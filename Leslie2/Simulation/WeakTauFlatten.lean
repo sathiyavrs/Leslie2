@@ -4483,4 +4483,102 @@ theorem curReach_split (S : WeakScheduler (𝒟(sys^w))) (src : PMF State)
       rw [add_comm, ← tsumOpt (fun o => (innerWitness sys src ω).next cur.1 o), PMF.tsum_coe],
     mul_one]
 
+open Classical in
+/-- Generic config-sum carrier over an arbitrary current-run kernel `k`, mirroring
+`dW`; the head-peeling recursion transplants verbatim. -/
+private noncomputable def genW
+    (k : PMF State → AlterSeq (PMF State) Label →
+      {q : AlterSeq State Label // q.trans.Terminates} → ENNReal)
+    (S : WeakScheduler (𝒟(sys^w))) (src : PMF State)
+    (E : AlterSeq (PMF State) Label)
+    (e : {q : AlterSeq State Label // q.trans.Terminates}) : ENNReal :=
+  ∑' p : List (FlatSeg State Label) × {q : AlterSeq State Label // q.trans.Terminates},
+    (if dConsistent e.1 ⟨p.1, p.2.1, p.2.2⟩ then (1 : ENNReal) else 0)
+      * segWeight S src E p.1
+      * k (segSrc src p.1) (segHist E p.1) p.2
+
+open Classical in
+/-- Base case of the generic peel: the no-segment configs contribute `k` at `e`. -/
+private theorem genBase
+    (k : PMF State → AlterSeq (PMF State) Label →
+      {q : AlterSeq State Label // q.trans.Terminates} → ENNReal)
+    (S : WeakScheduler (𝒟(sys^w))) (src : PMF State) (E : AlterSeq (PMF State) Label)
+    (e : {q : AlterSeq State Label // q.trans.Terminates}) :
+    (∑' cur : {q : AlterSeq State Label // q.trans.Terminates},
+      (if dConsistent e.1 (⟨[], cur.1, cur.2⟩ : DConfig State Label) then (1 : ENNReal) else 0)
+        * segWeight S src E ([] : List (FlatSeg State Label))
+        * k (segSrc src ([] : List (FlatSeg State Label)))
+            (segHist E ([] : List (FlatSeg State Label))) cur)
+      = k src E e := by
+  rw [tsum_eq_single e ?_]
+  · rw [if_pos ((dConsistent_nil_iff e e).mpr rfl)]
+    simp [segWeight, segSrc, segHist]
+  · intro cur hne
+    rw [if_neg (fun hc => hne ((dConsistent_nil_iff e cur).mp hc)), zero_mul, zero_mul]
+
+open Classical in
+/-- Per-segment reduction of the generic peel. -/
+private theorem genSeg
+    (k : PMF State → AlterSeq (PMF State) Label →
+      {q : AlterSeq State Label // q.trans.Terminates} → ENNReal)
+    (S : WeakScheduler (𝒟(sys^w))) (src : PMF State) (E : AlterSeq (PMF State) Label)
+    (e : {q : AlterSeq State Label // q.trans.Terminates}) (seg : FlatSeg State Label) :
+    (∑' rest : List (FlatSeg State Label),
+      ∑' cur : {q : AlterSeq State Label // q.trans.Terminates},
+        (if dConsistent e.1 ⟨seg :: rest, cur.1, cur.2⟩ then (1 : ENNReal) else 0)
+          * segWeight S src E (seg :: rest)
+          * k (segSrc src (seg :: rest)) (segHist E (seg :: rest)) cur)
+      = (if segPre e seg then (1 : ENNReal) else 0)
+          * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
+              * (innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩)
+          * genW k S seg.succ (macroExtend E seg.succ) (dResidual e seg) := by
+  by_cases hsp : segPre e seg
+  · rw [if_pos hsp, one_mul]
+    unfold genW
+    rw [ENNReal.tsum_prod', ← ENNReal.tsum_mul_left]
+    refine tsum_congr (fun rest => ?_)
+    rw [← ENNReal.tsum_mul_left]
+    refine tsum_congr (fun cur => ?_)
+    simp only [dConsistent_cons_iff, hsp, true_and]
+    show (if dConsistent (dResidual e seg).1 ⟨rest, cur.1, cur.2⟩ then (1 : ENNReal) else 0)
+        * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
+            * (innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩
+            * segWeight S seg.succ (macroExtend E seg.succ) rest)
+        * k (segSrc seg.succ rest) (segHist (macroExtend E seg.succ) rest) cur
+      = (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
+          * (innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩)
+        * ((if dConsistent (dResidual e seg).1 ⟨rest, cur.1, cur.2⟩ then (1 : ENNReal) else 0)
+            * segWeight S seg.succ (macroExtend E seg.succ) rest
+            * k (segSrc seg.succ rest) (segHist (macroExtend E seg.succ) rest) cur)
+    ring
+  · rw [if_neg hsp, zero_mul, zero_mul]
+    have hzero : ∀ (rest : List (FlatSeg State Label))
+        (cur : {q : AlterSeq State Label // q.trans.Terminates}),
+        (if dConsistent e.1 ⟨seg :: rest, cur.1, cur.2⟩ then (1 : ENNReal) else 0)
+            * segWeight S src E (seg :: rest)
+            * k (segSrc src (seg :: rest)) (segHist E (seg :: rest)) cur = 0 := by
+      intro rest cur
+      rw [if_neg (fun hc => hsp ((dConsistent_cons_iff e seg rest cur.1 cur.2).mp hc).1),
+        zero_mul, zero_mul]
+    simp only [hzero, tsum_zero]
+
+open Classical in
+/-- **The generic peeling recursion.** -/
+private theorem genW_peel
+    (k : PMF State → AlterSeq (PMF State) Label →
+      {q : AlterSeq State Label // q.trans.Terminates} → ENNReal)
+    (S : WeakScheduler (𝒟(sys^w))) (src : PMF State) (E : AlterSeq (PMF State) Label)
+    (e : {q : AlterSeq State Label // q.trans.Terminates}) :
+    genW k S src E e = k src E e
+      + ∑' seg : FlatSeg State Label,
+          (if segPre e seg then (1 : ENNReal) else 0)
+            * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
+                * (innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩)
+            * genW k S seg.succ (macroExtend E seg.succ) (dResidual e seg) := by
+  conv_lhs => rw [genW, ENNReal.tsum_prod', listSplit]
+  rw [genBase]
+  congr 1
+  rw [ENNReal.tsum_prod']
+  exact tsum_congr (fun seg => genSeg k S src E e seg)
+
 end PLTS
