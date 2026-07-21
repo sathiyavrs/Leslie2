@@ -1827,11 +1827,496 @@ noncomputable def dHM (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
   ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
     (dSched S μ0 E).haltMass μ0 e * g (e.1.endState e.2)
 
+/-- Integrating a test `g` against a `PMF.bind` splits as the source-weighted sum
+of the branch integrals (the `∑'`-form of `∫ g d(p.bind f) = ∑ₐ p a · ∫ g d(f a)`). -/
+private theorem tsum_bind_mul {γ : Type} (p : PMF γ) (f : γ → PMF State)
+    (g : State → ENNReal) :
+    (∑' s, (p.bind f) s * g s) = ∑' a, p a * ∑' s, f a s * g s := by
+  have h1 : (∑' s, (p.bind f) s * g s) = ∑' s, ∑' a, p a * f a s * g s :=
+    tsum_congr fun s => by rw [PMF.bind_apply, ENNReal.tsum_mul_right]
+  rw [h1, ENNReal.tsum_comm]
+  refine tsum_congr fun a => ?_
+  rw [← ENNReal.tsum_mul_left]
+  exact tsum_congr fun s => by ring
+
+/-- **One-layer distribution integrate identity.** Integrating `g` against the
+depth-`(n+1)` truncated macro-future distribution unfolds one macro level: halt
+now (mass `S.next E none`, integral against the current source `E.endState hT`), or
+take a macro-emission `ω` and successor `m'` and recurse at depth `n` from
+`macroExtend E m'`. This is the distribution-side (`macroFuture_trunc`) analogue of
+the scheduler-side target `d_integrate_step`; it is the pushforward that route-(b)'s
+`oneDecision := (weakTau_macroFuture_trunc S 1 E hT).witnessScheduler` delivers. -/
+theorem macroFuture_trunc_integrate_succ (S : WeakScheduler (𝒟(sys^w))) (n : ℕ)
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates) (g : State → ENNReal) :
+    (∑' s, macroFuture_trunc S (n + 1) E hT s * g s)
+      = S.next E none * (∑' s, (E.endState hT) s * g s)
+        + ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+            * ∑' m', ω m' * (∑' s, macroFuture_trunc S n (macroExtend E m')
+                (macroExtend_term hT m') s * g s) := by
+  have hzero : ∀ (l : Label) (ω : PMF (PMF State)), l ≠ Silent.τ →
+      S.next E (some (l, ω)) = 0 := fun l ω hl => by
+    by_contra hne
+    exact hl (S.internal_only E l ω ((PMF.mem_support_iff _ _).mpr hne))
+  have hunfold : macroFuture_trunc S (n + 1) E hT
+      = (S.next E).bind (fun o => match o with
+          | none => E.endState hT
+          | some (_, ω) => ω.bind (fun m' =>
+              macroFuture_trunc S n (macroExtend E m') (macroExtend_term hT m'))) := rfl
+  rw [hunfold, tsum_bind_mul]
+  rw [tsumOpt]
+  congr 1
+  rw [ENNReal.tsum_prod']
+  rw [tsum_eq_single Silent.τ (fun l hl => by
+    rw [ENNReal.tsum_eq_zero]; intro ω; rw [hzero l ω hl, zero_mul])]
+  refine tsum_congr fun ω => ?_
+  rw [tsum_bind_mul]
+
+/-- **`oneDecision` (route (b)).** The single-layer witness scheduler for the
+depth-1 truncated macro-future, extracted non-constructively from the landed
+`weakTau_macroFuture_trunc S 1 E hT`. No bespoke mixture construction is needed:
+`weakTau`'s own `witnessScheduler` / `witness_halts` / `integrate` /
+`witness_pushforward` supply every identity the one layer requires. -/
+noncomputable def oneDecision (S : WeakScheduler (𝒟(sys^w)))
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates) : WeakScheduler sys :=
+  (weakTau_macroFuture_trunc S 1 E hT).witnessScheduler
+
+/-- `oneDecision` halts almost surely from the current source `E.endState hT`. -/
+theorem oneDecision_halts (S : WeakScheduler (𝒟(sys^w)))
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates) :
+    (∑' e, (oneDecision S E hT).haltMass (E.endState hT) e) = 1 :=
+  (weakTau_macroFuture_trunc S 1 E hT).witness_halts
+
+/-- **One-layer integrate identity for `oneDecision`.** Exactly `d_integrate_step`'s
+shape, truncated at depth `0`: halt now (integral against the source `E.endState hT`),
+or take a macro-emission `ω` and successor `m'`, whereupon the successor integral is
+against the sampled `m'` itself (the depth-0 macro-future). The genuine work left for
+the full recursion is to replace this `∑' s, m' s * g s` by `dHM S m' (macroExtend E m')`
+via the depth tower / limit closure. -/
+theorem oneDecision_integrate (S : WeakScheduler (𝒟(sys^w)))
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates) (g : State → ENNReal) :
+    (∑' e, (oneDecision S E hT).haltMass (E.endState hT) e * g (e.1.endState e.2))
+      = S.next E none * (∑' s, (E.endState hT) s * g s)
+        + ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+            * ∑' m', ω m' * (∑' s, (macroExtend E m').endState (macroExtend_term hT m')
+                s * g s) := by
+  rw [oneDecision, (weakTau_macroFuture_trunc S 1 E hT).integrate g]
+  exact macroFuture_trunc_integrate_succ S 0 E hT g
+
+/-- **`WeakScheduler.bind` compose-integrate law** (the v4 enabling primitive).
+The weak-scheduler wrapper over the proven `Scheduler.bind_compose_integrate`:
+integrating `g` against the halting end-states of `bind σ k` (from `μ_init`)
+factors through `σ`'s halt states `f₁`, continuing with `k (f₁.end)` run from the
+Dirac `pure (f₁.end)`. Definitionally the `Scheduler`-level law, since
+`WeakScheduler.bind`/`haltMass` unfold to their `Scheduler` counterparts. -/
+theorem WeakScheduler.bind_compose_integrate (σ : WeakScheduler sys)
+    (k : State → WeakScheduler sys) (μ_init : PMF State) (g : State → ENNReal) :
+    (∑' e, (WeakScheduler.bind σ k).haltMass μ_init e * g (e.1.endState e.2))
+      = ∑' f₁ : {e : AlterSeq State Label // e.trans.Terminates},
+          σ.haltMass μ_init f₁ *
+            ∑' f₂ : {e : AlterSeq State Label // e.trans.Terminates},
+              (k (f₁.1.endState f₁.2)).haltMass (PMF.pure (f₁.1.endState f₁.2)) f₂
+                * g (f₂.1.endState f₂.2) :=
+  Scheduler.bind_compose_integrate σ.toScheduler (fun s => (k s).toScheduler) μ_init g
+
+open Classical in
+/-- The halting end-state pushforward of an a.s.-halting weak scheduler `σ` from
+source `μ`, as a genuine `PMF State` (total mass `1` by the a.s.-halting hypothesis). -/
+noncomputable def pushforwardPMF {sys : System State Label} (σ : WeakScheduler sys)
+    (μ : PMF State) (hh : (∑' e, σ.haltMass μ e) = 1) : PMF State :=
+  ⟨fun s => ∑' e, σ.haltMass μ e * (if e.1.endState e.2 = s then 1 else 0), by
+    have hsum : (∑' s, ∑' e, σ.haltMass μ e * (if e.1.endState e.2 = s then 1 else 0)) = 1 := by
+      rw [ENNReal.tsum_comm]
+      refine (tsum_congr fun e => ?_).trans hh
+      rw [ENNReal.tsum_mul_left, tsum_eq_single (e.1.endState e.2)
+        (fun s hs => by rw [if_neg (fun h => hs h.symm)]), if_pos rfl, mul_one]
+    have hhs := ENNReal.summable.hasSum
+      (f := fun s => ∑' e, σ.haltMass μ e * (if e.1.endState e.2 = s then 1 else 0))
+    rwa [hsum] at hhs⟩
+
+open Classical in
+/-- An a.s.-halting weak scheduler from source `μ` witnesses `weakTau sys μ` to its
+own halting end-state pushforward. -/
+theorem weakTau_of_halts {sys : System State Label} (σ : WeakScheduler sys)
+    (μ : PMF State) (hh : (∑' e, σ.haltMass μ e) = 1) :
+    weakTau sys μ (pushforwardPMF σ μ hh) :=
+  ⟨σ, hh, fun _ => rfl⟩
+
+/-- **Pure-source a.s.-halting corollary.** If `σ` halts a.s. from source `μ`, then it
+halts a.s. from the Dirac at every `t ∈ μ.support`. (`M u := ∑'e haltMass (pure u) e ≤ 1`
+averages to `1` against `μ`, forcing `M t = 1` on the support.) -/
+theorem haltMass_pure_of_source {sys : System State Label} (σ : WeakScheduler sys)
+    (μ : PMF State) (hh : (∑' e, σ.haltMass μ e) = 1) (t : State) (ht : t ∈ μ.support) :
+    (∑' e, σ.haltMass (PMF.pure t) e) = 1 := by
+  set M : State → ENNReal := fun u => ∑' e, σ.haltMass (PMF.pure u) e with hM
+  have hle : ∀ u, M u ≤ 1 := fun u => WeakScheduler.haltMass_tsum_le_one σ (PMF.pure u)
+  have hmix : (∑' u, μ u * M u) = 1 := by
+    rw [← hh, tsum_congr (fun e => σ.haltMass_init_mix μ e), ENNReal.tsum_comm]
+    exact tsum_congr fun u => by rw [hM, ENNReal.tsum_mul_left]
+  have hab : ∀ u, μ u * M u ≤ μ u := fun u => mul_le_of_le_one_right' (hle u)
+  have hnlt : ¬ (μ t * M t < μ t) := fun hlt => by
+    have hcontra := ENNReal.tsum_lt_tsum (f := fun u => μ u * M u) (g := μ) (i := t)
+      (by rw [hmix]; exact ENNReal.one_ne_top) hab hlt
+    rw [hmix, μ.tsum_coe] at hcontra
+    exact lt_irrefl 1 hcontra
+  have heqt : μ t * M t = μ t * 1 := by rw [mul_one]; exact le_antisymm (hab t) (not_lt.mp hnlt)
+  show M t = 1
+  exact (ENNReal.mul_right_inj ((PMF.mem_support_iff μ t).mp ht) (μ.apply_ne_top t)).mp heqt
+
+open Classical in
+/-- **Pushforward integrate.** Integrating `g` against `σ`'s halting end-state
+pushforward `PMF` equals integrating `g` against the halting end-states directly. -/
+theorem pushforwardPMF_integrate {sys : System State Label} (σ : WeakScheduler sys)
+    (μ : PMF State) (hh : (∑' e, σ.haltMass μ e) = 1) (g : State → ENNReal) :
+    (∑' u, pushforwardPMF σ μ hh u * g u)
+      = ∑' e, σ.haltMass μ e * g (e.1.endState e.2) := by
+  calc (∑' u, pushforwardPMF σ μ hh u * g u)
+      = ∑' u, (∑' e, σ.haltMass μ e * (if e.1.endState e.2 = u then 1 else 0)) * g u := rfl
+    _ = ∑' u, ∑' e, σ.haltMass μ e * (if e.1.endState e.2 = u then 1 else 0) * g u :=
+        tsum_congr (fun u => by rw [ENNReal.tsum_mul_right])
+    _ = ∑' e, ∑' u, σ.haltMass μ e * (if e.1.endState e.2 = u then 1 else 0) * g u :=
+        ENNReal.tsum_comm
+    _ = ∑' e, σ.haltMass μ e * g (e.1.endState e.2) := by
+        refine tsum_congr (fun e => ?_)
+        rw [tsum_congr (fun u => by ring :
+            ∀ u, σ.haltMass μ e * (if e.1.endState e.2 = u then 1 else 0) * g u
+              = σ.haltMass μ e * ((if e.1.endState e.2 = u then 1 else 0) * g u)),
+          ENNReal.tsum_mul_left]
+        congr 1
+        rw [tsum_eq_single (e.1.endState e.2)
+            (fun u' hu' => by rw [if_neg (fun heq => hu' heq.symm), zero_mul]),
+          if_pos rfl, one_mul]
+
+/-- **Depth-1 truncated macro-future, pointwise.** One macro-step unfolding of
+`macroFuture_trunc S 1 E hT` at a state `t`: halt now (`S.next E none`, source
+`E.endState hT`) or take an emission `ω` and successor `m'` (weight `ω m'`, value
+`m' t`). The pointwise companion of `macroFuture_trunc_integrate_succ`. -/
+theorem macroFuture_trunc_one_apply (S : WeakScheduler (𝒟(sys^w)))
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates) (t : State) :
+    macroFuture_trunc S 1 E hT t
+      = S.next E none * (E.endState hT) t
+        + ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω)) * ∑' m', ω m' * m' t := by
+  have hzero : ∀ (l : Label) (ω : PMF (PMF State)), l ≠ Silent.τ →
+      S.next E (some (l, ω)) = 0 := fun l ω hl => by
+    by_contra hne
+    exact hl (S.internal_only E l ω ((PMF.mem_support_iff _ _).mpr hne))
+  have hunfold : macroFuture_trunc S 1 E hT
+      = (S.next E).bind (fun o => match o with
+          | none => E.endState hT
+          | some (_, ω) => ω.bind (fun m' =>
+              macroFuture_trunc S 0 (macroExtend E m') (macroExtend_term hT m'))) := rfl
+  rw [hunfold, PMF.bind_apply, tsumOpt]
+  congr 1
+  rw [ENNReal.tsum_prod']
+  rw [tsum_eq_single Silent.τ (fun l hl => by
+    rw [ENNReal.tsum_eq_zero]; intro ω; rw [hzero l ω hl, zero_mul])]
+  refine tsum_congr fun ω => ?_
+  rw [PMF.bind_apply]
+  congr 1
+  refine tsum_congr fun m' => ?_
+  rw [show macroFuture_trunc S 0 (macroExtend E m') (macroExtend_term hT m') = m' from
+    macroExtend_endState hT m']
+
+/-! ### Layer 4d (cont.): the coherent bind tower
+
+The depth-`n` **coherent bind tower** `towerSched S n E hT : WeakScheduler sys`: a
+concrete witness for `weakTau sys (E.end) (macroFuture_trunc S n E hT)` built by
+`Nat.rec` from `WeakScheduler.bind` and `oneDecision`, so that its halting-integral
+identity `towerSched_integrate` COMPOSES through `bind_compose_integrate` (unlike the
+opaque classical witness of `weakTau_macroFuture_trunc`). This is the v4 route the
+frontier docstring at `d_integrate_step` calls for. -/
+
+/-- Bundled payload of the depth-`n` coherent bind tower rooted at `(E, hT)`: the
+scheduler together with its `g`-integrated halting identity against the depth-`n`
+truncated macro-future. Bundling is forced: the successor's continuation kernel is
+built from the previous level's identity (via `weakTau_mix`), so definition and proof
+are mutually recursive. -/
+structure TowerData {sys : System State Label} (S : WeakScheduler (𝒟(sys^w))) (n : ℕ)
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates) where
+  /-- The depth-`n` tower scheduler. -/
+  sched : WeakScheduler sys
+  /-- Its `g`-integrated halting end-state identity: the coherence dividend. -/
+  integrate : ∀ g : State → ENNReal,
+    (∑' e, sched.haltMass (E.endState hT) e * g (e.1.endState e.2))
+      = ∑' s, macroFuture_trunc S n E hT s * g s
+
+/-- **Successor step of the coherent bind tower.** Given the depth-`n` family
+`prev` (over all extended macro-histories), produce the depth-`(n+1)` tower rooted at
+`(E, hT)`: `WeakScheduler.bind (oneDecision S E hT) k`, where the continuation `k t`
+witnesses `weakTau sys (pure t) β_t` and `β_t` is the single-layer posterior mixture
+over provenance `Option (PMF (PMF State) × PMF State)`. -/
+noncomputable def towerStep (S : WeakScheduler (𝒟(sys^w))) (n : ℕ)
+    (prev : ∀ (E' : AlterSeq (PMF State) Label) (hT' : E'.trans.Terminates),
+      TowerData S n E' hT')
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates) :
+    TowerData S (n + 1) E hT := by
+  classical
+  -- provenance weights: none = immediate halt, some (ω, m') = macro-emission
+  let w : Option (PMF (PMF State) × PMF State) → State → ENNReal :=
+    fun x t => match x with
+      | none => S.next E none * (E.endState hT) t
+      | some p => S.next E (some (Silent.τ, p.1)) * p.1 p.2 * p.2 t
+  -- the normalizer equals the depth-1 truncated macro-future
+  have hZsum : ∀ t, (∑' x, w x t) = macroFuture_trunc S 1 E hT t := by
+    intro t
+    rw [tsumOpt (fun x => w x t), macroFuture_trunc_one_apply]
+    congr 1
+    rw [ENNReal.tsum_prod']
+    refine tsum_congr fun ω => ?_
+    rw [← ENNReal.tsum_mul_left]
+    refine tsum_congr fun m' => ?_
+    show S.next E (some (Silent.τ, ω)) * ω m' * m' t
+      = S.next E (some (Silent.τ, ω)) * (ω m' * m' t)
+    rw [mul_assoc]
+  have hZne : ∀ t, (∑' x, w x t) ≠ ⊤ := fun t => by
+    rw [hZsum t]; exact (macroFuture_trunc S 1 E hT).apply_ne_top t
+  -- posterior over provenance (junk when the normalizer vanishes)
+  let q : State → PMF (Option (PMF (PMF State) × PMF State)) := fun t =>
+    if h0 : (∑' x, w x t) = 0 then PMF.pure none
+    else PMF.normalize (fun x => w x t) h0 (hZne t)
+  -- the depth-n family halts a.s. from source `m'`
+  have prevHalt' : ∀ m',
+      (∑' e, (prev (macroExtend E m') (macroExtend_term hT m')).sched.haltMass m' e) = 1 := by
+    intro m'
+    have hsrc : (macroExtend E m').endState (macroExtend_term hT m') = m' :=
+      macroExtend_endState hT m'
+    have h := (prev (macroExtend E m') (macroExtend_term hT m')).integrate (fun _ => 1)
+    simp only [mul_one] at h
+    rw [hsrc] at h
+    rw [h, (macroFuture_trunc S n (macroExtend E m') (macroExtend_term hT m')).tsum_coe]
+  -- continuation targets: pure-halt (none) or the depth-n pushforward from `pure t`
+  let branchTarget : State → Option (PMF (PMF State) × PMF State) → PMF State :=
+    fun t x => match x with
+      | none => PMF.pure t
+      | some p => if ht : t ∈ (p.2).support
+          then pushforwardPMF (prev (macroExtend E p.2) (macroExtend_term hT p.2)).sched
+                (PMF.pure t) (haltMass_pure_of_source _ p.2 (prevHalt' p.2) t ht)
+          else PMF.pure t
+  -- each posterior mixture is a weak-τ continuation out of `pure t`
+  have H : ∀ t, weakTau sys (PMF.pure t) ((q t).bind (branchTarget t)) := by
+    intro t
+    have hmix : weakTau sys ((q t).bind (fun _ => PMF.pure t)) ((q t).bind (branchTarget t)) := by
+      refine weakTau_mix (q t) (fun _ => PMF.pure t) (branchTarget t) ?_
+      intro x hx
+      match x with
+      | none => exact weakTau_refl sys (PMF.pure t)
+      | some p =>
+          have hwne : w (some p) t ≠ 0 := by
+            by_cases h0 : (∑' x, w x t) = 0
+            · rw [show q t = PMF.pure none from dif_pos h0, PMF.mem_support_iff,
+                PMF.pure_apply, if_neg (Option.some_ne_none p)] at hx
+              exact absurd rfl hx
+            · rw [show q t = PMF.normalize (fun x => w x t) h0 (hZne t) from dif_neg h0,
+                PMF.mem_support_iff, PMF.normalize_apply] at hx
+              exact left_ne_zero_of_mul hx
+          have ht : t ∈ (p.2).support := by
+            rw [PMF.mem_support_iff]; intro hz
+            exact hwne (by
+              show S.next E (some (Silent.τ, p.1)) * p.1 p.2 * p.2 t = 0
+              rw [hz, mul_zero])
+          have hht := haltMass_pure_of_source
+            (prev (macroExtend E p.2) (macroExtend_term hT p.2)).sched p.2 (prevHalt' p.2) t ht
+          rw [show branchTarget t (some p)
+              = pushforwardPMF (prev (macroExtend E p.2) (macroExtend_term hT p.2)).sched
+                (PMF.pure t) hht from dif_pos ht]
+          exact weakTau_of_halts _ (PMF.pure t) hht
+    rwa [PMF.bind_const] at hmix
+  exact
+    { sched := WeakScheduler.bind (oneDecision S E hT) (fun t => (H t).witnessScheduler)
+      integrate := fun g => by
+        -- normalizer cancellation: `mft1 t · q t x = w x t`
+        have hcancel : ∀ t x, macroFuture_trunc S 1 E hT t * q t x = w x t := by
+          intro t x
+          by_cases h0 : (∑' y, w y t) = 0
+          · have hmft : macroFuture_trunc S 1 E hT t = 0 := (hZsum t).symm.trans h0
+            have hwx : w x t = 0 := ENNReal.tsum_eq_zero.mp h0 x
+            rw [hmft, zero_mul, hwx]
+          · rw [show q t = PMF.normalize (fun y => w y t) h0 (hZne t) from dif_neg h0,
+              PMF.normalize_apply, ← hZsum t, ← mul_assoc, mul_comm _ (w x t), mul_assoc,
+              ENNReal.mul_inv_cancel h0 (hZne t), mul_one]
+        -- expectation under a Dirac
+        have hpure : ∀ (t : State), (∑' s, (PMF.pure t) s * g s) = g t := fun t => by
+          rw [tsum_eq_single t (fun s hs => by rw [PMF.pure_apply, if_neg hs, zero_mul]),
+            PMF.pure_apply, if_pos rfl, one_mul]
+        -- per-`t` posterior collapse
+        have hΦcancel : ∀ t, macroFuture_trunc S 1 E hT t
+              * (∑' s, ((q t).bind (branchTarget t)) s * g s)
+            = ∑' x, w x t * (∑' s, branchTarget t x s * g s) := by
+          intro t
+          rw [tsum_bind_mul (q t) (branchTarget t) g, ← ENNReal.tsum_mul_left]
+          exact tsum_congr fun x => by rw [← mul_assoc, hcancel t x]
+        -- term A (immediate-halt provenance)
+        have hTermA : (∑' t, w none t * (∑' s, branchTarget t none s * g s))
+            = S.next E none * (∑' s, (E.endState hT) s * g s) := by
+          rw [← ENNReal.tsum_mul_left]
+          refine tsum_congr fun t => ?_
+          show S.next E none * (E.endState hT) t * (∑' s, (PMF.pure t) s * g s)
+            = S.next E none * ((E.endState hT) t * g t)
+          rw [hpure t, mul_assoc]
+        -- term B (macro-emission provenance)
+        have hTermB : (∑' p : PMF (PMF State) × PMF State,
+              ∑' t, w (some p) t * (∑' s, branchTarget t (some p) s * g s))
+            = ∑' ω, S.next E (some (Silent.τ, ω)) * ∑' m', ω m'
+                * (∑' s, macroFuture_trunc S n (macroExtend E m')
+                    (macroExtend_term hT m') s * g s) := by
+          rw [ENNReal.tsum_prod']
+          refine tsum_congr fun ω => ?_
+          rw [← ENNReal.tsum_mul_left]
+          refine tsum_congr fun m' => ?_
+          set σ' := (prev (macroExtend E m') (macroExtend_term hT m')).sched with hσ'
+          have hbridge : (∑' t, m' t * (∑' s, branchTarget t (some (ω, m')) s * g s))
+              = ∑' s, macroFuture_trunc S n (macroExtend E m')
+                  (macroExtend_term hT m') s * g s := by
+            have hstep : ∀ t, m' t * (∑' s, branchTarget t (some (ω, m')) s * g s)
+                = m' t * (∑' e, σ'.haltMass (PMF.pure t) e * g (e.1.endState e.2)) := by
+              intro t
+              by_cases ht : t ∈ (m').support
+              · congr 1
+                rw [show branchTarget t (some (ω, m'))
+                    = pushforwardPMF σ' (PMF.pure t)
+                      (haltMass_pure_of_source _ m' (prevHalt' m') t ht) from dif_pos ht]
+                exact pushforwardPMF_integrate _ (PMF.pure t) _ g
+              · rw [PMF.mem_support_iff, not_not] at ht
+                rw [ht, zero_mul, zero_mul]
+            rw [tsum_congr hstep]
+            have hsrc : (macroExtend E m').endState (macroExtend_term hT m') = m' :=
+              macroExtend_endState hT m'
+            have hint := (prev (macroExtend E m') (macroExtend_term hT m')).integrate g
+            rw [hsrc, ← hσ'] at hint
+            calc (∑' t, m' t * (∑' e, σ'.haltMass (PMF.pure t) e * g (e.1.endState e.2)))
+                = ∑' t, ∑' e, m' t * (σ'.haltMass (PMF.pure t) e * g (e.1.endState e.2)) :=
+                  tsum_congr fun t => ENNReal.tsum_mul_left.symm
+              _ = ∑' e, ∑' t, m' t * (σ'.haltMass (PMF.pure t) e * g (e.1.endState e.2)) :=
+                  ENNReal.tsum_comm
+              _ = ∑' e, (∑' t, m' t * σ'.haltMass (PMF.pure t) e) * g (e.1.endState e.2) := by
+                  refine tsum_congr fun e => ?_
+                  rw [← ENNReal.tsum_mul_right]
+                  exact tsum_congr fun t => by rw [mul_assoc]
+              _ = ∑' e, σ'.haltMass m' e * g (e.1.endState e.2) := by
+                  refine tsum_congr fun e => ?_
+                  rw [← WeakScheduler.haltMass_init_mix]
+              _ = ∑' s, macroFuture_trunc S n (macroExtend E m')
+                    (macroExtend_term hT m') s * g s := hint
+          rw [← hbridge, ← ENNReal.tsum_mul_left, ← ENNReal.tsum_mul_left]
+          refine tsum_congr fun t => ?_
+          show S.next E (some (Silent.τ, ω)) * ω m' * m' t
+              * (∑' s, branchTarget t (some (ω, m')) s * g s)
+            = S.next E (some (Silent.τ, ω))
+              * (ω m' * (m' t * (∑' s, branchTarget t (some (ω, m')) s * g s)))
+          ring
+        -- assemble: bind_compose ↦ mft1-reweight ↦ cancel ↦ split ↦ A + B
+        have h123 : (∑' e, (WeakScheduler.bind (oneDecision S E hT)
+                (fun t => (H t).witnessScheduler)).haltMass (E.endState hT) e
+              * g (e.1.endState e.2))
+            = ∑' t, macroFuture_trunc S 1 E hT t
+                * (∑' s, ((q t).bind (branchTarget t)) s * g s) := by
+          rw [WeakScheduler.bind_compose_integrate]
+          have hin : ∀ f₁ : {e : AlterSeq State Label // e.trans.Terminates},
+              (∑' f₂, (H (f₁.1.endState f₁.2)).witnessScheduler.haltMass
+                  (PMF.pure (f₁.1.endState f₁.2)) f₂ * g (f₂.1.endState f₂.2))
+              = ∑' s, ((q (f₁.1.endState f₁.2)).bind
+                  (branchTarget (f₁.1.endState f₁.2))) s * g s :=
+            fun f₁ => (H (f₁.1.endState f₁.2)).integrate g
+          simp_rw [hin]
+          exact (weakTau_macroFuture_trunc S 1 E hT).integrate
+            (fun t => ∑' s, ((q t).bind (branchTarget t)) s * g s)
+        rw [h123, macroFuture_trunc_integrate_succ S n E hT g, tsum_congr hΦcancel,
+          ENNReal.tsum_comm, tsumOpt, hTermA, hTermB] }
+
+/-- The coherent bind tower, by `Nat.rec`. Depth `0` is the immediate-halt witness
+(`weakTau_refl`); depth `n+1` is `WeakScheduler.bind (oneDecision S E hT) k` with the
+posterior-mixing continuation `k`.
+
+REMAINING (successor): `k t` is the witness of `weakTau sys (pure t) β_t`, where `β_t`
+is the single-layer posterior mixture over provenance `(none | some (ω,m'))` given the
+halt-state `t` of `oneDecision`: weight `S.next E none · (E.end) t` continues by
+immediate halt, weight `S.next E (τ,ω) · ω m' · m' t` continues by `towerData S n
+(macroExtend E m')` (its pure-`t` halting is the `t∈supp(m')` corollary of the depth-`n`
+`integrate`). Normalizer `∑ = macroFuture_trunc S 1 E hT t ≤ 1` (`ne_top` trivial). The
+`integrate` field then follows: `bind_compose_integrate` factors through `oneDecision`'s
+halt states; `(weakTau_macroFuture_trunc S 1 E hT).integrate` reweights by
+`macroFuture_trunc S 1`; the normalizer cancels the posterior denominator, leaving
+`macroFuture_trunc_integrate_succ`'s two terms closed by depth-`n` `integrate`. -/
+noncomputable def towerData {sys : System State Label} (S : WeakScheduler (𝒟(sys^w))) :
+    (n : ℕ) → (E : AlterSeq (PMF State) Label) → (hT : E.trans.Terminates) →
+      TowerData S n E hT
+  | 0, E, hT =>
+    { sched := (weakTau_refl sys (E.endState hT)).witnessScheduler
+      integrate := fun g => by
+        simpa only [macroFuture_trunc] using (weakTau_refl sys (E.endState hT)).integrate g }
+  | n + 1, E, hT => towerStep S n (fun E' hT' => towerData S n E' hT') E hT
+  termination_by n => n
+
+/-- The depth-`n` coherent bind tower witnessing
+`weakTau sys (E.end) (macroFuture_trunc S n E hT)`. -/
+noncomputable def towerSched {sys : System State Label} (S : WeakScheduler (𝒟(sys^w)))
+    (n : ℕ) (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates) : WeakScheduler sys :=
+  (towerData S n E hT).sched
+
+/-- **T2 — the tower realizes the truncation (pushforward/integrate).** The coherence
+dividend: the tower's `g`-integrated halting end-state equals the `g`-integral of the
+depth-`n` truncated macro-future. -/
+theorem towerSched_integrate {sys : System State Label} (S : WeakScheduler (𝒟(sys^w)))
+    (n : ℕ) (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates) (g : State → ENNReal) :
+    (∑' e, (towerSched S n E hT).haltMass (E.endState hT) e * g (e.1.endState e.2))
+      = ∑' s, macroFuture_trunc S n E hT s * g s :=
+  (towerData S n E hT).integrate g
+
+/-- **T2 — the tower halts almost surely** from the current source `E.end`. The `g:=1`
+specialization of `towerSched_integrate` (the truncated macro-future is a `PMF`). -/
+theorem towerSched_halts {sys : System State Label} (S : WeakScheduler (𝒟(sys^w)))
+    (n : ℕ) (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates) :
+    (∑' e, (towerSched S n E hT).haltMass (E.endState hT) e) = 1 := by
+  have h := towerSched_integrate S n E hT (fun _ => 1)
+  simp only [mul_one] at h
+  rw [h, (macroFuture_trunc S n E hT).tsum_coe]
+
 /-- **V1 — the one-step integrate recursion (rooted).** Integrating `g` against
 the composite's halting end-states unfolds one macro level: either the macro
 scheduler halts now (mass `S.next E none`, end-state distributed as the current
 source `μ0`), or it takes a macro-emission `ω` and successor `m'`, whereupon the
 integral recurses at the advanced configuration `(m', macroExtend E m')`.
+
+### v4 FRONTIER UPDATE (supersedes the AUDIT / PHASE-P verdict below)
+
+The PHASE-P verdict concludes "no route closes on the current landed stack alone"
+and isolates a missing bridge `probOf_beliefMass`. That conclusion is correct ONLY
+for the *belief-normalized* `dSched` witness. It is now SUPERSEDED by the v4 plan,
+whose enabling primitive already exists sorry-free elsewhere in the repository:
+
+  `Scheduler.bind_compose_integrate`  (`Leslie2/Weak/WeakTransition.lean`)
+    `∑' e, (bind σ k).haltMass μ e · g(e.end)`
+      `= ∑' f₁, σ.haltMass μ f₁ · ∑' f₂, (k f₁.end).haltMass (pure f₁.end) f₂ · g(f₂.end)`
+  (and its whole-execution generalization `bind_compose_integrate_gen`, the
+  `WeakScheduler.concat` split↔pair reindexing, already consumed by `weakTau_trans`).
+
+This is exactly the "compositionality built in" the DESIGN doc asked for; it is a
+LANDED lemma, so the PHASE-P premise ("not among the landed lemmas") is false for
+the v4 route. Since the downstream of `d_integrate_step` (`dHalt_ge`, `d_halts`,
+`dHalt_ge_G`, `d_pushforward`, `weakTau_flatten`) references the witness ONLY through
+`dSched _.haltMass` / `dHM`, the re-route is minimal-churn: KEEP the `dHM` definition
+and every downstream lemma verbatim, REDEFINE `dSched` as the v4 bind-recursive
+witness, and re-prove THIS lemma via one application of `bind_compose_integrate`.
+
+REMAINING CONSTRUCTION (the genuine work, not yet landed):
+  (1) `oneDecision S μ0 E : WeakScheduler sys` — from source `μ0 = E.end`, the
+      mixture that with mass `S.next E none` halts immediately (→ term A), and with
+      mass `S.next E (τ,ω)` runs `innerWitness sys μ0 ω` to its halt (→ one segment).
+      Build the mixture-of-inner-witnesses as a genuine `WeakScheduler` (valid /
+      internal_only); the stall series is resummed ONCE here via `stall_unfold` +
+      `tsum_iSup_of_monotone`. Its local integrate identity gives term A and the
+      `∑'ω S.next E(τ,ω) · [ω-routed segment integral]` shell.
+  (2) the posterior continuation kernel `k : State → WeakScheduler sys` mixing the
+      recursive `dSched S m' (macroExtend E m')` weighted by the single-layer
+      posterior over `(ω,m')` (normalizer ≤ 1, no stall accumulation — `ne_top`
+      trivial), fed to `WeakScheduler.bind (oneDecision …) k`.
+  (3) `dSched` by strong recursion on observed-history length (`e.trans.length`):
+      each non-halt layer consumes ≥ 1 sys-step, so `dSched.next e` is the depth-
+      `(|e|+1)` truncated bind tower; prove the tower value at `e` stabilizes for
+      depth > `|e|`. Then `d_integrate_step` = `bind_compose_integrate` applied once
+      + `oneDecision`'s local identity + the posterior marginalization.
+
+Everything below is the belief-normalized (v3) study, retained as documentation of
+why the pointwise posterior route is unreachable; it is not on the v4 critical path.
 
 **AUDIT (STEP 1 — the suspected "double-source" defect; verdict: REFUTED, keep
 current definitions).** The move-branch of `moveTerm` weights by the general-source
