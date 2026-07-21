@@ -3783,6 +3783,107 @@ DIRECTLY (no `haltMass`/`probOf` wrapper, since no valid scheduler carries them)
 against `macroHalt_bind_id_eq_iSup`. This bypasses the emission-PMF obstruction entirely but is a
 NEW construction (halting + pushforward + squeeze + discharge), not a wiring step — all F5e. -/
 
+/-! ### F5e-R — realization research verdict + staged design (expandSched transplant)
+
+**VERDICT.** The realization technology already exists in the repo's trace pipeline:
+`expandSched` (`WeakClosure/Scheduler.lean:644`). Transplant it. The two competing routes are
+dead: (B) NO scheduler-free / backward characterization of `weakTau` exists — `weakTau`
+(`Weak/WeakTransition.lean:38`) is an existential over an actual `WeakScheduler sys` with
+a.s.-halting `∑' e σ.haltMass = 1` and end-pushforward `= μ`; only the FORWARD direction
+(scheduler ⇒ cylinder/halt data) is available, no lemma reconstructs a witness from a bare
+halting measure. (C) NO ω-fold / limit combinator for schedulers exists: `Scheduler.bind`
+consumes exactly ONE observed emission via its split index, so an ω-iteration along observed
+steps is not one `Scheduler`, and the fresh-root emission does not stabilize — the restart idea
+does not become definable. Hence realization must come from the ONE place unbounded hidden
+unfolding is already realized as a `sys`-scheduler: `expandSched`.
+
+**(1) THE DELTA — why `probOf_eq_reachArr` closes but `probOf = dDenom` is false.**
+Both `expandSched` and `dSched` (`WeakTauFlatten:1734`) are genuine valid schedulers by the
+SAME move: `expandSched.valid` (`Scheduler.lean:646-666`) delegates each support emission to a
+config's inner `c.1.s.valid` (`:659`); `dSched.valid` (`:1741-1789`) delegates to
+`innerWitness.valid` (`:1783`). Realization was never the blocker. The blocker is the FIDELITY
+INVARIANT each proves:
+  • `expandSched`: `probOf (expandSched ws) exec = reachArr ws exec` (`probOf_eq_reachArr`,
+    `Scheduler.lean:1063`), where `reachArr` (`:59`) counts reach at the UNIQUE ARRIVAL config
+    (committed segment `= exec`), and `expandMass_hasSum` (`:624`) closes `∑' step ≤ 1` because
+    DEPARTURES ⊆ ARRIVALS (`:622`). The identity holds by cons-end induction on the telescoping
+    `reachArr_step` / arrival inner-recursion (`Scheduler.lean:668-966`): arrival mass at the
+    one-longer trajectory = departure mass mixed against the drawn `μ`.
+  • `dSched`: the target invariant `probOf = dDenom` is FALSE (`WeakTauFlatten:3845-3946`).
+    Three concrete deltas cause this: (i) `dDenom`/`moveTot` (`:1301`,`:1314`) is a RAW config
+    sum with no arrival/departure split, so `moveTot < 1` strictly (hidden macro-STALLS leak
+    `stallSum` mass — `:3857`), whereas `reachArr`'s departures-⊆-arrivals split makes the
+    normalizer honest; (ii) `reachProb` is the honest ALGORITHM-side reach at the unique arrival
+    config with macro-scheduler weights included and stalls marginalized PER-RUN, whereas
+    `dSched`'s `segWeight·moveTerm` belief double-counts the source and its per-prefix
+    normalizers `1/dDenom(eⱼ)` do NOT telescope across consecutive prefixes (`:3911-3928`);
+    (iii) the trace setting never split halt-vs-diverge (`expandSched`'s `none` conflates them),
+    so trace fidelity needs no halt notion. `reachArr_step` is EXACTLY the telescoping identity
+    `dSched` lacks; adopting `reachArr` as the normalizer dissolves the stall leak (stalls are
+    marginalized correctly at the arrival config, never leaked). The `dSched` route's missing
+    bridge `probOf_beliefMass` (`:3934`) is a re-statement of this same telescoping — it is NOT
+    an independent fallback; the transplant is strictly the better bet because `reachArr_step` is
+    already PROVEN.
+
+**(2) TRANSPLANT PLAN — `flatSched : WeakScheduler sys`.** Configs live at SYS level (mirroring
+the landed `macroHaltDepth`/`condDepth` strata, `:208`/`:271`), NOT at `𝒟(sys^w)` level: reuse
+`dSched`'s config structure (completed `segs` of sys-level `innerWitness` runs + active `cur`,
+via `dConsistent`), because `innerWitness sys μ ω` (`:526`) already collapses one macro-emission
+`ω : PMF (PMF State)` to a sys-level τ-run — the layer collapse is done per segment, so the
+transplant works over sys-level configs directly. The ONE change vs `dSched`: REPLACE the reach
+weight `segWeight·moveTerm` by a `reachProb`-analogue (honest macro reach, `Scheduler.lean:59`
+template) counted at the ARRIVAL config under the NONEMPTY-segment guard, with kernel =
+`expandMass`-analogue (`:73`) normalized by the arrival mass.
+
+**(3) THE TWO GAPS expandSched leaves.** (a) `internal_only`: `expandSched` is a plain
+`Scheduler`; the upgrade to `WeakScheduler` is a delegation IDENTICAL to its `valid` discharge —
+every composite emission is τ (macro steps of a `𝒟(sys^w)` weakTau are τ, and `innerWitness`
+inner runs are τ), so borrow `innerWitness.internal_only` exactly as `dSched.internal_only`
+(`:1790`) already does. (b) HALT ACCOUNTING: `expandSched`'s `none` = halt-OR-diverge, but
+`weakTau` needs the HALT split. Define `flatSched.next e none` := arrival reach at configs of `e`
+whose macro-run HAS HALTED (macro scheduler took its `none` after the current inner segment
+completed). Then two fidelity-style lemmas finish it:
+  • (L-halt) `flatSched.haltMass μ e = reachArrHalt e` — the haltMass-side analogue of
+    `probOf_eq_reachArr`, i.e. `probOf · next none` restricted to halted-macro arrivals.
+  • (L-strata) `∑' e, reachArrHalt e · [e.end = s] = ⨆ n, ∑ k<n, macroHaltDepth S μ k s` — the
+    arrival-halt reach reindexes to the LANDED strata accounting. Then `∑' e haltMass = 1` via
+    `macroHalted_iSup_eq_one` (`:435`) and pushforward `= (Ν.bind id) s` via
+    `macroHalt_bind_id_eq_iSup` (`:452`).
+
+**(4) STAGED LEMMA LADDER (F5f = scheduler + validity; F5g = fidelity + halt + wiring).**
+  F5f-1  `reachM`/`reachArrM` (composite reach + arrival mass over sys-level configs). Reuse
+         `dSched` Config/`segs`/`cur`/`dConsistent`. Template `reachArr`+`reachDep`
+         (`Scheduler.lean:59`,`:66`). New = the nonempty-segment arrival guard. ~60-100 lines.
+  F5f-2  `flatMass`/`flatMass_hasSum` (kernel `∑' step ≤ 1` via departures ⊆ arrivals).
+         Template `expandMass_hasSum` (`Scheduler.lean:624-637`). ~60 lines.
+  F5f-3  `flatSched : WeakScheduler sys` (`next = flatMass/reachArrM`; `valid`+`internal_only`
+         COPY `dSched` `:1741-1842` verbatim, delegating to `innerWitness`). ~40 lines.
+  F5g-1  ‹HIGHEST RISK› `probOf (flatSched) e = reachArrM e` (cons-end induction). Template =
+         the whole `Scheduler.lean:668-1090` block (`reachArr_step`, `arrivalStep_collapse:755`,
+         `reachProb_fixpoint`, `probOf_eq_reachArr:1063`). RISK: that block used `sys^w`'s FLAT
+         single `ws`; our macro layer is a TWO-level `𝒟(sys^w)` witness whose moves are
+         `PMF (PMF State)` — the arrival inner-recursion / telescoping must be RE-DERIVED for the
+         `innerWitness`-segment structure. ~300-500 lines; the campaign's crux.
+  F5g-2  `flatSched.haltMass μ e = reachArrHalt e` (L-halt). Template `probOf_eq_reachArr` +
+         none-branch of `expandMass`. ~80 lines. Consumes F5g-1.
+  F5g-3  `∑' e haltMass = 1` (via `macroHalted_iSup_eq_one`) and pushforward `= (Ν.bind id) s`
+         (via `macroHalt_bind_id_eq_iSup` + L-strata reindexing). ~100 lines.
+  F5g-4  `weakTau_flatten` wiring: `refine ⟨flatSched …, F5g-3.a, F5g-3.b⟩`, replacing the
+         `dSched` wiring at `:4291`. ~10 lines.
+
+**(5) cylP STATUS.** `cylP`/`cylMono`/`cylP_super`/`twDenom_super_step` are NOT on the transplant
+critical path: `flatSched` realizes the witness via `reachArr` fidelity, not via the cylinder
+LIMIT. They are retained as the QUANTITATIVE BACKBONE — the depth-`n` truncation limits
+(`twDenom` mono/super) are the same monotone-convergence facts L-strata will reuse when reindexing
+`reachArrHalt` to `⨆ n macroHaltDepth`, and `macroHalt_bind_id_eq_iSup` is ALREADY the `⨆`-strata
+form F5g-3 consumes. So: keep `cylP` as the reference for the super/mono estimates; the cylinder
+MEASURE `cylP` itself is obsoleted for the main wiring (superseded by `reachArr`).
+
+Honest ranking: if F5g-1 cannot re-derive the arrival inner-recursion for the two-level composite
+(fidelity genuinely needing `sys^w`'s flat single-scheduler telescoping), the ONLY alternative is
+the `dSched` analytic route via `probOf_beliefMass` — but that is the SAME telescoping obstruction
+un-proven, so it is weaker, not independent. No scheduler-free route survives (B). -/
+
 /- (frontier note continues) -/
 /-! ### σ\* limit-witness frontier — (assessment continues below)
 
