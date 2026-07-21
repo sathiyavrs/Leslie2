@@ -3555,6 +3555,27 @@ theorem cylMono (S : WeakScheduler (𝒟(sys^w))) (n : ℕ)
         (Stream'.Seq.terminates_ofList _)) _
   · rw [dif_neg he, dif_neg he]
 
+/-- **`cylP_super` — cylinder super-martingale step.** The cylinder limit masses of the
+one-step extensions of `e` sum to at most the cylinder limit mass of `e`. The `∑'`/`⨆`
+interchange (`tsum_iSup_of_monotone`, powered by `cylMono`) reduces it to the per-depth
+`twDenom_super_step`. This is the key layer-1 inequality for the F5d σ\* construction. -/
+theorem cylP_super (S : WeakScheduler (𝒟(sys^w)))
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates) (e : AlterSeq State Label)
+    (he : e.trans.Terminates) :
+    (∑' t : Label × State, cylP S E hT ⟨e.init, e.trans.append (Seq.cons t Seq.nil)⟩)
+      ≤ cylP S E hT e := by
+  classical
+  have hmono : ∀ t : Label × State,
+      Monotone (fun n => twDenom S n E hT ⟨e.init, e.trans.append (Seq.cons t Seq.nil)⟩) :=
+    fun t => monotone_nat_of_le_succ
+      (fun n => cylMono S n E hT ⟨e.init, e.trans.append (Seq.cons t Seq.nil)⟩)
+  calc (∑' t : Label × State, cylP S E hT ⟨e.init, e.trans.append (Seq.cons t Seq.nil)⟩)
+      = ⨆ n, ∑' t : Label × State,
+          twDenom S n E hT ⟨e.init, e.trans.append (Seq.cons t Seq.nil)⟩ :=
+        tsum_iSup_of_monotone _ hmono
+    _ ≤ ⨆ n, twDenom S n E hT e := iSup_mono (fun n => twDenom_super_step S n E hT e he)
+    _ = cylP S E hT e := rfl
+
 /-! ### σ\* limit-witness frontier — paper assessment (both routes vs. the current stack)
 
 Goal: a single `σ* : WeakScheduler sys`, a.s.-halting from `μ`, with pushforward
@@ -3634,6 +3655,20 @@ reasons; numerator exposure is necessary scaffolding but insufficient.
   construction, not a wiring step. VERDICT: dead — same root cause as Routes A/B/mixture. -/
 
 /-! ### F5b addendum — `cylMono` is TRUE (route validated); note (ii) refined
+
+F5c UPDATE — LANDED (axiom-clean `[propext, Classical.choice, Quot.sound]`). The 4-step route
+below went through verbatim. `cylMono` and `cylP_super` are proven above. Helper stack (all
+private except the two public targets): `probOf_source_split` (step 2, by `reverseRecOn`, kernel
+source-independent so `rfl` bridges the two `pe`s), `bindWeight_mono`/`bind_probOf_mono` (step 3,
+`Scheduler.reach` + init-split; `⟨pure s₀,·⟩` with `e.init ≠ s₀` gives `0` via `probOf_le_init`),
+`contC_probOf_mono` (step 4, `beliefSched_probOf` → `bDenom` termwise), `stop_probOf_le` (base
+`n=0`: `stop.kernel = 0` ⇒ `0` on non-empty, agree on nil), `twDenom_pure_mono` (the induction;
+`towerDataC (m+1)` unfolds via `simp only [towerDataC, towerStepC]`, NOT `rfl` — WF recursion).
+NOTE deviation: the induction runs at a GENERAL Dirac source `pure s₀` over ALL `(E, s₀, e)`
+(`twDenom_pure_mono`), and the ambient-source `twDenom` factor `(E.endState hT)(e.init)` is peeled
+ONCE at the top of `cylMono` via `probOf_source_split` + `mul_le_mul_left'` — cleaner than
+factoring per-step. `cylP_super` = `tsum_iSup_of_monotone _ (monotone from cylMono)` then
+`iSup_mono twDenom_super_step`.
 
 CORRECTION to Route-A verdict (ii): the object that is non-monotone in `n` is `twNum e none`
 (the FORCE-HALT-at-`e` mass) and the normalized posterior `next e` — NOT the cylinder REACH
