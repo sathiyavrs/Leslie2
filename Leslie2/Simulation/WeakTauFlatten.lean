@@ -5000,24 +5000,23 @@ prefix extended by `(l, s')` is consistent with the `snoc`-extended history iff 
 original config is consistent with the original history (append cancels via
 `segTrans_append` + `append_singleton_inj_left`). -/
 private theorem dConsistent_snoc_iff (e : {q : AlterSeq State Label // q.trans.Terminates})
-    (l : Label) (s' : State) (c : DConfig State Label) :
-    dConsistent (snocT e l s').1
-        ⟨c.segs, (snocT ⟨c.cur, c.curT⟩ l s').1, (snocT ⟨c.cur, c.curT⟩ l s').2⟩
-      ↔ dConsistent e.1 c := by
-  have hAterm : (segTrans c.segs c.cur.trans).Terminates :=
-    segTrans_terminates c.segs c.cur.trans c.curT
+    (l : Label) (s' : State) (segs : List (FlatSeg State Label))
+    (cur : {q : AlterSeq State Label // q.trans.Terminates}) :
+    dConsistent (snocT e l s').1 ⟨segs, (snocT cur l s').1, (snocT cur l s').2⟩
+      ↔ dConsistent e.1 ⟨segs, cur.1, cur.2⟩ := by
+  have hAterm : (segTrans segs cur.1.trans).Terminates :=
+    segTrans_terminates segs cur.1.trans cur.2
   unfold dConsistent
   constructor
   · rintro ⟨h1, h2, h3⟩
     refine ⟨h1, ?_, h3⟩
-    rw [show (⟨c.segs, (snocT ⟨c.cur, c.curT⟩ l s').1, (snocT ⟨c.cur, c.curT⟩ l s').2⟩
-          : DConfig State Label).cur.trans
-        = c.cur.trans.append (Stream'.Seq.cons (l, s') Stream'.Seq.nil) from rfl,
+    rw [show (⟨segs, (snocT cur l s').1, (snocT cur l s').2⟩ : DConfig State Label).cur.trans
+        = cur.1.trans.append (Stream'.Seq.cons (l, s') Stream'.Seq.nil) from rfl,
       segTrans_append] at h2
     exact Stream'.Seq.append_singleton_inj_left _ _ hAterm e.2 (l, s') (l, s') h2
   · rintro ⟨h1, h2, h3⟩
     refine ⟨h1, ?_, h3⟩
-    show segTrans c.segs (c.cur.trans.append (Stream'.Seq.cons (l, s') Stream'.Seq.nil))
+    show segTrans segs (cur.1.trans.append (Stream'.Seq.cons (l, s') Stream'.Seq.nil))
       = e.1.trans.append (Stream'.Seq.cons (l, s') Stream'.Seq.nil)
     rw [segTrans_append, h2]
 
@@ -5059,6 +5058,45 @@ private theorem genW_landKer (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
   rw [← ENNReal.tsum_mul_left]
   refine tsum_congr (fun ν => ?_)
   ring
+
+/-- Appending a fixed final step is injective on terminating prefixes. -/
+private theorem snocT_injective (l : Label) (s' : State) :
+    Function.Injective
+      (fun cur : {q : AlterSeq State Label // q.trans.Terminates} => snocT cur l s') := by
+  rintro ⟨⟨ai, at'⟩, aT⟩ ⟨⟨bi, bt'⟩, bT⟩ h
+  have h1 : (⟨ai, at'.append (Stream'.Seq.cons (l, s') Stream'.Seq.nil)⟩ : AlterSeq State Label)
+      = ⟨bi, bt'.append (Stream'.Seq.cons (l, s') Stream'.Seq.nil)⟩ := congrArg Subtype.val h
+  have hi : ai = bi := congrArg AlterSeq.init h1
+  have ht : at' = bt' :=
+    Stream'.Seq.append_singleton_inj_left _ _ aT bT _ _ (congrArg AlterSeq.trans h1)
+  subst hi; subst ht; rfl
+
+open Classical in
+/-- A nonempty current prefix consistent with a `snoc`-history must itself end in
+the appended step, hence lies in the range of the `snoc` map. -/
+private theorem dcon_snoc_mem_range (e : {q : AlterSeq State Label // q.trans.Terminates})
+    (l : Label) (s' : State) (segs : List (FlatSeg State Label))
+    (cur : {q : AlterSeq State Label // q.trans.Terminates})
+    (hnil : cur.1.trans ≠ Stream'.Seq.nil)
+    (hdc : dConsistent (snocT e l s').1 ⟨segs, cur.1, cur.2⟩) :
+    cur ∈ Set.range (fun cur' : {q : AlterSeq State Label // q.trans.Terminates} =>
+      snocT cur' l s') := by
+  have hne : cur.1.trans.toList cur.2 ≠ [] := by
+    intro h0
+    exact hnil (by rw [← Stream'.Seq.ofList_toList cur.1.trans cur.2, h0, Stream'.Seq.ofList_nil])
+  obtain ⟨prev, lastEl, hprevT, hsplit, -, -⟩ :=
+    Stream'.Seq.exists_split_last cur.1.trans cur.2 hne
+  have h2 : segTrans segs cur.1.trans
+      = e.1.trans.append (Stream'.Seq.cons (l, s') Stream'.Seq.nil) := hdc.2.1
+  rw [hsplit, segTrans_append] at h2
+  have hlast : lastEl = (l, s') :=
+    Stream'.Seq.append_singleton_inj_right _ _
+      (segTrans_terminates segs prev hprevT) e.2 _ _ h2
+  refine ⟨⟨⟨cur.1.init, prev⟩, hprevT⟩, ?_⟩
+  apply Subtype.ext
+  show (⟨cur.1.init, prev.append (Stream'.Seq.cons (l, s') Stream'.Seq.nil)⟩ : AlterSeq State Label)
+    = cur.1
+  rw [← hlast, ← hsplit]
 
 /-- The mass function of `flatSched` at observed history `e`: a proper step
 `some (l,ν)` gets the posterior `reachDepM / reachArrM`; the halt label `⊥` takes
