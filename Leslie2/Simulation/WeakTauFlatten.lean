@@ -3250,6 +3250,42 @@ theorem macroHalted_le_one (S : WeakScheduler (𝒟(sys^w))) (n : ℕ)
     _ = macroFuture_trunc S n E hT s := (macroFuture_trunc_decompose S n E hT s).symm
     _ ≤ 1 := (macroFuture_trunc S n E hT).coe_le_one s
 
+/-! ### v5 Layer 1 — the cylinder mass `cylP` (the monotone cylinder limit)
+
+For a fixed observable history `e`, the composite path measure `twDenom S n E hT e = probOf_n(e)`
+is monotone non-decreasing in the tower depth `n` (paper verdict F5a): deepening the tower
+only lets the `oneDecisionC`-halt-then-continue branch realize deeper cylinders (adding reach
+mass), while already-reachable cylinders keep their (`n`-independent) belief weight — the
+`beliefSched_probOf` normalizers cancel pointwise, so `probOf e = bDenom e` is an *unnormalized*
+config-sum. `cylP e := ⨆ n, twDenom S n E hT e` is the resulting cylinder limit. -/
+
+/-- **Cylinder mass at history `e`** for the depth-`n` concrete tower rooted at `(E, hT)`:
+the `⨆ n` of the composite path measure `twDenom S n E hT e = probOf_n(e)`. Layer 1 of the
+v5 cylinder-ratio scheduler. -/
+noncomputable def cylP (S : WeakScheduler (𝒟(sys^w)))
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates) (e : AlterSeq State Label) :
+    ENNReal :=
+  ⨆ n, twDenom S n E hT e
+
+/-- `cylP ≤ 1` (uniform `twDenom_le_one` under the `⨆`). -/
+theorem cylP_le_one (S : WeakScheduler (𝒟(sys^w)))
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates) (e : AlterSeq State Label) :
+    cylP S E hT e ≤ 1 :=
+  iSup_le (fun n => twDenom_le_one S n E hT e)
+
+/-- **Base value (telescope root).** At the empty concrete history `⟨s₀, nil⟩` the tower path
+measure is the source mass `(E.endState hT) s₀`, `n`-independent, so `cylP = (E.endState hT) s₀`. -/
+theorem cylP_root (S : WeakScheduler (𝒟(sys^w)))
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates) (s₀ : State) :
+    cylP S E hT ⟨s₀, Seq.nil⟩ = (E.endState hT) s₀ := by
+  have hconst : ∀ n, twDenom S n E hT ⟨s₀, Seq.nil⟩ = (E.endState hT) s₀ := by
+    intro n
+    unfold twDenom
+    rw [dif_pos Stream'.Seq.terminates_nil]
+    simp only [ProbabilisticExecution.probOf_nil, ProbabilisticExecution.init_eq_initState]
+  unfold cylP
+  simp only [hconst, iSup_const]
+
 /-! ### σ\* limit-witness frontier — paper assessment (both routes vs. the current stack)
 
 Goal: a single `σ* : WeakScheduler sys`, a.s.-halting from `μ`, with pushforward
@@ -3260,23 +3296,83 @@ Both are `[propext, Classical.choice, Quot.sound]`. Since `Ν.bind id` and any a
 `σ*`-pushforward are both PMFs (total `1`), the squeeze collapses `≥` to `=`: it SUFFICES to
 exhibit `σ*` a.s.-halting whose pushforward dominates `⨆ n, ∑ k<n, macroHaltDepth` pointwise.
 
-* **Route A (monotone limit of tower numerators): BLOCKED on the current tower.** `towerSched`
-  is built from `oneDecision := (weakTau_macroFuture_trunc S 1 E hT).witnessScheduler` and the
-  per-branch `(H t).witnessScheduler` — i.e. `Classical.choose` schedulers with OPAQUE `next`.
-  So `towerSched S n |>.next e` has no exposed numerator to take `⨆ n` of; the "numerators
-  monotone in `n`" step has nothing to bite on. Reviving Route A needs a CONCRETE-numerator
-  re-build of `oneDecision`/`towerStep` (an explicit `innerWitness`-mixture scheduler, the
-  belief-scheduler line), not the classical tower — a large construction, not a wiring step.
-* **Route B (diagonal `σ*.next e := towerSched S (|e|+1) root |>.next e`): BLOCKED.** One macro
-  STALL (inner witness with an empty run) consumes a macro-depth but 0 sys-steps, so `|e|` does
-  not bound macro-depth; the tower `next` at a fixed `e` does not stabilize and the diagonal is
-  not measure-correct (the recorded "stall-hidden-depth" failure).
-* **Old dSched route:** blocked on the unlanded `probOf_beliefMass` (audit at `d_integrate_step`).
+The classical-tower verdicts below are now SUPERSEDED by the concrete-tower assessment
+(`towerSchedC`, numerator-exposed). Both routes remain BLOCKED, now for sharper, recorded
+reasons; numerator exposure is necessary scaffolding but insufficient.
 
-Net: the last `sorry` is not dischargeable by wiring the current landed artifacts; it needs a
-concrete limit scheduler (a numerator-exposed tower, or a new `WeakScheduler` limit combinator)
-whose pushforward realizes the `⨆ n` above. The target identity and its mass-`1` companion are
-landed and axiom-clean; the construction is the open frontier. -/
+* **Route A (monotone limit of tower numerators) — CONCRETE-TOWER VERDICT: BLOCKED.**
+  `towerSchedC` removes the old "opaque `next`" objection: `twNum`/`twDenom` and the
+  pointwise `beliefSched_probOf` (`probOf e = bDenom e = ∑' x, wt x · bBranchProb x e`)
+  expose every layer. Numerator exposure still does NOT enable `⨆ n`, for two independent
+  reasons.
+    (i) STALLS PERSIST. The move-branch `odFam (some (_, ω)) = innerWitness sys (E.end) ω`
+        can halt on an EMPTY run (`iwHaltMass > 0`, the `stallPart`/`stallSum` object), so a
+        macro-`some` step appends 0 sys-transitions. Hence the observed history `e` does NOT
+        determine the hidden macro-config (its stall-depth is unbounded at fixed `e`), and
+        `(towerSchedC S n E hT).next e` does NOT stabilize in `n`: a deeper tower routes
+        extra stall-paths through the SAME `e`.
+    (ii) PER-HISTORY MASS IS NON-MONOTONE (F4s). `twNum`/`twDenom` at fixed `(e, o)` are not
+        monotone in `n` (deeper towers reroute mass from forced-halt-at-`e` to continue-past-
+        `e`), so no monotone `⨆`/limit of the belief `next e` exists to take; `twNum/twDenom`
+        neither stabilizes nor converges monotonically.
+  The ONLY monotone object is the END-STATE spine `macroHalted` (`macroHalted_mono`), which
+  lives at the whole-scheduler PUSHFORWARD level — `towerSchedC_integrate` realizes
+  `macroFuture_trunc S n = macroHalted + macroResidual` — NOT at the per-history `next` a
+  scheduler definition needs. `⨆ n, macroHalted S n = Ν.bind id` is the pinned target
+  (`macroHalt_bind_id_eq_iSup`), but there is no `next`-limit realizing it.
+* **Route B (diagonal `σ*.next e := towerSchedC S (|e|+1) root |>.next e`) — CONCRETE-TOWER
+  VERDICT: BLOCKED.** Stepwise consistency `next_{|e|+1}(e) = next_{|e|+2}(e)` FAILS by (i):
+  the extra macro-layer of depth `|e|+2` feeds stall-paths into the same `e`. The diagonal's
+  `probOf e` is a product over prefixes `eⱼ` each using a DIFFERENT tower depth `|eⱼ|+1`;
+  `beliefSched_probOf` shapes each factor as a `bDenom`, but consecutive factors belong to
+  distinct schedulers and telescope into no single `probOf` — not measure-correct, the
+  recorded stall-hidden-depth failure, unchanged by concreteness.
+* **Domination-inequality reframing (only `pushforward(σ*) ≥ ⨆ n macroHalted` needed) — does
+  NOT dodge the construction.** The honest never-truncating belief process pushes forward to
+  exactly `∑ k macroHaltDepth = Ν.bind id`, so it would dominate; but STATING its pushforward
+  still requires DEFINING `σ*`, whose `next` is the belief posterior over the INFINITE hidden-
+  config (all stall-depths) space — precisely the missing `next`-limit. A convex mixture
+  `beliefSched {towerSchedC S n} wt` pushes forward to `∑ n wt n · macroFuture_trunc S n`,
+  which averages BELOW the sup (residual noise), so it fails to dominate. No fixed finite or
+  mixture candidate on the current stack dominates.
+* **Old dSched route:** blocked on the unlanded `probOf_beliefMass` (audit at `d_integrate_step`).
+* **Domination on `dSched` (sub-family lower bound, no normalizer cancellation) — REFUTED
+  (crux killed by the normalizer sign).** Plan: bound the pushforward `P s := ∑' e,
+  dSched.haltMass e · [end e = s]` below by the raw macro×inner config joint masses
+  (= `∑ k macroHaltDepth = Ν.bind id`), then squeeze against `∑' s P s ≤ 1` (Kraft,
+  `haltMass_tsum_le_one`) to force `P = Ν.bind id`. The chain is
+  `haltMass e = probOf e · next e none`, `probOf e = ∏ⱼ next eⱼ stepⱼ`, and each
+  `next e o = dNum/dDenom ≥ single-config-summand / dDenom`, so
+  `haltMass e ≥ RawMass(τ) / ∏ⱼ dDenom(eⱼ)` per coherent config-trajectory `τ`. Reaching
+  `≥ RawMass(τ)` (needed for the strata) requires `∏ⱼ dDenom(eⱼ) ≤ 1`, i.e. `dDenom ≤ 1`
+  pointwise. **This FAILS for v3 `dSched`.** `dDenom` is a belief-mass sum over ALL nonempty
+  segmentations of `e` (`dDenom_eq_moveTot`/`dDenom_eq_dW`), and `dW_le` bounds it only by
+  `|e|+1`, NOT `1`; it genuinely exceeds `1` (≈`|e|` disjoint segmentation "explanations",
+  each up to `moveTot ≤ 1`, ADD). There is no `dDenom ≤ 1` lemma and none is provable — the
+  `≤ 1` normalizers in the file are all SINGLE-layer/tower objects (`odDenom_le_one`,
+  `bDenom_le_one`, `twDenom_le_one`), never the multi-segmentation belief sum. With
+  `dDenom > 1`, dividing DEFLATES: `next e o < single-summand`, `∏ⱼ dDenom(eⱼ)` grows with
+  `|τ|`, and `RawMass/∏dDenom → 0` relative to `RawMass`. The normalizers HURT, not help
+  (the hoped-for "positivity makes sub-family sums lower bounds with no cancellation" is real,
+  but the cancellation it dodges is replaced by an ever-growing `∏dDenom` denominator that is
+  strictly worse). No per-state `condDepthG` variant is reached — the crux dies before strata.
+  Tower fallback (`twDenom ≤ 1` IS landed) does NOT rescue it: `towerSchedC` is a DIFFERENT
+  scheduler per `n` (its `next` ≠ `dSched.next`; larger `dDenom` makes `dSched.haltMass`
+  potentially SMALLER than tower raw masses — domination points the wrong way), and its
+  pushforward `macroFuture_trunc n = macroHalted n + macroResidual n` carries non-vanishing
+  force-halt residual junk (Route A, already blocked: no monotone `next`-limit). No landed
+  handle relates `dSched.haltMass` to tower raw masses; building one is the missing large
+  construction, not a wiring step. VERDICT: dead — same root cause as Routes A/B/mixture. -/
+/- (frontier note continues) -/
+/-! ### σ\* limit-witness frontier — (assessment continues below)
+
+Net (concrete-tower confirmation): the last `sorry` needs a genuine `WeakScheduler`-LIMIT
+combinator, or an honest corecursive belief scheduler over the infinite hidden-config space
+with a convergence proof for its belief posteriors — a large new construction, not a wiring
+step. The numerator-exposed tower (`towerSchedC`, `beliefSched_probOf`, `twNum`/`twDenom`) is
+necessary scaffolding that exposes the layers whose LIMIT is the open frontier. The target
+`Ν.bind id = ⨆ n macroHalted` and its mass-`1` companion (`macroHalted_iSup_eq_one`) remain
+landed and axiom-clean. -/
 
 /-- **V1 — the one-step integrate recursion (rooted).** Integrating `g` against
 the composite's halting end-states unfolds one macro level: either the macro
