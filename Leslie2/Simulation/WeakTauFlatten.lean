@@ -4899,4 +4899,34 @@ theorem reachDepM_sum_le (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
       · simp [hdc, hcnil, reachM]
     · simp [hdc]
 
+/-- The mass function of `flatSched` at observed history `e`: a proper step
+`some (l,ν)` gets the posterior `reachDepM / reachArrM`; the halt label `⊥` takes
+the remaining (halt-or-diverge) mass. Mirrors `expandMass`. -/
+noncomputable def flatMass (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (E : AlterSeq (PMF State) Label)
+    (e : {q : AlterSeq State Label // q.trans.Terminates}) :
+    Option (Label × PMF State) → ENNReal
+  | some (l, ν) => reachDepM S μ0 E e l ν / reachArrM S μ0 E e
+  | none => 1 - ∑' p : Label × PMF State, reachDepM S μ0 E e p.1 p.2 / reachArrM S μ0 E e
+
+/-- `flatMass` is a probability distribution: the proper-step masses sum to `≤ 1`
+(departures ⊆ arrivals, `reachDepM_sum_le`), so `⊥` gets a well-defined remainder
+and the total is `1`. Mirrors `expandMass_hasSum`. -/
+theorem flatMass_hasSum (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (E : AlterSeq (PMF State) Label)
+    (e : {q : AlterSeq State Label // q.trans.Terminates}) :
+    HasSum (flatMass S μ0 E e) 1 := by
+  rw [ENNReal.summable.hasSum_iff, tsumOpt (flatMass S μ0 E e)]
+  have hsome : ∀ p : Label × PMF State,
+      flatMass S μ0 E e (some p) = reachDepM S μ0 E e p.1 p.2 / reachArrM S μ0 E e := by
+    rintro ⟨l, ν⟩; rfl
+  have hnone : flatMass S μ0 E e none
+      = 1 - ∑' p : Label × PMF State, reachDepM S μ0 E e p.1 p.2 / reachArrM S μ0 E e := rfl
+  rw [tsum_congr hsome, hnone]
+  apply tsub_add_cancel_of_le
+  rw [show (∑' p : Label × PMF State, reachDepM S μ0 E e p.1 p.2 / reachArrM S μ0 E e)
+        = (∑' p : Label × PMF State, reachDepM S μ0 E e p.1 p.2) / reachArrM S μ0 E e from by
+      simp_rw [div_eq_mul_inv]; rw [ENNReal.tsum_mul_right]]
+  exact ENNReal.div_le_of_le_mul (by rw [one_mul]; exact reachDepM_sum_le S μ0 E e)
+
 end PLTS
