@@ -4713,4 +4713,121 @@ private theorem depMove_le_init (S : WeakScheduler (𝒟(sys^w))) (s : PMF State
     _ ≤ 1 * s cur.1.init := by gcongr; exact macroSome_le_one S Ec
     _ = s cur.1.init := one_mul _
 
+open Classical in
+/-- `genW` at an empty history is just its base kernel (no segment can be peeled). -/
+private theorem genW_nil
+    (k : PMF State → AlterSeq (PMF State) Label →
+      {q : AlterSeq State Label // q.trans.Terminates} → ENNReal)
+    (S : WeakScheduler (𝒟(sys^w))) (s : PMF State) (E : AlterSeq (PMF State) Label)
+    (e : {q : AlterSeq State Label // q.trans.Terminates}) (h : e.1.trans = Stream'.Seq.nil) :
+    genW k S s E e = k s E e := by
+  rw [genW_peel]
+  have hz : ∀ seg : FlatSeg State Label,
+      (if segPre e seg then (1 : ENNReal) else 0)
+        * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
+            * (innerWitness sys s seg.emit).haltMass s ⟨seg.run, seg.runT⟩)
+        * genW k S seg.succ (macroExtend E seg.succ) (dResidual e seg) = 0 := by
+    intro seg
+    have hns : ¬ segPre e seg := by
+      rintro ⟨_, happ, hne⟩
+      apply hne
+      have hT : (seg.run.trans.append
+          (e.1.trans.drop (seg.run.trans.length seg.runT))).Terminates := by rw [happ]; exact e.2
+      have hsum : seg.run.trans.length seg.runT
+          + (e.1.trans.drop (seg.run.trans.length seg.runT)).length
+              (WeakScheduler.drop_terminates e.2 _) = 0 := by
+        rw [← length_append_seq seg.run.trans _ seg.runT
+              (WeakScheduler.drop_terminates e.2 _) hT,
+          length_congr _ e.1.trans hT e.2 happ, Stream'.Seq.length_eq_zero.mpr h]
+      exact Stream'.Seq.length_eq_zero.mp (by omega)
+    rw [if_neg hns, zero_mul, zero_mul]
+  rw [tsum_congr hz, tsum_zero, add_zero]
+
+open Classical in
+/-- **Departures ⊆ arrivals (config-sum form).** For a nonempty observed history,
+the total departure config-sum is at most the arrival config-sum (current run
+nonempty): the fresh-reset departures are absorbed by the arrival halt-reach
+(`boundaryHalt_le`), and continuing departures fall to the induction hypothesis on
+the strictly shorter residual history. -/
+private theorem genDep_le_genArr (S : WeakScheduler (𝒟(sys^w))) :
+    ∀ (n : ℕ) (src : PMF State) (E : AlterSeq (PMF State) Label)
+      (e : {q : AlterSeq State Label // q.trans.Terminates}),
+      e.1.trans ≠ Stream'.Seq.nil → e.1.trans.length e.2 = n →
+      genW (fun s Ec c => depMove S s Ec c) S src E e
+        ≤ genW (fun s Ec c => if c.1.trans ≠ Stream'.Seq.nil then curReach S s Ec c else 0)
+            S src E e := by
+  intro n
+  induction n using Nat.strongRecOn with
+  | ind n IH =>
+    intro src E e hne he
+    rw [genW_peel (fun s Ec c => depMove S s Ec c) S src E e,
+      genW_peel (fun s Ec c => if c.1.trans ≠ Stream'.Seq.nil then curReach S s Ec c else 0)
+        S src E e]
+    rw [if_pos hne, curReach_split S src E e, add_assoc]
+    refine add_le_add le_rfl ?_
+    calc (∑' seg : FlatSeg State Label,
+            (if segPre e seg then (1 : ENNReal) else 0)
+              * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
+                  * (innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩)
+              * genW (fun s Ec c => depMove S s Ec c) S seg.succ (macroExtend E seg.succ)
+                  (dResidual e seg))
+        ≤ ∑' seg : FlatSeg State Label,
+            ((if segPre e seg then (1 : ENNReal) else 0)
+                * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
+                    * (innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩)
+                * genW (fun s Ec c => if c.1.trans ≠ Stream'.Seq.nil then curReach S s Ec c else 0)
+                    S seg.succ (macroExtend E seg.succ) (dResidual e seg)
+              + (if segPre e seg ∧ (dResidual e seg).1.trans = Stream'.Seq.nil
+                    then (1 : ENNReal) else 0)
+                  * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
+                      * (innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩)
+                  * seg.succ (seg.run.endState seg.runT)) := by
+          refine ENNReal.tsum_le_tsum (fun seg => ?_)
+          by_cases hsp : segPre e seg
+          · simp only [if_pos hsp, one_mul]
+            by_cases hrn : (dResidual e seg).1.trans = Stream'.Seq.nil
+            · rw [if_pos ⟨hsp, hrn⟩, one_mul,
+                genW_nil (fun s Ec c => if c.1.trans ≠ Stream'.Seq.nil then curReach S s Ec c else 0)
+                  S seg.succ (macroExtend E seg.succ) (dResidual e seg) hrn]
+              simp only [hrn, ne_eq, not_true_eq_false, if_false, mul_zero, zero_add]
+              rw [genW_nil (fun s Ec c => depMove S s Ec c) S seg.succ (macroExtend E seg.succ)
+                (dResidual e seg) hrn]
+              gcongr
+              exact depMove_le_init S seg.succ (macroExtend E seg.succ) (dResidual e seg)
+            · rw [if_neg (fun h => hrn h.2), zero_mul, zero_mul, add_zero]
+              have hlt : (dResidual e seg).1.trans.length (dResidual e seg).2 < n := by
+                have hkpos : 1 ≤ seg.run.trans.length seg.runT :=
+                  Nat.one_le_iff_ne_zero.mpr (fun h0 => hsp.2.2 (Stream'.Seq.length_eq_zero.mp h0))
+                have hdefeq : (dResidual e seg).1.trans.length (dResidual e seg).2
+                    = (e.1.trans.drop (seg.run.trans.length seg.runT)).length
+                        (WeakScheduler.drop_terminates e.2 _) := rfl
+                rw [hdefeq]
+                have hlen : e.1.trans.length e.2 = seg.run.trans.length seg.runT
+                    + (e.1.trans.drop (seg.run.trans.length seg.runT)).length
+                        (WeakScheduler.drop_terminates e.2 _) := by
+                  rw [← length_append_seq seg.run.trans
+                      (e.1.trans.drop (seg.run.trans.length seg.runT)) seg.runT
+                      (WeakScheduler.drop_terminates e.2 _) (by rw [hsp.2.1]; exact e.2)]
+                  exact length_congr _ _ e.2 _ hsp.2.1.symm
+                omega
+              gcongr
+              exact IH _ hlt seg.succ (macroExtend E seg.succ) (dResidual e seg) hrn rfl
+          · rw [if_neg hsp, zero_mul, zero_mul]
+            positivity
+      _ = (∑' seg : FlatSeg State Label,
+            (if segPre e seg then (1 : ENNReal) else 0)
+              * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
+                  * (innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩)
+              * genW (fun s Ec c => if c.1.trans ≠ Stream'.Seq.nil then curReach S s Ec c else 0)
+                  S seg.succ (macroExtend E seg.succ) (dResidual e seg))
+          + ∑' seg : FlatSeg State Label,
+            (if segPre e seg ∧ (dResidual e seg).1.trans = Stream'.Seq.nil then (1 : ENNReal) else 0)
+              * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
+                  * (innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩)
+              * seg.succ (seg.run.endState seg.runT) := ENNReal.tsum_add
+      _ ≤ _ := by
+          rw [add_comm (haltReach S src E e)]
+          gcongr
+          exact boundaryHalt_le S src E e
+
 end PLTS
