@@ -4929,4 +4929,88 @@ theorem flatMass_hasSum (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
       simp_rw [div_eq_mul_inv]; rw [ENNReal.tsum_mul_right]]
   exact ENNReal.div_le_of_le_mul (by rw [one_mul]; exact reachDepM_sum_le S μ0 E e)
 
+open Classical in
+/-- **The honest reach-arrival flattening scheduler.** At each observed history the
+posterior over the next inner draw is `reachDepM / reachArrM` (halt takes the
+remainder). `valid`/`internal_only` delegate to the departure config's inner
+witness `innerWitness`, exactly as `dSched` does. -/
+noncomputable def flatSched (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (E : AlterSeq (PMF State) Label) : WeakScheduler sys where
+  next e := if hT : e.trans.Terminates then
+      ⟨flatMass S μ0 E ⟨e, hT⟩, flatMass_hasSum S μ0 E ⟨e, hT⟩⟩
+    else PMF.pure none
+  valid := by
+    classical
+    intro e n s hterm hstate l ν hsupp
+    by_cases hT : e.trans.Terminates
+    · rw [dif_pos hT, PMF.mem_support_iff] at hsupp
+      change flatMass S μ0 E ⟨e, hT⟩ (some (l, ν)) ≠ 0 at hsupp
+      have hgne : dNum S μ0 E ⟨e, hT⟩ (some (l, ν)) ≠ 0 := by
+        intro h0
+        apply hsupp
+        show reachDepM S μ0 E ⟨e, hT⟩ l ν / reachArrM S μ0 E ⟨e, hT⟩ = 0
+        rw [reachDepM, h0, ENNReal.zero_div]
+      rw [dNum] at hgne
+      obtain ⟨c, hc⟩ := not_forall.mp (mt ENNReal.tsum_eq_zero.mpr hgne)
+      have hguard : dConsistent e c := by
+        by_contra hcon
+        rw [if_neg hcon, zero_mul, zero_mul] at hc; exact hc rfl
+      have hmove : moveTerm S (segSrc μ0 c.segs) (segHist E c.segs) ⟨c.cur, c.curT⟩
+          (some (l, ν)) ≠ 0 := right_ne_zero_of_mul hc
+      simp only [moveTerm] at hmove
+      obtain ⟨ω, hω⟩ := not_forall.mp (mt ENNReal.tsum_eq_zero.mpr hmove)
+      have hnext : (innerWitness sys (segSrc μ0 c.segs) ω).next c.cur (some (l, ν)) ≠ 0 :=
+        right_ne_zero_of_mul hω
+      have hsend : s = e.endState hT := by
+        have hle1 : Nat.find hT ≤ n := Nat.find_le hterm
+        have hle2 : n ≤ Nat.find hT := by
+          by_contra hlt
+          push_neg at hlt
+          obtain ⟨m, hm⟩ : ∃ m, n = m + 1 := Nat.exists_eq_succ_of_ne_zero (by omega)
+          have hget : e.trans.get? m = none :=
+            Stream'.Seq.terminated_stable e.trans (by omega) (Nat.find_spec hT)
+          rw [hm] at hstate
+          change (e.trans.get? m).map Prod.snd = some s at hstate
+          rw [hget] at hstate; simp at hstate
+        have hn : n = Nat.find hT := le_antisymm hle2 hle1
+        rw [hn, AlterSeq.stateAt_find_eq_endState e hT] at hstate
+        exact (Option.some.inj hstate).symm
+      have heqe : (⟨e.init, segTrans c.segs c.cur.trans⟩ : AlterSeq State Label) = e := by
+        rw [hguard.2.1]
+      have hTeq' : (⟨e.init, segTrans c.segs c.cur.trans⟩ :
+          AlterSeq State Label).trans.Terminates := by rw [heqe]; exact hT
+      have hcend : e.endState hT = c.cur.endState c.curT := by
+        rw [← AlterSeq.endState_congr_pub heqe hTeq' hT]
+        exact chained_endState c.segs e.init ⟨c.cur, c.curT⟩ hTeq' hguard.2.2
+      have hstepIW := (innerWitness sys (segSrc μ0 c.segs) ω).valid c.cur
+        (Nat.find c.curT) (c.cur.endState c.curT) (Nat.find_spec c.curT)
+        (AlterSeq.stateAt_find_eq_endState c.cur c.curT) l ν
+        ((PMF.mem_support_iff _ _).mpr hnext)
+      rw [hsend, hcend]; exact hstepIW
+    · rw [dif_neg hT, PMF.mem_support_iff, PMF.pure_apply_of_ne _ _ (by simp)] at hsupp
+      exact absurd rfl hsupp
+  internal_only := by
+    classical
+    intro e l ν hsupp
+    by_cases hT : e.trans.Terminates
+    · rw [dif_pos hT, PMF.mem_support_iff] at hsupp
+      change flatMass S μ0 E ⟨e, hT⟩ (some (l, ν)) ≠ 0 at hsupp
+      have hgne : dNum S μ0 E ⟨e, hT⟩ (some (l, ν)) ≠ 0 := by
+        intro h0
+        apply hsupp
+        show reachDepM S μ0 E ⟨e, hT⟩ l ν / reachArrM S μ0 E ⟨e, hT⟩ = 0
+        rw [reachDepM, h0, ENNReal.zero_div]
+      rw [dNum] at hgne
+      obtain ⟨c, hc⟩ := not_forall.mp (mt ENNReal.tsum_eq_zero.mpr hgne)
+      have hmove : moveTerm S (segSrc μ0 c.segs) (segHist E c.segs) ⟨c.cur, c.curT⟩
+          (some (l, ν)) ≠ 0 := right_ne_zero_of_mul hc
+      simp only [moveTerm] at hmove
+      obtain ⟨ω, hω⟩ := not_forall.mp (mt ENNReal.tsum_eq_zero.mpr hmove)
+      have hnext : (innerWitness sys (segSrc μ0 c.segs) ω).next c.cur (some (l, ν)) ≠ 0 :=
+        right_ne_zero_of_mul hω
+      exact (innerWitness sys (segSrc μ0 c.segs) ω).internal_only c.cur l ν
+        ((PMF.mem_support_iff _ _).mpr hnext)
+    · rw [dif_neg hT, PMF.mem_support_iff, PMF.pure_apply_of_ne _ _ (by simp)] at hsupp
+      exact absurd rfl hsupp
+
 end PLTS
