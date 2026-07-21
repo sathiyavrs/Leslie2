@@ -4658,4 +4658,59 @@ private theorem boundaryHalt_le (S : WeakScheduler (𝒟(sys^w))) (src : PMF Sta
     _ = S.next E (some (Silent.τ, emit)) * (innerWitness sys src emit).haltMass src e := by
         rw [PMF.tsum_coe, mul_one]
 
+/-- The macro scheduler's proper-move mass is a sub-probability. -/
+private theorem macroSome_le_one (S : WeakScheduler (𝒟(sys^w)))
+    (Ec : AlterSeq (PMF State) Label) :
+    (∑' ω : PMF (PMF State), S.next Ec (some (Silent.τ, ω))) ≤ 1 := by
+  calc (∑' ω : PMF (PMF State), S.next Ec (some (Silent.τ, ω)))
+      ≤ ∑' p : Label × PMF (PMF State), S.next Ec (some p) :=
+        ENNReal.tsum_comp_le_tsum_of_injective
+          (fun a b h => congrArg Prod.snd h) (fun p => S.next Ec (some p))
+    _ ≤ ∑' o, S.next Ec o := by rw [tsumOpt]; exact le_add_self
+    _ = 1 := PMF.tsum_coe _
+
+/-- **`depMove` is bounded by the source mass at the current prefix's start.** The
+inner witnesses' proper-move totals and the macro `τ`-mass are sub-probabilities,
+and `probOf ≤ init`. Bounds the fresh-reset (empty-current) departures. -/
+private theorem depMove_le_init (S : WeakScheduler (𝒟(sys^w))) (s : PMF State)
+    (Ec : AlterSeq (PMF State) Label)
+    (cur : {q : AlterSeq State Label // q.trans.Terminates}) :
+    depMove S s Ec cur ≤ s cur.1.init := by
+  rw [depMove]
+  have hbound : ∀ ω : PMF (PMF State),
+      S.next Ec (some (Silent.τ, ω))
+          * (⟨s, (innerWitness sys s ω).toScheduler⟩ : ProbabilisticExecution sys).probOf cur.1 cur.2
+          * ∑' lν : Label × PMF State, (innerWitness sys s ω).next cur.1 (some lν)
+        ≤ S.next Ec (some (Silent.τ, ω)) * s cur.1.init := by
+    intro ω
+    have htail : (∑' lν : Label × PMF State, (innerWitness sys s ω).next cur.1 (some lν)) ≤ 1 := by
+      calc (∑' lν : Label × PMF State, (innerWitness sys s ω).next cur.1 (some lν))
+          ≤ (innerWitness sys s ω).next cur.1 none
+              + ∑' lν : Label × PMF State, (innerWitness sys s ω).next cur.1 (some lν) := le_add_self
+        _ = ∑' o, (innerWitness sys s ω).next cur.1 o :=
+            (tsumOpt (fun o => (innerWitness sys s ω).next cur.1 o)).symm
+        _ = 1 := PMF.tsum_coe _
+    calc S.next Ec (some (Silent.τ, ω))
+            * (⟨s, (innerWitness sys s ω).toScheduler⟩ : ProbabilisticExecution sys).probOf cur.1 cur.2
+            * ∑' lν : Label × PMF State, (innerWitness sys s ω).next cur.1 (some lν)
+        ≤ S.next Ec (some (Silent.τ, ω))
+            * (⟨s, (innerWitness sys s ω).toScheduler⟩ : ProbabilisticExecution sys).probOf cur.1 cur.2
+            * 1 := by gcongr
+      _ = S.next Ec (some (Silent.τ, ω))
+            * (⟨s, (innerWitness sys s ω).toScheduler⟩
+                : ProbabilisticExecution sys).probOf cur.1 cur.2 := mul_one _
+      _ ≤ S.next Ec (some (Silent.τ, ω)) * s cur.1.init := by
+          gcongr
+          exact ProbabilisticExecution.probOf_le_init _ _ _
+  calc (∑' ω : PMF (PMF State),
+          S.next Ec (some (Silent.τ, ω))
+            * (⟨s, (innerWitness sys s ω).toScheduler⟩ : ProbabilisticExecution sys).probOf cur.1 cur.2
+            * ∑' lν : Label × PMF State, (innerWitness sys s ω).next cur.1 (some lν))
+      ≤ ∑' ω : PMF (PMF State), S.next Ec (some (Silent.τ, ω)) * s cur.1.init :=
+        ENNReal.tsum_le_tsum hbound
+    _ = (∑' ω : PMF (PMF State), S.next Ec (some (Silent.τ, ω))) * s cur.1.init := by
+        rw [ENNReal.tsum_mul_right]
+    _ ≤ 1 * s cur.1.init := by gcongr; exact macroSome_le_one S Ec
+    _ = s cur.1.init := one_mul _
+
 end PLTS
