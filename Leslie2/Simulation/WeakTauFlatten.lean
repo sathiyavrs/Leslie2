@@ -4917,6 +4917,74 @@ theorem reachDepM_sum_le (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
       · simp [hdc, hcnil, reachM]
     · simp [hdc]
 
+/-- Append a single transition `(l, s')` at the end of a terminating prefix. -/
+private noncomputable def snocT (cur : {q : AlterSeq State Label // q.trans.Terminates})
+    (l : Label) (s' : State) : {q : AlterSeq State Label // q.trans.Terminates} :=
+  ⟨⟨cur.1.init, cur.1.trans.append (Stream'.Seq.cons (l, s') Stream'.Seq.nil)⟩,
+    ⟨_, Stream'.Seq.terminatedAt_append_find cur.2
+      (Nat.find_spec (Stream'.Seq.terminates_cons_iff.mpr Stream'.Seq.terminates_nil))⟩⟩
+
+/-- The current prefix of a `snocT` is nonempty (it ends in the appended step). -/
+private theorem snocT_trans_ne_nil (cur : {q : AlterSeq State Label // q.trans.Terminates})
+    (l : Label) (s' : State) : (snocT cur l s').1.trans ≠ Stream'.Seq.nil := by
+  show cur.1.trans.append (Stream'.Seq.cons (l, s') Stream'.Seq.nil) ≠ Stream'.Seq.nil
+  generalize cur.1.trans = t
+  apply Stream'.Seq.recOn t
+  · rw [Stream'.Seq.nil_append]; exact Stream'.Seq.cons_ne_nil
+  · intro x t'; rw [Stream'.Seq.cons_append]; exact Stream'.Seq.cons_ne_nil
+
+/-- `segTrans` distributes over a right `append`: the completed segments'
+concatenation is prepended, so appending after the current prefix commutes. -/
+private theorem segTrans_append (segs : List (FlatSeg State Label))
+    (X Y : Stream'.Seq (Label × State)) :
+    segTrans segs (X.append Y) = (segTrans segs X).append Y := by
+  induction segs with
+  | nil => rfl
+  | cons seg rest ih =>
+    show seg.run.trans.append (segTrans rest (X.append Y))
+      = (seg.run.trans.append (segTrans rest X)).append Y
+    rw [ih, Stream'.Seq.append_assoc]
+
+/-- **Landing identity (pointwise).** The current-run reach at a prefix extended
+by `(l, s')` equals the departure move mass at `(l, ν)` mixed against the drawn
+`ν`'s mass at `s'`. Uses `probOf_append_singleton` inside the inner witness. -/
+private theorem curReach_snoc (S : WeakScheduler (𝒟(sys^w))) (src : PMF State)
+    (Ec : AlterSeq (PMF State) Label)
+    (cur : {q : AlterSeq State Label // q.trans.Terminates}) (l : Label) (s' : State) :
+    curReach S src Ec (snocT cur l s')
+      = ∑' ν : PMF State, moveTerm S src Ec cur (some (l, ν)) * ν s' := by
+  have hkey : ∀ ω : PMF (PMF State),
+      (⟨src, (innerWitness sys src ω).toScheduler⟩ : ProbabilisticExecution sys).probOf
+          (snocT cur l s').1 (snocT cur l s').2
+        = (⟨src, (innerWitness sys src ω).toScheduler⟩ : ProbabilisticExecution sys).probOf
+              cur.1 cur.2
+          * ∑' ν : PMF State, (innerWitness sys src ω).next cur.1 (some (l, ν)) * ν s' := by
+    intro ω
+    rw [ProbabilisticExecution.probOf_congr _ (snocT cur l s').1
+        ⟨cur.1.init, cur.1.trans.append (Stream'.Seq.cons (l, s') Stream'.Seq.nil)⟩ rfl
+        (snocT cur l s').2 (snocT cur l s').2,
+      ProbabilisticExecution.probOf_append_singleton _ cur.1.init cur.1.trans cur.2 (l, s')
+        (snocT cur l s').2]
+    rfl
+  have hL : curReach S src Ec (snocT cur l s')
+      = ∑' ω : PMF (PMF State), S.next Ec (some (Silent.τ, ω))
+          * ((⟨src, (innerWitness sys src ω).toScheduler⟩ : ProbabilisticExecution sys).probOf
+                cur.1 cur.2
+            * ∑' ν : PMF State, (innerWitness sys src ω).next cur.1 (some (l, ν)) * ν s') := by
+    rw [curReach]; exact tsum_congr (fun ω => by rw [hkey ω])
+  rw [hL]
+  have e1 : ∀ ν : PMF State, moveTerm S src Ec cur (some (l, ν)) * ν s'
+      = ∑' ω : PMF (PMF State), S.next Ec (some (Silent.τ, ω))
+          * (⟨src, (innerWitness sys src ω).toScheduler⟩ : ProbabilisticExecution sys).probOf
+              cur.1 cur.2
+          * (innerWitness sys src ω).next cur.1 (some (l, ν)) * ν s' := by
+    intro ν; rw [moveTerm, ENNReal.tsum_mul_right]
+  rw [tsum_congr e1, ENNReal.tsum_comm]
+  refine tsum_congr (fun ω => ?_)
+  rw [← mul_assoc, ← ENNReal.tsum_mul_left]
+  refine tsum_congr (fun ν => ?_)
+  exact (mul_assoc _ _ _).symm
+
 /-- The mass function of `flatSched` at observed history `e`: a proper step
 `some (l,ν)` gets the posterior `reachDepM / reachArrM`; the halt label `⊥` takes
 the remaining (halt-or-diverge) mass. Mirrors `expandMass`. -/
