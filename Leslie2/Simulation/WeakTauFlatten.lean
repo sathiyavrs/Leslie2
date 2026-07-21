@@ -4581,4 +4581,81 @@ private theorem genW_peel
   rw [ENNReal.tsum_prod']
   exact tsum_congr (fun seg => genSeg k S src E e seg)
 
+open Classical in
+/-- **Boundary absorption.** The peeled head segments that reconstruct all of `e`
+(residual empty) contribute at most the arrival halt-reach at `e`: their macro
+successor mass sums against `emit` to `≤ 1`, and each such head's inner run halts
+exactly at `e`. -/
+private theorem boundaryHalt_le (S : WeakScheduler (𝒟(sys^w))) (src : PMF State)
+    (E : AlterSeq (PMF State) Label)
+    (e : {q : AlterSeq State Label // q.trans.Terminates}) :
+    (∑' seg : FlatSeg State Label,
+      (if segPre e seg ∧ (dResidual e seg).1.trans = Stream'.Seq.nil then (1 : ENNReal) else 0)
+        * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
+            * (innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩)
+        * seg.succ (seg.run.endState seg.runT))
+      ≤ haltReach S src E e := by
+  have hstep : (∑' seg : FlatSeg State Label,
+      (if segPre e seg ∧ (dResidual e seg).1.trans = Stream'.Seq.nil then (1 : ENNReal) else 0)
+        * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
+            * (innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩)
+        * seg.succ (seg.run.endState seg.runT))
+      ≤ ∑' seg : FlatSeg State Label,
+          (if seg.run = e.1 then (1 : ENNReal) else 0)
+            * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
+                * (innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩) := by
+    refine ENNReal.tsum_le_tsum (fun seg => ?_)
+    by_cases hP : segPre e seg ∧ (dResidual e seg).1.trans = Stream'.Seq.nil
+    · have hrun : seg.run = e.1 := by
+        obtain ⟨⟨hi, happ, _⟩, hnil⟩ := hP
+        have hd : e.1.trans.drop (seg.run.trans.length seg.runT) = Stream'.Seq.nil := hnil
+        rw [hd, Stream'.Seq.append_nil] at happ
+        calc seg.run = ⟨seg.run.init, seg.run.trans⟩ := rfl
+          _ = ⟨e.1.init, e.1.trans⟩ := by rw [hi, happ]
+          _ = e.1 := rfl
+      rw [if_pos hP, if_pos hrun]
+      simp only [one_mul]
+      exact mul_le_of_le_one_right' (PMF.coe_le_one _ _)
+    · rw [if_neg hP, zero_mul, zero_mul]
+      positivity
+  refine hstep.trans ?_
+  have hreindex : (∑' seg : FlatSeg State Label,
+      (if seg.run = e.1 then (1 : ENNReal) else 0)
+        * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
+            * (innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩))
+      = ∑' t : PMF (PMF State) × PMF State × {q : AlterSeq State Label // q.trans.Terminates},
+          (if t.2.2.1 = e.1 then (1 : ENNReal) else 0)
+            * (S.next E (some (Silent.τ, t.1)) * t.1 t.2.1
+                * (innerWitness sys src t.1).haltMass src t.2.2) :=
+    Equiv.tsum_eq flatSegEquiv (fun t => (if t.2.2.1 = e.1 then (1 : ENNReal) else 0)
+      * (S.next E (some (Silent.τ, t.1)) * t.1 t.2.1
+          * (innerWitness sys src t.1).haltMass src t.2.2))
+  rw [hreindex, ENNReal.tsum_prod']
+  have hunfold : haltReach S src E e
+      = ∑' emit : PMF (PMF State), S.next E (some (Silent.τ, emit))
+          * (innerWitness sys src emit).haltMass src e := by
+    rw [haltReach]
+    refine tsum_congr (fun ω => ?_)
+    unfold WeakScheduler.haltMass Scheduler.haltMass
+    rw [mul_assoc]
+  rw [hunfold]
+  refine ENNReal.tsum_le_tsum (fun emit => ?_)
+  rw [ENNReal.tsum_prod']
+  refine le_of_eq ?_
+  calc (∑' succ : PMF State, ∑' run : {q : AlterSeq State Label // q.trans.Terminates},
+        (if run.1 = e.1 then (1 : ENNReal) else 0)
+          * (S.next E (some (Silent.τ, emit)) * emit succ
+              * (innerWitness sys src emit).haltMass src run))
+      = ∑' succ : PMF State,
+          (S.next E (some (Silent.τ, emit)) * (innerWitness sys src emit).haltMass src e)
+            * emit succ := by
+        refine tsum_congr (fun succ => ?_)
+        rw [tsum_eq_single e (fun run hrun => by
+          rw [if_neg (fun hc => hrun (Subtype.ext hc)), zero_mul]), if_pos rfl, one_mul]
+        ring
+    _ = (S.next E (some (Silent.τ, emit)) * (innerWitness sys src emit).haltMass src e)
+          * ∑' succ : PMF State, emit succ := ENNReal.tsum_mul_left
+    _ = S.next E (some (Silent.τ, emit)) * (innerWitness sys src emit).haltMass src e := by
+        rw [PMF.tsum_coe, mul_one]
+
 end PLTS
