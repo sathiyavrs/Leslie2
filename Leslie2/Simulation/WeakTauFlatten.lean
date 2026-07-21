@@ -3392,6 +3392,52 @@ reasons; numerator exposure is necessary scaffolding but insufficient.
   force-halt residual junk (Route A, already blocked: no monotone `next`-limit). No landed
   handle relates `dSched.haltMass` to tower raw masses; building one is the missing large
   construction, not a wiring step. VERDICT: dead — same root cause as Routes A/B/mixture. -/
+
+/-! ### F5b addendum — `cylMono` is TRUE (route validated); note (ii) refined
+
+CORRECTION to Route-A verdict (ii): the object that is non-monotone in `n` is `twNum e none`
+(the FORCE-HALT-at-`e` mass) and the normalized posterior `next e` — NOT the cylinder REACH
+mass `twDenom e = probOf e`. `twDenom e` is the UNNORMALIZED config-sum `∑` over hidden
+macro/stall configurations that pass THROUGH `e` (via `beliefSched_probOf`: `probOf = bDenom`,
+normalizers cancel). Deepening `n → n+1` adds one macro-layer at the bottom (`stop ↦
+oneDecisionC+stop`): every config reaching `e` with `≤ n+1` layers keeps its (`n`-independent
+`ctW`/`ctPost`) weight, and new stall-configs using the extra layer add non-negative mass. So
+`twDenom e` is MONOTONE (`cylMono` TRUE) even though `twNum e none`/`next e` are not — the two
+are consistent (mass reroutes from force-halt to continue-past, but the through-mass only grows).
+This does NOT revive the σ\* construction: `next e` (the posterior) still does not stabilize.
+
+VALIDATED FORMALIZATION ROUTE for `cylMono : twDenom S n E hT e ≤ twDenom S (n+1) E hT e`
+(single induction on `n`, all pure-source; NOT attempted here — left for F5c, all handles landed):
+1. `Scheduler.reach` (now PUBLIC, `WeakScheduler.lean:864`): `probOf ⟨pure s₀, bind σ k⟩
+   ⟨s₀, ofList L⟩ = ∑' o, bindWeight σ k ⟨s₀,ofList L⟩ o` — the `n`-monotone unnormalized sum.
+2. Source factor `twDenom S n E hT e = (E.endState hT)(e.init) · probOf ⟨pure e.init,
+   towerSchedC n E hT⟩ e`: prove `probOf ⟨μ,sch⟩ ⟨s₀,ofList L⟩ = μ s₀ · probOf ⟨pure s₀,sch⟩
+   ⟨s₀,ofList L⟩` by `reverseRecOn` on `L` (nil: `probOf_nil`; step: `probOf_append_singleton`,
+   the two kernels are DEFEQ since `kernel` reads only `.scheduler`). [~30 lines; `probOf_eq_
+   pathWeight` alone does NOT close it — `pathWeight pe` is not defeq across differing `pe`.]
+3. Reduce to the pure-source claim `Ppure n E hT ⟨s₀,ofList L⟩ ≤ Ppure (n+1) …` and expand both
+   via `reach` (unfold `towerSchedC (m+1) = bind (oneDecisionC E) (t ↦ contC (towerDataC m) E hT
+   t)` — rfl through `.toScheduler`, `WeakScheduler.bind:1134`). `tsum_le_tsum` over `o : Option ℕ`:
+     - `o = none`: `bindWeight … none = probOf ⟨pure s₀, oneDecisionC E⟩` — continuation-free, EQUAL.
+     - `o = some j`: `= haltMass_{oneDecisionC}(prefix j) · probOf ⟨pure (stateAfter e j),
+       (contC (towerDataC m) E hT (stateAfter e j))⟩ (suffix j)`. `σ = oneDecisionC` (same) ⇒
+       `haltMass` factor identical; reduce to `contC_probOf_mono` on the suffix.
+4. `contC_probOf_mono` (takes the IH `∀ E'' e', Ppure m E'' e' ≤ Ppure (m+1) E'' e'` as hyp;
+   NON-inductive on its own): `contC prev t = beliefSched (ctFam prev) (ctPost t) (pure t)`, so
+   `probOf ⟨pure t, contC prev t⟩ e' = bDenom (ctFam prev) (ctPost t) (pure t) e'` (`beliefSched_
+   probOf`, source `pure t` MATCHES). `bDenom = ∑' x, (ctPost t)(x)·bBranchProb (ctFam prev)
+   (pure t) x e'`; `tsum_le_tsum` in `x` (`ctPost` `n`-independent, `mul_le_mul_right`):
+     - `x = none`: `ctFam = stop` — `n`-independent, EQUAL.
+     - `x = some p`: `bBranchProb = probOf ⟨pure t, towerSchedC m (macroExtend E p.2)⟩ e'
+       = Ppure m (macroExtend E p.2) e' ≤ Ppure (m+1) …` by the IH. ∎
+   Base `n = 0`: `towerSchedC 0 = stop`, `probOf ⟨_,stop⟩ e = init·[e.trans = nil]` (kernel 0 on
+   any emission); `= twDenom 1 e` at `e=nil`, `= 0 ≤ twDenom 1 e` otherwise.
+
+Then `cylP_super` (Target 2): `∑' t, cylP (e·t) ≤ cylP e` = `tsum_iSup_of_monotone` (needs
+`cylMono`) to swap `∑'`/`⨆`, then per-`n` the LANDED `twDenom_super_step`. Target-2 helper (a)
+(`∑' step, kernel ≤ 1`) is ALREADY LANDED as `ProbabilisticExecution.kernel_tsum_le_one`
+(`System.lean:417`) — no new Tonelli lemma needed. -/
+
 /- (frontier note continues) -/
 /-! ### σ\* limit-witness frontier — (assessment continues below)
 
