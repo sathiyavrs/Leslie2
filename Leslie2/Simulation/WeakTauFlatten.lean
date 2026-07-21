@@ -3871,6 +3871,24 @@ completed). Then two fidelity-style lemmas finish it:
   F5g-4  `weakTau_flatten` wiring: `refine ⟨flatSched …, F5g-3.a, F5g-3.b⟩`, replacing the
          `dSched` wiring at `:4291`. ~10 lines.
 
+**F5f LANDED (F5f-1..3, sorry-free).** Two deviations from the ladder above:
+  • ROOT CARVE. `reachArrM` at the empty prefix is carved to `μ0 e.init` (NOT `1` as the
+    `reachArr` template does): the composite's source is `μ0` (a distribution), not a Dirac,
+    so the honest reach of the empty concrete history `⟨s0,nil⟩` is `probOf ⟨s0,nil⟩ = μ0 s0`.
+    F5g-1's fidelity must therefore be stated with source `μ0` (`⟨μ0, flatSched⟩.probOf`), and
+    the base case reads `probOf ⟨s0,nil⟩ = μ0 s0 = reachArrM ⟨s0,nil⟩` (not `= 1`).
+  • F5f-2 TELESCOPING RE-DERIVED (larger than 60 lines). `reachDep_sum_le`'s trace-world proof
+    (`tele` + RP/RA `reachAfter`-fixpoint flow) does NOT transfer: our reach is DIRECT (segWeight
+    × probOf, no fixpoint). Instead `reachDepM_sum_le` = a generic head-peel (`genW`/`genW_peel`,
+    transplanted from `dW_peel`) + strong-induction telescoping `genDep_le_genArr`, where the
+    fresh-reset (residual-empty) departures are absorbed into the arrival halt-reach
+    `haltReach` via `boundaryHalt_le` (`∑_succ emit(succ)·succ(s0) ≤ 1`). Numerator-exposed
+    throughout (`curReach = depMove + haltReach`, `curReach_split`); no Classical.choose opacity.
+  Landed decls: `curReach`,`reachM`,`reachArrM`,`reachDepM` (F5f-1); `depMove`,`haltReach`,
+  `curReach_split`,`genW`(+`genBase`/`genSeg`/`genW_peel`/`genW_nil`),`boundaryHalt_le`,
+  `macroSome_le_one`,`depMove_le_init`,`genDep_le_genArr`,`moveSum_eq_depMove`,`curReachG`,
+  `genW_eq_dconfig`,`reachDepM_sum_le`,`flatMass`,`flatMass_hasSum` (F5f-2); `flatSched` (F5f-3).
+
 **(5) cylP STATUS.** `cylP`/`cylMono`/`cylP_super`/`twDenom_super_step` are NOT on the transplant
 critical path: `flatSched` realizes the witness via `reachArr` fidelity, not via the cylinder
 LIMIT. They are retained as the QUANTITATIVE BACKBONE — the depth-`n` truncation limits
