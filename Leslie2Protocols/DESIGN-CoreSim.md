@@ -311,3 +311,81 @@ i.e. honest-input unanimity is asserted only once a round is bound. Consequences
   `bind_succ` force the new value to equal the standing consensus (unchanged).
 - retC-impossibility while unbound: retC requires a bound round, so the
   conditioned unanimity applies — same refutation as before.
+
+---
+
+# DESIGN v3 (weakTau_flatten, Layer 4c rebuild): decision-point compression
+
+F4d confirmed `flattenDenom_ne_top` FALSE for the naive belief (counterexample:
+macro-stop probability 1/(ℓ+2) gives a.s. halting with E[visits] = harmonic
+series = ∞ at a stalling sys-prefix; empty inner runs advance the macro clock
+without advancing the observation). The h-transform is a no-op (future halting
+mass ≡ 1 under a.s. halting). The corrected construction:
+
+1. **Decision-point configs only**: the belief at observed history `e` ranges
+   over configs whose cursor is immediately after an observable event (or at
+   the start) — every completed inner segment nonempty, no trailing empty
+   macro-steps recorded. A joint run visits AT MOST ONE decision-point config
+   per sys-prefix (histories grow monotonically; empty macro-steps occur
+   strictly between decision points), so the belief masses are disjoint-run
+   contributions: **normalizer ≤ 1**. Finitely many segmentations of `e`
+   (each segment consumes ≥ 1 step) × per-segmentation macro-histories whose
+   weight already sums the interleaved-empties analytically (next point).
+2. **Compressed moves**: from a decision-point config, the emitted move is the
+   distribution of the NEXT OBSERVABLE EVENT: sum over k empty macro-steps
+   (any macro-path) followed by a macro-step whose inner witness's run is
+   nonempty, emitting that witness's FIRST move; plus the halt event (macro
+   halt reached through empties). Per config these events are DISJOINT, so
+   the series ≤ 1 — no divergence. `valid`/`internal_only`: every emitted
+   move is a genuine single inner-witness τ-step.
+3. Integrate recursion becomes one-OBSERVABLE-event unfolding; relate to the
+   macro-level identities (F4a bridge, Layer 2/3 algebra) through the
+   compression sums (the empty-tree series appears as an explicit factor —
+   define it as `stallSum E := Σ over empty-macro-paths from E` with its
+   one-step unfolding lemma, and prove `stallSum ≤ 1`-style bounds from
+   disjointness / Kraft on S).
+
+Status: Layers 0–4b + F4a bridge remain valid and consumed as-is. Layer 4c's
+current carrier/scheduler stays in-file (documented false-normalizer) or is
+replaced; the rebuild is a new Layer 4d.
+
+---
+
+# DESIGN v4 (weakTau_flatten, next session): the bind-recursive witness
+
+Seven tranches established: `d_integrate_step` is TRUE but unreachable for the
+belief-normalized `dSched` — the pointwise posterior is false, reweighting is
+refuted (the base mismatch is forced), and the single-normalizer bridge fails
+at its own base (the per-prefix normalizers `1/dDenom(e_j)` form a
+non-collapsing product; the true telescope is
+`probOf · ∏_j dDenom(e_j) = ∏_j rawNum(e_j)`). The genuine frontier is a
+scheduler-level coupling of `dSched` roots — i.e. compositionality must be
+BUILT IN, not proven after the fact.
+
+**v4 construction:** define the witness by RECURSION ON HISTORY LENGTH as an
+explicit `WeakScheduler.bind` tower:
+1. `oneDecision E : WeakScheduler sys` — the stall-collapsed first-decision
+   scheduler: from the macro-history `E`, its halting outcomes are (i) halt
+   (macro-halt reached through any number of empty-inner macro-steps — the
+   `stallSum` series, already proven ≤ 1 and with its `stall_unfold`
+   fixpoint) or (ii) the FIRST genuine inner move of a decisive macro-step.
+   Every emitted move consumes ≥ 1 observed step.
+2. Continuation kernel at a halting state `t`: the SINGLE-LAYER posterior over
+   which decisive emission `(ω, m')` produced `t` — normalizer
+   `Σ_ω S-kernel · inner-mass(t) ≤ 1` (one layer, no stall accumulation — the
+   divergence cannot recur), mixing `flatSched (macroExtend E m') m'`
+   recursively.
+3. Well-foundedness: `flatSched.next` at a history `e` is determined by at
+   most `|e| + 1` bind layers (each layer consumes ≥ 1 observed step), so the
+   definition recurses on length. The haltMass identities then ITERATE the
+   proven `WeakScheduler.bind_haltMass` / `bind_compose_integrate` laws —
+   `d_integrate_step`'s one-macro-level unfolding becomes essentially
+   definitional (the architect's original R1-fallback, now informed by the
+   stall-collapse necessity).
+4. Everything downstream (d_halts, d_pushforward, weakTau_flatten,
+   weakTau_lift_pure, PFS.trans) is already assembled and survives with the
+   witness swapped, modulo restating the two identities against `flatSched`.
+
+All supporting machinery (stallSum/stall_unfold, innerWitness kit, the F4a
+bridge, condDepth strata, tsum_iSup_of_monotone, the peel kit) remains valid
+and consumed as-is.

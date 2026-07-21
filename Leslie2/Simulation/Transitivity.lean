@@ -5,6 +5,8 @@ Authors: Gaspard Reghem
 -/
 
 import Leslie2.Simulation.SimDefs
+import Leslie2.Simulation.WeakTauFlatten
+import Leslie2.Simulation.WeakTauLift
 import Leslie2.Weak.WeakChar
 
 /-!
@@ -219,7 +221,12 @@ theorem weakTau_lift_pure
     (hR : R_AB q_B μ_A)
     (hweak : weakTau sys_B (PMF.pure q_B) ν_B) :
     ∃ ν_A, weakTau sys_A μ_A ν_A ∧ Simulates R_AB ν_B ν_A := by
-  sorry
+  -- Stage 1 + Stage 2: convert to a strong simulation into `𝒟(sys_A^w)`,
+  -- lift the weak transition there, and flatten back down to `sys_A`.
+  have hstrong : StrongProbabilisticSimulation sys_B (𝒟(sys_A^w)) R_AB :=
+    (probabilisticForwardSimulation_iff_strong_dist_weakClosure sys_B sys_A R_AB).mp sim
+  obtain ⟨Ν, hwtD, hPMFRel⟩ := hstrong.weakTau_lift hR hweak
+  exact ⟨Ν.bind id, weakTau_flatten sys_A hwtD, simulates_of_pmfRel hPMFRel⟩
 
 /-- Extract the pointwise membership from the standard `(K0)`-joint `Ω`. -/
 private theorem mem_bindMap_support {μ_B : PMF State_B} {K0 : State_B → PMF (PMF State_A)}
