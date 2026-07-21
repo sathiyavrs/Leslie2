@@ -3576,6 +3576,27 @@ theorem cylP_super (S : WeakScheduler (𝒟(sys^w)))
     _ ≤ ⨆ n, twDenom S n E hT e := iSup_mono (fun n => twDenom_super_step S n E hT e he)
     _ = cylP S E hT e := rfl
 
+/-! ### F5d Layer 2 (T0) — abstract cylinder-mass helpers (scheduler-free)
+
+`cylP_prefix_le` (single-term extraction from `cylP_super`) and `cylP_ne_top`
+(from `cylP_le_one`). Both are pure `cylP`-level algebra, independent of any
+scheduler — the only part of the F5d Layer-2 recipe that lands, since realizing
+`cylP` as a scheduler's `probOf` (T1–T3) is blocked (see the F5d addendum). -/
+
+/-- **Single-prefix bound.** A single one-step extension's cylinder mass is bounded
+by the parent's, extracted termwise from `cylP_super` (`ENNReal.le_tsum`). -/
+theorem cylP_prefix_le (S : WeakScheduler (𝒟(sys^w)))
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates) (e : AlterSeq State Label)
+    (he : e.trans.Terminates) (t : Label × State) :
+    cylP S E hT ⟨e.init, e.trans.append (Seq.cons t Seq.nil)⟩ ≤ cylP S E hT e :=
+  le_trans (ENNReal.le_tsum t) (cylP_super S E hT e he)
+
+/-- `cylP` is never `⊤` (it is `≤ 1`). -/
+theorem cylP_ne_top (S : WeakScheduler (𝒟(sys^w)))
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates) (e : AlterSeq State Label) :
+    cylP S E hT e ≠ ⊤ :=
+  ne_top_of_le_ne_top ENNReal.one_ne_top (cylP_le_one S E hT e)
+
 /-! ### σ\* limit-witness frontier — paper assessment (both routes vs. the current stack)
 
 Goal: a single `σ* : WeakScheduler sys`, a.s.-halting from `μ`, with pushforward
@@ -3712,6 +3733,55 @@ Then `cylP_super` (Target 2): `∑' t, cylP (e·t) ≤ cylP e` = `tsum_iSup_of_m
 `cylMono`) to swap `∑'`/`⨆`, then per-`n` the LANDED `twDenom_super_step`. Target-2 helper (a)
 (`∑' step, kernel ≤ 1`) is ALREADY LANDED as `ProbabilisticExecution.kernel_tsum_le_one`
 (`System.lean:417`) — no new Tonelli lemma needed. -/
+
+/-! ### F5d addendum — Layer 2 verdict: T0 LANDS, T1–T3 BLOCKED (emission-PMF reconstruction)
+
+LANDED (axiom-clean): `cylP_prefix_le`, `cylP_ne_top` (T0, scheduler-free, above `cylP_super`).
+
+**T1 `cylSched` does NOT exist as a valid (Weak)Scheduler — precise mismatch.** The recipe
+models the scheduler as emitting CONCRETE steps `Option (Label × State)` with
+`next e (some t) = cylP(e·t)/cylP e`, so that `probOf(e·t) = probOf(e)·next(e,t)` telescopes
+(T2) and `haltMass = probOf·next none` (T3). But the codebase `Scheduler` (`System.lean:233`)
+emits DISTRIBUTIONS: `next : AlterSeq → PMF (Option (Label × PMF State))`, and the concrete-step
+transition probability is the KERNEL `kernel e (l,s') = ∑' ν, next e (some (l,ν)) · ν s'`
+(`System.lean:267`), with the mandatory field `valid` (`some (l,μ) ∈ (next e).support → sys.step
+s l μ`) and, for `WeakScheduler` (`WeakScheduler.lean:37`), `internal_only` (`… → l = τ`).
+So realizing the recipe needs a VALID emission PMF `ρ_e` over `{ν : sys.step (e.endState) τ ν}`
+whose barycenter is `q_e(s') := cylP(e·(τ,s'))/cylP e` (then `kernel = q_e`, telescope closes).
+
+Why no such `ρ_e` exists — the SAME obstruction as Routes A/B/mixture, surfaced one layer early:
+  • `beliefSched`/`oneDecisionC` discharge `valid`/`internal_only` ONLY by delegating to a family
+    member `(fam x).valid`/`.internal_only` (every support emission comes from a real branch
+    scheduler). `cylSched` has NO family to borrow valid emissions from.
+  • Direct Dirac emission `(τ, PMF.pure s')` (which would make `kernel e (τ,s') = next e (some
+    (τ, pure s'))` and telescope directly) needs `sys.step (e.endState) τ (pure s')` — FALSE in
+    general (a system's τ-steps are arbitrary distributions, not Diracs).
+  • The tower DOES realize the per-depth kernel `kernel_n e t = twDenom_n(e·t)/twDenom_n(e)` via
+    `innerWitness`'s genuine valid emissions. The per-concrete-state kernel even CONVERGES:
+    since `twDenom_n(e) ↑ cylP e ∈ (0,∞)` (`cylMono`, `cylP_le_one`) and `twDenom_n(e·t) ↑
+    cylP(e·t)` finite, division-continuity at a positive finite denominator gives
+    `kernel_n e t → cylP(e·t)/cylP e = q_e`. BUT the realizing EMISSION PMF `next_n e` does NOT
+    converge/stabilize (blockage (i): stalls route extra hidden-config mass through the same `e`),
+    and the valid-step set carries no closedness/compactness (arbitrary `sys.step : Prop`,
+    arbitrary `State`/`Label`). A pointwise limit of barycenters need not be a barycenter, and no
+    limiting valid `ρ_e` is produced. `cylP` retains only KERNEL-level (concrete-state) data;
+    reconstructing a valid EMISSION PMF from it is exactly the missing (blocked) σ\* step.
+  • Mixture fallback `beliefSched (fun n => towerSchedC S n E hT) wt` IS valid (delegates), but
+    `beliefSched_probOf` gives `probOf = bDenom = ∑' n, wt n · twDenom_n(e)`, a weighted AVERAGE
+    `< ⨆ n = cylP` (the sup is attained at an `e`-DEPENDENT depth; one `wt : PMF ℕ` cannot
+    concentrate per-`e`). So `probOf ≠ cylP`: T2 fails. Recorded already in the frontier note.
+
+Hence T2/T3 are unreachable: they presuppose T1's valid scheduler with `probOf = cylP`, which is
+the blocked realization. No forced sorries added; left green with T0 only.
+
+**F5e frontier (revised).** Realizing `cylP` through a scheduler is a dead end (this addendum).
+The only remaining route to `weakTau_flatten` is a scheduler-FREE cylinder-measure theory: treat
+`cylHalt e := cylP e − ∑' t, cylP(e·t)` (≥ 0 by `cylP_super`; `cylP_prefix_le`/`cylP_ne_top` are
+its finiteness/monotonicity handles) as a bare halting measure on histories, prove its own Kraft
+bound (`∑' e, cylHalt e ≤ 1`) and pushforward `∑' e, cylHalt e · [e.endState = s] = (Ν.bind id) s`
+DIRECTLY (no `haltMass`/`probOf` wrapper, since no valid scheduler carries them), then squeeze
+against `macroHalt_bind_id_eq_iSup`. This bypasses the emission-PMF obstruction entirely but is a
+NEW construction (halting + pushforward + squeeze + discharge), not a wiring step — all F5e. -/
 
 /- (frontier note continues) -/
 /-! ### σ\* limit-witness frontier — (assessment continues below)
