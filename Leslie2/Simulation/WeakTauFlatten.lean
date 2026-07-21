@@ -4985,6 +4985,81 @@ private theorem curReach_snoc (S : WeakScheduler (𝒟(sys^w))) (src : PMF State
   refine tsum_congr (fun ν => ?_)
   exact (mul_assoc _ _ _).symm
 
+/-- `segTrans` of a terminating current prefix (all segment runs terminate) again
+terminates. -/
+private theorem segTrans_terminates (segs : List (FlatSeg State Label))
+    (c : Stream'.Seq (Label × State)) (hc : c.Terminates) :
+    (segTrans segs c).Terminates := by
+  induction segs with
+  | nil => exact hc
+  | cons seg rest ih =>
+    exact ⟨_, Stream'.Seq.terminatedAt_append_find seg.runT (Nat.find_spec ih)⟩
+
+/-- **Consistency is preserved by a shared final `snoc`.** A config with current
+prefix extended by `(l, s')` is consistent with the `snoc`-extended history iff the
+original config is consistent with the original history (append cancels via
+`segTrans_append` + `append_singleton_inj_left`). -/
+private theorem dConsistent_snoc_iff (e : {q : AlterSeq State Label // q.trans.Terminates})
+    (l : Label) (s' : State) (c : DConfig State Label) :
+    dConsistent (snocT e l s').1
+        ⟨c.segs, (snocT ⟨c.cur, c.curT⟩ l s').1, (snocT ⟨c.cur, c.curT⟩ l s').2⟩
+      ↔ dConsistent e.1 c := by
+  have hAterm : (segTrans c.segs c.cur.trans).Terminates :=
+    segTrans_terminates c.segs c.cur.trans c.curT
+  unfold dConsistent
+  constructor
+  · rintro ⟨h1, h2, h3⟩
+    refine ⟨h1, ?_, h3⟩
+    rw [show (⟨c.segs, (snocT ⟨c.cur, c.curT⟩ l s').1, (snocT ⟨c.cur, c.curT⟩ l s').2⟩
+          : DConfig State Label).cur.trans
+        = c.cur.trans.append (Stream'.Seq.cons (l, s') Stream'.Seq.nil) from rfl,
+      segTrans_append] at h2
+    exact Stream'.Seq.append_singleton_inj_left _ _ hAterm e.2 (l, s') (l, s') h2
+  · rintro ⟨h1, h2, h3⟩
+    refine ⟨h1, ?_, h3⟩
+    show segTrans c.segs (c.cur.trans.append (Stream'.Seq.cons (l, s') Stream'.Seq.nil))
+      = e.1.trans.append (Stream'.Seq.cons (l, s') Stream'.Seq.nil)
+    rw [segTrans_append, h2]
+
+open Classical in
+/-- For a nonempty observed history, `reachArrM` is the `genW`-carrier of the
+current-run kernel guarded by a nonempty current prefix. -/
+private theorem reachArrM_of_ne_nil (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (E : AlterSeq (PMF State) Label)
+    (e : {q : AlterSeq State Label // q.trans.Terminates}) (h : e.1.trans ≠ Stream'.Seq.nil) :
+    reachArrM S μ0 E e = genW (curReachG S) S μ0 E e := by
+  rw [reachArrM, if_neg h, genW_eq_dconfig]
+  refine tsum_congr (fun c => ?_)
+  simp only [curReachG]
+  by_cases hdc : dConsistent e.1 c
+  · by_cases hcnil : c.cur.trans = Stream'.Seq.nil
+    · simp [hdc, hcnil]
+    · simp [hdc, hcnil, reachM]
+  · simp [hdc]
+
+open Classical in
+/-- The `genW`-carrier of the landing kernel is the departure reach mixed against
+the drawn `ν`. -/
+private theorem genW_landKer (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (E : AlterSeq (PMF State) Label)
+    (e : {q : AlterSeq State Label // q.trans.Terminates}) (l : Label) (s' : State) :
+    genW (fun (s : PMF State) (Ec : AlterSeq (PMF State) Label)
+        (c : {q : AlterSeq State Label // q.trans.Terminates}) =>
+        ∑' ν : PMF State, moveTerm S s Ec c (some (l, ν)) * ν s') S μ0 E e
+      = ∑' ν : PMF State, reachDepM S μ0 E e l ν * ν s' := by
+  rw [genW_eq_dconfig]
+  have hr : ∀ ν : PMF State, reachDepM S μ0 E e l ν * ν s'
+      = ∑' c : DConfig State Label, ((if dConsistent e.1 c then (1 : ENNReal) else 0)
+          * segWeight S μ0 E c.segs
+          * moveTerm S (segSrc μ0 c.segs) (segHist E c.segs) ⟨c.cur, c.curT⟩ (some (l, ν)))
+        * ν s' := by
+    intro ν; rw [reachDepM, dNum, ENNReal.tsum_mul_right]
+  rw [tsum_congr hr, ENNReal.tsum_comm]
+  refine tsum_congr (fun c => ?_)
+  rw [← ENNReal.tsum_mul_left]
+  refine tsum_congr (fun ν => ?_)
+  ring
+
 /-- The mass function of `flatSched` at observed history `e`: a proper step
 `some (l,ν)` gets the posterior `reachDepM / reachArrM`; the halt label `⊥` takes
 the remaining (halt-or-diverge) mass. Mirrors `expandMass`. -/
