@@ -3286,6 +3286,35 @@ theorem cylP_root (S : WeakScheduler (𝒟(sys^w)))
   unfold cylP
   simp only [hconst, iSup_const]
 
+/-- **Per-depth cylinder super-step (F5b).** At a fixed tower depth `n`, the cylinder reach
+masses of the one-step extensions of `e` sum to at most the reach mass of `e`:
+`∑' t, twDenom (e·t) ≤ twDenom e`. This is `probOf_append_singleton` (each extension peels one
+kernel factor) followed by `kernel_tsum_le_one` (the one-step kernel mass is `≤ 1`). Independent
+of the depth `n` (no monotonicity used); the `n`-dependence enters only when `⨆ n` is taken. -/
+theorem twDenom_super_step (S : WeakScheduler (𝒟(sys^w))) (n : ℕ)
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates) (e : AlterSeq State Label)
+    (he : e.trans.Terminates) :
+    (∑' t : Label × State, twDenom S n E hT ⟨e.init, e.trans.append (Seq.cons t Seq.nil)⟩)
+      ≤ twDenom S n E hT e := by
+  classical
+  set pe : ProbabilisticExecution sys :=
+    ⟨E.endState hT, (towerSchedC S n E hT).toScheduler⟩ with hpe
+  have hbase : twDenom S n E hT e = pe.probOf e he := by
+    unfold twDenom; rw [dif_pos he, ← hpe]
+  have hstep : ∀ t : Label × State,
+      twDenom S n E hT ⟨e.init, e.trans.append (Seq.cons t Seq.nil)⟩
+        = pe.probOf e he * pe.kernel e t := by
+    intro t
+    have hcons : (Seq.cons t Seq.nil : Seq (Label × State)).Terminates :=
+      Stream'.Seq.terminates_cons_iff.mpr Stream'.Seq.terminates_nil
+    have happ : (e.trans.append (Seq.cons t Seq.nil)).Terminates :=
+      ⟨_, Stream'.Seq.terminatedAt_append_find he hcons.choose_spec⟩
+    unfold twDenom
+    rw [dif_pos happ, ← hpe]
+    exact pe.probOf_append_singleton e.init e.trans he t happ
+  rw [tsum_congr hstep, ENNReal.tsum_mul_left, hbase]
+  exact mul_le_of_le_one_right' (pe.kernel_tsum_le_one e)
+
 /-! ### σ\* limit-witness frontier — paper assessment (both routes vs. the current stack)
 
 Goal: a single `σ* : WeakScheduler sys`, a.s.-halting from `μ`, with pushforward
