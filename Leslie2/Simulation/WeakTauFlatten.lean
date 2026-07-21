@@ -3315,6 +3315,246 @@ theorem twDenom_super_step (S : WeakScheduler (𝒟(sys^w))) (n : ℕ)
   rw [tsum_congr hstep, ENNReal.tsum_mul_left, hbase]
   exact mul_le_of_le_one_right' (pe.kernel_tsum_le_one e)
 
+/-! ### F5c — `cylMono` : cylinder reach mass is monotone in tower depth -/
+
+/-- **Source split of `probOf`.** The path measure from a general source `μ` factors as
+the source mass at the start times the Dirac-`pure`-sourced path measure. Reverse induction
+on the transition list (`kernel` is source-independent, so only the base init factor differs). -/
+private theorem probOf_source_split (sch : Scheduler sys) (μ : PMF State)
+    (s₀ : State) (L : List (Label × State)) :
+    (⟨μ, sch⟩ : ProbabilisticExecution sys).probOf ⟨s₀, Seq.ofList L⟩
+        (Stream'.Seq.terminates_ofList L)
+      = μ s₀ * (⟨PMF.pure s₀, sch⟩ : ProbabilisticExecution sys).probOf ⟨s₀, Seq.ofList L⟩
+          (Stream'.Seq.terminates_ofList L) := by
+  classical
+  induction L using List.reverseRecOn with
+  | nil =>
+    rw [(⟨μ, sch⟩ : ProbabilisticExecution sys).probOf_congr
+          ⟨s₀, Seq.ofList ([] : List (Label × State))⟩ ⟨s₀, Seq.nil⟩
+          (by rw [Stream'.Seq.ofList_nil]) _ Stream'.Seq.terminates_nil,
+        (⟨PMF.pure s₀, sch⟩ : ProbabilisticExecution sys).probOf_congr
+          ⟨s₀, Seq.ofList ([] : List (Label × State))⟩ ⟨s₀, Seq.nil⟩
+          (by rw [Stream'.Seq.ofList_nil]) _ Stream'.Seq.terminates_nil,
+        ProbabilisticExecution.probOf_nil, ProbabilisticExecution.probOf_nil]
+    change μ s₀ = μ s₀ * (PMF.pure s₀ : PMF State) s₀
+    rw [PMF.pure_apply_self, mul_one]
+  | append_singleton rest last ih =>
+    have hsplit : (Seq.ofList (rest ++ [last]) : Seq (Label × State))
+        = (Seq.ofList rest).append (Seq.cons last Seq.nil) := by
+      rw [Stream'.Seq.ofList_append, Stream'.Seq.ofList_cons, Stream'.Seq.ofList_nil]
+    have hrest_fin : (Seq.ofList rest : Seq (Label × State)).Terminates :=
+      Stream'.Seq.terminates_ofList _
+    have hFinS : ((Seq.ofList rest).append (Seq.cons last Seq.nil)).Terminates := by
+      rw [← hsplit]; exact Stream'.Seq.terminates_ofList _
+    rw [(⟨μ, sch⟩ : ProbabilisticExecution sys).probOf_congr
+          ⟨s₀, Seq.ofList (rest ++ [last])⟩ ⟨s₀, (Seq.ofList rest).append (Seq.cons last Seq.nil)⟩
+          (by rw [hsplit]) _ hFinS,
+        ProbabilisticExecution.probOf_append_singleton _ s₀ (Seq.ofList rest) hrest_fin last hFinS,
+        (⟨PMF.pure s₀, sch⟩ : ProbabilisticExecution sys).probOf_congr
+          ⟨s₀, Seq.ofList (rest ++ [last])⟩ ⟨s₀, (Seq.ofList rest).append (Seq.cons last Seq.nil)⟩
+          (by rw [hsplit]) _ hFinS,
+        ProbabilisticExecution.probOf_append_singleton _ s₀ (Seq.ofList rest) hrest_fin last hFinS,
+        ih,
+        show (⟨μ, sch⟩ : ProbabilisticExecution sys).kernel ⟨s₀, Seq.ofList rest⟩ last
+          = (⟨PMF.pure s₀, sch⟩ : ProbabilisticExecution sys).kernel ⟨s₀, Seq.ofList rest⟩ last
+          from rfl, mul_assoc]
+
+/-- Termwise `bindWeight` monotonicity from a pointwise continuation bound. -/
+private theorem bindWeight_mono (σ : Scheduler sys) (k₁ k₂ : State → Scheduler sys)
+    (hk : ∀ (t : State) (e' : AlterSeq State Label) (he' : e'.trans.Terminates),
+      (⟨PMF.pure t, k₁ t⟩ : ProbabilisticExecution sys).probOf e' he'
+        ≤ (⟨PMF.pure t, k₂ t⟩ : ProbabilisticExecution sys).probOf e' he')
+    (e : AlterSeq State Label) (hT : e.trans.Terminates) (o : Option ℕ) :
+    Scheduler.bindWeight σ k₁ e hT o ≤ Scheduler.bindWeight σ k₂ e hT o := by
+  cases o with
+  | none => exact le_rfl
+  | some j =>
+    by_cases hj : j < e.trans.length hT
+    · show (if _hj : j < e.trans.length hT then _ else 0)
+        ≤ (if _hj : j < e.trans.length hT then _ else 0)
+      rw [dif_pos hj, dif_pos hj]
+      exact mul_le_mul_left'
+        (hk (WeakScheduler.stateAfter e j) ⟨WeakScheduler.stateAfter e j, e.trans.drop j⟩
+          (WeakScheduler.drop_terminates hT j)) _
+    · show (if _hj : j < e.trans.length hT then _ else 0)
+        ≤ (if _hj : j < e.trans.length hT then _ else 0)
+      rw [dif_neg hj, dif_neg hj]
+
+/-- **Bind monotonicity of the Dirac path measure.** If continuation `k₁ ≤ k₂` pointwise
+(on every Dirac-sourced path measure), then `bind σ k₁ ≤ bind σ k₂` on every Dirac path. -/
+private theorem bind_probOf_mono (σ : Scheduler sys) (k₁ k₂ : State → Scheduler sys)
+    (hk : ∀ (t : State) (e' : AlterSeq State Label) (he' : e'.trans.Terminates),
+      (⟨PMF.pure t, k₁ t⟩ : ProbabilisticExecution sys).probOf e' he'
+        ≤ (⟨PMF.pure t, k₂ t⟩ : ProbabilisticExecution sys).probOf e' he')
+    (s₀ : State) (e : AlterSeq State Label) (he : e.trans.Terminates) :
+    (⟨PMF.pure s₀, Scheduler.bind σ k₁⟩ : ProbabilisticExecution sys).probOf e he
+      ≤ (⟨PMF.pure s₀, Scheduler.bind σ k₂⟩ : ProbabilisticExecution sys).probOf e he := by
+  classical
+  by_cases hinit : e.init = s₀
+  · subst hinit
+    have hofl : (Seq.ofList (e.trans.toList he) : Seq (Label × State)) = e.trans :=
+      Stream'.Seq.ofList_toList e.trans he
+    have hEeq : (⟨e.init, Seq.ofList (e.trans.toList he)⟩ : AlterSeq State Label) = e := by
+      cases e; simp only [hofl]
+    rw [← (⟨PMF.pure e.init, Scheduler.bind σ k₁⟩ : ProbabilisticExecution sys).probOf_congr
+          ⟨e.init, Seq.ofList (e.trans.toList he)⟩ e hEeq
+          (Stream'.Seq.terminates_ofList (e.trans.toList he)) he,
+        ← (⟨PMF.pure e.init, Scheduler.bind σ k₂⟩ : ProbabilisticExecution sys).probOf_congr
+          ⟨e.init, Seq.ofList (e.trans.toList he)⟩ e hEeq
+          (Stream'.Seq.terminates_ofList (e.trans.toList he)) he,
+        Scheduler.reach σ k₁ e.init (e.trans.toList he),
+        Scheduler.reach σ k₂ e.init (e.trans.toList he)]
+    exact ENNReal.tsum_le_tsum
+      (fun o => bindWeight_mono σ k₁ k₂ hk ⟨e.init, Seq.ofList (e.trans.toList he)⟩
+        (Stream'.Seq.terminates_ofList _) o)
+  · have hz : (PMF.pure s₀ : PMF State) e.init = 0 := by rw [PMF.pure_apply, if_neg hinit]
+    have h0 : ∀ k : State → Scheduler sys,
+        (⟨PMF.pure s₀, Scheduler.bind σ k⟩ : ProbabilisticExecution sys).probOf e he = 0 := by
+      intro k
+      have hle : (⟨PMF.pure s₀, Scheduler.bind σ k⟩ : ProbabilisticExecution sys).probOf e he ≤ 0 := by
+        refine le_trans (ProbabilisticExecution.probOf_le_init _ e he) ?_
+        rw [ProbabilisticExecution.init_eq_initState]
+        exact le_of_eq hz
+      exact le_antisymm hle bot_le
+    rw [h0 k₁, h0 k₂]
+
+/-- **Continuation monotonicity** (takes the depth-`n` induction hypothesis explicitly).
+The concrete continuation kernel is monotone from depth `n` to `n+1` on every Dirac path. -/
+private theorem contC_probOf_mono (S : WeakScheduler (𝒟(sys^w))) (n : ℕ)
+    (IH : ∀ (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates) (s₀ : State)
+      (e : AlterSeq State Label) (he : e.trans.Terminates),
+      (⟨PMF.pure s₀, (towerSchedC S n E hT).toScheduler⟩
+          : ProbabilisticExecution sys).probOf e he
+        ≤ (⟨PMF.pure s₀, (towerSchedC S (n+1) E hT).toScheduler⟩
+          : ProbabilisticExecution sys).probOf e he)
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates) (t : State)
+    (e' : AlterSeq State Label) (he' : e'.trans.Terminates) :
+    (⟨PMF.pure t, (contC S (fun E' hT' => towerDataC S n E' hT') E hT t).toScheduler⟩
+        : ProbabilisticExecution sys).probOf e' he'
+      ≤ (⟨PMF.pure t, (contC S (fun E' hT' => towerDataC S (n+1) E' hT') E hT t).toScheduler⟩
+        : ProbabilisticExecution sys).probOf e' he' := by
+  classical
+  simp only [contC]
+  rw [beliefSched_probOf (ctFam S (fun E' hT' => towerDataC S n E' hT') E hT)
+        (ctPost S E hT t) (PMF.pure t) e' he',
+    beliefSched_probOf (ctFam S (fun E' hT' => towerDataC S (n+1) E' hT') E hT)
+      (ctPost S E hT t) (PMF.pure t) e' he']
+  unfold bDenom
+  refine ENNReal.tsum_le_tsum (fun x => mul_le_mul_left' ?_ _)
+  cases x with
+  | none => exact le_rfl
+  | some p =>
+    unfold bBranchProb
+    rw [dif_pos he', dif_pos he']
+    exact IH (macroExtend E p.2) (macroExtend_term hT p.2) t e' he'
+
+/-- The immediate-stop path measure is a lower bound for any scheduler's path measure:
+they agree on the empty history and `stop` gives `0` on every non-empty one (its kernel is `0`). -/
+private theorem stop_probOf_le (sch : Scheduler sys) (μ : PMF State) (s₀ : State)
+    (L : List (Label × State)) :
+    (⟨μ, (WeakScheduler.stop sys).toScheduler⟩ : ProbabilisticExecution sys).probOf
+        ⟨s₀, Seq.ofList L⟩ (Stream'.Seq.terminates_ofList L)
+      ≤ (⟨μ, sch⟩ : ProbabilisticExecution sys).probOf
+        ⟨s₀, Seq.ofList L⟩ (Stream'.Seq.terminates_ofList L) := by
+  classical
+  induction L using List.reverseRecOn with
+  | nil =>
+    rw [(⟨μ, (WeakScheduler.stop sys).toScheduler⟩ : ProbabilisticExecution sys).probOf_congr
+        ⟨s₀, Seq.ofList ([] : List (Label × State))⟩ ⟨s₀, Seq.nil⟩
+        (by rw [Stream'.Seq.ofList_nil]) _ Stream'.Seq.terminates_nil,
+      (⟨μ, sch⟩ : ProbabilisticExecution sys).probOf_congr
+        ⟨s₀, Seq.ofList ([] : List (Label × State))⟩ ⟨s₀, Seq.nil⟩
+        (by rw [Stream'.Seq.ofList_nil]) _ Stream'.Seq.terminates_nil,
+      ProbabilisticExecution.probOf_nil, ProbabilisticExecution.probOf_nil]
+    exact le_rfl
+  | append_singleton rest last _ih =>
+    have hsplit : (Seq.ofList (rest ++ [last]) : Seq (Label × State))
+        = (Seq.ofList rest).append (Seq.cons last Seq.nil) := by
+      rw [Stream'.Seq.ofList_append, Stream'.Seq.ofList_cons, Stream'.Seq.ofList_nil]
+    have hrest_fin : (Seq.ofList rest : Seq (Label × State)).Terminates :=
+      Stream'.Seq.terminates_ofList _
+    have hFinS : ((Seq.ofList rest).append (Seq.cons last Seq.nil)).Terminates := by
+      rw [← hsplit]; exact Stream'.Seq.terminates_ofList _
+    have hker : (⟨μ, (WeakScheduler.stop sys).toScheduler⟩ : ProbabilisticExecution sys).kernel
+        ⟨s₀, Seq.ofList rest⟩ last = 0 := by
+      unfold ProbabilisticExecution.kernel
+      refine ENNReal.tsum_eq_zero.mpr (fun ν => ?_)
+      rw [show (⟨μ, (WeakScheduler.stop sys).toScheduler⟩
+            : ProbabilisticExecution sys).scheduler.next ⟨s₀, Seq.ofList rest⟩ (some (last.1, ν))
+          = (PMF.pure none : PMF (Option (Label × PMF State))) (some (last.1, ν)) from rfl,
+        PMF.pure_apply_of_ne _ _ (by simp), zero_mul]
+    rw [(⟨μ, (WeakScheduler.stop sys).toScheduler⟩ : ProbabilisticExecution sys).probOf_congr
+        ⟨s₀, Seq.ofList (rest ++ [last])⟩ ⟨s₀, (Seq.ofList rest).append (Seq.cons last Seq.nil)⟩
+        (by rw [hsplit]) _ hFinS,
+      ProbabilisticExecution.probOf_append_singleton _ s₀ (Seq.ofList rest) hrest_fin last hFinS,
+      hker, mul_zero]
+    exact bot_le
+
+/-- **Dirac-source cylinder monotonicity** (the induction on tower depth `n`). -/
+private theorem twDenom_pure_mono (S : WeakScheduler (𝒟(sys^w))) (n : ℕ)
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates) (s₀ : State)
+    (e : AlterSeq State Label) (he : e.trans.Terminates) :
+    (⟨PMF.pure s₀, (towerSchedC S n E hT).toScheduler⟩
+        : ProbabilisticExecution sys).probOf e he
+      ≤ (⟨PMF.pure s₀, (towerSchedC S (n+1) E hT).toScheduler⟩
+        : ProbabilisticExecution sys).probOf e he := by
+  classical
+  induction n generalizing E hT s₀ e he with
+  | zero =>
+    have h0 : towerSchedC S 0 E hT = WeakScheduler.stop sys := by
+      show (towerDataC S 0 E hT).sched = _
+      simp only [towerDataC]
+    rw [h0]
+    have hEeq : (⟨e.init, Seq.ofList (e.trans.toList he)⟩ : AlterSeq State Label) = e := by
+      cases e; simp only [Stream'.Seq.ofList_toList _ he]
+    rw [← (⟨PMF.pure s₀, (WeakScheduler.stop sys).toScheduler⟩
+          : ProbabilisticExecution sys).probOf_congr ⟨e.init, Seq.ofList (e.trans.toList he)⟩ e hEeq
+          (Stream'.Seq.terminates_ofList (e.trans.toList he)) he,
+        ← (⟨PMF.pure s₀, (towerSchedC S 1 E hT).toScheduler⟩
+          : ProbabilisticExecution sys).probOf_congr ⟨e.init, Seq.ofList (e.trans.toList he)⟩ e hEeq
+          (Stream'.Seq.terminates_ofList (e.trans.toList he)) he]
+    exact stop_probOf_le (towerSchedC S 1 E hT).toScheduler (PMF.pure s₀) e.init (e.trans.toList he)
+  | succ n IH =>
+    have hunf : ∀ (m : ℕ) (E' : AlterSeq (PMF State) Label) (hT' : E'.trans.Terminates),
+        towerSchedC S (m+1) E' hT'
+          = WeakScheduler.bind (oneDecisionC S E' hT')
+              (fun t => contC S (fun E'' hT'' => towerDataC S m E'' hT'') E' hT' t) := by
+      intro m E' hT'
+      show (towerDataC S (m+1) E' hT').sched = _
+      simp only [towerDataC, towerStepC]
+    rw [hunf n E hT, hunf (n+1) E hT]
+    exact bind_probOf_mono (oneDecisionC S E hT).toScheduler
+      (fun t => (contC S (fun E'' hT'' => towerDataC S n E'' hT'') E hT t).toScheduler)
+      (fun t => (contC S (fun E'' hT'' => towerDataC S (n+1) E'' hT'') E hT t).toScheduler)
+      (fun t e' he' => contC_probOf_mono S n IH E hT t e' he') s₀ e he
+
+/-- **`cylMono` — cylinder reach mass is monotone in tower depth.**
+`twDenom S n E hT e ≤ twDenom S (n+1) E hT e`: deepening the tower only adds through-mass at
+`e` (the belief normalizers cancel; `probOf = bDenom` is an unnormalized config sum). -/
+theorem cylMono (S : WeakScheduler (𝒟(sys^w))) (n : ℕ)
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates) (e : AlterSeq State Label) :
+    twDenom S n E hT e ≤ twDenom S (n+1) E hT e := by
+  classical
+  unfold twDenom
+  by_cases he : e.trans.Terminates
+  · rw [dif_pos he, dif_pos he]
+    have hEeq : (⟨e.init, Seq.ofList (e.trans.toList he)⟩ : AlterSeq State Label) = e := by
+      cases e; simp only [Stream'.Seq.ofList_toList _ he]
+    rw [← (⟨E.endState hT, (towerSchedC S n E hT).toScheduler⟩
+          : ProbabilisticExecution sys).probOf_congr ⟨e.init, Seq.ofList (e.trans.toList he)⟩ e hEeq
+          (Stream'.Seq.terminates_ofList (e.trans.toList he)) he,
+        ← (⟨E.endState hT, (towerSchedC S (n+1) E hT).toScheduler⟩
+          : ProbabilisticExecution sys).probOf_congr ⟨e.init, Seq.ofList (e.trans.toList he)⟩ e hEeq
+          (Stream'.Seq.terminates_ofList (e.trans.toList he)) he,
+        probOf_source_split (towerSchedC S n E hT).toScheduler (E.endState hT) e.init
+          (e.trans.toList he),
+        probOf_source_split (towerSchedC S (n+1) E hT).toScheduler (E.endState hT) e.init
+          (e.trans.toList he)]
+    exact mul_le_mul_left'
+      (twDenom_pure_mono S n E hT e.init ⟨e.init, Seq.ofList (e.trans.toList he)⟩
+        (Stream'.Seq.terminates_ofList _)) _
+  · rw [dif_neg he, dif_neg he]
+
 /-! ### σ\* limit-witness frontier — paper assessment (both routes vs. the current stack)
 
 Goal: a single `σ* : WeakScheduler sys`, a.s.-halting from `μ`, with pushforward
