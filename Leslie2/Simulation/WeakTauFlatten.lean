@@ -4448,4 +4448,39 @@ noncomputable def reachDepM (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
     (l : Label) (ν : PMF State) : ENNReal :=
   dNum S μ0 E e (some (l, ν))
 
+/-- **Departure move mass** at the current run: the total next-move mass of the
+current inner run reaching `cur`, marginalized over the emission `ω`. Equal to
+`∑' (l,ν), moveTerm (some (l,ν))`. -/
+noncomputable def depMove (S : WeakScheduler (𝒟(sys^w))) (src : PMF State)
+    (Ec : AlterSeq (PMF State) Label)
+    (cur : {p : AlterSeq State Label // p.trans.Terminates}) : ENNReal :=
+  ∑' ω : PMF (PMF State), S.next Ec (some (Silent.τ, ω))
+    * (⟨src, (innerWitness sys src ω).toScheduler⟩
+        : ProbabilisticExecution sys).probOf cur.1 cur.2
+    * ∑' lν : Label × PMF State, (innerWitness sys src ω).next cur.1 (some lν)
+
+/-- **Halt-at-`cur` reach**: the belief mass that the current inner run reaches
+`cur` and then halts (`⊥`), marginalized over the emission `ω`. -/
+noncomputable def haltReach (S : WeakScheduler (𝒟(sys^w))) (src : PMF State)
+    (Ec : AlterSeq (PMF State) Label)
+    (cur : {p : AlterSeq State Label // p.trans.Terminates}) : ENNReal :=
+  ∑' ω : PMF (PMF State), S.next Ec (some (Silent.τ, ω))
+    * (⟨src, (innerWitness sys src ω).toScheduler⟩
+        : ProbabilisticExecution sys).probOf cur.1 cur.2
+    * (innerWitness sys src ω).next cur.1 none
+
+/-- **The current-run reach splits** into departures plus the halt reach: at the
+current prefix the inner witness is a PMF, so its next-move total is `1`. -/
+theorem curReach_split (S : WeakScheduler (𝒟(sys^w))) (src : PMF State)
+    (Ec : AlterSeq (PMF State) Label)
+    (cur : {p : AlterSeq State Label // p.trans.Terminates}) :
+    curReach S src Ec cur = depMove S src Ec cur + haltReach S src Ec cur := by
+  rw [depMove, haltReach, curReach, ← ENNReal.tsum_add]
+  refine tsum_congr (fun ω => ?_)
+  rw [← mul_add,
+    show (∑' lν : Label × PMF State, (innerWitness sys src ω).next cur.1 (some lν))
+        + (innerWitness sys src ω).next cur.1 none = 1 from by
+      rw [add_comm, ← tsumOpt (fun o => (innerWitness sys src ω).next cur.1 o), PMF.tsum_coe],
+    mul_one]
+
 end PLTS
