@@ -4830,4 +4830,73 @@ private theorem genDep_le_genArr (S : WeakScheduler (𝒟(sys^w))) :
           gcongr
           exact boundaryHalt_le S src E e
 
+/-- The total proper-move mass of the current run is `depMove`. -/
+private theorem moveSum_eq_depMove (S : WeakScheduler (𝒟(sys^w))) (src : PMF State)
+    (Ec : AlterSeq (PMF State) Label)
+    (cur : {q : AlterSeq State Label // q.trans.Terminates}) :
+    (∑' p : Label × PMF State, moveTerm S src Ec cur (some p)) = depMove S src Ec cur := by
+  have h1 : (∑' p : Label × PMF State, moveTerm S src Ec cur (some p))
+      = ∑' p : Label × PMF State, ∑' ω : PMF (PMF State),
+          S.next Ec (some (Silent.τ, ω))
+            * (⟨src, (innerWitness sys src ω).toScheduler⟩
+                : ProbabilisticExecution sys).probOf cur.1 cur.2
+            * (innerWitness sys src ω).next cur.1 (some p) :=
+    tsum_congr (fun p => rfl)
+  rw [h1, ENNReal.tsum_comm, depMove]
+  refine tsum_congr (fun ω => ?_)
+  rw [ENNReal.tsum_mul_left]
+
+open Classical in
+/-- The current-run reach guarded by a nonempty current prefix (the arrival kernel). -/
+private noncomputable def curReachG (S : WeakScheduler (𝒟(sys^w))) (s : PMF State)
+    (Ec : AlterSeq (PMF State) Label)
+    (c : {q : AlterSeq State Label // q.trans.Terminates}) : ENNReal :=
+  if c.1.trans ≠ Stream'.Seq.nil then curReach S s Ec c else 0
+
+open Classical in
+/-- `genW` reindexed over the `DConfig` carrier. -/
+private theorem genW_eq_dconfig
+    (k : PMF State → AlterSeq (PMF State) Label →
+      {q : AlterSeq State Label // q.trans.Terminates} → ENNReal)
+    (S : WeakScheduler (𝒟(sys^w))) (src : PMF State) (E : AlterSeq (PMF State) Label)
+    (e : {q : AlterSeq State Label // q.trans.Terminates}) :
+    genW k S src E e = ∑' c : DConfig State Label,
+      (if dConsistent e.1 c then (1 : ENNReal) else 0) * segWeight S src E c.segs
+        * k (segSrc src c.segs) (segHist E c.segs) ⟨c.cur, c.curT⟩ := by
+  rw [genW]
+  exact (Equiv.tsum_eq dcE _).symm
+
+open Classical in
+/-- **Departures ⊆ arrivals (kernel form).** The total departure reach is at most
+the arrival reach, so the halt label gets a well-defined remainder. -/
+theorem reachDepM_sum_le (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (E : AlterSeq (PMF State) Label)
+    (e : {q : AlterSeq State Label // q.trans.Terminates}) :
+    (∑' p : Label × PMF State, reachDepM S μ0 E e p.1 p.2) ≤ reachArrM S μ0 E e := by
+  have hdep : (∑' p : Label × PMF State, reachDepM S μ0 E e p.1 p.2)
+      = genW (depMove S) S μ0 E e := by
+    rw [genW_eq_dconfig]
+    have hr : ∀ p : Label × PMF State,
+        reachDepM S μ0 E e p.1 p.2 = dNum S μ0 E e (some p) := fun p => rfl
+    simp_rw [hr]
+    unfold dNum
+    rw [ENNReal.tsum_comm]
+    refine tsum_congr (fun c => ?_)
+    rw [ENNReal.tsum_mul_left, moveSum_eq_depMove]
+  rw [hdep]
+  by_cases hnil : e.1.trans = Stream'.Seq.nil
+  · rw [genW_nil (depMove S) S μ0 E e hnil, reachArrM, if_pos hnil]
+    exact depMove_le_init S μ0 E e
+  · rw [reachArrM, if_neg hnil]
+    refine (genDep_le_genArr S (e.1.trans.length e.2) μ0 E e hnil rfl).trans ?_
+    show genW (curReachG S) S μ0 E e ≤ _
+    rw [genW_eq_dconfig]
+    refine ENNReal.tsum_le_tsum (fun c => ?_)
+    simp only [curReachG]
+    by_cases hdc : dConsistent e.1 c
+    · by_cases hcnil : c.cur.trans = Stream'.Seq.nil
+      · simp [hdc, hcnil]
+      · simp [hdc, hcnil, reachM]
+    · simp [hdc]
+
 end PLTS
