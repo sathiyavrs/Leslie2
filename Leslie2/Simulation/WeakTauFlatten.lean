@@ -5098,6 +5098,64 @@ private theorem dcon_snoc_mem_range (e : {q : AlterSeq State Label // q.trans.Te
     = cur.1
   rw [← hlast, ← hsplit]
 
+open Classical in
+/-- **The arrival-config reindex.** The arrival `genW`-carrier at the `snoc`-history
+equals the landing `genW`-carrier at the original history: an arrival config whose
+current run ends in `(l, s')` is exactly a config at `e` whose current run then
+departs with a `(l, ν)`-move landing at `s'` (bijection via `snocT`). -/
+private theorem genW_curReachG_snoc (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (E : AlterSeq (PMF State) Label)
+    (e : {q : AlterSeq State Label // q.trans.Terminates}) (l : Label) (s' : State) :
+    genW (curReachG S) S μ0 E (snocT e l s')
+      = genW (fun (s : PMF State) (Ec : AlterSeq (PMF State) Label)
+          (c : {q : AlterSeq State Label // q.trans.Terminates}) =>
+          ∑' ν : PMF State, moveTerm S s Ec c (some (l, ν)) * ν s') S μ0 E e := by
+  rw [genW, genW]
+  set F0 : (List (FlatSeg State Label) × {q : AlterSeq State Label // q.trans.Terminates})
+      → ENNReal := fun p =>
+    (if dConsistent (snocT e l s').1 ⟨p.1, p.2.1, p.2.2⟩ then (1 : ENNReal) else 0)
+      * segWeight S μ0 E p.1
+      * curReachG S (segSrc μ0 p.1) (segHist E p.1) p.2 with hF0
+  have hΦinj : Function.Injective
+      (fun p : List (FlatSeg State Label) × {q : AlterSeq State Label // q.trans.Terminates} =>
+        (p.1, snocT p.2 l s')) := by
+    intro p1 p2 h
+    obtain ⟨a1, b1⟩ := p1
+    obtain ⟨a2, b2⟩ := p2
+    have hfst : a1 = a2 := congrArg Prod.fst h
+    have hsnd : b1 = b2 := snocT_injective l s' (congrArg Prod.snd h)
+    rw [hfst, hsnd]
+  have hf : Function.support F0 ⊆ Set.range
+      (fun p : List (FlatSeg State Label) × {q : AlterSeq State Label // q.trans.Terminates} =>
+        (p.1, snocT p.2 l s')) := by
+    intro p hp
+    rw [Function.mem_support, hF0] at hp
+    have hdc : dConsistent (snocT e l s').1 ⟨p.1, p.2.1, p.2.2⟩ := by
+      by_contra hc
+      exact hp (by simp only [hc, if_false, zero_mul])
+    have hnil : p.2.1.trans ≠ Stream'.Seq.nil := by
+      intro h0
+      exact hp (by simp only [curReachG, h0, ne_eq, not_true_eq_false, if_false, mul_zero])
+    obtain ⟨cur', hcur'⟩ := dcon_snoc_mem_range e l s' p.1 p.2 hnil hdc
+    have hcur'' : snocT cur' l s' = p.2 := hcur'
+    refine ⟨(p.1, cur'), ?_⟩
+    show (p.1, snocT cur' l s') = p
+    rw [hcur'']
+  rw [← Function.Injective.tsum_eq hΦinj hf]
+  refine tsum_congr (fun p => ?_)
+  have hcr : curReachG S (segSrc μ0 p.1) (segHist E p.1) (snocT p.2 l s')
+      = ∑' ν : PMF State, moveTerm S (segSrc μ0 p.1) (segHist E p.1) p.2 (some (l, ν)) * ν s' := by
+    have h1 : curReachG S (segSrc μ0 p.1) (segHist E p.1) (snocT p.2 l s')
+        = curReach S (segSrc μ0 p.1) (segHist E p.1) (snocT p.2 l s') :=
+      if_pos (snocT_trans_ne_nil p.2 l s')
+    rw [h1, curReach_snoc]
+  show (if dConsistent (snocT e l s').1 ⟨p.1, (snocT p.2 l s').1, (snocT p.2 l s').2⟩
+        then (1 : ENNReal) else 0) * segWeight S μ0 E p.1
+      * curReachG S (segSrc μ0 p.1) (segHist E p.1) (snocT p.2 l s')
+    = (if dConsistent e.1 ⟨p.1, p.2.1, p.2.2⟩ then (1 : ENNReal) else 0) * segWeight S μ0 E p.1
+      * (∑' ν : PMF State, moveTerm S (segSrc μ0 p.1) (segHist E p.1) p.2 (some (l, ν)) * ν s')
+  simp only [hcr, dConsistent_snoc_iff]
+
 /-- The mass function of `flatSched` at observed history `e`: a proper step
 `some (l,ν)` gets the posterior `reachDepM / reachArrM`; the halt label `⊥` takes
 the remaining (halt-or-diverge) mass. Mirrors `expandMass`. -/
