@@ -440,6 +440,24 @@ theorem macroHalted_iSup_eq_one {sys : System State Label}
   rw [← ENNReal.tsum_eq_iSup_nat, macroHaltDepth_tsum]
   exact hhalt
 
+open Classical in
+/-- **Pushforward as a monotone limit.** The flatten target `Ν.bind id`, evaluated
+pointwise at `s`, is the supremum over the truncation depth `n` of the halting mass
+accumulated in the first `n` macro-depths — the pointwise companion of
+`macroHalted_iSup_eq_one` (which is the `∑' s`-summed, mass-`1` form). Together they
+say the flatten pushforward is exactly the monotone limit of the depth-stratified
+halting sub-distributions: the object any limit witness `σ*` must realize. Immediate
+from `macroHalt_tsum_depth` (the depth stratification of `Ν.bind id`) and the
+`ENNReal` `tsum`-as-`iSup`-of-partial-sums identity. -/
+theorem macroHalt_bind_id_eq_iSup {sys : System State Label}
+    (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State) {Ν : PMF (PMF State)}
+    (hpush : ∀ m, Ν m = ∑' E : {e : AlterSeq (PMF State) Label // e.trans.Terminates},
+        S.haltMass (PMF.pure μ0) E * (if E.1.endState E.2 = m then 1 else 0))
+    (s : State) :
+    (Ν.bind id) s = ⨆ n : ℕ, ∑ k ∈ Finset.range n, macroHaltDepth S μ0 k s := by
+  rw [macroHalt_tsum_depth S μ0 hpush s]
+  exact ENNReal.tsum_eq_iSup_nat
+
 /-! #### HANDOFF (F3 → F6): the remaining bridge and the closure lemma
 
 Two self-contained sides are delivered above, both `[propext, Classical.choice,
@@ -1902,6 +1920,396 @@ theorem oneDecision_integrate (S : WeakScheduler (𝒟(sys^w)))
   rw [oneDecision, (weakTau_macroFuture_trunc S 1 E hT).integrate g]
   exact macroFuture_trunc_integrate_succ S 0 E hT g
 
+/-! ### The numerator-exposed single-layer scheduler `oneDecisionC`
+
+A concrete-`next` rebuild of `oneDecision` as a **mixture-of-common-source belief
+scheduler**. The single hidden index is the macro-emission `x : Option (Label ×
+PMF (PMF State))` sampled from `S.next E`; each branch runs a genuine `sys`-weak
+scheduler `odFam x` from the common source `E.endState hT` (the immediately-stopping
+scheduler at `none`, the per-emission inner witness `innerWitness sys src ω` at
+`some (_, ω)`). The belief `next e o` is the normalized numerator `odNum e o /
+odDenom e`; `odDenom` is the composite path measure and is `≤ 1` (single layer, so
+the total emission weight `∑' x, S.next E x = 1` — no stall leak). -/
+
+/-- The branch scheduler family for `oneDecisionC`. -/
+noncomputable def odFam (S : WeakScheduler (𝒟(sys^w)))
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates) :
+    Option (Label × PMF (PMF State)) → WeakScheduler sys
+  | none => WeakScheduler.stop sys
+  | some (_, ω) => innerWitness sys (E.endState hT) ω
+
+open Classical in
+/-- The per-branch path measure at an observed inner history `e` (0 off-termination). -/
+noncomputable def odBranchProb (S : WeakScheduler (𝒟(sys^w)))
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates)
+    (x : Option (Label × PMF (PMF State))) (e : AlterSeq State Label) : ENNReal :=
+  if h : e.trans.Terminates then
+    (⟨E.endState hT, (odFam S E hT x).toScheduler⟩ : ProbabilisticExecution sys).probOf e h
+  else 0
+
+/-- The exposed **numerator** of `oneDecisionC.next e` at emission `o`. -/
+noncomputable def odNum (S : WeakScheduler (𝒟(sys^w)))
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates)
+    (e : AlterSeq State Label) (o : Option (Label × PMF State)) : ENNReal :=
+  ∑' x, S.next E x * odBranchProb S E hT x e * (odFam S E hT x).next e o
+
+/-- The exposed **denominator** (composite path measure) of `oneDecisionC` at `e`. -/
+noncomputable def odDenom (S : WeakScheduler (𝒟(sys^w)))
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates)
+    (e : AlterSeq State Label) : ENNReal :=
+  ∑' x, S.next E x * odBranchProb S E hT x e
+
+/-- Each branch path measure is a sub-probability. -/
+theorem odBranchProb_le_one (S : WeakScheduler (𝒟(sys^w)))
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates)
+    (x : Option (Label × PMF (PMF State))) (e : AlterSeq State Label) :
+    odBranchProb S E hT x e ≤ 1 := by
+  classical
+  unfold odBranchProb
+  split
+  · exact le_trans (ProbabilisticExecution.probOf_le_init _ _ _) (PMF.coe_le_one _ _)
+  · exact zero_le_one
+
+/-- The numerators over `o` sum to the denominator (each branch's `next e` is a PMF). -/
+theorem odNum_tsum (S : WeakScheduler (𝒟(sys^w)))
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates) (e : AlterSeq State Label) :
+    (∑' o, odNum S E hT e o) = odDenom S E hT e := by
+  unfold odNum odDenom
+  rw [ENNReal.tsum_comm]
+  refine tsum_congr (fun x => ?_)
+  rw [ENNReal.tsum_mul_left, PMF.tsum_coe, mul_one]
+
+/-- The denominator is a sub-probability (`∑' x, S.next E x = 1`, `odBranchProb ≤ 1`). -/
+theorem odDenom_le_one (S : WeakScheduler (𝒟(sys^w)))
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates) (e : AlterSeq State Label) :
+    odDenom S E hT e ≤ 1 := by
+  unfold odDenom
+  calc (∑' x, S.next E x * odBranchProb S E hT x e)
+      ≤ ∑' x, S.next E x :=
+        ENNReal.tsum_le_tsum (fun x => mul_le_of_le_one_right' (odBranchProb_le_one S E hT x e))
+    _ = 1 := (S.next E).tsum_coe
+
+/-- The denominator is never `⊤` (the trivial single-layer bound; feeds later `⨆`). -/
+theorem odDenom_ne_top (S : WeakScheduler (𝒟(sys^w)))
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates) (e : AlterSeq State Label) :
+    odDenom S E hT e ≠ ⊤ :=
+  ne_top_of_le_ne_top ENNReal.one_ne_top (odDenom_le_one S E hT e)
+
+open Classical in
+/-- **`oneDecisionC` (numerator-exposed route (b)).** The single-macro-layer belief
+scheduler with EXPLICIT `next`: the normalized mixture posterior `odNum e o / odDenom e`
+over the hidden emission `x`. `valid`/`internal_only` reduce to the branch schedulers'
+(each `odFam x` is a genuine `sys`-weak scheduler). -/
+noncomputable def oneDecisionC (S : WeakScheduler (𝒟(sys^w)))
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates) : WeakScheduler sys where
+  next e := if h : odDenom S E hT e = 0 then PMF.pure none
+    else PMF.normalize (odNum S E hT e) (by rw [odNum_tsum]; exact h)
+      (by rw [odNum_tsum]; exact odDenom_ne_top S E hT e)
+  valid := by
+    classical
+    intro e n s hterm hstate l ν hsupp
+    by_cases hd : odDenom S E hT e = 0
+    · rw [dif_pos hd, PMF.mem_support_iff, PMF.pure_apply_of_ne _ _ (by simp)] at hsupp
+      exact absurd rfl hsupp
+    · simp only [dif_neg hd, PMF.mem_support_normalize_iff] at hsupp
+      have hgne : odNum S E hT e (some (l, ν)) ≠ 0 := hsupp
+      rw [odNum] at hgne
+      have hex := mt ENNReal.tsum_eq_zero.mpr hgne
+      push Not at hex
+      obtain ⟨x, hxne⟩ := hex
+      have hnextne : (odFam S E hT x).next e (some (l, ν)) ≠ 0 := by
+        intro h0; rw [h0, mul_zero] at hxne; exact hxne rfl
+      exact (odFam S E hT x).valid e n s hterm hstate l ν ((PMF.mem_support_iff _ _).mpr hnextne)
+  internal_only := by
+    classical
+    intro e l ν hsupp
+    by_cases hd : odDenom S E hT e = 0
+    · rw [dif_pos hd, PMF.mem_support_iff, PMF.pure_apply_of_ne _ _ (by simp)] at hsupp
+      exact absurd rfl hsupp
+    · simp only [dif_neg hd, PMF.mem_support_normalize_iff] at hsupp
+      have hgne : odNum S E hT e (some (l, ν)) ≠ 0 := hsupp
+      rw [odNum] at hgne
+      have hex := mt ENNReal.tsum_eq_zero.mpr hgne
+      push Not at hex
+      obtain ⟨x, hxne⟩ := hex
+      have hnextne : (odFam S E hT x).next e (some (l, ν)) ≠ 0 := by
+        intro h0; rw [h0, mul_zero] at hxne; exact hxne rfl
+      exact (odFam S E hT x).internal_only e l ν ((PMF.mem_support_iff _ _).mpr hnextne)
+
+/-- **Cancellation:** `odDenom · oneDecisionC.next = odNum` (the belief-scheduler
+normalization identity; the `mapWeakBeliefSched_cancel` analogue). -/
+theorem oneDecisionC_cancel (S : WeakScheduler (𝒟(sys^w)))
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates)
+    (e : AlterSeq State Label) (o : Option (Label × PMF State)) :
+    odDenom S E hT e * (oneDecisionC S E hT).next e o = odNum S E hT e o := by
+  classical
+  by_cases hd : odDenom S E hT e = 0
+  · have hnext : (oneDecisionC S E hT).next e = PMF.pure none := dif_pos hd
+    rw [hnext, hd, zero_mul]
+    have hall : ∀ o', odNum S E hT e o' = 0 := by
+      rw [← ENNReal.tsum_eq_zero, odNum_tsum]; exact hd
+    exact (hall o).symm
+  · have hnext : (oneDecisionC S E hT).next e o
+        = odNum S E hT e o * (odDenom S E hT e)⁻¹ := by
+      have h1 : (oneDecisionC S E hT).next e
+          = PMF.normalize (odNum S E hT e) (by rw [odNum_tsum]; exact hd)
+            (by rw [odNum_tsum]; exact odDenom_ne_top S E hT e) := dif_neg hd
+      rw [h1, PMF.normalize_apply, odNum_tsum]
+    rw [hnext, ← mul_assoc, mul_comm (odDenom S E hT e) (odNum S E hT e o), mul_assoc,
+      ENNReal.mul_inv_cancel hd (odDenom_ne_top S E hT e), mul_one]
+
+/-- **Belief consistency (pointwise).** The `oneDecisionC`-path measure of a
+terminating inner history `e`, from the common source `E.endState hT`, is exactly the
+denominator `odDenom e`. Because the single layer carries total emission weight
+`∑' x, S.next E x = 1`, the `nil` base collapses to the source with NO stall term — the
+pointwise form that failed for the recursive belief scheduler `dSched`. Induction on
+`e` (`List.reverseRecOn`), the append case telescoping each branch's own `probOf`. -/
+theorem oneDecisionC_probOf (S : WeakScheduler (𝒟(sys^w)))
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates)
+    (e : AlterSeq State Label) (hFin : e.trans.Terminates) :
+    (⟨E.endState hT, (oneDecisionC S E hT).toScheduler⟩ : ProbabilisticExecution sys).probOf e hFin
+      = odDenom S E hT e := by
+  classical
+  set pe : ProbabilisticExecution sys :=
+    ⟨E.endState hT, (oneDecisionC S E hT).toScheduler⟩ with hpe
+  change pe.probOf e hFin = odDenom S E hT e
+  suffices hgen : ∀ (L : List (Label × State)) (s₀ : State)
+      (hFin : (Seq.ofList L : Seq (Label × State)).Terminates),
+      pe.probOf ⟨s₀, Seq.ofList L⟩ hFin = odDenom S E hT ⟨s₀, Seq.ofList L⟩ by
+    have hofl : (Seq.ofList (e.trans.toList hFin) : Seq (Label × State)) = e.trans :=
+      Stream'.Seq.ofList_toList e.trans hFin
+    have hFin' : (Seq.ofList (e.trans.toList hFin) : Seq (Label × State)).Terminates := by
+      rw [hofl]; exact hFin
+    have hEeq : (⟨e.init, Seq.ofList (e.trans.toList hFin)⟩ : AlterSeq State Label) = e := by
+      cases e; simp only [hofl]
+    have hkey := hgen (e.trans.toList hFin) e.init hFin'
+    rw [pe.probOf_congr ⟨e.init, Seq.ofList (e.trans.toList hFin)⟩ e hEeq hFin' hFin] at hkey
+    rw [hkey, hEeq]
+  intro L
+  induction L using List.reverseRecOn with
+  | nil =>
+    intro s₀ hFin
+    rw [pe.probOf_congr ⟨s₀, Seq.ofList ([] : List (Label × State))⟩ ⟨s₀, Seq.nil⟩
+      (by rw [Stream'.Seq.ofList_nil]) hFin Stream'.Seq.terminates_nil,
+      ProbabilisticExecution.probOf_nil, Stream'.Seq.ofList_nil]
+    have hbp : ∀ x, odBranchProb S E hT x ⟨s₀, Seq.nil⟩ = (E.endState hT) s₀ := by
+      intro x
+      unfold odBranchProb
+      rw [dif_pos Stream'.Seq.terminates_nil, ProbabilisticExecution.probOf_nil,
+        ProbabilisticExecution.init_eq_initState]
+    change (E.endState hT) s₀ = odDenom S E hT ⟨s₀, Seq.nil⟩
+    unfold odDenom
+    rw [tsum_congr (fun x => by rw [hbp x]), ENNReal.tsum_mul_right, (S.next E).tsum_coe, one_mul]
+  | append_singleton rest last ih =>
+    intro s₀ hFin
+    obtain ⟨l, s'⟩ := last
+    have hsplit : (Seq.ofList (rest ++ [(l, s')]) : Seq (Label × State))
+        = (Seq.ofList rest).append (Seq.cons (l, s') Seq.nil) := by
+      rw [Stream'.Seq.ofList_append, Stream'.Seq.ofList_cons, Stream'.Seq.ofList_nil]
+    have hrest_fin : (Seq.ofList rest : Seq (Label × State)).Terminates :=
+      Stream'.Seq.terminates_ofList _
+    have hFinS : ((Seq.ofList rest).append (Seq.cons (l, s') Seq.nil)).Terminates := by
+      rw [← hsplit]; exact hFin
+    set E' : AlterSeq State Label := ⟨s₀, Seq.ofList rest⟩ with hE'
+    -- per-branch: probOf(E') * (branch kernel at (l,s')) = probOf(full)
+    have hbpstep : ∀ x, odBranchProb S E hT x E'
+        * (∑' ν, (odFam S E hT x).next E' (some (l, ν)) * ν s')
+        = odBranchProb S E hT x ⟨s₀, Seq.ofList (rest ++ [(l, s')])⟩ := by
+      intro x
+      unfold odBranchProb
+      rw [dif_pos hrest_fin, dif_pos hFin,
+        (⟨E.endState hT, (odFam S E hT x).toScheduler⟩ : ProbabilisticExecution sys).probOf_congr
+          ⟨s₀, Seq.ofList (rest ++ [(l, s')])⟩
+          ⟨s₀, (Seq.ofList rest).append (Seq.cons (l, s') Seq.nil)⟩ (by rw [hsplit]) hFin hFinS,
+        ProbabilisticExecution.probOf_append_singleton _ s₀ (Seq.ofList rest) hrest_fin (l, s')
+          hFinS, ProbabilisticExecution.kernel]
+    set Mid : ENNReal := ∑' x, S.next E x * odBranchProb S E hT x E'
+      * (∑' ν, (odFam S E hT x).next E' (some (l, ν)) * ν s') with hMid
+    have hLHS : pe.probOf ⟨s₀, Seq.ofList (rest ++ [(l, s')])⟩ hFin = Mid := by
+      rw [pe.probOf_congr ⟨s₀, Seq.ofList (rest ++ [(l, s')])⟩
+          ⟨s₀, (Seq.ofList rest).append (Seq.cons (l, s') Seq.nil)⟩ (by rw [hsplit]) hFin hFinS,
+        pe.probOf_append_singleton s₀ (Seq.ofList rest) hrest_fin (l, s') hFinS,
+        show pe.probOf E' hrest_fin = odDenom S E hT E' from ih s₀ hrest_fin,
+        ProbabilisticExecution.kernel]
+      change odDenom S E hT E' * (∑' ν, (oneDecisionC S E hT).next E' (some (l, ν)) * ν s') = Mid
+      have hstep2 : ∀ ν, odNum S E hT E' (some (l, ν)) * ν s'
+          = ∑' x, S.next E x * odBranchProb S E hT x E'
+              * (odFam S E hT x).next E' (some (l, ν)) * ν s' := by
+        intro ν; unfold odNum; rw [ENNReal.tsum_mul_right]
+      rw [← ENNReal.tsum_mul_left,
+        tsum_congr (fun ν => by rw [← mul_assoc, oneDecisionC_cancel S E hT E' (some (l, ν))]),
+        tsum_congr hstep2, ENNReal.tsum_comm, hMid]
+      refine tsum_congr (fun x => ?_)
+      rw [tsum_congr (fun ν => mul_assoc (S.next E x * odBranchProb S E hT x E') _ _),
+        ENNReal.tsum_mul_left]
+    have hRHS : odDenom S E hT ⟨s₀, Seq.ofList (rest ++ [(l, s')])⟩ = Mid := by
+      unfold odDenom
+      rw [hMid]
+      refine tsum_congr (fun x => ?_)
+      rw [← hbpstep x, ← mul_assoc]
+    rw [hLHS, hRHS]
+
+/-- Reindex a terminating-history sum supported on the `nil` fibre onto states
+(local copy of `weakTau_reindex_fiber`). -/
+private theorem reindexFiber {St Lb : Type}
+    (fiber : St → AlterSeq St Lb) (hterm : ∀ s, (fiber s).trans.Terminates)
+    (hinj : Function.Injective fiber)
+    (F : {e : AlterSeq St Lb // e.trans.Terminates} → ENNReal)
+    (hsupp : ∀ e : {e : AlterSeq St Lb // e.trans.Terminates},
+        F e ≠ 0 → ∃ s, fiber s = e.1) :
+    (∑' e, F e) = ∑' s, F ⟨fiber s, hterm s⟩ := by
+  refine tsum_eq_tsum_of_ne_zero_bij
+    (i := fun x => (⟨fiber (x : St), hterm x⟩ : {e : AlterSeq St Lb // e.trans.Terminates}))
+    ?_ ?_ ?_
+  · rintro ⟨a, ha⟩ ⟨b, hb⟩ hab
+    simp only [Subtype.mk.injEq] at hab
+    exact Subtype.ext (hinj hab)
+  · intro e he
+    obtain ⟨s, hs⟩ := hsupp e (Function.mem_support.mp he)
+    have hes : (⟨fiber s, hterm s⟩ : {e : AlterSeq St Lb // e.trans.Terminates}) = e :=
+      Subtype.ext hs
+    exact ⟨⟨s, by change F ⟨fiber s, hterm s⟩ ≠ 0; rw [hes]; exact Function.mem_support.mp he⟩,
+      Subtype.ext hs⟩
+  · intro x; rfl
+
+/-- **`stop`-scheduler integrate.** The immediately-stopping scheduler halts on the
+`nil` histories, so its `g`-integrated halting end-state is the `g`-integral of the
+source (the `none`-branch of `oneDecisionC`). -/
+theorem stop_integrate {sys : System State Label} (μ : PMF State) (g : State → ENNReal) :
+    (∑' e, (WeakScheduler.stop sys).haltMass μ e * g (e.1.endState e.2)) = ∑' s, μ s * g s := by
+  classical
+  set pe : ProbabilisticExecution sys := ⟨μ, (WeakScheduler.stop sys).toScheduler⟩ with hpe
+  have hker : ∀ (e' : AlterSeq State Label) (st : Label × State), pe.kernel e' st = 0 := by
+    intro e' st
+    unfold ProbabilisticExecution.kernel
+    have h0 : ∀ ν : PMF State, pe.scheduler.next e' (some (st.1, ν)) = 0 :=
+      fun ν => PMF.pure_apply_of_ne _ _ (by simp)
+    simp only [h0, zero_mul, tsum_zero]
+  have hprob_nonnil : ∀ (e' : AlterSeq State Label) (h : e'.trans.Terminates),
+      e'.trans ≠ Seq.nil → pe.probOf e' h = 0 := by
+    rintro ⟨init', trans'⟩ h hne
+    simp only at h hne ⊢
+    have hnonempty : trans'.toList h ≠ [] := by
+      intro hnil; apply hne
+      have := Stream'.Seq.ofList_toList trans' h
+      rw [hnil, Stream'.Seq.ofList_nil] at this; exact this.symm
+    obtain ⟨previous, last, h_prev, h_split, _, _⟩ :=
+      Stream'.Seq.exists_split_last trans' h hnonempty
+    subst h_split
+    rw [ProbabilisticExecution.probOf_append_singleton _ _ _ h_prev _ h, hker, mul_zero]
+  have hhalt_fiber : ∀ s : State,
+      (WeakScheduler.stop sys).haltMass μ ⟨⟨s, Seq.nil⟩, Stream'.Seq.terminates_nil⟩ = μ s := by
+    intro s
+    unfold WeakScheduler.haltMass Scheduler.haltMass
+    rw [← hpe, ProbabilisticExecution.probOf_nil, ProbabilisticExecution.init_eq_initState,
+      show (WeakScheduler.stop sys).toScheduler.next ⟨s, Seq.nil⟩ none = 1 from
+        PMF.pure_apply_self none, mul_one]
+  rw [reindexFiber (fun s => (⟨s, Seq.nil⟩ : AlterSeq State Label))
+      (fun _ => Stream'.Seq.terminates_nil) (fun a b hab => congrArg AlterSeq.init hab)
+      (fun e => (WeakScheduler.stop sys).haltMass μ e * g (e.1.endState e.2)) ?supp]
+  · refine tsum_congr (fun s => ?_)
+    rw [hhalt_fiber s, AlterSeq.endState_of_trans_nil _ rfl]
+  case supp =>
+    intro e hne
+    refine ⟨e.1.init, ?_⟩
+    by_contra hcontra
+    apply hne
+    have htrans : e.1.trans ≠ Seq.nil := by
+      intro hnil; apply hcontra
+      cases e with | mk e' he' => cases e' with | mk i t => simp only at hnil ⊢; rw [hnil]
+    have hz : (WeakScheduler.stop sys).haltMass μ e = 0 := by
+      unfold WeakScheduler.haltMass Scheduler.haltMass
+      rw [← hpe, hprob_nonnil e.1 e.2 htrans, zero_mul]
+    rw [hz, zero_mul]
+
+/-- **`oneDecisionC` halting mass as a branch mixture.** The composite halting mass
+factors through the hidden emission `x`: `haltMass = ∑' x, S.next E x · (branch halt
+mass)`. Immediate from `oneDecisionC_probOf` (path measure `= odDenom`) and
+`oneDecisionC_cancel` (`odDenom · next = odNum`). -/
+theorem oneDecisionC_haltMass (S : WeakScheduler (𝒟(sys^w)))
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates)
+    (e : {e : AlterSeq State Label // e.trans.Terminates}) :
+    (oneDecisionC S E hT).haltMass (E.endState hT) e
+      = ∑' x, S.next E x * (odFam S E hT x).haltMass (E.endState hT) e := by
+  classical
+  have hhalt : (oneDecisionC S E hT).haltMass (E.endState hT) e = odNum S E hT e.1 none := by
+    unfold WeakScheduler.haltMass Scheduler.haltMass
+    rw [show (⟨E.endState hT, (oneDecisionC S E hT).toScheduler⟩
+          : ProbabilisticExecution sys).probOf e.1 e.2 = odDenom S E hT e.1 from
+        oneDecisionC_probOf S E hT e.1 e.2]
+    exact oneDecisionC_cancel S E hT e.1 none
+  rw [hhalt]
+  unfold odNum
+  refine tsum_congr (fun x => ?_)
+  rw [mul_assoc]
+  congr 1
+  unfold WeakScheduler.haltMass Scheduler.haltMass odBranchProb
+  rw [dif_pos e.2]
+
+/-- **One-layer integrate identity for `oneDecisionC`.** The `g`-integrated halting
+end-state of the concrete single-layer scheduler unfolds exactly one macro level —
+the SAME right-hand side as the opaque `oneDecision_integrate`, so the tower/limit
+tranches see identical shapes. The `none` branch integrates against the source
+(`stop_integrate`); each `some (τ, ω)` branch against `ω.bind id` (`innerWitness_integrate`
+then `tsum_bind_mul`), matching the depth-0 macro-future `(macroExtend E m').endState = m'`. -/
+theorem oneDecisionC_integrate (S : WeakScheduler (𝒟(sys^w)))
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates) (g : State → ENNReal) :
+    (∑' e, (oneDecisionC S E hT).haltMass (E.endState hT) e * g (e.1.endState e.2))
+      = S.next E none * (∑' s, (E.endState hT) s * g s)
+        + ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+            * ∑' m', ω m' * (∑' s, (macroExtend E m').endState (macroExtend_term hT m')
+                s * g s) := by
+  classical
+  have hA : (∑' e, (oneDecisionC S E hT).haltMass (E.endState hT) e * g (e.1.endState e.2))
+      = ∑' x, S.next E x
+          * (∑' e, (odFam S E hT x).haltMass (E.endState hT) e * g (e.1.endState e.2)) := by
+    have he : ∀ e : {e : AlterSeq State Label // e.trans.Terminates},
+        (oneDecisionC S E hT).haltMass (E.endState hT) e * g (e.1.endState e.2)
+          = ∑' x, S.next E x * (odFam S E hT x).haltMass (E.endState hT) e
+              * g (e.1.endState e.2) := by
+      intro e
+      rw [oneDecisionC_haltMass S E hT e, ENNReal.tsum_mul_right]
+    rw [tsum_congr he, ENNReal.tsum_comm]
+    refine tsum_congr (fun x => ?_)
+    rw [tsum_congr (fun e => mul_assoc (S.next E x) _ _), ENNReal.tsum_mul_left]
+  rw [hA, tsumOpt (fun x => S.next E x
+    * (∑' e, (odFam S E hT x).haltMass (E.endState hT) e * g (e.1.endState e.2)))]
+  congr 1
+  · congr 1
+    exact stop_integrate (E.endState hT) g
+  · have hzero : ∀ (l : Label) (ω : PMF (PMF State)), l ≠ Silent.τ →
+        S.next E (some (l, ω)) = 0 := fun l ω hl => by
+      by_contra hne
+      exact hl (S.internal_only E l ω ((PMF.mem_support_iff _ _).mpr hne))
+    rw [ENNReal.tsum_prod',
+      tsum_eq_single Silent.τ (fun l hl => by
+        rw [ENNReal.tsum_eq_zero]; intro ω; rw [hzero l ω hl, zero_mul])]
+    refine tsum_congr (fun ω => ?_)
+    by_cases hw : S.next E (some (Silent.τ, ω)) = 0
+    · rw [hw, zero_mul, zero_mul]
+    · have hstep : (𝒟(sys^w)).step (E.endState hT) Silent.τ ω :=
+        S.valid E (Nat.find hT) (E.endState hT) (Nat.find_spec hT)
+          (AlterSeq.stateAt_find_eq_endState E hT) Silent.τ ω ((PMF.mem_support_iff _ _).mpr hw)
+      congr 1
+      show (∑' e, (innerWitness sys (E.endState hT) ω).haltMass (E.endState hT) e
+              * g (e.1.endState e.2))
+          = ∑' m', ω m' * (∑' s, (macroExtend E m').endState (macroExtend_term hT m') s * g s)
+      rw [innerWitness_integrate hstep g, tsum_bind_mul ω id g]
+      simp only [id_eq]
+      refine tsum_congr (fun m' => ?_)
+      rw [macroExtend_endState hT m']
+
+/-- **`oneDecisionC` integrate, macro-future form.** The same identity re-expressed
+against the depth-`1` truncated macro-future distribution (`macroFuture_trunc_integrate_succ`),
+matching `oneDecision.integrate` — the shape the σ\* squeeze consumes. -/
+theorem oneDecisionC_integrate_trunc (S : WeakScheduler (𝒟(sys^w)))
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates) (g : State → ENNReal) :
+    (∑' e, (oneDecisionC S E hT).haltMass (E.endState hT) e * g (e.1.endState e.2))
+      = ∑' s, macroFuture_trunc S 1 E hT s * g s := by
+  rw [oneDecisionC_integrate S E hT g]
+  exact (macroFuture_trunc_integrate_succ S 0 E hT g).symm
+
+
 /-- **`WeakScheduler.bind` compose-integrate law** (the v4 enabling primitive).
 The weak-scheduler wrapper over the proven `Scheduler.bind_compose_integrate`:
 integrating `g` against the halting end-states of `bind σ k` (from `μ_init`)
@@ -2269,6 +2677,34 @@ theorem towerSched_halts {sys : System State Label} (S : WeakScheduler (𝒟(sys
   have h := towerSched_integrate S n E hT (fun _ => 1)
   simp only [mul_one] at h
   rw [h, (macroFuture_trunc S n E hT).tsum_coe]
+
+/-! ### σ\* limit-witness frontier — paper assessment (both routes vs. the current stack)
+
+Goal: a single `σ* : WeakScheduler sys`, a.s.-halting from `μ`, with pushforward
+`Ν.bind id`. The pushforward TARGET is now pinned as a monotone limit:
+`macroHalt_bind_id_eq_iSup` gives `(Ν.bind id) s = ⨆ n, ∑ k ∈ range n, macroHaltDepth S μ k s`,
+and `macroHalted_iSup_eq_one` gives its `∑' s`-summed value `= 1` under a.s.-halting.
+Both are `[propext, Classical.choice, Quot.sound]`. Since `Ν.bind id` and any a.s.-halting
+`σ*`-pushforward are both PMFs (total `1`), the squeeze collapses `≥` to `=`: it SUFFICES to
+exhibit `σ*` a.s.-halting whose pushforward dominates `⨆ n, ∑ k<n, macroHaltDepth` pointwise.
+
+* **Route A (monotone limit of tower numerators): BLOCKED on the current tower.** `towerSched`
+  is built from `oneDecision := (weakTau_macroFuture_trunc S 1 E hT).witnessScheduler` and the
+  per-branch `(H t).witnessScheduler` — i.e. `Classical.choose` schedulers with OPAQUE `next`.
+  So `towerSched S n |>.next e` has no exposed numerator to take `⨆ n` of; the "numerators
+  monotone in `n`" step has nothing to bite on. Reviving Route A needs a CONCRETE-numerator
+  re-build of `oneDecision`/`towerStep` (an explicit `innerWitness`-mixture scheduler, the
+  belief-scheduler line), not the classical tower — a large construction, not a wiring step.
+* **Route B (diagonal `σ*.next e := towerSched S (|e|+1) root |>.next e`): BLOCKED.** One macro
+  STALL (inner witness with an empty run) consumes a macro-depth but 0 sys-steps, so `|e|` does
+  not bound macro-depth; the tower `next` at a fixed `e` does not stabilize and the diagonal is
+  not measure-correct (the recorded "stall-hidden-depth" failure).
+* **Old dSched route:** blocked on the unlanded `probOf_beliefMass` (audit at `d_integrate_step`).
+
+Net: the last `sorry` is not dischargeable by wiring the current landed artifacts; it needs a
+concrete limit scheduler (a numerator-exposed tower, or a new `WeakScheduler` limit combinator)
+whose pushforward realizes the `⨆ n` above. The target identity and its mass-`1` companion are
+landed and axiom-clean; the construction is the open frontier. -/
 
 /-- **V1 — the one-step integrate recursion (rooted).** Integrating `g` against
 the composite's halting end-states unfolds one macro level: either the macro
