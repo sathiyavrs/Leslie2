@@ -4394,4 +4394,58 @@ theorem weakTau_flatten (sys : System State Label) {μ : PMF State}
   · exact fun s => d_pushforward h.witnessScheduler μ Ν
       (fun m => h.witness_pushforward m) s
 
+/-! ### F5f — the honest reach-arrival flattening scheduler (`flatSched`)
+
+Transplant of `expandSched` (`WeakClosure/Scheduler.lean`) to the two-level
+`𝒟(sys^w)` composite: the honest normalizer is the ARRIVAL reach `reachArrM`
+(reach at a decision-point config with a NONEMPTY current inner run), replacing
+the belief denominator `dDenom` whose macro-STALL leak makes `probOf = dDenom`
+false (F5e-R §1). The step kernel is the posterior `reachDepM / reachArrM`; the
+halt label `⊥` takes the remaining (halt-or-diverge) mass. -/
+
+/-- **Current-run reach** at prefix `cur` (source `src`, macro-history `Ec`): the
+belief mass of the current fresh inner run reaching `cur`, marginalized over the
+macro-emission `ω` (`S.next Ec (τ,ω)`) and threaded through `innerWitness`'s path
+measure. The arrival analogue of `moveTerm`'s `some`-branch with the trailing
+inner move dropped. -/
+noncomputable def curReach (S : WeakScheduler (𝒟(sys^w))) (src : PMF State)
+    (Ec : AlterSeq (PMF State) Label)
+    (cur : {p : AlterSeq State Label // p.trans.Terminates}) : ENNReal :=
+  ∑' ω : PMF (PMF State), S.next Ec (some (Silent.τ, ω))
+    * (⟨src, (innerWitness sys src ω).toScheduler⟩
+        : ProbabilisticExecution sys).probOf cur.1 cur.2
+
+/-- **Config reach** — the honest joint probability the composite reaches the
+decision-point config `c` (rooted at macro-history `E`, source `μ0`): the
+completed segments' belief path-weight `segWeight` times the current run's reach
+`curReach`. -/
+noncomputable def reachM (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (E : AlterSeq (PMF State) Label) (c : DConfig State Label) : ENNReal :=
+  segWeight S μ0 E c.segs
+    * curReach S (segSrc μ0 c.segs) (segHist E c.segs) ⟨c.cur, c.curT⟩
+
+open Classical in
+/-- **Arrival reach** (the scheduler's normalizer) at observed history `e`: the
+total config reach over ARRIVAL configs — consistent with `e` and with a NONEMPTY
+current inner run (`c.cur.trans ≠ nil`). The empty history carries no arrival
+config, so it is carved to the source mass `μ0 e.init` (the reach of the empty
+concrete prefix, `probOf ⟨s0,nil⟩ = μ0 s0`). -/
+noncomputable def reachArrM (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (E : AlterSeq (PMF State) Label)
+    (e : {e : AlterSeq State Label // e.trans.Terminates}) : ENNReal :=
+  if e.1.trans = Stream'.Seq.nil then μ0 e.1.init
+  else ∑' c : DConfig State Label,
+    (if dConsistent e.1 c ∧ c.cur.trans ≠ Stream'.Seq.nil then (1 : ENNReal) else 0)
+      * reachM S μ0 E c
+
+/-- **Departure reach** for the step `(l, ν)` (the scheduler's numerator): the
+total belief mass at a config consistent with `e` whose current inner run departs
+next with move `some (l, ν)`. This is exactly the belief numerator `dNum` at that
+move, `∑' c consistent, segWeight · moveTerm (some (l,ν))`. -/
+noncomputable def reachDepM (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (E : AlterSeq (PMF State) Label)
+    (e : {e : AlterSeq State Label // e.trans.Terminates})
+    (l : Label) (ν : PMF State) : ENNReal :=
+  dNum S μ0 E e (some (l, ν))
+
 end PLTS
