@@ -3889,6 +3889,36 @@ completed). Then two fidelity-style lemmas finish it:
   `macroSome_le_one`,`depMove_le_init`,`genDep_le_genArr`,`moveSum_eq_depMove`,`curReachG`,
   `genW_eq_dconfig`,`reachDepM_sum_le`,`flatMass`,`flatMass_hasSum` (F5f-2); `flatSched` (F5f-3).
 
+**F5g-1 LANDED (sorry-free, axiom-clean: [propext, Classical.choice, Quot.sound]).** THE fidelity
+lemma `probOf_eq_reachArrM S μ0 E e : (⟨μ0, (flatSched S μ0 E).toScheduler⟩).probOf e.1 e.2 =
+reachArrM S μ0 E e`, exactly the F5f-pinned shape. The crux — the arrival-step identity
+`reachArrM_snoc : reachArrM S μ0 E (snocT e l s') = ∑' ν, reachDepM S μ0 E e l ν · ν s'` — was
+RE-DERIVED for the two-level composite via an END-append config reindex (NOT the trace-world head
+telescoping). Chain: (a) `reachArrM_of_ne_nil` folds the `cur≠nil` guard into `genW (curReachG)`;
+(b) `genW_curReachG_snoc` reindexes the `(segs,cur)`-carrier by `Φ p = (p.1, snocT p.2 l s')`
+(`Function.Injective.tsum_eq`; injectivity `snocT_injective` via `append_singleton_inj_left`;
+`Function.support ⊆ range` discharged by `dcon_snoc_mem_range`, i.e. any nonempty arrival cur
+consistent with the snoc-history ends in `(l,s')` — `exists_split_last`+`append_singleton_inj_right`);
+(c) pointwise the arrival kernel `curReach (snocT cur) = ∑' ν, moveTerm cur (some(l,ν))·ν s'`
+(`curReach_snoc`, from `probOf_append_singleton` inside `innerWitness`) and consistency transfers by
+`dConsistent_snoc_iff` (`segTrans_append`+`append_singleton_inj_left`); (d) `genW_landKer` re-exposes
+the departure numerator. The fidelity itself is cons-end induction (`reachArrM_aux`, `reverseRecOn`):
+base = root carve (`probOf_nil` = `μ0 s0` = `reachArrM`@nil `if_pos`); step = `probOf_append_singleton`
+· flatSched-kernel = `reachDepM/reachArrM` posterior, IH, then ENNReal div-cancel (`mul_div_cancel`,
+zero-guard from `reachDepM_sum_le`; `≠⊤` from `probOf_le_init ≤ μ0 ≤ 1`) meeting `reachArrM_snoc`.
+NO deviation from the pinned statement; NO head-telescoping (the recorded highest-risk point was
+dissolved by the direct END-append bijection). New decls (all before `flatMass`, fidelity after
+`flatSched`): `snocT`,`snocT_trans_ne_nil`,`segTrans_append`,`curReach_snoc`,`segTrans_terminates`,
+`dConsistent_snoc_iff`,`reachArrM_of_ne_nil`,`genW_landKer`,`snocT_injective`,`dcon_snoc_mem_range`,
+`genW_curReachG_snoc`,`reachArrM_snoc`,`reachArrM_congr`,`reachArrM_aux`,`probOf_eq_reachArrM`.
+
+**F5g-2 INPUT SURFACE (haltMass side).** `flatSched.haltMass μ0 e = reachArrHalt e` should mirror
+`probOf_eq_reachArrM`: consume it plus the `none`-branch of `flatMass` (`flatMass … none =
+1 - ∑' p, reachDepM/reachArrM`) exactly as the trace-world `probOf_eq_reachArr` + none-branch of
+`expandMass`. The available shapes: `flatMass … none` (def), `flatMass_hasSum` (total mass `1`),
+`reachDepM_sum_le` (departures ≤ arrivals), `reachArrM_snoc` (arrival-step), `probOf_eq_reachArrM`
+(fidelity), `haltReach`/`curReach_split` (the halt-mass at a config = `curReach − depMove`).
+
 **(5) cylP STATUS.** `cylP`/`cylMono`/`cylP_super`/`twDenom_super_step` are NOT on the transplant
 critical path: `flatSched` realizes the witness via `reachArr` fidelity, not via the cylinder
 LIMIT. They are retained as the QUANTITATIVE BACKBONE — the depth-`n` truncation limits
