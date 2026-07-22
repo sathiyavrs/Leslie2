@@ -6211,6 +6211,53 @@ private theorem renewal_step_le (S : WeakScheduler (𝒟(sys^w))) (g : State →
         + (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
             * ∑' m', ω m' * fHM S m' (macroExtend E m') g)
       ≤ fHM S μ0 E g := by
+  rw [fHM_split S g μ0 E]
+  refine add_le_add le_rfl ?_
+  -- **THE SOLE RESIDUAL (F5r) — a clean, self-contained inequality.** After
+  -- `fHM_split` (proven above) cancels the immediate-halt boundary `S.next E none ·
+  -- (∑'s μ0 s · g s)` off both sides, the goal is EXACTLY the core renewal `≤`:
+  --   ⊢  ∑'ω S.next E (τ,ω) · ∑'m' ω m' · fHM S m' (macroExtend E m') g
+  --        ≤  nilHalt_g  +  NE_g
+  -- with  nilHalt_g = ∑'s0 haltReach S μ0 E ⟨⟨s0,nil⟩,_⟩ · g s0,
+  --        NE_g     = ∑'{e≠nil} reachArrHalt S μ0 E e · g (e.1.endState e.2).
+  --
+  -- **Why this is the irreducible core (re-verified F5r, three ways).**
+  -- (1) The child factor `fHM(m',F) = halt-now(m',F) + nilHalt_g(m',F) + NE_g(m',F)`
+  --     (its own `fHM_split`) canNOT be bounded by the arrival carrier
+  --     `Ane_g(m',F) := ∑'{e'≠nil} reachArrM(m',F) e'·g` — the child's own boundary
+  --     terms are extra — so `genW_g_peel` of the ARRIVAL carrier overshoots and
+  --     mis-matches. The peel MUST be of the halt carrier `reachArrHalt`.
+  -- (2) `reachArrHalt` is NOT a `genW k` (it is `genW curReachG − genW depMove` on
+  --     nonempty configs, `reachArrHalt_ne`; `reachArrHalt_peel` at :6115 peels it
+  --     per-config as (arrival peel) − (departure peel)), so `genW_g_peel` cannot be
+  --     applied to it directly. The g-weighted peel of `NE_g` therefore requires
+  --     summing the per-config finite subtraction `reachArrHalt e = reachArrM e −
+  --     ∑reachDep e` (both finite, `reachArrM ≤ 1`) over `{e≠nil}` weighted by
+  --     `g(e.end)` — the F5m-(B) subtraction, which the file scrupulously avoids
+  --     everywhere else because the GLOBAL departure carrier `∑'e genW depMove·g`
+  --     is possibly `⊤`.
+  -- (3) The junction collapse itself is closeable (W1 `innerWitness_integrate` /
+  --     `innerWitness_pushforward` gives `∑'run haltMass(src,ω)⟨run⟩·[run.end=t] =
+  --     (ω.bind id) t`; W2 `ENNReal.div_mul_cancel`; the invariant `hinv` supplies
+  --     the step `(𝒟(sys^w)).step (E.endState hT) τ ω` via `S.valid E (Nat.find hT)
+  --     … stateAt_find_eq_endState … hw`, cf. `oneDecisionC_integrate` :2270). But
+  --     collapsing the RUN sum leaves the reset/nil correction `1 −
+  --     haltMass⟨t,nil⟩/(ω.bind id) t` per landing state `t`; that reset mass is the
+  --     silent-τ immediate-halt boundary, absorbed into `nilHalt_g`/parent halt via
+  --     `boundaryHalt_le` (:4670) + `depMove_le_init`, exactly as `genDep_le_genArr`
+  --     absorbs its resets — but now g-weighted and coupled to the (2) subtraction.
+  --
+  -- **The proven route (map, unchanged):** peel `NE_g` one macro level via
+  -- `reachArrHalt_peel`/`reachArrHalt_ne` + `curReach_split` (the additive lever:
+  -- `curReach = depMove + haltReach`, so per config `reachArrHalt e = haltReach e +
+  -- (T_arr(e) − T_dep(e))` with `depMove e` cancelled, all finite); reindex children
+  -- by `segPre_reindex`/`dResidual_endState`; collapse the junction (W1+W2) so the
+  -- child fiber sum lifts to the full `∑'m' ω m' · fHM(m', macroExtend E m')`;
+  -- continuing departures fall to `genDep_le_genArr` (the length recursion, already
+  -- proven :4933); nil/reset boundary absorbed by `boundaryHalt_le`/`depMove_le_init`
+  -- + the `≤1` bounds (`hg`, `fHM_le_one`, `condDepthSum_le_one`). ~150 lines of
+  -- intricate per-config ENNReal on top of the (now proven) `fHM_split`/`fHM_le_one`
+  -- scaffolding. This is the whole residual; everything else in the tower is closed.
   sorry
 
 open Classical in
