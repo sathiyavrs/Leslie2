@@ -6080,6 +6080,35 @@ private theorem f_integrate_ge (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF Stat
   rw [hsplit, add_assoc]
   exact add_le_add le_rfl (renewal_diamond S μ0 E g hg hT hinv)
 
+/-- **F5n finiteness.** The depth-`n` partial sum of `condDepth` is a sub-probability
+(it is `macroHaltTotal`, the halted-within-`n` mass). Source-independent, so any
+`μ0` works. This is the ⊤-safety hypothesis that route R1 rides. -/
+private theorem condDepthSum_le_one (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates) (n : ℕ) :
+    (∑ k ∈ Finset.range n, condDepth S μ0 k E) ≤ 1 := by
+  rw [← macroHaltTotal_eq_sum_condDepth S μ0 n E hT]
+  calc macroHaltTotal S n E hT
+      = ∑' s, macroHalted S n E hT s := rfl
+    _ ≤ (∑' s, macroHalted S n E hT s) + macroSurvive S n E hT := le_self_add
+    _ = 1 := macroHalted_total_add_macroSurvive S n E hT
+
+open Classical in
+/-- **F5n crux (R1) — the finite-payload renewal step.** Replaces
+`renewal_diamond`+`f_integrate_ge`. Given a payload `P m'` bounded by the child
+flatten-halt integral (`hPle`, from the depth-`n` IH) and finite (`hPfin`), the
+macro-halt boundary plus the payload-weighted first macro step lower-bound the
+honest flatten's halt-integral. Finiteness of `P` keeps every absorption ⊤-safe. -/
+private theorem payload_crux (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (E : AlterSeq (PMF State) Label) (g : State → ENNReal) (hg : ∀ x, g x ≤ 1)
+    (hT : E.trans.Terminates) (hinv : μ0 = E.endState hT)
+    (P : PMF State → ENNReal)
+    (hPle : ∀ m', P m' ≤ fHM S m' (macroExtend E m') g)
+    (hPfin : ∀ m', P m' ≤ 1) :
+    S.next E none * (∑' s, μ0 s * g s)
+      + ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω)) * ∑' m', ω m' * P m'
+      ≤ fHM S μ0 E g := by
+  sorry
+
 /-- Iterating `f_integrate_ge` at `g := 1`: the partial sum of conditional depth
 totals lower-bounds the honest flatten's total halting mass. -/
 private theorem fHalt_ge (S : WeakScheduler (𝒟(sys^w))) (n : ℕ) :
