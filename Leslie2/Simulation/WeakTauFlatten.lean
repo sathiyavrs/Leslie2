@@ -6158,6 +6158,75 @@ private theorem reachArrHalt_peel (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF S
   rw [reachArrHalt_ne S μ0 E e h, genW_peel (curReachG S) S μ0 E e,
     genW_peel (depMove S) S μ0 E e, hcg]
 
+open Classical in
+/-- **F5p — depth-stratified halt bound (bypasses `renewal_diamond`).** For any
+stratum family `D` obeying the depth-0 stop identity (`Dzero`) and the one-step
+junction recursion (`Dsucc`), the depth-`n` partial sum lower-bounds the honest
+flatten's `g`-integral. Specializes to `fHalt_ge` (`g := 1`) and `fHalt_ge_G`
+(`g := [·=s]`). The induction step reduces to the junction-collapse crux (★),
+whose child factor is the FINITE `∑ k<n D`, not the opaque `fHM(child)`. -/
+private theorem condDepthSum_le_fHM (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
+    (hg : ∀ x, g x ≤ 1)
+    (D : PMF State → (E : AlterSeq (PMF State) Label) → E.trans.Terminates → ℕ → ENNReal)
+    (Dsucc : ∀ (μ0 : PMF State) (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates)
+        (k : ℕ),
+      D μ0 E hT (k + 1)
+        = ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+            * ∑' m', ω m' * D m' (macroExtend E m') (macroExtend_term hT m') k)
+    (Dzero : ∀ (μ0 : PMF State) (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates),
+      μ0 = E.endState hT → D μ0 E hT 0 = S.next E none * (∑' s0, μ0 s0 * g s0))
+    (n : ℕ) :
+    ∀ (μ0 : PMF State) (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates),
+      μ0 = E.endState hT →
+      (∑ k ∈ Finset.range n, D μ0 E hT k) ≤ fHM S μ0 E g := by
+  induction n with
+  | zero => intro μ0 E hT hinv; simp
+  | succ n IH =>
+    intro μ0 E hT hinv
+    have hswap : (∑ k ∈ Finset.range n, D μ0 E hT (k + 1))
+        = ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+            * ∑' m', ω m'
+                * (∑ k ∈ Finset.range n, D m' (macroExtend E m') (macroExtend_term hT m') k) := by
+      rw [Finset.sum_congr rfl (fun k _ => Dsucc μ0 E hT k),
+        ← Summable.tsum_finsetSum (fun _ _ => ENNReal.summable)]
+      refine tsum_congr (fun ω => ?_)
+      rw [← Finset.mul_sum]
+      congr 1
+      rw [← Summable.tsum_finsetSum (fun _ _ => ENNReal.summable)]
+      refine tsum_congr (fun m' => ?_)
+      rw [← Finset.mul_sum]
+    rw [Finset.sum_range_succ', Dzero μ0 E hT hinv, hswap, add_comm, fHM_reachArrHalt]
+    have hnil : (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+          if e.1.trans = Stream'.Seq.nil then reachArrHalt S μ0 E e * g (e.1.endState e.2) else 0)
+        = S.next E none * (∑' s, μ0 s * g s)
+          + ∑' s0 : State,
+              haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0 := by
+      rw [tsum_nil_reindex (fun e => reachArrHalt S μ0 E e * g (e.1.endState e.2))]
+      have hpt : ∀ s0 : State,
+          reachArrHalt S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩
+              * g ((⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ :
+                  {e : AlterSeq State Label // e.trans.Terminates}).1.endState
+                Stream'.Seq.terminates_nil)
+            = S.next E none * (μ0 s0 * g s0)
+              + haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0 := by
+        intro s0
+        rw [AlterSeq.endState_of_trans_nil (⟨s0, Stream'.Seq.nil⟩ : AlterSeq State Label) rfl
+            Stream'.Seq.terminates_nil, reachArrHalt_nil, add_mul, mul_assoc]
+      rw [tsum_congr hpt, ENNReal.tsum_add, ENNReal.tsum_mul_left]
+    have hsplit : (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+          reachArrHalt S μ0 E e * g (e.1.endState e.2))
+        = (S.next E none * (∑' s, μ0 s * g s)
+            + ∑' s0 : State,
+                haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
+          + ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+              if e.1.trans = Stream'.Seq.nil then 0
+              else reachArrHalt S μ0 E e * g (e.1.endState e.2) := by
+      rw [← hnil, ← ENNReal.tsum_add]
+      exact tsum_congr (fun e => by split_ifs <;> simp)
+    rw [hsplit, add_assoc]
+    refine add_le_add le_rfl ?_
+    sorry
+
 /-- Iterating `f_integrate_ge` at `g := 1`: the partial sum of conditional depth
 totals lower-bounds the honest flatten's total halting mass. -/
 private theorem fHalt_ge (S : WeakScheduler (𝒟(sys^w))) (n : ℕ) :
