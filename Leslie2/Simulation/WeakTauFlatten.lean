@@ -6047,6 +6047,38 @@ at `μ0=E.endState hT`) + W2 `div_mul_cancel`, `segPre_reindex`, `dResidual_endS
 `#print axioms` on `PLTS.weakTau_flatten`/`weakTau_lift_pure`/
 `ProbabilisticForwardSimulation.trans` must be `[propext, Classical.choice, Quot.sound]`. -/
 
+/-! ### F5q — crux (★) reduced to `renewal_le`; the sole sorry is one clean inequality.
+
+**Landed (F5q).** `condDepthSum_le_fHM` is now sorry-free: its step (★) is discharged by
+applying the depth-`n` IH to each child (`∑ k<n D child ≤ fHM child`, via
+`macroExtend_term`/`macroExtend_endState`) under `ENNReal.tsum_le_tsum ×2` +
+`mul_le_mul_left'`, reducing (★) to the standalone private lemma `renewal_le`. The whole
+downstream tower (`fHalt_ge`/`fHalt_ge_G`/`f_halts`/`f_pushforward`/`weakTau_flatten`) is
+green modulo `renewal_le`'s single sorry (+ the pre-existing dead d-chain sorry :4197).
+
+**The sole residual `renewal_le`:**
+  `∑'ω S.next(τ,ω) ∑'m' ω m' · fHM S m' (macroExtend E m') g  ≤  nilHalt_g + NE_g`.
+After `simp_rw [fHM_reachArrHalt]` this is the pure `reachArrHalt` one-macro-level renewal
+`≤`. Two equivalent shapes, both verified pen-and-paper:
+  · (child-carrier form, as stated) — child factor is `fHM(child)`, RHS is the parent
+    non-immediate halt carve;
+  · (KEY′, via the ESTABLISHED `hsplit`/`hnil`: `fHM = halt-now + nilHalt_g + NE_g`, all
+    three FINITE ≤ 1, so the subtraction is safe): `renewal_le ⟺ halt-now + ∑'ω S.next(τ,ω)
+    ∑'m' ω m' fHM(child) ≤ fHM(μ0,E)` — the honest flatten's one-step renewal super-additivity.
+
+**Why not shorter (re-confirmed at F5q).** The child halt factor CANNOT be relaxed to
+`reachArrM` (arrivals ≫ halts ⇒ overshoot), and the global departure carrier `∑'e genW
+depMove·g` is possibly `⊤` (F5m), so `NE_g` never splits additively at the carrier level.
+Nor does it collapse to a sub-family of `NE_g`'s peel: the parent segWeight carries the
+inner-run `haltMass/bind` factor, so matching the clean `ω m'` junction weight REQUIRES the
+W1/W2 collapse. And the `[run≠nil]` guard in `genW_g_peel` genuinely drops mass — the
+silent-τ immediate-halt (nil observable run) — which is exactly the `nilHalt_g` boundary.
+So `renewal_le` is the g-weighted analog of `genDep_le_genArr` (:4933): peel the parent
+arrival carrier by `genW_g_peel`, collapse the junction (`innerWitness_integrate`/
+`innerWitness_pushforward` + `div_mul_cancel`, cf. `boundaryHalt_le`/`oneDecisionC_integrate`),
+recurse continuing departures on strictly shorter residuals (`depMove_le_init` at fresh
+resets), and absorb the nil-run boundary into `nilHalt_g` via `boundaryHalt_le`. ~150 lines. -/
+
 /-- **F5n finiteness.** The depth-`n` partial sum of `condDepth` is a sub-probability
 (it is `macroHaltTotal`, the halted-within-`n` mass). Source-independent, so any
 `μ0` works. This is the ⊤-safety hypothesis that route R1 rides. -/
@@ -6120,6 +6152,20 @@ private theorem renewal_le (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNR
         + ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
             if e.1.trans = Stream'.Seq.nil then 0
             else reachArrHalt S μ0 E e * g (e.1.endState e.2) := by
+  -- After `simp_rw [fHM_reachArrHalt]` the goal is the pure `reachArrHalt` inequality
+  --   `∑'ω S.next(τ,ω) ∑'m' ω m' ∑'e' reachArrHalt(m', macroExtend E m') e' · g(e'.end)`
+  --   `  ≤ nilHalt_g + ∑'{e≠nil} reachArrHalt(μ0,E) e · g(e.end)`.
+  -- This is the ⊤-safe departure-absorption core (F5m/F5n frontier). The child halt
+  -- factor CANNOT be relaxed to `reachArrM` (that overshoots: arrivals ≫ halts), and the
+  -- global departure carrier `∑'e genW depMove · g` is possibly `⊤`, so it can never be
+  -- isolated (F5m). The proven route is the g-weighted analog of `genDep_le_genArr`:
+  -- peel the parent arrival carrier by `genW_g_peel`, collapse the junction (W1
+  -- `innerWitness_integrate`/`innerWitness_pushforward` + W2 `div_mul_cancel`), and absorb
+  -- the nil-run (`run.trans = nil`, the silent-τ immediate-halt) boundary — which
+  -- `genW_g_peel`'s `[run≠nil]` guard excludes — into `nilHalt_g` via `boundaryHalt_le`;
+  -- continuing departures fall to the `genDep_le_genArr`-style length recursion
+  -- (`depMove_le_init` at the fresh resets). ~150 lines; the sole remaining sorry.
+  simp_rw [fHM_reachArrHalt]
   sorry
 
 open Classical in
