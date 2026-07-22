@@ -6211,7 +6211,26 @@ private theorem renewal_junction_split (S : WeakScheduler (𝒟(sys^w))) (g : St
             * ∑' m', ω m' * (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
                 if e.1.trans = Stream'.Seq.nil then 0
                 else reachArrHalt S m' (macroExtend E m') e * g (e.1.endState e.2))) := by
-  sorry
+  have hpt : ∀ ω : PMF (PMF State),
+      S.next E (some (Silent.τ, ω)) * ∑' m', ω m' * fHM S m' (macroExtend E m') g
+        = S.next E (some (Silent.τ, ω))
+              * ∑' m', ω m' * (S.next (macroExtend E m') none * (∑' s, m' s * g s))
+          + (S.next E (some (Silent.τ, ω))
+                * ∑' m', ω m' * (∑' s0 : State, haltReach S m' (macroExtend E m')
+                    ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
+              + S.next E (some (Silent.τ, ω))
+                * ∑' m', ω m' * (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+                    if e.1.trans = Stream'.Seq.nil then 0
+                    else reachArrHalt S m' (macroExtend E m') e * g (e.1.endState e.2))) := by
+    intro ω
+    rw [← mul_add, ← mul_add]
+    congr 1
+    rw [← ENNReal.tsum_add, ← ENNReal.tsum_add]
+    refine tsum_congr (fun m' => ?_)
+    rw [← mul_add, ← mul_add]
+    congr 1
+    exact fHM_split S g m' (macroExtend E m')
+  rw [add_assoc, tsum_congr hpt, ENNReal.tsum_add, ENNReal.tsum_add]
 
 open Classical in
 /-- **F5s (P3) — boundary bookkeeping.** The junction averages of the child's
