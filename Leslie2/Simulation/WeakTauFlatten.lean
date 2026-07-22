@@ -5608,6 +5608,140 @@ noncomputable def fHM (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
   ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
     (flatSched S μ0 E).haltMass μ0 e * g (e.1.endState e.2)
 
+/-- `fHM` as a `reachArrHalt`-weighted sum (via the halt-mass identity `flatSched_haltMass`). -/
+private theorem fHM_reachArrHalt (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (E : AlterSeq (PMF State) Label) (g : State → ENNReal) :
+    fHM S μ0 E g
+      = ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+          reachArrHalt S μ0 E e * g (e.1.endState e.2) := by
+  unfold fHM
+  exact tsum_congr (fun e => by rw [flatSched_haltMass])
+
+/-- The macro scheduler's total mass at `E` splits as halt-now plus `τ`-emission. -/
+private theorem macroTot (S : WeakScheduler (𝒟(sys^w))) (E : AlterSeq (PMF State) Label) :
+    S.next E none + ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω)) = 1 := by
+  have hzero : ∀ (l : Label) (ω : PMF (PMF State)), l ≠ Silent.τ →
+      S.next E (some (l, ω)) = 0 := fun l ω hl => by
+    by_contra hne
+    exact hl (S.internal_only E l ω ((PMF.mem_support_iff _ _).mpr hne))
+  have h1 : (∑' o, (S.next E) o) = 1 := PMF.tsum_coe _
+  rw [tsumOpt (fun o => (S.next E) o)] at h1
+  rw [← h1]; congr 1
+  refine ((?_ : (∑' p : Label × PMF (PMF State), (S.next E) (some p)) = _)).symm
+  rw [ENNReal.tsum_prod', tsum_eq_single Silent.τ (fun l hl => by
+    rw [ENNReal.tsum_eq_zero]; intro ω; exact hzero l ω hl)]
+
+open Classical in
+/-- **The nil-execution halt reach splits into the macro-halt boundary (term A's
+summand) plus the inner halt reach.** This is where term `A` of the integrate
+recursion comes from — the empty concrete run's arrival reach is the full source
+mass `μ0 s0`, carrying the immediate macro-halt `S.next E none · μ0 s0`. -/
+private theorem reachArrHalt_nil (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (E : AlterSeq (PMF State) Label) (s0 : State) :
+    reachArrHalt S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩
+      = S.next E none * μ0 s0
+        + haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ := by
+  set e0 : {e : AlterSeq State Label // e.trans.Terminates} :=
+    ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ with he0
+  have hnil : e0.1.trans = Stream'.Seq.nil := rfl
+  have hdep : (∑' p : Label × PMF State, reachDepM S μ0 E e0 p.1 p.2)
+      = depMove S μ0 E e0 := by
+    have hg : (∑' p : Label × PMF State, reachDepM S μ0 E e0 p.1 p.2)
+        = genW (depMove S) S μ0 E e0 := by
+      rw [genW_eq_dconfig]
+      simp_rw [reachDepM]
+      rw [ENNReal.tsum_comm]
+      exact tsum_congr (fun c => by rw [ENNReal.tsum_mul_left, moveSum_eq_depMove])
+    rw [hg, genW_nil (depMove S) S μ0 E e0 hnil]
+  have hdeptop : depMove S μ0 E e0 ≠ ⊤ :=
+    ne_top_of_le_ne_top (by simp) ((depMove_le_init S μ0 E e0).trans (PMF.coe_le_one _ _))
+  rw [reachArrHalt, hdep, reachArrM, if_pos hnil]
+  refine ENNReal.sub_eq_of_eq_add hdeptop ?_
+  have hsplit : curReach S μ0 E e0 = depMove S μ0 E e0 + haltReach S μ0 E e0 :=
+    curReach_split S μ0 E e0
+  have hcur : curReach S μ0 E e0 = (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))) * μ0 s0 := by
+    rw [curReach, ← ENNReal.tsum_mul_right]
+    refine tsum_congr (fun ω => ?_)
+    rw [ProbabilisticExecution.probOf_nil]
+    rfl
+  calc (μ0 e0.1.init)
+      = (S.next E none + ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))) * μ0 s0 := by
+        rw [macroTot, one_mul]
+    _ = S.next E none * μ0 s0 + curReach S μ0 E e0 := by rw [add_mul, hcur]
+    _ = S.next E none * μ0 s0 + haltReach S μ0 E e0 + depMove S μ0 E e0 := by
+        rw [hsplit]; ring
+
+open Classical in
+/-- Reindex a `nil`-guarded execution sum over the source `State`: the only
+terminating executions with empty transitions are `⟨s0, nil⟩`. -/
+private theorem tsum_nil_reindex
+    (G : {e : AlterSeq State Label // e.trans.Terminates} → ENNReal) :
+    (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+        (if e.1.trans = Stream'.Seq.nil then G e else 0))
+      = ∑' s0 : State, G ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ := by
+  have hinj : Function.Injective
+      (fun s0 : State => (⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ :
+        {e : AlterSeq State Label // e.trans.Terminates})) := by
+    intro a b hab
+    simp only [Subtype.mk.injEq, AlterSeq.mk.injEq] at hab
+    exact hab.1
+  have hsupp : ∀ e ∉ Set.range (fun s0 : State =>
+      (⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ :
+        {e : AlterSeq State Label // e.trans.Terminates})),
+      (if e.1.trans = Stream'.Seq.nil then G e else 0) = 0 := by
+    intro e he
+    rw [if_neg]
+    intro hnil
+    refine he ⟨e.1.init, ?_⟩
+    obtain ⟨⟨i, t⟩, hT⟩ := e
+    simp only at hnil ⊢
+    exact Subtype.ext (congrArg (AlterSeq.mk i) hnil.symm)
+  rw [← Function.Injective.tsum_eq hinj (Function.support_subset_iff'.2 hsupp)]
+  exact tsum_congr (fun s0 => if_pos rfl)
+
+/-! ### F5j — PHASE 2 status: term A CLOSED (nil carve-out); renewal crux `(♦)` isolated
+
+**Landed here (sorry-free, axiom-clean scaffolding for the `≥`-fallback):**
+  · `fHM_reachArrHalt` — `fHM = ∑'e reachArrHalt · g` (via `flatSched_haltMass`).
+  · `macroTot` — `S.next E none + ∑'ω S.next E (τ,ω) = 1` (option-split + `internal_only`).
+  · `reachArrHalt_nil` — **the term-A breakthrough**:
+      `reachArrHalt S μ0 E ⟨s0,nil⟩ = S.next E none · μ0 s0 + haltReach S μ0 E ⟨s0,nil⟩`.
+    The empty concrete run's arrival reach is the FULL source mass `μ0 s0` (the nil
+    carve-out of `reachArrM`), which carries the immediate macro-halt `S.next E none · μ0 s0`
+    EXACTLY. So **term A needs NO stall resummation** — it is the nil-execution boundary,
+    period (refuting the d-chain PHASE-P "term A is a genuine `⨆ₙ` limit" worry: that was an
+    artifact of the belief normalizer, not the honest reach).
+  · `tsum_nil_reindex` — `∑'e (if e.trans=nil then G e else 0) = ∑'s0 G ⟨s0,nil⟩`.
+
+**The clean reduction (proved, then re-opened as `(♦)`).** With the four helpers,
+`f_integrate_ge` reduces by `rw [fHM_reachArrHalt]`, split `∑'e = nil ⊔ nonempty`,
+`tsum_nil_reindex`, `reachArrHalt_nil`, `ENNReal.tsum_mul_left`, `add_le_add le_rfl` to
+EXACTLY (add a hypothesis `hg : ∀ x, g x ≤ 1`; both consumers supply it trivially —
+`fun _ => le_rfl` and `fun x => by split_ifs <;> simp`):
+
+  `(♦)   termB  ≤  nilHalt + NE`
+      termB   = ∑'ω S.next E (τ,ω) · ∑'m' ω m' · fHM S m' (macroExtend E m') g
+      nilHalt = ∑'s0 haltReach S μ0 E ⟨s0,nil⟩ · g s0
+      NE      = ∑'{e : trans ≠ nil} reachArrHalt S μ0 E e · g (e.endState)
+
+The whole reduction is an EQUALITY (`fHM = termA + (nilHalt + NE)`); only the last
+`add_le_add le_rfl` is a `≤`, so `(♦) ⟺ termA + termB ≤ fHM`.
+
+**Why `(♦)` is the genuine remaining crux (the renewal peel).** For a nonempty `e`,
+`reachArrHalt e = reachArrM e − ∑'p reachDepM e p`, and the landed genW forms give
+  `reachArrHalt e = ∑_{c: cons∧cur≠nil} segWeight·haltReach − ∑_{c: cons∧cur=nil} segWeight·depMove`.
+The SUBTRACTED cur-empty (fresh-reset) departures are precisely what `genDep_le_genArr`/
+`boundaryHalt_le` absorb at the `≤` level, so `reachArrHalt` is NOT a clean `genW`
+halt-config sum — there is no kernel `k` with `reachArrHalt = genW k`. Hence `(♦)` cannot
+be a one-shot `genW_peel`; it needs a g-weighted halt-config peel that matches `termB`'s
+child `fHM(m', macroExtend E m')` to the parent's first-segment head `S.next E (τ,ω)·ω m'·
+(haltMass(μ0,ω)⟨run⟩/(ω.bind id)(run.end))·[child reach]` via the junction W1/W2 cancellation
+(`PMF.bind_apply` + `ENNReal.div_mul_cancel`, the same collapse `boundaryHalt_le` uses).
+RECOMMENDATION: prove a g-weighted analogue of `genDep_le_genArr` for the halt side —
+`∑'e (genW haltReach) · g` peeled by first segment, with the reset-departures re-absorbed as
+in `boundaryHalt_le` — then `(♦)` assembles. The `fHM(child)` on `termB`'s side is a full
+`reachArrHalt`-sum (`fHM_reachArrHalt`), so the match is a renewal, not a bind. -/
+
 /-- **F5g-3 crux — the one-step integrate recursion for `flatSched` (rooted).**
 The honest flatten's halt-integral unfolds one macro level: either the macro
 scheduler halts now (mass `S.next E none`, end-state `μ0`), or it takes a
