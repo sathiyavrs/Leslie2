@@ -5806,6 +5806,55 @@ Infrastructure (1)–(3) is the genuine novel content and is DONE. (4) = invaria
 refactor (A) + subtraction assembly (B). Tree GREEN with the single
 `renewal_diamond` sorry (plus the pre-existing dead d-chain sorry at :4197). -/
 
+/-! ### F5m — (A) LANDED; (B) re-scoped: the subtraction route is DEAD, ≤-absorption required
+
+**(A) DONE (committed).** `(hT : E.trans.Terminates) (hinv : μ0 = E.endState hT)` is
+threaded through `renewal_diamond`, `f_integrate_ge`, `fHalt_ge` (and both were
+already carried by `fHalt_ge_G`). Root call sites (`f_halts` via `fHalt_ge`,
+`f_pushforward` via `fHalt_ge_G`) supply `Stream'.Seq.terminates_nil` +
+`(endState_of_trans_nil …).symm`; the recursion is preserved by
+`macroExtend_term hT m'` / `(macroExtend_endState hT m').symm`. With the invariant the
+junction step is now obtainable: `(𝒟(sys^w)).step μ0 τ ω =`
+`S.valid E (Nat.find hT) μ0 (Nat.find_spec hT) (stateAt_find_eq_endState E hT) τ ω hw`
+(rewrite `μ0 = E.endState hT`), feeding `innerWitness_integrate`. The packaged collapse
+is `oneDecisionC_integrate` (:2270) — but it yields the DEPTH-1 child `∑'s m' s·g s`,
+NOT the FULL child `fHM S m' (macroExtend E m') g` that `renewal_diamond`'s termB carries.
+
+**(B) THE OBSTRUCTION FOUND (supersedes the F5l "~80-line subtraction assembly" plan).**
+For nonempty `e`: `reachArrHalt(μ0,E)e = genW curReachG (μ0,E) e − genW depMove (μ0,E) e`
+(`reachArrM = genW curReachG` exactly on nonempty configs — the `≤` in
+`reachDepM_sum_le` at :5076 is `tsum_le_tsum` of an equality; `∑reachDepM = genW depMove`
+is `hdep`, exact). Hence
+  `NE = ∑'{e≠nil} (genW curReachG − genW depMove) e · g(e.end)`.
+The departure carrier `GDne := ∑'{e≠nil} genW depMove (μ0,E) e · g(e.end)` is NOT provably
+finite — it sums a departure mass over EVERY decision config, i.e. over every step-prefix
+of every arbitrarily long inner run (expected step count), so `GDne = ⊤` is possible.
+Therefore EVERY route that forms `GDne` as a standalone quantity is dead:
+  · `NE + GDne = GA` then `le_tsub_of_add_le_left`/`add_le_add_iff_right` needs `GDne ≠ ⊤`;
+  · `ENNReal.tsum_sub` for `NE = GA − GDne` needs `GDne ≠ ⊤`.
+The file uses NO `ENNReal.sub_mul`/`tsum_sub`/`le_tsub` (grep-confirmed) — consistent.
+
+**Why no clean identity.** `GH := ∑'e genW haltReach (μ0,E) e · g(e.end)` (the F5l-recommended
+halt carrier) is NOT `nilHalt + NE`: expanding both by config,
+  `GH = nilHalt + NE + [reset-halts] + [reset-deps]`  (GH strictly LARGER),
+where reset-{halts,deps} are the cur=nil-after-≥1-segment configs. So `L ≤ GH` OVERSHOOTS
+(wrong direction), and `nilHalt + NE` cannot be written as a positive `genW`-config sum:
+the reset terms must be ABSORBED at the `≤` level (exactly the `boundaryHalt_le` /
+`depMove_le_init` move inside `genDep_le_genArr`), never cancelled.
+
+**Consequence — the closing proof is NOT the F5l one-shot peel.** `genW_g_peel` matches only
+ONE level: its child fiber is `genW curReachG (succ, macroExtend E succ)` (an arrival
+carrier), whereas termB's child is `fHM = child NE + child nilHalt + child termA`
+`= (child GA − child GDne) + …` — reintroducing the same ⊤-departure subtraction one level
+down. So the match is genuinely recursive and must run the `genDep_le_genArr`-style STRONG
+INDUCTION on child-history length for the g-weighted halt/arrival carriers, with the
+first-segment head collapsed by W1 (`innerWitness_integrate`, now available via (A)) + W2
+(`ENNReal.div_mul_cancel`) and the reset terms absorbed by `boundaryHalt_le`. Estimated
+~150 lines (comparable to the whole `genDep_le_genArr` + `boundaryHalt_le` development),
+NOT the ~80 lines the F5l note projected. This is the exact residual gap; (A) has removed
+the only non-mechanical prerequisite (the junction step at μ0). Tree GREEN: single live
+`renewal_diamond` sorry (+ pre-existing dead d-chain sorry :4197). -/
+
 /-- **F5k sub-lemma (1) — g factors through the peel.** The residual history after
 peeling a legal first segment has the SAME end-state as the full history (the
 prepended run `r` does not move the final landing point). Foundational for the
