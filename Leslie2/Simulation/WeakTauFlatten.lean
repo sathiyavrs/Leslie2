@@ -985,8 +985,23 @@ noncomputable def segWeight (S : WeakScheduler (𝒟(sys^w))) (src0 : PMF State)
   | [] => 1
   | List.cons seg rest =>
       S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
-        * (innerWitness sys src0 seg.emit).haltMass src0 ⟨seg.run, seg.runT⟩
+        * ((innerWitness sys src0 seg.emit).haltMass src0 ⟨seg.run, seg.runT⟩
+            / (seg.emit.bind id) (seg.run.endState seg.runT))
         * segWeight S seg.succ (macroExtend E seg.succ) rest
+
+/-- **Belief-side (dead d-chain) segment weight**, the UN-divided original of
+`segWeight`. The junction repair divides `segWeight`'s completed-segment run mass
+by its endpoint marginal (needed for the live reach/halt accounting), but that
+inflates the belief denominator's head-sum past `1`; the belief normalizer
+`dDenom`/`dW` (consumed only by the dead `dSched`/d-chain) keeps the original
+un-divided weight so its finiteness proof (`dW_le`) stays verbatim. -/
+noncomputable def segWeightB (S : WeakScheduler (𝒟(sys^w))) (src0 : PMF State)
+    (E : AlterSeq (PMF State) Label) : List (FlatSeg State Label) → ENNReal
+  | [] => 1
+  | List.cons seg rest =>
+      S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
+        * (innerWitness sys src0 seg.emit).haltMass src0 ⟨seg.run, seg.runT⟩
+        * segWeightB S seg.succ (macroExtend E seg.succ) rest
 
 /-- Connection predicate: threading the connecting state `s0`, each completed
 run starts where the previous one ended, and the current prefix starts where the
@@ -1294,7 +1309,7 @@ noncomputable def dNum (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
     (o : Option (Label × PMF State)) : ENNReal :=
   ∑' c : DConfig State Label,
     (if dConsistent e.1 c then (1 : ENNReal) else 0)
-      * segWeight S μ0 E c.segs
+      * segWeightB S μ0 E c.segs
       * moveTerm S (segSrc μ0 c.segs) (segHist E c.segs) ⟨c.cur, c.curT⟩ o
 
 /-- The DConfig belief denominator: total numerator mass over all moves. -/
@@ -1376,7 +1391,7 @@ theorem dDenom_eq_moveTot (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
     (E : AlterSeq (PMF State) Label)
     (e : {e : AlterSeq State Label // e.trans.Terminates}) :
     dDenom S μ0 E e = ∑' c : DConfig State Label,
-      (if dConsistent e.1 c then (1 : ENNReal) else 0) * segWeight S μ0 E c.segs
+      (if dConsistent e.1 c then (1 : ENNReal) else 0) * segWeightB S μ0 E c.segs
         * moveTot S (segSrc μ0 c.segs) (segHist E c.segs) ⟨c.cur, c.curT⟩ := by
   unfold dDenom dNum moveTot
   rw [ENNReal.tsum_comm]
@@ -1485,7 +1500,7 @@ private noncomputable def dW (S : WeakScheduler (𝒟(sys^w))) (src : PMF State)
     (e : {q : AlterSeq State Label // q.trans.Terminates}) : ENNReal :=
   ∑' p : List (FlatSeg State Label) × {q : AlterSeq State Label // q.trans.Terminates},
     (if dConsistent e.1 ⟨p.1, p.2.1, p.2.2⟩ then (1 : ENNReal) else 0)
-      * segWeight S src E p.1
+      * segWeightB S src E p.1
       * moveTot S (segSrc src p.1) (segHist E p.1) p.2
 
 open Classical in
@@ -1575,13 +1590,13 @@ private theorem peelBase (S : WeakScheduler (𝒟(sys^w))) (src : PMF State)
     (e : {q : AlterSeq State Label // q.trans.Terminates}) :
     (∑' cur : {q : AlterSeq State Label // q.trans.Terminates},
       (if dConsistent e.1 (⟨[], cur.1, cur.2⟩ : DConfig State Label) then (1 : ENNReal) else 0)
-        * segWeight S src E ([] : List (FlatSeg State Label))
+        * segWeightB S src E ([] : List (FlatSeg State Label))
         * moveTot S (segSrc src ([] : List (FlatSeg State Label)))
             (segHist E ([] : List (FlatSeg State Label))) cur)
       = moveTot S src E e := by
   rw [tsum_eq_single e ?_]
   · rw [if_pos ((dConsistent_nil_iff e e).mpr rfl)]
-    simp [segWeight, segSrc, segHist]
+    simp [segWeightB, segSrc, segHist]
   · intro cur hne
     rw [if_neg (fun hc => hne ((dConsistent_nil_iff e cur).mp hc)), zero_mul, zero_mul]
 
@@ -1595,7 +1610,7 @@ private theorem peelSeg (S : WeakScheduler (𝒟(sys^w))) (src : PMF State)
     (∑' rest : List (FlatSeg State Label),
       ∑' cur : {q : AlterSeq State Label // q.trans.Terminates},
         (if dConsistent e.1 ⟨seg :: rest, cur.1, cur.2⟩ then (1 : ENNReal) else 0)
-          * segWeight S src E (seg :: rest)
+          * segWeightB S src E (seg :: rest)
           * moveTot S (segSrc src (seg :: rest)) (segHist E (seg :: rest)) cur)
       = (if segPre e seg then (1 : ENNReal) else 0)
           * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
@@ -1612,19 +1627,19 @@ private theorem peelSeg (S : WeakScheduler (𝒟(sys^w))) (src : PMF State)
     show (if dConsistent (dResidual e seg).1 ⟨rest, cur.1, cur.2⟩ then (1 : ENNReal) else 0)
         * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
             * (innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩
-            * segWeight S seg.succ (macroExtend E seg.succ) rest)
+            * segWeightB S seg.succ (macroExtend E seg.succ) rest)
         * moveTot S (segSrc seg.succ rest) (segHist (macroExtend E seg.succ) rest) cur
       = (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
           * (innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩)
         * ((if dConsistent (dResidual e seg).1 ⟨rest, cur.1, cur.2⟩ then (1 : ENNReal) else 0)
-            * segWeight S seg.succ (macroExtend E seg.succ) rest
+            * segWeightB S seg.succ (macroExtend E seg.succ) rest
             * moveTot S (segSrc seg.succ rest) (segHist (macroExtend E seg.succ) rest) cur)
     ring
   · rw [if_neg hsp, zero_mul, zero_mul]
     have hzero : ∀ (rest : List (FlatSeg State Label))
         (cur : {q : AlterSeq State Label // q.trans.Terminates}),
         (if dConsistent e.1 ⟨seg :: rest, cur.1, cur.2⟩ then (1 : ENNReal) else 0)
-            * segWeight S src E (seg :: rest)
+            * segWeightB S src E (seg :: rest)
             * moveTot S (segSrc src (seg :: rest)) (segHist E (seg :: rest)) cur = 0 := by
       intro rest cur
       rw [if_neg (fun hc => hsp ((dConsistent_cons_iff e seg rest cur.1 cur.2).mp hc).1),
@@ -4515,15 +4530,20 @@ noncomputable def reachArrM (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
     (if dConsistent e.1 c ∧ c.cur.trans ≠ Stream'.Seq.nil then (1 : ENNReal) else 0)
       * reachM S μ0 E c
 
+open Classical in
 /-- **Departure reach** for the step `(l, ν)` (the scheduler's numerator): the
-total belief mass at a config consistent with `e` whose current inner run departs
-next with move `some (l, ν)`. This is exactly the belief numerator `dNum` at that
-move, `∑' c consistent, segWeight · moveTerm (some (l,ν))`. -/
+total reach mass at a config consistent with `e` whose current inner run departs
+next with move `some (l, ν)`. Same shape as the belief numerator `dNum` but built
+on the junction-repaired (divided) `segWeight`, so it is consistent with the
+arrival reach `reachArrM`/`reachM`; `∑' c consistent, segWeight · moveTerm`. -/
 noncomputable def reachDepM (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
     (E : AlterSeq (PMF State) Label)
     (e : {e : AlterSeq State Label // e.trans.Terminates})
     (l : Label) (ν : PMF State) : ENNReal :=
-  dNum S μ0 E e (some (l, ν))
+  ∑' c : DConfig State Label,
+    (if dConsistent e.1 c then (1 : ENNReal) else 0)
+      * segWeight S μ0 E c.segs
+      * moveTerm S (segSrc μ0 c.segs) (segHist E c.segs) ⟨c.cur, c.curT⟩ (some (l, ν))
 
 /-- **Departure move mass** at the current run: the total next-move mass of the
 current inner run reaching `cur`, marginalized over the emission `ω`. Equal to
@@ -4607,7 +4627,8 @@ private theorem genSeg
           * k (segSrc src (seg :: rest)) (segHist E (seg :: rest)) cur)
       = (if segPre e seg then (1 : ENNReal) else 0)
           * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
-              * (innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩)
+              * ((innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩
+                  / (seg.emit.bind id) (seg.run.endState seg.runT)))
           * genW k S seg.succ (macroExtend E seg.succ) (dResidual e seg) := by
   by_cases hsp : segPre e seg
   · rw [if_pos hsp, one_mul]
@@ -4619,11 +4640,13 @@ private theorem genSeg
     simp only [dConsistent_cons_iff, hsp, true_and]
     show (if dConsistent (dResidual e seg).1 ⟨rest, cur.1, cur.2⟩ then (1 : ENNReal) else 0)
         * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
-            * (innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩
+            * ((innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩
+                / (seg.emit.bind id) (seg.run.endState seg.runT))
             * segWeight S seg.succ (macroExtend E seg.succ) rest)
         * k (segSrc seg.succ rest) (segHist (macroExtend E seg.succ) rest) cur
       = (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
-          * (innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩)
+          * ((innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩
+              / (seg.emit.bind id) (seg.run.endState seg.runT)))
         * ((if dConsistent (dResidual e seg).1 ⟨rest, cur.1, cur.2⟩ then (1 : ENNReal) else 0)
             * segWeight S seg.succ (macroExtend E seg.succ) rest
             * k (segSrc seg.succ rest) (segHist (macroExtend E seg.succ) rest) cur)
@@ -4650,7 +4673,8 @@ private theorem genW_peel
       + ∑' seg : FlatSeg State Label,
           (if segPre e seg then (1 : ENNReal) else 0)
             * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
-                * (innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩)
+                * ((innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩
+                    / (seg.emit.bind id) (seg.run.endState seg.runT)))
             * genW k S seg.succ (macroExtend E seg.succ) (dResidual e seg) := by
   conv_lhs => rw [genW, ENNReal.tsum_prod', listSplit]
   rw [genBase]
@@ -4669,18 +4693,30 @@ private theorem boundaryHalt_le (S : WeakScheduler (𝒟(sys^w))) (src : PMF Sta
     (∑' seg : FlatSeg State Label,
       (if segPre e seg ∧ (dResidual e seg).1.trans = Stream'.Seq.nil then (1 : ENNReal) else 0)
         * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
-            * (innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩)
+            * ((innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩
+                / (seg.emit.bind id) (seg.run.endState seg.runT)))
         * seg.succ (seg.run.endState seg.runT))
       ≤ haltReach S src E e := by
+  -- `(x / c) * c ≤ x` unconditionally in `ENNReal` (the junction W2 cancellation).
+  have hdmc : ∀ x c : ENNReal, x / c * c ≤ x := by
+    intro x c
+    rcases eq_or_ne c 0 with hc | hc
+    · simp [hc]
+    rcases eq_or_ne c ⊤ with hc' | hc'
+    · simp [hc', ENNReal.div_top]
+    · rw [ENNReal.div_mul_cancel hc hc']
   have hstep : (∑' seg : FlatSeg State Label,
       (if segPre e seg ∧ (dResidual e seg).1.trans = Stream'.Seq.nil then (1 : ENNReal) else 0)
         * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
-            * (innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩)
+            * ((innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩
+                / (seg.emit.bind id) (seg.run.endState seg.runT)))
         * seg.succ (seg.run.endState seg.runT))
       ≤ ∑' seg : FlatSeg State Label,
           (if seg.run = e.1 then (1 : ENNReal) else 0)
             * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
-                * (innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩) := by
+                * ((innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩
+                    / (seg.emit.bind id) (seg.run.endState seg.runT)))
+            * seg.succ (seg.run.endState seg.runT) := by
     refine ENNReal.tsum_le_tsum (fun seg => ?_)
     by_cases hP : segPre e seg ∧ (dResidual e seg).1.trans = Stream'.Seq.nil
     · have hrun : seg.run = e.1 := by
@@ -4691,22 +4727,26 @@ private theorem boundaryHalt_le (S : WeakScheduler (𝒟(sys^w))) (src : PMF Sta
           _ = ⟨e.1.init, e.1.trans⟩ := by rw [hi, happ]
           _ = e.1 := rfl
       rw [if_pos hP, if_pos hrun]
-      simp only [one_mul]
-      exact mul_le_of_le_one_right' (PMF.coe_le_one _ _)
     · rw [if_neg hP, zero_mul, zero_mul]
       positivity
   refine hstep.trans ?_
   have hreindex : (∑' seg : FlatSeg State Label,
       (if seg.run = e.1 then (1 : ENNReal) else 0)
         * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
-            * (innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩))
+            * ((innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩
+                / (seg.emit.bind id) (seg.run.endState seg.runT)))
+        * seg.succ (seg.run.endState seg.runT))
       = ∑' t : PMF (PMF State) × PMF State × {q : AlterSeq State Label // q.trans.Terminates},
           (if t.2.2.1 = e.1 then (1 : ENNReal) else 0)
             * (S.next E (some (Silent.τ, t.1)) * t.1 t.2.1
-                * (innerWitness sys src t.1).haltMass src t.2.2) :=
+                * ((innerWitness sys src t.1).haltMass src t.2.2
+                    / (t.1.bind id) (t.2.2.1.endState t.2.2.2)))
+            * t.2.1 (t.2.2.1.endState t.2.2.2) :=
     Equiv.tsum_eq flatSegEquiv (fun t => (if t.2.2.1 = e.1 then (1 : ENNReal) else 0)
       * (S.next E (some (Silent.τ, t.1)) * t.1 t.2.1
-          * (innerWitness sys src t.1).haltMass src t.2.2))
+          * ((innerWitness sys src t.1).haltMass src t.2.2
+              / (t.1.bind id) (t.2.2.1.endState t.2.2.2)))
+      * t.2.1 (t.2.2.1.endState t.2.2.2))
   rw [hreindex, ENNReal.tsum_prod']
   have hunfold : haltReach S src E e
       = ∑' emit : PMF (PMF State), S.next E (some (Silent.τ, emit))
@@ -4717,23 +4757,42 @@ private theorem boundaryHalt_le (S : WeakScheduler (𝒟(sys^w))) (src : PMF Sta
     rw [mul_assoc]
   rw [hunfold]
   refine ENNReal.tsum_le_tsum (fun emit => ?_)
-  rw [ENNReal.tsum_prod']
-  refine le_of_eq ?_
-  calc (∑' succ : PMF State, ∑' run : {q : AlterSeq State Label // q.trans.Terminates},
-        (if run.1 = e.1 then (1 : ENNReal) else 0)
-          * (S.next E (some (Silent.τ, emit)) * emit succ
-              * (innerWitness sys src emit).haltMass src run))
-      = ∑' succ : PMF State,
-          (S.next E (some (Silent.τ, emit)) * (innerWitness sys src emit).haltMass src e)
-            * emit succ := by
-        refine tsum_congr (fun succ => ?_)
-        rw [tsum_eq_single e (fun run hrun => by
-          rw [if_neg (fun hc => hrun (Subtype.ext hc)), zero_mul]), if_pos rfl, one_mul]
-        ring
-    _ = (S.next E (some (Silent.τ, emit)) * (innerWitness sys src emit).haltMass src e)
-          * ∑' succ : PMF State, emit succ := ENNReal.tsum_mul_left
+  rw [ENNReal.tsum_prod', ENNReal.tsum_comm]
+  calc (∑' run : {q : AlterSeq State Label // q.trans.Terminates}, ∑' succ : PMF State,
+          (if run.1 = e.1 then (1 : ENNReal) else 0)
+            * (S.next E (some (Silent.τ, emit)) * emit succ
+                * ((innerWitness sys src emit).haltMass src run
+                    / (emit.bind id) (run.1.endState run.2)))
+            * succ (run.1.endState run.2))
+      = ∑' run : {q : AlterSeq State Label // q.trans.Terminates},
+          (if run.1 = e.1 then (1 : ENNReal) else 0) * S.next E (some (Silent.τ, emit))
+            * ((innerWitness sys src emit).haltMass src run
+                / (emit.bind id) (run.1.endState run.2))
+            * (emit.bind id) (run.1.endState run.2) := by
+        refine tsum_congr (fun run => ?_)
+        rw [show (∑' succ : PMF State,
+              (if run.1 = e.1 then (1 : ENNReal) else 0)
+                * (S.next E (some (Silent.τ, emit)) * emit succ
+                    * ((innerWitness sys src emit).haltMass src run
+                        / (emit.bind id) (run.1.endState run.2)))
+                * succ (run.1.endState run.2))
+            = ((if run.1 = e.1 then (1 : ENNReal) else 0) * S.next E (some (Silent.τ, emit))
+                  * ((innerWitness sys src emit).haltMass src run
+                      / (emit.bind id) (run.1.endState run.2)))
+                * ∑' succ : PMF State, emit succ * succ (run.1.endState run.2) from by
+          rw [← ENNReal.tsum_mul_left]; exact tsum_congr (fun succ => by ring)]
+        rw [PMF.bind_apply]
+        simp only [id_eq]
+    _ ≤ ∑' run : {q : AlterSeq State Label // q.trans.Terminates},
+          (if run.1 = e.1 then (1 : ENNReal) else 0) * S.next E (some (Silent.τ, emit))
+            * (innerWitness sys src emit).haltMass src run := by
+        refine ENNReal.tsum_le_tsum (fun run => ?_)
+        rw [mul_assoc]
+        exact mul_le_mul_left' (hdmc _ _) _
     _ = S.next E (some (Silent.τ, emit)) * (innerWitness sys src emit).haltMass src e := by
-        rw [PMF.tsum_coe, mul_one]
+        rw [tsum_eq_single e (fun run hrun => by
+          rw [if_neg (fun hc => hrun (Subtype.ext hc)), zero_mul, zero_mul]), if_pos rfl,
+          one_mul]
 
 /-- The macro scheduler's proper-move mass is a sub-probability. -/
 private theorem macroSome_le_one (S : WeakScheduler (𝒟(sys^w)))
@@ -4802,7 +4861,8 @@ private theorem genW_nil
   have hz : ∀ seg : FlatSeg State Label,
       (if segPre e seg then (1 : ENNReal) else 0)
         * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
-            * (innerWitness sys s seg.emit).haltMass s ⟨seg.run, seg.runT⟩)
+            * ((innerWitness sys s seg.emit).haltMass s ⟨seg.run, seg.runT⟩
+                / (seg.emit.bind id) (seg.run.endState seg.runT)))
         * genW k S seg.succ (macroExtend E seg.succ) (dResidual e seg) = 0 := by
     intro seg
     have hns : ¬ segPre e seg := by
@@ -4845,19 +4905,22 @@ private theorem genDep_le_genArr (S : WeakScheduler (𝒟(sys^w))) :
     calc (∑' seg : FlatSeg State Label,
             (if segPre e seg then (1 : ENNReal) else 0)
               * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
-                  * (innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩)
+                  * ((innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩
+                      / (seg.emit.bind id) (seg.run.endState seg.runT)))
               * genW (fun s Ec c => depMove S s Ec c) S seg.succ (macroExtend E seg.succ)
                   (dResidual e seg))
         ≤ ∑' seg : FlatSeg State Label,
             ((if segPre e seg then (1 : ENNReal) else 0)
                 * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
-                    * (innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩)
+                    * ((innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩
+                        / (seg.emit.bind id) (seg.run.endState seg.runT)))
                 * genW (fun s Ec c => if c.1.trans ≠ Stream'.Seq.nil then curReach S s Ec c else 0)
                     S seg.succ (macroExtend E seg.succ) (dResidual e seg)
               + (if segPre e seg ∧ (dResidual e seg).1.trans = Stream'.Seq.nil
                     then (1 : ENNReal) else 0)
                   * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
-                      * (innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩)
+                      * ((innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩
+                          / (seg.emit.bind id) (seg.run.endState seg.runT)))
                   * seg.succ (seg.run.endState seg.runT)) := by
           refine ENNReal.tsum_le_tsum (fun seg => ?_)
           by_cases hsp : segPre e seg
@@ -4894,13 +4957,15 @@ private theorem genDep_le_genArr (S : WeakScheduler (𝒟(sys^w))) :
       _ = (∑' seg : FlatSeg State Label,
             (if segPre e seg then (1 : ENNReal) else 0)
               * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
-                  * (innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩)
+                  * ((innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩
+                      / (seg.emit.bind id) (seg.run.endState seg.runT)))
               * genW (fun s Ec c => if c.1.trans ≠ Stream'.Seq.nil then curReach S s Ec c else 0)
                   S seg.succ (macroExtend E seg.succ) (dResidual e seg))
           + ∑' seg : FlatSeg State Label,
             (if segPre e seg ∧ (dResidual e seg).1.trans = Stream'.Seq.nil then (1 : ENNReal) else 0)
               * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
-                  * (innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩)
+                  * ((innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩
+                      / (seg.emit.bind id) (seg.run.endState seg.runT)))
               * seg.succ (seg.run.endState seg.runT) := ENNReal.tsum_add
       _ ≤ _ := by
           rw [add_comm (haltReach S src E e)]
@@ -4953,10 +5018,7 @@ theorem reachDepM_sum_le (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
   have hdep : (∑' p : Label × PMF State, reachDepM S μ0 E e p.1 p.2)
       = genW (depMove S) S μ0 E e := by
     rw [genW_eq_dconfig]
-    have hr : ∀ p : Label × PMF State,
-        reachDepM S μ0 E e p.1 p.2 = dNum S μ0 E e (some p) := fun p => rfl
-    simp_rw [hr]
-    unfold dNum
+    simp_rw [reachDepM]
     rw [ENNReal.tsum_comm]
     refine tsum_congr (fun c => ?_)
     rw [ENNReal.tsum_mul_left, moveSum_eq_depMove]
@@ -5111,7 +5173,7 @@ private theorem genW_landKer (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
           * segWeight S μ0 E c.segs
           * moveTerm S (segSrc μ0 c.segs) (segHist E c.segs) ⟨c.cur, c.curT⟩ (some (l, ν)))
         * ν s' := by
-    intro ν; rw [reachDepM, dNum, ENNReal.tsum_mul_right]
+    intro ν; rw [reachDepM, ENNReal.tsum_mul_right]
   rw [tsum_congr hr, ENNReal.tsum_comm]
   refine tsum_congr (fun c => ?_)
   rw [← ENNReal.tsum_mul_left]
@@ -5281,12 +5343,12 @@ noncomputable def flatSched (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
     by_cases hT : e.trans.Terminates
     · rw [dif_pos hT, PMF.mem_support_iff] at hsupp
       change flatMass S μ0 E ⟨e, hT⟩ (some (l, ν)) ≠ 0 at hsupp
-      have hgne : dNum S μ0 E ⟨e, hT⟩ (some (l, ν)) ≠ 0 := by
+      have hgne : reachDepM S μ0 E ⟨e, hT⟩ l ν ≠ 0 := by
         intro h0
         apply hsupp
         show reachDepM S μ0 E ⟨e, hT⟩ l ν / reachArrM S μ0 E ⟨e, hT⟩ = 0
-        rw [reachDepM, h0, ENNReal.zero_div]
-      rw [dNum] at hgne
+        rw [h0, ENNReal.zero_div]
+      rw [reachDepM] at hgne
       obtain ⟨c, hc⟩ := not_forall.mp (mt ENNReal.tsum_eq_zero.mpr hgne)
       have hguard : dConsistent e c := by
         by_contra hcon
@@ -5331,12 +5393,12 @@ noncomputable def flatSched (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
     by_cases hT : e.trans.Terminates
     · rw [dif_pos hT, PMF.mem_support_iff] at hsupp
       change flatMass S μ0 E ⟨e, hT⟩ (some (l, ν)) ≠ 0 at hsupp
-      have hgne : dNum S μ0 E ⟨e, hT⟩ (some (l, ν)) ≠ 0 := by
+      have hgne : reachDepM S μ0 E ⟨e, hT⟩ l ν ≠ 0 := by
         intro h0
         apply hsupp
         show reachDepM S μ0 E ⟨e, hT⟩ l ν / reachArrM S μ0 E ⟨e, hT⟩ = 0
-        rw [reachDepM, h0, ENNReal.zero_div]
-      rw [dNum] at hgne
+        rw [h0, ENNReal.zero_div]
+      rw [reachDepM] at hgne
       obtain ⟨c, hc⟩ := not_forall.mp (mt ENNReal.tsum_eq_zero.mpr hgne)
       have hmove : moveTerm S (segSrc μ0 c.segs) (segHist E c.segs) ⟨c.cur, c.curT⟩
           (some (l, ν)) ≠ 0 := right_ne_zero_of_mul hc
