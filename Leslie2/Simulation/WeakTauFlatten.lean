@@ -6194,6 +6194,77 @@ private theorem fHM_split (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNRe
   rw [hsplit, add_assoc]
 
 open Classical in
+/-- **F5s (P2) — junction linearity split.** Distributing the child `fHM_split`
+(`fHM(m',·) = child-halt-now + child-nilHalt_g + child-NE_g`) through the junction
+average `∑'ω S.next(τ,ω) ∑'m' ω m' · (·)`. Pure `ENNReal` linearity. -/
+private theorem renewal_junction_split (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
+    (μ0 : PMF State) (E : AlterSeq (PMF State) Label) :
+    (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+        * ∑' m', ω m' * fHM S m' (macroExtend E m') g)
+      = (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+            * ∑' m', ω m' * (S.next (macroExtend E m') none * (∑' s, m' s * g s)))
+        + (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+            * ∑' m', ω m' * (∑' s0 : State,
+                haltReach S m' (macroExtend E m')
+                    ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0))
+        + (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+            * ∑' m', ω m' * (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+                if e.1.trans = Stream'.Seq.nil then 0
+                else reachArrHalt S m' (macroExtend E m') e * g (e.1.endState e.2))) := by
+  sorry
+
+open Classical in
+/-- **F5s (P3) — boundary bookkeeping.** The junction averages of the child's
+immediate-macro-halt (`Jimm`) and nil-run inner-halt (`Jnil`) are absorbed by the
+parent's nil-run halt (`nilHalt_g`) plus the parent's nonempty halt-at-boundary
+reach (`boundaryHaltSum`): each child boundary config lifts, via the first completed
+segment (`snocT`/`dConsistent_snoc_iff`), to a parent config halting AT that segment
+boundary, and the nil-first-run reset mass falls to `nilHalt_g`
+(`boundaryHalt_le`/`depMove_le_init`). -/
+private theorem renewal_boundary_le (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
+    (hg : ∀ x, g x ≤ 1)
+    (μ0 : PMF State) (E : AlterSeq (PMF State) Label)
+    (hT : E.trans.Terminates) (hinv : μ0 = E.endState hT) :
+    (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+        * ∑' m', ω m' * (S.next (macroExtend E m') none * (∑' s, m' s * g s)))
+      + (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+          * ∑' m', ω m' * (∑' s0 : State,
+              haltReach S m' (macroExtend E m')
+                  ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0))
+      ≤ (∑' s0 : State, haltReach S μ0 E
+              ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
+        + (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+            if e.1.trans = Stream'.Seq.nil then 0
+            else haltReach S μ0 E e * g (e.1.endState e.2)) := by
+  sorry
+
+open Classical in
+/-- **F5s (P1) — NE peel.** The junction average of the child's nonempty-config
+halted-arrival carve (`JNE`) plus the parent's nonempty halt-at-boundary reach
+(`boundaryHaltSum`) lower-bounds the parent's nonempty halted-arrival carve (`NE_g`).
+The g-weighted analogue of `genDep_le_genArr`: peel each `reachArrHalt e` per-config
+(`reachArrHalt_peel`/`reachArrHalt_ne` + `curReach_split`) into the halt-at-`e` reach
+plus the junction carrier of the child `reachArrHalt` over the residual fibre
+(`segPre_reindex`/`dResidual_endState`), collapse the junction (W1
+`innerWitness_integrate`/`innerWitness_pushforward`, W2 `ENNReal.div_mul_cancel`),
+recurse continuing departures on strictly shorter residuals. -/
+private theorem renewal_NE_le (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
+    (hg : ∀ x, g x ≤ 1)
+    (μ0 : PMF State) (E : AlterSeq (PMF State) Label)
+    (hT : E.trans.Terminates) (hinv : μ0 = E.endState hT) :
+    (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+        * ∑' m', ω m' * (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+            if e.1.trans = Stream'.Seq.nil then 0
+            else reachArrHalt S m' (macroExtend E m') e * g (e.1.endState e.2)))
+      + (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+          if e.1.trans = Stream'.Seq.nil then 0
+          else haltReach S μ0 E e * g (e.1.endState e.2))
+      ≤ ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+          if e.1.trans = Stream'.Seq.nil then 0
+          else reachArrHalt S μ0 E e * g (e.1.endState e.2) := by
+  sorry
+
+open Classical in
 /-- **F5r — the KEY′ one-step-unfold lower bound of `fHM` (the honest renewal `≤`).**
 Halting immediately at the parent (`S.next E none` against the source) plus taking
 one macro step to a child `m'` and then honest-flattening from `m'` lower-bounds the
@@ -6258,7 +6329,15 @@ private theorem renewal_step_le (S : WeakScheduler (𝒟(sys^w))) (g : State →
   -- + the `≤1` bounds (`hg`, `fHM_le_one`, `condDepthSum_le_one`). ~150 lines of
   -- intricate per-config ENNReal on top of the (now proven) `fHM_split`/`fHM_le_one`
   -- scaffolding. This is the whole residual; everything else in the tower is closed.
-  sorry
+  -- **F5s SKELETON.** Reduced to the three sub-lemmas above via the shared
+  -- `boundaryHaltSum := ∑'{e≠nil} haltReach·g` intermediate: junction linearity
+  -- split (`renewal_junction_split`), then `add_le_add` of the boundary bookkeeping
+  -- (`renewal_boundary_le`: `Jimm+Jnil ≤ nilHalt_g + boundaryHaltSum`) and the NE
+  -- peel (`renewal_NE_le`: `JNE + boundaryHaltSum ≤ NE_g`).
+  rw [renewal_junction_split S g μ0 E]
+  refine le_trans (add_le_add (renewal_boundary_le S g hg μ0 E hT hinv) le_rfl) ?_
+  rw [add_assoc]
+  exact add_le_add le_rfl (by rw [add_comm]; exact renewal_NE_le S g hg μ0 E hT hinv)
 
 open Classical in
 /-- **F5q/F5r — the one-macro-level renewal inequality (the residual crux (★)).**
