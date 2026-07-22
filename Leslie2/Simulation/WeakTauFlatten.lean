@@ -5742,6 +5742,76 @@ RECOMMENDATION: prove a g-weighted analogue of `genDep_le_genArr` for the halt s
 in `boundaryHalt_le` — then `(♦)` assembles. The `fHM(child)` on `termB`'s side is a full
 `reachArrHalt`-sum (`fHM_reachArrHalt`), so the match is a renewal, not a bind. -/
 
+/-! ### F5k — PHASE 3 status: reduction LANDED; `(♦)` refined to 4 sub-lemmas
+
+**DONE (this session, committed green).** `f_integrate_ge` is proved by the F5j
+equality chain (`fHM_reachArrHalt`; nil/nonempty split; `tsum_nil_reindex`;
+`reachArrHalt_nil`; `ENNReal.tsum_mul_left`) down to the single crux
+`renewal_diamond : termB ≤ nilHalt + NE`. Both consumers `fHalt_ge`/`fHalt_ge_G`
+now consume `f_integrate_ge` via `refine le_trans ?_ (f_integrate_ge …)` (the
+blessed `≥`-fallback); the dead `f_integrate_step` sorry stub is deleted.
+So `weakTau_flatten`'s ONLY remaining sorry is `renewal_diamond`.
+
+**The crux is EXACT (not just `≤`).** Physical content: `termB` = mass taking ≥1
+macro step then halting; `nilHalt + NE = fHM − termA`. Peeling `fHM`'s first
+completed segment (`genW_peel`, divided head) and summing the head over the inner
+run `r`, the junction collapses `∑_{r : r.end=s'} haltMass(src,ω)⟨r⟩/(ω.bind id)(s')
+= (ω.bind id)(s')/(ω.bind id)(s') = 1` (W1 = `innerWitness_integrate`
+`∑ run haltMass·[end=s] = (ω.bind id) s`; W2 = `ENNReal.div_mul_cancel`), so the
+run-sum of the honest peel-tail equals `termB` per `(ω,m')`. The reset-departures
+(cur=nil configs, subtracted inside `reachArrHalt`) are re-absorbed exactly as in
+`boundaryHalt_le`. Hence `renewal_diamond` should close as an EQUALITY chain, `≤`
+only as a safety net for the ENNReal subtraction.
+
+**The 4 sub-lemmas the closing proof needs (in build order).**
+ 1. `dResidual_endState : segPre e seg → (dResidual e seg).endState = e.endState`
+    (g factors out of the peel). Clean: `endState_append_shift` + `segPre.2` (the
+    `A.append B = e.trans` prefix) + `endState_congr_pub`. ~15 lines, certain.
+ 2. `prepend_reindex` — THE missing front-prepend bijection (dual of the F5g-1
+    `snocT` END-append). For fixed `seg`, `e ↦ dResidual e seg` is a bijection
+    `{e // segPre e seg} ≃ {e' // e'.init = seg.run.endState ∧ seg.run.trans ≠ nil}`
+    with inverse `e' ↦ ⟨seg.run.init, seg.run.trans.append e'.trans⟩`; injectivity
+    from `happ`/`drop_append_length`, support via `Function.Injective.tsum_eq`.
+    NOTE the constraint `e'.init = seg.run.end`: the honest child integral is over
+    the FIBER `e'.init = s'`, and only after the W1 run-sum (which reweights fibers
+    to `(ω.bind id)(s')` and cancels) does it become the FULL child `fHM(m',·)`.
+    So do the reindex+run-sum TOGETHER, not the bijection alone. ~60 lines.
+ 3. `genW_g_peel` — the g-weighted `genW` recursion: `∑'e genW k src E e·g(e.end)
+    = ∑'e k src E e·g(e.end) + ∑'seg (divhead src E seg)·∑'e' genW k seg.succ
+    (macroExtend E seg.succ) e'·g(e'.end)`, from `genW_peel` + (1) + (2). ~50 lines.
+ 4. `renewal_diamond` assembly: apply (3) at `k = curReachG` and `k = depMove`,
+    combine via `reachArrHalt = genW(haltReachG) − genW(depMoveNil)` (per-e), run-sum
+    the divided head (W1/W2), absorb resets (`boundaryHalt_le`/`depMove_le_init`).
+    ~70 lines.
+
+The whole proof is ~200 lines of new intricate ENNReal/reindex code; (2) is the
+genuine linchpin (the front-prepend bijection did not exist — F5g-1 built only the
+END-append `snocT`). RECORDED as the refined frontier; tree GREEN with the single
+`renewal_diamond` sorry. -/
+
+/-- **F5k sub-lemma (1) — g factors through the peel.** The residual history after
+peeling a legal first segment has the SAME end-state as the full history (the
+prepended run `r` does not move the final landing point). Foundational for the
+g-weighted `genW` peel `genW_g_peel`. -/
+private theorem dResidual_endState
+    (e : {q : AlterSeq State Label // q.trans.Terminates})
+    (seg : FlatSeg State Label) (h : segPre e seg) :
+    (dResidual e seg).1.endState (dResidual e seg).2 = e.1.endState e.2 := by
+  unfold dResidual
+  obtain ⟨hinit, happ, hne⟩ := h
+  have hAterm : seg.run.trans.Terminates := seg.runT
+  have hBterm : (e.1.trans.drop (seg.run.trans.length seg.runT)).Terminates :=
+    WeakScheduler.drop_terminates e.2 _
+  have hAB : (seg.run.trans.append
+      (e.1.trans.drop (seg.run.trans.length seg.runT))).Terminates := by rw [happ]; exact e.2
+  have hseg : (⟨e.1.init, seg.run.trans⟩ : AlterSeq State Label) = seg.run := by rw [← hinit]
+  have he1 : e.1 = (⟨e.1.init, seg.run.trans.append
+      (e.1.trans.drop (seg.run.trans.length seg.runT))⟩ : AlterSeq State Label) := by rw [happ]
+  rw [AlterSeq.endState_congr_pub he1 e.2 hAB,
+    endState_append_shift e.1.init seg.run.trans
+      (e.1.trans.drop (seg.run.trans.length seg.runT)) hAterm hAB hBterm,
+    AlterSeq.endState_congr_pub hseg hAterm seg.runT]
+
 open Classical in
 /-- **(♦) — the renewal crux.** The child halt-integrals summed against the first
 macro step lower-bound the honest flatten's nil-halt boundary plus its nonempty
