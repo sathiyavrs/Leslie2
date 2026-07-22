@@ -6233,87 +6233,85 @@ private theorem renewal_junction_split (S : WeakScheduler (𝒟(sys^w))) (g : St
   rw [add_assoc, tsum_congr hpt, ENNReal.tsum_add, ENNReal.tsum_add]
 
 open Classical in
-/-- **F5s (P3) — boundary bookkeeping.** The junction averages of the child's
-immediate-macro-halt (`Jimm`) and nil-run inner-halt (`Jnil`) are absorbed by the
-parent's nil-run halt (`nilHalt_g`) plus the parent's nonempty halt-at-boundary
-reach (`boundaryHaltSum`): each child boundary config lifts, via the first completed
-segment (`snocT`/`dConsistent_snoc_iff`), to a parent config halting AT that segment
-boundary, and the nil-first-run reset mass falls to `nilHalt_g`
-(`boundaryHalt_le`/`depMove_le_init`). -/
-private theorem renewal_boundary_le (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
+/-- **F5t — the one-macro-level junction bound (`renewal_step_le`'s sole residual).**
+The junction average of the child honest-flatten halt integrals — the
+`renewal_junction_split` decomposition `Jimm + Jnil + JNE` — lower-bounds the
+parent's non-immediate halt carve `nilHalt_g + NE_g`.
+
+**F5t PHASE-0 VERDICT — the reset coincidence FAILS (outcome iii, wrong-way).**
+The F5s split into `renewal_boundary_le` (P3: `Jimm+Jnil ≤ nilHalt_g+boundaryHaltSum`)
+and `renewal_NE_le` (P1: `JNE+boundaryHaltSum ≤ NE_g`) is UNSOUND: P1 is FALSE.
+The pen-and-paper peel is exact (all terms finite, `≤ 1`):
+  `NE_g = boundaryHaltSum + JNE − Σreset·g`,
+where the `genW_g_peel` carrier `Σcarrier·g` of `NE_g` collapses to `JNE` EXACTLY —
+not `≤` with a deficit. After W1 (`innerWitness_pushforward`:
+`∑ run [run.end=t] haltMass(μ0,ω)⟨run⟩ = (ω.bind id) t`) and W2 (`div_mul_cancel`),
+the only lost terms have `(ω.bind id) t = 0`; there `ω m' · child_{m',t} = 0`
+since `reachArrHalt S m' F e' ≤ reachArrM ≤ m'(e'.init)` (`probOf_eq_reachArrM` +
+`probOf_le_init`), so `m'(t)=0 ⟹ child=0`. Thus the junction-collapse deficit is
+ZERO and canNOT absorb `Σreset·g`; `JNE + boundaryHaltSum ≤ NE_g` overshoots by
+exactly `Σreset·g > 0`. P1/P3 are hence REPLACED by this single honest residual.
+
+**True route (unchanged crux, ~150+ lines).** `J ≤ nilHalt_g + NE_g` reduces (via
+the exact NE identity + `Σcarrier·g = JNE`) to the strengthened boundary bookkeeping
+`Jimm + Jnil + Σreset·g ≤ nilHalt_g + boundaryHaltSum`, argued per-ω over the witness
+`W_ω := innerWitness sys μ0 ω` (step from `S.valid … (rw [hinv])`): the child
+immediate/nil-halts and reset departures (`depMove_le_init`) lift through the
+witness halt-pushforward (`innerWitness_integrate`) to the parent nil-run halt
+(`nilHalt_g`) plus the nonempty halt-at-boundary reach (`boundaryHalt_le`); continuing
+departures fall to `genDep_le_genArr`. -/
+private theorem renewal_junction_bound (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
     (hg : ∀ x, g x ≤ 1)
     (μ0 : PMF State) (E : AlterSeq (PMF State) Label)
     (hT : E.trans.Terminates) (hinv : μ0 = E.endState hT) :
     (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
-        * ∑' m', ω m' * (S.next (macroExtend E m') none * (∑' s, m' s * g s)))
+          * ∑' m', ω m' * (S.next (macroExtend E m') none * (∑' s, m' s * g s)))
       + (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
           * ∑' m', ω m' * (∑' s0 : State,
               haltReach S m' (macroExtend E m')
                   ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0))
+      + (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+          * ∑' m', ω m' * (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+              if e.1.trans = Stream'.Seq.nil then 0
+              else reachArrHalt S m' (macroExtend E m') e * g (e.1.endState e.2)))
       ≤ (∑' s0 : State, haltReach S μ0 E
               ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
         + (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
             if e.1.trans = Stream'.Seq.nil then 0
-            else haltReach S μ0 E e * g (e.1.endState e.2)) := by
+            else reachArrHalt S μ0 E e * g (e.1.endState e.2)) := by
   sorry
 
-open Classical in
-/-- **F5s (P1) — NE peel.** The junction average of the child's nonempty-config
-halted-arrival carve (`JNE`) plus the parent's nonempty halt-at-boundary reach
-(`boundaryHaltSum`) lower-bounds the parent's nonempty halted-arrival carve (`NE_g`).
-The g-weighted analogue of `genDep_le_genArr`: peel each `reachArrHalt e` per-config
-(`reachArrHalt_peel`/`reachArrHalt_ne` + `curReach_split`) into the halt-at-`e` reach
-plus the junction carrier of the child `reachArrHalt` over the residual fibre
-(`segPre_reindex`/`dResidual_endState`), collapse the junction (W1
-`innerWitness_integrate`/`innerWitness_pushforward`, W2 `ENNReal.div_mul_cancel`),
-recurse continuing departures on strictly shorter residuals. -/
-private theorem renewal_NE_le (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
-    (hg : ∀ x, g x ≤ 1)
-    (μ0 : PMF State) (E : AlterSeq (PMF State) Label)
-    (hT : E.trans.Terminates) (hinv : μ0 = E.endState hT) :
-    (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
-        * ∑' m', ω m' * (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
-            if e.1.trans = Stream'.Seq.nil then 0
-            else reachArrHalt S m' (macroExtend E m') e * g (e.1.endState e.2)))
-      + (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
-          if e.1.trans = Stream'.Seq.nil then 0
-          else haltReach S μ0 E e * g (e.1.endState e.2))
-      ≤ ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
-          if e.1.trans = Stream'.Seq.nil then 0
-          else reachArrHalt S μ0 E e * g (e.1.endState e.2) := by
-  sorry
+/-! ### F5t status — the F5s P1/P3 split was UNSOUND; consolidated to one residual.
 
-/-! ### F5s status — `renewal_step_le` reduced to P1/P3; P2 landed.
-
-**Landed (F5s).** `renewal_step_le` is now **sorry-free**, reduced (via the shared
-`boundaryHaltSum := ∑'{e≠nil} haltReach S μ0 E e · g(e.end)` intermediate) to:
-  · `renewal_junction_split` (P2) — **CLOSED** (pure `ENNReal` linearity: distribute
-    the child `fHM_split` through the junction average). `J = Jimm + Jnil + JNE`.
-  · `renewal_boundary_le` (P3, `by sorry`) — `Jimm + Jnil ≤ nilHalt_g + boundaryHaltSum`.
-  · `renewal_NE_le` (P1, `by sorry`) — `JNE + boundaryHaltSum ≤ NE_g`.
-P1 + P3 add (cancelling the shared `boundaryHaltSum`) to exactly the residual
-`J ≤ nilHalt_g + NE_g`; the glue in `renewal_step_le` is `add_le_add` + `add_assoc`.
-
-**Frontier / CRUX for the next session (reset-coupling — verify before investing).**
-The pen-and-paper per-config peel (via `reachArrHalt_ne`/`genW_peel`/`curReach_split`;
-note each `genW depMove e ≤ reachArrM e ≤ 1` is FINITE, so the per-config subtraction
-is safe) gives the EXACT identity
+**PHASE-0 verdict (F5t, machine-checked against the defs).** The F5s frontier
+"reset-mass coincidence" was verified and it FAILS (outcome iii, wrong-way). The
+per-config peel (`reachArrHalt_ne`/`genW_peel`/`curReach_split`; each
+`genW depMove e ≤ reachArrM e ≤ 1` finite) gives the EXACT identity
   `reachArrHalt e = haltReach e + carrier_child e − reset_deficit e`,
-  `carrier_child e = ∑'seg [segPre e seg ∧ dResidual e seg ≠ nil]·divhead(seg)·reachArrHalt(child)`,
-  `reset_deficit e = ∑'seg [segPre e seg ∧ dResidual e seg = nil]·divhead(seg)·depMove(nil child) ≥ 0`.
+  `carrier_child e = ∑'seg [segPre e seg ∧ dResidual e seg ≠ nil]·divhead·reachArrHalt(child)`,
+  `reset_deficit e = ∑'seg [segPre e seg ∧ dResidual e seg = nil]·divhead·depMove(nil child) ≥ 0`.
 Summing `·g(e.end)` over `{e≠nil}`: `NE_g = boundaryHaltSum + Σcarrier·g − Σreset·g`.
-So P1 (`JNE + boundaryHaltSum ≤ NE_g`) needs `JNE ≤ Σcarrier·g − Σreset·g`, i.e. the
-junction-collapse deficit of `JNE` (the W1/W2 reset loss) must ABSORB `Σreset·g` — the
-SAME reset mass that `boundaryHalt_le` (:4734) bounds by `haltReach e`. This
-reset-mass coincidence is the delicate point: it is plausibly true (both resets are
-the nil-first-run mass) but was NOT machine-verified here. If it fails, the clean
-`boundaryHaltSum` split must be replaced by carrying `Σreset·g` explicitly (finite
-`tsub`), or by folding P1/P3 into one residual `Jimm+Jnil+JNE ≤ nilHalt_g+NE_g`.
-Route once verified: P1 by `genW_g_peel` of the `reachArrHalt` carrier + `segPre_reindex`/
-`dResidual_endState` reindex + junction collapse (W1 `innerWitness_integrate` with
-`hstep` from `S.valid E (Nat.find hT) … (rw [hinv])`, W2 `ENNReal.div_mul_cancel`) +
-`genDep_le_genArr` length recursion; P3 by the `snocT`/`dConsistent_snoc_iff` boundary
-lift + `boundaryHalt_le`/`depMove_le_init` reset absorption. -/
+CRUCIALLY the junction collapse of `Σcarrier·g` is EXACT (`Σcarrier·g = JNE`), NOT
+`≤`-with-deficit: after W1 (`innerWitness_pushforward`) + W2 (`div_mul_cancel`) the
+only dropped terms have `(ω.bind id) t = 0`, where `ω m'·child_{m',t} = 0` because
+`reachArrHalt S m' F e' ≤ reachArrM ≤ m'(e'.init)` (`probOf_eq_reachArrM`+`probOf_le_init`).
+So the collapse deficit is ZERO — it does NOT absorb `Σreset·g`. Hence the F5s
+P1 `JNE + boundaryHaltSum ≤ NE_g` is FALSE (overshoots by `Σreset·g > 0`); the clean
+`boundaryHaltSum` split is dead.
+
+**Consolidation.** `renewal_boundary_le`/`renewal_NE_le` are DELETED and replaced by
+the single honest residual `renewal_junction_bound : Jimm+Jnil+JNE ≤ nilHalt_g+NE_g`.
+`renewal_junction_split` (P2) is retained (it supplies `J = Jimm+Jnil+JNE`, still used
+by `renewal_step_le`). `renewal_step_le`/`renewal_le` and the whole downstream tower
+stay green modulo this one sorry.
+
+**True route for `renewal_junction_bound` (~150+ lines).** Reduce (exact NE identity +
+`Σcarrier·g = JNE`) to `Jimm + Jnil + Σreset·g ≤ nilHalt_g + boundaryHaltSum`, argued
+per-ω over `W_ω := innerWitness sys μ0 ω` (step via `S.valid E (Nat.find hT) … (rw
+[hinv])`): child immediate/nil-halts + child reset departures (`depMove_le_init`)
+lift through the witness halt-pushforward (`innerWitness_integrate`/`_pushforward`) to
+the parent nil-run halt `nilHalt_g` + the nonempty halt-at-boundary reach
+(`boundaryHalt_le`); continuing departures fall to `genDep_le_genArr`. -/
 
 open Classical in
 /-- **F5r — the KEY′ one-step-unfold lower bound of `fHM` (the honest renewal `≤`).**
@@ -6382,13 +6380,10 @@ private theorem renewal_step_le (S : WeakScheduler (𝒟(sys^w))) (g : State →
   -- scaffolding. This is the whole residual; everything else in the tower is closed.
   -- **F5s SKELETON.** Reduced to the three sub-lemmas above via the shared
   -- `boundaryHaltSum := ∑'{e≠nil} haltReach·g` intermediate: junction linearity
-  -- split (`renewal_junction_split`), then `add_le_add` of the boundary bookkeeping
-  -- (`renewal_boundary_le`: `Jimm+Jnil ≤ nilHalt_g + boundaryHaltSum`) and the NE
-  -- peel (`renewal_NE_le`: `JNE + boundaryHaltSum ≤ NE_g`).
+  -- split (`renewal_junction_split`), then the single honest residual
+  -- `renewal_junction_bound` (the F5s P1/P3 split was unsound — see its docstring).
   rw [renewal_junction_split S g μ0 E]
-  refine le_trans (add_le_add (renewal_boundary_le S g hg μ0 E hT hinv) le_rfl) ?_
-  rw [add_assoc]
-  exact add_le_add le_rfl (by rw [add_comm]; exact renewal_NE_le S g hg μ0 E hT hinv)
+  exact renewal_junction_bound S g hg μ0 E hT hinv
 
 open Classical in
 /-- **F5q/F5r — the one-macro-level renewal inequality (the residual crux (★)).**
