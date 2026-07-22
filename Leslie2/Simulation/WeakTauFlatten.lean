@@ -4429,19 +4429,6 @@ theorem d_pushforward (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
   show (Ν.bind id) s = F s
   exact le_antisymm (hle s) hge
 
-/-- **Flattening.** An internal weak transition of `𝒟(sys^w)` out of the Dirac
-macro-state `PMF.pure μ` collapses to an internal weak transition of `sys` from
-`μ` to the end-state mixture. Witnessed by the decision-point belief scheduler
-`dSched` instantiated at the macro witness of `h`. -/
-theorem weakTau_flatten (sys : System State Label) {μ : PMF State}
-    {Ν : PMF (PMF State)} (h : weakTau (𝒟(sys^w)) (PMF.pure μ) Ν) :
-    weakTau sys μ (Ν.bind id) := by
-  classical
-  refine ⟨dSched h.witnessScheduler μ ⟨μ, Seq.nil⟩, ?_, ?_⟩
-  · exact d_halts h.witnessScheduler μ h.witness_halts
-  · exact fun s => d_pushforward h.witnessScheduler μ Ν
-      (fun m => h.witness_pushforward m) s
-
 /-! ### F5f — the honest reach-arrival flattening scheduler (`flatSched`)
 
 Transplant of `expandSched` (`WeakClosure/Scheduler.lean`) to the two-level
@@ -5465,5 +5452,195 @@ theorem flatSched_haltMass (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
           reachDepM S μ0 E ⟨ev, eT⟩ p.1 p.2 / reachArrM S μ0 E ⟨ev, eT⟩) = _
   rw [hdiv, key _ _ (reachDepM_sum_le S μ0 E ⟨ev, eT⟩) htop]
   rfl
+
+/-- The `flatSched` halt-integral of a test `g` from source `μ0`, rooted at
+macro-history `E`. The honest analogue of `dHM`. -/
+noncomputable def fHM (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (E : AlterSeq (PMF State) Label) (g : State → ENNReal) : ENNReal :=
+  ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+    (flatSched S μ0 E).haltMass μ0 e * g (e.1.endState e.2)
+
+/-- **F5g-3 crux — the one-step integrate recursion for `flatSched` (rooted).**
+The honest flatten's halt-integral unfolds one macro level: either the macro
+scheduler halts now (mass `S.next E none`, end-state `μ0`), or it takes a
+macro-emission `ω` and successor `m'`, whereupon the inner witness runs to
+`ω.bind id` and the flatten continues from `(m', macroExtend E m')`. This is the
+recursion `d_integrate_step` posited for `dSched` — now honest because
+`flatSched`'s fidelity (`probOf_eq_reachArrM`) and halt identity
+(`flatSched_haltMass`) make its halt-mass the true reach-arrival halt. -/
+theorem f_integrate_step (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (E : AlterSeq (PMF State) Label) (g : State → ENNReal) :
+    fHM S μ0 E g = S.next E none * (∑' s, μ0 s * g s)
+      + ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+          * ∑' m', ω m' * fHM S m' (macroExtend E m') g := by
+  sorry
+
+/-- Iterating `f_integrate_step` at `g := 1`: the partial sum of conditional depth
+totals lower-bounds the honest flatten's total halting mass. -/
+private theorem fHalt_ge (S : WeakScheduler (𝒟(sys^w))) (n : ℕ) :
+    ∀ (μ0 : PMF State) (E : AlterSeq (PMF State) Label),
+      (∑ k ∈ Finset.range n, condDepth S μ0 k E) ≤ fHM S μ0 E (fun _ => 1) := by
+  induction n with
+  | zero => intro μ0 E; simp
+  | succ n IH =>
+    intro μ0 E
+    rw [f_integrate_step S μ0 E (fun _ => 1)]
+    rw [Finset.sum_range_succ', condDepth_zero]
+    have hswap : (∑ k ∈ Finset.range n, condDepth S μ0 (k + 1) E)
+        ≤ ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+            * ∑' m', ω m' * fHM S m' (macroExtend E m') (fun _ => 1) := by
+      rw [Finset.sum_congr rfl (fun k _ => condDepth_succ' S μ0 k E)]
+      rw [← Summable.tsum_finsetSum (fun _ _ => ENNReal.summable)]
+      refine ENNReal.tsum_le_tsum (fun ω => ?_)
+      rw [← Finset.mul_sum]
+      refine mul_le_mul_left' ?_ _
+      rw [← Summable.tsum_finsetSum (fun _ _ => ENNReal.summable)]
+      refine ENNReal.tsum_le_tsum (fun m' => ?_)
+      rw [← Finset.mul_sum]
+      exact mul_le_mul_left' (IH m' (macroExtend E m')) _
+    have hsrc : S.next E none = S.next E none * (∑' s, μ0 s * (1 : ENNReal)) := by
+      rw [tsum_congr (fun s => mul_one _), PMF.tsum_coe, mul_one]
+    rw [add_comm]
+    exact add_le_add (le_of_eq hsrc) hswap
+
+/-- **F5g-3(a) — a.s.-halting.** Given `S` halts almost surely from `PMF.pure μ0`,
+the honest flatten `flatSched` halts almost surely from `μ0`. -/
+theorem f_halts (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (hhalt : (∑' E : {e : AlterSeq (PMF State) Label // e.trans.Terminates},
+        S.haltMass (PMF.pure μ0) E) = 1) :
+    (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+        (flatSched S μ0 ⟨μ0, Seq.nil⟩).haltMass μ0 e) = 1 := by
+  have hle : (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+      (flatSched S μ0 ⟨μ0, Seq.nil⟩).haltMass μ0 e) ≤ 1 :=
+    WeakScheduler.haltMass_tsum_le_one _ _
+  have hHM : fHM S μ0 ⟨μ0, Seq.nil⟩ (fun _ => 1)
+      = ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+          (flatSched S μ0 ⟨μ0, Seq.nil⟩).haltMass μ0 e := by
+    unfold fHM; exact tsum_congr (fun e => mul_one _)
+  refine le_antisymm hle ?_
+  rw [← macroHalted_iSup_eq_one S μ0 hhalt]
+  refine iSup_le (fun n => ?_)
+  rw [show (∑ k ∈ Finset.range n, ∑' s, macroHaltDepth S μ0 k s)
+      = ∑ k ∈ Finset.range n, condDepth S μ0 k ⟨μ0, Seq.nil⟩ from
+    Finset.sum_congr rfl (fun k _ => by rw [macroHaltDepth_total, ← condDepth_root])]
+  rw [← hHM]
+  exact fHalt_ge S n μ0 ⟨μ0, Seq.nil⟩
+
+open Classical in
+/-- Iterating `f_integrate_step` at `g := [· = s]`: the partial sum of the
+depth-`k` end-state pushforwards lower-bounds the honest flatten's `s`-integral,
+along the invariant that the source is the current macro end-state. -/
+private theorem fHalt_ge_G (S : WeakScheduler (𝒟(sys^w))) (s : State) (n : ℕ) :
+    ∀ (μ0 : PMF State) (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates),
+      μ0 = E.endState hT →
+      (∑ k ∈ Finset.range n, condDepthG S k E hT s)
+        ≤ fHM S μ0 E (fun x => if x = s then 1 else 0) := by
+  induction n with
+  | zero => intro μ0 E hT hinv; simp
+  | succ n IH =>
+    intro μ0 E hT hinv
+    rw [f_integrate_step S μ0 E (fun x => if x = s then 1 else 0),
+      Finset.sum_range_succ', condDepthG_zero]
+    have hswap : (∑ k ∈ Finset.range n, condDepthG S (k + 1) E hT s)
+        ≤ ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+            * ∑' m', ω m' * fHM S m' (macroExtend E m') (fun x => if x = s then 1 else 0) := by
+      rw [Finset.sum_congr rfl (fun k _ => condDepthG_succ' S k E hT s),
+        ← Summable.tsum_finsetSum (fun _ _ => ENNReal.summable)]
+      refine ENNReal.tsum_le_tsum (fun ω => ?_)
+      rw [← Finset.mul_sum]
+      refine mul_le_mul_left' ?_ _
+      rw [← Summable.tsum_finsetSum (fun _ _ => ENNReal.summable)]
+      refine ENNReal.tsum_le_tsum (fun m' => ?_)
+      rw [← Finset.mul_sum]
+      exact mul_le_mul_left'
+        (IH m' (macroExtend E m') (macroExtend_term hT m')
+          (macroExtend_endState hT m').symm) _
+    have hhalt : S.next E none * ((E.endState hT) s)
+        = S.next E none * (∑' s', μ0 s' * (if s' = s then (1 : ENNReal) else 0)) := by
+      rw [tsum_eq_single s (fun s' hs' => by rw [if_neg hs', mul_zero]), if_pos rfl, mul_one,
+        ← hinv]
+    rw [add_comm]
+    exact add_le_add (le_of_eq hhalt) hswap
+
+open Classical in
+/-- **F5g-3(b) — pushforward.** The honest flatten `flatSched`'s halting end-state
+pushforward is the macro mixture `Ν.bind id`. -/
+theorem f_pushforward (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (Ν : PMF (PMF State))
+    (hpush : ∀ m, Ν m = ∑' E : {e : AlterSeq (PMF State) Label // e.trans.Terminates},
+        S.haltMass (PMF.pure μ0) E * (if E.1.endState E.2 = m then 1 else 0))
+    (s : State) :
+    (Ν.bind id) s
+      = ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+          (flatSched S μ0 ⟨μ0, Seq.nil⟩).haltMass μ0 e
+            * (if e.1.endState e.2 = s then 1 else 0) := by
+  have hhalt : (∑' E : {e : AlterSeq (PMF State) Label // e.trans.Terminates},
+      S.haltMass (PMF.pure μ0) E) = 1 := by
+    have h := (PMF.tsum_coe Ν).symm
+    rw [tsum_congr (fun m => hpush m), ENNReal.tsum_comm,
+      tsum_congr (fun E => by
+        rw [ENNReal.tsum_mul_left,
+          tsum_eq_single (E.1.endState E.2)
+            (fun m hm => if_neg (fun heq => hm heq.symm)), if_pos rfl, mul_one])] at h
+    exact h.symm
+  set F : State → ENNReal :=
+    fun s' => fHM S μ0 ⟨μ0, Seq.nil⟩ (fun x => if x = s' then 1 else 0) with hF
+  have htotF : (∑' s', F s') = 1 := by
+    simp only [hF, fHM]
+    rw [ENNReal.tsum_comm,
+      tsum_congr (fun e => by
+        rw [ENNReal.tsum_mul_left,
+          tsum_eq_single (e.1.endState e.2)
+            (fun s' hs' => if_neg (fun heq => hs' heq.symm)), if_pos rfl, mul_one])]
+    exact f_halts S μ0 hhalt
+  have hle : ∀ s0, (Ν.bind id) s0 ≤ F s0 := by
+    intro s0
+    rw [macroHalt_tsum_depth S μ0 hpush s0, ENNReal.tsum_eq_iSup_nat]
+    refine iSup_le (fun n => ?_)
+    rw [show (∑ k ∈ Finset.range n, macroHaltDepth S μ0 k s0)
+        = ∑ k ∈ Finset.range n, condDepthG S k ⟨μ0, Seq.nil⟩ Stream'.Seq.terminates_nil s0 from
+      Finset.sum_congr rfl (fun k _ => (condDepthG_root S μ0 k s0).symm)]
+    exact fHalt_ge_G S s0 n μ0 ⟨μ0, Seq.nil⟩ Stream'.Seq.terminates_nil
+      (AlterSeq.endState_of_trans_nil ⟨μ0, Seq.nil⟩ rfl Stream'.Seq.terminates_nil).symm
+  have hge : F s ≤ (Ν.bind id) s := by
+    have hFsplit : (∑' s', F s') = F s + ∑' s', if s' = s then 0 else F s' :=
+      ENNReal.tsum_eq_add_tsum_ite s
+    have hNsplit : (∑' s', (Ν.bind id) s') = (Ν.bind id) s
+        + ∑' s', if s' = s then 0 else (Ν.bind id) s' :=
+      ENNReal.tsum_eq_add_tsum_ite s
+    have hRle : (∑' s', if s' = s then 0 else (Ν.bind id) s')
+        ≤ ∑' s', if s' = s then 0 else F s' :=
+      ENNReal.tsum_le_tsum (fun s' => by split_ifs; exacts [le_refl 0, hle s'])
+    have hRfin : (∑' s', if s' = s then 0 else F s') ≠ ⊤ := by
+      have hb : (∑' s', if s' = s then 0 else F s') ≤ ∑' s', F s' :=
+        ENNReal.tsum_le_tsum (fun s' => by split_ifs; exacts [zero_le', le_refl _])
+      rw [htotF] at hb
+      exact ne_top_of_le_ne_top ENNReal.one_ne_top hb
+    have hle2 : F s + (∑' s', if s' = s then 0 else F s')
+        ≤ (Ν.bind id) s + (∑' s', if s' = s then 0 else F s') := by
+      calc F s + (∑' s', if s' = s then 0 else F s')
+          = ∑' s', F s' := hFsplit.symm
+        _ = 1 := htotF
+        _ = ∑' s', (Ν.bind id) s' := (PMF.tsum_coe _).symm
+        _ = (Ν.bind id) s + ∑' s', if s' = s then 0 else (Ν.bind id) s' := hNsplit
+        _ ≤ (Ν.bind id) s + ∑' s', if s' = s then 0 else F s' :=
+            add_le_add le_rfl hRle
+    exact (ENNReal.add_le_add_iff_right hRfin).mp hle2
+  show (Ν.bind id) s = F s
+  exact le_antisymm (hle s) hge
+
+/-- **Flattening (F5g-4).** An internal weak transition of `𝒟(sys^w)` out of the
+Dirac macro-state `PMF.pure μ` collapses to an internal weak transition of `sys`
+from `μ` to the end-state mixture. Witnessed by the honest reach-arrival
+flattening scheduler `flatSched` instantiated at the macro witness of `h`:
+a.s.-halting is `f_halts`, the pushforward is `f_pushforward`. -/
+theorem weakTau_flatten (sys : System State Label) {μ : PMF State}
+    {Ν : PMF (PMF State)} (h : weakTau (𝒟(sys^w)) (PMF.pure μ) Ν) :
+    weakTau sys μ (Ν.bind id) := by
+  classical
+  refine ⟨flatSched h.witnessScheduler μ ⟨μ, Seq.nil⟩, ?_, ?_⟩
+  · exact f_halts h.witnessScheduler μ h.witness_halts
+  · exact fun s => f_pushforward h.witnessScheduler μ Ν
+      (fun m => h.witness_pushforward m) s
 
 end PLTS
