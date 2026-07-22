@@ -5742,22 +5742,67 @@ RECOMMENDATION: prove a g-weighted analogue of `genDep_le_genArr` for the halt s
 in `boundaryHalt_le` — then `(♦)` assembles. The `fHM(child)` on `termB`'s side is a full
 `reachArrHalt`-sum (`fHM_reachArrHalt`), so the match is a renewal, not a bind. -/
 
-/-- **F5g-3 crux — the one-step integrate recursion for `flatSched` (rooted).**
-The honest flatten's halt-integral unfolds one macro level: either the macro
-scheduler halts now (mass `S.next E none`, end-state `μ0`), or it takes a
-macro-emission `ω` and successor `m'`, whereupon the inner witness runs to
-`ω.bind id` and the flatten continues from `(m', macroExtend E m')`. This is the
-recursion `d_integrate_step` posited for `dSched` — now honest because
-`flatSched`'s fidelity (`probOf_eq_reachArrM`) and halt identity
-(`flatSched_haltMass`) make its halt-mass the true reach-arrival halt. -/
-theorem f_integrate_step (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
-    (E : AlterSeq (PMF State) Label) (g : State → ENNReal) :
-    fHM S μ0 E g = S.next E none * (∑' s, μ0 s * g s)
-      + ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
-          * ∑' m', ω m' * fHM S m' (macroExtend E m') g := by
+open Classical in
+/-- **(♦) — the renewal crux.** The child halt-integrals summed against the first
+macro step lower-bound the honest flatten's nil-halt boundary plus its nonempty
+halted-arrival mass. This is the g-weighted halt analogue of `genDep_le_genArr`:
+`termB`'s first-segment head matches the parent halt-config sum via the junction
+W1/W2 cancellation (`PMF.bind_apply` + `(x/c)·c ≤ x`). -/
+private theorem renewal_diamond (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (E : AlterSeq (PMF State) Label) (g : State → ENNReal) (hg : ∀ x, g x ≤ 1) :
+    (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+        * ∑' m', ω m' * fHM S m' (macroExtend E m') g)
+      ≤ (∑' s0 : State,
+            haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
+        + ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+            if e.1.trans = Stream'.Seq.nil then 0
+            else reachArrHalt S μ0 E e * g (e.1.endState e.2) := by
   sorry
 
-/-- Iterating `f_integrate_step` at `g := 1`: the partial sum of conditional depth
+open Classical in
+/-- **The `≥`-only integrate step for `flatSched` (blessed fallback).** The macro
+halt boundary plus the child halt-integrals lower-bound the honest flatten's
+halt-integral. Reduces (by the term-A nil carve-out `reachArrHalt_nil`) to the
+renewal crux `renewal_diamond`. Consumed by `fHalt_ge`/`fHalt_ge_G`. -/
+private theorem f_integrate_ge (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (E : AlterSeq (PMF State) Label) (g : State → ENNReal) (hg : ∀ x, g x ≤ 1) :
+    S.next E none * (∑' s, μ0 s * g s)
+      + ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+          * ∑' m', ω m' * fHM S m' (macroExtend E m') g
+      ≤ fHM S μ0 E g := by
+  classical
+  rw [fHM_reachArrHalt]
+  have hnil : (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+        if e.1.trans = Stream'.Seq.nil then reachArrHalt S μ0 E e * g (e.1.endState e.2) else 0)
+      = S.next E none * (∑' s, μ0 s * g s)
+        + ∑' s0 : State,
+            haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0 := by
+    rw [tsum_nil_reindex (fun e => reachArrHalt S μ0 E e * g (e.1.endState e.2))]
+    have hpt : ∀ s0 : State,
+        reachArrHalt S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩
+            * g ((⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ :
+                {e : AlterSeq State Label // e.trans.Terminates}).1.endState
+              Stream'.Seq.terminates_nil)
+          = S.next E none * (μ0 s0 * g s0)
+            + haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0 := by
+      intro s0
+      rw [AlterSeq.endState_of_trans_nil (⟨s0, Stream'.Seq.nil⟩ : AlterSeq State Label) rfl
+          Stream'.Seq.terminates_nil, reachArrHalt_nil, add_mul, mul_assoc]
+    rw [tsum_congr hpt, ENNReal.tsum_add, ENNReal.tsum_mul_left]
+  have hsplit : (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+        reachArrHalt S μ0 E e * g (e.1.endState e.2))
+      = (S.next E none * (∑' s, μ0 s * g s)
+          + ∑' s0 : State,
+              haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
+        + ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+            if e.1.trans = Stream'.Seq.nil then 0
+            else reachArrHalt S μ0 E e * g (e.1.endState e.2) := by
+    rw [← hnil, ← ENNReal.tsum_add]
+    exact tsum_congr (fun e => by split_ifs <;> simp)
+  rw [hsplit, add_assoc]
+  exact add_le_add le_rfl (renewal_diamond S μ0 E g hg)
+
+/-- Iterating `f_integrate_ge` at `g := 1`: the partial sum of conditional depth
 totals lower-bounds the honest flatten's total halting mass. -/
 private theorem fHalt_ge (S : WeakScheduler (𝒟(sys^w))) (n : ℕ) :
     ∀ (μ0 : PMF State) (E : AlterSeq (PMF State) Label),
@@ -5766,7 +5811,7 @@ private theorem fHalt_ge (S : WeakScheduler (𝒟(sys^w))) (n : ℕ) :
   | zero => intro μ0 E; simp
   | succ n IH =>
     intro μ0 E
-    rw [f_integrate_step S μ0 E (fun _ => 1)]
+    refine le_trans ?_ (f_integrate_ge S μ0 E (fun _ => 1) (fun _ => le_rfl))
     rw [Finset.sum_range_succ', condDepth_zero]
     have hswap : (∑ k ∈ Finset.range n, condDepth S μ0 (k + 1) E)
         ≤ ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
@@ -5821,8 +5866,9 @@ private theorem fHalt_ge_G (S : WeakScheduler (𝒟(sys^w))) (s : State) (n : �
   | zero => intro μ0 E hT hinv; simp
   | succ n IH =>
     intro μ0 E hT hinv
-    rw [f_integrate_step S μ0 E (fun x => if x = s then 1 else 0),
-      Finset.sum_range_succ', condDepthG_zero]
+    refine le_trans ?_ (f_integrate_ge S μ0 E (fun x => if x = s then 1 else 0)
+      (fun x => by split_ifs <;> simp))
+    rw [Finset.sum_range_succ', condDepthG_zero]
     have hswap : (∑ k ∈ Finset.range n, condDepthG S (k + 1) E hT s)
         ≤ ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
             * ∑' m', ω m' * fHM S m' (macroExtend E m') (fun x => if x = s then 1 else 0) := by
