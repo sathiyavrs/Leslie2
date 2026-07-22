@@ -5882,6 +5882,57 @@ private theorem segPre_reindex (seg : FlatSeg State Label)
     rw [hdrop, ← hfib]
 
 open Classical in
+/-- **F5k sub-lemma (3) — the g-weighted `genW` peel.** Peeling the first completed
+segment of a g-weighted `genW`-carrier sum: the no-segment base plus, per first
+segment, the divided head times the child carrier summed over the residual-history
+fiber `e'.init = seg.run.end` (via `genW_peel`, `dResidual_endState`, `segPre_reindex`). -/
+private theorem genW_g_peel
+    (k : PMF State → AlterSeq (PMF State) Label →
+      {q : AlterSeq State Label // q.trans.Terminates} → ENNReal)
+    (S : WeakScheduler (𝒟(sys^w))) (src : PMF State) (E : AlterSeq (PMF State) Label)
+    (g : State → ENNReal) :
+    (∑' e : {q : AlterSeq State Label // q.trans.Terminates}, genW k S src E e * g (e.1.endState e.2))
+      = (∑' e : {q : AlterSeq State Label // q.trans.Terminates}, k src E e * g (e.1.endState e.2))
+        + ∑' seg : FlatSeg State Label,
+            (if seg.run.trans ≠ Stream'.Seq.nil then (1 : ENNReal) else 0)
+              * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
+                  * ((innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩
+                      / (seg.emit.bind id) (seg.run.endState seg.runT)))
+              * ∑' e' : {q : AlterSeq State Label // q.trans.Terminates},
+                  if e'.1.init = seg.run.endState seg.runT
+                    then genW k S seg.succ (macroExtend E seg.succ) e' * g (e'.1.endState e'.2)
+                    else 0 := by
+  have hpeel : ∀ e : {q : AlterSeq State Label // q.trans.Terminates},
+      genW k S src E e * g (e.1.endState e.2)
+        = k src E e * g (e.1.endState e.2)
+          + ∑' seg : FlatSeg State Label,
+              ((if segPre e seg then (1 : ENNReal) else 0)
+                * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
+                    * ((innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩
+                        / (seg.emit.bind id) (seg.run.endState seg.runT)))
+                * genW k S seg.succ (macroExtend E seg.succ) (dResidual e seg))
+              * g (e.1.endState e.2) := by
+    intro e; rw [genW_peel k S src E e, add_mul, ENNReal.tsum_mul_right]
+  rw [tsum_congr hpeel, ENNReal.tsum_add]
+  congr 1
+  rw [ENNReal.tsum_comm]
+  refine tsum_congr (fun seg => ?_)
+  by_cases hnil : seg.run.trans = Stream'.Seq.nil
+  · have hns : ∀ e : {q : AlterSeq State Label // q.trans.Terminates}, ¬ segPre e seg :=
+      fun e ⟨_, _, hne⟩ => hne hnil
+    rw [if_neg (fun h => h hnil), zero_mul, zero_mul, ENNReal.tsum_eq_zero]
+    intro e
+    rw [if_neg (hns e), zero_mul, zero_mul, zero_mul]
+  · rw [if_pos hnil, one_mul,
+      ← segPre_reindex seg hnil
+        (fun e' => genW k S seg.succ (macroExtend E seg.succ) e' * g (e'.1.endState e'.2)),
+      ← ENNReal.tsum_mul_left]
+    refine tsum_congr (fun e => ?_)
+    by_cases hsp : segPre e seg
+    · simp only [if_pos hsp]; rw [dResidual_endState e seg hsp]; ring
+    · simp only [if_neg hsp]; ring
+
+open Classical in
 /-- **(♦) — the renewal crux.** The child halt-integrals summed against the first
 macro step lower-bound the honest flatten's nil-halt boundary plus its nonempty
 halted-arrival mass. This is the g-weighted halt analogue of `genDep_le_genArr`:
