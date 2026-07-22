@@ -6493,6 +6493,145 @@ private theorem rAH_peel_identity (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF S
     ((ENNReal.add_le_add_iff_right hfinX).mp (le_of_eq hchain.symm))
 
 open Classical in
+/-- **F5v — the child nonempty-halt fiber** at landing state `t`. -/
+private noncomputable def childNEfib (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
+    (m' : PMF State) (F : AlterSeq (PMF State) Label) (t : State) : ENNReal :=
+  ∑' e' : {q : AlterSeq State Label // q.trans.Terminates},
+    if e'.1.init = t then
+      (if e'.1.trans = Stream'.Seq.nil then 0
+        else reachArrHalt S m' F e' * g (e'.1.endState e'.2))
+    else 0
+
+open Classical in
+/-- The fibers exhaust the child nonempty-halt integral. -/
+private theorem childNEfib_total (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
+    (m' : PMF State) (F : AlterSeq (PMF State) Label) :
+    (∑' t : State, childNEfib S g m' F t)
+      = ∑' e' : {q : AlterSeq State Label // q.trans.Terminates},
+          if e'.1.trans = Stream'.Seq.nil then 0
+          else reachArrHalt S m' F e' * g (e'.1.endState e'.2) :=
+  (tsum_group_init (fun e' =>
+    if e'.1.trans = Stream'.Seq.nil then 0
+    else reachArrHalt S m' F e' * g (e'.1.endState e'.2))).symm
+
+open Classical in
+/-- A fiber at a source-null landing state vanishes. -/
+private theorem childNEfib_zero (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
+    (m' : PMF State) (F : AlterSeq (PMF State) Label) (t : State) (h : m' t = 0) :
+    childNEfib S g m' F t = 0 := by
+  rw [childNEfib]
+  refine ENNReal.tsum_eq_zero.mpr (fun e' => ?_)
+  split_ifs with h1 h2
+  · rfl
+  · have h0 : reachArrHalt S m' F e' = 0 := by
+      have hle := reachArrHalt_le_init S m' F e'
+      rw [h1, h] at hle
+      exact le_antisymm hle zero_le'
+    rw [h0, zero_mul]
+  · rfl
+
+open Classical in
+/-- **F5v — the exact junction fiber collapse.** Per emission (on the step
+support) and per child, the stall-weighted child halts at the SAME history plus
+the W1-collapsed nonempty-head child halts recombine EXACTLY into the child
+nonempty-halt integral: the two Bayes weights sum to `(ω.bind id) t / (ω.bind
+id) t`, which is `1` where it matters and `0` exactly where the child fiber
+vanishes. -/
+private theorem fiber_collapse (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
+    (μ0 : PMF State) (E : AlterSeq (PMF State) Label) (ω : PMF (PMF State)) (m' : PMF State)
+    (hstep : (𝒟(sys^w)).step μ0 Silent.τ ω)
+    (hm : ∀ t : State, (ω.bind id) t = 0 → m' t = 0) :
+    (∑' e : {q : AlterSeq State Label // q.trans.Terminates},
+        if e.1.trans = Stream'.Seq.nil then 0
+        else ((innerWitness sys μ0 ω).haltMass μ0
+                ⟨⟨e.1.init, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩
+              / (ω.bind id) e.1.init)
+          * (reachArrHalt S m' (macroExtend E m') e * g (e.1.endState e.2)))
+      + (∑' r : {q : AlterSeq State Label // q.trans.Terminates},
+          if r.1.trans = Stream'.Seq.nil then 0
+          else ((innerWitness sys μ0 ω).haltMass μ0 r / (ω.bind id) (r.1.endState r.2))
+            * childNEfib S g m' (macroExtend E m') (r.1.endState r.2))
+      = ∑' e' : {q : AlterSeq State Label // q.trans.Terminates},
+          if e'.1.trans = Stream'.Seq.nil then 0
+          else reachArrHalt S m' (macroExtend E m') e' * g (e'.1.endState e'.2) := by
+  -- the stall side is the nil-`r` stratum of the same `r`-sum
+  have hstall : (∑' e : {q : AlterSeq State Label // q.trans.Terminates},
+      if e.1.trans = Stream'.Seq.nil then 0
+      else ((innerWitness sys μ0 ω).haltMass μ0
+              ⟨⟨e.1.init, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩
+            / (ω.bind id) e.1.init)
+        * (reachArrHalt S m' (macroExtend E m') e * g (e.1.endState e.2)))
+      = ∑' r : {q : AlterSeq State Label // q.trans.Terminates},
+          if r.1.trans = Stream'.Seq.nil
+            then ((innerWitness sys μ0 ω).haltMass μ0 r / (ω.bind id) (r.1.endState r.2))
+              * childNEfib S g m' (macroExtend E m') (r.1.endState r.2)
+            else 0 := by
+    rw [tsum_nil_reindex (fun r =>
+      ((innerWitness sys μ0 ω).haltMass μ0 r / (ω.bind id) (r.1.endState r.2))
+        * childNEfib S g m' (macroExtend E m') (r.1.endState r.2))]
+    rw [tsum_group_init (fun e =>
+      if e.1.trans = Stream'.Seq.nil then 0
+      else ((innerWitness sys μ0 ω).haltMass μ0
+              ⟨⟨e.1.init, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩
+            / (ω.bind id) e.1.init)
+        * (reachArrHalt S m' (macroExtend E m') e * g (e.1.endState e.2)))]
+    refine tsum_congr (fun t => ?_)
+    have hend : (⟨t, Stream'.Seq.nil⟩ : AlterSeq State Label).endState
+        Stream'.Seq.terminates_nil = t :=
+      AlterSeq.endState_of_trans_nil (⟨t, Stream'.Seq.nil⟩ : AlterSeq State Label) rfl
+        Stream'.Seq.terminates_nil
+    rw [hend, childNEfib, ← ENNReal.tsum_mul_left]
+    refine tsum_congr (fun e => ?_)
+    by_cases hi : e.1.init = t
+    · rw [if_pos hi]
+      split_ifs with h2
+      · rw [mul_zero]
+      · rw [hi]
+    · rw [if_neg hi, if_neg hi, mul_zero]
+  rw [hstall, ← ENNReal.tsum_add,
+    show (∑' r : {q : AlterSeq State Label // q.trans.Terminates},
+        ((if r.1.trans = Stream'.Seq.nil
+            then ((innerWitness sys μ0 ω).haltMass μ0 r / (ω.bind id) (r.1.endState r.2))
+              * childNEfib S g m' (macroExtend E m') (r.1.endState r.2)
+            else 0)
+          + (if r.1.trans = Stream'.Seq.nil then 0
+              else ((innerWitness sys μ0 ω).haltMass μ0 r / (ω.bind id) (r.1.endState r.2))
+                * childNEfib S g m' (macroExtend E m') (r.1.endState r.2))))
+      = ∑' r : {q : AlterSeq State Label // q.trans.Terminates},
+          ((innerWitness sys μ0 ω).haltMass μ0 r / (ω.bind id) (r.1.endState r.2))
+            * childNEfib S g m' (macroExtend E m') (r.1.endState r.2) from
+    tsum_congr (fun r => by split_ifs <;> simp), ← childNEfib_total S g m' (macroExtend E m')]
+  calc (∑' r : {q : AlterSeq State Label // q.trans.Terminates},
+          ((innerWitness sys μ0 ω).haltMass μ0 r / (ω.bind id) (r.1.endState r.2))
+            * childNEfib S g m' (macroExtend E m') (r.1.endState r.2))
+      = ∑' r : {q : AlterSeq State Label // q.trans.Terminates}, ∑' t : State,
+          (if r.1.endState r.2 = t then
+            (innerWitness sys μ0 ω).haltMass μ0 r
+              * (((ω.bind id) t)⁻¹ * childNEfib S g m' (macroExtend E m') t)
+          else 0) := by
+        refine tsum_congr (fun r => ?_)
+        rw [tsum_eq_single (r.1.endState r.2) (fun t ht => if_neg (fun h => ht h.symm)),
+          if_pos rfl, div_eq_mul_inv, mul_assoc]
+    _ = ∑' t : State,
+          (((ω.bind id) t)⁻¹ * childNEfib S g m' (macroExtend E m') t) * (ω.bind id) t := by
+        rw [ENNReal.tsum_comm]
+        refine tsum_congr (fun t => ?_)
+        rw [innerWitness_pushforward hstep t, ← ENNReal.tsum_mul_left]
+        refine tsum_congr (fun r => ?_)
+        split_ifs with h
+        · rw [mul_one]; ring
+        · rw [mul_zero, mul_zero]
+    _ = ∑' t : State, childNEfib S g m' (macroExtend E m') t := by
+        refine tsum_congr (fun t => ?_)
+        by_cases hb : (ω.bind id) t = 0
+        · rw [hb, mul_zero, childNEfib_zero S g m' (macroExtend E m') t (hm t hb)]
+        · rw [show (((ω.bind id) t)⁻¹ * childNEfib S g m' (macroExtend E m') t) * (ω.bind id) t
+              = (((ω.bind id) t)⁻¹ * (ω.bind id) t)
+                * childNEfib S g m' (macroExtend E m') t from by ring,
+            ENNReal.inv_mul_cancel hb
+              (ne_top_of_le_ne_top ENNReal.one_ne_top (PMF.coe_le_one _ _)),
+            one_mul]
+open Classical in
 /-- **F5v — the stall-junction nil-halt average** (`stallNil`): per emission `ω`
 and landing state `s0`, the Bayes-coupled stall factor
 `haltMass μ0 ⟨s0,nil⟩ / (ω.bind id) s0` times the junction average of the CHILD
