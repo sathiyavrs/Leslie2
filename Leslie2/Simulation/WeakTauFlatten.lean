@@ -5998,6 +5998,26 @@ private theorem genW_g_peel
     · simp only [if_pos hsp]; rw [dResidual_endState e seg hsp]; ring
     · simp only [if_neg hsp]; ring
 
+/-! ### F5n — ROUTE R1 CHOSEN (bypass `renewal_diamond`).
+
+**Why R1.** `renewal_diamond` (LHS `∑'ω S.next(τ,ω) ∑m' ω m' fHM(child)`) has NO
+induction handle: the child `fHM` is a full infinite-depth carrier, and by F5m it
+re-opens the ⊤-departure subtraction one level down (`fHM(child)=child(arrM−depM)`),
+so it cannot be proven by a single history-length induction (that is R2's recursive
+pain). R1 supplies the missing handle: the consumers `fHalt_ge`/`fHalt_ge_G` need
+only `∑ k<n condDepth(·G) ≤ fHM` for each `n`, and the depth-`n` partial sum is
+FINITE (`≤ macroHalted ≤ 1`), making every absorption ⊤-safe.
+
+**Shape.** Replace `renewal_diamond`+`f_integrate_ge` by ONE lemma proved by
+induction on `n`, carrying a payload `P : PMF State → ENNReal` with
+`hPle : P m' ≤ fHM(m', macroExtend E m', g)` (from IH) and `hPfin : P m' ≤ 1`:
+  `termA_g(E) + ∑'ω S.next(τ,ω) ∑m' ω m' P(m') ≤ fHM(μ0,E,g)`,
+`termA_g(E) = S.next E none * ∑'s μ0 s·g s`. Base/nil carve by `reachArrHalt_nil`;
+the nonempty crux mirrors `genDep_le_genArr` (peel via `genW_g_peel`, junction W1
+`innerWitness_integrate` at `μ0=E.endState hT` + W2 `div_mul_cancel`, resets absorbed
+by `boundaryHalt_le`), with `hPfin` licensing the ⊤-safe steps. Consumers instantiate
+`P := (∑ k<n condDepth(·) child)`, already `≤ fHM(child)` by IH and `≤ 1`. -/
+
 open Classical in
 /-- **(♦) — the renewal crux.** The child halt-integrals summed against the first
 macro step lower-bound the honest flatten's nil-halt boundary plus its nonempty
