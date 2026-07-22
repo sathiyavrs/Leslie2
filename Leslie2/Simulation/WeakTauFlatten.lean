@@ -929,8 +929,8 @@ noncomputable def reachArrM (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
 open Classical in
 /-- **Departure reach** for the step `(l, ν)` (the scheduler's numerator): the
 total reach mass at a config consistent with `e` whose current inner run departs
-next with move `some (l, ν)`. Same shape as the belief numerator `dNum` but built
-on the junction-repaired (divided) `segWeight`, so it is consistent with the
+next with move `some (l, ν)`, built
+on the junction-divided `segWeight`, so it is consistent with the
 arrival reach `reachArrM`/`reachM`; `∑' c consistent, segWeight · moveTerm`. -/
 noncomputable def reachDepM (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
     (E : AlterSeq (PMF State) Label)
@@ -2141,7 +2141,7 @@ theorem flatSched_haltMass (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
   rfl
 
 /-- The `flatSched` halt-integral of a test `g` from source `μ0`, rooted at
-macro-history `E`. The honest analogue of `dHM`. -/
+macro-history `E`. -/
 noncomputable def fHM (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
     (E : AlterSeq (PMF State) Label) (g : State → ENNReal) : ENNReal :=
   ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
@@ -2367,7 +2367,7 @@ private theorem renewal_junction_split (S : WeakScheduler (𝒟(sys^w))) (g : St
   rw [tsum_congr hpt, ENNReal.tsum_add]
 
 /-- **The divided per-segment head weight** (the `segWeight`-cons factor,
-`src = μ0`). Names the junction-repaired head that the peel/collapse carries. -/
+`src = μ0`). Names the junction-divided head that the peel/collapse carries. -/
 private noncomputable def divHead (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
     (E : AlterSeq (PMF State) Label) (seg : FlatSeg State Label) : ENNReal :=
   S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
