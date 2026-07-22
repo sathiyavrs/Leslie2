@@ -6633,6 +6633,66 @@ lift through the witness halt-pushforward (`innerWitness_integrate`/`_pushforwar
 the parent nil-run halt `nilHalt_g` + the nonempty halt-at-boundary reach
 (`boundaryHalt_le`); continuing departures fall to `genDep_le_genArr`. -/
 
+/-! ### F5v PHASE-0 — the stall-resolvent repair (design record; verified on paper).
+
+**Verdict (0.1, misfiling CONFIRMED; the F5u finding is architectural, not tactical).**
+Concrete counterexample against the CURRENT weights: `sys` with `a --τ--> pure b`,
+`μ0 = pure a`; `S` emits the reflexive `ω₀ = pure (pure a)` at `E0` (stall: the inner
+witness of `weakTau (pure a) (pure a)` halts on the nil run), then `ω₁ = pure (pure b)`
+at `E1`, then halts. `reachArrHalt(E0, ⟨a,nil⟩) = haltReach(nil@a) = 1`, so
+`fHM(E0,g) = g a`, while the child average is `fHM(E1,g) = g b`: `renewal_step_le`
+itself is FALSE (`g := [·=b]`), and `f_pushforward` fails (`Ν.bind id = pure b`).
+Mechanism: a stall (empty inner run) is not a composite halt — the macro continues —
+but `dConsistent` bans empty completed segments, so post-stall continuations have no
+config; the stall mass never departs and misfiles into `reachArrHalt`. Weights must change.
+
+**Design (0.2) — realize the stall-resolvent as CARRIER WIDENING, not weight surgery.**
+Drop the nonemptiness conjunct from `dConsistent` (and the `≠ nil` conjunct of `segPre`).
+All weight terms (`segWeight`/`curReach`/`depMove`/`haltReach`/`moveTerm`/`reachM`/
+`reachArrM`/`reachDepM`/`genW`) stay LITERALLY unchanged: an empty completed segment
+`(ω, m')` at state `t` carries exactly the Bayes-coupled stall factor
+`S.next E (τ,ω) · ω m' · haltMass μ0 ⟨t,nil⟩ / (ω.bind id) t`, so finite stall-chains
+of empty segments ARE the resolvent `Jres` — resummed by the config tsum itself, and
+`genW_peel` (whose proof is nonemptiness-free) IS the resolvent fixpoint equation.
+Validation: (i) junction ≤ 1 — the `stallPart_le_one` convexity (`iwMove + iwHalt = 1`
+per emission, `macroSome_le_one`) bounds each seg-count-truncated peel; (ii) in the
+counterexample the stall chain becomes the config `[empty(ω₀,pure a)] + run a→b`, so
+`fHM(E0,g) = g b` ✓; (iii) the fidelity kit (`dConsistent_snoc_iff`/`dcon_snoc_mem_range`/
+`genW_curReachG_snoc`/`genW_landKer`/`reachArrM_snoc`/`reachArrM_aux`/
+`probOf_eq_reachArrM`/`flatSched_haltMass`) is machine-checked nonemptiness-AGNOSTIC —
+it re-proves verbatim (the widened conjunct passes through untouched).
+
+**What genuinely changes (0.3, the re-derivation map).**
+(1) `genW_nil` is FALSE after widening (nil histories peel stall chains); its three
+    consumer sites reshape. (2) `dW_le`/`dDenom_ne_top` (dead d-chain) become false —
+    the dead cluster is deleted FIRST (grep-verified dead; `:4202` sorry included).
+(3) Quantitative core: introduce the seg-count truncation `genWd k d` (peel recursion
+    to depth `d`; `genW = ⨆ d, genWd` via the ℕ-graded list stratification). Then
+    · LEMMA A (nil resolvent bound): `genWd (depMove) d (nil@s0) ≤ src s0`, plain
+      induction on `d` by the stall convexity + W2 (`x/c·c ≤ x`);
+    · `genDep_le_genArr` becomes a SINGLE induction on `d` (no length induction):
+      empty heads recurse on the same history, nonempty heads on the residual; the
+      nil-residual boundary uses LEMMA A + `boundaryHalt_le` (verbatim shape).
+(4) The corrected renewal chain (all statements now TRUE; verified on paper, the
+    deficit cancellation is EXACT):
+    · K1 (nil carve): `m' t = reachArrHalt(child, nil@t) + genW(dep)(child, nil@t)`;
+    · N1 (nil resolvent identity): `reachArrHalt(nil@s0) = S.next E none · μ0 s0
+      + ∑'ω S.next(τ,ω) · sf(ω,s0) · ∑'m' ω m' · reachArrHalt(m', E·m', nil@s0)`,
+      `sf(ω,t) := haltMass μ0 ⟨t,nil⟩ / (ω.bind id) t` (dep-peel at nil + K1 + W2);
+    · corrected R-a: `NE_g + resetSum' = bHaltSum + JNE` — the widened peel adds the
+      stall-NE terms `∑'ω S.next(τ,ω)·∑'m' ω m'·∑'t sf(ω,t)·C(m',t)` which fill the
+      F5u deficit `D` EXACTLY (`W(ω,t) + sf(ω,t) = 1`); `resetSum'`/`Gap'` carry the
+      RESOLVENT departures `genW(dep)(child, nil@t)` in place of `depMove`;
+    · corrected R-c: `Jnil'' + resetSum' ≤ STALL_nil + bHaltSum` closes EXACTLY:
+      `bHaltSum = (parentHaltReach_collapse total) − nilstall`, K1 splits the total
+      into `Jnil'' + Gap'`, and the reset W1-collapse gives `resetSum' =
+      ∑'ω∑'m'∑'t (1−sf(ω,t))·genW(dep)(child,nil@t)·g t ≤ Gap' − (sf-part)` ✓;
+    · `renewal_step_le` then assembles as before; `condDepthSum_le_fHM` SIMPLIFIES
+      (consume `renewal_step_le` directly — no nil/NE split needed in the induction).
+Stage order: (S1) this note; (S2) delete dead d-chain + `segWeightB`; (S3) flip +
+structural kit + (3); (S4) chain (4); (S5) endgame (axiom check, header). Committed
+stages stay green; sorries only at corrected-TRUE statements with routes recorded. -/
+
 open Classical in
 /-- **F5r — the KEY′ one-step-unfold lower bound of `fHM` (the honest renewal `≤`).**
 Halting immediately at the parent (`S.next E none` against the source) plus taking
