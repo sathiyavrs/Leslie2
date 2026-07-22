@@ -1275,13 +1275,14 @@ structure DConfig (State Label : Type) where
   /-- The current prefix terminates. -/
   curT : cur.trans.Terminates
 
-/-- Consistency of a `DConfig` with an observed history `e`: every completed
-segment's inner run is nonempty (the decision-point invariant), the segments and
+/-- Consistency of a `DConfig` with an observed history `e`: the segments and
 the current prefix reconstruct `e`'s transitions, and the runs chain from
-`e.init`. -/
+`e.init`. **F5v (stall-resolvent widening):** completed segments may be EMPTY —
+a finite stall chain between decision points is represented by empty-run
+segments, whose `segWeight` factors are exactly the Bayes-coupled resolvent
+terms `S.next E (τ,ω) · ω m' · haltMass src ⟨t,nil⟩ / (ω.bind id) t`. -/
 def dConsistent (e : AlterSeq State Label) (c : DConfig State Label) : Prop :=
-  (∀ seg ∈ c.segs, seg.run.trans ≠ Stream'.Seq.nil)
-    ∧ segTrans c.segs c.cur.trans = e.trans ∧ chained e.init c.segs c.cur.init
+  segTrans c.segs c.cur.trans = e.trans ∧ chained e.init c.segs c.cur.init
 
 /-- Dropping the exact length of a terminating left factor from an `append`
 recovers the right factor. -/
@@ -1345,12 +1346,12 @@ private noncomputable def dResidual
     WeakScheduler.drop_terminates e.2 _⟩
 
 /-- A first segment `seg` is a legal peel from `e`: its run starts at `e.init`,
-its (nonempty) transition prefix is a genuine prefix of `e`'s transitions. -/
+its transition prefix is a genuine prefix of `e`'s transitions. **F5v:** the run
+may be EMPTY — a stall peel, whose residual is `e` itself. -/
 private def segPre (e : {q : AlterSeq State Label // q.trans.Terminates})
     (seg : FlatSeg State Label) : Prop :=
   seg.run.init = e.1.init
     ∧ seg.run.trans.append (e.1.trans.drop (seg.run.trans.length seg.runT)) = e.1.trans
-    ∧ seg.run.trans ≠ Stream'.Seq.nil
 
 /-- **Segment-peeling decomposition of `dConsistent`.** A config with a head
 segment is consistent with `e` iff that head is a legal prefix peel (`segPre`)
@@ -1367,14 +1368,14 @@ private theorem dConsistent_cons_iff
   simp only [dConsistent, segPre, dResidual, segTrans, chained,
     List.forall_mem_cons]
   constructor
-  · rintro ⟨⟨hne, hrest_ne⟩, htrans, hinit, hchain⟩
+  · rintro ⟨htrans, hinit, hchain⟩
     have hYeq : e.1.trans.drop (seg.run.trans.length seg.runT) = segTrans rest curA.trans := by
       rw [← htrans]; exact hdrop
-    refine ⟨⟨hinit, ?_, hne⟩, hrest_ne, ?_, hchain⟩
+    refine ⟨⟨hinit, ?_⟩, ?_, hchain⟩
     · rw [hYeq]; exact htrans
     · exact hYeq.symm
-  · rintro ⟨⟨hinit, hpre, hne⟩, hrest_ne, hseg, hchain⟩
-    refine ⟨⟨hne, hrest_ne⟩, ?_, hinit, hchain⟩
+  · rintro ⟨⟨hinit, hpre⟩, hseg, hchain⟩
+    refine ⟨?_, hinit, hchain⟩
     rw [hseg]; exact hpre
 
 /-- A config with no completed segments is consistent with `e` iff its current
@@ -1383,7 +1384,7 @@ private theorem dConsistent_nil_iff
     (e cur : {q : AlterSeq State Label // q.trans.Terminates}) :
     dConsistent e.1 ⟨[], cur.1, cur.2⟩ ↔ cur = e := by
   constructor
-  · rintro ⟨_, htr, hin⟩
+  · rintro ⟨htr, hin⟩
     obtain ⟨cval, cproof⟩ := cur
     obtain ⟨ci, ct⟩ := cval
     apply Subtype.ext
@@ -1392,7 +1393,7 @@ private theorem dConsistent_nil_iff
     have e2 : ct = e.1.trans := htr
     rw [e1, e2]
   · rintro rfl
-    exact ⟨fun s hs => by simp at hs, rfl, rfl⟩
+    exact ⟨rfl, rfl⟩
 
 /-- Integrating a test `g` against a `PMF.bind` splits as the source-weighted sum
 of the branch integrals (the `∑'`-form of `∫ g d(p.bind f) = ∑ₐ p a · ∫ g d(f a)`). -/
@@ -4136,7 +4137,7 @@ private theorem boundaryHalt_le (S : WeakScheduler (𝒟(sys^w))) (src : PMF Sta
     refine ENNReal.tsum_le_tsum (fun seg => ?_)
     by_cases hP : segPre e seg ∧ (dResidual e seg).1.trans = Stream'.Seq.nil
     · have hrun : seg.run = e.1 := by
-        obtain ⟨⟨hi, happ, _⟩, hnil⟩ := hP
+        obtain ⟨⟨hi, happ⟩, hnil⟩ := hP
         have hd : e.1.trans.drop (seg.run.trans.length seg.runT) = Stream'.Seq.nil := hnil
         rw [hd, Stream'.Seq.append_nil] at happ
         calc seg.run = ⟨seg.run.init, seg.run.trans⟩ := rfl
@@ -4266,54 +4267,247 @@ private theorem depMove_le_init (S : WeakScheduler (𝒟(sys^w))) (s : PMF State
     _ = s cur.1.init := one_mul _
 
 open Classical in
-/-- `genW` at an empty history is just its base kernel (no segment can be peeled). -/
-private theorem genW_nil
+/-- **F5v — the seg-count-truncated peel carrier.** `genWd k d` sums the configs
+with at most `d` completed segments (empty stall segments included). Its
+supremum over `d` recovers `genW` (`genW_eq_iSup_genWd`), and it satisfies the
+truncated peel recursion (`genWd_zero`/`genWd_succ`) that powers the F5v
+resolvent bounds: with the widened `segPre`, empty heads recurse at the SAME
+observed history, so the plain `Nat` induction on the budget `d` replaces the
+pre-F5v induction on the observed length. -/
+private noncomputable def genWd
     (k : PMF State → AlterSeq (PMF State) Label →
       {q : AlterSeq State Label // q.trans.Terminates} → ENNReal)
-    (S : WeakScheduler (𝒟(sys^w))) (s : PMF State) (E : AlterSeq (PMF State) Label)
-    (e : {q : AlterSeq State Label // q.trans.Terminates}) (h : e.1.trans = Stream'.Seq.nil) :
-    genW k S s E e = k s E e := by
-  rw [genW_peel]
-  have hz : ∀ seg : FlatSeg State Label,
-      (if segPre e seg then (1 : ENNReal) else 0)
+    (S : WeakScheduler (𝒟(sys^w))) (d : ℕ) (src : PMF State)
+    (E : AlterSeq (PMF State) Label)
+    (e : {q : AlterSeq State Label // q.trans.Terminates}) : ENNReal :=
+  ∑' p : List (FlatSeg State Label) × {q : AlterSeq State Label // q.trans.Terminates},
+    (if dConsistent e.1 ⟨p.1, p.2.1, p.2.2⟩ ∧ p.1.length ≤ d then (1 : ENNReal) else 0)
+      * segWeight S src E p.1
+      * k (segSrc src p.1) (segHist E p.1) p.2
+
+open Classical in
+/-- The truncations exhaust `genW`: pointwise the guard is monotone in `d` and
+eventually agrees with the unrestricted one. -/
+private theorem genW_eq_iSup_genWd
+    (k : PMF State → AlterSeq (PMF State) Label →
+      {q : AlterSeq State Label // q.trans.Terminates} → ENNReal)
+    (S : WeakScheduler (𝒟(sys^w))) (src : PMF State) (E : AlterSeq (PMF State) Label)
+    (e : {q : AlterSeq State Label // q.trans.Terminates}) :
+    genW k S src E e = ⨆ d : ℕ, genWd k S d src E e := by
+  have hmono : ∀ p : List (FlatSeg State Label) ×
+      {q : AlterSeq State Label // q.trans.Terminates},
+      Monotone (fun d : ℕ =>
+        (if dConsistent e.1 ⟨p.1, p.2.1, p.2.2⟩ ∧ p.1.length ≤ d then (1 : ENNReal) else 0)
+          * segWeight S src E p.1 * k (segSrc src p.1) (segHist E p.1) p.2) := by
+    intro p d d' hdd'
+    refine mul_le_mul_right' (mul_le_mul_right' ?_ _) _
+    by_cases hg : dConsistent e.1 ⟨p.1, p.2.1, p.2.2⟩ ∧ p.1.length ≤ d
+    · rw [if_pos hg, if_pos ⟨hg.1, hg.2.trans hdd'⟩]
+    · rw [if_neg hg]; exact zero_le'
+  rw [genW, show (⨆ d : ℕ, genWd k S d src E e)
+      = ∑' p : List (FlatSeg State Label) × {q : AlterSeq State Label // q.trans.Terminates},
+          ⨆ d : ℕ,
+            (if dConsistent e.1 ⟨p.1, p.2.1, p.2.2⟩ ∧ p.1.length ≤ d then (1 : ENNReal) else 0)
+              * segWeight S src E p.1 * k (segSrc src p.1) (segHist E p.1) p.2 from
+    (tsum_iSup_of_monotone _ hmono).symm]
+  refine tsum_congr (fun p => ?_)
+  refine le_antisymm ?_ (iSup_le (fun d => ?_))
+  · refine le_trans (le_of_eq ?_) (le_iSup _ p.1.length)
+    by_cases hc : dConsistent e.1 ⟨p.1, p.2.1, p.2.2⟩
+    · rw [if_pos hc, if_pos ⟨hc, le_rfl⟩]
+    · rw [if_neg hc, if_neg (fun h => hc h.1)]
+  · refine mul_le_mul_right' (mul_le_mul_right' ?_ _) _
+    by_cases hg : dConsistent e.1 ⟨p.1, p.2.1, p.2.2⟩ ∧ p.1.length ≤ d
+    · rw [if_pos hg, if_pos hg.1]
+    · rw [if_neg hg]; exact zero_le'
+
+open Classical in
+/-- Budget `0`: only the no-segment configs contribute, i.e. the base kernel. -/
+private theorem genWd_zero
+    (k : PMF State → AlterSeq (PMF State) Label →
+      {q : AlterSeq State Label // q.trans.Terminates} → ENNReal)
+    (S : WeakScheduler (𝒟(sys^w))) (src : PMF State) (E : AlterSeq (PMF State) Label)
+    (e : {q : AlterSeq State Label // q.trans.Terminates}) :
+    genWd k S 0 src E e = k src E e := by
+  rw [genWd, ENNReal.tsum_prod', listSplit]
+  have h2 : (∑' q : FlatSeg State Label × List (FlatSeg State Label),
+      ∑' cur : {q : AlterSeq State Label // q.trans.Terminates},
+        (if dConsistent e.1 ⟨q.1 :: q.2, cur.1, cur.2⟩ ∧ (q.1 :: q.2).length ≤ 0
+            then (1 : ENNReal) else 0)
+          * segWeight S src E (q.1 :: q.2)
+          * k (segSrc src (q.1 :: q.2)) (segHist E (q.1 :: q.2)) cur) = 0 := by
+    refine ENNReal.tsum_eq_zero.mpr (fun q => ENNReal.tsum_eq_zero.mpr (fun cur => ?_))
+    rw [if_neg (fun h => by simpa using h.2), zero_mul, zero_mul]
+  rw [h2, add_zero]
+  rw [tsum_eq_single e ?_]
+  · rw [if_pos ⟨(dConsistent_nil_iff e e).mpr rfl, by simp⟩]
+    simp [segWeight, segSrc, segHist]
+  · intro cur hne
+    rw [if_neg (fun hc => hne ((dConsistent_nil_iff e cur).mp hc.1)), zero_mul, zero_mul]
+
+open Classical in
+/-- Budget `d + 1`: the truncated peel — base kernel plus one (possibly empty)
+head segment, the tail truncated at budget `d`. -/
+private theorem genWd_succ
+    (k : PMF State → AlterSeq (PMF State) Label →
+      {q : AlterSeq State Label // q.trans.Terminates} → ENNReal)
+    (S : WeakScheduler (𝒟(sys^w))) (d : ℕ) (src : PMF State)
+    (E : AlterSeq (PMF State) Label)
+    (e : {q : AlterSeq State Label // q.trans.Terminates}) :
+    genWd k S (d + 1) src E e = k src E e
+      + ∑' seg : FlatSeg State Label,
+          (if segPre e seg then (1 : ENNReal) else 0)
+            * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
+                * ((innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩
+                    / (seg.emit.bind id) (seg.run.endState seg.runT)))
+            * genWd k S d seg.succ (macroExtend E seg.succ) (dResidual e seg) := by
+  conv_lhs => rw [genWd, ENNReal.tsum_prod', listSplit]
+  congr 1
+  · rw [tsum_eq_single e ?_]
+    · rw [if_pos ⟨(dConsistent_nil_iff e e).mpr rfl, by simp⟩]
+      simp [segWeight, segSrc, segHist]
+    · intro cur hne
+      rw [if_neg (fun hc => hne ((dConsistent_nil_iff e cur).mp hc.1)), zero_mul, zero_mul]
+  rw [ENNReal.tsum_prod']
+  refine tsum_congr (fun seg => ?_)
+  by_cases hsp : segPre e seg
+  · rw [if_pos hsp, one_mul]
+    rw [genWd, ENNReal.tsum_prod', ← ENNReal.tsum_mul_left]
+    refine tsum_congr (fun rest => ?_)
+    rw [← ENNReal.tsum_mul_left]
+    refine tsum_congr (fun cur => ?_)
+    simp only [dConsistent_cons_iff, hsp, true_and, List.length_cons,
+      Nat.add_le_add_iff_right]
+    show (if dConsistent (dResidual e seg).1 ⟨rest, cur.1, cur.2⟩ ∧ rest.length ≤ d
+          then (1 : ENNReal) else 0)
         * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
-            * ((innerWitness sys s seg.emit).haltMass s ⟨seg.run, seg.runT⟩
-                / (seg.emit.bind id) (seg.run.endState seg.runT)))
-        * genW k S seg.succ (macroExtend E seg.succ) (dResidual e seg) = 0 := by
-    intro seg
-    have hns : ¬ segPre e seg := by
-      rintro ⟨_, happ, hne⟩
-      apply hne
+            * ((innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩
+                / (seg.emit.bind id) (seg.run.endState seg.runT))
+            * segWeight S seg.succ (macroExtend E seg.succ) rest)
+        * k (segSrc seg.succ rest) (segHist (macroExtend E seg.succ) rest) cur
+      = (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
+          * ((innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩
+              / (seg.emit.bind id) (seg.run.endState seg.runT)))
+        * ((if dConsistent (dResidual e seg).1 ⟨rest, cur.1, cur.2⟩ ∧ rest.length ≤ d
+              then (1 : ENNReal) else 0)
+            * segWeight S seg.succ (macroExtend E seg.succ) rest
+            * k (segSrc seg.succ rest) (segHist (macroExtend E seg.succ) rest) cur)
+    ring
+  · rw [if_neg hsp, zero_mul, zero_mul]
+    refine ENNReal.tsum_eq_zero.mpr (fun rest => ENNReal.tsum_eq_zero.mpr (fun cur => ?_))
+    rw [if_neg (fun hc => hsp ((dConsistent_cons_iff e seg rest cur.1 cur.2).mp hc.1).1),
+      zero_mul, zero_mul]
+
+open Classical in
+/-- **F5v LEMMA A — the nil-history resolvent departure bound.** At an empty
+observed history every peel is a stall peel (empty run at `e.init`, residual
+again empty), so the truncated departure carrier is the finite stall resolvent;
+it is bounded by the source mass at the observed state. Induction on the budget:
+the stall boundary is absorbed by `boundaryHalt_le` into `haltReach`, and
+`depMove + haltReach = curReach ≤ src(init)`. -/
+private theorem genWd_dep_nil (S : WeakScheduler (𝒟(sys^w))) :
+    ∀ (d : ℕ) (src : PMF State) (E : AlterSeq (PMF State) Label)
+      (e : {q : AlterSeq State Label // q.trans.Terminates}),
+      e.1.trans = Stream'.Seq.nil →
+      genWd (fun s Ec c => depMove S s Ec c) S d src E e ≤ src e.1.init := by
+  have hcur : ∀ (src : PMF State) (E : AlterSeq (PMF State) Label)
+      (e : {q : AlterSeq State Label // q.trans.Terminates}),
+      curReach S src E e ≤ src e.1.init := by
+    intro src E e
+    calc curReach S src E e
+        ≤ ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω)) * src e.1.init :=
+          ENNReal.tsum_le_tsum (fun ω =>
+            mul_le_mul_left' (ProbabilisticExecution.probOf_le_init _ _ _) _)
+      _ = (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))) * src e.1.init := by
+          rw [ENNReal.tsum_mul_right]
+      _ ≤ 1 * src e.1.init := by gcongr; exact macroSome_le_one S E
+      _ = src e.1.init := one_mul _
+  intro d
+  induction d with
+  | zero =>
+    intro src E e h
+    rw [genWd_zero]
+    exact depMove_le_init S src E e
+  | succ d IH =>
+    intro src E e h
+    rw [genWd_succ]
+    have hres : ∀ seg : FlatSeg State Label, segPre e seg →
+        (dResidual e seg).1.trans = Stream'.Seq.nil := by
+      rintro seg ⟨hinit, happ⟩
       have hT : (seg.run.trans.append
-          (e.1.trans.drop (seg.run.trans.length seg.runT))).Terminates := by rw [happ]; exact e.2
+          (e.1.trans.drop (seg.run.trans.length seg.runT))).Terminates := by
+        rw [happ]; exact e.2
       have hsum : seg.run.trans.length seg.runT
           + (e.1.trans.drop (seg.run.trans.length seg.runT)).length
               (WeakScheduler.drop_terminates e.2 _) = 0 := by
         rw [← length_append_seq seg.run.trans _ seg.runT
               (WeakScheduler.drop_terminates e.2 _) hT,
           length_congr _ e.1.trans hT e.2 happ, Stream'.Seq.length_eq_zero.mpr h]
-      exact Stream'.Seq.length_eq_zero.mp (by omega)
-    rw [if_neg hns, zero_mul, zero_mul]
-  rw [tsum_congr hz, tsum_zero, add_zero]
+      have hlen0 : (e.1.trans.drop (seg.run.trans.length seg.runT)).length
+          (WeakScheduler.drop_terminates e.2 _) = 0 := by omega
+      exact Stream'.Seq.length_eq_zero.mp hlen0
+    have hbdy : (∑' seg : FlatSeg State Label,
+        (if segPre e seg then (1 : ENNReal) else 0)
+          * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
+              * ((innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩
+                  / (seg.emit.bind id) (seg.run.endState seg.runT)))
+          * genWd (fun s Ec c => depMove S s Ec c) S d seg.succ (macroExtend E seg.succ)
+              (dResidual e seg))
+        ≤ haltReach S src E e := by
+      refine le_trans ?_ (boundaryHalt_le S src E e)
+      refine ENNReal.tsum_le_tsum (fun seg => ?_)
+      by_cases hsp : segPre e seg
+      · rw [if_pos hsp, if_pos ⟨hsp, hres seg hsp⟩]
+        gcongr
+        exact IH seg.succ (macroExtend E seg.succ) (dResidual e seg) (hres seg hsp)
+      · rw [if_neg hsp, if_neg (fun hc => hsp hc.1)]
+        simp
+    calc depMove S src E e
+          + ∑' seg : FlatSeg State Label,
+            (if segPre e seg then (1 : ENNReal) else 0)
+              * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
+                  * ((innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩
+                      / (seg.emit.bind id) (seg.run.endState seg.runT)))
+              * genWd (fun s Ec c => depMove S s Ec c) S d seg.succ (macroExtend E seg.succ)
+                  (dResidual e seg)
+        ≤ depMove S src E e + haltReach S src E e := add_le_add le_rfl hbdy
+      _ = curReach S src E e := (curReach_split S src E e).symm
+      _ ≤ src e.1.init := hcur src E e
+
+/-- **F5v LEMMA A, `genW` form.** -/
+private theorem genW_dep_nil (S : WeakScheduler (𝒟(sys^w))) (src : PMF State)
+    (E : AlterSeq (PMF State) Label)
+    (e : {q : AlterSeq State Label // q.trans.Terminates})
+    (h : e.1.trans = Stream'.Seq.nil) :
+    genW (fun s Ec c => depMove S s Ec c) S src E e ≤ src e.1.init := by
+  rw [genW_eq_iSup_genWd]
+  exact iSup_le (fun d => genWd_dep_nil S d src E e h)
 
 open Classical in
-/-- **Departures ⊆ arrivals (config-sum form).** For a nonempty observed history,
-the total departure config-sum is at most the arrival config-sum (current run
-nonempty): the fresh-reset departures are absorbed by the arrival halt-reach
-(`boundaryHalt_le`), and continuing departures fall to the induction hypothesis on
-the strictly shorter residual history. -/
-private theorem genDep_le_genArr (S : WeakScheduler (𝒟(sys^w))) :
-    ∀ (n : ℕ) (src : PMF State) (E : AlterSeq (PMF State) Label)
+/-- **Departures ⊆ arrivals (config-sum form, truncated).** For a nonempty
+observed history the budget-`d` departure config-sum is at most the (full)
+arrival config-sum. F5v: plain induction on the budget — empty (stall) heads
+recurse at the same history via the inner IH, nonempty heads with empty residual
+fall to LEMMA A + `boundaryHalt_le`, the rest to the IH at the residual. -/
+private theorem genDepD_le_genArr (S : WeakScheduler (𝒟(sys^w))) :
+    ∀ (d : ℕ) (src : PMF State) (E : AlterSeq (PMF State) Label)
       (e : {q : AlterSeq State Label // q.trans.Terminates}),
-      e.1.trans ≠ Stream'.Seq.nil → e.1.trans.length e.2 = n →
-      genW (fun s Ec c => depMove S s Ec c) S src E e
+      e.1.trans ≠ Stream'.Seq.nil →
+      genWd (fun s Ec c => depMove S s Ec c) S d src E e
         ≤ genW (fun s Ec c => if c.1.trans ≠ Stream'.Seq.nil then curReach S s Ec c else 0)
             S src E e := by
-  intro n
-  induction n using Nat.strongRecOn with
-  | ind n IH =>
-    intro src E e hne he
-    rw [genW_peel (fun s Ec c => depMove S s Ec c) S src E e,
+  intro d
+  induction d with
+  | zero =>
+    intro src E e hne
+    rw [genWd_zero, genW_peel]
+    refine le_trans ?_ le_self_add
+    show depMove S src E e ≤ if e.1.trans ≠ Stream'.Seq.nil then curReach S src E e else 0
+    rw [if_pos hne, curReach_split S src E e]
+    exact le_self_add
+  | succ d IH =>
+    intro src E e hne
+    rw [genWd_succ,
       genW_peel (fun s Ec c => if c.1.trans ≠ Stream'.Seq.nil then curReach S s Ec c else 0)
         S src E e]
     rw [if_pos hne, curReach_split S src E e, add_assoc]
@@ -4323,7 +4517,7 @@ private theorem genDep_le_genArr (S : WeakScheduler (𝒟(sys^w))) :
               * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
                   * ((innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩
                       / (seg.emit.bind id) (seg.run.endState seg.runT)))
-              * genW (fun s Ec c => depMove S s Ec c) S seg.succ (macroExtend E seg.succ)
+              * genWd (fun s Ec c => depMove S s Ec c) S d seg.succ (macroExtend E seg.succ)
                   (dResidual e seg))
         ≤ ∑' seg : FlatSeg State Label,
             ((if segPre e seg then (1 : ENNReal) else 0)
@@ -4342,32 +4536,13 @@ private theorem genDep_le_genArr (S : WeakScheduler (𝒟(sys^w))) :
           by_cases hsp : segPre e seg
           · simp only [if_pos hsp, one_mul]
             by_cases hrn : (dResidual e seg).1.trans = Stream'.Seq.nil
-            · rw [if_pos ⟨hsp, hrn⟩, one_mul,
-                genW_nil (fun s Ec c => if c.1.trans ≠ Stream'.Seq.nil then curReach S s Ec c else 0)
-                  S seg.succ (macroExtend E seg.succ) (dResidual e seg) hrn]
-              simp only [hrn, ne_eq, not_true_eq_false, if_false, mul_zero, zero_add]
-              rw [genW_nil (fun s Ec c => depMove S s Ec c) S seg.succ (macroExtend E seg.succ)
-                (dResidual e seg) hrn]
+            · rw [if_pos ⟨hsp, hrn⟩, one_mul]
+              refine le_trans ?_ le_add_self
               gcongr
-              exact depMove_le_init S seg.succ (macroExtend E seg.succ) (dResidual e seg)
+              exact genWd_dep_nil S d seg.succ (macroExtend E seg.succ) (dResidual e seg) hrn
             · rw [if_neg (fun h => hrn h.2), zero_mul, zero_mul, add_zero]
-              have hlt : (dResidual e seg).1.trans.length (dResidual e seg).2 < n := by
-                have hkpos : 1 ≤ seg.run.trans.length seg.runT :=
-                  Nat.one_le_iff_ne_zero.mpr (fun h0 => hsp.2.2 (Stream'.Seq.length_eq_zero.mp h0))
-                have hdefeq : (dResidual e seg).1.trans.length (dResidual e seg).2
-                    = (e.1.trans.drop (seg.run.trans.length seg.runT)).length
-                        (WeakScheduler.drop_terminates e.2 _) := rfl
-                rw [hdefeq]
-                have hlen : e.1.trans.length e.2 = seg.run.trans.length seg.runT
-                    + (e.1.trans.drop (seg.run.trans.length seg.runT)).length
-                        (WeakScheduler.drop_terminates e.2 _) := by
-                  rw [← length_append_seq seg.run.trans
-                      (e.1.trans.drop (seg.run.trans.length seg.runT)) seg.runT
-                      (WeakScheduler.drop_terminates e.2 _) (by rw [hsp.2.1]; exact e.2)]
-                  exact length_congr _ _ e.2 _ hsp.2.1.symm
-                omega
               gcongr
-              exact IH _ hlt seg.succ (macroExtend E seg.succ) (dResidual e seg) hrn rfl
+              exact IH seg.succ (macroExtend E seg.succ) (dResidual e seg) hrn
           · rw [if_neg hsp, zero_mul, zero_mul]
             positivity
       _ = (∑' seg : FlatSeg State Label,
@@ -4387,6 +4562,19 @@ private theorem genDep_le_genArr (S : WeakScheduler (𝒟(sys^w))) :
           rw [add_comm (haltReach S src E e)]
           gcongr
           exact boundaryHalt_le S src E e
+
+open Classical in
+/-- **Departures ⊆ arrivals (config-sum form).** F5v: via the truncation
+supremum. -/
+private theorem genDep_le_genArr (S : WeakScheduler (𝒟(sys^w))) (src : PMF State)
+    (E : AlterSeq (PMF State) Label)
+    (e : {q : AlterSeq State Label // q.trans.Terminates})
+    (hne : e.1.trans ≠ Stream'.Seq.nil) :
+    genW (fun s Ec c => depMove S s Ec c) S src E e
+      ≤ genW (fun s Ec c => if c.1.trans ≠ Stream'.Seq.nil then curReach S s Ec c else 0)
+          S src E e := by
+  rw [genW_eq_iSup_genWd]
+  exact iSup_le (fun d => genDepD_le_genArr S d src E e hne)
 
 /-- The total proper-move mass of the current run is `depMove`. -/
 private theorem moveSum_eq_depMove (S : WeakScheduler (𝒟(sys^w))) (src : PMF State)
@@ -4440,10 +4628,10 @@ theorem reachDepM_sum_le (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
     rw [ENNReal.tsum_mul_left, moveSum_eq_depMove]
   rw [hdep]
   by_cases hnil : e.1.trans = Stream'.Seq.nil
-  · rw [genW_nil (depMove S) S μ0 E e hnil, reachArrM, if_pos hnil]
-    exact depMove_le_init S μ0 E e
+  · rw [reachArrM, if_pos hnil]
+    exact genW_dep_nil S μ0 E e hnil
   · rw [reachArrM, if_neg hnil]
-    refine (genDep_le_genArr S (e.1.trans.length e.2) μ0 E e hnil rfl).trans ?_
+    refine (genDep_le_genArr S μ0 E e hnil).trans ?_
     show genW (curReachG S) S μ0 E e ≤ _
     rw [genW_eq_dconfig]
     refine ENNReal.tsum_le_tsum (fun c => ?_)
@@ -4545,14 +4733,14 @@ private theorem dConsistent_snoc_iff (e : {q : AlterSeq State Label // q.trans.T
     segTrans_terminates segs cur.1.trans cur.2
   unfold dConsistent
   constructor
-  · rintro ⟨h1, h2, h3⟩
-    refine ⟨h1, ?_, h3⟩
+  · rintro ⟨h2, h3⟩
+    refine ⟨?_, h3⟩
     rw [show (⟨segs, (snocT cur l s').1, (snocT cur l s').2⟩ : DConfig State Label).cur.trans
         = cur.1.trans.append (Stream'.Seq.cons (l, s') Stream'.Seq.nil) from rfl,
       segTrans_append] at h2
     exact Stream'.Seq.append_singleton_inj_left _ _ hAterm e.2 (l, s') (l, s') h2
-  · rintro ⟨h1, h2, h3⟩
-    refine ⟨h1, ?_, h3⟩
+  · rintro ⟨h2, h3⟩
+    refine ⟨?_, h3⟩
     show segTrans segs (cur.1.trans.append (Stream'.Seq.cons (l, s') Stream'.Seq.nil))
       = e.1.trans.append (Stream'.Seq.cons (l, s') Stream'.Seq.nil)
     rw [segTrans_append, h2]
@@ -4624,7 +4812,7 @@ private theorem dcon_snoc_mem_range (e : {q : AlterSeq State Label // q.trans.Te
   obtain ⟨prev, lastEl, hprevT, hsplit, -, -⟩ :=
     Stream'.Seq.exists_split_last cur.1.trans cur.2 hne
   have h2 : segTrans segs cur.1.trans
-      = e.1.trans.append (Stream'.Seq.cons (l, s') Stream'.Seq.nil) := hdc.2.1
+      = e.1.trans.append (Stream'.Seq.cons (l, s') Stream'.Seq.nil) := hdc.1
   rw [hsplit, segTrans_append] at h2
   have hlast : lastEl = (l, s') :=
     Stream'.Seq.append_singleton_inj_right _ _
@@ -4790,12 +4978,12 @@ noncomputable def flatSched (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
         rw [hn, AlterSeq.stateAt_find_eq_endState e hT] at hstate
         exact (Option.some.inj hstate).symm
       have heqe : (⟨e.init, segTrans c.segs c.cur.trans⟩ : AlterSeq State Label) = e := by
-        rw [hguard.2.1]
+        rw [hguard.1]
       have hTeq' : (⟨e.init, segTrans c.segs c.cur.trans⟩ :
           AlterSeq State Label).trans.Terminates := by rw [heqe]; exact hT
       have hcend : e.endState hT = c.cur.endState c.curT := by
         rw [← AlterSeq.endState_congr_pub heqe hTeq' hT]
-        exact chained_endState c.segs e.init ⟨c.cur, c.curT⟩ hTeq' hguard.2.2
+        exact chained_endState c.segs e.init ⟨c.cur, c.curT⟩ hTeq' hguard.2
       have hstepIW := (innerWitness sys (segSrc μ0 c.segs) ω).valid c.cur
         (Nat.find c.curT) (c.cur.endState c.curT) (Nat.find_spec c.curT)
         (AlterSeq.stateAt_find_eq_endState c.cur c.curT) l ν
@@ -5008,40 +5196,22 @@ open Classical in
 summand) plus the inner halt reach.** This is where term `A` of the integrate
 recursion comes from — the empty concrete run's arrival reach is the full source
 mass `μ0 s0`, carrying the immediate macro-halt `S.next E none · μ0 s0`. -/
-private theorem reachArrHalt_nil (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+private theorem reachArrHalt_nil_add (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
     (E : AlterSeq (PMF State) Label) (s0 : State) :
     reachArrHalt S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩
-      = S.next E none * μ0 s0
-        + haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ := by
+        + genW (depMove S) S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩
+      = μ0 s0 := by
   set e0 : {e : AlterSeq State Label // e.trans.Terminates} :=
     ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ with he0
   have hnil : e0.1.trans = Stream'.Seq.nil := rfl
   have hdep : (∑' p : Label × PMF State, reachDepM S μ0 E e0 p.1 p.2)
-      = depMove S μ0 E e0 := by
-    have hg : (∑' p : Label × PMF State, reachDepM S μ0 E e0 p.1 p.2)
-        = genW (depMove S) S μ0 E e0 := by
-      rw [genW_eq_dconfig]
-      simp_rw [reachDepM]
-      rw [ENNReal.tsum_comm]
-      exact tsum_congr (fun c => by rw [ENNReal.tsum_mul_left, moveSum_eq_depMove])
-    rw [hg, genW_nil (depMove S) S μ0 E e0 hnil]
-  have hdeptop : depMove S μ0 E e0 ≠ ⊤ :=
-    ne_top_of_le_ne_top (by simp) ((depMove_le_init S μ0 E e0).trans (PMF.coe_le_one _ _))
+      = genW (depMove S) S μ0 E e0 := by
+    rw [genW_eq_dconfig]
+    simp_rw [reachDepM]
+    rw [ENNReal.tsum_comm]
+    exact tsum_congr (fun c => by rw [ENNReal.tsum_mul_left, moveSum_eq_depMove])
   rw [reachArrHalt, hdep, reachArrM, if_pos hnil]
-  refine ENNReal.sub_eq_of_eq_add hdeptop ?_
-  have hsplit : curReach S μ0 E e0 = depMove S μ0 E e0 + haltReach S μ0 E e0 :=
-    curReach_split S μ0 E e0
-  have hcur : curReach S μ0 E e0 = (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))) * μ0 s0 := by
-    rw [curReach, ← ENNReal.tsum_mul_right]
-    refine tsum_congr (fun ω => ?_)
-    rw [ProbabilisticExecution.probOf_nil]
-    rfl
-  calc (μ0 e0.1.init)
-      = (S.next E none + ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))) * μ0 s0 := by
-        rw [macroTot, one_mul]
-    _ = S.next E none * μ0 s0 + curReach S μ0 E e0 := by rw [add_mul, hcur]
-    _ = S.next E none * μ0 s0 + haltReach S μ0 E e0 + depMove S μ0 E e0 := by
-        rw [hsplit]; ring
+  exact tsub_add_cancel_of_le (genW_dep_nil S μ0 E e0 hnil)
 
 open Classical in
 /-- Reindex a `nil`-guarded execution sum over the source `State`: the only
@@ -5236,7 +5406,7 @@ private theorem dResidual_endState
     (seg : FlatSeg State Label) (h : segPre e seg) :
     (dResidual e seg).1.endState (dResidual e seg).2 = e.1.endState e.2 := by
   unfold dResidual
-  obtain ⟨hinit, happ, hne⟩ := h
+  obtain ⟨hinit, happ⟩ := h
   have hAterm : seg.run.trans.Terminates := seg.runT
   have hBterm : (e.1.trans.drop (seg.run.trans.length seg.runT)).Terminates :=
     WeakScheduler.drop_terminates e.2 _
@@ -5258,7 +5428,6 @@ whose init is the segment's landing state. The prepend map `e' ↦ ⟨seg.run.in
 seg.run.trans ⧺ e'.trans⟩` is injective ONLY on the fiber `e'.init = seg.run.end`
 (it discards the init otherwise), so the reindex runs over that fiber. -/
 private theorem segPre_reindex (seg : FlatSeg State Label)
-    (hseg : seg.run.trans ≠ Stream'.Seq.nil)
     (H : {q : AlterSeq State Label // q.trans.Terminates} → ENNReal) :
     (∑' e : {q : AlterSeq State Label // q.trans.Terminates},
         if segPre e seg then H (dResidual e seg) else 0)
@@ -5286,7 +5455,7 @@ private theorem segPre_reindex (seg : FlatSeg State Label)
     have hf0 : (if segPre e seg then H (dResidual e seg) else 0) ≠ 0 := Function.mem_support.mp he
     have hsp : segPre e seg := by by_contra hne; exact hf0 (if_neg hne)
     have hH : H (dResidual e seg) ≠ 0 := by rw [if_pos hsp] at hf0; exact hf0
-    obtain ⟨hinit, happ, hne⟩ := hsp
+    obtain ⟨hinit, happ⟩ := hsp
     refine ⟨⟨dResidual e seg, ?_⟩, ?_⟩
     · have hcond : (if (dResidual e seg).1.init = seg.run.endState seg.runT
           then H (dResidual e seg) else 0) = H (dResidual e seg) := if_pos rfl
@@ -5310,7 +5479,7 @@ private theorem segPre_reindex (seg : FlatSeg State Label)
         = e'.1.trans := drop_append_length seg.run.trans e'.1.trans seg.runT
     have hsp : segPre ⟨⟨seg.run.init, seg.run.trans.append e'.1.trans⟩,
         ⟨_, Stream'.Seq.terminatedAt_append_find seg.runT (Nat.find_spec e'.2)⟩⟩ seg :=
-      ⟨rfl, by simp only [hdrop], hseg⟩
+      ⟨rfl, by simp only [hdrop]⟩
     simp only [if_pos hfib, if_pos hsp]
     congr 1
     apply Subtype.ext
@@ -5332,10 +5501,9 @@ private theorem genW_g_peel
     (∑' e : {q : AlterSeq State Label // q.trans.Terminates}, genW k S src E e * g (e.1.endState e.2))
       = (∑' e : {q : AlterSeq State Label // q.trans.Terminates}, k src E e * g (e.1.endState e.2))
         + ∑' seg : FlatSeg State Label,
-            (if seg.run.trans ≠ Stream'.Seq.nil then (1 : ENNReal) else 0)
-              * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
-                  * ((innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩
-                      / (seg.emit.bind id) (seg.run.endState seg.runT)))
+            (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
+                * ((innerWitness sys src seg.emit).haltMass src ⟨seg.run, seg.runT⟩
+                    / (seg.emit.bind id) (seg.run.endState seg.runT)))
               * ∑' e' : {q : AlterSeq State Label // q.trans.Terminates},
                   if e'.1.init = seg.run.endState seg.runT
                     then genW k S seg.succ (macroExtend E seg.succ) e' * g (e'.1.endState e'.2)
@@ -5355,20 +5523,13 @@ private theorem genW_g_peel
   congr 1
   rw [ENNReal.tsum_comm]
   refine tsum_congr (fun seg => ?_)
-  by_cases hnil : seg.run.trans = Stream'.Seq.nil
-  · have hns : ∀ e : {q : AlterSeq State Label // q.trans.Terminates}, ¬ segPre e seg :=
-      fun e ⟨_, _, hne⟩ => hne hnil
-    rw [if_neg (fun h => h hnil), zero_mul, zero_mul, ENNReal.tsum_eq_zero]
-    intro e
-    rw [if_neg (hns e), zero_mul, zero_mul, zero_mul]
-  · rw [if_pos hnil, one_mul,
-      ← segPre_reindex seg hnil
-        (fun e' => genW k S seg.succ (macroExtend E seg.succ) e' * g (e'.1.endState e'.2)),
-      ← ENNReal.tsum_mul_left]
-    refine tsum_congr (fun e => ?_)
-    by_cases hsp : segPre e seg
-    · simp only [if_pos hsp]; rw [dResidual_endState e seg hsp]; ring
-    · simp only [if_neg hsp]; ring
+  rw [← segPre_reindex seg
+      (fun e' => genW k S seg.succ (macroExtend E seg.succ) e' * g (e'.1.endState e'.2)),
+    ← ENNReal.tsum_mul_left]
+  refine tsum_congr (fun e => ?_)
+  by_cases hsp : segPre e seg
+  · simp only [if_pos hsp]; rw [dResidual_endState e seg hsp]; ring
+  · simp only [if_neg hsp]; ring
 
 /-! ### F5p FRONTIER — depth-induction landed; the sole gap is now crux (★).
 
@@ -5521,63 +5682,39 @@ private theorem fHM_le_one (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNR
     _ ≤ 1 := WeakScheduler.haltMass_tsum_le_one _ _
 
 open Classical in
-/-- **F5r — one-macro-decision decomposition of `fHM`.** The honest flatten's
-`g`-integral splits into the immediate macro-halt boundary (`S.next E none`
-against the source), the nil-run inner-halt boundary (`nilHalt_g`), and the
-nonempty-history halted-arrival carve (`NE_g`). Pure reindex: `fHM_reachArrHalt`,
-the nil/nonempty split, `reachArrHalt_nil`. -/
+/-- **F5v — nil/nonempty carve of `fHM`** (pure reindex, `tsum_nil_reindex`).
+The pre-F5v version further split the nil part through the misfiled
+`haltReach`; since F5v the nil part is resolved by the stall resolvent
+(`nilHalt_resolvent`) instead. -/
 private theorem fHM_split (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
     (μ0 : PMF State) (E : AlterSeq (PMF State) Label) :
     fHM S μ0 E g
-      = S.next E none * (∑' s, μ0 s * g s)
-        + (∑' s0 : State,
-              haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0
-            + ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
-                if e.1.trans = Stream'.Seq.nil then 0
-                else reachArrHalt S μ0 E e * g (e.1.endState e.2)) := by
-  rw [fHM_reachArrHalt]
-  have hnil : (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
-        if e.1.trans = Stream'.Seq.nil then reachArrHalt S μ0 E e * g (e.1.endState e.2) else 0)
-      = S.next E none * (∑' s, μ0 s * g s)
-        + ∑' s0 : State,
-            haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0 := by
-    rw [tsum_nil_reindex (fun e => reachArrHalt S μ0 E e * g (e.1.endState e.2))]
-    have hpt : ∀ s0 : State,
-        reachArrHalt S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩
-            * g ((⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ :
-                {e : AlterSeq State Label // e.trans.Terminates}).1.endState
-              Stream'.Seq.terminates_nil)
-          = S.next E none * (μ0 s0 * g s0)
-            + haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0 := by
-      intro s0
-      rw [AlterSeq.endState_of_trans_nil (⟨s0, Stream'.Seq.nil⟩ : AlterSeq State Label) rfl
-          Stream'.Seq.terminates_nil, reachArrHalt_nil, add_mul, mul_assoc]
-    rw [tsum_congr hpt, ENNReal.tsum_add, ENNReal.tsum_mul_left]
-  have hsplit : (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
-        reachArrHalt S μ0 E e * g (e.1.endState e.2))
-      = (S.next E none * (∑' s, μ0 s * g s)
-          + ∑' s0 : State,
-              haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
+      = (∑' s0 : State,
+            reachArrHalt S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
         + ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
             if e.1.trans = Stream'.Seq.nil then 0
             else reachArrHalt S μ0 E e * g (e.1.endState e.2) := by
-    rw [← hnil, ← ENNReal.tsum_add]
-    exact tsum_congr (fun e => by split_ifs <;> simp)
-  rw [hsplit, add_assoc]
+  rw [fHM_reachArrHalt]
+  have hnil : (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+        if e.1.trans = Stream'.Seq.nil then reachArrHalt S μ0 E e * g (e.1.endState e.2) else 0)
+      = ∑' s0 : State,
+          reachArrHalt S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0 := by
+    rw [tsum_nil_reindex (fun e => reachArrHalt S μ0 E e * g (e.1.endState e.2))]
+    refine tsum_congr (fun s0 => ?_)
+    rw [AlterSeq.endState_of_trans_nil (⟨s0, Stream'.Seq.nil⟩ : AlterSeq State Label) rfl
+      Stream'.Seq.terminates_nil]
+  rw [← hnil, ← ENNReal.tsum_add]
+  exact tsum_congr (fun e => by split_ifs <;> simp)
 
 open Classical in
-/-- **F5s (P2) — junction linearity split.** Distributing the child `fHM_split`
-(`fHM(m',·) = child-halt-now + child-nilHalt_g + child-NE_g`) through the junction
-average `∑'ω S.next(τ,ω) ∑'m' ω m' · (·)`. Pure `ENNReal` linearity. -/
+/-- **F5v (P2) — junction linearity split** through the child `fHM_split`. -/
 private theorem renewal_junction_split (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
     (μ0 : PMF State) (E : AlterSeq (PMF State) Label) :
     (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
         * ∑' m', ω m' * fHM S m' (macroExtend E m') g)
       = (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
-            * ∑' m', ω m' * (S.next (macroExtend E m') none * (∑' s, m' s * g s)))
-        + (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
             * ∑' m', ω m' * (∑' s0 : State,
-                haltReach S m' (macroExtend E m')
+                reachArrHalt S m' (macroExtend E m')
                     ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0))
         + (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
             * ∑' m', ω m' * (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
@@ -5586,23 +5723,22 @@ private theorem renewal_junction_split (S : WeakScheduler (𝒟(sys^w))) (g : St
   have hpt : ∀ ω : PMF (PMF State),
       S.next E (some (Silent.τ, ω)) * ∑' m', ω m' * fHM S m' (macroExtend E m') g
         = S.next E (some (Silent.τ, ω))
-              * ∑' m', ω m' * (S.next (macroExtend E m') none * (∑' s, m' s * g s))
-          + (S.next E (some (Silent.τ, ω))
-                * ∑' m', ω m' * (∑' s0 : State, haltReach S m' (macroExtend E m')
-                    ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
-              + S.next E (some (Silent.τ, ω))
-                * ∑' m', ω m' * (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
-                    if e.1.trans = Stream'.Seq.nil then 0
-                    else reachArrHalt S m' (macroExtend E m') e * g (e.1.endState e.2))) := by
+              * ∑' m', ω m' * (∑' s0 : State,
+                  reachArrHalt S m' (macroExtend E m')
+                      ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
+          + S.next E (some (Silent.τ, ω))
+              * ∑' m', ω m' * (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+                  if e.1.trans = Stream'.Seq.nil then 0
+                  else reachArrHalt S m' (macroExtend E m') e * g (e.1.endState e.2)) := by
     intro ω
-    rw [← mul_add, ← mul_add]
+    rw [← mul_add]
     congr 1
-    rw [← ENNReal.tsum_add, ← ENNReal.tsum_add]
+    rw [← ENNReal.tsum_add]
     refine tsum_congr (fun m' => ?_)
-    rw [← mul_add, ← mul_add]
+    rw [← mul_add]
     congr 1
     exact fHM_split S g m' (macroExtend E m')
-  rw [add_assoc, tsum_congr hpt, ENNReal.tsum_add, ENNReal.tsum_add]
+  rw [tsum_congr hpt, ENNReal.tsum_add]
 
 /-- **F5u — the divided per-segment head weight** (the `segWeight`-cons factor,
 `src = μ0`). Names the junction-repaired head that the peel/collapse carries. -/
@@ -5622,9 +5758,11 @@ private noncomputable def bHaltSum (S : WeakScheduler (𝒟(sys^w))) (g : State 
     else haltReach S μ0 E e * g (e.1.endState e.2)
 
 open Classical in
-/-- **F5u — reset-departure integral** (`Σreset·g`): the fresh-restart departures at
-the empty residual (`dResidual e seg = nil`), summed over the peels of each nonempty
-observed history, `g`-weighted. The excess the exact NE peel carries over `JNE`. -/
+/-- **F5v — reset-departure integral** (`Σreset·g`): the fresh-restart departures
+at the empty residual, summed over the peels of each nonempty observed history,
+`g`-weighted. F5v: the tail factor is the RESOLVENT departure carrier
+`genW (depMove)` at the empty residual (post-stall resets included), not the
+single-stage `depMove`. -/
 private noncomputable def resetSum (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
     (μ0 : PMF State) (E : AlterSeq (PMF State) Label) : ENNReal :=
   ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
@@ -5633,7 +5771,8 @@ private noncomputable def resetSum (S : WeakScheduler (𝒟(sys^w))) (g : State 
             (if segPre e seg ∧ (dResidual e seg).1.trans = Stream'.Seq.nil
               then (1 : ENNReal) else 0)
               * divHead S μ0 E seg
-              * depMove S seg.succ (macroExtend E seg.succ) (dResidual e seg))
+              * genW (fun s Ec c => depMove S s Ec c) S seg.succ (macroExtend E seg.succ)
+                  (dResidual e seg))
           * g (e.1.endState e.2)
 
 open Classical in
@@ -5698,139 +5837,179 @@ private theorem haltReach_total_eq (S : WeakScheduler (𝒟(sys^w))) (g : State 
   rw [AlterSeq.endState_of_trans_nil (⟨s0, Stream'.Seq.nil⟩ : AlterSeq State Label) rfl
     Stream'.Seq.terminates_nil]
 
-/-- **F5u — the fresh-restart gap** (`Gap`): the junction average of the child
-fresh-run (`nil`) departure integrals. Equals `Hg − (Jimm + Jnil)`. -/
+/-- **F5v — the fresh-restart gap** (`Gap`): the junction average of the child
+fresh-run (`nil`) RESOLVENT departure integrals (`genW (depMove)` since F5v). -/
 private noncomputable def Gap (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
     (E : AlterSeq (PMF State) Label) : ENNReal :=
   ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
     * ∑' m', ω m' * (∑' s0 : State,
-        depMove S m' (macroExtend E m')
+        genW (fun s Ec c => depMove S s Ec c) S m' (macroExtend E m')
             ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
 
-open Classical in
-/-- **F5u (R-c-i) — the exact fresh-restart accounting.** The child immediate-halt,
-nil-run halt, and fresh-run departure integrals sum (per child) to the child source
-integral, so `Jimm + Jnil + Gap` telescopes to `nilHalt_g + bHaltSum` (=`Hg`). -/
-private theorem jimmjnil_gap_eq (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
-    (μ0 : PMF State) (E : AlterSeq (PMF State) Label)
-    (hT : E.trans.Terminates) (hinv : μ0 = E.endState hT) :
-    (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
-          * ∑' m', ω m' * (S.next (macroExtend E m') none * (∑' s, m' s * g s)))
-      + (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
-          * ∑' m', ω m' * (∑' s0 : State,
-              haltReach S m' (macroExtend E m')
-                  ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0))
-      + Gap S g E
-      = (∑' s0 : State, haltReach S μ0 E
-            ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
-        + bHaltSum S g μ0 E := by
-  have hpt : ∀ m' : PMF State,
-      S.next (macroExtend E m') none * (∑' s, m' s * g s)
-        + (∑' s0 : State, haltReach S m' (macroExtend E m')
-            ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
-        + (∑' s0 : State, depMove S m' (macroExtend E m')
-            ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
-        = ∑' s, m' s * g s := by
-    intro m'
-    have hcs : ∀ s0 : State,
-        haltReach S m' (macroExtend E m') ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0
-          + depMove S m' (macroExtend E m') ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0
-        = (∑' ω' : PMF (PMF State), S.next (macroExtend E m') (some (Silent.τ, ω')))
-            * (m' s0 * g s0) := by
-      intro s0
-      rw [← add_mul, add_comm (haltReach _ _ _ _),
-        ← curReach_split S m' (macroExtend E m') ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩,
-        show curReach S m' (macroExtend E m')
-              ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩
-            = (∑' ω' : PMF (PMF State), S.next (macroExtend E m') (some (Silent.τ, ω'))) * m' s0 from by
-          rw [curReach, ← ENNReal.tsum_mul_right]
-          exact tsum_congr (fun ω' => by rw [ProbabilisticExecution.probOf_nil]; rfl),
-        mul_assoc]
-    rw [add_assoc, ← ENNReal.tsum_add, tsum_congr hcs, ENNReal.tsum_mul_left,
-      ← add_mul, macroTot, one_mul]
-  rw [Gap, ← ENNReal.tsum_add, ← ENNReal.tsum_add,
-    show (∑' s0 : State, haltReach S μ0 E
-            ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0) + bHaltSum S g μ0 E
-        = ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
-            * ∑' m', ω m' * (∑' s, m' s * g s) from by
-      rw [haltReach_total_eq, parentHaltReach_collapse S g μ0 E hT hinv]]
-  refine tsum_congr (fun ω => ?_)
-  rw [← mul_add, ← mul_add, ← ENNReal.tsum_add, ← ENNReal.tsum_add]
-  refine congrArg _ (tsum_congr (fun m' => ?_))
-  rw [← mul_add, ← mul_add, hpt m']
-
-open Classical in
-/-- **F5u — the fresh-restart gap is a sub-probability.** Each child fresh-run
-departure integral is `≤ 1` (`depMove_le_init`, `g ≤ 1`), averaged against the
-sub-probability macro `τ`-mass (`macroSome_le_one`). -/
-private theorem gap_le_one (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
-    (hg : ∀ x, g x ≤ 1) (E : AlterSeq (PMF State) Label) :
-    Gap S g E ≤ 1 := by
-  rw [Gap]
-  have hchild : ∀ m' : PMF State,
-      (∑' s0 : State, depMove S m' (macroExtend E m')
-          ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0) ≤ 1 := by
-    intro m'
-    calc (∑' s0 : State, depMove S m' (macroExtend E m')
-            ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
-        ≤ ∑' s0 : State, m' s0 * 1 :=
-          ENNReal.tsum_le_tsum (fun s0 => mul_le_mul'
-            (depMove_le_init S m' (macroExtend E m')
-              ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩) (hg s0))
-      _ = 1 := by rw [tsum_congr (fun _ => mul_one _)]; exact PMF.tsum_coe m'
-  calc (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
-          * ∑' m', ω m' * (∑' s0 : State, depMove S m' (macroExtend E m')
-              ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0))
+/-- **F5v — a junction average of sub-probability child integrals is `≤ 1`.** -/
+private theorem junction_avg_le_one (S : WeakScheduler (𝒟(sys^w)))
+    (E : AlterSeq (PMF State) Label) (F : PMF State → ENNReal) (hF : ∀ m', F m' ≤ 1) :
+    (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω)) * ∑' m', ω m' * F m') ≤ 1 := by
+  calc (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω)) * ∑' m', ω m' * F m')
       ≤ ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω)) * 1 := by
         refine ENNReal.tsum_le_tsum (fun ω => mul_le_mul' le_rfl ?_)
-        calc (∑' m', ω m' * (∑' s0 : State, depMove S m' (macroExtend E m')
-                ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0))
-            ≤ ∑' m', ω m' * 1 :=
-              ENNReal.tsum_le_tsum (fun m' => mul_le_mul' le_rfl (hchild m'))
+        calc (∑' m', ω m' * F m')
+            ≤ ∑' m', ω m' * 1 := ENNReal.tsum_le_tsum (fun m' => mul_le_mul' le_rfl (hF m'))
           _ = 1 := by rw [tsum_congr (fun _ => mul_one _)]; exact PMF.tsum_coe ω
     _ = ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω)) := by
         rw [tsum_congr (fun _ => mul_one _)]
     _ ≤ 1 := macroSome_le_one S E
 
 open Classical in
-/-- **F5u (R-c-ii) — the reset junction collapse.** The reset departures (fresh
-restarts at the empty residual) reindex to a `seg`-sum and collapse (W1
-`innerWitness_pushforward`: `Σ_{run} haltMass·[run.end=t] = (ω.bind id) t`; W2
-`ENNReal.div_mul_cancel`, keeping `≤` by dropping the `(ω.bind id) t = 0` terms and
-by `Σ_{run≠nil} ≤ Σ_{run}`) to the child fresh-run departure average `Gap`. -/
-private theorem resetSum_le_gap (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
-    (hg : ∀ x, g x ≤ 1)
+/-- **F5v — the fresh-restart gap is a sub-probability**, via LEMMA A
+(`genW_dep_nil`). -/
+private theorem gap_le_one (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
+    (hg : ∀ x, g x ≤ 1) (E : AlterSeq (PMF State) Label) :
+    Gap S g E ≤ 1 := by
+  rw [Gap]
+  refine junction_avg_le_one S E _ (fun m' => ?_)
+  calc (∑' s0 : State, genW (fun s Ec c => depMove S s Ec c) S m' (macroExtend E m')
+          ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
+      ≤ ∑' s0 : State, m' s0 * 1 :=
+        ENNReal.tsum_le_tsum (fun s0 => mul_le_mul'
+          (genW_dep_nil S m' (macroExtend E m')
+            ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ rfl) (hg s0))
+    _ = 1 := by rw [tsum_congr (fun _ => mul_one _)]; exact PMF.tsum_coe m'
+
+/-- **F5v — total current-run halt reach is a sub-probability** (no invariant
+needed): unfold to the emissions' witness halt masses and apply the Kraft bound. -/
+private theorem haltReach_tsum_le_one (S : WeakScheduler (𝒟(sys^w))) (src : PMF State)
+    (E : AlterSeq (PMF State) Label) :
+    (∑' e : {e : AlterSeq State Label // e.trans.Terminates}, haltReach S src E e) ≤ 1 := by
+  have hunfold : ∀ e : {e : AlterSeq State Label // e.trans.Terminates},
+      haltReach S src E e
+        = ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+            * (innerWitness sys src ω).haltMass src e := by
+    intro e
+    rw [haltReach]
+    refine tsum_congr (fun ω => ?_)
+    unfold WeakScheduler.haltMass Scheduler.haltMass
+    rw [mul_assoc]
+  rw [tsum_congr hunfold, ENNReal.tsum_comm]
+  calc (∑' ω : PMF (PMF State), ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+          S.next E (some (Silent.τ, ω)) * (innerWitness sys src ω).haltMass src e)
+      = ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+          * ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+              (innerWitness sys src ω).haltMass src e :=
+        tsum_congr (fun ω => ENNReal.tsum_mul_left)
+    _ ≤ ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω)) * 1 := by
+        gcongr with ω
+        exact WeakScheduler.haltMass_tsum_le_one _ _
+    _ = ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω)) := by
+        rw [tsum_congr (fun _ => mul_one _)]
+    _ ≤ 1 := macroSome_le_one S E
+
+open Classical in
+/-- **F5v — `bHaltSum` is a sub-probability.** -/
+private theorem bHaltSum_le_one (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
+    (hg : ∀ x, g x ≤ 1) (μ0 : PMF State) (E : AlterSeq (PMF State) Label) :
+    bHaltSum S g μ0 E ≤ 1 := by
+  refine le_trans ?_ (haltReach_tsum_le_one S μ0 E)
+  rw [bHaltSum]
+  refine ENNReal.tsum_le_tsum (fun e => ?_)
+  split_ifs
+  · exact zero_le'
+  · exact mul_le_of_le_one_right' (hg _)
+
+open Classical in
+/-- **F5v — the nil-run halt integral is a sub-probability.** -/
+private theorem nilHaltReach_g_le_one (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
+    (hg : ∀ x, g x ≤ 1) (μ0 : PMF State) (E : AlterSeq (PMF State) Label) :
+    (∑' s0 : State,
+        haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0) ≤ 1 := by
+  have hinj : Function.Injective (fun s0 : State =>
+      (⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ :
+        {e : AlterSeq State Label // e.trans.Terminates})) :=
+    fun a b h => congrArg (fun e => e.1.init) h
+  calc (∑' s0 : State,
+          haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
+      ≤ ∑' s0 : State,
+          haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ :=
+        ENNReal.tsum_le_tsum (fun s0 => mul_le_of_le_one_right' (hg s0))
+    _ ≤ ∑' e : {e : AlterSeq State Label // e.trans.Terminates}, haltReach S μ0 E e :=
+        ENNReal.tsum_comp_le_tsum_of_injective hinj (fun e => haltReach S μ0 E e)
+    _ ≤ 1 := haltReach_tsum_le_one S μ0 E
+
+open Classical in
+/-- **F5v — the reset integral is dominated by the boundary halt integral**:
+per peel, LEMMA A bounds the resolvent tail by the successor mass, and
+`boundaryHalt_le` absorbs the boundary. -/
+private theorem resetSum_le_bHaltSum (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
+    (μ0 : PMF State) (E : AlterSeq (PMF State) Label) :
+    resetSum S g μ0 E ≤ bHaltSum S g μ0 E := by
+  rw [resetSum, bHaltSum]
+  refine ENNReal.tsum_le_tsum (fun e => ?_)
+  split_ifs
+  · exact le_rfl
+  · refine mul_le_mul_right' ?_ _
+    refine le_trans ?_ (boundaryHalt_le S μ0 E e)
+    refine ENNReal.tsum_le_tsum (fun seg => ?_)
+    by_cases hP : segPre e seg ∧ (dResidual e seg).1.trans = Stream'.Seq.nil
+    · rw [if_pos hP]
+      simp only [divHead]
+      gcongr
+      exact genW_dep_nil S seg.succ (macroExtend E seg.succ) (dResidual e seg) hP.2
+    · rw [if_neg hP, zero_mul, zero_mul, zero_mul, zero_mul]
+
+/-- **F5v — the reset integral is a sub-probability.** -/
+private theorem resetSum_le_one (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
+    (hg : ∀ x, g x ≤ 1) (μ0 : PMF State) (E : AlterSeq (PMF State) Label) :
+    resetSum S g μ0 E ≤ 1 :=
+  (resetSum_le_bHaltSum S g μ0 E).trans (bHaltSum_le_one S g hg μ0 E)
+
+open Classical in
+/-- **F5v — the stall-junction nil-halt average** (`stallNil`): per emission `ω`
+and landing state `s0`, the Bayes-coupled stall factor
+`haltMass μ0 ⟨s0,nil⟩ / (ω.bind id) s0` times the junction average of the CHILD
+nil-history halts at the same state, `g`-weighted. The resolvent one-step term
+of the nil-halt carve. -/
+private noncomputable def stallNil (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
+    (μ0 : PMF State) (E : AlterSeq (PMF State) Label) : ENNReal :=
+  ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+    * ∑' s0 : State,
+        ((innerWitness sys μ0 ω).haltMass μ0
+              ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩
+            / (ω.bind id) s0)
+          * (∑' m', ω m' * reachArrHalt S m' (macroExtend E m')
+              ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩)
+          * g s0
+
+open Classical in
+/-- **F5v N1 (RESIDUAL, sorried) — the nil-halt stall resolvent.** The nil-history
+halt carve unfolds one macro level: halt now against the source, or stall
+(Bayes-coupled empty inner run) and halt at the same state one macro level deeper.
+ROUTE: pointwise K1 (`reachArrHalt_nil_add`) turns the carve into
+`μ0 s0 − genW(dep)(nil@s0)`; the dep-peel at the nil history (`genW_peel` with all
+peels empty-run, collapsed over `(emit, succ)` via `flatSegEquiv`) unfolds
+`genW(dep)`; the child `m' s0`-carve splits by K1 again; W2
+(`ENNReal.div_mul_cancel`, edge `(ω.bind id) s0 = 0` killed via
+`innerWitness_pushforward` at the `S.valid` step from `hinv`) matches
+`haltReach(nil@s0)`; all subtractions finite by LEMMA A. -/
+private theorem nilHalt_resolvent (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
     (μ0 : PMF State) (E : AlterSeq (PMF State) Label)
     (hT : E.trans.Terminates) (hinv : μ0 = E.endState hT) :
-    resetSum S g μ0 E ≤ Gap S g E := by
-  -- **F5u status (R-c-ii, TRUE — the tractable residual).** Route (≈90 lines,
-  -- modelled on `boundaryHalt_le`): (1) `resetSum = ∑' seg, (if seg.run.trans ≠ nil
-  -- then 1 else 0) · divHead S μ0 E seg · depMove S seg.succ (macroExtend E seg.succ)
-  -- ⟨⟨seg.run.endState seg.runT, nil⟩,_⟩ · g (seg.run.endState seg.runT)` — swap
-  -- `∑'e ∑'seg`, then `segPre_reindex seg _ (fun e' => if e'.trans = nil then depMove …
-  -- e' · g (e'.end) else 0)` collapses the inner `e`-sum to the single `e' = ⟨⟨run.end,
-  -- nil⟩,_⟩` (using `dResidual_endState` for the `g`); (2) reindex `∑'seg` over
-  -- `(emit, succ, run)` via `flatSegEquiv`, then the run-sum collapses W1
-  -- (`innerWitness_pushforward`: `∑'_{run.end=t} wit.haltMass μ0⟨run⟩ = (emit.bind id) t`;
-  -- valid at each `emit` in support by `S.valid`+`hinv`, else the `S.next` factor is 0)
-  -- with W2 (`ENNReal.div_mul_cancel`), giving `∑_{run≠nil} … ≤ (bind t)/(bind t) ≤ 1`;
-  -- hence `≤ ∑'ω S.next·∑'m' ω m'·∑'t depMove(child nil@t)·g t = Gap`.
+    (∑' s0 : State,
+        reachArrHalt S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
+      = S.next E none * (∑' s, μ0 s * g s) + stallNil S g μ0 E := by
   sorry
 
 open Classical in
-/-- **F5u (R-a2 finiteness) — the reset integral is a sub-probability.** Via
-`resetSum ≤ Gap ≤ 1`. -/
-private theorem resetSum_le_one (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
-    (hg : ∀ x, g x ≤ 1)
-    (μ0 : PMF State) (E : AlterSeq (PMF State) Label)
-    (hT : E.trans.Terminates) (hinv : μ0 = E.endState hT) :
-    resetSum S g μ0 E ≤ 1 :=
-  (resetSum_le_gap S g hg μ0 E hT hinv).trans (gap_le_one S g hg E)
-
-open Classical in
-/-- **F5u (R-a) — the exact NE identity.** Summing the per-config additive peel
-`reachArrHalt e + reset e = haltReach e + carrier e` over nonempty histories,
-`g`-weighted, with the junction collapse `Σcarrier·g = JNE`. -/
+/-- **F5v R-a (RESIDUAL, sorried) — the exact NE identity.** With the F5v widened
+peel the junction collapse is EXACT: the pre-F5v deficit `D` (the omitted nil-run
+mass, weight `haltMass ⟨t,nil⟩/(ω.bind id) t` per landing state) is now filled
+precisely by the stall peels (empty-run heads), since W1 runs over ALL runs:
+`W(ω,t) + sf(ω,t) = 1`. ROUTE: per-config additive peel `reachArrHalt e =
+haltReach e + Σ_{stall} sf·reachArrHalt(child, e) + Σ_{nonempty, residual≠nil}
+divHead·reachArrHalt(child residual) − reset e` (via `reachArrHalt_ne`,
+`genW_peel` on both carriers, `curReach_split`, per-term finiteness); sum
+`·g(e.end)` over `{e≠nil}`; collapse the nonempty heads by `segPre_reindex` +
+`dResidual_endState` + W1 (`innerWitness_pushforward` under `hinv`) + W2; the
+stall heads reindex to the `JNE` complement. -/
 private theorem renewal_NE_identity (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
     (hg : ∀ x, g x ≤ 1)
     (μ0 : PMF State) (E : AlterSeq (PMF State) Label)
@@ -5844,134 +6023,53 @@ private theorem renewal_NE_identity (S : WeakScheduler (𝒟(sys^w))) (g : State
             * ∑' m', ω m' * (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
                 if e.1.trans = Stream'.Seq.nil then 0
                 else reachArrHalt S m' (macroExtend E m') e * g (e.1.endState e.2)) := by
-  -- **F5u FINDING (R-a, the crux — this exact identity appears to OVERSTATE).**
-  -- The per-config peel (`reachArrHalt_peel` + `reachArrHalt_ne` + `curReach_split`)
-  -- gives the honest EXACT identity, with `carrierSum` (NOT `JNE`) on the right:
-  --   `NE_g + resetSum = bHaltSum + carrierSum`,
-  --   `carrierSum := ∑'_{e≠nil} (∑'_{seg: segPre e seg ∧ dResidual e seg ≠ nil}`
-  --     `divHead S μ0 E seg · reachArrHalt S seg.succ (macroExtend E seg.succ)`
-  --     `(dResidual e seg)) · g (e.1.endState e.2)`.
-  -- The junction collapse of `carrierSum` is NOT exact. `segPre_reindex` + W1
-  -- (`innerWitness_pushforward`) + W2 give
-  --   `carrierSum = ∑'ω S.next E (τ,ω) · ∑'m' ω m' · ∑'t W(ω,t) · C(m',t)`,
-  --   `JNE       = ∑'ω S.next E (τ,ω) · ∑'m' ω m' · ∑'t   1    · C(m',t)`,
-  --   `C(m',t) := ∑'_{e'.init=t, e'≠nil} reachArrHalt S m' (macroExtend E m') e'·g(e'.end)`,
-  --   `W(ω,t)  := (∑'_{run≠nil, run.end=t} (innerWitness sys μ0 ω).haltMass μ0 ⟨run⟩)`
-  --              `/ (ω.bind id) t = 1 − (innerWitness sys μ0 ω).haltMass μ0 ⟨⟨t,nil⟩⟩/(ω.bind id) t`.
-  -- The peel's `seg`s have NONEMPTY runs (`segPre`), so the collapse omits the nil-run
-  -- (immediate-halt / stall) mass `haltMass μ0 ⟨⟨t,nil⟩⟩`, which is GENERICALLY NONZERO
-  -- — e.g. a reflexive weak-τ step is witnessed by `WeakScheduler.stop`, halting entirely
-  -- on nil runs (`Weak/WeakTransition.lean` `weakTau_refl`). Hence `W(ω,t) ≤ 1` strictly
-  -- and `carrierSum = JNE − D` with a stall deficit `D ≥ 0` generally `> 0`; the claimed
-  -- `Σcarrier·g = JNE` overshoots by `D`.
-  -- Consequence (via the machine-checked `jimmjnil_gap_eq`): the whole obligation
-  -- `renewal_junction_bound` is EQUIVALENT to `JNE + bHaltSum ≤ NE_g + Gap`, which with
-  -- the exact `carrierSum` identity reduces to `resetSum + D ≤ Gap`. Per-term this needs
-  -- `C(m',t) ≤ depMove S m' (macroExtend E m') ⟨⟨t,nil⟩⟩ · g t` (child nonempty arrivals ≤
-  -- child fresh departure), which FAILS. In the reflexive-stall scenario (`μ0 = pure a`,
-  -- reflexive `ω` to child `pure a` doing a genuine `a→b`) it degenerates to `g b ≤ g a`.
-  -- So this peel route does not close the goal: the stall mass must be tracked (Layer-4d
-  -- `stallSum`), or reflexive/stalling emissions ruled out, before `renewal_NE_identity`
-  -- (and hence `renewal_junction_bound`) can hold. Left as the honest residual.
   sorry
 
 open Classical in
-/-- **F5u (R-c) — the strengthened boundary bookkeeping.** The child immediate/nil
-halts plus the reset departures lower-bound the parent nil-run halt plus the
-nonempty halt-at-boundary reach. -/
-private theorem renewal_reduced_bound (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
+/-- **F5v R-c (RESIDUAL, sorried) — the reset/stall boundary bookkeeping.** The
+resets plus the parent nil-run halts are absorbed by the stall-junction average
+plus the gap. ROUTE (exact, verified on paper — PHASE-0 note): (i) `nilstall =
+∑'ω S.next(τ,ω)·∑'s0 haltMass μ0⟨s0,nil⟩·g s0` bounds by
+`sf(ω,s0)·(ω.bind id)(s0)` (W2 `x/c·c ≤ x`, edge exact), and `(ω.bind id) s0 =
+∑'m' ω m'·m' s0` splits by K1 (`reachArrHalt_nil_add`) into `stallNil`'s inner
+term plus the `sf`-weighted child gap; (ii) the reset W1-collapse
+(`segPre_reindex` on the nonempty heads + `innerWitness_pushforward`) gives
+`resetSum ≤ ∑'ω∑'m'∑'t (1−sf(ω,t))-weight · genW(dep)(child,nil@t)·g t`; (iii)
+per `(ω,t)` the two weights sum to `≤ (ω.bind id) t/(ω.bind id) t ≤ 1`, so the
+total is `≤ Gap`. -/
+private theorem resetStall_le (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
     (hg : ∀ x, g x ≤ 1)
     (μ0 : PMF State) (E : AlterSeq (PMF State) Label)
     (hT : E.trans.Terminates) (hinv : μ0 = E.endState hT) :
-    (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
-          * ∑' m', ω m' * (S.next (macroExtend E m') none * (∑' s, m' s * g s)))
-      + (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
-          * ∑' m', ω m' * (∑' s0 : State,
-              haltReach S m' (macroExtend E m')
-                  ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0))
-      + resetSum S g μ0 E
-      ≤ (∑' s0 : State, haltReach S μ0 E
-              ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
-        + bHaltSum S g μ0 E := by
-  rw [← jimmjnil_gap_eq S g μ0 E hT hinv]
-  gcongr
-  exact resetSum_le_gap S g hg μ0 E hT hinv
+    resetSum S g μ0 E
+        + (∑' s0 : State,
+            haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
+      ≤ stallNil S g μ0 E + Gap S g E := by
+  sorry
 
 open Classical in
-/-- **F5t — the one-macro-level junction bound (`renewal_step_le`'s sole residual).**
-The junction average of the child honest-flatten halt integrals — the
-`renewal_junction_split` decomposition `Jimm + Jnil + JNE` — lower-bounds the
-parent's non-immediate halt carve `nilHalt_g + NE_g`.
-
-**F5t PHASE-0 VERDICT — the reset coincidence FAILS (outcome iii, wrong-way).**
-The F5s split into `renewal_boundary_le` (P3: `Jimm+Jnil ≤ nilHalt_g+boundaryHaltSum`)
-and `renewal_NE_le` (P1: `JNE+boundaryHaltSum ≤ NE_g`) is UNSOUND: P1 is FALSE.
-The pen-and-paper peel is exact (all terms finite, `≤ 1`):
-  `NE_g = boundaryHaltSum + JNE − Σreset·g`,
-where the `genW_g_peel` carrier `Σcarrier·g` of `NE_g` collapses to `JNE` EXACTLY —
-not `≤` with a deficit. After W1 (`innerWitness_pushforward`:
-`∑ run [run.end=t] haltMass(μ0,ω)⟨run⟩ = (ω.bind id) t`) and W2 (`div_mul_cancel`),
-the only lost terms have `(ω.bind id) t = 0`; there `ω m' · child_{m',t} = 0`
-since `reachArrHalt S m' F e' ≤ reachArrM ≤ m'(e'.init)` (`probOf_eq_reachArrM` +
-`probOf_le_init`), so `m'(t)=0 ⟹ child=0`. Thus the junction-collapse deficit is
-ZERO and canNOT absorb `Σreset·g`; `JNE + boundaryHaltSum ≤ NE_g` overshoots by
-exactly `Σreset·g > 0`. P1/P3 are hence REPLACED by this single honest residual.
-
-**True route (unchanged crux, ~150+ lines).** `J ≤ nilHalt_g + NE_g` reduces (via
-the exact NE identity + `Σcarrier·g = JNE`) to the strengthened boundary bookkeeping
-`Jimm + Jnil + Σreset·g ≤ nilHalt_g + boundaryHaltSum`, argued per-ω over the witness
-`W_ω := innerWitness sys μ0 ω` (step from `S.valid … (rw [hinv])`): the child
-immediate/nil-halts and reset departures (`depMove_le_init`) lift through the
-witness halt-pushforward (`innerWitness_integrate`) to the parent nil-run halt
-(`nilHalt_g`) plus the nonempty halt-at-boundary reach (`boundaryHalt_le`); continuing
-departures fall to `genDep_le_genArr`. -/
-private theorem renewal_junction_bound (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
-    (hg : ∀ x, g x ≤ 1)
-    (μ0 : PMF State) (E : AlterSeq (PMF State) Label)
-    (hT : E.trans.Terminates) (hinv : μ0 = E.endState hT) :
+/-- **F5v — K1 through the junction**: the child landing integral splits into the
+child nil-halts plus the child resolvent departures (`Gap`). -/
+private theorem junction_total_split (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
+    (μ0 : PMF State) (E : AlterSeq (PMF State) Label) :
     (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
-          * ∑' m', ω m' * (S.next (macroExtend E m') none * (∑' s, m' s * g s)))
-      + (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
-          * ∑' m', ω m' * (∑' s0 : State,
-              haltReach S m' (macroExtend E m')
-                  ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0))
-      + (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
-          * ∑' m', ω m' * (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
-              if e.1.trans = Stream'.Seq.nil then 0
-              else reachArrHalt S m' (macroExtend E m') e * g (e.1.endState e.2)))
-      ≤ (∑' s0 : State, haltReach S μ0 E
-              ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
-        + (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
-            if e.1.trans = Stream'.Seq.nil then 0
-            else reachArrHalt S μ0 E e * g (e.1.endState e.2)) := by
-  -- **F5u glue (R-b).** With the exact NE identity (R-a) and the reduced boundary
-  -- bookkeeping (R-c), add `resetSum` to both sides and regroup.
-  have hRa := renewal_NE_identity S g hg μ0 E hT hinv
-  have hRc := renewal_reduced_bound S g hg μ0 E hT hinv
-  have hRfin : resetSum S g μ0 E ≠ ⊤ :=
-    ne_top_of_le_ne_top ENNReal.one_ne_top (resetSum_le_one S g hg μ0 E hT hinv)
-  set Jimm := (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
-      * ∑' m', ω m' * (S.next (macroExtend E m') none * (∑' s, m' s * g s))) with hJimm
-  set Jnil := (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
-      * ∑' m', ω m' * (∑' s0 : State,
-          haltReach S m' (macroExtend E m')
-              ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)) with hJnil
-  set JNE := (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
-      * ∑' m', ω m' * (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
-          if e.1.trans = Stream'.Seq.nil then 0
-          else reachArrHalt S m' (macroExtend E m') e * g (e.1.endState e.2))) with hJNE
-  set nilHalt := (∑' s0 : State, haltReach S μ0 E
-      ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0) with hnilHalt
-  set NE := (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
-      if e.1.trans = Stream'.Seq.nil then 0
-      else reachArrHalt S μ0 E e * g (e.1.endState e.2)) with hNE
-  rw [← ENNReal.add_le_add_iff_right hRfin]
-  calc Jimm + Jnil + JNE + resetSum S g μ0 E
-      = (Jimm + Jnil + resetSum S g μ0 E) + JNE := by ring
-    _ ≤ (nilHalt + bHaltSum S g μ0 E) + JNE := by gcongr
-    _ = nilHalt + (bHaltSum S g μ0 E + JNE) := by ring
-    _ = nilHalt + (NE + resetSum S g μ0 E) := by rw [← hRa]
-    _ = nilHalt + NE + resetSum S g μ0 E := by ring
+        * ∑' m', ω m' * (∑' s, m' s * g s))
+      = (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+            * ∑' m', ω m' * (∑' s0 : State,
+                reachArrHalt S m' (macroExtend E m')
+                    ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0))
+        + Gap S g E := by
+  rw [Gap, ← ENNReal.tsum_add]
+  refine tsum_congr (fun ω => ?_)
+  rw [← mul_add]
+  congr 1
+  rw [← ENNReal.tsum_add]
+  refine tsum_congr (fun m' => ?_)
+  rw [← mul_add]
+  congr 1
+  rw [← ENNReal.tsum_add]
+  refine tsum_congr (fun s0 => ?_)
+  rw [← add_mul, reachArrHalt_nil_add S m' (macroExtend E m') s0]
 
 /-! ### F5t status — the F5s P1/P3 split was UNSOUND; consolidated to one residual.
 
@@ -6066,15 +6164,15 @@ structural kit + (3); (S4) chain (4); (S5) endgame (axiom check, header). Commit
 stages stay green; sorries only at corrected-TRUE statements with routes recorded. -/
 
 open Classical in
-/-- **F5r — the KEY′ one-step-unfold lower bound of `fHM` (the honest renewal `≤`).**
-Halting immediately at the parent (`S.next E none` against the source) plus taking
-one macro step to a child `m'` and then honest-flattening from `m'` lower-bounds the
-parent honest flatten. All three split terms are `≤ 1`, so the bound is `⊤`-safe.
-This is the g-weighted analogue of `genDep_le_genArr`: peel the parent arrival
-carrier (`genW_g_peel`), collapse the junction (W1 `innerWitness_integrate` /
-W2 `ENNReal.div_mul_cancel`), and absorb the reset/nil boundary (`boundaryHalt_le`,
-`depMove_le_init`); continuing departures fall to the `genDep_le_genArr` length
-recursion. -/
+/-- **F5v — the KEY′ one-step-unfold lower bound of `fHM` (the honest renewal
+`≤`).** Halting immediately at the parent plus taking one macro step to a child
+`m'` and honest-flattening from `m'` lower-bounds the parent honest flatten.
+ASSEMBLY (green modulo the three F5v residuals `nilHalt_resolvent` /
+`renewal_NE_identity` / `resetStall_le`): split both sides (`fHM_split`,
+`renewal_junction_split`, `nilHalt_resolvent`); then the key inequality
+`Jn + JNE ≤ stallNil + NE_g` follows by adding the finite `resetSum + nilstall`
+to both sides and chaining `resetStall_le`, `junction_total_split` (K1),
+`parentHaltReach_collapse`, `haltReach_total_eq`, and `renewal_NE_identity`. -/
 private theorem renewal_step_le (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
     (hg : ∀ x, g x ≤ 1)
     (μ0 : PMF State) (E : AlterSeq (PMF State) Label)
@@ -6083,85 +6181,77 @@ private theorem renewal_step_le (S : WeakScheduler (𝒟(sys^w))) (g : State →
         + (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
             * ∑' m', ω m' * fHM S m' (macroExtend E m') g)
       ≤ fHM S μ0 E g := by
-  rw [fHM_split S g μ0 E]
-  refine add_le_add le_rfl ?_
-  -- **THE SOLE RESIDUAL (F5r) — a clean, self-contained inequality.** After
-  -- `fHM_split` (proven above) cancels the immediate-halt boundary `S.next E none ·
-  -- (∑'s μ0 s · g s)` off both sides, the goal is EXACTLY the core renewal `≤`:
-  --   ⊢  ∑'ω S.next E (τ,ω) · ∑'m' ω m' · fHM S m' (macroExtend E m') g
-  --        ≤  nilHalt_g  +  NE_g
-  -- with  nilHalt_g = ∑'s0 haltReach S μ0 E ⟨⟨s0,nil⟩,_⟩ · g s0,
-  --        NE_g     = ∑'{e≠nil} reachArrHalt S μ0 E e · g (e.1.endState e.2).
-  --
-  -- **Why this is the irreducible core (re-verified F5r, three ways).**
-  -- (1) The child factor `fHM(m',F) = halt-now(m',F) + nilHalt_g(m',F) + NE_g(m',F)`
-  --     (its own `fHM_split`) canNOT be bounded by the arrival carrier
-  --     `Ane_g(m',F) := ∑'{e'≠nil} reachArrM(m',F) e'·g` — the child's own boundary
-  --     terms are extra — so `genW_g_peel` of the ARRIVAL carrier overshoots and
-  --     mis-matches. The peel MUST be of the halt carrier `reachArrHalt`.
-  -- (2) `reachArrHalt` is NOT a `genW k` (it is `genW curReachG − genW depMove` on
-  --     nonempty configs, `reachArrHalt_ne`; `reachArrHalt_peel` at :6115 peels it
-  --     per-config as (arrival peel) − (departure peel)), so `genW_g_peel` cannot be
-  --     applied to it directly. The g-weighted peel of `NE_g` therefore requires
-  --     summing the per-config finite subtraction `reachArrHalt e = reachArrM e −
-  --     ∑reachDep e` (both finite, `reachArrM ≤ 1`) over `{e≠nil}` weighted by
-  --     `g(e.end)` — the F5m-(B) subtraction, which the file scrupulously avoids
-  --     everywhere else because the GLOBAL departure carrier `∑'e genW depMove·g`
-  --     is possibly `⊤`.
-  -- (3) The junction collapse itself is closeable (W1 `innerWitness_integrate` /
-  --     `innerWitness_pushforward` gives `∑'run haltMass(src,ω)⟨run⟩·[run.end=t] =
-  --     (ω.bind id) t`; W2 `ENNReal.div_mul_cancel`; the invariant `hinv` supplies
-  --     the step `(𝒟(sys^w)).step (E.endState hT) τ ω` via `S.valid E (Nat.find hT)
-  --     … stateAt_find_eq_endState … hw`, cf. `oneDecisionC_integrate` :2270). But
-  --     collapsing the RUN sum leaves the reset/nil correction `1 −
-  --     haltMass⟨t,nil⟩/(ω.bind id) t` per landing state `t`; that reset mass is the
-  --     silent-τ immediate-halt boundary, absorbed into `nilHalt_g`/parent halt via
-  --     `boundaryHalt_le` (:4670) + `depMove_le_init`, exactly as `genDep_le_genArr`
-  --     absorbs its resets — but now g-weighted and coupled to the (2) subtraction.
-  --
-  -- **The proven route (map, unchanged):** peel `NE_g` one macro level via
-  -- `reachArrHalt_peel`/`reachArrHalt_ne` + `curReach_split` (the additive lever:
-  -- `curReach = depMove + haltReach`, so per config `reachArrHalt e = haltReach e +
-  -- (T_arr(e) − T_dep(e))` with `depMove e` cancelled, all finite); reindex children
-  -- by `segPre_reindex`/`dResidual_endState`; collapse the junction (W1+W2) so the
-  -- child fiber sum lifts to the full `∑'m' ω m' · fHM(m', macroExtend E m')`;
-  -- continuing departures fall to `genDep_le_genArr` (the length recursion, already
-  -- proven :4933); nil/reset boundary absorbed by `boundaryHalt_le`/`depMove_le_init`
-  -- + the `≤1` bounds (`hg`, `fHM_le_one`, `condDepthSum_le_one`). ~150 lines of
-  -- intricate per-config ENNReal on top of the (now proven) `fHM_split`/`fHM_le_one`
-  -- scaffolding. This is the whole residual; everything else in the tower is closed.
-  -- **F5s SKELETON.** Reduced to the three sub-lemmas above via the shared
-  -- `boundaryHaltSum := ∑'{e≠nil} haltReach·g` intermediate: junction linearity
-  -- split (`renewal_junction_split`), then the single honest residual
-  -- `renewal_junction_bound` (the F5s P1/P3 split was unsound — see its docstring).
-  rw [renewal_junction_split S g μ0 E]
-  exact renewal_junction_bound S g hg μ0 E hT hinv
-
-open Classical in
-/-- **F5q/F5r — the one-macro-level renewal inequality (the residual crux (★)).**
-The junction average of the child honest-flatten halt integrals lower-bounds the
-parent's non-immediate halt carve (`nilHalt_g + NE_g`). Derived from the KEY′
-lower bound `renewal_step_le` by cancelling the (finite) immediate-halt boundary
-against the `fHM_split` decomposition. -/
-private theorem renewal_le (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
-    (hg : ∀ x, g x ≤ 1)
-    (μ0 : PMF State) (E : AlterSeq (PMF State) Label)
-    (hT : E.trans.Terminates) (hinv : μ0 = E.endState hT) :
-    (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
-        * ∑' m', ω m' * fHM S m' (macroExtend E m') g)
-      ≤ ∑' s0 : State,
-            haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0
+  rw [fHM_split S g μ0 E, renewal_junction_split S g μ0 E,
+    nilHalt_resolvent S g μ0 E hT hinv]
+  have hkey : (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+          * ∑' m', ω m' * (∑' s0 : State,
+              reachArrHalt S m' (macroExtend E m')
+                  ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0))
+        + (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+            * ∑' m', ω m' * (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+                if e.1.trans = Stream'.Seq.nil then 0
+                else reachArrHalt S m' (macroExtend E m') e * g (e.1.endState e.2)))
+      ≤ stallNil S g μ0 E
         + ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
             if e.1.trans = Stream'.Seq.nil then 0
             else reachArrHalt S μ0 E e * g (e.1.endState e.2) := by
-  have hfin : S.next E none * (∑' s, μ0 s * g s) ≠ ⊤ := by
-    refine ne_top_of_le_ne_top ENNReal.one_ne_top (mul_le_one' (PMF.coe_le_one _ _) ?_)
-    calc (∑' s, μ0 s * g s)
-        ≤ ∑' s, μ0 s := ENNReal.tsum_le_tsum (fun s => mul_le_of_le_one_right' (hg s))
-      _ = 1 := PMF.tsum_coe _
-  have hstep := renewal_step_le S g hg μ0 E hT hinv
-  rw [fHM_split S g μ0 E] at hstep
-  exact (ENNReal.add_le_add_iff_left hfin).mp hstep
+    set Jn := (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+        * ∑' m', ω m' * (∑' s0 : State,
+            reachArrHalt S m' (macroExtend E m')
+                ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)) with hJn
+    set JNE := (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+        * ∑' m', ω m' * (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+            if e.1.trans = Stream'.Seq.nil then 0
+            else reachArrHalt S m' (macroExtend E m') e * g (e.1.endState e.2))) with hJNE
+    set NE := (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+        if e.1.trans = Stream'.Seq.nil then 0
+        else reachArrHalt S μ0 E e * g (e.1.endState e.2)) with hNE
+    set NS := (∑' s0 : State,
+        haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0) with hNS
+    have hfinR : resetSum S g μ0 E + NS ≠ ⊤ := by
+      refine ENNReal.add_ne_top.mpr ⟨?_, ?_⟩
+      · exact ne_top_of_le_ne_top ENNReal.one_ne_top (resetSum_le_one S g hg μ0 E)
+      · exact ne_top_of_le_ne_top ENNReal.one_ne_top (nilHaltReach_g_le_one S g hg μ0 E)
+    have key : (Jn + JNE) + (resetSum S g μ0 E + NS)
+        ≤ (stallNil S g μ0 E + NE) + (resetSum S g μ0 E + NS) := by
+      calc (Jn + JNE) + (resetSum S g μ0 E + NS)
+          ≤ (Jn + JNE) + (stallNil S g μ0 E + Gap S g E) :=
+            add_le_add le_rfl (resetStall_le S g hg μ0 E hT hinv)
+        _ = stallNil S g μ0 E + (Jn + Gap S g E) + JNE := by ring
+        _ = stallNil S g μ0 E
+              + (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+                  * ∑' m', ω m' * (∑' s, m' s * g s)) + JNE := by
+            rw [← junction_total_split S g μ0 E]
+        _ = stallNil S g μ0 E
+              + (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+                  haltReach S μ0 E e * g (e.1.endState e.2)) + JNE := by
+            rw [← parentHaltReach_collapse S g μ0 E hT hinv]
+        _ = stallNil S g μ0 E + (NS + bHaltSum S g μ0 E) + JNE := by
+            rw [haltReach_total_eq S g μ0 E]
+        _ = stallNil S g μ0 E + NS + (bHaltSum S g μ0 E + JNE) := by ring
+        _ = stallNil S g μ0 E + NS + (NE + resetSum S g μ0 E) := by
+            rw [← renewal_NE_identity S g hg μ0 E hT hinv]
+        _ = (stallNil S g μ0 E + NE) + (resetSum S g μ0 E + NS) := by ring
+    exact (ENNReal.add_le_add_iff_right hfinR).mp key
+  calc S.next E none * (∑' s, μ0 s * g s)
+        + ((∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+            * ∑' m', ω m' * (∑' s0 : State,
+                reachArrHalt S m' (macroExtend E m')
+                    ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0))
+          + (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+              * ∑' m', ω m' * (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+                  if e.1.trans = Stream'.Seq.nil then 0
+                  else reachArrHalt S m' (macroExtend E m') e * g (e.1.endState e.2))))
+      ≤ S.next E none * (∑' s, μ0 s * g s)
+          + (stallNil S g μ0 E
+            + ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+                if e.1.trans = Stream'.Seq.nil then 0
+                else reachArrHalt S μ0 E e * g (e.1.endState e.2)) :=
+        add_le_add le_rfl hkey
+    _ = S.next E none * (∑' s, μ0 s * g s) + stallNil S g μ0 E
+          + ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+              if e.1.trans = Stream'.Seq.nil then 0
+              else reachArrHalt S μ0 E e * g (e.1.endState e.2) := by ring
 
 open Classical in
 /-- **F5p — depth-stratified halt bound (bypasses `renewal_diamond`).** For any
@@ -6200,59 +6290,13 @@ private theorem condDepthSum_le_fHM (S : WeakScheduler (𝒟(sys^w))) (g : State
       rw [← Summable.tsum_finsetSum (fun _ _ => ENNReal.summable)]
       refine tsum_congr (fun m' => ?_)
       rw [← Finset.mul_sum]
-    rw [Finset.sum_range_succ', Dzero μ0 E hT hinv, hswap, add_comm, fHM_reachArrHalt]
-    have hnil : (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
-          if e.1.trans = Stream'.Seq.nil then reachArrHalt S μ0 E e * g (e.1.endState e.2) else 0)
-        = S.next E none * (∑' s, μ0 s * g s)
-          + ∑' s0 : State,
-              haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0 := by
-      rw [tsum_nil_reindex (fun e => reachArrHalt S μ0 E e * g (e.1.endState e.2))]
-      have hpt : ∀ s0 : State,
-          reachArrHalt S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩
-              * g ((⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ :
-                  {e : AlterSeq State Label // e.trans.Terminates}).1.endState
-                Stream'.Seq.terminates_nil)
-            = S.next E none * (μ0 s0 * g s0)
-              + haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0 := by
-        intro s0
-        rw [AlterSeq.endState_of_trans_nil (⟨s0, Stream'.Seq.nil⟩ : AlterSeq State Label) rfl
-            Stream'.Seq.terminates_nil, reachArrHalt_nil, add_mul, mul_assoc]
-      rw [tsum_congr hpt, ENNReal.tsum_add, ENNReal.tsum_mul_left]
-    have hsplit : (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
-          reachArrHalt S μ0 E e * g (e.1.endState e.2))
-        = (S.next E none * (∑' s, μ0 s * g s)
-            + ∑' s0 : State,
-                haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
-          + ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
-              if e.1.trans = Stream'.Seq.nil then 0
-              else reachArrHalt S μ0 E e * g (e.1.endState e.2) := by
-      rw [← hnil, ← ENNReal.tsum_add]
-      exact tsum_congr (fun e => by split_ifs <;> simp)
-    rw [hsplit, add_assoc]
-    refine add_le_add le_rfl ?_
-    -- **PINNED RESIDUAL (★) — strictly smaller than the deleted `renewal_diamond`.**
-    -- Goal: `∑'ω S.next(τ,ω) ∑'m' ω m' · (∑ k<n D m' (macroExtend E m') _ k)`
-    --        `≤ nilHalt_g + NE_g`, where
-    --   `nilHalt_g = ∑'s0 haltReach S μ0 E ⟨⟨s0,nil⟩,_⟩ * g s0`,
-    --   `NE_g = ∑'{e≠nil} reachArrHalt S μ0 E e * g (e.1.endState e.2)`.
-    -- The child factor is the FINITE `∑ k<n D`, not the opaque `fHM(child)` that
-    -- `renewal_diamond` carried; `IH : ∀ μ0 E hT, μ0=E.endState hT → ∑ k<n D ≤ fHM`
-    -- is in context. ROUTE (F5o/F5p, unchanged): peel `nilHalt_g + NE_g` one macro
-    -- level via `genW_g_peel`/`reachArrHalt_peel` (use `curReach_split :
-    -- curReach = depMove + haltReach` to avoid ENNReal subtraction — the arr carrier
-    -- splits additively into depMove ⊕ haltReach, so `reachArrHalt = genW haltReach`
-    -- on nonempty configs); reindex children (`segPre_reindex`/`dResidual_endState`);
-    -- collapse the junction (W1 `innerWitness_integrate` with `hstep` from `S.valid …
-    -- (Nat.find hT) μ0 … Silent.τ ω hw` after `rw [hinv]`; W2 `ENNReal.div_mul_cancel`);
-    -- match term-by-term against the children, THEN apply `IH` per child
-    -- (`hinv' := (macroExtend_endState hT m').symm`); absorb the nil-reset/departure
-    -- boundary at the parent level via `boundaryHalt_le`/`depMove_le_init` +
-    -- `condDepthSum_le_one`/`hg` (≤1 bounds) — this is where D1's descent bottoms out.
-    refine le_trans ?_ (renewal_le S g hg μ0 E hT hinv)
+    rw [Finset.sum_range_succ', Dzero μ0 E hT hinv, hswap, add_comm]
+    refine le_trans (add_le_add le_rfl ?_) (renewal_step_le S g hg μ0 E hT hinv)
     refine ENNReal.tsum_le_tsum (fun ω => ?_)
     refine mul_le_mul_left' (ENNReal.tsum_le_tsum (fun m' => ?_)) _
-    exact mul_le_mul_left' (IH m' (macroExtend E m') (macroExtend_term hT m')
-      (macroExtend_endState hT m').symm) _
+    refine mul_le_mul_left' ?_ _
+    exact IH m' (macroExtend E m') (macroExtend_term hT m')
+      (macroExtend_endState hT m').symm
 
 /-- Iterating `f_integrate_ge` at `g := 1`: the partial sum of conditional depth
 totals lower-bounds the honest flatten's total halting mass. -/
