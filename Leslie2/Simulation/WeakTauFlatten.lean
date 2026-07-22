@@ -3932,6 +3932,48 @@ Honest ranking: if F5g-1 cannot re-derive the arrival inner-recursion for the tw
 the `dSched` analytic route via `probOf_beliefMass` — but that is the SAME telescoping obstruction
 un-proven, so it is weaker, not independent. No scheduler-free route survives (B). -/
 
+/-! ### F5h — PHASE 0 verdict: junction diagnosis CONFIRMED (two weight formulas)
+
+Ground truth = the landed strata `condDepth` (:602) / `macroHaltDepth` (:208), which
+connect `Ν.bind id` via `macroHalt_bind_id_eq_iSup` (:452).
+
+**STRATA per-config weight** (`macroHaltDepth S μ0 k s = ∑' E:len k, S.haltMass (pure μ0) E ·
+(E.endState) s`; `condDepth_succ` :645 gives the per-step recursion). Purely MACRO:
+  · per macro-step factor  `S.next E (some(τ,ω)) · ω m'`  (successor draw only);
+  · terminal landing factor `m_last s` (the LAST macro-state PMF evaluated at s);
+  · NO inner-run mass, NO `(ω.bind id) s` anywhere.
+Summed, the terminal marginalization `∑' m_last, ω_last m_last · m_last s = (ω_last.bind id) s`
+is the ONLY place an endpoint mixture appears.
+
+**FLAT per-config weight** (`reachM = segWeight · curReach`, :4457/:983/:4446). Routes the
+landing through CONCRETE sys-runs:
+  · `segWeight` per completed segment: `S.next E(τ,ω) · ω m' · haltMass(src0,ω)⟨run⟩ · [recurse
+    src0:=m', E:=macroExtend E m']` — carries the inner-run halt mass;
+  · `haltMass(src0,ω)⟨run⟩` includes the LEADING source factor `src0(run.init)`, and `chained`
+    forces `run_i.init = run_{i-1}.endState = s_{i-1}`, so segment i's leading factor is the CHILD
+    source `m_{i-1}'(s_{i-1})`, while segment (i-1)'s endpoint resolves (via
+    `innerWitness_integrate`, `∑ run→s haltMass = (ω.bind id) s`, :541) to `(ω_{i-1}.bind id) s_{i-1}`.
+
+**THE DIFF (= the repair).** At every junction the connecting state s_{i-1} is threaded TWICE:
+once through the parent run's endpoint `(ω.bind id) s` and once through the child source `m'(s)`.
+Unfolding `fHM` (`f_integrate_step` :5471) reproduces the blocked agents' reduction
+`∑'ω S.next E(τ,ω) · ∑'m' ω m' · ∑'s (ω.bind id) s · m'(s) · F(m',s)`, whereas honest term B is
+the same WITHOUT the spurious `(ω.bind id) s`. Since `(ω.bind id) s ≠ 1`, `f_integrate_step` is
+genuinely FALSE for the current `reachM`; the whole f-chain (gated on this sorry) cannot close
+without repair. VERDICT: junction diagnosis CONFIRMED — the spurious factor is exactly the parent
+inner-run endpoint `(ω.bind id) s`, present at every segment boundary, absent from the strata.
+
+**REPAIR (per-junction, pointwise single-layer division `0/0:=0`, benign F4r/`oneDecisionC_probOf`
+kind — NOT a history-dependent normalizer).** Normalize each completed segment's run mass by its
+own endpoint marginal: multiply `haltMass(src0,ω)⟨run⟩` by `1/(ω.bind id)(run.endState)`. Then
+`∑ run→s haltMass/(ω.bind id) s = 1`, the connecting state survives ONLY through the child leading
+source `m'(s)` coupled to the successor draw `ω m'`, and the honest coupling `ω m'·m'(s)` = strata.
+The mission's stated factor `ω m'·m' s/(ω.bind id) s` is this same correction net of the successor/
+child factors already carried by `segWeight`. NOTE (frontier caution for the transfer): the EXACT
+placement (divide `segWeight`'s per-run `haltMass`, vs. a `curReach`-level reweight) must be pinned
+against `probOf`'s leading-factor bookkeeping — getting it wrong cascades through the fidelity kit
+(`curReach_snoc`/`reachArrM_snoc`/`probOf_eq_reachArrM`). See PHASE-1 status below. -/
+
 /- (frontier note continues) -/
 /-! ### σ\* limit-witness frontier — (assessment continues below)
 
