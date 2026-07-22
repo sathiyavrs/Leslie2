@@ -5813,6 +5813,75 @@ private theorem dResidual_endState
     AlterSeq.endState_congr_pub hseg hAterm seg.runT]
 
 open Classical in
+/-- **F5k sub-lemma (2) — the front-prepend reindex (the linchpin).** For a fixed
+first segment `seg` (nonempty run), summing `H (dResidual e seg)` over the histories
+`e` that legally peel `seg` equals summing `H e'` over the residual histories `e'`
+whose init is the segment's landing state. The prepend map `e' ↦ ⟨seg.run.init,
+seg.run.trans ⧺ e'.trans⟩` is injective ONLY on the fiber `e'.init = seg.run.end`
+(it discards the init otherwise), so the reindex runs over that fiber. -/
+private theorem segPre_reindex (seg : FlatSeg State Label)
+    (hseg : seg.run.trans ≠ Stream'.Seq.nil)
+    (H : {q : AlterSeq State Label // q.trans.Terminates} → ENNReal) :
+    (∑' e : {q : AlterSeq State Label // q.trans.Terminates},
+        if segPre e seg then H (dResidual e seg) else 0)
+      = ∑' e' : {q : AlterSeq State Label // q.trans.Terminates},
+          if e'.1.init = seg.run.endState seg.runT then H e' else 0 := by
+  refine tsum_eq_tsum_of_ne_zero_bij
+    (fun x => (⟨⟨seg.run.init, seg.run.trans.append x.1.1.trans⟩,
+        ⟨_, Stream'.Seq.terminatedAt_append_find seg.runT (Nat.find_spec x.1.2)⟩⟩ :
+        {q : AlterSeq State Label // q.trans.Terminates})) ?_ ?_ ?_
+  · rintro ⟨e'a, ha⟩ ⟨e'b, hb⟩ hab
+    have hia : e'a.1.init = seg.run.endState seg.runT := by
+      by_contra h; exact (Function.mem_support.mp ha) (if_neg h)
+    have hib : e'b.1.init = seg.run.endState seg.runT := by
+      by_contra h; exact (Function.mem_support.mp hb) (if_neg h)
+    have htr : seg.run.trans.append e'a.1.trans = seg.run.trans.append e'b.1.trans :=
+      congrArg AlterSeq.trans (congrArg Subtype.val hab)
+    have hte : e'a.1.trans = e'b.1.trans := by
+      have hd := congrArg (fun s => s.drop (seg.run.trans.length seg.runT)) htr
+      rwa [drop_append_length seg.run.trans e'a.1.trans seg.runT,
+        drop_append_length seg.run.trans e'b.1.trans seg.runT] at hd
+    apply Subtype.ext; apply Subtype.ext
+    show (⟨e'a.1.init, e'a.1.trans⟩ : AlterSeq State Label) = ⟨e'b.1.init, e'b.1.trans⟩
+    rw [hia, hib, hte]
+  · intro e he
+    have hf0 : (if segPre e seg then H (dResidual e seg) else 0) ≠ 0 := Function.mem_support.mp he
+    have hsp : segPre e seg := by by_contra hne; exact hf0 (if_neg hne)
+    have hH : H (dResidual e seg) ≠ 0 := by rw [if_pos hsp] at hf0; exact hf0
+    obtain ⟨hinit, happ, hne⟩ := hsp
+    refine ⟨⟨dResidual e seg, ?_⟩, ?_⟩
+    · have hcond : (if (dResidual e seg).1.init = seg.run.endState seg.runT
+          then H (dResidual e seg) else 0) = H (dResidual e seg) := if_pos rfl
+      rw [Function.mem_support]
+      show (if (dResidual e seg).1.init = seg.run.endState seg.runT
+          then H (dResidual e seg) else 0) ≠ 0
+      rw [hcond]; exact hH
+    · apply Subtype.ext
+      show (⟨seg.run.init, seg.run.trans.append (dResidual e seg).1.trans⟩ :
+          AlterSeq State Label) = e.1
+      show (⟨seg.run.init,
+          seg.run.trans.append (e.1.trans.drop (seg.run.trans.length seg.runT))⟩ :
+          AlterSeq State Label) = e.1
+      rw [happ, hinit]
+  · rintro ⟨e', hx⟩
+    have hg0 : (if e'.1.init = seg.run.endState seg.runT then H e' else 0) ≠ 0 :=
+      Function.mem_support.mp hx
+    have hfib : e'.1.init = seg.run.endState seg.runT := by
+      by_contra hne; exact hg0 (if_neg hne)
+    have hdrop : (seg.run.trans.append e'.1.trans).drop (seg.run.trans.length seg.runT)
+        = e'.1.trans := drop_append_length seg.run.trans e'.1.trans seg.runT
+    have hsp : segPre ⟨⟨seg.run.init, seg.run.trans.append e'.1.trans⟩,
+        ⟨_, Stream'.Seq.terminatedAt_append_find seg.runT (Nat.find_spec e'.2)⟩⟩ seg :=
+      ⟨rfl, by simp only [hdrop], hseg⟩
+    simp only [if_pos hfib, if_pos hsp]
+    congr 1
+    apply Subtype.ext
+    show (⟨seg.run.endState seg.runT,
+        (seg.run.trans.append e'.1.trans).drop (seg.run.trans.length seg.runT)⟩ :
+        AlterSeq State Label) = e'.1
+    rw [hdrop, ← hfib]
+
+open Classical in
 /-- **(♦) — the renewal crux.** The child halt-integrals summed against the first
 macro step lower-bound the honest flatten's nil-halt boundary plus its nonempty
 halted-arrival mass. This is the g-weighted halt analogue of `genDep_le_genArr`:
