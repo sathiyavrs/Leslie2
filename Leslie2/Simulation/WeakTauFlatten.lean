@@ -6388,14 +6388,60 @@ private theorem jimmjnil_gap_eq (S : WeakScheduler (𝒟(sys^w))) (g : State →
   rw [← mul_add, ← mul_add, hpt m']
 
 open Classical in
-/-- **F5u (R-a2 finiteness) — the reset integral is a sub-probability.** Needed to
-cancel `resetSum` in the additive glue. -/
+/-- **F5u — the fresh-restart gap is a sub-probability.** Each child fresh-run
+departure integral is `≤ 1` (`depMove_le_init`, `g ≤ 1`), averaged against the
+sub-probability macro `τ`-mass (`macroSome_le_one`). -/
+private theorem gap_le_one (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
+    (hg : ∀ x, g x ≤ 1) (E : AlterSeq (PMF State) Label) :
+    Gap S g E ≤ 1 := by
+  rw [Gap]
+  have hchild : ∀ m' : PMF State,
+      (∑' s0 : State, depMove S m' (macroExtend E m')
+          ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0) ≤ 1 := by
+    intro m'
+    calc (∑' s0 : State, depMove S m' (macroExtend E m')
+            ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
+        ≤ ∑' s0 : State, m' s0 * 1 :=
+          ENNReal.tsum_le_tsum (fun s0 => mul_le_mul'
+            (depMove_le_init S m' (macroExtend E m')
+              ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩) (hg s0))
+      _ = 1 := by rw [tsum_congr (fun _ => mul_one _)]; exact PMF.tsum_coe m'
+  calc (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+          * ∑' m', ω m' * (∑' s0 : State, depMove S m' (macroExtend E m')
+              ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0))
+      ≤ ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω)) * 1 := by
+        refine ENNReal.tsum_le_tsum (fun ω => mul_le_mul' le_rfl ?_)
+        calc (∑' m', ω m' * (∑' s0 : State, depMove S m' (macroExtend E m')
+                ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0))
+            ≤ ∑' m', ω m' * 1 :=
+              ENNReal.tsum_le_tsum (fun m' => mul_le_mul' le_rfl (hchild m'))
+          _ = 1 := by rw [tsum_congr (fun _ => mul_one _)]; exact PMF.tsum_coe ω
+    _ = ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω)) := by
+        rw [tsum_congr (fun _ => mul_one _)]
+    _ ≤ 1 := macroSome_le_one S E
+
+open Classical in
+/-- **F5u (R-c-ii) — the reset junction collapse.** The reset departures (fresh
+restarts at the empty residual) reindex to a `seg`-sum and collapse (W1
+`innerWitness_pushforward`: `Σ_{run} haltMass·[run.end=t] = (ω.bind id) t`; W2
+`ENNReal.div_mul_cancel`, keeping `≤` by dropping the `(ω.bind id) t = 0` terms and
+by `Σ_{run≠nil} ≤ Σ_{run}`) to the child fresh-run departure average `Gap`. -/
+private theorem resetSum_le_gap (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
+    (hg : ∀ x, g x ≤ 1)
+    (μ0 : PMF State) (E : AlterSeq (PMF State) Label)
+    (hT : E.trans.Terminates) (hinv : μ0 = E.endState hT) :
+    resetSum S g μ0 E ≤ Gap S g E := by
+  sorry
+
+open Classical in
+/-- **F5u (R-a2 finiteness) — the reset integral is a sub-probability.** Via
+`resetSum ≤ Gap ≤ 1`. -/
 private theorem resetSum_le_one (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
     (hg : ∀ x, g x ≤ 1)
     (μ0 : PMF State) (E : AlterSeq (PMF State) Label)
     (hT : E.trans.Terminates) (hinv : μ0 = E.endState hT) :
-    resetSum S g μ0 E ≤ 1 := by
-  sorry
+    resetSum S g μ0 E ≤ 1 :=
+  (resetSum_le_gap S g hg μ0 E hT hinv).trans (gap_le_one S g hg E)
 
 open Classical in
 /-- **F5u (R-a) — the exact NE identity.** Summing the per-config additive peel
@@ -6434,7 +6480,9 @@ private theorem renewal_reduced_bound (S : WeakScheduler (𝒟(sys^w))) (g : Sta
       ≤ (∑' s0 : State, haltReach S μ0 E
               ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
         + bHaltSum S g μ0 E := by
-  sorry
+  rw [← jimmjnil_gap_eq S g μ0 E hT hinv]
+  gcongr
+  exact resetSum_le_gap S g hg μ0 E hT hinv
 
 open Classical in
 /-- **F5t — the one-macro-level junction bound (`renewal_step_le`'s sole residual).**
