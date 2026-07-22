@@ -53,8 +53,16 @@ depth stratification, the composite belief scheduler, its integral fixpoint,
 and the two halting-integral identities). -/
 
 /-! **Flattening** (`weakTau_flatten`) is stated and proved at the end of the
-file, after the decision-point belief scheduler `dSched` it is instantiated
-with. -/
+file, witnessed by the honest reach-arrival flattening scheduler `flatSched`.
+
+**CLOSED (F5h–F5v).** The whole flattening tower is sorry-free and axiom-clean
+(`[propext, Classical.choice, Quot.sound]`). The final architectural repair
+(F5v, the stall resolvent) widened the decision-point carrier to EMPTY completed
+segments: a finite stall chain (macro steps realized by empty inner runs) is a
+run of empty segments whose `segWeight` factors are exactly the Bayes-coupled
+resolvent terms, so stall mass flows through the junctions instead of misfiling
+into the halt reach. See the F5v PHASE-0 note before `renewal_step_le` for the
+design record and the S1–S5 stage map. -/
 
 /-! ### Layer 1: the finite depth-`n` macro-future recursion -/
 
@@ -5192,10 +5200,10 @@ private theorem macroTot (S : WeakScheduler (𝒟(sys^w))) (E : AlterSeq (PMF St
     rw [ENNReal.tsum_eq_zero]; intro ω; exact hzero l ω hl)]
 
 open Classical in
-/-- **The nil-execution halt reach splits into the macro-halt boundary (term A's
-summand) plus the inner halt reach.** This is where term `A` of the integrate
-recursion comes from — the empty concrete run's arrival reach is the full source
-mass `μ0 s0`, carrying the immediate macro-halt `S.next E none · μ0 s0`. -/
+/-- **F5v K1 — the nil carve split.** At an empty observed history the source
+mass splits exactly into the (stall-resolvent) departures and the composite
+halt. Replaces the pre-F5v `reachArrHalt_nil`, whose `haltReach`-shaped nil
+carve misfiled the stall mass as composite halt. -/
 private theorem reachArrHalt_nil_add (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
     (E : AlterSeq (PMF State) Label) (s0 : State) :
     reachArrHalt S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩
@@ -7535,7 +7543,16 @@ it re-proves verbatim (the widened conjunct passes through untouched).
       (consume `renewal_step_le` directly — no nil/NE split needed in the induction).
 Stage order: (S1) this note; (S2) delete dead d-chain + `segWeightB`; (S3) flip +
 structural kit + (3); (S4) chain (4); (S5) endgame (axiom check, header). Committed
-stages stay green; sorries only at corrected-TRUE statements with routes recorded. -/
+stages stay green; sorries only at corrected-TRUE statements with routes recorded.
+
+**F5v OUTCOME: ALL STAGES LANDED.** S4 closed all three residuals
+(`nilHalt_resolvent`, `resetStall_le` via `nilstall_split`/`reset_sfgap_le_gap`,
+and `renewal_NE_identity` via `rAH_peel_identity`/`stall_peel_collapse`/
+`fiber_collapse`) — the deficit cancellation `W(ω,t) + sf(ω,t) = 1` is exact,
+with the `(ω.bind id) t = 0` edge killed by `reachArrHalt_le_init`. The tower is
+sorry-free; `#print axioms` on `weakTau_flatten` / `weakTau_lift_pure` /
+`ProbabilisticForwardSimulation.trans` = `[propext, Classical.choice,
+Quot.sound]`. -/
 
 open Classical in
 /-- **F5v — the KEY′ one-step-unfold lower bound of `fHM` (the honest renewal
