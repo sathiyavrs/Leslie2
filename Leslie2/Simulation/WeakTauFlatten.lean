@@ -6093,6 +6093,23 @@ private theorem condDepthSum_le_one (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF
     _ = 1 := macroHalted_total_add_macroSurvive S n E hT
 
 open Classical in
+/-- For a nonempty observed history, the halted-arrival reach is the `genW`
+arrival carrier minus the `genW` departure carrier (both finite, departures ≤
+arrivals). The clean per-config numerator for the renewal collapse. -/
+private theorem reachArrHalt_ne (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (E : AlterSeq (PMF State) Label)
+    (e : {q : AlterSeq State Label // q.trans.Terminates}) (h : e.1.trans ≠ Stream'.Seq.nil) :
+    reachArrHalt S μ0 E e
+      = genW (curReachG S) S μ0 E e - genW (depMove S) S μ0 E e := by
+  have hdep : (∑' p : Label × PMF State, reachDepM S μ0 E e p.1 p.2)
+      = genW (depMove S) S μ0 E e := by
+    rw [genW_eq_dconfig]
+    simp_rw [reachDepM]
+    rw [ENNReal.tsum_comm]
+    exact tsum_congr (fun c => by rw [ENNReal.tsum_mul_left, moveSum_eq_depMove])
+  rw [reachArrHalt, reachArrM_of_ne_nil S μ0 E e h, hdep]
+
+open Classical in
 /-- **F5n crux (R1) — the finite-payload renewal step.** Replaces
 `renewal_diamond`+`f_integrate_ge`. Given a payload `P m'` bounded by the child
 flatten-halt integral (`hPle`, from the depth-`n` IH) and finite (`hPfin`), the
