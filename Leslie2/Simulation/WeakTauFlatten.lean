@@ -6178,6 +6178,175 @@ private theorem reset_collapse (S : WeakScheduler (𝒟(sys^w)))
   · intro r hr
     rw [if_neg (fun hP => hr (Subtype.ext ((segBoundary_iff e _).mp hP))), zero_mul, zero_mul]
 
+/-- Dropping zero elements is the identity. -/
+private theorem seq_drop_zero {α : Type} (s : Stream'.Seq α) : s.drop 0 = s := rfl
+
+/-- **F5v — stall peels at a general history are exactly the empty runs at its
+initial state.** -/
+private theorem segStall_iff (e : {q : AlterSeq State Label // q.trans.Terminates})
+    (seg : FlatSeg State Label) :
+    (segPre e seg ∧ seg.run.trans = Stream'.Seq.nil)
+      ↔ seg.run = ⟨e.1.init, Stream'.Seq.nil⟩ := by
+  constructor
+  · rintro ⟨⟨hinit, _⟩, hnil⟩
+    calc seg.run = ⟨seg.run.init, seg.run.trans⟩ := rfl
+      _ = ⟨e.1.init, Stream'.Seq.nil⟩ := by rw [hinit, hnil]
+  · intro hrun
+    obtain ⟨emit, succ, run, runT⟩ := seg
+    simp only at hrun
+    subst hrun
+    have hlen : (⟨e.1.init, Stream'.Seq.nil⟩ : AlterSeq State Label).trans.length runT = 0 :=
+      Stream'.Seq.length_eq_zero.mpr rfl
+    refine ⟨⟨rfl, ?_⟩, rfl⟩
+    show Stream'.Seq.nil.append (e.1.trans.drop
+      ((⟨e.1.init, Stream'.Seq.nil⟩ : AlterSeq State Label).trans.length runT)) = e.1.trans
+    rw [hlen, seq_drop_zero, Stream'.Seq.nil_append]
+
+/-- **F5v — the residual of a stall peel is the history itself.** -/
+private theorem dResidual_stall_eq (e : {q : AlterSeq State Label // q.trans.Terminates})
+    (seg : FlatSeg State Label) (h : seg.run = ⟨e.1.init, Stream'.Seq.nil⟩) :
+    dResidual e seg = e := by
+  obtain ⟨emit, succ, run, runT⟩ := seg
+  simp only at h
+  subst h
+  have hlen : (⟨e.1.init, Stream'.Seq.nil⟩ : AlterSeq State Label).trans.length runT = 0 :=
+    Stream'.Seq.length_eq_zero.mpr rfl
+  apply Subtype.ext
+  show (⟨(⟨e.1.init, Stream'.Seq.nil⟩ : AlterSeq State Label).endState runT,
+      e.1.trans.drop ((⟨e.1.init, Stream'.Seq.nil⟩ : AlterSeq State Label).trans.length runT)⟩
+      : AlterSeq State Label) = e.1
+  rw [AlterSeq.endState_of_trans_nil (⟨e.1.init, Stream'.Seq.nil⟩ : AlterSeq State Label) rfl
+    runT, hlen, seq_drop_zero]
+
+open Classical in
+/-- **F5v — the stall-peel collapse at a general history, `(ω, m')`-form.** The
+empty-run stratum of the peel collapses to the Bayes-coupled stall factor at the
+initial state times a child carrier `T` at the SAME history. -/
+private theorem stall_peel_collapse (S : WeakScheduler (𝒟(sys^w)))
+    (μ0 : PMF State) (E : AlterSeq (PMF State) Label)
+    (e : {q : AlterSeq State Label // q.trans.Terminates})
+    (T : PMF State → AlterSeq (PMF State) Label →
+      {q : AlterSeq State Label // q.trans.Terminates} → ENNReal) :
+    (∑' seg : FlatSeg State Label,
+        (if segPre e seg ∧ seg.run.trans = Stream'.Seq.nil then (1 : ENNReal) else 0)
+          * divHead S μ0 E seg
+          * T seg.succ (macroExtend E seg.succ) (dResidual e seg))
+      = ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+          * ∑' m', ω m'
+              * (((innerWitness sys μ0 ω).haltMass μ0
+                      ⟨⟨e.1.init, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩
+                    / (ω.bind id) e.1.init)
+                * T m' (macroExtend E m') e) := by
+  have hre : (∑' seg : FlatSeg State Label,
+      (if segPre e seg ∧ seg.run.trans = Stream'.Seq.nil then (1 : ENNReal) else 0)
+        * divHead S μ0 E seg
+        * T seg.succ (macroExtend E seg.succ) (dResidual e seg))
+      = ∑' t : PMF (PMF State) × PMF State × {q : AlterSeq State Label // q.trans.Terminates},
+          (if segPre e ⟨t.1, t.2.1, t.2.2.1, t.2.2.2⟩
+              ∧ (⟨t.1, t.2.1, t.2.2.1, t.2.2.2⟩ : FlatSeg State Label).run.trans
+                  = Stream'.Seq.nil
+            then (1 : ENNReal) else 0)
+            * divHead S μ0 E ⟨t.1, t.2.1, t.2.2.1, t.2.2.2⟩
+            * T t.2.1 (macroExtend E t.2.1) (dResidual e ⟨t.1, t.2.1, t.2.2.1, t.2.2.2⟩) :=
+    Equiv.tsum_eq flatSegEquiv
+      (fun t : PMF (PMF State) × PMF State × {q : AlterSeq State Label // q.trans.Terminates} =>
+        (if segPre e ⟨t.1, t.2.1, t.2.2.1, t.2.2.2⟩
+            ∧ (⟨t.1, t.2.1, t.2.2.1, t.2.2.2⟩ : FlatSeg State Label).run.trans
+                = Stream'.Seq.nil
+          then (1 : ENNReal) else 0)
+          * divHead S μ0 E ⟨t.1, t.2.1, t.2.2.1, t.2.2.2⟩
+          * T t.2.1 (macroExtend E t.2.1) (dResidual e ⟨t.1, t.2.1, t.2.2.1, t.2.2.2⟩))
+  rw [hre, ENNReal.tsum_prod']
+  refine tsum_congr (fun ω => ?_)
+  rw [ENNReal.tsum_prod', ← ENNReal.tsum_mul_left]
+  refine tsum_congr (fun m' => ?_)
+  rw [tsum_eq_single (⟨⟨e.1.init, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ :
+      {q : AlterSeq State Label // q.trans.Terminates}) ?_]
+  · rw [if_pos ((segStall_iff e ⟨ω, m', ⟨e.1.init, Stream'.Seq.nil⟩,
+        Stream'.Seq.terminates_nil⟩).mpr rfl),
+      dResidual_stall_eq e _ rfl]
+    show (1 : ENNReal) * divHead S μ0 E ⟨ω, m', ⟨e.1.init, Stream'.Seq.nil⟩,
+        Stream'.Seq.terminates_nil⟩ * _ = _
+    rw [divHead]
+    show (1 : ENNReal) * (S.next E (some (Silent.τ, ω)) * ω m'
+        * ((innerWitness sys μ0 ω).haltMass μ0
+              ⟨⟨e.1.init, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩
+            / (ω.bind id) ((⟨e.1.init, Stream'.Seq.nil⟩ : AlterSeq State Label).endState
+                Stream'.Seq.terminates_nil))) * _ = _
+    rw [AlterSeq.endState_of_trans_nil (⟨e.1.init, Stream'.Seq.nil⟩ : AlterSeq State Label) rfl
+      Stream'.Seq.terminates_nil]
+    ring
+  · intro r hr
+    rw [if_neg (fun hP => hr (Subtype.ext ((segStall_iff e _).mp hP))), zero_mul, zero_mul]
+
+/-- `segTrans` reconstructing `nil` forces an empty current prefix. -/
+private theorem segTrans_nil_cur (segs : List (FlatSeg State Label))
+    (c : Stream'.Seq (Label × State)) (h : segTrans segs c = Stream'.Seq.nil) :
+    c = Stream'.Seq.nil := by
+  induction segs with
+  | nil => exact h
+  | cons seg rest ih =>
+    exact ih ((seq_append_eq_nil (show seg.run.trans.append (segTrans rest c)
+      = Stream'.Seq.nil from h)).2)
+
+open Classical in
+/-- **F5v — the arrival carrier vanishes at empty histories**: every consistent
+config has an empty current prefix, killed by the `curReachG` guard. -/
+private theorem genW_arrG_nil (S : WeakScheduler (𝒟(sys^w))) (src : PMF State)
+    (E : AlterSeq (PMF State) Label)
+    (e : {q : AlterSeq State Label // q.trans.Terminates}) (h : e.1.trans = Stream'.Seq.nil) :
+    genW (curReachG S) S src E e = 0 := by
+  rw [genW]
+  refine ENNReal.tsum_eq_zero.mpr (fun p => ?_)
+  by_cases hdc : dConsistent e.1 ⟨p.1, p.2.1, p.2.2⟩
+  · have hcur : p.2.1.trans = Stream'.Seq.nil :=
+      segTrans_nil_cur p.1 p.2.1.trans (by rw [hdc.1, h])
+    rw [show curReachG S (segSrc src p.1) (segHist E p.1) p.2 = 0 from by
+      rw [curReachG, if_neg (fun hne => hne hcur)], mul_zero]
+  · rw [if_neg hdc, zero_mul, zero_mul]
+
+open Classical in
+/-- **F5v — the halted-arrival carve at a nonempty history, additive form**:
+`reachArrHalt + genW(dep) = genW(arrG)`. -/
+private theorem rAH_add_dep (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (E : AlterSeq (PMF State) Label)
+    (e : {q : AlterSeq State Label // q.trans.Terminates}) (hne : e.1.trans ≠ Stream'.Seq.nil) :
+    reachArrHalt S μ0 E e + genW (depMove S) S μ0 E e = genW (curReachG S) S μ0 E e := by
+  have hdep : (∑' p : Label × PMF State, reachDepM S μ0 E e p.1 p.2)
+      = genW (depMove S) S μ0 E e := by
+    rw [genW_eq_dconfig]
+    simp_rw [reachDepM]
+    rw [ENNReal.tsum_comm]
+    exact tsum_congr (fun c => by rw [ENNReal.tsum_mul_left, moveSum_eq_depMove])
+  rw [reachArrHalt, hdep, ← reachArrM_of_ne_nil S μ0 E e hne]
+  refine tsub_add_cancel_of_le ?_
+  rw [← hdep]
+  exact reachDepM_sum_le S μ0 E e
+
+open Classical in
+/-- **F5v — the halted-arrival reach is dominated by the source at the initial
+state.** -/
+private theorem reachArrHalt_le_init (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (E : AlterSeq (PMF State) Label)
+    (e : {q : AlterSeq State Label // q.trans.Terminates}) :
+    reachArrHalt S μ0 E e ≤ μ0 e.1.init := by
+  refine le_trans tsub_le_self ?_
+  by_cases hnil : e.1.trans = Stream'.Seq.nil
+  · rw [reachArrM, if_pos hnil]
+  · rw [← probOf_eq_reachArrM S μ0 E e]
+    exact ProbabilisticExecution.probOf_le_init _ _ _
+
+open Classical in
+/-- Group an execution-indexed sum by the initial state. -/
+private theorem tsum_group_init
+    (F : {q : AlterSeq State Label // q.trans.Terminates} → ENNReal) :
+    (∑' e : {q : AlterSeq State Label // q.trans.Terminates}, F e)
+      = ∑' t : State, ∑' e : {q : AlterSeq State Label // q.trans.Terminates},
+          if e.1.init = t then F e else 0 := by
+  rw [ENNReal.tsum_comm]
+  refine tsum_congr (fun e => ?_)
+  rw [tsum_eq_single e.1.init (fun t ht => if_neg (fun hh => ht hh.symm)), if_pos rfl]
+
 open Classical in
 /-- **F5v — the stall-junction nil-halt average** (`stallNil`): per emission `ω`
 and landing state `s0`, the Bayes-coupled stall factor
