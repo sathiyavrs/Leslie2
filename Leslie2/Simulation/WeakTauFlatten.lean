@@ -6107,6 +6107,38 @@ private theorem payload_crux (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
     S.next E none * (∑' s, μ0 s * g s)
       + ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω)) * ∑' m', ω m' * P m'
       ≤ fHM S μ0 E g := by
+  classical
+  rw [fHM_reachArrHalt]
+  have hnil : (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+        if e.1.trans = Stream'.Seq.nil then reachArrHalt S μ0 E e * g (e.1.endState e.2) else 0)
+      = S.next E none * (∑' s, μ0 s * g s)
+        + ∑' s0 : State,
+            haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0 := by
+    rw [tsum_nil_reindex (fun e => reachArrHalt S μ0 E e * g (e.1.endState e.2))]
+    have hpt : ∀ s0 : State,
+        reachArrHalt S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩
+            * g ((⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ :
+                {e : AlterSeq State Label // e.trans.Terminates}).1.endState
+              Stream'.Seq.terminates_nil)
+          = S.next E none * (μ0 s0 * g s0)
+            + haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0 := by
+      intro s0
+      rw [AlterSeq.endState_of_trans_nil (⟨s0, Stream'.Seq.nil⟩ : AlterSeq State Label) rfl
+          Stream'.Seq.terminates_nil, reachArrHalt_nil, add_mul, mul_assoc]
+    rw [tsum_congr hpt, ENNReal.tsum_add, ENNReal.tsum_mul_left]
+  have hsplit : (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+        reachArrHalt S μ0 E e * g (e.1.endState e.2))
+      = (S.next E none * (∑' s, μ0 s * g s)
+          + ∑' s0 : State,
+              haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
+        + ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+            if e.1.trans = Stream'.Seq.nil then 0
+            else reachArrHalt S μ0 E e * g (e.1.endState e.2) := by
+    rw [← hnil, ← ENNReal.tsum_add]
+    exact tsum_congr (fun e => by split_ifs <;> simp)
+  rw [hsplit, add_assoc]
+  refine add_le_add le_rfl ?_
+  -- **hcrux** — the finite-payload renewal inequality (the remaining work).
   sorry
 
 /-- Iterating `f_integrate_ge` at `g := 1`: the partial sum of conditional depth
