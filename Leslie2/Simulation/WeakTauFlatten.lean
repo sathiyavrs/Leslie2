@@ -5998,12 +5998,19 @@ private theorem genW_g_peel
     · simp only [if_pos hsp]; rw [dResidual_endState e seg hsp]; ring
     · simp only [if_neg hsp]; ring
 
-/-! ### F5n FRONTIER — the last gap `renewal_diamond`, mapped for a fresh session.
+/-! ### F5p FRONTIER — depth-induction landed; the sole gap is now crux (★).
 
-**State.** The SOLE live wired gap is `renewal_diamond` (below): `∑'ω S.next(τ,ω)
-∑m' ω m' fHM(m', macroExtend E m', g) ≤ nilHalt_gsum + ∑'{e≠nil} reachArrHalt g`.
-Everything downstream (`f_integrate_ge`/`fHalt_ge`/`fHalt_ge_G`/`f_halts`/
-`f_pushforward`/`weakTau_flatten`) is green modulo this one sorry.
+**State (F5p).** THE FIX below is IMPLEMENTED: `condDepthSum_le_fHM` (abstract over
+the stratum family `D` via `Dzero`/`Dsucc`) drives both `fHalt_ge` (`g:=1`) and
+`fHalt_ge_G` (`g:=[·=s]`); `renewal_diamond`/`f_integrate_ge` are DELETED. The sole
+live wired gap is now the induction-step crux (★) inside `condDepthSum_le_fHM`,
+strictly smaller than the old `renewal_diamond`: `∑'ω S.next(τ,ω) ∑m' ω m' ·
+(∑ k<n D(child)) ≤ nilHalt_gsum + ∑'{e≠nil} reachArrHalt g` — the child factor is
+the FINITE `∑ k<n D`, NOT opaque `fHM(child)`, and the depth-`n` IH is in context.
+Everything downstream (`fHalt_ge`/`fHalt_ge_G`/`f_halts`/`f_pushforward`/
+`weakTau_flatten`) is green modulo this one sorry. Full route recorded inline at the
+sorry; key new lever: `curReach_split : curReach = depMove + haltReach` (additive,
+sidesteps the D3 ENNReal-subtraction hazard).
 
 **DEAD END, ruled out (F5n).** The R1 "finite opaque payload" form
 `payload_crux` — a lemma over an abstract `P` with `hPle : P m' ≤ fHM(child)` and
@@ -6163,6 +6170,24 @@ private theorem condDepthSum_le_fHM (S : WeakScheduler (𝒟(sys^w))) (g : State
       exact tsum_congr (fun e => by split_ifs <;> simp)
     rw [hsplit, add_assoc]
     refine add_le_add le_rfl ?_
+    -- **PINNED RESIDUAL (★) — strictly smaller than the deleted `renewal_diamond`.**
+    -- Goal: `∑'ω S.next(τ,ω) ∑'m' ω m' · (∑ k<n D m' (macroExtend E m') _ k)`
+    --        `≤ nilHalt_g + NE_g`, where
+    --   `nilHalt_g = ∑'s0 haltReach S μ0 E ⟨⟨s0,nil⟩,_⟩ * g s0`,
+    --   `NE_g = ∑'{e≠nil} reachArrHalt S μ0 E e * g (e.1.endState e.2)`.
+    -- The child factor is the FINITE `∑ k<n D`, not the opaque `fHM(child)` that
+    -- `renewal_diamond` carried; `IH : ∀ μ0 E hT, μ0=E.endState hT → ∑ k<n D ≤ fHM`
+    -- is in context. ROUTE (F5o/F5p, unchanged): peel `nilHalt_g + NE_g` one macro
+    -- level via `genW_g_peel`/`reachArrHalt_peel` (use `curReach_split :
+    -- curReach = depMove + haltReach` to avoid ENNReal subtraction — the arr carrier
+    -- splits additively into depMove ⊕ haltReach, so `reachArrHalt = genW haltReach`
+    -- on nonempty configs); reindex children (`segPre_reindex`/`dResidual_endState`);
+    -- collapse the junction (W1 `innerWitness_integrate` with `hstep` from `S.valid …
+    -- (Nat.find hT) μ0 … Silent.τ ω hw` after `rw [hinv]`; W2 `ENNReal.div_mul_cancel`);
+    -- match term-by-term against the children, THEN apply `IH` per child
+    -- (`hinv' := (macroExtend_endState hT m').symm`); absorb the nil-reset/departure
+    -- boundary at the parent level via `boundaryHalt_le`/`depMove_le_init` +
+    -- `condDepthSum_le_one`/`hg` (≤1 bounds) — this is where D1's descent bottoms out.
     sorry
 
 /-- Iterating `f_integrate_ge` at `g := 1`: the partial sum of conditional depth
