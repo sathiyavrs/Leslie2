@@ -6040,68 +6040,6 @@ at `μ0=E.endState hT`) + W2 `div_mul_cancel`, `segPre_reindex`, `dResidual_endS
 `#print axioms` on `PLTS.weakTau_flatten`/`weakTau_lift_pure`/
 `ProbabilisticForwardSimulation.trans` must be `[propext, Classical.choice, Quot.sound]`. -/
 
-open Classical in
-/-- **(♦) — the renewal crux.** The child halt-integrals summed against the first
-macro step lower-bound the honest flatten's nil-halt boundary plus its nonempty
-halted-arrival mass. This is the g-weighted halt analogue of `genDep_le_genArr`:
-`termB`'s first-segment head matches the parent halt-config sum via the junction
-W1/W2 cancellation (`PMF.bind_apply` + `(x/c)·c ≤ x`). -/
-private theorem renewal_diamond (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
-    (E : AlterSeq (PMF State) Label) (g : State → ENNReal) (hg : ∀ x, g x ≤ 1)
-    (hT : E.trans.Terminates) (hinv : μ0 = E.endState hT) :
-    (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
-        * ∑' m', ω m' * fHM S m' (macroExtend E m') g)
-      ≤ (∑' s0 : State,
-            haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
-        + ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
-            if e.1.trans = Stream'.Seq.nil then 0
-            else reachArrHalt S μ0 E e * g (e.1.endState e.2) := by
-  sorry
-
-open Classical in
-/-- **The `≥`-only integrate step for `flatSched` (blessed fallback).** The macro
-halt boundary plus the child halt-integrals lower-bound the honest flatten's
-halt-integral. Reduces (by the term-A nil carve-out `reachArrHalt_nil`) to the
-renewal crux `renewal_diamond`. Consumed by `fHalt_ge`/`fHalt_ge_G`. -/
-private theorem f_integrate_ge (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
-    (E : AlterSeq (PMF State) Label) (g : State → ENNReal) (hg : ∀ x, g x ≤ 1)
-    (hT : E.trans.Terminates) (hinv : μ0 = E.endState hT) :
-    S.next E none * (∑' s, μ0 s * g s)
-      + ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
-          * ∑' m', ω m' * fHM S m' (macroExtend E m') g
-      ≤ fHM S μ0 E g := by
-  classical
-  rw [fHM_reachArrHalt]
-  have hnil : (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
-        if e.1.trans = Stream'.Seq.nil then reachArrHalt S μ0 E e * g (e.1.endState e.2) else 0)
-      = S.next E none * (∑' s, μ0 s * g s)
-        + ∑' s0 : State,
-            haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0 := by
-    rw [tsum_nil_reindex (fun e => reachArrHalt S μ0 E e * g (e.1.endState e.2))]
-    have hpt : ∀ s0 : State,
-        reachArrHalt S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩
-            * g ((⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ :
-                {e : AlterSeq State Label // e.trans.Terminates}).1.endState
-              Stream'.Seq.terminates_nil)
-          = S.next E none * (μ0 s0 * g s0)
-            + haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0 := by
-      intro s0
-      rw [AlterSeq.endState_of_trans_nil (⟨s0, Stream'.Seq.nil⟩ : AlterSeq State Label) rfl
-          Stream'.Seq.terminates_nil, reachArrHalt_nil, add_mul, mul_assoc]
-    rw [tsum_congr hpt, ENNReal.tsum_add, ENNReal.tsum_mul_left]
-  have hsplit : (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
-        reachArrHalt S μ0 E e * g (e.1.endState e.2))
-      = (S.next E none * (∑' s, μ0 s * g s)
-          + ∑' s0 : State,
-              haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
-        + ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
-            if e.1.trans = Stream'.Seq.nil then 0
-            else reachArrHalt S μ0 E e * g (e.1.endState e.2) := by
-    rw [← hnil, ← ENNReal.tsum_add]
-    exact tsum_congr (fun e => by split_ifs <;> simp)
-  rw [hsplit, add_assoc]
-  exact add_le_add le_rfl (renewal_diamond S μ0 E g hg hT hinv)
-
 /-- **F5n finiteness.** The depth-`n` partial sum of `condDepth` is a sub-probability
 (it is `macroHaltTotal`, the halted-within-`n` mass). Source-independent, so any
 `μ0` works. This is the ⊤-safety hypothesis that route R1 rides. -/
@@ -6232,30 +6170,12 @@ totals lower-bounds the honest flatten's total halting mass. -/
 private theorem fHalt_ge (S : WeakScheduler (𝒟(sys^w))) (n : ℕ) :
     ∀ (μ0 : PMF State) (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates),
       μ0 = E.endState hT →
-      (∑ k ∈ Finset.range n, condDepth S μ0 k E) ≤ fHM S μ0 E (fun _ => 1) := by
-  induction n with
-  | zero => intro μ0 E hT hinv; simp
-  | succ n IH =>
-    intro μ0 E hT hinv
-    refine le_trans ?_ (f_integrate_ge S μ0 E (fun _ => 1) (fun _ => le_rfl) hT hinv)
-    rw [Finset.sum_range_succ', condDepth_zero]
-    have hswap : (∑ k ∈ Finset.range n, condDepth S μ0 (k + 1) E)
-        ≤ ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
-            * ∑' m', ω m' * fHM S m' (macroExtend E m') (fun _ => 1) := by
-      rw [Finset.sum_congr rfl (fun k _ => condDepth_succ' S μ0 k E)]
-      rw [← Summable.tsum_finsetSum (fun _ _ => ENNReal.summable)]
-      refine ENNReal.tsum_le_tsum (fun ω => ?_)
-      rw [← Finset.mul_sum]
-      refine mul_le_mul_left' ?_ _
-      rw [← Summable.tsum_finsetSum (fun _ _ => ENNReal.summable)]
-      refine ENNReal.tsum_le_tsum (fun m' => ?_)
-      rw [← Finset.mul_sum]
-      exact mul_le_mul_left' (IH m' (macroExtend E m') (macroExtend_term hT m')
-        (macroExtend_endState hT m').symm) _
-    have hsrc : S.next E none = S.next E none * (∑' s, μ0 s * (1 : ENNReal)) := by
-      rw [tsum_congr (fun s => mul_one _), PMF.tsum_coe, mul_one]
-    rw [add_comm]
-    exact add_le_add (le_of_eq hsrc) hswap
+      (∑ k ∈ Finset.range n, condDepth S μ0 k E) ≤ fHM S μ0 E (fun _ => 1) :=
+  condDepthSum_le_fHM S (fun _ => 1) (fun _ => le_rfl)
+    (fun μ0 E _ k => condDepth S μ0 k E)
+    (fun μ0 E _ k => condDepth_succ' S μ0 k E)
+    (fun μ0 E _ _ => by rw [condDepth_zero]; simp only [mul_one, PMF.tsum_coe])
+    n
 
 /-- **F5g-3(a) — a.s.-halting.** Given `S` halts almost surely from `PMF.pure μ0`,
 the honest flatten `flatSched` halts almost surely from `μ0`. -/
@@ -6289,34 +6209,16 @@ private theorem fHalt_ge_G (S : WeakScheduler (𝒟(sys^w))) (s : State) (n : �
     ∀ (μ0 : PMF State) (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates),
       μ0 = E.endState hT →
       (∑ k ∈ Finset.range n, condDepthG S k E hT s)
-        ≤ fHM S μ0 E (fun x => if x = s then 1 else 0) := by
-  induction n with
-  | zero => intro μ0 E hT hinv; simp
-  | succ n IH =>
-    intro μ0 E hT hinv
-    refine le_trans ?_ (f_integrate_ge S μ0 E (fun x => if x = s then 1 else 0)
-      (fun x => by split_ifs <;> simp) hT hinv)
-    rw [Finset.sum_range_succ', condDepthG_zero]
-    have hswap : (∑ k ∈ Finset.range n, condDepthG S (k + 1) E hT s)
-        ≤ ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
-            * ∑' m', ω m' * fHM S m' (macroExtend E m') (fun x => if x = s then 1 else 0) := by
-      rw [Finset.sum_congr rfl (fun k _ => condDepthG_succ' S k E hT s),
-        ← Summable.tsum_finsetSum (fun _ _ => ENNReal.summable)]
-      refine ENNReal.tsum_le_tsum (fun ω => ?_)
-      rw [← Finset.mul_sum]
-      refine mul_le_mul_left' ?_ _
-      rw [← Summable.tsum_finsetSum (fun _ _ => ENNReal.summable)]
-      refine ENNReal.tsum_le_tsum (fun m' => ?_)
-      rw [← Finset.mul_sum]
-      exact mul_le_mul_left'
-        (IH m' (macroExtend E m') (macroExtend_term hT m')
-          (macroExtend_endState hT m').symm) _
-    have hhalt : S.next E none * ((E.endState hT) s)
-        = S.next E none * (∑' s', μ0 s' * (if s' = s then (1 : ENNReal) else 0)) := by
-      rw [tsum_eq_single s (fun s' hs' => by rw [if_neg hs', mul_zero]), if_pos rfl, mul_one,
-        ← hinv]
-    rw [add_comm]
-    exact add_le_add (le_of_eq hhalt) hswap
+        ≤ fHM S μ0 E (fun x => if x = s then 1 else 0) :=
+  condDepthSum_le_fHM S (fun x => if x = s then 1 else 0) (fun x => by split_ifs <;> simp)
+    (fun _ E hT k => condDepthG S k E hT s)
+    (fun _ E hT k => condDepthG_succ' S k E hT s)
+    (fun μ0 E hT hinv => by
+      rw [condDepthG_zero]
+      congr 1
+      rw [← hinv, tsum_eq_single s (fun s' hs' => by simp [hs'])]
+      simp)
+    n
 
 open Classical in
 /-- **F5g-3(b) — pushforward.** The honest flatten `flatSched`'s halting end-state
