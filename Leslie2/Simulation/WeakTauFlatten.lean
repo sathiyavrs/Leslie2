@@ -3989,6 +3989,50 @@ placement (divide `segWeight`'s per-run `haltMass`, vs. a `curReach`-level rewei
 against `probOf`'s leading-factor bookkeeping — getting it wrong cascades through the fidelity kit
 (`curReach_snoc`/`reachArrM_snoc`/`probOf_eq_reachArrM`). See PHASE-1 status below. -/
 
+/-! ### F5i — PHASE 1 status: junction repair APPLIED, flat stack RE-GREENED (frontier = `f_integrate_step`)
+
+**DONE (stages 1-3, committed green; full `lake build Leslie2` clean modulo the two
+pre-existing sorries).** The F5h-pinned repair is in and the whole flat quantitative
+core + fidelity kit + halt-mass identity re-close with the DIVIDED weight:
+
+  · **Placement pinned.** The division `haltMass(src0,ω)⟨run⟩ / (ω.bind id)(run.endState)`
+    lives in `segWeight`'s completed-segment factor (`:990` vicinity), so `reachM = segWeight
+    · curReach`, `reachArrM = genW curReachG`, and `reachDepM` all carry it. The fidelity kit
+    (`curReach_snoc`/`reachArrM_snoc`/`probOf_eq_reachArrM`) transferred UNCHANGED — the leading
+    source bookkeeping was not disturbed (division is on the parent run's endpoint marginal only).
+  · **Belief d-chain FORKED off the division.** The F5h analysis missed that the SHARED
+    `segWeight` also feeds the belief denominator `dW`/`dDenom`, whose finiteness `dW_le`/
+    `headSum_le_one` INFLATES under the division (dividing by a PMF value `≤ 1` blows the
+    head-sum past `1`; re-proving needs prefix-counting). Since the belief scheduler `dSched`
+    + d-chain are already DEAD (`weakTau_flatten` wires `flatSched`, `:5688`), they are kept
+    verbatim on a new UN-divided `segWeightB` (`:998`); `dW`/`dNum`/`dDenom`/`peelSeg`/`peelBase`
+    reference `segWeightB`. Stage 6 should DELETE this whole belief+d cluster outright.
+  · **`reachDepM` decoupled from `dNum`.** `reachDepM` was def-eq `dNum (some ·)`; since `dNum`
+    is now the un-divided belief numerator, `reachDepM` was given its OWN divided definition
+    (same shape, `segWeight` divided) so it stays consistent with `reachArrM`. Its four
+    `= dNum` unfold sites were redirected (`reachDepM_sum_le`, `genW_landKer`,
+    `flatSched.valid`/`internal_only`).
+  · **`boundaryHalt_le` re-proved via the junction W1/W2 cancellation** (this is where the
+    repair "pays off"): with the divided head the boundary term's `∑_succ emit succ · succ(s)
+    = (emit.bind id) s` (`PMF.bind_apply`, W1) meets `(x/c)·c ≤ x` (unconditional in `ENNReal`,
+    W2), collapsing exactly to the un-divided halt-reach. `genDep_le_genArr` heads carry the
+    division; the `gcongr` body is unchanged.
+
+**FRONTIER (stage 5, the crux — remaining sorry `f_integrate_step` :5575).** The repair makes
+this identity TRUE (the spurious `(ω.bind id) s` cancels via the same W1/W2 now used in
+`boundaryHalt_le`), but the PROOF is a from-scratch one-macro-level recursion for
+`reachArrHalt = reachArrM − ∑ reachDepM`: peel the first completed segment of the config sum
+(`genW_peel`, divided head), the no-segment base gives term A (`S.next E none · ∑ μ0 g` via the
+`curReach_split` halt side) and each first-segment head gives term B (`∑_ω S.next(τ,ω) · ∑_m'
+ω m' · fHM(m', macroExtend E m')`) with the junction W1/W2 collapse. HAZARD: `reachArrHalt`'s
+ENNReal SUBTRACTION does not distribute over the peel's `+`, so the exact equality risks
+`⊤`-cancellation. The blessed fallback is the ≥-only route: prove `f_integrate_ge :
+S.next E none·(∑ μ0 g) + ∑_ω S.next(τ,ω)·∑_m' ω m'·fHM(m') ≤ fHM S μ0 E g` (consumers `fHalt_ge`/
+`fHalt_ge_G` need only the ≥ direction — replace their `rw [f_integrate_step]` by
+`refine le_trans ?_ (f_integrate_ge …)`, the rest of each proof is unchanged). Once closed,
+stage 6: delete the dead belief+d cluster (incl. the `d_integrate_step` sorry), then
+`#print axioms weakTau_flatten` should be `[propext, Classical.choice, Quot.sound]`. -/
+
 /- (frontier note continues) -/
 /-! ### σ\* limit-witness frontier — (assessment continues below)
 
