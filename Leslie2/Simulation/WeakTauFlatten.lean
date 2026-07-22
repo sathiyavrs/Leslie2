@@ -6348,6 +6348,151 @@ private theorem tsum_group_init
   rw [tsum_eq_single e.1.init (fun t ht => if_neg (fun hh => ht hh.symm)), if_pos rfl]
 
 open Classical in
+/-- **F5v — the per-history additive peel identity (∗).** At a nonempty observed
+history, the composite halt plus its boundary resets equals the current-run halt
+plus the (stall + continuing) child halts one junction level deeper. -/
+private theorem rAH_peel_identity (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (E : AlterSeq (PMF State) Label)
+    (e : {q : AlterSeq State Label // q.trans.Terminates}) (hne : e.1.trans ≠ Stream'.Seq.nil) :
+    reachArrHalt S μ0 E e
+        + (∑' seg : FlatSeg State Label,
+            (if segPre e seg ∧ (dResidual e seg).1.trans = Stream'.Seq.nil
+              then (1 : ENNReal) else 0)
+              * divHead S μ0 E seg
+              * genW (fun s Ec c => depMove S s Ec c) S seg.succ (macroExtend E seg.succ)
+                  (dResidual e seg))
+      = haltReach S μ0 E e
+        + ∑' seg : FlatSeg State Label,
+            (if segPre e seg ∧ ¬ (dResidual e seg).1.trans = Stream'.Seq.nil
+              then (1 : ENNReal) else 0)
+              * divHead S μ0 E seg
+              * reachArrHalt S seg.succ (macroExtend E seg.succ) (dResidual e seg) := by
+  have hd1 : genW (depMove S) S μ0 E e
+      = depMove S μ0 E e
+        + ((∑' seg : FlatSeg State Label,
+              (if segPre e seg ∧ (dResidual e seg).1.trans = Stream'.Seq.nil
+                then (1 : ENNReal) else 0)
+                * divHead S μ0 E seg
+                * genW (fun s Ec c => depMove S s Ec c) S seg.succ (macroExtend E seg.succ)
+                    (dResidual e seg))
+          + ∑' seg : FlatSeg State Label,
+              (if segPre e seg ∧ ¬ (dResidual e seg).1.trans = Stream'.Seq.nil
+                then (1 : ENNReal) else 0)
+                * divHead S μ0 E seg
+                * genW (fun s Ec c => depMove S s Ec c) S seg.succ (macroExtend E seg.succ)
+                    (dResidual e seg)) := by
+    rw [genW_peel (depMove S) S μ0 E e]
+    congr 1
+    rw [← ENNReal.tsum_add]
+    refine tsum_congr (fun seg => ?_)
+    simp only [divHead]
+    by_cases hsp : segPre e seg
+    · by_cases hrn : (dResidual e seg).1.trans = Stream'.Seq.nil
+      · rw [if_pos hsp, if_pos ⟨hsp, hrn⟩, if_neg (fun h => h.2 hrn)]
+        simp
+      · rw [if_pos hsp, if_neg (fun h => hrn h.2), if_pos ⟨hsp, hrn⟩]
+        simp
+    · rw [if_neg hsp, if_neg (fun h => hsp h.1), if_neg (fun h => hsp h.1)]
+      simp
+  have hd2 : genW (curReachG S) S μ0 E e
+      = curReach S μ0 E e
+        + ((∑' seg : FlatSeg State Label,
+              (if segPre e seg ∧ ¬ (dResidual e seg).1.trans = Stream'.Seq.nil
+                then (1 : ENNReal) else 0)
+                * divHead S μ0 E seg
+                * reachArrHalt S seg.succ (macroExtend E seg.succ) (dResidual e seg))
+          + ∑' seg : FlatSeg State Label,
+              (if segPre e seg ∧ ¬ (dResidual e seg).1.trans = Stream'.Seq.nil
+                then (1 : ENNReal) else 0)
+                * divHead S μ0 E seg
+                * genW (fun s Ec c => depMove S s Ec c) S seg.succ (macroExtend E seg.succ)
+                    (dResidual e seg)) := by
+    rw [genW_peel (curReachG S) S μ0 E e]
+    congr 1
+    · show curReachG S μ0 E e = curReach S μ0 E e
+      rw [curReachG, if_pos hne]
+    rw [← ENNReal.tsum_add]
+    refine tsum_congr (fun seg => ?_)
+    simp only [divHead]
+    by_cases hsp : segPre e seg
+    · by_cases hrn : (dResidual e seg).1.trans = Stream'.Seq.nil
+      · rw [if_pos hsp,
+          if_neg (show ¬(segPre e seg ∧ ¬ (dResidual e seg).1.trans = Stream'.Seq.nil)
+            from fun h => h.2 hrn),
+          genW_arrG_nil S seg.succ (macroExtend E seg.succ) (dResidual e seg) hrn]
+        simp
+      · rw [if_pos hsp,
+          if_pos (show segPre e seg ∧ ¬ (dResidual e seg).1.trans = Stream'.Seq.nil
+            from ⟨hsp, hrn⟩),
+          ← rAH_add_dep S seg.succ (macroExtend E seg.succ) (dResidual e seg) hrn]
+        simp only [one_mul]
+        ring
+    · rw [if_neg hsp,
+        if_neg (show ¬(segPre e seg ∧ ¬ (dResidual e seg).1.trans = Stream'.Seq.nil)
+          from fun h => hsp h.1)]
+      simp
+  have hfinX : depMove S μ0 E e
+      + (∑' seg : FlatSeg State Label,
+          (if segPre e seg ∧ ¬ (dResidual e seg).1.trans = Stream'.Seq.nil
+            then (1 : ENNReal) else 0)
+            * divHead S μ0 E seg
+            * genW (fun s Ec c => depMove S s Ec c) S seg.succ (macroExtend E seg.succ)
+                (dResidual e seg)) ≠ ⊤ := by
+    refine ENNReal.add_ne_top.mpr ⟨?_, ?_⟩
+    · exact ne_top_of_le_ne_top ENNReal.one_ne_top
+        ((depMove_le_init S μ0 E e).trans (PMF.coe_le_one _ _))
+    · refine ne_top_of_le_ne_top ENNReal.one_ne_top ?_
+      calc (∑' seg : FlatSeg State Label,
+              (if segPre e seg ∧ ¬ (dResidual e seg).1.trans = Stream'.Seq.nil
+                then (1 : ENNReal) else 0)
+                * divHead S μ0 E seg
+                * genW (fun s Ec c => depMove S s Ec c) S seg.succ (macroExtend E seg.succ)
+                    (dResidual e seg))
+          ≤ genW (depMove S) S μ0 E e := by
+            rw [hd1]
+            exact le_add_self.trans (le_add_left le_rfl)
+        _ ≤ genW (curReachG S) S μ0 E e := genDep_le_genArr S μ0 E e hne
+        _ = reachArrM S μ0 E e := (reachArrM_of_ne_nil S μ0 E e hne).symm
+        _ ≤ 1 := by
+            rw [← probOf_eq_reachArrM S μ0 E e]
+            exact (ProbabilisticExecution.probOf_le_init _ _ _).trans (PMF.coe_le_one _ _)
+  have hchain : reachArrHalt S μ0 E e
+      + (∑' seg : FlatSeg State Label,
+          (if segPre e seg ∧ (dResidual e seg).1.trans = Stream'.Seq.nil
+            then (1 : ENNReal) else 0)
+            * divHead S μ0 E seg
+            * genW (fun s Ec c => depMove S s Ec c) S seg.succ (macroExtend E seg.succ)
+                (dResidual e seg))
+      + (depMove S μ0 E e
+        + (∑' seg : FlatSeg State Label,
+            (if segPre e seg ∧ ¬ (dResidual e seg).1.trans = Stream'.Seq.nil
+              then (1 : ENNReal) else 0)
+              * divHead S μ0 E seg
+              * genW (fun s Ec c => depMove S s Ec c) S seg.succ (macroExtend E seg.succ)
+                  (dResidual e seg)))
+      = (haltReach S μ0 E e
+        + ∑' seg : FlatSeg State Label,
+            (if segPre e seg ∧ ¬ (dResidual e seg).1.trans = Stream'.Seq.nil
+              then (1 : ENNReal) else 0)
+              * divHead S μ0 E seg
+              * reachArrHalt S seg.succ (macroExtend E seg.succ) (dResidual e seg))
+      + (depMove S μ0 E e
+        + (∑' seg : FlatSeg State Label,
+            (if segPre e seg ∧ ¬ (dResidual e seg).1.trans = Stream'.Seq.nil
+              then (1 : ENNReal) else 0)
+              * divHead S μ0 E seg
+              * genW (fun s Ec c => depMove S s Ec c) S seg.succ (macroExtend E seg.succ)
+                  (dResidual e seg))) := by
+    calc _ = reachArrHalt S μ0 E e + genW (depMove S) S μ0 E e := by rw [hd1]; ring
+      _ = genW (curReachG S) S μ0 E e := rAH_add_dep S μ0 E e hne
+      _ = curReach S μ0 E e + _ := hd2
+      _ = depMove S μ0 E e + haltReach S μ0 E e + _ := by rw [curReach_split S μ0 E e]
+      _ = _ := by ring
+  exact le_antisymm
+    ((ENNReal.add_le_add_iff_right hfinX).mp (le_of_eq hchain))
+    ((ENNReal.add_le_add_iff_right hfinX).mp (le_of_eq hchain.symm))
+
+open Classical in
 /-- **F5v — the stall-junction nil-halt average** (`stallNil`): per emission `ω`
 and landing state `s0`, the Bayes-coupled stall factor
 `haltMass μ0 ⟨s0,nil⟩ / (ω.bind id) s0` times the junction average of the CHILD
