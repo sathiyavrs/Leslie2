@@ -5956,7 +5956,8 @@ halted-arrival mass. This is the g-weighted halt analogue of `genDep_le_genArr`:
 `termB`'s first-segment head matches the parent halt-config sum via the junction
 W1/W2 cancellation (`PMF.bind_apply` + `(x/c)·c ≤ x`). -/
 private theorem renewal_diamond (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
-    (E : AlterSeq (PMF State) Label) (g : State → ENNReal) (hg : ∀ x, g x ≤ 1) :
+    (E : AlterSeq (PMF State) Label) (g : State → ENNReal) (hg : ∀ x, g x ≤ 1)
+    (hT : E.trans.Terminates) (hinv : μ0 = E.endState hT) :
     (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
         * ∑' m', ω m' * fHM S m' (macroExtend E m') g)
       ≤ (∑' s0 : State,
@@ -5972,7 +5973,8 @@ halt boundary plus the child halt-integrals lower-bound the honest flatten's
 halt-integral. Reduces (by the term-A nil carve-out `reachArrHalt_nil`) to the
 renewal crux `renewal_diamond`. Consumed by `fHalt_ge`/`fHalt_ge_G`. -/
 private theorem f_integrate_ge (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
-    (E : AlterSeq (PMF State) Label) (g : State → ENNReal) (hg : ∀ x, g x ≤ 1) :
+    (E : AlterSeq (PMF State) Label) (g : State → ENNReal) (hg : ∀ x, g x ≤ 1)
+    (hT : E.trans.Terminates) (hinv : μ0 = E.endState hT) :
     S.next E none * (∑' s, μ0 s * g s)
       + ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
           * ∑' m', ω m' * fHM S m' (macroExtend E m') g
@@ -6007,18 +6009,19 @@ private theorem f_integrate_ge (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF Stat
     rw [← hnil, ← ENNReal.tsum_add]
     exact tsum_congr (fun e => by split_ifs <;> simp)
   rw [hsplit, add_assoc]
-  exact add_le_add le_rfl (renewal_diamond S μ0 E g hg)
+  exact add_le_add le_rfl (renewal_diamond S μ0 E g hg hT hinv)
 
 /-- Iterating `f_integrate_ge` at `g := 1`: the partial sum of conditional depth
 totals lower-bounds the honest flatten's total halting mass. -/
 private theorem fHalt_ge (S : WeakScheduler (𝒟(sys^w))) (n : ℕ) :
-    ∀ (μ0 : PMF State) (E : AlterSeq (PMF State) Label),
+    ∀ (μ0 : PMF State) (E : AlterSeq (PMF State) Label) (hT : E.trans.Terminates),
+      μ0 = E.endState hT →
       (∑ k ∈ Finset.range n, condDepth S μ0 k E) ≤ fHM S μ0 E (fun _ => 1) := by
   induction n with
-  | zero => intro μ0 E; simp
+  | zero => intro μ0 E hT hinv; simp
   | succ n IH =>
-    intro μ0 E
-    refine le_trans ?_ (f_integrate_ge S μ0 E (fun _ => 1) (fun _ => le_rfl))
+    intro μ0 E hT hinv
+    refine le_trans ?_ (f_integrate_ge S μ0 E (fun _ => 1) (fun _ => le_rfl) hT hinv)
     rw [Finset.sum_range_succ', condDepth_zero]
     have hswap : (∑ k ∈ Finset.range n, condDepth S μ0 (k + 1) E)
         ≤ ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
@@ -6031,7 +6034,8 @@ private theorem fHalt_ge (S : WeakScheduler (𝒟(sys^w))) (n : ℕ) :
       rw [← Summable.tsum_finsetSum (fun _ _ => ENNReal.summable)]
       refine ENNReal.tsum_le_tsum (fun m' => ?_)
       rw [← Finset.mul_sum]
-      exact mul_le_mul_left' (IH m' (macroExtend E m')) _
+      exact mul_le_mul_left' (IH m' (macroExtend E m') (macroExtend_term hT m')
+        (macroExtend_endState hT m').symm) _
     have hsrc : S.next E none = S.next E none * (∑' s, μ0 s * (1 : ENNReal)) := by
       rw [tsum_congr (fun s => mul_one _), PMF.tsum_coe, mul_one]
     rw [add_comm]
@@ -6058,7 +6062,8 @@ theorem f_halts (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
       = ∑ k ∈ Finset.range n, condDepth S μ0 k ⟨μ0, Seq.nil⟩ from
     Finset.sum_congr rfl (fun k _ => by rw [macroHaltDepth_total, ← condDepth_root])]
   rw [← hHM]
-  exact fHalt_ge S n μ0 ⟨μ0, Seq.nil⟩
+  exact fHalt_ge S n μ0 ⟨μ0, Seq.nil⟩ Stream'.Seq.terminates_nil
+    (AlterSeq.endState_of_trans_nil ⟨μ0, Seq.nil⟩ rfl Stream'.Seq.terminates_nil).symm
 
 open Classical in
 /-- Iterating `f_integrate_step` at `g := [· = s]`: the partial sum of the
@@ -6074,7 +6079,7 @@ private theorem fHalt_ge_G (S : WeakScheduler (𝒟(sys^w))) (s : State) (n : �
   | succ n IH =>
     intro μ0 E hT hinv
     refine le_trans ?_ (f_integrate_ge S μ0 E (fun x => if x = s then 1 else 0)
-      (fun x => by split_ifs <;> simp))
+      (fun x => by split_ifs <;> simp) hT hinv)
     rw [Finset.sum_range_succ', condDepthG_zero]
     have hswap : (∑ k ∈ Finset.range n, condDepthG S (k + 1) E hT s)
         ≤ ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
