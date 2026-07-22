@@ -6265,6 +6265,129 @@ private noncomputable def resetSum (S : WeakScheduler (𝒟(sys^w))) (g : State 
           * g (e.1.endState e.2)
 
 open Classical in
+/-- **F5u — single-run halt-integral collapse.** The parent's current-run halt
+reach, summed over all observed histories and `g`-weighted, collapses through the
+inner-witness integrate identity (`innerWitness_integrate`, valid at each `ω` by
+`S.valid` under `hinv`) to the junction average of the child source-integrals. -/
+private theorem parentHaltReach_collapse (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
+    (μ0 : PMF State) (E : AlterSeq (PMF State) Label)
+    (hT : E.trans.Terminates) (hinv : μ0 = E.endState hT) :
+    (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+        haltReach S μ0 E e * g (e.1.endState e.2))
+      = ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+          * ∑' m', ω m' * (∑' s, m' s * g s) := by
+  have hunfold : ∀ e : {e : AlterSeq State Label // e.trans.Terminates},
+      haltReach S μ0 E e * g (e.1.endState e.2)
+        = ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+            * ((innerWitness sys μ0 ω).haltMass μ0 e * g (e.1.endState e.2)) := by
+    intro e
+    rw [show haltReach S μ0 E e
+          = ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+              * (innerWitness sys μ0 ω).haltMass μ0 e from by
+        rw [haltReach]
+        refine tsum_congr (fun ω => ?_)
+        unfold WeakScheduler.haltMass Scheduler.haltMass
+        rw [mul_assoc], ← ENNReal.tsum_mul_right]
+    exact tsum_congr (fun ω => by rw [mul_assoc])
+  rw [tsum_congr hunfold, ENNReal.tsum_comm]
+  refine tsum_congr (fun ω => ?_)
+  rw [ENNReal.tsum_mul_left]
+  by_cases hw : S.next E (some (Silent.τ, ω)) = 0
+  · rw [hw, zero_mul, zero_mul]
+  · congr 1
+    have hstep : (𝒟(sys^w)).step μ0 Silent.τ ω := by
+      rw [hinv]
+      exact S.valid E (Nat.find hT) (E.endState hT) (Nat.find_spec hT)
+        (AlterSeq.stateAt_find_eq_endState E hT) Silent.τ ω ((PMF.mem_support_iff _ _).mpr hw)
+    rw [innerWitness_integrate hstep g, tsum_bind_mul ω id g]
+    simp only [id_eq]
+
+open Classical in
+/-- **F5u — the total current-run halt reach** splits over the nil/nonempty
+histories into `nilHalt_g` (`tsum_nil_reindex`) plus `bHaltSum`. -/
+private theorem haltReach_total_eq (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
+    (μ0 : PMF State) (E : AlterSeq (PMF State) Label) :
+    (∑' s0 : State, haltReach S μ0 E
+          ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
+        + bHaltSum S g μ0 E
+      = ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+          haltReach S μ0 E e * g (e.1.endState e.2) := by
+  rw [bHaltSum]
+  have hsplit : (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+        haltReach S μ0 E e * g (e.1.endState e.2))
+      = (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+          if e.1.trans = Stream'.Seq.nil then haltReach S μ0 E e * g (e.1.endState e.2) else 0)
+        + ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+          if e.1.trans = Stream'.Seq.nil then 0 else haltReach S μ0 E e * g (e.1.endState e.2) := by
+    rw [← ENNReal.tsum_add]; exact tsum_congr (fun e => by split_ifs <;> simp)
+  rw [hsplit, tsum_nil_reindex (fun e => haltReach S μ0 E e * g (e.1.endState e.2))]
+  congr 1
+  refine tsum_congr (fun s0 => ?_)
+  rw [AlterSeq.endState_of_trans_nil (⟨s0, Stream'.Seq.nil⟩ : AlterSeq State Label) rfl
+    Stream'.Seq.terminates_nil]
+
+/-- **F5u — the fresh-restart gap** (`Gap`): the junction average of the child
+fresh-run (`nil`) departure integrals. Equals `Hg − (Jimm + Jnil)`. -/
+private noncomputable def Gap (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
+    (E : AlterSeq (PMF State) Label) : ENNReal :=
+  ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+    * ∑' m', ω m' * (∑' s0 : State,
+        depMove S m' (macroExtend E m')
+            ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
+
+open Classical in
+/-- **F5u (R-c-i) — the exact fresh-restart accounting.** The child immediate-halt,
+nil-run halt, and fresh-run departure integrals sum (per child) to the child source
+integral, so `Jimm + Jnil + Gap` telescopes to `nilHalt_g + bHaltSum` (=`Hg`). -/
+private theorem jimmjnil_gap_eq (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
+    (μ0 : PMF State) (E : AlterSeq (PMF State) Label)
+    (hT : E.trans.Terminates) (hinv : μ0 = E.endState hT) :
+    (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+          * ∑' m', ω m' * (S.next (macroExtend E m') none * (∑' s, m' s * g s)))
+      + (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+          * ∑' m', ω m' * (∑' s0 : State,
+              haltReach S m' (macroExtend E m')
+                  ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0))
+      + Gap S g E
+      = (∑' s0 : State, haltReach S μ0 E
+            ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
+        + bHaltSum S g μ0 E := by
+  have hpt : ∀ m' : PMF State,
+      S.next (macroExtend E m') none * (∑' s, m' s * g s)
+        + (∑' s0 : State, haltReach S m' (macroExtend E m')
+            ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
+        + (∑' s0 : State, depMove S m' (macroExtend E m')
+            ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
+        = ∑' s, m' s * g s := by
+    intro m'
+    have hcs : ∀ s0 : State,
+        haltReach S m' (macroExtend E m') ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0
+          + depMove S m' (macroExtend E m') ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0
+        = (∑' ω' : PMF (PMF State), S.next (macroExtend E m') (some (Silent.τ, ω')))
+            * (m' s0 * g s0) := by
+      intro s0
+      rw [← add_mul, add_comm (haltReach _ _ _ _),
+        ← curReach_split S m' (macroExtend E m') ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩,
+        show curReach S m' (macroExtend E m')
+              ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩
+            = (∑' ω' : PMF (PMF State), S.next (macroExtend E m') (some (Silent.τ, ω'))) * m' s0 from by
+          rw [curReach, ← ENNReal.tsum_mul_right]
+          exact tsum_congr (fun ω' => by rw [ProbabilisticExecution.probOf_nil]; rfl),
+        mul_assoc]
+    rw [add_assoc, ← ENNReal.tsum_add, tsum_congr hcs, ENNReal.tsum_mul_left,
+      ← add_mul, macroTot, one_mul]
+  rw [Gap, ← ENNReal.tsum_add, ← ENNReal.tsum_add,
+    show (∑' s0 : State, haltReach S μ0 E
+            ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0) + bHaltSum S g μ0 E
+        = ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+            * ∑' m', ω m' * (∑' s, m' s * g s) from by
+      rw [haltReach_total_eq, parentHaltReach_collapse S g μ0 E hT hinv]]
+  refine tsum_congr (fun ω => ?_)
+  rw [← mul_add, ← mul_add, ← ENNReal.tsum_add, ← ENNReal.tsum_add]
+  refine congrArg _ (tsum_congr (fun m' => ?_))
+  rw [← mul_add, ← mul_add, hpt m']
+
+open Classical in
 /-- **F5u (R-a2 finiteness) — the reset integral is a sub-probability.** Needed to
 cancel `resetSum` in the additive glue. -/
 private theorem resetSum_le_one (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
