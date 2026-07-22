@@ -5290,4 +5290,99 @@ noncomputable def flatSched (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
     · rw [dif_neg hT, PMF.mem_support_iff, PMF.pure_apply_of_ne _ _ (by simp)] at hsupp
       exact absurd rfl hsupp
 
+open Classical in
+/-- **List-indexed core of the fidelity theorem.** For the canonical terminating
+execution `⟨s0, ofList L⟩`, the composite `flatSched`-probability equals its arrival
+reach. Proved by cons-end induction on `L`. -/
+private theorem reachArrM_aux (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (E : AlterSeq (PMF State) Label) (s0 : State) (L : List (Label × State)) :
+    (⟨μ0, (flatSched S μ0 E).toScheduler⟩ : ProbabilisticExecution sys).probOf
+        ⟨s0, Stream'.Seq.ofList L⟩ (Stream'.Seq.terminates_ofList L)
+      = reachArrM S μ0 E ⟨⟨s0, Stream'.Seq.ofList L⟩, Stream'.Seq.terminates_ofList L⟩ := by
+  induction L using List.reverseRecOn with
+  | nil =>
+    rw [ProbabilisticExecution.probOf_congr _ ⟨s0, Stream'.Seq.ofList []⟩ ⟨s0, Stream'.Seq.nil⟩
+        (by rw [Stream'.Seq.ofList_nil]) (Stream'.Seq.terminates_ofList [])
+        Stream'.Seq.terminates_nil,
+      ProbabilisticExecution.probOf_nil,
+      reachArrM_congr S μ0 E ⟨⟨s0, Stream'.Seq.ofList []⟩, Stream'.Seq.terminates_ofList []⟩
+        ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩
+        (by show (⟨s0, Stream'.Seq.ofList []⟩ : AlterSeq State Label) = ⟨s0, Stream'.Seq.nil⟩
+            rw [Stream'.Seq.ofList_nil]),
+      reachArrM, if_pos rfl]
+    rfl
+  | append_singleton L' last ih =>
+    obtain ⟨l, x⟩ := last
+    have hofl : (Stream'.Seq.ofList (L' ++ [(l, x)]) : Stream'.Seq (Label × State))
+        = (Stream'.Seq.ofList L').append (Stream'.Seq.cons (l, x) Stream'.Seq.nil) := by
+      rw [Stream'.Seq.ofList_append, Stream'.Seq.ofList_cons, Stream'.Seq.ofList_nil]
+    have happ_term : ((Stream'.Seq.ofList L').append
+        (Stream'.Seq.cons (l, x) Stream'.Seq.nil)).Terminates := by
+      rw [← hofl]; exact Stream'.Seq.terminates_ofList _
+    have hnext : ∀ ν : PMF State,
+        (flatSched S μ0 E).next ⟨s0, Stream'.Seq.ofList L'⟩ (some (l, ν))
+          = reachDepM S μ0 E ⟨⟨s0, Stream'.Seq.ofList L'⟩, Stream'.Seq.terminates_ofList L'⟩ l ν
+            / reachArrM S μ0 E ⟨⟨s0, Stream'.Seq.ofList L'⟩, Stream'.Seq.terminates_ofList L'⟩ := by
+      intro ν
+      rw [show (flatSched S μ0 E).next ⟨s0, Stream'.Seq.ofList L'⟩
+          = ⟨flatMass S μ0 E ⟨⟨s0, Stream'.Seq.ofList L'⟩, Stream'.Seq.terminates_ofList L'⟩,
+              flatMass_hasSum S μ0 E
+                ⟨⟨s0, Stream'.Seq.ofList L'⟩, Stream'.Seq.terminates_ofList L'⟩⟩
+          from dif_pos (Stream'.Seq.terminates_ofList L')]
+      rfl
+    have hker : (⟨μ0, (flatSched S μ0 E).toScheduler⟩ : ProbabilisticExecution sys).kernel
+          ⟨s0, Stream'.Seq.ofList L'⟩ (l, x)
+        = ∑' ν : PMF State,
+            (reachDepM S μ0 E ⟨⟨s0, Stream'.Seq.ofList L'⟩, Stream'.Seq.terminates_ofList L'⟩ l ν
+              / reachArrM S μ0 E ⟨⟨s0, Stream'.Seq.ofList L'⟩, Stream'.Seq.terminates_ofList L'⟩)
+              * ν x := by
+      rw [ProbabilisticExecution.kernel]
+      exact tsum_congr (fun ν => by rw [hnext ν])
+    rw [ProbabilisticExecution.probOf_congr _ ⟨s0, Stream'.Seq.ofList (L' ++ [(l, x)])⟩
+        ⟨s0, (Stream'.Seq.ofList L').append (Stream'.Seq.cons (l, x) Stream'.Seq.nil)⟩
+        (by rw [hofl]) (Stream'.Seq.terminates_ofList _) happ_term,
+      ProbabilisticExecution.probOf_append_singleton _ s0 (Stream'.Seq.ofList L')
+        (Stream'.Seq.terminates_ofList L') (l, x) happ_term, ih, hker,
+      reachArrM_congr S μ0 E
+        ⟨⟨s0, Stream'.Seq.ofList (L' ++ [(l, x)])⟩, Stream'.Seq.terminates_ofList _⟩
+        (snocT ⟨⟨s0, Stream'.Seq.ofList L'⟩, Stream'.Seq.terminates_ofList L'⟩ l x)
+        (by show (⟨s0, Stream'.Seq.ofList (L' ++ [(l, x)])⟩ : AlterSeq State Label)
+              = ⟨s0, (Stream'.Seq.ofList L').append (Stream'.Seq.cons (l, x) Stream'.Seq.nil)⟩
+            rw [hofl]),
+      reachArrM_snoc]
+    by_cases hz : reachArrM S μ0 E
+        ⟨⟨s0, Stream'.Seq.ofList L'⟩, Stream'.Seq.terminates_ofList L'⟩ = 0
+    · rw [hz, zero_mul, eq_comm]
+      refine ENNReal.tsum_eq_zero.mpr (fun ν => ?_)
+      have hle := reachDepM_sum_le S μ0 E ⟨⟨s0, Stream'.Seq.ofList L'⟩, Stream'.Seq.terminates_ofList L'⟩
+      rw [hz, nonpos_iff_eq_zero] at hle
+      rw [ENNReal.tsum_eq_zero.mp hle (l, ν), zero_mul]
+    · have hle : reachArrM S μ0 E
+          ⟨⟨s0, Stream'.Seq.ofList L'⟩, Stream'.Seq.terminates_ofList L'⟩ ≤ 1 := by
+        rw [← ih]
+        exact (ProbabilisticExecution.probOf_le_init _ _ _).trans (PMF.coe_le_one _ _)
+      have htop : reachArrM S μ0 E
+          ⟨⟨s0, Stream'.Seq.ofList L'⟩, Stream'.Seq.terminates_ofList L'⟩ ≠ ⊤ :=
+        (hle.trans_lt ENNReal.one_lt_top).ne
+      rw [← ENNReal.tsum_mul_left]
+      refine tsum_congr (fun ν => ?_)
+      rw [← mul_assoc, ENNReal.mul_div_cancel hz htop]
+
+/-- **The fidelity lemma (F5g-1).** The probability that the honest reach-arrival
+flattening scheduler `flatSched` (sourced at `μ0`) produces the terminating
+concrete execution `e` equals its arrival reach `reachArrM`. -/
+theorem probOf_eq_reachArrM (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (E : AlterSeq (PMF State) Label)
+    (e : {q : AlterSeq State Label // q.trans.Terminates}) :
+    (⟨μ0, (flatSched S μ0 E).toScheduler⟩ : ProbabilisticExecution sys).probOf e.1 e.2
+      = reachArrM S μ0 E e := by
+  obtain ⟨⟨ei, et⟩, eT⟩ := e
+  rw [ProbabilisticExecution.probOf_congr _ ⟨ei, et⟩ ⟨ei, Stream'.Seq.ofList (et.toList eT)⟩
+      (by rw [Stream'.Seq.ofList_toList et eT]) eT (Stream'.Seq.terminates_ofList _),
+    reachArrM_congr S μ0 E ⟨⟨ei, et⟩, eT⟩
+      ⟨⟨ei, Stream'.Seq.ofList (et.toList eT)⟩, Stream'.Seq.terminates_ofList _⟩
+      (by show (⟨ei, et⟩ : AlterSeq State Label) = ⟨ei, Stream'.Seq.ofList (et.toList eT)⟩
+          rw [Stream'.Seq.ofList_toList et eT])]
+  exact reachArrM_aux S μ0 E ei (et.toList eT)
+
 end PLTS
