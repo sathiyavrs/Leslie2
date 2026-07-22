@@ -6232,6 +6232,87 @@ private theorem renewal_junction_split (S : WeakScheduler (𝒟(sys^w))) (g : St
     exact fHM_split S g m' (macroExtend E m')
   rw [add_assoc, tsum_congr hpt, ENNReal.tsum_add, ENNReal.tsum_add]
 
+/-- **F5u — the divided per-segment head weight** (the `segWeight`-cons factor,
+`src = μ0`). Names the junction-repaired head that the peel/collapse carries. -/
+private noncomputable def divHead (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (E : AlterSeq (PMF State) Label) (seg : FlatSeg State Label) : ENNReal :=
+  S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
+    * ((innerWitness sys μ0 seg.emit).haltMass μ0 ⟨seg.run, seg.runT⟩
+        / (seg.emit.bind id) (seg.run.endState seg.runT))
+
+open Classical in
+/-- **F5u — parent nonempty-history halt-reach integral** (`boundaryHaltSum`): the
+single-current-run halt reach summed over nonempty observed histories, `g`-weighted. -/
+private noncomputable def bHaltSum (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
+    (μ0 : PMF State) (E : AlterSeq (PMF State) Label) : ENNReal :=
+  ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+    if e.1.trans = Stream'.Seq.nil then 0
+    else haltReach S μ0 E e * g (e.1.endState e.2)
+
+open Classical in
+/-- **F5u — reset-departure integral** (`Σreset·g`): the fresh-restart departures at
+the empty residual (`dResidual e seg = nil`), summed over the peels of each nonempty
+observed history, `g`-weighted. The excess the exact NE peel carries over `JNE`. -/
+private noncomputable def resetSum (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
+    (μ0 : PMF State) (E : AlterSeq (PMF State) Label) : ENNReal :=
+  ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+    if e.1.trans = Stream'.Seq.nil then 0
+    else (∑' seg : FlatSeg State Label,
+            (if segPre e seg ∧ (dResidual e seg).1.trans = Stream'.Seq.nil
+              then (1 : ENNReal) else 0)
+              * divHead S μ0 E seg
+              * depMove S seg.succ (macroExtend E seg.succ) (dResidual e seg))
+          * g (e.1.endState e.2)
+
+open Classical in
+/-- **F5u (R-a2 finiteness) — the reset integral is a sub-probability.** Needed to
+cancel `resetSum` in the additive glue. -/
+private theorem resetSum_le_one (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
+    (hg : ∀ x, g x ≤ 1)
+    (μ0 : PMF State) (E : AlterSeq (PMF State) Label)
+    (hT : E.trans.Terminates) (hinv : μ0 = E.endState hT) :
+    resetSum S g μ0 E ≤ 1 := by
+  sorry
+
+open Classical in
+/-- **F5u (R-a) — the exact NE identity.** Summing the per-config additive peel
+`reachArrHalt e + reset e = haltReach e + carrier e` over nonempty histories,
+`g`-weighted, with the junction collapse `Σcarrier·g = JNE`. -/
+private theorem renewal_NE_identity (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
+    (hg : ∀ x, g x ≤ 1)
+    (μ0 : PMF State) (E : AlterSeq (PMF State) Label)
+    (hT : E.trans.Terminates) (hinv : μ0 = E.endState hT) :
+    (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+          if e.1.trans = Stream'.Seq.nil then 0
+          else reachArrHalt S μ0 E e * g (e.1.endState e.2))
+        + resetSum S g μ0 E
+      = bHaltSum S g μ0 E
+        + ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+            * ∑' m', ω m' * (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+                if e.1.trans = Stream'.Seq.nil then 0
+                else reachArrHalt S m' (macroExtend E m') e * g (e.1.endState e.2)) := by
+  sorry
+
+open Classical in
+/-- **F5u (R-c) — the strengthened boundary bookkeeping.** The child immediate/nil
+halts plus the reset departures lower-bound the parent nil-run halt plus the
+nonempty halt-at-boundary reach. -/
+private theorem renewal_reduced_bound (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
+    (hg : ∀ x, g x ≤ 1)
+    (μ0 : PMF State) (E : AlterSeq (PMF State) Label)
+    (hT : E.trans.Terminates) (hinv : μ0 = E.endState hT) :
+    (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+          * ∑' m', ω m' * (S.next (macroExtend E m') none * (∑' s, m' s * g s)))
+      + (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+          * ∑' m', ω m' * (∑' s0 : State,
+              haltReach S m' (macroExtend E m')
+                  ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0))
+      + resetSum S g μ0 E
+      ≤ (∑' s0 : State, haltReach S μ0 E
+              ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
+        + bHaltSum S g μ0 E := by
+  sorry
+
 open Classical in
 /-- **F5t — the one-macro-level junction bound (`renewal_step_le`'s sole residual).**
 The junction average of the child honest-flatten halt integrals — the
@@ -6279,7 +6360,34 @@ private theorem renewal_junction_bound (S : WeakScheduler (𝒟(sys^w))) (g : St
         + (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
             if e.1.trans = Stream'.Seq.nil then 0
             else reachArrHalt S μ0 E e * g (e.1.endState e.2)) := by
-  sorry
+  -- **F5u glue (R-b).** With the exact NE identity (R-a) and the reduced boundary
+  -- bookkeeping (R-c), add `resetSum` to both sides and regroup.
+  have hRa := renewal_NE_identity S g hg μ0 E hT hinv
+  have hRc := renewal_reduced_bound S g hg μ0 E hT hinv
+  have hRfin : resetSum S g μ0 E ≠ ⊤ :=
+    ne_top_of_le_ne_top ENNReal.one_ne_top (resetSum_le_one S g hg μ0 E hT hinv)
+  set Jimm := (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+      * ∑' m', ω m' * (S.next (macroExtend E m') none * (∑' s, m' s * g s))) with hJimm
+  set Jnil := (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+      * ∑' m', ω m' * (∑' s0 : State,
+          haltReach S m' (macroExtend E m')
+              ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)) with hJnil
+  set JNE := (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+      * ∑' m', ω m' * (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+          if e.1.trans = Stream'.Seq.nil then 0
+          else reachArrHalt S m' (macroExtend E m') e * g (e.1.endState e.2))) with hJNE
+  set nilHalt := (∑' s0 : State, haltReach S μ0 E
+      ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0) with hnilHalt
+  set NE := (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+      if e.1.trans = Stream'.Seq.nil then 0
+      else reachArrHalt S μ0 E e * g (e.1.endState e.2)) with hNE
+  rw [← ENNReal.add_le_add_iff_right hRfin]
+  calc Jimm + Jnil + JNE + resetSum S g μ0 E
+      = (Jimm + Jnil + resetSum S g μ0 E) + JNE := by ring
+    _ ≤ (nilHalt + bHaltSum S g μ0 E) + JNE := by gcongr
+    _ = nilHalt + (bHaltSum S g μ0 E + JNE) := by ring
+    _ = nilHalt + (NE + resetSum S g μ0 E) := by rw [← hRa]
+    _ = nilHalt + NE + resetSum S g μ0 E := by ring
 
 /-! ### F5t status — the F5s P1/P3 split was UNSOUND; consolidated to one residual.
 
