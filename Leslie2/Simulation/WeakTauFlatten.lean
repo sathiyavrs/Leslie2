@@ -6104,6 +6104,25 @@ private theorem reachArrHalt_peel (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF S
     genW_peel (depMove S) S μ0 E e, hcg]
 
 open Classical in
+/-- **F5q — the one-macro-level renewal inequality (the residual crux (★) content).**
+The junction average of the child honest-flatten halt integrals lower-bounds the
+parent's non-immediate halt carve (`nilHalt_g + NE_g`). This is the `≤` half of the
+one-step renewal identity, phrased additively so it never forms the (possibly `⊤`)
+global departure carrier. `condDepthSum_le_fHM`'s step reduces to this by applying its
+depth-`n` IH to each child (`∑ k<n D child ≤ fHM child`). -/
+private theorem renewal_le (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
+    (μ0 : PMF State) (E : AlterSeq (PMF State) Label)
+    (hT : E.trans.Terminates) (hinv : μ0 = E.endState hT) :
+    (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+        * ∑' m', ω m' * fHM S m' (macroExtend E m') g)
+      ≤ ∑' s0 : State,
+            haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0
+        + ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+            if e.1.trans = Stream'.Seq.nil then 0
+            else reachArrHalt S μ0 E e * g (e.1.endState e.2) := by
+  sorry
+
+open Classical in
 /-- **F5p — depth-stratified halt bound (bypasses `renewal_diamond`).** For any
 stratum family `D` obeying the depth-0 stop identity (`Dzero`) and the one-step
 junction recursion (`Dsucc`), the depth-`n` partial sum lower-bounds the honest
@@ -6188,7 +6207,11 @@ private theorem condDepthSum_le_fHM (S : WeakScheduler (𝒟(sys^w))) (g : State
     -- (`hinv' := (macroExtend_endState hT m').symm`); absorb the nil-reset/departure
     -- boundary at the parent level via `boundaryHalt_le`/`depMove_le_init` +
     -- `condDepthSum_le_one`/`hg` (≤1 bounds) — this is where D1's descent bottoms out.
-    sorry
+    refine le_trans ?_ (renewal_le S g μ0 E hT hinv)
+    refine ENNReal.tsum_le_tsum (fun ω => ?_)
+    refine mul_le_mul_left' (ENNReal.tsum_le_tsum (fun m' => ?_)) _
+    exact mul_le_mul_left' (IH m' (macroExtend E m') (macroExtend_term hT m')
+      (macroExtend_endState hT m').symm) _
 
 /-- Iterating `f_integrate_ge` at `g := 1`: the partial sum of conditional depth
 totals lower-bounds the honest flatten's total halting mass. -/
