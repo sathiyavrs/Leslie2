@@ -6110,6 +6110,33 @@ private theorem reachArrHalt_ne (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF Sta
   rw [reachArrHalt, reachArrM_of_ne_nil S μ0 E e h, hdep]
 
 open Classical in
+/-- **Per-config peel of the halted-arrival reach** (nonempty history): head
+current-run halt-plus-departure minus the segment continuations, both peeled by
+`genW_peel`. The finite per-config numerator that the renewal collapse sums. -/
+private theorem reachArrHalt_peel (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (E : AlterSeq (PMF State) Label)
+    (e : {q : AlterSeq State Label // q.trans.Terminates}) (h : e.1.trans ≠ Stream'.Seq.nil) :
+    reachArrHalt S μ0 E e
+      = (curReach S μ0 E e
+          + ∑' seg : FlatSeg State Label,
+              (if segPre e seg then (1 : ENNReal) else 0)
+                * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
+                    * ((innerWitness sys μ0 seg.emit).haltMass μ0 ⟨seg.run, seg.runT⟩
+                        / (seg.emit.bind id) (seg.run.endState seg.runT)))
+                * genW (curReachG S) S seg.succ (macroExtend E seg.succ) (dResidual e seg))
+        - (depMove S μ0 E e
+          + ∑' seg : FlatSeg State Label,
+              (if segPre e seg then (1 : ENNReal) else 0)
+                * (S.next E (some (Silent.τ, seg.emit)) * seg.emit seg.succ
+                    * ((innerWitness sys μ0 seg.emit).haltMass μ0 ⟨seg.run, seg.runT⟩
+                        / (seg.emit.bind id) (seg.run.endState seg.runT)))
+                * genW (depMove S) S seg.succ (macroExtend E seg.succ) (dResidual e seg)) := by
+  have hcg : curReachG S μ0 E e = curReach S μ0 E e := by
+    simp only [curReachG]; rw [if_pos h]
+  rw [reachArrHalt_ne S μ0 E e h, genW_peel (curReachG S) S μ0 E e,
+    genW_peel (depMove S) S μ0 E e, hcg]
+
+open Classical in
 /-- **F5n crux (R1) — the finite-payload renewal step.** Replaces
 `renewal_diamond`+`f_integrate_ge`. Given a payload `P m'` bounded by the child
 flatten-halt integral (`hPle`, from the depth-`n` IH) and finite (`hPfin`), the
