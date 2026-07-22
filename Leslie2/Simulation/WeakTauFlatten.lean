@@ -5156,6 +5156,26 @@ private theorem genW_curReachG_snoc (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF
       * (∑' ν : PMF State, moveTerm S (segSrc μ0 p.1) (segHist E p.1) p.2 (some (l, ν)) * ν s')
   simp only [hcr, dConsistent_snoc_iff]
 
+/-- **The arrival-step identity (the crux).** Extending the observed history by a
+step `(l, s')` decomposes the arrival reach as: depart at `e` with move `(l, ν)`,
+then the drawn `ν` lands at `s'`. -/
+theorem reachArrM_snoc (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (E : AlterSeq (PMF State) Label)
+    (e : {q : AlterSeq State Label // q.trans.Terminates}) (l : Label) (s' : State) :
+    reachArrM S μ0 E (snocT e l s') = ∑' ν : PMF State, reachDepM S μ0 E e l ν * ν s' := by
+  rw [reachArrM_of_ne_nil S μ0 E (snocT e l s') (snocT_trans_ne_nil e l s'),
+    genW_curReachG_snoc, genW_landKer]
+
+/-- `reachArrM` depends only on the underlying execution, not its termination proof. -/
+private theorem reachArrM_congr (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (E : AlterSeq (PMF State) Label)
+    (a b : {q : AlterSeq State Label // q.trans.Terminates}) (h : a.1 = b.1) :
+    reachArrM S μ0 E a = reachArrM S μ0 E b := by
+  obtain ⟨av, aT⟩ := a
+  obtain ⟨bv, bT⟩ := b
+  cases h
+  rfl
+
 /-- The mass function of `flatSched` at observed history `e`: a proper step
 `some (l,ν)` gets the posterior `reachDepM / reachArrM`; the halt label `⊥` takes
 the remaining (halt-or-diverge) mass. Mirrors `expandMass`. -/
