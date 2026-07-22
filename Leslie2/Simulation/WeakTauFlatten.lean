@@ -6845,7 +6845,291 @@ private theorem renewal_NE_identity (S : WeakScheduler (𝒟(sys^w))) (g : State
             * ∑' m', ω m' * (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
                 if e.1.trans = Stream'.Seq.nil then 0
                 else reachArrHalt S m' (macroExtend E m') e * g (e.1.endState e.2)) := by
-  sorry
+  classical
+  -- Step 1 — merge via the per-history identity (∗): LHS = bHaltSum + T.
+  have hmerge : (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+        if e.1.trans = Stream'.Seq.nil then 0
+        else reachArrHalt S μ0 E e * g (e.1.endState e.2))
+      + resetSum S g μ0 E
+      = bHaltSum S g μ0 E
+        + ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+            if e.1.trans = Stream'.Seq.nil then 0
+            else (∑' seg : FlatSeg State Label,
+                (if segPre e seg ∧ ¬ (dResidual e seg).1.trans = Stream'.Seq.nil
+                  then (1 : ENNReal) else 0)
+                  * divHead S μ0 E seg
+                  * reachArrHalt S seg.succ (macroExtend E seg.succ) (dResidual e seg))
+              * g (e.1.endState e.2) := by
+    rw [resetSum, bHaltSum, ← ENNReal.tsum_add, ← ENNReal.tsum_add]
+    refine tsum_congr (fun e => ?_)
+    split_ifs with hnil
+    · simp
+    · rw [← add_mul, ← add_mul, rAH_peel_identity S μ0 E e hnil]
+  rw [hmerge]
+  congr 1
+  -- Step 2 — T = JNE via the run-strata split and the fiber collapse.
+  -- per-`(e, seg)` strata split (stall heads vs continuing nonempty heads)
+  have hsplit : ∀ (e : {q : AlterSeq State Label // q.trans.Terminates}),
+      ¬ e.1.trans = Stream'.Seq.nil →
+      ∀ seg : FlatSeg State Label,
+      (if segPre e seg ∧ ¬ (dResidual e seg).1.trans = Stream'.Seq.nil
+          then (1 : ENNReal) else 0)
+          * divHead S μ0 E seg
+          * reachArrHalt S seg.succ (macroExtend E seg.succ) (dResidual e seg)
+          * g (e.1.endState e.2)
+        = ((if segPre e seg ∧ seg.run.trans = Stream'.Seq.nil then (1 : ENNReal) else 0)
+            * divHead S μ0 E seg
+            * reachArrHalt S seg.succ (macroExtend E seg.succ) (dResidual e seg)
+            * g (e.1.endState e.2))
+          + (if seg.run.trans = Stream'.Seq.nil then 0
+              else divHead S μ0 E seg
+                * (if segPre e seg then
+                    (if (dResidual e seg).1.trans = Stream'.Seq.nil then 0
+                      else reachArrHalt S seg.succ (macroExtend E seg.succ) (dResidual e seg)
+                        * g ((dResidual e seg).1.endState (dResidual e seg).2))
+                  else 0)) := by
+    intro e hne seg
+    by_cases hsp : segPre e seg
+    · by_cases hrun : seg.run.trans = Stream'.Seq.nil
+      · have hres : dResidual e seg = e :=
+          dResidual_stall_eq e seg ((segStall_iff e seg).mp ⟨hsp, hrun⟩)
+        rw [if_pos ⟨hsp, by rw [hres]; exact hne⟩, if_pos ⟨hsp, hrun⟩, if_pos hrun]
+        simp
+      · by_cases hrn : (dResidual e seg).1.trans = Stream'.Seq.nil
+        · rw [if_neg (fun h => h.2 hrn), if_neg (fun h => hrun h.2), if_neg hrun,
+            if_pos hsp, if_pos hrn]
+          simp
+        · rw [if_pos ⟨hsp, hrn⟩, if_neg (fun h => hrun h.2), if_neg hrun, if_pos hsp,
+            if_neg hrn, dResidual_endState e seg hsp]
+          simp
+          ring
+    · rw [if_neg (fun h => hsp h.1), if_neg (fun h => hsp h.1), if_neg hsp]
+      split_ifs <;> simp
+  -- push `g` into the segment sum, apply the strata split, and separate the sums
+  have hTsplit : (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+        if e.1.trans = Stream'.Seq.nil then 0
+        else (∑' seg : FlatSeg State Label,
+            (if segPre e seg ∧ ¬ (dResidual e seg).1.trans = Stream'.Seq.nil
+              then (1 : ENNReal) else 0)
+              * divHead S μ0 E seg
+              * reachArrHalt S seg.succ (macroExtend E seg.succ) (dResidual e seg))
+          * g (e.1.endState e.2))
+      = (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+          if e.1.trans = Stream'.Seq.nil then 0
+          else ∑' seg : FlatSeg State Label,
+            (if segPre e seg ∧ seg.run.trans = Stream'.Seq.nil then (1 : ENNReal) else 0)
+              * divHead S μ0 E seg
+              * reachArrHalt S seg.succ (macroExtend E seg.succ) (dResidual e seg)
+              * g (e.1.endState e.2))
+        + ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+            ∑' seg : FlatSeg State Label,
+              (if seg.run.trans = Stream'.Seq.nil then 0
+                else divHead S μ0 E seg
+                  * (if segPre e seg then
+                      (if (dResidual e seg).1.trans = Stream'.Seq.nil then 0
+                        else reachArrHalt S seg.succ (macroExtend E seg.succ) (dResidual e seg)
+                          * g ((dResidual e seg).1.endState (dResidual e seg).2))
+                    else 0)) := by
+    rw [← ENNReal.tsum_add]
+    refine tsum_congr (fun e => ?_)
+    by_cases hnil : e.1.trans = Stream'.Seq.nil
+    · rw [if_pos hnil, if_pos hnil, zero_add]
+      refine (ENNReal.tsum_eq_zero.mpr (fun seg => ?_)).symm
+      by_cases hrun : seg.run.trans = Stream'.Seq.nil
+      · rw [if_pos hrun]
+      · rw [if_neg hrun]
+        have hns : ¬ segPre e seg := by
+          rintro ⟨hinit, happ⟩
+          rw [hnil] at happ
+          exact hrun (seq_append_eq_nil happ).1
+        rw [if_neg hns, mul_zero]
+    · rw [if_neg hnil, if_neg hnil, ← ENNReal.tsum_mul_right, ← ENNReal.tsum_add]
+      exact tsum_congr (fun seg => hsplit e hnil seg)
+  rw [hTsplit]
+  -- stall stratum: collapse per history via `stall_peel_collapse`
+  have hTstall : (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+        if e.1.trans = Stream'.Seq.nil then 0
+        else ∑' seg : FlatSeg State Label,
+          (if segPre e seg ∧ seg.run.trans = Stream'.Seq.nil then (1 : ENNReal) else 0)
+            * divHead S μ0 E seg
+            * reachArrHalt S seg.succ (macroExtend E seg.succ) (dResidual e seg)
+            * g (e.1.endState e.2))
+      = ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+          * ∑' m', ω m'
+              * ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+                  (if e.1.trans = Stream'.Seq.nil then 0
+                    else ((innerWitness sys μ0 ω).haltMass μ0
+                            ⟨⟨e.1.init, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩
+                          / (ω.bind id) e.1.init)
+                      * (reachArrHalt S m' (macroExtend E m') e * g (e.1.endState e.2))) := by
+    have hpt : ∀ e : {e : AlterSeq State Label // e.trans.Terminates},
+        (if e.1.trans = Stream'.Seq.nil then 0
+          else ∑' seg : FlatSeg State Label,
+            (if segPre e seg ∧ seg.run.trans = Stream'.Seq.nil then (1 : ENNReal) else 0)
+              * divHead S μ0 E seg
+              * reachArrHalt S seg.succ (macroExtend E seg.succ) (dResidual e seg)
+              * g (e.1.endState e.2))
+        = ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+            * ∑' m', ω m'
+                * (if e.1.trans = Stream'.Seq.nil then 0
+                    else ((innerWitness sys μ0 ω).haltMass μ0
+                            ⟨⟨e.1.init, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩
+                          / (ω.bind id) e.1.init)
+                      * (reachArrHalt S m' (macroExtend E m') e * g (e.1.endState e.2))) := by
+      intro e
+      split_ifs with hnil
+      · simp
+      · calc (∑' seg : FlatSeg State Label,
+              (if segPre e seg ∧ seg.run.trans = Stream'.Seq.nil then (1 : ENNReal) else 0)
+                * divHead S μ0 E seg
+                * reachArrHalt S seg.succ (macroExtend E seg.succ) (dResidual e seg)
+                * g (e.1.endState e.2))
+            = (∑' seg : FlatSeg State Label,
+                (if segPre e seg ∧ seg.run.trans = Stream'.Seq.nil then (1 : ENNReal) else 0)
+                  * divHead S μ0 E seg
+                  * reachArrHalt S seg.succ (macroExtend E seg.succ) (dResidual e seg))
+                * g (e.1.endState e.2) := ENNReal.tsum_mul_right
+          _ = (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+                * ∑' m', ω m'
+                    * (((innerWitness sys μ0 ω).haltMass μ0
+                            ⟨⟨e.1.init, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩
+                          / (ω.bind id) e.1.init)
+                      * reachArrHalt S m' (macroExtend E m') e))
+                * g (e.1.endState e.2) := by
+              congr 1
+              exact stall_peel_collapse S μ0 E e (fun s F r => reachArrHalt S s F r)
+          _ = _ := by
+              rw [← ENNReal.tsum_mul_right]
+              refine tsum_congr (fun ω => ?_)
+              rw [mul_assoc]
+              congr 1
+              rw [← ENNReal.tsum_mul_right]
+              refine tsum_congr (fun m' => ?_)
+              ring
+    rw [tsum_congr hpt, ENNReal.tsum_comm]
+    refine tsum_congr (fun ω => ?_)
+    rw [ENNReal.tsum_mul_left]
+    congr 1
+    rw [ENNReal.tsum_comm]
+    refine tsum_congr (fun m' => ?_)
+    rw [ENNReal.tsum_mul_left]
+  -- move stratum: reindex over the peeled head and collapse the fiber
+  have hTmove : (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+        ∑' seg : FlatSeg State Label,
+          (if seg.run.trans = Stream'.Seq.nil then 0
+            else divHead S μ0 E seg
+              * (if segPre e seg then
+                  (if (dResidual e seg).1.trans = Stream'.Seq.nil then 0
+                    else reachArrHalt S seg.succ (macroExtend E seg.succ) (dResidual e seg)
+                      * g ((dResidual e seg).1.endState (dResidual e seg).2))
+                else 0)))
+      = ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
+          * ∑' m', ω m'
+              * ∑' r : {q : AlterSeq State Label // q.trans.Terminates},
+                  (if r.1.trans = Stream'.Seq.nil then 0
+                    else ((innerWitness sys μ0 ω).haltMass μ0 r
+                        / (ω.bind id) (r.1.endState r.2))
+                      * childNEfib S g m' (macroExtend E m') (r.1.endState r.2)) := by
+    rw [ENNReal.tsum_comm]
+    have hseg : ∀ seg : FlatSeg State Label,
+        (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
+          (if seg.run.trans = Stream'.Seq.nil then 0
+            else divHead S μ0 E seg
+              * (if segPre e seg then
+                  (if (dResidual e seg).1.trans = Stream'.Seq.nil then 0
+                    else reachArrHalt S seg.succ (macroExtend E seg.succ) (dResidual e seg)
+                      * g ((dResidual e seg).1.endState (dResidual e seg).2))
+                else 0)))
+        = if seg.run.trans = Stream'.Seq.nil then 0
+            else divHead S μ0 E seg
+              * childNEfib S g seg.succ (macroExtend E seg.succ)
+                  (seg.run.endState seg.runT) := by
+      intro seg
+      by_cases hrun : seg.run.trans = Stream'.Seq.nil
+      · rw [if_pos hrun]
+        refine ENNReal.tsum_eq_zero.mpr (fun e => ?_)
+        rw [if_pos hrun]
+      · rw [if_neg hrun,
+          show (∑' e : {q : AlterSeq State Label // q.trans.Terminates},
+              (if seg.run.trans = Stream'.Seq.nil then 0
+                else divHead S μ0 E seg
+                  * (if segPre e seg then
+                      (if (dResidual e seg).1.trans = Stream'.Seq.nil then 0
+                        else reachArrHalt S seg.succ (macroExtend E seg.succ) (dResidual e seg)
+                          * g ((dResidual e seg).1.endState (dResidual e seg).2))
+                    else 0)))
+            = ∑' e : {q : AlterSeq State Label // q.trans.Terminates},
+                divHead S μ0 E seg
+                  * (if segPre e seg then
+                      (if (dResidual e seg).1.trans = Stream'.Seq.nil then 0
+                        else reachArrHalt S seg.succ (macroExtend E seg.succ) (dResidual e seg)
+                          * g ((dResidual e seg).1.endState (dResidual e seg).2))
+                    else 0) from
+          tsum_congr (fun e => by rw [if_neg hrun]), ENNReal.tsum_mul_left]
+        congr 1
+        exact segPre_reindex seg (fun e' =>
+          if e'.1.trans = Stream'.Seq.nil then 0
+          else reachArrHalt S seg.succ (macroExtend E seg.succ) e' * g (e'.1.endState e'.2))
+    rw [tsum_congr hseg,
+      show (∑' seg : FlatSeg State Label,
+          (if seg.run.trans = Stream'.Seq.nil then 0
+            else divHead S μ0 E seg
+              * childNEfib S g seg.succ (macroExtend E seg.succ)
+                  (seg.run.endState seg.runT)))
+        = ∑' t : PMF (PMF State) × PMF State × {q : AlterSeq State Label // q.trans.Terminates},
+            (if t.2.2.1.trans = Stream'.Seq.nil then 0
+              else divHead S μ0 E ⟨t.1, t.2.1, t.2.2.1, t.2.2.2⟩
+                * childNEfib S g t.2.1 (macroExtend E t.2.1)
+                    (t.2.2.1.endState t.2.2.2)) from
+      Equiv.tsum_eq flatSegEquiv
+        (fun t : PMF (PMF State) × PMF State ×
+            {q : AlterSeq State Label // q.trans.Terminates} =>
+          (if t.2.2.1.trans = Stream'.Seq.nil then 0
+            else divHead S μ0 E ⟨t.1, t.2.1, t.2.2.1, t.2.2.2⟩
+              * childNEfib S g t.2.1 (macroExtend E t.2.1)
+                  (t.2.2.1.endState t.2.2.2))), ENNReal.tsum_prod']
+    refine tsum_congr (fun ω => ?_)
+    rw [ENNReal.tsum_prod',
+      show (∑' m' : PMF State,
+          ∑' r : {q : AlterSeq State Label // q.trans.Terminates},
+            (if r.1.trans = Stream'.Seq.nil then 0
+              else divHead S μ0 E ⟨ω, m', r.1, r.2⟩
+                * childNEfib S g m' (macroExtend E m') (r.1.endState r.2)))
+        = ∑' m' : PMF State, S.next E (some (Silent.τ, ω))
+            * (ω m' * ∑' r : {q : AlterSeq State Label // q.trans.Terminates},
+                (if r.1.trans = Stream'.Seq.nil then 0
+                  else ((innerWitness sys μ0 ω).haltMass μ0 r
+                      / (ω.bind id) (r.1.endState r.2))
+                    * childNEfib S g m' (macroExtend E m') (r.1.endState r.2))) from
+      tsum_congr (fun m' => by
+        rw [← ENNReal.tsum_mul_left, ← ENNReal.tsum_mul_left]
+        refine tsum_congr (fun r => ?_)
+        split_ifs with h
+        · simp
+        · simp only [divHead]
+          ring), ENNReal.tsum_mul_left]
+  rw [hTstall, hTmove, ← ENNReal.tsum_add]
+  refine tsum_congr (fun ω => ?_)
+  by_cases hw : S.next E (some (Silent.τ, ω)) = 0
+  · rw [hw, zero_mul, zero_mul, zero_mul, add_zero]
+  · rw [← mul_add]
+    congr 1
+    have hstep : (𝒟(sys^w)).step μ0 Silent.τ ω := by
+      rw [hinv]
+      exact S.valid E (Nat.find hT) (E.endState hT) (Nat.find_spec hT)
+        (AlterSeq.stateAt_find_eq_endState E hT) Silent.τ ω
+        ((PMF.mem_support_iff _ _).mpr hw)
+    rw [← ENNReal.tsum_add]
+    refine tsum_congr (fun m' => ?_)
+    by_cases hm0 : ω m' = 0
+    · rw [hm0, zero_mul, zero_mul, zero_mul, add_zero]
+    · rw [← mul_add]
+      congr 1
+      refine fiber_collapse S g μ0 E ω m' hstep (fun t hb => ?_)
+      have hb' : (∑' m'', ω m'' * m'' t) = 0 := by
+        rw [show (∑' m'', ω m'' * m'' t) = (ω.bind id) t from by
+          rw [PMF.bind_apply]; exact tsum_congr (fun m'' => by rw [id_eq]), hb]
+      exact (mul_eq_zero.mp (ENNReal.tsum_eq_zero.mp hb' m')).resolve_left hm0
 
 /-- `x / c * c ≤ x` unconditionally in `ENNReal` (the W2 cancellation). -/
 private theorem ennreal_div_mul_le (x c : ENNReal) : x / c * c ≤ x := by
