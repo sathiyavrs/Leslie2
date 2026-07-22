@@ -5415,4 +5415,55 @@ theorem probOf_eq_reachArrM (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
           rw [Stream'.Seq.ofList_toList et eT])]
   exact reachArrM_aux S μ0 E ei (et.toList eT)
 
+/-- **The honest halted-arrival reach** at observed history `e`: the arrival reach
+`reachArrM` minus the total departure reach `∑' p, reachDepM`. This is the mass
+that arrives at a decision point consistent with `e` and does NOT depart next — the
+`haltReach`-side of `curReach_split`, plus the fresh-reset boundary — i.e. the
+composite halts here. Departures ⊆ arrivals (`reachDepM_sum_le`) keeps it honest. -/
+noncomputable def reachArrHalt (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (E : AlterSeq (PMF State) Label)
+    (e : {e : AlterSeq State Label // e.trans.Terminates}) : ENNReal :=
+  reachArrM S μ0 E e - ∑' p : Label × PMF State, reachDepM S μ0 E e p.1 p.2
+
+/-- **F5g-2 — the halt-mass identity.** The halting mass of `flatSched` at the
+terminating execution `e` is exactly the honest halted-arrival reach. The
+haltMass-side analogue of the fidelity `probOf_eq_reachArrM`: `haltMass =
+probOf · next(⊥) = reachArrM · flatMass(⊥) = reachArrM − ∑ reachDepM`, the last
+step by ENNReal div-cancel under the departures ⊆ arrivals bound. -/
+theorem flatSched_haltMass (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
+    (E : AlterSeq (PMF State) Label)
+    (e : {e : AlterSeq State Label // e.trans.Terminates}) :
+    (flatSched S μ0 E).haltMass μ0 e = reachArrHalt S μ0 E e := by
+  obtain ⟨ev, eT⟩ := e
+  have key : ∀ x y : ENNReal, y ≤ x → x ≠ ⊤ → x * (1 - y / x) = x - y := by
+    intro x y hyx hxtop
+    rcases eq_or_ne x 0 with hx | hx
+    · subst hx; rw [le_zero_iff.mp hyx]; simp
+    · rw [ENNReal.mul_sub (fun _ _ => hxtop), mul_one, ← mul_div_assoc, mul_comm x y,
+        mul_div_assoc, ENNReal.div_self hx hxtop, mul_one]
+  have hnext : (flatSched S μ0 E).toScheduler.next ev none
+      = flatMass S μ0 E ⟨ev, eT⟩ none := by
+    show (flatSched S μ0 E).next ev none = _
+    simp only [flatSched, dif_pos eT]
+    rfl
+  rw [WeakScheduler.haltMass, Scheduler.haltMass]
+  show (⟨μ0, (flatSched S μ0 E).toScheduler⟩ : ProbabilisticExecution sys).probOf ev eT
+      * (flatSched S μ0 E).toScheduler.next ev none = _
+  rw [hnext, probOf_eq_reachArrM S μ0 E ⟨ev, eT⟩]
+  show reachArrM S μ0 E ⟨ev, eT⟩ * flatMass S μ0 E ⟨ev, eT⟩ none = _
+  have hdiv : (∑' p : Label × PMF State,
+        reachDepM S μ0 E ⟨ev, eT⟩ p.1 p.2 / reachArrM S μ0 E ⟨ev, eT⟩)
+      = (∑' p : Label × PMF State, reachDepM S μ0 E ⟨ev, eT⟩ p.1 p.2)
+          / reachArrM S μ0 E ⟨ev, eT⟩ := by
+    simp_rw [div_eq_mul_inv]; rw [ENNReal.tsum_mul_right]
+  have htop : reachArrM S μ0 E ⟨ev, eT⟩ ≠ ⊤ := by
+    rw [← probOf_eq_reachArrM S μ0 E ⟨ev, eT⟩]
+    exact ((ProbabilisticExecution.probOf_le_init _ _ _).trans (PMF.coe_le_one _ _)).trans_lt
+      ENNReal.one_lt_top |>.ne
+  show reachArrM S μ0 E ⟨ev, eT⟩
+      * (1 - ∑' p : Label × PMF State,
+          reachDepM S μ0 E ⟨ev, eT⟩ p.1 p.2 / reachArrM S μ0 E ⟨ev, eT⟩) = _
+  rw [hdiv, key _ _ (reachDepM_sum_le S μ0 E ⟨ev, eT⟩) htop]
+  rfl
+
 end PLTS
