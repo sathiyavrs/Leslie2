@@ -8,25 +8,41 @@ import Leslie2.Simulation.Equivalences
 import Leslie2.Weak.Bounds
 
 /-!
-# Flattening a `𝒟(sys^w)`-internal weak transition (Stage 2)
+# Flattening a `𝒟(sys^w)`-internal weak transition
 
-Stage 2 of the plan for `weakTau_lift_pure` (the last crux of
-forward-simulation transitivity): an internal weak transition of the lifted
-system `𝒟(sys^w)` out of a Dirac macro-state collapses to an internal weak
-transition of `sys` itself:
+An internal weak transition of the lifted system `𝒟(sys^w)` out of a Dirac
+macro-state collapses to an internal weak transition of `sys` itself:
 
 `weakTau_flatten : weakTau (𝒟(sys^w)) (PMF.pure μ) Ν → weakTau sys μ (Ν.bind id)`
 
-Each single internal macro-step already collapses through the proven bridge
+Each single internal macro-step collapses through the proven bridge
 `weakTau_of_hyperStep_weakClosure` (`weakTau_of_distStep` below); the content
 of the theorem is the **ω-composition**: countably many a.s.-halting
 `sys`-`weakTau`s, glued along an a.s.-halting macro-run, compose into one
 a.s.-halting `sys`-`weakTau` whose end-state distribution is the macro
-end-state mixture `Ν.bind id`.
+end-state mixture `Ν.bind id`. Together with
+`StrongProbabilisticSimulation.weakTau_lift` and the forward⇔strong
+correspondence, this discharges `weakTau_lift_pure` — see the reduction in
+`Simulation/Transitivity.lean`.
 
-Together with Stage 1 (`StrongProbabilisticSimulation.weakTau_lift`) and the
-forward⇔strong correspondence, this discharges `weakTau_lift_pure` — see the
-reduction in `Simulation/Transitivity.lean`.
+Architecture:
+
+* **macro-halt depth strata** — the halting mass of the macro-scheduler is
+  stratified by macro-depth (`macroHaltDepth`), summing to the flatten target
+  `Ν.bind id` (`macroHalt_tsum_depth`, `macroHalted_iSup_eq_one`);
+* **inner-witness extraction** — each macro-emission is realized by a
+  classical `sys`-scheduler witness (`innerWitness`) with exact halting
+  integral (`innerWitness_integrate`) and pushforward;
+* **the flattening scheduler** — a belief scheduler `flatSched` over segmented
+  hidden configurations (`FlatSeg`/`DConfig`), whose step kernel is the
+  posterior of algorithm-side reach weights (the `WeakClosure` `expandSched`
+  pattern), with Bayes-coupled junctions between macro-levels and empty
+  segments acting as the stall resolvent;
+* **fidelity** — the path measure of `flatSched` equals the config reach sum
+  (`probOf_eq_reachArrM`), giving the halt-mass identity;
+* **the renewal bound** — a depth-induction lower bound on the halting
+  integral (`renewal_step_le`, `condDepthSum_le_fHM`) closes the a.s.-halting
+  and pushforward obligations.
 -/
 
 open Stream'
@@ -36,7 +52,7 @@ namespace PLTS
 
 variable {State Label : Type} [Silent Label]
 
-/-! ### Layer 0: one macro-step collapses through the proven bridge -/
+/-! ### One macro-step collapses through the proven bridge -/
 
 /-- A single internal step of `𝒟(sys^w)` out of the macro-state `m` is an
 internal weak transition of `sys` from `m` to the successor mixture. -/
@@ -46,25 +62,16 @@ theorem weakTau_of_distStep {sys : System State Label} {m : PMF State}
   have h' : hyperStep (sys^w) m Silent.τ (ω.bind id) := h
   exact weakTau_of_hyperStep_weakClosure rfl h'
 
-/-! ### The flattening theorem (Stage 2)
+/-! ### The flattening theorem
 
-The ω-composition. Proven across the layers of this file (finite recursion,
-depth stratification, the composite belief scheduler, its integral fixpoint,
-and the two halting-integral identities). -/
+`weakTau_flatten` is stated and proved at the end of the file, witnessed by
+the honest reach-arrival flattening scheduler `flatSched`. The decision-point
+carrier admits EMPTY completed segments: a finite stall chain (macro steps
+realized by empty inner runs) is a run of empty segments whose `segWeight`
+factors are exactly the Bayes-coupled resolvent terms, so stall mass flows
+through the junctions instead of misfiling into the halt reach. -/
 
-/-! **Flattening** (`weakTau_flatten`) is stated and proved at the end of the
-file, witnessed by the honest reach-arrival flattening scheduler `flatSched`.
-
-**CLOSED (F5h–F5v).** The whole flattening tower is sorry-free and axiom-clean
-(`[propext, Classical.choice, Quot.sound]`). The final architectural repair
-(F5v, the stall resolvent) widened the decision-point carrier to EMPTY completed
-segments: a finite stall chain (macro steps realized by empty inner runs) is a
-run of empty segments whose `segWeight` factors are exactly the Bayes-coupled
-resolvent terms, so stall mass flows through the junctions instead of misfiling
-into the halt reach. See the F5v PHASE-0 note before `renewal_step_le` for the
-design record and the S1–S5 stage map. -/
-
-/-! ### Layer 1: the finite depth-`n` macro-future recursion -/
+/-! ### Macro-history extension -/
 
 /-- Append one internal (`τ`) macro-transition into `m'` onto the macro-history
 `E`. -/
@@ -160,24 +167,10 @@ theorem macroHalt_tsum_depth {sys : System State Label}
   rw [PMF.bind_apply, ← key]
   exact (macroIntegrate_of_pushforward S μ0 Ν hpush (fun m => m s)).symm
 
-/-! ### Layer 3: the recursion↔stratification halting decomposition
+/-! ### Stratification: depth-`k` halting totals sum to the halting mass -/
 
-Per the design's R3-fallback: **no new scheduler is constructed**. Instead the
-depth-`n` macro-future `macroFuture_trunc S n E` (Layer 1) is split, by pure
-`PMF`/`ENNReal` algebra over its own recursion, into a monotone
-**halted-within-`n`** sub-distribution `macroHalted` (mass that hit a scheduler
-stop within the first `n` levels, collapsed at that macro end-state) and a
-**residual** sub-distribution `macroResidual` (mass still running after `n`
-levels, pushed through the depth-`n` macro-state). On the stratification side
-(Layer 2) the depth-`k` halting masses `macroHaltDepth` sum to the full scheduler
-halting mass, so under a.s.-halting the halted total rises to `1` and the residual
-total mass `macroSurvive` falls to `0`. The bridge identifying the two
-"halted-within-`n`" notions is the handoff crux (see the note at the end). -/
-
-/-! #### Stratification side: depth-`k` halting totals sum to the halting mass -/
-
-/-- Total mass of the depth-`k` flattened halting sub-distribution (Layer 2's
-`macroHaltDepth`): the halting mass carried by terminating macro-runs of exactly
+/-- Total mass of the depth-`k` flattened halting sub-distribution
+`macroHaltDepth`: the halting mass carried by terminating macro-runs of exactly
 `k` internal steps. -/
 theorem macroHaltDepth_total {sys : System State Label}
     (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State) (k : ℕ) :
@@ -192,7 +185,7 @@ theorem macroHaltDepth_total {sys : System State Label}
 
 /-- **Depth totals sum to the total halting mass.** Summing the depth-`k` halting
 totals over `k` recovers the scheduler's whole halting mass from `PMF.pure μ0`
-(reverse of Layer 2's fiber stratification). -/
+(reverse of the fiber stratification). -/
 theorem macroHaltDepth_tsum {sys : System State Label}
     (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State) :
     (∑' k : ℕ, ∑' s, macroHaltDepth S μ0 k s)
@@ -206,9 +199,8 @@ theorem macroHaltDepth_tsum {sys : System State Label}
 
 /-- **Halted total rises to `1` under a.s.-halting.** If the scheduler `S` halts
 almost surely from `PMF.pure μ0` (`hhalt`), the supremum over the truncation depth
-`n` of the halting mass accumulated in the first `n` macro-depths is `1`. This is
-the residual-vanishing fact `macroSurvive → 0` in `iSup` form (partial sums of the
-depth totals), the stratification-side deliverable F5 consumes. -/
+`n` of the halting mass accumulated in the first `n` macro-depths is `1`
+(partial sums of the depth totals). -/
 theorem macroHalted_iSup_eq_one {sys : System State Label}
     (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
     (hhalt : (∑' E : {e : AlterSeq (PMF State) Label // e.trans.Terminates},
@@ -217,17 +209,14 @@ theorem macroHalted_iSup_eq_one {sys : System State Label}
   rw [← ENNReal.tsum_eq_iSup_nat, macroHaltDepth_tsum]
   exact hhalt
 
-/-! ### Layer 4b: the ω-witness scheduler and its one-step haltMass recursion
+/-! ### The per-emission inner witnesses
 
-The crux artifact: a single `WeakScheduler sys` realizing the ω-composition, and
-the identities tying its `haltMass` to the Layer-3 recursion.
-
-**Design (approved D1).** The hidden configuration behind an observed
-`sys`-history `e` is a *decomposition* of `e` into completed inner macro-segments
-plus a current in-progress inner prefix. Rather than an n-ary bijection, the
-carrier and the belief weight are defined by recursion mirroring one another.
-Per-macro-step inner witnesses are extracted classically from
-`weakTau_of_distStep`, exactly as `weakTau.witnessScheduler`. -/
+The hidden configuration behind an observed `sys`-history `e` is a
+*decomposition* of `e` into completed inner macro-segments plus a current
+in-progress inner prefix; the carrier and the belief weight are defined by
+recursion mirroring one another. Per-macro-step inner witnesses are extracted
+classically from `weakTau_of_distStep`, exactly as
+`weakTau.witnessScheduler`. -/
 
 open Classical in
 /-- **Per-emission inner witness.** For a macro-state `m : PMF State` and a
@@ -242,8 +231,7 @@ noncomputable def innerWitness (sys : System State Label) (m : PMF State)
 
 /-- On the support, the inner witness's `g`-integrated halting end-state equals
 the `g`-integral against the macro-mixture `ω.bind id` (the single-step collapse,
-`g`-integrated). Taking `g = 1` recovers `innerWitness_halts`; `g = [· = s]` the
-end-state pushforward. -/
+`g`-integrated). Taking `g = [· = s]` gives the end-state pushforward. -/
 theorem innerWitness_integrate {sys : System State Label} {m : PMF State}
     {ω : PMF (PMF State)} (h : (𝒟(sys^w)).step m Silent.τ ω) (g : State → ENNReal) :
     (∑' e, (innerWitness sys m ω).haltMass m e * g (e.1.endState e.2))
@@ -259,17 +247,12 @@ theorem innerWitness_pushforward {sys : System State Label} {m : PMF State}
       = ∑' e, (innerWitness sys m ω).haltMass m e * (if e.1.endState e.2 = s then 1 else 0) := by
   rw [innerWitness, dif_pos h]; exact (weakTau_of_distStep h).witness_pushforward s
 
-/-! ### Layer 4a: the local↔global halting bridge
+/-! ### The conditional depth totals `condDepth`
 
-Identifies the two "halted-within-`n`" notions rooted at `⟨μ0, Seq.nil⟩`: the
-LOCAL recursion `macroHalted` (Layer 3, `S.next` at histories extending
-`⟨μ0, nil⟩`) versus the GLOBAL depth-`k` halting masses
-`S.haltMass (PMF.pure μ0) ·` (Layer 2). The bridge is the execution↔recursion
-telescoping, routed through the conditional depth totals `condDepth` (a
-`pathWeight`-weighted halt-mass sum over the `k`-step continuations of a base
-macro-history). Both sides satisfy the same front-peel recursion; at the root
-`condDepth` is the global depth-`k` halting mass (via `probOf_eq_pathWeight`
-and the Dirac collapse of the source). -/
+The conditional depth total `condDepth` is a `pathWeight`-weighted halt-mass
+sum over the `k`-step continuations of a base macro-history; it satisfies a
+front-peel recursion, and at the root it is the global depth-`k` halting mass
+(via `probOf_eq_pathWeight` and the Dirac collapse of the source). -/
 
 /-- The conditional depth-`k` halt total from base macro-history `E`: the total
 mass, over the `k`-step continuations of `E`, of the path-weight to the
@@ -429,19 +412,14 @@ private theorem condDepth_root {sys : System State Label}
   rw [tsum_eq_single μ0 (fun s hs => by rw [PMF.pure_apply, if_neg hs, zero_mul]),
     PMF.pure_apply_self, one_mul]
 
-/-! ### Layer 4c: the ω-witness segment machinery
+/-! ### The segment machinery
 
-**Superseded by Layer 4d (decision-point compression); retained where reused.**
-The naive normalizer of the original `flattenSched` belief scheduler (an
-unbounded-empty-segment carrier) is divergent — see the design doc — so its
-belief numerator/denominator/scheduler and closing identities were removed. What
-survives is the segment/weight/connection machinery below
+The segment/weight/connection machinery
 (`FlatSeg`/`segTrans`/`segSrc`/`segHist`/`segWeight`/`chained`/`moveTerm`, and
-`endState_append_shift`/`chained_endState`), transplanted verbatim into the
-Layer-4d decision-point carrier `DConfig`/`dSched`. Per design D1, the hidden
-configuration behind an observed `sys`-history is a list of completed inner
-macro-segments; the belief weight is defined by recursion mirroring the segment
-list. -/
+`endState_append_shift`/`chained_endState`) behind the decision-point carrier
+`DConfig`: the hidden configuration behind an observed `sys`-history is a list
+of completed inner macro-segments; the belief weight is defined by recursion
+mirroring the segment list. -/
 
 /-- A completed inner macro-segment behind an observed `sys`-history: the
 macro-emission `emit`, the sampled successor macro-state `succ`, and the
@@ -579,8 +557,7 @@ theorem chained_endState :
 
 /-- **Monotone `tsum`↔`iSup` interchange.** For an `ENNReal` family monotone in
 its `ℕ` parameter, the countable sum of the pointwise suprema equals the supremum
-of the countable sums (monotone convergence for the counting measure). Broadly
-useful; here it drives `stall_unfold`. -/
+of the countable sums (monotone convergence for the counting measure). -/
 theorem tsum_iSup_of_monotone {ι : Type} (f : ℕ → ι → ENNReal)
     (hf : ∀ i, Monotone (fun n => f n i)) :
     ∑' i, ⨆ n, f n i = ⨆ n, ∑' i, f n i := by
@@ -602,7 +579,7 @@ structure DConfig (State Label : Type) where
 
 /-- Consistency of a `DConfig` with an observed history `e`: the segments and
 the current prefix reconstruct `e`'s transitions, and the runs chain from
-`e.init`. **F5v (stall-resolvent widening):** completed segments may be EMPTY —
+`e.init`. **Stall-resolvent widening:** completed segments may be EMPTY —
 a finite stall chain between decision points is represented by empty-run
 segments, whose `segWeight` factors are exactly the Bayes-coupled resolvent
 terms `S.next E (τ,ω) · ω m' · haltMass src ⟨t,nil⟩ / (ω.bind id) t`. -/
@@ -671,7 +648,7 @@ private noncomputable def dResidual
     WeakScheduler.drop_terminates e.2 _⟩
 
 /-- A first segment `seg` is a legal peel from `e`: its run starts at `e.init`,
-its transition prefix is a genuine prefix of `e`'s transitions. **F5v:** the run
+its transition prefix is a genuine prefix of `e`'s transitions. The run
 may be EMPTY — a stall peel, whose residual is `e` itself. -/
 private def segPre (e : {q : AlterSeq State Label // q.trans.Terminates})
     (seg : FlatSeg State Label) : Prop :=
@@ -906,14 +883,13 @@ private theorem condDepthG_root (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF Sta
       (append_ofList_term ⟨μ0, Seq.nil⟩ Stream'.Seq.terminates_nil K.1)
       (Stream'.Seq.terminates_ofList K.1)]
 
-/-! ### F5f — the honest reach-arrival flattening scheduler (`flatSched`)
+/-! ### The honest reach-arrival flattening scheduler `flatSched`
 
 Transplant of `expandSched` (`WeakClosure/Scheduler.lean`) to the two-level
-`𝒟(sys^w)` composite: the honest normalizer is the ARRIVAL reach `reachArrM`
-(reach at a decision-point config with a NONEMPTY current inner run), replacing
-the belief denominator `dDenom` whose macro-STALL leak makes `probOf = dDenom`
-false (F5e-R §1). The step kernel is the posterior `reachDepM / reachArrM`; the
-halt label `⊥` takes the remaining (halt-or-diverge) mass. -/
+`𝒟(sys^w)` composite: the normalizer is the ARRIVAL reach `reachArrM` (reach
+at a decision-point config with a NONEMPTY current inner run). The step kernel
+is the posterior `reachDepM / reachArrM`; the halt label `⊥` takes the
+remaining (halt-or-diverge) mass. -/
 
 /-- **Current-run reach** at prefix `cur` (source `src`, macro-history `Ec`): the
 belief mass of the current fresh inner run reaching `cur`, marginalized over the
@@ -1270,13 +1246,13 @@ private theorem depMove_le_init (S : WeakScheduler (𝒟(sys^w))) (s : PMF State
     _ = s cur.1.init := one_mul _
 
 open Classical in
-/-- **F5v — the seg-count-truncated peel carrier.** `genWd k d` sums the configs
+/-- **The seg-count-truncated peel carrier.** `genWd k d` sums the configs
 with at most `d` completed segments (empty stall segments included). Its
 supremum over `d` recovers `genW` (`genW_eq_iSup_genWd`), and it satisfies the
-truncated peel recursion (`genWd_zero`/`genWd_succ`) that powers the F5v
+truncated peel recursion (`genWd_zero`/`genWd_succ`) that powers the
 resolvent bounds: with the widened `segPre`, empty heads recurse at the SAME
 observed history, so the plain `Nat` induction on the budget `d` replaces the
-pre-F5v induction on the observed length. -/
+induction on the observed length. -/
 private noncomputable def genWd
     (k : PMF State → AlterSeq (PMF State) Label →
       {q : AlterSeq State Label // q.trans.Terminates} → ENNReal)
@@ -1402,7 +1378,7 @@ private theorem genWd_succ
       zero_mul, zero_mul]
 
 open Classical in
-/-- **F5v LEMMA A — the nil-history resolvent departure bound.** At an empty
+/-- **The nil-history resolvent departure bound.** At an empty
 observed history every peel is a stall peel (empty run at `e.init`, residual
 again empty), so the truncated departure carrier is the finite stall resolvent;
 it is bounded by the source mass at the observed state. Induction on the budget:
@@ -1477,7 +1453,7 @@ private theorem genWd_dep_nil (S : WeakScheduler (𝒟(sys^w))) :
       _ = curReach S src E e := (curReach_split S src E e).symm
       _ ≤ src e.1.init := hcur src E e
 
-/-- **F5v LEMMA A, `genW` form.** -/
+/-- The nil-history resolvent departure bound, `genW` form. -/
 private theorem genW_dep_nil (S : WeakScheduler (𝒟(sys^w))) (src : PMF State)
     (E : AlterSeq (PMF State) Label)
     (e : {q : AlterSeq State Label // q.trans.Terminates})
@@ -1489,7 +1465,7 @@ private theorem genW_dep_nil (S : WeakScheduler (𝒟(sys^w))) (src : PMF State)
 open Classical in
 /-- **Departures ⊆ arrivals (config-sum form, truncated).** For a nonempty
 observed history the budget-`d` departure config-sum is at most the (full)
-arrival config-sum. F5v: plain induction on the budget — empty (stall) heads
+arrival config-sum. Plain induction on the budget — empty (stall) heads
 recurse at the same history via the inner IH, nonempty heads with empty residual
 fall to LEMMA A + `boundaryHalt_le`, the rest to the IH at the residual. -/
 private theorem genDepD_le_genArr (S : WeakScheduler (𝒟(sys^w))) :
@@ -1567,7 +1543,7 @@ private theorem genDepD_le_genArr (S : WeakScheduler (𝒟(sys^w))) :
           exact boundaryHalt_le S src E e
 
 open Classical in
-/-- **Departures ⊆ arrivals (config-sum form).** F5v: via the truncation
+/-- **Departures ⊆ arrivals (config-sum form).** Via the truncation
 supremum. -/
 private theorem genDep_le_genArr (S : WeakScheduler (𝒟(sys^w))) (src : PMF State)
     (E : AlterSeq (PMF State) Label)
@@ -1938,7 +1914,7 @@ open Classical in
 /-- **The honest reach-arrival flattening scheduler.** At each observed history the
 posterior over the next inner draw is `reachDepM / reachArrM` (halt takes the
 remainder). `valid`/`internal_only` delegate to the departure config's inner
-witness `innerWitness`, exactly as `dSched` does. -/
+witness `innerWitness`. -/
 noncomputable def flatSched (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
     (E : AlterSeq (PMF State) Label) : WeakScheduler sys where
   next e := if hT : e.trans.Terminates then
@@ -2096,7 +2072,7 @@ private theorem reachArrM_aux (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State
       refine tsum_congr (fun ν => ?_)
       rw [← mul_assoc, ENNReal.mul_div_cancel hz htop]
 
-/-- **The fidelity lemma (F5g-1).** The probability that the honest reach-arrival
+/-- **The fidelity lemma.** The probability that the honest reach-arrival
 flattening scheduler `flatSched` (sourced at `μ0`) produces the terminating
 concrete execution `e` equals its arrival reach `reachArrM`. -/
 theorem probOf_eq_reachArrM (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
@@ -2123,7 +2099,7 @@ noncomputable def reachArrHalt (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF Stat
     (e : {e : AlterSeq State Label // e.trans.Terminates}) : ENNReal :=
   reachArrM S μ0 E e - ∑' p : Label × PMF State, reachDepM S μ0 E e p.1 p.2
 
-/-- **F5g-2 — the halt-mass identity.** The halting mass of `flatSched` at the
+/-- **The halt-mass identity.** The halting mass of `flatSched` at the
 terminating execution `e` is exactly the honest halted-arrival reach. The
 haltMass-side analogue of the fidelity `probOf_eq_reachArrM`: `haltMass =
 probOf · next(⊥) = reachArrM · flatMass(⊥) = reachArrM − ∑ reachDepM`, the last
@@ -2195,10 +2171,9 @@ private theorem macroTot (S : WeakScheduler (𝒟(sys^w))) (E : AlterSeq (PMF St
     rw [ENNReal.tsum_eq_zero]; intro ω; exact hzero l ω hl)]
 
 open Classical in
-/-- **F5v K1 — the nil carve split.** At an empty observed history the source
+/-- **The nil carve split.** At an empty observed history the source
 mass splits exactly into the (stall-resolvent) departures and the composite
-halt. Replaces the pre-F5v `reachArrHalt_nil`, whose `haltReach`-shaped nil
-carve misfiled the stall mass as composite halt. -/
+halt. -/
 private theorem reachArrHalt_nil_add (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
     (E : AlterSeq (PMF State) Label) (s0 : State) :
     reachArrHalt S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩
@@ -2244,166 +2219,9 @@ private theorem tsum_nil_reindex
   rw [← Function.Injective.tsum_eq hinj (Function.support_subset_iff'.2 hsupp)]
   exact tsum_congr (fun s0 => if_pos rfl)
 
-/-! ### F5j — PHASE 2 status: term A CLOSED (nil carve-out); renewal crux `(♦)` isolated
-
-**Landed here (sorry-free, axiom-clean scaffolding for the `≥`-fallback):**
-  · `fHM_reachArrHalt` — `fHM = ∑'e reachArrHalt · g` (via `flatSched_haltMass`).
-  · `macroTot` — `S.next E none + ∑'ω S.next E (τ,ω) = 1` (option-split + `internal_only`).
-  · `reachArrHalt_nil` — **the term-A breakthrough**:
-      `reachArrHalt S μ0 E ⟨s0,nil⟩ = S.next E none · μ0 s0 + haltReach S μ0 E ⟨s0,nil⟩`.
-    The empty concrete run's arrival reach is the FULL source mass `μ0 s0` (the nil
-    carve-out of `reachArrM`), which carries the immediate macro-halt `S.next E none · μ0 s0`
-    EXACTLY. So **term A needs NO stall resummation** — it is the nil-execution boundary,
-    period (refuting the d-chain PHASE-P "term A is a genuine `⨆ₙ` limit" worry: that was an
-    artifact of the belief normalizer, not the honest reach).
-  · `tsum_nil_reindex` — `∑'e (if e.trans=nil then G e else 0) = ∑'s0 G ⟨s0,nil⟩`.
-
-**The clean reduction (proved, then re-opened as `(♦)`).** With the four helpers,
-`f_integrate_ge` reduces by `rw [fHM_reachArrHalt]`, split `∑'e = nil ⊔ nonempty`,
-`tsum_nil_reindex`, `reachArrHalt_nil`, `ENNReal.tsum_mul_left`, `add_le_add le_rfl` to
-EXACTLY (add a hypothesis `hg : ∀ x, g x ≤ 1`; both consumers supply it trivially —
-`fun _ => le_rfl` and `fun x => by split_ifs <;> simp`):
-
-  `(♦)   termB  ≤  nilHalt + NE`
-      termB   = ∑'ω S.next E (τ,ω) · ∑'m' ω m' · fHM S m' (macroExtend E m') g
-      nilHalt = ∑'s0 haltReach S μ0 E ⟨s0,nil⟩ · g s0
-      NE      = ∑'{e : trans ≠ nil} reachArrHalt S μ0 E e · g (e.endState)
-
-The whole reduction is an EQUALITY (`fHM = termA + (nilHalt + NE)`); only the last
-`add_le_add le_rfl` is a `≤`, so `(♦) ⟺ termA + termB ≤ fHM`.
-
-**Why `(♦)` is the genuine remaining crux (the renewal peel).** For a nonempty `e`,
-`reachArrHalt e = reachArrM e − ∑'p reachDepM e p`, and the landed genW forms give
-  `reachArrHalt e = ∑_{c: cons∧cur≠nil} segWeight·haltReach − ∑_{c: cons∧cur=nil} segWeight·depMove`.
-The SUBTRACTED cur-empty (fresh-reset) departures are precisely what `genDep_le_genArr`/
-`boundaryHalt_le` absorb at the `≤` level, so `reachArrHalt` is NOT a clean `genW`
-halt-config sum — there is no kernel `k` with `reachArrHalt = genW k`. Hence `(♦)` cannot
-be a one-shot `genW_peel`; it needs a g-weighted halt-config peel that matches `termB`'s
-child `fHM(m', macroExtend E m')` to the parent's first-segment head `S.next E (τ,ω)·ω m'·
-(haltMass(μ0,ω)⟨run⟩/(ω.bind id)(run.end))·[child reach]` via the junction W1/W2 cancellation
-(`PMF.bind_apply` + `ENNReal.div_mul_cancel`, the same collapse `boundaryHalt_le` uses).
-RECOMMENDATION: prove a g-weighted analogue of `genDep_le_genArr` for the halt side —
-`∑'e (genW haltReach) · g` peeled by first segment, with the reset-departures re-absorbed as
-in `boundaryHalt_le` — then `(♦)` assembles. The `fHM(child)` on `termB`'s side is a full
-`reachArrHalt`-sum (`fHM_reachArrHalt`), so the match is a renewal, not a bind. -/
-
-/-! ### F5k — PHASE 3 status: reduction LANDED; `(♦)` refined to 4 sub-lemmas
-
-**DONE (this session, committed green).** `f_integrate_ge` is proved by the F5j
-equality chain (`fHM_reachArrHalt`; nil/nonempty split; `tsum_nil_reindex`;
-`reachArrHalt_nil`; `ENNReal.tsum_mul_left`) down to the single crux
-`renewal_diamond : termB ≤ nilHalt + NE`. Both consumers `fHalt_ge`/`fHalt_ge_G`
-now consume `f_integrate_ge` via `refine le_trans ?_ (f_integrate_ge …)` (the
-blessed `≥`-fallback); the dead `f_integrate_step` sorry stub is deleted.
-So `weakTau_flatten`'s ONLY remaining sorry is `renewal_diamond`.
-
-**The crux is EXACT (not just `≤`).** Physical content: `termB` = mass taking ≥1
-macro step then halting; `nilHalt + NE = fHM − termA`. Peeling `fHM`'s first
-completed segment (`genW_peel`, divided head) and summing the head over the inner
-run `r`, the junction collapses `∑_{r : r.end=s'} haltMass(src,ω)⟨r⟩/(ω.bind id)(s')
-= (ω.bind id)(s')/(ω.bind id)(s') = 1` (W1 = `innerWitness_integrate`
-`∑ run haltMass·[end=s] = (ω.bind id) s`; W2 = `ENNReal.div_mul_cancel`), so the
-run-sum of the honest peel-tail equals `termB` per `(ω,m')`. The reset-departures
-(cur=nil configs, subtracted inside `reachArrHalt`) are re-absorbed exactly as in
-`boundaryHalt_le`. Hence `renewal_diamond` should close as an EQUALITY chain, `≤`
-only as a safety net for the ENNReal subtraction.
-
-**The 4 sub-lemmas the closing proof needs (in build order).**
- 1. `dResidual_endState` — **LANDED** (in tree, :5796).
- 2. `segPre_reindex` — **LANDED (F5l, :5815)**. The front-prepend FIBER bijection.
-    Reindexes `∑'e [segPre e seg] H (dResidual e seg) = ∑'e' [e'.init = seg.run.end]
-    H e'` via `tsum_eq_tsum_of_ne_zero_bij` (NOT `Function.Injective.tsum_eq`): the
-    total prepend `e' ↦ ⟨seg.run.init, seg.run.trans ⧺ e'.trans⟩` discards `init`, so
-    it is injective only ON the fiber `e'.init = seg.run.end`; the bij's index map is
-    `support g → β`, dodging global injectivity. Junction W1 is NOT folded in here —
-    the fiber guard survives to the assembly.
- 3. `genW_g_peel` — **LANDED (F5l, :5884)**. `∑'e genW k src E e·g(e.end) = ∑'e
-    k src E e·g(e.end) + ∑'seg [run≠nil]·(divhead src E seg)·(∑'e' [e'.init=run.end]
-    genW k seg.succ (macroExtend E seg.succ) e'·g(e'.end))`, from `genW_peel` +
-    `dResidual_endState` + `segPre_reindex` (`tsum_comm`; nil-run segs vanish both
-    sides). The RHS child sum is FIBER-guarded (`e'.init = run.end`), NOT the full
-    child integral — the W1 run-sum that lifts the fiber to the full child lives in (4).
-
-**### F5l — refined frontier at sub-lemma (4) (renewal_diamond assembly).**
-(1)–(3) landed & committed green. (4) is NOT closed. Two coupled obstacles found:
- (A) THE JUNCTION NEEDS A SOURCE-STEP INVARIANT. Lifting `genW_g_peel`'s fiber sum
-     `∑'e'[e'.init=s'] child·g` to the full child `∑'ω S.next(τ,ω)∑'m' ω m'·fHM(m')`
-     requires the W1 run-collapse `∑'run haltMass(μ0,run)·[run.end=s'] = (emit.bind
-     id)(s')` = `innerWitness_integrate`, whose hypothesis is `(𝒟(sys^w)).step μ0 τ
-     emit`. That step is only available from `S.valid E … (E.endState hT) …` (see
-     :2305) — i.e. at source `E.endState`, NOT arbitrary `μ0`. So `renewal_diamond`
-     (and hence `f_integrate_ge`, `fHalt_ge`) is only TRUE under the invariant
-     `μ0 = E.endState hT`. `fHalt_ge_G` (:6050) ALREADY carries exactly this hyp;
-     `fHalt_ge`/`f_integrate_ge`/`renewal_diamond` do NOT. CLOSING (4) REQUIRES
-     threading `(hT : E.trans.Terminates) (hinv : μ0 = E.endState hT)` through all
-     three (the recursion preserves it: `(macroExtend E m').endState = m'`, base
-     `⟨μ0,nil⟩.endState = μ0`). This is a signature refactor, not just a proof.
- (B) THE ENNReal SUBTRACTION. `reachArrHalt(nonempty e) = genW(curReachG)e −
-     genW(depMove)e`; `genW` is LINEAR in `k`, but `curReachG − depMove = haltReach`
-     holds only for nonempty configs (nil configs: `curReachG=0 < depMove`, the reset
-     departures), so `genW(curReachG)−genW(depMove) ≠ genW(curReachG−depMove)`. The
-     assembly must mirror `genDep_le_genArr`/`boundaryHalt_le`: peel both g-weighted
-     carriers via `genW_g_peel`, cancel the shared divided heads, and absorb the
-     nil-reset gap with `boundaryHalt_le` (→ `haltReach` = termA) / `depMove_le_init`.
-     ~80 lines of intricate ENNReal on top of (A). Target is `≤` (subtraction slack).
-
-Infrastructure (1)–(3) is the genuine novel content and is DONE. (4) = invariant
-refactor (A) + subtraction assembly (B). Tree GREEN with the single
-`renewal_diamond` sorry (plus the pre-existing dead d-chain sorry at :4197). -/
-
-/-! ### F5m — (A) LANDED; (B) re-scoped: the subtraction route is DEAD, ≤-absorption required
-
-**(A) DONE (committed).** `(hT : E.trans.Terminates) (hinv : μ0 = E.endState hT)` is
-threaded through `renewal_diamond`, `f_integrate_ge`, `fHalt_ge` (and both were
-already carried by `fHalt_ge_G`). Root call sites (`f_halts` via `fHalt_ge`,
-`f_pushforward` via `fHalt_ge_G`) supply `Stream'.Seq.terminates_nil` +
-`(endState_of_trans_nil …).symm`; the recursion is preserved by
-`macroExtend_term hT m'` / `(macroExtend_endState hT m').symm`. With the invariant the
-junction step is now obtainable: `(𝒟(sys^w)).step μ0 τ ω =`
-`S.valid E (Nat.find hT) μ0 (Nat.find_spec hT) (stateAt_find_eq_endState E hT) τ ω hw`
-(rewrite `μ0 = E.endState hT`), feeding `innerWitness_integrate`. The packaged collapse
-is `oneDecisionC_integrate` (:2270) — but it yields the DEPTH-1 child `∑'s m' s·g s`,
-NOT the FULL child `fHM S m' (macroExtend E m') g` that `renewal_diamond`'s termB carries.
-
-**(B) THE OBSTRUCTION FOUND (supersedes the F5l "~80-line subtraction assembly" plan).**
-For nonempty `e`: `reachArrHalt(μ0,E)e = genW curReachG (μ0,E) e − genW depMove (μ0,E) e`
-(`reachArrM = genW curReachG` exactly on nonempty configs — the `≤` in
-`reachDepM_sum_le` at :5076 is `tsum_le_tsum` of an equality; `∑reachDepM = genW depMove`
-is `hdep`, exact). Hence
-  `NE = ∑'{e≠nil} (genW curReachG − genW depMove) e · g(e.end)`.
-The departure carrier `GDne := ∑'{e≠nil} genW depMove (μ0,E) e · g(e.end)` is NOT provably
-finite — it sums a departure mass over EVERY decision config, i.e. over every step-prefix
-of every arbitrarily long inner run (expected step count), so `GDne = ⊤` is possible.
-Therefore EVERY route that forms `GDne` as a standalone quantity is dead:
-  · `NE + GDne = GA` then `le_tsub_of_add_le_left`/`add_le_add_iff_right` needs `GDne ≠ ⊤`;
-  · `ENNReal.tsum_sub` for `NE = GA − GDne` needs `GDne ≠ ⊤`.
-The file uses NO `ENNReal.sub_mul`/`tsum_sub`/`le_tsub` (grep-confirmed) — consistent.
-
-**Why no clean identity.** `GH := ∑'e genW haltReach (μ0,E) e · g(e.end)` (the F5l-recommended
-halt carrier) is NOT `nilHalt + NE`: expanding both by config,
-  `GH = nilHalt + NE + [reset-halts] + [reset-deps]`  (GH strictly LARGER),
-where reset-{halts,deps} are the cur=nil-after-≥1-segment configs. So `L ≤ GH` OVERSHOOTS
-(wrong direction), and `nilHalt + NE` cannot be written as a positive `genW`-config sum:
-the reset terms must be ABSORBED at the `≤` level (exactly the `boundaryHalt_le` /
-`depMove_le_init` move inside `genDep_le_genArr`), never cancelled.
-
-**Consequence — the closing proof is NOT the F5l one-shot peel.** `genW_g_peel` matches only
-ONE level: its child fiber is `genW curReachG (succ, macroExtend E succ)` (an arrival
-carrier), whereas termB's child is `fHM = child NE + child nilHalt + child termA`
-`= (child GA − child GDne) + …` — reintroducing the same ⊤-departure subtraction one level
-down. So the match is genuinely recursive and must run the `genDep_le_genArr`-style STRONG
-INDUCTION on child-history length for the g-weighted halt/arrival carriers, with the
-first-segment head collapsed by W1 (`innerWitness_integrate`, now available via (A)) + W2
-(`ENNReal.div_mul_cancel`) and the reset terms absorbed by `boundaryHalt_le`. Estimated
-~150 lines (comparable to the whole `genDep_le_genArr` + `boundaryHalt_le` development),
-NOT the ~80 lines the F5l note projected. This is the exact residual gap; (A) has removed
-the only non-mechanical prerequisite (the junction step at μ0). Tree GREEN: single live
-`renewal_diamond` sorry (+ pre-existing dead d-chain sorry :4197). -/
-
-/-- **F5k sub-lemma (1) — g factors through the peel.** The residual history after
-peeling a legal first segment has the SAME end-state as the full history (the
-prepended run `r` does not move the final landing point). Foundational for the
-g-weighted `genW` peel `genW_g_peel`. -/
+/-- **`g` factors through the peel.** The residual history after peeling a
+legal first segment has the SAME end-state as the full history (the prepended
+run does not move the final landing point). -/
 private theorem dResidual_endState
     (e : {q : AlterSeq State Label // q.trans.Terminates})
     (seg : FlatSeg State Label) (h : segPre e seg) :
@@ -2424,7 +2242,7 @@ private theorem dResidual_endState
     AlterSeq.endState_congr_pub hseg hAterm seg.runT]
 
 open Classical in
-/-- **F5k sub-lemma (2) — the front-prepend reindex (the linchpin).** For a fixed
+/-- **The front-prepend reindex.** For a fixed
 first segment `seg` (nonempty run), summing `H (dResidual e seg)` over the histories
 `e` that legally peel `seg` equals summing `H e'` over the residual histories `e'`
 whose init is the segment's landing state. The prepend map `e' ↦ ⟨seg.run.init,
@@ -2492,10 +2310,8 @@ private theorem segPre_reindex (seg : FlatSeg State Label)
     rw [hdrop, ← hfib]
 
 open Classical in
-/-- **F5v — nil/nonempty carve of `fHM`** (pure reindex, `tsum_nil_reindex`).
-The pre-F5v version further split the nil part through the misfiled
-`haltReach`; since F5v the nil part is resolved by the stall resolvent
-(`nilHalt_resolvent`) instead. -/
+/-- **Nil/nonempty carve of `fHM`** (pure reindex, `tsum_nil_reindex`).
+The nil part is resolved by the stall resolvent (`nilHalt_resolvent`). -/
 private theorem fHM_split (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
     (μ0 : PMF State) (E : AlterSeq (PMF State) Label) :
     fHM S μ0 E g
@@ -2517,7 +2333,7 @@ private theorem fHM_split (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNRe
   exact tsum_congr (fun e => by split_ifs <;> simp)
 
 open Classical in
-/-- **F5v (P2) — junction linearity split** through the child `fHM_split`. -/
+/-- **Junction linearity split** through the child `fHM_split`. -/
 private theorem renewal_junction_split (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
     (μ0 : PMF State) (E : AlterSeq (PMF State) Label) :
     (∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
@@ -2550,7 +2366,7 @@ private theorem renewal_junction_split (S : WeakScheduler (𝒟(sys^w))) (g : St
     exact fHM_split S g m' (macroExtend E m')
   rw [tsum_congr hpt, ENNReal.tsum_add]
 
-/-- **F5u — the divided per-segment head weight** (the `segWeight`-cons factor,
+/-- **The divided per-segment head weight** (the `segWeight`-cons factor,
 `src = μ0`). Names the junction-repaired head that the peel/collapse carries. -/
 private noncomputable def divHead (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
     (E : AlterSeq (PMF State) Label) (seg : FlatSeg State Label) : ENNReal :=
@@ -2559,7 +2375,7 @@ private noncomputable def divHead (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF S
         / (seg.emit.bind id) (seg.run.endState seg.runT))
 
 open Classical in
-/-- **F5u — parent nonempty-history halt-reach integral** (`boundaryHaltSum`): the
+/-- **Parent nonempty-history halt-reach integral** (`boundaryHaltSum`): the
 single-current-run halt reach summed over nonempty observed histories, `g`-weighted. -/
 private noncomputable def bHaltSum (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
     (μ0 : PMF State) (E : AlterSeq (PMF State) Label) : ENNReal :=
@@ -2568,9 +2384,9 @@ private noncomputable def bHaltSum (S : WeakScheduler (𝒟(sys^w))) (g : State 
     else haltReach S μ0 E e * g (e.1.endState e.2)
 
 open Classical in
-/-- **F5v — reset-departure integral** (`Σreset·g`): the fresh-restart departures
+/-- **Reset-departure integral** (`Σreset·g`): the fresh-restart departures
 at the empty residual, summed over the peels of each nonempty observed history,
-`g`-weighted. F5v: the tail factor is the RESOLVENT departure carrier
+`g`-weighted. The tail factor is the RESOLVENT departure carrier
 `genW (depMove)` at the empty residual (post-stall resets included), not the
 single-stage `depMove`. -/
 private noncomputable def resetSum (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
@@ -2586,7 +2402,7 @@ private noncomputable def resetSum (S : WeakScheduler (𝒟(sys^w))) (g : State 
           * g (e.1.endState e.2)
 
 open Classical in
-/-- **F5u — single-run halt-integral collapse.** The parent's current-run halt
+/-- **Single-run halt-integral collapse.** The parent's current-run halt
 reach, summed over all observed histories and `g`-weighted, collapses through the
 inner-witness integrate identity (`innerWitness_integrate`, valid at each `ω` by
 `S.valid` under `hinv`) to the junction average of the child source-integrals. -/
@@ -2624,7 +2440,7 @@ private theorem parentHaltReach_collapse (S : WeakScheduler (𝒟(sys^w))) (g : 
     simp only [id_eq]
 
 open Classical in
-/-- **F5u — the total current-run halt reach** splits over the nil/nonempty
+/-- **The total current-run halt reach** splits over the nil/nonempty
 histories into `nilHalt_g` (`tsum_nil_reindex`) plus `bHaltSum`. -/
 private theorem haltReach_total_eq (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
     (μ0 : PMF State) (E : AlterSeq (PMF State) Label) :
@@ -2647,8 +2463,8 @@ private theorem haltReach_total_eq (S : WeakScheduler (𝒟(sys^w))) (g : State 
   rw [AlterSeq.endState_of_trans_nil (⟨s0, Stream'.Seq.nil⟩ : AlterSeq State Label) rfl
     Stream'.Seq.terminates_nil]
 
-/-- **F5v — the fresh-restart gap** (`Gap`): the junction average of the child
-fresh-run (`nil`) RESOLVENT departure integrals (`genW (depMove)` since F5v). -/
+/-- **The fresh-restart gap** (`Gap`): the junction average of the child
+fresh-run (`nil`) RESOLVENT departure integrals (`genW (depMove)`). -/
 private noncomputable def Gap (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
     (E : AlterSeq (PMF State) Label) : ENNReal :=
   ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω))
@@ -2656,7 +2472,7 @@ private noncomputable def Gap (S : WeakScheduler (𝒟(sys^w))) (g : State → E
         genW (fun s Ec c => depMove S s Ec c) S m' (macroExtend E m')
             ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
 
-/-- **F5v — total current-run halt reach is a sub-probability** (no invariant
+/-- **Total current-run halt reach is a sub-probability** (no invariant
 needed): unfold to the emissions' witness halt masses and apply the Kraft bound. -/
 private theorem haltReach_tsum_le_one (S : WeakScheduler (𝒟(sys^w))) (src : PMF State)
     (E : AlterSeq (PMF State) Label) :
@@ -2685,7 +2501,7 @@ private theorem haltReach_tsum_le_one (S : WeakScheduler (𝒟(sys^w))) (src : P
     _ ≤ 1 := macroSome_le_one S E
 
 open Classical in
-/-- **F5v — `bHaltSum` is a sub-probability.** -/
+/-- **`bHaltSum` is a sub-probability.** -/
 private theorem bHaltSum_le_one (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
     (hg : ∀ x, g x ≤ 1) (μ0 : PMF State) (E : AlterSeq (PMF State) Label) :
     bHaltSum S g μ0 E ≤ 1 := by
@@ -2697,7 +2513,7 @@ private theorem bHaltSum_le_one (S : WeakScheduler (𝒟(sys^w))) (g : State →
   · exact mul_le_of_le_one_right' (hg _)
 
 open Classical in
-/-- **F5v — the nil-run halt integral is a sub-probability.** -/
+/-- **The nil-run halt integral is a sub-probability.** -/
 private theorem nilHaltReach_g_le_one (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
     (hg : ∀ x, g x ≤ 1) (μ0 : PMF State) (E : AlterSeq (PMF State) Label) :
     (∑' s0 : State,
@@ -2716,7 +2532,7 @@ private theorem nilHaltReach_g_le_one (S : WeakScheduler (𝒟(sys^w))) (g : Sta
     _ ≤ 1 := haltReach_tsum_le_one S μ0 E
 
 open Classical in
-/-- **F5v — the reset integral is dominated by the boundary halt integral**:
+/-- **The reset integral is dominated by the boundary halt integral**:
 per peel, LEMMA A bounds the resolvent tail by the successor mass, and
 `boundaryHalt_le` absorbs the boundary. -/
 private theorem resetSum_le_bHaltSum (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
@@ -2736,7 +2552,7 @@ private theorem resetSum_le_bHaltSum (S : WeakScheduler (𝒟(sys^w))) (g : Stat
       exact genW_dep_nil S seg.succ (macroExtend E seg.succ) (dResidual e seg) hP.2
     · rw [if_neg hP, zero_mul, zero_mul, zero_mul, zero_mul]
 
-/-- **F5v — the reset integral is a sub-probability.** -/
+/-- **The reset integral is a sub-probability.** -/
 private theorem resetSum_le_one (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
     (hg : ∀ x, g x ≤ 1) (μ0 : PMF State) (E : AlterSeq (PMF State) Label) :
     resetSum S g μ0 E ≤ 1 :=
@@ -2761,7 +2577,7 @@ private theorem seq_drop_nil {α : Type} (n : ℕ) :
   rw [Stream'.Seq.drop_get?]
   rfl
 
-/-- **F5v — peels of the empty history are exactly the empty runs at its state.** -/
+/-- **Peels of the empty history are exactly the empty runs at its state.** -/
 private theorem segPre_nil_iff (s0 : State) (seg : FlatSeg State Label) :
     segPre ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ seg
       ↔ seg.run = ⟨s0, Stream'.Seq.nil⟩ := by
@@ -2779,7 +2595,7 @@ private theorem segPre_nil_iff (s0 : State) (seg : FlatSeg State Label) :
     subst hrun
     exact ⟨rfl, by rw [Stream'.Seq.nil_append, seq_drop_nil]⟩
 
-/-- **F5v — the residual of an empty-run peel of the empty history.** -/
+/-- **The residual of an empty-run peel of the empty history.** -/
 private theorem dResidual_nil_eq (s0 : State) (seg : FlatSeg State Label)
     (h : seg.run = ⟨s0, Stream'.Seq.nil⟩) :
     dResidual ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ seg
@@ -2796,7 +2612,7 @@ private theorem dResidual_nil_eq (s0 : State) (seg : FlatSeg State Label)
   rw [seq_drop_nil]
 
 open Classical in
-/-- **F5v — the nil-history stall peel, `(ω, m')`-form.** The `genW_peel` seg-sum
+/-- **The nil-history stall peel, `(ω, m')`-form.** The `genW_peel` seg-sum
 at an empty observed history collapses over the forced empty run to the
 Bayes-coupled stall factor times a child carrier `T` at the same state. -/
 private theorem nil_peel_collapse (S : WeakScheduler (𝒟(sys^w)))
@@ -2871,7 +2687,7 @@ private theorem seq_drop_length_nil {α : Type} (s : Stream'.Seq α) (hs : s.Ter
   have hlen : s.length hs = Nat.find hs := rfl
   exact Stream'.Seq.terminated_stable s (by omega) (Nat.find_spec hs)
 
-/-- **F5v — boundary peels are exactly the full-run peels.** -/
+/-- **Boundary peels are exactly the full-run peels.** -/
 private theorem segBoundary_iff (e : {q : AlterSeq State Label // q.trans.Terminates})
     (seg : FlatSeg State Label) :
     (segPre e seg ∧ (dResidual e seg).1.trans = Stream'.Seq.nil) ↔ seg.run = e.1 := by
@@ -2890,7 +2706,7 @@ private theorem segBoundary_iff (e : {q : AlterSeq State Label // q.trans.Termin
       seq_drop_length_nil e.1.trans runT
     exact ⟨⟨rfl, by rw [hd, Stream'.Seq.append_nil]⟩, hd⟩
 
-/-- **F5v — the residual of a boundary peel** is the empty history at the parent's
+/-- **The residual of a boundary peel** is the empty history at the parent's
 end-state. -/
 private theorem dResidual_boundary_eq (e : {q : AlterSeq State Label // q.trans.Terminates})
     (seg : FlatSeg State Label) (h : seg.run = e.1) :
@@ -2905,7 +2721,7 @@ private theorem dResidual_boundary_eq (e : {q : AlterSeq State Label // q.trans.
   rw [seq_drop_length_nil e.1.trans runT]
 
 open Classical in
-/-- **F5v — the boundary-peel collapse, `(ω, m')`-form.** The boundary seg-sum at a
+/-- **The boundary-peel collapse, `(ω, m')`-form.** The boundary seg-sum at a
 history `e` collapses over the forced full run to the Bayes-coupled factor
 `haltMass μ0 e / (ω.bind id) (e.end)` times a child carrier `T` at the empty
 history rooted at `e.end`. -/
@@ -2961,7 +2777,7 @@ private theorem reset_collapse (S : WeakScheduler (𝒟(sys^w)))
 /-- Dropping zero elements is the identity. -/
 private theorem seq_drop_zero {α : Type} (s : Stream'.Seq α) : s.drop 0 = s := rfl
 
-/-- **F5v — stall peels at a general history are exactly the empty runs at its
+/-- **Stall peels at a general history are exactly the empty runs at its
 initial state.** -/
 private theorem segStall_iff (e : {q : AlterSeq State Label // q.trans.Terminates})
     (seg : FlatSeg State Label) :
@@ -2982,7 +2798,7 @@ private theorem segStall_iff (e : {q : AlterSeq State Label // q.trans.Terminate
       ((⟨e.1.init, Stream'.Seq.nil⟩ : AlterSeq State Label).trans.length runT)) = e.1.trans
     rw [hlen, seq_drop_zero, Stream'.Seq.nil_append]
 
-/-- **F5v — the residual of a stall peel is the history itself.** -/
+/-- **The residual of a stall peel is the history itself.** -/
 private theorem dResidual_stall_eq (e : {q : AlterSeq State Label // q.trans.Terminates})
     (seg : FlatSeg State Label) (h : seg.run = ⟨e.1.init, Stream'.Seq.nil⟩) :
     dResidual e seg = e := by
@@ -2999,7 +2815,7 @@ private theorem dResidual_stall_eq (e : {q : AlterSeq State Label // q.trans.Ter
     runT, hlen, seq_drop_zero]
 
 open Classical in
-/-- **F5v — the stall-peel collapse at a general history, `(ω, m')`-form.** The
+/-- **The stall-peel collapse at a general history, `(ω, m')`-form.** The
 empty-run stratum of the peel collapses to the Bayes-coupled stall factor at the
 initial state times a child carrier `T` at the SAME history. -/
 private theorem stall_peel_collapse (S : WeakScheduler (𝒟(sys^w)))
@@ -3070,7 +2886,7 @@ private theorem segTrans_nil_cur (segs : List (FlatSeg State Label))
       = Stream'.Seq.nil from h)).2)
 
 open Classical in
-/-- **F5v — the arrival carrier vanishes at empty histories**: every consistent
+/-- **The arrival carrier vanishes at empty histories**: every consistent
 config has an empty current prefix, killed by the `curReachG` guard. -/
 private theorem genW_arrG_nil (S : WeakScheduler (𝒟(sys^w))) (src : PMF State)
     (E : AlterSeq (PMF State) Label)
@@ -3086,7 +2902,7 @@ private theorem genW_arrG_nil (S : WeakScheduler (𝒟(sys^w))) (src : PMF State
   · rw [if_neg hdc, zero_mul, zero_mul]
 
 open Classical in
-/-- **F5v — the halted-arrival carve at a nonempty history, additive form**:
+/-- **The halted-arrival carve at a nonempty history, additive form**:
 `reachArrHalt + genW(dep) = genW(arrG)`. -/
 private theorem rAH_add_dep (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
     (E : AlterSeq (PMF State) Label)
@@ -3104,7 +2920,7 @@ private theorem rAH_add_dep (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
   exact reachDepM_sum_le S μ0 E e
 
 open Classical in
-/-- **F5v — the halted-arrival reach is dominated by the source at the initial
+/-- **The halted-arrival reach is dominated by the source at the initial
 state.** -/
 private theorem reachArrHalt_le_init (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
     (E : AlterSeq (PMF State) Label)
@@ -3128,7 +2944,7 @@ private theorem tsum_group_init
   rw [tsum_eq_single e.1.init (fun t ht => if_neg (fun hh => ht hh.symm)), if_pos rfl]
 
 open Classical in
-/-- **F5v — the per-history additive peel identity (∗).** At a nonempty observed
+/-- **The per-history additive peel identity (∗).** At a nonempty observed
 history, the composite halt plus its boundary resets equals the current-run halt
 plus the (stall + continuing) child halts one junction level deeper. -/
 private theorem rAH_peel_identity (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
@@ -3273,7 +3089,7 @@ private theorem rAH_peel_identity (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF S
     ((ENNReal.add_le_add_iff_right hfinX).mp (le_of_eq hchain.symm))
 
 open Classical in
-/-- **F5v — the child nonempty-halt fiber** at landing state `t`. -/
+/-- **The child nonempty-halt fiber** at landing state `t`. -/
 private noncomputable def childNEfib (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
     (m' : PMF State) (F : AlterSeq (PMF State) Label) (t : State) : ENNReal :=
   ∑' e' : {q : AlterSeq State Label // q.trans.Terminates},
@@ -3311,7 +3127,7 @@ private theorem childNEfib_zero (S : WeakScheduler (𝒟(sys^w))) (g : State →
   · rfl
 
 open Classical in
-/-- **F5v — the exact junction fiber collapse.** Per emission (on the step
+/-- **The exact junction fiber collapse.** Per emission (on the step
 support) and per child, the stall-weighted child halts at the SAME history plus
 the W1-collapsed nonempty-head child halts recombine EXACTLY into the child
 nonempty-halt integral: the two Bayes weights sum to `(ω.bind id) t / (ω.bind
@@ -3412,7 +3228,7 @@ private theorem fiber_collapse (S : WeakScheduler (𝒟(sys^w))) (g : State → 
               (ne_top_of_le_ne_top ENNReal.one_ne_top (PMF.coe_le_one _ _)),
             one_mul]
 open Classical in
-/-- **F5v — the stall-junction nil-halt average** (`stallNil`): per emission `ω`
+/-- **The stall-junction nil-halt average** (`stallNil`): per emission `ω`
 and landing state `s0`, the Bayes-coupled stall factor
 `haltMass μ0 ⟨s0,nil⟩ / (ω.bind id) s0` times the junction average of the CHILD
 nil-history halts at the same state, `g`-weighted. The resolvent one-step term
@@ -3429,16 +3245,9 @@ private noncomputable def stallNil (S : WeakScheduler (𝒟(sys^w))) (g : State 
           * g s0
 
 open Classical in
-/-- **F5v N1 (RESIDUAL, sorried) — the nil-halt stall resolvent.** The nil-history
-halt carve unfolds one macro level: halt now against the source, or stall
-(Bayes-coupled empty inner run) and halt at the same state one macro level deeper.
-ROUTE: pointwise K1 (`reachArrHalt_nil_add`) turns the carve into
-`μ0 s0 − genW(dep)(nil@s0)`; the dep-peel at the nil history (`genW_peel` with all
-peels empty-run, collapsed over `(emit, succ)` via `flatSegEquiv`) unfolds
-`genW(dep)`; the child `m' s0`-carve splits by K1 again; W2
-(`ENNReal.div_mul_cancel`, edge `(ω.bind id) s0 = 0` killed via
-`innerWitness_pushforward` at the `S.valid` step from `hinv`) matches
-`haltReach(nil@s0)`; all subtractions finite by LEMMA A. -/
+/-- **The nil-halt stall resolvent.** The nil-history halt carve unfolds one
+macro level: halt now against the source, or stall (Bayes-coupled empty inner
+run) and halt at the same state one macro level deeper. -/
 private theorem nilHalt_resolvent (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
     (μ0 : PMF State) (E : AlterSeq (PMF State) Label)
     (hT : E.trans.Terminates) (hinv : μ0 = E.endState hT) :
@@ -3601,17 +3410,12 @@ private theorem nilHalt_resolvent (S : WeakScheduler (𝒟(sys^w))) (g : State �
     exact tsum_congr (fun ω => ENNReal.tsum_mul_left)
 
 open Classical in
-/-- **F5v R-a (RESIDUAL, sorried) — the exact NE identity.** With the F5v widened
-peel the junction collapse is EXACT: the pre-F5v deficit `D` (the omitted nil-run
-mass, weight `haltMass ⟨t,nil⟩/(ω.bind id) t` per landing state) is now filled
-precisely by the stall peels (empty-run heads), since W1 runs over ALL runs:
-`W(ω,t) + sf(ω,t) = 1`. ROUTE: per-config additive peel `reachArrHalt e =
-haltReach e + Σ_{stall} sf·reachArrHalt(child, e) + Σ_{nonempty, residual≠nil}
-divHead·reachArrHalt(child residual) − reset e` (via `reachArrHalt_ne`,
-`genW_peel` on both carriers, `curReach_split`, per-term finiteness); sum
-`·g(e.end)` over `{e≠nil}`; collapse the nonempty heads by `segPre_reindex` +
-`dResidual_endState` + W1 (`innerWitness_pushforward` under `hinv`) + W2; the
-stall heads reindex to the `JNE` complement. -/
+/-- **The exact nonempty-history junction identity.** The junction collapse is
+exact: the nonempty-history halt-reach integral plus the resets equals the
+boundary halt integral plus the emission-averaged child nonempty-history
+halt-reach integral. The nil-run mass (weight `haltMass ⟨t,nil⟩/(ω.bind id) t`
+per landing state) is filled precisely by the stall peels (empty-run heads),
+since the witness mass runs over ALL runs: `W(ω,t) + sf(ω,t) = 1`. -/
 private theorem renewal_NE_identity (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
     (hg : ∀ x, g x ≤ 1)
     (μ0 : PMF State) (E : AlterSeq (PMF State) Label)
@@ -3920,7 +3724,7 @@ private theorem ennreal_div_mul_le (x c : ENNReal) : x / c * c ≤ x := by
   · rw [ENNReal.div_mul_cancel hc hc']
 
 open Classical in
-/-- **F5v (a) — the parent nil-run halts split through the stall junction:**
+/-- **The parent nil-run halts split through the stall junction:**
 `nilstall = stallNil + sfGap`, by the Bayes cancellation at each landing state
 and the child K1 carve. -/
 private theorem nilstall_split (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
@@ -4006,7 +3810,7 @@ private theorem nilstall_split (S : WeakScheduler (𝒟(sys^w))) (g : State → 
           ring
 
 open Classical in
-/-- **F5v (b)+(c) — the resets plus the stall-weighted gap are absorbed by the
+/-- **The resets plus the stall-weighted gap are absorbed by the
 gap:** per landing state the two Bayes weights sum to `(ω.bind id) t / (ω.bind
 id) t ≤ 1`. -/
 private theorem reset_sfgap_le_gap (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
@@ -4158,17 +3962,8 @@ private theorem reset_sfgap_le_gap (S : WeakScheduler (𝒟(sys^w))) (g : State 
           exact tsum_congr (fun m' => ENNReal.tsum_mul_left)
 
 open Classical in
-/-- **F5v R-c (CLOSED) — the reset/stall boundary bookkeeping.** The
-resets plus the parent nil-run halts are absorbed by the stall-junction average
-plus the gap. ROUTE (exact, verified on paper — PHASE-0 note): (i) `nilstall =
-∑'ω S.next(τ,ω)·∑'s0 haltMass μ0⟨s0,nil⟩·g s0` bounds by
-`sf(ω,s0)·(ω.bind id)(s0)` (W2 `x/c·c ≤ x`, edge exact), and `(ω.bind id) s0 =
-∑'m' ω m'·m' s0` splits by K1 (`reachArrHalt_nil_add`) into `stallNil`'s inner
-term plus the `sf`-weighted child gap; (ii) the reset W1-collapse
-(`segPre_reindex` on the nonempty heads + `innerWitness_pushforward`) gives
-`resetSum ≤ ∑'ω∑'m'∑'t (1−sf(ω,t))-weight · genW(dep)(child,nil@t)·g t`; (iii)
-per `(ω,t)` the two weights sum to `≤ (ω.bind id) t/(ω.bind id) t ≤ 1`, so the
-total is `≤ Gap`. -/
+/-- **The reset/stall boundary bookkeeping.** The resets plus the parent
+nil-run halts are absorbed by the stall-junction average plus the gap. -/
 private theorem resetStall_le (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
     (hg : ∀ x, g x ≤ 1)
     (μ0 : PMF State) (E : AlterSeq (PMF State) Label)
@@ -4202,7 +3997,7 @@ private theorem resetStall_le (S : WeakScheduler (𝒟(sys^w))) (g : State → E
         add_le_add le_rfl (reset_sfgap_le_gap S g μ0 E hT hinv)
 
 open Classical in
-/-- **F5v — K1 through the junction**: the child landing integral splits into the
+/-- **K1 through the junction**: the child landing integral splits into the
 child nil-halts plus the child resolvent departures (`Gap`). -/
 private theorem junction_total_split (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
     (μ0 : PMF State) (E : AlterSeq (PMF State) Label) :
@@ -4225,117 +4020,14 @@ private theorem junction_total_split (S : WeakScheduler (𝒟(sys^w))) (g : Stat
   refine tsum_congr (fun s0 => ?_)
   rw [← add_mul, reachArrHalt_nil_add S m' (macroExtend E m') s0]
 
-/-! ### F5t status — the F5s P1/P3 split was UNSOUND; consolidated to one residual.
-
-**PHASE-0 verdict (F5t, machine-checked against the defs).** The F5s frontier
-"reset-mass coincidence" was verified and it FAILS (outcome iii, wrong-way). The
-per-config peel (`reachArrHalt_ne`/`genW_peel`/`curReach_split`; each
-`genW depMove e ≤ reachArrM e ≤ 1` finite) gives the EXACT identity
-  `reachArrHalt e = haltReach e + carrier_child e − reset_deficit e`,
-  `carrier_child e = ∑'seg [segPre e seg ∧ dResidual e seg ≠ nil]·divhead·reachArrHalt(child)`,
-  `reset_deficit e = ∑'seg [segPre e seg ∧ dResidual e seg = nil]·divhead·depMove(nil child) ≥ 0`.
-Summing `·g(e.end)` over `{e≠nil}`: `NE_g = boundaryHaltSum + Σcarrier·g − Σreset·g`.
-CRUCIALLY the junction collapse of `Σcarrier·g` is EXACT (`Σcarrier·g = JNE`), NOT
-`≤`-with-deficit: after W1 (`innerWitness_pushforward`) + W2 (`div_mul_cancel`) the
-only dropped terms have `(ω.bind id) t = 0`, where `ω m'·child_{m',t} = 0` because
-`reachArrHalt S m' F e' ≤ reachArrM ≤ m'(e'.init)` (`probOf_eq_reachArrM`+`probOf_le_init`).
-So the collapse deficit is ZERO — it does NOT absorb `Σreset·g`. Hence the F5s
-P1 `JNE + boundaryHaltSum ≤ NE_g` is FALSE (overshoots by `Σreset·g > 0`); the clean
-`boundaryHaltSum` split is dead.
-
-**Consolidation.** `renewal_boundary_le`/`renewal_NE_le` are DELETED and replaced by
-the single honest residual `renewal_junction_bound : Jimm+Jnil+JNE ≤ nilHalt_g+NE_g`.
-`renewal_junction_split` (P2) is retained (it supplies `J = Jimm+Jnil+JNE`, still used
-by `renewal_step_le`). `renewal_step_le`/`renewal_le` and the whole downstream tower
-stay green modulo this one sorry.
-
-**True route for `renewal_junction_bound` (~150+ lines).** Reduce (exact NE identity +
-`Σcarrier·g = JNE`) to `Jimm + Jnil + Σreset·g ≤ nilHalt_g + boundaryHaltSum`, argued
-per-ω over `W_ω := innerWitness sys μ0 ω` (step via `S.valid E (Nat.find hT) … (rw
-[hinv])`): child immediate/nil-halts + child reset departures (`depMove_le_init`)
-lift through the witness halt-pushforward (`innerWitness_integrate`/`_pushforward`) to
-the parent nil-run halt `nilHalt_g` + the nonempty halt-at-boundary reach
-(`boundaryHalt_le`); continuing departures fall to `genDep_le_genArr`. -/
-
-/-! ### F5v PHASE-0 — the stall-resolvent repair (design record; verified on paper).
-
-**Verdict (0.1, misfiling CONFIRMED; the F5u finding is architectural, not tactical).**
-Concrete counterexample against the CURRENT weights: `sys` with `a --τ--> pure b`,
-`μ0 = pure a`; `S` emits the reflexive `ω₀ = pure (pure a)` at `E0` (stall: the inner
-witness of `weakTau (pure a) (pure a)` halts on the nil run), then `ω₁ = pure (pure b)`
-at `E1`, then halts. `reachArrHalt(E0, ⟨a,nil⟩) = haltReach(nil@a) = 1`, so
-`fHM(E0,g) = g a`, while the child average is `fHM(E1,g) = g b`: `renewal_step_le`
-itself is FALSE (`g := [·=b]`), and `f_pushforward` fails (`Ν.bind id = pure b`).
-Mechanism: a stall (empty inner run) is not a composite halt — the macro continues —
-but `dConsistent` bans empty completed segments, so post-stall continuations have no
-config; the stall mass never departs and misfiles into `reachArrHalt`. Weights must change.
-
-**Design (0.2) — realize the stall-resolvent as CARRIER WIDENING, not weight surgery.**
-Drop the nonemptiness conjunct from `dConsistent` (and the `≠ nil` conjunct of `segPre`).
-All weight terms (`segWeight`/`curReach`/`depMove`/`haltReach`/`moveTerm`/`reachM`/
-`reachArrM`/`reachDepM`/`genW`) stay LITERALLY unchanged: an empty completed segment
-`(ω, m')` at state `t` carries exactly the Bayes-coupled stall factor
-`S.next E (τ,ω) · ω m' · haltMass μ0 ⟨t,nil⟩ / (ω.bind id) t`, so finite stall-chains
-of empty segments ARE the resolvent `Jres` — resummed by the config tsum itself, and
-`genW_peel` (whose proof is nonemptiness-free) IS the resolvent fixpoint equation.
-Validation: (i) junction ≤ 1 — the `stallPart_le_one` convexity (`iwMove + iwHalt = 1`
-per emission, `macroSome_le_one`) bounds each seg-count-truncated peel; (ii) in the
-counterexample the stall chain becomes the config `[empty(ω₀,pure a)] + run a→b`, so
-`fHM(E0,g) = g b` ✓; (iii) the fidelity kit (`dConsistent_snoc_iff`/`dcon_snoc_mem_range`/
-`genW_curReachG_snoc`/`genW_landKer`/`reachArrM_snoc`/`reachArrM_aux`/
-`probOf_eq_reachArrM`/`flatSched_haltMass`) is machine-checked nonemptiness-AGNOSTIC —
-it re-proves verbatim (the widened conjunct passes through untouched).
-
-**What genuinely changes (0.3, the re-derivation map).**
-(1) `genW_nil` is FALSE after widening (nil histories peel stall chains); its three
-    consumer sites reshape. (2) `dW_le`/`dDenom_ne_top` (dead d-chain) become false —
-    the dead cluster is deleted FIRST (grep-verified dead; `:4202` sorry included).
-(3) Quantitative core: introduce the seg-count truncation `genWd k d` (peel recursion
-    to depth `d`; `genW = ⨆ d, genWd` via the ℕ-graded list stratification). Then
-    · LEMMA A (nil resolvent bound): `genWd (depMove) d (nil@s0) ≤ src s0`, plain
-      induction on `d` by the stall convexity + W2 (`x/c·c ≤ x`);
-    · `genDep_le_genArr` becomes a SINGLE induction on `d` (no length induction):
-      empty heads recurse on the same history, nonempty heads on the residual; the
-      nil-residual boundary uses LEMMA A + `boundaryHalt_le` (verbatim shape).
-(4) The corrected renewal chain (all statements now TRUE; verified on paper, the
-    deficit cancellation is EXACT):
-    · K1 (nil carve): `m' t = reachArrHalt(child, nil@t) + genW(dep)(child, nil@t)`;
-    · N1 (nil resolvent identity): `reachArrHalt(nil@s0) = S.next E none · μ0 s0
-      + ∑'ω S.next(τ,ω) · sf(ω,s0) · ∑'m' ω m' · reachArrHalt(m', E·m', nil@s0)`,
-      `sf(ω,t) := haltMass μ0 ⟨t,nil⟩ / (ω.bind id) t` (dep-peel at nil + K1 + W2);
-    · corrected R-a: `NE_g + resetSum' = bHaltSum + JNE` — the widened peel adds the
-      stall-NE terms `∑'ω S.next(τ,ω)·∑'m' ω m'·∑'t sf(ω,t)·C(m',t)` which fill the
-      F5u deficit `D` EXACTLY (`W(ω,t) + sf(ω,t) = 1`); `resetSum'`/`Gap'` carry the
-      RESOLVENT departures `genW(dep)(child, nil@t)` in place of `depMove`;
-    · corrected R-c: `Jnil'' + resetSum' ≤ STALL_nil + bHaltSum` closes EXACTLY:
-      `bHaltSum = (parentHaltReach_collapse total) − nilstall`, K1 splits the total
-      into `Jnil'' + Gap'`, and the reset W1-collapse gives `resetSum' =
-      ∑'ω∑'m'∑'t (1−sf(ω,t))·genW(dep)(child,nil@t)·g t ≤ Gap' − (sf-part)` ✓;
-    · `renewal_step_le` then assembles as before; `condDepthSum_le_fHM` SIMPLIFIES
-      (consume `renewal_step_le` directly — no nil/NE split needed in the induction).
-Stage order: (S1) this note; (S2) delete dead d-chain + `segWeightB`; (S3) flip +
-structural kit + (3); (S4) chain (4); (S5) endgame (axiom check, header). Committed
-stages stay green; sorries only at corrected-TRUE statements with routes recorded.
-
-**F5v OUTCOME: ALL STAGES LANDED.** S4 closed all three residuals
-(`nilHalt_resolvent`, `resetStall_le` via `nilstall_split`/`reset_sfgap_le_gap`,
-and `renewal_NE_identity` via `rAH_peel_identity`/`stall_peel_collapse`/
-`fiber_collapse`) — the deficit cancellation `W(ω,t) + sf(ω,t) = 1` is exact,
-with the `(ω.bind id) t = 0` edge killed by `reachArrHalt_le_init`. The tower is
-sorry-free; `#print axioms` on `weakTau_flatten` / `weakTau_lift_pure` /
-`ProbabilisticForwardSimulation.trans` = `[propext, Classical.choice,
-Quot.sound]`. -/
-
 open Classical in
-/-- **F5v — the KEY′ one-step-unfold lower bound of `fHM` (the honest renewal
-`≤`).** Halting immediately at the parent plus taking one macro step to a child
-`m'` and honest-flattening from `m'` lower-bounds the parent honest flatten.
-ASSEMBLY (green modulo the three F5v residuals `nilHalt_resolvent` /
-`renewal_NE_identity` / `resetStall_le`): split both sides (`fHM_split`,
-`renewal_junction_split`, `nilHalt_resolvent`); then the key inequality
-`Jn + JNE ≤ stallNil + NE_g` follows by adding the finite `resetSum + nilstall`
-to both sides and chaining `resetStall_le`, `junction_total_split` (K1),
-`parentHaltReach_collapse`, `haltReach_total_eq`, and `renewal_NE_identity`. -/
+/-- **One-step-unfold lower bound of `fHM` (the renewal `≤`).** Halting
+immediately at the parent plus taking one macro step to a child `m'` and
+honest-flattening from `m'` lower-bounds the parent honest flatten. Proof:
+split both sides (`fHM_split`, `renewal_junction_split`, `nilHalt_resolvent`),
+add the finite `resetSum + nilstall` to both sides, and chain `resetStall_le`,
+`junction_total_split`, `parentHaltReach_collapse`, `haltReach_total_eq`, and
+`renewal_NE_identity`. -/
 private theorem renewal_step_le (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
     (hg : ∀ x, g x ≤ 1)
     (μ0 : PMF State) (E : AlterSeq (PMF State) Label)
@@ -4417,12 +4109,11 @@ private theorem renewal_step_le (S : WeakScheduler (𝒟(sys^w))) (g : State →
               else reachArrHalt S μ0 E e * g (e.1.endState e.2) := by ring
 
 open Classical in
-/-- **F5p — depth-stratified halt bound (bypasses `renewal_diamond`).** For any
-stratum family `D` obeying the depth-0 stop identity (`Dzero`) and the one-step
-junction recursion (`Dsucc`), the depth-`n` partial sum lower-bounds the honest
-flatten's `g`-integral. Specializes to `fHalt_ge` (`g := 1`) and `fHalt_ge_G`
-(`g := [·=s]`). The induction step reduces to the junction-collapse crux (★),
-whose child factor is the FINITE `∑ k<n D`, not the opaque `fHM(child)`. -/
+/-- **Depth-stratified halt bound.** For any stratum family `D` obeying the
+depth-0 stop identity (`Dzero`) and the one-step junction recursion (`Dsucc`),
+the depth-`n` partial sum lower-bounds the honest flatten's `g`-integral
+(by induction on the depth, via `renewal_step_le`). Specializes to `fHalt_ge`
+(`g := 1`) and `fHalt_ge_G` (`g := [·=s]`). -/
 private theorem condDepthSum_le_fHM (S : WeakScheduler (𝒟(sys^w))) (g : State → ENNReal)
     (hg : ∀ x, g x ≤ 1)
     (D : PMF State → (E : AlterSeq (PMF State) Label) → E.trans.Terminates → ℕ → ENNReal)
@@ -4473,7 +4164,7 @@ private theorem fHalt_ge (S : WeakScheduler (𝒟(sys^w))) (n : ℕ) :
     (fun μ0 E _ _ => by rw [condDepth_zero]; simp only [mul_one, PMF.tsum_coe])
     n
 
-/-- **F5g-3(a) — a.s.-halting.** Given `S` halts almost surely from `PMF.pure μ0`,
+/-- **A.s.-halting.** Given `S` halts almost surely from `PMF.pure μ0`,
 the honest flatten `flatSched` halts almost surely from `μ0`. -/
 theorem f_halts (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
     (hhalt : (∑' E : {e : AlterSeq (PMF State) Label // e.trans.Terminates},
@@ -4517,7 +4208,7 @@ private theorem fHalt_ge_G (S : WeakScheduler (𝒟(sys^w))) (s : State) (n : �
     n
 
 open Classical in
-/-- **F5g-3(b) — pushforward.** The honest flatten `flatSched`'s halting end-state
+/-- **Pushforward.** The honest flatten `flatSched`'s halting end-state
 pushforward is the macro mixture `Ν.bind id`. -/
 theorem f_pushforward (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
     (Ν : PMF (PMF State))
@@ -4583,7 +4274,7 @@ theorem f_pushforward (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
   show (Ν.bind id) s = F s
   exact le_antisymm (hle s) hge
 
-/-- **Flattening (F5g-4).** An internal weak transition of `𝒟(sys^w)` out of the
+/-- **Flattening.** An internal weak transition of `𝒟(sys^w)` out of the
 Dirac macro-state `PMF.pure μ` collapses to an internal weak transition of `sys`
 from `μ` to the end-state mixture. Witnessed by the honest reach-arrival
 flattening scheduler `flatSched` instantiated at the macro witness of `h`:
