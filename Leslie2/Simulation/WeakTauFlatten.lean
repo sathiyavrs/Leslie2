@@ -5764,30 +5764,47 @@ run-sum of the honest peel-tail equals `termB` per `(ω,m')`. The reset-departur
 only as a safety net for the ENNReal subtraction.
 
 **The 4 sub-lemmas the closing proof needs (in build order).**
- 1. `dResidual_endState : segPre e seg → (dResidual e seg).endState = e.endState`
-    (g factors out of the peel). Clean: `endState_append_shift` + `segPre.2` (the
-    `A.append B = e.trans` prefix) + `endState_congr_pub`. ~15 lines, certain.
- 2. `prepend_reindex` — THE missing front-prepend bijection (dual of the F5g-1
-    `snocT` END-append). For fixed `seg`, `e ↦ dResidual e seg` is a bijection
-    `{e // segPre e seg} ≃ {e' // e'.init = seg.run.endState ∧ seg.run.trans ≠ nil}`
-    with inverse `e' ↦ ⟨seg.run.init, seg.run.trans.append e'.trans⟩`; injectivity
-    from `happ`/`drop_append_length`, support via `Function.Injective.tsum_eq`.
-    NOTE the constraint `e'.init = seg.run.end`: the honest child integral is over
-    the FIBER `e'.init = s'`, and only after the W1 run-sum (which reweights fibers
-    to `(ω.bind id)(s')` and cancels) does it become the FULL child `fHM(m',·)`.
-    So do the reindex+run-sum TOGETHER, not the bijection alone. ~60 lines.
- 3. `genW_g_peel` — the g-weighted `genW` recursion: `∑'e genW k src E e·g(e.end)
-    = ∑'e k src E e·g(e.end) + ∑'seg (divhead src E seg)·∑'e' genW k seg.succ
-    (macroExtend E seg.succ) e'·g(e'.end)`, from `genW_peel` + (1) + (2). ~50 lines.
- 4. `renewal_diamond` assembly: apply (3) at `k = curReachG` and `k = depMove`,
-    combine via `reachArrHalt = genW(haltReachG) − genW(depMoveNil)` (per-e), run-sum
-    the divided head (W1/W2), absorb resets (`boundaryHalt_le`/`depMove_le_init`).
-    ~70 lines.
+ 1. `dResidual_endState` — **LANDED** (in tree, :5796).
+ 2. `segPre_reindex` — **LANDED (F5l, :5815)**. The front-prepend FIBER bijection.
+    Reindexes `∑'e [segPre e seg] H (dResidual e seg) = ∑'e' [e'.init = seg.run.end]
+    H e'` via `tsum_eq_tsum_of_ne_zero_bij` (NOT `Function.Injective.tsum_eq`): the
+    total prepend `e' ↦ ⟨seg.run.init, seg.run.trans ⧺ e'.trans⟩` discards `init`, so
+    it is injective only ON the fiber `e'.init = seg.run.end`; the bij's index map is
+    `support g → β`, dodging global injectivity. Junction W1 is NOT folded in here —
+    the fiber guard survives to the assembly.
+ 3. `genW_g_peel` — **LANDED (F5l, :5884)**. `∑'e genW k src E e·g(e.end) = ∑'e
+    k src E e·g(e.end) + ∑'seg [run≠nil]·(divhead src E seg)·(∑'e' [e'.init=run.end]
+    genW k seg.succ (macroExtend E seg.succ) e'·g(e'.end))`, from `genW_peel` +
+    `dResidual_endState` + `segPre_reindex` (`tsum_comm`; nil-run segs vanish both
+    sides). The RHS child sum is FIBER-guarded (`e'.init = run.end`), NOT the full
+    child integral — the W1 run-sum that lifts the fiber to the full child lives in (4).
 
-The whole proof is ~200 lines of new intricate ENNReal/reindex code; (2) is the
-genuine linchpin (the front-prepend bijection did not exist — F5g-1 built only the
-END-append `snocT`). RECORDED as the refined frontier; tree GREEN with the single
-`renewal_diamond` sorry. -/
+**### F5l — refined frontier at sub-lemma (4) (renewal_diamond assembly).**
+(1)–(3) landed & committed green. (4) is NOT closed. Two coupled obstacles found:
+ (A) THE JUNCTION NEEDS A SOURCE-STEP INVARIANT. Lifting `genW_g_peel`'s fiber sum
+     `∑'e'[e'.init=s'] child·g` to the full child `∑'ω S.next(τ,ω)∑'m' ω m'·fHM(m')`
+     requires the W1 run-collapse `∑'run haltMass(μ0,run)·[run.end=s'] = (emit.bind
+     id)(s')` = `innerWitness_integrate`, whose hypothesis is `(𝒟(sys^w)).step μ0 τ
+     emit`. That step is only available from `S.valid E … (E.endState hT) …` (see
+     :2305) — i.e. at source `E.endState`, NOT arbitrary `μ0`. So `renewal_diamond`
+     (and hence `f_integrate_ge`, `fHalt_ge`) is only TRUE under the invariant
+     `μ0 = E.endState hT`. `fHalt_ge_G` (:6050) ALREADY carries exactly this hyp;
+     `fHalt_ge`/`f_integrate_ge`/`renewal_diamond` do NOT. CLOSING (4) REQUIRES
+     threading `(hT : E.trans.Terminates) (hinv : μ0 = E.endState hT)` through all
+     three (the recursion preserves it: `(macroExtend E m').endState = m'`, base
+     `⟨μ0,nil⟩.endState = μ0`). This is a signature refactor, not just a proof.
+ (B) THE ENNReal SUBTRACTION. `reachArrHalt(nonempty e) = genW(curReachG)e −
+     genW(depMove)e`; `genW` is LINEAR in `k`, but `curReachG − depMove = haltReach`
+     holds only for nonempty configs (nil configs: `curReachG=0 < depMove`, the reset
+     departures), so `genW(curReachG)−genW(depMove) ≠ genW(curReachG−depMove)`. The
+     assembly must mirror `genDep_le_genArr`/`boundaryHalt_le`: peel both g-weighted
+     carriers via `genW_g_peel`, cancel the shared divided heads, and absorb the
+     nil-reset gap with `boundaryHalt_le` (→ `haltReach` = termA) / `depMove_le_init`.
+     ~80 lines of intricate ENNReal on top of (A). Target is `≤` (subtraction slack).
+
+Infrastructure (1)–(3) is the genuine novel content and is DONE. (4) = invariant
+refactor (A) + subtraction assembly (B). Tree GREEN with the single
+`renewal_diamond` sorry (plus the pre-existing dead d-chain sorry at :4197). -/
 
 /-- **F5k sub-lemma (1) — g factors through the peel.** The residual history after
 peeling a legal first segment has the SAME end-state as the full history (the
