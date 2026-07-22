@@ -24,7 +24,9 @@ forward simulation to a weak transition on the (abstract) `sys_A` side.
   `weakTau_lift_pure` — lift a `weakTau` **out of a single concrete state** `PMF.pure q_B`,
 
 which is the genuine analytic crux (the run-to-halt of an internal scheduler, matched step-by-step
-on the abstract side) and is left as the sole `sorry`. Everything else is *coupling algebra*:
+on the abstract side); it is proven by reduction through the distribution-lifted weak closure
+(`Equivalences.lean`, `WeakTauLift.lean`) and the ω-composition `weakTau_flatten`
+(`WeakTauFlatten.lean`). Everything else is *coupling algebra*:
 
 * `simulates_bind_mix` — `Simulates` is closed under mixing sources (posterior/Bayesian mixing of
   the per-source kernels), the convex-closure property the coupling form of `Simulates` was chosen
@@ -214,7 +216,10 @@ This is the genuine analytic core: the concrete internal scheduler runs to halt 
 internal steps), and the abstract side must mirror it step-by-step through `sim.step` and take the
 a.s.-halting limit. Everything else in this file is coupling algebra on top of this lemma.
 
-*Left as `sorry`.* -/
+Proven: Stage 1 converts `sim` to a strong simulation into `𝒟(sys_A^w)` and lifts the weak
+transition there (`probabilisticForwardSimulation_iff_strong_dist_weakClosure`,
+`StrongProbabilisticSimulation.weakTau_lift`); Stage 2 flattens the lifted transition back down
+to `sys_A` via the ω-composition `weakTau_flatten` (`WeakTauFlatten.lean`). -/
 theorem weakTau_lift_pure
     (sim : ProbabilisticForwardSimulation sys_B sys_A R_AB)
     {q_B : State_B} {ν_B : PMF State_B} {μ_A : PMF State_A}
