@@ -6283,6 +6283,38 @@ private theorem renewal_NE_le (S : WeakScheduler (𝒟(sys^w))) (g : State → E
           else reachArrHalt S μ0 E e * g (e.1.endState e.2) := by
   sorry
 
+/-! ### F5s status — `renewal_step_le` reduced to P1/P3; P2 landed.
+
+**Landed (F5s).** `renewal_step_le` is now **sorry-free**, reduced (via the shared
+`boundaryHaltSum := ∑'{e≠nil} haltReach S μ0 E e · g(e.end)` intermediate) to:
+  · `renewal_junction_split` (P2) — **CLOSED** (pure `ENNReal` linearity: distribute
+    the child `fHM_split` through the junction average). `J = Jimm + Jnil + JNE`.
+  · `renewal_boundary_le` (P3, `by sorry`) — `Jimm + Jnil ≤ nilHalt_g + boundaryHaltSum`.
+  · `renewal_NE_le` (P1, `by sorry`) — `JNE + boundaryHaltSum ≤ NE_g`.
+P1 + P3 add (cancelling the shared `boundaryHaltSum`) to exactly the residual
+`J ≤ nilHalt_g + NE_g`; the glue in `renewal_step_le` is `add_le_add` + `add_assoc`.
+
+**Frontier / CRUX for the next session (reset-coupling — verify before investing).**
+The pen-and-paper per-config peel (via `reachArrHalt_ne`/`genW_peel`/`curReach_split`;
+note each `genW depMove e ≤ reachArrM e ≤ 1` is FINITE, so the per-config subtraction
+is safe) gives the EXACT identity
+  `reachArrHalt e = haltReach e + carrier_child e − reset_deficit e`,
+  `carrier_child e = ∑'seg [segPre e seg ∧ dResidual e seg ≠ nil]·divhead(seg)·reachArrHalt(child)`,
+  `reset_deficit e = ∑'seg [segPre e seg ∧ dResidual e seg = nil]·divhead(seg)·depMove(nil child) ≥ 0`.
+Summing `·g(e.end)` over `{e≠nil}`: `NE_g = boundaryHaltSum + Σcarrier·g − Σreset·g`.
+So P1 (`JNE + boundaryHaltSum ≤ NE_g`) needs `JNE ≤ Σcarrier·g − Σreset·g`, i.e. the
+junction-collapse deficit of `JNE` (the W1/W2 reset loss) must ABSORB `Σreset·g` — the
+SAME reset mass that `boundaryHalt_le` (:4734) bounds by `haltReach e`. This
+reset-mass coincidence is the delicate point: it is plausibly true (both resets are
+the nil-first-run mass) but was NOT machine-verified here. If it fails, the clean
+`boundaryHaltSum` split must be replaced by carrying `Σreset·g` explicitly (finite
+`tsub`), or by folding P1/P3 into one residual `Jimm+Jnil+JNE ≤ nilHalt_g+NE_g`.
+Route once verified: P1 by `genW_g_peel` of the `reachArrHalt` carrier + `segPre_reindex`/
+`dResidual_endState` reindex + junction collapse (W1 `innerWitness_integrate` with
+`hstep` from `S.valid E (Nat.find hT) … (rw [hinv])`, W2 `ENNReal.div_mul_cancel`) +
+`genDep_le_genArr` length recursion; P3 by the `snocT`/`dConsistent_snoc_iff` boundary
+lift + `boundaryHalt_le`/`depMove_le_init` reset absorption. -/
+
 open Classical in
 /-- **F5r — the KEY′ one-step-unfold lower bound of `fHM` (the honest renewal `≤`).**
 Halting immediately at the parent (`S.next E none` against the source) plus taking
