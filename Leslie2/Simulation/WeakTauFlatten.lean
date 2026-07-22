@@ -6431,6 +6431,18 @@ private theorem resetSum_le_gap (S : WeakScheduler (𝒟(sys^w))) (g : State →
     (μ0 : PMF State) (E : AlterSeq (PMF State) Label)
     (hT : E.trans.Terminates) (hinv : μ0 = E.endState hT) :
     resetSum S g μ0 E ≤ Gap S g E := by
+  -- **F5u status (R-c-ii, TRUE — the tractable residual).** Route (≈90 lines,
+  -- modelled on `boundaryHalt_le`): (1) `resetSum = ∑' seg, (if seg.run.trans ≠ nil
+  -- then 1 else 0) · divHead S μ0 E seg · depMove S seg.succ (macroExtend E seg.succ)
+  -- ⟨⟨seg.run.endState seg.runT, nil⟩,_⟩ · g (seg.run.endState seg.runT)` — swap
+  -- `∑'e ∑'seg`, then `segPre_reindex seg _ (fun e' => if e'.trans = nil then depMove …
+  -- e' · g (e'.end) else 0)` collapses the inner `e`-sum to the single `e' = ⟨⟨run.end,
+  -- nil⟩,_⟩` (using `dResidual_endState` for the `g`); (2) reindex `∑'seg` over
+  -- `(emit, succ, run)` via `flatSegEquiv`, then the run-sum collapses W1
+  -- (`innerWitness_pushforward`: `∑'_{run.end=t} wit.haltMass μ0⟨run⟩ = (emit.bind id) t`;
+  -- valid at each `emit` in support by `S.valid`+`hinv`, else the `S.next` factor is 0)
+  -- with W2 (`ENNReal.div_mul_cancel`), giving `∑_{run≠nil} … ≤ (bind t)/(bind t) ≤ 1`;
+  -- hence `≤ ∑'ω S.next·∑'m' ω m'·∑'t depMove(child nil@t)·g t = Gap`.
   sorry
 
 open Classical in
@@ -6460,6 +6472,35 @@ private theorem renewal_NE_identity (S : WeakScheduler (𝒟(sys^w))) (g : State
             * ∑' m', ω m' * (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
                 if e.1.trans = Stream'.Seq.nil then 0
                 else reachArrHalt S m' (macroExtend E m') e * g (e.1.endState e.2)) := by
+  -- **F5u FINDING (R-a, the crux — this exact identity appears to OVERSTATE).**
+  -- The per-config peel (`reachArrHalt_peel` + `reachArrHalt_ne` + `curReach_split`)
+  -- gives the honest EXACT identity, with `carrierSum` (NOT `JNE`) on the right:
+  --   `NE_g + resetSum = bHaltSum + carrierSum`,
+  --   `carrierSum := ∑'_{e≠nil} (∑'_{seg: segPre e seg ∧ dResidual e seg ≠ nil}`
+  --     `divHead S μ0 E seg · reachArrHalt S seg.succ (macroExtend E seg.succ)`
+  --     `(dResidual e seg)) · g (e.1.endState e.2)`.
+  -- The junction collapse of `carrierSum` is NOT exact. `segPre_reindex` + W1
+  -- (`innerWitness_pushforward`) + W2 give
+  --   `carrierSum = ∑'ω S.next E (τ,ω) · ∑'m' ω m' · ∑'t W(ω,t) · C(m',t)`,
+  --   `JNE       = ∑'ω S.next E (τ,ω) · ∑'m' ω m' · ∑'t   1    · C(m',t)`,
+  --   `C(m',t) := ∑'_{e'.init=t, e'≠nil} reachArrHalt S m' (macroExtend E m') e'·g(e'.end)`,
+  --   `W(ω,t)  := (∑'_{run≠nil, run.end=t} (innerWitness sys μ0 ω).haltMass μ0 ⟨run⟩)`
+  --              `/ (ω.bind id) t = 1 − (innerWitness sys μ0 ω).haltMass μ0 ⟨⟨t,nil⟩⟩/(ω.bind id) t`.
+  -- The peel's `seg`s have NONEMPTY runs (`segPre`), so the collapse omits the nil-run
+  -- (immediate-halt / stall) mass `haltMass μ0 ⟨⟨t,nil⟩⟩`, which is GENERICALLY NONZERO
+  -- — e.g. a reflexive weak-τ step is witnessed by `WeakScheduler.stop`, halting entirely
+  -- on nil runs (`Weak/WeakTransition.lean` `weakTau_refl`). Hence `W(ω,t) ≤ 1` strictly
+  -- and `carrierSum = JNE − D` with a stall deficit `D ≥ 0` generally `> 0`; the claimed
+  -- `Σcarrier·g = JNE` overshoots by `D`.
+  -- Consequence (via the machine-checked `jimmjnil_gap_eq`): the whole obligation
+  -- `renewal_junction_bound` is EQUIVALENT to `JNE + bHaltSum ≤ NE_g + Gap`, which with
+  -- the exact `carrierSum` identity reduces to `resetSum + D ≤ Gap`. Per-term this needs
+  -- `C(m',t) ≤ depMove S m' (macroExtend E m') ⟨⟨t,nil⟩⟩ · g t` (child nonempty arrivals ≤
+  -- child fresh departure), which FAILS. In the reflexive-stall scenario (`μ0 = pure a`,
+  -- reflexive `ω` to child `pure a` doing a genuine `a→b`) it degenerates to `g b ≤ g a`.
+  -- So this peel route does not close the goal: the stall mass must be tracked (Layer-4d
+  -- `stallSum`), or reflexive/stalling emissions ruled out, before `renewal_NE_identity`
+  -- (and hence `renewal_junction_bound`) can hold. Left as the honest residual.
   sorry
 
 open Classical in
