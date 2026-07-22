@@ -5998,25 +5998,47 @@ private theorem genW_g_peel
     · simp only [if_pos hsp]; rw [dResidual_endState e seg hsp]; ring
     · simp only [if_neg hsp]; ring
 
-/-! ### F5n — ROUTE R1 CHOSEN (bypass `renewal_diamond`).
+/-! ### F5n FRONTIER — the last gap `renewal_diamond`, mapped for a fresh session.
 
-**Why R1.** `renewal_diamond` (LHS `∑'ω S.next(τ,ω) ∑m' ω m' fHM(child)`) has NO
-induction handle: the child `fHM` is a full infinite-depth carrier, and by F5m it
-re-opens the ⊤-departure subtraction one level down (`fHM(child)=child(arrM−depM)`),
-so it cannot be proven by a single history-length induction (that is R2's recursive
-pain). R1 supplies the missing handle: the consumers `fHalt_ge`/`fHalt_ge_G` need
-only `∑ k<n condDepth(·G) ≤ fHM` for each `n`, and the depth-`n` partial sum is
-FINITE (`≤ macroHalted ≤ 1`), making every absorption ⊤-safe.
+**State.** The SOLE live wired gap is `renewal_diamond` (below): `∑'ω S.next(τ,ω)
+∑m' ω m' fHM(m', macroExtend E m', g) ≤ nilHalt_gsum + ∑'{e≠nil} reachArrHalt g`.
+Everything downstream (`f_integrate_ge`/`fHalt_ge`/`fHalt_ge_G`/`f_halts`/
+`f_pushforward`/`weakTau_flatten`) is green modulo this one sorry.
 
-**Shape.** Replace `renewal_diamond`+`f_integrate_ge` by ONE lemma proved by
-induction on `n`, carrying a payload `P : PMF State → ENNReal` with
-`hPle : P m' ≤ fHM(m', macroExtend E m', g)` (from IH) and `hPfin : P m' ≤ 1`:
-  `termA_g(E) + ∑'ω S.next(τ,ω) ∑m' ω m' P(m') ≤ fHM(μ0,E,g)`,
-`termA_g(E) = S.next E none * ∑'s μ0 s·g s`. Base/nil carve by `reachArrHalt_nil`;
-the nonempty crux mirrors `genDep_le_genArr` (peel via `genW_g_peel`, junction W1
-`innerWitness_integrate` at `μ0=E.endState hT` + W2 `div_mul_cancel`, resets absorbed
-by `boundaryHalt_le`), with `hPfin` licensing the ⊤-safe steps. Consumers instantiate
-`P := (∑ k<n condDepth(·) child)`, already `≤ fHM(child)` by IH and `≤ 1`. -/
+**DEAD END, ruled out (F5n).** The R1 "finite opaque payload" form
+`payload_crux` — a lemma over an abstract `P` with `hPle : P m' ≤ fHM(child)` and
+`hPfin : P m' ≤ 1` concluding `termA + ∑'ω S.next(τ,ω) ∑m' ω m' P(m') ≤ fHM` — is
+LOGICALLY EQUIVALENT to `renewal_diamond` (3-line reductions both ways; and `hPfin`
+is vacuous because `fHM(child) ≤ 1` ALWAYS, halt-mass·g≤1). So no opaque-`P`
+wrapper can beat it. WHY: the junction collapse (W1 `innerWitness_integrate` + W2
+`div_mul_cancel`) under the nonempty-run restriction leaves the nil-run boundary
+weighted by the CHILD arrival carrier `R(m',s)`, NOT by `g(s)` — i.e. it bottoms
+out one renewal level down, and with an opaque `P` that descent is infinite.
+
+**THE FIX (recommended, NOT yet verified).** Restructure with EXPLICIT DEPTH and
+induct on `n` INSIDE the crux — do NOT prove `renewal_diamond` as stated; bypass it.
+Prove `∀ E hT (hinv : μ0 = E.endState hT), (∑ k ∈ Finset.range n, condDepth-stratum k)
+≤ fHM S μ0 E g` by induction on `n` (`fHalt_ge`/`fHalt_ge_G` already have this outer
+shape). In the STEP, the child bound is the IH AT DEPTH `n`
+(`∑ k<n condDepth(child) ≤ fHM(child)`), never the full opaque `fHM(child)`; because
+depth strictly decreases the `R(m',s)` LOSS/reset deficit that regressed forever now
+BOTTOMS OUT at `n=0`, its boundary terms absorbed into the parent `termA_halt`
+(= the `⟨s,nil⟩` `haltReach` contribution) via the `≤1` bound. `condDepth_succ`
+(:645) mirrors the junction peel: stratum-`(k+1)` parent = junction-average of
+stratum-`k` children, exactly what the collapse produces.
+
+**Landed green kit (usable as black boxes).** `condDepthSum_le_one`
+(`∑ k<n condDepth ≤ 1`, source-independent); `reachArrHalt_ne` (nonempty:
+`reachArrHalt = genW curReachG − genW depMove`); `reachArrHalt_peel` (per-config
+arr/dep `genW_peel`); plus prior `genW_g_peel`, `genDep_le_genArr`, `boundaryHalt_le`,
+`depMove_le_init`, junction W1 `innerWitness_integrate` (needs `hstep` from `S.valid …`
+at `μ0=E.endState hT`) + W2 `div_mul_cancel`, `segPre_reindex`, `dResidual_endState`.
+
+**Endgame after closure.** Delete dead `d`-chain (`d_integrate_step`/`dHM`/`dHalt_ge`
+/`dHalt_ge_G`/`d_halts`/`d_pushforward`) + `segWeightB` cluster + the then-dead
+`renewal_diamond`/`f_integrate_ge` (all unreferenced tree-wide, grep-verified); then
+`#print axioms` on `PLTS.weakTau_flatten`/`weakTau_lift_pure`/
+`ProbabilisticForwardSimulation.trans` must be `[propext, Classical.choice, Quot.sound]`. -/
 
 open Classical in
 /-- **(♦) — the renewal crux.** The child halt-integrals summed against the first
@@ -6135,55 +6157,6 @@ private theorem reachArrHalt_peel (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF S
     simp only [curReachG]; rw [if_pos h]
   rw [reachArrHalt_ne S μ0 E e h, genW_peel (curReachG S) S μ0 E e,
     genW_peel (depMove S) S μ0 E e, hcg]
-
-open Classical in
-/-- **F5n crux (R1) — the finite-payload renewal step.** Replaces
-`renewal_diamond`+`f_integrate_ge`. Given a payload `P m'` bounded by the child
-flatten-halt integral (`hPle`, from the depth-`n` IH) and finite (`hPfin`), the
-macro-halt boundary plus the payload-weighted first macro step lower-bound the
-honest flatten's halt-integral. Finiteness of `P` keeps every absorption ⊤-safe. -/
-private theorem payload_crux (S : WeakScheduler (𝒟(sys^w))) (μ0 : PMF State)
-    (E : AlterSeq (PMF State) Label) (g : State → ENNReal) (hg : ∀ x, g x ≤ 1)
-    (hT : E.trans.Terminates) (hinv : μ0 = E.endState hT)
-    (P : PMF State → ENNReal)
-    (hPle : ∀ m', P m' ≤ fHM S m' (macroExtend E m') g)
-    (hPfin : ∀ m', P m' ≤ 1) :
-    S.next E none * (∑' s, μ0 s * g s)
-      + ∑' ω : PMF (PMF State), S.next E (some (Silent.τ, ω)) * ∑' m', ω m' * P m'
-      ≤ fHM S μ0 E g := by
-  classical
-  rw [fHM_reachArrHalt]
-  have hnil : (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
-        if e.1.trans = Stream'.Seq.nil then reachArrHalt S μ0 E e * g (e.1.endState e.2) else 0)
-      = S.next E none * (∑' s, μ0 s * g s)
-        + ∑' s0 : State,
-            haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0 := by
-    rw [tsum_nil_reindex (fun e => reachArrHalt S μ0 E e * g (e.1.endState e.2))]
-    have hpt : ∀ s0 : State,
-        reachArrHalt S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩
-            * g ((⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ :
-                {e : AlterSeq State Label // e.trans.Terminates}).1.endState
-              Stream'.Seq.terminates_nil)
-          = S.next E none * (μ0 s0 * g s0)
-            + haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0 := by
-      intro s0
-      rw [AlterSeq.endState_of_trans_nil (⟨s0, Stream'.Seq.nil⟩ : AlterSeq State Label) rfl
-          Stream'.Seq.terminates_nil, reachArrHalt_nil, add_mul, mul_assoc]
-    rw [tsum_congr hpt, ENNReal.tsum_add, ENNReal.tsum_mul_left]
-  have hsplit : (∑' e : {e : AlterSeq State Label // e.trans.Terminates},
-        reachArrHalt S μ0 E e * g (e.1.endState e.2))
-      = (S.next E none * (∑' s, μ0 s * g s)
-          + ∑' s0 : State,
-              haltReach S μ0 E ⟨⟨s0, Stream'.Seq.nil⟩, Stream'.Seq.terminates_nil⟩ * g s0)
-        + ∑' e : {e : AlterSeq State Label // e.trans.Terminates},
-            if e.1.trans = Stream'.Seq.nil then 0
-            else reachArrHalt S μ0 E e * g (e.1.endState e.2) := by
-    rw [← hnil, ← ENNReal.tsum_add]
-    exact tsum_congr (fun e => by split_ifs <;> simp)
-  rw [hsplit, add_assoc]
-  refine add_le_add le_rfl ?_
-  -- **hcrux** — the finite-payload renewal inequality (the remaining work).
-  sorry
 
 /-- Iterating `f_integrate_ge` at `g := 1`: the partial sum of conditional depth
 totals lower-bounds the honest flatten's total halting mass. -/
