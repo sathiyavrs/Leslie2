@@ -245,6 +245,35 @@ theorem exists_honest_of_card_lt {Q G : Finset (Fin n)} (h : G.card < Q.card) :
   by_contra hjF
   exact hc ⟨j, hj, hjF⟩
 
+/-- Two `n − f` quorums share an honest member:
+`(n−f) + (n−f) − n = n − 2f > f ≥ |F|`. -/
+theorem exists_honest_inter {P : Params} {F Q Q' : Finset (Fin P.n)}
+    (hF : F.card ≤ P.f) (hQ : P.n - P.f ≤ Q.card) (hQ' : P.n - P.f ≤ Q'.card) :
+    ∃ q, q ∈ Q ∧ q ∈ Q' ∧ q ∉ F := by
+  have hcard := Finset.card_union_add_card_inter Q Q'
+  have hun : (Q ∪ Q').card ≤ P.n := by
+    refine le_trans (Finset.card_le_univ _) ?_
+    simp
+  have hf := P.hf
+  have hlt : F.card < (Q ∩ Q').card := by omega
+  obtain ⟨q, hq, hqF⟩ := exists_honest_of_card_lt hlt
+  rw [Finset.mem_inter] at hq
+  exact ⟨q, hq.1, hq.2, hqF⟩
+
+/-- An `f + 1`-set and an `n − f` quorum intersect: `(f+1) + (n−f) > n`. -/
+theorem exists_mem_inter_of_quorum {P : Params} {K Q : Finset (Fin P.n)}
+    (hK : P.f + 1 ≤ K.card) (hQ : P.n - P.f ≤ Q.card) :
+    ∃ q, q ∈ K ∧ q ∈ Q := by
+  have hcard := Finset.card_union_add_card_inter K Q
+  have hun : (K ∪ Q).card ≤ P.n := by
+    refine le_trans (Finset.card_le_univ _) ?_
+    simp
+  have hf := P.hf
+  have hlt : 0 < (K ∩ Q).card := by omega
+  obtain ⟨q, hq⟩ := Finset.card_pos.mp hlt
+  rw [Finset.mem_inter] at hq
+  exact ⟨q, hq.1, hq.2⟩
+
 section Counting
 
 variable [DecidableEq M]
