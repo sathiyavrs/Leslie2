@@ -183,7 +183,7 @@ variable [Silent Label]
 
 /-- Every external label occurring in a terminating execution occurs in its
 trace. -/
-private theorem mem_trace_of_external {sys : System State Label}
+theorem mem_trace_of_external {sys : System State Label}
     {e : AlterSeq State Label} (hterm : e.trans.Terminates) {n : ℕ} {l : Label}
     {s' : State} (hn : e.trans.get? n = some (l, s')) (hl : ¬ l = Silent.τ) :
     ∃ m, (sys.trace e).get? m = some l := by

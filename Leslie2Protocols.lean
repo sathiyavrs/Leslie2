@@ -23,6 +23,8 @@ import Leslie2Protocols.ABA.SpecSafety
 import Leslie2Protocols.ABA.WCCSpec
 import Leslie2Protocols.Framework.FamilySim
 import Leslie2Protocols.Framework.IdleFamily
+import Leslie2Protocols.Framework.MapIdleSim
 import Leslie2Protocols.Framework.Relabel
 import Leslie2Protocols.Framework.SyncProduct
 import Leslie2Protocols.Framework.TraceSupport
+import Leslie2Protocols.Framework.WeakBurst
