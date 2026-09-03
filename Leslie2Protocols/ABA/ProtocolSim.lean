@@ -191,14 +191,14 @@ private theorem corrupt_gnet {P : Params} (w : NetState P.n) (k : Fin P.n) (r : 
     (⟨w.pool r, w.F⟩ : GSub.GNetState P.n).corrupt P k =
       ⟨(NetState.corrupt P k w).pool r, (NetState.corrupt P k w).F⟩ := by
   by_cases hc : k ∉ w.F ∧ w.F.card < P.f <;>
-    simp [GSub.GNetState.corrupt, NetState.corrupt, hc]
+    simp [GSub.GNetState.corrupt, NetStateP.corrupt, hc]
 
 /-- The ABA-side network's corruption act and the adversary's agree. -/
 private theorem corrupt_anet {P : Params} (w : NetState P.n) (k : Fin P.n) :
     ANetState.corrupt P k ⟨w.dpool, w.F⟩ =
       ⟨(NetState.corrupt P k w).dpool, (NetState.corrupt P k w).F⟩ := by
   by_cases hc : k ∉ w.F ∧ w.F.card < P.f <;>
-    simp [ANetState.corrupt, NetState.corrupt, hc]
+    simp [ANetState.corrupt, NetStateP.corrupt, hc]
 
 /-! ### Transporting the columns conjunct
 
@@ -283,23 +283,6 @@ program of a corrupted process, those labels lying in `actsAt` (D23). The
 process group is a full synchronisation, so no protocol transition carries
 either label. -/
 
-/-- The Byzantine graded-agreement call has no row at the process it names
-(D11, D22, D23). -/
-private theorem stepN_byzCallG_dead {P : Params} {j : Fin P.n} {q : ProcRec P.n}
-    {ν : PMF (ProcRec P.n)} {r : ℕ} {b : Bool}
-    (h : ABAProcStepN P j q (Sum.inr (.byzCallG r j b)) ν) : False := by
-  cases h with
-  | byzCallGIdle _ _ _ _ _ hk => exact hk rfl
-  | corruptedIdle _ _ _ _ _ hown => exact hown rfl
-
-/-- The Byzantine graded-agreement return has no row at the process it names
-(D11, D22, D23). -/
-private theorem stepN_byzRetG_dead {P : Params} {j : Fin P.n} {q : ProcRec P.n}
-    {ν : PMF (ProcRec P.n)} {r : ℕ} {out : GbcaOut}
-    (h : ABAProcStepN P j q (Sum.inr (.byzRetG r j out)) ν) : False := by
-  cases h with
-  | byzRetGIdle _ _ _ _ _ hk => exact hk rfl
-  | corruptedIdle _ _ _ _ _ hown => exact hown rfl
 
 /-! ### The matching, by label class
 
