@@ -8,7 +8,7 @@ import Leslie2Protocols.ABA.Fabric
 import Leslie2.Systems.LTS
 
 /-!
-# The gather specification (blueprint Transition System 4, repaired)
+# The gather specification (blueprint Transition System 4, repaired: D25, D26)
 
 The specification of one gather instance over an arbitrary payload type `X`,
 on its own alphabet `Gather.Lab n X`. Processes call with a payload and may
@@ -27,7 +27,7 @@ of scope.
   so a process corrupted after an honest call can still direct its committed
   entry until first use, and a specification that pinned the entry at call
   time would refuse that execution. The source's Byzantine-call τ-rule is the
-  corrupted half of `commit`.
+  corrupted half of `commit` (deviation D26).
 * `cores` — the binding content: a family of payload sets, written at most
   once, by the internal transition `bindCores`. Every member's entries are
   committed entries, any two members share at least `n − f` entries, and
@@ -38,7 +38,7 @@ Agreement and Validity are linear. Two returns agree wherever both are
 defined, both being sub-maps of the write-once `val`; a never-corrupted
 process's entry is its genuine call, by `commit`'s guard.
 
-## The core family (repair of the source's single bound core)
+## The core family (repair of the source's single bound core, deviation D25)
 
 The source's TS 4 binds a *single* core set: one `S` of size at least
 `n − f`, fixed before the first return, contained in every return. The

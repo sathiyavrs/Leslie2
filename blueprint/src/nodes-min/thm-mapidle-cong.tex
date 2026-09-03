@@ -1,0 +1,11 @@
+\begin{theorem}[Read-back congruence]
+  \label{thm:mapidle-cong}
+  \lean{PLTS.ForwardSimulation.mapIdle}\leanok
+  \uses{def:idle-family, def:forwardsim}
+  Forward simulation is a congruence for reading both systems over a finer alphabet along one partial label map: delegated labels are matched through the simulation and unmapped labels by idling, under the sole hypothesis that the silent labels of the two alphabets correspond and nothing else delegates to $\tau$: \leandecl{PLTS.ForwardSimulation.mapIdle}.
+\end{theorem}
+
+\begin{proof}\leanok
+  \uses{def:idle-family, def:forwardsim}
+  See the Lean proof of \leandecl{PLTS.ForwardSimulation.mapIdle}.
+\end{proof}

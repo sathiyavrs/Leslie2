@@ -88,6 +88,7 @@ Safety properties are stated on the supports of achievable trace distributions, 
 The bridge is in \leanmodule{Leslie2Protocols/Framework/TraceSupport} and the composition operators are in \leanmodule{Leslie2/ProcessAlgebra/Composition} and \leanmodule{Leslie2/ProcessAlgebra/Abstract}.
 The synchronised product of the components is in \leanmodule{Leslie2Protocols/Framework/SyncProduct} and the idle-padded instance families are in \leanmodule{Leslie2Protocols/Framework/IdleFamily}.
 The restriction along the left embedding and the precongruence it enjoys are both in \leanmodule{Leslie2Protocols/Framework/Relabel}.
+The read-back congruence closing the list transports a simulation over a finer alphabet, and \leanmodule{Leslie2Protocols/Framework/WeakBurst} supplies the weak runs of unbounded length --- a chain of silent steps, closed or not by one external step --- that the simulations of the case study answer multi-step obligations with.
 
 \input{nodes-min/thm-trace-support}
 \input{nodes-min/def-process-algebra}
@@ -100,6 +101,7 @@ The restriction along the left embedding and the precongruence it enjoys are bot
 \input{nodes-min/thm-precong-interleave}
 \input{nodes-min/thm-precong-abstract}
 \input{nodes-min/thm-precong-relabel}
+\input{nodes-min/thm-mapidle-cong}
 
 \section{Case study: Asynchronous Byzantine Agreement}
 
@@ -135,10 +137,11 @@ Weak Common Coin (WCC) takes no input and may return a bit.
 \end{itemize}
 
 Every protocol with sub-protocols is treated in two moves: substitution, in which each sub-implementation is exchanged for the corresponding specification in a fixed context and which is sound by precongruence, and the core simulation, in which the core algorithm beside the specifications of its sub-protocols is simulated by the protocol's own specification.
-Composing the two inclusions places the implementation inside the specification, and the recursion stops at GBCA, which calls no sub-protocol, and at WCC, which is left at specification level.
+Composing the two inclusions places the implementation inside the specification, and the recursion stops at WCC, which is left at specification level.
+GBCA is verified against two implementations: a direct one, which calls no sub-protocol, and a gather-based one, through which the recursion continues into gather and reliable broadcast.
 
 \paragraph{Object names.}
-Transition System~1 is the ABA specification, Transition System~2 the GBCA specification and Transition System~3 the WCC specification; the three names are used throughout this section and in every node of it.
+Transition System~1 is the ABA specification, Transition System~2 the GBCA specification, Transition System~3 the WCC specification, Transition System~4 the gather specification and Transition System~6 the BRB specification; the numbering is the source's, whose Transition Systems~5 and~7 (SRSD and AVSS) are not encoded, and the names are used throughout this section and in every node of it.
 A rule is cited by its Lean constructor name, a deviation label in parentheses marks a point where an encoding departs from~\cite{LeslieBP}, and where a node names ABDY22's Algorithm~$k$ it means the numbering of~\cite{ABDY22}.
 
 \paragraph{Deviations.}
@@ -185,6 +188,17 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
     The two networks carry the Byzantine visible return, $\mathrm{retABA}(id,b)$ at a corrupted process for either bit under the authorisation $id \in F$ alone.
     The specification's corrupted interface rules are the image of the replacement: \leandeclnamed{callByz}{PLTS.ABA.SpecStep.callByz} records a bit unrelated to the one its label declares, and \leandeclnamed{retByz}{PLTS.ABA.SpecStep.retByz} returns any bit at any time without moving the state.
     The honest rules stay available to a corrupted process, so the two rules add behaviour and remove none.
+  \item D24: the gather-based GBCA implementation follows Algorithm~4 of~\cite{AFW25} at $R = 1$, with the approximate-agreement stage omitted and the grade read off the second gather's counts directly --- $(v, A)$ at $|{\rm dom}\, h| - f$ entries of $v$, $(v, B)$ at $f{+}1$, $(\bot, C)$ below both.
+    The source supplies no gather-based GBCA; its gather serves the coin construction, which stays at specification level here, so \cite{AFW25} is the algorithm's source of record and Transition System~2 is unchanged as its specification.
+  \item D25: the gather specification carries a write-once \emph{core family} in its state --- a nonempty set of committed-entry sets, any two of which (each with itself) share at least $n - f$ entries, every return dominating some member --- in place of Transition System~4's single bound identifier set carried on its return labels.
+    The classical common core is the family's intersection; its $n - f$ size bound is a fact about complete executions, not a state invariant an implementation can maintain (\cite{AFW25}, Remark~1), and the family is what a reachable state does determine.
+    On the implementation side the $\mathrm{BIND}$ payload travels by reliable broadcast rather than on the fabric, which is what pins a committed payload against a sender corrupted later.
+  \item D26: the gather specification records calls and committed entries in separate fields, a per-entry internal commit writing $val(k)$ once under $k \in F \vee call(k) = v$, in place of Transition System~4's rule writing $call$ itself at a corrupted process.
+    A process corrupted after its call may still direct its committed entry, and the guard reads $F$ at the commit rather than at the call.
+  \item D27: the BRB specification splits the leader's recorded input from the committed value, an internal commit writing the value once under $\mathit{ldr} \in F \vee input = m$, in place of Transition System~6's single call field and its corrupted-leader rule, which only bars the instance from returning.
+    A leader corrupted after its call may commit any value; Totality, a liveness property, is not encoded.
+  \item D28: composite instances are single rule tables over joint states rather than synchronised compositions.
+    A sub-protocol's call and return are fused into the rows of the caller --- the gather call contributes to the input broadcast, the $\mathrm{BIND}$ send is the bind-broadcast call, the first gather's return is the second's call --- and a sub-instance's delivery is a derived predicate on its coordinate, read by the consuming row, not an event of the composite.
 \end{itemize}
 
 \paragraph{Outside the model.}
@@ -226,7 +240,7 @@ The dashed vertical is Theorem~\ref{thm:aba-protocol-composed}, along the Dirac 
 
 \subsection{The graded-agreement stage}
 
-Graded agreement is the one sub-protocol carried to implementation level, and its messages form a five-level ladder.
+Graded agreement is the one sub-protocol carried to implementation level, and it is carried twice: by the direct transcription of ABDY22's Algorithm~6 given here, whose messages form a five-level ladder, and by the gather-based construction of Section~\ref{sec:aba-gather}.
 The depth of the ladder is what the grade-$1$ evidence buys (D18): $f{+}1$ $\mathrm{BIND}\,v$ receipts exceed the corruption budget, so an honest sender stands behind every grade-$1$ output, and that sender's own wait condition is the $n{-}f$ $\mathrm{VOTE}\,v$ quorum the binding argument of~\cite{ABDY22} counts.
 The definition below reads it as one per-round PLTS, which is the form Theorem~\ref{thm:gbca-inst-refines} is proved against.
 Its state is the pair of the $n$ stage records and the round's own message fabric, so the network is a component of it and not a field, and its guards read that pair through four accessors; Definitions~\ref{def:aba-procnet} and~\ref{def:aba-netadv} are where each guard is written against one process record.
@@ -299,9 +313,9 @@ The \leandeclnamed{flip}{PLTS.ABA.WCC.Step.flip} guard requires more than $f$ ca
 
 \subsection{The GBCA instance refinement}
 
-Graded agreement is carried to implementation level, and the work that carries it is done once, on one round instance.
+Graded agreement is carried to implementation level, and the work that carries the direct implementation is done once, on one round instance.
 The relation reads the specification's call slots, returns and corrupted set straight off the implementation state, and certifies the two fields the protocol does not store, $dead$ and $grade$, by receipt patterns; a kill is fired on demand, as a two-step weak burst under a return that needs it, which is why the obligation is discharged by a weak transition rather than by a single step.
-This is the only refinement of the case study proved against protocol code, and everything downstream of it is transport.
+This refinement and those of Section~\ref{sec:aba-gather} are the ones proved against protocol code, and everything downstream of them is transport.
 See \leanmodule{Leslie2Protocols/ABA/GBCASim}.
 
 \input{nodes-min/thm-gbca-inst-refines}
@@ -374,12 +388,82 @@ See \leanmodule{Leslie2Protocols/ABA/NonVacuity}.
 
 \input{nodes-min/def-aba-nonvacuity}
 
+\subsection{A second implementation of graded agreement}
+\label{sec:aba-gather}
+
+Transition System~2 has a second verified implementation.
+Attiya, Flam and Welch~\cite{AFW25} build graded agreement from two calls to a \emph{gather} sub-protocol and local counting, and the source blueprint carries the matching material: a gather specification (Transition System~4), a gather implementation over reliable broadcast (its Algorithm~4, from~\cite{AFW25}), and Bracha's reliable broadcast (Transition System~6 and its Algorithm~6, from~\cite{Bra87}).
+This section carries that construction to implementation level in full --- the two gather instances and, beneath them, the $4n$ Bracha instances --- and to the same specification: the round interface $\mathrm{callG}/\mathrm{retG}$, Transition System~2, and every statement downstream of it are those of the sections above, so the two implementations differ only in the system at the bottom of the chain.
+The per-round work is three substitutions in sequence, each replacing one layer of sub-protocol by its specification; at the protocol shape the three stages land on $\mathrm{hybrid}(P)$, and the chain continues along the shared links.
+The reading verified here is the composed one --- the gather-based counterpart of Definition~\ref{def:aba-composed} --- and no flat protocol reading over it is part of the development.
+The Lean files are \leanmodule{Leslie2Protocols/ABA/Fabric} through \leanmodule{Leslie2Protocols/ABA/GatherChain}, mapped file by file in the ABA library's own guide.
+
+\subsection{Reliable broadcast}
+
+Reliable broadcast is the bottom of the construction, and its specification is the first point dynamic corruption shapes: a leader corrupted after its call may still direct the delivered value, so the committed value is a separate field written by a guarded internal rule, not the call's own record (D27).
+The implementation is Bracha's ladder over the shared two-box state, and its refinement certifies the committed value by an $\mathrm{ECHO}$ receipt quorum, firing the abstract commit on demand under the first return.
+See \leanmodule{Leslie2Protocols/ABA/Fabric}, \leanmodule{Leslie2Protocols/ABA/BRBSpec}, \leanmodule{Leslie2Protocols/ABA/BRBImpl} and \leanmodule{Leslie2Protocols/ABA/BRBSim}.
+
+\input{nodes-min/def-aba-fabric}
+\input{nodes-min/def-aba-brb-spec}
+\input{nodes-min/def-aba-brb-impl}
+\input{nodes-min/thm-brb-refines}
+
+\subsection{Gather}
+
+Gather has every process broadcast a payload and returns to each caller a set of (process, payload) entries, with a binding guarantee: the returns share a committed core fixed no later than the first of them.
+The specification holds the binding content as a write-once \emph{family} of entry sets rather than as one bound set (D25).
+The single core of the classical statement is the family's intersection, and its $n - f$ size bound is a fact about complete executions --- at $n = 3f + 1$, a reachable state at the first return has as few as $n - 2f$ honest votes cast, and no state predicate pins one $n{-}f$-sized set every future return must dominate; what a state does determine is the family of committed $\mathrm{BIND}$ payloads, pairwise overlapping in $n - f$ entries.
+Every counting argument the two-gather round needs is re-derived from that pairwise bound.
+The implementation sends its $\mathrm{BIND}$ payloads by reliable broadcast, which is what pins a payload against a sender corrupted later, and is verified in two substitutions: the Bracha layer replaced coordinatewise, then the gather ladder replaced by Transition System~4.
+See \leanmodule{Leslie2Protocols/ABA/GatherSpec}, \leanmodule{Leslie2Protocols/ABA/GatherMid}, \leanmodule{Leslie2Protocols/ABA/GatherSim}, \leanmodule{Leslie2Protocols/ABA/GatherLow} and \leanmodule{Leslie2Protocols/ABA/GatherLowSim}.
+
+\input{nodes-min/def-aba-gather-spec}
+\input{nodes-min/def-aba-gather-mid}
+\input{nodes-min/thm-gather-core}
+\input{nodes-min/def-aba-gather-low}
+\input{nodes-min/thm-gather-low-refines}
+
+\subsection{The two-gather round}
+
+The round calls gather on the input bits, takes as candidate the bit carried by all but $f$ of the returned entries, calls gather again on the candidates, and reads the grade off the counts of the second return (D24).
+The refinement into Transition System~2 is pure counting on the two core families: a bit every member carries on fewer than $|U| - f$ entries is excluded and stays excluded, a member heavy at one candidate excludes the other, and the $A$/$C$ latch is member heaviness against member lightness.
+The kill-on-demand discipline of the direct implementation's refinement carries over unchanged.
+See \leanmodule{Leslie2Protocols/ABA/GBCAPair}, \leanmodule{Leslie2Protocols/ABA/GBCAPairSim}, \leanmodule{Leslie2Protocols/ABA/GBCAIdeal}, \leanmodule{Leslie2Protocols/ABA/GBCAIdealSim}, \leanmodule{Leslie2Protocols/ABA/GBCALow} and \leanmodule{Leslie2Protocols/ABA/GBCALowSim}.
+
+\input{nodes-min/def-aba-gbca-pair}
+\input{nodes-min/thm-gbca-pair-refines}
+\input{nodes-min/def-aba-gbca-gather-low}
+\input{nodes-min/thm-gbca-tier-refines}
+\input{nodes-min/thm-gbca-gather-refines}
+
+\subsection{The gather-based chain}
+
+At the protocol shape, the gather-based rounds occupy the same refinable slot the direct rounds do: each reading is lifted over the extended alphabet along the label pullback of Definition~\ref{def:aba-gbcasub}, gathered into the round-indexed family, and put through the composed reading's pipeline.
+The three substitutions inside the round become three stages between protocol-shaped systems, the third landing on $\mathrm{hybrid}(P)$ itself, and from there the chain is the shared one: Theorem~\ref{thm:aba-hybrid-spec} and the safety transfer.
+One specification, two verified implementations, one meeting point at $\mathrm{hybrid}(P)$.
+See \leanmodule{Leslie2Protocols/ABA/GatherChain}.
+
+\input{nodes-min/def-aba-gather-side}
+\input{nodes-min/thm-aba-substitution-g}
+\input{nodes-min/thm-aba-gather-main}
+
 \begin{thebibliography}{LeslieBP}
 
 \bibitem[ABDY22]{ABDY22}
 Ittai Abraham, Naama Ben-David and Sravya Yandamuri.
 Efficient and adaptively secure asynchronous binary agreement via binding crusader agreement.
 In \emph{41st ACM Symposium on Principles of Distributed Computing}, pages 381--391, 2022.
+
+\bibitem[AFW25]{AFW25}
+Hagit Attiya, Itay Flam and Jennifer L.\ Welch.
+Why canonical-round algorithms fail for optimal Byzantine resilience.
+In \emph{45th ACM Symposium on Principles of Distributed Computing}, pages 197--207, 2026.
+
+\bibitem[Bra87]{Bra87}
+Gabriel Bracha.
+Asynchronous Byzantine agreement protocols.
+\emph{Information and Computation}, 75(2):130--143, 1987.
 
 \bibitem[LeslieBP]{LeslieBP}
 Gaspard Reghem.

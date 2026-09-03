@@ -1,0 +1,15 @@
+\begin{theorem}[Gather broadcast substitution]
+  \label{thm:gather-low-refines}
+  \lean{PLTS.ABA.Gather.LowRel}\lean{PLTS.ABA.Gather.gatherLow}\leanok
+  \uses{def:aba-gather-low, def:aba-gather-mid, thm:brb-refines}
+  The gather implementation over Bracha instances is forward-simulated by the gather implementation over broadcast specifications.
+  The relation is the identity on the gather two-box together with the broadcast refinement relation of Theorem~\ref{thm:brb-refines} at each of the $2n$ coordinates.
+  A row that reads a derived delivery --- an approved entry, a committed bind payload --- is answered by a $\tau$-chain that fires the lagging commits of the specification coordinates it reads, then the row itself.
+\end{theorem}
+
+\begin{proof}\leanok
+  \uses{def:aba-gather-low, def:aba-gather-mid, thm:brb-refines, def:forwardsim}
+  Each embedded Bracha row is answered through the per-coordinate simulation of Theorem~\ref{thm:brb-refines}, the other coordinates standing still.
+  A receipt-quorum predicate $\mathit{apIn}(j, k, v)$ or $\mathit{apBind}(j, q, U)$ yields that coordinate's certificate, so the corresponding specification coordinate either holds the committed value already or commits it in one $\tau$-step; a row reading several such predicates is led by the chain of those commits, assembled left to right.
+  The gather two-box is shared verbatim, so the row itself transports, and corruption is answered by the lockstep broadcast on both sides.
+\end{proof}

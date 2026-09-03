@@ -1,0 +1,21 @@
+\begin{theorem}[Gather core refinement]
+  \label{thm:gather-core}
+  \lean{PLTS.ABA.Gather.MidInv}\lean{PLTS.ABA.Gather.CoreRel}\lean{PLTS.ABA.Gather.gatherCore}\leanok
+  \uses{def:aba-gather-mid, def:aba-gather-spec}
+  The gather implementation over broadcast specifications is forward-simulated by Transition System~4.
+  The relation reads the specification's $call$, $ret$ and $F$ off the implementation, certifies each committed abstract entry by the corresponding input-broadcast commitment, and certifies a bound family by the count
+  \[
+    f + 1 \le |\{\, q \;:\; \exists\, U \in \mathit{Cs},\ \mathit{brbBind}(q).val = U \,\}|,
+  \]
+  which is $F$-blind and monotone, the broadcast values being write-once.
+  A return is answered by one weak burst: the abstract commits for the output's entries, the binding where the specification's family is unbound, then the return.
+\end{theorem}
+
+\begin{proof}\leanok
+  \uses{def:aba-gather-mid, def:aba-gather-spec, def:forwardsim}
+  The invariant ties each honest coordinate to its process --- inputs to calls, bind inputs to the $\mathrm{BIND}$ row's quorum guard --- and carries approval-backing for the write-once $\mathrm{ECHO}$ and $\mathrm{VOTE}$ slots.
+  Two committed bind payloads share $n - f$ entries: each is backed by an $n{-}f$ $\mathrm{VOTE}$ quorum, the quorums share an honest voter, and that voter's write-once vote --- itself of at least $n - f$ entries --- sits below both payloads.
+  A return's $n{-}f$ quorum of committed bind payloads contains $f{+}1$ honest-at-that-state members; their payloads form a family satisfying the pairwise bound, every payload of the quorum dominates the output, and each entry of the output is a committed input, so the burst's commits, bind and return are all enabled.
+  When the specification already holds a family, the return's quorum meets the $f{+}1$ certified coordinates in one $q$, the broadcast value at $q$ is functional, so the output dominates a member of the standing family and no second bind is needed.
+  Every internal row is answered by the matching abstract commit or by a stutter, and corruption by the specification's own $\mathrm{fail}$.
+\end{proof}

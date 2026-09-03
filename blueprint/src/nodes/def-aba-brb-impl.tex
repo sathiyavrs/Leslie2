@@ -1,0 +1,9 @@
+\begin{definition}[The BRB implementation instance]
+  \label{def:aba-brb-impl}
+  \lean{PLTS.ABA.BRB.BMsg}\lean{PLTS.ABA.BRB.PState}\lean{PLTS.ABA.BRB.ImplState}\lean{PLTS.ABA.BRB.ImplStep}\lean{PLTS.ABA.BRB.implInst}\leanok
+  \uses{def:aba-brb-spec, def:aba-fabric}
+  Bracha's algorithm~\cite{Bra87} --- Algorithm~6 of~\cite{LeslieBP} --- over the two-box state of Definition~\ref{def:aba-fabric}.
+  The message type is $\mathrm{BMsg}(M) = \{\langle\mathrm{INIT}, m\rangle, \langle\mathrm{ECHO}, m\rangle, \langle\mathrm{VOTE}, m\rangle : m \in M\}$, and a process record holds its input beside the write-once send slots $\mathit{sentEcho}$ and $\mathit{sentVote}$ and its return flag.
+  The rows are the environment call at the leader with its loop, asynchronous delivery and Byzantine injection on the fabric (D5, D1), and the ladder: $\mathrm{ECHO}\,m$ on a delivered $\langle\mathrm{INIT}, m\rangle$ from the leader, $\mathrm{VOTE}\,m$ on an $n{-}f$ $\mathrm{ECHO}\,m$ receipt quorum or on $f{+}1$ $\mathrm{VOTE}\,m$ receipts (the amplification row), and the return of $m$ at $n{-}f$ $\mathrm{VOTE}\,m$ receipts, at a process that has not returned.
+  Full construction: \leandecl{PLTS.ABA.BRB.implInst}.
+\end{definition}

@@ -1,0 +1,12 @@
+\begin{theorem}[Two-gather round refinement]
+  \label{thm:gbca-pair-refines}
+  \lean{PLTS.ABA.GBCA.cnt_heavy_of_subMap}\lean{PLTS.ABA.GBCA.members_agree}\lean{PLTS.ABA.GBCA.members_heavy_light}\lean{PLTS.ABA.GBCA.PairInv}\lean{PLTS.ABA.GBCA.DeadEv}\lean{PLTS.ABA.GBCA.PairRel}\lean{PLTS.ABA.GBCA.pairRefines}\leanok
+  \uses{def:aba-gbca-pair, def:aba-gbca-spec}
+  The two-gather round is forward-simulated by the GBCA specification instance (Transition System~2): \leandecl{PLTS.ABA.GBCA.pairRefines}.
+  The exclusion set and the grade latch are certified on the gather core families --- a bit is excluded when every member of the first family carries it on fewer than $|U| - f$ entries --- and kills fire on demand under the returns that need them.
+\end{theorem}
+
+\begin{proof}\leanok
+  \uses{def:aba-gbca-pair, def:aba-gbca-spec, def:forwardsim}
+  See the Lean proof of \leandecl{PLTS.ABA.GBCA.pairRefines}.
+\end{proof}

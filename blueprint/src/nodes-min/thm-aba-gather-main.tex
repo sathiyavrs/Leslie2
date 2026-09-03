@@ -1,0 +1,11 @@
+\begin{theorem}[Safety of the gather-based reading]
+  \label{thm:aba-gather-main}
+  \lean{PLTS.ABA.refinesG}\lean{PLTS.ABA.composedG_safe}\lean{PLTS.ABA.chainSimG}\leanok
+  \uses{thm:aba-substitution-g, thm:aba-hybrid-spec, thm:aba-spec-safe, thm:trace-support, thm:forward-trans}
+  Every trace distribution achievable by the gather-based composed reading is achievable by the ABA specification, and every positive-probability trace of it satisfies Validity and Agreement: \leandecl{PLTS.ABA.refinesG}, \leandecl{PLTS.ABA.composedG_safe}; the composed simulation is \leandecl{PLTS.ABA.chainSimG}.
+\end{theorem}
+
+\begin{proof}\leanok
+  \uses{thm:aba-substitution-g, thm:aba-hybrid-spec, thm:aba-spec-safe, thm:trace-support, thm:forward-trans}
+  See the Lean proofs of \leandecl{PLTS.ABA.refinesG} and \leandecl{PLTS.ABA.composedG_safe}.
+\end{proof}

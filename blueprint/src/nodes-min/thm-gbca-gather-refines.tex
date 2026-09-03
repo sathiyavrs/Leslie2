@@ -1,0 +1,11 @@
+\begin{theorem}[Gather-based GBCA round refinement]
+  \label{thm:gbca-gather-refines}
+  \lean{PLTS.ABA.GBCA.gatherImplRefines}\lean{PLTS.ABA.GBCA.gatherRoundRefines}\leanok
+  \uses{thm:gbca-tier-refines, thm:gbca-pair-refines, thm:forward-trans, lem:bridge}
+  The gather-based GBCA implementation refines the GBCA specification instance, round by round: the three simulations, taken probabilistically, compose to \leandecl{PLTS.ABA.GBCA.gatherImplRefines}, and $\operatorname{ATD}$ inclusion follows: \leandecl{PLTS.ABA.GBCA.gatherRoundRefines}.
+\end{theorem}
+
+\begin{proof}\leanok
+  \uses{thm:gbca-tier-refines, thm:gbca-pair-refines, thm:forward-trans, lem:bridge}
+  See the Lean proof of \leandecl{PLTS.ABA.GBCA.gatherImplRefines}.
+\end{proof}

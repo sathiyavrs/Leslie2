@@ -1,0 +1,12 @@
+\begin{theorem}[The gather-based substitution]
+  \label{thm:aba-substitution-g}
+  \lean{PLTS.ABA.RlowAll}\lean{PLTS.ABA.RidealAll}\lean{PLTS.ABA.RpairAll}\lean{PLTS.ABA.famLowSimProbG}\lean{PLTS.ABA.famIdealSimProbG}\lean{PLTS.ABA.famPairSimProbG}\lean{PLTS.ABA.substSimG}\lean{PLTS.ABA.substitutionG}\leanok
+  \uses{def:aba-gather-side, def:aba-hybrid, thm:gbca-tier-refines, thm:gbca-pair-refines, thm:mapidle-cong, thm:gbca-family-refines, thm:precong-parallel, thm:precong-abstract, thm:precong-relabel, thm:forward-sound}
+  Each substitution inside the round, lifted by the read-back congruence and the family congruence and run under the composed reading's own context through the four congruences, is a stage from one protocol-shaped system to the next; the third stage lands on $\mathrm{hybrid}(P)$ itself.
+  Chaining the stages gives \leandecl{PLTS.ABA.substSimG} and the inclusion $\operatorname{ATD}(\mathrm{composedG}(P)) \subseteq \operatorname{ATD}(\mathrm{hybrid}(P))$: \leandecl{PLTS.ABA.substitutionG}.
+\end{theorem}
+
+\begin{proof}\leanok
+  \uses{def:aba-gather-side, def:aba-hybrid, thm:gbca-tier-refines, thm:gbca-pair-refines, thm:mapidle-cong, thm:gbca-family-refines, thm:precong-parallel, thm:precong-abstract, thm:precong-relabel, thm:forward-sound}
+  See the Lean proof of \leandecl{PLTS.ABA.substitutionG}.
+\end{proof}

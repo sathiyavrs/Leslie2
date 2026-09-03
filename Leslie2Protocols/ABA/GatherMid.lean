@@ -8,7 +8,7 @@ import Leslie2Protocols.ABA.GatherSpec
 import Leslie2Protocols.ABA.BRBSpec
 
 /-!
-# The gather implementation over the BRB specification (blueprint Algorithm 4)
+# The gather implementation over the BRB specification (blueprint Algorithm 4, deviation D28)
 
 The gather aggregation ladder read over the BRB specification: the source's
 Algorithm 4 with its reliable-broadcast sub-protocol replaced by the BRB
@@ -37,7 +37,7 @@ family of bind payloads at the first return and later returns must be held to
 those exact payloads, which a multicast cannot do once the sender is
 corrupted — the source's argument pins them by the sender's honesty, sound
 against its static adversary and unsound against this development's `fail`
-events. A committed bind-BRB entry is pinned mechanically.
+events. A committed bind-BRB entry is pinned mechanically (deviation D25).
 
 There is no gating of the `ECHO`/`VOTE`/`BIND` handlers beyond participation
 (D8: a process acts only once called); the handlers are the source's `upon`

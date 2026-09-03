@@ -1,16 +1,26 @@
 # The ABA case study — file guide
 
 Machine-checked safety (Validity ∧ Agreement) for randomized asynchronous binary
-agreement, following the "Verifying ABA with Leslie" blueprint. Every headline is in
-`Results.lean` — `ABA.main`, `ABA.refines`, `ABA.chainSim`, `ABA.protocol_safe`,
-`ABA.protocol_traces`, `ABA.hybrid_spec`, `ABA.composed_safe` — all axiom-clean and
-guarded.
+agreement, following the "Verifying ABA with Leslie" blueprint. The headlines of the
+protocol chain are in `Results.lean` — `ABA.main`, `ABA.refines`, `ABA.chainSim`,
+`ABA.protocol_safe`, `ABA.protocol_traces`, `ABA.hybrid_spec`, `ABA.composed_safe` —
+and those of the gather-based chain in `GatherChain.lean` — `ABA.refinesG`,
+`ABA.composedG_safe`, `ABA.chainSimG`, `GBCA.gatherRoundRefines` — all axiom-clean
+and guarded.
 
-The architecture in one line, all of it in the protocol's own coordinates:
+The architecture in two lines, all of it in the protocol's own coordinates:
 
 ```
-protocol  ⊑  composed  ⊑  hybrid  ⊑  ABA.spec
+protocol   ⊑  composed   ⊑  hybrid  ⊑  ABA.spec
+composedG  ⊑  hybridG1  ⊑  hybridG2  ⊑  hybrid  ⊑  ABA.spec
 ```
+
+One GBCA specification, two verified implementations. The first line carries the
+direct implementation (ABDY22's Algorithm 6, D18) from the protocol as it runs; the
+second carries the gather-based implementation (AFW25's two-gather construction,
+D24) from its composed reading, and the two chains share every link from `hybrid`
+up. The gather-based chain bottoms at `composedG`; no flat protocol reading over it
+is part of the development.
 
 - `protocol` — the protocol as it runs: `n` programs beside the network
   adversary, which owns the message pools and the corrupted set, and the coin oracle,
@@ -41,7 +51,9 @@ Why the cut sits there, and what it buys, is `../DESIGN-Composition.md`.
 
 ## Scope
 
-GBCA is verified to **implementation** level; WCC is **assumed** at specification level
+GBCA is verified to **implementation** level, by both implementations — the
+gather-based one down through gather and Bracha's reliable broadcast, both encoded at
+specification and implementation level of their own; WCC is **assumed** at specification level
 (its coin is `wccPMF`). Both trace predicates are read at never-corrupted returners.
 `ValidityTrace` is the paper-form predicate (D13): every return of `b` by a never-corrupted
 process is preceded by a `callABA _ b` from a caller that is never corrupted anywhere in the
@@ -56,7 +68,7 @@ does.
 
 ## Deviations
 
-Each departure from the source blueprint carries a label D1–D23, cited at the point where
+Each departure from the source blueprint carries a label D1–D28, cited at the point where
 it applies. The registry — every active label glossed — is the Deviations paragraph of
 `../../blueprint/src/content.tex`.
 `../NOTES-Fidelity.md` covers how the encoding stands against its two sources beyond that
@@ -90,8 +102,24 @@ the file is. The order is the dependency order.
 | `CoreSimBurst.lean` | 53 | The abstract-twin burst kit: `SpecStep.decide` as a τ-burst (`decide_step`), and a burst closed by a visible step (`weakStep_of_burst_then_step`). |
 | `CoreSim.lean` | 425 | **`coreSim`**: the simulation proof itself, one row per concrete step class. |
 | `ProtocolSim.lean` | 1071 | **`protocolSim`**, **`protocol_composed`**: the protocol carried into the composed reading along `ProtocolRel`, whose five unguarded conjuncts determine the composed state. |
-| `Results.lean` | 211 | The deliverables, gathered so every citable statement is in one file. Twelve `#guard_msgs` axiom firewalls. |
+| `Results.lean` | 211 | The deliverables of the protocol chain, gathered so every citable statement is in one file. Twelve `#guard_msgs` axiom firewalls. |
 | `NonVacuity.lean` | 629 | A concrete 21-step run of `hybrid P4` to a `retABA` decision, so the simulation about it is not vacuous. |
+| `Fabric.lean` | 397 | The two-box vocabulary of the gather-based development: message fabric (D5) beside `n` process boxes, with the multicast/delivery/corrupt operations and the quorum-intersection kit, stated once and shared by the three sub-protocol encodings. |
+| `BRBSpec.lean` | 160 | The reliable-broadcast specification, per leader (blueprint TS 6, safety-only): the input/committed-value split with the guarded commit (D27). |
+| `BRBImpl.lean` | 154 | Bracha's ladder (blueprint Algorithm 6) over the two-box state. |
+| `BRBSim.lean` | 965 | `brbRefines`: the Bracha instance refines TS 6, the committed value certified by an ECHO receipt quorum, the commit fired on demand. Exports the chain-data answers the gather files replay. |
+| `GatherSpec.lean` | 223 | The gather specification (blueprint TS 4): call/commit split (D26) and the write-once core family (D25). |
+| `GatherMid.lean` | 256 | The gather implementation over `2n` BRB specification coordinates (blueprint Algorithm 4, from AFW25): approval as commitment, the ECHO/VOTE ladder over entry sets, BIND by broadcast (D28). |
+| `GatherSim.lean` | 1443 | `gatherCore`: the gather-over-BRB instance refines TS 4. The core family is read off `f + 1` honest quorum members' committed BIND payloads; the return burst commits, binds and returns in one weak transition. |
+| `GatherLow.lean` | 187 | The same table with each BRB coordinate a Bracha instance; delivery as a receipt-quorum predicate (D28). |
+| `GatherLowSim.lean` | 652 | `gatherLow`: the broadcast substitution inside gather, per coordinate, lagging commits fired as τ-chains. |
+| `GBCAPair.lean` | 438 | **The two-gather round** (AFW25 Algorithm 4 at R = 1, no approximate agreement, D24) over two gather specifications, with the candidate/grade counting kit in member form. |
+| `GBCAPairSim.lean` | 1067 | `pairRefines`: the two-gather round refines the GBCA specification. Exclusion and grade certified on the core families; kill-on-demand. |
+| `GBCAIdeal.lean` | 97 | The round over gather-over-BRB components. |
+| `GBCAIdealSim.lean` | 197 | `idealRefines`: the gather substitution inside the round, componentwise. |
+| `GBCALow.lean` | 99 | **The gather-based GBCA implementation**: the round over gather-over-Bracha components — two gather ladders, `4n` Bracha instances beneath. |
+| `GBCALowSim.lean` | 207 | `lowRefines`: the broadcast substitution inside the round, componentwise. |
+| `GatherChain.lean` | 478 | **The gather-based chain**: the round composite `gatherImplRefines`, the lifted sides `composedG ⊑ hybridG1 ⊑ hybridG2 ⊑ hybrid`, and the headlines `refinesG`, `composedG_safe`, `chainSimG`. Six axiom firewalls. |
 
 The pieces both compositions are built from are in `Components.lean`. `Protocol.lean` and
 `GBCAInstances.lean` each import it and neither imports the other, so the two readings of
@@ -99,6 +127,12 @@ the protocol are assembled independently over one set of components. The specifi
 `GBCAInstances.lean`, `Hybrid.lean` and the core simulation above them — never imports
 `Protocol.lean`; the protocol enters only at `ProtocolSim.lean`, which is where the two
 readings meet, and `Results.lean` reaches it through that file.
+
+The gather-based files form their own stack over `Fabric.lean` and the unchanged
+`GBCASpec.lean`, meeting the rest of the development in exactly two places:
+`GBCAPair.lean` reads the shared round alphabet, and `GatherChain.lean` imports
+`Results.lean` for the shared links from `hybrid` up. Nothing in the protocol chain
+imports a gather-based file, so either chain reads standalone.
 
 ## Suggested first read
 
@@ -110,11 +144,18 @@ chain and their files. Follow it into the statements along `ProtocolSim.protocol
 That is roughly 700 lines of reading and gives the full statement-level picture; descend
 into the GBCA and core-simulation proofs only when you want them.
 
+For the gather-based chain: `BRBSpec` → `GatherSpec` → `GBCAPair`'s module docstring
+(the algorithm and its counting) → `GBCALow`'s (the system that runs) → `GatherChain`'s
+(the assembly). The simulation files export their answers as τ-chain data consumed one
+level up, so each `*Sim` file is readable against the one below it.
+
 ## Where else to look
 
 `../README.md` maps the library and its shared framework. `../DESIGN-Composition.md` is why
 the chain is cut where it is; `../DESIGN-CoreSim.md` and `../DESIGN-GBCASim.md` are the
-narrative accounts of the two large proofs; `../NOTES-Fidelity.md` is the encoding against
+narrative accounts of the two large protocol-chain proofs, and `../DESIGN-GatherTower.md`
+of the gather-based stack — including why the gather specification carries a core family;
+`../NOTES-Fidelity.md` is the encoding against
 its sources and `../NOTES-Liveness-Roadmap.md` what termination would take. The prose
 account is the ABA chapter of `../../blueprint/src/`, in two editions over one set of
 statements: the default one (`content.tex`, each object and result stated against its Lean
@@ -123,6 +164,13 @@ pseudocode and the proof bodies).
 
 ## Future work
 
+- **A factored flat reading**: the gather-based chain bottoms at `composedG`, its composed
+  reading. The protocol chain's flat reading (`Protocol.lean`) inlines the direct GBCA
+  implementation, and a flat reading over the gather-based one would repeat that work. The
+  economical shape is a process-level implementation interface — what a round's
+  per-process program and fabric contribute to the flat state — with one parametric
+  flat-⊑-composed theorem, instantiated once per implementation; `Protocol.lean` and
+  `ProtocolSim.lean` would then be its first instance.
 - **Achievability theorem**: one explicit scheduler for `protocol P4` driving a two-return
   decision trace `t`, with `∃ D ∈ achievableTraceDists (protocol P4), D t ≠ 0` — the
   machine-checked non-vacuity for `main`'s own system, exercising Agreement with two returns.

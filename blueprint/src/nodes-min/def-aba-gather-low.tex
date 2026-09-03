@@ -1,0 +1,6 @@
+\begin{definition}[The gather implementation over Bracha instances]
+  \label{def:aba-gather-low}
+  \lean{PLTS.ABA.Gather.LowState}\lean{PLTS.ABA.Gather.LowStep}\lean{PLTS.ABA.Gather.lowInst}\leanok
+  \uses{def:aba-gather-mid, def:aba-brb-impl}
+  The table of Definition~\ref{def:aba-gather-mid} with each broadcast-specification coordinate replaced by a Bracha instance of Definition~\ref{def:aba-brb-impl}: the gather fabric beside $2n$ implementation states, approval and bind commitment read as $n{-}f$ $\mathrm{VOTE}$ receipt-quorum predicates on them (D28): \leandecl{PLTS.ABA.Gather.lowInst}.
+\end{definition}

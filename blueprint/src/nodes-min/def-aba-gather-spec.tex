@@ -1,0 +1,7 @@
+\begin{definition}[The gather specification instance]
+  \label{def:aba-gather-spec}
+  \lean{PLTS.ABA.Gather.APSet}\lean{PLTS.ABA.Gather.APSet.subMap}\lean{PLTS.ABA.Gather.Lab}\lean{PLTS.ABA.Gather.SpecState}\lean{PLTS.ABA.Gather.SpecState.corrupt}\lean{PLTS.ABA.Gather.Step}\lean{PLTS.ABA.Gather.specInst}\leanok
+  \uses{def:aba-params}
+  Transition System~4 with the call/commit split and the core family.
+  Calls are recorded per process; each entry commits once, to any payload at a corrupted process and to the recorded call otherwise (D26); one internal rule writes, once, a nonempty family of committed-entry sets any two of which --- each with itself --- share at least $n - f$ entries (D25); and a return is a sub-map of the committed entries containing some member of the family: \leandecl{PLTS.ABA.Gather.specInst}.
+\end{definition}

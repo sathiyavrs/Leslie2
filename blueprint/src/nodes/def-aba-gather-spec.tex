@@ -1,0 +1,21 @@
+\begin{definition}[The gather specification instance]
+  \label{def:aba-gather-spec}
+  \lean{PLTS.ABA.Gather.APSet}\lean{PLTS.ABA.Gather.APSet.subMap}\lean{PLTS.ABA.Gather.Lab}\lean{PLTS.ABA.Gather.SpecState}\lean{PLTS.ABA.Gather.SpecState.corrupt}\lean{PLTS.ABA.Gather.Step}\lean{PLTS.ABA.Gather.specInst}\leanok
+  \uses{def:aba-params}
+  Transition System~4 with the call/commit split and the core family.
+  An instance is parametric in the payload type $X$; an entry set is a finite $U \subseteq [n] \times X$, and $U \sqsubseteq g$ ($\mathrm{subMap}$) says every entry of $U$ is an entry of the partial map $g$.
+  The state is the record $\{call, val, ret, cores, F\}$: the recorded calls, the committed entries, the return flags, an optional family $cores$ of entry sets, and the corrupted set.
+  The rules are the call with its loop; the per-entry commit, a $\tau$-rule writing $val(k)$ once under
+  \[
+    val(k) = \bot \;\wedge\; \bigl(k \in F \vee call(k) = v\bigr),
+  \]
+  so a corrupted process commits any payload and an honest one its call (D26); the binding rule, a $\tau$-rule writing $cores$ once, to a nonempty family of committed-entry sets satisfying the pairwise bound
+  \[
+    \forall\, U, V \in cores,\ n - f \le |U \cap V|,
+  \]
+  the case $U = V$ giving every member at least $n - f$ entries (D25); the return of a partial map $g$ under $cores = \mathit{Cs} \wedge (\exists U \in \mathit{Cs},\ U \sqsubseteq g) \wedge g \subseteq val$, at a process that has not returned; and the total corruption transform (D1).
+  Agreement and Validity are consequences of $g \subseteq val$ and the honest commit guard; the binding content is the write-once family, which no rule extends or rewrites.
+  Transition System~4 carries a single bound identifier set on its return labels; here the family sits in the state, the returns carry the output alone, and a member is a set of committed entries rather than of identifiers.
+  The classical common core is the intersection of the family; its $n - f$ size bound is a fact about complete executions and is not a state invariant of the instance, which is why the family replaces it (D25) --- \cite{AFW25}, Remark~1, reads the core of a gather without binding as determined only in hindsight.
+  Full construction: \leandecl{PLTS.ABA.Gather.specInst}.
+\end{definition}

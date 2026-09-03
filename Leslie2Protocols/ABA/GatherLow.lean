@@ -15,7 +15,7 @@ the implementation level: each process's input and each process's `BIND`
 payload travel through a Bracha instance (`ABA/BRBImpl.lean`), one per
 process and level.
 
-Delivery is derived, not stored: "`j` holds the pair `(k, v)`" is the
+Delivery is derived, not stored (deviation D28): "`j` holds the pair `(k, v)`" is the
 predicate `apIn` — an `n − f` `VOTE v` receipt quorum in `k`'s input-BRB
 instance at receiver `j` — and likewise `apBind` for the bind payloads. The
 approval guards of the gather rows read these predicates at the receiver;

@@ -1,0 +1,13 @@
+\begin{theorem}[The two substitutions inside the round]
+  \label{thm:gbca-tier-refines}
+  \lean{PLTS.ABA.GBCA.LowPairRel}\lean{PLTS.ABA.GBCA.lowRefines}\lean{PLTS.ABA.GBCA.IdealRel}\lean{PLTS.ABA.GBCA.idealRefines}\leanok
+  \uses{def:aba-gbca-gather-low, def:aba-gbca-pair, thm:gather-low-refines, thm:gather-core}
+  Each reading of the round is forward-simulated by the one above it, along the componentwise pairing of the gather-level relation: the fully concrete instance by the instance over broadcast components, along Theorem~\ref{thm:gather-low-refines}'s relation at both gather coordinates, and that instance by the two-gather round over specifications, along Theorem~\ref{thm:gather-core}'s.
+\end{theorem}
+
+\begin{proof}\leanok
+  \uses{def:aba-gbca-gather-low, def:aba-gbca-pair, thm:gather-low-refines, thm:gather-core, def:forwardsim}
+  The gather simulations export their answers as $\tau$-chains of the component instance closed by the answering row --- the internal reach, the fused call, and the return burst --- and each row of the pair carries one component's row as a premise.
+  The proof maps the exported chain into the pair coordinatewise, the other coordinate standing still, and closes it with the pair's own row; the link row concatenates the first coordinate's return burst and the second coordinate's call answer into one silent run.
+  Corruption is the lockstep transform on both sides, answered by the componentwise broadcast-compatibility of the gather relations.
+\end{proof}

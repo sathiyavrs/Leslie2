@@ -1,0 +1,18 @@
+\begin{theorem}[The gather-based substitution]
+  \label{thm:aba-substitution-g}
+  \lean{PLTS.ABA.RlowAll}\lean{PLTS.ABA.RidealAll}\lean{PLTS.ABA.RpairAll}\lean{PLTS.ABA.famLowSimProbG}\lean{PLTS.ABA.famIdealSimProbG}\lean{PLTS.ABA.famPairSimProbG}\lean{PLTS.ABA.substSimG}\lean{PLTS.ABA.substitutionG}\leanok
+  \uses{def:aba-gather-side, def:aba-hybrid, thm:gbca-tier-refines, thm:gbca-pair-refines, thm:mapidle-cong, thm:gbca-family-refines, thm:precong-parallel, thm:precong-abstract, thm:precong-relabel, thm:forward-sound}
+  Three stages carry the gather-based composed reading to the protocol-shaped specification:
+  \[
+    \mathrm{composedG}(P) \;\sqsubseteq\; \mathrm{hybridG1}(P) \;\sqsubseteq\; \mathrm{hybridG2}(P) \;\sqsubseteq\; \mathrm{hybrid}(P).
+  \]
+  Each stage is one substitution inside the round --- the broadcast substitution, the gather substitution, the counting refinement --- lifted over the extended alphabet by the read-back congruence, lifted to the $\mathbb{N}$-indexed family by the family congruence under the lockstep broadcast compatibility, and run under the composed reading's own context through the four congruences of the pipeline.
+  The third stage lands on $\mathrm{hybrid}(P)$ itself, the system the core simulation starts from, so the two implementation chains share every link from there up.
+  Chaining the stages gives the simulation $\mathrm{substSimG}$, and chaining their soundness inclusions gives $\operatorname{ATD}(\mathrm{composedG}(P)) \subseteq \operatorname{ATD}(\mathrm{hybrid}(P))$.
+\end{theorem}
+
+\begin{proof}\leanok
+  \uses{def:aba-gather-side, def:aba-hybrid, thm:gbca-tier-refines, thm:gbca-pair-refines, thm:mapidle-cong, thm:gbca-family-refines, thm:precong-parallel, thm:precong-abstract, thm:precong-relabel, thm:forward-sound}
+  Theorem~\ref{thm:mapidle-cong} lifts each per-round simulation along $\mathrm{gPull}$; the family congruence of Theorem~\ref{thm:gbca-family-refines} lifts the result to the sides, its broadcast hypothesis discharged by the lockstep-corruption compatibility of each relation; and each family substitution runs under the syntactically identical context by $\mathrm{parallel\_right}$ followed by $\mathrm{abstract}$, $\mathrm{relabel}$ and $\mathrm{abstract}$, exactly as the substitution of Theorem~\ref{thm:aba-substitution} does.
+  The stages compose by Result~2, and the inclusion is the composite of the three stage inclusions.
+\end{proof}

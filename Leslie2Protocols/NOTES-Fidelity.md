@@ -5,20 +5,25 @@ coincide, restricted to divergences carrying no D-number — together with §1, 
 place where the two sources disagree with each other and the encoding must pick a side —
 for a reader holding the sources open beside the Lean.
 
-**Two sources, in a chain.** The *source blueprint* — "Verifying ABA with Leslie",
+**Three sources, in a chain.** The *source blueprint* — "Verifying ABA with Leslie",
 `Papers/Leslie_blueprint.pdf` — supplies the transition systems (TS 1 = ABA, TS 2 =
-GBCA, TS 3 = WCC, pp. 18–19) and the pseudocode (Algorithm 1 = the ABA core, p. 14;
-Algorithm 2 = GBCA, p. 15). It in turn adapts *ABDY22* (Abraham, Ben-David and
-Yandamuri, PODC 2022), which numbers independently: ABDY22's Algorithm 2 is the
-weak-coin agreement framework `AA_ε` that the source blueprint's Algorithm 1
-realises (ABDY22's Algorithm 1 is the strong-coin framework, not encoded here),
-and ABDY22's Algorithm 6 is the GBCA of record. Bare algorithm numbers in this
-file are the source blueprint's. The encoding follows the
-source blueprint; where the source blueprint departs from ABDY22 the encoding inherits
-the departure, with the single exception of §1.
+GBCA, TS 3 = WCC, pp. 18–19; TS 4 = Gather, TS 6 = BRB, pp. 20–21) and the pseudocode
+(Algorithm 1 = the ABA core, p. 14; Algorithm 2 = GBCA, p. 15; Algorithm 4 = gather
+over BRB, p. 16; Algorithm 6 = Bracha's BRB, p. 17). It in turn adapts *ABDY22*
+(Abraham, Ben-David and Yandamuri, PODC 2022), which numbers independently: ABDY22's
+Algorithm 2 is the weak-coin agreement framework `AA_ε` that the source blueprint's
+Algorithm 1 realises (ABDY22's Algorithm 1 is the strong-coin framework, not encoded
+here), and ABDY22's Algorithm 6 is the GBCA of record. The third source is *AFW25*
+(Attiya, Flam and Welch, "Why Canonical-Round Algorithms Fail for Optimal Byzantine
+Resilience", PODC 2026): the source blueprint's Algorithm 4 is taken from it, and its
+own Algorithm 4 — graded agreement from two gather calls — is the source of record
+for the gather-based GBCA implementation (D24), which the source blueprint does not
+contain. Bare algorithm numbers in this file are the source blueprint's. The encoding
+follows the source blueprint; where the source blueprint departs from ABDY22 the
+encoding inherits the departure, with the single exception of §1.
 
-**The D-registry is elsewhere.** The catalogued deviations — D1, D4, D5, D8–D19, D21,
-D22 and D23, with D12 refined to D12′ — are cited at the point of use in the ABA module
+**The D-registry is elsewhere.** The catalogued deviations — D1, D4, D5, D8–D19, D21–D28,
+with D12 refined to D12′ — are cited at the point of use in the ABA module
 docstrings and glossed one by one in the blueprint chapter (the Deviations paragraph of
 `blueprint/src/content.tex`), which is the registry of record.
 
@@ -83,6 +88,16 @@ twin `GProcStep.byzRetB`, but no proof
 consumes it: the refinement's `retB` rows bind it and leave it unused, discharging the
 `B`-return's specification-side guards from the `f + 1` `BIND v` receipts and `hval`
 instead. Either reading supports the same theorems.
+
+**Unions read as bounds.** Algorithm 4's sends are unions: on `n − f` approved echoes a
+process sends `⟨vote, ⋃ AP_id⟩`, and likewise at the BIND and return steps. The gather
+rows (`Gather.MidStep.vote`, `bindCall`, `ret`, and their `LowStep` counterparts) read
+each union as a bound instead: any approved set containing the `n − f` collected
+payloads may be sent, and any map dominating the `n − f` committed BIND payloads and
+contained in the committed inputs may be returned. The union is one such choice, so the
+reading widens the implementation's nondeterminism; every guard the proofs consume is
+monotone in the chosen set, and the refinements hold for the wider reading, hence for
+the union.
 
 **Terminating `return` as state.** The pseudocode's `return` ends the process; the
 encoding renders that as a fire-once flag — `ProcState.returned`, guarded by the `hr`
@@ -223,6 +238,32 @@ repaired at the rule; the sixth entry is a cross-reference.
 - **TS 1's `Initial` clause names an undeclared field** `out` (source p. 18), absent
   from the same system's `State` line. It is omitted: `PLTS.ABA.SpecState` declares
   `input`, `ret`, `F`, `val` and `mode`, and nothing else.
+- **TS 6 pins the delivered value at the call, which Bracha's ladder does not.** Under
+  TS 6 an honest `call(m)` sets the single `call` field to `m`, every return hands out
+  `call`, and the corrupted-leader rule can only spoil the field (`call = ⊤`, no
+  returns) before the first return. Algorithm 6 with the leader corrupted *after* its
+  `INIT` multicast leaves more open: until some correct process holds an `n − f` ECHO
+  quorum, the corrupted leader's injections can drive the ladder to deliver a value
+  other than `m`, and no resolution of TS 6's nondeterminism returns it — the
+  specification excludes its own implementation under D1's dynamic corruption.
+  `BRB.SpecState` splits the recorded `input` from the committed `val` and guards the
+  commit by `ldr ∈ F ∨ input = some m` (D27), which is the window the implementation
+  actually leaves open: at a never-corrupted leader the commit is pinned to the input,
+  and Validity survives in the form the property states it.
+- **TS 4's bound core is not what a reachable state determines.** Two independent
+  points. As written (source p. 20), the bind rule constrains its set `S` only to
+  identifiers already called — no size bound, the empty set included, so the `n − f`
+  size clause of Binding Common Core is not enforced by the rules (its return guard
+  also reads `bind ≠ ⊥` where the unset marker is `∅`). And no repair by a size guard
+  on `S` is available at implementation level: at `n = 3f + 1` a state at the first
+  return has as few as `n − 2f` honest votes cast, and determines no single
+  `n − f`-sized set that every future return must dominate — AFW25's Remark 1 reads
+  the core of a gather without binding as fixed only in hindsight. What such a state
+  does determine is the family of committed BIND payloads, pairwise sharing `n − f`
+  entries; `Gather.SpecState` carries that family, write-once, with the pairwise bound
+  as the bind rule's guard and member domination as the return's (D25). The classical
+  single core is the family's intersection, sized `≥ n − f` in complete executions.
+  `DESIGN-GatherTower.md` carries the counting argument in full.
 
 ## 6. Scope boundaries
 
@@ -255,7 +296,20 @@ Unpredictability, inexpressible once the guess is dropped.
   lost.
 - **Termination.** ABA's ε-sure Termination, GBCA's Termination and WCC's ε′-sure
   Termination (pp. 6–7) are unclaimed — `ABA.main` is Validity ∧
-  Agreement. See `NOTES-Liveness-Roadmap.md`.
+  Agreement. The same holds one level down: gather's Termination and BRB's Totality
+  (pp. 7–9) are liveness properties and are unclaimed; TS 6's own stated scope is the
+  linear properties, Totality living in the fairness markings that are outside the
+  model. See `NOTES-Liveness-Roadmap.md`.
+- **The approximate-agreement stage of AFW25's Algorithm 4.** The algorithm at `R ≥ 2`
+  calls an approximate-agreement subroutine to pick its grade; at `R = 1`, the graded
+  agreement encoded here, lines 4–6 read the grade off the second gather's counts and
+  the subroutine never runs. It is not encoded (D24).
+- **SRSD and AVSS (TS 5 and TS 7).** Not encoded, nor is the source's Algorithm 3, the
+  coin implementation over gather and SRSD that they serve. In the source,
+  gather serves the coin construction through SRSD; here the coin stays at
+  specification level — its gather/SRSD implementation is not modelled, as the scope
+  note of `Results.lean` records — and the encoded gather serves the gather-based GBCA
+  implementation instead.
 - **Participation past the round advance.** ABDY22 separates deciding from terminating: a
   process decides and then eventually terminates (Definitions 3.1 and 3.2), and the
   amplification argument counts the echoes a decided process keeps sending (Lemmas 4.6 and
