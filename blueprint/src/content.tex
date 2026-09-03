@@ -178,12 +178,12 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
     A process record retains the graded-agreement stage record of every round it has touched, in a finite map \leandecl{PLTS.ABA.Net.StageSideRec} on which a round never touched reads as the initial stage record.
     The stage-side rules are round-indexed and guarded by the stage record their label tags rather than by the round loop, so a process answers the traffic of a round its round loop has passed.
     That indefinite participation is the regime of ABDY22's Lemmas~4.6 and~E.5, which are stated under the hypothesis that no non-faulty process has terminated.
-    Termination is the rule \leandeclnamed{terminate}{PLTS.ABA.Net.ABAProcStepN.terminate}, which fires once the process's own return has fired and $2f+1$ DECIDED receipts are on its record (ABDY22's Definitions~3.1 and~3.2 and its note on termination), and whose effect is to set the flag alone.
+    Termination is the rule \leandeclnamed{terminate}{PLTS.ABA.Net.FlatProcStep.terminate}, which fires once the process's own return has fired and $2f+1$ DECIDED receipts are on its record (ABDY22's Definitions~3.1 and~3.2 and its note on termination), and whose effect is to set the flag alone.
     It stops the stage-side rules only: the DECIDED rules carry no termination guard, so a process that has terminated keeps relaying the payloads it holds.
     The rule carries the replacement guard of D23, so a process whose program has been replaced never terminates.
   \item D23: when a process is corrupted its program is replaced.
-    The round-loop record carries the flag \leandecl{PLTS.ABA.CoreRec.corrupted}, written by the process's own half of the corruption broadcast, \leandeclnamed{failSelf}{PLTS.ABA.Net.ABAProcStepN.failSelf}, and the record beneath the flag stands still from that point.
-    Every honest row is enabled only at an unreplaced program, and in place of those rows the replaced program is the single self-loop \leandeclnamed{corruptedIdle}{PLTS.ABA.Net.ABAProcStepN.corruptedIdle}, taken on every label other than $\tau$ and the labels on which the process would act on its own sub-protocol traffic, where it has no row at all.
+    The round-loop record carries the flag \leandecl{PLTS.ABA.CoreRec.corrupted}, written by the process's own half of the corruption broadcast, \leandeclnamed{failSelf}{PLTS.ABA.Net.FlatProcStep.failSelf}, and the record beneath the flag stands still from that point.
+    Every honest row is enabled only at an unreplaced program, and in place of those rows the replaced program is the single self-loop \leandeclnamed{corruptedIdle}{PLTS.ABA.Net.FlatProcStep.corruptedIdle}, taken on every label other than $\tau$ and the labels on which the process would act on its own sub-protocol traffic, where it has no row at all.
     That traffic runs through the drives of D11.
     The two networks carry the Byzantine visible return, $\mathrm{retABA}(id,b)$ at a corrupted process for either bit under the authorisation $id \in F$ alone.
     The specification's corrupted interface rules are the image of the replacement: \leandeclnamed{callByz}{PLTS.ABA.SpecStep.callByz} records a bit unrelated to the one its label declares, and \leandeclnamed{retByz}{PLTS.ABA.SpecStep.retByz} returns any bit at any time without moving the state.
@@ -229,8 +229,11 @@ The stage record is in \leanmodule{Leslie2Protocols/ABA/GBCAImpl} and the contro
 What runs is $n$ programs, a network adversary holding the message pools and the corrupted set with its budget, and a coin oracle held at specification level.
 A program reads its own replacement flag and nothing else about corruption: not the corrupted set, not the budget, not another process's status (D23).
 The rendezvous the shared alphabet cannot name are carried by an extended alphabet, hidden to $\tau$ and then discharged by the restriction, so what leaves the outermost frame is the alphabet the ABA specification speaks.
-See \leanmodule{Leslie2Protocols/ABA/Protocol}.
+That much is fixed by the round loop and the specification, and is independent of how graded agreement is implemented, so it is written once, parametrically in the implementation.
+Section~\ref{sec:aba-gather} instantiates it a second time.
+See \leanmodule{Leslie2Protocols/ABA/NetAlphabet}, \leanmodule{Leslie2Protocols/ABA/FlatReading} and \leanmodule{Leslie2Protocols/ABA/Protocol}.
 
+\input{nodes-min/def-aba-flat-reading}
 \input{nodes-min/def-aba-procnet}
 \input{nodes-min/def-aba-netadv}
 \input{nodes-min/def-aba-protocol}
@@ -395,7 +398,7 @@ Transition System~2 has a second verified implementation.
 Attiya, Flam and Welch~\cite{AFW25} build graded agreement from two calls to a \emph{gather} sub-protocol and local counting, and the source blueprint carries the matching material: a gather specification (Transition System~4), a gather implementation over reliable broadcast (its Algorithm~4, from~\cite{AFW25}), and Bracha's reliable broadcast (Transition System~6 and its Algorithm~6, from~\cite{Bra87}).
 This section carries that construction to implementation level in full --- the two gather instances and, beneath them, the $4n$ Bracha instances --- and to the same specification: the round interface $\mathrm{callG}/\mathrm{retG}$, Transition System~2, and every statement downstream of it are those of the sections above, so the two implementations differ only in the system at the bottom of the chain.
 The per-round work is three substitutions in sequence, each replacing one layer of sub-protocol by its specification; at the protocol shape the three stages land on $\mathrm{hybrid}(P)$, and the chain continues along the shared links.
-The reading verified here is the composed one --- the gather-based counterpart of Definition~\ref{def:aba-composed} --- and no flat protocol reading over it is part of the development.
+Both readings of Section~\ref{sec:aba-gather} are carried: the composed one, the gather-based counterpart of Definition~\ref{def:aba-composed}, and beneath it the flat one, the second instantiation of Definition~\ref{def:aba-flat-reading}.
 The Lean files are \leanmodule{Leslie2Protocols/ABA/Fabric} through \leanmodule{Leslie2Protocols/ABA/GatherChain}, mapped file by file in the ABA library's own guide.
 
 \subsection{Reliable broadcast}
@@ -437,11 +440,34 @@ See \leanmodule{Leslie2Protocols/ABA/GBCAPair}, \leanmodule{Leslie2Protocols/ABA
 \input{nodes-min/thm-gbca-tier-refines}
 \input{nodes-min/thm-gbca-gather-refines}
 
+\subsection{The gather-based protocol}
+
+Beneath the composed reading is the protocol that runs.
+It is Definition~\ref{def:aba-flat-reading} a second time, at the gather-based implementation: the same round loop, the same DECIDED pools, the same coin handshake, the same corruption discipline and the same pipeline, over a stage side that is the two gather instances and the $4n$ Bracha instances beneath them.
+Two rearrangements separate that stage side from the composed reading's.
+A round of the composed reading carries $4n+2$ message fabrics; the adversary of a flat reading carries one pool family, so a stage message is tagged with the fabric it belongs to.
+And the composed reading indexes the boxes by instance and then by process, where a program must hold its own data and no one else's, so the stage record is transposed to hold one process's box in every instance.
+Assembling the composed state from the flat one undoes both, which is what the simulation relation of Theorem~\ref{thm:aba-protocolg-composedg} does.
+See \leanmodule{Leslie2Protocols/ABA/GatherFlat} and \leanmodule{Leslie2Protocols/ABA/GatherFlatSim}.
+
+\input{nodes-min/def-aba-protocolg}
+\input{nodes-min/thm-aba-protocolg-composedg}
+
 \subsection{The gather-based chain}
 
 At the protocol shape, the gather-based rounds occupy the same refinable slot the direct rounds do: each reading is lifted over the extended alphabet along the label pullback of Definition~\ref{def:aba-gbcasub}, gathered into the round-indexed family, and put through the composed reading's pipeline.
 The three substitutions inside the round become three stages between protocol-shaped systems, the third landing on $\mathrm{hybrid}(P)$ itself, and from there the chain is the shared one: Theorem~\ref{thm:aba-hybrid-spec} and the safety transfer.
 One specification, two verified implementations, one meeting point at $\mathrm{hybrid}(P)$.
+Below that point the chain has one step more than the direct one, the substitution splitting into its three stages:
+\[
+  \mathrm{protocolG}(P)
+  \;\sqsubseteq\; \mathrm{composedG}(P)
+  \;\sqsubseteq\; \mathrm{hybridG1}(P)
+  \;\sqsubseteq\; \mathrm{hybridG2}(P)
+  \;\sqsubseteq\; \mathrm{hybrid}(P)
+  \;\sqsubseteq\; \mathrm{spec}(P).
+\]
+The first step is Theorem~\ref{thm:aba-protocolg-composedg}, the middle three are the stages of Theorem~\ref{thm:aba-substitution-g}, and the last is Theorem~\ref{thm:aba-hybrid-spec}, shared with the direct chain.
 See \leanmodule{Leslie2Protocols/ABA/GatherChain}.
 
 \input{nodes-min/def-aba-gather-side}

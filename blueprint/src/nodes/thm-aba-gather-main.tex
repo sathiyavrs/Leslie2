@@ -1,17 +1,18 @@
-\begin{theorem}[Safety of the gather-based reading]
+\begin{theorem}[Safety of the gather-based protocol]
   \label{thm:aba-gather-main}
-  \lean{PLTS.ABA.refinesG}\lean{PLTS.ABA.composedG_safe}\lean{PLTS.ABA.chainSimG}\leanok
-  \uses{thm:aba-substitution-g, thm:aba-hybrid-spec, thm:aba-spec-safe, thm:trace-support, thm:forward-trans}
-  Every trace distribution achievable by the gather-based composed reading is achievable by the ABA specification,
+  \lean{PLTS.ABA.composedG_refines}\lean{PLTS.ABA.composedG_safe}\lean{PLTS.ABA.refinesG}\lean{PLTS.ABA.mainG}\lean{PLTS.ABA.chainSimG}\leanok
+  \uses{thm:aba-protocolg-composedg, thm:aba-substitution-g, thm:aba-hybrid-spec, thm:aba-spec-safe, thm:trace-support, thm:forward-trans}
+  Every trace distribution achievable by the gather-based protocol as it runs is achievable by the ABA specification,
   \[
-    \operatorname{ATD}(\mathrm{composedG}(P)) \;\subseteq\; \operatorname{ATD}(\mathrm{spec}(P)),
+    \operatorname{ATD}(\mathrm{protocolG}(P)) \;\subseteq\; \operatorname{ATD}(\mathrm{spec}(P)),
   \]
   and every positive-probability trace of every such distribution satisfies Validity and Agreement.
-  The composed simulation $\mathrm{composedG}(P) \sqsubseteq \mathrm{spec}(P)$ is the three-stage substitution joined with the core simulation by Result~2.
+  No side condition on the trace: the corruption budget is a guard of the network adversary's own $\mathrm{fail}$ row, so every execution is in budget by construction.
+  The composed reading inherits the same two statements, and the composed simulation $\mathrm{protocolG}(P) \sqsubseteq \mathrm{spec}(P)$ is the whole chain joined by Result~2.
 \end{theorem}
 
 \begin{proof}\leanok
-  \uses{thm:aba-substitution-g, thm:aba-hybrid-spec, thm:aba-spec-safe, thm:trace-support, thm:forward-trans}
-  The substitution of Theorem~\ref{thm:aba-substitution-g} lands on $\mathrm{hybrid}(P)$, Theorem~\ref{thm:aba-hybrid-spec} carries $\mathrm{hybrid}(P)$ to the specification, and the two inclusions compose.
-  Safety transfers along the composite by Theorem~\ref{thm:trace-support} from Theorem~\ref{thm:aba-spec-safe}, with no hypothesis on the trace beyond positive probability.
+  \uses{thm:aba-protocolg-composedg, thm:aba-substitution-g, thm:aba-hybrid-spec, thm:aba-spec-safe, thm:trace-support, thm:forward-trans}
+  The composition inclusion of Theorem~\ref{thm:aba-protocolg-composedg} carries the protocol into its composed reading, the substitution of Theorem~\ref{thm:aba-substitution-g} carries that to $\mathrm{hybrid}(P)$, and Theorem~\ref{thm:aba-hybrid-spec} carries $\mathrm{hybrid}(P)$ to the specification; the three inclusions compose.
+  Safety transfers along the composite by Theorem~\ref{thm:trace-support} from Theorem~\ref{thm:aba-spec-safe}.
 \end{proof}

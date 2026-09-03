@@ -45,9 +45,10 @@ consecutive systems the family substitution runs under the four congruences
 `substSim` does for the ladder chain. The third stage lands on `hybrid P`
 itself: from there the shared links `hybrid_spec` and `coreSim` carry both
 implementation chains to the ABA specification. `substitutionG` is the
-three-stage inclusion, `refinesG` chains it with `hybrid_spec`,
-`composedG_safe` reads off Validity and Agreement, and `chainSimG` composes
-the simulations themselves.
+three-stage inclusion, `composedG_refines` chains it with `hybrid_spec`,
+`composedG_safe` reads off Validity and Agreement, and `chainSimComposedG`
+composes the simulations themselves. `ABA/GatherFlatSim.lean` carries these
+one level lower, to the gather-based protocol as it runs.
 
 The `#print axioms` blocks are the mechanical firewall: every headline is
 pinned to the clean axiom list.

@@ -1,0 +1,16 @@
+\begin{definition}[The gather-based protocol]
+  \label{def:aba-protocolg}
+  \lean{PLTS.ABA.NetG.Msg}\lean{PLTS.ABA.NetG.StageRec}\lean{PLTS.ABA.NetG.StageStep}\lean{PLTS.ABA.NetG.gCallPayload}\lean{PLTS.ABA.protocolGPre}\lean{PLTS.ABA.protocolGGroup}\lean{PLTS.ABA.protocolG}\leanok
+  \uses{def:aba-flat-reading, def:aba-gbca-gather-low, def:aba-gather-low}
+  The flat reading of Definition~\ref{def:aba-flat-reading} at the gather-based implementation, supplying the three things it asks for.
+  The message type is tagged: a round of that implementation carries $4n+2$ message fabrics --- one for each gather instance and one for each of the $4n$ Bracha instances --- and the tag names the fabric a message belongs to, and for a Bracha message the instance, whose index is its leader.
+  The adversary then holds one pool family per round, the pool index staying the sender, so a threshold still counts distinct senders (D5).
+  The stage record is process-major.
+  The composed reading indexes the boxes by instance and then by process, and a program must hold its own data and no one else's, so $\mathrm{StageRec}$ holds process $j$'s box in each gather instance and its box in each of the $n$ instances of each broadcast family.
+  Every guard of the gather-based implementation reads the acting process's own boxes and the fabrics, and the two rows that read a fabric --- the adversary's delivery and its Byzantine injection --- belong to the adversary, so the rearrangement loses nothing.
+  The rows are those of $\mathrm{Gather.LowStep}$ and $\mathrm{GBCA.LowPairStep}$ cut into their process half and their network half: a send writes the sender's own record and the network pools the message, and a delivery files the message in the receiver's own box, dispatched on the tag.
+  Three rows are fused, as they are in the composed reading (D28): the graded-agreement call broadcasts the input, the $\mathrm{BIND}$ send is a broadcast call, and the first gather's return to a process is that process's call of the second gather.
+  The broadcast return is not a row: gather reads a broadcast delivery as an $n-f$ $\mathrm{VOTE}$ receipt quorum, never through a returned flag, and the composed reading embeds only the silent rows of a Bracha instance.
+  The adversary needs no new rows at all --- pooling a multicast, checking a delivery and authorising a drive are already independent of the payload.
+  Full construction: \leandecl{PLTS.ABA.protocolG}.
+\end{definition}

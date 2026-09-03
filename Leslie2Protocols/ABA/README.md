@@ -4,25 +4,32 @@ Machine-checked safety (Validity ∧ Agreement) for randomized asynchronous bina
 agreement, following the "Verifying ABA with Leslie" blueprint. The headlines of the
 protocol chain are in `Results.lean` — `ABA.main`, `ABA.refines`, `ABA.chainSim`,
 `ABA.protocol_safe`, `ABA.protocol_traces`, `ABA.hybrid_spec`, `ABA.composed_safe` —
-and those of the gather-based chain in `GatherChain.lean` — `ABA.refinesG`,
-`ABA.composedG_safe`, `ABA.chainSimG`, `GBCA.gatherRoundRefines` — all axiom-clean
-and guarded.
+and those of the gather-based chain in `GatherFlatSim.lean` — `ABA.mainG`,
+`ABA.refinesG`, `ABA.chainSimG`, `ABA.protocolG_composedG` — beside the
+composed-level `ABA.composedG_refines`, `ABA.composedG_safe`,
+`ABA.chainSimComposedG` and `GBCA.gatherRoundRefines` in `GatherChain.lean`, all
+axiom-clean and guarded.
 
 The architecture in two lines, all of it in the protocol's own coordinates:
 
 ```
 protocol   ⊑  composed   ⊑  hybrid  ⊑  ABA.spec
-composedG  ⊑  hybridG1  ⊑  hybridG2  ⊑  hybrid  ⊑  ABA.spec
+protocolG  ⊑  composedG  ⊑  hybridG1  ⊑  hybridG2  ⊑  hybrid  ⊑  ABA.spec
 ```
 
-One GBCA specification, two verified implementations. The first line carries the
-direct implementation (ABDY22's Algorithm 6, D18) from the protocol as it runs; the
-second carries the gather-based implementation (AFW25's two-gather construction,
-D24) from its composed reading, and the two chains share every link from `hybrid`
-up. The gather-based chain bottoms at `composedG`; no flat protocol reading over it
-is part of the development.
+One GBCA specification, two verified implementations, each carried from the protocol
+as it runs. The first line carries the direct implementation (ABDY22's Algorithm 6,
+D18), the second the gather-based one (AFW25's two-gather construction, D24), and the
+two chains share every link from `hybrid` up.
 
-- `protocol` — the protocol as it runs: `n` programs beside the network
+Both flat readings are one construction. What a protocol reading fixes — the round
+loop, the DECIDED pools, the coin handshake, corruption, the network adversary and
+the composition pipeline — is settled by the round interface and the specification,
+so `FlatReading.lean` writes it once, parametric in the stage message type, the
+per-process per-round stage record and the stage-side rows. `Protocol.lean` supplies
+the ladder's; `GatherFlat.lean` supplies the gather-based one.
+
+- `protocol` — the ladder protocol as it runs: `n` programs beside the network
   adversary, which owns the message pools and the corrupted set, and the coin oracle,
   the only component whose transitions are not Dirac. A program reads its own replacement
   flag and nothing else about corruption: not the corrupted set, not the budget, not
@@ -91,9 +98,11 @@ the file is. The order is the dependency order.
 | `GBCAImpl.lean` | 748 | **The GBCA implementation**, ABDY22's Algorithm 6 in full (D18). Its state is the stage records beside the round's fabric. |
 | `GBCASim.lean` | 1808 | The per-instance refinement `implRefines`, by kill-on-demand: `dead` carried as a receipt-pattern certificate; and the broadcast compatibility of its relation with the `fail` act (`instRel_corrupt`), which the family lifting consumes. |
 | `Core.lean` | 249 | **The ABA round loop**, per process and nothing else: the phase machine, the control record, the round-loop record. |
-| `Components.lean` | 974 | The extended alphabet `NLab n`, the coin oracle read along its label pullback, the round loop of one process, and the ABA-side network — the pieces the two compositions are built from. |
+| `NetAlphabet.lean` | 206 | The rendezvous alphabet `NLabP n M` a flat reading speaks, parametric in the stage message type, with the label pullback the coin oracle is read along. |
+| `Components.lean` | 839 | The extended alphabet `NLab n` at the ladder's messages, the coin oracle read along its label pullback, the round loop of one process, and the ABA-side network — the pieces the two compositions are built from. |
+| `FlatReading.lean` | 1193 | **The flat reading of a protocol**, parametric in the graded-agreement implementation: the shared rows of a program and of the network adversary, the pipeline that composes them beside the coin oracle, and the inversion lemmas that read a row off its label. |
 | `ABAState.lean` | 380 | The ABA-side state as one object: the round-loop records beside the DECIDED network, with the accessors the invariant is stated in. |
-| `Protocol.lean` | 1527 | **The protocol as it runs**, and the subject of the whole chain: the programs, each holding its round loop beside its stage-side record (D22), the network adversary, and the pipeline that composes them beside the coin oracle. |
+| `Protocol.lean` | 674 | **The ladder protocol as it runs**, and the subject of the protocol chain: the flat reading at ABDY22's Algorithm 6 — its fourteen stage-side rows, the payload the call multicasts, and the inversions they answer. |
 | `GBCAInstances.lean` | 1635 | **The round's graded-agreement instance** and the licence to replace it, `subSim`. |
 | `Hybrid.lean` | 731 | **`composed`**, **`substSim`**: the same protocol read as four components, one round instance per round retained at every moment, and that graded-agreement component then replaced by its specification under the four congruences. |
 | `CoreSimRel.lean` | 674 | The core simulation's relation: the lazy abstract twin `Abs` and the concrete invariant `Inv`. |
@@ -104,7 +113,7 @@ the file is. The order is the dependency order.
 | `ProtocolSim.lean` | 1071 | **`protocolSim`**, **`protocol_composed`**: the protocol carried into the composed reading along `ProtocolRel`, whose five unguarded conjuncts determine the composed state. |
 | `Results.lean` | 211 | The deliverables of the protocol chain, gathered so every citable statement is in one file. Twelve `#guard_msgs` axiom firewalls. |
 | `NonVacuity.lean` | 629 | A concrete 21-step run of `hybrid P4` to a `retABA` decision, so the simulation about it is not vacuous. |
-| `Fabric.lean` | 397 | The two-box vocabulary of the gather-based development: message fabric (D5) beside `n` process boxes, with the multicast/delivery/corrupt operations and the quorum-intersection kit, stated once and shared by the three sub-protocol encodings. |
+| `Fabric.lean` | 407 | The two-box vocabulary of the gather-based development: message fabric (D5) beside `n` process boxes, with the multicast/delivery/corrupt operations and the quorum-intersection kit, stated once and shared by the three sub-protocol encodings. |
 | `BRBSpec.lean` | 160 | The reliable-broadcast specification, per leader (blueprint TS 6, safety-only): the input/committed-value split with the guarded commit (D27). |
 | `BRBImpl.lean` | 154 | Bracha's ladder (blueprint Algorithm 6) over the two-box state. |
 | `BRBSim.lean` | 965 | `brbRefines`: the Bracha instance refines TS 6, the committed value certified by an ECHO receipt quorum, the commit fired on demand. Exports the chain-data answers the gather files replay. |
@@ -119,20 +128,24 @@ the file is. The order is the dependency order.
 | `GBCAIdealSim.lean` | 197 | `idealRefines`: the gather substitution inside the round, componentwise. |
 | `GBCALow.lean` | 99 | **The gather-based GBCA implementation**: the round over gather-over-Bracha components — two gather ladders, `4n` Bracha instances beneath. |
 | `GBCALowSim.lean` | 207 | `lowRefines`: the broadcast substitution inside the round, componentwise. |
-| `GatherChain.lean` | 478 | **The gather-based chain**: the round composite `gatherImplRefines`, the lifted sides `composedG ⊑ hybridG1 ⊑ hybridG2 ⊑ hybrid`, and the headlines `refinesG`, `composedG_safe`, `chainSimG`. Six axiom firewalls. |
+| `GatherChain.lean` | 479 | **The gather-based chain**: the round composite `gatherImplRefines`, the lifted sides `composedG ⊑ hybridG1 ⊑ hybridG2 ⊑ hybrid`, and the composed-level headlines `composedG_refines`, `composedG_safe`, `chainSimComposedG`. Six axiom firewalls. |
+| `GatherFlat.lean` | 597 | **The gather-based protocol as it runs**: the flat reading at AFW25's two-gather construction — the tagged message type collapsing a round's `4n + 2` fabrics into one pool family, the process-major stage record, and the 23 stage-side rows. |
+| `GatherFlatSim.lean` | 2887 | **`protocolSimG`**, **`mainG`**: the gather-based protocol carried into `composedG` along a relation that computes the composed state from the flat one, and the headlines `refinesG`, `mainG`, `chainSimG` it yields. Five axiom firewalls. |
 
-The pieces both compositions are built from are in `Components.lean`. `Protocol.lean` and
-`GBCAInstances.lean` each import it and neither imports the other, so the two readings of
-the protocol are assembled independently over one set of components. The specification side —
+The pieces both compositions are built from are in `Components.lean`, over the alphabet of
+`NetAlphabet.lean`. `Protocol.lean` and `GBCAInstances.lean` each import it and neither
+imports the other, so the two readings of the protocol are assembled independently over one
+set of components. `FlatReading.lean` sits beside `Components.lean` over the same alphabet
+and imports no implementation, which is what lets both flat readings instantiate it. The specification side —
 `GBCAInstances.lean`, `Hybrid.lean` and the core simulation above them — never imports
 `Protocol.lean`; the protocol enters only at `ProtocolSim.lean`, which is where the two
 readings meet, and `Results.lean` reaches it through that file.
 
 The gather-based files form their own stack over `Fabric.lean` and the unchanged
-`GBCASpec.lean`, meeting the rest of the development in exactly two places:
-`GBCAPair.lean` reads the shared round alphabet, and `GatherChain.lean` imports
-`Results.lean` for the shared links from `hybrid` up. Nothing in the protocol chain
-imports a gather-based file, so either chain reads standalone.
+`GBCASpec.lean`, meeting the rest of the development in three places: `GBCAPair.lean`
+reads the shared round alphabet, `GatherFlat.lean` instantiates `FlatReading.lean`, and
+`GatherChain.lean` imports `Results.lean` for the shared links from `hybrid` up. Nothing
+in the protocol chain imports a gather-based file, so either chain reads standalone.
 
 ## Suggested first read
 
@@ -145,9 +158,10 @@ That is roughly 700 lines of reading and gives the full statement-level picture;
 into the GBCA and core-simulation proofs only when you want them.
 
 For the gather-based chain: `BRBSpec` → `GatherSpec` → `GBCAPair`'s module docstring
-(the algorithm and its counting) → `GBCALow`'s (the system that runs) → `GatherChain`'s
-(the assembly). The simulation files export their answers as τ-chain data consumed one
-level up, so each `*Sim` file is readable against the one below it.
+(the algorithm and its counting) → `GBCALow`'s (the round's components) → `GatherFlat`'s
+(the system that runs) → `GatherChain`'s and `GatherFlatSim`'s (the assembly). The
+simulation files export their answers as τ-chain data consumed one level up, so each
+`*Sim` file is readable against the one below it.
 
 ## Where else to look
 
@@ -164,13 +178,6 @@ pseudocode and the proof bodies).
 
 ## Future work
 
-- **A factored flat reading**: the gather-based chain bottoms at `composedG`, its composed
-  reading. The protocol chain's flat reading (`Protocol.lean`) inlines the direct GBCA
-  implementation, and a flat reading over the gather-based one would repeat that work. The
-  economical shape is a process-level implementation interface — what a round's
-  per-process program and fabric contribute to the flat state — with one parametric
-  flat-⊑-composed theorem, instantiated once per implementation; `Protocol.lean` and
-  `ProtocolSim.lean` would then be its first instance.
 - **Achievability theorem**: one explicit scheduler for `protocol P4` driving a two-return
   decision trace `t`, with `∃ D ∈ achievableTraceDists (protocol P4), D t ≠ 0` — the
   machine-checked non-vacuity for `main`'s own system, exercising Agreement with two returns.

@@ -816,7 +816,8 @@ theorem toPair_bind1Send (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
       · simp only [toPairUpd, toLow1, Function.update_self, SubState.mcast, Fabric.post]
         exact slice_post_some (unBind1 k) (unBind1_inj k) (w.pool r) j
           (.brbBind1 k m) m (by simp [unBind1])
-      · simp only [toPairUpd, toLow1, Function.update_self, SubState.mcast, SubState.setProc, Fabric.post]
+      · simp only [toPairUpd, toLow1, Function.update_self, SubState.mcast, SubState.setProc,
+        Fabric.post]
     · refine Prod.ext ?_ (fabric_ext ?_ ?_)
       · simp only [toPairUpd, toLow1, Function.update_of_ne hk]
         exact Function.update_eq_self _ _
@@ -886,7 +887,8 @@ theorem toPair_in2Send (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
       · simp only [toPairUpd, toLow2, Function.update_self, SubState.mcast, Fabric.post]
         exact slice_post_some (unIn2 k) (unIn2_inj k) (w.pool r) j
           (.brbIn2 k m) m (by simp [unIn2])
-      · simp only [toPairUpd, toLow2, Function.update_self, SubState.mcast, SubState.setProc, Fabric.post]
+      · simp only [toPairUpd, toLow2, Function.update_self, SubState.mcast, SubState.setProc,
+        Fabric.post]
     · refine Prod.ext ?_ (fabric_ext ?_ ?_)
       · simp only [toPairUpd, toLow2, Function.update_of_ne hk]
         exact Function.update_eq_self _ _
@@ -951,7 +953,8 @@ theorem toPair_bind2Send (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
       · simp only [toPairUpd, toLow2, Function.update_self, SubState.mcast, Fabric.post]
         exact slice_post_some (unBind2 k) (unBind2_inj k) (w.pool r) j
           (.brbBind2 k m) m (by simp [unBind2])
-      · simp only [toPairUpd, toLow2, Function.update_self, SubState.mcast, SubState.setProc, Fabric.post]
+      · simp only [toPairUpd, toLow2, Function.update_self, SubState.mcast, SubState.setProc,
+        Fabric.post]
     · refine Prod.ext ?_ (fabric_ext ?_ ?_)
       · simp only [toPairUpd, toLow2, Function.update_of_ne hk]
         exact Function.update_eq_self _ _
@@ -1081,7 +1084,8 @@ theorem toPair_dlvIn1 (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n) (mm : BRB.BMs
     · simp only [toPairUpd, toLow2]
 
 /-- A delivery in a bind-broadcast instance of the first gather, read through the view. -/
-theorem toPair_dlvBind1 (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n) (mm : BRB.BMsg (APSet P.n Bool)) :
+theorem toPair_dlvBind1 (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
+    (mm : BRB.BMsg (APSet P.n Bool)) :
     toPair P (Function.update u j (c, p.setStage r
         { p.stage r with
           brbBind1 := Function.update (p.stage r).brbBind1 i
@@ -1177,7 +1181,8 @@ theorem toPair_dlvIn2 (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n) (mm : BRB.BMs
     · simp only [toPairUpd, toLow2]
 
 /-- A delivery in a bind-broadcast instance of the second gather, read through the view. -/
-theorem toPair_dlvBind2 (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n) (mm : BRB.BMsg (APSet P.n (Option Bool))) :
+theorem toPair_dlvBind2 (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
+    (mm : BRB.BMsg (APSet P.n (Option Bool))) :
     toPair P (Function.update u j (c, p.setStage r
         { p.stage r with
           brbBind2 := Function.update (p.stage r).brbBind2 i
@@ -1698,27 +1703,33 @@ theorem stage_answer_gsnd (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
   | ga1Echo _ _ _ A hh hterm hin happ hcard hsend =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
     rw [toPair_ga1Send rfl]
-    exact GBCA.LowPairStep.ga1Tau (toPair P u w r) _ (Gather.LowStep.echo (toPair P u w r).1 j A hin happ hcard hsend)
+    exact GBCA.LowPairStep.ga1Tau
+      (toPair P u w r) _ (Gather.LowStep.echo (toPair P u w r).1 j A hin happ hcard hsend)
   | ga1Vote _ _ _ U hh hterm hin happ hQ hsend =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
     rw [toPair_ga1Send rfl]
-    exact GBCA.LowPairStep.ga1Tau (toPair P u w r) _ (Gather.LowStep.vote (toPair P u w r).1 j U hin happ hQ hsend)
+    exact GBCA.LowPairStep.ga1Tau
+      (toPair P u w r) _ (Gather.LowStep.vote (toPair P u w r).1 j U hin happ hQ hsend)
   | ga1Bind _ _ _ U hh hterm hin hbc happ hQ =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
     rw [toPair_bind1Send rfl]
-    exact GBCA.LowPairStep.ga1Tau (toPair P u w r) _ (Gather.LowStep.bindCall (toPair P u w r).1 j U hin hbc happ hQ)
+    exact GBCA.LowPairStep.ga1Tau
+      (toPair P u w r) _ (Gather.LowStep.bindCall (toPair P u w r).1 j U hin hbc happ hQ)
   | ga2Echo _ _ _ A hh hterm hin happ hcard hsend =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
     rw [toPair_ga2Send rfl]
-    exact GBCA.LowPairStep.ga2Tau (toPair P u w r) _ (Gather.LowStep.echo (toPair P u w r).2 j A hin happ hcard hsend)
+    exact GBCA.LowPairStep.ga2Tau
+      (toPair P u w r) _ (Gather.LowStep.echo (toPair P u w r).2 j A hin happ hcard hsend)
   | ga2Vote _ _ _ U hh hterm hin happ hQ hsend =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
     rw [toPair_ga2Send rfl]
-    exact GBCA.LowPairStep.ga2Tau (toPair P u w r) _ (Gather.LowStep.vote (toPair P u w r).2 j U hin happ hQ hsend)
+    exact GBCA.LowPairStep.ga2Tau
+      (toPair P u w r) _ (Gather.LowStep.vote (toPair P u w r).2 j U hin happ hQ hsend)
   | ga2Bind _ _ _ U hh hterm hin hbc happ hQ =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
     rw [toPair_bind2Send rfl]
-    exact GBCA.LowPairStep.ga2Tau (toPair P u w r) _ (Gather.LowStep.bindCall (toPair P u w r).2 j U hin hbc happ hQ)
+    exact GBCA.LowPairStep.ga2Tau
+      (toPair P u w r) _ (Gather.LowStep.bindCall (toPair P u w r).2 j U hin hbc happ hQ)
   | link _ _ _ g hh hterm hin hsubap hQ hr1 hin2 hbin2 =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
     rw [toPair_link rfl]
@@ -1728,62 +1739,74 @@ theorem stage_answer_gsnd (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
     rw [toPair_in1Send rfl]
     exact GBCA.LowPairStep.ga1Tau (toPair P u w r) _
-      (Gather.LowStep.brbInTau (toPair P u w r).1 i _ (BRB.ImplStep.echo ((toPair P u w r).1.brbIn i) j mm hrecv hsend))
+      (Gather.LowStep.brbInTau (toPair P u w r).1 i _
+        (BRB.ImplStep.echo ((toPair P u w r).1.brbIn i) j mm hrecv hsend))
   | in1VoteQuorum _ _ _ i mm hh hterm hcnt hsend =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
     rw [toPair_in1Send rfl]
     exact GBCA.LowPairStep.ga1Tau (toPair P u w r) _
-      (Gather.LowStep.brbInTau (toPair P u w r).1 i _ (BRB.ImplStep.voteQuorum ((toPair P u w r).1.brbIn i) j mm hcnt hsend))
+      (Gather.LowStep.brbInTau (toPair P u w r).1 i _
+        (BRB.ImplStep.voteQuorum ((toPair P u w r).1.brbIn i) j mm hcnt hsend))
   | in1VoteAmp _ _ _ i mm hh hterm hcnt hsend =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
     rw [toPair_in1Send rfl]
     exact GBCA.LowPairStep.ga1Tau (toPair P u w r) _
-      (Gather.LowStep.brbInTau (toPair P u w r).1 i _ (BRB.ImplStep.voteAmp ((toPair P u w r).1.brbIn i) j mm hcnt hsend))
+      (Gather.LowStep.brbInTau (toPair P u w r).1 i _
+        (BRB.ImplStep.voteAmp ((toPair P u w r).1.brbIn i) j mm hcnt hsend))
   | bind1Echo _ _ _ i mm hh hterm hrecv hsend =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
     rw [toPair_bind1Send rfl]
     exact GBCA.LowPairStep.ga1Tau (toPair P u w r) _
-      (Gather.LowStep.brbBindTau (toPair P u w r).1 i _ (BRB.ImplStep.echo ((toPair P u w r).1.brbBind i) j mm hrecv hsend))
+      (Gather.LowStep.brbBindTau (toPair P u w r).1 i _
+        (BRB.ImplStep.echo ((toPair P u w r).1.brbBind i) j mm hrecv hsend))
   | bind1VoteQuorum _ _ _ i mm hh hterm hcnt hsend =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
     rw [toPair_bind1Send rfl]
     exact GBCA.LowPairStep.ga1Tau (toPair P u w r) _
-      (Gather.LowStep.brbBindTau (toPair P u w r).1 i _ (BRB.ImplStep.voteQuorum ((toPair P u w r).1.brbBind i) j mm hcnt hsend))
+      (Gather.LowStep.brbBindTau (toPair P u w r).1 i _
+        (BRB.ImplStep.voteQuorum ((toPair P u w r).1.brbBind i) j mm hcnt hsend))
   | bind1VoteAmp _ _ _ i mm hh hterm hcnt hsend =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
     rw [toPair_bind1Send rfl]
     exact GBCA.LowPairStep.ga1Tau (toPair P u w r) _
-      (Gather.LowStep.brbBindTau (toPair P u w r).1 i _ (BRB.ImplStep.voteAmp ((toPair P u w r).1.brbBind i) j mm hcnt hsend))
+      (Gather.LowStep.brbBindTau (toPair P u w r).1 i _
+        (BRB.ImplStep.voteAmp ((toPair P u w r).1.brbBind i) j mm hcnt hsend))
   | in2Echo _ _ _ i mm hh hterm hrecv hsend =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
     rw [toPair_in2Send rfl]
     exact GBCA.LowPairStep.ga2Tau (toPair P u w r) _
-      (Gather.LowStep.brbInTau (toPair P u w r).2 i _ (BRB.ImplStep.echo ((toPair P u w r).2.brbIn i) j mm hrecv hsend))
+      (Gather.LowStep.brbInTau (toPair P u w r).2 i _
+        (BRB.ImplStep.echo ((toPair P u w r).2.brbIn i) j mm hrecv hsend))
   | in2VoteQuorum _ _ _ i mm hh hterm hcnt hsend =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
     rw [toPair_in2Send rfl]
     exact GBCA.LowPairStep.ga2Tau (toPair P u w r) _
-      (Gather.LowStep.brbInTau (toPair P u w r).2 i _ (BRB.ImplStep.voteQuorum ((toPair P u w r).2.brbIn i) j mm hcnt hsend))
+      (Gather.LowStep.brbInTau (toPair P u w r).2 i _
+        (BRB.ImplStep.voteQuorum ((toPair P u w r).2.brbIn i) j mm hcnt hsend))
   | in2VoteAmp _ _ _ i mm hh hterm hcnt hsend =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
     rw [toPair_in2Send rfl]
     exact GBCA.LowPairStep.ga2Tau (toPair P u w r) _
-      (Gather.LowStep.brbInTau (toPair P u w r).2 i _ (BRB.ImplStep.voteAmp ((toPair P u w r).2.brbIn i) j mm hcnt hsend))
+      (Gather.LowStep.brbInTau (toPair P u w r).2 i _
+        (BRB.ImplStep.voteAmp ((toPair P u w r).2.brbIn i) j mm hcnt hsend))
   | bind2Echo _ _ _ i mm hh hterm hrecv hsend =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
     rw [toPair_bind2Send rfl]
     exact GBCA.LowPairStep.ga2Tau (toPair P u w r) _
-      (Gather.LowStep.brbBindTau (toPair P u w r).2 i _ (BRB.ImplStep.echo ((toPair P u w r).2.brbBind i) j mm hrecv hsend))
+      (Gather.LowStep.brbBindTau (toPair P u w r).2 i _
+        (BRB.ImplStep.echo ((toPair P u w r).2.brbBind i) j mm hrecv hsend))
   | bind2VoteQuorum _ _ _ i mm hh hterm hcnt hsend =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
     rw [toPair_bind2Send rfl]
     exact GBCA.LowPairStep.ga2Tau (toPair P u w r) _
-      (Gather.LowStep.brbBindTau (toPair P u w r).2 i _ (BRB.ImplStep.voteQuorum ((toPair P u w r).2.brbBind i) j mm hcnt hsend))
+      (Gather.LowStep.brbBindTau (toPair P u w r).2 i _
+        (BRB.ImplStep.voteQuorum ((toPair P u w r).2.brbBind i) j mm hcnt hsend))
   | bind2VoteAmp _ _ _ i mm hh hterm hcnt hsend =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
     rw [toPair_bind2Send rfl]
     exact GBCA.LowPairStep.ga2Tau (toPair P u w r) _
-      (Gather.LowStep.brbBindTau (toPair P u w r).2 i _ (BRB.ImplStep.voteAmp ((toPair P u w r).2.brbBind i) j mm hcnt hsend))
+      (Gather.LowStep.brbBindTau (toPair P u w r).2 i _
+        (BRB.ImplStep.voteAmp ((toPair P u w r).2.brbBind i) j mm hcnt hsend))
 
 
 /-! ### Answering a delivery, a call, a return and a call loop -/
@@ -1809,7 +1832,8 @@ theorem stage_answer_gdlv (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     | ga1 mm =>
       rw [toPair_dlvGa1 rfl]
       exact GBCA.LowPairStep.ga1Tau (toPair P u w r) _
-        (Gather.LowStep.deliver (toPair P u w r).1 j k mm ((mem_slice (hf := unGa1_inj)).mpr ⟨_, hpool, rfl⟩))
+        (Gather.LowStep.deliver (toPair P u w r).1 j k mm
+          ((mem_slice (hf := unGa1_inj)).mpr ⟨_, hpool, rfl⟩))
     | ga2 mm =>
       rw [toPair_dlvGa2 rfl]
       exact GBCA.LowPairStep.ga2Tau (toPair P u w r) _

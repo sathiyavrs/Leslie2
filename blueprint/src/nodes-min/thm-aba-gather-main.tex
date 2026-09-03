@@ -1,11 +1,12 @@
-\begin{theorem}[Safety of the gather-based reading]
+\begin{theorem}[Safety of the gather-based protocol]
   \label{thm:aba-gather-main}
-  \lean{PLTS.ABA.refinesG}\lean{PLTS.ABA.composedG_safe}\lean{PLTS.ABA.chainSimG}\leanok
-  \uses{thm:aba-substitution-g, thm:aba-hybrid-spec, thm:aba-spec-safe, thm:trace-support, thm:forward-trans}
-  Every trace distribution achievable by the gather-based composed reading is achievable by the ABA specification, and every positive-probability trace of it satisfies Validity and Agreement: \leandecl{PLTS.ABA.refinesG}, \leandecl{PLTS.ABA.composedG_safe}; the composed simulation is \leandecl{PLTS.ABA.chainSimG}.
+  \lean{PLTS.ABA.composedG_refines}\lean{PLTS.ABA.composedG_safe}\lean{PLTS.ABA.refinesG}\lean{PLTS.ABA.mainG}\lean{PLTS.ABA.chainSimG}\leanok
+  \uses{thm:aba-protocolg-composedg, thm:aba-substitution-g, thm:aba-hybrid-spec, thm:aba-spec-safe, thm:trace-support, thm:forward-trans}
+  Every trace distribution achievable by the gather-based protocol as it runs is achievable by the ABA specification, and every positive-probability trace of it satisfies Validity and Agreement: \leandecl{PLTS.ABA.refinesG}, \leandecl{PLTS.ABA.mainG}; the composed simulation is \leandecl{PLTS.ABA.chainSimG}.
+  The same holds of the composed reading alone: \leandecl{PLTS.ABA.composedG_refines}, \leandecl{PLTS.ABA.composedG_safe}.
 \end{theorem}
 
 \begin{proof}\leanok
-  \uses{thm:aba-substitution-g, thm:aba-hybrid-spec, thm:aba-spec-safe, thm:trace-support, thm:forward-trans}
-  See the Lean proofs of \leandecl{PLTS.ABA.refinesG} and \leandecl{PLTS.ABA.composedG_safe}.
+  \uses{thm:aba-protocolg-composedg, thm:aba-substitution-g, thm:aba-hybrid-spec, thm:aba-spec-safe, thm:trace-support, thm:forward-trans}
+  See the Lean proofs of \leandecl{PLTS.ABA.refinesG} and \leandecl{PLTS.ABA.mainG}.
 \end{proof}

@@ -9,8 +9,10 @@ documentation covers them and the blueprint's links resolve.
 The asynchronous binary agreement development: machine-checked safety for randomized ABA,
 from the protocol as it runs down to a small specification, by probabilistic forward
 simulation, with two verified implementations of its graded-agreement sub-protocol —
-one direct, one built over gather and reliable broadcast. 40 files, and its own file
-guide in [`ABA/README.md`](ABA/README.md).
+one direct, one built over gather and reliable broadcast. Each is carried from the
+protocol as it runs, through one flat reading written parametrically in the
+implementation and instantiated twice. 43 files, and its own file guide in
+[`ABA/README.md`](ABA/README.md).
 
 ## `Framework/`
 
@@ -35,7 +37,7 @@ beside the three in the core.
 | [`DESIGN-Composition.md`](DESIGN-Composition.md) | Why the chain is cut where it is: what the composition buys, where each network is external, and what the DECIDED model already weakens. |
 | [`DESIGN-CoreSim.md`](DESIGN-CoreSim.md) | The narrative account of the core simulation `hybrid ⊑ ABA.spec` — the abstract twin, the invariant, and the certificates decided values ride on. |
 | [`DESIGN-GBCASim.md`](DESIGN-GBCASim.md) | The narrative account of the per-instance GBCA refinement — kill-on-demand, the receipt-pattern certificates, and the burst structure. |
-| [`DESIGN-GatherTower.md`](DESIGN-GatherTower.md) | The narrative account of the gather-based GBCA stack — why the gather specification carries a core family, the BIND-by-broadcast pinning, the member-form counting, and the chain-data discipline of its simulations. |
+| [`DESIGN-GatherTower.md`](DESIGN-GatherTower.md) | The narrative account of the gather-based GBCA stack — why the gather specification carries a core family, the BIND-by-broadcast pinning, the member-form counting, the chain-data discipline of its simulations, and the flat reading beneath the composed one. |
 | [`NOTES-Fidelity.md`](NOTES-Fidelity.md) | How the encoding stands against its sources — the Leslie blueprint, ABDY22 and AFW25: where it follows one against another, and what it deliberately does not reproduce. |
 | [`NOTES-Liveness-Roadmap.md`](NOTES-Liveness-Roadmap.md) | Termination is out of scope; this is what proving it would take. |
 

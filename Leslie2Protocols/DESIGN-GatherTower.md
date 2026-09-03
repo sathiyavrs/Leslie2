@@ -6,8 +6,9 @@ agreement: the sub-protocol encodings (`ABA/Fabric.lean`, `ABA/BRBSpec.lean`,
 `ABA/GatherLow.lean`), their refinements (`ABA/BRBSim.lean`,
 `ABA/GatherSim.lean`, `ABA/GatherLowSim.lean`), the two-gather round and its
 three readings (`ABA/GBCAPair.lean`, `ABA/GBCAIdeal.lean`, `ABA/GBCALow.lean`
-and the three `*Sim` files), and the assembly at the protocol shape
-(`ABA/GatherChain.lean`). The gather subsections of
+and the three `*Sim` files), the assembly at the protocol shape
+(`ABA/GatherChain.lean`), and the protocol beneath it (`ABA/GatherFlat.lean`,
+`ABA/GatherFlatSim.lean`). The gather subsections of
 `blueprint/src/content.tex` are a condensation of this document; the
 deviations D24–D28 it realises are glossed in that file's registry, and the
 source-fidelity items it rests on are §§2, 5 and 6 of `NOTES-Fidelity.md`.
@@ -45,11 +46,13 @@ pipeline; the three substitutions become three stages whose last lands on
 `hybrid P`:
 
 ```
-composedG ⊑ hybridG1 ⊑ hybridG2 ⊑ hybrid ⊑ ABA.spec
+protocolG ⊑ composedG ⊑ hybridG1 ⊑ hybridG2 ⊑ hybrid ⊑ ABA.spec
 ```
 
-Everything from `hybrid` up — the core simulation, `spec_safe`, the safety
-transfer — is shared with the protocol chain.
+Beneath `composedG` is `protocolG`, the gather-based protocol as it runs
+(`ABA/GatherFlat.lean`), carried into the composed reading by `protocolSimG`
+(`ABA/GatherFlatSim.lean`). Everything from `hybrid` up — the core simulation,
+`spec_safe`, the safety transfer — is shared with the protocol chain.
 
 ## Why the gather specification carries a core family (D25)
 
@@ -210,11 +213,76 @@ The stages compose by `ProbabilisticForwardSimulation.trans`; the inclusions
 compose by `Set.Subset.trans` and never invoke transitivity of simulation —
 the two routes of `Results.lean`, reproduced.
 
+## The protocol beneath the composed reading (`GatherFlat.lean`, `GatherFlatSim.lean`)
+
+`composedG P` is the gather-based protocol read as a composition of
+components. What runs is a flat system: `n` programs, each reading its own
+records and nothing else, beside one network adversary holding every pool and
+the corrupted set, beside the coin oracle. That shape is the same for either
+implementation of graded agreement — the round loop, the DECIDED pools, the
+coin handshake, corruption, the adversary's table and the composition pipeline
+are fixed by the round interface and the specification — so `ABA/FlatReading.lean`
+writes it once, parametric in three things: the stage message type `M`, the
+per-process per-round stage record `S`, and the stage-side rows, supplied as a
+relation embedded in one constructor of the program table. `ABA/Protocol.lean`
+instantiates it at ABDY22's ladder; `ABA/GatherFlat.lean` instantiates it here.
+
+The division of labour is by label. `Net.stageOwn j` is the set of label
+classes an implementation owns at process `j`: the graded-agreement call and
+return, `j`'s own stage multicast, a delivery addressed to `j`, and `j`'s call
+against an already-opened record. An instantiation supplies `Net.IsStageTable`
+— its rows carry such a label, fire only at an unreplaced program, and are
+Dirac — and the shared inversion lemmas consume exactly those three facts.
+`Net.stageRow_of_own` runs the argument the other way: a program's step on a
+label of `stageOwn j` is a step of the implementation, which is what lets each
+case of the simulation rule the others out.
+
+Two rearrangements separate the flat stage side from the composed reading's,
+and both are forced by the flat shape.
+
+- **The tagged pool.** A round of `composedG` carries `4n + 2` message
+  fabrics — one per gather instance, one per Bracha instance. A flat
+  adversary carries one pool family per round, so `NetG.Msg n` tags each
+  message with the fabric it belongs to, and for a Bracha message with the
+  instance, whose index is its leader. The pool index stays the sender, so a
+  threshold still counts distinct senders (D5). No new adversary rows are
+  needed: pooling a multicast, checking a delivery and authorising a drive are
+  already payload-blind.
+- **The transposition.** `Gather.LowState` indexes boxes by instance and then
+  by process. A program must hold its own data and no one else's, so
+  `NetG.StageRec n` is process-major: process `j`'s box in each gather
+  instance, and its box in each of the `n` instances of each broadcast family.
+  Nothing is lost, because every guard of the gather-based implementation
+  reads the acting process's own boxes and the fabrics, and the two rows that
+  read a fabric — the adversary's delivery and its Byzantine injection —
+  belong to the adversary either way.
+
+`ProtocolRelG` therefore has four conjuncts, not twenty: the round loop, the
+coin oracle and the ABA-side network are shared objects, and the round family
+is *computed* from the flat state by `NetG.toPair`, which undoes both
+rearrangements — transposing the boxes back and slicing each fabric's pool out
+of the tagged family by `Finset.filterMap`. The relation is a function, so
+there is nothing to choose in the witness.
+
+The proof is organised around that computation. One master lemma,
+`NetG.toPair_write`, says what a one-point stage write and a single pool
+insertion do to the view, pushing them inside all twelve coordinates; each row
+of the implementation then owes only slice algebra — which of the six slices
+takes the message, and which are untouched — discharged by `slice_post_some`
+and `slice_post_none`. On that basis a send and a delivery are internal to the
+round instance and are answered by one of its silent rules, the adversary's
+authenticity conjunct becoming membership in the sliced pool; the call and the
+return are the instance's own. The remaining labels move the round loop and
+the ABA-side network while the family of rounds stands still, and corruption
+is one broadcast, the corrupted set the adversary holds being the corrupted
+set of every fabric under the same guard.
+
+`ABA/GatherFlatSim.lean` closes with the headlines mirroring `Results.lean`'s:
+`protocolG_composedG`, `refinesG`, `mainG` and `chainSimG`, each behind a
+`#print axioms` firewall.
+
 ## Boundaries
 
-- The gather-based chain bottoms at `composedG`, the composed reading. A
-  flat protocol reading over it is future work, recorded in
-  `ABA/README.md` under the factored-interface shape.
 - The union sends of the source's Algorithm 4 are read as bounds
   (`NOTES-Fidelity.md` §2); the widening is monotone in every guard the
   proofs consume.

@@ -1,0 +1,6 @@
+\begin{definition}[The gather-based protocol]
+  \label{def:aba-protocolg}
+  \lean{PLTS.ABA.NetG.Msg}\lean{PLTS.ABA.NetG.StageRec}\lean{PLTS.ABA.NetG.StageStep}\lean{PLTS.ABA.NetG.gCallPayload}\lean{PLTS.ABA.protocolGPre}\lean{PLTS.ABA.protocolGGroup}\lean{PLTS.ABA.protocolG}\leanok
+  \uses{def:aba-flat-reading, def:aba-gbca-gather-low, def:aba-gather-low}
+  The flat reading at the gather-based implementation: one tagged message type collapsing a round's $4n+2$ fabrics into one pool family, a process-major stage record holding each process's box in every instance, and 23 stage-side rows --- the two gather ladders, the $4n$ Bracha instances beneath them, the three fused rows and the delivery: \leandecl{PLTS.ABA.protocolG}.
+\end{definition}

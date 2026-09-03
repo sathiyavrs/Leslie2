@@ -1,0 +1,18 @@
+\begin{theorem}[The gather-based composition]
+  \label{thm:aba-protocolg-composedg}
+  \lean{PLTS.ABA.NetG.toPair}\lean{PLTS.ABA.NetG.ProtocolRelG}\lean{PLTS.ABA.protocolSimG}\lean{PLTS.ABA.protocolG_composedG}\leanok
+  \uses{def:aba-protocolg, def:aba-gather-side, thm:forward-sound, def:achievable}
+  The gather-based protocol is forward-simulated by its composed reading, and hence every trace distribution it achieves is achieved there.
+  The relation is a function rather than a correspondence: the round loops and the coin oracle are shared objects, the ABA-side network is the DECIDED pools beside the corrupted set, and each round's instance is the view $\mathrm{toPair}$ of the flat state.
+  Assembling that view undoes the two rearrangements the flat reading performs --- the boxes are transposed back out of the round records the $n$ processes hold, and each fabric is sliced out of the adversary's single tagged pool family.
+\end{theorem}
+
+\begin{proof}\leanok
+  \uses{def:aba-protocolg, def:aba-gather-side, def:forwardsim}
+  Every row writes the acting process's round record and pools at most one tagged message, and one lemma says what that does to the view: the round the row names reads as the one-point update of each of its coordinates.
+  What a row then owes is pool algebra --- which of the six slices takes the message and which are left alone --- and slicing commutes with a pool write in exactly those two ways.
+  On that basis each row of the implementation is answered by a row of the round instance: a send and a delivery are internal to the instance, so the composed reading answers them with one of its own silent rules, the adversary's authenticity conjunct becoming membership in the sliced pool; the graded-agreement call and return are the instance's own call and return.
+  The remaining labels never reach the implementation.
+  The ABA interface, the coin handshake, the DECIDED rows and the fused coin return move the round loop and the ABA-side network while the family of rounds stands still; corruption is one broadcast, the corrupted set the adversary holds being the corrupted set of every fabric under the same guard; and the two Byzantine graded-agreement drives have no row at the process they name.
+  A program's row on a label of $\mathrm{stageOwn}(j)$ is a row of the implementation, which is what lets each of those cases rule the others out.
+\end{proof}

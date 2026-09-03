@@ -459,14 +459,14 @@ The labels D2, D3, D6, D7 and D20 are not in use.
   \item D23: when a process is corrupted its program is replaced.
     The round-loop record carries the flag \leandecl{PLTS.ABA.CoreRec.corrupted},
     and the process's own half of the corruption broadcast,
-    \leandeclnamed{failSelf}{PLTS.ABA.Net.ABAProcStepN.failSelf}, is the row
+    \leandeclnamed{failSelf}{PLTS.ABA.Net.FlatProcStep.failSelf}, is the row
     that writes it.
     Every honest row of the program is enabled only at an unreplaced program,
     so the record beneath the flag stands still from the corruption on: the
     phase, the estimate, the round, the receipt rows and the retained stage
     records all freeze where they stand.
     In place of those rows the replaced program is the single self-loop
-    \leandeclnamed{corruptedIdle}{PLTS.ABA.Net.ABAProcStepN.corruptedIdle},
+    \leandeclnamed{corruptedIdle}{PLTS.ABA.Net.FlatProcStep.corruptedIdle},
     taken on every label other than $\tau$ and the labels on which the process
     would act on its own sub-protocol traffic.
     On the latter the replaced program has no row at all, so under full
@@ -764,6 +764,21 @@ taken over the extended alphabet of Definition~\ref{def:relabel} and read back
 along the restriction that definition supplies.
 The record of one automaton holds that process's own rows and nothing further,
 so locality sits in the state shape and not in the guards alone.
+
+None of this depends on how graded agreement is implemented.
+The round loop, the DECIDED relay and its delivery, the coin handshake, the
+corruption discipline, the adversary's table and the composition pipeline are
+fixed by the round interface and the specification, and what an implementation
+supplies is its stage message type, its per-process per-round stage record and
+its stage-side rows.
+The reading is therefore written once, parametric in those three, and
+instantiated here at the ladder of Algorithm~\ref{alg:gbca-impl};
+Section~\ref{sec:aba-gather} instantiates it a second time.
+The rendezvous alphabet is parametric in the message type, and is hidden before
+anything outside the composition sees it, so two instantiations need not agree
+on it.
+
+\input{nodes/def-aba-flat-reading}
 
 \input{nodes/def-aba-procnet}
 
@@ -2068,9 +2083,10 @@ At the protocol shape, each reading is lifted over the extended alphabet,
 gathered into the round-indexed family, and put through the composed
 reading's pipeline; the three substitutions become three stages whose last
 lands on $\mathrm{hybrid}(P)$, and from there the chain is the shared one.
-The reading verified here is the composed one --- the gather-based
-counterpart of Definition~\ref{def:aba-composed} --- and no flat protocol
-reading over it is part of the development.
+Two readings are verified: the composed one, the gather-based counterpart of
+Definition~\ref{def:aba-composed}, and beneath it the flat one, the second
+instantiation of Definition~\ref{def:aba-flat-reading}, which is the
+gather-based protocol as it runs.
 
 \begin{algorithm}
     \caption{The two-gather graded agreement, Algorithm~4 of Attiya, Flam and
@@ -2253,6 +2269,44 @@ See \leanmodule{Leslie2Protocols/ABA/GBCAPair},
 \input{nodes/thm-gbca-tier-refines}
 \input{nodes/thm-gbca-gather-refines}
 
+\subsection{The gather-based protocol}
+
+Beneath the composed reading is the protocol that runs.
+It is the reading of Definition~\ref{def:aba-flat-reading} a second time, at
+the gather-based implementation: the same round loop, the same DECIDED pools,
+the same coin handshake, the same corruption discipline and the same pipeline,
+over a stage side that is the two gather instances and the $4n$ Bracha
+instances beneath them.
+Two rearrangements separate that stage side from the composed reading's, and
+both are forced by what a flat reading is.
+A round of the composed reading carries $4n+2$ message fabrics, one per
+sub-protocol instance, while the adversary of a flat reading carries one pool
+family per round; a stage message therefore carries a tag naming the fabric it
+belongs to, and for a broadcast message the instance, whose index is its
+leader.
+The pool index stays the sender, so a threshold still counts distinct senders
+(D5).
+And the composed reading indexes the boxes by instance and then by process,
+while a program must hold its own data and no one else's; the stage record is
+therefore transposed, holding one process's box in every instance.
+Neither rearrangement loses anything, because every guard of the gather-based
+implementation reads the acting process's own boxes and the fabrics, and the
+two rows that read a fabric --- the adversary's delivery and its Byzantine
+injection --- belong to the adversary in either reading.
+Assembling the composed state from the flat one undoes both: the boxes are
+transposed back, and each fabric is sliced out of the tagged pool family.
+That assembly is the simulation relation of
+Theorem~\ref{thm:aba-protocolg-composedg}, which is a function rather than a
+correspondence --- the composed state is computed from the flat one, and the
+proof obligation of a row is which of the six slices takes the message it
+pools.
+See \leanmodule{Leslie2Protocols/ABA/GatherFlat} and
+\leanmodule{Leslie2Protocols/ABA/GatherFlatSim}.
+
+\input{nodes/def-aba-protocolg}
+
+\input{nodes/thm-aba-protocolg-composedg}
+
 \subsection{The gather-based chain}
 
 At the protocol shape the gather-based rounds occupy the same refinable slot
@@ -2271,6 +2325,19 @@ specification and the safety transfer are shared between the two chains from
 that point up.
 One specification, two verified implementations, one meeting point at
 $\mathrm{hybrid}(P)$.
+Below that point the chain has one step more than the direct one, the
+substitution splitting into its three stages:
+\[
+  \mathrm{protocolG}(P)
+  \;\sqsubseteq\; \mathrm{composedG}(P)
+  \;\sqsubseteq\; \mathrm{hybridG1}(P)
+  \;\sqsubseteq\; \mathrm{hybridG2}(P)
+  \;\sqsubseteq\; \mathrm{hybrid}(P)
+  \;\sqsubseteq\; \mathrm{spec}(P).
+\]
+The first step is Theorem~\ref{thm:aba-protocolg-composedg}, the middle three
+are the stages of Theorem~\ref{thm:aba-substitution-g}, and the last is
+Theorem~\ref{thm:aba-hybrid-spec}, shared with the direct chain.
 See \leanmodule{Leslie2Protocols/ABA/GatherChain}.
 
 \input{nodes/def-aba-gather-side}
