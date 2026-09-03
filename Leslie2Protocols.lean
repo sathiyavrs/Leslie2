@@ -29,6 +29,7 @@ import Leslie2Protocols.ABA.GatherSim
 import Leslie2Protocols.ABA.GatherSpec
 import Leslie2Protocols.ABA.Hybrid
 import Leslie2Protocols.ABA.Labels
+import Leslie2Protocols.ABA.NetAlphabet
 import Leslie2Protocols.ABA.NonVacuity
 import Leslie2Protocols.ABA.Params
 import Leslie2Protocols.ABA.Protocol
