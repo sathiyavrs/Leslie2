@@ -47,6 +47,13 @@ namespace BRB
 
 variable {M : Type} [DecidableEq M] {P : Params} {ldr : Fin P.n}
 
+/-- `PMF.pure` is injective (via its singleton support). -/
+private theorem pure_inj {α : Type*} {a b : α} (h : PMF.pure a = PMF.pure b) :
+    a = b := by
+  have ha : a ∈ (PMF.pure a).support := by rw [PMF.mem_support_pure_iff]
+  rw [h, PMF.mem_support_pure_iff] at ha
+  exact ha
+
 /-! ### The certificate -/
 
 /-- `m` is echo-certified: some receiver holds an `n − f` `ECHO m` receipt
@@ -768,6 +775,186 @@ theorem brbRefines (P : Params) (ldr : Fin P.n) :
     subst hq₁'
     exact ⟨q₂.corrupt P id, Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
       (Step.fail q₂ id)⟩, instRel_corrupt hR id⟩
+
+
+/-! ### Step-level relation transports
+
+The relation across one row, exported for systems that replay the BRB rows
+inside a larger rule table: internal rows under a specification stutter, the
+call across the fused effects, and the on-demand commit that a derived
+delivery licenses. -/
+
+/-- The relation across any internal row, the specification stuttering. -/
+theorem instRel_tau {P : Params} {ldr : Fin P.n} {s s' : ImplState P.n M}
+    {t : SpecState P.n M} (hR : InstRel P ldr s t)
+    (hstep : ImplStep P ldr s Lab.tau (PMF.pure s')) : InstRel P ldr s' t := by
+  have hInv' := hR.inv.step hstep (by rw [PMF.mem_support_pure_iff])
+  generalize hμ : (PMF.pure s' : PMF (ImplState P.n M)) = μ at hstep
+  cases hstep with
+  | deliver i j m h =>
+    have hs' := pure_inj hμ
+    subst hs'
+    refine ⟨hInv', ?_, ?_, ?_, ?_⟩
+    · rw [SubState.recvMsg_proc]
+      exact hR.input_eq
+    · intro k
+      rw [SubState.recvMsg_proc]
+      exact hR.ret_eq k
+    · simpa using hR.F_eq
+    · intro m' hm'
+      exact (hR.val_cert m' hm').recvMsg i j m
+  | echo j m hrecv hsend =>
+    have hs' := pure_inj hμ
+    subst hs'
+    refine ⟨hInv', ?_, ?_, ?_, ?_⟩
+    · by_cases hkl : ldr = j
+      · rw [SubState.mcast_proc, hkl, SubState.setProc_proc_self]
+        rw [hR.input_eq, hkl]
+      · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hkl]
+        exact hR.input_eq
+    · intro k
+      by_cases hkl : k = j
+      · subst hkl
+        rw [SubState.mcast_proc, SubState.setProc_proc_self]
+        exact hR.ret_eq k
+      · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hkl]
+        exact hR.ret_eq k
+    · simpa using hR.F_eq
+    · intro m' hm'
+      rw [echoCert_mcast, echoCert_setProc]
+      exact hR.val_cert m' hm'
+  | voteQuorum j m hcnt hsend =>
+    have hs' := pure_inj hμ
+    subst hs'
+    refine ⟨hInv', ?_, ?_, ?_, ?_⟩
+    · by_cases hkl : ldr = j
+      · rw [SubState.mcast_proc, hkl, SubState.setProc_proc_self]
+        rw [hR.input_eq, hkl]
+      · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hkl]
+        exact hR.input_eq
+    · intro k
+      by_cases hkl : k = j
+      · subst hkl
+        rw [SubState.mcast_proc, SubState.setProc_proc_self]
+        exact hR.ret_eq k
+      · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hkl]
+        exact hR.ret_eq k
+    · simpa using hR.F_eq
+    · intro m' hm'
+      rw [echoCert_mcast, echoCert_setProc]
+      exact hR.val_cert m' hm'
+  | voteAmp j m hcnt hsend =>
+    have hs' := pure_inj hμ
+    subst hs'
+    refine ⟨hInv', ?_, ?_, ?_, ?_⟩
+    · by_cases hkl : ldr = j
+      · rw [SubState.mcast_proc, hkl, SubState.setProc_proc_self]
+        rw [hR.input_eq, hkl]
+      · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hkl]
+        exact hR.input_eq
+    · intro k
+      by_cases hkl : k = j
+      · subst hkl
+        rw [SubState.mcast_proc, SubState.setProc_proc_self]
+        exact hR.ret_eq k
+      · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hkl]
+        exact hR.ret_eq k
+    · simpa using hR.F_eq
+    · intro m' hm'
+      rw [echoCert_mcast, echoCert_setProc]
+      exact hR.val_cert m' hm'
+  | byz j m hj =>
+    have hs' := pure_inj hμ
+    subst hs'
+    refine ⟨hInv', ?_, ?_, ?_, ?_⟩
+    · rw [SubState.mcast_proc]
+      exact hR.input_eq
+    · intro k
+      rw [SubState.mcast_proc]
+      exact hR.ret_eq k
+    · simpa using hR.F_eq
+    · intro m' hm'
+      rw [echoCert_mcast]
+      exact hR.val_cert m' hm'
+
+/-- An internal row leaves the corrupted set alone. -/
+theorem implStep_tau_F {P : Params} {ldr : Fin P.n} {s s' : ImplState P.n M}
+    (hstep : ImplStep P ldr s Lab.tau (PMF.pure s')) : s'.F = s.F := by
+  generalize hμ : (PMF.pure s' : PMF (ImplState P.n M)) = μ at hstep
+  cases hstep with
+  | deliver i j m h =>
+    have hs' := pure_inj hμ
+    subst hs'
+    rfl
+  | echo j m hrecv hsend =>
+    have hs' := pure_inj hμ
+    subst hs'
+    simp
+  | voteQuorum j m hcnt hsend =>
+    have hs' := pure_inj hμ
+    subst hs'
+    simp
+  | voteAmp j m hcnt hsend =>
+    have hs' := pure_inj hμ
+    subst hs'
+    simp
+  | byz j m hj =>
+    have hs' := pure_inj hμ
+    subst hs'
+    simp
+
+/-- The relation across the leader's call, the specification calling too. -/
+theorem instRel_call {P : Params} {ldr : Fin P.n} {s : ImplState P.n M}
+    {t : SpecState P.n M} (hR : InstRel P ldr s t) {m : M}
+    (h : (s.proc ldr).input = none) :
+    InstRel P ldr
+      ((s.setProc ldr { s.proc ldr with input := some m }).mcast ldr (.init m))
+      { t with input := some m } := by
+  refine ⟨hR.inv.step (ImplStep.call s m h) (by rw [PMF.mem_support_pure_iff]),
+    ?_, ?_, ?_, ?_⟩
+  · dsimp only
+    rw [SubState.mcast_proc, SubState.setProc_proc_self]
+  · intro k
+    by_cases hkl : k = ldr
+    · subst hkl
+      rw [SubState.mcast_proc, SubState.setProc_proc_self]
+      exact hR.ret_eq k
+    · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hkl]
+      exact hR.ret_eq k
+  · simpa using hR.F_eq
+  · intro m' hm'
+    rw [echoCert_mcast, echoCert_setProc]
+    exact hR.val_cert m' hm'
+
+/-- **The on-demand commit.** A `VOTE` receipt quorum licenses the
+specification's committed value: either it is already this value, or the
+`commit` guard holds towards it, the relation restored either way. -/
+theorem commitReach {P : Params} {ldr : Fin P.n} {s : ImplState P.n M}
+    {t : SpecState P.n M} (hR : InstRel P ldr s t) {id : Fin P.n} {m : M}
+    (hcnt : P.n - P.f ≤ s.recvCount id (.vote m)) :
+    (t.val = some m ∧ InstRel P ldr s t) ∨
+    (t.val = none ∧ (ldr ∈ t.F ∨ t.input = some m) ∧
+      InstRel P ldr s { t with val := some m }) := by
+  have hcert : EchoCert P s m := echoCert_of_vote_quorum hR.inv hcnt
+  rcases hval : t.val with _ | m'
+  · right
+    have hcommit : ldr ∈ t.F ∨ t.input = some m := by
+      by_cases hldr : ldr ∈ s.F
+      · exact Or.inl (by rw [hR.F_eq]; exact hldr)
+      · exact Or.inr (by
+          rw [hR.input_eq]
+          exact input_of_echoCert hR.inv hldr hcert)
+    refine ⟨rfl, hcommit, hR.inv, ?_, hR.ret_eq, hR.F_eq, ?_⟩
+    · dsimp only
+      exact hR.input_eq
+    · intro m'' hm''
+      dsimp only at hm''
+      obtain rfl : m = m'' := by injection hm''
+      exact hcert
+  · left
+    obtain rfl : m' = m :=
+      echoCert_unique hR.inv (hR.val_cert m' hval) hcert
+    exact ⟨rfl, hR⟩
 
 /-- info: 'PLTS.ABA.BRB.brbRefines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in

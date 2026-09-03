@@ -134,6 +134,31 @@ theorem System.weakLStep_tauCons {q q₁ q' : State} {l : Label}
 
 /-! ### Chains -/
 
+/-- Extending a chain by one related element. -/
+theorem isChain_snoc {α : Type*} {R : α → α → Prop} {a : α} {l : List α} {x : α}
+    (h : List.IsChain R (a :: l)) (hx : R (l.getLastD a) x) :
+    List.IsChain R (a :: (l ++ [x])) := by
+  induction l generalizing a with
+  | nil =>
+    exact List.isChain_cons_cons.mpr ⟨hx, List.isChain_singleton x⟩
+  | cons b l ih =>
+    rw [List.cons_append]
+    obtain ⟨hab, hbl⟩ := List.isChain_cons_cons.mp h
+    refine List.isChain_cons_cons.mpr ⟨hab, ih hbl ?_⟩
+    rwa [List.getLastD_cons] at hx
+
+/-- Concatenating two chains that meet at the first one's last state. -/
+theorem isChain_trans {α : Type*} {R : α → α → Prop} {a : α} {l₁ l₂ : List α}
+    (h₁ : List.IsChain R (a :: l₁)) (h₂ : List.IsChain R (l₁.getLastD a :: l₂)) :
+    List.IsChain R (a :: (l₁ ++ l₂)) := by
+  induction l₁ generalizing a with
+  | nil => exact h₂
+  | cons b l ih =>
+    rw [List.cons_append]
+    obtain ⟨hab, hbl⟩ := List.isChain_cons_cons.mp h₁
+    refine List.isChain_cons_cons.mpr ⟨hab, ih hbl ?_⟩
+    rwa [List.getLastD_cons] at h₂
+
 /-- A chain of silent `LStep`s is a silent weak run to the chain's last
 state. -/
 theorem System.weakLSilent_ofChain {q : State} {qs : List State}

@@ -176,6 +176,13 @@ read them from here rather than reproving them locally. -/
     (s.corrupt P id).grade = s.grade := by
   unfold SpecState.corrupt; split <;> rfl
 
+/-- The corrupted set after a corruption. Not a simp lemma: it introduces an
+`ite`. -/
+theorem SpecState.corrupt_F (P : Params) (s : SpecState P.n) (id : Fin P.n) :
+    (s.corrupt P id).F = if id ∉ s.F ∧ s.F.card < P.f then insert id s.F else s.F := by
+  unfold SpecState.corrupt
+  split_ifs <;> rfl
+
 /-- The step relation of the round-`r` GBCA specification instance
 (blueprint Transition System 2, deviation D19). -/
 inductive Step (P : Params) (r : ℕ) :
