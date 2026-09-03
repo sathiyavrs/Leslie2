@@ -124,6 +124,12 @@ def setP (p : Box n Pr M) (pr : Pr) : Box n Pr M := { p with proc := pr }
 def deliverTo [DecidableEq M] (p : Box n Pr M) (k : Fin n) (m : M) : Box n Pr M :=
   { p with inbox := Function.update p.inbox k (insert m (p.inbox k)) }
 
+/-- The number of distinct senders from which this box holds `m`. A receipt
+threshold read at one process is a count on that process's box alone, which is
+what lets a flat reading state it locally. -/
+def recvCount [DecidableEq M] (p : Box n Pr M) (m : M) : ℕ :=
+  (Finset.univ.filter (fun q => m ∈ p.inbox q)).card
+
 end Box
 
 /-! ### The instance state -/
@@ -281,6 +287,10 @@ variable [DecidableEq M]
 /-- The number of distinct senders from which `i` has received `m`. -/
 def recvCount (s : SubState n Pr M) (i : Fin n) (m : M) : ℕ :=
   (Finset.univ.filter (fun j => m ∈ s.recv i j)).card
+
+/-- The instance's receipt count at `i` is the count on `i`'s own box. -/
+theorem recvCount_eq_box (s : SubState n Pr M) (i : Fin n) (m : M) :
+    s.recvCount i m = (s.1 i).recvCount m := rfl
 
 @[simp] theorem setProc_recvCount (s : SubState n Pr M) (j : Fin n) (p : Pr)
     (i : Fin n) (m : M) : (s.setProc j p).recvCount i m = s.recvCount i m := by

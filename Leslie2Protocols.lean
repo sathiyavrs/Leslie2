@@ -23,6 +23,7 @@ import Leslie2Protocols.ABA.GBCASafety
 import Leslie2Protocols.ABA.GBCASim
 import Leslie2Protocols.ABA.GBCASpec
 import Leslie2Protocols.ABA.GatherChain
+import Leslie2Protocols.ABA.GatherFlat
 import Leslie2Protocols.ABA.GatherLow
 import Leslie2Protocols.ABA.GatherLowSim
 import Leslie2Protocols.ABA.GatherMid
