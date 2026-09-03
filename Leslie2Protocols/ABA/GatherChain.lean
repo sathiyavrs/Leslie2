@@ -420,11 +420,11 @@ theorem substitutionG (P : Params) :
 
 /-! ## The headlines -/
 
-/-- **Trace-distribution refinement of the gather-based reading**: every trace
-distribution achievable by the gather-based composed reading is achievable by
-the ABA specification. The substitution gives the first inclusion, the shared
-core simulation the second. -/
-theorem refinesG (P : Params) :
+/-- **Trace-distribution refinement of the gather-based composed reading**:
+every trace distribution achievable by it is achievable by the ABA
+specification. The substitution gives the first inclusion, the shared core
+simulation the second. -/
+theorem composedG_refines (P : Params) :
     achievableTraceDists (composedG P) ⊆ achievableTraceDists (spec P) :=
   Set.Subset.trans (substitutionG P) (hybrid_spec P)
 
@@ -434,12 +434,12 @@ satisfies Validity and Agreement. -/
 theorem composedG_safe (P : Params) :
     ∀ D ∈ achievableTraceDists (composedG P), ∀ t, D t ≠ 0 →
       ValidityTrace P t ∧ AgreementTrace P t :=
-  safety_transfer (refinesG P) (spec_safe P)
+  safety_transfer (composedG_refines P) (spec_safe P)
 
 /-- **The composed gather-based simulation** `composedG ⊑ ABA.spec`: the
 three-stage substitution joined with the shared core simulation by
 Result 2. -/
-noncomputable def chainSimG (P : Params) :
+noncomputable def chainSimComposedG (P : Params) :
     ProbabilisticForwardSimulation (composedG P) (spec P)
       (compRel
         (compRel (parallelRel (diracRel (RlowAll P)))
@@ -462,17 +462,17 @@ noncomputable def chainSimG (P : Params) :
 #guard_msgs in
 #print axioms substitutionG
 
-/-- info: 'PLTS.ABA.refinesG' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.composedG_refines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms refinesG
+#print axioms composedG_refines
 
 /-- info: 'PLTS.ABA.composedG_safe' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms composedG_safe
 
-/-- info: 'PLTS.ABA.chainSimG' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.chainSimComposedG' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms chainSimG
+#print axioms chainSimComposedG
 
 end ABA
 end PLTS

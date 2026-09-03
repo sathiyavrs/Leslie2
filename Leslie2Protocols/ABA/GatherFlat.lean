@@ -139,6 +139,12 @@ instance instStageRecord (n : ℕ) : StageRecord n (Msg n) (StageRec n) where
   initial := StageRec.initial n
   deliverTo s k m := s.deliverTo k m
 
+@[simp] theorem stageRecord_initial (n : ℕ) :
+    (StageRecord.initial : StageRec n) = StageRec.initial n := rfl
+
+@[simp] theorem stageRecord_deliverTo (n : ℕ) (s : StageRec n) (k : Fin n)
+    (m : Msg n) : (StageRecord.deliverTo s k m : StageRec n) = s.deliverTo k m := rfl
+
 /-- The stage-side record of one process: the round records it holds, and
 whether it has terminated (D22). -/
 abbrev StageSideRec (n : ℕ) : Type := StageSideRecP (StageRec n)
