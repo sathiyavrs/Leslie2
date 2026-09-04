@@ -1,0 +1,11 @@
+\begin{theorem}[The gather-based composition]
+  \label{thm:aba-afw-protocol-composed}
+  \lean{PLTS.ABA.AFW.toPair}\lean{PLTS.ABA.AFW.ProtocolRel}\lean{PLTS.ABA.AFW.protocolSim}\lean{PLTS.ABA.AFW.protocol_composed}\leanok
+  \uses{def:aba-afw-protocol, def:aba-afw-sides, thm:forward-sound, def:achievable}
+  The gather-based protocol is forward-simulated by its composed reading, along the Dirac lift of a relation that computes the composed state from the flat one, and hence $\operatorname{ATD}(\afw{\mathrm{protocol}}(P)) \subseteq \operatorname{ATD}(\afw{\mathrm{composed}}(P))$: \leandecl{PLTS.ABA.AFW.protocolSim}, \leandecl{PLTS.ABA.AFW.protocol_composed}.
+\end{theorem}
+
+\begin{proof}\leanok
+  \uses{def:aba-afw-protocol, def:aba-afw-sides, def:forwardsim}
+  See the Lean proof of \leandecl{PLTS.ABA.AFW.protocolSim}.
+\end{proof}

@@ -25,7 +25,7 @@ beside the three in the core.
 | [`TraceSupport.lean`](Framework/TraceSupport.lean) | 594 | From trace-distribution support to genuine executions: the safety transfer, the invariant inductions, and the label-side transport of a run. |
 | [`IdleFamily.lean`](Framework/IdleFamily.lean) | 221 | Idle padding, partial label pullbacks, and ℕ-indexed instance families with a broadcast disjunct. |
 | [`FamilySim.lean`](Framework/FamilySim.lean) | 385 | Forward simulation is a congruence for `System.family`: per-instance refinement lifts to the family. |
-| [`SyncProduct.lean`](Framework/SyncProduct.lean) | 164 | Full-synchronisation product of a finite family — a visible label moves every component, τ moves one. |
+| [`SyncProduct.lean`](Framework/SyncProduct.lean) | 177 | Full-synchronisation product of a finite family — a visible label moves every component, τ moves one. |
 | [`Relabel.lean`](Framework/Relabel.lean) | 471 | Extended alphabets and restriction along the left summand, with the precongruence for it. |
 | [`WeakBurst.lean`](Framework/WeakBurst.lean) | 188 | Weak runs from step chains: prepending a silent step, and the k-fold burst — a chain of silent steps closed by one external step. |
 | [`MapIdleSim.lean`](Framework/MapIdleSim.lean) | 191 | Forward simulation is a congruence for reading both systems over a finer alphabet along a partial label map. |

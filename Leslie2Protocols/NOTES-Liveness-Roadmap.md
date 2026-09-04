@@ -163,10 +163,10 @@ Ordered by expected value-for-effort:
    `WeakDivPreserving`'s stutter-ranking with `Leslie2Extra/Fairness`'s probabilistic
    descent/König machinery over Leslie2's weak simulation. Sound transfer of fair
    trace-distribution inclusion would push the spec-level mass bound down the chain to
-   `protocol`, which is where a fair-scheduling statement about this protocol belongs.
+   `ABDY.protocol`, which is where a fair-scheduling statement about this protocol belongs.
    All three steps are inclusions in the same direction, `protocol ⊑ composed ⊑
    hybrid ⊑ ABA.spec`, so a mass bound established at `ABA.spec` has to be
-   transported down all three, the composition link (`protocolSim`,
+   transported down all three, the composition link (`ABDY.protocolSim`,
    `ABA/ProtocolSim.lean`) included. That link imposes no constraint on the amplification
    axis. Under D22 a process retains the stage record of every round it has touched and
    answers that round's traffic under an instance-local guard, whichever round its loop is
@@ -319,10 +319,10 @@ the sub-protocol slot.
 - Certificates: `Leslie/Prob/Liveness.lean` (`FairASTCertificate`, `sound` at :1719)
 - This repo's fairness line: `Leslie2Extra/Fairness/Simulation/{Defs,Soundness}.lean`
 - The protocol, whose programs read their own replacement flag and nothing else about
-  corruption (D23): `ABA/Protocol.lean` (`protocol`, `netAdv`), with
-  its reading as a composition of components in `ABA/Hybrid.lean` (`composed`) and the
-  inclusion into it in `ABA/ProtocolSim.lean` (`ProtocolRel`, `protocolSim`,
-  `protocol_composed`) — the presentation to state fair
+  corruption (D23): `ABA/Protocol.lean` (`ABDY.protocol`, `netAdv`), with
+  its reading as a composition of components in `ABA/Hybrid.lean` (`ABDY.composed`) and the
+  inclusion into it in `ABA/ProtocolSim.lean` (`ABDY.ProtocolRel`, `ABDY.protocolSim`,
+  `ABDY.protocol_composed`) — the presentation to state fair
   termination over if it is to be stated of the protocol: the `fail` row belongs
   to the network adversary and is guarded by `k ∉ F ∧ |F| < f`, so `fail` is enabled
   exactly while budget remains and the marking of `fail` is read off that component's

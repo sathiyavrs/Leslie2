@@ -107,7 +107,7 @@ specification over the shared alphabet `Lab n`, which is lifted to the
 instance's interface along `gPull`: the projection that reads a Byzantine
 call drive as a call, a Byzantine return drive as a return, and the two call
 loops as calls, which the specification takes on its input-enabledness row
-(D11). The lifted specification `liftedSpecG` — the specification read back
+(D11). The lifted specification `liftedSpec` — the specification read back
 along `gPull` — is the system that replaces the instance, and `gActSpec` is
 the broadcast corruption act it carries at that alphabet.
 -/
@@ -927,17 +927,17 @@ section NetInversion
 
 variable {P : Params} {r : ℕ} {w : GNetState P.n} {μ : PMF (GNetState P.n)}
 
-theorem netG_snd {j : Fin P.n} {m : GBCA.Msg}
+theorem gNetStep_snd {j : Fin P.n} {m : GBCA.Msg}
     (h : GNetStep P r w (Sum.inr (.snd j m)) μ) :
     μ = PMF.pure (w.gpool j m) := by
   cases h; rfl
 
-theorem netG_dlv {i j : Fin P.n} {m : GBCA.Msg}
+theorem gNetStep_dlv {i j : Fin P.n} {m : GBCA.Msg}
     (h : GNetStep P r w (Sum.inr (.dlv i j m)) μ) :
     m ∈ w.pool j ∧ μ = PMF.pure w := by
   cases h; exact ⟨by assumption, rfl⟩
 
-theorem netG_tau (h : GNetStep P r w (Sum.inl (Sum.inl .tau)) μ) :
+theorem gNetStep_tau (h : GNetStep P r w (Sum.inl (Sum.inl .tau)) μ) :
     ∃ (k : Fin P.n) (m : GBCA.Msg), k ∈ w.F ∧ μ = PMF.pure (w.gpool k m) := by
   cases h
   case byzG k m hF => exact ⟨k, m, hF, rfl⟩
@@ -955,7 +955,7 @@ call loops are calls, which the specification takes on its input-enabledness
 row. Every other extended label — the protocol network's rendezvous, the coin
 drives — is off the specification's interface and idles.
 
-The lifted specification `liftedSpecG` is the specification read back along
+The lifted specification `liftedSpec` is the specification read back along
 `gPull`. It is what the instance is replaced by: the drive labels stay visible
 at this boundary, and their authorisation is the surrounding network's business
 (D11). -/
@@ -1019,16 +1019,16 @@ theorem gPull_eq_tau {n : ℕ} {l : NLab n} (h : gPull n l = some Lab.tau) :
 
 /-- **The lifted specification**: the round-`r` graded agreement specification
 read over the instance's interface. -/
-noncomputable def liftedSpecG (P : Params) (r : ℕ) :
+noncomputable def liftedSpec (P : Params) (r : ℕ) :
     System (GBCA.SpecState P.n) (NLab P.n) :=
   (GBCA.specInst P r).mapIdle (gPull P.n)
 
-@[simp] theorem liftedSpecG_init (P : Params) (r : ℕ) :
-    (liftedSpecG P r).init = GBCA.SpecState.initial P.n := rfl
+@[simp] theorem liftedSpec_init (P : Params) (r : ℕ) :
+    (liftedSpec P r).init = GBCA.SpecState.initial P.n := rfl
 
 /-- The lifted specification is an LTS: the specification is, and reading it
 back adds only Dirac self-loops. -/
-theorem liftedSpecG_isLTS (P : Params) (r : ℕ) : (liftedSpecG P r).IsLTS :=
+theorem liftedSpec_isLTS (P : Params) (r : ℕ) : (liftedSpec P r).IsLTS :=
   System.mapIdle_isLTS _ (GBCA.specInst_isLTS P r)
 
 /-! ### Weak runs of the lifted specification
@@ -1067,17 +1067,17 @@ theorem gSect_tau {n : ℕ} {l₀ : Lab n} {l : NLab n} (hl : gPull n l = some l
 
 /-- A silent weak run of the specification is a silent weak run of the lifted
 specification. -/
-theorem weakLSilent_liftedSpecG (P : Params) (r : ℕ) {s s' : GBCA.SpecState P.n}
-    (h : (GBCA.specInst P r).weakLSilent s s') : (liftedSpecG P r).weakLSilent s s' :=
+theorem weakLSilent_liftedSpec (P : Params) (r : ℕ) {s s' : GBCA.SpecState P.n}
+    (h : (GBCA.specInst P r).weakLSilent s s') : (liftedSpec P r).weakLSilent s s' :=
   System.weakLSilent_mapIdle Sum.inl (fun _ => rfl) (fun _ => by simp) h
 
 /-- A labelled weak run of the specification is a weak run of the lifted
 specification at any interface label projecting to the same specification
 label. -/
-theorem weakLStep_liftedSpecG (P : Params) (r : ℕ) {s s' : GBCA.SpecState P.n}
+theorem weakLStep_liftedSpec (P : Params) (r : ℕ) {s s' : GBCA.SpecState P.n}
     {l₀ : Lab P.n} {l : NLab P.n} (hl₀ : l₀ ≠ (Silent.τ : Lab P.n))
     (hl : gPull P.n l = some l₀)
-    (h : (GBCA.specInst P r).weakLStep s l₀ s') : (liftedSpecG P r).weakLStep s l s' :=
+    (h : (GBCA.specInst P r).weakLStep s l₀ s') : (liftedSpec P r).weakLStep s l s' :=
   System.weakLStep_mapIdle (gSect l₀ l) (gPull_gSect hl) (gSect_tau hl hl₀)
     (by simp [gSect]) h
 
@@ -1202,32 +1202,32 @@ section NetRound
 
 variable {P : Params} {r : ℕ} {w : GNetState P.n} {μ : PMF (GNetState P.n)}
 
-theorem netG_callG_round {r' : ℕ} {id : Fin P.n} {b : Bool}
+theorem gNetStep_callG_round {r' : ℕ} {id : Fin P.n} {b : Bool}
     (h : GNetStep P r w (Sum.inl (Sum.inl (.callG r' id b))) μ) :
     r' = r ∧ μ = PMF.pure (w.gpool id (.input b)) := by
   cases h; exact ⟨rfl, rfl⟩
 
-theorem netG_retG_round {r' : ℕ} {id : Fin P.n} {out : GbcaOut}
+theorem gNetStep_retG_round {r' : ℕ} {id : Fin P.n} {out : GbcaOut}
     (h : GNetStep P r w (Sum.inl (Sum.inl (.retG r' id out))) μ) :
     r' = r ∧ μ = PMF.pure w := by
   cases h; exact ⟨rfl, rfl⟩
 
-theorem netG_gcallLoop_round {r' : ℕ} {id : Fin P.n} {b : Bool}
+theorem gNetStep_gcallLoop_round {r' : ℕ} {id : Fin P.n} {b : Bool}
     (h : GNetStep P r w (Sum.inl (Sum.inr (.gcallLoop r' id b))) μ) :
     r' = r ∧ μ = PMF.pure w := by
   cases h; exact ⟨rfl, rfl⟩
 
-theorem netG_byzCallG_round {r' : ℕ} {k : Fin P.n} {b : Bool}
+theorem gNetStep_byzCallG_round {r' : ℕ} {k : Fin P.n} {b : Bool}
     (h : GNetStep P r w (Sum.inl (Sum.inr (.byzCallG r' k b))) μ) :
     r' = r ∧ μ = PMF.pure (w.gpool k (.input b)) := by
   cases h; exact ⟨rfl, rfl⟩
 
-theorem netG_byzCallGLoop_round {r' : ℕ} {k : Fin P.n} {b : Bool}
+theorem gNetStep_byzCallGLoop_round {r' : ℕ} {k : Fin P.n} {b : Bool}
     (h : GNetStep P r w (Sum.inl (Sum.inr (.byzCallGLoop r' k b))) μ) :
     r' = r ∧ μ = PMF.pure w := by
   cases h; exact ⟨rfl, rfl⟩
 
-theorem netG_byzRetG_round {r' : ℕ} {k : Fin P.n} {out : GbcaOut}
+theorem gNetStep_byzRetG_round {r' : ℕ} {k : Fin P.n} {out : GbcaOut}
     (h : GNetStep P r w (Sum.inl (Sum.inr (.byzRetG r' k out))) μ) :
     r' = r ∧ μ = PMF.pure w := by
   cases h; exact ⟨rfl, rfl⟩
@@ -1235,40 +1235,40 @@ theorem netG_byzRetG_round {r' : ℕ} {k : Fin P.n} {out : GbcaOut}
 /-! The labels the fabric does not offer at all: the ABA API, the coin ports,
 corruption, and the protocol network's own rendezvous. -/
 
-theorem netG_callABA_dead {id : Fin P.n} {b : Bool}
+theorem gNetStep_callABA_dead {id : Fin P.n} {b : Bool}
     (h : GNetStep P r w (Sum.inl (Sum.inl (.callABA id b))) μ) : False := by cases h
 
-theorem netG_retABA_dead {id : Fin P.n} {b : Bool}
+theorem gNetStep_retABA_dead {id : Fin P.n} {b : Bool}
     (h : GNetStep P r w (Sum.inl (Sum.inl (.retABA id b))) μ) : False := by cases h
 
-theorem netG_callW_dead {r' : ℕ} {id : Fin P.n}
+theorem gNetStep_callW_dead {r' : ℕ} {id : Fin P.n}
     (h : GNetStep P r w (Sum.inl (Sum.inl (.callW r' id))) μ) : False := by cases h
 
-theorem netG_retW_dead {r' : ℕ} {id : Fin P.n} {b : Bool}
+theorem gNetStep_retW_dead {r' : ℕ} {id : Fin P.n} {b : Bool}
     (h : GNetStep P r w (Sum.inl (Sum.inl (.retW r' id b))) μ) : False := by cases h
 
-theorem netG_fail_dead {k : Fin P.n}
+theorem gNetStep_fail_dead {k : Fin P.n}
     (h : GNetStep P r w (Sum.inl (Sum.inl (.fail k))) μ) : False := by cases h
 
-theorem netG_gsnd_dead {r' : ℕ} {j : Fin P.n} {m : GBCA.Msg}
+theorem gNetStep_gsnd_dead {r' : ℕ} {j : Fin P.n} {m : GBCA.Msg}
     (h : GNetStep P r w (Sum.inl (Sum.inr (.gsnd r' j m))) μ) : False := by cases h
 
-theorem netG_gdlv_dead {r' : ℕ} {i j : Fin P.n} {m : GBCA.Msg}
+theorem gNetStep_gdlv_dead {r' : ℕ} {i j : Fin P.n} {m : GBCA.Msg}
     (h : GNetStep P r w (Sum.inl (Sum.inr (.gdlv r' i j m))) μ) : False := by cases h
 
-theorem netG_dsnd_dead {j : Fin P.n} {b : Bool}
+theorem gNetStep_dsnd_dead {j : Fin P.n} {b : Bool}
     (h : GNetStep P r w (Sum.inl (Sum.inr (.dsnd j b))) μ) : False := by cases h
 
-theorem netG_ddlv_dead {i j : Fin P.n} {b : Bool}
+theorem gNetStep_ddlv_dead {i j : Fin P.n} {b : Bool}
     (h : GNetStep P r w (Sum.inl (Sum.inr (.ddlv i j b))) μ) : False := by cases h
 
-theorem netG_retWPub_dead {r' : ℕ} {id : Fin P.n} {c b : Bool}
+theorem gNetStep_retWPub_dead {r' : ℕ} {id : Fin P.n} {c b : Bool}
     (h : GNetStep P r w (Sum.inl (Sum.inr (.retWPub r' id c b))) μ) : False := by cases h
 
-theorem netG_byzCallW_dead {r' : ℕ} {k : Fin P.n}
+theorem gNetStep_byzCallW_dead {r' : ℕ} {k : Fin P.n}
     (h : GNetStep P r w (Sum.inl (Sum.inr (.byzCallW r' k))) μ) : False := by cases h
 
-theorem netG_byzRetW_dead {r' : ℕ} {k : Fin P.n} {b : Bool}
+theorem gNetStep_byzRetW_dead {r' : ℕ} {k : Fin P.n} {b : Bool}
     (h : GNetStep P r w (Sum.inl (Sum.inr (.byzRetW r' k b))) μ) : False := by cases h
 
 end NetRound
@@ -1308,7 +1308,7 @@ theorem sub_projects (P : Params) (r : ℕ) :
     | snd j m =>
       have hfor : ∀ i, i ≠ j → x i = u i :=
         fun i hi => pure_inj (stepG_snd_foreign (Ne.symm hi) (hall i))
-      have hw : w' = w.gpool j m := pure_inj (netG_snd hn)
+      have hw : w' = w.gpool j m := pure_inj (gNetStep_snd hn)
       subst hw
       cases m with
       | input b =>
@@ -1353,7 +1353,7 @@ theorem sub_projects (P : Params) (r : ℕ) :
           rw [sub_setProc_gpool (pure_inj hx) hfor]
           exact GBCA.ImplStep.sealBot _ j hin hlv hnot hcnt hval hsend
     | dlv i j m =>
-      obtain ⟨hmem, hw⟩ := netG_dlv hn
+      obtain ⟨hmem, hw⟩ := gNetStep_dlv hn
       have hw' : w' = w := pure_inj hw
       subst hw'
       have hfor : ∀ i', i' ≠ i → x i' = u i' :=
@@ -1364,7 +1364,7 @@ theorem sub_projects (P : Params) (r : ℕ) :
     · -- the fabric's own injection
       subst hlτ
       obtain ⟨w', rfl, hn⟩ := subPre_tau_inv hlab
-      obtain ⟨k, m, hF, hw⟩ := netG_tau hn
+      obtain ⟨k, m, hF, hw⟩ := gNetStep_tau hn
       have hw' : w' = w.gpool k m := pure_inj hw
       subst hw'
       refine ⟨Lab.tau, rfl, ?_⟩
@@ -1375,13 +1375,13 @@ theorem sub_projects (P : Params) (r : ℕ) :
       | inl l₀ =>
         cases l₀ with
         | tau => exact absurd rfl hlτ
-        | callABA id b => exact (netG_callABA_dead hn).elim
-        | retABA id b => exact (netG_retABA_dead hn).elim
-        | callW r' id => exact (netG_callW_dead hn).elim
-        | retW r' id b => exact (netG_retW_dead hn).elim
-        | fail k => exact (netG_fail_dead hn).elim
+        | callABA id b => exact (gNetStep_callABA_dead hn).elim
+        | retABA id b => exact (gNetStep_retABA_dead hn).elim
+        | callW r' id => exact (gNetStep_callW_dead hn).elim
+        | retW r' id b => exact (gNetStep_retW_dead hn).elim
+        | fail k => exact (gNetStep_fail_dead hn).elim
         | callG r' id b =>
-          obtain ⟨rfl, hw⟩ := netG_callG_round hn
+          obtain ⟨rfl, hw⟩ := gNetStep_callG_round hn
           have hw' : w' = w.gpool id (.input b) := pure_inj hw
           subst hw'
           obtain ⟨hin, hx⟩ := stepG_callG_own (hall id)
@@ -1391,7 +1391,7 @@ theorem sub_projects (P : Params) (r : ℕ) :
           rw [sub_setProc_gpool (pure_inj hx) hfor]
           exact GBCA.ImplStep.call _ id b hin
         | retG r' id out =>
-          obtain ⟨rfl, hw⟩ := netG_retG_round hn
+          obtain ⟨rfl, hw⟩ := gNetStep_retG_round hn
           have hw' : w' = w := pure_inj hw
           subst hw'
           have hfor : ∀ i, i ≠ id → x i = u i :=
@@ -1414,15 +1414,15 @@ theorem sub_projects (P : Params) (r : ℕ) :
             exact GBCA.ImplStep.retC _ id hin hlv hnotA hnotB hcnt hval hret
       | inr ev =>
         cases ev with
-        | gsnd r' j m => exact (netG_gsnd_dead hn).elim
-        | gdlv r' i j m => exact (netG_gdlv_dead hn).elim
-        | dsnd j b => exact (netG_dsnd_dead hn).elim
-        | ddlv i j b => exact (netG_ddlv_dead hn).elim
-        | retWPub r' id c b => exact (netG_retWPub_dead hn).elim
-        | byzCallW r' k => exact (netG_byzCallW_dead hn).elim
-        | byzRetW r' k b => exact (netG_byzRetW_dead hn).elim
+        | gsnd r' j m => exact (gNetStep_gsnd_dead hn).elim
+        | gdlv r' i j m => exact (gNetStep_gdlv_dead hn).elim
+        | dsnd j b => exact (gNetStep_dsnd_dead hn).elim
+        | ddlv i j b => exact (gNetStep_ddlv_dead hn).elim
+        | retWPub r' id c b => exact (gNetStep_retWPub_dead hn).elim
+        | byzCallW r' k => exact (gNetStep_byzCallW_dead hn).elim
+        | byzRetW r' k b => exact (gNetStep_byzRetW_dead hn).elim
         | gcallLoop r' id b =>
-          obtain ⟨rfl, hw⟩ := netG_gcallLoop_round hn
+          obtain ⟨rfl, hw⟩ := gNetStep_gcallLoop_round hn
           have hw' : w' = w := pure_inj hw
           subst hw'
           have hidle : ∀ i, x i = u i := fun i => pure_inj (stepG_gcallLoop (hall i))
@@ -1430,7 +1430,7 @@ theorem sub_projects (P : Params) (r : ℕ) :
           rw [sub_idle hidle]
           exact GBCA.ImplStep.callLoop _ id b
         | byzCallG r' k b =>
-          obtain ⟨rfl, hw⟩ := netG_byzCallG_round hn
+          obtain ⟨rfl, hw⟩ := gNetStep_byzCallG_round hn
           have hw' : w' = w.gpool k (.input b) := pure_inj hw
           subst hw'
           obtain ⟨hin, hx⟩ := stepG_byzCallG_own (hall k)
@@ -1440,7 +1440,7 @@ theorem sub_projects (P : Params) (r : ℕ) :
           rw [sub_setProc_gpool (pure_inj hx) hfor]
           exact GBCA.ImplStep.call _ k b hin
         | byzCallGLoop r' k b =>
-          obtain ⟨rfl, hw⟩ := netG_byzCallGLoop_round hn
+          obtain ⟨rfl, hw⟩ := gNetStep_byzCallGLoop_round hn
           have hw' : w' = w := pure_inj hw
           subst hw'
           have hidle : ∀ i, x i = u i :=
@@ -1449,7 +1449,7 @@ theorem sub_projects (P : Params) (r : ℕ) :
           rw [sub_idle hidle]
           exact GBCA.ImplStep.callLoop _ k b
         | byzRetG r' k out =>
-          obtain ⟨rfl, hw⟩ := netG_byzRetG_round hn
+          obtain ⟨rfl, hw⟩ := gNetStep_byzRetG_round hn
           have hw' : w' = w := pure_inj hw
           subst hw'
           have hfor : ∀ i, i ≠ k → x i = u i :=
@@ -1490,7 +1490,7 @@ def Rsub (P : Params) (r : ℕ) (σ : GBCA.ImplState P.n) (s : GBCA.SpecState P.
 simulated by the round-`r` graded agreement specification, read over the
 instance's interface. -/
 theorem subSim (P : Params) (r : ℕ) :
-    ForwardSimulation (sub P r) (liftedSpecG P r) (Rsub P r) := by
+    ForwardSimulation (sub P r) (liftedSpec P r) (Rsub P r) := by
   constructor
   intro q₁ q₂ hR l μ hstep q₁' hq₁'
   obtain ⟨l₀, hpull, himpl⟩ := sub_projects P r q₁ l μ hstep
@@ -1498,8 +1498,8 @@ theorem subSim (P : Params) (r : ℕ) :
   refine ⟨s', ?_, hrel⟩
   rcases hdis with ⟨hτ, hweak⟩ | ⟨hτ, hweak⟩
   · exact Or.inl ⟨gPull_eq_tau (by rw [hpull, hτ]; rfl),
-      weakLSilent_liftedSpecG P r hweak⟩
-  · refine Or.inr ⟨?_, weakLStep_liftedSpecG P r hτ hpull hweak⟩
+      weakLSilent_liftedSpec P r hweak⟩
+  · refine Or.inr ⟨?_, weakLStep_liftedSpec P r hτ hpull hweak⟩
     intro hl
     refine hτ ?_
     have h2 : gPull P.n (Silent.τ : NLab P.n) = some l₀ := by rw [← hl]; exact hpull

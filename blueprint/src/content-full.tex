@@ -778,6 +778,16 @@ The rendezvous alphabet is parametric in the message type, and is hidden before
 anything outside the composition sees it, so two instantiations need not agree
 on it.
 
+A system below the meeting point of the two chains therefore belongs to one
+implementation or the other, and carries a superscript naming its source:
+$\abdy{\mathrm{protocol}}(P)$ and $\abdy{\mathrm{composed}}(P)$ here, after the
+authors of~\cite{ABDY22}, and $\afw{\mathrm{protocol}}(P)$ and
+$\afw{\mathrm{composed}}(P)$ in Section~\ref{sec:aba-gather}, after those
+of~\cite{AFW25}.
+The systems the two chains share, $\mathrm{hybrid}(P)$ and $\mathrm{spec}(P)$,
+carry none.
+The Lean development writes each superscript as a namespace.
+
 \input{nodes/def-aba-flat-reading}
 
 \input{nodes/def-aba-procnet}
@@ -786,7 +796,7 @@ on it.
 
 \input{nodes/def-aba-protocol}
 
-\blueprintfig{fig-protocol}{The protocol \leandecl{PLTS.ABA.protocol}: the $n$ programs $\mathrm{ABAProcN}(P,j)$, \leandecl{PLTS.ABA.Net.ABAProcN}, under $\mathrm{syncProduct}$, the network adversary \leandecl{PLTS.ABA.Net.netAdv} and the coin oracle beside the group.
+\blueprintfig{fig-protocol}{The protocol \leandecl{PLTS.ABA.ABDY.protocol}: the $n$ programs $\mathrm{ABAProcN}(P,j)$, \leandecl{PLTS.ABA.Net.ABAProcN}, under $\mathrm{syncProduct}$, the network adversary \leandecl{PLTS.ABA.Net.netAdv} and the coin oracle beside the group.
 Each program holds one process's round loop beside its stage-side record, the stage record of every round it has touched and its termination flag (D22); every guard of its forty-three rules reads that program's own record, and what any of them reads of corruption is that record's own replacement flag (D23).
 Its state \leandecl{PLTS.ABA.Net.NetState} holds the pools $pool(r,j)$ and $dpool(j)$ and the corrupted set $F$, and its twenty-one rules supply the other half of every send, every delivery, every Byzantine drive and the Byzantine return; the corruption budget is the guard on its own $\mathrm{fail}$ row.
 The inner dashed frame is $\mathrm{relabel} \circ \mathrm{abstract}\,\mathrm{netEvtLabels}$: every $\mathrm{gsnd}$, $\mathrm{gdlv}$, $\mathrm{dsnd}$, $\mathrm{ddlv}$, $\mathrm{retWPub}$, $\mathrm{gcallLoop}$ and Byzantine drive becomes $\tau$.
@@ -1922,7 +1932,7 @@ The instance of Definition~\ref{def:aba-gbcasub} is drawn to own it.
 
 \input{nodes/def-aba-composed}
 
-\blueprintfig{fig-composed}{The composed system \leandecl{PLTS.ABA.composed} and the substitution: the four components of Definition~\ref{def:aba-composed} inside the two hiding frames of the protocol's pipeline.
+\blueprintfig{fig-composed}{The composed system \leandecl{PLTS.ABA.ABDY.composed} and the substitution: the four components of Definition~\ref{def:aba-composed} inside the two hiding frames of the protocol's pipeline.
 The round instance $\mathrm{sub}(P,r)$, \leandecl{PLTS.ABA.GSub.sub}, is drawn open: the $n$ stage programs of round $r$ beside that round's own message fabric, with the multicast and the delivery hidden inside the instance's own frame.
 The left slot is the refinable one: Theorem~\ref{thm:aba-substitution} replaces the family of round instances by the family of round specifications and leaves the other three components as they stand.
 Everything the round's message fabric holds --- the stage pools, the delivery guard, the injection $\mathrm{byzG}$ --- is inside the replaced component.
@@ -2013,8 +2023,8 @@ trace of positive probability in the protocol as it runs.
 
 Three steps separate the protocol from the ABA specification:
 \[
-  \mathrm{protocol}(P)
-  \;\overset{\text{(1)}}{\sqsubseteq}\; \mathrm{composed}(P)
+  \abdy{\mathrm{protocol}}(P)
+  \;\overset{\text{(1)}}{\sqsubseteq}\; \abdy{\mathrm{composed}}(P)
   \;\overset{\text{(2)}}{\sqsubseteq}\; \mathrm{hybrid}(P)
   \;\overset{\text{(3)}}{\sqsubseteq}\; \mathrm{spec}(P),
 \]
@@ -2048,7 +2058,7 @@ Definition~\ref{def:aba-hybrid}, the system
 Theorem~\ref{thm:aba-hybrid-spec} is proved of, executes and reaches a
 return.
 Membership of a decision trace in
-$\operatorname{ATD}(\mathrm{protocol}\ P4)$ is not established; the
+$\operatorname{ATD}(\abdy{\mathrm{protocol}}\ P4)$ is not established; the
 witnesses are about that system alone.
 
 \input{nodes/def-aba-nonvacuity}
@@ -2087,6 +2097,13 @@ Two readings are verified: the composed one, the gather-based counterpart of
 Definition~\ref{def:aba-composed}, and beneath it the flat one, the second
 instantiation of Definition~\ref{def:aba-flat-reading}, which is the
 gather-based protocol as it runs.
+
+The two chains meet at $\mathrm{hybrid}(P)$ and are identical above it, and
+below it they run through systems of the same shape.
+A system of this section therefore carries the name of its counterpart in the
+sections above, under the superscript $\mathsf{AFW}$: $\afw{\mathrm{composed}}(P)$
+is to the gather-based implementation what $\abdy{\mathrm{composed}}(P)$ is to the
+ladder, and $\afw{\mathrm{protocol}}(P)$ what $\abdy{\mathrm{protocol}}(P)$ is.
 
 \begin{algorithm}
     \caption{The two-gather graded agreement, Algorithm~4 of Attiya, Flam and
@@ -2296,16 +2313,16 @@ injection --- belong to the adversary in either reading.
 Assembling the composed state from the flat one undoes both: the boxes are
 transposed back, and each fabric is sliced out of the tagged pool family.
 That assembly is the simulation relation of
-Theorem~\ref{thm:aba-protocolg-composedg}, which is a function rather than a
+Theorem~\ref{thm:aba-afw-protocol-composed}, which is a function rather than a
 correspondence --- the composed state is computed from the flat one, and the
 proof obligation of a row is which of the six slices takes the message it
 pools.
 See \leanmodule{Leslie2Protocols/ABA/GatherFlat} and
 \leanmodule{Leslie2Protocols/ABA/GatherFlatSim}.
 
-\input{nodes/def-aba-protocolg}
+\input{nodes/def-aba-afw-protocol}
 
-\input{nodes/thm-aba-protocolg-composedg}
+\input{nodes/thm-aba-afw-protocol-composed}
 
 \subsection{The gather-based chain}
 
@@ -2328,21 +2345,21 @@ $\mathrm{hybrid}(P)$.
 Below that point the chain has one step more than the direct one, the
 substitution splitting into its three stages:
 \[
-  \mathrm{protocolG}(P)
-  \;\sqsubseteq\; \mathrm{composedG}(P)
-  \;\sqsubseteq\; \mathrm{hybridG1}(P)
-  \;\sqsubseteq\; \mathrm{hybridG2}(P)
+  \afw{\mathrm{protocol}}(P)
+  \;\sqsubseteq\; \afw{\mathrm{composed}}(P)
+  \;\sqsubseteq\; \afw{\mathrm{hybrid}}_1(P)
+  \;\sqsubseteq\; \afw{\mathrm{hybrid}}_2(P)
   \;\sqsubseteq\; \mathrm{hybrid}(P)
   \;\sqsubseteq\; \mathrm{spec}(P).
 \]
-The first step is Theorem~\ref{thm:aba-protocolg-composedg}, the middle three
-are the stages of Theorem~\ref{thm:aba-substitution-g}, and the last is
+The first step is Theorem~\ref{thm:aba-afw-protocol-composed}, the middle three
+are the stages of Theorem~\ref{thm:aba-afw-substitution}, and the last is
 Theorem~\ref{thm:aba-hybrid-spec}, shared with the direct chain.
 See \leanmodule{Leslie2Protocols/ABA/GatherChain}.
 
-\input{nodes/def-aba-gather-side}
-\input{nodes/thm-aba-substitution-g}
-\input{nodes/thm-aba-gather-main}
+\input{nodes/def-aba-afw-sides}
+\input{nodes/thm-aba-afw-substitution}
+\input{nodes/thm-aba-afw-main}
 
 \begin{thebibliography}{LeslieBP}
 

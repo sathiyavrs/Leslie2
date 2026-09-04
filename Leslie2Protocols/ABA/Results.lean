@@ -11,7 +11,7 @@ import Leslie2Protocols.ABA.Hybrid
 /-!
 # The main theorems of the ABA case study
 
-The subject is the protocol `protocol P`: `n` programs, one per process, beside
+The subject is the protocol `ABDY.protocol P`: `n` programs, one per process, beside
 two boxes that are not processes — the network adversary, which owns the
 message pools, the DECIDED pools and the corrupted set with its budget, and the
 common-coin oracle, the only component whose transitions are not Dirac. A
@@ -32,12 +32,12 @@ whose traces satisfy Validity and Agreement (`spec_safe`, `SpecSafety.lean`).
 Three probabilistic forward simulations carry the protocol to the
 specification:
 
-1. `protocolSim` (`ProtocolSim.lean`) — the protocol into the composed
-   reading, along the Dirac lift of `ProtocolRel`. The relation pins every
+1. `ABDY.protocolSim` (`ProtocolSim.lean`) — the protocol into the composed
+   reading, along the Dirac lift of `ABDY.ProtocolRel`. The relation pins every
    composed coordinate against the protocol state; the inclusion is
    one-directional because a round instance also answers the Byzantine drives
    (D11) and the processes the protocol has terminated (D22).
-2. `substSim` (`Hybrid.lean`) — replace each round's graded-agreement
+2. `ABDY.substSim` (`Hybrid.lean`) — replace each round's graded-agreement
    instance by its specification, the other three components untouched: the
    family substitution carried by four congruences (`parallel_right`,
    `abstract`, `relabel`, `abstract`).
@@ -47,8 +47,8 @@ specification:
    ABA-side network and the coin oracle, each still a component of the state the
    relation is defined on.
 
-`refines` chains the soundness inclusions of the three (Result 1) by
-`Set.Subset.trans`; `chainSim` composes the three simulations themselves by
+`ABDY.refines` chains the soundness inclusions of the three (Result 1) by
+`Set.Subset.trans`; `ABDY.chainSim` composes the three simulations themselves by
 `ProbabilisticForwardSimulation.trans` (Result 2). The two routes are
 independent — the inclusion never invokes transitivity of simulation.
 
@@ -80,9 +80,9 @@ open Net Comp
 
 /-! ### The chain, link by link
 
-Carry the protocol reading into the composed reading (`protocol_composed`),
+Carry the protocol reading into the composed reading (`ABDY.protocol_composed`),
 substitute each round's graded-agreement instance by its specification at the
-protocol shape (`substitution`), then take the core simulation (`coreSim`).
+protocol shape (`ABDY.substitution`), then take the core simulation (`coreSim`).
 Every step is a simulation between systems the protocol reading itself
 names. -/
 
@@ -91,6 +91,8 @@ soundness of the core simulation. -/
 theorem hybrid_spec (P : Params) :
     achievableTraceDists (hybrid P) ⊆ achievableTraceDists (spec P) :=
   (coreSim P).achievableTraceDists_subset
+
+namespace ABDY
 
 /-- **Safety of the protocol reading**: every positive-probability trace of
 every achievable trace distribution of the `n` programs beside the network
@@ -163,7 +165,7 @@ a `sorryAx` dependence. -/
 #guard_msgs in
 #print axioms ProbabilisticForwardSimulation.relabel
 
-/-- info: 'PLTS.ABA.substitution' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.ABDY.substitution' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms substitution
 
@@ -171,27 +173,27 @@ a `sorryAx` dependence. -/
 #guard_msgs in
 #print axioms hybrid_spec
 
-/-- info: 'PLTS.ABA.protocol_safe' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.ABDY.protocol_safe' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms protocol_safe
 
-/-- info: 'PLTS.ABA.protocol_traces' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.ABDY.protocol_traces' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms protocol_traces
 
-/-- info: 'PLTS.ABA.composed_safe' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.ABDY.composed_safe' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms composed_safe
 
-/-- info: 'PLTS.ABA.main' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.ABDY.main' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms main
 
-/-- info: 'PLTS.ABA.refines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.ABDY.refines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms refines
 
-/-- info: 'PLTS.ABA.chainSim' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.ABDY.chainSim' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms chainSim
 
@@ -206,6 +208,8 @@ a `sorryAx` dependence. -/
 /-- info: 'PLTS.weakTau_flatten' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms weakTau_flatten
+
+end ABDY
 
 end ABA
 end PLTS

@@ -61,6 +61,19 @@ theorem prodPMF_pure_left_apply {α β : Type*}
     exact fun h => absurd h (Ne.symm hb)
   · simp
 
+/-- A product of two Dirac factors beside a third distribution. -/
+theorem prodPMF_pure₂ {α β γ : Type*} (a : α) (b : β) (ν : PMF γ) :
+    prodPMF (PMF.pure a) (prodPMF (PMF.pure b) ν) = ν.map (fun c => (a, b, c)) := by
+  rw [prodPMF_pure_left, prodPMF_pure_left, PMF.map_comp]
+  rfl
+
+/-- A product of three Dirac factors beside a fourth distribution. -/
+theorem prodPMF_pure₃ {α β γ δ : Type*} (a : α) (b : β) (c : γ) (ν : PMF δ) :
+    prodPMF (PMF.pure a) (prodPMF (PMF.pure b) (prodPMF (PMF.pure c) ν)) =
+      ν.map (fun d => (a, b, c, d)) := by
+  rw [prodPMF_pure_left, prodPMF_pure₂, PMF.map_comp]
+  rfl
+
 /-- Pushing an injective `f` forward, the mass at `f x` is the mass at `x`. -/
 theorem map_apply_inj {α β : Type*} {f : α → β} (hf : Function.Injective f)
     (p : PMF α) (x : α) : (p.map f) (f x) = p x := by

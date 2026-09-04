@@ -1,6 +1,6 @@
 \begin{theorem}[A round's instance is refined by its specification]
   \label{thm:aba-subsim}
-  \lean{PLTS.ABA.GSub.sub_projects}\lean{PLTS.ABA.GSub.gPull}\lean{PLTS.ABA.GSub.liftedSpecG}\lean{PLTS.ABA.GSub.Rsub}\lean{PLTS.ABA.GSub.subSim}\lean{PLTS.ABA.GSub.subSim_init}\lean{PLTS.ABA.GSub.subSim_failAct}\leanok
+  \lean{PLTS.ABA.GSub.sub_projects}\lean{PLTS.ABA.GSub.gPull}\lean{PLTS.ABA.GSub.liftedSpec}\lean{PLTS.ABA.GSub.Rsub}\lean{PLTS.ABA.GSub.subSim}\lean{PLTS.ABA.GSub.subSim_init}\lean{PLTS.ABA.GSub.subSim_failAct}\leanok
   \uses{def:aba-gbcasub, def:aba-gbca-impl, def:aba-gbca-spec, thm:gbca-inst-refines, def:forwardsim}
   For all parameters $P$ and every round $r$, the round instance $\mathrm{sub}(P,r)$ is forward-simulated by the round-$r$ GBCA specification instance, read over its interface.
   The relation is the relation of Theorem~\ref{thm:gbca-inst-refines} itself, the round instance and the implementation instance being two presentations of one round over one state.

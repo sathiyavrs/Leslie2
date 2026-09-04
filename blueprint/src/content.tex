@@ -231,6 +231,9 @@ A program reads its own replacement flag and nothing else about corruption: not 
 The rendezvous the shared alphabet cannot name are carried by an extended alphabet, hidden to $\tau$ and then discharged by the restriction, so what leaves the outermost frame is the alphabet the ABA specification speaks.
 That much is fixed by the round loop and the specification, and is independent of how graded agreement is implemented, so it is written once, parametrically in the implementation.
 Section~\ref{sec:aba-gather} instantiates it a second time.
+A system below the meeting point therefore belongs to one implementation or the other, and carries a superscript naming its source: $\abdy{\mathrm{protocol}}(P)$ and $\abdy{\mathrm{composed}}(P)$ here, after~\cite{ABDY22}, and $\afw{\mathrm{protocol}}(P)$ and $\afw{\mathrm{composed}}(P)$ in Section~\ref{sec:aba-gather}, after~\cite{AFW25}.
+The systems the two share, $\mathrm{hybrid}(P)$ and $\mathrm{spec}(P)$, carry none.
+The Lean development writes each superscript as a namespace.
 See \leanmodule{Leslie2Protocols/ABA/NetAlphabet}, \leanmodule{Leslie2Protocols/ABA/FlatReading} and \leanmodule{Leslie2Protocols/ABA/Protocol}.
 
 \input{nodes-min/def-aba-flat-reading}
@@ -238,7 +241,7 @@ See \leanmodule{Leslie2Protocols/ABA/NetAlphabet}, \leanmodule{Leslie2Protocols/
 \input{nodes-min/def-aba-netadv}
 \input{nodes-min/def-aba-protocol}
 
-\blueprintfig{fig-protocol}{The protocol \leandecl{PLTS.ABA.protocol}: the $n$ programs \leandecl{PLTS.ABA.Net.ABAProcN} under $\mathrm{syncProduct}$, the network adversary \leandecl{PLTS.ABA.Net.netAdv} over the state \leandecl{PLTS.ABA.Net.NetState}, and the coin oracle beside the group.
+\blueprintfig{fig-protocol}{The protocol \leandecl{PLTS.ABA.ABDY.protocol}: the $n$ programs \leandecl{PLTS.ABA.Net.ABAProcN} under $\mathrm{syncProduct}$, the network adversary \leandecl{PLTS.ABA.Net.netAdv} over the state \leandecl{PLTS.ABA.Net.NetState}, and the coin oracle beside the group.
 The dashed vertical is Theorem~\ref{thm:aba-protocol-composed}, along the Dirac lift of $\mathrm{ProtocolRel}$.}
 
 \subsection{The graded-agreement stage}
@@ -330,7 +333,7 @@ A return whose bit the specification has not yet excluded is a burst, mapping to
 
 A sub-protocol may be exchanged for its specification where it is a component of a composition, and the protocol does not present graded agreement as one.
 This subsection reads the same protocol as a composition of components, the cut being decided by which component owns the round's message fabric.
-The component boundary is where the chain passes from implementation to specification: $\mathrm{protocol}(P)$ is the system that runs, everything above it is specification, and the first link is accordingly an inclusion.
+The component boundary is where the chain passes from implementation to specification: $\abdy{\mathrm{protocol}}(P)$ is the system that runs, everything above it is specification, and the first link is accordingly an inclusion.
 The composed reading holds one graded-agreement instance per round at every moment, and a round instance carries no termination flag, so it answers a send or a delivery at a process the protocol has terminated (D22).
 Graded agreement is a parallel component of that reading, which is what the substitution congruence consumes.
 See \leanmodule{Leslie2Protocols/ABA/GBCAInstances} and \leanmodule{Leslie2Protocols/ABA/Hybrid}.
@@ -339,7 +342,7 @@ See \leanmodule{Leslie2Protocols/ABA/GBCAInstances} and \leanmodule{Leslie2Proto
 \input{nodes-min/thm-aba-subsim}
 \input{nodes-min/def-aba-composed}
 
-\blueprintfig{fig-composed}{The composed system \leandecl{PLTS.ABA.composed} and the substitution: the four components of Definition~\ref{def:aba-composed} inside the two hiding frames of the protocol's pipeline.
+\blueprintfig{fig-composed}{The composed system \leandecl{PLTS.ABA.ABDY.composed} and the substitution: the four components of Definition~\ref{def:aba-composed} inside the two hiding frames of the protocol's pipeline.
 The round instance \leandecl{PLTS.ABA.GSub.sub} is drawn open, the $n$ stage programs of round $r$ beside that round's own message fabric, with the multicast and the delivery hidden inside its own frame.
 The left slot is the refinable one: Theorem~\ref{thm:aba-substitution} replaces the family of round instances by the family of round specifications and leaves the other three components as they stand.}
 
@@ -370,8 +373,8 @@ See \leanmodule{Leslie2Protocols/ABA/ABAState} and \leanmodule{Leslie2Protocols/
 
 Three steps separate the protocol from the ABA specification:
 \[
-  \mathrm{protocol}(P)
-  \;\overset{\text{(1)}}{\sqsubseteq}\; \mathrm{composed}(P)
+  \abdy{\mathrm{protocol}}(P)
+  \;\overset{\text{(1)}}{\sqsubseteq}\; \abdy{\mathrm{composed}}(P)
   \;\overset{\text{(2)}}{\sqsubseteq}\; \mathrm{hybrid}(P)
   \;\overset{\text{(3)}}{\sqsubseteq}\; \mathrm{spec}(P),
 \]
@@ -399,6 +402,7 @@ Attiya, Flam and Welch~\cite{AFW25} build graded agreement from two calls to a \
 This section carries that construction to implementation level in full --- the two gather instances and, beneath them, the $4n$ Bracha instances --- and to the same specification: the round interface $\mathrm{callG}/\mathrm{retG}$, Transition System~2, and every statement downstream of it are those of the sections above, so the two implementations differ only in the system at the bottom of the chain.
 The per-round work is three substitutions in sequence, each replacing one layer of sub-protocol by its specification; at the protocol shape the three stages land on $\mathrm{hybrid}(P)$, and the chain continues along the shared links.
 Both readings of Section~\ref{sec:aba-gather} are carried: the composed one, the gather-based counterpart of Definition~\ref{def:aba-composed}, and beneath it the flat one, the second instantiation of Definition~\ref{def:aba-flat-reading}.
+A system of this section carries the name of its counterpart in the sections above under the superscript $\mathsf{AFW}$, so $\afw{\mathrm{composed}}(P)$ is to the gather-based implementation what $\abdy{\mathrm{composed}}(P)$ is to the ladder.
 The Lean files are \leanmodule{Leslie2Protocols/ABA/Fabric} through \leanmodule{Leslie2Protocols/ABA/GatherChain}, mapped file by file in the ABA library's own guide.
 
 \subsection{Reliable broadcast}
@@ -447,11 +451,11 @@ It is Definition~\ref{def:aba-flat-reading} a second time, at the gather-based i
 Two rearrangements separate that stage side from the composed reading's.
 A round of the composed reading carries $4n+2$ message fabrics; the adversary of a flat reading carries one pool family, so a stage message is tagged with the fabric it belongs to.
 And the composed reading indexes the boxes by instance and then by process, where a program must hold its own data and no one else's, so the stage record is transposed to hold one process's box in every instance.
-Assembling the composed state from the flat one undoes both, which is what the simulation relation of Theorem~\ref{thm:aba-protocolg-composedg} does.
+Assembling the composed state from the flat one undoes both, which is what the simulation relation of Theorem~\ref{thm:aba-afw-protocol-composed} does.
 See \leanmodule{Leslie2Protocols/ABA/GatherFlat} and \leanmodule{Leslie2Protocols/ABA/GatherFlatSim}.
 
-\input{nodes-min/def-aba-protocolg}
-\input{nodes-min/thm-aba-protocolg-composedg}
+\input{nodes-min/def-aba-afw-protocol}
+\input{nodes-min/thm-aba-afw-protocol-composed}
 
 \subsection{The gather-based chain}
 
@@ -460,19 +464,19 @@ The three substitutions inside the round become three stages between protocol-sh
 One specification, two verified implementations, one meeting point at $\mathrm{hybrid}(P)$.
 Below that point the chain has one step more than the direct one, the substitution splitting into its three stages:
 \[
-  \mathrm{protocolG}(P)
-  \;\sqsubseteq\; \mathrm{composedG}(P)
-  \;\sqsubseteq\; \mathrm{hybridG1}(P)
-  \;\sqsubseteq\; \mathrm{hybridG2}(P)
+  \afw{\mathrm{protocol}}(P)
+  \;\sqsubseteq\; \afw{\mathrm{composed}}(P)
+  \;\sqsubseteq\; \afw{\mathrm{hybrid}}_1(P)
+  \;\sqsubseteq\; \afw{\mathrm{hybrid}}_2(P)
   \;\sqsubseteq\; \mathrm{hybrid}(P)
   \;\sqsubseteq\; \mathrm{spec}(P).
 \]
-The first step is Theorem~\ref{thm:aba-protocolg-composedg}, the middle three are the stages of Theorem~\ref{thm:aba-substitution-g}, and the last is Theorem~\ref{thm:aba-hybrid-spec}, shared with the direct chain.
+The first step is Theorem~\ref{thm:aba-afw-protocol-composed}, the middle three are the stages of Theorem~\ref{thm:aba-afw-substitution}, and the last is Theorem~\ref{thm:aba-hybrid-spec}, shared with the direct chain.
 See \leanmodule{Leslie2Protocols/ABA/GatherChain}.
 
-\input{nodes-min/def-aba-gather-side}
-\input{nodes-min/thm-aba-substitution-g}
-\input{nodes-min/thm-aba-gather-main}
+\input{nodes-min/def-aba-afw-sides}
+\input{nodes-min/thm-aba-afw-substitution}
+\input{nodes-min/thm-aba-afw-main}
 
 \begin{thebibliography}{LeslieBP}
 

@@ -15,7 +15,8 @@ composition: `n` programs beside one network adversary and the coin oracle.
 This is the flat reading of `ABA/FlatReading.lean` at the gather-based
 implementation, as `ABA/Protocol.lean` is that reading at the ladder, and it
 supplies the same three things — a stage message type, a stage record, and the
-implementation's rows.
+implementation's rows. It sits in the namespace `AFW`, after Attiya, Flam and
+Welch, and so `AFW.protocol` is what `protocol` is at the ladder.
 
 ## One pool for every fabric
 
@@ -58,7 +59,7 @@ of a Bracha instance, its return not among them.
 
 namespace PLTS
 namespace ABA
-namespace NetG
+namespace AFW
 
 open Net Gather
 
@@ -568,30 +569,31 @@ abbrev NetStep (P : Params) :
     NetState P.n → NLabP P.n (Msg P.n) → PMF (NetState P.n) → Prop :=
   FlatNetStep P (Msg P.n) (gCallPayload P)
 
-end NetG
 
 /-- The state of the gather-based protocol: the process family, the network
 adversary and the coin oracle. -/
-abbrev ProtocolGState (P : Params) : Type :=
-  Net.FlatState P (NetG.Msg P.n) (NetG.StageRec P.n)
+abbrev ProtocolState (P : Params) : Type :=
+  Net.FlatState P (Msg P.n) (StageRec P.n)
 
 /-- The three components side by side, over the extended alphabet. -/
-noncomputable def protocolGPre (P : Params) :
-    System (ProtocolGState P) (Net.NLabP P.n (NetG.Msg P.n)) :=
-  Net.flatPre P (NetG.Msg P.n) (NetG.StageRec P.n) (NetG.StageStep P)
-    (NetG.gCallPayload P)
+noncomputable def protocolPre (P : Params) :
+    System (ProtocolState P) (Net.NLabP P.n (Msg P.n)) :=
+  Net.flatPre P (Msg P.n) (StageRec P.n) (StageStep P)
+    (gCallPayload P)
 
 /-- The gather-based protocol group: the rendezvous alphabet hidden, the
 result read back over `Lab n`. -/
-noncomputable def protocolGGroup (P : Params) : System (ProtocolGState P) (Lab P.n) :=
-  Net.flatGroup P (NetG.Msg P.n) (NetG.StageRec P.n) (NetG.StageStep P)
-    (NetG.gCallPayload P)
+noncomputable def protocolGroup (P : Params) : System (ProtocolState P) (Lab P.n) :=
+  Net.flatGroup P (Msg P.n) (StageRec P.n) (StageStep P)
+    (gCallPayload P)
 
 /-- **The gather-based protocol**: the group with the sub-protocol API
 hidden. -/
-noncomputable def protocolG (P : Params) : System (ProtocolGState P) (Lab P.n) :=
-  Net.flat P (NetG.Msg P.n) (NetG.StageRec P.n) (NetG.StageStep P)
-    (NetG.gCallPayload P)
+noncomputable def protocol (P : Params) : System (ProtocolState P) (Lab P.n) :=
+  Net.flat P (Msg P.n) (StageRec P.n) (StageStep P)
+    (gCallPayload P)
+
+end AFW
 
 end ABA
 end PLTS

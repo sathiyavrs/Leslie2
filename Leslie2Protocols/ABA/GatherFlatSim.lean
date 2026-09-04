@@ -10,16 +10,17 @@ import Leslie2Protocols.ABA.GatherChain
 /-!
 # The gather-based protocol into its composed reading
 
-`protocolG P` is the gather-based protocol as it runs and `composedG P` reads
-the same protocol as a composition of components. This file carries the first
-into the second, which is where the gather-based chain passes from
+`AFW.protocol P` is the gather-based protocol as it runs and `AFW.composed P`
+reads the same protocol as a composition of components. This file carries the
+first into the second, which is where the gather-based chain passes from
 implementation to specification, as `ABA/ProtocolSim.lean` does for the
-ladder.
+ladder. Everything here is read in the namespace `AFW`, where each name is
+that of its ladder-chain counterpart, and the qualifier is dropped below.
 
 ## The composed state is a view of the flat one
 
-The relation is a function, not a correspondence: a state of `composedG P` is
-computed from a state of `protocolG P`. The round loops and the coin oracle
+The relation is a function, not a correspondence: a state of `composed P` is
+computed from a state of `protocol P`. The round loops and the coin oracle
 are shared objects, the ABA-side network is the DECIDED pools beside the
 corrupted set, and the round-`r` instance is assembled by `toPair`. Assembling
 it undoes the two rearrangements the flat reading performs. The boxes are
@@ -38,7 +39,7 @@ simulation is discharged by.
 
 namespace PLTS
 namespace ABA
-namespace NetG
+namespace AFW
 
 open Net Gather
 
@@ -269,25 +270,25 @@ theorem stage_update_ne {u : ∀ _ : Fin P.n, ProcRec P.n} {j : Fin P.n}
 shared, the ABA-side network is the DECIDED pools beside the corrupted set,
 and every round's instance is the view `toPair` of the flat state. Nothing is
 guarded, so the composed state is determined by the flat one. -/
-def ProtocolRelG (P : Params) (s : ProtocolGState P) (t : ComposedGState P) : Prop :=
+def ProtocolRel (P : Params) (s : ProtocolState P) (t : ComposedState P) : Prop :=
   (∀ j, (s.1 j).1 = t.2.1 j) ∧
     s.2.2 = t.2.2.2 ∧
     t.2.2.1 = ⟨s.2.1.dpool, s.2.1.F⟩ ∧
     t.1 = fun r => toPair P s.1 s.2.1 r
 
-theorem protocolRelG_mk (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n)
+theorem protocolRel_mk (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n)
     (w : NetState P.n) (o : ℕ → WCC.SpecState P.n) (G : ℕ → GBCA.LowPairState P.n)
     (C : ∀ _ : Fin P.n, CoreRec P.n) (A : Comp.ANetState P.n)
     (o' : ℕ → WCC.SpecState P.n) :
-    ProtocolRelG P (u, w, o) (G, C, A, o') ↔
+    ProtocolRel P (u, w, o) (G, C, A, o') ↔
       ((∀ j, (u j).1 = C j) ∧ o = o' ∧ A = ⟨w.dpool, w.F⟩ ∧
         G = fun r => toPair P u w r) := Iff.rfl
 
 /-- The initial states are related: every round of the view is the initial
 instance state, an untouched round reading as the initial record on the flat
 side and the empty pool slicing to the empty pool. -/
-theorem protocolRelG_init (P : Params) :
-    ProtocolRelG P (protocolG P).init (composedG P).init := by
+theorem protocolRel_init (P : Params) :
+    ProtocolRel P (protocol P).init (composed P).init := by
   have hslice : ∀ {β : Type} (f : Msg P.n → Option β)
       (hf : ∀ a a' b, b ∈ f a → b ∈ f a' → a = a'),
       slice f hf (fun _ => (∅ : Finset (Msg P.n))) = fun _ => (∅ : Finset β) := by
@@ -296,12 +297,12 @@ theorem protocolRelG_init (P : Params) :
     simp [slice]
   refine ⟨fun _ => rfl, rfl, rfl, ?_⟩
   funext r
-  have hlow : (composedG P).init.1 r = GBCA.LowPairState.initial P.n := rfl
-  have hproc : (protocolG P).init.1
+  have hlow : (composed P).init.1 r = GBCA.LowPairState.initial P.n := rfl
+  have hproc : (protocol P).init.1
       = fun _ => (CoreRec.initial P.n, StageSideRecP.initial (StageRec P.n)) := rfl
-  have hpool : ((protocolG P).init.2.1).pool
+  have hpool : ((protocol P).init.2.1).pool
       = fun _ _ => (∅ : Finset (Msg P.n)) := rfl
-  have hF : ((protocolG P).init.2.1).F = (∅ : Finset (Fin P.n)) := rfl
+  have hF : ((protocol P).init.2.1).F = (∅ : Finset (Fin P.n)) := rfl
   rw [hlow, toPair, toLow1, toLow2, hproc, hpool, hF]
   refine Prod.ext ?_ ?_ <;>
     simp [GBCA.LowPairState.initial, Gather.LowState.initial, SubState.initial,
@@ -315,80 +316,80 @@ instances beside the round loops, the ABA-side network and the lifted
 oracle. -/
 
 /-- The four components of the gather-based composed reading, side by side. -/
-noncomputable def composedGPre (P : Params) :
-    System (ComposedGState P) (NLab P.n) :=
-  (lowSideG P).parallel
+noncomputable def composedPre (P : Params) :
+    System (ComposedState P) (NLab P.n) :=
+  (lowSide P).parallel
     ((System.syncProduct (Comp.coreProcN P)).parallel
       ((Comp.aNet P).parallel (wccLift P)))
 
 /-- The composed group: the rendezvous alphabet hidden, read back over
 `Lab n`. -/
-noncomputable def composedGGroup (P : Params) :
-    System (ComposedGState P) (Lab P.n) :=
-  ((composedGPre P).abstract (netEvtLabels P.n)).relabel
+noncomputable def composedGroup (P : Params) :
+    System (ComposedState P) (Lab P.n) :=
+  ((composedPre P).abstract (netEvtLabels P.n)).relabel
 
-theorem composedG_eq (P : Params) :
-    composedG P = (composedGGroup P).abstract (Lab.hiddenAPI P.n) := rfl
+theorem composed_eq (P : Params) :
+    composed P = (composedGroup P).abstract (Lab.hiddenAPI P.n) := rfl
 
 /-- A row of the round instance, read over the extended alphabet. -/
-theorem liftedLowG_step (P : Params) (r : ℕ) {q q' : GBCA.LowPairState P.n}
+theorem liftedLow_step (P : Params) (r : ℕ) {q q' : GBCA.LowPairState P.n}
     {L : NLab P.n} {l₀ : Lab P.n} (hpull : GSub.gPull P.n L = some l₀)
     (h : GBCA.LowPairStep P r q l₀ (PMF.pure q')) :
-    (GSub.liftedLowG P r).step q L (PMF.pure q') := by
-  rw [GSub.liftedLowG, System.mapIdle_step_some hpull]
+    (liftedLow P r).step q L (PMF.pure q') := by
+  rw [liftedLow, System.mapIdle_step_some hpull]
   exact h
 
 /-- The round-`r` instance moves on a label it owns. -/
-theorem lowSideG_owned (P : Params) (G : ℕ → GBCA.LowPairState P.n) (r : ℕ)
+theorem lowSide_owned (P : Params) (G : ℕ → GBCA.LowPairState P.n) (r : ℕ)
     {L : NLab P.n} (hL : GSub.gOwns L = some r) {X : GBCA.LowPairState P.n}
-    (h : (GSub.liftedLowG P r).step (G r) L (PMF.pure X)) :
-    (lowSideG P).step G L (PMF.pure (Function.update G r X)) := by
-  rw [lowSideG, System.family_step_iff]
+    (h : (liftedLow P r).step (G r) L (PMF.pure X)) :
+    (lowSide P).step G L (PMF.pure (Function.update G r X)) := by
+  rw [lowSide, System.family_step_iff]
   exact Or.inr (Or.inl ⟨r, hL, PMF.pure X, h, by rw [PMF.pure_map]⟩)
 
 /-- An owned label whose instance stands still. -/
-theorem lowSideG_owned_id (P : Params) (G : ℕ → GBCA.LowPairState P.n) (r : ℕ)
+theorem lowSide_owned_id (P : Params) (G : ℕ → GBCA.LowPairState P.n) (r : ℕ)
     {L : NLab P.n} (hL : GSub.gOwns L = some r)
-    (h : (GSub.liftedLowG P r).step (G r) L (PMF.pure (G r))) :
-    (lowSideG P).step G L (PMF.pure G) := by
-  have hstep := lowSideG_owned P G r hL h
+    (h : (liftedLow P r).step (G r) L (PMF.pure (G r))) :
+    (lowSide P).step G L (PMF.pure G) := by
+  have hstep := lowSide_owned P G r hL h
   rwa [Function.update_eq_self] at hstep
 
 /-- The round-`r` instance takes one of its own silent rules. -/
-theorem lowSideG_tau (P : Params) (G : ℕ → GBCA.LowPairState P.n) (r : ℕ)
+theorem lowSide_tau (P : Params) (G : ℕ → GBCA.LowPairState P.n) (r : ℕ)
     {X : GBCA.LowPairState P.n}
-    (h : (GSub.liftedLowG P r).step (G r) (Sum.inl Lab.tau) (PMF.pure X)) :
-    (lowSideG P).step G (Sum.inl Lab.tau) (PMF.pure (Function.update G r X)) := by
-  rw [lowSideG, System.family_step_iff]
+    (h : (liftedLow P r).step (G r) (Sum.inl Lab.tau) (PMF.pure X)) :
+    (lowSide P).step G (Sum.inl Lab.tau) (PMF.pure (Function.update G r X)) := by
+  rw [lowSide, System.family_step_iff]
   exact Or.inl ⟨rfl, r, PMF.pure X, h, by rw [PMF.pure_map]⟩
 
 /-- A label no round owns and no broadcast: the family idles. -/
-theorem lowSideG_idle (P : Params) (G : ℕ → GBCA.LowPairState P.n) {L : NLab P.n}
+theorem lowSide_idle (P : Params) (G : ℕ → GBCA.LowPairState P.n) {L : NLab P.n}
     (hτ : L ≠ Silent.τ) (hown : GSub.gOwns L = none) (hf : ¬ GSub.isFailN L) :
-    (lowSideG P).step G L (PMF.pure G) := by
-  rw [lowSideG, System.family_step_iff]
+    (lowSide P).step G L (PMF.pure G) := by
+  rw [lowSide, System.family_step_iff]
   exact Or.inr (Or.inr (Or.inr ⟨hτ, hown, hf, rfl⟩))
 
 /-- Corruption is broadcast to every round's coordinates. -/
-theorem lowSideG_fail (P : Params) (G : ℕ → GBCA.LowPairState P.n) (k : Fin P.n) :
-    (lowSideG P).step G (Sum.inl (Lab.fail k))
-      (PMF.pure (fun r => GSub.gActLow P (Sum.inl (Lab.fail k)) (G r))) := by
-  rw [lowSideG, System.family_step_iff]
+theorem lowSide_fail (P : Params) (G : ℕ → GBCA.LowPairState P.n) (k : Fin P.n) :
+    (lowSide P).step G (Sum.inl (Lab.fail k))
+      (PMF.pure (fun r => gActLow P (Sum.inl (Lab.fail k)) (G r))) := by
+  rw [lowSide, System.family_step_iff]
   exact Or.inr (Or.inr (Or.inl ⟨by simp, rfl, trivial, rfl⟩))
 
 /-- Build a joint transition of the four components on a visible label, the
 oracle's successor left arbitrary. -/
-theorem composedGPre_vis_step (P : Params) {G G' : ℕ → GBCA.LowPairState P.n}
+theorem composedPre_vis_step (P : Params) {G G' : ℕ → GBCA.LowPairState P.n}
     {C C' : ∀ _ : Fin P.n, CoreRec P.n} {A A' : Comp.ANetState P.n}
     {o : ℕ → WCC.SpecState P.n} {ω : PMF (ℕ → WCC.SpecState P.n)} {L : NLab P.n}
     (hL : L ≠ Silent.τ)
-    (hG : (lowSideG P).step G L (PMF.pure G'))
+    (hG : (lowSide P).step G L (PMF.pure G'))
     (hC : ∀ i, Comp.CoreProcStepN P i (C i) L (PMF.pure (C' i)))
     (hA : Comp.ANetStep P A L (PMF.pure A'))
     (hW : (wccLift P).step o L ω) :
-    (composedGPre P).step (G, C, A, o) L
+    (composedPre P).step (G, C, A, o) L
       (prodPMF (PMF.pure G') (prodPMF (PMF.pure C') (prodPMF (PMF.pure A') ω))) := by
-  rw [composedGPre, System.parallel_step]
+  rw [composedPre, System.parallel_step]
   refine Or.inl ⟨hL, PMF.pure G', prodPMF (PMF.pure C') (prodPMF (PMF.pure A') ω),
     hG, ?_, rfl⟩
   rw [System.parallel_step]
@@ -399,25 +400,25 @@ theorem composedGPre_vis_step (P : Params) {G G' : ℕ → GBCA.LowPairState P.n
 
 /-- Build a silent transition of the four components from a round-instance
 one. -/
-theorem composedGPre_tau_low (P : Params) {G G' : ℕ → GBCA.LowPairState P.n}
+theorem composedPre_tau_low (P : Params) {G G' : ℕ → GBCA.LowPairState P.n}
     {C : ∀ _ : Fin P.n, CoreRec P.n} {A : Comp.ANetState P.n}
     {o : ℕ → WCC.SpecState P.n}
-    (hG : (lowSideG P).step G (Sum.inl Lab.tau) (PMF.pure G')) :
-    (composedGPre P).step (G, C, A, o) (Sum.inl Lab.tau)
+    (hG : (lowSide P).step G (Sum.inl Lab.tau) (PMF.pure G')) :
+    (composedPre P).step (G, C, A, o) (Sum.inl Lab.tau)
       (PMF.pure (G', C, A, o)) := by
-  rw [composedGPre, System.parallel_step]
+  rw [composedPre, System.parallel_step]
   refine Or.inr (Or.inl ⟨rfl, PMF.pure G', hG, ?_⟩)
   rw [prodPMF_pure_pure]
 
 /-- Build a silent transition of the four components from an ABA-side network
 injection. -/
-theorem composedGPre_tau_aNet (P : Params) {G : ℕ → GBCA.LowPairState P.n}
+theorem composedPre_tau_aNet (P : Params) {G : ℕ → GBCA.LowPairState P.n}
     {C : ∀ _ : Fin P.n, CoreRec P.n} {A A' : Comp.ANetState P.n}
     {o : ℕ → WCC.SpecState P.n}
     (hA : Comp.ANetStep P A (Sum.inl Lab.tau) (PMF.pure A')) :
-    (composedGPre P).step (G, C, A, o) (Sum.inl Lab.tau)
+    (composedPre P).step (G, C, A, o) (Sum.inl Lab.tau)
       (PMF.pure (G, C, A', o)) := by
-  rw [composedGPre, System.parallel_step]
+  rw [composedPre, System.parallel_step]
   refine Or.inr (Or.inr ⟨rfl,
     prodPMF (PMF.pure C) (prodPMF (PMF.pure A') (PMF.pure o)), ?_, ?_⟩)
   · rw [System.parallel_step]
@@ -428,13 +429,13 @@ theorem composedGPre_tau_aNet (P : Params) {G : ℕ → GBCA.LowPairState P.n}
 
 /-- Build a silent transition of the four components from the coin
 resolution. -/
-theorem composedGPre_tau_wcc (P : Params) {G : ℕ → GBCA.LowPairState P.n}
+theorem composedPre_tau_wcc (P : Params) {G : ℕ → GBCA.LowPairState P.n}
     {C : ∀ _ : Fin P.n, CoreRec P.n} {A : Comp.ANetState P.n}
     {o : ℕ → WCC.SpecState P.n} {ω : PMF (ℕ → WCC.SpecState P.n)}
     (hW : (WCC.specFamily P).step o Lab.tau ω) :
-    (composedGPre P).step (G, C, A, o) (Sum.inl Lab.tau)
+    (composedPre P).step (G, C, A, o) (Sum.inl Lab.tau)
       (prodPMF (PMF.pure G) (prodPMF (PMF.pure C) (prodPMF (PMF.pure A) ω))) := by
-  rw [composedGPre, System.parallel_step]
+  rw [composedPre, System.parallel_step]
   refine Or.inr (Or.inr ⟨rfl, _, ?_, rfl⟩)
   rw [System.parallel_step]
   refine Or.inr (Or.inr ⟨rfl, prodPMF (PMF.pure A) ω, ?_, rfl⟩)
@@ -443,11 +444,11 @@ theorem composedGPre_tau_wcc (P : Params) {G : ℕ → GBCA.LowPairState P.n}
 
 /-! ### The two hiding frames -/
 
-theorem composedGGroup_step_iff (P : Params) (q : ComposedGState P) (l : Lab P.n)
-    (μ : PMF (ComposedGState P)) :
-    (composedGGroup P).step q l μ ↔
-      (l = .tau ∧ ∃ e : NetEvt P.n, (composedGPre P).step q (Sum.inr e) μ) ∨
-      (composedGPre P).step q (Sum.inl l) μ := by
+theorem composedGroup_step_iff (P : Params) (q : ComposedState P) (l : Lab P.n)
+    (μ : PMF (ComposedState P)) :
+    (composedGroup P).step q l μ ↔
+      (l = .tau ∧ ∃ e : NetEvt P.n, (composedPre P).step q (Sum.inr e) μ) ∨
+      (composedPre P).step q (Sum.inl l) μ := by
   constructor
   · rintro (⟨hτ, l', ⟨e, rfl⟩, hstep⟩ | ⟨-, hstep⟩)
     · exact Or.inl ⟨Sum.inl_injective hτ, e, hstep⟩
@@ -456,17 +457,17 @@ theorem composedGGroup_step_iff (P : Params) (q : ComposedGState P) (l : Lab P.n
     · exact Or.inl ⟨rfl, _, inr_mem_netEvtLabels e, hstep⟩
     · exact Or.inr ⟨inl_notMem_netEvtLabels l, hstep⟩
 
-theorem composedGGroup_of_event (P : Params) {q : ComposedGState P}
-    (e : NetEvt P.n) {μ : PMF (ComposedGState P)}
-    (h : (composedGPre P).step q (Sum.inr e) μ) :
-    (composedGGroup P).step q Lab.tau μ :=
-  (composedGGroup_step_iff P _ _ _).mpr (Or.inl ⟨rfl, e, h⟩)
+theorem composedGroup_of_event (P : Params) {q : ComposedState P}
+    (e : NetEvt P.n) {μ : PMF (ComposedState P)}
+    (h : (composedPre P).step q (Sum.inr e) μ) :
+    (composedGroup P).step q Lab.tau μ :=
+  (composedGroup_step_iff P _ _ _).mpr (Or.inl ⟨rfl, e, h⟩)
 
-theorem composedGGroup_of_tau (P : Params) {q : ComposedGState P}
-    {μ : PMF (ComposedGState P)}
-    (h : (composedGPre P).step q (Sum.inl Lab.tau) μ) :
-    (composedGGroup P).step q Lab.tau μ :=
-  (composedGGroup_step_iff P _ _ _).mpr (Or.inr h)
+theorem composedGroup_of_tau (P : Params) {q : ComposedState P}
+    {μ : PMF (ComposedState P)}
+    (h : (composedPre P).step q (Sum.inl Lab.tau) μ) :
+    (composedGroup P).step q Lab.tau μ :=
+  (composedGroup_step_iff P _ _ _).mpr (Or.inr h)
 
 /-! ### Transposing one written record
 
@@ -1471,24 +1472,11 @@ The relation is a function, so a Dirac outcome of the flat reading is matched
 by the single composed state it is read as, and an outcome whose only free
 coordinate is the oracle's is matched outcome by outcome. -/
 
-/-- A product of two Dirac factors beside a third distribution. -/
-private theorem prodPMF_pure₂ {α β γ : Type*} (a : α) (b : β) (ν : PMF γ) :
-    prodPMF (PMF.pure a) (prodPMF (PMF.pure b) ν) = ν.map (fun c => (a, b, c)) := by
-  rw [prodPMF_pure_left, prodPMF_pure_left, PMF.map_comp]
-  rfl
-
-/-- A product of three Dirac factors beside a fourth distribution. -/
-private theorem prodPMF_pure₃ {α β γ δ : Type*} (a : α) (b : β) (c : γ) (ν : PMF δ) :
-    prodPMF (PMF.pure a) (prodPMF (PMF.pure b) (prodPMF (PMF.pure c) ν)) =
-      ν.map (fun d => (a, b, c, d)) := by
-  rw [prodPMF_pure_left, prodPMF_pure₂, PMF.map_comp]
-  rfl
-
 /-- A Dirac outcome matched by the single composed state it is read as. -/
-theorem match_pure (P : Params) {s : ProtocolGState P} {t : ComposedGState P}
-    (h : ProtocolRelG P s t) :
-    ∃ Ω : PMF (PMF (ComposedGState P)),
-      PMFRel (diracRel (ProtocolRelG P)) (PMF.pure s) Ω ∧ Ω.bind id = PMF.pure t := by
+private theorem match_pure (P : Params) {s : ProtocolState P} {t : ComposedState P}
+    (h : ProtocolRel P s t) :
+    ∃ Ω : PMF (PMF (ComposedState P)),
+      PMFRel (diracRel (ProtocolRel P)) (PMF.pure s) Ω ∧ Ω.bind id = PMF.pure t := by
   refine ⟨PMF.pure (PMF.pure t), ⟨PMF.pure (s, PMF.pure t), ?_, ?_, ?_⟩, ?_⟩
   · rw [PMF.pure_map]
   · rw [PMF.pure_map]
@@ -1501,19 +1489,19 @@ theorem match_pure (P : Params) {s : ProtocolGState P} {t : ComposedGState P}
 
 /-- An outcome whose only free coordinate is the oracle's, matched outcome by
 outcome. -/
-theorem match_prod (P : Params) {x : ∀ _ : Fin P.n, ProcRec P.n}
+private theorem match_prod (P : Params) {x : ∀ _ : Fin P.n, ProcRec P.n}
     {w : NetState P.n} {G : ℕ → GBCA.LowPairState P.n}
     {C : ∀ _ : Fin P.n, CoreRec P.n} {A : Comp.ANetState P.n}
     {ν : PMF (ℕ → WCC.SpecState P.n)}
-    (h : ∀ o ∈ ν.support, ProtocolRelG P (x, w, o) (G, C, A, o)) :
-    ∃ Ω : PMF (PMF (ComposedGState P)),
-      PMFRel (diracRel (ProtocolRelG P))
+    (h : ∀ o ∈ ν.support, ProtocolRel P (x, w, o) (G, C, A, o)) :
+    ∃ Ω : PMF (PMF (ComposedState P)),
+      PMFRel (diracRel (ProtocolRel P))
         (prodPMF (PMF.pure x) (prodPMF (PMF.pure w) ν)) Ω ∧
       Ω.bind id =
         prodPMF (PMF.pure G) (prodPMF (PMF.pure C) (prodPMF (PMF.pure A) ν)) := by
-  refine ⟨ν.map (fun o => PMF.pure ((G, C, A, o) : ComposedGState P)),
-    ⟨ν.map (fun o => (((x, w, o) : ProtocolGState P),
-      PMF.pure ((G, C, A, o) : ComposedGState P))), ?_, ?_, ?_⟩, ?_⟩
+  refine ⟨ν.map (fun o => PMF.pure ((G, C, A, o) : ComposedState P)),
+    ⟨ν.map (fun o => (((x, w, o) : ProtocolState P),
+      PMF.pure ((G, C, A, o) : ComposedState P))), ?_, ?_, ?_⟩, ?_⟩
   · rw [PMF.map_comp, prodPMF_pure₂]
     rfl
   · rw [PMF.map_comp]
@@ -1564,34 +1552,34 @@ theorem toPair_congr {x u : ∀ _ : Fin P.n, ProcRec P.n} {r : ℕ}
 theorem toPair_fail (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n) (r : ℕ)
     (k : Fin P.n) :
     toPair P u (NetStateP.corrupt P k w) r
-      = GSub.gActLow P (Sum.inl (Lab.fail k)) (toPair P u w r) := by
+      = gActLow P (Sum.inl (Lab.fail k)) (toPair P u w r) := by
   refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
   · refine Prod.ext rfl ?_
-    simp only [toPair, toLow1, GSub.gActLow, Gather.LowState.corruptAll,
+    simp only [toPair, toLow1, gActLow, Gather.LowState.corruptAll,
       SubState.corrupt, NetStateP.corrupt, Fabric.corrupt]
     split_ifs <;> rfl
   · funext k
     refine Prod.ext rfl ?_
-    simp only [toPair, toLow1, GSub.gActLow, Gather.LowState.corruptAll,
+    simp only [toPair, toLow1, gActLow, Gather.LowState.corruptAll,
       SubState.corrupt, NetStateP.corrupt, Fabric.corrupt]
     split_ifs <;> rfl
   · funext k
     refine Prod.ext rfl ?_
-    simp only [toPair, toLow1, GSub.gActLow, Gather.LowState.corruptAll,
+    simp only [toPair, toLow1, gActLow, Gather.LowState.corruptAll,
       SubState.corrupt, NetStateP.corrupt, Fabric.corrupt]
     split_ifs <;> rfl
   · refine Prod.ext rfl ?_
-    simp only [toPair, toLow2, GSub.gActLow, Gather.LowState.corruptAll,
+    simp only [toPair, toLow2, gActLow, Gather.LowState.corruptAll,
       SubState.corrupt, NetStateP.corrupt, Fabric.corrupt]
     split_ifs <;> rfl
   · funext k
     refine Prod.ext rfl ?_
-    simp only [toPair, toLow2, GSub.gActLow, Gather.LowState.corruptAll,
+    simp only [toPair, toLow2, gActLow, Gather.LowState.corruptAll,
       SubState.corrupt, NetStateP.corrupt, Fabric.corrupt]
     split_ifs <;> rfl
   · funext k
     refine Prod.ext rfl ?_
-    simp only [toPair, toLow2, GSub.gActLow, Gather.LowState.corruptAll,
+    simp only [toPair, toLow2, gActLow, Gather.LowState.corruptAll,
       SubState.corrupt, NetStateP.corrupt, Fabric.corrupt]
     split_ifs <;> rfl
 
@@ -1632,37 +1620,37 @@ theorem toPairFamPool (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n) (r :
 
 /-- A visible label: the four components move together, the oracle's successor
 free. -/
-theorem match_vis (P : Params) {x : ∀ _ : Fin P.n, ProcRec P.n}
+private theorem match_vis (P : Params) {x : ∀ _ : Fin P.n, ProcRec P.n}
     {w' : NetState P.n} {G' : ℕ → GBCA.LowPairState P.n}
     {C' : ∀ _ : Fin P.n, CoreRec P.n} {A' : Comp.ANetState P.n}
     {ν : PMF (ℕ → WCC.SpecState P.n)} {G : ℕ → GBCA.LowPairState P.n}
     {C : ∀ _ : Fin P.n, CoreRec P.n} {A : Comp.ANetState P.n}
     {o : ℕ → WCC.SpecState P.n} {L : NLab P.n} (hL : L ≠ Silent.τ)
-    (hrel : ∀ o' ∈ ν.support, ProtocolRelG P (x, w', o') (G', C', A', o'))
-    (hG : (lowSideG P).step G L (PMF.pure G'))
+    (hrel : ∀ o' ∈ ν.support, ProtocolRel P (x, w', o') (G', C', A', o'))
+    (hG : (lowSide P).step G L (PMF.pure G'))
     (hC : ∀ i, Comp.CoreProcStepN P i (C i) L (PMF.pure (C' i)))
     (hA : Comp.ANetStep P A L (PMF.pure A'))
     (hW : (wccLift P).step o L ν) :
-    ∃ Ω : PMF (PMF (ComposedGState P)),
-      PMFRel (diracRel (ProtocolRelG P))
+    ∃ Ω : PMF (PMF (ComposedState P)),
+      PMFRel (diracRel (ProtocolRel P))
         (prodPMF (PMF.pure x) (prodPMF (PMF.pure w') ν)) Ω ∧
-      (composedGPre P).step (G, C, A, o) L (Ω.bind id) := by
+      (composedPre P).step (G, C, A, o) L (Ω.bind id) := by
   obtain ⟨Ω, hr, hb⟩ := match_prod P hrel
-  exact ⟨Ω, hr, hb ▸ composedGPre_vis_step P hL hG hC hA hW⟩
+  exact ⟨Ω, hr, hb ▸ composedPre_vis_step P hL hG hC hA hW⟩
 
 /-- A rendezvous of the flat reading: the round instance takes one of its own
 silent rules and nothing else moves. -/
-theorem match_round (P : Params) {x : ∀ _ : Fin P.n, ProcRec P.n}
+private theorem match_round (P : Params) {x : ∀ _ : Fin P.n, ProcRec P.n}
     {w' : NetState P.n} {G' G : ℕ → GBCA.LowPairState P.n}
     {C : ∀ _ : Fin P.n, CoreRec P.n} {A : Comp.ANetState P.n}
     {o : ℕ → WCC.SpecState P.n}
-    (hrel : ProtocolRelG P (x, w', o) (G', C, A, o))
-    (hG : (lowSideG P).step G (Sum.inl Lab.tau) (PMF.pure G')) :
-    ∃ Ω : PMF (PMF (ComposedGState P)),
-      PMFRel (diracRel (ProtocolRelG P)) (PMF.pure ((x, w', o) : ProtocolGState P)) Ω ∧
-      (composedGPre P).step (G, C, A, o) (Sum.inl Lab.tau) (Ω.bind id) := by
+    (hrel : ProtocolRel P (x, w', o) (G', C, A, o))
+    (hG : (lowSide P).step G (Sum.inl Lab.tau) (PMF.pure G')) :
+    ∃ Ω : PMF (PMF (ComposedState P)),
+      PMFRel (diracRel (ProtocolRel P)) (PMF.pure ((x, w', o) : ProtocolState P)) Ω ∧
+      (composedPre P).step (G, C, A, o) (Sum.inl Lab.tau) (Ω.bind id) := by
   obtain ⟨Ω, hr, hb⟩ := match_pure P hrel
-  exact ⟨Ω, hr, hb ▸ composedGPre_tau_low P hG⟩
+  exact ⟨Ω, hr, hb ▸ composedPre_tau_low P hG⟩
 
 
 
@@ -2220,21 +2208,21 @@ answered by a transition. -/
 theorem match_tau (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     {w : NetState P.n} {o : ℕ → WCC.SpecState P.n}
     {G : ℕ → GBCA.LowPairState P.n} {C : ∀ _ : Fin P.n, CoreRec P.n}
-    {A : Comp.ANetState P.n} (hR : ProtocolRelG P (u, w, o) (G, C, A, o))
-    {μ : PMF (ProtocolGState P)}
-    (h : (protocolGPre P).step (u, w, o) (Sum.inl Lab.tau) μ) :
-    ∃ Ω : PMF (PMF (ComposedGState P)),
-      PMFRel (diracRel (ProtocolRelG P)) μ Ω ∧
-      ((composedGGroup P).step (G, C, A, o) Lab.tau (Ω.bind id) ∨
+    {A : Comp.ANetState P.n} (hR : ProtocolRel P (u, w, o) (G, C, A, o))
+    {μ : PMF (ProtocolState P)}
+    (h : (protocolPre P).step (u, w, o) (Sum.inl Lab.tau) μ) :
+    ∃ Ω : PMF (PMF (ComposedState P)),
+      PMFRel (diracRel (ProtocolRel P)) μ Ω ∧
+      ((composedGroup P).step (G, C, A, o) Lab.tau (Ω.bind id) ∨
         Ω.bind id = PMF.pure (G, C, A, o)) := by
-  obtain ⟨hC, -, hA, hGv⟩ := (protocolRelG_mk P _ _ _ _ _ _ _).mp hR
+  obtain ⟨hC, -, hA, hGv⟩ := (protocolRel_mk P _ _ _ _ _ _ _).mp hR
   rcases flatPre_tau_inv h with ⟨i, y, hstep, rfl⟩ | ⟨w', hn, rfl⟩ | ⟨ω, hW, rfl⟩
   · obtain ⟨b, hh, hret, hcnt, hterm, hy⟩ := stepN_tau_terminate hstep
     obtain rfl : y = ((u i).1, { (u i).2 with terminated := true }) := pureN_inj hy
-    have hrel : ProtocolRelG P
+    have hrel : ProtocolRel P
         (Function.update u i ((u i).1, { (u i).2 with terminated := true }), w, o)
         (G, C, A, o) := by
-      refine (protocolRelG_mk P _ _ _ _ _ _ _).mpr ⟨fun j => ?_, rfl, hA, ?_⟩
+      refine (protocolRel_mk P _ _ _ _ _ _ _).mpr ⟨fun j => ?_, rfl, hA, ?_⟩
       · by_cases hj : j = i
         · subst hj; rw [Function.update_self]; exact hC j
         · rw [Function.update_of_ne hj]; exact hC j
@@ -2248,32 +2236,32 @@ theorem match_tau (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     exact ⟨Ω, hrelΩ, Or.inr hb⟩
   · rcases netStep_tau hn with ⟨r, k, m, hF, hw⟩ | ⟨k, b, hF, hw⟩
     · obtain rfl : w' = w.gpool r k m := pureN_inj hw
-      have hrel : ProtocolRelG P (u, w.gpool r k m, o)
+      have hrel : ProtocolRel P (u, w.gpool r k m, o)
           (Function.update G r (toPair P u (w.gpool r k m) r), C, A, o) :=
-        (protocolRelG_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, by simpa using hA, by
+        (protocolRel_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, by simpa using hA, by
           rw [hGv]; exact (toPairFamPool u w r k m _ rfl).symm⟩
       obtain ⟨Ω, hrelΩ, hb⟩ := match_pure P hrel
-      refine ⟨Ω, hrelΩ, Or.inl (composedGGroup_of_tau P ?_)⟩
+      refine ⟨Ω, hrelΩ, Or.inl (composedGroup_of_tau P ?_)⟩
       rw [hb]
-      refine composedGPre_tau_low P (lowSideG_tau P G r ?_)
-      refine liftedLowG_step P r (l₀ := Lab.tau) (by simp) ?_
+      refine composedPre_tau_low P (lowSide_tau P G r ?_)
+      refine liftedLow_step P r (l₀ := Lab.tau) (by simp) ?_
       rw [hGv]
       exact byz_answer P u w r m hF
     · obtain rfl : w' = w.dput k b := pureN_inj hw
-      have hrel : ProtocolRelG P (u, w.dput k b, o)
+      have hrel : ProtocolRel P (u, w.dput k b, o)
           (G, C, ⟨(w.dput k b).dpool, (w.dput k b).F⟩, o) :=
-        (protocolRelG_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, rfl, by rw [hGv]; funext r; rfl⟩
+        (protocolRel_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, rfl, by rw [hGv]; funext r; rfl⟩
       obtain ⟨Ω, hrelΩ, hb⟩ := match_pure P hrel
-      refine ⟨Ω, hrelΩ, Or.inl (composedGGroup_of_tau P ?_)⟩
+      refine ⟨Ω, hrelΩ, Or.inl (composedGroup_of_tau P ?_)⟩
       rw [hb]
-      refine composedGPre_tau_aNet P ?_
+      refine composedPre_tau_aNet P ?_
       rw [hA]
       exact Comp.ANetStep.byzD ⟨w.dpool, w.F⟩ k b hF
   · obtain ⟨Ω, hrel, hb⟩ := match_prod P (x := u) (w := w) (G := G) (C := C) (A := A)
-      (fun o' _ => (protocolRelG_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, hA, hGv⟩)
-    refine ⟨Ω, hrel, Or.inl (composedGGroup_of_tau P ?_)⟩
+      (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, hA, hGv⟩)
+    refine ⟨Ω, hrel, Or.inl (composedGroup_of_tau P ?_)⟩
     rw [hb]
-    exact composedGPre_tau_wcc P hW
+    exact composedPre_tau_wcc P hW
 
 
 /-- A row that leaves every round record where it stands leaves the whole
@@ -2289,24 +2277,24 @@ theorem view_unchanged {x u : ∀ _ : Fin P.n, ProcRec P.n}
 theorem match_lab (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     {w : NetState P.n} {o : ℕ → WCC.SpecState P.n}
     {G : ℕ → GBCA.LowPairState P.n} {C : ∀ _ : Fin P.n, CoreRec P.n}
-    {A : Comp.ANetState P.n} (hR : ProtocolRelG P (u, w, o) (G, C, A, o))
-    {l : Lab P.n} (hl : l ≠ Lab.tau) {μ : PMF (ProtocolGState P)}
-    (h : (protocolGPre P).step (u, w, o) (Sum.inl l) μ) :
-    ∃ Ω : PMF (PMF (ComposedGState P)),
-      PMFRel (diracRel (ProtocolRelG P)) μ Ω ∧
-      (composedGGroup P).step (G, C, A, o) l (Ω.bind id) := by
-  obtain ⟨hC, -, hA, hGv⟩ := (protocolRelG_mk P _ _ _ _ _ _ _).mp hR
+    {A : Comp.ANetState P.n} (hR : ProtocolRel P (u, w, o) (G, C, A, o))
+    {l : Lab P.n} (hl : l ≠ Lab.tau) {μ : PMF (ProtocolState P)}
+    (h : (protocolPre P).step (u, w, o) (Sum.inl l) μ) :
+    ∃ Ω : PMF (PMF (ComposedState P)),
+      PMFRel (diracRel (ProtocolRel P)) μ Ω ∧
+      (composedGroup P).step (G, C, A, o) l (Ω.bind id) := by
+  obtain ⟨hC, -, hA, hGv⟩ := (protocolRel_mk P _ _ _ _ _ _ _).mp hR
   obtain ⟨x, w', ω, hall, hn, hOr, rfl⟩ := flatPre_lab_inv hl h
   have hWl : (Net.wccLift P).step o (Sum.inl l) ω :=
     (System.mapIdle_step_some (wccPull_inl l) ω).mpr hOr
   have hLne : (Sum.inl l : NLab P.n) ≠ Silent.τ := by simpa using hl
   have hCeq : ∀ i, C i = (u i).1 := fun i => (hC i).symm
-  suffices hsuf : ∃ Ω : PMF (PMF (ComposedGState P)),
-      PMFRel (diracRel (ProtocolRelG P))
+  suffices hsuf : ∃ Ω : PMF (PMF (ComposedState P)),
+      PMFRel (diracRel (ProtocolRel P))
         (prodPMF (PMF.pure x) (prodPMF (PMF.pure w') ω)) Ω ∧
-      (composedGPre P).step (G, C, A, o) (Sum.inl l) (Ω.bind id) by
+      (composedPre P).step (G, C, A, o) (Sum.inl l) (Ω.bind id) by
     obtain ⟨Ω, hr, hs⟩ := hsuf
-    exact ⟨Ω, hr, (composedGGroup_step_iff P _ _ _).mpr (Or.inr hs)⟩
+    exact ⟨Ω, hr, (composedGroup_step_iff P _ _ _).mpr (Or.inr hs)⟩
   cases l with
   | tau => exact absurd rfl hl
   | callABA id b =>
@@ -2319,9 +2307,9 @@ theorem match_lab (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       · subst hi
         rcases stepN_callABA_own (hall i) with ⟨-, -, hx⟩ | hx <;> rw [pureN_inj hx]
       · rw [hfor i hi]
-    refine match_vis P hLne (fun o' _ => (protocolRelG_mk P _ _ _ _ _ _ _).mpr
+    refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact view_unchanged hsame w'⟩)
-      (lowSideG_idle P G hLne (by simp) not_false) (fun i => ?_)
+      (lowSide_idle P G hLne (by simp) not_false) (fun i => ?_)
       (Comp.ANetStep.callABAIdle A id b) hWl
     rw [hCeq i]
     by_cases hi : i = id
@@ -2350,9 +2338,9 @@ theorem match_lab (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       rcases hdp with hd | hf
       · exact Comp.ANetStep.retABA ⟨w'.dpool, w'.F⟩ id b hd
       · exact Comp.ANetStep.retByz ⟨w'.dpool, w'.F⟩ id b hf
-    refine match_vis P hLne (fun o' _ => (protocolRelG_mk P _ _ _ _ _ _ _).mpr
+    refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact view_unchanged hsame w'⟩)
-      (lowSideG_idle P G hLne (by simp) not_false) (fun i => ?_) hAn hWl
+      (lowSide_idle P G hLne (by simp) not_false) (fun i => ?_) hAn hWl
     rw [hCeq i]
     by_cases hi : i = id
     · subst hi
@@ -2371,9 +2359,9 @@ theorem match_lab (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       · subst hi
         rcases stepN_callW_own (hall i) with ⟨-, -, -, hx⟩ | ⟨-, hx⟩ <;> rw [pureN_inj hx]
       · rw [hfor i hi]
-    refine match_vis P hLne (fun o' _ => (protocolRelG_mk P _ _ _ _ _ _ _).mpr
+    refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact view_unchanged hsame w'⟩)
-      (lowSideG_idle P G hLne (by simp) not_false) (fun i => ?_)
+      (lowSide_idle P G hLne (by simp) not_false) (fun i => ?_)
       (Comp.ANetStep.callWIdle A r id) hWl
     rw [hCeq i]
     by_cases hi : i = id
@@ -2393,9 +2381,9 @@ theorem match_lab (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       · subst hi
         rcases stepN_retW_own (hall i) with ⟨-, -, -, -, hx⟩ | ⟨-, hx⟩ <;> rw [pureN_inj hx]
       · rw [hfor i hi]
-    refine match_vis P hLne (fun o' _ => (protocolRelG_mk P _ _ _ _ _ _ _).mpr
+    refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact view_unchanged hsame w'⟩)
-      (lowSideG_idle P G hLne (by simp) not_false) (fun i => ?_)
+      (lowSide_idle P G hLne (by simp) not_false) (fun i => ?_)
       (Comp.ANetStep.retWIdle A r id co) hWl
     rw [hCeq i]
     by_cases hi : i = id
@@ -2416,9 +2404,9 @@ theorem match_lab (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       · subst hi
         rcases stepN_fail_own (hall i) with ⟨-, hx⟩ | ⟨-, hx⟩ <;> rw [pureN_inj hx]
       · rw [hfor i hi]
-    refine match_vis P hLne (fun o' _ => (protocolRelG_mk P _ _ _ _ _ _ _).mpr
+    refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, ?_, ?_⟩)
-      (lowSideG_fail P G k) (fun i => ?_)
+      (lowSide_fail P G k) (fun i => ?_)
       (Comp.ANetStep.fail A k (by rw [hA]; exact hnew) (by rw [hA]; exact hbud)) hWl
     · rw [hA]
       unfold Comp.ANetState.corrupt NetStateP.corrupt
@@ -2449,10 +2437,10 @@ theorem match_lab (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       by_cases hi : i = id
       · subst hi; rw [Function.update_self]
       · rw [Function.update_of_ne hi, hfor i hi]
-    refine match_vis P hLne (fun o' _ => (protocolRelG_mk P _ _ _ _ _ _ _).mpr
+    refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, by rw [hA]; simp, ?_⟩)
-      (lowSideG_owned P G r (by simp)
-        (liftedLowG_step P r (l₀ := Lab.callG r id b) (by simp)
+      (lowSide_owned P G r (by simp)
+        (liftedLow_step P r (l₀ := Lab.callG r id b) (by simp)
           (by rw [hGv]; exact hlow)))
       (fun i => ?_) (Comp.ANetStep.callGIdle A r id b) hWl
     · funext r'
@@ -2491,10 +2479,10 @@ theorem match_lab (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       by_cases hi : i = id
       · subst hi; rw [Function.update_self]
       · rw [Function.update_of_ne hi, hfor i hi]
-    refine match_vis P hLne (fun o' _ => (protocolRelG_mk P _ _ _ _ _ _ _).mpr
+    refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, ?_⟩)
-      (lowSideG_owned P G r (by simp)
-        (liftedLowG_step P r (l₀ := Lab.retG r id out) (by simp)
+      (lowSide_owned P G r (by simp)
+        (liftedLow_step P r (l₀ := Lab.retG r id out) (by simp)
           (by rw [hGv]; exact hlow)))
       (fun i => ?_) (Comp.ANetStep.retGIdle A r id out) hWl
     · funext r'
@@ -2529,41 +2517,41 @@ drives are answered by the same rendezvous. -/
 theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     {w : NetState P.n} {o : ℕ → WCC.SpecState P.n}
     {G : ℕ → GBCA.LowPairState P.n} {C : ∀ _ : Fin P.n, CoreRec P.n}
-    {A : Comp.ANetState P.n} (hR : ProtocolRelG P (u, w, o) (G, C, A, o))
-    (e : NetEvtP P.n (Msg P.n)) {μ : PMF (ProtocolGState P)}
-    (h : (protocolGPre P).step (u, w, o) (Sum.inr e) μ) :
-    ∃ Ω : PMF (PMF (ComposedGState P)),
-      PMFRel (diracRel (ProtocolRelG P)) μ Ω ∧
-      (composedGGroup P).step (G, C, A, o) Lab.tau (Ω.bind id) := by
-  obtain ⟨hC, -, hA, hGv⟩ := (protocolRelG_mk P _ _ _ _ _ _ _).mp hR
+    {A : Comp.ANetState P.n} (hR : ProtocolRel P (u, w, o) (G, C, A, o))
+    (e : NetEvtP P.n (Msg P.n)) {μ : PMF (ProtocolState P)}
+    (h : (protocolPre P).step (u, w, o) (Sum.inr e) μ) :
+    ∃ Ω : PMF (PMF (ComposedState P)),
+      PMFRel (diracRel (ProtocolRel P)) μ Ω ∧
+      (composedGroup P).step (G, C, A, o) Lab.tau (Ω.bind id) := by
+  obtain ⟨hC, -, hA, hGv⟩ := (protocolRel_mk P _ _ _ _ _ _ _).mp hR
   have hCeq : ∀ i, C i = (u i).1 := fun i => (hC i).symm
   obtain ⟨x, w', ν, hall, hn, hWs, rfl⟩ := flatPre_event_inv h
   have htau : ∀ {G' : ℕ → GBCA.LowPairState P.n}, ν = PMF.pure o →
-      ProtocolRelG P (x, w', o) (G', C, A, o) →
-      (lowSideG P).step G (Sum.inl Lab.tau) (PMF.pure G') →
-      ∃ Ω : PMF (PMF (ComposedGState P)),
-        PMFRel (diracRel (ProtocolRelG P))
+      ProtocolRel P (x, w', o) (G', C, A, o) →
+      (lowSide P).step G (Sum.inl Lab.tau) (PMF.pure G') →
+      ∃ Ω : PMF (PMF (ComposedState P)),
+        PMFRel (diracRel (ProtocolRel P))
           (prodPMF (PMF.pure x) (prodPMF (PMF.pure w') ν)) Ω ∧
-        (composedGGroup P).step (G, C, A, o) Lab.tau (Ω.bind id) := by
+        (composedGroup P).step (G, C, A, o) Lab.tau (Ω.bind id) := by
     intro G' hν hrel hGs
     subst hν
     obtain ⟨Ω, hr, hs⟩ := match_round P hrel hGs
-    refine ⟨Ω, ?_, composedGGroup_of_tau P hs⟩
+    refine ⟨Ω, ?_, composedGroup_of_tau P hs⟩
     rwa [prodPMF_pure_pure, prodPMF_pure_pure]
   have hvis : ∀ {G' : ℕ → GBCA.LowPairState P.n} {A' : Comp.ANetState P.n}
       (e' : NetEvt P.n), (Sum.inr e' : NLab P.n) ≠ Silent.τ →
-      (∀ o' ∈ ν.support, ProtocolRelG P (x, w', o') (G', fun i => (x i).1, A', o')) →
-      (lowSideG P).step G (Sum.inr e') (PMF.pure G') →
+      (∀ o' ∈ ν.support, ProtocolRel P (x, w', o') (G', fun i => (x i).1, A', o')) →
+      (lowSide P).step G (Sum.inr e') (PMF.pure G') →
       (∀ i, Comp.CoreProcStepN P i (C i) (Sum.inr e') (PMF.pure ((x i).1))) →
       Comp.ANetStep P A (Sum.inr e') (PMF.pure A') →
       (Net.wccLift P).step o (Sum.inr e') ν →
-      ∃ Ω : PMF (PMF (ComposedGState P)),
-        PMFRel (diracRel (ProtocolRelG P))
+      ∃ Ω : PMF (PMF (ComposedState P)),
+        PMFRel (diracRel (ProtocolRel P))
           (prodPMF (PMF.pure x) (prodPMF (PMF.pure w') ν)) Ω ∧
-        (composedGGroup P).step (G, C, A, o) Lab.tau (Ω.bind id) := by
+        (composedGroup P).step (G, C, A, o) Lab.tau (Ω.bind id) := by
     intro G' A' e' hne hrel hGs hCs hAs hWs'
     obtain ⟨Ω, hr, hs⟩ := match_vis P hne hrel hGs hCs hAs hWs'
-    exact ⟨Ω, hr, composedGGroup_of_event P e' hs⟩
+    exact ⟨Ω, hr, composedGroup_of_event P e' hs⟩
   cases e with
   | gsnd r j m =>
     obtain rfl : ν = PMF.pure o :=
@@ -2579,13 +2567,13 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       by_cases hi : i = j
       · subst hi; rw [Function.update_self]
       · rw [Function.update_of_ne hi, hfor i hi]
-    refine htau rfl ((protocolRelG_mk P _ _ _ _ _ _ _).mpr
+    refine htau rfl ((protocolRel_mk P _ _ _ _ _ _ _).mpr
       ⟨fun i => by
         rw [hCeq i]
         by_cases hi : i = j
         · subst hi; rw [hcore]
         · rw [hfor i hi], rfl, by rw [hA]; simp, ?_⟩)
-      (lowSideG_tau P G r (liftedLowG_step P r (l₀ := Lab.tau) (by simp)
+      (lowSide_tau P G r (liftedLow_step P r (l₀ := Lab.tau) (by simp)
         (by rw [hGv]; exact hlow)))
     funext r'
     rw [hGv]
@@ -2615,13 +2603,13 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       by_cases hi : i' = i
       · subst hi; rw [Function.update_self]
       · rw [Function.update_of_ne hi, hfor i' hi]
-    refine htau rfl ((protocolRelG_mk P _ _ _ _ _ _ _).mpr
+    refine htau rfl ((protocolRel_mk P _ _ _ _ _ _ _).mpr
       ⟨fun i' => by
         rw [hCeq i']
         by_cases hi : i' = i
         · subst hi; rw [hcore]
         · rw [hfor i' hi], rfl, hA, ?_⟩)
-      (lowSideG_tau P G r (liftedLowG_step P r (l₀ := Lab.tau) (by simp)
+      (lowSide_tau P G r (liftedLow_step P r (l₀ := Lab.tau) (by simp)
         (by rw [hGv]; exact hlow)))
     funext r'
     rw [hGv]
@@ -2645,10 +2633,10 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
           exact pureN_inj hxi
       · exact pureN_inj (stepN_dsnd_foreign (Ne.symm hi) (hall i))
     refine hvis (.dsnd j b) (by simp) (fun o' _ =>
-      (protocolRelG_mk P _ _ _ _ _ _ _).mpr
+      (protocolRel_mk P _ _ _ _ _ _ _).mpr
         ⟨fun i => by rw [hx i], rfl, by rw [hA]; rfl, by
           rw [hGv]; funext r; exact (toPair_congr (fun i => by rw [hx i]) _).symm⟩)
-      (lowSideG_idle P G (by simp) (by simp) not_false) (fun i => ?_)
+      (lowSide_idle P G (by simp) (by simp) not_false) (fun i => ?_)
       (hA ▸ Comp.ANetStep.dsnd ⟨w.dpool, w.F⟩ j b hd) hWs
     rw [hCeq i, hx i]
     by_cases hi : i = j
@@ -2669,10 +2657,10 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       · subst hi; rw [pureN_inj hxi]
       · rw [hfor i' hi]
     refine hvis (.ddlv i k b) (by simp) (fun o' _ =>
-      (protocolRelG_mk P _ _ _ _ _ _ _).mpr
+      (protocolRel_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, by
           rw [hGv]; exact view_unchanged hsame w'⟩)
-      (lowSideG_idle P G (by simp) (by simp) not_false) (fun i' => ?_)
+      (lowSide_idle P G (by simp) (by simp) not_false) (fun i' => ?_)
       (hA ▸ Comp.ANetStep.ddlv ⟨w'.dpool, w'.F⟩ i k b hd) hWs
     rw [hCeq i']
     by_cases hi : i' = i
@@ -2689,10 +2677,10 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       · subst hi; rw [pureN_inj hxi]
       · rw [hfor i hi]
     refine hvis (.retWPub r id c b) (by simp) (fun o' _ =>
-      (protocolRelG_mk P _ _ _ _ _ _ _).mpr
+      (protocolRel_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, by rw [hA]; rfl, by
           rw [hGv]; funext r'; exact (toPair_congr (fun i => by rw [hsame i]) _).symm⟩)
-      (lowSideG_idle P G (by simp) (by simp) not_false) (fun i => ?_)
+      (lowSide_idle P G (by simp) (by simp) not_false) (fun i => ?_)
       (hA ▸ Comp.ANetStep.retWPub ⟨w.dpool, w.F⟩ r id c b) hWs
     rw [hCeq i]
     by_cases hi : i = id
@@ -2715,10 +2703,10 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       · subst hi; exact hy2
       · rw [hfor i hi]
     refine hvis (.gcallLoop r id b) (by simp) (fun o' _ =>
-      (protocolRelG_mk P _ _ _ _ _ _ _).mpr
+      (protocolRel_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact view_unchanged hsame w'⟩)
-      (lowSideG_owned_id P G r (by simp)
-        (liftedLowG_step P r (l₀ := Lab.callG r id b) (by simp)
+      (lowSide_owned_id P G r (by simp)
+        (liftedLow_step P r (l₀ := Lab.callG r id b) (by simp)
           (by rw [hGv]; exact hlow)))
       (fun i => ?_) (Comp.ANetStep.gcallLoop A r id b) hWs
     rw [hCeq i]
@@ -2732,11 +2720,11 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     obtain rfl : w' = w := pureN_inj hw
     have hx : ∀ i, x i = u i := fun i => pureN_inj (stepN_byzCallGLoop (hall i))
     refine hvis (.byzCallGLoop r k b) (by simp) (fun o' _ =>
-      (protocolRelG_mk P _ _ _ _ _ _ _).mpr
+      (protocolRel_mk P _ _ _ _ _ _ _).mpr
         ⟨fun i => by rw [hx i], rfl, hA, by
           rw [hGv]; funext r'; exact (toPair_congr (fun i => by rw [hx i]) _).symm⟩)
-      (lowSideG_owned_id P G r (by simp)
-        (liftedLowG_step P r (l₀ := Lab.callG r k b) (by simp)
+      (lowSide_owned_id P G r (by simp)
+        (liftedLow_step P r (l₀ := Lab.callG r k b) (by simp)
           (by rw [hGv]
               exact GBCA.LowPairStep.callG (toPair P u w' r) k b _
                 (Gather.LowStep.callLoop (toPair P u w' r).1 k b))))
@@ -2748,10 +2736,10 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     obtain rfl : w' = w := pureN_inj hw
     have hx : ∀ i, x i = u i := fun i => pureN_inj (stepN_byzCallW (hall i))
     refine hvis (.byzCallW r k) (by simp) (fun o' _ =>
-      (protocolRelG_mk P _ _ _ _ _ _ _).mpr
+      (protocolRel_mk P _ _ _ _ _ _ _).mpr
         ⟨fun i => by rw [hx i], rfl, hA, by
           rw [hGv]; funext r'; exact (toPair_congr (fun i => by rw [hx i]) _).symm⟩)
-      (lowSideG_idle P G (by simp) (by simp) not_false) (fun i => ?_)
+      (lowSide_idle P G (by simp) (by simp) not_false) (fun i => ?_)
       (hA ▸ Comp.ANetStep.byzCallW ⟨w'.dpool, w'.F⟩ r k hF) hWs
     rw [hCeq i, hx i]
     exact Comp.CoreProcStepN.byzCallWIdle _ r k
@@ -2760,10 +2748,10 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     obtain rfl : w' = w := pureN_inj hw
     have hx : ∀ i, x i = u i := fun i => pureN_inj (stepN_byzRetW (hall i))
     refine hvis (.byzRetW r k b) (by simp) (fun o' _ =>
-      (protocolRelG_mk P _ _ _ _ _ _ _).mpr
+      (protocolRel_mk P _ _ _ _ _ _ _).mpr
         ⟨fun i => by rw [hx i], rfl, hA, by
           rw [hGv]; funext r'; exact (toPair_congr (fun i => by rw [hx i]) _).symm⟩)
-      (lowSideG_idle P G (by simp) (by simp) not_false) (fun i => ?_)
+      (lowSide_idle P G (by simp) (by simp) not_false) (fun i => ?_)
       (hA ▸ Comp.ANetStep.byzRetW ⟨w'.dpool, w'.F⟩ r k b hF) hWs
     rw [hCeq i, hx i]
     exact Comp.CoreProcStepN.byzRetWIdle _ r k b
@@ -2775,19 +2763,19 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
 sides, so a hidden rendezvous of the flat reading is answered by a silent
 transition of the composed group. The second disjunct is the composed answer
 to `terminate`: the state stands still under a silent label. -/
-theorem match_group (P : Params) {s : ProtocolGState P} {t : ComposedGState P}
-    (hR : ProtocolRelG P s t) {l : Lab P.n} {μ : PMF (ProtocolGState P)}
-    (h : (protocolGGroup P).step s l μ) :
-    ∃ Ω : PMF (PMF (ComposedGState P)),
-      PMFRel (diracRel (ProtocolRelG P)) μ Ω ∧
-        ((composedGGroup P).step t l (Ω.bind id) ∨
+theorem match_group (P : Params) {s : ProtocolState P} {t : ComposedState P}
+    (hR : ProtocolRel P s t) {l : Lab P.n} {μ : PMF (ProtocolState P)}
+    (h : (protocolGroup P).step s l μ) :
+    ∃ Ω : PMF (PMF (ComposedState P)),
+      PMFRel (diracRel (ProtocolRel P)) μ Ω ∧
+        ((composedGroup P).step t l (Ω.bind id) ∨
           (l = Lab.tau ∧ Ω.bind id = PMF.pure t)) := by
   obtain ⟨u, w, o⟩ := s
   obtain ⟨G, C, A, o'⟩ := t
-  obtain ⟨hC, ho, hA, hGv⟩ := (protocolRelG_mk P _ _ _ _ _ _ _).mp hR
+  obtain ⟨hC, ho, hA, hGv⟩ := (protocolRel_mk P _ _ _ _ _ _ _).mp hR
   subst ho
-  have hR' : ProtocolRelG P (u, w, o) (G, C, A, o) :=
-    (protocolRelG_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, hA, hGv⟩
+  have hR' : ProtocolRel P (u, w, o) (G, C, A, o) :=
+    (protocolRel_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, hA, hGv⟩
   rcases (flatGroup_step_iff _ _ _).mp h with ⟨rfl, e, hstep⟩ | hstep
   · obtain ⟨Ω, hrel, hs⟩ := match_event P hR' e hstep
     exact ⟨Ω, hrel, Or.inl hs⟩
@@ -2801,13 +2789,13 @@ theorem match_group (P : Params) {s : ProtocolGState P} {t : ComposedGState P}
 /-- The matching at the system level: a hidden sub-protocol label is silent on
 both sides, and every other label is answered on the nose or by standing
 still. -/
-theorem match_step (P : Params) {s : ProtocolGState P} {t : ComposedGState P}
-    (hR : ProtocolRelG P s t) {l : Lab P.n} {μ : PMF (ProtocolGState P)}
-    (h : (protocolG P).step s l μ) :
-    ∃ Ω : PMF (PMF (ComposedGState P)),
-      PMFRel (diracRel (ProtocolRelG P)) μ Ω ∧
-        ((l = Silent.τ ∧ weakTau (composedG P) (PMF.pure t) (Ω.bind id)) ∨
-         (¬ (l = Silent.τ) ∧ weakStep (composedG P) (PMF.pure t) l (Ω.bind id))) := by
+theorem match_step (P : Params) {s : ProtocolState P} {t : ComposedState P}
+    (hR : ProtocolRel P s t) {l : Lab P.n} {μ : PMF (ProtocolState P)}
+    (h : (protocol P).step s l μ) :
+    ∃ Ω : PMF (PMF (ComposedState P)),
+      PMFRel (diracRel (ProtocolRel P)) μ Ω ∧
+        ((l = Silent.τ ∧ weakTau (composed P) (PMF.pure t) (Ω.bind id)) ∨
+         (¬ (l = Silent.τ) ∧ weakStep (composed P) (PMF.pure t) l (Ω.bind id))) := by
   rcases (flat_step_iff s l μ).mp h with ⟨rfl, l', hmem, hg⟩ | ⟨hnm, hg⟩
   · obtain ⟨Ω, hrel, hlay⟩ := match_group P hR hg
     rcases hlay with hlay | ⟨rfl, -⟩
@@ -2816,38 +2804,31 @@ theorem match_step (P : Params) {s : ProtocolGState P} {t : ComposedGState P}
     · exact absurd hmem Lab.tau_not_mem_hiddenAPI
   · obtain ⟨Ω, hrel, hlay⟩ := match_group P hR hg
     rcases hlay with hlay | ⟨rfl, hpure⟩
-    · have hstep : (composedG P).step t l (Ω.bind id) :=
+    · have hstep : (composed P).step t l (Ω.bind id) :=
         (System.abstract_step _ _ _ _ _).mpr (Or.inr ⟨hnm, hlay⟩)
       by_cases hτ : l = Silent.τ
       · exact ⟨Ω, hrel, Or.inl ⟨hτ, weakTau_of_step hτ hstep⟩⟩
       · exact ⟨Ω, hrel, Or.inr ⟨hτ, weakStep_strong hstep⟩⟩
-    · exact ⟨Ω, hrel, Or.inl ⟨rfl, hpure ▸ weakTau_refl (composedG P) (PMF.pure t)⟩⟩
+    · exact ⟨Ω, hrel, Or.inl ⟨rfl, hpure ▸ weakTau_refl (composed P) (PMF.pure t)⟩⟩
 
-end NetG
-
-open NetG
 
 /-- **The gather-based protocol forward-simulates into its composed reading**,
 along the Dirac lift of the view. -/
-theorem protocolSimG (P : Params) :
-    ProbabilisticForwardSimulation (protocolG P) (composedG P)
-      (diracRel (ProtocolRelG P)) where
-  init := ⟨PMF.pure (composedG P).init,
+theorem protocolSim (P : Params) :
+    ProbabilisticForwardSimulation (protocol P) (composed P)
+      (diracRel (ProtocolRel P)) where
+  init := ⟨PMF.pure (composed P).init,
     fun _ hs => by rwa [PMF.mem_support_pure_iff] at hs,
-    (composedG P).init, rfl, protocolRelG_init P⟩
+    (composed P).init, rfl, protocolRel_init P⟩
   step := by
     rintro s_C μ_A ⟨t, rfl, hR⟩ l μ_C hstep
-    exact NetG.match_step P hR hstep
+    exact match_step P hR hstep
 
 /-- **The composition inclusion**: every trace distribution the gather-based
 protocol achieves is achieved by its composed reading. -/
-theorem protocolG_composedG (P : Params) :
-    achievableTraceDists (protocolG P) ⊆ achievableTraceDists (composedG P) :=
-  (protocolSimG P).achievableTraceDists_subset
-
-namespace NetG
-
-end NetG
+theorem protocol_composed (P : Params) :
+    achievableTraceDists (protocol P) ⊆ achievableTraceDists (composed P) :=
+  (protocolSim P).achievableTraceDists_subset
 
 
 /-! ### The headlines
@@ -2859,53 +2840,55 @@ reading it was cut into, and safety transfers to it. -/
 trace distribution achievable by the protocol as it runs is achievable by the
 ABA specification. The composition inclusion gives the first step, the
 substitution and the core simulation the rest. -/
-theorem refinesG (P : Params) :
-    achievableTraceDists (protocolG P) ⊆ achievableTraceDists (spec P) :=
-  Set.Subset.trans (protocolG_composedG P) (composedG_refines P)
+theorem refines (P : Params) :
+    achievableTraceDists (protocol P) ⊆ achievableTraceDists (spec P) :=
+  Set.Subset.trans (protocol_composed P) (composed_refines P)
 
 /-- **Correctness of the gather-based protocol**: every positive-probability
 trace of the protocol as it runs satisfies Validity and Agreement. No side
 condition on the trace: the corruption budget is a guard of the network
 adversary's own `fail` row, so every execution is in budget by construction. -/
-theorem mainG (P : Params) :
-    ∀ D ∈ achievableTraceDists (protocolG P), ∀ t, D t ≠ 0 →
+theorem main (P : Params) :
+    ∀ D ∈ achievableTraceDists (protocol P), ∀ t, D t ≠ 0 →
       ValidityTrace P t ∧ AgreementTrace P t :=
-  safety_transfer (refinesG P) (spec_safe P)
+  safety_transfer (refines P) (spec_safe P)
 
-/-- **The composed gather-based simulation** `protocolG ⊑ ABA.spec`: the
+/-- **The composed gather-based simulation** `protocol ⊑ ABA.spec`: the
 composition simulation joined with the chain from the composed reading by
 Result 2. -/
-noncomputable def chainSimG (P : Params) :
-    ProbabilisticForwardSimulation (protocolG P) (spec P)
-      (compRel (diracRel (ProtocolRelG P))
+noncomputable def chainSim (P : Params) :
+    ProbabilisticForwardSimulation (protocol P) (spec P)
+      (compRel (diracRel (ProtocolRel P))
         (compRel
           (compRel (parallelRel (diracRel (RlowAll P)))
             (compRel (parallelRel (diracRel (RidealAll P)))
               (parallelRel (diracRel (RpairAll P)))))
           (coreRel P))) :=
-  (protocolSimG P).trans (chainSimComposedG P)
+  (protocolSim P).trans (chainSimComposed P)
 
 /-! ### Mechanical axiom firewall -/
 
-/-- info: 'PLTS.ABA.protocolSimG' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.AFW.protocolSim' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms protocolSimG
+#print axioms protocolSim
 
-/-- info: 'PLTS.ABA.protocolG_composedG' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.AFW.protocol_composed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms protocolG_composedG
+#print axioms protocol_composed
 
-/-- info: 'PLTS.ABA.refinesG' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.AFW.refines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms refinesG
+#print axioms refines
 
-/-- info: 'PLTS.ABA.mainG' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.AFW.main' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms mainG
+#print axioms main
 
-/-- info: 'PLTS.ABA.chainSimG' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.AFW.chainSim' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms chainSimG
+#print axioms chainSim
+
+end AFW
 
 end ABA
 end PLTS

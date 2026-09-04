@@ -1,11 +1,11 @@
 \begin{theorem}[The protocol under its composed reading]
   \label{thm:aba-protocol-composed}
-  \lean{PLTS.ABA.ProtocolState}\lean{PLTS.ABA.ProtocolRel}\lean{PLTS.ABA.protocolRel_mk}\lean{PLTS.ABA.protocolRel_init}\lean{PLTS.ABA.protocolSim}\lean{PLTS.ABA.protocol_composed}\leanok
+  \lean{PLTS.ABA.ABDY.ProtocolState}\lean{PLTS.ABA.ABDY.ProtocolRel}\lean{PLTS.ABA.ABDY.protocolRel_mk}\lean{PLTS.ABA.ABDY.protocolRel_init}\lean{PLTS.ABA.ABDY.protocolSim}\lean{PLTS.ABA.ABDY.protocol_composed}\leanok
   \uses{def:aba-composed, def:aba-procnet, def:aba-netadv, def:aba-protocol, def:forwardsim, def:pmfrel, def:achievable, thm:forward-sound}
   For all parameters $P$, the protocol is forward-simulated by its composed reading along the Dirac lift of the relation $\mathrm{ProtocolRel}(P)$, and hence
   \[
-    \operatorname{ATD}(\mathrm{protocol}(P)) \;\subseteq\;
-    \operatorname{ATD}(\mathrm{composed}(P)).
+    \operatorname{ATD}(\abdy{\mathrm{protocol}}(P)) \;\subseteq\;
+    \operatorname{ATD}(\abdy{\mathrm{composed}}(P)).
   \]
   The two presentations hold the same stage data indexed two ways, by process on the protocol side and by round on the composed one.
   $\mathrm{ProtocolRel}(P)$ pins, of a composed state, everything a state of the protocol determines, and it has five conjuncts, none of them guarded.
@@ -16,12 +16,12 @@
   A round $j$ has not touched reads on the protocol side as the initial stage record, and that equation asks the composed entry to be initial there too.
   A composed state is therefore determined by any state of the protocol related to it.
   The determination is not injective: no composed state carries a termination flag, so two states of the protocol differing only in which processes have terminated are related to the same composed state (D22).
-  Headline: \leandecl{PLTS.ABA.protocol_composed}.
+  Headline: \leandecl{PLTS.ABA.ABDY.protocol_composed}.
 \end{theorem}
 
 \begin{proof}\leanok
   \uses{def:aba-composed, def:aba-procnet, def:aba-netadv, def:aba-protocol, def:forwardsim, def:pmfrel, def:achievable, thm:forward-sound}
-  The initial states are related, \leandecl{PLTS.ABA.protocolRel_init}: everything is initial, so each process's stage-side record is off the map at every round and $\mathrm{stage}\,r$ is the initial stage record there, which is the entry the composed initial state carries.
+  The initial states are related, \leandecl{PLTS.ABA.ABDY.protocolRel_init}: everything is initial, so each process's stage-side record is off the map at every round and $\mathrm{stage}\,r$ is the initial stage record there, which is the entry the composed initial state carries.
   For the step condition, take a state of the protocol, a composed state related to it, and a row out of that protocol state.
   Every transition of the protocol is a product of Dirac factors beside the coin oracle's successor distribution, and so is the composed transition that answers it.
   The two presentations carry the same oracle, so the coupling is functional in the oracle coordinate and the matched outcomes differ in no coordinate the relation constrains.
@@ -33,5 +33,5 @@
   The Byzantine graded-agreement call and return name a process whose program has no row for them (D11, D22), and the process group is a full synchronisation, so no transition of the protocol carries either label, while the round instance has a row for each.
   The stage rules of a round instance carry no termination guard either, so the instance answers a send or a delivery at a process the protocol has terminated.
   The inclusion is one-directional for those two reasons.
-  Soundness (Theorem~\ref{thm:forward-sound}) turns the simulation \leandecl{PLTS.ABA.protocolSim} into the stated inclusion.
+  Soundness (Theorem~\ref{thm:forward-sound}) turns the simulation \leandecl{PLTS.ABA.ABDY.protocolSim} into the stated inclusion.
 \end{proof}

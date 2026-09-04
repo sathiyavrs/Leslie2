@@ -46,13 +46,19 @@ pipeline; the three substitutions become three stages whose last lands on
 `hybrid P`:
 
 ```
-protocolG ⊑ composedG ⊑ hybridG1 ⊑ hybridG2 ⊑ hybrid ⊑ ABA.spec
+AFW.protocol ⊑ AFW.composed ⊑ AFW.hybrid1 ⊑ AFW.hybrid2 ⊑ hybrid ⊑ ABA.spec
 ```
 
-Beneath `composedG` is `protocolG`, the gather-based protocol as it runs
-(`ABA/GatherFlat.lean`), carried into the composed reading by `protocolSimG`
+Beneath `AFW.composed` is `AFW.protocol`, the gather-based protocol as it runs
+(`ABA/GatherFlat.lean`), carried into the composed reading by `AFW.protocolSim`
 (`ABA/GatherFlatSim.lean`). Everything from `hybrid` up — the core simulation,
 `spec_safe`, the safety transfer — is shared with the protocol chain.
+
+Every protocol-shaped system and headline of this chain sits in the namespace
+`AFW`, after Attiya, Flam and Welch, and carries the name of its counterpart in
+the protocol chain: `AFW.composed` is to the gather-based implementation what
+`ABDY.composed` is to the ladder. A `G` elsewhere in the development is graded
+agreement — `callG`, `retG`, `GSub`, `GNetState` — and never the chain.
 
 ## Why the gather specification carries a core family (D25)
 
@@ -206,7 +212,7 @@ Three ingredients, none new to the chain:
   discharges it for the protocol chain.
 - **The four congruences** (`parallel_right`, `abstract`, `relabel`,
   `abstract`): each family substitution runs under the composed reading's
-  own context, the same term `Hybrid.lean`'s `substSim` uses, so the third
+  own context, the same term `Hybrid.lean`'s `ABDY.substSim` uses, so the third
   stage's target is definitionally `hybrid P`.
 
 The stages compose by `ProbabilisticForwardSimulation.trans`; the inclusions
@@ -215,7 +221,7 @@ the two routes of `Results.lean`, reproduced.
 
 ## The protocol beneath the composed reading (`GatherFlat.lean`, `GatherFlatSim.lean`)
 
-`composedG P` is the gather-based protocol read as a composition of
+`AFW.composed P` is the gather-based protocol read as a composition of
 components. What runs is a flat system: `n` programs, each reading its own
 records and nothing else, beside one network adversary holding every pool and
 the corrupted set, beside the coin oracle. That shape is the same for either
@@ -240,9 +246,9 @@ case of the simulation rule the others out.
 Two rearrangements separate the flat stage side from the composed reading's,
 and both are forced by the flat shape.
 
-- **The tagged pool.** A round of `composedG` carries `4n + 2` message
+- **The tagged pool.** A round of `AFW.composed` carries `4n + 2` message
   fabrics — one per gather instance, one per Bracha instance. A flat
-  adversary carries one pool family per round, so `NetG.Msg n` tags each
+  adversary carries one pool family per round, so `AFW.Msg n` tags each
   message with the fabric it belongs to, and for a Bracha message with the
   instance, whose index is its leader. The pool index stays the sender, so a
   threshold still counts distinct senders (D5). No new adversary rows are
@@ -250,22 +256,22 @@ and both are forced by the flat shape.
   already payload-blind.
 - **The transposition.** `Gather.LowState` indexes boxes by instance and then
   by process. A program must hold its own data and no one else's, so
-  `NetG.StageRec n` is process-major: process `j`'s box in each gather
+  `AFW.StageRec n` is process-major: process `j`'s box in each gather
   instance, and its box in each of the `n` instances of each broadcast family.
   Nothing is lost, because every guard of the gather-based implementation
   reads the acting process's own boxes and the fabrics, and the two rows that
   read a fabric — the adversary's delivery and its Byzantine injection —
   belong to the adversary either way.
 
-`ProtocolRelG` therefore has four conjuncts, not twenty: the round loop, the
+`AFW.ProtocolRel` therefore has four conjuncts, not twenty: the round loop, the
 coin oracle and the ABA-side network are shared objects, and the round family
-is *computed* from the flat state by `NetG.toPair`, which undoes both
+is *computed* from the flat state by `AFW.toPair`, which undoes both
 rearrangements — transposing the boxes back and slicing each fabric's pool out
 of the tagged family by `Finset.filterMap`. The relation is a function, so
 there is nothing to choose in the witness.
 
 The proof is organised around that computation. One master lemma,
-`NetG.toPair_write`, says what a one-point stage write and a single pool
+`AFW.toPair_write`, says what a one-point stage write and a single pool
 insertion do to the view, pushing them inside all twelve coordinates; each row
 of the implementation then owes only slice algebra — which of the six slices
 takes the message, and which are untouched — discharged by `slice_post_some`
@@ -278,7 +284,7 @@ is one broadcast, the corrupted set the adversary holds being the corrupted
 set of every fabric under the same guard.
 
 `ABA/GatherFlatSim.lean` closes with the headlines mirroring `Results.lean`'s:
-`protocolG_composedG`, `refinesG`, `mainG` and `chainSimG`, each behind a
+`AFW.protocol_composed`, `AFW.refines`, `AFW.main` and `AFW.chainSim`, each behind a
 `#print axioms` firewall.
 
 ## Boundaries

@@ -552,7 +552,7 @@ theorem hybrid_step_tau (P : Params) (G : ℕ → GBCA.SpecState P.n)
         ⟨ω, hW, rfl⟩
       · obtain ⟨r, X, hstepG, hGeq⟩ := specSide_tau_inv P hspec
         obtain rfl : G' = Function.update G r X := pureN_inj hGeq
-        rw [GSub.liftedSpecG, System.mapIdle_step_some (GSub.gPull_inl (Lab.tau : Lab P.n))]
+        rw [GSub.liftedSpec, System.mapIdle_step_some (GSub.gPull_inl (Lab.tau : Lab P.n))]
           at hstepG
         exact Or.inl ⟨r, PMF.pure X, hstepG, by rw [PMF.pure_map, prodPMF_pure_pure]⟩
       · obtain ⟨k, b, hF, hA'⟩ := aStep_tau hnet

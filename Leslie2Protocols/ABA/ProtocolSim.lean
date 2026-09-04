@@ -19,6 +19,9 @@ process is the entry of that process in the instance of round `r`, so the two
 cuts hold the same stage data indexed two ways: by process on one side, by
 round on the other.
 
+Everything here is read in the namespace `ABDY`, where each name is that of its
+counterpart in the gather-based chain's `AFW`, and the qualifier is dropped below.
+
 ## The relation
 
 `ProtocolRel` pins every coordinate of a composed state, in five conjuncts and
@@ -59,6 +62,8 @@ namespace ABA
 
 open Net Comp
 
+namespace ABDY
+
 /-- **The relation of the protocol presentation to the composed one.** Writing
 `u = (procs, w, o)` and `t = (G, C, A, o')`, the five conjuncts are: the round
 loops agree; the oracle is shared; the ABA-side network is the adversary's
@@ -93,19 +98,6 @@ successor distribution, and so is the composed transition that answers it. The
 coupling is functional in the oracle coordinate: the two presentations carry the
 same oracle, so a protocol outcome and the composed outcome that matches it
 differ in no coordinate the relation constrains. -/
-
-/-- A product of two Dirac factors beside a third distribution. -/
-private theorem prodPMF_pure₂ {α β γ : Type*} (a : α) (b : β) (ν : PMF γ) :
-    prodPMF (PMF.pure a) (prodPMF (PMF.pure b) ν) = ν.map (fun c => (a, b, c)) := by
-  rw [prodPMF_pure_left, prodPMF_pure_left, PMF.map_comp]
-  rfl
-
-/-- A product of three Dirac factors beside a fourth distribution. -/
-private theorem prodPMF_pure₃ {α β γ δ : Type*} (a : α) (b : β) (c : γ) (ν : PMF δ) :
-    prodPMF (PMF.pure a) (prodPMF (PMF.pure b) (prodPMF (PMF.pure c) ν)) =
-      ν.map (fun d => (a, b, c, d)) := by
-  rw [prodPMF_pure_left, prodPMF_pure₂, PMF.map_comp]
-  rfl
 
 /-- A Dirac protocol outcome matched by a single related composed state. -/
 private theorem match_pure (P : Params) {s : ProtocolState P} {t : ComposedState P}
@@ -1021,14 +1013,16 @@ theorem match_step (P : Params) {u : ProtocolState P} {t : ComposedState P}
 /-- The two initial states are related: everything is initial, so every column
 is the initial stage record, which is what an untouched round reads as on the
 protocol side. -/
-theorem protocolRel_init (P : Params) : ProtocolRel P (protocol P).init (composed P).init :=
+theorem protocolRel_init (P : Params) :
+    ProtocolRel P (protocol P).init (composed P).init :=
   ⟨fun _ => rfl, rfl, rfl, fun _ => rfl,
     fun _ r => (StageSideRec.initial_stage P.n r).symm⟩
 
 /-- **The protocol forward-simulates into its composed reading**
 along the Dirac lift of `ProtocolRel`. -/
 theorem protocolSim (P : Params) :
-    ProbabilisticForwardSimulation (protocol P) (composed P) (diracRel (ProtocolRel P)) where
+    ProbabilisticForwardSimulation (protocol P) (composed P)
+      (diracRel (ProtocolRel P)) where
   init := ⟨PMF.pure (composed P).init,
     fun _ hs => by rwa [PMF.mem_support_pure_iff] at hs,
     (composed P).init, rfl, protocolRel_init P⟩
@@ -1046,9 +1040,11 @@ theorem protocol_composed (P : Params) :
 
 The composition step of the chain may not acquire a `sorryAx` dependence. -/
 
-/-- info: 'PLTS.ABA.protocol_composed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.ABDY.protocol_composed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms protocol_composed
+
+end ABDY
 
 end ABA
 end PLTS

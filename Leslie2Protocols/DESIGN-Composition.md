@@ -4,29 +4,29 @@ The ABA case study relates the protocol as it runs to a small specification thro
 four systems:
 
 ```
-protocol  ⊑  composed  ⊑  hybrid  ⊑  ABA.spec
+ABDY.protocol  ⊑  ABDY.composed  ⊑  hybrid  ⊑  ABA.spec
 ```
 
-`protocol` is what runs: `n` programs beside a network adversary and a coin oracle. A
+`ABDY.protocol` is what runs: `n` programs beside a network adversary and a coin oracle. A
 program reads its own replacement flag and nothing else about corruption: not the corrupted
-set, not the budget, not another process's status (D23). `composed` is the same protocol
+set, not the budget, not another process's status (D23). `ABDY.composed` is the same protocol
 read as a composition of components.
 `hybrid` replaces each round's graded-agreement instance by the graded agreement
 specification. `ABA.spec` is the single-automaton reading of agreement.
 
 This note records why that cut is placed where it is, what it buys, and what the model
 already weakens. The systems themselves are in `ABA/Protocol.lean`, `ABA/Spec.lean` and
-`ABA/Hybrid.lean`, which carries both `composed` and `hybrid`, over the components of
+`ABA/Hybrid.lean`, which carries both `ABDY.composed` and `hybrid`, over the components of
 `ABA/Components.lean`; the first link is in `ABA/ProtocolSim.lean`. The file guide is
 `ABA/README.md`.
 
-The first link is where the chain passes from implementation to specification: `protocol`
+The first link is where the chain passes from implementation to specification: `ABDY.protocol`
 is the system that runs, and everything above it is specification. It is therefore an
 inclusion, `ProtocolSim.protocol_composed`, and not an equality. A process record of the
 protocol carries the round-loop record beside the stage record of every round the process
 has touched, and a flag saying whether the process has terminated (D22). A composed state
 carries one graded-agreement instance per round at every moment, and no termination flag.
-`ProtocolRel` pins every composed coordinate against the protocol state: the entry of
+`ABDY.ProtocolRel` pins every composed coordinate against the protocol state: the entry of
 process `j` in the instance of round `r` is the stage record of round `r` that `j` holds.
 A composed state is therefore determined by any protocol state related to it. What makes
 the link one-directional is on the composed side. A round instance has a row for the
@@ -58,7 +58,7 @@ it.
 Two networks carry the protocol. Neither is internal to a process, and neither is a
 field of a record.
 
-The round's message fabric `GSub.gNet` is a component of `composed` and of `hybrid`, and
+The round's message fabric `GSub.gNet` is a component of `ABDY.composed` and of `hybrid`, and
 it disappears at the substitution, inside the component that is exchanged. It is also
 the second component of `GBCA.ImplState`, the state the round refinement is defined on.
 

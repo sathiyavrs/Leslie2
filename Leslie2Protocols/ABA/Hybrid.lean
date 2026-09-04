@@ -38,7 +38,7 @@ The four components speak the extended alphabet `Net.NLab n`, the rendezvous
 labels are hidden, and the result is read back over `Lab n`. The round loops,
 the ABA-side network and the lifted oracle are defined in `ABA/Components.lean`,
 the round instances in `ABA/GBCAInstances.lean`; the composition pipeline
-`composedPre` / `composedGroup` / `composed` is the first section below.
+`ABDY.composedPre` / `ABDY.composedGroup` / `ABDY.composed` is the first section below.
 
 The second link is the substitution, which replaces each round's
 graded-agreement instance by that round's specification. `hybrid` is the
@@ -47,7 +47,7 @@ application of `ProbabilisticForwardSimulation.parallel_right` under a
 syntactically identical context, followed by the three congruences the protocol
 pipeline is built from: `abstract` for the rendezvous alphabet, `relabel` for
 the read-back to `Lab n` (`Framework/Relabel.lean`), and `abstract` again for
-the sub-protocol API. The conclusion is `substitution`, the inclusion of the
+the sub-protocol API. The conclusion is `ABDY.substitution`, the inclusion of the
 composed system's achievable trace distributions in the specification's.
 
 ## Per-round memory
@@ -118,6 +118,8 @@ abbrev ComposedState (P : Params) : Type :=
 
 end Comp
 
+namespace ABDY
+
 /-- The four components side by side, over the extended alphabet. -/
 noncomputable def composedPre (P : Params) : System (Comp.ComposedState P) (NLab P.n) :=
   (GSub.gbcaSide P).parallel
@@ -134,6 +136,8 @@ noncomputable def composedGroup (P : Params) :
 noncomputable def composed (P : Params) : System (Comp.ComposedState P) (Lab P.n) :=
   (composedGroup P).abstract (Lab.hiddenAPI P.n)
 
+end ABDY
+
 namespace Comp
 
 /-! ### Reading and building composite transitions of the composed system -/
@@ -142,9 +146,9 @@ namespace Comp
 and the shared-label case. -/
 theorem composedGroup_step_iff (P : Params) (q : ComposedState P) (l : Lab P.n)
     (μ : PMF (ComposedState P)) :
-    (composedGroup P).step q l μ ↔
-      (l = .tau ∧ ∃ e : NetEvt P.n, (composedPre P).step q (Sum.inr e) μ) ∨
-      (composedPre P).step q (Sum.inl l) μ := by
+    (ABDY.composedGroup P).step q l μ ↔
+      (l = .tau ∧ ∃ e : NetEvt P.n, (ABDY.composedPre P).step q (Sum.inr e) μ) ∨
+      (ABDY.composedPre P).step q (Sum.inl l) μ := by
   constructor
   · rintro (⟨hτ, l', ⟨e, rfl⟩, hstep⟩ | ⟨-, hstep⟩)
     · exact Or.inl ⟨Sum.inl_injective hτ, e, hstep⟩
@@ -163,9 +167,9 @@ theorem composedPre_vis_step (P : Params) {G G' : ℕ → GBCA.ImplState P.n}
     (hC : ∀ i, CoreProcStepN P i (C i) L (PMF.pure (C' i)))
     (hA : ANetStep P A L (PMF.pure A'))
     (hW : (wccLift P).step o L ω) :
-    (composedPre P).step (G, C, A, o) L
+    (ABDY.composedPre P).step (G, C, A, o) L
       (prodPMF (PMF.pure G') (prodPMF (PMF.pure C') (prodPMF (PMF.pure A') ω))) := by
-  rw [composedPre, System.parallel_step]
+  rw [ABDY.composedPre, System.parallel_step]
   refine Or.inl ⟨hL, PMF.pure G', prodPMF (PMF.pure C') (prodPMF (PMF.pure A') ω),
     hG, ?_, rfl⟩
   rw [System.parallel_step]
@@ -179,8 +183,8 @@ theorem composedPre_tau_gbca (P : Params) {G G' : ℕ → GBCA.ImplState P.n}
     {C : ∀ _ : Fin P.n, CoreRec P.n} {A : ANetState P.n}
     {o : ℕ → WCC.SpecState P.n}
     (hG : (GSub.gbcaSide P).step G (Sum.inl Lab.tau) (PMF.pure G')) :
-    (composedPre P).step (G, C, A, o) (Sum.inl Lab.tau) (PMF.pure (G', C, A, o)) := by
-  rw [composedPre, System.parallel_step]
+    (ABDY.composedPre P).step (G, C, A, o) (Sum.inl Lab.tau) (PMF.pure (G', C, A, o)) := by
+  rw [ABDY.composedPre, System.parallel_step]
   refine Or.inr (Or.inl ⟨rfl, PMF.pure G', hG, ?_⟩)
   rw [prodPMF_pure_pure]
 
@@ -190,8 +194,8 @@ theorem composedPre_tau_aNet (P : Params) {G : ℕ → GBCA.ImplState P.n}
     {C : ∀ _ : Fin P.n, CoreRec P.n} {A A' : ANetState P.n}
     {o : ℕ → WCC.SpecState P.n}
     (hA : ANetStep P A (Sum.inl Lab.tau) (PMF.pure A')) :
-    (composedPre P).step (G, C, A, o) (Sum.inl Lab.tau) (PMF.pure (G, C, A', o)) := by
-  rw [composedPre, System.parallel_step]
+    (ABDY.composedPre P).step (G, C, A, o) (Sum.inl Lab.tau) (PMF.pure (G, C, A', o)) := by
+  rw [ABDY.composedPre, System.parallel_step]
   refine Or.inr (Or.inr ⟨rfl,
     prodPMF (PMF.pure C) (prodPMF (PMF.pure A') (PMF.pure o)), ?_, ?_⟩)
   · rw [System.parallel_step]
@@ -206,9 +210,9 @@ theorem composedPre_tau_wcc (P : Params) {G : ℕ → GBCA.ImplState P.n}
     {C : ∀ _ : Fin P.n, CoreRec P.n} {A : ANetState P.n}
     {o : ℕ → WCC.SpecState P.n} {ω : PMF (ℕ → WCC.SpecState P.n)}
     (hW : (WCC.specFamily P).step o Lab.tau ω) :
-    (composedPre P).step (G, C, A, o) (Sum.inl Lab.tau)
+    (ABDY.composedPre P).step (G, C, A, o) (Sum.inl Lab.tau)
       (prodPMF (PMF.pure G) (prodPMF (PMF.pure C) (prodPMF (PMF.pure A) ω))) := by
-  rw [composedPre, System.parallel_step]
+  rw [ABDY.composedPre, System.parallel_step]
   refine Or.inr (Or.inr ⟨rfl, _, ?_, rfl⟩)
   rw [System.parallel_step]
   refine Or.inr (Or.inr ⟨rfl, prodPMF (PMF.pure A) ω, ?_, rfl⟩)
@@ -274,20 +278,20 @@ theorem gprocs_family {P : Params} {r : ℕ}
 
 /-! ### Hiding the rendezvous alphabet
 
-The composition hides `NetEvt n`, so a transition of `composedPre` on a
-rendezvous label is a silent transition of `composedGroup`, as is one on `τ`.
+The composition hides `NetEvt n`, so a transition of `ABDY.composedPre` on a
+rendezvous label is a silent transition of `ABDY.composedGroup`, as is one on `τ`.
 The two stage rendezvous never reach this point. They are internal to a round
 instance, hidden inside `GSub.sub`, and reach the composite as the family's
 own `τ`. -/
 
 theorem composedGroup_of_event (P : Params) {q : ComposedState P} (e : NetEvt P.n)
-    {μ : PMF (ComposedState P)} (h : (composedPre P).step q (Sum.inr e) μ) :
-    (composedGroup P).step q Lab.tau μ :=
+    {μ : PMF (ComposedState P)} (h : (ABDY.composedPre P).step q (Sum.inr e) μ) :
+    (ABDY.composedGroup P).step q Lab.tau μ :=
   (composedGroup_step_iff P _ _ _).mpr (Or.inl ⟨rfl, e, h⟩)
 
 theorem composedGroup_of_tau (P : Params) {q : ComposedState P} {μ : PMF (ComposedState P)}
-    (h : (composedPre P).step q (Sum.inl Lab.tau) μ) :
-    (composedGroup P).step q Lab.tau μ :=
+    (h : (ABDY.composedPre P).step q (Sum.inl Lab.tau) μ) :
+    (ABDY.composedGroup P).step q Lab.tau μ :=
   (composedGroup_step_iff P _ _ _).mpr (Or.inr h)
 
 end Comp
@@ -312,14 +316,14 @@ round — moves its round alone, `τ` moves one round, and `fail` is the
 broadcast that keeps every round's copy of the corrupted set in lockstep. -/
 noncomputable def specSide (P : Params) :
     System (ℕ → GBCA.SpecState P.n) (NLab P.n) :=
-  System.family (GSub.liftedSpecG P) GSub.gOwns GSub.isFailN (GSub.gActSpec P)
+  System.family (GSub.liftedSpec P) GSub.gOwns GSub.isFailN (GSub.gActSpec P)
 
 @[simp] theorem specSide_init (P : Params) :
     (specSide P).init = fun _ => GBCA.SpecState.initial P.n := rfl
 
 /-- The specification side is an LTS: every round's specification is. -/
 theorem specSide_isLTS (P : Params) : (specSide P).IsLTS :=
-  System.family_isLTS (GSub.liftedSpecG_isLTS P) _ _ _
+  System.family_isLTS (GSub.liftedSpec_isLTS P) _ _ _
 
 /-- The state of the protocol-shaped specification: the round
 specifications beside the composed system's other three components. -/
@@ -328,14 +332,14 @@ abbrev HybridState (P : Params) : Type :=
     ((∀ _ : Fin P.n, CoreRec P.n) × (ANetState P.n × (ℕ → WCC.SpecState P.n)))
 
 /-- The four components side by side, over the extended alphabet:
-`composedPre` with its graded-agreement component replaced. -/
+`ABDY.composedPre` with its graded-agreement component replaced. -/
 noncomputable def hybridPre (P : Params) : System (HybridState P) (NLab P.n) :=
   (specSide P).parallel
     ((System.syncProduct (coreProcN P)).parallel ((aNet P).parallel (wccLift P)))
 
 /-- **The protocol-shaped specification**: the rendezvous alphabet hidden,
 the result read back over `Lab n`, the sub-protocol API hidden — the pipeline
-of `composed`, component for component. -/
+of `ABDY.composed`, component for component. -/
 noncomputable def hybrid (P : Params) : System (HybridState P) (Lab P.n) :=
   (((hybridPre P).abstract (netEvtLabels P.n)).relabel).abstract (Lab.hiddenAPI P.n)
 
@@ -364,6 +368,8 @@ theorem famSubSimProb (P : Params) :
   ForwardSimulation.toProbabilistic (GSub.gbcaSide_isLTS P) (specSide_isLTS P)
     (fun r => GSub.subSim_init P r) (famSubSim P)
 
+namespace ABDY
+
 /-- **The substitution simulation at the protocol shape**: the four
 congruences applied to the family substitution under the composed system's own
 context — `parallel_right` for the three untouched components, `abstract` for the
@@ -382,6 +388,8 @@ composed system is achievable by the protocol-shaped specification. -/
 theorem substitution (P : Params) :
     achievableTraceDists (composed P) ⊆ achievableTraceDists (hybrid P) :=
   (substSim P).achievableTraceDists_subset
+
+end ABDY
 
 /-! ### The specification side's rows
 
@@ -406,13 +414,13 @@ theorem specSide_fail (P : Params) (G : ℕ → GBCA.SpecState P.n) (k : Fin P.n
 theorem specSide_owned_inv (P : Params) {G : ℕ → GBCA.SpecState P.n}
     {L : NLab P.n} {r : ℕ} (hL : GSub.gOwns L = some r) (hτ : L ≠ Silent.τ)
     {μ : PMF (ℕ → GBCA.SpecState P.n)} (h : (specSide P).step G L μ) :
-    ∃ X, (GSub.liftedSpecG P r).step (G r) L (PMF.pure X) ∧
+    ∃ X, (GSub.liftedSpec P r).step (G r) L (PMF.pure X) ∧
       μ = PMF.pure (Function.update G r X) := by
   rw [specSide, System.family_step_iff] at h
   rcases h with ⟨habs, -⟩ | ⟨r', hown, μr, hstep, rfl⟩ | ⟨-, hown, -, -⟩ | ⟨-, hown, -, -⟩
   · exact absurd habs hτ
   · obtain rfl : r' = r := by rw [hL] at hown; exact (Option.some.inj hown).symm
-    obtain ⟨X, rfl⟩ := GSub.liftedSpecG_isLTS P r' _ _ _ hstep
+    obtain ⟨X, rfl⟩ := GSub.liftedSpec_isLTS P r' _ _ _ hstep
     exact ⟨X, hstep, by rw [PMF.pure_map]⟩
   · rw [hL] at hown; exact absurd hown (by simp)
   · rw [hL] at hown; exact absurd hown (by simp)
@@ -426,7 +434,7 @@ theorem specSide_owned (P : Params) {G : ℕ → GBCA.SpecState P.n} {L : NLab P
     (specSide P).step G L (PMF.pure (Function.update G r X)) := by
   rw [specSide, System.family_step_iff]
   refine Or.inr (Or.inl ⟨r, hown, PMF.pure X, ?_, by rw [PMF.pure_map]⟩)
-  rw [GSub.liftedSpecG, System.mapIdle_step_some hpull]
+  rw [GSub.liftedSpec, System.mapIdle_step_some hpull]
   exact h
 
 /-- A round's own silent rule — the specification's binding kill — read into
@@ -436,7 +444,7 @@ theorem specSide_tau (P : Params) {G : ℕ → GBCA.SpecState P.n} {r : ℕ}
     (specSide P).step G (Sum.inl Lab.tau) (PMF.pure (Function.update G r X)) := by
   rw [specSide, System.family_step_iff]
   refine Or.inl ⟨rfl, r, PMF.pure X, ?_, by rw [PMF.pure_map]⟩
-  rw [GSub.liftedSpecG, System.mapIdle_step_some (GSub.gPull_inl (Lab.tau : Lab P.n))]
+  rw [GSub.liftedSpec, System.mapIdle_step_some (GSub.gPull_inl (Lab.tau : Lab P.n))]
   exact h
 
 /-- A label a round specification owns is answered by that round alone, read
@@ -448,7 +456,7 @@ theorem specSide_owned_step (P : Params) {G G' : ℕ → GBCA.SpecState P.n}
     (h : (specSide P).step G L (PMF.pure G')) :
     ∃ X, GBCA.Step P r (G r) l₀ (PMF.pure X) ∧ G' = Function.update G r X := by
   obtain ⟨X, hstep, heq⟩ := specSide_owned_inv P hown hτ h
-  rw [GSub.liftedSpecG, System.mapIdle_step_some hpull] at hstep
+  rw [GSub.liftedSpec, System.mapIdle_step_some hpull] at hstep
   exact ⟨X, hstep, pureN_inj heq⟩
 
 /-- Only the identity successor answers a label no round owns and no
@@ -482,11 +490,11 @@ theorem specSide_tau_inv (P : Params) {G : ℕ → GBCA.SpecState P.n}
     {μ : PMF (ℕ → GBCA.SpecState P.n)}
     (h : (specSide P).step G (Sum.inl Lab.tau) μ) :
     ∃ (r : ℕ) (X : GBCA.SpecState P.n),
-      (GSub.liftedSpecG P r).step (G r) (Sum.inl Lab.tau) (PMF.pure X) ∧
+      (GSub.liftedSpec P r).step (G r) (Sum.inl Lab.tau) (PMF.pure X) ∧
       μ = PMF.pure (Function.update G r X) := by
   rw [specSide, System.family_step_iff] at h
   rcases h with ⟨-, r, μr, hstep, rfl⟩ | ⟨r, hr, -⟩ | ⟨habs, -, -, -⟩ | ⟨habs, -, -, -⟩
-  · obtain ⟨X, rfl⟩ := GSub.liftedSpecG_isLTS P r _ _ _ hstep
+  · obtain ⟨X, rfl⟩ := GSub.liftedSpec_isLTS P r _ _ _ hstep
     exact ⟨r, X, hstep, by rw [PMF.pure_map]⟩
   · exact absurd hr (by simp)
   · exact absurd rfl habs

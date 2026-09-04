@@ -195,7 +195,7 @@ repaired at the rule; the sixth entry is a cross-reference.
 - **`CoreProcStepN`'s DECIDED rows (chosen).** `CoreProcStepN.ret` and
   `CoreProcStepN.dsndRelay` read the receipt counts alone, without the `input ≠ none`
   gate their `ABAProcStepN` counterparts carry. The composed reading is the abstraction
-  the protocol is carried into, and gating there would ripple through `ProtocolRel` and
+  the protocol is carried into, and gating there would ripple through `ABDY.ProtocolRel` and
   the core simulation.
 - **`SpecStep.ret` without an honesty guard (chosen).** The honest return's guards are
   `val = some b` and `ret id = false`, and nothing about the returner, so a corrupted
@@ -295,7 +295,7 @@ Unpredictability, inexpressible once the guess is dropped.
   every guard the non-bit one would, and no safety- or termination-relevant behaviour is
   lost.
 - **Termination.** ABA's ε-sure Termination, GBCA's Termination and WCC's ε′-sure
-  Termination (pp. 6–7) are unclaimed — `ABA.main` is Validity ∧
+  Termination (pp. 6–7) are unclaimed — `ABDY.main` is Validity ∧
   Agreement. The same holds one level down: gather's Termination and BRB's Totality
   (pp. 7–9) are liveness properties and are unclaimed; TS 6's own stated scope is the
   linear properties, Totality living in the fairness markings that are outside the
@@ -372,6 +372,6 @@ produces must itself be never corrupted, not merely a member of a support set a 
 Neither is a fidelity gap; both sit under Future work in `ABA/README.md`.
 **Achievability** — `NonVacuity.lean` carries the non-vacuity run on `hybrid`, the system
 the core simulation takes as its subject, and a machine-checked positive-mass trace for
-`protocol`, the system `main` is about, is outstanding.
+`ABDY.protocol`, the system `ABDY.main` is about, is outstanding.
 **`ValidityTrace` witness strengthening** — the witness clause accepts any preceding
 `callABA id' b`, where the proof yields a stronger ghost-backed one.
