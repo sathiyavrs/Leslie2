@@ -86,7 +86,11 @@ def main(argv: list[str]) -> int:
                 "blueprint/src/dep_graph.html no longer fits that source"
             )
 
-    sections = sorted(build.glob("sect*.html"))
+    sections = sorted(
+        page
+        for page in build.glob("*.html")
+        if page.name not in {"index.html", "dep_graph_document.html"}
+    )
     if not sections:
         failures.append(f"{build} holds no section pages")
     else:

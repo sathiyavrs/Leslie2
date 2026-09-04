@@ -7,8 +7,7 @@
 \end{lemma}
 
 \begin{proof}\leanok
-  Fix a probabilistic execution $pe_X$ with initial distribution $\delta_{sys_X.init}$ realising $D$.
-  Since $f$ preserves labels, pushing each $X$-history forward to the $Y$-history $f_\ast E_X$ leaves the label sequence alone, hence the trace and the tightness status.
+  Fix a probabilistic execution $pe_X$ with initial distribution $\delta_{sys_X.init}$ realising $D$. Since $f$ preserves labels, pushing each $X$-history forward to the $Y$-history $f_\ast E_X$ leaves the label sequence alone, hence the trace and the tightness status.
   What must be produced is a \emph{single} $sys_Y$-scheduler realising the pushforward, and it is recovered by \emph{disintegration}: at a finite $Y$-history $E_Y$, emit each next move with probability proportional to the total $probOf$-weight of the members of the fibre $f_\ast E_X = E_Y$ that emit a preimage of that move.
   That weight is the posterior over the fibre weighted by path mass, so the induced $sys_Y$-execution assigns each tight $Y$-history the summed $probOf$-mass of its fibre, and $traceProb$ is preserved cone by cone.
 \end{proof}

@@ -6,6 +6,10 @@
 % Each section says what its objects are for and points at the Lean source; the
 % statements are the nodes and the full implementation is the Lean.
 
+\chapter{The framework}
+
+The five results the case study rests on, and the constructions they are proved for.
+
 \section{Systems, executions, and trace distributions}
 
 A PLTS is the single model every system of this development is written in.
@@ -103,13 +107,13 @@ The read-back congruence closing the list transports a simulation over a finer a
 \input{nodes-min/thm-precong-relabel}
 \input{nodes-min/thm-mapidle-cong}
 
-\section{Case study: Asynchronous Byzantine Agreement}
+\chapter{The ABA case study}
 
 This section verifies an implementation of Asynchronous Byzantine Agreement against a small specification, by probabilistic forward simulation, on the five results proved above.
 The setting is $n$ processes, each holding an input bit, of which at most $f$ are Byzantine, with $3f < n$, communicating by asynchronous message passing.
 The development lives in the opt-in Lake library \leanmodule{Leslie2Protocols}.
 
-\subsection{Setting and conventions}
+\section{Setting and method}
 
 Three protocols occur in the case study, each given as properties over the calls and returns of its interface that speak only of processes never corrupted.
 What this development establishes is Validity and Agreement for ABA, machine-checked; Termination, Unpredictability and fairness are out of scope, and the weak common coin is held at specification level, so $\varepsilon$-Goodness enters as an assumption.
@@ -144,7 +148,15 @@ GBCA is verified against two implementations: a direct one, which calls no sub-p
 Transition System~1 is the ABA specification, Transition System~2 the GBCA specification, Transition System~3 the WCC specification, Transition System~4 the gather specification and Transition System~6 the BRB specification; the numbering is the source's, whose Transition Systems~5 and~7 (SRSD and AVSS) are not encoded, and the names are used throughout this section and in every node of it.
 A rule is cited by its Lean constructor name, a deviation label in parentheses marks a point where an encoding departs from~\cite{LeslieBP}, and where a node names ABDY22's Algorithm~$k$ it means the numbering of~\cite{ABDY22}.
 
-\paragraph{Deviations.}
+\paragraph{Outside the model.}
+Two features of~\cite{LeslieBP} are deliberately not encoded: fairness, whose markings bear only on liveness, and partial information, whose observation functions and belief construction are not needed because every adversary here is omniscient.
+
+\paragraph{Notation.}
+Write $[n]$ for the identifier set and $F \subseteq [n]$ for the corrupted set.
+
+\section{Deviations from the source blueprint}
+\label{sec:aba-deviations}
+
 Each departure from~\cite{LeslieBP} carries a label, cited at the point where it applies; the labels D2, D3, D6, D7 and D20 are not in use.
 \begin{itemize}
   \item D1: corruption is a guarded deterministic transform, broadcast to every component.
@@ -192,7 +204,7 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
     The source supplies no gather-based GBCA; its gather serves the coin construction, which stays at specification level here, so \cite{AFW25} is the algorithm's source of record and Transition System~2 is unchanged as its specification.
   \item D25: the gather specification carries a write-once \emph{core family} in its state --- a nonempty set of committed-entry sets, any two of which (each with itself) share at least $n - f$ entries, every return dominating some member --- in place of Transition System~4's single bound identifier set carried on its return labels.
     The classical common core is the family's intersection; its $n - f$ size bound is a fact about complete executions, not a state invariant an implementation can maintain (\cite{AFW25}, Remark~1), and the family is what a reachable state does determine.
-    On the implementation side the $\mathrm{BIND}$ payload travels by reliable broadcast rather than on the fabric, which is what pins a committed payload against a sender corrupted later.
+    On the implementation side the $\mathrm{BIND}$ payload is sent by reliable broadcast rather than on the fabric, which is what pins a committed payload against a sender corrupted later.
   \item D26: the gather specification records calls and committed entries in separate fields, a per-entry internal commit writing $val(k)$ once under $k \in F \vee call(k) = v$, in place of Transition System~4's rule writing $call$ itself at a corrupted process.
     A process corrupted after its call may still direct its committed entry, and the guard reads $F$ at the commit rather than at the call.
   \item D27: the BRB specification splits the leader's recorded input from the committed value, an internal commit writing the value once under $\mathit{ldr} \in F \vee input = m$, in place of Transition System~6's single call field and its corrupted-leader rule, which only bars the instance from returning.
@@ -201,78 +213,22 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
     A sub-protocol's call and return are fused into the rows of the caller --- the gather call contributes to the input broadcast, the $\mathrm{BIND}$ send is the bind-broadcast call, the first gather's return is the second's call --- and a sub-instance's delivery is a derived predicate on its coordinate, read by the consuming row, not an event of the composite.
 \end{itemize}
 
-\paragraph{Outside the model.}
-Two features of~\cite{LeslieBP} are deliberately not encoded: fairness, whose markings bear only on liveness, and partial information, whose observation functions and belief construction are not needed because every adversary here is omniscient.
+\section{The specifications and their safety}
 
-\paragraph{Notation.}
-Write $[n]$ for the identifier set and $F \subseteq [n]$ for the corrupted set.
+Everything in this section is what both implementations are measured against.
+A specification locates the adversary differently from the implementation it stands for.
+An implementation pairs processes that read only their own replacement flag with an explicit network-adversary PLTS, which owns the corrupted set together with its budget and authorises every Byzantine action by the guard $k \in F$ of a component; a specification carries no network component at all, and its adversarial transitions are bare nondeterministic choices resolved by the scheduler.
+Leaving those choices unstructured is sound because a specification constrains from above: an unstructured adversary makes the specification more permissive, never less, and trace-distribution inclusion asks only that every behaviour of the implementation be matched by some resolution of the specification's nondeterminism.
 
 \subsection{Parameters and the shared alphabet}
 
-The parameters and the label type are fixed once, and fixing one alphabet is what lets an implementation and a specification be compared at all: a refinement is an inclusion of trace-distribution sets, and a trace is a sequence of external labels.
+The parameters and the label type are fixed first, and fixing one alphabet is what lets an implementation and a specification be compared at all: a refinement is an inclusion of trace-distribution sets, and a trace is a sequence of external labels.
 See \leanmodule{Leslie2Protocols/ABA/Params} and \leanmodule{Leslie2Protocols/ABA/Labels}.
 
 \input{nodes-min/def-aba-params}
 \input{nodes-min/def-aba-labels}
 
-\subsection{Process-local vocabulary}
-
-The round loop and the graded-agreement stage of a process are built over the same process-local data: the stage record holds one process's graded-agreement stage and the control record holds its round loop.
-No field of either record names another process or holds the corrupted set, so locality sits in the state shape and not in the guards alone.
-The stage record is in \leanmodule{Leslie2Protocols/ABA/GBCAImpl} and the control record in \leanmodule{Leslie2Protocols/ABA/Core}.
-
-\input{nodes-min/def-aba-gbca-vocab}
-\input{nodes-min/def-aba-core-vocab}
-
-\subsection{The protocol}
-
-What runs is $n$ programs, a network adversary holding the message pools and the corrupted set with its budget, and a coin oracle held at specification level.
-A program reads its own replacement flag and nothing else about corruption: not the corrupted set, not the budget, not another process's status (D23).
-The rendezvous the shared alphabet cannot name are carried by an extended alphabet, hidden to $\tau$ and then discharged by the restriction, so what leaves the outermost frame is the alphabet the ABA specification speaks.
-That much is fixed by the round loop and the specification, and is independent of how graded agreement is implemented, so it is written once, parametrically in the implementation.
-Section~\ref{sec:aba-gather} instantiates it a second time.
-A system below the meeting point therefore belongs to one implementation or the other, and carries a superscript naming its source: $\abdy{\mathrm{protocol}}(P)$ and $\abdy{\mathrm{composed}}(P)$ here, after~\cite{ABDY22}, and $\afw{\mathrm{protocol}}(P)$ and $\afw{\mathrm{composed}}(P)$ in Section~\ref{sec:aba-gather}, after~\cite{AFW25}.
-The systems the two share, $\mathrm{hybrid}(P)$ and $\mathrm{spec}(P)$, carry none.
-The Lean development writes each superscript as a namespace.
-See \leanmodule{Leslie2Protocols/ABA/NetAlphabet}, \leanmodule{Leslie2Protocols/ABA/FlatReading} and \leanmodule{Leslie2Protocols/ABA/Protocol}.
-
-\input{nodes-min/def-aba-flat-reading}
-\input{nodes-min/def-aba-procnet}
-\input{nodes-min/def-aba-netadv}
-\input{nodes-min/def-aba-protocol}
-
-\blueprintfig{fig-protocol}{The protocol \leandecl{PLTS.ABA.ABDY.protocol}: the $n$ programs \leandecl{PLTS.ABA.Net.ABAProcN} under $\mathrm{syncProduct}$, the network adversary \leandecl{PLTS.ABA.Net.netAdv} over the state \leandecl{PLTS.ABA.Net.NetState}, and the coin oracle beside the group.
-The dashed vertical is Theorem~\ref{thm:aba-protocol-composed}, along the Dirac lift of $\mathrm{ProtocolRel}$.}
-
-\subsection{The graded-agreement stage}
-
-Graded agreement is the one sub-protocol carried to implementation level, and it is carried twice: by the direct transcription of ABDY22's Algorithm~6 given here, whose messages form a five-level ladder, and by the gather-based construction of Section~\ref{sec:aba-gather}.
-The depth of the ladder is what the grade-$1$ evidence buys (D18): $f{+}1$ $\mathrm{BIND}\,v$ receipts exceed the corruption budget, so an honest sender stands behind every grade-$1$ output, and that sender's own wait condition is the $n{-}f$ $\mathrm{VOTE}\,v$ quorum the binding argument of~\cite{ABDY22} counts.
-The definition below reads it as one per-round PLTS, which is the form Theorem~\ref{thm:gbca-inst-refines} is proved against.
-Its state is the pair of the $n$ stage records and the round's own message fabric, so the network is a component of it and not a field, and its guards read that pair through four accessors; Definitions~\ref{def:aba-procnet} and~\ref{def:aba-netadv} are where each guard is written against one process record.
-See \leanmodule{Leslie2Protocols/ABA/GBCAImpl}.
-
-\input{nodes-min/def-aba-gbca-impl}
-
-\blueprintfig{fig-gbca-impl}{The GBCA implementation instance \leandecl{PLTS.ABA.GBCA.implInst}, ABDY22's Algorithm~6 (D18): the per-process stage automaton and, boxed, the authenticated set-based network of D5.}
-
-\subsection{The round loop}
-
-The round loop is the core algorithm of ABA, and it is what calls the other two.
-Its external return is gated on an $n-f$ DECIDED quorum, and that count is what excludes disagreement: two returns of different bits would need two sender sets of size $n-f$, and any two such sets meet in an honest process.
-Its rules are written against one process's own record in Definition~\ref{def:aba-procnet}, and the state below is what those rules move, read across the two components that hold it.
-See \leanmodule{Leslie2Protocols/ABA/Core} and \leanmodule{Leslie2Protocols/ABA/ABAState}.
-
-\input{nodes-min/def-aba-core}
-
-\blueprintfig{fig-core-phases}{The round loop \leandecl{PLTS.ABA.Comp.coreProcN}: the per-process five-phase handshake cycle, the fused DECIDED multicast at the $A$-grade coin return (D10), and the DECIDED pools gating $\mathrm{retABA}$.
-A corruption leaves the machine at whatever phase it reaches: every edge drawn carries the guard that the program is unreplaced, so the phase field stands still from the corruption on (D23).}
-
 \subsection{The ABA specification and its safety}
-
-The three specification systems locate the adversary differently from the implementations they stand for.
-An implementation pairs processes that read only their own replacement flag with an explicit network-adversary PLTS, which owns the corrupted set together with its budget and authorises every Byzantine action by the guard $k \in F$ of a component; a specification carries no network component at all, and its adversarial transitions are bare nondeterministic choices resolved by the scheduler.
-Leaving those choices unstructured is sound because a specification constrains from above: an unstructured adversary makes the specification more permissive, never less, and trace-distribution inclusion asks only that every behaviour of the implementation be matched by some resolution of the specification's nondeterminism.
 
 Transition System~1 is eight rules over the record \leandecl{PLTS.ABA.SpecState}, and its flip rule is the only probabilistic transition of the system.
 Safety is proved by induction over those eight rules under two invariants, one on the state and one reading the label history.
@@ -317,17 +273,54 @@ See \leanmodule{Leslie2Protocols/ABA/WCCSpec}.
 \blueprintfig{fig-wcc}{The WCC specification instance \leandecl{PLTS.ABA.WCC.specInst} (Transition System 3): the four-outcome coin resolution and the return of the common bit or an adversary-chosen bit.
 The \leandeclnamed{flip}{PLTS.ABA.WCC.Step.flip} guard requires more than $f$ callers counting corrupted, and the branch $val{=}\dagger$ of mass $\failmass$ is a sink for returns (D17), \leandeclnamed{ret}{PLTS.ABA.WCC.Step.ret} having a positive guard.}
 
-\subsection{The GBCA instance refinement}
+\section{The protocol reading}
+\label{sec:aba-protocol-reading}
 
-Graded agreement is carried to implementation level, and the work that carries the direct implementation is done once, on one round instance.
-The relation reads the specification's call slots, returns and corrupted set straight off the implementation state, and certifies the two fields the protocol does not store, $dead$ and $grade$, by receipt patterns; a kill is fired on demand, as a two-step weak burst under a return that needs it, which is why the obligation is discharged by a weak transition rather than by a single step.
-This refinement and those of Section~\ref{sec:aba-gather} are the ones proved against protocol code, and everything downstream of them is transport.
-See \leanmodule{Leslie2Protocols/ABA/GBCASim}.
+What runs is $n$ programs, a network adversary holding the message pools and the corrupted set with its budget, and a coin oracle held at specification level.
+A program reads its own replacement flag and nothing else about corruption: not the corrupted set, not the budget, not another process's status (D23).
+The rendezvous the shared alphabet cannot name are carried by an extended alphabet, hidden to $\tau$ and then discharged by the restriction, so what leaves the outermost frame is the alphabet the ABA specification speaks.
+That much is fixed by the round loop and the specification, and is independent of how graded agreement is implemented, so it is written once, parametrically in the implementation.
+Section~\ref{sec:aba-ladder} instantiates it at the ladder and Section~\ref{sec:aba-gather} at the gather-based construction.
+A system below the meeting point therefore belongs to one implementation or the other, and carries a superscript naming its source: $\abdy{\mathrm{protocol}}(P)$ and $\abdy{\mathrm{composed}}(P)$ after~\cite{ABDY22}, and $\afw{\mathrm{protocol}}(P)$ and $\afw{\mathrm{composed}}(P)$ after~\cite{AFW25}.
+The systems the two share, $\mathrm{hybrid}(P)$ and $\mathrm{spec}(P)$, carry none.
+The Lean development writes each superscript as a namespace.
 
-\input{nodes-min/thm-gbca-inst-refines}
+The control record beneath the reading holds one process's round loop, and no field of it names another process or holds the corrupted set, so locality sits in the state shape and not in the guards alone.
+See \leanmodule{Leslie2Protocols/ABA/Core}, \leanmodule{Leslie2Protocols/ABA/NetAlphabet} and \leanmodule{Leslie2Protocols/ABA/FlatReading}.
 
-\blueprintfig{fig-gbca-sim}{The GBCA instance forward simulation \leandecl{PLTS.ABA.GBCA.implRefines}, along the relation \leandecl{PLTS.ABA.GBCA.instRel}: implementation rows above, specification-instance states below, dashed verticals the relation.
-A return whose bit the specification has not yet excluded is a burst, mapping to the weak step $\mathrm{bindUnset};\mathrm{ret}$ whose killed bit is pinned by the return's own kill certificate; a return whose kill has already happened maps to a single graded specification return.}
+\input{nodes-min/def-aba-core-vocab}
+\input{nodes-min/def-aba-flat-reading}
+
+\section{The ladder implementation}
+\label{sec:aba-ladder}
+
+The first of the two implementations of graded agreement, and the protocol built on it.
+The section runs from the stage a process executes to the inclusion that carries the protocol into its composed reading; what it establishes about the round loop and the ABA-side state is shared with Section~\ref{sec:aba-gather}, and what it establishes about graded agreement is not.
+
+\subsection{The graded-agreement stage}
+
+The first implementation of graded agreement calls no sub-protocol: it is ABDY22's Algorithm~6 transcribed in full, whose messages form a five-level ladder.
+The depth of the ladder is what the grade-$1$ evidence buys (D18): $f{+}1$ $\mathrm{BIND}\,v$ receipts exceed the corruption budget, so an honest sender stands behind every grade-$1$ output, and that sender's own wait condition is the $n{-}f$ $\mathrm{VOTE}\,v$ quorum the binding argument of~\cite{ABDY22} counts.
+The stage record holds one process's graded-agreement stage, and the definition below reads the round as one per-round PLTS, which is the form Theorem~\ref{thm:gbca-inst-refines} is proved against.
+Its state is the pair of the $n$ stage records and the round's own message fabric, so the network is a component of it and not a field, and its guards read that pair through four accessors.
+Definitions~\ref{def:aba-procnet} and~\ref{def:aba-netadv} below are where each of those guards is written against one process record.
+The stage record itself is in \leanmodule{Leslie2Protocols/ABA/GBCAImpl}.
+
+\input{nodes-min/def-aba-gbca-vocab}
+\input{nodes-min/def-aba-gbca-impl}
+
+\blueprintfig{fig-gbca-impl}{The GBCA implementation instance \leandecl{PLTS.ABA.GBCA.implInst}, ABDY22's Algorithm~6 (D18): the per-process stage automaton and, boxed, the authenticated set-based network of D5.}
+
+\subsection{The programs and the protocol}
+
+The flat reading of Section~\ref{sec:aba-protocol-reading} at that implementation is the $n$ programs, each carrying the stage records of every round it has touched, beside the one adversary holding what no process may see.
+
+\input{nodes-min/def-aba-procnet}
+\input{nodes-min/def-aba-netadv}
+\input{nodes-min/def-aba-protocol}
+
+\blueprintfig{fig-protocol}{The protocol \leandecl{PLTS.ABA.ABDY.protocol}: the $n$ programs \leandecl{PLTS.ABA.Net.ABAProcN} under $\mathrm{syncProduct}$, the network adversary \leandecl{PLTS.ABA.Net.netAdv} over the state \leandecl{PLTS.ABA.Net.NetState}, and the coin oracle beside the group.
+The dashed vertical is Theorem~\ref{thm:aba-protocol-composed}, along the Dirac lift of $\mathrm{ProtocolRel}$.}
 
 \subsection{The composed reading}
 
@@ -339,19 +332,52 @@ Graded agreement is a parallel component of that reading, which is what the subs
 See \leanmodule{Leslie2Protocols/ABA/GBCAInstances} and \leanmodule{Leslie2Protocols/ABA/Hybrid}.
 
 \input{nodes-min/def-aba-gbcasub}
-\input{nodes-min/thm-aba-subsim}
 \input{nodes-min/def-aba-composed}
 
 \blueprintfig{fig-composed}{The composed system \leandecl{PLTS.ABA.ABDY.composed} and the substitution: the four components of Definition~\ref{def:aba-composed} inside the two hiding frames of the protocol's pipeline.
 The round instance \leandecl{PLTS.ABA.GSub.sub} is drawn open, the $n$ stage programs of round $r$ beside that round's own message fabric, with the multicast and the delivery hidden inside its own frame.
 The left slot is the refinable one: Theorem~\ref{thm:aba-substitution} replaces the family of round instances by the family of round specifications and leaves the other three components as they stand.}
 
+\subsection{The round loop}
+
+The round loop is the core algorithm of ABA, and it is what calls the other two.
+Its external return is gated on an $n-f$ DECIDED quorum, and that count is what excludes disagreement: two returns of different bits would need two sender sets of size $n-f$, and any two such sets meet in an honest process.
+Its rules are written against one process's own record in Definition~\ref{def:aba-procnet}, and the state below is what those rules move, read across the two components that hold it.
+Both implementations run the same round loop over the same ABA-side state.
+See \leanmodule{Leslie2Protocols/ABA/Core} and \leanmodule{Leslie2Protocols/ABA/ABAState}.
+
+\input{nodes-min/def-aba-core}
+
+\blueprintfig{fig-core-phases}{The round loop \leandecl{PLTS.ABA.Comp.coreProcN}: the per-process five-phase handshake cycle, the fused DECIDED multicast at the $A$-grade coin return (D10), and the DECIDED pools gating $\mathrm{retABA}$.
+A corruption leaves the machine at whatever phase it reaches: every edge drawn carries the guard that the program is unreplaced, so the phase field stands still from the corruption on (D23).}
+
+\subsection{The refinements}
+
+Two refinements close the section.
+The work that carries the ladder into Transition System~2 is done once, on one round instance.
+The relation reads the specification's call slots, returns and corrupted set straight off the implementation state, and certifies the two fields the protocol does not store, $dead$ and $grade$, by receipt patterns; a kill is fired on demand, as a two-step weak burst under a return that needs it, which is why the obligation is discharged by a weak transition rather than by a single step.
+This refinement and those of Section~\ref{sec:aba-gather} are the ones proved against protocol code, and everything downstream of them is transport.
+See \leanmodule{Leslie2Protocols/ABA/GBCASim}.
+
+\input{nodes-min/thm-gbca-inst-refines}
+
+\blueprintfig{fig-gbca-sim}{The GBCA instance forward simulation \leandecl{PLTS.ABA.GBCA.implRefines}, along the relation \leandecl{PLTS.ABA.GBCA.instRel}: implementation rows above, specification-instance states below, dashed verticals the relation.
+A return whose bit the specification has not yet excluded is a burst, mapping to the weak step $\mathrm{bindUnset};\mathrm{ret}$ whose killed bit is pinned by the return's own kill certificate; a return whose kill has already happened maps to a single graded specification return.}
+
+\input{nodes-min/thm-aba-subsim}
 \input{nodes-min/thm-aba-protocol-composed}
+
+\section{The hybrid and the ladder chain}
+
+Replacing the graded-agreement family by its specification leaves $\mathrm{hybrid}(P)$, which is where the two implementations meet.
+Everything from that point up is proved once: the core simulation into the ABA specification, the safety transfer, and the witnesses that the system runs at all.
+The chain closes here for the ladder, and Section~\ref{sec:aba-gather} rejoins it.
 
 \subsection{The substitution}
 
 The graded-agreement family occupies the refinable slot of the composed system, so exchanging it for its specification is one family congruence followed by the precongruences of the pipeline, and no transitivity of simulations enters.
 What the idealisation removes is the round's message fabric and every Byzantine power over it; the DECIDED pools, the corrupted set with the budget $|F| < f$ as the guard on the $\mathrm{fail}$ row, and the authorisation of every Byzantine drive are outside the exchanged component and survive unchanged.
+The system that results, $\mathrm{hybrid}(P)$, is where the two implementations meet: both reach it, and every step above it is proved once and shared.
 See \leanmodule{Leslie2Protocols/Framework/FamilySim} and \leanmodule{Leslie2Protocols/ABA/Hybrid}.
 
 \input{nodes-min/thm-gbca-family-refines}
@@ -360,7 +386,7 @@ See \leanmodule{Leslie2Protocols/Framework/FamilySim} and \leanmodule{Leslie2Pro
 
 \subsection{From the hybrid to the ABA specification}
 
-The proof is one hand-built simulation, run in the hybrid's own coordinates.
+The refinement of $\mathrm{hybrid}(P)$ into the specification is one hand-built simulation, run in the hybrid's own coordinates.
 The round specifications, the $n$ round loops, the ABA-side network and the coin oracle are each a component of the system, and each is a component of the state the simulation relation is defined on.
 The simulation's abstract twin is lazy and two-phase (D16), deferring the decision to a single weak step under the first visible return, which is what a forward simulation permits and a strong one does not.
 See \leanmodule{Leslie2Protocols/ABA/ABAState} and \leanmodule{Leslie2Protocols/ABA/CoreSim}.
@@ -378,8 +404,7 @@ Three steps separate the protocol from the ABA specification:
   \;\overset{\text{(2)}}{\sqsubseteq}\; \mathrm{hybrid}(P)
   \;\overset{\text{(3)}}{\sqsubseteq}\; \mathrm{spec}(P),
 \]
-where (1) is the composition inclusion of Theorem~\ref{thm:aba-protocol-composed}, along the Dirac lift of $\mathrm{ProtocolRel}(P)$; (2) the substitution of Theorem~\ref{thm:aba-substitution}; and (3) the refinement of Theorem~\ref{thm:aba-hybrid-spec}, whose proof is the hand-built core simulation, read in the coordinates of $\mathrm{hybrid}(P)$.
-Safety then transfers by Theorem~\ref{thm:trace-support}, with no hypothesis on the trace beyond positive probability, and both properties are stated on the returns of never-corrupted processes.
+where (1) is the composition inclusion of Theorem~\ref{thm:aba-protocol-composed}, along the Dirac lift of $\mathrm{ProtocolRel}(P)$; (2) the substitution of Theorem~\ref{thm:aba-substitution}; and (3) the refinement of Theorem~\ref{thm:aba-hybrid-spec}, whose proof is the hand-built core simulation, read in the coordinates of $\mathrm{hybrid}(P)$. Safety then transfers by Theorem~\ref{thm:trace-support}, with no hypothesis on the trace beyond positive probability, and both properties are stated on the returns of never-corrupted processes.
 The chain is assembled in \leanmodule{Leslie2Protocols/ABA/Results}.
 
 \input{nodes-min/thm-aba-protocol}
@@ -390,19 +415,18 @@ The chain is assembled in \leanmodule{Leslie2Protocols/ABA/Results}.
 A refinement statement is compatible with a system that does nothing.
 The chain is therefore accompanied by machine-checked witnesses that the hybrid of Definition~\ref{def:aba-hybrid}, the system Theorem~\ref{thm:aba-hybrid-spec} is proved of, executes and reaches a return at $n = 4$ and $f = 1$, on a connected run of positive probability that exercises the one probabilistic transition on the way, and that the $\mathrm{fail}$ label is live in it rather than merely declared.
 Membership of a decision trace in the achievable trace distributions of the protocol is not established; the witnesses are about that system alone.
+Both chains pass through that system, so the witnesses serve both.
 See \leanmodule{Leslie2Protocols/ABA/NonVacuity}.
 
 \input{nodes-min/def-aba-nonvacuity}
 
-\subsection{A second implementation of graded agreement}
+\section{The gather-based implementation}
 \label{sec:aba-gather}
 
 Transition System~2 has a second verified implementation.
 Attiya, Flam and Welch~\cite{AFW25} build graded agreement from two calls to a \emph{gather} sub-protocol and local counting, and the source blueprint carries the matching material: a gather specification (Transition System~4), a gather implementation over reliable broadcast (its Algorithm~4, from~\cite{AFW25}), and Bracha's reliable broadcast (Transition System~6 and its Algorithm~6, from~\cite{Bra87}).
 This section carries that construction to implementation level in full --- the two gather instances and, beneath them, the $4n$ Bracha instances --- and to the same specification: the round interface $\mathrm{callG}/\mathrm{retG}$, Transition System~2, and every statement downstream of it are those of the sections above, so the two implementations differ only in the system at the bottom of the chain.
 The per-round work is three substitutions in sequence, each replacing one layer of sub-protocol by its specification; at the protocol shape the three stages land on $\mathrm{hybrid}(P)$, and the chain continues along the shared links.
-Both readings of Section~\ref{sec:aba-gather} are carried: the composed one, the gather-based counterpart of Definition~\ref{def:aba-composed}, and beneath it the flat one, the second instantiation of Definition~\ref{def:aba-flat-reading}.
-A system of this section carries the name of its counterpart in the sections above under the superscript $\mathsf{AFW}$, so $\afw{\mathrm{composed}}(P)$ is to the gather-based implementation what $\abdy{\mathrm{composed}}(P)$ is to the ladder.
 The Lean files are \leanmodule{Leslie2Protocols/ABA/Fabric} through \leanmodule{Leslie2Protocols/ABA/GatherChain}, mapped file by file in the ABA library's own guide.
 
 \subsection{Reliable broadcast}
@@ -444,7 +468,7 @@ See \leanmodule{Leslie2Protocols/ABA/GBCAPair}, \leanmodule{Leslie2Protocols/ABA
 \input{nodes-min/thm-gbca-tier-refines}
 \input{nodes-min/thm-gbca-gather-refines}
 
-\subsection{The gather-based protocol}
+\section{The gather-based chain}
 
 Beneath the composed reading is the protocol that runs.
 It is Definition~\ref{def:aba-flat-reading} a second time, at the gather-based implementation: the same round loop, the same DECIDED pools, the same coin handshake, the same corruption discipline and the same pipeline, over a stage side that is the two gather instances and the $4n$ Bracha instances beneath them.
@@ -455,13 +479,15 @@ Assembling the composed state from the flat one undoes both, which is what the s
 See \leanmodule{Leslie2Protocols/ABA/GatherFlat} and \leanmodule{Leslie2Protocols/ABA/GatherFlatSim}.
 
 \input{nodes-min/def-aba-afw-protocol}
-\input{nodes-min/thm-aba-afw-protocol-composed}
-
-\subsection{The gather-based chain}
 
 At the protocol shape, the gather-based rounds occupy the same refinable slot the direct rounds do: each reading is lifted over the extended alphabet along the label pullback of Definition~\ref{def:aba-gbcasub}, gathered into the round-indexed family, and put through the composed reading's pipeline.
 The three substitutions inside the round become three stages between protocol-shaped systems, the third landing on $\mathrm{hybrid}(P)$ itself, and from there the chain is the shared one: Theorem~\ref{thm:aba-hybrid-spec} and the safety transfer.
-One specification, two verified implementations, one meeting point at $\mathrm{hybrid}(P)$.
+One specification, two verified implementations, one meeting point at $\mathrm{hybrid}(P)$. See \leanmodule{Leslie2Protocols/ABA/GatherChain}.
+
+\input{nodes-min/def-aba-afw-sides}
+\input{nodes-min/thm-aba-afw-protocol-composed}
+\input{nodes-min/thm-aba-afw-substitution}
+
 Below that point the chain has one step more than the direct one, the substitution splitting into its three stages:
 \[
   \afw{\mathrm{protocol}}(P)
@@ -472,10 +498,7 @@ Below that point the chain has one step more than the direct one, the substituti
   \;\sqsubseteq\; \mathrm{spec}(P).
 \]
 The first step is Theorem~\ref{thm:aba-afw-protocol-composed}, the middle three are the stages of Theorem~\ref{thm:aba-afw-substitution}, and the last is Theorem~\ref{thm:aba-hybrid-spec}, shared with the direct chain.
-See \leanmodule{Leslie2Protocols/ABA/GatherChain}.
 
-\input{nodes-min/def-aba-afw-sides}
-\input{nodes-min/thm-aba-afw-substitution}
 \input{nodes-min/thm-aba-afw-main}
 
 \begin{thebibliography}{LeslieBP}
@@ -498,8 +521,7 @@ Asynchronous Byzantine agreement protocols.
 \bibitem[LeslieBP]{LeslieBP}
 Gaspard Reghem.
 \emph{Verifying ABA with Leslie}.
-Project blueprint, 2026.
-The source document whose Transition Systems and Algorithms the encodings of this section follow.
+Project blueprint, 2026. The source document whose Transition Systems and Algorithms the encodings of this section follow.
 
 \bibitem[Segala95]{Segala95}
 Roberto Segala.

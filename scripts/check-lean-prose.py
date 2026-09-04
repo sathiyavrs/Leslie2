@@ -25,6 +25,9 @@ NOTATION = {
     "SL", "BD", "VT", "IN", "EC", "DEC", "Valid",
     # message levels of the graded-agreement ladder, and the source's own names
     "INPUT", "ECHO", "VOTE", "BIND", "SEAL", "DECIDED", "echo4", "echo5",
+    # Bracha's first message level, and the gather instances of the two-gather
+    # pseudocode, each naming a line of an algorithm rather than a rule
+    "INIT", "G",
     # booleans, positions and generic mathematical words
     "true", "false", "id", "inl", "inr", "pre", "post", "idle", "map", "swap",
     # parameters
@@ -32,6 +35,9 @@ NOTATION = {
     # the one label the encoding deliberately omits (deviation D4), so it names
     # nothing in Lean by design
     "guess",
+    # pseudocode for a sub-protocol return, as in BRB_k.return(m'), which the
+    # encoding reads as a receipt quorum rather than as a rule
+    "return",
 }
 
 DECL = re.compile(

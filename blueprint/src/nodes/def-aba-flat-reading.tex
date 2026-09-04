@@ -10,7 +10,7 @@
     \mathrm{flat} \;=\;
       \mathrm{abstract}_{\mathrm{hiddenAPI}}\Bigl(
         \mathrm{relabel}\bigl(\mathrm{abstract}_{\mathrm{NetEvt}}(
-          (\mathrm{syncProduct}_{j \in [n]}\ \mathrm{prog}_j) \parallel (\mathrm{adv} \parallel \mathrm{oracle}))\bigr)\Bigr),
+          (\mathrm{syncProduct}_{j \in [n]}\ \mathrm{flatProcN}(j)) \parallel (\mathrm{flatNetAdv} \parallel \mathrm{wccLiftP}))\bigr)\Bigr),
   \]
   and the lemmas that read a row off its label.
   Which rows belong to the implementation is settled by the label: a program's row is the implementation's business exactly when its label is one of $\mathrm{stageOwn}(j)$ --- the graded-agreement call and return at $j$, $j$'s own stage multicast, a delivery addressed to $j$, and $j$'s own call against an already-called record.
