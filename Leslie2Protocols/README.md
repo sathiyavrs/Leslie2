@@ -11,7 +11,8 @@ from the protocol as it runs down to a small specification, by probabilistic for
 simulation, with two verified implementations of its graded-agreement sub-protocol —
 one direct, one built over gather and reliable broadcast. Each is carried from the
 protocol as it runs, through one flat reading written parametrically in the
-implementation and instantiated twice. 43 files, and its own file guide in
+implementation and instantiated twice. 43 files in nine content-themed
+sub-folders, given in dependency order in its own file guide,
 [`ABA/README.md`](ABA/README.md).
 
 ## `Framework/`

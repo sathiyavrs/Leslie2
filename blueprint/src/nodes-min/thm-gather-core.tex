@@ -1,12 +1,12 @@
 \begin{theorem}[Gather core refinement]
   \label{thm:gather-core}
-  \lean{PLTS.ABA.Gather.MidInv}\lean{PLTS.ABA.Gather.CoreRel}\lean{PLTS.ABA.Gather.gatherCore}\leanok
-  \uses{def:aba-gather-mid, def:aba-gather-spec}
+  \lean{PLTS.ABA.Gather.IdealInv}\lean{PLTS.ABA.Gather.CoreRel}\lean{PLTS.ABA.Gather.gatherCore}\leanok
+  \uses{def:aba-gather-ideal, def:aba-gather-spec}
   The gather implementation over broadcast specifications is forward-simulated by Transition System~4: \leandecl{PLTS.ABA.Gather.gatherCore}.
   The family the abstract side binds is read off the committed bind payloads of $f{+}1$ honest members of the returning quorum, and a return is answered by one weak burst that commits the abstract entries, binds the family where it is unbound, and returns.
 \end{theorem}
 
 \begin{proof}\leanok
-  \uses{def:aba-gather-mid, def:aba-gather-spec, def:forwardsim}
+  \uses{def:aba-gather-ideal, def:aba-gather-spec, def:forwardsim}
   See the Lean proof of \leandecl{PLTS.ABA.Gather.gatherCore}.
 \end{proof}

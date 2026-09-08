@@ -4,10 +4,10 @@ Machine-checked safety (Validity ∧ Agreement) for randomized asynchronous bina
 agreement, following the "Verifying ABA with Leslie" blueprint. The headlines of the
 protocol chain are in `Results.lean` — `ABDY.main`, `ABDY.refines`, `ABDY.chainSim`,
 `ABDY.protocol_safe`, `ABDY.protocol_traces`, `ABDY.composed_safe`, and the shared
-`hybrid_spec` — and those of the gather-based chain in `GatherFlatSim.lean` — `AFW.main`,
+`hybrid_spec` — and those of the gather-based chain in `AFW/FlatSim.lean` — `AFW.main`,
 `AFW.refines`, `AFW.chainSim`, `AFW.protocol_composed` — beside the composed-level
 `AFW.composed_refines`, `AFW.composed_safe`, `AFW.chainSimComposed` and
-`GBCA.gatherRoundRefines` in `GatherChain.lean`, all axiom-clean and guarded.
+`GBCA.gatherRoundRefines` in `AFW/Chain.lean`, all axiom-clean and guarded.
 
 The architecture in two lines, all of it in the protocol's own coordinates:
 
@@ -34,9 +34,9 @@ chain.
 Both flat readings are one construction. What a protocol reading fixes — the round
 loop, the DECIDED pools, the coin handshake, corruption, the network adversary and
 the composition pipeline — is settled by the round interface and the specification,
-so `FlatReading.lean` writes it once, parametric in the stage message type, the
-per-process per-round stage record and the stage-side rows. `Protocol.lean` supplies
-the ladder's; `GatherFlat.lean` supplies the gather-based one.
+so `Reading/Flat.lean` writes it once, parametric in the stage message type, the
+per-process per-round stage record and the stage-side rows. `ABDY/Protocol.lean` supplies
+the ladder's; `AFW/Flat.lean` supplies the gather-based one.
 
 - `ABDY.protocol` — the ladder protocol as it runs: `n` programs beside the network
   adversary, which owns the message pools and the corrupted set, and the coin oracle,
@@ -93,67 +93,117 @@ registry.
 ## The files
 
 Each file's module docstring is the account of record for it; the table says only what
-the file is. The order is the dependency order.
+the file is. The folders are given in dependency order, and no folder imports one
+below it: `Vocabulary/` is written over by everything, `AFW/` writes over
+everything. Within a folder the files are alphabetical.
+
+
+**`ABA/Vocabulary/`** — the records and alphabets every reading is written over.
 
 | file | lines | what it is |
 |---|---|---|
-| `Params.lean` | 125 | The parameters `P` — `n`, `f` with `n > 3f`, and the coin distribution `wccPMF` with its ε/δ bounds. |
-| `Labels.lean` | 141 | The shared label alphabet `Lab n`: the visible API, the hidden sub-protocol handshakes, `τ`. |
-| `Spec.lean` | 235 | **The top-level ABA specification**, the system all safety is measured against. Eight rules over `SpecState`, whose control mode carries the flip (D21) and two of which are the corrupted interface (D23). The decision is gated on the `f + 1` support guard `SuppOK` alone (D13). |
-| `WCCSpec.lean` | 163 | The weak common coin specification, per round, and the coin value domain `TVal`. Held at specification level by design. |
-| `GBCASpec.lean` | 268 | The graded binding crusader agreement specification, per round. Binding is negative (D19). |
-| `SpecSafety.lean` | 717 | `spec_safe`: every positive-mass trace of `ABA.spec` is valid and agreeing. The trace predicates live here. |
-| `GBCASafety.lean` | 590 | Binding, graded agreement and Validity's safety half for the GBCA specification instance. |
-| `GBCAImpl.lean` | 748 | **The GBCA implementation**, ABDY22's Algorithm 6 in full (D18). Its state is the stage records beside the round's fabric. |
-| `GBCASim.lean` | 1808 | The per-instance refinement `implRefines`, by kill-on-demand: `dead` carried as a receipt-pattern certificate; and the broadcast compatibility of its relation with the `fail` act (`instRel_corrupt`), which the family lifting consumes. |
-| `Core.lean` | 249 | **The ABA round loop**, per process and nothing else: the phase machine, the control record, the round-loop record. |
-| `NetAlphabet.lean` | 206 | The rendezvous alphabet `NLabP n M` a flat reading speaks, parametric in the stage message type, with the label pullback the coin oracle is read along. |
-| `Components.lean` | 839 | The extended alphabet `NLab n` at the ladder's messages, the coin oracle read along its label pullback, the round loop of one process, and the ABA-side network — the pieces the two compositions are built from. |
-| `FlatReading.lean` | 1193 | **The flat reading of a protocol**, parametric in the graded-agreement implementation: the shared rows of a program and of the network adversary, the pipeline that composes them beside the coin oracle, and the inversion lemmas that read a row off its label. |
-| `ABAState.lean` | 380 | The ABA-side state as one object: the round-loop records beside the DECIDED network, with the accessors the invariant is stated in. |
-| `Protocol.lean` | 679 | **The ladder protocol as it runs**, and the subject of the protocol chain: the flat reading at ABDY22's Algorithm 6 — its fourteen stage-side rows, the payload the call multicasts, and the inversions they answer. |
-| `GBCAInstances.lean` | 1635 | **The round's graded-agreement instance** and the licence to replace it, `subSim`. |
-| `Hybrid.lean` | 739 | **`ABDY.composed`**, **`ABDY.substSim`**: the same protocol read as four components, one round instance per round retained at every moment, and that graded-agreement component then replaced by its specification under the four congruences. |
-| `CoreSimRel.lean` | 674 | The core simulation's relation: the lazy abstract twin `Abs` and the concrete invariant `Inv`. |
-| `CoreSimInv.lean` | 3947 | Step inversion for `hybrid`, then preservation of `Inv` across every row. The bulk of the proof text. |
-| `CoreSimAbs.lean` | 335 | `Abs` preservation for the stutter rows, and the assembly `Inv.step`. |
-| `CoreSimBurst.lean` | 53 | The abstract-twin burst kit: `SpecStep.decide` as a τ-burst (`decide_step`), and a burst closed by a visible step (`weakStep_of_burst_then_step`). |
-| `CoreSim.lean` | 425 | **`coreSim`**: the simulation proof itself, one row per concrete step class. |
-| `ProtocolSim.lean` | 1050 | **`ABDY.protocolSim`**, **`ABDY.protocol_composed`**: the protocol carried into the composed reading along `ABDY.ProtocolRel`, whose five unguarded conjuncts determine the composed state. |
-| `Results.lean` | 215 | The deliverables of the protocol chain, gathered so every citable statement is in one file. Twelve `#guard_msgs` axiom firewalls. |
-| `NonVacuity.lean` | 629 | A concrete 21-step run of `hybrid P4` to a `retABA` decision, so the simulation about it is not vacuous. |
-| `Fabric.lean` | 407 | The two-box vocabulary of the gather-based development: message fabric (D5) beside `n` process boxes, with the multicast/delivery/corrupt operations and the quorum-intersection kit, stated once and shared by the three sub-protocol encodings. |
-| `BRBSpec.lean` | 160 | The reliable-broadcast specification, per leader (blueprint TS 6, safety-only): the input/committed-value split with the guarded commit (D27). |
-| `BRBImpl.lean` | 154 | Bracha's ladder (blueprint Algorithm 6) over the two-box state. |
-| `BRBSim.lean` | 965 | `brbRefines`: the Bracha instance refines TS 6, the committed value certified by an ECHO receipt quorum, the commit fired on demand. Exports the chain-data answers the gather files replay. |
-| `GatherSpec.lean` | 223 | The gather specification (blueprint TS 4): call/commit split (D26) and the write-once core family (D25). |
-| `GatherMid.lean` | 256 | The gather implementation over `2n` BRB specification coordinates (blueprint Algorithm 4, from AFW25): approval as commitment, the ECHO/VOTE ladder over entry sets, BIND by broadcast (D28). |
-| `GatherSim.lean` | 1443 | `gatherCore`: the gather-over-BRB instance refines TS 4. The core family is read off `f + 1` honest quorum members' committed BIND payloads; the return burst commits, binds and returns in one weak transition. |
-| `GatherLow.lean` | 187 | The same table with each BRB coordinate a Bracha instance; delivery as a receipt-quorum predicate (D28). |
-| `GatherLowSim.lean` | 652 | `gatherLow`: the broadcast substitution inside gather, per coordinate, lagging commits fired as τ-chains. |
-| `GBCAPair.lean` | 438 | **The two-gather round** (AFW25 Algorithm 4 at R = 1, no approximate agreement, D24) over two gather specifications, with the candidate/grade counting kit in member form. |
-| `GBCAPairSim.lean` | 1067 | `pairRefines`: the two-gather round refines the GBCA specification. Exclusion and grade certified on the core families; kill-on-demand. |
-| `GBCAIdeal.lean` | 97 | The round over gather-over-BRB components. |
-| `GBCAIdealSim.lean` | 197 | `idealRefines`: the gather substitution inside the round, componentwise. |
-| `GBCALow.lean` | 99 | **The gather-based GBCA implementation**: the round over gather-over-Bracha components — two gather ladders, `4n` Bracha instances beneath. |
-| `GBCALowSim.lean` | 207 | `lowRefines`: the broadcast substitution inside the round, componentwise. |
-| `GatherChain.lean` | 486 | **The gather-based chain**: the round composite `gatherImplRefines`, the lifted sides `AFW.composed ⊑ AFW.hybrid1 ⊑ AFW.hybrid2 ⊑ hybrid`, and the composed-level headlines `AFW.composed_refines`, `AFW.composed_safe`, `AFW.chainSimComposed`. Six axiom firewalls. |
-| `GatherFlat.lean` | 599 | **The gather-based protocol as it runs**: the flat reading at AFW25's two-gather construction — the tagged message type collapsing a round's `4n + 2` fabrics into one pool family, the process-major stage record, and the 23 stage-side rows. |
-| `GatherFlatSim.lean` | 2894 | **`AFW.protocolSim`**, **`AFW.main`**: the gather-based protocol carried into `AFW.composed` along a relation that computes the composed state from the flat one, and the headlines `AFW.refines`, `AFW.main`, `AFW.chainSim` it yields. Five axiom firewalls. |
+| `Vocabulary/Fabric.lean` | 407 | The two-box vocabulary of the gather-based development: message fabric (D5) beside `n` process boxes, with the multicast/delivery/corrupt operations and the quorum-intersection kit, stated once and shared by the three sub-protocol encodings. |
+| `Vocabulary/Labels.lean` | 141 | The shared label alphabet `Lab n`: the visible API, the hidden sub-protocol handshakes, `τ`. |
+| `Vocabulary/Params.lean` | 125 | The parameters `P` — `n`, `f` with `n > 3f`, and the coin distribution `wccPMF` with its ε/δ bounds. |
+| `Vocabulary/RoundLoop.lean` | 249 | **The ABA round loop**, per process and nothing else: the phase machine, the control record, the round-loop record. |
 
-The pieces both compositions are built from are in `Components.lean`, over the alphabet of
-`NetAlphabet.lean`. `Protocol.lean` and `GBCAInstances.lean` each import it and neither
+**`ABA/Spec/`** — what both implementations are measured against.
+
+| file | lines | what it is |
+|---|---|---|
+| `Spec/ABA.lean` | 235 | **The top-level ABA specification**, the system all safety is measured against. Eight rules over `SpecState`, whose control mode carries the flip (D21) and two of which are the corrupted interface (D23). The decision is gated on the `f + 1` support guard `SuppOK` alone (D13). |
+| `Spec/ABASafety.lean` | 717 | `spec_safe`: every positive-mass trace of `ABA.spec` is valid and agreeing. The trace predicates live here. |
+| `Spec/GBCA.lean` | 275 | The graded binding crusader agreement specification, per round. Binding is negative (D19). |
+| `Spec/GBCASafety.lean` | 590 | Binding, graded agreement and Validity's safety half for the GBCA specification instance. |
+| `Spec/WCC.lean` | 163 | The weak common coin specification, per round, and the coin value domain `TVal`. Held at specification level by design. |
+
+**`ABA/Reading/`** — the flat reading, parametric in the graded-agreement implementation.
+
+| file | lines | what it is |
+|---|---|---|
+| `Reading/Alphabet.lean` | 206 | The rendezvous alphabet `NLabP n M` a flat reading speaks, parametric in the stage message type, with the label pullback the coin oracle is read along. |
+| `Reading/Flat.lean` | 1193 | **The flat reading of a protocol**, parametric in the graded-agreement implementation: the shared rows of a program and of the network adversary, the pipeline that composes them beside the coin oracle, and the inversion lemmas that read a row off its label. |
+
+**`ABA/ABDY/`** — the ladder implementation of ABDY22, and the composed reading over it.
+
+| file | lines | what it is |
+|---|---|---|
+| `ABDY/ABAState.lean` | 380 | The ABA-side state as one object: the round-loop records beside the DECIDED network, with the accessors the invariant is stated in. |
+| `ABDY/Components.lean` | 839 | The extended alphabet `NLab n` at the ladder's messages, the coin oracle read along its label pullback, the round loop of one process, and the ABA-side network — the pieces the two compositions are built from. |
+| `ABDY/Hybrid.lean` | 739 | **`ABDY.composed`**, **`ABDY.substSim`**: the same protocol read as four components, one round instance per round retained at every moment, and that graded-agreement component then replaced by its specification under the four congruences. |
+| `ABDY/Instances.lean` | 1628 | **The round's graded-agreement instance** and the licence to replace it, `subSim`. |
+| `ABDY/Ladder.lean` | 748 | **The GBCA implementation**, ABDY22's Algorithm 6 in full (D18). Its state is the stage records beside the round's fabric. |
+| `ABDY/LadderSim.lean` | 1808 | The per-instance refinement `implRefines`, by kill-on-demand: `dead` carried as a receipt-pattern certificate; and the broadcast compatibility of its relation with the `fail` act (`instRel_corrupt`), which the family lifting consumes. |
+| `ABDY/Protocol.lean` | 679 | **The ladder protocol as it runs**, and the subject of the protocol chain: the flat reading at ABDY22's Algorithm 6 — its fourteen stage-side rows, the payload the call multicasts, and the inversions they answer. |
+| `ABDY/ProtocolSim.lean` | 1050 | **`ABDY.protocolSim`**, **`ABDY.protocol_composed`**: the protocol carried into the composed reading along `ABDY.ProtocolRel`, whose five unguarded conjuncts determine the composed state. |
+
+**`ABA/Core/`** — the simulation of the hybrid by the ABA specification, and its witnesses.
+
+| file | lines | what it is |
+|---|---|---|
+| `Core/Abs.lean` | 335 | `Abs` preservation for the stutter rows, and the assembly `Inv.step`. |
+| `Core/Burst.lean` | 53 | The abstract-twin burst kit: `SpecStep.decide` as a τ-burst (`decide_step`), and a burst closed by a visible step (`weakStep_of_burst_then_step`). |
+| `Core/Inv.lean` | 3947 | Step inversion for `hybrid`, then preservation of `Inv` across every row. The bulk of the proof text. |
+| `Core/NonVacuity.lean` | 629 | A concrete 21-step run of `hybrid P4` to a `retABA` decision, so the simulation about it is not vacuous. |
+| `Core/Rel.lean` | 674 | The core simulation's relation: the lazy abstract twin `Abs` and the concrete invariant `Inv`. |
+| `Core/Sim.lean` | 425 | **`coreSim`**: the simulation proof itself, one row per concrete step class. |
+
+**`ABA/`** — the headlines.
+
+| file | lines | what it is |
+|---|---|---|
+| `Results.lean` | 215 | The deliverables of the protocol chain, gathered so every citable statement is in one file. Twelve `#guard_msgs` axiom firewalls. |
+
+**`ABA/Broadcast/`** — Bracha's reliable broadcast.
+
+| file | lines | what it is |
+|---|---|---|
+| `Broadcast/Impl.lean` | 154 | Bracha's ladder (blueprint Algorithm 6) over the two-box state. |
+| `Broadcast/Sim.lean` | 958 | `brbRefines`: the Bracha instance refines TS 6, the committed value certified by an ECHO receipt quorum, the commit fired on demand. Exports the chain-data answers the gather files replay. |
+| `Broadcast/Spec.lean` | 160 | The reliable-broadcast specification, per leader (blueprint TS 6, safety-only): the input/committed-value split with the guarded commit (D27). |
+
+**`ABA/Gather/`** — gather over reliable broadcast.
+
+| file | lines | what it is |
+|---|---|---|
+| `Gather/Low.lean` | 187 | The same table with each BRB coordinate a Bracha instance; delivery as a receipt-quorum predicate (D28). |
+| `Gather/LowSim.lean` | 645 | `gatherLow`: the broadcast substitution inside gather, per coordinate, lagging commits fired as τ-chains. |
+| `Gather/Ideal.lean` | 256 | The gather implementation over `2n` BRB specification coordinates (blueprint Algorithm 4, from AFW25): approval as commitment, the ECHO/VOTE ladder over entry sets, BIND by broadcast (D28). |
+| `Gather/IdealSim.lean` | 1436 | `gatherCore`: the gather-over-BRB instance refines TS 4. The core family is read off `f + 1` honest quorum members' committed BIND payloads; the return burst commits, binds and returns in one weak transition. |
+| `Gather/Spec.lean` | 223 | The gather specification (blueprint TS 4): call/commit split (D26) and the write-once core family (D25). |
+
+**`ABA/Round/`** — the two-gather round and the three tiers that carry it.
+
+| file | lines | what it is |
+|---|---|---|
+| `Round/Ideal.lean` | 97 | The round over gather-over-BRB components. |
+| `Round/IdealSim.lean` | 176 | `idealRefines`: the gather substitution inside the round, componentwise. |
+| `Round/Low.lean` | 100 | **The gather-based GBCA implementation**: the round over gather-over-Bracha components — two gather ladders, `4n` Bracha instances beneath. |
+| `Round/LowSim.lean` | 186 | `lowRefines`: the broadcast substitution inside the round, componentwise. |
+| `Round/Pair.lean` | 440 | **The two-gather round** (AFW25 Algorithm 4 at R = 1, no approximate agreement, D24) over two gather specifications, with the candidate/grade counting kit in member form. |
+| `Round/PairSim.lean` | 1060 | `pairRefines`: the two-gather round refines the GBCA specification. Exclusion and grade certified on the core families; kill-on-demand. |
+
+**`ABA/AFW/`** — the gather-based chain, and the protocol beneath it.
+
+| file | lines | what it is |
+|---|---|---|
+| `AFW/Chain.lean` | 486 | **The gather-based chain**: the round composite `gatherImplRefines`, the lifted sides `AFW.composed ⊑ AFW.hybrid1 ⊑ AFW.hybrid2 ⊑ hybrid`, and the composed-level headlines `AFW.composed_refines`, `AFW.composed_safe`, `AFW.chainSimComposed`. Six axiom firewalls. |
+| `AFW/Flat.lean` | 599 | **The gather-based protocol as it runs**: the flat reading at AFW25's two-gather construction — the tagged message type collapsing a round's `4n + 2` fabrics into one pool family, the process-major stage record, and the 23 stage-side rows. |
+| `AFW/FlatSim.lean` | 2894 | **`AFW.protocolSim`**, **`AFW.main`**: the gather-based protocol carried into `AFW.composed` along a relation that computes the composed state from the flat one, and the headlines `AFW.refines`, `AFW.main`, `AFW.chainSim` it yields. Five axiom firewalls. |
+
+The pieces both compositions are built from are in `ABDY/Components.lean`, over the alphabet of
+`Reading/Alphabet.lean`. `ABDY/Protocol.lean` and `ABDY/Instances.lean` each import it and neither
 imports the other, so the two readings of the protocol are assembled independently over one
-set of components. `FlatReading.lean` sits beside `Components.lean` over the same alphabet
+set of components. `Reading/Flat.lean` sits beside `ABDY/Components.lean` over the same alphabet
 and imports no implementation, which is what lets both flat readings instantiate it. The specification side —
-`GBCAInstances.lean`, `Hybrid.lean` and the core simulation above them — never imports
-`Protocol.lean`; the protocol enters only at `ProtocolSim.lean`, which is where the two
+`ABDY/Instances.lean`, `ABDY/Hybrid.lean` and the core simulation above them — never imports
+`ABDY/Protocol.lean`; the protocol enters only at `ABDY/ProtocolSim.lean`, which is where the two
 readings meet, and `Results.lean` reaches it through that file.
 
-The gather-based files form their own stack over `Fabric.lean` and the unchanged
-`GBCASpec.lean`, meeting the rest of the development in three places: `GBCAPair.lean`
-reads the shared round alphabet, `GatherFlat.lean` instantiates `FlatReading.lean`, and
-`GatherChain.lean` imports `Results.lean` for the shared links from `hybrid` up. Nothing
+The gather-based files form their own stack over `Vocabulary/Fabric.lean` and the unchanged
+`Spec/GBCA.lean`, meeting the rest of the development in three places: `Round/Pair.lean`
+reads the shared round alphabet, `AFW/Flat.lean` instantiates `Reading/Flat.lean`, and
+`AFW/Chain.lean` imports `Results.lean` for the shared links from `hybrid` up. Nothing
 in the protocol chain imports a gather-based file, so either chain reads standalone.
 
 ## Suggested first read
@@ -193,7 +243,7 @@ pseudocode and the proof bodies).
 - **Budget as an assumption throughout** (not pursued): the alternative shape is an
   unguarded `fail` in every system, `|F| ≤ f` relativized out of the invariants, and every
   headline conditional on a trace-level budget predicate. It is unnecessary here: in
-  `Protocol.lean` the budget is a component guard on the one box that owns the corrupted
+  `ABDY/Protocol.lean` the budget is a component guard on the one box that owns the corrupted
   set, so `ABDY.protocol_safe` and `ABDY.protocol_traces` need no hypothesis on the trace.
 - **`ValidityTrace` witness strengthening**: the current witness clause accepts any
   preceding `callABA id' b`; the proof yields a stronger ghost-backed witness. Care: while

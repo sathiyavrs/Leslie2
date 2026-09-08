@@ -1,9 +1,9 @@
 # Design — the core simulation `hybrid ⊑ ABA.spec` (`coreSim`)
 
-Companion design document to the Lean proof in `ABA/CoreSimRel.lean` (relation +
-invariant), `ABA/CoreSimInv.lean` (step inversion and invariant preservation),
-`ABA/CoreSimAbs.lean` (the stutter rows and the assembly),
-`ABA/CoreSimBurst.lean` (abstract τ-burst kit), and `ABA/CoreSim.lean`
+Companion design document to the Lean proof in `ABA/Core/Rel.lean` (relation +
+invariant), `ABA/Core/Inv.lean` (step inversion and invariant preservation),
+`ABA/Core/Abs.lean` (the stutter rows and the assembly),
+`ABA/Core/Burst.lean` (abstract τ-burst kit), and `ABA/Core/Sim.lean`
 (the per-row simulation proof). It is the narrative account of that proof: what the
 relation is, why it has the shape it has, and how each class of concrete step is answered.
 Each Lean file's module docstring is the account of record for its own contents. The
@@ -22,16 +22,16 @@ target    : ProbabilisticForwardSimulation hybrid (ABA.spec P) coreRel
 The four components are the round specifications, the `n` round loops, the ABA-side
 network and the coin oracle, and they speak the extended alphabet of the protocol;
 the rendezvous labels are hidden, the result is read back over `Lab n`, and
-the sub-protocol API is hidden in turn (`Hybrid.lean`). Corrupted-process
+the sub-protocol API is hidden in turn (`ABDY/Hybrid.lean`). Corrupted-process
 handshakes are covered by the Byzantine drives, authorised by `k ∈ F` at `aNet`
-(D11). See `Core.lean`'s module docstring for the per-process algorithm and
+(D11). See `Vocabulary/RoundLoop.lean`'s module docstring for the per-process algorithm and
 deviations D9–D12′ (0-based rounds, the fused DECIDED-send in `retWPub`/`stepRound`,
 per-process DECIDED pools — see § D12′ below).
 
 Concrete state: `(g, (C, (A, w)))` with `g : ℕ → GBCA.SpecState`,
 `C : ∀ j, CoreRec`, `A : ANetState`, `w : ℕ → WCC.SpecState`. The two ABA-side
 components are read as one object `c : ABAState := (C, A)` through the accessors of
-`ABAState.lean` — `procs`, `decidedSent`, `decidedRecv`, `F` — and every clause below
+`ABDY/ABAState.lean` — `procs`, `decidedSent`, `decidedRecv`, `F` — and every clause below
 names them, so the relation reads the hybrid state with no change of system.
 Abstract state: `a : ABA.SpecState`.
 
@@ -46,7 +46,7 @@ enabled throughout, and every concrete coin-flip row couples to a stutter. And i
 decides *between* rows: it occupies one of two phases, keyed on `a.val`, and crosses from
 the first to the second at the visible `retABA` that opens phase 2.
 
-### `Abs` fields (`CoreSimRel.lean`)
+### `Abs` fields (`Core/Rel.lean`)
 
 - `F_eq : a.F = c.F`
 - `ret_eq : ∀ id, a.ret id = (c.procs id).returned`
@@ -79,7 +79,7 @@ carrying an `AbsFrame` (§ Certificates) for the last — and `Abs.w_swap` is th
 `w`-only corollary, since the twin never reads the coin state. Together they replace the
 per-row stutter arguments: every hidden row preserves the three projections, so its
 `Abs`-match is one `Abs.frame`/`Abs.w_swap` invocation rather than a bespoke
-re-derivation (the six Stage-C stutter lemmas of `CoreSimAbs.lean` are all instances).
+re-derivation (the six Stage-C stutter lemmas of `Core/Abs.lean` are all instances).
 
 ### Certificates: decided values stated without the live pair
 
@@ -141,9 +141,9 @@ certificate form needs no reachability argument of its own.
 
 ## Row dispositions
 
-Concrete steps are read through the Stage-A inversion lemmas of `CoreSimInv.lean`,
+Concrete steps are read through the Stage-A inversion lemmas of `Core/Inv.lean`,
 which take a `hybrid` transition back through the two hiding frames to the rows of
-its four components; each class is one row of `CoreSim.lean`.
+its four components; each class is one row of `Core/Sim.lean`.
 
 Three of the four Stage-A lemmas — `hybrid_step_callABA`, `hybrid_step_retABA`,
 `hybrid_step_tau` — take I0 as a hypothesis. A round loop's row is guarded by its own
@@ -155,7 +155,7 @@ translation.
 | concrete row | label | abstract answer |
 |---|---|---|
 | every hidden handshake (`callG`/`retG`/`callW`/`retW`), `bindUnset`, DECIDED gossip τ | τ | stutter (`Abs.frame`; only `Inv` moves) |
-| **every** `WCC_r` coin flip | τ | constant-coupled stutter via the generic `stutter_step` (`CoreSim.lean`): coupling `Ω := μ_C.map (·, pure a)`, so `ω = pure (pure a)` and `ω.bind id = pure a` (`Abs.w_swap`; the twin never flips) |
+| **every** `WCC_r` coin flip | τ | constant-coupled stutter via the generic `stutter_step` (`Core/Sim.lean`): coupling `Ω := μ_C.map (·, pure a)`, so `ω = pure (pure a)` and `ω.bind id = pure a` (`Abs.w_swap`; the twin never flips) |
 | `callABA id b`, phase 1, genuine (idle-exit input) | `callABA id b` | `SpecStep.callSet` (the overwrite banks the concrete input and restores the ghost sync) |
 | `callABA id b`, otherwise (phase 2, or a concrete self-loop) | `callABA id b` | `SpecStep.callLoop` (first-write-wins; no `Abs`-field change) |
 | `retABA id b`, `id ∉ F`, phase 1 | `retABA id b` | `decide_step` then `SpecStep.ret` (`weakStep_of_burst_then_step`) — see below |
@@ -163,14 +163,14 @@ translation.
 | `retABA id b`, `id ∈ F` | `retABA id b` | `SpecStep.retByz` (D23): neither side moves, in either phase |
 | `fail id` | `fail id` | `SpecStep.fail` (same two guards via `F_eq`; robust in both phases) |
 
-The single burst is `decide_step` (`CoreSimBurst.lean`), fired at the phase-1 `retABA`.
+The single burst is `decide_step` (`Core/Burst.lean`), fired at the phase-1 `retABA`.
 `SpecStep.decide` is Dirac, so the burst is one step; what the row supplies is its three
 guards, each read off the concrete state at the round `rA` of the `ACert` harvested from a
 never-corrupted DECIDED sender of `b`.
 
 - `hv : a.val = none` — phase 1 itself.
 - `hm : a.mode ≠ .dead` — the `mode_idle` field: a twin that never flips is never killed.
-- `hs : SuppOK P a b` — `suppOK_of_inputSupp` (`CoreSimRel.lean`) reads the concrete
+- `hs : SuppOK P a b` — `suppOK_of_inputSupp` (`Core/Rel.lean`) reads the concrete
   input-or-`F` pool `Inv.bind_supp rA b` through phase 1's ghost sync.
 
 The step writes `val := some b` and returns the mode to `Mode.idle`, so `mode_idle`
@@ -195,7 +195,7 @@ later-corrupted process can win. The repair principle: a value may circulate onl
 supporters always include a never-corrupted one, and provenance survives dynamic
 corruption with no future-peeking guard (`3f < n` supplies `n − 2f ≥ f + 1`).
 
-What `Spec.lean` carries:
+What `Spec/ABA.lean` carries:
 
 - **Ghost** `input : Fin n → Option Bool` in `SpecState`. `SpecStep.callSet` records by
   overwrite under the guard `val = ⊥`; `SpecStep.callLoop` is unguarded and records
@@ -254,7 +254,7 @@ singular-witness provenance loss one level down, and `hybrid` built on it provab
 violates Validity (§ Why this shape). ABDY22's implementation carries the `f + 1` via
 Valid-set relay thresholds; TS 2 abstracts it to one witness.
 
-`GBCASpec.lean` instead uses TS 1's `SuppOK` shape at every provenance guard, as a count
+`Spec/GBCA.lean` instead uses TS 1's `SuppOK` shape at every provenance guard, as a count
 `f + 1 ≤ #{id | call id = some b ∨ id ∈ F}` at the bit that guard is about. Binding here
 is negative (D19): the state carries `dead : Finset Bool`, the bits the instance can no
 longer hand out, and the internal τ-transition `bindUnset b` kills one bit at a time,
@@ -330,14 +330,14 @@ state; every return row runs the same decidable case split on `dead`.
 D12 models DECIDED gossip as a single per-process slot, which cannot send `DECIDED 0`
 to X and `DECIDED 1` to Y — an under-approximation inconsistent with the equivocating
 D5 sent-pool of graded agreement. D12′ mirrors D5 in the DECIDED pools: the network's
-`dpool` and the round-loop records' receipt rows, read as one object (`ABAState.lean`)
+`dpool` and the round-loop records' receipt rows, read as one object (`ABDY/ABAState.lean`)
 as `decidedSent : Fin n → Finset Bool` and
 `decidedRecv : Fin n → Fin n → Finset Bool`, pools that only grow. `sendDecided`
 inserts; delivery is the `ddlv` rendezvous, per (receiver, sender, bit), with soundness
 `b ∈ decidedSent j` on the network's half and an at-most-once `b ∉ decidedRecv i j`
 guard on the receiver's; `byzD` is guarded *only* by `k ∈ F`. Honest pools stay at card ≤ 1 in reachable
 states (A-grade certificates pin one bit), but no card invariant is needed. The invariant
-rewiring (`CoreSimRel.lean`): `recv_sound` becomes per-bit and *honesty-free*
+rewiring (`Core/Rel.lean`): `recv_sound` becomes per-bit and *honesty-free*
 (`b ∈ decidedRecv i j → b ∈ decidedSent j`, preserved by pure monotonicity, since sent
 pools never shrink); `decided_src` becomes per pooled bit
 (`id ∉ F → b ∈ decidedSent id → ∃ r` A-lock cert for `b`) — the equivocation-robust
@@ -346,7 +346,7 @@ form: corrupted equivocators may pad any bit's tally, but the `retABA`-row pigeo
 sender of `b`, whose pooled `b` carries the A-lock certificate that the phase-1
 `SpecStep.decide` step and phase 2's `Abs` certificate both need.
 
-## `Inv`: the concrete invariant (`CoreSimRel.lean`)
+## `Inv`: the concrete invariant (`Core/Rel.lean`)
 
 Forty fields, docstring-numbered I0–I30 (a few numbers cover a small group of
 fields), grouped:
@@ -404,10 +404,10 @@ fields), grouped:
   `F`-free provenance facts — so folding the residue conjuncts into the pools is a
   recorded future refactor.
 
-Each row of `CoreSim.lean` proves `Inv`-preservation for its step class and then the
+Each row of `Core/Sim.lean` proves `Inv`-preservation for its step class and then the
 `Abs`-level match above.
 
-## The burst kit (`CoreSimBurst.lean`)
+## The burst kit (`Core/Burst.lean`)
 
 Pure `ABA.spec`-side weak-τ lemmas, no `Inv`/`Abs` reasoning and no mention of the
 concrete `(g, c, w)` state:

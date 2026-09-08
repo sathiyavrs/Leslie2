@@ -1,7 +1,0 @@
-\begin{definition}[The gather implementation over broadcast specifications]
-  \label{def:aba-gather-mid}
-  \lean{PLTS.ABA.Gather.GaMsg}\lean{PLTS.ABA.Gather.PRec}\lean{PLTS.ABA.Gather.MidState}\lean{PLTS.ABA.Gather.MidStep}\lean{PLTS.ABA.Gather.midInst}\leanok
-  \uses{def:aba-gather-spec, def:aba-brb-spec, def:aba-fabric}
-  Algorithm~4 of~\cite{LeslieBP}, from~\cite{AFW25}, over $2n$ broadcast-specification coordinates: each process contributes its input through its own input-broadcast instance and its $\mathrm{BIND}$ payload through its own bind-broadcast instance, an entry set is approved when every entry is a committed input, and the $\mathrm{ECHO}$/$\mathrm{VOTE}$ rounds over approved sets run on the instance's own fabric (D28).
-  A return requires $n{-}f$ committed bind payloads below the output and the output below the committed inputs: \leandecl{PLTS.ABA.Gather.midInst}.
-\end{definition}

@@ -15,7 +15,7 @@ scheduler, the protocol decides with probability 1 — at `δ_f = 0`, and **fair
 with probability at least `1 − g(ε, δ_f)` — in general.
 
 The failure mass is in the encoding, not in the statement of the goal. Both coin
-resolutions of the development follow `ABA.Params.wccPMF` (`ABA/Params.lean`), which puts
+resolutions of the development follow `ABA.Params.wccPMF` (`ABA/Vocabulary/Params.lean`), which puts
 mass `δ_f` (the Lean field `Params.δ`, `δ_f` in the blueprint) on the outcome `dead`: the
 coin resolves without delivering. In TS 3 that outcome is absorbing — `WCC.Step.flip`
 fires once per instance and `WCC.Step.ret` has a positive guard — so the
@@ -62,7 +62,7 @@ exclusion set `dead` only grows — its single writer inserts and corruption doe
 it — and both value-bearing returns demand `v ∉ dead ∧ !v ∈ dead`, so any two graded
 returns of one round hand out the same bit and a `C`-return pins a bit that no extension
 of the run hands out at grade ≥ 1: `retG_value_agree`, `specInst_binding`,
-`retC_dead_nonempty` (`ABA/GBCASafety.lean`), each from monotonicity alone, no invariant.
+`retC_dead_nonempty` (`ABA/Spec/GBCASafety.lean`), each from monotonicity alone, no invariant.
 At the implementation the encoding is ABDY22's Algorithm 6 in full (D18), whose Binding
 the paper proves. The precondition is therefore available on both sides of the refinement,
 and a liveness effort inherits it rather than re-deriving it; what it must supply is the
@@ -167,7 +167,7 @@ Ordered by expected value-for-effort:
    All three steps are inclusions in the same direction, `protocol ⊑ composed ⊑
    hybrid ⊑ ABA.spec`, so a mass bound established at `ABA.spec` has to be
    transported down all three, the composition link (`ABDY.protocolSim`,
-   `ABA/ProtocolSim.lean`) included. That link imposes no constraint on the amplification
+   `ABA/ABDY/ProtocolSim.lean`) included. That link imposes no constraint on the amplification
    axis. Under D22 a process retains the stage record of every round it has touched and
    answers that round's traffic under an instance-local guard, whichever round its loop is
    in, which is the behaviour ABDY22's Lemmas 4.6 and E.5 are stated under; and
@@ -234,7 +234,7 @@ the bound §1 records.
 
 **The gate and the liveness half of Validity.** `hmix` also settles the unanimous case
 structurally, at the specification and with no proof obligation. A supported bit has a
-never-corrupted recorded inputter (`SuppOK.honest_supporter`, `SpecSafety.lean`), so under
+never-corrupted recorded inputter (`SuppOK.honest_supporter`, `Spec/ABASafety.lean`), so under
 honest unanimity on `v` the bit `!v` is supported by corrupted identifiers alone, at most
 `f` of them, and `hmix` fails at every state such a run reaches. The flip is then
 unreachable, and with it every probabilistic branch of the system: the unanimous path is
@@ -265,9 +265,9 @@ is why the specification carries the mode and not the bit.
 
 ## 6. Design note: the GBCA kill under fairness
 
-The GBCA specification's `bindUnset` carries the guard `dead = ∅` (`ABA/GBCASpec.lean`), so
+The GBCA specification's `bindUnset` carries the guard `dead = ∅` (`ABA/Spec/GBCA.lean`), so
 one kill happens per instance. Safety is indifferent to the guard — every statement of
-`GBCASafety.lean` rests on monotonicity of `dead` and would hold without it — but a fair
+`Spec/GBCASafety.lean` rests on monotonicity of `dead` and would hold without it — but a fair
 reading of the specification is not.
 
 Suppose the guard were the per-bit one, `b ∉ dead`, so that a round could kill both bits in
@@ -314,14 +314,14 @@ the sub-protocol slot.
 - Ranked witness + transfers: `Leslie_LTS/Framework/Simulation.lean:1339,1506,2110,2246`
 - Fairness/WF1/LTL: `Leslie_LTS/Framework/{Liveness,LTL,Divergence}.lean`
 - BRB/BCA pivot rationale: `Leslie_LTS/Examples/BRB_Liveness.lean:33-49`,
-  `Examples/BCA_Liveness.lean:726-751`
+  `Leslie_LTS/Examples/BCA_Liveness.lean:726-751`
 - PLTS + adapters in Leslie: `Leslie_LTS/Framework/Probabilistic.lean:34-70`
 - Certificates: `Leslie/Prob/Liveness.lean` (`FairASTCertificate`, `sound` at :1719)
 - This repo's fairness line: `Leslie2Extra/Fairness/Simulation/{Defs,Soundness}.lean`
 - The protocol, whose programs read their own replacement flag and nothing else about
-  corruption (D23): `ABA/Protocol.lean` (`ABDY.protocol`, `netAdv`), with
-  its reading as a composition of components in `ABA/Hybrid.lean` (`ABDY.composed`) and the
-  inclusion into it in `ABA/ProtocolSim.lean` (`ABDY.ProtocolRel`, `ABDY.protocolSim`,
+  corruption (D23): `ABA/ABDY/Protocol.lean` (`ABDY.protocol`, `netAdv`), with
+  its reading as a composition of components in `ABA/ABDY/Hybrid.lean` (`ABDY.composed`) and the
+  inclusion into it in `ABA/ABDY/ProtocolSim.lean` (`ABDY.ProtocolRel`, `ABDY.protocolSim`,
   `ABDY.protocol_composed`) — the presentation to state fair
   termination over if it is to be stated of the protocol: the `fail` row belongs
   to the network adversary and is guarded by `k ∉ F ∧ |F| < f`, so `fail` is enabled

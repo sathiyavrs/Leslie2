@@ -1,8 +1,8 @@
 \begin{definition}[The gather implementation over Bracha instances]
   \label{def:aba-gather-low}
   \lean{PLTS.ABA.Gather.LowState}\lean{PLTS.ABA.Gather.LowStep}\lean{PLTS.ABA.Gather.lowInst}\leanok
-  \uses{def:aba-gather-mid, def:aba-brb-impl}
-  The fully concrete gather instance: the table of Definition~\ref{def:aba-gather-mid} with each broadcast-specification coordinate replaced by a Bracha instance of Definition~\ref{def:aba-brb-impl}.
+  \uses{def:aba-gather-ideal, def:aba-brb-impl}
+  The fully concrete gather instance: the table of Definition~\ref{def:aba-gather-ideal} with each broadcast-specification coordinate replaced by a Bracha instance of Definition~\ref{def:aba-brb-impl}.
   The state is the gather two-box beside $2n$ Bracha states, and the derived predicates
   \[
     \mathit{apIn}(j, k, v),\qquad \mathit{apBind}(j, q, U)

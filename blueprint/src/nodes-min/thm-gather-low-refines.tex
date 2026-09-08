@@ -1,11 +1,11 @@
 \begin{theorem}[Gather broadcast substitution]
   \label{thm:gather-low-refines}
   \lean{PLTS.ABA.Gather.LowRel}\lean{PLTS.ABA.Gather.gatherLow}\leanok
-  \uses{def:aba-gather-low, def:aba-gather-mid, thm:brb-refines}
+  \uses{def:aba-gather-low, def:aba-gather-ideal, thm:brb-refines}
   The gather implementation over Bracha instances is forward-simulated by the gather implementation over broadcast specifications, along the per-coordinate broadcast refinement relation, the lagging specification coordinates advanced by $\tau$-chains under the rows that read them: \leandecl{PLTS.ABA.Gather.gatherLow}.
 \end{theorem}
 
 \begin{proof}\leanok
-  \uses{def:aba-gather-low, def:aba-gather-mid, thm:brb-refines, def:forwardsim}
+  \uses{def:aba-gather-low, def:aba-gather-ideal, thm:brb-refines, def:forwardsim}
   See the Lean proof of \leandecl{PLTS.ABA.Gather.gatherLow}.
 \end{proof}

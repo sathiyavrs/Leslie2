@@ -15,9 +15,9 @@ read as a composition of components.
 specification. `ABA.spec` is the single-automaton reading of agreement.
 
 This note records why that cut is placed where it is, what it buys, and what the model
-already weakens. The systems themselves are in `ABA/Protocol.lean`, `ABA/Spec.lean` and
-`ABA/Hybrid.lean`, which carries both `ABDY.composed` and `hybrid`, over the components of
-`ABA/Components.lean`; the first link is in `ABA/ProtocolSim.lean`. The file guide is
+already weakens. The systems themselves are in `ABA/ABDY/Protocol.lean`, `ABA/Spec/ABA.lean` and
+`ABA/ABDY/Hybrid.lean`, which carries both `ABDY.composed` and `hybrid`, over the components of
+`ABA/ABDY/Components.lean`; the first link is in `ABA/ABDY/ProtocolSim.lean`. The file guide is
 `ABA/README.md`.
 
 The first link is where the chain passes from implementation to specification: `ABDY.protocol`
@@ -66,8 +66,8 @@ The ABA-side DECIDED network `Comp.aNet` is a component of every system in the c
 and the second component of `ABAState`, the state `coreRel` is defined on.
 
 Both invariants therefore read their network through accessors on a pair — the
-`GBCA.ImplState` accessors in `ABA/GBCAImpl.lean`, the `ABAState` accessors in
-`ABA/ABAState.lean` — and name the network's own pools rather than a copy of them held
+`GBCA.ImplState` accessors in `ABA/ABDY/Ladder.lean`, the `ABAState` accessors in
+`ABA/ABDY/ABAState.lean` — and name the network's own pools rather than a copy of them held
 inside a record. Weakening either network is a change to that one component.
 
 ## Every state is a component's own record or a product of them
@@ -81,7 +81,7 @@ the DECIDED network, and one `SpecState` for each of the three specifications. E
 `Net.ProcRec`, `GBCA.ImplState`, `ABAState`, `Comp.ComposedState`, `HybridState`.
 
 One record holds two kinds of message pool at once, and it is the right one to.
-`Net.NetState` (`ABA/Protocol.lean`) carries the stage pools, the DECIDED pools and the
+`Net.NetState` (`ABA/ABDY/Protocol.lean`) carries the stage pools, the DECIDED pools and the
 corrupted set together, because it is the network adversary of the protocol — the subject
 of the chain, not a vehicle for proving anything about it.
 `ProtocolSim.protocol_composed` carries that reading into one where each round owns a

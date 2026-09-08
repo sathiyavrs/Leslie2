@@ -4,9 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.CoreSim
-import Leslie2Protocols.ABA.ProtocolSim
-import Leslie2Protocols.ABA.Hybrid
+import Leslie2Protocols.ABA.Core.Sim
+import Leslie2Protocols.ABA.ABDY.ProtocolSim
+import Leslie2Protocols.ABA.ABDY.Hybrid
 
 /-!
 # The main theorems of the ABA case study
@@ -25,23 +25,23 @@ has touched, in a finite map — and terminates at `2f + 1` DECIDED receipts
 (D22).
 
 The abstract side is `ABA.spec P`, the single-automaton reading of agreement,
-whose traces satisfy Validity and Agreement (`spec_safe`, `SpecSafety.lean`).
+whose traces satisfy Validity and Agreement (`spec_safe`, `Spec/ABASafety.lean`).
 
 ## The chain
 
 Three probabilistic forward simulations carry the protocol to the
 specification:
 
-1. `ABDY.protocolSim` (`ProtocolSim.lean`) — the protocol into the composed
+1. `ABDY.protocolSim` (`ABDY/ProtocolSim.lean`) — the protocol into the composed
    reading, along the Dirac lift of `ABDY.ProtocolRel`. The relation pins every
    composed coordinate against the protocol state; the inclusion is
    one-directional because a round instance also answers the Byzantine drives
    (D11) and the processes the protocol has terminated (D22).
-2. `ABDY.substSim` (`Hybrid.lean`) — replace each round's graded-agreement
+2. `ABDY.substSim` (`ABDY/Hybrid.lean`) — replace each round's graded-agreement
    instance by its specification, the other three components untouched: the
    family substitution carried by four congruences (`parallel_right`,
    `abstract`, `relabel`, `abstract`).
-3. `coreSim` (`CoreSim.lean`) — the hand-built simulation of the
+3. `coreSim` (`Core/Sim.lean`) — the hand-built simulation of the
    protocol-shaped specification against the ABA specification, read in the
    composed coordinates: the round specifications, the `n` round loops, the
    ABA-side network and the coin oracle, each still a component of the state the
@@ -61,7 +61,7 @@ network adversary. The **common coin is held at specification level** — the
 reading is *graded agreement verified to implementation level; the coin
 assumed at specification level*.
 
-`ValidityTrace` (`SpecSafety.lean`) is the paper-form predicate: a decided bit
+`ValidityTrace` (`Spec/ABASafety.lean`) is the paper-form predicate: a decided bit
 must carry a provenance clause witnessed by a *never-corrupted*
 (`NeverCorrupted`) supporter, matching the papers' correct-process Validity.
 What is proven is safety — Validity and Agreement for every

@@ -1,9 +1,9 @@
 # Design — the per-instance GBCA refinement `GBCA.implInst ⊑ GBCA.specInst` (`implRefines`)
 
-Companion design document to the Lean proof in `ABA/GBCASim.lean` (relation,
+Companion design document to the Lean proof in `ABA/ABDY/LadderSim.lean` (relation,
 invariant, burst lemmas, per-row simulation), against the implementation shape
-in `ABA/GBCAImpl.lean` (deviation D18: the full five-level message ladder of
-ABDY22's Algorithm 6) and the specification shape in `ABA/GBCASpec.lean`
+in `ABA/ABDY/Ladder.lean` (deviation D18: the full five-level message ladder of
+ABDY22's Algorithm 6) and the specification shape in `ABA/Spec/GBCA.lean`
 (deviation D19: the exclusion set `dead : Finset Bool` in place of a bound
 value). The refinement paragraphs of `blueprint/src/content.tex` — the kill
 certificate, the `VOTE` wall, and the two-step kill-then-return burst — are a
@@ -18,7 +18,7 @@ target       : ForwardSimulation (implInst P r) (specInst P r) (instRel P r)
 ```
 
 Both systems are Dirac-transition LTSs. The instance refinement reaches the
-ℕ-indexed families through the round instance (`ABA/GBCAInstances.lean`), whose
+ℕ-indexed families through the round instance (`ABA/ABDY/Instances.lean`), whose
 family lifting takes its broadcast ingredient from
 `GBCASim.instRel_corrupt`.
 
@@ -515,7 +515,7 @@ theorem voteCount_le_recvMsg (s : ImplState n) (i j : Fin n) (m : Msg) (i' : Fin
 
 ### Certificate and harvest lemmas
 
-Collected statements (all defined in `GBCASim.lean` unless noted):
+Collected statements (all defined in `ABDY/LadderSim.lean` unless noted):
 
 ```lean
 def VoteWall (P : Params) (s : ImplState P.n) (b : Bool) : Prop := …   -- § kill certificates
@@ -603,7 +603,7 @@ consumes, and exactly why no later receipt pattern can contradict the kill.
 ## Where the shapes surface downstream
 
 The exclusion set and the kill certificate are read directly by the files
-above this one. The `CoreSimRel.lean` chain and `CoreSim.lean` phrase the round skeleton
+above this one. The `Core/Rel.lean` chain and `Core/Sim.lean` phrase the round skeleton
 over `dead`: `IsLastBound g r` is `(g r).dead ≠ ∅ ∧ (g (r + 1)).dead = ∅`,
 `Closed g r` is `(g r).dead ≠ ∅ ∨ (g r).grade = some false`, and `a_commit`,
 `gradeA_needs_bind`, `bind_supp` and the A-lock certificates are keyed on the
@@ -611,7 +611,7 @@ guard pair `(!b) ∈ dead ∧ b ∉ dead` — the D19 rendering of `bind = some 
 with `bind ≠ none` rendered as `dead ≠ ∅`. `GBCASim.instRel_corrupt`
 carries the `dead_cert` row through `DeadCert.mono`, whose three hypotheses it
 discharges by `corrupt_recv`, `corrupt_proc` and `corrupt_F_subset`.
-`Protocol.lean`'s rendering carries the same ladder inside one
+`ABDY/Protocol.lean`'s rendering carries the same ladder inside one
 process: the stage record `GBCA.StageRec` keeps the write-once `sentSeal` slot in
 its `proc` record and carries its own `sealCount` over its inbox rows, the
 rendezvous rows `gsndSealBit`/`gsndSealBot` are the seal multicasts read off
@@ -621,7 +621,7 @@ level off it. No bridge is needed to the global view: the round-`r` `ImplState`
 beside the round's message fabric, which holds the per-sender pools and the
 corrupted set — and `ImplState.sealCount` reads the receiving program's inbox
 rows directly. So `GSub.subSim` consumes `implRefines` as it stands: the
-projection `sub_projects` (`ABA/GBCAInstances.lean`) matches every round-instance
+projection `sub_projects` (`ABA/ABDY/Instances.lean`) matches every round-instance
 transition with the implementation instance's at that same state, one step for
 one step, and this file's refinement answers it, its weak answer read back at the
 round instance's interface — which is what licenses replacing a round's instance

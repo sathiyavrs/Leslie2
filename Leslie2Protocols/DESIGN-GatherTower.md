@@ -1,14 +1,14 @@
 # Design — the gather-based GBCA stack `GBCA.lowPairInst ⊑ … ⊑ GBCA.specInst` and its chain
 
 Companion design document to the gather-based implementation of graded
-agreement: the sub-protocol encodings (`ABA/Fabric.lean`, `ABA/BRBSpec.lean`,
-`ABA/BRBImpl.lean`, `ABA/GatherSpec.lean`, `ABA/GatherMid.lean`,
-`ABA/GatherLow.lean`), their refinements (`ABA/BRBSim.lean`,
-`ABA/GatherSim.lean`, `ABA/GatherLowSim.lean`), the two-gather round and its
-three readings (`ABA/GBCAPair.lean`, `ABA/GBCAIdeal.lean`, `ABA/GBCALow.lean`
+agreement: the sub-protocol encodings (`ABA/Vocabulary/Fabric.lean`, `ABA/Broadcast/Spec.lean`,
+`ABA/Broadcast/Impl.lean`, `ABA/Gather/Spec.lean`, `ABA/Gather/Ideal.lean`,
+`ABA/Gather/Low.lean`), their refinements (`ABA/Broadcast/Sim.lean`,
+`ABA/Gather/IdealSim.lean`, `ABA/Gather/LowSim.lean`), the two-gather round and its
+three readings (`ABA/Round/Pair.lean`, `ABA/Round/Ideal.lean`, `ABA/Round/Low.lean`
 and the three `*Sim` files), the assembly at the protocol shape
-(`ABA/GatherChain.lean`), and the protocol beneath it (`ABA/GatherFlat.lean`,
-`ABA/GatherFlatSim.lean`). The gather subsections of
+(`ABA/AFW/Chain.lean`), and the protocol beneath it (`ABA/AFW/Flat.lean`,
+`ABA/AFW/FlatSim.lean`). The gather subsections of
 `blueprint/src/content.tex` are a condensation of this document; the
 deviations D24–D28 it realises are glossed in that file's registry, and the
 source-fidelity items it rests on are §§2, 5 and 6 of `NOTES-Fidelity.md`.
@@ -35,11 +35,11 @@ their own and consumed by the round through exported chain data:
 
 ```
 BRB.implInst P ldr M ⊑ BRB.specInst P ldr M      (brbRefines, BRBSim.lean)
-Gather.lowInst P X   ⊑ Gather.midInst P X        (gatherLow, GatherLowSim.lean)
-Gather.midInst P X   ⊑ Gather.specInst P X       (gatherCore, GatherSim.lean)
+Gather.lowInst P X   ⊑ Gather.idealInst P X        (gatherLow, GatherLowSim.lean)
+Gather.idealInst P X   ⊑ Gather.specInst P X       (gatherCore, GatherSim.lean)
 ```
 
-At the protocol shape (`GatherChain.lean`), each round reading is lifted over
+At the protocol shape (`AFW/Chain.lean`), each round reading is lifted over
 the extended alphabet along `GSub.gPull`, gathered into the ℕ-indexed family
 under the corruption broadcast, and put through the composed reading's
 pipeline; the three substitutions become three stages whose last lands on
@@ -50,8 +50,8 @@ AFW.protocol ⊑ AFW.composed ⊑ AFW.hybrid1 ⊑ AFW.hybrid2 ⊑ hybrid ⊑ ABA
 ```
 
 Beneath `AFW.composed` is `AFW.protocol`, the gather-based protocol as it runs
-(`ABA/GatherFlat.lean`), carried into the composed reading by `AFW.protocolSim`
-(`ABA/GatherFlatSim.lean`). Everything from `hybrid` up — the core simulation,
+(`ABA/AFW/Flat.lean`), carried into the composed reading by `AFW.protocolSim`
+(`ABA/AFW/FlatSim.lean`). Everything from `hybrid` up — the core simulation,
 `spec_safe`, the safety transfer — is shared with the protocol chain.
 
 Every protocol-shaped system and headline of this chain sits in the namespace
@@ -112,7 +112,7 @@ sits below both payloads. Hence:
 **BIND travels by reliable broadcast** rather than on the gather fabric.
 "Committed" must survive the sender's later corruption, and a BRB value is
 write-once whatever happens to its sender afterwards. This is what makes the
-family's members stable objects: `Gather.MidState` holds one bind-BRB
+family's members stable objects: `Gather.IdealState` holds one bind-BRB
 instance per process (`brbBind`), the BIND send is that instance's call
 (D28's fusion), and the certificate the simulation carries —
 `f + 1 ≤ #{q | (brbBind q).val ∈ Cs}` — is F-blind, monotone, and immune to
@@ -196,7 +196,7 @@ closed by an external step. This is why the wrapper simulations
 (`GBCAIdealSim`, `GBCALowSim`) are two hundred lines against the towers'
 thousands: they replay, they do not re-prove.
 
-## The assembly at the protocol shape (`GatherChain.lean`)
+## The assembly at the protocol shape (`AFW/Chain.lean`)
 
 Three ingredients, none new to the chain:
 
@@ -212,14 +212,14 @@ Three ingredients, none new to the chain:
   discharges it for the protocol chain.
 - **The four congruences** (`parallel_right`, `abstract`, `relabel`,
   `abstract`): each family substitution runs under the composed reading's
-  own context, the same term `Hybrid.lean`'s `ABDY.substSim` uses, so the third
+  own context, the same term `ABDY/Hybrid.lean`'s `ABDY.substSim` uses, so the third
   stage's target is definitionally `hybrid P`.
 
 The stages compose by `ProbabilisticForwardSimulation.trans`; the inclusions
 compose by `Set.Subset.trans` and never invoke transitivity of simulation —
 the two routes of `Results.lean`, reproduced.
 
-## The protocol beneath the composed reading (`GatherFlat.lean`, `GatherFlatSim.lean`)
+## The protocol beneath the composed reading (`AFW/Flat.lean`, `AFW/FlatSim.lean`)
 
 `AFW.composed P` is the gather-based protocol read as a composition of
 components. What runs is a flat system: `n` programs, each reading its own
@@ -227,11 +227,11 @@ records and nothing else, beside one network adversary holding every pool and
 the corrupted set, beside the coin oracle. That shape is the same for either
 implementation of graded agreement — the round loop, the DECIDED pools, the
 coin handshake, corruption, the adversary's table and the composition pipeline
-are fixed by the round interface and the specification — so `ABA/FlatReading.lean`
+are fixed by the round interface and the specification — so `ABA/Reading/Flat.lean`
 writes it once, parametric in three things: the stage message type `M`, the
 per-process per-round stage record `S`, and the stage-side rows, supplied as a
-relation embedded in one constructor of the program table. `ABA/Protocol.lean`
-instantiates it at ABDY22's ladder; `ABA/GatherFlat.lean` instantiates it here.
+relation embedded in one constructor of the program table. `ABA/ABDY/Protocol.lean`
+instantiates it at ABDY22's ladder; `ABA/AFW/Flat.lean` instantiates it here.
 
 The division of labour is by label. `Net.stageOwn j` is the set of label
 classes an implementation owns at process `j`: the graded-agreement call and
@@ -283,7 +283,7 @@ the ABA-side network while the family of rounds stands still, and corruption
 is one broadcast, the corrupted set the adversary holds being the corrupted
 set of every fabric under the same guard.
 
-`ABA/GatherFlatSim.lean` closes with the headlines mirroring `Results.lean`'s:
+`ABA/AFW/FlatSim.lean` closes with the headlines mirroring `Results.lean`'s:
 `AFW.protocol_composed`, `AFW.refines`, `AFW.main` and `AFW.chainSim`, each behind a
 `#print axioms` firewall.
 

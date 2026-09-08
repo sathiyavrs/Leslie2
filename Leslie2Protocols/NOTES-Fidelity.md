@@ -53,7 +53,7 @@ evidence level the same attack dies: `f + 1 > |F|` `BIND v` receipts put an hone
 over the write-once `VOTE` level — and that quorum is the object the paper's binding
 argument counts (Lemmas 4.8/4.9 through E.9).
 
-Annotation lives in `GBCAImpl.lean`'s module docstring, in the blueprint chapter's caption
+Annotation lives in `ABDY/Ladder.lean`'s module docstring, in the blueprint chapter's caption
 for the algorithm and its D18 registry entry, and in the source blueprint's own TeX
 (`Leslie/blueprint/src/sections/Algorithm.tex`, a red note at Algorithm 2's decide
 conditions); the source's PDF caption reads "Implementation of GBCA from [ABDY22]" with no
@@ -61,13 +61,13 @@ such note.
 
 On the specification side the matching item is **D19**. TS 2's bound value
 `bind ∈ {0,1,⊥}` is replaced by the exclusion set `dead : Finset Bool`, the bits the
-instance can no longer hand out (`GBCASpec.lean`). The kill fires under the guard
+instance can no longer hand out (`Spec/GBCA.lean`). The kill fires under the guard
 `dead = ∅`, so reachable states are exactly `dead ∈ {∅, {b}}`
 (`GBCASafety.dead_card_le_one`) and the bound value embeds onto them — `bind = ⊥` as
 `dead = ∅`, `bind = b` as `dead = {!b}`. The two state shapes therefore differ in the
 guards rather than in the cardinality. `dead` is monotone and written once, so Graded
 Agreement is the return guard pair `v ∉ dead ∧ !v ∈ dead` and Binding is the `C`-return
-guard `1 ≤ dead.card`, both proved from monotonicity alone in `GBCASafety.lean`
+guard `1 ≤ dead.card`, both proved from monotonicity alone in `Spec/GBCASafety.lean`
 (`retG_value_agree`, `specInst_binding`, `retC_dead_nonempty`) with no auxiliary
 invariant; the same file carries Validity's safety half (`specInst_validity`,
 `specInst_no_retC`).
@@ -91,7 +91,7 @@ instead. Either reading supports the same theorems.
 
 **Unions read as bounds.** Algorithm 4's sends are unions: on `n − f` approved echoes a
 process sends `⟨vote, ⋃ AP_id⟩`, and likewise at the BIND and return steps. The gather
-rows (`Gather.MidStep.vote`, `bindCall`, `ret`, and their `LowStep` counterparts) read
+rows (`Gather.IdealStep.vote`, `bindCall`, `ret`, and their `LowStep` counterparts) read
 each union as a bound instead: any approved set containing the `n − f` collected
 payloads may be sent, and any map dominating the `n − f` committed BIND payloads and
 contained in the committed inputs may be returned. The union is one such choice, so the
@@ -136,9 +136,9 @@ refine. A refinement asks only that the implementation move no more freely than 
 specification, so the gap is harmless; what is worth having in one place is which side of
 it each guard falls on, and whether that placement was chosen or forced.
 
-**Carried by the implementation tables** — `GBCA.ImplStep` (`ABA/GBCAImpl.lean`), mirrored
-row for row at `GBCA.GProcStep` (`ABA/GBCAInstances.lean`), Byzantine drives included, and
-at `Net.ABAProcStepN` (`ABA/Protocol.lean`) with the reads taken through `p.stage r`.
+**Carried by the implementation tables** — `GBCA.ImplStep` (`ABA/ABDY/Ladder.lean`), mirrored
+row for row at `GBCA.GProcStep` (`ABA/ABDY/Instances.lean`), Byzantine drives included, and
+at `Net.ABAProcStepN` (`ABA/ABDY/Protocol.lean`) with the reads taken through `p.stage r`.
 
 - **The wait-until order.** The order is carried from the `BIND` level down: each of
   those sends requires the sender's own send at the level below — `hlv : sentVote ≠ none`
@@ -213,17 +213,17 @@ repaired at the rule; the sixth entry is a cross-reference.
   fires with `val` already written, so the unanimity rule can overwrite it and one run
   returns `v` and then `1 − v`; and the free bind choice together with that same
   re-proposal carries a bit input only by a later-corrupted process through to a return.
-  `Spec.lean` reproduces neither rule. `PLTS.ABA.SpecStep.decide` is the sole writer of
+  `Spec/ABA.lean` reproduces neither rule. `PLTS.ABA.SpecStep.decide` is the sole writer of
   `val` and fires only from `val = ⊥`, so the decision value is written once and
   Agreement is structural (`PLTS.ABA.SpecInv.val_stable`); and it carries the D13 support
   guard `PLTS.ABA.SuppOK`, which is where the Validity trace dies —
-  the counterexample check in `Spec.lean` records it, with inputs `1,0,0,0` at
+  the counterexample check in `Spec/ABA.lean` records it, with inputs `1,0,0,0` at
   `n = 4, f = 1` and the sole `1`-inputter corrupted leaving one supporter of `1` against
   the `f + 1 = 2` the guard demands. The eight-rule shape this leaves, with the control
   mode carrying the flip, is deviation **D21**.
 - **TS 2's singular binding witness** (`∃ id ∉ F, call[id] = b`, source p. 19) loses
   provenance one level down, and `hybrid` over it violates Validity; the
-  deterministic trace is in `GBCASpec.lean`'s module docstring, under D14.
+  deterministic trace is in `Spec/GBCA.lean`'s module docstring, under D14.
   Both TS 1 defects and this one are annotated in the source blueprint's TeX
   (`Leslie/blueprint/src/sections/Specification.tex`, red notes at the affected
   rules). D14 and D15
@@ -267,8 +267,8 @@ repaired at the rule; the sixth entry is a cross-reference.
 
 ## 6. Scope boundaries
 
-Beyond D4 — the WCC `guess` label and state field, whose omission `Labels.lean` and
-`WCCSpec.lean` both record in their module docstrings — they exist solely for
+Beyond D4 — the WCC `guess` label and state field, whose omission `Vocabulary/Labels.lean` and
+`Spec/WCC.lean` both record in their module docstrings — they exist solely for
 Unpredictability, inexpressible once the guess is dropped.
 
 - **Per-transition fairness markings.** Every transition system in the source carries
@@ -370,7 +370,7 @@ produces must itself be never corrupted, not merely a member of a support set a 
 ## 7. Adjacent open items
 
 Neither is a fidelity gap; both sit under Future work in `ABA/README.md`.
-**Achievability** — `NonVacuity.lean` carries the non-vacuity run on `hybrid`, the system
+**Achievability** — `Core/NonVacuity.lean` carries the non-vacuity run on `hybrid`, the system
 the core simulation takes as its subject, and a machine-checked positive-mass trace for
 `ABDY.protocol`, the system `ABDY.main` is about, is outstanding.
 **`ValidityTrace` witness strengthening** — the witness clause accepts any preceding

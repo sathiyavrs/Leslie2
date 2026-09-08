@@ -134,6 +134,14 @@ theorem System.weakLStep_tauCons {q q₁ q' : State} {l : Label}
 
 /-! ### Chains -/
 
+/-- The last entry of a mapped list, read through the map: mapping commutes
+with `getLastD` when the default is mapped with it. -/
+theorem getLastD_map {α β : Type*} (f : α → β) (d : α) (l : List α) :
+    (l.map f).getLastD (f d) = f (l.getLastD d) := by
+  induction l generalizing d with
+  | nil => rfl
+  | cons a t ih => rw [List.map_cons, List.getLastD_cons, List.getLastD_cons, ih]
+
 /-- Extending a chain by one related element. -/
 theorem isChain_snoc {α : Type*} {R : α → α → Prop} {a : α} {l : List α} {x : α}
     (h : List.IsChain R (a :: l)) (hx : R (l.getLastD a) x) :

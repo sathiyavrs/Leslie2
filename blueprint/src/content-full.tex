@@ -1817,10 +1817,10 @@ Reliable broadcast is the bottom of the construction, and its specification is t
 Under Transition System~6 an honest call pins every return to the called value, and Algorithm~\ref{alg:brb} with the leader corrupted after its $\mathrm{INIT}$ leaves a window that pinning forbids: until some correct process holds an $n{-}f$ $\mathrm{ECHO}$ quorum, the injections of the now-corrupted leader can drive the ladder to deliver a different value.
 The encoding therefore splits the recorded input from the committed value and guards the internal commit by $\mathit{ldr} \in F \vee input = m$ (D27): the corrupted leader's power is a commit of any value, the honest leader's value is pinned, and the window closes at the commit rather than at the call.
 The refinement certifies the committed value by an $n{-}f$ $\mathrm{ECHO}$ receipt quorum --- $F$-blind, monotone, unique by quorum intersection over the write-once echoes --- and fires the abstract commit on demand, as a two-step weak burst under the first return.
-See \leanmodule{Leslie2Protocols/ABA/Fabric},
-\leanmodule{Leslie2Protocols/ABA/BRBSpec},
-\leanmodule{Leslie2Protocols/ABA/BRBImpl} and
-\leanmodule{Leslie2Protocols/ABA/BRBSim}.
+See \leanmodule{Leslie2Protocols/ABA/Vocabulary/Fabric},
+\leanmodule{Leslie2Protocols/ABA/Broadcast/Spec},
+\leanmodule{Leslie2Protocols/ABA/Broadcast/Impl} and
+\leanmodule{Leslie2Protocols/ABA/Broadcast/Sim}.
 
 \input{nodes/def-aba-fabric}
 \input{nodes/def-aba-brb-spec}
@@ -1841,14 +1841,14 @@ The commit split of D26 is the per-entry form of the same reading.
 The implementation is verified in two substitutions.
 The gather-over-broadcast reading embeds the $2n$ broadcast specifications as state coordinates and is carried to Transition System~4 by the core refinement, whose returns are answered by one weak burst --- the abstract commits, the binding where the family is unbound, the return --- with the fresh family read off the committed $\mathrm{BIND}$ payloads of the $f{+}1$ honest members of the returning quorum.
 The fully concrete reading replaces each broadcast coordinate by a Bracha instance and is carried to the previous one coordinatewise, the lagging specification commits fired as $\tau$-chains under the rows that read them.
-See \leanmodule{Leslie2Protocols/ABA/GatherSpec},
-\leanmodule{Leslie2Protocols/ABA/GatherMid},
-\leanmodule{Leslie2Protocols/ABA/GatherSim},
-\leanmodule{Leslie2Protocols/ABA/GatherLow} and
-\leanmodule{Leslie2Protocols/ABA/GatherLowSim}.
+See \leanmodule{Leslie2Protocols/ABA/Gather/Spec},
+\leanmodule{Leslie2Protocols/ABA/Gather/Ideal},
+\leanmodule{Leslie2Protocols/ABA/Gather/IdealSim},
+\leanmodule{Leslie2Protocols/ABA/Gather/Low} and
+\leanmodule{Leslie2Protocols/ABA/Gather/LowSim}.
 
 \input{nodes/def-aba-gather-spec}
-\input{nodes/def-aba-gather-mid}
+\input{nodes/def-aba-gather-ideal}
 \input{nodes/thm-gather-core}
 \input{nodes/def-aba-gather-low}
 \input{nodes/thm-gather-low-refines}
@@ -1861,12 +1861,12 @@ The round is Algorithm~\ref{alg:gbca-gather} over the round alphabet: the call i
 The refinement into Transition System~2 is counting on the two core families, in member form.
 A returned map heavy at a value --- all but $f$ entries --- makes every family member heavy at it; two heavy members agree, their $\ge n - f \ge 2f + 1$ shared entries admitting one value on all but $2f$; and a member heavy at one value leaves every other value at most $f$ entries anywhere, which is at once the uniqueness of the $B$-bit and the $A$/$C$ exclusivity of the grade latch.
 The exclusion certificate --- every member of the first family light at the excluded bit --- is frozen when the family is written, so the specification's monotone $dead$ is certified with no relay machinery, and the kill-on-demand discipline of the direct implementation's refinement carries over unchanged: a return needing an exclusion the specification does not yet hold is answered by the burst $\mathrm{bindUnset}; \mathrm{ret}$.
-See \leanmodule{Leslie2Protocols/ABA/GBCAPair},
-\leanmodule{Leslie2Protocols/ABA/GBCAPairSim},
-\leanmodule{Leslie2Protocols/ABA/GBCAIdeal},
-\leanmodule{Leslie2Protocols/ABA/GBCAIdealSim},
-\leanmodule{Leslie2Protocols/ABA/GBCALow} and
-\leanmodule{Leslie2Protocols/ABA/GBCALowSim}.
+See \leanmodule{Leslie2Protocols/ABA/Round/Pair},
+\leanmodule{Leslie2Protocols/ABA/Round/PairSim},
+\leanmodule{Leslie2Protocols/ABA/Round/Ideal},
+\leanmodule{Leslie2Protocols/ABA/Round/IdealSim},
+\leanmodule{Leslie2Protocols/ABA/Round/Low} and
+\leanmodule{Leslie2Protocols/ABA/Round/LowSim}.
 
 \input{nodes/def-aba-gbca-pair}
 \input{nodes/thm-gbca-pair-refines}
@@ -1887,8 +1887,8 @@ And the composed reading indexes the boxes by instance and then by process, whil
 Neither rearrangement loses anything, because every guard of the gather-based implementation reads the acting process's own boxes and the fabrics, and the two rows that read a fabric --- the adversary's delivery and its Byzantine injection --- belong to the adversary in either reading.
 Assembling the composed state from the flat one undoes both: the boxes are transposed back, and each fabric is sliced out of the tagged pool family.
 That assembly is the simulation relation of Theorem~\ref{thm:aba-afw-protocol-composed}, which is a function rather than a correspondence --- the composed state is computed from the flat one, and the proof obligation of a row is which of the six slices takes the message it pools.
-See \leanmodule{Leslie2Protocols/ABA/GatherFlat} and
-\leanmodule{Leslie2Protocols/ABA/GatherFlatSim}.
+See \leanmodule{Leslie2Protocols/ABA/AFW/Flat} and
+\leanmodule{Leslie2Protocols/ABA/AFW/FlatSim}.
 
 \input{nodes/def-aba-afw-protocol}
 
@@ -1907,7 +1907,7 @@ One specification, two verified implementations, one meeting point at $\mathrm{h
   \;\sqsubseteq\; \mathrm{spec}(P).
 \]
 The first step is Theorem~\ref{thm:aba-afw-protocol-composed}, the middle three are the stages of Theorem~\ref{thm:aba-afw-substitution}, and the last is Theorem~\ref{thm:aba-hybrid-spec}, shared with the direct chain.
-See \leanmodule{Leslie2Protocols/ABA/GatherChain}.
+See \leanmodule{Leslie2Protocols/ABA/AFW/Chain}.
 
 
 \input{nodes/def-aba-afw-sides}
