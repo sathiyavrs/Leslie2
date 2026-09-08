@@ -1824,6 +1824,13 @@ See \leanmodule{Leslie2Protocols/ABA/Vocabulary/Fabric},
 
 \input{nodes/def-aba-fabric}
 \input{nodes/def-aba-brb-spec}
+
+\blueprintfig{fig-brb-lifecycle}{The BRB specification instance \leandecl{PLTS.ABA.BRB.specInst} (Transition System 6): the reachable states quotiented to the pair of the leader's recorded input and the committed value.
+The call records the leader's input, and the internal commit writes the delivered value once, under either of two guards (D27): the leader's own input, or any value once the leader is corrupted.
+A corrupted leader therefore commits without a call at all, which is the edge leaving the initial state.
+The guard of \leandeclnamed{commit}{PLTS.ABA.BRB.Step.commit} asks $val = \bot$ and no rule writes $val$ a second time, so the committed value is written once.
+Every return hands out that value, so the returns are a self-loop on the committed state.
+Totality is a liveness property and is not encoded; $\mathrm{fail}$ is omitted.}
 \input{nodes/def-aba-brb-impl}
 \input{nodes/thm-brb-refines}
 
@@ -1848,6 +1855,14 @@ See \leanmodule{Leslie2Protocols/ABA/Gather/Spec},
 \leanmodule{Leslie2Protocols/ABA/Gather/LowSim}.
 
 \input{nodes/def-aba-gather-spec}
+
+\blueprintfig{fig-gather-lifecycle}{The gather specification instance \leandecl{PLTS.ABA.Gather.specInst} (Transition System 4).
+Above, the lifecycle of one process's entry: the call records $k$'s payload, and \leandeclnamed{commit}{PLTS.ABA.Gather.Step.commit} writes $val(k)$ once, under $k$'s own call or, once $k$ is corrupted, under any value (D26).
+The guard reads $F$ at the commit rather than at the call, so a process corrupted after its call may still direct its committed entry.
+Below, the lifecycle of the instance: \leandeclnamed{bindCores}{PLTS.ABA.Gather.Step.bindCores} freezes the core family $\mathcal{C}$ once, asking that it is nonempty, that every member's entries are already committed, and that any two members --- each with itself --- share at least $n-f$ entries.
+No return is enabled before that write, and a return delivers a sub-map of the committed entries containing some member of the family (D25).
+The classical single core is the family's intersection, which no reachable state determines; the pairwise bound is what a state does determine, and every counting argument the two-gather round needs is re-derived from it.
+$\mathrm{fail}$ is omitted.}
 \input{nodes/def-aba-gather-ideal}
 \input{nodes/thm-gather-core}
 \input{nodes/def-aba-gather-low}
@@ -1871,7 +1886,20 @@ See \leanmodule{Leslie2Protocols/ABA/Round/Pair},
 \input{nodes/def-aba-gbca-pair}
 \input{nodes/thm-gbca-pair-refines}
 \input{nodes/def-aba-gbca-gather-low}
+
+\blueprintfig{fig-gather-tower}{One round of the gather-based implementation, \leandecl{PLTS.ABA.GBCA.lowPairInst}, drawn open, and the three substitutions that carry it to Transition System~2.
+A round is two gather instances, one over the input bits and one over the candidates, and each is an $\mathrm{ECHO}$/$\mathrm{VOTE}$ ladder over its own message fabric beside $2n$ Bracha instances --- $n$ carrying the inputs and $n$ the $\mathrm{BIND}$ payloads.
+That is $4n + 2$ message fabrics in a single round, which is the count the flat reading collapses into one tagged pool family.
+The three tiers above it replace one layer at a time: \leandecl{PLTS.ABA.GBCA.lowRefines} replaces each Bracha coordinate by the BRB specification, \leandecl{PLTS.ABA.GBCA.idealRefines} each gather coordinate by the gather specification, and \leandecl{PLTS.ABA.GBCA.pairRefines} reads the grade off the two core families.
+Each is a plain forward simulation, so the three compose and no transitivity of simulations enters.}
 \input{nodes/thm-gbca-tier-refines}
+
+\blueprintfig{fig-gather-sim}{The three tier simulations of one round, with the concrete rows on the right and the relation dashed.
+Each stage idealises away one layer and holds the layers above it equal.
+Under \leandecl{PLTS.ABA.GBCA.LowPairRel} every $\mathrm{ECHO}$, $\mathrm{VOTE}$ and delivery of a Bracha instance is answered by a stutter of the specification coordinate that replaces it.
+Under \leandecl{PLTS.ABA.GBCA.IdealRel} the gather ladder's own rows stutter in the same way, a delivery there being the derived receipt-quorum predicate rather than an event of the composite (D28).
+Under \leandecl{PLTS.ABA.GBCA.PairRel} the returns do the work: a return whose bit the specification has not yet excluded is the weak burst $\mathrm{bindUnset};\mathrm{ret}$, and a return whose kill has already happened is a single graded return.
+The kill-on-demand discipline is the ladder's own, unchanged.}
 \input{nodes/thm-gbca-gather-refines}
 
 
@@ -1892,6 +1920,12 @@ See \leanmodule{Leslie2Protocols/ABA/AFW/Flat} and
 
 \input{nodes/def-aba-afw-protocol}
 
+\blueprintfig{fig-afw-protocol}{The gather-based protocol \leandecl{PLTS.ABA.AFW.protocol}: the $n$ programs beside the one network adversary and the coin oracle, under the two hiding frames of Definition~\ref{def:aba-flat-reading}.
+The shape is the flat reading's, and two things distinguish it from the ladder's instantiation.
+The adversary holds a single pool family per round over the tagged message type \leandecl{PLTS.ABA.AFW.Msg}, whose tag names the fabric a message belongs to and, for a broadcast message, the instance; the composed reading of the same round carries $4n + 2$ separate fabrics.
+And a program's record is process-major: process $j$ holds its own box in every instance, where the composed reading indexes the boxes by instance and then by process.
+Assembling the composed state from the flat one undoes both, which is what \leandecl{PLTS.ABA.AFW.toPair} does --- slicing the one pool family into the fabrics, and transposing the records back.}
+
 
 
 At the protocol shape the gather-based rounds occupy the same refinable slot the direct rounds do.
@@ -1911,6 +1945,13 @@ See \leanmodule{Leslie2Protocols/ABA/AFW/Chain}.
 
 
 \input{nodes/def-aba-afw-sides}
+
+\blueprintfig{fig-afw-composed}{The gather-based composed system \leandecl{PLTS.ABA.AFW.composed} and its three-stage substitution.
+Component for component this is the composed system of Definition~\ref{def:aba-composed}: the same $n$ round loops, the same ABA-side network carrying the DECIDED pools and the corrupted set with its budget, the same lifted coin oracle, under the same two hiding frames.
+What differs is the refinable slot, and that it is replaced three times rather than once.
+The slot holds \leandecl{PLTS.ABA.AFW.lowSide}, one gather-based round per $r \in \mathbb{N}$, each carrying $4n + 2$ message fabrics, and the substitution runs in three stages rather than one: the Bracha layer, then the gather layer, then the counting onto Transition System~2.
+The intermediate systems are $\afw{\mathrm{hybrid}}_1(P)$ and $\afw{\mathrm{hybrid}}_2(P)$, and the third stage lands on $\mathrm{hybrid}(P)$ itself, where the two chains meet.
+The other three components stand unchanged throughout.}
 
 \input{nodes/thm-aba-afw-protocol-composed}
 

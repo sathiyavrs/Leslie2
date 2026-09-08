@@ -1,0 +1,44 @@
+% The gather-based round and its three substitutions
+% (PLTS.ABA.GBCA.lowPairInst, idealInst, pairInst, GBCA.specInst).
+% The bottom tier is drawn open: two gather instances, each a ladder over its
+% own fabric beside 2n Bracha instances, so 4n + 2 fabrics in one round.
+\begin{tikzpicture}[
+    >={Stealth[round]}, semithick,
+    tier/.style={draw, rounded corners, align=center, font=\scriptsize,
+      minimum width=5.6cm, minimum height=0.7cm, inner sep=3pt},
+    ga/.style={draw, rounded corners, align=center, font=\scriptsize,
+      minimum width=4.6cm, minimum height=0.8cm, inner sep=2pt},
+    brb/.style={draw, align=center, font=\scriptsize,
+      minimum width=0.95cm, minimum height=0.55cm, inner sep=1pt},
+    lbl/.style={font=\scriptsize, align=left, fill=white, inner sep=1.5pt}]
+  % ---- the bottom tier, drawn open
+  \draw[dashed, rounded corners] (-0.4,-3.5) rectangle (11.2,-0.15);
+  \node[font=\scriptsize, anchor=west] at (-0.25,-0.42)
+    {$\mathrm{lowPairInst}(P,r)$: two gather instances, everything concrete};
+  \foreach \x/\name/\pay in {0.3/1/{\textsf{Bool}}, 5.9/2/{\textsf{Option Bool}}} {
+    \node[ga, anchor=north west] at (\x,-0.75)
+      {gather \name\ over payloads \pay:\\ the ladder and its own fabric};
+    \foreach \i/\lab in {0/{$\mathrm{brbIn}\,1$}, 1/{$\cdots$}, 2/{$\mathrm{brbIn}\,n$},
+                         3/{$\mathrm{brbBind}\,1$}} {
+      \node[brb, anchor=north west] at ({\x + \i*1.15},-1.85) {\lab};
+    }
+    \node[brb, anchor=north west, minimum width=1.05cm] at ({\x + 3.45},-1.85) {$\cdots$};
+    \node[font=\scriptsize, anchor=north west] at (\x,-2.65)
+      {$2n$ Bracha instances: $n$ carrying the inputs, $n$ the $\mathrm{BIND}$ payloads};
+  }
+  \node[font=\scriptsize] at (5.4,-3.25)
+    {$4n + 2$ message fabrics in one round};
+  % ---- the three tiers above it
+  \node[tier] (ideal) at (5.4,-4.35)
+    {$\mathrm{idealInst}(P,r)$: each Bracha coordinate\\ replaced by the BRB specification};
+  \node[tier] (pair)  at (5.4,-5.65)
+    {$\mathrm{pairInst}(P,r)$: each gather coordinate\\ replaced by the gather specification};
+  \node[tier] (spec)  at (5.4,-6.95)
+    {$\mathrm{GBCA.specInst}(P,r)$: Transition System 2,\\ the grade read off the two core families};
+  \draw[->] (5.4,-3.5) -- (ideal.north)
+    node[lbl, midway, right]{$\mathrm{lowRefines}$, along $\mathrm{LowPairRel}$};
+  \draw[->] (ideal) -- (pair)
+    node[lbl, midway, right]{$\mathrm{idealRefines}$, along $\mathrm{IdealRel}$};
+  \draw[->] (pair) -- (spec)
+    node[lbl, midway, right]{$\mathrm{pairRefines}$, along $\mathrm{PairRel}$};
+\end{tikzpicture}

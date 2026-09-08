@@ -1,0 +1,26 @@
+% BRB specification instance (PLTS.ABA.BRB.Step). Automata style.
+% Nodes are the reachable states quotiented to the pair (input, val). The
+% commit guard is ldr in F or input = m (D27), so a corrupted leader commits
+% without a call at all — the edge leaving the initial state. call/callLoop are
+% enabled wherever input is unset and drawn once; fail is omitted.
+\begin{tikzpicture}[
+    ->, >={Stealth[round]}, auto, semithick, on grid,
+    every state/.style={draw, minimum size=1.35cm, align=center, font=\small},
+    lbl/.style={font=\footnotesize, align=center, fill=white, inner sep=1.5pt}]
+  \node[state, initial, initial text={}] (e) at (0,0)     {$input{=}\bot$\\ $val{=}\bot$};
+  \node[state]                           (c) at (4.6,0)   {$input{=}m$\\ $val{=}\bot$};
+  \node[state]                           (v) at (9.4,0)   {$val{=}m'$};
+  \path
+    (e) edge node[lbl, above]{\texttt{call}\,$m$} (c)
+    (c) edge node[lbl, above, align=center]
+          {\texttt{commit}\,$m'$ $\to\tau$\\ $[\,input = m\,]$} (v)
+    (e) edge[bend right=30] node[lbl, below, pos=0.55, align=center]
+          {\texttt{commit}\,$m'$ $\to\tau$\ \ $[\,ldr \in F\,]$\\
+           a corrupted leader commits without a call} (v)
+    (e) edge[loop above, looseness=6] node[lbl, above]{\texttt{callLoop}} (e)
+    (c) edge[loop above, looseness=6] node[lbl, above]{\texttt{callLoop}} (c)
+    (v) edge[loop above, looseness=6]
+      node[lbl, above]{\texttt{ret}\,$id\ m'$, one per process} (v);
+  \node[below=1.55cm of c, font=\footnotesize, align=center]
+    {$val$ is written once: \texttt{commit} asks $val = \bot$, and no rule writes it again};
+\end{tikzpicture}
