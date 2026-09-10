@@ -2,7 +2,7 @@
   \label{def:aba-gather-ideal}
   \lean{PLTS.ABA.Gather.GaMsg}\lean{PLTS.ABA.Gather.PRec}\lean{PLTS.ABA.Gather.IdealState}\lean{PLTS.ABA.Gather.IdealStep}\lean{PLTS.ABA.Gather.idealInst}\leanok
   \uses{def:aba-gather-spec, def:aba-brb-spec, def:aba-fabric}
-  Algorithm~4 of~\cite{LeslieBP}, from~\cite{AFW25}, with each reliable broadcast held at specification level.
+  Algorithm~4 of~\cite{LeslieBP}, which is the binding form of Algorithm~5 of~\cite{AFW25}, with each reliable broadcast held at specification level.
   The state is a two-box gather instance of Definition~\ref{def:aba-fabric} beside $2n$ broadcast-specification states: $\mathit{brbIn}(k)$, the instance in which $p_k$ broadcasts its input, and $\mathit{brbBind}(k)$, the instance in which $p_k$ broadcasts its $\mathrm{BIND}$ payload.
   An entry set $A$ is \emph{approved} when every entry $(k, x) \in A$ has $\mathit{brbIn}(k).val = x$: approval is commitment of every entry, read off the broadcast coordinates rather than signalled by an event (D28).
   The gather fabric carries $\langle\mathrm{ECHO}, A\rangle$ and $\langle\mathrm{VOTE}, A\rangle$ with entry-set payloads; the $\mathrm{BIND}$ payload is sent through $\mathit{brbBind}$ and not on the fabric.

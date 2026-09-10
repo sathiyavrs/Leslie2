@@ -11,10 +11,11 @@ import Leslie2Protocols.ABA.Vocabulary.Labels
 # The GBCA implementation over the gather specifications
 
 The round-`r` GBCA implementation of the modular construction of Attiya,
-Flam and Welch — their Algorithm 4 at `R = 1`, with no approximate-agreement
-stage (deviation D24): two gather calls and local counting, read over the
-gather specification (`ABA/Gather/Spec.lean`), as an LTS over the shared
-alphabet `ABA.Lab n`.
+Flam and Welch — their Algorithm 4 at `R = 2`, its two-gather branch, with the
+grade read off the second gather's counts in place of the approximate-agreement
+subroutine of its lines 7 and 8 (deviation D24): two gather calls and local
+counting, read over the gather specification (`ABA/Gather/Spec.lean`), as an LTS
+over the shared alphabet `ABA.Lab n`.
 
 Per process, the construction is
 

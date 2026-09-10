@@ -2,7 +2,7 @@
   \label{def:aba-gbca-pair}
   \lean{PLTS.ABA.GBCA.cand}\lean{PLTS.ABA.GBCA.gradeOf}\lean{PLTS.ABA.GBCA.PairState}\lean{PLTS.ABA.GBCA.PairStep}\lean{PLTS.ABA.GBCA.pairInst}\leanok
   \uses{def:aba-gather-spec, def:aba-gbca-spec, def:aba-labels}
-  The graded agreement of~\cite{AFW25} --- its Algorithm~4 at $R = 1$, with the approximate-agreement stage omitted and the grade read off the second gather's counts directly (D24) --- over two gather specification instances of Definition~\ref{def:aba-gather-spec}, the first at payload type $\mathbb{B}$ and the second at $\mathbb{B} \cup \{\bot\}$.
+  The graded agreement of~\cite{AFW25} --- its Algorithm~4 at $R = 2$, the two-gather branch, with the grade read off the second gather's counts in place of the approximate-agreement subroutine of lines~7 and~8 (D24) --- over two gather specification instances of Definition~\ref{def:aba-gather-spec}, the first at payload type $\mathbb{B}$ and the second at $\mathbb{B} \cup \{\bot\}$.
   The state is the pair of the two gather states and nothing else: the round's per-process input is the first instance's $call$, the candidate the second's, and the round's return flags the second's $ret$.
   For a first-gather output $g$, the candidate is
   \[

@@ -168,7 +168,7 @@ everything. Within a folder the files are alphabetical.
 |---|---|---|
 | `Gather/Low.lean` | 187 | The same table with each BRB coordinate a Bracha instance; delivery as a receipt-quorum predicate (D28). |
 | `Gather/LowSim.lean` | 645 | `gatherLow`: the broadcast substitution inside gather, per coordinate, lagging commits fired as τ-chains. |
-| `Gather/Ideal.lean` | 256 | The gather implementation over `2n` BRB specification coordinates (blueprint Algorithm 4, from AFW25): approval as commitment, the ECHO/VOTE rounds over entry sets, BIND by broadcast (D28). |
+| `Gather/Ideal.lean` | 256 | The gather implementation over `2n` BRB specification coordinates (blueprint Algorithm 4, the binding form of AFW25's Algorithm 5): approval as commitment, the ECHO/VOTE rounds over entry sets, BIND by broadcast (D28). |
 | `Gather/IdealSim.lean` | 1436 | `gatherCore`: the gather-over-BRB instance refines TS 4. The core family is read off `f + 1` honest quorum members' committed BIND payloads; the return burst commits, binds and returns in one weak transition. |
 | `Gather/Spec.lean` | 223 | The gather specification (blueprint TS 4): call/commit split (D26) and the write-once core family (D25). |
 
@@ -180,7 +180,7 @@ everything. Within a folder the files are alphabetical.
 | `Round/IdealSim.lean` | 176 | `idealRefines`: the gather substitution inside the round, componentwise. |
 | `Round/Low.lean` | 100 | **The gather-based GBCA implementation**: the round over gather-over-Bracha components — two gather instances, `4n` Bracha instances beneath. |
 | `Round/LowSim.lean` | 186 | `lowRefines`: the broadcast substitution inside the round, componentwise. |
-| `Round/Pair.lean` | 440 | **The two-gather round** (AFW25 Algorithm 4 at R = 1, no approximate agreement, D24) over two gather specifications, with the candidate/grade counting kit in member form. |
+| `Round/Pair.lean` | 440 | **The two-gather round** (AFW25 Algorithm 4 at R = 2, its approximate-agreement subroutine replaced by a local count, D24) over two gather specifications, with the candidate/grade counting kit in member form. |
 | `Round/PairSim.lean` | 1060 | `pairRefines`: the two-gather round refines the GBCA specification. Exclusion and grade certified on the core families; kill-on-demand. |
 
 **`ABA/AFW/`** — the gather-based chain, and the protocol beneath it.

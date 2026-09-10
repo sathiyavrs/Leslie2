@@ -2,6 +2,6 @@
   \label{def:aba-gather-ideal}
   \lean{PLTS.ABA.Gather.GaMsg}\lean{PLTS.ABA.Gather.PRec}\lean{PLTS.ABA.Gather.IdealState}\lean{PLTS.ABA.Gather.IdealStep}\lean{PLTS.ABA.Gather.idealInst}\leanok
   \uses{def:aba-gather-spec, def:aba-brb-spec, def:aba-fabric}
-  Algorithm~4 of~\cite{LeslieBP}, from~\cite{AFW25}, over $2n$ broadcast-specification coordinates: each process contributes its input through its own input-broadcast instance and its $\mathrm{BIND}$ payload through its own bind-broadcast instance, an entry set is approved when every entry is a committed input, and the $\mathrm{ECHO}$/$\mathrm{VOTE}$ rounds over approved sets run on the instance's own fabric (D28).
+  Algorithm~4 of~\cite{LeslieBP}, the binding form of Algorithm~5 of~\cite{AFW25}, over $2n$ broadcast-specification coordinates: each process contributes its input through its own input-broadcast instance and its $\mathrm{BIND}$ payload through its own bind-broadcast instance, an entry set is approved when every entry is a committed input, and the $\mathrm{ECHO}$/$\mathrm{VOTE}$ rounds over approved sets run on the instance's own fabric (D28).
   A return requires $n{-}f$ committed bind payloads below the output and the output below the committed inputs: \leandecl{PLTS.ABA.Gather.idealInst}.
 \end{definition}

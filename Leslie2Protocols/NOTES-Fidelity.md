@@ -14,11 +14,13 @@ over BRB, p. 16; Algorithm 6 = Bracha's BRB, p. 17). It in turn adapts *ABDY22*
 Algorithm 2 is the weak-coin agreement framework `AA_ε` that the source blueprint's
 Algorithm 1 realises (ABDY22's Algorithm 1 is the strong-coin framework, not encoded
 here), and ABDY22's Algorithm 6 is the GBCA of record. The third source is *AFW25*
-(Attiya, Flam and Welch, "Why Canonical-Round Algorithms Fail for Optimal Byzantine
-Resilience", PODC 2026): the source blueprint's Algorithm 4 is taken from it, and its
-own Algorithm 4 — graded agreement from two gather calls — is the source of record
-for the gather-based GBCA implementation (D24), which the source blueprint does not
-contain. Bare algorithm numbers in this file are the source blueprint's. The encoding
+(Attiya, Flam and Welch, "Why Canonical Rounds Fail for Optimal Byzantine
+Resilience", arXiv:2510.04310v2, the extended version of the PODC 2026 paper; numbers
+below are the extended version's): the source blueprint's Algorithm 4 is the binding
+form of AFW25's Algorithm 5, and AFW25's Algorithm 4 — graded agreement from two
+gather calls — is the source of record for the gather-based GBCA implementation
+(D24), which the source blueprint does not contain. Bare algorithm numbers in this
+file are the source blueprint's. The encoding
 follows the source blueprint; where the source blueprint departs from ABDY22 the
 encoding inherits the departure, with the single exception of §1.
 
@@ -257,7 +259,7 @@ repaired at the rule; the sixth entry is a cross-reference.
   also reads `bind ≠ ⊥` where the unset marker is `∅`). And no repair by a size guard
   on `S` is available at implementation level: at `n = 3f + 1` a state at the first
   return has as few as `n − 2f` honest votes cast, and determines no single
-  `n − f`-sized set that every future return must dominate — AFW25's Remark 1 reads
+  `n − f`-sized set that every future return must dominate — AFW25's Remark 22 reads
   the core of a gather without binding as fixed only in hindsight. What such a state
   does determine is the family of committed BIND payloads, pairwise sharing `n − f`
   entries; `Gather.SpecState` carries that family, write-once, with the pairwise bound
@@ -300,10 +302,16 @@ Unpredictability, inexpressible once the guess is dropped.
   (pp. 7–9) are liveness properties and are unclaimed; TS 6's own stated scope is the
   linear properties, Totality living in the fairness markings that are outside the
   model. See `NOTES-Liveness-Roadmap.md`.
-- **The approximate-agreement stage of AFW25's Algorithm 4.** The algorithm at `R ≥ 2`
-  calls an approximate-agreement subroutine to pick its grade; at `R = 1`, the graded
-  agreement encoded here, lines 4–6 read the grade off the second gather's counts and
-  the subroutine never runs. It is not encoded (D24).
+- **The approximate-agreement subroutine of AFW25's Algorithm 4.** Lines 7 and 8 set
+  the grade by an approximate-agreement subroutine on an input of `R` or `0`, so a
+  process there reaches the top grade only when enough others also chose `R`. AFW25's
+  Appendix B gives that subroutine concretely, as a two-input approximate agreement
+  over a primitive with its own `f + 1` relay and `n − f` thresholds. Neither is
+  encoded: the grade is the local count on the second gather's return (D24), which
+  drops a communication stage. Line 5 takes the returned bit from the `f + 1` test and
+  line 6 the grade from the `|T| − f` test, and grade `A` ties both to the latter —
+  sound because `|T| − f ≥ n − 2f ≥ f + 1` carries the heavy bit past the `f + 1` bar,
+  where AFW25's Lemma 18 makes it unique.
 - **SRSD and AVSS (TS 5 and TS 7).** Not encoded, nor is the source's Algorithm 3, the
   coin implementation over gather and SRSD that they serve. In the source,
   gather serves the coin construction through SRSD; here the coin stays at

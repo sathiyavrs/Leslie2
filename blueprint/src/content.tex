@@ -149,7 +149,8 @@ Transition System~1 is the ABA specification, Transition System~2 the GBCA speci
 A rule is cited by its Lean constructor name, a deviation label in parentheses marks a point where an encoding departs from~\cite{LeslieBP}, and where a node names ABDY22's Algorithm~$k$ it means the numbering of~\cite{ABDY22}.
 Bracha's third message level is $\mathrm{VOTE}$ here and in the source blueprint, where both~\cite{ABDY22} and~\cite{AFW25} write $\mathrm{READY}$.
 Its echo threshold is $n-f$ here and in the source blueprint, where~\cite{AFW25} writes $(n+f)/2$.
-The encoding follows the source blueprint on both points, so neither carries a deviation label.
+Its return quorum is $n-f$ where~\cite{AFW25} writes $2f+1$, the two coinciding at $n = 3f+1$.
+The encoding follows the source blueprint at each point, so none of the three carries a deviation label.
 
 \paragraph{Outside the model.}
 Two features of~\cite{LeslieBP} are deliberately not encoded: fairness, whose markings bear only on liveness, and partial information, whose observation functions and belief construction are not needed because every adversary here is omniscient.
@@ -203,10 +204,10 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
     The two networks carry the Byzantine visible return, $\mathrm{retABA}(id,b)$ at a corrupted process for either bit under the authorisation $id \in F$ alone.
     The specification's corrupted interface rules are the image of the replacement: \leandeclnamed{callByz}{PLTS.ABA.SpecStep.callByz} records a bit unrelated to the one its label declares, and \leandeclnamed{retByz}{PLTS.ABA.SpecStep.retByz} returns any bit at any time without moving the state.
     The honest rules stay available to a corrupted process, so the two rules add behaviour and remove none.
-  \item D24: the gather-based GBCA implementation follows Algorithm~4 of~\cite{AFW25} at $R = 1$, with the approximate-agreement stage omitted and the grade read off the second gather's counts directly --- $(v, A)$ at $|{\rm dom}\, h| - f$ entries of $v$, $(v, B)$ at $f{+}1$, $(\bot, C)$ below both.
+  \item D24: the gather-based GBCA implementation follows Algorithm~4 of~\cite{AFW25} at $R = 2$, its two-gather branch, with the grade read off the second gather's counts in place of the approximate-agreement subroutine of lines~7 and~8 --- $(v, A)$ at $|{\rm dom}\, h| - f$ entries of $v$, $(v, B)$ at $f{+}1$, $(\bot, C)$ below both.
     The source supplies no gather-based GBCA; its gather serves the coin construction, which stays at specification level here, so \cite{AFW25} is the algorithm's source of record and Transition System~2 is unchanged as its specification.
   \item D25: the gather specification carries a write-once \emph{core family} in its state --- a nonempty set of committed-entry sets, any two of which (each with itself) share at least $n - f$ entries, every return dominating some member --- in place of Transition System~4's single bound identifier set carried on its return labels.
-    The classical common core is the family's intersection; its $n - f$ size bound is a fact about complete executions, not a state invariant an implementation can maintain (\cite{AFW25}, Remark~1), and the family is what a reachable state does determine.
+    The classical common core is the family's intersection; its $n - f$ size bound is a fact about complete executions, not a state invariant an implementation can maintain (\cite{AFW25}, Remark~22), and the family is what a reachable state does determine.
     On the implementation side the $\mathrm{BIND}$ payload is sent by reliable broadcast rather than on the fabric, which is what pins a committed payload against a sender corrupted later.
   \item D26: the gather specification records calls and committed entries in separate fields, a per-entry internal commit writing $val(k)$ once under $k \in F \vee call(k) = v$, in place of Transition System~4's rule writing $call$ itself at a corrupted process.
     A process corrupted after its call may still direct its committed entry, and the guard reads $F$ at the commit rather than at the call.
@@ -427,7 +428,7 @@ See \leanmodule{Leslie2Protocols/ABA/Core/NonVacuity}.
 \label{sec:aba-gather}
 
 Transition System~2 has a second verified implementation.
-Attiya, Flam and Welch~\cite{AFW25} build graded agreement from two calls to a \emph{gather} sub-protocol and local counting, and the source blueprint carries the matching material: a gather specification (Transition System~4), a gather implementation over reliable broadcast (its Algorithm~4, from~\cite{AFW25}), and Bracha's reliable broadcast (Transition System~6 and its Algorithm~6, from~\cite{Bra87}).
+Attiya, Flam and Welch~\cite{AFW25} build graded agreement from two calls to a \emph{gather} sub-protocol and local counting, and the source blueprint carries the matching material: a gather specification (Transition System~4), a gather implementation over reliable broadcast (its Algorithm~4, the binding form of Algorithm~5 of~\cite{AFW25}), and Bracha's reliable broadcast (Transition System~6 and its Algorithm~6, from~\cite{Bra87}).
 This section carries that construction to implementation level in full --- the two gather instances and, beneath them, the $4n$ Bracha instances --- and to the same specification: the round interface $\mathrm{callG}/\mathrm{retG}$, Transition System~2, and every statement downstream of it are those of the sections above, so the two implementations differ only in the system at the bottom of the chain.
 The per-round work is three substitutions in sequence, each replacing one layer of sub-protocol by its specification; at the protocol shape the three stages land on $\mathrm{hybrid}(P)$, and the chain continues along the shared links.
 The Lean files are \leanmodule{Leslie2Protocols/ABA/Vocabulary/Fabric} through \leanmodule{Leslie2Protocols/ABA/AFW/Chain}, mapped file by file in the ABA library's own guide.
@@ -554,8 +555,10 @@ In \emph{41st ACM Symposium on Principles of Distributed Computing}, pages 381--
 
 \bibitem[AFW25]{AFW25}
 Hagit Attiya, Itay Flam and Jennifer L.\ Welch.
-Why canonical-round algorithms fail for optimal Byzantine resilience.
-In \emph{45th ACM Symposium on Principles of Distributed Computing}, pages 197--207, 2026.
+Why canonical rounds fail for optimal Byzantine resilience.
+arXiv:2510.04310v2 [cs.DC], 2026.
+Extended version of the paper in \emph{45th ACM Symposium on Principles of Distributed Computing}, pages 197--207, 2026;
+citations here are to the extended version, whose appendices carry the gather algorithm and the approximate-agreement subroutine.
 
 \bibitem[Bra87]{Bra87}
 Gabriel Bracha.

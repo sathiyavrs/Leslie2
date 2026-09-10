@@ -16,6 +16,6 @@
   the case $U = V$ giving every member at least $n - f$ entries (D25); the return of a partial map $g$ under $cores = \mathit{Cs} \wedge (\exists U \in \mathit{Cs},\ U \sqsubseteq g) \wedge g \subseteq val$, at a process that has not returned; and the total corruption transform (D1).
   Agreement and Validity are consequences of $g \subseteq val$ and the honest commit guard; the binding content is the write-once family, which no rule extends or rewrites.
   Transition System~4 carries a single bound identifier set on its return labels; here the family sits in the state, the returns carry the output alone, and a member is a set of committed entries rather than of identifiers.
-  The classical common core is the intersection of the family; its $n - f$ size bound is a fact about complete executions and is not a state invariant of the instance, which is why the family replaces it (D25) --- \cite{AFW25}, Remark~1, reads the core of a gather without binding as determined only in hindsight.
+  The classical common core is the intersection of the family; its $n - f$ size bound is a fact about complete executions and is not a state invariant of the instance, which is why the family replaces it (D25) --- \cite{AFW25}, Remark~22, reads the core of a gather without binding as determined only in hindsight.
   Full construction: \leandecl{PLTS.ABA.Gather.specInst}.
 \end{definition}

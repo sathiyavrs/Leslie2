@@ -88,7 +88,7 @@ member may be corrupted *after* its sends, and a fabric multicast from a
 sender corrupted later pins nothing — the injections of the now-corrupted
 sender can put any payload beside it.
 
-AFW25's Remark 1 says the same from above: for a gather without binding the
+AFW25's Remark 22 says the same from above: for a gather without binding the
 core set "is determined only in hindsight, and could be captured as a
 prophecy variable". The `n − f`-sized single core is a fact about complete
 executions. A specification whose internal rule must fire at a reachable
@@ -147,19 +147,19 @@ fire it inside the weak answer of the first row that reads it —
 
 ## Member-form counting at the pair tier (`pairRefines`)
 
-`pairInst` is AFW25's Algorithm 4 at `R = 1` (D24): candidate at
+`pairInst` is AFW25's Algorithm 4 at `R = 2`, its two-gather branch (D24): candidate at
 `|dom g| − f` occurrences after the first gather, grade at
 `|dom h| − f` / `f + 1` after the second. The refinement into TS 2 certifies
 the specification's `dead` and `grade` on the two core families, and every
 count is in *member form* — about family members, never about a global core:
 
-- `cnt_heavy_of_subMap` (AFW25 Lemma 11, member form): a returned map heavy
+- `cnt_heavy_of_subMap` (AFW25 Lemma 13, member form): a returned map heavy
   at `x` — all but `f` entries — makes every member of the family heavy at
   `x`, since the member sits below the map and loses at most `f` entries.
-- `members_agree` (Proposition 12, member form): two members heavy at `x`
+- `members_agree` (Proposition 14, member form): two members heavy at `x`
   and `y` share `≥ n − f ≥ 2f + 1` entries, of which at most `2f` miss a
   value; a common entry carries both, so `x = y`.
-- `members_heavy_light` (Lemma 16 / A–C exclusivity): a member heavy at `x`
+- `members_heavy_light` (Lemma 18 / A–C exclusivity): a member heavy at `x`
   leaves every value `≠ x` at most `f` entries on any member, through the
   shared entries again.
 
