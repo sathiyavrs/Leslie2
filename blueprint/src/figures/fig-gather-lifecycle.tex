@@ -1,38 +1,35 @@
 % Gather specification instance (PLTS.ABA.Gather.Step). Automata style, two
-% bands. Above, one process's entry: call records the payload, commit writes
-% val(k) once under k's own call or, once k is corrupted, under any value
-% (D26). Below, the instance: bindCores freezes the core family once, and no
-% return is enabled before it (D25). fail is omitted.
+% bands separated by the dotted rule. Above, one process's entry: call records
+% the payload, commit writes val(k) once under k's own call or, once k is
+% corrupted, under any value (D26). Below, the instance: bindCores freezes the
+% core family once, and no return is enabled before it (D25). fail is omitted.
 \begin{tikzpicture}[
     ->, >={Stealth[round]}, auto, semithick, on grid,
     every state/.style={draw, minimum size=1.3cm, align=center, font=\small},
-    lbl/.style={font=\footnotesize, align=center, fill=white, inner sep=1.5pt},
-    band/.style={font=\footnotesize\itshape}]
+    lbl/.style={font=\footnotesize, align=center, fill=white, inner sep=1.5pt}]
   % ---- upper band: the lifecycle of one entry k
-  \node[band, anchor=west] at (-1.5,1.9) {one entry $k$};
   \node[state, initial, initial text={}] (e) at (0,0.7)   {$call(k){=}\bot$};
-  \node[state]                           (c) at (4.4,0.7) {$call(k){=}x$};
-  \node[state]                           (w) at (9.0,0.7) {$val(k){=}v$};
+  \node[state]                           (c) at (4.5,0.7) {$call(k){=}x$};
+  \node[state]                           (w) at (9.2,0.7) {$val(k){=}v$};
   \path
     (e) edge node[lbl, above]{\texttt{call}\,$k\ x$} (c)
     (c) edge node[lbl, above]{\texttt{commit}\,$k\ v$ $\to\tau$\\ $[\,call(k) = v\,]$} (w)
-    (e) edge[bend right=26] node[lbl, below, pos=0.55]
+    (e) edge[bend right=24] node[lbl, below, pos=0.5]
           {\texttt{commit}\,$k\ v$ $\to\tau$\ \ $[\,k \in F\,]$} (w)
     (e) edge[loop above, looseness=6] node[lbl, above]{\texttt{callLoop}} (e)
     (c) edge[loop above, looseness=6] node[lbl, above]{\texttt{callLoop}} (c);
-  % ---- the divider
-  \draw[dotted] (-2.0,-1.1) -- (11.3,-1.1);
+  % ---- the divider; the explicit - stops it inheriting the picture's arrow tip
+  \draw[dotted, -] (-1.7,-1.5) -- (11.0,-1.5);
   % ---- lower band: the instance
-  \node[band, anchor=west] at (-1.5,-1.7) {the instance};
-  \node[state, initial, initial text={}] (n) at (0,-3.0)   {$cores{=}\bot$};
-  \node[state]                           (b) at (5.4,-3.0) {$cores{=}\mathcal{C}$};
+  \node[font=\footnotesize] at (0,-2.2) {no \texttt{ret} enabled};
+  \node[state, initial, initial text={}] (n) at (0,-3.3)   {$cores{=}\bot$};
+  \node[state]                           (b) at (6.0,-3.3) {$cores{=}\mathcal{C}$};
   \path
-    (n) edge node[lbl, above]
-          {\texttt{bindCores}\,$\mathcal{C}$ $\to\tau$\\
-           $[\,\mathcal{C} \neq \emptyset$; every member's entries committed;\\
-            any two members, each with itself, share $\geq n{-}f\,]$} (b)
-    (b) edge[loop right, looseness=5.5] node[lbl, right, align=left]
-          {\texttt{ret}\,$id\ g$\\ $[\,g$ a sub-map of $val$;\\ some $U \in \mathcal{C}$ with $U \subseteq g\,]$} (b);
-  \node[right=2.9cm of n, font=\footnotesize, align=center, yshift=-1.15cm]
-    {no \texttt{ret} enabled};
+    (n) edge node[lbl, above]{\texttt{bindCores}\,$\mathcal{C}$ $\to\tau$} (b)
+    (b) edge[loop right, looseness=5] node[lbl, right]{\texttt{ret}\,$id\ g$} (b);
+  \node[font=\footnotesize, align=center] at (3.0,-4.6)
+    {$[\ \mathcal{C} \neq \emptyset$;\ \ every member's entries are committed;\\
+      any two members, each with itself, share $\geq n{-}f\ ]$};
+  \node[font=\footnotesize, align=left, anchor=north west] at (7.5,-4.0)
+    {$[\ g$ a sub-map of $val$;\\ some $U \in \mathcal{C}$ with $U \subseteq g\ ]$};
 \end{tikzpicture}

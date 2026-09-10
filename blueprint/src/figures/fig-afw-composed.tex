@@ -5,40 +5,41 @@
 \begin{tikzpicture}[
     >={Stealth[round]}, semithick,
     box/.style={draw, rounded corners, align=center, font=\scriptsize,
-      minimum width=4.4cm, minimum height=1.0cm, inner sep=3pt},
+      minimum width=4.2cm, minimum height=0.9cm, text width=3.9cm, inner sep=3pt},
     slot/.style={draw, rounded corners, align=center, font=\scriptsize,
       minimum width=5.0cm, minimum height=1.3cm, inner sep=3pt},
     ann/.style={font=\scriptsize, align=center, inner sep=1.5pt},
     lbl/.style={font=\scriptsize, align=left, fill=white, inner sep=1.5pt}]
-  \draw[dashed, rounded corners] (-1.1,-2.6) rectangle (11.1,3.0);
-  \node[font=\footnotesize] at (8.6,2.7) {$\mathrm{abstract}\,\mathrm{hiddenAPI}$};
-  \draw[dashed, rounded corners] (-0.8,-2.3) rectangle (10.7,2.3);
-  \node[font=\footnotesize] at (7.2,2.02)
+  \draw[dashed, rounded corners] (-1.1,-3.3) rectangle (11.1,3.0);
+  \node[font=\footnotesize] at (8.5,2.7) {$\mathrm{abstract}\,\mathrm{hiddenAPI}$};
+  \draw[dashed, rounded corners] (-0.8,-3.0) rectangle (10.8,2.3);
+  \node[font=\footnotesize] at (7.1,2.02)
     {$\mathrm{relabel} \circ \mathrm{abstract}\,\mathrm{netEvtLabels}$};
-  \draw[thick] (-0.5,1.45) -- (10.4,1.45);
+  \draw[thick] (-0.5,1.45) -- (10.5,1.45);
   \node[ann, anchor=west] at (-0.45,1.72) {$\mathrm{NLab}(n)$: every component steps};
   % the refinable slot
   \node[slot] (low) at (2.3,0.1)
     {$\mathrm{lowSide}(P)$: one gather-based round\\ per $r \in \mathbb{N}$, each $4n{+}2$ fabrics};
-  % the three untouched components
-  \node[box] (cores) at (8.2,0.5) {the $n$ round loops};
-  \node[box] (anet)  at (8.2,-0.8) {$\mathrm{aNet}(P)$: DECIDED pools, $F$, $|F| < f$};
-  \node[box] (w)     at (8.2,-2.0) {$\mathrm{WCC.specFamily}(P)$ along $\mathrm{wccPull}$};
   \draw[<->] (2.3,1.45) -- (2.3,0.75);
-  \foreach \y in {0.5,-0.8,-2.0} \draw[<->] (5.4,1.45) -- (5.4,\y) -- (5.95,\y);
+  % the three untouched components, fed from a spine clear of both columns
+  \node[box] (cores) at (8.4,0.6)  {the $n$ round loops};
+  \node[box] (anet)  at (8.4,-0.7) {$\mathrm{aNet}(P)$: the DECIDED pools,\\ $F$ with $|F| < f$};
+  \node[box] (w)     at (8.4,-2.0) {$\mathrm{WCC.specFamily}(P)$\\ along $\mathrm{wccPull}$};
+  \foreach \y in {0.6,-0.7,-2.0} \draw[<->] (5.7,1.45) -- (5.7,\y) -- (6.3,\y);
   % the three stages
-  \node[slot, minimum height=0.75cm] (ideal) at (2.3,-3.7)
+  \node[slot, minimum height=0.75cm] (ideal) at (2.3,-4.5)
     {$\mathrm{idealSide}(P)$ \ \ giving $\afw{\mathrm{hybrid}}_1(P)$};
-  \node[slot, minimum height=0.75cm] (pair)  at (2.3,-5.0)
+  \node[slot, minimum height=0.75cm] (pair)  at (2.3,-5.8)
     {$\mathrm{pairSide}(P)$ \ \ giving $\afw{\mathrm{hybrid}}_2(P)$};
-  \node[slot, minimum height=0.75cm] (spec)  at (2.3,-6.3)
+  \node[slot, minimum height=0.75cm] (spec)  at (2.3,-7.1)
     {$\mathrm{specSide}(P)$ \ \ giving $\mathrm{hybrid}(P)$};
-  \draw[->, dashed] (2.3,-2.6) -- (ideal.north);
+  \draw[->, dashed] (2.3,-3.3) -- (ideal.north);
   \draw[->, dashed] (ideal) -- (pair);
   \draw[->, dashed] (pair) -- (spec);
-  \node[lbl, anchor=west] at (5.1,-3.2)  {stage 1: the Bracha layer};
-  \node[lbl, anchor=west] at (5.1,-4.35) {stage 2: the gather layer};
-  \node[lbl, anchor=west] at (5.1,-5.65) {stage 3: the counting, onto Transition System 2};
-  \node[ann, anchor=west] at (5.1,-6.75)
-    {the left slot alone is replaced, three times;\\ the other three components stand throughout};
+  \node[lbl, anchor=west] at (5.2,-3.95) {stage 1: the Bracha layer};
+  \node[lbl, anchor=west] at (5.2,-5.15) {stage 2: the gather layer};
+  \node[lbl, anchor=west] at (5.2,-6.45) {stage 3: the counting, onto Transition System 2};
+  \node[ann, anchor=north west, text width=5.6cm] at (5.2,-6.9)
+    {the left slot alone is replaced, three times; the other three components
+     stand throughout};
 \end{tikzpicture}

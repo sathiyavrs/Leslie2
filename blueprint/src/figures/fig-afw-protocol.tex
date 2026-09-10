@@ -5,35 +5,36 @@
 \begin{tikzpicture}[
     >={Stealth[round]}, semithick,
     prog/.style={draw, rounded corners, align=center, font=\scriptsize,
-      minimum width=2.5cm, minimum height=1.5cm, inner sep=2pt},
+      minimum width=2.4cm, minimum height=1.5cm, inner sep=3pt},
     box/.style={draw, rounded corners, align=center, font=\scriptsize,
-      minimum width=4.7cm, minimum height=1.2cm, inner sep=3pt},
+      minimum width=4.6cm, minimum height=1.2cm, inner sep=3pt},
     ann/.style={font=\scriptsize, align=center, inner sep=1.5pt}]
-  \draw[dashed, rounded corners] (-1.2,-4.6) rectangle (11.0,3.3);
+  \draw[dashed, rounded corners] (-1.2,-5.5) rectangle (11.0,3.3);
   \node[font=\footnotesize] at (8.6,3.0) {$\mathrm{abstract}\,\mathrm{hiddenAPI}$};
-  \draw[dashed, rounded corners] (-0.9,-4.3) rectangle (10.6,2.6);
+  \draw[dashed, rounded corners] (-0.9,-5.2) rectangle (10.7,2.6);
   \node[font=\footnotesize] at (7.2,2.32)
     {$\mathrm{relabel} \circ \mathrm{abstract}\,\mathrm{netEvtLabels}$};
-  \draw[thick] (-0.6,1.75) -- (10.3,1.75);
+  \draw[thick] (-0.75,1.75) -- (10.55,1.75);
   \node[ann, anchor=west] at (-0.55,2.05) {$\mathrm{NLab}(n)$ over the tagged messages};
   % the n programs
-  \node[prog] (p1) at (0.7,0.4)  {program $1$};
-  \node[prog] (pj) at (4.0,0.4)
-    {program $j$\\[2pt]\emph{process-major} record:\\ $j$'s box in \emph{every}\\ instance of every round};
-  \node[prog] (pn) at (7.3,0.4)  {program $n$};
-  \node[font=\scriptsize] at (2.35,0.4) {$\cdots$};
-  \node[font=\scriptsize] at (5.65,0.4) {$\cdots$};
-  \foreach \x in {0.7,4.0,7.3} \draw[<->] (\x,1.75) -- (\x,1.15);
-  % the adversary and the oracle
-  \node[box] (adv) at (2.6,-2.4)
+  \node[prog] (p1) at (0.65,0.4) {program $1$};
+  \node[prog, minimum width=3.4cm, text width=3.2cm] (pj) at (4.3,0.4)
+    {program $j$\\[2pt]\emph{process-major} record: $j$'s box in \emph{every} instance of every round};
+  \node[prog] (pn) at (8.4,0.4) {program $n$};
+  \node[font=\scriptsize] at (2.2,0.4)  {$\cdots$};
+  \node[font=\scriptsize] at (6.35,0.4) {$\cdots$};
+  \foreach \x in {0.65,4.3,8.4} \draw[<->] (\x,1.75) -- (\x,1.15);
+  % the adversary and the oracle, reached through the gaps between the programs
+  \node[box] (adv) at (2.4,-2.6)
     {the network adversary:\\ \emph{one} tagged pool family per round,\\
      $\mathrm{ga}_1$, $\mathrm{ga}_2$, $\mathrm{brbIn}_i\,k$, $\mathrm{brbBind}_i\,k$,\\
      beside the DECIDED pools and $F$};
-  \node[box] (w) at (8.1,-2.4)
+  \node[box] (w) at (8.0,-2.6)
     {$\mathrm{WCC.specFamily}(P)$ along $\mathrm{wccPull}$:\\ the one non-Dirac component};
-  \draw[<->] (2.6,1.75) -- (2.6,-1.8);
-  \draw[<->] (8.1,1.75) -- (8.1,-1.8);
-  \node[ann, anchor=west, text width=11.2cm, align=flush left] at (-0.75,-4.0)
+  % the two boxes are fed round the outside, clear of the programs
+  \draw[<->] (-0.75,1.75) -- (-0.75,-2.6) -- (0.1,-2.6);
+  \draw[<->] (10.55,1.75) -- (10.55,-2.6) -- (10.3,-2.6);
+  \node[ann, text width=11.0cm] at (4.9,-4.5)
     {the composed reading of the same round carries $4n + 2$ separate fabrics
      and indexes its boxes by instance, then by process;
      $\mathrm{toPair}$ slices the one pool family and transposes the records back};
