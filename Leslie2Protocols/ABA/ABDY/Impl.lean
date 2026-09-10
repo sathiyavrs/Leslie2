@@ -39,7 +39,7 @@ by nondeterministic `τ`-transitions.
 
 ## Why the cited algorithm and not the blueprint's `alg:GBCA` (D18)
 
-* **D18 (the five-level ladder).** This is a deviation from the source
+* **D18 (the five message levels).** This is a deviation from the source
   blueprint's `alg:GBCA`, which presents a **4-round compression** of
   Algorithm 6: the `echo5` round is elided, the decide conditions read one level
   down, and the grade-1 evidence is `f + 1` `VOTE v` where Algorithm 6 has
@@ -77,7 +77,7 @@ pseudocode (`n − f`).
 * **D8 (participation gating).** Protocol sends (`relay`, `echo`, `vote*`,
   `bind*`, `seal*`) and the three returns require the process to have received
   its input (`input ≠ none`): the algorithm's handlers only run inside a called
-  instance. The ladder rules are taken in the wait-until order of Algorithm 6
+  instance. The send rows are taken in the wait-until order of Algorithm 6
   from the `BIND` level down: each of those rules requires the process's own
   send at the level below. The `VOTE` rules ask for no own send, the `ECHO`
   they read being sent by an `upon` handler that may still be pending. The
@@ -96,14 +96,14 @@ the receipts of its own case, each return reads the receipts named by the
 cases above it in the chain, the process's own `SEAL` slot, and the call
 record. The binding and grade information that the specification tracks is an
 abstraction of these receipt patterns and lives only on the specification
-side; the refinement (`ABA/ABDY/LadderSim.lean`) supplies it from the receipts.
+side; the refinement (`ABA/ABDY/ImplSim.lean`) supplies it from the receipts.
 -/
 
 namespace PLTS
 namespace ABA
 namespace GBCA
 
-/-- The five-level message ladder of Algorithm 6. `VOTE`, `BIND` and `SEAL` may
+/-- The five message levels of Algorithm 6. `VOTE`, `BIND` and `SEAL` may
 carry the non-bit payload `⊥` (`none`). -/
 inductive Msg : Type
   /-- `⟨INPUT, b⟩`. -/
@@ -567,7 +567,7 @@ theorem exists_honest_recv₂ {P : Params} {s : ImplState P.n} (hF : s.F.card �
 end ImplState
 
 /-- The step relation of the round-`r` GBCA implementation instance
-(ABDY22 Algorithm 6, the full five-level ladder). All transitions are Dirac. -/
+(ABDY22 Algorithm 6, all five message levels). All transitions are Dirac. -/
 inductive ImplStep (P : Params) (r : ℕ) :
     ImplState P.n → Lab P.n → PMF (ImplState P.n) → Prop
   /-- The environment call arrives: record the input and multicast

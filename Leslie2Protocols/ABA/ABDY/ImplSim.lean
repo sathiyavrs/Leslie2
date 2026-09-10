@@ -4,14 +4,14 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.ABDY.Ladder
+import Leslie2Protocols.ABA.ABDY.Impl
 import Leslie2Protocols.Framework.FamilySim
 
 /-!
 # The per-instance GBCA refinement
 
 The round-`r` implementation instance (`GBCA.implInst`, ABDY22 Algorithm 6 —
-the full five-level ladder, D18) forward-simulates the round-`r` specification
+all five message levels, D18) forward-simulates the round-`r` specification
 instance (`GBCA.specInst`, the exclusion-set specification, D19):
 `GBCA.implRefines`.
 

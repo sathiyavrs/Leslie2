@@ -14,7 +14,7 @@ import Leslie2Protocols.Framework.MapIdleSim
 # The gather-based implementation chain
 
 The graded-agreement specification has two verified implementations. The
-ladder implementation (`ABA/ABDY/Ladder.lean`, deviation D18) enters the
+ABDY22 implementation (`ABA/ABDY/Impl.lean`, deviation D18) enters the
 protocol reading through `GSub.gbcaSide` and is replaced by the
 specification family in `ABA/ABDY/Hybrid.lean`. The gather-based implementation
 (`ABA/Round/Low.lean`) is carried to the same specification here, by the three
@@ -36,7 +36,7 @@ soundness inclusion.
 
 **The protocol-shaped reading.** Everything the gather-based chain builds at
 protocol shape sits in the namespace `AFW`, after Attiya, Flam and Welch, so
-each of its systems and headlines carries the name of its ladder-chain
+each of its systems and headlines carries the name of its ABDY-chain
 counterpart: `AFW.composed` beside `composed`, `AFW.substitution` beside
 `substitution`. The names below are read in that namespace.
 
@@ -48,7 +48,7 @@ are the graded-agreement sides of three systems `composed`, `hybrid1` and
 three components. Between
 consecutive systems the family substitution runs under the four congruences
 (`parallel_right`, `abstract`, `relabel`, `abstract`), exactly as
-`substSim` does for the ladder chain. The third stage lands on `hybrid P`
+`substSim` does for the ABDY chain. The third stage lands on `hybrid P`
 itself: from there the shared links `hybrid_spec` and `coreSim` carry both
 implementation chains to the ABA specification. `substitution` is the
 three-stage inclusion, `composed_refines` chains it with `hybrid_spec`,
@@ -395,7 +395,7 @@ noncomputable def substSimIdeal (P : Params) :
 
 /-- The third stage at the protocol shape, into the protocol-shaped
 specification `hybrid P` — the point where the gather-based chain meets the
-ladder chain. -/
+ABDY chain. -/
 noncomputable def substSimPair (P : Params) :
     ProbabilisticForwardSimulation (hybrid2 P) (hybrid P)
       (parallelRel (diracRel (RpairAll P))) :=

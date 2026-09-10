@@ -3,7 +3,7 @@
 Companion design document to the gather-based implementation of graded
 agreement: the sub-protocol encodings (`ABA/Vocabulary/Fabric.lean`, `ABA/Broadcast/Spec.lean`,
 `ABA/Broadcast/Impl.lean`, `ABA/Gather/Spec.lean`, `ABA/Gather/Ideal.lean`,
-`ABA/Gather/Low.lean`), their refinements (`ABA/Broadcast/Sim.lean`,
+`ABA/Gather/Low.lean`), their refinements (`ABA/Broadcast/ImplSim.lean`,
 `ABA/Gather/IdealSim.lean`, `ABA/Gather/LowSim.lean`), the two-gather round and its
 three readings (`ABA/Round/Pair.lean`, `ABA/Round/Ideal.lean`, `ABA/Round/Low.lean`
 and the three `*Sim` files), the assembly at the protocol shape
@@ -57,7 +57,7 @@ Beneath `AFW.composed` is `AFW.protocol`, the gather-based protocol as it runs
 Every protocol-shaped system and headline of this chain sits in the namespace
 `AFW`, after Attiya, Flam and Welch, and carries the name of its counterpart in
 the protocol chain: `AFW.composed` is to the gather-based implementation what
-`ABDY.composed` is to the ladder. A `G` elsewhere in the development is graded
+`ABDY.composed` is to ABDY22's. A `G` elsewhere in the development is graded
 agreement — `callG`, `retG`, `GSub`, `GNetState` — and never the chain.
 
 ## Why the gather specification carries a core family (D25)
@@ -129,7 +129,7 @@ at `q` and no second bind is needed.
 ## The commit splits (D26, D27)
 
 The same dynamic-corruption reading, one level down. TS 6 pins the delivered
-value at an honest `call`; Bracha's ladder with the leader corrupted after
+value at an honest `call`; Bracha's rounds with the leader corrupted after
 its `INIT` but before any honest ECHO quorum can deliver a different value,
 so the pinned specification excludes its own implementation
 (`NOTES-Fidelity.md` §5). `BRB.SpecState` therefore splits `input` (the
@@ -231,7 +231,7 @@ are fixed by the round interface and the specification — so `ABA/Reading/Flat.
 writes it once, parametric in three things: the stage message type `M`, the
 per-process per-round stage record `S`, and the stage-side rows, supplied as a
 relation embedded in one constructor of the program table. `ABA/ABDY/Protocol.lean`
-instantiates it at ABDY22's ladder; `ABA/AFW/Flat.lean` instantiates it here.
+instantiates it at ABDY22's implementation; `ABA/AFW/Flat.lean` instantiates it here.
 
 The division of labour is by label. `Net.stageOwn j` is the set of label
 classes an implementation owns at process `j`: the graded-agreement call and

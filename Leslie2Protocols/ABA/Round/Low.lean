@@ -13,8 +13,8 @@ import Leslie2Protocols.ABA.Gather.Low
 The round-`r` gather-based GBCA implementation (deviation D24), fully
 concrete: the same fused rule table as the readings above it, each gather
 component at the gather-over-Bracha level (`ABA/Gather/Low.lean`). This is
-the protocol as it runs — the two gather calls with their aggregation
-ladders, and underneath them the `4n` Bracha instances carrying the inputs
+the protocol as it runs — the two gather calls with their `ECHO` and `VOTE`
+exchanges, and underneath them the `4n` Bracha instances carrying the inputs
 and the `BIND` payloads.
 -/
 

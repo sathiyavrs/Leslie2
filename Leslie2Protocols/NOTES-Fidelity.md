@@ -53,7 +53,7 @@ evidence level the same attack dies: `f + 1 > |F|` `BIND v` receipts put an hone
 over the write-once `VOTE` level — and that quorum is the object the paper's binding
 argument counts (Lemmas 4.8/4.9 through E.9).
 
-Annotation lives in `ABDY/Ladder.lean`'s module docstring, in the blueprint chapter's caption
+Annotation lives in `ABDY/Impl.lean`'s module docstring, in the blueprint chapter's caption
 for the algorithm and its D18 registry entry, and in the source blueprint's own TeX
 (`Leslie/blueprint/src/sections/Algorithm.tex`, a red note at Algorithm 2's decide
 conditions); the source's PDF caption reads "Implementation of GBCA from [ABDY22]" with no
@@ -136,7 +136,7 @@ refine. A refinement asks only that the implementation move no more freely than 
 specification, so the gap is harmless; what is worth having in one place is which side of
 it each guard falls on, and whether that placement was chosen or forced.
 
-**Carried by the implementation tables** — `GBCA.ImplStep` (`ABA/ABDY/Ladder.lean`), mirrored
+**Carried by the implementation tables** — `GBCA.ImplStep` (`ABA/ABDY/Impl.lean`), mirrored
 row for row at `GBCA.GProcStep` (`ABA/ABDY/Instances.lean`), Byzantine drives included, and
 at `Net.ABAProcStepN` (`ABA/ABDY/Protocol.lean`) with the reads taken through `p.stage r`.
 
@@ -151,7 +151,7 @@ at `Net.ABAProcStepN` (`ABA/ABDY/Protocol.lean`) with the reads taken through `p
   **upon** handler of Algorithm 6's lines 5–7, which multicasts `ECHO`, so a process may
   reach that block and send its `VOTE` with its own `ECHO` still pending.
 - **The denials of the higher cases.** Each rule carries the denials of the cases above
-  it in its own block. In a ladder block the `⊥` rule denies its block's case (a) at
+  it in its own block. In a return block the `⊥` rule denies its block's case (a) at
   either bit
   (`hnot : ∀ b, recvCount (level below, b) < n − f` at `voteBot`, `bindBot`, `sealBot`).
   In the decide block `retB` and `retC` carry `hnotA`, the denial of case (1) at either
@@ -238,12 +238,12 @@ repaired at the rule; the sixth entry is a cross-reference.
 - **TS 1's `Initial` clause names an undeclared field** `out` (source p. 18), absent
   from the same system's `State` line. It is omitted: `PLTS.ABA.SpecState` declares
   `input`, `ret`, `F`, `val` and `mode`, and nothing else.
-- **TS 6 pins the delivered value at the call, which Bracha's ladder does not.** Under
+- **TS 6 pins the delivered value at the call, which Bracha's rounds do not.** Under
   TS 6 an honest `call(m)` sets the single `call` field to `m`, every return hands out
   `call`, and the corrupted-leader rule can only spoil the field (`call = ⊤`, no
   returns) before the first return. Algorithm 6 with the leader corrupted *after* its
   `INIT` multicast leaves more open: until some correct process holds an `n − f` ECHO
-  quorum, the corrupted leader's injections can drive the ladder to deliver a value
+  quorum, the corrupted leader's injections can drive the rounds to deliver a value
   other than `m`, and no resolution of TS 6's nondeterminism returns it — the
   specification excludes its own implementation under D1's dynamic corruption.
   `BRB.SpecState` splits the recorded `input` from the committed `val` and guards the
@@ -338,7 +338,7 @@ Unpredictability, inexpressible once the guess is dropped.
       honest senders of the payload, which is the threshold `ABAProcStepN.dsndRelay` reads;
       the paper's own condition is that the process may stop without holding back any other.
 - **The scope of `terminate`.** The flag is read by the stage-side rows and by nothing
-  else: `callG_call`, the three `retG_*`, `gsndRelay`, `gsndEcho`, the six ladder rows
+  else: `callG_call`, the three `retG_*`, `gsndRelay`, `gsndEcho`, the six level rows
   `gsndVoteBit` through `gsndSealBot`, `gdlvRecv`, and `terminate` itself; `gcallLoop` is
   the stage-side row that does not read it (§4). A process that has terminated still
   finishes a pending coin handshake (`callW`, `retW`), publishes `⟨DECIDED, b⟩` through

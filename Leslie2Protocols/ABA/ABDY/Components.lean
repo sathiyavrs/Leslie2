@@ -6,7 +6,7 @@ Authors: Sathiya / Claude
 
 import Leslie2Protocols.ABA.Vocabulary.RoundLoop
 import Leslie2Protocols.ABA.Reading.Alphabet
-import Leslie2Protocols.ABA.ABDY.Ladder
+import Leslie2Protocols.ABA.ABDY.Impl
 import Leslie2Protocols.ABA.Spec.ABASafety
 import Leslie2Protocols.ABA.Spec.WCC
 import Leslie2Protocols.Framework.IdleFamily
@@ -30,7 +30,7 @@ cannot name the two message networks, the Byzantine drives, or the branches of
 a handshake that it does not distinguish. The rendezvous alphabet
 `NetEvtP n M` names them, over a graded-agreement message type `M`
 (`ABA/Reading/Alphabet.lean`); `NetEvt n` is that alphabet at the stage messages of
-`ABA/ABDY/Ladder.lean`, and `NLab n = Lab n ⊕ NetEvt n` is the alphabet every
+`ABA/ABDY/Impl.lean`, and `NLab n = Lab n ⊕ NetEvt n` is the alphabet every
 component here speaks. Its silent label is `Sum.inl τ`, so every `Sum.inr`
 label is observable, and `netEvtLabels n` — the set of all of them — is what
 both compositions hide before reading the result back over `Lab n`.
@@ -93,9 +93,9 @@ namespace Net
 The rendezvous alphabet, the hidden-label set, the labels a process acts on,
 the coin oracle's label pullback and the lifted oracle are parametric in the
 graded-agreement message type (`ABA/Reading/Alphabet.lean`). This reading fixes that
-type to the stage messages of `ABA/ABDY/Ladder.lean`. -/
+type to the stage messages of `ABA/ABDY/Impl.lean`. -/
 
-/-- The rendezvous alphabet at the stage messages of `ABA/ABDY/Ladder.lean`. -/
+/-- The rendezvous alphabet at the stage messages of `ABA/ABDY/Impl.lean`. -/
 abbrev NetEvt (n : ℕ) : Type := NetEvtP n GBCA.Msg
 
 /-- The extended alphabet. Its silent label is `Sum.inl τ`, so every

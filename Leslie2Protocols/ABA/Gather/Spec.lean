@@ -42,8 +42,8 @@ process's entry is its genuine call, by `commit`'s guard.
 
 The source's TS 4 binds a *single* core set: one `S` of size at least
 `n − f`, fixed before the first return, contained in every return. The
-implementations this specification abstracts (the ECHO/VOTE/BIND aggregation
-ladder of the source's Algorithm 4) do satisfy that property, but its proof
+implementations this specification abstracts (the ECHO/VOTE/BIND rounds
+of the source's Algorithm 4) do satisfy that property, but its proof
 identifies the core only in hindsight: the core is the intersection of
 `f + 1` fixed payloads, and the bound `n − f` on that intersection is
 witnessed by the common core of a *completed* execution — at the moment the

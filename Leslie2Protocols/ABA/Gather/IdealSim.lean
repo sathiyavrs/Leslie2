@@ -9,7 +9,7 @@ import Leslie2Protocols.Framework.FamilySim
 import Leslie2Protocols.Framework.WeakBurst
 
 /-!
-# The gather refinement: the aggregation ladder implements the specification
+# The gather refinement: the ECHO/VOTE rounds implement the specification
 
 `Gather.gatherCore`: the gather-over-BRB-specification instance
 (`ABA/Gather/Ideal.lean`) forward-simulates the gather specification

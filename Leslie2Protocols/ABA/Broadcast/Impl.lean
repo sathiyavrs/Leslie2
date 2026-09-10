@@ -36,7 +36,7 @@ namespace PLTS
 namespace ABA
 namespace BRB
 
-/-- The message ladder of Bracha's protocol. -/
+/-- The message levels of Bracha's protocol. -/
 inductive BMsg (M : Type) : Type
   /-- `⟨INIT, m⟩` — the leader's broadcast of its payload. -/
   | init (m : M)

@@ -24,16 +24,16 @@ network adversary and the composition pipeline for any graded-agreement
 implementation. This file supplies the three things a reading fixes and
 nothing else:
 
-* the stage message type, `GBCA.Msg` — the five-level ladder of
-  `ABA/ABDY/Ladder.lean` (D18);
+* the stage message type, `GBCA.Msg` — the five message levels of
+  `ABA/ABDY/Impl.lean` (D18);
 * the per-process per-round stage record, `GBCA.StageRec`, held by round in a
   finite map (D22);
-* the rows of the implementation, `LadderStageStep`: the graded-agreement call, the
+* the rows of the implementation, `AbdyStageStep`: the graded-agreement call, the
   eight stage multicasts, the stage delivery, the call against an
   already-called record, and the three graded returns.
 
 `ABDY.protocol P` is the flat reading at those three, named for the authors of
-the ladder it runs, as `AFW.protocol P` is named for the authors of the
+the implementation it runs, as `AFW.protocol P` is named for the authors of the
 gather-based one. Its per-process record is a round-loop record beside a
 stage-side record, and the stage records a process holds are retained across
 the round advance, a round never touched reading as the initial record (D22).
@@ -56,13 +56,13 @@ namespace PLTS
 namespace ABA
 namespace Net
 
-/-! ### The stage-side vocabulary at the ladder -/
+/-! ### The stage-side vocabulary at ABDY22's implementation -/
 
 /-- The stage-side record of one process: the stage record of every round the
 process has touched, and whether it has terminated (D22). -/
 abbrev StageSideRec (n : ℕ) : Type := StageSideRecP (GBCA.StageRec n)
 
-/-- The ladder's stage record, as the flat reading consumes it. -/
+/-- ABDY22's stage record, as the flat reading consumes it. -/
 instance instStageRecord (n : ℕ) : StageRecord n GBCA.Msg (GBCA.StageRec n) where
   initial := GBCA.StageRec.initial n
   deliverTo p k m := p.deliverTo k m
@@ -89,7 +89,7 @@ end StageSideRec
 (D22). -/
 abbrev ProcRec (n : ℕ) : Type := ProcRecP n (GBCA.StageRec n)
 
-/-! ### The network adversary's state at the ladder -/
+/-! ### The network adversary's state at ABDY22's implementation -/
 
 /-- The state of the network adversary: the round-tagged message pools, the
 DECIDED pools, and the corrupted set with its budget. -/
@@ -106,9 +106,9 @@ abbrev NetState.corrupt (P : Params) (id : Fin P.n) (s : NetState P.n) : NetStat
 /-! ### The rows of the graded-agreement implementation -/
 
 /-- The stage-side rows of process `j`: the graded-agreement call, the eight
-multicasts of the five-level ladder, the stage delivery, the call against an
+multicasts of the five message levels, the stage delivery, the call against an
 already-called record, and the three graded returns. -/
-inductive LadderStageStep (P : Params) (j : Fin P.n) :
+inductive AbdyStageStep (P : Params) (j : Fin P.n) :
     ProcRec P.n → NLab P.n → PMF (ProcRec P.n) → Prop
   /-- The graded-agreement call: the round loop hands its estimate to the stage
   record of round `r`, which opens. The `⟨INPUT, b⟩` multicast is the network's
@@ -118,7 +118,7 @@ inductive LadderStageStep (P : Params) (j : Fin P.n) :
       (hph : c.proc.phase = .toCallG) (hr : c.proc.round = r)
       (hterm : p.terminated = false)
       (hest : c.proc.est = some b) (hin : (p.stage r).proc.input = none) :
-      LadderStageStep P j (c, p) (Sum.inl (.callG r j b))
+      AbdyStageStep P j (c, p) (Sum.inl (.callG r j b))
         (PMF.pure (c.setProc { c.proc with phase := .awaitG },
           p.setStage r ((p.stage r).setP { (p.stage r).proc with
             input := some b,
@@ -134,7 +134,7 @@ inductive LadderStageStep (P : Params) (j : Fin P.n) :
       (hlv : (p.stage r).proc.sentSeal ≠ none)
       (hcnt : P.n - P.f ≤ (p.stage r).recvCount (.seal (some v)))
       (hret : (p.stage r).proc.returned = false) :
-      LadderStageStep P j (c, p) (Sum.inl (.retG r j (.A v)))
+      AbdyStageStep P j (c, p) (Sum.inl (.retG r j (.A v)))
         (PMF.pure (c.setProc { c.proc with
             est := (GbcaOut.A v).est, lastGrade := some (.A v), phase := .toCallW },
           p.setStage r ((p.stage r).setP { (p.stage r).proc with returned := true })))
@@ -153,7 +153,7 @@ inductive LadderStageStep (P : Params) (j : Fin P.n) :
       (hbind : P.f + 1 ≤ (p.stage r).recvCount (.bind (some v)))
       (hval : (p.stage r).bothValid P)
       (hret : (p.stage r).proc.returned = false) :
-      LadderStageStep P j (c, p) (Sum.inl (.retG r j (.B v)))
+      AbdyStageStep P j (c, p) (Sum.inl (.retG r j (.B v)))
         (PMF.pure (c.setProc { c.proc with
             est := (GbcaOut.B v).est, lastGrade := some (.B v), phase := .toCallW },
           p.setStage r ((p.stage r).setP { (p.stage r).proc with returned := true })))
@@ -173,7 +173,7 @@ inductive LadderStageStep (P : Params) (j : Fin P.n) :
       (hcnt : P.n - P.f ≤ (p.stage r).recvCount (.seal none))
       (hval : (p.stage r).bothValid P)
       (hret : (p.stage r).proc.returned = false) :
-      LadderStageStep P j (c, p) (Sum.inl (.retG r j .C))
+      AbdyStageStep P j (c, p) (Sum.inl (.retG r j .C))
         (PMF.pure (c.setProc { c.proc with
             est := GbcaOut.C.est, lastGrade := some .C, phase := .toCallW },
           p.setStage r ((p.stage r).setP { (p.stage r).proc with returned := true })))
@@ -185,7 +185,7 @@ inductive LadderStageStep (P : Params) (j : Fin P.n) :
       (hin : (p.stage r).proc.input ≠ none)
       (hcnt : P.f + 1 ≤ (p.stage r).recvCount (.input b))
       (hsend : (p.stage r).proc.sentInput b = false) :
-      LadderStageStep P j (c, p) (Sum.inr (.gsnd r j (.input b)))
+      AbdyStageStep P j (c, p) (Sum.inr (.gsnd r j (.input b)))
         (PMF.pure (c, p.setStage r ((p.stage r).setP { (p.stage r).proc with
           sentInput := Function.update (p.stage r).proc.sentInput b true })))
   /-- The stage `ECHO`: an `n − f` `INPUT b` quorum (D18, D22). -/
@@ -195,7 +195,7 @@ inductive LadderStageStep (P : Params) (j : Fin P.n) :
       (hin : (p.stage r).proc.input ≠ none)
       (hcnt : P.n - P.f ≤ (p.stage r).recvCount (.input b))
       (hsend : (p.stage r).proc.sentEcho = none) :
-      LadderStageStep P j (c, p) (Sum.inr (.gsnd r j (.echo b)))
+      AbdyStageStep P j (c, p) (Sum.inr (.gsnd r j (.echo b)))
         (PMF.pure (c, p.setStage r
           ((p.stage r).setP { (p.stage r).proc with sentEcho := some b })))
   /-- The stage `VOTE b`: an `n − f` `ECHO b` quorum. The stage record's own
@@ -207,7 +207,7 @@ inductive LadderStageStep (P : Params) (j : Fin P.n) :
       (hin : (p.stage r).proc.input ≠ none)
       (hcnt : P.n - P.f ≤ (p.stage r).recvCount (.echo b))
       (hsend : (p.stage r).proc.sentVote = none) :
-      LadderStageStep P j (c, p) (Sum.inr (.gsnd r j (.vote (some b))))
+      AbdyStageStep P j (c, p) (Sum.inr (.gsnd r j (.vote (some b))))
         (PMF.pure (c, p.setStage r
           ((p.stage r).setP { (p.stage r).proc with sentVote := some (some b) })))
   /-- The stage `VOTE ⊥`: `n − f` `ECHO`s of any payload and `|Valid| > 1`, and
@@ -221,7 +221,7 @@ inductive LadderStageStep (P : Params) (j : Fin P.n) :
       (hnot : ∀ b, (p.stage r).recvCount (.echo b) < P.n - P.f)
       (hcnt : P.n - P.f ≤ (p.stage r).echoCount)
       (hval : (p.stage r).bothValid P) (hsend : (p.stage r).proc.sentVote = none) :
-      LadderStageStep P j (c, p) (Sum.inr (.gsnd r j (.vote none)))
+      AbdyStageStep P j (c, p) (Sum.inr (.gsnd r j (.vote none)))
         (PMF.pure (c, p.setStage r
           ((p.stage r).setP { (p.stage r).proc with sentVote := some none })))
   /-- The stage `BIND b`: an `n − f` `VOTE b` quorum, the stage record's own
@@ -233,7 +233,7 @@ inductive LadderStageStep (P : Params) (j : Fin P.n) :
       (hlv : (p.stage r).proc.sentVote ≠ none)
       (hcnt : P.n - P.f ≤ (p.stage r).recvCount (.vote (some b)))
       (hsend : (p.stage r).proc.sentBind = none) :
-      LadderStageStep P j (c, p) (Sum.inr (.gsnd r j (.bind (some b))))
+      AbdyStageStep P j (c, p) (Sum.inr (.gsnd r j (.bind (some b))))
         (PMF.pure (c, p.setStage r
           ((p.stage r).setP { (p.stage r).proc with sentBind := some (some b) })))
   /-- The stage `BIND ⊥`: `n − f` `VOTE`s of any payload and `|Valid| > 1`, the
@@ -247,7 +247,7 @@ inductive LadderStageStep (P : Params) (j : Fin P.n) :
       (hnot : ∀ b, (p.stage r).recvCount (.vote (some b)) < P.n - P.f)
       (hcnt : P.n - P.f ≤ (p.stage r).voteCount)
       (hval : (p.stage r).bothValid P) (hsend : (p.stage r).proc.sentBind = none) :
-      LadderStageStep P j (c, p) (Sum.inr (.gsnd r j (.bind none)))
+      AbdyStageStep P j (c, p) (Sum.inr (.gsnd r j (.bind none)))
         (PMF.pure (c, p.setStage r
           ((p.stage r).setP { (p.stage r).proc with sentBind := some none })))
   /-- The stage `SEAL b`: an `n − f` `BIND b` quorum, the stage record's own
@@ -259,7 +259,7 @@ inductive LadderStageStep (P : Params) (j : Fin P.n) :
       (hlv : (p.stage r).proc.sentBind ≠ none)
       (hcnt : P.n - P.f ≤ (p.stage r).recvCount (.bind (some b)))
       (hsend : (p.stage r).proc.sentSeal = none) :
-      LadderStageStep P j (c, p) (Sum.inr (.gsnd r j (.seal (some b))))
+      AbdyStageStep P j (c, p) (Sum.inr (.gsnd r j (.seal (some b))))
         (PMF.pure (c, p.setStage r
           ((p.stage r).setP { (p.stage r).proc with sentSeal := some (some b) })))
   /-- The stage `SEAL ⊥`: `n − f` `BIND`s of any payload and `|Valid| > 1`, the
@@ -273,7 +273,7 @@ inductive LadderStageStep (P : Params) (j : Fin P.n) :
       (hnot : ∀ b, (p.stage r).recvCount (.bind (some b)) < P.n - P.f)
       (hcnt : P.n - P.f ≤ (p.stage r).bindCount)
       (hval : (p.stage r).bothValid P) (hsend : (p.stage r).proc.sentSeal = none) :
-      LadderStageStep P j (c, p) (Sum.inr (.gsnd r j (.seal none)))
+      AbdyStageStep P j (c, p) (Sum.inr (.gsnd r j (.seal none)))
         (PMF.pure (c, p.setStage r
           ((p.stage r).setP { (p.stage r).proc with sentSeal := some none })))
   /-- Stage delivery, receiver's half: file the message under the sender's
@@ -282,7 +282,7 @@ inductive LadderStageStep (P : Params) (j : Fin P.n) :
   | gdlvRecv (c : CoreRec P.n) (p : StageSideRec P.n)
       (r : ℕ) (k : Fin P.n) (m : GBCA.Msg) (hh : c.corrupted = false)
       (hterm : p.terminated = false) :
-      LadderStageStep P j (c, p) (Sum.inr (.gdlv r j k m))
+      AbdyStageStep P j (c, p) (Sum.inr (.gdlv r j k m))
         (PMF.pure (c, p.deliverTo r k m))
   /-- The graded-agreement call against an already-called stage record: the
   round loop moves, the stage record does not. The row carries no termination
@@ -294,13 +294,13 @@ inductive LadderStageStep (P : Params) (j : Fin P.n) :
       (hph : c.proc.phase = .toCallG) (hr : c.proc.round = r)
       (hest : c.proc.est = some b)
       (hin : (p.stage r).proc.input ≠ none) :
-      LadderStageStep P j (c, p) (Sum.inr (.gcallLoop r j b))
+      AbdyStageStep P j (c, p) (Sum.inr (.gcallLoop r j b))
         (PMF.pure (c.setProc { c.proc with phase := .awaitG }, p))
 
 /-- The rows above meet the flat reading's conditions: each carries a label of
 `stageOwn j`, each fires only at an unreplaced program, and each is Dirac. -/
 instance instIsStageTable (P : Params) :
-    IsStageTable P GBCA.Msg (GBCA.StageRec P.n) (LadderStageStep P) where
+    IsStageTable P GBCA.Msg (GBCA.StageRec P.n) (AbdyStageStep P) where
   own h := by cases h <;> rfl
   honest h := by cases h <;> assumption
   dirac h := by cases h <;> exact ⟨_, rfl⟩
@@ -308,10 +308,10 @@ instance instIsStageTable (P : Params) :
 /-! ### The tables, the automata and the pipeline -/
 
 /-- The step relation of the program of process `j`: the flat reading's rows
-beside the stage-side rows of the ladder. -/
+beside ABDY22's own stage-side rows. -/
 abbrev ABAProcStepN (P : Params) (j : Fin P.n) :
     ProcRec P.n → NLab P.n → PMF (ProcRec P.n) → Prop :=
-  FlatProcStep P GBCA.Msg (GBCA.StageRec P.n) (LadderStageStep P) j
+  FlatProcStep P GBCA.Msg (GBCA.StageRec P.n) (AbdyStageStep P) j
 
 /-- The message the graded-agreement call multicasts: `⟨INPUT, b⟩`. -/
 def gCallPayload (P : Params) : Fin P.n → Bool → GBCA.Msg := fun _ b => .input b
@@ -323,7 +323,7 @@ abbrev NetStep (P : Params) : NetState P.n → NLab P.n → PMF (NetState P.n) �
 /-- The program of process `j`. -/
 noncomputable abbrev ABAProcN (P : Params) (j : Fin P.n) :
     System (ProcRec P.n) (NLab P.n) :=
-  flatProcN P GBCA.Msg (GBCA.StageRec P.n) (LadderStageStep P) j
+  flatProcN P GBCA.Msg (GBCA.StageRec P.n) (AbdyStageStep P) j
 
 /-- The network adversary. -/
 noncomputable abbrev netAdv (P : Params) : System (NetState P.n) (NLab P.n) :=
@@ -341,16 +341,16 @@ abbrev ProtocolState (P : Params) : Type :=
 /-- The three components side by side, over the extended alphabet: the
 synchronised process group, the network adversary and the lifted oracle. -/
 noncomputable def protocolPre (P : Params) : System (ProtocolState P) (Net.NLab P.n) :=
-  Net.flatPre P GBCA.Msg (GBCA.StageRec P.n) (Net.LadderStageStep P) (Net.gCallPayload P)
+  Net.flatPre P GBCA.Msg (GBCA.StageRec P.n) (Net.AbdyStageStep P) (Net.gCallPayload P)
 
 /-- **The protocol group**: the rendezvous alphabet hidden, the result read
 back over `Lab n`. -/
 noncomputable def protocolGroup (P : Params) : System (ProtocolState P) (Lab P.n) :=
-  Net.flatGroup P GBCA.Msg (GBCA.StageRec P.n) (Net.LadderStageStep P) (Net.gCallPayload P)
+  Net.flatGroup P GBCA.Msg (GBCA.StageRec P.n) (Net.AbdyStageStep P) (Net.gCallPayload P)
 
 /-- **The protocol system**: the group with the sub-protocol API hidden. -/
 noncomputable def protocol (P : Params) : System (ProtocolState P) (Lab P.n) :=
-  Net.flat P GBCA.Msg (GBCA.StageRec P.n) (Net.LadderStageStep P) (Net.gCallPayload P)
+  Net.flat P GBCA.Msg (GBCA.StageRec P.n) (Net.AbdyStageStep P) (Net.gCallPayload P)
 
 end ABDY
 
@@ -415,7 +415,7 @@ theorem protocolPre_tau_inv (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       μ = prodPMF (PMF.pure u) (prodPMF (PMF.pure w) ω)) :=
   flatPre_tau_inv h
 
-/-! ### The ladder's own rows, by label class
+/-! ### ABDY22's own rows, by label class
 
 Each lemma reads a stage-side row off its label: the participant's row as its
 guards together with the Dirac it produces. The idle row of a non-participant

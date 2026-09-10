@@ -8,7 +8,7 @@
     \mathit{apIn}(j, k, v),\qquad \mathit{apBind}(j, q, U)
   \]
   read a payload as delivered at $j$ when $j$ holds $n - f$ $\mathrm{VOTE}$ receipts of it in the corresponding Bracha coordinate: a sub-instance's return is a receipt predicate on its state, not an event of the composite (D28).
-  Approval at $j$ is $\mathit{apIn}$ at every entry, the ladder rows read approved sets through it, and the return reads $\mathit{apBind}$ at $n{-}f$ coordinates; the internal rows of the $2n$ Bracha instances --- their fabric deliveries, echoes, votes and injections --- are embedded as $\tau$-rules of the composite.
+  Approval at $j$ is $\mathit{apIn}$ at every entry, the $\mathrm{ECHO}$, $\mathrm{VOTE}$ and $\mathrm{BIND}$ rows read approved sets through it, and the return reads $\mathit{apBind}$ at $n{-}f$ coordinates; the internal rows of the $2n$ Bracha instances --- their fabric deliveries, echoes, votes and injections --- are embedded as $\tau$-rules of the composite.
   Corruption is one broadcast across the gather fabric and every Bracha coordinate (D1).
   Full construction: \leandecl{PLTS.ABA.Gather.lowInst}.
 \end{definition}

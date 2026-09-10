@@ -66,7 +66,7 @@ The ABA-side DECIDED network `Comp.aNet` is a component of every system in the c
 and the second component of `ABAState`, the state `coreRel` is defined on.
 
 Both invariants therefore read their network through accessors on a pair — the
-`GBCA.ImplState` accessors in `ABA/ABDY/Ladder.lean`, the `ABAState` accessors in
+`GBCA.ImplState` accessors in `ABA/ABDY/Impl.lean`, the `ABAState` accessors in
 `ABA/ABDY/ABAState.lean` — and name the network's own pools rather than a copy of them held
 inside a record. Weakening either network is a change to that one component.
 

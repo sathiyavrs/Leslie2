@@ -295,7 +295,7 @@ monotone throughout. The harvest splits by D14 site.
   a non-`b` `VOTE` payload — the two ways an `n − f` `VOTE b` quorum is made impossible
   forever). A value-bearing return restores it from its own SEAL-level evidence: `retA`'s
   `n − f` `SEAL v` quorum, and `retB`'s `f + 1` `BIND v` receipts as the grade-1 witness
-  (the full D18 ladder, not the source's compressed `VOTE`-level reading). Both route to
+  (all five D18 levels, not the source's compressed `VOTE`-level reading). Both route to
   an `n − f` `VOTE v` receipt quorum at an honest process
   (`bind_receipts_of_seal_quorum` then `voteQuorum_of_bind_receipts`); that quorum is
   itself the wall, so `deadCert_of_voteQuorum` certifies `!v` dead, and

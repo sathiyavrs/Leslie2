@@ -13,10 +13,10 @@ import Leslie2Protocols.ABA.Round.Low
 The gather-based graded agreement, read as a protocol rather than as a
 composition: `n` programs beside one network adversary and the coin oracle.
 This is the flat reading of `ABA/Reading/Flat.lean` at the gather-based
-implementation, as `ABA/ABDY/Protocol.lean` is that reading at the ladder, and it
+implementation, as `ABA/ABDY/Protocol.lean` is that reading at ABDY22's, and it
 supplies the same three things — a stage message type, a stage record, and the
 implementation's rows. It sits in the namespace `AFW`, after Attiya, Flam and
-Welch, and so `AFW.protocol` is what `protocol` is at the ladder.
+Welch, and so `AFW.protocol` is what `ABDY.protocol` is at ABDY22's.
 
 ## One pool for every fabric
 
@@ -193,7 +193,7 @@ def approved2 (P : Params) (s : StageRec P.n) (A : APSet P.n (Option Bool)) : Pr
 
 /-! ### The stage-side rows -/
 
-/-- The stage-side rows of process `j`: the two gather ladders, the `4n`
+/-- The stage-side rows of process `j`: the two gather instances, the `4n`
 Bracha instances beneath them, the three fused rows, and the delivery. -/
 inductive StageStep (P : Params) (j : Fin P.n) :
     ProcRec P.n → NLabP P.n (Msg P.n) → PMF (ProcRec P.n) → Prop

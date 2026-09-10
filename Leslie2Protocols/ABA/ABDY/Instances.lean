@@ -5,7 +5,7 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.ABDY.Components
-import Leslie2Protocols.ABA.ABDY.LadderSim
+import Leslie2Protocols.ABA.ABDY.ImplSim
 import Leslie2Protocols.Framework.FamilySim
 import Leslie2Protocols.Framework.IdleFamily
 
@@ -66,7 +66,7 @@ broadcasts `fail` to every round at once.
   `returned` flag on the same evidence, denials and gate an honest return
   needs. The guard belongs to the network that surrounds the instance, where
   it applies to the drive label that stays visible at this boundary.
-* **D18 (the five-level ladder).** The send rows are the five levels
+* **D18 (the five message levels).** The send rows are the five levels
   `INPUT / ECHO / VOTE / BIND / SEAL` and the three graded returns of the
   cited algorithm, not the four-round compression. The rows are taken in the
   wait-until order of Algorithm 6 from the `BIND` level down: each of those
@@ -79,7 +79,7 @@ broadcasts `fail` to every round at once.
 ## The interface
 
 Every row mirrors the stage-visible half of one rule of the implementation
-instance (`ABA/ABDY/Ladder.lean`), split between the program that owns the record
+instance (`ABA/ABDY/Impl.lean`), split between the program that owns the record
 and the fabric that owns the pool. What the implementation's rule writes on the
 core slice — the round loop's phase, estimate and grade — appears nowhere here:
 that slice is a different component of the protocol system.
@@ -88,7 +88,7 @@ that slice is a different component of the protocol system.
 
 `subSim` is what licenses replacing the round instance by the graded
 agreement specification. It runs through the implementation instance of
-`ABA/ABDY/Ladder.lean` in two legs.
+`ABA/ABDY/Impl.lean` in two legs.
 
 The first leg is strong and functional. The round instance and the
 implementation run on the same state: `GBCA.ImplState` is the pair of the stage
@@ -102,7 +102,7 @@ presentations — a single rule table on one side, `n` programs beside a fabric
 on the other.
 
 The second leg is the per-instance refinement `GBCA.implRefines`
-(`ABA/ABDY/LadderSim.lean`), used as it stands. Its answer is a weak run of the
+(`ABA/ABDY/ImplSim.lean`), used as it stands. Its answer is a weak run of the
 specification over the shared alphabet `Lab n`, which is lifted to the
 instance's interface along `gPull`: the projection that reads a Byzantine
 call drive as a call, a Byzantine return drive as a return, and the two call
@@ -368,7 +368,7 @@ The one box of the instance that holds what no program may see: the per-sender
 pools and the corrupted set. It participates in every send by pooling the
 message and in every delivery by checking that the message is pooled, and it
 is where a corrupted sender's injections enter (D5). Its state record
-`GNetState` stands beside the stage record in `ABA/ABDY/Ladder.lean`, the two of
+`GNetState` stands beside the stage record in `ABA/ABDY/Impl.lean`, the two of
 them being the components of a round's state; what follows is its rule table. -/
 
 /-- The step relation of the round's message fabric. All transitions are
@@ -1084,7 +1084,7 @@ theorem weakLStep_liftedSpec (P : Params) (r : ℕ) {s s' : GBCA.SpecState P.n}
 /-! ### One state, two presentations
 
 The stage records and the fabric are the two components of `GBCA.ImplState`
-(`ABA/ABDY/Ladder.lean`), so the round instance and the implementation instance
+(`ABA/ABDY/Impl.lean`), so the round instance and the implementation instance
 run on the same state and every rule of the one is a rule of the other read in
 the implementation's accessors. What the joint steps deliver, though, is a
 program function pinned pointwise — its value at the acting process, and its
@@ -1467,7 +1467,7 @@ theorem sub_projects (P : Params) (r : ℕ) :
 /-! ### The round instance is refined by the graded agreement specification
 
 The round instance's answer to a step is the implementation's answer, read
-through the per-instance refinement (`GBCA.implRefines`, `ABA/ABDY/LadderSim.lean`):
+through the per-instance refinement (`GBCA.implRefines`, `ABA/ABDY/ImplSim.lean`):
 the first leg is strong and functional, so nothing of that refinement is
 reproved here. The specification's weak answer is finally lifted to the round
 instance's interface along a section of `gPull` — which is where a Byzantine

@@ -5,7 +5,7 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.Gather.Low
-import Leslie2Protocols.ABA.Broadcast.Sim
+import Leslie2Protocols.ABA.Broadcast.ImplSim
 import Leslie2Protocols.Framework.WeakBurst
 
 /-!
@@ -15,7 +15,7 @@ import Leslie2Protocols.Framework.WeakBurst
 forward-simulates the gather-over-BRB-specification instance
 (`ABA/Gather/Ideal.lean`), along `Gather.LowRel` — the gather boxes and fabric
 held *equal*, and each Bracha coordinate related to its specification
-coordinate by the BRB refinement relation (`ABA/Broadcast/Sim.lean`).
+coordinate by the BRB refinement relation (`ABA/Broadcast/ImplSim.lean`).
 
 The abstraction gap is delivery: the implementation's rows read the derived
 predicates `apIn` / `apBind` — a `VOTE` receipt quorum in the coordinate —

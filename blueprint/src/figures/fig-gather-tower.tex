@@ -1,6 +1,6 @@
 % The gather-based round and its three substitutions
 % (PLTS.ABA.GBCA.lowPairInst, idealInst, pairInst, GBCA.specInst).
-% The bottom tier is drawn open: two gather instances, each a ladder over its
+% The bottom tier is drawn open: two gather instances, each an exchange over its
 % own fabric beside 2n Bracha instances, so 4n + 2 fabrics in one round.
 \begin{tikzpicture}[
     >={Stealth[round]}, semithick,
@@ -16,9 +16,9 @@
   \node[font=\scriptsize, anchor=west] at (-0.2,-0.45)
     {$\mathrm{lowPairInst}(P,r)$: two gather instances, everything concrete};
   \node[ga, anchor=north west] at (0.05,-0.75)
-    {gather 1 over payloads \textsf{Bool}:\\ the ladder and its own fabric};
+    {gather 1 over payloads \textsf{Bool}:\\ its rounds and its own fabric};
   \node[ga, anchor=north west] at (5.85,-0.75)
-    {gather 2 over payloads \textsf{Option Bool}:\\ the ladder and its own fabric};
+    {gather 2 over payloads \textsf{Option Bool}:\\ its rounds and its own fabric};
   % the 2n Bracha instances of each gather, inputs above and BIND payloads below
   \foreach \x in {0.05,5.85} {
     \node[brb, anchor=north west] at ({\x+0.00},-1.75) {$\mathrm{brbIn}\,1$};

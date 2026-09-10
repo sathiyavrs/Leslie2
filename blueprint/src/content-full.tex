@@ -237,6 +237,9 @@ Of its Algorithms~1 and~2 only the ABA core is reproduced here; Algorithms~4 and
 The cited paper carries a third, independent numbering, always written here with ``ABDY22's'' attached: ABDY22's Algorithm~2 is the weak-coin agreement framework $AA_\varepsilon$, which the source blueprint's Algorithm~1 realises (ABDY22's Algorithm~1, the strong-coin framework over ungraded BCA, is not encoded in this development); ABDY22's Algorithm~6 is the graded sub-protocol.
 The GBCA implementation this chapter displays and encodes is ABDY22's Algorithm~6, of which the source blueprint's Algorithm~2 is a compression that violates Binding (D18).
 A cross-reference of the form ``Algorithm~\ref{alg:aba-core}'' always points to a displayed float of this document, whose numbering runs independently of both; the other two numberings appear only in the phrases ``the source blueprint's Algorithm~$k$'' and ``ABDY22's Algorithm~$k$''.
+Bracha's third message level is $\mathrm{VOTE}$ here and in the source blueprint, where both~\cite{ABDY22} and~\cite{AFW25} write $\mathrm{READY}$.
+Its echo threshold is $n-f$ here and in the source blueprint, where~\cite{AFW25} writes $(n+f)/2$.
+The encoding follows the source blueprint on both points, so neither carries a deviation label.
 
 
 \paragraph{Outside the model.}
@@ -366,7 +369,7 @@ The labels D2, D3, D6, D7 and D20 are not in use.
     The split is what a process corrupted after its call requires: until its entry commits, such a process may still direct the committed payload, and the guard reads $F$ at the commit rather than at the call.
   \item D27: the BRB specification splits the leader's recorded input from the
     committed value, an internal commit writing the value once under $\mathit{ldr} \in F \vee input = m$, in place of Transition System~6's single call field and its corrupted-leader rule, which can only bar the instance from returning.
-    Under Transition System~6 an honest call pins every return to the called value, and a leader corrupted after that call but before any correct process holds an echo quorum can drive Bracha's ladder to deliver a different value, which no resolution of that system's nondeterminism returns; the commit guard restores the leader's power to the window the implementation actually leaves open.
+    Under Transition System~6 an honest call pins every return to the called value, and a leader corrupted after that call but before any correct process holds an echo quorum can drive Bracha's rounds to deliver a different value, which no resolution of that system's nondeterminism returns; the commit guard restores the leader's power to the window the implementation actually leaves open.
     Totality, a liveness property, is not encoded (Transition System~6, whose stated scope is the linear properties, does not encode it either; the fairness markings that carried it are outside the model).
   \item D28: composite instances are single rule tables over joint states
     rather than synchronised compositions with a hidden API, the shape the source's Definitions~19 and~20 use for gather over BRB.
@@ -910,7 +913,7 @@ The round loop and the graded-agreement stage make up the programs, and this
 section gives them in the form they run in: the automaton of one process, every
 guard of which reads that process's own record, beside the adversary that holds
 the rest.
-Section~\ref{sec:aba-ladder} gives the same two again at the ladder, as
+Section~\ref{sec:aba-abdy} gives the same two again at ABDY22's implementation, as
 pseudocode and then as rule inventories in which a guard is read against the
 line of pseudocode it transcribes.
 Each inventory enters the argument at a named point.
@@ -966,7 +969,7 @@ fixed by the round interface and the specification, and what an implementation
 supplies is its stage message type, its per-process per-round stage record and
 its stage-side rows.
 The reading is therefore written once, parametric in those three, and
-instantiated here at the ladder of Algorithm~\ref{alg:gbca-impl};
+instantiated here at the implementation of Algorithm~\ref{alg:gbca-impl};
 Section~\ref{sec:aba-gather} instantiates it a second time.
 The rendezvous alphabet is parametric in the message type, and is hidden before
 anything outside the composition sees it, so two instantiations need not agree
@@ -994,14 +997,13 @@ below.
 
 \input{nodes/def-aba-flat-reading}
 
-\section{The ladder implementation}
-\label{sec:aba-ladder}
+\section{The ABDY implementation}
+\label{sec:aba-abdy}
 
 \subsection{The graded-agreement stage}
 
 The first implementation of graded agreement calls no sub-protocol: it is
-ABDY22's Algorithm~6 transcribed in full, whose messages form a five-level
-ladder.
+ABDY22's Algorithm~6 transcribed in full, over five message levels.
 The stage record of one process is its state, and the round is read as one
 per-round PLTS, which is the form Theorem~\ref{thm:gbca-inst-refines} is proved
 against.
@@ -1252,7 +1254,7 @@ The blocks are taken in the order Algorithm~\ref{alg:gbca-impl} writes them.
 A process reaches a block only after executing the send the block above it ends with, and that is the guard $\mathit{sentVote}_j$ set on the two $\mathrm{BIND}$ rules, $\mathit{sentBind}_j$ set on the two $\mathrm{SEAL}$ rules, and $\mathit{sentSeal}_i$ set on the three return rules.
 The two $\mathrm{VOTE}$ rules carry no such guard.
 What precedes the first \textbf{wait until} block is not a block a process must execute to the end but the \textbf{upon} handler that multicasts $\mathrm{ECHO}$, so a process may reach that block with its own $\mathrm{ECHO}$ still pending.
-In each of the three ladder blocks the two rules are exclusive: the $\bot$ rule denies its block's case (a) at either bit, which is the \textbf{else} of that block's last line.
+In each of the three return blocks the two rules are exclusive: the $\bot$ rule denies its block's case (a) at either bit, which is the \textbf{else} of that block's last line.
 The three return rules are the three wait-until cases of the last block: case (a) is an $n{-}f$ $\mathrm{SEAL}\,v$ quorum, case (b) an $n{-}f$ any-$\mathrm{SEAL}$ quorum containing $\mathrm{SEAL}\,v$ together with $f{+}1$ $\mathrm{BIND}\,v$ receipts and $|\mathit{Valid}| > 1$, and case (c) an $n{-}f$ $\mathrm{SEAL}\,\bot$ quorum with $|\mathit{Valid}| > 1$.
 That block ends in an \textbf{if}/\textbf{elif}/\textbf{else}, so each rule carries the denials of the cases above it beside the receipts its own case names: \leandeclnamed{retB}{PLTS.ABA.GBCA.ImplStep.retB} denies case (a) at either bit, and \leandeclnamed{retC}{PLTS.ABA.GBCA.ImplStep.retC} denies case (a) at either bit and case (b).
 The denial of case (b) is carried in reduced form.
@@ -1616,7 +1618,7 @@ Every return row does the same case split on $dead$, $C$-returns included, howev
 
 \input{nodes/thm-aba-protocol-composed}
 
-\section{The hybrid and the ladder chain}
+\section{The hybrid and the ABDY chain}
 
 
 \subsection{The substitution}
@@ -1740,7 +1742,7 @@ At the protocol shape, each reading is lifted over the extended alphabet, gather
 Two readings are verified: the composed one, the gather-based counterpart of Definition~\ref{def:aba-composed}, and beneath it the flat one, the second instantiation of Definition~\ref{def:aba-flat-reading}, which is the gather-based protocol as it runs.
 
 The two chains meet at $\mathrm{hybrid}(P)$ and are identical above it, and below it they run through systems of the same shape.
-A system of this section therefore carries the name of its counterpart in the sections above, under the superscript $\mathsf{AFW}$: $\afw{\mathrm{composed}}(P)$ is to the gather-based implementation what $\abdy{\mathrm{composed}}(P)$ is to the ladder, and $\afw{\mathrm{protocol}}(P)$ what $\abdy{\mathrm{protocol}}(P)$ is.
+A system of this section therefore carries the name of its counterpart in the sections above, under the superscript $\mathsf{AFW}$: $\afw{\mathrm{composed}}(P)$ is to the gather-based implementation what $\abdy{\mathrm{composed}}(P)$ is to ABDY22's, and $\afw{\mathrm{protocol}}(P)$ what $\abdy{\mathrm{protocol}}(P)$ is.
 
 \begin{algorithm}
     \caption{The two-gather graded agreement, Algorithm~4 of Attiya, Flam and
@@ -1813,14 +1815,14 @@ A system of this section therefore carries the name of its counterpart in the se
 \subsection{Reliable broadcast}
 
 
-Reliable broadcast is the bottom of the construction, and its specification is the first point dynamic corruption shapes.
-Under Transition System~6 an honest call pins every return to the called value, and Algorithm~\ref{alg:brb} with the leader corrupted after its $\mathrm{INIT}$ leaves a window that pinning forbids: until some correct process holds an $n{-}f$ $\mathrm{ECHO}$ quorum, the injections of the now-corrupted leader can drive the ladder to deliver a different value.
+Reliable broadcast is the bottom layer, and its specification is the first point dynamic corruption shapes.
+Under Transition System~6 an honest call pins every return to the called value, and Algorithm~\ref{alg:brb} with the leader corrupted after its $\mathrm{INIT}$ leaves a window that pinning forbids: until some correct process holds an $n{-}f$ $\mathrm{ECHO}$ quorum, the injections of the now-corrupted leader can drive the rounds to deliver a different value.
 The encoding therefore splits the recorded input from the committed value and guards the internal commit by $\mathit{ldr} \in F \vee input = m$ (D27): the corrupted leader's power is a commit of any value, the honest leader's value is pinned, and the window closes at the commit rather than at the call.
 The refinement certifies the committed value by an $n{-}f$ $\mathrm{ECHO}$ receipt quorum --- $F$-blind, monotone, unique by quorum intersection over the write-once echoes --- and fires the abstract commit on demand, as a two-step weak burst under the first return.
 See \leanmodule{Leslie2Protocols/ABA/Vocabulary/Fabric},
 \leanmodule{Leslie2Protocols/ABA/Broadcast/Spec},
 \leanmodule{Leslie2Protocols/ABA/Broadcast/Impl} and
-\leanmodule{Leslie2Protocols/ABA/Broadcast/Sim}.
+\leanmodule{Leslie2Protocols/ABA/Broadcast/ImplSim}.
 
 \input{nodes/def-aba-fabric}
 \input{nodes/def-aba-brb-spec}
@@ -1888,7 +1890,7 @@ See \leanmodule{Leslie2Protocols/ABA/Round/Pair},
 \input{nodes/def-aba-gbca-gather-low}
 
 \blueprintfig{fig-gather-tower}{One round of the gather-based implementation, \leandecl{PLTS.ABA.GBCA.lowPairInst}, drawn open, and the three substitutions that carry it to Transition System~2.
-A round is two gather instances, one over the input bits and one over the candidates, and each is an $\mathrm{ECHO}$/$\mathrm{VOTE}$ ladder over its own message fabric beside $2n$ Bracha instances --- $n$ carrying the inputs and $n$ the $\mathrm{BIND}$ payloads.
+A round is two gather instances, one over the input bits and one over the candidates, and each is an $\mathrm{ECHO}$/$\mathrm{VOTE}$ exchange over its own message fabric beside $2n$ Bracha instances --- $n$ carrying the inputs and $n$ the $\mathrm{BIND}$ payloads.
 That is $4n + 2$ message fabrics in a single round, which is the count the flat reading collapses into one tagged pool family.
 The three tiers above it replace one layer at a time: \leandecl{PLTS.ABA.GBCA.lowRefines} replaces each Bracha coordinate by the BRB specification, \leandecl{PLTS.ABA.GBCA.idealRefines} each gather coordinate by the gather specification, and \leandecl{PLTS.ABA.GBCA.pairRefines} reads the grade off the two core families.
 Each is a plain forward simulation, so the three compose and no transitivity of simulations enters.}
@@ -1897,9 +1899,9 @@ Each is a plain forward simulation, so the three compose and no transitivity of 
 \blueprintfig{fig-gather-sim}{The three tier simulations of one round, with the concrete rows on the right and the relation dashed.
 Each stage idealises away one layer and holds the layers above it equal.
 Under \leandecl{PLTS.ABA.GBCA.LowPairRel} every $\mathrm{ECHO}$, $\mathrm{VOTE}$ and delivery of a Bracha instance is answered by a stutter of the specification coordinate that replaces it.
-Under \leandecl{PLTS.ABA.GBCA.IdealRel} the gather ladder's own rows stutter in the same way, a delivery there being the derived receipt-quorum predicate rather than an event of the composite (D28).
+Under \leandecl{PLTS.ABA.GBCA.IdealRel} gather's own rows stutter in the same way, a delivery there being the derived receipt-quorum predicate rather than an event of the composite (D28).
 Under \leandecl{PLTS.ABA.GBCA.PairRel} the returns do the work: a return whose bit the specification has not yet excluded is the weak burst $\mathrm{bindUnset};\mathrm{ret}$, and a return whose kill has already happened is a single graded return.
-The kill-on-demand discipline is the ladder's own, unchanged.}
+The kill-on-demand discipline is ABDY22's own, unchanged.}
 \input{nodes/thm-gbca-gather-refines}
 
 
@@ -1921,7 +1923,7 @@ See \leanmodule{Leslie2Protocols/ABA/AFW/Flat} and
 \input{nodes/def-aba-afw-protocol}
 
 \blueprintfig{fig-afw-protocol}{The gather-based protocol \leandecl{PLTS.ABA.AFW.protocol}: the $n$ programs beside the one network adversary and the coin oracle, under the two hiding frames of Definition~\ref{def:aba-flat-reading}.
-The shape is the flat reading's, and two things distinguish it from the ladder's instantiation.
+The shape is the flat reading's, and two things distinguish it from ABDY22's instantiation.
 The adversary holds a single pool family per round over the tagged message type \leandecl{PLTS.ABA.AFW.Msg}, whose tag names the fabric a message belongs to and, for a broadcast message, the instance; the composed reading of the same round carries $4n + 2$ separate fabrics.
 And a program's record is process-major: process $j$ holds its own box in every instance, where the composed reading indexes the boxes by instance and then by process.
 Assembling the composed state from the flat one undoes both, which is what \leandecl{PLTS.ABA.AFW.toPair} does --- slicing the one pool family into the fabrics, and transposing the records back.}

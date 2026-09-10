@@ -14,8 +14,8 @@ import Leslie2Protocols.ABA.AFW.Chain
 reads the same protocol as a composition of components. This file carries the
 first into the second, which is where the gather-based chain passes from
 implementation to specification, as `ABA/ABDY/ProtocolSim.lean` does for the
-ladder. Everything here is read in the namespace `AFW`, where each name is
-that of its ladder-chain counterpart, and the qualifier is dropped below.
+ABDY22's. Everything here is read in the namespace `AFW`, where each name is
+that of its ABDY-chain counterpart, and the qualifier is dropped below.
 
 ## The composed state is a view of the flat one
 
@@ -626,7 +626,7 @@ theorem toPair_writeNoPool (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n)
 
 /-- A send of the first gather, read through the view: the sender's box takes
 the send, the first gather's fabric pools it, and every other coordinate of
-the round stands still. Both ladder sends of the first gather are this row,
+the round stands still. Both the `ECHO` and the `VOTE` send of the first gather are this row,
 and so is any other row that writes the first gather's box and pools on its
 fabric. -/
 theorem toPair_ga1Send (hu : (u j).2 = p) (r : ℕ) (pr : PRec P.n Bool)

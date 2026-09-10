@@ -10,7 +10,7 @@ import Leslie2Protocols.ABA.Broadcast.Impl
 /-!
 # The gather implementation over Bracha's broadcast
 
-The gather aggregation ladder with its reliable-broadcast sub-protocol at
+Gather's ECHO/VOTE rounds with their reliable-broadcast sub-protocol at
 the implementation level: each process's input and each process's `BIND`
 payload travel through a Bracha instance (`ABA/Broadcast/Impl.lean`), one per
 process and level.

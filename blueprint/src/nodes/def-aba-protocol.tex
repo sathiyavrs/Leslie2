@@ -18,7 +18,7 @@
     \abdy{\mathrm{protocol}}(P) \;=\; \mathrm{abstract}_H\bigl(\abdy{\mathrm{protocolGroup}}(P)\bigr),
   \]
   where $\mathrm{wccLift}(P)$ is the oracle read along $\mathrm{wccPull}$ and $H$ is the sub-protocol API of Definition~\ref{def:aba-labels}.
-  This is the pipeline of Definition~\ref{def:aba-flat-reading} at the ladder implementation; the payload the call multicasts is $\langle \mathrm{INPUT}, b \rangle$.
+  This is the pipeline of Definition~\ref{def:aba-flat-reading} at ABDY22's implementation; the payload the call multicasts is $\langle \mathrm{INPUT}, b \rangle$.
   Hiding $\mathrm{netEvtLabels}$ discharges the extended alphabet, so $\abdy{\mathrm{protocolGroup}}(P)$ speaks exactly $\mathrm{Lab}(n)$.
   Full construction: \leandecl{PLTS.ABA.ABDY.protocol}.
 \end{definition}

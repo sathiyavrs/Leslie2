@@ -1,8 +1,8 @@
 \begin{definition}[The program of one process]
   \label{def:aba-procnet}
-  \lean{PLTS.ABA.GBCA.StageRec}\lean{PLTS.ABA.CoreRec}\lean{PLTS.ABA.Net.StageSideRec}\lean{PLTS.ABA.Net.ProcRec}\lean{PLTS.ABA.Net.NetEvt}\lean{PLTS.ABA.Net.NLab}\lean{PLTS.ABA.Net.netEvtLabels}\lean{PLTS.ABA.Net.LadderStageStep}\lean{PLTS.ABA.Net.ABAProcStepN}\lean{PLTS.ABA.Net.ABAProcN}\leanok
+  \lean{PLTS.ABA.GBCA.StageRec}\lean{PLTS.ABA.CoreRec}\lean{PLTS.ABA.Net.StageSideRec}\lean{PLTS.ABA.Net.ProcRec}\lean{PLTS.ABA.Net.NetEvt}\lean{PLTS.ABA.Net.NLab}\lean{PLTS.ABA.Net.netEvtLabels}\lean{PLTS.ABA.Net.AbdyStageStep}\lean{PLTS.ABA.Net.ABAProcStepN}\lean{PLTS.ABA.Net.ABAProcN}\leanok
   \uses{def:aba-labels, def:aba-gbca-vocab, def:aba-core-vocab, def:aba-flat-reading, def:relabel, def:syncproduct}
-  Process $j$ runs the flat reading of Definition~\ref{def:aba-flat-reading} at the ladder implementation of Definition~\ref{def:aba-gbca-vocab}: the stage message type is $\mathrm{GBCA.Msg}$, the stage record is $\mathrm{GBCA.StageRec}(n)$, and the stage-side rows are the fourteen of \leandecl{PLTS.ABA.Net.LadderStageStep} --- the eight multicasts of the ladder, the delivery that files a received message, the call and its loop, and the three returns.
+  Process $j$ runs the flat reading of Definition~\ref{def:aba-flat-reading} at ABDY22's implementation of Definition~\ref{def:aba-gbca-vocab}: the stage message type is $\mathrm{GBCA.Msg}$, the stage record is $\mathrm{GBCA.StageRec}(n)$, and the stage-side rows are the fourteen of \leandecl{PLTS.ABA.Net.AbdyStageStep} --- the eight multicasts of those levels, the delivery that files a received message, the call and its loop, and the three returns.
   The twenty-nine rows around them are the shared ones.
   The state of process $j$ is
   \[
@@ -32,5 +32,5 @@
   While $j$'s program stands unreplaced, every label of either alphabet has a row of process $j$, the participant's or an idle self-loop, with two exceptions: $\mathrm{byzCallG}(r,k,b)$ and $\mathrm{byzRetG}(r,k,out)$ have no row at the process $k$ they name (D11, D22), and a corrupted process's stage traffic enters through the network's own $\mathrm{byzG}$ injection instead.
   Once the program is replaced the labels of $\mathrm{actsAt}\,j$ join those two (D23).
   Full synchronisation therefore lets a label's owner move while every other program stands.
-  Full rule table, forty-three rows --- twenty-nine shared, fourteen of the ladder: \leandecl{PLTS.ABA.Net.ABAProcN}.
+  Full rule table, forty-three rows --- twenty-nine shared, fourteen of ABDY22's: \leandecl{PLTS.ABA.Net.ABAProcN}.
 \end{definition}

@@ -10,7 +10,7 @@ import Leslie2Protocols.ABA.Broadcast.Spec
 /-!
 # The gather implementation over the BRB specification (blueprint Algorithm 4, deviation D28)
 
-The gather aggregation ladder read over the BRB specification: the source's
+Gather's ECHO/VOTE rounds read over the BRB specification: the source's
 Algorithm 4 with its reliable-broadcast sub-protocol replaced by the BRB
 specification instances it calls, one per process for the inputs and one per
 process for the `BIND` payloads. This is the source's `Gather.Hybrid`

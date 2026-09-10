@@ -1,8 +1,8 @@
 # Design — the per-instance GBCA refinement `GBCA.implInst ⊑ GBCA.specInst` (`implRefines`)
 
-Companion design document to the Lean proof in `ABA/ABDY/LadderSim.lean` (relation,
+Companion design document to the Lean proof in `ABA/ABDY/ImplSim.lean` (relation,
 invariant, burst lemmas, per-row simulation), against the implementation shape
-in `ABA/ABDY/Ladder.lean` (deviation D18: the full five-level message ladder of
+in `ABA/ABDY/Impl.lean` (deviation D18: all five message levels of
 ABDY22's Algorithm 6) and the specification shape in `ABA/Spec/GBCA.lean`
 (deviation D19: the exclusion set `dead : Finset Bool` in place of a bound
 value). The refinement paragraphs of `blueprint/src/content.tex` — the kill
@@ -22,7 +22,7 @@ Both systems are Dirac-transition LTSs. The instance refinement reaches the
 family lifting takes its broadcast ingredient from
 `GBCASim.instRel_corrupt`.
 
-### The implementation (D18): the five-level ladder
+### The implementation (D18): the five message levels
 
 The implementation transcribes ABDY22's Algorithm 6. The message type is
 
@@ -47,12 +47,12 @@ bit — Algorithm 6's `|approvedVals| > 1`).
 
 The rules, all τ except the labelled API rows. Three conditions run across the
 table. D8 participation gating (`input ≠ none`) is on every protocol send,
-including the seal level, and on all three returns. The ladder is taken in the
+including the seal level, and on all three returns. The levels are taken in the
 wait-until order of Algorithm 6 from the `BIND` level down: each of those levels
 requires the sender's own send at the level below (`hlv`), the returns requiring
 the sender's own `SEAL`. The vote level requires no own send, the `ECHO` it
 reads being multicast by an `upon` handler and not on the main thread. And the
-block boundaries are denials: within a ladder block the `⊥` rule denies its
+block boundaries are denials: within a return block the `⊥` rule denies its
 block's case (a) at either bit, and the returns read as Algorithm 6's
 `if (a) … elif (b) … else …`, each carrying the denials of the cases above it.
 
@@ -515,7 +515,7 @@ theorem voteCount_le_recvMsg (s : ImplState n) (i j : Fin n) (m : Msg) (i' : Fin
 
 ### Certificate and harvest lemmas
 
-Collected statements (all defined in `ABDY/LadderSim.lean` unless noted):
+Collected statements (all defined in `ABDY/ImplSim.lean` unless noted):
 
 ```lean
 def VoteWall (P : Params) (s : ImplState P.n) (b : Bool) : Prop := …   -- § kill certificates
@@ -611,7 +611,7 @@ guard pair `(!b) ∈ dead ∧ b ∉ dead` — the D19 rendering of `bind = some 
 with `bind ≠ none` rendered as `dead ≠ ∅`. `GBCASim.instRel_corrupt`
 carries the `dead_cert` row through `DeadCert.mono`, whose three hypotheses it
 discharges by `corrupt_recv`, `corrupt_proc` and `corrupt_F_subset`.
-`ABDY/Protocol.lean`'s rendering carries the same ladder inside one
+`ABDY/Protocol.lean`'s rendering carries the same levels inside one
 process: the stage record `GBCA.StageRec` keeps the write-once `sentSeal` slot in
 its `proc` record and carries its own `sealCount` over its inbox rows, the
 rendezvous rows `gsndSealBit`/`gsndSealBot` are the seal multicasts read off
