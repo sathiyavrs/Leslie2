@@ -19,16 +19,16 @@ arbitrary payload type `M`, as an LTS over the instance alphabet
   from `f + 1` `VOTE m` receipts, once;
 * return `m` — on an `n − f` `VOTE m` receipt quorum.
 
-The state is the generic two-box shape (`ABA.SubState`,
-`ABA/Vocabulary/Fabric.lean`): each process's local record and delivered sets beside the
-instance's message fabric, under the development's D1 (determinised
+The state is the generic two-part shape (`ABA.SubState`,
+`ABA/Vocabulary/MsgState.lean`): each process's local record and delivered sets beside the
+instance's message state, under the development's D1 (determinised
 corruption) and D5 (set-based network) conventions.
 
 There is no participation gating here: only the leader is called, and every
 other process runs its handlers unconditionally — Bracha's protocol has no
-per-process input. The write-once `sentEcho` / `sentVote` slots carry the
+per-process input. The write-once `sentEcho` / `sentVote` fields carry the
 "having not sent" guards of the source's `upon` clauses; the amplification
-rule (`voteAmp`) and the quorum rule (`voteQuorum`) write the same slot, so a
+rule (`voteAmp`) and the quorum rule (`voteQuorum`) write the same field, so a
 process votes at most once whichever rule fires first.
 -/
 
@@ -66,8 +66,8 @@ def PState.initial (M : Type) : PState M where
   sentVote := none
   returned := false
 
-/-- The state of one BRB implementation instance: the `n` boxes beside the
-instance's fabric. -/
+/-- The state of one BRB implementation instance: the `n` local states beside the
+instance's message state. -/
 abbrev ImplState (n : ℕ) (M : Type) : Type := SubState n (PState M) (BMsg M)
 
 /-- The initial BRB implementation state. -/

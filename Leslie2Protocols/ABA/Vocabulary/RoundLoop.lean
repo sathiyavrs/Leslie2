@@ -38,7 +38,7 @@ a graded outcome dictates (`GbcaOut.est`), and the per-process control record
 `callG`/`retG`/`callW`/`retW` interactions are pure handshakes over the API
 labels, advancing the process's `phase` and recording the returned data, while
 the sub-protocol state itself lives in the round specifications and the coin
-oracle — and no network state: the DECIDED pools and the corrupted set belong
+oracle — and no network state: the DECIDED sets and the corrupted set belong
 to the network. The transitions themselves are `CoreProcStepN`
 (`ABA/ABDY/Components.lean`), the rows of a round-loop record `CoreRec` over the
 extended alphabet, and `Net.ABAProcStepN` (`ABA/ABDY/Protocol.lean`), the rows of
@@ -57,29 +57,29 @@ diffusion state (conjunct 6), and input coherence (conjunct 5 — the honest
   `est = ⊥`, multicasts `⟨DECIDED, b⟩` when the round's grade was `A b`,
   clears `lastGrade` and advances to the next round, all in one Dirac
   transition. The joint step is the `retWPub` rendezvous, whose round-loop
-  half is the advance and whose network half is the pool insert.
-* **D11 (byzantine handshake drivers).** Corrupted processes may drive their
+  half is the advance and whose network half is the sent insert.
+* **D11 (Byzantine handshake rows).** Corrupted processes may make their
   sub-protocol handshakes arbitrarily: each of `callG`/`retG`/`callW`/`retW`
-  has a Byzantine drive, authorised by `k ∈ F` at the network and constrained
+  has a Byzantine handshake row, authorised by `k ∈ F` at the network and constrained
   by no phase or estimate. The round loop contributes an idle row to every
-  such drive, so the family-side call/return rules for corrupted ids are never
+  such a row, so the family-side call/return rules for corrupted ids are never
   blocked by it.
-* **D12′ (per-process DECIDED pools, equivocation-capable).** The DECIDED
-  multicast state is the network's per-process pool
-  `dpool : Fin n → Finset Bool`, read on the ABA side as `decidedSent`
-  (`ABA/ABDY/ABAState.lean`) and mirroring graded agreement's D5 sent-pool pattern.
-  Honest sends insert into the pool (the fused `retWPub` publication and the
+* **D12′ (per-process DECIDED sets, equivocation-capable).** The DECIDED
+  multicast state is the network's per-process sent
+  `dsent : Fin n → Finset Bool`, read on the ABA side as `decidedSent`
+  (`ABA/ABDY/ABAState.lean`) and mirroring graded agreement's D5 sent-sent pattern.
+  Honest sends insert into the sent (the fused `retWPub` publication and the
   `f + 1` relay `dsnd`; in reachable states DECIDED coherence keeps every
-  honest pool at card ≤ 1, so the insert is a first write or a no-op re-send
+  honest sent at card ≤ 1, so the insert is a first write or a no-op re-send
   of the same bit). Byzantine injection (`byzD`, guarded only by `k ∈ F`) may
   insert either or both bits at any time — a corrupted process may send
   `DECIDED 0` to one receiver and `DECIDED 1` to another (delivery is
-  selective). The delivery rendezvous `ddlv` moves one pooled bit into the
+  selective). The delivery rendezvous `ddlv` moves one sent bit into the
   receiver's own row `decidedRecv i j` at most once per (receiver, sender,
   bit) triple, with soundness `b ∈ decidedSent j` on the network's half; the
   `retABA` quorum guard counts distinct *senders* per bit (`decidedCount`).
-  The per-process pools (D12′) let a corrupted process equivocate in the
-  DECIDED pools; a single-slot model would bar that — an under-approximation
+  The per-process sent sets (D12′) let a corrupted process equivocate in the
+  DECIDED sets; a single-entry model would bar that — an under-approximation
   inconsistent with graded agreement.
 * **D23 (the corrupted process's replaced program).** A corruption replaces the
   program of the process it names. `CoreRec.corrupted` carries the
@@ -87,8 +87,8 @@ diffusion state (conjunct 6), and input coherence (conjunct 5 — the honest
   that reads or writes the process's own record is guarded by
   `corrupted = false`, and the replaced program self-loops on every label of
   the alphabet other than `τ` and the labels on which the process would act on
-  its own sub-protocol traffic. That traffic is the business of the Byzantine
-  drives (D11), which carry it with no round-loop row of the driven process.
+  its own sub-protocol messages. Those messages are the business of the Byzantine
+  handshake rows (D11), which carry it with no round-loop row of the named process.
 
 Two further notes: the return rule has **no** honesty check — corrupted
 returns must pass the same `n − f` DECIDED count as honest ones, and the
@@ -186,7 +186,7 @@ reads (`ABA/ABDY/ABAState.lean`). -/
 
 /-- The round-loop record of one process: its own control record and the
 DECIDED payloads delivered to it, indexed by sender. There is no record of
-what it has multicast — the DECIDED pools live in the network. -/
+what it has multicast — the DECIDED sets live in the network. -/
 structure CoreRec (n : ℕ) : Type where
   /-- The process's own control record. -/
   proc : ProcCore n

@@ -9,7 +9,7 @@ import Leslie2.Systems.Trace
 /-!
 # From trace-distribution support to genuine executions
 
-The bridge between `traceProb` positivity and execution-level reasoning, used
+The transfer between `traceProb` positivity and execution-level reasoning, used
 to prove safety properties of every trace in the support of an achievable
 trace distribution:
 
@@ -301,7 +301,7 @@ theorem Seq_mem_ofList {α : Type} {a : α} {L : List α} :
   · rintro ⟨i, hi⟩; exact ⟨i, by rw [← Seq.ofList_get?]; exact hi.symm⟩
   · rintro ⟨i, hi⟩; exact ⟨i, by rw [Seq.ofList_get?]; exact hi.symm⟩
 
-/-! ### Positional bridge: filtered-list positions vs original positions -/
+/-! ### Positional correspondence: filtered-list positions vs original positions -/
 
 /-- Pull a position of a filtered list back to a position of the original
 list: the element sits at some original index `j`, and the filter of the

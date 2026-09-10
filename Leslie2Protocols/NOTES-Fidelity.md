@@ -35,10 +35,10 @@ The one substantive item, and the one place the encoding parts from the source b
 rather than inheriting its parting from ABDY22.
 
 The verified GBCA implementation (`GBCA.ImplStep`) transcribes **ABDY22's Algorithm 6 in
-full** — six rounds, the message levels INPUT, ECHO, VOTE, BIND, SEAL (the paper's `echo`
+full** — six rounds, the message levels INPUT, ECHO, VOTE, BIND, ECHO5 (the paper's `echo`
 through `echo5`), and that algorithm's three decide conditions, `retA` an `n − f`
-`SEAL v` receipt quorum, `retB` an `n − f` any-`SEAL` quorum containing `SEAL v` with
-`f + 1` `BIND v` receipts and `|Valid| > 1`, `retC` an `n − f` `SEAL ⊥` quorum with
+`ECHO5 v` receipt quorum, `retB` an `n − f` any-`ECHO5` quorum containing `ECHO5 v` with
+`f + 1` `BIND v` receipts and `|Valid| > 1`, `retC` an `n − f` `ECHO5 ⊥` quorum with
 `|Valid| > 1`. That is deviation **D18**, and what it departs from is the source
 blueprint's Algorithm 2, a **four-round compression** of Algorithm 6: the `echo5` level
 elided, the decide conditions read one message level down, and `f + 1` `VOTE v` receipts
@@ -62,15 +62,15 @@ conditions); the source's PDF caption reads "Implementation of GBCA from [ABDY22
 such note.
 
 On the specification side the matching item is **D19**. TS 2's bound value
-`bind ∈ {0,1,⊥}` is replaced by the exclusion set `dead : Finset Bool`, the bits the
-instance can no longer hand out (`Spec/GBCA.lean`). The kill fires under the guard
-`dead = ∅`, so reachable states are exactly `dead ∈ {∅, {b}}`
-(`GBCASafety.dead_card_le_one`) and the bound value embeds onto them — `bind = ⊥` as
-`dead = ∅`, `bind = b` as `dead = {!b}`. The two state shapes therefore differ in the
-guards rather than in the cardinality. `dead` is monotone and written once, so Graded
-Agreement is the return guard pair `v ∉ dead ∧ !v ∈ dead` and Binding is the `C`-return
-guard `1 ≤ dead.card`, both proved from monotonicity alone in `Spec/GBCASafety.lean`
-(`retG_value_agree`, `specInst_binding`, `retC_dead_nonempty`) with no auxiliary
+`bind ∈ {0,1,⊥}` is replaced by the exclusion set `excluded : Finset Bool`, the bits the
+instance can no longer hand out (`Spec/GBCA.lean`). The exclude fires under the guard
+`excluded = ∅`, so reachable states are exactly `excluded ∈ {∅, {b}}`
+(`GBCASafety.excluded_card_le_one`) and the bound value embeds onto them — `bind = ⊥` as
+`excluded = ∅`, `bind = b` as `excluded = {!b}`. The two state shapes therefore differ in the
+guards rather than in the cardinality. `excluded` is monotone and written once, so Graded
+Agreement is the return guard pair `v ∉ excluded ∧ !v ∈ excluded` and Binding is the `C`-return
+guard `1 ≤ excluded.card`, both proved from monotonicity alone in `Spec/GBCASafety.lean`
+(`retG_value_agree`, `specInst_binding`, `retC_excluded_nonempty`) with no auxiliary
 invariant; the same file carries Validity's safety half (`specInst_validity`,
 `specInst_no_retC`).
 
@@ -83,10 +83,10 @@ receiving `echo4` messages from `2t + 1` parties" where the pseudocode's lines 1
 
 **"Received once."** The wait case (b) of Algorithm 6 requires that "⟨echo5, b⟩ has been
 received once". `ImplStep.retB` reads this as *from at least one sender*: `honce : ∃ k,
-Msg.seal (some v) ∈ s.recv id k`, not as a cardinality constraint of exactly one
+Msg.echo5 (some v) ∈ s.recv id k`, not as a cardinality constraint of exactly one
 receipt. The hypothesis is a genuine part of the rule, carried through the protocol's
-rendering by `ABAProcStepN.retG_B` and through the round instance's Byzantine-drive
-twin `GProcStep.byzRetB`, but no proof
+rendering by `ABAProcStepN.retG_B` and through the round instance's Byzantine handshake row
+counterpart `GProcStep.byzRetB`, but no proof
 consumes it: the refinement's `retB` rows bind it and leave it unused, discharging the
 `B`-return's specification-side guards from the `f + 1` `BIND v` receipts and `hval`
 instead. Either reading supports the same theorems.
@@ -115,19 +115,19 @@ returning and terminating are two fields and two rules: `ProcCore.returned` reco
 ## 3. A network-model artifact
 
 The source pseudocode has no explicit network: sends and receipts are primitive. The
-encoding's set-based authenticated model is D5 and the DECIDED pools are D12′; what
+encoding's set-based authenticated model is D5 and the DECIDED sets are D12′; what
 belongs here is the asymmetry *between* the two networks. `CoreProcStepN.ddlvRecv`
 carries a freshness guard `hr : b ∉ c.decIn k`; `ImplStep.deliver` carries no
 counterpart, its only hypothesis being soundness `h : m ∈ s.sent j`. Both are sound for the same reason — receipt sets are `Finset`s
 and re-delivery is `insert` into a set, so the guard removes redundant transitions
 rather than reachable states — and the asymmetry reappears exactly in the protocol's
 rendering, where each delivery is a rendezvous whose two halves are held by different
-components. Soundness is the network adversary's conjunct in both pools: `NetStep.gdlv`
-requires `h : m ∈ s.pool r j` and `NetStep.ddlv` requires `h : b ∈ s.dpool j`, neither
-consuming the pooled message. Freshness is the receiver's, and only in the DECIDED
-pools: `ABAProcStepN.ddlvRecv` carries `hr : b ∉ c.decIn k` while
+components. Soundness is the network adversary's conjunct in both sent sets: `NetStep.gdlv`
+requires `h : m ∈ s.sent set r j` and `NetStep.ddlv` requires `h : b ∈ s.dpool j`, neither
+consuming the sent message. Freshness is the receiver's, and only in the DECIDED
+sent sets: `ABAProcStepN.ddlvRecv` carries `hr : b ∉ c.decIn k` while
 `ABAProcStepN.gdlvRecv` carries no freshness guard, filing the message under the sender's
-inbox row whatever is already there. Its one hypothesis is the termination guard
+received set row whatever is already there. Its one hypothesis is the termination guard
 `hterm : p.terminated = false` carried by every stage-side row (D22, §6), which is not a
 freshness condition.
 
@@ -139,13 +139,13 @@ specification, so the gap is harmless; what is worth having in one place is whic
 it each guard falls on, and whether that placement was chosen or forced.
 
 **Carried by the implementation tables** — `GBCA.ImplStep` (`ABA/ABDY/Impl.lean`), mirrored
-row for row at `GBCA.GProcStep` (`ABA/ABDY/Instances.lean`), Byzantine drives included, and
+row for row at `GBCA.GProcStep` (`ABA/ABDY/Instances.lean`), Byzantine handshake rows included, and
 at `Net.ABAProcStepN` (`ABA/ABDY/Protocol.lean`) with the reads taken through `p.stage r`.
 
 - **The wait-until order.** The order is carried from the `BIND` level down: each of
   those sends requires the sender's own send at the level below — `hlv : sentVote ≠ none`
-  on the two `BIND` rules, `sentBind ≠ none` on the two `SEAL` rules, and
-  `sentSeal ≠ none` on all three returns. Algorithm 6 reaches those **wait until** blocks
+  on the two `BIND` rules, `sentBind ≠ none` on the two `ECHO5` rules, and
+  `sentEcho5 ≠ none` on all three returns. Algorithm 6 reaches those **wait until** blocks
   only after executing the send the block above them ends with, and `hlv` is that
   reachability written as a guard. The two `VOTE` rules carry no own-send guard, and here
   the encoding follows the paper's own reading rather than tightening it: what precedes
@@ -155,48 +155,48 @@ at `Net.ABAProcStepN` (`ABA/ABDY/Protocol.lean`) with the reads taken through `p
 - **The denials of the higher cases.** Each rule carries the denials of the cases above
   it in its own block. In a return block the `⊥` rule denies its block's case (a) at
   either bit
-  (`hnot : ∀ b, recvCount (level below, b) < n − f` at `voteBot`, `bindBot`, `sealBot`).
+  (`hnot : ∀ b, recvCount (level below, b) < n − f` at `voteBot`, `bindBot`, `echo5Bot`).
   In the decide block `retB` and `retC` carry `hnotA`, the denial of case (1) at either
   bit, and `retC` carries `hnotB`, the denial of case (2) in reduced form:
-  `∀ v, (∃ k, seal (some v) ∈ recv id k) → recvCount (.bind (some v)) < f + 1`. Case (2)
-  asks at a bit `v` for four things — an `n − f` any-`SEAL` quorum, a received `SEAL v`,
+  `∀ v, (∃ k, echo5 (some v) ∈ recv id k) → recvCount (.bind (some v)) < f + 1`. Case (2)
+  asks at a bit `v` for four things — an `n − f` any-`ECHO5` quorum, a received `ECHO5 v`,
   `f + 1` `BIND v` receipts and `|Valid| > 1` — of which the first and the last are
-  `retC`'s own `hcnt` and `hval`, an `n − f` `SEAL ⊥` quorum being in particular an
-  `n − f` any-`SEAL` quorum; the reduced `hnotB` denies the remaining pair. The
+  `retC`'s own `hcnt` and `hval`, an `n − f` `ECHO5 ⊥` quorum being in particular an
+  `n − f` any-`ECHO5` quorum; the reduced `hnotB` denies the remaining pair. The
   docstring of `ImplStep.retC` states the reduction.
-- **The return call-gates.** All three returns require `input ≠ none`, the D8 gate
+- **The return call guards.** All three returns require `input ≠ none`, the D8 guard
   carried from the sends over to the returns: a process that was never called does not
   return from the round.
-- **The protocol's participation gates.** `ABAProcStepN.ret` and `ABAProcStepN.dsndRelay`
+- **The protocol's participation guards.** `ABAProcStepN.ret` and `ABAProcStepN.dsndRelay`
   require `c.proc.input ≠ none`, and `ABAProcStepN.gcallLoop` requires
   `(p.stage r).proc.input ≠ none`. `gcallLoop` deliberately carries no termination guard,
   so a process that has terminated at phase `toCallG` over an uncalled stage record has a
-  row on neither call label and takes no further round-loop step. That dead region is
+  row on neither call label and takes no further round-loop step. That excluded region is
   accepted rather than repaired: a terminated process is one whose own return has already
   fired, and no statement of the development is about what it does afterwards.
 
 **Absent from the specifications.** Three of the placements below are chosen and two are
-forced by where the authorisation of a Byzantine drive sits (D11), which cannot be
+forced by where the authorisation of a Byzantine handshake row sits (D11), which cannot be
 repaired at the rule; the sixth entry is a cross-reference.
 
 - **`GBCASpec.Step`, every rule (chosen).** No rule of the graded-agreement specification
-  requires a send at the level below, denies a higher case, or gates a return on a call.
-  The specification abstracts the receipt patterns into `dead` and `grade` (D19), and its
+  requires a send at the level below, denies a higher case, or guards a return on a call.
+  The specification abstracts the receipt patterns into `excluded` and `grade` (D19), and its
   return guards are that pair; supplying them from the receipts is exactly the work of
   `GBCASim.implRefines`.
 - **`WCC.Step.ret` without `called` (forced).** `WCC.SpecState` carries a `called` field
-  and the return rule does not read it. The Byzantine coin drive `byzRetW` has no row at
+  and the return rule does not read it. The Byzantine coin row `byzRetW` has no row at
   the process it names — `CoreProcStepN.byzRetWIdle` stands idle at every process — and
-  `wccPull` maps that drive onto `retW`, so the coin instance answers it alone. A `called`
-  guard there would leave the drive unanswerable. This is a consequence of the
+  `wccPull` maps that row onto `retW`, so the coin instance answers it alone. A `called`
+  guard there would leave the row unanswerable. This is a consequence of the
   authorisation placement, not a preference.
 - **`ImplStep.callLoop` and `GProcStep.callLoop` (forced).** Both are unguarded
   self-loops. `gPull` maps `byzCallGLoop` onto `callG`, `GNetStep.byzCallGLoop` carries no
-  `k ∈ F`, and the driven process's row is idle, so the call loop must accept every call
+  `k ∈ F`, and the named process's row is idle, so the call loop must accept every call
   label whatever the record holds.
 - **`CoreProcStepN`'s DECIDED rows (chosen).** `CoreProcStepN.ret` and
   `CoreProcStepN.dsndRelay` read the receipt counts alone, without the `input ≠ none`
-  gate their `ABAProcStepN` counterparts carry. The composed reading is the abstraction
+  guard their `ABAProcStepN` counterparts carry. The composed reading is the abstraction
   the protocol is carried into, and gating there would ripple through `ABDY.ProtocolRel` and
   the core simulation.
 - **`SpecStep.ret` without an honesty guard (chosen).** The honest return's guards are
@@ -234,8 +234,8 @@ repaired at the rule; the sixth entry is a cross-reference.
   Algorithm 6; the encoding follows Algorithm 6 instead (D18) — §1.
 - **The Graded Agreement clause is ill-typed** as stated: "if two correct processes
   return `(b, X)` and `(b′, X′)` then `b = 0 ⟹ b′ ≠ 1` and `X = A ⟹ X′ ≠ ⊥`" (p. 6),
-  with `⊥` in a grade slot ranging over `{A, B, C}`. It reads as grade `C`, and is
-  realized as the `grade` latch's `A`/`C` exclusivity, the `hg` guards of
+  with `⊥` in a grade position ranging over `{A, B, C}`. It reads as grade `C`, and is
+  realized as the `grade` guard's `A`/`C` exclusivity, the `hg` guards of
   `PLTS.ABA.GBCA.Step.retA` and `PLTS.ABA.GBCA.Step.retC`.
 - **TS 1's `Initial` clause names an undeclared field** `out` (source p. 18), absent
   from the same system's `State` line. It is omitted: `PLTS.ABA.SpecState` declares
@@ -245,7 +245,7 @@ repaired at the rule; the sixth entry is a cross-reference.
   `call`, and the corrupted-leader rule can only spoil the field (`call = ⊤`, no
   returns) before the first return. Algorithm 6 with the leader corrupted *after* its
   `INIT` multicast leaves more open: until some correct process holds an `n − f` ECHO
-  quorum, the corrupted leader's injections can drive the rounds to deliver a value
+  quorum, the corrupted leader's injections can make the rounds deliver a value
   other than `m`, and no resolution of TS 6's nondeterminism returns it — the
   specification excludes its own implementation under D1's dynamic corruption.
   `BRB.SpecState` splits the recorded `input` from the committed `val` and guards the
@@ -265,7 +265,7 @@ repaired at the rule; the sixth entry is a cross-reference.
   entries; `Gather.SpecState` carries that family, write-once, with the pairwise bound
   as the bind rule's guard and member domination as the return's (D25). The classical
   single core is the family's intersection, sized `≥ n − f` in complete executions.
-  `DESIGN-GatherTower.md` carries the counting argument in full.
+  `DESIGN-GatherTiers.md` carries the counting argument in full.
 
 ## 6. Scope boundaries
 
@@ -282,7 +282,7 @@ Unpredictability, inexpressible once the guess is dropped.
   chain is declared omniscient there (Definitions 11–15, Specifications 1–3, pp. 6–7),
   which the encoding's unrestricted schedulers match; belief has no counterpart.
 - **The Byzantine `⟨ECHO, ⊥⟩`.** `GBCA.Msg.echo` carries a `Bool` where `Msg.vote`,
-  `Msg.bind` and `Msg.seal` carry an `Option Bool`, so `ImplStep.byz` cannot inject an
+  `Msg.bind` and `Msg.echo5` carry an `Option Bool`, so `ImplStep.byz` cannot inject an
   `ECHO` of non-bit payload, which ABDY22 permits a corrupted sender. The restriction
   falls on the adversary and costs nothing. Two guards read `ECHO`: at a named bit,
   `recvCount j (.echo b)`, in `voteBit`'s quorum and in `voteBot`'s denial `hnot`; and
@@ -326,17 +326,17 @@ Unpredictability, inexpressible once the guess is dropped.
   uncovered. A process record holds the stage record of
   every round the process has touched, in a `Finmap` read through
   `Net.StageSideRec.stage`; each stage-side rule reads and writes the stage record of the
-  round its own label tags, under an instance-local guard and no round gate; and the round
+  round its own label tags, under an instance-local guard and no round guard; and the round
   advance, `ABAProcStepN.retW` and `ABAProcStepN.retWPub`, resets nothing. A process
-  therefore answers prior-round traffic and files deliveries of any round.
+  therefore answers prior-round messages and files deliveries of any round.
   `ABAProcStepN.terminate` is the terminating step. It fires when the process's own return
   has fired and DECIDED receipts from `2f + 1` distinct senders are on record, and it
   writes `terminated` alone, so the stage records freeze where they stand. Three
   residues remain.
-    - The amplification rule `ABAProcStepN.gsndRelay` is gated on the process holding an
+    - The amplification rule `ABAProcStepN.gsndRelay` is guarded by the process holding an
       input in that round's stage record (`hin : (p.stage r).proc.input ≠ none`, D8, and
-      `ImplStep.relay` carries the same gate one level down), where lines 3–4 of ABDY22's
-      Algorithm 6 gate the relay on the receipt count alone.
+      `ImplStep.relay` carries the same guard one level down), where lines 3–4 of ABDY22's
+      Algorithm 6 guard the relay on the receipt count alone.
     - A stage delivery at a process that has terminated is disabled rather than ignored.
       `ABAProcStepN.gdlvRecv` carries `hterm : p.terminated = false` and
       `ABAProcStepN.gdlvIdle` demands a different receiver, so the adversary has no
@@ -347,7 +347,7 @@ Unpredictability, inexpressible once the guess is dropped.
       the paper's own condition is that the process may stop without holding back any other.
 - **The scope of `terminate`.** The flag is read by the stage-side rows and by nothing
   else: `callG_call`, the three `retG_*`, `gsndRelay`, `gsndEcho`, the six level rows
-  `gsndVoteBit` through `gsndSealBot`, `gdlvRecv`, and `terminate` itself; `gcallLoop` is
+  `gsndVoteBit` through `gsndEcho5Bot`, `gdlvRecv`, and `terminate` itself; `gcallLoop` is
   the stage-side row that does not read it (§4). A process that has terminated still
   finishes a pending coin handshake (`callW`, `retW`), publishes `⟨DECIDED, b⟩` through
   `retWPub`, and both relays and receives DECIDED (`dsndRelay`, `ddlvRecv`). That placement is the

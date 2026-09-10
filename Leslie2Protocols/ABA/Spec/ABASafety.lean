@@ -38,7 +38,7 @@ The proof is invariant reasoning along genuine executions (via
   being counted through the `F` disjunct.
 * `ValInv` — the label-history-aware invariant: a ghost-recorded input is
   attributed either to a `callABA` event in the history or to the corruption
-  of its own slot (`input_src`), and the corrupted set is exactly the fold of
+  of its own entry (`input_src`), and the corrupted set is exactly the fold of
   D1-`corrupt` over the labels seen so far (`F_eq`). The honest `callABA`
   rules record the bit their own label carries, which is what restores the
   first disjunct under the D16 overwrite; `SpecStep.callByz` takes the second.
@@ -64,7 +64,7 @@ so `ValInv.input_src` yields its `callABA` event.
 
 The same pigeonhole in the state alone is `SuppOK.honest_supporter`: a
 supported bit has an uncorrupted recorded inputter. It is what makes the
-mixedness gate on `SpecStep.coinFlip` unsatisfiable under honest unanimity,
+mixedness guard on `SpecStep.coinFlip` unsatisfiable under honest unanimity,
 which is where the specification holds the liveness half of Validity.
 -/
 
@@ -256,7 +256,7 @@ theorem exists_uniform_stage (t : Seq (Lab P.n)) (S : Finset (Fin P.n)) :
 /-- A corrupted call preserves support. The write at `id` may replace a
 recorded `v` by the other bit, so `SuppOK.mono` does not apply. The count is
 `F`-blind, however, and `id ∈ s.F`, so `id` is counted through the second
-disjunct whatever its slot holds; every other slot is untouched. -/
+disjunct whatever its entry holds; every other entry is untouched. -/
 theorem SuppOK.callByz {s : SpecState P.n} {id : Fin P.n} {b v : Bool}
     (h : SuppOK P s v) (hF : id ∈ s.F) :
     SuppOK P { s with input := Function.update s.input id (some b) } v := by
@@ -272,7 +272,7 @@ theorem SuppOK.callByz {s : SpecState P.n} {id : Fin P.n} {b v : Bool}
 
 /-- **The budget pigeonhole on a single bit.** A bit with `f + 1` supporters
 has one that is not corrupted in the state, and that one is recorded. This is
-what makes the mixedness gate `SpecStep.coinFlip`'s `hmix` unsatisfiable under
+what makes the mixedness guard `SpecStep.coinFlip`'s `hmix` unsatisfiable under
 honest unanimity: were both bits supported, each would carry a recorded
 uncorrupted inputter, and the two inputters disagree. -/
 theorem SuppOK.honest_supporter {s : SpecState P.n} {b : Bool}
@@ -391,7 +391,7 @@ theorem SpecInv.step {s : SpecState P.n} {l : Lab P.n} {μ : PMF (SpecState P.n)
     exact (hI.val_supp v hv).mono
       (fun i hh => by rw [corrupt_input]; exact hh) (corrupt_F_subset s id)
   | callByz id b b' hF =>
-    -- `val` and `F` are untouched; `id ∈ F` keeps the overwritten slot counted
+    -- `val` and `F` are untouched; `id ∈ F` keeps the overwritten field counted
     rw [PMF.mem_support_pure_iff] at hs'; subst hs'
     exact ⟨hI.F_le, fun v hv => (hI.val_supp v hv).callByz hF⟩
   | retByz id b hF =>
@@ -428,7 +428,7 @@ theorem SpecInv.val_stable {s : SpecState P.n} {l : Lab P.n}
 /-! ### The label-history-aware invariant (for Validity) -/
 
 /-- The history-aware invariant: a ghost-recorded input is attributed either to
-a `callABA` event in the label history or to the corruption of its own slot,
+a `callABA` event in the label history or to the corruption of its own entry,
 and the corrupted set is exactly the fold of D1-`corrupt` over the labels seen
 so far. The second disjunct of `input_src` is what `SpecStep.callByz` takes:
 its write is unrelated to the label it carries, and its guard puts the writer
@@ -639,13 +639,13 @@ private theorem exists_retSite (P : Params) {pe : ProbabilisticExecution (spec P
     (fun pre s => ValInv P pre s) (ValInv.initial P)
     (fun pre s l μ s' hI hstep hs' => hI.step hstep hs') h_exec j s h_state
   rw [AlterSeq.labelsUpTo_eq_take h_map j] at h_VI
-  -- the trace-prefix bridge: `s.F` is the trace-level fold at position `m`
+  -- the trace-prefix transfer: `s.F` is the trace-level fold at position `m`
   have h_take : (labs.take j).filter p = (labs.filter p).take m :=
     take_filter_eq_take p labs hlen
-  have h_bridge : s.F = failSet P t m := by
+  have h_transfer : s.F = failSet P t m := by
     rw [h_VI.F_eq, ← failSetL_filter hpfail (labs.take j), h_take,
       ← failSet_ofList, h_t]
-  refine ⟨j, s, μ, labs.take j, h_state, h_step, h_VI, h_bridge, ?_⟩
+  refine ⟨j, s, μ, labs.take j, h_state, h_step, h_VI, h_transfer, ?_⟩
   -- a `callABA` of the prefix sits at a trace position below `m`
   intro id' b' h_mem
   have h_memf : Lab.callABA id' b' ∈ (labs.filter p).take m := by
@@ -682,26 +682,26 @@ theorem spec_safe (P : Params) :
         ∀ id' b', Lab.callABA id' b' ∈ pre →
           ∃ k, k < m ∧ t.get? k = some (Lab.callABA id' b') := by
     intro m id b h_ret h_nc
-    obtain ⟨j, s, μ, pre, h_state, h_step, h_VI, h_bridge, h_push⟩ := hloc m id b h_ret
-    refine ⟨j, s, pre, h_state, h_VI, ?_, h_bridge, h_push⟩
+    obtain ⟨j, s, μ, pre, h_state, h_step, h_VI, h_transfer, h_push⟩ := hloc m id b h_ret
+    refine ⟨j, s, pre, h_state, h_VI, ?_, h_transfer, h_push⟩
     rcases retABA_inv h_step with hv | hmem
     · exact hv
     · refine absurd ?_ (h_nc m)
-      rw [← h_bridge]
+      rw [← h_transfer]
       exact hmem
   constructor
   · -- Validity: the pigeonhole witness, pushed back to a preceding position
     intro m id b h_ret h_nc
-    obtain ⟨j, s, pre, h_state, h_VI, h_val, h_bridge, h_push⟩ :=
+    obtain ⟨j, s, pre, h_state, h_VI, h_val, h_transfer, h_push⟩ :=
       h_honest m id b h_ret h_nc
     obtain ⟨id', h_in, h_nc'⟩ :=
-      exists_neverCorrupted_supporter (h_VI.inv.val_supp b h_val) h_bridge
+      exists_neverCorrupted_supporter (h_VI.inv.val_supp b h_val) h_transfer
     rcases h_VI.input_src id' b h_in with hcall | hmem
     · obtain ⟨k, hk_lt, hk⟩ := h_push id' b hcall
       exact ⟨k, hk_lt, id', hk, h_nc'⟩
     · -- a never-corrupted supporter is in no prefix fold
       refine absurd ?_ (h_nc' m)
-      rw [← h_bridge, h_VI.F_eq]
+      rw [← h_transfer, h_VI.F_eq]
       exact hmem
   · -- Agreement: two honest returns read the write-once decision value
     intro id b id' b' h₁ h₂ h_nc h_nc'

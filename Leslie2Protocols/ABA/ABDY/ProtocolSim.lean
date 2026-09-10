@@ -29,9 +29,9 @@ under no guard.
 
 * The round loops are the first components of the process records.
 * The coin oracle is the same component on both sides.
-* The ABA-side network is the protocol adversary's DECIDED pools beside its
+* The ABA-side network is the protocol adversary's DECIDED sets beside its
   corrupted set.
-* The fabric of round `r` is the adversary's round-`r` message pools beside the
+* The message state of round `r` is the adversary's round-`r` message sets beside the
   same corrupted set. Corruption is one broadcast on both sides, so every copy
   of the corrupted set is the adversary's.
 * The entry of process `j` in the instance of round `r` is the stage record of
@@ -50,7 +50,7 @@ are related to the same composed state.
 `protocol P` along the Dirac lift of `ProtocolRel P`, and the trace-distribution
 inclusion `protocol_composed` it yields. The inclusion is one-directional
 because the composed reading takes transitions the protocol declines. A round
-instance has a row for the Byzantine graded-agreement drives, and no protocol
+instance has a row for the Byzantine graded-agreement rows, and no protocol
 program has one (D11, D22); the instance's stage rules carry no termination
 guard, so the instance answers a send or a delivery at a process the protocol
 has terminated. In the other direction the protocol's `terminate` row writes a
@@ -67,15 +67,15 @@ namespace ABDY
 /-- **The relation of the protocol presentation to the composed one.** Writing
 `u = (procs, w, o)` and `t = (G, C, A, o')`, the five conjuncts are: the round
 loops agree; the oracle is shared; the ABA-side network is the adversary's
-DECIDED pools beside its corrupted set; each round's fabric is that round's
-slice of the adversary's pools beside the same corrupted set; and the entry of
+DECIDED sets beside its corrupted set; each round's message state is that round's
+slice of the adversary's sent sets beside the same corrupted set; and the entry of
 process `j` in the instance of round `r` is the stage record of round `r` that
 `j` holds (D22). No conjunct is guarded, so the composed state is determined. -/
 def ProtocolRel (P : Params) (u : ProtocolState P) (t : ComposedState P) : Prop :=
   (∀ j, (u.1 j).1 = t.2.1 j) ∧
   u.2.2 = t.2.2.2 ∧
-  t.2.2.1 = ⟨u.2.1.dpool, u.2.1.F⟩ ∧
-  (∀ r, (t.1 r).2 = ⟨u.2.1.pool r, u.2.1.F⟩) ∧
+  t.2.2.1 = ⟨u.2.1.dsent, u.2.1.F⟩ ∧
+  (∀ r, (t.1 r).2 = ⟨u.2.1.sent r, u.2.1.F⟩) ∧
   (∀ j r, (t.1 r).1 j = (u.1 j).2.stage r)
 
 /-- The relation, read at an explicit pair of states. -/
@@ -86,8 +86,8 @@ theorem protocolRel_mk (P : Params) (procs : ∀ _ : Fin P.n, ProcRec P.n) (w : 
     ProtocolRel P (procs, w, o) (G, C, A, o') ↔
       (∀ j, (procs j).1 = C j) ∧
       o = o' ∧
-      A = ⟨w.dpool, w.F⟩ ∧
-      (∀ r, (G r).2 = ⟨w.pool r, w.F⟩) ∧
+      A = ⟨w.dsent, w.F⟩ ∧
+      (∀ r, (G r).2 = ⟨w.sent r, w.F⟩) ∧
       (∀ j r, (G r).1 j = (procs j).2.stage r) :=
   Iff.rfl
 
@@ -142,7 +142,7 @@ private theorem match_prod (P : Params) {x : ∀ _ : Fin P.n, ProcRec P.n}
 /-! ### Updating one round
 
 A label owned by round `r` moves that round's instance and no other. The two
-lemmas below read the stage columns and the fabrics of the updated family. -/
+lemmas below read the stage columns and the message states of the updated family. -/
 
 /-- Updating round `r` by a state whose stage columns are the ones it already
 had leaves every stage column where it was. -/
@@ -153,8 +153,8 @@ private theorem update_fst {P : Params} (G : ℕ → GBCA.ImplState P.n) (r : �
   · subst h; rw [Function.update_self, hX]
   · rw [Function.update_of_ne h]
 
-/-- Updating round `r` by a state whose fabric is the one it already had leaves
-every fabric where it was. -/
+/-- Updating round `r` by a state whose message state is the one it already had leaves
+every message state where it was. -/
 private theorem update_snd {P : Params} (G : ℕ → GBCA.ImplState P.n) (r : ℕ)
     (u : ∀ _ : Fin P.n, GBCA.StageRec P.n) (r' : ℕ) :
     (Function.update G r (u, (G r).2) r').2 = (G r').2 := by
@@ -162,33 +162,33 @@ private theorem update_snd {P : Params} (G : ℕ → GBCA.ImplState P.n) (r : �
   · subst h; rw [Function.update_self]
   · rw [Function.update_of_ne h]
 
-/-- The fabric conjunct after a stage multicast in round `r`. -/
-private theorem rel_gpool {P : Params} {G : ℕ → GBCA.ImplState P.n}
-    {w : NetState P.n} (hG : ∀ r, (G r).2 = ⟨w.pool r, w.F⟩)
+/-- The message state conjunct after a stage multicast in round `r`. -/
+private theorem rel_gsent {P : Params} {G : ℕ → GBCA.ImplState P.n}
+    {w : NetState P.n} (hG : ∀ r, (G r).2 = ⟨w.sent r, w.F⟩)
     (r : ℕ) (k : Fin P.n) (m : GBCA.Msg) (u : ∀ _ : Fin P.n, GBCA.StageRec P.n)
     (r' : ℕ) :
-    ((Function.update G r (u, ((G r).2).gpool k m)) r').2 =
-      ⟨(w.gpool r k m).pool r', (w.gpool r k m).F⟩ := by
+    ((Function.update G r (u, ((G r).2).gsent k m)) r').2 =
+      ⟨(w.gsent r k m).sent r', (w.gsent r k m).F⟩ := by
   by_cases hr : r' = r
   · subst hr
     rw [Function.update_self]
-    change ((G r').2).gpool k m = _
+    change ((G r').2).gsent k m = _
     rw [hG r']
-    simp [GSub.GNetState.gpool]
-  · rw [Function.update_of_ne hr, hG r', gpool_pool_ne w r k m hr]
+    simp [GSub.GNetState.gsent]
+  · rw [Function.update_of_ne hr, hG r', gsent_sent_ne w r k m hr]
     simp
 
-/-- The fabric's corruption act and the adversary's agree. -/
+/-- The message state's corruption act and the adversary's agree. -/
 private theorem corrupt_gnet {P : Params} (w : NetState P.n) (k : Fin P.n) (r : ℕ) :
-    (⟨w.pool r, w.F⟩ : GSub.GNetState P.n).corrupt P k =
-      ⟨(NetState.corrupt P k w).pool r, (NetState.corrupt P k w).F⟩ := by
+    (⟨w.sent r, w.F⟩ : GSub.GNetState P.n).corrupt P k =
+      ⟨(NetState.corrupt P k w).sent r, (NetState.corrupt P k w).F⟩ := by
   by_cases hc : k ∉ w.F ∧ w.F.card < P.f <;>
     simp [GSub.GNetState.corrupt, NetStateP.corrupt, hc]
 
 /-- The ABA-side network's corruption act and the adversary's agree. -/
 private theorem corrupt_anet {P : Params} (w : NetState P.n) (k : Fin P.n) :
-    ANetState.corrupt P k ⟨w.dpool, w.F⟩ =
-      ⟨(NetState.corrupt P k w).dpool, (NetState.corrupt P k w).F⟩ := by
+    ANetState.corrupt P k ⟨w.dsent, w.F⟩ =
+      ⟨(NetState.corrupt P k w).dsent, (NetState.corrupt P k w).F⟩ := by
   by_cases hc : k ∉ w.F ∧ w.F.card < P.f <;>
     simp [ANetState.corrupt, NetStateP.corrupt, hc]
 
@@ -267,7 +267,7 @@ private theorem match_round (P : Params) {x : ∀ _ : Fin P.n, ProcRec P.n}
   · rw [hbind]
     exact composedGroup_of_tau P (composedPre_tau_gbca P (gbcaSide_tau P G r hsub))
 
-/-! ### The drive rows the protocol process group cannot take
+/-! ### The handshake rows the protocol process group cannot take
 
 A Byzantine graded-agreement call or return names a process, and the protocol
 program of that process has no row for it (D11, D22). Neither has the replaced
@@ -316,7 +316,7 @@ theorem match_event (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
   | gsnd r j m =>
     obtain rfl : ν = PMF.pure o :=
       (System.mapIdle_step_none (wccPull_gsnd r j m) ν).mp hWs
-    obtain rfl : w' = w.gpool r j m := pureN_inj (netStep_gsnd hn)
+    obtain rfl : w' = w.gsent r j m := pureN_inj (netStep_gsnd hn)
     have hcol : (G r).1 j = (procs j).2.stage r := hst j r
     have hstage : ∃ nd : GBCA.StageRec P.n,
         GSub.GProcStep P r j ((G r).1 j) (Sum.inr (GSub.GEvt.snd j m)) (PMF.pure nd) ∧
@@ -364,18 +364,18 @@ theorem match_event (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
             (by rw [hcol]; exact hcnt) (by rw [hcol]; exact hval)
             (by rw [hcol]; exact hsend),
             by rw [hcol]; exact pureN_inj hxid⟩
-      | «seal» v =>
+      | «echo5» v =>
         cases v with
         | some b =>
-          obtain ⟨-, -, hin, hlv, hcnt, hsend, hxid⟩ := stepN_gsnd_sealBit_self (hall j)
-          exact ⟨_, GSub.GProcStep.sndSealBit _ b (by rw [hcol]; exact hin)
+          obtain ⟨-, -, hin, hlv, hcnt, hsend, hxid⟩ := stepN_gsnd_echo5Bit_self (hall j)
+          exact ⟨_, GSub.GProcStep.sndEcho5Bit _ b (by rw [hcol]; exact hin)
             (by rw [hcol]; exact hlv) (by rw [hcol]; exact hcnt)
             (by rw [hcol]; exact hsend),
             by rw [hcol]; exact pureN_inj hxid⟩
         | none =>
           obtain ⟨-, -, hin, hlv, hnot, hcnt, hval, hsend, hxid⟩ :=
-            stepN_gsnd_sealBot_self (hall j)
-          exact ⟨_, GSub.GProcStep.sndSealBot _ (by rw [hcol]; exact hin)
+            stepN_gsnd_echo5Bot_self (hall j)
+          exact ⟨_, GSub.GProcStep.sndEcho5Bot _ (by rw [hcol]; exact hin)
             (by rw [hcol]; exact hlv) (by rw [hcol]; exact hnot)
             (by rw [hcol]; exact hcnt) (by rw [hcol]; exact hval)
             (by rw [hcol]; exact hsend),
@@ -385,14 +385,14 @@ theorem match_event (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
       pureN_inj (stepN_gsnd_foreign (Ne.symm hi) (hall i))
     have hGfor : ∀ i r', i ≠ j →
         ((Function.update G r
-          (Function.update ((G r).1) j nd, ((G r).2).gpool j m)) r').1 i =
+          (Function.update ((G r).1) j nd, ((G r).2).gsent j m)) r').1 i =
             (G r').1 i := by
       intro i r' hi
       by_cases hr' : r' = r
       · subst hr'; rw [Function.update_self]; exact Function.update_of_ne hi _ _
       · rw [Function.update_of_ne hr']
     have hown : ∀ r', ((Function.update G r
-        (Function.update ((G r).1) j nd, ((G r).2).gpool j m)) r').1 j =
+        (Function.update ((G r).1) j nd, ((G r).2).gsent j m)) r').1 j =
           (x j).2.stage r' := by
       intro r'
       simp only [hx]
@@ -407,7 +407,7 @@ theorem match_event (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
       · rw [hfor i hi]; exact hC i
     have h5 := rel_stage P j hst hfor hGfor hown
     exact match_round P rfl ((protocolRel_mk P _ _ _ _ _ _ _).mpr
-      ⟨hxcore, rfl, by simpa using hA, rel_gpool hG r j m _, h5⟩)
+      ⟨hxcore, rfl, by simpa using hA, rel_gsent hG r j m _, h5⟩)
       (GSub.sub_event_step P r (GSub.GEvt.snd j m)
         (gprocs_family j nd hrow
           (fun i hi => GSub.GProcStep.sndIdle _ j m (Ne.symm hi)))
@@ -531,8 +531,8 @@ theorem match_event (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
     · subst hi; rw [hCeq i, hx]; exact CoreProcStepN.gcallLoop _ r b hh hph hrr hest
     · rw [hCeq i, hfor i hi]
       exact CoreProcStepN.gcallLoopIdle _ r id b (Ne.symm hi)
-  | byzCallG r k b => exact (stepN_byzCallG_dead (hall k)).elim
-  | byzRetG r k out => exact (stepN_byzRetG_dead (hall k)).elim
+  | byzCallG r k b => exact (stepN_byzCallG_noStep (hall k)).elim
+  | byzRetG r k out => exact (stepN_byzRetG_noStep (hall k)).elim
   | byzCallGLoop r k b =>
     obtain ⟨hF, hw⟩ := netStep_byzCallGLoop hn
     obtain rfl : w' = w := pureN_inj hw
@@ -755,7 +755,7 @@ theorem match_lab (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
         exact CoreProcStepN.corruptedIdle _ _ hh (by simp) not_false
     · rw [hCeq i, hfor i hi]; exact CoreProcStepN.failIdle _ k (Ne.symm hi)
   | callG r id b =>
-    obtain rfl : w' = w.gpool r id (.input b) := pureN_inj (netStep_callG hn)
+    obtain rfl : w' = w.gsent r id (.input b) := pureN_inj (netStep_callG hn)
     have hfor : ∀ i, i ≠ id → x i = procs i := fun i hi =>
       pureN_inj (stepN_callG_foreign (Ne.symm hi) (hall i))
     obtain ⟨hh, hph, hrr, -, hest, hin, hxid⟩ := stepN_callG_own (hall id)
@@ -772,7 +772,7 @@ theorem match_lab (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
           (Function.update ((G r).1) id (((G r).1 id).setP { ((G r).1 id).proc with
             input := some b,
             sentInput := Function.update ((G r).1 id).proc.sentInput b true }),
-          ((G r).2).gpool id (.input b)))) :=
+          ((G r).2).gsent id (.input b)))) :=
       gbcaSide_owned P G r (by simp)
         (GSub.sub_lab_step P r (by simp)
           (gprocs_family id _
@@ -784,7 +784,7 @@ theorem match_lab (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
           (Function.update ((G r).1) id (((G r).1 id).setP { ((G r).1 id).proc with
             input := some b,
             sentInput := Function.update ((G r).1 id).proc.sentInput b true }),
-          ((G r).2).gpool id (.input b))) r').1 j = (G r').1 j := by
+          ((G r).2).gsent id (.input b))) r').1 j = (G r').1 j := by
       intro j r' hj
       by_cases hr' : r' = r
       · subst hr'; rw [Function.update_self]; exact Function.update_of_ne hj _ _
@@ -793,7 +793,7 @@ theorem match_lab (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
         (Function.update ((G r).1) id (((G r).1 id).setP { ((G r).1 id).proc with
           input := some b,
           sentInput := Function.update ((G r).1 id).proc.sentInput b true }),
-        ((G r).2).gpool id (.input b))) r').1 id = (x id).2.stage r' := by
+        ((G r).2).gsent id (.input b))) r').1 id = (x id).2.stage r' := by
       intro r'
       simp only [hx]
       by_cases hr' : r' = r
@@ -802,7 +802,7 @@ theorem match_lab (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
         exact hst id r'
     have h5 := rel_stage P id hst hfor hGfor hown
     refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
-      ⟨fun _ => rfl, rfl, by simpa using hA, rel_gpool hG r id (.input b) _,
+      ⟨fun _ => rfl, rfl, by simpa using hA, rel_gsent hG r id (.input b) _,
         h5⟩) hGs (fun i => ?_) (ANetStep.callGIdle A r id b) hWl
     by_cases hi : i = id
     · subst hi; rw [hCeq i, hx]; exact CoreProcStepN.callG _ r b hh hph hrr hest
@@ -914,11 +914,11 @@ theorem match_tau (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
     obtain ⟨Ω, hrel, hbind⟩ := match_pure P hrel'
     exact ⟨Ω, hrel, Or.inr hbind⟩
   · rcases netStep_tau hn with ⟨r, k, m, hF, hw⟩ | ⟨k, b, hF, hw⟩
-    · obtain rfl : w' = w.gpool r k m := pureN_inj hw
+    · obtain rfl : w' = w.gsent r k m := pureN_inj hw
       have hFG : k ∈ ((G r).2).F := by rw [hG r]; exact hF
-      have hfst := update_fst G r (X := ((G r).1, ((G r).2).gpool k m)) rfl
-      have hrel' : ProtocolRel P ((procs, w.gpool r k m, o) : ProtocolState P)
-          ((Function.update G r ((G r).1, ((G r).2).gpool k m), C, A, o) :
+      have hfst := update_fst G r (X := ((G r).1, ((G r).2).gsent k m)) rfl
+      have hrel' : ProtocolRel P ((procs, w.gsent r k m, o) : ProtocolState P)
+          ((Function.update G r ((G r).1, ((G r).2).gsent k m), C, A, o) :
             ComposedState P) := by
         refine (protocolRel_mk P _ _ _ _ _ _ _).mpr
           ⟨hC, rfl, by simpa using hA, ?_, ?_⟩
@@ -926,10 +926,10 @@ theorem match_tau (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
           by_cases hr : r' = r
           · subst hr
             rw [Function.update_self]
-            change ((G r').2).gpool k m = _
+            change ((G r').2).gsent k m = _
             rw [hG r']
-            simp [GSub.GNetState.gpool]
-          · rw [Function.update_of_ne hr, hG r', gpool_pool_ne w r k m hr]
+            simp [GSub.GNetState.gsent]
+          · rw [Function.update_of_ne hr, hG r', gsent_sent_ne w r k m hr]
             simp
         · intro j r'; rw [hfst]; exact hst j r'
       obtain ⟨Ω, hrel, hbind⟩ := match_pure P hrel'
@@ -1036,7 +1036,7 @@ theorem protocol_composed (P : Params) :
     achievableTraceDists (protocol P) ⊆ achievableTraceDists (composed P) :=
   (protocolSim P).achievableTraceDists_subset
 
-/-! ### Mechanical axiom firewall
+/-! ### Mechanical axiom check
 
 The composition step of the chain may not acquire a `sorryAx` dependence. -/
 

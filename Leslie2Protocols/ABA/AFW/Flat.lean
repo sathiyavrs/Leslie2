@@ -18,26 +18,26 @@ supplies the same three things — a stage message type, a stage record, and the
 implementation's rows. It sits in the namespace `AFW`, after Attiya, Flam and
 Welch, and so `AFW.protocol` is what `ABDY.protocol` is at ABDY22's.
 
-## One pool for every fabric
+## One sent for every message state
 
-A round of the gather-based implementation carries `4n + 2` message fabrics:
+A round of the gather-based implementation carries `4n + 2` message states:
 one for each of the two gather instances, and one for each of the `4n` Bracha
 instances — `n` carrying the inputs and `n` carrying the `BIND` payloads, in
-each of the two gathers. The adversary here holds one pool family per round
-instead, over the tagged message type `Msg`, whose tag names the fabric a
+each of the two gathers. The adversary here holds one sent family per round
+instead, over the tagged message type `Msg`, whose tag names the message state a
 message belongs to and, for a Bracha message, the instance it belongs to. The
-pool index stays the sender, so a threshold still counts distinct senders
+sent index stays the sender, so a threshold still counts distinct senders
 (D5).
 
 ## The record of one process
 
-A process's data is scattered across those instances: `j` holds its own box in
-each of the `4n + 2` of them, and the composed reading indexes those boxes by
+A process's data is scattered across those instances: `j` holds its own local state in
+each of the `4n + 2` of them, and the composed reading indexes those local states by
 instance and then by process. A program must hold its own data and no one
-else's, so `StageRec` holds them the other way round — `j`'s box in each
-gather instance, and `j`'s box in each of the `n` instances of each Bracha
+else's, so `StageRec` holds them the other way round — `j`'s local state in each
+gather instance, and `j`'s local state in each of the `n` instances of each Bracha
 family. Every guard of the gather-based implementation reads the acting
-process's own boxes and the fabrics, and the two rows that read a fabric are
+process's own local states and the message states, and the two rows that read a message state are
 the adversary's delivery and its Byzantine injection, so the transposition
 loses nothing.
 
@@ -45,14 +45,14 @@ loses nothing.
 
 The stage-side rows are the rows of `Gather.LowStep` and `GBCA.LowPairStep`
 cut into their process half and their network half. A send writes the sender's
-own record and the network pools the message; a delivery files the message in
-the receiver's own box, dispatched on the tag. Three rows are fused, as they
+own record and the network records the message; a delivery files the message in
+the receiver's own local state, dispatched on the tag. Three rows are fused, as they
 are in the composed reading (D28): the graded-agreement call broadcasts the
 input, the `BIND` send is a broadcast call, and the first gather's return to a
 process is that process's call of the second gather.
 
 The Bracha return is not a row here. Gather reads a broadcast delivery as an
-`n − f` `VOTE` receipt quorum on the receiving box (`apIn`, `apBind`), never
+`n − f` `VOTE` receipt quorum on the receiving local state (`apIn`, `apBind`), never
 through a returned flag, and the composed reading embeds only the silent rows
 of a Bracha instance, its return not among them.
 -/
@@ -65,13 +65,13 @@ open Net Gather
 
 /-! ### The tagged message type -/
 
-/-- A round's messages: the two gather fabrics and the `4n` Bracha fabrics,
-tagged by the fabric they belong to. A Bracha tag carries the instance, whose
+/-- A round's messages: the two gather message states and the `4n` Bracha message states,
+tagged by the message state they belong to. A Bracha tag carries the instance, whose
 index is its leader. -/
 inductive Msg (n : ℕ) : Type
-  /-- A message of the first gather's fabric. -/
+  /-- A message of the first gather's message state. -/
   | ga1 (m : GaMsg n Bool)
-  /-- A message of the second gather's fabric. -/
+  /-- A message of the second gather's message state. -/
   | ga2 (m : GaMsg n (Option Bool))
   /-- A message of the input-broadcast instance `k` of the first gather. -/
   | brbIn1 (k : Fin n) (m : BRB.BMsg Bool)
@@ -85,42 +85,42 @@ inductive Msg (n : ℕ) : Type
 
 /-! ### The record of one process in one round -/
 
-/-- One process's data in one round, held by instance: its box in each gather
-instance, and its box in each of the `n` instances of each broadcast family.
+/-- One process's data in one round, held by instance: its local state in each gather
+instance, and its local state in each of the `n` instances of each broadcast family.
 This is the composed reading's instance-major indexing transposed. -/
 structure StageRec (n : ℕ) : Type where
-  /-- The process's box in the first gather instance. -/
-  ga1 : Box n (PRec n Bool) (GaMsg n Bool)
-  /-- The process's box in the second gather instance. -/
-  ga2 : Box n (PRec n (Option Bool)) (GaMsg n (Option Bool))
-  /-- The process's box in each input-broadcast instance of the first
+  /-- The process's local state in the first gather instance. -/
+  ga1 : LocalState n (PRec n Bool) (GaMsg n Bool)
+  /-- The process's local state in the second gather instance. -/
+  ga2 : LocalState n (PRec n (Option Bool)) (GaMsg n (Option Bool))
+  /-- The process's local state in each input-broadcast instance of the first
   gather. -/
-  brbIn1 : ∀ _ : Fin n, Box n (BRB.PState Bool) (BRB.BMsg Bool)
-  /-- The process's box in each bind-broadcast instance of the first
+  brbIn1 : ∀ _ : Fin n, LocalState n (BRB.PState Bool) (BRB.BMsg Bool)
+  /-- The process's local state in each bind-broadcast instance of the first
   gather. -/
-  brbBind1 : ∀ _ : Fin n, Box n (BRB.PState (APSet n Bool)) (BRB.BMsg (APSet n Bool))
-  /-- The process's box in each input-broadcast instance of the second
+  brbBind1 : ∀ _ : Fin n, LocalState n (BRB.PState (APSet n Bool)) (BRB.BMsg (APSet n Bool))
+  /-- The process's local state in each input-broadcast instance of the second
   gather. -/
-  brbIn2 : ∀ _ : Fin n, Box n (BRB.PState (Option Bool)) (BRB.BMsg (Option Bool))
-  /-- The process's box in each bind-broadcast instance of the second
+  brbIn2 : ∀ _ : Fin n, LocalState n (BRB.PState (Option Bool)) (BRB.BMsg (Option Bool))
+  /-- The process's local state in each bind-broadcast instance of the second
   gather. -/
   brbBind2 : ∀ _ : Fin n,
-    Box n (BRB.PState (APSet n (Option Bool))) (BRB.BMsg (APSet n (Option Bool)))
+    LocalState n (BRB.PState (APSet n (Option Bool))) (BRB.BMsg (APSet n (Option Bool)))
 
 namespace StageRec
 
 variable {n : ℕ}
 
-/-- The initial record: every box empty over the initial local record. -/
+/-- The initial record: every local state empty over the initial local record. -/
 def initial (n : ℕ) : StageRec n where
-  ga1 := Box.initial n _ (PRec.initial n Bool)
-  ga2 := Box.initial n _ (PRec.initial n (Option Bool))
-  brbIn1 := fun _ => Box.initial n _ (BRB.PState.initial Bool)
-  brbBind1 := fun _ => Box.initial n _ (BRB.PState.initial (APSet n Bool))
-  brbIn2 := fun _ => Box.initial n _ (BRB.PState.initial (Option Bool))
-  brbBind2 := fun _ => Box.initial n _ (BRB.PState.initial (APSet n (Option Bool)))
+  ga1 := LocalState.initial n _ (PRec.initial n Bool)
+  ga2 := LocalState.initial n _ (PRec.initial n (Option Bool))
+  brbIn1 := fun _ => LocalState.initial n _ (BRB.PState.initial Bool)
+  brbBind1 := fun _ => LocalState.initial n _ (BRB.PState.initial (APSet n Bool))
+  brbIn2 := fun _ => LocalState.initial n _ (BRB.PState.initial (Option Bool))
+  brbBind2 := fun _ => LocalState.initial n _ (BRB.PState.initial (APSet n (Option Bool)))
 
-/-- File a delivered message in the box of the fabric its tag names. -/
+/-- File a delivered message in the local state of the message state its tag names. -/
 def deliverTo (s : StageRec n) (k : Fin n) : Msg n → StageRec n
   | .ga1 m => { s with ga1 := s.ga1.deliverTo k m }
   | .ga2 m => { s with ga2 := s.ga2.deliverTo k m }
@@ -159,8 +159,8 @@ abbrev NetState (n : ℕ) : Type := NetStateP n (Msg n)
 
 /-! ### The derived receipt predicates
 
-A broadcast delivery is a receipt quorum on the receiving box, not an event
-(D28). Read at the process that holds the box, each predicate below is a count
+A broadcast delivery is a receipt quorum on the receiving local state, not an event
+(D28). Read at the process that holds the local state, each predicate below is a count
 on that process's own record. -/
 
 variable {P : Params}
@@ -244,7 +244,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
       (hin : ((p.stage r).ga1.proc).input ≠ none)
       (happ : approved1 P (p.stage r) U)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
-        ∀ q ∈ Q, ∃ A, GaMsg.echo A ∈ ((p.stage r).ga1.inbox q) ∧
+        ∀ q ∈ Q, ∃ A, GaMsg.echo A ∈ ((p.stage r).ga1.recv q) ∧
           approved1 P (p.stage r) A ∧ A ⊆ U)
       (hsend : ((p.stage r).ga1.proc).sentVote = none) :
       StageStep P j (c, p) (Sum.inr (.gsnd r j (.ga1 (.vote U))))
@@ -261,7 +261,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
       (hbc : (((p.stage r).brbBind1 j).proc).input = none)
       (happ : approved1 P (p.stage r) U)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
-        ∀ q ∈ Q, ∃ W, GaMsg.vote W ∈ ((p.stage r).ga1.inbox q) ∧
+        ∀ q ∈ Q, ∃ W, GaMsg.vote W ∈ ((p.stage r).ga1.recv q) ∧
           approved1 P (p.stage r) W ∧ W ⊆ U) :
       StageStep P j (c, p) (Sum.inr (.gsnd r j (.brbBind1 j (.init U))))
         (PMF.pure (c, p.setStage r
@@ -288,7 +288,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
       (hin : ((p.stage r).ga2.proc).input ≠ none)
       (happ : approved2 P (p.stage r) U)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
-        ∀ q ∈ Q, ∃ A, GaMsg.echo A ∈ ((p.stage r).ga2.inbox q) ∧
+        ∀ q ∈ Q, ∃ A, GaMsg.echo A ∈ ((p.stage r).ga2.recv q) ∧
           approved2 P (p.stage r) A ∧ A ⊆ U)
       (hsend : ((p.stage r).ga2.proc).sentVote = none) :
       StageStep P j (c, p) (Sum.inr (.gsnd r j (.ga2 (.vote U))))
@@ -304,7 +304,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
       (hbc : (((p.stage r).brbBind2 j).proc).input = none)
       (happ : approved2 P (p.stage r) U)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
-        ∀ q ∈ Q, ∃ W, GaMsg.vote W ∈ ((p.stage r).ga2.inbox q) ∧
+        ∀ q ∈ Q, ∃ W, GaMsg.vote W ∈ ((p.stage r).ga2.recv q) ∧
           approved2 P (p.stage r) W ∧ W ⊆ U) :
       StageStep P j (c, p) (Sum.inr (.gsnd r j (.brbBind2 j (.init U))))
         (PMF.pure (c, p.setStage r
@@ -361,7 +361,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
   `⟨INIT, m⟩` is delivered here and no `ECHO` is out. -/
   | in1Echo (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ) (i : Fin P.n)
       (m : Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hrecv : BRB.BMsg.init m ∈ ((p.stage r).brbIn1 i).inbox i)
+      (hrecv : BRB.BMsg.init m ∈ ((p.stage r).brbIn1 i).recv i)
       (hsend : (((p.stage r).brbIn1 i).proc).sentEcho = none) :
       StageStep P j (c, p) (Sum.inr (.gsnd r j (.brbIn1 i (.echo m))))
         (PMF.pure (c, p.setStage r
@@ -395,7 +395,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
   /-- `ECHO` in a bind-broadcast instance of the first gather. -/
   | bind1Echo (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ) (i : Fin P.n)
       (m : APSet P.n Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hrecv : BRB.BMsg.init m ∈ ((p.stage r).brbBind1 i).inbox i)
+      (hrecv : BRB.BMsg.init m ∈ ((p.stage r).brbBind1 i).recv i)
       (hsend : (((p.stage r).brbBind1 i).proc).sentEcho = none) :
       StageStep P j (c, p) (Sum.inr (.gsnd r j (.brbBind1 i (.echo m))))
         (PMF.pure (c, p.setStage r
@@ -430,7 +430,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
   /-- `ECHO` in an input-broadcast instance of the second gather. -/
   | in2Echo (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ) (i : Fin P.n)
       (m : Option Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hrecv : BRB.BMsg.init m ∈ ((p.stage r).brbIn2 i).inbox i)
+      (hrecv : BRB.BMsg.init m ∈ ((p.stage r).brbIn2 i).recv i)
       (hsend : (((p.stage r).brbIn2 i).proc).sentEcho = none) :
       StageStep P j (c, p) (Sum.inr (.gsnd r j (.brbIn2 i (.echo m))))
         (PMF.pure (c, p.setStage r
@@ -466,7 +466,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
   | bind2Echo (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ) (i : Fin P.n)
       (m : APSet P.n (Option Bool)) (hh : c.corrupted = false)
       (hterm : p.terminated = false)
-      (hrecv : BRB.BMsg.init m ∈ ((p.stage r).brbBind2 i).inbox i)
+      (hrecv : BRB.BMsg.init m ∈ ((p.stage r).brbBind2 i).recv i)
       (hsend : (((p.stage r).brbBind2 i).proc).sentEcho = none) :
       StageStep P j (c, p) (Sum.inr (.gsnd r j (.brbBind2 i (.echo m))))
         (PMF.pure (c, p.setStage r
@@ -500,7 +500,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
             brbBind2 := Function.update (p.stage r).brbBind2 i
               (((p.stage r).brbBind2 i).setP
                 { (((p.stage r).brbBind2 i).proc) with sentVote := some m }) }))
-  /-- Delivery, receiver's half: file the message in the box of the fabric its
+  /-- Delivery, receiver's half: file the message in the local state of the message state its
   tag names. Authenticity is the network's conjunct. -/
   | gdlvRecv (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ) (k : Fin P.n)
       (m : Msg P.n) (hh : c.corrupted = false) (hterm : p.terminated = false) :
@@ -515,11 +515,11 @@ instance instIsStageTable (P : Params) :
   honest h := by cases h <;> assumption
   dirac h := by cases h <;> exact ⟨_, rfl⟩
 
-/-! ### The transposed record writes one box at a time
+/-! ### The transposed record writes one local state at a time
 
-A tagged delivery reaches exactly the box its tag names and leaves every other
-box of the record where it stands. These are the facts the substitution into
-the composed reading rests on, the composed side writing the same box through
+A tagged delivery reaches exactly the local state its tag names and leaves every other
+local state of the record where it stands. These are the facts the substitution into
+the composed reading rests on, the composed side writing the same local state through
 its instance-major indexing. -/
 
 section Transposition
@@ -527,9 +527,9 @@ section Transposition
 variable {n : ℕ}
 
 example (s : StageRec n) (k i : Fin n) (m : BRB.BMsg Bool) :
-    ((s.deliverTo k (.brbIn1 i m)).brbIn1 i).inbox k
-      = insert m ((s.brbIn1 i).inbox k) := by
-  simp [StageRec.deliverTo, Box.deliverTo]
+    ((s.deliverTo k (.brbIn1 i m)).brbIn1 i).recv k
+      = insert m ((s.brbIn1 i).recv k) := by
+  simp [StageRec.deliverTo, LocalState.deliverTo]
 
 example (s : StageRec n) (k i i' : Fin n) (m : BRB.BMsg Bool) (h : i' ≠ i) :
     (s.deliverTo k (.brbIn1 i m)).brbIn1 i' = s.brbIn1 i' := by
@@ -540,8 +540,8 @@ example (s : StageRec n) (k i : Fin n) (m : BRB.BMsg Bool) :
   simp [StageRec.deliverTo]
 
 example (s : StageRec n) (k : Fin n) (m : GaMsg n Bool) :
-    (s.deliverTo k (.ga1 m)).ga1.inbox k = insert m (s.ga1.inbox k) := by
-  simp [StageRec.deliverTo, Box.deliverTo]
+    (s.deliverTo k (.ga1 m)).ga1.recv k = insert m (s.ga1.recv k) := by
+  simp [StageRec.deliverTo, LocalState.deliverTo]
 
 example (s : StageRec n) (k : Fin n) (m : GaMsg n Bool) (i : Fin n) :
     (s.deliverTo k (.ga1 m)).brbIn1 i = s.brbIn1 i := by

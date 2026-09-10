@@ -21,15 +21,15 @@ that of its ABDY-chain counterpart, and the qualifier is dropped below.
 
 The relation is a function, not a correspondence: a state of `composed P` is
 computed from a state of `protocol P`. The round loops and the coin oracle
-are shared objects, the ABA-side network is the DECIDED pools beside the
+are shared objects, the ABA-side network is the DECIDED sets beside the
 corrupted set, and the round-`r` instance is assembled by `toPair`. Assembling
-it undoes the two rearrangements the flat reading performs. The boxes are
-transposed back: the instance's box vector at round `r` is read off the round
-records the `n` processes hold. And the pools are sliced: the instance's
-fabric carries the messages of one tag, recovered from the adversary's single
-tagged pool family by `slice`.
+it undoes the two rearrangements the flat reading performs. The local states are
+transposed back: the instance's local state vector at round `r` is read off the round
+records the `n` processes hold. And the sent sets are sliced: the instance's
+message state carries the messages of one tag, recovered from the adversary's single
+tagged sent family by `slice`.
 
-Slicing commutes with the adversary's pool write in the only two ways a step
+Slicing commutes with the adversary's sent write in the only two ways a step
 needs (`slice_post_some`, `slice_post_none`): a message of the tag being
 sliced arrives in that slice, and a message of any other tag leaves the slice
 alone. Together with the two lemmas that read a written round record
@@ -45,9 +45,9 @@ open Net Gather
 
 /-! ### Two extensionality helpers -/
 
-/-- A fabric is its pool family beside its corrupted set. -/
-theorem fabric_ext {n : ℕ} {M : Type} {a b : Fabric n M}
-    (hp : a.pool = b.pool) (hF : a.F = b.F) : a = b := by
+/-- A message state is its sent family beside its corrupted set. -/
+theorem msgState_ext {n : ℕ} {M : Type} {a b : MsgState n M}
+    (hp : a.sent = b.sent) (hF : a.F = b.F) : a = b := by
   cases a; cases b; simp_all
 
 /-- A gather-over-Bracha state is its gather instance beside its two
@@ -57,28 +57,28 @@ theorem lowState_ext {n : ℕ} {X : Type} {a b : Gather.LowState n X}
     a = b := by
   cases a; cases b; simp_all
 
-/-! ### Slicing a tagged pool -/
+/-! ### Slicing a tagged sent -/
 
 variable {n : ℕ} {β : Type}
 
-/-- The messages of one tag, recovered from a tagged pool family along a
+/-- The messages of one tag, recovered from a tagged sent family along a
 partial untagging. -/
 def slice (f : Msg n → Option β)
     (hf : ∀ a a' b, b ∈ f a → b ∈ f a' → a = a')
-    (pool : Fin n → Finset (Msg n)) : Fin n → Finset β :=
-  fun q => (pool q).filterMap f hf
+    (sent : Fin n → Finset (Msg n)) : Fin n → Finset β :=
+  fun q => (sent q).filterMap f hf
 
 theorem mem_slice {f : Msg n → Option β}
     {hf : ∀ a a' b, b ∈ f a → b ∈ f a' → a = a'}
-    {pool : Fin n → Finset (Msg n)} {q : Fin n} {b : β} :
-    b ∈ slice f hf pool q ↔ ∃ m ∈ pool q, f m = some b :=
+    {sent : Fin n → Finset (Msg n)} {q : Fin n} {b : β} :
+    b ∈ slice f hf sent q ↔ ∃ m ∈ sent q, f m = some b :=
   Finset.mem_filterMap f
 
-/-- A pooled message of another tag leaves the slice alone. -/
+/-- A sent message of another tag leaves the slice alone. -/
 theorem slice_post_none (f : Msg n → Option β)
     (hf : ∀ a a' b, b ∈ f a → b ∈ f a' → a = a')
-    (pool : Fin n → Finset (Msg n)) (j : Fin n) (m : Msg n) (hm : f m = none) :
-    slice f hf (Function.update pool j (insert m (pool j))) = slice f hf pool := by
+    (sent : Fin n → Finset (Msg n)) (j : Fin n) (m : Msg n) (hm : f m = none) :
+    slice f hf (Function.update sent j (insert m (sent j))) = slice f hf sent := by
   funext q
   ext b
   rw [mem_slice, mem_slice]
@@ -100,13 +100,13 @@ theorem slice_post_none (f : Msg n → Option β)
       exact Or.inr ha
     · rwa [Function.update_of_ne hq]
 
-/-- A pooled message of the tag being sliced arrives in that slice. -/
+/-- A sent message of the tag being sliced arrives in that slice. -/
 theorem slice_post_some [DecidableEq β] (f : Msg n → Option β)
     (hf : ∀ a a' b, b ∈ f a → b ∈ f a' → a = a')
-    (pool : Fin n → Finset (Msg n)) (j : Fin n) (m : Msg n) (b : β)
+    (sent : Fin n → Finset (Msg n)) (j : Fin n) (m : Msg n) (b : β)
     (hm : f m = some b) :
-    slice f hf (Function.update pool j (insert m (pool j)))
-      = Function.update (slice f hf pool) j (insert b (slice f hf pool j)) := by
+    slice f hf (Function.update sent j (insert m (sent j)))
+      = Function.update (slice f hf sent) j (insert b (slice f hf sent j)) := by
   funext q
   by_cases hq : q = j
   · subst hq
@@ -137,12 +137,12 @@ theorem slice_post_some [DecidableEq β] (f : Msg n → Option β)
 
 /-! ### The six untaggings -/
 
-/-- The first gather's fabric messages. -/
+/-- The first gather's message state messages. -/
 def unGa1 : Msg n → Option (GaMsg n Bool)
   | .ga1 m => some m
   | _ => none
 
-/-- The second gather's fabric messages. -/
+/-- The second gather's message state messages. -/
 def unGa2 : Msg n → Option (GaMsg n (Option Bool))
   | .ga2 m => some m
   | _ => none
@@ -202,27 +202,27 @@ theorem unBind2_inj (i : Fin n) : ∀ a a' (b : BRB.BMsg (APSet n (Option Bool))
 variable {P : Params}
 
 /-- The round-`r` state of the first gather instance, read off the flat
-state: the box vector transposed out of the round records the processes hold,
-and the fabrics sliced out of the adversary's tagged pools. -/
+state: the local state vector transposed out of the round records the processes hold,
+and the message states sliced out of the adversary's tagged sent sets. -/
 def toLow1 (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n)
     (r : ℕ) : Gather.LowState P.n Bool where
-  ga := (fun i => ((u i).2.stage r).ga1, ⟨slice unGa1 unGa1_inj (w.pool r), w.F⟩)
+  ga := (fun i => ((u i).2.stage r).ga1, ⟨slice unGa1 unGa1_inj (w.sent r), w.F⟩)
   brbIn := fun k =>
-    (fun i => ((u i).2.stage r).brbIn1 k, ⟨slice (unIn1 k) (unIn1_inj k) (w.pool r), w.F⟩)
+    (fun i => ((u i).2.stage r).brbIn1 k, ⟨slice (unIn1 k) (unIn1_inj k) (w.sent r), w.F⟩)
   brbBind := fun k =>
     (fun i => ((u i).2.stage r).brbBind1 k,
-      ⟨slice (unBind1 k) (unBind1_inj k) (w.pool r), w.F⟩)
+      ⟨slice (unBind1 k) (unBind1_inj k) (w.sent r), w.F⟩)
 
 /-- The round-`r` state of the second gather instance, read off the flat
 state. -/
 def toLow2 (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n)
     (r : ℕ) : Gather.LowState P.n (Option Bool) where
-  ga := (fun i => ((u i).2.stage r).ga2, ⟨slice unGa2 unGa2_inj (w.pool r), w.F⟩)
+  ga := (fun i => ((u i).2.stage r).ga2, ⟨slice unGa2 unGa2_inj (w.sent r), w.F⟩)
   brbIn := fun k =>
-    (fun i => ((u i).2.stage r).brbIn2 k, ⟨slice (unIn2 k) (unIn2_inj k) (w.pool r), w.F⟩)
+    (fun i => ((u i).2.stage r).brbIn2 k, ⟨slice (unIn2 k) (unIn2_inj k) (w.sent r), w.F⟩)
   brbBind := fun k =>
     (fun i => ((u i).2.stage r).brbBind2 k,
-      ⟨slice (unBind2 k) (unBind2_inj k) (w.pool r), w.F⟩)
+      ⟨slice (unBind2 k) (unBind2_inj k) (w.sent r), w.F⟩)
 
 /-- The round-`r` instance of the composed reading, read off the flat
 state. -/
@@ -267,13 +267,13 @@ theorem stage_update_ne {u : ∀ _ : Fin P.n, ProcRec P.n} {j : Fin P.n}
 /-! ### The relation -/
 
 /-- **The composition relation**: the round loops and the coin oracle are
-shared, the ABA-side network is the DECIDED pools beside the corrupted set,
+shared, the ABA-side network is the DECIDED sets beside the corrupted set,
 and every round's instance is the view `toPair` of the flat state. Nothing is
 guarded, so the composed state is determined by the flat one. -/
 def ProtocolRel (P : Params) (s : ProtocolState P) (t : ComposedState P) : Prop :=
   (∀ j, (s.1 j).1 = t.2.1 j) ∧
     s.2.2 = t.2.2.2 ∧
-    t.2.2.1 = ⟨s.2.1.dpool, s.2.1.F⟩ ∧
+    t.2.2.1 = ⟨s.2.1.dsent, s.2.1.F⟩ ∧
     t.1 = fun r => toPair P s.1 s.2.1 r
 
 theorem protocolRel_mk (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n)
@@ -281,12 +281,12 @@ theorem protocolRel_mk (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n)
     (C : ∀ _ : Fin P.n, CoreRec P.n) (A : Comp.ANetState P.n)
     (o' : ℕ → WCC.SpecState P.n) :
     ProtocolRel P (u, w, o) (G, C, A, o') ↔
-      ((∀ j, (u j).1 = C j) ∧ o = o' ∧ A = ⟨w.dpool, w.F⟩ ∧
+      ((∀ j, (u j).1 = C j) ∧ o = o' ∧ A = ⟨w.dsent, w.F⟩ ∧
         G = fun r => toPair P u w r) := Iff.rfl
 
 /-- The initial states are related: every round of the view is the initial
 instance state, an untouched round reading as the initial record on the flat
-side and the empty pool slicing to the empty pool. -/
+side and the empty sent slicing to the empty sent. -/
 theorem protocolRel_init (P : Params) :
     ProtocolRel P (protocol P).init (composed P).init := by
   have hslice : ∀ {β : Type} (f : Msg P.n → Option β)
@@ -300,13 +300,13 @@ theorem protocolRel_init (P : Params) :
   have hlow : (composed P).init.1 r = GBCA.LowPairState.initial P.n := rfl
   have hproc : (protocol P).init.1
       = fun _ => (CoreRec.initial P.n, StageSideRecP.initial (StageRec P.n)) := rfl
-  have hpool : ((protocol P).init.2.1).pool
+  have hsent : ((protocol P).init.2.1).sent
       = fun _ _ => (∅ : Finset (Msg P.n)) := rfl
   have hF : ((protocol P).init.2.1).F = (∅ : Finset (Fin P.n)) := rfl
-  rw [hlow, toPair, toLow1, toLow2, hproc, hpool, hF]
+  rw [hlow, toPair, toLow1, toLow2, hproc, hsent, hF]
   refine Prod.ext ?_ ?_ <;>
     simp [GBCA.LowPairState.initial, Gather.LowState.initial, SubState.initial,
-      Fabric.initial, StageRec.initial, BRB.ImplState.initial, hslice]
+      MsgState.initial, StageRec.initial, BRB.ImplState.initial, hslice]
 
 /-! ### Building a transition of the composed reading
 
@@ -471,63 +471,63 @@ theorem composedGroup_of_tau (P : Params) {q : ComposedState P}
 
 /-! ### Transposing one written record
 
-A row writes the acting process's round record, so the box vector the view
+A row writes the acting process's round record, so the local state vector the view
 reads becomes a one-point update of the old one. Each lemma below is that
 observation at one component, stated over the `ite` that reading a written
 record produces. -/
 
-section Boxes
+section Locals
 
 variable {n : ℕ} {j : Fin n} (X : Fin n → StageRec n) (sr : StageRec n)
 
-theorem boxes_ga1_if :
+theorem locals_ga1_if :
     (fun i => (if i = j then sr else X i).ga1)
       = Function.update (fun i => (X i).ga1) j sr.ga1 := by
   funext i
   rw [Function.update_apply]
   by_cases hi : i = j <;> simp [hi]
 
-theorem boxes_ga2_if :
+theorem locals_ga2_if :
     (fun i => (if i = j then sr else X i).ga2)
       = Function.update (fun i => (X i).ga2) j sr.ga2 := by
   funext i
   rw [Function.update_apply]
   by_cases hi : i = j <;> simp [hi]
 
-theorem boxes_brbIn1_if (k : Fin n) :
+theorem locals_brbIn1_if (k : Fin n) :
     (fun i => (if i = j then sr else X i).brbIn1 k)
       = Function.update (fun i => (X i).brbIn1 k) j (sr.brbIn1 k) := by
   funext i
   rw [Function.update_apply]
   by_cases hi : i = j <;> simp [hi]
 
-theorem boxes_brbBind1_if (k : Fin n) :
+theorem locals_brbBind1_if (k : Fin n) :
     (fun i => (if i = j then sr else X i).brbBind1 k)
       = Function.update (fun i => (X i).brbBind1 k) j (sr.brbBind1 k) := by
   funext i
   rw [Function.update_apply]
   by_cases hi : i = j <;> simp [hi]
 
-theorem boxes_brbIn2_if (k : Fin n) :
+theorem locals_brbIn2_if (k : Fin n) :
     (fun i => (if i = j then sr else X i).brbIn2 k)
       = Function.update (fun i => (X i).brbIn2 k) j (sr.brbIn2 k) := by
   funext i
   rw [Function.update_apply]
   by_cases hi : i = j <;> simp [hi]
 
-theorem boxes_brbBind2_if (k : Fin n) :
+theorem locals_brbBind2_if (k : Fin n) :
     (fun i => (if i = j then sr else X i).brbBind2 k)
       = Function.update (fun i => (X i).brbBind2 k) j (sr.brbBind2 k) := by
   funext i
   rw [Function.update_apply]
   by_cases hi : i = j <;> simp [hi]
 
-end Boxes
+end Locals
 
 /-! ### The view after one row
 
 A row of the flat reading writes one component of the acting process's round
-record and pools one tagged message. The lemma below is that write read
+record and records one tagged message. The lemma below is that write read
 through the view, and it is the shape every row of the simulation is
 discharged by: the round the row names moves as the composed reading's own row
 moves it. -/
@@ -538,144 +538,144 @@ variable {u : ∀ _ : Fin P.n, ProcRec P.n} {w : NetState P.n} {j : Fin P.n}
     {c : CoreRec P.n} {p : StageSideRec P.n}
 
 /-- The view after a write, with the one-point update pushed inside every
-coordinate: the acting process's box replaced in each box vector, and each
-fabric sliced out of the written pool. -/
+coordinate: the acting process's local state replaced in each local state vector, and each
+message state sliced out of the written sent. -/
 def toPairUpd (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n)
     (r : ℕ) (j : Fin P.n) (sr : StageRec P.n)
-    (pool : Fin P.n → Finset (Msg P.n)) : GBCA.LowPairState P.n :=
+    (sent : Fin P.n → Finset (Msg P.n)) : GBCA.LowPairState P.n :=
   ({ ga := (Function.update (fun i => ((u i).2.stage r).ga1) j sr.ga1,
-            ⟨slice unGa1 unGa1_inj pool, w.F⟩)
+            ⟨slice unGa1 unGa1_inj sent, w.F⟩)
      brbIn := fun k =>
        (Function.update (fun i => ((u i).2.stage r).brbIn1 k) j (sr.brbIn1 k),
-        ⟨slice (unIn1 k) (unIn1_inj k) pool, w.F⟩)
+        ⟨slice (unIn1 k) (unIn1_inj k) sent, w.F⟩)
      brbBind := fun k =>
        (Function.update (fun i => ((u i).2.stage r).brbBind1 k) j (sr.brbBind1 k),
-        ⟨slice (unBind1 k) (unBind1_inj k) pool, w.F⟩) },
+        ⟨slice (unBind1 k) (unBind1_inj k) sent, w.F⟩) },
    { ga := (Function.update (fun i => ((u i).2.stage r).ga2) j sr.ga2,
-            ⟨slice unGa2 unGa2_inj pool, w.F⟩)
+            ⟨slice unGa2 unGa2_inj sent, w.F⟩)
      brbIn := fun k =>
        (Function.update (fun i => ((u i).2.stage r).brbIn2 k) j (sr.brbIn2 k),
-        ⟨slice (unIn2 k) (unIn2_inj k) pool, w.F⟩)
+        ⟨slice (unIn2 k) (unIn2_inj k) sent, w.F⟩)
      brbBind := fun k =>
        (Function.update (fun i => ((u i).2.stage r).brbBind2 k) j (sr.brbBind2 k),
-        ⟨slice (unBind2 k) (unBind2_inj k) pool, w.F⟩) })
+        ⟨slice (unBind2 k) (unBind2_inj k) sent, w.F⟩) })
 
 /-- **A write, read through the view.** A row writes the acting process's
-round record and pools one tagged message; the round it names then reads as
+round record and records one tagged message; the round it names then reads as
 the one-point update of every coordinate. This is the transposition, done
-once, so that the six slice computations each row still owes are pool algebra
+once, so that the six slice computations each row still owes are sent algebra
 alone. -/
 theorem toPair_write (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n)
     (j : Fin P.n) (c : CoreRec P.n) (r : ℕ) (sr : StageRec P.n) (m : Msg P.n) :
-    toPair P (Function.update u j (c, (u j).2.setStage r sr)) (w.gpool r j m) r
+    toPair P (Function.update u j (c, (u j).2.setStage r sr)) (w.gsent r j m) r
       = toPairUpd P u w r j sr
-          (Function.update (w.pool r) j (insert m (w.pool r j))) := by
+          (Function.update (w.sent r) j (insert m (w.sent r j))) := by
   refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
-    · simp only [toPair, toPairUpd, toLow1, stage_update_self rfl, boxes_ga1_if]
-    · simp only [toPair, toPairUpd, toLow1, gpool_pool_self]
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    · simp only [toPair, toPairUpd, toLow1, stage_update_self rfl, locals_ga1_if]
+    · simp only [toPair, toPairUpd, toLow1, gsent_sent_self]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
-    · simp only [toPair, toPairUpd, toLow1, stage_update_self rfl, boxes_brbIn1_if]
-    · simp only [toPair, toPairUpd, toLow1, gpool_pool_self]
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    · simp only [toPair, toPairUpd, toLow1, stage_update_self rfl, locals_brbIn1_if]
+    · simp only [toPair, toPairUpd, toLow1, gsent_sent_self]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
-    · simp only [toPair, toPairUpd, toLow1, stage_update_self rfl, boxes_brbBind1_if]
-    · simp only [toPair, toPairUpd, toLow1, gpool_pool_self]
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
-    · simp only [toPair, toPairUpd, toLow2, stage_update_self rfl, boxes_ga2_if]
-    · simp only [toPair, toPairUpd, toLow2, gpool_pool_self]
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    · simp only [toPair, toPairUpd, toLow1, stage_update_self rfl, locals_brbBind1_if]
+    · simp only [toPair, toPairUpd, toLow1, gsent_sent_self]
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    · simp only [toPair, toPairUpd, toLow2, stage_update_self rfl, locals_ga2_if]
+    · simp only [toPair, toPairUpd, toLow2, gsent_sent_self]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
-    · simp only [toPair, toPairUpd, toLow2, stage_update_self rfl, boxes_brbIn2_if]
-    · simp only [toPair, toPairUpd, toLow2, gpool_pool_self]
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    · simp only [toPair, toPairUpd, toLow2, stage_update_self rfl, locals_brbIn2_if]
+    · simp only [toPair, toPairUpd, toLow2, gsent_sent_self]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
-    · simp only [toPair, toPairUpd, toLow2, stage_update_self rfl, boxes_brbBind2_if]
-    · simp only [toPair, toPairUpd, toLow2, gpool_pool_self]
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    · simp only [toPair, toPairUpd, toLow2, stage_update_self rfl, locals_brbBind2_if]
+    · simp only [toPair, toPairUpd, toLow2, gsent_sent_self]
 
-/-- A write that pools nothing — a delivery, or a return — read through the
+/-- A write that records nothing — a delivery, or a return — read through the
 view. -/
-theorem toPair_writeNoPool (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n)
+theorem toPair_writeNoSent (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n)
     (j : Fin P.n) (c : CoreRec P.n) (r : ℕ) (sr : StageRec P.n) :
     toPair P (Function.update u j (c, (u j).2.setStage r sr)) w r
-      = toPairUpd P u w r j sr (w.pool r) := by
+      = toPairUpd P u w r j sr (w.sent r) := by
   refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
-    · simp only [toPair, toPairUpd, toLow1, stage_update_self rfl, boxes_ga1_if]
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    · simp only [toPair, toPairUpd, toLow1, stage_update_self rfl, locals_ga1_if]
     · simp only [toPair, toPairUpd, toLow1]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
-    · simp only [toPair, toPairUpd, toLow1, stage_update_self rfl, boxes_brbIn1_if]
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    · simp only [toPair, toPairUpd, toLow1, stage_update_self rfl, locals_brbIn1_if]
     · simp only [toPair, toPairUpd, toLow1]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
-    · simp only [toPair, toPairUpd, toLow1, stage_update_self rfl, boxes_brbBind1_if]
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    · simp only [toPair, toPairUpd, toLow1, stage_update_self rfl, locals_brbBind1_if]
     · simp only [toPair, toPairUpd, toLow1]
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
-    · simp only [toPair, toPairUpd, toLow2, stage_update_self rfl, boxes_ga2_if]
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    · simp only [toPair, toPairUpd, toLow2, stage_update_self rfl, locals_ga2_if]
     · simp only [toPair, toPairUpd, toLow2]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
-    · simp only [toPair, toPairUpd, toLow2, stage_update_self rfl, boxes_brbIn2_if]
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    · simp only [toPair, toPairUpd, toLow2, stage_update_self rfl, locals_brbIn2_if]
     · simp only [toPair, toPairUpd, toLow2]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
-    · simp only [toPair, toPairUpd, toLow2, stage_update_self rfl, boxes_brbBind2_if]
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    · simp only [toPair, toPairUpd, toLow2, stage_update_self rfl, locals_brbBind2_if]
     · simp only [toPair, toPairUpd, toLow2]
 
-/-- A send of the first gather, read through the view: the sender's box takes
-the send, the first gather's fabric pools it, and every other coordinate of
+/-- A send of the first gather, read through the view: the sender's local state takes
+the send, the first gather's message state records it, and every other coordinate of
 the round stands still. Both the `ECHO` and the `VOTE` send of the first gather are this row,
-and so is any other row that writes the first gather's box and pools on its
-fabric. -/
+and so is any other row that writes the first gather's local state and records on its
+message state. -/
 theorem toPair_ga1Send (hu : (u j).2 = p) (r : ℕ) (pr : PRec P.n Bool)
     (m : GaMsg P.n Bool) :
     toPair P (Function.update u j (c, p.setStage r
         { p.stage r with ga1 := (p.stage r).ga1.setP pr }))
-      (w.gpool r j (.ga1 m)) r
+      (w.gsent r j (.ga1 m)) r
       = ({ toLow1 P u w r with
             ga := ((toLow1 P u w r).ga.setProc j pr).mcast j m },
          toLow2 P u w r) := by
   rw [← hu, toPair_write]
   refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1, SubState.mcast, SubState.setProc]
-    · simp only [toPairUpd, toLow1, SubState.mcast, Fabric.post]
-      exact slice_post_some unGa1 unGa1_inj (w.pool r) j (.ga1 m) m rfl
+    · simp only [toPairUpd, toLow1, SubState.mcast, MsgState.post]
+      exact slice_post_some unGa1 unGa1_inj (w.sent r) j (.ga1 m) m rfl
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
-      exact slice_post_none (unIn1 k) (unIn1_inj k) (w.pool r) j (.ga1 m) rfl
+      exact slice_post_none (unIn1 k) (unIn1_inj k) (w.sent r) j (.ga1 m) rfl
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
-      exact slice_post_none (unBind1 k) (unBind1_inj k) (w.pool r) j (.ga1 m) rfl
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
+      exact slice_post_none (unBind1 k) (unBind1_inj k) (w.sent r) j (.ga1 m) rfl
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
-      exact slice_post_none unGa2 unGa2_inj (w.pool r) j (.ga1 m) rfl
+      exact slice_post_none unGa2 unGa2_inj (w.sent r) j (.ga1 m) rfl
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
-      exact slice_post_none (unIn2 k) (unIn2_inj k) (w.pool r) j (.ga1 m) rfl
+      exact slice_post_none (unIn2 k) (unIn2_inj k) (w.sent r) j (.ga1 m) rfl
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
-      exact slice_post_none (unBind2 k) (unBind2_inj k) (w.pool r) j (.ga1 m) rfl
+      exact slice_post_none (unBind2 k) (unBind2_inj k) (w.sent r) j (.ga1 m) rfl
 
 /-- A send in an input-broadcast instance of the first gather, read through
-the view: the sender's box in that instance takes the send, that instance's
-fabric pools it, and every other coordinate stands still. The three Bracha
+the view: the sender's local state in that instance takes the send, that instance's
+message state records it, and every other coordinate stands still. The three Bracha
 rows of the family are this row, and so is the graded-agreement call's
 broadcast half. -/
 theorem toPair_in1Send (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
@@ -684,105 +684,105 @@ theorem toPair_in1Send (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
         { p.stage r with
           brbIn1 := Function.update (p.stage r).brbIn1 i
             (((p.stage r).brbIn1 i).setP pr) }))
-      (w.gpool r j (.brbIn1 i m)) r
+      (w.gsent r j (.brbIn1 i m)) r
       = ({ toLow1 P u w r with
             brbIn := Function.update (toLow1 P u w r).brbIn i
               ((((toLow1 P u w r).brbIn i).setProc j pr).mcast j m) },
          toLow2 P u w r) := by
   rw [← hu, toPair_write]
   refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
-      exact slice_post_none unGa1 unGa1_inj (w.pool r) j (.brbIn1 i m) rfl
+      exact slice_post_none unGa1 unGa1_inj (w.sent r) j (.brbIn1 i m) rfl
   · funext k
     by_cases hk : k = i
     · subst hk
-      refine Prod.ext ?_ (fabric_ext ?_ ?_)
+      refine Prod.ext ?_ (msgState_ext ?_ ?_)
       · simp only [toPairUpd, toLow1, Function.update_self, SubState.mcast,
           SubState.setProc]
       · simp only [toPairUpd, toLow1, Function.update_self, SubState.mcast,
-          Fabric.post]
-        exact slice_post_some (unIn1 k) (unIn1_inj k) (w.pool r) j
+          MsgState.post]
+        exact slice_post_some (unIn1 k) (unIn1_inj k) (w.sent r) j
           (.brbIn1 k m) m (by simp [unIn1])
       · simp only [toPairUpd, toLow1, Function.update_self, SubState.mcast,
-          SubState.setProc, Fabric.post]
-    · refine Prod.ext ?_ (fabric_ext ?_ ?_)
+          SubState.setProc, MsgState.post]
+    · refine Prod.ext ?_ (msgState_ext ?_ ?_)
       · simp only [toPairUpd, toLow1, Function.update_of_ne hk]
         exact Function.update_eq_self _ _
       · simp only [toPairUpd, toLow1, Function.update_of_ne hk]
-        exact slice_post_none (unIn1 k) (unIn1_inj k) (w.pool r) j (.brbIn1 i m)
+        exact slice_post_none (unIn1 k) (unIn1_inj k) (w.sent r) j (.brbIn1 i m)
           (by simp [unIn1, Ne.symm hk])
       · simp only [toPairUpd, toLow1, Function.update_of_ne hk]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
-      exact slice_post_none (unBind1 k) (unBind1_inj k) (w.pool r) j (.brbIn1 i m) rfl
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
+      exact slice_post_none (unBind1 k) (unBind1_inj k) (w.sent r) j (.brbIn1 i m) rfl
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
-      exact slice_post_none unGa2 unGa2_inj (w.pool r) j (.brbIn1 i m) rfl
+      exact slice_post_none unGa2 unGa2_inj (w.sent r) j (.brbIn1 i m) rfl
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
-      exact slice_post_none (unIn2 k) (unIn2_inj k) (w.pool r) j (.brbIn1 i m) rfl
+      exact slice_post_none (unIn2 k) (unIn2_inj k) (w.sent r) j (.brbIn1 i m) rfl
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
-      exact slice_post_none (unBind2 k) (unBind2_inj k) (w.pool r) j (.brbIn1 i m) rfl
+      exact slice_post_none (unBind2 k) (unBind2_inj k) (w.sent r) j (.brbIn1 i m) rfl
 
 /-- A send of the second gather, read through the view. -/
 theorem toPair_ga2Send (hu : (u j).2 = p) (r : ℕ) (pr : PRec P.n (Option Bool))
     (m : GaMsg P.n (Option Bool)) :
     toPair P (Function.update u j (c, p.setStage r
         { p.stage r with ga2 := (p.stage r).ga2.setP pr }))
-      (w.gpool r j (.ga2 m)) r
+      (w.gsent r j (.ga2 m)) r
       = (toLow1 P u w r,
          { toLow2 P u w r with
             ga := ((toLow2 P u w r).ga.setProc j pr).mcast j m }) := by
   rw [← hu, toPair_write]
   refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
-      exact slice_post_none unGa1 unGa1_inj (w.pool r) j (.ga2 m) rfl
+      exact slice_post_none unGa1 unGa1_inj (w.sent r) j (.ga2 m) rfl
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
-      exact slice_post_none (unIn1 k) (unIn1_inj k) (w.pool r) j (.ga2 m) rfl
+      exact slice_post_none (unIn1 k) (unIn1_inj k) (w.sent r) j (.ga2 m) rfl
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
-      exact slice_post_none (unBind1 k) (unBind1_inj k) (w.pool r) j (.ga2 m) rfl
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
+      exact slice_post_none (unBind1 k) (unBind1_inj k) (w.sent r) j (.ga2 m) rfl
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2, SubState.mcast, SubState.setProc]
-    · simp only [toPairUpd, toLow2, SubState.mcast, Fabric.post]
-      exact slice_post_some unGa2 unGa2_inj (w.pool r) j (.ga2 m) m rfl
+    · simp only [toPairUpd, toLow2, SubState.mcast, MsgState.post]
+      exact slice_post_some unGa2 unGa2_inj (w.sent r) j (.ga2 m) m rfl
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
-      exact slice_post_none (unIn2 k) (unIn2_inj k) (w.pool r) j (.ga2 m) rfl
+      exact slice_post_none (unIn2 k) (unIn2_inj k) (w.sent r) j (.ga2 m) rfl
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
-      exact slice_post_none (unBind2 k) (unBind2_inj k) (w.pool r) j (.ga2 m) rfl
+      exact slice_post_none (unBind2 k) (unBind2_inj k) (w.sent r) j (.ga2 m) rfl
 
 /-- A send in a bind-broadcast instance of the first gather, read through the view. -/
 theorem toPair_bind1Send (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
@@ -791,58 +791,58 @@ theorem toPair_bind1Send (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
         { p.stage r with
           brbBind1 := Function.update (p.stage r).brbBind1 i
             (((p.stage r).brbBind1 i).setP pr) }))
-      (w.gpool r j (.brbBind1 i m)) r
+      (w.gsent r j (.brbBind1 i m)) r
       = ({ toLow1 P u w r with
             brbBind := Function.update (toLow1 P u w r).brbBind i
               ((((toLow1 P u w r).brbBind i).setProc j pr).mcast j m) },
          toLow2 P u w r) := by
   rw [← hu, toPair_write]
   refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
-      exact slice_post_none unGa1 unGa1_inj (w.pool r) j (.brbBind1 i m) rfl
+      exact slice_post_none unGa1 unGa1_inj (w.sent r) j (.brbBind1 i m) rfl
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
-      exact slice_post_none (unIn1 k) (unIn1_inj k) (w.pool r) j (.brbBind1 i m) rfl
+      exact slice_post_none (unIn1 k) (unIn1_inj k) (w.sent r) j (.brbBind1 i m) rfl
   · funext k
     by_cases hk : k = i
     · subst hk
-      refine Prod.ext ?_ (fabric_ext ?_ ?_)
+      refine Prod.ext ?_ (msgState_ext ?_ ?_)
       · simp only [toPairUpd, toLow1, Function.update_self, SubState.mcast, SubState.setProc]
-      · simp only [toPairUpd, toLow1, Function.update_self, SubState.mcast, Fabric.post]
-        exact slice_post_some (unBind1 k) (unBind1_inj k) (w.pool r) j
+      · simp only [toPairUpd, toLow1, Function.update_self, SubState.mcast, MsgState.post]
+        exact slice_post_some (unBind1 k) (unBind1_inj k) (w.sent r) j
           (.brbBind1 k m) m (by simp [unBind1])
       · simp only [toPairUpd, toLow1, Function.update_self, SubState.mcast, SubState.setProc,
-        Fabric.post]
-    · refine Prod.ext ?_ (fabric_ext ?_ ?_)
+        MsgState.post]
+    · refine Prod.ext ?_ (msgState_ext ?_ ?_)
       · simp only [toPairUpd, toLow1, Function.update_of_ne hk]
         exact Function.update_eq_self _ _
       · simp only [toPairUpd, toLow1, Function.update_of_ne hk]
-        exact slice_post_none (unBind1 k) (unBind1_inj k) (w.pool r) j (.brbBind1 i m)
+        exact slice_post_none (unBind1 k) (unBind1_inj k) (w.sent r) j (.brbBind1 i m)
           (by simp [unBind1, Ne.symm hk])
       · simp only [toPairUpd, toLow1, Function.update_of_ne hk]
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
-      exact slice_post_none unGa2 unGa2_inj (w.pool r) j (.brbBind1 i m) rfl
+      exact slice_post_none unGa2 unGa2_inj (w.sent r) j (.brbBind1 i m) rfl
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
-      exact slice_post_none (unIn2 k) (unIn2_inj k) (w.pool r) j (.brbBind1 i m) rfl
+      exact slice_post_none (unIn2 k) (unIn2_inj k) (w.sent r) j (.brbBind1 i m) rfl
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
-      exact slice_post_none (unBind2 k) (unBind2_inj k) (w.pool r) j (.brbBind1 i m) rfl
+      exact slice_post_none (unBind2 k) (unBind2_inj k) (w.sent r) j (.brbBind1 i m) rfl
 
 /-- A send in an input-broadcast instance of the second gather, read through the view. -/
 theorem toPair_in2Send (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
@@ -851,58 +851,58 @@ theorem toPair_in2Send (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
         { p.stage r with
           brbIn2 := Function.update (p.stage r).brbIn2 i
             (((p.stage r).brbIn2 i).setP pr) }))
-      (w.gpool r j (.brbIn2 i m)) r
+      (w.gsent r j (.brbIn2 i m)) r
       = (toLow1 P u w r,
          { toLow2 P u w r with
             brbIn := Function.update (toLow2 P u w r).brbIn i
               ((((toLow2 P u w r).brbIn i).setProc j pr).mcast j m) }) := by
   rw [← hu, toPair_write]
   refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
-      exact slice_post_none unGa1 unGa1_inj (w.pool r) j (.brbIn2 i m) rfl
+      exact slice_post_none unGa1 unGa1_inj (w.sent r) j (.brbIn2 i m) rfl
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
-      exact slice_post_none (unIn1 k) (unIn1_inj k) (w.pool r) j (.brbIn2 i m) rfl
+      exact slice_post_none (unIn1 k) (unIn1_inj k) (w.sent r) j (.brbIn2 i m) rfl
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
-      exact slice_post_none (unBind1 k) (unBind1_inj k) (w.pool r) j (.brbIn2 i m) rfl
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
+      exact slice_post_none (unBind1 k) (unBind1_inj k) (w.sent r) j (.brbIn2 i m) rfl
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
-      exact slice_post_none unGa2 unGa2_inj (w.pool r) j (.brbIn2 i m) rfl
+      exact slice_post_none unGa2 unGa2_inj (w.sent r) j (.brbIn2 i m) rfl
   · funext k
     by_cases hk : k = i
     · subst hk
-      refine Prod.ext ?_ (fabric_ext ?_ ?_)
+      refine Prod.ext ?_ (msgState_ext ?_ ?_)
       · simp only [toPairUpd, toLow2, Function.update_self, SubState.mcast, SubState.setProc]
-      · simp only [toPairUpd, toLow2, Function.update_self, SubState.mcast, Fabric.post]
-        exact slice_post_some (unIn2 k) (unIn2_inj k) (w.pool r) j
+      · simp only [toPairUpd, toLow2, Function.update_self, SubState.mcast, MsgState.post]
+        exact slice_post_some (unIn2 k) (unIn2_inj k) (w.sent r) j
           (.brbIn2 k m) m (by simp [unIn2])
       · simp only [toPairUpd, toLow2, Function.update_self, SubState.mcast, SubState.setProc,
-        Fabric.post]
-    · refine Prod.ext ?_ (fabric_ext ?_ ?_)
+        MsgState.post]
+    · refine Prod.ext ?_ (msgState_ext ?_ ?_)
       · simp only [toPairUpd, toLow2, Function.update_of_ne hk]
         exact Function.update_eq_self _ _
       · simp only [toPairUpd, toLow2, Function.update_of_ne hk]
-        exact slice_post_none (unIn2 k) (unIn2_inj k) (w.pool r) j (.brbIn2 i m)
+        exact slice_post_none (unIn2 k) (unIn2_inj k) (w.sent r) j (.brbIn2 i m)
           (by simp [unIn2, Ne.symm hk])
       · simp only [toPairUpd, toLow2, Function.update_of_ne hk]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
-      exact slice_post_none (unBind2 k) (unBind2_inj k) (w.pool r) j (.brbIn2 i m) rfl
+      exact slice_post_none (unBind2 k) (unBind2_inj k) (w.sent r) j (.brbIn2 i m) rfl
 
 /-- A send in a bind-broadcast instance of the second gather, read through the view. -/
 theorem toPair_bind2Send (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
@@ -911,127 +911,127 @@ theorem toPair_bind2Send (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
         { p.stage r with
           brbBind2 := Function.update (p.stage r).brbBind2 i
             (((p.stage r).brbBind2 i).setP pr) }))
-      (w.gpool r j (.brbBind2 i m)) r
+      (w.gsent r j (.brbBind2 i m)) r
       = (toLow1 P u w r,
          { toLow2 P u w r with
             brbBind := Function.update (toLow2 P u w r).brbBind i
               ((((toLow2 P u w r).brbBind i).setProc j pr).mcast j m) }) := by
   rw [← hu, toPair_write]
   refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
-      exact slice_post_none unGa1 unGa1_inj (w.pool r) j (.brbBind2 i m) rfl
+      exact slice_post_none unGa1 unGa1_inj (w.sent r) j (.brbBind2 i m) rfl
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
-      exact slice_post_none (unIn1 k) (unIn1_inj k) (w.pool r) j (.brbBind2 i m) rfl
+      exact slice_post_none (unIn1 k) (unIn1_inj k) (w.sent r) j (.brbBind2 i m) rfl
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
-      exact slice_post_none (unBind1 k) (unBind1_inj k) (w.pool r) j (.brbBind2 i m) rfl
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
+      exact slice_post_none (unBind1 k) (unBind1_inj k) (w.sent r) j (.brbBind2 i m) rfl
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
-      exact slice_post_none unGa2 unGa2_inj (w.pool r) j (.brbBind2 i m) rfl
+      exact slice_post_none unGa2 unGa2_inj (w.sent r) j (.brbBind2 i m) rfl
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
-      exact slice_post_none (unIn2 k) (unIn2_inj k) (w.pool r) j (.brbBind2 i m) rfl
+      exact slice_post_none (unIn2 k) (unIn2_inj k) (w.sent r) j (.brbBind2 i m) rfl
   · funext k
     by_cases hk : k = i
     · subst hk
-      refine Prod.ext ?_ (fabric_ext ?_ ?_)
+      refine Prod.ext ?_ (msgState_ext ?_ ?_)
       · simp only [toPairUpd, toLow2, Function.update_self, SubState.mcast, SubState.setProc]
-      · simp only [toPairUpd, toLow2, Function.update_self, SubState.mcast, Fabric.post]
-        exact slice_post_some (unBind2 k) (unBind2_inj k) (w.pool r) j
+      · simp only [toPairUpd, toLow2, Function.update_self, SubState.mcast, MsgState.post]
+        exact slice_post_some (unBind2 k) (unBind2_inj k) (w.sent r) j
           (.brbBind2 k m) m (by simp [unBind2])
       · simp only [toPairUpd, toLow2, Function.update_self, SubState.mcast, SubState.setProc,
-        Fabric.post]
-    · refine Prod.ext ?_ (fabric_ext ?_ ?_)
+        MsgState.post]
+    · refine Prod.ext ?_ (msgState_ext ?_ ?_)
       · simp only [toPairUpd, toLow2, Function.update_of_ne hk]
         exact Function.update_eq_self _ _
       · simp only [toPairUpd, toLow2, Function.update_of_ne hk]
-        exact slice_post_none (unBind2 k) (unBind2_inj k) (w.pool r) j (.brbBind2 i m)
+        exact slice_post_none (unBind2 k) (unBind2_inj k) (w.sent r) j (.brbBind2 i m)
           (by simp [unBind2, Ne.symm hk])
       · simp only [toPairUpd, toLow2, Function.update_of_ne hk]
 
-/-- A delivery on the first gather's fabric, read through the view. -/
+/-- A delivery on the first gather's message state, read through the view. -/
 theorem toPair_dlvGa1 (hu : (u j).2 = p) (r : ℕ) (k : Fin P.n) (mm : GaMsg P.n Bool) :
     toPair P (Function.update u j (c, p.setStage r
         { p.stage r with ga1 := (p.stage r).ga1.deliverTo k mm })) w r
       = ({ toLow1 P u w r with ga := (toLow1 P u w r).ga.recvMsg j k mm },
          toLow2 P u w r) := by
-  rw [← hu, toPair_writeNoPool]
+  rw [← hu, toPair_writeNoSent]
   refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1, SubState.recvMsg]
     · simp only [toPairUpd, toLow1, SubState.recvMsg]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
 
-/-- A delivery on the second gather's fabric, read through the view. -/
+/-- A delivery on the second gather's message state, read through the view. -/
 theorem toPair_dlvGa2 (hu : (u j).2 = p) (r : ℕ) (k : Fin P.n) (mm : GaMsg P.n (Option Bool)) :
     toPair P (Function.update u j (c, p.setStage r
         { p.stage r with ga2 := (p.stage r).ga2.deliverTo k mm })) w r
       = (toLow1 P u w r,
          { toLow2 P u w r with ga := (toLow2 P u w r).ga.recvMsg j k mm }) := by
-  rw [← hu, toPair_writeNoPool]
+  rw [← hu, toPair_writeNoSent]
   refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2, SubState.recvMsg]
     · simp only [toPairUpd, toLow2, SubState.recvMsg]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
@@ -1046,40 +1046,40 @@ theorem toPair_dlvIn1 (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n) (mm : BRB.BMs
             brbIn := Function.update (toLow1 P u w r).brbIn i
               (((toLow1 P u w r).brbIn i).recvMsg j k mm) },
          toLow2 P u w r) := by
-  rw [← hu, toPair_writeNoPool]
+  rw [← hu, toPair_writeNoSent]
   refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
   · funext k
     by_cases hk : k = i
     · subst hk
-      refine Prod.ext ?_ (fabric_ext ?_ ?_)
+      refine Prod.ext ?_ (msgState_ext ?_ ?_)
       · simp only [toPairUpd, toLow1, Function.update_self, SubState.recvMsg]
       · simp only [toPairUpd, toLow1, Function.update_self, SubState.recvMsg]
       · simp only [toPairUpd, toLow1, Function.update_self, SubState.recvMsg]
-    · refine Prod.ext ?_ (fabric_ext ?_ ?_)
+    · refine Prod.ext ?_ (msgState_ext ?_ ?_)
       · simp only [toPairUpd, toLow1, Function.update_of_ne hk]
         exact Function.update_eq_self _ _
       · simp only [toPairUpd, toLow1, Function.update_of_ne hk]
       · simp only [toPairUpd, toLow1, Function.update_of_ne hk]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
@@ -1095,40 +1095,40 @@ theorem toPair_dlvBind1 (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
             brbBind := Function.update (toLow1 P u w r).brbBind i
               (((toLow1 P u w r).brbBind i).recvMsg j k mm) },
          toLow2 P u w r) := by
-  rw [← hu, toPair_writeNoPool]
+  rw [← hu, toPair_writeNoSent]
   refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
   · funext k
     by_cases hk : k = i
     · subst hk
-      refine Prod.ext ?_ (fabric_ext ?_ ?_)
+      refine Prod.ext ?_ (msgState_ext ?_ ?_)
       · simp only [toPairUpd, toLow1, Function.update_self, SubState.recvMsg]
       · simp only [toPairUpd, toLow1, Function.update_self, SubState.recvMsg]
       · simp only [toPairUpd, toLow1, Function.update_self, SubState.recvMsg]
-    · refine Prod.ext ?_ (fabric_ext ?_ ?_)
+    · refine Prod.ext ?_ (msgState_ext ?_ ?_)
       · simp only [toPairUpd, toLow1, Function.update_of_ne hk]
         exact Function.update_eq_self _ _
       · simp only [toPairUpd, toLow1, Function.update_of_ne hk]
       · simp only [toPairUpd, toLow1, Function.update_of_ne hk]
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
@@ -1143,40 +1143,40 @@ theorem toPair_dlvIn2 (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n) (mm : BRB.BMs
          { toLow2 P u w r with
             brbIn := Function.update (toLow2 P u w r).brbIn i
               (((toLow2 P u w r).brbIn i).recvMsg j k mm) }) := by
-  rw [← hu, toPair_writeNoPool]
+  rw [← hu, toPair_writeNoSent]
   refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
   · funext k
     by_cases hk : k = i
     · subst hk
-      refine Prod.ext ?_ (fabric_ext ?_ ?_)
+      refine Prod.ext ?_ (msgState_ext ?_ ?_)
       · simp only [toPairUpd, toLow2, Function.update_self, SubState.recvMsg]
       · simp only [toPairUpd, toLow2, Function.update_self, SubState.recvMsg]
       · simp only [toPairUpd, toLow2, Function.update_self, SubState.recvMsg]
-    · refine Prod.ext ?_ (fabric_ext ?_ ?_)
+    · refine Prod.ext ?_ (msgState_ext ?_ ?_)
       · simp only [toPairUpd, toLow2, Function.update_of_ne hk]
         exact Function.update_eq_self _ _
       · simp only [toPairUpd, toLow2, Function.update_of_ne hk]
       · simp only [toPairUpd, toLow2, Function.update_of_ne hk]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
@@ -1192,84 +1192,84 @@ theorem toPair_dlvBind2 (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
          { toLow2 P u w r with
             brbBind := Function.update (toLow2 P u w r).brbBind i
               (((toLow2 P u w r).brbBind i).recvMsg j k mm) }) := by
-  rw [← hu, toPair_writeNoPool]
+  rw [← hu, toPair_writeNoSent]
   refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
   · funext k
     by_cases hk : k = i
     · subst hk
-      refine Prod.ext ?_ (fabric_ext ?_ ?_)
+      refine Prod.ext ?_ (msgState_ext ?_ ?_)
       · simp only [toPairUpd, toLow2, Function.update_self, SubState.recvMsg]
       · simp only [toPairUpd, toLow2, Function.update_self, SubState.recvMsg]
       · simp only [toPairUpd, toLow2, Function.update_self, SubState.recvMsg]
-    · refine Prod.ext ?_ (fabric_ext ?_ ?_)
+    · refine Prod.ext ?_ (msgState_ext ?_ ?_)
       · simp only [toPairUpd, toLow2, Function.update_of_ne hk]
         exact Function.update_eq_self _ _
       · simp only [toPairUpd, toLow2, Function.update_of_ne hk]
       · simp only [toPairUpd, toLow2, Function.update_of_ne hk]
 
 
-/-- The second gather's return, read through the view: the returner's box
-takes the flag and nothing is pooled. -/
+/-- The second gather's return, read through the view: the returner's local state
+takes the flag and nothing is sent. -/
 theorem toPair_retG (hu : (u j).2 = p) (r : ℕ) (pr : PRec P.n (Option Bool)) :
     toPair P (Function.update u j (c, p.setStage r
         { p.stage r with ga2 := (p.stage r).ga2.setP pr })) w r
       = (toLow1 P u w r,
          { toLow2 P u w r with ga := (toLow2 P u w r).ga.setProc j pr }) := by
-  rw [← hu, toPair_writeNoPool]
+  rw [← hu, toPair_writeNoSent]
   refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2, SubState.setProc]
     · simp only [toPairUpd, toLow2, SubState.setProc]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
 
 /-- The graded-agreement call, read through the view: the first gather records
-the input and the caller's own input-broadcast instance takes it and pools its
+the input and the caller's own input-broadcast instance takes it and records its
 `⟨INIT, b⟩`. -/
 theorem toPair_callG (hu : (u j).2 = p) (r : ℕ) (b : Bool) :
     toPair P (Function.update u j (c, p.setStage r
@@ -1279,7 +1279,7 @@ theorem toPair_callG (hu : (u j).2 = p) (r : ℕ) (b : Bool) :
           brbIn1 := Function.update (p.stage r).brbIn1 j
             (((p.stage r).brbIn1 j).setP
               { (((p.stage r).brbIn1 j).proc) with input := some b }) }))
-      (w.gpool r j (.brbIn1 j (.init b))) r
+      (w.gsent r j (.brbIn1 j (.init b))) r
       = ({ toLow1 P u w r with
             ga := (toLow1 P u w r).ga.setProc j
               { ((toLow1 P u w r).ga.proc j) with input := some b }
@@ -1290,59 +1290,59 @@ theorem toPair_callG (hu : (u j).2 = p) (r : ℕ) (b : Bool) :
          toLow2 P u w r) := by
   rw [← hu, toPair_write]
   refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1, SubState.setProc, SubState.proc]
     · simp only [toPairUpd, toLow1]
-      exact slice_post_none unGa1 unGa1_inj (w.pool r) j (.brbIn1 j (.init b)) rfl
+      exact slice_post_none unGa1 unGa1_inj (w.sent r) j (.brbIn1 j (.init b)) rfl
   · funext k
     by_cases hk : k = j
     · subst hk
-      refine Prod.ext ?_ (fabric_ext ?_ ?_)
+      refine Prod.ext ?_ (msgState_ext ?_ ?_)
       · simp only [toPairUpd, toLow1, Function.update_self, SubState.mcast,
           SubState.setProc, SubState.proc]
       · simp only [toPairUpd, toLow1, Function.update_self, SubState.mcast,
-          Fabric.post]
-        exact slice_post_some (unIn1 k) (unIn1_inj k) (w.pool r) k
+          MsgState.post]
+        exact slice_post_some (unIn1 k) (unIn1_inj k) (w.sent r) k
           (.brbIn1 k (.init b)) (.init b) (by simp [unIn1])
       · simp only [toPairUpd, toLow1, Function.update_self, SubState.mcast,
-          SubState.setProc, Fabric.post]
-    · refine Prod.ext ?_ (fabric_ext ?_ ?_)
+          SubState.setProc, MsgState.post]
+    · refine Prod.ext ?_ (msgState_ext ?_ ?_)
       · simp only [toPairUpd, toLow1, Function.update_of_ne hk]
         exact Function.update_eq_self _ _
       · simp only [toPairUpd, toLow1, Function.update_of_ne hk]
-        exact slice_post_none (unIn1 k) (unIn1_inj k) (w.pool r) j
+        exact slice_post_none (unIn1 k) (unIn1_inj k) (w.sent r) j
           (.brbIn1 j (.init b)) (by simp [unIn1, Ne.symm hk])
       · simp only [toPairUpd, toLow1, Function.update_of_ne hk]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
-      exact slice_post_none (unBind1 k) (unBind1_inj k) (w.pool r) j
+      exact slice_post_none (unBind1 k) (unBind1_inj k) (w.sent r) j
         (.brbIn1 j (.init b)) rfl
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
-      exact slice_post_none unGa2 unGa2_inj (w.pool r) j (.brbIn1 j (.init b)) rfl
+      exact slice_post_none unGa2 unGa2_inj (w.sent r) j (.brbIn1 j (.init b)) rfl
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
-      exact slice_post_none (unIn2 k) (unIn2_inj k) (w.pool r) j
+      exact slice_post_none (unIn2 k) (unIn2_inj k) (w.sent r) j
         (.brbIn1 j (.init b)) rfl
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
-      exact slice_post_none (unBind2 k) (unBind2_inj k) (w.pool r) j
+      exact slice_post_none (unBind2 k) (unBind2_inj k) (w.sent r) j
         (.brbIn1 j (.init b)) rfl
 
 /-- The link, read through the view: the first gather records the return, the
 second records the candidate, and the caller's own input-broadcast instance of
-the second gather takes it and pools its `⟨INIT, ·⟩` (D28). -/
+the second gather takes it and records its `⟨INIT, ·⟩` (D28). -/
 theorem toPair_link (hu : (u j).2 = p) (r : ℕ) (pr1 : PRec P.n Bool)
     (pr2 : PRec P.n (Option Bool)) (prb : BRB.PState (Option Bool))
     (x : Option Bool) :
@@ -1352,7 +1352,7 @@ theorem toPair_link (hu : (u j).2 = p) (r : ℕ) (pr1 : PRec P.n Bool)
           ga2 := (p.stage r).ga2.setP pr2
           brbIn2 := Function.update (p.stage r).brbIn2 j
             (((p.stage r).brbIn2 j).setP prb) }))
-      (w.gpool r j (.brbIn2 j (.init x))) r
+      (w.gsent r j (.brbIn2 j (.init x))) r
       = ({ toLow1 P u w r with ga := (toLow1 P u w r).ga.setProc j pr1 },
          { toLow2 P u w r with
             ga := (toLow2 P u w r).ga.setProc j pr2
@@ -1360,101 +1360,101 @@ theorem toPair_link (hu : (u j).2 = p) (r : ℕ) (pr1 : PRec P.n Bool)
               ((((toLow2 P u w r).brbIn j).setProc j prb).mcast j (.init x)) }) := by
   rw [← hu, toPair_write]
   refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1, SubState.setProc]
     · simp only [toPairUpd, toLow1, SubState.setProc]
-      exact slice_post_none unGa1 unGa1_inj (w.pool r) j (.brbIn2 j (.init x)) rfl
+      exact slice_post_none unGa1 unGa1_inj (w.sent r) j (.brbIn2 j (.init x)) rfl
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
-      exact slice_post_none (unIn1 k) (unIn1_inj k) (w.pool r) j
+      exact slice_post_none (unIn1 k) (unIn1_inj k) (w.sent r) j
         (.brbIn2 j (.init x)) rfl
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
-      exact slice_post_none (unBind1 k) (unBind1_inj k) (w.pool r) j
+      exact slice_post_none (unBind1 k) (unBind1_inj k) (w.sent r) j
         (.brbIn2 j (.init x)) rfl
-  · refine Prod.ext ?_ (fabric_ext ?_ rfl)
+  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2, SubState.setProc]
     · simp only [toPairUpd, toLow2, SubState.setProc]
-      exact slice_post_none unGa2 unGa2_inj (w.pool r) j (.brbIn2 j (.init x)) rfl
+      exact slice_post_none unGa2 unGa2_inj (w.sent r) j (.brbIn2 j (.init x)) rfl
   · funext k
     by_cases hk : k = j
     · subst hk
-      refine Prod.ext ?_ (fabric_ext ?_ ?_)
+      refine Prod.ext ?_ (msgState_ext ?_ ?_)
       · simp only [toPairUpd, toLow2, Function.update_self, SubState.mcast,
           SubState.setProc]
       · simp only [toPairUpd, toLow2, Function.update_self, SubState.mcast,
-          Fabric.post]
-        exact slice_post_some (unIn2 k) (unIn2_inj k) (w.pool r) k
+          MsgState.post]
+        exact slice_post_some (unIn2 k) (unIn2_inj k) (w.sent r) k
           (.brbIn2 k (.init x)) (.init x) (by simp [unIn2])
       · simp only [toPairUpd, toLow2, Function.update_self, SubState.mcast,
-          SubState.setProc, Fabric.post]
-    · refine Prod.ext ?_ (fabric_ext ?_ ?_)
+          SubState.setProc, MsgState.post]
+    · refine Prod.ext ?_ (msgState_ext ?_ ?_)
       · simp only [toPairUpd, toLow2, Function.update_of_ne hk]
         exact Function.update_eq_self _ _
       · simp only [toPairUpd, toLow2, Function.update_of_ne hk]
-        exact slice_post_none (unIn2 k) (unIn2_inj k) (w.pool r) j
+        exact slice_post_none (unIn2 k) (unIn2_inj k) (w.sent r) j
           (.brbIn2 j (.init x)) (by simp [unIn2, Ne.symm hk])
       · simp only [toPairUpd, toLow2, Function.update_of_ne hk]
   · funext k
-    refine Prod.ext ?_ (fabric_ext ?_ rfl)
+    refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
-      exact slice_post_none (unBind2 k) (unBind2_inj k) (w.pool r) j
+      exact slice_post_none (unBind2 k) (unBind2_inj k) (w.sent r) j
         (.brbIn2 j (.init x)) rfl
 
 /-! ### Every other round stands still
 
 A row names one round. The rounds it does not name read exactly as they did:
-the process's other round records are untouched, and the adversary's pool
+the process's other round records are untouched, and the adversary's sent
 family is written at one round only. -/
 
 theorem toPair_other (hu : (u j).2 = p) {r r' : ℕ} (hr : r' ≠ r)
     (sr : StageRec P.n) (m : Msg P.n) :
-    toPair P (Function.update u j (c, p.setStage r sr)) (w.gpool r j m) r'
+    toPair P (Function.update u j (c, p.setStage r sr)) (w.gsent r j m) r'
       = toPair P u w r' := by
   refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_) <;>
     first
-      | (refine Prod.ext ?_ (fabric_ext ?_ rfl)
+      | (refine Prod.ext ?_ (msgState_ext ?_ rfl)
          · simp only [toPair, toLow1, toLow2, stage_update_ne hu hr]
-         · simp only [toPair, toLow1, toLow2, gpool_pool_ne _ _ _ _ hr])
+         · simp only [toPair, toLow1, toLow2, gsent_sent_ne _ _ _ _ hr])
       | (funext k
-         refine Prod.ext ?_ (fabric_ext ?_ rfl)
+         refine Prod.ext ?_ (msgState_ext ?_ rfl)
          · simp only [toPair, toLow1, toLow2, stage_update_ne hu hr]
-         · simp only [toPair, toLow1, toLow2, gpool_pool_ne _ _ _ _ hr])
+         · simp only [toPair, toLow1, toLow2, gsent_sent_ne _ _ _ _ hr])
 
-theorem toPair_otherNoPool (hu : (u j).2 = p) {r r' : ℕ} (hr : r' ≠ r)
+theorem toPair_otherNoSent (hu : (u j).2 = p) {r r' : ℕ} (hr : r' ≠ r)
     (sr : StageRec P.n) :
     toPair P (Function.update u j (c, p.setStage r sr)) w r' = toPair P u w r' := by
   refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_) <;>
     first
-      | (refine Prod.ext ?_ (fabric_ext rfl rfl)
+      | (refine Prod.ext ?_ (msgState_ext rfl rfl)
          simp only [toPair, toLow1, toLow2, stage_update_ne hu hr])
       | (funext k
-         refine Prod.ext ?_ (fabric_ext rfl rfl)
+         refine Prod.ext ?_ (msgState_ext rfl rfl)
          simp only [toPair, toLow1, toLow2, stage_update_ne hu hr])
 
 /-- The whole family of rounds after a row: the round it names moves, the rest
 stand still. -/
 theorem toPairFam (hu : (u j).2 = p) (r : ℕ) (sr : StageRec P.n) (m : Msg P.n)
     (X : GBCA.LowPairState P.n)
-    (hX : toPair P (Function.update u j (c, p.setStage r sr)) (w.gpool r j m) r = X) :
+    (hX : toPair P (Function.update u j (c, p.setStage r sr)) (w.gsent r j m) r = X) :
     (fun r' => toPair P (Function.update u j (c, p.setStage r sr))
-        (w.gpool r j m) r')
+        (w.gsent r j m) r')
       = Function.update (fun r' => toPair P u w r') r X := by
   funext r'
   by_cases hr : r' = r
   · subst hr; rw [Function.update_self, hX]
   · rw [Function.update_of_ne hr, toPair_other hu hr]
 
-/-- The same, for a row that pools nothing. -/
-theorem toPairFamNoPool (hu : (u j).2 = p) (r : ℕ) (sr : StageRec P.n)
+/-- The same, for a row that records nothing. -/
+theorem toPairFamNoSent (hu : (u j).2 = p) (r : ℕ) (sr : StageRec P.n)
     (X : GBCA.LowPairState P.n)
     (hX : toPair P (Function.update u j (c, p.setStage r sr)) w r = X) :
     (fun r' => toPair P (Function.update u j (c, p.setStage r sr)) w r')
@@ -1462,7 +1462,7 @@ theorem toPairFamNoPool (hu : (u j).2 = p) (r : ℕ) (sr : StageRec P.n)
   funext r'
   by_cases hr : r' = r
   · subst hr; rw [Function.update_self, hX]
-  · rw [Function.update_of_ne hr, toPair_otherNoPool hu hr]
+  · rw [Function.update_of_ne hr, toPair_otherNoSent hu hr]
 
 end Frame
 
@@ -1519,7 +1519,7 @@ private theorem match_prod (P : Params) {x : ∀ _ : Fin P.n, ProcRec P.n}
 
 A row that writes only the round loop leaves every round record where it
 stands, so the view does not move. Corruption moves it in one respect only:
-the corrupted set the adversary holds is the corrupted set of every fabric,
+the corrupted set the adversary holds is the corrupted set of every message state,
 and the two guards are the same. -/
 
 theorem toPair_congr {x u : ∀ _ : Fin P.n, ProcRec P.n} {r : ℕ}
@@ -1556,65 +1556,65 @@ theorem toPair_fail (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n) (r : �
   refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
   · refine Prod.ext rfl ?_
     simp only [toPair, toLow1, gActLow, Gather.LowState.corruptAll,
-      SubState.corrupt, NetStateP.corrupt, Fabric.corrupt]
+      SubState.corrupt, NetStateP.corrupt, MsgState.corrupt]
     split_ifs <;> rfl
   · funext k
     refine Prod.ext rfl ?_
     simp only [toPair, toLow1, gActLow, Gather.LowState.corruptAll,
-      SubState.corrupt, NetStateP.corrupt, Fabric.corrupt]
+      SubState.corrupt, NetStateP.corrupt, MsgState.corrupt]
     split_ifs <;> rfl
   · funext k
     refine Prod.ext rfl ?_
     simp only [toPair, toLow1, gActLow, Gather.LowState.corruptAll,
-      SubState.corrupt, NetStateP.corrupt, Fabric.corrupt]
+      SubState.corrupt, NetStateP.corrupt, MsgState.corrupt]
     split_ifs <;> rfl
   · refine Prod.ext rfl ?_
     simp only [toPair, toLow2, gActLow, Gather.LowState.corruptAll,
-      SubState.corrupt, NetStateP.corrupt, Fabric.corrupt]
+      SubState.corrupt, NetStateP.corrupt, MsgState.corrupt]
     split_ifs <;> rfl
   · funext k
     refine Prod.ext rfl ?_
     simp only [toPair, toLow2, gActLow, Gather.LowState.corruptAll,
-      SubState.corrupt, NetStateP.corrupt, Fabric.corrupt]
+      SubState.corrupt, NetStateP.corrupt, MsgState.corrupt]
     split_ifs <;> rfl
   · funext k
     refine Prod.ext rfl ?_
     simp only [toPair, toLow2, gActLow, Gather.LowState.corruptAll,
-      SubState.corrupt, NetStateP.corrupt, Fabric.corrupt]
+      SubState.corrupt, NetStateP.corrupt, MsgState.corrupt]
     split_ifs <;> rfl
 
-/-- A pool write at one round leaves every other round's view alone. -/
-theorem toPair_otherPool (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n)
+/-- A sent write at one round leaves every other round's view alone. -/
+theorem toPair_otherSent (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n)
     {r r' : ℕ} (hr : r' ≠ r) (k : Fin P.n) (m : Msg P.n) :
-    toPair P u (w.gpool r k m) r' = toPair P u w r' := by
+    toPair P u (w.gsent r k m) r' = toPair P u w r' := by
   refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
-  · refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow1, gpool_pool_ne _ _ _ _ hr]
+  · refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow1, gsent_sent_ne _ _ _ _ hr]
   · funext k'
-    refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow1, gpool_pool_ne _ _ _ _ hr]
+    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow1, gsent_sent_ne _ _ _ _ hr]
   · funext k'
-    refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow1, gpool_pool_ne _ _ _ _ hr]
-  · refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow2, gpool_pool_ne _ _ _ _ hr]
+    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow1, gsent_sent_ne _ _ _ _ hr]
+  · refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow2, gsent_sent_ne _ _ _ _ hr]
   · funext k'
-    refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow2, gpool_pool_ne _ _ _ _ hr]
+    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow2, gsent_sent_ne _ _ _ _ hr]
   · funext k'
-    refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow2, gpool_pool_ne _ _ _ _ hr]
+    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow2, gsent_sent_ne _ _ _ _ hr]
 
 /-- The family of rounds after a Byzantine injection at one round. -/
-theorem toPairFamPool (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n) (r : ℕ)
+theorem toPairFamSent (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n) (r : ℕ)
     (k : Fin P.n) (m : Msg P.n) (X : GBCA.LowPairState P.n)
-    (hX : toPair P u (w.gpool r k m) r = X) :
-    (fun r' => toPair P u (w.gpool r k m) r')
+    (hX : toPair P u (w.gsent r k m) r = X) :
+    (fun r' => toPair P u (w.gsent r k m) r')
       = Function.update (fun r' => toPair P u w r') r X := by
   funext r'
   by_cases hr : r' = r
   · subst hr; rw [Function.update_self, hX]
-  · rw [Function.update_of_ne hr, toPair_otherPool u w hr]
+  · rw [Function.update_of_ne hr, toPair_otherSent u w hr]
 
 /-! ### Assembling a matched transition -/
 
@@ -1675,7 +1675,7 @@ theorem stageRow_of_own {j : Fin P.n} {q : ProcRec P.n} {L : NLabP P.n (Msg P.n)
 /-! ### Answering a send
 
 A send of the flat reading is a silent row of the round instance: the sender
-writes its own record, the network pools the message, and the round the label
+writes its own record, the network records the message, and the round the label
 tags moves as one of the instance's own rules moves it. -/
 
 theorem stage_answer_gsnd (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
@@ -1685,7 +1685,7 @@ theorem stage_answer_gsnd (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     ∃ x : ProcRec P.n, μ = PMF.pure x ∧ x.1 = c ∧
       (∀ r', r' ≠ r → x.2.stage r' = p.stage r') ∧
       GBCA.LowPairStep P r (toPair P u w r) Lab.tau
-        (PMF.pure (toPair P (Function.update u j x) (w.gpool r j m) r)) := by
+        (PMF.pure (toPair P (Function.update u j x) (w.gsent r j m) r)) := by
   subst hu
   cases h with
   | ga1Echo _ _ _ A hh hterm hin happ hcard hsend =>
@@ -1801,11 +1801,11 @@ theorem stage_answer_gsnd (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
 
 /-- A delivery of the flat reading is a silent row of the round instance: the
 message the adversary holds under its sender is filed in the receiver's own
-box of the fabric its tag names. -/
+local state of the message state its tag names. -/
 theorem stage_answer_gdlv (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     (w : NetState P.n) {j : Fin P.n} {c : CoreRec P.n} {p : StageSideRec P.n}
     (hu : (u j).2 = p) {r : ℕ} {k : Fin P.n} {m : Msg P.n}
-    {μ : PMF (ProcRec P.n)} (hpool : m ∈ w.pool r k)
+    {μ : PMF (ProcRec P.n)} (hsent : m ∈ w.sent r k)
     (h : StageStep P j (c, p) (Sum.inr (.gdlv r j k m)) μ) :
     ∃ x : ProcRec P.n, μ = PMF.pure x ∧ x.1 = c ∧
       (∀ r', r' ≠ r → x.2.stage r' = p.stage r') ∧
@@ -1821,36 +1821,36 @@ theorem stage_answer_gdlv (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       rw [toPair_dlvGa1 rfl]
       exact GBCA.LowPairStep.ga1Tau (toPair P u w r) _
         (Gather.LowStep.deliver (toPair P u w r).1 j k mm
-          ((mem_slice (hf := unGa1_inj)).mpr ⟨_, hpool, rfl⟩))
+          ((mem_slice (hf := unGa1_inj)).mpr ⟨_, hsent, rfl⟩))
     | ga2 mm =>
       rw [toPair_dlvGa2 rfl]
       exact GBCA.LowPairStep.ga2Tau (toPair P u w r) _
         (Gather.LowStep.deliver (toPair P u w r).2 j k mm
-          ((mem_slice (hf := unGa2_inj)).mpr ⟨_, hpool, rfl⟩))
+          ((mem_slice (hf := unGa2_inj)).mpr ⟨_, hsent, rfl⟩))
     | brbIn1 i mm =>
       rw [toPair_dlvIn1 rfl]
       exact GBCA.LowPairStep.ga1Tau (toPair P u w r) _
         (Gather.LowStep.brbInTau (toPair P u w r).1 i _
           (BRB.ImplStep.deliver ((toPair P u w r).1.brbIn i) j k mm
-            ((mem_slice (hf := unIn1_inj i)).mpr ⟨_, hpool, by simp [unIn1]⟩)))
+            ((mem_slice (hf := unIn1_inj i)).mpr ⟨_, hsent, by simp [unIn1]⟩)))
     | brbBind1 i mm =>
       rw [toPair_dlvBind1 rfl]
       exact GBCA.LowPairStep.ga1Tau (toPair P u w r) _
         (Gather.LowStep.brbBindTau (toPair P u w r).1 i _
           (BRB.ImplStep.deliver ((toPair P u w r).1.brbBind i) j k mm
-            ((mem_slice (hf := unBind1_inj i)).mpr ⟨_, hpool, by simp [unBind1]⟩)))
+            ((mem_slice (hf := unBind1_inj i)).mpr ⟨_, hsent, by simp [unBind1]⟩)))
     | brbIn2 i mm =>
       rw [toPair_dlvIn2 rfl]
       exact GBCA.LowPairStep.ga2Tau (toPair P u w r) _
         (Gather.LowStep.brbInTau (toPair P u w r).2 i _
           (BRB.ImplStep.deliver ((toPair P u w r).2.brbIn i) j k mm
-            ((mem_slice (hf := unIn2_inj i)).mpr ⟨_, hpool, by simp [unIn2]⟩)))
+            ((mem_slice (hf := unIn2_inj i)).mpr ⟨_, hsent, by simp [unIn2]⟩)))
     | brbBind2 i mm =>
       rw [toPair_dlvBind2 rfl]
       exact GBCA.LowPairStep.ga2Tau (toPair P u w r) _
         (Gather.LowStep.brbBindTau (toPair P u w r).2 i _
           (BRB.ImplStep.deliver ((toPair P u w r).2.brbBind i) j k mm
-            ((mem_slice (hf := unBind2_inj i)).mpr ⟨_, hpool, by simp [unBind2]⟩)))
+            ((mem_slice (hf := unBind2_inj i)).mpr ⟨_, hsent, by simp [unBind2]⟩)))
 
 /-- The graded-agreement call of the flat reading is the round instance's own
 call. -/
@@ -1865,7 +1865,7 @@ theorem stage_answer_callG (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       (∀ r', r' ≠ r → x.2.stage r' = p.stage r') ∧
       GBCA.LowPairStep P r (toPair P u w r) (.callG r j b)
         (PMF.pure (toPair P (Function.update u j x)
-          (w.gpool r j (gCallPayload P j b)) r)) := by
+          (w.gsent r j (gCallPayload P j b)) r)) := by
   subst hu
   cases h with
   | callG _ _ _ _ hh hph hr hterm hest hin hbin =>
@@ -1921,256 +1921,256 @@ theorem stage_answer_gcallLoop (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
 /-! ### Answering a Byzantine injection
 
 The adversary multicasts on behalf of a corrupted sender. The message reaches
-the fabric its tag names and no record moves. -/
+the message state its tag names and no record moves. -/
 
-/-- A Byzantine injection on the first gather's fabric, read through the view. -/
+/-- A Byzantine injection on the first gather's message state, read through the view. -/
 theorem toPair_byzGa1 (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n) (r : ℕ)
     (k : Fin P.n) (mm : GaMsg P.n Bool) :
-    toPair P u (w.gpool r k (.ga1 mm)) r
+    toPair P u (w.gsent r k (.ga1 mm)) r
       = ({ toLow1 P u w r with ga := (toLow1 P u w r).ga.mcast k mm },
          toLow2 P u w r) := by
   refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
-  · refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow1, SubState.mcast, Fabric.post, gpool_pool_self]
-    exact slice_post_some unGa1 unGa1_inj (w.pool r) k (.ga1 mm) mm rfl
+  · refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow1, SubState.mcast, MsgState.post, gsent_sent_self]
+    exact slice_post_some unGa1 unGa1_inj (w.sent r) k (.ga1 mm) mm rfl
   · funext kk
-    refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow1, gpool_pool_self]
-    exact slice_post_none (unIn1 kk) (unIn1_inj kk) (w.pool r) k (.ga1 mm) rfl
+    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow1, gsent_sent_self]
+    exact slice_post_none (unIn1 kk) (unIn1_inj kk) (w.sent r) k (.ga1 mm) rfl
   · funext kk
-    refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow1, gpool_pool_self]
-    exact slice_post_none (unBind1 kk) (unBind1_inj kk) (w.pool r) k (.ga1 mm) rfl
-  · refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow2, gpool_pool_self]
-    exact slice_post_none unGa2 unGa2_inj (w.pool r) k (.ga1 mm) rfl
+    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow1, gsent_sent_self]
+    exact slice_post_none (unBind1 kk) (unBind1_inj kk) (w.sent r) k (.ga1 mm) rfl
+  · refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow2, gsent_sent_self]
+    exact slice_post_none unGa2 unGa2_inj (w.sent r) k (.ga1 mm) rfl
   · funext kk
-    refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow2, gpool_pool_self]
-    exact slice_post_none (unIn2 kk) (unIn2_inj kk) (w.pool r) k (.ga1 mm) rfl
+    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow2, gsent_sent_self]
+    exact slice_post_none (unIn2 kk) (unIn2_inj kk) (w.sent r) k (.ga1 mm) rfl
   · funext kk
-    refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow2, gpool_pool_self]
-    exact slice_post_none (unBind2 kk) (unBind2_inj kk) (w.pool r) k (.ga1 mm) rfl
+    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow2, gsent_sent_self]
+    exact slice_post_none (unBind2 kk) (unBind2_inj kk) (w.sent r) k (.ga1 mm) rfl
 
-/-- A Byzantine injection on the second gather's fabric, read through the view. -/
+/-- A Byzantine injection on the second gather's message state, read through the view. -/
 theorem toPair_byzGa2 (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n) (r : ℕ)
     (k : Fin P.n) (mm : GaMsg P.n (Option Bool)) :
-    toPair P u (w.gpool r k (.ga2 mm)) r
+    toPair P u (w.gsent r k (.ga2 mm)) r
       = (toLow1 P u w r,
          { toLow2 P u w r with ga := (toLow2 P u w r).ga.mcast k mm }) := by
   refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
-  · refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow1, gpool_pool_self]
-    exact slice_post_none unGa1 unGa1_inj (w.pool r) k (.ga2 mm) rfl
+  · refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow1, gsent_sent_self]
+    exact slice_post_none unGa1 unGa1_inj (w.sent r) k (.ga2 mm) rfl
   · funext kk
-    refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow1, gpool_pool_self]
-    exact slice_post_none (unIn1 kk) (unIn1_inj kk) (w.pool r) k (.ga2 mm) rfl
+    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow1, gsent_sent_self]
+    exact slice_post_none (unIn1 kk) (unIn1_inj kk) (w.sent r) k (.ga2 mm) rfl
   · funext kk
-    refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow1, gpool_pool_self]
-    exact slice_post_none (unBind1 kk) (unBind1_inj kk) (w.pool r) k (.ga2 mm) rfl
-  · refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow2, SubState.mcast, Fabric.post, gpool_pool_self]
-    exact slice_post_some unGa2 unGa2_inj (w.pool r) k (.ga2 mm) mm rfl
+    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow1, gsent_sent_self]
+    exact slice_post_none (unBind1 kk) (unBind1_inj kk) (w.sent r) k (.ga2 mm) rfl
+  · refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow2, SubState.mcast, MsgState.post, gsent_sent_self]
+    exact slice_post_some unGa2 unGa2_inj (w.sent r) k (.ga2 mm) mm rfl
   · funext kk
-    refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow2, gpool_pool_self]
-    exact slice_post_none (unIn2 kk) (unIn2_inj kk) (w.pool r) k (.ga2 mm) rfl
+    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow2, gsent_sent_self]
+    exact slice_post_none (unIn2 kk) (unIn2_inj kk) (w.sent r) k (.ga2 mm) rfl
   · funext kk
-    refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow2, gpool_pool_self]
-    exact slice_post_none (unBind2 kk) (unBind2_inj kk) (w.pool r) k (.ga2 mm) rfl
+    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow2, gsent_sent_self]
+    exact slice_post_none (unBind2 kk) (unBind2_inj kk) (w.sent r) k (.ga2 mm) rfl
 
 /-- A Byzantine injection in an input-broadcast instance of the first gather. -/
 theorem toPair_byzIn1 (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n) (r : ℕ)
     (k : Fin P.n) (i : Fin P.n) (mm : BRB.BMsg Bool) :
-    toPair P u (w.gpool r k (.brbIn1 i mm)) r
+    toPair P u (w.gsent r k (.brbIn1 i mm)) r
       = ({ toLow1 P u w r with
             brbIn := Function.update (toLow1 P u w r).brbIn i
               (((toLow1 P u w r).brbIn i).mcast k mm) },
          toLow2 P u w r) := by
   refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
-  · refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow1, gpool_pool_self]
-    exact slice_post_none unGa1 unGa1_inj (w.pool r) k (.brbIn1 i mm) rfl
+  · refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow1, gsent_sent_self]
+    exact slice_post_none unGa1 unGa1_inj (w.sent r) k (.brbIn1 i mm) rfl
   · funext kk
     by_cases hk : kk = i
     · subst hk
-      refine Prod.ext ?_ (fabric_ext ?_ ?_)
+      refine Prod.ext ?_ (msgState_ext ?_ ?_)
       · simp only [toPair, toLow1, toLow2, Function.update_self, SubState.mcast]
       · simp only [toPair, toLow1, Function.update_self, SubState.mcast,
-          Fabric.post, gpool_pool_self]
-        exact slice_post_some (unIn1 kk) (unIn1_inj kk) (w.pool r) k
+          MsgState.post, gsent_sent_self]
+        exact slice_post_some (unIn1 kk) (unIn1_inj kk) (w.sent r) k
           (.brbIn1 kk mm) mm (by simp [unIn1])
       · simp only [toPair, toLow1, Function.update_self, SubState.mcast,
-          Fabric.post, gpool_F]
-    · refine Prod.ext ?_ (fabric_ext ?_ ?_)
+          MsgState.post, gsent_F]
+    · refine Prod.ext ?_ (msgState_ext ?_ ?_)
       · simp only [toPair, toLow1, toLow2, Function.update_of_ne hk]
-      · simp only [toPair, toLow1, Function.update_of_ne hk, gpool_pool_self]
-        exact slice_post_none (unIn1 kk) (unIn1_inj kk) (w.pool r) k (.brbIn1 i mm)
+      · simp only [toPair, toLow1, Function.update_of_ne hk, gsent_sent_self]
+        exact slice_post_none (unIn1 kk) (unIn1_inj kk) (w.sent r) k (.brbIn1 i mm)
           (by simp [unIn1, Ne.symm hk])
-      · simp only [toPair, toLow1, Function.update_of_ne hk, gpool_F]
+      · simp only [toPair, toLow1, Function.update_of_ne hk, gsent_F]
   · funext kk
-    refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow1, gpool_pool_self]
-    exact slice_post_none (unBind1 kk) (unBind1_inj kk) (w.pool r) k (.brbIn1 i mm) rfl
-  · refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow2, gpool_pool_self]
-    exact slice_post_none unGa2 unGa2_inj (w.pool r) k (.brbIn1 i mm) rfl
+    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow1, gsent_sent_self]
+    exact slice_post_none (unBind1 kk) (unBind1_inj kk) (w.sent r) k (.brbIn1 i mm) rfl
+  · refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow2, gsent_sent_self]
+    exact slice_post_none unGa2 unGa2_inj (w.sent r) k (.brbIn1 i mm) rfl
   · funext kk
-    refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow2, gpool_pool_self]
-    exact slice_post_none (unIn2 kk) (unIn2_inj kk) (w.pool r) k (.brbIn1 i mm) rfl
+    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow2, gsent_sent_self]
+    exact slice_post_none (unIn2 kk) (unIn2_inj kk) (w.sent r) k (.brbIn1 i mm) rfl
   · funext kk
-    refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow2, gpool_pool_self]
-    exact slice_post_none (unBind2 kk) (unBind2_inj kk) (w.pool r) k (.brbIn1 i mm) rfl
+    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow2, gsent_sent_self]
+    exact slice_post_none (unBind2 kk) (unBind2_inj kk) (w.sent r) k (.brbIn1 i mm) rfl
 
 /-- A Byzantine injection in a bind-broadcast instance of the first gather. -/
 theorem toPair_byzBind1 (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n) (r : ℕ)
     (k : Fin P.n) (i : Fin P.n) (mm : BRB.BMsg (APSet P.n Bool)) :
-    toPair P u (w.gpool r k (.brbBind1 i mm)) r
+    toPair P u (w.gsent r k (.brbBind1 i mm)) r
       = ({ toLow1 P u w r with
             brbBind := Function.update (toLow1 P u w r).brbBind i
               (((toLow1 P u w r).brbBind i).mcast k mm) },
          toLow2 P u w r) := by
   refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
-  · refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow1, gpool_pool_self]
-    exact slice_post_none unGa1 unGa1_inj (w.pool r) k (.brbBind1 i mm) rfl
+  · refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow1, gsent_sent_self]
+    exact slice_post_none unGa1 unGa1_inj (w.sent r) k (.brbBind1 i mm) rfl
   · funext kk
-    refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow1, gpool_pool_self]
-    exact slice_post_none (unIn1 kk) (unIn1_inj kk) (w.pool r) k (.brbBind1 i mm) rfl
+    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow1, gsent_sent_self]
+    exact slice_post_none (unIn1 kk) (unIn1_inj kk) (w.sent r) k (.brbBind1 i mm) rfl
   · funext kk
     by_cases hk : kk = i
     · subst hk
-      refine Prod.ext ?_ (fabric_ext ?_ ?_)
+      refine Prod.ext ?_ (msgState_ext ?_ ?_)
       · simp only [toPair, toLow1, toLow2, Function.update_self, SubState.mcast]
       · simp only [toPair, toLow1, Function.update_self, SubState.mcast,
-          Fabric.post, gpool_pool_self]
-        exact slice_post_some (unBind1 kk) (unBind1_inj kk) (w.pool r) k
+          MsgState.post, gsent_sent_self]
+        exact slice_post_some (unBind1 kk) (unBind1_inj kk) (w.sent r) k
           (.brbBind1 kk mm) mm (by simp [unBind1])
       · simp only [toPair, toLow1, Function.update_self, SubState.mcast,
-          Fabric.post, gpool_F]
-    · refine Prod.ext ?_ (fabric_ext ?_ ?_)
+          MsgState.post, gsent_F]
+    · refine Prod.ext ?_ (msgState_ext ?_ ?_)
       · simp only [toPair, toLow1, toLow2, Function.update_of_ne hk]
-      · simp only [toPair, toLow1, Function.update_of_ne hk, gpool_pool_self]
-        exact slice_post_none (unBind1 kk) (unBind1_inj kk) (w.pool r) k (.brbBind1 i mm)
+      · simp only [toPair, toLow1, Function.update_of_ne hk, gsent_sent_self]
+        exact slice_post_none (unBind1 kk) (unBind1_inj kk) (w.sent r) k (.brbBind1 i mm)
           (by simp [unBind1, Ne.symm hk])
-      · simp only [toPair, toLow1, Function.update_of_ne hk, gpool_F]
-  · refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow2, gpool_pool_self]
-    exact slice_post_none unGa2 unGa2_inj (w.pool r) k (.brbBind1 i mm) rfl
+      · simp only [toPair, toLow1, Function.update_of_ne hk, gsent_F]
+  · refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow2, gsent_sent_self]
+    exact slice_post_none unGa2 unGa2_inj (w.sent r) k (.brbBind1 i mm) rfl
   · funext kk
-    refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow2, gpool_pool_self]
-    exact slice_post_none (unIn2 kk) (unIn2_inj kk) (w.pool r) k (.brbBind1 i mm) rfl
+    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow2, gsent_sent_self]
+    exact slice_post_none (unIn2 kk) (unIn2_inj kk) (w.sent r) k (.brbBind1 i mm) rfl
   · funext kk
-    refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow2, gpool_pool_self]
-    exact slice_post_none (unBind2 kk) (unBind2_inj kk) (w.pool r) k (.brbBind1 i mm) rfl
+    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow2, gsent_sent_self]
+    exact slice_post_none (unBind2 kk) (unBind2_inj kk) (w.sent r) k (.brbBind1 i mm) rfl
 
 /-- A Byzantine injection in an input-broadcast instance of the second gather. -/
 theorem toPair_byzIn2 (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n) (r : ℕ)
     (k : Fin P.n) (i : Fin P.n) (mm : BRB.BMsg (Option Bool)) :
-    toPair P u (w.gpool r k (.brbIn2 i mm)) r
+    toPair P u (w.gsent r k (.brbIn2 i mm)) r
       = (toLow1 P u w r,
          { toLow2 P u w r with
             brbIn := Function.update (toLow2 P u w r).brbIn i
               (((toLow2 P u w r).brbIn i).mcast k mm) }) := by
   refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
-  · refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow1, gpool_pool_self]
-    exact slice_post_none unGa1 unGa1_inj (w.pool r) k (.brbIn2 i mm) rfl
+  · refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow1, gsent_sent_self]
+    exact slice_post_none unGa1 unGa1_inj (w.sent r) k (.brbIn2 i mm) rfl
   · funext kk
-    refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow1, gpool_pool_self]
-    exact slice_post_none (unIn1 kk) (unIn1_inj kk) (w.pool r) k (.brbIn2 i mm) rfl
+    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow1, gsent_sent_self]
+    exact slice_post_none (unIn1 kk) (unIn1_inj kk) (w.sent r) k (.brbIn2 i mm) rfl
   · funext kk
-    refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow1, gpool_pool_self]
-    exact slice_post_none (unBind1 kk) (unBind1_inj kk) (w.pool r) k (.brbIn2 i mm) rfl
-  · refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow2, gpool_pool_self]
-    exact slice_post_none unGa2 unGa2_inj (w.pool r) k (.brbIn2 i mm) rfl
+    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow1, gsent_sent_self]
+    exact slice_post_none (unBind1 kk) (unBind1_inj kk) (w.sent r) k (.brbIn2 i mm) rfl
+  · refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow2, gsent_sent_self]
+    exact slice_post_none unGa2 unGa2_inj (w.sent r) k (.brbIn2 i mm) rfl
   · funext kk
     by_cases hk : kk = i
     · subst hk
-      refine Prod.ext ?_ (fabric_ext ?_ ?_)
+      refine Prod.ext ?_ (msgState_ext ?_ ?_)
       · simp only [toPair, toLow1, toLow2, Function.update_self, SubState.mcast]
       · simp only [toPair, toLow2, Function.update_self, SubState.mcast,
-          Fabric.post, gpool_pool_self]
-        exact slice_post_some (unIn2 kk) (unIn2_inj kk) (w.pool r) k
+          MsgState.post, gsent_sent_self]
+        exact slice_post_some (unIn2 kk) (unIn2_inj kk) (w.sent r) k
           (.brbIn2 kk mm) mm (by simp [unIn2])
       · simp only [toPair, toLow2, Function.update_self, SubState.mcast,
-          Fabric.post, gpool_F]
-    · refine Prod.ext ?_ (fabric_ext ?_ ?_)
+          MsgState.post, gsent_F]
+    · refine Prod.ext ?_ (msgState_ext ?_ ?_)
       · simp only [toPair, toLow1, toLow2, Function.update_of_ne hk]
-      · simp only [toPair, toLow2, Function.update_of_ne hk, gpool_pool_self]
-        exact slice_post_none (unIn2 kk) (unIn2_inj kk) (w.pool r) k (.brbIn2 i mm)
+      · simp only [toPair, toLow2, Function.update_of_ne hk, gsent_sent_self]
+        exact slice_post_none (unIn2 kk) (unIn2_inj kk) (w.sent r) k (.brbIn2 i mm)
           (by simp [unIn2, Ne.symm hk])
-      · simp only [toPair, toLow2, Function.update_of_ne hk, gpool_F]
+      · simp only [toPair, toLow2, Function.update_of_ne hk, gsent_F]
   · funext kk
-    refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow2, gpool_pool_self]
-    exact slice_post_none (unBind2 kk) (unBind2_inj kk) (w.pool r) k (.brbIn2 i mm) rfl
+    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow2, gsent_sent_self]
+    exact slice_post_none (unBind2 kk) (unBind2_inj kk) (w.sent r) k (.brbIn2 i mm) rfl
 
 /-- A Byzantine injection in a bind-broadcast instance of the second gather. -/
 theorem toPair_byzBind2 (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n) (r : ℕ)
     (k : Fin P.n) (i : Fin P.n) (mm : BRB.BMsg (APSet P.n (Option Bool))) :
-    toPair P u (w.gpool r k (.brbBind2 i mm)) r
+    toPair P u (w.gsent r k (.brbBind2 i mm)) r
       = (toLow1 P u w r,
          { toLow2 P u w r with
             brbBind := Function.update (toLow2 P u w r).brbBind i
               (((toLow2 P u w r).brbBind i).mcast k mm) }) := by
   refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
-  · refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow1, gpool_pool_self]
-    exact slice_post_none unGa1 unGa1_inj (w.pool r) k (.brbBind2 i mm) rfl
+  · refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow1, gsent_sent_self]
+    exact slice_post_none unGa1 unGa1_inj (w.sent r) k (.brbBind2 i mm) rfl
   · funext kk
-    refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow1, gpool_pool_self]
-    exact slice_post_none (unIn1 kk) (unIn1_inj kk) (w.pool r) k (.brbBind2 i mm) rfl
+    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow1, gsent_sent_self]
+    exact slice_post_none (unIn1 kk) (unIn1_inj kk) (w.sent r) k (.brbBind2 i mm) rfl
   · funext kk
-    refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow1, gpool_pool_self]
-    exact slice_post_none (unBind1 kk) (unBind1_inj kk) (w.pool r) k (.brbBind2 i mm) rfl
-  · refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow2, gpool_pool_self]
-    exact slice_post_none unGa2 unGa2_inj (w.pool r) k (.brbBind2 i mm) rfl
+    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow1, gsent_sent_self]
+    exact slice_post_none (unBind1 kk) (unBind1_inj kk) (w.sent r) k (.brbBind2 i mm) rfl
+  · refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow2, gsent_sent_self]
+    exact slice_post_none unGa2 unGa2_inj (w.sent r) k (.brbBind2 i mm) rfl
   · funext kk
-    refine Prod.ext rfl (fabric_ext ?_ rfl)
-    simp only [toPair, toLow2, gpool_pool_self]
-    exact slice_post_none (unIn2 kk) (unIn2_inj kk) (w.pool r) k (.brbBind2 i mm) rfl
+    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    simp only [toPair, toLow2, gsent_sent_self]
+    exact slice_post_none (unIn2 kk) (unIn2_inj kk) (w.sent r) k (.brbBind2 i mm) rfl
   · funext kk
     by_cases hk : kk = i
     · subst hk
-      refine Prod.ext ?_ (fabric_ext ?_ ?_)
+      refine Prod.ext ?_ (msgState_ext ?_ ?_)
       · simp only [toPair, toLow1, toLow2, Function.update_self, SubState.mcast]
       · simp only [toPair, toLow2, Function.update_self, SubState.mcast,
-          Fabric.post, gpool_pool_self]
-        exact slice_post_some (unBind2 kk) (unBind2_inj kk) (w.pool r) k
+          MsgState.post, gsent_sent_self]
+        exact slice_post_some (unBind2 kk) (unBind2_inj kk) (w.sent r) k
           (.brbBind2 kk mm) mm (by simp [unBind2])
       · simp only [toPair, toLow2, Function.update_self, SubState.mcast,
-          Fabric.post, gpool_F]
-    · refine Prod.ext ?_ (fabric_ext ?_ ?_)
+          MsgState.post, gsent_F]
+    · refine Prod.ext ?_ (msgState_ext ?_ ?_)
       · simp only [toPair, toLow1, toLow2, Function.update_of_ne hk]
-      · simp only [toPair, toLow2, Function.update_of_ne hk, gpool_pool_self]
-        exact slice_post_none (unBind2 kk) (unBind2_inj kk) (w.pool r) k (.brbBind2 i mm)
+      · simp only [toPair, toLow2, Function.update_of_ne hk, gsent_sent_self]
+        exact slice_post_none (unBind2 kk) (unBind2_inj kk) (w.sent r) k (.brbBind2 i mm)
           (by simp [unBind2, Ne.symm hk])
-      · simp only [toPair, toLow2, Function.update_of_ne hk, gpool_F]
+      · simp only [toPair, toLow2, Function.update_of_ne hk, gsent_F]
 
 
 
 /-- A Byzantine injection is answered by the round instance's own injection on
-the fabric the message's tag names. -/
+the message state the message's tag names. -/
 theorem byz_answer (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n)
     (w : NetState P.n) (r : ℕ) {k : Fin P.n} (m : Msg P.n) (hF : k ∈ w.F) :
     GBCA.LowPairStep P r (toPair P u w r) Lab.tau
-      (PMF.pure (toPair P u (w.gpool r k m) r)) := by
+      (PMF.pure (toPair P u (w.gsent r k m) r)) := by
   cases m with
   | ga1 mm =>
     rw [toPair_byzGa1]
@@ -2235,11 +2235,11 @@ theorem match_tau (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     obtain ⟨Ω, hrelΩ, hb⟩ := match_pure P hrel
     exact ⟨Ω, hrelΩ, Or.inr hb⟩
   · rcases netStep_tau hn with ⟨r, k, m, hF, hw⟩ | ⟨k, b, hF, hw⟩
-    · obtain rfl : w' = w.gpool r k m := pureN_inj hw
-      have hrel : ProtocolRel P (u, w.gpool r k m, o)
-          (Function.update G r (toPair P u (w.gpool r k m) r), C, A, o) :=
+    · obtain rfl : w' = w.gsent r k m := pureN_inj hw
+      have hrel : ProtocolRel P (u, w.gsent r k m, o)
+          (Function.update G r (toPair P u (w.gsent r k m) r), C, A, o) :=
         (protocolRel_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, by simpa using hA, by
-          rw [hGv]; exact (toPairFamPool u w r k m _ rfl).symm⟩
+          rw [hGv]; exact (toPairFamSent u w r k m _ rfl).symm⟩
       obtain ⟨Ω, hrelΩ, hb⟩ := match_pure P hrel
       refine ⟨Ω, hrelΩ, Or.inl (composedGroup_of_tau P ?_)⟩
       rw [hb]
@@ -2249,14 +2249,14 @@ theorem match_tau (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       exact byz_answer P u w r m hF
     · obtain rfl : w' = w.dput k b := pureN_inj hw
       have hrel : ProtocolRel P (u, w.dput k b, o)
-          (G, C, ⟨(w.dput k b).dpool, (w.dput k b).F⟩, o) :=
+          (G, C, ⟨(w.dput k b).dsent, (w.dput k b).F⟩, o) :=
         (protocolRel_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, rfl, by rw [hGv]; funext r; rfl⟩
       obtain ⟨Ω, hrelΩ, hb⟩ := match_pure P hrel
       refine ⟨Ω, hrelΩ, Or.inl (composedGroup_of_tau P ?_)⟩
       rw [hb]
       refine composedPre_tau_aNet P ?_
       rw [hA]
-      exact Comp.ANetStep.byzD ⟨w.dpool, w.F⟩ k b hF
+      exact Comp.ANetStep.byzD ⟨w.dsent, w.F⟩ k b hF
   · obtain ⟨Ω, hrel, hb⟩ := match_prod P (x := u) (w := w) (G := G) (C := C) (A := A)
       (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, hA, hGv⟩)
     refine ⟨Ω, hrel, Or.inl (composedGroup_of_tau P ?_)⟩
@@ -2336,8 +2336,8 @@ theorem match_lab (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     have hAn : Comp.ANetStep P A (Sum.inl (Lab.retABA id b)) (PMF.pure A) := by
       rw [hA]
       rcases hdp with hd | hf
-      · exact Comp.ANetStep.retABA ⟨w'.dpool, w'.F⟩ id b hd
-      · exact Comp.ANetStep.retByz ⟨w'.dpool, w'.F⟩ id b hf
+      · exact Comp.ANetStep.retABA ⟨w'.dsent, w'.F⟩ id b hd
+      · exact Comp.ANetStep.retByz ⟨w'.dsent, w'.F⟩ id b hf
     refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact view_unchanged hsame w'⟩)
       (lowSide_idle P G hLne (by simp) not_false) (fun i => ?_) hAn hWl
@@ -2425,7 +2425,7 @@ theorem match_lab (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
           exact Comp.CoreProcStepN.corruptedIdle _ _ hh (by simp) not_false
       · rw [hCeq i, hfor i hi]; exact Comp.CoreProcStepN.failIdle _ k (Ne.symm hi)
   | callG r id b =>
-    obtain rfl : w' = w.gpool r id (gCallPayload P id b) :=
+    obtain rfl : w' = w.gsent r id (gCallPayload P id b) :=
       pureN_inj (netStep_callG hn)
     have hfor : ∀ i, i ≠ id → x i = u i := fun i hi =>
       pureN_inj (stepN_callG_foreign (Ne.symm hi) (hall i))
@@ -2457,7 +2457,7 @@ theorem match_lab (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
         exact (toPair_congr hxc _).symm
       · rw [Function.update_of_ne hr']
         refine ((toPair_congr (r := r') (fun i => ?_) _).trans
-          (toPair_otherPool u w hr' id _)).symm
+          (toPair_otherSent u w hr' id _)).symm
         by_cases hi : i = id
         · subst hi; exact hoff r' hr'
         · rw [hfor i hi]
@@ -2513,7 +2513,7 @@ theorem match_lab (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
 /-- The matching on a rendezvous of the flat reading. A send and a delivery
 are internal to the round instance, so the composed reading answers them with
 one of its own silent rules; the DECIDED rows, the fused coin return and the
-drives are answered by the same rendezvous. -/
+handshake rows are answered by the same rendezvous. -/
 theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     {w : NetState P.n} {o : ℕ → WCC.SpecState P.n}
     {G : ℕ → GBCA.LowPairState P.n} {C : ∀ _ : Fin P.n, CoreRec P.n}
@@ -2556,7 +2556,7 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
   | gsnd r j m =>
     obtain rfl : ν = PMF.pure o :=
       (System.mapIdle_step_none (wccPull_gsnd r j m) ν).mp hWs
-    obtain rfl : w' = w.gpool r j m := pureN_inj (netStep_gsnd hn)
+    obtain rfl : w' = w.gsent r j m := pureN_inj (netStep_gsnd hn)
     have hfor : ∀ i, i ≠ j → x i = u i := fun i hi =>
       pureN_inj (stepN_gsnd_foreign (Ne.symm hi) (hall i))
     obtain ⟨y, hy, hcore, hoff, hlow⟩ :=
@@ -2583,19 +2583,19 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       exact (toPair_congr (r := r') (fun i => by rw [hxeq i]) _).symm
     · rw [Function.update_of_ne hr']
       refine ((toPair_congr (r := r') (fun i => ?_) _).trans
-        (toPair_otherPool u w hr' j m)).symm
+        (toPair_otherSent u w hr' j m)).symm
       by_cases hi : i = j
       · subst hi; exact hoff r' hr'
       · rw [hfor i hi]
   | gdlv r i k m =>
     obtain rfl : ν = PMF.pure o :=
       (System.mapIdle_step_none (wccPull_gdlv r i k m) ν).mp hWs
-    obtain ⟨hpool, hw⟩ := netStep_gdlv hn
+    obtain ⟨hsent, hw⟩ := netStep_gdlv hn
     obtain rfl : w' = w := pureN_inj hw
     have hfor : ∀ i', i' ≠ i → x i' = u i' := fun i' hi =>
       pureN_inj (stepN_gdlv_foreign (Ne.symm hi) (hall i'))
     obtain ⟨y, hy, hcore, hoff, hlow⟩ :=
-      stage_answer_gdlv P w' (u := u) (j := i) rfl hpool
+      stage_answer_gdlv P w' (u := u) (j := i) rfl hsent
         (stageRow_of_own rfl (hall i))
     obtain rfl : x i = y := pureN_inj hy
     have hxeq : ∀ i', x i' = (Function.update u i (x i)) i' := by
@@ -2637,7 +2637,7 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
         ⟨fun i => by rw [hx i], rfl, by rw [hA]; rfl, by
           rw [hGv]; funext r; exact (toPair_congr (fun i => by rw [hx i]) _).symm⟩)
       (lowSide_idle P G (by simp) (by simp) not_false) (fun i => ?_)
-      (hA ▸ Comp.ANetStep.dsnd ⟨w.dpool, w.F⟩ j b hd) hWs
+      (hA ▸ Comp.ANetStep.dsnd ⟨w.dsent, w.F⟩ j b hd) hWs
     rw [hCeq i, hx i]
     by_cases hi : i = j
     · subst hi
@@ -2661,7 +2661,7 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
         ⟨fun _ => rfl, rfl, hA, by
           rw [hGv]; exact view_unchanged hsame w'⟩)
       (lowSide_idle P G (by simp) (by simp) not_false) (fun i' => ?_)
-      (hA ▸ Comp.ANetStep.ddlv ⟨w'.dpool, w'.F⟩ i k b hd) hWs
+      (hA ▸ Comp.ANetStep.ddlv ⟨w'.dsent, w'.F⟩ i k b hd) hWs
     rw [hCeq i']
     by_cases hi : i' = i
     · subst hi; rw [pureN_inj hxi]; exact Comp.CoreProcStepN.ddlvRecv _ k b hh hr
@@ -2681,7 +2681,7 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
         ⟨fun _ => rfl, rfl, by rw [hA]; rfl, by
           rw [hGv]; funext r'; exact (toPair_congr (fun i => by rw [hsame i]) _).symm⟩)
       (lowSide_idle P G (by simp) (by simp) not_false) (fun i => ?_)
-      (hA ▸ Comp.ANetStep.retWPub ⟨w.dpool, w.F⟩ r id c b) hWs
+      (hA ▸ Comp.ANetStep.retWPub ⟨w.dsent, w.F⟩ r id c b) hWs
     rw [hCeq i]
     by_cases hi : i = id
     · subst hi; rw [pureN_inj hxi]
@@ -2728,7 +2728,7 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
           (by rw [hGv]
               exact GBCA.LowPairStep.callG (toPair P u w' r) k b _
                 (Gather.LowStep.callLoop (toPair P u w' r).1 k b))))
-      (fun i => ?_) (hA ▸ Comp.ANetStep.byzCallGLoop ⟨w'.dpool, w'.F⟩ r k b hF) hWs
+      (fun i => ?_) (hA ▸ Comp.ANetStep.byzCallGLoop ⟨w'.dsent, w'.F⟩ r k b hF) hWs
     rw [hCeq i, hx i]
     exact Comp.CoreProcStepN.byzCallGLoopIdle _ r k b
   | byzCallW r k =>
@@ -2740,7 +2740,7 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
         ⟨fun i => by rw [hx i], rfl, hA, by
           rw [hGv]; funext r'; exact (toPair_congr (fun i => by rw [hx i]) _).symm⟩)
       (lowSide_idle P G (by simp) (by simp) not_false) (fun i => ?_)
-      (hA ▸ Comp.ANetStep.byzCallW ⟨w'.dpool, w'.F⟩ r k hF) hWs
+      (hA ▸ Comp.ANetStep.byzCallW ⟨w'.dsent, w'.F⟩ r k hF) hWs
     rw [hCeq i, hx i]
     exact Comp.CoreProcStepN.byzCallWIdle _ r k
   | byzRetW r k b =>
@@ -2752,11 +2752,11 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
         ⟨fun i => by rw [hx i], rfl, hA, by
           rw [hGv]; funext r'; exact (toPair_congr (fun i => by rw [hx i]) _).symm⟩)
       (lowSide_idle P G (by simp) (by simp) not_false) (fun i => ?_)
-      (hA ▸ Comp.ANetStep.byzRetW ⟨w'.dpool, w'.F⟩ r k b hF) hWs
+      (hA ▸ Comp.ANetStep.byzRetW ⟨w'.dsent, w'.F⟩ r k b hF) hWs
     rw [hCeq i, hx i]
     exact Comp.CoreProcStepN.byzRetWIdle _ r k b
-  | byzCallG r k b => exact (stepN_byzCallG_dead (hall k)).elim
-  | byzRetG r k out => exact (stepN_byzRetG_dead (hall k)).elim
+  | byzCallG r k b => exact (stepN_byzCallG_noStep (hall k)).elim
+  | byzRetG r k out => exact (stepN_byzRetG_noStep (hall k)).elim
 
 
 /-- The matching at the group level: the rendezvous alphabet is hidden on both
@@ -2866,7 +2866,7 @@ noncomputable def chainSim (P : Params) :
           (coreRel P))) :=
   (protocolSim P).trans (chainSimComposed P)
 
-/-! ### Mechanical axiom firewall -/
+/-! ### Mechanical axiom check -/
 
 /-- info: 'PLTS.ABA.AFW.protocolSim' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in

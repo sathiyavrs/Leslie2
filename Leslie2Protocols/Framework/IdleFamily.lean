@@ -39,7 +39,7 @@ emulate the blueprint's sync-set composition `∥_S`:
   functions in the style of deviation D1.
 
 All three combinators preserve `System.IsLTS`, so an LTS instance family is
-again an LTS and the `ForwardLTS` bridge applies at family level.
+again an LTS and the `ForwardLTS` correspondence applies at family level.
 
 Both weak transitions of a system are carried along `mapIdle` by any *section*
 `g` of `φ` that respects the silent label. A section is what makes the

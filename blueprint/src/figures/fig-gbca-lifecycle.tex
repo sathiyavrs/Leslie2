@@ -1,10 +1,10 @@
 % GBCA specification instance (PLTS.ABA.GBCA.Step). Automata style.
-% Nodes are the reachable states quotiented to the pair (|dead|, grade). The
+% Nodes are the reachable states quotiented to the pair (|excluded|, grade). The
 % bit-labelled reachable states are (empty, bot), ({b}, bot), ({b}, A) and
 % ({b}, C) for each bit b, seven in all. (empty, A) and (empty, C) are
-% unreachable, every graded return needing dead nonempty; and dead never holds
-% two bits, bindUnset being enabled from dead = empty alone, so no second kill
-% is drawn. The kill edge names the bit it kills, so 1-b is the surviving bit
+% unreachable, every graded return needing excluded nonempty; and excluded never holds
+% two bits, bindUnset being enabled from excluded = empty alone, so no second exclusion
+% is drawn. The exclude edge names the bit it excludes, so 1-b is the surviving bit
 % at every node to its right. call/callLoop are enabled in every state and
 % drawn once, on the initial state; fail is omitted.
 \begin{tikzpicture}[
@@ -28,11 +28,11 @@
     (dC) edge[loop below, looseness=5]
       node[lbl, below]{4 \texttt{retB}\ $1{-}b$\\6 \texttt{retC}} (dC);
 
-  % the kill
+  % the exclusion
   \path
     (e0) edge node[lbl, above]{3 \texttt{bindUnset}\ $b$} (d0);
 
-  % the two grade latches
+  % the two grade guards
   \path
     (d0) edge node[lbl, left]{5 \texttt{retA}\ $1{-}b$} (dA)
     (d0) edge node[lbl, left]{6 \texttt{retC}} (dC);

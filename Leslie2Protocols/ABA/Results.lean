@@ -12,13 +12,13 @@ import Leslie2Protocols.ABA.ABDY.Hybrid
 # The main theorems of the ABA case study
 
 The subject is the protocol `ABDY.protocol P`: `n` programs, one per process, beside
-two boxes that are not processes — the network adversary, which owns the
-message pools, the DECIDED pools and the corrupted set with its budget, and the
+two components that are not processes — the network adversary, which owns the
+message sets, the DECIDED sets and the corrupted set with its budget, and the
 common-coin oracle, the only component whose transitions are not Dirac. A
-program reads its own records, its own inbox and its own replacement flag, and
+program reads its own records, its own recv and its own replacement flag, and
 nothing else about corruption: not the corrupted set, not the budget, not
 another process's status. A corruption replaces the program of the process it
-names (D23); whether another process may be driven off-protocol is decided by
+names (D23); whether another process may be taken off-protocol is decided by
 the network's `k ∈ F` guard. A program holds its
 round loop beside its stage-side record — the stage record of every round it
 has touched, in a finite map — and terminates at `2f + 1` DECIDED receipts
@@ -35,7 +35,7 @@ specification:
 1. `ABDY.protocolSim` (`ABDY/ProtocolSim.lean`) — the protocol into the composed
    reading, along the Dirac lift of `ABDY.ProtocolRel`. The relation pins every
    composed coordinate against the protocol state; the inclusion is
-   one-directional because a round instance also answers the Byzantine drives
+   one-directional because a round instance also answers the Byzantine handshake rows
    (D11) and the processes the protocol has terminated (D22).
 2. `ABDY.substSim` (`ABDY/Hybrid.lean`) — replace each round's graded-agreement
    instance by its specification, the other three components untouched: the
@@ -55,7 +55,7 @@ independent — the inclusion never invokes transitivity of simulation.
 ## Scope of the headline
 
 Graded agreement is carried to implementation level: each round is a group of
-stage programs beside that round's own message fabric, driven by the same
+stage programs beside that round's own message state, moved by the same
 network adversary. The **common coin is held at specification level** — the
 ε-coin is `Params.wccPMF`, not a Gather/SRSD implementation — so the honest
 reading is *graded agreement verified to implementation level; the coin
@@ -68,7 +68,7 @@ What is proven is safety — Validity and Agreement for every
 positive-probability trace. Termination, liveness, unpredictability and
 fairness are not claimed.
 
-The `#guard_msgs`/`#print axioms` blocks below are the mechanical firewall:
+The `#guard_msgs`/`#print axioms` blocks below are the mechanical check:
 the headlines, and the framework results the chain rests on, are pinned to the
 clean axiom list `[propext, Classical.choice, Quot.sound]`.
 -/
@@ -156,7 +156,7 @@ noncomputable def chainSim (P : Params) :
         (compRel (parallelRel (diracRel (RsubAll P))) (coreRel P))) :=
   (protocolSim P).trans ((substSim P).trans (coreSim P))
 
-/-! ### Mechanical axiom firewall
+/-! ### Mechanical axiom check
 
 Neither the headlines nor the framework results the chain rests on may acquire
 a `sorryAx` dependence. -/

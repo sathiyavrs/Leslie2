@@ -19,7 +19,7 @@ lake exe mk_all --check            # check that each library root re-exports all
                                    # (CI runs this via `mk_all-check: true`)
 ```
 
-There is no test suite. CI (`.github/workflows/blueprint.yml`) runs `lake-action` with `build: true, lint: false, mk_all-check: true` (which builds the default targets and checks the library roots), then builds the extras library (`lake build Leslie2Extra`) to keep it green, then compiles the blueprint and doc-gen output to GitHub Pages on every push to `main` or `master`. A manual run verifies everything but publishes nothing: the docs build, the Jekyll build, the Pages upload and the deployment are all gated on push events. Linting is intentionally off in CI; the lakefile sets `weak.linter.mathlibStandardSet = true` so warnings show locally but don't fail the build.
+There is no test suite. CI (`.github/workflows/blueprint.yml`) runs `lake-action` with `build: true, lint: false, mk_all-check: true` (which builds the default targets and checks the library roots), then builds the extras library (`lake build Leslie2Extra`) to keep it green, then compiles the blueprint and doc-gen output to GitHub Pages on every push to `main` or `master`. A manual run verifies everything but publishes nothing: the docs build, the Jekyll build, the Pages upload and the deployment are all conditional on push events. Linting is intentionally off in CI; the lakefile sets `weak.linter.mathlibStandardSet = true` so warnings show locally but don't fail the build.
 
 ## Lakefile conventions
 
@@ -62,7 +62,7 @@ plastex -c plastex-full.cfg web-full.tex               # → ../web-full/
 latexmk -output-directory=../print-full print-full.tex  # → ../print-full/print-full.pdf
 ```
 
-Caveat: the full web build writes `blueprint/lean_decls`, the same path `leanblueprint web` writes, and the two editions harvest different declaration sets. `build-full.sh` saves and restores that file; if you run `plastex -c plastex-full.cfg` by hand, re-run `leanblueprint web` before `lake exe checkdecls blueprint/lean_decls`.
+Caveat: the full web build writes `blueprint/lean_decls`, the same path `leanblueprint web` writes, and the two editions collect different declaration sets. `build-full.sh` saves and restores that file; if you run `plastex -c plastex-full.cfg` by hand, re-run `leanblueprint web` before `lake exe checkdecls blueprint/lean_decls`.
 
 The dependency graph is drawn from a vendored copy of the plugin's page template,
 `blueprint/src/dep_graph.html`, selected by `tpl=` in the `\usepackage[...]{blueprint}`
@@ -75,7 +75,7 @@ and still fits the graph source; run it against both `blueprint/web` and
 `blueprint/web-full`. When updating leanblueprint, re-diff the template against the
 plugin's own.
 
-The two node directories must agree on their formal frontmatter (`\label`, `\lean`, `\leanok`, `\uses`) — that is what the dependency graph and the declaration harvest are built from. `python3 scripts/check-node-sync.py` checks every pair and prints `N/N in sync`; only the bodies are allowed to differ.
+The two node directories must agree on their formal frontmatter (`\label`, `\lean`, `\leanok`, `\uses`) — that is what the dependency graph and the declaration collection are built from. `python3 scripts/check-node-sync.py` checks every pair and prints `N/N in sync`; only the bodies are allowed to differ.
 
 Caveats: plasTeX 3.1 silently breaks on **Python 3.14** (packages fail to load, `\lean`/`\uses` fall back to default renderers, no dep graph, no `lean_decls`, no theorem badges), and `leanblueprint web` resolves `plastex` from PATH — so there must be exactly ONE pipx installation, on Python ≤ 3.13, exposing both apps: `pipx install leanblueprint --python /opt/homebrew/bin/python3.13 --include-deps` (uninstall any standalone `plastex` pipx venv first). The dependency graph needs no external `dot` binary (`pygraphviz` ships bundled Graphviz libraries). plasTeX caches the parse in `blueprint/src/web.paux` — after preamble/URL changes, `rm -rf blueprint/web blueprint/src/web.paux` before rebuilding.
 

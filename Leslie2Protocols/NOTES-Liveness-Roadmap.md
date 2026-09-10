@@ -16,10 +16,10 @@ with probability at least `1 − g(ε, δ_f)` — in general.
 
 The failure mass is in the encoding, not in the statement of the goal. Both coin
 resolutions of the development follow `ABA.Params.wccPMF` (`ABA/Vocabulary/Params.lean`), which puts
-mass `δ_f` (the Lean field `Params.δ`, `δ_f` in the blueprint) on the outcome `dead`: the
+mass `δ_f` (the Lean field `Params.δ`, `δ_f` in the blueprint) on the outcome `undelivered`: the
 coin resolves without delivering. In TS 3 that outcome is absorbing — `WCC.Step.flip`
 fires once per instance and `WCC.Step.ret` has a positive guard — so the
-processes awaiting a `dead` round's return never return, in any extension, under any
+processes awaiting an undelivered round's return never return, in any extension, under any
 scheduler. A single such round therefore strands positive mass, and no fairness
 assumption recovers it. The honest target carries the failure mass.
 
@@ -31,10 +31,10 @@ round structure the proof exposes.
 
 The specification pins the target the race is measured against. `ABA.spec` runs that race
 at one point, in the mode loop of §5: from `Mode.idle`, and only where both bits carry
-`f + 1` support, a flip locks with probability `ε` and kills with probability `δ_f`, the
+`f + 1` support, a flip locks with probability `ε` and fails to deliver with probability `δ_f`, the
 release mass `1 − ε − δ_f` returns to `Mode.idle`, and a lock is never discarded. A
 flip-only scheduler from such a state therefore reaches the terminal mode
-`Mode.dead` with probability `δ_f / (ε + δ_f)`, and that is the specification-level bound
+`Mode.terminal` with probability `δ_f / (ε + δ_f)`, and that is the specification-level bound
 a transfer would carry:
 
 ```
@@ -58,11 +58,11 @@ supermartingales in Caesar):
 turns on a precondition the coin cannot see: the round's value is fixed before the coin
 resolves, so a resolution matching it decides. That precondition is structural here rather
 than an assumption a liveness proof would have to carry. At the specification, GBCA's
-exclusion set `dead` only grows — its single writer inserts and corruption does not touch
-it — and both value-bearing returns demand `v ∉ dead ∧ !v ∈ dead`, so any two graded
+exclusion set `excluded` only grows — its single writer inserts and corruption does not touch
+it — and both value-bearing returns demand `v ∉ excluded ∧ !v ∈ excluded`, so any two graded
 returns of one round hand out the same bit and a `C`-return pins a bit that no extension
 of the run hands out at grade ≥ 1: `retG_value_agree`, `specInst_binding`,
-`retC_dead_nonempty` (`ABA/Spec/GBCASafety.lean`), each from monotonicity alone, no invariant.
+`retC_excluded_nonempty` (`ABA/Spec/GBCASafety.lean`), each from monotonicity alone, no invariant.
 At the implementation the encoding is ABDY22's Algorithm 6 in full (D18), whose Binding
 the paper proves. The precondition is therefore available on both sides of the refinement,
 and a liveness effort inherits it rather than re-deriving it; what it must supply is the
@@ -108,12 +108,12 @@ port, *started*:
   it (`WeakProbabilistic.lean`, `ProbSimulation.lean` — weak τ-transitions, coupling-based
   `WeakProbSim`) are sorried (9 + 4): they are, structurally, an unfinished re-derivation
   of exactly what Leslie2 has already proven end-to-end.
-- `Leslie/Prob/`: the certificate line on a different (functional, gated-action) model
+- `Leslie/Prob/`: the certificate line on a different (functional, guarded-action) model
   `ProbActionSpec` — `FairASTCertificate` (Majumdar–Sathiyanarayana POPL'25 Rule 3.2 +
   fair extension) with `sound` **proven**, conditional on caller-supplied trajectory
   witnesses (`TrajectoryFairProgress` etc.); Ionescu–Tulcea trace measures; probabilistic
   Abadi–Lamport refinement. Two real sorries remain (`RandomisedAdversary.lean`). No
-  bridge from `ProbActionSpec` to the relational PLTS model.
+  translation from `ProbActionSpec` to the relational PLTS model.
 
 The two repos are complementary halves of one program: Leslie has liveness without
 (finished) probabilistic simulation; Leslie2 has probabilistic simulation without liveness.
@@ -123,7 +123,7 @@ The two repos are complementary halves of one program: Leslie has liveness witho
 **It is the right design on the wrong model — with one hard-won warning attached.**
 
 *Right design*: it handles precisely what `Leslie2Extra/Fairness` does not — stuttering.
-The ABA chain's simulations are weak (the core simulation's lazy twin stutters on almost
+The ABA chain's simulations are weak (the core simulation's lazy abstract state stutters on almost
 every row), so any fairness-preservation for ABA must discipline stutters exactly the way
 `WeakDivPreserving` does (rank must decrease when the abstract answers a fair concrete
 step with silence).
@@ -169,7 +169,7 @@ Ordered by expected value-for-effort:
    transported down all three, the composition link (`ABDY.protocolSim`,
    `ABA/ABDY/ProtocolSim.lean`) included. That link imposes no constraint on the amplification
    axis. Under D22 a process retains the stage record of every round it has touched and
-   answers that round's traffic under an instance-local guard, whichever round its loop is
+   answers that round's messages under an instance-local guard, whichever round its loop is
    in, which is the behaviour ABDY22's Lemmas 4.6 and E.5 are stated under; and
    `ABAProcStepN.terminate` fires only once the process's own return has fired and `2f + 1`
    DECIDED receipts are on record, so the concrete stopping point is a terminate in the
@@ -189,7 +189,7 @@ Ordered by expected value-for-effort:
    stack meet without duplication.
 
 One cost note, on any of the three. The achievability item of `ABA/README.md` — an
-explicit scheduler driving `protocol P4` to a two-return trace of positive mass — is
+explicit scheduler taking `protocol P4` to a two-return trace of positive mass — is
 expensive under the wait-until order and the case denials: every stage send
 waits on the sender's own send at the level below, and every return but `retA` discharges
 the denials of the cases above it, so a witness has to schedule the full five-level
@@ -202,13 +202,13 @@ safety; both matter to any fair-inclusion proof.
 
 In TS 3 the failure outcome is absorbing. `WCC.Step.flip` requires `hv : s.val = .bot`,
 so an instance resolves once, and `WCC.Step.ret`'s guard `s.val = .top ∨ s.val = .bit b`
-is positive, so a resolution at `TVal.dead` enables no return in any extension.
+is positive, so a resolution at `TVal.undelivered` enables no return in any extension.
 
-In TS 1 the same mass drives the control mode `Mode.dead`, which is globally absorbing
+In TS 1 the same mass puts the control mode at `Mode.terminal`, which is globally absorbing
 (D17). `PLTS.ABA.SpecStep.coinFlip` is one-shot: its guard `hm : s.mode = .idle` admits it
-only at `Mode.idle`, and its `kill` outcome — mass `δ_f` under `PLTS.ABA.flipPMF` — leaves
-the state at `Mode.dead`. The only other `τ`-rule is `PLTS.ABA.SpecStep.decide`, whose
-guard `hm : s.mode ≠ .dead` excludes exactly that mode. A killed specification therefore
+only at `Mode.idle`, and its `undelivered` outcome — mass `δ_f` under `PLTS.ABA.flipPMF` — leaves
+the state at `Mode.terminal`. The only other `τ`-rule is `PLTS.ABA.SpecStep.decide`, whose
+guard `hm : s.mode ≠ .terminal` rules out exactly that mode. A terminal-mode specification therefore
 decides nothing and returns nothing, in any extension, under any scheduler, which is what
 the absorbed TS 3 instance does one level down. The two encodings agree on what a fair
 scheduler can be obliged to do, and no marking has anything to reconcile between them.
@@ -220,7 +220,7 @@ support, and a state that has passed the flip's own guard leaves some bit suppor
 after. The forcing runs on the *sum* of the two support counts. Neither count is monotone
 by itself: `SpecStep.callSet`'s overwrite takes its writer out of one of the two supporter
 sets. The sum is. An overwrite moves a supporter from one set to the other and leaves the
-sum where it was; a write into an empty slot raises it by one; a `fail` puts its
+sum where it was; a write into an empty entry raises it by one; a `fail` puts its
 identifier into both sets through the `id ∈ s.F` disjunct and raises it by one or two;
 `SpecStep.callByz` writes only at identifiers that disjunct already counts at both bits,
 so it moves neither count. The flip's `hmix` guard asks `f + 1` at each bit, so the sum
@@ -232,7 +232,7 @@ state to `Mode.idle`, where the flip is enabled again, so a flip-only scheduler 
 `ε`-versus-`δ_f` race to absorption and locks with probability `ε / (ε + δ_f)`. That is
 the bound §1 records.
 
-**The gate and the liveness half of Validity.** `hmix` also settles the unanimous case
+**The guard and the liveness half of Validity.** `hmix` also settles the unanimous case
 structurally, at the specification and with no proof obligation. A supported bit has a
 never-corrupted recorded inputter (`SuppOK.honest_supporter`, `Spec/ABASafety.lean`), so under
 honest unanimity on `v` the bit `!v` is supported by corrupted identifiers alone, at most
@@ -255,38 +255,38 @@ is recorded here rather than repaired.
 
 **The transfer hook.** The specification names no coin bit. `flipPMF` is `Params.wccPMF`
 pushed forward along a map that forgets which bit was delivered: one bit to `lock`, the
-other bit and the adversarial outcome to `release`, the failure outcome to `kill`. The
+other bit and the adversarial outcome to `release`, the failure outcome to `undelivered`. The
 three masses are all the rules read. Reading `lock` as "the coin agreed with the round's
 surviving bit" is accordingly not a component of TS 1 — it is what a liveness refinement
 would supply, as an outcome coupling between the concrete flip and `flipPMF`: the
 agree-outcome, of mass `ε`, coupled to `lock`; the disagree- and adversarial outcomes to
-`release`; the failure outcome, of mass `δ_f`, to `kill`. Safety needs none of it, which
+`release`; the failure outcome, of mass `δ_f`, to `undelivered`. Safety needs none of it, which
 is why the specification carries the mode and not the bit.
 
-## 6. Design note: the GBCA kill under fairness
+## 6. Design note: the GBCA exclusion under fairness
 
-The GBCA specification's `bindUnset` carries the guard `dead = ∅` (`ABA/Spec/GBCA.lean`), so
-one kill happens per instance. Safety is indifferent to the guard — every statement of
-`Spec/GBCASafety.lean` rests on monotonicity of `dead` and would hold without it — but a fair
+The GBCA specification's `bindUnset` carries the guard `excluded = ∅` (`ABA/Spec/GBCA.lean`), so
+one exclusion happens per instance. Safety is indifferent to the guard — every statement of
+`Spec/GBCASafety.lean` rests on monotonicity of `excluded` and would hold without it — but a fair
 reading of the specification is not.
 
-Suppose the guard were the per-bit one, `b ∉ dead`, so that a round could kill both bits in
+Suppose the guard were the per-bit one, `b ∉ excluded`, so that a round could exclude both bits in
 turn. Take a mixed round: a quorum, `f + 1` F-blind support at each bit, and an `A`-return
 of `v` already fired. `bindUnset v` is then enabled — its guards would be the quorum, `f + 1`
-support for the spared bit `!v`, and `v` not yet dead, none of which the return disturbs —
+support for the spared bit `!v`, and `v` not yet excluded, none of which the return disturbs —
 so under a blanket-fair marking of the internal transitions every fair scheduler must
-eventually fire it. After that kill no bit is alive: `retA` and `retB` are disabled at both
-bits, and `retC` is disabled by the A-latch (`grade = some true`). The processes that had
+eventually fire it. After that exclusion no bit is alive: `retA` and `retB` are disabled at both
+bits, and `retC` is disabled by the `A` grade guard (`grade = some true`). The processes that had
 not yet returned never return, in any extension, under any scheduler. Spec-level
 Termination — "if `n − f` correct processes take part then all correct processes eventually
 return" — would then be false of the specification itself, and no marking on the
 implementation side could repair it.
 
-The `dead = ∅` guard removes those states rather than the obligation. Every reachable state
-has `dead ∈ {∅, {b}}` (`GBCASafety.dead_card_le_one`), the surviving bit stays alive, and
-the A-latch still admits `A`- and `B`-returns. The resolution is structural, so no marking
+The `excluded = ∅` guard removes those states rather than the obligation. Every reachable state
+has `excluded ∈ {∅, {b}}` (`GBCASafety.excluded_card_le_one`), the surviving bit stays alive, and
+the `A` grade guard still admits `A`- and `B`-returns. The resolution is structural, so no marking
 has anything to decide here. The same holds of TS 1's flip (§5), where the one-shot guard
-and the absorbing `Mode.dead` settle the question in the step relation rather than in a
+and the absorbing `Mode.terminal` settle the question in the step relation rather than in a
 marking.
 
 **Termination proof sketch for the specification as encoded.** Assume the `n − f` honest
@@ -294,7 +294,7 @@ processes have called, so the quorum guard holds and holds forever (the count is
 in `call` and `F`). The quorum's `n − f ≥ 2f + 1` callers-or-corrupted fall on two bits, so
 some bit `v` carries `f + 1` of them by pigeonhole — the `SuppOK(v)` count, itself monotone.
 All three guards of `bindUnset (!v)` therefore hold, and they persist until the rule is
-taken, so weak fairness fires it; `dead = {!v}` from then on, and `v` is alive at every
+taken, so weak fairness fires it; `excluded = {!v}` from then on, and `v` is alive at every
 later state.
 
 Split on whether the dissent count at `!v` ever reaches `f + 1`. If it never does, `retB`
@@ -307,7 +307,7 @@ honest input the count is capped by the corruption budget outright
 reads no grade. Either way each un-returned process has a return enabled from some point on
 and permanently, so a fair scheduler answers it. Nothing in the sketch mentions the coin: it
 is a statement about one GBCA instance, and it is what item 1 of §4 would have to supply for
-the sub-protocol slot.
+the sub-protocol position.
 
 ## 7. Pointers
 

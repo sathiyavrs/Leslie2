@@ -2,6 +2,6 @@
   \label{def:aba-flat-reading}
   \lean{PLTS.ABA.Net.NetEvtP}\lean{PLTS.ABA.Net.actsAt}\lean{PLTS.ABA.Net.wccPull}\lean{PLTS.ABA.Net.StageSideRecP}\lean{PLTS.ABA.Net.StageRecord}\lean{PLTS.ABA.Net.NetStateP}\lean{PLTS.ABA.Net.stageOwn}\lean{PLTS.ABA.Net.FlatProcStep}\lean{PLTS.ABA.Net.FlatNetStep}\lean{PLTS.ABA.Net.IsStageTable}\lean{PLTS.ABA.Net.flat}\leanok
   \uses{def:aba-labels, def:aba-params, def:aba-core-vocab, def:relabel, def:syncproduct, def:process-algebra, def:idle-family}
-  A protocol as it runs: $n$ programs, one per process, beside one network adversary holding the message pools, the DECIDED pools and the corrupted set with its budget, beside the coin oracle.
-  The reading is parametric in the graded-agreement implementation --- its message type, its per-process per-round stage record, and its rows --- so the round loop, the DECIDED pools, the coin handshake, corruption, the adversary and the composition pipeline are written once: \leandecl{PLTS.ABA.Net.flat}.
+  A protocol as it runs: $n$ programs, one per process, beside one network adversary holding the message sets, the DECIDED sets and the corrupted set with its budget, beside the coin oracle.
+  The reading is parametric in the graded-agreement implementation --- its message type, its per-process per-round stage record, and its rows --- so the round loop, the DECIDED sets, the coin handshake, corruption, the adversary and the composition pipeline are written once: \leandecl{PLTS.ABA.Net.flat}.
 \end{definition}

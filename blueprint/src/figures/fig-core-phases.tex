@@ -17,12 +17,12 @@
     (tcw)  edge node[elbl, above]{\texttt{callW}} (aww)
     (idle) edge[loop above, looseness=5]
       node[lbl, above]{\texttt{inputLoop}} (idle);
-  % round back-edge, routed over the top so it clears the DECIDED box below
+  % round back-edge, routed over the top so it clears the DECIDED node below
   \draw[->] (aww) to[out=115, in=65, looseness=0.55]
     node[lbl, above]{\texttt{retW}: round${+}1$ (D10)} (tcg);
-  % the DECIDED pools, below the row; detail in caption
+  % the DECIDED sets, below the row; detail in caption
   \node[draw, dashed, rounded corners, align=center, font=\footnotesize,
         below=1.95cm of awg, minimum width=5.4cm, inner sep=4pt] (dec)
-    {\textbf{the DECIDED pools}\\ ($\tau$-loops, D12$'$)};
+    {\textbf{the DECIDED sets}\\ ($\tau$-loops, D12$'$)};
   \draw[dotted, ->] (dec.north) -- (aww.south);
 \end{tikzpicture}

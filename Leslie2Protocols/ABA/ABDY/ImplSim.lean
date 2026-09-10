@@ -17,42 +17,42 @@ instance (`GBCA.specInst`, the exclusion-set specification, D19):
 
 The implementation state is the protocol's own data, so only `call`, `ret` and
 `F` are read off it directly (`InstRel.call_eq`, `ret_eq`, `F_eq`). The
-specification's `dead` and `grade` are bookkeeping the protocol never stores;
+specification's `excluded` and `grade` are bookkeeping the protocol never stores;
 the relation carries receipt evidence for them instead:
 
-* `dead_cert` — every dead bit `b` is covered by a monotone *kill certificate*
-  `DeadCert P s b`: either the opposite bit owns the unique `n − f` `ECHO`
+* `excluded_cert` — every excluded bit `b` is covered by a monotone *exclude certificate*
+  `ExcludedCert P s b`: either the opposite bit owns the unique `n − f` `ECHO`
   receipt quorum (`EchoQuorum P s (!b)`, Case A), or an `n − f` wall of
   processes is each corrupted or committed, write-once, to a `VOTE` payload
   other than `some b` (`VoteWall P s b`, Case B). Both disjuncts make an
-  `n − f` `VOTE b` receipt quorum — the sole gateway to any grade-≥1 evidence
+  `n − f` `VOTE b` receipt quorum — the only source of any grade-≥1 evidence
   for `b` — impossible forever: a `VOTE b` quorum against Case A yields an
   honest double-`ECHO` sender (`echoQuorum_unique`, write-once `sentEcho`),
   and against Case B meets the wall only inside `F`, contradicting
-  `2(n − f) > n + f` (`no_disjoint_quorums`). The relation bounds `dead` from
-  above and never from below: which bits are actually dead is recovered by
+  `2(n − f) > n + f` (`no_disjoint_quorums`). The relation bounds `excluded` from
+  above and never from below: which bits are actually excluded is recovered by
   case analysis at the return rows, not stored.
 * `gradeA_ev` / `gradeC_ev` — an `A`-side grade lock is backed by an `n − f`
-  `SEAL v` receipt quorum, a `C`-side lock by an `n − f` `SEAL ⊥` quorum. Two
+  `ECHO5 v` receipt quorum, a `C`-side lock by an `n − f` `ECHO5 ⊥` quorum. Two
   opposing quorums intersect in an honest process that would have multicast
-  two different `SEAL` payloads, contradicting the write-once `seal_once` —
-  which is the A/C exclusivity the specification's grade latch demands
-  (`grade_ne_false_of_seal_quorum`, `grade_ne_true_of_sealBot_quorum`).
+  two different `ECHO5` payloads, contradicting the write-once `echo5_once` —
+  which is the A/C exclusivity the specification's grade guard demands
+  (`grade_ne_false_of_echo5_quorum`, `grade_ne_true_of_echo5Bot_quorum`).
 
-The specification kills a bit by the internal τ-transition `bindUnset`, so an
-implementation return that needs a not-yet-dead bit killed is answered by a
-two-step weak burst (`weakLStep_tauThen`; `killThenRetA_burst`,
-`killThenRetB_burst`, `killThenRetC_burst`). Every return row does the same
-decidable case split on the specification's `dead`, and the burst fires
-whenever the kill is missing. Each return's own evidence harvests the
-certificate: `retA`'s `SEAL v` quorum and `retB`'s `f + 1` `BIND v` receipts
+The specification excludes a bit by the internal τ-transition `bindUnset`, so an
+implementation return that needs a not-yet-excluded bit excluded is answered by a
+two-step weak run (`weakLStep_tauThen`; `excludeThenRetA_run`,
+`excludeThenRetB_run`, `excludeThenRetC_run`). Every return row does the same
+decidable case split on the specification's `excluded`, and the run fires
+whenever the exclusion is missing. Each return's own evidence derives the
+certificate: `retA`'s `ECHO5 v` quorum and `retB`'s `f + 1` `BIND v` receipts
 both route to an `n − f` `VOTE v` receipt quorum at an honest process
-(`bind_receipts_of_seal_quorum`, `voteQuorum_of_bind_receipts`), which kills
-`!v` — the quorum itself is a `VoteWall` (`deadCert_of_voteQuorum`) — and
-certifies `v` alive (`not_deadCert_of_voteQuorum`, which is what discharges
-the guard pair `v ∉ dead ∧ (!v) ∈ dead` and with it value agreement between
-successive returns). The `C`-return's `SEAL ⊥` quorum yields a certificate
-for *some* bit (`deadCert_of_sealBot_quorum`): if an honest bit-voter exists
+(`bind_receipts_of_echo5_quorum`, `voteQuorum_of_bind_receipts`), which excludes
+`!v` — the quorum itself is a `VoteWall` (`excludedCert_of_voteQuorum`) — and
+certifies `v` alive (`not_excludedCert_of_voteQuorum`, which is what discharges
+the guard pair `v ∉ excluded ∧ (!v) ∈ excluded` and with it value agreement between
+successive returns). The `C`-return's `ECHO5 ⊥` quorum yields a certificate
+for *some* bit (`excludedCert_of_echo5Bot_quorum`): if an honest bit-voter exists
 anywhere, its `vote_conf` receipt quorum is Case A for the opposite bit;
 otherwise the honest vote prefix is all-⊥ and the `VoteWall` holds for both
 bits at once.
@@ -71,15 +71,15 @@ The invariant carries
 
 * the corruption budget (`F_card`) and delivery soundness (`recv_sub`);
 * protocol conformance of honest multicasts (`echo_conf`, `vote_input`,
-  `vote_conf`, `bind_conf`, `bindBot_conf`, `seal_input`, `seal_conf`,
-  `sealBot_conf`): each honest `ECHO`/`VOTE`/`BIND`/`SEAL` is backed by the
+  `vote_conf`, `bind_conf`, `bindBot_conf`, `echo5_input`, `echo5_conf`,
+  `echo5Bot_conf`): each honest `ECHO`/`VOTE`/`BIND`/`ECHO5` is backed by the
   receipt evidence that Algorithm 6 demands (receipts only grow, so the
   historical evidence persists in the current state);
 * write-once recording of honest multicasts (`echo_once`, `vote_once`,
-  `bind_once`, `seal_once`): an honest payload is the one held in the
-  sender's write-once slot, so an honest process speaks at most one payload
+  `bind_once`, `echo5_once`): an honest payload is the one held in the
+  sender's write-once field, so an honest process speaks at most one payload
   per level — `echo_once` carries Case A, `vote_once` the `VoteWall`
-  counting, `seal_once` the grade exclusivity;
+  counting, `echo5_once` the grade exclusivity;
 * participation (`input_called`, D8): an honest `INPUT` sender has been
   called;
 * the *budget-robust* input-origin clause (`input_orig`): for **every**
@@ -109,7 +109,7 @@ namespace PLTS
 namespace ABA
 namespace GBCA
 
-/-! ### Counting kit: any-payload monotonicity and harvest variants -/
+/-! ### Counting kit: any-payload monotonicity and derivation variants -/
 
 /-- Deliveries only grow the any-payload `VOTE` count. -/
 theorem ImplState.voteCount_le_recvMsg {n : ℕ} (s : ImplState n) (i j : Fin n)
@@ -185,7 +185,7 @@ structure Inv (P : Params) (s : ImplState P.n) : Prop where
   echo_conf : ∀ j b, j ∉ s.F → Msg.echo b ∈ s.sent j →
     P.n - P.f ≤ s.recvCount j (.input b)
   /-- Honest `ECHO` multicasts are recorded in the write-once `sentEcho`
-  slot; in particular an honest process echoes at most one payload. -/
+  field; in particular an honest process echoes at most one payload. -/
   echo_once : ∀ j b, j ∉ s.F → Msg.echo b ∈ s.sent j →
     (s.proc j).sentEcho = some b
   /-- Honest voters hold an input (D8). -/
@@ -194,11 +194,11 @@ structure Inv (P : Params) (s : ImplState P.n) : Prop where
   vote_conf : ∀ j b, j ∉ s.F → Msg.vote (some b) ∈ s.sent j →
     P.n - P.f ≤ s.recvCount j (.echo b)
   /-- Honest `VOTE` multicasts are recorded in the write-once `sentVote`
-  slot; this is the level the `VoteWall` certificate counts. -/
+  field; this is the level the `VoteWall` certificate counts. -/
   vote_once : ∀ j w, j ∉ s.F → Msg.vote w ∈ s.sent j →
     (s.proc j).sentVote = some w
   /-- Honest `BIND` multicasts are recorded in the write-once `sentBind`
-  slot; in particular an honest process multicasts at most one payload. -/
+  field; in particular an honest process multicasts at most one payload. -/
   bind_once : ∀ j w, j ∉ s.F → Msg.bind w ∈ s.sent j →
     (s.proc j).sentBind = some w
   /-- Honest `BIND b` is backed by an `n − f` `VOTE b` receipt quorum. -/
@@ -207,17 +207,17 @@ structure Inv (P : Params) (s : ImplState P.n) : Prop where
   /-- Honest `BIND ⊥` is backed by `n − f` any-payload `VOTE` receipts. -/
   bindBot_conf : ∀ j, j ∉ s.F → Msg.bind none ∈ s.sent j →
     P.n - P.f ≤ s.voteCount j
-  /-- Honest sealers hold an input (D8, one level up). -/
-  seal_input : ∀ j w, j ∉ s.F → Msg.seal w ∈ s.sent j → (s.proc j).input ≠ none
-  /-- Honest `SEAL` multicasts are recorded in the write-once `sentSeal`
-  slot; this is the level that carries the A/C grade exclusivity. -/
-  seal_once : ∀ j w, j ∉ s.F → Msg.seal w ∈ s.sent j →
-    (s.proc j).sentSeal = some w
-  /-- Honest `SEAL b` is backed by an `n − f` `BIND b` receipt quorum. -/
-  seal_conf : ∀ j b, j ∉ s.F → Msg.seal (some b) ∈ s.sent j →
+  /-- Honest `ECHO5` senders hold an input (D8, one level up). -/
+  echo5_input : ∀ j w, j ∉ s.F → Msg.echo5 w ∈ s.sent j → (s.proc j).input ≠ none
+  /-- Honest `ECHO5` multicasts are recorded in the write-once `sentEcho5`
+  field; this is the level that carries the A/C grade exclusivity. -/
+  echo5_once : ∀ j w, j ∉ s.F → Msg.echo5 w ∈ s.sent j →
+    (s.proc j).sentEcho5 = some w
+  /-- Honest `ECHO5 b` is backed by an `n − f` `BIND b` receipt quorum. -/
+  echo5_conf : ∀ j b, j ∉ s.F → Msg.echo5 (some b) ∈ s.sent j →
     P.n - P.f ≤ s.recvCount j (.bind (some b))
-  /-- Honest `SEAL ⊥` is backed by `n − f` any-payload `BIND` receipts. -/
-  sealBot_conf : ∀ j, j ∉ s.F → Msg.seal none ∈ s.sent j →
+  /-- Honest `ECHO5 ⊥` is backed by `n − f` any-payload `BIND` receipts. -/
+  echo5Bot_conf : ∀ j, j ∉ s.F → Msg.echo5 none ∈ s.sent j →
     P.n - P.f ≤ s.bindCount j
   /-- Budget-robust input origin: for every corruption superset `G` within
   the budget, an `INPUT b` multicast outside `G` traces back to an input `b`
@@ -247,15 +247,15 @@ theorem Inv.initial (P : Params) : Inv P (ImplState.initial P.n) where
   bind_once := fun j w _ h => absurd h (by simp [ImplState.initial])
   bind_conf := fun j b _ h => absurd h (by simp [ImplState.initial])
   bindBot_conf := fun j _ h => absurd h (by simp [ImplState.initial])
-  seal_input := fun j w _ h => absurd h (by simp [ImplState.initial])
-  seal_once := fun j w _ h => absurd h (by simp [ImplState.initial])
-  seal_conf := fun j b _ h => absurd h (by simp [ImplState.initial])
-  sealBot_conf := fun j _ h => absurd h (by simp [ImplState.initial])
+  echo5_input := fun j w _ h => absurd h (by simp [ImplState.initial])
+  echo5_once := fun j w _ h => absurd h (by simp [ImplState.initial])
+  echo5_conf := fun j b _ h => absurd h (by simp [ImplState.initial])
+  echo5Bot_conf := fun j _ h => absurd h (by simp [ImplState.initial])
   input_orig := fun b G _ _ j _ h => absurd h (by simp [ImplState.initial])
   input_supp := fun b j _ h => absurd h (by simp [ImplState.initial])
   input_called := fun j b _ h => absurd h (by simp [ImplState.initial])
 
-/-- Harvest (D15): any `f + 1` `INPUT b` receipt count yields the F-blind
+/-- Derivation (D15): any `f + 1` `INPUT b` receipt count yields the F-blind
 genuine-holder support — some honest non-holder sender's `input_supp` clause
 closes, or else every sender is a holder-or-`F`-member and the senders
 themselves witness the count. -/
@@ -285,9 +285,9 @@ private theorem proc_send_ne {s : ImplState P.n} {j : Fin P.n} {p : ProcState}
 
 /-- **Invariant preservation, honest-send schema.** Process `j` updates its
 local state to `p` and multicasts `m`. The hypotheses collect, clause by
-clause, what the new message and the touched slot must satisfy; every frame
+clause, what the new message and the touched field must satisfy; every frame
 condition is discharged here once for all nine send rules (`call`, `relay`,
-`echo`, `voteBit`, `voteBot`, `bindBit`, `bindBot`, `sealBit`, `sealBot`). -/
+`echo`, `voteBit`, `voteBot`, `bindBit`, `bindBot`, `echo5Bit`, `echo5Bot`). -/
 private theorem Inv.send {s : ImplState P.n} (hI : Inv P s) {j : Fin P.n}
     {p : ProcState} {m : Msg}
     (hpne : p.input ≠ none)
@@ -299,17 +299,17 @@ private theorem Inv.send {s : ImplState P.n} (hI : Inv P s) {j : Fin P.n}
     (hBindC : ∀ b, m = .bind (some b) →
       P.n - P.f ≤ s.recvCount j (.vote (some b)))
     (hBindBotC : m = .bind none → P.n - P.f ≤ s.voteCount j)
-    (hSealC : ∀ b, m = .seal (some b) →
+    (hEcho5C : ∀ b, m = .echo5 (some b) →
       P.n - P.f ≤ s.recvCount j (.bind (some b)))
-    (hSealBotC : m = .seal none → P.n - P.f ≤ s.bindCount j)
+    (hEcho5BotC : m = .echo5 none → P.n - P.f ≤ s.bindCount j)
     (hEchoO : ((∀ b, m ≠ .echo b) ∧ p.sentEcho = (s.proc j).sentEcho) ∨
       (∃ b, m = .echo b ∧ p.sentEcho = some b ∧ (s.proc j).sentEcho = none))
     (hVoteO : ((∀ w, m ≠ .vote w) ∧ p.sentVote = (s.proc j).sentVote) ∨
       (∃ w, m = .vote w ∧ p.sentVote = some w ∧ (s.proc j).sentVote = none))
     (hBindO : ((∀ w, m ≠ .bind w) ∧ p.sentBind = (s.proc j).sentBind) ∨
       (∃ w, m = .bind w ∧ p.sentBind = some w ∧ (s.proc j).sentBind = none))
-    (hSealO : ((∀ w, m ≠ .seal w) ∧ p.sentSeal = (s.proc j).sentSeal) ∨
-      (∃ w, m = .seal w ∧ p.sentSeal = some w ∧ (s.proc j).sentSeal = none)) :
+    (hEcho5O : ((∀ w, m ≠ .echo5 w) ∧ p.sentEcho5 = (s.proc j).sentEcho5) ∨
+      (∃ w, m = .echo5 w ∧ p.sentEcho5 = some w ∧ (s.proc j).sentEcho5 = none)) :
     Inv P ((s.setProc j p).mcast j m) := by
   have htrans : ∀ (b : Bool) (k : Fin P.n), (s.proc k).input = some b →
       (((s.setProc j p).mcast j m).proc k).input = some b := by
@@ -411,7 +411,7 @@ private theorem Inv.send {s : ImplState P.n} (hI : Inv P s) {j : Fin P.n}
     rcases ImplState.mem_mcast_sent.mp hm' with ⟨rfl, heq⟩ | hold
     · simpa using hBindBotC heq.symm
     · simpa using hI.bindBot_conf j' hF hold
-  · -- seal_input
+  · -- echo5_input
     intro j' w hF hm'
     rcases ImplState.mem_mcast_sent.mp hm' with ⟨rfl, _⟩ | hold
     · rw [ImplState.mcast_proc, ImplState.setProc_proc_self]
@@ -421,12 +421,12 @@ private theorem Inv.send {s : ImplState P.n} (hI : Inv P s) {j : Fin P.n}
         rw [ImplState.mcast_proc, ImplState.setProc_proc_self]
         exact hpne
       · rw [proc_send_ne hkj]
-        exact hI.seal_input j' w hF hold
-  · -- seal_once
+        exact hI.echo5_input j' w hF hold
+  · -- echo5_once
     intro j' w hF hm'
     rcases ImplState.mem_mcast_sent.mp hm' with ⟨rfl, heq⟩ | hold
     · rw [ImplState.mcast_proc, ImplState.setProc_proc_self]
-      rcases hSealO with ⟨hne, _⟩ | ⟨w₀, hm0, hpe, _⟩
+      rcases hEcho5O with ⟨hne, _⟩ | ⟨w₀, hm0, hpe, _⟩
       · exact absurd heq.symm (hne w)
       · rw [hm0] at heq
         injection heq with hw
@@ -434,22 +434,22 @@ private theorem Inv.send {s : ImplState P.n} (hI : Inv P s) {j : Fin P.n}
     · by_cases hkj : j' = j
       · subst hkj
         rw [ImplState.mcast_proc, ImplState.setProc_proc_self]
-        have hbase := hI.seal_once j' w hF hold
-        rcases hSealO with ⟨_, hpe⟩ | ⟨w₀, _, _, hnone⟩
+        have hbase := hI.echo5_once j' w hF hold
+        rcases hEcho5O with ⟨_, hpe⟩ | ⟨w₀, _, _, hnone⟩
         · rw [hpe]; exact hbase
         · rw [hnone] at hbase; exact absurd hbase (by simp)
       · rw [proc_send_ne hkj]
-        exact hI.seal_once j' w hF hold
-  · -- seal_conf
+        exact hI.echo5_once j' w hF hold
+  · -- echo5_conf
     intro j' b hF hm'
     rcases ImplState.mem_mcast_sent.mp hm' with ⟨rfl, heq⟩ | hold
-    · simpa using hSealC b heq.symm
-    · simpa using hI.seal_conf j' b hF hold
-  · -- sealBot_conf
+    · simpa using hEcho5C b heq.symm
+    · simpa using hI.echo5_conf j' b hF hold
+  · -- echo5Bot_conf
     intro j' hF hm'
     rcases ImplState.mem_mcast_sent.mp hm' with ⟨rfl, heq⟩ | hold
-    · simpa using hSealBotC heq.symm
-    · simpa using hI.sealBot_conf j' hF hold
+    · simpa using hEcho5BotC heq.symm
+    · simpa using hI.echo5Bot_conf j' hF hold
   · -- input_orig
     intro b G hFG hGc j' hjG hm'
     rcases ImplState.mem_mcast_sent.mp hm' with ⟨rfl, heq⟩ | hold
@@ -497,7 +497,7 @@ private theorem Inv.send {s : ImplState P.n} (hI : Inv P s) {j : Fin P.n}
         exact hI.input_called j' b hF hold
 
 /-- **Invariant preservation, local-frame schema.** A `setProc` that keeps
-the input and all four write-once slots (the return rules, which flip only
+the input and all four write-once fields (the return rules, which flip only
 `returned`) preserves every clause. -/
 private theorem Inv.setProc_frame {s : ImplState P.n} (hI : Inv P s)
     {id : Fin P.n} {p : ProcState}
@@ -505,7 +505,7 @@ private theorem Inv.setProc_frame {s : ImplState P.n} (hI : Inv P s)
     (h2 : p.sentEcho = (s.proc id).sentEcho)
     (h3 : p.sentVote = (s.proc id).sentVote)
     (h4 : p.sentBind = (s.proc id).sentBind)
-    (h5 : p.sentSeal = (s.proc id).sentSeal) :
+    (h5 : p.sentEcho5 = (s.proc id).sentEcho5) :
     Inv P (s.setProc id p) := by
   have hin : ∀ k, ((s.setProc id p).proc k).input = (s.proc k).input := by
     intro k
@@ -527,15 +527,15 @@ private theorem Inv.setProc_frame {s : ImplState P.n} (hI : Inv P s)
     by_cases hk : k = id
     · subst hk; rw [ImplState.setProc_proc_self, h4]
     · rw [ImplState.setProc_proc_ne _ _ _ hk]
-  have hsea : ∀ k, ((s.setProc id p).proc k).sentSeal = (s.proc k).sentSeal := by
+  have hsea : ∀ k, ((s.setProc id p).proc k).sentEcho5 = (s.proc k).sentEcho5 := by
     intro k
     by_cases hk : k = id
     · subst hk; rw [ImplState.setProc_proc_self, h5]
     · rw [ImplState.setProc_proc_ne _ _ _ hk]
   refine ⟨hI.F_card, by simpa using hI.recv_sub, by simpa using hI.echo_conf, ?_, ?_,
     by simpa using hI.vote_conf, ?_, ?_, by simpa using hI.bind_conf,
-    by simpa using hI.bindBot_conf, ?_, ?_, by simpa using hI.seal_conf,
-    by simpa using hI.sealBot_conf, ?_, ?_, ?_⟩
+    by simpa using hI.bindBot_conf, ?_, ?_, by simpa using hI.echo5_conf,
+    by simpa using hI.echo5Bot_conf, ?_, ?_, ?_⟩
   · intro j' b hF hm'
     rw [hech j']
     exact hI.echo_once j' b hF hm'
@@ -550,10 +550,10 @@ private theorem Inv.setProc_frame {s : ImplState P.n} (hI : Inv P s)
     exact hI.bind_once j' w hF hm'
   · intro j' w hF hm'
     rw [hin j']
-    exact hI.seal_input j' w hF hm'
+    exact hI.echo5_input j' w hF hm'
   · intro j' w hF hm'
     rw [hsea j']
-    exact hI.seal_once j' w hF hm'
+    exact hI.echo5_once j' w hF hm'
   · intro b G hFG hGc j' hjG hm'
     obtain ⟨m0, hmG, hmi⟩ := hI.input_orig b G hFG hGc j' hjG hm'
     exact ⟨m0, hmG, by rw [hin m0]; exact hmi⟩
@@ -596,8 +596,8 @@ theorem Inv.step {r : ℕ} {s : ImplState P.n} {l : Lab P.n}
     subst hs'
     refine ⟨hI.F_card, ?_, ?_, by simpa using hI.echo_once,
       by simpa using hI.vote_input, ?_, by simpa using hI.vote_once,
-      by simpa using hI.bind_once, ?_, ?_, by simpa using hI.seal_input,
-      by simpa using hI.seal_once, ?_, ?_, by simpa using hI.input_orig,
+      by simpa using hI.bind_once, ?_, ?_, by simpa using hI.echo5_input,
+      by simpa using hI.echo5_once, ?_, ?_, by simpa using hI.input_orig,
       by simpa [ImplSupp] using hI.input_supp, by simpa using hI.input_called⟩
     · intro i' j' m' hm'
       rcases ImplState.mem_recvMsg_recv.mp hm' with ⟨rfl, rfl, rfl⟩ | hold
@@ -616,10 +616,10 @@ theorem Inv.step {r : ℕ} {s : ImplState P.n} {l : Lab P.n}
       exact le_trans (hI.bindBot_conf j' hF hm')
         (ImplState.voteCount_le_recvMsg s i j m j')
     · intro j' b hF hm'
-      exact le_trans (hI.seal_conf j' b hF hm')
+      exact le_trans (hI.echo5_conf j' b hF hm')
         (ImplState.recvCount_le_recvMsg s i j m j' _)
     · intro j' hF hm'
-      exact le_trans (hI.sealBot_conf j' hF hm')
+      exact le_trans (hI.echo5Bot_conf j' hF hm')
         (ImplState.bindCount_le_recvMsg s i j m j')
   | relay j b hin hcnt hsend =>
     rw [PMF.mem_support_pure_iff] at hs'
@@ -693,7 +693,7 @@ theorem Inv.step {r : ℕ} {s : ImplState P.n} {l : Lab P.n}
       (Or.inl ⟨fun w heq => by simp at heq, rfl⟩)
       (Or.inr ⟨none, rfl, rfl, hsend⟩)
       (Or.inl ⟨fun w heq => by simp at heq, rfl⟩)
-  | sealBit j b hin _hlv hcnt hsend =>
+  | echo5Bit j b hin _hlv hcnt hsend =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     refine hI.send hin (fun _ hb => hb) (fun b' heq => by simp at heq)
@@ -706,7 +706,7 @@ theorem Inv.step {r : ℕ} {s : ImplState P.n} {l : Lab P.n}
       (Or.inl ⟨fun w heq => by simp at heq, rfl⟩)
       (Or.inl ⟨fun w heq => by simp at heq, rfl⟩)
       (Or.inr ⟨some b, rfl, rfl, hsend⟩)
-  | sealBot j hin _hlv _hnot hcnt hval hsend =>
+  | echo5Bot j hin _hlv _hnot hcnt hval hsend =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     refine hI.send hin (fun _ hb => hb) (fun b' heq => by simp at heq)
@@ -740,10 +740,10 @@ theorem Inv.step {r : ℕ} {s : ImplState P.n} {l : Lab P.n}
     · exact fun j' w hF hm' => hI.bind_once j' w hF (hs j' _ hF hm')
     · exact fun j' b hF hm' => hI.bind_conf j' b hF (hs j' _ hF hm')
     · exact fun j' hF hm' => hI.bindBot_conf j' hF (hs j' _ hF hm')
-    · exact fun j' w hF hm' => hI.seal_input j' w hF (hs j' _ hF hm')
-    · exact fun j' w hF hm' => hI.seal_once j' w hF (hs j' _ hF hm')
-    · exact fun j' b hF hm' => hI.seal_conf j' b hF (hs j' _ hF hm')
-    · exact fun j' hF hm' => hI.sealBot_conf j' hF (hs j' _ hF hm')
+    · exact fun j' w hF hm' => hI.echo5_input j' w hF (hs j' _ hF hm')
+    · exact fun j' w hF hm' => hI.echo5_once j' w hF (hs j' _ hF hm')
+    · exact fun j' b hF hm' => hI.echo5_conf j' b hF (hs j' _ hF hm')
+    · exact fun j' hF hm' => hI.echo5Bot_conf j' hF (hs j' _ hF hm')
     · exact fun b G hFG hGc j' hjG hm' =>
         hI.input_orig b G hFG hGc j' hjG (hsentG G hFG j' _ hjG hm')
     · exact fun b j' hF hm' => hI.input_supp b j' hF (hs j' _ hF hm')
@@ -807,19 +807,19 @@ theorem Inv.step {r : ℕ} {s : ImplState P.n} {l : Lab P.n}
     · intro j' w hF hm'
       rw [ImplState.corrupt_sent] at hm'
       rw [ImplState.corrupt_proc]
-      exact hI.seal_input j' w (hFtr j' hF) hm'
+      exact hI.echo5_input j' w (hFtr j' hF) hm'
     · intro j' w hF hm'
       rw [ImplState.corrupt_sent] at hm'
       rw [ImplState.corrupt_proc]
-      exact hI.seal_once j' w (hFtr j' hF) hm'
+      exact hI.echo5_once j' w (hFtr j' hF) hm'
     · intro j' b hF hm'
       rw [ImplState.corrupt_sent] at hm'
       rw [ImplState.corrupt_recvCount]
-      exact hI.seal_conf j' b (hFtr j' hF) hm'
+      exact hI.echo5_conf j' b (hFtr j' hF) hm'
     · intro j' hF hm'
       rw [ImplState.corrupt_sent] at hm'
       rw [ImplState.corrupt_bindCount]
-      exact hI.sealBot_conf j' (hFtr j' hF) hm'
+      exact hI.echo5Bot_conf j' (hFtr j' hF) hm'
     · intro b G hFG hGc j' hjG hm'
       rw [ImplState.corrupt_sent] at hm'
       obtain ⟨m0, hmG, hmi⟩ :=
@@ -840,7 +840,7 @@ theorem Inv.step {r : ℕ} {s : ImplState P.n} {l : Lab P.n}
       rw [ImplState.corrupt_proc]
       exact hI.input_called j' b (hFtr j' hF) hm'
 
-/-! ### The kill certificates -/
+/-! ### The exclude certificates -/
 
 /-- Case A carrier: some process holds an `n − f` `ECHO v` receipt quorum.
 The certificate is `F`-blind and receipt-monotone, hence stable under `fail`
@@ -849,7 +849,7 @@ and under every implementation step, and at most one bit can carry it
 def EchoQuorum (P : Params) (s : ImplState P.n) (v : Bool) : Prop :=
   ∃ i, P.n - P.f ≤ s.recvCount i (.echo v)
 
-/-- Harvest from `f + 1` `VOTE v` receipts: they contain an honest `VOTE v`
+/-- Derivation from `f + 1` `VOTE v` receipts: they contain an honest `VOTE v`
 sender, whose `vote_conf` receipt quorum is the certificate. -/
 theorem echoQuorum_of_vote_receipts {s : ImplState P.n} (hI : Inv P s)
     {i : Fin P.n} {v : Bool} (h : P.f + 1 ≤ s.recvCount i (.vote (some v))) :
@@ -883,18 +883,18 @@ theorem echoQuorum_unique {s : ImplState P.n} (hI : Inv P s) {v v' : Bool}
   exact Option.some.inj e2
 
 /-- Case B carrier: an `n − f` wall of processes each of which is corrupted
-or has committed its write-once `VOTE` slot to a payload other than
+or has committed its write-once `VOTE` field to a payload other than
 `some b`. -/
 def VoteWall (P : Params) (s : ImplState P.n) (b : Bool) : Prop :=
   P.n - P.f ≤ (Finset.univ.filter
     (fun j => j ∈ s.F ∨ ∃ w, (s.proc j).sentVote = some w ∧ w ≠ some b)).card
 
-/-- The kill certificate licensing `b ∈ dead` on the specification side:
+/-- The exclude certificate licensing `b ∈ excluded` on the specification side:
 either the opposite bit owns the (unique) `n − f` `ECHO` receipt quorum, or
 a `VoteWall` blocks `b` at the `VOTE` level. Both disjuncts make an `n − f`
-`VOTE b` receipt quorum — the sole gateway to any grade-≥1 evidence for `b`
+`VOTE b` receipt quorum — the only source of any grade-≥1 evidence for `b`
 — impossible forever. -/
-def DeadCert (P : Params) (s : ImplState P.n) (b : Bool) : Prop :=
+def ExcludedCert (P : Params) (s : ImplState P.n) (b : Bool) : Prop :=
   EchoQuorum P s (!b) ∨ VoteWall P s b
 
 /-- The counting core: two `n − f`-sized subsets of `Fin n` meeting only
@@ -913,11 +913,11 @@ theorem no_disjoint_quorums {Q D F : Finset (Fin P.n)}
   omega
 
 /-- **Certificate monotonicity**: receipts only grow, `sentVote` is
-write-once, `F` only grows — so a kill certificate never expires. -/
-theorem DeadCert.mono {s s' : ImplState P.n} {b : Bool}
+write-once, `F` only grows — so an exclusion certificate never expires. -/
+theorem ExcludedCert.mono {s s' : ImplState P.n} {b : Bool}
     (hrecv : ∀ i j m, m ∈ s.recv i j → m ∈ s'.recv i j)
     (hvote : ∀ j w, (s.proc j).sentVote = some w → (s'.proc j).sentVote = some w)
-    (hF : s.F ⊆ s'.F) : DeadCert P s b → DeadCert P s' b := by
+    (hF : s.F ⊆ s'.F) : ExcludedCert P s b → ExcludedCert P s' b := by
   rintro (⟨i, hi⟩ | hw)
   · refine Or.inl ⟨i, le_trans hi (Finset.card_le_card fun k hk => ?_)⟩
     rw [Finset.mem_filter] at hk ⊢
@@ -929,13 +929,13 @@ theorem DeadCert.mono {s s' : ImplState P.n} {b : Bool}
     · exact Or.inl (hF hkF)
     · exact Or.inr ⟨w, hvote k w hsv, hne⟩
 
-/-- `DeadCert` is stable under an honest send that respects the write-once
-`sentVote` slot. -/
-private theorem deadCert_send {s : ImplState P.n} {j : Fin P.n} {p : ProcState}
+/-- `ExcludedCert` is stable under an honest send that respects the write-once
+`sentVote` field. -/
+private theorem excludedCert_send {s : ImplState P.n} {j : Fin P.n} {p : ProcState}
     {m : Msg} (hvote : ∀ w, (s.proc j).sentVote = some w → p.sentVote = some w)
-    {b : Bool} (h : DeadCert P s b) :
-    DeadCert P ((s.setProc j p).mcast j m) b :=
-  DeadCert.mono (s := s) (fun _ _ _ hm => by simpa using hm)
+    {b : Bool} (h : ExcludedCert P s b) :
+    ExcludedCert P ((s.setProc j p).mcast j m) b :=
+  ExcludedCert.mono (s := s) (fun _ _ _ hm => by simpa using hm)
     (fun k w hk => by
       by_cases hkj : k = j
       · subst hkj
@@ -945,11 +945,11 @@ private theorem deadCert_send {s : ImplState P.n} {j : Fin P.n} {p : ProcState}
         exact hk)
     (Finset.Subset.refl _) h
 
-/-- `DeadCert` is stable under a return (only `returned` flips). -/
-private theorem deadCert_ret {s : ImplState P.n} {id : Fin P.n} {b : Bool}
-    (h : DeadCert P s b) :
-    DeadCert P (s.setProc id { s.proc id with returned := true }) b :=
-  DeadCert.mono (s := s) (fun _ _ _ hm => by simpa using hm)
+/-- `ExcludedCert` is stable under a return (only `returned` flips). -/
+private theorem excludedCert_ret {s : ImplState P.n} {id : Fin P.n} {b : Bool}
+    (h : ExcludedCert P s b) :
+    ExcludedCert P (s.setProc id { s.proc id with returned := true }) b :=
+  ExcludedCert.mono (s := s) (fun _ _ _ hm => by simpa using hm)
     (fun k w hk => by
       by_cases hkj : k = id
       · subst hkj
@@ -959,7 +959,7 @@ private theorem deadCert_ret {s : ImplState P.n} {id : Fin P.n} {b : Bool}
         exact hk)
     (Finset.Subset.refl _) h
 
-/-! ### The harvest chains -/
+/-! ### The derivation chains -/
 
 /-- `f + 1` `BIND v` receipts exceed the corruption budget, so they contain
 an honest binder, whose `bind_conf` wait-condition is an honest `n − f`
@@ -972,23 +972,23 @@ theorem voteQuorum_of_bind_receipts {s : ImplState P.n} (hI : Inv P s)
   obtain ⟨k, hkF, hkr⟩ := ImplState.exists_sender_notMem s.F h'
   exact ⟨k, hkF, hI.bind_conf k v hkF (hI.recv_sub i k _ hkr)⟩
 
-/-- An `n − f` `SEAL v` receipt quorum contains an honest sealer, whose
-`seal_conf` wait-condition is an honest `n − f` `BIND v` receipt quorum. -/
-theorem bind_receipts_of_seal_quorum {s : ImplState P.n} (hI : Inv P s)
-    {i : Fin P.n} {v : Bool} (h : P.n - P.f ≤ s.recvCount i (.seal (some v))) :
+/-- An `n − f` `ECHO5 v` receipt quorum contains an honest `ECHO5` sender, whose
+`echo5_conf` wait-condition is an honest `n − f` `BIND v` receipt quorum. -/
+theorem bind_receipts_of_echo5_quorum {s : ImplState P.n} (hI : Inv P s)
+    {i : Fin P.n} {v : Bool} (h : P.n - P.f ≤ s.recvCount i (.echo5 (some v))) :
     ∃ k, k ∉ s.F ∧ P.n - P.f ≤ s.recvCount k (.bind (some v)) := by
   have hFc := hI.F_card
   have hfn := P.f_lt_n_sub_f
-  have h' : s.F.card < s.recvCount i (Msg.seal (some v)) := by omega
+  have h' : s.F.card < s.recvCount i (Msg.echo5 (some v)) := by omega
   obtain ⟨k, hkF, hkr⟩ := ImplState.exists_sender_notMem s.F h'
-  exact ⟨k, hkF, hI.seal_conf k v hkF (hI.recv_sub i k _ hkr)⟩
+  exact ⟨k, hkF, hI.echo5_conf k v hkF (hI.recv_sub i k _ hkr)⟩
 
-/-- **Availability, kill side**: any `n − f` `VOTE v` receipt quorum kills
+/-- **Availability, exclude side**: any `n − f` `VOTE v` receipt quorum excludes
 the opposite bit — the quorum's members are each corrupted or committed
 (write-once) to `some v`, so the quorum itself is a `VoteWall` for `!v`. -/
-theorem deadCert_of_voteQuorum {s : ImplState P.n} (hI : Inv P s)
+theorem excludedCert_of_voteQuorum {s : ImplState P.n} (hI : Inv P s)
     {i : Fin P.n} {v : Bool} (h : P.n - P.f ≤ s.recvCount i (.vote (some v))) :
-    DeadCert P s (!v) := by
+    ExcludedCert P s (!v) := by
   refine Or.inr (le_trans h (Finset.card_le_card fun k hk => ?_))
   rw [Finset.mem_filter] at hk ⊢
   refine ⟨hk.1, ?_⟩
@@ -1000,12 +1000,12 @@ theorem deadCert_of_voteQuorum {s : ImplState P.n} (hI : Inv P s)
     cases v <;> simp at hc
 
 /-- **Availability, live side**: an `n − f` `VOTE v` receipt quorum refutes
-both certificate cases for `v` itself — against Case A the harvested
+both certificate cases for `v` itself — against Case A the derived
 `ECHO v` quorum meets the `ECHO (!v)` quorum in an honest double-echoer, and
 against Case B the quorum meets the wall only inside `F`. -/
-theorem not_deadCert_of_voteQuorum {s : ImplState P.n} (hI : Inv P s)
+theorem not_excludedCert_of_voteQuorum {s : ImplState P.n} (hI : Inv P s)
     {i : Fin P.n} {v : Bool} (h : P.n - P.f ≤ s.recvCount i (.vote (some v))) :
-    ¬ DeadCert P s v := by
+    ¬ ExcludedCert P s v := by
   have hfn := P.f_lt_n_sub_f
   rintro (hq | hw)
   · have hv : EchoQuorum P s v := echoQuorum_of_vote_receipts hI (i := i) (by omega)
@@ -1022,17 +1022,17 @@ theorem not_deadCert_of_voteQuorum {s : ImplState P.n} (hI : Inv P s)
       rw [hsv] at hcommit
       exact hne (Option.some.inj hcommit)
 
-/-- **Availability at the `C`-return**: an `n − f` `SEAL ⊥` receipt quorum
-certifies *some* dead bit. Classical dichotomy on "an honest bit-voter
+/-- **Availability at the `C`-return**: an `n − f` `ECHO5 ⊥` receipt quorum
+certifies *some* excluded bit. Classical dichotomy on "an honest bit-voter
 exists somewhere": if yes, its `vote_conf` receipt quorum is Case A for the
-opposite bit; if no, the quorum's honest sealer holds `n − f` any-`BIND`
+opposite bit; if no, the quorum's honest `ECHO5` sender holds `n − f` any-`BIND`
 receipts, its honest `BIND` sender can only have sent `BIND ⊥` (a bit `BIND`
 needs an honest bit-voter), and that sender's `bindBot_conf` receipts pin an
 `n − f` set of processes each corrupted or committed to `VOTE ⊥` — a
 `VoteWall` for both bits at once. -/
-theorem deadCert_of_sealBot_quorum {s : ImplState P.n} (hI : Inv P s)
-    {i : Fin P.n} (h : P.n - P.f ≤ s.recvCount i (.seal none)) :
-    ∃ b, DeadCert P s b := by
+theorem excludedCert_of_echo5Bot_quorum {s : ImplState P.n} (hI : Inv P s)
+    {i : Fin P.n} (h : P.n - P.f ≤ s.recvCount i (.echo5 none)) :
+    ∃ b, ExcludedCert P s b := by
   classical
   have hFc := hI.F_card
   have hfn := P.f_lt_n_sub_f
@@ -1041,10 +1041,10 @@ theorem deadCert_of_sealBot_quorum {s : ImplState P.n} (hI : Inv P s)
     refine ⟨!b, Or.inl ?_⟩
     rw [Bool.not_not]
     exact ⟨k, hI.vote_conf k b hkF hks⟩
-  · have h1 : s.F.card < s.recvCount i (Msg.seal none) := by omega
+  · have h1 : s.F.card < s.recvCount i (Msg.echo5 none) := by omega
     obtain ⟨p, hpF, hpr⟩ := ImplState.exists_sender_notMem s.F h1
     have hbc : P.n - P.f ≤ s.bindCount p :=
-      hI.sealBot_conf p hpF (hI.recv_sub i p _ hpr)
+      hI.echo5Bot_conf p hpF (hI.recv_sub i p _ hpr)
     have h2 : s.F.card < s.bindCount p := by omega
     obtain ⟨k, w, hkF, hkr⟩ := ImplState.exists_bind_sender_notMem s.F h2
     have hksent := hI.recv_sub p k _ hkr
@@ -1078,8 +1078,8 @@ theorem deadCert_of_sealBot_quorum {s : ImplState P.n} (hI : Inv P s)
 /-- The simulation relation: the concrete invariant, the abstraction map for
 the fields the protocol itself holds (spec `call` = concrete input, spec
 `ret` = concrete return flags, spec `F` = concrete `F`), and receipt evidence
-for the two fields it does not. `dead_cert` bounds `dead` from above — a kill
-certificate for every dead bit — and never from below. -/
+for the two fields it does not. `excluded_cert` bounds `excluded` from above — an exclusion
+certificate for every excluded bit — and never from below. -/
 structure InstRel (P : Params) (s : ImplState P.n) (t : SpecState P.n) : Prop where
   /-- The concrete inductive invariant. -/
   inv : Inv P s
@@ -1089,16 +1089,16 @@ structure InstRel (P : Params) (s : ImplState P.n) (t : SpecState P.n) : Prop wh
   ret_eq : ∀ id, t.ret id = (s.proc id).returned
   /-- The corrupted sets agree. -/
   F_eq : t.F = s.F
-  /-- Every dead bit carries a monotone kill certificate. -/
-  dead_cert : ∀ b, b ∈ t.dead → DeadCert P s b
-  /-- An `A`-side grade lock is backed by an `n − f` `SEAL v` receipt quorum
+  /-- Every excluded bit carries a monotone exclude certificate. -/
+  excluded_cert : ∀ b, b ∈ t.excluded → ExcludedCert P s b
+  /-- An `A`-side grade lock is backed by an `n − f` `ECHO5 v` receipt quorum
   for some bit `v`. -/
   gradeA_ev : t.grade = some true →
-    ∃ v i, P.n - P.f ≤ s.recvCount i (.seal (some v))
-  /-- A `C`-side grade lock is backed by an `n − f` `SEAL ⊥` receipt
+    ∃ v i, P.n - P.f ≤ s.recvCount i (.echo5 (some v))
+  /-- A `C`-side grade lock is backed by an `n − f` `ECHO5 ⊥` receipt
   quorum. -/
   gradeC_ev : t.grade = some false →
-    ∃ i, P.n - P.f ≤ s.recvCount i (.seal none)
+    ∃ i, P.n - P.f ≤ s.recvCount i (.echo5 none)
 
 /-- The simulation relation of the round-`r` instance (the round index is
 phantom: every round runs the same protocol). -/
@@ -1112,13 +1112,13 @@ theorem instRel_init (P : Params) (r : ℕ) :
   call_eq := fun _ => rfl
   ret_eq := fun _ => rfl
   F_eq := rfl
-  dead_cert := fun b hb => absurd hb (Finset.notMem_empty b)
+  excluded_cert := fun b hb => absurd hb (Finset.notMem_empty b)
   gradeA_ev := fun h => absurd h (by simp [SpecState.initial])
   gradeC_ev := fun h => absurd h (by simp [SpecState.initial])
 
 /-! ### Deriving the spec guards -/
 
-/-- D15 harvest at `retB`/`retC`: `|Valid| > 1` evidence yields the
+/-- D15 derivation at `retB`/`retC`: `|Valid| > 1` evidence yields the
 `f + 1` F-blind genuine-holder support for either bit — its `n − f ≥ f + 1`
 `INPUT` receipt quorum for that bit sits at the returner itself. -/
 theorem suppI_of_valid {s : ImplState P.n} (hI : Inv P s)
@@ -1140,7 +1140,7 @@ theorem InstRel.spec_supp {s : ImplState P.n} {t : SpecState P.n}
   rw [hR.call_eq, hR.F_eq]
   exact hk.2
 
-/-- D8 quorum harvest: any `n − f` receipt quorum of a message whose honest
+/-- D8 quorum derivation: any `n − f` receipt quorum of a message whose honest
 senders must hold an input yields the spec's call quorum; corrupted senders
 are absorbed into the `∪ F`. -/
 theorem quorum_of_msg_quorum {s : ImplState P.n} {t : SpecState P.n}
@@ -1173,103 +1173,103 @@ theorem bindUnset_guards {s : ImplState P.n} {t : SpecState P.n}
     (fun j hj hm' => hR.inv.input_called j v hj hm') hm, ?_⟩
   exact hR.spec_supp (hR.inv.supp_of_input_receipts (le_trans (by omega) hm))
 
-/-- A/C-exclusivity, `A`-side: an `n − f` `SEAL v` receipt quorum rules out
-a `C`-side grade lock (the two `SEAL` quorums would intersect in an honest
-process with two different `SEAL` payloads, against `seal_once`). -/
-theorem grade_ne_false_of_seal_quorum {s : ImplState P.n} {t : SpecState P.n}
+/-- A/C-exclusivity, `A`-side: an `n − f` `ECHO5 v` receipt quorum rules out
+a `C`-side grade lock (the two `ECHO5` quorums would intersect in an honest
+process with two different `ECHO5` payloads, against `echo5_once`). -/
+theorem grade_ne_false_of_echo5_quorum {s : ImplState P.n} {t : SpecState P.n}
     (hR : InstRel P s t) {id : Fin P.n} {v : Bool}
-    (hcnt : P.n - P.f ≤ s.recvCount id (.seal (some v))) :
+    (hcnt : P.n - P.f ≤ s.recvCount id (.echo5 (some v))) :
     t.grade ≠ some false := by
   intro hg
   obtain ⟨i', hc⟩ := hR.gradeC_ev hg
   obtain ⟨j, hjF, hj1, hj2⟩ := ImplState.exists_honest_recv₂ hR.inv.F_card hcnt hc
-  have e1 := hR.inv.seal_once j (some v) hjF (hR.inv.recv_sub id j _ hj1)
-  have e2 := hR.inv.seal_once j none hjF (hR.inv.recv_sub i' j _ hj2)
+  have e1 := hR.inv.echo5_once j (some v) hjF (hR.inv.recv_sub id j _ hj1)
+  have e2 := hR.inv.echo5_once j none hjF (hR.inv.recv_sub i' j _ hj2)
   rw [e1] at e2
   exact absurd (Option.some.inj e2) (by simp)
 
-/-- A/C-exclusivity, `C`-side: an `n − f` `SEAL ⊥` receipt quorum rules out
+/-- A/C-exclusivity, `C`-side: an `n − f` `ECHO5 ⊥` receipt quorum rules out
 an `A`-side grade lock. -/
-theorem grade_ne_true_of_sealBot_quorum {s : ImplState P.n} {t : SpecState P.n}
+theorem grade_ne_true_of_echo5Bot_quorum {s : ImplState P.n} {t : SpecState P.n}
     (hR : InstRel P s t) {id : Fin P.n}
-    (hcnt : P.n - P.f ≤ s.recvCount id (.seal none)) :
+    (hcnt : P.n - P.f ≤ s.recvCount id (.echo5 none)) :
     t.grade ≠ some true := by
   intro hg
   obtain ⟨v', i', hc⟩ := hR.gradeA_ev hg
   obtain ⟨j, hjF, hj1, hj2⟩ := ImplState.exists_honest_recv₂ hR.inv.F_card hc hcnt
-  have e1 := hR.inv.seal_once j (some v') hjF (hR.inv.recv_sub i' j _ hj1)
-  have e2 := hR.inv.seal_once j none hjF (hR.inv.recv_sub id j _ hj2)
+  have e1 := hR.inv.echo5_once j (some v') hjF (hR.inv.recv_sub i' j _ hj1)
+  have e2 := hR.inv.echo5_once j none hjF (hR.inv.recv_sub id j _ hj2)
   rw [e1] at e2
   exact absurd (Option.some.inj e2) (by simp)
 
-/-! ### Answering a return by a kill burst -/
+/-! ### Answering a return by an exclusion run -/
 
 /-- A `Finset Bool` that omits both `v` and `!v` omits everything. -/
-theorem dead_empty_of_both {d : Finset Bool} {v : Bool}
+theorem excluded_empty_of_both {d : Finset Bool} {v : Bool}
     (h1 : v ∉ d) (h2 : (!v) ∉ d) : d = ∅ := by
   ext b; cases b <;> cases v <;> simp_all
 
-/-- `bindUnset (!v) ; retA v` from an all-alive state (`dead = ∅`, the
+/-- `bindUnset (!v) ; retA v` from an all-alive state (`excluded = ∅`, the
 `bindUnset` guard). The `bindUnset (!v)` support guard reads `some (!(!v))`;
 `Bool.not_not` rewrites it to `hw`'s `some v`. -/
-theorem killThenRetA_burst {r : ℕ} {t : SpecState P.n} {id : Fin P.n} {v : Bool}
+theorem excludeThenRetA_run {r : ℕ} {t : SpecState P.n} {id : Fin P.n} {v : Bool}
     (hq : t.quorum P)
     (hw : P.f + 1 ≤ (Finset.univ.filter
       (fun k => t.call k = some v ∨ k ∈ t.F)).card)
-    (hlive : v ∉ t.dead) (hd0 : t.dead = ∅)
+    (hlive : v ∉ t.excluded) (hd0 : t.excluded = ∅)
     (hg : t.grade = none ∨ t.grade = some true)
     (hr : t.ret id = false) :
     (specInst P r).weakLStep t (.retG r id (.A v))
-      { t with dead := insert (!v) t.dead, grade := some true,
+      { t with excluded := insert (!v) t.excluded, grade := some true,
                ret := Function.update t.ret id true } := by
-  have h1 : (specInst P r).LStep t Silent.τ { t with dead := insert (!v) t.dead } :=
+  have h1 : (specInst P r).LStep t Silent.τ { t with excluded := insert (!v) t.excluded } :=
     Step.bindUnset t (!v) hq (by simpa only [Bool.not_not] using hw) hd0
-  have h2 : (specInst P r).LStep { t with dead := insert (!v) t.dead }
+  have h2 : (specInst P r).LStep { t with excluded := insert (!v) t.excluded }
       (.retG r id (.A v))
-      { t with dead := insert (!v) t.dead, grade := some true,
+      { t with excluded := insert (!v) t.excluded, grade := some true,
                ret := Function.update t.ret id true } := by
-    refine Step.retA { t with dead := insert (!v) t.dead } id v ?_
-      (Finset.mem_insert_self (!v) t.dead) hg hr
+    refine Step.retA { t with excluded := insert (!v) t.excluded } id v ?_
+      (Finset.mem_insert_self (!v) t.excluded) hg hr
     rw [Finset.mem_insert]
     rintro (hv | hv)
     · cases v <;> exact absurd hv (by decide)
     · exact hlive hv
   exact weakLStep_tauThen h1 h2 (by simp)
 
-/-- `bindUnset (!v) ; retB v`: the same burst with the dissent count in
-place of the grade latch. -/
-theorem killThenRetB_burst {r : ℕ} {t : SpecState P.n} {id : Fin P.n} {v : Bool}
+/-- `bindUnset (!v) ; retB v`: the same run with the dissent count in
+place of the grade guard. -/
+theorem excludeThenRetB_run {r : ℕ} {t : SpecState P.n} {id : Fin P.n} {v : Bool}
     (hq : t.quorum P)
     (hw : P.f + 1 ≤ (Finset.univ.filter
       (fun k => t.call k = some v ∨ k ∈ t.F)).card)
-    (hlive : v ∉ t.dead) (hd0 : t.dead = ∅)
+    (hlive : v ∉ t.excluded) (hd0 : t.excluded = ∅)
     (hd : P.f + 1 ≤ (Finset.univ.filter
       (fun k => t.call k = some (!v) ∨ k ∈ t.F)).card)
     (hr : t.ret id = false) :
     (specInst P r).weakLStep t (.retG r id (.B v))
-      { t with dead := insert (!v) t.dead,
+      { t with excluded := insert (!v) t.excluded,
                ret := Function.update t.ret id true } := by
-  have h1 : (specInst P r).LStep t Silent.τ { t with dead := insert (!v) t.dead } :=
+  have h1 : (specInst P r).LStep t Silent.τ { t with excluded := insert (!v) t.excluded } :=
     Step.bindUnset t (!v) hq (by simpa only [Bool.not_not] using hw) hd0
-  have h2 : (specInst P r).LStep { t with dead := insert (!v) t.dead }
+  have h2 : (specInst P r).LStep { t with excluded := insert (!v) t.excluded }
       (.retG r id (.B v))
-      { t with dead := insert (!v) t.dead,
+      { t with excluded := insert (!v) t.excluded,
                ret := Function.update t.ret id true } := by
-    refine Step.retB { t with dead := insert (!v) t.dead } id v ?_
-      (Finset.mem_insert_self (!v) t.dead) hd hr
+    refine Step.retB { t with excluded := insert (!v) t.excluded } id v ?_
+      (Finset.mem_insert_self (!v) t.excluded) hd hr
     rw [Finset.mem_insert]
     rintro (hv | hv)
     · cases v <;> exact absurd hv (by decide)
     · exact hlive hv
   exact weakLStep_tauThen h1 h2 (by simp)
 
-/-- `bindUnset b ; retC` from an all-alive state (`dead = ∅`, the `bindUnset`
-guard): the kill supplies the `1 ≤ |dead|` witness (`insert` is nonempty). -/
-theorem killThenRetC_burst {r : ℕ} {t : SpecState P.n} {id : Fin P.n} {b : Bool}
+/-- `bindUnset b ; retC` from an all-alive state (`excluded = ∅`, the `bindUnset`
+guard): the exclusion supplies the `1 ≤ |excluded|` witness (`insert` is nonempty). -/
+theorem excludeThenRetC_run {r : ℕ} {t : SpecState P.n} {id : Fin P.n} {b : Bool}
     (hq : t.quorum P)
     (hw : P.f + 1 ≤ (Finset.univ.filter
       (fun k => t.call k = some (!b) ∨ k ∈ t.F)).card)
-    (hd0 : t.dead = ∅)
+    (hd0 : t.excluded = ∅)
     (hwT : P.f + 1 ≤ (Finset.univ.filter
       (fun k => t.call k = some true ∨ k ∈ t.F)).card)
     (hwF : P.f + 1 ≤ (Finset.univ.filter
@@ -1277,16 +1277,16 @@ theorem killThenRetC_burst {r : ℕ} {t : SpecState P.n} {id : Fin P.n} {b : Boo
     (hg : t.grade = none ∨ t.grade = some false)
     (hr : t.ret id = false) :
     (specInst P r).weakLStep t (.retG r id .C)
-      { t with dead := insert b t.dead, grade := some false,
+      { t with excluded := insert b t.excluded, grade := some false,
                ret := Function.update t.ret id true } := by
-  have h1 : (specInst P r).LStep t Silent.τ { t with dead := insert b t.dead } :=
+  have h1 : (specInst P r).LStep t Silent.τ { t with excluded := insert b t.excluded } :=
     Step.bindUnset t b hq hw hd0
-  have h2 : (specInst P r).LStep { t with dead := insert b t.dead }
+  have h2 : (specInst P r).LStep { t with excluded := insert b t.excluded }
       (.retG r id .C)
-      { t with dead := insert b t.dead, grade := some false,
+      { t with excluded := insert b t.excluded, grade := some false,
                ret := Function.update t.ret id true } :=
-    Step.retC { t with dead := insert b t.dead } id
-      (Finset.card_pos.mpr ⟨b, Finset.mem_insert_self b t.dead⟩) hwT hwF hg hr
+    Step.retC { t with excluded := insert b t.excluded } id
+      (Finset.card_pos.mpr ⟨b, Finset.mem_insert_self b t.excluded⟩) hwT hwF hg hr
   exact weakLStep_tauThen h1 h2 (by simp)
 
 /-! ### The refinement -/
@@ -1337,7 +1337,7 @@ theorem implRefines (P : Params) (r : ℕ) :
       · rw [proc_send_ne hk]
         exact hRR.ret_eq k
     · intro b' hb'
-      exact deadCert_send (by intro w hw; exact hw) (hRR.dead_cert b' hb')
+      exact excludedCert_send (by intro w hw; exact hw) (hRR.excluded_cert b' hb')
   | callLoop id b =>
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'
@@ -1349,9 +1349,9 @@ theorem implRefines (P : Params) (r : ℕ) :
     refine ⟨q2, Or.inl ⟨rfl, System.weakLSilent_refl _ q2⟩,
       hI', by simpa using hRR.call_eq, by simpa using hRR.ret_eq, hRR.F_eq, ?_, ?_, ?_⟩
     · intro b hb
-      exact DeadCert.mono (s := q1)
+      exact ExcludedCert.mono (s := q1)
         (fun i' j' m' hm' => ImplState.mem_recvMsg_recv.mpr (Or.inr hm'))
-        (fun k w hk => by simpa using hk) (Finset.Subset.refl _) (hRR.dead_cert b hb)
+        (fun k w hk => by simpa using hk) (Finset.Subset.refl _) (hRR.excluded_cert b hb)
     · intro hg
       obtain ⟨v0, i0, hi0⟩ := hRR.gradeA_ev hg
       exact ⟨v0, i0, le_trans hi0 (ImplState.recvCount_le_recvMsg q1 i j m i0 _)⟩
@@ -1363,8 +1363,8 @@ theorem implRefines (P : Params) (r : ℕ) :
     subst hq1'
     refine ⟨q2, Or.inl ⟨rfl, System.weakLSilent_refl _ q2⟩,
       hI', ?_, ?_, hRR.F_eq,
-      fun b' hb' => deadCert_send (by intro w hw; exact hw)
-        (hRR.dead_cert b' hb'),
+      fun b' hb' => excludedCert_send (by intro w hw; exact hw)
+        (hRR.excluded_cert b' hb'),
       by simpa using hRR.gradeA_ev, by simpa using hRR.gradeC_ev⟩
     · intro k
       by_cases hk : k = j
@@ -1383,8 +1383,8 @@ theorem implRefines (P : Params) (r : ℕ) :
     subst hq1'
     refine ⟨q2, Or.inl ⟨rfl, System.weakLSilent_refl _ q2⟩,
       hI', ?_, ?_, hRR.F_eq,
-      fun b' hb' => deadCert_send (by intro w hw; exact hw)
-        (hRR.dead_cert b' hb'),
+      fun b' hb' => excludedCert_send (by intro w hw; exact hw)
+        (hRR.excluded_cert b' hb'),
       by simpa using hRR.gradeA_ev, by simpa using hRR.gradeC_ev⟩
     · intro k
       by_cases hk : k = j
@@ -1403,9 +1403,9 @@ theorem implRefines (P : Params) (r : ℕ) :
     subst hq1'
     refine ⟨q2, Or.inl ⟨rfl, System.weakLSilent_refl _ q2⟩,
       hI', ?_, ?_, hRR.F_eq,
-      fun b' hb' => deadCert_send
+      fun b' hb' => excludedCert_send
         (by intro w hw; rw [hsend] at hw; simp at hw)
-        (hRR.dead_cert b' hb'),
+        (hRR.excluded_cert b' hb'),
       by simpa using hRR.gradeA_ev, by simpa using hRR.gradeC_ev⟩
     · intro k
       by_cases hk : k = j
@@ -1424,9 +1424,9 @@ theorem implRefines (P : Params) (r : ℕ) :
     subst hq1'
     refine ⟨q2, Or.inl ⟨rfl, System.weakLSilent_refl _ q2⟩,
       hI', ?_, ?_, hRR.F_eq,
-      fun b' hb' => deadCert_send
+      fun b' hb' => excludedCert_send
         (by intro w hw; rw [hsend] at hw; simp at hw)
-        (hRR.dead_cert b' hb'),
+        (hRR.excluded_cert b' hb'),
       by simpa using hRR.gradeA_ev, by simpa using hRR.gradeC_ev⟩
     · intro k
       by_cases hk : k = j
@@ -1445,8 +1445,8 @@ theorem implRefines (P : Params) (r : ℕ) :
     subst hq1'
     refine ⟨q2, Or.inl ⟨rfl, System.weakLSilent_refl _ q2⟩,
       hI', ?_, ?_, hRR.F_eq,
-      fun b' hb' => deadCert_send (by intro w hw; exact hw)
-        (hRR.dead_cert b' hb'),
+      fun b' hb' => excludedCert_send (by intro w hw; exact hw)
+        (hRR.excluded_cert b' hb'),
       by simpa using hRR.gradeA_ev, by simpa using hRR.gradeC_ev⟩
     · intro k
       by_cases hk : k = j
@@ -1465,8 +1465,8 @@ theorem implRefines (P : Params) (r : ℕ) :
     subst hq1'
     refine ⟨q2, Or.inl ⟨rfl, System.weakLSilent_refl _ q2⟩,
       hI', ?_, ?_, hRR.F_eq,
-      fun b' hb' => deadCert_send (by intro w hw; exact hw)
-        (hRR.dead_cert b' hb'),
+      fun b' hb' => excludedCert_send (by intro w hw; exact hw)
+        (hRR.excluded_cert b' hb'),
       by simpa using hRR.gradeA_ev, by simpa using hRR.gradeC_ev⟩
     · intro k
       by_cases hk : k = j
@@ -1480,13 +1480,13 @@ theorem implRefines (P : Params) (r : ℕ) :
         simpa using hRR.ret_eq k
       · rw [proc_send_ne hk]
         exact hRR.ret_eq k
-  | sealBit j b hin _hlv hcnt hsend =>
+  | echo5Bit j b hin _hlv hcnt hsend =>
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'
     refine ⟨q2, Or.inl ⟨rfl, System.weakLSilent_refl _ q2⟩,
       hI', ?_, ?_, hRR.F_eq,
-      fun b' hb' => deadCert_send (by intro w hw; exact hw)
-        (hRR.dead_cert b' hb'),
+      fun b' hb' => excludedCert_send (by intro w hw; exact hw)
+        (hRR.excluded_cert b' hb'),
       by simpa using hRR.gradeA_ev, by simpa using hRR.gradeC_ev⟩
     · intro k
       by_cases hk : k = j
@@ -1500,13 +1500,13 @@ theorem implRefines (P : Params) (r : ℕ) :
         simpa using hRR.ret_eq k
       · rw [proc_send_ne hk]
         exact hRR.ret_eq k
-  | sealBot j hin _hlv _hnot hcnt hval hsend =>
+  | echo5Bot j hin _hlv _hnot hcnt hval hsend =>
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'
     refine ⟨q2, Or.inl ⟨rfl, System.weakLSilent_refl _ q2⟩,
       hI', ?_, ?_, hRR.F_eq,
-      fun b' hb' => deadCert_send (by intro w hw; exact hw)
-        (hRR.dead_cert b' hb'),
+      fun b' hb' => excludedCert_send (by intro w hw; exact hw)
+        (hRR.excluded_cert b' hb'),
       by simpa using hRR.gradeA_ev, by simpa using hRR.gradeC_ev⟩
     · intro k
       by_cases hk : k = j
@@ -1524,33 +1524,33 @@ theorem implRefines (P : Params) (r : ℕ) :
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'
     exact ⟨q2, Or.inl ⟨rfl, System.weakLSilent_refl _ q2⟩,
-      hI', hRR.call_eq, hRR.ret_eq, hRR.F_eq, hRR.dead_cert, hRR.gradeA_ev,
+      hI', hRR.call_eq, hRR.ret_eq, hRR.F_eq, hRR.excluded_cert, hRR.gradeA_ev,
       hRR.gradeC_ev⟩
   | retA id v _hin _hlv hcnt hr =>
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'
     have hret : q2.ret id = false := by rw [hRR.ret_eq]; exact hr
     have hfn := P.f_lt_n_sub_f
-    obtain ⟨k₁, hk₁F, hbq⟩ := bind_receipts_of_seal_quorum hRR.inv hcnt
+    obtain ⟨k₁, hk₁F, hbq⟩ := bind_receipts_of_echo5_quorum hRR.inv hcnt
     obtain ⟨k, hkF, hvq⟩ :=
       voteQuorum_of_bind_receipts hRR.inv (i := k₁) (v := v) (by omega)
-    have hlive : v ∉ q2.dead := fun hv =>
-      not_deadCert_of_voteQuorum hRR.inv hvq (hRR.dead_cert v hv)
+    have hlive : v ∉ q2.excluded := fun hv =>
+      not_excludedCert_of_voteQuorum hRR.inv hvq (hRR.excluded_cert v hv)
     have hgr : q2.grade = none ∨ q2.grade = some true := by
-      have hne := grade_ne_false_of_seal_quorum hRR hcnt
+      have hne := grade_ne_false_of_echo5_quorum hRR hcnt
       cases hg : q2.grade with
       | none => exact Or.inl rfl
       | some gb =>
         cases gb
         · exact absurd hg hne
         · exact Or.inr rfl
-    by_cases hdead : (!v) ∈ q2.dead
+    by_cases hexcluded : (!v) ∈ q2.excluded
     · refine ⟨{ q2 with grade := some true,
                         ret := Function.update q2.ret id true },
         Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
-          (Step.retA q2 id v hlive hdead hgr hret)⟩,
+          (Step.retA q2 id v hlive hexcluded hgr hret)⟩,
         hI', ?_, ?_, hRR.F_eq,
-        fun b hb => deadCert_ret (hRR.dead_cert b hb),
+        fun b hb => excludedCert_ret (hRR.excluded_cert b hb),
         fun _ => ⟨v, id, by simpa using hcnt⟩,
         fun hgf => absurd hgf (by simp)⟩
       · intro k'
@@ -1569,10 +1569,10 @@ theorem implRefines (P : Params) (r : ℕ) :
           exact hRR.ret_eq k'
     · obtain ⟨hq, hw⟩ := bindUnset_guards hRR
         (echoQuorum_of_vote_receipts hRR.inv (i := k) (v := v) (by omega))
-      refine ⟨{ q2 with dead := insert (!v) q2.dead, grade := some true,
+      refine ⟨{ q2 with excluded := insert (!v) q2.excluded, grade := some true,
                         ret := Function.update q2.ret id true },
         Or.inr ⟨by simp,
-          killThenRetA_burst hq hw hlive (dead_empty_of_both hlive hdead) hgr hret⟩,
+          excludeThenRetA_run hq hw hlive (excluded_empty_of_both hlive hexcluded) hgr hret⟩,
         hI', ?_, ?_, hRR.F_eq, ?_,
         fun _ => ⟨v, id, by simpa using hcnt⟩,
         fun hgf => absurd hgf (by simp)⟩
@@ -1593,25 +1593,25 @@ theorem implRefines (P : Params) (r : ℕ) :
       · intro b hb
         rw [Finset.mem_insert] at hb
         rcases hb with rfl | hb
-        · exact deadCert_ret (deadCert_of_voteQuorum hRR.inv hvq)
-        · exact deadCert_ret (hRR.dead_cert b hb)
+        · exact excludedCert_ret (excludedCert_of_voteQuorum hRR.inv hvq)
+        · exact excludedCert_ret (hRR.excluded_cert b hb)
   | retB id v _hin _hlv _hnotA hcnt honce hbind hval hr =>
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'
     have hret : q2.ret id = false := by rw [hRR.ret_eq]; exact hr
     have hfn := P.f_lt_n_sub_f
     obtain ⟨k, hkF, hvq⟩ := voteQuorum_of_bind_receipts hRR.inv hbind
-    have hlive : v ∉ q2.dead := fun hv =>
-      not_deadCert_of_voteQuorum hRR.inv hvq (hRR.dead_cert v hv)
+    have hlive : v ∉ q2.excluded := fun hv =>
+      not_excludedCert_of_voteQuorum hRR.inv hvq (hRR.excluded_cert v hv)
     have hd : P.f + 1 ≤ (Finset.univ.filter
         (fun k' => q2.call k' = some (!v) ∨ k' ∈ q2.F)).card :=
       hRR.spec_supp (suppI_of_valid hRR.inv hval (!v))
-    by_cases hdead : (!v) ∈ q2.dead
+    by_cases hexcluded : (!v) ∈ q2.excluded
     · refine ⟨{ q2 with ret := Function.update q2.ret id true },
         Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
-          (Step.retB q2 id v hlive hdead hd hret)⟩,
+          (Step.retB q2 id v hlive hexcluded hd hret)⟩,
         hI', ?_, ?_, hRR.F_eq,
-        fun b hb => deadCert_ret (hRR.dead_cert b hb),
+        fun b hb => excludedCert_ret (hRR.excluded_cert b hb),
         by simpa using hRR.gradeA_ev, by simpa using hRR.gradeC_ev⟩
       · intro k'
         by_cases hk : k' = id
@@ -1629,10 +1629,10 @@ theorem implRefines (P : Params) (r : ℕ) :
           exact hRR.ret_eq k'
     · obtain ⟨hq, hw⟩ := bindUnset_guards hRR
         (echoQuorum_of_vote_receipts hRR.inv (i := k) (v := v) (by omega))
-      refine ⟨{ q2 with dead := insert (!v) q2.dead,
+      refine ⟨{ q2 with excluded := insert (!v) q2.excluded,
                         ret := Function.update q2.ret id true },
         Or.inr ⟨by simp,
-          killThenRetB_burst hq hw hlive (dead_empty_of_both hlive hdead) hd hret⟩,
+          excludeThenRetB_run hq hw hlive (excluded_empty_of_both hlive hexcluded) hd hret⟩,
         hI', ?_, ?_, hRR.F_eq, ?_, by simpa using hRR.gradeA_ev, by simpa using hRR.gradeC_ev⟩
       · intro k'
         by_cases hk : k' = id
@@ -1651,8 +1651,8 @@ theorem implRefines (P : Params) (r : ℕ) :
       · intro b hb
         rw [Finset.mem_insert] at hb
         rcases hb with rfl | hb
-        · exact deadCert_ret (deadCert_of_voteQuorum hRR.inv hvq)
-        · exact deadCert_ret (hRR.dead_cert b hb)
+        · exact excludedCert_ret (excludedCert_of_voteQuorum hRR.inv hvq)
+        · exact excludedCert_ret (hRR.excluded_cert b hb)
   | retC id _hin _hlv _hnotA _hnotB hcnt hval hr =>
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'
@@ -1664,25 +1664,25 @@ theorem implRefines (P : Params) (r : ℕ) :
         (fun k' => q2.call k' = some false ∨ k' ∈ q2.F)).card :=
       hRR.spec_supp (suppI_of_valid hRR.inv hval false)
     have hgr : q2.grade = none ∨ q2.grade = some false := by
-      have hne := grade_ne_true_of_sealBot_quorum hRR hcnt
+      have hne := grade_ne_true_of_echo5Bot_quorum hRR hcnt
       cases hg : q2.grade with
       | none => exact Or.inl rfl
       | some gb =>
         cases gb
         · exact Or.inr rfl
         · exact absurd hg hne
-    rcases Finset.eq_empty_or_nonempty q2.dead with hde | hdne
-    · -- `dead = ∅`: kill the certified bit, then return
-      obtain ⟨b, hcert⟩ := deadCert_of_sealBot_quorum hRR.inv hcnt
+    rcases Finset.eq_empty_or_nonempty q2.excluded with hde | hdne
+    · -- `excluded = ∅`: exclude the certified bit, then return
+      obtain ⟨b, hcert⟩ := excludedCert_of_echo5Bot_quorum hRR.inv hcnt
       have hq : q2.quorum P := quorum_of_msg_quorum hRR
         (fun j hj hm' => hRR.inv.input_called j true hj hm')
         (ImplState.bothValid_le hval true)
       have hw : P.f + 1 ≤ (Finset.univ.filter
           (fun k' => q2.call k' = some (!b) ∨ k' ∈ q2.F)).card :=
         hRR.spec_supp (suppI_of_valid hRR.inv hval (!b))
-      refine ⟨{ q2 with dead := insert b q2.dead, grade := some false,
+      refine ⟨{ q2 with excluded := insert b q2.excluded, grade := some false,
                         ret := Function.update q2.ret id true },
-        Or.inr ⟨by simp, killThenRetC_burst hq hw hde hwT hwF hgr hret⟩,
+        Or.inr ⟨by simp, excludeThenRetC_run hq hw hde hwT hwF hgr hret⟩,
         hI', ?_, ?_, hRR.F_eq, ?_,
         fun hgt => absurd hgt (by simp),
         fun _ => ⟨id, by simpa using hcnt⟩⟩
@@ -1703,16 +1703,16 @@ theorem implRefines (P : Params) (r : ℕ) :
       · intro b' hb'
         rw [Finset.mem_insert] at hb'
         rcases hb' with rfl | hb'
-        · exact deadCert_ret hcert
-        · exact deadCert_ret (hRR.dead_cert b' hb')
-    · -- some bit is already dead: a single labelled step answers
-      have hd1 : 1 ≤ q2.dead.card := Finset.card_pos.mpr hdne
+        · exact excludedCert_ret hcert
+        · exact excludedCert_ret (hRR.excluded_cert b' hb')
+    · -- some bit is already excluded: a single labelled step answers
+      have hd1 : 1 ≤ q2.excluded.card := Finset.card_pos.mpr hdne
       refine ⟨{ q2 with grade := some false,
                         ret := Function.update q2.ret id true },
         Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
           (Step.retC q2 id hd1 hwT hwF hgr hret)⟩,
         hI', ?_, ?_, hRR.F_eq,
-        fun b hb => deadCert_ret (hRR.dead_cert b hb),
+        fun b hb => excludedCert_ret (hRR.excluded_cert b hb),
         fun hgt => absurd hgt (by simp),
         fun _ => ⟨id, by simpa using hcnt⟩⟩
       · intro k'
@@ -1742,9 +1742,9 @@ theorem implRefines (P : Params) (r : ℕ) :
       rw [corrupt_ret, ImplState.corrupt_proc]
       exact hRR.ret_eq k
     · intro b hb
-      rw [corrupt_dead] at hb
-      refine DeadCert.mono (s := q1) (fun i' j' m' hm' => ?_) (fun k w hk => ?_)
-        (ImplState.corrupt_F_subset q1 id) (hRR.dead_cert b hb)
+      rw [corrupt_excluded] at hb
+      refine ExcludedCert.mono (s := q1) (fun i' j' m' hm' => ?_) (fun k w hk => ?_)
+        (ImplState.corrupt_F_subset q1 id) (hRR.excluded_cert b hb)
       · rw [ImplState.corrupt_recv]
         exact hm'
       · rw [ImplState.corrupt_proc]
@@ -1763,7 +1763,7 @@ theorem implRefines (P : Params) (r : ℕ) :
 The round-indexed family lift of the refinement takes `fail` as a broadcast
 act, applied to every round at once. It needs the per-round relation to be
 preserved by that act. The spec-side corruption projections
-(`corrupt_call`/`corrupt_ret`/`corrupt_dead`/`corrupt_grade`) come from
+(`corrupt_call`/`corrupt_ret`/`corrupt_excluded`/`corrupt_grade`) come from
 `ABA/Spec/GBCA.lean`; the two `corrupt` functions stay in lockstep by
 `implSpec_corrupt_F_eq`. The statement is proved directly rather than through
 `implRefines`, whose `fail` case only yields an existential match. Its
@@ -1787,13 +1787,13 @@ theorem instRel_corrupt (P : Params) (r : ℕ) (id : Fin P.n)
         rw [corrupt_ret, ImplState.corrupt_proc]
         exact hR.ret_eq k
       F_eq := implSpec_corrupt_F_eq hR.F_eq id
-      dead_cert := fun b hb => by
-        rw [corrupt_dead] at hb
-        exact DeadCert.mono
+      excluded_cert := fun b hb => by
+        rw [corrupt_excluded] at hb
+        exact ExcludedCert.mono
           (fun i j m hm => by rw [ImplState.corrupt_recv]; exact hm)
           (fun j w hw => by rw [ImplState.corrupt_proc]; exact hw)
           (ImplState.corrupt_F_subset x id)
-          (hR.dead_cert b hb)
+          (hR.excluded_cert b hb)
       gradeA_ev := fun hg => by
         rw [corrupt_grade] at hg
         obtain ⟨v, i, hi⟩ := hR.gradeA_ev hg

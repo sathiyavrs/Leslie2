@@ -15,15 +15,15 @@ specification instance with the same leader, along `BRB.InstRel`.
 
 The one piece of abstract information the specification tracks and the
 implementation does not is the committed value `val`. The refinement supplies
-it as a receipt-pattern certificate, in the kill-on-demand style of the GBCA
-refinement: the specification's `commit` is fired inside the return burst, at
+it as a receipt-pattern certificate, in the exclusion-on-demand style of the GBCA
+refinement: the specification's `commit` is fired inside the return run, at
 the first return that needs it.
 
 * `BRB.EchoCert s m` — some receiver holds an `n − f` `ECHO m` receipt
   quorum. F-blind (it counts receipts, not honesty) and monotone (receipts
   only accumulate), so it survives every rule and every corruption.
 * At most one value is ever echo-certified (`echoCert_unique`): two `ECHO`
-  receipt quorums share an honest sender, whose `sentEcho` slot is
+  receipt quorums share an honest sender, whose `sentEcho` field is
   write-once.
 * Every return guard yields a certificate (`echoCert_of_vote_quorum`): an
   `n − f` `VOTE m` receipt quorum contains an honest voter, whose vote is
@@ -31,12 +31,12 @@ the first return that needs it.
   `vote_backed` — by an `ECHO m` receipt quorum.
 * A certificate identifies the honest leader's input
   (`input_of_echoCert`): an `ECHO` quorum contains an honest echoer, whose
-  echo is backed by an `⟨INIT, m⟩` receipt from the leader's pool.
+  echo is backed by an `⟨INIT, m⟩` receipt from the leader's sent.
 
 The matching: internal rules stutter; `call` and `fail` are answered by their
 specification rows; `ret id m` is answered by `ret` alone when `val` is
 already committed (the certificates identify the values), and by the two-step
-burst `commit ; ret` (`weakLStep_tauThen`) when it is not — with `commit`'s
+run `commit ; ret` (`weakLStep_tauThen`) when it is not — with `commit`'s
 guard discharged by `input_of_echoCert` under an honest leader and by
 membership in `F` otherwise.
 -/
@@ -77,24 +77,24 @@ theorem EchoCert.recvMsg {s : ImplState P.n M} {m : M} (h : EchoCert P s m)
 /-! ### The invariant -/
 
 /-- The BRB implementation invariant. The `*_conf` clauses tie an honest
-sender's pool to its write-once slot; `echo_backed` / `vote_backed` tie the
-slots to the receipts that justified them, with the amplification chain
+sender's sent to its write-once field; `echo_backed` / `vote_backed` tie the
+fields to the receipts that justified them, with the amplification chain
 collapsed into `EchoCert`. -/
 structure Inv (P : Params) (ldr : Fin P.n) (s : ImplState P.n M) : Prop where
   /-- The corruption budget. -/
   F_card : s.F.card ≤ P.f
   /-- Delivered messages were multicast. -/
   recv_sub : ∀ i k, s.recv i k ⊆ s.sent k
-  /-- An honest leader's pooled `INIT` carries its input. -/
+  /-- An honest leader's sent `INIT` carries its input. -/
   init_conf : ldr ∉ s.F → ∀ m, BMsg.init m ∈ s.sent ldr →
     (s.proc ldr).input = some m
-  /-- An honest sender's pooled `ECHO` matches its write-once slot. -/
+  /-- An honest sender's sent `ECHO` matches its write-once field. -/
   echo_conf : ∀ k ∉ s.F, ∀ m, BMsg.echo m ∈ s.sent k →
     (s.proc k).sentEcho = some m
   /-- An honest echo is backed by an `INIT` receipt from the leader. -/
   echo_backed : ∀ k ∉ s.F, ∀ m, (s.proc k).sentEcho = some m →
     BMsg.init m ∈ s.recv k ldr
-  /-- An honest sender's pooled `VOTE` matches its write-once slot. -/
+  /-- An honest sender's sent `VOTE` matches its write-once field. -/
   vote_conf : ∀ k ∉ s.F, ∀ m, BMsg.vote m ∈ s.sent k →
     (s.proc k).sentVote = some m
   /-- An honest vote is backed by an `ECHO` receipt quorum somewhere: the
@@ -378,8 +378,8 @@ theorem Inv.step {s : ImplState P.n M} {l : Lab P.n M} {μ : PMF (ImplState P.n 
           lt_of_lt_of_le (Nat.lt_succ_of_le hInv.F_card) hcnt
         obtain ⟨k', hk'F, hk'recv⟩ := SubState.exists_sender_notMem s.F hlt
         have hk'sent := hInv.recv_sub k k' hk'recv
-        have hk'slot := hInv.vote_conf k' hk'F m hk'sent
-        exact hInv.vote_backed k' hk'F m hk'slot
+        have hk'field := hInv.vote_conf k' hk'F m hk'sent
+        exact hInv.vote_backed k' hk'F m hk'field
       · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hkl] at hslot
         exact hInv.vote_backed k (by simpa using hk) m' hslot
   | byz j m hj =>
@@ -498,10 +498,10 @@ theorem Inv.step {s : ImplState P.n M} {l : Lab P.n M} {μ : PMF (ImplState P.n 
       rw [echoCert_corrupt]
       exact hInv.vote_backed k (hF k hk) m' hslot
 
-/-! ### The certificate harvest -/
+/-! ### Deriving the certificate -/
 
 /-- At most one value is ever echo-certified: two `ECHO` receipt quorums share
-an honest sender, whose `sentEcho` slot is write-once. -/
+an honest sender, whose `sentEcho` field is write-once. -/
 theorem echoCert_unique {s : ImplState P.n M} (hInv : Inv P ldr s) {m m' : M}
     (h : EchoCert P s m) (h' : EchoCert P s m') : m = m' := by
   obtain ⟨i, hi⟩ := h
@@ -525,7 +525,7 @@ theorem echoCert_of_vote_quorum {s : ImplState P.n M} (hInv : Inv P ldr s)
 
 /-- Under an honest leader, the certificate identifies the leader's input: the
 `ECHO` quorum contains an honest echoer, backed by an `INIT` receipt from the
-leader's pool. -/
+leader's sent. -/
 theorem input_of_echoCert {s : ImplState P.n M} (hInv : Inv P ldr s)
     (hldr : ldr ∉ s.F) {m : M} (hc : EchoCert P s m) :
     (s.proc ldr).input = some m := by
@@ -561,7 +561,7 @@ theorem instRel_init :
     simp [ImplState.initial, SpecState.initial, PState.initial]
 
 /-- **Broadcast compatibility**: the relation is preserved by corrupting both
-sides at once — the twin the family lifting consumes. -/
+sides at once — the abstract state the family lifting consumes. -/
 theorem instRel_corrupt {s : ImplState P.n M} {t : SpecState P.n M}
     (hR : InstRel P ldr s t) (id : Fin P.n) :
     InstRel P ldr (s.corrupt P id) (t.corrupt P id) := by

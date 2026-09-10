@@ -14,7 +14,7 @@ The round-loop records beside the ABA-side network, read as one object.
 `ABAState` is the pair `(∀ j, CoreRec) × ANetState`. Its accessors gather the
 data the two components hold apart: `procs` reads each process's control
 record, `decidedRecv` its receipts, `corrupted` the replacement flag of its
-program (D23), and `decidedSent` and `F` the network's sent pools and corrupted
+program (D23), and `decidedSent` and `F` the network's sent sets and corrupted
 set. The invariant of the core simulation is stated through these accessors, so
 it reads the composed state without a change of system.
 -/
@@ -37,7 +37,7 @@ namespace ABAState
 def procs (s : ABAState P) : Fin P.n → ProcCore P.n := fun j => (s.1 j).proc
 
 /-- `b ∈ s.decidedSent id` — process `id` has multicast `⟨DECIDED, b⟩`. -/
-def decidedSent (s : ABAState P) : Fin P.n → Finset Bool := s.2.dpool
+def decidedSent (s : ABAState P) : Fin P.n → Finset Bool := s.2.dsent
 
 /-- `b ∈ s.decidedRecv i j` — `j`'s `⟨DECIDED, b⟩` has been delivered to `i`. -/
 def decidedRecv (s : ABAState P) : Fin P.n → Fin P.n → Finset Bool :=
@@ -56,7 +56,7 @@ def F (s : ABAState P) : Finset (Fin P.n) := s.2.F
 @[simp] theorem procs_apply (C : ∀ _ : Fin P.n, CoreRec P.n) (a : ANetState P.n)
     (j : Fin P.n) : procs (P := P) (C, a) j = (C j).proc := rfl
 @[simp] theorem decidedSent_apply (C : ∀ _ : Fin P.n, CoreRec P.n) (a : ANetState P.n) :
-    decidedSent (P := P) (C, a) = a.dpool := rfl
+    decidedSent (P := P) (C, a) = a.dsent := rfl
 @[simp] theorem decidedRecv_apply (C : ∀ _ : Fin P.n, CoreRec P.n) (a : ANetState P.n)
     (i : Fin P.n) : decidedRecv (P := P) (C, a) i = (C i).decIn := rfl
 @[simp] theorem F_apply (C : ∀ _ : Fin P.n, CoreRec P.n) (a : ANetState P.n) :
@@ -80,8 +80,8 @@ def initial (P : Params) : ABAState P :=
     (CoreRec.initial n).proc = ProcCore.initial n := rfl
 @[simp] theorem _root_.PLTS.ABA.CoreRec.initial_decIn (n : ℕ) (j : Fin n) :
     (CoreRec.initial n).decIn j = ∅ := rfl
-@[simp] theorem _root_.PLTS.ABA.Comp.ANetState.initial_dpool (n : ℕ) (j : Fin n) :
-    (ANetState.initial n).dpool j = ∅ := rfl
+@[simp] theorem _root_.PLTS.ABA.Comp.ANetState.initial_dsent (n : ℕ) (j : Fin n) :
+    (ANetState.initial n).dsent j = ∅ := rfl
 @[simp] theorem _root_.PLTS.ABA.Comp.ANetState.initial_F (n : ℕ) :
     (ANetState.initial n).F = ∅ := rfl
 
@@ -140,8 +140,8 @@ theorem setProc_procs_ne (s : ABAState P) (id : Fin P.n) (p : ProcCore P.n)
     {k : Fin P.n} (h : k ≠ id) : (s.setProc id p).procs k = s.procs k := by
   simp [setProc, procs, Function.update_of_ne h]
 
-/-- Process `id` multicasts `⟨DECIDED, b⟩`: the network pools `b` under `id`
-(deviation D12′ — the pool only ever grows). -/
+/-- Process `id` multicasts `⟨DECIDED, b⟩`: the network sent sets `b` under `id`
+(deviation D12′ — the sent only ever grows). -/
 def sendDecided (s : ABAState P) (id : Fin P.n) (b : Bool) : ABAState P :=
   (s.1, s.2.dput id b)
 
@@ -160,7 +160,7 @@ def sendDecided (s : ABAState P) (id : Fin P.n) (b : Bool) : ABAState P :=
     (i : Fin P.n) (b' : Bool) :
     (s.sendDecided id b).decidedCount i b' = s.decidedCount i b' := rfl
 
-/-- Sent pools only grow under `sendDecided`. -/
+/-- Sent sets only grow under `sendDecided`. -/
 theorem sendDecided_decidedSent_mono (s : ABAState P) (id : Fin P.n) (b : Bool)
     {k : Fin P.n} {b' : Bool} (h : b' ∈ s.decidedSent k) :
     b' ∈ (s.sendDecided id b).decidedSent k := by
@@ -171,8 +171,8 @@ theorem sendDecided_decidedSent_mono (s : ABAState P) (id : Fin P.n) (b : Bool)
   · simp only [sendDecided_decidedSent, Function.update_of_ne hk]
     exact h
 
-/-- Membership in a post-`sendDecided` sent pool: the fresh bit at `id`, or an
-old pool member. -/
+/-- Membership in a post-`sendDecided` sent set: the fresh bit at `id`, or an
+old sent member. -/
 theorem mem_sendDecided_decidedSent_iff (s : ABAState P) (id : Fin P.n) (b : Bool)
     (k : Fin P.n) (b' : Bool) :
     b' ∈ (s.sendDecided id b).decidedSent k ↔
@@ -289,7 +289,7 @@ theorem stepRound_decidedSent_of_A (s : ABAState P) (id : Fin P.n) (c b : Bool)
   rw [h]
   rfl
 
-/-- Without an `A` grade the round advance leaves the DECIDED slots alone. -/
+/-- Without an `A` grade the round advance leaves the DECIDED sets alone. -/
 theorem stepRound_decidedSent_of_not_A (s : ABAState P) (id : Fin P.n) (c : Bool)
     (h : ∀ b, (s.procs id).lastGrade ≠ some (.A b)) :
     (s.stepRound id c).decidedSent = s.decidedSent := by

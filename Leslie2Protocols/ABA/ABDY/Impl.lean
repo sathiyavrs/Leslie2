@@ -16,7 +16,7 @@ LTS over the shared alphabet `ABA.Lab n`.
 Binding Crusader Agreement for Byzantine faults — directly. The level mapping is
 
 ```
-INPUT = echo,  ECHO = echo2,  VOTE = echo3,  BIND = echo4,  SEAL = echo5
+INPUT = echo,  ECHO = echo2,  VOTE = echo3,  BIND = echo4,  ECHO5 = echo5
 ```
 
 and the three returns are the decide conditions of lines 23–29.
@@ -29,10 +29,10 @@ Each process runs the message pattern
 * `VOTE v` (`v ∈ {0,1,⊥}`) — a real bit after an `n − f` `ECHO b` quorum, `⊥`
   after `n − f` `ECHO`s of any payload with `|Valid| > 1`;
 * `BIND v` — the same pattern one level up, over `VOTE`s;
-* `SEAL v` — the same pattern one level up again, over `BIND`s;
-* return — grade `A b` after an `n − f` `SEAL b` quorum, `B b` after an
-  `n − f` any-`SEAL` quorum containing `b` with `f + 1` `BIND b`s and
-  `|Valid| > 1`, and `C` after an `n − f` `SEAL ⊥` quorum with `|Valid| > 1`.
+* `ECHO5 v` — the same pattern one level up again, over `BIND`s;
+* return — grade `A b` after an `n − f` `ECHO5 b` quorum, `B b` after an
+  `n − f` any-`ECHO5` quorum containing `b` with `f + 1` `BIND b`s and
+  `|Valid| > 1`, and `C` after an `n − f` `ECHO5 ⊥` quorum with `|Valid| > 1`.
 
 Every transition is Dirac; asynchrony and Byzantine behaviour are modelled
 by nondeterministic `τ`-transitions.
@@ -73,9 +73,9 @@ pseudocode (`n − f`).
   `τ`-transition requiring `m ∈ sent j`). Thresholds count *distinct senders*
   in the receiver's delivered sets, so message duplication and point-to-point
   scheduling are absorbed into the set model. A corrupted sender may inject
-  any message into its `sent` pool (`byz`).
+  any message into its `sent` sent (`byz`).
 * **D8 (participation gating).** Protocol sends (`relay`, `echo`, `vote*`,
-  `bind*`, `seal*`) and the three returns require the process to have received
+  `bind*`, `echo5*`) and the three returns require the process to have received
   its input (`input ≠ none`): the algorithm's handlers only run inside a called
   instance. The send rows are taken in the wait-until order of Algorithm 6
   from the `BIND` level down: each of those rules requires the process's own
@@ -83,17 +83,17 @@ pseudocode (`n − f`).
   they read being sent by an `upon` handler that may still be pending. The
   return rules carry the negations that the algorithm's if/else chain implies.
 
-The state is exactly the protocol's own data, held in two boxes: each process
+The state is exactly the protocol's own data, held in two halves: each process
 keeps its own local state beside the messages delivered to it, and the round's
-message fabric keeps the per-sender pools and the corrupted set. `ImplState` is
+message state keeps the per-sender sent sets and the corrupted set. `ImplState` is
 their pair, so the network is a component of the state and not a field of it — a
-weaker fabric is a different second component and leaves the rest of the round
+weaker message state is a different second component and leaves the rest of the round
 alone. The three return transitions are cases (1), (2), (3) of Algorithm 6's
-lines 23–29: case (1) an `n − f` `SEAL v` quorum, case (2) an `n − f`
-any-`SEAL` quorum containing `SEAL v` together with `f + 1` `BIND v`s and
-`|Valid| > 1`, case (3) an `n − f` `SEAL ⊥` quorum with `|Valid| > 1`. Beside
+lines 23–29: case (1) an `n − f` `ECHO5 v` quorum, case (2) an `n − f`
+any-`ECHO5` quorum containing `ECHO5 v` together with `f + 1` `BIND v`s and
+`|Valid| > 1`, case (3) an `n − f` `ECHO5 ⊥` quorum with `|Valid| > 1`. Beside
 the receipts of its own case, each return reads the receipts named by the
-cases above it in the chain, the process's own `SEAL` slot, and the call
+cases above it in the chain, the process's own `ECHO5` field, and the call
 record. The binding and grade information that the specification tracks is an
 abstraction of these receipt patterns and lives only on the specification
 side; the refinement (`ABA/ABDY/ImplSim.lean`) supplies it from the receipts.
@@ -103,7 +103,7 @@ namespace PLTS
 namespace ABA
 namespace GBCA
 
-/-- The five message levels of Algorithm 6. `VOTE`, `BIND` and `SEAL` may
+/-- The five message levels of Algorithm 6. `VOTE`, `BIND` and `ECHO5` may
 carry the non-bit payload `⊥` (`none`). -/
 inductive Msg : Type
   /-- `⟨INPUT, b⟩`. -/
@@ -115,7 +115,7 @@ inductive Msg : Type
   /-- `⟨BIND, v⟩` with `v ∈ {0, 1, ⊥}`. -/
   | bind (v : Option Bool)
   /-- `⟨echo5, v⟩` with `v ∈ {0, 1, ⊥}` (Algorithm 6 lines 21–22). -/
-  | seal (v : Option Bool)
+  | echo5 (v : Option Bool)
   deriving DecidableEq
 
 /-- The local state of one process in one GBCA instance. -/
@@ -130,9 +130,9 @@ structure ProcState : Type where
   sentVote : Option (Option Bool)
   /-- The `BIND` payload multicast, if any (write-once; payload may be `⊥`). -/
   sentBind : Option (Option Bool)
-  /-- The `SEAL` (`echo5`) payload multicast, if any (write-once; payload may
+  /-- The `ECHO5` (`echo5`) payload multicast, if any (write-once; payload may
   be `⊥`). -/
-  sentSeal : Option (Option Bool)
+  sentEcho5 : Option (Option Bool)
   /-- Whether this process has returned. -/
   returned : Bool
   deriving DecidableEq
@@ -144,28 +144,28 @@ def ProcState.initial : ProcState where
   sentEcho := none
   sentVote := none
   sentBind := none
-  sentSeal := none
+  sentEcho5 := none
   returned := false
 
-/-! ### The two boxes of a round
+/-! ### The two halves of a round's state
 
 The data of one round sits in two records. Each process holds its own protocol
 state together with the messages delivered to it, and nothing else — there is
-no record there of what it has multicast. The round's message fabric holds the
-per-sender pools and the corrupted set. The instance's state below is their
-pair, so every field of the algorithm is a field of one box or the other.
+no record there of what it has multicast. The round's message state holds the
+per-sender sent sets and the corrupted set. The instance's state below is their
+pair, so every field of the algorithm is a field of one local state or the other.
 
-The fabric carries the name of the instance that composes it beside the
+The message state carries the name of the instance that composes it beside the
 programs (`ABA/ABDY/Instances.lean`). -/
 
 /-- The stage record of one process: its own local state and the messages
 delivered to it, indexed by sender. There is no record of what it has sent —
-the sender's pool lives in the network. -/
+the sender's sent lives in the network. -/
 structure StageRec (n : ℕ) : Type where
   /-- The process's own protocol state. -/
   proc : ProcState
-  /-- `inbox k` — the messages from sender `k` delivered here. -/
-  inbox : Fin n → Finset Msg
+  /-- `recv k` — the messages from sender `k` delivered here. -/
+  recv : Fin n → Finset Msg
   deriving DecidableEq
 
 namespace StageRec
@@ -175,27 +175,27 @@ variable {n : ℕ}
 /-- The initial stage record: nothing received, nothing done. -/
 def initial (n : ℕ) : StageRec n where
   proc := ProcState.initial
-  inbox := fun _ => ∅
+  recv := fun _ => ∅
 
 /-- The number of distinct senders from which this process has received `m`. -/
 def recvCount (p : StageRec n) (m : Msg) : ℕ :=
-  (Finset.univ.filter (fun k => m ∈ p.inbox k)).card
+  (Finset.univ.filter (fun k => m ∈ p.recv k)).card
 
 /-- The number of distinct senders of some received `ECHO`. -/
 def echoCount (p : StageRec n) : ℕ :=
-  (Finset.univ.filter (fun k => ∃ b, Msg.echo b ∈ p.inbox k)).card
+  (Finset.univ.filter (fun k => ∃ b, Msg.echo b ∈ p.recv k)).card
 
 /-- The number of distinct senders of some received `VOTE`. -/
 def voteCount (p : StageRec n) : ℕ :=
-  (Finset.univ.filter (fun k => ∃ v, Msg.vote v ∈ p.inbox k)).card
+  (Finset.univ.filter (fun k => ∃ v, Msg.vote v ∈ p.recv k)).card
 
 /-- The number of distinct senders of some received `BIND`. -/
 def bindCount (p : StageRec n) : ℕ :=
-  (Finset.univ.filter (fun k => ∃ v, Msg.bind v ∈ p.inbox k)).card
+  (Finset.univ.filter (fun k => ∃ v, Msg.bind v ∈ p.recv k)).card
 
-/-- The number of distinct senders of some received `SEAL`. -/
-def sealCount (p : StageRec n) : ℕ :=
-  (Finset.univ.filter (fun k => ∃ v, Msg.seal v ∈ p.inbox k)).card
+/-- The number of distinct senders of some received `ECHO5`. -/
+def echo5Count (p : StageRec n) : ℕ :=
+  (Finset.univ.filter (fun k => ∃ v, Msg.echo5 v ∈ p.recv k)).card
 
 /-- Both bits are backed by an `n − f` `INPUT` quorum among the delivered
 messages. -/
@@ -205,9 +205,9 @@ def bothValid (P : Params) (p : StageRec P.n) : Prop :=
 /-- Overwrite the local record. -/
 def setP (p : StageRec n) (pr : ProcState) : StageRec n := { p with proc := pr }
 
-/-- File `m` under the inbox row of sender `k`. -/
+/-- File `m` under the recv row of sender `k`. -/
 def deliverTo (p : StageRec n) (k : Fin n) (m : Msg) : StageRec n :=
-  { p with inbox := Function.update p.inbox k (insert m (p.inbox k)) }
+  { p with recv := Function.update p.recv k (insert m (p.recv k)) }
 
 end StageRec
 
@@ -215,11 +215,11 @@ end GBCA
 
 namespace GSub
 
-/-- The state of the round's message fabric: the per-sender pools and the
+/-- The state of the round's message state: the per-sender sent sets and the
 corrupted set. -/
 structure GNetState (n : ℕ) : Type where
-  /-- `pool j` — the messages process `j` has multicast in this round (D5). -/
-  pool : Fin n → Finset GBCA.Msg
+  /-- `sent j` — the messages process `j` has multicast in this round (D5). -/
+  sent : Fin n → Finset GBCA.Msg
   /-- The corrupted set. -/
   F : Finset (Fin n)
   deriving DecidableEq
@@ -228,32 +228,32 @@ namespace GNetState
 
 variable {n : ℕ}
 
-/-- The initial fabric: nothing multicast, nobody corrupted. -/
+/-- The initial message state: nothing multicast, nobody corrupted. -/
 def initial (n : ℕ) : GNetState n where
-  pool := fun _ => ∅
+  sent := fun _ => ∅
   F := ∅
 
-/-- Pool `m` under sender `j` (D5). -/
-def gpool (w : GNetState n) (j : Fin n) (m : GBCA.Msg) : GNetState n :=
-  { w with pool := Function.update w.pool j (insert m (w.pool j)) }
+/-- Sent `m` under sender `j` (D5). -/
+def gsent (w : GNetState n) (j : Fin n) (m : GBCA.Msg) : GNetState n :=
+  { w with sent := Function.update w.sent j (insert m (w.sent j)) }
 
 /-- Corruption (deviation D1): total, Dirac, budget-guarded. It is not a row
-of any rule table — the family applies it to every round's fabric at once. -/
+of any rule table — the family applies it to every round's message state at once. -/
 def corrupt (P : Params) (id : Fin P.n) (w : GNetState P.n) : GNetState P.n :=
   if id ∉ w.F ∧ w.F.card < P.f then { w with F := insert id w.F } else w
 
-@[simp] theorem gpool_F (w : GNetState n) (j : Fin n) (m : GBCA.Msg) :
-    (w.gpool j m).F = w.F := rfl
+@[simp] theorem gsent_F (w : GNetState n) (j : Fin n) (m : GBCA.Msg) :
+    (w.gsent j m).F = w.F := rfl
 
-@[simp] theorem corrupt_pool {P : Params} (w : GNetState P.n) (id : Fin P.n) :
-    (w.corrupt P id).pool = w.pool := by
+@[simp] theorem corrupt_sent {P : Params} (w : GNetState P.n) (id : Fin P.n) :
+    (w.corrupt P id).sent = w.sent := by
   unfold corrupt; split <;> rfl
 
-/-- Membership in a pool after a multicast. -/
-theorem mem_gpool {w : GNetState n} {j : Fin n} {m : GBCA.Msg} {k : Fin n}
+/-- Membership in a sent after a multicast. -/
+theorem mem_gsent {w : GNetState n} {j : Fin n} {m : GBCA.Msg} {k : Fin n}
     {m' : GBCA.Msg} :
-    m' ∈ (w.gpool j m).pool k ↔ (k = j ∧ m' = m) ∨ m' ∈ w.pool k := by
-  change m' ∈ Function.update w.pool j (insert m (w.pool j)) k ↔ _
+    m' ∈ (w.gsent j m).sent k ↔ (k = j ∧ m' = m) ∨ m' ∈ w.sent k := by
+  change m' ∈ Function.update w.sent j (insert m (w.sent j)) k ↔ _
   by_cases hk : k = j
   · subst hk
     rw [Function.update_self, Finset.mem_insert]
@@ -268,7 +268,7 @@ end GSub
 namespace GBCA
 
 /-- **The state of one GBCA implementation instance**: the `n` stage records
-beside the round's message fabric. -/
+beside the round's message state. -/
 abbrev ImplState (n : ℕ) : Type := (∀ _ : Fin n, StageRec n) × GSub.GNetState n
 
 namespace ImplState
@@ -279,26 +279,26 @@ variable {n : ℕ}
 def proc (s : ImplState n) : Fin n → ProcState := fun j => (s.1 j).proc
 
 /-- `sent j` — the messages process `j` has multicast (D5). -/
-def sent (s : ImplState n) : Fin n → Finset Msg := s.2.pool
+def sent (s : ImplState n) : Fin n → Finset Msg := s.2.sent
 
 /-- `recv i j` — the messages from sender `j` delivered to receiver `i`. -/
-def recv (s : ImplState n) : Fin n → Fin n → Finset Msg := fun i => (s.1 i).inbox
+def recv (s : ImplState n) : Fin n → Fin n → Finset Msg := fun i => (s.1 i).recv
 
-/-- The corrupted set (the fabric's, kept in lockstep by `fail` broadcast). -/
+/-- The corrupted set (the message state's, kept in lockstep by `fail` broadcast). -/
 def F (s : ImplState n) : Finset (Fin n) := s.2.F
 
 @[simp] theorem proc_apply (u : ∀ _ : Fin n, StageRec n) (w : GSub.GNetState n)
     (j : Fin n) : proc (u, w) j = (u j).proc := rfl
 @[simp] theorem sent_apply (u : ∀ _ : Fin n, StageRec n) (w : GSub.GNetState n) :
-    sent (u, w) = w.pool := rfl
+    sent (u, w) = w.sent := rfl
 @[simp] theorem recv_apply (u : ∀ _ : Fin n, StageRec n) (w : GSub.GNetState n)
-    (i : Fin n) : recv (u, w) i = (u i).inbox := rfl
+    (i : Fin n) : recv (u, w) i = (u i).recv := rfl
 @[simp] theorem F_apply (u : ∀ _ : Fin n, StageRec n) (w : GSub.GNetState n) :
     F (u, w) = w.F := rfl
 
 /-- Dot notation resolves against `ImplState`, so the rule table and the
 refinement read the pair in the four names the algorithm uses. -/
-example (s : ImplState n) (i j : Fin n) : s.recv i j = (s.1 i).inbox j := rfl
+example (s : ImplState n) (i j : Fin n) : s.recv i j = (s.1 i).recv j := rfl
 
 /-- The initial implementation state. -/
 def initial (n : ℕ) : ImplState n :=
@@ -309,10 +309,10 @@ def initial (n : ℕ) : ImplState n :=
 
 @[simp] theorem _root_.PLTS.ABA.GBCA.StageRec.initial_proc (n : ℕ) :
     (StageRec.initial n).proc = ProcState.initial := rfl
-@[simp] theorem _root_.PLTS.ABA.GBCA.StageRec.initial_inbox (n : ℕ) (k : Fin n) :
-    (StageRec.initial n).inbox k = ∅ := rfl
-@[simp] theorem _root_.PLTS.ABA.GSub.GNetState.initial_pool (n : ℕ) (j : Fin n) :
-    (GSub.GNetState.initial n).pool j = ∅ := rfl
+@[simp] theorem _root_.PLTS.ABA.GBCA.StageRec.initial_recv (n : ℕ) (k : Fin n) :
+    (StageRec.initial n).recv k = ∅ := rfl
+@[simp] theorem _root_.PLTS.ABA.GSub.GNetState.initial_sent (n : ℕ) (j : Fin n) :
+    (GSub.GNetState.initial n).sent j = ∅ := rfl
 @[simp] theorem _root_.PLTS.ABA.GSub.GNetState.initial_F (n : ℕ) :
     (GSub.GNetState.initial n).F = ∅ := rfl
 
@@ -337,9 +337,9 @@ def voteCount (s : ImplState n) (i : Fin n) : ℕ :=
 def bindCount (s : ImplState n) (i : Fin n) : ℕ :=
   (Finset.univ.filter (fun j => ∃ v, Msg.bind v ∈ s.recv i j)).card
 
-/-- The number of distinct senders from which `i` has received some `SEAL`. -/
-def sealCount (s : ImplState n) (i : Fin n) : ℕ :=
-  (Finset.univ.filter (fun j => ∃ v, Msg.seal v ∈ s.recv i j)).card
+/-- The number of distinct senders from which `i` has received some `ECHO5`. -/
+def echo5Count (s : ImplState n) (i : Fin n) : ℕ :=
+  (Finset.univ.filter (fun j => ∃ v, Msg.echo5 v ∈ s.recv i j)).card
 
 /-- `Valid = {0, 1}` at process `i`: both bits are backed by an `n − f`
 `INPUT` quorum among `i`'s delivered messages. -/
@@ -393,17 +393,17 @@ theorem setProc_proc_ne (s : ImplState n) (j : Fin n) (p : ProcState)
 @[simp] theorem setProc_bindCount (s : ImplState n) (j : Fin n) (p : ProcState)
     (i : Fin n) : (s.setProc j p).bindCount i = s.bindCount i := by
   simp [bindCount, setProc_recv]
-@[simp] theorem setProc_sealCount (s : ImplState n) (j : Fin n) (p : ProcState)
-    (i : Fin n) : (s.setProc j p).sealCount i = s.sealCount i := by
-  simp [sealCount, setProc_recv]
+@[simp] theorem setProc_echo5Count (s : ImplState n) (j : Fin n) (p : ProcState)
+    (i : Fin n) : (s.setProc j p).echo5Count i = s.echo5Count i := by
+  simp [echo5Count, setProc_recv]
 @[simp] theorem setProc_bothValid {P : Params} (s : ImplState P.n) (j : Fin P.n)
     (p : ProcState) (i : Fin P.n) :
     (s.setProc j p).bothValid P i ↔ s.bothValid P i := by
   simp [bothValid]
 
-/-- Process `j` multicasts `m`: the fabric pools it under `j`. -/
+/-- Process `j` multicasts `m`: the message state records it under `j`. -/
 def mcast (s : ImplState n) (j : Fin n) (m : Msg) : ImplState n :=
-  (s.1, s.2.gpool j m)
+  (s.1, s.2.gsent j m)
 
 @[simp] theorem mcast_proc (s : ImplState n) (j : Fin n) (m : Msg) :
     (s.mcast j m).proc = s.proc := rfl
@@ -412,7 +412,7 @@ def mcast (s : ImplState n) (j : Fin n) (m : Msg) : ImplState n :=
 @[simp] theorem mcast_F (s : ImplState n) (j : Fin n) (m : Msg) :
     (s.mcast j m).F = s.F := rfl
 
-/-! A multicast is the fabric's write alone, so no reading of the delivered
+/-! A multicast is the message state's write alone, so no reading of the delivered
 sets moves. -/
 
 @[simp] theorem mcast_recvCount (s : ImplState n) (j : Fin n) (m : Msg)
@@ -423,16 +423,16 @@ sets moves. -/
     (s.mcast j m).voteCount i = s.voteCount i := rfl
 @[simp] theorem mcast_bindCount (s : ImplState n) (j : Fin n) (m : Msg) (i : Fin n) :
     (s.mcast j m).bindCount i = s.bindCount i := rfl
-@[simp] theorem mcast_sealCount (s : ImplState n) (j : Fin n) (m : Msg) (i : Fin n) :
-    (s.mcast j m).sealCount i = s.sealCount i := rfl
+@[simp] theorem mcast_echo5Count (s : ImplState n) (j : Fin n) (m : Msg) (i : Fin n) :
+    (s.mcast j m).echo5Count i = s.echo5Count i := rfl
 @[simp] theorem mcast_bothValid {P : Params} (s : ImplState P.n) (j : Fin P.n)
     (m : Msg) (i : Fin P.n) : (s.mcast j m).bothValid P i ↔ s.bothValid P i := Iff.rfl
 
-/-- Membership in a sent pool after a multicast. -/
+/-- Membership in a sent set after a multicast. -/
 theorem mem_mcast_sent {s : ImplState n} {j : Fin n} {m : Msg} {k : Fin n} {m' : Msg} :
     m' ∈ (s.mcast j m).sent k ↔ (k = j ∧ m' = m) ∨ m' ∈ s.sent k := by
-  change m' ∈ (s.2.gpool j m).pool k ↔ (k = j ∧ m' = m) ∨ m' ∈ s.2.pool k
-  exact GSub.GNetState.mem_gpool
+  change m' ∈ (s.2.gsent j m).sent k ↔ (k = j ∧ m' = m) ∨ m' ∈ s.2.sent k
+  exact GSub.GNetState.mem_gsent
 
 theorem sent_subset_mcast (s : ImplState n) (j : Fin n) (m : Msg) (k : Fin n) :
     s.sent k ⊆ (s.mcast j m).sent k :=
@@ -462,16 +462,16 @@ theorem mem_recvMsg_recv {s : ImplState n} {i j : Fin n} {m : Msg}
       (i' = i ∧ j' = j ∧ m' = m) ∨ m' ∈ s.recv i' j' := by
   by_cases hi : i' = i
   · subst hi
-    change m' ∈ (Function.update s.1 i' ((s.1 i').deliverTo j m) i').inbox j' ↔ _
+    change m' ∈ (Function.update s.1 i' ((s.1 i').deliverTo j m) i').recv j' ↔ _
     rw [Function.update_self]
-    change m' ∈ Function.update ((s.1 i').inbox) j (insert m ((s.1 i').inbox j)) j' ↔ _
+    change m' ∈ Function.update ((s.1 i').recv) j (insert m ((s.1 i').recv j)) j' ↔ _
     by_cases hj : j' = j
     · subst hj
       rw [Function.update_self, Finset.mem_insert]
       simp [recv]
     · rw [Function.update_of_ne hj]
       simp [hj, recv]
-  · change m' ∈ (Function.update s.1 i ((s.1 i).deliverTo j m) i').inbox j' ↔ _
+  · change m' ∈ (Function.update s.1 i ((s.1 i).deliverTo j m) i').recv j' ↔ _
     rw [Function.update_of_ne hi]
     simp [hi, recv]
 
@@ -484,7 +484,7 @@ theorem recvCount_le_recvMsg (s : ImplState n) (i j : Fin n) (m : Msg)
   exact ⟨hk.1, mem_recvMsg_recv.mpr (Or.inr hk.2)⟩
 
 /-- Corruption (deviation D1): total, Dirac, in lockstep with the spec's, and
-the fabric's own row — the stage records are corruption-blind. -/
+the message state's own row — the stage records are corruption-blind. -/
 def corrupt (P : Params) (id : Fin P.n) (s : ImplState P.n) : ImplState P.n :=
   (s.1, GSub.GNetState.corrupt P id s.2)
 
@@ -500,7 +500,7 @@ def corrupt (P : Params) (id : Fin P.n) (s : ImplState P.n) : ImplState P.n :=
   unfold corrupt sent GSub.GNetState.corrupt; split <;> rfl
 
 /-- The corrupted set after a corruption. `F` is the one field corruption
-writes, and the budget guard sits in the fabric, so the reading is stated here
+writes, and the budget guard sits in the message state, so the reading is stated here
 rather than reached by unfolding. Not a simp lemma: it introduces an `ite`. -/
 theorem corrupt_F {P : Params} (s : ImplState P.n) (id : Fin P.n) :
     (s.corrupt P id).F = if id ∉ s.F ∧ s.F.card < P.f then insert id s.F else s.F := by
@@ -654,75 +654,75 @@ inductive ImplStep (P : Params) (r : ℕ) :
       ImplStep P r s .tau
         (PMF.pure ((s.setProc j { s.proc j with sentBind := some none }).mcast
           j (.bind none)))
-  /-- `SEAL b` (wait case (a)): an `n − f` `BIND b` quorum, the process's own
+  /-- `ECHO5 b` (wait case (a)): an `n − f` `BIND b` quorum, the process's own
   `BIND` already out. -/
-  | sealBit (s : ImplState P.n) (j : Fin P.n) (b : Bool)
+  | echo5Bit (s : ImplState P.n) (j : Fin P.n) (b : Bool)
       (hin : (s.proc j).input ≠ none)
       (hlv : (s.proc j).sentBind ≠ none)
       (hcnt : P.n - P.f ≤ s.recvCount j (.bind (some b)))
-      (hsend : (s.proc j).sentSeal = none) :
+      (hsend : (s.proc j).sentEcho5 = none) :
       ImplStep P r s .tau
-        (PMF.pure ((s.setProc j { s.proc j with sentSeal := some (some b) }).mcast
-          j (.seal (some b))))
-  /-- `SEAL ⊥` (wait case (b)): `n − f` `BIND`s of any payload and
+        (PMF.pure ((s.setProc j { s.proc j with sentEcho5 := some (some b) }).mcast
+          j (.echo5 (some b))))
+  /-- `ECHO5 ⊥` (wait case (b)): `n − f` `BIND`s of any payload and
   `|Valid| > 1`, the process's own `BIND` already out, and no single-bit
   `BIND` quorum is on record. -/
-  | sealBot (s : ImplState P.n) (j : Fin P.n)
+  | echo5Bot (s : ImplState P.n) (j : Fin P.n)
       (hin : (s.proc j).input ≠ none)
       (hlv : (s.proc j).sentBind ≠ none)
       (hnot : ∀ b, s.recvCount j (.bind (some b)) < P.n - P.f)
       (hcnt : P.n - P.f ≤ s.bindCount j)
       (hval : s.bothValid P j)
-      (hsend : (s.proc j).sentSeal = none) :
+      (hsend : (s.proc j).sentEcho5 = none) :
       ImplStep P r s .tau
-        (PMF.pure ((s.setProc j { s.proc j with sentSeal := some none }).mcast
-          j (.seal none)))
+        (PMF.pure ((s.setProc j { s.proc j with sentEcho5 := some none }).mcast
+          j (.echo5 none)))
   /-- Byzantine injection: a corrupted sender multicasts anything. -/
   | byz (s : ImplState P.n) (j : Fin P.n) (m : Msg) (h : j ∈ s.F) :
       ImplStep P r s .tau (PMF.pure (s.mcast j m))
-  /-- `A`-return (decide case (1)): an `n − f` `SEAL v` quorum. The process
-  has called and its own `SEAL` is out. Case (1) heads the chain, so there is
+  /-- `A`-return (decide case (1)): an `n − f` `ECHO5 v` quorum. The process
+  has called and its own `ECHO5` is out. Case (1) heads the chain, so there is
   no higher case to deny. -/
   | retA (s : ImplState P.n) (id : Fin P.n) (v : Bool)
       (hin : (s.proc id).input ≠ none)
-      (hlv : (s.proc id).sentSeal ≠ none)
-      (hcnt : P.n - P.f ≤ s.recvCount id (.seal (some v)))
+      (hlv : (s.proc id).sentEcho5 ≠ none)
+      (hcnt : P.n - P.f ≤ s.recvCount id (.echo5 (some v)))
       (hr : (s.proc id).returned = false) :
       ImplStep P r s (.retG r id (.A v))
         (PMF.pure (s.setProc id { s.proc id with returned := true }))
-  /-- `B`-return (decide case (2)): an `n − f` any-`SEAL` quorum containing
-  `SEAL v`, `f + 1` `BIND v`s and `|Valid| > 1`. The `f + 1` `BIND v` receipts
+  /-- `B`-return (decide case (2)): an `n − f` any-`ECHO5` quorum containing
+  `ECHO5 v`, `f + 1` `BIND v`s and `|Valid| > 1`. The `f + 1` `BIND v` receipts
   put an honest `BIND v` sender — hence an `n − f` `VOTE v` receipt quorum —
-  behind every grade-1 output. The process has called, its own `SEAL` is out,
+  behind every grade-1 output. The process has called, its own `ECHO5` is out,
   and no higher case holds: `hnotA` denies case (1) at either bit. -/
   | retB (s : ImplState P.n) (id : Fin P.n) (v : Bool)
       (hin : (s.proc id).input ≠ none)
-      (hlv : (s.proc id).sentSeal ≠ none)
-      (hnotA : ∀ v, s.recvCount id (.seal (some v)) < P.n - P.f)
-      (hcnt : P.n - P.f ≤ s.sealCount id)
-      (honce : ∃ k, Msg.seal (some v) ∈ s.recv id k)
+      (hlv : (s.proc id).sentEcho5 ≠ none)
+      (hnotA : ∀ v, s.recvCount id (.echo5 (some v)) < P.n - P.f)
+      (hcnt : P.n - P.f ≤ s.echo5Count id)
+      (honce : ∃ k, Msg.echo5 (some v) ∈ s.recv id k)
       (hbind : P.f + 1 ≤ s.recvCount id (.bind (some v)))
       (hval : s.bothValid P id)
       (hr : (s.proc id).returned = false) :
       ImplStep P r s (.retG r id (.B v))
         (PMF.pure (s.setProc id { s.proc id with returned := true }))
-  /-- `C`-return (decide case (3)): an `n − f` `SEAL ⊥` quorum and
-  `|Valid| > 1`. The process has called, its own `SEAL` is out, and no higher
+  /-- `C`-return (decide case (3)): an `n − f` `ECHO5 ⊥` quorum and
+  `|Valid| > 1`. The process has called, its own `ECHO5` is out, and no higher
   case holds: `hnotA` denies case (1) at either bit, and `hnotB` denies
   case (2). The denial of case (2) is carried in reduced form. Case (2) asks
-  for four things at a bit `v`: an `n − f` any-`SEAL` quorum, a received
-  `SEAL v`, `f + 1` `BIND v` receipts, and `|Valid| > 1`. This row's own
+  for four things at a bit `v`: an `n − f` any-`ECHO5` quorum, a received
+  `ECHO5 v`, `f + 1` `BIND v` receipts, and `|Valid| > 1`. This row's own
   `hcnt` and `hval` already supply the first and the last, an `n − f`
-  `SEAL ⊥` quorum being in particular an `n − f` any-`SEAL` quorum. What is
-  left to deny is the pair of the received `SEAL v` and the `f + 1` `BIND v`
+  `ECHO5 ⊥` quorum being in particular an `n − f` any-`ECHO5` quorum. What is
+  left to deny is the pair of the received `ECHO5 v` and the `f + 1` `BIND v`
   receipts, which is what `hnotB` states. -/
   | retC (s : ImplState P.n) (id : Fin P.n)
       (hin : (s.proc id).input ≠ none)
-      (hlv : (s.proc id).sentSeal ≠ none)
-      (hnotA : ∀ v, s.recvCount id (.seal (some v)) < P.n - P.f)
-      (hnotB : ∀ v, (∃ k, Msg.seal (some v) ∈ s.recv id k) →
+      (hlv : (s.proc id).sentEcho5 ≠ none)
+      (hnotA : ∀ v, s.recvCount id (.echo5 (some v)) < P.n - P.f)
+      (hnotB : ∀ v, (∃ k, Msg.echo5 (some v) ∈ s.recv id k) →
         s.recvCount id (.bind (some v)) < P.f + 1)
-      (hcnt : P.n - P.f ≤ s.recvCount id (.seal none))
+      (hcnt : P.n - P.f ≤ s.recvCount id (.echo5 none))
       (hval : s.bothValid P id)
       (hr : (s.proc id).returned = false) :
       ImplStep P r s (.retG r id .C)

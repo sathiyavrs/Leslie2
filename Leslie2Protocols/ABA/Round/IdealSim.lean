@@ -6,7 +6,7 @@ Authors: Sathiya / Claude
 
 import Leslie2Protocols.ABA.Round.Ideal
 import Leslie2Protocols.ABA.Gather.IdealSim
-import Leslie2Protocols.Framework.WeakBurst
+import Leslie2Protocols.Framework.WeakRun
 
 /-!
 # The gather substitution inside the round
@@ -19,7 +19,7 @@ gather refinement relation.
 Everything is inherited from the gather refinement (`ABA/Gather/IdealSim.lean`):
 internal gather rows transport by `Gather.coreRel_tau` under a stutter, the
 fused calls by `Gather.coreRel_call`, and the two fused returns replay
-`Gather.retBurst` — its τ-chain of gather specification steps maps into the
+`Gather.retRun` — its τ-chain of gather specification steps maps into the
 pair's own embedded rows coordinate by coordinate, and its final return
 guards feed the pair's fused row.
 -/
@@ -116,7 +116,7 @@ theorem idealRefines (P : Params) (r : ℕ) :
       have ht1' := PMF.pure_injective hμ
       subst ht1'
       obtain ⟨ts, Cs, hchain, hCs, hmem, hcov, hret1, hRel1⟩ :=
-        Gather.retBurst hR.1 hin hsub hQ hr
+        Gather.retRun hR.1 hin hsub hQ hr
       have hguard2 : q₂.2.call id = none := by
         rw [hR.2.call_eq id]
         exact h2
@@ -147,7 +147,7 @@ theorem idealRefines (P : Params) (r : ℕ) :
       have ht2' := PMF.pure_injective hμ
       subst ht2'
       obtain ⟨ts, Cs, hchain, hCs, hmem, hcov, hret1, hRel2⟩ :=
-        Gather.retBurst hR.2 hin hsub hQ hr
+        Gather.retRun hR.2 hin hsub hQ hr
       have hchain' := chain_map_ga2 (r := r) q₂.1 hchain
       have hlaststep : (pairInst P r).LStep
           ((ts.map (fun x => (q₂.1, x))).getLastD (q₂.1, q₂.2))

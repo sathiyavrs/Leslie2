@@ -14,7 +14,7 @@ This module is the account of record for what the ABA development specifies.
 The state is the record `SpecState`: a ghost record `input` of genuine
 `callABA` events (D13), the flags `ret` of the processes that have returned,
 the corrupted set `F`, the decision value `val`, and a control mode
-`mode ∈ {idle, locked, dead}` (D21). Eight rules act on it.
+`mode ∈ {idle, locked, terminal}` (D21). Eight rules act on it.
 `SpecStep.callSet` and `SpecStep.callLoop` carry the honest interface call,
 `SpecStep.coinFlip` is the mode loop, `SpecStep.decide` writes the decision
 value, `SpecStep.ret` carries the honest interface return, `SpecStep.fail` is
@@ -30,24 +30,24 @@ never-corrupted returners: a corrupted return carries an arbitrary bit, which
 no property of the system can constrain.
 
 The mode loop is the specification's liveness reading. From `Mode.idle` a
-flip locks with probability `ε`, kills with probability `δ`, and releases back
+flip locks with probability `ε`, fails to deliver with probability `δ`, and releases back
 to `Mode.idle` with the remaining mass. At `Mode.locked` the decision is the
-only `τ`-rule the mode can enable, so a lock is never discarded; `Mode.dead`
+only `τ`-rule the mode can enable, so a lock is never discarded; `Mode.terminal`
 enables no `τ`-rule at all (D17). The flip names no coin bit. Reading `lock` as the coin
 agreeing with a round's reference value is an outcome coupling of a
 refinement, not a component of this system.
 
-The flip is gated on both bits carrying `f + 1` support, and the sum of the
+The flip is guarded by both bits carrying `f + 1` support, and the sum of the
 two support counts never decreases (an overwrite moves a supporter from one
 count to the other, a first write or a corruption adds to one), so a state
-passing that gate leaves some bit supported ever after and the decision stays
+passing that guard leaves some bit supported ever after and the decision stays
 enabled at `Mode.locked`; the Lean lemma is deferred.
 
 Provenance rests on the ghost record and the support guard `SuppOK` (D13).
 `SpecStep.decide` is the sole writer of `val`. Its guards are `val = ⊥`,
-`SuppOK b` and `mode ≠ dead`, and the support guard is the entire constraint
+`SuppOK b` and `mode ≠ terminal`, and the support guard is the entire constraint
 on the value decided. The rule is therefore enabled whenever some bit carries
-`f + 1` recorded-or-corrupt supporters and the mode is not `Mode.dead`; no
+`f + 1` recorded-or-corrupt supporters and the mode is not `Mode.terminal`; no
 count of participating processes is read anywhere in the system.
 `SpecStep.callSet` overwrites the ghost record while nothing is decided, so
 the record holds the bit of the last such call (D16); `SpecStep.callLoop` is
@@ -65,7 +65,7 @@ inductive Mode : Type
   /-- A lock is held: the decision is the only enabled `τ`-rule. -/
   | locked
   /-- The flip failed to deliver (D17): no `τ`-rule is enabled. -/
-  | dead
+  | terminal
   deriving DecidableEq, Repr
 
 /-- The state of the ABA specification (Transition System 1). -/
@@ -116,19 +116,19 @@ theorem SuppOK.mono {P : Params} {s s' : SpecState P.n} {v : Bool}
   rw [Finset.mem_filter] at hid ⊢
   exact ⟨hid.1, hid.2.imp (hin id) (fun hm => hF hm)⟩
 
-/-- The outcome of one flip: it locks, releases, or kills. No coin bit is
+/-- The outcome of one flip: it locks, releases, or fails to deliver. No coin bit is
 named. -/
 inductive FlipOutcome : Type
   /-- The flip locks: the mode becomes `Mode.locked`. -/
   | lock
   /-- The flip releases: the mode stays `Mode.idle`. -/
   | release
-  /-- The flip kills: the mode becomes `Mode.dead` (D17). -/
-  | kill
+  /-- The flip fails to deliver: the mode becomes `Mode.terminal` (D17). -/
+  | undelivered
   deriving DecidableEq, Repr
 
 /-- The flip distribution: mass `ε` on `lock`, `1 − ε − δ` on `release` and
-`δ` on `kill`. It is the image of the development's single coin distribution
+`δ` on `undelivered`. It is the image of the development's single coin distribution
 `Params.wccPMF` under a map that forgets the bit, one bit going to `lock` and
 the other, together with the adversarial outcome, to `release`. The three
 masses are all the rules read; no rule names a coin bit. -/
@@ -137,7 +137,7 @@ noncomputable def flipPMF (P : Params) : PMF FlipOutcome :=
     | .bit true => .lock
     | .bit false => .release
     | .adv => .release
-    | .dead => .kill)
+    | .undelivered => .undelivered)
 
 /-- The step relation of the ABA specification. -/
 inductive SpecStep (P : Params) :
@@ -158,11 +158,11 @@ inductive SpecStep (P : Params) :
   /-- Rule 3 (the flip): the only non-Dirac rule of the system. From
   `Mode.idle`, with nothing decided, one flip resolves by `flipPMF` into
   `Mode.locked` with probability `ε`, back into `Mode.idle` with probability
-  `1 − ε − δ`, and into `Mode.dead` with probability `δ` (D17). It is
+  `1 − ε − δ`, and into `Mode.terminal` with probability `δ` (D17). It is
   one-shot: the three outcomes are the three modes, and the rule names no coin
   bit.
 
-  The guard `hmix` is the mixedness gate: the flip fires only from a state
+  The guard `hmix` is the mixedness guard: the flip fires only from a state
   where both bits carry `f + 1` support. Under honest unanimity on one bit the
   other bit is never supported, so the guard fails at every state such a run
   reaches. The flip is then unreachable, and with it every probabilistic
@@ -174,15 +174,15 @@ inductive SpecStep (P : Params) :
         ((flipPMF P).map (fun o => match o with
           | .lock => { s with mode := .locked }
           | .release => s
-          | .kill => { s with mode := .dead }))
+          | .undelivered => { s with mode := .terminal }))
   /-- Rule 4 (decide): the sole writer of `val`. Its guards are `val = ⊥`
-  (`hv`), `SuppOK b` (`hs`) and `mode ≠ dead` (`hm`), and the support guard is
+  (`hv`), `SuppOK b` (`hs`) and `mode ≠ terminal` (`hm`), and the support guard is
   the entire constraint on the decided value: the bit `b` carries `f + 1`
-  recorded-or-corrupt supporters (D13). A killed flip disables the rule (D17);
+  recorded-or-corrupt supporters (D13). An undelivered flip disables the rule (D17);
   at `Mode.locked` it is the only enabled `τ`-rule, and it is enabled there
   whenever some bit carries `f + 1` support. The mode returns to `Mode.idle`. -/
   | decide (s : SpecState P.n) (b : Bool) (hv : s.val = none) (hs : SuppOK P s b)
-      (hm : s.mode ≠ .dead) :
+      (hm : s.mode ≠ .terminal) :
       SpecStep P s .tau
         (PMF.pure { s with val := some b, mode := .idle })
   /-- Rule 5 (return): a process returns the decision value. -/

@@ -12,16 +12,16 @@ import Leslie2Protocols.Framework.IdleFamily
 
 The round-`r` instance of the Graded Binding Crusader Agreement specification.
 
-Binding is *negative* information. The state field `dead : Finset Bool` is the
+Binding is *negative* information. The state field `excluded : Finset Bool` is the
 set of bits the instance can no longer hand out; it starts empty. The internal
-τ-transition `bindUnset b` kills one bit — `dead := insert b dead` — once a
+τ-transition `bindUnset b` excludes one bit — `excluded := insert b excluded` — once a
 quorum has spoken and `f + 1` F-blind supporters back the *surviving* bit `!b`.
-No rule removes a bit and `bindUnset` requires `dead = ∅`, so `dead` is written
-at most once per instance — the kill commits the round — and is monotone along
+No rule removes a bit and `bindUnset` requires `excluded = ∅`, so `excluded` is written
+at most once per instance — the exclusion commits the round — and is monotone along
 every execution; `corrupt` leaves it alone. The once-only guard is what makes
-every fair round completable: a second kill after an `A`-return would strand
+every fair round completable: a second exclusion after an `A`-return would strand
 the processes yet to return, the value-bearing returns needing a live bit and
-`retC` being blocked by the A-latch. Every property below is a consequence of
+`retC` being blocked by the `A` grade guard. Every property below is a consequence of
 that monotonicity plus the membership guards on the return rules, with no
 auxiliary invariant.
 
@@ -32,22 +32,22 @@ The `grade` field (`some true` ≈ grade `1`/A-side, `some false` ≈ grade
 
 ## Graded agreement is the guard pair
 
-Both value-bearing returns carry the guard pair `v ∉ dead ∧ (!v) ∈ dead`: the
-bit handed out is alive, and the other bit is already dead. That pair *is*
+Both value-bearing returns carry the guard pair `v ∉ excluded ∧ (!v) ∈ excluded`: the
+bit handed out is alive, and the other bit is already excluded. That pair *is*
 graded agreement, with no supporting argument. A return of `v` pins `!v` into
-`dead`; monotonicity carries `!v ∈ dead` to every later state of the run; a
-later return of `w` needs `w ∉ dead`, so `w ≠ !v`, so `w = v`. Two returns in
+`excluded`; monotonicity carries `!v ∈ excluded` to every later state of the run; a
+later return of `w` needs `w ∉ excluded`, so `w ≠ !v`, so `w = v`. Two returns in
 one execution therefore name the same bit whatever their grades, and a single
 bit — the unique survivor once any value-bearing return has fired — is the only
 bit any extension can ever hand out.
 
 ## `retC` and Graded Binding
 
-The `C`-return's guard `1 ≤ dead.card` is ABDY22's Graded Binding clause read
+The `C`-return's guard `1 ≤ excluded.card` is ABDY22's Graded Binding clause read
 on this state: *there is a bit `b` such that no non-faulty party decides `1 − b`
-at grade `≥ 1` in any extension*. A member of `dead` is exactly such a `1 − b`
+at grade `≥ 1` in any extension*. A member of `excluded` is exactly such a `1 − b`
 — the witness `b` is its complement, the surviving bit — because the
-value-bearing returns refuse a dead bit, and `dead` only grows, so the witness
+value-bearing returns refuse an excluded bit, and `excluded` only grows, so the witness
 is valid in every extension of the run and not merely at the moment of the
 return. A `C`-return thus commits the instance: from that point on at most
 one bit is alive anywhere in the future, which is what makes handing out no bit
@@ -57,10 +57,10 @@ bit (D15), which is what certifies that neither bit was forced.
 ## The all-⊥ run
 
 In a round where neither bit is decidable the specification still commits
-internally to a single killed bit, and the run ends with `C`-returns alone.
+internally to a single excluded bit, and the run ends with `C`-returns alone.
 That commitment is sound because the `C`-return's label carries no bit: the
-instance never announces which bit it killed, so no process is answered with
-the internal choice. `retC`'s guard `1 ≤ dead.card` is the binding witness
+instance never announces which bit it excluded, so no process is answered with
+the internal choice. `retC`'s guard `1 ≤ excluded.card` is the binding witness
 either way — a bit that no extension can hand out — whether the round goes on
 to hand out its complement or hands out nothing at all.
 
@@ -89,24 +89,24 @@ to hand out its complement or hands out nothing at all.
   supporters some member is outside the *final* `F`, hence outside the current
   `F`, hence a never-corrupted genuine caller — corrupt supporters are paid for
   by the `F` budget itself, with no phantom-call bookkeeping. Chaining the two:
-  a bit `v` handed out at grade `≥ 1` requires `(!v) ∈ dead`, and the
+  a bit `v` handed out at grade `≥ 1` requires `(!v) ∈ excluded`, and the
   `bindUnset (!v)` that put it there certified `f + 1` F-blind supporters of
   `!(!v) = v`; the budget pigeonhole then recovers a never-corrupted genuine
   caller of `v` behind every value-bearing return.
 
 * **D19 (the state shape).** The source blueprint's TS 2 carries a bound value
-  `bind ∈ {0, 1, ⊥}`. The exclusion set is the killed-bit reading of that
-  value: `dead ∈ {∅, {b}}`, embedding `bind = ⊥ ↦ dead = ∅` and
-  `bind = b ↦ dead = {!b}`. The two states therefore differ in the guards, not
+  `bind ∈ {0, 1, ⊥}`. The exclusion set is the excluded-bit reading of that
+  value: `excluded ∈ {∅, {b}}`, embedding `bind = ⊥ ↦ excluded = ∅` and
+  `bind = b ↦ excluded = {!b}`. The two states therefore differ in the guards, not
   in the cardinality. The blueprint's `bind = some v` guard on the
-  value-bearing returns becomes the pair `v ∉ dead ∧ (!v) ∈ dead`, its
-  `bind = none` guard on binding becomes `dead = ∅`, and the `C`-return's
+  value-bearing returns becomes the pair `v ∉ excluded ∧ (!v) ∈ excluded`, its
+  `bind = none` guard on binding becomes `excluded = ∅`, and the `C`-return's
   binding obligation `bind ≠ ⊥` — which in the source also puts the bound
-  value on the label — becomes `1 ≤ dead.card`, read off a label that names no
+  value on the label — becomes `1 ≤ excluded.card`, read off a label that names no
   bit.
 
 Every transition is Dirac, so the instance is an LTS and the `ForwardLTS`
-bridge applies. `fail` is the determinised D1 `corrupt`; the family
+correspondence applies. `fail` is the determinised D1 `corrupt`; the family
 (`GBCA.specFamily`) broadcasts it to all rounds.
 -/
 
@@ -122,7 +122,7 @@ structure SpecState (n : ℕ) where
   ret : Fin n → Bool
   /-- The exclusion set: the bits the instance can no longer hand out.
   Monotone, written at most once, by `bindUnset`. -/
-  dead : Finset Bool
+  excluded : Finset Bool
   /-- The grade lock: `some true` after an `A`-return, `some false` after a
   `C`-return (`⊥` before either). -/
   grade : Option Bool
@@ -134,11 +134,11 @@ namespace SpecState
 
 variable {n : ℕ}
 
-/-- The initial GBCA instance state: no bit is dead yet. -/
+/-- The initial GBCA instance state: no bit is excluded yet. -/
 def initial (n : ℕ) : SpecState n where
   call := fun _ => none
   ret := fun _ => false
-  dead := ∅
+  excluded := ∅
   grade := none
   F := ∅
 
@@ -147,7 +147,7 @@ def quorum (P : Params) (s : SpecState P.n) : Prop :=
   P.n - P.f ≤ ((Finset.univ.filter (fun id => id ∉ s.F ∧ s.call id ≠ none)) ∪ s.F).card
 
 /-- Corruption (deviation D1): total, Dirac, monotone in `F`, and blind to
-`dead`. -/
+`excluded`. -/
 def corrupt (P : Params) (id : Fin P.n) (s : SpecState P.n) : SpecState P.n :=
   if id ∉ s.F ∧ s.F.card < P.f then { s with F := insert id s.F } else s
 
@@ -168,8 +168,8 @@ read them from here rather than reproving them locally. -/
     (s.corrupt P id).ret = s.ret := by
   unfold SpecState.corrupt; split <;> rfl
 
-@[simp] theorem corrupt_dead (P : Params) (s : SpecState P.n) (id : Fin P.n) :
-    (s.corrupt P id).dead = s.dead := by
+@[simp] theorem corrupt_excluded (P : Params) (s : SpecState P.n) (id : Fin P.n) :
+    (s.corrupt P id).excluded = s.excluded := by
   unfold SpecState.corrupt; split <;> rfl
 
 @[simp] theorem corrupt_grade (P : Params) (s : SpecState P.n) (id : Fin P.n) :
@@ -195,18 +195,18 @@ inductive Step (P : Params) (r : ℕ) :
   | callLoop (s : SpecState P.n) (id : Fin P.n) (b : Bool) :
       Step P r s (.callG r id b) (PMF.pure s)
   /-- Binding: a quorum has spoken and `f + 1` processes support the surviving
-  bit `!b` (D15, SuppOK form: caller or `F`-member); kill `b`. Fires at most
-  once per instance — the guard is `dead = ∅` — and `dead` never shrinks. -/
+  bit `!b` (D15, SuppOK form: caller or `F`-member); exclude `b`. Fires at most
+  once per instance — the guard is `excluded = ∅` — and `excluded` never shrinks. -/
   | bindUnset (s : SpecState P.n) (b : Bool)
       (hq : s.quorum P)
       (hw : P.f + 1 ≤ (Finset.univ.filter
         (fun id => s.call id = some (!b) ∨ id ∈ s.F)).card)
-      (hd0 : s.dead = ∅) :
-      Step P r s .tau (PMF.pure { s with dead := insert b s.dead })
+      (hd0 : s.excluded = ∅) :
+      Step P r s .tau (PMF.pure { s with excluded := insert b s.excluded })
   /-- `B`-return: adopt the surviving bit `v` (`f + 1` dissenting supporters,
-  D15). The guard pair `v ∉ dead`, `(!v) ∈ dead` is graded agreement. -/
+  D15). The guard pair `v ∉ excluded`, `(!v) ∈ excluded` is graded agreement. -/
   | retB (s : SpecState P.n) (id : Fin P.n) (v : Bool)
-      (hlive : v ∉ s.dead) (hdead : (!v) ∈ s.dead)
+      (hlive : v ∉ s.excluded) (hexcluded : (!v) ∈ s.excluded)
       (hw : P.f + 1 ≤ (Finset.univ.filter
         (fun id' => s.call id' = some (!v) ∨ id' ∈ s.F)).card)
       (hr : s.ret id = false) :
@@ -215,17 +215,17 @@ inductive Step (P : Params) (r : ℕ) :
   /-- `A`-return: decide the surviving bit `v` (locks the grade to the A-side).
   Same guard pair as `retB`. -/
   | retA (s : SpecState P.n) (id : Fin P.n) (v : Bool)
-      (hlive : v ∉ s.dead) (hdead : (!v) ∈ s.dead)
+      (hlive : v ∉ s.excluded) (hexcluded : (!v) ∈ s.excluded)
       (hg : s.grade = none ∨ s.grade = some true)
       (hr : s.ret id = false) :
       Step P r s (.retG r id (.A v))
         (PMF.pure { s with grade := some true, ret := Function.update s.ret id true })
-  /-- `C`-return: no output. Some bit is already dead — the Graded Binding
-  witness, valid in every extension because `dead` only grows — and both bits
+  /-- `C`-return: no output. Some bit is already excluded — the Graded Binding
+  witness, valid in every extension because `excluded` only grows — and both bits
   carry `f + 1` F-blind support (D15), which is what makes handing out no bit
   the right answer; the grade is locked to the C-side. -/
   | retC (s : SpecState P.n) (id : Fin P.n)
-      (hd : 1 ≤ s.dead.card)
+      (hd : 1 ≤ s.excluded.card)
       (hwT : P.f + 1 ≤ (Finset.univ.filter
         (fun id' => s.call id' = some true ∨ id' ∈ s.F)).card)
       (hwF : P.f + 1 ≤ (Finset.univ.filter

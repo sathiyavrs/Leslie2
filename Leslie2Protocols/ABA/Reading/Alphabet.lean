@@ -14,7 +14,7 @@ import Leslie2Protocols.Framework.Relabel
 
 The shared alphabet `Lab n` names what an observer of the protocol sees: the
 ABA interface, the two sub-protocol interfaces, and corruption. It cannot name
-a multicast, a delivery, or a Byzantine drive, because those are joint steps of
+a multicast, a delivery, or a Byzantine handshake row, because those are joint steps of
 components whose boundary the observer does not see. The extended alphabet
 `NLab n M` adds them, and the composition hides them again.
 
@@ -36,15 +36,15 @@ namespace Net
 
 /-! ### The rendezvous alphabet -/
 
-/-- The rendezvous alphabet: the two networks, the Byzantine drives, and the
+/-- The rendezvous alphabet: the two networks, the Byzantine handshake rows, and the
 handshake branches the shared alphabet does not distinguish. The stage
 multicast and the stage delivery carry a message of the graded-agreement
 implementation being read. -/
 inductive NetEvtP (n : ℕ) (M : Type) : Type
-  /-- Stage-`r` multicast: sender `j` writes its record and the network pools
+  /-- Stage-`r` multicast: sender `j` writes its record and the network sent sets
   `m` under `j`. -/
   | gsnd (r : ℕ) (j : Fin n) (m : M)
-  /-- Stage-`r` delivery: `m`, pooled under sender `j`, reaches receiver `i`. -/
+  /-- Stage-`r` delivery: `m`, sent under sender `j`, reaches receiver `i`. -/
   | gdlv (r : ℕ) (i j : Fin n) (m : M)
   /-- DECIDED relay: sender `j` publishes `⟨DECIDED, b⟩` on an `f + 1` quorum. -/
   | dsnd (j : Fin n) (b : Bool)
@@ -55,15 +55,15 @@ inductive NetEvtP (n : ℕ) (M : Type) : Type
   | retWPub (r : ℕ) (id : Fin n) (c : Bool) (b : Bool)
   /-- The graded-agreement call against an already-called stage record. -/
   | gcallLoop (r : ℕ) (id : Fin n) (b : Bool)
-  /-- A corrupted process drives the graded-agreement call, opening the stage
+  /-- A corrupted process takes the graded-agreement call, opening the stage
   record (D11). -/
   | byzCallG (r : ℕ) (k : Fin n) (b : Bool)
-  /-- A corrupted process drives the graded-agreement call against an
+  /-- A corrupted process takes the graded-agreement call against an
   already-called stage record (D11). -/
   | byzCallGLoop (r : ℕ) (k : Fin n) (b : Bool)
   /-- A corrupted process takes a graded-agreement return (D11). -/
   | byzRetG (r : ℕ) (k : Fin n) (out : GbcaOut)
-  /-- A corrupted process drives the coin call (D11). -/
+  /-- A corrupted process takes the coin call (D11). -/
   | byzCallW (r : ℕ) (k : Fin n)
   /-- A corrupted process takes the coin return (D11). -/
   | byzRetW (r : ℕ) (k : Fin n) (b : Bool)
@@ -92,13 +92,13 @@ def netEvtLabels (n : ℕ) {M : Type} : Set (NLabP n M) :=
 A corruption replaces the program of the process it names (D23). The replaced
 program stands still on every label it can take at all, and it can take every
 label except the ones below: those on which the process would act on its own
-sub-protocol traffic. That traffic is the business of the Byzantine drives
+sub-protocol messages. Those messages are the business of the Byzantine handshake rows
 (D11), which carry it with no row at the process they name. -/
 
-/-- The labels on which process `j` acts on its own sub-protocol traffic: its
+/-- The labels on which process `j` acts on its own sub-protocol messages: its
 own graded-agreement call and return, its own stage multicast, the stage and
 DECIDED deliveries addressed to it, its own call against an already-called
-stage record, its own fused coin return, and the graded-agreement drives that
+stage record, its own fused coin return, and the graded-agreement rows that
 name it. -/
 def actsAt {n : ℕ} {M : Type} (j : Fin n) : NLabP n M → Prop
   | Sum.inl (.callG _ id _) => id = j
@@ -122,7 +122,7 @@ instance {n : ℕ} {M : Type} (j : Fin n) :
 /-! ### The label pullback of the coin oracle -/
 
 /-- The pullback along which the coin oracle is read over the extended
-alphabet: a shared label is its own, the Byzantine handshake drives and the
+alphabet: a shared label is its own, the Byzantine handshake rows and the
 fused coin return are the oracle's own handshakes, and every other rendezvous
 label leaves the oracle idle. -/
 def wccPull (n : ℕ) {M : Type} : NLabP n M → Option (Lab n)

@@ -28,7 +28,7 @@ beside the three in the core.
 | [`FamilySim.lean`](Framework/FamilySim.lean) | 385 | Forward simulation is a congruence for `System.family`: per-instance refinement lifts to the family. |
 | [`SyncProduct.lean`](Framework/SyncProduct.lean) | 177 | Full-synchronisation product of a finite family — a visible label moves every component, τ moves one. |
 | [`Relabel.lean`](Framework/Relabel.lean) | 471 | Extended alphabets and restriction along the left summand, with the precongruence for it. |
-| [`WeakBurst.lean`](Framework/WeakBurst.lean) | 188 | Weak runs from step chains: prepending a silent step, and the k-fold burst — a chain of silent steps closed by one external step. |
+| [`WeakRun.lean`](Framework/WeakRun.lean) | 188 | Weak runs from step chains: prepending a silent step, and the k-fold run — a chain of silent steps closed by one external step. |
 | [`MapIdleSim.lean`](Framework/MapIdleSim.lean) | 191 | Forward simulation is a congruence for reading both systems over a finer alphabet along a partial label map. |
 
 ## Notes
@@ -36,9 +36,9 @@ beside the three in the core.
 | file | what it is for |
 |---|---|
 | [`DESIGN-Composition.md`](DESIGN-Composition.md) | Why the chain is cut where it is: what the composition buys, where each network is external, and what the DECIDED model already weakens. |
-| [`DESIGN-CoreSim.md`](DESIGN-CoreSim.md) | The narrative account of the core simulation `hybrid ⊑ ABA.spec` — the abstract twin, the invariant, and the certificates decided values ride on. |
-| [`DESIGN-GBCASim.md`](DESIGN-GBCASim.md) | The narrative account of the per-instance GBCA refinement — kill-on-demand, the receipt-pattern certificates, and the burst structure. |
-| [`DESIGN-GatherTower.md`](DESIGN-GatherTower.md) | The narrative account of the gather-based GBCA stack — why the gather specification carries a core family, the BIND-by-broadcast pinning, the member-form counting, the chain-data discipline of its simulations, and the flat reading beneath the composed one. |
+| [`DESIGN-CoreSim.md`](DESIGN-CoreSim.md) | The narrative account of the core simulation `hybrid ⊑ ABA.spec` — the abstract state, the invariant, and the certificates decided values ride on. |
+| [`DESIGN-GBCASim.md`](DESIGN-GBCASim.md) | The narrative account of the per-instance GBCA refinement — exclude-on-demand, the receipt-pattern certificates, and the run structure. |
+| [`DESIGN-GatherTiers.md`](DESIGN-GatherTiers.md) | The narrative account of the gather-based GBCA stack — why the gather specification carries a core family, the BIND-by-broadcast pinning, the member-form counting, the chain-data discipline of its simulations, and the flat reading beneath the composed one. |
 | [`NOTES-Fidelity.md`](NOTES-Fidelity.md) | How the encoding stands against its sources — the Leslie blueprint, ABDY22 and AFW25: where it follows one against another, and what it deliberately does not reproduce. |
 | [`NOTES-Liveness-Roadmap.md`](NOTES-Liveness-Roadmap.md) | Termination is out of scope; this is what proving it would take. |
 

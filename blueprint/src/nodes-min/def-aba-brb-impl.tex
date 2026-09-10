@@ -1,6 +1,6 @@
 \begin{definition}[The BRB implementation instance]
   \label{def:aba-brb-impl}
   \lean{PLTS.ABA.BRB.BMsg}\lean{PLTS.ABA.BRB.PState}\lean{PLTS.ABA.BRB.ImplState}\lean{PLTS.ABA.BRB.ImplStep}\lean{PLTS.ABA.BRB.implInst}\leanok
-  \uses{def:aba-brb-spec, def:aba-fabric}
-  Bracha's algorithm~\cite{Bra87} --- Algorithm~6 of~\cite{LeslieBP} --- over the two-box state: the leader multicasts $\mathrm{INIT}$, a process echoes the leader's $\mathrm{INIT}$ once, votes once on an $n{-}f$ $\mathrm{ECHO}$ quorum or on $f{+}1$ $\mathrm{VOTE}$ receipts, and returns a value at $n{-}f$ $\mathrm{VOTE}$ receipts of it: \leandecl{PLTS.ABA.BRB.implInst}.
+  \uses{def:aba-brb-spec, def:aba-msgstate}
+  Bracha's algorithm~\cite{Bra87} --- Algorithm~6 of~\cite{LeslieBP} --- over the two-part state: the leader multicasts $\mathrm{INIT}$, a process echoes the leader's $\mathrm{INIT}$ once, votes once on an $n{-}f$ $\mathrm{ECHO}$ quorum or on $f{+}1$ $\mathrm{VOTE}$ receipts, and returns a value at $n{-}f$ $\mathrm{VOTE}$ receipts of it: \leandecl{PLTS.ABA.BRB.implInst}.
 \end{definition}

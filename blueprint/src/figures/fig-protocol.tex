@@ -5,7 +5,7 @@
     >={Stealth[round]}, semithick,
     prog/.style={draw, rounded corners, align=center, font=\footnotesize,
       minimum width=2.4cm, minimum height=1.35cm, inner sep=3pt},
-    box/.style={draw, rounded corners, align=center, font=\footnotesize,
+    comp/.style={draw, rounded corners, align=center, font=\footnotesize,
       minimum width=4.0cm, minimum height=1.1cm, inner sep=3pt},
     lbl/.style={font=\scriptsize, fill=white, inner sep=1.5pt},
     ann/.style={font=\scriptsize, align=center, inner sep=1.5pt}]
@@ -18,11 +18,11 @@
     {$\mathrm{relabel} \circ \mathrm{abstract}\,\mathrm{netEvtLabels}$};
   % the n programs
   \node[prog] (p1) at (0.6,1.0)
-    {$\mathrm{ABAProcN}(P,1)$\\ round loop\\ stage-side record\\ inbox rows};
+    {$\mathrm{ABAProcN}(P,1)$\\ round loop\\ stage-side record\\ received set rows};
   \node[prog] (pj) at (4.9,1.0)
-    {$\mathrm{ABAProcN}(P,j)$\\ round loop\\ stage-side record\\ inbox rows};
+    {$\mathrm{ABAProcN}(P,j)$\\ round loop\\ stage-side record\\ received set rows};
   \node[prog] (pn) at (8.9,1.0)
-    {$\mathrm{ABAProcN}(P,n)$\\ round loop\\ stage-side record\\ inbox rows};
+    {$\mathrm{ABAProcN}(P,n)$\\ round loop\\ stage-side record\\ received set rows};
   \node[font=\footnotesize] at (2.75,1.0) {$\cdots$};
   \node[font=\footnotesize] at (6.9,1.0) {$\cdots$};
   % the synchronised visible bus
@@ -35,14 +35,14 @@
   \draw[thick] (-0.7,-0.35) -- (10.1,-0.35);
   \foreach \x in {0.6,4.9,8.9} \draw[<->] (\x,0.32) -- (\x,-0.35);
   % the network adversary
-  \node[box] (adv) at (2.2,-2.6)
+  \node[comp] (adv) at (2.2,-2.6)
     {$\mathrm{netAdv}(P)$: the adversary\\
-     pools $pool(r,j)$, $dpool(j)$\\
+     sent sets $sent(r,j)$, $dpool(j)$\\
      corrupted set $F$, $|F| < f$};
   \draw[<->] (2.2,-0.35) -- (2.2,-2.05);
-  \node[ann, anchor=east] at (1.95,-1.5) {$k \in F$ authorises\\ every drive};
+  \node[ann, anchor=east] at (1.95,-1.5) {$k \in F$ authorises\\ every handshake row};
   % the coin oracle, joined through the pullback
-  \node[box] (w) at (7.6,-2.6)
+  \node[comp] (w) at (7.6,-2.6)
     {$\mathrm{WCC.specFamily}(P)$\\ along $\mathrm{wccPull}$:\\
      the one non-Dirac rule};
   \draw[<->] (7.6,-0.35) -- (7.6,-2.05);
@@ -50,14 +50,14 @@
     {$\mathrm{callW}$, $\mathrm{retW}$,\\ $\mathrm{byzCallW}$, $\mathrm{byzRetW}$,\\
      $\mathrm{retWPub}$};
   % the presentation it is included in
-  \node[box] (impl) at (4.9,-5.2)
+  \node[comp] (impl) at (4.9,-5.2)
     {the composed reading\\ $\mathrm{composed}(P)$};
   \draw[->, dashed] (4.9,-3.9) --
     node[lbl, right, align=left, pos=0.72]{$\operatorname{ATD}$ inclusion, no restriction,\\ along $\mathrm{ProtocolRel}$} (impl.north);
   % the rendezvous bus legend, drawn last so it masks the descending arrows
   \node[ann, fill=white] at (4.7,-0.8)
     {$\mathrm{gsnd}$, $\mathrm{gdlv}$, $\mathrm{dsnd}$, $\mathrm{ddlv}$,
-     $\mathrm{retWPub}$, $\mathrm{gcallLoop}$, the five drives $\to \tau$:\\
+     $\mathrm{retWPub}$, $\mathrm{gcallLoop}$, the five handshake rows $\to \tau$:\\
      one half at the named program, the other at the adversary,\\
      save $\mathrm{byzCallG}$ and $\mathrm{byzRetG}$, which have no program half (D11).\\
      $\mathrm{fail}$ fires under $k \notin F$ and $|F| < f$ and replaces the program it names;\\

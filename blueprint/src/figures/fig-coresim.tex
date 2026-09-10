@@ -1,4 +1,4 @@
-% Core forward simulation: the two-phase abstract twin (PLTS.ABA.coreSim).
+% Core forward simulation: the two-phase abstract state (PLTS.ABA.coreSim).
 \begin{tikzpicture}[
     >={Stealth[round]}, semithick, on grid,
     conc/.style={draw, rounded corners, minimum height=0.8cm, align=center,
@@ -11,7 +11,7 @@
   \node[conc] (t4) at (7.2,2.4){coin\\flip};
   \node[conc] (t5) at (9.6,2.4){DECIDED\\gossip};
   \node[conc] (t6) at (12.0,2.4){\texttt{retABA}};
-  % bottom row: the twin's two nodes
+  % bottom row: the abstract state's two nodes
   \node[state, initial, initial text={}] (p1) at (4.8,0)
     {Phase 1\\ $val=\bot$\\ ghost sync};
   \node[state, accepting] (p2) at (12.0,0)

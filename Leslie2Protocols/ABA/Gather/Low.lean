@@ -28,11 +28,11 @@ namespace PLTS
 namespace ABA
 namespace Gather
 
-/-- The state of one gather-over-Bracha instance: the gather boxes and
-fabric, the `n` input-BRB implementation instances, and the `n` bind-BRB
+/-- The state of one gather-over-Bracha instance: the gather local states and
+message state, the `n` input-BRB implementation instances, and the `n` bind-BRB
 implementation instances. -/
 structure LowState (n : ℕ) (X : Type) : Type where
-  /-- The gather processes' boxes and the instance's message fabric. -/
+  /-- The gather processes' local states and the instance's message state. -/
   ga : SubState n (PRec n X) (GaMsg n X)
   /-- `brbIn k` — the Bracha instance broadcasting `k`'s input. -/
   brbIn : ∀ _ : Fin n, BRB.ImplState n X
@@ -50,7 +50,7 @@ def initial (n : ℕ) (X : Type) : LowState n X where
   brbBind := fun _ => BRB.ImplState.initial n (APSet n X)
 
 /-- Corruption (deviation D1): the broadcast transform, corrupting the gather
-fabric and every Bracha coordinate in lockstep. -/
+message state and every Bracha coordinate in lockstep. -/
 def corruptAll (P : Params) (id : Fin P.n) (s : LowState P.n X) : LowState P.n X where
   ga := s.ga.corrupt P id
   brbIn := fun k => (s.brbIn k).corrupt P id
@@ -105,7 +105,7 @@ inductive LowStep (P : Params) :
       (b' : BRB.ImplState P.n (APSet P.n X))
       (h : BRB.ImplStep P k (s.brbBind k) BRB.Lab.tau (PMF.pure b')) :
       LowStep P s .tau (PMF.pure { s with brbBind := Function.update s.brbBind k b' })
-  /-- Asynchronous delivery on the gather fabric. -/
+  /-- Asynchronous delivery on the gather message state. -/
   | deliver (s : LowState P.n X) (i j : Fin P.n) (m : GaMsg P.n X)
       (h : m ∈ s.ga.sent j) :
       LowStep P s .tau (PMF.pure { s with ga := s.ga.recvMsg i j m })
@@ -143,7 +143,7 @@ inductive LowStep (P : Params) :
           brbBind := Function.update s.brbBind j
             (((s.brbBind j).setProc j
               { (s.brbBind j).proc j with input := some U }).mcast j (.init U)) })
-  /-- Byzantine injection on the gather fabric. -/
+  /-- Byzantine injection on the gather message state. -/
   | byz (s : LowState P.n X) (j : Fin P.n) (m : GaMsg P.n X) (h : j ∈ s.ga.F) :
       LowStep P s .tau (PMF.pure { s with ga := s.ga.mcast j m })
   /-- Return: `n − f` bind-BRB payloads held at the returner, each a sub-map
@@ -157,7 +157,7 @@ inductive LowStep (P : Params) :
       LowStep P s (.ret id g)
         (PMF.pure
         { s with ga := s.ga.setProc id { s.ga.proc id with returned := true } })
-  /-- Corruption (deviation D1), in lockstep across the fabric and every
+  /-- Corruption (deviation D1), in lockstep across the message state and every
   Bracha coordinate. -/
   | fail (s : LowState P.n X) (id : Fin P.n) :
       LowStep P s (.fail id) (PMF.pure (s.corruptAll P id))

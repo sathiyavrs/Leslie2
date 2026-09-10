@@ -13,10 +13,10 @@ import Leslie2Protocols.ABA.Broadcast.Impl
 import Leslie2Protocols.ABA.Broadcast.ImplSim
 import Leslie2Protocols.ABA.Broadcast.Spec
 import Leslie2Protocols.ABA.Core.Abs
-import Leslie2Protocols.ABA.Core.Burst
 import Leslie2Protocols.ABA.Core.Inv
 import Leslie2Protocols.ABA.Core.NonVacuity
 import Leslie2Protocols.ABA.Core.Rel
+import Leslie2Protocols.ABA.Core.Run
 import Leslie2Protocols.ABA.Core.Sim
 import Leslie2Protocols.ABA.Gather.Ideal
 import Leslie2Protocols.ABA.Gather.IdealSim
@@ -37,8 +37,8 @@ import Leslie2Protocols.ABA.Spec.ABASafety
 import Leslie2Protocols.ABA.Spec.GBCA
 import Leslie2Protocols.ABA.Spec.GBCASafety
 import Leslie2Protocols.ABA.Spec.WCC
-import Leslie2Protocols.ABA.Vocabulary.Fabric
 import Leslie2Protocols.ABA.Vocabulary.Labels
+import Leslie2Protocols.ABA.Vocabulary.MsgState
 import Leslie2Protocols.ABA.Vocabulary.Params
 import Leslie2Protocols.ABA.Vocabulary.RoundLoop
 import Leslie2Protocols.Framework.FamilySim
@@ -47,4 +47,4 @@ import Leslie2Protocols.Framework.MapIdleSim
 import Leslie2Protocols.Framework.Relabel
 import Leslie2Protocols.Framework.SyncProduct
 import Leslie2Protocols.Framework.TraceSupport
-import Leslie2Protocols.Framework.WeakBurst
+import Leslie2Protocols.Framework.WeakRun

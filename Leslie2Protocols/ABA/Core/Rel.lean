@@ -12,7 +12,7 @@ import Leslie2Protocols.ABA.Spec.GBCASafety
 # The core-simulation relation
 
 The relation and invariant for `coreSim : hybrid ⊑ ABA.spec`. The abstract
-twin never fires `SpecStep.coinFlip`: it answers every hidden row, the
+abstract state never fires `SpecStep.coinFlip`: it answers every hidden row, the
 concrete coin included, by stuttering under a constant coupling, and its mode
 is `Mode.idle` throughout. It decides once, in the `SpecStep.decide` τ-step
 that leads the first `retABA` row.
@@ -24,7 +24,7 @@ that leads the first `retABA` row.
   flag against the corrupted set, F-lockstep, input
   coherence, the `Closed`-keyed round skeleton with quiescence, DECIDED
   coherence, A-grade commitment, delivery soundness, round/phase coherence,
-  support pools, and the burn-proof certificate conjuncts I28–I30).
+  support sent sets, and the burn-proof certificate conjuncts I28–I30).
 * `coreR` — the simulation relation `Inv ∧ Abs`, wrapped in `diracRel` by
   `Core/Sim.lean`.
 
@@ -55,7 +55,7 @@ abbrev HybridState.wcc (s : HybridState P) : ℕ → WCC.SpecState P.n := s.2.2.
 and round `r + 1`'s is still empty.
 Concrete-only; used by `Inv.agree_locked` (I3a). -/
 def IsLastBound (g : ℕ → GBCA.SpecState P.n) (r : ℕ) : Prop :=
-  (g r).dead ≠ ∅ ∧ (g (r + 1)).dead = ∅
+  (g r).excluded ≠ ∅ ∧ (g (r + 1)).excluded = ∅
 
 /-- An honest-side holder of round `r`'s outcome bit `v`: a round-`(r + 1)`
 GBCA call, or a committed estimate between round `r`'s `retG` and round
@@ -73,33 +73,33 @@ def Carrier (P : Params) (g : ℕ → GBCA.SpecState P.n) (c : ABAState P)
 
 /-- The permanent commitments of an `A`-locked round (what `Inv.a_commit`
 concludes of it, together with the round's own honest carriers). Carried *inside* every
-`A`-certificate: a later `bindUnset` may *burn* the round — kill its surviving
-bit as well, reaching `dead = {0, 1}` — after which the exclusion set alone no
+`A`-certificate: a later `bindUnset` may *burn* the round — exclude its surviving
+bit as well, reaching `excluded = {0, 1}` — after which the exclusion set alone no
 longer names the decided value. Every component is monotone-stable: the pair
-hypothesis of the first component only ever loses instances when `dead` grows,
+hypothesis of the first component only ever loses instances when `excluded` grows,
 and the others read only `call` (write-once) and honest `procs` fields. -/
 def ACommit (P : Params) (g : ℕ → GBCA.SpecState P.n) (c : ABAState P)
     (r : ℕ) (b : Bool) : Prop :=
-  (∀ r' b', r ≤ r' → (!b') ∈ (g r').dead ∧ b' ∉ (g r').dead → b' = b) ∧
+  (∀ r' b', r ≤ r' → (!b') ∈ (g r').excluded ∧ b' ∉ (g r').excluded → b' = b) ∧
   (∀ r' id b', r < r' → id ∉ c.F → (g r').call id = some b' → b' = b) ∧
   (∀ id, id ∉ c.F → r < (c.procs id).round → (c.procs id).est = some b) ∧
   (∀ id v, id ∉ c.F → Carrier P g c r id v → v = b)
 
 /-- The full `A`-certificate: an `A`-locked round whose surviving bit at lock
-time was `b` (the permanent residue `!b ∈ dead`), together with the round's
+time was `b` (the permanent residue `!b ∈ excluded`), together with the round's
 permanent commitments. -/
 def ACert (P : Params) (g : ℕ → GBCA.SpecState P.n) (c : ABAState P)
     (r : ℕ) (b : Bool) : Prop :=
-  (g r).grade = some true ∧ (!b) ∈ (g r).dead ∧ ACommit P g c r b
+  (g r).grade = some true ∧ (!b) ∈ (g r).excluded ∧ ACommit P g c r b
 
 /-- A process-side holder of an `A`-decision for `b`: a live `A`-grade or a
-pooled DECIDED multicast. -/
+sent DECIDED multicast. -/
 def AHolder (P : Params) (c : ABAState P) (id : Fin P.n) (b : Bool) : Prop :=
   (c.procs id).lastGrade = some (.A b) ∨ b ∈ c.decidedSent id
 
-/-! ### Abs: the abstract-twin constraints -/
+/-! ### Abs: the abstract-state constraints -/
 
-/-- Constraints tying the abstract twin `a` to the concrete state. The twin
+/-- Constraints tying the abstract state `a` to the concrete state. The abstract state
 never fires `SpecStep.coinFlip`: its mode is `Mode.idle` throughout, so
 `SpecStep.decide` stays enabled at every state it reaches. It lives in one of
 two phases keyed on `a.val`. In **phase 1**, before the first visible return,
@@ -110,7 +110,7 @@ entered by the `SpecStep.decide` step that answers the first `retABA` row,
 
 The ghost record is synced only where the concrete input is committed. A
 `callABA` answered by the concrete self-loop banks junk under
-`SpecStep.callLoop`, and that junk lands only in slots where the sync clause
+`SpecStep.callLoop`, and that junk lands only in fields where the sync clause
 is vacuous. -/
 structure Abs (P : Params) (g : ℕ → GBCA.SpecState P.n) (c : ABAState P)
     (w : ℕ → WCC.SpecState P.n) (a : SpecState P.n) : Prop where
@@ -118,12 +118,12 @@ structure Abs (P : Params) (g : ℕ → GBCA.SpecState P.n) (c : ABAState P)
   F_eq : a.F = c.F
   /-- C2: returns agree. -/
   ret_eq : ∀ id, a.ret id = (c.procs id).returned
-  /-- The twin never flips: its mode is `Mode.idle` at every reachable state. -/
+  /-- The abstract state never flips: its mode is `Mode.idle` at every reachable state. -/
   mode_idle : a.mode = .idle
   /-- C3/C7: the two-phase discipline. Phase 1 (pre-return): undecided, ghost
   record synced on committed inputs. Phase 2 (post-return): `val = some v`
   with `v` certified by a full `A`-certificate, and every honest `A`-decision
-  holder — live grade or pooled DECIDED — names `v` (the F-free universal that
+  holder — live grade or sent DECIDED — names `v` (the F-free universal that
   survives corruption of the original witnesses). -/
   phase :
     (a.val = none ∧
@@ -139,9 +139,9 @@ provenance either from round `0`'s external input (`input_g0`-style, if `r = 0`)
 permanent facts, so this survives every later `fail`/step once established. -/
 def DissentResidue (P : Params) (g : ℕ → GBCA.SpecState P.n) (c : ABAState P)
     (r : ℕ) : Prop :=
-  ∃ v, (!v) ∈ (g r).dead ∧
+  ∃ v, (!v) ∈ (g r).excluded ∧
     (if r = 0 then ∃ id', (c.procs id').input = some (!v)
-     else v ∈ (g (r - 1)).dead ∨ (g (r - 1)).grade = some false)
+     else v ∈ (g (r - 1)).excluded ∨ (g (r - 1)).grade = some false)
 
 /-- `DissentResidue` transports along any frame that agrees on `g`'s exclusion set at
 `r`/`r - 1`, `g`'s grade at `r - 1`, and every honest input (the shape every `Inv.step_*`
@@ -149,23 +149,23 @@ row's frame facts already provide for their own row; the `r = 0` branch only nee
 equality, the `r ≥ 1` branch only the exclusion-set/grade ones). -/
 theorem DissentResidue.transport {P : Params} {g₀ g : ℕ → GBCA.SpecState P.n}
     {c₀ c : ABAState P} {r : ℕ}
-    (hdead : (g r).dead = (g₀ r).dead)
-    (hdead1 : (g (r - 1)).dead = (g₀ (r - 1)).dead)
+    (hexcluded : (g r).excluded = (g₀ r).excluded)
+    (hexcluded1 : (g (r - 1)).excluded = (g₀ (r - 1)).excluded)
     (hgrade1 : (g₀ (r - 1)).grade = some false → (g (r - 1)).grade = some false)
     (hinput : ∀ id, (c.procs id).input = (c₀.procs id).input) :
     DissentResidue P g₀ c₀ r → DissentResidue P g c r := by
   rintro ⟨v, hb, hif⟩
-  refine ⟨v, by rw [hdead]; exact hb, ?_⟩
+  refine ⟨v, by rw [hexcluded]; exact hb, ?_⟩
   by_cases h0 : r = 0
   · rw [if_pos h0] at hif ⊢
     obtain ⟨id', hid'⟩ := hif
     exact ⟨id', by rw [hinput]; exact hid'⟩
   · rw [if_neg h0] at hif ⊢
     rcases hif with h | h
-    · left; rw [hdead1]; exact h
+    · left; rw [hexcluded1]; exact h
     · right; exact hgrade1 h
 
-/-- The permanent input-or-`F` support pool for a bit `v` (D13/D15 SuppOK shape,
+/-- The permanent input-or-`F` support sent for a bit `v` (D13/D15 SuppOK shape,
 one level down): `f + 1` processes that either committed `v` as their genuine external
 input (write-once) or are corrupted (`F` only grows). Both disjuncts are permanent, so
 the count is monotone along every step. -/
@@ -184,34 +184,34 @@ theorem InputSupp.mono {P : Params} {c c' : ABAState P} {v : Bool}
   exact ⟨Finset.mem_univ id, hid.2.elim (fun h' => Or.inl (hin id v h'))
     (fun h' => Or.inr (hF h'))⟩
 
-/-- Round `r` is **closed**: some bit is dead, or a `C`-return has locked its grade to the
+/-- Round `r` is **closed**: some bit is excluded, or a `C`-return has locked its grade to the
 C-side. Either way it hands out no fresh bit from here on. This is the predicate the round
 skeleton of `Inv` (`down_closed`, `quiescent`, `w_bound`, `round_bound`, `w_called`) is keyed
-on: a `C`-return kills no bit itself, so "round `r` is finished" is `Closed`, which is
-strictly weaker than `dead ≠ ∅`. -/
+on: a `C`-return excludes no bit itself, so "round `r` is finished" is `Closed`, which is
+strictly weaker than `excluded ≠ ∅`. -/
 def Closed (g : ℕ → GBCA.SpecState P.n) (r : ℕ) : Prop :=
-  (g r).dead ≠ ∅ ∨ (g r).grade = some false
+  (g r).excluded ≠ ∅ ∨ (g r).grade = some false
 
-/-- `Closed` reads only round `r`'s `dead` and `grade`. -/
+/-- `Closed` reads only round `r`'s `excluded` and `grade`. -/
 theorem Closed.congr {g g' : ℕ → GBCA.SpecState P.n} {r : ℕ}
-    (hdead : (g' r).dead = (g r).dead) (hgrade : (g' r).grade = (g r).grade) :
+    (hexcluded : (g' r).excluded = (g r).excluded) (hgrade : (g' r).grade = (g r).grade) :
     Closed g' r ↔ Closed g r := by
-  unfold Closed; rw [hdead, hgrade]
+  unfold Closed; rw [hexcluded, hgrade]
 
-/-- `Closed` transports along any frame that keeps round `r`'s `dead` and only ever adds the
+/-- `Closed` transports along any frame that keeps round `r`'s `excluded` and only ever adds the
 `C`-side grade lock. -/
 theorem Closed.of_frame {g g' : ℕ → GBCA.SpecState P.n} {r : ℕ}
-    (hdead : (g' r).dead = (g r).dead)
+    (hexcluded : (g' r).excluded = (g r).excluded)
     (hgrade : (g r).grade = some false → (g' r).grade = some false)
     (h : Closed g r) : Closed g' r :=
-  h.imp (fun hb hc => hb (by rw [← hdead]; exact hc)) hgrade
+  h.imp (fun hb hc => hb (by rw [← hexcluded]; exact hc)) hgrade
 
-/-- `ACommit` transports along any frame that keeps `dead` and `call`
+/-- `ACommit` transports along any frame that keeps `excluded` and `call`
 pointwise, keeps honest `round`/`est` projections, reflects carriers, and only
 ever grows `F`. -/
 theorem ACommit.of_frame {P : Params} {g g' : ℕ → GBCA.SpecState P.n}
     {c c' : ABAState P} {r : ℕ} {b : Bool}
-    (hdead : ∀ r', (g' r').dead = (g r').dead)
+    (hexcluded : ∀ r', (g' r').excluded = (g r').excluded)
     (hcall : ∀ r' id, (g' r').call id = (g r').call id)
     (hF : c.F ⊆ c'.F)
     (hround : ∀ id, (c'.procs id).round = (c.procs id).round)
@@ -219,7 +219,7 @@ theorem ACommit.of_frame {P : Params} {g g' : ℕ → GBCA.SpecState P.n}
     (hcarr : ∀ id v, Carrier P g' c' r id v → Carrier P g c r id v)
     (h : ACommit P g c r b) : ACommit P g' c' r b := by
   obtain ⟨h1, h2, h3, h4⟩ := h
-  refine ⟨fun r' b' hrr' hb' => h1 r' b' hrr' (by rw [← hdead r']; exact hb'),
+  refine ⟨fun r' b' hrr' hb' => h1 r' b' hrr' (by rw [← hexcluded r']; exact hb'),
     fun r' id b' hrr' hmem hcall' =>
       h2 r' id b' hrr' (fun hh => hmem (hF hh)) (by rw [← hcall r']; exact hcall'),
     fun id hmem hround' => ?_,
@@ -232,15 +232,15 @@ grade is kept. -/
 theorem ACert.of_frame {P : Params} {g g' : ℕ → GBCA.SpecState P.n}
     {c c' : ABAState P} {r : ℕ} {b : Bool}
     (hgrade : (g' r).grade = (g r).grade)
-    (hdead : ∀ r', (g' r').dead = (g r').dead)
+    (hexcluded : ∀ r', (g' r').excluded = (g r').excluded)
     (hcall : ∀ r' id, (g' r').call id = (g r').call id)
     (hF : c.F ⊆ c'.F)
     (hround : ∀ id, (c'.procs id).round = (c.procs id).round)
     (hest : ∀ id, (c'.procs id).est = (c.procs id).est)
     (hcarr : ∀ id v, Carrier P g' c' r id v → Carrier P g c r id v)
     (h : ACert P g c r b) : ACert P g' c' r b :=
-  ⟨hgrade.trans h.1, by rw [hdead r]; exact h.2.1,
-    ACommit.of_frame hdead hcall hF hround hest hcarr h.2.2⟩
+  ⟨hgrade.trans h.1, by rw [hexcluded r]; exact h.2.1,
+    ACommit.of_frame hexcluded hcall hF hround hest hcarr h.2.2⟩
 
 /-- The `Abs`-side transport a step row hands to `Abs.frame`: `A`-certificates survive the
 step, and any holder-pinning universal survives given its certificate (the certificate is
@@ -287,21 +287,21 @@ structure Inv (P : Params) (g : ℕ → GBCA.SpecState P.n) (c : ABAState P)
   /-- I5: coins flip only at closed rounds. -/
   w_bound : ∀ r, (w r).val ≠ .bot → Closed g r
   /-- I4: delivery soundness for DECIDED, per (receiver, sender, bit) (D12′).
-  Honesty-free: sent pools only ever grow, so every receipt stays covered even
+  Honesty-free: sent sets only ever grow, so every receipt stays covered even
   after the sender is corrupted or equivocates. -/
   recv_sound : ∀ i j b, b ∈ c.decidedRecv i j → b ∈ c.decidedSent j
-  /-- I4: honest DECIDEDs come from an A-locked bound round — per pooled bit
-  (D12′). Equivocation-robust form: a corrupted sender may pool both bits (and
+  /-- I4: honest DECIDEDs come from an A-locked bound round — per sent bit
+  (D12′). Equivocation-robust form: a corrupted sender may sent both bits (and
   its receipts count toward either tally), but any `n − f`-sender tally for `b`
   contains a never-corrupted sender of `b` (pigeonhole, at the `retABA` row),
-  and *that* sender's pooled `b` carries the `A`-lock certificate. -/
+  and *that* sender's sent `b` carries the `A`-lock certificate. -/
   decided_src : ∀ id b, id ∉ c.F → b ∈ c.decidedSent id → ∃ r, ACert P g c r b
   /-- I3b: an A-locked round whose surviving bit is still alive commits
   everything at and above it. Keyed on the live pair — the pair can only be
-  *destroyed* by later kills (never created at an A-locked round, whose
+  *destroyed* by later exclusions (never created at an A-locked round, whose
   exclusion set is already non-empty), so the clause weakens vacuously; the
   certificates (`ACert`) carry the payload past a burn. -/
-  a_commit : ∀ r b, (g r).grade = some true → (!b) ∈ (g r).dead ∧ b ∉ (g r).dead →
+  a_commit : ∀ r b, (g r).grade = some true → (!b) ∈ (g r).excluded ∧ b ∉ (g r).excluded →
     ACommit P g c r b
   /-- I5': honest procs' round progress implies closed rounds below. -/
   round_bound : ∀ id, id ∉ c.F → ∀ r, r < (c.procs id).round →
@@ -309,12 +309,12 @@ structure Inv (P : Params) (g : ℕ → GBCA.SpecState P.n) (c : ABAState P)
   /-- I3a: when the frontier coin agrees with the frontier surviving bit, honest
   estimates of procs beyond the frontier are that bit (the
   rule-6-only-filler corner: the concrete cannot rebind differently). -/
-  agree_locked : ∀ r v, IsLastBound g r → (!v) ∈ (g r).dead ∧ v ∉ (g r).dead →
+  agree_locked : ∀ r v, IsLastBound g r → (!v) ∈ (g r).excluded ∧ v ∉ (g r).excluded →
     (w r).val = .bit v →
     ∀ id, id ∉ c.F → r < (c.procs id).round → (c.procs id).est = some v
   /-- I8' : an A-side graded `GBCA_r` round has a non-empty exclusion set (`retA`
-  requires `(!v) ∈ dead` as precondition, and `dead` is monotone). -/
-  gradeA_needs_bind : ∀ r, (g r).grade = some true → (g r).dead ≠ ∅
+  requires `(!v) ∈ excluded` as precondition, and `excluded` is monotone). -/
+  gradeA_needs_bind : ∀ r, (g r).grade = some true → (g r).excluded ≠ ∅
   /-- I8 : honest `GBCA_r` callers have reached round `r` (rounds only grow). -/
   call_round : ∀ r id, id ∉ c.F → (g r).call id ≠ none → r ≤ (c.procs id).round
   /-- I9 : an honest `WCC_r` caller has already gotten `retG r`, so round `r` is closed. -/
@@ -345,20 +345,20 @@ structure Inv (P : Params) (g : ℕ → GBCA.SpecState P.n) (c : ABAState P)
     ((c.procs id).est = none →
       (g r).grade = some false ∧
       ∀ r₀, r₀ ≤ r → (g r₀).grade ≠ some true) ∧
-    (∀ b, (c.procs id).est = some b → (!b) ∈ (g r).dead)
-  /-- I14 : `dead` is monotone and write-once per bit, so a freshly-bound round
+    (∀ b, (c.procs id).est = some b → (!b) ∈ (g r).excluded)
+  /-- I14 : `excluded` is monotone and write-once per bit, so a freshly-bound round
   `r + 1`'s surviving value was already carried at round `r`: either round `r` had already
   bound to it, or round `r` just closed with a `C`-lock and the coin pins the adopted value
   (the `⊤` disjunct: an unresolved-to-a-bit coin lets the adopting return pick an arbitrary
   matching bit, so the coin fact alone doesn't pin `v`, only the `C`-lock does — every
   downstream use only needs the `grade = some false` half). -/
-  bind_succ : ∀ r v, (!v) ∈ (g (r + 1)).dead →
-    (!v) ∈ (g r).dead ∨
+  bind_succ : ∀ r v, (!v) ∈ (g (r + 1)).excluded →
+    (!v) ∈ (g r).excluded ∨
       ((g r).grade = some false ∧ ((w r).val = .bit v ∨ (w r).val = .top))
   /-- I15 : an honest call to round `r + 1` carries est-provenance from finishing
   round `r`. -/
   call_prov : ∀ r id v, id ∉ c.F → (g (r + 1)).call id = some v →
-    (!v) ∈ (g r).dead ∨
+    (!v) ∈ (g r).excluded ∨
       ((g r).grade = some false ∧ ((w r).val = .bit v ∨ (w r).val = .top))
   /-- I16 : honest procs at the start of round `r + 1` carry est-provenance from
   finishing round `r`. -/
@@ -366,7 +366,7 @@ structure Inv (P : Params) (g : ℕ → GBCA.SpecState P.n) (c : ABAState P)
     ((c.procs id).phase = .idle ∨ (c.procs id).phase = .toCallG ∨
       (c.procs id).phase = .awaitG) →
     ∀ v, (c.procs id).est = some v →
-      (!v) ∈ (g r).dead ∨
+      (!v) ∈ (g r).excluded ∨
         ((g r).grade = some false ∧ ((w r).val = .bit v ∨ (w r).val = .top))
   /-- I17 : `C`-locks propagate downward. -/
   c_chain : ∀ r, (g (r + 1)).grade = some false → (g r).grade = some false
@@ -420,33 +420,33 @@ structure Inv (P : Params) (g : ℕ → GBCA.SpecState P.n) (c : ABAState P)
     (g r).grade ≠ none ∨ DissentResidue P g c r
   /-- I25 : every bound round permanently retains its firing quorum (`bindUnset`'s
   guard, monotone under later call-growth and `F`-growth). -/
-  bound_quorum : ∀ r, (g r).dead ≠ ∅ → (g r).quorum P
+  bound_quorum : ∀ r, (g r).excluded ≠ ∅ → (g r).quorum P
   /-- I26 (D13) : every bound round's surviving value carries a permanent `f + 1`
-  input-or-`F` support pool — the concrete mirror of TS 1's V-P1 `SuppOK`.
+  input-or-`F` support sent — the concrete mirror of TS 1's V-P1 `SuppOK`.
   Established at the `bindUnset` row from the D15 count guard (round 0
   wholesale via `input_g0_perm`; `r ≥ 1` through `call_prov` and the previous
-  round's pools); preserved everywhere by monotonicity. -/
-  bind_supp : ∀ r v, (!v) ∈ (g r).dead → InputSupp P c v
+  round's sent sets); preserved everywhere by monotonicity. -/
+  bind_supp : ∀ r v, (!v) ∈ (g r).excluded → InputSupp P c v
   /-- I27 (D13) : a `C`-locked round retains the `retC` guards themselves — `f + 1`
   F-blind support for *each* bit, in `SuppOK` shape. Both `call` and `F` only grow, so
   the counts are permanent. Established at the `retC` row; preserved everywhere by
-  monotonicity. `supp_of_call_count` reads them back as input pools, and they are what
+  monotonicity. `supp_of_call_count` reads them back as input sent sets, and they are what
   keeps a `C`-lock incompatible with an `A`-lock below it or with an agreeing coin
   underneath it. -/
   clock_supp : ∀ r b, (g r).grade = some false →
     P.f + 1 ≤ (Finset.univ.filter
       (fun id => (g r).call id = some b ∨ id ∈ (g r).F)).card
-  /-- I28 : every kill's D15 guard is permanent — a dead bit's spared rival
+  /-- I28 : every exclusion's D15 guard is permanent — an excluded bit's spared rival
   keeps `f + 1` F-blind call support at that round (`call` and `F` only grow).
-  Established at the `bindUnset` row verbatim from its guard; harvesting it
+  Established at the `bindUnset` row verbatim from its guard; deriving it
   (`GBCA.exists_honest_caller`) recovers an honest caller of the spared bit
   from any residue, which is what pins values past a burn. -/
-  dead_supp : ∀ r b, b ∈ (g r).dead →
+  excluded_supp : ∀ r b, b ∈ (g r).excluded →
     P.f + 1 ≤ (Finset.univ.filter
       (fun id => (g r).call id = some (!b) ∨ id ∈ (g r).F)).card
   /-- I29 : honest holders of round `r`'s outcome agree, unless the round is
   C-locked. This is the state residue of the order argument "two opposite
-  value-bearing returns cannot both fire" — the first pins the rival bit dead,
+  value-bearing returns cannot both fire" — the first pins the rival bit excluded,
   the second's liveness guard then fails — which the exclusion set alone
   forgets once the round burns. -/
   carrier_agree : ∀ r id id' v v', id ∉ c.F → id' ∉ c.F →
@@ -460,7 +460,7 @@ structure Inv (P : Params) (g : ℕ → GBCA.SpecState P.n) (c : ABAState P)
     AHolder P c i b → AHolder P c j b' → b = b'
 
 /-- The core simulation relation (pre-`diracRel`): the concrete invariant
-plus the abstract-twin constraints. -/
+plus the abstract-state constraints. -/
 def coreR (P : Params) (s : HybridState P) (a : SpecState P.n) : Prop :=
   Inv P s.1 s.aba s.wcc ∧ Abs P s.1 s.aba s.wcc a
 
@@ -483,7 +483,7 @@ theorem GBCA.SpecState.quorum_of_eq {P : Params} {s s' : GBCA.SpecState P.n}
     (hF : s'.F = s.F) (hcall : s'.call = s.call) (h : s.quorum P) : s'.quorum P := by
   unfold GBCA.SpecState.quorum at h ⊢; rw [hF, hcall]; exact h
 
-/-- **Witness harvest (D15)**: the SuppOK-form support count (`f + 1` callers-or-`F`)
+/-- **Witness derivation (D15)**: the SuppOK-form support count (`f + 1` callers-or-`F`)
 plus the `F` budget recover an honest caller *at fire time* — the in-state honest witness
 the pre-repair guards carried directly (at most `f` of the `f + 1` are `F`-members). -/
 theorem GBCA.exists_honest_caller {P : Params} {s : GBCA.SpecState P.n} {b : Bool}
@@ -512,9 +512,9 @@ theorem GBCA.callSupp_mono {P : Params} {s s' : GBCA.SpecState P.n} {b : Bool}
   simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hx ⊢
   exact hx.imp (hcall x) (fun h' => hF h')
 
-/-- **Support transfer (D13)** : the concrete input-or-`F` pool for `b`
-(`Inv.bind_supp`) reads on the twin as the `SpecStep.decide` guard `SuppOK`,
-for any twin whose corrupted set is `c.F` and whose ghost record carries every
+/-- **Support transfer (D13)** : the concrete input-or-`F` sent for `b`
+(`Inv.bind_supp`) reads on the abstract state as the `SpecStep.decide` guard `SuppOK`,
+for any abstract state whose corrupted set is `c.F` and whose ghost record carries every
 committed concrete input. -/
 theorem suppOK_of_inputSupp {P : Params} {c : ABAState P} {a : SpecState P.n} {b : Bool}
     (haF : a.F = c.F)
@@ -525,9 +525,9 @@ theorem suppOK_of_inputSupp {P : Params} {c : ABAState P} {a : SpecState P.n} {b
   simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hx ⊢
   exact hx.imp (hghost x b) (fun hF => by rw [haF]; exact hF)
 
-/-- **Pool establishment (D13).** A D15 count over round-`r` calls (`f + 1`
-callers-or-`F` of `b`) yields the permanent input-or-`F` pool for `b`: wholesale via
-`input_g0_perm` at round `0`; at `r ≥ 1` by harvesting one honest caller, whose
+/-- **Sent establishment (D13).** A D15 count over round-`r` calls (`f + 1`
+callers-or-`F` of `b`) yields the permanent input-or-`F` sent for `b`: wholesale via
+`input_g0_perm` at round `0`; at `r ≥ 1` by deriving one honest caller, whose
 `call_prov` provenance routes either through the previous round's `bind_supp` (the bit is
 that round's surviving bit) or through its `clock_supp` count, which is a smaller instance
 of the very same statement. Serves both the `bindUnset` (`b` = the surviving bit) and `retC`
@@ -584,7 +584,7 @@ for `!v` at round `r + 1` — which a `C`-return there requires — cannot exist
 theorem Inv.no_cgrade_succ_of_supp {P : Params} {g : ℕ → GBCA.SpecState P.n}
     {c : ABAState P} {w : ℕ → WCC.SpecState P.n} (hI : Inv P g c w) (r : ℕ) (v : Bool)
     (hcoin : (w r).val = .bit v)
-    (hbnd : v ∉ (g r).dead)
+    (hbnd : v ∉ (g r).excluded)
     (hwNv : P.f + 1 ≤ (Finset.univ.filter
       (fun id' => (g (r + 1)).call id' = some (!v) ∨ id' ∈ (g (r + 1)).F)).card) :
     False := by
@@ -599,7 +599,7 @@ theorem Inv.no_cgrade_succ_of_supp {P : Params} {g : ℕ → GBCA.SpecState P.n}
 theorem Inv.no_cgrade_succ {P : Params} {g : ℕ → GBCA.SpecState P.n}
     {c : ABAState P} {w : ℕ → WCC.SpecState P.n} (hI : Inv P g c w) (r : ℕ) (v : Bool)
     (hcoin : (w r).val = .bit v)
-    (hbnd : v ∉ (g r).dead)
+    (hbnd : v ∉ (g r).excluded)
     (hgf : (g (r + 1)).grade = some false) : False :=
   hI.no_cgrade_succ_of_supp r v hcoin hbnd (hI.clock_supp (r + 1) (!v) hgf)
 
@@ -651,7 +651,7 @@ theorem Inv.initial (P : Params) :
   bound_quorum := fun r h => (h (by simp [GBCA.SpecState.initial])).elim
   bind_supp := fun r v h => absurd h (by simp [GBCA.SpecState.initial])
   clock_supp := fun r b hg => absurd hg (by simp [GBCA.SpecState.initial])
-  dead_supp := fun r b h => absurd h (by simp [GBCA.SpecState.initial])
+  excluded_supp := fun r b h => absurd h (by simp [GBCA.SpecState.initial])
   carrier_agree := fun r id id' v v' _ _ hcar _ => by
     rcases hcar with hcall | ⟨hest, -⟩
     · exact absurd hcall (by simp [GBCA.SpecState.initial])
@@ -661,7 +661,7 @@ theorem Inv.initial (P : Params) :
     · exact absurd h (by simp [ABAState.initial])
     · exact absurd h (by simp [ABAState.initial])
 
-/-- The initial abstract state is a twin of the initial hybrid state. -/
+/-- The initial abstract state is related to the initial hybrid state. -/
 theorem Abs.initial (P : Params) :
     Abs P (fun _ => GBCA.SpecState.initial P.n) (ABAState.initial P)
       (fun _ => WCC.SpecState.initial P.n) (SpecState.initial P.n) where

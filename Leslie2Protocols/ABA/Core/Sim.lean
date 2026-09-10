@@ -5,13 +5,13 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.Core.Abs
-import Leslie2Protocols.ABA.Core.Burst
+import Leslie2Protocols.ABA.Core.Run
 
 /-!
 # The core simulation `hybrid ⊑ ABA.spec`
 
 Assembles the invariant and relation of the `CoreSimRel`/`CoreSimInv`/`CoreSimAbs`
-chain and `CoreSimBurst`'s burst kit into `coreSim`, the probabilistic forward
+chain and `CoreSimRun`'s run kit into `coreSim`, the probabilistic forward
 simulation `hybrid P ⊑ spec P` along `coreRel P`.
 
 The rows dispatch as follows. A visible `callABA` is answered by
@@ -20,7 +20,7 @@ afterwards. A never-corrupted process's visible `retABA` is answered by
 `SpecStep.decide` followed by
 `SpecStep.ret` on the first such row, and by `SpecStep.ret` alone on every
 later one. Every hidden row, the concrete coin flip included, is answered by a
-stutter: the twin's mode stays `Mode.idle`, so it never fires
+stutter: the abstract state's mode stays `Mode.idle`, so it never fires
 `SpecStep.coinFlip` and `SpecStep.decide` remains enabled when the first
 return arrives. A `fail` is answered by `SpecStep.fail`, whose two guards are
 the concrete row's own, read across `Abs.F_eq`.
@@ -28,7 +28,7 @@ the concrete row's own, read across `Abs.F_eq`.
 A corruption replaces the program of the process it names (D23), and the
 replacement is answered on both sides of the interface. The corrupted
 process's `retABA` is answered by `SpecStep.retByz`: neither the concrete
-state nor the twin moves. On every other label the replaced program
+state nor the abstract state moves. On every other label the replaced program
 self-loops, and the concrete row it contributes is the corrupted branch the
 inversion already carries.
 -/
@@ -41,12 +41,12 @@ open Net Comp
 variable {P : Params}
 
 /-- The core simulation relation, `Dirac`-lifted: every concrete state relates to the point
-mass on its (unique) abstract twin. -/
+mass on its (unique) abstract state. -/
 def coreRel (P : Params) : HybridState P → PMF (SpecState P.n) → Prop :=
   diracRel (coreR P)
 
 /-- **Stutter-row packaging.** If every post-state `s'` in the support of a concrete τ-step's
-outcome `μ_C` relates to the *same* abstract state `a` (via `coreR`), the abstract twin can
+outcome `μ_C` relates to the *same* abstract state `a` (via `coreR`), the abstract state can
 answer with the trivial `weakTau_refl` stutter: the coupling `Ω := μ_C.map (fun s' => (s', pure
 a))` has first marginal `μ_C` and second marginal the constant `pure (pure a)` (`PMF.map_const`),
 so `ω := pure (pure a)` and `ω.bind id = pure a` (`PMF.pure_bind`). Reused by every hidden
@@ -116,7 +116,7 @@ private theorem hidden_label_impossible {P : Params} {s_C : HybridState P} {l : 
   · exact h hmem
 
 /-- **The core simulation.** `hybrid P` is a probabilistic forward simulation of `spec P`
-along `coreRel P` (the never-flipping abstract twin). -/
+along `coreRel P` (the never-flipping abstract state). -/
 theorem coreSim (P : Params) :
     ProbabilisticForwardSimulation (hybrid P) (spec P) (coreRel P) := by
   refine ⟨⟨PMF.pure (SpecState.initial P.n), ?_, SpecState.initial P.n, rfl, Inv.initial P,
@@ -133,7 +133,7 @@ theorem coreSim (P : Params) :
         ⟨r, id, b, μr, μc, hstepG, hstepC, rfl⟩ |
         ⟨r, id, out, μr, μc, hstepG, hstepC, rfl⟩ |
         ⟨r, id, μw', μc, hstepW, hstepC, rfl⟩ | ⟨r, id, b, μw', μc, hstepW, hstepC, rfl⟩
-      · -- row 3: `bindUnset` (`gbcaTau`) — the twin stutters
+      · -- row 3: `bindUnset` (`gbcaTau`) — the abstract state stutters
         obtain ⟨ω, hRel, hWeak⟩ := stutter_step _ a (fun s' hs' => by
           obtain ⟨g', C', A', w'⟩ := s'
           have hI' := hI.step hstep hs'
@@ -152,7 +152,7 @@ theorem coreSim (P : Params) :
           exact ⟨hI', hAbs.step_coreTau hI hstepC hc2⟩)
         exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
       · -- row 6: WCC flip — a constant-coupled stutter (`Abs` never reads `w`, so every
-        -- outcome of the coin lands on the same abstract twin `a`)
+        -- outcome of the coin lands on the same abstract state `a`)
         obtain ⟨ω, hRel, hWeak⟩ := stutter_step _ a (fun s' hs' => by
           obtain ⟨g', C', A', w'⟩ := s'
           have hI' := hI.step hstep hs'
@@ -291,7 +291,7 @@ theorem coreSim (P : Params) :
       obtain ⟨μc, hstepC, rfl⟩ := hstep
       have hdisj := hstepC
       rcases hdisj with ⟨-, hcnt, hs, hret, rfl⟩ | ⟨hFbyz, rfl⟩
-      · -- a never-corrupted process's return: the twin decides and returns
+      · -- a never-corrupted process's return: the abstract state decides and returns
         set c' := ABAState.setProc (C, A) id { ABAState.procs (C, A) id with returned := true }
           with hc'def
         have hc'mem : c' ∈ (PMF.pure c').support := by rw [PMF.mem_support_pure_iff]
@@ -315,8 +315,8 @@ theorem coreSim (P : Params) :
         obtain ⟨j, hjF, hjrecv⟩ := hex
         have hjsent : b ∈ ABAState.decidedSent (C, A) j := hI.recv_sound id j b hjrecv
         obtain ⟨rA, hrA_cert⟩ := hI.decided_src j b hjF hjsent
-        -- the twin-level holder pin for `b`: every honest `A`-decision holder agrees with the
-        -- harvested sender's pooled bit (I30)
+        -- the abstract-side holder pin for `b`: every honest `A`-decision holder agrees with the
+        -- derived sender's sent bit (I30)
         have hpinb : ∀ j0 b0', j0 ∉ ABAState.F (C, A) → AHolder P (C, A) j0 b0' → b0' = b :=
           fun j0 b0' hj0 hh0 => hI.alock_agree j0 j b0' b hj0 hjF hh0 (Or.inr hjsent)
         have hretfalse : a.ret id = false := by rw [hAbs.ret_eq id]; exact hret
@@ -325,9 +325,9 @@ theorem coreSim (P : Params) :
         · -- phase 1: the `decide` τ-step, then `SpecStep.ret`
           have hsup : SuppOK P a b :=
             suppOK_of_inputSupp hAbs.F_eq hghost (hI.bind_supp rA b hrA_cert.2.1)
-          have hmode : a.mode ≠ .dead := by rw [hAbs.mode_idle]; exact fun h => by cases h
+          have hmode : a.mode ≠ .terminal := by rw [hAbs.mode_idle]; exact fun h => by cases h
           set a1 : SpecState P.n := { a with val := some b, mode := .idle } with ha1def
-          have hburst : weakTau (spec P) (PMF.pure a) (PMF.pure a1) :=
+          have hrun : weakTau (spec P) (PMF.pure a) (PMF.pure a1) :=
             decide_step hv hsup hmode
           have hval1 : a1.val = some b := rfl
           have hretid : a1.ret id = false := hretfalse
@@ -347,10 +347,10 @@ theorem coreSim (P : Params) :
           obtain ⟨ω, hRel, hbid⟩ := dirac_step (g, c'.1, c'.2, w) a'' ⟨hIA', hAbs''⟩
           refine ⟨ω, hRel, Or.inr ⟨by simp, ?_⟩⟩
           rw [hbid]
-          exact weakStep_of_burst_then_step hburst (SpecStep.ret a1 id b hval1 hretid)
-        · -- phase 2: `b` agrees with the certified value through the twin's holder pin
-          -- (I30 pins the harvested sender's pooled `b` against every honest holder, and the
-          -- twin's pin names `v`; `SpecStep.ret` fires alone)
+          exact weakStep_of_run_then_step hrun (SpecStep.ret a1 id b hval1 hretid)
+        · -- phase 2: `b` agrees with the certified value through the abstract state's holder pin
+          -- (I30 pins the derived sender's sent `b` against every honest holder, and the
+          -- abstract state's pin names `v`; `SpecStep.ret` fires alone)
           have hD3 : v = b := (hpin j b hjF (Or.inr hjsent)).symm
           have hvalb : a.val = some b := by rw [hv2, hD3]
           set a'' : SpecState P.n := { a with ret := Function.update a.ret id true } with ha''def
@@ -370,7 +370,7 @@ theorem coreSim (P : Params) :
           refine ⟨ω, hRel, Or.inr ⟨by simp, ?_⟩⟩
           rw [hbid]
           exact weakStep_strong (SpecStep.ret a id b hvalb hretfalse)
-      · -- a corrupted process's return (D23): neither side moves, and the twin answers
+      · -- a corrupted process's return (D23): neither side moves, and the abstract state answers
         -- with its own corrupted-return rule
         simp only [prodPMF_pure_abaRow]
         obtain ⟨ω, hRel, hbid⟩ := dirac_step (g, C, A, w) a ⟨hI, hAbs⟩

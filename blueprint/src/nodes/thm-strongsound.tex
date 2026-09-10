@@ -8,7 +8,7 @@
 \begin{proof}\leanok
   \uses{def:strongsim, lem:map}
   A strong simulation is lockstep, so the proof factors through the coupled product $\operatorname{simProd} sys_C\ sys_A\ R$ (\leandeclnamed{simProd}{PLTS.simProd}) over $State_C \times State_A$, whose steps out of an $R$-related pair are the couplings $\omega$ with $\omega.map\ \pi_1$ a $sys_C$-step, $\omega.map\ \pi_2$ a $sys_A$-step and $\operatorname{supp}\omega \subseteq R$. Two inclusions compose.
-  The lift \leandeclnamed{simProd_achievableTraceDists_superset}{PLTS.simProd_achievableTraceDists_superset} drives a $sys_C$-execution on the concrete component and answers each of its moves by the coupling the simulation supplies.
+  The lift \leandeclnamed{simProd_achievableTraceDists_superset}{PLTS.simProd_achievableTraceDists_superset} runs a $sys_C$-execution on the concrete component and answers each of its moves by the coupling the simulation supplies.
   It gives the joint execution \leandeclnamed{simJointExec}{PLTS.simJointExec}, whose concrete projection is the original one and whose labels are shared, so the two trace distributions agree.
   The projection is Lemma~\ref{lem:map} applied to $\pi_2$, which the marginal condition makes a functional label-preserving simulation of the coupled product by $sys_A$.
 \end{proof}

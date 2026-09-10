@@ -25,7 +25,7 @@ complete decision — starting from its initial state:
   the caller's round loop hands over its estimate and the round-`0`
   specification takes its owned `call`);
 * `step_bindUnset` — the round-`0` specification's `bindUnset` internal
-  transition killing the bit `false` (a family `τ`, `n − f` quorum met at
+  transition excluding the bit `false` (a family `τ`, `n − f` quorum met at
   `n = 4, f = 1` by the three callers of `true`);
 * `step_retG₀/₁/₂` — the three graded-agreement `A`-return handshakes
   (`retG 0`, *hidden*), the first locking the round grade to the `A`-side;
@@ -165,9 +165,9 @@ noncomputable def Sc1 : ABAState P4 := sCallG 0 S3
 noncomputable def Sc2 : ABAState P4 := sCallG 1 Sc1
 noncomputable def Sc3 : ABAState P4 := sCallG 2 Sc2
 
-/-- Round specifications after `bindUnset` kills the round-`0` bit `false`,
+/-- Round specifications after `bindUnset` excludes the round-`0` bit `false`,
 sparing `true`. -/
-def Gb : ℕ → GBCA.SpecState 4 := Function.update G3 0 { G3 0 with dead := {false} }
+def Gb : ℕ → GBCA.SpecState 4 := Function.update G3 0 { G3 0 with excluded := {false} }
 
 /-- Round specifications after the three round-`0` `A`-returns. -/
 def Gr : ℕ → GBCA.SpecState 4 := gRetA 0 Gb
@@ -324,7 +324,7 @@ theorem step_callG₂ :
 specification (family `τ`, interleaved) -/
 
 /-- With three of four processes having called, the round-`0` quorum `n − f = 3`
-is met, so `bindUnset` kills the bit `false` (the three callers of `true` supply
+is met, so `bindUnset` excludes the bit `false` (the three callers of `true` supply
 the `f + 1` support for the surviving bit). This is a family `τ`, interleaved on
 the specification side while the other three components hold. -/
 theorem step_bindUnset :

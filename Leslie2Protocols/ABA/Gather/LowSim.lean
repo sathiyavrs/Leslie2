@@ -6,14 +6,14 @@ Authors: Sathiya / Claude
 
 import Leslie2Protocols.ABA.Gather.Low
 import Leslie2Protocols.ABA.Broadcast.ImplSim
-import Leslie2Protocols.Framework.WeakBurst
+import Leslie2Protocols.Framework.WeakRun
 
 /-!
 # The broadcast substitution inside the gather instance
 
 `Gather.gatherLow`: the gather-over-Bracha instance (`ABA/Gather/Low.lean`)
 forward-simulates the gather-over-BRB-specification instance
-(`ABA/Gather/Ideal.lean`), along `Gather.LowRel` — the gather boxes and fabric
+(`ABA/Gather/Ideal.lean`), along `Gather.LowRel` — the gather local states and message state
 held *equal*, and each Bracha coordinate related to its specification
 coordinate by the BRB refinement relation (`ABA/Broadcast/ImplSim.lean`).
 
@@ -25,7 +25,7 @@ specification's `commitIn` / `commitBind` rows, one per uncommitted entry,
 licensed by `BRB.commitReach`: the receipt quorum certifies the value, an
 honest coordinate's committed value is its input, and a corrupted one may
 commit anything. The exported answers are chain data
-(`lowTau_reach`, `lowRetBurst`), replayable by any system embedding the
+(`lowTau_reach`, `lowRetRun`), replayable by any system embedding the
 specification tier's rows.
 -/
 
@@ -37,15 +37,15 @@ variable {X : Type} [DecidableEq X] {P : Params}
 
 /-! ### The relation -/
 
-/-- The broadcast substitution relation: the gather boxes and fabric equal,
+/-- The broadcast substitution relation: the gather local states and message state equal,
 the Bracha coordinates related by the BRB refinement relation, and the
 corrupted sets in lockstep across every component. -/
 structure LowRel (P : Params) (s : LowState P.n X) (t : IdealState P.n X) : Prop where
-  /-- The gather boxes and fabric are untouched by the substitution. -/
+  /-- The gather local states and message state are untouched by the substitution. -/
   ga_eq : t.ga = s.ga
-  /-- The input-BRB corrupted sets are in lockstep with the fabric's. -/
+  /-- The input-BRB corrupted sets are in lockstep with the message state's. -/
   F_in_ga : ∀ k, (s.brbIn k).F = s.ga.F
-  /-- The bind-BRB corrupted sets are in lockstep with the fabric's. -/
+  /-- The bind-BRB corrupted sets are in lockstep with the message state's. -/
   F_bind_ga : ∀ k, (s.brbBind k).F = s.ga.F
   /-- Each input coordinate is BRB-refined. -/
   inRel : ∀ k, BRB.InstRel P k (s.brbIn k) (t.brbIn k)
@@ -472,13 +472,13 @@ private theorem getLastD_append {α : Type*} (d : α) :
     rw [List.cons_append, List.getLastD_cons, List.getLastD_cons,
       getLastD_append a l₁ l₂]
 
-/-! ### The return burst -/
+/-! ### The return run -/
 
 /-- The return answer, as chain data: from a related pair and the
 implementation's return guards, a chain of the specification tier's internal
 rows reaches a state where its return guards hold, the relation restored
 across the pair of return effects. -/
-theorem lowRetBurst {s : LowState P.n X} {t : IdealState P.n X}
+theorem lowRetRun {s : LowState P.n X} {t : IdealState P.n X}
     (hR : LowRel P s t) {id : Fin P.n} {g : Fin P.n → Option X}
     (hin : (s.ga.proc id).input ≠ none)
     (hsubap : ∀ k x, g k = some x → apIn P s id k x)
@@ -622,7 +622,7 @@ theorem gatherLow (P : Params) (X : Type) [DecidableEq X] :
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     obtain ⟨ts, hchain, hin', hcov, hQ', hr', hRel⟩ :=
-      lowRetBurst hR hin hsubap hQ hr
+      lowRetRun hR hin hsubap hQ hr
     have hretstep : IdealStep P (ts.getLastD q₂) (Gather.Lab.ret id g)
         (PMF.pure { ts.getLastD q₂ with
           ga := (ts.getLastD q₂).ga.setProc id

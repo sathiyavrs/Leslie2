@@ -3,17 +3,18 @@
     >={Stealth[round]}, semithick, on grid,
     conc/.style={draw, rounded corners, minimum height=0.85cm, align=center,
       font=\footnotesize, inner sep=3pt},
-    every state/.style={draw, align=center, font=\small, inner sep=2pt}]
+    every state/.style={draw, align=center, font=\small, inner sep=2pt,
+      text width=2.15cm, minimum size=2.5cm}]
   % top row: implementation run phases
   \node[conc] (t1) at (1.6,2.4) {input\\ (INPUT)};
-  \node[conc] (t2) at (4.8,2.4) {deliveries\\ relay/echo/vote/\\bind/seal (incl.\ byz)};
-  \node[conc] (t3) at (8.2,2.4) {a return whose\\ kill is missing};
-  \node[conc] (t4) at (11.6,2.4){a return whose\\ kill has happened};
+  \node[conc] (t2) at (4.8,2.4) {deliveries\\ relay/echo/vote/\\bind/echo5 (incl.\ byz)};
+  \node[conc] (t3) at (8.2,2.4) {a return whose\\ exclusion is missing};
+  \node[conc] (t4) at (11.6,2.4){a return whose\\ exclusion has happened};
   % bottom row: specification-instance states
   \node[state, initial, initial text={}] (p1) at (1.6,0)
-    {$dead=\emptyset$\\ $call=input$};
+    {$excluded=\emptyset$\\ $call=input$};
   \node[state, accepting] (p2) at (11.6,0)
-    {$dead\ni$ killed bit\\ grade latch};
+    {$excluded \neq \emptyset$\\ grade guard};
   \draw[->] (p1) to[loop below, looseness=5]
     node[below=2pt, font=\footnotesize]{stutter} (p1);
   \draw[->] (p2) to[loop below, looseness=5]
@@ -21,14 +22,14 @@
   \draw[->, thick] (p1) -- (p2)
     node[pos=0.5, below=4pt, font=\footnotesize, align=center, fill=white, inner sep=1.5pt]
       {weak step \texttt{bindUnset};\,\texttt{ret}\\
-       $f{+}1$ via $input\_supp$, killed bit via the kill certificate};
+       $f{+}1$ via $input\_supp$, excluded bit via the exclusion certificate};
   % instRel verticals
   \draw[dashed, ->] (t1) -- (p1) node[pos=0.55, right=1pt, font=\scriptsize]{call};
   \draw[dashed, ->] (t2.south) -- (3.1,0.3);
   \draw[dashed, ->] (t3.south) -- (8.2,0.12)
-    node[pos=0.45, right=1pt, font=\scriptsize]{burst};
+    node[pos=0.45, right=1pt, font=\scriptsize]{run};
   \draw[dashed, ->] (t4) -- (p2) node[pos=0.55, right=1pt, font=\scriptsize]{graded};
-  \node[font=\footnotesize, align=center] at (6.6,-2.0)
-    {dashed $=$ $\mathrm{instRel}$; deliveries/relay/echo/vote/bind/seal $\mapsto$ stutter;\\
-     every return row splits on $dead$, $C$-returns included};
+  \node[font=\footnotesize, align=center] at (6.6,-2.75)
+    {dashed $=$ $\mathrm{instRel}$; deliveries/relay/echo/vote/bind/echo5 $\mapsto$ stutter;\\
+     every return row splits on $excluded$, $C$-returns included};
 \end{tikzpicture}

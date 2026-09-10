@@ -6,7 +6,7 @@ Authors: Sathiya / Claude
 
 import Leslie2Protocols.ABA.Gather.Ideal
 import Leslie2Protocols.Framework.FamilySim
-import Leslie2Protocols.Framework.WeakBurst
+import Leslie2Protocols.Framework.WeakRun
 
 /-!
 # The gather refinement: the ECHO/VOTE rounds implement the specification
@@ -16,9 +16,9 @@ import Leslie2Protocols.Framework.WeakBurst
 (`ABA/Gather/Spec.lean`), along `Gather.CoreRel`.
 
 The specification's abstract content is committed lazily, in the
-kill-on-demand style: the committed entries (`val`) and the core family
-(`cores`) are both written inside the return burst, at the first return that
-needs them. The burst is
+exclude-on-demand style: the committed entries (`val`) and the core family
+(`cores`) are both written inside the return run, at the first return that
+needs them. The run is
 
 ```
 commit*  ;  bindCores?  ;  ret
@@ -57,15 +57,15 @@ variable {X : Type} [DecidableEq X] {P : Params}
 /-! ### The invariant -/
 
 /-- The gather-over-BRB invariant. The `*_conf` clauses tie an honest
-sender's pool to its write-once slot, the `*_backed` clauses tie the slots to
+sender's sent to its write-once field, the `*_backed` clauses tie the fields to
 the receipts that justified them, and the provenance clauses are the BRB
 commit guards, recorded per coordinate. -/
 structure IdealInv (P : Params) (s : IdealState P.n X) : Prop where
   /-- The corruption budget. -/
   F_card : s.ga.F.card ≤ P.f
-  /-- The input-BRB corrupted sets are in lockstep with the fabric's. -/
+  /-- The input-BRB corrupted sets are in lockstep with the message state's. -/
   F_in_eq : ∀ k, (s.brbIn k).F = s.ga.F
-  /-- The bind-BRB corrupted sets are in lockstep with the fabric's. -/
+  /-- The bind-BRB corrupted sets are in lockstep with the message state's. -/
   F_bind_eq : ∀ k, (s.brbBind k).F = s.ga.F
   /-- Delivered messages were multicast. -/
   recv_sub : ∀ i k, s.ga.recv i k ⊆ s.ga.sent k
@@ -79,13 +79,13 @@ structure IdealInv (P : Params) (s : IdealState P.n X) : Prop where
   payload. -/
   bindVal_prov : ∀ k U, (s.brbBind k).val = some U →
     k ∈ s.ga.F ∨ (s.brbBind k).input = some U
-  /-- An honest sender's pooled `ECHO` matches its write-once slot. -/
+  /-- An honest sender's sent `ECHO` matches its write-once field. -/
   echo_conf : ∀ j ∉ s.ga.F, ∀ A, GaMsg.echo A ∈ s.ga.sent j →
     (s.ga.proc j).sentEcho = some A
   /-- An honest echo payload has at least `n − f` entries. -/
   echo_card : ∀ j ∉ s.ga.F, ∀ A, (s.ga.proc j).sentEcho = some A →
     P.n - P.f ≤ A.card
-  /-- An honest sender's pooled `VOTE` matches its write-once slot. -/
+  /-- An honest sender's sent `VOTE` matches its write-once field. -/
   vote_conf : ∀ j ∉ s.ga.F, ∀ W, GaMsg.vote W ∈ s.ga.sent j →
     (s.ga.proc j).sentVote = some W
   /-- An honest vote is backed by `n − f` senders' echo payloads, each
@@ -576,7 +576,7 @@ theorem IdealInv.step {s : IdealState P.n X} {l : Lab P.n X}
       rw [show (s.corruptAll P id).ga.recv = s.ga.recv from rfl]
       exact hInv.bind_backed j (hF j hj) U hU
 
-/-! ### The harvest -/
+/-! ### The derivation -/
 
 /-- A quorum contains an honest member. -/
 theorem exists_honest_quorum_mem {F Q : Finset (Fin P.n)} (hF : F.card ≤ P.f)
@@ -685,7 +685,7 @@ theorem coreRel_corrupt {s : IdealState P.n X} {t : SpecState P.n X}
     obtain ⟨-, U, hU, hval⟩ := hq
     exact ⟨Finset.mem_univ q, U, hU, by rw [IdealState.corruptAll_brbBind_val]; exact hval⟩
 
-/-! ### The return burst
+/-! ### The return run
 
 The specification's committed entries are written one at a time, by a chain
 of `commit` steps folded over a list of processes; `commitOne` commits one
@@ -693,7 +693,7 @@ entry of the returned map if it is not committed yet, and `commitList` folds
 it. The chain is prepended to the answering weak step by recursion with
 `weakLStep_tauCons`. -/
 
-section Burst
+section Run
 
 variable (g : Fin P.n → Option X)
 
@@ -928,17 +928,17 @@ private theorem commitChain_isChain :
           exact hg k' (List.mem_cons_of_mem k hk'))
       rwa [hid] at this
 
-end Burst
+end Run
 
-/-! ### The return burst, as data
+/-! ### The return run, as data
 
 The whole return answer of the refinement, packaged as a τ-chain of
 specification steps with the return guards at its end and the relation
 restored across the pair of return effects — the shape a larger system that
 embeds the gather specification's rows can replay without re-proving the
-burst. -/
+run. -/
 
-theorem retBurst {s : IdealState P.n X} {t : SpecState P.n X}
+theorem retRun {s : IdealState P.n X} {t : SpecState P.n X}
     (hR : CoreRel P s t) {id : Fin P.n} {g : Fin P.n → Option X}
     (hin : (s.ga.proc id).input ≠ none)
     (hsub : ∀ k x, g k = some x → (s.brbIn k).val = some x)
@@ -1414,7 +1414,7 @@ theorem gatherCore (P : Params) (X : Type) [DecidableEq X] :
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     obtain ⟨ts, Cs, hchain, hCs, hmem, hcov, hret1, hRel⟩ :=
-      retBurst hR hin hsub hQ hr
+      retRun hR hin hsub hQ hr
     have hretstep : Step P (ts.getLastD q₂) (Lab.ret id g)
         (PMF.pure { ts.getLastD q₂ with
           ret := Function.update (ts.getLastD q₂).ret id true }) :=

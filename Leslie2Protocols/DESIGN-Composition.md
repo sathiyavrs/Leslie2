@@ -30,7 +30,7 @@ carries one graded-agreement instance per round at every moment, and no terminat
 process `j` in the instance of round `r` is the stage record of round `r` that `j` holds.
 A composed state is therefore determined by any protocol state related to it. What makes
 the link one-directional is on the composed side. A round instance has a row for the
-Byzantine graded-agreement drives and no program of the protocol has one (D11), and the
+Byzantine graded-agreement rows and no program of the protocol has one (D11), and the
 instance's stage rules carry no termination guard, so the instance answers a send or a
 delivery at a process the protocol has terminated.
 
@@ -38,19 +38,19 @@ delivery at a process the protocol has terminated.
 
 A sub-protocol is swappable exactly when its component boundary owns its network.
 
-Giving each round its own message fabric is what makes the round a component, and a
+Giving each round its own message state is what makes the round a component, and a
 component can be replaced. The substitution is one family congruence and one parallel
 precongruence, then `abstract`, `relabel`, `abstract` to run the composition pipeline
 out. Nothing else in the chain is touched.
 
-That is a modular axis rather than a one-off. Varying the power of the message fabric —
+That is a modular axis rather than a one-off. Varying the power of the message state —
 losses, reordering, a different forgery model — is a change inside the round instance,
 swapped in by the same precongruence.
 
-Idealizing the round also exposes an asymmetry worth naming. The round's pools, its
+Idealizing the round also exposes an asymmetry worth naming. The round's sent sets, its
 delivery guards and its injections die with the graded-agreement idealization. The
-DECIDED pools, the corruption budget and the authorisation `k ∈ F` of every Byzantine
-drive survive it, at the ABA-side network. What a component owns is what disappears with
+DECIDED sets, the corruption budget and the authorisation `k ∈ F` of every Byzantine
+handshake row survive it, at the ABA-side network. What a component owns is what disappears with
 it.
 
 ## Where each network is external
@@ -58,7 +58,7 @@ it.
 Two networks carry the protocol. Neither is internal to a process, and neither is a
 field of a record.
 
-The round's message fabric `GSub.gNet` is a component of `ABDY.composed` and of `hybrid`, and
+The round's message state `GSub.gNet` is a component of `ABDY.composed` and of `hybrid`, and
 it disappears at the substitution, inside the component that is exchanged. It is also
 the second component of `GBCA.ImplState`, the state the round refinement is defined on.
 
@@ -67,25 +67,25 @@ and the second component of `ABAState`, the state `coreRel` is defined on.
 
 Both invariants therefore read their network through accessors on a pair — the
 `GBCA.ImplState` accessors in `ABA/ABDY/Impl.lean`, the `ABAState` accessors in
-`ABA/ABDY/ABAState.lean` — and name the network's own pools rather than a copy of them held
+`ABA/ABDY/ABAState.lean` — and name the network's own sent sets rather than a copy of them held
 inside a record. Weakening either network is a change to that one component.
 
 ## Every state is a component's own record or a product of them
 
 The property holds across the development, and a reader should not have to re-derive it.
 
-Each leaf record holds exactly one box's data: `ProcCore` and `CoreRec` for a round loop,
+Each leaf record holds exactly one local state's data: `ProcCore` and `CoreRec` for a round loop,
 `GBCA.ProcState` and `GBCA.StageRec` for a graded-agreement stage, `Net.StageSideRec` for
-the stage side of one process, `GSub.GNetState` for a round's fabric, `Comp.ANetState` for
+the stage side of one process, `GSub.GNetState` for a round's message state, `Comp.ANetState` for
 the DECIDED network, and one `SpecState` for each of the three specifications. Each composite state is an explicit product of those:
 `Net.ProcRec`, `GBCA.ImplState`, `ABAState`, `Comp.ComposedState`, `HybridState`.
 
-One record holds two kinds of message pool at once, and it is the right one to.
-`Net.NetState` (`ABA/ABDY/Protocol.lean`) carries the stage pools, the DECIDED pools and the
+One record holds two kinds of message set at once, and it is the right one to.
+`Net.NetState` (`ABA/ABDY/Protocol.lean`) carries the stage sent sets, the DECIDED sets and the
 corrupted set together, because it is the network adversary of the protocol — the subject
 of the chain, not a vehicle for proving anything about it.
 `ProtocolSim.protocol_composed` carries that reading into one where each round owns a
-fabric beside `Comp.ANetState`, and every step above the first link runs there.
+message state beside `Comp.ANetState`, and every step above the first link runs there.
 
 ## What the DECIDED model already weakens
 
@@ -100,11 +100,11 @@ than taking a step that would change no state. Duplication is immaterial here, n
 away.
 
 No rule forces a delivery, so any subset of the multicasts may be lost. `byzD` injects
-either bit for any `k ∈ F`, so a corrupted process may equivocate in the DECIDED pools.
+either bit for any `k ∈ F`, so a corrupted process may equivocate in the DECIDED sets.
 `Comp.ANetStep.retByz` lets a corrupted process return either bit at any time with no
 DECIDED evidence at all, its round-loop half being the self-loop of the replaced program
 (D23), so the DECIDED quorum is a condition on honest returns alone.
 
 What remains assumed is unforgeability of an honest process's DECIDED multicast. The
 delivery guard `b ∈ dpool j` attributes every receipt to a genuine send by the named
-sender, and no rule lets one process pool under another's name.
+sender, and no rule lets one process sent set under another's name.

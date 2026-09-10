@@ -18,7 +18,7 @@ ABDY22 implementation (`ABA/ABDY/Impl.lean`, deviation D18) enters the
 protocol reading through `GSub.gbcaSide` and is replaced by the
 specification family in `ABA/ABDY/Hybrid.lean`. The gather-based implementation
 (`ABA/Round/Low.lean`) is carried to the same specification here, by the three
-tier simulations of its own tower:
+tier simulations of its own:
 
 1. `GBCA.lowRefines` (`ABA/Round/LowSim.lean`) — the broadcast substitution:
    each Bracha instance replaced by its specification;
@@ -56,7 +56,7 @@ three-stage inclusion, `composed_refines` chains it with `hybrid_spec`,
 composes the simulations themselves. `ABA/AFW/FlatSim.lean` carries these
 one level lower, to the gather-based protocol as it runs.
 
-The `#print axioms` blocks are the mechanical firewall: every headline is
+The `#print axioms` blocks are the mechanical check: every headline is
 pinned to the clean axiom list.
 -/
 
@@ -332,7 +332,7 @@ theorem famPairSimProb (P : Params) :
 The composed reading's pipeline — the graded-agreement side beside the round
 loops, the ABA-side network and the coin oracle, the rendezvous alphabet
 hidden, the result read back over `Lab n`, the sub-protocol API hidden —
-taken at each tier of the gather-based tower. -/
+taken at each tier of the gather-based construction. -/
 
 /-- The state of the gather-based composed reading. -/
 abbrev ComposedState (P : Params) : Type :=
@@ -454,7 +454,7 @@ noncomputable def chainSimComposed (P : Params) :
         (coreRel P)) :=
   (substSim P).trans (coreSim P)
 
-/-! ### Mechanical axiom firewall -/
+/-! ### Mechanical axiom check -/
 
 /-- info: 'PLTS.ABA.GBCA.gatherImplRefines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in

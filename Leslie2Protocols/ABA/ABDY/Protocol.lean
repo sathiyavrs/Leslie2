@@ -12,14 +12,14 @@ import Leslie2Protocols.ABA.Reading.Flat
 
 The subject of the whole chain: `n` programs, one per process, beside one
 network adversary and the coin oracle. A program reads its own records, its own
-inboxes and its own replacement flag, and nothing else about corruption: not
+received sets and its own replacement flag, and nothing else about corruption: not
 the corrupted set, not the budget, not another process's status (D23). The
-adversary holds the round-tagged message pools, the DECIDED pools and the
+adversary holds the round-tagged message sets, the DECIDED sets and the
 corrupted set with its budget, and it is the sole authority on the Byzantine
 labels. The coin oracle is held at specification level.
 
 The shape of that reading is the flat reading of `ABA/Reading/Flat.lean`, which
-carries the round loop, the DECIDED pools, the coin handshake, corruption, the
+carries the round loop, the DECIDED sets, the coin handshake, corruption, the
 network adversary and the composition pipeline for any graded-agreement
 implementation. This file supplies the three things a reading fixes and
 nothing else:
@@ -48,7 +48,7 @@ those levels requiring the process's own send at the level below; the `VOTE`
 rows ask for no own send, the `ECHO` they read being sent by an `upon` handler
 that may still be pending. A rendezvous row carries the process's half of a
 joint step with the network: on a send the record write, on a delivery the
-inbox write. The Byzantine stage drives have no row at the process they name
+recv write. The Byzantine stage rows have no row at the process they name
 (D11, D22).
 -/
 
@@ -91,11 +91,11 @@ abbrev ProcRec (n : ℕ) : Type := ProcRecP n (GBCA.StageRec n)
 
 /-! ### The network adversary's state at ABDY22's implementation -/
 
-/-- The state of the network adversary: the round-tagged message pools, the
-DECIDED pools, and the corrupted set with its budget. -/
+/-- The state of the network adversary: the round-tagged message sets, the
+DECIDED sets, and the corrupted set with its budget. -/
 abbrev NetState (n : ℕ) : Type := NetStateP n GBCA.Msg
 
-/-- Pool `⟨DECIDED, b⟩` under sender `j` (D12′). -/
+/-- Sent `⟨DECIDED, b⟩` under sender `j` (D12′). -/
 abbrev NetState.dput {n : ℕ} (s : NetState n) (j : Fin n) (b : Bool) : NetState n :=
   NetStateP.dput s j b
 
@@ -123,33 +123,33 @@ inductive AbdyStageStep (P : Params) (j : Fin P.n) :
           p.setStage r ((p.stage r).setP { (p.stage r).proc with
             input := some b,
             sentInput := Function.update (p.stage r).proc.sentInput b true })))
-  /-- Return with grade `A v`: an `n − f` `SEAL v` quorum. The stage record has
-  been called and its own `SEAL` is out. Case (1) heads the algorithm's chain,
+  /-- Return with grade `A v`: an `n − f` `ECHO5 v` quorum. The stage record has
+  been called and its own `ECHO5` is out. Case (1) heads the algorithm's chain,
   so there is no higher case to deny. -/
   | retG_A (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ) (v : Bool)
       (hh : c.corrupted = false)
       (hph : c.proc.phase = .awaitG) (hr : c.proc.round = r)
       (hterm : p.terminated = false)
       (hin : (p.stage r).proc.input ≠ none)
-      (hlv : (p.stage r).proc.sentSeal ≠ none)
-      (hcnt : P.n - P.f ≤ (p.stage r).recvCount (.seal (some v)))
+      (hlv : (p.stage r).proc.sentEcho5 ≠ none)
+      (hcnt : P.n - P.f ≤ (p.stage r).recvCount (.echo5 (some v)))
       (hret : (p.stage r).proc.returned = false) :
       AbdyStageStep P j (c, p) (Sum.inl (.retG r j (.A v)))
         (PMF.pure (c.setProc { c.proc with
             est := (GbcaOut.A v).est, lastGrade := some (.A v), phase := .toCallW },
           p.setStage r ((p.stage r).setP { (p.stage r).proc with returned := true })))
-  /-- Return with grade `B v`: an `n − f` any-`SEAL` quorum containing
-  `SEAL v`, `f + 1` `BIND v`s and `|Valid| > 1`. The stage record has been
-  called, its own `SEAL` is out, and `hnotA` denies case (1) at either bit. -/
+  /-- Return with grade `B v`: an `n − f` any-`ECHO5` quorum containing
+  `ECHO5 v`, `f + 1` `BIND v`s and `|Valid| > 1`. The stage record has been
+  called, its own `ECHO5` is out, and `hnotA` denies case (1) at either bit. -/
   | retG_B (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ) (v : Bool)
       (hh : c.corrupted = false)
       (hph : c.proc.phase = .awaitG) (hr : c.proc.round = r)
       (hterm : p.terminated = false)
       (hin : (p.stage r).proc.input ≠ none)
-      (hlv : (p.stage r).proc.sentSeal ≠ none)
-      (hnotA : ∀ v, (p.stage r).recvCount (.seal (some v)) < P.n - P.f)
-      (hcnt : P.n - P.f ≤ (p.stage r).sealCount)
-      (honce : ∃ k, GBCA.Msg.seal (some v) ∈ (p.stage r).inbox k)
+      (hlv : (p.stage r).proc.sentEcho5 ≠ none)
+      (hnotA : ∀ v, (p.stage r).recvCount (.echo5 (some v)) < P.n - P.f)
+      (hcnt : P.n - P.f ≤ (p.stage r).echo5Count)
+      (honce : ∃ k, GBCA.Msg.echo5 (some v) ∈ (p.stage r).recv k)
       (hbind : P.f + 1 ≤ (p.stage r).recvCount (.bind (some v)))
       (hval : (p.stage r).bothValid P)
       (hret : (p.stage r).proc.returned = false) :
@@ -157,8 +157,8 @@ inductive AbdyStageStep (P : Params) (j : Fin P.n) :
         (PMF.pure (c.setProc { c.proc with
             est := (GbcaOut.B v).est, lastGrade := some (.B v), phase := .toCallW },
           p.setStage r ((p.stage r).setP { (p.stage r).proc with returned := true })))
-  /-- Return with grade `C`: an `n − f` `SEAL ⊥` quorum and `|Valid| > 1`. The
-  stage record has been called, its own `SEAL` is out, `hnotA` denies case (1)
+  /-- Return with grade `C`: an `n − f` `ECHO5 ⊥` quorum and `|Valid| > 1`. The
+  stage record has been called, its own `ECHO5` is out, `hnotA` denies case (1)
   at either bit, and `hnotB` denies case (2) in the reduced form
   `GBCA.ImplStep.retC` states. -/
   | retG_C (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ)
@@ -166,11 +166,11 @@ inductive AbdyStageStep (P : Params) (j : Fin P.n) :
       (hph : c.proc.phase = .awaitG) (hr : c.proc.round = r)
       (hterm : p.terminated = false)
       (hin : (p.stage r).proc.input ≠ none)
-      (hlv : (p.stage r).proc.sentSeal ≠ none)
-      (hnotA : ∀ v, (p.stage r).recvCount (.seal (some v)) < P.n - P.f)
-      (hnotB : ∀ v, (∃ k, GBCA.Msg.seal (some v) ∈ (p.stage r).inbox k) →
+      (hlv : (p.stage r).proc.sentEcho5 ≠ none)
+      (hnotA : ∀ v, (p.stage r).recvCount (.echo5 (some v)) < P.n - P.f)
+      (hnotB : ∀ v, (∃ k, GBCA.Msg.echo5 (some v) ∈ (p.stage r).recv k) →
         (p.stage r).recvCount (.bind (some v)) < P.f + 1)
-      (hcnt : P.n - P.f ≤ (p.stage r).recvCount (.seal none))
+      (hcnt : P.n - P.f ≤ (p.stage r).recvCount (.echo5 none))
       (hval : (p.stage r).bothValid P)
       (hret : (p.stage r).proc.returned = false) :
       AbdyStageStep P j (c, p) (Sum.inl (.retG r j .C))
@@ -250,34 +250,34 @@ inductive AbdyStageStep (P : Params) (j : Fin P.n) :
       AbdyStageStep P j (c, p) (Sum.inr (.gsnd r j (.bind none)))
         (PMF.pure (c, p.setStage r
           ((p.stage r).setP { (p.stage r).proc with sentBind := some none })))
-  /-- The stage `SEAL b`: an `n − f` `BIND b` quorum, the stage record's own
+  /-- The stage `ECHO5 b`: an `n − f` `BIND b` quorum, the stage record's own
   `BIND` already out (D18, D22). -/
-  | gsndSealBit (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ) (b : Bool)
+  | gsndEcho5Bit (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ) (b : Bool)
       (hh : c.corrupted = false)
       (hterm : p.terminated = false)
       (hin : (p.stage r).proc.input ≠ none)
       (hlv : (p.stage r).proc.sentBind ≠ none)
       (hcnt : P.n - P.f ≤ (p.stage r).recvCount (.bind (some b)))
-      (hsend : (p.stage r).proc.sentSeal = none) :
-      AbdyStageStep P j (c, p) (Sum.inr (.gsnd r j (.seal (some b))))
+      (hsend : (p.stage r).proc.sentEcho5 = none) :
+      AbdyStageStep P j (c, p) (Sum.inr (.gsnd r j (.echo5 (some b))))
         (PMF.pure (c, p.setStage r
-          ((p.stage r).setP { (p.stage r).proc with sentSeal := some (some b) })))
-  /-- The stage `SEAL ⊥`: `n − f` `BIND`s of any payload and `|Valid| > 1`, the
+          ((p.stage r).setP { (p.stage r).proc with sentEcho5 := some (some b) })))
+  /-- The stage `ECHO5 ⊥`: `n − f` `BIND`s of any payload and `|Valid| > 1`, the
   stage record's own `BIND` already out, and no single-bit `BIND` quorum on
   record (D18, D22). -/
-  | gsndSealBot (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ)
+  | gsndEcho5Bot (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ)
       (hh : c.corrupted = false)
       (hterm : p.terminated = false)
       (hin : (p.stage r).proc.input ≠ none)
       (hlv : (p.stage r).proc.sentBind ≠ none)
       (hnot : ∀ b, (p.stage r).recvCount (.bind (some b)) < P.n - P.f)
       (hcnt : P.n - P.f ≤ (p.stage r).bindCount)
-      (hval : (p.stage r).bothValid P) (hsend : (p.stage r).proc.sentSeal = none) :
-      AbdyStageStep P j (c, p) (Sum.inr (.gsnd r j (.seal none)))
+      (hval : (p.stage r).bothValid P) (hsend : (p.stage r).proc.sentEcho5 = none) :
+      AbdyStageStep P j (c, p) (Sum.inr (.gsnd r j (.echo5 none)))
         (PMF.pure (c, p.setStage r
-          ((p.stage r).setP { (p.stage r).proc with sentSeal := some none })))
+          ((p.stage r).setP { (p.stage r).proc with sentEcho5 := some none })))
   /-- Stage delivery, receiver's half: file the message under the sender's
-  inbox row in the stage record of round `r`, whichever round the round loop is
+  recv row in the stage record of round `r`, whichever round the round loop is
   in. Authenticity is the network's conjunct (D22). -/
   | gdlvRecv (c : CoreRec P.n) (p : StageSideRec P.n)
       (r : ℕ) (k : Fin P.n) (m : GBCA.Msg) (hh : c.corrupted = false)
@@ -287,7 +287,7 @@ inductive AbdyStageStep (P : Params) (j : Fin P.n) :
   /-- The graded-agreement call against an already-called stage record: the
   round loop moves, the stage record does not. The row carries no termination
   guard, so a terminated process in `toCallG` whose stage record of round `r`
-  is uncalled has no row on either call label, a dead region this reading
+  is uncalled has no row on either call label, a gap this reading
   accepts. -/
   | gcallLoop (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ) (b : Bool)
       (hh : c.corrupted = false)
@@ -448,8 +448,8 @@ theorem stepN_retG_A_own {r : ℕ} {v : Bool}
     (h : ABAProcStepN P j q (Sum.inl (.retG r j (.A v))) ν) :
     q.1.corrupted = false ∧
       q.1.proc.phase = .awaitG ∧ q.1.proc.round = r ∧ q.2.terminated = false ∧
-      (q.2.stage r).proc.input ≠ none ∧ (q.2.stage r).proc.sentSeal ≠ none ∧
-      P.n - P.f ≤ (q.2.stage r).recvCount (.seal (some v)) ∧
+      (q.2.stage r).proc.input ≠ none ∧ (q.2.stage r).proc.sentEcho5 ≠ none ∧
+      P.n - P.f ≤ (q.2.stage r).recvCount (.echo5 (some v)) ∧
       (q.2.stage r).proc.returned = false ∧
       ν = PMF.pure (q.1.setProc { q.1.proc with
           est := (GbcaOut.A v).est, lastGrade := some (.A v), phase := .toCallW },
@@ -467,10 +467,10 @@ theorem stepN_retG_B_own {r : ℕ} {v : Bool}
     (h : ABAProcStepN P j q (Sum.inl (.retG r j (.B v))) ν) :
     q.1.corrupted = false ∧
       q.1.proc.phase = .awaitG ∧ q.1.proc.round = r ∧ q.2.terminated = false ∧
-      (q.2.stage r).proc.input ≠ none ∧ (q.2.stage r).proc.sentSeal ≠ none ∧
-      (∀ v, (q.2.stage r).recvCount (.seal (some v)) < P.n - P.f) ∧
-      P.n - P.f ≤ (q.2.stage r).sealCount ∧
-      (∃ k, GBCA.Msg.seal (some v) ∈ (q.2.stage r).inbox k) ∧
+      (q.2.stage r).proc.input ≠ none ∧ (q.2.stage r).proc.sentEcho5 ≠ none ∧
+      (∀ v, (q.2.stage r).recvCount (.echo5 (some v)) < P.n - P.f) ∧
+      P.n - P.f ≤ (q.2.stage r).echo5Count ∧
+      (∃ k, GBCA.Msg.echo5 (some v) ∈ (q.2.stage r).recv k) ∧
       P.f + 1 ≤ (q.2.stage r).recvCount (.bind (some v)) ∧
       (q.2.stage r).bothValid P ∧
       (q.2.stage r).proc.returned = false ∧
@@ -491,11 +491,11 @@ theorem stepN_retG_C_own {r : ℕ}
     (h : ABAProcStepN P j q (Sum.inl (.retG r j .C)) ν) :
     q.1.corrupted = false ∧
       q.1.proc.phase = .awaitG ∧ q.1.proc.round = r ∧ q.2.terminated = false ∧
-      (q.2.stage r).proc.input ≠ none ∧ (q.2.stage r).proc.sentSeal ≠ none ∧
-      (∀ v, (q.2.stage r).recvCount (.seal (some v)) < P.n - P.f) ∧
-      (∀ v, (∃ k, GBCA.Msg.seal (some v) ∈ (q.2.stage r).inbox k) →
+      (q.2.stage r).proc.input ≠ none ∧ (q.2.stage r).proc.sentEcho5 ≠ none ∧
+      (∀ v, (q.2.stage r).recvCount (.echo5 (some v)) < P.n - P.f) ∧
+      (∀ v, (∃ k, GBCA.Msg.echo5 (some v) ∈ (q.2.stage r).recv k) →
         (q.2.stage r).recvCount (.bind (some v)) < P.f + 1) ∧
-      P.n - P.f ≤ (q.2.stage r).recvCount (.seal none) ∧
+      P.n - P.f ≤ (q.2.stage r).recvCount (.echo5 none) ∧
       (q.2.stage r).bothValid P ∧
       (q.2.stage r).proc.returned = false ∧
       ν = PMF.pure (q.1.setProc { q.1.proc with
@@ -611,15 +611,15 @@ theorem stepN_gsnd_bindBot_self {r : ℕ}
   case gsndIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
-theorem stepN_gsnd_sealBit_self {r : ℕ} {b : Bool}
-    (h : ABAProcStepN P j q (Sum.inr (.gsnd r j (.seal (some b)))) ν) :
+theorem stepN_gsnd_echo5Bit_self {r : ℕ} {b : Bool}
+    (h : ABAProcStepN P j q (Sum.inr (.gsnd r j (.echo5 (some b)))) ν) :
     q.1.corrupted = false ∧
       q.2.terminated = false ∧ (q.2.stage r).proc.input ≠ none ∧
       (q.2.stage r).proc.sentBind ≠ none ∧
       P.n - P.f ≤ (q.2.stage r).recvCount (.bind (some b)) ∧
-      (q.2.stage r).proc.sentSeal = none ∧
+      (q.2.stage r).proc.sentEcho5 = none ∧
       ν = PMF.pure (q.1, q.2.setStage r
-        ((q.2.stage r).setP { (q.2.stage r).proc with sentSeal := some (some b) })) := by
+        ((q.2.stage r).setP { (q.2.stage r).proc with sentEcho5 := some (some b) })) := by
   cases h
   case stageRow h' =>
     cases h'
@@ -628,16 +628,16 @@ theorem stepN_gsnd_sealBit_self {r : ℕ} {b : Bool}
   case gsndIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
-theorem stepN_gsnd_sealBot_self {r : ℕ}
-    (h : ABAProcStepN P j q (Sum.inr (.gsnd r j (.seal none))) ν) :
+theorem stepN_gsnd_echo5Bot_self {r : ℕ}
+    (h : ABAProcStepN P j q (Sum.inr (.gsnd r j (.echo5 none))) ν) :
     q.1.corrupted = false ∧
       q.2.terminated = false ∧ (q.2.stage r).proc.input ≠ none ∧
       (q.2.stage r).proc.sentBind ≠ none ∧
       (∀ b, (q.2.stage r).recvCount (.bind (some b)) < P.n - P.f) ∧
       P.n - P.f ≤ (q.2.stage r).bindCount ∧
-      (q.2.stage r).bothValid P ∧ (q.2.stage r).proc.sentSeal = none ∧
+      (q.2.stage r).bothValid P ∧ (q.2.stage r).proc.sentEcho5 = none ∧
       ν = PMF.pure (q.1, q.2.setStage r
-        ((q.2.stage r).setP { (q.2.stage r).proc with sentSeal := some none })) := by
+        ((q.2.stage r).setP { (q.2.stage r).proc with sentEcho5 := some none })) := by
   cases h
   case stageRow h' =>
     cases h'

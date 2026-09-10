@@ -13,9 +13,9 @@ import Mathlib.Data.Finmap
 # The flat reading of a protocol
 
 A flat reading presents the protocol as it runs: `n` programs, one per process,
-beside one network adversary holding the message pools, the DECIDED pools and
+beside one network adversary holding the message sets, the DECIDED sets and
 the corrupted set with its budget, beside the coin oracle. A program reads its
-own records, its own inboxes and its own replacement flag, and nothing else
+own records, its own received sets and its own replacement flag, and nothing else
 about corruption: not the corrupted set, not the budget, not another process's
 status (D23).
 
@@ -24,7 +24,7 @@ implementation is written here once. The parameters are the stage-side message
 type `M`, the per-process per-round stage record `S`, and the implementation's
 own rows, given as a relation `stageStep` embedded in one constructor of the
 program table. A reading supplies the three and inherits the round loop, the
-DECIDED pools, the coin handshake, corruption, the network adversary, the
+DECIDED sets, the coin handshake, corruption, the network adversary, the
 composition pipeline and the inversion lemmas.
 
 ## The division of rows
@@ -33,7 +33,7 @@ A program's row is the implementation's business exactly when its label is one
 of `stageOwn j`: the graded-agreement call and return at `j`, `j`'s own stage
 multicast, a stage delivery addressed to `j`, and `j`'s own call against an
 already-called stage record. Every other label — the ABA interface, the coin
-handshake, the DECIDED relay and its delivery, the Byzantine drives,
+handshake, the DECIDED relay and its delivery, the Byzantine handshake rows,
 corruption, and the same five label classes at another process — is answered
 by a row here. The side condition `stageOwn` is what the inversion lemmas
 consume: a program's row on a label outside `stageOwn j` is one of the rows
@@ -42,7 +42,7 @@ below, whichever implementation is being read.
 ## The network adversary
 
 The adversary's table is independent of the implementation except in one
-place: the graded-agreement call and its Byzantine drive pool the message the
+place: the graded-agreement call and its Byzantine handshake row sent the message the
 call multicasts, and which message that is belongs to the implementation. It
 enters as the parameter `callPayload`.
 -/
@@ -81,11 +81,11 @@ end StageSideRecP
 
 /-- What a flat reading's stage record supplies: the record of a round the
 process has not touched, and the filing of a delivered message under its
-sender's inbox row. -/
+sender's recv row. -/
 class StageRecord (n : outParam ℕ) (M : outParam Type) (S : Type) where
   /-- The stage record of a round the process has not touched. -/
   initial : S
-  /-- File a message under its sender's inbox row. -/
+  /-- File a message under its sender's recv row. -/
   deliverTo : S → Fin n → M → S
 
 namespace StageSideRecP
@@ -97,7 +97,7 @@ touched round `r`, the initial record otherwise. -/
 def stage (q : StageSideRecP S) (r : ℕ) : S :=
   (q.stages.lookup r).getD StageRecord.initial
 
-/-- File `m` under the inbox row of sender `k` in the stage record of round
+/-- File `m` under the recv row of sender `k` in the stage record of round
 `r`. -/
 def deliverTo (q : StageSideRecP S) (r : ℕ) (k : Fin n) (m : M) : StageSideRecP S :=
   q.setStage r (StageRecord.deliverTo (q.stage r) k m)
@@ -130,13 +130,13 @@ abbrev ProcRecP (n : ℕ) (S : Type) : Type := CoreRec n × StageSideRecP S
 
 /-! ### The network adversary's state -/
 
-/-- The state of the network adversary: the round-tagged message pools, the
-DECIDED pools, and the corrupted set with its budget. -/
+/-- The state of the network adversary: the round-tagged message sets, the
+DECIDED sets, and the corrupted set with its budget. -/
 structure NetStateP (n : ℕ) (M : Type) : Type where
-  /-- `pool r j` — the stage-`r` messages process `j` has multicast (D5). -/
-  pool : ℕ → Fin n → Finset M
-  /-- `dpool j` — the DECIDED payloads process `j` has multicast (D12′). -/
-  dpool : Fin n → Finset Bool
+  /-- `sent r j` — the stage-`r` messages process `j` has multicast (D5). -/
+  sent : ℕ → Fin n → Finset M
+  /-- `dsent j` — the DECIDED payloads process `j` has multicast (D12′). -/
+  dsent : Fin n → Finset Bool
   /-- The corrupted set. -/
   F : Finset (Fin n)
 
@@ -146,19 +146,19 @@ variable {n : ℕ} {M : Type} [DecidableEq M]
 
 /-- The initial network: nothing multicast, nobody corrupted. -/
 def initial (n : ℕ) (M : Type) : NetStateP n M where
-  pool := fun _ _ => ∅
-  dpool := fun _ => ∅
+  sent := fun _ _ => ∅
+  dsent := fun _ => ∅
   F := ∅
 
-/-- Pool `m` under sender `j` in stage `r` (D5). -/
-def gpool (s : NetStateP n M) (r : ℕ) (j : Fin n) (m : M) : NetStateP n M :=
+/-- Sent `m` under sender `j` in stage `r` (D5). -/
+def gsent (s : NetStateP n M) (r : ℕ) (j : Fin n) (m : M) : NetStateP n M :=
   { s with
-    pool :=
-      Function.update s.pool r (Function.update (s.pool r) j (insert m (s.pool r j))) }
+    sent :=
+      Function.update s.sent r (Function.update (s.sent r) j (insert m (s.sent r j))) }
 
-/-- Pool `⟨DECIDED, b⟩` under sender `j` (D12′). -/
+/-- Sent `⟨DECIDED, b⟩` under sender `j` (D12′). -/
 def dput (s : NetStateP n M) (j : Fin n) (b : Bool) : NetStateP n M :=
-  { s with dpool := Function.update s.dpool j (insert b (s.dpool j)) }
+  { s with dsent := Function.update s.dsent j (insert b (s.dsent j)) }
 
 /-- Corruption (deviation D1): total, Dirac, budget-guarded. -/
 def corrupt (P : Params) (id : Fin P.n) (s : NetStateP P.n M) : NetStateP P.n M :=
@@ -193,9 +193,9 @@ theorem actsAt_of_stageOwn {n : ℕ} {M : Type} {j : Fin n} {L : NLabP n M}
 
 Process `j`'s program. Every guard reads the process's own record and nothing
 else: none asks whether another process is honest, and none asks what this one
-has multicast. The DECIDED relay and the ABA return are participation-gated
+has multicast. The DECIDED relay and the ABA return are participation-guarded
 (D8). The DECIDED rows carry no termination guard, so a terminated process
-keeps relaying the payloads it holds. The Byzantine stage drives have no row at
+keeps relaying the payloads it holds. The Byzantine stage rows have no row at
 the process they name (D11, D22). Every label of the extended alphabet outside
 `stageOwn j` has a row here: the participant's, or an idle one.
 
@@ -231,7 +231,7 @@ inductive FlatProcStep (P : Params) (M S : Type)
       FlatProcStep P M S stageStep j (c, p) (Sum.inl (.callABA id b)) (PMF.pure (c, p))
   /-- Return `b` on an `n − f` DECIDED quorum, the round-loop record having
   received its input (D8). Having multicast `b` oneself is a condition on the
-  pool, hence the network's conjunct. -/
+  sent, hence the network's conjunct. -/
   | ret (c : CoreRec P.n) (p : StageSideRecP S) (b : Bool)
       (hh : c.corrupted = false) (hin : c.proc.input ≠ none)
       (hcnt : P.n - P.f ≤ c.decidedCount b) (hret : c.proc.returned = false) :
@@ -305,7 +305,7 @@ inductive FlatProcStep (P : Params) (M S : Type)
       FlatProcStep P M S stageStep j (c, p) (Sum.inr (.gdlv r i k m)) (PMF.pure (c, p))
   /-- The DECIDED relay on an `f + 1` quorum, the round-loop record having
   received its input (D8, D12′). Not having multicast `b` is a condition on the
-  pool, hence the network's conjunct; the pool insert is the network's half
+  sent, hence the network's conjunct; the sent insert is the network's half
   too. -/
   | dsndRelay (c : CoreRec P.n) (p : StageSideRecP S) (b : Bool)
       (hh : c.corrupted = false) (hin : c.proc.input ≠ none)
@@ -326,7 +326,7 @@ inductive FlatProcStep (P : Params) (M S : Type)
       (i k : Fin P.n) (b : Bool) (hi : i ≠ j) :
       FlatProcStep P M S stageStep j (c, p) (Sum.inr (.ddlv i k b)) (PMF.pure (c, p))
   /-- The coin return fused with the `⟨DECIDED, b⟩` publication (D10): the
-  round's grade was `A b`, so the round advance publishes `b`, the pool insert
+  round's grade was `A b`, so the round advance publishes `b`, the sent insert
   being the network's half. The advance opens a new round; the stage records
   the process holds are retained across it (D22). -/
   | retWPub (c : CoreRec P.n) (p : StageSideRecP S)
@@ -376,9 +376,9 @@ inductive FlatProcStep (P : Params) (M S : Type)
 
 /-! ### The network adversary
 
-The one box that holds what no process may see: the pools, the corrupted set
+The one local state that holds what no process may see: the sent sets, the corrupted set
 and the budget. It participates in every send and every delivery — a send by
-pooling the message, a delivery by checking that the message is pooled — and
+recording the message, a delivery by checking that the message is sent — and
 it is the sole authority on the Byzantine labels, where its `k ∈ F` guard is
 the whole authorisation. -/
 
@@ -388,24 +388,24 @@ multicasts. -/
 inductive FlatNetStep (P : Params) (M : Type) [DecidableEq M]
     (callPayload : Fin P.n → Bool → M) :
     NetStateP P.n M → NLabP P.n M → PMF (NetStateP P.n M) → Prop
-  /-- The network's half of a stage multicast: pool the message under its
+  /-- The network's half of a stage multicast: sent the message under its
   sender. Authenticity is the sender's joint participation (D5). -/
   | gsnd (s : NetStateP P.n M) (r : ℕ) (j : Fin P.n) (m : M) :
-      FlatNetStep P M callPayload s (Sum.inr (.gsnd r j m)) (PMF.pure (s.gpool r j m))
-  /-- The network's half of a stage delivery: the message must be pooled under
+      FlatNetStep P M callPayload s (Sum.inr (.gsnd r j m)) (PMF.pure (s.gsent r j m))
+  /-- The network's half of a stage delivery: the message must be sent under
   the named sender. Delivery does not consume it (D5). -/
   | gdlv (s : NetStateP P.n M) (r : ℕ) (i j : Fin P.n) (m : M)
-      (h : m ∈ s.pool r j) :
+      (h : m ∈ s.sent r j) :
       FlatNetStep P M callPayload s (Sum.inr (.gdlv r i j m)) (PMF.pure s)
-  /-- The network's half of a DECIDED relay: the payload must not be pooled
+  /-- The network's half of a DECIDED relay: the payload must not be sent
   yet (D12′). -/
-  | dsnd (s : NetStateP P.n M) (j : Fin P.n) (b : Bool) (h : b ∉ s.dpool j) :
+  | dsnd (s : NetStateP P.n M) (j : Fin P.n) (b : Bool) (h : b ∉ s.dsent j) :
       FlatNetStep P M callPayload s (Sum.inr (.dsnd j b)) (PMF.pure (s.dput j b))
-  /-- The network's half of a DECIDED delivery: the payload must be pooled
+  /-- The network's half of a DECIDED delivery: the payload must be sent
   under the named sender (D12′). -/
-  | ddlv (s : NetStateP P.n M) (i j : Fin P.n) (b : Bool) (h : b ∈ s.dpool j) :
+  | ddlv (s : NetStateP P.n M) (i j : Fin P.n) (b : Bool) (h : b ∈ s.dsent j) :
       FlatNetStep P M callPayload s (Sum.inr (.ddlv i j b)) (PMF.pure s)
-  /-- The network's half of the fused coin return: pool the published payload
+  /-- The network's half of the fused coin return: sent the published payload
   (D10, D12′). -/
   | retWPub (s : NetStateP P.n M) (r : ℕ) (id : Fin P.n) (c : Bool) (b : Bool) :
       FlatNetStep P M callPayload s (Sum.inr (.retWPub r id c b)) (PMF.pure (s.dput id b))
@@ -414,10 +414,10 @@ inductive FlatNetStep (P : Params) (M : Type) [DecidableEq M]
   | gcallLoop (s : NetStateP P.n M) (r : ℕ) (id : Fin P.n) (b : Bool) :
       FlatNetStep P M callPayload s (Sum.inr (.gcallLoop r id b)) (PMF.pure s)
   /-- A Byzantine graded-agreement call (D11): authorised here, and the
-  message its call multicasts pooled here. -/
+  message its call multicasts sent here. -/
   | byzCallG (s : NetStateP P.n M) (r : ℕ) (k : Fin P.n) (b : Bool) (hF : k ∈ s.F) :
       FlatNetStep P M callPayload s (Sum.inr (.byzCallG r k b))
-        (PMF.pure (s.gpool r k (callPayload k b)))
+        (PMF.pure (s.gsent r k (callPayload k b)))
   /-- A Byzantine graded-agreement call against an already-called stage record
   (D11). -/
   | byzCallGLoop (s : NetStateP P.n M) (r : ℕ) (k : Fin P.n) (b : Bool)
@@ -437,8 +437,8 @@ inductive FlatNetStep (P : Params) (M : Type) [DecidableEq M]
   | callABAIdle (s : NetStateP P.n M) (id : Fin P.n) (b : Bool) :
       FlatNetStep P M callPayload s (Sum.inl (.callABA id b)) (PMF.pure s)
   /-- A return requires the returning process to have multicast the payload —
-  a condition on its pool (D12′). -/
-  | retABA (s : NetStateP P.n M) (id : Fin P.n) (b : Bool) (h : b ∈ s.dpool id) :
+  a condition on its sent (D12′). -/
+  | retABA (s : NetStateP P.n M) (id : Fin P.n) (b : Bool) (h : b ∈ s.dsent id) :
       FlatNetStep P M callPayload s (Sum.inl (.retABA id b)) (PMF.pure s)
   /-- A corrupted process returns whatever it likes (D23): its program has been
   replaced, so the DECIDED evidence the honest row asks for is not required of
@@ -446,10 +446,10 @@ inductive FlatNetStep (P : Params) (M : Type) [DecidableEq M]
   the replaced program's self-loop. -/
   | retByz (s : NetStateP P.n M) (id : Fin P.n) (b : Bool) (hF : id ∈ s.F) :
       FlatNetStep P M callPayload s (Sum.inl (.retABA id b)) (PMF.pure s)
-  /-- The graded-agreement call multicasts: the network pools the message. -/
+  /-- The graded-agreement call multicasts: the network records the message. -/
   | callG (s : NetStateP P.n M) (r : ℕ) (id : Fin P.n) (b : Bool) :
       FlatNetStep P M callPayload s (Sum.inl (.callG r id b))
-        (PMF.pure (s.gpool r id (callPayload id b)))
+        (PMF.pure (s.gsent r id (callPayload id b)))
   /-- A graded-agreement return sends nothing. -/
   | retGIdle (s : NetStateP P.n M) (r : ℕ) (id : Fin P.n) (out : GbcaOut) :
       FlatNetStep P M callPayload s (Sum.inl (.retG r id out)) (PMF.pure s)
@@ -467,7 +467,7 @@ inductive FlatNetStep (P : Params) (M : Type) [DecidableEq M]
   /-- Byzantine stage injection (D5, D11): the network multicasts on behalf of
   a corrupted sender. -/
   | byzG (s : NetStateP P.n M) (r : ℕ) (k : Fin P.n) (m : M) (hF : k ∈ s.F) :
-      FlatNetStep P M callPayload s (Sum.inl .tau) (PMF.pure (s.gpool r k m))
+      FlatNetStep P M callPayload s (Sum.inl .tau) (PMF.pure (s.gsent r k m))
   /-- Byzantine DECIDED injection (D12′): either or both bits, at any time, so
   a corrupted process may equivocate. -/
   | byzD (s : NetStateP P.n M) (k : Fin P.n) (b : Bool) (hF : k ∈ s.F) :
@@ -735,7 +735,7 @@ theorem stepN_fail_foreign {k : Fin P.n} (hk : k ≠ j)
 
 /-! ### One program's rules on the rendezvous alphabet
 
-The Byzantine stage drives have no row at the process they name (D22, D23), so
+The Byzantine stage rows have no row at the process they name (D22, D23), so
 on `byzCallG`, `byzCallGLoop` and `byzRetG` every process idles and there is no
 participant's row to read. -/
 
@@ -847,9 +847,9 @@ theorem stepN_byzRetW {r : ℕ} {k : Fin P.n} {b : Bool}
   all_goals rfl
 
 /-- The Byzantine graded-agreement call has no row at the process it names
-(D11, D22, D23): the drive carries its effect outside the program, and the
+(D11, D22, D23): the row carries its effect outside the program, and the
 replaced program has no row on a label it acts on. -/
-theorem stepN_byzCallG_dead {r : ℕ} {b : Bool}
+theorem stepN_byzCallG_noStep {r : ℕ} {b : Bool}
     (h : FlatProcStep P M S stageStep j q (Sum.inr (.byzCallG r j b)) ν) : False := by
   cases h with
   | stageRow _ _ _ h' => exact (IsStageTable.own h').elim
@@ -858,7 +858,7 @@ theorem stepN_byzCallG_dead {r : ℕ} {b : Bool}
 
 /-- The Byzantine graded-agreement return has no row at the process it names
 (D11, D22, D23). -/
-theorem stepN_byzRetG_dead {r : ℕ} {out : GbcaOut}
+theorem stepN_byzRetG_noStep {r : ℕ} {out : GbcaOut}
     (h : FlatProcStep P M S stageStep j q (Sum.inr (.byzRetG r j out)) ν) : False := by
   cases h with
   | stageRow _ _ _ h' => exact (IsStageTable.own h').elim
@@ -893,22 +893,22 @@ theorem netStep_dirac {l : NLabP P.n M}
 
 theorem netStep_gsnd {r : ℕ} {j : Fin P.n} {m : M}
     (h : FlatNetStep P M callPayload s (Sum.inr (.gsnd r j m)) μ) :
-    μ = PMF.pure (s.gpool r j m) := by
+    μ = PMF.pure (s.gsent r j m) := by
   cases h; rfl
 
 theorem netStep_gdlv {r : ℕ} {i j : Fin P.n} {m : M}
     (h : FlatNetStep P M callPayload s (Sum.inr (.gdlv r i j m)) μ) :
-    m ∈ s.pool r j ∧ μ = PMF.pure s := by
+    m ∈ s.sent r j ∧ μ = PMF.pure s := by
   cases h; exact ⟨by assumption, rfl⟩
 
 theorem netStep_dsnd {j : Fin P.n} {b : Bool}
     (h : FlatNetStep P M callPayload s (Sum.inr (.dsnd j b)) μ) :
-    b ∉ s.dpool j ∧ μ = PMF.pure (s.dput j b) := by
+    b ∉ s.dsent j ∧ μ = PMF.pure (s.dput j b) := by
   cases h; exact ⟨by assumption, rfl⟩
 
 theorem netStep_ddlv {i j : Fin P.n} {b : Bool}
     (h : FlatNetStep P M callPayload s (Sum.inr (.ddlv i j b)) μ) :
-    b ∈ s.dpool j ∧ μ = PMF.pure s := by
+    b ∈ s.dsent j ∧ μ = PMF.pure s := by
   cases h; exact ⟨by assumption, rfl⟩
 
 theorem netStep_retWPub {r : ℕ} {id : Fin P.n} {c b : Bool}
@@ -938,7 +938,7 @@ theorem netStep_byzRetW {r : ℕ} {k : Fin P.n} {b : Bool}
 
 theorem netStep_byzCallG {r : ℕ} {k : Fin P.n} {b : Bool}
     (h : FlatNetStep P M callPayload s (Sum.inr (.byzCallG r k b)) μ) :
-    k ∈ s.F ∧ μ = PMF.pure (s.gpool r k (callPayload k b)) := by
+    k ∈ s.F ∧ μ = PMF.pure (s.gsent r k (callPayload k b)) := by
   cases h; exact ⟨by assumption, rfl⟩
 
 theorem netStep_byzRetG {r : ℕ} {k : Fin P.n} {out : GbcaOut}
@@ -951,19 +951,19 @@ theorem netStep_callABA {id : Fin P.n} {b : Bool}
     μ = PMF.pure s := by
   cases h; rfl
 
-/-- A return is authorised either by the DECIDED pool of the returning process
+/-- A return is authorised either by the DECIDED sent of the returning process
 or by its corruption (D23); the two rows share the label and the identity
 successor. -/
 theorem netStep_retABA {id : Fin P.n} {b : Bool}
     (h : FlatNetStep P M callPayload s (Sum.inl (.retABA id b)) μ) :
-    (b ∈ s.dpool id ∨ id ∈ s.F) ∧ μ = PMF.pure s := by
+    (b ∈ s.dsent id ∨ id ∈ s.F) ∧ μ = PMF.pure s := by
   cases h
   case retABA => exact ⟨Or.inl (by assumption), rfl⟩
   case retByz => exact ⟨Or.inr (by assumption), rfl⟩
 
 theorem netStep_callG {r : ℕ} {id : Fin P.n} {b : Bool}
     (h : FlatNetStep P M callPayload s (Sum.inl (.callG r id b)) μ) :
-    μ = PMF.pure (s.gpool r id (callPayload id b)) := by
+    μ = PMF.pure (s.gsent r id (callPayload id b)) := by
   cases h; rfl
 
 theorem netStep_retG {r : ℕ} {id : Fin P.n} {out : GbcaOut}
@@ -987,7 +987,7 @@ theorem netStep_fail {k : Fin P.n}
   cases h; exact ⟨by assumption, by assumption, rfl⟩
 
 theorem netStep_tau (h : FlatNetStep P M callPayload s (Sum.inl .tau) μ) :
-    (∃ (r : ℕ) (k : Fin P.n) (m : M), k ∈ s.F ∧ μ = PMF.pure (s.gpool r k m)) ∨
+    (∃ (r : ℕ) (k : Fin P.n) (m : M), k ∈ s.F ∧ μ = PMF.pure (s.gsent r k m)) ∨
     (∃ (k : Fin P.n) (b : Bool), k ∈ s.F ∧ μ = PMF.pure (s.dput k b)) := by
   cases h
   case byzG => exact Or.inl ⟨_, _, _, by assumption, rfl⟩
@@ -1001,38 +1001,38 @@ Each of the network adversary's three writes — a stage multicast, a DECIDED
 multicast, and corruption — touches one field of the state and leaves the
 other two alone. -/
 
-@[simp] theorem gpool_pool_self {n : ℕ} {M : Type} [DecidableEq M]
+@[simp] theorem gsent_sent_self {n : ℕ} {M : Type} [DecidableEq M]
     (s : NetStateP n M) (r : ℕ) (j : Fin n) (m : M) :
-    (s.gpool r j m).pool r = Function.update (s.pool r) j (insert m (s.pool r j)) := by
-  simp [NetStateP.gpool]
+    (s.gsent r j m).sent r = Function.update (s.sent r) j (insert m (s.sent r j)) := by
+  simp [NetStateP.gsent]
 
-theorem gpool_pool_ne {n : ℕ} {M : Type} [DecidableEq M] (s : NetStateP n M)
+theorem gsent_sent_ne {n : ℕ} {M : Type} [DecidableEq M] (s : NetStateP n M)
     (r : ℕ) (j : Fin n) (m : M) {r' : ℕ} (h : r' ≠ r) :
-    (s.gpool r j m).pool r' = s.pool r' := by
-  simp [NetStateP.gpool, Function.update_of_ne h]
+    (s.gsent r j m).sent r' = s.sent r' := by
+  simp [NetStateP.gsent, Function.update_of_ne h]
 
-@[simp] theorem gpool_dpool {n : ℕ} {M : Type} [DecidableEq M] (s : NetStateP n M)
-    (r : ℕ) (j : Fin n) (m : M) : (s.gpool r j m).dpool = s.dpool := rfl
+@[simp] theorem gsent_dsent {n : ℕ} {M : Type} [DecidableEq M] (s : NetStateP n M)
+    (r : ℕ) (j : Fin n) (m : M) : (s.gsent r j m).dsent = s.dsent := rfl
 
-@[simp] theorem gpool_F {n : ℕ} {M : Type} [DecidableEq M] (s : NetStateP n M)
-    (r : ℕ) (j : Fin n) (m : M) : (s.gpool r j m).F = s.F := rfl
+@[simp] theorem gsent_F {n : ℕ} {M : Type} [DecidableEq M] (s : NetStateP n M)
+    (r : ℕ) (j : Fin n) (m : M) : (s.gsent r j m).F = s.F := rfl
 
-@[simp] theorem dput_pool {n : ℕ} {M : Type} (s : NetStateP n M)
-    (j : Fin n) (b : Bool) : (s.dput j b).pool = s.pool := rfl
+@[simp] theorem dput_sent {n : ℕ} {M : Type} (s : NetStateP n M)
+    (j : Fin n) (b : Bool) : (s.dput j b).sent = s.sent := rfl
 
-@[simp] theorem dput_dpool {n : ℕ} {M : Type} (s : NetStateP n M)
+@[simp] theorem dput_dsent {n : ℕ} {M : Type} (s : NetStateP n M)
     (j : Fin n) (b : Bool) :
-    (s.dput j b).dpool = Function.update s.dpool j (insert b (s.dpool j)) := rfl
+    (s.dput j b).dsent = Function.update s.dsent j (insert b (s.dsent j)) := rfl
 
 @[simp] theorem dput_F {n : ℕ} {M : Type} (s : NetStateP n M)
     (j : Fin n) (b : Bool) : (s.dput j b).F = s.F := rfl
 
-@[simp] theorem netCorrupt_pool {P : Params} {M : Type} (s : NetStateP P.n M) (k : Fin P.n) :
-    (NetStateP.corrupt P k s).pool = s.pool := by
+@[simp] theorem netCorrupt_sent {P : Params} {M : Type} (s : NetStateP P.n M) (k : Fin P.n) :
+    (NetStateP.corrupt P k s).sent = s.sent := by
   unfold NetStateP.corrupt; split <;> rfl
 
-@[simp] theorem netCorrupt_dpool {P : Params} {M : Type} (s : NetStateP P.n M) (k : Fin P.n) :
-    (NetStateP.corrupt P k s).dpool = s.dpool := by
+@[simp] theorem netCorrupt_dsent {P : Params} {M : Type} (s : NetStateP P.n M) (k : Fin P.n) :
+    (NetStateP.corrupt P k s).dsent = s.dsent := by
   unfold NetStateP.corrupt; split <;> rfl
 
 /-! ### Reading composite transitions

@@ -2,5 +2,5 @@
   \label{def:aba-afw-protocol}
   \lean{PLTS.ABA.AFW.Msg}\lean{PLTS.ABA.AFW.StageRec}\lean{PLTS.ABA.AFW.StageStep}\lean{PLTS.ABA.AFW.gCallPayload}\lean{PLTS.ABA.AFW.protocolPre}\lean{PLTS.ABA.AFW.protocolGroup}\lean{PLTS.ABA.AFW.protocol}\leanok
   \uses{def:aba-flat-reading, def:aba-gbca-gather-low, def:aba-gather-low}
-  The flat reading at the gather-based implementation: one tagged message type collapsing a round's $4n+2$ fabrics into one pool family, a process-major stage record holding each process's box in every instance, and 23 stage-side rows --- the two gather instances, the $4n$ Bracha instances beneath them, the three fused rows and the delivery: \leandecl{PLTS.ABA.AFW.protocol}.
+  The flat reading at the gather-based implementation: one tagged message type collapsing a round's $4n+2$ message states into one sent-set family, a process-major stage record holding each process's local state in every instance, and 23 stage-side rows --- the two gather instances, the $4n$ Bracha instances beneath them, the three fused rows and the delivery: \leandecl{PLTS.ABA.AFW.protocol}.
 \end{definition}

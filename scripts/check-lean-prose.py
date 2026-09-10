@@ -25,7 +25,7 @@ NOTATION = {
     "SL", "BD", "VT", "IN", "EC", "DEC", "Valid",
     # the message levels of the graded-agreement rounds, and the source's own
     # names; READY is what both papers call the level the encoding writes VOTE
-    "INPUT", "ECHO", "VOTE", "READY", "BIND", "SEAL", "DECIDED", "echo4", "echo5",
+    "INPUT", "ECHO", "VOTE", "READY", "BIND", "ECHO5", "DECIDED", "echo4", "echo5",
     # Bracha's first message level, and the gather instances of the two-gather
     # pseudocode, each naming a line of an algorithm rather than a rule
     "INIT", "G",

@@ -10,10 +10,10 @@ import Leslie2Protocols.Framework.FamilySim
 # Weak runs from step chains
 
 `Framework/FamilySim.lean` builds the two smallest weak runs by hand: the
-single external step (`System.weakLStep_of_step`) and the two-step burst
+single external step (`System.weakLStep_of_step`) and the two-step run
 (`weakLStep_tauThen`). Simulations whose abstract side must fire several
 internal rules before answering — a chain of Byzantine call registrations, a
-core bind, then the return — need bursts of unbounded length. This file
+core bind, then the return — need runs of unbounded length. This file
 supplies them:
 
 * `System.weakLSilent_tauCons` / `System.weakLStep_tauCons` — prepending a
@@ -179,9 +179,9 @@ theorem System.weakLSilent_ofChain {q : State} {qs : List State}
     obtain ⟨hhead, htail⟩ := List.isChain_cons_cons.mp hchain
     exact System.weakLSilent_tauCons hhead (ih htail)
 
-/-- **The k-fold burst.** A chain of silent `LStep`s followed by one external
+/-- **The k-fold run.** A chain of silent `LStep`s followed by one external
 `LStep` is a weak `l`-transition — the generalisation of `weakLStep_tauThen`
-to bursts of any length. -/
+to runs of any length. -/
 theorem System.weakLStep_tausThen {q q' : State} {qs : List State} {l : Label}
     (hchain : List.IsChain (fun a b => sys.LStep a Silent.τ b) (q :: qs))
     (hlast : sys.LStep (qs.getLastD q) l q') (hl : ¬ l = Silent.τ) :

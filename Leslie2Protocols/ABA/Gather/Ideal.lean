@@ -30,7 +30,7 @@ Each process, once called:
 * return `g` — once `n − f` bind-BRB instances hold committed payloads, each
   a sub-map of `g`, with `g` itself a sub-map of the committed inputs.
 
-`ECHO` and `VOTE` are plain multicasts on the instance's message fabric
+`ECHO` and `VOTE` are plain multicasts on the instance's message state
 (`ABA.SubState`, deviations D1/D5). The `BIND` payloads travel by reliable
 broadcast instead: the binding argument (`ABA/Gather/IdealSim.lean`) freezes a
 family of bind payloads at the first return and later returns must be held to
@@ -50,7 +50,7 @@ namespace Gather
 
 /-- The plain-multicast messages of one gather instance: the `ECHO` and
 `VOTE` payload sets. The `BIND` payloads travel by reliable broadcast and are
-not messages of the fabric. -/
+not messages of the message state. -/
 inductive GaMsg (n : ℕ) (X : Type) : Type
   /-- `⟨ECHO, A⟩`. -/
   | echo (A : APSet n X)
@@ -58,7 +58,7 @@ inductive GaMsg (n : ℕ) (X : Type) : Type
   | vote (A : APSet n X)
   deriving DecidableEq
 
-/-- The local record of one process in one gather instance. The `BIND` slot
+/-- The local record of one process in one gather instance. The `BIND` field
 is the process's own bind-BRB instance's call record, not a field here. -/
 structure PRec (n : ℕ) (X : Type) : Type where
   /-- The payload received via `call` (`none` before the call). -/
@@ -78,11 +78,11 @@ def PRec.initial (n : ℕ) (X : Type) : PRec n X where
   sentVote := none
   returned := false
 
-/-- The state of one gather-over-BRB-specification instance: the gather boxes
-and fabric, the `n` input-BRB specification states, and the `n` bind-BRB
+/-- The state of one gather-over-BRB-specification instance: the gather local states
+and message state, the `n` input-BRB specification states, and the `n` bind-BRB
 specification states. -/
 structure IdealState (n : ℕ) (X : Type) : Type where
-  /-- The gather processes' boxes and the instance's message fabric. -/
+  /-- The gather processes' local states and the instance's message state. -/
   ga : SubState n (PRec n X) (GaMsg n X)
   /-- `brbIn k` — the BRB specification instance broadcasting `k`'s input. -/
   brbIn : ∀ _ : Fin n, BRB.SpecState n X
@@ -106,7 +106,7 @@ def approved (s : IdealState n X) (A : APSet n X) : Prop :=
   A.subMap (fun k => (s.brbIn k).val)
 
 /-- Corruption (deviation D1): the broadcast transform, corrupting the gather
-fabric and every BRB coordinate in lockstep. -/
+message state and every BRB coordinate in lockstep. -/
 def corruptAll (P : Params) (id : Fin P.n) (s : IdealState P.n X) : IdealState P.n X where
   ga := s.ga.corrupt P id
   brbIn := fun k => (s.brbIn k).corrupt P id
@@ -178,7 +178,7 @@ inductive IdealStep (P : Params) :
       IdealStep P s .tau
         (PMF.pure
         { s with brbBind := Function.update s.brbBind k { s.brbBind k with val := some U } })
-  /-- Asynchronous delivery on the gather fabric. -/
+  /-- Asynchronous delivery on the gather message state. -/
   | deliver (s : IdealState P.n X) (i j : Fin P.n) (m : GaMsg P.n X)
       (h : m ∈ s.ga.sent j) :
       IdealStep P s .tau (PMF.pure { s with ga := s.ga.recvMsg i j m })
@@ -213,7 +213,7 @@ inductive IdealStep (P : Params) :
       IdealStep P s .tau
         (PMF.pure
         { s with brbBind := Function.update s.brbBind j { s.brbBind j with input := some U } })
-  /-- Byzantine injection on the gather fabric. -/
+  /-- Byzantine injection on the gather message state. -/
   | byz (s : IdealState P.n X) (j : Fin P.n) (m : GaMsg P.n X) (h : j ∈ s.ga.F) :
       IdealStep P s .tau (PMF.pure { s with ga := s.ga.mcast j m })
   /-- Return: `n − f` bind-BRB instances hold committed payloads, each a
@@ -228,7 +228,7 @@ inductive IdealStep (P : Params) :
       IdealStep P s (.ret id g)
         (PMF.pure
         { s with ga := s.ga.setProc id { s.ga.proc id with returned := true } })
-  /-- Corruption (deviation D1), in lockstep across the fabric and every BRB
+  /-- Corruption (deviation D1), in lockstep across the message state and every BRB
   coordinate. -/
   | fail (s : IdealState P.n X) (id : Fin P.n) :
       IdealStep P s (.fail id) (PMF.pure (s.corruptAll P id))

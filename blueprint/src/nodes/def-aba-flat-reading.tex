@@ -3,7 +3,7 @@
   \lean{PLTS.ABA.Net.NetEvtP}\lean{PLTS.ABA.Net.actsAt}\lean{PLTS.ABA.Net.wccPull}\lean{PLTS.ABA.Net.StageSideRecP}\lean{PLTS.ABA.Net.StageRecord}\lean{PLTS.ABA.Net.NetStateP}\lean{PLTS.ABA.Net.stageOwn}\lean{PLTS.ABA.Net.FlatProcStep}\lean{PLTS.ABA.Net.FlatNetStep}\lean{PLTS.ABA.Net.IsStageTable}\lean{PLTS.ABA.Net.flat}\leanok
   \uses{def:aba-labels, def:aba-params, def:aba-core-vocab, def:relabel, def:syncproduct, def:process-algebra, def:idle-family}
   A protocol as it runs: $n$ programs, one per process, beside one network adversary and the coin oracle.
-  A program reads its own records, its own inboxes and its own replacement flag, and nothing else about corruption --- not the corrupted set, not the budget, not another process's status (D23) --- while the adversary holds the round-tagged message pools, the DECIDED pools and the corrupted set with its budget, and it alone has rows on the Byzantine labels.
+  A program reads its own records, its own received sets and its own replacement flag, and nothing else about corruption --- not the corrupted set, not the budget, not another process's status (D23) --- while the adversary holds the round-tagged message sets, the DECIDED sets and the corrupted set with its budget, and it alone has rows on the Byzantine labels.
   The reading is parametric in three things a graded-agreement implementation supplies: its stage message type $M$, its per-process per-round stage record $S$, and its rows, given as a relation embedded in one constructor of the program table.
   What does not depend on them is written once --- the round loop, the DECIDED relay and its delivery, the coin handshake, corruption, the adversary's table, the composition pipeline
   \[

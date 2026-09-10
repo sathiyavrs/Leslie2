@@ -6,7 +6,7 @@ Authors: Sathiya / Claude
 
 import Leslie2Protocols.ABA.Round.Low
 import Leslie2Protocols.ABA.Gather.LowSim
-import Leslie2Protocols.Framework.WeakBurst
+import Leslie2Protocols.Framework.WeakRun
 
 /-!
 # The broadcast substitution inside the round
@@ -17,7 +17,7 @@ forward-simulates the GBCA instance over the gather-over-BRB components
 substitution relation. Everything is inherited from the gather-level
 substitution (`ABA/Gather/LowSim.lean`): the internal rows replay
 `Gather.lowTau_reach`, the fused calls `Gather.lowRel_call`, and the fused
-returns `Gather.lowRetBurst`, the chains mapping into the pair's embedded
+returns `Gather.lowRetRun`, the chains mapping into the pair's embedded
 rows coordinate by coordinate.
 -/
 
@@ -115,7 +115,7 @@ theorem lowRefines (P : Params) (r : ℕ) :
       have ht1' := PMF.pure_injective hμ
       subst ht1'
       obtain ⟨ts, hchain, hin', hcov, hQ', hr', hRel1⟩ :=
-        Gather.lowRetBurst hR.1 hin hsubap hQ hr
+        Gather.lowRetRun hR.1 hin hsubap hQ hr
       have hguard2 : (q₂.2.ga.proc id).input = none := by
         rw [hR.2.ga_eq]
         exact h2
@@ -156,7 +156,7 @@ theorem lowRefines (P : Params) (r : ℕ) :
       have ht2' := PMF.pure_injective hμ
       subst ht2'
       obtain ⟨ts, hchain, hin', hcov, hQ', hr', hRel2⟩ :=
-        Gather.lowRetBurst hR.2 hin hsubap hQ hr
+        Gather.lowRetRun hR.2 hin hsubap hQ hr
       have hchain' := chain_map_ga2 (r := r) q₂.1 hchain
       have hlaststep : (idealInst P r).LStep
           ((ts.map (fun x => (q₂.1, x))).getLastD (q₂.1, q₂.2))

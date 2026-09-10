@@ -26,7 +26,7 @@ This file holds that alphabet and those components.
 ## The extended alphabet
 
 `Lab n` is the shared alphabet of the protocol and of its specification. It
-cannot name the two message networks, the Byzantine drives, or the branches of
+cannot name the two message networks, the Byzantine handshake rows, or the branches of
 a handshake that it does not distinguish. The rendezvous alphabet
 `NetEvtP n M` names them, over a graded-agreement message type `M`
 (`ABA/Reading/Alphabet.lean`); `NetEvt n` is that alphabet at the stage messages of
@@ -39,7 +39,7 @@ both compositions hide before reading the result back over `Lab n`.
 
 The coin oracle `WCC.specFamily` speaks `Lab n`, so it is joined to the
 extended alphabet through the label pullback `wccPull`, which sends a shared
-label to itself, the Byzantine handshake drives and the fused coin return to
+label to itself, the Byzantine handshake rows and the fused coin return to
 the oracle's own handshake rows, and every other rendezvous label out of the
 domain. `wccLift` is the oracle read along that pullback at this alphabet. It
 is a component of both compositions, unchanged.
@@ -59,14 +59,14 @@ A corruption replaces the program of the process it names (D23). The flag
 participant's row is guarded by `corrupted = false`, and the replaced program
 is the single self-loop `corruptedIdle`. The replaced program has no row on the
 labels of `actsAt j` — the labels on which the process would act on its own
-sub-protocol traffic — so that traffic enters only through the Byzantine drives
+sub-protocol messages — so those messages enter only through the Byzantine handshake rows
 (D11).
 
 ## The ABA-side network
 
-`ANetStep` is what the network adversary retains once the round fabrics have
-taken the stage pools: the DECIDED pools `dpool j`, the corrupted set `F` with
-its budget, and the authorisation of every Byzantine drive. `aNet` is that
+`ANetStep` is what the network adversary retains once the round message states have
+taken the stage sent sets: the DECIDED sets `dsent j`, the corrupted set `F` with
+its budget, and the authorisation of every Byzantine handshake row. `aNet` is that
 automaton. Its `fail` row carries the budget guard `k ∉ F ∧ |F| < f`, so a
 corruption fires exactly when it takes effect, and its `retByz` row lets a
 corrupted process return without DECIDED evidence, pairing with the replaced
@@ -126,7 +126,7 @@ namespace Comp
 The automaton that calls a round's graded-agreement instance and the coin, and
 decides. It writes no stage record: the five multicast levels and the stage
 delivery are internal to a round instance, so they leave no row here, and the
-three Byzantine graded-agreement drives change no round-loop data, which is
+three Byzantine graded-agreement rows change no round-loop data, which is
 why they appear below only as idle rows.
 
 The programs sit under a full-synchronisation product, so every label that can
@@ -142,8 +142,8 @@ on the process's own `fail`; every participant's row is guarded by
 rows the replaced program has the single row `corruptedIdle`: a self-loop on
 every label other than `τ` and the labels of `actsAt j`. On the latter the
 replaced program has no row at all, so those labels cannot fire; the corrupted
-process's graded-agreement traffic enters through the Byzantine drives (D11)
-and its DECIDED traffic through `byzD`. -/
+process's graded-agreement messages enters through the Byzantine handshake rows (D11)
+and its DECIDED messages through `byzD`. -/
 
 /-- The step relation of the round-loop program of process `j`. -/
 inductive CoreProcStepN (P : Params) (j : Fin P.n) :
@@ -161,7 +161,7 @@ inductive CoreProcStepN (P : Params) (j : Fin P.n) :
   | callABAIdle (c : CoreRec P.n) (id : Fin P.n) (b : Bool) (hid : id ≠ j) :
       CoreProcStepN P j c (Sum.inl (.callABA id b)) (PMF.pure c)
   /-- Return `b` on an `n − f` DECIDED quorum. Having multicast `b` oneself is
-  a condition on the DECIDED pools, hence `aNet`'s conjunct. -/
+  a condition on the DECIDED sets, hence `aNet`'s conjunct. -/
   | ret (c : CoreRec P.n) (b : Bool) (hh : c.corrupted = false)
       (hcnt : P.n - P.f ≤ c.decidedCount b) (hret : c.proc.returned = false) :
       CoreProcStepN P j c (Sum.inl (.retABA j b))
@@ -221,7 +221,7 @@ inductive CoreProcStepN (P : Params) (j : Fin P.n) :
       (hτ : L ≠ Sum.inl Lab.tau) (hown : ¬ actsAt j L) :
       CoreProcStepN P j c L (PMF.pure c)
   /-- The DECIDED relay on an `f + 1` quorum (D12′): the quorum is a condition
-  on the record, the write-once condition and the pool insert are `aNet`'s. -/
+  on the record, the write-once condition and the sent insert are `aNet`'s. -/
   | dsndRelay (c : CoreRec P.n) (b : Bool) (hh : c.corrupted = false)
       (hcnt : P.f + 1 ≤ c.decidedCount b) :
       CoreProcStepN P j c (Sum.inr (.dsnd j b)) (PMF.pure c)
@@ -237,7 +237,7 @@ inductive CoreProcStepN (P : Params) (j : Fin P.n) :
   | ddlvIdle (c : CoreRec P.n) (i k : Fin P.n) (b : Bool) (hi : i ≠ j) :
       CoreProcStepN P j c (Sum.inr (.ddlv i k b)) (PMF.pure c)
   /-- The coin return fused with the `⟨DECIDED, b⟩` publication (D10): the
-  round's grade was `A b`, so the round advance publishes `b`, the pool insert
+  round's grade was `A b`, so the round advance publishes `b`, the sent insert
   being `aNet`'s half. -/
   | retWPub (c : CoreRec P.n) (r : ℕ) (co : Bool) (b : Bool)
       (hh : c.corrupted = false)
@@ -260,7 +260,7 @@ inductive CoreProcStepN (P : Params) (j : Fin P.n) :
       (hid : id ≠ j) :
       CoreProcStepN P j c (Sum.inr (.gcallLoop r id b)) (PMF.pure c)
   /-- A Byzantine graded-agreement call (D11) writes a stage record and no
-  round-loop data: every round loop, the driven one included, stands still. -/
+  round-loop data: every round loop, the named one included, stands still. -/
   | byzCallGIdle (c : CoreRec P.n) (r : ℕ) (k : Fin P.n) (b : Bool) :
       CoreProcStepN P j c (Sum.inr (.byzCallG r k b)) (PMF.pure c)
   /-- A Byzantine graded-agreement call against an already-called stage record
@@ -278,17 +278,17 @@ inductive CoreProcStepN (P : Params) (j : Fin P.n) :
   | byzRetWIdle (c : CoreRec P.n) (r : ℕ) (k : Fin P.n) (b : Bool) :
       CoreProcStepN P j c (Sum.inr (.byzRetW r k b)) (PMF.pure c)
 
-/-! ### The DECIDED pools and the corrupted set
+/-! ### The DECIDED sets and the corrupted set
 
-What is left of the network adversary once the round-tagged pools have gone to
-the round fabrics: the DECIDED pools, the corrupted set with its budget, and
-the authorisation of every Byzantine drive. -/
+What is left of the network adversary once the round-tagged sent sets have gone to
+the round message states: the DECIDED sets, the corrupted set with its budget, and
+the authorisation of every Byzantine handshake row. -/
 
-/-- The state of the ABA-side network: the DECIDED pools and the corrupted
+/-- The state of the ABA-side network: the DECIDED sets and the corrupted
 set. -/
 structure ANetState (n : ℕ) : Type where
-  /-- `dpool j` — the DECIDED payloads process `j` has multicast (D12′). -/
-  dpool : Fin n → Finset Bool
+  /-- `dsent j` — the DECIDED payloads process `j` has multicast (D12′). -/
+  dsent : Fin n → Finset Bool
   /-- The corrupted set. -/
   F : Finset (Fin n)
 
@@ -298,19 +298,19 @@ variable {n : ℕ}
 
 /-- The initial network: nothing multicast, nobody corrupted. -/
 def initial (n : ℕ) : ANetState n where
-  dpool := fun _ => ∅
+  dsent := fun _ => ∅
   F := ∅
 
-/-- Pool `⟨DECIDED, b⟩` under sender `j` (D12′). -/
+/-- Sent `⟨DECIDED, b⟩` under sender `j` (D12′). -/
 def dput (a : ANetState n) (j : Fin n) (b : Bool) : ANetState n :=
-  { a with dpool := Function.update a.dpool j (insert b (a.dpool j)) }
+  { a with dsent := Function.update a.dsent j (insert b (a.dsent j)) }
 
 /-- Corruption (deviation D1): total, Dirac, budget-guarded. -/
 def corrupt (P : Params) (id : Fin P.n) (a : ANetState P.n) : ANetState P.n :=
   if id ∉ a.F ∧ a.F.card < P.f then { a with F := insert id a.F } else a
 
-@[simp] theorem dput_dpool (a : ANetState n) (j : Fin n) (b : Bool) :
-    (a.dput j b).dpool = Function.update a.dpool j (insert b (a.dpool j)) := rfl
+@[simp] theorem dput_dsent (a : ANetState n) (j : Fin n) (b : Bool) :
+    (a.dput j b).dsent = Function.update a.dsent j (insert b (a.dsent j)) := rfl
 
 @[simp] theorem dput_F (a : ANetState n) (j : Fin n) (b : Bool) :
     (a.dput j b).F = a.F := rfl
@@ -320,14 +320,14 @@ end ANetState
 /-- The step relation of the ABA-side network. All transitions are Dirac. -/
 inductive ANetStep (P : Params) :
     ANetState P.n → NLab P.n → PMF (ANetState P.n) → Prop
-  /-- The DECIDED relay's half: the payload must not be pooled yet (D12′). -/
-  | dsnd (a : ANetState P.n) (j : Fin P.n) (b : Bool) (h : b ∉ a.dpool j) :
+  /-- The DECIDED relay's half: the payload must not be sent yet (D12′). -/
+  | dsnd (a : ANetState P.n) (j : Fin P.n) (b : Bool) (h : b ∉ a.dsent j) :
       ANetStep P a (Sum.inr (.dsnd j b)) (PMF.pure (a.dput j b))
-  /-- The DECIDED delivery's half: the payload must be pooled under the named
+  /-- The DECIDED delivery's half: the payload must be sent under the named
   sender (D12′). -/
-  | ddlv (a : ANetState P.n) (i j : Fin P.n) (b : Bool) (h : b ∈ a.dpool j) :
+  | ddlv (a : ANetState P.n) (i j : Fin P.n) (b : Bool) (h : b ∈ a.dsent j) :
       ANetStep P a (Sum.inr (.ddlv i j b)) (PMF.pure a)
-  /-- The fused coin return's half: pool the published payload (D10, D12′). -/
+  /-- The fused coin return's half: sent the published payload (D10, D12′). -/
   | retWPub (a : ANetState P.n) (r : ℕ) (id : Fin P.n) (c : Bool) (b : Bool) :
       ANetStep P a (Sum.inr (.retWPub r id c b)) (PMF.pure (a.dput id b))
   /-- A graded-agreement call against an already-called stage record publishes
@@ -357,8 +357,8 @@ inductive ANetStep (P : Params) :
   | callABAIdle (a : ANetState P.n) (id : Fin P.n) (b : Bool) :
       ANetStep P a (Sum.inl (.callABA id b)) (PMF.pure a)
   /-- A return requires the returning process to have multicast the payload —
-  a condition on its DECIDED pool (D12′). -/
-  | retABA (a : ANetState P.n) (id : Fin P.n) (b : Bool) (h : b ∈ a.dpool id) :
+  a condition on its DECIDED sent (D12′). -/
+  | retABA (a : ANetState P.n) (id : Fin P.n) (b : Bool) (h : b ∈ a.dsent id) :
       ANetStep P a (Sum.inl (.retABA id b)) (PMF.pure a)
   /-- A corrupted process returns whatever it likes (D23): its program has been
   replaced, so the DECIDED evidence the honest row asks for is not required of
@@ -366,7 +366,7 @@ inductive ANetStep (P : Params) :
   is the replaced program's self-loop. -/
   | retByz (a : ANetState P.n) (id : Fin P.n) (b : Bool) (hF : id ∈ a.F) :
       ANetStep P a (Sum.inl (.retABA id b)) (PMF.pure a)
-  /-- The graded-agreement call's `⟨INPUT, b⟩` is pooled in the round's fabric,
+  /-- The graded-agreement call's `⟨INPUT, b⟩` is sent in the round's message state,
   not here. -/
   | callGIdle (a : ANetState P.n) (r : ℕ) (id : Fin P.n) (b : Bool) :
       ANetStep P a (Sum.inl (.callG r id b)) (PMF.pure a)
@@ -386,7 +386,7 @@ inductive ANetStep (P : Params) :
   | fail (a : ANetState P.n) (k : Fin P.n) (hnew : k ∉ a.F) (hbud : a.F.card < P.f) :
       ANetStep P a (Sum.inl (.fail k)) (PMF.pure (ANetState.corrupt P k a))
   /-- Byzantine DECIDED injection (D12′): either or both bits, at any time, so
-  a corrupted process may equivocate in the DECIDED pools. -/
+  a corrupted process may equivocate in the DECIDED sets. -/
   | byzD (a : ANetState P.n) (k : Fin P.n) (b : Bool) (hF : k ∈ a.F) :
       ANetStep P a (Sum.inl .tau) (PMF.pure (a.dput k b))
 
@@ -716,12 +716,12 @@ variable {P : Params} {a : ANetState P.n} {μ : PMF (ANetState P.n)}
 
 theorem aStep_dsnd {j : Fin P.n} {b : Bool}
     (h : ANetStep P a (Sum.inr (.dsnd j b)) μ) :
-    b ∉ a.dpool j ∧ μ = PMF.pure (a.dput j b) := by
+    b ∉ a.dsent j ∧ μ = PMF.pure (a.dput j b) := by
   cases h; exact ⟨by assumption, rfl⟩
 
 theorem aStep_ddlv {i j : Fin P.n} {b : Bool}
     (h : ANetStep P a (Sum.inr (.ddlv i j b)) μ) :
-    b ∈ a.dpool j ∧ μ = PMF.pure a := by
+    b ∈ a.dsent j ∧ μ = PMF.pure a := by
   cases h; exact ⟨by assumption, rfl⟩
 
 theorem aStep_retWPub {r : ℕ} {id : Fin P.n} {c b : Bool}
@@ -762,12 +762,12 @@ theorem aStep_callABA {id : Fin P.n} {b : Bool}
     (h : ANetStep P a (Sum.inl (.callABA id b)) μ) : μ = PMF.pure a := by
   cases h; rfl
 
-/-- A return is authorised either by the DECIDED pool of the returning process
+/-- A return is authorised either by the DECIDED sent of the returning process
 or by its corruption (D23); the two rows share the label and the identity
 successor. -/
 theorem aStep_retABA {id : Fin P.n} {b : Bool}
     (h : ANetStep P a (Sum.inl (.retABA id b)) μ) :
-    (b ∈ a.dpool id ∨ id ∈ a.F) ∧ μ = PMF.pure a := by
+    (b ∈ a.dsent id ∨ id ∈ a.F) ∧ μ = PMF.pure a := by
   cases h
   case retABA => exact ⟨Or.inl (by assumption), rfl⟩
   case retByz => exact ⟨Or.inr (by assumption), rfl⟩
@@ -798,10 +798,10 @@ theorem aStep_tau (h : ANetStep P a (Sum.inl .tau) μ) :
   cases h
   case byzD => exact ⟨_, _, by assumption, rfl⟩
 
-theorem aStep_gsnd_dead {r : ℕ} {k : Fin P.n} {m : GBCA.Msg}
+theorem aStep_gsnd_noStep {r : ℕ} {k : Fin P.n} {m : GBCA.Msg}
     (h : ANetStep P a (Sum.inr (.gsnd r k m)) μ) : False := by cases h
 
-theorem aStep_gdlv_dead {r : ℕ} {i k : Fin P.n} {m : GBCA.Msg}
+theorem aStep_gdlv_noStep {r : ℕ} {i k : Fin P.n} {m : GBCA.Msg}
     (h : ANetStep P a (Sum.inr (.gdlv r i k m)) μ) : False := by cases h
 
 end ANetInversion

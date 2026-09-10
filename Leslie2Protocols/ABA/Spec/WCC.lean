@@ -30,7 +30,7 @@ out-of-scope Unpredictability property), and `fail` is the determinised
   on is an `ε`-correct verifiable secret sharing scheme, whose delivery
   guarantee holds only up to a failure probability `δ`; the specification
   inherits that failure as an outcome of its own. `wccPMF` therefore carries a
-  fourth outcome `dead` of mass `δ`, pushed into `val := TVal.dead`. A `dead`
+  fourth outcome `undelivered` of mass `δ`, pushed into `val := TVal.undelivered`. An `undelivered`
   round enables no `ret`: the return rule's guard is positive
   (`val = ⊤ ∨ val = bit b`), so a failed resolution silently delivers nothing
   and the round's callers wait forever. This is distinct from `⊤`, where
@@ -58,15 +58,15 @@ inductive TVal : Type
   /-- Failed resolution: the coin resolved without delivering, so no process
   ever receives a value. Distinct from `⊥` (not yet resolved) and from `⊤`
   (delivered, with the adversary choosing each process's bit). -/
-  | dead
+  | undelivered
   deriving DecidableEq, Repr
 
 /-- The `TVal` recorded by a coin resolution with the given outcome: the common
-bit, `⊤` for the adversarial outcome, and `dead` for delivery failure. -/
+bit, `⊤` for the adversarial outcome, and `undelivered` for delivery failure. -/
 def CoinOutcome.toTVal : CoinOutcome → TVal
   | .bit b => .bit b
   | .adv => .top
-  | .dead => .dead
+  | .undelivered => .undelivered
 
 /-- `toTVal` is injective: the four coin outcomes land on four distinct
 `TVal`s. -/
@@ -118,13 +118,13 @@ inductive Step (P : Params) (r : ℕ) :
   /-- Input-enabledness loop for `call`. -/
   | callLoop (s : SpecState P.n) (id : Fin P.n) :
       Step P r s (.callW r id) (PMF.pure s)
-  /-- Coin resolution: the only probabilistic transition. Outcome `dead`
+  /-- Coin resolution: the only probabilistic transition. Outcome `undelivered`
   (mass `δ`, deviation D17) resolves the coin without delivering. -/
   | flip (s : SpecState P.n) (hq : s.threshold P) (hv : s.val = .bot) :
       Step P r s .tau
         (P.wccPMF.map (fun o => { s with val := o.toTVal }))
   /-- A process receives its return: the common bit if `val = bit b`, an
-  adversary-chosen bit if `val = ⊤`. The guard is positive, so a `dead`
+  adversary-chosen bit if `val = ⊤`. The guard is positive, so an `undelivered`
   resolution (D17) enables no return at all. -/
   | ret (s : SpecState P.n) (id : Fin P.n) (b : Bool)
       (h₁ : s.val = .top ∨ s.val = .bit b) (h₂ : s.ret id = false) :

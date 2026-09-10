@@ -21,15 +21,15 @@ adversary and the coin oracle. A program reads its own replacement flag and
 nothing else about corruption: not the corrupted set, not the budget, not
 another process's status (D23). Each program runs its round
 loop and a graded-agreement stage at once, and the single adversary holds both
-kinds of message pool. The composed reading reads the same protocol as a
+kinds of message sent. The composed reading reads the same protocol as a
 composition of components:
 
 * the graded-agreement side is the round-indexed family `GSub.gbcaSide`. Its
   round-`r` instance is a parallel component in its own right: the stage
-  programs of round `r` beside the message fabric of round `r`, which that
+  programs of round `r` beside the message state of round `r`, which that
   instance owns outright;
 * the round loops are `n` separate automata (`coreProcN`), synchronised;
-* what is left of the network adversary is the DECIDED pools beside the
+* what is left of the network adversary is the DECIDED sets beside the
   corrupted set (`aNet`);
 * the coin oracle enters through the same label pullback as in the protocol
   reading (`Net.wccLift`).
@@ -54,7 +54,7 @@ composed system's achievable trace distributions in the specification's.
 
 A round instance is a component of the composite from the start, not an object
 created by the round's first call, and it keeps its stage records and its
-fabric for the whole run. The graded-agreement coordinate of a composed state
+message state for the whole run. The graded-agreement coordinate of a composed state
 is therefore `ℕ → GBCA.ImplState n`: every round is present at every moment,
 whichever round each process is in. Those retained stage records are
 specification-side state in one respect only: a process record of the protocol
@@ -63,12 +63,12 @@ nothing further, where the round instance answers at every moment (D22).
 
 ## The authorisation relocation (D11)
 
-A round instance carries no `k ∈ F` guard on the drive labels `byzCallG`,
-`byzCallGLoop` and `byzRetG` (`ABDY/Instances.lean`, D11). A drive label stays
+A round instance carries no `k ∈ F` guard on the handshake-row labels `byzCallG`,
+`byzCallGLoop` and `byzRetG` (`ABDY/Instances.lean`, D11). A handshake-row label stays
 visible at the instance boundary and is authorised outside it. Here `aNet` is
 that outside, and it carries the guard on its own copy of the corrupted set.
 The two copies are written by one broadcast: `fail` reaches every round's
-fabric through the family (`gbcaSide_fail`) and `aNet` on its own `fail` row,
+message state through the family (`gbcaSide_fail`) and `aNet` on its own `fail` row,
 and `GSub.GNetState.corrupt` and `ANetState.corrupt` are the same
 budget-guarded insertion.
 
@@ -102,7 +102,7 @@ open Net
 
 The protocol cut into its components: the graded-agreement side as a
 round-indexed family of instances, the round loops as `n` synchronised
-automata, the DECIDED pools beside the corrupted set, and the lifted coin
+automata, the DECIDED sets beside the corrupted set, and the lifted coin
 oracle. This section
 composes the four components and reads the rows of the composite. -/
 
@@ -255,7 +255,7 @@ theorem gbcaSide_idle (P : Params) (G : ℕ → GBCA.ImplState P.n) {L : NLab P.
   rw [GSub.gbcaSide, System.family_step_iff]
   exact Or.inr (Or.inr (Or.inr ⟨hτ, hown, hf, rfl⟩))
 
-/-- Corruption is broadcast to every round's fabric. -/
+/-- Corruption is broadcast to every round's message state. -/
 theorem gbcaSide_fail (P : Params) (G : ℕ → GBCA.ImplState P.n) (k : Fin P.n) :
     (GSub.gbcaSide P).step G (Sum.inl (Lab.fail k))
       (PMF.pure (fun r => GSub.gAct P (Sum.inl (Lab.fail k)) (G r))) := by
@@ -311,7 +311,7 @@ to `Lab n`, and `abstract` again for the sub-protocol API. -/
 
 /-- **The specification side of the protocol**: the ℕ-indexed family
 of round specifications, read over the protocol extended alphabet along
-`GSub.gPull`. A round-tagged label — including a Byzantine drive of that
+`GSub.gPull`. A round-tagged label — including a Byzantine handshake row of that
 round — moves its round alone, `τ` moves one round, and `fail` is the
 broadcast that keeps every round's copy of the corrupted set in lockstep. -/
 noncomputable def specSide (P : Params) :
@@ -437,7 +437,7 @@ theorem specSide_owned (P : Params) {G : ℕ → GBCA.SpecState P.n} {L : NLab P
   rw [GSub.liftedSpec, System.mapIdle_step_some hpull]
   exact h
 
-/-- A round's own silent rule — the specification's binding kill — read into
+/-- A round's own silent rule — the specification's binding exclusion — read into
 the specification side. -/
 theorem specSide_tau (P : Params) {G : ℕ → GBCA.SpecState P.n} {r : ℕ}
     {X : GBCA.SpecState P.n} (h : GBCA.Step P r (G r) Lab.tau (PMF.pure X)) :
@@ -485,7 +485,7 @@ theorem specSide_fail_inv (P : Params) {G : ℕ → GBCA.SpecState P.n} (k : Fin
   · exact absurd trivial hglob
 
 /-- A silent transition of the family is one round's own silent rule — the
-specification's binding kill. -/
+specification's binding exclusion. -/
 theorem specSide_tau_inv (P : Params) {G : ℕ → GBCA.SpecState P.n}
     {μ : PMF (ℕ → GBCA.SpecState P.n)}
     (h : (specSide P).step G (Sum.inl Lab.tau) μ) :
@@ -642,7 +642,7 @@ theorem hybridPre_tau_wcc (P : Params) {G : ℕ → GBCA.SpecState P.n}
     (System.mapIdle_step_some (wccPull_inl Lab.tau) ω).mpr hW, rfl⟩)
 
 /-- A silent transition of the four components: no round loop has a `τ` row, so it
-is the specification family's binding kill, the ABA-side network's own
+is the specification family's binding exclusion, the ABA-side network's own
 injection, or the coin resolution. -/
 theorem hybridPre_tau_inv (P : Params) {G : ℕ → GBCA.SpecState P.n}
     {C : ∀ _ : Fin P.n, CoreRec P.n} {A : ANetState P.n}

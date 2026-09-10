@@ -14,23 +14,23 @@ import Leslie2Protocols.Framework.TraceSupport
 Binding is the promise a Graded Binding Crusader Agreement instance makes about
 its *future*: there is a bit the instance will never hand out, in this run or in
 any extension of it. On the specification state that promise is a field rather
-than a theorem. `SpecState.dead : Finset Bool` is the set of bits the instance
-can no longer hand out; the value-bearing returns refuse a dead bit and demand
-that the other bit be dead, and the `C`-return demands that some bit be dead.
+than a theorem. `SpecState.excluded : Finset Bool` is the set of bits the instance
+can no longer hand out; the value-bearing returns refuse an excluded bit and demand
+that the other bit be excluded, and the `C`-return demands that some bit be excluded.
 
-Binding and graded agreement rest on one fact: `dead` only grows. The single
+Binding and graded agreement rest on one fact: `excluded` only grows. The single
 writer is the internal `bindUnset`, which inserts, and `corrupt` does not touch
-the field — so `Step.dead_mono` holds rule by rule, and `is_exec_stable` lifts
-it to whole executions (`dead_mem_stable`). Binding is
-therefore structural: a bit killed at any point of a run is killed at every
-later point, and a guard reading `∉ dead` can never be re-enabled. That writer
-also fires only from `dead = ∅`, so the exclusion set never holds more than one
-bit (`dead_card_le_one`, from the step-level `Step.dead_card_le_one`): the kill
+the field — so `Step.excluded_mono` holds rule by rule, and `is_exec_stable` lifts
+it to whole executions (`excluded_mem_stable`). Binding is
+therefore structural: a bit excluded at any point of a run is excluded at every
+later point, and a guard reading `∉ excluded` can never be re-enabled. That writer
+also fires only from `excluded = ∅`, so the exclusion set never holds more than one
+bit (`excluded_card_le_one`, from the step-level `Step.excluded_card_le_one`): the exclusion
 commits the round, and the surviving bit stays available to every later return.
 
 * `retG_value_agree` — **graded agreement**. Two returns of one execution that
   hand out a bit hand out the same bit. A return of `v₁` fires from a state with
-  `(!v₁) ∈ dead`; monotonicity carries that membership to the state of any other
+  `(!v₁) ∈ excluded`; monotonicity carries that membership to the state of any other
   return; that return needs its own bit alive, so its bit is not `!v₁`, so on
   `Bool` it is `v₁`. No invariant, no quorum arithmetic, no reachability
   hypothesis beyond membership in one execution.
@@ -38,12 +38,12 @@ commits the round, and the surviving bit stays available to every later return.
   graded-return labels of a positive-probability trace of `specInst P r` that
   name a bit (`outValue`, defined here: `A b` and `B b` name `b`, `C` names
   nothing) name the same bit.
-* `retC_dead_nonempty` — the **Graded Binding witness**, as the complement of
-  the bit the return kills. After a `C`-return,
-  `dead` is nonempty in every later state of the execution. A member of `dead`
+* `retC_excluded_nonempty` — the **Graded Binding witness**, as the complement of
+  the bit the return excludes. After a `C`-return,
+  `excluded` is nonempty in every later state of the execution. A member of `excluded`
   is a bit no non-faulty party can be handed at grade `≥ 1` in any extension,
   which is ABDY22's Graded Binding clause; the witness is produced at the
-  `C`-return and survives because `dead` never shrinks.
+  `C`-return and survives because `excluded` never shrinks.
 * `specInst_validity` — **Validity, safety half**. If every round-`r` call of
   the trace carries the bit `v` unless its caller is corrupted somewhere along
   the trace (`UnanimousInput`), then every round-`r` return of the trace hands
@@ -66,7 +66,7 @@ trace — a caller of `!v` by unanimity, an `F`-member by the fold — and
 `failSet` is monotone in the stage, so the whole support set sits inside one
 `failSet P t K`, of size at most `f` (`supp_le_of_unanimous`). The D15 guards
 asking `f + 1` there are therefore unreachable: `bindUnset v` never fires, so
-`v` is alive at every state (`dead_notMem_of_unanimous`), which forces the
+`v` is alive at every state (`excluded_notMem_of_unanimous`), which forces the
 value-bearing returns to hand out `v` and refutes `retC` outright.
 
 The scope is the specification instance alone. That the implementation refines
@@ -85,64 +85,64 @@ variable {P : Params} {r : ℕ}
 /-! ### Monotonicity of the exclusion set -/
 
 /-- **The exclusion set never shrinks.** -/
-theorem Step.dead_mono {s s' : SpecState P.n} {l : Lab P.n}
+theorem Step.excluded_mono {s s' : SpecState P.n} {l : Lab P.n}
     {μ : PMF (SpecState P.n)} (hstep : Step P r s l μ) (hs' : s' ∈ μ.support) :
-    s.dead ⊆ s'.dead := by
+    s.excluded ⊆ s'.excluded := by
   cases hstep <;>
     · rw [PMF.mem_support_pure_iff] at hs'
       subst hs'
       first
         | exact Finset.subset_insert _ _
         | exact Finset.Subset.refl _
-        | (rw [corrupt_dead])
+        | (rw [corrupt_excluded])
 
 /-! ### Run-level monotonicity -/
 
-/-- **A dead bit stays dead along a run.** -/
-theorem dead_mem_stable {e : AlterSeq (SpecState P.n) (Lab P.n)}
+/-- **An excluded bit stays excluded along a run.** -/
+theorem excluded_mem_stable {e : AlterSeq (SpecState P.n) (Lab P.n)}
     (he : is_exec e (specInst P r)) {k₁ k₂ : ℕ} (hk : k₁ ≤ k₂)
     {s₁ s₂ : SpecState P.n} {b : Bool}
     (hst₁ : e.stateAt k₁ = some s₁) (hst₂ : e.stateAt k₂ = some s₂)
-    (hb : b ∈ s₁.dead) : b ∈ s₂.dead :=
-  is_exec_stable (sys := specInst P r) (fun s => b ∈ s.dead)
-    (fun _ _ _ _ hmem hstep hs' => Step.dead_mono hstep hs' hmem)
+    (hb : b ∈ s₁.excluded) : b ∈ s₂.excluded :=
+  is_exec_stable (sys := specInst P r) (fun s => b ∈ s.excluded)
+    (fun _ _ _ _ hmem hstep hs' => Step.excluded_mono hstep hs' hmem)
     he k₁ k₂ s₁ s₂ hk hst₁ hst₂ hb
 
 /-! ### The exclusion set holds at most one bit -/
 
-/-- **One kill per instance, step level.** `bindUnset` is the only writer and
-it fires only from `dead = ∅`, so it leaves a singleton; every other rule
+/-- **One exclude per instance, step level.** `bindUnset` is the only writer and
+it fires only from `excluded = ∅`, so it leaves a singleton; every other rule
 leaves the field alone. -/
-theorem Step.dead_card_le_one {s s' : SpecState P.n} {l : Lab P.n}
+theorem Step.excluded_card_le_one {s s' : SpecState P.n} {l : Lab P.n}
     {μ : PMF (SpecState P.n)} (hstep : Step P r s l μ) (hs' : s' ∈ μ.support)
-    (h : s.dead.card ≤ 1) : s'.dead.card ≤ 1 := by
+    (h : s.excluded.card ≤ 1) : s'.excluded.card ≤ 1 := by
   cases hstep with
   | bindUnset b hq hw hd0 =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    change (insert b s.dead).card ≤ 1
+    change (insert b s.excluded).card ≤ 1
     rw [hd0]
     simp
   | fail id =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    rw [corrupt_dead]
+    rw [corrupt_excluded]
     exact h
   | _ =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     exact h
 
-/-- **One kill per instance.** Every state of every execution of the round-`r`
-instance has `dead.card ≤ 1`: the field starts empty and the single writer
-fires only from `∅`. Together with `Step.dead_mono` this pins the reachable
-shape to `dead ∈ {∅, {b}}` — the killed-bit reading of the source blueprint's
+/-- **One exclude per instance.** Every state of every execution of the round-`r`
+instance has `excluded.card ≤ 1`: the field starts empty and the single writer
+fires only from `∅`. Together with `Step.excluded_mono` this pins the reachable
+shape to `excluded ∈ {∅, {b}}` — the excluded-bit reading of the source blueprint's
 bound value (D19). -/
-theorem dead_card_le_one {e : AlterSeq (SpecState P.n) (Lab P.n)}
+theorem excluded_card_le_one {e : AlterSeq (SpecState P.n) (Lab P.n)}
     (he : is_exec e (specInst P r)) {k : ℕ} {s : SpecState P.n}
-    (hst : e.stateAt k = some s) : s.dead.card ≤ 1 :=
-  is_exec_stable (sys := specInst P r) (fun s => s.dead.card ≤ 1)
-    (fun _ _ _ _ h hstep hs' => Step.dead_card_le_one hstep hs' h)
+    (hst : e.stateAt k = some s) : s.excluded.card ≤ 1 :=
+  is_exec_stable (sys := specInst P r) (fun s => s.excluded.card ≤ 1)
+    (fun _ _ _ _ h hstep hs' => Step.excluded_card_le_one hstep hs' h)
     he 0 k e.init s (Nat.zero_le k) rfl hst
     (by rw [← he.2]; simp [specInst, SpecState.initial])
 
@@ -161,33 +161,33 @@ def outValue : GbcaOut → Option Bool
 
 @[simp] theorem outValue_C : outValue .C = none := rfl
 
-/-- An `A`-return pins its bit alive and the other bit dead. -/
+/-- An `A`-return pins its bit alive and the other bit excluded. -/
 private theorem retA_inv {s : SpecState P.n} {id : Fin P.n} {v : Bool}
     {μ : PMF (SpecState P.n)} (hstep : Step P r s (.retG r id (.A v)) μ) :
-    v ∉ s.dead ∧ (!v) ∈ s.dead :=
+    v ∉ s.excluded ∧ (!v) ∈ s.excluded :=
   match hstep with
-  | .retA _ _ _ hlive hdead _ _ => ⟨hlive, hdead⟩
+  | .retA _ _ _ hlive hexcluded _ _ => ⟨hlive, hexcluded⟩
 
-/-- A `B`-return pins its bit alive and the other bit dead. -/
+/-- A `B`-return pins its bit alive and the other bit excluded. -/
 private theorem retB_inv {s : SpecState P.n} {id : Fin P.n} {v : Bool}
     {μ : PMF (SpecState P.n)} (hstep : Step P r s (.retG r id (.B v)) μ) :
-    v ∉ s.dead ∧ (!v) ∈ s.dead :=
+    v ∉ s.excluded ∧ (!v) ∈ s.excluded :=
   match hstep with
-  | .retB _ _ _ hlive hdead _ _ => ⟨hlive, hdead⟩
+  | .retB _ _ _ hlive hexcluded _ _ => ⟨hlive, hexcluded⟩
 
 /-- A `C`-return pins the exclusion set nonempty. -/
 private theorem retC_inv {s : SpecState P.n} {id : Fin P.n}
     {μ : PMF (SpecState P.n)} (hstep : Step P r s (.retG r id .C) μ) :
-    s.dead.Nonempty :=
+    s.excluded.Nonempty :=
   match hstep with
   | .retC _ _ hd _ _ _ _ => Finset.card_pos.mp hd
 
 /-- **The guard pair of a value-bearing return.** Whatever its grade, a return
-that hands out `v` fires from a state where `v` is alive and `!v` is dead. -/
+that hands out `v` fires from a state where `v` is alive and `!v` is excluded. -/
 theorem retG_value_guards {s : SpecState P.n} {id : Fin P.n} {o : GbcaOut}
     {v : Bool} {μ : PMF (SpecState P.n)}
     (hstep : Step P r s (.retG r id o) μ) (ho : outValue o = some v) :
-    v ∉ s.dead ∧ (!v) ∈ s.dead := by
+    v ∉ s.excluded ∧ (!v) ∈ s.excluded := by
   cases o with
   | A w =>
     obtain rfl : w = v := by simpa using ho
@@ -208,9 +208,9 @@ private theorem retG_value_agree_le {e : AlterSeq (SpecState P.n) (Lab P.n)}
     (hstep₁ : Step P r s₁ (.retG r id₁ o₁) μ₁)
     (hstep₂ : Step P r s₂ (.retG r id₂ o₂) μ₂)
     (ho₁ : outValue o₁ = some v₁) (ho₂ : outValue o₂ = some v₂) : v₁ = v₂ := by
-  obtain ⟨-, hdead₁⟩ := retG_value_guards hstep₁ ho₁
+  obtain ⟨-, hexcluded₁⟩ := retG_value_guards hstep₁ ho₁
   obtain ⟨hlive₂, -⟩ := retG_value_guards hstep₂ ho₂
-  have hcarry : (!v₁) ∈ s₂.dead := dead_mem_stable he hk hst₁ hst₂ hdead₁
+  have hcarry : (!v₁) ∈ s₂.excluded := excluded_mem_stable he hk hst₁ hst₂ hexcluded₁
   have hne : v₂ ≠ !v₁ := fun h => hlive₂ (h ▸ hcarry)
   revert hne
   cases v₁ <;> cases v₂ <;> simp
@@ -219,7 +219,7 @@ private theorem retG_value_agree_le {e : AlterSeq (SpecState P.n) (Lab P.n)}
 along one execution of the round-`r` specification instance hand out the same
 bit, whatever their grades and whichever processes they answer. The whole
 argument is the guard pair plus monotonicity: the first return pins `!v₁` into
-`dead`, `dead` only grows, and the second return refuses a dead bit. -/
+`excluded`, `excluded` only grows, and the second return refuses an excluded bit. -/
 theorem retG_value_agree {e : AlterSeq (SpecState P.n) (Lab P.n)}
     (he : is_exec e (specInst P r)) {k₁ k₂ : ℕ}
     {s₁ s₂ : SpecState P.n} {id₁ id₂ : Fin P.n} {o₁ o₂ : GbcaOut} {v₁ v₂ : Bool}
@@ -233,16 +233,16 @@ theorem retG_value_agree {e : AlterSeq (SpecState P.n) (Lab P.n)}
   · exact (retG_value_agree_le he h hst₂ hst₁ hstep₂ hstep₁ ho₂ ho₁).symm
 
 /-- **The Graded Binding witness**, as the complement of the bit the return
-kills. A `C`-return leaves the exclusion set nonempty in every later state of
-the execution: the bit it kills is a bit no extension of the run can ever hand
+excludes. A `C`-return leaves the exclusion set nonempty in every later state of
+the execution: the bit it excludes is a bit no extension of the run can ever hand
 out, so the surviving complement is the clause's witness. -/
-theorem retC_dead_nonempty {e : AlterSeq (SpecState P.n) (Lab P.n)}
+theorem retC_excluded_nonempty {e : AlterSeq (SpecState P.n) (Lab P.n)}
     (he : is_exec e (specInst P r)) {k₁ k₂ : ℕ} (hk : k₁ ≤ k₂)
     {s₁ s₂ : SpecState P.n} {id : Fin P.n} {μ : PMF (SpecState P.n)}
     (hst₁ : e.stateAt k₁ = some s₁) (hst₂ : e.stateAt k₂ = some s₂)
-    (hstep : Step P r s₁ (.retG r id .C) μ) : s₂.dead.Nonempty := by
+    (hstep : Step P r s₁ (.retG r id .C) μ) : s₂.excluded.Nonempty := by
   obtain ⟨b, hb⟩ := retC_inv hstep
-  exact ⟨b, dead_mem_stable he hk hst₁ hst₂ hb⟩
+  exact ⟨b, excluded_mem_stable he hk hst₁ hst₂ hb⟩
 
 /-! ### The trace-level statement -/
 
@@ -374,15 +374,15 @@ theorem supp_le_of_unanimous {t : Seq (Lab P.n)} {v : Bool} {s : SpecState P.n}
   exact le_trans (Finset.card_le_card (fun id hid => hK id hid))
     (failSet_card_le t K)
 
-/-! ### The state-to-trace bridge -/
+/-! ### The state-to-trace transfer -/
 
-/-- **The bridge.** At every state of a genuine execution whose label list is
+/-- **The transfer.** At every state of a genuine execution whose label list is
 `labs` and whose trace is the external filter of `labs`, every pending input
 has its `callG` event in the trace, and the corrupted set is the trace-level
 fold at some stage. Both come from `CallInv` on the history `labs.take k`,
 which the filter carries to the trace: it keeps every `fail` label, so the
 fold is unchanged, and prefixes stay prefixes. -/
-theorem trace_bridge {e : AlterSeq (SpecState P.n) (Lab P.n)}
+theorem trace_transfer {e : AlterSeq (SpecState P.n) (Lab P.n)}
     {labs : List (Lab P.n)} {t : Seq (Lab P.n)} {p : Lab P.n → Bool}
     (he : is_exec e (specInst P r))
     (h_map : e.trans.map Prod.fst = Seq.ofList labs)
@@ -406,16 +406,16 @@ theorem trace_bridge {e : AlterSeq (SpecState P.n) (Lab P.n)}
 /-! ### The surviving bit stays alive -/
 
 /-- **Under unanimous input `v`, the bit `v` is alive at every state.** The
-only rule that could kill it is `bindUnset v`, whose D15 guard counts `f + 1`
+only rule that could exclude it is `bindUnset v`, whose D15 guard counts `f + 1`
 supporters of `!v` — refuted by `supp_le_of_unanimous` at the very state where
 the rule would fire. -/
-theorem dead_notMem_of_unanimous {e : AlterSeq (SpecState P.n) (Lab P.n)}
+theorem excluded_notMem_of_unanimous {e : AlterSeq (SpecState P.n) (Lab P.n)}
     {t : Seq (Lab P.n)} {v : Bool} (he : is_exec e (specInst P r))
     (hbr : ∀ (k : ℕ) (s : SpecState P.n), e.stateAt k = some s →
       (∀ id b, s.call id = some b → Lab.callG r id b ∈ t) ∧
         ∃ j, s.F = failSet P t j)
     (hun : UnanimousInput P r v t) :
-    ∀ k s, e.stateAt k = some s → v ∉ s.dead := by
+    ∀ k s, e.stateAt k = some s → v ∉ s.excluded := by
   intro k
   induction k with
   | zero =>
@@ -437,7 +437,7 @@ theorem dead_notMem_of_unanimous {e : AlterSeq (SpecState P.n) (Lab P.n)}
           hg] at hs
         exact ⟨q, rfl, Option.some.inj hs⟩
     obtain ⟨s₀, μ, h_state, h_step, h_supp⟩ := he.1 k l s'' h_get
-    have hprev : v ∉ s₀.dead := ih s₀ h_state
+    have hprev : v ∉ s₀.excluded := ih s₀ h_state
     obtain ⟨hcall, j, hF⟩ := hbr k s₀ h_state
     subst h_snd
     cases h_step with
@@ -454,7 +454,7 @@ theorem dead_notMem_of_unanimous {e : AlterSeq (SpecState P.n) (Lab P.n)}
     | fail id =>
       rw [PMF.mem_support_pure_iff] at h_supp
       subst h_supp
-      rw [corrupt_dead]
+      rw [corrupt_excluded]
       exact hprev
     | _ =>
       rw [PMF.mem_support_pure_iff] at h_supp
@@ -475,20 +475,20 @@ private theorem retC_supp {s : SpecState P.n} {id : Fin P.n}
     | true => exact hwT
 
 /-- **Every return of a state where `v` is alive hands out `v`.** A
-value-bearing return needs the other bit dead, and `v` is not; a `C`-return
+value-bearing return needs the other bit excluded, and `v` is not; a `C`-return
 needs `f + 1` support at both bits, and the dissenting one is capped by the
 budget. -/
 theorem retG_value_of_unanimous {t : Seq (Lab P.n)} {v : Bool}
     {s : SpecState P.n} {id : Fin P.n} {o : GbcaOut} {μ : PMF (SpecState P.n)}
     (hun : UnanimousInput P r v t)
     (hcall : ∀ id b, s.call id = some b → Lab.callG r id b ∈ t)
-    (hF : ∃ j, s.F = failSet P t j) (hlive : v ∉ s.dead)
+    (hF : ∃ j, s.F = failSet P t j) (hlive : v ∉ s.excluded)
     (hstep : Step P r s (.retG r id o) μ) : outValue o = some v := by
-  have key : ∀ w : Bool, (!w) ∈ s.dead → w = v := by
-    intro w hdead
+  have key : ∀ w : Bool, (!w) ∈ s.excluded → w = v := by
+    intro w hexcluded
     by_contra hne
     have hflip : (!w) = v := by cases w <;> cases v <;> simp_all
-    exact hlive (hflip ▸ hdead)
+    exact hlive (hflip ▸ hexcluded)
   cases o with
   | A w =>
     rw [key w (retG_value_guards hstep (outValue_A w)).2]
@@ -543,8 +543,8 @@ theorem specInst_validity (P : Params) (r : ℕ) (v : Bool) :
   have hbr : ∀ (k : ℕ) (s : SpecState P.n), e.stateAt k = some s →
       (∀ id b, s.call id = some b → Lab.callG r id b ∈ t) ∧
         ∃ j, s.F = failSet P t j :=
-    fun k s hst => trace_bridge h_exec h_map hpfail hpcall h_t hst
-  have halive := dead_notMem_of_unanimous h_exec hbr hun
+    fun k s hst => trace_transfer h_exec h_map hpfail hpcall h_t hst
+  have halive := excluded_notMem_of_unanimous h_exec hbr hun
   intro id o h_mem
   obtain ⟨k, s', h_get⟩ := event_of_mem_trace h_map h_t h_mem
   obtain ⟨s, μ, h_state, h_step, -⟩ := h_exec.1 k _ _ h_get
@@ -561,7 +561,7 @@ theorem specInst_no_retC (P : Params) (r : ℕ) (v : Bool) :
   have h := specInst_validity P r v D hD t h_ne hun id .C h_mem
   simp at h
 
-/-! ### Mechanical axiom firewall
+/-! ### Mechanical axiom check
 
 No headline may acquire a `sorryAx` dependence. -/
 
@@ -573,9 +573,9 @@ No headline may acquire a `sorryAx` dependence. -/
 #guard_msgs in
 #print axioms specInst_binding
 
-/-- info: 'PLTS.ABA.GBCA.dead_card_le_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.GBCA.excluded_card_le_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms dead_card_le_one
+#print axioms excluded_card_le_one
 
 /-- info: 'PLTS.ABA.GBCA.specInst_validity' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in

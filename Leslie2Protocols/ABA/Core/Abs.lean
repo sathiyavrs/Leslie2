@@ -12,7 +12,7 @@ import Leslie2Protocols.ABA.Core.Inv
 Stage C of the proof that `coreR` is a simulation relation, and the assembly
 of Stages A–C.
 
-* **Stage C** — `Abs` preservation for the stutter rows. The abstract twin is
+* **Stage C** — `Abs` preservation for the stutter rows. The abstract state is
   untouched by every hidden row and moves only at the visible ones
   (`callABA`/`retABA`/`fail`, handled in `Core/Sim.lean`). All six lemmas are
   instances of one frame argument, `Abs.frame`.
@@ -31,7 +31,7 @@ variable {P : Params}
 /-! ### Stage C: `Abs` preservation for the stutter rows
 
 Every one of `hybrid_step_tau`'s seven disjuncts is answered by a stutter: the
-twin is untouched by every hidden row and only moves at the visible rows
+abstract state is untouched by every hidden row and only moves at the visible rows
 (`callABA`/`retABA`/`fail`), handled in `Core/Sim.lean`. All six lemmas below
 are instances of a single frame argument: `Abs` inspects only `F`, the
 per-process `input`/`returned` projections, and the `g`-side `A`-lock
@@ -52,7 +52,7 @@ theorem Abs.frame {P : Params} {g g' : ℕ → GBCA.SpecState P.n} {c c' : ABASt
   · exact Or.inl ⟨hv, fun id b h => hghost id b (by rw [← hin id]; exact h)⟩
   · exact Or.inr ⟨v, hv, hAF.1 r v hcv, hAF.2 v ⟨r, hcv⟩ hpin⟩
 
-/-- `Abs` never reads `w`: the twin never fires `SpecStep.coinFlip`. -/
+/-- `Abs` never reads `w`: the abstract state never fires `SpecStep.coinFlip`. -/
 theorem Abs.w_swap {P : Params} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w w' : ℕ → WCC.SpecState P.n} {a : SpecState P.n} (hA : Abs P g c w a) :
     Abs P g c w' a :=

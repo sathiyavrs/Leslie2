@@ -22,7 +22,7 @@ into the family via `AlterSeq.map (Function.update t r)` — the non-moving
 coordinates just carry the ambient joint state along:
 
 * `System.weakLStep_of_step` — a single Dirac step is a (one-transition) weak
-  run; `weakLStep_tauThen` is the two-step burst, a silent step followed by an
+  run; `weakLStep_tauThen` is the two-step run, a silent step followed by an
   external one;
 * `AlterSeq.stateAt_map`, `AlterSeq.endState_map`, `System.trace_map_state` —
   `AlterSeq.map` glue: pointwise state maps commute with `stateAt`/`endState`
@@ -102,7 +102,7 @@ theorem System.weakLStep_of_step {q q' : State} {l : Label}
     AlterSeq.endState_singleton_cons q l q',
     by rw [System.trace_cons_external sys q l q' Seq.nil hl, System.trace_init]⟩
 
-/-- **The burst.** A silent step followed by an external step is a weak
+/-- **The run.** A silent step followed by an external step is a weak
 `l`-transition: the τ-step is the leading τ-closure. -/
 theorem weakLStep_tauThen {q q₁ q' : State} {l : Label}
     (h1 : sys.LStep q Silent.τ q₁) (h2 : sys.LStep q₁ l q')

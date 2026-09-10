@@ -1,7 +1,7 @@
 # Design — the gather-based GBCA stack `GBCA.lowPairInst ⊑ … ⊑ GBCA.specInst` and its chain
 
 Companion design document to the gather-based implementation of graded
-agreement: the sub-protocol encodings (`ABA/Vocabulary/Fabric.lean`, `ABA/Broadcast/Spec.lean`,
+agreement: the sub-protocol encodings (`ABA/Vocabulary/MsgState.lean`, `ABA/Broadcast/Spec.lean`,
 `ABA/Broadcast/Impl.lean`, `ABA/Gather/Spec.lean`, `ABA/Gather/Ideal.lean`,
 `ABA/Gather/Low.lean`), their refinements (`ABA/Broadcast/ImplSim.lean`,
 `ABA/Gather/IdealSim.lean`, `ABA/Gather/LowSim.lean`), the two-gather round and its
@@ -19,7 +19,7 @@ Per round, four systems over the shared round alphabet `Lab P.n`, three plain
 forward simulations between them, and their probabilistic composite:
 
 ```
-lowPairInst P r   -- two gather-over-Bracha instances: 2 fabrics + 4n Bracha instances
+lowPairInst P r   -- two gather-over-Bracha instances: 2 message states + 4n Bracha instances
   ⊑ lowRefines        (broadcast substitution, componentwise)
 idealInst P r     -- two gather-over-BRB.Spec instances
   ⊑ idealRefines      (gather substitution, componentwise)
@@ -30,7 +30,7 @@ GBCA.specInst P r -- unchanged (GBCASpec.lean, D19)
 gatherImplRefines P r : lowPairInst ⊑ specInst   (probabilistic, trans ×2)
 ```
 
-Beneath the round, two standalone towers with their own alphabets, citable on
+Beneath the round, two standalone tier sequences with their own alphabets, citable on
 their own and consumed by the round through exported chain data:
 
 ```
@@ -84,7 +84,7 @@ never for their global intersection at a prefix.
 puts a common member behind any two `n − f` quorums, and with a *static*
 adversary one argues: some common member is honest, its write-once payload
 dominates both sides. Under D1 the adversary corrupts adaptively; the common
-member may be corrupted *after* its sends, and a fabric multicast from a
+member may be corrupted *after* its sends, and a message state multicast from a
 sender corrupted later pins nothing — the injections of the now-corrupted
 sender can put any payload beside it.
 
@@ -109,7 +109,7 @@ sits below both payloads. Hence:
   statement of the development needs it: every consumer argument re-derives
   from the pairwise bound (see the counting section below).
 
-**BIND travels by reliable broadcast** rather than on the gather fabric.
+**BIND travels by reliable broadcast** rather than on the gather message state.
 "Committed" must survive the sender's later corruption, and a BRB value is
 write-once whatever happens to its sender afterwards. This is what makes the
 family's members stable objects: `Gather.IdealState` holds one bind-BRB
@@ -150,7 +150,7 @@ fire it inside the weak answer of the first row that reads it —
 `pairInst` is AFW25's Algorithm 4 at `R = 2`, its two-gather branch (D24): candidate at
 `|dom g| − f` occurrences after the first gather, grade at
 `|dom h| − f` / `f + 1` after the second. The refinement into TS 2 certifies
-the specification's `dead` and `grade` on the two core families, and every
+the specification's `excluded` and `grade` on the two core families, and every
 count is in *member form* — about family members, never about a global core:
 
 - `cnt_heavy_of_subMap` (AFW25 Lemma 13, member form): a returned map heavy
@@ -164,17 +164,17 @@ count is in *member form* — about family members, never about a global core:
   shared entries again.
 
 The exclusion certificate is
-`DeadEv b = ∃ Cs, cores₁ = some Cs ∧ ∀ U ∈ Cs, cnt U b < |U| − f`. The
+`ExcludedEv b = ∃ Cs, cores₁ = some Cs ∧ ∀ U ∈ Cs, cnt U b < |U| − f`. The
 family is write-once, so the certificate is frozen the moment it holds —
 monotonicity for free, where the direct implementation's refinement
 maintains monotone receipt walls. The return rows then mirror
 `GBCASim.implRefines` shape for shape: a candidate reaching the second
-gather is heavy in the first family (refuting any standing `DeadEv` for it),
-an `A`/`B` return certifies `DeadEv` of the other bit from its own map, the
+gather is heavy in the first family (refuting any standing `ExcludedEv` for it),
+an `A`/`B` return certifies `ExcludedEv` of the other bit from its own map, the
 `B`-return's `f + 1` dissent support is read off the `> f` non-candidate
 entries of the returned map (each an honest caller or corrupted — the D15
-form), and the `C`-return picks its killed bit by a case split on whether
-some member is heavy at a bit. Kills fire on demand as the two-step burst
+form), and the `C`-return picks its excluded bit by a case split on whether
+some member is heavy at a bit. Exclusions fire on demand as the two-step run
 `bindUnset; ret`, unchanged from the direct refinement.
 
 ## The chain-data export discipline
@@ -184,16 +184,16 @@ Dirac τ-steps of the abstract system, plus the final row's guards and the
 relation at the end state — rather than as a finished weak run:
 
 - `BRBSim` exports `instRel_tau`, `instRel_call`, `commitReach`;
-- `GatherSim` exports `retBurst`, `coreRel_call`, `coreRel_tau`;
-- `GatherLowSim` exports `lowRel_call`, `lowTau_reach`, `lowRetBurst`.
+- `GatherSim` exports `retRun`, `coreRel_call`, `coreRel_tau`;
+- `GatherLowSim` exports `lowRel_call`, `lowTau_reach`, `lowRetRun`.
 
 A consumer one level up maps the chain into its own embedded rows with a
 ten-line `chain_map` lemma (the rows of `idealInst`/`lowPairInst` carry the
 component's row as a premise), splices chains where a fused row answers two
-components (the `link` row), and closes with `Framework/WeakBurst.lean`:
+components (the `link` row), and closes with `Framework/WeakRun.lean`:
 `weakLSilent_ofChain` for silent answers, `weakLStep_tausThen` for a chain
 closed by an external step. This is why the wrapper simulations
-(`GBCAIdealSim`, `GBCALowSim`) are two hundred lines against the towers'
+(`GBCAIdealSim`, `GBCALowSim`) are two hundred lines against the tiers'
 thousands: they replay, they do not re-prove.
 
 ## The assembly at the protocol shape (`AFW/Chain.lean`)
@@ -223,9 +223,9 @@ the two routes of `Results.lean`, reproduced.
 
 `AFW.composed P` is the gather-based protocol read as a composition of
 components. What runs is a flat system: `n` programs, each reading its own
-records and nothing else, beside one network adversary holding every pool and
+records and nothing else, beside one network adversary holding every sent set and
 the corrupted set, beside the coin oracle. That shape is the same for either
-implementation of graded agreement — the round loop, the DECIDED pools, the
+implementation of graded agreement — the round loop, the DECIDED sets, the
 coin handshake, corruption, the adversary's table and the composition pipeline
 are fixed by the round interface and the specification — so `ABA/Reading/Flat.lean`
 writes it once, parametric in three things: the stage message type `M`, the
@@ -246,46 +246,46 @@ case of the simulation rule the others out.
 Two rearrangements separate the flat stage side from the composed reading's,
 and both are forced by the flat shape.
 
-- **The tagged pool.** A round of `AFW.composed` carries `4n + 2` message
-  fabrics — one per gather instance, one per Bracha instance. A flat
-  adversary carries one pool family per round, so `AFW.Msg n` tags each
-  message with the fabric it belongs to, and for a Bracha message with the
-  instance, whose index is its leader. The pool index stays the sender, so a
+- **The tagged sent set.** A round of `AFW.composed` carries `4n + 2` message
+  message states — one per gather instance, one per Bracha instance. A flat
+  adversary carries one sent-set family per round, so `AFW.Msg n` tags each
+  message with the message state it belongs to, and for a Bracha message with the
+  instance, whose index is its leader. The sender index stays the sender, so a
   threshold still counts distinct senders (D5). No new adversary rows are
-  needed: pooling a multicast, checking a delivery and authorising a drive are
+  needed: recording a multicast, checking a delivery and authorising a handshake row are
   already payload-blind.
-- **The transposition.** `Gather.LowState` indexes boxes by instance and then
+- **The transposition.** `Gather.LowState` indexes local states by instance and then
   by process. A program must hold its own data and no one else's, so
-  `AFW.StageRec n` is process-major: process `j`'s box in each gather
-  instance, and its box in each of the `n` instances of each broadcast family.
+  `AFW.StageRec n` is process-major: process `j`'s local state in each gather
+  instance, and its local state in each of the `n` instances of each broadcast family.
   Nothing is lost, because every guard of the gather-based implementation
-  reads the acting process's own boxes and the fabrics, and the two rows that
-  read a fabric — the adversary's delivery and its Byzantine injection —
+  reads the acting process's own local states and the message states, and the two rows that
+  read a message state — the adversary's delivery and its Byzantine injection —
   belong to the adversary either way.
 
 `AFW.ProtocolRel` therefore has four conjuncts, not twenty: the round loop, the
 coin oracle and the ABA-side network are shared objects, and the round family
 is *computed* from the flat state by `AFW.toPair`, which undoes both
-rearrangements — transposing the boxes back and slicing each fabric's pool out
+rearrangements — transposing the local states back and slicing each message state's sent set out
 of the tagged family by `Finset.filterMap`. The relation is a function, so
 there is nothing to choose in the witness.
 
 The proof is organised around that computation. One master lemma,
-`AFW.toPair_write`, says what a one-point stage write and a single pool
+`AFW.toPair_write`, says what a one-point stage write and a single sent set
 insertion do to the view, pushing them inside all twelve coordinates; each row
 of the implementation then owes only slice algebra — which of the six slices
 takes the message, and which are untouched — discharged by `slice_post_some`
 and `slice_post_none`. On that basis a send and a delivery are internal to the
 round instance and are answered by one of its silent rules, the adversary's
-authenticity conjunct becoming membership in the sliced pool; the call and the
+authenticity conjunct becoming membership in the sliced sent set; the call and the
 return are the instance's own. The remaining labels move the round loop and
 the ABA-side network while the family of rounds stands still, and corruption
 is one broadcast, the corrupted set the adversary holds being the corrupted
-set of every fabric under the same guard.
+set of every message state under the same guard.
 
 `ABA/AFW/FlatSim.lean` closes with the headlines mirroring `Results.lean`'s:
 `AFW.protocol_composed`, `AFW.refines`, `AFW.main` and `AFW.chainSim`, each behind a
-`#print axioms` firewall.
+`#print axioms` check.
 
 ## Boundaries
 
