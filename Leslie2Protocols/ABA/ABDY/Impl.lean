@@ -97,6 +97,21 @@ cases above it in the chain, the process's own `ECHO5` field, and the call
 record. The binding and grade information that the specification tracks is an
 abstraction of these receipt patterns and lives only on the specification
 side; the refinement (`ABA/ABDY/ImplSim.lean`) supplies it from the receipts.
+
+## The round's bound bit
+
+The specification announces a bound bit on every return label (`ABA/Spec/GBCA.lean`).
+The implementation announces one too, and holds it in the write-once field
+`GSub.GNetState.bound` of the round's message state. The field is a ghost: it is
+auxiliary state, no program reads it, and the three return rows are the only
+rows that touch it.
+
+`boundOf` computes the bit from the round's sent sets, the corrupted set and the
+outcome. A return of outcome `out` announces `bound.getD (boundOf sent F out)` —
+the bit already on record if the round has returned before, and `boundOf`'s
+otherwise — and writes it back, so the round announces one bit on all of its
+returns. The three return rows are otherwise the rows of Algorithm 6 unchanged:
+the announced bit enters no guard of the algorithm and no field a program holds.
 -/
 
 namespace PLTS
@@ -117,6 +132,40 @@ inductive Msg : Type
   /-- `⟨echo5, v⟩` with `v ∈ {0, 1, ⊥}` (Algorithm 6 lines 21–22). -/
   | echo5 (v : Option Bool)
   deriving DecidableEq
+
+/-- **The round's bound bit**, as a function of the round's messages. It is the
+bit a return of outcome `out` announces on its label.
+
+A value-bearing outcome announces the value it hands out. An outcome carrying no
+value announces the payload of an honest `⟨VOTE, b⟩` sender, and `true` where
+there is none. An honest `⟨VOTE, b⟩` sender holds an `n − f` `⟨ECHO, b⟩`
+receipt quorum and at most one bit carries such a quorum, so on a reachable
+state the two bit branches are exclusive and the order in which they are read
+is immaterial. Where neither branch applies no bit is ever handed out, and the
+announced bit is the surviving one of a round that hands out nothing.
+
+The bit is a ghost output: no program reads it, and the three return rows are
+the only rows that read it. -/
+def boundOf {n : ℕ} (sent : Fin n → Finset Msg) (F : Finset (Fin n)) :
+    GbcaOut → Bool
+  | .A v => v
+  | .B v => v
+  | .C =>
+      if ∃ k, k ∉ F ∧ Msg.vote (some true) ∈ sent k then true
+      else if ∃ k, k ∉ F ∧ Msg.vote (some false) ∈ sent k then false
+      else true
+
+@[simp] theorem boundOf_A {n : ℕ} (sent : Fin n → Finset Msg) (F : Finset (Fin n))
+    (v : Bool) : boundOf sent F (.A v) = v := rfl
+
+@[simp] theorem boundOf_B {n : ℕ} (sent : Fin n → Finset Msg) (F : Finset (Fin n))
+    (v : Bool) : boundOf sent F (.B v) = v := rfl
+
+theorem boundOf_C {n : ℕ} (sent : Fin n → Finset Msg) (F : Finset (Fin n)) :
+    boundOf sent F .C =
+      if ∃ k, k ∉ F ∧ Msg.vote (some true) ∈ sent k then true
+      else if ∃ k, k ∉ F ∧ Msg.vote (some false) ∈ sent k then false
+      else true := rfl
 
 /-- The local state of one process in one GBCA instance. -/
 structure ProcState : Type where
@@ -222,6 +271,10 @@ structure GNetState (n : ℕ) : Type where
   sent : Fin n → Finset GBCA.Msg
   /-- The corrupted set. -/
   F : Finset (Fin n)
+  /-- The round's bound bit, `none` before the round's first return. A ghost:
+  no program reads it, it is written at the first return of the round and
+  announced on every return of the round. -/
+  bound : Option Bool
   deriving DecidableEq
 
 namespace GNetState
@@ -232,6 +285,7 @@ variable {n : ℕ}
 def initial (n : ℕ) : GNetState n where
   sent := fun _ => ∅
   F := ∅
+  bound := none
 
 /-- Sent `m` under sender `j` (D5). -/
 def gsent (w : GNetState n) (j : Fin n) (m : GBCA.Msg) : GNetState n :=
@@ -242,8 +296,27 @@ of any rule table — the family applies it to every round's message state at on
 def corrupt (P : Params) (id : Fin P.n) (w : GNetState P.n) : GNetState P.n :=
   if id ∉ w.F ∧ w.F.card < P.f then { w with F := insert id w.F } else w
 
+/-- The round's bound bit is written: the message state records `β`. -/
+def setBound (w : GNetState n) (β : Bool) : GNetState n := { w with bound := some β }
+
 @[simp] theorem gsent_F (w : GNetState n) (j : Fin n) (m : GBCA.Msg) :
     (w.gsent j m).F = w.F := rfl
+
+@[simp] theorem gsent_bound (w : GNetState n) (j : Fin n) (m : GBCA.Msg) :
+    (w.gsent j m).bound = w.bound := rfl
+
+@[simp] theorem setBound_sent (w : GNetState n) (β : Bool) :
+    (w.setBound β).sent = w.sent := rfl
+
+@[simp] theorem setBound_F (w : GNetState n) (β : Bool) :
+    (w.setBound β).F = w.F := rfl
+
+@[simp] theorem setBound_bound (w : GNetState n) (β : Bool) :
+    (w.setBound β).bound = some β := rfl
+
+@[simp] theorem corrupt_bound {P : Params} (w : GNetState P.n) (id : Fin P.n) :
+    (w.corrupt P id).bound = w.bound := by
+  unfold corrupt; split <;> rfl
 
 @[simp] theorem corrupt_sent {P : Params} (w : GNetState P.n) (id : Fin P.n) :
     (w.corrupt P id).sent = w.sent := by
@@ -287,6 +360,13 @@ def recv (s : ImplState n) : Fin n → Fin n → Finset Msg := fun i => (s.1 i).
 /-- The corrupted set (the message state's, kept in lockstep by `fail` broadcast). -/
 def F (s : ImplState n) : Finset (Fin n) := s.2.F
 
+/-- The round's bound bit (the message state's). A ghost: no rule but the three
+returns reads it, and no program holds it. -/
+def bound (s : ImplState n) : Option Bool := s.2.bound
+
+/-- The round's bound bit is written: the message state records `β`. -/
+def setBound (s : ImplState n) (β : Bool) : ImplState n := (s.1, s.2.setBound β)
+
 @[simp] theorem proc_apply (u : ∀ _ : Fin n, StageRec n) (w : GSub.GNetState n)
     (j : Fin n) : proc (u, w) j = (u j).proc := rfl
 @[simp] theorem sent_apply (u : ∀ _ : Fin n, StageRec n) (w : GSub.GNetState n) :
@@ -295,6 +375,24 @@ def F (s : ImplState n) : Finset (Fin n) := s.2.F
     (i : Fin n) : recv (u, w) i = (u i).recv := rfl
 @[simp] theorem F_apply (u : ∀ _ : Fin n, StageRec n) (w : GSub.GNetState n) :
     F (u, w) = w.F := rfl
+@[simp] theorem bound_apply (u : ∀ _ : Fin n, StageRec n) (w : GSub.GNetState n) :
+    bound (u, w) = w.bound := rfl
+@[simp] theorem setBound_apply (u : ∀ _ : Fin n, StageRec n) (w : GSub.GNetState n)
+    (β : Bool) : setBound (u, w) β = (u, w.setBound β) := rfl
+
+/-! The bound-bit write touches the message state's own field alone, so every
+other reading of the round passes through it. -/
+
+@[simp] theorem setBound_proc (s : ImplState n) (β : Bool) :
+    (s.setBound β).proc = s.proc := rfl
+@[simp] theorem setBound_recv (s : ImplState n) (β : Bool) :
+    (s.setBound β).recv = s.recv := rfl
+@[simp] theorem setBound_sent (s : ImplState n) (β : Bool) :
+    (s.setBound β).sent = s.sent := rfl
+@[simp] theorem setBound_F (s : ImplState n) (β : Bool) :
+    (s.setBound β).F = s.F := rfl
+@[simp] theorem setBound_bound (s : ImplState n) (β : Bool) :
+    (s.setBound β).bound = some β := rfl
 
 /-- Dot notation resolves against `ImplState`, so the rule table and the
 refinement read the pair in the four names the algorithm uses. -/
@@ -320,6 +418,7 @@ def initial (n : ℕ) : ImplState n :=
 @[simp] theorem initial_sent (j : Fin n) : (initial n).sent j = ∅ := rfl
 @[simp] theorem initial_recv (i j : Fin n) : (initial n).recv i j = ∅ := rfl
 @[simp] theorem initial_F : (initial n).F = ∅ := rfl
+@[simp] theorem initial_bound : (initial n).bound = none := rfl
 
 /-- The number of distinct senders from which `i` has received `m`. -/
 def recvCount (s : ImplState n) (i : Fin n) (m : Msg) : ℕ :=
@@ -507,6 +606,32 @@ theorem corrupt_F {P : Params} (s : ImplState P.n) (id : Fin P.n) :
   unfold corrupt F GSub.GNetState.corrupt
   split_ifs <;> rfl
 
+/-! The bound-bit write moves no reading of the round. -/
+
+@[simp] theorem setBound_recvCount (s : ImplState n) (β : Bool) (i : Fin n) (m : Msg) :
+    (s.setBound β).recvCount i m = s.recvCount i m := rfl
+@[simp] theorem setBound_echoCount (s : ImplState n) (β : Bool) (i : Fin n) :
+    (s.setBound β).echoCount i = s.echoCount i := rfl
+@[simp] theorem setBound_voteCount (s : ImplState n) (β : Bool) (i : Fin n) :
+    (s.setBound β).voteCount i = s.voteCount i := rfl
+@[simp] theorem setBound_bindCount (s : ImplState n) (β : Bool) (i : Fin n) :
+    (s.setBound β).bindCount i = s.bindCount i := rfl
+@[simp] theorem setBound_echo5Count (s : ImplState n) (β : Bool) (i : Fin n) :
+    (s.setBound β).echo5Count i = s.echo5Count i := rfl
+@[simp] theorem setBound_bothValid {P : Params} (s : ImplState P.n) (β : Bool)
+    (i : Fin P.n) : (s.setBound β).bothValid P i ↔ s.bothValid P i := Iff.rfl
+
+/-! The bound bit is written by no rule but the three returns. -/
+
+@[simp] theorem setProc_bound (s : ImplState n) (j : Fin n) (p : ProcState) :
+    (s.setProc j p).bound = s.bound := rfl
+@[simp] theorem mcast_bound (s : ImplState n) (j : Fin n) (m : Msg) :
+    (s.mcast j m).bound = s.bound := rfl
+@[simp] theorem recvMsg_bound (s : ImplState n) (i j : Fin n) (m : Msg) :
+    (s.recvMsg i j m).bound = s.bound := rfl
+@[simp] theorem corrupt_bound {P : Params} (s : ImplState P.n) (id : Fin P.n) :
+    (s.corrupt P id).bound = s.bound := GSub.GNetState.corrupt_bound s.2 id
+
 theorem corrupt_F_subset {P : Params} (s : ImplState P.n) (id : Fin P.n) :
     s.F ⊆ (s.corrupt P id).F := by
   rw [corrupt_F]
@@ -683,19 +808,20 @@ inductive ImplStep (P : Params) (r : ℕ) :
   /-- `A`-return (decide case (1)): an `n − f` `ECHO5 v` quorum. The process
   has called and its own `ECHO5` is out. Case (1) heads the chain, so there is
   no higher case to deny. -/
-  | retA (s : ImplState P.n) (id : Fin P.n) (v : Bool)
+  | retA (s : ImplState P.n) (id : Fin P.n) (v : Bool) (bnd : Bool)
       (hin : (s.proc id).input ≠ none)
       (hlv : (s.proc id).sentEcho5 ≠ none)
       (hcnt : P.n - P.f ≤ s.recvCount id (.echo5 (some v)))
-      (hr : (s.proc id).returned = false) :
-      ImplStep P r s (.retG r id (.A v))
-        (PMF.pure (s.setProc id { s.proc id with returned := true }))
+      (hr : (s.proc id).returned = false)
+      (hbnd : bnd = s.bound.getD (boundOf s.sent s.F (.A v))) :
+      ImplStep P r s (.retG r id (.A v) bnd)
+        (PMF.pure ((s.setProc id { s.proc id with returned := true }).setBound bnd))
   /-- `B`-return (decide case (2)): an `n − f` any-`ECHO5` quorum containing
   `ECHO5 v`, `f + 1` `BIND v`s and `|Valid| > 1`. The `f + 1` `BIND v` receipts
   put an honest `BIND v` sender — hence an `n − f` `VOTE v` receipt quorum —
   behind every grade-1 output. The process has called, its own `ECHO5` is out,
   and no higher case holds: `hnotA` denies case (1) at either bit. -/
-  | retB (s : ImplState P.n) (id : Fin P.n) (v : Bool)
+  | retB (s : ImplState P.n) (id : Fin P.n) (v : Bool) (bnd : Bool)
       (hin : (s.proc id).input ≠ none)
       (hlv : (s.proc id).sentEcho5 ≠ none)
       (hnotA : ∀ v, s.recvCount id (.echo5 (some v)) < P.n - P.f)
@@ -703,9 +829,10 @@ inductive ImplStep (P : Params) (r : ℕ) :
       (honce : ∃ k, Msg.echo5 (some v) ∈ s.recv id k)
       (hbind : P.f + 1 ≤ s.recvCount id (.bind (some v)))
       (hval : s.bothValid P id)
-      (hr : (s.proc id).returned = false) :
-      ImplStep P r s (.retG r id (.B v))
-        (PMF.pure (s.setProc id { s.proc id with returned := true }))
+      (hr : (s.proc id).returned = false)
+      (hbnd : bnd = s.bound.getD (boundOf s.sent s.F (.B v))) :
+      ImplStep P r s (.retG r id (.B v) bnd)
+        (PMF.pure ((s.setProc id { s.proc id with returned := true }).setBound bnd))
   /-- `C`-return (decide case (3)): an `n − f` `ECHO5 ⊥` quorum and
   `|Valid| > 1`. The process has called, its own `ECHO5` is out, and no higher
   case holds: `hnotA` denies case (1) at either bit, and `hnotB` denies
@@ -716,7 +843,7 @@ inductive ImplStep (P : Params) (r : ℕ) :
   `ECHO5 ⊥` quorum being in particular an `n − f` any-`ECHO5` quorum. What is
   left to deny is the pair of the received `ECHO5 v` and the `f + 1` `BIND v`
   receipts, which is what `hnotB` states. -/
-  | retC (s : ImplState P.n) (id : Fin P.n)
+  | retC (s : ImplState P.n) (id : Fin P.n) (bnd : Bool)
       (hin : (s.proc id).input ≠ none)
       (hlv : (s.proc id).sentEcho5 ≠ none)
       (hnotA : ∀ v, s.recvCount id (.echo5 (some v)) < P.n - P.f)
@@ -724,9 +851,10 @@ inductive ImplStep (P : Params) (r : ℕ) :
         s.recvCount id (.bind (some v)) < P.f + 1)
       (hcnt : P.n - P.f ≤ s.recvCount id (.echo5 none))
       (hval : s.bothValid P id)
-      (hr : (s.proc id).returned = false) :
-      ImplStep P r s (.retG r id .C)
-        (PMF.pure (s.setProc id { s.proc id with returned := true }))
+      (hr : (s.proc id).returned = false)
+      (hbnd : bnd = s.bound.getD (boundOf s.sent s.F .C)) :
+      ImplStep P r s (.retG r id .C bnd)
+        (PMF.pure ((s.setProc id { s.proc id with returned := true }).setBound bnd))
   /-- Corruption (deviation D1). -/
   | fail (s : ImplState P.n) (id : Fin P.n) :
       ImplStep P r s (.fail id) (PMF.pure (s.corrupt P id))

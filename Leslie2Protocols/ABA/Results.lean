@@ -56,7 +56,10 @@ independent — the inclusion never invokes transitivity of simulation.
 
 Graded agreement is carried to implementation level: each round is a group of
 stage programs beside that round's own message state, moved by the same
-network adversary. The **common coin is held at specification level** — the
+network adversary. Each round's graded return announces that round's bound bit
+(D29), a ghost output that rides the `retG` label and that no component's state
+records. `GBCA.BindingTrace` (`Spec/GBCASafety.lean`) is the property it
+carries. The **common coin is held at specification level** — the
 ε-coin is `Params.wccPMF`, not a Gather/SRSD implementation — so the honest
 reading is *graded agreement verified to implementation level; the coin
 assumed at specification level*.

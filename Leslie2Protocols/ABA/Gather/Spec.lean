@@ -8,7 +8,7 @@ import Leslie2Protocols.ABA.Vocabulary.MsgState
 import Leslie2.Systems.LTS
 
 /-!
-# The gather specification (blueprint Transition System 4, repaired: D25, D26)
+# The gather specification (blueprint Transition System 4, repaired: D26)
 
 The specification of one gather instance over an arbitrary payload type `X`,
 on its own alphabet `Gather.Lab n X`. Processes call with a payload and may
@@ -28,41 +28,33 @@ of scope.
   entry until first use, and a specification that pinned the entry at call
   time would refuse that execution. The source's Byzantine-call τ-rule is the
   corrupted half of `commit` (deviation D26).
-* `cores` — the binding content: a family of payload sets, written at most
-  once, by the internal transition `bindCores`. Every member's entries are
-  committed entries, any two members share at least `n − f` entries, and
-  every return must contain some member.
+* `core` — the binding content: one payload set, written at most once, by
+  the internal transition `bindCore`. Its entries are committed entries, it
+  has at least `n − f` of them, and every return carries it.
 * `ret`, `F` — the return flags and the corrupted set.
 
 Agreement and Validity are linear. Two returns agree wherever both are
 defined, both being sub-maps of the write-once `val`; a never-corrupted
 process's entry is its genuine call, by `commit`'s guard.
 
-## The core family (repair of the source's single bound core, deviation D25)
+## The core
 
-The source's TS 4 binds a *single* core set: one `S` of size at least
-`n − f`, fixed before the first return, contained in every return. The
-implementations this specification abstracts (the ECHO/VOTE/BIND rounds
-of the source's Algorithm 4) do satisfy that property, but its proof
-identifies the core only in hindsight: the core is the intersection of
-`f + 1` fixed payloads, and the bound `n − f` on that intersection is
-witnessed by the common core of a *completed* execution — at the moment the
-first process returns, only `n − 2f` honest votes are guaranteed cast, and no
-counting over the prefix alone reaches the bound at `n = 3f + 1`. A
-forward-simulation proof sees only the prefix, so the single-core rule is not
-dischargeable as stated.
+The instance binds one payload set: the `core`, written before the first
+return by `bindCore`, of at least `n − f` committed entries, and carried by
+every return.
 
-The family form carries exactly the prefix-checkable content. `bindCores`
-freezes a nonempty family of committed payload sets, pairwise sharing at
-least `n − f` entries — the self-pair making every member itself that large —
-and each return dominates *some* member. Every consequence the consumers need
-is recovered pairwise: values heavy in two different members are both heavy
-on the shared `n − f ≥ 2f + 1` entries, hence equal; and a member's
-`n − f ≥ 2f + 1` entries put `f + 1` honest committed entries behind every
-heavy value. The source's single core is the family's intersection —
-contained in every return through whichever member that return dominates —
-and its `n − f` size bound is exactly the part that holds only in completed
-executions.
+The core is a ghost output. No process holds it; the set a return hands out
+is specification state. The return label carries it — `ret id g C` names the
+returner, the map it is handed and the core — so the binding content is
+read off a trace rather than off a state, and a system that embeds this
+instance binds by reading its labels.
+
+Two guards of `bindCore` are what a return then delivers: `hval` makes the
+core's entries committed entries, `hcard` gives it at least `n − f` of them.
+Both are discharged at the freeze, from the prefix alone. `Gather/Core.lean`
+carries the argument for the gather implementation: the core is the `ECHO`
+payload of a sender whose payload lies below every `VOTE` of `n − f − |F|`
+processes outside `F`, and the size bound is that payload's own.
 
 Every transition is Dirac, so the instance is an LTS. `fail` is the
 determinised D1 corruption.
@@ -90,8 +82,9 @@ inductive Lab (n : ℕ) (X : Type) : Type
   | tau
   /-- The environment calls process `id` with payload `x`. -/
   | call (id : Fin n) (x : X)
-  /-- Process `id` returns the partial map `g`. -/
-  | ret (id : Fin n) (g : Fin n → Option X)
+  /-- Process `id` returns the partial map `g`, and the instance's core is
+  `C`. -/
+  | ret (id : Fin n) (g : Fin n → Option X) (C : APSet n X)
   /-- Corruption of process `id`. -/
   | fail (id : Fin n)
 
@@ -109,9 +102,9 @@ structure SpecState (n : ℕ) (X : Type) : Type where
   val : Fin n → Option X
   /-- Which processes have received their return. -/
   ret : Fin n → Bool
-  /-- The core family: every return contains some member. Written at most
-  once, by `bindCores`. -/
-  cores : Option (Finset (APSet n X))
+  /-- The core: every return carries it. Written at most once, by
+  `bindCore`. -/
+  core : Option (APSet n X)
   /-- The corrupted set (local copy, kept in lockstep by `fail` broadcast). -/
   F : Finset (Fin n)
 
@@ -124,7 +117,7 @@ def initial (n : ℕ) (X : Type) : SpecState n X where
   call := fun _ => none
   val := fun _ => none
   ret := fun _ => false
-  cores := none
+  core := none
   F := ∅
 
 /-- Corruption (deviation D1): total, Dirac, monotone in `F`. -/
@@ -149,8 +142,8 @@ variable {X : Type}
     (s.corrupt P id).ret = s.ret := by
   unfold SpecState.corrupt; split <;> rfl
 
-@[simp] theorem corrupt_cores (P : Params) (s : SpecState P.n X) (id : Fin P.n) :
-    (s.corrupt P id).cores = s.cores := by
+@[simp] theorem corrupt_core (P : Params) (s : SpecState P.n X) (id : Fin P.n) :
+    (s.corrupt P id).core = s.core := by
   unfold SpecState.corrupt; split <;> rfl
 
 /-- The corrupted set after a corruption. Not a simp lemma: it introduces an
@@ -161,8 +154,8 @@ theorem SpecState.corrupt_F (P : Params) (s : SpecState P.n X) (id : Fin P.n) :
   split_ifs <;> rfl
 
 /-- The step relation of the gather specification instance (blueprint
-Transition System 4, with the committed entries and the core family in place
-of the source's call-borne values and single bound core). -/
+Transition System 4, with the committed entries in place of the source's
+call-borne values). -/
 inductive Step (P : Params) [DecidableEq X] :
     SpecState P.n X → Lab P.n X → PMF (SpecState P.n X) → Prop
   /-- A process inputs its payload. -/
@@ -177,22 +170,21 @@ inductive Step (P : Params) [DecidableEq X] :
   | commit (s : SpecState P.n X) (k : Fin P.n) (v : X)
       (hv : s.val k = none) (hm : k ∈ s.F ∨ s.call k = some v) :
       Step P s .tau (PMF.pure { s with val := Function.update s.val k (some v) })
-  /-- Binding: freeze the core family. Every member's entries are committed,
-  and any two members — the self-pair included — share at least `n − f`
-  entries. Fires at most once per instance. -/
-  | bindCores (s : SpecState P.n X) (Cs : Finset (APSet P.n X))
-      (h0 : s.cores = none) (hne : Cs.Nonempty)
-      (hval : ∀ U ∈ Cs, APSet.subMap U s.val)
-      (hpair : ∀ U ∈ Cs, ∀ V ∈ Cs, P.n - P.f ≤ (U ∩ V).card) :
-      Step P s .tau (PMF.pure { s with cores := some Cs })
-  /-- A process returns a sub-map of the committed entries containing some
-  member of the core family. -/
+  /-- Binding: freeze the core. Its entries are committed entries and it has
+  at least `n − f` of them. Fires at most once per instance. -/
+  | bindCore (s : SpecState P.n X) (S : APSet P.n X)
+      (h0 : s.core = none)
+      (hval : APSet.subMap S s.val)
+      (hcard : P.n - P.f ≤ S.card) :
+      Step P s .tau (PMF.pure { s with core := some S })
+  /-- A process returns a sub-map of the committed entries containing the
+  core, which the label carries. -/
   | ret (s : SpecState P.n X) (id : Fin P.n) (g : Fin P.n → Option X)
-      (Cs : Finset (APSet P.n X)) (hCs : s.cores = some Cs)
-      (hmem : ∃ U ∈ Cs, APSet.subMap U g)
+      (C : APSet P.n X) (hC : s.core = some C)
+      (hmem : APSet.subMap C g)
       (hsub : ∀ k x, g k = some x → s.val k = some x)
       (hr : s.ret id = false) :
-      Step P s (.ret id g)
+      Step P s (.ret id g C)
         (PMF.pure { s with ret := Function.update s.ret id true })
   /-- Corruption (deviation D1). -/
   | fail (s : SpecState P.n X) (id : Fin P.n) :

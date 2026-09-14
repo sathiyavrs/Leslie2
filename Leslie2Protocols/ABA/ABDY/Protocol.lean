@@ -21,7 +21,7 @@ labels. The coin oracle is held at specification level.
 The shape of that reading is the flat reading of `ABA/Reading/Flat.lean`, which
 carries the round loop, the DECIDED sets, the coin handshake, corruption, the
 network adversary and the composition pipeline for any graded-agreement
-implementation. This file supplies the three things a reading fixes and
+implementation. This file supplies the things a reading fixes and
 nothing else:
 
 * the stage message type, `GBCA.Msg` — the five message levels of
@@ -30,7 +30,9 @@ nothing else:
   finite map (D22);
 * the rows of the implementation, `AbdyStageStep`: the graded-agreement call, the
   eight stage multicasts, the stage delivery, the call against an
-  already-called record, and the three graded returns.
+  already-called record, and the three graded returns;
+* the network adversary's ghost — the type `Option Bool` of a round's bound
+  bit, the write `abdyGhostStep` and the read `abdyGhostOut`.
 
 `ABDY.protocol P` is the flat reading at those three, named for the authors of
 the implementation it runs, as `AFW.protocol P` is named for the authors of the
@@ -49,7 +51,9 @@ rows ask for no own send, the `ECHO` they read being sent by an `upon` handler
 that may still be pending. A rendezvous row carries the process's half of a
 joint step with the network: on a send the record write, on a delivery the
 recv write. The Byzantine stage rows have no row at the process they name
-(D11, D22).
+(D11, D22). The three return rows take the bit their label announces free: the
+bit is the network's ghost output and the program neither guards on it nor
+records it.
 -/
 
 namespace PLTS
@@ -92,8 +96,9 @@ abbrev ProcRec (n : ℕ) : Type := ProcRecP n (GBCA.StageRec n)
 /-! ### The network adversary's state at ABDY22's implementation -/
 
 /-- The state of the network adversary: the round-tagged message sets, the
-DECIDED sets, and the corrupted set with its budget. -/
-abbrev NetState (n : ℕ) : Type := NetStateP n GBCA.Msg
+DECIDED sets, the corrupted set with its budget, and the bound bit of every
+round. -/
+abbrev NetState (n : ℕ) : Type := NetStateP n GBCA.Msg (Option Bool)
 
 /-- Sent `⟨DECIDED, b⟩` under sender `j` (D12′). -/
 abbrev NetState.dput {n : ℕ} (s : NetState n) (j : Fin n) (b : Bool) : NetState n :=
@@ -102,6 +107,135 @@ abbrev NetState.dput {n : ℕ} (s : NetState n) (j : Fin n) (b : Bool) : NetStat
 /-- Corruption (deviation D1): total, Dirac, budget-guarded. -/
 abbrev NetState.corrupt (P : Params) (id : Fin P.n) (s : NetState P.n) : NetState P.n :=
   NetStateP.corrupt P id s
+
+/-! ### The network adversary's ghost at ABDY22's implementation
+
+The bound bit of a round is a ghost output: the specification announces it on
+every return label (`ABA/Spec/GBCA.lean`) and no program reads it. At this
+reading the network adversary holds it, one bit per round, in the ghost record
+`NetStateP.ghostRec`.
+
+`abdyGhostStep` writes it. A return records the bit its own label announces if
+the round has none on record and leaves the record alone otherwise, so the
+record is write-once and both returns of a round — the honest one and the
+Byzantine one — write it the same way. Every other row leaves it alone.
+
+`abdyGhostOut` reads it out. It is the guard of the two return rows: the label's
+bit is the bit on record if the round has one, and `GBCA.boundOf` of the round's
+sent sets, the corrupted set and the outcome otherwise. This is the reading of
+the round's bound bit that `ABA/ABDY/Impl.lean` holds in its own message state,
+computed here from the network's sent sets instead. -/
+
+/-- The ghost write of a row: a return records the bit its label announces
+where the round has none on record; every other row leaves the record alone. -/
+def abdyGhostStep (P : Params) :
+    NLab P.n → NetState P.n → Option Bool → Option Bool
+  | Sum.inl (.retG _ _ _ bnd), _, g => some (g.getD bnd)
+  | Sum.inr (.byzRetG _ _ _ bnd), _, g => some (g.getD bnd)
+  | _, _, g => g
+
+/-- The ghost output of a return: the round's bound bit on record, and
+`GBCA.boundOf` of the round's messages where there is none. -/
+def abdyGhostOut (P : Params) (s : NetState P.n) (r : ℕ) (_id : Fin P.n)
+    (out : GbcaOut) : Bool :=
+  (s.ghostRec r).getD (GBCA.boundOf (s.sent r) s.F out)
+
+
+/-- A row whose ghost write is the identity leaves the adversary's whole state
+where it stands. Every row but the two returns is such a row. -/
+theorem writeGhost_abdy_id (P : Params) (w : NetState P.n) (L : NLab P.n)
+    (h : ∀ g, abdyGhostStep P L w g = g) :
+    w.writeGhost (abdyGhostStep P) L = w := by
+  unfold NetStateP.writeGhost
+  split
+  · next r _ => rw [h]; simp
+  · rfl
+
+section GhostFrame
+
+variable (P : Params) (w : NetState P.n)
+
+@[simp] theorem writeGhost_tau :
+    w.writeGhost (abdyGhostStep P) (Sum.inl Lab.tau) = w :=
+  writeGhost_abdy_id P w _ fun _ => rfl
+@[simp] theorem writeGhost_callABA (id : Fin P.n) (b : Bool) :
+    w.writeGhost (abdyGhostStep P) (Sum.inl (.callABA id b)) = w :=
+  writeGhost_abdy_id P w _ fun _ => rfl
+@[simp] theorem writeGhost_retABA (id : Fin P.n) (b : Bool) :
+    w.writeGhost (abdyGhostStep P) (Sum.inl (.retABA id b)) = w :=
+  writeGhost_abdy_id P w _ fun _ => rfl
+@[simp] theorem writeGhost_callG (r : ℕ) (id : Fin P.n) (b : Bool) :
+    w.writeGhost (abdyGhostStep P) (Sum.inl (.callG r id b)) = w :=
+  writeGhost_abdy_id P w _ fun _ => rfl
+@[simp] theorem writeGhost_callW (r : ℕ) (id : Fin P.n) :
+    w.writeGhost (abdyGhostStep P) (Sum.inl (.callW r id)) = w :=
+  writeGhost_abdy_id P w _ fun _ => rfl
+@[simp] theorem writeGhost_retW (r : ℕ) (id : Fin P.n) (b : Bool) :
+    w.writeGhost (abdyGhostStep P) (Sum.inl (.retW r id b)) = w :=
+  writeGhost_abdy_id P w _ fun _ => rfl
+@[simp] theorem writeGhost_fail (k : Fin P.n) :
+    w.writeGhost (abdyGhostStep P) (Sum.inl (.fail k)) = w :=
+  writeGhost_abdy_id P w _ fun _ => rfl
+@[simp] theorem writeGhost_gsnd (r : ℕ) (j : Fin P.n) (m : GBCA.Msg) :
+    w.writeGhost (abdyGhostStep P) (Sum.inr (.gsnd r j m)) = w :=
+  writeGhost_abdy_id P w _ fun _ => rfl
+@[simp] theorem writeGhost_gdlv (r : ℕ) (i j : Fin P.n) (m : GBCA.Msg) :
+    w.writeGhost (abdyGhostStep P) (Sum.inr (.gdlv r i j m)) = w :=
+  writeGhost_abdy_id P w _ fun _ => rfl
+@[simp] theorem writeGhost_dsnd (j : Fin P.n) (b : Bool) :
+    w.writeGhost (abdyGhostStep P) (Sum.inr (.dsnd j b)) = w :=
+  writeGhost_abdy_id P w _ fun _ => rfl
+@[simp] theorem writeGhost_ddlv (i j : Fin P.n) (b : Bool) :
+    w.writeGhost (abdyGhostStep P) (Sum.inr (.ddlv i j b)) = w :=
+  writeGhost_abdy_id P w _ fun _ => rfl
+@[simp] theorem writeGhost_retWPub (r : ℕ) (id : Fin P.n) (c b : Bool) :
+    w.writeGhost (abdyGhostStep P) (Sum.inr (.retWPub r id c b)) = w :=
+  writeGhost_abdy_id P w _ fun _ => rfl
+@[simp] theorem writeGhost_gcallLoop (r : ℕ) (id : Fin P.n) (b : Bool) :
+    w.writeGhost (abdyGhostStep P) (Sum.inr (.gcallLoop r id b)) = w :=
+  writeGhost_abdy_id P w _ fun _ => rfl
+@[simp] theorem writeGhost_byzCallG (r : ℕ) (k : Fin P.n) (b : Bool) :
+    w.writeGhost (abdyGhostStep P) (Sum.inr (.byzCallG r k b)) = w :=
+  writeGhost_abdy_id P w _ fun _ => rfl
+@[simp] theorem writeGhost_byzCallGLoop (r : ℕ) (k : Fin P.n) (b : Bool) :
+    w.writeGhost (abdyGhostStep P) (Sum.inr (.byzCallGLoop r k b)) = w :=
+  writeGhost_abdy_id P w _ fun _ => rfl
+@[simp] theorem writeGhost_byzCallW (r : ℕ) (k : Fin P.n) :
+    w.writeGhost (abdyGhostStep P) (Sum.inr (.byzCallW r k)) = w :=
+  writeGhost_abdy_id P w _ fun _ => rfl
+@[simp] theorem writeGhost_byzRetW (r : ℕ) (k : Fin P.n) (b : Bool) :
+    w.writeGhost (abdyGhostStep P) (Sum.inr (.byzRetW r k b)) = w :=
+  writeGhost_abdy_id P w _ fun _ => rfl
+
+/-! The two return rows, which do write. The ghost record of the round the
+label names holds the announced bit after the write, and every other round's
+record stands still. -/
+
+@[simp] theorem writeGhost_retG_self (r : ℕ) (id : Fin P.n) (out : GbcaOut)
+    (bnd : Bool) :
+    (w.writeGhost (abdyGhostStep P) (Sum.inl (.retG r id out bnd))).ghostRec r
+      = some ((w.ghostRec r).getD bnd) :=
+  writeGhost_ghostRec_self w rfl
+
+theorem writeGhost_retG_ne (r : ℕ) (id : Fin P.n) (out : GbcaOut) (bnd : Bool)
+    {r' : ℕ} (h : r' ≠ r) :
+    (w.writeGhost (abdyGhostStep P) (Sum.inl (.retG r id out bnd))).ghostRec r'
+      = w.ghostRec r' :=
+  writeGhost_ghostRec_ne w rfl h
+
+@[simp] theorem writeGhost_byzRetG_self (r : ℕ) (k : Fin P.n) (out : GbcaOut)
+    (bnd : Bool) :
+    (w.writeGhost (abdyGhostStep P) (Sum.inr (.byzRetG r k out bnd))).ghostRec r
+      = some ((w.ghostRec r).getD bnd) :=
+  writeGhost_ghostRec_self w rfl
+
+theorem writeGhost_byzRetG_ne (r : ℕ) (k : Fin P.n) (out : GbcaOut) (bnd : Bool)
+    {r' : ℕ} (h : r' ≠ r) :
+    (w.writeGhost (abdyGhostStep P) (Sum.inr (.byzRetG r k out bnd))).ghostRec r'
+      = w.ghostRec r' :=
+  writeGhost_ghostRec_ne w rfl h
+
+end GhostFrame
 
 /-! ### The rows of the graded-agreement implementation -/
 
@@ -126,7 +260,7 @@ inductive AbdyStageStep (P : Params) (j : Fin P.n) :
   /-- Return with grade `A v`: an `n − f` `ECHO5 v` quorum. The stage record has
   been called and its own `ECHO5` is out. Case (1) heads the algorithm's chain,
   so there is no higher case to deny. -/
-  | retG_A (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ) (v : Bool)
+  | retG_A (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ) (v : Bool) (bnd : Bool)
       (hh : c.corrupted = false)
       (hph : c.proc.phase = .awaitG) (hr : c.proc.round = r)
       (hterm : p.terminated = false)
@@ -134,14 +268,14 @@ inductive AbdyStageStep (P : Params) (j : Fin P.n) :
       (hlv : (p.stage r).proc.sentEcho5 ≠ none)
       (hcnt : P.n - P.f ≤ (p.stage r).recvCount (.echo5 (some v)))
       (hret : (p.stage r).proc.returned = false) :
-      AbdyStageStep P j (c, p) (Sum.inl (.retG r j (.A v)))
+      AbdyStageStep P j (c, p) (Sum.inl (.retG r j (.A v) bnd))
         (PMF.pure (c.setProc { c.proc with
             est := (GbcaOut.A v).est, lastGrade := some (.A v), phase := .toCallW },
           p.setStage r ((p.stage r).setP { (p.stage r).proc with returned := true })))
   /-- Return with grade `B v`: an `n − f` any-`ECHO5` quorum containing
   `ECHO5 v`, `f + 1` `BIND v`s and `|Valid| > 1`. The stage record has been
   called, its own `ECHO5` is out, and `hnotA` denies case (1) at either bit. -/
-  | retG_B (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ) (v : Bool)
+  | retG_B (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ) (v : Bool) (bnd : Bool)
       (hh : c.corrupted = false)
       (hph : c.proc.phase = .awaitG) (hr : c.proc.round = r)
       (hterm : p.terminated = false)
@@ -153,7 +287,7 @@ inductive AbdyStageStep (P : Params) (j : Fin P.n) :
       (hbind : P.f + 1 ≤ (p.stage r).recvCount (.bind (some v)))
       (hval : (p.stage r).bothValid P)
       (hret : (p.stage r).proc.returned = false) :
-      AbdyStageStep P j (c, p) (Sum.inl (.retG r j (.B v)))
+      AbdyStageStep P j (c, p) (Sum.inl (.retG r j (.B v) bnd))
         (PMF.pure (c.setProc { c.proc with
             est := (GbcaOut.B v).est, lastGrade := some (.B v), phase := .toCallW },
           p.setStage r ((p.stage r).setP { (p.stage r).proc with returned := true })))
@@ -161,7 +295,7 @@ inductive AbdyStageStep (P : Params) (j : Fin P.n) :
   stage record has been called, its own `ECHO5` is out, `hnotA` denies case (1)
   at either bit, and `hnotB` denies case (2) in the reduced form
   `GBCA.ImplStep.retC` states. -/
-  | retG_C (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ)
+  | retG_C (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ) (bnd : Bool)
       (hh : c.corrupted = false)
       (hph : c.proc.phase = .awaitG) (hr : c.proc.round = r)
       (hterm : p.terminated = false)
@@ -173,7 +307,7 @@ inductive AbdyStageStep (P : Params) (j : Fin P.n) :
       (hcnt : P.n - P.f ≤ (p.stage r).recvCount (.echo5 none))
       (hval : (p.stage r).bothValid P)
       (hret : (p.stage r).proc.returned = false) :
-      AbdyStageStep P j (c, p) (Sum.inl (.retG r j .C))
+      AbdyStageStep P j (c, p) (Sum.inl (.retG r j .C bnd))
         (PMF.pure (c.setProc { c.proc with
             est := GbcaOut.C.est, lastGrade := some .C, phase := .toCallW },
           p.setStage r ((p.stage r).setP { (p.stage r).proc with returned := true })))
@@ -318,7 +452,8 @@ def gCallPayload (P : Params) : Fin P.n → Bool → GBCA.Msg := fun _ b => .inp
 
 /-- The step relation of the network adversary. -/
 abbrev NetStep (P : Params) : NetState P.n → NLab P.n → PMF (NetState P.n) → Prop :=
-  FlatNetStep P GBCA.Msg (gCallPayload P)
+  FlatNetStep P GBCA.Msg (Option Bool) (gCallPayload P) (abdyGhostStep P)
+    (abdyGhostOut P)
 
 /-- The program of process `j`. -/
 noncomputable abbrev ABAProcN (P : Params) (j : Fin P.n) :
@@ -327,7 +462,8 @@ noncomputable abbrev ABAProcN (P : Params) (j : Fin P.n) :
 
 /-- The network adversary. -/
 noncomputable abbrev netAdv (P : Params) : System (NetState P.n) (NLab P.n) :=
-  flatNetAdv P GBCA.Msg (gCallPayload P)
+  flatNetAdv P GBCA.Msg (Option Bool) (gCallPayload P) (abdyGhostStep P)
+    (abdyGhostOut P)
 
 end Net
 
@@ -336,21 +472,24 @@ namespace ABDY
 /-- The state of the protocol: the process family, the network adversary and
 the coin oracle. -/
 abbrev ProtocolState (P : Params) : Type :=
-  Net.FlatState P GBCA.Msg (GBCA.StageRec P.n)
+  Net.FlatState P GBCA.Msg (GBCA.StageRec P.n) (Option Bool)
 
 /-- The three components side by side, over the extended alphabet: the
 synchronised process group, the network adversary and the lifted oracle. -/
 noncomputable def protocolPre (P : Params) : System (ProtocolState P) (Net.NLab P.n) :=
-  Net.flatPre P GBCA.Msg (GBCA.StageRec P.n) (Net.AbdyStageStep P) (Net.gCallPayload P)
+  Net.flatPre P GBCA.Msg (GBCA.StageRec P.n) (Option Bool) (Net.AbdyStageStep P)
+    (Net.gCallPayload P) (Net.abdyGhostStep P) (Net.abdyGhostOut P)
 
 /-- **The protocol group**: the rendezvous alphabet hidden, the result read
 back over `Lab n`. -/
 noncomputable def protocolGroup (P : Params) : System (ProtocolState P) (Lab P.n) :=
-  Net.flatGroup P GBCA.Msg (GBCA.StageRec P.n) (Net.AbdyStageStep P) (Net.gCallPayload P)
+  Net.flatGroup P GBCA.Msg (GBCA.StageRec P.n) (Option Bool) (Net.AbdyStageStep P)
+    (Net.gCallPayload P) (Net.abdyGhostStep P) (Net.abdyGhostOut P)
 
 /-- **The protocol system**: the group with the sub-protocol API hidden. -/
 noncomputable def protocol (P : Params) : System (ProtocolState P) (Lab P.n) :=
-  Net.flat P GBCA.Msg (GBCA.StageRec P.n) (Net.AbdyStageStep P) (Net.gCallPayload P)
+  Net.flat P GBCA.Msg (GBCA.StageRec P.n) (Option Bool) (Net.AbdyStageStep P)
+    (Net.gCallPayload P) (Net.abdyGhostStep P) (Net.abdyGhostOut P)
 
 end ABDY
 
@@ -444,8 +583,8 @@ theorem stepN_callG_own {r : ℕ} {b : Bool}
   case callGIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
-theorem stepN_retG_A_own {r : ℕ} {v : Bool}
-    (h : ABAProcStepN P j q (Sum.inl (.retG r j (.A v))) ν) :
+theorem stepN_retG_A_own {r : ℕ} {v bnd : Bool}
+    (h : ABAProcStepN P j q (Sum.inl (.retG r j (.A v) bnd)) ν) :
     q.1.corrupted = false ∧
       q.1.proc.phase = .awaitG ∧ q.1.proc.round = r ∧ q.2.terminated = false ∧
       (q.2.stage r).proc.input ≠ none ∧ (q.2.stage r).proc.sentEcho5 ≠ none ∧
@@ -463,8 +602,8 @@ theorem stepN_retG_A_own {r : ℕ} {v : Bool}
   case retGIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
-theorem stepN_retG_B_own {r : ℕ} {v : Bool}
-    (h : ABAProcStepN P j q (Sum.inl (.retG r j (.B v))) ν) :
+theorem stepN_retG_B_own {r : ℕ} {v bnd : Bool}
+    (h : ABAProcStepN P j q (Sum.inl (.retG r j (.B v) bnd)) ν) :
     q.1.corrupted = false ∧
       q.1.proc.phase = .awaitG ∧ q.1.proc.round = r ∧ q.2.terminated = false ∧
       (q.2.stage r).proc.input ≠ none ∧ (q.2.stage r).proc.sentEcho5 ≠ none ∧
@@ -487,8 +626,8 @@ theorem stepN_retG_B_own {r : ℕ} {v : Bool}
   case retGIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
-theorem stepN_retG_C_own {r : ℕ}
-    (h : ABAProcStepN P j q (Sum.inl (.retG r j .C)) ν) :
+theorem stepN_retG_C_own {r : ℕ} {bnd : Bool}
+    (h : ABAProcStepN P j q (Sum.inl (.retG r j .C bnd)) ν) :
     q.1.corrupted = false ∧
       q.1.proc.phase = .awaitG ∧ q.1.proc.round = r ∧ q.2.terminated = false ∧
       (q.2.stage r).proc.input ≠ none ∧ (q.2.stage r).proc.sentEcho5 ≠ none ∧

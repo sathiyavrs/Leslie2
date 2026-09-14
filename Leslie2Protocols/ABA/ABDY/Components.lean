@@ -70,7 +70,9 @@ its budget, and the authorisation of every Byzantine handshake row. `aNet` is th
 automaton. Its `fail` row carries the budget guard `k ∉ F ∧ |F| < f`, so a
 corruption fires exactly when it takes effect, and its `retByz` row lets a
 corrupted process return without DECIDED evidence, pairing with the replaced
-program's self-loop on `retABA` (D23).
+program's self-loop on `retABA` (D23). It holds no ghost record: the bound bit
+a graded-agreement return announces belongs to the round, so the round's
+instance carries it and both rows here idle on it.
 
 ## What this file supplies
 
@@ -180,16 +182,19 @@ inductive CoreProcStepN (P : Params) (j : Fin P.n) :
   | callGIdle (c : CoreRec P.n) (r : ℕ) (id : Fin P.n) (b : Bool) (hid : id ≠ j) :
       CoreProcStepN P j c (Sum.inl (.callG r id b)) (PMF.pure c)
   /-- The graded-agreement return, round-loop half: record the grade and head
-  for the coin. The evidence for the grade is the round instance's conjunct. -/
-  | retG (c : CoreRec P.n) (r : ℕ) (out : GbcaOut) (hh : c.corrupted = false)
+  for the coin. The evidence for the grade is the round instance's conjunct.
+  The round's bound bit is announced beside the grade and written nowhere: the
+  round loop is one of the programs that do not read it. -/
+  | retG (c : CoreRec P.n) (r : ℕ) (out : GbcaOut) (bnd : Bool)
+      (hh : c.corrupted = false)
       (hph : c.proc.phase = .awaitG) (hr : c.proc.round = r) :
-      CoreProcStepN P j c (Sum.inl (.retG r j out))
+      CoreProcStepN P j c (Sum.inl (.retG r j out bnd))
         (PMF.pure (c.setProc { c.proc with
           est := out.est, lastGrade := some out, phase := .toCallW }))
   /-- A graded-agreement return to another process: not `j`'s business. -/
-  | retGIdle (c : CoreRec P.n) (r : ℕ) (id : Fin P.n) (out : GbcaOut)
+  | retGIdle (c : CoreRec P.n) (r : ℕ) (id : Fin P.n) (out : GbcaOut) (bnd : Bool)
       (hid : id ≠ j) :
-      CoreProcStepN P j c (Sum.inl (.retG r id out)) (PMF.pure c)
+      CoreProcStepN P j c (Sum.inl (.retG r id out bnd)) (PMF.pure c)
   /-- `c ← WCC_r()`, the call half. -/
   | callW (c : CoreRec P.n) (r : ℕ) (hh : c.corrupted = false)
       (hph : c.proc.phase = .toCallW) (hr : c.proc.round = r) :
@@ -268,8 +273,9 @@ inductive CoreProcStepN (P : Params) (j : Fin P.n) :
   | byzCallGLoopIdle (c : CoreRec P.n) (r : ℕ) (k : Fin P.n) (b : Bool) :
       CoreProcStepN P j c (Sum.inr (.byzCallGLoop r k b)) (PMF.pure c)
   /-- A Byzantine graded-agreement return (D11): stage content only. -/
-  | byzRetGIdle (c : CoreRec P.n) (r : ℕ) (k : Fin P.n) (out : GbcaOut) :
-      CoreProcStepN P j c (Sum.inr (.byzRetG r k out)) (PMF.pure c)
+  | byzRetGIdle (c : CoreRec P.n) (r : ℕ) (k : Fin P.n) (out : GbcaOut)
+      (bnd : Bool) :
+      CoreProcStepN P j c (Sum.inr (.byzRetG r k out bnd)) (PMF.pure c)
   /-- A Byzantine coin call (D11): the coin oracle reacts through the pullback. -/
   | byzCallWIdle (c : CoreRec P.n) (r : ℕ) (k : Fin P.n) :
       CoreProcStepN P j c (Sum.inr (.byzCallW r k)) (PMF.pure c)
@@ -344,9 +350,9 @@ inductive ANetStep (P : Params) :
       (hF : k ∈ a.F) :
       ANetStep P a (Sum.inr (.byzCallGLoop r k b)) (PMF.pure a)
   /-- The authorisation of a Byzantine graded-agreement return (D11). -/
-  | byzRetG (a : ANetState P.n) (r : ℕ) (k : Fin P.n) (out : GbcaOut)
+  | byzRetG (a : ANetState P.n) (r : ℕ) (k : Fin P.n) (out : GbcaOut) (bnd : Bool)
       (hF : k ∈ a.F) :
-      ANetStep P a (Sum.inr (.byzRetG r k out)) (PMF.pure a)
+      ANetStep P a (Sum.inr (.byzRetG r k out bnd)) (PMF.pure a)
   /-- The authorisation of a Byzantine coin call (D11). -/
   | byzCallW (a : ANetState P.n) (r : ℕ) (k : Fin P.n) (hF : k ∈ a.F) :
       ANetStep P a (Sum.inr (.byzCallW r k)) (PMF.pure a)
@@ -370,9 +376,11 @@ inductive ANetStep (P : Params) :
   not here. -/
   | callGIdle (a : ANetState P.n) (r : ℕ) (id : Fin P.n) (b : Bool) :
       ANetStep P a (Sum.inl (.callG r id b)) (PMF.pure a)
-  /-- A graded-agreement return publishes nothing here. -/
-  | retGIdle (a : ANetState P.n) (r : ℕ) (id : Fin P.n) (out : GbcaOut) :
-      ANetStep P a (Sum.inl (.retG r id out)) (PMF.pure a)
+  /-- A graded-agreement return publishes nothing here, and the bound bit it
+  announces is the round instance's: this component holds no ghost. -/
+  | retGIdle (a : ANetState P.n) (r : ℕ) (id : Fin P.n) (out : GbcaOut)
+      (bnd : Bool) :
+      ANetStep P a (Sum.inl (.retG r id out bnd)) (PMF.pure a)
   /-- A coin call publishes nothing. -/
   | callWIdle (a : ANetState P.n) (r : ℕ) (id : Fin P.n) :
       ANetStep P a (Sum.inl (.callW r id)) (PMF.pure a)
@@ -542,8 +550,8 @@ theorem stepC_callG_foreign {r : ℕ} {id : Fin P.n} {b : Bool} (hid : id ≠ j)
   case callGIdle => rfl
   case corruptedIdle => rfl
 
-theorem stepC_retG_own {r : ℕ} {out : GbcaOut}
-    (h : CoreProcStepN P j c (Sum.inl (.retG r j out)) ν) :
+theorem stepC_retG_own {r : ℕ} {out : GbcaOut} {bnd : Bool}
+    (h : CoreProcStepN P j c (Sum.inl (.retG r j out bnd)) ν) :
     c.corrupted = false ∧ c.proc.phase = .awaitG ∧ c.proc.round = r ∧
       ν = PMF.pure (c.setProc { c.proc with
         est := out.est, lastGrade := some out, phase := .toCallW }) := by
@@ -552,8 +560,10 @@ theorem stepC_retG_own {r : ℕ} {out : GbcaOut}
   case retGIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
-theorem stepC_retG_foreign {r : ℕ} {id : Fin P.n} {out : GbcaOut} (hid : id ≠ j)
-    (h : CoreProcStepN P j c (Sum.inl (.retG r id out)) ν) : ν = PMF.pure c := by
+theorem stepC_retG_foreign {r : ℕ} {id : Fin P.n} {out : GbcaOut} {bnd : Bool}
+    (hid : id ≠ j)
+    (h : CoreProcStepN P j c (Sum.inl (.retG r id out bnd)) ν) :
+    ν = PMF.pure c := by
   cases h
   case retG => exact absurd rfl hid
   case retGIdle => rfl
@@ -686,8 +696,9 @@ theorem stepC_byzCallGLoop {r : ℕ} {k : Fin P.n} {b : Bool}
     (h : CoreProcStepN P j c (Sum.inr (.byzCallGLoop r k b)) ν) : ν = PMF.pure c := by
   cases h <;> rfl
 
-theorem stepC_byzRetG {r : ℕ} {k : Fin P.n} {out : GbcaOut}
-    (h : CoreProcStepN P j c (Sum.inr (.byzRetG r k out)) ν) : ν = PMF.pure c := by
+theorem stepC_byzRetG {r : ℕ} {k : Fin P.n} {out : GbcaOut} {bnd : Bool}
+    (h : CoreProcStepN P j c (Sum.inr (.byzRetG r k out bnd)) ν) :
+    ν = PMF.pure c := by
   cases h <;> rfl
 
 theorem stepC_byzCallW {r : ℕ} {k : Fin P.n}
@@ -743,8 +754,8 @@ theorem aStep_byzCallGLoop {r : ℕ} {k : Fin P.n} {b : Bool}
     k ∈ a.F ∧ μ = PMF.pure a := by
   cases h; exact ⟨by assumption, rfl⟩
 
-theorem aStep_byzRetG {r : ℕ} {k : Fin P.n} {out : GbcaOut}
-    (h : ANetStep P a (Sum.inr (.byzRetG r k out)) μ) :
+theorem aStep_byzRetG {r : ℕ} {k : Fin P.n} {out : GbcaOut} {bnd : Bool}
+    (h : ANetStep P a (Sum.inr (.byzRetG r k out bnd)) μ) :
     k ∈ a.F ∧ μ = PMF.pure a := by
   cases h; exact ⟨by assumption, rfl⟩
 
@@ -776,8 +787,8 @@ theorem aStep_callG {r : ℕ} {id : Fin P.n} {b : Bool}
     (h : ANetStep P a (Sum.inl (.callG r id b)) μ) : μ = PMF.pure a := by
   cases h; rfl
 
-theorem aStep_retG {r : ℕ} {id : Fin P.n} {out : GbcaOut}
-    (h : ANetStep P a (Sum.inl (.retG r id out)) μ) : μ = PMF.pure a := by
+theorem aStep_retG {r : ℕ} {id : Fin P.n} {out : GbcaOut} {bnd : Bool}
+    (h : ANetStep P a (Sum.inl (.retG r id out bnd)) μ) : μ = PMF.pure a := by
   cases h; rfl
 
 theorem aStep_callW {r : ℕ} {id : Fin P.n}

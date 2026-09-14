@@ -28,7 +28,10 @@ complete decision — starting from its initial state:
   transition excluding the bit `false` (a family `τ`, `n − f` quorum met at
   `n = 4, f = 1` by the three callers of `true`);
 * `step_retG₀/₁/₂` — the three graded-agreement `A`-return handshakes
-  (`retG 0`, *hidden*), the first locking the round grade to the `A`-side;
+  (`retG 0`, *hidden*), the first locking the round grade to the `A`-side. Each
+  return announces the bound bit `true`. Its complement is the bit that
+  `step_bindUnset` excluded, which is exactly the return's guard, so the ghost
+  output leaves the run intact;
 * `step_callW₀/₁/₂` — the three coin-call handshakes (`callW 0`, *hidden*);
 * `step_flip` + `step_flip_mass` — the coin `flip`, the run's **single
   probabilistic step**: the successor lands on the `bit true` branch (the one
@@ -341,15 +344,15 @@ specification locks the grade and records the return, the round loop adopts the
 estimate and heads for the coin. -/
 theorem step_retG₀ :
     (hybrid P4).step (st Gb Sc3 W0) Lab.tau (PMF.pure (st Gr Sr W0)) := by
-  refine hybrid_hidden P4 (l := Lab.retG 0 (0 : Fin 4) (.A true)) (by simp) ?_
+  refine hybrid_hidden P4 (l := Lab.retG 0 (0 : Fin 4) (.A true) true) (by simp) ?_
   have h := hybridPre_vis_step P4 (G := Gb) (C := Sc3.1) (A := Sc3.2) (o := W0)
-    (L := Sum.inl (Lab.retG 0 (0 : Fin 4) (.A true))) (by simp)
-    (specSide_owned P4 rfl rfl (GBCA.Step.retA (P := P4) (r := 0) (Gb 0) 0 true
-      (by decide) (by decide) (Or.inl rfl) rfl))
-    (coreLoops_at 0 (CoreProcStepN.retG (P := P4) (Sc3.1 0) 0 (.A true) (by decide)
+    (L := Sum.inl (Lab.retG 0 (0 : Fin 4) (.A true) true)) (by simp)
+    (specSide_owned P4 rfl rfl (GBCA.Step.retA (P := P4) (r := 0) (Gb 0) 0 true true
+      (by decide) (by decide) (by decide) (Or.inl rfl) rfl))
+    (coreLoops_at 0 (CoreProcStepN.retG (P := P4) (Sc3.1 0) 0 (.A true) true (by decide)
         (by decide) (by decide))
-      (fun j hj => CoreProcStepN.retGIdle (P := P4) (Sc3.1 j) 0 0 (.A true) (Ne.symm hj)))
-    (ANetStep.retGIdle (P := P4) Sc3.2 0 0 (.A true))
+      (fun j hj => CoreProcStepN.retGIdle (P := P4) (Sc3.1 j) 0 0 (.A true) true (Ne.symm hj)))
+    (ANetStep.retGIdle (P := P4) Sc3.2 0 0 (.A true) true)
     (wccIdle W0 (by simp) rfl (by simp [Lab.isFail]))
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
@@ -357,15 +360,15 @@ theorem step_retG₀ :
 /-- Process `1`'s round-`0` `A`-return. -/
 theorem step_retG₁ :
     (hybrid P4).step (st Gr Sr W0) Lab.tau (PMF.pure (st Ga1 Sq1 W0)) := by
-  refine hybrid_hidden P4 (l := Lab.retG 0 (1 : Fin 4) (.A true)) (by simp) ?_
+  refine hybrid_hidden P4 (l := Lab.retG 0 (1 : Fin 4) (.A true) true) (by simp) ?_
   have h := hybridPre_vis_step P4 (G := Gr) (C := Sr.1) (A := Sr.2) (o := W0)
-    (L := Sum.inl (Lab.retG 0 (1 : Fin 4) (.A true))) (by simp)
-    (specSide_owned P4 rfl rfl (GBCA.Step.retA (P := P4) (r := 0) (Gr 0) 1 true
-      (by decide) (by decide) (Or.inr rfl) (by decide)))
-    (coreLoops_at 1 (CoreProcStepN.retG (P := P4) (Sr.1 1) 0 (.A true) (by decide)
+    (L := Sum.inl (Lab.retG 0 (1 : Fin 4) (.A true) true)) (by simp)
+    (specSide_owned P4 rfl rfl (GBCA.Step.retA (P := P4) (r := 0) (Gr 0) 1 true true
+      (by decide) (by decide) (by decide) (Or.inr rfl) (by decide)))
+    (coreLoops_at 1 (CoreProcStepN.retG (P := P4) (Sr.1 1) 0 (.A true) true (by decide)
         (by decide) (by decide))
-      (fun j hj => CoreProcStepN.retGIdle (P := P4) (Sr.1 j) 0 1 (.A true) (Ne.symm hj)))
-    (ANetStep.retGIdle (P := P4) Sr.2 0 1 (.A true))
+      (fun j hj => CoreProcStepN.retGIdle (P := P4) (Sr.1 j) 0 1 (.A true) true (Ne.symm hj)))
+    (ANetStep.retGIdle (P := P4) Sr.2 0 1 (.A true) true)
     (wccIdle W0 (by simp) rfl (by simp [Lab.isFail]))
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
@@ -373,15 +376,15 @@ theorem step_retG₁ :
 /-- Process `2`'s round-`0` `A`-return. -/
 theorem step_retG₂ :
     (hybrid P4).step (st Ga1 Sq1 W0) Lab.tau (PMF.pure (st Ga2 Sq2 W0)) := by
-  refine hybrid_hidden P4 (l := Lab.retG 0 (2 : Fin 4) (.A true)) (by simp) ?_
+  refine hybrid_hidden P4 (l := Lab.retG 0 (2 : Fin 4) (.A true) true) (by simp) ?_
   have h := hybridPre_vis_step P4 (G := Ga1) (C := Sq1.1) (A := Sq1.2) (o := W0)
-    (L := Sum.inl (Lab.retG 0 (2 : Fin 4) (.A true))) (by simp)
-    (specSide_owned P4 rfl rfl (GBCA.Step.retA (P := P4) (r := 0) (Ga1 0) 2 true
-      (by decide) (by decide) (Or.inr rfl) (by decide)))
-    (coreLoops_at 2 (CoreProcStepN.retG (P := P4) (Sq1.1 2) 0 (.A true) (by decide)
+    (L := Sum.inl (Lab.retG 0 (2 : Fin 4) (.A true) true)) (by simp)
+    (specSide_owned P4 rfl rfl (GBCA.Step.retA (P := P4) (r := 0) (Ga1 0) 2 true true
+      (by decide) (by decide) (by decide) (Or.inr rfl) (by decide)))
+    (coreLoops_at 2 (CoreProcStepN.retG (P := P4) (Sq1.1 2) 0 (.A true) true (by decide)
         (by decide) (by decide))
-      (fun j hj => CoreProcStepN.retGIdle (P := P4) (Sq1.1 j) 0 2 (.A true) (Ne.symm hj)))
-    (ANetStep.retGIdle (P := P4) Sq1.2 0 2 (.A true))
+      (fun j hj => CoreProcStepN.retGIdle (P := P4) (Sq1.1 j) 0 2 (.A true) true (Ne.symm hj)))
+    (ANetStep.retGIdle (P := P4) Sq1.2 0 2 (.A true) true)
     (wccIdle W0 (by simp) rfl (by simp [Lab.isFail]))
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h

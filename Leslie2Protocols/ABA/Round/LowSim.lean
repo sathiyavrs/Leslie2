@@ -18,7 +18,9 @@ substitution relation. Everything is inherited from the gather-level
 substitution (`ABA/Gather/LowSim.lean`): the internal rows replay
 `Gather.lowTau_reach`, the fused calls `Gather.lowRel_call`, and the fused
 returns `Gather.lowRetRun`, the chains mapping into the pair's embedded
-rows coordinate by coordinate.
+rows coordinate by coordinate. A return carries the same core on both sides
+(`Gather.LowRel.core_eq`), so the `link` row writes the same bound bit and the
+`retG` row announces the same one.
 -/
 
 namespace PLTS
@@ -29,26 +31,28 @@ open Gather
 
 variable {P : Params}
 
-/-- The broadcast substitution relation, per coordinate. -/
+/-- The broadcast substitution relation, per gather coordinate, and equality
+of the bound bits. -/
 def LowPairRel (P : Params) (s : LowPairState P.n) (t : IdealState P.n) : Prop :=
-  Gather.LowRel P s.1 t.1 ∧ Gather.LowRel P s.2 t.2
+  Gather.LowRel P s.1 t.1 ∧ Gather.LowRel P s.2.1 t.2.1 ∧ t.2.2 = s.2.2
 
 /-- The relation holds initially. -/
 theorem lowPairRel_init :
     LowPairRel P (LowPairState.initial P.n) (IdealState.initial P.n) :=
-  ⟨Gather.lowRel_init, Gather.lowRel_init⟩
+  ⟨Gather.lowRel_init, Gather.lowRel_init, rfl⟩
 
 /-- **Broadcast compatibility**: the relation is preserved by corrupting both
 sides at once. -/
 theorem lowPairRel_corrupt {s : LowPairState P.n} {t : IdealState P.n}
     (hR : LowPairRel P s t) (id : Fin P.n) :
-    LowPairRel P (s.1.corruptAll P id, s.2.corruptAll P id)
-      (t.1.corruptAll P id, t.2.corruptAll P id) :=
-  ⟨Gather.lowRel_corrupt hR.1 id, Gather.lowRel_corrupt hR.2 id⟩
+    LowPairRel P (s.1.corruptAll P id, s.2.1.corruptAll P id, s.2.2)
+      (t.1.corruptAll P id, t.2.1.corruptAll P id, t.2.2) :=
+  ⟨Gather.lowRel_corrupt hR.1 id, Gather.lowRel_corrupt hR.2.1 id, hR.2.2⟩
 
 /-- Mapping a first-coordinate τ-chain of gather-over-BRB steps into the
 pair. -/
-private theorem chain_map_ga1 {r : ℕ} (t2 : Gather.IdealState P.n (Option Bool))
+private theorem chain_map_ga1 {r : ℕ}
+    (t2 : Gather.IdealState P.n (Option Bool) × Option Bool)
     {t : Gather.IdealState P.n Bool} {ts : List (Gather.IdealState P.n Bool)}
     (h : List.IsChain (fun a b => Gather.IdealStep P a Gather.Lab.tau (PMF.pure b))
       (t :: ts)) :
@@ -59,13 +63,14 @@ private theorem chain_map_ga1 {r : ℕ} (t2 : Gather.IdealState P.n (Option Bool
 /-- Mapping a second-coordinate τ-chain of gather-over-BRB steps into the
 pair. -/
 private theorem chain_map_ga2 {r : ℕ} (t1 : Gather.IdealState P.n Bool)
-    {t : Gather.IdealState P.n (Option Bool)}
+    (β : Option Bool) {t : Gather.IdealState P.n (Option Bool)}
     {ts : List (Gather.IdealState P.n (Option Bool))}
     (h : List.IsChain (fun a b => Gather.IdealStep P a Gather.Lab.tau (PMF.pure b))
       (t :: ts)) :
     List.IsChain (fun A B => (idealInst P r).LStep A Silent.τ B)
-      ((t1, t) :: ts.map (fun x => (t1, x))) :=
-  List.isChain_map_of_isChain (fun x => (t1, x)) (fun a b hab => IdealStep.ga2Tau (t1, a) b hab) h
+      ((t1, t, β) :: ts.map (fun x => (t1, x, β))) :=
+  List.isChain_map_of_isChain (fun x => (t1, x, β))
+    (fun a b hab => IdealStep.ga2Tau (t1, a, β) b hab) h
 
 /-- **The broadcast substitution**: the GBCA implementation forward-simulates
 the GBCA instance over the gather-over-BRB components. -/
@@ -102,11 +107,12 @@ theorem lowRefines (P : Params) (r : ℕ) :
   | ga2Tau t2' h =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
-    obtain ⟨ts, hchain, hR'⟩ := Gather.lowTau_reach hR.2 h
-    refine ⟨(q₂.1, ts.getLastD q₂.2), Or.inl ⟨rfl, ?_⟩, hR.1, hR'⟩
-    have hrun := System.weakLSilent_ofChain (chain_map_ga2 (r := r) q₂.1 hchain)
+    obtain ⟨ts, hchain, hR'⟩ := Gather.lowTau_reach hR.2.1 h
+    refine ⟨(q₂.1, ts.getLastD q₂.2.1, q₂.2.2), Or.inl ⟨rfl, ?_⟩, hR.1, hR', hR.2.2⟩
+    have hrun :=
+      System.weakLSilent_ofChain (chain_map_ga2 (r := r) q₂.1 q₂.2.2 hchain)
     rwa [getLastD_map] at hrun
-  | link id g t1' h h2 hb2 =>
+  | link id g C t1' h h2 hb2 =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     generalize hμ : (PMF.pure t1' : PMF (Gather.LowState P.n Bool)) = μ1 at h
@@ -114,40 +120,53 @@ theorem lowRefines (P : Params) (r : ℕ) :
     | ret id' g' hin hsubap hQ hr =>
       have ht1' := PMF.pure_injective hμ
       subst ht1'
-      obtain ⟨ts, hchain, hin', hcov, hQ', hr', hRel1⟩ :=
+      obtain ⟨ts, hchain, hin', hcov, hQ', hr', hga, hcore, hRel1⟩ :=
         Gather.lowRetRun hR.1 hin hsubap hQ hr
-      have hguard2 : (q₂.2.ga.proc id).input = none := by
-        rw [hR.2.ga_eq]
+      have hretstep : Gather.IdealStep P (ts.getLastD q₂.1)
+          (.ret id g (q₁.1.core.getD (Gather.coreOf P q₁.1.ga)))
+          (PMF.pure { ts.getLastD q₂.1 with
+            ga := (ts.getLastD q₂.1).ga.setProc id
+              { (ts.getLastD q₂.1).ga.proc id with returned := true }
+            core := some (q₁.1.core.getD (Gather.coreOf P q₁.1.ga)) }) := by
+        rw [← hga, ← hcore]
+        exact Gather.IdealStep.ret _ id g hin' hcov hQ' hr'
+      have hguard2 : (q₂.2.1.ga.proc id).input = none := by
+        rw [hR.2.1.ga_eq]
         exact h2
       have hchain' := chain_map_ga1 (r := r) q₂.2 hchain
       have hlinkstep : (idealInst P r).LStep
           ((ts.map (fun x => (x, q₂.2))).getLastD (q₂.1, q₂.2)) Silent.τ
           ({ ts.getLastD q₂.1 with
             ga := (ts.getLastD q₂.1).ga.setProc id
-              { (ts.getLastD q₂.1).ga.proc id with returned := true } },
-           { q₂.2 with
-            ga := q₂.2.ga.setProc id
-              { q₂.2.ga.proc id with input := some (cand P g) }
-            brbIn := Function.update q₂.2.brbIn id
-              { q₂.2.brbIn id with input := some (cand P g) } }) := by
+              { (ts.getLastD q₂.1).ga.proc id with returned := true }
+            core := some (q₁.1.core.getD (Gather.coreOf P q₁.1.ga)) },
+           { q₂.2.1 with
+            ga := q₂.2.1.ga.setProc id
+              { q₂.2.1.ga.proc id with input := some (cand P g) }
+            brbIn := Function.update q₂.2.1.brbIn id
+              { q₂.2.1.brbIn id with input := some (cand P g) } },
+           some (q₂.2.2.getD
+             (boundOfCore P (q₁.1.core.getD (Gather.coreOf P q₁.1.ga))))) := by
         rw [show ((q₂.1, q₂.2) : IdealState P.n)
             = (fun x => (x, q₂.2)) q₂.1 from rfl, getLastD_map]
-        exact IdealStep.link ((ts.getLastD q₂.1), q₂.2) id g _
-          (Gather.IdealStep.ret _ id g hin' hcov hQ' hr') hguard2
+        exact IdealStep.link ((ts.getLastD q₂.1), q₂.2) id g _ _ hretstep hguard2
       refine ⟨({ ts.getLastD q₂.1 with
           ga := (ts.getLastD q₂.1).ga.setProc id
-            { (ts.getLastD q₂.1).ga.proc id with returned := true } },
-        { q₂.2 with
-          ga := q₂.2.ga.setProc id
-            { q₂.2.ga.proc id with input := some (cand P g) }
-          brbIn := Function.update q₂.2.brbIn id
-            { q₂.2.brbIn id with input := some (cand P g) } }),
+            { (ts.getLastD q₂.1).ga.proc id with returned := true }
+          core := some (q₁.1.core.getD (Gather.coreOf P q₁.1.ga)) },
+        { q₂.2.1 with
+          ga := q₂.2.1.ga.setProc id
+            { q₂.2.1.ga.proc id with input := some (cand P g) }
+          brbIn := Function.update q₂.2.1.brbIn id
+            { q₂.2.1.brbIn id with input := some (cand P g) } },
+        some (q₂.2.2.getD
+          (boundOfCore P (q₁.1.core.getD (Gather.coreOf P q₁.1.ga))))),
         Or.inl ⟨rfl, ?_⟩, hRel1,
-        Gather.lowRel_call (x := cand P g) hR.2 h2 hb2⟩
+        Gather.lowRel_call (x := cand P g) hR.2.1 h2 hb2, by rw [hR.2.2]⟩
       have hfull := isChain_snoc hchain' hlinkstep
       have hrun := System.weakLSilent_ofChain hfull
       rwa [List.getLastD_concat] at hrun
-  | retG id g t2' h =>
+  | retG id g C t2' h =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     generalize hμ : (PMF.pure t2' : PMF (Gather.LowState P.n (Option Bool))) = μ2 at h
@@ -155,25 +174,36 @@ theorem lowRefines (P : Params) (r : ℕ) :
     | ret id' g' hin hsubap hQ hr =>
       have ht2' := PMF.pure_injective hμ
       subst ht2'
-      obtain ⟨ts, hchain, hin', hcov, hQ', hr', hRel2⟩ :=
-        Gather.lowRetRun hR.2 hin hsubap hQ hr
-      have hchain' := chain_map_ga2 (r := r) q₂.1 hchain
+      obtain ⟨ts, hchain, hin', hcov, hQ', hr', hga, hcore, hRel2⟩ :=
+        Gather.lowRetRun hR.2.1 hin hsubap hQ hr
+      have hretstep : Gather.IdealStep P (ts.getLastD q₂.2.1)
+          (.ret id g (q₁.2.1.core.getD (Gather.coreOf P q₁.2.1.ga)))
+          (PMF.pure { ts.getLastD q₂.2.1 with
+            ga := (ts.getLastD q₂.2.1).ga.setProc id
+              { (ts.getLastD q₂.2.1).ga.proc id with returned := true }
+            core := some (q₁.2.1.core.getD (Gather.coreOf P q₁.2.1.ga)) }) := by
+        rw [← hga, ← hcore]
+        exact Gather.IdealStep.ret _ id g hin' hcov hQ' hr'
+      have hchain' := chain_map_ga2 (r := r) q₂.1 q₂.2.2 hchain
       have hlaststep : (idealInst P r).LStep
-          ((ts.map (fun x => (q₂.1, x))).getLastD (q₂.1, q₂.2))
-          (Lab.retG r id (gradeOf P g))
-          (q₂.1, { ts.getLastD q₂.2 with
-            ga := (ts.getLastD q₂.2).ga.setProc id
-              { (ts.getLastD q₂.2).ga.proc id with returned := true } }) := by
-        rw [show ((q₂.1, q₂.2) : IdealState P.n)
-            = (fun x => (q₂.1, x)) q₂.2 from rfl, getLastD_map]
-        exact IdealStep.retG (q₂.1, ts.getLastD q₂.2) id g _
-          (Gather.IdealStep.ret _ id g hin' hcov hQ' hr')
+          ((ts.map (fun x => (q₂.1, x, q₂.2.2))).getLastD (q₂.1, q₂.2.1, q₂.2.2))
+          (Lab.retG r id (gradeOf P g) (q₁.2.2.getD (boundOfCore P ∅)))
+          (q₂.1, { ts.getLastD q₂.2.1 with
+            ga := (ts.getLastD q₂.2.1).ga.setProc id
+              { (ts.getLastD q₂.2.1).ga.proc id with returned := true }
+            core := some (q₁.2.1.core.getD (Gather.coreOf P q₁.2.1.ga)) },
+           q₂.2.2) := by
+        rw [show ((q₂.1, q₂.2.1, q₂.2.2) : IdealState P.n)
+            = (fun x => (q₂.1, x, q₂.2.2)) q₂.2.1 from rfl, getLastD_map,
+          ← hR.2.2]
+        exact IdealStep.retG (q₂.1, ts.getLastD q₂.2.1, q₂.2.2) id g _ _ hretstep
       exact ⟨_, Or.inr ⟨by simp,
-        System.weakLStep_tausThen hchain' hlaststep (by simp)⟩, hR.1, hRel2⟩
+        System.weakLStep_tausThen hchain' hlaststep (by simp)⟩,
+        hR.1, hRel2, hR.2.2⟩
   | fail id =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
-    exact ⟨(q₂.1.corruptAll P id, q₂.2.corruptAll P id),
+    exact ⟨(q₂.1.corruptAll P id, q₂.2.1.corruptAll P id, q₂.2.2),
       Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
         (IdealStep.fail q₂ id)⟩, lowPairRel_corrupt hR id⟩
 

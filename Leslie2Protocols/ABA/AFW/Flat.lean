@@ -55,6 +55,28 @@ The Bracha return is not a row here. Gather reads a broadcast delivery as an
 `n − f` `VOTE` receipt quorum on the receiving local state (`apIn`, `apBind`), never
 through a returned flag, and the composed reading embeds only the silent rows
 of a Bracha instance, its return not among them.
+
+## The network adversary's ghost
+
+The record the adversary holds for round `r` is `AFW.Ghost`: the first
+gather's frozen core, the second gather's frozen core, and the round's bound
+bit, each written once. `AFW.ghostStep` writes it. The link's broadcast of the
+candidate — the label `gsnd r j (brbIn2 j (init _))`, which no other row
+carries — freezes the first core at `Gather.coreOf` of the round's first
+gather message state and the bound bit at `GBCA.boundOfCore` of that core; a
+graded return freezes the second core the same way. Every other label leaves
+the record where it stands.
+
+The message state `Gather.coreOf` is read on is `AFW.ga1Of`, the first
+gather's slice of the adversary's tagged sent sets beside its corrupted set,
+and `AFW.ga2Of` is the second's. `Gather.coreOf` reads the sent sets and the
+corrupted set alone (`Gather.coreOf_msgState_only`), which is what lets the
+adversary compute the core from its own state.
+
+`AFW.ghostOut` reads the bit back, and the two graded-agreement return rows
+fire only with the bit their label carries equal to it. It is total: where the
+ghost holds no bit it computes one from the first gather's core, and on a
+reachable state the returner's own link has already written the bit.
 -/
 
 namespace PLTS
@@ -154,8 +176,96 @@ abbrev StageSideRec (n : ℕ) : Type := StageSideRecP (StageRec n)
 record. -/
 abbrev ProcRec (n : ℕ) : Type := ProcRecP n (StageRec n)
 
+/-! ### The network adversary's ghost -/
+
+/-- The adversary's record for one round: the first gather's frozen core, the
+second gather's frozen core, and the round's bound bit. No program reads
+it. -/
+abbrev Ghost (n : ℕ) : Type :=
+  Option (APSet n Bool) × Option (APSet n (Option Bool)) × Option Bool
+
+instance instInhabitedGhost (n : ℕ) : Inhabited (Ghost n) := ⟨(none, none, none)⟩
+
 /-- The state of the network adversary. -/
-abbrev NetState (n : ℕ) : Type := NetStateP n (Msg n)
+abbrev NetState (n : ℕ) : Type := NetStateP n (Msg n) (Ghost n)
+
+section Slicing
+
+variable {n : ℕ} {β : Type}
+
+/-- The messages of one tag, recovered from a tagged sent family along a
+partial untagging. -/
+def slice (f : Msg n → Option β)
+    (hf : ∀ a a' b, b ∈ f a → b ∈ f a' → a = a')
+    (sent : Fin n → Finset (Msg n)) : Fin n → Finset β :=
+  fun q => (sent q).filterMap f hf
+
+theorem mem_slice {f : Msg n → Option β}
+    {hf : ∀ a a' b, b ∈ f a → b ∈ f a' → a = a'}
+    {sent : Fin n → Finset (Msg n)} {q : Fin n} {b : β} :
+    b ∈ slice f hf sent q ↔ ∃ m ∈ sent q, f m = some b :=
+  Finset.mem_filterMap f
+
+/-- The first gather's message state messages. -/
+def unGa1 : Msg n → Option (GaMsg n Bool)
+  | .ga1 m => some m
+  | _ => none
+
+/-- The second gather's message state messages. -/
+def unGa2 : Msg n → Option (GaMsg n (Option Bool))
+  | .ga2 m => some m
+  | _ => none
+
+theorem unGa1_inj : ∀ a a' (b : GaMsg n Bool),
+    b ∈ unGa1 a → b ∈ unGa1 a' → a = a' := by
+  intro a a' b h h'
+  cases a <;> cases a' <;> simp_all [unGa1]
+
+theorem unGa2_inj : ∀ a a' (b : GaMsg n (Option Bool)),
+    b ∈ unGa2 a → b ∈ unGa2 a' → a = a' := by
+  intro a a' b h h'
+  cases a <;> cases a' <;> simp_all [unGa2]
+
+end Slicing
+
+/-- The first gather's instance state of round `r`, read off the adversary's
+tagged sent sets and its corrupted set. The local states are the initial
+ones: `Gather.coreOf` reads the message state alone
+(`Gather.coreOf_msgState_only`). -/
+def ga1Of (P : Params) (w : NetState P.n) (r : ℕ) :
+    SubState P.n (PRec P.n Bool) (GaMsg P.n Bool) :=
+  (fun _ => LocalState.initial P.n _ (PRec.initial P.n Bool),
+    ⟨slice unGa1 unGa1_inj (w.sent r), w.F⟩)
+
+/-- The second gather's instance state of round `r`, read off the adversary's
+tagged sent sets and its corrupted set. -/
+def ga2Of (P : Params) (w : NetState P.n) (r : ℕ) :
+    SubState P.n (PRec P.n (Option Bool)) (GaMsg P.n (Option Bool)) :=
+  (fun _ => LocalState.initial P.n _ (PRec.initial P.n (Option Bool)),
+    ⟨slice unGa2 unGa2_inj (w.sent r), w.F⟩)
+
+/-- The ghost write: the link's broadcast of the candidate freezes the first
+gather's core and the round's bound bit, a graded return freezes the second
+gather's core, and every other label leaves the record where it stands. Each
+field is written once. -/
+noncomputable def ghostStep (P : Params) :
+    NLabP P.n (Msg P.n) → NetState P.n → Ghost P.n → Ghost P.n
+  | Sum.inr (.gsnd r _ (.brbIn2 _ (.init _))), w, G =>
+      (some (G.1.getD (Gather.coreOf P (ga1Of P w r))), G.2.1,
+        some (G.2.2.getD (GBCA.boundOfCore P
+          (G.1.getD (Gather.coreOf P (ga1Of P w r))))))
+  | Sum.inl (.retG r _ _ _), w, G =>
+      (G.1, some (G.2.1.getD (Gather.coreOf P (ga2Of P w r))), G.2.2)
+  | Sum.inr (.byzRetG r _ _ _), w, G =>
+      (G.1, some (G.2.1.getD (Gather.coreOf P (ga2Of P w r))), G.2.2)
+  | _, _, G => G
+
+/-- The bound bit the round's graded returns announce: the one the ghost
+holds, and the bit of the first gather's core where it holds none. -/
+noncomputable def ghostOut (P : Params) (w : NetState P.n) (r : ℕ) (_id : Fin P.n)
+    (_out : GbcaOut) : Bool :=
+  ((w.ghostRec r).2.2).getD
+    (GBCA.boundOfCore P ((w.ghostRec r).1.getD (Gather.coreOf P (ga1Of P w r))))
 
 /-! ### The derived receipt predicates
 
@@ -340,7 +450,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
   /-- The second gather returns and the round returns the graded outcome
   (D24). -/
   | retG (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ)
-      (g : Fin P.n → Option (Option Bool))
+      (g : Fin P.n → Option (Option Bool)) (bnd : Bool)
       (hh : c.corrupted = false)
       (hph : c.proc.phase = .awaitG) (hr : c.proc.round = r)
       (hterm : p.terminated = false)
@@ -349,7 +459,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ U, apBind2 P (p.stage r) q U ∧ APSet.subMap U g)
       (hr2 : ((p.stage r).ga2.proc).returned = false) :
-      StageStep P j (c, p) (Sum.inl (.retG r j (GBCA.gradeOf P g)))
+      StageStep P j (c, p) (Sum.inl (.retG r j (GBCA.gradeOf P g) bnd))
         (PMF.pure (c.setProc { c.proc with
             est := (GBCA.gradeOf P g).est, lastGrade := some (GBCA.gradeOf P g),
             phase := .toCallW },
@@ -567,31 +677,30 @@ abbrev ProcStep (P : Params) (j : Fin P.n) :
 /-- The step relation of the network adversary. -/
 abbrev NetStep (P : Params) :
     NetState P.n → NLabP P.n (Msg P.n) → PMF (NetState P.n) → Prop :=
-  FlatNetStep P (Msg P.n) (gCallPayload P)
-
+  FlatNetStep P (Msg P.n) (Ghost P.n) (gCallPayload P) (ghostStep P) (ghostOut P)
 
 /-- The state of the gather-based protocol: the process family, the network
 adversary and the coin oracle. -/
 abbrev ProtocolState (P : Params) : Type :=
-  Net.FlatState P (Msg P.n) (StageRec P.n)
+  Net.FlatState P (Msg P.n) (StageRec P.n) (Ghost P.n)
 
 /-- The three components side by side, over the extended alphabet. -/
 noncomputable def protocolPre (P : Params) :
     System (ProtocolState P) (Net.NLabP P.n (Msg P.n)) :=
-  Net.flatPre P (Msg P.n) (StageRec P.n) (StageStep P)
-    (gCallPayload P)
+  Net.flatPre P (Msg P.n) (StageRec P.n) (Ghost P.n) (StageStep P)
+    (gCallPayload P) (ghostStep P) (ghostOut P)
 
 /-- The gather-based protocol group: the rendezvous alphabet hidden, the
 result read back over `Lab n`. -/
 noncomputable def protocolGroup (P : Params) : System (ProtocolState P) (Lab P.n) :=
-  Net.flatGroup P (Msg P.n) (StageRec P.n) (StageStep P)
-    (gCallPayload P)
+  Net.flatGroup P (Msg P.n) (StageRec P.n) (Ghost P.n) (StageStep P)
+    (gCallPayload P) (ghostStep P) (ghostOut P)
 
 /-- **The gather-based protocol**: the group with the sub-protocol API
 hidden. -/
 noncomputable def protocol (P : Params) : System (ProtocolState P) (Lab P.n) :=
-  Net.flat P (Msg P.n) (StageRec P.n) (StageStep P)
-    (gCallPayload P)
+  Net.flat P (Msg P.n) (StageRec P.n) (Ghost P.n) (StageStep P)
+    (gCallPayload P) (ghostStep P) (ghostOut P)
 
 end AFW
 

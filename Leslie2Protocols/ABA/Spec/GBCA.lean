@@ -41,28 +41,41 @@ one execution therefore name the same bit whatever their grades, and a single
 bit — the unique survivor once any value-bearing return has fired — is the only
 bit any extension can ever hand out.
 
+## The bound bit on the label
+
+Every return rule takes a bit `bnd` under the guard `(!bnd) ∈ excluded` and
+announces it on the label `.retG r id out bnd`. The bit is a ghost output: it is
+the value the specification holds as state, and no program reads it. On a
+reachable state `excluded` holds at most one bit, so the guard determines `bnd`
+as the complement of the excluded bit. All the returns of a round therefore
+announce one bit. A value-bearing return carries `(!v) ∈ excluded` as well, so it
+announces `bnd = v`. This makes binding a property of the trace alone: the
+round-`r` returns of a trace name a single bit, and each of them that hands out a
+value hands out that bit.
+
 ## `retC` and Graded Binding
 
-The `C`-return's guard `1 ≤ excluded.card` is ABDY22's Graded Binding clause read
+The `C`-return's guard `(!bnd) ∈ excluded` is ABDY22's Graded Binding clause read
 on this state: *there is a bit `b` such that no non-faulty party decides `1 − b`
-at grade `≥ 1` in any extension*. A member of `excluded` is exactly such a `1 − b`
-— the witness `b` is its complement, the surviving bit — because the
-value-bearing returns refuse an excluded bit, and `excluded` only grows, so the witness
-is valid in every extension of the run and not merely at the moment of the
-return. A `C`-return thus commits the instance: from that point on at most
-one bit is alive anywhere in the future, which is what makes handing out no bit
-the right answer. `retC` additionally requires `f + 1` F-blind support for each
-bit (D15), which is what certifies that neither bit was forced.
+at grade `≥ 1` in any extension*. The witness is the announced bit `bnd`, and the
+bit no extension can hand out is `!bnd`, because the value-bearing returns refuse
+an excluded bit and `excluded` only grows. The witness is thus valid in every
+extension of the run and not merely at the moment of the return. A `C`-return
+commits the instance: from that point on at most one bit is alive anywhere in the
+future, which is what makes handing out no bit the right answer. `retC`
+additionally requires `f + 1` F-blind support for each bit (D15), which is what
+certifies that neither bit was forced.
 
 ## The all-⊥ run
 
-In a round where neither bit is decidable the specification still commits
-internally to a single excluded bit, and the run ends with `C`-returns alone.
-That commitment is sound because the `C`-return's label carries no bit: the
-instance never announces which bit it excluded, so no process is answered with
-the internal choice. `retC`'s guard `1 ≤ excluded.card` is the binding witness
-either way — a bit that no extension can hand out — whether the round goes on
-to hand out its complement or hands out nothing at all.
+In a round where neither bit is decidable the specification still commits to a
+single excluded bit, and the run ends with `C`-returns alone. Those returns
+announce its complement, so the round is bound to one bit on the trace even
+though no process is handed a value. The commitment is sound because the
+announced bit is a ghost output: it is program data for no component, so no
+process is answered with the internal choice. The guard `(!bnd) ∈ excluded` is
+the binding witness either way — `!bnd` is a bit that no extension can hand out
+— whether the round goes on to hand out `bnd` or hands out nothing at all.
 
 ## Provenance (D14/D15)
 
@@ -101,9 +114,9 @@ to hand out its complement or hands out nothing at all.
   in the cardinality. The blueprint's `bind = some v` guard on the
   value-bearing returns becomes the pair `v ∉ excluded ∧ (!v) ∈ excluded`, its
   `bind = none` guard on binding becomes `excluded = ∅`, and the `C`-return's
-  binding obligation `bind ≠ ⊥` — which in the source also puts the bound
-  value on the label — becomes `1 ≤ excluded.card`, read off a label that names no
-  bit.
+  binding obligation `bind ≠ ⊥` becomes `(!bnd) ∈ excluded`. The source puts the
+  bound value on the `C`-return label; here `bnd` is that value, announced on
+  every return label as a ghost output.
 
 Every transition is Dirac, so the instance is an LTS and the `ForwardLTS`
 correspondence applies. `fail` is the determinised D1 `corrupt`; the family
@@ -204,35 +217,39 @@ inductive Step (P : Params) (r : ℕ) :
       (hd0 : s.excluded = ∅) :
       Step P r s .tau (PMF.pure { s with excluded := insert b s.excluded })
   /-- `B`-return: adopt the surviving bit `v` (`f + 1` dissenting supporters,
-  D15). The guard pair `v ∉ excluded`, `(!v) ∈ excluded` is graded agreement. -/
-  | retB (s : SpecState P.n) (id : Fin P.n) (v : Bool)
+  D15). The guard pair `v ∉ excluded`, `(!v) ∈ excluded` is graded agreement; the
+  announced bit `bnd` is the one whose complement is excluded. -/
+  | retB (s : SpecState P.n) (id : Fin P.n) (v : Bool) (bnd : Bool)
       (hlive : v ∉ s.excluded) (hexcluded : (!v) ∈ s.excluded)
+      (hbnd : (!bnd) ∈ s.excluded)
       (hw : P.f + 1 ≤ (Finset.univ.filter
         (fun id' => s.call id' = some (!v) ∨ id' ∈ s.F)).card)
       (hr : s.ret id = false) :
-      Step P r s (.retG r id (.B v))
+      Step P r s (.retG r id (.B v) bnd)
         (PMF.pure { s with ret := Function.update s.ret id true })
   /-- `A`-return: decide the surviving bit `v` (locks the grade to the A-side).
-  Same guard pair as `retB`. -/
-  | retA (s : SpecState P.n) (id : Fin P.n) (v : Bool)
+  Same guard pair and same announced bit as `retB`. -/
+  | retA (s : SpecState P.n) (id : Fin P.n) (v : Bool) (bnd : Bool)
       (hlive : v ∉ s.excluded) (hexcluded : (!v) ∈ s.excluded)
+      (hbnd : (!bnd) ∈ s.excluded)
       (hg : s.grade = none ∨ s.grade = some true)
       (hr : s.ret id = false) :
-      Step P r s (.retG r id (.A v))
+      Step P r s (.retG r id (.A v) bnd)
         (PMF.pure { s with grade := some true, ret := Function.update s.ret id true })
-  /-- `C`-return: no output. Some bit is already excluded — the Graded Binding
-  witness, valid in every extension because `excluded` only grows — and both bits
-  carry `f + 1` F-blind support (D15), which is what makes handing out no bit
-  the right answer; the grade is locked to the C-side. -/
-  | retC (s : SpecState P.n) (id : Fin P.n)
-      (hd : 1 ≤ s.excluded.card)
+  /-- `C`-return: no output, but the bound bit is announced. The guard
+  `(!bnd) ∈ excluded` is the Graded Binding witness, valid in every extension
+  because `excluded` only grows, and it names `bnd` as the surviving bit. Both
+  bits carry `f + 1` F-blind support (D15), which is what makes handing out no
+  bit the right answer; the grade is locked to the C-side. -/
+  | retC (s : SpecState P.n) (id : Fin P.n) (bnd : Bool)
+      (hbnd : (!bnd) ∈ s.excluded)
       (hwT : P.f + 1 ≤ (Finset.univ.filter
         (fun id' => s.call id' = some true ∨ id' ∈ s.F)).card)
       (hwF : P.f + 1 ≤ (Finset.univ.filter
         (fun id' => s.call id' = some false ∨ id' ∈ s.F)).card)
       (hg : s.grade = none ∨ s.grade = some false)
       (hr : s.ret id = false) :
-      Step P r s (.retG r id .C)
+      Step P r s (.retG r id .C bnd)
         (PMF.pure { s with grade := some false, ret := Function.update s.ret id true })
   /-- Corruption (deviation D1). -/
   | fail (s : SpecState P.n) (id : Fin P.n) :

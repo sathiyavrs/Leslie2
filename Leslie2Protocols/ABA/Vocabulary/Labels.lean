@@ -25,7 +25,8 @@ handshake while everyone else no-ops in place.
 
 * `callG/retG r id …`, `callW/retW r id …` — handshakes between a round loop
   and the round-`r` instance of the respective family. A `retG` label names the
-  round, the process being answered and the graded outcome it receives.
+  round, the process being answered, the graded outcome it receives and the
+  round's bound bit.
 * `fail id` — corruption; a genuine synchronisation of **all** components
   (each keeps its own copy of the corrupted set `F`, updated in lockstep).
 * `hiddenAPI` — the sub-protocol API labels, hidden (sent to `τ`) in the
@@ -59,8 +60,13 @@ inductive Lab (n : ℕ) : Type
   | retABA (id : Fin n) (b : Bool)
   /-- Process `id` calls round-`r` GBCA with input `b`. -/
   | callG (r : ℕ) (id : Fin n) (b : Bool)
-  /-- Round-`r` GBCA returns the graded outcome `out` to process `id`. -/
-  | retG (r : ℕ) (id : Fin n) (out : GbcaOut)
+  /-- Round-`r` GBCA returns to process `id` the graded outcome `out` and the
+  round's bound bit `bnd`. The graded outcome is program data: a round loop
+  reads it and retains it. The bound bit is a ghost output — the bound value the
+  round's specification holds, announced on the label — and no program reads
+  it. Announcing it makes binding, a property of the branching structure, a
+  property of the trace alone. -/
+  | retG (r : ℕ) (id : Fin n) (out : GbcaOut) (bnd : Bool)
   /-- Process `id` calls round-`r` WCC. -/
   | callW (r : ℕ) (id : Fin n)
   /-- Round-`r` WCC returns the coin bit `b` to `id`. -/
@@ -80,7 +86,7 @@ variable {n : ℕ}
 /-- The GBCA round a label belongs to, if any. -/
 def gbcaRound : Lab n → Option ℕ
   | callG r _ _ => some r
-  | retG r _ _ => some r
+  | retG r _ _ _ => some r
   | _ => none
 
 /-- The WCC round a label belongs to, if any. -/
@@ -111,8 +117,8 @@ def hiddenAPI (n : ℕ) : Set (Lab n) :=
     Lab.callG r id b ∈ hiddenAPI n := by
   simp [hiddenAPI, gbcaRound]
 
-@[simp] theorem retG_mem_hiddenAPI (r : ℕ) (id : Fin n) (out : GbcaOut) :
-    Lab.retG r id out ∈ hiddenAPI n := by
+@[simp] theorem retG_mem_hiddenAPI (r : ℕ) (id : Fin n) (out : GbcaOut)
+    (bnd : Bool) : Lab.retG r id out bnd ∈ hiddenAPI n := by
   simp [hiddenAPI, gbcaRound]
 
 @[simp] theorem callW_mem_hiddenAPI (r : ℕ) (id : Fin n) :

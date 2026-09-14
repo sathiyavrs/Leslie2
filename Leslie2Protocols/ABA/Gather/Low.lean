@@ -22,6 +22,9 @@ approval guards of the gather rows read these predicates at the receiver;
 no delivery event or return flag of the broadcast sub-protocol appears.
 The broadcast calls are fused as in the tier above: the gather call
 broadcasts the input, the `BIND` row broadcasts the payload.
+
+The state carries the instance's `core` as auxiliary state, written by the
+`ret` row and carried on every return label, as in the tier above.
 -/
 
 namespace PLTS
@@ -38,6 +41,9 @@ structure LowState (n : ℕ) (X : Type) : Type where
   brbIn : ∀ _ : Fin n, BRB.ImplState n X
   /-- `brbBind k` — the Bracha instance broadcasting `k`'s `BIND` payload. -/
   brbBind : ∀ _ : Fin n, BRB.ImplState n (APSet n X)
+  /-- The instance's core, written at the first return and returned on every
+  return. Auxiliary state: no process reads it and no guard consults it. -/
+  core : Option (APSet n X)
 
 namespace LowState
 
@@ -48,6 +54,7 @@ def initial (n : ℕ) (X : Type) : LowState n X where
   ga := SubState.initial n (GaMsg n X) (PRec.initial n X)
   brbIn := fun _ => BRB.ImplState.initial n X
   brbBind := fun _ => BRB.ImplState.initial n (APSet n X)
+  core := none
 
 /-- Corruption (deviation D1): the broadcast transform, corrupting the gather
 message state and every Bracha coordinate in lockstep. -/
@@ -55,6 +62,10 @@ def corruptAll (P : Params) (id : Fin P.n) (s : LowState P.n X) : LowState P.n X
   ga := s.ga.corrupt P id
   brbIn := fun k => (s.brbIn k).corrupt P id
   brbBind := fun k => (s.brbBind k).corrupt P id
+  core := s.core
+
+@[simp] theorem corruptAll_core (P : Params) (id : Fin P.n)
+    (s : LowState P.n X) : (s.corruptAll P id).core = s.core := rfl
 
 end LowState
 
@@ -147,16 +158,19 @@ inductive LowStep (P : Params) :
   | byz (s : LowState P.n X) (j : Fin P.n) (m : GaMsg P.n X) (h : j ∈ s.ga.F) :
       LowStep P s .tau (PMF.pure { s with ga := s.ga.mcast j m })
   /-- Return: `n − f` bind-BRB payloads held at the returner, each a sub-map
-  of the output, and the output held pairwise. -/
+  of the output, and the output held pairwise. The label carries the
+  instance's core, which this row writes if it is unwritten. -/
   | ret (s : LowState P.n X) (id : Fin P.n) (g : Fin P.n → Option X)
       (hin : (s.ga.proc id).input ≠ none)
       (hsubap : ∀ k x, g k = some x → apIn P s id k x)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ U, apBind P s id q U ∧ APSet.subMap U g)
       (hr : (s.ga.proc id).returned = false) :
-      LowStep P s (.ret id g)
+      LowStep P s (.ret id g (s.core.getD (coreOf P s.ga)))
         (PMF.pure
-        { s with ga := s.ga.setProc id { s.ga.proc id with returned := true } })
+        { s with
+          ga := s.ga.setProc id { s.ga.proc id with returned := true }
+          core := some (s.core.getD (coreOf P s.ga)) })
   /-- Corruption (deviation D1), in lockstep across the message state and every
   Bracha coordinate. -/
   | fail (s : LowState P.n X) (id : Fin P.n) :

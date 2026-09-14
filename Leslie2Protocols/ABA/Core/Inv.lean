@@ -316,8 +316,9 @@ theorem hybrid_step_tau (P : Params) (G : ℕ → GBCA.SpecState P.n)
               { ABAState.procs (C, A) id with phase := .awaitG })) ∨
           (id ∈ ABAState.F (C, A) ∧ μc = PMF.pure (C, A))) ∧
         μ = prodPMF (μr.map (Function.update G r)) (μc.map fun c => (c.1, c.2, o))) ∨
-      (∃ (r : ℕ) (id : Fin P.n) (out : GbcaOut) (μr : PMF (GBCA.SpecState P.n))
-          (μc : PMF (ABAState P)), GBCA.Step P r (G r) (.retG r id out) μr ∧
+      (∃ (r : ℕ) (id : Fin P.n) (out : GbcaOut) (bnd : Bool)
+          (μr : PMF (GBCA.SpecState P.n))
+          (μc : PMF (ABAState P)), GBCA.Step P r (G r) (.retG r id out bnd) μr ∧
         (((ABAState.procs (C, A) id).phase = .awaitG ∧
             (ABAState.procs (C, A) id).round = r ∧
             μc = PMF.pure (ABAState.setProc (C, A) id
@@ -369,18 +370,18 @@ theorem hybrid_step_tau (P : Params) (G : ℕ → GBCA.SpecState P.n)
             { ABAState.procs (C, A) id with phase := .awaitG }),
           hstepG, Or.inl ⟨hph, hr, hest, rfl⟩, by
             simp only [PMF.pure_map, prodPMF_pure_pure]; rfl⟩)))
-      | retG r id out =>
+      | retG r id out bnd =>
         obtain ⟨G', C', A', ω, hG, hall, hA, hW, rfl⟩ :=
           hybridPre_vis_inv P (by simp) hpre
         obtain ⟨X, hstepG, rfl⟩ := specSide_owned_step P rfl (by simp) rfl hG
         obtain rfl : A = A' := (pureN_inj (aStep_retG hA)).symm
         obtain rfl : ω = PMF.pure o := wccFamily_idle_inv P (by simp) rfl (by simp [Lab.isFail])
-          ((System.mapIdle_step_some (wccPull_inl (Lab.retG r id out)) _).mp hW)
+          ((System.mapIdle_step_some (wccPull_inl (Lab.retG r id out bnd)) _).mp hW)
         obtain ⟨-, hph, hr, hx0⟩ := stepC_retG_own (hall id)
         obtain rfl : C' = Function.update C id ((C id).setProc
             { (C id).proc with est := out.est, lastGrade := some out, phase := .toCallW }) :=
           coresN_update hx0 (fun i hi => stepC_retG_foreign (Ne.symm hi) (hall i))
-        exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨r, id, out, PMF.pure X,
+        exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨r, id, out, bnd, PMF.pure X,
           PMF.pure (ABAState.setProc (C, A) id
             { ABAState.procs (C, A) id with
               est := out.est, lastGrade := some out, phase := .toCallW }),
@@ -517,14 +518,14 @@ theorem hybrid_step_tau (P : Params) (G : ℕ → GBCA.SpecState P.n)
         exact Or.inr (Or.inr (Or.inr (Or.inl ⟨r, k, b, PMF.pure X, PMF.pure (C, A),
           hstepG, Or.inr ⟨hF, rfl⟩, by
             simp only [PMF.pure_map, prodPMF_pure_pure]⟩)))
-      | byzRetG r k out =>
+      | byzRetG r k out bnd =>
         obtain ⟨X, hstepG, rfl⟩ := specSide_owned_step P rfl (by simp) rfl hG
         obtain rfl : C = C' := (coresN_id fun i => stepC_byzRetG (hall i)).symm
         obtain ⟨hF, hA'⟩ := aStep_byzRetG hA
         obtain rfl : A = A' := (pureN_inj hA').symm
         obtain rfl : ω = PMF.pure o :=
-          (System.mapIdle_step_none (wccPull_byzRetG r k out) ω).mp hW
-        exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨r, k, out, PMF.pure X,
+          (System.mapIdle_step_none (wccPull_byzRetG r k out bnd) ω).mp hW
+        exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨r, k, out, bnd, PMF.pure X,
           PMF.pure (C, A), hstepG, Or.inr ⟨hF, rfl⟩, by
             simp only [PMF.pure_map, prodPMF_pure_pure]⟩))))
       | byzCallW r k =>
@@ -2700,7 +2701,8 @@ round-`r` commitment and `agree_locked`'s est-transfer at `id` — are handed of
 GBCA's own Graded-Agreement safety property, not local bookkeeping. -/
 theorem Inv.step_retG {P : Params} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} (hI : Inv P g c w) (r : ℕ) (id : Fin P.n) (out : GbcaOut)
-    {μr : PMF (GBCA.SpecState P.n)} (hstepG : GBCA.Step P r (g r) (.retG r id out) μr)
+    (bnd : Bool)
+    {μr : PMF (GBCA.SpecState P.n)} (hstepG : GBCA.Step P r (g r) (.retG r id out bnd) μr)
     {μc : PMF (ABAState P)}
     (hstepC :
       ((c.procs id).phase = .awaitG ∧ (c.procs id).round = r ∧
@@ -2713,24 +2715,24 @@ theorem Inv.step_retG {P : Params} {g : ℕ → GBCA.SpecState P.n} {c : ABAStat
       AbsFrame P g (Function.update g r gr') c c' := by
   have hGframe : gr'.F = (g r).F ∧ gr'.excluded = (g r).excluded ∧ gr'.call = (g r).call := by
     cases hstepG with
-    | retB _ _ _ _ _ _ =>
+    | retB _ _ _ _ _ _ _ _ =>
       rw [PMF.mem_support_pure_iff] at hgr'; rw [hgr']; exact ⟨rfl, rfl, rfl⟩
-    | retA _ _ _ _ _ _ =>
+    | retA _ _ _ _ _ _ _ _ =>
       rw [PMF.mem_support_pure_iff] at hgr'; rw [hgr']; exact ⟨rfl, rfl, rfl⟩
-    | retC _ _ _ _ _ _ =>
+    | retC _ _ _ _ _ _ _ =>
       rw [PMF.mem_support_pure_iff] at hgr'; rw [hgr']; exact ⟨rfl, rfl, rfl⟩
   have hGgradeTrue : (g r).grade = some true → gr'.grade = some true := by
     cases hstepG with
-    | retB _ _ _ _ _ _ => rw [PMF.mem_support_pure_iff] at hgr'; rw [hgr']; exact fun h => h
-    | retA _ _ _ _ _ _ => rw [PMF.mem_support_pure_iff] at hgr'; rw [hgr']; exact fun _ => rfl
-    | retC _ _ _ _ hg _ =>
+    | retB _ _ _ _ _ _ _ _ => rw [PMF.mem_support_pure_iff] at hgr'; rw [hgr']; exact fun h => h
+    | retA _ _ _ _ _ _ _ _ => rw [PMF.mem_support_pure_iff] at hgr'; rw [hgr']; exact fun _ => rfl
+    | retC _ _ _ _ _ hg _ =>
       rw [PMF.mem_support_pure_iff] at hgr'
       intro hgt; rw [hgt] at hg; rcases hg with hg | hg <;> simp at hg
   have hGgradeFalse : (g r).grade = some false → gr'.grade = some false := by
     cases hstepG with
-    | retB _ _ _ _ _ _ => rw [PMF.mem_support_pure_iff] at hgr'; rw [hgr']; exact fun h => h
-    | retA _ _ _ _ hg _ => intro hgt; rw [hgt] at hg; rcases hg with hg | hg <;> simp at hg
-    | retC _ _ _ _ _ _ => rw [PMF.mem_support_pure_iff] at hgr'; rw [hgr']; exact fun _ => rfl
+    | retB _ _ _ _ _ _ _ _ => rw [PMF.mem_support_pure_iff] at hgr'; rw [hgr']; exact fun h => h
+    | retA _ _ _ _ _ _ hg _ => intro hgt; rw [hgt] at hg; rcases hg with hg | hg <;> simp at hg
+    | retC _ _ _ _ _ _ _ => rw [PMF.mem_support_pure_iff] at hgr'; rw [hgr']; exact fun _ => rfl
   have hGeq : ∀ r', r' ≠ r → Function.update g r gr' r' = g r' := fun r' h =>
     Function.update_of_ne h gr' g
   have hFgeq : ∀ r', (Function.update g r gr' r').F = (g r').F := by
@@ -2779,9 +2781,9 @@ theorem Inv.step_retG {P : Params} {g : ℕ → GBCA.SpecState P.n} {c : ABAStat
   have hRetInfo : (∃ v, out.est = some v ∧ v ∉ (g r).excluded ∧ (!v) ∈ (g r).excluded) ∨
       (out.est = none ∧ gr'.grade = some false) := by
     cases hstepG with
-    | retB _ v hlive hexcluded _ _ => exact Or.inl ⟨v, rfl, hlive, hexcluded⟩
-    | retA _ v hlive hexcluded _ _ => exact Or.inl ⟨v, rfl, hlive, hexcluded⟩
-    | retC _ _ _ _ _ _ =>
+    | retB _ v _ hlive hexcluded _ _ _ => exact Or.inl ⟨v, rfl, hlive, hexcluded⟩
+    | retA _ v _ hlive hexcluded _ _ _ => exact Or.inl ⟨v, rfl, hlive, hexcluded⟩
+    | retC _ _ _ _ _ _ _ =>
       rw [PMF.mem_support_pure_iff] at hgr'
       exact Or.inr ⟨rfl, by rw [hgr']⟩
   -- A round that is `C`-locked after the return carries the `retC` guards at `g r`: either
@@ -2790,21 +2792,21 @@ theorem Inv.step_retG {P : Params} {g : ℕ → GBCA.SpecState P.n} {c : ABAStat
   have hCsupp : gr'.grade = some false → ∀ b, P.f + 1 ≤ (Finset.univ.filter
       (fun id' => (g r).call id' = some b ∨ id' ∈ (g r).F)).card := by
     cases hstepG with
-    | retB _ _ _ _ _ _ =>
+    | retB _ _ _ _ _ _ _ _ =>
       rw [PMF.mem_support_pure_iff] at hgr'
       intro hgf b; rw [hgr'] at hgf; exact hI.clock_supp r b hgf
-    | retA _ _ _ _ _ _ =>
+    | retA _ _ _ _ _ _ _ _ =>
       rw [PMF.mem_support_pure_iff] at hgr'
       intro hgf; rw [hgr'] at hgf; simp at hgf
-    | retC _ _ hwT hwF _ _ =>
+    | retC _ _ _ hwT hwF _ _ =>
       intro _ b; cases b
       · exact hwF
       · exact hwT
   have hGradeTrueOfA : ∀ b, out = .A b → gr'.grade = some true := by
     cases hstepG with
-    | retB _ _ _ _ _ _ => intro b h; simp at h
-    | retA _ _ _ _ _ _ => intro b h; rw [PMF.mem_support_pure_iff] at hgr'; rw [hgr']
-    | retC _ _ _ _ _ _ => intro b h; simp at h
+    | retB _ _ _ _ _ _ _ _ => intro b h; simp at h
+    | retA _ _ _ _ _ _ _ _ => intro b h; rw [PMF.mem_support_pure_iff] at hgr'; rw [hgr']
+    | retC _ _ _ _ _ _ _ => intro b h; simp at h
   have hGradeNoneTrans : (g r).grade ≠ none → gr'.grade ≠ none := by
     intro hgne hcontra
     obtain ⟨b', hb'⟩ := Option.ne_none_iff_exists'.mp hgne
@@ -3382,9 +3384,9 @@ theorem Inv.step_retG {P : Params} {g : ℕ → GBCA.SpecState P.n} {c : ABAStat
           have hreq : r' = r := hround'.symm.trans hr
           rw [hreq, Function.update_self]
           cases hstepG with
-          | retA _ _ _ _ _ _ => rw [PMF.mem_support_pure_iff] at hgr'; left; rw [hgr']; simp
-          | retC _ _ _ _ _ _ => rw [PMF.mem_support_pure_iff] at hgr'; left; rw [hgr']; simp
-          | retB _ v hlive hexcluded hw _ =>
+          | retA _ _ _ _ _ _ _ _ => rw [PMF.mem_support_pure_iff] at hgr'; left; rw [hgr']; simp
+          | retC _ _ _ _ _ _ _ => rw [PMF.mem_support_pure_iff] at hgr'; left; rw [hgr']; simp
+          | retB _ v _ hlive hexcluded _ hw _ =>
             rw [PMF.mem_support_pure_iff] at hgr'
             by_cases hgn : (g r).grade = none
             · right

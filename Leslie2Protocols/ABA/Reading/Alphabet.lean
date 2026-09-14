@@ -27,7 +27,9 @@ reading fixes `M` and inherits all of it.
 
 The graded-agreement return `retG` carries `GbcaOut`, the interface's grade,
 which is the specification's own value type and is shared by every
-implementation.
+implementation. It carries the round's bound bit beside it, and so does the
+Byzantine return row `byzRetG`: both returns of a round announce the same
+ghost output, whichever process they answer.
 -/
 
 namespace PLTS
@@ -61,8 +63,9 @@ inductive NetEvtP (n : ℕ) (M : Type) : Type
   /-- A corrupted process takes the graded-agreement call against an
   already-called stage record (D11). -/
   | byzCallGLoop (r : ℕ) (k : Fin n) (b : Bool)
-  /-- A corrupted process takes a graded-agreement return (D11). -/
-  | byzRetG (r : ℕ) (k : Fin n) (out : GbcaOut)
+  /-- A corrupted process takes a graded-agreement return (D11), the round's
+  bound bit `bnd` announced beside the graded outcome. -/
+  | byzRetG (r : ℕ) (k : Fin n) (out : GbcaOut) (bnd : Bool)
   /-- A corrupted process takes the coin call (D11). -/
   | byzCallW (r : ℕ) (k : Fin n)
   /-- A corrupted process takes the coin return (D11). -/
@@ -102,7 +105,7 @@ stage record, its own fused coin return, and the graded-agreement rows that
 name it. -/
 def actsAt {n : ℕ} {M : Type} (j : Fin n) : NLabP n M → Prop
   | Sum.inl (.callG _ id _) => id = j
-  | Sum.inl (.retG _ id _) => id = j
+  | Sum.inl (.retG _ id _ _) => id = j
   | Sum.inr (.gsnd _ k _) => k = j
   | Sum.inr (.gdlv _ i _ _) => i = j
   | Sum.inr (.ddlv i _ _) => i = j
@@ -110,7 +113,7 @@ def actsAt {n : ℕ} {M : Type} (j : Fin n) : NLabP n M → Prop
   | Sum.inr (.retWPub _ id _ _) => id = j
   | Sum.inr (.byzCallG _ k _) => k = j
   | Sum.inr (.byzCallGLoop _ k _) => k = j
-  | Sum.inr (.byzRetG _ k _) => k = j
+  | Sum.inr (.byzRetG _ k _ _) => k = j
   | _ => False
 
 instance {n : ℕ} {M : Type} (j : Fin n) :
@@ -165,8 +168,8 @@ def wccPull (n : ℕ) {M : Type} : NLabP n M → Option (Lab n)
 @[simp] theorem wccPull_byzCallGLoop {n : ℕ} {M : Type} (r : ℕ) (k : Fin n) (b : Bool) :
     wccPull (M := M) n (Sum.inr (.byzCallGLoop r k b)) = none := rfl
 
-@[simp] theorem wccPull_byzRetG {n : ℕ} {M : Type} (r : ℕ) (k : Fin n) (out : GbcaOut) :
-    wccPull (M := M) n (Sum.inr (.byzRetG r k out)) = none := rfl
+@[simp] theorem wccPull_byzRetG {n : ℕ} {M : Type} (r : ℕ) (k : Fin n) (out : GbcaOut)
+    (bnd : Bool) : wccPull (M := M) n (Sum.inr (.byzRetG r k out bnd)) = none := rfl
 
 /-! ### The lifted coin oracle -/
 

@@ -35,12 +35,26 @@ instance's step, or fuses two: the first gather's return with the second's
 call (`link`), and the second gather's return with the graded ABA-level
 return (`retG`).
 
+## The bound bit
+
+The state carries a third factor, `bound : Option Bool`, the round's bound
+bit. It is auxiliary state: no program reads it and no guard consults it. The
+`link` row writes it, at the round's first link and once only, as
+`GBCA.boundOfCore` of the core the first gather's return carries, and every
+graded return announces it on its label.
+
+`boundOfCore P S` is the bit heavy in `S` — carried by at least `|S| − f` of
+its entries — and `true` when neither bit is. At the sizes the gather
+specification's `bindCore` allows (`|S| ≥ n − f > 2f`) at most one bit is
+heavy, so the definition is the heavy bit wherever one exists, and its
+complement is then light (`cnt_boundOfCore_light`): a return handing out `v`
+announces `v`, and a return handing out nothing announces a bit whose
+complement no return can hand out.
+
 The file also carries the entry-counting kit the refinement consumes: the
 per-value counts of a partial map (`gcount`, `gdom`) and of a payload set
-(`APSet.cnt`), the transfer of a heavy value into a dominated core-family
-member (`cnt_heavy_of_subMap`), and the two member-arithmetic facts — values
-heavy in two members of one family agree (`members_agree`), and a heavy
-member refutes an everywhere-light one (`members_heavy_light`).
+(`APSet.cnt`), and the transfer of a heavy value into a payload set below the
+map (`cnt_heavy_of_subMap`).
 -/
 
 namespace PLTS
@@ -66,10 +80,6 @@ def gdom (g : Fin n → Option α) : ℕ :=
 /-- The number of entries of a payload set at value `x`. -/
 def APSet.cnt (U : APSet n α) (x : α) : ℕ :=
   (U.filter (fun p => p.2 = x)).card
-
-theorem APSet.cnt_le_of_subset {U V : APSet n α} (h : U ⊆ V) (x : α) :
-    APSet.cnt U x ≤ APSet.cnt V x :=
-  Finset.card_le_card (Finset.filter_subset_filter _ h)
 
 /-- The entries of a sub-map payload set away from `x` are at most the
 map's entries away from `x`: the first components are distinct, and each
@@ -225,75 +235,18 @@ theorem gdom_bool_sum (g : Fin n → Option Bool) :
     have : true = false := by injection h2
     exact absurd this (by simp)
 
-/-- **Heavy transfer into a member.** A value carried by all but `f` of a
-map's entries is carried by all but `f` of any dominated payload set's
-entries. -/
+/-- **Heavy transfer into a dominated payload set.** A value carried by all
+but `f` of a map's entries is carried by all but `f` of the entries of any
+payload set below that map. -/
 theorem cnt_heavy_of_subMap {P : Params} {U : APSet P.n α} {g : Fin P.n → Option α}
     {x : α} (hg : U.subMap g) (hheavy : gdom g - P.f ≤ gcount g x) :
     U.card - P.f ≤ APSet.cnt U x := by
   have h1 := APSet.card_sub_cnt_le hg x
   omega
 
-/-- The intersection of two payload sets counts below either. -/
-theorem APSet.cnt_inter_le_left (U V : APSet n α) (x : α) :
-    APSet.cnt (U ∩ V) x ≤ APSet.cnt U x :=
-  APSet.cnt_le_of_subset Finset.inter_subset_left x
-
-theorem APSet.cnt_inter_le_right (U V : APSet n α) (x : α) :
-    APSet.cnt (U ∩ V) x ≤ APSet.cnt V x :=
-  APSet.cnt_le_of_subset Finset.inter_subset_right x
-
-/-- Heaviness restricts to the intersection: a value heavy in `U` misses at
-most `f` entries of any subset of `U`. -/
-theorem cnt_heavy_inter {P : Params} {U V : APSet P.n α} {x : α}
-    (hheavy : U.card - P.f ≤ APSet.cnt U x) :
-    (U ∩ V).card - P.f ≤ APSet.cnt (U ∩ V) x := by
-  have hsplitU := Finset.card_filter_add_card_filter_not
-    (s := U) (p := fun p => p.2 = x)
-  have hsplitD := Finset.card_filter_add_card_filter_not
-    (s := U ∩ V) (p := fun p => p.2 = x)
-  have hsub : ((U ∩ V).filter (fun p => ¬ p.2 = x)).card
-      ≤ (U.filter (fun p => ¬ p.2 = x)).card :=
-    Finset.card_le_card (Finset.filter_subset_filter _ Finset.inter_subset_left)
-  unfold APSet.cnt at hheavy ⊢
-  omega
-
-/-- **Two heavy members agree.** In a family whose members pairwise share at
-least `n − f ≥ 2f + 1` entries, values heavy in two members coincide. -/
-theorem members_agree {P : Params} {U V : APSet P.n α} {x y : α}
-    (hpair : P.n - P.f ≤ (U ∩ V).card)
-    (hx : U.card - P.f ≤ APSet.cnt U x) (hy : V.card - P.f ≤ APSet.cnt V y) :
-    x = y := by
-  by_contra hxy
-  have hDx := cnt_heavy_inter (V := V) hx
-  have hy' : V.card - P.f ≤ APSet.cnt V y := hy
-  have hDy : (U ∩ V).card - P.f ≤ APSet.cnt (U ∩ V) y := by
-    rw [Finset.inter_comm]
-    exact cnt_heavy_inter (V := U) hy'
-  -- the two value filters are disjoint
-  have hdisj : APSet.cnt (U ∩ V) x + APSet.cnt (U ∩ V) y ≤ (U ∩ V).card := by
-    unfold APSet.cnt
-    rw [← Finset.card_union_of_disjoint]
-    · exact Finset.card_le_card (Finset.union_subset
-        (Finset.filter_subset _ _) (Finset.filter_subset _ _))
-    · rw [Finset.disjoint_filter]
-      intro p _ hpx hpy
-      exact hxy (hpx ▸ hpy ▸ rfl)
-  have hf := P.hf
-  omega
-
-/-- **A heavy member refutes an everywhere-light one.** -/
-theorem members_heavy_light {P : Params} {U V : APSet P.n α} {x : α}
-    (hpair : P.n - P.f ≤ (U ∩ V).card)
-    (hx : U.card - P.f ≤ APSet.cnt U x) (hy : APSet.cnt V x ≤ P.f) : False := by
-  have hDx := cnt_heavy_inter (V := V) hx
-  have hle := APSet.cnt_inter_le_right U V x
-  have hf := P.hf
-  omega
-
 end Counting
 
-/-! ### The candidate and the grade -/
+/-! ### The candidate, the grade and the bound bit -/
 
 /-- The candidate after the first gather: the bit carried by all but `f` of
 the returned entries, `⊥` if neither is. At the domains the return rules
@@ -365,24 +318,73 @@ theorem gradeOf_C {P : Params} {g : Fin P.n → Option (Option Bool)}
   · exact Nat.lt_succ_iff.mp (lt_of_not_ge h4)
   · exact Nat.lt_succ_iff.mp (lt_of_not_ge h3)
 
+/-- **The round's bound bit**, read off the first gather's core: the bit
+heavy in `S` — carried by at least `|S| − f` of its entries — and `true` when
+neither bit is. -/
+def boundOfCore (P : Params) (S : APSet P.n Bool) : Bool :=
+  if S.card - P.f ≤ APSet.cnt S true then true
+  else if S.card - P.f ≤ APSet.cnt S false then false
+  else true
+
+/-- A heavy bit is the bound bit. Two bits cannot both be heavy at
+`|S| ≥ n − f`, so the heavy bit is the one the definition selects. -/
+theorem boundOfCore_of_heavy {P : Params} {S : APSet P.n Bool} {v : Bool}
+    (hcard : P.n - P.f ≤ S.card) (hv : S.card - P.f ≤ APSet.cnt S v) :
+    boundOfCore P S = v := by
+  have hf := P.hf
+  have hsplit : APSet.cnt S true + APSet.cnt S false ≤ S.card := by
+    unfold APSet.cnt
+    rw [← Finset.card_union_of_disjoint]
+    · exact Finset.card_le_card (Finset.union_subset
+        (Finset.filter_subset _ _) (Finset.filter_subset _ _))
+    · rw [Finset.disjoint_filter]
+      intro p _ h1 h2
+      rw [h1] at h2
+      exact absurd h2 (by simp)
+  unfold boundOfCore
+  cases v
+  · have hT : ¬ S.card - P.f ≤ APSet.cnt S true := by omega
+    rw [if_neg hT, if_pos hv]
+  · rw [if_pos hv]
+
+/-- The complement of the bound bit is light: no return can hand it out. -/
+theorem cnt_boundOfCore_light {P : Params} {S : APSet P.n Bool}
+    (hcard : P.n - P.f ≤ S.card) :
+    APSet.cnt S (!boundOfCore P S) < S.card - P.f := by
+  have hf := P.hf
+  have hsplit : APSet.cnt S true + APSet.cnt S false ≤ S.card := by
+    unfold APSet.cnt
+    rw [← Finset.card_union_of_disjoint]
+    · exact Finset.card_le_card (Finset.union_subset
+        (Finset.filter_subset _ _) (Finset.filter_subset _ _))
+    · rw [Finset.disjoint_filter]
+      intro p _ h1 h2
+      rw [h1] at h2
+      exact absurd h2 (by simp)
+  unfold boundOfCore
+  split_ifs with h1 h2 <;> simp only [Bool.not_true, Bool.not_false] <;> omega
+
 /-! ### The pair instance -/
 
 /-- **The state of the GBCA implementation over the gather specifications**:
-the two gather specification states. The per-process input is the first
-instance's call record, the candidate the second's, the round's return flag
-the second's return flag — the pair carries the whole round. -/
+the two gather specification states beside the round's bound bit. The
+per-process input is the first instance's call record, the candidate the
+second's, the round's return flag the second's return flag — the triple
+carries the whole round. -/
 abbrev PairState (n : ℕ) : Type :=
-  Gather.SpecState n Bool × Gather.SpecState n (Option Bool)
+  Gather.SpecState n Bool × Gather.SpecState n (Option Bool) × Option Bool
 
-/-- The initial pair state. -/
+/-- The initial pair state: no bound bit yet. -/
 def PairState.initial (n : ℕ) : PairState n :=
-  (Gather.SpecState.initial n Bool, Gather.SpecState.initial n (Option Bool))
+  (Gather.SpecState.initial n Bool, Gather.SpecState.initial n (Option Bool), none)
 
 /-- The step relation of the round-`r` GBCA-over-gather instance. Each row
 either relays one gather instance's specification step, or fuses two: the
 environment call with the first gather's call, the first gather's return
 with the second's call (`link`), and the second gather's return with the
-graded ABA-level return (`retG`). All transitions are Dirac. -/
+graded ABA-level return (`retG`). The bound bit is written by `link` alone,
+at the round's first link, and announced by `retG`. All transitions are
+Dirac. -/
 inductive PairStep (P : Params) (r : ℕ) :
     PairState P.n → Lab P.n → PMF (PairState P.n) → Prop
   /-- The environment call is the first gather's call (genuine or loop,
@@ -396,27 +398,31 @@ inductive PairStep (P : Params) (r : ℕ) :
       PairStep P r s .tau (PMF.pure (t1', s.2))
   /-- An internal step of the second gather instance. -/
   | ga2Tau (s : PairState P.n) (t2' : Gather.SpecState P.n (Option Bool))
-      (h : Gather.Step P s.2 Gather.Lab.tau (PMF.pure t2')) :
-      PairStep P r s .tau (PMF.pure (s.1, t2'))
-  /-- The first gather returns to `id` and `id` calls the second gather with
-  the candidate. -/
+      (h : Gather.Step P s.2.1 Gather.Lab.tau (PMF.pure t2')) :
+      PairStep P r s .tau (PMF.pure (s.1, t2', s.2.2))
+  /-- The first gather returns to `id`, `id` calls the second gather with the
+  candidate, and the round's bound bit is written from the core the return
+  carries if it is unwritten. -/
   | link (s : PairState P.n) (id : Fin P.n) (g : Fin P.n → Option Bool)
-      (t1' : Gather.SpecState P.n Bool)
-      (h : Gather.Step P s.1 (.ret id g) (PMF.pure t1'))
-      (h2 : s.2.call id = none) :
+      (C : APSet P.n Bool) (t1' : Gather.SpecState P.n Bool)
+      (h : Gather.Step P s.1 (.ret id g C) (PMF.pure t1'))
+      (h2 : s.2.1.call id = none) :
       PairStep P r s .tau
-        (PMF.pure (t1', { s.2 with
-          call := Function.update s.2.call id (some (cand P g)) }))
+        (PMF.pure (t1', { s.2.1 with
+          call := Function.update s.2.1.call id (some (cand P g)) },
+          some (s.2.2.getD (boundOfCore P C))))
   /-- The second gather returns to `id` and the round returns the graded
-  outcome. -/
+  outcome, announcing the round's bound bit. -/
   | retG (s : PairState P.n) (id : Fin P.n) (g : Fin P.n → Option (Option Bool))
-      (t2' : Gather.SpecState P.n (Option Bool))
-      (h : Gather.Step P s.2 (.ret id g) (PMF.pure t2')) :
-      PairStep P r s (.retG r id (gradeOf P g)) (PMF.pure (s.1, t2'))
+      (C : APSet P.n (Option Bool)) (t2' : Gather.SpecState P.n (Option Bool))
+      (h : Gather.Step P s.2.1 (.ret id g C) (PMF.pure t2')) :
+      PairStep P r s
+        (.retG r id (gradeOf P g) (s.2.2.getD (boundOfCore P ∅)))
+        (PMF.pure (s.1, t2', s.2.2))
   /-- Corruption (deviation D1), in lockstep across both instances. -/
   | fail (s : PairState P.n) (id : Fin P.n) :
       PairStep P r s (.fail id)
-        (PMF.pure (s.1.corrupt P id, s.2.corrupt P id))
+        (PMF.pure (s.1.corrupt P id, s.2.1.corrupt P id, s.2.2))
 
 /-- The round-`r` GBCA-over-gather instance. -/
 noncomputable def pairInst (P : Params) (r : ℕ) :

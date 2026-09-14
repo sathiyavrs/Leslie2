@@ -17,23 +17,34 @@ forward-simulates the unchanged GBCA specification instance
 
 Everything the specification tracks abstractly — the exclusion set `excluded`,
 the grade lock, the D15 support counts — is discharged from the two gather
-specifications' committed entries and frozen core families, by the member
-arithmetic of `ABA/Round/Pair.lean`:
+specifications' committed entries and frozen cores, by the counting kit of
+`ABA/Round/Pair.lean`:
 
-* a graded return's value is heavy in a member of the second family
-  (`cnt_heavy_of_subMap` on the return's dominated member), and its
-  candidate is heavy in a member of the *first* family, recorded by the
-  invariant clause `cand_heavy` when the link row computed it;
-* values heavy in two members of one family agree (`members_agree` on the
-  pairwise `n − f ≥ 2f + 1` shared entries), which pins the surviving bit:
-  the exclusion set's exclude `bindUnset (!v)` is fired inside the return run,
-  its `ExcludedEv` certificate — every first-family member counts `!v` below
-  `|U| − f` — following from the agreement;
-* the A/C grade exclusivity is `members_heavy_light` between the A-side heavy
-  member and the C-side everywhere-light member of the second family;
-* the D15 support counts are read off members through the committed-entry
-  provenance: a member entry is a committed entry, a committed entry of an
+* a graded return's value is heavy in the second instance's core
+  (`cnt_heavy_of_subMap` on the return's dominated core), and its candidate
+  is heavy in the *first* instance's core, recorded by the invariant clause
+  `cand_heavy` when the link row computed it;
+* a bit heavy in the first core is the round's bound bit
+  (`boundOfCore_of_heavy`), which pins the surviving bit: the exclusion
+  `bindUnset (!v)` is fired inside the return run, and its `ExcludedEv`
+  certificate — the first core counts `!v` below `|S| − f` — is
+  `cnt_boundOfCore_light`;
+* the A/C grade exclusivity is the second core being heavy at `some v` on the
+  A side and light at both bits on the C side, which `|S| ≥ n − f > 2f`
+  refutes;
+* the D15 support counts are read off the core through the committed-entry
+  provenance: a core entry is a committed entry, a committed entry of an
   honest process is its call, and the count is `F`-blind.
+
+## The bound bit on the label
+
+The return label carries the round's bound bit, the third factor of the pair
+state. The relation clause `excluded_bound` says the specification's
+`excluded` holds nothing but that bit's complement, so a return finds either
+`(!bnd) ∈ excluded` already — and fires `ret` alone — or `excluded = ∅` — and
+fires `bindUnset (!bnd) ; ret`. A value-bearing return's value is the bound
+bit, by `boundOfCore_of_heavy` on the first core, so the specification's guard
+pair `v ∉ excluded`, `(!v) ∈ excluded` is the same pair.
 
 The runs are at most two steps — `bindUnset ; ret` through
 `weakLStep_tauThen` — the long commit chains live one tier down, inside the
@@ -55,46 +66,46 @@ def supp1 (t1 : Gather.SpecState P.n Bool) (v : Bool) : ℕ :=
   (Finset.univ.filter (fun id => t1.val id = some v ∨ id ∈ t1.F)).card
 
 /-- The invariant of the GBCA-over-gather instance. The provenance clauses
-are the gather commit guards, per instance; `cand_heavy`, `cand_bot` and
-`cand_cores` record, at the link row, what the computed candidate certifies
-about the first instance; the `cores*` clauses re-state the freeze guards,
-which the write-once family keeps true. -/
+are the gather commit guards, per instance; `cand_heavy` and `cand_bot`
+record, at the link row, what the computed candidate certifies about the
+first instance; `call2_bound` and `bound_core` say that the same row writes
+the bound bit and that the bit is read off the first instance's core; the
+`core*` clauses re-state the freeze guards, which the write-once core keeps
+true. -/
 structure PairInv (P : Params) (s : PairState P.n) : Prop where
   /-- The corruption budget. -/
   F_card : s.1.F.card ≤ P.f
   /-- The two corrupted sets are in lockstep. -/
-  F_eq12 : s.2.F = s.1.F
+  F_eq12 : s.2.1.F = s.1.F
   /-- A committed first-instance entry of an honest process is its call. -/
   val1_prov : ∀ k v, s.1.val k = some v → k ∈ s.1.F ∨ s.1.call k = some v
   /-- A committed second-instance entry of an honest process is its call. -/
-  val2_prov : ∀ k c, s.2.val k = some c → k ∈ s.1.F ∨ s.2.call k = some c
-  /-- An honest bit candidate is heavy in a member of the first family. -/
-  cand_heavy : ∀ k ∉ s.1.F, ∀ v, s.2.call k = some (some v) →
-    ∃ Cs U, s.1.cores = some Cs ∧ U ∈ Cs ∧ U.card - P.f ≤ APSet.cnt U v
+  val2_prov : ∀ k c, s.2.1.val k = some c → k ∈ s.1.F ∨ s.2.1.call k = some c
+  /-- An honest bit candidate is heavy in the first instance's core. -/
+  cand_heavy : ∀ k ∉ s.1.F, ∀ v, s.2.1.call k = some (some v) →
+    ∃ S, s.1.core = some S ∧ S.card - P.f ≤ APSet.cnt S v
   /-- An honest `⊥` candidate certifies `f + 1` committed-entry support for
   both bits. -/
-  cand_bot : ∀ k ∉ s.1.F, s.2.call k = some none →
+  cand_bot : ∀ k ∉ s.1.F, s.2.1.call k = some none →
     P.f + 1 ≤ supp1 s.1 true ∧ P.f + 1 ≤ supp1 s.1 false
-  /-- Any candidate at all certifies the first family is frozen. -/
-  cand_cores : ∀ k ∉ s.1.F, s.2.call k ≠ none → ∃ Cs, s.1.cores = some Cs
-  /-- The first family is nonempty. -/
-  cores1_ne : ∀ Cs, s.1.cores = some Cs → Cs.Nonempty
-  /-- First-family members are committed entries. -/
-  cores1_val : ∀ Cs, s.1.cores = some Cs → ∀ U ∈ Cs, U.subMap s.1.val
-  /-- First-family members pairwise share `n − f` entries. -/
-  cores1_pair : ∀ Cs, s.1.cores = some Cs →
-    ∀ U ∈ Cs, ∀ V ∈ Cs, P.n - P.f ≤ (U ∩ V).card
-  /-- The second family is nonempty. -/
-  cores2_ne : ∀ Cs, s.2.cores = some Cs → Cs.Nonempty
-  /-- Second-family members are committed entries. -/
-  cores2_val : ∀ Cs, s.2.cores = some Cs → ∀ U ∈ Cs, U.subMap s.2.val
-  /-- Second-family members pairwise share `n − f` entries. -/
-  cores2_pair : ∀ Cs, s.2.cores = some Cs →
-    ∀ U ∈ Cs, ∀ V ∈ Cs, P.n - P.f ≤ (U ∩ V).card
+  /-- A candidate at all certifies the bound bit is written: the link row
+  writes the candidate and the bit together. -/
+  call2_bound : ∀ k, s.2.1.call k ≠ none → s.2.2 ≠ none
+  /-- The bound bit is the bound bit of the first instance's frozen core. -/
+  bound_core : ∀ β, s.2.2 = some β →
+    ∃ S, s.1.core = some S ∧ β = boundOfCore P S
+  /-- The first instance's core is committed entries. -/
+  core1_val : ∀ S, s.1.core = some S → S.subMap s.1.val
+  /-- The first instance's core has `n − f` entries. -/
+  core1_card : ∀ S, s.1.core = some S → P.n - P.f ≤ S.card
+  /-- The second instance's core is committed entries. -/
+  core2_val : ∀ S, s.2.1.core = some S → S.subMap s.2.1.val
+  /-- The second instance's core has `n − f` entries. -/
+  core2_card : ∀ S, s.2.1.core = some S → P.n - P.f ≤ S.card
 
 /-- The invariant holds initially. -/
 theorem PairInv.initial : PairInv P (PairState.initial P.n) := by
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
     simp [PairState.initial, Gather.SpecState.initial]
 
 /-- Committed entries only grow: an entry-wise extension preserves `supp1`
@@ -123,8 +134,8 @@ theorem PairInv.step {r : ℕ} {s : PairState P.n} {l : Lab P.n}
       have ht1' := PMF.pure_injective hμ
       subst ht1'
       refine ⟨hInv.F_card, hInv.F_eq12, ?_, hInv.val2_prov, hInv.cand_heavy,
-        hInv.cand_bot, hInv.cand_cores, hInv.cores1_ne, hInv.cores1_val,
-        hInv.cores1_pair, hInv.cores2_ne, hInv.cores2_val, hInv.cores2_pair⟩
+        hInv.cand_bot, hInv.call2_bound, hInv.bound_core, hInv.core1_val,
+        hInv.core1_card, hInv.core2_val, hInv.core2_card⟩
       intro k v hv
       dsimp only at hv ⊢
       rcases hInv.val1_prov k v hv with hF | hcall'
@@ -158,8 +169,8 @@ theorem PairInv.step {r : ℕ} {s : PairState P.n} {l : Lab P.n}
         · rw [Function.update_of_ne hk]
           exact hv'
       refine ⟨hInv.F_card, hInv.F_eq12, ?_, hInv.val2_prov, hInv.cand_heavy,
-        ?_, hInv.cand_cores, hInv.cores1_ne, ?_, hInv.cores1_pair,
-        hInv.cores2_ne, hInv.cores2_val, hInv.cores2_pair⟩
+        ?_, hInv.call2_bound, hInv.bound_core, ?_, hInv.core1_card,
+        hInv.core2_val, hInv.core2_card⟩
       · intro k' v' hv'
         dsimp only at hv'
         by_cases hk : k' = k
@@ -174,34 +185,32 @@ theorem PairInv.step {r : ℕ} {s : PairState P.n} {l : Lab P.n}
         obtain ⟨h1, h2⟩ := hInv.cand_bot k' hk' hc
         constructor <;>
           exact le_trans (by assumption) (supp1_mono hvmono (by rfl) _)
-      · intro Cs hCs U hU
-        have hpre := hInv.cores1_val Cs hCs U hU
+      · intro S hS
+        have hpre := hInv.core1_val S hS
         intro p hp
         exact hvmono p.1 p.2 (hpre p hp)
-    | bindCores Cs h0 hne hval hpair =>
+    | bindCore S h0 hval hcard =>
       have ht1' := PMF.pure_injective hμ
       subst ht1'
       refine ⟨hInv.F_card, hInv.F_eq12, hInv.val1_prov, hInv.val2_prov,
-        ?_, hInv.cand_bot, ?_, ?_, ?_, ?_, hInv.cores2_ne, hInv.cores2_val,
-        hInv.cores2_pair⟩
+        ?_, hInv.cand_bot, hInv.call2_bound, ?_, ?_, ?_,
+        hInv.core2_val, hInv.core2_card⟩
       · intro k hk v hc
-        obtain ⟨Cs', U', hCs', -, -⟩ := hInv.cand_heavy k hk v hc
-        rw [h0] at hCs'
-        exact absurd hCs' (by simp)
-      · intro k hk hc
-        exact ⟨Cs, rfl⟩
-      · intro Cs' hCs'
-        dsimp only at hCs'
-        obtain rfl : Cs = Cs' := by injection hCs'
-        exact hne
-      · intro Cs' hCs' U hU
-        dsimp only at hCs'
-        obtain rfl : Cs = Cs' := by injection hCs'
-        exact hval U hU
-      · intro Cs' hCs' U hU V hV
-        dsimp only at hCs'
-        obtain rfl : Cs = Cs' := by injection hCs'
-        exact hpair U hU V hV
+        obtain ⟨S', hS', -⟩ := hInv.cand_heavy k hk v hc
+        rw [h0] at hS'
+        exact absurd hS' (by simp)
+      · intro β hβ
+        obtain ⟨S', hS', -⟩ := hInv.bound_core β hβ
+        rw [h0] at hS'
+        exact absurd hS' (by simp)
+      · intro S' hS'
+        dsimp only at hS'
+        obtain rfl : S = S' := by injection hS'
+        exact hval
+      · intro S' hS'
+        dsimp only at hS'
+        obtain rfl : S = S' := by injection hS'
+        exact hcard
   | ga2Tau t2' h =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
@@ -211,8 +220,8 @@ theorem PairInv.step {r : ℕ} {s : PairState P.n} {l : Lab P.n}
       have ht2' := PMF.pure_injective hμ
       subst ht2'
       refine ⟨hInv.F_card, hInv.F_eq12, hInv.val1_prov, ?_, hInv.cand_heavy,
-        hInv.cand_bot, hInv.cand_cores, hInv.cores1_ne, hInv.cores1_val,
-        hInv.cores1_pair, hInv.cores2_ne, ?_, hInv.cores2_pair⟩
+        hInv.cand_bot, hInv.call2_bound, hInv.bound_core, hInv.core1_val,
+        hInv.core1_card, ?_, hInv.core2_card⟩
       · intro k' c' hc'
         dsimp only at hc'
         by_cases hk : k' = k
@@ -225,8 +234,8 @@ theorem PairInv.step {r : ℕ} {s : PairState P.n} {l : Lab P.n}
           · exact Or.inr hin
         · rw [Function.update_of_ne hk] at hc'
           exact hInv.val2_prov k' c' hc'
-      · intro Cs hCs U hU
-        have hpre := hInv.cores2_val Cs hCs U hU
+      · intro S hS
+        have hpre := hInv.core2_val S hS
         intro p hp
         dsimp only
         by_cases hk : p.1 = k
@@ -237,41 +246,33 @@ theorem PairInv.step {r : ℕ} {s : PairState P.n} {l : Lab P.n}
           exact absurd this (by simp)
         · rw [Function.update_of_ne hk]
           exact hpre p hp
-    | bindCores Cs h0 hne hval hpair =>
+    | bindCore S h0 hval hcard =>
       have ht2' := PMF.pure_injective hμ
       subst ht2'
       refine ⟨hInv.F_card, hInv.F_eq12, hInv.val1_prov, hInv.val2_prov,
-        hInv.cand_heavy, hInv.cand_bot, hInv.cand_cores, hInv.cores1_ne,
-        hInv.cores1_val, hInv.cores1_pair, ?_, ?_, ?_⟩
-      · intro Cs' hCs'
-        dsimp only at hCs'
-        obtain rfl : Cs = Cs' := by injection hCs'
-        exact hne
-      · intro Cs' hCs' U hU
-        dsimp only at hCs'
-        obtain rfl : Cs = Cs' := by injection hCs'
-        exact hval U hU
-      · intro Cs' hCs' U hU V hV
-        dsimp only at hCs'
-        obtain rfl : Cs = Cs' := by injection hCs'
-        exact hpair U hU V hV
-  | link id g t1' h h2 =>
+        hInv.cand_heavy, hInv.cand_bot, hInv.call2_bound, hInv.bound_core,
+        hInv.core1_val, hInv.core1_card, ?_, ?_⟩
+      · intro S' hS'
+        dsimp only at hS'
+        obtain rfl : S = S' := by injection hS'
+        exact hval
+      · intro S' hS'
+        dsimp only at hS'
+        obtain rfl : S = S' := by injection hS'
+        exact hcard
+  | link id g C t1' h h2 =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     generalize hμ : (PMF.pure t1' : PMF (Gather.SpecState P.n Bool)) = μ1 at h
     cases h with
-    | ret id' g' Cs hCs hmem hsubv hr =>
+    | ret id' g' C' hC hmem hsubv hr =>
       have ht1' := PMF.pure_injective hμ
       subst ht1'
-      obtain ⟨U₀, hU₀Cs, hU₀g⟩ := hmem
-      have hUcard : P.n - P.f ≤ U₀.card := by
-        have := hInv.cores1_pair Cs hCs U₀ hU₀Cs U₀ hU₀Cs
-        rwa [Finset.inter_self] at this
+      have hCcard : P.n - P.f ≤ C.card := hInv.core1_card C hC
       have hgdom : P.n - P.f ≤ gdom g :=
-        le_trans hUcard (APSet.card_le_gdom hU₀g)
-      refine ⟨hInv.F_card, hInv.F_eq12, hInv.val1_prov, ?_, ?_, ?_, ?_,
-        hInv.cores1_ne, hInv.cores1_val, hInv.cores1_pair, hInv.cores2_ne,
-        hInv.cores2_val, hInv.cores2_pair⟩
+        le_trans hCcard (APSet.card_le_gdom hmem)
+      refine ⟨hInv.F_card, hInv.F_eq12, hInv.val1_prov, ?_, ?_, ?_, ?_, ?_,
+        hInv.core1_val, hInv.core1_card, hInv.core2_val, hInv.core2_card⟩
       · intro k c hc
         rcases hInv.val2_prov k c hc with hF | hin
         · exact Or.inl hF
@@ -289,8 +290,7 @@ theorem PairInv.step {r : ℕ} {s : PairState P.n} {l : Lab P.n}
         · subst hkid
           rw [Function.update_self] at hc
           have hcand : cand P g = some v := by injection hc
-          have hheavy := cand_some hcand
-          exact ⟨Cs, U₀, hCs, hU₀Cs, cnt_heavy_of_subMap hU₀g hheavy⟩
+          exact ⟨C, hC, cnt_heavy_of_subMap hmem (cand_some hcand)⟩
         · rw [Function.update_of_ne hkid] at hc
           exact hInv.cand_heavy k hk v hc
       · intro k hk hc
@@ -303,8 +303,7 @@ theorem PairInv.step {r : ℕ} {s : PairState P.n} {l : Lab P.n}
           have hsum := gdom_bool_sum g
           have hf := P.hf
           constructor
-          · -- `f + 1` entries of `g'` at `true`, each a committed entry
-            have hcnt : P.f + 1 ≤ gcount g true := by
+          · have hcnt : P.f + 1 ≤ gcount g true := by
               have := hbot false
               omega
             refine le_trans hcnt (Finset.card_le_card ?_)
@@ -320,24 +319,25 @@ theorem PairInv.step {r : ℕ} {s : PairState P.n} {l : Lab P.n}
             exact ⟨hk'.1, Or.inl (hsubv k' false hk'.2)⟩
         · rw [Function.update_of_ne hkid] at hc
           exact hInv.cand_bot k hk hc
-      · intro k hk hc
-        dsimp only at hc
-        by_cases hkid : k = id
-        · exact ⟨Cs, hCs⟩
-        · rw [Function.update_of_ne hkid] at hc
-          exact hInv.cand_cores k hk hc
-  | retG id g t2' h =>
+      · intro k _
+        exact Option.some_ne_none _
+      · intro β hβ
+        dsimp only at hβ
+        obtain rfl : s.2.2.getD (boundOfCore P C) = β := by injection hβ
+        rcases hb : s.2.2 with _ | β₀
+        · exact ⟨C, hC, rfl⟩
+        · exact hInv.bound_core β₀ hb
+  | retG id g C t2' h =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     generalize hμ : (PMF.pure t2' : PMF (Gather.SpecState P.n (Option Bool))) = μ2 at h
     cases h with
-    | ret id' g' Cs hCs hmem hsubv hr =>
+    | ret id' g' C' hC hmem hsubv hr =>
       have ht2' := PMF.pure_injective hμ
       subst ht2'
       exact ⟨hInv.F_card, hInv.F_eq12, hInv.val1_prov, hInv.val2_prov,
-        hInv.cand_heavy, hInv.cand_bot, hInv.cand_cores, hInv.cores1_ne,
-        hInv.cores1_val, hInv.cores1_pair, hInv.cores2_ne, hInv.cores2_val,
-        hInv.cores2_pair⟩
+        hInv.cand_heavy, hInv.cand_bot, hInv.call2_bound, hInv.bound_core,
+        hInv.core1_val, hInv.core1_card, hInv.core2_val, hInv.core2_card⟩
   | fail id =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
@@ -348,7 +348,7 @@ theorem PairInv.step {r : ℕ} {s : PairState P.n} {l : Lab P.n}
       · exact Finset.Subset.refl _
     have hF' : ∀ k, k ∉ (s.1.corrupt P id).F → k ∉ s.1.F :=
       fun k hk hkF => hk (hFsub hkF)
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> dsimp only
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> dsimp only
     · rw [Gather.SpecState.corrupt_F]
       split
       · next hc =>
@@ -371,8 +371,8 @@ theorem PairInv.step {r : ℕ} {s : PairState P.n} {l : Lab P.n}
       · exact Or.inr hin
     · intro k hk v hc
       rw [Gather.corrupt_call] at hc
-      obtain ⟨Cs, U, hCs, hU, hh⟩ := hInv.cand_heavy k (hF' k hk) v hc
-      exact ⟨Cs, U, by rw [Gather.corrupt_cores]; exact hCs, hU, hh⟩
+      obtain ⟨S, hS, hh⟩ := hInv.cand_heavy k (hF' k hk) v hc
+      exact ⟨S, by rw [Gather.corrupt_core]; exact hS, hh⟩
     · intro k hk hc
       rw [Gather.corrupt_call] at hc
       obtain ⟨h1, h2⟩ := hInv.cand_bot k (hF' k hk) hc
@@ -381,34 +381,30 @@ theorem PairInv.step {r : ℕ} {s : PairState P.n} {l : Lab P.n}
         constructor <;>
           exact supp1_mono (by intro k' v' hv'; rw [Gather.corrupt_val]; exact hv') hFsub _
       exact ⟨le_trans h1 hmono.1, le_trans h2 hmono.2⟩
-    · intro k hk hc
+    · intro k hc
       rw [Gather.corrupt_call] at hc
-      obtain ⟨Cs, hCs⟩ := hInv.cand_cores k (hF' k hk) hc
-      exact ⟨Cs, by rw [Gather.corrupt_cores]; exact hCs⟩
-    · intro Cs hCs
-      rw [Gather.corrupt_cores] at hCs
-      exact hInv.cores1_ne Cs hCs
-    · intro Cs hCs U hU
-      rw [Gather.corrupt_cores] at hCs
-      have hpre := hInv.cores1_val Cs hCs U hU
+      exact hInv.call2_bound k hc
+    · intro β hβ
+      obtain ⟨S, hS, hh⟩ := hInv.bound_core β hβ
+      exact ⟨S, by rw [Gather.corrupt_core]; exact hS, hh⟩
+    · intro S hS
+      rw [Gather.corrupt_core] at hS
+      have hpre := hInv.core1_val S hS
       intro p hp
       rw [Gather.corrupt_val]
       exact hpre p hp
-    · intro Cs hCs U hU V hV
-      rw [Gather.corrupt_cores] at hCs
-      exact hInv.cores1_pair Cs hCs U hU V hV
-    · intro Cs hCs
-      rw [Gather.corrupt_cores] at hCs
-      exact hInv.cores2_ne Cs hCs
-    · intro Cs hCs U hU
-      rw [Gather.corrupt_cores] at hCs
-      have hpre := hInv.cores2_val Cs hCs U hU
+    · intro S hS
+      rw [Gather.corrupt_core] at hS
+      exact hInv.core1_card S hS
+    · intro S hS
+      rw [Gather.corrupt_core] at hS
+      have hpre := hInv.core2_val S hS
       intro p hp
       rw [Gather.corrupt_val]
       exact hpre p hp
-    · intro Cs hCs U hU V hV
-      rw [Gather.corrupt_cores] at hCs
-      exact hInv.cores2_pair Cs hCs U hU V hV
+    · intro S hS
+      rw [Gather.corrupt_core] at hS
+      exact hInv.core2_card S hS
 
 /-! ### The discharge kit -/
 
@@ -440,7 +436,7 @@ private theorem spec_supp_of_supp1 {s : PairState P.n} {t : GBCA.SpecState P.n}
     · exact Or.inl (by rw [hcall]; exact hc)
   · exact Or.inr (by rw [hF]; exact hFm)
 
-/-- A member's value entries count into `supp1`. -/
+/-- The core's value entries count into `supp1`. -/
 private theorem cnt_le_supp1 {s : PairState P.n} {U : APSet P.n Bool}
     (hUval : U.subMap s.1.val) (v : Bool) :
     APSet.cnt U v ≤ supp1 s.1 v := by
@@ -449,8 +445,8 @@ private theorem cnt_le_supp1 {s : PairState P.n} {U : APSet P.n Bool}
   rw [Finset.mem_filter] at hid ⊢
   exact ⟨hid.1, Or.inl hid.2⟩
 
-/-- Member-heavy support reads as call support on the specification side. -/
-private theorem supp_spec_of_member {s : PairState P.n} {t : GBCA.SpecState P.n}
+/-- Core-heavy support reads as call support on the specification side. -/
+private theorem supp_spec_of_core {s : PairState P.n} {t : GBCA.SpecState P.n}
     (hcall : ∀ k, t.call k = s.1.call k) (hF : t.F = s.1.F)
     (hprov : ∀ k v, s.1.val k = some v → k ∈ s.1.F ∨ s.1.call k = some v)
     {U : APSet P.n Bool} (hUval : U.subMap s.1.val) {v : Bool}
@@ -459,10 +455,10 @@ private theorem supp_spec_of_member {s : PairState P.n} {t : GBCA.SpecState P.n}
       (fun id' => t.call id' = some v ∨ id' ∈ t.F)).card :=
   spec_supp_of_supp1 hcall hF hprov (le_trans hcnt (cnt_le_supp1 hUval v))
 
-/-- A member of the first family discharges the specification's quorum guard:
+/-- The first instance's core discharges the specification's quorum guard:
 its `n − f` distinct processes each carry a committed entry, hence a call or
 a corruption. -/
-private theorem quorum_of_member {s : PairState P.n} {t : GBCA.SpecState P.n}
+private theorem quorum_of_core {s : PairState P.n} {t : GBCA.SpecState P.n}
     (hcall : ∀ k, t.call k = s.1.call k) (hF : t.F = s.1.F)
     (hprov : ∀ k v, s.1.val k = some v → k ∈ s.1.F ∨ s.1.call k = some v)
     {U : APSet P.n Bool} (hUval : U.subMap s.1.val)
@@ -495,11 +491,10 @@ private theorem quorum_of_member {s : PairState P.n} {t : GBCA.SpecState P.n}
 
 /-! ### The relation -/
 
-/-- The exclusion certificate: every first-family member counts `b` below
-`|U| − f`, so `b` can never again be a candidate. Frozen — the family and the
-members are write-once. -/
+/-- The exclusion certificate: the first instance's core counts `b` below
+`|S| − f`, so no later candidate is `b`. Frozen — the core is write-once. -/
 def ExcludedEv (P : Params) (s : PairState P.n) (b : Bool) : Prop :=
-  ∃ Cs, s.1.cores = some Cs ∧ ∀ U ∈ Cs, APSet.cnt U b < U.card - P.f
+  ∃ S, s.1.core = some S ∧ APSet.cnt S b < S.card - P.f
 
 /-- The GBCA core refinement relation. -/
 structure PairRel (P : Params) (s : PairState P.n) (t : GBCA.SpecState P.n) : Prop where
@@ -508,31 +503,37 @@ structure PairRel (P : Params) (s : PairState P.n) (t : GBCA.SpecState P.n) : Pr
   /-- The call records agree. -/
   call_eq : ∀ k, t.call k = s.1.call k
   /-- The return flags agree. -/
-  ret_eq : ∀ id, t.ret id = s.2.ret id
+  ret_eq : ∀ id, t.ret id = s.2.1.ret id
   /-- The corrupted sets agree. -/
   F_eq : t.F = s.1.F
   /-- An excluded bit is certified excluded. -/
   excluded_cert : ∀ b ∈ t.excluded, ExcludedEv P s b
-  /-- The `A` grade guard is certified by a heavy second-family member. -/
-  gradeA_ev : t.grade = some true → ∃ Cs U v, s.2.cores = some Cs ∧ U ∈ Cs ∧
-    U.card - P.f ≤ APSet.cnt U (some v)
-  /-- The `C` grade guard is certified by an everywhere-light second-family member. -/
-  gradeC_ev : t.grade = some false → ∃ Cs U, s.2.cores = some Cs ∧ U ∈ Cs ∧
-    ∀ v, APSet.cnt U (some v) ≤ P.f
+  /-- An excluded bit is the complement of the round's bound bit: the
+  exclusion is written inside the first return's run, which announces that
+  bit. -/
+  excluded_bound : ∀ b ∈ t.excluded, ∃ β, s.2.2 = some β ∧ b = !β
+  /-- The `A` grade guard is certified by a value heavy in the second
+  instance's core. -/
+  gradeA_ev : t.grade = some true → ∃ S v, s.2.1.core = some S ∧
+    S.card - P.f ≤ APSet.cnt S (some v)
+  /-- The `C` grade guard is certified by the second instance's core being
+  light at both bits. -/
+  gradeC_ev : t.grade = some false → ∃ S, s.2.1.core = some S ∧
+    ∀ v, APSet.cnt S (some v) ≤ P.f
 
 /-- The relation holds initially. -/
 theorem pairRel_init :
     PairRel P (PairState.initial P.n) (GBCA.SpecState.initial P.n) := by
-  refine ⟨PairInv.initial, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
+  refine ⟨PairInv.initial, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
     simp [PairState.initial, Gather.SpecState.initial, GBCA.SpecState.initial]
 
 /-- **Broadcast compatibility**: the relation is preserved by corrupting both
 sides at once. -/
 theorem pairRel_corrupt {r : ℕ} {s : PairState P.n} {t : GBCA.SpecState P.n}
     (hR : PairRel P s t) (id : Fin P.n) :
-    PairRel P (s.1.corrupt P id, s.2.corrupt P id) (t.corrupt P id) := by
+    PairRel P (s.1.corrupt P id, s.2.1.corrupt P id, s.2.2) (t.corrupt P id) := by
   refine ⟨hR.inv.step (r := r) (PairStep.fail s id) (by rw [PMF.mem_support_pure_iff]),
-    ?_, ?_, ?_, ?_, ?_, ?_⟩
+    ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro k
     rw [GBCA.corrupt_call]
     dsimp only
@@ -547,16 +548,19 @@ theorem pairRel_corrupt {r : ℕ} {s : PairState P.n} {t : GBCA.SpecState P.n}
     rw [GBCA.SpecState.corrupt_F, Gather.SpecState.corrupt_F, hR.F_eq]
   · intro b hb
     rw [GBCA.corrupt_excluded] at hb
-    obtain ⟨Cs, hCs, hl⟩ := hR.excluded_cert b hb
-    exact ⟨Cs, by dsimp only; rw [Gather.corrupt_cores]; exact hCs, hl⟩
+    obtain ⟨S, hS, hl⟩ := hR.excluded_cert b hb
+    exact ⟨S, by dsimp only; rw [Gather.corrupt_core]; exact hS, hl⟩
+  · intro b hb
+    rw [GBCA.corrupt_excluded] at hb
+    exact hR.excluded_bound b hb
   · intro hg
     rw [GBCA.corrupt_grade] at hg
-    obtain ⟨Cs, U, v, hCs, hU, hh⟩ := hR.gradeA_ev hg
-    exact ⟨Cs, U, v, by dsimp only; rw [Gather.corrupt_cores]; exact hCs, hU, hh⟩
+    obtain ⟨S, v, hS, hh⟩ := hR.gradeA_ev hg
+    exact ⟨S, v, by dsimp only; rw [Gather.corrupt_core]; exact hS, hh⟩
   · intro hg
     rw [GBCA.corrupt_grade] at hg
-    obtain ⟨Cs, U, hCs, hU, hl⟩ := hR.gradeC_ev hg
-    exact ⟨Cs, U, by dsimp only; rw [Gather.corrupt_cores]; exact hCs, hU, hl⟩
+    obtain ⟨S, hS, hl⟩ := hR.gradeC_ev hg
+    exact ⟨S, by dsimp only; rw [Gather.corrupt_core]; exact hS, hl⟩
 
 /-! ### The refinement -/
 
@@ -580,8 +584,8 @@ theorem pairRefines (P : Params) (r : ℕ) :
       refine ⟨{ q₂ with call := Function.update q₂.call id (some b) },
         Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
           (GBCA.Step.call q₂ id b (by rw [hR.call_eq id]; exact hcall))⟩,
-        hInv', ?_, hR.ret_eq, hR.F_eq, hR.excluded_cert, hR.gradeA_ev,
-        hR.gradeC_ev⟩
+        hInv', ?_, hR.ret_eq, hR.F_eq, hR.excluded_cert, hR.excluded_bound,
+        hR.gradeA_ev, hR.gradeC_ev⟩
       intro k
       dsimp only
       by_cases hk : k = id
@@ -603,17 +607,18 @@ theorem pairRefines (P : Params) (r : ℕ) :
       have ht1' := PMF.pure_injective hμ
       subst ht1'
       exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩, hInv',
-        hR.call_eq, hR.ret_eq, hR.F_eq, hR.excluded_cert, hR.gradeA_ev,
-        hR.gradeC_ev⟩
-    | bindCores Cs h0 hne hval hpair =>
+        hR.call_eq, hR.ret_eq, hR.F_eq, hR.excluded_cert, hR.excluded_bound,
+        hR.gradeA_ev, hR.gradeC_ev⟩
+    | bindCore S h0 hval hcard =>
       have ht1' := PMF.pure_injective hμ
       subst ht1'
       refine ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩, hInv',
-        hR.call_eq, hR.ret_eq, hR.F_eq, ?_, hR.gradeA_ev, hR.gradeC_ev⟩
+        hR.call_eq, hR.ret_eq, hR.F_eq, ?_, hR.excluded_bound,
+        hR.gradeA_ev, hR.gradeC_ev⟩
       intro b hb
-      obtain ⟨Cs', hCs', -⟩ := hR.excluded_cert b hb
-      rw [h0] at hCs'
-      exact absurd hCs' (by simp)
+      obtain ⟨S', hS', -⟩ := hR.excluded_cert b hb
+      rw [h0] at hS'
+      exact absurd hS' (by simp)
   | ga2Tau t2' h =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
@@ -623,99 +628,118 @@ theorem pairRefines (P : Params) (r : ℕ) :
       have ht2' := PMF.pure_injective hμ
       subst ht2'
       exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩, hInv',
-        hR.call_eq, hR.ret_eq, hR.F_eq, hR.excluded_cert, hR.gradeA_ev,
-        hR.gradeC_ev⟩
-    | bindCores Cs h0 hne hval hpair =>
+        hR.call_eq, hR.ret_eq, hR.F_eq, hR.excluded_cert, hR.excluded_bound,
+        hR.gradeA_ev, hR.gradeC_ev⟩
+    | bindCore S h0 hval hcard =>
       have ht2' := PMF.pure_injective hμ
       subst ht2'
       refine ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩, hInv',
-        hR.call_eq, hR.ret_eq, hR.F_eq, hR.excluded_cert, ?_, ?_⟩
+        hR.call_eq, hR.ret_eq, hR.F_eq, hR.excluded_cert, hR.excluded_bound,
+        ?_, ?_⟩
       · intro hg
-        obtain ⟨Cs', U, v, hCs', -, -⟩ := hR.gradeA_ev hg
-        rw [h0] at hCs'
-        exact absurd hCs' (by simp)
+        obtain ⟨S', v, hS', -⟩ := hR.gradeA_ev hg
+        rw [h0] at hS'
+        exact absurd hS' (by simp)
       · intro hg
-        obtain ⟨Cs', U, hCs', -, -⟩ := hR.gradeC_ev hg
-        rw [h0] at hCs'
-        exact absurd hCs' (by simp)
-  | link id g t1' h h2 =>
+        obtain ⟨S', hS', -⟩ := hR.gradeC_ev hg
+        rw [h0] at hS'
+        exact absurd hS' (by simp)
+  | link id g C t1' h h2 =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     generalize hμ : (PMF.pure t1' : PMF (Gather.SpecState P.n Bool)) = μ1 at h
     cases h with
-    | ret id' g' Cs hCs hmem hsubv hr =>
+    | ret id' g' C' hC hmem hsubv hr =>
       have ht1' := PMF.pure_injective hμ
       subst ht1'
-      exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩, hInv',
-        hR.call_eq, hR.ret_eq, hR.F_eq, hR.excluded_cert, hR.gradeA_ev,
-        hR.gradeC_ev⟩
-  | retG id g t2' h =>
+      refine ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩, hInv',
+        hR.call_eq, hR.ret_eq, hR.F_eq, hR.excluded_cert, ?_,
+        hR.gradeA_ev, hR.gradeC_ev⟩
+      intro b hb
+      obtain ⟨β, hβ, hbβ⟩ := hR.excluded_bound b hb
+      exact ⟨β, by dsimp only; rw [hβ]; rfl, hbβ⟩
+  | retG id g C t2' h =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     generalize hμ : (PMF.pure t2' : PMF (Gather.SpecState P.n (Option Bool))) = μ2 at h
     cases h with
-    | ret id' g' Cs₂ hCs₂ hmem₂ hsub₂ hr₂ =>
+    | ret id' g' C' hC₂ hmem₂ hsub₂ hr₂ =>
       have ht2' := PMF.pure_injective hμ
       subst ht2'
-      obtain ⟨U₂, hU₂Cs, hU₂g⟩ := hmem₂
-      have hU₂card : P.n - P.f ≤ U₂.card := by
-        have := hR.inv.cores2_pair Cs₂ hCs₂ U₂ hU₂Cs U₂ hU₂Cs
-        rwa [Finset.inter_self] at this
-      have hgdom : P.n - P.f ≤ gdom g := le_trans hU₂card (APSet.card_le_gdom hU₂g)
       have hf := P.hf
+      have hC₂card : P.n - P.f ≤ C.card := hR.inv.core2_card C hC₂
+      have hgdom : P.n - P.f ≤ gdom g :=
+        le_trans hC₂card (APSet.card_le_gdom hmem₂)
       have hretflag : q₂.ret id = false := by
         rw [hR.ret_eq id]
         exact hr₂
-      have hchain : ∀ k, k ∉ q₁.1.F → ∀ c, g k = some c → q₁.2.call k = some c := by
+      have hchain : ∀ k, k ∉ q₁.1.F → ∀ c, g k = some c → q₁.2.1.call k = some c := by
         intro k hkF c hgc
-        have hv2 := hsub₂ k c hgc
-        rcases hR.inv.val2_prov k c hv2 with hF | hc
+        rcases hR.inv.val2_prov k c (hsub₂ k c hgc) with hF | hc
         · exact absurd hF hkF
         · exact hc
+      -- the returner's round has linked, so the bound bit is written
+      have hgdom_pos : P.f + 1 ≤ gdom g := by omega
+      obtain ⟨k0, hk0, hk0F⟩ := exists_honest_filter
+        (F := q₁.1.F) hR.inv.F_card (p := fun k => g k ≠ none) hgdom_pos
+      rcases hgk0 : g k0 with _ | c0
+      · exact absurd hgk0 hk0
+      obtain ⟨β, hβ⟩ : ∃ β, q₁.2.2 = some β :=
+        Option.ne_none_iff_exists'.mp
+          (hR.inv.call2_bound k0 (by rw [hchain k0 hk0F c0 hgk0]; simp))
+      obtain ⟨S, hS, hβS⟩ := hR.inv.bound_core β hβ
+      have hScard : P.n - P.f ≤ S.card := hR.inv.core1_card S hS
+      have hSval := hR.inv.core1_val S hS
+      have hlight : ExcludedEv P q₁ (!β) :=
+        ⟨S, hS, by rw [hβS]; exact cnt_boundOfCore_light hScard⟩
+      have hexcl : ∀ b ∈ q₂.excluded, b = !β := by
+        intro b hb
+        obtain ⟨β', hβ', rfl⟩ := hR.excluded_bound b hb
+        rw [hβ] at hβ'
+        obtain rfl : β = β' := Option.some.inj hβ'
+        rfl
+      have hbndeq : q₁.2.2.getD (boundOfCore P (∅ : APSet P.n Bool)) = β := by
+        rw [hβ]
+        rfl
+      rw [hbndeq]
       cases hout : gradeOf P g with
       | A v =>
-        have hA := gradeOf_A hout
-        have hA_ev : U₂.card - P.f ≤ APSet.cnt U₂ (some v) :=
-          cnt_heavy_of_subMap hU₂g hA
-        have hcnt_v : P.f + 1 ≤ gcount g (some v) := by omega
+        have hA_ev : C.card - P.f ≤ APSet.cnt C (some v) :=
+          cnt_heavy_of_subMap hmem₂ (gradeOf_A hout)
+        have hcnt_v : P.f + 1 ≤ gcount g (some v) := by
+          have := gradeOf_A hout
+          omega
         obtain ⟨kh, hkhg, hkhF⟩ := exists_honest_filter
           (F := q₁.1.F) hR.inv.F_card
           (p := fun k => g k = some (some v)) hcnt_v
-        have hcall2 := hchain kh hkhF (some v) hkhg
-        obtain ⟨Cs₁, U₁, hCs₁, hU₁, hheavy₁⟩ := hR.inv.cand_heavy kh hkhF v hcall2
-        have hU₁val := hR.inv.cores1_val Cs₁ hCs₁ U₁ hU₁
-        have hU₁card : P.n - P.f ≤ U₁.card := by
-          have := hR.inv.cores1_pair Cs₁ hCs₁ U₁ hU₁ U₁ hU₁
-          rwa [Finset.inter_self] at this
+        obtain ⟨S', hS', hheavy⟩ :=
+          hR.inv.cand_heavy kh hkhF v (hchain kh hkhF (some v) hkhg)
+        obtain rfl : S = S' := by rw [hS] at hS'; exact Option.some.inj hS'
+        have hβv : β = v := by
+          rw [hβS]
+          exact boundOfCore_of_heavy hScard hheavy
         have hlive : v ∉ q₂.excluded := by
           intro hv
-          obtain ⟨Cs₁', hCs₁', hlight⟩ := hR.excluded_cert v hv
-          rw [hCs₁] at hCs₁'
-          obtain rfl : Cs₁ = Cs₁' := by injection hCs₁'
-          have := hlight U₁ hU₁
-          omega
+          have hb := hexcl v hv
+          rw [hβv] at hb
+          simp at hb
         have hgA : q₂.grade = none ∨ q₂.grade = some true := by
           rcases hgr : q₂.grade with _ | b
           · exact Or.inl rfl
           · cases b
             · exfalso
-              obtain ⟨Cs₂', U', hCs₂', hU', hlight⟩ := hR.gradeC_ev hgr
-              rw [hCs₂] at hCs₂'
-              obtain rfl : Cs₂ = Cs₂' := by injection hCs₂'
-              exact members_heavy_light
-                (hR.inv.cores2_pair Cs₂ hCs₂ U₂ hU₂Cs U' hU') hA_ev (hlight v)
+              obtain ⟨S₂, hS₂, hlight₂⟩ := hR.gradeC_ev hgr
+              rw [hC₂] at hS₂
+              obtain rfl : C = S₂ := Option.some.inj hS₂
+              have := hlight₂ v
+              omega
             · exact Or.inr rfl
-        have hExcluded : ∀ U' ∈ Cs₁, APSet.cnt U' (!v) < U'.card - P.f := by
-          intro U' hU'
-          by_contra hcon
-          rw [not_lt] at hcon
-          have h := members_agree
-            (hR.inv.cores1_pair Cs₁ hCs₁ U₁ hU₁ U' hU') hheavy₁ hcon
-          simp at h
         by_cases hbv : (!v) ∈ q₂.excluded
         · refine ⟨_, Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
-            (GBCA.Step.retA q₂ id v hlive hbv hgA hretflag)⟩,
-            hInv', hR.call_eq, ?_, hR.F_eq, hR.excluded_cert, ?_, ?_⟩ <;> dsimp only
+            (GBCA.Step.retA q₂ id v β hlive hbv (by rw [hβv]; exact hbv)
+              hgA hretflag)⟩,
+            hInv', hR.call_eq, ?_, hR.F_eq, hR.excluded_cert,
+            hR.excluded_bound, ?_, ?_⟩ <;> dsimp only
           · intro k
             by_cases hk : k = id
             · subst hk
@@ -723,43 +747,36 @@ theorem pairRefines (P : Params) (r : ℕ) :
             · rw [Function.update_of_ne hk, Function.update_of_ne hk]
               exact hR.ret_eq k
           · intro _
-            exact ⟨Cs₂, U₂, v, hCs₂, hU₂Cs, hA_ev⟩
+            exact ⟨C, v, hC₂, hA_ev⟩
           · intro hgr
             exact absurd hgr (by simp)
         · have hd0 : q₂.excluded = ∅ := by
             rw [Finset.eq_empty_iff_forall_notMem]
             intro b' hb'
-            obtain ⟨Cs₁', hCs₁', hlight⟩ := hR.excluded_cert b' hb'
-            rw [hCs₁] at hCs₁'
-            obtain rfl : Cs₁ = Cs₁' := by injection hCs₁'
-            have hlU₁ := hlight U₁ hU₁
-            have hbv' : b' ≠ v := by
-              intro hh
-              subst hh
-              omega
-            have hb'nv : b' = !v := by
-              cases b' <;> cases v <;> simp_all
-            subst hb'nv
+            have hb := hexcl b' hb'
+            rw [hβv] at hb
+            subst hb
             exact hbv hb'
           have hexclude : (GBCA.specInst P r).LStep q₂ Silent.τ
               { q₂ with excluded := insert (!v) q₂.excluded } :=
             GBCA.Step.bindUnset q₂ (!v)
-              (quorum_of_member hR.call_eq hR.F_eq hR.inv.val1_prov hU₁val hU₁card)
+              (quorum_of_core hR.call_eq hR.F_eq hR.inv.val1_prov hSval hScard)
               (by
                 rw [Bool.not_not]
-                exact supp_spec_of_member hR.call_eq hR.F_eq hR.inv.val1_prov
-                  hU₁val (by omega))
+                exact supp_spec_of_core hR.call_eq hR.F_eq hR.inv.val1_prov
+                  hSval (by omega))
               hd0
           have hret2 : (GBCA.specInst P r).LStep
-              { q₂ with excluded := insert (!v) q₂.excluded } (.retG r id (.A v))
+              { q₂ with excluded := insert (!v) q₂.excluded } (.retG r id (.A v) β)
               { q₂ with
                 excluded := insert (!v) q₂.excluded
                 grade := some true
                 ret := Function.update q₂.ret id true } :=
-            GBCA.Step.retA _ id v (by rw [hd0]; simp) (Finset.mem_insert_self _ _)
-              hgA hretflag
+            GBCA.Step.retA _ id v β (by rw [hd0]; simp)
+              (Finset.mem_insert_self _ _)
+              (by rw [hβv]; exact Finset.mem_insert_self _ _) hgA hretflag
           refine ⟨_, Or.inr ⟨by simp, weakLStep_tauThen hexclude hret2 (by simp)⟩,
-            hInv', hR.call_eq, ?_, hR.F_eq, ?_, ?_, ?_⟩ <;> dsimp only
+            hInv', hR.call_eq, ?_, hR.F_eq, ?_, ?_, ?_, ?_⟩ <;> dsimp only
           · intro k
             by_cases hk : k = id
             · subst hk
@@ -769,10 +786,16 @@ theorem pairRefines (P : Params) (r : ℕ) :
           · intro b hb
             rw [hd0, Finset.mem_insert] at hb
             rcases hb with rfl | hb
-            · exact ⟨Cs₁, hCs₁, hExcluded⟩
+            · rw [← hβv]
+              exact hlight
+            · simp at hb
+          · intro b hb
+            rw [hd0, Finset.mem_insert] at hb
+            rcases hb with rfl | hb
+            · exact ⟨β, hβ, by rw [hβv]⟩
             · simp at hb
           · intro _
-            exact ⟨Cs₂, U₂, v, hCs₂, hU₂Cs, hA_ev⟩
+            exact ⟨C, v, hC₂, hA_ev⟩
           · intro hgr
             exact absurd hgr (by simp)
       | B v =>
@@ -780,26 +803,17 @@ theorem pairRefines (P : Params) (r : ℕ) :
         obtain ⟨kh, hkhg, hkhF⟩ := exists_honest_filter
           (F := q₁.1.F) hR.inv.F_card
           (p := fun k => g k = some (some v)) hBcnt
-        have hcall2 := hchain kh hkhF (some v) hkhg
-        obtain ⟨Cs₁, U₁, hCs₁, hU₁, hheavy₁⟩ := hR.inv.cand_heavy kh hkhF v hcall2
-        have hU₁val := hR.inv.cores1_val Cs₁ hCs₁ U₁ hU₁
-        have hU₁card : P.n - P.f ≤ U₁.card := by
-          have := hR.inv.cores1_pair Cs₁ hCs₁ U₁ hU₁ U₁ hU₁
-          rwa [Finset.inter_self] at this
+        obtain ⟨S', hS', hheavy⟩ :=
+          hR.inv.cand_heavy kh hkhF v (hchain kh hkhF (some v) hkhg)
+        obtain rfl : S = S' := by rw [hS] at hS'; exact Option.some.inj hS'
+        have hβv : β = v := by
+          rw [hβS]
+          exact boundOfCore_of_heavy hScard hheavy
         have hlive : v ∉ q₂.excluded := by
           intro hv
-          obtain ⟨Cs₁', hCs₁', hlight⟩ := hR.excluded_cert v hv
-          rw [hCs₁] at hCs₁'
-          obtain rfl : Cs₁ = Cs₁' := by injection hCs₁'
-          have := hlight U₁ hU₁
-          omega
-        have hExcluded : ∀ U' ∈ Cs₁, APSet.cnt U' (!v) < U'.card - P.f := by
-          intro U' hU'
-          by_contra hcon
-          rw [not_lt] at hcon
-          have h := members_agree
-            (hR.inv.cores1_pair Cs₁ hCs₁ U₁ hU₁ U' hU') hheavy₁ hcon
-          simp at h
+          have hb := hexcl v hv
+          rw [hβv] at hb
+          simp at hb
         have hnv : P.f + 1 ≤ (Finset.univ.filter
             (fun k => g k ≠ none ∧ g k ≠ some (some v))).card := by
           rw [card_ne_gcount]
@@ -816,22 +830,22 @@ theorem pairRefines (P : Params) (r : ℕ) :
             cases v
             · exact spec_supp_of_supp1 hR.call_eq hR.F_eq hR.inv.val1_prov hsT
             · exact spec_supp_of_supp1 hR.call_eq hR.F_eq hR.inv.val1_prov hsF
-          · have hwv : w ≠ v := by
+          · exfalso
+            have hwv : w ≠ v := by
               intro hwv
               subst hwv
               exact hkd.2 hgkd
-            obtain ⟨Cs₁', U₁', hCs₁', hU₁', hheavy₁'⟩ :=
-              hR.inv.cand_heavy kd hkdF w hcall2d
-            rw [hCs₁] at hCs₁'
-            obtain rfl : Cs₁ = Cs₁' := by injection hCs₁'
-            have h := members_agree
-              (hR.inv.cores1_pair Cs₁ hCs₁ U₁ hU₁ U₁' hU₁') hheavy₁ hheavy₁'
-            exact absurd h.symm hwv
+            obtain ⟨S'', hS'', hheavy'⟩ := hR.inv.cand_heavy kd hkdF w hcall2d
+            obtain rfl : S = S'' := by rw [hS] at hS''; exact Option.some.inj hS''
+            refine hwv ?_
+            rw [← boundOfCore_of_heavy hScard hheavy',
+              boundOfCore_of_heavy hScard hheavy]
         by_cases hbv : (!v) ∈ q₂.excluded
         · refine ⟨_, Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
-            (GBCA.Step.retB q₂ id v hlive hbv hw hretflag)⟩,
-            hInv', hR.call_eq, ?_, hR.F_eq, hR.excluded_cert, hR.gradeA_ev,
-            hR.gradeC_ev⟩
+            (GBCA.Step.retB q₂ id v β hlive hbv (by rw [hβv]; exact hbv)
+              hw hretflag)⟩,
+            hInv', hR.call_eq, ?_, hR.F_eq, hR.excluded_cert,
+            hR.excluded_bound, hR.gradeA_ev, hR.gradeC_ev⟩
           intro k
           dsimp only
           by_cases hk : k = id
@@ -842,199 +856,133 @@ theorem pairRefines (P : Params) (r : ℕ) :
         · have hd0 : q₂.excluded = ∅ := by
             rw [Finset.eq_empty_iff_forall_notMem]
             intro b' hb'
-            obtain ⟨Cs₁', hCs₁', hlight⟩ := hR.excluded_cert b' hb'
-            rw [hCs₁] at hCs₁'
-            obtain rfl : Cs₁ = Cs₁' := by injection hCs₁'
-            have hlU₁ := hlight U₁ hU₁
-            have hbv' : b' ≠ v := by
-              intro hh
-              subst hh
-              omega
-            have hb'nv : b' = !v := by
-              cases b' <;> cases v <;> simp_all
-            subst hb'nv
+            have hb := hexcl b' hb'
+            rw [hβv] at hb
+            subst hb
             exact hbv hb'
           have hexclude : (GBCA.specInst P r).LStep q₂ Silent.τ
               { q₂ with excluded := insert (!v) q₂.excluded } :=
             GBCA.Step.bindUnset q₂ (!v)
-              (quorum_of_member hR.call_eq hR.F_eq hR.inv.val1_prov hU₁val hU₁card)
+              (quorum_of_core hR.call_eq hR.F_eq hR.inv.val1_prov hSval hScard)
               (by
                 rw [Bool.not_not]
-                exact supp_spec_of_member hR.call_eq hR.F_eq hR.inv.val1_prov
-                  hU₁val (by omega))
+                exact supp_spec_of_core hR.call_eq hR.F_eq hR.inv.val1_prov
+                  hSval (by omega))
               hd0
           have hret2 : (GBCA.specInst P r).LStep
-              { q₂ with excluded := insert (!v) q₂.excluded } (.retG r id (.B v))
+              { q₂ with excluded := insert (!v) q₂.excluded } (.retG r id (.B v) β)
               { q₂ with
                 excluded := insert (!v) q₂.excluded
                 ret := Function.update q₂.ret id true } :=
-            GBCA.Step.retB _ id v (by rw [hd0]; simp) (Finset.mem_insert_self _ _)
-              hw hretflag
+            GBCA.Step.retB _ id v β (by rw [hd0]; simp)
+              (Finset.mem_insert_self _ _)
+              (by rw [hβv]; exact Finset.mem_insert_self _ _) hw hretflag
           refine ⟨_, Or.inr ⟨by simp, weakLStep_tauThen hexclude hret2 (by simp)⟩,
-            hInv', hR.call_eq, ?_, hR.F_eq, ?_, hR.gradeA_ev, hR.gradeC_ev⟩
+            hInv', hR.call_eq, ?_, hR.F_eq, ?_, ?_, hR.gradeA_ev,
+            hR.gradeC_ev⟩ <;> dsimp only
           · intro k
-            dsimp only
             by_cases hk : k = id
             · subst hk
               rw [Function.update_self, Function.update_self]
             · rw [Function.update_of_ne hk, Function.update_of_ne hk]
               exact hR.ret_eq k
           · intro b hb
-            dsimp only at hb
             rw [hd0, Finset.mem_insert] at hb
             rcases hb with rfl | hb
-            · exact ⟨Cs₁, hCs₁, hExcluded⟩
+            · rw [← hβv]
+              exact hlight
+            · simp at hb
+          · intro b hb
+            rw [hd0, Finset.mem_insert] at hb
+            rcases hb with rfl | hb
+            · exact ⟨β, hβ, by rw [hβv]⟩
             · simp at hb
       | C =>
-        have hC := gradeOf_C hout
-        have hU₂light : ∀ w, APSet.cnt U₂ (some w) ≤ P.f := fun w =>
-          le_trans (APSet.cnt_le_gcount hU₂g (some w)) (hC w)
-        have hgdom_pos : P.f + 1 ≤ gdom g := by omega
-        obtain ⟨k0, hk0, hk0F⟩ := exists_honest_filter
-          (F := q₁.1.F) hR.inv.F_card (p := fun k => g k ≠ none) hgdom_pos
-        rcases hgk0 : g k0 with _ | c0
-        · exact absurd hgk0 hk0
-        have hcall20 := hchain k0 hk0F c0 hgk0
-        obtain ⟨Cs₁, hCs₁⟩ := hR.inv.cand_cores k0 hk0F (by rw [hcall20]; simp)
-        obtain ⟨U₀, hU₀⟩ := hR.inv.cores1_ne Cs₁ hCs₁
-        have hU₀val := hR.inv.cores1_val Cs₁ hCs₁ U₀ hU₀
-        have hU₀card : P.n - P.f ≤ U₀.card := by
-          have := hR.inv.cores1_pair Cs₁ hCs₁ U₀ hU₀ U₀ hU₀
-          rwa [Finset.inter_self] at this
-        -- both bit supports
+        have hCgrade := gradeOf_C hout
+        have hClight : ∀ w, APSet.cnt C (some w) ≤ P.f := fun w =>
+          le_trans (APSet.cnt_le_gcount hmem₂ (some w)) (hCgrade w)
         have hsupp : ∀ b : Bool, P.f + 1 ≤ (Finset.univ.filter
             (fun id' => q₂.call id' = some b ∨ id' ∈ q₂.F)).card := by
           intro b
           have hcard : P.f + 1 ≤ (Finset.univ.filter
               (fun k => g k ≠ none ∧ g k ≠ some (some (!b)))).card := by
             rw [card_ne_gcount]
-            have := hC (!b)
+            have := hCgrade (!b)
             omega
           obtain ⟨kt, hkt, hktF⟩ := exists_honest_filter hR.inv.F_card hcard
           rcases hgkt : g kt with _ | ct
           · exact absurd hgkt hkt.1
           have hcall2t := hchain kt hktF ct hgkt
           rcases ct with _ | wt
-          · rcases (hR.inv.cand_bot kt hktF hcall2t) with ⟨hsT, hsF⟩
+          · obtain ⟨hsT, hsF⟩ := hR.inv.cand_bot kt hktF hcall2t
             cases b
             · exact spec_supp_of_supp1 hR.call_eq hR.F_eq hR.inv.val1_prov hsF
             · exact spec_supp_of_supp1 hR.call_eq hR.F_eq hR.inv.val1_prov hsT
           · have hwt : wt = b := by
               by_contra hne
-              have : wt = !b := by
-                cases wt <;> cases b <;> simp_all
-              subst this
+              have hb : wt = !b := by cases wt <;> cases b <;> simp_all
+              subst hb
               exact hkt.2 hgkt
             subst hwt
-            obtain ⟨Cs₁', U', hCs₁', hU', hh⟩ :=
-              hR.inv.cand_heavy kt hktF wt hcall2t
-            rw [hCs₁] at hCs₁'
-            obtain rfl : Cs₁ = Cs₁' := by injection hCs₁'
-            have hU'val := hR.inv.cores1_val Cs₁ hCs₁ U' hU'
-            have hU'card : P.n - P.f ≤ U'.card := by
-              have := hR.inv.cores1_pair Cs₁ hCs₁ U' hU' U' hU'
-              rwa [Finset.inter_self] at this
-            exact supp_spec_of_member hR.call_eq hR.F_eq hR.inv.val1_prov
-              hU'val (by omega)
+            obtain ⟨S'', hS'', hh⟩ := hR.inv.cand_heavy kt hktF wt hcall2t
+            obtain rfl : S = S'' := by rw [hS] at hS''; exact Option.some.inj hS''
+            exact supp_spec_of_core hR.call_eq hR.F_eq hR.inv.val1_prov
+              hSval (by omega)
         have hgC : q₂.grade = none ∨ q₂.grade = some false := by
           rcases hgr : q₂.grade with _ | b
           · exact Or.inl rfl
           · cases b
             · exact Or.inr rfl
             · exfalso
-              obtain ⟨Cs₂', U', v', hCs₂', hU', hh⟩ := hR.gradeA_ev hgr
-              rw [hCs₂] at hCs₂'
-              obtain rfl : Cs₂ = Cs₂' := by injection hCs₂'
-              exact members_heavy_light
-                (hR.inv.cores2_pair Cs₂ hCs₂ U' hU' U₂ hU₂Cs) hh (hU₂light v')
+              obtain ⟨S₂, v', hS₂, hh⟩ := hR.gradeA_ev hgr
+              rw [hC₂] at hS₂
+              obtain rfl : C = S₂ := Option.some.inj hS₂
+              have := hClight v'
+              omega
         by_cases hdne : q₂.excluded = ∅
-        · -- exclude a bit first
-          by_cases hex : ∃ U ∈ Cs₁, U.card - P.f ≤ APSet.cnt U true
-          · obtain ⟨Ut, hUt, hht⟩ := hex
-            have hUtval := hR.inv.cores1_val Cs₁ hCs₁ Ut hUt
-            have hUtcard : P.n - P.f ≤ Ut.card := by
-              have := hR.inv.cores1_pair Cs₁ hCs₁ Ut hUt Ut hUt
-              rwa [Finset.inter_self] at this
-            have hExcludedF : ∀ U' ∈ Cs₁, APSet.cnt U' false < U'.card - P.f := by
-              intro U' hU'
-              by_contra hcon
-              push_neg at hcon
-              have h := members_agree
-                (hR.inv.cores1_pair Cs₁ hCs₁ Ut hUt U' hU') hht hcon
-              simp at h
-            have hexclude : (GBCA.specInst P r).LStep q₂ Silent.τ
-                { q₂ with excluded := insert false q₂.excluded } :=
-              GBCA.Step.bindUnset q₂ false
-                (quorum_of_member hR.call_eq hR.F_eq hR.inv.val1_prov hU₀val hU₀card)
-                (by
-                  have hnf : (!false) = true := by simp
-                  rw [hnf]
-                  exact hsupp true)
-                hdne
-            have hret2 : (GBCA.specInst P r).LStep
-                { q₂ with excluded := insert false q₂.excluded } (.retG r id .C)
-                { q₂ with
-                  excluded := insert false q₂.excluded
-                  grade := some false
-                  ret := Function.update q₂.ret id true } :=
-              GBCA.Step.retC _ id (by simp) (hsupp true) (hsupp false) hgC hretflag
-            refine ⟨_, Or.inr ⟨by simp, weakLStep_tauThen hexclude hret2 (by simp)⟩,
-              hInv', hR.call_eq, ?_, hR.F_eq, ?_, ?_, ?_⟩ <;> dsimp only
-            · intro k
-              by_cases hk : k = id
-              · subst hk
-                rw [Function.update_self, Function.update_self]
-              · rw [Function.update_of_ne hk, Function.update_of_ne hk]
-                exact hR.ret_eq k
-            · intro b hb
-              rw [hdne, Finset.mem_insert] at hb
-              rcases hb with rfl | hb
-              · exact ⟨Cs₁, hCs₁, hExcludedF⟩
-              · simp at hb
-            · intro hgr
-              exact absurd hgr (by simp)
-            · intro _
-              exact ⟨Cs₂, U₂, hCs₂, hU₂Cs, hU₂light⟩
-          · simp only [not_exists, not_and, not_le] at hex
-            have hexclude : (GBCA.specInst P r).LStep q₂ Silent.τ
-                { q₂ with excluded := insert true q₂.excluded } :=
-              GBCA.Step.bindUnset q₂ true
-                (quorum_of_member hR.call_eq hR.F_eq hR.inv.val1_prov hU₀val hU₀card)
-                (by
-                  have hnf : (!true) = false := by simp
-                  rw [hnf]
-                  exact hsupp false)
-                hdne
-            have hret2 : (GBCA.specInst P r).LStep
-                { q₂ with excluded := insert true q₂.excluded } (.retG r id .C)
-                { q₂ with
-                  excluded := insert true q₂.excluded
-                  grade := some false
-                  ret := Function.update q₂.ret id true } :=
-              GBCA.Step.retC _ id (by simp) (hsupp true) (hsupp false) hgC hretflag
-            refine ⟨_, Or.inr ⟨by simp, weakLStep_tauThen hexclude hret2 (by simp)⟩,
-              hInv', hR.call_eq, ?_, hR.F_eq, ?_, ?_, ?_⟩ <;> dsimp only
-            · intro k
-              by_cases hk : k = id
-              · subst hk
-                rw [Function.update_self, Function.update_self]
-              · rw [Function.update_of_ne hk, Function.update_of_ne hk]
-                exact hR.ret_eq k
-            · intro b hb
-              rw [hdne, Finset.mem_insert] at hb
-              rcases hb with rfl | hb
-              · exact ⟨Cs₁, hCs₁, hex⟩
-              · simp at hb
-            · intro hgr
-              exact absurd hgr (by simp)
-            · intro _
-              exact ⟨Cs₂, U₂, hCs₂, hU₂Cs, hU₂light⟩
-        · -- some bit is already excluded
-          have hd : 1 ≤ q₂.excluded.card :=
-            Finset.card_pos.mpr (Finset.nonempty_iff_ne_empty.mpr hdne)
+        · have hexclude : (GBCA.specInst P r).LStep q₂ Silent.τ
+              { q₂ with excluded := insert (!β) q₂.excluded } :=
+            GBCA.Step.bindUnset q₂ (!β)
+              (quorum_of_core hR.call_eq hR.F_eq hR.inv.val1_prov hSval hScard)
+              (by rw [Bool.not_not]; exact hsupp β)
+              hdne
+          have hret2 : (GBCA.specInst P r).LStep
+              { q₂ with excluded := insert (!β) q₂.excluded } (.retG r id .C β)
+              { q₂ with
+                excluded := insert (!β) q₂.excluded
+                grade := some false
+                ret := Function.update q₂.ret id true } :=
+            GBCA.Step.retC _ id β (Finset.mem_insert_self _ _)
+              (hsupp true) (hsupp false) hgC hretflag
+          refine ⟨_, Or.inr ⟨by simp, weakLStep_tauThen hexclude hret2 (by simp)⟩,
+            hInv', hR.call_eq, ?_, hR.F_eq, ?_, ?_, ?_, ?_⟩ <;> dsimp only
+          · intro k
+            by_cases hk : k = id
+            · subst hk
+              rw [Function.update_self, Function.update_self]
+            · rw [Function.update_of_ne hk, Function.update_of_ne hk]
+              exact hR.ret_eq k
+          · intro b hb
+            rw [hdne, Finset.mem_insert] at hb
+            rcases hb with rfl | hb
+            · exact hlight
+            · simp at hb
+          · intro b hb
+            rw [hdne, Finset.mem_insert] at hb
+            rcases hb with rfl | hb
+            · exact ⟨β, hβ, rfl⟩
+            · simp at hb
+          · intro hgr
+            exact absurd hgr (by simp)
+          · intro _
+            exact ⟨C, hC₂, hClight⟩
+        · obtain ⟨b, hb⟩ := Finset.nonempty_iff_ne_empty.mpr hdne
+          have hbeq := hexcl b hb
+          subst hbeq
           refine ⟨_, Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
-            (GBCA.Step.retC q₂ id hd (hsupp true) (hsupp false) hgC hretflag)⟩,
-            hInv', hR.call_eq, ?_, hR.F_eq, hR.excluded_cert, ?_, ?_⟩ <;> dsimp only
+            (GBCA.Step.retC q₂ id β hb (hsupp true) (hsupp false) hgC hretflag)⟩,
+            hInv', hR.call_eq, ?_, hR.F_eq, hR.excluded_cert,
+            hR.excluded_bound, ?_, ?_⟩ <;> dsimp only
           · intro k
             by_cases hk : k = id
             · subst hk
@@ -1044,7 +992,7 @@ theorem pairRefines (P : Params) (r : ℕ) :
           · intro hgr
             exact absurd hgr (by simp)
           · intro _
-            exact ⟨Cs₂, U₂, hCs₂, hU₂Cs, hU₂light⟩
+            exact ⟨C, hC₂, hClight⟩
   | fail id =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'

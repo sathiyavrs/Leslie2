@@ -27,6 +27,10 @@ honest coordinate's committed value is its input, and a corrupted one may
 commit anything. The exported answers are chain data
 (`lowTau_reach`, `lowRetRun`), replayable by any system embedding the
 specification tier's rows.
+
+The relation holds the two instances' `core` fields equal, which is what
+makes the two `ret` labels agree: the core each carries is `coreOf` of the
+message state the relation already holds equal.
 -/
 
 namespace PLTS
@@ -51,10 +55,12 @@ structure LowRel (P : Params) (s : LowState P.n X) (t : IdealState P.n X) : Prop
   inRel : ∀ k, BRB.InstRel P k (s.brbIn k) (t.brbIn k)
   /-- Each bind coordinate is BRB-refined. -/
   bindRel : ∀ k, BRB.InstRel P k (s.brbBind k) (t.brbBind k)
+  /-- The two sides hold the same core, so the two `ret` labels agree. -/
+  core_eq : t.core = s.core
 
 /-- The relation holds initially. -/
 theorem lowRel_init : LowRel P (LowState.initial P.n X) (IdealState.initial P.n X) := by
-  refine ⟨rfl, ?_, ?_, fun _ => BRB.instRel_init, fun _ => BRB.instRel_init⟩
+  refine ⟨rfl, ?_, ?_, fun _ => BRB.instRel_init, fun _ => BRB.instRel_init, rfl⟩
   · intro k
     simp [LowState.initial, BRB.ImplState.initial]
   · intro k
@@ -65,7 +71,7 @@ sides at once. -/
 theorem lowRel_corrupt {s : LowState P.n X} {t : IdealState P.n X}
     (hR : LowRel P s t) (id : Fin P.n) :
     LowRel P (s.corruptAll P id) (t.corruptAll P id) := by
-  refine ⟨?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
   · show (t.corruptAll P id).ga = s.ga.corrupt P id
     show t.ga.corrupt P id = s.ga.corrupt P id
     rw [hR.ga_eq]
@@ -79,6 +85,7 @@ theorem lowRel_corrupt {s : LowState P.n X} {t : IdealState P.n X}
     exact BRB.instRel_corrupt (hR.inRel k) id
   · intro k
     exact BRB.instRel_corrupt (hR.bindRel k) id
+  · exact hR.core_eq
 
 /-! ### The commit chains -/
 
@@ -121,7 +128,7 @@ private theorem commitsIn_reach {s : LowState P.n X} {j : Fin P.n} :
       have hR1 : LowRel P s
           { t with
             brbIn := Function.update t.brbIn p.1 { t.brbIn p.1 with val := some p.2 } } := by
-        refine ⟨hR.ga_eq, hR.F_in_ga, hR.F_bind_ga, ?_, hR.bindRel⟩
+        refine ⟨hR.ga_eq, hR.F_in_ga, hR.F_bind_ga, ?_, hR.bindRel, hR.core_eq⟩
         intro k
         dsimp only
         by_cases hk : k = p.1
@@ -196,7 +203,7 @@ private theorem commitsBind_reach {s : LowState P.n X} {j : Fin P.n} :
       have hR1 : LowRel P s
           { t with
             brbBind := Function.update t.brbBind p.1 { t.brbBind p.1 with val := some p.2 } } := by
-        refine ⟨hR.ga_eq, hR.F_in_ga, hR.F_bind_ga, hR.inRel, ?_⟩
+        refine ⟨hR.ga_eq, hR.F_in_ga, hR.F_bind_ga, hR.inRel, ?_, hR.core_eq⟩
         intro k
         dsimp only
         by_cases hk : k = p.1
@@ -249,7 +256,7 @@ theorem lowRel_call {s : LowState P.n X} {t : IdealState P.n X}
         ga := t.ga.setProc id { t.ga.proc id with input := some x }
         brbIn := Function.update t.brbIn id
           { t.brbIn id with input := some x } } := by
-  refine ⟨?_, ?_, ?_, ?_, ?_⟩ <;> dsimp only
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩ <;> dsimp only
   · rw [hR.ga_eq]
   · intro k
     rw [show (s.ga.setProc id { s.ga.proc id with input := some x }).F
@@ -274,6 +281,7 @@ theorem lowRel_call {s : LowState P.n X} {t : IdealState P.n X}
       exact hR.inRel k
   · intro k
     exact hR.bindRel k
+  · exact hR.core_eq
 
 /-- The relation across any internal row, as a chain of the specification
 tier's own internal rows. -/
@@ -287,7 +295,8 @@ theorem lowTau_reach {s s' : LowState P.n X} {t : IdealState P.n X}
   | brbInTau k b' h =>
     have hs' := PMF.pure_injective hμ
     subst hs'
-    refine ⟨[], List.isChain_singleton t, ?_, ?_, hR.F_bind_ga, ?_, hR.bindRel⟩
+    refine ⟨[], List.isChain_singleton t, ?_, ?_, hR.F_bind_ga, ?_, hR.bindRel,
+      hR.core_eq⟩
     · exact hR.ga_eq
     · intro k'
       dsimp only
@@ -308,7 +317,8 @@ theorem lowTau_reach {s s' : LowState P.n X} {t : IdealState P.n X}
   | brbBindTau k b' h =>
     have hs' := PMF.pure_injective hμ
     subst hs'
-    refine ⟨[], List.isChain_singleton t, hR.ga_eq, hR.F_in_ga, ?_, hR.inRel, ?_⟩
+    refine ⟨[], List.isChain_singleton t, hR.ga_eq, hR.F_in_ga, ?_, hR.inRel, ?_,
+      hR.core_eq⟩
     · intro k'
       dsimp only
       by_cases hk : k' = k
@@ -332,7 +342,7 @@ theorem lowTau_reach {s s' : LowState P.n X} {t : IdealState P.n X}
       List.isChain_cons_cons.mpr ⟨IdealStep.deliver t i j m
         (by rw [hR.ga_eq]; exact h), List.isChain_singleton _⟩, ?_⟩
     simp only [List.getLastD_cons, List.getLastD_nil]
-    refine ⟨?_, ?_, ?_, hR.inRel, hR.bindRel⟩ <;> dsimp only
+    refine ⟨?_, ?_, ?_, hR.inRel, hR.bindRel, hR.core_eq⟩ <;> dsimp only
     · rw [hR.ga_eq]
     · intro k
       exact hR.F_in_ga k
@@ -345,7 +355,7 @@ theorem lowTau_reach {s s' : LowState P.n X} {t : IdealState P.n X}
       List.isChain_cons_cons.mpr ⟨IdealStep.byz t j m
         (by rw [hR.ga_eq]; exact hj), List.isChain_singleton _⟩, ?_⟩
     simp only [List.getLastD_cons, List.getLastD_nil]
-    refine ⟨?_, ?_, ?_, hR.inRel, hR.bindRel⟩ <;> dsimp only
+    refine ⟨?_, ?_, ?_, hR.inRel, hR.bindRel, hR.core_eq⟩ <;> dsimp only
     · rw [hR.ga_eq]
     · intro k
       rw [SubState.mcast_F]
@@ -375,7 +385,7 @@ theorem lowTau_reach {s s' : LowState P.n X} {t : IdealState P.n X}
         exact hsend
     refine ⟨ts ++ [_], isChain_snoc hchain hechostep, ?_⟩
     rw [List.getLastD_concat]
-    refine ⟨?_, ?_, ?_, hR1.inRel, hR1.bindRel⟩ <;> dsimp only
+    refine ⟨?_, ?_, ?_, hR1.inRel, hR1.bindRel, hR1.core_eq⟩ <;> dsimp only
     · rw [hga1]
     · intro k
       rw [SubState.mcast_F]
@@ -412,7 +422,7 @@ theorem lowTau_reach {s s' : LowState P.n X} {t : IdealState P.n X}
         exact hsend
     refine ⟨ts ++ [_], isChain_snoc hchain hvotestep, ?_⟩
     rw [List.getLastD_concat]
-    refine ⟨?_, ?_, ?_, hR1.inRel, hR1.bindRel⟩ <;> dsimp only
+    refine ⟨?_, ?_, ?_, hR1.inRel, hR1.bindRel, hR1.core_eq⟩ <;> dsimp only
     · rw [hga1]
     · intro k
       rw [SubState.mcast_F]
@@ -448,7 +458,7 @@ theorem lowTau_reach {s s' : LowState P.n X} {t : IdealState P.n X}
         exact hcov p (Finset.mem_toList.mpr (hWU hp))
     refine ⟨ts ++ [_], isChain_snoc hchain hbindstep, ?_⟩
     rw [List.getLastD_concat]
-    refine ⟨?_, hR1.F_in_ga, ?_, hR1.inRel, ?_⟩ <;> dsimp only
+    refine ⟨?_, hR1.F_in_ga, ?_, hR1.inRel, ?_, hR1.core_eq⟩ <;> dsimp only
     · rw [hga1]
     · intro k
       by_cases hk : k = j
@@ -492,11 +502,16 @@ theorem lowRetRun {s : LowState P.n X} {t : IdealState P.n X}
       (∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ U, ((ts.getLastD t).brbBind q).val = some U ∧ APSet.subMap U g) ∧
       ((ts.getLastD t).ga.proc id).returned = false ∧
+      (ts.getLastD t).ga = s.ga ∧
+      (ts.getLastD t).core = s.core ∧
       LowRel P
-        { s with ga := s.ga.setProc id { s.ga.proc id with returned := true } }
+        { s with
+          ga := s.ga.setProc id { s.ga.proc id with returned := true }
+          core := some (s.core.getD (coreOf P s.ga)) }
         { ts.getLastD t with
           ga := (ts.getLastD t).ga.setProc id
-            { (ts.getLastD t).ga.proc id with returned := true } } := by
+            { (ts.getLastD t).ga.proc id with returned := true }
+          core := some (s.core.getD (coreOf P s.ga)) } := by
   classical
   obtain ⟨Q, hQc, hQm⟩ := hQ
   -- the input-entry chain
@@ -541,7 +556,7 @@ theorem lowRetRun {s : LowState P.n X} {t : IdealState P.n X}
     commitsBind_reach lb (ts₁.getLastD t) hR₁ hlb_ap
   have hga : (ts₂.getLastD (ts₁.getLastD t)).ga = s.ga := by
     rw [hga₂, hga₁, hR.ga_eq]
-  refine ⟨ts₁ ++ ts₂, isChain_trans hchain₁ hchain₂, ?_, ?_, ?_, ?_, ?_⟩ <;>
+  refine ⟨ts₁ ++ ts₂, isChain_trans hchain₁ hchain₂, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
     rw [getLastD_append]
   · rw [hga]
     exact hin
@@ -555,7 +570,9 @@ theorem lowRetRun {s : LowState P.n X} {t : IdealState P.n X}
     exact ⟨q, Finset.mem_toList.mpr hq, rfl⟩
   · rw [hga]
     exact hr
-  · refine ⟨?_, hR₂.F_in_ga, hR₂.F_bind_ga, hR₂.inRel, hR₂.bindRel⟩
+  · exact hga
+  · exact hR₂.core_eq
+  · refine ⟨?_, hR₂.F_in_ga, hR₂.F_bind_ga, hR₂.inRel, hR₂.bindRel, rfl⟩
     dsimp only
     rw [hga]
 
@@ -621,13 +638,16 @@ theorem gatherLow (P : Params) (X : Type) [DecidableEq X] :
   | ret id g hin hsubap hQ hr =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
-    obtain ⟨ts, hchain, hin', hcov, hQ', hr', hRel⟩ :=
+    obtain ⟨ts, hchain, hin', hcov, hQ', hr', hga, hcore, hRel⟩ :=
       lowRetRun hR hin hsubap hQ hr
-    have hretstep : IdealStep P (ts.getLastD q₂) (Gather.Lab.ret id g)
+    have hretstep : IdealStep P (ts.getLastD q₂)
+        (Gather.Lab.ret id g (q₁.core.getD (coreOf P q₁.ga)))
         (PMF.pure { ts.getLastD q₂ with
           ga := (ts.getLastD q₂).ga.setProc id
-            { (ts.getLastD q₂).ga.proc id with returned := true } }) :=
-      IdealStep.ret _ id g hin' hcov hQ' hr'
+            { (ts.getLastD q₂).ga.proc id with returned := true }
+          core := some (q₁.core.getD (coreOf P q₁.ga)) }) := by
+      rw [← hga, ← hcore]
+      exact IdealStep.ret _ id g hin' hcov hQ' hr'
     exact ⟨_, Or.inr ⟨by simp,
       System.weakLStep_tausThen hchain hretstep (by simp)⟩, hRel⟩
   | fail id =>

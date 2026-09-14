@@ -35,6 +35,32 @@ sliced arrives in that slice, and a message of any other tag leaves the slice
 alone. Together with the two lemmas that read a written round record
 (`stage_update_self`, `stage_update_ne`) these are what every row of the
 simulation is discharged by.
+
+## The ghost record is the round's auxiliary state
+
+The round instance carries three fields no guard of it reads: the core of each
+of its two gather instances, and the round's bound bit. On the flat side the
+adversary holds those three as the ghost record of the round (`AFW.Ghost`), so
+the view reads them off it, and a row's ghost write is the instance's write of
+them (`toPair_writeGhost`, `toPair_writeGhost_ne`, `toPair_ghostId`). Two rows
+write. The link's broadcast of the candidate freezes the first gather's core
+and the bound bit, and the composed `link` freezes the same two off the core
+its embedded gather return carries; the two cores agree because each is
+`Gather.coreOf` of the same message state (`coreOf_toLow1`). A graded return
+freezes the second gather's core, and the composed `retG` the same
+(`coreOf_toLow2`).
+
+## The bound bit a graded return announces
+
+`AFW.ghostOut` is total: where the round holds no bound bit it computes one
+from the first gather's core, where the composed round's `retG` announces
+`GBCA.boundOfCore P ∅`. The two agree because a return's own `link` has already
+written the bit, and `AFW.BoundInv` is that fact — a process whose round-`r`
+second-gather local state carries an input has passed the round's `link`, so
+the round's bound bit is on record. It is the fifth conjunct of `ProtocolRel`,
+the one clause that is not a reading of the flat state, and the only row that
+extends it is the link (`stage_gsnd_ga2`), which writes the bit at the same
+moment.
 -/
 
 namespace PLTS
@@ -53,26 +79,13 @@ theorem msgState_ext {n : ℕ} {M : Type} {a b : MsgState n M}
 /-- A gather-over-Bracha state is its gather instance beside its two
 broadcast families. -/
 theorem lowState_ext {n : ℕ} {X : Type} {a b : Gather.LowState n X}
-    (h1 : a.ga = b.ga) (h2 : a.brbIn = b.brbIn) (h3 : a.brbBind = b.brbBind) :
-    a = b := by
+    (h1 : a.ga = b.ga) (h2 : a.brbIn = b.brbIn) (h3 : a.brbBind = b.brbBind)
+    (h4 : a.core = b.core) : a = b := by
   cases a; cases b; simp_all
 
 /-! ### Slicing a tagged sent -/
 
 variable {n : ℕ} {β : Type}
-
-/-- The messages of one tag, recovered from a tagged sent family along a
-partial untagging. -/
-def slice (f : Msg n → Option β)
-    (hf : ∀ a a' b, b ∈ f a → b ∈ f a' → a = a')
-    (sent : Fin n → Finset (Msg n)) : Fin n → Finset β :=
-  fun q => (sent q).filterMap f hf
-
-theorem mem_slice {f : Msg n → Option β}
-    {hf : ∀ a a' b, b ∈ f a → b ∈ f a' → a = a'}
-    {sent : Fin n → Finset (Msg n)} {q : Fin n} {b : β} :
-    b ∈ slice f hf sent q ↔ ∃ m ∈ sent q, f m = some b :=
-  Finset.mem_filterMap f
 
 /-- A sent message of another tag leaves the slice alone. -/
 theorem slice_post_none (f : Msg n → Option β)
@@ -135,17 +148,11 @@ theorem slice_post_some [DecidableEq β] (f : Msg n → Option β)
     · rintro ⟨a, ha, hac⟩
       exact ⟨a, by rw [Function.update_of_ne hq]; exact ha, hac⟩
 
-/-! ### The six untaggings -/
+/-! ### The four broadcast untaggings
 
-/-- The first gather's message state messages. -/
-def unGa1 : Msg n → Option (GaMsg n Bool)
-  | .ga1 m => some m
-  | _ => none
-
-/-- The second gather's message state messages. -/
-def unGa2 : Msg n → Option (GaMsg n (Option Bool))
-  | .ga2 m => some m
-  | _ => none
+The two gather untaggings and their injectivity are `AFW.unGa1` and
+`AFW.unGa2` of `ABA/AFW/Flat.lean`, where the adversary's ghost write reads
+them. -/
 
 /-- The messages of input-broadcast instance `i` of the first gather. -/
 def unIn1 (i : Fin n) : Msg n → Option (BRB.BMsg Bool)
@@ -166,16 +173,6 @@ def unIn2 (i : Fin n) : Msg n → Option (BRB.BMsg (Option Bool))
 def unBind2 (i : Fin n) : Msg n → Option (BRB.BMsg (APSet n (Option Bool)))
   | .brbBind2 i' m => if i' = i then some m else none
   | _ => none
-
-theorem unGa1_inj : ∀ a a' (b : GaMsg n Bool),
-    b ∈ unGa1 a → b ∈ unGa1 a' → a = a' := by
-  intro a a' b h h'
-  cases a <;> cases a' <;> simp_all [unGa1]
-
-theorem unGa2_inj : ∀ a a' (b : GaMsg n (Option Bool)),
-    b ∈ unGa2 a → b ∈ unGa2 a' → a = a' := by
-  intro a a' b h h'
-  cases a <;> cases a' <;> simp_all [unGa2]
 
 theorem unIn1_inj (i : Fin n) : ∀ a a' (b : BRB.BMsg Bool),
     b ∈ unIn1 i a → b ∈ unIn1 i a' → a = a' := by
@@ -203,7 +200,8 @@ variable {P : Params}
 
 /-- The round-`r` state of the first gather instance, read off the flat
 state: the local state vector transposed out of the round records the processes hold,
-and the message states sliced out of the adversary's tagged sent sets. -/
+the message states sliced out of the adversary's tagged sent sets, and the
+instance's core the first field of the adversary's ghost record. -/
 def toLow1 (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n)
     (r : ℕ) : Gather.LowState P.n Bool where
   ga := (fun i => ((u i).2.stage r).ga1, ⟨slice unGa1 unGa1_inj (w.sent r), w.F⟩)
@@ -212,9 +210,10 @@ def toLow1 (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n)
   brbBind := fun k =>
     (fun i => ((u i).2.stage r).brbBind1 k,
       ⟨slice (unBind1 k) (unBind1_inj k) (w.sent r), w.F⟩)
+  core := (w.ghostRec r).1
 
 /-- The round-`r` state of the second gather instance, read off the flat
-state. -/
+state, its core the second field of the adversary's ghost record. -/
 def toLow2 (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n)
     (r : ℕ) : Gather.LowState P.n (Option Bool) where
   ga := (fun i => ((u i).2.stage r).ga2, ⟨slice unGa2 unGa2_inj (w.sent r), w.F⟩)
@@ -223,12 +222,111 @@ def toLow2 (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n)
   brbBind := fun k =>
     (fun i => ((u i).2.stage r).brbBind2 k,
       ⟨slice (unBind2 k) (unBind2_inj k) (w.sent r), w.F⟩)
+  core := (w.ghostRec r).2.1
 
 /-- The round-`r` instance of the composed reading, read off the flat
-state. -/
+state: the two gather instances, and the round's bound bit the third field of
+the adversary's ghost record. -/
 def toPair (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n)
     (r : ℕ) : GBCA.LowPairState P.n :=
-  (toLow1 P u w r, toLow2 P u w r)
+  (toLow1 P u w r, toLow2 P u w r, (w.ghostRec r).2.2)
+
+/-- The first gather's message state of round `r` is the one the adversary's
+ghost write reads `Gather.coreOf` on. -/
+theorem toLow1_ga_snd (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n)
+    (w : NetState P.n) (r : ℕ) : (toLow1 P u w r).ga.2 = (ga1Of P w r).2 := rfl
+
+/-- The second gather's message state of round `r`, likewise. -/
+theorem toLow2_ga_snd (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n)
+    (w : NetState P.n) (r : ℕ) : (toLow2 P u w r).ga.2 = (ga2Of P w r).2 := rfl
+
+/-- **The two readings of the first gather's core agree**: the instance's core
+is read off its message state alone, and that message state is the one
+`AFW.ga1Of` hands the adversary. -/
+theorem coreOf_toLow1 (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n)
+    (w : NetState P.n) (r : ℕ) :
+    Gather.coreOf P (toLow1 P u w r).ga = Gather.coreOf P (ga1Of P w r) :=
+  Gather.coreOf_msgState_only _ _ (toLow1_ga_snd P u w r)
+
+/-- The same for the second gather's core. -/
+theorem coreOf_toLow2 (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n)
+    (w : NetState P.n) (r : ℕ) :
+    Gather.coreOf P (toLow2 P u w r).ga = Gather.coreOf P (ga2Of P w r) :=
+  Gather.coreOf_msgState_only _ _ (toLow2_ga_snd P u w r)
+
+/-! ### The ghost write, read through the view
+
+The adversary's ghost record of round `r` is the round instance's two cores
+beside its bound bit, so a row's ghost write is exactly the instance's write
+of those three fields. The three lemmas below are that write at the round the
+row's label names, at every other round, and at a row whose write returns the
+record it found. -/
+
+/-- **The ghost write at the round its label names**, read through the view:
+the two cores and the bound bit are the written record, every other coordinate
+the view before the write. -/
+theorem toPair_writeGhost (v : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n)
+    {L : NLabP P.n (Msg P.n)} {r : ℕ} (h : roundOf L = some r) :
+    toPair P v (w.writeGhost (ghostStep P) L) r
+      = ({ (toPair P v w r).1 with core := (ghostStep P L w (w.ghostRec r)).1 },
+         { (toPair P v w r).2.1 with core := (ghostStep P L w (w.ghostRec r)).2.1 },
+         (ghostStep P L w (w.ghostRec r)).2.2) := by
+  unfold NetStateP.writeGhost
+  rw [h]
+  simp [toPair, toLow1, toLow2]
+
+/-- The ghost write leaves every other round's view where it stands. -/
+theorem toPair_writeGhost_ne (v : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n)
+    {L : NLabP P.n (Msg P.n)} {r r' : ℕ} (h : roundOf L = some r) (hr : r' ≠ r) :
+    toPair P v (w.writeGhost (ghostStep P) L) r' = toPair P v w r' := by
+  unfold NetStateP.writeGhost
+  rw [h]
+  simp [toPair, toLow1, toLow2, Function.update_of_ne hr]
+
+/-- A row whose ghost write returns the record it found leaves every round's
+view where it stands. -/
+theorem toPair_ghostId (L : NLabP P.n (Msg P.n))
+    (h : ∀ (v : NetState P.n) (G : Ghost P.n), ghostStep P L v G = G)
+    (x : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n) (r' : ℕ) :
+    toPair P x (w.writeGhost (ghostStep P) L) r' = toPair P x w r' := by
+  unfold NetStateP.writeGhost
+  cases hL : roundOf L with
+  | none => rfl
+  | some r => simp only [h, Function.update_eq_self]
+
+/-- The ghost write never clears a round's bound bit: `AFW.ghostStep` writes
+the third field at the link alone, and writes it `some`. -/
+theorem ghostStep_bound (L : NLabP P.n (Msg P.n)) (v : NetState P.n)
+    (G : Ghost P.n) (h : G.2.2 ≠ none) : (ghostStep P L v G).2.2 ≠ none := by
+  unfold ghostStep
+  split <;> simp_all
+
+/-- The bound bit of a round on record stays on record across any row. -/
+theorem writeGhost_bound {w : NetState P.n} (L : NLabP P.n (Msg P.n)) {r : ℕ}
+    (h : (w.ghostRec r).2.2 ≠ none) :
+    ((w.writeGhost (ghostStep P) L).ghostRec r).2.2 ≠ none := by
+  unfold NetStateP.writeGhost
+  cases hL : roundOf L with
+  | none => exact h
+  | some r₀ =>
+    by_cases hr : r = r₀
+    · subst hr; simpa using ghostStep_bound L w _ h
+    · simpa [Function.update_of_ne hr] using h
+
+/-- A send, read through the view with its ghost write: the round's two cores
+and its bound bit are the record `AFW.ghostStep` writes, and every other
+coordinate is the send's own. -/
+theorem toPair_gsndGhost (v : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n)
+    (r : ℕ) (j : Fin P.n) (m : Msg P.n) :
+    toPair P v ((w.gsent r j m).writeGhost (ghostStep P) (Sum.inr (.gsnd r j m))) r
+      = ({ (toPair P v (w.gsent r j m) r).1 with
+            core := (ghostStep P (Sum.inr (.gsnd r j m))
+              (w.gsent r j m) (w.ghostRec r)).1 },
+         { (toPair P v (w.gsent r j m) r).2.1 with
+            core := (ghostStep P (Sum.inr (.gsnd r j m))
+              (w.gsent r j m) (w.ghostRec r)).2.1 },
+         (ghostStep P (Sum.inr (.gsnd r j m)) (w.gsent r j m) (w.ghostRec r)).2.2) :=
+  toPair_writeGhost v _ rfl
 
 /-! ### Reading a written round record -/
 
@@ -266,15 +364,27 @@ theorem stage_update_ne {u : ∀ _ : Fin P.n, ProcRec P.n} {j : Fin P.n}
 
 /-! ### The relation -/
 
+/-- **The round's bound bit is on record wherever its second gather has been
+called**: a process whose round-`r` second-gather local state carries an input
+has passed the round's `link`, and the `link` writes the bound bit. This is
+what the graded return's announced bit rests on, and it is the one clause of
+the relation that is not a reading of the flat state. -/
+def BoundInv (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n)
+    (w : NetState P.n) : Prop :=
+  ∀ (r : ℕ) (i : Fin P.n), (((u i).2.stage r).ga2.proc).input ≠ none →
+    (w.ghostRec r).2.2 ≠ none
+
 /-- **The composition relation**: the round loops and the coin oracle are
 shared, the ABA-side network is the DECIDED sets beside the corrupted set,
-and every round's instance is the view `toPair` of the flat state. Nothing is
-guarded, so the composed state is determined by the flat one. -/
+every round's instance is the view `toPair` of the flat state, and the bound
+bit of a called round is on record. The first four conjuncts are unguarded, so
+they determine the composed state from the flat one. -/
 def ProtocolRel (P : Params) (s : ProtocolState P) (t : ComposedState P) : Prop :=
   (∀ j, (s.1 j).1 = t.2.1 j) ∧
     s.2.2 = t.2.2.2 ∧
     t.2.2.1 = ⟨s.2.1.dsent, s.2.1.F⟩ ∧
-    t.1 = fun r => toPair P s.1 s.2.1 r
+    t.1 = (fun r => toPair P s.1 s.2.1 r) ∧
+    BoundInv P s.1 s.2.1
 
 theorem protocolRel_mk (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n)
     (w : NetState P.n) (o : ℕ → WCC.SpecState P.n) (G : ℕ → GBCA.LowPairState P.n)
@@ -282,7 +392,18 @@ theorem protocolRel_mk (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n)
     (o' : ℕ → WCC.SpecState P.n) :
     ProtocolRel P (u, w, o) (G, C, A, o') ↔
       ((∀ j, (u j).1 = C j) ∧ o = o' ∧ A = ⟨w.dsent, w.F⟩ ∧
-        G = fun r => toPair P u w r) := Iff.rfl
+        (G = fun r => toPair P u w r) ∧ BoundInv P u w) := Iff.rfl
+
+/-- The invariant survives a row that leaves every process's second-gather
+local input where it stands and keeps on record every bound bit already
+there. -/
+theorem boundInv_of {u x : ∀ _ : Fin P.n, ProcRec P.n} {w v : NetState P.n}
+    (hI : BoundInv P u w)
+    (hx : ∀ i r, (((x i).2.stage r).ga2.proc).input
+      = (((u i).2.stage r).ga2.proc).input)
+    (hv : ∀ r, (w.ghostRec r).2.2 ≠ none → (v.ghostRec r).2.2 ≠ none) :
+    BoundInv P x v :=
+  fun r i hne => hv r (hI r i (by rw [← hx i r]; exact hne))
 
 /-- The initial states are related: every round of the view is the initial
 instance state, an untouched round reading as the initial record on the flat
@@ -295,7 +416,7 @@ theorem protocolRel_init (P : Params) :
     intro β f hf
     funext q
     simp [slice]
-  refine ⟨fun _ => rfl, rfl, rfl, ?_⟩
+  refine ⟨fun _ => rfl, rfl, rfl, ?_, fun _ _ h => absurd rfl h⟩
   funext r
   have hlow : (composed P).init.1 r = GBCA.LowPairState.initial P.n := rfl
   have hproc : (protocol P).init.1
@@ -303,7 +424,9 @@ theorem protocolRel_init (P : Params) :
   have hsent : ((protocol P).init.2.1).sent
       = fun _ _ => (∅ : Finset (Msg P.n)) := rfl
   have hF : ((protocol P).init.2.1).F = (∅ : Finset (Fin P.n)) := rfl
-  rw [hlow, toPair, toLow1, toLow2, hproc, hsent, hF]
+  have hghost : ((protocol P).init.2.1).ghostRec
+      = fun _ => ((none, none, none) : Ghost P.n) := rfl
+  rw [hlow, toPair, toLow1, toLow2, hproc, hsent, hF, hghost]
   refine Prod.ext ?_ ?_ <;>
     simp [GBCA.LowPairState.initial, Gather.LowState.initial, SubState.initial,
       MsgState.initial, StageRec.initial, BRB.ImplState.initial, hslice]
@@ -539,7 +662,8 @@ variable {u : ∀ _ : Fin P.n, ProcRec P.n} {w : NetState P.n} {j : Fin P.n}
 
 /-- The view after a write, with the one-point update pushed inside every
 coordinate: the acting process's local state replaced in each local state vector, and each
-message state sliced out of the written sent. -/
+message state sliced out of the written sent. The two cores and the bound bit
+are the adversary's ghost record of the round, which a write leaves alone. -/
 def toPairUpd (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n)
     (r : ℕ) (j : Fin P.n) (sr : StageRec P.n)
     (sent : Fin P.n → Finset (Msg P.n)) : GBCA.LowPairState P.n :=
@@ -550,7 +674,8 @@ def toPairUpd (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n)
         ⟨slice (unIn1 k) (unIn1_inj k) sent, w.F⟩)
      brbBind := fun k =>
        (Function.update (fun i => ((u i).2.stage r).brbBind1 k) j (sr.brbBind1 k),
-        ⟨slice (unBind1 k) (unBind1_inj k) sent, w.F⟩) },
+        ⟨slice (unBind1 k) (unBind1_inj k) sent, w.F⟩)
+     core := (w.ghostRec r).1 },
    { ga := (Function.update (fun i => ((u i).2.stage r).ga2) j sr.ga2,
             ⟨slice unGa2 unGa2_inj sent, w.F⟩)
      brbIn := fun k =>
@@ -558,7 +683,9 @@ def toPairUpd (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n)
         ⟨slice (unIn2 k) (unIn2_inj k) sent, w.F⟩)
      brbBind := fun k =>
        (Function.update (fun i => ((u i).2.stage r).brbBind2 k) j (sr.brbBind2 k),
-        ⟨slice (unBind2 k) (unBind2_inj k) sent, w.F⟩) })
+        ⟨slice (unBind2 k) (unBind2_inj k) sent, w.F⟩)
+     core := (w.ghostRec r).2.1 },
+   (w.ghostRec r).2.2)
 
 /-- **A write, read through the view.** A row writes the acting process's
 round record and records one tagged message; the round it names then reads as
@@ -570,7 +697,7 @@ theorem toPair_write (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n)
     toPair P (Function.update u j (c, (u j).2.setStage r sr)) (w.gsent r j m) r
       = toPairUpd P u w r j sr
           (Function.update (w.sent r) j (insert m (w.sent r j))) := by
-  refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
+  refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
   · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPair, toPairUpd, toLow1, stage_update_self rfl, locals_ga1_if]
     · simp only [toPair, toPairUpd, toLow1, gsent_sent_self]
@@ -600,7 +727,7 @@ theorem toPair_writeNoSent (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n)
     (j : Fin P.n) (c : CoreRec P.n) (r : ℕ) (sr : StageRec P.n) :
     toPair P (Function.update u j (c, (u j).2.setStage r sr)) w r
       = toPairUpd P u w r j sr (w.sent r) := by
-  refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
+  refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
   · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPair, toPairUpd, toLow1, stage_update_self rfl, locals_ga1_if]
     · simp only [toPair, toPairUpd, toLow1]
@@ -636,9 +763,9 @@ theorem toPair_ga1Send (hu : (u j).2 = p) (r : ℕ) (pr : PRec P.n Bool)
       (w.gsent r j (.ga1 m)) r
       = ({ toLow1 P u w r with
             ga := ((toLow1 P u w r).ga.setProc j pr).mcast j m },
-         toLow2 P u w r) := by
+         toLow2 P u w r, (w.ghostRec r).2.2) := by
   rw [← hu, toPair_write]
-  refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
+  refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
   · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1, SubState.mcast, SubState.setProc]
     · simp only [toPairUpd, toLow1, SubState.mcast, MsgState.post]
@@ -688,9 +815,9 @@ theorem toPair_in1Send (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
       = ({ toLow1 P u w r with
             brbIn := Function.update (toLow1 P u w r).brbIn i
               ((((toLow1 P u w r).brbIn i).setProc j pr).mcast j m) },
-         toLow2 P u w r) := by
+         toLow2 P u w r, (w.ghostRec r).2.2) := by
   rw [← hu, toPair_write]
-  refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
+  refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
   · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
@@ -747,9 +874,9 @@ theorem toPair_ga2Send (hu : (u j).2 = p) (r : ℕ) (pr : PRec P.n (Option Bool)
       (w.gsent r j (.ga2 m)) r
       = (toLow1 P u w r,
          { toLow2 P u w r with
-            ga := ((toLow2 P u w r).ga.setProc j pr).mcast j m }) := by
+            ga := ((toLow2 P u w r).ga.setProc j pr).mcast j m }, (w.ghostRec r).2.2) := by
   rw [← hu, toPair_write]
-  refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
+  refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
   · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
@@ -795,9 +922,9 @@ theorem toPair_bind1Send (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
       = ({ toLow1 P u w r with
             brbBind := Function.update (toLow1 P u w r).brbBind i
               ((((toLow1 P u w r).brbBind i).setProc j pr).mcast j m) },
-         toLow2 P u w r) := by
+         toLow2 P u w r, (w.ghostRec r).2.2) := by
   rw [← hu, toPair_write]
-  refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
+  refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
   · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
@@ -855,9 +982,9 @@ theorem toPair_in2Send (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
       = (toLow1 P u w r,
          { toLow2 P u w r with
             brbIn := Function.update (toLow2 P u w r).brbIn i
-              ((((toLow2 P u w r).brbIn i).setProc j pr).mcast j m) }) := by
+              ((((toLow2 P u w r).brbIn i).setProc j pr).mcast j m) }, (w.ghostRec r).2.2) := by
   rw [← hu, toPair_write]
-  refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
+  refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
   · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
@@ -915,9 +1042,9 @@ theorem toPair_bind2Send (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
       = (toLow1 P u w r,
          { toLow2 P u w r with
             brbBind := Function.update (toLow2 P u w r).brbBind i
-              ((((toLow2 P u w r).brbBind i).setProc j pr).mcast j m) }) := by
+              ((((toLow2 P u w r).brbBind i).setProc j pr).mcast j m) }, (w.ghostRec r).2.2) := by
   rw [← hu, toPair_write]
-  refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
+  refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
   · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
@@ -969,9 +1096,9 @@ theorem toPair_dlvGa1 (hu : (u j).2 = p) (r : ℕ) (k : Fin P.n) (mm : GaMsg P.n
     toPair P (Function.update u j (c, p.setStage r
         { p.stage r with ga1 := (p.stage r).ga1.deliverTo k mm })) w r
       = ({ toLow1 P u w r with ga := (toLow1 P u w r).ga.recvMsg j k mm },
-         toLow2 P u w r) := by
+         toLow2 P u w r, (w.ghostRec r).2.2) := by
   rw [← hu, toPair_writeNoSent]
-  refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
+  refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
   · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1, SubState.recvMsg]
     · simp only [toPairUpd, toLow1, SubState.recvMsg]
@@ -1005,9 +1132,9 @@ theorem toPair_dlvGa2 (hu : (u j).2 = p) (r : ℕ) (k : Fin P.n) (mm : GaMsg P.n
     toPair P (Function.update u j (c, p.setStage r
         { p.stage r with ga2 := (p.stage r).ga2.deliverTo k mm })) w r
       = (toLow1 P u w r,
-         { toLow2 P u w r with ga := (toLow2 P u w r).ga.recvMsg j k mm }) := by
+         { toLow2 P u w r with ga := (toLow2 P u w r).ga.recvMsg j k mm }, (w.ghostRec r).2.2) := by
   rw [← hu, toPair_writeNoSent]
-  refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
+  refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
   · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
@@ -1045,9 +1172,9 @@ theorem toPair_dlvIn1 (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n) (mm : BRB.BMs
       = ({ toLow1 P u w r with
             brbIn := Function.update (toLow1 P u w r).brbIn i
               (((toLow1 P u w r).brbIn i).recvMsg j k mm) },
-         toLow2 P u w r) := by
+         toLow2 P u w r, (w.ghostRec r).2.2) := by
   rw [← hu, toPair_writeNoSent]
-  refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
+  refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
   · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
@@ -1094,9 +1221,9 @@ theorem toPair_dlvBind1 (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
       = ({ toLow1 P u w r with
             brbBind := Function.update (toLow1 P u w r).brbBind i
               (((toLow1 P u w r).brbBind i).recvMsg j k mm) },
-         toLow2 P u w r) := by
+         toLow2 P u w r, (w.ghostRec r).2.2) := by
   rw [← hu, toPair_writeNoSent]
-  refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
+  refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
   · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
@@ -1142,9 +1269,9 @@ theorem toPair_dlvIn2 (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n) (mm : BRB.BMs
       = (toLow1 P u w r,
          { toLow2 P u w r with
             brbIn := Function.update (toLow2 P u w r).brbIn i
-              (((toLow2 P u w r).brbIn i).recvMsg j k mm) }) := by
+              (((toLow2 P u w r).brbIn i).recvMsg j k mm) }, (w.ghostRec r).2.2) := by
   rw [← hu, toPair_writeNoSent]
-  refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
+  refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
   · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
@@ -1191,9 +1318,9 @@ theorem toPair_dlvBind2 (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
       = (toLow1 P u w r,
          { toLow2 P u w r with
             brbBind := Function.update (toLow2 P u w r).brbBind i
-              (((toLow2 P u w r).brbBind i).recvMsg j k mm) }) := by
+              (((toLow2 P u w r).brbBind i).recvMsg j k mm) }, (w.ghostRec r).2.2) := by
   rw [← hu, toPair_writeNoSent]
-  refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
+  refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
   · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
@@ -1237,9 +1364,9 @@ theorem toPair_retG (hu : (u j).2 = p) (r : ℕ) (pr : PRec P.n (Option Bool)) :
     toPair P (Function.update u j (c, p.setStage r
         { p.stage r with ga2 := (p.stage r).ga2.setP pr })) w r
       = (toLow1 P u w r,
-         { toLow2 P u w r with ga := (toLow2 P u w r).ga.setProc j pr }) := by
+         { toLow2 P u w r with ga := (toLow2 P u w r).ga.setProc j pr }, (w.ghostRec r).2.2) := by
   rw [← hu, toPair_writeNoSent]
-  refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
+  refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
   · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
@@ -1287,9 +1414,9 @@ theorem toPair_callG (hu : (u j).2 = p) (r : ℕ) (b : Bool) :
               ((((toLow1 P u w r).brbIn j).setProc j
                 { (((toLow1 P u w r).brbIn j).proc j) with input := some b }).mcast
                   j (.init b)) },
-         toLow2 P u w r) := by
+         toLow2 P u w r, (w.ghostRec r).2.2) := by
   rw [← hu, toPair_write]
-  refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
+  refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
   · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1, SubState.setProc, SubState.proc]
     · simp only [toPairUpd, toLow1]
@@ -1357,9 +1484,10 @@ theorem toPair_link (hu : (u j).2 = p) (r : ℕ) (pr1 : PRec P.n Bool)
          { toLow2 P u w r with
             ga := (toLow2 P u w r).ga.setProc j pr2
             brbIn := Function.update (toLow2 P u w r).brbIn j
-              ((((toLow2 P u w r).brbIn j).setProc j prb).mcast j (.init x)) }) := by
+              ((((toLow2 P u w r).brbIn j).setProc j prb).mcast j (.init x)) },
+         (w.ghostRec r).2.2) := by
   rw [← hu, toPair_write]
-  refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
+  refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
   · refine Prod.ext ?_ (msgState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1, SubState.setProc]
     · simp only [toPairUpd, toLow1, SubState.setProc]
@@ -1419,7 +1547,7 @@ theorem toPair_other (hu : (u j).2 = p) {r r' : ℕ} (hr : r' ≠ r)
     (sr : StageRec P.n) (m : Msg P.n) :
     toPair P (Function.update u j (c, p.setStage r sr)) (w.gsent r j m) r'
       = toPair P u w r' := by
-  refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_) <;>
+  refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl) <;>
     first
       | (refine Prod.ext ?_ (msgState_ext ?_ rfl)
          · simp only [toPair, toLow1, toLow2, stage_update_ne hu hr]
@@ -1432,7 +1560,7 @@ theorem toPair_other (hu : (u j).2 = p) {r r' : ℕ} (hr : r' ≠ r)
 theorem toPair_otherNoSent (hu : (u j).2 = p) {r r' : ℕ} (hr : r' ≠ r)
     (sr : StageRec P.n) :
     toPair P (Function.update u j (c, p.setStage r sr)) w r' = toPair P u w r' := by
-  refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_) <;>
+  refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl) <;>
     first
       | (refine Prod.ext ?_ (msgState_ext rfl rfl)
          simp only [toPair, toLow1, toLow2, stage_update_ne hu hr])
@@ -1525,7 +1653,7 @@ and the two guards are the same. -/
 theorem toPair_congr {x u : ∀ _ : Fin P.n, ProcRec P.n} {r : ℕ}
     (h : ∀ i, (x i).2.stage r = (u i).2.stage r) (w : NetState P.n) :
     toPair P x w r = toPair P u w r := by
-  refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
+  refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
   · refine Prod.ext ?_ rfl
     funext i
     exact congrArg (fun q => q.ga1) (h i)
@@ -1553,7 +1681,7 @@ theorem toPair_fail (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n) (r : �
     (k : Fin P.n) :
     toPair P u (NetStateP.corrupt P k w) r
       = gActLow P (Sum.inl (Lab.fail k)) (toPair P u w r) := by
-  refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
+  refine Prod.ext (lowState_ext ?_ ?_ ?_ ?_) (Prod.ext (lowState_ext ?_ ?_ ?_ ?_) ?_)
   · refine Prod.ext rfl ?_
     simp only [toPair, toLow1, gActLow, Gather.LowState.corruptAll,
       SubState.corrupt, NetStateP.corrupt, MsgState.corrupt]
@@ -1568,6 +1696,8 @@ theorem toPair_fail (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n) (r : �
     simp only [toPair, toLow1, gActLow, Gather.LowState.corruptAll,
       SubState.corrupt, NetStateP.corrupt, MsgState.corrupt]
     split_ifs <;> rfl
+  · simp only [toPair, toLow1, gActLow, Gather.LowState.corruptAll, NetStateP.corrupt]
+    split_ifs <;> rfl
   · refine Prod.ext rfl ?_
     simp only [toPair, toLow2, gActLow, Gather.LowState.corruptAll,
       SubState.corrupt, NetStateP.corrupt, MsgState.corrupt]
@@ -1581,13 +1711,17 @@ theorem toPair_fail (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n) (r : �
     refine Prod.ext rfl ?_
     simp only [toPair, toLow2, gActLow, Gather.LowState.corruptAll,
       SubState.corrupt, NetStateP.corrupt, MsgState.corrupt]
+    split_ifs <;> rfl
+  · simp only [toPair, toLow2, gActLow, Gather.LowState.corruptAll, NetStateP.corrupt]
+    split_ifs <;> rfl
+  · simp only [toPair, gActLow, NetStateP.corrupt]
     split_ifs <;> rfl
 
 /-- A sent write at one round leaves every other round's view alone. -/
 theorem toPair_otherSent (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n)
     {r r' : ℕ} (hr : r' ≠ r) (k : Fin P.n) (m : Msg P.n) :
     toPair P u (w.gsent r k m) r' = toPair P u w r' := by
-  refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
+  refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
   · refine Prod.ext rfl (msgState_ext ?_ rfl)
     simp only [toPair, toLow1, gsent_sent_ne _ _ _ _ hr]
   · funext k'
@@ -1685,117 +1819,144 @@ theorem stage_answer_gsnd (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     ∃ x : ProcRec P.n, μ = PMF.pure x ∧ x.1 = c ∧
       (∀ r', r' ≠ r → x.2.stage r' = p.stage r') ∧
       GBCA.LowPairStep P r (toPair P u w r) Lab.tau
-        (PMF.pure (toPair P (Function.update u j x) (w.gsent r j m) r)) := by
+        (PMF.pure (toPair P (Function.update u j x)
+          ((w.gsent r j m).writeGhost (ghostStep P) (Sum.inr (.gsnd r j m))) r)) := by
   subst hu
   cases h with
   | ga1Echo _ _ _ A hh hterm hin happ hcard hsend =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
-    rw [toPair_ga1Send rfl]
+    rw [toPair_gsndGhost, toPair_ga1Send rfl]
     exact GBCA.LowPairStep.ga1Tau
       (toPair P u w r) _ (Gather.LowStep.echo (toPair P u w r).1 j A hin happ hcard hsend)
   | ga1Vote _ _ _ U hh hterm hin happ hQ hsend =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
-    rw [toPair_ga1Send rfl]
+    rw [toPair_gsndGhost, toPair_ga1Send rfl]
     exact GBCA.LowPairStep.ga1Tau
       (toPair P u w r) _ (Gather.LowStep.vote (toPair P u w r).1 j U hin happ hQ hsend)
   | ga1Bind _ _ _ U hh hterm hin hbc happ hQ =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
-    rw [toPair_bind1Send rfl]
+    rw [toPair_gsndGhost, toPair_bind1Send rfl]
     exact GBCA.LowPairStep.ga1Tau
       (toPair P u w r) _ (Gather.LowStep.bindCall (toPair P u w r).1 j U hin hbc happ hQ)
   | ga2Echo _ _ _ A hh hterm hin happ hcard hsend =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
-    rw [toPair_ga2Send rfl]
+    rw [toPair_gsndGhost, toPair_ga2Send rfl]
     exact GBCA.LowPairStep.ga2Tau
-      (toPair P u w r) _ (Gather.LowStep.echo (toPair P u w r).2 j A hin happ hcard hsend)
+      (toPair P u w r) _ (Gather.LowStep.echo (toPair P u w r).2.1 j A hin happ hcard hsend)
   | ga2Vote _ _ _ U hh hterm hin happ hQ hsend =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
-    rw [toPair_ga2Send rfl]
+    rw [toPair_gsndGhost, toPair_ga2Send rfl]
     exact GBCA.LowPairStep.ga2Tau
-      (toPair P u w r) _ (Gather.LowStep.vote (toPair P u w r).2 j U hin happ hQ hsend)
+      (toPair P u w r) _ (Gather.LowStep.vote (toPair P u w r).2.1 j U hin happ hQ hsend)
   | ga2Bind _ _ _ U hh hterm hin hbc happ hQ =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
-    rw [toPair_bind2Send rfl]
+    rw [toPair_gsndGhost, toPair_bind2Send rfl]
     exact GBCA.LowPairStep.ga2Tau
-      (toPair P u w r) _ (Gather.LowStep.bindCall (toPair P u w r).2 j U hin hbc happ hQ)
+      (toPair P u w r) _ (Gather.LowStep.bindCall (toPair P u w r).2.1 j U hin hbc happ hQ)
   | link _ _ _ g hh hterm hin hsubap hQ hr1 hin2 hbin2 =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
-    rw [toPair_link rfl]
-    exact GBCA.LowPairStep.link (toPair P u w r) j g _
+    have hcore : Gather.coreOf P
+        (ga1Of P (w.gsent r j (.brbIn2 j (.init (GBCA.cand P g)))) r)
+        = Gather.coreOf P (toLow1 P u w r).ga := by
+      refine Gather.coreOf_msgState_only _ _ (msgState_ext ?_ rfl)
+      simp only [ga1Of, toLow1, gsent_sent_self]
+      exact slice_post_none unGa1 unGa1_inj (w.sent r) j
+        (.brbIn2 j (.init (GBCA.cand P g))) rfl
+    rw [toPair_gsndGhost, toPair_link rfl]
+    simp only [ghostStep, hcore]
+    exact GBCA.LowPairStep.link (toPair P u w r) j g _ _
       (Gather.LowStep.ret (toPair P u w r).1 j g hin hsubap hQ hr1) hin2 hbin2
   | in1Echo _ _ _ i mm hh hterm hrecv hsend =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
-    rw [toPair_in1Send rfl]
+    rw [toPair_gsndGhost, toPair_in1Send rfl]
     exact GBCA.LowPairStep.ga1Tau (toPair P u w r) _
       (Gather.LowStep.brbInTau (toPair P u w r).1 i _
         (BRB.ImplStep.echo ((toPair P u w r).1.brbIn i) j mm hrecv hsend))
   | in1VoteQuorum _ _ _ i mm hh hterm hcnt hsend =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
-    rw [toPair_in1Send rfl]
+    rw [toPair_gsndGhost, toPair_in1Send rfl]
     exact GBCA.LowPairStep.ga1Tau (toPair P u w r) _
       (Gather.LowStep.brbInTau (toPair P u w r).1 i _
         (BRB.ImplStep.voteQuorum ((toPair P u w r).1.brbIn i) j mm hcnt hsend))
   | in1VoteAmp _ _ _ i mm hh hterm hcnt hsend =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
-    rw [toPair_in1Send rfl]
+    rw [toPair_gsndGhost, toPair_in1Send rfl]
     exact GBCA.LowPairStep.ga1Tau (toPair P u w r) _
       (Gather.LowStep.brbInTau (toPair P u w r).1 i _
         (BRB.ImplStep.voteAmp ((toPair P u w r).1.brbIn i) j mm hcnt hsend))
   | bind1Echo _ _ _ i mm hh hterm hrecv hsend =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
-    rw [toPair_bind1Send rfl]
+    rw [toPair_gsndGhost, toPair_bind1Send rfl]
     exact GBCA.LowPairStep.ga1Tau (toPair P u w r) _
       (Gather.LowStep.brbBindTau (toPair P u w r).1 i _
         (BRB.ImplStep.echo ((toPair P u w r).1.brbBind i) j mm hrecv hsend))
   | bind1VoteQuorum _ _ _ i mm hh hterm hcnt hsend =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
-    rw [toPair_bind1Send rfl]
+    rw [toPair_gsndGhost, toPair_bind1Send rfl]
     exact GBCA.LowPairStep.ga1Tau (toPair P u w r) _
       (Gather.LowStep.brbBindTau (toPair P u w r).1 i _
         (BRB.ImplStep.voteQuorum ((toPair P u w r).1.brbBind i) j mm hcnt hsend))
   | bind1VoteAmp _ _ _ i mm hh hterm hcnt hsend =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
-    rw [toPair_bind1Send rfl]
+    rw [toPair_gsndGhost, toPair_bind1Send rfl]
     exact GBCA.LowPairStep.ga1Tau (toPair P u w r) _
       (Gather.LowStep.brbBindTau (toPair P u w r).1 i _
         (BRB.ImplStep.voteAmp ((toPair P u w r).1.brbBind i) j mm hcnt hsend))
   | in2Echo _ _ _ i mm hh hterm hrecv hsend =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
-    rw [toPair_in2Send rfl]
+    rw [toPair_gsndGhost, toPair_in2Send rfl]
     exact GBCA.LowPairStep.ga2Tau (toPair P u w r) _
-      (Gather.LowStep.brbInTau (toPair P u w r).2 i _
-        (BRB.ImplStep.echo ((toPair P u w r).2.brbIn i) j mm hrecv hsend))
+      (Gather.LowStep.brbInTau (toPair P u w r).2.1 i _
+        (BRB.ImplStep.echo ((toPair P u w r).2.1.brbIn i) j mm hrecv hsend))
   | in2VoteQuorum _ _ _ i mm hh hterm hcnt hsend =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
-    rw [toPair_in2Send rfl]
+    rw [toPair_gsndGhost, toPair_in2Send rfl]
     exact GBCA.LowPairStep.ga2Tau (toPair P u w r) _
-      (Gather.LowStep.brbInTau (toPair P u w r).2 i _
-        (BRB.ImplStep.voteQuorum ((toPair P u w r).2.brbIn i) j mm hcnt hsend))
+      (Gather.LowStep.brbInTau (toPair P u w r).2.1 i _
+        (BRB.ImplStep.voteQuorum ((toPair P u w r).2.1.brbIn i) j mm hcnt hsend))
   | in2VoteAmp _ _ _ i mm hh hterm hcnt hsend =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
-    rw [toPair_in2Send rfl]
+    rw [toPair_gsndGhost, toPair_in2Send rfl]
     exact GBCA.LowPairStep.ga2Tau (toPair P u w r) _
-      (Gather.LowStep.brbInTau (toPair P u w r).2 i _
-        (BRB.ImplStep.voteAmp ((toPair P u w r).2.brbIn i) j mm hcnt hsend))
+      (Gather.LowStep.brbInTau (toPair P u w r).2.1 i _
+        (BRB.ImplStep.voteAmp ((toPair P u w r).2.1.brbIn i) j mm hcnt hsend))
   | bind2Echo _ _ _ i mm hh hterm hrecv hsend =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
-    rw [toPair_bind2Send rfl]
+    rw [toPair_gsndGhost, toPair_bind2Send rfl]
     exact GBCA.LowPairStep.ga2Tau (toPair P u w r) _
-      (Gather.LowStep.brbBindTau (toPair P u w r).2 i _
-        (BRB.ImplStep.echo ((toPair P u w r).2.brbBind i) j mm hrecv hsend))
+      (Gather.LowStep.brbBindTau (toPair P u w r).2.1 i _
+        (BRB.ImplStep.echo ((toPair P u w r).2.1.brbBind i) j mm hrecv hsend))
   | bind2VoteQuorum _ _ _ i mm hh hterm hcnt hsend =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
-    rw [toPair_bind2Send rfl]
+    rw [toPair_gsndGhost, toPair_bind2Send rfl]
     exact GBCA.LowPairStep.ga2Tau (toPair P u w r) _
-      (Gather.LowStep.brbBindTau (toPair P u w r).2 i _
-        (BRB.ImplStep.voteQuorum ((toPair P u w r).2.brbBind i) j mm hcnt hsend))
+      (Gather.LowStep.brbBindTau (toPair P u w r).2.1 i _
+        (BRB.ImplStep.voteQuorum ((toPair P u w r).2.1.brbBind i) j mm hcnt hsend))
   | bind2VoteAmp _ _ _ i mm hh hterm hcnt hsend =>
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
-    rw [toPair_bind2Send rfl]
+    rw [toPair_gsndGhost, toPair_bind2Send rfl]
     exact GBCA.LowPairStep.ga2Tau (toPair P u w r) _
-      (Gather.LowStep.brbBindTau (toPair P u w r).2 i _
-        (BRB.ImplStep.voteAmp ((toPair P u w r).2.brbBind i) j mm hcnt hsend))
+      (Gather.LowStep.brbBindTau (toPair P u w r).2.1 i _
+        (BRB.ImplStep.voteAmp ((toPair P u w r).2.1.brbBind i) j mm hcnt hsend))
 
+
+/-- **The second gather's local input is written at the link alone**: a send
+either leaves every round's input where it stands, or carries the link's
+`⟨INIT, ·⟩` in the caller's own input-broadcast instance of the second
+gather. -/
+theorem stage_gsnd_ga2 (P : Params) {j : Fin P.n} {c : CoreRec P.n}
+    {p : StageSideRec P.n} {r : ℕ} {m : Msg P.n} {μ : PMF (ProcRec P.n)}
+    (h : StageStep P j (c, p) (Sum.inr (.gsnd r j m)) μ) :
+    (∀ x : ProcRec P.n, μ = PMF.pure x → ∀ r',
+        (((x.2.stage r').ga2.proc)).input = ((p.stage r').ga2.proc).input)
+      ∨ ∃ q y, m = Msg.brbIn2 q (BRB.BMsg.init y) := by
+  cases h <;> first
+    | exact Or.inr ⟨_, _, rfl⟩
+    | exact Or.inl (fun x hx r' => by
+        obtain rfl := pureN_inj hx.symm
+        by_cases hr' : r' = r
+        · subst hr'; simp [LocalState.setP]
+        · rw [StageSideRecP.stage_setStage_ne _ _ _ hr'])
 
 /-! ### Answering a delivery, a call, a return and a call loop -/
 
@@ -1809,12 +1970,22 @@ theorem stage_answer_gdlv (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     (h : StageStep P j (c, p) (Sum.inr (.gdlv r j k m)) μ) :
     ∃ x : ProcRec P.n, μ = PMF.pure x ∧ x.1 = c ∧
       (∀ r', r' ≠ r → x.2.stage r' = p.stage r') ∧
+      (∀ r', ((x.2.stage r').ga2.proc).input = ((p.stage r').ga2.proc).input) ∧
       GBCA.LowPairStep P r (toPair P u w r) Lab.tau
-        (PMF.pure (toPair P (Function.update u j x) w r)) := by
+        (PMF.pure (toPair P (Function.update u j x)
+          (w.writeGhost (ghostStep P) (Sum.inr (.gdlv r j k m))) r)) := by
   subst hu
   cases h with
   | gdlvRecv _ _ _ _ _ hh hterm =>
-    refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
+    refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr',
+      fun r' => ?_, ?_⟩
+    · by_cases hr' : r' = r
+      · subst hr'
+        simp only [StageSideRecP.deliverTo, stageRecord_deliverTo, StageRec.deliverTo,
+          StageSideRecP.stage_setStage_self]
+        cases m <;> simp [LocalState.deliverTo]
+      · rw [StageSideRecP.deliverTo, StageSideRecP.stage_setStage_ne _ _ _ hr']
+    rw [toPair_ghostId (Sum.inr (.gdlv r j k m)) (fun _ _ => rfl)]
     simp only [StageSideRecP.deliverTo, stageRecord_deliverTo, StageRec.deliverTo]
     cases m with
     | ga1 mm =>
@@ -1825,7 +1996,7 @@ theorem stage_answer_gdlv (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     | ga2 mm =>
       rw [toPair_dlvGa2 rfl]
       exact GBCA.LowPairStep.ga2Tau (toPair P u w r) _
-        (Gather.LowStep.deliver (toPair P u w r).2 j k mm
+        (Gather.LowStep.deliver (toPair P u w r).2.1 j k mm
           ((mem_slice (hf := unGa2_inj)).mpr ⟨_, hsent, rfl⟩))
     | brbIn1 i mm =>
       rw [toPair_dlvIn1 rfl]
@@ -1842,14 +2013,14 @@ theorem stage_answer_gdlv (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     | brbIn2 i mm =>
       rw [toPair_dlvIn2 rfl]
       exact GBCA.LowPairStep.ga2Tau (toPair P u w r) _
-        (Gather.LowStep.brbInTau (toPair P u w r).2 i _
-          (BRB.ImplStep.deliver ((toPair P u w r).2.brbIn i) j k mm
+        (Gather.LowStep.brbInTau (toPair P u w r).2.1 i _
+          (BRB.ImplStep.deliver ((toPair P u w r).2.1.brbIn i) j k mm
             ((mem_slice (hf := unIn2_inj i)).mpr ⟨_, hsent, by simp [unIn2]⟩)))
     | brbBind2 i mm =>
       rw [toPair_dlvBind2 rfl]
       exact GBCA.LowPairStep.ga2Tau (toPair P u w r) _
-        (Gather.LowStep.brbBindTau (toPair P u w r).2 i _
-          (BRB.ImplStep.deliver ((toPair P u w r).2.brbBind i) j k mm
+        (Gather.LowStep.brbBindTau (toPair P u w r).2.1 i _
+          (BRB.ImplStep.deliver ((toPair P u w r).2.1.brbBind i) j k mm
             ((mem_slice (hf := unBind2_inj i)).mpr ⟨_, hsent, by simp [unBind2]⟩)))
 
 /-- The graded-agreement call of the flat reading is the round instance's own
@@ -1863,15 +2034,21 @@ theorem stage_answer_callG (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       c.proc.est = some b ∧
       x.1 = c.setProc { c.proc with phase := .awaitG } ∧
       (∀ r', r' ≠ r → x.2.stage r' = p.stage r') ∧
+      (∀ r', ((x.2.stage r').ga2.proc).input = ((p.stage r').ga2.proc).input) ∧
       GBCA.LowPairStep P r (toPair P u w r) (.callG r j b)
         (PMF.pure (toPair P (Function.update u j x)
-          (w.gsent r j (gCallPayload P j b)) r)) := by
+          ((w.gsent r j (gCallPayload P j b)).writeGhost (ghostStep P)
+            (Sum.inl (.callG r j b))) r)) := by
   subst hu
   cases h with
   | callG _ _ _ _ hh hph hr hterm hest hin hbin =>
     refine ⟨_, rfl, hh, hph, hr, hest, rfl,
-      fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
-    rw [gCallPayload, toPair_callG rfl]
+      fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', fun r' => ?_, ?_⟩
+    · by_cases hr' : r' = r
+      · subst hr'; simp
+      · rw [StageSideRecP.stage_setStage_ne _ _ _ hr']
+    rw [toPair_ghostId (Sum.inl (Lab.callG r j b)) (fun _ _ => rfl), gCallPayload,
+      toPair_callG rfl]
     exact GBCA.LowPairStep.callG (toPair P u w r) j b _
       (Gather.LowStep.call (toPair P u w r).1 j b hin hbin)
 
@@ -1879,23 +2056,38 @@ theorem stage_answer_callG (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
 own return, the grade read off the second gather's output. -/
 theorem stage_answer_retG (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     (w : NetState P.n) {j : Fin P.n} {c : CoreRec P.n} {p : StageSideRec P.n}
-    (hu : (u j).2 = p) {r : ℕ} {out : GbcaOut} {μ : PMF (ProcRec P.n)}
-    (h : StageStep P j (c, p) (Sum.inl (.retG r j out)) μ) :
+    (hu : (u j).2 = p) {r : ℕ} {out : GbcaOut} {bnd : Bool}
+    {μ : PMF (ProcRec P.n)} (hbnd : bnd = ghostOut P w r j out)
+    (hset : ∀ i, (((u i).2.stage r).ga2.proc).input ≠ none →
+      (w.ghostRec r).2.2 ≠ none)
+    (h : StageStep P j (c, p) (Sum.inl (.retG r j out bnd)) μ) :
     ∃ x : ProcRec P.n, μ = PMF.pure x ∧
       c.corrupted = false ∧ c.proc.phase = .awaitG ∧ c.proc.round = r ∧
       x.1 = c.setProc { c.proc with
         est := out.est, lastGrade := some out, phase := .toCallW } ∧
       (∀ r', r' ≠ r → x.2.stage r' = p.stage r') ∧
-      GBCA.LowPairStep P r (toPair P u w r) (.retG r j out)
-        (PMF.pure (toPair P (Function.update u j x) w r)) := by
+      (∀ r', ((x.2.stage r').ga2.proc).input = ((p.stage r').ga2.proc).input) ∧
+      GBCA.LowPairStep P r (toPair P u w r) (.retG r j out bnd)
+        (PMF.pure (toPair P (Function.update u j x)
+          (w.writeGhost (ghostStep P) (Sum.inl (.retG r j out bnd))) r)) := by
   subst hu
   cases h with
-  | retG _ _ _ g hh hph hr hterm hin hsubap hQ hr2 =>
+  | retG _ _ _ g _ hh hph hr hterm hin hsubap hQ hr2 =>
+    obtain ⟨β, hβ⟩ := Option.ne_none_iff_exists'.mp (hset j hin)
+    have hb : bnd = (toPair P u w r).2.2.getD (GBCA.boundOfCore P ∅) := by
+      rw [hbnd]
+      unfold ghostOut
+      simp only [toPair, hβ, Option.getD_some]
+    subst hb
     refine ⟨_, rfl, hh, hph, hr, rfl,
-      fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_⟩
-    rw [toPair_retG rfl]
-    exact GBCA.LowPairStep.retG (toPair P u w r) j g _
-      (Gather.LowStep.ret (toPair P u w r).2 j g hin hsubap hQ hr2)
+      fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', fun r' => ?_, ?_⟩
+    · by_cases hr' : r' = r
+      · subst hr'; simp [LocalState.setP]
+      · rw [StageSideRecP.stage_setStage_ne _ _ _ hr']
+    rw [toPair_writeGhost _ _ rfl, toPair_retG rfl]
+    simp only [ghostStep]
+    exact GBCA.LowPairStep.retG (toPair P u w r) j g _ _
+      (Gather.LowStep.ret (toPair P u w r).2.1 j g hin hsubap hQ hr2)
 
 /-- The call against an already-called record: the round loop moves and the
 round instance takes its input-enabledness loop. -/
@@ -1908,14 +2100,17 @@ theorem stage_answer_gcallLoop (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       c.proc.est = some b ∧
       x.1 = c.setProc { c.proc with phase := .awaitG } ∧
       (∀ r', r' ≠ r → x.2.stage r' = p.stage r') ∧
-      GBCA.LowPairStep P r (toPair P u w r) (.callG r j b)
-        (PMF.pure (toPair P u w r)) := by
+      GBCA.LowPairStep P r (toPair P u w r)
+        (.callG r j b)
+        (PMF.pure (toPair P u
+          (w.writeGhost (ghostStep P) (Sum.inr (.gcallLoop r j b))) r)) := by
   subst hu
   cases h with
   | gcallLoop _ _ _ _ hh hph hr hest hin =>
-    exact ⟨_, rfl, rfl, hh, hph, hr, hest, rfl, fun r' _ => rfl,
-      GBCA.LowPairStep.callG (toPair P u w r) j b _
-        (Gather.LowStep.callLoop (toPair P u w r).1 j b)⟩
+    refine ⟨_, rfl, rfl, hh, hph, hr, hest, rfl, fun r' _ => rfl, ?_⟩
+    rw [toPair_ghostId (Sum.inr (.gcallLoop r j b)) (fun _ _ => rfl)]
+    exact GBCA.LowPairStep.callG (toPair P u w r) j b _
+      (Gather.LowStep.callLoop (toPair P u w r).1 j b)
 
 
 /-! ### Answering a Byzantine injection
@@ -1928,8 +2123,8 @@ theorem toPair_byzGa1 (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n) (r :
     (k : Fin P.n) (mm : GaMsg P.n Bool) :
     toPair P u (w.gsent r k (.ga1 mm)) r
       = ({ toLow1 P u w r with ga := (toLow1 P u w r).ga.mcast k mm },
-         toLow2 P u w r) := by
-  refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
+         toLow2 P u w r, (w.ghostRec r).2.2) := by
+  refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
   · refine Prod.ext rfl (msgState_ext ?_ rfl)
     simp only [toPair, toLow1, SubState.mcast, MsgState.post, gsent_sent_self]
     exact slice_post_some unGa1 unGa1_inj (w.sent r) k (.ga1 mm) mm rfl
@@ -1958,8 +2153,8 @@ theorem toPair_byzGa2 (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n) (r :
     (k : Fin P.n) (mm : GaMsg P.n (Option Bool)) :
     toPair P u (w.gsent r k (.ga2 mm)) r
       = (toLow1 P u w r,
-         { toLow2 P u w r with ga := (toLow2 P u w r).ga.mcast k mm }) := by
-  refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
+         { toLow2 P u w r with ga := (toLow2 P u w r).ga.mcast k mm }, (w.ghostRec r).2.2) := by
+  refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
   · refine Prod.ext rfl (msgState_ext ?_ rfl)
     simp only [toPair, toLow1, gsent_sent_self]
     exact slice_post_none unGa1 unGa1_inj (w.sent r) k (.ga2 mm) rfl
@@ -1990,8 +2185,8 @@ theorem toPair_byzIn1 (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n) (r :
       = ({ toLow1 P u w r with
             brbIn := Function.update (toLow1 P u w r).brbIn i
               (((toLow1 P u w r).brbIn i).mcast k mm) },
-         toLow2 P u w r) := by
-  refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
+         toLow2 P u w r, (w.ghostRec r).2.2) := by
+  refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
   · refine Prod.ext rfl (msgState_ext ?_ rfl)
     simp only [toPair, toLow1, gsent_sent_self]
     exact slice_post_none unGa1 unGa1_inj (w.sent r) k (.brbIn1 i mm) rfl
@@ -2035,8 +2230,8 @@ theorem toPair_byzBind1 (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n) (r
       = ({ toLow1 P u w r with
             brbBind := Function.update (toLow1 P u w r).brbBind i
               (((toLow1 P u w r).brbBind i).mcast k mm) },
-         toLow2 P u w r) := by
-  refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
+         toLow2 P u w r, (w.ghostRec r).2.2) := by
+  refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
   · refine Prod.ext rfl (msgState_ext ?_ rfl)
     simp only [toPair, toLow1, gsent_sent_self]
     exact slice_post_none unGa1 unGa1_inj (w.sent r) k (.brbBind1 i mm) rfl
@@ -2080,8 +2275,8 @@ theorem toPair_byzIn2 (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n) (r :
       = (toLow1 P u w r,
          { toLow2 P u w r with
             brbIn := Function.update (toLow2 P u w r).brbIn i
-              (((toLow2 P u w r).brbIn i).mcast k mm) }) := by
-  refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
+              (((toLow2 P u w r).brbIn i).mcast k mm) }, (w.ghostRec r).2.2) := by
+  refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
   · refine Prod.ext rfl (msgState_ext ?_ rfl)
     simp only [toPair, toLow1, gsent_sent_self]
     exact slice_post_none unGa1 unGa1_inj (w.sent r) k (.brbIn2 i mm) rfl
@@ -2125,8 +2320,8 @@ theorem toPair_byzBind2 (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n) (r
       = (toLow1 P u w r,
          { toLow2 P u w r with
             brbBind := Function.update (toLow2 P u w r).brbBind i
-              (((toLow2 P u w r).brbBind i).mcast k mm) }) := by
-  refine Prod.ext (lowState_ext ?_ ?_ ?_) (lowState_ext ?_ ?_ ?_)
+              (((toLow2 P u w r).brbBind i).mcast k mm) }, (w.ghostRec r).2.2) := by
+  refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
   · refine Prod.ext rfl (msgState_ext ?_ rfl)
     simp only [toPair, toLow1, gsent_sent_self]
     exact slice_post_none unGa1 unGa1_inj (w.sent r) k (.brbBind2 i mm) rfl
@@ -2179,7 +2374,7 @@ theorem byz_answer (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n)
   | ga2 mm =>
     rw [toPair_byzGa2]
     exact GBCA.LowPairStep.ga2Tau (toPair P u w r) _
-      (Gather.LowStep.byz (toPair P u w r).2 k mm hF)
+      (Gather.LowStep.byz (toPair P u w r).2.1 k mm hF)
   | brbIn1 i mm =>
     rw [toPair_byzIn1]
     exact GBCA.LowPairStep.ga1Tau (toPair P u w r) _
@@ -2193,13 +2388,13 @@ theorem byz_answer (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n)
   | brbIn2 i mm =>
     rw [toPair_byzIn2]
     exact GBCA.LowPairStep.ga2Tau (toPair P u w r) _
-      (Gather.LowStep.brbInTau (toPair P u w r).2 i _
-        (BRB.ImplStep.byz ((toPair P u w r).2.brbIn i) k mm hF))
+      (Gather.LowStep.brbInTau (toPair P u w r).2.1 i _
+        (BRB.ImplStep.byz ((toPair P u w r).2.1.brbIn i) k mm hF))
   | brbBind2 i mm =>
     rw [toPair_byzBind2]
     exact GBCA.LowPairStep.ga2Tau (toPair P u w r) _
-      (Gather.LowStep.brbBindTau (toPair P u w r).2 i _
-        (BRB.ImplStep.byz ((toPair P u w r).2.brbBind i) k mm hF))
+      (Gather.LowStep.brbBindTau (toPair P u w r).2.1 i _
+        (BRB.ImplStep.byz ((toPair P u w r).2.1.brbBind i) k mm hF))
 
 /-- The matching on the silent label. The flat reading's own `terminate` row
 writes no coordinate the relation reads, so the composed answer to it is to
@@ -2215,23 +2410,28 @@ theorem match_tau (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       PMFRel (diracRel (ProtocolRel P)) μ Ω ∧
       ((composedGroup P).step (G, C, A, o) Lab.tau (Ω.bind id) ∨
         Ω.bind id = PMF.pure (G, C, A, o)) := by
-  obtain ⟨hC, -, hA, hGv⟩ := (protocolRel_mk P _ _ _ _ _ _ _).mp hR
+  obtain ⟨hC, -, hA, hGv, hI⟩ := (protocolRel_mk P _ _ _ _ _ _ _).mp hR
   rcases flatPre_tau_inv h with ⟨i, y, hstep, rfl⟩ | ⟨w', hn, rfl⟩ | ⟨ω, hW, rfl⟩
   · obtain ⟨b, hh, hret, hcnt, hterm, hy⟩ := stepN_tau_terminate hstep
     obtain rfl : y = ((u i).1, { (u i).2 with terminated := true }) := pureN_inj hy
     have hrel : ProtocolRel P
         (Function.update u i ((u i).1, { (u i).2 with terminated := true }), w, o)
         (G, C, A, o) := by
-      refine (protocolRel_mk P _ _ _ _ _ _ _).mpr ⟨fun j => ?_, rfl, hA, ?_⟩
+      have hst : ∀ (j : Fin P.n) (r : ℕ),
+          ((Function.update u i ((u i).1,
+              { (u i).2 with terminated := true }) j).2.stage r) = ((u j).2.stage r) := by
+        intro j r
+        by_cases hj : j = i
+        · subst hj; rw [Function.update_self]; rfl
+        · rw [Function.update_of_ne hj]
+      refine (protocolRel_mk P _ _ _ _ _ _ _).mpr ⟨fun j => ?_, rfl, hA, ?_,
+        boundInv_of hI (fun j r => by rw [hst j r]) (fun _ h => h)⟩
       · by_cases hj : j = i
         · subst hj; rw [Function.update_self]; exact hC j
         · rw [Function.update_of_ne hj]; exact hC j
       · rw [hGv]
         funext r
-        refine (toPair_congr (fun j => ?_) w).symm
-        by_cases hj : j = i
-        · subst hj; rw [Function.update_self]; rfl
-        · rw [Function.update_of_ne hj]
+        exact (toPair_congr (fun j => hst j r) w).symm
     obtain ⟨Ω, hrelΩ, hb⟩ := match_pure P hrel
     exact ⟨Ω, hrelΩ, Or.inr hb⟩
   · rcases netStep_tau hn with ⟨r, k, m, hF, hw⟩ | ⟨k, b, hF, hw⟩
@@ -2239,7 +2439,8 @@ theorem match_tau (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       have hrel : ProtocolRel P (u, w.gsent r k m, o)
           (Function.update G r (toPair P u (w.gsent r k m) r), C, A, o) :=
         (protocolRel_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, by simpa using hA, by
-          rw [hGv]; exact (toPairFamSent u w r k m _ rfl).symm⟩
+          rw [hGv]; exact (toPairFamSent u w r k m _ rfl).symm,
+          boundInv_of hI (fun _ _ => rfl) (fun _ h => h)⟩
       obtain ⟨Ω, hrelΩ, hb⟩ := match_pure P hrel
       refine ⟨Ω, hrelΩ, Or.inl (composedGroup_of_tau P ?_)⟩
       rw [hb]
@@ -2250,7 +2451,8 @@ theorem match_tau (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     · obtain rfl : w' = w.dput k b := pureN_inj hw
       have hrel : ProtocolRel P (u, w.dput k b, o)
           (G, C, ⟨(w.dput k b).dsent, (w.dput k b).F⟩, o) :=
-        (protocolRel_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, rfl, by rw [hGv]; funext r; rfl⟩
+        (protocolRel_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, rfl, by rw [hGv]; funext r; rfl,
+          boundInv_of hI (fun _ _ => rfl) (fun _ h => h)⟩
       obtain ⟨Ω, hrelΩ, hb⟩ := match_pure P hrel
       refine ⟨Ω, hrelΩ, Or.inl (composedGroup_of_tau P ?_)⟩
       rw [hb]
@@ -2258,7 +2460,7 @@ theorem match_tau (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       rw [hA]
       exact Comp.ANetStep.byzD ⟨w.dsent, w.F⟩ k b hF
   · obtain ⟨Ω, hrel, hb⟩ := match_prod P (x := u) (w := w) (G := G) (C := C) (A := A)
-      (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, hA, hGv⟩)
+      (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, hA, hGv, hI⟩)
     refine ⟨Ω, hrel, Or.inl (composedGroup_of_tau P ?_)⟩
     rw [hb]
     exact composedPre_tau_wcc P hW
@@ -2283,7 +2485,7 @@ theorem match_lab (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     ∃ Ω : PMF (PMF (ComposedState P)),
       PMFRel (diracRel (ProtocolRel P)) μ Ω ∧
       (composedGroup P).step (G, C, A, o) l (Ω.bind id) := by
-  obtain ⟨hC, -, hA, hGv⟩ := (protocolRel_mk P _ _ _ _ _ _ _).mp hR
+  obtain ⟨hC, -, hA, hGv, hI⟩ := (protocolRel_mk P _ _ _ _ _ _ _).mp hR
   obtain ⟨x, w', ω, hall, hn, hOr, rfl⟩ := flatPre_lab_inv hl h
   have hWl : (Net.wccLift P).step o (Sum.inl l) ω :=
     (System.mapIdle_step_some (wccPull_inl l) ω).mpr hOr
@@ -2308,7 +2510,8 @@ theorem match_lab (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
         rcases stepN_callABA_own (hall i) with ⟨-, -, hx⟩ | hx <;> rw [pureN_inj hx]
       · rw [hfor i hi]
     refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
-        ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact view_unchanged hsame w'⟩)
+        ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact view_unchanged hsame w',
+          boundInv_of hI (fun i r => by rw [hsame i]) (fun _ h => h)⟩)
       (lowSide_idle P G hLne (by simp) not_false) (fun i => ?_)
       (Comp.ANetStep.callABAIdle A id b) hWl
     rw [hCeq i]
@@ -2339,7 +2542,8 @@ theorem match_lab (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       · exact Comp.ANetStep.retABA ⟨w'.dsent, w'.F⟩ id b hd
       · exact Comp.ANetStep.retByz ⟨w'.dsent, w'.F⟩ id b hf
     refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
-        ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact view_unchanged hsame w'⟩)
+        ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact view_unchanged hsame w',
+          boundInv_of hI (fun i r => by rw [hsame i]) (fun _ h => h)⟩)
       (lowSide_idle P G hLne (by simp) not_false) (fun i => ?_) hAn hWl
     rw [hCeq i]
     by_cases hi : i = id
@@ -2360,7 +2564,8 @@ theorem match_lab (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
         rcases stepN_callW_own (hall i) with ⟨-, -, -, hx⟩ | ⟨-, hx⟩ <;> rw [pureN_inj hx]
       · rw [hfor i hi]
     refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
-        ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact view_unchanged hsame w'⟩)
+        ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact view_unchanged hsame w',
+          boundInv_of hI (fun i r => by rw [hsame i]) (fun _ h => h)⟩)
       (lowSide_idle P G hLne (by simp) not_false) (fun i => ?_)
       (Comp.ANetStep.callWIdle A r id) hWl
     rw [hCeq i]
@@ -2382,7 +2587,8 @@ theorem match_lab (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
         rcases stepN_retW_own (hall i) with ⟨-, -, -, -, hx⟩ | ⟨-, hx⟩ <;> rw [pureN_inj hx]
       · rw [hfor i hi]
     refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
-        ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact view_unchanged hsame w'⟩)
+        ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact view_unchanged hsame w',
+          boundInv_of hI (fun i r => by rw [hsame i]) (fun _ h => h)⟩)
       (lowSide_idle P G hLne (by simp) not_false) (fun i => ?_)
       (Comp.ANetStep.retWIdle A r id co) hWl
     rw [hCeq i]
@@ -2405,7 +2611,8 @@ theorem match_lab (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
         rcases stepN_fail_own (hall i) with ⟨-, hx⟩ | ⟨-, hx⟩ <;> rw [pureN_inj hx]
       · rw [hfor i hi]
     refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
-        ⟨fun _ => rfl, rfl, ?_, ?_⟩)
+        ⟨fun _ => rfl, rfl, ?_, ?_,
+          boundInv_of hI (fun i r => by rw [hsame i]) (fun _ h => by simpa using h)⟩)
       (lowSide_fail P G k) (fun i => ?_)
       (Comp.ANetStep.fail A k (by rw [hA]; exact hnew) (by rw [hA]; exact hbud)) hWl
     · rw [hA]
@@ -2425,11 +2632,11 @@ theorem match_lab (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
           exact Comp.CoreProcStepN.corruptedIdle _ _ hh (by simp) not_false
       · rw [hCeq i, hfor i hi]; exact Comp.CoreProcStepN.failIdle _ k (Ne.symm hi)
   | callG r id b =>
-    obtain rfl : w' = w.gsent r id (gCallPayload P id b) :=
-      pureN_inj (netStep_callG hn)
+    obtain rfl : w' = (w.gsent r id (gCallPayload P id b)).writeGhost (ghostStep P)
+        (Sum.inl (Lab.callG r id b)) := pureN_inj (netStep_callG hn)
     have hfor : ∀ i, i ≠ id → x i = u i := fun i hi =>
       pureN_inj (stepN_callG_foreign (Ne.symm hi) (hall i))
-    obtain ⟨y, hy, hh, hph, hrr, hest, hx1, hoff, hlow⟩ :=
+    obtain ⟨y, hy, hh, hph, hrr, hest, hx1, hoff, hga2, hlow⟩ :=
       stage_answer_callG P w (u := u) (j := id) rfl (stageRow_of_own rfl (hall id))
     obtain rfl : x id = y := pureN_inj hy
     have hxeq : x = Function.update u id (x id) := by
@@ -2437,8 +2644,15 @@ theorem match_lab (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       by_cases hi : i = id
       · subst hi; rw [Function.update_self]
       · rw [Function.update_of_ne hi, hfor i hi]
+    have hxg : ∀ (i : Fin P.n) (r'' : ℕ), (((x i).2.stage r'').ga2.proc).input
+        = (((u i).2.stage r'').ga2.proc).input := by
+      intro i r''
+      by_cases hi : i = id
+      · subst hi; exact hga2 r''
+      · rw [hfor i hi]
     refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
-        ⟨fun _ => rfl, rfl, by rw [hA]; simp, ?_⟩)
+        ⟨fun _ => rfl, rfl, by rw [hA]; simp, ?_,
+          boundInv_of hI hxg (fun _ hb => writeGhost_bound _ (by simpa using hb))⟩)
       (lowSide_owned P G r (by simp)
         (liftedLow_step P r (l₀ := Lab.callG r id b) (by simp)
           (by rw [hGv]; exact hlow)))
@@ -2455,7 +2669,8 @@ theorem match_lab (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       · subst hr'
         rw [Function.update_self]
         exact (toPair_congr hxc _).symm
-      · rw [Function.update_of_ne hr']
+      · rw [Function.update_of_ne hr',
+          toPair_ghostId (Sum.inl (Lab.callG r id b)) (fun _ _ => rfl)]
         refine ((toPair_congr (r := r') (fun i => ?_) _).trans
           (toPair_otherSent u w hr' id _)).symm
         by_cases hi : i = id
@@ -2467,24 +2682,34 @@ theorem match_lab (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
         rw [hx1]
         exact Comp.CoreProcStepN.callG _ r b hh hph hrr hest
       · rw [hfor i hi]; exact Comp.CoreProcStepN.callGIdle _ r id b (Ne.symm hi)
-  | retG r id out =>
-    obtain rfl : w' = w := pureN_inj (netStep_retG hn)
+  | retG r id out bnd =>
+    obtain ⟨hbnd, hw⟩ := netStep_retG hn
+    obtain rfl : w' = w.writeGhost (ghostStep P)
+        (Sum.inl (Lab.retG r id out bnd)) := pureN_inj hw
     have hfor : ∀ i, i ≠ id → x i = u i := fun i hi =>
       pureN_inj (stepN_retG_foreign (Ne.symm hi) (hall i))
-    obtain ⟨y, hy, hh, hph, hrr, hx1, hoff, hlow⟩ :=
-      stage_answer_retG P w' (u := u) (j := id) rfl (stageRow_of_own rfl (hall id))
+    obtain ⟨y, hy, hh, hph, hrr, hx1, hoff, hga2, hlow⟩ :=
+      stage_answer_retG P w (u := u) (j := id) rfl hbnd (hI r)
+        (stageRow_of_own rfl (hall id))
     obtain rfl : x id = y := pureN_inj hy
     have hxeq : x = Function.update u id (x id) := by
       funext i
       by_cases hi : i = id
       · subst hi; rw [Function.update_self]
       · rw [Function.update_of_ne hi, hfor i hi]
+    have hxg : ∀ (i : Fin P.n) (r'' : ℕ), (((x i).2.stage r'').ga2.proc).input
+        = (((u i).2.stage r'').ga2.proc).input := by
+      intro i r''
+      by_cases hi : i = id
+      · subst hi; exact hga2 r''
+      · rw [hfor i hi]
     refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
-        ⟨fun _ => rfl, rfl, hA, ?_⟩)
+        ⟨fun _ => rfl, rfl, by rw [hA]; simp, ?_,
+          boundInv_of hI hxg (fun _ hb => writeGhost_bound _ hb)⟩)
       (lowSide_owned P G r (by simp)
-        (liftedLow_step P r (l₀ := Lab.retG r id out) (by simp)
+        (liftedLow_step P r (l₀ := Lab.retG r id out bnd) (by simp)
           (by rw [hGv]; exact hlow)))
-      (fun i => ?_) (Comp.ANetStep.retGIdle A r id out) hWl
+      (fun i => ?_) (Comp.ANetStep.retGIdle A r id out bnd) hWl
     · funext r'
       have hxc : ∀ i, (x i).2.stage r'
           = ((Function.update u id (x id)) i).2.stage r' := by
@@ -2497,7 +2722,8 @@ theorem match_lab (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       · subst hr'
         rw [Function.update_self]
         exact (toPair_congr hxc _).symm
-      · rw [Function.update_of_ne hr']
+      · rw [Function.update_of_ne hr',
+          toPair_writeGhost_ne (L := Sum.inl (Lab.retG r id out bnd)) _ _ rfl hr']
         refine (toPair_congr (r := r') (fun i => ?_) _).symm
         by_cases hi : i = id
         · subst hi; exact hoff r' hr'
@@ -2506,8 +2732,8 @@ theorem match_lab (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       by_cases hi : i = id
       · subst hi
         rw [hx1]
-        exact Comp.CoreProcStepN.retG _ r out hh hph hrr
-      · rw [hfor i hi]; exact Comp.CoreProcStepN.retGIdle _ r id out (Ne.symm hi)
+        exact Comp.CoreProcStepN.retG _ r out bnd hh hph hrr
+      · rw [hfor i hi]; exact Comp.CoreProcStepN.retGIdle _ r id out bnd (Ne.symm hi)
 
 
 /-- The matching on a rendezvous of the flat reading. A send and a delivery
@@ -2523,7 +2749,7 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     ∃ Ω : PMF (PMF (ComposedState P)),
       PMFRel (diracRel (ProtocolRel P)) μ Ω ∧
       (composedGroup P).step (G, C, A, o) Lab.tau (Ω.bind id) := by
-  obtain ⟨hC, -, hA, hGv⟩ := (protocolRel_mk P _ _ _ _ _ _ _).mp hR
+  obtain ⟨hC, -, hA, hGv, hI⟩ := (protocolRel_mk P _ _ _ _ _ _ _).mp hR
   have hCeq : ∀ i, C i = (u i).1 := fun i => (hC i).symm
   obtain ⟨x, w', ν, hall, hn, hWs, rfl⟩ := flatPre_event_inv h
   have htau : ∀ {G' : ℕ → GBCA.LowPairState P.n}, ν = PMF.pure o →
@@ -2556,7 +2782,8 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
   | gsnd r j m =>
     obtain rfl : ν = PMF.pure o :=
       (System.mapIdle_step_none (wccPull_gsnd r j m) ν).mp hWs
-    obtain rfl : w' = w.gsent r j m := pureN_inj (netStep_gsnd hn)
+    obtain rfl : w' = (w.gsent r j m).writeGhost (ghostStep P)
+        (Sum.inr (NetEvtP.gsnd r j m)) := pureN_inj (netStep_gsnd hn)
     have hfor : ∀ i, i ≠ j → x i = u i := fun i hi =>
       pureN_inj (stepN_gsnd_foreign (Ne.symm hi) (hall i))
     obtain ⟨y, hy, hcore, hoff, hlow⟩ :=
@@ -2567,12 +2794,30 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       by_cases hi : i = j
       · subst hi; rw [Function.update_self]
       · rw [Function.update_of_ne hi, hfor i hi]
+    have hbI : BoundInv P x
+        ((w.gsent r j m).writeGhost (ghostStep P) (Sum.inr (.gsnd r j m))) := by
+      rcases stage_gsnd_ga2 P (stageRow_of_own rfl (hall j)) with hkeep | ⟨q, y, rfl⟩
+      · refine boundInv_of hI (fun i r'' => ?_)
+          (fun _ hb => writeGhost_bound _ (by simpa using hb))
+        by_cases hi : i = j
+        · subst hi; exact hkeep _ rfl r''
+        · rw [hfor i hi]
+      · intro r'' i hne
+        by_cases hr'' : r'' = r
+        · subst hr''
+          rw [writeGhost_ghostRec_self _ rfl]
+          simp [ghostStep]
+        · rw [writeGhost_ghostRec_ne _ rfl hr'']
+          refine hI r'' i ?_
+          by_cases hi : i = j
+          · subst hi; rwa [hoff r'' hr''] at hne
+          · rwa [hfor i hi] at hne
     refine htau rfl ((protocolRel_mk P _ _ _ _ _ _ _).mpr
       ⟨fun i => by
         rw [hCeq i]
         by_cases hi : i = j
         · subst hi; rw [hcore]
-        · rw [hfor i hi], rfl, by rw [hA]; simp, ?_⟩)
+        · rw [hfor i hi], rfl, by rw [hA]; simp, ?_, hbI⟩)
       (lowSide_tau P G r (liftedLow_step P r (l₀ := Lab.tau) (by simp)
         (by rw [hGv]; exact hlow)))
     funext r'
@@ -2581,7 +2826,8 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     · subst hr'
       rw [Function.update_self]
       exact (toPair_congr (r := r') (fun i => by rw [hxeq i]) _).symm
-    · rw [Function.update_of_ne hr']
+    · rw [Function.update_of_ne hr',
+        toPair_writeGhost_ne (L := Sum.inr (NetEvtP.gsnd r j m)) _ _ rfl hr']
       refine ((toPair_congr (r := r') (fun i => ?_) _).trans
         (toPair_otherSent u w hr' j m)).symm
       by_cases hi : i = j
@@ -2591,11 +2837,12 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     obtain rfl : ν = PMF.pure o :=
       (System.mapIdle_step_none (wccPull_gdlv r i k m) ν).mp hWs
     obtain ⟨hsent, hw⟩ := netStep_gdlv hn
-    obtain rfl : w' = w := pureN_inj hw
+    obtain rfl : w' = w.writeGhost (ghostStep P) (Sum.inr (NetEvtP.gdlv r i k m)) :=
+      pureN_inj hw
     have hfor : ∀ i', i' ≠ i → x i' = u i' := fun i' hi =>
       pureN_inj (stepN_gdlv_foreign (Ne.symm hi) (hall i'))
-    obtain ⟨y, hy, hcore, hoff, hlow⟩ :=
-      stage_answer_gdlv P w' (u := u) (j := i) rfl hsent
+    obtain ⟨y, hy, hcore, hoff, hga2, hlow⟩ :=
+      stage_answer_gdlv P w (u := u) (j := i) rfl hsent
         (stageRow_of_own rfl (hall i))
     obtain rfl : x i = y := pureN_inj hy
     have hxeq : ∀ i', x i' = (Function.update u i (x i)) i' := by
@@ -2603,12 +2850,19 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       by_cases hi : i' = i
       · subst hi; rw [Function.update_self]
       · rw [Function.update_of_ne hi, hfor i' hi]
+    have hxg : ∀ (i' : Fin P.n) (r'' : ℕ), (((x i').2.stage r'').ga2.proc).input
+        = (((u i').2.stage r'').ga2.proc).input := by
+      intro i' r''
+      by_cases hi : i' = i
+      · subst hi; exact hga2 r''
+      · rw [hfor i' hi]
     refine htau rfl ((protocolRel_mk P _ _ _ _ _ _ _).mpr
       ⟨fun i' => by
         rw [hCeq i']
         by_cases hi : i' = i
         · subst hi; rw [hcore]
-        · rw [hfor i' hi], rfl, hA, ?_⟩)
+        · rw [hfor i' hi], rfl, by rw [hA]; simp, ?_,
+        boundInv_of hI hxg (fun _ hb => writeGhost_bound _ hb)⟩)
       (lowSide_tau P G r (liftedLow_step P r (l₀ := Lab.tau) (by simp)
         (by rw [hGv]; exact hlow)))
     funext r'
@@ -2617,7 +2871,8 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     · subst hr'
       rw [Function.update_self]
       exact (toPair_congr (r := r') (fun i' => by rw [hxeq i']) _).symm
-    · rw [Function.update_of_ne hr']
+    · rw [Function.update_of_ne hr',
+        toPair_writeGhost_ne (L := Sum.inr (NetEvtP.gdlv r i k m)) _ _ rfl hr']
       refine (toPair_congr (r := r') (fun i' => ?_) _).symm
       by_cases hi : i' = i
       · subst hi; exact hoff r' hr'
@@ -2635,7 +2890,8 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     refine hvis (.dsnd j b) (by simp) (fun o' _ =>
       (protocolRel_mk P _ _ _ _ _ _ _).mpr
         ⟨fun i => by rw [hx i], rfl, by rw [hA]; rfl, by
-          rw [hGv]; funext r; exact (toPair_congr (fun i => by rw [hx i]) _).symm⟩)
+          rw [hGv]; funext r; exact (toPair_congr (fun i => by rw [hx i]) _).symm,
+          boundInv_of hI (fun i r => by rw [hx i]) (fun _ h => h)⟩)
       (lowSide_idle P G (by simp) (by simp) not_false) (fun i => ?_)
       (hA ▸ Comp.ANetStep.dsnd ⟨w.dsent, w.F⟩ j b hd) hWs
     rw [hCeq i, hx i]
@@ -2659,7 +2915,8 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     refine hvis (.ddlv i k b) (by simp) (fun o' _ =>
       (protocolRel_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, by
-          rw [hGv]; exact view_unchanged hsame w'⟩)
+          rw [hGv]; exact view_unchanged hsame w',
+          boundInv_of hI (fun i' r => by rw [hsame i']) (fun _ h => h)⟩)
       (lowSide_idle P G (by simp) (by simp) not_false) (fun i' => ?_)
       (hA ▸ Comp.ANetStep.ddlv ⟨w'.dsent, w'.F⟩ i k b hd) hWs
     rw [hCeq i']
@@ -2667,7 +2924,8 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     · subst hi; rw [pureN_inj hxi]; exact Comp.CoreProcStepN.ddlvRecv _ k b hh hr
     · rw [hfor i' hi]; exact Comp.CoreProcStepN.ddlvIdle _ i k b (Ne.symm hi)
   | retWPub r id c b =>
-    obtain rfl : w' = w.dput id b := pureN_inj (netStep_retWPub hn)
+    obtain rfl : w' = (w.dput id b).writeGhost (ghostStep P)
+        (Sum.inr (NetEvtP.retWPub r id c b)) := pureN_inj (netStep_retWPub hn)
     have hfor : ∀ i, i ≠ id → x i = u i := fun i hi =>
       pureN_inj (stepN_retWPub_foreign (Ne.symm hi) (hall i))
     obtain ⟨hh, hph, hr, hgr, hxi⟩ := stepN_retWPub_self (hall id)
@@ -2679,7 +2937,11 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     refine hvis (.retWPub r id c b) (by simp) (fun o' _ =>
       (protocolRel_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, by rw [hA]; rfl, by
-          rw [hGv]; funext r'; exact (toPair_congr (fun i => by rw [hsame i]) _).symm⟩)
+          rw [hGv]; funext r'
+          rw [toPair_ghostId (Sum.inr (NetEvtP.retWPub r id c b)) (fun _ _ => rfl)]
+          exact (toPair_congr (fun i => by rw [hsame i]) _).symm,
+          boundInv_of hI (fun i r' => by rw [hsame i])
+            (fun _ hb => writeGhost_bound _ hb)⟩)
       (lowSide_idle P G (by simp) (by simp) not_false) (fun i => ?_)
       (hA ▸ Comp.ANetStep.retWPub ⟨w.dsent, w.F⟩ r id c b) hWs
     rw [hCeq i]
@@ -2690,11 +2952,12 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
   | gcallLoop r id b =>
     obtain rfl : ν = PMF.pure o :=
       (System.mapIdle_step_none (wccPull_gcallLoop r id b) ν).mp hWs
-    obtain rfl : w' = w := pureN_inj (netStep_gcallLoop hn)
+    obtain rfl : w' = w.writeGhost (ghostStep P) (Sum.inr (NetEvtP.gcallLoop r id b)) :=
+      pureN_inj (netStep_gcallLoop hn)
     have hfor : ∀ i, i ≠ id → x i = u i := fun i hi =>
       pureN_inj (stepN_gcallLoop_foreign (Ne.symm hi) (hall i))
     obtain ⟨y, hy, hy2, hh, hph, hrr, hest, hx1, -, hlow⟩ :=
-      stage_answer_gcallLoop P w' (u := u) (j := id) rfl
+      stage_answer_gcallLoop P w (u := u) (j := id) rfl
         (stageRow_of_own rfl (hall id))
     obtain rfl : x id = y := pureN_inj hy
     have hsame : ∀ i, (x i).2 = (u i).2 := by
@@ -2704,10 +2967,18 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       · rw [hfor i hi]
     refine hvis (.gcallLoop r id b) (by simp) (fun o' _ =>
       (protocolRel_mk P _ _ _ _ _ _ _).mpr
-        ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact view_unchanged hsame w'⟩)
+        ⟨fun _ => rfl, rfl, by rw [hA]; simp, by
+          rw [hGv]; funext r'
+          rw [toPair_ghostId (Sum.inr (NetEvtP.gcallLoop r id b)) (fun _ _ => rfl)]
+          exact (toPair_congr (fun i => by rw [hsame i]) _).symm,
+          boundInv_of hI (fun i r => by rw [hsame i])
+            (fun _ hb => writeGhost_bound _ hb)⟩)
       (lowSide_owned_id P G r (by simp)
         (liftedLow_step P r (l₀ := Lab.callG r id b) (by simp)
-          (by rw [hGv]; exact hlow)))
+          (by rw [hGv]
+              rw [toPair_ghostId (Sum.inr (NetEvtP.gcallLoop r id b))
+                (fun _ _ => rfl)] at hlow
+              exact hlow)))
       (fun i => ?_) (Comp.ANetStep.gcallLoop A r id b) hWs
     rw [hCeq i]
     by_cases hi : i = id
@@ -2717,46 +2988,59 @@ theorem match_event (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     obtain rfl : ν = PMF.pure o :=
       (System.mapIdle_step_none (wccPull_byzCallGLoop r k b) ν).mp hWs
     obtain ⟨hF, hw⟩ := netStep_byzCallGLoop hn
-    obtain rfl : w' = w := pureN_inj hw
+    obtain rfl : w' = w.writeGhost (ghostStep P)
+        (Sum.inr (NetEvtP.byzCallGLoop r k b)) := pureN_inj hw
     have hx : ∀ i, x i = u i := fun i => pureN_inj (stepN_byzCallGLoop (hall i))
     refine hvis (.byzCallGLoop r k b) (by simp) (fun o' _ =>
       (protocolRel_mk P _ _ _ _ _ _ _).mpr
         ⟨fun i => by rw [hx i], rfl, hA, by
-          rw [hGv]; funext r'; exact (toPair_congr (fun i => by rw [hx i]) _).symm⟩)
+          rw [hGv]; funext r'
+          rw [toPair_ghostId (Sum.inr (NetEvtP.byzCallGLoop r k b)) (fun _ _ => rfl)]
+          exact (toPair_congr (fun i => by rw [hx i]) _).symm,
+          boundInv_of hI (fun i r' => by rw [hx i])
+            (fun _ hb => writeGhost_bound _ hb)⟩)
       (lowSide_owned_id P G r (by simp)
         (liftedLow_step P r (l₀ := Lab.callG r k b) (by simp)
           (by rw [hGv]
-              exact GBCA.LowPairStep.callG (toPair P u w' r) k b _
-                (Gather.LowStep.callLoop (toPair P u w' r).1 k b))))
-      (fun i => ?_) (hA ▸ Comp.ANetStep.byzCallGLoop ⟨w'.dsent, w'.F⟩ r k b hF) hWs
+              exact GBCA.LowPairStep.callG (toPair P u w r) k b _
+                (Gather.LowStep.callLoop (toPair P u w r).1 k b))))
+      (fun i => ?_) (hA ▸ Comp.ANetStep.byzCallGLoop ⟨w.dsent, w.F⟩ r k b hF) hWs
     rw [hCeq i, hx i]
     exact Comp.CoreProcStepN.byzCallGLoopIdle _ r k b
   | byzCallW r k =>
     obtain ⟨hF, hw⟩ := netStep_byzCallW hn
-    obtain rfl : w' = w := pureN_inj hw
+    obtain rfl : w' = w.writeGhost (ghostStep P) (Sum.inr (NetEvtP.byzCallW r k)) := pureN_inj hw
     have hx : ∀ i, x i = u i := fun i => pureN_inj (stepN_byzCallW (hall i))
     refine hvis (.byzCallW r k) (by simp) (fun o' _ =>
       (protocolRel_mk P _ _ _ _ _ _ _).mpr
         ⟨fun i => by rw [hx i], rfl, hA, by
-          rw [hGv]; funext r'; exact (toPair_congr (fun i => by rw [hx i]) _).symm⟩)
+          rw [hGv]; funext r'
+          rw [toPair_ghostId (Sum.inr (NetEvtP.byzCallW r k)) (fun _ _ => rfl)]
+          exact (toPair_congr (fun i => by rw [hx i]) _).symm,
+          boundInv_of hI (fun i r' => by rw [hx i])
+            (fun _ hb => writeGhost_bound _ hb)⟩)
       (lowSide_idle P G (by simp) (by simp) not_false) (fun i => ?_)
-      (hA ▸ Comp.ANetStep.byzCallW ⟨w'.dsent, w'.F⟩ r k hF) hWs
+      (hA ▸ Comp.ANetStep.byzCallW ⟨w.dsent, w.F⟩ r k hF) hWs
     rw [hCeq i, hx i]
     exact Comp.CoreProcStepN.byzCallWIdle _ r k
   | byzRetW r k b =>
     obtain ⟨hF, hw⟩ := netStep_byzRetW hn
-    obtain rfl : w' = w := pureN_inj hw
+    obtain rfl : w' = w.writeGhost (ghostStep P) (Sum.inr (NetEvtP.byzRetW r k b)) := pureN_inj hw
     have hx : ∀ i, x i = u i := fun i => pureN_inj (stepN_byzRetW (hall i))
     refine hvis (.byzRetW r k b) (by simp) (fun o' _ =>
       (protocolRel_mk P _ _ _ _ _ _ _).mpr
         ⟨fun i => by rw [hx i], rfl, hA, by
-          rw [hGv]; funext r'; exact (toPair_congr (fun i => by rw [hx i]) _).symm⟩)
+          rw [hGv]; funext r'
+          rw [toPair_ghostId (Sum.inr (NetEvtP.byzRetW r k b)) (fun _ _ => rfl)]
+          exact (toPair_congr (fun i => by rw [hx i]) _).symm,
+          boundInv_of hI (fun i r' => by rw [hx i])
+            (fun _ hb => writeGhost_bound _ hb)⟩)
       (lowSide_idle P G (by simp) (by simp) not_false) (fun i => ?_)
-      (hA ▸ Comp.ANetStep.byzRetW ⟨w'.dsent, w'.F⟩ r k b hF) hWs
+      (hA ▸ Comp.ANetStep.byzRetW ⟨w.dsent, w.F⟩ r k b hF) hWs
     rw [hCeq i, hx i]
     exact Comp.CoreProcStepN.byzRetWIdle _ r k b
   | byzCallG r k b => exact (stepN_byzCallG_noStep (hall k)).elim
-  | byzRetG r k out => exact (stepN_byzRetG_noStep (hall k)).elim
+  | byzRetG r k out bnd => exact (stepN_byzRetG_noStep (hall k)).elim
 
 
 /-- The matching at the group level: the rendezvous alphabet is hidden on both
@@ -2772,10 +3056,10 @@ theorem match_group (P : Params) {s : ProtocolState P} {t : ComposedState P}
           (l = Lab.tau ∧ Ω.bind id = PMF.pure t)) := by
   obtain ⟨u, w, o⟩ := s
   obtain ⟨G, C, A, o'⟩ := t
-  obtain ⟨hC, ho, hA, hGv⟩ := (protocolRel_mk P _ _ _ _ _ _ _).mp hR
+  obtain ⟨hC, ho, hA, hGv, hI⟩ := (protocolRel_mk P _ _ _ _ _ _ _).mp hR
   subst ho
   have hR' : ProtocolRel P (u, w, o) (G, C, A, o) :=
-    (protocolRel_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, hA, hGv⟩
+    (protocolRel_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, hA, hGv, hI⟩
   rcases (flatGroup_step_iff _ _ _).mp h with ⟨rfl, e, hstep⟩ | hstep
   · obtain ⟨Ω, hrel, hs⟩ := match_event P hR' e hstep
     exact ⟨Ω, hrel, Or.inl hs⟩

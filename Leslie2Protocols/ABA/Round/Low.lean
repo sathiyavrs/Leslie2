@@ -24,13 +24,14 @@ namespace GBCA
 
 open Gather
 
-/-- **The state**: the two gather-over-Bracha instances. -/
+/-- **The state**: the two gather-over-Bracha instances beside the round's
+bound bit. -/
 abbrev LowPairState (n : ℕ) : Type :=
-  Gather.LowState n Bool × Gather.LowState n (Option Bool)
+  Gather.LowState n Bool × Gather.LowState n (Option Bool) × Option Bool
 
 /-- The initial state. -/
 def LowPairState.initial (n : ℕ) : LowPairState n :=
-  (Gather.LowState.initial n Bool, Gather.LowState.initial n (Option Bool))
+  (Gather.LowState.initial n Bool, Gather.LowState.initial n (Option Bool), none)
 
 /-- The step relation of the round-`r` GBCA implementation: the fused table
 of `GBCA.PairStep`, each gather component moving by its gather-over-Bracha
@@ -48,34 +49,38 @@ inductive LowPairStep (P : Params) (r : ℕ) :
       LowPairStep P r s .tau (PMF.pure (t1', s.2))
   /-- An internal step of the second gather instance. -/
   | ga2Tau (s : LowPairState P.n) (t2' : Gather.LowState P.n (Option Bool))
-      (h : Gather.LowStep P s.2 Gather.Lab.tau (PMF.pure t2')) :
-      LowPairStep P r s .tau (PMF.pure (s.1, t2'))
-  /-- The first gather returns to `id` and `id` calls the second gather with
-  the candidate. -/
+      (h : Gather.LowStep P s.2.1 Gather.Lab.tau (PMF.pure t2')) :
+      LowPairStep P r s .tau (PMF.pure (s.1, t2', s.2.2))
+  /-- The first gather returns to `id`, `id` calls the second gather with the
+  candidate, and the round's bound bit is written from the core the return
+  carries if it is unwritten. -/
   | link (s : LowPairState P.n) (id : Fin P.n) (g : Fin P.n → Option Bool)
-      (t1' : Gather.LowState P.n Bool)
-      (h : Gather.LowStep P s.1 (.ret id g) (PMF.pure t1'))
-      (h2 : (s.2.ga.proc id).input = none)
-      (hb2 : ((s.2.brbIn id).proc id).input = none) :
+      (C : APSet P.n Bool) (t1' : Gather.LowState P.n Bool)
+      (h : Gather.LowStep P s.1 (.ret id g C) (PMF.pure t1'))
+      (h2 : (s.2.1.ga.proc id).input = none)
+      (hb2 : ((s.2.1.brbIn id).proc id).input = none) :
       LowPairStep P r s .tau
         (PMF.pure (t1',
-          { s.2 with
-            ga := s.2.ga.setProc id
-              { s.2.ga.proc id with input := some (cand P g) }
-            brbIn := Function.update s.2.brbIn id
-              (((s.2.brbIn id).setProc id
-                { (s.2.brbIn id).proc id with input := some (cand P g) }).mcast
-                id (.init (cand P g))) }))
+          { s.2.1 with
+            ga := s.2.1.ga.setProc id
+              { s.2.1.ga.proc id with input := some (cand P g) }
+            brbIn := Function.update s.2.1.brbIn id
+              (((s.2.1.brbIn id).setProc id
+                { (s.2.1.brbIn id).proc id with input := some (cand P g) }).mcast
+                id (.init (cand P g))) },
+          some (s.2.2.getD (boundOfCore P C))))
   /-- The second gather returns to `id` and the round returns the graded
-  outcome. -/
+  outcome, announcing the round's bound bit. -/
   | retG (s : LowPairState P.n) (id : Fin P.n) (g : Fin P.n → Option (Option Bool))
-      (t2' : Gather.LowState P.n (Option Bool))
-      (h : Gather.LowStep P s.2 (.ret id g) (PMF.pure t2')) :
-      LowPairStep P r s (.retG r id (gradeOf P g)) (PMF.pure (s.1, t2'))
+      (C : APSet P.n (Option Bool)) (t2' : Gather.LowState P.n (Option Bool))
+      (h : Gather.LowStep P s.2.1 (.ret id g C) (PMF.pure t2')) :
+      LowPairStep P r s
+        (.retG r id (gradeOf P g) (s.2.2.getD (boundOfCore P ∅)))
+        (PMF.pure (s.1, t2', s.2.2))
   /-- Corruption (deviation D1), in lockstep across both instances. -/
   | fail (s : LowPairState P.n) (id : Fin P.n) :
       LowPairStep P r s (.fail id)
-        (PMF.pure (s.1.corruptAll P id, s.2.corruptAll P id))
+        (PMF.pure (s.1.corruptAll P id, s.2.1.corruptAll P id, s.2.2))
 
 /-- The round-`r` GBCA implementation. -/
 noncomputable def lowPairInst (P : Params) (r : ℕ) :

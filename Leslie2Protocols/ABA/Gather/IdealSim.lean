@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.Gather.Ideal
+import Leslie2Protocols.ABA.Gather.Core
 import Leslie2Protocols.Framework.FamilySim
 import Leslie2Protocols.Framework.WeakRun
 
@@ -16,36 +16,39 @@ import Leslie2Protocols.Framework.WeakRun
 (`ABA/Gather/Spec.lean`), along `Gather.CoreRel`.
 
 The specification's abstract content is committed lazily, in the
-exclude-on-demand style: the committed entries (`val`) and the core family
-(`cores`) are both written inside the return run, at the first return that
-needs them. The run is
+exclude-on-demand style: the committed entries (`val`) and the core (`core`)
+are both written inside the return run, at the first return that needs them.
+The run is
 
 ```
-commit*  ;  bindCores?  ;  ret
+commit*  ;  bindCore?  ;  ret
 ```
 
 built by recursion with `weakLStep_tauCons` — one `commit` per entry of the
-returned map not yet committed, the family freeze if the instance has none
-yet, then the return.
+returned map not yet committed, the freeze if the instance has no core yet,
+then the return.
 
 * Entry commits are licensed by the invariant's provenance clause: a
   committed input-BRB entry of an honest process is that process's input,
   which the relation identifies with the specification's call record.
-* The fresh family is the bind-BRB payloads of `f + 1` honest members of the
-  returner's quorum — a quorum of `n − f` holds at least `n − 2f ≥ f + 1`
-  honest members. Any two members share an honest voter of both backing
-  quorums, whose write-once `VOTE` payload of at least `n − f` entries lies
-  in both — the pairwise guard of `bindCores`.
-* Against a family frozen earlier, a return is matched through the count
-  `CoreRel.cores_cert`: at least `f + 1` bind-BRB instances hold members as
-  their committed payloads. The count is `F`-blind and monotone — committed
-  payloads are written once — so it survives every rule and every
-  corruption; the returner's quorum of `n − f` meets it, and the committed
-  payload identifies the member.
+* The core frozen is `coreOf` of the instance's message state, and the two
+  guards of `bindCore` are `Gather.coreOf_freeze`, which the returner's
+  quorum of `n − f` committed bind payloads supplies.
+* Every return, the first included, is matched through the count
+  `CoreRel.core_cert`: at least `f + 1` bind-BRB instances hold a committed
+  payload above the frozen core. The count is blind to `F` and monotone —
+  committed payloads are written once (`Gather.bindAbove_mono`) — so it
+  survives every rule and every corruption. The returner's quorum of `n − f`
+  meets it in a coordinate whose committed payload lies above the core and
+  below the returned map.
 
-The second point is where the `BIND`-by-reliable-broadcast design of the
-implementation pays: the count pins members to *committed* payloads, which a
-sender corrupted after the freeze cannot rewrite.
+The last point is where the `BIND`-by-reliable-broadcast design of the
+implementation pays: the count reads *committed* payloads, which a sender
+corrupted after the freeze cannot rewrite.
+
+The relation carries the implementation's `core` field and the
+specification's as equal, so the core a return label carries is the same on
+both sides.
 -/
 
 namespace PLTS
@@ -54,586 +57,12 @@ namespace Gather
 
 variable {X : Type} [DecidableEq X] {P : Params}
 
-/-! ### The invariant -/
-
-/-- The gather-over-BRB invariant. The `*_conf` clauses tie an honest
-sender's sent to its write-once field, the `*_backed` clauses tie the fields to
-the receipts that justified them, and the provenance clauses are the BRB
-commit guards, recorded per coordinate. -/
-structure IdealInv (P : Params) (s : IdealState P.n X) : Prop where
-  /-- The corruption budget. -/
-  F_card : s.ga.F.card ≤ P.f
-  /-- The input-BRB corrupted sets are in lockstep with the message state's. -/
-  F_in_eq : ∀ k, (s.brbIn k).F = s.ga.F
-  /-- The bind-BRB corrupted sets are in lockstep with the message state's. -/
-  F_bind_eq : ∀ k, (s.brbBind k).F = s.ga.F
-  /-- Delivered messages were multicast. -/
-  recv_sub : ∀ i k, s.ga.recv i k ⊆ s.ga.sent k
-  /-- The input-BRB call records are the gather call records (the fused
-  call). -/
-  input_eq : ∀ k, (s.brbIn k).input = (s.ga.proc k).input
-  /-- A committed input entry of an honest process is its input. -/
-  inVal_prov : ∀ k v, (s.brbIn k).val = some v →
-    k ∈ s.ga.F ∨ (s.brbIn k).input = some v
-  /-- A committed bind payload of an honest process is its contributed
-  payload. -/
-  bindVal_prov : ∀ k U, (s.brbBind k).val = some U →
-    k ∈ s.ga.F ∨ (s.brbBind k).input = some U
-  /-- An honest sender's sent `ECHO` matches its write-once field. -/
-  echo_conf : ∀ j ∉ s.ga.F, ∀ A, GaMsg.echo A ∈ s.ga.sent j →
-    (s.ga.proc j).sentEcho = some A
-  /-- An honest echo payload has at least `n − f` entries. -/
-  echo_card : ∀ j ∉ s.ga.F, ∀ A, (s.ga.proc j).sentEcho = some A →
-    P.n - P.f ≤ A.card
-  /-- An honest sender's sent `VOTE` matches its write-once field. -/
-  vote_conf : ∀ j ∉ s.ga.F, ∀ W, GaMsg.vote W ∈ s.ga.sent j →
-    (s.ga.proc j).sentVote = some W
-  /-- An honest vote is backed by `n − f` senders' echo payloads, each
-  contained in it. -/
-  vote_backed : ∀ j ∉ s.ga.F, ∀ W, (s.ga.proc j).sentVote = some W →
-    ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
-      ∀ q ∈ Q, ∃ A, GaMsg.echo A ∈ s.ga.recv j q ∧ A ⊆ W
-  /-- An honest contributed bind payload is backed by `n − f` senders' vote
-  payloads, each contained in it. -/
-  bind_backed : ∀ j ∉ s.ga.F, ∀ U, (s.brbBind j).input = some U →
-    ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
-      ∀ q ∈ Q, ∃ W, GaMsg.vote W ∈ s.ga.recv j q ∧ W ⊆ U
-
-omit [DecidableEq X] in
-/-- The invariant holds initially. -/
-theorem IdealInv.initial : IdealInv P (IdealState.initial P.n X) := by
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
-    simp [IdealState.initial, PRec.initial, BRB.SpecState.initial]
-
-/-- The invariant is preserved by every step. -/
-theorem IdealInv.step {s : IdealState P.n X} {l : Lab P.n X}
-    {μ : PMF (IdealState P.n X)} (hInv : IdealInv P s) (hstep : IdealStep P s l μ)
-    {s' : IdealState P.n X} (hs' : s' ∈ μ.support) : IdealInv P s' := by
-  cases hstep with
-  | call id x h =>
-    rw [PMF.mem_support_pure_iff] at hs'
-    subst hs'
-    refine ⟨hInv.F_card, ?_, hInv.F_bind_eq, ?_,
-      ?_, ?_, hInv.bindVal_prov, ?_, ?_, ?_, ?_, ?_⟩
-    all_goals dsimp only
-    · intro k
-      by_cases hk : k = id
-      · subst hk
-        rw [Function.update_self]
-        exact hInv.F_in_eq k
-      · rw [Function.update_of_ne hk]
-        exact hInv.F_in_eq k
-    · intro i k x hx
-      rw [SubState.setProc_recv] at hx
-      rw [SubState.setProc_sent]
-      exact hInv.recv_sub i k hx
-    · intro k
-      by_cases hk : k = id
-      · subst hk
-        rw [Function.update_self, SubState.setProc_proc_self]
-      · rw [Function.update_of_ne hk, SubState.setProc_proc_ne _ _ _ hk]
-        exact hInv.input_eq k
-    · intro k v hv
-      by_cases hk : k = id
-      · subst hk
-        rw [Function.update_self] at hv
-        have hv0 : (s.brbIn k).val = some v := hv
-        rcases hInv.inVal_prov k v hv0 with hF | hin
-        · exact Or.inl hF
-        · rw [hInv.input_eq k, h] at hin
-          exact absurd hin (by simp)
-      · rw [Function.update_of_ne hk] at hv ⊢
-        exact hInv.inVal_prov k v hv
-    · intro j hj A hA
-      rw [SubState.setProc_sent] at hA
-      have hpre := hInv.echo_conf j hj A hA
-      by_cases hk : j = id
-      · subst hk
-        rw [SubState.setProc_proc_self]
-        exact hpre
-      · rw [SubState.setProc_proc_ne _ _ _ hk]
-        exact hpre
-    · intro j hj A hA
-      by_cases hk : j = id
-      · subst hk
-        rw [SubState.setProc_proc_self] at hA
-        exact hInv.echo_card j hj A hA
-      · rw [SubState.setProc_proc_ne _ _ _ hk] at hA
-        exact hInv.echo_card j hj A hA
-    · intro j hj W hW
-      rw [SubState.setProc_sent] at hW
-      have hpre := hInv.vote_conf j hj W hW
-      by_cases hk : j = id
-      · subst hk
-        rw [SubState.setProc_proc_self]
-        exact hpre
-      · rw [SubState.setProc_proc_ne _ _ _ hk]
-        exact hpre
-    · intro j hj W hW
-      rw [show (s.ga.setProc id { s.ga.proc id with input := some x }).recv
-          = s.ga.recv from SubState.setProc_recv ..]
-      by_cases hk : j = id
-      · subst hk
-        rw [SubState.setProc_proc_self] at hW
-        exact hInv.vote_backed j hj W hW
-      · rw [SubState.setProc_proc_ne _ _ _ hk] at hW
-        exact hInv.vote_backed j hj W hW
-    · intro j hj U hU
-      rw [show (s.ga.setProc id { s.ga.proc id with input := some x }).recv
-          = s.ga.recv from SubState.setProc_recv ..]
-      exact hInv.bind_backed j hj U hU
-  | callLoop id x =>
-    rw [PMF.mem_support_pure_iff] at hs'
-    subst hs'
-    exact hInv
-  | commitIn k v hv hm =>
-    rw [PMF.mem_support_pure_iff] at hs'
-    subst hs'
-    refine ⟨hInv.F_card, ?_, hInv.F_bind_eq, hInv.recv_sub, ?_, ?_,
-      hInv.bindVal_prov, hInv.echo_conf, hInv.echo_card, hInv.vote_conf,
-      hInv.vote_backed, hInv.bind_backed⟩
-    all_goals dsimp only
-    · intro k'
-      by_cases hk : k' = k
-      · subst hk
-        rw [Function.update_self]
-        exact hInv.F_in_eq k'
-      · rw [Function.update_of_ne hk]
-        exact hInv.F_in_eq k'
-    · intro k'
-      by_cases hk : k' = k
-      · subst hk
-        rw [Function.update_self]
-        exact hInv.input_eq k'
-      · rw [Function.update_of_ne hk]
-        exact hInv.input_eq k'
-    · intro k' v' hv'
-      by_cases hk : k' = k
-      · subst hk
-        rw [Function.update_self] at hv' ⊢
-        have : some v = some v' := hv'
-        obtain rfl : v = v' := by injection this
-        exact hm
-      · rw [Function.update_of_ne hk] at hv' ⊢
-        exact hInv.inVal_prov k' v' hv'
-  | commitBind k U hv hm =>
-    rw [PMF.mem_support_pure_iff] at hs'
-    subst hs'
-    refine ⟨hInv.F_card, hInv.F_in_eq, ?_, hInv.recv_sub, hInv.input_eq,
-      hInv.inVal_prov, ?_, hInv.echo_conf, hInv.echo_card, hInv.vote_conf,
-      hInv.vote_backed, ?_⟩
-    all_goals dsimp only
-    · intro k'
-      by_cases hk : k' = k
-      · subst hk
-        rw [Function.update_self]
-        exact hInv.F_bind_eq k'
-      · rw [Function.update_of_ne hk]
-        exact hInv.F_bind_eq k'
-    · intro k' U' hU'
-      by_cases hk : k' = k
-      · subst hk
-        rw [Function.update_self] at hU' ⊢
-        have : some U = some U' := hU'
-        obtain rfl : U = U' := by injection this
-        exact hm
-      · rw [Function.update_of_ne hk] at hU' ⊢
-        exact hInv.bindVal_prov k' U' hU'
-    · intro j hj U' hU'
-      by_cases hk : j = k
-      · subst hk
-        rw [Function.update_self] at hU'
-        have hin : (s.brbBind j).input = some U' := hU'
-        exact hInv.bind_backed j hj U' hin
-      · rw [Function.update_of_ne hk] at hU'
-        exact hInv.bind_backed j hj U' hU'
-  | deliver i j m h =>
-    rw [PMF.mem_support_pure_iff] at hs'
-    subst hs'
-    refine ⟨hInv.F_card, hInv.F_in_eq, hInv.F_bind_eq, ?_, ?_,
-      hInv.inVal_prov, hInv.bindVal_prov, ?_, ?_, ?_, ?_, ?_⟩
-    all_goals dsimp only
-    · intro i' k x hx
-      rw [SubState.mem_recvMsg_recv] at hx
-      rw [SubState.recvMsg_sent]
-      rcases hx with ⟨-, rfl, rfl⟩ | hold
-      · exact h
-      · exact hInv.recv_sub i' k hold
-    · intro k
-      rw [SubState.recvMsg_proc]
-      exact hInv.input_eq k
-    · intro j' hj A hA
-      rw [SubState.recvMsg_sent] at hA
-      rw [SubState.recvMsg_proc]
-      exact hInv.echo_conf j' hj A hA
-    · intro j' hj A hA
-      rw [SubState.recvMsg_proc] at hA
-      exact hInv.echo_card j' hj A hA
-    · intro j' hj W hW
-      rw [SubState.recvMsg_sent] at hW
-      rw [SubState.recvMsg_proc]
-      exact hInv.vote_conf j' hj W hW
-    · intro j' hj W hW
-      rw [SubState.recvMsg_proc] at hW
-      obtain ⟨Q, hQc, hQ⟩ := hInv.vote_backed j' hj W hW
-      exact ⟨Q, hQc, fun q hq => by
-        obtain ⟨A, hA, hAW⟩ := hQ q hq
-        exact ⟨A, SubState.mem_recvMsg_recv.mpr (Or.inr hA), hAW⟩⟩
-    · intro j' hj U hU
-      obtain ⟨Q, hQc, hQ⟩ := hInv.bind_backed j' hj U hU
-      exact ⟨Q, hQc, fun q hq => by
-        obtain ⟨W, hW, hWU⟩ := hQ q hq
-        exact ⟨W, SubState.mem_recvMsg_recv.mpr (Or.inr hW), hWU⟩⟩
-  | echo j A hin happ hcard hsend =>
-    rw [PMF.mem_support_pure_iff] at hs'
-    subst hs'
-    refine ⟨hInv.F_card, hInv.F_in_eq, hInv.F_bind_eq, ?_, ?_,
-      hInv.inVal_prov, hInv.bindVal_prov, ?_, ?_, ?_, ?_, ?_⟩
-    all_goals dsimp only
-    · intro i k x hx
-      simp only [SubState.mcast_recv, SubState.setProc_recv] at hx
-      rw [SubState.mem_mcast_sent, SubState.setProc_sent]
-      exact Or.inr (hInv.recv_sub i k hx)
-    · intro k
-      by_cases hk : k = j
-      · subst hk
-        rw [SubState.mcast_proc, SubState.setProc_proc_self]
-        exact hInv.input_eq k
-      · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hk]
-        exact hInv.input_eq k
-    · intro j' hj A' hA'
-      rw [SubState.mem_mcast_sent, SubState.setProc_sent] at hA'
-      rcases hA' with ⟨rfl, hm'⟩ | hold
-      · obtain rfl : A' = A := by injection hm'
-        rw [SubState.mcast_proc, SubState.setProc_proc_self]
-      · have hpre := hInv.echo_conf j' hj A' hold
-        by_cases hk : j' = j
-        · subst hk
-          rw [hsend] at hpre
-          exact absurd hpre (by simp)
-        · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hk]
-          exact hpre
-    · intro j' hj A' hA'
-      by_cases hk : j' = j
-      · subst hk
-        rw [SubState.mcast_proc, SubState.setProc_proc_self] at hA'
-        obtain rfl : A = A' := by injection hA'
-        exact hcard
-      · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hk] at hA'
-        exact hInv.echo_card j' hj A' hA'
-    · intro j' hj W hW
-      rw [SubState.mem_mcast_sent, SubState.setProc_sent] at hW
-      rcases hW with ⟨-, hm'⟩ | hold
-      · exact absurd hm' (by simp)
-      · have hpre := hInv.vote_conf j' hj W hold
-        by_cases hk : j' = j
-        · subst hk
-          rw [SubState.mcast_proc, SubState.setProc_proc_self]
-          exact hpre
-        · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hk]
-          exact hpre
-    · intro j' hj W hW
-      simp only [SubState.mcast_recv, SubState.setProc_recv]
-      by_cases hk : j' = j
-      · subst hk
-        rw [SubState.mcast_proc, SubState.setProc_proc_self] at hW
-        exact hInv.vote_backed j' hj W hW
-      · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hk] at hW
-        exact hInv.vote_backed j' hj W hW
-    · intro j' hj U hU
-      simp only [SubState.mcast_recv, SubState.setProc_recv]
-      exact hInv.bind_backed j' hj U hU
-  | vote j U hin happ hQ hsend =>
-    rw [PMF.mem_support_pure_iff] at hs'
-    subst hs'
-    refine ⟨hInv.F_card, hInv.F_in_eq, hInv.F_bind_eq, ?_, ?_,
-      hInv.inVal_prov, hInv.bindVal_prov, ?_, ?_, ?_, ?_, ?_⟩
-    all_goals dsimp only
-    · intro i k x hx
-      simp only [SubState.mcast_recv, SubState.setProc_recv] at hx
-      rw [SubState.mem_mcast_sent, SubState.setProc_sent]
-      exact Or.inr (hInv.recv_sub i k hx)
-    · intro k
-      by_cases hk : k = j
-      · subst hk
-        rw [SubState.mcast_proc, SubState.setProc_proc_self]
-        exact hInv.input_eq k
-      · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hk]
-        exact hInv.input_eq k
-    · intro j' hj A' hA'
-      rw [SubState.mem_mcast_sent, SubState.setProc_sent] at hA'
-      rcases hA' with ⟨-, hm'⟩ | hold
-      · exact absurd hm' (by simp)
-      · have hpre := hInv.echo_conf j' hj A' hold
-        by_cases hk : j' = j
-        · subst hk
-          rw [SubState.mcast_proc, SubState.setProc_proc_self]
-          exact hpre
-        · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hk]
-          exact hpre
-    · intro j' hj A' hA'
-      by_cases hk : j' = j
-      · subst hk
-        rw [SubState.mcast_proc, SubState.setProc_proc_self] at hA'
-        exact hInv.echo_card j' hj A' hA'
-      · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hk] at hA'
-        exact hInv.echo_card j' hj A' hA'
-    · intro j' hj W hW
-      rw [SubState.mem_mcast_sent, SubState.setProc_sent] at hW
-      rcases hW with ⟨rfl, hm'⟩ | hold
-      · obtain rfl : W = U := by injection hm'
-        rw [SubState.mcast_proc, SubState.setProc_proc_self]
-      · have hpre := hInv.vote_conf j' hj W hold
-        by_cases hk : j' = j
-        · subst hk
-          rw [hsend] at hpre
-          exact absurd hpre (by simp)
-        · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hk]
-          exact hpre
-    · intro j' hj W hW
-      simp only [SubState.mcast_recv, SubState.setProc_recv]
-      by_cases hk : j' = j
-      · subst hk
-        rw [SubState.mcast_proc, SubState.setProc_proc_self] at hW
-        obtain rfl : U = W := by injection hW
-        obtain ⟨Q, hQc, hQm⟩ := hQ
-        exact ⟨Q, hQc, fun q hq => by
-          obtain ⟨A, hA, -, hAU⟩ := hQm q hq
-          exact ⟨A, hA, hAU⟩⟩
-      · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hk] at hW
-        exact hInv.vote_backed j' hj W hW
-    · intro j' hj U' hU'
-      simp only [SubState.mcast_recv, SubState.setProc_recv]
-      exact hInv.bind_backed j' hj U' hU'
-  | bindCall j U hin hb happ hQ =>
-    rw [PMF.mem_support_pure_iff] at hs'
-    subst hs'
-    refine ⟨hInv.F_card, hInv.F_in_eq, ?_, hInv.recv_sub, hInv.input_eq,
-      hInv.inVal_prov, ?_, hInv.echo_conf, hInv.echo_card, hInv.vote_conf,
-      hInv.vote_backed, ?_⟩
-    all_goals dsimp only
-    · intro k
-      by_cases hk : k = j
-      · subst hk
-        rw [Function.update_self]
-        exact hInv.F_bind_eq k
-      · rw [Function.update_of_ne hk]
-        exact hInv.F_bind_eq k
-    · intro k U' hU'
-      by_cases hk : k = j
-      · subst hk
-        rw [Function.update_self] at hU'
-        have hU0 : (s.brbBind k).val = some U' := hU'
-        rcases hInv.bindVal_prov k U' hU0 with hF | hin'
-        · exact Or.inl hF
-        · rw [hb] at hin'
-          exact absurd hin' (by simp)
-      · rw [Function.update_of_ne hk] at hU' ⊢
-        exact hInv.bindVal_prov k U' hU'
-    · intro j' hj U' hU'
-      by_cases hk : j' = j
-      · subst hk
-        rw [Function.update_self] at hU'
-        have : some U = some U' := hU'
-        obtain rfl : U = U' := by injection this
-        obtain ⟨Q, hQc, hQm⟩ := hQ
-        exact ⟨Q, hQc, fun q hq => by
-          obtain ⟨W, hW, -, hWU⟩ := hQm q hq
-          exact ⟨W, hW, hWU⟩⟩
-      · rw [Function.update_of_ne hk] at hU'
-        exact hInv.bind_backed j' hj U' hU'
-  | byz j m h =>
-    rw [PMF.mem_support_pure_iff] at hs'
-    subst hs'
-    refine ⟨hInv.F_card, hInv.F_in_eq, hInv.F_bind_eq, ?_, hInv.input_eq,
-      hInv.inVal_prov, hInv.bindVal_prov, ?_, hInv.echo_card, ?_,
-      hInv.vote_backed, hInv.bind_backed⟩
-    all_goals dsimp only
-    · intro i k x hx
-      rw [SubState.mcast_recv] at hx
-      rw [SubState.mem_mcast_sent]
-      exact Or.inr (hInv.recv_sub i k hx)
-    · intro j' hj A hA
-      rw [SubState.mem_mcast_sent] at hA
-      rw [SubState.mcast_proc]
-      rcases hA with ⟨rfl, -⟩ | hold
-      · exact absurd h hj
-      · exact hInv.echo_conf j' hj A hold
-    · intro j' hj W hW
-      rw [SubState.mem_mcast_sent] at hW
-      rw [SubState.mcast_proc]
-      rcases hW with ⟨rfl, -⟩ | hold
-      · exact absurd h hj
-      · exact hInv.vote_conf j' hj W hold
-  | ret id g hin hsub hQ hr =>
-    rw [PMF.mem_support_pure_iff] at hs'
-    subst hs'
-    refine ⟨hInv.F_card, hInv.F_in_eq, hInv.F_bind_eq, ?_, ?_,
-      hInv.inVal_prov, hInv.bindVal_prov, ?_, ?_, ?_, ?_, ?_⟩
-    all_goals dsimp only
-    · intro i k x hx
-      rw [SubState.setProc_recv] at hx
-      rw [SubState.setProc_sent]
-      exact hInv.recv_sub i k hx
-    · intro k
-      by_cases hk : k = id
-      · subst hk
-        rw [SubState.setProc_proc_self]
-        exact hInv.input_eq k
-      · rw [SubState.setProc_proc_ne _ _ _ hk]
-        exact hInv.input_eq k
-    · intro j hj A hA
-      rw [SubState.setProc_sent] at hA
-      have hpre := hInv.echo_conf j hj A hA
-      by_cases hk : j = id
-      · subst hk
-        rw [SubState.setProc_proc_self]
-        exact hpre
-      · rw [SubState.setProc_proc_ne _ _ _ hk]
-        exact hpre
-    · intro j hj A hA
-      by_cases hk : j = id
-      · subst hk
-        rw [SubState.setProc_proc_self] at hA
-        exact hInv.echo_card j hj A hA
-      · rw [SubState.setProc_proc_ne _ _ _ hk] at hA
-        exact hInv.echo_card j hj A hA
-    · intro j hj W hW
-      rw [SubState.setProc_sent] at hW
-      have hpre := hInv.vote_conf j hj W hW
-      by_cases hk : j = id
-      · subst hk
-        rw [SubState.setProc_proc_self]
-        exact hpre
-      · rw [SubState.setProc_proc_ne _ _ _ hk]
-        exact hpre
-    · intro j hj W hW
-      rw [show (s.ga.setProc id { s.ga.proc id with returned := true }).recv
-          = s.ga.recv from SubState.setProc_recv ..]
-      by_cases hk : j = id
-      · subst hk
-        rw [SubState.setProc_proc_self] at hW
-        exact hInv.vote_backed j hj W hW
-      · rw [SubState.setProc_proc_ne _ _ _ hk] at hW
-        exact hInv.vote_backed j hj W hW
-    · intro j hj U hU
-      rw [show (s.ga.setProc id { s.ga.proc id with returned := true }).recv
-          = s.ga.recv from SubState.setProc_recv ..]
-      exact hInv.bind_backed j hj U hU
-  | fail id =>
-    rw [PMF.mem_support_pure_iff] at hs'
-    subst hs'
-    have hF : ∀ k, k ∉ (s.corruptAll P id).ga.F → k ∉ s.ga.F := by
-      intro k hk hkF
-      exact hk (SubState.corrupt_F_subset s.ga id hkF)
-    refine ⟨SubState.corrupt_card_le s.ga id hInv.F_card, ?_, ?_, ?_, ?_,
-      ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-    · intro k
-      change ((s.brbIn k).corrupt P id).F = (s.ga.corrupt P id).F
-      rw [BRB.SpecState.corrupt_F, SubState.corrupt_F, hInv.F_in_eq k]
-    · intro k
-      change ((s.brbBind k).corrupt P id).F = (s.ga.corrupt P id).F
-      rw [BRB.SpecState.corrupt_F, SubState.corrupt_F, hInv.F_bind_eq k]
-    · intro i k x hx
-      rw [show (s.corruptAll P id).ga.recv = s.ga.recv from rfl] at hx
-      rw [show (s.corruptAll P id).ga.sent = s.ga.sent from
-        IdealState.corruptAll_ga_sent P id s]
-      exact hInv.recv_sub i k hx
-    · intro k
-      rw [IdealState.corruptAll_brbIn_input, IdealState.corruptAll_ga_proc]
-      exact hInv.input_eq k
-    · intro k v hv
-      rw [IdealState.corruptAll_brbIn_val] at hv
-      rw [IdealState.corruptAll_brbIn_input]
-      rcases hInv.inVal_prov k v hv with hkF | hin
-      · exact Or.inl (SubState.corrupt_F_subset s.ga id hkF)
-      · exact Or.inr hin
-    · intro k U hU
-      rw [IdealState.corruptAll_brbBind_val] at hU
-      rw [IdealState.corruptAll_brbBind_input]
-      rcases hInv.bindVal_prov k U hU with hkF | hin
-      · exact Or.inl (SubState.corrupt_F_subset s.ga id hkF)
-      · exact Or.inr hin
-    · intro j hj A hA
-      rw [show (s.corruptAll P id).ga.sent = s.ga.sent from
-        IdealState.corruptAll_ga_sent P id s] at hA
-      rw [IdealState.corruptAll_ga_proc]
-      exact hInv.echo_conf j (hF j hj) A hA
-    · intro j hj A hA
-      rw [IdealState.corruptAll_ga_proc] at hA
-      exact hInv.echo_card j (hF j hj) A hA
-    · intro j hj W hW
-      rw [show (s.corruptAll P id).ga.sent = s.ga.sent from
-        IdealState.corruptAll_ga_sent P id s] at hW
-      rw [IdealState.corruptAll_ga_proc]
-      exact hInv.vote_conf j (hF j hj) W hW
-    · intro j hj W hW
-      rw [IdealState.corruptAll_ga_proc] at hW
-      rw [show (s.corruptAll P id).ga.recv = s.ga.recv from rfl]
-      exact hInv.vote_backed j (hF j hj) W hW
-    · intro j hj U hU
-      rw [IdealState.corruptAll_brbBind_input] at hU
-      rw [show (s.corruptAll P id).ga.recv = s.ga.recv from rfl]
-      exact hInv.bind_backed j (hF j hj) U hU
-
-/-! ### The derivation -/
-
-/-- A quorum contains an honest member. -/
-theorem exists_honest_quorum_mem {F Q : Finset (Fin P.n)} (hF : F.card ≤ P.f)
-    (hQ : P.n - P.f ≤ Q.card) : ∃ q ∈ Q, q ∉ F :=
-  SubState.exists_honest_of_card_lt (lt_of_le_of_lt hF (lt_of_lt_of_le P.f_lt_n_sub_f hQ))
-
-omit [DecidableEq X] in
-/-- An honest vote payload has at least `n − f` entries: its backing quorum
-contains an honest echoer, whose write-once payload of at least `n − f`
-entries it contains. -/
-theorem vote_card {s : IdealState P.n X} (hInv : IdealInv P s) {j : Fin P.n}
-    (hj : j ∉ s.ga.F) {W : APSet P.n X} (hW : (s.ga.proc j).sentVote = some W) :
-    P.n - P.f ≤ W.card := by
-  obtain ⟨Q, hQc, hQ⟩ := hInv.vote_backed j hj W hW
-  obtain ⟨q, hqQ, hqF⟩ := exists_honest_quorum_mem hInv.F_card hQc
-  obtain ⟨A, hA, hAW⟩ := hQ q hqQ
-  have hsent := hInv.recv_sub j q hA
-  have hslot := hInv.echo_conf q hqF A hsent
-  exact le_trans (hInv.echo_card q hqF A hslot) (Finset.card_le_card hAW)
-
-/-- Two honest contributed bind payloads share at least `n − f` entries: the
-backing vote quorums share an honest voter, whose write-once payload lies in
-both. -/
-theorem bindInput_inter {s : IdealState P.n X} (hInv : IdealInv P s)
-    {j j' : Fin P.n} (hj : j ∉ s.ga.F) (hj' : j' ∉ s.ga.F)
-    {U U' : APSet P.n X} (hU : (s.brbBind j).input = some U)
-    (hU' : (s.brbBind j').input = some U') :
-    P.n - P.f ≤ (U ∩ U').card := by
-  obtain ⟨Q, hQc, hQ⟩ := hInv.bind_backed j hj U hU
-  obtain ⟨Q', hQ'c, hQ'⟩ := hInv.bind_backed j' hj' U' hU'
-  obtain ⟨q, hqQ, hqQ', hqF⟩ := SubState.exists_honest_inter hInv.F_card hQc hQ'c
-  obtain ⟨W, hW, hWU⟩ := hQ q hqQ
-  obtain ⟨W', hW', hW'U⟩ := hQ' q hqQ'
-  have h1 := hInv.vote_conf q hqF W (hInv.recv_sub j q hW)
-  have h2 := hInv.vote_conf q hqF W' (hInv.recv_sub j' q hW')
-  rw [h1] at h2
-  obtain rfl : W = W' := by injection h2
-  have hsub : W ⊆ U ∩ U' := Finset.subset_inter hWU hW'U
-  exact le_trans (vote_card hInv hqF h1) (Finset.card_le_card hsub)
-
-/-- Two honest committed bind payloads share at least `n − f` entries. -/
-theorem bindVal_inter {s : IdealState P.n X} (hInv : IdealInv P s)
-    {j j' : Fin P.n} (hj : j ∉ s.ga.F) (hj' : j' ∉ s.ga.F)
-    {U U' : APSet P.n X} (hU : (s.brbBind j).val = some U)
-    (hU' : (s.brbBind j').val = some U') :
-    P.n - P.f ≤ (U ∩ U').card := by
-  rcases hInv.bindVal_prov j U hU with hF | hin
-  · exact absurd hF hj
-  rcases hInv.bindVal_prov j' U' hU' with hF | hin'
-  · exact absurd hF hj'
-  exact bindInput_inter hInv hj hj' hin hin'
-
 /-! ### The relation -/
 
 /-- The gather refinement relation. `val_cert` bounds the specification's
-committed entries by the input-BRB commitments; `cores_cert` is the `F`-blind
-monotone count pinning the frozen family to committed bind payloads. -/
+committed entries by the input-BRB commitments; `core_cert` is the count,
+blind to `F` and monotone, pinning the frozen core below committed bind
+payloads. -/
 structure CoreRel (P : Params) (s : IdealState P.n X) (t : SpecState P.n X) : Prop where
   /-- The implementation invariant. -/
   inv : IdealInv P s
@@ -645,16 +74,16 @@ structure CoreRel (P : Params) (s : IdealState P.n X) (t : SpecState P.n X) : Pr
   F_eq : t.F = s.ga.F
   /-- A committed specification entry is a committed input-BRB entry. -/
   val_cert : ∀ k v, t.val k = some v → (s.brbIn k).val = some v
-  /-- At least `f + 1` bind-BRB instances hold members of the frozen family
-  as their committed payloads. -/
-  cores_cert : ∀ Cs, t.cores = some Cs →
-    P.f + 1 ≤ (Finset.univ.filter
-      (fun q => ∃ U ∈ Cs, (s.brbBind q).val = some U)).card
+  /-- The two sides hold the same core. -/
+  core_eq : t.core = s.core
+  /-- At least `f + 1` bind-BRB instances hold a committed payload above the
+  frozen core. -/
+  core_cert : ∀ C, s.core = some C → P.f + 1 ≤ (bindAbove s C).card
 
 /-- The relation holds initially. -/
 theorem coreRel_init :
     CoreRel P (IdealState.initial P.n X) (SpecState.initial P.n X) := by
-  refine ⟨IdealInv.initial, ?_, ?_, ?_, ?_, ?_⟩ <;>
+  refine ⟨IdealInv.initial, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
     simp [IdealState.initial, SpecState.initial, PRec.initial]
 
 /-- **Broadcast compatibility**: the relation is preserved by corrupting both
@@ -663,7 +92,7 @@ theorem coreRel_corrupt {s : IdealState P.n X} {t : SpecState P.n X}
     (hR : CoreRel P s t) (id : Fin P.n) :
     CoreRel P (s.corruptAll P id) (t.corrupt P id) := by
   refine ⟨hR.inv.step (IdealStep.fail s id) (by rw [PMF.mem_support_pure_iff]),
-    ?_, ?_, ?_, ?_, ?_⟩
+    ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro k
     rw [corrupt_call, IdealState.corruptAll_ga_proc]
     exact hR.call_eq k
@@ -676,14 +105,12 @@ theorem coreRel_corrupt {s : IdealState P.n X} {t : SpecState P.n X}
     rw [corrupt_val] at hv
     rw [IdealState.corruptAll_brbIn_val]
     exact hR.val_cert k v hv
-  · intro Cs hCs
-    rw [corrupt_cores] at hCs
-    have := hR.cores_cert Cs hCs
-    refine le_trans this (Finset.card_le_card ?_)
-    intro q hq
-    rw [Finset.mem_filter] at hq ⊢
-    obtain ⟨-, U, hU, hval⟩ := hq
-    exact ⟨Finset.mem_univ q, U, hU, by rw [IdealState.corruptAll_brbBind_val]; exact hval⟩
+  · rw [corrupt_core, IdealState.corruptAll_core]
+    exact hR.core_eq
+  · intro C hC
+    rw [IdealState.corruptAll_core] at hC
+    exact le_trans (hR.core_cert C hC) (Finset.card_le_card
+      (bindAbove_mono (IdealStep.fail s id) (by rw [PMF.mem_support_pure_iff]) C))
 
 /-! ### The return run
 
@@ -715,8 +142,8 @@ private theorem commitOne_ret (k : Fin P.n) (t : SpecState P.n X) :
     (commitOne g k t).ret = t.ret := by
   unfold commitOne; split <;> rfl
 
-private theorem commitOne_cores (k : Fin P.n) (t : SpecState P.n X) :
-    (commitOne g k t).cores = t.cores := by
+private theorem commitOne_core (k : Fin P.n) (t : SpecState P.n X) :
+    (commitOne g k t).core = t.core := by
   unfold commitOne; split <;> rfl
 
 private theorem commitOne_val_mono {k : Fin P.n} {t : SpecState P.n X}
@@ -808,10 +235,10 @@ private theorem commitList_ret :
   | [], _ => rfl
   | k :: l, t => by rw [commitList, commitList_ret l, commitOne_ret]
 
-private theorem commitList_cores :
-    ∀ (l : List (Fin P.n)) (t : SpecState P.n X), (commitList g l t).cores = t.cores
+private theorem commitList_core :
+    ∀ (l : List (Fin P.n)) (t : SpecState P.n X), (commitList g l t).core = t.core
   | [], _ => rfl
-  | k :: l, t => by rw [commitList, commitList_cores l, commitOne_cores]
+  | k :: l, t => by rw [commitList, commitList_core l, commitOne_core]
 
 private theorem commitList_val_mono :
     ∀ (l : List (Fin P.n)) (t : SpecState P.n X) {k' : Fin P.n} {v : X},
@@ -945,17 +372,23 @@ theorem retRun {s : IdealState P.n X} {t : SpecState P.n X}
     (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
       ∀ q ∈ Q, ∃ U, (s.brbBind q).val = some U ∧ APSet.subMap U g)
     (hr : (s.ga.proc id).returned = false) :
-    ∃ (ts : List (SpecState P.n X)) (Cs : Finset (APSet P.n X)),
+    ∃ ts : List (SpecState P.n X),
       List.IsChain (fun a b => Step P a Lab.tau (PMF.pure b)) (t :: ts) ∧
-      (ts.getLastD t).cores = some Cs ∧
-      (∃ U ∈ Cs, APSet.subMap U g) ∧
+      (ts.getLastD t).core = some (s.core.getD (coreOf P s.ga)) ∧
+      APSet.subMap (s.core.getD (coreOf P s.ga)) g ∧
       (∀ k x, g k = some x → (ts.getLastD t).val k = some x) ∧
       (ts.getLastD t).ret id = false ∧
-      CoreRel P { s with ga := s.ga.setProc id { s.ga.proc id with returned := true } }
+      CoreRel P
+        { s with
+          ga := s.ga.setProc id { s.ga.proc id with returned := true }
+          core := some (s.core.getD (coreOf P s.ga)) }
         { ts.getLastD t with ret := Function.update (ts.getLastD t).ret id true } := by
   classical
+  set C : APSet P.n X := s.core.getD (coreOf P s.ga) with hC_def
   have hInv' : IdealInv P
-      { s with ga := s.ga.setProc id { s.ga.proc id with returned := true } } :=
+      { s with
+        ga := s.ga.setProc id { s.ga.proc id with returned := true }
+        core := some (s.core.getD (coreOf P s.ga)) } :=
     hR.inv.step (IdealStep.ret s id g hin hsub hQ hr) (by rw [PMF.mem_support_pure_iff])
   obtain ⟨Q, hQc, hQm⟩ := hQ
   set l : List (Fin P.n) := (Finset.univ.filter (fun k => (g k).isSome)).toList with hl
@@ -995,119 +428,95 @@ theorem retRun {s : IdealState P.n X} {t : SpecState P.n X}
     dsimp only
     rw [dif_pos hex]
     exact hex.choose_spec
-  rcases hcores : t.cores with _ | Cs₀
-  · -- no family yet: freeze a fresh one at the end of the chain
-    have hH : P.f + 1 ≤ (Q \ s.ga.F).card := by
-      have h1 := Finset.le_card_sdiff s.ga.F Q
-      have h2 := hR.inv.F_card
-      have hf := P.hf
-      omega
-    obtain ⟨H', hH'sub, hH'card⟩ := Finset.exists_subset_card_eq hH
-    have hH'Q : ∀ q ∈ H', q ∈ Q := fun q hq => (Finset.mem_sdiff.mp (hH'sub hq)).1
-    have hH'F : ∀ q ∈ H', q ∉ s.ga.F := fun q hq => (Finset.mem_sdiff.mp (hH'sub hq)).2
-    have hH'ne : H'.Nonempty := by
-      rw [← Finset.card_pos, hH'card]
-      omega
-    obtain ⟨q₀, hq₀⟩ := hH'ne
-    set Cs : Finset (APSet P.n X) := H'.image u with hCs_def
-    have hCsne : Cs.Nonempty := Finset.Nonempty.image ⟨q₀, hq₀⟩ u
+  -- A core with `f + 1` committed bind payloads above it is dominated by the
+  -- returned map: the count meets the return quorum.
+  have key : ∀ C : APSet P.n X, P.f + 1 ≤ (bindAbove s C).card → APSet.subMap C g := by
+    intro C hcnt
+    obtain ⟨q, hqK, hqQ⟩ := SubState.exists_mem_inter_of_quorum hcnt hQc
+    obtain ⟨U, hUval, hCU⟩ := mem_bindAbove.mp hqK
+    have h2 := (hu q hqQ).1
+    rw [hUval] at h2
+    obtain rfl : U = u q := Option.some.inj h2
+    exact APSet.subMap_mono hCU (hu q hqQ).2
+  -- The relation across the pair of return effects, at the end of the chain.
+  have hrel : ∀ (t' : SpecState P.n X), t'.call = (commitList g l t).call →
+      t'.ret = (commitList g l t).ret → t'.F = (commitList g l t).F →
+      (∀ k v, t'.val k = some v → (commitList g l t).val k = some v) →
+      t'.core = some (s.core.getD (coreOf P s.ga)) →
+      P.f + 1 ≤ (bindAbove s (s.core.getD (coreOf P s.ga))).card →
+      CoreRel P
+        { s with
+          ga := s.ga.setProc id { s.ga.proc id with returned := true }
+          core := some (s.core.getD (coreOf P s.ga)) }
+        { t' with ret := Function.update t'.ret id true } := by
+    intro t' hcall hret hF hval hcore hcnt
+    refine ⟨hInv', ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> dsimp only
+    · intro k
+      rw [hcall, commitList_call]
+      by_cases hk : k = id
+      · subst hk
+        rw [SubState.setProc_proc_self]
+        exact hR.call_eq k
+      · rw [SubState.setProc_proc_ne _ _ _ hk]
+        exact hR.call_eq k
+    · intro k
+      by_cases hk : k = id
+      · subst hk
+        rw [Function.update_self, SubState.setProc_proc_self]
+      · rw [Function.update_of_ne hk, hret, commitList_ret,
+          SubState.setProc_proc_ne _ _ _ hk]
+        exact hR.ret_eq k
+    · rw [hF, commitList_F]
+      exact hR.F_eq
+    · intro k v hv
+      rcases commitList_val_new g l t (hval k v hv) with hold | hnew
+      · exact hR.val_cert k v hold
+      · exact hsub k v hnew
+    · exact hcore
+    · intro C hC
+      obtain rfl : s.core.getD (coreOf P s.ga) = C := Option.some.inj hC
+      exact hcnt
+  rcases hcore : s.core with _ | C₀
+  · -- no core yet: freeze `coreOf` at the end of the chain
+    have hCcore : C = coreOf P s.ga := by simp [hC_def, hcore]
+    obtain ⟨hcard, -, hcnt⟩ :=
+      coreOf_freeze hR.inv hQc (fun q hq => ⟨u q, (hu q hq).1⟩)
+    rw [← hCcore] at hcard hcnt
+    have hCg : APSet.subMap C g := key _ hcnt
     have hbind : Step P (commitList g l t) Lab.tau
-        (PMF.pure { commitList g l t with cores := some Cs }) := by
-      refine Step.bindCores _ Cs (by rw [commitList_cores, hcores]) hCsne ?_ ?_
-      · intro U hU
-        obtain ⟨q, hqH', rfl⟩ := Finset.mem_image.mp hU
-        intro p hp
-        exact hcov p.1 p.2 ((hu q (hH'Q q hqH')).2 p hp)
-      · intro U hU V hV
-        obtain ⟨q, hqH', rfl⟩ := Finset.mem_image.mp hU
-        obtain ⟨q', hq'H', rfl⟩ := Finset.mem_image.mp hV
-        exact bindVal_inter hR.inv (hH'F q hqH') (hH'F q' hq'H')
-          (hu q (hH'Q q hqH')).1 (hu q' (hH'Q q' hq'H')).1
-    refine ⟨commitChain g l t ++ [{ commitList g l t with cores := some Cs }], Cs,
-      ?_, ?_, ?_, ?_, ?_, ?_⟩
+        (PMF.pure { commitList g l t with core := some C }) := by
+      refine Step.bindCore _ C (by rw [commitList_core, hR.core_eq, hcore]) ?_ hcard
+      intro p hp
+      exact hcov p.1 p.2 (hCg p hp)
+    refine ⟨commitChain g l t ++ [{ commitList g l t with core := some C }],
+      ?_, ?_, hCg, ?_, ?_, ?_⟩
     · refine isChain_snoc hchain ?_
       rw [hlast]
       exact hbind
     · rw [List.getLastD_concat]
-    · exact ⟨u q₀, Finset.mem_image_of_mem u hq₀, (hu q₀ (hH'Q q₀ hq₀)).2⟩
     · intro k x hx
       rw [List.getLastD_concat]
       exact hcov k x hx
     · rw [List.getLastD_concat]
       exact hretflag
     · rw [List.getLastD_concat]
-      refine ⟨hInv', ?_, ?_, ?_, ?_, ?_⟩ <;> dsimp only
-      · intro k
-        rw [commitList_call]
-        by_cases hk : k = id
-        · subst hk
-          rw [SubState.setProc_proc_self]
-          exact hR.call_eq k
-        · rw [SubState.setProc_proc_ne _ _ _ hk]
-          exact hR.call_eq k
-      · intro k
-        by_cases hk : k = id
-        · subst hk
-          rw [Function.update_self, SubState.setProc_proc_self]
-        · rw [Function.update_of_ne hk, commitList_ret,
-            SubState.setProc_proc_ne _ _ _ hk]
-          exact hR.ret_eq k
-      · rw [commitList_F]
-        exact hR.F_eq
-      · intro k v hv
-        rcases commitList_val_new g l t hv with hold | hnew
-        · exact hR.val_cert k v hold
-        · exact hsub k v hnew
-      · intro Cs' hCs'
-        obtain rfl : Cs = Cs' := by injection hCs'
-        refine le_trans (le_of_eq hH'card.symm) (Finset.card_le_card ?_)
-        intro q hq
-        rw [Finset.mem_filter]
-        exact ⟨Finset.mem_univ q, u q, Finset.mem_image_of_mem u hq,
-          (hu q (hH'Q q hq)).1⟩
-  · -- family frozen earlier: locate the dominated member through the count
-    have hcount := hR.cores_cert Cs₀ hcores
-    obtain ⟨qh, hqhK, hqhQ⟩ := SubState.exists_mem_inter_of_quorum hcount hQc
-    rw [Finset.mem_filter] at hqhK
-    obtain ⟨-, U₀, hU₀Cs, hU₀val⟩ := hqhK
-    have h2 := (hu qh hqhQ).1
-    rw [hU₀val] at h2
-    obtain rfl : U₀ = u qh := by injection h2
-    refine ⟨commitChain g l t, Cs₀, hchain, ?_, ⟨u qh, hU₀Cs, (hu qh hqhQ).2⟩,
-      ?_, ?_, ?_⟩
-    · rw [hlast, commitList_cores, hcores]
+      exact hrel _ rfl rfl rfl (fun _ _ h => h) rfl hcnt
+  · -- a core frozen earlier: the certificate meets the return quorum
+    have hCcore : C = C₀ := by simp [hC_def, hcore]
+    have hcnt : P.f + 1 ≤ (bindAbove s C).card := by
+      rw [hCcore]; exact hR.core_cert C₀ hcore
+    have hCg : APSet.subMap C g := key _ hcnt
+    have hlastcore : (commitList g l t).core = some C := by
+      rw [commitList_core, hR.core_eq, hcore, hCcore]
+    refine ⟨commitChain g l t, hchain, ?_, hCg, ?_, ?_, ?_⟩
+    · rw [hlast]; exact hlastcore
     · intro k x hx
       rw [hlast]
       exact hcov k x hx
     · rw [hlast]
       exact hretflag
     · rw [hlast]
-      refine ⟨hInv', ?_, ?_, ?_, ?_, ?_⟩ <;> dsimp only
-      · intro k
-        rw [commitList_call]
-        by_cases hk : k = id
-        · subst hk
-          rw [SubState.setProc_proc_self]
-          exact hR.call_eq k
-        · rw [SubState.setProc_proc_ne _ _ _ hk]
-          exact hR.call_eq k
-      · intro k
-        by_cases hk : k = id
-        · subst hk
-          rw [Function.update_self, SubState.setProc_proc_self]
-        · rw [Function.update_of_ne hk, commitList_ret,
-            SubState.setProc_proc_ne _ _ _ hk]
-          exact hR.ret_eq k
-      · rw [commitList_F]
-        exact hR.F_eq
-      · intro k v hv
-        rcases commitList_val_new g l t hv with hold | hnew
-        · exact hR.val_cert k v hold
-        · exact hsub k v hnew
-      · intro Cs' hCs'
-        rw [commitList_cores, hcores] at hCs'
-        obtain rfl : Cs₀ = Cs' := by injection hCs'
-        exact hR.cores_cert Cs₀ hcores
+      exact hrel _ rfl rfl rfl (fun _ _ h => h) hlastcore hcnt
 
 
 /-! ### Step-level relation transports
@@ -1126,7 +535,7 @@ theorem coreRel_call {s : IdealState P.n X} {t : SpecState P.n X}
         brbIn := Function.update s.brbIn id { s.brbIn id with input := some x } }
       { t with call := Function.update t.call id (some x) } := by
   refine ⟨hR.inv.step (IdealStep.call s id x h) (by rw [PMF.mem_support_pure_iff]),
-    ?_, ?_, ?_, ?_, ?_⟩ <;> dsimp only
+    ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> dsimp only
   · intro k
     by_cases hk : k = id
     · subst hk
@@ -1148,11 +557,8 @@ theorem coreRel_call {s : IdealState P.n X} {t : SpecState P.n X}
       exact hR.val_cert k v hv
     · rw [Function.update_of_ne hk]
       exact hR.val_cert k v hv
-  · intro Cs hCs
-    refine le_trans (hR.cores_cert Cs hCs) (Finset.card_le_card ?_)
-    intro q hq
-    rw [Finset.mem_filter] at hq ⊢
-    exact hq
+  · exact hR.core_eq
+  · exact hR.core_cert
 
 /-- The relation across any internal row, the specification stuttering. -/
 theorem coreRel_tau {s s' : IdealState P.n X} {t : SpecState P.n X}
@@ -1164,7 +570,7 @@ theorem coreRel_tau {s s' : IdealState P.n X} {t : SpecState P.n X}
   | commitIn k v hv hm =>
     have hs' := PMF.pure_injective hμ
     subst hs'
-    refine ⟨hInv', hR.call_eq, hR.ret_eq, hR.F_eq, ?_, hR.cores_cert⟩
+    refine ⟨hInv', hR.call_eq, hR.ret_eq, hR.F_eq, ?_, hR.core_eq, hR.core_cert⟩
     intro k' v' hv'
     have hold := hR.val_cert k' v' hv'
     dsimp only
@@ -1177,24 +583,15 @@ theorem coreRel_tau {s s' : IdealState P.n X} {t : SpecState P.n X}
   | commitBind k U hv hm =>
     have hs' := PMF.pure_injective hμ
     subst hs'
-    refine ⟨hInv', hR.call_eq, hR.ret_eq, hR.F_eq, hR.val_cert, ?_⟩
-    intro Cs hCs
-    refine le_trans (hR.cores_cert Cs hCs) (Finset.card_le_card ?_)
-    intro q hq
-    rw [Finset.mem_filter] at hq ⊢
-    obtain ⟨-, U', hU', hval⟩ := hq
-    refine ⟨Finset.mem_univ q, U', hU', ?_⟩
-    dsimp only
-    by_cases hk : q = k
-    · subst hk
-      rw [hv] at hval
-      exact absurd hval (by simp)
-    · rw [Function.update_of_ne hk]
-      exact hval
+    refine ⟨hInv', hR.call_eq, hR.ret_eq, hR.F_eq, hR.val_cert, hR.core_eq, ?_⟩
+    intro C hC
+    exact le_trans (hR.core_cert C hC) (Finset.card_le_card
+      (bindAbove_mono (IdealStep.commitBind _ k U hv hm)
+        (by rw [PMF.mem_support_pure_iff]) C))
   | deliver i j m h =>
     have hs' := PMF.pure_injective hμ
     subst hs'
-    refine ⟨hInv', ?_, ?_, hR.F_eq, hR.val_cert, hR.cores_cert⟩ <;> dsimp only
+    refine ⟨hInv', ?_, ?_, hR.F_eq, hR.val_cert, hR.core_eq, hR.core_cert⟩ <;> dsimp only
     · intro k
       rw [SubState.recvMsg_proc]
       exact hR.call_eq k
@@ -1204,7 +601,7 @@ theorem coreRel_tau {s s' : IdealState P.n X} {t : SpecState P.n X}
   | echo j A hin happ hcard hsend =>
     have hs' := PMF.pure_injective hμ
     subst hs'
-    refine ⟨hInv', ?_, ?_, hR.F_eq, hR.val_cert, hR.cores_cert⟩ <;> dsimp only
+    refine ⟨hInv', ?_, ?_, hR.F_eq, hR.val_cert, hR.core_eq, hR.core_cert⟩ <;> dsimp only
     · intro k
       by_cases hk : k = j
       · subst hk
@@ -1222,7 +619,7 @@ theorem coreRel_tau {s s' : IdealState P.n X} {t : SpecState P.n X}
   | vote j U hin happ hQ hsend =>
     have hs' := PMF.pure_injective hμ
     subst hs'
-    refine ⟨hInv', ?_, ?_, hR.F_eq, hR.val_cert, hR.cores_cert⟩ <;> dsimp only
+    refine ⟨hInv', ?_, ?_, hR.F_eq, hR.val_cert, hR.core_eq, hR.core_cert⟩ <;> dsimp only
     · intro k
       by_cases hk : k = j
       · subst hk
@@ -1240,24 +637,15 @@ theorem coreRel_tau {s s' : IdealState P.n X} {t : SpecState P.n X}
   | bindCall j U hin hb happ hQ =>
     have hs' := PMF.pure_injective hμ
     subst hs'
-    refine ⟨hInv', hR.call_eq, hR.ret_eq, hR.F_eq, hR.val_cert, ?_⟩
-    intro Cs hCs
-    refine le_trans (hR.cores_cert Cs hCs) (Finset.card_le_card ?_)
-    intro q hq
-    rw [Finset.mem_filter] at hq ⊢
-    obtain ⟨-, U', hU', hval⟩ := hq
-    refine ⟨Finset.mem_univ q, U', hU', ?_⟩
-    dsimp only
-    by_cases hk : q = j
-    · subst hk
-      rw [Function.update_self]
-      exact hval
-    · rw [Function.update_of_ne hk]
-      exact hval
+    refine ⟨hInv', hR.call_eq, hR.ret_eq, hR.F_eq, hR.val_cert, hR.core_eq, ?_⟩
+    intro C hC
+    exact le_trans (hR.core_cert C hC) (Finset.card_le_card
+      (bindAbove_mono (IdealStep.bindCall _ j U hin hb happ hQ)
+        (by rw [PMF.mem_support_pure_iff]) C))
   | byz j m hmem =>
     have hs' := PMF.pure_injective hμ
     subst hs'
-    exact ⟨hInv', hR.call_eq, hR.ret_eq, hR.F_eq, hR.val_cert, hR.cores_cert⟩
+    exact ⟨hInv', hR.call_eq, hR.ret_eq, hR.F_eq, hR.val_cert, hR.core_eq, hR.core_cert⟩
 
 /-! ### The refinement -/
 
@@ -1276,7 +664,7 @@ theorem gatherCore (P : Params) (X : Type) [DecidableEq X] :
     refine ⟨{ q₂ with call := Function.update q₂.call id (some x) },
       Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
         (Step.call q₂ id x (by rw [hR.call_eq id]; exact h))⟩,
-      hInv', ?_, ?_, ?_, ?_, ?_⟩ <;> dsimp only
+      hInv', ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> dsimp only
     · intro k
       by_cases hk : k = id
       · subst hk
@@ -1299,8 +687,8 @@ theorem gatherCore (P : Params) (X : Type) [DecidableEq X] :
         exact hold
       · rw [Function.update_of_ne hk]
         exact hR.val_cert k v hv
-    · intro Cs hCs
-      exact hR.cores_cert Cs hCs
+    · exact hR.core_eq
+    · exact hR.core_cert
   | callLoop id x =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
@@ -1310,7 +698,7 @@ theorem gatherCore (P : Params) (X : Type) [DecidableEq X] :
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     refine ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
-      hInv', hR.call_eq, hR.ret_eq, hR.F_eq, ?_, hR.cores_cert⟩
+      hInv', hR.call_eq, hR.ret_eq, hR.F_eq, ?_, hR.core_eq, hR.core_cert⟩
     intro k' v' hv'
     have hold := hR.val_cert k' v' hv'
     dsimp only
@@ -1324,25 +712,16 @@ theorem gatherCore (P : Params) (X : Type) [DecidableEq X] :
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     refine ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
-      hInv', hR.call_eq, hR.ret_eq, hR.F_eq, hR.val_cert, ?_⟩
-    intro Cs hCs
-    refine le_trans (hR.cores_cert Cs hCs) (Finset.card_le_card ?_)
-    intro q hq
-    rw [Finset.mem_filter] at hq ⊢
-    obtain ⟨-, U', hU', hval⟩ := hq
-    refine ⟨Finset.mem_univ q, U', hU', ?_⟩
-    dsimp only
-    by_cases hk : q = k
-    · subst hk
-      rw [hv] at hval
-      exact absurd hval (by simp)
-    · rw [Function.update_of_ne hk]
-      exact hval
+      hInv', hR.call_eq, hR.ret_eq, hR.F_eq, hR.val_cert, hR.core_eq, ?_⟩
+    intro C hC
+    exact le_trans (hR.core_cert C hC) (Finset.card_le_card
+      (bindAbove_mono (IdealStep.commitBind _ k U hv hm)
+        (by rw [PMF.mem_support_pure_iff]) C))
   | deliver i j m h =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     refine ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
-      hInv', ?_, ?_, hR.F_eq, hR.val_cert, hR.cores_cert⟩ <;> dsimp only
+      hInv', ?_, ?_, hR.F_eq, hR.val_cert, hR.core_eq, hR.core_cert⟩ <;> dsimp only
     · intro k
       rw [SubState.recvMsg_proc]
       exact hR.call_eq k
@@ -1353,7 +732,7 @@ theorem gatherCore (P : Params) (X : Type) [DecidableEq X] :
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     refine ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
-      hInv', ?_, ?_, hR.F_eq, hR.val_cert, hR.cores_cert⟩ <;> dsimp only
+      hInv', ?_, ?_, hR.F_eq, hR.val_cert, hR.core_eq, hR.core_cert⟩ <;> dsimp only
     · intro k
       by_cases hk : k = j
       · subst hk
@@ -1372,7 +751,7 @@ theorem gatherCore (P : Params) (X : Type) [DecidableEq X] :
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     refine ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
-      hInv', ?_, ?_, hR.F_eq, hR.val_cert, hR.cores_cert⟩ <;> dsimp only
+      hInv', ?_, ?_, hR.F_eq, hR.val_cert, hR.core_eq, hR.core_cert⟩ <;> dsimp only
     · intro k
       by_cases hk : k = j
       · subst hk
@@ -1391,34 +770,26 @@ theorem gatherCore (P : Params) (X : Type) [DecidableEq X] :
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     refine ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
-      hInv', hR.call_eq, hR.ret_eq, hR.F_eq, hR.val_cert, ?_⟩
-    intro Cs hCs
-    refine le_trans (hR.cores_cert Cs hCs) (Finset.card_le_card ?_)
-    intro q hq
-    rw [Finset.mem_filter] at hq ⊢
-    obtain ⟨-, U', hU', hval⟩ := hq
-    refine ⟨Finset.mem_univ q, U', hU', ?_⟩
-    dsimp only
-    by_cases hk : q = j
-    · subst hk
-      rw [Function.update_self]
-      exact hval
-    · rw [Function.update_of_ne hk]
-      exact hval
+      hInv', hR.call_eq, hR.ret_eq, hR.F_eq, hR.val_cert, hR.core_eq, ?_⟩
+    intro C hC
+    exact le_trans (hR.core_cert C hC) (Finset.card_le_card
+      (bindAbove_mono (IdealStep.bindCall _ j U hin hb happ hQ)
+        (by rw [PMF.mem_support_pure_iff]) C))
   | byz j m hmem =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
-      hInv', hR.call_eq, hR.ret_eq, hR.F_eq, hR.val_cert, hR.cores_cert⟩
+      hInv', hR.call_eq, hR.ret_eq, hR.F_eq, hR.val_cert, hR.core_eq, hR.core_cert⟩
   | ret id g hin hsub hQ hr =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
-    obtain ⟨ts, Cs, hchain, hCs, hmem, hcov, hret1, hRel⟩ :=
+    obtain ⟨ts, hchain, hcore, hmem, hcov, hret1, hRel⟩ :=
       retRun hR hin hsub hQ hr
-    have hretstep : Step P (ts.getLastD q₂) (Lab.ret id g)
+    have hretstep : Step P (ts.getLastD q₂)
+        (Lab.ret id g (q₁.core.getD (coreOf P q₁.ga)))
         (PMF.pure { ts.getLastD q₂ with
           ret := Function.update (ts.getLastD q₂).ret id true }) :=
-      Step.ret _ id g Cs hCs hmem hcov hret1
+      Step.ret _ id g _ hcore hmem hcov hret1
     exact ⟨_, Or.inr ⟨by simp,
       System.weakLStep_tausThen hchain hretstep (by simp)⟩, hRel⟩
   | fail id =>

@@ -135,17 +135,17 @@ theorem liftedPair_isLTS (P : Params) (r : ℕ) : (liftedPair P r).IsLTS :=
 /-- The broadcast corruption act on a gather-based implementation state: both
 gather-over-Bracha instances record it at once (D1). -/
 def gActLow (P : Params) : NLab P.n → GBCA.LowPairState P.n → GBCA.LowPairState P.n
-  | Sum.inl (.fail k), s => (s.1.corruptAll P k, s.2.corruptAll P k)
+  | Sum.inl (.fail k), s => (s.1.corruptAll P k, s.2.1.corruptAll P k, s.2.2)
   | _, s => s
 
 /-- The broadcast corruption act on a GBCA-over-gather-over-BRB state. -/
 def gActIdeal (P : Params) : NLab P.n → GBCA.IdealState P.n → GBCA.IdealState P.n
-  | Sum.inl (.fail k), s => (s.1.corruptAll P k, s.2.corruptAll P k)
+  | Sum.inl (.fail k), s => (s.1.corruptAll P k, s.2.1.corruptAll P k, s.2.2)
   | _, s => s
 
 /-- The broadcast corruption act on a GBCA-over-gather state. -/
 def gActPair (P : Params) : NLab P.n → GBCA.PairState P.n → GBCA.PairState P.n
-  | Sum.inl (.fail k), s => (s.1.corrupt P k, s.2.corrupt P k)
+  | Sum.inl (.fail k), s => (s.1.corrupt P k, s.2.1.corrupt P k, s.2.2)
   | _, s => s
 
 /-! ### The lifted tier simulations

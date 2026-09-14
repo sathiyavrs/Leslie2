@@ -120,7 +120,8 @@ theorem Abs.step_callG {P : Params} {g : ℕ → GBCA.SpecState P.n} {c : ABASta
 theorem Abs.step_retG {P : Params} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} {a : SpecState P.n}
     (hA : Abs P g c w a) (hI : Inv P g c w) (r : ℕ) (id : Fin P.n) (out : GbcaOut)
-    {μr : PMF (GBCA.SpecState P.n)} (hstepG : GBCA.Step P r (g r) (.retG r id out) μr)
+    (bnd : Bool)
+    {μr : PMF (GBCA.SpecState P.n)} (hstepG : GBCA.Step P r (g r) (.retG r id out bnd) μr)
     {μc : PMF (ABAState P)}
     (hstepC :
       ((c.procs id).phase = .awaitG ∧ (c.procs id).round = r ∧
@@ -130,7 +131,7 @@ theorem Abs.step_retG {P : Params} {g : ℕ → GBCA.SpecState P.n} {c : ABAStat
     {gr' : GBCA.SpecState P.n} (hgr' : gr' ∈ μr.support)
     {c' : ABAState P} (hc' : c' ∈ μc.support) :
     Abs P (Function.update g r gr') c' w a := by
-  have hAF := (Inv.step_retG hI r id out hstepG hstepC hgr' hc').2
+  have hAF := (Inv.step_retG hI r id out bnd hstepG hstepC hgr' hc').2
   have hCFrame : c'.F = c.F ∧ ∀ id', (c'.procs id').input = (c.procs id').input ∧
       (c'.procs id').returned = (c.procs id').returned := by
     rcases hstepC with ⟨hph, hr, rfl⟩ | ⟨hF, rfl⟩ <;>
@@ -234,7 +235,7 @@ theorem Inv.step {P : Params} {g : ℕ → GBCA.SpecState P.n}
     rcases hybrid_step_tau P g C A w hI.corrupted_F μ hstep with
       ⟨r, μr, hstepG, rfl⟩ | ⟨μc, hstepC, rfl⟩ | ⟨r, μw', hstepW, rfl⟩ |
       ⟨r, id, b, μr, μc, hstepG, hstepC, rfl⟩ |
-      ⟨r, id, out, μr, μc, hstepG, hstepC, rfl⟩ |
+      ⟨r, id, out, bnd, μr, μc, hstepG, hstepC, rfl⟩ |
       ⟨r, id, μw', μc, hstepW, hstepC, rfl⟩ |
       ⟨r, id, b, μw', μc, hstepW, hstepC, rfl⟩
     · simp only [mem_support_prodPMF] at hmem
@@ -269,7 +270,7 @@ theorem Inv.step {P : Params} {g : ℕ → GBCA.SpecState P.n}
       obtain ⟨gr', hgr', heq⟩ := h1
       obtain ⟨hc2, rfl⟩ := mem_support_abaRow h2
       rw [← heq]
-      exact (Inv.step_retG hI r id out hstepG hstepC hgr' hc2).1
+      exact (Inv.step_retG hI r id out bnd hstepG hstepC hgr' hc2).1
     · simp only [mem_support_prodPMF] at hmem
       obtain ⟨h1, h2⟩ := hmem
       rw [PMF.mem_support_pure_iff] at h1
@@ -315,11 +316,11 @@ theorem Inv.step {P : Params} {g : ℕ → GBCA.SpecState P.n}
     rcases hstep with ⟨hτ, -⟩ | ⟨hnotmem, -⟩
     · exact absurd hτ (by simp)
     · exact hnotmem (Lab.callG_mem_hiddenAPI r id b)
-  | retG r id out =>
+  | retG r id out bnd =>
     exfalso; rw [hybrid_step_iff] at hstep
     rcases hstep with ⟨hτ, -⟩ | ⟨hnotmem, -⟩
     · exact absurd hτ (by simp)
-    · exact hnotmem (Lab.retG_mem_hiddenAPI r id out)
+    · exact hnotmem (Lab.retG_mem_hiddenAPI r id out bnd)
   | callW r id =>
     exfalso; rw [hybrid_step_iff] at hstep
     rcases hstep with ⟨hτ, -⟩ | ⟨hnotmem, -⟩

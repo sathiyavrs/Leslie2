@@ -131,7 +131,7 @@ theorem coreSim (P : Params) :
       rcases hybrid_step_tau P g C A w hI.corrupted_F μ_C hstep with
         ⟨r, μr, hstepG, rfl⟩ | ⟨μc, hstepC, rfl⟩ | ⟨r, μw', hstepW, rfl⟩ |
         ⟨r, id, b, μr, μc, hstepG, hstepC, rfl⟩ |
-        ⟨r, id, out, μr, μc, hstepG, hstepC, rfl⟩ |
+        ⟨r, id, out, bnd, μr, μc, hstepG, hstepC, rfl⟩ |
         ⟨r, id, μw', μc, hstepW, hstepC, rfl⟩ | ⟨r, id, b, μw', μc, hstepW, hstepC, rfl⟩
       · -- row 3: `bindUnset` (`gbcaTau`) — the abstract state stutters
         obtain ⟨ω, hRel, hWeak⟩ := stutter_step _ a (fun s' hs' => by
@@ -182,7 +182,7 @@ theorem coreSim (P : Params) :
           obtain ⟨gr', hgr', heq⟩ := h1
           obtain ⟨hc2, rfl⟩ := mem_support_abaRow h2
           exact ⟨hI', by
-            rw [← heq]; exact hAbs.step_retG hI r id out hstepG hstepC hgr' hc2⟩)
+            rw [← heq]; exact hAbs.step_retG hI r id out bnd hstepG hstepC hgr' hc2⟩)
         exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
       · -- row: callW handshake
         obtain ⟨ω, hRel, hWeak⟩ := stutter_step _ a (fun s' hs' => by
@@ -378,7 +378,7 @@ theorem coreSim (P : Params) :
         rw [hbid]
         exact weakStep_strong (SpecStep.retByz a id b (hAbs.F_eq ▸ hFbyz))
     | callG r id b => exact (hidden_label_impossible (by simp) (by simp) hstep).elim
-    | retG r id out => exact (hidden_label_impossible (by simp) (by simp) hstep).elim
+    | retG r id out bnd => exact (hidden_label_impossible (by simp) (by simp) hstep).elim
     | callW r id => exact (hidden_label_impossible (by simp) (by simp) hstep).elim
     | retW r id b => exact (hidden_label_impossible (by simp) (by simp) hstep).elim
     | fail id =>

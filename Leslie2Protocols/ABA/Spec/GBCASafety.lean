@@ -16,7 +16,9 @@ its *future*: there is a bit the instance will never hand out, in this run or in
 any extension of it. On the specification state that promise is a field rather
 than a theorem. `SpecState.excluded : Finset Bool` is the set of bits the instance
 can no longer hand out; the value-bearing returns refuse an excluded bit and demand
-that the other bit be excluded, and the `C`-return demands that some bit be excluded.
+that the other bit be excluded. Every return, whatever its grade, announces a bit
+`β` on its label under the guard `(!β) ∈ excluded`, which is what puts the
+promise on the trace.
 
 Binding and graded agreement rest on one fact: `excluded` only grows. The single
 writer is the internal `bindUnset`, which inserts, and `corrupt` does not touch
@@ -34,16 +36,22 @@ commits the round, and the surviving bit stays available to every later return.
   return; that return needs its own bit alive, so its bit is not `!v₁`, so on
   `Bool` it is `v₁`. No invariant, no quorum arithmetic, no reachability
   hypothesis beyond membership in one execution.
-* `specInst_binding` — the same statement read off the trace: any two round-`r`
-  graded-return labels of a positive-probability trace of `specInst P r` that
-  name a bit (`outValue`, defined here: `A b` and `B b` name `b`, `C` names
-  nothing) name the same bit.
-* `retC_excluded_nonempty` — the **Graded Binding witness**, as the complement of
-  the bit the return excludes. After a `C`-return,
-  `excluded` is nonempty in every later state of the execution. A member of `excluded`
-  is a bit no non-faulty party can be handed at grade `≥ 1` in any extension,
-  which is ABDY22's Graded Binding clause; the witness is produced at the
-  `C`-return and survives because `excluded` never shrinks.
+* `retG_bound_agree` — **one bound bit per round**. Any two returns of one
+  execution announce the same bit. Each return excludes the complement of the bit
+  it announces, the run carries that exclusion forward, and no state excludes two
+  bits.
+* `specInst_binding` — binding read off the trace (`BindingTrace`). Every
+  positive-probability trace of `specInst P r` carries a single round-`r`
+  announced bit (`BoundTrace`), and every round-`r` return that names a bit
+  (`outValue`, defined here: `A b` and `B b` name `b`, `C` names nothing) names
+  the announced one. The graded-agreement reading — any two bit-naming returns of
+  the trace name the same bit — is `BindingTrace.value_agree`.
+* `retC_excluded_nonempty` — the **Graded Binding witness**, as the bit the
+  `C`-return announces. After a `C`-return announcing `β`, `excluded` is nonempty
+  in every later state of the execution, `!β` being the member. A member of
+  `excluded` is a bit no non-faulty party can be handed at grade `≥ 1` in any
+  extension, which is ABDY22's Graded Binding clause; the witness is produced at
+  the `C`-return and survives because `excluded` never shrinks.
 * `specInst_validity` — **Validity, safety half**. If every round-`r` call of
   the trace carries the bit `v` unless its caller is corrupted somewhere along
   the trace (`UnanimousInput`), then every round-`r` return of the trace hands
@@ -162,31 +170,31 @@ def outValue : GbcaOut → Option Bool
 @[simp] theorem outValue_C : outValue .C = none := rfl
 
 /-- An `A`-return pins its bit alive and the other bit excluded. -/
-private theorem retA_inv {s : SpecState P.n} {id : Fin P.n} {v : Bool}
-    {μ : PMF (SpecState P.n)} (hstep : Step P r s (.retG r id (.A v)) μ) :
+private theorem retA_inv {s : SpecState P.n} {id : Fin P.n} {v β : Bool}
+    {μ : PMF (SpecState P.n)} (hstep : Step P r s (.retG r id (.A v) β) μ) :
     v ∉ s.excluded ∧ (!v) ∈ s.excluded :=
   match hstep with
-  | .retA _ _ _ hlive hexcluded _ _ => ⟨hlive, hexcluded⟩
+  | .retA _ _ _ _ hlive hexcluded _ _ _ => ⟨hlive, hexcluded⟩
 
 /-- A `B`-return pins its bit alive and the other bit excluded. -/
-private theorem retB_inv {s : SpecState P.n} {id : Fin P.n} {v : Bool}
-    {μ : PMF (SpecState P.n)} (hstep : Step P r s (.retG r id (.B v)) μ) :
+private theorem retB_inv {s : SpecState P.n} {id : Fin P.n} {v β : Bool}
+    {μ : PMF (SpecState P.n)} (hstep : Step P r s (.retG r id (.B v) β) μ) :
     v ∉ s.excluded ∧ (!v) ∈ s.excluded :=
   match hstep with
-  | .retB _ _ _ hlive hexcluded _ _ => ⟨hlive, hexcluded⟩
+  | .retB _ _ _ _ hlive hexcluded _ _ _ => ⟨hlive, hexcluded⟩
 
-/-- A `C`-return pins the exclusion set nonempty. -/
-private theorem retC_inv {s : SpecState P.n} {id : Fin P.n}
-    {μ : PMF (SpecState P.n)} (hstep : Step P r s (.retG r id .C) μ) :
-    s.excluded.Nonempty :=
-  match hstep with
-  | .retC _ _ hd _ _ _ _ => Finset.card_pos.mp hd
+/-- **The guard of the announced bit.** Every return rule, whatever its grade,
+fires from a state where the complement of the announced bit `β` is excluded. -/
+theorem retG_bound_guard {s : SpecState P.n} {id : Fin P.n} {o : GbcaOut}
+    {β : Bool} {μ : PMF (SpecState P.n)}
+    (hstep : Step P r s (.retG r id o β) μ) : (!β) ∈ s.excluded := by
+  cases hstep <;> assumption
 
 /-- **The guard pair of a value-bearing return.** Whatever its grade, a return
 that hands out `v` fires from a state where `v` is alive and `!v` is excluded. -/
 theorem retG_value_guards {s : SpecState P.n} {id : Fin P.n} {o : GbcaOut}
-    {v : Bool} {μ : PMF (SpecState P.n)}
-    (hstep : Step P r s (.retG r id o) μ) (ho : outValue o = some v) :
+    {v β : Bool} {μ : PMF (SpecState P.n)}
+    (hstep : Step P r s (.retG r id o β) μ) (ho : outValue o = some v) :
     v ∉ s.excluded ∧ (!v) ∈ s.excluded := by
   cases o with
   | A w =>
@@ -197,16 +205,37 @@ theorem retG_value_guards {s : SpecState P.n} {id : Fin P.n} {o : GbcaOut}
     exact retB_inv hstep
   | C => exact absurd ho (by simp)
 
+/-- Two bits excluded at one state of an execution are equal: the exclusion set
+holds at most one bit. -/
+private theorem excluded_eq_of_mem {e : AlterSeq (SpecState P.n) (Lab P.n)}
+    (he : is_exec e (specInst P r)) {k : ℕ} {s : SpecState P.n} {b₁ b₂ : Bool}
+    (hst : e.stateAt k = some s) (h₁ : b₁ ∈ s.excluded) (h₂ : b₂ ∈ s.excluded) :
+    b₁ = b₂ :=
+  Finset.card_le_one.mp (excluded_card_le_one he hst) _ h₁ _ h₂
+
+/-- **A value-bearing return announces the bit it hands out.** The value guard
+excludes `!v` and the bound guard excludes `!β`, and a state of an execution
+excludes at most one bit. -/
+theorem retG_value_eq_bound {e : AlterSeq (SpecState P.n) (Lab P.n)}
+    (he : is_exec e (specInst P r)) {k : ℕ} {s : SpecState P.n} {id : Fin P.n}
+    {o : GbcaOut} {v β : Bool} {μ : PMF (SpecState P.n)}
+    (hst : e.stateAt k = some s) (hstep : Step P r s (.retG r id o β) μ)
+    (ho : outValue o = some v) : v = β := by
+  have h := excluded_eq_of_mem he hst (retG_value_guards hstep ho).2
+    (retG_bound_guard hstep)
+  revert h
+  cases v <;> cases β <;> simp
+
 /-! ### Binding and graded agreement along a run -/
 
 /-- Two value-bearing returns of one run agree on the bit (`k₁ ≤ k₂` case). -/
 private theorem retG_value_agree_le {e : AlterSeq (SpecState P.n) (Lab P.n)}
     (he : is_exec e (specInst P r)) {k₁ k₂ : ℕ} (hk : k₁ ≤ k₂)
-    {s₁ s₂ : SpecState P.n} {id₁ id₂ : Fin P.n} {o₁ o₂ : GbcaOut} {v₁ v₂ : Bool}
-    {μ₁ μ₂ : PMF (SpecState P.n)}
+    {s₁ s₂ : SpecState P.n} {id₁ id₂ : Fin P.n} {o₁ o₂ : GbcaOut}
+    {v₁ v₂ β₁ β₂ : Bool} {μ₁ μ₂ : PMF (SpecState P.n)}
     (hst₁ : e.stateAt k₁ = some s₁) (hst₂ : e.stateAt k₂ = some s₂)
-    (hstep₁ : Step P r s₁ (.retG r id₁ o₁) μ₁)
-    (hstep₂ : Step P r s₂ (.retG r id₂ o₂) μ₂)
+    (hstep₁ : Step P r s₁ (.retG r id₁ o₁ β₁) μ₁)
+    (hstep₂ : Step P r s₂ (.retG r id₂ o₂ β₂) μ₂)
     (ho₁ : outValue o₁ = some v₁) (ho₂ : outValue o₂ = some v₂) : v₁ = v₂ := by
   obtain ⟨-, hexcluded₁⟩ := retG_value_guards hstep₁ ho₁
   obtain ⟨hlive₂, -⟩ := retG_value_guards hstep₂ ho₂
@@ -222,40 +251,88 @@ argument is the guard pair plus monotonicity: the first return pins `!v₁` into
 `excluded`, `excluded` only grows, and the second return refuses an excluded bit. -/
 theorem retG_value_agree {e : AlterSeq (SpecState P.n) (Lab P.n)}
     (he : is_exec e (specInst P r)) {k₁ k₂ : ℕ}
-    {s₁ s₂ : SpecState P.n} {id₁ id₂ : Fin P.n} {o₁ o₂ : GbcaOut} {v₁ v₂ : Bool}
-    {μ₁ μ₂ : PMF (SpecState P.n)}
+    {s₁ s₂ : SpecState P.n} {id₁ id₂ : Fin P.n} {o₁ o₂ : GbcaOut}
+    {v₁ v₂ β₁ β₂ : Bool} {μ₁ μ₂ : PMF (SpecState P.n)}
     (hst₁ : e.stateAt k₁ = some s₁) (hst₂ : e.stateAt k₂ = some s₂)
-    (hstep₁ : Step P r s₁ (.retG r id₁ o₁) μ₁)
-    (hstep₂ : Step P r s₂ (.retG r id₂ o₂) μ₂)
+    (hstep₁ : Step P r s₁ (.retG r id₁ o₁ β₁) μ₁)
+    (hstep₂ : Step P r s₂ (.retG r id₂ o₂ β₂) μ₂)
     (ho₁ : outValue o₁ = some v₁) (ho₂ : outValue o₂ = some v₂) : v₁ = v₂ := by
   rcases le_total k₁ k₂ with h | h
   · exact retG_value_agree_le he h hst₁ hst₂ hstep₁ hstep₂ ho₁ ho₂
   · exact (retG_value_agree_le he h hst₂ hst₁ hstep₂ hstep₁ ho₂ ho₁).symm
 
-/-- **The Graded Binding witness**, as the complement of the bit the return
-excludes. A `C`-return leaves the exclusion set nonempty in every later state of
-the execution: the bit it excludes is a bit no extension of the run can ever hand
-out, so the surviving complement is the clause's witness. -/
+/-- Two returns of one run announce the same bit (`k₁ ≤ k₂` case). -/
+private theorem retG_bound_agree_le {e : AlterSeq (SpecState P.n) (Lab P.n)}
+    (he : is_exec e (specInst P r)) {k₁ k₂ : ℕ} (hk : k₁ ≤ k₂)
+    {s₁ s₂ : SpecState P.n} {id₁ id₂ : Fin P.n} {o₁ o₂ : GbcaOut} {β₁ β₂ : Bool}
+    {μ₁ μ₂ : PMF (SpecState P.n)}
+    (hst₁ : e.stateAt k₁ = some s₁) (hst₂ : e.stateAt k₂ = some s₂)
+    (hstep₁ : Step P r s₁ (.retG r id₁ o₁ β₁) μ₁)
+    (hstep₂ : Step P r s₂ (.retG r id₂ o₂ β₂) μ₂) : β₁ = β₂ := by
+  have hcarry : (!β₁) ∈ s₂.excluded :=
+    excluded_mem_stable he hk hst₁ hst₂ (retG_bound_guard hstep₁)
+  have h := excluded_eq_of_mem he hst₂ hcarry (retG_bound_guard hstep₂)
+  revert h
+  cases β₁ <;> cases β₂ <;> simp
+
+/-- **One bound bit per round.** Any two returns occurring along one execution of
+the round-`r` specification instance announce the same bit. Each fires under
+`(!β) ∈ excluded`, the exclusion set only grows, and no state of an execution
+excludes two bits. -/
+theorem retG_bound_agree {e : AlterSeq (SpecState P.n) (Lab P.n)}
+    (he : is_exec e (specInst P r)) {k₁ k₂ : ℕ}
+    {s₁ s₂ : SpecState P.n} {id₁ id₂ : Fin P.n} {o₁ o₂ : GbcaOut} {β₁ β₂ : Bool}
+    {μ₁ μ₂ : PMF (SpecState P.n)}
+    (hst₁ : e.stateAt k₁ = some s₁) (hst₂ : e.stateAt k₂ = some s₂)
+    (hstep₁ : Step P r s₁ (.retG r id₁ o₁ β₁) μ₁)
+    (hstep₂ : Step P r s₂ (.retG r id₂ o₂ β₂) μ₂) : β₁ = β₂ := by
+  rcases le_total k₁ k₂ with h | h
+  · exact retG_bound_agree_le he h hst₁ hst₂ hstep₁ hstep₂
+  · exact (retG_bound_agree_le he h hst₂ hst₁ hstep₂ hstep₁).symm
+
+/-- **The Graded Binding witness**, as the bit the `C`-return announces. The
+return fires under `(!β) ∈ excluded`, so the exclusion set is nonempty in every
+later state of the execution: `!β` is a bit no extension of the run can ever hand
+out, and the announced `β` is the clause's witness. -/
 theorem retC_excluded_nonempty {e : AlterSeq (SpecState P.n) (Lab P.n)}
     (he : is_exec e (specInst P r)) {k₁ k₂ : ℕ} (hk : k₁ ≤ k₂)
-    {s₁ s₂ : SpecState P.n} {id : Fin P.n} {μ : PMF (SpecState P.n)}
+    {s₁ s₂ : SpecState P.n} {id : Fin P.n} {β : Bool} {μ : PMF (SpecState P.n)}
     (hst₁ : e.stateAt k₁ = some s₁) (hst₂ : e.stateAt k₂ = some s₂)
-    (hstep : Step P r s₁ (.retG r id .C) μ) : s₂.excluded.Nonempty := by
-  obtain ⟨b, hb⟩ := retC_inv hstep
-  exact ⟨b, excluded_mem_stable he hk hst₁ hst₂ hb⟩
+    (hstep : Step P r s₁ (.retG r id .C β) μ) : s₂.excluded.Nonempty :=
+  ⟨!β, excluded_mem_stable he hk hst₁ hst₂ (retG_bound_guard hstep)⟩
 
 /-! ### The trace-level statement -/
 
-/-- **Binding (trace form).** Any two round-`r` graded returns appearing in the
-trace that hand out a bit hand out the same bit. -/
+/-- **The announced bit is one bit (trace form).** Any two round-`r` returns
+appearing in the trace announce the same bit. -/
+def BoundTrace (P : Params) (r : ℕ) (t : Seq (Lab P.n)) : Prop :=
+  ∀ (id₁ id₂ : Fin P.n) (o₁ o₂ : GbcaOut) (β₁ β₂ : Bool),
+    Lab.retG r id₁ o₁ β₁ ∈ t → Lab.retG r id₂ o₂ β₂ ∈ t → β₁ = β₂
+
+/-- **Binding (trace form).** The round is bound to one bit on the trace: all
+round-`r` returns of the trace announce the same bit, and every one of them that
+hands out a value hands out that bit. -/
 def BindingTrace (P : Params) (r : ℕ) (t : Seq (Lab P.n)) : Prop :=
-  ∀ (id₁ id₂ : Fin P.n) (o₁ o₂ : GbcaOut) (v₁ v₂ : Bool),
-    Lab.retG r id₁ o₁ ∈ t → Lab.retG r id₂ o₂ ∈ t →
-    outValue o₁ = some v₁ → outValue o₂ = some v₂ → v₁ = v₂
+  BoundTrace P r t ∧
+    ∀ (id : Fin P.n) (o : GbcaOut) (β v : Bool),
+      Lab.retG r id o β ∈ t → outValue o = some v → v = β
+
+/-- **Graded agreement (trace form).** Any two round-`r` returns of a bound trace
+that hand out a bit hand out the same bit: each hands out the bit it announces,
+and the two announcements agree. -/
+theorem BindingTrace.value_agree {t : Seq (Lab P.n)} (h : BindingTrace P r t)
+    {id₁ id₂ : Fin P.n} {o₁ o₂ : GbcaOut} {β₁ β₂ v₁ v₂ : Bool}
+    (h₁ : Lab.retG r id₁ o₁ β₁ ∈ t) (h₂ : Lab.retG r id₂ o₂ β₂ ∈ t)
+    (ho₁ : outValue o₁ = some v₁) (ho₂ : outValue o₂ = some v₂) : v₁ = v₂ := by
+  rw [h.2 id₁ o₁ β₁ v₁ h₁ ho₁, h.2 id₂ o₂ β₂ v₂ h₂ ho₂]
+  exact h.1 id₁ id₂ o₁ o₂ β₁ β₂ h₁ h₂
 
 /-- **Binding of the GBCA specification instance**: every trace in the support
 of every achievable trace distribution of `GBCA.specInst P r` satisfies
-`BindingTrace`. -/
+`BindingTrace`. The announced bits agree because each return excludes the
+complement of the one it announces, an exclusion the run carries forward, and a
+state excludes at most one bit; a value-bearing return announces the bit it hands
+out by the same cardinality bound at its own state. -/
 theorem specInst_binding (P : Params) (r : ℕ) :
     ∀ D ∈ achievableTraceDists (specInst P r), ∀ t, D t ≠ 0 →
       BindingTrace P r t := by
@@ -263,12 +340,17 @@ theorem specInst_binding (P : Params) (r : ℕ) :
   rw [← h_D t] at h_ne
   obtain ⟨e, h_exec, h_char⟩ :=
     exists_exec_of_traceProb_ne_zero pe h_init t h_ne
-  intro id₁ id₂ o₁ o₂ v₁ v₂ h₁ h₂ ho₁ ho₂
-  obtain ⟨-, k₁, s₁', hg₁⟩ := (h_char _).mp h₁
-  obtain ⟨-, k₂, s₂', hg₂⟩ := (h_char _).mp h₂
-  obtain ⟨s₁, μ₁, hst₁, hstep₁, -⟩ := h_exec.1 k₁ _ _ hg₁
-  obtain ⟨s₂, μ₂, hst₂, hstep₂, -⟩ := h_exec.1 k₂ _ _ hg₂
-  exact retG_value_agree h_exec hst₁ hst₂ hstep₁ hstep₂ ho₁ ho₂
+  constructor
+  · intro id₁ id₂ o₁ o₂ β₁ β₂ h₁ h₂
+    obtain ⟨-, k₁, s₁', hg₁⟩ := (h_char _).mp h₁
+    obtain ⟨-, k₂, s₂', hg₂⟩ := (h_char _).mp h₂
+    obtain ⟨s₁, μ₁, hst₁, hstep₁, -⟩ := h_exec.1 k₁ _ _ hg₁
+    obtain ⟨s₂, μ₂, hst₂, hstep₂, -⟩ := h_exec.1 k₂ _ _ hg₂
+    exact retG_bound_agree h_exec hst₁ hst₂ hstep₁ hstep₂
+  · intro id o β v h_mem ho
+    obtain ⟨-, k, s', hg⟩ := (h_char _).mp h_mem
+    obtain ⟨s, μ, hst, hstep, -⟩ := h_exec.1 k _ _ hg
+    exact retG_value_eq_bound h_exec hst hstep ho
 
 /-! ### Validity: the trace-level hypothesis and conclusion -/
 
@@ -285,7 +367,8 @@ def UnanimousInput (P : Params) (r : ℕ) (v : Bool) (t : Seq (Lab P.n)) : Prop 
 hands out `v`. Returner-unconditional, and it excludes `C` outright, `C`
 handing out nothing. -/
 def ValidityTrace (P : Params) (r : ℕ) (v : Bool) (t : Seq (Lab P.n)) : Prop :=
-  ∀ (id : Fin P.n) (o : GbcaOut), Lab.retG r id o ∈ t → outValue o = some v
+  ∀ (id : Fin P.n) (o : GbcaOut) (β : Bool),
+    Lab.retG r id o β ∈ t → outValue o = some v
 
 /-! ### The bookkeeping invariant -/
 
@@ -464,12 +547,13 @@ theorem excluded_notMem_of_unanimous {e : AlterSeq (SpecState P.n) (Lab P.n)}
 /-! ### The return refutation -/
 
 /-- Both D15 counts of a `C`-return: `f + 1` support at each bit. -/
-private theorem retC_supp {s : SpecState P.n} {id : Fin P.n}
-    {μ : PMF (SpecState P.n)} (hstep : Step P r s (.retG r id .C) μ) (c : Bool) :
+private theorem retC_supp {s : SpecState P.n} {id : Fin P.n} {β : Bool}
+    {μ : PMF (SpecState P.n)} (hstep : Step P r s (.retG r id .C β) μ)
+    (c : Bool) :
     P.f + 1 ≤
       (Finset.univ.filter (fun id' => s.call id' = some c ∨ id' ∈ s.F)).card :=
   match hstep with
-  | .retC _ _ _ hwT hwF _ _ => by
+  | .retC _ _ _ _ hwT hwF _ _ => by
     cases c with
     | false => exact hwF
     | true => exact hwT
@@ -478,12 +562,12 @@ private theorem retC_supp {s : SpecState P.n} {id : Fin P.n}
 value-bearing return needs the other bit excluded, and `v` is not; a `C`-return
 needs `f + 1` support at both bits, and the dissenting one is capped by the
 budget. -/
-theorem retG_value_of_unanimous {t : Seq (Lab P.n)} {v : Bool}
+theorem retG_value_of_unanimous {t : Seq (Lab P.n)} {v β : Bool}
     {s : SpecState P.n} {id : Fin P.n} {o : GbcaOut} {μ : PMF (SpecState P.n)}
     (hun : UnanimousInput P r v t)
     (hcall : ∀ id b, s.call id = some b → Lab.callG r id b ∈ t)
     (hF : ∃ j, s.F = failSet P t j) (hlive : v ∉ s.excluded)
-    (hstep : Step P r s (.retG r id o) μ) : outValue o = some v := by
+    (hstep : Step P r s (.retG r id o β) μ) : outValue o = some v := by
   have key : ∀ w : Bool, (!w) ∈ s.excluded → w = v := by
     intro w hexcluded
     by_contra hne
@@ -545,7 +629,7 @@ theorem specInst_validity (P : Params) (r : ℕ) (v : Bool) :
         ∃ j, s.F = failSet P t j :=
     fun k s hst => trace_transfer h_exec h_map hpfail hpcall h_t hst
   have halive := excluded_notMem_of_unanimous h_exec hbr hun
-  intro id o h_mem
+  intro id o β h_mem
   obtain ⟨k, s', h_get⟩ := event_of_mem_trace h_map h_t h_mem
   obtain ⟨s, μ, h_state, h_step, -⟩ := h_exec.1 k _ _ h_get
   obtain ⟨hcall, hF⟩ := hbr k s h_state
@@ -556,9 +640,10 @@ guards ask `f + 1` support at *both* bits; the dissenting one is capped by the
 corruption budget. -/
 theorem specInst_no_retC (P : Params) (r : ℕ) (v : Bool) :
     ∀ D ∈ achievableTraceDists (specInst P r), ∀ t, D t ≠ 0 →
-      UnanimousInput P r v t → ∀ id : Fin P.n, Lab.retG r id .C ∉ t := by
-  intro D hD t h_ne hun id h_mem
-  have h := specInst_validity P r v D hD t h_ne hun id .C h_mem
+      UnanimousInput P r v t →
+      ∀ (id : Fin P.n) (β : Bool), Lab.retG r id .C β ∉ t := by
+  intro D hD t h_ne hun id β h_mem
+  have h := specInst_validity P r v D hD t h_ne hun id .C β h_mem
   simp at h
 
 /-! ### Mechanical axiom check
@@ -572,6 +657,14 @@ No headline may acquire a `sorryAx` dependence. -/
 /-- info: 'PLTS.ABA.GBCA.specInst_binding' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms specInst_binding
+
+/-- info: 'PLTS.ABA.GBCA.retG_bound_agree' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms retG_bound_agree
+
+/-- info: 'PLTS.ABA.GBCA.BindingTrace.value_agree' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms BindingTrace.value_agree
 
 /-- info: 'PLTS.ABA.GBCA.excluded_card_le_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
