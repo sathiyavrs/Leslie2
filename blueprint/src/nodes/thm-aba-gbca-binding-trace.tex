@@ -1,0 +1,15 @@
+\begin{theorem}[Binding of the GBCA specification, on a trace]
+  \label{thm:aba-gbca-binding-trace}
+  \lean{PLTS.ABA.GBCA.BoundTrace}\lean{PLTS.ABA.GBCA.BindingTrace}\lean{PLTS.ABA.GBCA.specInst_binding}\lean{PLTS.ABA.GBCA.BindingTrace.value_agree}\leanok
+  \uses{def:aba-gbca-spec, thm:gbca-spec-binding, thm:trace-support}
+  $\mathrm{BoundTrace}$ says that any two round-$r$ returns of a trace announce the same bit, and $\mathrm{BindingTrace}$ adds that every round-$r$ return of the trace which hands out a value hands out that bit.
+  Every trace in the support of every achievable trace distribution of the round-$r$ GBCA specification instance satisfies $\mathrm{BindingTrace}$.\lean{PLTS.ABA.GBCA.specInst_binding}\leanok{} Graded agreement is then a consequence of the trace predicate alone: two returns of the trace that hand out bits each hand out the bit they announce, and the two announcements agree.\lean{PLTS.ABA.GBCA.BindingTrace.value_agree}\leanok{}
+\end{theorem}
+
+\begin{proof}\leanok
+  \uses{def:aba-gbca-spec, thm:gbca-spec-binding, thm:trace-support}
+  Theorem~\ref{thm:trace-support} turns a positive-probability trace into a genuine execution of the instance in which each round-$r$ return label of the trace is a step of a return rule at some state.
+  The two clauses are then Theorem~\ref{thm:gbca-spec-binding} read at those steps: the announcements of any two of them agree, and a value-bearing one announces the value it hands out.
+  Nothing beyond positive probability is asked of the trace, and nothing beyond membership in one execution of the returns.
+  This is what carries binding down a chain of refinements: the property is stated on labels, so an inclusion of achievable trace distributions transports it.
+\end{proof}

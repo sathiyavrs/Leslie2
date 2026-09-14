@@ -10,7 +10,7 @@ and the three `*Sim` files), the assembly at the protocol shape
 (`ABA/AFW/Chain.lean`), and the protocol beneath it (`ABA/AFW/Flat.lean`,
 `ABA/AFW/FlatSim.lean`). The gather subsections of
 `blueprint/src/content.tex` are a condensation of this document; the
-deviations D24–D28 it realises are glossed in that file's registry, and the
+deviations D24, D26–D30 it realises are glossed in that file's registry, and the
 source-fidelity items it rests on are §§2, 5 and 6 of `NOTES-Fidelity.md`.
 
 ## Systems
@@ -23,9 +23,9 @@ lowPairInst P r   -- two gather-over-Bracha instances: 2 message states + 4n Bra
   ⊑ lowRefines        (broadcast substitution, componentwise)
 idealInst P r     -- two gather-over-BRB.Spec instances
   ⊑ idealRefines      (gather substitution, componentwise)
-pairInst P r      -- two Gather.SpecState coordinates + counting
-  ⊑ pairRefines       (member-form counting into TS 2)
-GBCA.specInst P r -- unchanged (GBCASpec.lean, D19)
+pairInst P r      -- two Gather.SpecState coordinates + the bound bit + counting
+  ⊑ pairRefines       (core counting into TS 2)
+GBCA.specInst P r -- Spec/GBCA.lean, D19/D29
 
 gatherImplRefines P r : lowPairInst ⊑ specInst   (probabilistic, trans ×2)
 ```
@@ -34,9 +34,9 @@ Beneath the round, two standalone tier sequences with their own alphabets, citab
 their own and consumed by the round through exported chain data:
 
 ```
-BRB.implInst P ldr M ⊑ BRB.specInst P ldr M      (brbRefines, BRBSim.lean)
-Gather.lowInst P X   ⊑ Gather.idealInst P X        (gatherLow, GatherLowSim.lean)
-Gather.idealInst P X   ⊑ Gather.specInst P X       (gatherCore, GatherSim.lean)
+BRB.implInst P ldr M ⊑ BRB.specInst P ldr M    (brbRefines, Broadcast/ImplSim.lean)
+Gather.lowInst P X   ⊑ Gather.idealInst P X      (gatherLow,  Gather/LowSim.lean)
+Gather.idealInst P X ⊑ Gather.specInst P X       (gatherCore, Gather/IdealSim.lean)
 ```
 
 At the protocol shape (`AFW/Chain.lean`), each round reading is lifted over
@@ -60,71 +60,69 @@ the protocol chain: `AFW.composed` is to the gather-based implementation what
 `ABDY.composed` is to ABDY22's. A `G` elsewhere in the development is graded
 agreement — `callG`, `retG`, `GSub`, `GNetState` — and never the chain.
 
-## Why the gather specification carries a core family (D25)
+## The core of the gather specification
 
 The classical binding property of gather says: once the first correct process
-returns, there is a set `S` of size `≥ n − f` such that every future correct
-return is defined on `S`. TS 4 states this with a single `bind` set, written
-once by an internal rule and read by every return. A forward simulation must
-produce the abstract bind step at some concrete prefix state — no later than
-the first return it answers — and the invariant must then keep every future
-return above the chosen set. At `n = 3f + 1` no state predicate can do this
-with a single `n − f`-sized set. Two natural routes both fail.
+returns, there is a set of at least `n − f` entries on which every future
+correct return is defined. TS 4 states this with a single set, and
+`Gather.SpecState.core : Option (APSet n X)` carries it. The internal rule
+`Gather.Step.bindCore` is its only writer and fires only from `core = none`,
+under two guards: the set's entries are committed entries (`hval`), and it has
+at least `n − f` of them (`hcard`). `Gather.Step.ret` demands that the returned
+map dominate it, and the return label carries it (D29).
 
-**The pigeonhole route fails.** At the first return's state, as few as
-`n − 2f = f + 1` honest processes have cast their `VOTE`; the returner's
-`n − f` quorum of BIND payloads contains only `f + 1` honest-at-that-state
-members. Every argument that tries to cut a single `n − f`-sized entry set
-out of that evidence needs an intersection bound of the form
-`2(n − f) − n ≥ n − f`, i.e. `n ≥ 2f + something` beyond `3f < n` — at
-`n = 3f + 1` the arithmetic closes only for sets of size `≥ n − f` *pairwise*,
-never for their global intersection at a prefix.
+A forward simulation has to produce that write at a reachable prefix state, no
+later than the first return it answers, and then hold every later return above
+the set it chose. `ABA/Gather/Core.lean` is the argument that the
+gather-over-BRB instance determines such a set.
 
-**The sender-honesty route fails under dynamic corruption.** Quorum overlap
-puts a common member behind any two `n − f` quorums, and with a *static*
-adversary one argues: some common member is honest, its write-once payload
-dominates both sides. Under D1 the adversary corrupts adaptively; the common
-member may be corrupted *after* its sends, and a message state multicast from a
-sender corrupted later pins nothing — the injections of the now-corrupted
-sender can put any payload beside it.
+**The core.** Let `w` be the gather message state of a state of the instance:
+the per-sender sent sets beside the corrupted set `F`. Say that `q` *dominates*
+`j` when every `VOTE` payload `q` has multicast lies above some `ECHO` payload
+of `j`. Write `dominatedBy w q` for the senders `q` dominates and
+`dominators w j` for the processes outside `F` that dominate `j`.
+`Gather.coreOf P w` is the `ECHO` payload of a sender outside `F` carrying at
+least `f + 1` dominators, and `∅` where there is no such sender. It reads the
+sent sets and the corrupted set alone (`coreOf_msgState_only`), so the network
+component of a flat reading computes it from its own state.
 
-AFW25's Remark 22 says the same from above: for a gather without binding the
-core set "is determined only in hindsight, and could be captured as a
-prophecy variable". The `n − f`-sized single core is a fact about complete
-executions. A specification whose internal rule must fire at a reachable
-state can only bind what a reachable state determines.
+**The counting.** Read `dominatedBy` as an incidence whose rows and columns are
+the processes outside `F`. A `VOTE` payload of a process outside `F` is
+multicast above `n − f` delivered `ECHO` payloads, and `VOTE` is write-once, so
+`n − f ≤ (dominatedBy w q).card` for every `q` outside `F` — vacuously for a `q`
+that has multicast no `VOTE`, whose row is everything (`dominatedBy_card`).
+Restricting a row to the columns costs at most `|F|`, so every row carries at
+least `n − f − |F|` of them (`dominatedBy_honest_card`). Summing the rows and
+reading the same sum by columns (`sum_dominatedBy`) gives a column `j₀` outside
+`F` with `n − f − |F| ≤ (dominators w j₀).card` (`exists_dominators`), and
+`n − f − |F| ≥ f + 1` under `n > 3f` and `|F| ≤ f`. The core is `j₀`'s `ECHO`
+payload, whose own send guard gives it `n − f` entries.
 
-**What a reachable state determines** is the family of committed BIND
-payloads, and it satisfies a *pairwise* bound: each committed payload is
-backed by an `n − f` VOTE receipt quorum; two such quorums share an honest
-voter; that voter's vote is write-once and carries `≥ n − f` entries; and it
-sits below both payloads. Hence:
+**The transfer.** Take a committed `BIND` payload `U` of a process outside `F`.
+It is that process's contributed payload, multicast above `n − f` delivered
+`VOTE` payloads. Those `n − f` senders meet the `f + 1` dominators of `j₀` in a
+process `q`, whose write-once `VOTE` payload lies above the core by domination
+and below `U` by the bind guard, so `coreOf P w ⊆ U` (`transfer`,
+`single_core`). Every `ECHO` slot holds committed input-BRB entries, so the
+core's entries are committed entries (`single_core_approved`), which is
+`bindCore`'s other guard.
 
-- `Gather.SpecState.cores : Option (Finset (APSet n X))` — a write-once
-  *family* of committed-entry sets, nonempty, any two members (each with
-  itself, giving the size bound) sharing `≥ n − f` entries, every return
-  dominating some member (`Gather.Step.bindCores`, `Gather.Step.ret`).
-- The classical core is `⋂ cores`, of size `≥ n − f` once all honest votes
-  are in — a complete-execution corollary, not a state invariant, and no
-  statement of the development needs it: every consumer argument re-derives
-  from the pairwise bound (see the counting section below).
+**The freeze certificate.** `coreOf_freeze` packages the three facts with the
+count the simulation carries along the run: at least `f + 1` coordinates hold a
+committed `BIND` payload above the core (`Gather.bindAbove`). That count is
+blind to `F` and monotone under every rule (`bindAbove_mono`), so it survives
+every later corruption, and it is what holds the returns after the first to the
+set the first one froze. A returner's quorum of `n − f` committed payloads meets
+the `f + 1` certified coordinates, and BRB values are functional, so the
+returned map lies above the frozen core.
 
-**BIND travels by reliable broadcast** rather than on the gather message state.
-"Committed" must survive the sender's later corruption, and a BRB value is
-write-once whatever happens to its sender afterwards. This is what makes the
-family's members stable objects: `Gather.IdealState` holds one bind-BRB
-instance per process (`brbBind`), the BIND send is that instance's call
-(D28's fusion), and the certificate the simulation carries —
-`f + 1 ≤ #{q | (brbBind q).val ∈ Cs}` — is F-blind, monotone, and immune to
-corruption of the senders it counts.
-
-**Producing and matching the family in the simulation** (`gatherCore`): a
-return's `n − f` quorum of committed bind payloads contains `f + 1` members
-honest at that state; their payloads form a family satisfying the pairwise
-bound (fresh bind), and each dominates the output. When a family is already
-bound, the return's quorum meets the `f + 1` certified coordinates in some
-`q`; BRB values are functional, so the output dominates the standing member
-at `q` and no second bind is needed.
+**Why the counting closes here.** `BIND` payloads travel by reliable broadcast
+rather than on the gather message state, so a committed payload is write-once
+whatever happens to its sender afterwards, where a multicast payload is pinned
+only by its sender's honesty and D1 withdraws that at any moment.
+`Gather.IdealState` holds one bind-BRB instance per process (`brbBind`) and the
+`BIND` send is that instance's call (D28's fusion), which is what makes the
+objects the certificate counts stable.
 
 ## The commit splits (D26, D27)
 
@@ -143,39 +141,44 @@ The refinement counterpart is *commit-on-demand*: the abstract commit is a
 τ-rule with no implementation event to synchronise with, so the simulations
 fire it inside the weak answer of the first row that reads it —
 `BRB.commitReach` under a return, the `commitOne/commitList` chains of
-`GatherSim` under an approval-reading row.
+`ABA/Gather/IdealSim.lean` under an approval-reading row.
 
-## Member-form counting at the pair tier (`pairRefines`)
+## Counting at the pair tier (`pairRefines`)
 
 `pairInst` is AFW25's Algorithm 4 at `R = 2`, its two-gather branch (D24): candidate at
 `|dom g| − f` occurrences after the first gather, grade at
 `|dom h| − f` / `f + 1` after the second. The refinement into TS 2 certifies
-the specification's `excluded` and `grade` on the two core families, and every
-count is in *member form* — about family members, never about a global core:
+the specification's `excluded` and `grade` on the two instances' frozen cores.
+One transfer lemma carries a count from a returned map down to a core below
+it: `cnt_heavy_of_subMap` (AFW25 Lemma 13) says that a map heavy at `x` — all
+but `f` of its entries — makes such a core heavy at `x` too, the core sitting
+below the map and losing at most `f` entries to it.
 
-- `cnt_heavy_of_subMap` (AFW25 Lemma 13, member form): a returned map heavy
-  at `x` — all but `f` entries — makes every member of the family heavy at
-  `x`, since the member sits below the map and loses at most `f` entries.
-- `members_agree` (Proposition 14, member form): two members heavy at `x`
-  and `y` share `≥ n − f ≥ 2f + 1` entries, of which at most `2f` miss a
-  value; a common entry carries both, so `x = y`.
-- `members_heavy_light` (Lemma 18 / A–C exclusivity): a member heavy at `x`
-  leaves every value `≠ x` at most `f` entries on any member, through the
-  shared entries again.
+A core has at least `n − f > 2f` entries, so at most one value is heavy in it,
+and the three certificates are readings of that:
 
-The exclusion certificate is
-`ExcludedEv b = ∃ Cs, cores₁ = some Cs ∧ ∀ U ∈ Cs, cnt U b < |U| − f`. The
-family is write-once, so the certificate is frozen the moment it holds —
-monotonicity for free, where the direct implementation's refinement
-maintains monotone receipt walls. The return rows then mirror
-`GBCASim.implRefines` shape for shape: a candidate reaching the second
-gather is heavy in the first family (refuting any standing `ExcludedEv` for it),
-an `A`/`B` return certifies `ExcludedEv` of the other bit from its own map, the
-`B`-return's `f + 1` dissent support is read off the `> f` non-candidate
-entries of the returned map (each an honest caller or corrupted — the D15
-form), and the `C`-return picks its excluded bit by a case split on whether
-some member is heavy at a bit. Exclusions fire on demand as the two-step run
-`bindUnset; ret`, unchanged from the direct refinement.
+- the round's bound bit is `GBCA.boundOfCore` of the first instance's core —
+  its heavy bit where one exists (`boundOfCore_of_heavy`), the complement
+  being light (`cnt_boundOfCore_light`);
+- the exclusion certificate is
+  `ExcludedEv b = ∃ S, core₁ = some S ∧ cnt S b < |S| − f`. The core is
+  write-once, so the certificate is frozen the moment it holds — monotonicity
+  for free, where the direct implementation's refinement maintains monotone
+  receipt walls;
+- the A/C grade exclusivity is the second instance's core being heavy at
+  `some v` on the A side and light at both bits on the C side.
+
+The return rows then mirror `GBCASim.implRefines` shape for shape: a candidate
+reaching the second gather is heavy in the first core (the invariant clause
+`cand_heavy`, recorded when the link row computed the candidate, which refutes
+a standing `ExcludedEv` for it), an `A`/`B` return hands out the bound bit and
+certifies `ExcludedEv` of its complement, and the `C`-return announces the bit
+the link already wrote. The D15 support counts come off the first core through
+the committed-entry provenance — a core entry is a committed entry, a committed
+entry of an honest process is its call, and the count is `F`-blind
+(`supp_spec_of_core`) — or off an honest `⊥` candidate, which certifies `f + 1`
+for both bits (`cand_bot`). Exclusions fire on demand as the two-step run
+`bindUnset; ret`, as in the direct refinement.
 
 ## The chain-data export discipline
 
@@ -183,9 +186,12 @@ Each simulation exports its answers as *chain data* — a `List.IsChain` of
 Dirac τ-steps of the abstract system, plus the final row's guards and the
 relation at the end state — rather than as a finished weak run:
 
-- `BRBSim` exports `instRel_tau`, `instRel_call`, `commitReach`;
-- `GatherSim` exports `retRun`, `coreRel_call`, `coreRel_tau`;
-- `GatherLowSim` exports `lowRel_call`, `lowTau_reach`, `lowRetRun`.
+- `ABA/Broadcast/ImplSim.lean` exports `instRel_tau`, `instRel_call`,
+  `commitReach`;
+- `ABA/Gather/IdealSim.lean` exports `retRun`, `coreRel_call`, `coreRel_tau`,
+  and the core equality `CoreRel.core_eq` the return labels are matched by;
+- `ABA/Gather/LowSim.lean` exports `lowRel_call`, `lowTau_reach`, `lowRetRun`,
+  and `LowRel.core_eq`.
 
 A consumer one level up maps the chain into its own embedded rows with a
 ten-line `chain_map` lemma (the rows of `idealInst`/`lowPairInst` carry the
@@ -193,8 +199,8 @@ component's row as a premise), splices chains where a fused row answers two
 components (the `link` row), and closes with `Framework/WeakRun.lean`:
 `weakLSilent_ofChain` for silent answers, `weakLStep_tausThen` for a chain
 closed by an external step. This is why the wrapper simulations
-(`GBCAIdealSim`, `GBCALowSim`) are two hundred lines against the tiers'
-thousands: they replay, they do not re-prove.
+(`ABA/Round/IdealSim.lean`, `ABA/Round/LowSim.lean`) are two hundred lines
+against the tiers' thousands: they replay, they do not re-prove.
 
 ## The assembly at the protocol shape (`AFW/Chain.lean`)
 
@@ -228,10 +234,12 @@ the corrupted set, beside the coin oracle. That shape is the same for either
 implementation of graded agreement — the round loop, the DECIDED sets, the
 coin handshake, corruption, the adversary's table and the composition pipeline
 are fixed by the round interface and the specification — so `ABA/Reading/Flat.lean`
-writes it once, parametric in three things: the stage message type `M`, the
-per-process per-round stage record `S`, and the stage-side rows, supplied as a
-relation embedded in one constructor of the program table. `ABA/ABDY/Protocol.lean`
-instantiates it at ABDY22's implementation; `ABA/AFW/Flat.lean` instantiates it here.
+writes it once, parametric in the stage message type `M`, the per-process per-round
+stage record `S`, the stage-side rows, supplied as a relation embedded in one
+constructor of the program table, and the adversary's per-round ghost record
+`G` with its update `ghostStep` and its output `ghostOut` (D30).
+`ABA/ABDY/Protocol.lean` instantiates it at ABDY22's implementation;
+`ABA/AFW/Flat.lean` instantiates it here.
 
 The division of labour is by label. `Net.stageOwn j` is the set of label
 classes an implementation owns at process `j`: the graded-agreement call and
@@ -263,12 +271,29 @@ and both are forced by the flat shape.
   read a message state — the adversary's delivery and its Byzantine injection —
   belong to the adversary either way.
 
-`AFW.ProtocolRel` therefore has four conjuncts, not twenty: the round loop, the
+`AFW.ProtocolRel` therefore has five conjuncts, not twenty: the round loop, the
 coin oracle and the ABA-side network are shared objects, and the round family
 is *computed* from the flat state by `AFW.toPair`, which undoes both
 rearrangements — transposing the local states back and slicing each message state's sent set out
-of the tagged family by `Finset.filterMap`. The relation is a function, so
-there is nothing to choose in the witness.
+of the tagged family by `Finset.filterMap`. Four of the five are that
+computation, so there is nothing to choose in the witness.
+
+The ghost is part of that computation. The round instance carries three fields
+no guard of it reads — the core of each of its two gather instances and the
+round's bound bit — and the adversary holds the same three as the round's ghost
+record `AFW.Ghost`, which `AFW.toPair` reads them off. Two rows write the
+record. The link's broadcast of the candidate freezes the first gather's core at
+`Gather.coreOf` of that gather's slice of the tagged sent sets, and the bound bit
+at `GBCA.boundOfCore` of that core; a graded return freezes the second core the
+same way. The composed `link` and `retG` freeze the same two values off the core
+their embedded gather return carries, and the values agree because each is
+`Gather.coreOf` of one message state (`coreOf_toLow1`, `coreOf_toLow2`).
+
+The fifth conjunct, `AFW.BoundInv`, is the one clause that is not a reading of
+the flat state, and it is what makes the announced bits agree: a process whose
+round-`r` second-gather local state carries an input has passed that round's
+link, so the round's bound bit is on record. The link is the only row that
+extends the clause, and it writes the bit at the same moment.
 
 The proof is organised around that computation. One master lemma,
 `AFW.toPair_write`, says what a one-point stage write and a single sent set

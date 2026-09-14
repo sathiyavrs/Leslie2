@@ -83,7 +83,7 @@ re-derivation (the six Stage-C stutter lemmas of `Core/Abs.lean` are all instanc
 
 ### Certificates: decided values stated without the live pair
 
-Under D19 a GBCA round records exclusion, not a bound value: `(g r).excluded : Finset Bool`
+Under D19 the state of a GBCA round records exclusion: `(g r).excluded : Finset Bool`
 is written by `bindUnset`, and a value-bearing return needs the *live pair*
 `(!v) ∈ (g r).excluded ∧ v ∉ (g r).excluded`. The relation does not state decided values through
 that pair. It states them through certificates, which name their bit off a single
@@ -162,6 +162,13 @@ translation.
 | `retABA id b`, `id ∉ F`, phase 2 | `retABA id b` | `SpecStep.ret` directly (phase 2's holder universal, applied to the honest DECIDED sender it derives, pins `b = v`) |
 | `retABA id b`, `id ∈ F` | `retABA id b` | `SpecStep.retByz` (D23): neither side moves, in either phase |
 | `fail id` | `fail id` | `SpecStep.fail` (same two guards via `F_eq`; robust in both phases) |
+
+A `retG` label carries the round's bound bit beside the graded outcome (D29). The whole
+rendezvous alphabet is hidden before the core simulation sees it, so that bit reaches the
+abstract side on no label, and the row that reads it — the round instance's return — is a
+τ of `hybrid` answered by a stutter. `Abs` holds no field for it, and no invariant conjunct
+reads it: the round's binding content enters the core simulation through `(g r).excluded`,
+which the bit is a reading of.
 
 The single run is `decide_step` (`Core/Run.lean`), fired at the phase-1 `retABA`.
 `SpecStep.decide` is Dirac, so the run is one step; what the row supplies is its three
@@ -264,9 +271,10 @@ write-once per bit and `excluded` monotone.
   calls and `b ∉ excluded`;
 - `retB v` counts support for the dissenting bit `!v`, alongside the live pair
   `v ∉ excluded ∧ (!v) ∈ excluded` for the bit it hands out — the same pair `retA v` reads;
-- `retC` hands out no bit and reads no live pair at all, only `1 ≤ excluded.card`: it carries
-  one such count for **each** bit — which is exactly what certifies that no single bit is
-  the right answer — plus the `C`-side grade guard enforcing A/C exclusivity.
+- `retC` hands out no bit and reads no live pair, only `(!bnd) ∈ excluded` for the bit
+  `bnd` it announces: it carries one such count for **each** bit — which is exactly what
+  certifies that no single bit is the right answer — plus the `C`-side grade guard
+  enforcing A/C exclusivity.
 
 Directly `F`-blind — the count is monotone in `F` and `call`, so it is
 immune to later `fail`s — and the budget pigeonhole transfers verbatim: among `f + 1`

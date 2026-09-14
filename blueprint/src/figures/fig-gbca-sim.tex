@@ -14,7 +14,7 @@
   \node[state, initial, initial text={}] (p1) at (1.6,0)
     {$excluded=\emptyset$\\ $call=input$};
   \node[state, accepting] (p2) at (11.6,0)
-    {$excluded \neq \emptyset$\\ grade guard};
+    {$1{-}bnd \in excluded$\\ grade guard};
   \draw[->] (p1) to[loop below, looseness=5]
     node[below=2pt, font=\footnotesize]{stutter} (p1);
   \draw[->] (p2) to[loop below, looseness=5]

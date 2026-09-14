@@ -4,10 +4,11 @@ Companion design document to the Lean proof in `ABA/ABDY/ImplSim.lean` (relation
 invariant, run lemmas, per-row simulation), against the implementation shape
 in `ABA/ABDY/Impl.lean` (deviation D18: all five message levels of
 ABDY22's Algorithm 6) and the specification shape in `ABA/Spec/GBCA.lean`
-(deviation D19: the exclusion set `excluded : Finset Bool` in place of a bound
-value). The refinement paragraphs of `blueprint/src/content.tex` — the exclusion
-certificate, the `VOTE` wall, and the two-step exclusion-then-return run — are a
-condensation of this document.
+(deviation D19: the exclusion set `excluded : Finset Bool` as the state shape,
+with the bound value announced on the return labels, D29). The refinement
+paragraphs of `blueprint/src/content.tex` — the exclusion certificate, the
+`VOTE` wall, and the two-step exclusion-then-return run — are a condensation of
+this document.
 
 ## Systems
 
@@ -38,8 +39,9 @@ inductive Msg : Type
 and `ProcState` carries one write-once field per level above `INPUT`:
 `sentEcho : Option Bool`, `sentVote sentBind sentEcho5 : Option (Option Bool)`,
 next to `input`, `sentInput : Bool → Bool` and `returned`. `ImplState` is the
-per-process states, the D5 set-based network (`sent`, `recv`) and the
-corrupted set `F`. Derived counts: `recvCount i m` (distinct senders of the
+pair of the per-process stage records and the round's message state, the
+latter carrying the D5 set-based network (`sent`, `recv`), the corrupted set
+`F`, and the write-once ghost field `bound : Option Bool`. Derived counts: `recvCount i m` (distinct senders of the
 exact message `m` delivered to `i`), `echoCount`/`voteCount`/`bindCount`/
 `echo5Count i` (distinct senders of *any* payload at that level), and
 `bothValid P s i` (an `n − f` `INPUT b` receipt quorum at `i` for **each**
@@ -89,6 +91,17 @@ block's case (a) at either bit, and the returns read as Algorithm 6's
   particular an `n − f` any-`ECHO5` quorum (grade 0);
 * `fail` — D1 determinised corruption.
 
+The three return rows each announce a bit and write it back, and no other row
+touches the field. `GBCA.boundOf sent F out` is the bit a return of outcome
+`out` announces where the round has none on record: `v` at a value-bearing
+outcome, and at `C` the payload of an honest `⟨VOTE, b⟩` sender, `true` where
+there is none. An honest `⟨VOTE, b⟩` sender holds an `n − f` `⟨ECHO, b⟩`
+receipt quorum and at most one bit carries such a quorum, so on a reachable
+state at most one branch applies. A return announces
+`bound.getD (boundOf sent F out)`, so the round announces one bit on all of its
+returns. The bit is a ghost output (D29): it enters no guard of Algorithm 6 and
+no field a program holds.
+
 The load-bearing depth of the return evidence: **every grade-≥1 output names a
 bit with an honest `BIND` behind it** — `retA` via `n − f` `ECHO5 v` →
 honest `ECHO5` sender → `n − f` `BIND v` receipts → honest binder; `retB` via
@@ -109,16 +122,24 @@ instance can no longer hand out. The rules:
   `f + 1 ≤ #{id | s.call id = some (!b) ∨ id ∈ s.F}` (the D15 SuppOK count,
   at the *surviving* bit `!b`), and `hd0 : s.excluded = ∅`; effect
   `excluded := insert b s.excluded`;
-* `retA id v` — guards `v ∉ s.excluded`, `(!v) ∈ s.excluded`,
-  `s.grade = none ∨ s.grade = some true`, `s.ret id = false`; effect
-  `grade := some true`, mark returned;
-* `retB id v` — guards `v ∉ s.excluded`, `(!v) ∈ s.excluded`, the D15 dissent count
+* `retA id v bnd` — guards `v ∉ s.excluded`, `(!v) ∈ s.excluded`,
+  `(!bnd) ∈ s.excluded`, `s.grade = none ∨ s.grade = some true`,
+  `s.ret id = false`; effect `grade := some true`, mark returned;
+* `retB id v bnd` — guards `v ∉ s.excluded`, `(!v) ∈ s.excluded`,
+  `(!bnd) ∈ s.excluded`, the D15 dissent count
   `f + 1 ≤ #{id' | s.call id' = some (!v) ∨ id' ∈ s.F}`, `s.ret id = false`;
   effect: mark returned;
-* `retC id` — guards `1 ≤ s.excluded.card`, the two D15 counts (one per bit),
-  `s.grade = none ∨ s.grade = some false`, `s.ret id = false`; effect
+* `retC id bnd` — guards `(!bnd) ∈ s.excluded`, the two D15 counts (one per
+  bit), `s.grade = none ∨ s.grade = some false`, `s.ret id = false`; effect
   `grade := some false`, mark returned;
 * `fail` — D1 corruption, `excluded` untouched.
+
+Each return announces `bnd` on its label `.retG r id out bnd` under the single
+guard `(!bnd) ∈ s.excluded`. A reachable state excludes at most one bit, so the
+guard determines `bnd` as the complement of the excluded one, and all the
+returns of a round announce one bit. A value-bearing return carries
+`(!v) ∈ s.excluded` too, so it announces `bnd = v`. This is what makes binding a
+property of the trace alone (`GBCA.BindingTrace`, `specInst_binding`).
 
 The `hd0` guard admits `bindUnset` from the empty set only, so an instance excludes
 at most once and every reachable state has `excluded ∈ {∅, {b}}`
@@ -147,6 +168,7 @@ structure InstRel (P : Params) (s : ImplState P.n) (t : SpecState P.n) : Prop wh
   ret_eq    : ∀ id, t.ret id = (s.proc id).returned
   F_eq      : t.F = s.F
   excluded_cert : ∀ b, b ∈ t.excluded → ExcludedCert P s b
+  bound_excluded : t.excluded = excludedOf s.bound
   gradeA_ev : t.grade = some true  → ∃ v i, P.n - P.f ≤ s.recvCount i (.echo5 (some v))
   gradeC_ev : t.grade = some false → ∃ i,   P.n - P.f ≤ s.recvCount i (.echo5 none)
 ```
@@ -160,10 +182,19 @@ process with two different `ECHO5` payloads, contradicting the write-once
 
 `excluded_cert` is the load-bearing novelty: the spec's `excluded` is bookkeeping the
 protocol never stores, so the relation carries a receipt-pattern *exclude
-certificate* for every excluded bit. Note the direction — the relation bounds
-`excluded` from above (`excluded ⊆ {b | ExcludedCert P s b}`) and never from below; which
-bits are actually in `excluded` is recovered by case analysis at the return rows,
-not stored.
+certificate* for every excluded bit. Note the direction — the clause bounds
+`excluded` from above (`excluded ⊆ {b | ExcludedCert P s b}`) and never from below.
+
+`bound_excluded` is the one clause that pins `excluded` from below, through the
+implementation's ghost field: `excludedOf` is `∅` at `bound = none` and
+`{!β}` at `bound = some β`, and the equation holds because the exclusion fires
+inside the round's first return, which is also the row that writes the bit. Two
+things follow. It discharges the guard `(!bnd) ∈ excluded` of a return that
+announces a bit already on record, and with `excluded_cert` it gives
+`InstRel.bound_cert`: the bit on record carries an exclude certificate for its
+complement. Each return row therefore splits on `bound`: with a bit on record
+the guard is discharged and the row answers with `ret` alone, and with the field
+unwritten `excluded` is empty and the row answers with the two-step run.
 
 ## The exclude certificates
 
@@ -320,11 +351,11 @@ carriers:
 
 The specification excludes by an internal τ-transition, so an implementation
 return that needs a not-yet-excluded bit excluded is answered by a two-step weak
-run through `weakLStep_tauThen`. Unlike a bound-value
-design there is no "first return" phase distinction: **every** return row does
-the same decidable case split on the spec's `excluded`, and the run is enabled
-whenever the exclusion is missing, regardless of how many returns happened before.
-Every run carries `hd0 : t.excluded = ∅`, the `bindUnset` guard:
+run through `weakLStep_tauThen`. **Every** return row does the same decidable
+case split on the specification's `excluded`, and the run is enabled whenever
+the exclusion is missing, whatever returns came before. Every run carries
+`hd0 : t.excluded = ∅`, the `bindUnset` guard, and each run's label carries the
+bit the row announces:
 
 ```lean
 /-- `bindUnset (!v) ; retA v` from an all-alive state (`excluded = ∅`). -/
@@ -334,7 +365,7 @@ theorem excludeThenRetA_run {r t id v}
       (fun k => t.call k = some v ∨ k ∈ t.F)).card)
     (hlive : v ∉ t.excluded) (hd0 : t.excluded = ∅)
     (hg : t.grade = none ∨ t.grade = some true) (hr : t.ret id = false) :
-    (specInst P r).weakLStep t (.retG r id (.A v))
+    (specInst P r).weakLStep t (.retG r id (.A v) v)
       { t with excluded := insert (!v) t.excluded, grade := some true,
                ret := Function.update t.ret id true }
 ```
@@ -447,10 +478,21 @@ from `quorum_of_msg_quorum` on `bothValid`'s `INPUT` quorum; restore
 `gradeC_ev := ⟨id, hcnt⟩` and `excluded_cert` as above with `ExcludedCert b*` for the
 new member.
 
-Value agreement needs no dedicated lemmas: with `excluded` in place of a bound
-value, agreement between successive returns is the guard pair
-`v ∉ excluded ∧ (!v) ∈ excluded` itself, discharged per row by
+Value agreement needs no dedicated lemmas: agreement between successive returns
+is the guard pair `v ∉ excluded ∧ (!v) ∈ excluded` itself, discharged per row by
 `not_excludedCert_of_voteQuorum` (for `∉`) and the case analysis (for `∈`).
+
+The announced bit is discharged the same way. A value-bearing return announces
+its own value (`InstRel.retBound_eq`): the return's `n − f` `VOTE v` receipt
+quorum refutes a certificate for `v`, so a bit already on record is `v` by
+`InstRel.bound_cert`, and a bit computed here is `v` by `boundOf`. A `C`-return
+announces `boundOf`'s bit, whose complement is certified by
+`excludedCert_boundOf_C`: an honest bit-voter's `vote_conf` receipt quorum is
+Case A for the opposite bit, and where there is no honest bit-voter the all-⊥
+wall (`excludedCert_of_noHonestVote`) certifies both bits at once. In that
+all-⊥ run no bit is ever handed out, and the bit the `C`-returns announce is
+the surviving one — `boundOf` reads `true` there, and the run excludes `false`
+— which is sound because the bit is a ghost output and answers no process.
 
 ## Invariant inventory
 
@@ -647,14 +689,15 @@ by the graded agreement specification.
    quantitative or decidability layer) needs the choice computable, replace it
    with the explicit case split (`if EchoQuorum … true then false else …`);
    nothing in the simulation depends on which certified bit is chosen.
-4. **`excluded.card ≤ 1` is an invariant, and the relation still does not carry
-   it.** It holds at every state of every execution of the specification
-   instance (`GBCASafety.excluded_card_le_one`), by the `hd0 : excluded = ∅` guard on
-   the single writer. The relation neither states nor needs it: each run gets
-   its `hd0` from the branch analysis of its own row (`excluded_empty_of_both` at
-   the value returns, `Finset.eq_empty_or_nonempty` at `retC`), so adding the
-   conjunct would create restoration obligations on every row for no benefit.
-   Recorded so nobody "strengthens" the relation into extra work.
+4. **`excluded.card ≤ 1` carries no conjunct of its own.** It holds at every
+   state of every execution of the specification instance
+   (`GBCASafety.excluded_card_le_one`), by the `hd0 : excluded = ∅` guard on the
+   single writer, and it is a consequence of `bound_excluded`, `excludedOf`
+   taking only `∅` and singletons. A separate conjunct would create restoration
+   obligations on every row for no benefit, and each run gets its `hd0` from the
+   branch analysis of its own row (`excluded_empty_of_both` at the value
+   returns, the `bound` split at `retC`). Recorded so nobody "strengthens" the
+   relation into extra work.
 5. **`VoteWall` reads process-local fields.** Unlike `EchoQuorum` it counts
    `sentVote` fields, not receipts — still monotone in `F` (a corrupted field
    stays in the wall via the `j ∈ F` disjunct) and in `sentVote` (write-once),

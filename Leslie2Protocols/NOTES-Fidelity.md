@@ -68,11 +68,11 @@ instance can no longer hand out (`Spec/GBCA.lean`). The exclude fires under the 
 (`GBCASafety.excluded_card_le_one`) and the bound value embeds onto them — `bind = ⊥` as
 `excluded = ∅`, `bind = b` as `excluded = {!b}`. The two state shapes therefore differ in the
 guards rather than in the cardinality. `excluded` is monotone and written once, so Graded
-Agreement is the return guard pair `v ∉ excluded ∧ !v ∈ excluded` and Binding is the `C`-return
-guard `1 ≤ excluded.card`, both proved from monotonicity alone in `Spec/GBCASafety.lean`
-(`retG_value_agree`, `specInst_binding`, `retC_excluded_nonempty`) with no auxiliary
-invariant; the same file carries Validity's safety half (`specInst_validity`,
-`specInst_no_retC`).
+Agreement is the return guard pair `v ∉ excluded ∧ !v ∈ excluded` and Binding is the guard
+`(!bnd) ∈ excluded` every return carries for the bit `bnd` it announces, both proved from
+monotonicity alone in `Spec/GBCASafety.lean` (`retG_value_agree`, `specInst_binding`,
+`retC_excluded_nonempty`) with no auxiliary invariant; the same file carries Validity's
+safety half (`specInst_validity`, `specInst_no_retC`).
 
 A transcription question of ABDY22's own: the prose preceding Algorithm 6 says "upon
 receiving `echo4` messages from `2t + 1` parties" where the pseudocode's lines 19–20 say
@@ -111,6 +111,27 @@ interpretation: TS 1 and TS 2 carry `ret[id] = ⊥` guards of their own.) At the
 returning and terminating are two fields and two rules: `ProcCore.returned` records that
 `ABAProcStepN.ret` has fired, and `Net.StageSideRec.terminated`, whose sole writer is
 `ABAProcStepN.terminate`, records that the process has stopped participating (D22, §6).
+
+**The announced values on the return labels (D29).** The source blueprint puts the binding
+content on the return label at both levels. Its TS 2 returns `bind` beside the graded
+outcome and its TS 4 returns the core beside the map, and its pseudocode writes the same
+two returns as `Response((v, g), _bound-value)` and `Response(S, _S^C)` — the second
+component of each a value the caller is not handed. The encoding follows that reading.
+`Lab.retG r id out β` announces the round's bound bit and `Gather.Lab.ret id g C`
+announces the instance's core, in each case the value the specification holds as state,
+written once by an internal rule and read by no guard of either algorithm.
+
+The two announced values differ from the sources in what they are guaranteed to be. The
+bound bit is a `Bool` under the single guard `(!β) ∈ excluded`, which is D19's reading of
+`bind = some β`; a reachable state excludes at most one bit, so the guard determines it.
+The core is a payload set of at least `n − f` entries below the returned map, where TS 4's
+own bind rule imposes no size bound at all (§5); the encoding's `Gather.Step.bindCore`
+carries the size as a guard, and `ABA/Gather/Core.lean` is the argument that a reachable
+state of the implementation determines such a set. On the implementation side both values
+are held as ghost state — the bound bit by the round's message state, the core by the
+gather instance's message state — so no program reads either, and the announcement is
+what makes binding a property of a single trace (`GBCA.specInst_binding`,
+`Gather.specInst_core`), transported to each implementation by its own refinement.
 
 ## 3. A network-model artifact
 
@@ -257,14 +278,15 @@ repaired at the rule; the sixth entry is a cross-reference.
   identifiers already called — no size bound, the empty set included, so the `n − f`
   size clause of Binding Common Core is not enforced by the rules (its return guard
   also reads `bind ≠ ⊥` where the unset marker is `∅`). And no repair by a size guard
-  on `S` is available at implementation level: at `n = 3f + 1` a state at the first
-  return has as few as `n − 2f` honest votes cast, and determines no single
-  `n − f`-sized set that every future return must dominate — AFW25's Remark 22 reads
-  the core of a gather without binding as fixed only in hindsight. What such a state
-  does determine is the family of committed BIND payloads, pairwise sharing `n − f`
-  entries; `Gather.SpecState` carries that family, write-once, with the pairwise bound
-  as the bind rule's guard and member domination as the return's (D25). The classical
-  single core is the family's intersection, sized `≥ n − f` in complete executions.
+  on `S` is available without an argument about the implementation: AFW25's Remark 22
+  reads the core of a gather *without* binding as fixed only in hindsight, and a
+  specification whose internal rule fires at a reachable state can bind only what a
+  reachable state determines. `Gather.SpecState.core` therefore carries the size as the
+  guard `hcard` of `Gather.Step.bindCore` and domination as the return's, and
+  `ABA/Gather/Core.lean` discharges both from the prefix: the core is the `ECHO` payload
+  of a sender outside `F` dominated by `f + 1` processes outside `F`, a counting argument
+  over the sent sets locates such a sender, and BIND-by-reliable-broadcast is what keeps
+  the payloads the certificate counts write-once under D1's adaptive corruption.
   `DESIGN-GatherTiers.md` carries the counting argument in full.
 
 ## 6. Scope boundaries

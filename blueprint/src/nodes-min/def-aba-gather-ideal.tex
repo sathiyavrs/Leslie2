@@ -4,4 +4,5 @@
   \uses{def:aba-gather-spec, def:aba-brb-spec, def:aba-msgstate}
   Algorithm~4 of~\cite{LeslieBP}, the binding form of Algorithm~5 of~\cite{AFW25}, over $2n$ broadcast-specification coordinates: each process contributes its input through its own input-broadcast instance and its $\mathrm{BIND}$ payload through its own bind-broadcast instance, an entry set is approved when every entry is a committed input, and the $\mathrm{ECHO}$/$\mathrm{VOTE}$ rounds over approved sets run on the instance's own message state (D28).
   A return requires $n{-}f$ committed bind payloads below the output and the output below the committed inputs: \leandecl{PLTS.ABA.Gather.idealInst}.
+  The state carries the instance's core as auxiliary state, written by the first return from the message state alone and carried on every return label; no process reads it and no guard consults it (D29).
 \end{definition}

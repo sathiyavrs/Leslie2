@@ -1,8 +1,9 @@
 % Gather specification instance (PLTS.ABA.Gather.Step). Automata style, two
 % bands separated by the dotted rule. Above, one process's entry: call records
 % the payload, commit writes val(k) once under k's own call or, once k is
-% corrupted, under any value (D26). Below, the instance: bindCores freezes the
-% core family once, and no return is enabled before it (D25). fail is omitted.
+% corrupted, under any value (D26). Below, the instance: bindCore freezes the
+% core once, no return is enabled before it, and every return label carries it
+% (D29). fail is omitted.
 \begin{tikzpicture}[
     ->, >={Stealth[round]}, auto, semithick, on grid,
     every state/.style={draw, minimum size=1.3cm, align=center, font=\small},
@@ -22,14 +23,13 @@
   \draw[dotted, -] (-1.7,-1.5) -- (11.0,-1.5);
   % ---- lower band: the instance
   \node[font=\footnotesize] at (0,-2.2) {no \texttt{ret} enabled};
-  \node[state, initial, initial text={}] (n) at (0,-3.3)   {$cores{=}\bot$};
-  \node[state]                           (b) at (6.0,-3.3) {$cores{=}\mathcal{C}$};
+  \node[state, initial, initial text={}] (n) at (0,-3.3)   {$core{=}\bot$};
+  \node[state]                           (b) at (6.0,-3.3) {$core{=}C$};
   \path
-    (n) edge node[lbl, above]{\texttt{bindCores}\,$\mathcal{C}$ $\to\tau$} (b)
-    (b) edge[loop right, looseness=5] node[lbl, right]{\texttt{ret}\,$id\ g$} (b);
+    (n) edge node[lbl, above]{\texttt{bindCore}\,$C$ $\to\tau$} (b)
+    (b) edge[loop right, looseness=5] node[lbl, right]{\texttt{ret}\,$id\ g\ C$} (b);
   \node[font=\footnotesize, align=center] at (3.0,-4.6)
-    {$[\ \mathcal{C} \neq \emptyset$;\ \ every member's entries are committed;\\
-      any two members, each with itself, share $\geq n{-}f\ ]$};
+    {$[\ C$'s entries are committed;\ \ $|C| \geq n{-}f\ ]$};
   \node[font=\footnotesize, align=left, anchor=north west] at (7.5,-4.0)
-    {$[\ g$ a sub-map of $val$;\\ some $U \in \mathcal{C}$ with $U \subseteq g\ ]$};
+    {$[\ g$ a sub-map of $val$;\\ $C \subseteq g\ ]$};
 \end{tikzpicture}

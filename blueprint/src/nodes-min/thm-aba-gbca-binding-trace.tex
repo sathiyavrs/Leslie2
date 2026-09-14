@@ -1,0 +1,12 @@
+\begin{theorem}[Binding of the GBCA specification, on a trace]
+  \label{thm:aba-gbca-binding-trace}
+  \lean{PLTS.ABA.GBCA.BoundTrace}\lean{PLTS.ABA.GBCA.BindingTrace}\lean{PLTS.ABA.GBCA.specInst_binding}\lean{PLTS.ABA.GBCA.BindingTrace.value_agree}\leanok
+  \uses{def:aba-gbca-spec, thm:gbca-spec-binding, thm:trace-support}
+  Every trace of positive probability of the round-$r$ GBCA specification instance is bound to one bit: all its round-$r$ returns announce the same bit, and every one of them that hands out a value hands out that bit (\leandecl{PLTS.ABA.GBCA.BindingTrace}, \leandecl{PLTS.ABA.GBCA.specInst_binding}).
+  Graded agreement follows on the trace alone: any two round-$r$ returns of it that hand out a bit hand out the same bit (\leandecl{PLTS.ABA.GBCA.BindingTrace.value_agree}).
+\end{theorem}
+
+\begin{proof}\leanok
+  \uses{def:aba-gbca-spec, thm:gbca-spec-binding, thm:trace-support}
+  See the Lean proof of \leandecl{PLTS.ABA.GBCA.specInst_binding}.
+\end{proof}

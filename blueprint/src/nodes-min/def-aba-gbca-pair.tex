@@ -1,7 +1,8 @@
 \begin{definition}[The two-gather round]
   \label{def:aba-gbca-pair}
-  \lean{PLTS.ABA.GBCA.cand}\lean{PLTS.ABA.GBCA.gradeOf}\lean{PLTS.ABA.GBCA.PairState}\lean{PLTS.ABA.GBCA.PairStep}\lean{PLTS.ABA.GBCA.pairInst}\leanok
+  \lean{PLTS.ABA.GBCA.cand}\lean{PLTS.ABA.GBCA.gradeOf}\lean{PLTS.ABA.GBCA.boundOfCore}\lean{PLTS.ABA.GBCA.PairState}\lean{PLTS.ABA.GBCA.PairStep}\lean{PLTS.ABA.GBCA.pairInst}\leanok
   \uses{def:aba-gather-spec, def:aba-gbca-spec, def:aba-labels}
   The graded agreement of~\cite{AFW25} (its Algorithm~4 at $R = 2$, the two-gather branch, its approximate-agreement subroutine replaced by a local count, D24), read over two gather specification instances.
   The round's call is the first gather's call; when the first gather returns $g$, the caller calls the second gather with the candidate --- the bit on all but $f$ of $g$'s entries, $\bot$ if neither bit is; when the second gather returns $h$, the round returns $(v, A)$ at $|{\rm dom}\, h| - f$ entries of $v$, $(v, B)$ at $f{+}1$, and $(\bot, C)$ below both: \leandecl{PLTS.ABA.GBCA.pairInst}.
+  A third state factor holds the round's bound bit, written at the round's first link as \leandecl{PLTS.ABA.GBCA.boundOfCore} of the core the first gather's return carries, and announced by every graded return (D29).
 \end{definition}

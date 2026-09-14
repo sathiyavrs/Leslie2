@@ -63,6 +63,9 @@ it — and both value-bearing returns demand `v ∉ excluded ∧ !v ∈ excluded
 returns of one round hand out the same bit and a `C`-return pins a bit that no extension
 of the run hands out at grade ≥ 1: `retG_value_agree`, `specInst_binding`,
 `retC_excluded_nonempty` (`ABA/Spec/GBCASafety.lean`), each from monotonicity alone, no invariant.
+The precondition is on the trace, not only on the state: every return of a round announces
+the round's bound bit on its label (D29), so `specInst_binding` reads it off the labels of a
+single trace, and the coin's race is against a bit the trace has already named.
 At the implementation the encoding is ABDY22's Algorithm 6 in full (D18), whose Binding
 the paper proves. The precondition is therefore available on both sides of the refinement,
 and a liveness effort inherits it rather than re-deriving it; what it must supply is the

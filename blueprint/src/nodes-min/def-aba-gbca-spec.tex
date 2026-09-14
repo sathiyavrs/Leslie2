@@ -3,4 +3,5 @@
   \lean{PLTS.ABA.GBCA.Step}\lean{PLTS.ABA.GBCA.specFamily}\leanok
   \uses{def:aba-labels, def:idle-family}
   Transition System 2 as a round-indexed instance and as the $\mathbb{N}$-indexed family over it, binding by exclusion under $f{+}1$ support guards (D14, D15, D19): \leandecl{PLTS.ABA.GBCA.specInst} and \leandecl{PLTS.ABA.GBCA.specFamily}.
+  Each of the three returns takes a bit $bnd$ under the one guard $1-bnd \in excluded$ and announces it on its label, the $C$-return included, so the round's surviving bit is carried by every return of the round (D19, D29).
 \end{definition}

@@ -61,6 +61,11 @@ field of a record.
 The round's message state `GSub.gNet` is a component of `ABDY.composed` and of `hybrid`, and
 it disappears at the substitution, inside the component that is exchanged. It is also
 the second component of `GBCA.ImplState`, the state the round refinement is defined on.
+It carries one field that is not a message set: the round's bound bit, the value the
+round's graded returns announce on their labels (D29). The field is a ghost — no program
+reads it, and the three return rows are the only rows that touch it — and it belongs to
+the round for the same reason the sent sets do, so it disappears with the round at the
+substitution.
 
 The ABA-side DECIDED network `Comp.aNet` is a component of every system in the chain,
 and the second component of `ABAState`, the state `coreRel` is defined on.
@@ -76,16 +81,24 @@ The property holds across the development, and a reader should not have to re-de
 
 Each leaf record holds exactly one local state's data: `ProcCore` and `CoreRec` for a round loop,
 `GBCA.ProcState` and `GBCA.StageRec` for a graded-agreement stage, `Net.StageSideRec` for
-the stage side of one process, `GSub.GNetState` for a round's message state, `Comp.ANetState` for
-the DECIDED network, and one `SpecState` for each of the three specifications. Each composite state is an explicit product of those:
+the stage side of one process, `GSub.GNetState` for a round's message state beside its
+bound bit, `Comp.ANetState` for the DECIDED network, and one `SpecState` for each of the
+three specifications. Each composite state is an explicit product of those:
 `Net.ProcRec`, `GBCA.ImplState`, `ABAState`, `Comp.ComposedState`, `HybridState`.
 
 One record holds two kinds of message set at once, and it is the right one to.
 `Net.NetState` (`ABA/ABDY/Protocol.lean`) carries the stage sent sets, the DECIDED sets and the
 corrupted set together, because it is the network adversary of the protocol — the subject
-of the chain, not a vehicle for proving anything about it.
+of the chain, not a vehicle for proving anything about it. It carries one ghost record per
+round beside them (D30), for the same reason: the value a graded return announces is
+determined by the round's messages and the corrupted set, which this record holds. The
+flat reading of `ABA/Reading/Flat.lean` is parametric in that record's type, its update
+`ghostStep`, applied on every row to the round the label names, and its output
+`ghostOut`, which guards the two graded-agreement return rows.
 `ProtocolSim.protocol_composed` carries that reading into one where each round owns a
 message state beside `Comp.ANetState`, and every step above the first link runs there.
+The round's ghost record is the composed reading of the bit the round's message state
+holds, which is the fourth conjunct of `ABDY.ProtocolRel`.
 
 ## What the DECIDED model already weakens
 

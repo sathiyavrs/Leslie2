@@ -8,5 +8,7 @@
   The gather message state carries $\langle\mathrm{ECHO}, A\rangle$ and $\langle\mathrm{VOTE}, A\rangle$ with entry-set payloads; the $\mathrm{BIND}$ payload is sent through $\mathit{brbBind}$ and not on the message state.
   The rows: the environment call records the input and contributes it through $\mathit{brbIn}$ in the same step; the commit rows of the $2n$ broadcast coordinates are embedded as $\tau$-rules; delivery and Byzantine injection act on the message state (D5, D1); a process holding $n{-}f$ approved committed entries multicasts them as its write-once $\mathrm{ECHO}$; on $n{-}f$ senders' approved $\mathrm{ECHO}$ payloads below an approved set $U$ it multicasts $U$ as its write-once $\mathrm{VOTE}$; on $n{-}f$ senders' approved $\mathrm{VOTE}$ payloads below an approved $U$ it contributes $U$ through $\mathit{brbBind}$; and the return of $g$ requires $n{-}f$ coordinates $q$ with $\mathit{brbBind}(q).val = U_q \sqsubseteq g$ together with $g \subseteq \mathit{brbIn}(\cdot).val$.
   Corruption is one broadcast across the message state and all $2n$ coordinates (D1).
+  The state carries one field more, the instance's core, and the return row writes it: a return reads the core already on record, and where there is none it writes $\mathrm{coreOf}$ of the message state and announces that.
+  The field is auxiliary state (D29): no process holds it, no guard consults it, and every return label carries it.
   Full construction: \leandecl{PLTS.ABA.Gather.idealInst}.
 \end{definition}

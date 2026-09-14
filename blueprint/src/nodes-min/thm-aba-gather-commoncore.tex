@@ -1,0 +1,12 @@
+\begin{theorem}[The common core on a trace]
+  \label{thm:aba-gather-commoncore}
+  \lean{PLTS.ABA.Gather.CoreTrace}\lean{PLTS.ABA.Gather.specInst_core}\lean{PLTS.ABA.Gather.idealInst_core}\lean{PLTS.ABA.Gather.lowInst_core}\leanok
+  \uses{def:aba-gather-spec, def:aba-gather-ideal, def:aba-gather-low, thm:gather-core, thm:gather-low-refines, thm:trace-support}
+  Every trace of positive probability of the gather specification instance satisfies $\mathrm{CoreTrace}$: all its return labels carry one and the same payload set, that set has at least $n-f$ entries, and each returned map has every entry of it (\leandecl{PLTS.ABA.Gather.CoreTrace}, \leandecl{PLTS.ABA.Gather.specInst_core}).
+  Both implementations inherit it along their refinements: \leandecl{PLTS.ABA.Gather.idealInst_core} and \leandecl{PLTS.ABA.Gather.lowInst_core}.
+\end{theorem}
+
+\begin{proof}\leanok
+  \uses{def:aba-gather-spec, thm:gather-core, thm:gather-low-refines, thm:trace-support, thm:forward-sound}
+  The specification clauses come from the rules, and the two implementations inherit them along the soundness of their refinements; see \leandecl{PLTS.ABA.Gather.specInst_core}.
+\end{proof}
