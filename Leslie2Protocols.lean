@@ -1,5 +1,6 @@
 import Leslie2Protocols.ABA.ABDY.ABAState
 import Leslie2Protocols.ABA.ABDY.Components
+import Leslie2Protocols.ABA.ABDY.Erasure
 import Leslie2Protocols.ABA.ABDY.Hybrid
 import Leslie2Protocols.ABA.ABDY.Impl
 import Leslie2Protocols.ABA.ABDY.ImplSim
@@ -7,6 +8,7 @@ import Leslie2Protocols.ABA.ABDY.Instances
 import Leslie2Protocols.ABA.ABDY.Protocol
 import Leslie2Protocols.ABA.ABDY.ProtocolSim
 import Leslie2Protocols.ABA.AFW.Chain
+import Leslie2Protocols.ABA.AFW.Erasure
 import Leslie2Protocols.ABA.AFW.Flat
 import Leslie2Protocols.ABA.AFW.FlatSim
 import Leslie2Protocols.ABA.Broadcast.Impl
@@ -26,6 +28,7 @@ import Leslie2Protocols.ABA.Gather.LowSim
 import Leslie2Protocols.ABA.Gather.Safety
 import Leslie2Protocols.ABA.Gather.Spec
 import Leslie2Protocols.ABA.Reading.Alphabet
+import Leslie2Protocols.ABA.Reading.Erase
 import Leslie2Protocols.ABA.Reading.Flat
 import Leslie2Protocols.ABA.Results
 import Leslie2Protocols.ABA.Round.Ideal
@@ -43,6 +46,7 @@ import Leslie2Protocols.ABA.Vocabulary.Labels
 import Leslie2Protocols.ABA.Vocabulary.MsgState
 import Leslie2Protocols.ABA.Vocabulary.Params
 import Leslie2Protocols.ABA.Vocabulary.RoundLoop
+import Leslie2Protocols.Framework.Erasure
 import Leslie2Protocols.Framework.FamilySim
 import Leslie2Protocols.Framework.IdleFamily
 import Leslie2Protocols.Framework.MapIdleSim

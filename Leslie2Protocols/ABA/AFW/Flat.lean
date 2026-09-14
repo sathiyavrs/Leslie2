@@ -73,10 +73,11 @@ and `AFW.ga2Of` is the second's. `Gather.coreOf` reads the sent sets and the
 corrupted set alone (`Gather.coreOf_msgState_only`), which is what lets the
 adversary compute the core from its own state.
 
-`AFW.ghostOut` reads the bit back, and the two graded-agreement return rows
-fire only with the bit their label carries equal to it. It is total: where the
-ghost holds no bit it computes one from the first gather's core, and on a
-reachable state the returner's own link has already written the bit.
+`AFW.ghostOut` reads the bit back, and `AFW.announcedBound`, the guard of the
+two graded-agreement return rows, is the equation between the bit their label
+carries and it. `AFW.ghostOut` is total: where the ghost holds no bit it
+computes one from the first gather's core, and on a reachable state the
+returner's own link has already written the bit.
 -/
 
 namespace PLTS
@@ -266,6 +267,14 @@ noncomputable def ghostOut (P : Params) (w : NetState P.n) (r : ℕ) (_id : Fin 
     (_out : GbcaOut) : Bool :=
   ((w.ghostRec r).2.2).getD
     (GBCA.boundOfCore P ((w.ghostRec r).1.getD (Gather.coreOf P (ga1Of P w r))))
+
+/-- The bit the network adversary announces on a return: `AFW.ghostOut` of the
+round, and no other. This is the relation the flat reading's `ghostOut`
+parameter takes at this instantiation. It is reducible, so the guard of the two
+return rows is the equation itself. -/
+noncomputable abbrev announcedBound (P : Params) (w : NetState P.n) (r : ℕ)
+    (id : Fin P.n) (out : GbcaOut) (bnd : Bool) : Prop :=
+  bnd = ghostOut P w r id out
 
 /-! ### The derived receipt predicates
 
@@ -618,12 +627,14 @@ inductive StageStep (P : Params) (j : Fin P.n) :
         (PMF.pure (c, p.deliverTo r k m))
 
 /-- The rows above meet the flat reading's conditions: each carries a label of
-`stageOwn j`, each fires only at an unreplaced program, and each is Dirac. -/
+`stageOwn j`, each fires only at an unreplaced program, each is Dirac, and the
+return takes the announced bit free (D29). -/
 instance instIsStageTable (P : Params) :
     IsStageTable P (Msg P.n) (StageRec P.n) (StageStep P) where
   own h := by cases h <;> rfl
   honest h := by cases h <;> assumption
   dirac h := by cases h <;> exact ⟨_, rfl⟩
+  bndFree h := by cases h; constructor <;> assumption
 
 /-! ### The transposed record writes one local state at a time
 
@@ -677,7 +688,7 @@ abbrev ProcStep (P : Params) (j : Fin P.n) :
 /-- The step relation of the network adversary. -/
 abbrev NetStep (P : Params) :
     NetState P.n → NLabP P.n (Msg P.n) → PMF (NetState P.n) → Prop :=
-  FlatNetStep P (Msg P.n) (Ghost P.n) (gCallPayload P) (ghostStep P) (ghostOut P)
+  FlatNetStep P (Msg P.n) (Ghost P.n) (gCallPayload P) (ghostStep P) (announcedBound P)
 
 /-- The state of the gather-based protocol: the process family, the network
 adversary and the coin oracle. -/
@@ -688,19 +699,19 @@ abbrev ProtocolState (P : Params) : Type :=
 noncomputable def protocolPre (P : Params) :
     System (ProtocolState P) (Net.NLabP P.n (Msg P.n)) :=
   Net.flatPre P (Msg P.n) (StageRec P.n) (Ghost P.n) (StageStep P)
-    (gCallPayload P) (ghostStep P) (ghostOut P)
+    (gCallPayload P) (ghostStep P) (announcedBound P)
 
 /-- The gather-based protocol group: the rendezvous alphabet hidden, the
 result read back over `Lab n`. -/
 noncomputable def protocolGroup (P : Params) : System (ProtocolState P) (Lab P.n) :=
   Net.flatGroup P (Msg P.n) (StageRec P.n) (Ghost P.n) (StageStep P)
-    (gCallPayload P) (ghostStep P) (ghostOut P)
+    (gCallPayload P) (ghostStep P) (announcedBound P)
 
 /-- **The gather-based protocol**: the group with the sub-protocol API
 hidden. -/
 noncomputable def protocol (P : Params) : System (ProtocolState P) (Lab P.n) :=
   Net.flat P (Msg P.n) (StageRec P.n) (Ghost P.n) (StageStep P)
-    (gCallPayload P) (ghostStep P) (ghostOut P)
+    (gCallPayload P) (ghostStep P) (announcedBound P)
 
 end AFW
 

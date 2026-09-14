@@ -32,7 +32,8 @@ nothing else:
   eight stage multicasts, the stage delivery, the call against an
   already-called record, and the three graded returns;
 * the network adversary's ghost — the type `Option Bool` of a round's bound
-  bit, the write `abdyGhostStep` and the read `abdyGhostOut`.
+  bit, the write `abdyGhostStep`, the read `abdyGhostOut` and the guard
+  `abdyAnnouncedBound` the two return rows put on the announced bit.
 
 `ABDY.protocol P` is the flat reading at those three, named for the authors of
 the implementation it runs, as `AFW.protocol P` is named for the authors of the
@@ -120,11 +121,12 @@ the round has none on record and leaves the record alone otherwise, so the
 record is write-once and both returns of a round — the honest one and the
 Byzantine one — write it the same way. Every other row leaves it alone.
 
-`abdyGhostOut` reads it out. It is the guard of the two return rows: the label's
-bit is the bit on record if the round has one, and `GBCA.boundOf` of the round's
-sent sets, the corrupted set and the outcome otherwise. This is the reading of
-the round's bound bit that `ABA/ABDY/Impl.lean` holds in its own message state,
-computed here from the network's sent sets instead. -/
+`abdyGhostOut` reads it out: the bit on record if the round has one, and
+`GBCA.boundOf` of the round's sent sets, the corrupted set and the outcome
+otherwise. This is the reading of the round's bound bit that
+`ABA/ABDY/Impl.lean` holds in its own message state, computed here from the
+network's sent sets instead. `abdyAnnouncedBound` is the guard of the two
+return rows: the bit a return announces is `abdyGhostOut` of the round. -/
 
 /-- The ghost write of a row: a return records the bit its label announces
 where the round has none on record; every other row leaves the record alone. -/
@@ -139,6 +141,14 @@ def abdyGhostStep (P : Params) :
 def abdyGhostOut (P : Params) (s : NetState P.n) (r : ℕ) (_id : Fin P.n)
     (out : GbcaOut) : Bool :=
   (s.ghostRec r).getD (GBCA.boundOf (s.sent r) s.F out)
+
+/-- The bit the network adversary announces on a return: the round's ghost
+output, and no other. This is the relation the flat reading's `ghostOut`
+parameter takes at this instantiation. It is reducible, so the guard of the two
+return rows is the equation itself. -/
+abbrev abdyAnnouncedBound (P : Params) (s : NetState P.n) (r : ℕ) (id : Fin P.n)
+    (out : GbcaOut) (bnd : Bool) : Prop :=
+  bnd = abdyGhostOut P s r id out
 
 
 /-- A row whose ghost write is the identity leaves the adversary's whole state
@@ -432,12 +442,14 @@ inductive AbdyStageStep (P : Params) (j : Fin P.n) :
         (PMF.pure (c.setProc { c.proc with phase := .awaitG }, p))
 
 /-- The rows above meet the flat reading's conditions: each carries a label of
-`stageOwn j`, each fires only at an unreplaced program, and each is Dirac. -/
+`stageOwn j`, each fires only at an unreplaced program, each is Dirac, and each
+of the three returns takes the announced bit free (D29). -/
 instance instIsStageTable (P : Params) :
     IsStageTable P GBCA.Msg (GBCA.StageRec P.n) (AbdyStageStep P) where
   own h := by cases h <;> rfl
   honest h := by cases h <;> assumption
   dirac h := by cases h <;> exact ⟨_, rfl⟩
+  bndFree h := by cases h <;> constructor <;> assumption
 
 /-! ### The tables, the automata and the pipeline -/
 
@@ -453,7 +465,7 @@ def gCallPayload (P : Params) : Fin P.n → Bool → GBCA.Msg := fun _ b => .inp
 /-- The step relation of the network adversary. -/
 abbrev NetStep (P : Params) : NetState P.n → NLab P.n → PMF (NetState P.n) → Prop :=
   FlatNetStep P GBCA.Msg (Option Bool) (gCallPayload P) (abdyGhostStep P)
-    (abdyGhostOut P)
+    (abdyAnnouncedBound P)
 
 /-- The program of process `j`. -/
 noncomputable abbrev ABAProcN (P : Params) (j : Fin P.n) :
@@ -463,7 +475,7 @@ noncomputable abbrev ABAProcN (P : Params) (j : Fin P.n) :
 /-- The network adversary. -/
 noncomputable abbrev netAdv (P : Params) : System (NetState P.n) (NLab P.n) :=
   flatNetAdv P GBCA.Msg (Option Bool) (gCallPayload P) (abdyGhostStep P)
-    (abdyGhostOut P)
+    (abdyAnnouncedBound P)
 
 end Net
 
@@ -478,18 +490,18 @@ abbrev ProtocolState (P : Params) : Type :=
 synchronised process group, the network adversary and the lifted oracle. -/
 noncomputable def protocolPre (P : Params) : System (ProtocolState P) (Net.NLab P.n) :=
   Net.flatPre P GBCA.Msg (GBCA.StageRec P.n) (Option Bool) (Net.AbdyStageStep P)
-    (Net.gCallPayload P) (Net.abdyGhostStep P) (Net.abdyGhostOut P)
+    (Net.gCallPayload P) (Net.abdyGhostStep P) (Net.abdyAnnouncedBound P)
 
 /-- **The protocol group**: the rendezvous alphabet hidden, the result read
 back over `Lab n`. -/
 noncomputable def protocolGroup (P : Params) : System (ProtocolState P) (Lab P.n) :=
   Net.flatGroup P GBCA.Msg (GBCA.StageRec P.n) (Option Bool) (Net.AbdyStageStep P)
-    (Net.gCallPayload P) (Net.abdyGhostStep P) (Net.abdyGhostOut P)
+    (Net.gCallPayload P) (Net.abdyGhostStep P) (Net.abdyAnnouncedBound P)
 
 /-- **The protocol system**: the group with the sub-protocol API hidden. -/
 noncomputable def protocol (P : Params) : System (ProtocolState P) (Lab P.n) :=
   Net.flat P GBCA.Msg (GBCA.StageRec P.n) (Option Bool) (Net.AbdyStageStep P)
-    (Net.gCallPayload P) (Net.abdyGhostStep P) (Net.abdyGhostOut P)
+    (Net.gCallPayload P) (Net.abdyGhostStep P) (Net.abdyAnnouncedBound P)
 
 end ABDY
 

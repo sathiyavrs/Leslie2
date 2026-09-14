@@ -57,18 +57,22 @@ Two parameters carry it. `ghostStep` writes it. On every row, the record of
 the round the label names is replaced by `ghostStep` of that label, the
 network's state and the record standing there, and the records of the other
 rounds are left where they stand; a label naming no round leaves the whole
-ghost alone. `ghostOut` reads it out. It is the guard of the two
-graded-agreement return rows — `retG`, and `byzRetG` at a replaced program —
-each of which fires only with the bound bit its label carries equal to
-`ghostOut` of the network's state, the round, the process being answered and
-the graded outcome. A reading writes the record at the first return of a
-round, from the sent sets and the corrupted set, and reads the same record
-back at every later return of that round.
+ghost alone. `ghostOut` reads it out. It is a relation on the bit a return
+announces: the network's state, the round, the process being answered, the
+graded outcome and the bit. It guards the two graded-agreement return rows —
+`retG`, and `byzRetG` at a replaced program — each of which fires only with
+the bound bit its label carries standing in it. A reading that computes the
+announced bit instantiates the relation as an equation against it. A reading
+that leaves the announcement to the adversary instantiates it as the full
+relation, and the bit is unconstrained.
 
 The content is the reading's own. ABDY22's reading and the gather-based one
 hold different records and write them at different rows, so `G`, `ghostStep`
 and `ghostOut` are parameters here, as `M`, `S`, `stageStep` and `callPayload`
-are.
+are. Each of the two writes the record at the first return of a round, from
+the sent sets and the corrupted set, and reads the same record back at every
+later return of that round. Each instantiates `ghostOut` as the equation
+between the announced bit and that record.
 -/
 
 namespace PLTS
@@ -225,6 +229,14 @@ def writeGhost (s : NetStateP n M G)
   | some r =>
       { s with ghostRec := Function.update s.ghostRec r (ghostStep L s (s.ghostRec r)) }
   | none => s
+
+/-- The same network state over the trivial ghost: the message record, the
+DECIDED sets and the corrupted set stand, and every round's record is `()`. -/
+def forgetGhost (s : NetStateP n M G) : NetStateP n M Unit where
+  sent := s.sent
+  dsent := s.dsent
+  F := s.F
+  ghostRec := fun _ => ()
 
 end NetStateP
 
@@ -452,12 +464,13 @@ the whole authorisation. -/
 multicasts. The successor of every row is that row's effect on the sent sets,
 the DECIDED sets and the corrupted set, with the ghost record of the round the
 label names written by `ghostStep`. The two graded-agreement returns fire only
-with the bound bit their label carries equal to `ghostOut` of the state before
-the row, the round, the process being answered and the graded outcome. -/
+with the bound bit their label carries standing in `ghostOut` at the state
+before the row, the round, the process being answered and the graded
+outcome. -/
 inductive FlatNetStep (P : Params) (M G : Type) [DecidableEq M]
     (callPayload : Fin P.n → Bool → M)
     (ghostStep : NLabP P.n M → NetStateP P.n M G → G → G)
-    (ghostOut : NetStateP P.n M G → ℕ → Fin P.n → GbcaOut → Bool) :
+    (ghostOut : NetStateP P.n M G → ℕ → Fin P.n → GbcaOut → Bool → Prop) :
     NetStateP P.n M G → NLabP P.n M → PMF (NetStateP P.n M G) → Prop
   /-- The network's half of a stage multicast: sent the message under its
   sender. Authenticity is the sender's joint participation (D5). -/
@@ -502,11 +515,11 @@ inductive FlatNetStep (P : Params) (M G : Type) [DecidableEq M]
       (hF : k ∈ s.F) :
       FlatNetStep P M G callPayload ghostStep ghostOut s (Sum.inr (.byzCallGLoop r k b))
         (PMF.pure (s.writeGhost ghostStep (Sum.inr (.byzCallGLoop r k b))))
-  /-- A Byzantine graded-agreement return (D11). The bound bit is the ghost
-  output of the round, as at a return to an unreplaced program: a replaced
-  program is answered, and the announcement is the network's. -/
+  /-- A Byzantine graded-agreement return (D11). The bound bit stands in the
+  ghost relation of the round, as at a return to an unreplaced program: a
+  replaced program is answered, and the announcement is the network's. -/
   | byzRetG (s : NetStateP P.n M G) (r : ℕ) (k : Fin P.n) (out : GbcaOut) (bnd : Bool)
-      (hF : k ∈ s.F) (hbnd : bnd = ghostOut s r k out) :
+      (hF : k ∈ s.F) (hbnd : ghostOut s r k out bnd) :
       FlatNetStep P M G callPayload ghostStep ghostOut s (Sum.inr (.byzRetG r k out bnd))
         (PMF.pure (s.writeGhost ghostStep (Sum.inr (.byzRetG r k out bnd))))
   /-- A Byzantine coin call (D11). -/
@@ -539,10 +552,10 @@ inductive FlatNetStep (P : Params) (M G : Type) [DecidableEq M]
         (PMF.pure ((s.gsent r id (callPayload id b)).writeGhost ghostStep
           (Sum.inl (.callG r id b))))
   /-- A graded-agreement return sends nothing, and announces the round's bound
-  bit: the label's `bnd` is the ghost output of the round at this state. This
-  is the one row of the development that reads the ghost. -/
+  bit: the label's `bnd` stands in the ghost relation of the round at this
+  state. This is the one row of the development that reads the ghost. -/
   | retG (s : NetStateP P.n M G) (r : ℕ) (id : Fin P.n) (out : GbcaOut) (bnd : Bool)
-      (hbnd : bnd = ghostOut s r id out) :
+      (hbnd : ghostOut s r id out bnd) :
       FlatNetStep P M G callPayload ghostStep ghostOut s (Sum.inl (.retG r id out bnd))
         (PMF.pure (s.writeGhost ghostStep (Sum.inl (.retG r id out bnd))))
   /-- A coin call sends nothing. -/
@@ -603,7 +616,7 @@ section Network
 variable (P : Params) (M G : Type) [DecidableEq M] [Inhabited G]
     (callPayload : Fin P.n → Bool → M)
     (ghostStep : NLabP P.n M → NetStateP P.n M G → G → G)
-    (ghostOut : NetStateP P.n M G → ℕ → Fin P.n → GbcaOut → Bool)
+    (ghostOut : NetStateP P.n M G → ℕ → Fin P.n → GbcaOut → Bool → Prop)
 
 /-- The network adversary. -/
 noncomputable def flatNetAdv : System (NetStateP P.n M G) (NLabP P.n M) where
@@ -628,7 +641,7 @@ variable (P : Params) (M S G : Type) [DecidableEq M] [Inhabited G]
     (stageStep : Fin P.n → ProcRecP P.n S → NLabP P.n M → PMF (ProcRecP P.n S) → Prop)
     (callPayload : Fin P.n → Bool → M)
     (ghostStep : NLabP P.n M → NetStateP P.n M G → G → G)
-    (ghostOut : NetStateP P.n M G → ℕ → Fin P.n → GbcaOut → Bool)
+    (ghostOut : NetStateP P.n M G → ℕ → Fin P.n → GbcaOut → Bool → Prop)
 
 /-- The three components side by side, over the extended alphabet: the
 synchronised process group, the network adversary and the lifted oracle. -/
@@ -650,10 +663,11 @@ end Pipe
 
 /-! ### What a reading must supply about its own rows -/
 
-/-- The two conditions a flat reading's graded-agreement rows must satisfy for
-the inversion lemmas below to read the rest of the table off a label: a row of
-process `j` carries a label of `stageOwn j`, and it fires only at a process
-whose program has not been replaced (D23). -/
+/-- What a flat reading's graded-agreement rows must satisfy for the inversion
+lemmas below to read the rest of the table off a label: a row of process `j`
+carries a label of `stageOwn j`, it fires only at a process whose program has
+not been replaced (D23), it is Dirac, and its return takes the announced bit
+free (D29). -/
 class IsStageTable (P : Params) (M S : Type)
     (stageStep : Fin P.n → ProcRecP P.n S → NLabP P.n M →
       PMF (ProcRecP P.n S) → Prop) : Prop where
@@ -666,6 +680,13 @@ class IsStageTable (P : Params) (M S : Type)
   /-- A stage-side row is Dirac. -/
   dirac : ∀ {j : Fin P.n} {q : ProcRecP P.n S} {L : NLabP P.n M}
     {μ : PMF (ProcRecP P.n S)}, stageStep j q L μ → ∃ q', μ = PMF.pure q'
+  /-- A program's return row takes the announced bit free (D29): the bit the
+  label carries is the network's business, so a return row that fires at one
+  bit fires at every other, with the same successor. -/
+  bndFree : ∀ {j : Fin P.n} {q : ProcRecP P.n S} {r : ℕ} {id : Fin P.n}
+    {out : GbcaOut} {b b' : Bool} {μ : PMF (ProcRecP P.n S)},
+    stageStep j q (Sum.inl (.retG r id out b)) μ →
+      stageStep j q (Sum.inl (.retG r id out b')) μ
 
 /-! ### Determinacy of the two rule tables
 
@@ -993,7 +1014,7 @@ section NetInversion
 variable {P : Params} {M G : Type} [DecidableEq M]
     {callPayload : Fin P.n → Bool → M}
     {ghostStep : NLabP P.n M → NetStateP P.n M G → G → G}
-    {ghostOut : NetStateP P.n M G → ℕ → Fin P.n → GbcaOut → Bool}
+    {ghostOut : NetStateP P.n M G → ℕ → Fin P.n → GbcaOut → Bool → Prop}
     {s : NetStateP P.n M G} {μ : PMF (NetStateP P.n M G)}
 
 /-- Every network transition is Dirac. -/
@@ -1068,11 +1089,11 @@ theorem netStep_byzCallG {r : ℕ} {k : Fin P.n} {b : Bool}
   cases h; exact ⟨by assumption, rfl⟩
 
 /-- A Byzantine graded-agreement return is authorised by the corrupted set, and
-the bound bit on its label is the round's ghost output (D11). -/
+the bound bit on its label stands in the round's ghost relation (D11). -/
 theorem netStep_byzRetG {r : ℕ} {k : Fin P.n} {out : GbcaOut} {bnd : Bool}
     (h : FlatNetStep P M G callPayload ghostStep ghostOut s
       (Sum.inr (.byzRetG r k out bnd)) μ) :
-    k ∈ s.F ∧ bnd = ghostOut s r k out ∧
+    k ∈ s.F ∧ ghostOut s r k out bnd ∧
       μ = PMF.pure (s.writeGhost ghostStep (Sum.inr (.byzRetG r k out bnd))) := by
   cases h; exact ⟨by assumption, by assumption, rfl⟩
 
@@ -1101,11 +1122,11 @@ theorem netStep_callG {r : ℕ} {id : Fin P.n} {b : Bool}
   cases h; rfl
 
 /-- A graded-agreement return announces the round's ghost output: the bound bit
-on the label is `ghostOut` at the state the row starts from. -/
+on the label stands in `ghostOut` at the state the row starts from. -/
 theorem netStep_retG {r : ℕ} {id : Fin P.n} {out : GbcaOut} {bnd : Bool}
     (h : FlatNetStep P M G callPayload ghostStep ghostOut s
       (Sum.inl (.retG r id out bnd)) μ) :
-    bnd = ghostOut s r id out ∧
+    ghostOut s r id out bnd ∧
       μ = PMF.pure (s.writeGhost ghostStep (Sum.inl (.retG r id out bnd))) := by
   cases h; exact ⟨by assumption, rfl⟩
 
@@ -1235,6 +1256,89 @@ theorem writeGhost_ghostRec_ne (s : NetStateP n M G) {L : NLabP n M} {r r' : ℕ
 
 end Ghost
 
+/-! ### Dropping the ghost
+
+Two erasures. `NetStateP.forgetGhost` sends the network's state to the state
+over the trivial ghost `Unit`, and it commutes with each of the adversary's
+three writes on the message record. Over `Unit` the ghost write is the
+identity, so the erasure of a ghost write is the erasure of the state it
+starts from. `forgetBound` sends a label to the label with the announced bound
+bit fixed at `false`, and it is the identity elsewhere; two labels agree under
+it exactly when they are equal or are returns of the same round, process and
+graded outcome. -/
+
+section Forget
+
+variable {n : ℕ} {M G : Type}
+
+@[simp] theorem forgetGhost_sent (s : NetStateP n M G) :
+    s.forgetGhost.sent = s.sent := rfl
+
+@[simp] theorem forgetGhost_dsent (s : NetStateP n M G) :
+    s.forgetGhost.dsent = s.dsent := rfl
+
+@[simp] theorem forgetGhost_F (s : NetStateP n M G) : s.forgetGhost.F = s.F := rfl
+
+@[simp] theorem forgetGhost_gsent [DecidableEq M] (s : NetStateP n M G)
+    (r : ℕ) (j : Fin n) (m : M) :
+    (s.gsent r j m).forgetGhost = s.forgetGhost.gsent r j m := rfl
+
+@[simp] theorem forgetGhost_dput (s : NetStateP n M G) (j : Fin n) (b : Bool) :
+    (s.dput j b).forgetGhost = s.forgetGhost.dput j b := rfl
+
+@[simp] theorem forgetGhost_corrupt {P : Params} (s : NetStateP P.n M G)
+    (k : Fin P.n) :
+    (NetStateP.corrupt P k s).forgetGhost = NetStateP.corrupt P k s.forgetGhost := by
+  unfold NetStateP.corrupt
+  simp only [forgetGhost_F]
+  split <;> rfl
+
+/-- The ghost write leaves the erasure where it stands. -/
+@[simp] theorem forgetGhost_writeGhost (s : NetStateP n M G)
+    (ghostStep : NLabP n M → NetStateP n M G → G → G) (L : NLabP n M) :
+    (s.writeGhost ghostStep L).forgetGhost = s.forgetGhost := by
+  unfold NetStateP.writeGhost
+  split <;> rfl
+
+/-- Over the trivial ghost the ghost write is the identity. -/
+@[simp] theorem writeGhost_unit (s : NetStateP n M Unit) (L : NLabP n M) :
+    s.writeGhost (fun _ _ _ => ()) L = s := by
+  obtain ⟨sent, dsent, F, g⟩ := s
+  unfold NetStateP.writeGhost
+  split
+  · exact congrArg _ (funext fun _ => rfl)
+  · rfl
+
+/-- The label with the announced bound bit dropped: a graded-agreement return
+keeps its round, the process it answers and its graded outcome, and every
+other label stands. -/
+def forgetBound : Lab n → Lab n
+  | .retG r id out _ => .retG r id out false
+  | l => l
+
+@[simp] theorem forgetBound_tau : forgetBound (Lab.tau : Lab n) = Lab.tau := rfl
+
+@[simp] theorem forgetBound_retG (r : ℕ) (id : Fin n) (out : GbcaOut) (bnd : Bool) :
+    forgetBound (Lab.retG r id out bnd) = Lab.retG r id out false := rfl
+
+/-- Two labels agree under the erasure exactly when they are equal, or are
+graded-agreement returns of the same round, process and graded outcome. -/
+theorem forgetBound_eq_iff (l l' : Lab n) :
+    forgetBound l = forgetBound l' ↔
+      l = l' ∨ ∃ (r : ℕ) (id : Fin n) (out : GbcaOut) (b b' : Bool),
+        l = Lab.retG r id out b ∧ l' = Lab.retG r id out b' := by
+  constructor
+  · intro h
+    cases l <;> cases l' <;> simp_all [forgetBound]
+  · rintro (rfl | ⟨r, id, out, b, b', rfl, rfl⟩) <;> rfl
+
+/-- The erasure keeps a label inside the sub-protocol API and outside it. -/
+@[simp] theorem forgetBound_mem_hiddenAPI (l : Lab n) :
+    forgetBound l ∈ Lab.hiddenAPI n ↔ l ∈ Lab.hiddenAPI n := by
+  cases l <;> simp [forgetBound]
+
+end Forget
+
 /-! ### Reading composite transitions
 
 The pipeline is `relabel ∘ abstract ∘ parallel ∘ parallel ∘ syncProduct`; the
@@ -1282,7 +1386,7 @@ section WithNet
 variable {G : Type} [DecidableEq M] [Inhabited G]
     {callPayload : Fin P.n → Bool → M}
     {ghostStep : NLabP P.n M → NetStateP P.n M G → G → G}
-    {ghostOut : NetStateP P.n M G → ℕ → Fin P.n → GbcaOut → Bool}
+    {ghostOut : NetStateP P.n M G → ℕ → Fin P.n → GbcaOut → Bool → Prop}
 
 omit [IsStageTable P M S stageStep] in
 /-- The composite step relation of the group, unfolded to the hidden
@@ -1395,30 +1499,31 @@ theorem flatPre_tau_inv {u : ∀ _ : Fin P.n, ProcRecP P.n S}
 /-! ### The bound bit on a return
 
 The two graded-agreement returns are the only rows that read the ghost, and
-what they read is fixed by the network's state. A composite transition on
-either therefore determines the bound bit its label carries. -/
+what they read is the relation `ghostOut` at the network's state. A composite
+transition on either therefore constrains the bound bit its label carries. -/
 
-/-- A composite graded-agreement return announces the network's ghost output. -/
+/-- A composite graded-agreement return announces a bit the network's ghost
+relation admits. -/
 theorem flatPre_retG_bound {u : ∀ _ : Fin P.n, ProcRecP P.n S}
     {w : NetStateP P.n M G} {o : ℕ → WCC.SpecState P.n}
     {r : ℕ} {id : Fin P.n} {out : GbcaOut} {bnd : Bool}
     {μ : PMF (FlatState P M S G)}
     (h : (flatPre P M S G stageStep callPayload ghostStep ghostOut).step (u, w, o)
       (Sum.inl (.retG r id out bnd)) μ) :
-    bnd = ghostOut w r id out := by
+    ghostOut w r id out bnd := by
   have hne : (Lab.retG r id out bnd : Lab P.n) ≠ Lab.tau := by simp
   obtain ⟨x, w', ω, -, hN, -, -⟩ := flatPre_lab_inv hne h
   exact (netStep_retG hN).1
 
-/-- A composite Byzantine graded-agreement return announces the same ghost
-output (D11). -/
+/-- A composite Byzantine graded-agreement return announces a bit the same
+ghost relation admits (D11). -/
 theorem flatPre_byzRetG_bound {u : ∀ _ : Fin P.n, ProcRecP P.n S}
     {w : NetStateP P.n M G} {o : ℕ → WCC.SpecState P.n}
     {r : ℕ} {k : Fin P.n} {out : GbcaOut} {bnd : Bool}
     {μ : PMF (FlatState P M S G)}
     (h : (flatPre P M S G stageStep callPayload ghostStep ghostOut).step (u, w, o)
       (Sum.inr (.byzRetG r k out bnd)) μ) :
-    bnd = ghostOut w r k out := by
+    ghostOut w r k out bnd := by
   obtain ⟨x, w', μ₃, -, hN, -, -⟩ := flatPre_event_inv h
   exact (netStep_byzRetG hN).2.1
 
