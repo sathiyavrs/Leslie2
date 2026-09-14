@@ -131,7 +131,11 @@ state of the implementation determines such a set. On the implementation side bo
 are held as ghost state — the bound bit by the round's message state, the core by the
 gather instance's message state — so no program reads either, and the announcement is
 what makes binding a property of a single trace (`GBCA.specInst_binding`,
-`Gather.specInst_core`), transported to each implementation by its own refinement.
+`Gather.specInst_core`), transported to each implementation by its own refinement. For the
+bound bit at a flat reading that inertness is a theorem:
+`ABDY.protocol_erasure` and `AFW.protocol_erasure` equate the achievable trace distributions
+of each protocol with those of the same protocol over a one-element ghost record whose
+returns announce any bit.
 
 ## 3. A network-model artifact
 

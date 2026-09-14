@@ -75,6 +75,18 @@ Both invariants therefore read their network through accessors on a pair — the
 `ABA/ABDY/ABAState.lean` — and name the network's own sent sets rather than a copy of them held
 inside a record. Weakening either network is a change to that one component.
 
+The ghost field of the network is removable, and `ABA/Reading/Erase.lean` removes it. The
+ghost-free reading `Net.flat₀` is the flat reading over a one-element ghost record, its two
+graded-agreement return rows free to announce either bit; the map that drops the record is
+a state erasure of the adversary onto it (`Framework/Erasure.lean`), and the congruences of
+that file carry the erasure through the same pipeline the composition is built by — the
+coin oracle, the process group, the rendezvous hiding and the restriction. Hiding
+`Lab.hiddenAPI` collapses the label identification the erasure runs on, since every label it
+moves is a `retG`, so `ABDY.protocol_erasure` and `AFW.protocol_erasure` are equalities of
+achievable trace distributions with no map on labels in them. The bound bit is therefore a
+field the chain may keep or drop, and the choice to keep it is a choice about what the
+invariants read, not about what the protocol does.
+
 ## Every state is a component's own record or a product of them
 
 The property holds across the development, and a reader should not have to re-derive it.

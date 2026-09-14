@@ -14,7 +14,8 @@
   \]
   and the lemmas that read a row off its label.
   Which rows belong to the implementation is settled by the label: a program's row is the implementation's business exactly when its label is one of $\mathrm{stageOwn}(j)$ --- the graded-agreement call and return at $j$, $j$'s own stage multicast, a delivery addressed to $j$, and $j$'s own call against an already-called record.
-  A reading must supply that its rows carry such a label, fire only at an unreplaced program, and are Dirac (\leandecl{PLTS.ABA.Net.IsStageTable}); those lemmas consume exactly those three.
+  A reading must supply four things about its rows: that they carry such a label, that they fire only at an unreplaced program, that they are Dirac, and that a return row takes the announced bit free, firing at every other bit with the same successor (D29).
+  That is \leandecl{PLTS.ABA.Net.IsStageTable}; the lemmas that read a row off its label consume the first three, and Theorem~\ref{thm:aba-erasure} the fourth.
   The rendezvous alphabet is parametric in $M$ in its two stage constructors and fixed in every other, and is hidden before anything outside sees it, so two readings of the same protocol need not agree on it.
   The adversary holds one further record, and a reading supplies it too (D30).
   For each round $r$ its state carries a ghost record $ghostRec(r)$ of a type $G$ the reading fixes.
@@ -22,8 +23,9 @@
   Two parameters carry it.
   The first, $\mathrm{ghostStep}$, writes it: on every row the record of the round the label names --- $\mathrm{roundOf}$ of that label --- is replaced by $\mathrm{ghostStep}$ of the label, the adversary's state and the record standing there, the records of the other rounds are left where they stand, and a label naming no round leaves the whole ghost alone.
   That is $\mathrm{writeGhost}$, and it sits on the successor of every row of the adversary's table.
-  The second, $\mathrm{ghostOut}$, reads it out: it is the guard of the two graded-agreement return rows, the honest $\mathrm{retG}$ and the Byzantine $\mathrm{byzRetG}$ at a replaced program, each of which fires only with the bound bit its label carries equal to $\mathrm{ghostOut}$ of the state before the row, the round, the process being answered and the graded outcome.
-  A reading writes the record at the first return of a round, from the sent sets and the corrupted set, and reads the same record back at every later return of that round.
+  The second, $\mathrm{ghostOut}$, reads it out: it is a relation between the adversary's state, the round, the process being answered, the graded outcome and a bit, and it guards the two graded-agreement return rows, the honest $\mathrm{retG}$ and the Byzantine $\mathrm{byzRetG}$ at a replaced program, each of which fires only with the bound bit its label carries standing in the relation at the state before the row.
+  A reading that computes the announced bit writes the record at the first return of a round, from the sent sets and the corrupted set, reads the same record back at every later return of that round, and instantiates the relation as the equation between the announced bit and that record.
+  A reading that leaves the announcement to the adversary instantiates the relation as the full one, and the bit is then unconstrained (Definition~\ref{def:aba-ghost-free}).
   The content is the reading's own, the two instantiations holding different records and writing them at different rows, which is why $G$, $\mathrm{ghostStep}$ and $\mathrm{ghostOut}$ are parameters here as $M$, $S$ and the implementation's rows are.
   Full construction: \leandecl{PLTS.ABA.Net.flat}.
 \end{definition}

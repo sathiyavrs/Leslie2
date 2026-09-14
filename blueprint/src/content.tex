@@ -107,6 +107,14 @@ The read-back congruence closing the list transports a simulation over a finer a
 \input{nodes-min/thm-precong-relabel}
 \input{nodes-min/thm-mapidle-cong}
 
+A system is often written with a state component that no transition reads, carried so that an invariant can be stated over it, and erasing such a component must leave the observable behaviour untouched.
+A component of that kind is an auxiliary variable in the sense of Abadi and Lamport~\cite{AL91}.
+The definition below states its erasure for systems whose steps are distributions: one clause projects every step of the system carrying the component onto a step of the system without it, a second answers every step of the system without the component by a step of the system carrying it, and the two give equality of achievable trace distributions.
+Congruences carry an erasure through parallel composition, abstraction and restriction, so it composes as a simulation does.
+The construction is in \leanmodule{Leslie2Protocols/Framework/Erasure}.
+
+\input{nodes-min/def-erasure-sim}
+
 \chapter{The ABA case study}
 
 This section verifies an implementation of Asynchronous Byzantine Agreement against a small specification, by probabilistic forward simulation, on the five results proved above.
@@ -148,6 +156,7 @@ GBCA is verified against two implementations: a direct one, which calls no sub-p
 Transition System~1 is the ABA specification, Transition System~2 the GBCA specification, Transition System~3 the WCC specification, Transition System~4 the gather specification and Transition System~6 the BRB specification; the numbering is the source's, whose Transition Systems~5 and~7 (SRSD and AVSS) are not encoded, and the names are used throughout this section and in every node of it.
 A rule is cited by its Lean constructor name, a deviation label in parentheses marks a point where an encoding departs from~\cite{LeslieBP}, and where a node names ABDY22's Algorithm~$k$ it means the numbering of~\cite{ABDY22}.
 A \emph{ghost output} is a value a specification holds as state and announces on a return label, which no program reads and no guard of an implementation consults (D29); the round's bound bit and a gather instance's core are the two.
+A \emph{state erasure} deletes a state component no transition reads, and the \emph{ghost-free reading} of a protocol is its flat reading with the adversary's ghost record deleted.
 Bracha's third message level is $\mathrm{VOTE}$ here and in the source blueprint, where both~\cite{ABDY22} and~\cite{AFW25} write $\mathrm{READY}$.
 Its echo threshold is $n-f$ here and in the source blueprint, where~\cite{AFW25} writes $(n+f)/2$.
 Its return quorum is $n-f$ where~\cite{AFW25} writes $2f+1$, the two coinciding at $n = 3f+1$.
@@ -222,7 +231,9 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
     Announcing the value is what puts binding, a property of the extensions of a run, on a single trace, and what makes every trace inclusion of a chain carry it.
   \item D30: a flat reading is parametric in a per-round ghost record.
     The network adversary of \leandecl{PLTS.ABA.Net.flat} holds a record $ghostRec(r)$ of a type the reading fixes, alongside the message sets and the corrupted set.
-    Two parameters carry it: an update applied on every row, which replaces the record of the round the label names and leaves the other rounds alone, and an output which guards the two graded-agreement return rows, each firing only with the bound bit its label carries equal to it.
+    Two parameters carry it: an update applied on every row, which replaces the record of the round the label names and leaves the other rounds alone, and an output which guards the two graded-agreement return rows.
+    The output is a relation between the adversary's state, the round, the process answered, the graded outcome and a bit, and a return row fires only with the bound bit its label carries standing in it.
+    Each of the two algorithms instantiates the relation as the equation between the announced bit and the record it keeps, and the ghost-free reading of Definition~\ref{def:aba-ghost-free} instantiates it as the relation that holds of every bit, so the three readings share one rule table.
     The two instantiations hold different records --- one bit for ABDY22's reading, the two gathers' cores beside the bit for the gather-based one --- and write them at different rows, which is why the record is a parameter and not part of the shared table.
 \end{itemize}
 
@@ -303,6 +314,11 @@ Section~\ref{sec:aba-abdy} instantiates it at ABDY22's implementation and Sectio
 A system below the meeting point therefore belongs to one implementation or the other, and carries a superscript naming its source: $\abdy{\mathrm{protocol}}(P)$ and $\abdy{\mathrm{composed}}(P)$ after~\cite{ABDY22}, and $\afw{\mathrm{protocol}}(P)$ and $\afw{\mathrm{composed}}(P)$ after~\cite{AFW25}.
 The systems the two share, $\mathrm{hybrid}(P)$ and $\mathrm{spec}(P)$, carry none.
 The Lean development writes each superscript as a namespace.
+
+The announcement costs the reading nothing.
+The ghost record is written by every row and read by the two graded-agreement return rows alone, so the one thing it can affect is the bit such a return announces.
+That label belongs to the hidden alphabet of Definition~\ref{def:aba-labels}, and the outermost frame hides it, so the bit reaches no trace of the protocol.
+Definition~\ref{def:aba-ghost-free} is the same reading with the record deleted and the announcement left to the adversary, and Theorem~\ref{thm:aba-erasure} is the equality of achievable trace distributions between the two, from which every conclusion of either chain holds of the ghost-free reading.
 
 The control record beneath the reading holds one process's round loop, and no field of it names another process or holds the corrupted set, so locality sits in the state shape and not in the guards alone.
 See \leanmodule{Leslie2Protocols/ABA/Vocabulary/RoundLoop}, \leanmodule{Leslie2Protocols/ABA/Reading/Alphabet} and \leanmodule{Leslie2Protocols/ABA/Reading/Flat}.
@@ -571,6 +587,16 @@ The first step is Theorem~\ref{thm:aba-afw-protocol-composed}, the middle three 
 
 \input{nodes-min/thm-aba-afw-main}
 
+\section{The ghost-free reading}
+
+Both chains run over a reading whose adversary keeps a record for each round, and the record is deleted here.
+The route is the erasure of Definition~\ref{def:erasure-sim} at the network adversary, carried through the composition pipeline by its congruences and collapsed at the hidden alphabet.
+The construction is in \leanmodule{Leslie2Protocols/ABA/Reading/Erase}.
+The two instantiations are in \leanmodule{Leslie2Protocols/ABA/ABDY/Erasure} and in \leanmodule{Leslie2Protocols/ABA/AFW/Erasure}.
+
+\input{nodes-min/def-aba-ghost-free}
+\input{nodes-min/thm-aba-erasure}
+
 \begin{thebibliography}{LeslieBP}
 
 \bibitem[ABDY22]{ABDY22}
@@ -584,6 +610,11 @@ Why canonical rounds fail for optimal Byzantine resilience.
 arXiv:2510.04310v2 [cs.DC], 2026.
 Extended version of the paper in \emph{45th ACM Symposium on Principles of Distributed Computing}, pages 197--207, 2026;
 citations here are to the extended version, whose appendices carry the gather algorithm and the approximate-agreement subroutine.
+
+\bibitem[AL91]{AL91}
+Mart\'in Abadi and Leslie Lamport.
+The existence of refinement mappings.
+\emph{Theoretical Computer Science}, 82(2):253--284, 1991.
 
 \bibitem[Bra87]{Bra87}
 Gabriel Bracha.

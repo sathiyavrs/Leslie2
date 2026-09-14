@@ -1,0 +1,8 @@
+\begin{definition}[State erasure]
+  \label{def:erasure-sim}
+  \lean{PLTS.StateErasure}\lean{PLTS.System.LabelSaturated}\lean{PLTS.SeparatesSilent}\lean{PLTS.StateErasure.achievableTraceDists_eq}\leanok
+  \uses{def:forwardsim, def:achievable, def:strongfunctional, thm:forward-sound}
+  A state erasure of $sys_A$ onto $sys_0$ is a map $\pi$ on states together with an identification $\varphi$ of labels, under which every transition of $sys_A$ projects along $\pi$ to the transition of $sys_0$ on the same label, and every transition of $sys_0$ out of a $\pi$-image is answered, up to $\varphi$, by a transition of $sys_A$ that projects back onto it: \leandecl{PLTS.StateErasure}.
+  The first clause is a functional strong matching and the second is the converse matching, so at $\varphi = \mathrm{id}$ the two systems have the same achievable trace distributions, and a general $\varphi$ reaches that equality once every label it identifies with a different label is hidden: \leandecl{PLTS.StateErasure.achievableTraceDists_eq}.
+  An erasure survives parallel composition, abstraction and restriction against a component whose labels with the same $\varphi$-image have the same outgoing transitions (\leandecl{PLTS.System.LabelSaturated}), and its third clause asks that $\tau$ be the one label with the $\varphi$-image of $\tau$ (\leandecl{PLTS.SeparatesSilent}).
+\end{definition}

@@ -1,0 +1,8 @@
+\begin{definition}[The ghost-free reading]
+  \label{def:aba-ghost-free}
+  \lean{PLTS.ABA.Net.flat₀}\lean{PLTS.ABA.ABDY.protocol₀}\lean{PLTS.ABA.AFW.protocol₀}\leanok
+  \uses{def:aba-flat-reading, def:aba-protocol, def:aba-afw-protocol}
+  The flat reading of Definition~\ref{def:aba-flat-reading} at a one-element ghost record: the same programs, the same network rows and the same coin oracle, with the adversary holding nothing of a round and its two graded-agreement returns free to announce either bit: \leandecl{PLTS.ABA.Net.flat₀}.
+  The ghost-free readings of the two protocols are that reading at the two implementations, \leandecl{PLTS.ABA.ABDY.protocol₀} and \leandecl{PLTS.ABA.AFW.protocol₀}, each the protocol of Definition~\ref{def:aba-protocol} and of Definition~\ref{def:aba-afw-protocol} with the record dropped and nothing else changed.
+  The ghost output of D30 is a relation on the announced bit, which is what puts the three readings in one table: each algorithm instantiates it as the equation between the bit and the record it keeps, and the ghost-free reading as the full relation.
+\end{definition}

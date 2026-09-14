@@ -11,7 +11,7 @@ from the protocol as it runs down to a small specification, by probabilistic for
 simulation, with two verified implementations of its graded-agreement sub-protocol —
 one direct, one built over gather and reliable broadcast. Each is carried from the
 protocol as it runs, through one flat reading written parametrically in the
-implementation and instantiated twice. 45 files in nine content-themed
+implementation and instantiated twice. 48 files in nine content-themed
 sub-folders, given in dependency order in its own file guide,
 [`ABA/README.md`](ABA/README.md).
 
@@ -30,6 +30,7 @@ beside the three in the core.
 | [`Relabel.lean`](Framework/Relabel.lean) | 468 | Extended alphabets and restriction along the left summand, with the precongruence for it. |
 | [`WeakRun.lean`](Framework/WeakRun.lean) | 196 | Weak runs from step chains: prepending a silent step, and the k-fold run — a chain of silent steps closed by one external step. |
 | [`MapIdleSim.lean`](Framework/MapIdleSim.lean) | 191 | Forward simulation is a congruence for reading both systems over a finer alphabet along a partial label map. |
+| [`Erasure.lean`](Framework/Erasure.lean) | 375 | Erasure of a state component no transition reads: the projection and lift clauses, the equality of achievable trace distributions they give, and the congruences that carry an erasure through composition, hiding and restriction. |
 
 ## Notes
 
