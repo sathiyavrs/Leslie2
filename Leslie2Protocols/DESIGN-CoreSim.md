@@ -329,8 +329,8 @@ state; every return row runs the same decidable case split on `excluded`.
 
 D12 models DECIDED gossip as a single per-process entry, which cannot send `DECIDED 0`
 to X and `DECIDED 1` to Y — an under-approximation inconsistent with the equivocating
-D5 sent-sent set of graded agreement. D12′ mirrors D5 in the DECIDED sets: the network's
-`dpool` and the round-loop records' receipt rows, read as one object (`ABDY/ABAState.lean`)
+D5 sent sets of graded agreement. D12′ mirrors D5 in the DECIDED sets: the network's
+`dsent` and the round-loop records' receipt rows, read as one object (`ABDY/ABAState.lean`)
 as `decidedSent : Fin n → Finset Bool` and
 `decidedRecv : Fin n → Fin n → Finset Bool`, records that only grow. `sendDecided`
 inserts; delivery is the `ddlv` rendezvous, per (receiver, sender, bit), with soundness
@@ -339,7 +339,7 @@ guard on the receiver's; `byzD` is guarded *only* by `k ∈ F`. Honest sent sets
 states (A-grade certificates pin one bit), but no card invariant is needed. The invariant
 rewiring (`Core/Rel.lean`): `recv_sound` becomes per-bit and *honesty-free*
 (`b ∈ decidedRecv i j → b ∈ decidedSent j`, preserved by pure monotonicity, since sent
-sent sets never shrink); `decided_src` becomes per sent bit
+sets never shrink); `decided_src` becomes per sent bit
 (`id ∉ F → b ∈ decidedSent id → ∃ r` A-lock cert for `b`) — the equivocation-robust
 form: corrupted equivocators may pad any bit's tally, but the `retABA`-row pigeonhole
 (`n − f` distinct senders of `b`, `|F| ≤ f`, `n − f > f`) recovers a never-corrupted

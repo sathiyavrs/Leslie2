@@ -46,7 +46,7 @@ exact message `m` delivered to `i`), `echoCount`/`voteCount`/`bindCount`/
 bit — Algorithm 6's `|approvedVals| > 1`).
 
 The rules, all τ except the labelled API rows. Three conditions run across the
-table. D8 participation gating (`input ≠ none`) is on every protocol send,
+table. The D8 participation guard (`input ≠ none`) is on every protocol send,
 including the echo5 level, and on all three returns. The levels are taken in the
 wait-until order of Algorithm 6 from the `BIND` level down: each of those levels
 requires the sender's own send at the level below (`hlv`), the returns requiring
@@ -408,7 +408,7 @@ never picked.
 | `voteBit` / `voteBot` | τ | stutter | `sentVote` goes `none → some _`: `ExcludedCert.mono`'s persistence hypothesis holds vacuously-forward (wall members already committed) |
 | `bindBit` / `bindBot` | τ | stutter | frame: sender's `sentBind` only |
 | `echo5Bit` / `echo5Bot` | τ | stutter | frame: sender's `sentEcho5` only (nothing in the relation reads `sentEcho5` outside `Inv`) |
-| `byz` | τ | stutter | frame: `sent` sent set of a corrupted sender only |
+| `byz` | τ | stutter | frame: `sent` set of a corrupted sender only |
 | `retA id v` | `retG r id (A v)` | `(!v) ∈ excluded`: single `Step.retA`; else: `excludeThenRetA_run` | see below |
 | `retB id v` | `retG r id (B v)` | `(!v) ∈ excluded`: single `Step.retB`; else: `excludeThenRetB_run` | see below |
 | `retC id` | `retG r id C` | `excluded ≠ ∅`: single `Step.retC`; else: `excludeThenRetC_run` on `b*` | see below |

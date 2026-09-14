@@ -92,7 +92,7 @@ message state beside `Comp.ANetState`, and every step above the first link runs 
 The ABA-side network is the one the chain never idealizes, so what it assumes is what the
 development assumes. Much of the weakening one might ask for is already in it.
 
-`dpool` is a `Finset`, so there is no delivery order to disturb. Receipts are sets too and
+`dsent` is a `Finset`, so there is no delivery order to disturb. Receipts are sets too and
 `CoreRec.recvDec` files by insertion, so a repeated delivery of one (receiver, sender,
 bit) triple carries no information: `Comp.ANetStep.ddlv` consumes nothing, and the
 receiver's `Comp.CoreProcStepN.ddlvRecv` declines the repeat under `b ∉ decIn k` rather
@@ -106,5 +106,5 @@ DECIDED evidence at all, its round-loop half being the self-loop of the replaced
 (D23), so the DECIDED quorum is a condition on honest returns alone.
 
 What remains assumed is unforgeability of an honest process's DECIDED multicast. The
-delivery guard `b ∈ dpool j` attributes every receipt to a genuine send by the named
-sender, and no rule lets one process sent set under another's name.
+delivery guard `b ∈ dsent j` attributes every receipt to a genuine send by the named
+sender, and no rule lets one process record a send under another's name.

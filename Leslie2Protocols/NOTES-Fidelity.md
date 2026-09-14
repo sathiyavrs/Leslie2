@@ -123,7 +123,7 @@ and re-delivery is `insert` into a set, so the guard removes redundant transitio
 rather than reachable states — and the asymmetry reappears exactly in the protocol's
 rendering, where each delivery is a rendezvous whose two halves are held by different
 components. Soundness is the network adversary's conjunct in both sent sets: `NetStep.gdlv`
-requires `h : m ∈ s.sent set r j` and `NetStep.ddlv` requires `h : b ∈ s.dpool j`, neither
+requires `h : m ∈ s.sent r j` and `NetStep.ddlv` requires `h : b ∈ s.dsent j`, neither
 consuming the sent message. Freshness is the receiver's, and only in the DECIDED
 sent sets: `ABAProcStepN.ddlvRecv` carries `hr : b ∉ c.decIn k` while
 `ABAProcStepN.gdlvRecv` carries no freshness guard, filing the message under the sender's
@@ -197,7 +197,7 @@ repaired at the rule; the sixth entry is a cross-reference.
 - **`CoreProcStepN`'s DECIDED rows (chosen).** `CoreProcStepN.ret` and
   `CoreProcStepN.dsndRelay` read the receipt counts alone, without the `input ≠ none`
   guard their `ABAProcStepN` counterparts carry. The composed reading is the abstraction
-  the protocol is carried into, and gating there would ripple through `ABDY.ProtocolRel` and
+  the protocol is carried into, and a guard there would ripple through `ABDY.ProtocolRel` and
   the core simulation.
 - **`SpecStep.ret` without an honesty guard (chosen).** The honest return's guards are
   `val = some b` and `ret id = false`, and nothing about the returner, so a corrupted

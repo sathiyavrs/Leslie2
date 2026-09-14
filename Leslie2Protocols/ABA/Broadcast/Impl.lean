@@ -24,7 +24,7 @@ The state is the generic two-part shape (`ABA.SubState`,
 instance's message state, under the development's D1 (determinised
 corruption) and D5 (set-based network) conventions.
 
-There is no participation gating here: only the leader is called, and every
+There is no participation guard here: only the leader is called, and every
 other process runs its handlers unconditionally — Bracha's protocol has no
 per-process input. The write-once `sentEcho` / `sentVote` fields carry the
 "having not sent" guards of the source's `upon` clauses; the amplification

@@ -39,7 +39,7 @@ corrupted — the source's argument pins them by the sender's honesty, sound
 against its static adversary and unsound against this development's `fail`
 events. A committed bind-BRB entry is pinned mechanically (deviation D25).
 
-There is no gating of the `ECHO`/`VOTE`/`BIND` handlers beyond participation
+No guard restricts the `ECHO`/`VOTE`/`BIND` handlers beyond participation
 (D8: a process acts only once called); the handlers are the source's `upon`
 clauses, with no own-send ordering between levels.
 -/

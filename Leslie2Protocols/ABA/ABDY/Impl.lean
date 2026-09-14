@@ -73,8 +73,8 @@ pseudocode (`n − f`).
   `τ`-transition requiring `m ∈ sent j`). Thresholds count *distinct senders*
   in the receiver's delivered sets, so message duplication and point-to-point
   scheduling are absorbed into the set model. A corrupted sender may inject
-  any message into its `sent` sent (`byz`).
-* **D8 (participation gating).** Protocol sends (`relay`, `echo`, `vote*`,
+  any message into its `sent` set (`byz`).
+* **D8 (participation guard).** Protocol sends (`relay`, `echo`, `vote*`,
   `bind*`, `echo5*`) and the three returns require the process to have received
   its input (`input ≠ none`): the algorithm's handlers only run inside a called
   instance. The send rows are taken in the wait-until order of Algorithm 6

@@ -1151,7 +1151,7 @@ Set
 \]
 and write $\#_i(\mathrm{EC})$, $\#_i(\mathrm{VT})$, $\#_i(\mathrm{BD})$, $\#_i(\mathrm{SL})$ for the payload-blind counts, that is, the number of distinct senders from which $i$ holds some $\mathrm{ECHO}$, some $\mathrm{VOTE}$, some $\mathrm{BIND}$, some $\mathrm{ECHO5}$.
 The set $\mathit{Val}_i$ is Algorithm~\ref{alg:gbca-impl}'s variable $\mathit{Valid}$, read off the delivered messages instead of being stored, so the condition $|\mathit{Valid}| > 1$ becomes $\mathit{Val}_i = \{0,1\}$.
-In the table $\mathrm{IN}\,b$, $\mathrm{EC}\,b$, $\mathrm{VT}\,v$, $\mathrm{BD}\,v$ and $\mathrm{SL}\,v$ abbreviate the five message forms, ``mcast'' abbreviates the insertion of a message into the sender's $\mathit{sent}$ sent set, and a dash marks an unguarded rule.
+In the table $\mathrm{IN}\,b$, $\mathrm{EC}\,b$, $\mathrm{VT}\,v$, $\mathrm{BD}\,v$ and $\mathrm{SL}\,v$ abbreviate the five message forms, ``mcast'' abbreviates the insertion of a message into the sender's $\mathit{sent}$ set, and a dash marks an unguarded rule.
 The two $\mathrm{ECHO5}$ rows and the ECHO5-reading guards of the three return rows are what D18 restores over the source blueprint's compressed four-round form, and carry no separate marker in the table.
 Two further conditions of Algorithm~\ref{alg:gbca-impl}'s control flow are written into the same guards and are likewise unmarked: from the $\mathrm{BIND}$ level down each level asks for the process's own send at the level below, and each return denies the cases above it.
 The two $\mathrm{VOTE}$ rows ask for no own send, the $\mathrm{ECHO}$ they read being multicast by an \textbf{upon} handler and not in the body of the algorithm.
@@ -1294,7 +1294,7 @@ No rule reads a second process, and Definitions~\ref{def:aba-procnet} and~\ref{d
 
 \blueprintfig{fig-protocol}{The protocol \leandecl{PLTS.ABA.ABDY.protocol}: the $n$ programs $\mathrm{ABAProcN}(P,j)$, \leandecl{PLTS.ABA.Net.ABAProcN}, under $\mathrm{syncProduct}$, the network adversary \leandecl{PLTS.ABA.Net.netAdv} and the coin oracle beside the group.
 Each program holds one process's round loop beside its stage-side record, the stage record of every round it has touched and its termination flag (D22); every guard of its forty-three rules reads that program's own record, and what any of them reads of corruption is that record's own replacement flag (D23).
-Its state \leandecl{PLTS.ABA.Net.NetState} holds the sent sets $sent(r,j)$ and $dpool(j)$ and the corrupted set $F$, and its twenty-one rules supply the other half of every send, every delivery, every Byzantine handshake row and the Byzantine return; the corruption budget is the guard on its own $\mathrm{fail}$ row.
+Its state \leandecl{PLTS.ABA.Net.NetState} holds the sent sets $sent(r,j)$ and $dsent(j)$ and the corrupted set $F$, and its twenty-one rules supply the other half of every send, every delivery, every Byzantine handshake row and the Byzantine return; the corruption budget is the guard on its own $\mathrm{fail}$ row.
 The inner dashed frame is $\mathrm{relabel} \circ \mathrm{abstract}\,\mathrm{netEvtLabels}$: every $\mathrm{gsnd}$, $\mathrm{gdlv}$, $\mathrm{dsnd}$, $\mathrm{ddlv}$, $\mathrm{retWPub}$, $\mathrm{gcallLoop}$ and Byzantine handshake row becomes $\tau$.
 The coin oracle is joined through the partial map $\mathrm{wccPull}$, so the handshake rows $\mathrm{byzCallW}$ and $\mathrm{byzRetW}$ and the fused return $\mathrm{retWPub}$ reach it as coin handshakes while the network labels leave it idle.
 The outer dashed frame is $\mathrm{abstract}_H$, which hides the coin handshake $\mathrm{callW}/\mathrm{retW}$; what leaves it is the API $\mathrm{callABA}/\mathrm{retABA}/\mathrm{fail}$ together with $\tau$.
@@ -1401,10 +1401,10 @@ The step \leandeclnamed{retG}{PLTS.ABA.Comp.CoreProcStepN.retG} sets $est$ to th
 The coin return has two rows.
 The step \leandeclnamed{retW}{PLTS.ABA.Comp.CoreProcStepN.retW} increments the round and adopts the coin when $est = \bot$; the step \leandeclnamed{retWPub}{PLTS.ABA.Comp.CoreProcStepN.retWPub} does the same on an $A$-grade return and multicasts $\langle\mathrm{DECIDED},b\rangle$, the sent set insert being the network's half of that rendezvous, \leandeclnamed{retWPub}{PLTS.ABA.Comp.ANetStep.retWPub} (D10).
 The DECIDED sets are round-agnostic, carrying no round index.
-A delivery pairs the network's authenticity guard \leandeclnamed{ddlv}{PLTS.ABA.Comp.ANetStep.ddlv} with the receiver's write \leandeclnamed{ddlvRecv}{PLTS.ABA.Comp.CoreProcStepN.ddlvRecv}; a relay pairs the sender's $f{+}1$ receipt count \leandeclnamed{dsndRelay}{PLTS.ABA.Comp.CoreProcStepN.dsndRelay} with the network's write-once insert \leandeclnamed{dsnd}{PLTS.ABA.Comp.ANetStep.dsnd}; and \leandeclnamed{byzD}{PLTS.ABA.Comp.ANetStep.byzD} is the network's own $\tau$-loop, by which $id \in F$ sent sets either bit (D12$'$).
-The exit \texttt{retABA}\,$id\,b$ fires once $n-f$ distinct senders of $b$ have been delivered to $id$, the count read at \leandeclnamed{ret}{PLTS.ABA.Comp.CoreProcStepN.ret}, and $b$ lies in $id$'s own sent sent set, read at \leandeclnamed{retABA}{PLTS.ABA.Comp.ANetStep.retABA}.
+A delivery pairs the network's authenticity guard \leandeclnamed{ddlv}{PLTS.ABA.Comp.ANetStep.ddlv} with the receiver's write \leandeclnamed{ddlvRecv}{PLTS.ABA.Comp.CoreProcStepN.ddlvRecv}; a relay pairs the sender's $f{+}1$ receipt count \leandeclnamed{dsndRelay}{PLTS.ABA.Comp.CoreProcStepN.dsndRelay} with the network's write-once insert \leandeclnamed{dsnd}{PLTS.ABA.Comp.ANetStep.dsnd}; and \leandeclnamed{byzD}{PLTS.ABA.Comp.ANetStep.byzD} is the network's own $\tau$-loop, by which $id \in F$ records either bit (D12$'$).
+The exit \texttt{retABA}\,$id\,b$ fires once $n-f$ distinct senders of $b$ have been delivered to $id$, the count read at \leandeclnamed{ret}{PLTS.ABA.Comp.CoreProcStepN.ret}, and $b$ lies in $id$'s own sent set, read at \leandeclnamed{retABA}{PLTS.ABA.Comp.ANetStep.retABA}.
 
-\blueprintfig{fig-core-phases}{The round loop \leandecl{PLTS.ABA.Comp.coreProcN}: the per-process five-phase handshake cycle, the fused DECIDED multicast at the $A$-grade coin return (D10), and the DECIDED sets gating $\mathrm{retABA}$.
+\blueprintfig{fig-core-phases}{The round loop \leandecl{PLTS.ABA.Comp.coreProcN}: the per-process five-phase handshake cycle, the fused DECIDED multicast at the $A$-grade coin return (D10), and the DECIDED sets guarding $\mathrm{retABA}$.
 Every edge drawn carries the guard that the process's own program is unreplaced, so a corruption leaves the machine at the phase it has reached and the phase field stands still from there (D23).}
 
 The Lean encoding of Algorithm~\ref{alg:aba-core} is the round-loop program $\mathrm{coreProcN}(P,j)$ of each process together with the ABA-side network $\mathrm{aNet}(P)$, both read over the extended alphabet $\mathrm{NLab}(n)$ of Definition~\ref{def:aba-procnet}.
@@ -1457,7 +1457,7 @@ Write
 \]
 for the number of distinct senders whose $\langle\mathrm{DECIDED}, b\rangle$ has been delivered to $i$; this is the count the return guard reads.
 Write $\mathrm{est}(A\,b) = \mathrm{est}(B\,b) = b$ and $\mathrm{est}(C) = \bot$ for the estimate a graded outcome dictates.
-In the table $\mathrm{DEC}\,b$ abbreviates $\langle\mathrm{DECIDED}, b\rangle$, ``mcast'' abbreviates the insertion of a payload into the sender's $\mathit{decidedSent}$ sent set, and a dash marks an unguarded rule.
+In the table $\mathrm{DEC}\,b$ abbreviates $\langle\mathrm{DECIDED}, b\rangle$, ``mcast'' abbreviates the insertion of a payload into the sender's $\mathit{decidedSent}$ set, and a dash marks an unguarded rule.
 A row is a rule of a round loop, a rule of the ABA-side network, or a rendezvous of one of each; where a row has two halves the table names both, and a guard is annotated with the component that reads it.
 A label of the extended alphabet is written with the $\to\tau$ the composition applies to it.
 Every round-loop row below other than $\mathrm{failSelf}$ and $\mathrm{corruptedIdle}$ carries in addition the guard that the acting process's own program is unreplaced (D23); the Guard column does not repeat it.
@@ -1603,7 +1603,7 @@ each process returns at most once, by the flag its return rule sets.
 
 The round-loop inventory is read on a pair of components, as the one above is, and every guard in the table is read at one component: the counts of
 \leandeclnamed{dsndRelay}{PLTS.ABA.Comp.CoreProcStepN.dsndRelay} and \leandeclnamed{ret}{PLTS.ABA.Comp.CoreProcStepN.ret} range over one receiver's own rows, and the
-soundness guard $b \in dpool(j)$ that licenses a delivery is the network's, split from the freshness guard $b \notin decIn(i)$ and the write at the receiver.
+soundness guard $b \in dsent(j)$ that licenses a delivery is the network's, split from the freshness guard $b \notin decIn(i)$ and the write at the receiver.
 Definitions~\ref{def:aba-procnet} and~\ref{def:aba-netadv} write the same rules at the finer cut, where the round loop shares a record with the stage records and the DECIDED sets share a component with the stage sent sets.
 
 
@@ -1927,7 +1927,7 @@ The sender index stays the sender, so a threshold still counts distinct senders 
 And the composed reading indexes the local states by instance and then by process, while a program must hold its own data and no one else's; the stage record is therefore transposed, holding one process's local state in every instance.
 Neither rearrangement loses anything, because every guard of the gather-based implementation reads the acting process's own local states and the message states, and the two rows that read a message state --- the adversary's delivery and its Byzantine injection --- belong to the adversary in either reading.
 Assembling the composed state from the flat one undoes both: the local states are transposed back, and each message state is sliced out of the tagged sent-set family.
-That assembly is the simulation relation of Theorem~\ref{thm:aba-afw-protocol-composed}, which is a function rather than a correspondence --- the composed state is computed from the flat one, and the proof obligation of a row is which of the six slices takes the message it sent sets.
+That assembly is the simulation relation of Theorem~\ref{thm:aba-afw-protocol-composed}, which is a function rather than a correspondence --- the composed state is computed from the flat one, and the proof obligation of a row is which of the six slices takes the message it sends.
 See \leanmodule{Leslie2Protocols/ABA/AFW/Flat} and
 \leanmodule{Leslie2Protocols/ABA/AFW/FlatSim}.
 

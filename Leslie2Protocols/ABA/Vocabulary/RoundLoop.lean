@@ -67,7 +67,7 @@ diffusion state (conjunct 6), and input coherence (conjunct 5 — the honest
 * **D12′ (per-process DECIDED sets, equivocation-capable).** The DECIDED
   multicast state is the network's per-process sent
   `dsent : Fin n → Finset Bool`, read on the ABA side as `decidedSent`
-  (`ABA/ABDY/ABAState.lean`) and mirroring graded agreement's D5 sent-sent pattern.
+  (`ABA/ABDY/ABAState.lean`) and mirroring graded agreement's D5 sent-set pattern.
   Honest sends insert into the sent (the fused `retWPub` publication and the
   `f + 1` relay `dsnd`; in reachable states DECIDED coherence keeps every
   honest sent at card ≤ 1, so the insert is a first write or a no-op re-send

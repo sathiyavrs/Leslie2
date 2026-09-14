@@ -56,7 +56,7 @@ broadcasts `fail` to every round at once.
   the set of messages from `k` delivered there. Thresholds count distinct
   senders. A corrupted sender's injections enter its sent through the
   message state's own `byzG` transition.
-* **D8 (participation gating).** The protocol sends and the three returns
+* **D8 (participation guard).** The protocol sends and the three returns
   require the record to have received its input: the algorithm's handlers only
   run inside a called instance.
 * **D11 (Byzantine handshake rows), split.** A handshake row is authorised by a
