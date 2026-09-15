@@ -155,7 +155,7 @@ GBCA is verified against two implementations: a direct one, which calls no sub-p
 \paragraph{Object names.}
 Transition System~1 is the ABA specification, Transition System~2 the GBCA specification, Transition System~3 the WCC specification, Transition System~4 the gather specification and Transition System~6 the BRB specification; the numbering is the source's, whose Transition Systems~5 and~7 (SRSD and AVSS) are not encoded, and the names are used throughout this section and in every node of it.
 A rule is cited by its Lean constructor name, a deviation label in parentheses marks a point where an encoding departs from~\cite{LeslieBP}, and where a node names ABDY22's Algorithm~$k$ it means the numbering of~\cite{ABDY22}.
-A \emph{ghost output} is a value a specification holds as state and announces on a return label, which no program reads and no guard of an implementation consults (D29); the round's bound bit and a gather instance's core are the two.
+A \emph{ghost output} is a value a specification holds as state and announces on a return label, which no program reads and on which no row's firing depends (D29); the round's bound bit and a gather instance's core are the two.
 A \emph{state erasure} deletes a state component no transition reads, and the \emph{ghost-free reading} of a protocol is its flat reading with the adversary's ghost record deleted.
 Bracha's third message level is $\mathrm{VOTE}$ here and in the source blueprint, where both~\cite{ABDY22} and~\cite{AFW25} write $\mathrm{READY}$.
 Its echo threshold is $n-f$ here and in the source blueprint, where~\cite{AFW25} writes $(n+f)/2$.
@@ -226,7 +226,8 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
     A sub-protocol's call and return are fused into the rows of the caller --- the gather call contributes to the input broadcast, the $\mathrm{BIND}$ send is the bind-broadcast call, the first gather's return is the second's call --- and a sub-instance's delivery is a derived predicate on its coordinate, read by the consuming row, not an event of the composite.
   \item D29: ghost outputs.
     A specification holds a binding value as state, written once by an internal rule, and announces it on every return label: the round's bound bit on $\mathrm{retG}$ of Transition System~2, and the common core on the $\mathrm{ret}$ of Transition System~4, which the source carries on that label already.
-    No program reads either value, and no guard of an implementation consults it.
+    No program reads either value.
+    A flat reading's network does read the record that holds the bound bit, at its two graded-agreement return rows, and what it reads there decides the value the label announces rather than whether the row fires: the read admits a bit at every state.
     On the implementation side it is a history variable: the bound bit is held by the round's message state and by the network component of a protocol reading, and a gather instance's core by a field of its own state, each written at the first return of the instance and read back at every later one.
     Announcing the value is what puts binding, a property of the extensions of a run, on a single trace, and what makes every trace inclusion of a chain carry it.
   \item D30: a flat reading is parametric in a per-round ghost record.
@@ -281,6 +282,7 @@ The GBCA instance, over \leandecl{PLTS.ABA.GBCA.SpecState}, binds by removing an
 Every return rule takes a bit under the guard that the complement of that bit is excluded, and announces it on its label (D19, D29).
 On a reachable state the exclusion set holds at most one bit, so the guard determines the announced bit and all the returns of a round announce one bit; a value-bearing return carries the guard pair as well, so it announces the bit it hands out.
 That is what makes binding readable on a single trace: a round that hands out no value ends with $C$-returns alone, and those returns name the surviving bit all the same.
+The trace form of binding, and its transfer to both implementations, is Theorem~\ref{thm:aba-gbca-binding-trace}.
 See \leanmodule{Leslie2Protocols/ABA/Spec/GBCA}.
 
 \input{nodes-min/def-aba-gbca-spec}
@@ -293,7 +295,6 @@ The guard $excluded = \emptyset$ on the exclusion is what keeps every round comp
 The $\varepsilon$-Goodness assumption is inert for what is proved, since $\dagger$ removes returns rather than adding any and every safety property here constrains the returns that do occur, so safety holds for every admissible pair $\varepsilon,\failmass$, $\varepsilon = 0$ included.
 
 \input{nodes-min/thm-gbca-spec-binding}
-\input{nodes-min/thm-aba-gbca-binding-trace}
 \input{nodes-min/thm-gbca-spec-validity}
 
 The WCC instance, over \leandecl{PLTS.ABA.WCC.SpecState}, resolves its coin once into four outcomes, inside the access that carries the number of callers above $f$, and that resolution is the second and last non-Dirac transition of the development.
@@ -542,6 +543,11 @@ Under \leandecl{PLTS.ABA.GBCA.IdealRel} gather's own rows stutter in the same wa
 Under \leandecl{PLTS.ABA.GBCA.PairRel} the returns do the work: a return whose bit the specification has not yet excluded is answered by the weak run $\mathrm{bindUnset};\mathrm{ret}$, and a return whose exclusion has already happened is a single graded return.
 The exclude-on-demand discipline is ABDY22's own, unchanged.}
 \input{nodes-min/thm-gbca-gather-refines}
+
+Both implementations of Transition System~2 stand above, so binding can be read at each of them.
+The predicate sits on the return labels of a trace, and each refinement above is an inclusion of achievable trace distributions, which is all the reading needs.
+
+\input{nodes-min/thm-aba-gbca-binding-trace}
 
 \section{The gather-based chain}
 

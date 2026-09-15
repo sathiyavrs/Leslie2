@@ -133,7 +133,7 @@ two returns as `Response((v, g), _bound-value)` and `Response(S, _S^C)` — the 
 component of each a value the caller is not handed. The encoding follows that reading.
 `Lab.retG r id out β` announces the round's bound bit and `Gather.Lab.ret id g C`
 announces the instance's core, in each case the value the specification holds as state,
-written once by an internal rule and read by no guard of either algorithm.
+written once by an internal rule and read by no program of either algorithm.
 
 The two announced values differ from the sources in what they are guaranteed to be. The
 bound bit is a `Bool` under the single guard `(!β) ∈ excluded`, which is D19's reading of
@@ -145,7 +145,11 @@ state of the implementation determines such a set. On the implementation side bo
 are held as ghost state — the bound bit by the round's message state, the core by the
 gather instance's message state — so no program reads either, and the announcement is
 what makes binding a property of a single trace (`GBCA.specInst_binding`,
-`Gather.specInst_core`), transported to each implementation by its own refinement. For the
+`Gather.specInst_core`), transported to each implementation by its own refinement
+(`GBCA.implInst_binding`, `GBCA.lowPairInst_binding`; `Gather.idealInst_core`,
+`Gather.lowInst_core`). The rows that do read a ghost — a flat reading's two
+graded-agreement returns — read it for the value they announce and not for whether they
+fire, the read admitting a bit at every state (`ghostOut_total`). For the
 bound bit at a flat reading that inertness is a theorem:
 `ABDY.protocol_erasure` and `AFW.protocol_erasure` equate the achievable trace distributions
 of each protocol with those of the same protocol over a one-element ghost record whose
@@ -291,12 +295,14 @@ repaired at the rule; the sixth entry is a cross-reference.
   commit by `ldr ∈ F ∨ input = some m` (D27), which is the window the implementation
   actually leaves open: at a never-corrupted leader the commit is pinned to the input,
   and Validity survives in the form the property states it.
-- **TS 4's bound core is not what a reachable state determines.** Two independent
-  points. As written (source p. 20), the bind rule constrains its set `S` only to
+- **TS 4's bound core is what a reachable state determines.** The core is an honest
+  sender's `ECHO` payload heard by `f + 1` honest rows, and the counting of
+  `ABA/Gather/Core.lean` locates it in the prefix of a run. Two independent points stand
+  behind that reading. As written (source p. 20), the bind rule constrains its set `S` only to
   identifiers already called — no size bound, the empty set included, so the `n − f`
   size clause of Binding Common Core is not enforced by the rules (its return guard
-  also reads `bind ≠ ⊥` where the unset marker is `∅`). And no repair by a size guard
-  on `S` is available without an argument about the implementation: AFW25's Remark 22
+  also reads `bind ≠ ⊥` where the unset marker is `∅`). And a size guard on `S` carries
+  only as far as an argument about the implementation does: AFW25's Remark 22
   reads the core of a gather *without* binding as fixed only in hindsight, and a
   specification whose internal rule fires at a reachable state can bind only what a
   reachable state determines. `Gather.SpecState.core` therefore carries the size as the

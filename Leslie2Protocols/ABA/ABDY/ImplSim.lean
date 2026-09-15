@@ -5,7 +5,9 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.ABDY.Impl
+import Leslie2Protocols.ABA.Spec.GBCASafety
 import Leslie2Protocols.Framework.FamilySim
+import Leslie2.Results
 
 /-!
 # The per-instance GBCA refinement
@@ -14,6 +16,11 @@ The round-`r` implementation instance (`GBCA.implInst`, ABDY22 Algorithm 6 —
 all five message levels, D18) forward-simulates the round-`r` specification
 instance (`GBCA.specInst`, the exclusion-set specification, D19):
 `GBCA.implRefines`.
+
+Binding is stated on the labels of a trace (`GBCA.BindingTrace`), so the
+soundness inclusion of that simulation carries it: `GBCA.implInst_refines` is
+the inclusion and `GBCA.implInst_binding` is the specification's
+`GBCA.specInst_binding` at the implementation instance.
 
 The implementation state is the protocol's own data, so only `call`, `ret` and
 `F` are read off it directly (`InstRel.call_eq`, `ret_eq`, `F_eq`). The
@@ -1966,6 +1973,40 @@ theorem instRel_corrupt (P : Params) (r : ℕ) (id : Fin P.n)
       bound_excluded := by
         rw [corrupt_excluded, ImplState.corrupt_bound]
         exact hR.bound_excluded }
+
+/-! ### Binding at the implementation instance
+
+Binding is stated on the labels of a trace (`BindingTrace`, `ABA/Spec/GBCASafety.lean`),
+so a trace-distribution inclusion carries it. The inclusion is the soundness of
+`implRefines`, and `safety_transfer` moves the property across it. -/
+
+/-- The soundness inclusion of the per-instance refinement: every trace
+distribution achievable by the round-`r` implementation instance is achievable
+by the round-`r` specification instance. -/
+theorem implInst_refines (P : Params) (r : ℕ) :
+    achievableTraceDists (implInst P r) ⊆ achievableTraceDists (specInst P r) :=
+  (ForwardSimulation.toProbabilistic (implInst_isLTS P r) (specInst_isLTS P r)
+    (instRel_init P r) (implRefines P r)).achievableTraceDists_subset
+
+/-- **Binding of the implementation instance, on a trace.** Every
+positive-probability trace of the round-`r` implementation instance is bound to
+one bit: all its round-`r` returns announce that bit, and every one of them that
+hands out a value hands out it. The specification has the property
+(`specInst_binding`) and `implInst_refines` includes the trace distributions. -/
+theorem implInst_binding (P : Params) (r : ℕ) :
+    ∀ D ∈ achievableTraceDists (implInst P r), ∀ t, D t ≠ 0 →
+      BindingTrace P r t :=
+  safety_transfer (implInst_refines P r) (specInst_binding P r)
+
+/-! ### Mechanical axiom check -/
+
+/-- info: 'PLTS.ABA.GBCA.implInst_refines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms implInst_refines
+
+/-- info: 'PLTS.ABA.GBCA.implInst_binding' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms implInst_binding
 
 end GBCA
 end ABA

@@ -103,7 +103,7 @@ It is that process's contributed payload, multicast above `n − f` delivered
 `VOTE` payloads. Those `n − f` senders meet the `f + 1` dominators of `j₀` in a
 process `q`, whose write-once `VOTE` payload lies above the core by domination
 and below `U` by the bind guard, so `coreOf P w ⊆ U` (`transfer`,
-`single_core`). Every `ECHO` slot holds committed input-BRB entries, so the
+`single_core`). Every `ECHO` field holds committed input-BRB entries, so the
 core's entries are committed entries (`single_core_approved`), which is
 `bindCore`'s other guard.
 

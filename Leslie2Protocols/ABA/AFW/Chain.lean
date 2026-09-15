@@ -32,7 +32,11 @@ Two readings are given, mirroring `ABA/Results.lean`.
 **The round reading.** `GBCA.gatherImplRefines` composes the three tier
 simulations probabilistically: the round-`r` gather-based implementation
 refines the round-`r` specification. `GBCA.gatherRoundRefines` is its
-soundness inclusion.
+soundness inclusion, and `GBCA.pairRoundRefines` the soundness inclusion of the
+counting simulation alone. Binding is stated on the labels of a trace, so those
+two inclusions carry it: `GBCA.lowPairInst_binding` and `GBCA.pairInst_binding`
+are the specification's `GBCA.specInst_binding` at the gather-based
+implementation and at the tier above it.
 
 **The protocol-shaped reading.** Everything the gather-based chain builds at
 protocol shape sits in the namespace `AFW`, after Attiya, Flam and Welch, so
@@ -89,6 +93,32 @@ round-`r` specification. -/
 theorem gatherRoundRefines (P : Params) (r : ℕ) :
     achievableTraceDists (lowPairInst P r) ⊆ achievableTraceDists (specInst P r) :=
   (gatherImplRefines P r).achievableTraceDists_subset
+
+/-- The soundness inclusion of the counting simulation alone: every trace
+distribution achievable by the round-`r` GBCA-over-gather tier is achievable by
+the round-`r` specification. -/
+theorem pairRoundRefines (P : Params) (r : ℕ) :
+    achievableTraceDists (pairInst P r) ⊆ achievableTraceDists (specInst P r) :=
+  (ForwardSimulation.toProbabilistic (pairInst_isLTS P r) (specInst_isLTS P r)
+    pairRel_init (pairRefines P r)).achievableTraceDists_subset
+
+/-- **Binding of the GBCA-over-gather tier, on a trace.** Every
+positive-probability trace of the round-`r` tier is bound to one bit: all its
+round-`r` returns announce that bit, and every one of them that hands out a
+value hands out it. Binding is a property of the labels (`BindingTrace`), so
+`pairRoundRefines` carries it from `specInst_binding`. -/
+theorem pairInst_binding (P : Params) (r : ℕ) :
+    ∀ D ∈ achievableTraceDists (pairInst P r), ∀ t, D t ≠ 0 →
+      BindingTrace P r t :=
+  safety_transfer (pairRoundRefines P r) (specInst_binding P r)
+
+/-- **Binding of the gather-based implementation, on a trace.** The round-`r`
+gather-based implementation has the property its specification has, along the
+three-tier inclusion `gatherRoundRefines`. -/
+theorem lowPairInst_binding (P : Params) (r : ℕ) :
+    ∀ D ∈ achievableTraceDists (lowPairInst P r), ∀ t, D t ≠ 0 →
+      BindingTrace P r t :=
+  safety_transfer (gatherRoundRefines P r) (specInst_binding P r)
 
 end GBCA
 
@@ -463,6 +493,14 @@ noncomputable def chainSimComposed (P : Params) :
 /-- info: 'PLTS.ABA.GBCA.gatherRoundRefines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms GBCA.gatherRoundRefines
+
+/-- info: 'PLTS.ABA.GBCA.pairInst_binding' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms GBCA.pairInst_binding
+
+/-- info: 'PLTS.ABA.GBCA.lowPairInst_binding' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms GBCA.lowPairInst_binding
 
 /-- info: 'PLTS.ABA.AFW.substitution' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in

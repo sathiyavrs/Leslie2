@@ -59,9 +59,12 @@ network's state and the record standing there, and the records of the other
 rounds are left where they stand; a label naming no round leaves the whole
 ghost alone. `ghostOut` reads it out. It is a relation on the bit a return
 announces: the network's state, the round, the process being answered, the
-graded outcome and the bit. It guards the two graded-agreement return rows —
+graded outcome and the bit. It is read by the two graded-agreement return rows —
 `retG`, and `byzRetG` at a replaced program — each of which fires only with
-the bound bit its label carries standing in it. A reading that computes the
+the bound bit its label carries standing in it. What the read decides is the bit
+announced and not whether the row fires: each reading below instantiates the
+relation so that it admits a bit at every state (`ghostOut_total`,
+`ABA/Reading/Erase.lean`). A reading that computes the
 announced bit instantiates the relation as an equation against it. A reading
 that leaves the announcement to the adversary instantiates it as the full
 relation, and the bit is unconstrained.

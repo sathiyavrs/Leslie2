@@ -1,12 +1,16 @@
-\begin{theorem}[Binding of the GBCA specification, on a trace]
+\begin{theorem}[Binding of graded agreement, on a trace]
   \label{thm:aba-gbca-binding-trace}
-  \lean{PLTS.ABA.GBCA.BoundTrace}\lean{PLTS.ABA.GBCA.BindingTrace}\lean{PLTS.ABA.GBCA.specInst_binding}\lean{PLTS.ABA.GBCA.BindingTrace.value_agree}\leanok
-  \uses{def:aba-gbca-spec, thm:gbca-spec-binding, thm:trace-support}
+  \lean{PLTS.ABA.GBCA.BoundTrace}\lean{PLTS.ABA.GBCA.BindingTrace}\lean{PLTS.ABA.GBCA.specInst_binding}\lean{PLTS.ABA.GBCA.BindingTrace.value_agree}\lean{PLTS.ABA.GBCA.implInst_binding}\lean{PLTS.ABA.GBCA.pairInst_binding}\lean{PLTS.ABA.GBCA.lowPairInst_binding}\leanok
+  \uses{def:aba-gbca-spec, thm:gbca-spec-binding, thm:trace-support, thm:forward-sound, thm:gbca-inst-refines, thm:gbca-pair-refines, thm:gbca-gather-refines}
   Every trace of positive probability of the round-$r$ GBCA specification instance is bound to one bit: all its round-$r$ returns announce the same bit, and every one of them that hands out a value hands out that bit (\leandecl{PLTS.ABA.GBCA.BindingTrace}, \leandecl{PLTS.ABA.GBCA.specInst_binding}).
   Graded agreement follows on the trace alone: any two round-$r$ returns of it that hand out a bit hand out the same bit (\leandecl{PLTS.ABA.GBCA.BindingTrace.value_agree}).
+  The property is stated on labels, so every inclusion of achievable trace distributions into the instance carries it.
+  The direct implementation instance satisfies it along the inclusion of Theorem~\ref{thm:gbca-inst-refines} (\leandecl{PLTS.ABA.GBCA.implInst_binding}).
+  The GBCA-over-gather tier satisfies it along the counting refinement of Theorem~\ref{thm:gbca-pair-refines} (\leandecl{PLTS.ABA.GBCA.pairInst_binding}).
+  The gather-based implementation satisfies it along the three-tier inclusion of Theorem~\ref{thm:gbca-gather-refines} (\leandecl{PLTS.ABA.GBCA.lowPairInst_binding}).
 \end{theorem}
 
 \begin{proof}\leanok
-  \uses{def:aba-gbca-spec, thm:gbca-spec-binding, thm:trace-support}
-  See the Lean proof of \leandecl{PLTS.ABA.GBCA.specInst_binding}.
+  \uses{def:aba-gbca-spec, thm:gbca-spec-binding, thm:trace-support, thm:forward-sound, thm:gbca-inst-refines, thm:gbca-pair-refines, thm:gbca-gather-refines}
+  See the Lean proof of \leandecl{PLTS.ABA.GBCA.specInst_binding}, and the three transfers along it in \leandecl{PLTS.ABA.GBCA.implInst_refines}, \leandecl{PLTS.ABA.GBCA.pairRoundRefines} and \leandecl{PLTS.ABA.GBCA.gatherRoundRefines}.
 \end{proof}

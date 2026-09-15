@@ -29,7 +29,7 @@ is `j₀`'s `ECHO` payload.
 Those `f + 1` dominators meet the `n − f` `VOTE` quorum backing any
 committed `BIND` payload `U` of a process outside `F`, in a process whose
 write-once `VOTE` payload lies above the core and below `U` (`single_core`).
-Every `ECHO` slot holds committed input-BRB entries — the clause
+Every `ECHO` field holds committed input-BRB entries — the clause
 `echo_appr` — so the core's entries are committed input-BRB entries
 (`single_core_approved`).
 
@@ -569,7 +569,7 @@ theorem IdealConf.step {s : IdealState P.n X} {l : Lab P.n X}
       exact hInv.bind_backed j (hF j hj) U hU
 
 
-/-! ### The approval of an echo slot -/
+/-! ### The approval of an echo field -/
 
 /-- Committed input entries are write-once, so `approved` is monotone along
 every rule. -/
@@ -601,7 +601,7 @@ theorem approved_mono {s s' : IdealState P.n X} {l : Lab P.n X}
   | _ => rw [PMF.mem_support_pure_iff] at hs'; subst hs'; exact h
 
 omit [DecidableEq X] in
-/-- The `ECHO` slots of the initial state are empty. -/
+/-- The `ECHO` fields of the initial state are empty. -/
 theorem echoAppr_initial :
     ∀ (j : Fin P.n) (A : APSet P.n X),
       ((IdealState.initial P.n X).ga.proc j).sentEcho = some A →
@@ -609,8 +609,8 @@ theorem echoAppr_initial :
   intro j A hA
   simp [IdealState.initial, PRec.initial] at hA
 
-/-- **The approval of an `ECHO` slot is inductive**: only `IdealStep.echo`
-writes a slot, and its guard is the approval of the payload it writes. -/
+/-- **The approval of an `ECHO` field is inductive**: only `IdealStep.echo`
+writes the field, and its guard is the approval of the payload it writes. -/
 theorem echoAppr_step {s s' : IdealState P.n X} {l : Lab P.n X}
     {μ : PMF (IdealState P.n X)}
     (hEA : ∀ (j : Fin P.n) (A : APSet P.n X),
@@ -672,11 +672,11 @@ theorem echoAppr_step {s s' : IdealState P.n X} {l : Lab P.n X}
 /-! ### The invariant -/
 
 /-- **The gather-over-BRB invariant**: the conformance clauses, together with
-the approval of every `ECHO` slot. -/
+the approval of every `ECHO` field. -/
 structure IdealInv (P : Params) (s : IdealState P.n X) : Prop extends IdealConf P s where
-  /-- The payload set in a process's `ECHO` slot consists of committed
+  /-- The payload set in a process's `ECHO` field consists of committed
   input-BRB entries. No honesty side condition: only `IdealStep.echo` writes
-  the slot, and its guard holds of a corrupted sender too. -/
+  the field, and its guard holds of a corrupted sender too. -/
   echo_appr : ∀ (j : Fin P.n) (A : APSet P.n X),
     (s.ga.proc j).sentEcho = some A → s.approved A
 
@@ -716,7 +716,8 @@ theorem mem_dominatedBy {q j : Fin P.n} :
   exact ⟨fun h => h.2, fun h => ⟨Finset.mem_univ _, h⟩⟩
 
 omit [DecidableEq X] in
-/-- The `ECHO` payload of a process outside `F` is the one in its slot. -/
+/-- The `ECHO` payload of a process outside `F` is the one its `sentEcho`
+field holds. -/
 theorem echoOf_eq {s : IdealState P.n X} (hInv : IdealInv P s) {j : Fin P.n}
     (hj : j ∉ s.ga.F) {A : APSet P.n X} (hA : GaMsg.echo A ∈ s.ga.sent j) :
     echoOf s.ga j = A := by
@@ -888,7 +889,7 @@ theorem single_core {s : IdealState P.n X} (hInv : IdealInv P s)
 
 omit [DecidableEq X] in
 /-- **The core is approved**: its entries are committed input-BRB entries,
-the `ECHO` slot it comes from carrying only such entries. -/
+the `ECHO` field it comes from carrying only such entries. -/
 theorem single_core_approved {s : IdealState P.n X} (hInv : IdealInv P s)
     {k₀ : Fin P.n} (hk₀ : k₀ ∉ s.ga.F) {U₀ : APSet P.n X}
     (hU₀ : (s.brbBind k₀).val = some U₀) :

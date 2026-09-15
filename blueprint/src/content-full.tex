@@ -250,7 +250,7 @@ Of its Algorithms~1 and~2 only the ABA core is reproduced here; Algorithms~4 and
 The cited paper carries a third, independent numbering, always written here with ``ABDY22's'' attached: ABDY22's Algorithm~2 is the weak-coin agreement framework $AA_\varepsilon$, which the source blueprint's Algorithm~1 realises (ABDY22's Algorithm~1, the strong-coin framework over ungraded BCA, is not encoded in this development); ABDY22's Algorithm~6 is the graded sub-protocol.
 The GBCA implementation this chapter displays and encodes is ABDY22's Algorithm~6, of which the source blueprint's Algorithm~2 is a compression that violates Binding (D18).
 A cross-reference of the form ``Algorithm~\ref{alg:aba-core}'' always points to a displayed float of this document, whose numbering runs independently of both; the other two numberings appear only in the phrases ``the source blueprint's Algorithm~$k$'' and ``ABDY22's Algorithm~$k$''.
-A \emph{ghost output} is a value a specification holds as state and announces on a return label, which no program reads and no guard of an implementation consults (D29).
+A \emph{ghost output} is a value a specification holds as state and announces on a return label, which no program reads and on which no row's firing depends (D29).
 There are two in this development, the round's bound bit and a gather instance's core, and both are called that below.
 A \emph{state erasure} deletes a state component no transition reads, and the \emph{ghost-free reading} of a protocol is its flat reading with the adversary's ghost record deleted.
 Bracha's third message level is $\mathrm{VOTE}$ here and in the source blueprint, where both~\cite{ABDY22} and~\cite{AFW25} write $\mathrm{READY}$.
@@ -399,7 +399,9 @@ The labels D2, D3, D6, D7, D20 and D25 are not in use.
   \item D29: ghost outputs.
     A specification holds a binding value as state, written once by an internal rule, and announces it on every return label.
     There are two: the round's bound bit, on $\mathrm{retG}$ of Transition System~2, and the common core, on the $\mathrm{ret}$ of Transition System~4, which is the label the source carries its bound identifier set on already.
-    No program reads either value and no guard of an implementation consults it, so announcing it constrains no behaviour of the systems below.
+    No program reads either value.
+    A flat reading's network does read the record that holds the bound bit, at its two graded-agreement return rows, and what it reads there decides the value the label announces rather than whether the row fires, the read admitting a bit at every state.
+    Announcing the value therefore constrains no behaviour of the systems below.
     What it buys is the reading of the property.
     Binding is a statement about the extensions of a run, and a trace inclusion carries statements about labels; putting the value on the label makes binding a predicate of a single trace, which every step of a chain then transports with no further argument.
     On the implementation side the value is a history variable.
@@ -668,7 +670,7 @@ The set $excluded$ starts empty, and its only writer is the internal transition 
 No rule ever revives a bit, so $excluded$ grows along every execution, the exclusion happens at most once per instance, and every reachable state has $excluded = \emptyset$ or $excluded = \{b\}$ for one bit $b$.
 The $A$- and $B$-returns hand out a bit that is alive while the other bit is excluded; the $C$-return hands out no bit.
 All three take a bit $bnd$ under the guard $1-bnd \in excluded$ and announce it on the label.
-That bit is a ghost output (D29): it is the bound value the specification holds, read off the exclusion set, and no component of any system below reads it.
+That bit is a ghost output (D29): it is the bound value the specification holds, read off the exclusion set, and no program of any system below reads it.
 The source blueprint's bound value embeds onto those reachable states, $bind = \bot$ as $excluded = \emptyset$ and $bind = b$ as $excluded = \{1-b\}$, so the two state shapes differ in the guards rather than in the cardinality (D19).
 
 \noindent\textbf{Labels.}
@@ -784,7 +786,7 @@ reads on a single trace --- the round-$r$ returns of the trace name one bit, and
 each of them that hands out a value hands out that bit --- and every step of a
 refinement chain then transports it with no further argument.
 The announcement adds no power to the scheduler.
-The bit is a ghost output: no component reads it, so no behaviour turns on it,
+The bit is a ghost output: no program reads it and no row's firing turns on it,
 and a round that hands out no value ends with $C$-returns alone which name
 the surviving bit all the same.
 }
@@ -844,7 +846,7 @@ there certified $f+1$ $F$-blind supporters of $v$ itself.
 
 \input{nodes/thm-gbca-spec-binding}
 
-\input{nodes/thm-aba-gbca-binding-trace}
+The trace form of binding, and its transfer to both implementations, is Theorem~\ref{thm:aba-gbca-binding-trace}.
 
 \input{nodes/thm-gbca-spec-validity}
 
@@ -2022,6 +2024,11 @@ Under \leandecl{PLTS.ABA.GBCA.IdealRel} gather's own rows stutter in the same wa
 Under \leandecl{PLTS.ABA.GBCA.PairRel} the returns do the work: a return whose bit the specification has not yet excluded is answered by the weak run $\mathrm{bindUnset};\mathrm{ret}$, and a return whose exclusion has already happened is a single graded return.
 The exclude-on-demand discipline is ABDY22's own, unchanged.}
 \input{nodes/thm-gbca-gather-refines}
+
+Both implementations of Transition System~2 stand above, so binding can be read at each of them.
+The predicate sits on the return labels of a trace, and each refinement above is an inclusion of achievable trace distributions, which is all the reading needs.
+
+\input{nodes/thm-aba-gbca-binding-trace}
 
 
 \section{The gather-based chain}

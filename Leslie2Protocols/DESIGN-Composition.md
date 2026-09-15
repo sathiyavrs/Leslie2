@@ -106,7 +106,9 @@ round beside them (D30), for the same reason: the value a graded return announce
 determined by the round's messages and the corrupted set, which this record holds. The
 flat reading of `ABA/Reading/Flat.lean` is parametric in that record's type, its update
 `ghostStep`, applied on every row to the round the label names, and its output
-`ghostOut`, which guards the two graded-agreement return rows.
+`ghostOut`, which the two graded-agreement return rows read. What a row reads there is the
+value its label announces, not whether it fires: the read admits a bit at every state
+(`ghostOut_total`), which is what makes the record erasable.
 `ProtocolSim.protocol_composed` carries that reading into one where each round owns a
 message state beside `Comp.ANetState`, and every step above the first link runs there.
 The round's ghost record is the composed reading of the bit the round's message state

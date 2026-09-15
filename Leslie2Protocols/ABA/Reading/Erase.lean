@@ -12,7 +12,9 @@ import Leslie2Protocols.Framework.Erasure
 
 The network adversary of a flat reading holds one record no program reads: the ghost
 record `NetStateP.ghostRec` of every round, written by `ghostStep` and read out by
-`ghostOut` at the two graded-agreement returns. This file erases it.
+`ghostOut` at the two graded-agreement returns. That read decides the bit a return
+announces and not whether the return fires: the hypothesis `ghostOut_total` below asks it
+to admit a bit at every state. This file erases it.
 
 The reading it is erased to is `flat₀`, the reading over the trivial ghost `Unit` whose
 `ghostOut` is the full relation: the same programs, the same network rows, and a
@@ -381,9 +383,9 @@ theorem flat_stateErasure
   exact hgroup.abstract_collapse (Lab.hiddenAPI P.n) hiddenAPI_forgetBound
     hiddenAPI_of_forgetBound_ne
 
-/-- **The ghost changes no trace distribution.** The ghost never blocks a step and never
-adds one, and the bit it announces is hidden at protocol level, so the reading and the
-ghost-free reading achieve the same trace distributions. -/
+/-- **The ghost changes no trace distribution.** The ghost decides no row's firing, the
+read admitting a bit at every state, and the bit it announces is hidden at protocol level,
+so the reading and the ghost-free reading achieve the same trace distributions. -/
 theorem flat_erasure
     (ghostOut_total : ∀ (s : NetStateP P.n M G) (r : ℕ) (id : Fin P.n) (out : GbcaOut),
       ∃ bnd, ghostOut s r id out bnd) :

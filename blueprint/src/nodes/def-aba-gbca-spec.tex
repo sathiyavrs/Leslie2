@@ -7,7 +7,7 @@
   Every return rule, whatever its grade, takes a bit $bnd$ under the guard $1-bnd \in excluded$ and announces it on the label $\mathrm{retG}(r,id,out,bnd)$.
   On a reachable state $excluded$ holds at most one bit, so that guard determines $bnd$ as the complement of the excluded bit and all the returns of a round announce one bit.
   A value-bearing return of $v$ carries $v \notin excluded$ and $1-v \in excluded$ as well, so it announces $bnd = v$.
-  The bit is a ghost output (D29): it is the bound value the specification holds as state, and no component reads it.
+  The bit is a ghost output (D29): it is the bound value the specification holds as state, and no program reads it.
   In a round that hands out no value the run ends with $C$-returns alone, and those returns announce the surviving bit, so the round is bound on the trace all the same.
   Full rule table: \leandecl{PLTS.ABA.GBCA.specFamily}.
 \end{definition}

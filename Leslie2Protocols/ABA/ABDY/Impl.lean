@@ -871,6 +871,12 @@ noncomputable def implInst (P : Params) (r : ℕ) : System (ImplState P.n) (Lab 
     (l : Lab P.n) (μ : PMF (ImplState P.n)) :
     (implInst P r).step s l μ ↔ ImplStep P r s l μ := Iff.rfl
 
+/-- Every transition of the implementation instance is Dirac: the instance is
+an LTS. -/
+theorem implInst_isLTS (P : Params) (r : ℕ) : (implInst P r).IsLTS := by
+  rintro s l μ hstep
+  cases hstep <;> exact ⟨_, rfl⟩
+
 end GBCA
 end ABA
 end PLTS

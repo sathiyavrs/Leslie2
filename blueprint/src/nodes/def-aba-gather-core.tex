@@ -21,7 +21,7 @@
     n - f - |F| \;\le\; |\mathrm{dominators}(w, j_0)|,
   \]
   and $n - f - |F| \ge f + 1$ at $3f < n$ and $|F| \le f$.
-  The invariant \leandecl{PLTS.ABA.Gather.IdealInv} ties an honest sender's sent messages to its write-once fields and those fields to the receipt quorums behind them, and adds one clause, $echo\_appr$: every entry in any process's $\mathrm{ECHO}$ slot is a committed input-broadcast entry.
+  The invariant \leandecl{PLTS.ABA.Gather.IdealInv} ties an honest sender's sent messages to its write-once fields and those fields to the receipt quorums behind them, and adds one clause, $echo\_appr$: every entry in any process's $\mathrm{ECHO}$ field is a committed input-broadcast entry.
   Under it, once one process outside $F$ holds a committed $\mathrm{BIND}$ payload, the core has at least $n - f$ entries, its entries are committed input-broadcast entries, and it lies below the committed $\mathrm{BIND}$ payload of every process outside $F$.\lean{PLTS.ABA.Gather.single_core}\lean{PLTS.ABA.Gather.single_core_approved}\leanok{} That the core lies below such a payload $U$ is the transfer: the $f{+}1$ dominators of the sender the core comes from meet the $n - f$ $\mathrm{VOTE}$ quorum backing $U$, and the meeting process's write-once $\mathrm{VOTE}$ payload lies above the core and below $U$.
   The size bound is the $\mathrm{ECHO}$ payload's own, an honest sender sending $n - f$ entries in it.
   The certificate that holds the returns after the first to the core the first one freezes is $\mathrm{bindAbove}$, the coordinates holding a committed $\mathrm{BIND}$ payload above it.

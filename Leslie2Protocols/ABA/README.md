@@ -12,8 +12,11 @@ carries two headlines about its ghost-free reading, in `ABDY/Erasure.lean` and
 `AFW/Erasure.lean`: `protocol_erasure`, the equality of achievable trace distributions
 between the protocol and that reading, and `protocol₀_safe`, Validity and Agreement at it. The two
 sub-protocol interfaces carry headlines of their own: `GBCA.specInst_binding` in
-`Spec/GBCASafety.lean`, and `Gather.specInst_core` with the two implementation
-readings `Gather.idealInst_core` and `Gather.lowInst_core` in `Gather/Safety.lean`.
+`Spec/GBCASafety.lean`, with its three implementation readings
+`GBCA.implInst_binding` in `ABDY/ImplSim.lean` and `GBCA.pairInst_binding`,
+`GBCA.lowPairInst_binding` in `AFW/Chain.lean`; and `Gather.specInst_core` with the
+two implementation readings `Gather.idealInst_core` and `Gather.lowInst_core` in
+`Gather/Safety.lean`.
 
 The architecture in two lines, all of it in the protocol's own coordinates:
 
@@ -83,7 +86,10 @@ same value as ghost state: the bound bit is a field of the round's message state
 core a field of the gather instance's state, computed by `Gather.coreOf` from that
 instance's message state alone. In the flat readings both belong to the network
 adversary, which holds a ghost record per round (D30). No program's record carries
-either and no guard of either algorithm reads one, so the announcement leaves every
+either and no program's row reads one. The two graded-agreement return rows of the
+network do read the round's record, and what they read from it is the value the label
+announces, never whether the row fires: the read admits a bit at every state
+(`ghostOut_total` in `Reading/Erase.lean`). The announcement therefore leaves every
 execution of the protocol as it is.
 
 For the bound bit that inertness is a theorem.
@@ -100,9 +106,11 @@ of them that hands out a value hands out that bit (`GBCA.BindingTrace`,
 `GBCA.specInst_binding`). Every return of a trace of `Gather.specInst` names one payload
 set, of at least `n − f` entries and below the returned map (`Gather.CoreTrace`,
 `Gather.specInst_core`). Both predicates are read off labels alone, so a
-trace-distribution inclusion transports them: `Gather.idealInst_core` and
-`Gather.lowInst_core` are the two gather implementations' readings along their own
-refinements.
+trace-distribution inclusion transports them. `GBCA.implInst_binding`,
+`GBCA.pairInst_binding` and `GBCA.lowPairInst_binding` are binding at the two verified
+graded-agreement implementations and at the tier between them, along their own
+refinements, and `Gather.idealInst_core` and `Gather.lowInst_core` are the two gather
+implementations' readings along theirs.
 
 ## Scope
 
@@ -172,8 +180,8 @@ everything. Within a folder the files are alphabetical.
 | `ABDY/Components.lean` | 850 | The extended alphabet `NLab n` at ABDY22's messages, the coin oracle read along its label pullback, the round loop of one process, and the ABA-side network — the pieces the two compositions are built from. |
 | `ABDY/Hybrid.lean` | 699 | **`ABDY.composed`**, **`ABDY.substSim`**: the same protocol read as four components, one round instance per round retained at every moment, and that graded-agreement component then replaced by its specification under the four congruences. |
 | `ABDY/Instances.lean` | 1659 | **The round's graded-agreement instance** and the licence to replace it, `subSim`. |
-| `ABDY/Impl.lean` | 876 | **The GBCA implementation**, ABDY22's Algorithm 6 in full (D18). Its state is the stage records beside the round's message state, which holds the round's bound bit (D29). |
-| `ABDY/ImplSim.lean` | 1972 | The per-instance refinement `implRefines`, by exclude-on-demand: `excluded` carried as a receipt-pattern certificate; and the broadcast compatibility of its relation with the `fail` act (`instRel_corrupt`), which the family lifting consumes. |
+| `ABDY/Impl.lean` | 882 | **The GBCA implementation**, ABDY22's Algorithm 6 in full (D18). Its state is the stage records beside the round's message state, which holds the round's bound bit (D29). |
+| `ABDY/ImplSim.lean` | 2013 | The per-instance refinement `implRefines`, by exclude-on-demand: `excluded` carried as a receipt-pattern certificate; its soundness inclusion `implInst_refines` with the binding it carries, `implInst_binding`; and the broadcast compatibility of the relation with the `fail` act (`instRel_corrupt`), which the family lifting consumes. Two axiom checks. |
 | `ABDY/Protocol.lean` | 828 | **ABDY22's protocol as it runs**, and the subject of the protocol chain: the flat reading at ABDY22's Algorithm 6 — its fourteen stage-side rows, the payload the call multicasts, the adversary's bound-bit ghost, and the inversions they answer. |
 | `ABDY/ProtocolSim.lean` | 1095 | **`ABDY.protocolSim`**, **`ABDY.protocol_composed`**: the protocol carried into the composed reading along `ABDY.ProtocolRel`, whose five unguarded conjuncts determine the composed state. |
 | `ABDY/Erasure.lean` | 100 | **`ABDY.protocol₀`** and **`ABDY.protocol_erasure`**: the protocol with the adversary's bound-bit record dropped, and the headlines re-derived at it — `protocol₀_composed`, `protocol₀_refines`, `protocol₀_safe`, `protocol₀_traces`. Three axiom checks. |
@@ -230,7 +238,7 @@ everything. Within a folder the files are alphabetical.
 
 | file | lines | what it is |
 |---|---|---|
-| `AFW/Chain.lean` | 486 | **The gather-based chain**: the round composite `gatherImplRefines`, the lifted sides `AFW.composed ⊑ AFW.hybrid1 ⊑ AFW.hybrid2 ⊑ hybrid`, and the composed-level headlines `AFW.composed_refines`, `AFW.composed_safe`, `AFW.chainSimComposed`. Six axiom checks. |
+| `AFW/Chain.lean` | 524 | **The gather-based chain**: the round composite `gatherImplRefines` with the binding its inclusions carry, `GBCA.pairInst_binding` and `GBCA.lowPairInst_binding`; the lifted sides `AFW.composed ⊑ AFW.hybrid1 ⊑ AFW.hybrid2 ⊑ hybrid`; and the composed-level headlines `AFW.composed_refines`, `AFW.composed_safe`, `AFW.chainSimComposed`. Eight axiom checks. |
 | `AFW/Flat.lean` | 719 | **The gather-based protocol as it runs**: the flat reading at AFW25's two-gather construction — the tagged message type collapsing a round's `4n + 2` message states into one sent-set family, the process-major stage record, the adversary's ghost record of the two cores and the bound bit, and the 23 stage-side rows. |
 | `AFW/FlatSim.lean` | 3157 | **`AFW.protocolSim`**, **`AFW.main`**: the gather-based protocol carried into `AFW.composed` along a relation that computes the composed state from the flat one, the ghost record included, and the headlines `AFW.refines`, `AFW.main`, `AFW.chainSim` it yields. Five axiom checks. |
 | `AFW/Erasure.lean` | 95 | **`AFW.protocol₀`** and **`AFW.protocol_erasure`**: the gather-based protocol with the adversary's record of the two cores and the bound bit dropped, and the headlines re-derived at it — `protocol₀_composed`, `protocol₀_refines`, `protocol₀_safe`. Four axiom checks. |
