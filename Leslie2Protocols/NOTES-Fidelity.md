@@ -112,7 +112,17 @@ responses at the resolution instead, one bit per process written when the coin r
 two admit the same per-process assignments, and the encoding lets the adversary choose later,
 with more of the run in view, so the encoding's coin is the more permissive of the two. A
 specification constrains from above, so the refinements hold for the wider reading, hence for
-the narrower one. The `guess` label and the `guess` state field are omitted under either
+the narrower one.
+
+The same rule differs from Fig. 7 in a second way, glossed under D31. There every access
+joins the caller set, so the coin resolves inside the `(f + 1)`st access. `WCC.Step.callLoop`
+is unguarded and records no caller, so a call may be answered by it: the resolution happens
+at the `(f + 1)`st recorded access, and the scheduler may defer it by answering calls with
+the loop. The loop is what makes the call label input-enabled, and deferral adds executions
+to the specification, so the encoding's coin is again the wider of the two and the
+refinements hold for it. What the deferral withholds is a return, which is liveness.
+
+The `guess` label and the `guess` state field are omitted under either
 reading (D4, §6).
 
 **Terminating `return` as state.** The pseudocode's `return` ends the process; the

@@ -160,7 +160,7 @@ The transfer below is what carries them from a system to every system it simulat
 
 \subsection{Erasing a state component}
 
-A system is often written with a state component that no transition reads, carried so that an invariant can be stated over it.
+A system is often written with a state component that no transition's firing depends on, carried so that an invariant can be stated over it, and read at most to decide a value a step announces.
 A component of that kind is an auxiliary variable in the sense of Abadi and Lamport~\cite{AL91}, and erasing it must leave the observable behaviour untouched.
 The definition below states that for systems whose steps are distributions.
 One clause projects every step of the system carrying the component onto a step of the system without it, on the same label; a second answers every step of the system without the component by a step of the system carrying it that projects back onto it.
@@ -252,7 +252,7 @@ The GBCA implementation this chapter displays and encodes is ABDY22's Algorithm~
 A cross-reference of the form ``Algorithm~\ref{alg:aba-core}'' always points to a displayed float of this document, whose numbering runs independently of both; the other two numberings appear only in the phrases ``the source blueprint's Algorithm~$k$'' and ``ABDY22's Algorithm~$k$''.
 A \emph{ghost output} is a value a specification holds as state and announces on a return label, which no program reads and on which no row's firing depends (D29).
 There are two in this development, the round's bound bit and a gather instance's core, and both are called that below.
-A \emph{state erasure} deletes a state component no transition reads, and the \emph{ghost-free reading} of a protocol is its flat reading with the adversary's ghost record deleted.
+A \emph{state erasure} deletes a state component that no transition's firing depends on, and the \emph{ghost-free reading} of a protocol is its flat reading with the adversary's ghost record deleted.
 Bracha's third message level is $\mathrm{VOTE}$ here and in the source blueprint, where both~\cite{ABDY22} and~\cite{AFW25} write $\mathrm{READY}$.
 Its echo threshold is $n-f$ here and in the source blueprint, where~\cite{AFW25} writes $(n+f)/2$.
 Its return quorum is $n-f$ where~\cite{AFW25} writes $2f+1$, the two coinciding at $n = 3f+1$.
@@ -422,6 +422,7 @@ The labels D2, D3, D6, D7, D20 and D25 are not in use.
     Transition System~3 resolves by a rule of its own, scheduled after the callers have arrived, and counts the corrupted set alongside them.
     The call label therefore carries two rows under exclusive guards.
     \leandeclnamed{callRecord}{PLTS.ABA.WCC.Step.callRecord} records a caller that leaves the count at $f$ or below, or that arrives at an already resolved $val$; \leandeclnamed{callResolve}{PLTS.ABA.WCC.Step.callResolve} records the caller whose own access carries the count above $f$ at $val = \bot$, and draws $val$ in the same step.
+    The crossing access is a recorded one: the loop rule \leandeclnamed{callLoop}{PLTS.ABA.WCC.Step.callLoop} carries the call label at every state and records no caller, so a call may be answered there and the scheduler may defer the resolution past any number of calls, which the safety theorems do not depend on.
     The count runs over the callers alone because a corrupted process reaches the instance as a caller, its Byzantine call arriving at the round's own $\mathrm{callW}$ row, so the count carries it already.
     Were $F$ added to the count, a corruption could carry the count across the threshold on its own; the corruption broadcast is a deterministic transform taken by every component at once, so there is no row there on which the resolution could be drawn.
     The instance has in consequence no rule on $\tau$ at all.

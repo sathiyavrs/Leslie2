@@ -12,9 +12,9 @@ carries two headlines about its ghost-free reading, in `ABDY/Erasure.lean` and
 `AFW/Erasure.lean`: `protocol_erasure`, the equality of achievable trace distributions
 between the protocol and that reading, and `protocol₀_safe`, Validity and Agreement at it. The two
 sub-protocol interfaces carry headlines of their own: `GBCA.specInst_binding` in
-`Spec/GBCASafety.lean`, with its three implementation readings
+`Spec/GBCASafety.lean`, with its four implementation readings
 `GBCA.implInst_binding` in `ABDY/ImplSim.lean` and `GBCA.pairInst_binding`,
-`GBCA.lowPairInst_binding` in `AFW/Chain.lean`; and `Gather.specInst_core` with the
+`GBCA.idealInst_binding`, `GBCA.lowPairInst_binding` in `AFW/Chain.lean`; and `Gather.specInst_core` with the
 two implementation readings `Gather.idealInst_core` and `Gather.lowInst_core` in
 `Gather/Safety.lean`.
 
@@ -107,9 +107,9 @@ of them that hands out a value hands out that bit (`GBCA.BindingTrace`,
 set, of at least `n − f` entries and below the returned map (`Gather.CoreTrace`,
 `Gather.specInst_core`). Both predicates are read off labels alone, so a
 trace-distribution inclusion transports them. `GBCA.implInst_binding`,
-`GBCA.pairInst_binding` and `GBCA.lowPairInst_binding` are binding at the two verified
-graded-agreement implementations and at the tier between them, along their own
-refinements, and `Gather.idealInst_core` and `Gather.lowInst_core` are the two gather
+`GBCA.pairInst_binding`, `GBCA.idealInst_binding` and `GBCA.lowPairInst_binding` are binding
+at the two verified graded-agreement implementations and at the two tiers between them,
+along their own refinements, and `Gather.idealInst_core` and `Gather.lowInst_core` are the two gather
 implementations' readings along theirs.
 
 ## Scope
@@ -162,7 +162,7 @@ everything. Within a folder the files are alphabetical.
 | `Spec/ABASafety.lean` | 717 | `spec_safe`: every positive-mass trace of `ABA.spec` is valid and agreeing. The trace predicates live here. |
 | `Spec/GBCA.lean` | 292 | The graded binding crusader agreement specification, per round. Binding is negative, and every return announces the round's bound bit (D19, D29). |
 | `Spec/GBCASafety.lean` | 683 | Binding, graded agreement and Validity's safety half for the GBCA specification instance. `specInst_binding` reads binding off a trace. |
-| `Spec/WCC.lean` | 254 | The weak common coin specification, per round, and the coin value domain `TVal`. The call carries two rows: one records a caller, the other records the caller whose access carries the count above `f` and draws the coin in the same step (D31). Held at specification level by design. |
+| `Spec/WCC.lean` | 259 | The weak common coin specification, per round, and the coin value domain `TVal`. The call carries three rows: an unguarded loop that records nothing, one that records a caller, and one that records the caller whose access carries the count above `f` and draws the coin in the same step (D31). Held at specification level by design. |
 
 **`ABA/Reading/`** — the flat reading, parametric in the graded-agreement implementation.
 
@@ -238,7 +238,7 @@ everything. Within a folder the files are alphabetical.
 
 | file | lines | what it is |
 |---|---|---|
-| `AFW/Chain.lean` | 524 | **The gather-based chain**: the round composite `gatherImplRefines` with the binding its inclusions carry, `GBCA.pairInst_binding` and `GBCA.lowPairInst_binding`; the lifted sides `AFW.composed ⊑ AFW.hybrid1 ⊑ AFW.hybrid2 ⊑ hybrid`; and the composed-level headlines `AFW.composed_refines`, `AFW.composed_safe`, `AFW.chainSimComposed`. Eight axiom checks. |
+| `AFW/Chain.lean` | 551 | **The gather-based chain**: the round composite `gatherImplRefines` with the binding its three inclusions carry, `GBCA.pairInst_binding`, `GBCA.idealInst_binding` and `GBCA.lowPairInst_binding`; the lifted sides `AFW.composed ⊑ AFW.hybrid1 ⊑ AFW.hybrid2 ⊑ hybrid`; and the composed-level headlines `AFW.composed_refines`, `AFW.composed_safe`, `AFW.chainSimComposed`. Nine axiom checks. |
 | `AFW/Flat.lean` | 719 | **The gather-based protocol as it runs**: the flat reading at AFW25's two-gather construction — the tagged message type collapsing a round's `4n + 2` message states into one sent-set family, the process-major stage record, the adversary's ghost record of the two cores and the bound bit, and the 23 stage-side rows. |
 | `AFW/FlatSim.lean` | 3157 | **`AFW.protocolSim`**, **`AFW.main`**: the gather-based protocol carried into `AFW.composed` along a relation that computes the composed state from the flat one, the ghost record included, and the headlines `AFW.refines`, `AFW.main`, `AFW.chainSim` it yields. Five axiom checks. |
 | `AFW/Erasure.lean` | 95 | **`AFW.protocol₀`** and **`AFW.protocol_erasure`**: the gather-based protocol with the adversary's record of the two cores and the bound bit dropped, and the headlines re-derived at it — `protocol₀_composed`, `protocol₀_refines`, `protocol₀_safe`. Four axiom checks. |

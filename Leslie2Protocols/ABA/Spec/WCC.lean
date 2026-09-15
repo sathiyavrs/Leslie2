@@ -11,7 +11,7 @@ import Leslie2Protocols.Framework.IdleFamily
 # The WCC specification instance (blueprint Transition System 3)
 
 The round-`r` instance of the Weak Common Coin specification. The coin
-resolves inside the `(f+1)`st access: the call that carries the number of
+resolves inside the `(f+1)`st recorded access: the call that carries the number of
 callers above `f` at an unresolved `val` draws `val` from `wccPMF` -- each bit
 with probability `ε` (all correct processes receive that bit), the failure
 outcome with probability `δ`, and `⊤` with the remaining mass. Under `⊤`
@@ -57,7 +57,11 @@ out-of-scope Unpredictability property), and `fail` is the determinised
   alone, following Fig. 7 of *Asynchronous Randomized Consensus with Ghost
   Variables* (working draft, 2026). Transition System 3 resolves
   by a separately scheduled rule and counts the corrupted set alongside the
-  callers.
+  callers. The crossing access is a recorded one: `WCC.Step.callLoop` carries
+  the call label at every state and records no caller, so a call may be
+  answered there, and the scheduler may defer the resolution past any number
+  of calls. No safety theorem of the development depends on the coin
+  resolving.
 
 The instance only steps on its own round-`r` API labels and `fail`; it has no
 silent row (`WCC.step_tau_inv`), and the family combinator (`System.family`)

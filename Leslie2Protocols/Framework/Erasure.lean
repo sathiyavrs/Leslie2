@@ -14,21 +14,22 @@ import Leslie2Protocols.Framework.SyncProduct
 /-!
 # Erasure of an auxiliary state component
 
-A system is often written with a state component that no transition reads: a record of what
-has already happened, carried so that an invariant can be stated over it. Such a component
-is an auxiliary variable in the sense of Abadi and Lamport, *The existence of refinement
-mappings* (1991), here between systems whose steps are distributions. Erasing it has to
-leave the observable behaviour untouched.
+A system is often written with a state component that no transition's firing depends on: a
+record of what has already happened, carried so that an invariant can be stated over it. A
+step may read the component to decide a value it announces, never whether it fires. Such a
+component is an auxiliary variable in the sense of Abadi and Lamport, *The existence of
+refinement mappings* (1991), here between systems whose steps are distributions. Erasing it
+has to leave the observable behaviour untouched.
 
 `StateErasure sysA sys0 π φ` is that statement. The map `π : SA → S0` deletes the component
 and `φ : L → L` identifies the labels that differ only in the value the component announces.
 Two clauses carry the content.
 
 * `project` — every transition `s -[l]→ μ` of `sysA` is a transition `π s -[l]→ μ.map π` of
-  `sys0`, on the same label. The component neither blocks a step nor adds one, and the
-  distribution over what survives `π` is unchanged.
+  `sys0`, on the same label. The component adds no step, and the distribution over what
+  survives `π` is unchanged.
 * `lift` — every transition `π s -[l]→ μ` of `sys0` is met by a transition `s -[l']→ ν` of
-  `sysA` with `φ l' = φ l` and `μ = ν.map π`.
+  `sysA` with `φ l' = φ l` and `μ = ν.map π`. The component blocks no step.
 
 The two clauses are not symmetric. A label of `sysA` may announce the value of
 the erased component, and from a state `s` only the announcement `s` carries is available,

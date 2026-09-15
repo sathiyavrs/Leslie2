@@ -30,7 +30,7 @@ beside the three in the core.
 | [`Relabel.lean`](Framework/Relabel.lean) | 468 | Extended alphabets and restriction along the left summand, with the precongruence for it. |
 | [`WeakRun.lean`](Framework/WeakRun.lean) | 196 | Weak runs from step chains: prepending a silent step, and the k-fold run — a chain of silent steps closed by one external step. |
 | [`MapIdleSim.lean`](Framework/MapIdleSim.lean) | 191 | Forward simulation is a congruence for reading both systems over a finer alphabet along a partial label map. |
-| [`Erasure.lean`](Framework/Erasure.lean) | 375 | Erasure of a state component no transition reads: the projection and lift clauses, the equality of achievable trace distributions they give, and the congruences that carry an erasure through composition, hiding and restriction. |
+| [`Erasure.lean`](Framework/Erasure.lean) | 376 | Erasure of a state component no transition's firing depends on: the projection and lift clauses, the equality of achievable trace distributions they give, and the congruences that carry an erasure through composition, hiding and restriction. |
 
 ## Notes
 

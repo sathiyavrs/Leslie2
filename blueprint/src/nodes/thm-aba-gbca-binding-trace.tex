@@ -1,20 +1,21 @@
 \begin{theorem}[Binding of graded agreement, on a trace]
   \label{thm:aba-gbca-binding-trace}
-  \lean{PLTS.ABA.GBCA.BoundTrace}\lean{PLTS.ABA.GBCA.BindingTrace}\lean{PLTS.ABA.GBCA.specInst_binding}\lean{PLTS.ABA.GBCA.BindingTrace.value_agree}\lean{PLTS.ABA.GBCA.implInst_binding}\lean{PLTS.ABA.GBCA.pairInst_binding}\lean{PLTS.ABA.GBCA.lowPairInst_binding}\leanok
-  \uses{def:aba-gbca-spec, thm:gbca-spec-binding, thm:trace-support, thm:forward-sound, thm:gbca-inst-refines, thm:gbca-pair-refines, thm:gbca-gather-refines}
+  \lean{PLTS.ABA.GBCA.BoundTrace}\lean{PLTS.ABA.GBCA.BindingTrace}\lean{PLTS.ABA.GBCA.specInst_binding}\lean{PLTS.ABA.GBCA.BindingTrace.value_agree}\lean{PLTS.ABA.GBCA.implInst_binding}\lean{PLTS.ABA.GBCA.pairInst_binding}\lean{PLTS.ABA.GBCA.idealInst_binding}\lean{PLTS.ABA.GBCA.lowPairInst_binding}\leanok
+  \uses{def:aba-gbca-spec, thm:gbca-spec-binding, thm:trace-support, thm:forward-sound, thm:gbca-inst-refines, thm:gbca-pair-refines, thm:gbca-tier-refines, thm:gbca-gather-refines}
   $\mathrm{BoundTrace}$ says that any two round-$r$ returns of a trace announce the same bit, and $\mathrm{BindingTrace}$ adds that every round-$r$ return of the trace which hands out a value hands out that bit.
   Every trace in the support of every achievable trace distribution of the round-$r$ GBCA specification instance satisfies $\mathrm{BindingTrace}$.\lean{PLTS.ABA.GBCA.specInst_binding}\leanok{} Graded agreement is then a consequence of the trace predicate alone: two returns of the trace that hand out bits each hand out the bit they announce, and the two announcements agree.\lean{PLTS.ABA.GBCA.BindingTrace.value_agree}\leanok{}
-  The predicate is stated on the labels of a trace, so every inclusion of achievable trace distributions into the instance carries it, and three systems below Transition System~2 satisfy it for that reason.
+  The predicate is stated on the labels of a trace, so every inclusion of achievable trace distributions into the instance carries it, and four systems below Transition System~2 satisfy it for that reason.
   The direct implementation instance satisfies $\mathrm{BindingTrace}$ along the inclusion of Theorem~\ref{thm:gbca-inst-refines}.\lean{PLTS.ABA.GBCA.implInst_binding}\leanok{}
   The GBCA-over-gather tier satisfies it along the counting refinement of Theorem~\ref{thm:gbca-pair-refines}.\lean{PLTS.ABA.GBCA.pairInst_binding}\leanok{}
+  The tier over the gather implementations satisfies it along the gather substitution of Theorem~\ref{thm:gbca-tier-refines} chained with the counting refinement.\lean{PLTS.ABA.GBCA.idealInst_binding}\leanok{}
   The gather-based implementation satisfies it along the three-tier inclusion of Theorem~\ref{thm:gbca-gather-refines}.\lean{PLTS.ABA.GBCA.lowPairInst_binding}\leanok{}
 \end{theorem}
 
 \begin{proof}\leanok
-  \uses{def:aba-gbca-spec, thm:gbca-spec-binding, thm:trace-support, thm:forward-sound, thm:gbca-inst-refines, thm:gbca-pair-refines, thm:gbca-gather-refines}
+  \uses{def:aba-gbca-spec, thm:gbca-spec-binding, thm:trace-support, thm:forward-sound, thm:gbca-inst-refines, thm:gbca-pair-refines, thm:gbca-tier-refines, thm:gbca-gather-refines}
   Theorem~\ref{thm:trace-support} turns a positive-probability trace into a genuine execution of the instance in which each round-$r$ return label of the trace is a step of a return rule at some state.
   The two clauses are then Theorem~\ref{thm:gbca-spec-binding} read at those steps: the announcements of any two of them agree, and a value-bearing one announces the value it hands out.
   Nothing beyond positive probability is asked of the trace, and nothing beyond membership in one execution of the returns.
   This is what carries binding down a chain of refinements: the property is stated on labels, so an inclusion of achievable trace distributions transports it.
-  The three statements below Transition System~2 are that transport applied to the soundness inclusion of each refinement, by Theorem~\ref{thm:forward-sound}.
+  The four statements below Transition System~2 are that transport applied to the soundness inclusion of each refinement, by Theorem~\ref{thm:forward-sound}.
 \end{proof}

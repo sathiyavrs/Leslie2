@@ -107,7 +107,7 @@ The read-back congruence closing the list transports a simulation over a finer a
 \input{nodes-min/thm-precong-relabel}
 \input{nodes-min/thm-mapidle-cong}
 
-A system is often written with a state component that no transition reads, carried so that an invariant can be stated over it, and erasing such a component must leave the observable behaviour untouched.
+A system is often written with a state component that no transition's firing depends on, carried so that an invariant can be stated over it, and read at most to decide a value a step announces, and erasing such a component must leave the observable behaviour untouched.
 A component of that kind is an auxiliary variable in the sense of Abadi and Lamport~\cite{AL91}.
 The definition below states its erasure for systems whose steps are distributions: one clause projects every step of the system carrying the component onto a step of the system without it, a second answers every step of the system without the component by a step of the system carrying it, and the two give equality of achievable trace distributions.
 Congruences carry an erasure through parallel composition, abstraction and restriction, so it composes as a simulation does.
@@ -156,7 +156,7 @@ GBCA is verified against two implementations: a direct one, which calls no sub-p
 Transition System~1 is the ABA specification, Transition System~2 the GBCA specification, Transition System~3 the WCC specification, Transition System~4 the gather specification and Transition System~6 the BRB specification; the numbering is the source's, whose Transition Systems~5 and~7 (SRSD and AVSS) are not encoded, and the names are used throughout this section and in every node of it.
 A rule is cited by its Lean constructor name, a deviation label in parentheses marks a point where an encoding departs from~\cite{LeslieBP}, and where a node names ABDY22's Algorithm~$k$ it means the numbering of~\cite{ABDY22}.
 A \emph{ghost output} is a value a specification holds as state and announces on a return label, which no program reads and on which no row's firing depends (D29); the round's bound bit and a gather instance's core are the two.
-A \emph{state erasure} deletes a state component no transition reads, and the \emph{ghost-free reading} of a protocol is its flat reading with the adversary's ghost record deleted.
+A \emph{state erasure} deletes a state component that no transition's firing depends on, and the \emph{ghost-free reading} of a protocol is its flat reading with the adversary's ghost record deleted.
 Bracha's third message level is $\mathrm{VOTE}$ here and in the source blueprint, where both~\cite{ABDY22} and~\cite{AFW25} write $\mathrm{READY}$.
 Its echo threshold is $n-f$ here and in the source blueprint, where~\cite{AFW25} writes $(n+f)/2$.
 Its return quorum is $n-f$ where~\cite{AFW25} writes $2f+1$, the two coinciding at $n = 3f+1$.
@@ -239,6 +239,7 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
   \item D31: the coin resolves inside the access that crosses the threshold, and the threshold counts accesses alone, after Fig.~7 of~\cite{GhostDraft}.
     Transition System~3 resolves by a separately scheduled rule and counts the corrupted set alongside the callers.
     The call label therefore carries two rows under exclusive guards: \leandeclnamed{callRecord}{PLTS.ABA.WCC.Step.callRecord} records a caller that leaves the count at $f$ or below, or that arrives at a resolved $val$, and \leandeclnamed{callResolve}{PLTS.ABA.WCC.Step.callResolve} records the crossing caller and draws $val$ in the same step.
+    The crossing access is a recorded one: the loop row \leandeclnamed{callLoop}{PLTS.ABA.WCC.Step.callLoop} answers a call at every state and records no caller, so the scheduler may defer the resolution past any number of calls, which the safety theorems do not depend on.
     The count runs over the callers alone because a corrupted process reaches the instance as a caller and is counted there already; were $F$ added to it, a corruption could carry the count across the threshold, and the corruption broadcast is a deterministic transform, which leaves no row on which to draw the resolution.
 \end{itemize}
 
