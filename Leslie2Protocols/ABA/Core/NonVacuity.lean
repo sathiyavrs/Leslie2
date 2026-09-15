@@ -15,7 +15,7 @@ execute a nontrivial prefix: the core simulation `ABA.coreSim` about it is not
 vacuously true through an immediate deadlock.
 
 We fix the small parameter set `P4` (`n = 4`, `f = 1`, `ε = 1/2`) and exhibit a
-concrete **21-step run of `hybrid P4` that reaches a genuine `retABA`** — a
+concrete **20-step run of `hybrid P4` that reaches a genuine `retABA`** — a
 complete decision — starting from its initial state:
 
 * `step_callABA₀/₁/₂` — three external input handshakes (`callABA`, *visible*:
@@ -32,10 +32,15 @@ complete decision — starting from its initial state:
   return announces the bound bit `true`. Its complement is the bit that
   `step_bindUnset` excluded, which is exactly the return's guard, so the ghost
   output leaves the run intact;
-* `step_callW₀/₁/₂` — the three coin-call handshakes (`callW 0`, *hidden*);
-* `step_flip` + `step_flip_mass` — the coin `flip`, the run's **single
-  probabilistic step**: the successor lands on the `bit true` branch (the one
-  agreeing with the bound value) with mass exactly `ε = 1/2 > 0`;
+* `step_callW₀` — process `0`'s coin call (`callW 0`, *hidden*), a recording
+  call: a single caller does not carry the count past `f = 1`;
+* `step_callW₁` + `step_callW₁_mass` — process `1`'s coin call, the resolving
+  call and the run's **single probabilistic step**: that access carries the
+  caller count to `2 > f` at `val = ⊥`, so the call records its caller and
+  draws `val` from `wccPMF`. The successor lands on the `bit true` branch — the
+  outcome agreeing with the bound value — with mass exactly `ε = 1/2 > 0`;
+* `step_callW₂` — process `2`'s coin call, recording again: `val` is resolved,
+  so the resolving row's guard is closed;
 * `step_retW₀/₁/₂` — the three coin returns, each a rendezvous on `retWPub`
   (*hidden*): the round loop's fused round advance (deviation D10) joined with
   the network's publication of `⟨DECIDED, true⟩`, giving three distinct
@@ -46,12 +51,12 @@ complete decision — starting from its initial state:
 
 Plus `step_fail` — a `fail` broadcast synchronising all four components.
 
-Because every step but the flip is a Dirac and the flip's chosen branch has mass
-`ε > 0`, the whole path is a positive-probability execution: a product of Diracs
-times one `ε` factor. Every guard on these closed numeric states discharges by
-`decide`/`rfl`; the Dirac successor distributions collapse through
-`prodPMF_pure_pure` and `PMF.pure_map`, and the flip's branch mass through
-`prodPMF_pure_left_apply` and `map_apply_inj`.
+Because every step but the resolving call is a Dirac and the chosen branch of
+that call has mass `ε > 0`, the whole path is a positive-probability execution: a
+product of Diracs times one `ε` factor. Every guard on these closed numeric
+states discharges by `decide`/`rfl`; the Dirac successor distributions collapse
+through `prodPMF_pure_pure` and `PMF.pure_map`, and the resolving call's branch
+mass through `prodPMF_pure_left_apply` and `map_apply_inj`.
 
 The ABA-side components are named through the view of `ABA/ABDY/ABAState.lean`: a
 state of the run is a triple — the round specifications, one `ABAState` holding
@@ -66,7 +71,7 @@ open Net Comp
 
 /-- A concrete parameter set: four processes, corruption budget one, and a
 never-failing `ε = 1/2` coin, so that each bit outcome carries positive mass
-(`ε = 1/2`) and the witnessed `flip` can take the `bit true` branch.
+(`ε = 1/2`) and the witnessed resolution can take the `bit true` branch.
 `2 * ε + δ ≤ 1` holds with equality (`2 * (1/2) + 0 = 1`); the adversarial `⊤`
 outcome and the failure outcome then both have mass `0`. -/
 noncomputable abbrev P4 : Params := ⟨4, 1, by omega, 1 / 2, 0, by
@@ -91,6 +96,16 @@ theorem coreLoops_at {C : ∀ _ : Fin 4, CoreRec 4} (id : Fin 4) {L : NLab 4}
   by_cases h : i = id
   · subst h; rw [Function.update_self]; exact hown
   · rw [Function.update_of_ne h]; exact hidle i h
+
+/-- The coin oracle on a label one of its rounds owns, at a row whose successor
+need not be a point mass: the family's successor is the round's, pushed forward
+along the update at that round. -/
+theorem wccFamilyStep (o : ℕ → WCC.SpecState 4) {l : Lab 4} {r : ℕ}
+    {μ : PMF (WCC.SpecState 4)} (hr : Lab.wccRound l = some r)
+    (h : WCC.Step P4 r (o r) l μ) :
+    (WCC.specFamily P4).step o l (μ.map (Function.update o r)) := by
+  rw [WCC.specFamily, System.family_step_iff]
+  exact Or.inr (Or.inl ⟨r, hr, μ, h, rfl⟩)
 
 /-- The coin oracle's idle row on a shared label that is neither `τ`, nor one
 of its own handshakes, nor `fail`. -/
@@ -141,13 +156,15 @@ grade to the `A`-side and record the return. -/
 def gRetA (id : Fin 4) (s : ℕ → GBCA.SpecState 4) : ℕ → GBCA.SpecState 4 :=
   Function.update s 0 { s 0 with grade := some true, ret := Function.update (s 0).ret id true }
 
-/-- The round-`0` coin update of a `call id`: record `id` as a caller. -/
+/-- The round-`0` coin update of a recording call by `id`: record `id` as a
+caller. -/
 def wCall (id : Fin 4) (s : ℕ → WCC.SpecState 4) : ℕ → WCC.SpecState 4 :=
-  Function.update s 0 { s 0 with called := Function.update (s 0).called id true }
+  Function.update s 0 ((s 0).record id)
 
-/-- The round-`0` coin update of the `flip` landing on `bit true`. -/
-def wFlip (s : ℕ → WCC.SpecState 4) : ℕ → WCC.SpecState 4 :=
-  Function.update s 0 { s 0 with val := .bit true }
+/-- The round-`0` coin update of a resolving call by `id` whose draw lands on
+`v`: record `id` as a caller and write `v`. -/
+def wResolve (id : Fin 4) (v : TVal) (s : ℕ → WCC.SpecState 4) : ℕ → WCC.SpecState 4 :=
+  Function.update s 0 { (s 0).record id with val := v }
 
 /-- The round-`0` coin update of a `ret id true`. -/
 def wRet (id : Fin 4) (s : ℕ → WCC.SpecState 4) : ℕ → WCC.SpecState 4 :=
@@ -187,16 +204,19 @@ noncomputable def Sw0 : ABAState P4 := sCallW 0 Sq2
 noncomputable def Sw1 : ABAState P4 := sCallW 1 Sw0
 noncomputable def Sw2 : ABAState P4 := sCallW 2 Sw1
 
-/-- The coin oracle after all three processes call the coin. -/
+/-- The coin oracle after process `0`'s recording call. -/
 def Wc0 : ℕ → WCC.SpecState 4 := wCall 0 W0
-def Wc1 : ℕ → WCC.SpecState 4 := wCall 1 Wc0
-def Wc2 : ℕ → WCC.SpecState 4 := wCall 2 Wc1
 
-/-- The coin oracle after the coin flips to `bit true`. -/
-def Wfl : ℕ → WCC.SpecState 4 := wFlip Wc2
+/-- The coin oracle after process `1`'s resolving call, on the `bit true`
+branch of the draw. -/
+def Wres : ℕ → WCC.SpecState 4 := wResolve 1 (.bit true) Wc0
+
+/-- The coin oracle after process `2`'s recording call, which closes the round's
+three calls. -/
+def Wc2 : ℕ → WCC.SpecState 4 := wCall 2 Wres
 
 /-- The coin oracle after all three processes receive the coin. -/
-def Wr0 : ℕ → WCC.SpecState 4 := wRet 0 Wfl
+def Wr0 : ℕ → WCC.SpecState 4 := wRet 0 Wc2
 def Wr1 : ℕ → WCC.SpecState 4 := wRet 1 Wr0
 def Wr2 : ℕ → WCC.SpecState 4 := wRet 2 Wr1
 
@@ -389,9 +409,11 @@ theorem step_retG₂ :
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
 
-/-! ### Steps 11–13: all three call the coin (hidden `callW` handshakes) -/
+/-! ### Steps 11–13: all three call the coin (hidden `callW` handshakes), the
+second call resolving it -/
 
-/-- Process `0` calls the round-`0` coin. -/
+/-- Process `0` calls the round-`0` coin. One caller leaves the count at `f`, so
+the call only records. -/
 theorem step_callW₀ :
     (hybrid P4).step (st Ga2 Sq2 W0) Lab.tau (PMF.pure (st Ga2 Sw0 Wc0)) := by
   refine hybrid_hidden P4 (l := Lab.callW 0 (0 : Fin 4)) (by simp) ?_
@@ -402,93 +424,87 @@ theorem step_callW₀ :
       (fun j hj => CoreProcStepN.callWIdle (P := P4) (Sq2.1 j) 0 0 (Ne.symm hj)))
     (ANetStep.callWIdle (P := P4) Sq2.2 0 0)
     ((System.mapIdle_step_some (wccPull_inl (Lab.callW 0 (0 : Fin 4))) _).mpr
-      (wccFamily_owned P4 W0 rfl (WCC.Step.call (P := P4) (r := 0) (W0 0) 0 (by decide))))
+      (wccFamily_owned P4 W0 rfl (WCC.Step.callRecord (P := P4) (r := 0) (W0 0) 0 (by decide)
+        (by simp only [WCC.SpecState.threshold]; decide))))
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
 
-/-- Process `1` calls the round-`0` coin. -/
+/-- The coin distribution the resolving call draws: the `wccPMF` outcome is
+written to round `0`'s `val` beside the caller's record. -/
+noncomputable def resolveWr : PMF (ℕ → WCC.SpecState 4) :=
+  (P4.wccPMF.map (fun o => { (Wc0 0).record 1 with val := o.toTVal })).map
+    (Function.update Wc0 0)
+
+/-- The successor distribution of process `1`'s coin call: the round
+specifications and the ABA-side network stand still, process `1`'s round loop
+advances to `awaitW`, and the coin oracle resolves. -/
+noncomputable def resolveμ : PMF (HybridState P4) :=
+  prodPMF (PMF.pure Ga2) (prodPMF (PMF.pure Sw1.1) (prodPMF (PMF.pure Sw1.2) resolveWr))
+
+/-- Process `1` calls the round-`0` coin. Its access carries the caller count to
+`2 > f` at `val = ⊥`, so the call records the caller and draws `val` from
+`wccPMF`: the run's single probabilistic step. -/
 theorem step_callW₁ :
-    (hybrid P4).step (st Ga2 Sw0 Wc0) Lab.tau (PMF.pure (st Ga2 Sw1 Wc1)) := by
+    (hybrid P4).step (st Ga2 Sw0 Wc0) Lab.tau resolveμ := by
   refine hybrid_hidden P4 (l := Lab.callW 0 (1 : Fin 4)) (by simp) ?_
-  have h := hybridPre_vis_step P4 (G := Ga2) (C := Sw0.1) (A := Sw0.2) (o := Wc0)
+  exact hybridPre_vis_step P4 (G := Ga2) (C := Sw0.1) (A := Sw0.2) (o := Wc0)
     (L := Sum.inl (Lab.callW 0 (1 : Fin 4))) (by simp)
     (specSide_idle P4 Ga2 (by simp) rfl not_false)
     (coreLoops_at 1 (CoreProcStepN.callW (P := P4) (Sw0.1 1) 0 (by decide) (by decide) (by decide))
       (fun j hj => CoreProcStepN.callWIdle (P := P4) (Sw0.1 j) 0 1 (Ne.symm hj)))
     (ANetStep.callWIdle (P := P4) Sw0.2 0 1)
     ((System.mapIdle_step_some (wccPull_inl (Lab.callW 0 (1 : Fin 4))) _).mpr
-      (wccFamily_owned P4 Wc0 rfl (WCC.Step.call (P := P4) (r := 0) (Wc0 0) 1 (by decide))))
-  rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
-  exact h
+      (wccFamilyStep Wc0 rfl (WCC.Step.callResolve (P := P4) (r := 0) (Wc0 0) 1 (by decide)
+        (by decide) (by simp only [WCC.SpecState.threshold]; decide))))
 
-/-- Process `2` calls the round-`0` coin; three callers now meet the `> f`
-resolution threshold. -/
+/-- The draw lands on the `bit true` branch — the outcome that agrees with the
+bound value — with mass exactly `ε = 1/2 > 0`. This is the run's single
+`ε` factor; every other step is Dirac, so the whole path has positive
+probability. -/
+theorem step_callW₁_mass : resolveμ (st Ga2 Sw1 Wres) = P4.ε := by
+  have hup : Function.Injective (Function.update Wc0 0) := by
+    intro a b h; have h0 := congrFun h 0; simpa using h0
+  have hg : Function.Injective
+      (fun o : CoinOutcome =>
+        ({ (Wc0 0).record 1 with val := o.toTVal } : WCC.SpecState 4)) :=
+    fun _ _ h => CoinOutcome.toTVal_injective (congrArg (·.val) h)
+  change prodPMF (PMF.pure Ga2) (prodPMF (PMF.pure Sw1.1) (prodPMF (PMF.pure Sw1.2) resolveWr))
+      (Ga2, Sw1.1, Sw1.2, Wres) = P4.ε
+  rw [prodPMF_pure_left_apply, prodPMF_pure_left_apply, prodPMF_pure_left_apply]
+  unfold resolveWr
+  rw [show (Wres : ℕ → WCC.SpecState 4)
+      = Function.update Wc0 0 { (Wc0 0).record 1 with val := TVal.bit true } from rfl,
+    map_apply_inj hup,
+    show ({ (Wc0 0).record 1 with val := TVal.bit true } : WCC.SpecState 4)
+      = (fun o => { (Wc0 0).record 1 with val := o.toTVal }) (CoinOutcome.bit true) from rfl,
+    map_apply_inj hg, Params.wccPMF_apply_bit]
+
+/-- Process `2` calls the round-`0` coin. `val` is resolved, so the resolving
+row's guard is closed and this call only records. -/
 theorem step_callW₂ :
-    (hybrid P4).step (st Ga2 Sw1 Wc1) Lab.tau (PMF.pure (st Ga2 Sw2 Wc2)) := by
+    (hybrid P4).step (st Ga2 Sw1 Wres) Lab.tau (PMF.pure (st Ga2 Sw2 Wc2)) := by
   refine hybrid_hidden P4 (l := Lab.callW 0 (2 : Fin 4)) (by simp) ?_
-  have h := hybridPre_vis_step P4 (G := Ga2) (C := Sw1.1) (A := Sw1.2) (o := Wc1)
+  have h := hybridPre_vis_step P4 (G := Ga2) (C := Sw1.1) (A := Sw1.2) (o := Wres)
     (L := Sum.inl (Lab.callW 0 (2 : Fin 4))) (by simp)
     (specSide_idle P4 Ga2 (by simp) rfl not_false)
     (coreLoops_at 2 (CoreProcStepN.callW (P := P4) (Sw1.1 2) 0 (by decide) (by decide) (by decide))
       (fun j hj => CoreProcStepN.callWIdle (P := P4) (Sw1.1 j) 0 2 (Ne.symm hj)))
     (ANetStep.callWIdle (P := P4) Sw1.2 0 2)
     ((System.mapIdle_step_some (wccPull_inl (Lab.callW 0 (2 : Fin 4))) _).mpr
-      (wccFamily_owned P4 Wc1 rfl (WCC.Step.call (P := P4) (r := 0) (Wc1 0) 2 (by decide))))
+      (wccFamily_owned P4 Wres rfl (WCC.Step.callRecord (P := P4) (r := 0) (Wres 0) 2 (by decide)
+        (by simp only [WCC.SpecState.threshold]; decide))))
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
 
-/-! ### Step 14: the coin `flip` (the run's single probabilistic step) -/
-
-/-- The coin distribution produced by the `flip`: the `wccPMF` outcome resolves
-round `0`'s `val`. -/
-noncomputable def flipWr : PMF (ℕ → WCC.SpecState 4) :=
-  (P4.wccPMF.map (fun o => { Wc2 0 with val := o.toTVal })).map
-    (Function.update Wc2 0)
-
-/-- The successor distribution of the coin flip: the three other components
-stay put (Dirac), the coin oracle resolves. -/
-noncomputable def flipμ : PMF (HybridState P4) :=
-  prodPMF (PMF.pure Ga2) (prodPMF (PMF.pure Sw2.1) (prodPMF (PMF.pure Sw2.2) flipWr))
-
-/-- The coin `flip` is a legal silent transition of the composed system: the
-round-`0` coin resolves `val` by `wccPMF` (threshold met by the three callers),
-the other three components interleave. -/
-theorem step_flip : (hybrid P4).step (st Ga2 Sw2 Wc2) Lab.tau flipμ := by
-  refine hybrid_vis P4 (by simp) ?_
-  exact hybridPre_tau_wcc P4 (wccFamily_tau P4 Wc2
-    (WCC.Step.flip (P := P4) (r := 0) (Wc2 0)
-      (by unfold WCC.SpecState.threshold; decide) (by decide)))
-
-/-- The flip lands on the `bit true` branch — the outcome that agrees with the
-bound value — with mass exactly `ε = 1/2 > 0`. This is the run's single
-`ε` factor; every other step is Dirac, so the whole path has positive
-probability. -/
-theorem step_flip_mass : flipμ (st Ga2 Sw2 Wfl) = P4.ε := by
-  have hup : Function.Injective (Function.update Wc2 0) := by
-    intro a b h; have h0 := congrFun h 0; simpa using h0
-  have hg : Function.Injective
-      (fun o : CoinOutcome => ({ Wc2 0 with val := o.toTVal } : WCC.SpecState 4)) :=
-    fun _ _ h => CoinOutcome.toTVal_injective (congrArg (·.val) h)
-  change prodPMF (PMF.pure Ga2) (prodPMF (PMF.pure Sw2.1) (prodPMF (PMF.pure Sw2.2) flipWr))
-      (Ga2, Sw2.1, Sw2.2, Wfl) = P4.ε
-  rw [prodPMF_pure_left_apply, prodPMF_pure_left_apply, prodPMF_pure_left_apply]
-  unfold flipWr
-  rw [show (Wfl : ℕ → WCC.SpecState 4)
-      = Function.update Wc2 0 { Wc2 0 with val := TVal.bit true } from rfl,
-    map_apply_inj hup,
-    show ({ Wc2 0 with val := TVal.bit true } : WCC.SpecState 4)
-      = (fun o => { Wc2 0 with val := o.toTVal }) (CoinOutcome.bit true) from rfl,
-    map_apply_inj hg, Params.wccPMF_apply_bit]
-
-/-! ### Steps 15–17: the three coin returns, each a `retWPub` rendezvous of the
+/-! ### Steps 14–16: the three coin returns, each a `retWPub` rendezvous of the
 round loop's fused round advance (deviation D10) with the network's publication
 of `⟨DECIDED, true⟩`. -/
 
 /-- Process `0` receives the coin and multicasts `⟨DECIDED, true⟩`. -/
 theorem step_retW₀ :
-    (hybrid P4).step (st Ga2 Sw2 Wfl) Lab.tau (PMF.pure (st Ga2 Ss0 Wr0)) := by
+    (hybrid P4).step (st Ga2 Sw2 Wc2) Lab.tau (PMF.pure (st Ga2 Ss0 Wr0)) := by
   refine hybrid_rendezvous P4 (e := .retWPub 0 (0 : Fin 4) true true) ?_
-  have h := hybridPre_vis_step P4 (G := Ga2) (C := Sw2.1) (A := Sw2.2) (o := Wfl)
+  have h := hybridPre_vis_step P4 (G := Ga2) (C := Sw2.1) (A := Sw2.2) (o := Wc2)
     (L := Sum.inr (.retWPub 0 (0 : Fin 4) true true)) (by simp)
     (specSide_idle P4 Ga2 (by simp) rfl not_false)
     (coreLoops_at 0 (CoreProcStepN.retWPub (P := P4) (Sw2.1 0) 0 true true (by decide)
@@ -496,8 +512,8 @@ theorem step_retW₀ :
       (fun j hj => CoreProcStepN.retWPubIdle (P := P4) (Sw2.1 j) 0 0 true true (Ne.symm hj)))
     (ANetStep.retWPub (P := P4) Sw2.2 0 0 true true)
     ((System.mapIdle_step_some (wccPull_retWPub 0 (0 : Fin 4) true true) _).mpr
-      (wccFamily_owned P4 Wfl rfl
-        (WCC.Step.ret (P := P4) (r := 0) (Wfl 0) 0 true (Or.inr (by decide)) (by decide))))
+      (wccFamily_owned P4 Wc2 rfl
+        (WCC.Step.ret (P := P4) (r := 0) (Wc2 0) 0 true (Or.inr (by decide)) (by decide))))
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
 
@@ -536,7 +552,7 @@ theorem step_retW₂ :
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
 
-/-! ### Steps 18–20: the adversary delivers the three `⟨DECIDED, true⟩` to
+/-! ### Steps 17–19: the adversary delivers the three `⟨DECIDED, true⟩` to
 process `0` (a `ddlv` rendezvous of the receiving round loop with the
 network). -/
 
@@ -583,12 +599,12 @@ theorem step_deliver₂ :
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
 
-/-! ### Step 21: the decision (`retABA 0 true`, visible) -/
+/-! ### Step 20: the decision (`retABA 0 true`, visible) -/
 
 /-- Process `0` returns `true`: it has multicast `⟨DECIDED, true⟩` — the
 network's conjunct — and holds `n − f = 3` distinct DECIDED-true receipts — the
-round loop's. The whole 21-step run, every step a Dirac except the single
-`ε`-mass coin flip, carries positive probability and ends in a genuine
+round loop's. The whole 20-step run, every step a Dirac except the single
+`ε`-mass coin resolution, carries positive probability and ends in a genuine
 `retABA`. -/
 theorem step_retABA :
     (hybrid P4).step (st Ga2 Sd2 Wr2) (Lab.retABA (0 : Fin 4) true)

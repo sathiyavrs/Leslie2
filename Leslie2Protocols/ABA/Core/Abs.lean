@@ -30,7 +30,7 @@ variable {P : Params}
 
 /-! ### Stage C: `Abs` preservation for the stutter rows
 
-Every one of `hybrid_step_tau`'s seven disjuncts is answered by a stutter: the
+Every one of `hybrid_step_tau`'s six disjuncts is answered by a stutter: the
 abstract state is untouched by every hidden row and only moves at the visible rows
 (`callABA`/`retABA`/`fail`), handled in `Core/Sim.lean`. All six lemmas below
 are instances of a single frame argument: `Abs` inspects only `F`, the
@@ -233,7 +233,7 @@ theorem Inv.step {P : Params} {g : ℕ → GBCA.SpecState P.n}
   cases l with
   | tau =>
     rcases hybrid_step_tau P g C A w hI.corrupted_F μ hstep with
-      ⟨r, μr, hstepG, rfl⟩ | ⟨μc, hstepC, rfl⟩ | ⟨r, μw', hstepW, rfl⟩ |
+      ⟨r, μr, hstepG, rfl⟩ | ⟨μc, hstepC, rfl⟩ |
       ⟨r, id, b, μr, μc, hstepG, hstepC, rfl⟩ |
       ⟨r, id, out, bnd, μr, μc, hstepG, hstepC, rfl⟩ |
       ⟨r, id, μw', μc, hstepW, hstepC, rfl⟩ |
@@ -253,10 +253,6 @@ theorem Inv.step {P : Params} {g : ℕ → GBCA.SpecState P.n}
       obtain ⟨hc2, rfl⟩ := mem_support_abaRow h2
       rw [h1]
       exact (Inv.step_coreTau hI hstepC hc2).1
-    · simp only [mem_support_prodPMF, PMF.mem_support_pure_iff,
-        PMF.mem_support_map_iff] at hmem
-      obtain ⟨rfl, rfl, rfl, wr', hwr', rfl⟩ := hmem
-      exact (Inv.step_wccTau hI r hstepW hwr').1
     · simp only [mem_support_prodPMF] at hmem
       obtain ⟨h1, h2⟩ := hmem
       rw [PMF.mem_support_map_iff] at h1

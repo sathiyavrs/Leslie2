@@ -19,8 +19,8 @@ The rows dispatch as follows. A visible `callABA` is answered by
 afterwards. A never-corrupted process's visible `retABA` is answered by
 `SpecStep.decide` followed by
 `SpecStep.ret` on the first such row, and by `SpecStep.ret` alone on every
-later one. Every hidden row, the concrete coin flip included, is answered by a
-stutter: the abstract state's mode stays `Mode.idle`, so it never fires
+later one. Every hidden row, the coin's resolving call included, is answered by
+a stutter: the abstract state's mode stays `Mode.idle`, so it never fires
 `SpecStep.coinFlip` and `SpecStep.decide` remains enabled when the first
 return arrives. A `fail` is answered by `SpecStep.fail`, whose two guards are
 the concrete row's own, read across `Abs.F_eq`.
@@ -50,7 +50,7 @@ outcome `μ_C` relates to the *same* abstract state `a` (via `coreR`), the abstr
 answer with the trivial `weakTau_refl` stutter: the coupling `Ω := μ_C.map (fun s' => (s', pure
 a))` has first marginal `μ_C` and second marginal the constant `pure (pure a)` (`PMF.map_const`),
 so `ω := pure (pure a)` and `ω.bind id = pure a` (`PMF.pure_bind`). Reused by every hidden
-row, the concrete coin flip included. -/
+row, the coin's resolving call included. -/
 private theorem stutter_step {P : Params} (μ_C : PMF (HybridState P)) (a : SpecState P.n)
     (hA : ∀ s' ∈ μ_C.support, coreR P s' a) :
     ∃ ω : PMF (PMF (SpecState P.n)),
@@ -129,7 +129,7 @@ theorem coreSim (P : Params) :
     cases l with
     | tau =>
       rcases hybrid_step_tau P g C A w hI.corrupted_F μ_C hstep with
-        ⟨r, μr, hstepG, rfl⟩ | ⟨μc, hstepC, rfl⟩ | ⟨r, μw', hstepW, rfl⟩ |
+        ⟨r, μr, hstepG, rfl⟩ | ⟨μc, hstepC, rfl⟩ |
         ⟨r, id, b, μr, μc, hstepG, hstepC, rfl⟩ |
         ⟨r, id, out, bnd, μr, μc, hstepG, hstepC, rfl⟩ |
         ⟨r, id, μw', μc, hstepW, hstepC, rfl⟩ | ⟨r, id, b, μw', μc, hstepW, hstepC, rfl⟩
@@ -150,16 +150,6 @@ theorem coreSim (P : Params) :
           obtain ⟨rfl, hs2⟩ := hs'
           obtain ⟨hc2, rfl⟩ := mem_support_abaRow hs2
           exact ⟨hI', hAbs.step_coreTau hI hstepC hc2⟩)
-        exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
-      · -- row 6: WCC flip — a constant-coupled stutter (`Abs` never reads `w`, so every
-        -- outcome of the coin lands on the same abstract state `a`)
-        obtain ⟨ω, hRel, hWeak⟩ := stutter_step _ a (fun s' hs' => by
-          obtain ⟨g', C', A', w'⟩ := s'
-          have hI' := hI.step hstep hs'
-          simp only [mem_support_prodPMF, PMF.mem_support_pure_iff,
-            PMF.mem_support_map_iff] at hs'
-          obtain ⟨rfl, rfl, rfl, wr', hwr', rfl⟩ := hs'
-          exact ⟨hI', hAbs.w_swap⟩)
         exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
       · -- row: callG handshake
         obtain ⟨ω, hRel, hWeak⟩ := stutter_step _ a (fun s' hs' => by

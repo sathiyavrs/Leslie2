@@ -552,8 +552,8 @@ theorem protocolPre_lab_inv (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       μ = prodPMF (PMF.pure x) (prodPMF (PMF.pure w') ω) :=
   flatPre_lab_inv hl h
 
-/-- A silent shared-label transition: one process terminating, the network's own
-injection, or the coin resolution. -/
+/-- A silent shared-label transition: one process terminating, or the network's
+own injection. The coin oracle has no silent row, so it contributes none. -/
 theorem protocolPre_tau_inv (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     {w : NetState P.n} {o : ℕ → WCC.SpecState P.n}
     {μ : PMF (ABDY.ProtocolState P)}
@@ -561,9 +561,7 @@ theorem protocolPre_tau_inv (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     (∃ (i : Fin P.n) (y : ProcRec P.n),
       ABAProcStepN P i (u i) (Sum.inl Lab.tau) (PMF.pure y) ∧
       μ = PMF.pure (Function.update u i y, w, o)) ∨
-    (∃ w', NetStep P w (Sum.inl .tau) (PMF.pure w') ∧ μ = PMF.pure (u, w', o)) ∨
-    (∃ ω, (WCC.specFamily P).step o Lab.tau ω ∧
-      μ = prodPMF (PMF.pure u) (prodPMF (PMF.pure w) ω)) :=
+    (∃ w', NetStep P w (Sum.inl .tau) (PMF.pure w') ∧ μ = PMF.pure (u, w', o)) :=
   flatPre_tau_inv h
 
 /-! ### ABDY22's own rows, by label class

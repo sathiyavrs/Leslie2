@@ -550,21 +550,6 @@ theorem composedPre_tau_aNet (P : Params) {G : ℕ → GBCA.LowPairState P.n}
     exact Or.inr (Or.inl ⟨rfl, PMF.pure A', hA, rfl⟩)
   · rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure]
 
-/-- Build a silent transition of the four components from the coin
-resolution. -/
-theorem composedPre_tau_wcc (P : Params) {G : ℕ → GBCA.LowPairState P.n}
-    {C : ∀ _ : Fin P.n, CoreRec P.n} {A : Comp.ANetState P.n}
-    {o : ℕ → WCC.SpecState P.n} {ω : PMF (ℕ → WCC.SpecState P.n)}
-    (hW : (WCC.specFamily P).step o Lab.tau ω) :
-    (composedPre P).step (G, C, A, o) (Sum.inl Lab.tau)
-      (prodPMF (PMF.pure G) (prodPMF (PMF.pure C) (prodPMF (PMF.pure A) ω))) := by
-  rw [composedPre, System.parallel_step]
-  refine Or.inr (Or.inr ⟨rfl, _, ?_, rfl⟩)
-  rw [System.parallel_step]
-  refine Or.inr (Or.inr ⟨rfl, prodPMF (PMF.pure A) ω, ?_, rfl⟩)
-  rw [System.parallel_step]
-  exact Or.inr (Or.inr ⟨rfl, ω, (System.mapIdle_step_some (by simp) ω).mpr hW, rfl⟩)
-
 /-! ### The two hiding frames -/
 
 theorem composedGroup_step_iff (P : Params) (q : ComposedState P) (l : Lab P.n)
@@ -2398,8 +2383,7 @@ theorem byz_answer (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n)
 
 /-- The matching on the silent label. The flat reading's own `terminate` row
 writes no coordinate the relation reads, so the composed answer to it is to
-stand still; the adversary's two injections and the coin resolution are
-answered by a transition. -/
+stand still; the adversary's two injections are answered by a transition. -/
 theorem match_tau (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     {w : NetState P.n} {o : ℕ → WCC.SpecState P.n}
     {G : ℕ → GBCA.LowPairState P.n} {C : ∀ _ : Fin P.n, CoreRec P.n}
@@ -2411,7 +2395,7 @@ theorem match_tau (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       ((composedGroup P).step (G, C, A, o) Lab.tau (Ω.bind id) ∨
         Ω.bind id = PMF.pure (G, C, A, o)) := by
   obtain ⟨hC, -, hA, hGv, hI⟩ := (protocolRel_mk P _ _ _ _ _ _ _).mp hR
-  rcases flatPre_tau_inv h with ⟨i, y, hstep, rfl⟩ | ⟨w', hn, rfl⟩ | ⟨ω, hW, rfl⟩
+  rcases flatPre_tau_inv h with ⟨i, y, hstep, rfl⟩ | ⟨w', hn, rfl⟩
   · obtain ⟨b, hh, hret, hcnt, hterm, hy⟩ := stepN_tau_terminate hstep
     obtain rfl : y = ((u i).1, { (u i).2 with terminated := true }) := pureN_inj hy
     have hrel : ProtocolRel P
@@ -2459,11 +2443,6 @@ theorem match_tau (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
       refine composedPre_tau_aNet P ?_
       rw [hA]
       exact Comp.ANetStep.byzD ⟨w.dsent, w.F⟩ k b hF
-  · obtain ⟨Ω, hrel, hb⟩ := match_prod P (x := u) (w := w) (G := G) (C := C) (A := A)
-      (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, hA, hGv, hI⟩)
-    refine ⟨Ω, hrel, Or.inl (composedGroup_of_tau P ?_)⟩
-    rw [hb]
-    exact composedPre_tau_wcc P hW
 
 
 /-- A row that leaves every round record where it stands leaves the whole

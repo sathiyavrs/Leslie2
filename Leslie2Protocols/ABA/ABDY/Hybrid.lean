@@ -77,7 +77,7 @@ budget-guarded insertion.
 The composed system and its rows, the protocol-shaped specification and its
 rows, and the substitution between them. The builders assemble a transition of
 a composite out of transitions of its components (`composedPre_vis_step`,
-`composedPre_tau_gbca`, `composedPre_tau_aNet`, `composedPre_tau_wcc`,
+`composedPre_tau_gbca`, `composedPre_tau_aNet`,
 `gbcaSide_owned`, `gbcaSide_idle`, `gbcaSide_tau`, `gbcaSide_fail`,
 `composedGroup_of_event`, `composedGroup_of_tau`, and their counterparts on the
 specification side). On the specification side the reading also runs in the
@@ -203,21 +203,6 @@ theorem composedPre_tau_aNet (P : Params) {G : ℕ → GBCA.ImplState P.n}
     rw [System.parallel_step]
     exact Or.inr (Or.inl ⟨rfl, PMF.pure A', hA, rfl⟩)
   · rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure]
-
-/-- Build a silent transition of the four components from the coin resolution —
-the one transition of the composite that is not Dirac. -/
-theorem composedPre_tau_wcc (P : Params) {G : ℕ → GBCA.ImplState P.n}
-    {C : ∀ _ : Fin P.n, CoreRec P.n} {A : ANetState P.n}
-    {o : ℕ → WCC.SpecState P.n} {ω : PMF (ℕ → WCC.SpecState P.n)}
-    (hW : (WCC.specFamily P).step o Lab.tau ω) :
-    (ABDY.composedPre P).step (G, C, A, o) (Sum.inl Lab.tau)
-      (prodPMF (PMF.pure G) (prodPMF (PMF.pure C) (prodPMF (PMF.pure A) ω))) := by
-  rw [ABDY.composedPre, System.parallel_step]
-  refine Or.inr (Or.inr ⟨rfl, _, ?_, rfl⟩)
-  rw [System.parallel_step]
-  refine Or.inr (Or.inr ⟨rfl, prodPMF (PMF.pure A) ω, ?_, rfl⟩)
-  rw [System.parallel_step]
-  exact Or.inr (Or.inr ⟨rfl, ω, (System.mapIdle_step_some (by simp) ω).mpr hW, rfl⟩)
 
 /-! ### The graded-agreement side's rows
 
@@ -538,14 +523,6 @@ theorem wccFamily_owned (P : Params) (o : ℕ → WCC.SpecState P.n) {l : Lab P.
   rw [WCC.specFamily, System.family_step_iff]
   exact Or.inr (Or.inl ⟨r, hr, PMF.pure x, h, by rw [PMF.pure_map]⟩)
 
-/-- A round of the coin oracle takes its own silent rule — the coin
-resolution, the one transition of the development that is not a Dirac. -/
-theorem wccFamily_tau (P : Params) (o : ℕ → WCC.SpecState P.n) {r : ℕ}
-    {μw : PMF (WCC.SpecState P.n)} (h : WCC.Step P r (o r) Lab.tau μw) :
-    (WCC.specFamily P).step o Lab.tau (μw.map (Function.update o r)) := by
-  rw [WCC.specFamily, System.family_step_iff]
-  exact Or.inl ⟨rfl, r, μw, h, rfl⟩
-
 /-- Corruption is broadcast to every round of the coin oracle's family. -/
 theorem wccFamily_fail (P : Params) (o : ℕ → WCC.SpecState P.n) (k : Fin P.n) :
     (WCC.specFamily P).step o (.fail k) (PMF.pure fun r => (o r).corrupt P k) := by
@@ -626,24 +603,9 @@ theorem hybridPre_tau_spec (P : Params) {G G' : ℕ → GBCA.SpecState P.n}
   refine Or.inr (Or.inl ⟨rfl, PMF.pure G', hG, ?_⟩)
   rw [prodPMF_pure_pure]
 
-/-- Build a silent transition of the four components from a coin resolution. -/
-theorem hybridPre_tau_wcc (P : Params) {G : ℕ → GBCA.SpecState P.n}
-    {C : ∀ _ : Fin P.n, CoreRec P.n} {A : ANetState P.n}
-    {o : ℕ → WCC.SpecState P.n} {ω : PMF (ℕ → WCC.SpecState P.n)}
-    (hW : (WCC.specFamily P).step o Lab.tau ω) :
-    (hybridPre P).step (G, C, A, o) (Sum.inl Lab.tau)
-      (prodPMF (PMF.pure G) (prodPMF (PMF.pure C) (prodPMF (PMF.pure A) ω))) := by
-  rw [hybridPre, System.parallel_step]
-  refine Or.inr (Or.inr ⟨rfl, _, ?_, rfl⟩)
-  rw [System.parallel_step]
-  refine Or.inr (Or.inr ⟨rfl, _, ?_, rfl⟩)
-  rw [System.parallel_step]
-  exact Or.inr (Or.inr ⟨rfl, ω,
-    (System.mapIdle_step_some (wccPull_inl Lab.tau) ω).mpr hW, rfl⟩)
-
-/-- A silent transition of the four components: no round loop has a `τ` row, so it
-is the specification family's binding exclusion, the ABA-side network's own
-injection, or the coin resolution. -/
+/-- A silent transition of the four components: no round loop has a `τ` row, and
+neither has the coin oracle, so it is the specification family's binding
+exclusion or the ABA-side network's own injection. -/
 theorem hybridPre_tau_inv (P : Params) {G : ℕ → GBCA.SpecState P.n}
     {C : ∀ _ : Fin P.n, CoreRec P.n} {A : ANetState P.n}
     {o : ℕ → WCC.SpecState P.n} {μ : PMF (HybridState P)}
@@ -651,9 +613,7 @@ theorem hybridPre_tau_inv (P : Params) {G : ℕ → GBCA.SpecState P.n}
     (∃ G', (specSide P).step G (Sum.inl Lab.tau) (PMF.pure G') ∧
         μ = PMF.pure (G', C, A, o)) ∨
     (∃ A', ANetStep P A (Sum.inl Lab.tau) (PMF.pure A') ∧
-        μ = PMF.pure (G, C, A', o)) ∨
-    (∃ ω, (WCC.specFamily P).step o Lab.tau ω ∧
-        μ = prodPMF (PMF.pure G) (prodPMF (PMF.pure C) (prodPMF (PMF.pure A) ω))) := by
+        μ = PMF.pure (G, C, A', o)) := by
   rw [hybridPre, System.parallel_step] at h
   rcases h with ⟨habs, -⟩ | ⟨-, μ₁, hG, rfl⟩ | ⟨-, μ₂, hrest, rfl⟩
   · exact absurd rfl habs
@@ -667,10 +627,10 @@ theorem hybridPre_tau_inv (P : Params) {G : ℕ → GBCA.SpecState P.n}
       rcases hrest with ⟨habs, -⟩ | ⟨-, μ₃, hA, rfl⟩ | ⟨-, ω, hW, rfl⟩
       · exact absurd rfl habs
       · obtain ⟨A', rfl⟩ := aNetStep_dirac hA
-        exact Or.inr (Or.inl ⟨A', hA,
-          by rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure]⟩)
-      · exact Or.inr (Or.inr ⟨ω,
-          (System.mapIdle_step_some (wccPull_inl Lab.tau) ω).mp hW, rfl⟩)
+        exact Or.inr ⟨A', hA,
+          by rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure]⟩
+      · exact (WCC.specFamily_tau_inv P
+          ((System.mapIdle_step_some (wccPull_inl Lab.tau) ω).mp hW)).elim
 
 /-! ### The two hiding frames -/
 

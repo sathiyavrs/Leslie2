@@ -935,7 +935,7 @@ theorem match_lab (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
 
 /-- The matching on the silent label. The protocol's own `terminate` row writes
 no coordinate the relation reads, so the composed answer to it is to stand
-still; the other two silent rows are answered by a transition. -/
+still; the adversary's two injections are answered by a transition. -/
 theorem match_tau (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
     {w : NetState P.n} {o : ℕ → WCC.SpecState P.n}
     {G : ℕ → GBCA.ImplState P.n} {C : ∀ _ : Fin P.n, CoreRec P.n}
@@ -947,7 +947,7 @@ theorem match_tau (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
       ((composedGroup P).step (G, C, A, o) Lab.tau (Ω.bind id) ∨
         Ω.bind id = PMF.pure (G, C, A, o)) := by
   obtain ⟨hC, -, hA, hG, hst⟩ := (protocolRel_mk P _ _ _ _ _ _ _).mp hR
-  rcases protocolPre_tau_inv P h with ⟨i, y, hy, rfl⟩ | ⟨w', hn, rfl⟩ | ⟨ω, hW, rfl⟩
+  rcases protocolPre_tau_inv P h with ⟨i, y, hy, rfl⟩ | ⟨w', hn, rfl⟩
   · obtain ⟨-, -, -, -, -, hyeq⟩ := stepN_tau_terminate hy
     obtain rfl : y = ((procs i).1, { (procs i).2 with terminated := true }) :=
       pureN_inj hyeq
@@ -999,12 +999,6 @@ theorem match_tau (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
       refine ⟨Ω, hrel, Or.inl ?_⟩
       rw [hbind]
       exact composedGroup_of_tau P (composedPre_tau_aNet P (ANetStep.byzD A k b hFA))
-  · obtain ⟨Ω, hrel, hbind⟩ := match_prod P (x := procs) (w := w) (G := G) (C := C)
-      (A := A) (ν := ω) (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
-        ⟨hC, rfl, hA, hG, hst⟩)
-    refine ⟨Ω, hrel, Or.inl ?_⟩
-    rw [hbind]
-    exact composedGroup_of_tau P (composedPre_tau_wcc P hW)
 
 /-! ### The simulation -/
 

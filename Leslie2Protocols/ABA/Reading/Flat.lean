@@ -1468,8 +1468,8 @@ theorem flatPre_lab_inv {u : ∀ _ : Fin P.n, ProcRecP P.n S}
   · rw [nlab_tau] at habs; exact absurd (Sum.inl_injective habs) hl
   · rw [nlab_tau] at habs; exact absurd (Sum.inl_injective habs) hl
 
-/-- A silent shared-label transition: one process terminating, the network's
-own injection, or the coin resolution. -/
+/-- A silent shared-label transition: one process terminating, or the network's
+own injection. The coin oracle has no silent row, so it contributes none. -/
 theorem flatPre_tau_inv {u : ∀ _ : Fin P.n, ProcRecP P.n S}
     {w : NetStateP P.n M G} {o : ℕ → WCC.SpecState P.n}
     {μ : PMF (FlatState P M S G)}
@@ -1480,9 +1480,7 @@ theorem flatPre_tau_inv {u : ∀ _ : Fin P.n, ProcRecP P.n S}
       μ = PMF.pure (Function.update u i y, w, o)) ∨
     (∃ w', FlatNetStep P M G callPayload ghostStep ghostOut w (Sum.inl .tau)
         (PMF.pure w') ∧
-      μ = PMF.pure (u, w', o)) ∨
-    (∃ ω, (WCC.specFamily P).step o Lab.tau ω ∧
-      μ = prodPMF (PMF.pure u) (prodPMF (PMF.pure w) ω)) := by
+      μ = PMF.pure (u, w', o)) := by
   rw [flatPre, System.parallel_step] at h
   rcases h with ⟨habs, -⟩ | ⟨-, μ₁, hS, rfl⟩ | ⟨-, μ₂₃, hNW, rfl⟩
   · exact absurd rfl habs
@@ -1492,9 +1490,9 @@ theorem flatPre_tau_inv {u : ∀ _ : Fin P.n, ProcRecP P.n S}
     rcases hNW with ⟨habs, -⟩ | ⟨-, μ₂, hN, rfl⟩ | ⟨-, μ₃, hO, rfl⟩
     · exact absurd rfl habs
     · obtain ⟨w', rfl⟩ := netStep_dirac hN
-      exact Or.inr (Or.inl ⟨w', hN, by rw [prodPMF_pure_pure, prodPMF_pure_pure]⟩)
-    · exact Or.inr (Or.inr ⟨μ₃,
-        (System.mapIdle_step_some (wccPull_inl Lab.tau) μ₃).mp hO, rfl⟩)
+      exact Or.inr ⟨w', hN, by rw [prodPMF_pure_pure, prodPMF_pure_pure]⟩
+    · exact (ABA.WCC.specFamily_tau_inv P
+        ((System.mapIdle_step_some (wccPull_inl Lab.tau) μ₃).mp hO)).elim
 
 /-! ### The bound bit on a return
 

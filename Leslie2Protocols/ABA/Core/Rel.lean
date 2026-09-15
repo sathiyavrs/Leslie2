@@ -284,7 +284,7 @@ structure Inv (P : Params) (g : ℕ → GBCA.SpecState P.n) (c : ABAState P)
   down_closed : ∀ r, Closed g (r + 1) → Closed g r
   /-- I7: cofinitely many rounds are open. -/
   quiescent : ∃ R, ∀ r, R ≤ r → ¬ Closed g r
-  /-- I5: coins flip only at closed rounds. -/
+  /-- I5: coins resolve only at closed rounds. -/
   w_bound : ∀ r, (w r).val ≠ .bot → Closed g r
   /-- I4: delivery soundness for DECIDED, per (receiver, sender, bit) (D12′).
   Honesty-free: sent sets only ever grow, so every receipt stays covered even
@@ -378,9 +378,9 @@ structure Inv (P : Params) (g : ℕ → GBCA.SpecState P.n) (c : ABAState P)
     ((c.procs id).phase = .idle ∨ (c.procs id).phase = .toCallG ∨
       (c.procs id).phase = .awaitG) →
     (c.procs id).est ≠ none
-  /-- I19 : flips happen in round order. Established at the flip
-  row: the threshold on `w (r + 1)` yields an honest caller (`Finset` pigeonhole, as in
-  `w_bound`), which by `round_flip` has already resolved round `r`'s coin. -/
+  /-- I19 : coins resolve in round order. Established at the resolving call: the threshold
+  on `w (r + 1)` yields a never-corrupted caller, the callers outnumbering `F`, and that
+  caller has by `round_flip` already resolved round `r`'s coin. -/
   w_order : ∀ r, (w (r + 1)).val ≠ .bot → (w r).val ≠ .bot
   /-- I20 : `F`-free residue of round-`0` `GBCA` call provenance — either the input
   is genuinely committed (write-once, permanent) or the caller was already corrupted (`F` only
@@ -389,10 +389,11 @@ structure Inv (P : Params) (g : ℕ → GBCA.SpecState P.n) (c : ABAState P)
   input_g0_perm : ∀ id b, (g 0).call id = some b → (c.procs id).input = some b ∨ id ∈ c.F
   /-- I21' : the `WCC`-side analogue of `call_round` (I8) — an honest `WCC_r`
   caller has reached round `r`. Established at the `callW` row exactly like `call_round` is at
-  `callG`; feeds `w_order`/`flip_alock`'s flip-row establishment (an honest caller of the
-  newly-flipped round has already resolved every earlier round's coin via `round_flip`). -/
+  `callG`; feeds `w_order`/`flip_alock`'s establishment at the resolving call (a
+  never-corrupted caller of the round being resolved has already resolved every earlier
+  round's coin via `round_flip`). -/
   w_call_round : ∀ r id, id ∉ c.F → (w r).called id = true → r ≤ (c.procs id).round
-  /-- I21 : a flip-threshold consequence — once round `r`'s coin has
+  /-- I21 : a resolution-threshold consequence — once round `r`'s coin has
   resolved, round `r` is either already `A`/`C`-graded or a `DissentResidue` certifies why a
   `B`/`C`-return could have fired there. -/
   flip_alock : ∀ r, (w r).val ≠ .bot → (g r).grade ≠ none ∨ DissentResidue P g c r
@@ -415,7 +416,8 @@ structure Inv (P : Params) (g : ℕ → GBCA.SpecState P.n) (c : ABAState P)
   /-- I24 : an honest `WCC_r` caller inherits `retg_residue`'s conclusion outright
   (it called `GBCA_r` and reached `toCallW`/`awaitW` in the same handshake). Established at the
   `callW` row from `retg_residue`; preserved trivially (conclusion permanent, `fail` shrinks the
-  quantifier). Feeds `flip_alock`'s flip-row establishment via the threshold's honest caller. -/
+  quantifier). Feeds `flip_alock`'s establishment at the resolving call, through the
+  threshold's never-corrupted caller. -/
   wcalled_residue : ∀ r id, id ∉ c.F → (w r).called id = true →
     (g r).grade ≠ none ∨ DissentResidue P g c r
   /-- I25 : every bound round permanently retains its firing quorum (`bindUnset`'s
