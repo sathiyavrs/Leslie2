@@ -275,7 +275,7 @@ resolved outcome, and $\dagger$ is a resolution that delivers to no process (D17
 
 Every transition rule is displayed as a guard above a labelled step into an explicit distribution.
 A Dirac target and a genuinely probabilistic one are therefore distinguishable in that display.
-Exactly two transitions in the whole development are non-Dirac: the flip of Transition System~1 and the coin resolution of Transition System~3.
+Exactly two transitions in the whole development are non-Dirac: the flip of Transition System~1 and the resolving call of Transition System~3.
 Both follow the same distribution, displayed in Definition~\ref{def:aba-params}; the flip reads it through the map that drops the bit (D21).
 
 
@@ -415,6 +415,14 @@ The labels D2, D3, D6, D7, D20 and D25 are not in use.
     A reading that computes the announced bit writes the record at the first return of a round, reads the same record back at every later return of it, and instantiates the relation as the equation between the announced bit and that record.
     Both algorithms read it that way; the ghost-free reading of Definition~\ref{def:aba-ghost-free} instantiates it as the relation that holds of every bit, which leaves the announcement to the adversary and puts the three readings in one rule table.
     The two instantiations differ in what they hold and where they write it --- one bit for ABDY22's reading, written at a return; the two gathers' frozen cores beside the bit for the gather-based one, the first core and the bit written at the link --- which is why the record is a parameter of the shared reading rather than part of its table.
+  \item D31: the coin resolves inside the access that crosses the
+    threshold, and the threshold counts accesses alone, after Fig.~7 of~\cite{GhostDraft}.
+    Transition System~3 resolves by a rule of its own, scheduled after the callers have arrived, and counts the corrupted set alongside them.
+    The call label therefore carries two rows under exclusive guards.
+    \leandeclnamed{callRecord}{PLTS.ABA.WCC.Step.callRecord} records a caller that leaves the count at $f$ or below, or that arrives at an already resolved $val$; \leandeclnamed{callResolve}{PLTS.ABA.WCC.Step.callResolve} records the caller whose own access carries the count above $f$ at $val = \bot$, and draws $val$ in the same step.
+    The count runs over the callers alone because a corrupted process reaches the instance as a caller, its Byzantine call arriving at the round's own $\mathrm{callW}$ row, so the count carries it already.
+    Were $F$ added to the count, a corruption could carry the count across the threshold on its own; the corruption broadcast is a deterministic transform taken by every component at once, so there is no row there on which the resolution could be drawn.
+    The instance has in consequence no rule on $\tau$ at all.
 \end{itemize}
 
 
@@ -843,7 +851,7 @@ there certified $f+1$ $F$-blind supporters of $v$ itself.
 \input{nodes/def-aba-wcc-spec}
 
 \blueprintfig{fig-wcc}{The WCC specification instance \leandecl{PLTS.ABA.WCC.specInst} (Transition System 3): the four-outcome coin resolution and the return of the common bit or an adversary-chosen bit.
-The \leandeclnamed{flip}{PLTS.ABA.WCC.Step.flip} guard requires more than $f$ callers counting corrupted, $|\{id\notin F:\ called\}\cup F|>f$, and is the sole probabilistic transition besides Transition System 1.
+The \leandeclnamed{callResolve}{PLTS.ABA.WCC.Step.callResolve} guard asks that the caller's own access carry the callers above $f$, $|\{id:\ called\}|>f$ at the recorded state, at $val = \bot$, every other call being \leandeclnamed{callRecord}{PLTS.ABA.WCC.Step.callRecord}; it is the sole probabilistic transition besides Transition System 1.
 On $val{=}1$ and $val{=}0$ every process returns the common bit, and on $val{=}\top$ each process returns an adversary-chosen bit.
 The branch $val{=}\dagger$ of mass $\failmass$ is a sink for returns (D17): \leandeclnamed{ret}{PLTS.ABA.WCC.Step.ret} has a positive guard, so no return is enabled there.}
 
@@ -860,9 +868,9 @@ The branch $val{=}\dagger$ of mass $\failmass$ is a sink for returns (D17): \lea
 \noindent The upstream $guess$ field is not encoded (D4).
 
 \noindent\textbf{Labels.}
-$\mathrm{callW}(r,id)$, $\mathrm{retW}(r,id,b)$, $\mathrm{fail}(id)$ and $\tau$, for $id \in [n]$ and $b \in \mathbb{B}$.
+$\mathrm{callW}(r,id)$, $\mathrm{retW}(r,id,b)$ and $\mathrm{fail}(id)$, for $id \in [n]$ and $b \in \mathbb{B}$.
 The upstream $\mathrm{guess}(b)$ label is not encoded (D4).
-The instance steps on the four label families above only; the family combinator supplies idle self-loops on every other label, the API labels of every round $r' \neq r$ among them.
+The instance steps on the three label families above only and has no rule on $\tau$ (D31); the family combinator supplies idle self-loops on every other label, the API labels of every round $r' \neq r$ among them.
 
 \noindent\textbf{Input-enabled labels.}
 $\mathrm{callW}(r,id)$, by the unconditional loop rule~2, and $\mathrm{fail}(id)$, whose rule~5 is total (D1).
@@ -874,27 +882,35 @@ $called = \mathrm{false}^{[n]}$, $ret = \mathrm{false}^{[n]}$, $val = \bot$ and 
 \noindent In each rule $id \in [n]$ and $b \in \mathbb{B}$ are parameters, and $s$ is the source state.
 
 \medskip
-\noindent\textbf{1.} \leandeclnamed{call}{PLTS.ABA.WCC.Step.call}.
-Guard $called[id] = \mathrm{false}$.
-\[ s \xrightarrow{\;\mathrm{callW}(r,id)\;}
-   \delta\bigl(s[\,called[id] := \mathrm{true}\,]\bigr) \]
+\noindent In rules~1 and~3, write $s' = s[\,called[id] := \mathrm{true}\,]$ for the state the access records; the count both rules read is taken at $s'$ (D31).
+
+\medskip
+\noindent\textbf{1.} \leandeclnamed{callRecord}{PLTS.ABA.WCC.Step.callRecord} (D31).
+Guard
+\[ \begin{aligned}
+     &called[id] = \mathrm{false},\\
+     &\neg\bigl(\,\bigl|\{j \in [n] \mid s'.called[j] = \mathrm{true}\}\bigr| > f
+        \ \wedge\ val = \bot\,\bigr).
+   \end{aligned} \]
+\[ s \xrightarrow{\;\mathrm{callW}(r,id)\;} \delta(s') \]
 
 \noindent\textbf{2.} \leandeclnamed{callLoop}{PLTS.ABA.WCC.Step.callLoop}.
 No guard.
 \[ s \xrightarrow{\;\mathrm{callW}(r,id)\;} \delta(s) \]
 
-\noindent\textbf{3.} \leandeclnamed{flip}{PLTS.ABA.WCC.Step.flip}.
+\noindent\textbf{3.} \leandeclnamed{callResolve}{PLTS.ABA.WCC.Step.callResolve} (D31).
 Guard
 \[ \begin{aligned}
-     &\bigl|\{id \in [n]\setminus F \mid called[id] = \mathrm{true}\} \cup F\bigr| > f,\\
+     &called[id] = \mathrm{false},\\
+     &\bigl|\{j \in [n] \mid s'.called[j] = \mathrm{true}\}\bigr| > f,\\
      &val = \bot.
    \end{aligned} \]
 \[ \begin{aligned}
-     s \xrightarrow{\;\tau\;}\ \
-     &\varepsilon\cdot\delta\bigl(s[\,val := 0\,]\bigr)
-     + \varepsilon\cdot\delta\bigl(s[\,val := 1\,]\bigr)\\
-     &{}+ (1-2\varepsilon-\failmass)\cdot\delta\bigl(s[\,val := \top\,]\bigr)
-     + \failmass\cdot\delta\bigl(s[\,val := \dagger\,]\bigr)
+     s \xrightarrow{\;\mathrm{callW}(r,id)\;}\ \
+     &\varepsilon\cdot\delta\bigl(s'[\,val := 0\,]\bigr)
+     + \varepsilon\cdot\delta\bigl(s'[\,val := 1\,]\bigr)\\
+     &{}+ (1-2\varepsilon-\failmass)\cdot\delta\bigl(s'[\,val := \top\,]\bigr)
+     + \failmass\cdot\delta\bigl(s'[\,val := \dagger\,]\bigr)
    \end{aligned} \]
 
 \noindent\textbf{4.} \leandeclnamed{ret}{PLTS.ABA.WCC.Step.ret}.
@@ -914,7 +930,7 @@ No guard.
 \medskip
 \noindent The guard of rule~4 is positive, so it holds of neither $\bot$ nor $\dagger$.
 A resolution to $\dagger$ therefore enables no return, and no process ever returns from that instance (D17).
-No other rule reads $\dagger$ either: rules 1, 2 and 5 read only $called$, $ret$ and $F$, and rule 3 requires $val = \bot$.
+No other rule tells $\dagger$ from the other resolved values: rule~3 asks $val = \bot$, so at $val = \dagger$ a call takes rule~1 or rule~2, and rules~2 and~5 read $called$, $ret$ and $F$ alone.
 
 \dynamics{The coin and its parameters}{%
 One coin resolution has four outcomes.
@@ -1757,15 +1773,15 @@ Its relation is defined on the state of $\mathrm{hybrid}(P)$ itself, where the r
 
 \input{nodes/thm-aba-hybrid-spec}
 
-\blueprintfig{fig-coresim}{The simulation of Theorem~\ref{thm:aba-hybrid-spec}, \leandecl{PLTS.ABA.coreSim}: the two-phase abstract state, its stutter answering every concrete row --- including the probabilistic coin flip --- under a constant coupling, and the single \leandeclnamed{decide}{PLTS.ABA.SpecStep.decide} step that leads the first $\mathrm{retABA}$, the two together forming one weak step.}
+\blueprintfig{fig-coresim}{The simulation of Theorem~\ref{thm:aba-hybrid-spec}, \leandecl{PLTS.ABA.coreSim}: the two-phase abstract state, its stutter answering every concrete row --- the coin's resolving call, the one probabilistic row among them, included --- under a constant coupling, and the single \leandeclnamed{decide}{PLTS.ABA.SpecStep.decide} step that leads the first $\mathrm{retABA}$, the two together forming one weak step.}
 
 \dynamics{What the simulation buys}{%
 The abstract state of a state of the hybrid is lazy.
 Every hidden row is answered by a stutter: the handshakes, the internal steps
 of the sub-protocol specifications, and the delivery and echo of DECIDED all
 leave the abstract state where it was.
-The probabilistic coin row is answered the same way, under the constant
-coupling that sends every outcome of the flip to the one unchanged abstract state, so the
+The coin's resolving call is answered the same way, under the constant
+coupling that sends every outcome of the draw to the one unchanged abstract state, so the
 abstract state never fires its own coin rule.
 The entire decision is deferred to the first visible return, where a single
 weak step writes the decision value before the return label is emitted.
@@ -2101,6 +2117,10 @@ The existence of refinement mappings.
 Gabriel Bracha.
 Asynchronous Byzantine agreement protocols.
 \emph{Information and Computation}, 75(2):130--143, 1987.
+
+\bibitem[GhostDraft]{GhostDraft}
+\emph{Asynchronous Randomized Consensus with Ghost Variables}.
+Working draft, 2026. The specification-style pseudocode whose Fig.~7 the coin encoding follows.
 
 \bibitem[LeslieBP]{LeslieBP}
 Gaspard Reghem.

@@ -42,7 +42,7 @@ randomness couples outcome-to-outcome, so the abstract side stays Dirac.
 
 The abstract state is **lazy** and **never-flipping**. It never fires `SpecStep.coinFlip`, so its
 mode is `Mode.idle` at every state it reaches (field `mode_idle`), `SpecStep.decide` is
-enabled throughout, and every concrete coin-flip row couples to a stutter. And it never
+enabled throughout, and the concrete coin's resolving call couples to a stutter. And it never
 decides *between* rows: it occupies one of two phases, keyed on `a.val`, and crosses from
 the first to the second at the visible `retABA` that opens phase 2.
 
@@ -75,10 +75,10 @@ every hidden row with a stutter. The single `retABA` answer runs `SpecStep.decid
 `Abs` reads only three projections of the concrete state: `F`, the per-process
 `input`/`returned` fields, and phase 2's certificate-and-holder pair. `Abs.frame` packages
 exactly this — `Abs` transfers along any frame preserving `F`, `input`, `returned` and
-carrying an `AbsFrame` (§ Certificates) for the last — and `Abs.w_swap` is the
-`w`-only corollary, since the abstract state never reads the coin state. Together they replace the
+carrying an `AbsFrame` (§ Certificates) for the last; the coin state is not among them,
+so `Abs` transfers along any change of it. The frame lemma replaces the
 per-row stutter arguments: every hidden row preserves the three projections, so its
-`Abs`-match is one `Abs.frame`/`Abs.w_swap` invocation rather than a bespoke
+`Abs`-match is one `Abs.frame` invocation rather than a bespoke
 re-derivation (the six Stage-C stutter lemmas of `Core/Abs.lean` are all instances).
 
 ### Certificates: decided values stated without the live pair
@@ -155,7 +155,7 @@ translation.
 | concrete row | label | abstract answer |
 |---|---|---|
 | every hidden handshake (`callG`/`retG`/`callW`/`retW`), `bindUnset`, DECIDED gossip τ | τ | stutter (`Abs.frame`; only `Inv` moves) |
-| **every** `WCC_r` coin flip | τ | constant-coupled stutter via the generic `stutter_step` (`Core/Sim.lean`): coupling `Ω := μ_C.map (·, pure a)`, so `ω = pure (pure a)` and `ω.bind id = pure a` (`Abs.w_swap`; the abstract state never flips) |
+| `callW` at the row that resolves `WCC_r`'s coin | τ | constant-coupled stutter via the generic `stutter_step` (`Core/Sim.lean`): coupling `Ω := μ_C.map (·, pure a)`, so `ω = pure (pure a)` and `ω.bind id = pure a` (the abstract state never flips, so every outcome of the draw lands on the same `a`) |
 | `callABA id b`, phase 1, genuine (idle-exit input) | `callABA id b` | `SpecStep.callSet` (the overwrite banks the concrete input and restores the ghost sync) |
 | `callABA id b`, otherwise (phase 2, or a concrete self-loop) | `callABA id b` | `SpecStep.callLoop` (first-write-wins; no `Abs`-field change) |
 | `retABA id b`, `id ∉ F`, phase 1 | `retABA id b` | `decide_step` then `SpecStep.ret` (`weakStep_of_run_then_step`) — see below |
@@ -369,9 +369,20 @@ fields), grouped:
   which is strictly weaker than "round `r` has excluded a bit", since a `C`-return excludes
   nothing itself:
   `down_closed` (closed rounds downward-closed), `quiescent` (cofinitely many rounds open),
-  `round_bound`, `call_round`, `w_call_round`, `w_bound`/`w_called` (flips/W-calls only at
-  closed rounds), `w_order`, `round_flip`. `Closed.congr`/`Closed.of_frame` are the two
+  `round_bound`, `call_round`, `w_call_round`, `w_bound`/`w_called` (coin resolutions and
+  W-calls only at closed rounds), `w_order`, `round_flip`. `Closed.congr`/`Closed.of_frame` are the two
   transport lemmas every row's frame facts feed.
+- **The coin clauses, established at the resolving call**: `w_bound`, `w_order` and
+  `flip_alock` are the conjuncts that read `(w r).val`, and the one row that writes it is
+  `callW`'s resolving row, so `Inv.step_callW_resolve` carries all three. Its input is
+  `Inv.exists_honest_wcaller`: the threshold counts more than `f` callers of round `r`
+  and `F_card` bounds the corrupted set by `f`, so the callers outnumber it and one of
+  them is never corrupted. That caller's `w_called`, `w_call_round` and `wcalled_residue`
+  carry `w_bound`, `w_order` and `flip_alock` in turn. `agree_locked`'s round-`r` corner is
+  vacuous, `round_flip` at an honest process past round `r` contradicting `val = ⊥`. The
+  other two rows of `callW` — the input-enabledness loop and the recording call — move
+  neither `val` nor `F`, and both go through `Inv.step_callW_dirac`; `Inv.step_callW`
+  assembles the three off `WCC.step_callW_inv`.
 - **Input/est provenance**: `input_g0`, `input_g0_perm`, `input_called`, `phase_input`,
   `est0`, `est_ret`, `est_prev`, `est_prev_ne`, `call_prov`, `bind_succ` (a bit excluded at
   round `r + 1` was already excluded at round `r`, or round `r` closed `C`-locked with round

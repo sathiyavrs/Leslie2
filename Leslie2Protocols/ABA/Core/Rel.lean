@@ -320,7 +320,7 @@ structure Inv (P : Params) (g : ℕ → GBCA.SpecState P.n) (c : ABAState P)
   /-- I9 : an honest `WCC_r` caller has already gotten `retG r`, so round `r` is closed. -/
   w_called : ∀ r id, id ∉ c.F → (w r).called id = true → Closed g r
   /-- I10 : an honest proc past round `r` has already resolved round `r`'s coin
-  (flips are permanent). -/
+  (a resolution is permanent). -/
   round_flip : ∀ r id, id ∉ c.F → r < (c.procs id).round → (w r).val ≠ .bot
   /-- I11 : round-0 pre-`retG` honest ests are the external input. -/
   est0 : ∀ id, id ∉ c.F → (c.procs id).round = 0 →

@@ -52,12 +52,6 @@ theorem Abs.frame {P : Params} {g g' : ℕ → GBCA.SpecState P.n} {c c' : ABASt
   · exact Or.inl ⟨hv, fun id b h => hghost id b (by rw [← hin id]; exact h)⟩
   · exact Or.inr ⟨v, hv, hAF.1 r v hcv, hAF.2 v ⟨r, hcv⟩ hpin⟩
 
-/-- `Abs` never reads `w`: the abstract state never fires `SpecStep.coinFlip`. -/
-theorem Abs.w_swap {P : Params} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
-    {w w' : ℕ → WCC.SpecState P.n} {a : SpecState P.n} (hA : Abs P g c w a) :
-    Abs P g c w' a :=
-  hA.frame rfl (fun _ => rfl) (fun _ => rfl) (AbsFrame.refl P g c)
-
 /-- `bindUnset`: stutters; the row's `AbsFrame` package carries the certificates. -/
 theorem Abs.step_gbcaTau {P : Params} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} {a : SpecState P.n} (hA : Abs P g c w a)

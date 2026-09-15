@@ -280,9 +280,11 @@ direction). Six sources, and the whole rendezvous alphabet folds into them:
 the specification family's binding exclusion, the view's own DECIDED messages
 (delivery, echo, Byzantine injection), and the four handshakes — `callG`/`retG`
 against a round specification, `callW`/`retW` against the coin oracle — each
-reached either by the shared label under the sub-protocol hiding or by the rendezvous that stands for it (`gcallLoop`, the
-Byzantine handshake rows, and the fused coin return `retWPub`). A replaced program
-contributes no source of its own: its self-loop on `callG`, `retG`, `callW`,
+reached either by the shared label under the sub-protocol hiding or by the
+rendezvous that stands for it (`gcallLoop`, the Byzantine handshake rows, and
+the fused coin return `retWPub`). The coin resolves inside the `callW`
+handshake (D31), so the coin oracle's draw arrives under that handshake's
+source. A replaced program contributes no source of its own: its self-loop on `callG`, `retG`, `callW`,
 `retW` and `dsnd` reads as the corrupted branch already present at those rows,
 `id ∈ F` being supplied by I0 (D23). -/
 theorem hybrid_step_tau (P : Params) (G : ℕ → GBCA.SpecState P.n)

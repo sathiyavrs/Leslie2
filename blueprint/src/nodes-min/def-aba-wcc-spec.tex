@@ -2,5 +2,6 @@
   \label{def:aba-wcc-spec}
   \lean{PLTS.ABA.WCC.Step}\lean{PLTS.ABA.WCC.specFamily}\leanok
   \uses{def:aba-labels, def:aba-params, def:idle-family}
-  Transition System 3 as a round-indexed instance and as the $\mathbb{N}$-indexed family over it, resolving its coin once by the distribution of Definition~\ref{def:aba-params}: \leandecl{PLTS.ABA.WCC.specInst} and \leandecl{PLTS.ABA.WCC.specFamily}.
+  Transition System 3 as a round-indexed instance and as the $\mathbb{N}$-indexed family over it, its call carrying the two rows \leandeclnamed{callRecord}{PLTS.ABA.WCC.Step.callRecord} and \leandeclnamed{callResolve}{PLTS.ABA.WCC.Step.callResolve}: \leandecl{PLTS.ABA.WCC.specInst} and \leandecl{PLTS.ABA.WCC.specFamily}.
+  The resolving row is the access at which the count \leandeclnamed{threshold}{PLTS.ABA.WCC.SpecState.threshold}, taken over the callers alone (D31), first passes $f$ at the recorded state \leandeclnamed{record}{PLTS.ABA.WCC.SpecState.record}, and it draws $val$ by the distribution of Definition~\ref{def:aba-params}.
 \end{definition}

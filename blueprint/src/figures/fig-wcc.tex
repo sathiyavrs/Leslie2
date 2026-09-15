@@ -4,21 +4,24 @@
     every state/.style={draw, minimum size=1.15cm, align=center, font=\small},
     lbl/.style={font=\footnotesize, fill=white, inner sep=1.5pt}]
   \node[state, initial, initial text={}] (bot) at (0,0)     {$val{=}\bot$};
-  \node[state] (b1)  at (4.3,2.2)  {$val{=}1$};
-  \node[state] (b0)  at (4.3,0)     {$val{=}0$};
-  \node[state] (top) at (4.3,-2.2) {$val{=}\top$};
-  \node[state] (undelivered) at (4.3,-4.6) {$val{=}\dagger$};
+  \node[state] (b1)  at (5.2,2.2)  {$val{=}1$};
+  \node[state] (b0)  at (5.2,0)     {$val{=}0$};
+  \node[state] (top) at (5.2,-2.2) {$val{=}\top$};
+  \node[state] (undelivered) at (5.2,-4.6) {$val{=}\dagger$};
   \path
-    (bot) edge node[lbl, sloped, above, pos=0.55]{\texttt{flip}\,$[\varepsilon]$} (b1)
-    (bot) edge node[lbl, above]{\texttt{flip}\,$[\varepsilon]$} (b0)
-    (bot) edge node[lbl, sloped, above, pos=0.5]{\texttt{flip}\,$[1{-}2\varepsilon{-}\failmass]$} (top)
-    (bot) edge node[lbl, sloped, below, pos=0.62]{\texttt{flip}\,$[\failmass]$} (undelivered)
+    (bot) edge node[lbl, sloped, above, pos=0.58]{\texttt{callResolve}\,$[\varepsilon]$} (b1)
+    (bot) edge node[lbl, above]{\texttt{callResolve}\,$[\varepsilon]$} (b0)
+    (bot) edge node[lbl, sloped, above, pos=0.5]{\texttt{callResolve}\,$[1{-}2\varepsilon{-}\failmass]$} (top)
+    (bot) edge node[lbl, sloped, below, pos=0.66]{\texttt{callResolve}\,$[\failmass]$} (undelivered)
     (bot) edge[loop above, looseness=6]
-      node[lbl, above]{\texttt{call} / \texttt{callLoop}} (bot)
+      node[lbl, above]{\texttt{callRecord} / \texttt{callLoop}} (bot)
     (b1)  edge[loop right, looseness=6] node[lbl, right]{\texttt{ret}\,$1$ (common)} (b1)
     (b0)  edge[loop right, looseness=6] node[lbl, right]{\texttt{ret}\,$0$ (common)} (b0)
     (top) edge[loop right, looseness=6]
-      node[lbl, right, align=left]{\texttt{ret}\,$b$\\ (adv.-chosen)} (top);
+      node[lbl, right, align=left, text width=2.1cm]{\texttt{ret}\,$b$\\ (adv.-chosen)} (top);
   \node[right=0.55cm of undelivered, font=\footnotesize, align=left]
     {no \texttt{ret} enabled};
+  \node[font=\footnotesize, align=left, text width=3.8cm] at (0.2,-3.3)
+    {\texttt{callResolve} is the call whose own access carries the caller
+     count above $f$ at $val{=}\bot$; every other call is \texttt{callRecord}};
 \end{tikzpicture}

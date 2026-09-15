@@ -17,7 +17,7 @@ with probability at least `1 − g(ε, δ_f)` — in general.
 The failure mass is in the encoding, not in the statement of the goal. Both coin
 resolutions of the development follow `ABA.Params.wccPMF` (`ABA/Vocabulary/Params.lean`), which puts
 mass `δ_f` (the Lean field `Params.δ`, `δ_f` in the blueprint) on the outcome `undelivered`: the
-coin resolves without delivering. In TS 3 that outcome is absorbing — `WCC.Step.flip`
+coin resolves without delivering. In TS 3 that outcome is absorbing — `WCC.Step.callResolve`
 fires once per instance and `WCC.Step.ret` has a positive guard — so the
 processes awaiting an undelivered round's return never return, in any extension, under any
 scheduler. A single such round therefore strands positive mass, and no fairness
@@ -203,9 +203,10 @@ exchange at each participating process and then exhibit those denials at each re
 The `δ_f` mass is encoded twice, and the two encodings agree. Neither is visible to
 safety; both matter to any fair-inclusion proof.
 
-In TS 3 the failure outcome is absorbing. `WCC.Step.flip` requires `hv : s.val = .bot`,
-so an instance resolves once, and `WCC.Step.ret`'s guard `s.val = .top ∨ s.val = .bit b`
-is positive, so a resolution at `TVal.undelivered` enables no return in any extension.
+In TS 3 the failure outcome is absorbing. `WCC.Step.callResolve` requires `hv : s.val = .bot`,
+so an instance resolves once — every later call takes `WCC.Step.callRecord` (D31) — and
+`WCC.Step.ret`'s guard `s.val = .top ∨ s.val = .bit b` is positive, so a resolution at
+`TVal.undelivered` enables no return in any extension.
 
 In TS 1 the same mass puts the control mode at `Mode.terminal`, which is globally absorbing
 (D17). `PLTS.ABA.SpecStep.coinFlip` is one-shot: its guard `hm : s.mode = .idle` admits it
@@ -261,7 +262,7 @@ pushed forward along a map that forgets which bit was delivered: one bit to `loc
 other bit and the adversarial outcome to `release`, the failure outcome to `undelivered`. The
 three masses are all the rules read. Reading `lock` as "the coin agreed with the round's
 surviving bit" is accordingly not a component of TS 1 — it is what a liveness refinement
-would supply, as an outcome coupling between the concrete flip and `flipPMF`: the
+would supply, as an outcome coupling between the coin's resolving call and `flipPMF`: the
 agree-outcome, of mass `ε`, coupled to `lock`; the disagree- and adversarial outcomes to
 `release`; the failure outcome, of mass `δ_f`, to `undelivered`. Safety needs none of it, which
 is why the specification carries the mode and not the bit.

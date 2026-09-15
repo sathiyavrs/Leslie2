@@ -54,7 +54,8 @@ out-of-scope Unpredictability property), and `fail` is the determinised
 
 * **D31 (resolution inside the crossing access).** The coin resolves inside
   the access that crosses the threshold, and the threshold counts accesses
-  alone, following Fig. 7 of the current paper. Transition System 3 resolves
+  alone, following Fig. 7 of *Asynchronous Randomized Consensus with Ghost
+  Variables* (working draft, 2026). Transition System 3 resolves
   by a separately scheduled rule and counts the corrupted set alongside the
   callers.
 

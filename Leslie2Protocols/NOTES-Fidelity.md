@@ -24,8 +24,8 @@ file are the source blueprint's. The encoding
 follows the source blueprint; where the source blueprint departs from ABDY22 the
 encoding inherits the departure, with the single exception of §1.
 
-**The D-registry is elsewhere.** The catalogued deviations — D1, D4, D5, D8–D19, D21–D28,
-with D12 refined to D12′ — are cited at the point of use in the ABA module
+**The D-registry is elsewhere.** The catalogued deviations — D1, D4, D5, D8–D19, D21–D24,
+D26–D31, with D12 refined to D12′ — are cited at the point of use in the ABA module
 docstrings and glossed one by one in the blueprint chapter (the Deviations paragraph of
 `blueprint/src/content.tex`), which is the registry of record.
 
@@ -100,6 +100,20 @@ contained in the committed inputs may be returned. The union is one such choice,
 reading widens the implementation's nondeterminism; every guard the proofs consume is
 monotone in the chosen set, and the refinements hold for the wider reading, hence for
 the union.
+
+**The coin's `⊤` outcome answered at the return.** `WCC.Step.callResolve` draws the coin
+inside the access that carries the caller count above `f`, which is Fig. 7 of the ghost-variables draft against
+TS 3's separately scheduled resolution; that departure carries a D-number (D31) and the
+blueprint registry is where it is glossed. What carries none is how the outcome
+`TVal.top` is answered. Three of the four outcomes fix what every caller receives. `⊤`
+fixes nothing: `WCC.Step.ret`'s guard `val = .top ∨ val = .bit b` admits either bit, so the
+adversary picks a process's returned bit at that process's return. The draft's Fig. 7 fixes the
+responses at the resolution instead, one bit per process written when the coin resolves. The
+two admit the same per-process assignments, and the encoding lets the adversary choose later,
+with more of the run in view, so the encoding's coin is the more permissive of the two. A
+specification constrains from above, so the refinements hold for the wider reading, hence for
+the narrower one. The `guess` label and the `guess` state field are omitted under either
+reading (D4, §6).
 
 **Terminating `return` as state.** The pseudocode's `return` ends the process; the
 encoding renders that as a fire-once flag — `ProcState.returned`, guarded by the `hr`
