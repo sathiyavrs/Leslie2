@@ -37,3 +37,6 @@ blueprint/src/*.toc
 
 # Claude Code local state
 .claude/
+
+# Local presentation, not part of the repository
+slides/
