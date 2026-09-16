@@ -20,16 +20,18 @@
   \draw[->] (p2) to[loop below, looseness=5]
     node[below=2pt, font=\footnotesize]{stutter} (p2);
   \draw[->, thick] (p1) -- (p2)
-    node[pos=0.5, below=4pt, font=\footnotesize, align=center, fill=white, inner sep=1.5pt]
+    node[pos=0.5, below=4pt, font=\footnotesize, align=center, text width=6.8cm,
+         fill=white, inner sep=1.5pt]
       {weak step \texttt{bindUnset};\,\texttt{ret}\\
-       $f{+}1$ via $input\_supp$, excluded bit via the exclusion certificate};
+       $f{+}1$ via $input\_supp$, the excluded bit via the exclusion certificate};
   % instRel verticals
   \draw[dashed, ->] (t1) -- (p1) node[pos=0.55, right=1pt, font=\scriptsize]{call};
   \draw[dashed, ->] (t2.south) -- (3.1,0.3);
-  \draw[dashed, ->] (t3.south) -- (8.2,0.12)
+  \draw[dashed, ->] (t3.south) -- (8.2,0.3)
     node[pos=0.45, right=1pt, font=\scriptsize]{run};
   \draw[dashed, ->] (t4) -- (p2) node[pos=0.55, right=1pt, font=\scriptsize]{graded};
-  \node[font=\footnotesize, align=center] at (6.6,-2.75)
+  \node[font=\footnotesize, align=center] at (6.6,-3.1)
     {dashed $=$ $\mathrm{instRel}$; deliveries/relay/echo/vote/bind/echo5 $\mapsto$ stutter;\\
-     every return row splits on $excluded$, $C$-returns included};
+     every return row splits on $excluded$, $C$-returns included;\\
+     $excluded$ is the excluded-bit reading of the message state's bound bit};
 \end{tikzpicture}

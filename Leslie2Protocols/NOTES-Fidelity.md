@@ -25,7 +25,7 @@ follows the source blueprint; where the source blueprint departs from ABDY22 the
 encoding inherits the departure, with the single exception of §1.
 
 **The D-registry is elsewhere.** The catalogued deviations — D1, D4, D5, D8–D19, D21–D24,
-D26–D31, with D12 refined to D12′ — are cited at the point of use in the ABA module
+D26–D33, with D12 refined to D12′ — are cited at the point of use in the ABA module
 docstrings and glossed one by one in the blueprint chapter (the Deviations paragraph of
 `blueprint/src/content.tex`), which is the registry of record.
 
@@ -321,6 +321,9 @@ repaired at the rule; the sixth entry is a cross-reference.
   of a sender outside `F` dominated by `f + 1` processes outside `F`, a counting argument
   over the sent sets locates such a sender, and BIND-by-reliable-broadcast is what keeps
   the payloads the certificate counts write-once under D1's adaptive corruption.
+  That broadcast of the `BIND` payloads is D32, and the binding form of both of the
+  round's gathers, which is what makes the second gather's core a history variable
+  rather than the prophecy variable of Remark 22, is D33.
   `DESIGN-GatherTiers.md` carries the counting argument in full.
 
 ## 6. Scope boundaries

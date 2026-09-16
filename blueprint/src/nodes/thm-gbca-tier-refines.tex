@@ -2,7 +2,8 @@
   \label{thm:gbca-tier-refines}
   \lean{PLTS.ABA.GBCA.LowPairRel}\lean{PLTS.ABA.GBCA.lowRefines}\lean{PLTS.ABA.GBCA.IdealRel}\lean{PLTS.ABA.GBCA.idealRefines}\leanok
   \uses{def:aba-gbca-gather-low, def:aba-gbca-pair, thm:gather-low-refines, thm:gather-core}
-  Each reading of the round is forward-simulated by the one above it, along the componentwise pairing of the gather-level relation: the fully concrete instance by the instance over broadcast components, along Theorem~\ref{thm:gather-low-refines}'s relation at both gather coordinates, and that instance by the two-gather round over specifications, along Theorem~\ref{thm:gather-core}'s.
+  Each reading of the round is forward-simulated by the one above it, along the componentwise pairing of the gather-level relation with the equality of the bound coordinate: the fully concrete instance by the instance over broadcast components, along Theorem~\ref{thm:gather-low-refines}'s relation at both gather coordinates, and that instance by the two-gather round over specifications, along Theorem~\ref{thm:gather-core}'s.
+  The round's bound bit is the third factor of each of the three states, and neither substitution touches it.
 \end{theorem}
 
 \begin{proof}\leanok

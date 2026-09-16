@@ -1,41 +1,35 @@
 % The gather-based protocol (PLTS.ABA.AFW.protocol) and the view that reads it
-% as a composition (PLTS.ABA.AFW.toPair). What differs from ABDY22's
-% protocol is the shape of the two halves: the record is process-major and the
-% adversary holds one tagged sent-set family in place of 4n + 2 message states.
+% as a composition (PLTS.ABA.AFW.toPair).
 \begin{tikzpicture}[
     >={Stealth[round]}, semithick,
     prog/.style={draw, rounded corners, align=center, font=\scriptsize,
-      minimum width=2.4cm, minimum height=1.5cm, inner sep=3pt},
+      minimum width=2.4cm, minimum height=1.0cm, inner sep=3pt},
     comp/.style={draw, rounded corners, align=center, font=\scriptsize,
       minimum width=4.6cm, minimum height=1.2cm, inner sep=3pt},
     ann/.style={font=\scriptsize, align=center, inner sep=1.5pt}]
-  \draw[dashed, rounded corners] (-1.2,-5.5) rectangle (11.0,3.3);
+  \draw[dashed, rounded corners] (-1.2,-3.95) rectangle (11.0,3.3);
   \node[font=\footnotesize] at (8.6,3.0) {$\mathrm{abstract}\,\mathrm{hiddenAPI}$};
-  \draw[dashed, rounded corners] (-0.9,-5.2) rectangle (10.7,2.6);
+  \draw[dashed, rounded corners] (-0.9,-3.65) rectangle (10.7,2.6);
   \node[font=\footnotesize] at (7.2,2.32)
     {$\mathrm{relabel} \circ \mathrm{abstract}\,\mathrm{netEvtLabels}$};
   \draw[thick] (-0.75,1.75) -- (10.55,1.75);
   \node[ann, anchor=west] at (-0.55,2.05) {$\mathrm{NLab}(n)$ over the tagged messages};
   % the n programs
   \node[prog] (p1) at (0.65,0.4) {program $1$};
-  \node[prog, minimum width=3.4cm, text width=3.2cm] (pj) at (4.3,0.4)
-    {program $j$\\[2pt]\emph{process-major} record: $j$'s local state in \emph{every} instance of every round};
+  \node[prog, minimum width=3.0cm] (pj) at (4.3,0.4)
+    {program $j$\\ \emph{process-major} record};
   \node[prog] (pn) at (8.4,0.4) {program $n$};
   \node[font=\scriptsize] at (2.2,0.4)  {$\cdots$};
   \node[font=\scriptsize] at (6.35,0.4) {$\cdots$};
-  \foreach \x in {0.65,4.3,8.4} \draw[<->] (\x,1.75) -- (\x,1.15);
-  % the adversary and the oracle, reached through the gaps between the programs
-  \node[comp] (adv) at (2.4,-2.6)
-    {the network adversary:\\ \emph{one} tagged sent-set family per round,\\
-     $\mathrm{ga}_1$, $\mathrm{ga}_2$, $\mathrm{brbIn}_i\,k$, $\mathrm{brbBind}_i\,k$,\\
-     beside the DECIDED sets and $F$};
-  \node[comp] (w) at (8.0,-2.6)
-    {$\mathrm{WCC.specFamily}(P)$ along $\mathrm{wccPull}$:\\ the one non-Dirac component};
-  % the two shared components are fed round the outside, clear of the programs
-  \draw[<->] (-0.75,1.75) -- (-0.75,-2.6) -- (0.1,-2.6);
-  \draw[<->] (10.55,1.75) -- (10.55,-2.6) -- (10.3,-2.6);
-  \node[ann, text width=11.0cm] at (4.9,-4.5)
-    {the composed reading of the same round carries $4n + 2$ separate message states
-     and indexes its local states by instance, then by process;
-     $\mathrm{toPair}$ slices the one sent-set family and transposes the records back};
+  \foreach \x in {0.65,4.3,8.4} \draw[<->] (\x,1.75) -- (\x,0.9);
+  % the adversary and the oracle, reached round the outside, clear of the programs
+  \node[comp] (adv) at (2.4,-1.95)
+    {the network adversary:\\ one tagged sent-set family per round,\\
+     the DECIDED sets, $F$, the ghost record};
+  \node[comp] (w) at (7.8,-1.95)
+    {$\mathrm{WCC.specFamily}(P)$ along $\mathrm{wccPull}$};
+  \draw[<->] (-0.75,1.75) -- (-0.75,-1.95) -- (adv.west);
+  \draw[<->] (10.55,1.75) -- (10.55,-1.95) -- (w.east);
+  \node[ann] at (4.9,-3.25)
+    {$\mathrm{toPair}$ assembles the composed round's state from this one};
 \end{tikzpicture}

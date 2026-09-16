@@ -3,7 +3,7 @@
   \lean{PLTS.ABA.GBCA.cnt_heavy_of_subMap}\lean{PLTS.ABA.GBCA.boundOfCore_of_heavy}\lean{PLTS.ABA.GBCA.cnt_boundOfCore_light}\lean{PLTS.ABA.GBCA.PairInv}\lean{PLTS.ABA.GBCA.ExcludedEv}\lean{PLTS.ABA.GBCA.PairRel}\lean{PLTS.ABA.GBCA.pairRefines}\leanok
   \uses{def:aba-gbca-pair, def:aba-gbca-spec}
   The two-gather round is forward-simulated by the GBCA specification instance (Transition System~2): \leandecl{PLTS.ABA.GBCA.pairRefines}.
-  The exclusion set and the grade guard are certified on the two frozen cores --- a bit is excluded when the first core carries it on fewer than $|S| - f$ entries --- and excludes fire on demand under the returns that need them.
+  The exclusion set and the grade guard are certified on the two cores, each written once, --- a bit is excluded when the first core carries it on fewer than $|S| - f$ entries --- and excludes fire on demand under the returns that need them.
   The bit a return announces is the round's bound bit, so the specification's guard on the announcement and its guard pair on the value are the same pair.
 \end{theorem}
 

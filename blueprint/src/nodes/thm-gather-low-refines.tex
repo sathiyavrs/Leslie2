@@ -3,7 +3,7 @@
   \lean{PLTS.ABA.Gather.LowRel}\lean{PLTS.ABA.Gather.gatherLow}\leanok
   \uses{def:aba-gather-low, def:aba-gather-ideal, thm:brb-refines}
   The gather implementation over Bracha instances is forward-simulated by the gather implementation over broadcast specifications.
-  The relation is the identity on the gather two-part state together with the broadcast refinement relation of Theorem~\ref{thm:brb-refines} at each of the $2n$ coordinates.
+  The relation is the identity on the gather two-part state, the broadcast refinement relation of Theorem~\ref{thm:brb-refines} at each of the $2n$ coordinates, and the equality of the two sides' $core$ fields.
   A row that reads a derived delivery --- an approved entry, a committed bind payload --- is answered by a $\tau$-chain that fires the lagging commits of the specification coordinates it reads, then the row itself.
 \end{theorem}
 

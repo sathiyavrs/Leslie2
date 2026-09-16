@@ -16,7 +16,7 @@
   Which rows belong to the implementation is settled by the label: a program's row is the implementation's business exactly when its label is one of $\mathrm{stageOwn}(j)$ --- the graded-agreement call and return at $j$, $j$'s own stage multicast, a delivery addressed to $j$, and $j$'s own call against an already-called record.
   A reading must supply four things about its rows: that they carry such a label, that they fire only at an unreplaced program, that they are Dirac, and that a return row takes the announced bit free, firing at every other bit with the same successor (D29).
   That is \leandecl{PLTS.ABA.Net.IsStageTable}; the lemmas that read a row off its label consume the first three, and Theorem~\ref{thm:aba-erasure} the fourth.
-  The rendezvous alphabet is parametric in $M$ in its two stage constructors and fixed in every other, and is hidden before anything outside sees it, so two readings of the same protocol need not agree on it.
+  The rendezvous alphabet is parametric in $M$ in its two stage constructors and fixed in every other, and is hidden before it leaves the composition, so two readings of the same protocol need not agree on it.
   The adversary holds one further record, and a reading supplies it too (D30).
   For each round $r$ its state carries a ghost record $ghostRec(r)$ of a type $G$ the reading fixes.
   The record belongs to the network: no program's row reads it and no program's record holds it.

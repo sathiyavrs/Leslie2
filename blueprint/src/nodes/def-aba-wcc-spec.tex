@@ -7,8 +7,8 @@
   \leandeclnamed{callRecord}{PLTS.ABA.WCC.Step.callRecord} records a caller that leaves the count at $f$ or below, or that arrives at a resolved $val$.
   \leandeclnamed{callResolve}{PLTS.ABA.WCC.Step.callResolve} takes the caller whose access carries the count above $f$ at $val = \bot$, records it, and draws $val$ by the distribution of Definition~\ref{def:aba-params}, the one both coin resolutions of the development share.
   The count is \leandeclnamed{threshold}{PLTS.ABA.WCC.SpecState.threshold}, read at the recorded state \leandeclnamed{record}{PLTS.ABA.WCC.SpecState.record} and taken over the callers alone (D31).
-  A third row \leandeclnamed{callLoop}{PLTS.ABA.WCC.Step.callLoop} answers a call at every state and records no caller, which makes the call label input-enabled: the crossing access is therefore a recorded one, and the scheduler may defer the resolution past any number of calls.
+  A third row \leandeclnamed{callLoop}{PLTS.ABA.WCC.Step.callLoop} carries a call at every state and records no caller, which makes the call label input-enabled: the crossing access is therefore a recorded one, and the scheduler may defer the resolution past any number of calls.
   The resolving row is the only rule of this system that is not Dirac, and the system carries no silent rule.
-  Its fourth outcome $\dagger$, of mass $\failmass$, delivers to no process and so freezes the round it resolves (D17).
+  Its fourth outcome $\dagger$, of mass $\failmass$, delivers to no process, so the round it resolves stands still (D17).
   Full rule table: \leandecl{PLTS.ABA.WCC.specFamily}.
 \end{definition}

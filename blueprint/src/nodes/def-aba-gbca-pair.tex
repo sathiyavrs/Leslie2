@@ -2,7 +2,7 @@
   \label{def:aba-gbca-pair}
   \lean{PLTS.ABA.GBCA.cand}\lean{PLTS.ABA.GBCA.gradeOf}\lean{PLTS.ABA.GBCA.boundOfCore}\lean{PLTS.ABA.GBCA.PairState}\lean{PLTS.ABA.GBCA.PairStep}\lean{PLTS.ABA.GBCA.pairInst}\leanok
   \uses{def:aba-gather-spec, def:aba-gbca-spec, def:aba-labels}
-  The graded agreement of~\cite{AFW25} --- its Algorithm~4 at $R = 2$, the two-gather branch, with the grade read off the second gather's counts in place of the approximate-agreement subroutine of lines~7 and~8 (D24) --- over two gather specification instances of Definition~\ref{def:aba-gather-spec}, the first at payload type $\mathbb{B}$ and the second at $\mathbb{B} \cup \{\bot\}$.
+  The graded agreement of~\cite{AFW25} --- its Algorithm~4 at $R = 2$, the two-gather branch, with the grade read off the second gather's counts in place of the approximate-agreement subroutine of lines~7 and~8 (D24) --- over two gather specification instances of Definition~\ref{def:aba-gather-spec}, each the binding form (D33), the first at payload type $\mathbb{B}$ and the second at $\mathbb{B} \cup \{\bot\}$.
   The state is the triple of the two gather states and the round's bound bit: the round's per-process input is the first instance's $call$, the candidate the second's, and the round's return flags the second's $ret$.
   For a first-gather output $g$, the candidate is
   \[
@@ -17,6 +17,6 @@
   The third factor is auxiliary state (D29): no program reads it and no guard consults it.
   The link row writes it, at the round's first link and once only, as $\mathrm{boundOfCore}$ of the core the first gather's return carries, and every graded return announces it on its label.
   For a payload set $S$, $\mathrm{boundOfCore}(S)$ is the bit heavy in $S$ --- carried by at least $|S| - f$ of its entries --- and $1$ where neither bit is.
-  At the sizes the freeze of Definition~\ref{def:aba-gather-spec} allows, $|S| \ge n - f > 2f$, at most one bit is heavy, so a return handing out $v$ announces $v$ and a return handing out nothing announces a bit whose complement no return can hand out.
+  At the sizes the core rule of Definition~\ref{def:aba-gather-spec} allows, $|S| \ge n - f > 2f$, at most one bit is heavy, so a return handing out $v$ announces $v$ and a return handing out nothing announces a bit whose complement no return can hand out.
   Full construction: \leandecl{PLTS.ABA.GBCA.pairInst}.
 \end{definition}

@@ -9,7 +9,7 @@
 \begin{proof}\leanok
   \uses{def:aba-gather-spec, thm:gather-core, thm:gather-low-refines, thm:trace-support, thm:forward-sound}
   At the specification the three clauses come from the rules alone.
-  The freeze is the only writer of $core$ and fires only from $core = \bot$, so the field keeps its value once written and every return reads the same set; the return rule asks $C \sqsubseteq g$ outright; and the size bound is the freeze's own guard, carried forward as a state invariant by induction along the execution.
+  \leandeclnamed{bindCore}{PLTS.ABA.Gather.Step.bindCore} is the only writer of $core$ and fires only from $core = \bot$, so the field keeps its value once written and every return reads the same set; the return rule requires $C \sqsubseteq g$ outright; and the size bound is that rule's own guard, carried forward as a state invariant by induction along the execution.
   Theorem~\ref{thm:trace-support} turns a positive-probability trace into a genuine execution whose return labels are steps of those rules, which is the trace form.
   The two implementations inherit the predicate along the soundness of their refinements: the implementation over broadcast specifications along Theorem~\ref{thm:gather-core}, and the implementation over Bracha instances along Theorem~\ref{thm:gather-low-refines} composed with it.
   What makes that transfer say anything is that the core is on the label.

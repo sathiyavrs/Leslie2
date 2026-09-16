@@ -15,7 +15,7 @@
   \uses{def:aba-gbca-spec, thm:gbca-spec-binding, thm:trace-support, thm:forward-sound, thm:gbca-inst-refines, thm:gbca-pair-refines, thm:gbca-tier-refines, thm:gbca-gather-refines}
   Theorem~\ref{thm:trace-support} turns a positive-probability trace into a genuine execution of the instance in which each round-$r$ return label of the trace is a step of a return rule at some state.
   The two clauses are then Theorem~\ref{thm:gbca-spec-binding} read at those steps: the announcements of any two of them agree, and a value-bearing one announces the value it hands out.
-  Nothing beyond positive probability is asked of the trace, and nothing beyond membership in one execution of the returns.
+  Nothing beyond positive probability is required of the trace, and nothing beyond membership in one execution of the returns.
   This is what carries binding down a chain of refinements: the property is stated on labels, so an inclusion of achievable trace distributions transports it.
   The four statements below Transition System~2 are that transport applied to the soundness inclusion of each refinement, by Theorem~\ref{thm:forward-sound}.
 \end{proof}

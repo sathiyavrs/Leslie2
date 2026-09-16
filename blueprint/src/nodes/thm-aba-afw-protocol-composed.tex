@@ -3,8 +3,9 @@
   \lean{PLTS.ABA.AFW.toPair}\lean{PLTS.ABA.AFW.ProtocolRel}\lean{PLTS.ABA.AFW.protocolSim}\lean{PLTS.ABA.AFW.protocol_composed}\leanok
   \uses{def:aba-afw-protocol, def:aba-afw-sides, thm:forward-sound, def:achievable}
   The gather-based protocol is forward-simulated by its composed reading, and hence every trace distribution it achieves is achieved there.
-  The relation is a function rather than a correspondence: the round loops and the coin oracle are shared objects, the ABA-side network is the DECIDED sets beside the corrupted set, and each round's instance is the view $\mathrm{toPair}$ of the flat state.
-  Assembling that view undoes the two rearrangements the flat reading performs --- the local states are transposed back out of the round records the $n$ processes hold, and each message state is sliced out of the adversary's single tagged sent-set family.
+  The relation has five conjuncts: the round loops and the coin oracle are shared objects, the ABA-side network is the DECIDED sets beside the corrupted set, each round's instance is the view $\mathrm{toPair}$ of the flat state, and the bound bit of every round whose second gather has been called is on record.
+  The first four are unguarded, so they determine the composed state from the flat one; the fifth, \leandecl{PLTS.ABA.AFW.BoundInv}, is the one clause that is not a reading of the flat state.
+  Assembling the view undoes the two rearrangements the flat reading performs --- the local states are transposed back out of the round records the $n$ processes hold, and each message state is sliced out of the adversary's single tagged sent-set family --- and it reads the two gathers' cores and the round's bound bit off the adversary's ghost record of that round.
 \end{theorem}
 
 \begin{proof}\leanok
@@ -15,4 +16,7 @@
   The remaining labels never reach the implementation.
   The ABA interface, the coin handshake, the DECIDED rows and the fused coin return move the round loop and the ABA-side network while the family of rounds stands still; corruption is one broadcast, the corrupted set the adversary holds being the corrupted set of every message state under the same guard; and the two Byzantine graded-agreement rows have no row at the process they name.
   A program's row on a label of $\mathrm{stageOwn}(j)$ is a row of the implementation, which is what lets each of those cases rule the others out.
+  The three fields of the round instance that no guard of it reads --- the core of each of its two gather instances and the round's bound bit --- are the adversary's ghost record on the flat side, and a row's ghost write is the instance's write of them.
+  The view of the round the row names is the one-point update of those three coordinates, \leandecl{PLTS.ABA.AFW.toPair_writeGhost}; every other round's view stands where it is, \leandecl{PLTS.ABA.AFW.toPair_writeGhost_ne}; and a row whose write returns the record it found moves no round's view at all, \leandecl{PLTS.ABA.AFW.toPair_ghostId}.
+  The link is the row that writes the first gather's core and the bound bit, and it is the only row that extends the fifth conjunct, so the bit a graded return announces is on record when the return fires.
 \end{proof}

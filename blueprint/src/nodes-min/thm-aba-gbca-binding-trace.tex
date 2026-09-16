@@ -4,11 +4,7 @@
   \uses{def:aba-gbca-spec, thm:gbca-spec-binding, thm:trace-support, thm:forward-sound, thm:gbca-inst-refines, thm:gbca-pair-refines, thm:gbca-tier-refines, thm:gbca-gather-refines}
   Every trace of positive probability of the round-$r$ GBCA specification instance is bound to one bit: all its round-$r$ returns announce the same bit, and every one of them that hands out a value hands out that bit (\leandecl{PLTS.ABA.GBCA.BindingTrace}, \leandecl{PLTS.ABA.GBCA.specInst_binding}).
   Graded agreement follows on the trace alone: any two round-$r$ returns of it that hand out a bit hand out the same bit (\leandecl{PLTS.ABA.GBCA.BindingTrace.value_agree}).
-  The property is stated on labels, so every inclusion of achievable trace distributions into the instance carries it.
-  The direct implementation instance satisfies it along the inclusion of Theorem~\ref{thm:gbca-inst-refines} (\leandecl{PLTS.ABA.GBCA.implInst_binding}).
-  The GBCA-over-gather tier satisfies it along the counting refinement of Theorem~\ref{thm:gbca-pair-refines} (\leandecl{PLTS.ABA.GBCA.pairInst_binding}).
-  The tier over the gather implementations satisfies it along the gather substitution of Theorem~\ref{thm:gbca-tier-refines} chained with the counting refinement (\leandecl{PLTS.ABA.GBCA.idealInst_binding}).
-  The gather-based implementation satisfies it along the three-tier inclusion of Theorem~\ref{thm:gbca-gather-refines} (\leandecl{PLTS.ABA.GBCA.lowPairInst_binding}).
+  The property is stated on labels, so it transfers along the inclusions of Theorems~\ref{thm:gbca-inst-refines}, \ref{thm:gbca-pair-refines}, \ref{thm:gbca-tier-refines} and~\ref{thm:gbca-gather-refines} to the direct implementation instance, the GBCA-over-gather tier, the tier over the gather implementations and the gather-based implementation, in \leandecl{PLTS.ABA.GBCA.implInst_binding}, \leandecl{PLTS.ABA.GBCA.pairInst_binding}, \leandecl{PLTS.ABA.GBCA.idealInst_binding} and \leandecl{PLTS.ABA.GBCA.lowPairInst_binding}.
 \end{theorem}
 
 \begin{proof}\leanok

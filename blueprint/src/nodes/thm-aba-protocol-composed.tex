@@ -8,12 +8,7 @@
     \operatorname{ATD}(\abdy{\mathrm{composed}}(P)).
   \]
   The two presentations hold the same stage data indexed two ways, by process on the protocol side and by round on the composed one.
-  $\mathrm{ProtocolRel}(P)$ pins, of a composed state, everything a state of the protocol determines, and it has five conjuncts, none of them guarded.
-  The round loops agree, replacement flags included (D23).
-  The coin oracle is the same component on both sides.
-  The ABA-side network is the network adversary's DECIDED sets beside its corrupted set, and the message state of round $r$ is that adversary's round-$r$ sent sets beside the same corrupted set, corruption being one broadcast on both sides.
-  The entry of process $j$ in the instance of round $r$ is the stage record of round $r$ that $j$ holds, one equation for each pair $(j,r)$.
-  A round $j$ has not touched reads on the protocol side as the initial stage record, and that equation asks the composed entry to be initial there too.
+  $\mathrm{ProtocolRel}(P)$ pins, of a composed state, everything a state of the protocol determines, in five unguarded conjuncts: the round loops agree, replacement flags included (D23); the coin oracle is the same component on both sides; the ABA-side network is the network adversary's DECIDED sets beside its corrupted set; the message state of round $r$ is that adversary's round-$r$ sent sets beside the same corrupted set and its ghost record of that round, the round's bound bit; and the entry of process $j$ in the instance of round $r$ is the stage record of round $r$ that $j$ holds, a round $j$ has not touched reading as the initial stage record on both sides.
   A composed state is therefore determined by any state of the protocol related to it.
   The determination is not injective: no composed state carries a termination flag, so two states of the protocol differing only in which processes have terminated are related to the same composed state (D22).
   Headline: \leandecl{PLTS.ABA.ABDY.protocol_composed}.
@@ -25,13 +20,9 @@
   For the step condition, take a state of the protocol, a composed state related to it, and a row out of that protocol state.
   Every transition of the protocol is a product of Dirac factors beside the coin oracle's successor distribution, and so is the composed transition that answers it.
   The two presentations carry the same oracle, so the coupling is functional in the oracle coordinate and the matched outcomes differ in no coordinate the relation constrains.
-  The rows are answered by label class: the rendezvous labels of the two networks and of the handshake rows, the visible labels of the ABA interface, and the silent label.
-  A stage-side row writes the stage record of the round its label tags and no other, and the round instance of that round writes the entry of the acting process and no other, so the fifth conjunct is preserved pair by pair.
-  The round advance writes no stage record on either side, and the row $terminate$ writes a field no conjunct reads, so the composed answer to it is a stutter.
-  A corrupted process's replaced program is matched loop for loop (D23): where the protocol program takes its self-loop, the composed round loop takes the same one, the two tables carrying the row under the same guard, and the flag itself is the first conjunct's own field.
-  The corrupted return is answered on the composed side by the ABA-side network's Byzantine row, which asks for $id \in F$ and no DECIDED evidence, as the protocol adversary's does.
-  The Byzantine graded-agreement call and return name a process whose program has no row for them (D11, D22), and the process group is a full synchronisation, so no transition of the protocol carries either label, while the round instance has a row for each.
-  The stage rules of a round instance carry no termination guard either, so the instance answers a send or a delivery at a process the protocol has terminated.
-  The inclusion is one-directional for those two reasons.
+  The rows are answered by label class, each by the composed row carrying the same label, and three classes carry the work.
+  A stage-side row writes the stage record of the round its label tags and no other, and the round instance of that round writes the entry of the acting process and no other, so the fifth conjunct is preserved pair by pair; the two graded-agreement return rows read the round's ghost record for the bit they announce and write it back, so the fourth conjunct is restored by $rel\_setBound$ with every other round's record standing still; and the rows that write a field no conjunct reads --- the round advance and $terminate$ --- are answered by a stutter.
+  A corrupted process's replaced program is matched loop for loop (D23), and its visible return by the ABA-side network's Byzantine row, which requires $id \in F$ and no DECIDED evidence, as the protocol adversary's does.
+  Two classes of composed row have no protocol counterpart, which is what makes the inclusion one-directional: the Byzantine graded-agreement call and return name a process whose program has no row for them (D11, D22) under a full synchronisation, and the stage rules of a round instance carry no termination guard, so the instance answers a send or a delivery at a process the protocol has terminated.
   Soundness (Theorem~\ref{thm:forward-sound}) turns the simulation \leandecl{PLTS.ABA.ABDY.protocolSim} into the stated inclusion.
 \end{proof}

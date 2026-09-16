@@ -2,10 +2,12 @@
 % (PLTS.ABA.GBCA.lowPairInst, idealInst, pairInst, GBCA.specInst).
 % The bottom tier is drawn open: two gather instances, each an exchange over its
 % own message state beside 2n Bracha instances, so 4n + 2 message states in one round.
+% Each of the three state tiers is a triple whose third factor is the round's
+% bound bit, written at the link row.
 \begin{tikzpicture}[
     >={Stealth[round]}, semithick,
     tier/.style={draw, rounded corners, align=center, font=\scriptsize,
-      minimum width=5.8cm, minimum height=0.7cm, inner sep=3pt},
+      minimum width=9.2cm, minimum height=0.6cm, inner sep=3pt},
     ga/.style={draw, rounded corners, align=center, font=\scriptsize,
       minimum width=4.8cm, minimum height=0.75cm, inner sep=2pt},
     brb/.style={draw, align=center, font=\scriptsize,
@@ -14,7 +16,7 @@
   % ---- the bottom tier, drawn open
   \draw[dashed, rounded corners] (-0.35,-3.85) rectangle (11.05,-0.15);
   \node[font=\scriptsize, anchor=west] at (-0.2,-0.45)
-    {$\mathrm{lowPairInst}(P,r)$: two gather instances, everything concrete};
+    {$\mathrm{lowPairInst}(P,r)$: two gather instances and the round's bound bit, all concrete};
   \node[ga, anchor=north west] at (0.05,-0.75)
     {gather 1 over payloads \textsf{Bool}:\\ its rounds and its own message state};
   \node[ga, anchor=north west] at (5.85,-0.75)
@@ -29,20 +31,19 @@
     \node[brb, anchor=north west] at ({\x+3.20},-2.40) {$\mathrm{brbBind}\,n$};
   }
   % drawn once, under both groups
-  \node[font=\scriptsize, align=center, text width=10.4cm] at (5.35,-3.35)
-    {$2n$ Bracha instances per gather --- $n$ carrying the inputs, $n$ the
-     $\mathrm{BIND}$ payloads --- and so $4n + 2$ message states in one round};
+  \node[font=\scriptsize, align=center, text width=10.4cm] at (5.35,-3.4)
+    {$2n$ Bracha instances per gather, and so $4n + 2$ message states in one round};
   % ---- the three tiers above it
-  \node[tier] (ideal) at (5.35,-4.7)
+  \node[tier] (ideal) at (5.35,-4.6)
     {$\mathrm{idealInst}(P,r)$: each Bracha coordinate replaced by the BRB specification};
-  \node[tier] (pair)  at (5.35,-6.0)
+  \node[tier] (pair)  at (5.35,-5.8)
     {$\mathrm{pairInst}(P,r)$: each gather coordinate replaced by the gather specification};
-  \node[tier] (spec)  at (5.35,-7.3)
-    {$\mathrm{GBCA.specInst}(P,r)$: Transition System 2, the grade read off the two core families};
+  \node[tier] (spec)  at (5.35,-7.0)
+    {$\mathrm{GBCA.specInst}(P,r)$: Transition System 2};
   \draw[->] (5.35,-3.85) -- (ideal.north)
-    node[lbl, midway, right]{$\mathrm{lowRefines}$, along $\mathrm{LowPairRel}$};
+    node[lbl, midway, anchor=west, xshift=4pt]{$\mathrm{lowRefines}$, along $\mathrm{LowPairRel}$};
   \draw[->] (ideal) -- (pair)
-    node[lbl, midway, right]{$\mathrm{idealRefines}$, along $\mathrm{IdealRel}$};
+    node[lbl, midway, anchor=west, xshift=4pt]{$\mathrm{idealRefines}$, along $\mathrm{IdealRel}$};
   \draw[->] (pair) -- (spec)
-    node[lbl, midway, right]{$\mathrm{pairRefines}$, along $\mathrm{PairRel}$};
+    node[lbl, midway, anchor=west, xshift=4pt]{$\mathrm{pairRefines}$, along $\mathrm{PairRel}$};
 \end{tikzpicture}

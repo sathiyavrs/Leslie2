@@ -131,7 +131,7 @@ does.
 
 ## Deviations
 
-Each departure from the source blueprint carries a label D1–D31, cited at the point where
+Each departure from the source blueprint carries a label D1–D33, cited at the point where
 it applies. The registry — every active label glossed, and the numbers the range skips —
 is the Deviations paragraph of `../../blueprint/src/content.tex`.
 `../NOTES-Fidelity.md` covers how the encoding stands against its two sources beyond that

@@ -1,6 +1,8 @@
 % GBCA implementation instance (PLTS.ABA.GBCA.implInst). Stage automaton,
 % ABDY22 Algorithm 6 in full (D18): five message levels, the returns reading
-% ECHO5 quorums with f+1 BIND v as the grade-1 witness.
+% ECHO5 quorums with f+1 BIND v as the grade-1 witness. Each return announces
+% the round's bound bit bnd, the bit on record or, where none is, the bit its
+% own outcome computes.
 \begin{tikzpicture}[
     ->, >={Stealth[round]}, auto, semithick, on grid,
     every state/.style={draw, ellipse, minimum width=1.7cm, minimum height=0.9cm,
@@ -13,12 +15,12 @@
   \node[state] (vot) at (6.0,0)  {VOTE\,$v$};
   \node[state] (bnd) at (9.0,0)  {BIND\,$v$};
   \node[state] (sea) at (9.0,-2.2) {ECHO5\,$v$};
-  \node[ret]   (ra)  at (11.7,-0.6)
-    {ret\,$A\,b$\\[1pt]{\scriptsize $n{-}f$ ECHO5\,$b$}};
-  \node[ret]   (rb)  at (11.7,-2.2)
-    {ret\,$B\,b$\\[1pt]{\scriptsize $f{+}1$ BIND\,$b$}};
-  \node[ret]   (rc)  at (11.7,-3.8)
-    {ret\,$C$\\[1pt]{\scriptsize $n{-}f$ ECHO5\,$\bot$}};
+  \node[ret]   (ra)  at (11.3,-0.6)
+    {ret\,$A\,b$\\[1pt]{\scriptsize $n{-}f$ ECHO5\,$b$}\\[1pt]{\scriptsize $bnd = b$}};
+  \node[ret]   (rb)  at (11.3,-2.2)
+    {ret\,$B\,b$\\[1pt]{\scriptsize $f{+}1$ BIND\,$b$}\\[1pt]{\scriptsize $bnd = b$}};
+  \node[ret]   (rc)  at (11.3,-3.8)
+    {ret\,$C$\\[1pt]{\scriptsize $n{-}f$ ECHO5\,$\bot$}\\[1pt]{\scriptsize $bnd$ off the sent sets}};
   \path
     (inp) edge node[lbl, above]{$n{-}f$} (ech)
     (ech) edge node[lbl, above]{$n{-}f$} (vot)
@@ -32,6 +34,7 @@
   % D5 network side node, below the message row
   \node[draw, dashed, rounded corners, align=left, font=\footnotesize,
         minimum width=8.2cm, inner sep=5pt] (net) at (3.4,-3.4)
-    {\textbf{D5 network} (per-sender sent/recv sets):\ \ adversary $\mathrm{deliver}$,\ \ byz inject $j\in F$};
+    {\textbf{D5 network} (per-sender sent/recv sets):\ \ adversary $\mathrm{deliver}$,\ \ byz inject $j\in F$\\
+     the round's bound bit: a ghost, written at the first return (D29)};
   \draw[dotted, ->] (net.north) -- (vot.south);
 \end{tikzpicture}

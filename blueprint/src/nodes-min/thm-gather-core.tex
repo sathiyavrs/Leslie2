@@ -3,7 +3,7 @@
   \lean{PLTS.ABA.Gather.IdealInv}\lean{PLTS.ABA.Gather.CoreRel}\lean{PLTS.ABA.Gather.gatherCore}\leanok
   \uses{def:aba-gather-ideal, def:aba-gather-spec, def:aba-gather-core}
   The gather implementation over broadcast specifications is forward-simulated by Transition System~4: \leandecl{PLTS.ABA.Gather.gatherCore}.
-  The core the abstract side freezes is the core of the implementation's message state, and a return is answered by one weak run that commits the abstract entries, freezes the core where it is unfrozen, and returns.
+  The core the abstract side holds is the core of the implementation's message state, and a return is answered by one weak run that commits the abstract entries, writes the core where it is unwritten, and returns.
 \end{theorem}
 
 \begin{proof}\leanok
