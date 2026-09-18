@@ -46,6 +46,7 @@ import Leslie2Protocols.ABA.Vocabulary.Labels
 import Leslie2Protocols.ABA.Vocabulary.NetworkState
 import Leslie2Protocols.ABA.Vocabulary.Params
 import Leslie2Protocols.ABA.Vocabulary.RoundLoop
+import Leslie2Protocols.Framework.Congruence
 import Leslie2Protocols.Framework.Erasure
 import Leslie2Protocols.Framework.FamilySim
 import Leslie2Protocols.Framework.IdleFamily
