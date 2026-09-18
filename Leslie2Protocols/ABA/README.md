@@ -74,7 +74,7 @@ graded-agreement return rows (D30). `ABDY/Protocol.lean` supplies ABDY22's;
 - `ABA.spec` — the single-automaton reading of agreement, reached by `coreSim`.
 
 Components talk only through synchronized labels, and no component reads another's state.
-Why the cut sits there, and what it buys, is `../DESIGN-Composition.md`.
+Why the cuts sit there, and what they buy, is `../DESIGN-Composition.md`.
 
 ## Ghost outputs
 
@@ -284,7 +284,7 @@ consumed one level up, so each `*Sim` file is readable against the one below it.
 ## Where else to look
 
 `../README.md` maps the library and its shared framework. `../DESIGN-Composition.md` is why
-the chain is cut where it is; `../DESIGN-CoreSim.md` and `../DESIGN-GBCASim.md` are the
+the chains are cut where they are; `../DESIGN-CoreSim.md` and `../DESIGN-GBCASim.md` are the
 narrative accounts of the two large protocol-chain proofs, and `../DESIGN-GatherTiers.md`
 of the gather-based stack — including the counting argument behind the gather
 specification's core; `../NOTES-Fidelity.md` is the encoding against
@@ -316,3 +316,7 @@ pseudocode and the proof bodies).
   and a finitely-supported family combinator in `Framework/`. The finite-program
   principle does not ask for it: the network is the adversary, the coin an assumed
   oracle, and the instance family a specification-side reading.
+- **Decomposing the gather-based composed reading**: its graded-agreement side is a family
+  of single rule tables over joint states (D28), where the protocol chain's round is a
+  composition of the stage programs beside their message state. The target, and what
+  reaching it takes, is `../TODO-Decomposing-AFW-Composed.md`.

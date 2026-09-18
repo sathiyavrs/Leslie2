@@ -36,12 +36,13 @@ beside the three in the core.
 
 | file | what it is for |
 |---|---|
-| [`DESIGN-Composition.md`](DESIGN-Composition.md) | Why the chain is cut where it is: what the composition buys, where each network is external, and what the DECIDED model already weakens. |
+| [`DESIGN-Composition.md`](DESIGN-Composition.md) | Why the chains are cut where they are: what the composition buys, what each component owns and where it disappears, and what the DECIDED model already weakens. |
 | [`DESIGN-CoreSim.md`](DESIGN-CoreSim.md) | The narrative account of the core simulation `hybrid ⊑ ABA.spec` — the abstract state, the invariant, and the certificates decided values ride on. |
 | [`DESIGN-GBCASim.md`](DESIGN-GBCASim.md) | The narrative account of the per-instance GBCA refinement — exclude-on-demand, the receipt-pattern certificates, and the run structure. |
 | [`DESIGN-GatherTiers.md`](DESIGN-GatherTiers.md) | The narrative account of the gather-based GBCA stack — the counting argument behind the gather specification's core, the BIND-by-broadcast pinning, the counting at the pair tier, the chain-data discipline of its simulations, and the flat reading beneath the composed one. |
 | [`NOTES-Fidelity.md`](NOTES-Fidelity.md) | How the encoding stands against its sources — the Leslie blueprint, ABDY22 and AFW25: where it follows one against another, and what it deliberately does not reproduce. |
 | [`NOTES-Liveness-Roadmap.md`](NOTES-Liveness-Roadmap.md) | Termination is out of scope; this is what proving it would take. |
+| [`TODO-Decomposing-AFW-Composed.md`](TODO-Decomposing-AFW-Composed.md) | The gather-based chain is not decomposed below the round; this is the target that would make the two chains uniform, and what reaching it takes. |
 
 The prose account of the case study is the ABA chapter of the repository's blueprint
 (`../blueprint/src/`), which carries it in two editions over one set of statements.
