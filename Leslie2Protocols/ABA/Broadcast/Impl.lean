@@ -7,11 +7,12 @@ Authors: Sathiya / Claude
 import Leslie2Protocols.ABA.Broadcast.Spec
 
 /-!
-# The BRB implementation (Bracha 1987, blueprint Algorithm 6)
+# The vocabulary of one reliable-broadcast instance
 
-Bracha's Byzantine Reliable Broadcast with designated leader `ldr`, over an
-arbitrary payload type `M`, as an LTS over the instance alphabet
-`BRB.Lab n M`. The message pattern, per process:
+The state of one Byzantine Reliable Broadcast instance with designated leader
+`ldr` over an arbitrary payload type `M`, and its rows. The rows transcribe
+Bracha's algorithm (Bracha 1987; blueprint Algorithm 6). The message pattern,
+per process:
 
 * the leader, on being called with `m`, multicasts `⟨INIT, m⟩`;
 * `⟨ECHO, m⟩` — multicast on receipt of `⟨INIT, m⟩` from the leader, once;
@@ -20,9 +21,14 @@ arbitrary payload type `M`, as an LTS over the instance alphabet
 * return `m` — on an `n − f` `VOTE m` receipt quorum.
 
 The state is the generic two-part shape (`ABA.SubState`,
-`ABA/Vocabulary/NetworkState.lean`): each process's local record and delivered sets beside the
-instance's network state, under the development's D1 (determinised
-corruption) and D5 (set-based network) conventions.
+`ABA/Vocabulary/NetworkState.lean`): each process's local record and delivered
+sets beside the instance's network state, under the development's D1
+(determinised corruption) and D5 (set-based network) conventions.
+
+`ImplStep` is the rows of the instance `BRB.sub` (`ABA/Broadcast/Sub.lean`) —
+the `n` per-process programs beside the instance's network — stated over that
+product state, one constructor per case of `BRB.sub_step_iff_row`. It is a
+relation on the product state; the system is the composition.
 
 There is no participation guard here: only the leader is called, and every
 other process runs its handlers unconditionally — Bracha's protocol has no
@@ -76,8 +82,11 @@ def ImplState.initial (n : ℕ) (M : Type) : ImplState n M :=
 
 variable {M : Type} [DecidableEq M]
 
-/-- The step relation of the BRB implementation instance with leader `ldr`
-(Bracha 1987; blueprint Algorithm 6). All transitions are Dirac. -/
+/-- The rows of the reliable-broadcast instance with leader `ldr`
+(`BRB.sub`, `ABA/Broadcast/Sub.lean`), stated over the product state: one
+constructor per case of `BRB.sub_step_iff_row`. The call and the call loop are
+the two rows of `call m`, which the instance takes at two labels. All
+transitions are Dirac. -/
 inductive ImplStep (P : Params) (ldr : Fin P.n) :
     ImplState P.n M → Lab P.n M → PMF (ImplState P.n M) → Prop
   /-- The environment call arrives at the leader: record the payload and
@@ -130,24 +139,6 @@ inductive ImplStep (P : Params) (ldr : Fin P.n) :
   /-- Corruption (deviation D1). -/
   | fail (s : ImplState P.n M) (id : Fin P.n) :
       ImplStep P ldr s (.fail id) (PMF.pure (s.corrupt P id))
-
-/-- The BRB implementation instance with leader `ldr`. -/
-noncomputable def implInst (P : Params) (ldr : Fin P.n) (M : Type)
-    [DecidableEq M] : System (ImplState P.n M) (Lab P.n M) where
-  init := ImplState.initial P.n M
-  step := ImplStep P ldr
-
-@[simp] theorem implInst_init (P : Params) (ldr : Fin P.n) :
-    (implInst P ldr M).init = ImplState.initial P.n M := rfl
-
-@[simp] theorem implInst_step (P : Params) (ldr : Fin P.n) (s : ImplState P.n M)
-    (l : Lab P.n M) (μ : PMF (ImplState P.n M)) :
-    (implInst P ldr M).step s l μ ↔ ImplStep P ldr s l μ := Iff.rfl
-
-/-- Every BRB implementation transition is Dirac: the instance is an LTS. -/
-theorem implInst_isLTS (P : Params) (ldr : Fin P.n) : (implInst P ldr M).IsLTS := by
-  rintro s l μ hstep
-  cases hstep <;> exact ⟨_, rfl⟩
 
 end BRB
 end ABA

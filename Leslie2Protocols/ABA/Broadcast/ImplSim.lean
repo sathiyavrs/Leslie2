@@ -4,14 +4,24 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.Broadcast.Impl
+import Leslie2Protocols.ABA.Broadcast.Sub
 import Leslie2Protocols.Framework.FamilySim
 
 /-!
 # The BRB refinement: Bracha's protocol implements Transition System 6
 
-`BRB.brbRefines`: the BRB implementation instance forward-simulates the BRB
-specification instance with the same leader, along `BRB.InstRel`.
+`BRB.brbRefines`: the reliable-broadcast instance `BRB.sub`
+(`ABA/Broadcast/Sub.lean`) is forward simulated by the BRB specification
+instance with the same leader, read over the instance's interface
+(`BRB.liftedSpec`), along `BRB.InstRel`.
+
+The refinement runs in two legs. The first is strong and functional: a
+transition of the instance is one row of `BRB.ImplStep` at the same state, at
+the specification label the interface label projects to (`BRB.sub_step_row`).
+The second is the row-level matching `instRel_row`, whose answer is a weak run
+of the specification over `BRB.Lab`; it is lifted to the interface along a
+section of `BRB.specPull`, which is where the call loop is answered by the
+specification's own loop row.
 
 The one piece of abstract information the specification tracks and the
 implementation does not is the committed value `val`. The refinement supplies
@@ -578,13 +588,18 @@ theorem instRel_corrupt {s : ImplState P.n M} {t : SpecState P.n M}
     rw [echoCert_corrupt]
     exact hR.val_cert m hm
 
-/-- **The BRB refinement**: Bracha's implementation instance forward-simulates
-the specification instance with the same leader. -/
-theorem brbRefines (P : Params) (ldr : Fin P.n) :
-    ForwardSimulation (implInst P ldr M) (specInst P ldr M) (InstRel P ldr) := by
-  constructor
-  intro q₁ q₂ hR l μ hstep q₁' hq₁'
-  rw [implInst_step] at hstep
+/-- **The relation across one row**: every row of `ImplStep` at a related pair
+is answered by a weak run of the specification instance, and the answer is
+again related. Internal rows stutter; `call` and `fail` are answered by their
+specification rows; `ret id m` is answered by `ret` alone when `val` is already
+committed, and by the two-step run `commit ; ret` when it is not. -/
+theorem instRel_row (P : Params) (ldr : Fin P.n) (q₁ : ImplState P.n M)
+    (q₂ : SpecState P.n M) (hR : InstRel P ldr q₁ q₂) (l : Lab P.n M)
+    (μ : PMF (ImplState P.n M)) (hstep : ImplStep P ldr q₁ l μ)
+    (q₁' : ImplState P.n M) (hq₁' : q₁' ∈ μ.support) :
+    ∃ q₂', ((l = Silent.τ ∧ (specInst P ldr M).weakLSilent q₂ q₂') ∨
+      (¬ l = Silent.τ ∧ (specInst P ldr M).weakLStep q₂ l q₂')) ∧
+      InstRel P ldr q₁' q₂' := by
   have hInv' := hR.inv.step hstep hq₁'
   cases hstep with
   | call m h =>
@@ -769,6 +784,29 @@ theorem brbRefines (P : Params) (ldr : Fin P.n) :
     exact ⟨q₂.corrupt P id, Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
       (Step.fail q₂ id)⟩, instRel_corrupt hR id⟩
 
+/-- **The BRB refinement**: the reliable-broadcast instance is forward
+simulated by the specification instance with the same leader, read over the
+instance's interface. A transition of the instance is one row of `ImplStep`
+(`BRB.sub_step_row`), the row is answered by a weak run of the specification
+(`instRel_row`), and that run is lifted to the interface along a section of
+`specPull` — which is where the call loop is answered by the specification's
+own loop row. -/
+theorem brbRefines (P : Params) (ldr : Fin P.n) :
+    ForwardSimulation (sub P ldr M) (liftedSpec P ldr M) (InstRel P ldr) := by
+  constructor
+  intro q₁ q₂ hR l μ hstep q₁' hq₁'
+  obtain ⟨l₀, hpull, hrow⟩ := sub_step_row P ldr q₁ l μ hstep
+  obtain ⟨s', hdis, hrel⟩ := instRel_row P ldr q₁ q₂ hR l₀ μ hrow q₁' hq₁'
+  refine ⟨s', ?_, hrel⟩
+  rcases hdis with ⟨hτ, hweak⟩ | ⟨hτ, hweak⟩
+  · exact Or.inl ⟨specPull_eq_tau (by rw [hpull, hτ]; rfl),
+      weakLSilent_liftedSpec P ldr hweak⟩
+  · refine Or.inr ⟨?_, weakLStep_liftedSpec P ldr hτ hpull hweak⟩
+    intro hl
+    refine hτ ?_
+    have h2 : specPull P.n M (Silent.τ : SubLab P.n M) = some l₀ := by rw [← hl]; exact hpull
+    rw [specPull_tau] at h2
+    exact (Option.some.inj h2).symm
 
 /-! ### Step-level relation transports
 
