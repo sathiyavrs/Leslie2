@@ -614,7 +614,7 @@ the coin oracle. -/
 abbrev FlatState (P : Params) (M S G : Type) : Type :=
   (∀ _ : Fin P.n, ProcRecP P.n S) × (NetStateP P.n M G × (ℕ → WCC.SpecState P.n))
 
-section Network
+section NetworkAdversary
 
 variable (P : Params) (M G : Type) [DecidableEq M] [Inhabited G]
     (callPayload : Fin P.n → Bool → M)
@@ -636,7 +636,7 @@ noncomputable def flatNetAdv : System (NetStateP P.n M G) (NLabP P.n M) where
       FlatNetStep P M G callPayload ghostStep ghostOut s l μ :=
   Iff.rfl
 
-end Network
+end NetworkAdversary
 
 section Pipe
 

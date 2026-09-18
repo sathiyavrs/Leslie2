@@ -14,7 +14,7 @@ import Leslie2Protocols.Framework.IdleFamily
 
 One round of the protocol, taken apart into the pieces that run it:
 `n` corruption-blind local programs, one per process, beside the round's own
-message state. The instance is the unit the analysis replaces by the graded
+network. The instance is the unit the analysis replaces by the graded
 agreement specification, so it is drawn to be exactly what that replacement
 may see — the round's handshake ports and nothing else.
 
@@ -25,9 +25,9 @@ its guards read the record and the recv, never the identity of the caller.
 The round loop that moves the ports is not here either — a call writes the
 stage record alone, a return sets the record's `returned` flag alone.
 
-The round's message state holds the per-sender sent sets and the corrupted set.
+The round's network holds the per-sender sent sets and the corrupted set.
 A multicast is a joint step of the sender, which writes its record, and the
-message state, which records the message; a delivery is a joint step of the message state,
+network, which records the message; a delivery is a joint step of the network,
 which checks that the message is sent under the named sender, and the
 receiver, which files it under that sender's recv row.
 
@@ -49,13 +49,13 @@ broadcasts `fail` to every round at once.
 * **D1 (determinised `fail`).** `GNetState.corrupt` is the total Dirac
   function guarded by `k ∉ F ∧ |F| < f`. `fail` is not a row of any rule
   table here: it is the family's broadcast act, applied to every round's
-  message state simultaneously, which is what keeps the per-round copies of the
+  network simultaneously, which is what keeps the per-round copies of the
   corrupted set in lockstep.
 * **D5 (set-based network).** Multicasts are idempotent: `sent j` is the set
   of messages `j` has multicast in this round, and `recv k` at a program is
   the set of messages from `k` delivered there. Thresholds count distinct
   senders. A corrupted sender's injections enter its sent through the
-  message state's own `byzG` transition.
+  network's own `byzG` transition.
 * **D8 (participation guard).** The protocol sends and the three returns
   require the record to have received its input: the algorithm's handlers only
   run inside a called instance.
@@ -68,7 +68,7 @@ broadcasts `fail` to every round at once.
   that surrounds the instance, where it applies to the handshake-row label that
   stays visible at this boundary.
 * **The round's bound bit.** The ghost field `GNetState.bound` belongs to the
-  message state, so the two return rows that write it are the message state's
+  network, so the two return rows that write it are the network's
   (`GNetStep.retGIdle`, `GNetStep.byzRetG`), and a program's return row takes
   the announced bit free. The write is the one in `ImplStep.retA`/`retB`/`retC`,
   which is what keeps `sub_projects` an equality.
@@ -86,7 +86,7 @@ broadcasts `fail` to every round at once.
 
 Every row mirrors the stage-visible half of one rule of the implementation
 instance (`ABA/ABDY/Impl.lean`), split between the program that owns the record
-and the message state that owns the sent. What the implementation's rule writes on the
+and the network that owns the sent. What the implementation's rule writes on the
 core slice — the round loop's phase, estimate and grade — appears nowhere here:
 that slice is a different component of the protocol system.
 
@@ -98,13 +98,13 @@ agreement specification. It runs through the implementation instance of
 
 The first leg is strong and functional. The round instance and the
 implementation run on the same state: `GBCA.ImplState` is the pair of the stage
-records and the message state, which are exactly the local states composed here.
+records and the network state, which are exactly the local states composed here.
 `sub_projects` says that every transition of the round instance is a transition
 of the implementation at that same state, one step for one step, with no
 stuttering: a joint call is the implementation's call, a hidden multicast or
-delivery is the protocol rule or the delivery it carries, a message state injection is
+delivery is the protocol rule or the delivery it carries, a network injection is
 the implementation's Byzantine row. The two are one round under two
-presentations — a single rule table on one side, `n` programs beside a message state
+presentations — a single rule table on one side, `n` programs beside a network
 on the other.
 
 The second leg is the per-instance refinement `GBCA.implRefines`
@@ -136,9 +136,9 @@ before the family sees the instance at all. -/
 
 /-- The internal rendezvous of one round: the multicast and the delivery. -/
 inductive GEvt (n : ℕ) : Type
-  /-- Process `j` hands `m` to the round's message state. -/
+  /-- Process `j` hands `m` to the round's network. -/
   | snd (j : Fin n) (m : GBCA.Msg)
-  /-- The message state delivers `j`'s `m` to `i`. -/
+  /-- The network delivers `j`'s `m` to `i`. -/
   | dlv (i j : Fin n) (m : GBCA.Msg)
   deriving DecidableEq
 
@@ -164,7 +164,7 @@ def gEvents (n : ℕ) : Set (GLab n) := {l | ∃ e : GEvt n, l = Sum.inr e}
 
 Process `j`'s program in this round. Every guard reads the stage record and
 the recv and nothing else. A rendezvous row carries the program's half of a
-joint step with the message state — on a send the record write, on a delivery the
+joint step with the network — on a send the record write, on a delivery the
 recv write. The rows are exactly the labels that reach the round's instance:
 the round's own handshake ports and the two rendezvous. -/
 
@@ -173,7 +173,7 @@ round `r`. -/
 inductive GProcStep (P : Params) (r : ℕ) (j : Fin P.n) :
     GBCA.StageRec P.n → GLab P.n → PMF (GBCA.StageRec P.n) → Prop
   /-- The call arrives: record the input and mark `⟨INPUT, b⟩` as multicast.
-  The recording of that message is the message state's half (`ImplStep.call`). -/
+  The recording of that message is the network's half (`ImplStep.call`). -/
   | call (p : GBCA.StageRec P.n) (b : Bool) (h : p.proc.input = none) :
       GProcStep P r j p (Sum.inl (Sum.inl (.callG r j b)))
         (PMF.pure (p.setP { p.proc with
@@ -363,14 +363,14 @@ inductive GProcStep (P : Params) (r : ℕ) (j : Fin P.n) :
   | sndIdle (p : GBCA.StageRec P.n) (k : Fin P.n) (m : GBCA.Msg) (hk : k ≠ j) :
       GProcStep P r j p (Sum.inr (.snd k m)) (PMF.pure p)
   /-- Delivery, receiver's half: file the message under the sender's recv row.
-  Authenticity is the message state's conjunct (`ImplStep.deliver`; D5). -/
+  Authenticity is the network's conjunct (`ImplStep.deliver`; D5). -/
   | dlvRecv (p : GBCA.StageRec P.n) (k : Fin P.n) (m : GBCA.Msg) :
       GProcStep P r j p (Sum.inr (.dlv j k m)) (PMF.pure (p.deliverTo k m))
   /-- A delivery to another process: not `j`'s business. -/
   | dlvIdle (p : GBCA.StageRec P.n) (i k : Fin P.n) (m : GBCA.Msg) (hi : i ≠ j) :
       GProcStep P r j p (Sum.inr (.dlv i k m)) (PMF.pure p)
 
-/-! ### The round's message state
+/-! ### The round's network
 
 The one local state of the instance that holds what no program may see: the per-sender
 sent sets and the corrupted set. It participates in every send by recording the
@@ -379,15 +379,15 @@ is where a corrupted sender's injections enter (D5). Its state record
 `GNetState` stands beside the stage record in `ABA/ABDY/Impl.lean`, the two of
 them being the components of a round's state; what follows is its rule table. -/
 
-/-- The step relation of the round's message state. All transitions are
+/-- The step relation of the round's network. All transitions are
 Dirac. -/
 inductive GNetStep (P : Params) (r : ℕ) :
     GNetState P.n → GLab P.n → PMF (GNetState P.n) → Prop
-  /-- The message state's half of a multicast: sent the message under its sender.
+  /-- The network's half of a multicast: sent the message under its sender.
   Authenticity is the sender's joint participation (D5). -/
   | snd (w : GNetState P.n) (j : Fin P.n) (m : GBCA.Msg) :
       GNetStep P r w (Sum.inr (.snd j m)) (PMF.pure (w.gsent j m))
-  /-- The message state's half of a delivery: the message must be sent under the
+  /-- The network's half of a delivery: the message must be sent under the
   named sender, and delivery does not consume it (`ImplStep.deliver`; D5). -/
   | dlv (w : GNetState P.n) (i j : Fin P.n) (m : GBCA.Msg) (h : m ∈ w.sent j) :
       GNetStep P r w (Sum.inr (.dlv i j m)) (PMF.pure w)
@@ -395,7 +395,7 @@ inductive GNetStep (P : Params) (r : ℕ) :
   (`ImplStep.byz`; D5, D11). -/
   | byzG (w : GNetState P.n) (k : Fin P.n) (m : GBCA.Msg) (hF : k ∈ w.F) :
       GNetStep P r w (Sum.inl (Sum.inl .tau)) (PMF.pure (w.gsent k m))
-  /-- The message state's half of the call: sent the caller's `⟨INPUT, b⟩`
+  /-- The network's half of the call: sent the caller's `⟨INPUT, b⟩`
   (`ImplStep.call`). -/
   | callG (w : GNetState P.n) (id : Fin P.n) (b : Bool) :
       GNetStep P r w (Sum.inl (Sum.inl (.callG r id b)))
@@ -443,7 +443,7 @@ noncomputable def gbcaProc (P : Params) (r : ℕ) (j : Fin P.n) :
     (p : GBCA.StageRec P.n) (l : GLab P.n) (ν : PMF (GBCA.StageRec P.n)) :
     (gbcaProc P r j).step p l ν ↔ GProcStep P r j p l ν := Iff.rfl
 
-/-- The round's message state. -/
+/-- The round's network. -/
 noncomputable def gNet (P : Params) (r : ℕ) :
     System (GNetState P.n) (GLab P.n) where
   init := GNetState.initial P.n
@@ -456,12 +456,12 @@ noncomputable def gNet (P : Params) (r : ℕ) :
     (l : GLab P.n) (μ : PMF (GNetState P.n)) :
     (gNet P r).step w l μ ↔ GNetStep P r w l μ := Iff.rfl
 
-/-- The programs beside the message state, over the instance-internal alphabet. -/
+/-- The programs beside the network, over the instance-internal alphabet. -/
 noncomputable def subPre (P : Params) (r : ℕ) :
     System (GBCA.ImplState P.n) (GLab P.n) :=
   (System.syncProduct (gbcaProc P r)).parallel (gNet P r)
 
-/-- **The round-`r` instance**: the programs beside the message state, the two
+/-- **The round-`r` instance**: the programs beside the network, the two
 rendezvous hidden, the result read back over the shared extended alphabet. Its
 interface is the round's ports — `callG r`, `retG r`, `gcallLoop r` and the
 three graded-agreement rows of round `r`. -/
@@ -492,7 +492,7 @@ instance {n : ℕ} : DecidablePred (isFailN (n := n)) := fun l => by
   | inl l => cases l <;> simp only [isFailN] <;> infer_instance
   | inr e => cases e <;> simp only [isFailN] <;> infer_instance
 
-/-- The broadcast corruption act on an instance state: the round's message state
+/-- The broadcast corruption act on an instance state: the round's network state
 records it, the stage records do not (D1). -/
 def gAct (P : Params) : NLab P.n → GBCA.ImplState P.n → GBCA.ImplState P.n
   | Sum.inl (.fail k), (u, w) => (u, w.corrupt P k)
@@ -518,7 +518,7 @@ theorem gProcStep_dirac {P : Params} {r : ℕ} {j : Fin P.n}
     (h : GProcStep P r j p l ν) : ∃ p', ν = PMF.pure p' := by
   cases h <;> exact ⟨_, rfl⟩
 
-/-- Every message state transition is Dirac. -/
+/-- Every network transition is Dirac. -/
 theorem gNetStep_dirac {P : Params} {r : ℕ} {w : GNetState P.n} {l : GLab P.n}
     {μ : PMF (GNetState P.n)} (h : GNetStep P r w l μ) :
     ∃ w', μ = PMF.pure w' := by
@@ -529,7 +529,7 @@ theorem gbcaProc_isLTS (P : Params) (r : ℕ) (j : Fin P.n) :
     (gbcaProc P r j).IsLTS :=
   fun _ _ _ h => gProcStep_dirac h
 
-/-- The message state is an LTS. -/
+/-- The network is an LTS. -/
 theorem gNet_isLTS (P : Params) (r : ℕ) : (gNet P r).IsLTS :=
   fun _ _ _ h => gNetStep_dirac h
 
@@ -538,7 +538,7 @@ theorem syncG_isLTS (P : Params) (r : ℕ) :
     (System.syncProduct (gbcaProc P r)).IsLTS :=
   System.syncProduct_isLTS (gbcaProc_isLTS P r)
 
-/-- The programs beside the message state form an LTS. -/
+/-- The programs beside the network form an LTS. -/
 theorem subPre_isLTS (P : Params) (r : ℕ) : (subPre P r).IsLTS :=
   System.parallel_isLTS (syncG_isLTS P r) (gNet_isLTS P r)
 
@@ -552,7 +552,7 @@ theorem gbcaSide_isLTS (P : Params) : (gbcaSide P).IsLTS :=
 
 /-- No program rule fires on `τ`: a program only ever moves in a rendezvous or
 on one of the round's ports. The instance's silent transitions are therefore
-exactly the message state's injections and the hidden rendezvous. -/
+exactly the network's injections and the hidden rendezvous. -/
 theorem gProcStep_no_tau {P : Params} {r : ℕ} {j : Fin P.n}
     {p : GBCA.StageRec P.n} {ν : PMF (GBCA.StageRec P.n)}
     (h : GProcStep P r j p (Silent.τ : GLab P.n) ν) : False := by
@@ -615,7 +615,7 @@ theorem sub_step_iff (P : Params) (r : ℕ) (q : GBCA.ImplState P.n) (l : NLab P
     · exact Or.inl ⟨rfl, _, inr_mem_gEvents e, hstep⟩
     · exact Or.inr ⟨inl_notMem_gEvents l, hstep⟩
 
-/-- Build a joint transition of the programs and the message state on a rendezvous
+/-- Build a joint transition of the programs and the network on a rendezvous
 label. -/
 theorem subPre_event_step (P : Params) (r : ℕ)
     {u x : ∀ _ : Fin P.n, GBCA.StageRec P.n} {w w' : GNetState P.n}
@@ -627,7 +627,7 @@ theorem subPre_event_step (P : Params) (r : ℕ)
   exact Or.inl ⟨by simp, PMF.pure x, PMF.pure w', syncG_pure (by simp) hall, hn,
     (prodPMF_pure_pure _ _).symm⟩
 
-/-- Build a joint transition of the programs and the message state on a visible
+/-- Build a joint transition of the programs and the network on a visible
 shared label. -/
 theorem subPre_lab_step (P : Params) (r : ℕ)
     {u x : ∀ _ : Fin P.n, GBCA.StageRec P.n} {w w' : GNetState P.n}
@@ -641,8 +641,8 @@ theorem subPre_lab_step (P : Params) (r : ℕ)
   exact Or.inl ⟨hne, PMF.pure x, PMF.pure w', syncG_pure hne hall, hn,
     (prodPMF_pure_pure _ _).symm⟩
 
-/-- Build a silent transition of the programs and the message state from a
-message state-local one. -/
+/-- Build a silent transition of the programs and the network from a
+network-local one. -/
 theorem subPre_tau_net (P : Params) (r : ℕ)
     {u : ∀ _ : Fin P.n, GBCA.StageRec P.n} {w w' : GNetState P.n}
     (hn : GNetStep P r w (Sum.inl (Sum.inl .tau)) (PMF.pure w')) :
@@ -669,7 +669,7 @@ theorem sub_lab_step (P : Params) (r : ℕ)
     (sub P r).step (u, w) l (PMF.pure (x, w')) :=
   (sub_step_iff P r _ _ _).mpr (Or.inr (subPre_lab_step P r hl hall hn))
 
-/-- A message state-local injection is a silent transition of the instance. -/
+/-- A network-local injection is a silent transition of the instance. -/
 theorem sub_tau_net (P : Params) (r : ℕ)
     {u : ∀ _ : Fin P.n, GBCA.StageRec P.n} {w w' : GNetState P.n}
     (hn : GNetStep P r w (Sum.inl (Sum.inl .tau)) (PMF.pure w')) :
@@ -936,7 +936,7 @@ theorem stepG_dlv_foreign {i k : Fin P.n} {m : GBCA.Msg} (hi : i ≠ j)
 
 end ProcInversion
 
-/-! ### The message state's rules, by label class -/
+/-! ### The network's rules, by label class -/
 
 section NetInversion
 
@@ -1099,7 +1099,7 @@ theorem weakLStep_liftedSpec (P : Params) (r : ℕ) {s s' : GBCA.SpecState P.n}
 
 /-! ### One state, two presentations
 
-The stage records and the message state are the two components of `GBCA.ImplState`
+The stage records and the network state are the two components of `GBCA.ImplState`
 (`ABA/ABDY/Impl.lean`), so the round instance and the implementation instance
 run on the same state and every rule of the one is a rule of the other read in
 the implementation's accessors. What the joint steps deliver, though, is a
@@ -1120,14 +1120,14 @@ theorem nodeFun_update {j : Fin P.n} {q : GBCA.StageRec P.n}
   · subst hi; rw [hj, Function.update_self]
   · rw [hne i hi, Function.update_of_ne hi]
 
-/-- A record write at one program, with the message state untouched. -/
+/-- A record write at one program, with the network state untouched. -/
 theorem sub_setProc {j : Fin P.n} {pr : GBCA.ProcState}
     (hj : x j = (u j).setP pr) (hne : ∀ i, i ≠ j → x i = u i) :
     ((x, w) : GBCA.ImplState P.n) = GBCA.ImplState.setProc (u, w) j pr := by
   rw [nodeFun_update hj hne]
   rfl
 
-/-- A record write at one program together with the message state recording the message
+/-- A record write at one program together with the network state recording the message
 that write multicasts. -/
 theorem sub_setProc_gsent {j : Fin P.n} {pr : GBCA.ProcState} {m : GBCA.Msg}
     (hj : x j = (u j).setP pr) (hne : ∀ i, i ≠ j → x i = u i) :
@@ -1136,7 +1136,7 @@ theorem sub_setProc_gsent {j : Fin P.n} {pr : GBCA.ProcState} {m : GBCA.Msg}
   rw [nodeFun_update hj hne]
   rfl
 
-/-- A record write at one program together with the message state's write of
+/-- A record write at one program together with the network state's write of
 the round's bound bit. -/
 theorem sub_setProc_setBound {j : Fin P.n} {pr : GBCA.ProcState} {β : Bool}
     (hj : x j = (u j).setP pr) (hne : ∀ i, i ≠ j → x i = u i) :
@@ -1157,13 +1157,13 @@ theorem sub_deliver {i k : Fin P.n} {m : GBCA.Msg}
   rw [nodeFun_update hi hne]
   rfl
 
-/-- A Byzantine injection: the message state records a message under a corrupted
+/-- A Byzantine injection: the network state records a message under a corrupted
 sender. -/
 theorem sub_gsent {k : Fin P.n} {m : GBCA.Msg} :
     ((u, w.gsent k m) : GBCA.ImplState P.n)
       = GBCA.ImplState.mcast (u, w) k m := rfl
 
-/-- Corruption is the message state's own write, which is the implementation's (D1). -/
+/-- Corruption is the network state's own write, which is the implementation's (D1). -/
 theorem sub_corrupt (k : Fin P.n) :
     ((u, w.corrupt P k) : GBCA.ImplState P.n)
       = GBCA.ImplState.corrupt P k (u, w) := rfl
@@ -1174,11 +1174,11 @@ end Frame
 
 Two inversions of the composition, the counterparts of `subPre_event_step` /
 `subPre_lab_step` / `subPre_tau_net`: on a visible label of the internal
-alphabet every program and the message state step together, and on the silent label
-only the message state moves. -/
+alphabet every program and the network step together, and on the silent label
+only the network moves. -/
 
-/-- A visible transition of the programs beside the message state: every program and
-the message state step on the label, and the joint distribution is their Dirac
+/-- A visible transition of the programs beside the network: every program and
+the network step on the label, and the joint distribution is their Dirac
 product. -/
 theorem subPre_joint_inv {P : Params} {r : ℕ}
     {u : ∀ _ : Fin P.n, GBCA.StageRec P.n} {w : GNetState P.n} {L : GLab P.n}
@@ -1195,7 +1195,7 @@ theorem subPre_joint_inv {P : Params} {r : ℕ}
   · exact absurd hτ hL
   · exact absurd hτ hL
 
-/-- A silent transition of the programs beside the message state is a message state-local
+/-- A silent transition of the programs beside the network is a network-local
 injection: no program has a `τ` row. -/
 theorem subPre_tau_inv {P : Params} {r : ℕ}
     {u : ∀ _ : Fin P.n, GBCA.StageRec P.n} {w : GNetState P.n}
@@ -1210,11 +1210,11 @@ theorem subPre_tau_inv {P : Params} {r : ℕ}
   · obtain ⟨w', rfl⟩ := gNetStep_dirac hn
     exact ⟨w', prodPMF_pure_pure _ _, hn⟩
 
-/-! ### The message state's rules read off a round-tagged label
+/-! ### The network's rules read off a round-tagged label
 
-The message state has a row only for its own round: a handshake label of another round
+The network has a row only for its own round: a handshake label of another round
 carries no transition of the instance at all. These readers therefore return
-the round equation together with the message state's move. -/
+the round equation together with the network's move. -/
 
 section NetRound
 
@@ -1254,7 +1254,7 @@ theorem gNetStep_byzRetG_round {r' : ℕ} {k : Fin P.n} {out : GbcaOut} {bnd : B
   cases h with
   | byzRetG _ _ _ hbnd => exact ⟨rfl, hbnd, rfl⟩
 
-/-! The labels the message state does not offer at all: the ABA API, the coin ports,
+/-! The labels the network does not offer at all: the ABA API, the coin ports,
 corruption, and the protocol network's own rendezvous. -/
 
 theorem gNetStep_callABA_noStep {id : Fin P.n} {b : Bool}
@@ -1304,15 +1304,15 @@ anywhere:
 
 | round instance | implementation |
 | --- | --- |
-| `callG` (caller writes, message state records) | `ImplStep.call` |
+| `callG` (caller writes, network records) | `ImplStep.call` |
 | `gcallLoop`, `byzCallGLoop` | `ImplStep.callLoop` |
 | `byzCallG` (D11) | `ImplStep.call` |
 | `retG` / `byzRetG`, by grade | `ImplStep.retA` / `retB` / `retC` |
 | hidden `snd` rendezvous, by level | the eight protocol `τ` rules |
 | hidden `dlv` rendezvous | `ImplStep.deliver` |
-| message state-local injection | `ImplStep.byz` |
+| network-local injection | `ImplStep.byz` |
 
-The two hidden rendezvous and the message state's injection are silent on both sides,
+The two hidden rendezvous and the network's injection are silent on both sides,
 and `gPull` takes `τ` to `τ`. -/
 
 /-- **The strong projection lemma.** -/
@@ -1383,7 +1383,7 @@ theorem sub_projects (P : Params) (r : ℕ) :
       rw [sub_deliver (PMF.pure_injective (stepG_dlv_own (hall i))) hfor]
       exact GBCA.ImplStep.deliver _ i j m hmem
   · by_cases hlτ : l = Sum.inl Lab.tau
-    · -- the message state's own injection
+    · -- the network's own injection
       subst hlτ
       obtain ⟨w', rfl, hn⟩ := subPre_tau_inv hlab
       obtain ⟨k, m, hF, hw⟩ := gNetStep_tau hn
@@ -1550,7 +1550,7 @@ theorem subSim_init (P : Params) (r : ℕ) :
   GBCA.instRel_init P r
 
 /-- **Broadcast compatibility**: corruption preserves the instance relation.
-The message state's corrupted set is the implementation's, so the two guards
+The network state's corrupted set is the implementation's, so the two guards
 `k ∉ F ∧ |F| < f` agree and the implementation-level statement
 (`GBCA.instRel_corrupt`) applies verbatim (D1). -/
 theorem subSim_failAct (P : Params) :

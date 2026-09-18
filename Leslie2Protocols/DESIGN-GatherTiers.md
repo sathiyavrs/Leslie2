@@ -1,7 +1,7 @@
 # Design — the gather-based GBCA stack `GBCA.lowPairInst ⊑ … ⊑ GBCA.specInst` and its chain
 
 Companion design document to the gather-based implementation of graded
-agreement: the sub-protocol encodings (`ABA/Vocabulary/MsgState.lean`, `ABA/Broadcast/Spec.lean`,
+agreement: the sub-protocol encodings (`ABA/Vocabulary/NetworkState.lean`, `ABA/Broadcast/Spec.lean`,
 `ABA/Broadcast/Impl.lean`, `ABA/Gather/Spec.lean`, `ABA/Gather/Ideal.lean`,
 `ABA/Gather/Low.lean`), their refinements (`ABA/Broadcast/ImplSim.lean`,
 `ABA/Gather/IdealSim.lean`, `ABA/Gather/LowSim.lean`), the two-gather round and its
@@ -19,7 +19,7 @@ Per round, four systems over the shared round alphabet `Lab P.n`, three plain
 forward simulations between them, and their probabilistic composite:
 
 ```
-lowPairInst P r   -- two gather-over-Bracha instances: 2 message states + 4n Bracha instances
+lowPairInst P r   -- two gather-over-Bracha instances: 2 network states + 4n Bracha instances
   ⊑ lowRefines        (broadcast substitution, componentwise)
 idealInst P r     -- two gather-over-BRB.Spec instances
   ⊑ idealRefines      (gather substitution, componentwise)
@@ -76,14 +76,14 @@ later than the first return it answers, and then hold every later return above
 the set it chose. `ABA/Gather/Core.lean` is the argument that the
 gather-over-BRB instance determines such a set.
 
-**The core.** Let `w` be the gather message state of a state of the instance:
+**The core.** Let `w` be the gather network state of a state of the instance:
 the per-sender sent sets beside the corrupted set `F`. Say that `q` *dominates*
 `j` when every `VOTE` payload `q` has multicast lies above some `ECHO` payload
 of `j`. Write `dominatedBy w q` for the senders `q` dominates and
 `dominators w j` for the processes outside `F` that dominate `j`.
 `Gather.coreOf P w` is the `ECHO` payload of a sender outside `F` carrying at
 least `f + 1` dominators, and `∅` where there is no such sender. It reads the
-sent sets and the corrupted set alone (`coreOf_msgState_only`), so the network
+sent sets and the corrupted set alone (`coreOf_networkState_only`), so the network
 component of a flat reading computes it from its own state.
 
 **The counting.** Read `dominatedBy` as an incidence whose rows and columns are
@@ -117,7 +117,7 @@ the `f + 1` certified coordinates, and BRB values are functional, so the
 returned map lies above the frozen core.
 
 **Why the counting closes here.** `BIND` payloads travel by reliable broadcast
-rather than on the gather message state, so a committed payload is write-once
+rather than on the gather network, so a committed payload is write-once
 whatever happens to its sender afterwards, where a multicast payload is pinned
 only by its sender's honesty and D1 withdraws that at any moment.
 `Gather.IdealState` holds one bind-BRB instance per process (`brbBind`) and the
@@ -254,10 +254,10 @@ case of the simulation rule the others out.
 Two rearrangements separate the flat stage side from the composed reading's,
 and both are forced by the flat shape.
 
-- **The tagged sent set.** A round of `AFW.composed` carries `4n + 2` message
-  message states — one per gather instance, one per Bracha instance. A flat
+- **The tagged sent set.** A round of `AFW.composed` carries `4n + 2`
+  network states — one per gather instance, one per Bracha instance. A flat
   adversary carries one sent-set family per round, so `AFW.Msg n` tags each
-  message with the message state it belongs to, and for a Bracha message with the
+  message with the network state it belongs to, and for a Bracha message with the
   instance, whose index is its leader. The sender index stays the sender, so a
   threshold still counts distinct senders (D5). No new adversary rows are
   needed: recording a multicast, checking a delivery and authorising a handshake row are
@@ -267,14 +267,14 @@ and both are forced by the flat shape.
   `AFW.StageRec n` is process-major: process `j`'s local state in each gather
   instance, and its local state in each of the `n` instances of each broadcast family.
   Nothing is lost, because every guard of the gather-based implementation
-  reads the acting process's own local states and the message states, and the two rows that
-  read a message state — the adversary's delivery and its Byzantine injection —
+  reads the acting process's own local states and the network states, and the two rows that
+  read a network state — the adversary's delivery and its Byzantine injection —
   belong to the adversary either way.
 
 `AFW.ProtocolRel` therefore has five conjuncts, not twenty: the round loop, the
 coin oracle and the ABA-side network are shared objects, and the round family
 is *computed* from the flat state by `AFW.toPair`, which undoes both
-rearrangements — transposing the local states back and slicing each message state's sent set out
+rearrangements — transposing the local states back and slicing each network state's sent set out
 of the tagged family by `Finset.filterMap`. Four of the five are that
 computation, so there is nothing to choose in the witness.
 
@@ -287,7 +287,7 @@ record. The link's broadcast of the candidate freezes the first gather's core at
 at `GBCA.boundOfCore` of that core; a graded return freezes the second core the
 same way. The composed `link` and `retG` freeze the same two values off the core
 their embedded gather return carries, and the values agree because each is
-`Gather.coreOf` of one message state (`coreOf_toLow1`, `coreOf_toLow2`).
+`Gather.coreOf` of one network state (`coreOf_toLow1`, `coreOf_toLow2`).
 
 The fifth conjunct, `AFW.BoundInv`, is the one clause that is not a reading of
 the flat state, and it is what makes the announced bits agree: a process whose
@@ -306,7 +306,7 @@ authenticity conjunct becoming membership in the sliced sent set; the call and t
 return are the instance's own. The remaining labels move the round loop and
 the ABA-side network while the family of rounds stands still, and corruption
 is one broadcast, the corrupted set the adversary holds being the corrupted
-set of every message state under the same guard.
+set of every network state under the same guard.
 
 `ABA/AFW/FlatSim.lean` closes with the headlines mirroring `Results.lean`'s:
 `AFW.protocol_composed`, `AFW.refines`, `AFW.main` and `AFW.chainSim`, each behind a

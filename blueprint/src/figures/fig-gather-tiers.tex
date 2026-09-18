@@ -1,7 +1,7 @@
 % The gather-based round and its three substitutions
 % (PLTS.ABA.GBCA.lowPairInst, idealInst, pairInst, GBCA.specInst).
 % The bottom tier is drawn open: two gather instances, each an exchange over its
-% own message state beside 2n Bracha instances, so 4n + 2 message states in one round.
+% own network beside 2n Bracha instances, so 4n + 2 network states in one round.
 % Each of the three state tiers is a triple whose third factor is the round's
 % bound bit, written at the link row.
 \begin{tikzpicture}[
@@ -18,9 +18,9 @@
   \node[font=\scriptsize, anchor=west] at (-0.2,-0.45)
     {$\mathrm{lowPairInst}(P,r)$: two gather instances and the round's bound bit, all concrete};
   \node[ga, anchor=north west] at (0.05,-0.75)
-    {gather 1 over payloads \textsf{Bool}:\\ its rounds and its own message state};
+    {gather 1 over payloads \textsf{Bool}:\\ its rounds and its own network};
   \node[ga, anchor=north west] at (5.85,-0.75)
-    {gather 2 over payloads \textsf{Option Bool}:\\ its rounds and its own message state};
+    {gather 2 over payloads \textsf{Option Bool}:\\ its rounds and its own network};
   % the 2n Bracha instances of each gather, inputs above and BIND payloads below
   \foreach \x in {0.05,5.85} {
     \node[brb, anchor=north west] at ({\x+0.00},-1.75) {$\mathrm{brbIn}\,1$};
@@ -32,7 +32,7 @@
   }
   % drawn once, under both groups
   \node[font=\scriptsize, align=center, text width=10.4cm] at (5.35,-3.4)
-    {$2n$ Bracha instances per gather, and so $4n + 2$ message states in one round};
+    {$2n$ Bracha instances per gather, and so $4n + 2$ network states in one round};
   % ---- the three tiers above it
   \node[tier] (ideal) at (5.35,-4.6)
     {$\mathrm{idealInst}(P,r)$: each Bracha coordinate replaced by the BRB specification};

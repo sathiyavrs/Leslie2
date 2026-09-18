@@ -55,7 +55,7 @@ independent — the inclusion never invokes transitivity of simulation.
 ## Scope of the headline
 
 Graded agreement is carried to implementation level: each round is a group of
-stage programs beside that round's own message state, moved by the same
+stage programs beside that round's own network, moved by the same
 network adversary. Each round's graded return announces that round's bound bit
 (D29), a ghost output that rides the `retG` label and that no component's state
 records. `GBCA.BindingTrace` (`Spec/GBCASafety.lean`) is the property it

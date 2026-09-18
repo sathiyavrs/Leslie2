@@ -39,7 +39,7 @@ inductive Msg : Type
 and `ProcState` carries one write-once field per level above `INPUT`:
 `sentEcho : Option Bool`, `sentVote sentBind sentEcho5 : Option (Option Bool)`,
 next to `input`, `sentInput : Bool → Bool` and `returned`. `ImplState` is the
-pair of the per-process stage records and the round's message state, the
+pair of the per-process stage records and the round's network state, the
 latter carrying the D5 set-based network (`sent`, `recv`), the corrupted set
 `F`, and the write-once ghost field `bound : Option Bool`. Derived counts: `recvCount i m` (distinct senders of the
 exact message `m` delivered to `i`), `echoCount`/`voteCount`/`bindCount`/
@@ -660,7 +660,7 @@ rendezvous rows `gsndEcho5Bit`/`gsndEcho5Bot` are the echo5 multicasts read off
 that record, and the three `retG` rows (and their `byzRetG` counterparts) read the echo5
 level off it. No translation is needed to the global view: the round-`r` `ImplState`
 *is* the round instance's own state — the stage records with their received set rows
-beside the round's message state, which holds the per-sender sent sets and the
+beside the round's network state, which holds the per-sender sent sets and the
 corrupted set — and `ImplState.echo5Count` reads the receiving program's received set
 rows directly. So `GSub.subSim` consumes `implRefines` as it stands: the
 projection `sub_projects` (`ABA/ABDY/Instances.lean`) matches every round-instance
@@ -704,8 +704,8 @@ by the graded agreement specification.
    which is all the simulation needs. Any per-process decomposition must
    therefore be read through the same accessors as the other `proc`-field
    predicates — `ImplState.proc` for the field and `ImplState.F` for the
-   corrupted set, the latter reading the set held by the round's own message
-   message state, which is the state's second component.
+   corrupted set, the latter reading the set held by the round's own
+   network state, which is the state's second component.
 6. **Vacuous-fill hazard in `excludedCert_of_echo5Bot_quorum`.** The Case B branch
    needs the global classical split "some honest bit-voter exists"; its
    **no**-branch uses `bindBot_conf` on a *specific* honest `BIND` sender

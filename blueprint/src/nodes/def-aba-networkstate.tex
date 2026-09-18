@@ -1,12 +1,12 @@
 \begin{definition}[The two-part instance vocabulary]
-  \label{def:aba-msgstate}
-  \lean{PLTS.ABA.MsgState}\lean{PLTS.ABA.LocalState}\lean{PLTS.ABA.SubState}\lean{PLTS.ABA.SubState.corrupt}\lean{PLTS.ABA.SubState.mcast}\lean{PLTS.ABA.SubState.recvMsg}\lean{PLTS.ABA.SubState.recvCount}\leanok
+  \label{def:aba-networkstate}
+  \lean{PLTS.ABA.NetworkState}\lean{PLTS.ABA.LocalState}\lean{PLTS.ABA.SubState}\lean{PLTS.ABA.SubState.corrupt}\lean{PLTS.ABA.SubState.mcast}\lean{PLTS.ABA.SubState.recvMsg}\lean{PLTS.ABA.SubState.recvCount}\leanok
   \uses{def:aba-params}
   The state shape the broadcast and gather encodings share.
-  The message state $\mathrm{MsgState}(n, M)$ holds the per-sender sent sets $sent : [n] \to \mathcal{P}(M)$ and the corrupted set $F$ (D5, D1); a local state $\mathrm{LocalState}(n, Pr, M)$ holds one process's record of type $Pr$ beside its per-sender received sets.
+  The network state $\mathrm{NetworkState}(n, M)$ holds the per-sender sent sets $sent : [n] \to \mathcal{P}(M)$ and the corrupted set $F$ (D5, D1); a local state $\mathrm{LocalState}(n, Pr, M)$ holds one process's record of type $Pr$ beside its per-sender received sets.
   An instance state is the pair
   \[
-    \mathrm{SubState}(n, Pr, M) \;=\; \bigl([n] \to \mathrm{LocalState}(n, Pr, M)\bigr) \times \mathrm{MsgState}(n, M),
+    \mathrm{SubState}(n, Pr, M) \;=\; \bigl([n] \to \mathrm{LocalState}(n, Pr, M)\bigr) \times \mathrm{NetworkState}(n, M),
   \]
   read through the accessors $\mathit{proc}$, $\mathit{sent}$, $\mathit{recv}$ and $F$, and moved by $\mathrm{setProc}$, the multicast $\mathrm{mcast}$, the delivery $\mathrm{recvMsg}$ and the corruption transform $\mathrm{corrupt}$.
   The receipt count $\mathrm{recvCount}(i, m)$ is the number of distinct senders from which $i$ holds $m$, and the quorum-intersection lemmas --- two $n{-}f$ receipt sets meet in an honest sender at $3f < n$, and a receipt count above $|F|$ names an honest sender --- are stated once over the pair.

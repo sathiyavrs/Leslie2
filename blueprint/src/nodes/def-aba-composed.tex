@@ -12,9 +12,9 @@
   A round loop is not round-filtered: it answers every round's $\mathrm{callG}$, its own as a participant and every other process's as a bystander.
   A corruption replaces the program of the process it names (D23), here as at the protocol: the round loop carries the flag, its own half of the $\mathrm{fail}$ row writes it, every other row is enabled only while it is down, and in place of those rows the replaced program is the self-loop \leandeclnamed{corruptedIdle}{PLTS.ABA.Comp.CoreProcStepN.corruptedIdle}.
   The ABA-side network holds the other half: its $\mathrm{fail}$ row carries the guard $k \notin F \wedge |F| < f$, and its \leandeclnamed{retByz}{PLTS.ABA.Comp.ANetStep.retByz} row lets a corrupted process return without DECIDED evidence, pairing with that self-loop.
-  A round instance is a component of the composite at every moment, so the graded-agreement coordinate of a composed state is $\mathbb{N} \to \mathrm{ImplState}(n)$: every round keeps its stage records and its message state for the whole run, whichever round each process is in.
+  A round instance is a component of the composite at every moment, so the graded-agreement coordinate of a composed state is $\mathbb{N} \to \mathrm{ImplState}(n)$: every round keeps its stage records and its network state for the whole run, whichever round each process is in.
   The processes hold those stage records too (D22).
-  What no process holds is the message state of a round, and a round instance, carrying no termination flag, answers a send or a delivery at a process the protocol has terminated.
+  What no process holds is the network state of a round, and a round instance, carrying no termination flag, answers a send or a delivery at a process the protocol has terminated.
   The graded-agreement family occupies the left argument of the outer parallel composition, which is the refinable position.
   Full construction: \leandecl{PLTS.ABA.ABDY.composed}, over \leandecl{PLTS.ABA.Comp.coreProcN} and \leandecl{PLTS.ABA.Comp.aNet}.
 \end{definition}

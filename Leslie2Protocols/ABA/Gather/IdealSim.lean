@@ -31,7 +31,7 @@ then the return.
 * Entry commits are licensed by the invariant's provenance clause: a
   committed input-BRB entry of an honest process is that process's input,
   which the relation identifies with the specification's call record.
-* The core frozen is `coreOf` of the instance's message state, and the two
+* The core frozen is `coreOf` of the instance's network state, and the two
   guards of `bindCore` are `Gather.coreOf_freeze`, which the returner's
   quorum of `n − f` committed bind payloads supplies.
 * Every return, the first included, is matched through the count

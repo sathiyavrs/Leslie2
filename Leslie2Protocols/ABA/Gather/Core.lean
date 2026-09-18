@@ -15,7 +15,7 @@ that `coreOf` is a bound core. At every state at which some process outside
 its entries are committed input-BRB entries, and it lies below the committed
 `BIND` payload of every process outside `F`.
 
-The counting is over one incidence on the message state. `dominatedBy w q`
+The counting is over one incidence on the network state. `dominatedBy w q`
 is the set of senders an `ECHO` payload of which lies below every `VOTE`
 payload `q` has multicast, and `dominators w j` the set of processes outside
 `F` that dominate `j` in that sense. A `VOTE` of a process outside `F` is
@@ -55,9 +55,9 @@ commit guards, recorded per coordinate. -/
 structure IdealConf (P : Params) (s : IdealState P.n X) : Prop where
   /-- The corruption budget. -/
   F_card : s.ga.F.card ≤ P.f
-  /-- The input-BRB corrupted sets are in lockstep with the message state's. -/
+  /-- The input-BRB corrupted sets are in lockstep with the network state's. -/
   F_in_eq : ∀ k, (s.brbIn k).F = s.ga.F
-  /-- The bind-BRB corrupted sets are in lockstep with the message state's. -/
+  /-- The bind-BRB corrupted sets are in lockstep with the network state's. -/
   F_bind_eq : ∀ k, (s.brbBind k).F = s.ga.F
   /-- Delivered messages were multicast. -/
   recv_sub : ∀ i k, s.ga.recv i k ⊆ s.ga.sent k
@@ -691,7 +691,7 @@ theorem IdealInv.step {s : IdealState P.n X} {l : Lab P.n X}
     {s' : IdealState P.n X} (hs' : s' ∈ μ.support) : IdealInv P s' :=
   ⟨hInv.toIdealConf.step hstep hs', echoAppr_step hInv.echo_appr hstep hs'⟩
 
-/-! ### The incidence on the message state -/
+/-! ### The incidence on the network state -/
 
 section Incidence
 

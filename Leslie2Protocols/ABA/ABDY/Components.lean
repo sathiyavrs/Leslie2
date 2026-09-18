@@ -64,7 +64,7 @@ sub-protocol messages — so those messages enter only through the Byzantine han
 
 ## The ABA-side network
 
-`ANetStep` is what the network adversary retains once the round message states have
+`ANetStep` is what the network adversary retains once the round networks have
 taken the stage sent sets: the DECIDED sets `dsent j`, the corrupted set `F` with
 its budget, and the authorisation of every Byzantine handshake row. `aNet` is that
 automaton. Its `fail` row carries the budget guard `k ∉ F ∧ |F| < f`, so a
@@ -287,7 +287,7 @@ inductive CoreProcStepN (P : Params) (j : Fin P.n) :
 /-! ### The DECIDED sets and the corrupted set
 
 What is left of the network adversary once the round-tagged sent sets have gone to
-the round message states: the DECIDED sets, the corrupted set with its budget, and
+the round networks: the DECIDED sets, the corrupted set with its budget, and
 the authorisation of every Byzantine handshake row. -/
 
 /-- The state of the ABA-side network: the DECIDED sets and the corrupted
@@ -372,7 +372,7 @@ inductive ANetStep (P : Params) :
   is the replaced program's self-loop. -/
   | retByz (a : ANetState P.n) (id : Fin P.n) (b : Bool) (hF : id ∈ a.F) :
       ANetStep P a (Sum.inl (.retABA id b)) (PMF.pure a)
-  /-- The graded-agreement call's `⟨INPUT, b⟩` is sent in the round's message state,
+  /-- The graded-agreement call's `⟨INPUT, b⟩` is sent in the round's network,
   not here. -/
   | callGIdle (a : ANetState P.n) (r : ℕ) (id : Fin P.n) (b : Bool) :
       ANetStep P a (Sum.inl (.callG r id b)) (PMF.pure a)

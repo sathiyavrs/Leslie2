@@ -33,11 +33,11 @@ the fourth conjunct is restored by `rel_setBound`.
 * The coin oracle is the same component on both sides.
 * The ABA-side network is the protocol adversary's DECIDED sets beside its
   corrupted set.
-* The message state of round `r` is the adversary's round-`r` message sets beside the
+* The network state of round `r` is the adversary's round-`r` message sets beside the
   same corrupted set and the adversary's ghost record of round `r`. Corruption
   is one broadcast on both sides, so every copy of the corrupted set is the
   adversary's; the round's bound bit is the adversary's ghost record of that
-  round, which is the composed reading of the bit the instance's message state
+  round, which is the composed reading of the bit the instance's network state
   holds.
 * The entry of process `j` in the instance of round `r` is the stage record of
   round `r` that `j` holds. This is one equation for each pair `(j, r)`. A
@@ -72,7 +72,7 @@ namespace ABDY
 /-- **The relation of the protocol presentation to the composed one.** Writing
 `u = (procs, w, o)` and `t = (G, C, A, o')`, the five conjuncts are: the round
 loops agree; the oracle is shared; the ABA-side network is the adversary's
-DECIDED sets beside its corrupted set; each round's message state is that round's
+DECIDED sets beside its corrupted set; each round's network state is that round's
 slice of the adversary's sent sets beside the same corrupted set and the
 adversary's ghost record of that round; and the entry of process `j` in the
 instance of round `r` is the stage record of round `r` that `j` holds (D22). No
@@ -148,7 +148,7 @@ private theorem match_prod (P : Params) {x : ∀ _ : Fin P.n, ProcRec P.n}
 /-! ### Updating one round
 
 A label owned by round `r` moves that round's instance and no other. The two
-lemmas below read the stage columns and the message states of the updated family. -/
+lemmas below read the stage columns and the network states of the updated family. -/
 
 /-- Updating round `r` by a state whose stage columns are the ones it already
 had leaves every stage column where it was. -/
@@ -159,8 +159,8 @@ private theorem update_fst {P : Params} (G : ℕ → GBCA.ImplState P.n) (r : �
   · subst h; rw [Function.update_self, hX]
   · rw [Function.update_of_ne h]
 
-/-- Updating round `r` by a state whose message state is the one it already had leaves
-every message state where it was. -/
+/-- Updating round `r` by a state whose network state is the one it already had leaves
+every network state where it was. -/
 private theorem update_snd {P : Params} (G : ℕ → GBCA.ImplState P.n) (r : ℕ)
     (u : ∀ _ : Fin P.n, GBCA.StageRec P.n) (r' : ℕ) :
     (Function.update G r (u, (G r).2) r').2 = (G r').2 := by
@@ -168,7 +168,7 @@ private theorem update_snd {P : Params} (G : ℕ → GBCA.ImplState P.n) (r : �
   · subst h; rw [Function.update_self]
   · rw [Function.update_of_ne h]
 
-/-- The message state conjunct after a stage multicast in round `r`. -/
+/-- The network state conjunct after a stage multicast in round `r`. -/
 private theorem rel_gsent {P : Params} {G : ℕ → GBCA.ImplState P.n}
     {w : NetState P.n} (hG : ∀ r, (G r).2 = ⟨w.sent r, w.F, w.ghostRec r⟩)
     (r : ℕ) (k : Fin P.n) (m : GBCA.Msg) (u : ∀ _ : Fin P.n, GBCA.StageRec P.n)
@@ -195,7 +195,7 @@ private theorem ghostOut_getD {P : Params} {w : NetState P.n} {r : ℕ} {id : Fi
   | none => rfl
   | some β => rw [hg] at h; exact h.symm
 
-/-- The message state conjunct after a return of round `r`. The instance's bound
+/-- The network state conjunct after a return of round `r`. The instance's bound
 bit and the adversary's ghost record of round `r` take the same bit, and every
 other round's record stands still. -/
 private theorem rel_setBound {P : Params} {G : ℕ → GBCA.ImplState P.n}
@@ -218,7 +218,7 @@ private theorem rel_setBound {P : Params} {G : ℕ → GBCA.ImplState P.n}
   · rw [Function.update_of_ne hr, hG r', hne r' hr]
     simp
 
-/-- The message state's corruption act and the adversary's agree. -/
+/-- The network state's corruption act and the adversary's agree. -/
 private theorem corrupt_gnet {P : Params} (w : NetState P.n) (k : Fin P.n) (r : ℕ) :
     (⟨w.sent r, w.F, w.ghostRec r⟩ : GSub.GNetState P.n).corrupt P k =
       ⟨(NetState.corrupt P k w).sent r, (NetState.corrupt P k w).F,

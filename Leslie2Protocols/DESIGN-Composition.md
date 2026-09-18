@@ -47,7 +47,7 @@ round the process has touched, and a flag saying whether the process has termina
 composed state carries one graded-agreement instance per round at every moment, and no
 termination flag. `ABDY.ProtocolRel` and `AFW.ProtocolRel` pin every composed coordinate
 against the protocol state: a round instance's local states are the stage records the
-processes hold for that round, and its message states are the adversary's sent sets for it.
+processes hold for that round, and its network states are the adversary's sent sets for it.
 Those conjuncts are unguarded, so a composed state is determined by any protocol state
 related to it. `AFW.ProtocolRel` carries one further conjunct, `AFW.BoundInv`, which is not
 a reading of the protocol state: a round whose second gather has been called has its bound
@@ -62,12 +62,12 @@ answers a send or a delivery at a process the protocol has terminated.
 
 A sub-protocol is swappable exactly when its component boundary owns its network.
 
-Giving each round its own message state is what makes the round a component, and a
+Giving each round its own network is what makes the round a component, and a
 component can be replaced. The substitution is one family congruence and one parallel
 precongruence, then `abstract`, `relabel`, `abstract` to run the composition pipeline
 out. Nothing else in the chain is touched.
 
-That is a modular axis rather than a one-off. Varying the power of the message state —
+That is a modular axis rather than a one-off. Varying the power of the network —
 losses, reordering, a different forgery model — is a change inside the round instance,
 swapped in by the same precongruence. Exchanging the whole implementation of graded agreement
 is that same move at that same place, which is what the second chain is.
@@ -84,11 +84,11 @@ The gather-based implementation applies that device three more times, inside the
 before the round itself is exchanged at `hybrid`.
 
 One record shape carries every level. `ABA.SubState n Pr M` is `n` local states beside one
-message state `ABA.MsgState n M`, which holds the per-sender sent sets and the corrupted set
+network state `ABA.NetworkState n M`, which holds the per-sender sent sets and the corrupted set
 and nothing else (D5). Bracha's instance is `BRB.ImplState`, that shape at the broadcast
 message type; a gather instance holds its own in the field `ga`; and `GBCA.ImplState` is the
-ABDY22 analogue, the stage records beside the round's message state. A sub-protocol
-implementation here is always local states beside the one message state it owns.
+ABDY22 analogue, the stage records beside the round's network state. A sub-protocol
+implementation here is always local states beside the one network state it owns.
 
 A round is two gather instances beside the round's bound bit, at each of the three tiers:
 
@@ -98,28 +98,28 @@ GBCA.IdealState   n = Gather.IdealState n Bool × Gather.IdealState n (Option Bo
 GBCA.PairState    n = Gather.SpecState  n Bool × Gather.SpecState  n (Option Bool) × Option Bool
 ```
 
-and a gather instance carries its own message state beside the `2n` broadcast instances its
+and a gather instance carries its own network state beside the `2n` broadcast instances its
 payloads travel by. `Gather.LowState` holds `ga` beside `2n` Bracha instances, `n` carrying the
 entries and `n` the `BIND` payloads; `Gather.IdealState` holds `ga` beside the same `2n` at
 broadcast specifications; and `Gather.SpecState` holds
-no message state at all — the call records, the committed entries, the return flags, the core
+no network state at all — the call records, the committed entries, the return flags, the core
 and the corrupted set.
 
 Three substitutions take one tier to the next, and each removes exactly what the component it
 replaces owned.
 
 - `GBCA.lowRefines` replaces each of the round's `4n` Bracha instances by a broadcast
-  specification, componentwise through `Gather.gatherLow`. The Bracha message states die;
+  specification, componentwise through `Gather.gatherLow`. The Bracha network states die;
   what survives of each is the committed value, written once.
 - `GBCA.idealRefines` replaces each gather-over-broadcast instance by the gather
-  specification, componentwise through `Gather.gatherCore`. A gather's own message state and
+  specification, componentwise through `Gather.gatherCore`. A gather's own network state and
   the `2n` broadcast specifications beneath it die together; what survives is the per-entry
   committed record and the frozen core.
 - `GBCA.pairRefines` replaces the two-gather round by `GBCA.specInst`. The two gather
   specifications die; what survives is `excluded` and `grade`.
 
 Each of those tiers is a single rule table over a product state rather than a composition, so
-a round's message states are fields of one system and not components of one (D28), where the
+a round's network states are fields of one system and not components of one (D28), where the
 protocol chain's round is the `n` stage programs beside `GSub.gNet`. Bringing the two chains
 to one shape is the subject of `TODO-Decomposing-AFW-Composed.md`.
 
@@ -132,8 +132,8 @@ no guard consults, and the gather specification's own core is the value its retu
 announce (D29).
 
 Which component owns a payload is a design decision and not bookkeeping. A gather's `BIND`
-payloads travel by reliable broadcast rather than on the gather message state, so a committed
-payload is write-once whatever later happens to its sender. A payload held in a message state
+payloads travel by reliable broadcast rather than on the gather network, so a committed
+payload is write-once whatever later happens to its sender. A payload held in a network
 is pinned only by its sender's honesty, and D1 withdraws that at any moment. The decision is
 legible in the message types: `Gather.GaMsg` carries `echo` and `vote` and no `BIND`
 constructor, and at the protocol a bind payload is tagged `brbBind1` or `brbBind2`, a
@@ -155,7 +155,7 @@ term:
 term is the same expression in all five, which is why the third stage's target is `hybrid P`
 itself and why the two chains meet there.
 
-Beneath `AFW.composed` the protocol collapses the round's `4n + 2` message states into the
+Beneath `AFW.composed` the protocol collapses the round's `4n + 2` network states into the
 one sent-set family the adversary holds, tagging each message with the instance it belongs
 to: `AFW.Msg` carries a constructor per layer, `ga1`, `ga2`, `brbIn1`, `brbBind1`, `brbIn2`
 and `brbBind2`. `AFW.StageRec` is the composed reading's instance-major indexing transposed,
@@ -171,7 +171,7 @@ of both chains and the second component of `ABAState`, the state `coreRel` is de
 neither chain idealizes it.
 
 Below that the two chains own different things. ABDY22's carries one further network, the
-round's message state `GSub.gNet`, a component of `ABDY.composed` and of `hybrid`, which
+round's network `GSub.gNet`, a component of `ABDY.composed` and of `hybrid`, which
 disappears at the substitution inside the component that is exchanged. It is also the second
 component of `GBCA.ImplState`, the state the round refinement is defined on. It carries one
 field that is not a message set: the round's bound bit, the value the round's graded returns
@@ -181,12 +181,12 @@ the sent sets do, so it disappears with the round at the substitution.
 
 The gather-based chain carries `4n + 2` of them per round: one for each gather instance, and
 one for each of the `4n` broadcast instances beneath the two. They disappear in two stages
-rather than one, the broadcast message states at `GBCA.lowRefines` and the gather message
-states at `GBCA.idealRefines`, each inside the component being exchanged.
+rather than one, the broadcast networks at `GBCA.lowRefines` and the gather networks
+at `GBCA.idealRefines`, each inside the component being exchanged.
 
 Every invariant therefore reads its network through accessors on a pair — the
 `GBCA.ImplState` accessors in `ABA/ABDY/Impl.lean`, the `ABAState` accessors in
-`ABA/ABDY/ABAState.lean`, the `ABA.SubState` accessors in `ABA/Vocabulary/MsgState.lean` —
+`ABA/ABDY/ABAState.lean`, the `ABA.SubState` accessors in `ABA/Vocabulary/NetworkState.lean` —
 and names the network's own sent sets rather than a copy of them held inside a record.
 Weakening any one of them is a change to that one component.
 
@@ -208,8 +208,8 @@ The property holds across the development, and a reader should not have to re-de
 
 Each leaf record holds exactly one local state's data: `ProcCore` and `CoreRec` for a round loop,
 `GBCA.ProcState` and `GBCA.StageRec` for a graded-agreement stage, `Net.StageSideRec` and
-`AFW.StageSideRec` for the stage side of one process, `GSub.GNetState` for a round's message
-state beside its bound bit, `ABA.MsgState` for the message state of any other sub-protocol
+`AFW.StageSideRec` for the stage side of one process, `GSub.GNetState` for a round's network
+state beside its bound bit, `ABA.NetworkState` for the network state of any other sub-protocol
 instance, `Comp.ANetState` for the DECIDED network, and one `SpecState` for each of the five
 specifications. Each composite state is an explicit product of those: `Net.ProcRec`,
 `AFW.ProcRec`, `ABA.SubState`, `GBCA.ImplState`, `ABAState`, `Comp.ComposedState` and
@@ -228,7 +228,7 @@ output `ghostOut`, which the two graded-agreement return rows read. What a row r
 the value its label announces, not whether it fires: the read admits a bit at every state
 (`ghostOut_total`), which is what makes the record erasable.
 `ABDY.protocol_composed` and `AFW.protocol_composed` carry those readings into ones where
-each round owns its message states beside `Comp.ANetState`, and every step above the first
+each round owns its network states beside `Comp.ANetState`, and every step above the first
 link runs there. A round's ghost record is the composed reading of the values the round's own
 state holds, which is one conjunct of each protocol relation.
 

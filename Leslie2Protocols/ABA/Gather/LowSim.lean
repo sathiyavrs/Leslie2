@@ -13,7 +13,7 @@ import Leslie2Protocols.Framework.WeakRun
 
 `Gather.gatherLow`: the gather-over-Bracha instance (`ABA/Gather/Low.lean`)
 forward-simulates the gather-over-BRB-specification instance
-(`ABA/Gather/Ideal.lean`), along `Gather.LowRel` — the gather local states and message state
+(`ABA/Gather/Ideal.lean`), along `Gather.LowRel` — the gather local states and network state
 held *equal*, and each Bracha coordinate related to its specification
 coordinate by the BRB refinement relation (`ABA/Broadcast/ImplSim.lean`).
 
@@ -30,7 +30,7 @@ specification tier's rows.
 
 The relation holds the two instances' `core` fields equal, which is what
 makes the two `ret` labels agree: the core each carries is `coreOf` of the
-message state the relation already holds equal.
+network state the relation already holds equal.
 -/
 
 namespace PLTS
@@ -41,15 +41,15 @@ variable {X : Type} [DecidableEq X] {P : Params}
 
 /-! ### The relation -/
 
-/-- The broadcast substitution relation: the gather local states and message state equal,
+/-- The broadcast substitution relation: the gather local states and network state equal,
 the Bracha coordinates related by the BRB refinement relation, and the
 corrupted sets in lockstep across every component. -/
 structure LowRel (P : Params) (s : LowState P.n X) (t : IdealState P.n X) : Prop where
-  /-- The gather local states and message state are untouched by the substitution. -/
+  /-- The gather local states and network state are untouched by the substitution. -/
   ga_eq : t.ga = s.ga
-  /-- The input-BRB corrupted sets are in lockstep with the message state's. -/
+  /-- The input-BRB corrupted sets are in lockstep with the network state's. -/
   F_in_ga : ∀ k, (s.brbIn k).F = s.ga.F
-  /-- The bind-BRB corrupted sets are in lockstep with the message state's. -/
+  /-- The bind-BRB corrupted sets are in lockstep with the network state's. -/
   F_bind_ga : ∀ k, (s.brbBind k).F = s.ga.F
   /-- Each input coordinate is BRB-refined. -/
   inRel : ∀ k, BRB.InstRel P k (s.brbIn k) (t.brbIn k)

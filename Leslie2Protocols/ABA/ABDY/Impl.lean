@@ -85,9 +85,9 @@ pseudocode (`n − f`).
 
 The state is exactly the protocol's own data, held in two halves: each process
 keeps its own local state beside the messages delivered to it, and the round's
-message state keeps the per-sender sent sets and the corrupted set. `ImplState` is
+network state keeps the per-sender sent sets and the corrupted set. `ImplState` is
 their pair, so the network is a component of the state and not a field of it — a
-weaker message state is a different second component and leaves the rest of the round
+weaker network is a different second component and leaves the rest of the round
 alone. The three return transitions are cases (1), (2), (3) of Algorithm 6's
 lines 23–29: case (1) an `n − f` `ECHO5 v` quorum, case (2) an `n − f`
 any-`ECHO5` quorum containing `ECHO5 v` together with `f + 1` `BIND v`s and
@@ -102,7 +102,7 @@ side; the refinement (`ABA/ABDY/ImplSim.lean`) supplies it from the receipts.
 
 The specification announces a bound bit on every return label (`ABA/Spec/GBCA.lean`).
 The implementation announces one too, and holds it in the write-once field
-`GSub.GNetState.bound` of the round's message state. The field is a ghost: it is
+`GSub.GNetState.bound` of the round's network state. The field is a ghost: it is
 auxiliary state, no program reads it, and the three return rows are the only
 rows that touch it.
 
@@ -200,11 +200,11 @@ def ProcState.initial : ProcState where
 
 The data of one round sits in two records. Each process holds its own protocol
 state together with the messages delivered to it, and nothing else — there is
-no record there of what it has multicast. The round's message state holds the
+no record there of what it has multicast. The round's network state holds the
 per-sender sent sets and the corrupted set. The instance's state below is their
 pair, so every field of the algorithm is a field of one local state or the other.
 
-The message state carries the name of the instance that composes it beside the
+The network state carries the name of the instance that composes it beside the
 programs (`ABA/ABDY/Instances.lean`). -/
 
 /-- The stage record of one process: its own local state and the messages
@@ -264,7 +264,7 @@ end GBCA
 
 namespace GSub
 
-/-- The state of the round's message state: the per-sender sent sets and the
+/-- The state of the round's network: the per-sender sent sets and the
 corrupted set. -/
 structure GNetState (n : ℕ) : Type where
   /-- `sent j` — the messages process `j` has multicast in this round (D5). -/
@@ -281,7 +281,7 @@ namespace GNetState
 
 variable {n : ℕ}
 
-/-- The initial message state: nothing multicast, nobody corrupted. -/
+/-- The initial network state: nothing multicast, nobody corrupted. -/
 def initial (n : ℕ) : GNetState n where
   sent := fun _ => ∅
   F := ∅
@@ -292,11 +292,11 @@ def gsent (w : GNetState n) (j : Fin n) (m : GBCA.Msg) : GNetState n :=
   { w with sent := Function.update w.sent j (insert m (w.sent j)) }
 
 /-- Corruption (deviation D1): total, Dirac, budget-guarded. It is not a row
-of any rule table — the family applies it to every round's message state at once. -/
+of any rule table — the family applies it to every round's network at once. -/
 def corrupt (P : Params) (id : Fin P.n) (w : GNetState P.n) : GNetState P.n :=
   if id ∉ w.F ∧ w.F.card < P.f then { w with F := insert id w.F } else w
 
-/-- The round's bound bit is written: the message state records `β`. -/
+/-- The round's bound bit is written: the network state records `β`. -/
 def setBound (w : GNetState n) (β : Bool) : GNetState n := { w with bound := some β }
 
 @[simp] theorem gsent_F (w : GNetState n) (j : Fin n) (m : GBCA.Msg) :
@@ -341,7 +341,7 @@ end GSub
 namespace GBCA
 
 /-- **The state of one GBCA implementation instance**: the `n` stage records
-beside the round's message state. -/
+beside the round's network state. -/
 abbrev ImplState (n : ℕ) : Type := (∀ _ : Fin n, StageRec n) × GSub.GNetState n
 
 namespace ImplState
@@ -357,14 +357,14 @@ def sent (s : ImplState n) : Fin n → Finset Msg := s.2.sent
 /-- `recv i j` — the messages from sender `j` delivered to receiver `i`. -/
 def recv (s : ImplState n) : Fin n → Fin n → Finset Msg := fun i => (s.1 i).recv
 
-/-- The corrupted set (the message state's, kept in lockstep by `fail` broadcast). -/
+/-- The corrupted set (the network state's, kept in lockstep by `fail` broadcast). -/
 def F (s : ImplState n) : Finset (Fin n) := s.2.F
 
-/-- The round's bound bit (the message state's). A ghost: no rule but the three
+/-- The round's bound bit (the network state's). A ghost: no rule but the three
 returns reads it, and no program holds it. -/
 def bound (s : ImplState n) : Option Bool := s.2.bound
 
-/-- The round's bound bit is written: the message state records `β`. -/
+/-- The round's bound bit is written: the network state records `β`. -/
 def setBound (s : ImplState n) (β : Bool) : ImplState n := (s.1, s.2.setBound β)
 
 @[simp] theorem proc_apply (u : ∀ _ : Fin n, StageRec n) (w : GSub.GNetState n)
@@ -380,7 +380,7 @@ def setBound (s : ImplState n) (β : Bool) : ImplState n := (s.1, s.2.setBound �
 @[simp] theorem setBound_apply (u : ∀ _ : Fin n, StageRec n) (w : GSub.GNetState n)
     (β : Bool) : setBound (u, w) β = (u, w.setBound β) := rfl
 
-/-! The bound-bit write touches the message state's own field alone, so every
+/-! The bound-bit write touches the network state's own field alone, so every
 other reading of the round passes through it. -/
 
 @[simp] theorem setBound_proc (s : ImplState n) (β : Bool) :
@@ -500,7 +500,7 @@ theorem setProc_proc_ne (s : ImplState n) (j : Fin n) (p : ProcState)
     (s.setProc j p).bothValid P i ↔ s.bothValid P i := by
   simp [bothValid]
 
-/-- Process `j` multicasts `m`: the message state records it under `j`. -/
+/-- Process `j` multicasts `m`: the network state records it under `j`. -/
 def mcast (s : ImplState n) (j : Fin n) (m : Msg) : ImplState n :=
   (s.1, s.2.gsent j m)
 
@@ -511,7 +511,7 @@ def mcast (s : ImplState n) (j : Fin n) (m : Msg) : ImplState n :=
 @[simp] theorem mcast_F (s : ImplState n) (j : Fin n) (m : Msg) :
     (s.mcast j m).F = s.F := rfl
 
-/-! A multicast is the message state's write alone, so no reading of the delivered
+/-! A multicast is the network state's write alone, so no reading of the delivered
 sets moves. -/
 
 @[simp] theorem mcast_recvCount (s : ImplState n) (j : Fin n) (m : Msg)
@@ -583,7 +583,7 @@ theorem recvCount_le_recvMsg (s : ImplState n) (i j : Fin n) (m : Msg)
   exact ⟨hk.1, mem_recvMsg_recv.mpr (Or.inr hk.2)⟩
 
 /-- Corruption (deviation D1): total, Dirac, in lockstep with the spec's, and
-the message state's own row — the stage records are corruption-blind. -/
+the network state's own row — the stage records are corruption-blind. -/
 def corrupt (P : Params) (id : Fin P.n) (s : ImplState P.n) : ImplState P.n :=
   (s.1, GSub.GNetState.corrupt P id s.2)
 
@@ -599,7 +599,7 @@ def corrupt (P : Params) (id : Fin P.n) (s : ImplState P.n) : ImplState P.n :=
   unfold corrupt sent GSub.GNetState.corrupt; split <;> rfl
 
 /-- The corrupted set after a corruption. `F` is the one field corruption
-writes, and the budget guard sits in the message state, so the reading is stated here
+writes, and the budget guard sits in the network state, so the reading is stated here
 rather than reached by unfolding. Not a simp lemma: it introduces an `ite`. -/
 theorem corrupt_F {P : Params} (s : ImplState P.n) (id : Fin P.n) :
     (s.corrupt P id).F = if id ∉ s.F ∧ s.F.card < P.f then insert id s.F else s.F := by

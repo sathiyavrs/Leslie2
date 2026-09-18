@@ -30,7 +30,7 @@ Each process, once called:
 * return `g` — once `n − f` bind-BRB instances hold committed payloads, each
   a sub-map of `g`, with `g` itself a sub-map of the committed inputs.
 
-`ECHO` and `VOTE` are plain multicasts on the instance's message state
+`ECHO` and `VOTE` are plain multicasts on the instance's network
 (`ABA.SubState`, deviations D1/D5). The `BIND` payloads travel by reliable
 broadcast instead. The binding argument (`ABA/Gather/Core.lean`) holds every
 return to one core, fixed at the first return, and the entries carrying it
@@ -41,7 +41,7 @@ withdraw.
 
 The state carries the instance's `core` as auxiliary state: no process reads
 it and no guard consults it. The `ret` row writes it, at the first return,
-with the payload set `coreOf` computes from the message state, and every
+with the payload set `coreOf` computes from the network state, and every
 return carries it on its label.
 
 No guard restricts the `ECHO`/`VOTE`/`BIND` handlers beyond participation
@@ -55,7 +55,7 @@ namespace Gather
 
 /-- The plain-multicast messages of one gather instance: the `ECHO` and
 `VOTE` payload sets. The `BIND` payloads travel by reliable broadcast and are
-not messages of the message state. -/
+not messages of the network. -/
 inductive GaMsg (n : ℕ) (X : Type) : Type
   /-- `⟨ECHO, A⟩`. -/
   | echo (A : APSet n X)
@@ -83,10 +83,10 @@ def PRec.initial (n : ℕ) (X : Type) : PRec n X where
   sentVote := none
   returned := false
 
-/-! ### The core of a gather message state
+/-! ### The core of a gather network state
 
 `coreOf` reads a payload set off the sent sets and the corrupted set of a
-gather message state, and nothing else (`coreOf_msgState_only`). It is the
+gather network state, and nothing else (`coreOf_networkState_only`). It is the
 `ECHO` payload of a sender whose payload lies below the `VOTE` payloads of
 many processes outside `F`. `Gather/Core.lean` is the argument that it has at
 least `n − f` entries and lies below every committed `BIND` payload of a
@@ -122,7 +122,7 @@ noncomputable def echoOf (j : Fin n) : APSet n X :=
   if h : ∃ A : APSet n X, GaMsg.echo A ∈ w.sent j then h.choose else ∅
 
 open scoped Classical in
-/-- **The core of a gather message state**: the `ECHO` payload of a sender
+/-- **The core of a gather network state**: the `ECHO` payload of a sender
 outside the corrupted set with at least `f + 1` dominators, and `∅` if there
 is no such sender. -/
 noncomputable def coreOf (P : Params) (w : SubState P.n (PRec P.n X) (GaMsg P.n X)) :
@@ -132,10 +132,10 @@ noncomputable def coreOf (P : Params) (w : SubState P.n (PRec P.n X) (GaMsg P.n 
 
 end Core
 
-/-- **The core is a function of the message state**: `coreOf` reads the sent
+/-- **The core is a function of the network state**: `coreOf` reads the sent
 sets and the corrupted set, so a network component holding those computes
 it. -/
-theorem coreOf_msgState_only {X : Type} {P : Params}
+theorem coreOf_networkState_only {X : Type} {P : Params}
     (w w' : SubState P.n (PRec P.n X) (GaMsg P.n X)) (h : w.2 = w'.2) :
     coreOf P w = coreOf P w' := by
   obtain ⟨u, m⟩ := w
@@ -144,10 +144,10 @@ theorem coreOf_msgState_only {X : Type} {P : Params}
   rfl
 
 /-- The state of one gather-over-BRB-specification instance: the gather local states
-and message state, the `n` input-BRB specification states, and the `n` bind-BRB
+and network state, the `n` input-BRB specification states, and the `n` bind-BRB
 specification states. -/
 structure IdealState (n : ℕ) (X : Type) : Type where
-  /-- The gather processes' local states and the instance's message state. -/
+  /-- The gather processes' local states and the instance's network state. -/
   ga : SubState n (PRec n X) (GaMsg n X)
   /-- `brbIn k` — the BRB specification instance broadcasting `k`'s input. -/
   brbIn : ∀ _ : Fin n, BRB.SpecState n X
@@ -175,7 +175,7 @@ def approved (s : IdealState n X) (A : APSet n X) : Prop :=
   A.subMap (fun k => (s.brbIn k).val)
 
 /-- Corruption (deviation D1): the broadcast transform, corrupting the gather
-message state and every BRB coordinate in lockstep. -/
+network state and every BRB coordinate in lockstep. -/
 def corruptAll (P : Params) (id : Fin P.n) (s : IdealState P.n X) : IdealState P.n X where
   ga := s.ga.corrupt P id
   brbIn := fun k => (s.brbIn k).corrupt P id
@@ -250,7 +250,7 @@ inductive IdealStep (P : Params) :
       IdealStep P s .tau
         (PMF.pure
         { s with brbBind := Function.update s.brbBind k { s.brbBind k with val := some U } })
-  /-- Asynchronous delivery on the gather message state. -/
+  /-- Asynchronous delivery on the gather network. -/
   | deliver (s : IdealState P.n X) (i j : Fin P.n) (m : GaMsg P.n X)
       (h : m ∈ s.ga.sent j) :
       IdealStep P s .tau (PMF.pure { s with ga := s.ga.recvMsg i j m })
@@ -285,7 +285,7 @@ inductive IdealStep (P : Params) :
       IdealStep P s .tau
         (PMF.pure
         { s with brbBind := Function.update s.brbBind j { s.brbBind j with input := some U } })
-  /-- Byzantine injection on the gather message state. -/
+  /-- Byzantine injection on the gather network. -/
   | byz (s : IdealState P.n X) (j : Fin P.n) (m : GaMsg P.n X) (h : j ∈ s.ga.F) :
       IdealStep P s .tau (PMF.pure { s with ga := s.ga.mcast j m })
   /-- Return: `n − f` bind-BRB instances hold committed payloads, each a
@@ -303,7 +303,7 @@ inductive IdealStep (P : Params) :
         { s with
           ga := s.ga.setProc id { s.ga.proc id with returned := true }
           core := some (s.core.getD (coreOf P s.ga)) })
-  /-- Corruption (deviation D1), in lockstep across the message state and every BRB
+  /-- Corruption (deviation D1), in lockstep across the network state and every BRB
   coordinate. -/
   | fail (s : IdealState P.n X) (id : Fin P.n) :
       IdealStep P s (.fail id) (PMF.pure (s.corruptAll P id))

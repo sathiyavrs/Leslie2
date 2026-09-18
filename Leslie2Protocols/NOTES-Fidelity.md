@@ -152,8 +152,8 @@ The core is a payload set of at least `n − f` entries below the returned map, 
 own bind rule imposes no size bound at all (§5); the encoding's `Gather.Step.bindCore`
 carries the size as a guard, and `ABA/Gather/Core.lean` is the argument that a reachable
 state of the implementation determines such a set. On the implementation side both values
-are held as ghost state — the bound bit by the round's message state, the core by the
-gather instance's message state — so no program reads either, and the announcement is
+are held as ghost state — the bound bit by the round's network state, the core by the
+gather instance's network state — so no program reads either, and the announcement is
 what makes binding a property of a single trace (`GBCA.specInst_binding`,
 `Gather.specInst_core`), transported to each implementation by its own refinement
 (`GBCA.implInst_binding`, `GBCA.lowPairInst_binding`; `Gather.idealInst_core`,

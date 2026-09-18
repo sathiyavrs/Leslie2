@@ -20,8 +20,8 @@ arbitrary payload type `M`, as an LTS over the instance alphabet
 * return `m` — on an `n − f` `VOTE m` receipt quorum.
 
 The state is the generic two-part shape (`ABA.SubState`,
-`ABA/Vocabulary/MsgState.lean`): each process's local record and delivered sets beside the
-instance's message state, under the development's D1 (determinised
+`ABA/Vocabulary/NetworkState.lean`): each process's local record and delivered sets beside the
+instance's network state, under the development's D1 (determinised
 corruption) and D5 (set-based network) conventions.
 
 There is no participation guard here: only the leader is called, and every
@@ -67,7 +67,7 @@ def PState.initial (M : Type) : PState M where
   returned := false
 
 /-- The state of one BRB implementation instance: the `n` local states beside the
-instance's message state. -/
+instance's network state. -/
 abbrev ImplState (n : ℕ) (M : Type) : Type := SubState n (PState M) (BMsg M)
 
 /-- The initial BRB implementation state. -/

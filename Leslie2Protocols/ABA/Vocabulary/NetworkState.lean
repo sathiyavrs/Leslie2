@@ -11,23 +11,23 @@ import Leslie2Protocols.ABA.Vocabulary.Params
 
 The data of one message-passing sub-protocol instance sits in two halves:
 each process holds its own local record beside the messages delivered to it,
-and the instance's message state holds the per-sender sent sets and the corrupted
+and the instance's network state holds the per-sender sent sets and the corrupted
 set. The GBCA implementation introduced this shape for one concrete message
 type; the sub-protocol tiers (BRB, Gather) repeat it at their own payload
 types, so the shape is stated here once, generically:
 
-* `ABA.MsgState n M` — the message state: per-sender sent sets over payload type `M`, and
+* `ABA.NetworkState n M` — the network state: per-sender sent sets over payload type `M`, and
   the corrupted set;
 * `ABA.LocalState n Pr M` — one process's local state: its local record `Pr` and its
   delivered sets, indexed by sender;
 * `ABA.SubState n Pr M` — the instance state, the pair of the local state vector and
-  the message state, with the multicast / delivery / corruption updates
+  the network state, with the multicast / delivery / corruption updates
   (`mcast`, `recvMsg`, `corrupt`), the receipt counts (`recvCount`), the
   frame lemmas each update leaves behind, and the quorum-counting kit
   (`exists_sender_notMem`, `exists_honest_recv₂`).
 
 The model conventions are the development's D1 (corruption is the total Dirac
-budget-guarded transform of the message state, the local states are corruption-blind) and
+budget-guarded transform of the network state, the local states are corruption-blind) and
 D5 (the network is a set: multicasts are idempotent, thresholds count distinct
 senders in the receiver's delivered sets).
 -/
@@ -35,23 +35,23 @@ senders in the receiver's delivered sets).
 namespace PLTS
 namespace ABA
 
-/-! ### The message state -/
+/-! ### The network state -/
 
-/-- The message state of one sub-protocol instance: the per-sender sent sets over
+/-- The network state of one sub-protocol instance: the per-sender sent sets over
 payload type `M`, and the corrupted set. -/
-structure MsgState (n : ℕ) (M : Type) : Type where
+structure NetworkState (n : ℕ) (M : Type) : Type where
   /-- `sent j` — the messages process `j` has multicast in this instance (D5). -/
   sent : Fin n → Finset M
   /-- The corrupted set. -/
   F : Finset (Fin n)
   deriving DecidableEq
 
-namespace MsgState
+namespace NetworkState
 
 variable {n : ℕ} {M : Type}
 
-/-- The initial message state: nothing multicast, nobody corrupted. -/
-def initial (n : ℕ) (M : Type) : MsgState n M where
+/-- The initial network state: nothing multicast, nobody corrupted. -/
+def initial (n : ℕ) (M : Type) : NetworkState n M where
   sent := fun _ => ∅
   F := ∅
 
@@ -59,10 +59,10 @@ def initial (n : ℕ) (M : Type) : MsgState n M where
 @[simp] theorem initial_F : (initial n M).F = ∅ := rfl
 
 /-- Corruption (deviation D1): total, Dirac, budget-guarded. -/
-def corrupt (P : Params) (id : Fin P.n) (w : MsgState P.n M) : MsgState P.n M :=
+def corrupt (P : Params) (id : Fin P.n) (w : NetworkState P.n M) : NetworkState P.n M :=
   if id ∉ w.F ∧ w.F.card < P.f then { w with F := insert id w.F } else w
 
-@[simp] theorem corrupt_sent {P : Params} (w : MsgState P.n M) (id : Fin P.n) :
+@[simp] theorem corrupt_sent {P : Params} (w : NetworkState P.n M) (id : Fin P.n) :
     (w.corrupt P id).sent = w.sent := by
   unfold corrupt; split <;> rfl
 
@@ -71,14 +71,14 @@ section Post
 variable [DecidableEq M]
 
 /-- Sent `m` under sender `j` (D5). -/
-def post (w : MsgState n M) (j : Fin n) (m : M) : MsgState n M :=
+def post (w : NetworkState n M) (j : Fin n) (m : M) : NetworkState n M :=
   { w with sent := Function.update w.sent j (insert m (w.sent j)) }
 
-@[simp] theorem post_F (w : MsgState n M) (j : Fin n) (m : M) :
+@[simp] theorem post_F (w : NetworkState n M) (j : Fin n) (m : M) :
     (w.post j m).F = w.F := rfl
 
 /-- Membership in a sent after a multicast. -/
-theorem mem_post {w : MsgState n M} {j : Fin n} {m : M} {k : Fin n} {m' : M} :
+theorem mem_post {w : NetworkState n M} {j : Fin n} {m : M} {k : Fin n} {m' : M} :
     m' ∈ (w.post j m).sent k ↔ (k = j ∧ m' = m) ∨ m' ∈ w.sent k := by
   change m' ∈ Function.update w.sent j (insert m (w.sent j)) k ↔ _
   by_cases hk : k = j
@@ -90,13 +90,13 @@ theorem mem_post {w : MsgState n M} {j : Fin n} {m : M} {k : Fin n} {m' : M} :
 
 end Post
 
-end MsgState
+end NetworkState
 
 /-! ### The local state of one process -/
 
 /-- The local state of one process: its own local record and the messages delivered to
 it, indexed by sender. There is no record of what it has sent — the sender's
-sent lives in the message state. -/
+sent lives in the network state. -/
 structure LocalState (n : ℕ) (Pr M : Type) : Type where
   /-- The process's own local record. -/
   proc : Pr
@@ -135,8 +135,9 @@ end LocalState
 /-! ### The instance state -/
 
 /-- **The state of one sub-protocol instance**: the `n` local states beside the
-instance's message state. -/
-abbrev SubState (n : ℕ) (Pr M : Type) : Type := (∀ _ : Fin n, LocalState n Pr M) × MsgState n M
+instance's network state. -/
+abbrev SubState (n : ℕ) (Pr M : Type) : Type :=
+  (∀ _ : Fin n, LocalState n Pr M) × NetworkState n M
 
 namespace SubState
 
@@ -151,21 +152,21 @@ def sent (s : SubState n Pr M) : Fin n → Finset M := s.2.sent
 /-- `recv i j` — the messages from sender `j` delivered to receiver `i`. -/
 def recv (s : SubState n Pr M) : Fin n → Fin n → Finset M := fun i => (s.1 i).recv
 
-/-- The corrupted set (the message state's, kept in lockstep by `fail` broadcast). -/
+/-- The corrupted set (the network state's, kept in lockstep by `fail` broadcast). -/
 def F (s : SubState n Pr M) : Finset (Fin n) := s.2.F
 
-@[simp] theorem proc_apply (u : ∀ _ : Fin n, LocalState n Pr M) (w : MsgState n M)
+@[simp] theorem proc_apply (u : ∀ _ : Fin n, LocalState n Pr M) (w : NetworkState n M)
     (j : Fin n) : proc (u, w) j = (u j).proc := rfl
-@[simp] theorem sent_apply (u : ∀ _ : Fin n, LocalState n Pr M) (w : MsgState n M) :
+@[simp] theorem sent_apply (u : ∀ _ : Fin n, LocalState n Pr M) (w : NetworkState n M) :
     sent (u, w) = w.sent := rfl
-@[simp] theorem recv_apply (u : ∀ _ : Fin n, LocalState n Pr M) (w : MsgState n M)
+@[simp] theorem recv_apply (u : ∀ _ : Fin n, LocalState n Pr M) (w : NetworkState n M)
     (i : Fin n) : recv (u, w) i = (u i).recv := rfl
-@[simp] theorem F_apply (u : ∀ _ : Fin n, LocalState n Pr M) (w : MsgState n M) :
+@[simp] theorem F_apply (u : ∀ _ : Fin n, LocalState n Pr M) (w : NetworkState n M) :
     F (u, w) = w.F := rfl
 
 /-- The initial instance state over the initial local record `p₀`. -/
 def initial (n : ℕ) (M : Type) (p₀ : Pr) : SubState n Pr M :=
-  (fun _ => LocalState.initial n M p₀, MsgState.initial n M)
+  (fun _ => LocalState.initial n M p₀, NetworkState.initial n M)
 
 @[simp] theorem initial_proc (p₀ : Pr) (j : Fin n) :
     (initial n M p₀).proc j = p₀ := rfl
@@ -206,7 +207,7 @@ theorem proc_setProc (s : SubState n Pr M) (j : Fin n) (p : Pr) (k : Fin n) :
   · subst hk; simp
   · simp [setProc_proc_ne _ _ _ hk, hk]
 
-/-- Corruption (deviation D1): total, Dirac, the message state's own row — the local states
+/-- Corruption (deviation D1): total, Dirac, the network state's own row — the local states
 are corruption-blind. -/
 def corrupt (P : Params) (id : Fin P.n) (s : SubState P.n Pr M) : SubState P.n Pr M :=
   (s.1, s.2.corrupt P id)
@@ -217,13 +218,13 @@ def corrupt (P : Params) (id : Fin P.n) (s : SubState P.n Pr M) : SubState P.n P
     (s.corrupt P id).recv = s.recv := rfl
 @[simp] theorem corrupt_sent {P : Params} (s : SubState P.n Pr M) (id : Fin P.n) :
     (s.corrupt P id).sent = s.sent := by
-  unfold corrupt sent MsgState.corrupt; split <;> rfl
+  unfold corrupt sent NetworkState.corrupt; split <;> rfl
 
 /-- The corrupted set after a corruption. Not a simp lemma: it introduces an
 `ite`. -/
 theorem corrupt_F {P : Params} (s : SubState P.n Pr M) (id : Fin P.n) :
     (s.corrupt P id).F = if id ∉ s.F ∧ s.F.card < P.f then insert id s.F else s.F := by
-  unfold corrupt F MsgState.corrupt
+  unfold corrupt F NetworkState.corrupt
   split_ifs <;> rfl
 
 theorem corrupt_F_subset {P : Params} (s : SubState P.n Pr M) (id : Fin P.n) :
@@ -300,7 +301,7 @@ theorem recvCount_eq_box (s : SubState n Pr M) (i : Fin n) (m : M) :
     (i : Fin P.n) (m : M) :
     (s.corrupt P id).recvCount i m = s.recvCount i m := rfl
 
-/-- Process `j` multicasts `m`: the message state records it under `j`. -/
+/-- Process `j` multicasts `m`: the network state records it under `j`. -/
 def mcast (s : SubState n Pr M) (j : Fin n) (m : M) : SubState n Pr M :=
   (s.1, s.2.post j m)
 
@@ -318,7 +319,7 @@ theorem mem_mcast_sent {s : SubState n Pr M} {j : Fin n} {m : M} {k : Fin n}
     {m' : M} :
     m' ∈ (s.mcast j m).sent k ↔ (k = j ∧ m' = m) ∨ m' ∈ s.sent k := by
   change m' ∈ (s.2.post j m).sent k ↔ (k = j ∧ m' = m) ∨ m' ∈ s.2.sent k
-  exact MsgState.mem_post
+  exact NetworkState.mem_post
 
 theorem sent_subset_mcast (s : SubState n Pr M) (j : Fin n) (m : M) (k : Fin n) :
     s.sent k ⊆ (s.mcast j m).sent k :=

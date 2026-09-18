@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.Vocabulary.MsgState
+import Leslie2Protocols.ABA.Vocabulary.NetworkState
 import Leslie2.Systems.LTS
 
 /-!

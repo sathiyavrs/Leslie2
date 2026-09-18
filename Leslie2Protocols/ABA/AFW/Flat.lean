@@ -18,13 +18,13 @@ supplies the same three things — a stage message type, a stage record, and the
 implementation's rows. It sits in the namespace `AFW`, after Attiya, Flam and
 Welch, and so `AFW.protocol` is what `ABDY.protocol` is at ABDY22's.
 
-## One sent for every message state
+## One sent for every network state
 
-A round of the gather-based implementation carries `4n + 2` message states:
+A round of the gather-based implementation carries `4n + 2` network states:
 one for each of the two gather instances, and one for each of the `4n` Bracha
 instances — `n` carrying the inputs and `n` carrying the `BIND` payloads, in
 each of the two gathers. The adversary here holds one sent family per round
-instead, over the tagged message type `Msg`, whose tag names the message state a
+instead, over the tagged message type `Msg`, whose tag names the network state a
 message belongs to and, for a Bracha message, the instance it belongs to. The
 sent index stays the sender, so a threshold still counts distinct senders
 (D5).
@@ -37,7 +37,7 @@ instance and then by process. A program must hold its own data and no one
 else's, so `StageRec` holds them the other way round — `j`'s local state in each
 gather instance, and `j`'s local state in each of the `n` instances of each Bracha
 family. Every guard of the gather-based implementation reads the acting
-process's own local states and the message states, and the two rows that read a message state are
+process's own local states and the network states, and the two rows that read a network state are
 the adversary's delivery and its Byzantine injection, so the transposition
 loses nothing.
 
@@ -63,14 +63,14 @@ gather's frozen core, the second gather's frozen core, and the round's bound
 bit, each written once. `AFW.ghostStep` writes it. The link's broadcast of the
 candidate — the label `gsnd r j (brbIn2 j (init _))`, which no other row
 carries — freezes the first core at `Gather.coreOf` of the round's first
-gather message state and the bound bit at `GBCA.boundOfCore` of that core; a
+gather network state and the bound bit at `GBCA.boundOfCore` of that core; a
 graded return freezes the second core the same way. Every other label leaves
 the record where it stands.
 
-The message state `Gather.coreOf` is read on is `AFW.ga1Of`, the first
+The network state `Gather.coreOf` is read on is `AFW.ga1Of`, the first
 gather's slice of the adversary's tagged sent sets beside its corrupted set,
 and `AFW.ga2Of` is the second's. `Gather.coreOf` reads the sent sets and the
-corrupted set alone (`Gather.coreOf_msgState_only`), which is what lets the
+corrupted set alone (`Gather.coreOf_networkState_only`), which is what lets the
 adversary compute the core from its own state.
 
 `AFW.ghostOut` reads the bit back, and `AFW.announcedBound`, the guard of the
@@ -88,13 +88,13 @@ open Net Gather
 
 /-! ### The tagged message type -/
 
-/-- A round's messages: the two gather message states and the `4n` Bracha message states,
-tagged by the message state they belong to. A Bracha tag carries the instance, whose
+/-- A round's messages: the two gather network states and the `4n` Bracha network states,
+tagged by the network state they belong to. A Bracha tag carries the instance, whose
 index is its leader. -/
 inductive Msg (n : ℕ) : Type
-  /-- A message of the first gather's message state. -/
+  /-- A message of the first gather's network state. -/
   | ga1 (m : GaMsg n Bool)
-  /-- A message of the second gather's message state. -/
+  /-- A message of the second gather's network state. -/
   | ga2 (m : GaMsg n (Option Bool))
   /-- A message of the input-broadcast instance `k` of the first gather. -/
   | brbIn1 (k : Fin n) (m : BRB.BMsg Bool)
@@ -143,7 +143,7 @@ def initial (n : ℕ) : StageRec n where
   brbIn2 := fun _ => LocalState.initial n _ (BRB.PState.initial (Option Bool))
   brbBind2 := fun _ => LocalState.initial n _ (BRB.PState.initial (APSet n (Option Bool)))
 
-/-- File a delivered message in the local state of the message state its tag names. -/
+/-- File a delivered message in the local state of the network state its tag names. -/
 def deliverTo (s : StageRec n) (k : Fin n) : Msg n → StageRec n
   | .ga1 m => { s with ga1 := s.ga1.deliverTo k m }
   | .ga2 m => { s with ga2 := s.ga2.deliverTo k m }
@@ -207,12 +207,12 @@ theorem mem_slice {f : Msg n → Option β}
     b ∈ slice f hf sent q ↔ ∃ m ∈ sent q, f m = some b :=
   Finset.mem_filterMap f
 
-/-- The first gather's message state messages. -/
+/-- The first gather's network state messages. -/
 def unGa1 : Msg n → Option (GaMsg n Bool)
   | .ga1 m => some m
   | _ => none
 
-/-- The second gather's message state messages. -/
+/-- The second gather's network state messages. -/
 def unGa2 : Msg n → Option (GaMsg n (Option Bool))
   | .ga2 m => some m
   | _ => none
@@ -231,8 +231,8 @@ end Slicing
 
 /-- The first gather's instance state of round `r`, read off the adversary's
 tagged sent sets and its corrupted set. The local states are the initial
-ones: `Gather.coreOf` reads the message state alone
-(`Gather.coreOf_msgState_only`). -/
+ones: `Gather.coreOf` reads the network state alone
+(`Gather.coreOf_networkState_only`). -/
 def ga1Of (P : Params) (w : NetState P.n) (r : ℕ) :
     SubState P.n (PRec P.n Bool) (GaMsg P.n Bool) :=
   (fun _ => LocalState.initial P.n _ (PRec.initial P.n Bool),
@@ -619,7 +619,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
             brbBind2 := Function.update (p.stage r).brbBind2 i
               (((p.stage r).brbBind2 i).setP
                 { (((p.stage r).brbBind2 i).proc) with sentVote := some m }) }))
-  /-- Delivery, receiver's half: file the message in the local state of the message state its
+  /-- Delivery, receiver's half: file the message in the local state of the network state its
   tag names. Authenticity is the network's conjunct. -/
   | gdlvRecv (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ) (k : Fin P.n)
       (m : Msg P.n) (hh : c.corrupted = false) (hterm : p.terminated = false) :

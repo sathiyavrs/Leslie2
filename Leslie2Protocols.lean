@@ -43,7 +43,7 @@ import Leslie2Protocols.ABA.Spec.GBCA
 import Leslie2Protocols.ABA.Spec.GBCASafety
 import Leslie2Protocols.ABA.Spec.WCC
 import Leslie2Protocols.ABA.Vocabulary.Labels
-import Leslie2Protocols.ABA.Vocabulary.MsgState
+import Leslie2Protocols.ABA.Vocabulary.NetworkState
 import Leslie2Protocols.ABA.Vocabulary.Params
 import Leslie2Protocols.ABA.Vocabulary.RoundLoop
 import Leslie2Protocols.Framework.Erasure

@@ -1,9 +1,9 @@
-\begin{definition}[The core of a gather message state]
+\begin{definition}[The core of a gather network state]
   \label{def:aba-gather-core}
   \lean{PLTS.ABA.Gather.honest}\lean{PLTS.ABA.Gather.dominatedBy}\lean{PLTS.ABA.Gather.dominators}\lean{PLTS.ABA.Gather.echoOf}\lean{PLTS.ABA.Gather.coreOf}\lean{PLTS.ABA.Gather.IdealInv}\lean{PLTS.ABA.Gather.single_core}\lean{PLTS.ABA.Gather.single_core_approved}\lean{PLTS.ABA.Gather.bindAbove}\lean{PLTS.ABA.Gather.coreOf_freeze}\leanok
   \uses{def:aba-gather-ideal, def:aba-params}
-  The core of the instance of Definition~\ref{def:aba-gather-ideal} is a payload set read off one message state, and the size bound the core rule of Definition~\ref{def:aba-gather-spec} requires is a theorem about it.
-  Write $w$ for a gather message state, that is, the per-sender sent sets beside the corrupted set.
+  The core of the instance of Definition~\ref{def:aba-gather-ideal} is a payload set read off one network state, and the size bound the core rule of Definition~\ref{def:aba-gather-spec} requires is a theorem about it.
+  Write $w$ for a gather network state, that is, the per-sender sent sets beside the corrupted set.
   Let $\mathrm{honest}(w) = [n] \setminus F$, let
   \[
     \mathrm{dominatedBy}(w, q) \;=\;

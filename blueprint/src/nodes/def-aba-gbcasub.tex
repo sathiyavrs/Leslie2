@@ -2,7 +2,7 @@
   \label{def:aba-gbcasub}
   \lean{PLTS.ABA.GSub.GEvt}\lean{PLTS.ABA.GSub.GLab}\lean{PLTS.ABA.GSub.gEvents}\lean{PLTS.ABA.GSub.GProcStep}\lean{PLTS.ABA.GSub.gbcaProc}\lean{PLTS.ABA.GSub.GNetState}\lean{PLTS.ABA.GSub.GNetState.corrupt}\lean{PLTS.ABA.GSub.GNetStep}\lean{PLTS.ABA.GSub.gNet}\lean{PLTS.ABA.GBCA.ImplState}\lean{PLTS.ABA.GSub.subPre}\lean{PLTS.ABA.GSub.sub}\lean{PLTS.ABA.GSub.gOwns}\lean{PLTS.ABA.GSub.gAct}\lean{PLTS.ABA.GSub.gbcaSide}\leanok
   \uses{def:aba-procnet, def:aba-netadv, def:aba-gbca-vocab, def:relabel, def:syncproduct, def:idle-family, def:process-algebra}
-  One round of graded agreement taken apart into the pieces that run it: $n$ local stage programs $\mathrm{gbcaProc}(P,r,j)$, each holding one stage record of Definition~\ref{def:aba-procnet}, beside that round's own message state $\mathrm{gNet}(P,r)$, which holds the round's per-sender message sets (D5), the corrupted set and the round's bound bit.
+  One round of graded agreement taken apart into the pieces that run it: $n$ local stage programs $\mathrm{gbcaProc}(P,r,j)$, each holding one stage record of Definition~\ref{def:aba-procnet}, beside that round's own network $\mathrm{gNet}(P,r)$, which holds the round's per-sender message sets (D5), the corrupted set and the round's bound bit.
   That bit is a ghost output (D29): the three return rows write it and announce it, and no program's record holds it.
   The instance
   \[

@@ -2,14 +2,14 @@
 
 The gather-based chain's graded-agreement side is a family of single rule tables over joint
 states. `GBCA.lowPairInst`, `GBCA.idealInst`, `Gather.lowInst` and `Gather.idealInst` are each
-one inductive over a product state, so a round's `4n + 2` message states are fields of one
+one inductive over a product state, so a round's `4n + 2` network states are fields of one
 system rather than components of a composition. That is deviation D28, with the two clauses
 that follow from it: a sub-protocol's call and return are fused into the rows of the caller,
 and a sub-instance's delivery is a derived predicate on its coordinate — `Gather.apIn`,
 `Gather.apBind` — rather than an event.
 
 The protocol chain is decomposed at the corresponding place. `GSub.sub` is the `n` stage
-programs under `System.syncProduct` beside the round's message state `GSub.gNet`, its own send
+programs under `System.syncProduct` beside the round's network `GSub.gNet`, its own send
 and delivery events hidden and the result read back over the shared alphabet; `GSub.sub_projects`
 relates that composition to the joint table `GBCA.implInst`, one step for one step.
 
@@ -18,7 +18,7 @@ discharging it requires. Nothing here is built.
 
 ## The target
 
-Every instance a component, each message-passing instance owning its message state, and the
+Every instance a component, each message-passing instance owning its network, and the
 two sub-protocol substitutions inside a round congruence applications rather than hand-built
 simulations.
 
@@ -32,7 +32,7 @@ gatherSide  =  System.family (round ·)                        one member per ro
 
 Per round that is two gather instances and `4n` broadcast instances; `n` graded-agreement
 programs, `2n` gather programs and `4n²` broadcast programs, so `4n² + 7n + 2` leaf systems in
-all; and `4n + 2` message states, none of them the graded-agreement layer's. The other three
+all; and `4n + 2` networks, none of them the graded-agreement layer's. The other three
 components of the composed reading — the `n` round loops, the ABA-side network and the coin
 oracle — are untouched, and so is the context term they form.
 
@@ -43,7 +43,7 @@ its meeting point.
 
 ## The graded-agreement layer
 
-The layer the round's own rows belong to has neither per-process records nor a message state
+The layer the round's own rows belong to has neither per-process records nor a network
 today, and the two absences have different causes.
 
 It has no per-process record because its data is read off the instances beneath it. The
@@ -54,11 +54,11 @@ takes a record of its own holding its input, its candidate and its return flag; 
 records continue to hold what those instances were called with, and the two are tied by the
 rendezvous rather than by identity.
 
-It has no message state because the construction sends nothing. AFW25 records of the crusader
+It has no network because the construction sends nothing. AFW25 records of the crusader
 case that it "makes one call to a gather subroutine and does no additional communication", and
 D24 removes the step that still communicated at `R = 2`, the approximate-agreement call of
 line 7. A round is two subroutine calls with local counting between and after them, so there is
-no traffic for a message state to hold and the decomposed layer is programs alone.
+no traffic for a network to hold and the decomposed layer is programs alone.
 
 ABDY22's graded agreement is the contrast, and what separates the two chains here is the
 algorithms rather than the encodings. It carries `GBCA.ProcState` per process and
@@ -75,7 +75,7 @@ describe the flat reading, and `ABA/AFW/Flat.lean` keeps its citation of it.
 That boundary is where the cost falls. `ABA/AFW/FlatSim.lean` carries the link between the two
 readings and is written against the joint-table shape throughout: `AFW.toLow1` and `AFW.toLow2`
 build a `Gather.LowState` by transposing local-state vectors out of the process records and
-slicing message states out of the adversary's tagged sent family, and `AFW.toPair` assembles
+slicing network states out of the adversary's tagged sent family, and `AFW.toPair` assembles
 the triple beside the bound bit. Against a decomposed target, each fused flat row is instead
 answered by a synchronised run of several components.
 
@@ -89,7 +89,7 @@ four levels deep with instance indices:
 | `GSub.GEvt` | the instance's own send and delivery events |
 | `GSub.GLab` | the instance-internal alphabet, the shared one plus those events |
 | `GSub.gEvents` | the set the instance hides |
-| `GSub.subPre` | the programs beside the message state |
+| `GSub.subPre` | the programs beside the network |
 | `GSub.sub` | that composition, hidden and read back |
 | `GSub.sub_projects` | the composition against the joint table, one step for one step |
 | `GSub.gPull` | the label pullback the specification is read along |
@@ -171,9 +171,9 @@ synchronised product.
 
 Decomposing the round forces a placement the joint tables never had to make.
 
-A gather instance's core is computed by `Gather.coreOf` from the message state and the
-corrupted set alone (`Gather.coreOf_msgState_only`), so it belongs with that instance's
-message-state component and moves there without argument.
+A gather instance's core is computed by `Gather.coreOf` from the network state and the
+corrupted set alone (`Gather.coreOf_networkState_only`), so it belongs with that instance's
+network component and moves there without argument.
 
 The round's bound bit has no such owner. It is the third factor of `GBCA.LowPairState` today,
 written at the `link` row as `GBCA.boundOfCore` of the first gather's core. It is one bit for
@@ -245,7 +245,7 @@ Against `ABA/ABDY/Instances.lean` at 1659 lines, which is what one such level co
 protocol chain, including its own alphabet, the pullback lift and `GSub.sub_projects`.
 
 `ABA/Broadcast/Impl.lean` and `ABA/Broadcast/Spec.lean` are already the two-part shape of
-`ABA/Vocabulary/MsgState.lean` and need no change in themselves; what changes is that their
+`ABA/Vocabulary/NetworkState.lean` and need no change in themselves; what changes is that their
 instances become components, with the labels and frames that entails.
 
 ## What it buys
@@ -253,36 +253,6 @@ instances become components, with the labels and frames that entails.
 The three in-round substitutions become congruence applications, so each rests on
 `ProbabilisticForwardSimulation.parallel_right` and `ForwardSimulation.family` rather than on
 a relation written by hand. The gather stack then states, as the protocol chain already does
-through `GSub.sub_projects`, that a round is `n` programs beside the message states they own —
+through `GSub.sub_projects`, that a round is `n` programs beside the networks they own —
 a claim about the protocol rather than a convenience of its encoding. And the two chains
 become uniform in shape, where at present only one of them is decomposed below the round.
-
-## The naming pass
-
-The development calls a sub-protocol instance's network its *message state*, and the tree above
-already calls those components `gaNet` and `brbNet`. One term should survive, and it should be
-the network.
-
-Two things carry the name and are worth keeping apart. `ABA.MsgState` is a **record**, the
-per-sender sent sets beside the corrupted set. `GSub.gNet` is the **system** whose state that
-record is. The decomposition makes one such system per instance, so `gaNet` and `brbNet` above
-are PLTSs exactly as `GSub.gNet` is today; what the pass renames is the record.
-
-`ABA.MsgState` is the only member of the record family not named for the network. The flat
-reading's `Net.NetStateP`, the ABA-side `Comp.ANetState` and the round's `GSub.GNetState` carry
-the name already, and the last of those is `ABA.MsgState`'s two fields with the round's bound
-bit added. Each of them ends in `State`, which is what holds the record apart from the system,
-so the identifier is a choice between `ABA.Network` and `ABA.NetworkState`, and the family's own
-convention asks for the second. Either is free: the one occurrence of `Network` in the tree is a
-section marker in `ABA/Reading/Flat.lean`, which wants renaming with it.
-
-The pass is that identifier with its operations, the module `ABA/Vocabulary/MsgState.lean`
-renamed to match, and the phrase wherever it stands in the prose. The identifier reaches
-fifty-six occurrences across five modules; the phrase reaches three hundred and twenty-six,
-across this library's modules and guides and the blueprint's two content roots, its nodes and
-its figures. The module rename carries a check of its own: six prose citations name that path,
-and `scripts/check-lean-modules.py` resolves each.
-
-The pass is independent of the decomposition and can go either side of it. First is the cheaper
-order, the decomposed tree being networks throughout — its prose would then be written in the
-settled vocabulary rather than converted afterwards.

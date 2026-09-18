@@ -592,7 +592,7 @@ private theorem Inv.setProc_frame {s : ImplState P.n} (hI : Inv P s)
     rw [hin j']
     exact hI.input_called j' b hF hm'
 
-/-- **Frame lemma for the bound bit.** The ghost write touches the message
+/-- **Frame lemma for the bound bit.** The ghost write touches the network
 state's own field alone, and no clause of `Inv` reads it. -/
 private theorem Inv.setBound {s : ImplState P.n} (hI : Inv P s) (β : Bool) :
     Inv P (s.setBound β) := { hI with }

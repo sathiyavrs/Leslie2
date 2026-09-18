@@ -26,7 +26,7 @@ composition of components:
 
 * the graded-agreement side is the round-indexed family `GSub.gbcaSide`. Its
   round-`r` instance is a parallel component in its own right: the stage
-  programs of round `r` beside the message state of round `r`, which that
+  programs of round `r` beside the network of round `r`, which that
   instance owns outright;
 * the round loops are `n` separate automata (`coreProcN`), synchronised;
 * what is left of the network adversary is the DECIDED sets beside the
@@ -54,7 +54,7 @@ composed system's achievable trace distributions in the specification's.
 
 A round instance is a component of the composite from the start, not an object
 created by the round's first call, and it keeps its stage records and its
-message state for the whole run. The graded-agreement coordinate of a composed state
+network state for the whole run. The graded-agreement coordinate of a composed state
 is therefore `ℕ → GBCA.ImplState n`: every round is present at every moment,
 whichever round each process is in. Those retained stage records are
 specification-side state in one respect only: a process record of the protocol
@@ -68,7 +68,7 @@ A round instance carries no `k ∈ F` guard on the handshake-row labels `byzCall
 visible at the instance boundary and is authorised outside it. Here `aNet` is
 that outside, and it carries the guard on its own copy of the corrupted set.
 The two copies are written by one broadcast: `fail` reaches every round's
-message state through the family (`gbcaSide_fail`) and `aNet` on its own `fail` row,
+network through the family (`gbcaSide_fail`) and `aNet` on its own `fail` row,
 and `GSub.GNetState.corrupt` and `ANetState.corrupt` are the same
 budget-guarded insertion.
 
@@ -240,7 +240,7 @@ theorem gbcaSide_idle (P : Params) (G : ℕ → GBCA.ImplState P.n) {L : NLab P.
   rw [GSub.gbcaSide, System.family_step_iff]
   exact Or.inr (Or.inr (Or.inr ⟨hτ, hown, hf, rfl⟩))
 
-/-- Corruption is broadcast to every round's message state. -/
+/-- Corruption is broadcast to every round's network. -/
 theorem gbcaSide_fail (P : Params) (G : ℕ → GBCA.ImplState P.n) (k : Fin P.n) :
     (GSub.gbcaSide P).step G (Sum.inl (Lab.fail k))
       (PMF.pure (fun r => GSub.gAct P (Sum.inl (Lab.fail k)) (G r))) := by

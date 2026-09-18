@@ -26,7 +26,7 @@ corrupted set, and the round-`r` instance is assembled by `toPair`. Assembling
 it undoes the two rearrangements the flat reading performs. The local states are
 transposed back: the instance's local state vector at round `r` is read off the round
 records the `n` processes hold. And the sent sets are sliced: the instance's
-message state carries the messages of one tag, recovered from the adversary's single
+network state carries the messages of one tag, recovered from the adversary's single
 tagged sent family by `slice`.
 
 Slicing commutes with the adversary's sent write in the only two ways a step
@@ -46,7 +46,7 @@ them (`toPair_writeGhost`, `toPair_writeGhost_ne`, `toPair_ghostId`). Two rows
 write. The link's broadcast of the candidate freezes the first gather's core
 and the bound bit, and the composed `link` freezes the same two off the core
 its embedded gather return carries; the two cores agree because each is
-`Gather.coreOf` of the same message state (`coreOf_toLow1`). A graded return
+`Gather.coreOf` of the same network state (`coreOf_toLow1`). A graded return
 freezes the second gather's core, and the composed `retG` the same
 (`coreOf_toLow2`).
 
@@ -71,8 +71,8 @@ open Net Gather
 
 /-! ### Two extensionality helpers -/
 
-/-- A message state is its sent family beside its corrupted set. -/
-theorem msgState_ext {n : ℕ} {M : Type} {a b : MsgState n M}
+/-- A network state is its sent family beside its corrupted set. -/
+theorem networkState_ext {n : ℕ} {M : Type} {a b : NetworkState n M}
     (hp : a.sent = b.sent) (hF : a.F = b.F) : a = b := by
   cases a; cases b; simp_all
 
@@ -200,7 +200,7 @@ variable {P : Params}
 
 /-- The round-`r` state of the first gather instance, read off the flat
 state: the local state vector transposed out of the round records the processes hold,
-the message states sliced out of the adversary's tagged sent sets, and the
+the network states sliced out of the adversary's tagged sent sets, and the
 instance's core the first field of the adversary's ghost record. -/
 def toLow1 (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n)
     (r : ℕ) : Gather.LowState P.n Bool where
@@ -231,28 +231,28 @@ def toPair (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n)
     (r : ℕ) : GBCA.LowPairState P.n :=
   (toLow1 P u w r, toLow2 P u w r, (w.ghostRec r).2.2)
 
-/-- The first gather's message state of round `r` is the one the adversary's
+/-- The first gather's network state of round `r` is the one the adversary's
 ghost write reads `Gather.coreOf` on. -/
 theorem toLow1_ga_snd (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n)
     (w : NetState P.n) (r : ℕ) : (toLow1 P u w r).ga.2 = (ga1Of P w r).2 := rfl
 
-/-- The second gather's message state of round `r`, likewise. -/
+/-- The second gather's network state of round `r`, likewise. -/
 theorem toLow2_ga_snd (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n)
     (w : NetState P.n) (r : ℕ) : (toLow2 P u w r).ga.2 = (ga2Of P w r).2 := rfl
 
 /-- **The two readings of the first gather's core agree**: the instance's core
-is read off its message state alone, and that message state is the one
+is read off its network state alone, and that network state is the one
 `AFW.ga1Of` hands the adversary. -/
 theorem coreOf_toLow1 (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n)
     (w : NetState P.n) (r : ℕ) :
     Gather.coreOf P (toLow1 P u w r).ga = Gather.coreOf P (ga1Of P w r) :=
-  Gather.coreOf_msgState_only _ _ (toLow1_ga_snd P u w r)
+  Gather.coreOf_networkState_only _ _ (toLow1_ga_snd P u w r)
 
 /-- The same for the second gather's core. -/
 theorem coreOf_toLow2 (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n)
     (w : NetState P.n) (r : ℕ) :
     Gather.coreOf P (toLow2 P u w r).ga = Gather.coreOf P (ga2Of P w r) :=
-  Gather.coreOf_msgState_only _ _ (toLow2_ga_snd P u w r)
+  Gather.coreOf_networkState_only _ _ (toLow2_ga_snd P u w r)
 
 /-! ### The ghost write, read through the view
 
@@ -429,7 +429,7 @@ theorem protocolRel_init (P : Params) :
   rw [hlow, toPair, toLow1, toLow2, hproc, hsent, hF, hghost]
   refine Prod.ext ?_ ?_ <;>
     simp [GBCA.LowPairState.initial, Gather.LowState.initial, SubState.initial,
-      MsgState.initial, StageRec.initial, BRB.ImplState.initial, hslice]
+      NetworkState.initial, StageRec.initial, BRB.ImplState.initial, hslice]
 
 /-! ### Building a transition of the composed reading
 
@@ -647,7 +647,7 @@ variable {u : ∀ _ : Fin P.n, ProcRec P.n} {w : NetState P.n} {j : Fin P.n}
 
 /-- The view after a write, with the one-point update pushed inside every
 coordinate: the acting process's local state replaced in each local state vector, and each
-message state sliced out of the written sent. The two cores and the bound bit
+network state sliced out of the written sent. The two cores and the bound bit
 are the adversary's ghost record of the round, which a write leaves alone. -/
 def toPairUpd (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n)
     (r : ℕ) (j : Fin P.n) (sr : StageRec P.n)
@@ -683,26 +683,26 @@ theorem toPair_write (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n)
       = toPairUpd P u w r j sr
           (Function.update (w.sent r) j (insert m (w.sent r j))) := by
   refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPair, toPairUpd, toLow1, stage_update_self rfl, locals_ga1_if]
     · simp only [toPair, toPairUpd, toLow1, gsent_sent_self]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPair, toPairUpd, toLow1, stage_update_self rfl, locals_brbIn1_if]
     · simp only [toPair, toPairUpd, toLow1, gsent_sent_self]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPair, toPairUpd, toLow1, stage_update_self rfl, locals_brbBind1_if]
     · simp only [toPair, toPairUpd, toLow1, gsent_sent_self]
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPair, toPairUpd, toLow2, stage_update_self rfl, locals_ga2_if]
     · simp only [toPair, toPairUpd, toLow2, gsent_sent_self]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPair, toPairUpd, toLow2, stage_update_self rfl, locals_brbIn2_if]
     · simp only [toPair, toPairUpd, toLow2, gsent_sent_self]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPair, toPairUpd, toLow2, stage_update_self rfl, locals_brbBind2_if]
     · simp only [toPair, toPairUpd, toLow2, gsent_sent_self]
 
@@ -713,34 +713,34 @@ theorem toPair_writeNoSent (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n)
     toPair P (Function.update u j (c, (u j).2.setStage r sr)) w r
       = toPairUpd P u w r j sr (w.sent r) := by
   refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPair, toPairUpd, toLow1, stage_update_self rfl, locals_ga1_if]
     · simp only [toPair, toPairUpd, toLow1]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPair, toPairUpd, toLow1, stage_update_self rfl, locals_brbIn1_if]
     · simp only [toPair, toPairUpd, toLow1]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPair, toPairUpd, toLow1, stage_update_self rfl, locals_brbBind1_if]
     · simp only [toPair, toPairUpd, toLow1]
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPair, toPairUpd, toLow2, stage_update_self rfl, locals_ga2_if]
     · simp only [toPair, toPairUpd, toLow2]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPair, toPairUpd, toLow2, stage_update_self rfl, locals_brbIn2_if]
     · simp only [toPair, toPairUpd, toLow2]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPair, toPairUpd, toLow2, stage_update_self rfl, locals_brbBind2_if]
     · simp only [toPair, toPairUpd, toLow2]
 
 /-- A send of the first gather, read through the view: the sender's local state takes
-the send, the first gather's message state records it, and every other coordinate of
+the send, the first gather's network state records it, and every other coordinate of
 the round stands still. Both the `ECHO` and the `VOTE` send of the first gather are this row,
 and so is any other row that writes the first gather's local state and records on its
-message state. -/
+network state. -/
 theorem toPair_ga1Send (hu : (u j).2 = p) (r : ℕ) (pr : PRec P.n Bool)
     (m : GaMsg P.n Bool) :
     toPair P (Function.update u j (c, p.setStage r
@@ -751,35 +751,35 @@ theorem toPair_ga1Send (hu : (u j).2 = p) (r : ℕ) (pr : PRec P.n Bool)
          toLow2 P u w r, (w.ghostRec r).2.2) := by
   rw [← hu, toPair_write]
   refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1, SubState.mcast, SubState.setProc]
-    · simp only [toPairUpd, toLow1, SubState.mcast, MsgState.post]
+    · simp only [toPairUpd, toLow1, SubState.mcast, NetworkState.post]
       exact slice_post_some unGa1 unGa1_inj (w.sent r) j (.ga1 m) m rfl
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
       exact slice_post_none (unIn1 k) (unIn1_inj k) (w.sent r) j (.ga1 m) rfl
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
       exact slice_post_none (unBind1 k) (unBind1_inj k) (w.sent r) j (.ga1 m) rfl
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
       exact slice_post_none unGa2 unGa2_inj (w.sent r) j (.ga1 m) rfl
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
       exact slice_post_none (unIn2 k) (unIn2_inj k) (w.sent r) j (.ga1 m) rfl
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
@@ -787,7 +787,7 @@ theorem toPair_ga1Send (hu : (u j).2 = p) (r : ℕ) (pr : PRec P.n Bool)
 
 /-- A send in an input-broadcast instance of the first gather, read through
 the view: the sender's local state in that instance takes the send, that instance's
-message state records it, and every other coordinate stands still. The three Bracha
+network state records it, and every other coordinate stands still. The three Bracha
 rows of the family are this row, and so is the graded-agreement call's
 broadcast half. -/
 theorem toPair_in1Send (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
@@ -803,7 +803,7 @@ theorem toPair_in1Send (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
          toLow2 P u w r, (w.ghostRec r).2.2) := by
   rw [← hu, toPair_write]
   refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
@@ -811,16 +811,16 @@ theorem toPair_in1Send (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
   · funext k
     by_cases hk : k = i
     · subst hk
-      refine Prod.ext ?_ (msgState_ext ?_ ?_)
+      refine Prod.ext ?_ (networkState_ext ?_ ?_)
       · simp only [toPairUpd, toLow1, Function.update_self, SubState.mcast,
           SubState.setProc]
       · simp only [toPairUpd, toLow1, Function.update_self, SubState.mcast,
-          MsgState.post]
+          NetworkState.post]
         exact slice_post_some (unIn1 k) (unIn1_inj k) (w.sent r) j
           (.brbIn1 k m) m (by simp [unIn1])
       · simp only [toPairUpd, toLow1, Function.update_self, SubState.mcast,
-          SubState.setProc, MsgState.post]
-    · refine Prod.ext ?_ (msgState_ext ?_ ?_)
+          SubState.setProc, NetworkState.post]
+    · refine Prod.ext ?_ (networkState_ext ?_ ?_)
       · simp only [toPairUpd, toLow1, Function.update_of_ne hk]
         exact Function.update_eq_self _ _
       · simp only [toPairUpd, toLow1, Function.update_of_ne hk]
@@ -828,24 +828,24 @@ theorem toPair_in1Send (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
           (by simp [unIn1, Ne.symm hk])
       · simp only [toPairUpd, toLow1, Function.update_of_ne hk]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
       exact slice_post_none (unBind1 k) (unBind1_inj k) (w.sent r) j (.brbIn1 i m) rfl
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
       exact slice_post_none unGa2 unGa2_inj (w.sent r) j (.brbIn1 i m) rfl
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
       exact slice_post_none (unIn2 k) (unIn2_inj k) (w.sent r) j (.brbIn1 i m) rfl
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
@@ -862,35 +862,35 @@ theorem toPair_ga2Send (hu : (u j).2 = p) (r : ℕ) (pr : PRec P.n (Option Bool)
             ga := ((toLow2 P u w r).ga.setProc j pr).mcast j m }, (w.ghostRec r).2.2) := by
   rw [← hu, toPair_write]
   refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
       exact slice_post_none unGa1 unGa1_inj (w.sent r) j (.ga2 m) rfl
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
       exact slice_post_none (unIn1 k) (unIn1_inj k) (w.sent r) j (.ga2 m) rfl
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
       exact slice_post_none (unBind1 k) (unBind1_inj k) (w.sent r) j (.ga2 m) rfl
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2, SubState.mcast, SubState.setProc]
-    · simp only [toPairUpd, toLow2, SubState.mcast, MsgState.post]
+    · simp only [toPairUpd, toLow2, SubState.mcast, NetworkState.post]
       exact slice_post_some unGa2 unGa2_inj (w.sent r) j (.ga2 m) m rfl
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
       exact slice_post_none (unIn2 k) (unIn2_inj k) (w.sent r) j (.ga2 m) rfl
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
@@ -910,13 +910,13 @@ theorem toPair_bind1Send (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
          toLow2 P u w r, (w.ghostRec r).2.2) := by
   rw [← hu, toPair_write]
   refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
       exact slice_post_none unGa1 unGa1_inj (w.sent r) j (.brbBind1 i m) rfl
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
@@ -924,33 +924,33 @@ theorem toPair_bind1Send (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
   · funext k
     by_cases hk : k = i
     · subst hk
-      refine Prod.ext ?_ (msgState_ext ?_ ?_)
+      refine Prod.ext ?_ (networkState_ext ?_ ?_)
       · simp only [toPairUpd, toLow1, Function.update_self, SubState.mcast, SubState.setProc]
-      · simp only [toPairUpd, toLow1, Function.update_self, SubState.mcast, MsgState.post]
+      · simp only [toPairUpd, toLow1, Function.update_self, SubState.mcast, NetworkState.post]
         exact slice_post_some (unBind1 k) (unBind1_inj k) (w.sent r) j
           (.brbBind1 k m) m (by simp [unBind1])
       · simp only [toPairUpd, toLow1, Function.update_self, SubState.mcast, SubState.setProc,
-        MsgState.post]
-    · refine Prod.ext ?_ (msgState_ext ?_ ?_)
+        NetworkState.post]
+    · refine Prod.ext ?_ (networkState_ext ?_ ?_)
       · simp only [toPairUpd, toLow1, Function.update_of_ne hk]
         exact Function.update_eq_self _ _
       · simp only [toPairUpd, toLow1, Function.update_of_ne hk]
         exact slice_post_none (unBind1 k) (unBind1_inj k) (w.sent r) j (.brbBind1 i m)
           (by simp [unBind1, Ne.symm hk])
       · simp only [toPairUpd, toLow1, Function.update_of_ne hk]
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
       exact slice_post_none unGa2 unGa2_inj (w.sent r) j (.brbBind1 i m) rfl
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
       exact slice_post_none (unIn2 k) (unIn2_inj k) (w.sent r) j (.brbBind1 i m) rfl
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
@@ -970,24 +970,24 @@ theorem toPair_in2Send (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
               ((((toLow2 P u w r).brbIn i).setProc j pr).mcast j m) }, (w.ghostRec r).2.2) := by
   rw [← hu, toPair_write]
   refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
       exact slice_post_none unGa1 unGa1_inj (w.sent r) j (.brbIn2 i m) rfl
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
       exact slice_post_none (unIn1 k) (unIn1_inj k) (w.sent r) j (.brbIn2 i m) rfl
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
       exact slice_post_none (unBind1 k) (unBind1_inj k) (w.sent r) j (.brbIn2 i m) rfl
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
@@ -995,14 +995,14 @@ theorem toPair_in2Send (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
   · funext k
     by_cases hk : k = i
     · subst hk
-      refine Prod.ext ?_ (msgState_ext ?_ ?_)
+      refine Prod.ext ?_ (networkState_ext ?_ ?_)
       · simp only [toPairUpd, toLow2, Function.update_self, SubState.mcast, SubState.setProc]
-      · simp only [toPairUpd, toLow2, Function.update_self, SubState.mcast, MsgState.post]
+      · simp only [toPairUpd, toLow2, Function.update_self, SubState.mcast, NetworkState.post]
         exact slice_post_some (unIn2 k) (unIn2_inj k) (w.sent r) j
           (.brbIn2 k m) m (by simp [unIn2])
       · simp only [toPairUpd, toLow2, Function.update_self, SubState.mcast, SubState.setProc,
-        MsgState.post]
-    · refine Prod.ext ?_ (msgState_ext ?_ ?_)
+        NetworkState.post]
+    · refine Prod.ext ?_ (networkState_ext ?_ ?_)
       · simp only [toPairUpd, toLow2, Function.update_of_ne hk]
         exact Function.update_eq_self _ _
       · simp only [toPairUpd, toLow2, Function.update_of_ne hk]
@@ -1010,7 +1010,7 @@ theorem toPair_in2Send (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
           (by simp [unIn2, Ne.symm hk])
       · simp only [toPairUpd, toLow2, Function.update_of_ne hk]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
@@ -1030,30 +1030,30 @@ theorem toPair_bind2Send (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
               ((((toLow2 P u w r).brbBind i).setProc j pr).mcast j m) }, (w.ghostRec r).2.2) := by
   rw [← hu, toPair_write]
   refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
       exact slice_post_none unGa1 unGa1_inj (w.sent r) j (.brbBind2 i m) rfl
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
       exact slice_post_none (unIn1 k) (unIn1_inj k) (w.sent r) j (.brbBind2 i m) rfl
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
       exact slice_post_none (unBind1 k) (unBind1_inj k) (w.sent r) j (.brbBind2 i m) rfl
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
       exact slice_post_none unGa2 unGa2_inj (w.sent r) j (.brbBind2 i m) rfl
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
@@ -1061,14 +1061,14 @@ theorem toPair_bind2Send (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
   · funext k
     by_cases hk : k = i
     · subst hk
-      refine Prod.ext ?_ (msgState_ext ?_ ?_)
+      refine Prod.ext ?_ (networkState_ext ?_ ?_)
       · simp only [toPairUpd, toLow2, Function.update_self, SubState.mcast, SubState.setProc]
-      · simp only [toPairUpd, toLow2, Function.update_self, SubState.mcast, MsgState.post]
+      · simp only [toPairUpd, toLow2, Function.update_self, SubState.mcast, NetworkState.post]
         exact slice_post_some (unBind2 k) (unBind2_inj k) (w.sent r) j
           (.brbBind2 k m) m (by simp [unBind2])
       · simp only [toPairUpd, toLow2, Function.update_self, SubState.mcast, SubState.setProc,
-        MsgState.post]
-    · refine Prod.ext ?_ (msgState_ext ?_ ?_)
+        NetworkState.post]
+    · refine Prod.ext ?_ (networkState_ext ?_ ?_)
       · simp only [toPairUpd, toLow2, Function.update_of_ne hk]
         exact Function.update_eq_self _ _
       · simp only [toPairUpd, toLow2, Function.update_of_ne hk]
@@ -1076,7 +1076,7 @@ theorem toPair_bind2Send (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
           (by simp [unBind2, Ne.symm hk])
       · simp only [toPairUpd, toLow2, Function.update_of_ne hk]
 
-/-- A delivery on the first gather's message state, read through the view. -/
+/-- A delivery on the first gather's network, read through the view. -/
 theorem toPair_dlvGa1 (hu : (u j).2 = p) (r : ℕ) (k : Fin P.n) (mm : GaMsg P.n Bool) :
     toPair P (Function.update u j (c, p.setStage r
         { p.stage r with ga1 := (p.stage r).ga1.deliverTo k mm })) w r
@@ -1084,35 +1084,35 @@ theorem toPair_dlvGa1 (hu : (u j).2 = p) (r : ℕ) (k : Fin P.n) (mm : GaMsg P.n
          toLow2 P u w r, (w.ghostRec r).2.2) := by
   rw [← hu, toPair_writeNoSent]
   refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1, SubState.recvMsg]
     · simp only [toPairUpd, toLow1, SubState.recvMsg]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
 
-/-- A delivery on the second gather's message state, read through the view. -/
+/-- A delivery on the second gather's network, read through the view. -/
 theorem toPair_dlvGa2 (hu : (u j).2 = p) (r : ℕ) (k : Fin P.n) (mm : GaMsg P.n (Option Bool)) :
     toPair P (Function.update u j (c, p.setStage r
         { p.stage r with ga2 := (p.stage r).ga2.deliverTo k mm })) w r
@@ -1120,30 +1120,30 @@ theorem toPair_dlvGa2 (hu : (u j).2 = p) (r : ℕ) (k : Fin P.n) (mm : GaMsg P.n
          { toLow2 P u w r with ga := (toLow2 P u w r).ga.recvMsg j k mm }, (w.ghostRec r).2.2) := by
   rw [← hu, toPair_writeNoSent]
   refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2, SubState.recvMsg]
     · simp only [toPairUpd, toLow2, SubState.recvMsg]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
@@ -1160,38 +1160,38 @@ theorem toPair_dlvIn1 (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n) (mm : BRB.BMs
          toLow2 P u w r, (w.ghostRec r).2.2) := by
   rw [← hu, toPair_writeNoSent]
   refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
   · funext k
     by_cases hk : k = i
     · subst hk
-      refine Prod.ext ?_ (msgState_ext ?_ ?_)
+      refine Prod.ext ?_ (networkState_ext ?_ ?_)
       · simp only [toPairUpd, toLow1, Function.update_self, SubState.recvMsg]
       · simp only [toPairUpd, toLow1, Function.update_self, SubState.recvMsg]
       · simp only [toPairUpd, toLow1, Function.update_self, SubState.recvMsg]
-    · refine Prod.ext ?_ (msgState_ext ?_ ?_)
+    · refine Prod.ext ?_ (networkState_ext ?_ ?_)
       · simp only [toPairUpd, toLow1, Function.update_of_ne hk]
         exact Function.update_eq_self _ _
       · simp only [toPairUpd, toLow1, Function.update_of_ne hk]
       · simp only [toPairUpd, toLow1, Function.update_of_ne hk]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
@@ -1209,38 +1209,38 @@ theorem toPair_dlvBind1 (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
          toLow2 P u w r, (w.ghostRec r).2.2) := by
   rw [← hu, toPair_writeNoSent]
   refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
   · funext k
     by_cases hk : k = i
     · subst hk
-      refine Prod.ext ?_ (msgState_ext ?_ ?_)
+      refine Prod.ext ?_ (networkState_ext ?_ ?_)
       · simp only [toPairUpd, toLow1, Function.update_self, SubState.recvMsg]
       · simp only [toPairUpd, toLow1, Function.update_self, SubState.recvMsg]
       · simp only [toPairUpd, toLow1, Function.update_self, SubState.recvMsg]
-    · refine Prod.ext ?_ (msgState_ext ?_ ?_)
+    · refine Prod.ext ?_ (networkState_ext ?_ ?_)
       · simp only [toPairUpd, toLow1, Function.update_of_ne hk]
         exact Function.update_eq_self _ _
       · simp only [toPairUpd, toLow1, Function.update_of_ne hk]
       · simp only [toPairUpd, toLow1, Function.update_of_ne hk]
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
@@ -1257,38 +1257,38 @@ theorem toPair_dlvIn2 (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n) (mm : BRB.BMs
               (((toLow2 P u w r).brbIn i).recvMsg j k mm) }, (w.ghostRec r).2.2) := by
   rw [← hu, toPair_writeNoSent]
   refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
   · funext k
     by_cases hk : k = i
     · subst hk
-      refine Prod.ext ?_ (msgState_ext ?_ ?_)
+      refine Prod.ext ?_ (networkState_ext ?_ ?_)
       · simp only [toPairUpd, toLow2, Function.update_self, SubState.recvMsg]
       · simp only [toPairUpd, toLow2, Function.update_self, SubState.recvMsg]
       · simp only [toPairUpd, toLow2, Function.update_self, SubState.recvMsg]
-    · refine Prod.ext ?_ (msgState_ext ?_ ?_)
+    · refine Prod.ext ?_ (networkState_ext ?_ ?_)
       · simp only [toPairUpd, toLow2, Function.update_of_ne hk]
         exact Function.update_eq_self _ _
       · simp only [toPairUpd, toLow2, Function.update_of_ne hk]
       · simp only [toPairUpd, toLow2, Function.update_of_ne hk]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
@@ -1306,37 +1306,37 @@ theorem toPair_dlvBind2 (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
               (((toLow2 P u w r).brbBind i).recvMsg j k mm) }, (w.ghostRec r).2.2) := by
   rw [← hu, toPair_writeNoSent]
   refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
   · funext k
     by_cases hk : k = i
     · subst hk
-      refine Prod.ext ?_ (msgState_ext ?_ ?_)
+      refine Prod.ext ?_ (networkState_ext ?_ ?_)
       · simp only [toPairUpd, toLow2, Function.update_self, SubState.recvMsg]
       · simp only [toPairUpd, toLow2, Function.update_self, SubState.recvMsg]
       · simp only [toPairUpd, toLow2, Function.update_self, SubState.recvMsg]
-    · refine Prod.ext ?_ (msgState_ext ?_ ?_)
+    · refine Prod.ext ?_ (networkState_ext ?_ ?_)
       · simp only [toPairUpd, toLow2, Function.update_of_ne hk]
         exact Function.update_eq_self _ _
       · simp only [toPairUpd, toLow2, Function.update_of_ne hk]
@@ -1352,30 +1352,30 @@ theorem toPair_retG (hu : (u j).2 = p) (r : ℕ) (pr : PRec P.n (Option Bool)) :
          { toLow2 P u w r with ga := (toLow2 P u w r).ga.setProc j pr }, (w.ghostRec r).2.2) := by
   rw [← hu, toPair_writeNoSent]
   refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2, SubState.setProc]
     · simp only [toPairUpd, toLow2, SubState.setProc]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
@@ -1402,23 +1402,23 @@ theorem toPair_callG (hu : (u j).2 = p) (r : ℕ) (b : Bool) :
          toLow2 P u w r, (w.ghostRec r).2.2) := by
   rw [← hu, toPair_write]
   refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1, SubState.setProc, SubState.proc]
     · simp only [toPairUpd, toLow1]
       exact slice_post_none unGa1 unGa1_inj (w.sent r) j (.brbIn1 j (.init b)) rfl
   · funext k
     by_cases hk : k = j
     · subst hk
-      refine Prod.ext ?_ (msgState_ext ?_ ?_)
+      refine Prod.ext ?_ (networkState_ext ?_ ?_)
       · simp only [toPairUpd, toLow1, Function.update_self, SubState.mcast,
           SubState.setProc, SubState.proc]
       · simp only [toPairUpd, toLow1, Function.update_self, SubState.mcast,
-          MsgState.post]
+          NetworkState.post]
         exact slice_post_some (unIn1 k) (unIn1_inj k) (w.sent r) k
           (.brbIn1 k (.init b)) (.init b) (by simp [unIn1])
       · simp only [toPairUpd, toLow1, Function.update_self, SubState.mcast,
-          SubState.setProc, MsgState.post]
-    · refine Prod.ext ?_ (msgState_ext ?_ ?_)
+          SubState.setProc, NetworkState.post]
+    · refine Prod.ext ?_ (networkState_ext ?_ ?_)
       · simp only [toPairUpd, toLow1, Function.update_of_ne hk]
         exact Function.update_eq_self _ _
       · simp only [toPairUpd, toLow1, Function.update_of_ne hk]
@@ -1426,26 +1426,26 @@ theorem toPair_callG (hu : (u j).2 = p) (r : ℕ) (b : Bool) :
           (.brbIn1 j (.init b)) (by simp [unIn1, Ne.symm hk])
       · simp only [toPairUpd, toLow1, Function.update_of_ne hk]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
       exact slice_post_none (unBind1 k) (unBind1_inj k) (w.sent r) j
         (.brbIn1 j (.init b)) rfl
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
       exact slice_post_none unGa2 unGa2_inj (w.sent r) j (.brbIn1 j (.init b)) rfl
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
       exact slice_post_none (unIn2 k) (unIn2_inj k) (w.sent r) j
         (.brbIn1 j (.init b)) rfl
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
@@ -1473,41 +1473,41 @@ theorem toPair_link (hu : (u j).2 = p) (r : ℕ) (pr1 : PRec P.n Bool)
          (w.ghostRec r).2.2) := by
   rw [← hu, toPair_write]
   refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1, SubState.setProc]
     · simp only [toPairUpd, toLow1, SubState.setProc]
       exact slice_post_none unGa1 unGa1_inj (w.sent r) j (.brbIn2 j (.init x)) rfl
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
       exact slice_post_none (unIn1 k) (unIn1_inj k) (w.sent r) j
         (.brbIn2 j (.init x)) rfl
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow1]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow1]
       exact slice_post_none (unBind1 k) (unBind1_inj k) (w.sent r) j
         (.brbIn2 j (.init x)) rfl
-  · refine Prod.ext ?_ (msgState_ext ?_ rfl)
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2, SubState.setProc]
     · simp only [toPairUpd, toLow2, SubState.setProc]
       exact slice_post_none unGa2 unGa2_inj (w.sent r) j (.brbIn2 j (.init x)) rfl
   · funext k
     by_cases hk : k = j
     · subst hk
-      refine Prod.ext ?_ (msgState_ext ?_ ?_)
+      refine Prod.ext ?_ (networkState_ext ?_ ?_)
       · simp only [toPairUpd, toLow2, Function.update_self, SubState.mcast,
           SubState.setProc]
       · simp only [toPairUpd, toLow2, Function.update_self, SubState.mcast,
-          MsgState.post]
+          NetworkState.post]
         exact slice_post_some (unIn2 k) (unIn2_inj k) (w.sent r) k
           (.brbIn2 k (.init x)) (.init x) (by simp [unIn2])
       · simp only [toPairUpd, toLow2, Function.update_self, SubState.mcast,
-          SubState.setProc, MsgState.post]
-    · refine Prod.ext ?_ (msgState_ext ?_ ?_)
+          SubState.setProc, NetworkState.post]
+    · refine Prod.ext ?_ (networkState_ext ?_ ?_)
       · simp only [toPairUpd, toLow2, Function.update_of_ne hk]
         exact Function.update_eq_self _ _
       · simp only [toPairUpd, toLow2, Function.update_of_ne hk]
@@ -1515,7 +1515,7 @@ theorem toPair_link (hu : (u j).2 = p) (r : ℕ) (pr1 : PRec P.n Bool)
           (.brbIn2 j (.init x)) (by simp [unIn2, Ne.symm hk])
       · simp only [toPairUpd, toLow2, Function.update_of_ne hk]
   · funext k
-    refine Prod.ext ?_ (msgState_ext ?_ rfl)
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [toPairUpd, toLow2]
       exact Function.update_eq_self _ _
     · simp only [toPairUpd, toLow2]
@@ -1534,11 +1534,11 @@ theorem toPair_other (hu : (u j).2 = p) {r r' : ℕ} (hr : r' ≠ r)
       = toPair P u w r' := by
   refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl) <;>
     first
-      | (refine Prod.ext ?_ (msgState_ext ?_ rfl)
+      | (refine Prod.ext ?_ (networkState_ext ?_ rfl)
          · simp only [toPair, toLow1, toLow2, stage_update_ne hu hr]
          · simp only [toPair, toLow1, toLow2, gsent_sent_ne _ _ _ _ hr])
       | (funext k
-         refine Prod.ext ?_ (msgState_ext ?_ rfl)
+         refine Prod.ext ?_ (networkState_ext ?_ rfl)
          · simp only [toPair, toLow1, toLow2, stage_update_ne hu hr]
          · simp only [toPair, toLow1, toLow2, gsent_sent_ne _ _ _ _ hr])
 
@@ -1547,10 +1547,10 @@ theorem toPair_otherNoSent (hu : (u j).2 = p) {r r' : ℕ} (hr : r' ≠ r)
     toPair P (Function.update u j (c, p.setStage r sr)) w r' = toPair P u w r' := by
   refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl) <;>
     first
-      | (refine Prod.ext ?_ (msgState_ext rfl rfl)
+      | (refine Prod.ext ?_ (networkState_ext rfl rfl)
          simp only [toPair, toLow1, toLow2, stage_update_ne hu hr])
       | (funext k
-         refine Prod.ext ?_ (msgState_ext rfl rfl)
+         refine Prod.ext ?_ (networkState_ext rfl rfl)
          simp only [toPair, toLow1, toLow2, stage_update_ne hu hr])
 
 /-- The whole family of rounds after a row: the round it names moves, the rest
@@ -1632,7 +1632,7 @@ private theorem match_prod (P : Params) {x : ∀ _ : Fin P.n, ProcRec P.n}
 
 A row that writes only the round loop leaves every round record where it
 stands, so the view does not move. Corruption moves it in one respect only:
-the corrupted set the adversary holds is the corrupted set of every message state,
+the corrupted set the adversary holds is the corrupted set of every network state,
 and the two guards are the same. -/
 
 theorem toPair_congr {x u : ∀ _ : Fin P.n, ProcRec P.n} {r : ℕ}
@@ -1669,33 +1669,33 @@ theorem toPair_fail (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n) (r : �
   refine Prod.ext (lowState_ext ?_ ?_ ?_ ?_) (Prod.ext (lowState_ext ?_ ?_ ?_ ?_) ?_)
   · refine Prod.ext rfl ?_
     simp only [toPair, toLow1, gActLow, Gather.LowState.corruptAll,
-      SubState.corrupt, NetStateP.corrupt, MsgState.corrupt]
+      SubState.corrupt, NetStateP.corrupt, NetworkState.corrupt]
     split_ifs <;> rfl
   · funext k
     refine Prod.ext rfl ?_
     simp only [toPair, toLow1, gActLow, Gather.LowState.corruptAll,
-      SubState.corrupt, NetStateP.corrupt, MsgState.corrupt]
+      SubState.corrupt, NetStateP.corrupt, NetworkState.corrupt]
     split_ifs <;> rfl
   · funext k
     refine Prod.ext rfl ?_
     simp only [toPair, toLow1, gActLow, Gather.LowState.corruptAll,
-      SubState.corrupt, NetStateP.corrupt, MsgState.corrupt]
+      SubState.corrupt, NetStateP.corrupt, NetworkState.corrupt]
     split_ifs <;> rfl
   · simp only [toPair, toLow1, gActLow, Gather.LowState.corruptAll, NetStateP.corrupt]
     split_ifs <;> rfl
   · refine Prod.ext rfl ?_
     simp only [toPair, toLow2, gActLow, Gather.LowState.corruptAll,
-      SubState.corrupt, NetStateP.corrupt, MsgState.corrupt]
+      SubState.corrupt, NetStateP.corrupt, NetworkState.corrupt]
     split_ifs <;> rfl
   · funext k
     refine Prod.ext rfl ?_
     simp only [toPair, toLow2, gActLow, Gather.LowState.corruptAll,
-      SubState.corrupt, NetStateP.corrupt, MsgState.corrupt]
+      SubState.corrupt, NetStateP.corrupt, NetworkState.corrupt]
     split_ifs <;> rfl
   · funext k
     refine Prod.ext rfl ?_
     simp only [toPair, toLow2, gActLow, Gather.LowState.corruptAll,
-      SubState.corrupt, NetStateP.corrupt, MsgState.corrupt]
+      SubState.corrupt, NetStateP.corrupt, NetworkState.corrupt]
     split_ifs <;> rfl
   · simp only [toPair, toLow2, gActLow, Gather.LowState.corruptAll, NetStateP.corrupt]
     split_ifs <;> rfl
@@ -1707,21 +1707,21 @@ theorem toPair_otherSent (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n)
     {r r' : ℕ} (hr : r' ≠ r) (k : Fin P.n) (m : Msg P.n) :
     toPair P u (w.gsent r k m) r' = toPair P u w r' := by
   refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
-  · refine Prod.ext rfl (msgState_ext ?_ rfl)
+  · refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow1, gsent_sent_ne _ _ _ _ hr]
   · funext k'
-    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow1, gsent_sent_ne _ _ _ _ hr]
   · funext k'
-    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow1, gsent_sent_ne _ _ _ _ hr]
-  · refine Prod.ext rfl (msgState_ext ?_ rfl)
+  · refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow2, gsent_sent_ne _ _ _ _ hr]
   · funext k'
-    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow2, gsent_sent_ne _ _ _ _ hr]
   · funext k'
-    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow2, gsent_sent_ne _ _ _ _ hr]
 
 /-- The family of rounds after a Byzantine injection at one round. -/
@@ -1843,7 +1843,7 @@ theorem stage_answer_gsnd (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     have hcore : Gather.coreOf P
         (ga1Of P (w.gsent r j (.brbIn2 j (.init (GBCA.cand P g)))) r)
         = Gather.coreOf P (toLow1 P u w r).ga := by
-      refine Gather.coreOf_msgState_only _ _ (msgState_ext ?_ rfl)
+      refine Gather.coreOf_networkState_only _ _ (networkState_ext ?_ rfl)
       simp only [ga1Of, toLow1, gsent_sent_self]
       exact slice_post_none unGa1 unGa1_inj (w.sent r) j
         (.brbIn2 j (.init (GBCA.cand P g))) rfl
@@ -1947,7 +1947,7 @@ theorem stage_gsnd_ga2 (P : Params) {j : Fin P.n} {c : CoreRec P.n}
 
 /-- A delivery of the flat reading is a silent row of the round instance: the
 message the adversary holds under its sender is filed in the receiver's own
-local state of the message state its tag names. -/
+local state of the network state its tag names. -/
 theorem stage_answer_gdlv (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     (w : NetState P.n) {j : Fin P.n} {c : CoreRec P.n} {p : StageSideRec P.n}
     (hu : (u j).2 = p) {r : ℕ} {k : Fin P.n} {m : Msg P.n}
@@ -2101,65 +2101,65 @@ theorem stage_answer_gcallLoop (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
 /-! ### Answering a Byzantine injection
 
 The adversary multicasts on behalf of a corrupted sender. The message reaches
-the message state its tag names and no record moves. -/
+the network its tag names and no record moves. -/
 
-/-- A Byzantine injection on the first gather's message state, read through the view. -/
+/-- A Byzantine injection on the first gather's network, read through the view. -/
 theorem toPair_byzGa1 (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n) (r : ℕ)
     (k : Fin P.n) (mm : GaMsg P.n Bool) :
     toPair P u (w.gsent r k (.ga1 mm)) r
       = ({ toLow1 P u w r with ga := (toLow1 P u w r).ga.mcast k mm },
          toLow2 P u w r, (w.ghostRec r).2.2) := by
   refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
-  · refine Prod.ext rfl (msgState_ext ?_ rfl)
-    simp only [toPair, toLow1, SubState.mcast, MsgState.post, gsent_sent_self]
+  · refine Prod.ext rfl (networkState_ext ?_ rfl)
+    simp only [toPair, toLow1, SubState.mcast, NetworkState.post, gsent_sent_self]
     exact slice_post_some unGa1 unGa1_inj (w.sent r) k (.ga1 mm) mm rfl
   · funext kk
-    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow1, gsent_sent_self]
     exact slice_post_none (unIn1 kk) (unIn1_inj kk) (w.sent r) k (.ga1 mm) rfl
   · funext kk
-    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow1, gsent_sent_self]
     exact slice_post_none (unBind1 kk) (unBind1_inj kk) (w.sent r) k (.ga1 mm) rfl
-  · refine Prod.ext rfl (msgState_ext ?_ rfl)
+  · refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow2, gsent_sent_self]
     exact slice_post_none unGa2 unGa2_inj (w.sent r) k (.ga1 mm) rfl
   · funext kk
-    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow2, gsent_sent_self]
     exact slice_post_none (unIn2 kk) (unIn2_inj kk) (w.sent r) k (.ga1 mm) rfl
   · funext kk
-    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow2, gsent_sent_self]
     exact slice_post_none (unBind2 kk) (unBind2_inj kk) (w.sent r) k (.ga1 mm) rfl
 
-/-- A Byzantine injection on the second gather's message state, read through the view. -/
+/-- A Byzantine injection on the second gather's network, read through the view. -/
 theorem toPair_byzGa2 (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n) (r : ℕ)
     (k : Fin P.n) (mm : GaMsg P.n (Option Bool)) :
     toPair P u (w.gsent r k (.ga2 mm)) r
       = (toLow1 P u w r,
          { toLow2 P u w r with ga := (toLow2 P u w r).ga.mcast k mm }, (w.ghostRec r).2.2) := by
   refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
-  · refine Prod.ext rfl (msgState_ext ?_ rfl)
+  · refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow1, gsent_sent_self]
     exact slice_post_none unGa1 unGa1_inj (w.sent r) k (.ga2 mm) rfl
   · funext kk
-    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow1, gsent_sent_self]
     exact slice_post_none (unIn1 kk) (unIn1_inj kk) (w.sent r) k (.ga2 mm) rfl
   · funext kk
-    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow1, gsent_sent_self]
     exact slice_post_none (unBind1 kk) (unBind1_inj kk) (w.sent r) k (.ga2 mm) rfl
-  · refine Prod.ext rfl (msgState_ext ?_ rfl)
-    simp only [toPair, toLow2, SubState.mcast, MsgState.post, gsent_sent_self]
+  · refine Prod.ext rfl (networkState_ext ?_ rfl)
+    simp only [toPair, toLow2, SubState.mcast, NetworkState.post, gsent_sent_self]
     exact slice_post_some unGa2 unGa2_inj (w.sent r) k (.ga2 mm) mm rfl
   · funext kk
-    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow2, gsent_sent_self]
     exact slice_post_none (unIn2 kk) (unIn2_inj kk) (w.sent r) k (.ga2 mm) rfl
   · funext kk
-    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow2, gsent_sent_self]
     exact slice_post_none (unBind2 kk) (unBind2_inj kk) (w.sent r) k (.ga2 mm) rfl
 
@@ -2172,39 +2172,39 @@ theorem toPair_byzIn1 (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n) (r :
               (((toLow1 P u w r).brbIn i).mcast k mm) },
          toLow2 P u w r, (w.ghostRec r).2.2) := by
   refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
-  · refine Prod.ext rfl (msgState_ext ?_ rfl)
+  · refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow1, gsent_sent_self]
     exact slice_post_none unGa1 unGa1_inj (w.sent r) k (.brbIn1 i mm) rfl
   · funext kk
     by_cases hk : kk = i
     · subst hk
-      refine Prod.ext ?_ (msgState_ext ?_ ?_)
+      refine Prod.ext ?_ (networkState_ext ?_ ?_)
       · simp only [toPair, toLow1, toLow2, Function.update_self, SubState.mcast]
       · simp only [toPair, toLow1, Function.update_self, SubState.mcast,
-          MsgState.post, gsent_sent_self]
+          NetworkState.post, gsent_sent_self]
         exact slice_post_some (unIn1 kk) (unIn1_inj kk) (w.sent r) k
           (.brbIn1 kk mm) mm (by simp [unIn1])
       · simp only [toPair, toLow1, Function.update_self, SubState.mcast,
-          MsgState.post, gsent_F]
-    · refine Prod.ext ?_ (msgState_ext ?_ ?_)
+          NetworkState.post, gsent_F]
+    · refine Prod.ext ?_ (networkState_ext ?_ ?_)
       · simp only [toPair, toLow1, toLow2, Function.update_of_ne hk]
       · simp only [toPair, toLow1, Function.update_of_ne hk, gsent_sent_self]
         exact slice_post_none (unIn1 kk) (unIn1_inj kk) (w.sent r) k (.brbIn1 i mm)
           (by simp [unIn1, Ne.symm hk])
       · simp only [toPair, toLow1, Function.update_of_ne hk, gsent_F]
   · funext kk
-    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow1, gsent_sent_self]
     exact slice_post_none (unBind1 kk) (unBind1_inj kk) (w.sent r) k (.brbIn1 i mm) rfl
-  · refine Prod.ext rfl (msgState_ext ?_ rfl)
+  · refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow2, gsent_sent_self]
     exact slice_post_none unGa2 unGa2_inj (w.sent r) k (.brbIn1 i mm) rfl
   · funext kk
-    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow2, gsent_sent_self]
     exact slice_post_none (unIn2 kk) (unIn2_inj kk) (w.sent r) k (.brbIn1 i mm) rfl
   · funext kk
-    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow2, gsent_sent_self]
     exact slice_post_none (unBind2 kk) (unBind2_inj kk) (w.sent r) k (.brbIn1 i mm) rfl
 
@@ -2217,39 +2217,39 @@ theorem toPair_byzBind1 (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n) (r
               (((toLow1 P u w r).brbBind i).mcast k mm) },
          toLow2 P u w r, (w.ghostRec r).2.2) := by
   refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
-  · refine Prod.ext rfl (msgState_ext ?_ rfl)
+  · refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow1, gsent_sent_self]
     exact slice_post_none unGa1 unGa1_inj (w.sent r) k (.brbBind1 i mm) rfl
   · funext kk
-    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow1, gsent_sent_self]
     exact slice_post_none (unIn1 kk) (unIn1_inj kk) (w.sent r) k (.brbBind1 i mm) rfl
   · funext kk
     by_cases hk : kk = i
     · subst hk
-      refine Prod.ext ?_ (msgState_ext ?_ ?_)
+      refine Prod.ext ?_ (networkState_ext ?_ ?_)
       · simp only [toPair, toLow1, toLow2, Function.update_self, SubState.mcast]
       · simp only [toPair, toLow1, Function.update_self, SubState.mcast,
-          MsgState.post, gsent_sent_self]
+          NetworkState.post, gsent_sent_self]
         exact slice_post_some (unBind1 kk) (unBind1_inj kk) (w.sent r) k
           (.brbBind1 kk mm) mm (by simp [unBind1])
       · simp only [toPair, toLow1, Function.update_self, SubState.mcast,
-          MsgState.post, gsent_F]
-    · refine Prod.ext ?_ (msgState_ext ?_ ?_)
+          NetworkState.post, gsent_F]
+    · refine Prod.ext ?_ (networkState_ext ?_ ?_)
       · simp only [toPair, toLow1, toLow2, Function.update_of_ne hk]
       · simp only [toPair, toLow1, Function.update_of_ne hk, gsent_sent_self]
         exact slice_post_none (unBind1 kk) (unBind1_inj kk) (w.sent r) k (.brbBind1 i mm)
           (by simp [unBind1, Ne.symm hk])
       · simp only [toPair, toLow1, Function.update_of_ne hk, gsent_F]
-  · refine Prod.ext rfl (msgState_ext ?_ rfl)
+  · refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow2, gsent_sent_self]
     exact slice_post_none unGa2 unGa2_inj (w.sent r) k (.brbBind1 i mm) rfl
   · funext kk
-    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow2, gsent_sent_self]
     exact slice_post_none (unIn2 kk) (unIn2_inj kk) (w.sent r) k (.brbBind1 i mm) rfl
   · funext kk
-    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow2, gsent_sent_self]
     exact slice_post_none (unBind2 kk) (unBind2_inj kk) (w.sent r) k (.brbBind1 i mm) rfl
 
@@ -2262,39 +2262,39 @@ theorem toPair_byzIn2 (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n) (r :
             brbIn := Function.update (toLow2 P u w r).brbIn i
               (((toLow2 P u w r).brbIn i).mcast k mm) }, (w.ghostRec r).2.2) := by
   refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
-  · refine Prod.ext rfl (msgState_ext ?_ rfl)
+  · refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow1, gsent_sent_self]
     exact slice_post_none unGa1 unGa1_inj (w.sent r) k (.brbIn2 i mm) rfl
   · funext kk
-    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow1, gsent_sent_self]
     exact slice_post_none (unIn1 kk) (unIn1_inj kk) (w.sent r) k (.brbIn2 i mm) rfl
   · funext kk
-    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow1, gsent_sent_self]
     exact slice_post_none (unBind1 kk) (unBind1_inj kk) (w.sent r) k (.brbIn2 i mm) rfl
-  · refine Prod.ext rfl (msgState_ext ?_ rfl)
+  · refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow2, gsent_sent_self]
     exact slice_post_none unGa2 unGa2_inj (w.sent r) k (.brbIn2 i mm) rfl
   · funext kk
     by_cases hk : kk = i
     · subst hk
-      refine Prod.ext ?_ (msgState_ext ?_ ?_)
+      refine Prod.ext ?_ (networkState_ext ?_ ?_)
       · simp only [toPair, toLow1, toLow2, Function.update_self, SubState.mcast]
       · simp only [toPair, toLow2, Function.update_self, SubState.mcast,
-          MsgState.post, gsent_sent_self]
+          NetworkState.post, gsent_sent_self]
         exact slice_post_some (unIn2 kk) (unIn2_inj kk) (w.sent r) k
           (.brbIn2 kk mm) mm (by simp [unIn2])
       · simp only [toPair, toLow2, Function.update_self, SubState.mcast,
-          MsgState.post, gsent_F]
-    · refine Prod.ext ?_ (msgState_ext ?_ ?_)
+          NetworkState.post, gsent_F]
+    · refine Prod.ext ?_ (networkState_ext ?_ ?_)
       · simp only [toPair, toLow1, toLow2, Function.update_of_ne hk]
       · simp only [toPair, toLow2, Function.update_of_ne hk, gsent_sent_self]
         exact slice_post_none (unIn2 kk) (unIn2_inj kk) (w.sent r) k (.brbIn2 i mm)
           (by simp [unIn2, Ne.symm hk])
       · simp only [toPair, toLow2, Function.update_of_ne hk, gsent_F]
   · funext kk
-    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow2, gsent_sent_self]
     exact slice_post_none (unBind2 kk) (unBind2_inj kk) (w.sent r) k (.brbIn2 i mm) rfl
 
@@ -2307,36 +2307,36 @@ theorem toPair_byzBind2 (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n) (r
             brbBind := Function.update (toLow2 P u w r).brbBind i
               (((toLow2 P u w r).brbBind i).mcast k mm) }, (w.ghostRec r).2.2) := by
   refine Prod.ext (lowState_ext ?_ ?_ ?_ rfl) (Prod.ext (lowState_ext ?_ ?_ ?_ rfl) rfl)
-  · refine Prod.ext rfl (msgState_ext ?_ rfl)
+  · refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow1, gsent_sent_self]
     exact slice_post_none unGa1 unGa1_inj (w.sent r) k (.brbBind2 i mm) rfl
   · funext kk
-    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow1, gsent_sent_self]
     exact slice_post_none (unIn1 kk) (unIn1_inj kk) (w.sent r) k (.brbBind2 i mm) rfl
   · funext kk
-    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow1, gsent_sent_self]
     exact slice_post_none (unBind1 kk) (unBind1_inj kk) (w.sent r) k (.brbBind2 i mm) rfl
-  · refine Prod.ext rfl (msgState_ext ?_ rfl)
+  · refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow2, gsent_sent_self]
     exact slice_post_none unGa2 unGa2_inj (w.sent r) k (.brbBind2 i mm) rfl
   · funext kk
-    refine Prod.ext rfl (msgState_ext ?_ rfl)
+    refine Prod.ext rfl (networkState_ext ?_ rfl)
     simp only [toPair, toLow2, gsent_sent_self]
     exact slice_post_none (unIn2 kk) (unIn2_inj kk) (w.sent r) k (.brbBind2 i mm) rfl
   · funext kk
     by_cases hk : kk = i
     · subst hk
-      refine Prod.ext ?_ (msgState_ext ?_ ?_)
+      refine Prod.ext ?_ (networkState_ext ?_ ?_)
       · simp only [toPair, toLow1, toLow2, Function.update_self, SubState.mcast]
       · simp only [toPair, toLow2, Function.update_self, SubState.mcast,
-          MsgState.post, gsent_sent_self]
+          NetworkState.post, gsent_sent_self]
         exact slice_post_some (unBind2 kk) (unBind2_inj kk) (w.sent r) k
           (.brbBind2 kk mm) mm (by simp [unBind2])
       · simp only [toPair, toLow2, Function.update_self, SubState.mcast,
-          MsgState.post, gsent_F]
-    · refine Prod.ext ?_ (msgState_ext ?_ ?_)
+          NetworkState.post, gsent_F]
+    · refine Prod.ext ?_ (networkState_ext ?_ ?_)
       · simp only [toPair, toLow1, toLow2, Function.update_of_ne hk]
       · simp only [toPair, toLow2, Function.update_of_ne hk, gsent_sent_self]
         exact slice_post_none (unBind2 kk) (unBind2_inj kk) (w.sent r) k (.brbBind2 i mm)
@@ -2346,7 +2346,7 @@ theorem toPair_byzBind2 (u : ∀ _ : Fin P.n, ProcRec P.n) (w : NetState P.n) (r
 
 
 /-- A Byzantine injection is answered by the round instance's own injection on
-the message state the message's tag names. -/
+the network the message's tag names. -/
 theorem byz_answer (P : Params) (u : ∀ _ : Fin P.n, ProcRec P.n)
     (w : NetState P.n) (r : ℕ) {k : Fin P.n} (m : Msg P.n) (hF : k ∈ w.F) :
     GBCA.LowPairStep P r (toPair P u w r) Lab.tau
