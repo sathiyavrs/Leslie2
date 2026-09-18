@@ -31,6 +31,13 @@ on `l` is then matched in one step by the composite itself: a synchronised step
 of the product, a `τ`-step of the abstraction when `l` is hidden, or an
 `l`-step of the restricted system.
 
+Two simulations compose (`ForwardSimulation.trans`). A step of the concrete
+system is answered by a run of the middle system, and that run is answered by a
+run of the abstract system, one transition at a time
+(`ForwardSimulation.weakLSilent_answer`, `ForwardSimulation.weakLStep_answer`).
+`ForwardSimulation.congr` transports a simulation along a pointwise `Iff` of
+relations.
+
 Chains of `LStep`s are the other reading of a weak run, and on a system all of
 whose transitions are Dirac (`System.IsLTS`) the two readings agree:
 `System.weakLSilent_chain` and `System.weakLStep_chains` invert a run into
@@ -745,10 +752,76 @@ theorem System.mapIdle_mapIdle {S L L' L'' : Type} (φ : L' → Option L) (ψ : 
   | none => simp [hψ]
   | some l' => cases hφ : φ l' <;> simp [hψ, hφ]
 
+/-! ### Composing simulations -/
+
+section Composition
+
+variable {SC SB SA Label : Type} [Silent Label]
+  {sysC : System SC Label} {sysB : System SB Label} {sysA : System SA Label}
+
+/-- **A silent run is answered by a silent run.** The induction is along the run
+(`System.weakLSilent_induction`): each of its transitions is answered by the
+simulation, and the answers compose. -/
+theorem ForwardSimulation.weakLSilent_answer {R : SB → SA → Prop}
+    (sim : ForwardSimulation sysB sysA R) {b b' : SB} {a : SA} (hR : R b a)
+    (h : sysB.weakLSilent b b') : ∃ a', sysA.weakLSilent a a' ∧ R b' a' := by
+  refine System.weakLSilent_induction
+    (P := fun s => ∀ u, R s u → ∃ a', sysA.weakLSilent u a' ∧ R b' a')
+    (fun u hu => ⟨u, System.weakLSilent_refl sysA u, hu⟩) ?_ h a hR
+  intro s μ x hs hx hP u hu
+  obtain ⟨u₁, hdisj, hR'⟩ := sim.step s u hu Silent.τ μ hs x hx
+  rcases hdisj with ⟨-, hsil⟩ | ⟨hnτ, -⟩
+  · obtain ⟨a', hrun, hRa⟩ := hP u₁ hR'
+    exact ⟨a', System.weakLSilent_trans hsil hrun, hRa⟩
+  · exact absurd rfl hnτ
+
+/-- **A weak transition is answered by a weak transition on the same label.**
+The run splits into a silent run, one transition on `l` and a second silent run
+(`System.weakLStep_split`); the two silent runs are answered by
+`ForwardSimulation.weakLSilent_answer`, the transition by the simulation, and
+the three answers reassemble. -/
+theorem ForwardSimulation.weakLStep_answer {R : SB → SA → Prop}
+    (sim : ForwardSimulation sysB sysA R) {b b' : SB} {a : SA} {l : Label} (hR : R b a)
+    (h : sysB.weakLStep b l b') : ∃ a', sysA.weakLStep a l a' ∧ R b' a' := by
+  obtain ⟨hl, b₁, b₂, μ, hpre, hstep, hmem, hpost⟩ := System.weakLStep_split h
+  obtain ⟨a₁, hrun₁, hR₁⟩ := sim.weakLSilent_answer hR hpre
+  obtain ⟨a₂, hdisj, hR₂⟩ := sim.step b₁ a₁ hR₁ l μ hstep b₂ hmem
+  rcases hdisj with ⟨hτ, -⟩ | ⟨-, hlab⟩
+  · exact absurd hτ hl
+  · obtain ⟨a', hrun₂, hRa⟩ := sim.weakLSilent_answer hR₂ hpost
+    exact ⟨a', System.weakLStep_silentCons hrun₁ (System.weakLStep_silentSnoc hlab hrun₂), hRa⟩
+
+/-- **Forward simulations compose**, along the composite of the two relations
+and without either system being an LTS. A step of `sysC` is answered by a run of
+`sysB`, and that run is answered by a run of `sysA`
+(`ForwardSimulation.weakLSilent_answer`, `ForwardSimulation.weakLStep_answer`),
+which is the answer of `sysA` to the step. -/
+theorem ForwardSimulation.trans {R₁ : SC → SB → Prop} {R₂ : SB → SA → Prop}
+    (sim₁ : ForwardSimulation sysC sysB R₁) (sim₂ : ForwardSimulation sysB sysA R₂) :
+    ForwardSimulation sysC sysA (fun c a => ∃ b, R₁ c b ∧ R₂ b a) := by
+  constructor
+  rintro c a ⟨b, hR₁, hR₂⟩ l μ hstep c' hc'
+  obtain ⟨b', hdisj, hR₁'⟩ := sim₁.step c b hR₁ l μ hstep c' hc'
+  rcases hdisj with ⟨hτ, hsil⟩ | ⟨hnτ, hlab⟩
+  · obtain ⟨a', hrun, hRa⟩ := sim₂.weakLSilent_answer hR₂ hsil
+    exact ⟨a', Or.inl ⟨hτ, hrun⟩, b', hR₁', hRa⟩
+  · obtain ⟨a', hrun, hRa⟩ := sim₂.weakLStep_answer hR₂ hlab
+    exact ⟨a', Or.inr ⟨hnτ, hrun⟩, b', hR₁', hRa⟩
+
+/-- Transport a forward simulation along a pointwise `Iff` of relations. -/
+theorem ForwardSimulation.congr {R R' : SC → SA → Prop} (h : ∀ c a, R c a ↔ R' c a)
+    (sim : ForwardSimulation sysC sysA R) : ForwardSimulation sysC sysA R' := by
+  constructor
+  intro c a hR l μ hstep c' hc'
+  obtain ⟨a', hdisj, hR'⟩ := sim.step c a ((h c a).mpr hR) l μ hstep c' hc'
+  exact ⟨a', hdisj, (h c' a').mp hR'⟩
+
+end Composition
+
 /-! ### Axiom check
 
-The five congruences are pinned to the clean axiom list
-`[propext, Classical.choice, Quot.sound]`. -/
+The five congruences and the composition of two simulations are pinned to the
+clean axiom list `[propext, Classical.choice, Quot.sound]`. -/
 
 /-- info: 'PLTS.ForwardSimulation.parallel_right' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
@@ -769,5 +842,9 @@ The five congruences are pinned to the clean axiom list
 /-- info: 'PLTS.ForwardSimulation.relabel' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms ForwardSimulation.relabel
+
+/-- info: 'PLTS.ForwardSimulation.trans' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms ForwardSimulation.trans
 
 end PLTS
