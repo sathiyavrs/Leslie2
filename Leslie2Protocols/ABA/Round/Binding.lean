@@ -4,8 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.Round.SubSim
-import Leslie2Protocols.ABA.Round.SubLow
+import Leslie2Protocols.ABA.Round.PairSim
+import Leslie2Protocols.ABA.Round.Substitutions
 import Leslie2Protocols.ABA.Spec.GBCASafety
 import Leslie2.Results
 
@@ -15,11 +15,11 @@ import Leslie2.Results
 The round speaks the family alphabet `NLab n`, in which a round-`r` return
 appears twice: as `Sum.inl (Lab.retG r id out bnd)` and as the Byzantine row
 `Sum.inr (.byzRetG r id out bnd)`. `GSub.gPull` sends both to the same
-specification return, and `GBCA.Sub.BindingTraceN` states binding at every
+specification return, and `GBCA.BindingTraceN` states binding at every
 label of a trace that `GSub.gPull` sends to a round-`r` return, so both forms
 count.
 
-`GBCA.Sub.liftedSpec_binding` proves binding of the specification read over
+`GBCA.liftedSpec_binding` proves binding of the specification read over
 that alphabet, `GSub.liftedSpec`. An execution of the lifted system has the
 states of a `GBCA.specInst` execution: a transition on a label `GSub.gPull`
 names is a `GBCA.Step` transition at that label, and a transition on a label it
@@ -28,9 +28,9 @@ such an execution and holds at most one bit, which is what the binding
 argument of `ABA/Spec/GBCASafety.lean` runs on.
 
 The three tiers of the round reach the lifted specification through
-`GBCA.Sub.pairRefines` and the two substitutions of `ABA/Round/SubLow.lean`.
-Each inherits binding along its inclusion: `GBCA.Sub.pairSub_binding`,
-`GBCA.Sub.idealSub_binding` and `GBCA.Sub.lowPairSub_binding`.
+`GBCA.pairRefines` and the two substitutions of `ABA/Round/Substitutions.lean`.
+Each inherits binding along its inclusion: `GBCA.pairInst_binding`,
+`GBCA.idealInst_binding` and `GBCA.lowPairInst_binding`.
 -/
 
 open Stream'
@@ -38,7 +38,6 @@ open Stream'
 namespace PLTS
 namespace ABA
 namespace GBCA
-namespace Sub
 
 open Net
 
@@ -201,9 +200,9 @@ theorem liftedSpec_binding (P : Params) (r : ℕ) :
 /-- Trace-distribution inclusion of the round over the gather specifications in
 the specification read over the round's interface, the soundness of
 `pairRefines`. -/
-theorem pairSub_refines (P : Params) (r : ℕ) :
-    achievableTraceDists (pairSub P r) ⊆ achievableTraceDists (GSub.liftedSpec P r) :=
-  (ForwardSimulation.toProbabilistic (pairSub_isLTS P r) (GSub.liftedSpec_isLTS P r)
+theorem pairInst_refines (P : Params) (r : ℕ) :
+    achievableTraceDists (pairInst P r) ⊆ achievableTraceDists (GSub.liftedSpec P r) :=
+  (ForwardSimulation.toProbabilistic (pairInst_isLTS P r) (GSub.liftedSpec_isLTS P r)
     (pairRel_init P r) (pairRefines P r)).achievableTraceDists_subset
 
 /-- **The round over the gather instances over Bracha's broadcast refines the
@@ -211,21 +210,21 @@ specification**: the two substitutions and the counting simulation, each taken
 probabilistically, joined by Result 2
 (`ProbabilisticForwardSimulation.trans`). -/
 theorem gatherImplRefines (P : Params) (r : ℕ) :
-    ProbabilisticForwardSimulation (lowPairSub P r) (GSub.liftedSpec P r)
+    ProbabilisticForwardSimulation (lowPairInst P r) (GSub.liftedSpec P r)
       (compRel (diracRel (LowPairRel P))
         (compRel (diracRel (IdealRel P)) (diracRel (PairRel P)))) :=
-  (ForwardSimulation.toProbabilistic (lowPairSub_isLTS P r) (idealSub_isLTS P r)
+  (ForwardSimulation.toProbabilistic (lowPairInst_isLTS P r) (idealInst_isLTS P r)
       (lowPairRel_init P r) (lowPairRefines P r)).trans
-    ((ForwardSimulation.toProbabilistic (idealSub_isLTS P r) (pairSub_isLTS P r)
+    ((ForwardSimulation.toProbabilistic (idealInst_isLTS P r) (pairInst_isLTS P r)
         (idealRel_init P r) (idealRefines P r)).trans
-      (ForwardSimulation.toProbabilistic (pairSub_isLTS P r) (GSub.liftedSpec_isLTS P r)
+      (ForwardSimulation.toProbabilistic (pairInst_isLTS P r) (GSub.liftedSpec_isLTS P r)
         (pairRel_init P r) (pairRefines P r)))
 
 /-- The soundness inclusion of the round reading: every trace distribution
 achievable by the round over the gather instances over Bracha's broadcast is
 achievable by the lifted specification. -/
 theorem gatherRoundRefines (P : Params) (r : ℕ) :
-    achievableTraceDists (lowPairSub P r) ⊆ achievableTraceDists (GSub.liftedSpec P r) :=
+    achievableTraceDists (lowPairInst P r) ⊆ achievableTraceDists (GSub.liftedSpec P r) :=
   (gatherImplRefines P r).achievableTraceDists_subset
 
 /-- The soundness inclusion of the gather substitution above the counting
@@ -233,15 +232,15 @@ simulation: every trace distribution achievable by the round over the gather
 instances over the broadcast specification is achievable by the lifted
 specification. -/
 theorem idealRoundRefines (P : Params) (r : ℕ) :
-    achievableTraceDists (idealSub P r) ⊆ achievableTraceDists (GSub.liftedSpec P r) :=
-  Set.Subset.trans (idealSub_refines P r) (pairSub_refines P r)
+    achievableTraceDists (idealInst P r) ⊆ achievableTraceDists (GSub.liftedSpec P r) :=
+  Set.Subset.trans (idealInst_refines P r) (pairInst_refines P r)
 
 /-- The soundness inclusion of the counting simulation alone: every trace
 distribution achievable by the round over the gather specifications is
 achievable by the lifted specification. -/
 theorem pairRoundRefines (P : Params) (r : ℕ) :
-    achievableTraceDists (pairSub P r) ⊆ achievableTraceDists (GSub.liftedSpec P r) :=
-  pairSub_refines P r
+    achievableTraceDists (pairInst P r) ⊆ achievableTraceDists (GSub.liftedSpec P r) :=
+  pairInst_refines P r
 
 /-! ### Binding of the three tiers -/
 
@@ -250,22 +249,22 @@ positive-probability trace of the round is bound to one bit: all its round-`r`
 returns announce that bit, and every one of them that hands out a value hands
 out it. Binding is a property of the labels (`BindingTraceN`), so
 `pairRoundRefines` carries it from `liftedSpec_binding`. -/
-theorem pairSub_binding (P : Params) (r : ℕ) :
-    ∀ D ∈ achievableTraceDists (pairSub P r), ∀ t, D t ≠ 0 →
+theorem pairInst_binding (P : Params) (r : ℕ) :
+    ∀ D ∈ achievableTraceDists (pairInst P r), ∀ t, D t ≠ 0 →
       BindingTraceN P r t :=
   safety_transfer (pairRoundRefines P r) (liftedSpec_binding P r)
 
 /-- **Binding of the round over the gather instances over the broadcast
 specification, on a trace**, along the inclusion `idealRoundRefines`. -/
-theorem idealSub_binding (P : Params) (r : ℕ) :
-    ∀ D ∈ achievableTraceDists (idealSub P r), ∀ t, D t ≠ 0 →
+theorem idealInst_binding (P : Params) (r : ℕ) :
+    ∀ D ∈ achievableTraceDists (idealInst P r), ∀ t, D t ≠ 0 →
       BindingTraceN P r t :=
   safety_transfer (idealRoundRefines P r) (liftedSpec_binding P r)
 
 /-- **Binding of the round over the gather instances over Bracha's broadcast,
 on a trace**, along the three-tier inclusion `gatherRoundRefines`. -/
-theorem lowPairSub_binding (P : Params) (r : ℕ) :
-    ∀ D ∈ achievableTraceDists (lowPairSub P r), ∀ t, D t ≠ 0 →
+theorem lowPairInst_binding (P : Params) (r : ℕ) :
+    ∀ D ∈ achievableTraceDists (lowPairInst P r), ∀ t, D t ≠ 0 →
       BindingTraceN P r t :=
   safety_transfer (gatherRoundRefines P r) (liftedSpec_binding P r)
 
@@ -273,31 +272,30 @@ theorem lowPairSub_binding (P : Params) (r : ℕ) :
 
 No headline may acquire a `sorryAx` dependence. -/
 
-/-- info: 'PLTS.ABA.GBCA.Sub.liftedSpec_binding' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.GBCA.liftedSpec_binding' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms liftedSpec_binding
 
-/-- info: 'PLTS.ABA.GBCA.Sub.gatherImplRefines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.GBCA.gatherImplRefines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms gatherImplRefines
 
-/-- info: 'PLTS.ABA.GBCA.Sub.gatherRoundRefines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.GBCA.gatherRoundRefines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms gatherRoundRefines
 
-/-- info: 'PLTS.ABA.GBCA.Sub.pairSub_binding' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.GBCA.pairInst_binding' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms pairSub_binding
+#print axioms pairInst_binding
 
-/-- info: 'PLTS.ABA.GBCA.Sub.idealSub_binding' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.GBCA.idealInst_binding' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms idealSub_binding
+#print axioms idealInst_binding
 
-/-- info: 'PLTS.ABA.GBCA.Sub.lowPairSub_binding' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.GBCA.lowPairInst_binding' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms lowPairSub_binding
+#print axioms lowPairInst_binding
 
-end Sub
 end GBCA
 end ABA
 end PLTS

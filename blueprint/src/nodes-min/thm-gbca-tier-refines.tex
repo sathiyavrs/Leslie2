@@ -1,11 +1,11 @@
 \begin{theorem}[The two substitutions inside the round]
   \label{thm:gbca-tier-refines}
-  \lean{PLTS.ABA.GBCA.LowPairRel}\lean{PLTS.ABA.GBCA.lowRefines}\lean{PLTS.ABA.GBCA.IdealRel}\lean{PLTS.ABA.GBCA.idealRefines}\leanok
+  \lean{PLTS.ABA.GBCA.LowPairRel}\lean{PLTS.ABA.GBCA.lowPairRefines}\lean{PLTS.ABA.GBCA.IdealRel}\lean{PLTS.ABA.GBCA.idealRefines}\leanok
   \uses{def:aba-gbca-gather-low, def:aba-gbca-pair, thm:gather-low-refines, thm:gather-core}
-  Each reading of the round is forward-simulated by the one above it, along the componentwise pairing of the gather-level relation: the broadcast substitution \leandecl{PLTS.ABA.GBCA.lowRefines} and the gather substitution \leandecl{PLTS.ABA.GBCA.idealRefines}, each replaying the corresponding gather simulation in both coordinates.
+  Each reading of the round is forward-simulated by the one above it, along the componentwise pairing of the gather-level relation: the broadcast substitution \leandecl{PLTS.ABA.GBCA.lowPairRefines} and the gather substitution \leandecl{PLTS.ABA.GBCA.idealRefines}, each replaying the corresponding gather simulation in both coordinates.
 \end{theorem}
 
 \begin{proof}\leanok
   \uses{def:aba-gbca-gather-low, def:aba-gbca-pair, thm:gather-low-refines, thm:gather-core, def:forwardsim}
-  See the Lean proofs of \leandecl{PLTS.ABA.GBCA.lowRefines} and \leandecl{PLTS.ABA.GBCA.idealRefines}.
+  See the Lean proofs of \leandecl{PLTS.ABA.GBCA.lowPairRefines} and \leandecl{PLTS.ABA.GBCA.idealRefines}.
 \end{proof}

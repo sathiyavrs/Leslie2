@@ -25,9 +25,9 @@ The state is the generic two-part shape (`ABA.SubState`,
 sets beside the instance's network state, under the development's D1
 (determinised corruption) and D5 (set-based network) conventions.
 
-`ImplStep` is the rows of the instance `BRB.sub` (`ABA/Broadcast/Sub.lean`) —
+`ImplStep` is the rows of the instance `BRB.implInst` (`ABA/Broadcast/Sub.lean`) —
 the `n` per-process programs beside the instance's network — stated over that
-product state, one constructor per case of `BRB.sub_step_iff_row`. It is a
+product state, one constructor per case of `BRB.implInst_step_iff_row`. It is a
 relation on the product state; the system is the composition.
 
 There is no participation guard here: only the leader is called, and every
@@ -83,8 +83,8 @@ def ImplState.initial (n : ℕ) (M : Type) : ImplState n M :=
 variable {M : Type} [DecidableEq M]
 
 /-- The rows of the reliable-broadcast instance with leader `ldr`
-(`BRB.sub`, `ABA/Broadcast/Sub.lean`), stated over the product state: one
-constructor per case of `BRB.sub_step_iff_row`. The call and the call loop are
+(`BRB.implInst`, `ABA/Broadcast/Sub.lean`), stated over the product state: one
+constructor per case of `BRB.implInst_step_iff_row`. The call and the call loop are
 the two rows of `call m`, which the instance takes at two labels. All
 transitions are Dirac. -/
 inductive ImplStep (P : Params) (ldr : Fin P.n) :

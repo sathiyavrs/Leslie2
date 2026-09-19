@@ -4,8 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.Gather.LowSim
-import Leslie2Protocols.ABA.Gather.IdealSim
+import Leslie2Protocols.ABA.Gather.Spec
 import Leslie2Protocols.Framework.TraceSupport
 import Leslie2.Results
 
@@ -25,12 +24,11 @@ reads the same set. `ret` demands `C.subMap g` outright. The size bound is
 the guard `hcard` of `bindCore`, carried forward as the state invariant
 `core_card`.
 
-The two implementations inherit the predicate along the soundness of their
-refinements (`PLTS.safety_transfer`, `Framework/TraceSupport.lean`): the
-gather-over-BRB instance along `gatherCore`, the gather-over-Bracha instance
-along `gatherLow` composed with it. What makes that transfer say anything is
-that the core is on the label: the implementations hold it in a field no
-process reads, and the refinements match the labels that carry it.
+An implementation inherits the predicate along the soundness of its refinement
+(`PLTS.safety_transfer`, `Framework/TraceSupport.lean`). What makes that
+transfer say anything is that the core is on the label: an implementation holds
+it in a field no process reads, and its refinement matches the labels that
+carry it.
 -/
 
 open Stream'
@@ -139,60 +137,11 @@ theorem specInst_core (P : Params) (X : Type) [DecidableEq X] :
       rw [hcarry] at hC₁
       exact (Option.some.inj hC₁).symm
 
-/-! ### The two implementations -/
-
-/-- Trace-distribution inclusion of the gather-over-BRB-specification
-instance in the gather specification, the soundness of `gatherCore`. -/
-theorem idealInst_refines (P : Params) (X : Type) [DecidableEq X] :
-    achievableTraceDists (idealInst P X) ⊆ achievableTraceDists (specInst P X) :=
-  (ForwardSimulation.toProbabilistic (idealInst_isLTS P) (specInst_isLTS P)
-    coreRel_init (gatherCore P X)).achievableTraceDists_subset
-
-/-- Trace-distribution inclusion of the gather-over-Bracha instance in the
-gather specification, the soundness of `gatherLow` composed with that of
-`gatherCore`. -/
-theorem lowInst_refines (P : Params) (X : Type) [DecidableEq X] :
-    achievableTraceDists (lowInst P X) ⊆ achievableTraceDists (specInst P X) :=
-  Set.Subset.trans
-    ((ForwardSimulation.toProbabilistic (lowInst_isLTS P) (idealInst_isLTS P)
-      lowRel_init (gatherLow P X)).achievableTraceDists_subset)
-    (idealInst_refines P X)
-
-/-- **The gather-over-BRB-specification instance binds one core.** -/
-theorem idealInst_core (P : Params) (X : Type) [DecidableEq X] :
-    ∀ D ∈ achievableTraceDists (idealInst P X), ∀ t, D t ≠ 0 → CoreTrace P t :=
-  safety_transfer (idealInst_refines P X) (specInst_core P X)
-
-/-- **The gather-over-Bracha instance binds one core.** -/
-theorem lowInst_core (P : Params) (X : Type) [DecidableEq X] :
-    ∀ D ∈ achievableTraceDists (lowInst P X), ∀ t, D t ≠ 0 → CoreTrace P t :=
-  safety_transfer (lowInst_refines P X) (specInst_core P X)
-
 /-! ### Mechanical axiom check -/
-
-/-- info: 'PLTS.ABA.Gather.single_core' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in
-#print axioms single_core
-
-/-- info: 'PLTS.ABA.Gather.gatherCore' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in
-#print axioms gatherCore
-
-/-- info: 'PLTS.ABA.Gather.gatherLow' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in
-#print axioms gatherLow
 
 /-- info: 'PLTS.ABA.Gather.specInst_core' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms specInst_core
-
-/-- info: 'PLTS.ABA.Gather.idealInst_core' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in
-#print axioms idealInst_core
-
-/-- info: 'PLTS.ABA.Gather.lowInst_core' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in
-#print axioms lowInst_core
 
 end Gather
 end ABA

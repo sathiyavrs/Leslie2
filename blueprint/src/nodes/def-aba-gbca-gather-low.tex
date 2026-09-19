@@ -1,8 +1,8 @@
 \begin{definition}[The gather-based GBCA implementation]
   \label{def:aba-gbca-gather-low}
-  \lean{PLTS.ABA.GBCA.IdealState}\lean{PLTS.ABA.GBCA.IdealStep}\lean{PLTS.ABA.GBCA.idealInst}\lean{PLTS.ABA.GBCA.LowPairState}\lean{PLTS.ABA.GBCA.LowPairStep}\lean{PLTS.ABA.GBCA.lowPairInst}\leanok
+  \lean{PLTS.ABA.GBCA.IdealState}\lean{PLTS.ABA.GBCA.idealInst}\lean{PLTS.ABA.GBCA.LowPairState}\lean{PLTS.ABA.GBCA.lowPairInst}\leanok
   \uses{def:aba-gbca-pair, def:aba-gather-ideal, def:aba-gather-low}
-  The two-gather round at its two concrete readings, each carrying the rule table of Definition~\ref{def:aba-gbca-pair} with the gather coordinates read one level down.
+  The two-gather round at its two concrete readings, each a composition carrying the rows of Definition~\ref{def:aba-gbca-pair} with the gather coordinates read one level down.
   The instance over gather-over-broadcast components pairs two states of Definition~\ref{def:aba-gather-ideal}; the fully concrete instance pairs two states of Definition~\ref{def:aba-gather-low} --- the two gather instances and, beneath them, the $4n$ Bracha instances carrying the inputs and the $\mathrm{BIND}$ payloads.
   In both, the round's $\mathrm{callG}$ is the first gather's call, each component's internal rows are $\tau$-rows of the pair, the link row fuses the first gather's return with the second gather's call at the candidate --- at the concrete reading, together with the input-broadcast contribution that call performs --- the round's $\mathrm{retG}$ reads the grade off the second gather's return, and corruption is the lockstep transform of every coordinate (D1, D28).
   The concrete reading \leandecl{PLTS.ABA.GBCA.lowPairInst} is the gather-based GBCA implementation, the protocol as it runs; the reading over broadcast components, \leandecl{PLTS.ABA.GBCA.idealInst}, is the middle stage the two substitutions below pass through.

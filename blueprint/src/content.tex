@@ -453,7 +453,7 @@ The size bound is provable from the prefix of an execution, which is what the ru
 The core is one honest sender's $\mathrm{ECHO}$ payload, located on the sent sets by the counting of Definition~\ref{def:aba-gather-core}.
 Remark~22 of~\cite{AFW25} determines the core of a non-binding gather only in hindsight; here it is an auxiliary variable in the sense of~\cite{AL91}, held as state and announced on the returns (D29).
 The implementation sends its $\mathrm{BIND}$ payloads by reliable broadcast, which is what pins a payload against a sender corrupted later, and is verified in two substitutions: the Bracha layer replaced coordinatewise, then the gather rounds replaced by Transition System~4.
-See \leanmodule{Leslie2Protocols/ABA/Gather/Spec}, \leanmodule{Leslie2Protocols/ABA/Gather/Ideal}, \leanmodule{Leslie2Protocols/ABA/Gather/IdealSim}, \leanmodule{Leslie2Protocols/ABA/Gather/Low} and \leanmodule{Leslie2Protocols/ABA/Gather/LowSim}.
+See \leanmodule{Leslie2Protocols/ABA/Gather/Spec}, \leanmodule{Leslie2Protocols/ABA/Gather/Vocabulary}, \leanmodule{Leslie2Protocols/ABA/Gather/Sub}, \leanmodule{Leslie2Protocols/ABA/Gather/Ideal}, \leanmodule{Leslie2Protocols/ABA/Gather/IdealSim}, \leanmodule{Leslie2Protocols/ABA/Gather/Low} and \leanmodule{Leslie2Protocols/ABA/Gather/LowSim}.
 
 \input{nodes-min/def-aba-gather-spec}
 
@@ -476,7 +476,7 @@ The round calls gather on the input bits, takes as candidate the bit carried by 
 Both gathers are the binding form (D33).
 The refinement into Transition System~2 is pure counting on the two cores, each written once: a bit the first core carries on fewer than $|S| - f$ entries is excluded and stays excluded, a core heavy at one candidate leaves the other light, and the $A$/$C$ grade guard is heaviness of the second core against its lightness.
 The round's bound bit is the heavy bit of the first core, written at the link and announced by every graded return, and it is the bit whose complement each return excludes.
-See \leanmodule{Leslie2Protocols/ABA/Round/Pair}, \leanmodule{Leslie2Protocols/ABA/Round/PairSim}, \leanmodule{Leslie2Protocols/ABA/Round/Ideal}, \leanmodule{Leslie2Protocols/ABA/Round/IdealSim}, \leanmodule{Leslie2Protocols/ABA/Round/Low} and \leanmodule{Leslie2Protocols/ABA/Round/LowSim}.
+See \leanmodule{Leslie2Protocols/ABA/Round/Counting}, \leanmodule{Leslie2Protocols/ABA/Round/Sub}, \leanmodule{Leslie2Protocols/ABA/Round/Pair}, \leanmodule{Leslie2Protocols/ABA/Round/PairSim} and \leanmodule{Leslie2Protocols/ABA/Round/Substitutions}.
 
 \input{nodes-min/def-aba-gbca-pair}
 \input{nodes-min/thm-gbca-pair-refines}
@@ -485,7 +485,7 @@ See \leanmodule{Leslie2Protocols/ABA/Round/Pair}, \leanmodule{Leslie2Protocols/A
 \blueprintfig{fig-gather-tiers}{One round of the gather-based implementation, \leandecl{PLTS.ABA.GBCA.lowPairInst}, drawn open, and the three substitutions that carry it to Transition System~2.
 A round is two gather instances of the binding form (D33), one over the input bits and one over the candidates, and each is an $\mathrm{ECHO}$/$\mathrm{VOTE}$ exchange over its own network beside $2n$ Bracha instances.
 That is $4n + 2$ network states in a single round --- $2n$ broadcasts for the inputs and $2n$ for the $\mathrm{BIND}$ payloads (D32, D33), beside the two gather network states --- which is the count the flat reading collapses into one tagged sent-set family.
-The three tiers above it --- the three systems that carry one round, from the pair of gather specifications down to Bracha --- replace one layer at a time: \leandecl{PLTS.ABA.GBCA.lowRefines} replaces each Bracha coordinate by the BRB specification, \leandecl{PLTS.ABA.GBCA.idealRefines} each gather coordinate by the gather specification, and \leandecl{PLTS.ABA.GBCA.pairRefines} reads the grade off the two cores, each written once, and the exclusion set off the round's bound bit.
+The three tiers above it --- the three systems that carry one round, from the pair of gather specifications down to Bracha --- replace one layer at a time: \leandecl{PLTS.ABA.GBCA.lowPairRefines} replaces each Bracha coordinate by the BRB specification, \leandecl{PLTS.ABA.GBCA.idealRefines} each gather coordinate by the gather specification, and \leandecl{PLTS.ABA.GBCA.pairRefines} reads the grade off the two cores, each written once, and the exclusion set off the round's bound bit.
 Each of the three state tiers is a triple whose third factor is that bound bit, written at the link row and untouched by either substitution.
 Each is a plain forward simulation, so the three compose.}
 \input{nodes-min/thm-gbca-tier-refines}
@@ -520,9 +520,9 @@ The shape is the flat reading's, and two things distinguish it from ABDY22's ins
 The adversary holds a single sent-set family per round over the tagged message type \leandecl{PLTS.ABA.AFW.Msg}, whose tag names the network state a message belongs to and, for a broadcast message, the instance; the composed reading of the same round carries $4n + 2$ separate network states.
 And a program's record is process-major: process $j$ holds its own local state in every instance, where the composed reading indexes the local states by instance and then by process.
 The adversary further holds the ghost record of each round, \leandecl{PLTS.ABA.AFW.Ghost}: the two gathers' cores and the round's bound bit, each written once (D30).
-Assembling the composed state from the flat one undoes both rearrangements, which is what \leandecl{PLTS.ABA.AFW.toPair} does --- slicing the one sent-set family into the network states, transposing the records back, and reading the two cores and the bound bit off that ghost record.}
+Assembling the composed state from the flat one undoes both rearrangements, which is what \leandecl{PLTS.ABA.AFW.toRound} does --- slicing the one sent-set family into the network states, transposing the records back, and reading the two cores and the bound bit off that ghost record.}
 
-At the protocol shape, the gather-based rounds occupy the same refinable position the direct rounds do: each reading is lifted over the extended alphabet along the label pullback of Definition~\ref{def:aba-gbcasub}, gathered into the round-indexed family, and put through the composed reading's pipeline.
+At the protocol shape, the gather-based rounds occupy the same refinable position the direct rounds do: each reading speaks the extended alphabet itself, is gathered into the round-indexed family, and is put through the composed reading's pipeline.
 The three substitutions inside the round become three stages between protocol-shaped systems, the third landing on $\mathrm{hybrid}(P)$ itself, and from there the chain is the shared one: Theorem~\ref{thm:aba-hybrid-spec} and the safety transfer.
 See \leanmodule{Leslie2Protocols/ABA/AFW/Chain}.
 

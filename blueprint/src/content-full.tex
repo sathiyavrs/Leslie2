@@ -1750,7 +1750,7 @@ The round interface $\mathrm{callG}/\mathrm{retG}$, Transition System~2 and ever
 The verification is organised as substitutions inside the round.
 Three readings of the round share one fused rule table (D28): the two-gather round over gather specifications, the same round over gather-over-broadcast components, and the fully concrete round over gather-over-Bracha components.
 Three forward simulations connect them --- the broadcast substitution, the gather substitution, and the counting refinement into Transition System~2 --- and compose to the round refinement.
-At the protocol shape, each reading is lifted over the extended alphabet, gathered into the round-indexed family, and put through the composed reading's pipeline; the three substitutions become three stages whose last lands on $\mathrm{hybrid}(P)$, and from there the chain is the shared one.
+At the protocol shape, each reading speaks the extended alphabet itself, is gathered into the round-indexed family, and is put through the composed reading's pipeline; the three substitutions become three stages whose last lands on $\mathrm{hybrid}(P)$, and from there the chain is the shared one.
 Two readings are verified: the composed one, the gather-based counterpart of Definition~\ref{def:aba-composed}, and beneath it the flat one, the second instantiation of Definition~\ref{def:aba-flat-reading}, which is the gather-based protocol as it runs.
 
 The two chains meet at $\mathrm{hybrid}(P)$ and are identical above it, and below it they run through systems of the same shape.
@@ -1875,6 +1875,8 @@ The implementation is verified in two substitutions.
 The gather-over-broadcast reading embeds the $2n$ broadcast specifications as state coordinates and is carried to Transition System~4 by the core refinement, whose returns are answered by one weak run --- the abstract commits, the write of the core where the specification holds none, the return --- with the core read off the implementation's own network state.
 The fully concrete reading replaces each broadcast coordinate by a Bracha instance and is carried to the previous one coordinatewise, the lagging specification commits fired as $\tau$-chains under the rows that read them.
 See \leanmodule{Leslie2Protocols/ABA/Gather/Spec},
+\leanmodule{Leslie2Protocols/ABA/Gather/Vocabulary},
+\leanmodule{Leslie2Protocols/ABA/Gather/Sub},
 \leanmodule{Leslie2Protocols/ABA/Gather/Ideal},
 \leanmodule{Leslie2Protocols/ABA/Gather/IdealSim},
 \leanmodule{Leslie2Protocols/ABA/Gather/Low} and
@@ -1905,12 +1907,11 @@ The refinement into Transition System~2 is counting on the two cores, each writt
 A returned map heavy at a value --- all but $f$ entries --- makes the core the return carries heavy at it; a core heavy at one value leaves every other value at most $f$ entries on it, its $\ge n - f \ge 2f + 1$ entries admitting one value on all but $2f$, which is at once the uniqueness of the $B$-bit and the $A$/$C$ exclusivity of the grade guard.
 The round's bound bit is the heavy bit of the first core, written at the round's first link and announced by every graded return (D29).
 The exclusion certificate --- the first core light at the excluded bit --- stands from the moment the core is written, so the specification's monotone $excluded$ is certified with no relay machinery, and the exclusion-on-demand discipline of the direct implementation's refinement carries over unchanged: a return needing an exclusion the specification does not yet hold is answered by the run $\mathrm{bindUnset}; \mathrm{ret}$, whose excluded bit is the complement of the bit the return announces.
-See \leanmodule{Leslie2Protocols/ABA/Round/Pair},
-\leanmodule{Leslie2Protocols/ABA/Round/PairSim},
-\leanmodule{Leslie2Protocols/ABA/Round/Ideal},
-\leanmodule{Leslie2Protocols/ABA/Round/IdealSim},
-\leanmodule{Leslie2Protocols/ABA/Round/Low} and
-\leanmodule{Leslie2Protocols/ABA/Round/LowSim}.
+See \leanmodule{Leslie2Protocols/ABA/Round/Counting},
+\leanmodule{Leslie2Protocols/ABA/Round/Sub},
+\leanmodule{Leslie2Protocols/ABA/Round/Pair},
+\leanmodule{Leslie2Protocols/ABA/Round/PairSim} and
+\leanmodule{Leslie2Protocols/ABA/Round/Substitutions}.
 
 \input{nodes/def-aba-gbca-pair}
 \input{nodes/thm-gbca-pair-refines}
@@ -1919,7 +1920,7 @@ See \leanmodule{Leslie2Protocols/ABA/Round/Pair},
 \blueprintfig{fig-gather-tiers}{One round of the gather-based implementation, \leandecl{PLTS.ABA.GBCA.lowPairInst}, drawn open, and the three substitutions that carry it to Transition System~2.
 A round is two gather instances of the binding form (D33), one over the input bits and one over the candidates, and each is an $\mathrm{ECHO}$/$\mathrm{VOTE}$ exchange over its own network beside $2n$ Bracha instances.
 That is $4n + 2$ network states in a single round --- $2n$ broadcasts for the inputs and $2n$ for the $\mathrm{BIND}$ payloads (D32, D33), beside the two gather network states --- which is the count the flat reading collapses into one tagged sent-set family.
-The three tiers above it --- the three systems that carry one round, from the pair of gather specifications down to Bracha --- replace one layer at a time: \leandecl{PLTS.ABA.GBCA.lowRefines} replaces each Bracha coordinate by the BRB specification, \leandecl{PLTS.ABA.GBCA.idealRefines} each gather coordinate by the gather specification, and \leandecl{PLTS.ABA.GBCA.pairRefines} reads the grade off the two cores, each written once, and the exclusion set off the round's bound bit.
+The three tiers above it --- the three systems that carry one round, from the pair of gather specifications down to Bracha --- replace one layer at a time: \leandecl{PLTS.ABA.GBCA.lowPairRefines} replaces each Bracha coordinate by the BRB specification, \leandecl{PLTS.ABA.GBCA.idealRefines} each gather coordinate by the gather specification, and \leandecl{PLTS.ABA.GBCA.pairRefines} reads the grade off the two cores, each written once, and the exclusion set off the round's bound bit.
 Each of the three state tiers is a triple whose third factor is that bound bit, written at the link row and untouched by either substitution.
 Each is a plain forward simulation, so the three compose.}
 \input{nodes/thm-gbca-tier-refines}
@@ -1964,12 +1965,12 @@ The shape is the flat reading's, and two things distinguish it from ABDY22's ins
 The adversary holds a single sent-set family per round over the tagged message type \leandecl{PLTS.ABA.AFW.Msg}, whose tag names the network state a message belongs to and, for a broadcast message, the instance; the composed reading of the same round carries $4n + 2$ separate network states.
 And a program's record is process-major: process $j$ holds its own local state in every instance, where the composed reading indexes the local states by instance and then by process.
 The adversary further holds the ghost record of each round, \leandecl{PLTS.ABA.AFW.Ghost}: the two gathers' cores and the round's bound bit, each written once (D30).
-Assembling the composed state from the flat one undoes both rearrangements, which is what \leandecl{PLTS.ABA.AFW.toPair} does --- slicing the one sent-set family into the network states, transposing the records back, and reading the two cores and the bound bit off that ghost record.}
+Assembling the composed state from the flat one undoes both rearrangements, which is what \leandecl{PLTS.ABA.AFW.toRound} does --- slicing the one sent-set family into the network states, transposing the records back, and reading the two cores and the bound bit off that ghost record.}
 
 
 
 At the protocol shape the gather-based rounds occupy the same refinable position the direct rounds do.
-Each reading of the round is lifted over the extended alphabet along the label pullback of Definition~\ref{def:aba-gbcasub} --- the read-back congruence transports each per-round simulation with no further proof obligation --- and gathered into the round-indexed family under the corruption broadcast, whose compatibility is each relation's own lockstep statement.
+Each reading of the round speaks the extended alphabet itself, and is gathered into the round-indexed family under the corruption broadcast, whose compatibility is each relation's own lockstep statement.
 The three family substitutions run under the composed reading's context through the four congruences, exactly as the substitution of Theorem~\ref{thm:aba-substitution} does, and the third stage lands on $\mathrm{hybrid}(P)$ itself: the core simulation, the safety of the specification and the safety transfer are shared between the two chains from that point up.
 One specification, two verified implementations, one meeting point at $\mathrm{hybrid}(P)$. Below that point the chain has one step more than the direct one, the substitution splitting into its three stages:
 \[

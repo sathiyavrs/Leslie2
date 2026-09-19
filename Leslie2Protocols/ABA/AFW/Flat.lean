@@ -5,7 +5,9 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.Reading.Flat
-import Leslie2Protocols.ABA.Round.Low
+import Leslie2Protocols.ABA.Round.Counting
+import Leslie2Protocols.ABA.Gather.Vocabulary
+import Leslie2Protocols.ABA.Broadcast.Impl
 
 /-!
 # The gather-based protocol as it runs
@@ -43,7 +45,7 @@ loses nothing.
 
 ## The rows
 
-The stage-side rows are the rows of `Gather.LowStep` and `GBCA.LowPairStep`
+The stage-side rows are the rows of `Gather.LowStep` and `GBCA.lowPairInst`
 cut into their process half and their network half. A send writes the sender's
 own record and the network records the message; a delivery files the message in
 the receiver's own local state, dispatched on the tag. Three rows are fused, as they

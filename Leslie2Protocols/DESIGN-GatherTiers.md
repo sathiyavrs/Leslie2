@@ -5,8 +5,8 @@ agreement: the sub-protocol encodings (`ABA/Vocabulary/NetworkState.lean`, `ABA/
 `ABA/Broadcast/Impl.lean`, `ABA/Gather/Spec.lean`, `ABA/Gather/Ideal.lean`,
 `ABA/Gather/Low.lean`), their refinements (`ABA/Broadcast/ImplSim.lean`,
 `ABA/Gather/IdealSim.lean`, `ABA/Gather/LowSim.lean`), the two-gather round and its
-three readings (`ABA/Round/Pair.lean`, `ABA/Round/Ideal.lean`, `ABA/Round/Low.lean`
-and the three `*Sim` files), the assembly at the protocol shape
+three readings (`ABA/Round/Counting.lean`, `ABA/Round/Sub.lean`,
+`ABA/Round/Pair.lean` and the simulation files), the assembly at the protocol shape
 (`ABA/AFW/Chain.lean`), and the protocol beneath it (`ABA/AFW/Flat.lean`,
 `ABA/AFW/FlatSim.lean`). The gather subsections of
 `blueprint/src/content.tex` are a condensation of this document; the
@@ -199,7 +199,7 @@ component's row as a premise), splices chains where a fused row answers two
 components (the `link` row), and closes with `Framework/WeakRun.lean`:
 `weakLSilent_ofChain` for silent answers, `weakLStep_tausThen` for a chain
 closed by an external step. This is why the wrapper simulations
-(`ABA/Round/IdealSim.lean`, `ABA/Round/LowSim.lean`) are two hundred lines
+(`ABA/Round/Substitutions.lean`) are two hundred lines
 against the tiers' thousands: they replay, they do not re-prove.
 
 ## The assembly at the protocol shape (`AFW/Chain.lean`)

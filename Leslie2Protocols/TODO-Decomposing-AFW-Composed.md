@@ -236,10 +236,8 @@ The files the decomposition rewrites, with their present sizes:
 | `ABA/Gather/LowSim.lean` | 665 | the broadcast substitution, likewise |
 | `ABA/Gather/Ideal.lean` | 331 | the joint table split into components |
 | `ABA/Gather/Low.lean` | 201 | likewise, and `Gather.apIn` / `Gather.apBind` retired |
-| `ABA/Round/LowSim.lean` | 216 | the componentwise wrappers |
-| `ABA/Round/IdealSim.lean` | 188 | likewise |
-| `ABA/Round/Low.lean` | 105 | the round tier split |
-| `ABA/Round/Ideal.lean` | 106 | likewise |
+| `ABA/Round/Substitutions.lean` | 218 | the componentwise wrappers |
+| `ABA/Round/Sub.lean` | 1155 | the round tier split |
 
 Against `ABA/ABDY/Instances.lean` at 1659 lines, which is what one such level costs in the
 protocol chain, including its own alphabet, the pullback lift and `GSub.sub_projects`.

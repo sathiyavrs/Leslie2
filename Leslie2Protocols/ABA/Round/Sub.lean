@@ -5,7 +5,7 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.Gather.Sub
-import Leslie2Protocols.ABA.Round.Pair
+import Leslie2Protocols.ABA.Round.Counting
 import Leslie2Protocols.ABA.ABDY.Instances
 import Leslie2Protocols.Framework.Relabel
 import Leslie2Protocols.Framework.SyncProduct
@@ -61,7 +61,7 @@ exception: it has no image at all, so the layer stands still on it while the
 two gather instances move.
 
 The round-internal alphabet is `RLab n = NLab n ⊕ REvt n`. Its three events are
-hidden before anything outside sees the round: `roundSubAt` speaks `NLab n`.
+hidden before anything outside sees the round: `roundInstAt` speaks `NLab n`.
 
 ## Corruption
 
@@ -190,7 +190,7 @@ def procPull (n : ℕ) : RLab n → Option (PLab n)
 /-- The projection of the round-internal alphabet onto the first gather's
 interface alphabet. The round's call is the gather's call, the family's call
 loops are the gather's loop, and the `ret1` event is the gather's return. -/
-def ga1Pull (n : ℕ) : RLab n → Option (Gather.SubLab n Bool)
+def ga1Pull (n : ℕ) : RLab n → Option (Gather.InstLab n Bool)
   | Sum.inl (Sum.inl .tau) => some (Sum.inl .tau)
   | Sum.inl (Sum.inl (.callG _ id b)) => some (Sum.inl (.call id b))
   | Sum.inl (Sum.inl (.fail id)) => some (Sum.inl (.fail id))
@@ -203,7 +203,7 @@ def ga1Pull (n : ℕ) : RLab n → Option (Gather.SubLab n Bool)
 /-- The projection of the round-internal alphabet onto the second gather's
 interface alphabet. The `call2` event is the gather's call and the `ret2` event
 its return. -/
-def ga2Pull (n : ℕ) : RLab n → Option (Gather.SubLab n (Option Bool))
+def ga2Pull (n : ℕ) : RLab n → Option (Gather.InstLab n (Option Bool))
   | Sum.inl (Sum.inl .tau) => some (Sum.inl .tau)
   | Sum.inl (Sum.inl (.fail id)) => some (Sum.inl (.fail id))
   | Sum.inr (.call2 id x) => some (Sum.inl (.call id x))
@@ -216,11 +216,11 @@ def ga2Pull (n : ℕ) : RLab n → Option (Gather.SubLab n (Option Bool))
 
 /-- The silent label projects to the silent label. -/
 @[simp] theorem ga1Pull_tau (n : ℕ) :
-    ga1Pull n (Silent.τ : RLab n) = some (Silent.τ : Gather.SubLab n Bool) := rfl
+    ga1Pull n (Silent.τ : RLab n) = some (Silent.τ : Gather.InstLab n Bool) := rfl
 
 /-- The silent label projects to the silent label. -/
 @[simp] theorem ga2Pull_tau (n : ℕ) :
-    ga2Pull n (Silent.τ : RLab n) = some (Silent.τ : Gather.SubLab n (Option Bool)) := rfl
+    ga2Pull n (Silent.τ : RLab n) = some (Silent.τ : Gather.InstLab n (Option Bool)) := rfl
 
 /-- Only the silent label reaches a program's silent label. -/
 theorem procPull_eq_tau {n : ℕ} {l : RLab n} (h : procPull n l = some PLab.tau) :
@@ -232,7 +232,7 @@ theorem procPull_eq_tau {n : ℕ} {l : RLab n} (h : procPull n l = some PLab.tau
 
 /-- Only the silent label reaches the first gather's silent label. -/
 theorem ga1Pull_eq_tau {n : ℕ} {l : RLab n}
-    (h : ga1Pull n l = some (Silent.τ : Gather.SubLab n Bool)) : l = Silent.τ := by
+    (h : ga1Pull n l = some (Silent.τ : Gather.InstLab n Bool)) : l = Silent.τ := by
   rcases l with (l₀ | e) | e
   · cases l₀ <;> simp_all [ga1Pull]
   · cases e <;> simp_all [ga1Pull]
@@ -240,7 +240,7 @@ theorem ga1Pull_eq_tau {n : ℕ} {l : RLab n}
 
 /-- Only the silent label reaches the second gather's silent label. -/
 theorem ga2Pull_eq_tau {n : ℕ} {l : RLab n}
-    (h : ga2Pull n l = some (Silent.τ : Gather.SubLab n (Option Bool))) : l = Silent.τ := by
+    (h : ga2Pull n l = some (Silent.τ : Gather.InstLab n (Option Bool))) : l = Silent.τ := by
   rcases l with (l₀ | e) | e
   · cases l₀ <;> simp_all [ga2Pull]
   · cases e <;> simp_all [ga2Pull]
@@ -398,11 +398,13 @@ inductive ProcStep (P : Params) (r : ℕ) (j : Fin P.n) :
   | ret2Idle (p : ProcRec P.n) (i : Fin P.n) (g : Fin P.n → Option (Option Bool))
       (C : Gather.APSet P.n (Option Bool)) (hi : i ≠ j) :
       ProcStep P r j p (.ret2 i g C) (PMF.pure p)
-  /-- The round returns the recorded grade. The announced bit is the layer's
-  network's to determine. -/
+  /-- The round returns the recorded grade. The return announces the grade and
+  the record drops it. The announced bit is the layer's network's to
+  determine. -/
   | retG (p : ProcRec P.n) (out : GbcaOut) (bnd : Bool) (ho : p.out = some out)
       (hr : p.returned = false) :
-      ProcStep P r j p (.retG r j out bnd) (PMF.pure { p with returned := true })
+      ProcStep P r j p (.retG r j out bnd)
+        (PMF.pure { p with out := none, returned := true })
   /-- A return to another process: not `j`'s business. -/
   | retGIdle (p : ProcRec P.n) (i : Fin P.n) (out : GbcaOut) (bnd : Bool) (hi : i ≠ j) :
       ProcStep P r j p (.retG r i out bnd) (PMF.pure p)
@@ -482,68 +484,68 @@ abbrev RoundStateAt (n : ℕ) (G₁ G₂ : Type) : Type :=
 /-- The layer beside the two gather instances, over the round-internal
 alphabet. -/
 noncomputable def roundPreAt (P : Params) (r : ℕ) {G₁ G₂ : Type}
-    (ga1 : System G₁ (Gather.SubLab P.n Bool))
-    (ga2 : System G₂ (Gather.SubLab P.n (Option Bool))) :
+    (ga1 : System G₁ (Gather.InstLab P.n Bool))
+    (ga2 : System G₂ (Gather.InstLab P.n (Option Bool))) :
     System (RoundStateAt P.n G₁ G₂) (RLab P.n) :=
   (layer P r).parallel ((ga1.mapIdle (ga1Pull P.n)).parallel (ga2.mapIdle (ga2Pull P.n)))
 
 /-- **The round-`r` graded-agreement round** over the gather instances `ga1`,
 `ga2`: the layer beside the two of them, the round's events hidden, the result
 read over the family alphabet. -/
-noncomputable def roundSubAt (P : Params) (r : ℕ) {G₁ G₂ : Type}
-    (ga1 : System G₁ (Gather.SubLab P.n Bool))
-    (ga2 : System G₂ (Gather.SubLab P.n (Option Bool))) :
+noncomputable def roundInstAt (P : Params) (r : ℕ) {G₁ G₂ : Type}
+    (ga1 : System G₁ (Gather.InstLab P.n Bool))
+    (ga2 : System G₂ (Gather.InstLab P.n (Option Bool))) :
     System (RoundStateAt P.n G₁ G₂) (NLab P.n) :=
   ((roundPreAt P r ga1 ga2).abstract (rEvents P.n)).relabel
 
-@[simp] theorem roundSubAt_init (P : Params) (r : ℕ) {G₁ G₂ : Type}
-    (ga1 : System G₁ (Gather.SubLab P.n Bool))
-    (ga2 : System G₂ (Gather.SubLab P.n (Option Bool))) :
-    (roundSubAt P r ga1 ga2).init =
+@[simp] theorem roundInstAt_init (P : Params) (r : ℕ) {G₁ G₂ : Type}
+    (ga1 : System G₁ (Gather.InstLab P.n Bool))
+    (ga2 : System G₂ (Gather.InstLab P.n (Option Bool))) :
+    (roundInstAt P r ga1 ga2).init =
       (((fun _ => ProcRec.initial P.n), none), (ga1.init, ga2.init)) := rfl
 
 /-- The state of the round over the gather instances over Bracha's
 broadcast. -/
-abbrev LowPairSubState (n : ℕ) : Type :=
-  RoundStateAt n (Gather.LowSubState n Bool) (Gather.LowSubState n (Option Bool))
+abbrev LowPairState (n : ℕ) : Type :=
+  RoundStateAt n (Gather.LowState n Bool) (Gather.LowState n (Option Bool))
 
 /-- The state of the round over the gather instances over the broadcast
 specification. -/
-abbrev IdealSubState (n : ℕ) : Type :=
-  RoundStateAt n (Gather.IdealSubState n Bool) (Gather.IdealSubState n (Option Bool))
+abbrev IdealState (n : ℕ) : Type :=
+  RoundStateAt n (Gather.IdealState n Bool) (Gather.IdealState n (Option Bool))
 
 /-- The state of the round over the gather specifications. -/
-abbrev PairSubState (n : ℕ) : Type :=
+abbrev PairState (n : ℕ) : Type :=
   RoundStateAt n (Gather.SpecState n Bool) (Gather.SpecState n (Option Bool))
 
 /-- **The round over the gather instances over Bracha's broadcast.** -/
-noncomputable def lowPairSub (P : Params) (r : ℕ) :
-    System (LowPairSubState P.n) (NLab P.n) :=
-  roundSubAt P r (Gather.lowSub P Bool) (Gather.lowSub P (Option Bool))
+noncomputable def lowPairInst (P : Params) (r : ℕ) :
+    System (LowPairState P.n) (NLab P.n) :=
+  roundInstAt P r (Gather.lowInst P Bool) (Gather.lowInst P (Option Bool))
 
 /-- **The round over the gather instances over the broadcast
 specification.** -/
-noncomputable def idealSub (P : Params) (r : ℕ) :
-    System (IdealSubState P.n) (NLab P.n) :=
-  roundSubAt P r (Gather.idealSub P Bool) (Gather.idealSub P (Option Bool))
+noncomputable def idealInst (P : Params) (r : ℕ) :
+    System (IdealState P.n) (NLab P.n) :=
+  roundInstAt P r (Gather.idealInst P Bool) (Gather.idealInst P (Option Bool))
 
 /-- **The round over the gather specifications.** -/
-noncomputable def pairSub (P : Params) (r : ℕ) :
-    System (PairSubState P.n) (NLab P.n) :=
-  roundSubAt P r (Gather.liftedSpec P Bool) (Gather.liftedSpec P (Option Bool))
+noncomputable def pairInst (P : Params) (r : ℕ) :
+    System (PairState P.n) (NLab P.n) :=
+  roundInstAt P r (Gather.liftedSpec P Bool) (Gather.liftedSpec P (Option Bool))
 
-@[simp] theorem lowPairSub_init (P : Params) (r : ℕ) :
-    (lowPairSub P r).init =
+@[simp] theorem lowPairInst_init (P : Params) (r : ℕ) :
+    (lowPairInst P r).init =
       (((fun _ => ProcRec.initial P.n), none),
-        ((Gather.lowSub P Bool).init, (Gather.lowSub P (Option Bool)).init)) := rfl
+        ((Gather.lowInst P Bool).init, (Gather.lowInst P (Option Bool)).init)) := rfl
 
-@[simp] theorem idealSub_init (P : Params) (r : ℕ) :
-    (idealSub P r).init =
+@[simp] theorem idealInst_init (P : Params) (r : ℕ) :
+    (idealInst P r).init =
       (((fun _ => ProcRec.initial P.n), none),
-        ((Gather.idealSub P Bool).init, (Gather.idealSub P (Option Bool)).init)) := rfl
+        ((Gather.idealInst P Bool).init, (Gather.idealInst P (Option Bool)).init)) := rfl
 
-@[simp] theorem pairSub_init (P : Params) (r : ℕ) :
-    (pairSub P r).init =
+@[simp] theorem pairInst_init (P : Params) (r : ℕ) :
+    (pairInst P r).init =
       (((fun _ => ProcRec.initial P.n), none),
         (Gather.SpecState.initial P.n Bool, Gather.SpecState.initial P.n (Option Bool))) := rfl
 
@@ -677,31 +679,31 @@ theorem layer_isLTS (P : Params) (r : ℕ) : (layer P r).IsLTS :=
 
 /-- The layer beside the two gather instances is an LTS. -/
 theorem roundPreAt_isLTS (P : Params) (r : ℕ) {G₁ G₂ : Type}
-    {ga1 : System G₁ (Gather.SubLab P.n Bool)}
-    {ga2 : System G₂ (Gather.SubLab P.n (Option Bool))}
+    {ga1 : System G₁ (Gather.InstLab P.n Bool)}
+    {ga2 : System G₂ (Gather.InstLab P.n (Option Bool))}
     (h1 : ga1.IsLTS) (h2 : ga2.IsLTS) : (roundPreAt P r ga1 ga2).IsLTS :=
   System.parallel_isLTS (layer_isLTS P r)
     (System.parallel_isLTS (System.mapIdle_isLTS _ h1) (System.mapIdle_isLTS _ h2))
 
 /-- The round is an LTS. -/
-theorem roundSubAt_isLTS (P : Params) (r : ℕ) {G₁ G₂ : Type}
-    {ga1 : System G₁ (Gather.SubLab P.n Bool)}
-    {ga2 : System G₂ (Gather.SubLab P.n (Option Bool))}
-    (h1 : ga1.IsLTS) (h2 : ga2.IsLTS) : (roundSubAt P r ga1 ga2).IsLTS :=
+theorem roundInstAt_isLTS (P : Params) (r : ℕ) {G₁ G₂ : Type}
+    {ga1 : System G₁ (Gather.InstLab P.n Bool)}
+    {ga2 : System G₂ (Gather.InstLab P.n (Option Bool))}
+    (h1 : ga1.IsLTS) (h2 : ga2.IsLTS) : (roundInstAt P r ga1 ga2).IsLTS :=
   System.relabel_isLTS (System.abstract_isLTS (roundPreAt_isLTS P r h1 h2) _)
 
 /-- The round over the gather instances over Bracha's broadcast is an LTS. -/
-theorem lowPairSub_isLTS (P : Params) (r : ℕ) : (lowPairSub P r).IsLTS :=
-  roundSubAt_isLTS P r (Gather.lowSub_isLTS P) (Gather.lowSub_isLTS P)
+theorem lowPairInst_isLTS (P : Params) (r : ℕ) : (lowPairInst P r).IsLTS :=
+  roundInstAt_isLTS P r (Gather.lowInst_isLTS P) (Gather.lowInst_isLTS P)
 
 /-- The round over the gather instances over the broadcast specification is an
 LTS. -/
-theorem idealSub_isLTS (P : Params) (r : ℕ) : (idealSub P r).IsLTS :=
-  roundSubAt_isLTS P r (Gather.idealSub_isLTS P) (Gather.idealSub_isLTS P)
+theorem idealInst_isLTS (P : Params) (r : ℕ) : (idealInst P r).IsLTS :=
+  roundInstAt_isLTS P r (Gather.idealInst_isLTS P) (Gather.idealInst_isLTS P)
 
 /-- The round over the gather specifications is an LTS. -/
-theorem pairSub_isLTS (P : Params) (r : ℕ) : (pairSub P r).IsLTS :=
-  roundSubAt_isLTS P r (Gather.liftedSpec_isLTS P) (Gather.liftedSpec_isLTS P)
+theorem pairInst_isLTS (P : Params) (r : ℕ) : (pairInst P r).IsLTS :=
+  roundInstAt_isLTS P r (Gather.liftedSpec_isLTS P) (Gather.liftedSpec_isLTS P)
 
 /-- No program rule fires on the silent label: a program only ever moves on one
 of the round's ports or one of its events. -/
@@ -753,11 +755,11 @@ directions. -/
 
 /-- The round's step relation, unfolded to the hidden-event case and the
 family-label case. -/
-theorem roundSubAt_step_iff (P : Params) (r : ℕ) {G₁ G₂ : Type}
-    (ga1 : System G₁ (Gather.SubLab P.n Bool))
-    (ga2 : System G₂ (Gather.SubLab P.n (Option Bool)))
+theorem roundInstAt_step_iff (P : Params) (r : ℕ) {G₁ G₂ : Type}
+    (ga1 : System G₁ (Gather.InstLab P.n Bool))
+    (ga2 : System G₂ (Gather.InstLab P.n (Option Bool)))
     (s : RoundStateAt P.n G₁ G₂) (l : NLab P.n) (μ : PMF (RoundStateAt P.n G₁ G₂)) :
-    (roundSubAt P r ga1 ga2).step s l μ ↔
+    (roundInstAt P r ga1 ga2).step s l μ ↔
       (l = Sum.inl Lab.tau ∧ ∃ e : REvt P.n, (roundPreAt P r ga1 ga2).step s (Sum.inr e) μ) ∨
       (roundPreAt P r ga1 ga2).step s (Sum.inl l) μ := by
   constructor
@@ -900,8 +902,8 @@ the layer has no silent transition. -/
 section RoundPre
 
 variable {P : Params} {r : ℕ} {G₁ G₂ : Type}
-  {ga1 : System G₁ (Gather.SubLab P.n Bool)}
-  {ga2 : System G₂ (Gather.SubLab P.n (Option Bool))}
+  {ga1 : System G₁ (Gather.InstLab P.n Bool)}
+  {ga2 : System G₂ (Gather.InstLab P.n (Option Bool))}
   {u x : ∀ _ : Fin P.n, ProcRec P.n} {v v' : Option Bool} {c c' : G₁} {d d' : G₂}
   {L : RLab P.n}
 
@@ -935,9 +937,9 @@ theorem roundPreAt_tau_inv (h1 : ga1.IsLTS) (h2 : ga2.IsLTS)
     {μ : PMF (RoundStateAt P.n G₁ G₂)}
     (h : (roundPreAt P r ga1 ga2).step ((u, v), (c, d)) (Silent.τ : RLab P.n) μ) :
     (∃ c', μ = PMF.pure ((u, v), (c', d)) ∧
-      ga1.step c (Silent.τ : Gather.SubLab P.n Bool) (PMF.pure c')) ∨
+      ga1.step c (Silent.τ : Gather.InstLab P.n Bool) (PMF.pure c')) ∨
     (∃ d', μ = PMF.pure ((u, v), (c, d')) ∧
-      ga2.step d (Silent.τ : Gather.SubLab P.n (Option Bool)) (PMF.pure d')) := by
+      ga2.step d (Silent.τ : Gather.InstLab P.n (Option Bool)) (PMF.pure d')) := by
   rw [roundPreAt, System.parallel_step] at h
   rcases h with ⟨hτ, -⟩ | ⟨-, μ₁, hlay, rfl⟩ | ⟨-, μ₂, hga, rfl⟩
   · exact absurd rfl hτ
@@ -966,7 +968,7 @@ theorem roundPreAt_lab_step (hL : L ≠ (Silent.τ : RLab P.n))
 
 /-- Build a silent transition of the layer beside the two gather instances from
 a silent step of the first gather. -/
-theorem roundPreAt_tau_ga1 (h : ga1.step c (Silent.τ : Gather.SubLab P.n Bool) (PMF.pure c')) :
+theorem roundPreAt_tau_ga1 (h : ga1.step c (Silent.τ : Gather.InstLab P.n Bool) (PMF.pure c')) :
     (roundPreAt P r ga1 ga2).step ((u, v), (c, d)) (Silent.τ : RLab P.n)
       (PMF.pure ((u, v), (c', d))) := by
   rw [roundPreAt, System.parallel_step]
@@ -978,7 +980,7 @@ theorem roundPreAt_tau_ga1 (h : ga1.step c (Silent.τ : Gather.SubLab P.n Bool) 
 /-- Build a silent transition of the layer beside the two gather instances from
 a silent step of the second gather. -/
 theorem roundPreAt_tau_ga2
-    (h : ga2.step d (Silent.τ : Gather.SubLab P.n (Option Bool)) (PMF.pure d')) :
+    (h : ga2.step d (Silent.τ : Gather.InstLab P.n (Option Bool)) (PMF.pure d')) :
     (roundPreAt P r ga1 ga2).step ((u, v), (c, d)) (Silent.τ : RLab P.n)
       (PMF.pure ((u, v), (c, d'))) := by
   rw [roundPreAt, System.parallel_step]
@@ -988,38 +990,38 @@ theorem roundPreAt_tau_ga2
     (System.mapIdle_step_some (ga2Pull_tau P.n) _).mpr h, (prodPMF_pure_pure _ _).symm⟩)
 
 /-- A hidden event is a silent transition of the round. -/
-theorem roundSubAt_event_step (e : REvt P.n)
+theorem roundInstAt_event_step (e : REvt P.n)
     (hlayer : (layer P r).step (u, v) (Sum.inr e) (PMF.pure (x, v')))
     (hga1 : (ga1.mapIdle (ga1Pull P.n)).step c (Sum.inr e) (PMF.pure c'))
     (hga2 : (ga2.mapIdle (ga2Pull P.n)).step d (Sum.inr e) (PMF.pure d')) :
-    (roundSubAt P r ga1 ga2).step ((u, v), (c, d)) (Sum.inl Lab.tau)
+    (roundInstAt P r ga1 ga2).step ((u, v), (c, d)) (Sum.inl Lab.tau)
       (PMF.pure ((x, v'), (c', d'))) :=
-  (roundSubAt_step_iff P r ga1 ga2 _ _ _).mpr
+  (roundInstAt_step_iff P r ga1 ga2 _ _ _).mpr
     (Or.inl ⟨rfl, e, roundPreAt_lab_step (by simp) hlayer hga1 hga2⟩)
 
 /-- A visible family label is a transition of the round. -/
-theorem roundSubAt_lab_step {l : NLab P.n} (hl : l ≠ Sum.inl Lab.tau)
+theorem roundInstAt_lab_step {l : NLab P.n} (hl : l ≠ Sum.inl Lab.tau)
     (hlayer : (layer P r).step (u, v) (Sum.inl l) (PMF.pure (x, v')))
     (hga1 : (ga1.mapIdle (ga1Pull P.n)).step c (Sum.inl l) (PMF.pure c'))
     (hga2 : (ga2.mapIdle (ga2Pull P.n)).step d (Sum.inl l) (PMF.pure d')) :
-    (roundSubAt P r ga1 ga2).step ((u, v), (c, d)) l (PMF.pure ((x, v'), (c', d'))) := by
-  refine (roundSubAt_step_iff P r ga1 ga2 _ _ _).mpr
+    (roundInstAt P r ga1 ga2).step ((u, v), (c, d)) l (PMF.pure ((x, v'), (c', d'))) := by
+  refine (roundInstAt_step_iff P r ga1 ga2 _ _ _).mpr
     (Or.inr (roundPreAt_lab_step ?_ hlayer hga1 hga2))
   rw [rlab_tau]
   simpa using hl
 
 /-- A silent step of the first gather is a silent transition of the round. -/
-theorem roundSubAt_tau_ga1 (h : ga1.step c (Silent.τ : Gather.SubLab P.n Bool) (PMF.pure c')) :
-    (roundSubAt P r ga1 ga2).step ((u, v), (c, d)) (Sum.inl Lab.tau)
+theorem roundInstAt_tau_ga1 (h : ga1.step c (Silent.τ : Gather.InstLab P.n Bool) (PMF.pure c')) :
+    (roundInstAt P r ga1 ga2).step ((u, v), (c, d)) (Sum.inl Lab.tau)
       (PMF.pure ((u, v), (c', d))) :=
-  (roundSubAt_step_iff P r ga1 ga2 _ _ _).mpr (Or.inr (roundPreAt_tau_ga1 h))
+  (roundInstAt_step_iff P r ga1 ga2 _ _ _).mpr (Or.inr (roundPreAt_tau_ga1 h))
 
 /-- A silent step of the second gather is a silent transition of the round. -/
-theorem roundSubAt_tau_ga2
-    (h : ga2.step d (Silent.τ : Gather.SubLab P.n (Option Bool)) (PMF.pure d')) :
-    (roundSubAt P r ga1 ga2).step ((u, v), (c, d)) (Sum.inl Lab.tau)
+theorem roundInstAt_tau_ga2
+    (h : ga2.step d (Silent.τ : Gather.InstLab P.n (Option Bool)) (PMF.pure d')) :
+    (roundInstAt P r ga1 ga2).step ((u, v), (c, d)) (Sum.inl Lab.tau)
       (PMF.pure ((u, v), (c, d'))) :=
-  (roundSubAt_step_iff P r ga1 ga2 _ _ _).mpr (Or.inr (roundPreAt_tau_ga2 h))
+  (roundInstAt_step_iff P r ga1 ga2 _ _ _).mpr (Or.inr (roundPreAt_tau_ga2 h))
 
 end RoundPre
 
@@ -1105,7 +1107,8 @@ theorem procStep_ret2_foreign {i : Fin P.n} {g : Fin P.n → Option (Option Bool
 
 theorem procStep_retG_own {out : GbcaOut} {bnd : Bool}
     (h : ProcStep P r j p (.retG r j out bnd) ν) :
-    p.out = some out ∧ p.returned = false ∧ ν = PMF.pure { p with returned := true } := by
+    p.out = some out ∧ p.returned = false ∧
+      ν = PMF.pure { p with out := none, returned := true } := by
   cases h
   case retG => exact ⟨by assumption, by assumption, rfl⟩
   case retGIdle => exact absurd rfl ‹_ ≠ j›

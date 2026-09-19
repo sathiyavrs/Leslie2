@@ -19,7 +19,10 @@ free to announce either bit on a return.
 `AFW.protocol_erasure` is the statement that the record costs nothing: the ghost never
 blocks a step and never adds one, so the two readings have the same achievable trace
 distributions. Every headline about the protocol therefore holds of the ghost-free
-protocol, and the rest of this file re-derives them.
+protocol, and the rest of this file re-derives them: the composition inclusion into
+`AFW.composed`, trace-distribution refinement into the ABA specification, Validity and
+Agreement of every positive-probability trace, and trace conservativity against the
+protocol-shaped specification `hybrid`.
 
 The proof is the state erasure of `ABA/Reading/Erase.lean` carried through the
 composition pipeline. Its hypothesis is that every round, process and graded outcome
@@ -72,6 +75,15 @@ theorem protocol₀_safe (P : Params) :
       ValidityTrace P t ∧ AgreementTrace P t :=
   safety_transfer (protocol₀_refines P) (spec_safe P)
 
+/-- **Trace conservativity of the ghost-free protocol**: every
+positive-probability trace has positive probability under an achievable trace
+distribution of the protocol-shaped specification. -/
+theorem protocol₀_traces (P : Params) :
+    ∀ D ∈ achievableTraceDists (protocol₀ P), ∀ t, D t ≠ 0 →
+      ∃ D' ∈ achievableTraceDists (hybrid P), D' t ≠ 0 :=
+  fun D hD _ ht =>
+    ⟨D, Set.Subset.trans (protocol₀_composed P) (substitution P) hD, ht⟩
+
 /-! ### Mechanical axiom check -/
 
 /-- info: 'PLTS.ABA.AFW.protocol_erasure' depends on axioms: [propext, Classical.choice, Quot.sound] -/
@@ -89,6 +101,10 @@ theorem protocol₀_safe (P : Params) :
 /-- info: 'PLTS.ABA.AFW.protocol₀_safe' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms protocol₀_safe
+
+/-- info: 'PLTS.ABA.AFW.protocol₀_traces' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms protocol₀_traces
 
 end AFW
 end ABA

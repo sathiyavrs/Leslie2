@@ -41,7 +41,7 @@
   \node[tier] (spec)  at (5.35,-7.0)
     {$\mathrm{GBCA.specInst}(P,r)$: Transition System 2};
   \draw[->] (5.35,-3.85) -- (ideal.north)
-    node[lbl, midway, anchor=west, xshift=4pt]{$\mathrm{lowRefines}$, along $\mathrm{LowPairRel}$};
+    node[lbl, midway, anchor=west, xshift=4pt]{$\mathrm{lowPairRefines}$, along $\mathrm{LowPairRel}$};
   \draw[->] (ideal) -- (pair)
     node[lbl, midway, anchor=west, xshift=4pt]{$\mathrm{idealRefines}$, along $\mathrm{IdealRel}$};
   \draw[->] (pair) -- (spec)

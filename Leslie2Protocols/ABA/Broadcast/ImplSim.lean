@@ -10,14 +10,14 @@ import Leslie2Protocols.Framework.FamilySim
 /-!
 # The BRB refinement: Bracha's protocol implements Transition System 6
 
-`BRB.brbRefines`: the reliable-broadcast instance `BRB.sub`
+`BRB.brbRefines`: the reliable-broadcast instance `BRB.implInst`
 (`ABA/Broadcast/Sub.lean`) is forward simulated by the BRB specification
 instance with the same leader, read over the instance's interface
 (`BRB.liftedSpec`), along `BRB.InstRel`.
 
 The refinement runs in two legs. The first is strong and functional: a
 transition of the instance is one row of `BRB.ImplStep` at the same state, at
-the specification label the interface label projects to (`BRB.sub_step_row`).
+the specification label the interface label projects to (`BRB.implInst_step_row`).
 The second is the row-level matching `instRel_row`, whose answer is a weak run
 of the specification over `BRB.Lab`; it is lifted to the interface along a
 section of `BRB.specPull`, which is where the call loop is answered by the
@@ -787,15 +787,15 @@ theorem instRel_row (P : Params) (ldr : Fin P.n) (q₁ : ImplState P.n M)
 /-- **The BRB refinement**: the reliable-broadcast instance is forward
 simulated by the specification instance with the same leader, read over the
 instance's interface. A transition of the instance is one row of `ImplStep`
-(`BRB.sub_step_row`), the row is answered by a weak run of the specification
+(`BRB.implInst_step_row`), the row is answered by a weak run of the specification
 (`instRel_row`), and that run is lifted to the interface along a section of
 `specPull` — which is where the call loop is answered by the specification's
 own loop row. -/
 theorem brbRefines (P : Params) (ldr : Fin P.n) :
-    ForwardSimulation (sub P ldr M) (liftedSpec P ldr M) (InstRel P ldr) := by
+    ForwardSimulation (implInst P ldr M) (liftedSpec P ldr M) (InstRel P ldr) := by
   constructor
   intro q₁ q₂ hR l μ hstep q₁' hq₁'
-  obtain ⟨l₀, hpull, hrow⟩ := sub_step_row P ldr q₁ l μ hstep
+  obtain ⟨l₀, hpull, hrow⟩ := implInst_step_row P ldr q₁ l μ hstep
   obtain ⟨s', hdis, hrel⟩ := instRel_row P ldr q₁ q₂ hR l₀ μ hrow q₁' hq₁'
   refine ⟨s', ?_, hrel⟩
   rcases hdis with ⟨hτ, hweak⟩ | ⟨hτ, hweak⟩
@@ -804,7 +804,7 @@ theorem brbRefines (P : Params) (ldr : Fin P.n) :
   · refine Or.inr ⟨?_, weakLStep_liftedSpec P ldr hτ hpull hweak⟩
     intro hl
     refine hτ ?_
-    have h2 : specPull P.n M (Silent.τ : SubLab P.n M) = some l₀ := by rw [← hl]; exact hpull
+    have h2 : specPull P.n M (Silent.τ : InstLab P.n M) = some l₀ := by rw [← hl]; exact hpull
     rw [specPull_tau] at h2
     exact (Option.some.inj h2).symm
 

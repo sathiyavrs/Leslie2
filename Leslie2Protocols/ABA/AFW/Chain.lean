@@ -4,66 +4,54 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.Round.LowSim
-import Leslie2Protocols.ABA.Round.IdealSim
+import Leslie2Protocols.ABA.Round.Substitutions
 import Leslie2Protocols.ABA.Round.PairSim
+import Leslie2Protocols.ABA.ABDY.Hybrid
 import Leslie2Protocols.ABA.Results
-import Leslie2Protocols.Framework.MapIdleSim
+import Leslie2Protocols.Framework.FamilySim
+import Leslie2.Results
 
 /-!
-# The gather-based implementation chain
+# The gather-based chain at the protocol shape
 
-The graded-agreement specification has two verified implementations. The
-ABDY22 implementation (`ABA/ABDY/Impl.lean`, deviation D18) enters the
-protocol reading through `GSub.gbcaSide` and is replaced by the
-specification family in `ABA/ABDY/Hybrid.lean`. The gather-based implementation
-(`ABA/Round/Low.lean`) is carried to the same specification here, by the three
-tier simulations of its own:
+The gather-based implementation is carried to the protocol-shaped
+specification `hybrid` in three stages. Each stage replaces one tier of the
+round by the tier above it, at every round at once:
 
-1. `GBCA.lowRefines` (`ABA/Round/LowSim.lean`) — the broadcast substitution:
-   each Bracha instance replaced by its specification;
-2. `GBCA.idealRefines` (`ABA/Round/IdealSim.lean`) — the gather substitution:
-   each gather-over-BRB instance replaced by the gather specification;
-3. `GBCA.pairRefines` (`ABA/Round/PairSim.lean`) — the counting simulation
-   into `GBCA.specInst`.
+1. `substSimLow` — the broadcast substitution, from the round over the gather
+   instances over Bracha's broadcast to the round over the gather instances
+   over the broadcast specification;
+2. `substSimIdeal` — the gather substitution, into the round over the gather
+   specifications;
+3. `substSimPair` — the counting simulation, into the round specification.
 
-Two readings are given, mirroring `ABA/Results.lean`.
+The systems the stages run between are `composed`, `hybrid1`, `hybrid2` and
+`hybrid`. Each has a graded-agreement side and three further components. The
+side is an ℕ-indexed family of rounds — `lowSide`, `idealSide`, `pairSide` and
+`specSide` — in which a round-tagged label moves its round alone, `τ` moves one
+round, `fail` reaches every round, and every other label idles. The round of a
+given index is itself a composition: the layer of programs and the round's
+network beside the round's two gather instances (`ABA/Round/Sub.lean`).
 
-**The round reading.** `GBCA.gatherImplRefines` composes the three tier
-simulations probabilistically: the round-`r` gather-based implementation
-refines the round-`r` specification. Each tier has its own soundness
-inclusion into the specification: `GBCA.gatherRoundRefines` for the
-gather-based implementation, `GBCA.idealRoundRefines` for the tier over the
-gather implementations, `GBCA.pairRoundRefines` for the counting simulation
-alone. Binding is stated on the labels of a trace, so each of the three
-inclusions carries the specification's `GBCA.specInst_binding` to its tier:
-`GBCA.lowPairInst_binding`, `GBCA.idealInst_binding` and
-`GBCA.pairInst_binding`.
+The three further components are the round loops, the ABA-side network and the
+lifted coin oracle, and the pipeline over them — the rendezvous alphabet
+hidden, the result read back over `Lab n`, the sub-protocol API hidden — is the
+context term of `ABDY.composed` and `hybrid`, character for character. The
+third stage therefore lands on `hybrid P` itself, and the shared links
+`hybrid_spec` and `coreSim` carry the gather-based chain to the ABA
+specification from there.
 
-**The protocol-shaped reading.** Everything the gather-based chain builds at
-protocol shape sits in the namespace `AFW`, after Attiya, Flam and Welch, so
-each of its systems and headlines carries the name of its ABDY-chain
-counterpart: `AFW.composed` beside `composed`, `AFW.substitution` beside
-`substitution`. The names below are read in that namespace.
+Each side carries a broadcast act, and the act of a round state corrupts the
+round's two gather instances at once while leaving the programs and the round's
+bound bit untouched (D1): `gActLow`, `gActIdeal` and `gActPair` are
+`GBCA.corruptAll` over the corruption of the tier's gather states, and
+`GSub.gActSpec` is the act of the specification side. The three relations
+survive those acts — `lowSim_failAct`, `idealSim_failAct`, `pairSim_failAct` —
+which is the side condition `ForwardSimulation.family` consumes.
 
-Each tier instance is read over the extended alphabet along `GSub.gPull` —
-the read-back that defines `GSub.liftedSpec` — and gathered into a ℕ-indexed
-family with the corruption broadcast: `lowSide`, `idealSide` and `pairSide`
-are the graded-agreement sides of three systems `composed`, `hybrid1` and
-`hybrid2`, each built by the composed reading's own pipeline beside its other
-three components. Between
-consecutive systems the family substitution runs under the four congruences
-(`parallel_right`, `abstract`, `relabel`, `abstract`), exactly as
-`substSim` does for the ABDY chain. The third stage lands on `hybrid P`
-itself: from there the shared links `hybrid_spec` and `coreSim` carry both
-implementation chains to the ABA specification. `substitution` is the
-three-stage inclusion, `composed_refines` chains it with `hybrid_spec`,
-`composed_safe` reads off Validity and Agreement, and `chainSimComposed`
-composes the simulations themselves. `ABA/AFW/FlatSim.lean` carries these
-one level lower, to the gather-based protocol as it runs.
-
-The `#print axioms` blocks are the mechanical check: every headline is
-pinned to the clean axiom list.
+`substitution` is the three-stage inclusion, `composed_refines` chains it with
+`hybrid_spec`, `composed_safe` reads off Validity and Agreement, and
+`chainSimComposed` composes the simulations themselves.
 -/
 
 namespace PLTS
@@ -71,163 +59,44 @@ namespace ABA
 
 open Net Comp GSub
 
-/-! ## The round reading -/
-
-namespace GBCA
-
-/-- **The gather-based implementation refines the specification**, round by
-round: the three tier simulations, each taken probabilistically, joined by
-Result 2 (`ProbabilisticForwardSimulation.trans`). -/
-theorem gatherImplRefines (P : Params) (r : ℕ) :
-    ProbabilisticForwardSimulation (lowPairInst P r) (specInst P r)
-      (compRel (diracRel (LowPairRel P))
-        (compRel (diracRel (IdealRel P)) (diracRel (PairRel P)))) :=
-  (ForwardSimulation.toProbabilistic (lowPairInst_isLTS P r) (idealInst_isLTS P r)
-      lowPairRel_init (lowRefines P r)).trans
-    ((ForwardSimulation.toProbabilistic (idealInst_isLTS P r) (pairInst_isLTS P r)
-        idealRel_init (idealRefines P r)).trans
-      (ForwardSimulation.toProbabilistic (pairInst_isLTS P r) (specInst_isLTS P r)
-        pairRel_init (pairRefines P r)))
-
-/-- The soundness inclusion of the round reading: every trace distribution
-achievable by the round-`r` gather-based implementation is achievable by the
-round-`r` specification. -/
-theorem gatherRoundRefines (P : Params) (r : ℕ) :
-    achievableTraceDists (lowPairInst P r) ⊆ achievableTraceDists (specInst P r) :=
-  (gatherImplRefines P r).achievableTraceDists_subset
-
-/-- The soundness inclusion of the counting simulation alone: every trace
-distribution achievable by the round-`r` GBCA-over-gather tier is achievable by
-the round-`r` specification. -/
-theorem pairRoundRefines (P : Params) (r : ℕ) :
-    achievableTraceDists (pairInst P r) ⊆ achievableTraceDists (specInst P r) :=
-  (ForwardSimulation.toProbabilistic (pairInst_isLTS P r) (specInst_isLTS P r)
-    pairRel_init (pairRefines P r)).achievableTraceDists_subset
-
-/-- The soundness inclusion of the gather substitution above the counting
-simulation: every trace distribution achievable by the round-`r`
-GBCA-over-gather-over-BRB tier is achievable by the round-`r` specification.
-The gather substitution, taken probabilistically, is chained with
-`pairRoundRefines`. -/
-theorem idealRoundRefines (P : Params) (r : ℕ) :
-    achievableTraceDists (idealInst P r) ⊆ achievableTraceDists (specInst P r) :=
-  Set.Subset.trans
-    (ForwardSimulation.toProbabilistic (idealInst_isLTS P r) (pairInst_isLTS P r)
-      idealRel_init (idealRefines P r)).achievableTraceDists_subset
-    (pairRoundRefines P r)
-
-/-- **Binding of the GBCA-over-gather tier, on a trace.** Every
-positive-probability trace of the round-`r` tier is bound to one bit: all its
-round-`r` returns announce that bit, and every one of them that hands out a
-value hands out it. Binding is a property of the labels (`BindingTrace`), so
-`pairRoundRefines` carries it from `specInst_binding`. -/
-theorem pairInst_binding (P : Params) (r : ℕ) :
-    ∀ D ∈ achievableTraceDists (pairInst P r), ∀ t, D t ≠ 0 →
-      BindingTrace P r t :=
-  safety_transfer (pairRoundRefines P r) (specInst_binding P r)
-
-/-- **Binding of the GBCA-over-gather-over-BRB tier, on a trace.** Every
-positive-probability trace of the round-`r` tier over the gather
-implementations is bound to one bit, along the inclusion
-`idealRoundRefines`. -/
-theorem idealInst_binding (P : Params) (r : ℕ) :
-    ∀ D ∈ achievableTraceDists (idealInst P r), ∀ t, D t ≠ 0 →
-      BindingTrace P r t :=
-  safety_transfer (idealRoundRefines P r) (specInst_binding P r)
-
-/-- **Binding of the gather-based implementation, on a trace.** The round-`r`
-gather-based implementation has the property its specification has, along the
-three-tier inclusion `gatherRoundRefines`. -/
-theorem lowPairInst_binding (P : Params) (r : ℕ) :
-    ∀ D ∈ achievableTraceDists (lowPairInst P r), ∀ t, D t ≠ 0 →
-      BindingTrace P r t :=
-  safety_transfer (gatherRoundRefines P r) (specInst_binding P r)
-
-end GBCA
-
-/-! ## The lifted tiers
-
-Each tier instance is read over the extended alphabet along `GSub.gPull`,
-exactly as `GSub.liftedSpec` reads the specification: a delegating label
-takes the tier's own row, every other extended label idles. The broadcast
-corruption acts are the tiers' own `fail` successors, taken on the extended
-`fail` label. -/
-
 namespace AFW
 
-/-- The gather-based implementation read over the extended alphabet. -/
-noncomputable def liftedLow (P : Params) (r : ℕ) :
-    System (GBCA.LowPairState P.n) (NLab P.n) :=
-  (GBCA.lowPairInst P r).mapIdle (gPull P.n)
+/-! ## The broadcast corruption acts
 
-/-- The lifted tier is an LTS: the tier is, and reading it back adds only
-Dirac self-loops. -/
-theorem liftedLow_isLTS (P : Params) (r : ℕ) : (liftedLow P r).IsLTS :=
-  System.mapIdle_isLTS _ (GBCA.lowPairInst_isLTS P r)
+Corruption reaches a round through its two gather instances. Each gather
+instance passes it to its own network state and to every broadcast coordinate
+it holds; the round's programs and its bound bit are untouched (D1). -/
 
-/-- The GBCA-over-gather-over-BRB tier read over the extended alphabet. -/
-noncomputable def liftedIdeal (P : Params) (r : ℕ) :
-    System (GBCA.IdealState P.n) (NLab P.n) :=
-  (GBCA.idealInst P r).mapIdle (gPull P.n)
-
-/-- The lifted tier is an LTS. -/
-theorem liftedIdeal_isLTS (P : Params) (r : ℕ) : (liftedIdeal P r).IsLTS :=
-  System.mapIdle_isLTS _ (GBCA.idealInst_isLTS P r)
-
-/-- The GBCA-over-gather tier read over the extended alphabet. -/
-noncomputable def liftedPair (P : Params) (r : ℕ) :
-    System (GBCA.PairState P.n) (NLab P.n) :=
-  (GBCA.pairInst P r).mapIdle (gPull P.n)
-
-/-- The lifted tier is an LTS. -/
-theorem liftedPair_isLTS (P : Params) (r : ℕ) : (liftedPair P r).IsLTS :=
-  System.mapIdle_isLTS _ (GBCA.pairInst_isLTS P r)
-
-/-! ### The broadcast corruption acts -/
-
-/-- The broadcast corruption act on a gather-based implementation state: both
-gather-over-Bracha instances record it at once (D1). -/
-def gActLow (P : Params) : NLab P.n → GBCA.LowPairState P.n → GBCA.LowPairState P.n
-  | Sum.inl (.fail k), s => (s.1.corruptAll P k, s.2.1.corruptAll P k, s.2.2)
+/-- The broadcast corruption act on a round over the gather instances over
+Bracha's broadcast. -/
+def gActLow (P : Params) :
+    NLab P.n → GBCA.LowPairState P.n → GBCA.LowPairState P.n
+  | Sum.inl (.fail k), s =>
+    GBCA.corruptAll P k
+      (fun i => Gather.corruptAll P i (SubState.corrupt P i) (SubState.corrupt P i))
+      (fun i => Gather.corruptAll P i (SubState.corrupt P i) (SubState.corrupt P i)) s
   | _, s => s
 
-/-- The broadcast corruption act on a GBCA-over-gather-over-BRB state. -/
-def gActIdeal (P : Params) : NLab P.n → GBCA.IdealState P.n → GBCA.IdealState P.n
-  | Sum.inl (.fail k), s => (s.1.corruptAll P k, s.2.1.corruptAll P k, s.2.2)
+/-- The broadcast corruption act on a round over the gather instances over the
+broadcast specification. -/
+def gActIdeal (P : Params) :
+    NLab P.n → GBCA.IdealState P.n → GBCA.IdealState P.n
+  | Sum.inl (.fail k), s =>
+    GBCA.corruptAll P k
+      (fun i => Gather.corruptAll P i (BRB.SpecState.corrupt P i) (BRB.SpecState.corrupt P i))
+      (fun i => Gather.corruptAll P i (BRB.SpecState.corrupt P i) (BRB.SpecState.corrupt P i)) s
   | _, s => s
 
-/-- The broadcast corruption act on a GBCA-over-gather state. -/
-def gActPair (P : Params) : NLab P.n → GBCA.PairState P.n → GBCA.PairState P.n
-  | Sum.inl (.fail k), s => (s.1.corrupt P k, s.2.1.corrupt P k, s.2.2)
+/-- The broadcast corruption act on a round over the gather specifications. -/
+def gActPair (P : Params) :
+    NLab P.n → GBCA.PairState P.n → GBCA.PairState P.n
+  | Sum.inl (.fail k), s =>
+    GBCA.corruptAll P k (Gather.SpecState.corrupt P) (Gather.SpecState.corrupt P) s
   | _, s => s
-
-/-! ### The lifted tier simulations
-
-Forward simulation is a congruence for the read-back
-(`ForwardSimulation.mapIdle`, `Framework/MapIdleSim.lean`); the τ round-trip
-of `gPull` is `gPull_tau` and `gPull_eq_tau`. -/
-
-/-- The broadcast substitution, read over the extended alphabet. -/
-theorem liftedLowSim (P : Params) (r : ℕ) :
-    ForwardSimulation (liftedLow P r) (liftedIdeal P r) (GBCA.LowPairRel P) :=
-  ForwardSimulation.mapIdle (gPull P.n) (gPull_tau P.n)
-    (fun _ h => gPull_eq_tau h) (GBCA.lowRefines P r)
-
-/-- The gather substitution, read over the extended alphabet. -/
-theorem liftedIdealSim (P : Params) (r : ℕ) :
-    ForwardSimulation (liftedIdeal P r) (liftedPair P r) (GBCA.IdealRel P) :=
-  ForwardSimulation.mapIdle (gPull P.n) (gPull_tau P.n)
-    (fun _ h => gPull_eq_tau h) (GBCA.idealRefines P r)
-
-/-- The counting simulation, read over the extended alphabet. -/
-theorem liftedPairSim (P : Params) (r : ℕ) :
-    ForwardSimulation (liftedPair P r) (liftedSpec P r) (GBCA.PairRel P) :=
-  ForwardSimulation.mapIdle (gPull P.n) (gPull_tau P.n)
-    (fun _ h => gPull_eq_tau h) (GBCA.pairRefines P r)
 
 /-! ### Broadcast compatibility
 
-The three relations survive the corruption broadcast: the tiers' own
+The three relations survive the corruption broadcast: the rounds' own
 lockstep-corruption statements, taken on the extended `fail` label. -/
 
 /-- Corruption preserves the broadcast substitution relation. -/
@@ -287,41 +156,39 @@ theorem pairSim_failAct (P : Params) :
     | callW r' id => exact hl.elim
     | retW r' id b => exact hl.elim
 
-
 /-! ## The graded-agreement sides
 
-Three ℕ-indexed families over the shape of `GSub.gbcaSide` and `specSide`: a
-round-tagged label moves its round alone, `τ` moves one round, `fail` is the
-broadcast that keeps every round's copy of the corrupted set in lockstep, and
-everything else idles. -/
+Three ℕ-indexed families over the shape of `specSide`: a round-tagged label
+moves its round alone, `τ` moves one round, `fail` is the broadcast that keeps
+every round's gather instances in lockstep, and everything else idles. -/
 
-/-- The gather-based graded-agreement side: the family of lifted round
-implementations. -/
+/-- The gather-based graded-agreement side: the family of rounds over the
+gather instances over Bracha's broadcast. -/
 noncomputable def lowSide (P : Params) :
     System (ℕ → GBCA.LowPairState P.n) (NLab P.n) :=
-  System.family (liftedLow P) GSub.gOwns GSub.isFailN (gActLow P)
+  System.family (GBCA.lowPairInst P) gOwns isFailN (gActLow P)
 
-/-- The side is an LTS: every round's tier is. -/
+/-- The side is an LTS: every round is. -/
 theorem lowSide_isLTS (P : Params) : (lowSide P).IsLTS :=
-  System.family_isLTS (liftedLow_isLTS P) _ _ _
+  System.family_isLTS (GBCA.lowPairInst_isLTS P) _ _ _
 
-/-- The GBCA-over-gather-over-BRB side. -/
+/-- The side over the gather instances over the broadcast specification. -/
 noncomputable def idealSide (P : Params) :
     System (ℕ → GBCA.IdealState P.n) (NLab P.n) :=
-  System.family (liftedIdeal P) GSub.gOwns GSub.isFailN (gActIdeal P)
+  System.family (GBCA.idealInst P) gOwns isFailN (gActIdeal P)
 
 /-- The side is an LTS. -/
 theorem idealSide_isLTS (P : Params) : (idealSide P).IsLTS :=
-  System.family_isLTS (liftedIdeal_isLTS P) _ _ _
+  System.family_isLTS (GBCA.idealInst_isLTS P) _ _ _
 
-/-- The GBCA-over-gather side. -/
+/-- The side over the gather specifications. -/
 noncomputable def pairSide (P : Params) :
     System (ℕ → GBCA.PairState P.n) (NLab P.n) :=
-  System.family (liftedPair P) GSub.gOwns GSub.isFailN (gActPair P)
+  System.family (GBCA.pairInst P) gOwns isFailN (gActPair P)
 
 /-- The side is an LTS. -/
 theorem pairSide_isLTS (P : Params) : (pairSide P).IsLTS :=
-  System.family_isLTS (liftedPair_isLTS P) _ _ _
+  System.family_isLTS (GBCA.pairInst_isLTS P) _ _ _
 
 /-! ### The family substitutions -/
 
@@ -343,49 +210,49 @@ def RpairAll (P : Params) (s : ℕ → GBCA.PairState P.n)
 /-- The family substitution of the first stage, round by round. -/
 theorem famLowSim (P : Params) :
     ForwardSimulation (lowSide P) (idealSide P) (RlowAll P) :=
-  ForwardSimulation.family GSub.gOwns GSub.isFailN (gActLow P)
-    (gActIdeal P) (liftedLowSim P) (lowSim_failAct P)
+  ForwardSimulation.family gOwns isFailN (gActLow P) (gActIdeal P)
+    (GBCA.lowPairRefines P) (lowSim_failAct P)
 
 /-- The family substitution of the second stage. -/
 theorem famIdealSim (P : Params) :
     ForwardSimulation (idealSide P) (pairSide P) (RidealAll P) :=
-  ForwardSimulation.family GSub.gOwns GSub.isFailN (gActIdeal P)
-    (gActPair P) (liftedIdealSim P) (idealSim_failAct P)
+  ForwardSimulation.family gOwns isFailN (gActIdeal P) (gActPair P)
+    (GBCA.idealRefines P) (idealSim_failAct P)
 
 /-- The family substitution of the third stage, into the specification
 side. -/
 theorem famPairSim (P : Params) :
     ForwardSimulation (pairSide P) (specSide P) (RpairAll P) :=
-  ForwardSimulation.family GSub.gOwns GSub.isFailN (gActPair P)
-    (GSub.gActSpec P) (liftedPairSim P) (pairSim_failAct P)
+  ForwardSimulation.family gOwns isFailN (gActPair P) (gActSpec P)
+    (GBCA.pairRefines P) (pairSim_failAct P)
 
 /-- The first family substitution, probabilistically. -/
 theorem famLowSimProb (P : Params) :
     ProbabilisticForwardSimulation (lowSide P) (idealSide P)
       (diracRel (RlowAll P)) :=
   ForwardSimulation.toProbabilistic (lowSide_isLTS P) (idealSide_isLTS P)
-    (fun _ => GBCA.lowPairRel_init) (famLowSim P)
+    (fun r => GBCA.lowPairRel_init P r) (famLowSim P)
 
 /-- The second family substitution, probabilistically. -/
 theorem famIdealSimProb (P : Params) :
     ProbabilisticForwardSimulation (idealSide P) (pairSide P)
       (diracRel (RidealAll P)) :=
   ForwardSimulation.toProbabilistic (idealSide_isLTS P) (pairSide_isLTS P)
-    (fun _ => GBCA.idealRel_init) (famIdealSim P)
+    (fun r => GBCA.idealRel_init P r) (famIdealSim P)
 
 /-- The third family substitution, probabilistically. -/
 theorem famPairSimProb (P : Params) :
     ProbabilisticForwardSimulation (pairSide P) (specSide P)
       (diracRel (RpairAll P)) :=
   ForwardSimulation.toProbabilistic (pairSide_isLTS P) (specSide_isLTS P)
-    (fun _ => GBCA.pairRel_init) (famPairSim P)
+    (fun r => GBCA.pairRel_init P r) (famPairSim P)
 
 /-! ## The protocol-shaped systems
 
 The composed reading's pipeline — the graded-agreement side beside the round
 loops, the ABA-side network and the coin oracle, the rendezvous alphabet
-hidden, the result read back over `Lab n`, the sub-protocol API hidden —
-taken at each tier of the gather-based construction. -/
+hidden, the result read back over `Lab n`, the sub-protocol API hidden — taken
+at each tier of the gather-based construction. -/
 
 /-- The state of the gather-based composed reading. -/
 abbrev ComposedState (P : Params) : Type :=
@@ -508,26 +375,6 @@ noncomputable def chainSimComposed (P : Params) :
   (substSim P).trans (coreSim P)
 
 /-! ### Mechanical axiom check -/
-
-/-- info: 'PLTS.ABA.GBCA.gatherImplRefines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in
-#print axioms GBCA.gatherImplRefines
-
-/-- info: 'PLTS.ABA.GBCA.gatherRoundRefines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in
-#print axioms GBCA.gatherRoundRefines
-
-/-- info: 'PLTS.ABA.GBCA.pairInst_binding' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in
-#print axioms GBCA.pairInst_binding
-
-/-- info: 'PLTS.ABA.GBCA.idealInst_binding' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in
-#print axioms GBCA.idealInst_binding
-
-/-- info: 'PLTS.ABA.GBCA.lowPairInst_binding' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in
-#print axioms GBCA.lowPairInst_binding
 
 /-- info: 'PLTS.ABA.AFW.substitution' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in

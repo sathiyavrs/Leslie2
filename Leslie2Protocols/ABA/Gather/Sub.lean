@@ -5,7 +5,7 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.Broadcast.Sub
-import Leslie2Protocols.ABA.Gather.Ideal
+import Leslie2Protocols.ABA.Gather.Vocabulary
 import Leslie2Protocols.Framework.Relabel
 import Leslie2Protocols.Framework.SyncProduct
 import Leslie2Protocols.Framework.IdleFamily
@@ -27,9 +27,9 @@ its own delivered sets. The gather network holds the per-sender sent sets, the
 corrupted set (`ABA.NetworkState`) and the instance's core; it reads no
 program's record.
 
-The composition is generic in the broadcast tier: `subAt` takes the `2n`
-instances as arguments, `lowSub` supplies Bracha instances (`BRB.sub`) and
-`idealSub` supplies lifted broadcast specifications (`BRB.liftedSpec`).
+The composition is generic in the broadcast tier: `instAt` takes the `2n`
+instances as arguments, `lowInst` supplies Bracha instances (`BRB.implInst`) and
+`idealInst` supplies lifted broadcast specifications (`BRB.liftedSpec`).
 
 ## The alphabet
 
@@ -40,13 +40,13 @@ The gather record and the broadcast instance are different components, so a
 single label carrying both rows would also carry the mixed pairs. The loop
 therefore has a label of its own, `Extra.callLoop id x`, and the specification
 is read along `specPull`, which sends that label to `call id x`. The interface
-alphabet is `SubLab n X = Lab n X ⊕ Extra n X`.
+alphabet is `InstLab n X = Lab n X ⊕ Extra n X`.
 
-The instance-internal alphabet is `GaLab n X = SubLab n X ⊕ GaEvt n X`. Its
+The instance-internal alphabet is `GaLab n X = InstLab n X ⊕ GaEvt n X`. Its
 five events are the gather multicast and delivery, the return of an input
 instance, the call of a bind instance and the return of a bind instance. They
-are hidden before anything outside sees the instance: `subAt` speaks
-`SubLab n X`.
+are hidden before anything outside sees the instance: `instAt` speaks
+`InstLab n X`.
 
 A broadcast instance joins the composition along a pullback — `inPull k` for
 the instance broadcasting `k`'s input, `bindPull q` for the instance
@@ -88,7 +88,7 @@ inductive Extra (n : ℕ) (X : Type) : Type
 
 /-- The instance's interface alphabet: the specification's alphabet with the
 call loop beside it. -/
-abbrev SubLab (n : ℕ) (X : Type) : Type := Lab n X ⊕ Extra n X
+abbrev InstLab (n : ℕ) (X : Type) : Type := Lab n X ⊕ Extra n X
 
 /-- The instance's own events: the gather multicast and delivery, the return of
 an input instance, and the call and return of a bind instance. -/
@@ -107,12 +107,12 @@ inductive GaEvt (n : ℕ) (X : Type) : Type
 /-- The instance-internal alphabet: the interface alphabet plus the five
 events. Its silent label is `Sum.inl (Sum.inl tau)`, so every `Sum.inr` label is
 observable and hence hideable. -/
-abbrev GaLab (n : ℕ) (X : Type) : Type := SubLab n X ⊕ GaEvt n X
+abbrev GaLab (n : ℕ) (X : Type) : Type := InstLab n X ⊕ GaEvt n X
 
 /-- The event labels, hidden by the instance. -/
 def gaEvents (n : ℕ) (X : Type) : Set (GaLab n X) := {l | ∃ e : GaEvt n X, l = Sum.inr e}
 
-@[simp] theorem inl_notMem_gaEvents {n : ℕ} {X : Type} (l : SubLab n X) :
+@[simp] theorem inl_notMem_gaEvents {n : ℕ} {X : Type} (l : InstLab n X) :
     Sum.inl l ∉ gaEvents n X := by
   simp [gaEvents]
 
@@ -122,12 +122,12 @@ def gaEvents (n : ℕ) (X : Type) : Set (GaLab n X) := {l | ∃ e : GaEvt n X, l
 @[simp] theorem galab_tau (n : ℕ) (X : Type) :
     (Silent.τ : GaLab n X) = Sum.inl (Sum.inl Lab.tau) := rfl
 
-@[simp] theorem sublab_tau (n : ℕ) (X : Type) :
-    (Silent.τ : SubLab n X) = Sum.inl Lab.tau := rfl
+@[simp] theorem instlab_tau (n : ℕ) (X : Type) :
+    (Silent.τ : InstLab n X) = Sum.inl Lab.tau := rfl
 
 /-- The silent label of a broadcast instance's interface alphabet. -/
-@[simp] theorem brbSubLab_tau (n : ℕ) (M : Type) :
-    (Silent.τ : BRB.SubLab n M) = Sum.inl BRB.Lab.tau := rfl
+@[simp] theorem brbInstLab_tau (n : ℕ) (M : Type) :
+    (Silent.τ : BRB.InstLab n M) = Sum.inl BRB.Lab.tau := rfl
 
 /-! ### The records -/
 
@@ -187,12 +187,12 @@ theorem coreOf_eq_coreOfNet {X : Type} (P : Params)
 
 /-! ### The pullbacks
 
-A broadcast instance speaks its own interface alphabet `BRB.SubLab`. It joins
+A broadcast instance speaks its own interface alphabet `BRB.InstLab`. It joins
 the composition along a pullback that names it: a label carrying another
 instance's index has no image and leaves that instance idle. -/
 
 /-- The pullback along which the instance broadcasting `k`'s input is read. -/
-def inPull (n : ℕ) (X : Type) (k : Fin n) : GaLab n X → Option (BRB.SubLab n X)
+def inPull (n : ℕ) (X : Type) (k : Fin n) : GaLab n X → Option (BRB.InstLab n X)
   | Sum.inl (Sum.inl .tau) => some (Sum.inl .tau)
   | Sum.inl (Sum.inl (.call id x)) => if k = id then some (Sum.inl (.call x)) else none
   | Sum.inl (Sum.inl (.fail id)) => some (Sum.inl (.fail id))
@@ -202,7 +202,7 @@ def inPull (n : ℕ) (X : Type) (k : Fin n) : GaLab n X → Option (BRB.SubLab n
 
 /-- The pullback along which the instance broadcasting `q`'s `BIND` payload is
 read. -/
-def bindPull (n : ℕ) (X : Type) (q : Fin n) : GaLab n X → Option (BRB.SubLab n (APSet n X))
+def bindPull (n : ℕ) (X : Type) (q : Fin n) : GaLab n X → Option (BRB.InstLab n (APSet n X))
   | Sum.inl (Sum.inl .tau) => some (Sum.inl .tau)
   | Sum.inl (Sum.inl (.fail id)) => some (Sum.inl (.fail id))
   | Sum.inr (.bindCall j U) => if q = j then some (Sum.inl (.call U)) else none
@@ -210,15 +210,15 @@ def bindPull (n : ℕ) (X : Type) (q : Fin n) : GaLab n X → Option (BRB.SubLab
   | _ => none
 
 @[simp] theorem inPull_tau (n : ℕ) (X : Type) (k : Fin n) :
-    inPull n X k (Silent.τ : GaLab n X) = some (Silent.τ : BRB.SubLab n X) := rfl
+    inPull n X k (Silent.τ : GaLab n X) = some (Silent.τ : BRB.InstLab n X) := rfl
 
 @[simp] theorem bindPull_tau (n : ℕ) (X : Type) (q : Fin n) :
-    bindPull n X q (Silent.τ : GaLab n X) = some (Silent.τ : BRB.SubLab n (APSet n X)) := rfl
+    bindPull n X q (Silent.τ : GaLab n X) = some (Silent.τ : BRB.InstLab n (APSet n X)) := rfl
 
 /-- Only the silent label of the composition reaches the silent label of an
 input instance. -/
 theorem inPull_eq_tau {n : ℕ} {X : Type} {k : Fin n} {l : GaLab n X}
-    (h : inPull n X k l = some (Silent.τ : BRB.SubLab n X)) : l = Silent.τ := by
+    (h : inPull n X k l = some (Silent.τ : BRB.InstLab n X)) : l = Silent.τ := by
   rcases l with (l | e) | e
   · cases l <;> simp_all [inPull]
   · cases e; simp_all [inPull]
@@ -227,7 +227,7 @@ theorem inPull_eq_tau {n : ℕ} {X : Type} {k : Fin n} {l : GaLab n X}
 /-- Only the silent label of the composition reaches the silent label of a bind
 instance. -/
 theorem bindPull_eq_tau {n : ℕ} {X : Type} {q : Fin n} {l : GaLab n X}
-    (h : bindPull n X q l = some (Silent.τ : BRB.SubLab n (APSet n X))) : l = Silent.τ := by
+    (h : bindPull n X q l = some (Silent.τ : BRB.InstLab n (APSet n X))) : l = Silent.τ := by
   rcases l with (l | e) | e
   · cases l <;> simp_all [bindPull]
   · cases e; simp_all [bindPull]
@@ -418,8 +418,8 @@ abbrev SubStateAt (n : ℕ) (X B B' : Type) : Type :=
 /-- The gather tier beside the broadcast tier, over the instance-internal
 alphabet. -/
 noncomputable def preAt (P : Params) (X : Type) [DecidableEq X] {B B' : Type}
-    (BIn : ∀ _ : Fin P.n, System B (BRB.SubLab P.n X))
-    (BBind : ∀ _ : Fin P.n, System B' (BRB.SubLab P.n (APSet P.n X))) :
+    (BIn : ∀ _ : Fin P.n, System B (BRB.InstLab P.n X))
+    (BBind : ∀ _ : Fin P.n, System B' (BRB.InstLab P.n (APSet P.n X))) :
     System (SubStateAt P.n X B B') (GaLab P.n X) :=
   (gaPart P X).parallel
     ((System.syncProduct (fun k => (BIn k).mapIdle (inPull P.n X k))).parallel
@@ -428,47 +428,47 @@ noncomputable def preAt (P : Params) (X : Type) [DecidableEq X] {B B' : Type}
 /-- **The gather instance** over the broadcast tier `BIn`, `BBind`: the two
 tiers in parallel, the instance's events hidden, the result read back over the
 interface alphabet. -/
-noncomputable def subAt (P : Params) (X : Type) [DecidableEq X] {B B' : Type}
-    (BIn : ∀ _ : Fin P.n, System B (BRB.SubLab P.n X))
-    (BBind : ∀ _ : Fin P.n, System B' (BRB.SubLab P.n (APSet P.n X))) :
-    System (SubStateAt P.n X B B') (SubLab P.n X) :=
+noncomputable def instAt (P : Params) (X : Type) [DecidableEq X] {B B' : Type}
+    (BIn : ∀ _ : Fin P.n, System B (BRB.InstLab P.n X))
+    (BBind : ∀ _ : Fin P.n, System B' (BRB.InstLab P.n (APSet P.n X))) :
+    System (SubStateAt P.n X B B') (InstLab P.n X) :=
   ((preAt P X BIn BBind).abstract (gaEvents P.n X)).relabel
 
 /-- The state of the gather instance over Bracha's broadcast. -/
-abbrev LowSubState (n : ℕ) (X : Type) : Type :=
+abbrev LowState (n : ℕ) (X : Type) : Type :=
   SubStateAt n X (BRB.ImplState n X) (BRB.ImplState n (APSet n X))
 
 /-- The state of the gather instance over the broadcast specification. -/
-abbrev IdealSubState (n : ℕ) (X : Type) : Type :=
+abbrev IdealState (n : ℕ) (X : Type) : Type :=
   SubStateAt n X (BRB.SpecState n X) (BRB.SpecState n (APSet n X))
 
 /-- **The gather instance over Bracha's broadcast.** -/
-noncomputable def lowSub (P : Params) (X : Type) [DecidableEq X] :
-    System (LowSubState P.n X) (SubLab P.n X) :=
-  subAt P X (fun k => BRB.sub P k X) (fun q => BRB.sub P q (APSet P.n X))
+noncomputable def lowInst (P : Params) (X : Type) [DecidableEq X] :
+    System (LowState P.n X) (InstLab P.n X) :=
+  instAt P X (fun k => BRB.implInst P k X) (fun q => BRB.implInst P q (APSet P.n X))
 
 /-- **The gather instance over the broadcast specification.** -/
-noncomputable def idealSub (P : Params) (X : Type) [DecidableEq X] :
-    System (IdealSubState P.n X) (SubLab P.n X) :=
-  subAt P X (fun k => BRB.liftedSpec P k X) (fun q => BRB.liftedSpec P q (APSet P.n X))
+noncomputable def idealInst (P : Params) (X : Type) [DecidableEq X] :
+    System (IdealState P.n X) (InstLab P.n X) :=
+  instAt P X (fun k => BRB.liftedSpec P k X) (fun q => BRB.liftedSpec P q (APSet P.n X))
 
-@[simp] theorem subAt_init (P : Params) {B B' : Type}
-    (BIn : ∀ _ : Fin P.n, System B (BRB.SubLab P.n X))
-    (BBind : ∀ _ : Fin P.n, System B' (BRB.SubLab P.n (APSet P.n X))) :
-    (subAt P X BIn BBind).init =
+@[simp] theorem instAt_init (P : Params) {B B' : Type}
+    (BIn : ∀ _ : Fin P.n, System B (BRB.InstLab P.n X))
+    (BBind : ∀ _ : Fin P.n, System B' (BRB.InstLab P.n (APSet P.n X))) :
+    (instAt P X BIn BBind).init =
       (((fun _ => LocalState.initial P.n (GaMsg P.n X) (ProcRec.initial P.n X)),
         GaNetState.initial P.n X),
         ((fun k => (BIn k).init), (fun q => (BBind q).init))) := rfl
 
-@[simp] theorem lowSub_init (P : Params) :
-    (lowSub P X).init =
+@[simp] theorem lowInst_init (P : Params) :
+    (lowInst P X).init =
       (((fun _ => LocalState.initial P.n (GaMsg P.n X) (ProcRec.initial P.n X)),
         GaNetState.initial P.n X),
         ((fun _ => BRB.ImplState.initial P.n X),
           (fun _ => BRB.ImplState.initial P.n (APSet P.n X)))) := rfl
 
-@[simp] theorem idealSub_init (P : Params) :
-    (idealSub P X).init =
+@[simp] theorem idealInst_init (P : Params) :
+    (idealInst P X).init =
       (((fun _ => LocalState.initial P.n (GaMsg P.n X) (ProcRec.initial P.n X)),
         GaNetState.initial P.n X),
         ((fun _ => BRB.SpecState.initial P.n X),
@@ -575,7 +575,7 @@ end Views
 
 /-- A payload set is approved at the ideal tier when every pair is a committed
 entry of the input instance that carries it. -/
-def approved {n : ℕ} (s : IdealSubState n X) (A : APSet n X) : Prop :=
+def approved {n : ℕ} (s : IdealState n X) (A : APSet n X) : Prop :=
   A.subMap (fun k => (brbIn s k).val)
 
 section Determinacy
@@ -615,8 +615,8 @@ theorem gaPart_isLTS (P : Params) : (gaPart P X).IsLTS :=
 
 /-- The two tiers in parallel form an LTS. -/
 theorem preAt_isLTS (P : Params) {B B' : Type}
-    {BIn : ∀ _ : Fin P.n, System B (BRB.SubLab P.n X)}
-    {BBind : ∀ _ : Fin P.n, System B' (BRB.SubLab P.n (APSet P.n X))}
+    {BIn : ∀ _ : Fin P.n, System B (BRB.InstLab P.n X)}
+    {BBind : ∀ _ : Fin P.n, System B' (BRB.InstLab P.n (APSet P.n X))}
     (hIn : ∀ k, (BIn k).IsLTS) (hBind : ∀ q, (BBind q).IsLTS) :
     (preAt P X BIn BBind).IsLTS :=
   System.parallel_isLTS (gaPart_isLTS P)
@@ -625,20 +625,20 @@ theorem preAt_isLTS (P : Params) {B B' : Type}
       (System.syncProduct_isLTS (fun q => System.mapIdle_isLTS _ (hBind q))))
 
 /-- The gather instance is an LTS. -/
-theorem subAt_isLTS (P : Params) {B B' : Type}
-    {BIn : ∀ _ : Fin P.n, System B (BRB.SubLab P.n X)}
-    {BBind : ∀ _ : Fin P.n, System B' (BRB.SubLab P.n (APSet P.n X))}
+theorem instAt_isLTS (P : Params) {B B' : Type}
+    {BIn : ∀ _ : Fin P.n, System B (BRB.InstLab P.n X)}
+    {BBind : ∀ _ : Fin P.n, System B' (BRB.InstLab P.n (APSet P.n X))}
     (hIn : ∀ k, (BIn k).IsLTS) (hBind : ∀ q, (BBind q).IsLTS) :
-    (subAt P X BIn BBind).IsLTS :=
+    (instAt P X BIn BBind).IsLTS :=
   System.relabel_isLTS (System.abstract_isLTS (preAt_isLTS P hIn hBind) _)
 
 /-- The gather instance over Bracha's broadcast is an LTS. -/
-theorem lowSub_isLTS (P : Params) : (lowSub P X).IsLTS :=
-  subAt_isLTS P (fun k => BRB.sub_isLTS P k) (fun q => BRB.sub_isLTS P q)
+theorem lowInst_isLTS (P : Params) : (lowInst P X).IsLTS :=
+  instAt_isLTS P (fun k => BRB.implInst_isLTS P k) (fun q => BRB.implInst_isLTS P q)
 
 /-- The gather instance over the broadcast specification is an LTS. -/
-theorem idealSub_isLTS (P : Params) : (idealSub P X).IsLTS :=
-  subAt_isLTS P (fun k => BRB.liftedSpec_isLTS P k) (fun q => BRB.liftedSpec_isLTS P q)
+theorem idealInst_isLTS (P : Params) : (idealInst P X).IsLTS :=
+  instAt_isLTS P (fun k => BRB.liftedSpec_isLTS P k) (fun q => BRB.liftedSpec_isLTS P q)
 
 /-- No gather program rule fires on `τ`: a program only ever moves in an event
 or on one of the interface labels. The composition's silent transitions are
@@ -654,14 +654,14 @@ end Determinacy
 
 /-! ### The specification read over the instance's interface
 
-The specification speaks `Lab n X`; the instance speaks `SubLab n X`, in which
+The specification speaks `Lab n X`; the instance speaks `InstLab n X`, in which
 the call loop is a label of its own. `specPull` identifies the loop with the
 specification label it stands for, so that the specification's own loop row
 answers it. -/
 
 /-- The projection of the interface alphabet onto the specification's
 alphabet. -/
-def specPull (n : ℕ) (X : Type) : SubLab n X → Option (Lab n X)
+def specPull (n : ℕ) (X : Type) : InstLab n X → Option (Lab n X)
   | Sum.inl l => some l
   | Sum.inr (.callLoop id x) => some (.call id x)
 
@@ -672,18 +672,18 @@ def specPull (n : ℕ) (X : Type) : SubLab n X → Option (Lab n X)
 
 /-- The silent label projects to the silent label. -/
 @[simp] theorem specPull_tau (n : ℕ) (X : Type) :
-    specPull n X (Silent.τ : SubLab n X) = some (Silent.τ : Lab n X) := rfl
+    specPull n X (Silent.τ : InstLab n X) = some (Silent.τ : Lab n X) := rfl
 
 /-- Only the silent label projects to the silent label: the call loop projects
 to the call. -/
-theorem specPull_eq_tau {n : ℕ} {l : SubLab n X} (h : specPull n X l = some Lab.tau) :
+theorem specPull_eq_tau {n : ℕ} {l : InstLab n X} (h : specPull n X l = some Lab.tau) :
     l = Sum.inl Lab.tau := by
   cases l with
   | inl l₀ => rw [Option.some.inj h]
   | inr e => cases e; simp at h
 
 /-- Every interface label carries a specification label. -/
-theorem specPull_isSome {n : ℕ} (l : SubLab n X) : ∃ l₀, specPull n X l = some l₀ := by
+theorem specPull_isSome {n : ℕ} (l : InstLab n X) : ∃ l₀, specPull n X l = some l₀ := by
   cases l with
   | inl l₀ => exact ⟨l₀, rfl⟩
   | inr e => cases e; exact ⟨_, rfl⟩
@@ -691,7 +691,7 @@ theorem specPull_isSome {n : ℕ} (l : SubLab n X) : ∃ l₀, specPull n X l = 
 /-- **The lifted specification**: the gather specification read over the
 instance's interface. -/
 noncomputable def liftedSpec (P : Params) (X : Type) [DecidableEq X] :
-    System (SpecState P.n X) (SubLab P.n X) :=
+    System (SpecState P.n X) (InstLab P.n X) :=
   (specInst P X).mapIdle (specPull P.n X)
 
 @[simp] theorem liftedSpec_init (P : Params) [DecidableEq X] :
@@ -710,31 +710,31 @@ instance's step projects from, which is sent to the interface label the instance
 actually took. -/
 
 /-- The left injection: the interface label a specification label sits at. -/
-def sect {n : ℕ} : Lab n X → SubLab n X := Sum.inl
+def sect {n : ℕ} : Lab n X → InstLab n X := Sum.inl
 
 open scoped Classical in
 /-- The section of `specPull` that answers the interface label `l` over the
 specification label `l₀`. -/
-noncomputable def sectAt {n : ℕ} (l₀ : Lab n X) (l : SubLab n X) : Lab n X → SubLab n X :=
+noncomputable def sectAt {n : ℕ} (l₀ : Lab n X) (l : InstLab n X) : Lab n X → InstLab n X :=
   fun x => if x = l₀ then l else sect x
 
 @[simp] theorem specPull_sect {n : ℕ} (x : Lab n X) : specPull n X (sect x) = some x := rfl
 
 /-- The left injection reflects the silent label. -/
 theorem sect_eq_tau {n : ℕ} (x : Lab n X) :
-    (sect x : SubLab n X) = (Silent.τ : SubLab n X) ↔ x = (Silent.τ : Lab n X) :=
+    (sect x : InstLab n X) = (Silent.τ : InstLab n X) ↔ x = (Silent.τ : Lab n X) :=
   inl_eq_tau_iff x
 
-theorem specPull_sectAt {n : ℕ} {l₀ : Lab n X} {l : SubLab n X}
+theorem specPull_sectAt {n : ℕ} {l₀ : Lab n X} {l : InstLab n X}
     (hl : specPull n X l = some l₀) (x : Lab n X) : specPull n X (sectAt l₀ l x) = some x := by
   unfold sectAt
   by_cases hx : x = l₀
   · rw [if_pos hx, hl, hx]
   · rw [if_neg hx, specPull_sect]
 
-theorem sectAt_tau {n : ℕ} {l₀ : Lab n X} {l : SubLab n X} (hl : specPull n X l = some l₀)
+theorem sectAt_tau {n : ℕ} {l₀ : Lab n X} {l : InstLab n X} (hl : specPull n X l = some l₀)
     (hl₀ : l₀ ≠ (Silent.τ : Lab n X)) (x : Lab n X) :
-    sectAt l₀ l x = (Silent.τ : SubLab n X) ↔ x = (Silent.τ : Lab n X) := by
+    sectAt l₀ l x = (Silent.τ : InstLab n X) ↔ x = (Silent.τ : Lab n X) := by
   unfold sectAt
   by_cases hx : x = l₀
   · rw [if_pos hx, hx]
@@ -756,7 +756,7 @@ theorem weakLSilent_liftedSpec [DecidableEq X] (P : Params) {s s' : SpecState P.
 specification at any interface label projecting to the same specification
 label. -/
 theorem weakLStep_liftedSpec [DecidableEq X] (P : Params) {s s' : SpecState P.n X}
-    {l₀ : Lab P.n X} {l : SubLab P.n X} (hl₀ : l₀ ≠ (Silent.τ : Lab P.n X))
+    {l₀ : Lab P.n X} {l : InstLab P.n X} (hl₀ : l₀ ≠ (Silent.τ : Lab P.n X))
     (hl : specPull P.n X l = some l₀) (h : (specInst P X).weakLStep s l₀ s') :
     (liftedSpec P X).weakLStep s l s' :=
   System.weakLStep_mapIdle (sectAt l₀ l) (specPull_sectAt hl) (sectAt_tau hl hl₀)
@@ -770,11 +770,11 @@ directions. -/
 
 /-- The instance's step relation, unfolded to the hidden-event case and the
 interface-label case. -/
-theorem subAt_step_iff (P : Params) (X : Type) [DecidableEq X] {B B' : Type}
-    (BIn : ∀ _ : Fin P.n, System B (BRB.SubLab P.n X))
-    (BBind : ∀ _ : Fin P.n, System B' (BRB.SubLab P.n (APSet P.n X)))
-    (s : SubStateAt P.n X B B') (l : SubLab P.n X) (μ : PMF (SubStateAt P.n X B B')) :
-    (subAt P X BIn BBind).step s l μ ↔
+theorem instAt_step_iff (P : Params) (X : Type) [DecidableEq X] {B B' : Type}
+    (BIn : ∀ _ : Fin P.n, System B (BRB.InstLab P.n X))
+    (BBind : ∀ _ : Fin P.n, System B' (BRB.InstLab P.n (APSet P.n X)))
+    (s : SubStateAt P.n X B B') (l : InstLab P.n X) (μ : PMF (SubStateAt P.n X B B')) :
+    (instAt P X BIn BBind).step s l μ ↔
       (l = Sum.inl Lab.tau ∧ ∃ e : GaEvt P.n X, (preAt P X BIn BBind).step s (Sum.inr e) μ) ∨
       (preAt P X BIn BBind).step s (Sum.inl l) μ := by
   constructor
@@ -910,8 +910,8 @@ input instance or one bind instance. -/
 section PreAt
 
 variable [DecidableEq X] {P : Params} {B B' : Type}
-  {BIn : ∀ _ : Fin P.n, System B (BRB.SubLab P.n X)}
-  {BBind : ∀ _ : Fin P.n, System B' (BRB.SubLab P.n (APSet P.n X))}
+  {BIn : ∀ _ : Fin P.n, System B (BRB.InstLab P.n X)}
+  {BBind : ∀ _ : Fin P.n, System B' (BRB.InstLab P.n (APSet P.n X))}
   {u x : ∀ _ : Fin P.n, LocalState P.n (ProcRec P.n X) (GaMsg P.n X)}
   {w w' : GaNetState P.n X} {a a' : ∀ _ : Fin P.n, B} {b b' : ∀ _ : Fin P.n, B'}
   {L : GaLab P.n X}
@@ -956,9 +956,9 @@ theorem preAt_tau_inv (hIn : ∀ k, (BIn k).IsLTS) (hBind : ∀ q, (BBind q).IsL
     (∃ v, μ = PMF.pure ((u, v), (a, b)) ∧
       NetStep P w (Silent.τ : GaLab P.n X) (PMF.pure v)) ∨
     (∃ (k : Fin P.n) (c : B), μ = PMF.pure ((u, w), (Function.update a k c, b)) ∧
-      (BIn k).step (a k) (Silent.τ : BRB.SubLab P.n X) (PMF.pure c)) ∨
+      (BIn k).step (a k) (Silent.τ : BRB.InstLab P.n X) (PMF.pure c)) ∨
     (∃ (q : Fin P.n) (d : B'), μ = PMF.pure ((u, w), (a, Function.update b q d)) ∧
-      (BBind q).step (b q) (Silent.τ : BRB.SubLab P.n (APSet P.n X)) (PMF.pure d)) := by
+      (BBind q).step (b q) (Silent.τ : BRB.InstLab P.n (APSet P.n X)) (PMF.pure d)) := by
   rw [preAt, System.parallel_step] at h
   rcases h with ⟨hτ, -⟩ | ⟨-, μ₁, hga, rfl⟩ | ⟨-, μ₂, hbr, rfl⟩
   · exact absurd rfl hτ
@@ -1007,7 +1007,7 @@ theorem preAt_tau_net (hn : NetStep P w (Silent.τ : GaLab P.n X) (PMF.pure w'))
 /-- Build a silent transition of the two tiers from a silent step of one input
 instance. -/
 theorem preAt_tau_in {k : Fin P.n} {c : B}
-    (h : (BIn k).step (a k) (Silent.τ : BRB.SubLab P.n X) (PMF.pure c)) :
+    (h : (BIn k).step (a k) (Silent.τ : BRB.InstLab P.n X) (PMF.pure c)) :
     (preAt P X BIn BBind).step ((u, w), (a, b)) (Silent.τ : GaLab P.n X)
       (PMF.pure ((u, w), (Function.update a k c, b))) := by
   rw [preAt, System.parallel_step]
@@ -1020,7 +1020,7 @@ theorem preAt_tau_in {k : Fin P.n} {c : B}
 /-- Build a silent transition of the two tiers from a silent step of one bind
 instance. -/
 theorem preAt_tau_bind {q : Fin P.n} {d : B'}
-    (h : (BBind q).step (b q) (Silent.τ : BRB.SubLab P.n (APSet P.n X)) (PMF.pure d)) :
+    (h : (BBind q).step (b q) (Silent.τ : BRB.InstLab P.n (APSet P.n X)) (PMF.pure d)) :
     (preAt P X BIn BBind).step ((u, w), (a, b)) (Silent.τ : GaLab P.n X)
       (PMF.pure ((u, w), (a, Function.update b q d))) := by
   rw [preAt, System.parallel_step]
@@ -1031,51 +1031,51 @@ theorem preAt_tau_bind {q : Fin P.n} {d : B'}
     syncLift_tau_step (bindPull_tau P.n X q) h, (prodPMF_pure_pure _ _).symm⟩)
 
 /-- A hidden event is a silent transition of the instance. -/
-theorem subAt_event_step (e : GaEvt P.n X)
+theorem instAt_event_step (e : GaEvt P.n X)
     (hproc : ∀ i, ProcStep P i (u i) (Sum.inr e) (PMF.pure (x i)))
     (hnet : NetStep P w (Sum.inr e) (PMF.pure w'))
     (hin : ∀ k, ((BIn k).mapIdle (inPull P.n X k)).step (a k) (Sum.inr e) (PMF.pure (a' k)))
     (hbind : ∀ q, ((BBind q).mapIdle (bindPull P.n X q)).step (b q) (Sum.inr e)
       (PMF.pure (b' q))) :
-    (subAt P X BIn BBind).step ((u, w), (a, b)) (Sum.inl Lab.tau)
+    (instAt P X BIn BBind).step ((u, w), (a, b)) (Sum.inl Lab.tau)
       (PMF.pure ((x, w'), (a', b'))) :=
-  (subAt_step_iff P X BIn BBind _ _ _).mpr
+  (instAt_step_iff P X BIn BBind _ _ _).mpr
     (Or.inl ⟨rfl, e, preAt_lab_step (by simp) hproc hnet hin hbind⟩)
 
 /-- A visible interface label is a transition of the instance. -/
-theorem subAt_lab_step {l : SubLab P.n X} (hl : l ≠ Sum.inl Lab.tau)
+theorem instAt_lab_step {l : InstLab P.n X} (hl : l ≠ Sum.inl Lab.tau)
     (hproc : ∀ i, ProcStep P i (u i) (Sum.inl l) (PMF.pure (x i)))
     (hnet : NetStep P w (Sum.inl l) (PMF.pure w'))
     (hin : ∀ k, ((BIn k).mapIdle (inPull P.n X k)).step (a k) (Sum.inl l) (PMF.pure (a' k)))
     (hbind : ∀ q, ((BBind q).mapIdle (bindPull P.n X q)).step (b q) (Sum.inl l)
       (PMF.pure (b' q))) :
-    (subAt P X BIn BBind).step ((u, w), (a, b)) l (PMF.pure ((x, w'), (a', b'))) := by
-  refine (subAt_step_iff P X BIn BBind _ _ _).mpr (Or.inr (preAt_lab_step ?_ hproc hnet hin hbind))
+    (instAt P X BIn BBind).step ((u, w), (a, b)) l (PMF.pure ((x, w'), (a', b'))) := by
+  refine (instAt_step_iff P X BIn BBind _ _ _).mpr (Or.inr (preAt_lab_step ?_ hproc hnet hin hbind))
   rw [galab_tau]
   simpa using hl
 
 /-- An injection of the gather network is a silent transition of the
 instance. -/
-theorem subAt_tau_net (hn : NetStep P w (Silent.τ : GaLab P.n X) (PMF.pure w')) :
-    (subAt P X BIn BBind).step ((u, w), (a, b)) (Sum.inl Lab.tau)
+theorem instAt_tau_net (hn : NetStep P w (Silent.τ : GaLab P.n X) (PMF.pure w')) :
+    (instAt P X BIn BBind).step ((u, w), (a, b)) (Sum.inl Lab.tau)
       (PMF.pure ((u, w'), (a, b))) :=
-  (subAt_step_iff P X BIn BBind _ _ _).mpr (Or.inr (preAt_tau_net hn))
+  (instAt_step_iff P X BIn BBind _ _ _).mpr (Or.inr (preAt_tau_net hn))
 
 /-- A silent step of one input instance is a silent transition of the
 instance. -/
-theorem subAt_tau_in {k : Fin P.n} {c : B}
-    (h : (BIn k).step (a k) (Silent.τ : BRB.SubLab P.n X) (PMF.pure c)) :
-    (subAt P X BIn BBind).step ((u, w), (a, b)) (Sum.inl Lab.tau)
+theorem instAt_tau_in {k : Fin P.n} {c : B}
+    (h : (BIn k).step (a k) (Silent.τ : BRB.InstLab P.n X) (PMF.pure c)) :
+    (instAt P X BIn BBind).step ((u, w), (a, b)) (Sum.inl Lab.tau)
       (PMF.pure ((u, w), (Function.update a k c, b))) :=
-  (subAt_step_iff P X BIn BBind _ _ _).mpr (Or.inr (preAt_tau_in h))
+  (instAt_step_iff P X BIn BBind _ _ _).mpr (Or.inr (preAt_tau_in h))
 
 /-- A silent step of one bind instance is a silent transition of the
 instance. -/
-theorem subAt_tau_bind {q : Fin P.n} {d : B'}
-    (h : (BBind q).step (b q) (Silent.τ : BRB.SubLab P.n (APSet P.n X)) (PMF.pure d)) :
-    (subAt P X BIn BBind).step ((u, w), (a, b)) (Sum.inl Lab.tau)
+theorem instAt_tau_bind {q : Fin P.n} {d : B'}
+    (h : (BBind q).step (b q) (Silent.τ : BRB.InstLab P.n (APSet P.n X)) (PMF.pure d)) :
+    (instAt P X BIn BBind).step ((u, w), (a, b)) (Sum.inl Lab.tau)
       (PMF.pure ((u, w), (a, Function.update b q d))) :=
-  (subAt_step_iff P X BIn BBind _ _ _).mpr (Or.inr (preAt_tau_bind h))
+  (instAt_step_iff P X BIn BBind _ _ _).mpr (Or.inr (preAt_tau_bind h))
 
 end PreAt
 

@@ -4,443 +4,445 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.Gather.Spec
-import Leslie2Protocols.ABA.Vocabulary.Labels
+import Leslie2Protocols.ABA.Round.Sub
 
 /-!
-# The GBCA implementation over the gather specifications
+# The rows of the round over the gather specifications
 
-The round-`r` GBCA implementation of the modular construction of Attiya,
-Flam and Welch — their Algorithm 4 at `R = 2`, its two-gather branch, with the
-grade read off the second gather's counts in place of the approximate-agreement
-subroutine of its lines 7 and 8 (deviation D24): two gather calls and local
-counting, read over the gather specification (`ABA/Gather/Spec.lean`), as an LTS
-over the shared alphabet `ABA.Lab n`.
+`GBCA.PairStep` is the rule table of `GBCA.pairInst` (`ABA/Round/Sub.lean`) —
+the `n` graded-agreement programs beside the layer's network, in parallel with
+two gather specifications — stated over the round's state through the four
+views `procs`, `bound`, `ga1`, `ga2`. It is a relation on that state; the
+system is the composition.
 
-Per process, the construction is
+`pairInst_step_iff_row` is the row characterisation: at a shared label `l₀`, the
+transitions of the round over the labels `GSub.gPull` sends to `l₀` are exactly
+the `l₀`-rows of `PairStep`, on the same state and with the same
+distribution.
 
-* `S ← Gather₁(b)` — the input bit through the first gather instance;
-* the candidate: the bit occurring at least `|S| − f` times in `S`, `⊥` if
-  neither does (`GBCA.cand`);
-* `T ← Gather₂(candidate)` — the candidate through the second instance;
-* the graded return (`GBCA.gradeOf`): `(v, A)` if some bit's entries reach
-  `|T| − f`, else `(v, B)` if they reach `f + 1` — at most one bit can —
-  else `(⊥, C)`.
+## The gather tier
 
-The state is exactly the pair of the two gather specification states: the
-per-process input is the first instance's call record, the candidate the
-second's, the round's return flag the second's return flag. The rule table
-embeds the gather specification's rows — a row of the pair either relays one
-instance's step, or fuses two: the first gather's return with the second's
-call (`link`), and the second gather's return with the graded ABA-level
-return (`retG`).
+A gather instance's own rows are `Gather.Step` (`ABA/Gather/Spec.lean`), and a
+row carries them as the hypothesis `Gather.Step P (ga1 s) l₀ (PMF.pure t1)`, as
+`GBCA.PairStep` does. The specification answers `call id x` on two rows, the
+call and the input-enabledness loop, and both sit at the one label
+`Gather.Lab.call id x` of the lifted specification: the round's `callG` row and
+its `callLoop` row therefore carry the same hypothesis, and which of the two
+specification rows fires is the gather's own business.
 
-## The bound bit
+## Corruption
 
-The state carries a third factor, `bound : Option Bool`, the round's bound
-bit. It is auxiliary state: no program reads it and no guard consults it. The
-`link` row writes it, at the round's first link and once only, as
-`GBCA.boundOfCore` of the core the first gather's return carries, and every
-graded return announces it on its label.
-
-`boundOfCore P S` is the bit heavy in `S` — carried by at least `|S| − f` of
-its entries — and `true` when neither bit is. At the sizes the gather
-specification's `bindCore` allows (`|S| ≥ n − f > 2f`) at most one bit is
-heavy, so the definition is the heavy bit wherever one exists, and its
-complement is then light (`cnt_boundOfCore_light`): a return handing out `v`
-announces `v`, and a return handing out nothing announces a bit whose
-complement no return can hand out.
-
-The file also carries the entry-counting kit the refinement consumes: the
-per-value counts of a partial map (`gcount`, `gdom`) and of a payload set
-(`APSet.cnt`), and the transfer of a heavy value into a payload set below the
-map (`cnt_heavy_of_subMap`).
+The `fail` row corrupts the two gather instances and leaves the programs and
+the round's bound bit untouched. The label is in the round's alphabet, and in
+the family of rounds it is the broadcast act that answers it.
 -/
 
 namespace PLTS
 namespace ABA
 namespace GBCA
 
-open Gather
+open Net
 
-/-! ### Entry counting -/
+/-! ### Reading a lifted gather specification through a pullback -/
 
-section Counting
+section SpecRows
 
-variable {n : ℕ} {α : Type} [DecidableEq α]
+variable {X : Type} [DecidableEq X] {P : Params} {c c' : Gather.SpecState P.n X}
+  {L : RLab P.n} {ψ : RLab P.n → Option (Gather.InstLab P.n X)}
 
-/-- The number of processes whose entry in `g` is `x`. -/
-def gcount (g : Fin n → Option α) (x : α) : ℕ :=
-  (Finset.univ.filter (fun k => g k = some x)).card
+/-- A lifted gather specification's step at an interface label on the left is
+the specification's own step there. -/
+theorem liftedSpec_step {l₀ : Gather.Lab P.n X} (hψ : ψ L = some (Sum.inl l₀))
+    (h : ((Gather.liftedSpec P X).mapIdle ψ).step c L (PMF.pure c')) :
+    Gather.Step P c l₀ (PMF.pure c') :=
+  (System.mapIdle_step_some (Gather.specPull_inl l₀) _).mp (Gather.lift_step_some hψ h)
 
-/-- The number of processes with an entry in `g`. -/
-def gdom (g : Fin n → Option α) : ℕ :=
-  (Finset.univ.filter (fun k => g k ≠ none)).card
+/-- A lifted gather specification's step at the call-loop label is its step at
+the call that label stands for. -/
+theorem liftedSpec_loop_step {id : Fin P.n} {x : X}
+    (hψ : ψ L = some (Sum.inr (Gather.Extra.callLoop id x)))
+    (h : ((Gather.liftedSpec P X).mapIdle ψ).step c L (PMF.pure c')) :
+    Gather.Step P c (.call id x) (PMF.pure c') :=
+  (System.mapIdle_step_some (Gather.specPull_callLoop id x) _).mp (Gather.lift_step_some hψ h)
 
-/-- The number of entries of a payload set at value `x`. -/
-def APSet.cnt (U : APSet n α) (x : α) : ℕ :=
-  (U.filter (fun p => p.2 = x)).card
+/-- A lifted gather specification's silent step is the specification's own. -/
+theorem liftedSpec_tau_step
+    (h : (Gather.liftedSpec P X).step c (Silent.τ : Gather.InstLab P.n X) (PMF.pure c')) :
+    Gather.Step P c Gather.Lab.tau (PMF.pure c') :=
+  (System.mapIdle_step_some (Gather.specPull_tau P.n X) _).mp h
 
-/-- The entries of a sub-map payload set away from `x` are at most the
-map's entries away from `x`: the first components are distinct, and each
-carries an entry of `g` other than `x`. -/
-theorem APSet.card_sub_cnt_le {U : APSet n α} {g : Fin n → Option α}
-    (hg : U.subMap g) (x : α) :
-    U.card - APSet.cnt U x ≤ gdom g - gcount g x := by
-  have hsplit := Finset.card_filter_add_card_filter_not
-    (s := U) (p := fun p => p.2 = x)
-  have himg : (U.filter (fun p => ¬ p.2 = x)).card
-      ≤ ((Finset.univ.filter (fun k => g k ≠ none)) \
-          (Finset.univ.filter (fun k => g k = some x))).card := by
-    have hinj : Set.InjOn Prod.fst
-        ((U.filter (fun p => ¬ p.2 = x) : Finset (Fin n × α)) : Set (Fin n × α)) := by
-      intro p hp q hq hpq
-      rw [Finset.mem_coe, Finset.mem_filter] at hp hq
-      have h1 := hg p hp.1
-      have h2 := hg q hq.1
-      rw [hpq] at h1
-      rw [h1] at h2
-      have h3 : p.2 = q.2 := by injection h2
-      exact Prod.ext hpq h3
-    rw [← Finset.card_image_of_injOn hinj]
-    refine Finset.card_le_card ?_
-    intro k hk
-    rw [Finset.mem_image] at hk
-    obtain ⟨p, hp, rfl⟩ := hk
-    rw [Finset.mem_filter] at hp
-    have h1 := hg p hp.1
-    rw [Finset.mem_sdiff, Finset.mem_filter, Finset.mem_filter]
-    refine ⟨⟨Finset.mem_univ _, by rw [h1]; simp⟩, ?_⟩
-    intro hc
-    obtain ⟨-, hc⟩ := hc
-    rw [h1] at hc
-    have h4 : p.2 = x := by injection hc
-    exact hp.2 h4
-  have hsub : (Finset.univ.filter (fun k => g k = some x))
-      ⊆ (Finset.univ.filter (fun k => g k ≠ none)) := by
-    intro k hk
-    rw [Finset.mem_filter] at hk ⊢
-    refine ⟨hk.1, ?_⟩
-    rw [hk.2]
-    simp
-  have hsdiff : ((Finset.univ.filter (fun k => g k ≠ none)) \
-        (Finset.univ.filter (fun k => g k = some x))).card
-      = (Finset.univ.filter (fun k => g k ≠ none)).card
-        - ((Finset.univ.filter (fun k => g k = some x))
-            ∩ (Finset.univ.filter (fun k => g k ≠ none))).card :=
-    Finset.card_sdiff
-  rw [Finset.inter_eq_left.mpr hsub] at hsdiff
-  unfold APSet.cnt gdom gcount
-  omega
+/-- Build a lifted gather specification's step at an interface label on the
+left. -/
+theorem row_liftedSpec_step {l₀ : Gather.Lab P.n X} (hψ : ψ L = some (Sum.inl l₀))
+    (h : Gather.Step P c l₀ (PMF.pure c')) :
+    ((Gather.liftedSpec P X).mapIdle ψ).step c L (PMF.pure c') :=
+  Gather.row_lift_step hψ ((System.mapIdle_step_some (Gather.specPull_inl l₀) _).mpr h)
 
-/-- A payload set's first components inject into the map's domain. -/
-theorem APSet.card_le_gdom {U : APSet n α} {g : Fin n → Option α}
-    (hg : U.subMap g) : U.card ≤ gdom g := by
-  have hinj : Set.InjOn Prod.fst ((U : Finset (Fin n × α)) : Set (Fin n × α)) := by
-    intro p hp q hq hpq
-    rw [Finset.mem_coe] at hp hq
-    have h1 := hg p hp
-    have h2 := hg q hq
-    rw [hpq] at h1
-    rw [h1] at h2
-    have h3 : p.2 = q.2 := by injection h2
-    exact Prod.ext hpq h3
-  rw [← Finset.card_image_of_injOn hinj]
-  refine Finset.card_le_card ?_
-  intro k hk
-  rw [Finset.mem_image] at hk
-  obtain ⟨p, hp, rfl⟩ := hk
-  have h1 := hg p hp
-  rw [Finset.mem_filter]
-  refine ⟨Finset.mem_univ _, ?_⟩
-  rw [h1]
-  simp
+/-- Build a lifted gather specification's step at the call-loop label. -/
+theorem row_liftedSpec_loop_step {id : Fin P.n} {x : X}
+    (hψ : ψ L = some (Sum.inr (Gather.Extra.callLoop id x)))
+    (h : Gather.Step P c (.call id x) (PMF.pure c')) :
+    ((Gather.liftedSpec P X).mapIdle ψ).step c L (PMF.pure c') :=
+  Gather.row_lift_step hψ ((System.mapIdle_step_some (Gather.specPull_callLoop id x) _).mpr h)
 
-/-- A payload set's entries at `x` count below the map's. -/
-theorem APSet.cnt_le_gcount {U : APSet n α} {g : Fin n → Option α}
-    (hg : U.subMap g) (x : α) : APSet.cnt U x ≤ gcount g x := by
-  have hinj : Set.InjOn Prod.fst
-      ((U.filter (fun p => p.2 = x) : Finset (Fin n × α)) : Set (Fin n × α)) := by
-    intro p hp q hq hpq
-    rw [Finset.mem_coe, Finset.mem_filter] at hp hq
-    have h1 := hg p hp.1
-    have h2 := hg q hq.1
-    rw [hpq] at h1
-    rw [h1] at h2
-    have h3 : p.2 = q.2 := by injection h2
-    exact Prod.ext hpq h3
-  unfold APSet.cnt
-  rw [← Finset.card_image_of_injOn hinj]
-  refine Finset.card_le_card ?_
-  intro k hk
-  rw [Finset.mem_image] at hk
-  obtain ⟨p, hp, rfl⟩ := hk
-  rw [Finset.mem_filter] at hp
-  have h1 := hg p hp.1
-  rw [Finset.mem_filter]
-  refine ⟨Finset.mem_univ _, ?_⟩
-  rw [h1, hp.2]
+/-- Build a lifted gather specification's silent step. -/
+theorem row_liftedSpec_tau_step (h : Gather.Step P c Gather.Lab.tau (PMF.pure c')) :
+    (Gather.liftedSpec P X).step c (Silent.τ : Gather.InstLab P.n X) (PMF.pure c') :=
+  (System.mapIdle_step_some (Gather.specPull_tau P.n X) _).mpr h
 
-/-- The entries away from `x` count the domain minus `x`'s count. -/
-theorem card_ne_gcount (g : Fin n → Option α) (x : α) :
-    (Finset.univ.filter (fun k => g k ≠ none ∧ g k ≠ some x)).card
-      = gdom g - gcount g x := by
-  have hset : Finset.univ.filter (fun k => g k ≠ none ∧ g k ≠ some x)
-      = (Finset.univ.filter (fun k => g k ≠ none))
-        \ (Finset.univ.filter (fun k => g k = some x)) := by
-    ext k
-    rw [Finset.mem_filter, Finset.mem_sdiff, Finset.mem_filter, Finset.mem_filter]
-    constructor
-    · rintro ⟨h1, h2, h3⟩
-      exact ⟨⟨h1, h2⟩, fun hc => h3 hc.2⟩
-    · rintro ⟨⟨h1, h2⟩, h3⟩
-      exact ⟨h1, h2, fun hc => h3 ⟨h1, hc⟩⟩
-  have hsub : (Finset.univ.filter (fun k => g k = some x))
-      ⊆ (Finset.univ.filter (fun k => g k ≠ none)) := by
-    intro k hk
-    rw [Finset.mem_filter] at hk ⊢
-    refine ⟨hk.1, ?_⟩
-    rw [hk.2]
-    simp
-  have hsdiff : ((Finset.univ.filter (fun k => g k ≠ none)) \
-        (Finset.univ.filter (fun k => g k = some x))).card
-      = (Finset.univ.filter (fun k => g k ≠ none)).card
-        - ((Finset.univ.filter (fun k => g k = some x))
-            ∩ (Finset.univ.filter (fun k => g k ≠ none))).card :=
-    Finset.card_sdiff
-  rw [Finset.inter_eq_left.mpr hsub] at hsdiff
-  rw [hset, hsdiff]
-  rfl
+/-- The one corruption row of the gather specification. -/
+theorem specStep_fail {id : Fin P.n} {μ : PMF (Gather.SpecState P.n X)}
+    (h : Gather.Step P c (.fail id) μ) : μ = PMF.pure (c.corrupt P id) := by cases h; rfl
 
-/-- For a Boolean map the domain splits into the two value counts. -/
-theorem gdom_bool_sum (g : Fin n → Option Bool) :
-    gdom g = gcount g true + gcount g false := by
-  unfold gdom gcount
-  rw [← Finset.card_union_of_disjoint]
-  · congr 1
-    ext k
-    rw [Finset.mem_union, Finset.mem_filter, Finset.mem_filter, Finset.mem_filter]
-    constructor
-    · rintro ⟨-, hk⟩
-      rcases hg : g k with _ | b
-      · exact absurd hg hk
-      · cases b
-        · exact Or.inr ⟨Finset.mem_univ _, rfl⟩
-        · exact Or.inl ⟨Finset.mem_univ _, rfl⟩
-    · rintro (⟨-, hk⟩ | ⟨-, hk⟩) <;>
-        exact ⟨Finset.mem_univ _, by rw [hk]; simp⟩
-  · rw [Finset.disjoint_filter]
-    intro k _ h1 h2
-    rw [h1] at h2
-    have : true = false := by injection h2
-    exact absurd this (by simp)
+end SpecRows
 
-/-- **Heavy transfer into a dominated payload set.** A value carried by all
-but `f` of a map's entries is carried by all but `f` of the entries of any
-payload set below that map. -/
-theorem cnt_heavy_of_subMap {P : Params} {U : APSet P.n α} {g : Fin P.n → Option α}
-    {x : α} (hg : U.subMap g) (hheavy : gdom g - P.f ≤ gcount g x) :
-    U.card - P.f ≤ APSet.cnt U x := by
-  have h1 := APSet.card_sub_cnt_le hg x
-  omega
+/-! ### The rows -/
 
-end Counting
-
-/-! ### The candidate, the grade and the bound bit -/
-
-/-- The candidate after the first gather: the bit carried by all but `f` of
-the returned entries, `⊥` if neither is. At the domains the return rules
-allow (`≥ n − f > 2f` entries) at most one bit can be. -/
-def cand (P : Params) (g : Fin P.n → Option Bool) : Option Bool :=
-  if gdom g - P.f ≤ gcount g true then some true
-  else if gdom g - P.f ≤ gcount g false then some false
-  else none
-
-theorem cand_some {P : Params} {g : Fin P.n → Option Bool} {v : Bool}
-    (h : cand P g = some v) : gdom g - P.f ≤ gcount g v := by
-  unfold cand at h
-  split_ifs at h with h1 h2
-  · obtain rfl : true = v := by injection h
-    exact h1
-  · obtain rfl : false = v := by injection h
-    exact h2
-
-theorem cand_none {P : Params} {g : Fin P.n → Option Bool}
-    (h : cand P g = none) (v : Bool) : gcount g v < gdom g - P.f := by
-  unfold cand at h
-  split_ifs at h with h1 h2
-  cases v
-  · exact lt_of_not_ge h2
-  · exact lt_of_not_ge h1
-
-/-- The graded outcome after the second gather: `A` at `|T| − f` entries of
-one bit, `B` at `f + 1`, `C` below both. -/
-def gradeOf (P : Params) (g : Fin P.n → Option (Option Bool)) : GbcaOut :=
-  if gdom g - P.f ≤ gcount g (some true) then .A true
-  else if gdom g - P.f ≤ gcount g (some false) then .A false
-  else if P.f + 1 ≤ gcount g (some true) then .B true
-  else if P.f + 1 ≤ gcount g (some false) then .B false
-  else .C
-
-theorem gradeOf_A {P : Params} {g : Fin P.n → Option (Option Bool)} {v : Bool}
-    (h : gradeOf P g = .A v) : gdom g - P.f ≤ gcount g (some v) := by
-  unfold gradeOf at h
-  split_ifs at h with h1 h2 h3 h4
-  · obtain rfl : true = v := by injection h
-    exact h1
-  · obtain rfl : false = v := by injection h
-    exact h2
-
-theorem gradeOf_B {P : Params} {g : Fin P.n → Option (Option Bool)} {v : Bool}
-    (h : gradeOf P g = .B v) :
-    P.f + 1 ≤ gcount g (some v) ∧ ∀ w, gcount g (some w) < gdom g - P.f := by
-  unfold gradeOf at h
-  split_ifs at h with h1 h2 h3 h4
-  · obtain rfl : true = v := by injection h
-    refine ⟨h3, ?_⟩
-    intro w
-    cases w
-    · exact lt_of_not_ge h2
-    · exact lt_of_not_ge h1
-  · obtain rfl : false = v := by injection h
-    refine ⟨h4, ?_⟩
-    intro w
-    cases w
-    · exact lt_of_not_ge h2
-    · exact lt_of_not_ge h1
-
-theorem gradeOf_C {P : Params} {g : Fin P.n → Option (Option Bool)}
-    (h : gradeOf P g = .C) : ∀ w, gcount g (some w) ≤ P.f := by
-  unfold gradeOf at h
-  split_ifs at h with h1 h2 h3 h4
-  intro w
-  cases w
-  · exact Nat.lt_succ_iff.mp (lt_of_not_ge h4)
-  · exact Nat.lt_succ_iff.mp (lt_of_not_ge h3)
-
-/-- **The round's bound bit**, read off the first gather's core: the bit
-heavy in `S` — carried by at least `|S| − f` of its entries — and `true` when
-neither bit is. -/
-def boundOfCore (P : Params) (S : APSet P.n Bool) : Bool :=
-  if S.card - P.f ≤ APSet.cnt S true then true
-  else if S.card - P.f ≤ APSet.cnt S false then false
-  else true
-
-/-- A heavy bit is the bound bit. Two bits cannot both be heavy at
-`|S| ≥ n − f`, so the heavy bit is the one the definition selects. -/
-theorem boundOfCore_of_heavy {P : Params} {S : APSet P.n Bool} {v : Bool}
-    (hcard : P.n - P.f ≤ S.card) (hv : S.card - P.f ≤ APSet.cnt S v) :
-    boundOfCore P S = v := by
-  have hf := P.hf
-  have hsplit : APSet.cnt S true + APSet.cnt S false ≤ S.card := by
-    unfold APSet.cnt
-    rw [← Finset.card_union_of_disjoint]
-    · exact Finset.card_le_card (Finset.union_subset
-        (Finset.filter_subset _ _) (Finset.filter_subset _ _))
-    · rw [Finset.disjoint_filter]
-      intro p _ h1 h2
-      rw [h1] at h2
-      exact absurd h2 (by simp)
-  unfold boundOfCore
-  cases v
-  · have hT : ¬ S.card - P.f ≤ APSet.cnt S true := by omega
-    rw [if_neg hT, if_pos hv]
-  · rw [if_pos hv]
-
-/-- The complement of the bound bit is light: no return can hand it out. -/
-theorem cnt_boundOfCore_light {P : Params} {S : APSet P.n Bool}
-    (hcard : P.n - P.f ≤ S.card) :
-    APSet.cnt S (!boundOfCore P S) < S.card - P.f := by
-  have hf := P.hf
-  have hsplit : APSet.cnt S true + APSet.cnt S false ≤ S.card := by
-    unfold APSet.cnt
-    rw [← Finset.card_union_of_disjoint]
-    · exact Finset.card_le_card (Finset.union_subset
-        (Finset.filter_subset _ _) (Finset.filter_subset _ _))
-    · rw [Finset.disjoint_filter]
-      intro p _ h1 h2
-      rw [h1] at h2
-      exact absurd h2 (by simp)
-  unfold boundOfCore
-  split_ifs with h1 h2 <;> simp only [Bool.not_true, Bool.not_false] <;> omega
-
-/-! ### The pair instance -/
-
-/-- **The state of the GBCA implementation over the gather specifications**:
-the two gather specification states beside the round's bound bit. The
-per-process input is the first instance's call record, the candidate the
-second's, the round's return flag the second's return flag — the triple
-carries the whole round. -/
-abbrev PairState (n : ℕ) : Type :=
-  Gather.SpecState n Bool × Gather.SpecState n (Option Bool) × Option Bool
-
-/-- The initial pair state: no bound bit yet. -/
-def PairState.initial (n : ℕ) : PairState n :=
-  (Gather.SpecState.initial n Bool, Gather.SpecState.initial n (Option Bool), none)
-
-/-- The step relation of the round-`r` GBCA-over-gather instance. Each row
-either relays one gather instance's specification step, or fuses two: the
-environment call with the first gather's call, the first gather's return
-with the second's call (`link`), and the second gather's return with the
-graded ABA-level return (`retG`). The bound bit is written by `link` alone,
-at the round's first link, and announced by `retG`. All transitions are
-Dirac. -/
+/-- The rows of the round over the gather specifications (`GBCA.pairInst`),
+stated over the round's state: one constructor per case of
+`GBCA.pairInst_step_iff_row`. All transitions are Dirac. -/
 inductive PairStep (P : Params) (r : ℕ) :
     PairState P.n → Lab P.n → PMF (PairState P.n) → Prop
-  /-- The environment call is the first gather's call (genuine or loop,
-  whichever the embedded step is). -/
-  | callG (s : PairState P.n) (id : Fin P.n) (b : Bool) (t1' : Gather.SpecState P.n Bool)
-      (h : Gather.Step P s.1 (.call id b) (PMF.pure t1')) :
-      PairStep P r s (.callG r id b) (PMF.pure (t1', s.2))
-  /-- An internal step of the first gather instance. -/
-  | ga1Tau (s : PairState P.n) (t1' : Gather.SpecState P.n Bool)
-      (h : Gather.Step P s.1 Gather.Lab.tau (PMF.pure t1')) :
-      PairStep P r s .tau (PMF.pure (t1', s.2))
-  /-- An internal step of the second gather instance. -/
-  | ga2Tau (s : PairState P.n) (t2' : Gather.SpecState P.n (Option Bool))
-      (h : Gather.Step P s.2.1 Gather.Lab.tau (PMF.pure t2')) :
-      PairStep P r s .tau (PMF.pure (s.1, t2', s.2.2))
-  /-- The first gather returns to `id`, `id` calls the second gather with the
-  candidate, and the round's bound bit is written from the core the return
-  carries if it is unwritten. -/
-  | link (s : PairState P.n) (id : Fin P.n) (g : Fin P.n → Option Bool)
-      (C : APSet P.n Bool) (t1' : Gather.SpecState P.n Bool)
-      (h : Gather.Step P s.1 (.ret id g C) (PMF.pure t1'))
-      (h2 : s.2.1.call id = none) :
+  /-- The call arrives: program `id` records the input and the first gather
+  takes the call. -/
+  | callG (s : PairState P.n) (id : Fin P.n) (b : Bool)
+      (t1 : Gather.SpecState P.n Bool) (h0 : (procs s id).input = none)
+      (h : Gather.Step P (ga1 s) (.call id b) (PMF.pure t1)) :
+      PairStep P r s (.callG r id b)
+        (PMF.pure (setGa1 (setProcs s (Function.update (procs s) id
+          { procs s id with input := some b })) t1))
+  /-- The call loop: no program moves and the first gather takes the call. -/
+  | callLoop (s : PairState P.n) (id : Fin P.n) (b : Bool)
+      (t1 : Gather.SpecState P.n Bool)
+      (h : Gather.Step P (ga1 s) (.call id b) (PMF.pure t1)) :
+      PairStep P r s (.callG r id b) (PMF.pure (setGa1 s t1))
+  /-- An internal step of the first gather. -/
+  | ga1Tau (s : PairState P.n) (t1 : Gather.SpecState P.n Bool)
+      (h : Gather.Step P (ga1 s) Gather.Lab.tau (PMF.pure t1)) :
+      PairStep P r s .tau (PMF.pure (setGa1 s t1))
+  /-- An internal step of the second gather. -/
+  | ga2Tau (s : PairState P.n) (t2 : Gather.SpecState P.n (Option Bool))
+      (h : Gather.Step P (ga2 s) Gather.Lab.tau (PMF.pure t2)) :
+      PairStep P r s .tau (PMF.pure (setGa2 s t2))
+  /-- The first gather returns to `id`: program `id` records the candidate, and
+  the round's bound bit is written from the core the return carries if it is
+  unwritten. -/
+  | ret1 (s : PairState P.n) (id : Fin P.n) (g : Fin P.n → Option Bool)
+      (C : Gather.APSet P.n Bool) (t1 : Gather.SpecState P.n Bool)
+      (hin : (procs s id).input ≠ none) (hc : (procs s id).cand = none)
+      (h : Gather.Step P (ga1 s) (.ret id g C) (PMF.pure t1)) :
       PairStep P r s .tau
-        (PMF.pure (t1', { s.2.1 with
-          call := Function.update s.2.1.call id (some (cand P g)) },
-          some (s.2.2.getD (boundOfCore P C))))
-  /-- The second gather returns to `id` and the round returns the graded
-  outcome, announcing the round's bound bit. -/
-  | retG (s : PairState P.n) (id : Fin P.n) (g : Fin P.n → Option (Option Bool))
-      (C : APSet P.n (Option Bool)) (t2' : Gather.SpecState P.n (Option Bool))
-      (h : Gather.Step P s.2.1 (.ret id g C) (PMF.pure t2')) :
-      PairStep P r s
-        (.retG r id (gradeOf P g) (s.2.2.getD (boundOfCore P ∅)))
-        (PMF.pure (s.1, t2', s.2.2))
-  /-- Corruption (deviation D1), in lockstep across both instances. -/
+        (PMF.pure (setBound (setGa1 (setProcs s (Function.update (procs s) id
+            { procs s id with cand := some (cand P g) })) t1)
+          (some ((bound s).getD (boundOfCore P C)))))
+  /-- Program `id` calls the second gather with the candidate it holds. -/
+  | call2 (s : PairState P.n) (id : Fin P.n) (x : Option Bool)
+      (t2 : Gather.SpecState P.n (Option Bool)) (hc : (procs s id).cand = some x)
+      (h2 : (procs s id).called2 = false)
+      (h : Gather.Step P (ga2 s) (.call id x) (PMF.pure t2)) :
+      PairStep P r s .tau
+        (PMF.pure (setGa2 (setProcs s (Function.update (procs s) id
+          { procs s id with called2 := true })) t2))
+  /-- The second gather returns to `id`: program `id` records the grade. -/
+  | ret2 (s : PairState P.n) (id : Fin P.n) (g : Fin P.n → Option (Option Bool))
+      (C : Gather.APSet P.n (Option Bool)) (t2 : Gather.SpecState P.n (Option Bool))
+      (h2 : (procs s id).called2 = true) (ho : (procs s id).out = none)
+      (h : Gather.Step P (ga2 s) (.ret id g C) (PMF.pure t2)) :
+      PairStep P r s .tau
+        (PMF.pure (setGa2 (setProcs s (Function.update (procs s) id
+          { procs s id with out := some (gradeOf P g) })) t2))
+  /-- The round returns the grade program `id` holds, announcing the round's
+  bound bit. The return announces the grade and the record drops it. -/
+  | retG (s : PairState P.n) (id : Fin P.n) (out : GbcaOut)
+      (ho : (procs s id).out = some out) (hr : (procs s id).returned = false) :
+      PairStep P r s (.retG r id out ((bound s).getD (boundOfCore P ∅)))
+        (PMF.pure (setProcs s (Function.update (procs s) id
+          { procs s id with out := none, returned := true })))
+  /-- Corruption (deviation D1): the two gather instances corrupted in
+  lockstep, the programs and the round's bound bit untouched. -/
   | fail (s : PairState P.n) (id : Fin P.n) :
       PairStep P r s (.fail id)
-        (PMF.pure (s.1.corrupt P id, s.2.1.corrupt P id, s.2.2))
+        (PMF.pure (corruptAll P id (Gather.SpecState.corrupt P)
+          (Gather.SpecState.corrupt P) s))
 
-/-- The round-`r` GBCA-over-gather instance. -/
-noncomputable def pairInst (P : Params) (r : ℕ) :
-    System (PairState P.n) (Lab P.n) where
-  init := PairState.initial P.n
-  step := PairStep P r
+/-! ### The row characterisation -/
 
-@[simp] theorem pairInst_init (P : Params) (r : ℕ) :
-    (pairInst P r).init = PairState.initial P.n := rfl
+/-- **The projection.** -/
+theorem pairInst_step_row (P : Params) (r : ℕ) :
+    ∀ (s : PairState P.n) (l : NLab P.n) (μ : PMF (PairState P.n)),
+      (pairInst P r).step s l μ →
+      ∃ l₀, GSub.gPull P.n l = some l₀ ∧ PairStep P r s l₀ μ := by
+  have h1 : (Gather.liftedSpec P Bool).IsLTS := Gather.liftedSpec_isLTS P
+  have h2 : (Gather.liftedSpec P (Option Bool)).IsLTS := Gather.liftedSpec_isLTS P
+  rintro ⟨⟨u, v⟩, c, d⟩ l μ hstep
+  rcases (roundInstAt_step_iff P r (Gather.liftedSpec P Bool)
+      (Gather.liftedSpec P (Option Bool)) _ l μ).mp hstep with ⟨rfl, e, hev⟩ | hlab
+  · obtain ⟨x, v', c', d', rfl, hlayer, hga1, hga2⟩ :=
+      roundPreAt_joint_inv h1 h2 (by simp) hev
+    refine ⟨Lab.tau, rfl, ?_⟩
+    cases e with
+    | ret1 id g C =>
+      obtain ⟨hproc, hnet⟩ := layer_lab_pure (lp := .ret1 id g C) (by simp) (by simp) hlayer
+      obtain ⟨hin, hc, hxid⟩ := procStep_ret1_own (hproc id)
+      have hfor : ∀ i, i ≠ id → x i = u i :=
+        fun i hi => PMF.pure_injective (procStep_ret1_foreign (Ne.symm hi) (hproc i))
+      have hx := Gather.funPin (PMF.pure_injective hxid) hfor
+      have hv : v' = some (v.getD (boundOfCore P C)) := PMF.pure_injective (netStep_ret1 hnet)
+      have hg1 : Gather.Step P c (.ret id g C) (PMF.pure c') := liftedSpec_step (by simp) hga1
+      have hd : d' = d := Gather.lift_step_none (by simp) hga2
+      subst hx; subst hv; subst hd
+      exact PairStep.ret1 _ id g C c' hin hc hg1
+    | call2 id y =>
+      obtain ⟨hproc, hnet⟩ := layer_lab_pure (lp := .call2 id y) (by simp) (by simp) hlayer
+      obtain ⟨hc, h2', hxid⟩ := procStep_call2_own (hproc id)
+      have hfor : ∀ i, i ≠ id → x i = u i :=
+        fun i hi => PMF.pure_injective (procStep_call2_foreign (Ne.symm hi) (hproc i))
+      have hx := Gather.funPin (PMF.pure_injective hxid) hfor
+      have hv : v' = v := PMF.pure_injective (netStep_call2 hnet)
+      have hc1 : c' = c := Gather.lift_step_none (by simp) hga1
+      have hg2 : Gather.Step P d (.call id y) (PMF.pure d') := liftedSpec_step (by simp) hga2
+      subst hx; subst hv; subst hc1
+      exact PairStep.call2 _ id y d' hc h2' hg2
+    | ret2 id g C =>
+      obtain ⟨hproc, hnet⟩ := layer_lab_pure (lp := .ret2 id g C) (by simp) (by simp) hlayer
+      obtain ⟨h2', ho, hxid⟩ := procStep_ret2_own (hproc id)
+      have hfor : ∀ i, i ≠ id → x i = u i :=
+        fun i hi => PMF.pure_injective (procStep_ret2_foreign (Ne.symm hi) (hproc i))
+      have hx := Gather.funPin (PMF.pure_injective hxid) hfor
+      have hv : v' = v := PMF.pure_injective (netStep_ret2 hnet)
+      have hc1 : c' = c := Gather.lift_step_none (by simp) hga1
+      have hg2 : Gather.Step P d (.ret id g C) (PMF.pure d') := liftedSpec_step (by simp) hga2
+      subst hx; subst hv; subst hc1
+      exact PairStep.ret2 _ id g C d' h2' ho hg2
+  · by_cases hlτ : l = Sum.inl Lab.tau
+    · subst hlτ
+      refine ⟨Lab.tau, rfl, ?_⟩
+      rcases roundPreAt_tau_inv h1 h2 hlab with ⟨c', rfl, hs⟩ | ⟨d', rfl, hs⟩
+      · exact PairStep.ga1Tau _ c' (liftedSpec_tau_step hs)
+      · exact PairStep.ga2Tau _ d' (liftedSpec_tau_step hs)
+    · obtain ⟨x, v', c', d', rfl, hlayer, hga1, hga2⟩ :=
+        roundPreAt_joint_inv h1 h2 (by simpa using hlτ) hlab
+      cases l with
+      | inl l₀ =>
+        cases l₀ with
+        | tau => exact absurd rfl hlτ
+        | callABA id b => exact (layer_outside_inv (by simp) hlayer).elim
+        | retABA id b => exact (layer_outside_inv (by simp) hlayer).elim
+        | callW r' id => exact (layer_outside_inv (by simp) hlayer).elim
+        | retW r' id b => exact (layer_outside_inv (by simp) hlayer).elim
+        | callG r' id b =>
+          obtain ⟨hproc, hnet⟩ := layer_lab_pure (lp := .callG r' id b) (by simp) (by simp) hlayer
+          obtain rfl : r' = r := procStep_callG_round (hproc id)
+          obtain ⟨h0, hxid⟩ := procStep_callG_own (hproc id)
+          have hfor : ∀ i, i ≠ id → x i = u i :=
+            fun i hi => PMF.pure_injective (procStep_callG_foreign (Ne.symm hi) (hproc i))
+          have hx := Gather.funPin (PMF.pure_injective hxid) hfor
+          have hv : v' = v := PMF.pure_injective (netStep_callG hnet)
+          have hg1 : Gather.Step P c (.call id b) (PMF.pure c') := liftedSpec_step (by simp) hga1
+          have hd : d' = d := Gather.lift_step_none (by simp) hga2
+          subst hx; subst hv; subst hd
+          exact ⟨_, rfl, PairStep.callG _ id b c' h0 hg1⟩
+        | retG r' id out bnd =>
+          obtain ⟨hproc, hnet⟩ :=
+            layer_lab_pure (lp := .retG r' id out bnd) (by simp) (by simp) hlayer
+          obtain rfl : r' = r := procStep_retG_round (hproc id)
+          obtain ⟨ho, hr, hxid⟩ := procStep_retG_own (hproc id)
+          obtain ⟨rfl, hv⟩ := netStep_retG hnet
+          have hfor : ∀ i, i ≠ id → x i = u i :=
+            fun i hi => PMF.pure_injective (procStep_retG_foreign (Ne.symm hi) (hproc i))
+          have hx := Gather.funPin (PMF.pure_injective hxid) hfor
+          have hv' : v' = v := PMF.pure_injective hv
+          have hc1 : c' = c := Gather.lift_step_none (by simp) hga1
+          have hd : d' = d := Gather.lift_step_none (by simp) hga2
+          subst hx; subst hv'; subst hc1; subst hd
+          exact ⟨_, rfl, PairStep.retG _ id out ho hr⟩
+        | fail id =>
+          obtain ⟨hx, hv⟩ := layer_idle_pure (by simp) hlayer
+          have hg1 : Gather.Step P c (.fail id) (PMF.pure c') := liftedSpec_step (by simp) hga1
+          have hg2 : Gather.Step P d (.fail id) (PMF.pure d') := liftedSpec_step (by simp) hga2
+          have hc1 : c' = c.corrupt P id := PMF.pure_injective (specStep_fail hg1)
+          have hd1 : d' = d.corrupt P id := PMF.pure_injective (specStep_fail hg2)
+          subst hx; subst hv; subst hc1; subst hd1
+          exact ⟨_, rfl, PairStep.fail _ id⟩
+      | inr ev =>
+        cases ev with
+        | gsnd r' j m => exact (layer_outside_inv (by simp) hlayer).elim
+        | gdlv r' i j m => exact (layer_outside_inv (by simp) hlayer).elim
+        | dsnd j b => exact (layer_outside_inv (by simp) hlayer).elim
+        | ddlv i j b => exact (layer_outside_inv (by simp) hlayer).elim
+        | retWPub r' id cc b => exact (layer_outside_inv (by simp) hlayer).elim
+        | byzCallW r' k => exact (layer_outside_inv (by simp) hlayer).elim
+        | byzRetW r' k b => exact (layer_outside_inv (by simp) hlayer).elim
+        | gcallLoop r' id b =>
+          obtain ⟨hproc, hnet⟩ :=
+            layer_lab_pure (lp := .callLoop r' id b) (by simp) (by simp) hlayer
+          obtain rfl : r' = r := procStep_callLoop_round (hproc id)
+          have hx : x = u := funext fun i => PMF.pure_injective (procStep_callLoop (hproc i))
+          have hv : v' = v := PMF.pure_injective (netStep_callLoop hnet)
+          have hg1 : Gather.Step P c (.call id b) (PMF.pure c') :=
+            liftedSpec_loop_step (by simp) hga1
+          have hd : d' = d := Gather.lift_step_none (by simp) hga2
+          subst hx; subst hv; subst hd
+          exact ⟨_, rfl, PairStep.callLoop _ id b c' hg1⟩
+        | byzCallG r' k b =>
+          obtain ⟨hproc, hnet⟩ := layer_lab_pure (lp := .callG r' k b) (by simp) (by simp) hlayer
+          obtain rfl : r' = r := procStep_callG_round (hproc k)
+          obtain ⟨h0, hxid⟩ := procStep_callG_own (hproc k)
+          have hfor : ∀ i, i ≠ k → x i = u i :=
+            fun i hi => PMF.pure_injective (procStep_callG_foreign (Ne.symm hi) (hproc i))
+          have hx := Gather.funPin (PMF.pure_injective hxid) hfor
+          have hv : v' = v := PMF.pure_injective (netStep_callG hnet)
+          have hg1 : Gather.Step P c (.call k b) (PMF.pure c') := liftedSpec_step (by simp) hga1
+          have hd : d' = d := Gather.lift_step_none (by simp) hga2
+          subst hx; subst hv; subst hd
+          exact ⟨_, rfl, PairStep.callG _ k b c' h0 hg1⟩
+        | byzCallGLoop r' k b =>
+          obtain ⟨hproc, hnet⟩ :=
+            layer_lab_pure (lp := .callLoop r' k b) (by simp) (by simp) hlayer
+          obtain rfl : r' = r := procStep_callLoop_round (hproc k)
+          have hx : x = u := funext fun i => PMF.pure_injective (procStep_callLoop (hproc i))
+          have hv : v' = v := PMF.pure_injective (netStep_callLoop hnet)
+          have hg1 : Gather.Step P c (.call k b) (PMF.pure c') :=
+            liftedSpec_loop_step (by simp) hga1
+          have hd : d' = d := Gather.lift_step_none (by simp) hga2
+          subst hx; subst hv; subst hd
+          exact ⟨_, rfl, PairStep.callLoop _ k b c' hg1⟩
+        | byzRetG r' k out bnd =>
+          obtain ⟨hproc, hnet⟩ :=
+            layer_lab_pure (lp := .retG r' k out bnd) (by simp) (by simp) hlayer
+          obtain rfl : r' = r := procStep_retG_round (hproc k)
+          obtain ⟨ho, hr, hxid⟩ := procStep_retG_own (hproc k)
+          obtain ⟨rfl, hv⟩ := netStep_retG hnet
+          have hfor : ∀ i, i ≠ k → x i = u i :=
+            fun i hi => PMF.pure_injective (procStep_retG_foreign (Ne.symm hi) (hproc i))
+          have hx := Gather.funPin (PMF.pure_injective hxid) hfor
+          have hv' : v' = v := PMF.pure_injective hv
+          have hc1 : c' = c := Gather.lift_step_none (by simp) hga1
+          have hd : d' = d := Gather.lift_step_none (by simp) hga2
+          subst hx; subst hv'; subst hc1; subst hd
+          exact ⟨_, rfl, PairStep.retG _ k out ho hr⟩
 
-@[simp] theorem pairInst_step (P : Params) (r : ℕ) (s : PairState P.n)
-    (l : Lab P.n) (μ : PMF (PairState P.n)) :
-    (pairInst P r).step s l μ ↔ PairStep P r s l μ := Iff.rfl
+/-- **The embedding.** -/
+theorem row_pairInst_step (P : Params) (r : ℕ) :
+    ∀ (s : PairState P.n) (l₀ : Lab P.n) (μ : PMF (PairState P.n)),
+      PairStep P r s l₀ μ →
+      ∃ l, GSub.gPull P.n l = some l₀ ∧ (pairInst P r).step s l μ := by
+  rintro ⟨⟨u, v⟩, c, d⟩ l₀ μ hrow
+  cases hrow with
+  | callG id b t1 h0 h =>
+    have hlayer : (layer P r).step (u, v) (Sum.inl (Sum.inl (Lab.callG r id b)))
+        (PMF.pure (Function.update u id { u id with input := some b }, v)) :=
+      layer_lab_step (lp := .callG r id b) (by simp) (by simp)
+        (procStep_update (ProcStep.callG (u id) b h0)
+          (fun i hi => ProcStep.callGIdle (u i) id b (Ne.symm hi)))
+        (NetStep.callG v id b)
+    have hg1 : ((Gather.liftedSpec P Bool).mapIdle (ga1Pull P.n)).step c
+        (Sum.inl (Sum.inl (Lab.callG r id b))) (PMF.pure t1) :=
+      row_liftedSpec_step (by simp) h
+    have hg2 : ((Gather.liftedSpec P (Option Bool)).mapIdle (ga2Pull P.n)).step d
+        (Sum.inl (Sum.inl (Lab.callG r id b))) (PMF.pure d) := Gather.lift_idle (by simp)
+    exact ⟨Sum.inl (.callG r id b), rfl, roundInstAt_lab_step (by simp) hlayer hg1 hg2⟩
+  | callLoop id b t1 h =>
+    have hlayer : (layer P r).step (u, v) (Sum.inl (Sum.inr (Net.NetEvtP.gcallLoop r id b)))
+        (PMF.pure (u, v)) := by
+      refine layer_lab_step (lp := .callLoop r id b) (by simp) (by simp) (fun i => ?_)
+        (NetStep.callLoop v id b)
+      by_cases hi : i = id
+      · subst hi; exact ProcStep.callLoop (u i) b
+      · exact ProcStep.callLoopIdle (u i) id b (Ne.symm hi)
+    have hg1 : ((Gather.liftedSpec P Bool).mapIdle (ga1Pull P.n)).step c
+        (Sum.inl (Sum.inr (Net.NetEvtP.gcallLoop r id b))) (PMF.pure t1) :=
+      row_liftedSpec_loop_step (by simp) h
+    have hg2 : ((Gather.liftedSpec P (Option Bool)).mapIdle (ga2Pull P.n)).step d
+        (Sum.inl (Sum.inr (Net.NetEvtP.gcallLoop r id b))) (PMF.pure d) :=
+      Gather.lift_idle (by simp)
+    exact ⟨Sum.inr (.gcallLoop r id b), rfl, roundInstAt_lab_step (by simp) hlayer hg1 hg2⟩
+  | ga1Tau t1 h =>
+    exact ⟨Sum.inl Lab.tau, rfl, roundInstAt_tau_ga1 (row_liftedSpec_tau_step h)⟩
+  | ga2Tau t2 h =>
+    exact ⟨Sum.inl Lab.tau, rfl, roundInstAt_tau_ga2 (row_liftedSpec_tau_step h)⟩
+  | ret1 id g C t1 hin hc h =>
+    have hlayer : (layer P r).step (u, v) (Sum.inr (REvt.ret1 id g C))
+        (PMF.pure (Function.update u id { u id with cand := some (cand P g) },
+          some (v.getD (boundOfCore P C)))) :=
+      layer_lab_step (lp := .ret1 id g C) (by simp) (by simp)
+        (procStep_update (ProcStep.ret1 (u id) g C hin hc)
+          (fun i hi => ProcStep.ret1Idle (u i) id g C (Ne.symm hi)))
+        (NetStep.ret1 v id g C)
+    have hg1 : ((Gather.liftedSpec P Bool).mapIdle (ga1Pull P.n)).step c
+        (Sum.inr (REvt.ret1 id g C)) (PMF.pure t1) := row_liftedSpec_step (by simp) h
+    have hg2 : ((Gather.liftedSpec P (Option Bool)).mapIdle (ga2Pull P.n)).step d
+        (Sum.inr (REvt.ret1 id g C)) (PMF.pure d) := Gather.lift_idle (by simp)
+    exact ⟨Sum.inl Lab.tau, rfl, roundInstAt_event_step _ hlayer hg1 hg2⟩
+  | call2 id y t2 hc h2 h =>
+    have hlayer : (layer P r).step (u, v) (Sum.inr (REvt.call2 id y))
+        (PMF.pure (Function.update u id { u id with called2 := true }, v)) :=
+      layer_lab_step (lp := .call2 id y) (by simp) (by simp)
+        (procStep_update (ProcStep.call2 (u id) y hc h2)
+          (fun i hi => ProcStep.call2Idle (u i) id y (Ne.symm hi)))
+        (NetStep.call2 v id y)
+    have hg1 : ((Gather.liftedSpec P Bool).mapIdle (ga1Pull P.n)).step c
+        (Sum.inr (REvt.call2 id y)) (PMF.pure c) := Gather.lift_idle (by simp)
+    have hg2 : ((Gather.liftedSpec P (Option Bool)).mapIdle (ga2Pull P.n)).step d
+        (Sum.inr (REvt.call2 id y)) (PMF.pure t2) := row_liftedSpec_step (by simp) h
+    exact ⟨Sum.inl Lab.tau, rfl, roundInstAt_event_step _ hlayer hg1 hg2⟩
+  | ret2 id g C t2 h2 ho h =>
+    have hlayer : (layer P r).step (u, v) (Sum.inr (REvt.ret2 id g C))
+        (PMF.pure (Function.update u id { u id with out := some (gradeOf P g) }, v)) :=
+      layer_lab_step (lp := .ret2 id g C) (by simp) (by simp)
+        (procStep_update (ProcStep.ret2 (u id) g C h2 ho)
+          (fun i hi => ProcStep.ret2Idle (u i) id g C (Ne.symm hi)))
+        (NetStep.ret2 v id g C)
+    have hg1 : ((Gather.liftedSpec P Bool).mapIdle (ga1Pull P.n)).step c
+        (Sum.inr (REvt.ret2 id g C)) (PMF.pure c) := Gather.lift_idle (by simp)
+    have hg2 : ((Gather.liftedSpec P (Option Bool)).mapIdle (ga2Pull P.n)).step d
+        (Sum.inr (REvt.ret2 id g C)) (PMF.pure t2) := row_liftedSpec_step (by simp) h
+    exact ⟨Sum.inl Lab.tau, rfl, roundInstAt_event_step _ hlayer hg1 hg2⟩
+  | retG id out ho hr =>
+    have hlayer : (layer P r).step (u, v)
+        (Sum.inl (Sum.inl (Lab.retG r id out (v.getD (boundOfCore P ∅)))))
+        (PMF.pure (Function.update u id { u id with out := none, returned := true }, v)) :=
+      layer_lab_step (lp := .retG r id out (v.getD (boundOfCore P ∅))) (by simp) (by simp)
+        (procStep_update (ProcStep.retG (u id) out _ ho hr)
+          (fun i hi => ProcStep.retGIdle (u i) id out _ (Ne.symm hi)))
+        (NetStep.retG v id out)
+    have hg1 : ((Gather.liftedSpec P Bool).mapIdle (ga1Pull P.n)).step c
+        (Sum.inl (Sum.inl (Lab.retG r id out (v.getD (boundOfCore P ∅))))) (PMF.pure c) :=
+      Gather.lift_idle (by simp)
+    have hg2 : ((Gather.liftedSpec P (Option Bool)).mapIdle (ga2Pull P.n)).step d
+        (Sum.inl (Sum.inl (Lab.retG r id out (v.getD (boundOfCore P ∅))))) (PMF.pure d) :=
+      Gather.lift_idle (by simp)
+    exact ⟨Sum.inl (.retG r id out (v.getD (boundOfCore P ∅))), rfl,
+      roundInstAt_lab_step (by simp) hlayer hg1 hg2⟩
+  | fail id =>
+    have hlayer : (layer P r).step (u, v) (Sum.inl (Sum.inl (Lab.fail id)))
+        (PMF.pure (u, v)) := layer_idle_step (by simp)
+    have hg1 : ((Gather.liftedSpec P Bool).mapIdle (ga1Pull P.n)).step c
+        (Sum.inl (Sum.inl (Lab.fail id))) (PMF.pure (c.corrupt P id)) :=
+      row_liftedSpec_step (by simp) (Gather.Step.fail c id)
+    have hg2 : ((Gather.liftedSpec P (Option Bool)).mapIdle (ga2Pull P.n)).step d
+        (Sum.inl (Sum.inl (Lab.fail id))) (PMF.pure (d.corrupt P id)) :=
+      row_liftedSpec_step (by simp) (Gather.Step.fail d id)
+    exact ⟨Sum.inl (.fail id), rfl, roundInstAt_lab_step (by simp) hlayer hg1 hg2⟩
 
-/-- Every transition is Dirac: the instance is an LTS. -/
-theorem pairInst_isLTS (P : Params) (r : ℕ) : (pairInst P r).IsLTS := by
-  rintro s l μ hstep
-  cases hstep <;> exact ⟨_, rfl⟩
+/-- **The row characterisation.** At a shared label `l₀`, the transitions of
+the round over the labels `GSub.gPull` sends to `l₀` are exactly the `l₀`-rows
+of `PairStep`, on the same state and with the same distribution. -/
+theorem pairInst_step_iff_row (P : Params) (r : ℕ) (s : PairState P.n) (l₀ : Lab P.n)
+    (μ : PMF (PairState P.n)) :
+    (∃ l, GSub.gPull P.n l = some l₀ ∧ (pairInst P r).step s l μ) ↔ PairStep P r s l₀ μ := by
+  constructor
+  · rintro ⟨l, hl, hstep⟩
+    obtain ⟨l₁, hl₁, hrow⟩ := pairInst_step_row P r s l μ hstep
+    have hll : l₁ = l₀ := Option.some.inj (show (some l₁ : Option (Lab P.n)) = some l₀ by
+      rw [← hl₁, hl])
+    subst hll
+    exact hrow
+  · exact row_pairInst_step P r s l₀ μ
+
+/-- info: 'PLTS.ABA.GBCA.pairInst_step_iff_row' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms pairInst_step_iff_row
 
 end GBCA
 end ABA

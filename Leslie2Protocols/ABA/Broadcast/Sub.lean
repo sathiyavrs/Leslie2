@@ -27,8 +27,8 @@ that the message is sent under the named sender, and the receiver, which files
 it under that sender's row.
 
 The two rendezvous are labels of the instance-internal alphabet
-`BLab n M = SubLab n M ⊕ BEvt n M`, and they are hidden before anything outside
-sees the instance: `sub` speaks `SubLab n M`, in which the instance's interface
+`BLab n M = InstLab n M ⊕ BEvt n M`, and they are hidden before anything outside
+sees the instance: `implInst` speaks `InstLab n M`, in which the instance's interface
 is the leader's call, the per-process returns, corruption and the call loop.
 
 ## The alphabet
@@ -41,11 +41,11 @@ leader looping while the network posts `⟨INIT, m⟩`, and the leader recording
 its payload while the network posts nothing. The loop therefore has a label of
 its own, `Extra.callLoop m`, and the specification is read along `specPull`,
 which sends that label to `call m`: the specification answers it on its own
-loop row. The interface alphabet is `SubLab n M = Lab n M ⊕ Extra M`.
+loop row. The interface alphabet is `InstLab n M = Lab n M ⊕ Extra M`.
 
 ## The rows
 
-`sub_step_iff_row` is the row characterisation: at a specification label `l₀`,
+`implInst_step_iff_row` is the row characterisation: at a specification label `l₀`,
 the transitions of the composition over the labels `specPull` sends to `l₀` are
 exactly the `l₀`-rows of `BRB.ImplStep` (`ABA/Broadcast/Impl.lean`), one
 constructor per case, on the same product state and with the same distribution.
@@ -84,7 +84,7 @@ inductive Extra (M : Type) : Type
 
 /-- The instance's interface alphabet: the specification's alphabet with the
 call loop beside it. -/
-abbrev SubLab (n : ℕ) (M : Type) : Type := Lab n M ⊕ Extra M
+abbrev InstLab (n : ℕ) (M : Type) : Type := Lab n M ⊕ Extra M
 
 /-- The internal rendezvous of one instance: the multicast and the delivery. -/
 inductive BEvt (n : ℕ) (M : Type) : Type
@@ -97,12 +97,12 @@ inductive BEvt (n : ℕ) (M : Type) : Type
 /-- The instance-internal alphabet: the interface alphabet plus the two
 rendezvous. Its silent label is `Sum.inl τ`, so every `Sum.inr` label is
 observable and hence hideable. -/
-abbrev BLab (n : ℕ) (M : Type) : Type := SubLab n M ⊕ BEvt n M
+abbrev BLab (n : ℕ) (M : Type) : Type := InstLab n M ⊕ BEvt n M
 
 /-- The rendezvous labels, hidden by the instance. -/
 def bEvents (n : ℕ) (M : Type) : Set (BLab n M) := {l | ∃ e : BEvt n M, l = Sum.inr e}
 
-@[simp] theorem inl_notMem_bEvents {n : ℕ} {M : Type} (l : SubLab n M) :
+@[simp] theorem inl_notMem_bEvents {n : ℕ} {M : Type} (l : InstLab n M) :
     Sum.inl l ∉ bEvents n M := by
   simp [bEvents]
 
@@ -241,29 +241,29 @@ noncomputable def brbNet (P : Params) (ldr : Fin P.n) (M : Type) [DecidableEq M]
     (brbNet P ldr M).step w l μ ↔ NetStep P ldr w l μ := Iff.rfl
 
 /-- The programs beside the network, over the instance-internal alphabet. -/
-noncomputable def subPre (P : Params) (ldr : Fin P.n) (M : Type) [DecidableEq M] :
+noncomputable def implPre (P : Params) (ldr : Fin P.n) (M : Type) [DecidableEq M] :
     System (ImplState P.n M) (BLab P.n M) :=
   (System.syncProduct (brbProc P ldr (M := M))).parallel (brbNet P ldr M)
 
 /-- **The reliable-broadcast instance**: the programs beside the network, the
 two rendezvous hidden, the result read back over the interface alphabet. -/
-noncomputable def sub (P : Params) (ldr : Fin P.n) (M : Type) [DecidableEq M] :
-    System (ImplState P.n M) (SubLab P.n M) :=
-  ((subPre P ldr M).abstract (bEvents P.n M)).relabel
+noncomputable def implInst (P : Params) (ldr : Fin P.n) (M : Type) [DecidableEq M] :
+    System (ImplState P.n M) (InstLab P.n M) :=
+  ((implPre P ldr M).abstract (bEvents P.n M)).relabel
 
-@[simp] theorem sub_init (P : Params) (ldr : Fin P.n) :
-    (sub P ldr M).init = ImplState.initial P.n M := rfl
+@[simp] theorem implInst_init (P : Params) (ldr : Fin P.n) :
+    (implInst P ldr M).init = ImplState.initial P.n M := rfl
 
 /-! ### The specification read over the instance's interface
 
-The specification speaks `Lab n M`; the instance speaks `SubLab n M`, in which
+The specification speaks `Lab n M`; the instance speaks `InstLab n M`, in which
 the call loop is a label of its own. `specPull` is the projection that
 identifies the loop with the specification label it stands for, so that the
 specification's own loop row answers it. -/
 
 /-- The projection of the interface alphabet onto the specification's
 alphabet. -/
-def specPull (n : ℕ) (M : Type) : SubLab n M → Option (Lab n M)
+def specPull (n : ℕ) (M : Type) : InstLab n M → Option (Lab n M)
   | Sum.inl l => some l
   | Sum.inr (.callLoop m) => some (.call m)
 
@@ -275,18 +275,18 @@ def specPull (n : ℕ) (M : Type) : SubLab n M → Option (Lab n M)
 
 /-- The silent label projects to the silent label. -/
 @[simp] theorem specPull_tau (n : ℕ) (M : Type) :
-    specPull n M (Silent.τ : SubLab n M) = some (Silent.τ : Lab n M) := rfl
+    specPull n M (Silent.τ : InstLab n M) = some (Silent.τ : Lab n M) := rfl
 
 /-- Only the silent label projects to the silent label: the call loop projects
 to the call. -/
-theorem specPull_eq_tau {n : ℕ} {M : Type} {l : SubLab n M} (h : specPull n M l = some Lab.tau) :
+theorem specPull_eq_tau {n : ℕ} {M : Type} {l : InstLab n M} (h : specPull n M l = some Lab.tau) :
     l = Sum.inl Lab.tau := by
   cases l with
   | inl l₀ => rw [Option.some.inj h]
   | inr e => cases e; simp at h
 
 /-- Every interface label carries a specification label. -/
-theorem specPull_isSome {n : ℕ} {M : Type} (l : SubLab n M) : ∃ l₀, specPull n M l = some l₀ := by
+theorem specPull_isSome {n : ℕ} {M : Type} (l : InstLab n M) : ∃ l₀, specPull n M l = some l₀ := by
   cases l with
   | inl l₀ => exact ⟨l₀, rfl⟩
   | inr e => cases e; exact ⟨_, rfl⟩
@@ -294,7 +294,7 @@ theorem specPull_isSome {n : ℕ} {M : Type} (l : SubLab n M) : ∃ l₀, specPu
 /-- **The lifted specification**: the specification instance with leader `ldr`,
 read over the instance's interface. -/
 noncomputable def liftedSpec (P : Params) (ldr : Fin P.n) (M : Type) :
-    System (SpecState P.n M) (SubLab P.n M) :=
+    System (SpecState P.n M) (InstLab P.n M) :=
   (specInst P ldr M).mapIdle (specPull P.n M)
 
 @[simp] theorem liftedSpec_init {M : Type} (P : Params) (ldr : Fin P.n) :
@@ -330,12 +330,12 @@ theorem syncB_isLTS (P : Params) (ldr : Fin P.n) :
   System.syncProduct_isLTS (brbProc_isLTS P ldr)
 
 /-- The programs beside the network form an LTS. -/
-theorem subPre_isLTS (P : Params) (ldr : Fin P.n) : (subPre P ldr M).IsLTS :=
+theorem implPre_isLTS (P : Params) (ldr : Fin P.n) : (implPre P ldr M).IsLTS :=
   System.parallel_isLTS (syncB_isLTS P ldr) (brbNet_isLTS P ldr)
 
 /-- The instance is an LTS. -/
-theorem sub_isLTS (P : Params) (ldr : Fin P.n) : (sub P ldr M).IsLTS :=
-  System.relabel_isLTS (System.abstract_isLTS (subPre_isLTS P ldr) _)
+theorem implInst_isLTS (P : Params) (ldr : Fin P.n) : (implInst P ldr M).IsLTS :=
+  System.relabel_isLTS (System.abstract_isLTS (implPre_isLTS P ldr) _)
 
 /-- The lifted specification is an LTS: the specification is, and reading it
 back adds only Dirac self-loops. -/
@@ -359,13 +359,13 @@ instance actually took — this is what turns a specification `call` run into th
 answer to the call loop. -/
 
 /-- The left injection: the interface label a specification label sits at. -/
-def sect {n : ℕ} {M : Type} : Lab n M → SubLab n M := Sum.inl
+def sect {n : ℕ} {M : Type} : Lab n M → InstLab n M := Sum.inl
 
 open scoped Classical in
 /-- The section of `specPull` that answers the interface label `l` over the
 specification label `l₀`. -/
-noncomputable def sectAt {n : ℕ} {M : Type} (l₀ : Lab n M) (l : SubLab n M) :
-    Lab n M → SubLab n M :=
+noncomputable def sectAt {n : ℕ} {M : Type} (l₀ : Lab n M) (l : InstLab n M) :
+    Lab n M → InstLab n M :=
   fun x => if x = l₀ then l else sect x
 
 @[simp] theorem specPull_sect {n : ℕ} {M : Type} (x : Lab n M) :
@@ -373,20 +373,20 @@ noncomputable def sectAt {n : ℕ} {M : Type} (l₀ : Lab n M) (l : SubLab n M) 
 
 /-- The left injection reflects the silent label. -/
 theorem sect_eq_tau {n : ℕ} {M : Type} (x : Lab n M) :
-    (sect x : SubLab n M) = (Silent.τ : SubLab n M) ↔ x = (Silent.τ : Lab n M) :=
+    (sect x : InstLab n M) = (Silent.τ : InstLab n M) ↔ x = (Silent.τ : Lab n M) :=
   inl_eq_tau_iff x
 
-theorem specPull_sectAt {n : ℕ} {M : Type} {l₀ : Lab n M} {l : SubLab n M}
+theorem specPull_sectAt {n : ℕ} {M : Type} {l₀ : Lab n M} {l : InstLab n M}
     (hl : specPull n M l = some l₀) (x : Lab n M) : specPull n M (sectAt l₀ l x) = some x := by
   unfold sectAt
   by_cases hx : x = l₀
   · rw [if_pos hx, hl, hx]
   · rw [if_neg hx, specPull_sect]
 
-theorem sectAt_tau {n : ℕ} {M : Type} {l₀ : Lab n M} {l : SubLab n M}
+theorem sectAt_tau {n : ℕ} {M : Type} {l₀ : Lab n M} {l : InstLab n M}
     (hl : specPull n M l = some l₀)
     (hl₀ : l₀ ≠ (Silent.τ : Lab n M)) (x : Lab n M) :
-    sectAt l₀ l x = (Silent.τ : SubLab n M) ↔ x = (Silent.τ : Lab n M) := by
+    sectAt l₀ l x = (Silent.τ : InstLab n M) ↔ x = (Silent.τ : Lab n M) := by
   unfold sectAt
   by_cases hx : x = l₀
   · rw [if_pos hx, hx]
@@ -408,7 +408,7 @@ theorem weakLSilent_liftedSpec {M : Type} (P : Params) (ldr : Fin P.n) {s s' : S
 specification at any interface label projecting to the same specification
 label. -/
 theorem weakLStep_liftedSpec {M : Type} (P : Params) (ldr : Fin P.n) {s s' : SpecState P.n M}
-    {l₀ : Lab P.n M} {l : SubLab P.n M} (hl₀ : l₀ ≠ (Silent.τ : Lab P.n M))
+    {l₀ : Lab P.n M} {l : InstLab P.n M} (hl₀ : l₀ ≠ (Silent.τ : Lab P.n M))
     (hl : specPull P.n M l = some l₀)
     (h : (specInst P ldr M).weakLStep s l₀ s') : (liftedSpec P ldr M).weakLStep s l s' :=
   System.weakLStep_mapIdle (sectAt l₀ l) (specPull_sectAt hl) (sectAt_tau hl hl₀)
@@ -458,11 +458,11 @@ theorem syncB_no_tau {P : Params} {ldr : Fin P.n}
 
 /-- The instance's step relation, unfolded to the hidden-rendezvous case and
 the interface-label case. -/
-theorem sub_step_iff (P : Params) (ldr : Fin P.n) (q : ImplState P.n M) (l : SubLab P.n M)
+theorem implInst_step_iff (P : Params) (ldr : Fin P.n) (q : ImplState P.n M) (l : InstLab P.n M)
     (μ : PMF (ImplState P.n M)) :
-    (sub P ldr M).step q l μ ↔
-      (l = Sum.inl Lab.tau ∧ ∃ e : BEvt P.n M, (subPre P ldr M).step q (Sum.inr e) μ) ∨
-      (subPre P ldr M).step q (Sum.inl l) μ := by
+    (implInst P ldr M).step q l μ ↔
+      (l = Sum.inl Lab.tau ∧ ∃ e : BEvt P.n M, (implPre P ldr M).step q (Sum.inr e) μ) ∨
+      (implPre P ldr M).step q (Sum.inl l) μ := by
   constructor
   · rintro (⟨hτ, l', ⟨e, rfl⟩, hstep⟩ | ⟨-, hstep⟩)
     · exact Or.inl ⟨Sum.inl_injective hτ, e, hstep⟩
@@ -473,77 +473,77 @@ theorem sub_step_iff (P : Params) (ldr : Fin P.n) (q : ImplState P.n M) (l : Sub
 
 /-- Build a joint transition of the programs and the network on a rendezvous
 label. -/
-theorem subPre_event_step (P : Params) (ldr : Fin P.n)
+theorem implPre_event_step (P : Params) (ldr : Fin P.n)
     {u x : ∀ _ : Fin P.n, LocalState P.n (PState M) (BMsg M)}
     {w w' : NetworkState P.n (BMsg M)} (e : BEvt P.n M)
     (hall : ∀ i, ProcStep P ldr i (u i) (Sum.inr e) (PMF.pure (x i)))
     (hn : NetStep P ldr w (Sum.inr e) (PMF.pure w')) :
-    (subPre P ldr M).step (u, w) (Sum.inr e) (PMF.pure (x, w')) := by
-  rw [subPre, System.parallel_step]
+    (implPre P ldr M).step (u, w) (Sum.inr e) (PMF.pure (x, w')) := by
+  rw [implPre, System.parallel_step]
   exact Or.inl ⟨by simp, PMF.pure x, PMF.pure w', syncB_pure (by simp) hall, hn,
     (prodPMF_pure_pure _ _).symm⟩
 
 /-- Build a joint transition of the programs and the network on a visible
 interface label. -/
-theorem subPre_lab_step (P : Params) (ldr : Fin P.n)
+theorem implPre_lab_step (P : Params) (ldr : Fin P.n)
     {u x : ∀ _ : Fin P.n, LocalState P.n (PState M) (BMsg M)}
-    {w w' : NetworkState P.n (BMsg M)} {l : SubLab P.n M} (hl : l ≠ Sum.inl Lab.tau)
+    {w w' : NetworkState P.n (BMsg M)} {l : InstLab P.n M} (hl : l ≠ Sum.inl Lab.tau)
     (hall : ∀ i, ProcStep P ldr i (u i) (Sum.inl l) (PMF.pure (x i)))
     (hn : NetStep P ldr w (Sum.inl l) (PMF.pure w')) :
-    (subPre P ldr M).step (u, w) (Sum.inl l) (PMF.pure (x, w')) := by
+    (implPre P ldr M).step (u, w) (Sum.inl l) (PMF.pure (x, w')) := by
   have hne : (Sum.inl l : BLab P.n M) ≠ Silent.τ := by
     rw [blab_tau]; simpa using hl
-  rw [subPre, System.parallel_step]
+  rw [implPre, System.parallel_step]
   exact Or.inl ⟨hne, PMF.pure x, PMF.pure w', syncB_pure hne hall, hn,
     (prodPMF_pure_pure _ _).symm⟩
 
 /-- Build a silent transition of the programs and the network from a
 network-local one. -/
-theorem subPre_tau_net (P : Params) (ldr : Fin P.n)
+theorem implPre_tau_net (P : Params) (ldr : Fin P.n)
     {u : ∀ _ : Fin P.n, LocalState P.n (PState M) (BMsg M)}
     {w w' : NetworkState P.n (BMsg M)}
     (hn : NetStep P ldr w (Sum.inl (Sum.inl .tau)) (PMF.pure w')) :
-    (subPre P ldr M).step (u, w) (Sum.inl (Sum.inl .tau)) (PMF.pure (u, w')) := by
-  rw [subPre, System.parallel_step]
+    (implPre P ldr M).step (u, w) (Sum.inl (Sum.inl .tau)) (PMF.pure (u, w')) := by
+  rw [implPre, System.parallel_step]
   exact Or.inr (Or.inr ⟨rfl, PMF.pure w', hn, (prodPMF_pure_pure _ _).symm⟩)
 
 /-- A hidden rendezvous is a silent transition of the instance. -/
-theorem sub_event_step (P : Params) (ldr : Fin P.n)
+theorem implInst_event_step (P : Params) (ldr : Fin P.n)
     {u x : ∀ _ : Fin P.n, LocalState P.n (PState M) (BMsg M)}
     {w w' : NetworkState P.n (BMsg M)} (e : BEvt P.n M)
     (hall : ∀ i, ProcStep P ldr i (u i) (Sum.inr e) (PMF.pure (x i)))
     (hn : NetStep P ldr w (Sum.inr e) (PMF.pure w')) :
-    (sub P ldr M).step (u, w) (Sum.inl Lab.tau) (PMF.pure (x, w')) :=
-  (sub_step_iff P ldr _ _ _).mpr (Or.inl ⟨rfl, e, subPre_event_step P ldr e hall hn⟩)
+    (implInst P ldr M).step (u, w) (Sum.inl Lab.tau) (PMF.pure (x, w')) :=
+  (implInst_step_iff P ldr _ _ _).mpr (Or.inl ⟨rfl, e, implPre_event_step P ldr e hall hn⟩)
 
 /-- A visible interface label is a transition of the instance. -/
-theorem sub_lab_step (P : Params) (ldr : Fin P.n)
+theorem implInst_lab_step (P : Params) (ldr : Fin P.n)
     {u x : ∀ _ : Fin P.n, LocalState P.n (PState M) (BMsg M)}
-    {w w' : NetworkState P.n (BMsg M)} {l : SubLab P.n M} (hl : l ≠ Sum.inl Lab.tau)
+    {w w' : NetworkState P.n (BMsg M)} {l : InstLab P.n M} (hl : l ≠ Sum.inl Lab.tau)
     (hall : ∀ i, ProcStep P ldr i (u i) (Sum.inl l) (PMF.pure (x i)))
     (hn : NetStep P ldr w (Sum.inl l) (PMF.pure w')) :
-    (sub P ldr M).step (u, w) l (PMF.pure (x, w')) :=
-  (sub_step_iff P ldr _ _ _).mpr (Or.inr (subPre_lab_step P ldr hl hall hn))
+    (implInst P ldr M).step (u, w) l (PMF.pure (x, w')) :=
+  (implInst_step_iff P ldr _ _ _).mpr (Or.inr (implPre_lab_step P ldr hl hall hn))
 
 /-- A network-local injection is a silent transition of the instance. -/
-theorem sub_tau_net (P : Params) (ldr : Fin P.n)
+theorem implInst_tau_net (P : Params) (ldr : Fin P.n)
     {u : ∀ _ : Fin P.n, LocalState P.n (PState M) (BMsg M)}
     {w w' : NetworkState P.n (BMsg M)}
     (hn : NetStep P ldr w (Sum.inl (Sum.inl .tau)) (PMF.pure w')) :
-    (sub P ldr M).step (u, w) (Sum.inl Lab.tau) (PMF.pure (u, w')) :=
-  (sub_step_iff P ldr _ _ _).mpr (Or.inr (subPre_tau_net P ldr hn))
+    (implInst P ldr M).step (u, w) (Sum.inl Lab.tau) (PMF.pure (u, w')) :=
+  (implInst_step_iff P ldr _ _ _).mpr (Or.inr (implPre_tau_net P ldr hn))
 
 /-- A visible transition of the programs beside the network: every program and
 the network step on the label, and the joint distribution is their Dirac
 product. -/
-theorem subPre_joint_inv {P : Params} {ldr : Fin P.n}
+theorem implPre_joint_inv {P : Params} {ldr : Fin P.n}
     {u : ∀ _ : Fin P.n, LocalState P.n (PState M) (BMsg M)} {w : NetworkState P.n (BMsg M)}
     {L : BLab P.n M} {μ : PMF (ImplState P.n M)} (hL : L ≠ (Silent.τ : BLab P.n M))
-    (h : (subPre P ldr M).step (u, w) L μ) :
+    (h : (implPre P ldr M).step (u, w) L μ) :
     ∃ (x : ∀ _ : Fin P.n, LocalState P.n (PState M) (BMsg M)) (w' : NetworkState P.n (BMsg M)),
       μ = PMF.pure (x, w') ∧ (∀ i, ProcStep P ldr i (u i) L (PMF.pure (x i))) ∧
         NetStep P ldr w L (PMF.pure w') := by
-  rw [subPre, System.parallel_step] at h
+  rw [implPre, System.parallel_step] at h
   rcases h with ⟨-, μ₁, μ₂, hs, hn, rfl⟩ | ⟨hτ, -⟩ | ⟨hτ, -⟩
   · obtain ⟨x, rfl, hall⟩ := syncB_inv hs
     obtain ⟨w', rfl⟩ := netStep_dirac hn
@@ -553,13 +553,13 @@ theorem subPre_joint_inv {P : Params} {ldr : Fin P.n}
 
 /-- A silent transition of the programs beside the network is a network-local
 injection: no program has a `τ` row. -/
-theorem subPre_tau_inv {P : Params} {ldr : Fin P.n}
+theorem implPre_tau_inv {P : Params} {ldr : Fin P.n}
     {u : ∀ _ : Fin P.n, LocalState P.n (PState M) (BMsg M)} {w : NetworkState P.n (BMsg M)}
     {μ : PMF (ImplState P.n M)}
-    (h : (subPre P ldr M).step (u, w) (Sum.inl (Sum.inl Lab.tau)) μ) :
+    (h : (implPre P ldr M).step (u, w) (Sum.inl (Sum.inl Lab.tau)) μ) :
     ∃ w' : NetworkState P.n (BMsg M), μ = PMF.pure (u, w') ∧
       NetStep P ldr w (Sum.inl (Sum.inl Lab.tau)) (PMF.pure w') := by
-  rw [subPre, System.parallel_step] at h
+  rw [implPre, System.parallel_step] at h
   rcases h with ⟨hτ, -⟩ | ⟨-, μ₁, hs, rfl⟩ | ⟨-, μ₂, hn, rfl⟩
   · exact absurd rfl hτ
   · exact absurd hs syncB_no_tau
@@ -723,7 +723,7 @@ theorem procFun_update {j : Fin P.n} {q : LocalState P.n (PState M) (BMsg M)}
 
 omit [DecidableEq M] in
 /-- A record write at one program, with the network state untouched. -/
-theorem sub_setProc {j : Fin P.n} {pr : PState M}
+theorem implInst_setProc {j : Fin P.n} {pr : PState M}
     (hj : x j = (u j).setP pr) (hne : ∀ i, i ≠ j → x i = u i) :
     ((x, w) : ImplState P.n M) = SubState.setProc (u, w) j pr := by
   rw [procFun_update hj hne]
@@ -731,7 +731,7 @@ theorem sub_setProc {j : Fin P.n} {pr : PState M}
 
 /-- A record write at one program together with the network state recording the
 message that write multicasts. -/
-theorem sub_setProc_post {j : Fin P.n} {pr : PState M} {m : BMsg M}
+theorem implInst_setProc_post {j : Fin P.n} {pr : PState M} {m : BMsg M}
     (hj : x j = (u j).setP pr) (hne : ∀ i, i ≠ j → x i = u i) :
     ((x, w.post j m) : ImplState P.n M) = (SubState.setProc (u, w) j pr).mcast j m := by
   rw [procFun_update hj hne]
@@ -739,11 +739,11 @@ theorem sub_setProc_post {j : Fin P.n} {pr : PState M} {m : BMsg M}
 
 omit [DecidableEq M] in
 /-- The programs stand still. -/
-theorem sub_idle (hall : ∀ i, x i = u i) : ((x, w) : ImplState P.n M) = (u, w) := by
+theorem implInst_idle (hall : ∀ i, x i = u i) : ((x, w) : ImplState P.n M) = (u, w) := by
   rw [funext hall]
 
 /-- A delivery: the receiver files the message under its sender's row. -/
-theorem sub_deliver {i k : Fin P.n} {m : BMsg M}
+theorem implInst_deliver {i k : Fin P.n} {m : BMsg M}
     (hi : x i = (u i).deliverTo k m) (hne : ∀ i', i' ≠ i → x i' = u i') :
     ((x, w) : ImplState P.n M) = SubState.recvMsg (u, w) i k m := by
   rw [procFun_update hi hne]
@@ -751,12 +751,12 @@ theorem sub_deliver {i k : Fin P.n} {m : BMsg M}
 
 /-- A Byzantine injection: the network state records a message under a
 corrupted sender. -/
-theorem sub_post {k : Fin P.n} {m : BMsg M} :
+theorem implInst_post {k : Fin P.n} {m : BMsg M} :
     ((u, w.post k m) : ImplState P.n M) = SubState.mcast (u, w) k m := rfl
 
 omit [DecidableEq M] in
 /-- Corruption is the network state's own write (D1). -/
-theorem sub_corrupt (k : Fin P.n) :
+theorem implInst_corrupt (k : Fin P.n) :
     ((u, w.corrupt P k) : ImplState P.n M) = SubState.corrupt P k (u, w) := rfl
 
 /-- The participant's row beside the idle rows of every other program is the
@@ -793,14 +793,14 @@ The two hidden rendezvous and the network's injection are silent on both sides,
 and `specPull` takes `τ` to `τ`. -/
 
 /-- **The projection.** -/
-theorem sub_step_row (P : Params) (ldr : Fin P.n) :
-    ∀ (s : ImplState P.n M) (l : SubLab P.n M) (μ : PMF (ImplState P.n M)),
-      (sub P ldr M).step s l μ →
+theorem implInst_step_row (P : Params) (ldr : Fin P.n) :
+    ∀ (s : ImplState P.n M) (l : InstLab P.n M) (μ : PMF (ImplState P.n M)),
+      (implInst P ldr M).step s l μ →
       ∃ l₀, specPull P.n M l = some l₀ ∧ ImplStep P ldr s l₀ μ := by
   rintro ⟨u, w⟩ l μ hstep
-  rcases (sub_step_iff P ldr (u, w) l μ).mp hstep with ⟨rfl, e, hev⟩ | hlab
+  rcases (implInst_step_iff P ldr (u, w) l μ).mp hstep with ⟨rfl, e, hev⟩ | hlab
   · -- a hidden rendezvous: an internal row
-    obtain ⟨x, w', rfl, hall, hn⟩ := subPre_joint_inv (by simp) hev
+    obtain ⟨x, w', rfl, hall, hn⟩ := implPre_joint_inv (by simp) hev
     refine ⟨Lab.tau, rfl, ?_⟩
     cases e with
     | snd j m =>
@@ -812,11 +812,11 @@ theorem sub_step_row (P : Params) (ldr : Fin P.n) :
       | init m => exact (stepB_snd_init_own (hall j)).elim
       | echo m =>
         obtain ⟨hrecv, hsend, hx⟩ := stepB_snd_echo_own (hall j)
-        rw [sub_setProc_post (PMF.pure_injective hx) hfor]
+        rw [implInst_setProc_post (PMF.pure_injective hx) hfor]
         exact ImplStep.echo _ j m hrecv hsend
       | vote m =>
         obtain ⟨hcnt, hsend, hx⟩ := stepB_snd_vote_own (hall j)
-        rw [sub_setProc_post (PMF.pure_injective hx) hfor]
+        rw [implInst_setProc_post (PMF.pure_injective hx) hfor]
         rcases hcnt with hq | ha
         · exact ImplStep.voteQuorum _ j m hq hsend
         · exact ImplStep.voteAmp _ j m ha hsend
@@ -826,19 +826,19 @@ theorem sub_step_row (P : Params) (ldr : Fin P.n) :
       subst hw'
       have hfor : ∀ i', i' ≠ i → x i' = u i' :=
         fun i' hi' => PMF.pure_injective (stepB_dlv_foreign (Ne.symm hi') (hall i'))
-      rw [sub_deliver (PMF.pure_injective (stepB_dlv_own (hall i))) hfor]
+      rw [implInst_deliver (PMF.pure_injective (stepB_dlv_own (hall i))) hfor]
       exact ImplStep.deliver _ i j m hmem
   · by_cases hlτ : l = Sum.inl Lab.tau
     · -- the network's own injection
       subst hlτ
-      obtain ⟨w', rfl, hn⟩ := subPre_tau_inv hlab
+      obtain ⟨w', rfl, hn⟩ := implPre_tau_inv hlab
       obtain ⟨j, m, hF, hw⟩ := netStep_tau hn
       have hw' : w' = w.post j m := PMF.pure_injective hw
       subst hw'
       refine ⟨Lab.tau, rfl, ?_⟩
-      rw [sub_post]
+      rw [implInst_post]
       exact ImplStep.byz _ j m hF
-    · obtain ⟨x, w', rfl, hall, hn⟩ := subPre_joint_inv (by simpa using hlτ) hlab
+    · obtain ⟨x, w', rfl, hall, hn⟩ := implPre_joint_inv (by simpa using hlτ) hlab
       cases l with
       | inl l₀ =>
         cases l₀ with
@@ -850,7 +850,7 @@ theorem sub_step_row (P : Params) (ldr : Fin P.n) :
           have hfor : ∀ i, i ≠ ldr → x i = u i :=
             fun i hi => PMF.pure_injective (stepB_call_foreign hi (hall i))
           refine ⟨_, rfl, ?_⟩
-          rw [sub_setProc_post (PMF.pure_injective hx) hfor]
+          rw [implInst_setProc_post (PMF.pure_injective hx) hfor]
           exact ImplStep.call _ m hin
         | ret id m =>
           have hw : w' = w := PMF.pure_injective (netStep_ret hn)
@@ -859,14 +859,14 @@ theorem sub_step_row (P : Params) (ldr : Fin P.n) :
           have hfor : ∀ i, i ≠ id → x i = u i :=
             fun i hi => PMF.pure_injective (stepB_ret_foreign (Ne.symm hi) (hall i))
           refine ⟨_, rfl, ?_⟩
-          rw [sub_setProc (PMF.pure_injective hx) hfor]
+          rw [implInst_setProc (PMF.pure_injective hx) hfor]
           exact ImplStep.ret _ id m hcnt hr
         | fail id =>
           have hw : w' = w.corrupt P id := PMF.pure_injective (netStep_fail hn)
           subst hw
           have hidle : ∀ i, x i = u i := fun i => PMF.pure_injective (stepB_fail (hall i))
           refine ⟨_, rfl, ?_⟩
-          rw [sub_idle hidle, sub_corrupt]
+          rw [implInst_idle hidle, implInst_corrupt]
           exact ImplStep.fail _ id
       | inr e =>
         cases e with
@@ -875,53 +875,53 @@ theorem sub_step_row (P : Params) (ldr : Fin P.n) :
           subst hw
           have hidle : ∀ i, x i = u i := fun i => PMF.pure_injective (stepB_callLoop (hall i))
           refine ⟨_, rfl, ?_⟩
-          rw [sub_idle hidle]
+          rw [implInst_idle hidle]
           exact ImplStep.callLoop _ m
 
 /-- **The embedding.** -/
-theorem row_sub_step (P : Params) (ldr : Fin P.n) :
+theorem row_implInst_step (P : Params) (ldr : Fin P.n) :
     ∀ (s : ImplState P.n M) (l₀ : Lab P.n M) (μ : PMF (ImplState P.n M)),
       ImplStep P ldr s l₀ μ →
-      ∃ l, specPull P.n M l = some l₀ ∧ (sub P ldr M).step s l μ := by
+      ∃ l, specPull P.n M l = some l₀ ∧ (implInst P ldr M).step s l μ := by
   rintro ⟨u, w⟩ l₀ μ hrow
   cases hrow with
   | call m h =>
-    exact ⟨Sum.inl (.call m), rfl, sub_lab_step P ldr (by simp)
+    exact ⟨Sum.inl (.call m), rfl, implInst_lab_step P ldr (by simp)
       (procStep_update (ProcStep.call (u ldr) m rfl h)
         (fun i hi => ProcStep.callIdle (u i) m hi))
       (NetStep.call w m)⟩
   | callLoop m =>
-    exact ⟨Sum.inr (.callLoop m), rfl, sub_lab_step P ldr (by simp)
+    exact ⟨Sum.inr (.callLoop m), rfl, implInst_lab_step P ldr (by simp)
       (fun i => ProcStep.callLoop (u i) m) (NetStep.callLoop w m)⟩
   | deliver i j m h =>
-    exact ⟨Sum.inl Lab.tau, rfl, sub_event_step P ldr (BEvt.dlv i j m)
+    exact ⟨Sum.inl Lab.tau, rfl, implInst_event_step P ldr (BEvt.dlv i j m)
       (procStep_update (ProcStep.dlvRecv (u i) j m)
         (fun i' hi' => ProcStep.dlvIdle (u i') i j m (Ne.symm hi')))
       (NetStep.dlv w i j m h)⟩
   | echo j m hrecv hsend =>
-    exact ⟨Sum.inl Lab.tau, rfl, sub_event_step P ldr (BEvt.snd j (.echo m))
+    exact ⟨Sum.inl Lab.tau, rfl, implInst_event_step P ldr (BEvt.snd j (.echo m))
       (procStep_update (ProcStep.sndEcho (u j) m hrecv hsend)
         (fun i hi => ProcStep.sndIdle (u i) j (.echo m) (Ne.symm hi)))
       (NetStep.snd w j (.echo m))⟩
   | voteQuorum j m hcnt hsend =>
-    exact ⟨Sum.inl Lab.tau, rfl, sub_event_step P ldr (BEvt.snd j (.vote m))
+    exact ⟨Sum.inl Lab.tau, rfl, implInst_event_step P ldr (BEvt.snd j (.vote m))
       (procStep_update (ProcStep.sndVoteQuorum (u j) m hcnt hsend)
         (fun i hi => ProcStep.sndIdle (u i) j (.vote m) (Ne.symm hi)))
       (NetStep.snd w j (.vote m))⟩
   | voteAmp j m hcnt hsend =>
-    exact ⟨Sum.inl Lab.tau, rfl, sub_event_step P ldr (BEvt.snd j (.vote m))
+    exact ⟨Sum.inl Lab.tau, rfl, implInst_event_step P ldr (BEvt.snd j (.vote m))
       (procStep_update (ProcStep.sndVoteAmp (u j) m hcnt hsend)
         (fun i hi => ProcStep.sndIdle (u i) j (.vote m) (Ne.symm hi)))
       (NetStep.snd w j (.vote m))⟩
   | byz j m h =>
-    exact ⟨Sum.inl Lab.tau, rfl, sub_tau_net P ldr (NetStep.byz w j m h)⟩
+    exact ⟨Sum.inl Lab.tau, rfl, implInst_tau_net P ldr (NetStep.byz w j m h)⟩
   | ret id m hcnt hr =>
-    exact ⟨Sum.inl (.ret id m), rfl, sub_lab_step P ldr (by simp)
+    exact ⟨Sum.inl (.ret id m), rfl, implInst_lab_step P ldr (by simp)
       (procStep_update (ProcStep.ret (u id) m hcnt hr)
         (fun i hi => ProcStep.retIdle (u i) id m (Ne.symm hi)))
       (NetStep.retIdle w id m)⟩
   | fail id =>
-    exact ⟨Sum.inl (.fail id), rfl, sub_lab_step P ldr (by simp)
+    exact ⟨Sum.inl (.fail id), rfl, implInst_lab_step P ldr (by simp)
       (fun i => ProcStep.failIdle (u i) id) (NetStep.fail w id)⟩
 
 /-- **The row characterisation.** At a specification label `l₀`, the
@@ -930,21 +930,21 @@ exactly the `l₀`-rows of `ImplStep`, on the same state and with the same
 distribution. The call and the call loop are the two rows of `call m`, taken at
 the two labels `specPull` sends to it; every other specification label has a
 single interface label over it. -/
-theorem sub_step_iff_row (P : Params) (ldr : Fin P.n) (s : ImplState P.n M)
+theorem implInst_step_iff_row (P : Params) (ldr : Fin P.n) (s : ImplState P.n M)
     (l₀ : Lab P.n M) (μ : PMF (ImplState P.n M)) :
-    (∃ l, specPull P.n M l = some l₀ ∧ (sub P ldr M).step s l μ) ↔ ImplStep P ldr s l₀ μ := by
+    (∃ l, specPull P.n M l = some l₀ ∧ (implInst P ldr M).step s l μ) ↔ ImplStep P ldr s l₀ μ := by
   constructor
   · rintro ⟨l, hl, hstep⟩
-    obtain ⟨l₁, hl₁, hrow⟩ := sub_step_row P ldr s l μ hstep
+    obtain ⟨l₁, hl₁, hrow⟩ := implInst_step_row P ldr s l μ hstep
     have hll : l₁ = l₀ := Option.some.inj (show (some l₁ : Option (Lab P.n M)) = some l₀ by
       rw [← hl₁, hl])
     subst hll
     exact hrow
-  · exact row_sub_step P ldr s l₀ μ
+  · exact row_implInst_step P ldr s l₀ μ
 
-/-- info: 'PLTS.ABA.BRB.sub_step_iff_row' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.BRB.implInst_step_iff_row' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms sub_step_iff_row
+#print axioms implInst_step_iff_row
 
 end BRB
 end ABA

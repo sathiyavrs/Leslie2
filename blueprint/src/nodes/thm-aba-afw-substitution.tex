@@ -6,7 +6,7 @@
   \[
     \afw{\mathrm{composed}}(P) \;\sqsubseteq\; \afw{\mathrm{hybrid}}_1(P) \;\sqsubseteq\; \afw{\mathrm{hybrid}}_2(P) \;\sqsubseteq\; \mathrm{hybrid}(P).
   \]
-  Each stage is one substitution inside the round --- the broadcast substitution, the gather substitution, the counting refinement --- lifted over the extended alphabet by the read-back congruence, lifted to the $\mathbb{N}$-indexed family by the family congruence under the lockstep broadcast compatibility, and run under the composed reading's own context through the four congruences of the pipeline.
+  Each stage is one substitution inside the round --- the broadcast substitution, the gather substitution, the counting refinement --- lifted to the $\mathbb{N}$-indexed family by the family congruence under the lockstep broadcast compatibility, and run under the composed reading's own context through the four congruences of the pipeline.
   The third stage lands on $\mathrm{hybrid}(P)$ itself, the system the core simulation starts from, so the two implementation chains share every link from there up.
   Chaining the stages gives the simulation $\mathrm{substSim}$, and chaining their soundness inclusions gives $\operatorname{ATD}(\afw{\mathrm{composed}}(P)) \subseteq \operatorname{ATD}(\mathrm{hybrid}(P))$.
 \end{theorem}

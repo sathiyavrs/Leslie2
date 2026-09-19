@@ -4,197 +4,514 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.Gather.Ideal
-import Leslie2Protocols.ABA.Broadcast.Impl
+import Leslie2Protocols.ABA.Gather.Sub
 
 /-!
-# The gather implementation over Bracha's broadcast
+# The rows of the gather instance over Bracha's broadcast
 
-Gather's ECHO/VOTE rounds with their reliable-broadcast sub-protocol at
-the implementation level: each process's input and each process's `BIND`
-payload travel through a Bracha instance (`ABA/Broadcast/Impl.lean`), one per
-process and level.
+`LowStep` is the rule table of `Gather.lowInst` (`ABA/Gather/Sub.lean`) — the
+`n` gather programs beside the gather network, in parallel with `2n` composed
+reliable-broadcast instances — stated over the composition's state through the
+four views `ga`, `brbIn`, `brbBind`, `core`. It is a relation on that state; the
+system is the composition.
 
-Delivery is derived, not stored (deviation D28): "`j` holds the pair `(k, v)`" is the
-predicate `apIn` — an `n − f` `VOTE v` receipt quorum in `k`'s input-BRB
-instance at receiver `j` — and likewise `apBind` for the bind payloads. The
-approval guards of the gather rows read these predicates at the receiver;
-no delivery event or return flag of the broadcast sub-protocol appears.
-The broadcast calls are fused as in the tier above: the gather call
-broadcasts the input, the `BIND` row broadcasts the payload.
+`lowInst_step_iff_row` is the row characterisation: at a specification label
+`l₀`, the transitions of the composition over the labels `specPull` sends to
+`l₀` are exactly the `l₀`-rows of `LowStep`, on the same state and with the
+same distribution.
 
-The state carries the instance's `core` as auxiliary state, written by the
-`ret` row and carried on every return label, as in the tier above.
+## The broadcast tier
+
+A broadcast instance's own rows are `BRB.ImplStep` (`ABA/Broadcast/Impl.lean`),
+and `BRB.implInst_step_iff_row` matches them against the instance's transitions. Each
+label of the composition reaches an instance at one label of its interface
+alphabet, and the rows there carry over: a silent step, a return and a
+corruption are the hypotheses `BRB.ImplStep P k (brbIn s k) l₀ (PMF.pure c)` of
+the rows `brbInTau`, `inRet` and `fail`.
+
+The call is the exception. `BRB.ImplStep` answers `call x` on two rows, the
+broadcast of `⟨INIT, x⟩` and the input-enabledness loop, and the two sit at the
+two labels of the instance's interface — the broadcast under `call x`, the loop
+under `Extra.callLoop x`. The composition puts the gather call over the first
+and the gather call loop over the second, so the gather call carries the
+broadcast and the gather call loop moves nothing. The rows `call` and
+`callLoop` state that directly, as does `bindCall`.
 -/
 
 namespace PLTS
 namespace ABA
 namespace Gather
 
-/-- The state of one gather-over-Bracha instance: the gather local states and
-network state, the `n` input-BRB implementation instances, and the `n` bind-BRB
-implementation instances. -/
-structure LowState (n : ℕ) (X : Type) : Type where
-  /-- The gather processes' local states and the instance's network state. -/
-  ga : SubState n (PRec n X) (GaMsg n X)
-  /-- `brbIn k` — the Bracha instance broadcasting `k`'s input. -/
-  brbIn : ∀ _ : Fin n, BRB.ImplState n X
-  /-- `brbBind k` — the Bracha instance broadcasting `k`'s `BIND` payload. -/
-  brbBind : ∀ _ : Fin n, BRB.ImplState n (APSet n X)
-  /-- The instance's core, written at the first return and returned on every
-  return. Auxiliary state: no process reads it and no guard consults it. -/
-  core : Option (APSet n X)
+variable {X : Type} [DecidableEq X]
 
-namespace LowState
+/-! ### Reading a composed broadcast instance -/
 
-variable {n : ℕ} {X : Type}
+omit [DecidableEq X] in
+/-- A transition of a composed broadcast instance is a `BRB.ImplStep` row at the
+label `BRB.specPull` projects to. -/
+theorem implInst_step_at {M : Type} [DecidableEq M] {P : Params} {ldr : Fin P.n}
+    {s s' : BRB.ImplState P.n M} {l : BRB.InstLab P.n M} {l₀ : BRB.Lab P.n M}
+    (hl : BRB.specPull P.n M l = some l₀)
+    (h : (BRB.implInst P ldr M).step s l (PMF.pure s')) : BRB.ImplStep P ldr s l₀ (PMF.pure s') := by
+  obtain ⟨l₁, hl₁, hrow⟩ := BRB.implInst_step_row P ldr s l _ h
+  rwa [Option.some.inj (hl₁.symm.trans hl)] at hrow
 
-/-- The initial instance state. -/
-def initial (n : ℕ) (X : Type) : LowState n X where
-  ga := SubState.initial n (GaMsg n X) (PRec.initial n X)
-  brbIn := fun _ => BRB.ImplState.initial n X
-  brbBind := fun _ => BRB.ImplState.initial n (APSet n X)
-  core := none
+omit [DecidableEq X] in
+/-- A `BRB.ImplStep` row at a label other than a call is a transition of the
+instance at the interface label over it. -/
+theorem row_implInst_step_inl {M : Type} [DecidableEq M] {P : Params} {ldr : Fin P.n}
+    {s s' : BRB.ImplState P.n M} {l₀ : BRB.Lab P.n M} (h0 : ∀ m : M, l₀ ≠ BRB.Lab.call m)
+    (h : BRB.ImplStep P ldr s l₀ (PMF.pure s')) :
+    (BRB.implInst P ldr M).step s (Sum.inl l₀) (PMF.pure s') := by
+  obtain ⟨l, hl, hstep⟩ := BRB.row_implInst_step P ldr s l₀ _ h
+  cases l with
+  | inl y => rwa [Option.some.inj hl] at hstep
+  | inr e => cases e with
+    | callLoop m => exact absurd (Option.some.inj hl).symm (h0 m)
 
-/-- Corruption (deviation D1): the broadcast transform, corrupting the gather
-network state and every Bracha coordinate in lockstep. -/
-def corruptAll (P : Params) (id : Fin P.n) (s : LowState P.n X) : LowState P.n X where
-  ga := s.ga.corrupt P id
-  brbIn := fun k => (s.brbIn k).corrupt P id
-  brbBind := fun k => (s.brbBind k).corrupt P id
-  core := s.core
+omit [DecidableEq X] in
+/-- The one corruption row. -/
+theorem implStep_fail {M : Type} [DecidableEq M] {P : Params} {ldr : Fin P.n}
+    {s : BRB.ImplState P.n M} {id : Fin P.n} {μ : PMF (BRB.ImplState P.n M)}
+    (h : BRB.ImplStep P ldr s (.fail id) μ) : μ = PMF.pure (s.corrupt P id) := by
+  cases h; rfl
 
-@[simp] theorem corruptAll_core (P : Params) (id : Fin P.n)
-    (s : LowState P.n X) : (s.corruptAll P id).core = s.core := rfl
+omit [DecidableEq X] in
+/-- At the call label the instance broadcasts: the leader records the payload
+and the network records `⟨INIT, m⟩`. -/
+theorem implInst_call_row {M : Type} [DecidableEq M] {P : Params} {ldr : Fin P.n}
+    {s s' : BRB.ImplState P.n M} {m : M}
+    (h : (BRB.implInst P ldr M).step s (Sum.inl (BRB.Lab.call m)) (PMF.pure s')) :
+    (s.proc ldr).input = none ∧
+      s' = (s.setProc ldr { s.proc ldr with input := some m }).mcast ldr (.init m) := by
+  obtain ⟨u, w⟩ := s
+  rcases (BRB.implInst_step_iff P ldr (u, w) (Sum.inl (BRB.Lab.call m)) _).mp h with ⟨hτ, -⟩ | hlab
+  · exact absurd hτ (by simp)
+  · obtain ⟨x, w', hμ, hall, hn⟩ := BRB.implPre_joint_inv (by simp) hlab
+    obtain ⟨hinp, hx⟩ := BRB.stepB_call_leader (hall ldr)
+    have hfor : ∀ i, i ≠ ldr → x i = u i :=
+      fun i hi => PMF.pure_injective (BRB.stepB_call_foreign hi (hall i))
+    have hw : w' = w.post ldr (.init m) := PMF.pure_injective (BRB.netStep_call hn)
+    subst hw
+    refine ⟨hinp, ?_⟩
+    rw [PMF.pure_injective hμ, BRB.implInst_setProc_post (PMF.pure_injective hx) hfor]
+    rfl
 
-end LowState
+omit [DecidableEq X] in
+/-- At the call-loop label the instance stands still. -/
+theorem implInst_callLoop_row {M : Type} [DecidableEq M] {P : Params} {ldr : Fin P.n}
+    {s s' : BRB.ImplState P.n M} {m : M}
+    (h : (BRB.implInst P ldr M).step s (Sum.inr (BRB.Extra.callLoop m)) (PMF.pure s')) : s' = s := by
+  obtain ⟨u, w⟩ := s
+  rcases (BRB.implInst_step_iff P ldr (u, w) (Sum.inr (BRB.Extra.callLoop m)) _).mp h with
+    ⟨hτ, -⟩ | hlab
+  · exact absurd hτ (by simp)
+  · obtain ⟨x, w', hμ, hall, hn⟩ := BRB.implPre_joint_inv (by simp) hlab
+    have hw : w' = w := PMF.pure_injective (BRB.netStep_callLoop hn)
+    subst hw
+    have hidle : ∀ i, x i = u i := fun i => PMF.pure_injective (BRB.stepB_callLoop (hall i))
+    rw [PMF.pure_injective hμ, BRB.implInst_idle hidle]
 
-section Rules
+omit [DecidableEq X] in
+/-- Build the instance's broadcast at the call label. -/
+theorem row_implInst_call_step {M : Type} [DecidableEq M] (P : Params) (ldr : Fin P.n)
+    (s : BRB.ImplState P.n M) (m : M) (h : (s.proc ldr).input = none) :
+    (BRB.implInst P ldr M).step s (Sum.inl (BRB.Lab.call m))
+      (PMF.pure ((s.setProc ldr { s.proc ldr with input := some m }).mcast ldr (.init m))) := by
+  obtain ⟨u, w⟩ := s
+  exact BRB.implInst_lab_step P ldr (by simp)
+    (BRB.procStep_update (BRB.ProcStep.call (u ldr) m rfl h)
+      (fun i hi => BRB.ProcStep.callIdle (u i) m hi))
+    (BRB.NetStep.call w m)
 
-variable {X : Type} [DecidableEq X] {P : Params}
+omit [DecidableEq X] in
+/-- Build the instance's stutter at the call-loop label. -/
+theorem row_implInst_callLoop_step {M : Type} [DecidableEq M] (P : Params) (ldr : Fin P.n)
+    (s : BRB.ImplState P.n M) (m : M) :
+    (BRB.implInst P ldr M).step s (Sum.inr (BRB.Extra.callLoop m)) (PMF.pure s) := by
+  obtain ⟨u, w⟩ := s
+  exact BRB.implInst_lab_step P ldr (by simp) (fun i => BRB.ProcStep.callLoop (u i) m)
+    (BRB.NetStep.callLoop w m)
 
-/-- `j` holds the pair `(k, v)`: an `n − f` `VOTE v` receipt quorum in `k`'s
-input-BRB instance at receiver `j`. Monotone — receipts only accumulate. -/
-def apIn (P : Params) (s : LowState P.n X) (j k : Fin P.n) (v : X) : Prop :=
-  P.n - P.f ≤ (s.brbIn k).recvCount j (BRB.BMsg.vote v)
+/-! ### The rows -/
 
-/-- `j` holds `q`'s bind payload `U`. -/
-def apBind (P : Params) (s : LowState P.n X) (j q : Fin P.n) (U : APSet P.n X) : Prop :=
-  P.n - P.f ≤ (s.brbBind q).recvCount j (BRB.BMsg.vote U)
-
-/-- A payload set is approved at `j` when `j` holds every pair. -/
-def approvedAt (P : Params) (s : LowState P.n X) (j : Fin P.n)
-    (A : APSet P.n X) : Prop :=
-  ∀ p ∈ A, apIn P s j p.1 p.2
-
-/-- The step relation of the gather-over-Bracha instance. All transitions are
-Dirac; the Bracha coordinates move by their own implementation rows, embedded
-as internal transitions. -/
+/-- The rows of the gather instance over Bracha's broadcast (`Gather.lowInst`),
+stated over the composition's state: one constructor per case of
+`Gather.lowInst_step_iff_row`. All transitions are Dirac. -/
 inductive LowStep (P : Params) :
     LowState P.n X → Lab P.n X → PMF (LowState P.n X) → Prop
-  /-- The environment call arrives: record the payload and broadcast it
-  through the process's input-BRB instance (the fused call). -/
+  /-- The call arrives: the gather record records the payload and the input
+  instance broadcasts it. -/
   | call (s : LowState P.n X) (id : Fin P.n) (x : X)
-      (h : (s.ga.proc id).input = none)
-      (hb : ((s.brbIn id).proc id).input = none) :
+      (h : ((ga s).proc id).input = none) (hb : ((brbIn s id).proc id).input = none) :
       LowStep P s (.call id x)
-        (PMF.pure
-        { s with
-          ga := s.ga.setProc id { s.ga.proc id with input := some x }
-          brbIn := Function.update s.brbIn id
-            (((s.brbIn id).setProc id
-              { (s.brbIn id).proc id with input := some x }).mcast id (.init x)) })
-  /-- Input-enabledness loop for `call`. -/
+        (PMF.pure (setBrbIn (setGa s ((ga s).setProc id { (ga s).proc id with input := some x }))
+          (Function.update (brbIn s) id
+            (((brbIn s id).setProc id
+              { (brbIn s id).proc id with input := some x }).mcast id (.init x)))))
+  /-- Input-enabledness loop for `call`: nothing moves. -/
   | callLoop (s : LowState P.n X) (id : Fin P.n) (x : X) :
       LowStep P s (.call id x) (PMF.pure s)
-  /-- An internal step of one input-BRB instance. -/
-  | brbInTau (s : LowState P.n X) (k : Fin P.n) (b' : BRB.ImplState P.n X)
-      (h : BRB.ImplStep P k (s.brbIn k) BRB.Lab.tau (PMF.pure b')) :
-      LowStep P s .tau (PMF.pure { s with brbIn := Function.update s.brbIn k b' })
-  /-- An internal step of one bind-BRB instance. -/
-  | brbBindTau (s : LowState P.n X) (k : Fin P.n)
-      (b' : BRB.ImplState P.n (APSet P.n X))
-      (h : BRB.ImplStep P k (s.brbBind k) BRB.Lab.tau (PMF.pure b')) :
-      LowStep P s .tau (PMF.pure { s with brbBind := Function.update s.brbBind k b' })
+  /-- A silent step of one input instance. -/
+  | brbInTau (s : LowState P.n X) (k : Fin P.n) (c : BRB.ImplState P.n X)
+      (hb : BRB.ImplStep P k (brbIn s k) .tau (PMF.pure c)) :
+      LowStep P s .tau (PMF.pure (setBrbIn s (Function.update (brbIn s) k c)))
+  /-- A silent step of one bind instance. -/
+  | brbBindTau (s : LowState P.n X) (q : Fin P.n) (d : BRB.ImplState P.n (APSet P.n X))
+      (hb : BRB.ImplStep P q (brbBind s q) .tau (PMF.pure d)) :
+      LowStep P s .tau (PMF.pure (setBrbBind s (Function.update (brbBind s) q d)))
   /-- Asynchronous delivery on the gather network. -/
   | deliver (s : LowState P.n X) (i j : Fin P.n) (m : GaMsg P.n X)
-      (h : m ∈ s.ga.sent j) :
-      LowStep P s .tau (PMF.pure { s with ga := s.ga.recvMsg i j m })
-  /-- `ECHO`: the process holds `n − f` pairs. -/
+      (h : m ∈ (ga s).sent j) :
+      LowStep P s .tau (PMF.pure (setGa s ((ga s).recvMsg i j m)))
+  /-- `ECHO`: the process holds every pair of a payload set of at least `n − f`
+  pairs. -/
   | echo (s : LowState P.n X) (j : Fin P.n) (A : APSet P.n X)
-      (hin : (s.ga.proc j).input ≠ none)
-      (happ : approvedAt P s j A) (hcard : P.n - P.f ≤ A.card)
-      (hsend : (s.ga.proc j).sentEcho = none) :
+      (hin : ((ga s).proc j).input ≠ none) (happ : approvedBy ((ga s).proc j) A)
+      (hcard : P.n - P.f ≤ A.card) (hsend : ((ga s).proc j).sentEcho = none) :
       LowStep P s .tau
-        (PMF.pure { s with ga := (s.ga.setProc j
-          { s.ga.proc j with sentEcho := some A }).mcast j (.echo A) })
-  /-- `VOTE`: `n − f` senders' `ECHO` payloads, each held at `j` and
-  contained in the vote payload, are delivered. -/
+        (PMF.pure (setGa s (((ga s).setProc j
+          { (ga s).proc j with sentEcho := some A }).mcast j (.echo A))))
+  /-- `VOTE`: `n − f` senders' approved `ECHO` payloads, each contained in the
+  vote payload, are delivered here. -/
   | vote (s : LowState P.n X) (j : Fin P.n) (U : APSet P.n X)
-      (hin : (s.ga.proc j).input ≠ none)
-      (happ : approvedAt P s j U)
+      (hin : ((ga s).proc j).input ≠ none) (happ : approvedBy ((ga s).proc j) U)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
-        ∀ q ∈ Q, ∃ A, GaMsg.echo A ∈ s.ga.recv j q ∧ approvedAt P s j A ∧ A ⊆ U)
-      (hsend : (s.ga.proc j).sentVote = none) :
+        ∀ q ∈ Q, ∃ A, GaMsg.echo A ∈ (ga s).recv j q ∧ approvedBy ((ga s).proc j) A ∧ A ⊆ U)
+      (hsend : ((ga s).proc j).sentVote = none) :
       LowStep P s .tau
-        (PMF.pure { s with ga := (s.ga.setProc j
-          { s.ga.proc j with sentVote := some U }).mcast j (.vote U) })
-  /-- `BIND`: `n − f` senders' `VOTE` payloads, each held at `j` and
-  contained in the bind payload, are delivered; the payload is broadcast
-  through the process's own bind-BRB instance. -/
+        (PMF.pure (setGa s (((ga s).setProc j
+          { (ga s).proc j with sentVote := some U }).mcast j (.vote U))))
+  /-- `BIND`: `n − f` senders' approved `VOTE` payloads, each contained in the
+  bind payload, are delivered here, and the bind instance broadcasts it. -/
   | bindCall (s : LowState P.n X) (j : Fin P.n) (U : APSet P.n X)
-      (hin : (s.ga.proc j).input ≠ none)
-      (hbc : ((s.brbBind j).proc j).input = none)
-      (happ : approvedAt P s j U)
+      (hin : ((ga s).proc j).input ≠ none) (happ : approvedBy ((ga s).proc j) U)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
-        ∀ q ∈ Q, ∃ W, GaMsg.vote W ∈ s.ga.recv j q ∧ approvedAt P s j W ∧ W ⊆ U) :
+        ∀ q ∈ Q, ∃ W, GaMsg.vote W ∈ (ga s).recv j q ∧ approvedBy ((ga s).proc j) W ∧ W ⊆ U)
+      (hbc : ((brbBind s j).proc j).input = none) :
       LowStep P s .tau
-        (PMF.pure
-        { s with
-          brbBind := Function.update s.brbBind j
-            (((s.brbBind j).setProc j
-              { (s.brbBind j).proc j with input := some U }).mcast j (.init U)) })
+        (PMF.pure (setBrbBind s (Function.update (brbBind s) j
+          (((brbBind s j).setProc j
+            { (brbBind s j).proc j with input := some U }).mcast j (.init U)))))
   /-- Byzantine injection on the gather network. -/
-  | byz (s : LowState P.n X) (j : Fin P.n) (m : GaMsg P.n X) (h : j ∈ s.ga.F) :
-      LowStep P s .tau (PMF.pure { s with ga := s.ga.mcast j m })
-  /-- Return: `n − f` bind-BRB payloads held at the returner, each a sub-map
-  of the output, and the output held pairwise. The label carries the
-  instance's core, which this row writes if it is unwritten. -/
+  | byz (s : LowState P.n X) (j : Fin P.n) (m : GaMsg P.n X) (h : j ∈ (ga s).F) :
+      LowStep P s .tau (PMF.pure (setGa s ((ga s).mcast j m)))
+  /-- An input instance returns to `j`, which files the value in its store. -/
+  | inRet (s : LowState P.n X) (k j : Fin P.n) (v : X) (c : BRB.ImplState P.n X)
+      (hb : BRB.ImplStep P k (brbIn s k) (.ret j v) (PMF.pure c)) :
+      LowStep P s .tau
+        (PMF.pure (setBrbIn (setGa s ((ga s).setProc j
+            { (ga s).proc j with
+              delivIn := Function.update ((ga s).proc j).delivIn k (some v) }))
+          (Function.update (brbIn s) k c)))
+  /-- A bind instance returns to `j`, which files the payload in its store. -/
+  | bindRet (s : LowState P.n X) (q j : Fin P.n) (U : APSet P.n X)
+      (d : BRB.ImplState P.n (APSet P.n X))
+      (hb : BRB.ImplStep P q (brbBind s q) (.ret j U) (PMF.pure d)) :
+      LowStep P s .tau
+        (PMF.pure (setBrbBind (setGa s ((ga s).setProc j
+            { (ga s).proc j with
+              delivBind := Function.update ((ga s).proc j).delivBind q (some U) }))
+          (Function.update (brbBind s) q d)))
+  /-- Return: the output's entries are held here, and `n − f` bind payloads held
+  here are sub-maps of it. The label carries the instance's core, which this row
+  writes if it is unwritten. -/
   | ret (s : LowState P.n X) (id : Fin P.n) (g : Fin P.n → Option X)
-      (hin : (s.ga.proc id).input ≠ none)
-      (hsubap : ∀ k x, g k = some x → apIn P s id k x)
+      (hin : ((ga s).proc id).input ≠ none)
+      (hsub : ∀ k x, g k = some x → holdsIn ((ga s).proc id) k x)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
-        ∀ q ∈ Q, ∃ U, apBind P s id q U ∧ APSet.subMap U g)
-      (hr : (s.ga.proc id).returned = false) :
-      LowStep P s (.ret id g (s.core.getD (coreOf P s.ga)))
-        (PMF.pure
-        { s with
-          ga := s.ga.setProc id { s.ga.proc id with returned := true }
-          core := some (s.core.getD (coreOf P s.ga)) })
-  /-- Corruption (deviation D1), in lockstep across the network state and every
-  Bracha coordinate. -/
+        ∀ q ∈ Q, ∃ U, holdsBind ((ga s).proc id) q U ∧ APSet.subMap U g)
+      (hr : ((ga s).proc id).returned = false) :
+      LowStep P s (.ret id g ((core s).getD (coreOfNet P (ga s).2)))
+        (PMF.pure (setCore (setGa s ((ga s).setProc id
+          { (ga s).proc id with returned := true }))
+          (some ((core s).getD (coreOfNet P (ga s).2)))))
+  /-- Corruption (deviation D1), in lockstep across the gather network state and
+  every broadcast coordinate. -/
   | fail (s : LowState P.n X) (id : Fin P.n) :
-      LowStep P s (.fail id) (PMF.pure (s.corruptAll P id))
+      LowStep P s (.fail id)
+        (PMF.pure (corruptAll P id (SubState.corrupt P id) (SubState.corrupt P id) s))
 
-/-- The gather-over-Bracha instance. -/
-noncomputable def lowInst (P : Params) (X : Type) [DecidableEq X] :
-    System (LowState P.n X) (Lab P.n X) where
-  init := LowState.initial P.n X
-  step := LowStep P
+/-! ### The row characterisation -/
 
-@[simp] theorem lowInst_init (P : Params) :
-    (lowInst P X).init = LowState.initial P.n X := rfl
+/-- **The projection.** -/
+theorem lowInst_step_row (P : Params) :
+    ∀ (s : LowState P.n X) (l : InstLab P.n X) (μ : PMF (LowState P.n X)),
+      (lowInst P X).step s l μ →
+      ∃ l₀, specPull P.n X l = some l₀ ∧ LowStep P s l₀ μ := by
+  have hIn : ∀ k : Fin P.n, (BRB.implInst P k X).IsLTS := fun k => BRB.implInst_isLTS P k
+  have hBind : ∀ q : Fin P.n, (BRB.implInst P q (APSet P.n X)).IsLTS := fun q => BRB.implInst_isLTS P q
+  rintro ⟨⟨u, w⟩, a, b⟩ l μ hstep
+  rcases (instAt_step_iff P X (fun k => BRB.implInst P k X)
+      (fun q => BRB.implInst P q (APSet P.n X)) _ l μ).mp hstep with ⟨rfl, e, hev⟩ | hlab
+  · obtain ⟨x, w', a', b', rfl, hproc, hnet, hin, hbind⟩ :=
+      preAt_joint_inv hIn hBind (by simp) hev
+    refine ⟨Lab.tau, rfl, ?_⟩
+    cases e with
+    | snd j m =>
+      have hfor : ∀ i, i ≠ j → x i = u i :=
+        fun i hi => PMF.pure_injective (stepG_snd_foreign (Ne.symm hi) (hproc i))
+      have hw : w' = { w with net := w.net.post j m } := PMF.pure_injective (netStep_snd hnet)
+      have ha : a' = a := funext fun k => lift_step_none rfl (hin k)
+      have hb : b' = b := funext fun q => lift_step_none rfl (hbind q)
+      subst hw; subst ha; subst hb
+      cases m with
+      | echo A =>
+        obtain ⟨hinp, happ, hcard, hsend, hx⟩ := stepG_snd_echo_own (hproc j)
+        rw [sub_setProc_post (PMF.pure_injective hx) hfor]
+        exact LowStep.echo _ j A hinp happ hcard hsend
+      | vote U =>
+        obtain ⟨hinp, happ, hQ, hsend, hx⟩ := stepG_snd_vote_own (hproc j)
+        rw [sub_setProc_post (PMF.pure_injective hx) hfor]
+        exact LowStep.vote _ j U hinp happ hQ hsend
+    | dlv i j m =>
+      obtain ⟨hmem, hw⟩ := netStep_dlv hnet
+      have hw' : w' = w := PMF.pure_injective hw
+      have ha : a' = a := funext fun k => lift_step_none rfl (hin k)
+      have hb : b' = b := funext fun q => lift_step_none rfl (hbind q)
+      subst hw'; subst ha; subst hb
+      have hfor : ∀ i', i' ≠ i → x i' = u i' :=
+        fun i' hi' => PMF.pure_injective (stepG_dlv_foreign (Ne.symm hi') (hproc i'))
+      rw [sub_deliver (PMF.pure_injective (stepG_dlv_own (hproc i))) hfor]
+      exact LowStep.deliver _ i j m hmem
+    | inRet k j v =>
+      have hw : w' = w := PMF.pure_injective (netStep_inRet hnet)
+      have hb : b' = b := funext fun q => lift_step_none rfl (hbind q)
+      subst hw; subst hb
+      have himpl : BRB.ImplStep P k (a k) (.ret j v) (PMF.pure (a' k)) :=
+        implInst_step_at (l := Sum.inl (BRB.Lab.ret j v)) rfl
+          (lift_step_some (l₀ := Sum.inl (BRB.Lab.ret j v)) (by simp) (hin k))
+      have haf : ∀ k', k' ≠ k → a' k' = a k' :=
+        fun k' hk' => lift_step_none (by simp [hk']) (hin k')
+      have ha : a' = Function.update a k (a' k) := funPin rfl haf
+      have hfor : ∀ i, i ≠ j → x i = u i :=
+        fun i hi => PMF.pure_injective (stepG_inRet_foreign (Ne.symm hi) (hproc i))
+      have hxj := PMF.pure_injective (stepG_inRet_own (hproc j))
+      rw [procFun_update hxj hfor, ha]
+      exact LowStep.inRet _ k j v (a' k) himpl
+    | bindCall j U =>
+      have hw : w' = w := PMF.pure_injective (netStep_bindCall hnet)
+      have ha : a' = a := funext fun k => lift_step_none rfl (hin k)
+      subst hw; subst ha
+      obtain ⟨hinp, happ, hQ, hxj⟩ := stepG_bindCall_own (hproc j)
+      have hxall : ∀ i, x i = u i := by
+        intro i
+        by_cases hi : i = j
+        · subst hi; exact PMF.pure_injective hxj
+        · exact PMF.pure_injective (stepG_bindCall_foreign (Ne.symm hi) (hproc i))
+      obtain ⟨hbc, hbj⟩ := implInst_call_row
+        (lift_step_some (l₀ := Sum.inl (BRB.Lab.call U)) (by simp) (hbind j))
+      have hbf : ∀ q, q ≠ j → b' q = b q :=
+        fun q hq => lift_step_none (by simp [hq]) (hbind q)
+      have hb : b' = Function.update b j
+          (((b j).setProc j { (b j).proc j with input := some U }).mcast j (.init U)) :=
+        funPin hbj hbf
+      subst hb
+      rw [sub_idle hxall, sub_setBrbBind]
+      exact LowStep.bindCall _ j U hinp happ hQ hbc
+    | bindRet q j U =>
+      have hw : w' = w := PMF.pure_injective (netStep_bindRet hnet)
+      have ha : a' = a := funext fun k => lift_step_none rfl (hin k)
+      subst hw; subst ha
+      have himpl : BRB.ImplStep P q (b q) (.ret j U) (PMF.pure (b' q)) :=
+        implInst_step_at (l := Sum.inl (BRB.Lab.ret j U)) rfl
+          (lift_step_some (l₀ := Sum.inl (BRB.Lab.ret j U)) (by simp) (hbind q))
+      have hbf : ∀ q', q' ≠ q → b' q' = b q' :=
+        fun q' hq' => lift_step_none (by simp [hq']) (hbind q')
+      have hb : b' = Function.update b q (b' q) := funPin rfl hbf
+      have hfor : ∀ i, i ≠ j → x i = u i :=
+        fun i hi => PMF.pure_injective (stepG_bindRet_foreign (Ne.symm hi) (hproc i))
+      have hxj := PMF.pure_injective (stepG_bindRet_own (hproc j))
+      rw [procFun_update hxj hfor, hb]
+      exact LowStep.bindRet _ q j U (b' q) himpl
+  · by_cases hlτ : l = Sum.inl Lab.tau
+    · subst hlτ
+      refine ⟨Lab.tau, rfl, ?_⟩
+      rcases preAt_tau_inv hIn hBind hlab with ⟨v, rfl, hn⟩ | ⟨k, c, rfl, hs⟩ | ⟨q, d, rfl, hs⟩
+      · obtain ⟨jj, m, hF, hv⟩ := netStep_tau hn
+        have hv' : v = { w with net := w.net.post jj m } := PMF.pure_injective hv
+        subst hv'
+        rw [sub_post]
+        exact LowStep.byz _ jj m hF
+      · have himpl : BRB.ImplStep P k (a k) BRB.Lab.tau (PMF.pure c) :=
+          implInst_step_at (l := (Silent.τ : BRB.InstLab P.n X)) rfl hs
+        rw [sub_setBrbIn]
+        exact LowStep.brbInTau _ k c himpl
+      · have himpl : BRB.ImplStep P q (b q) BRB.Lab.tau (PMF.pure d) :=
+          implInst_step_at (l := (Silent.τ : BRB.InstLab P.n (APSet P.n X))) rfl hs
+        rw [sub_setBrbBind]
+        exact LowStep.brbBindTau _ q d himpl
+    · obtain ⟨x, w', a', b', rfl, hproc, hnet, hin, hbind⟩ :=
+        preAt_joint_inv hIn hBind (by simpa using hlτ) hlab
+      cases l with
+      | inl l₀ =>
+        cases l₀ with
+        | tau => exact absurd rfl hlτ
+        | call id y =>
+          have hw : w' = w := PMF.pure_injective (netStep_call hnet)
+          have hb : b' = b := funext fun q => lift_step_none rfl (hbind q)
+          subst hw; subst hb
+          obtain ⟨hinp, hxj⟩ := stepG_call_own (hproc id)
+          have hfor : ∀ i, i ≠ id → x i = u i :=
+            fun i hi => PMF.pure_injective (stepG_call_foreign (Ne.symm hi) (hproc i))
+          obtain ⟨hbin, haid⟩ := implInst_call_row
+            (lift_step_some (l₀ := Sum.inl (BRB.Lab.call y)) (by simp) (hin id))
+          have haf : ∀ k, k ≠ id → a' k = a k :=
+            fun k hk => lift_step_none (by simp [hk]) (hin k)
+          have ha : a' = Function.update a id
+              (((a id).setProc id { (a id).proc id with input := some y }).mcast id (.init y)) :=
+            funPin haid haf
+          subst ha
+          refine ⟨Lab.call id y, rfl, ?_⟩
+          rw [procFun_update (PMF.pure_injective hxj) hfor]
+          exact LowStep.call _ id y hinp hbin
+        | ret id g C =>
+          obtain ⟨hC, hw⟩ := netStep_ret hnet
+          subst hC
+          have hw' : w' = { w with core := some (w.core.getD (coreOfNet P w.net)) } :=
+            PMF.pure_injective hw
+          have ha : a' = a := funext fun k => lift_step_none rfl (hin k)
+          have hb : b' = b := funext fun q => lift_step_none rfl (hbind q)
+          subst hw'; subst ha; subst hb
+          obtain ⟨hinp, hsub, hQ, hr, hxj⟩ := stepG_ret_own (hproc id)
+          have hfor : ∀ i, i ≠ id → x i = u i :=
+            fun i hi => PMF.pure_injective (stepG_ret_foreign (Ne.symm hi) (hproc i))
+          refine ⟨_, rfl, ?_⟩
+          rw [sub_ret (PMF.pure_injective hxj) hfor]
+          exact LowStep.ret _ id g hinp hsub hQ hr
+        | fail id =>
+          have hw : w' = { w with net := w.net.corrupt P id } :=
+            PMF.pure_injective (netStep_fail hnet)
+          have hxall : ∀ i, x i = u i := fun i => PMF.pure_injective (stepG_fail (hproc i))
+          have ha : ∀ k, a' k = SubState.corrupt P id (a k) := fun k =>
+            PMF.pure_injective (implStep_fail (implInst_step_at (l := Sum.inl (BRB.Lab.fail id)) rfl
+              (lift_step_some (l₀ := Sum.inl (BRB.Lab.fail id)) rfl (hin k))))
+          have hb : ∀ q, b' q = SubState.corrupt P id (b q) := fun q =>
+            PMF.pure_injective (implStep_fail (implInst_step_at (l := Sum.inl (BRB.Lab.fail id)) rfl
+              (lift_step_some (l₀ := Sum.inl (BRB.Lab.fail id)) rfl (hbind q))))
+          subst hw
+          refine ⟨_, rfl, ?_⟩
+          rw [funext ha, funext hb, sub_corrupt hxall]
+          exact LowStep.fail _ id
+      | inr ev =>
+        cases ev with
+        | callLoop id y =>
+          have hw : w' = w := PMF.pure_injective (netStep_callLoop hnet)
+          have hb : b' = b := funext fun q => lift_step_none rfl (hbind q)
+          subst hw; subst hb
+          have hxall : ∀ i, x i = u i := fun i => PMF.pure_injective (stepG_callLoop (hproc i))
+          have haid : a' id = a id := implInst_callLoop_row
+            (lift_step_some (l₀ := Sum.inr (BRB.Extra.callLoop y)) (by simp) (hin id))
+          have haf : ∀ k, k ≠ id → a' k = a k :=
+            fun k hk => lift_step_none (by simp [hk]) (hin k)
+          have ha : a' = a := funext fun k => by
+            by_cases hk : k = id
+            · subst hk; exact haid
+            · exact haf k hk
+          subst ha
+          refine ⟨Lab.call id y, rfl, ?_⟩
+          rw [sub_idle hxall]
+          exact LowStep.callLoop _ id y
 
-@[simp] theorem lowInst_step (P : Params) (s : LowState P.n X)
-    (l : Lab P.n X) (μ : PMF (LowState P.n X)) :
-    (lowInst P X).step s l μ ↔ LowStep P s l μ := Iff.rfl
+/-- **The embedding.** -/
+theorem row_lowInst_step (P : Params) :
+    ∀ (s : LowState P.n X) (l₀ : Lab P.n X) (μ : PMF (LowState P.n X)),
+      LowStep P s l₀ μ →
+      ∃ l, specPull P.n X l = some l₀ ∧ (lowInst P X).step s l μ := by
+  rintro ⟨⟨u, w⟩, a, b⟩ l₀ μ hrow
+  cases hrow with
+  | call id x h hb =>
+    exact ⟨Sum.inl (.call id x), rfl, instAt_lab_step (b' := b) (by simp)
+      (procStep_update (ProcStep.call (u id) x h)
+        (fun i hi => ProcStep.callIdle (u i) id x (Ne.symm hi)))
+      (NetStep.call w id x)
+      (lift_update (by simp) (fun k hk => by simp [hk]) (row_implInst_call_step P id (a id) x hb))
+      (fun q => lift_idle rfl)⟩
+  | callLoop id x =>
+    refine ⟨Sum.inr (.callLoop id x), rfl,
+      instAt_lab_step (x := u) (w' := w) (a' := a) (b' := b) (by simp) (fun i => ?_)
+        (NetStep.callLoop w id x) (fun k => ?_) (fun q => lift_idle rfl)⟩
+    · by_cases hi : i = id
+      · subst hi; exact ProcStep.callLoop (u i) x
+      · exact ProcStep.callLoopIdle (u i) id x (Ne.symm hi)
+    · by_cases hk : k = id
+      · subst hk; exact row_lift_step (by simp) (row_implInst_callLoop_step P k (a k) x)
+      · exact lift_idle (by simp [hk])
+  | brbInTau k c hb =>
+    exact ⟨Sum.inl Lab.tau, rfl, instAt_tau_in (row_implInst_step_inl (by simp) hb)⟩
+  | brbBindTau q d hb =>
+    exact ⟨Sum.inl Lab.tau, rfl, instAt_tau_bind (row_implInst_step_inl (by simp) hb)⟩
+  | deliver i j m h =>
+    exact ⟨Sum.inl Lab.tau, rfl, instAt_event_step (a' := a) (b' := b) (GaEvt.dlv i j m)
+      (procStep_update (ProcStep.dlvRecv (u i) j m)
+        (fun i' hi' => ProcStep.dlvIdle (u i') i j m (Ne.symm hi')))
+      (NetStep.dlv w i j m h) (fun k => lift_idle rfl) (fun q => lift_idle rfl)⟩
+  | echo j A hin happ hcard hsend =>
+    exact ⟨Sum.inl Lab.tau, rfl, instAt_event_step (a' := a) (b' := b) (GaEvt.snd j (.echo A))
+      (procStep_update (ProcStep.sndEcho (u j) A hin happ hcard hsend)
+        (fun i hi => ProcStep.sndIdle (u i) j (.echo A) (Ne.symm hi)))
+      (NetStep.snd w j (.echo A)) (fun k => lift_idle rfl) (fun q => lift_idle rfl)⟩
+  | vote j U hin happ hQ hsend =>
+    exact ⟨Sum.inl Lab.tau, rfl, instAt_event_step (a' := a) (b' := b) (GaEvt.snd j (.vote U))
+      (procStep_update (ProcStep.sndVote (u j) U hin happ hQ hsend)
+        (fun i hi => ProcStep.sndIdle (u i) j (.vote U) (Ne.symm hi)))
+      (NetStep.snd w j (.vote U)) (fun k => lift_idle rfl) (fun q => lift_idle rfl)⟩
+  | bindCall j U hin happ hQ hbc =>
+    refine ⟨Sum.inl Lab.tau, rfl,
+      instAt_event_step (x := u) (w' := w) (a' := a) (GaEvt.bindCall j U) (fun i => ?_)
+        (NetStep.bindCallIdle w j U) (fun k => lift_idle rfl)
+        (lift_update (by simp) (fun q hq => by simp [hq])
+          (row_implInst_call_step P j (b j) U hbc))⟩
+    by_cases hi : i = j
+    · subst hi; exact ProcStep.bindCall (u i) U hin happ hQ
+    · exact ProcStep.bindCallIdle (u i) j U (Ne.symm hi)
+  | byz j m h =>
+    exact ⟨Sum.inl Lab.tau, rfl, instAt_tau_net (NetStep.byz w j m h)⟩
+  | inRet k j v c hb =>
+    exact ⟨Sum.inl Lab.tau, rfl, instAt_event_step (w' := w) (b' := b) (GaEvt.inRet k j v)
+      (procStep_update (ProcStep.inRetRecv (u j) k v)
+        (fun i hi => ProcStep.inRetIdle (u i) k j v (Ne.symm hi)))
+      (NetStep.inRetIdle w k j v)
+      (lift_update (by simp) (fun k' hk' => by simp [hk']) (row_implInst_step_inl (by simp) hb))
+      (fun q => lift_idle rfl)⟩
+  | bindRet q j U d hb =>
+    exact ⟨Sum.inl Lab.tau, rfl, instAt_event_step (w' := w) (a' := a) (GaEvt.bindRet q j U)
+      (procStep_update (ProcStep.bindRetRecv (u j) q U)
+        (fun i hi => ProcStep.bindRetIdle (u i) q j U (Ne.symm hi)))
+      (NetStep.bindRetIdle w q j U) (fun k => lift_idle rfl)
+      (lift_update (by simp) (fun q' hq' => by simp [hq']) (row_implInst_step_inl (by simp) hb))⟩
+  | ret id g hin hsub hQ hr =>
+    exact ⟨Sum.inl (.ret id g (w.core.getD (coreOfNet P w.net))), rfl,
+      instAt_lab_step (a' := a) (b' := b) (by simp)
+        (procStep_update (ProcStep.ret (u id) g _ hin hsub hQ hr)
+          (fun i hi => ProcStep.retIdle (u i) id g _ (Ne.symm hi)))
+        (NetStep.ret w id g) (fun k => lift_idle rfl) (fun q => lift_idle rfl)⟩
+  | fail id =>
+    exact ⟨Sum.inl (.fail id), rfl, instAt_lab_step (x := u) (by simp)
+      (fun i => ProcStep.failIdle (u i) id) (NetStep.fail w id)
+      (lift_all (l₀ := fun _ => Sum.inl (BRB.Lab.fail id)) (fun k => rfl)
+        (fun k => row_implInst_step_inl (by simp) (BRB.ImplStep.fail (a k) id)))
+      (lift_all (l₀ := fun _ => Sum.inl (BRB.Lab.fail id)) (fun q => rfl)
+        (fun q => row_implInst_step_inl (by simp) (BRB.ImplStep.fail (b q) id)))⟩
 
-/-- Every transition is Dirac: the instance is an LTS. -/
-theorem lowInst_isLTS (P : Params) : (lowInst P X).IsLTS := by
-  rintro s l μ hstep
-  cases hstep <;> exact ⟨_, rfl⟩
+/-- **The row characterisation.** At a specification label `l₀`, the transitions
+of the instance over the labels `specPull` sends to `l₀` are exactly the
+`l₀`-rows of `LowStep`, on the same state and with the same distribution. -/
+theorem lowInst_step_iff_row (P : Params) (s : LowState P.n X) (l₀ : Lab P.n X)
+    (μ : PMF (LowState P.n X)) :
+    (∃ l, specPull P.n X l = some l₀ ∧ (lowInst P X).step s l μ) ↔ LowStep P s l₀ μ := by
+  constructor
+  · rintro ⟨l, hl, hstep⟩
+    obtain ⟨l₁, hl₁, hrow⟩ := lowInst_step_row P s l μ hstep
+    have hll : l₁ = l₀ := Option.some.inj (show (some l₁ : Option (Lab P.n X)) = some l₀ by
+      rw [← hl₁, hl])
+    subst hll
+    exact hrow
+  · exact row_lowInst_step P s l₀ μ
 
-end Rules
+/-- info: 'PLTS.ABA.Gather.lowInst_step_iff_row' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms lowInst_step_iff_row
 
 end Gather
 end ABA
