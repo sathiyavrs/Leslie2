@@ -1,0 +1,8 @@
+\begin{definition}[The network of the graded-agreement layer]
+  \label{def:aba-gbca-net}
+  \lean{PLTS.ABA.GBCA.NetStep}\lean{PLTS.ABA.GBCA.gbcaNet}\leanok
+  \uses{def:aba-gather-spec, def:aba-labels}
+  The network component of a gather-based round: it exchanges no messages and its whole state is the round's bound bit --- \leandecl{PLTS.ABA.GBCA.gbcaNet}.
+  The first gather's return writes the bit, where the component holds none, as $\mathrm{boundOfCore}$ of the core that return carries; every graded return announces the bit on its label and moves nothing; every other label leaves it where it stands.
+  No program reads it, so it is auxiliary state (D29).
+\end{definition}

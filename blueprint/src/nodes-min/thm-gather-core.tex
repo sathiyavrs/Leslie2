@@ -3,7 +3,8 @@
   \lean{PLTS.ABA.Gather.IdealInv}\lean{PLTS.ABA.Gather.CoreRel}\lean{PLTS.ABA.Gather.gatherCore}\leanok
   \uses{def:aba-gather-ideal, def:aba-gather-spec, def:aba-gather-core}
   The gather implementation over broadcast specifications is forward-simulated by Transition System~4: \leandecl{PLTS.ABA.Gather.gatherCore}.
-  The core the abstract side holds is the core of the implementation's network state, and a return is answered by one weak run that commits the abstract entries, writes the core where it is unwritten, and returns.
+  The core the abstract side holds is the core of the gather network's state, and a return is answered by one weak run that commits the abstract entries, writes the core where it is unwritten, and returns.
+  The refinement is a case analysis over the rows of Definition~\ref{def:aba-gather-ideal}, through its row characterisation; the specification's call record follows the input instances' records, whose writes it shares.
 \end{theorem}
 
 \begin{proof}\leanok

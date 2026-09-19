@@ -48,15 +48,18 @@ loses nothing.
 The stage-side rows are the rows of `Gather.LowStep` and `GBCA.lowPairInst`
 cut into their process half and their network half. A send writes the sender's
 own record and the network records the message; a delivery files the message in
-the receiver's own local state, dispatched on the tag. Three rows are fused, as they
-are in the composed reading (D28): the graded-agreement call broadcasts the
-input, the `BIND` send is a broadcast call, and the first gather's return to a
-process is that process's call of the second gather.
+the receiver's own local state, dispatched on the tag. Three rows are fused
+(D28): the graded-agreement call broadcasts the input, the `BIND` send is a
+broadcast call, and the first gather's return to a process is that process's
+call of the second gather.
 
-The Bracha return is not a row here. Gather reads a broadcast delivery as an
-`n − f` `VOTE` receipt quorum on the receiving local state (`apIn`, `apBind`), never
-through a returned flag, and the composed reading embeds only the silent rows
-of a Bracha instance, its return not among them.
+The Bracha return is not a row here. A gather guard reads an `n − f` `VOTE`
+receipt quorum on the acting process's own local state in the instance —
+`apIn1` and its three companions — so what an instance has returned to a
+process is a receipt count on that process's own record. A gather program of
+the composed reading holds the returned value in a store
+(`Gather.holdsIn`, `Gather.holdsBind`), and `AFW.storeIn`
+(`ABA/AFW/View.lean`) is the reading that identifies the two.
 
 ## The network adversary's ghost
 
@@ -278,11 +281,12 @@ noncomputable abbrev announcedBound (P : Params) (w : NetState P.n) (r : ℕ)
     (id : Fin P.n) (out : GbcaOut) (bnd : Bool) : Prop :=
   bnd = ghostOut P w r id out
 
-/-! ### The derived receipt predicates
+/-! ### The receipt predicates
 
-A broadcast delivery is a receipt quorum on the receiving local state, not an event
-(D28). Read at the process that holds the local state, each predicate below is a count
-on that process's own record. -/
+The flat reading has no broadcast return: a gather guard reads an `n − f` `VOTE`
+receipt quorum on the acting process's own local state in the instance, where a
+program of the composed round reads the store that instance's return wrote (D28).
+Each predicate below is a count on the acting process's own record. -/
 
 variable {P : Params}
 

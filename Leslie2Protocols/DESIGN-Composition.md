@@ -83,66 +83,92 @@ it.
 The gather-based implementation applies that device three more times, inside the round,
 before the round itself is exchanged at `hybrid`.
 
-One record shape carries every level. `ABA.SubState n Pr M` is `n` local states beside one
-network state `ABA.NetworkState n M`, which holds the per-sender sent sets and the corrupted set
-and nothing else (D5). Bracha's instance is `BRB.ImplState`, that shape at the broadcast
-message type; a gather instance holds its own in the field `ga`; and `GBCA.ImplState` is the
-ABDY22 analogue, the stage records beside the round's network state. A sub-protocol
-implementation here is always local states beside the one network state it owns.
+One shape carries every message-passing level: `n` programs beside the one network that
+carries their messages. A program holds one process's local record and the messages
+delivered to it, indexed by sender, and its guards read that and nothing else. The
+network holds the per-sender sent sets and the corrupted set (`ABA.NetworkState`, D5)
+and reads no program's record. A multicast is a joint step of the sender and the
+network, a delivery a joint step of the network and the receiver, and both labels are
+hidden inside the instance. `ABA.SubState n Pr M` is the state of such a pair.
 
-A round is two gather instances beside the round's bound bit, at each of the three tiers:
+Three levels are built that way, each the level below it in parallel with a tier of its
+own:
+
+- a reliable-broadcast instance is `n` programs beside the instance's network at the
+  broadcast message type (`BRB.implInst`, `ABA/Broadcast/Sub.lean`);
+- a gather instance is `n` gather programs beside the gather network, in parallel with
+  `2n` reliable-broadcast instances — one per process for the inputs, one per process
+  for the `BIND` payloads — each read along a pullback that names it (`Gather.instAt`,
+  `ABA/Gather/Sub.lean`). `Gather.lowInst` plugs Bracha's instances into that slot and
+  `Gather.idealInst` the broadcast specifications;
+- a round is `n` graded-agreement programs beside the network of the graded-agreement
+  layer, in parallel with two gather instances read along `ga1Pull` and `ga2Pull`
+  (`GBCA.roundInstAt`, `ABA/Round/Sub.lean`). `GBCA.lowPairInst`, `GBCA.idealInst` and
+  `GBCA.pairInst` are the three tiers, by which gather system fills the two slots.
+
+The state of each is the product of its components, and every tier of a level is the
+same expression at a different component:
 
 ```
-GBCA.LowPairState n = Gather.LowState   n Bool × Gather.LowState   n (Option Bool) × Option Bool
-GBCA.IdealState   n = Gather.IdealState n Bool × Gather.IdealState n (Option Bool) × Option Bool
-GBCA.PairState    n = Gather.SpecState  n Bool × Gather.SpecState  n (Option Bool) × Option Bool
+BRB.ImplState  n M       = (Fin n → LocalState n (PState M) (BMsg M)) × NetworkState n (BMsg M)
+Gather.SubStateAt n X B B' = ((Fin n → LocalState n (ProcRec n X) (GaMsg n X)) × GaNetState n X)
+                             × ((Fin n → B) × (Fin n → B'))
+GBCA.RoundStateAt n G₁ G₂  = ((Fin n → GBCA.ProcRec n) × Option Bool) × (G₁ × G₂)
 ```
 
-and a gather instance carries its own network state beside the `2n` broadcast instances its
-payloads travel by. `Gather.LowState` holds `ga` beside `2n` Bracha instances, `n` carrying the
-entries and `n` the `BIND` payloads; `Gather.IdealState` holds `ga` beside the same `2n` at
-broadcast specifications; and `Gather.SpecState` holds
-no network state at all — the call records, the committed entries, the return flags, the core
-and the corrupted set.
+A program reads no neighbouring coordinate, so what a sub-protocol has returned to a
+process is written into that process's own record. A gather program's stores
+(`Gather.ProcRec.delivIn`, `delivBind`) are written on the return event of a broadcast
+instance and read by the four rows that read what has been returned. A round program's
+record (`GBCA.ProcRec`) holds the candidate between the first gather's return and the
+second gather's call, and the graded outcome between the second gather's return and the
+round's own return: each of those two links is two events, and the record is what
+carries the round across them.
 
-Three substitutions take one tier to the next, and each removes exactly what the component it
-replaces owned.
+Three substitutions take one tier to the next, and each removes exactly what the
+component it replaces owned.
 
-- `GBCA.lowRefines` replaces each of the round's `4n` Bracha instances by a broadcast
-  specification, componentwise through `Gather.gatherLow`. The Bracha network states die;
-  what survives of each is the committed value, written once.
-- `GBCA.idealRefines` replaces each gather-over-broadcast instance by the gather
-  specification, componentwise through `Gather.gatherCore`. A gather's own network state and
-  the `2n` broadcast specifications beneath it die together; what survives is the per-entry
-  committed record and the frozen core.
-- `GBCA.pairRefines` replaces the two-gather round by `GBCA.specInst`. The two gather
+- `Gather.gatherLow` replaces each of a gather's `2n` Bracha instances by a broadcast
+  specification. An instance's programs and its network die together; what survives of
+  each is the committed value, written once.
+- `Gather.gatherCore` replaces a gather instance by the gather specification. The `n`
+  gather programs, the gather network and the `2n` broadcast specifications beneath them
+  die together; what survives is the per-entry committed record and the frozen core.
+- `GBCA.pairRefines` replaces the round over the two gather specifications by
+  `GBCA.specInst`. The graded-agreement programs, the layer's network and the two gather
   specifications die; what survives is `excluded` and `grade`.
 
-Each of those tiers is a single rule table over a product state rather than a composition, so
-a round's network states are fields of one system and not components of one (D28), where the
-protocol chain's round is the `n` stage programs beside `GSub.gNet`. Bringing the two chains
-to one shape is the subject of `TODO-Decomposing-AFW-Composed.md`.
+The first two are applied inside the round by congruence. `GBCA.lowPairRefines` carries
+`Gather.gatherLow` and `GBCA.idealRefines` carries `Gather.gatherCore` through the
+operators a round is built from — `mapIdle` at the gather coordinate, `parallel_left`
+and `parallel_right` to hold the layer and the other gather, then `abstract` and
+`relabel` (`ABA/Round/Substitutions.lean`, over `Framework/Congruence.lean`), and
+`Gather.gatherLow` itself carries `BRB.brbRefines` through the operators a gather
+instance is built from, `syncProduct` among them. `Gather.gatherCore` and
+`GBCA.pairRefines` are proved on the compositions themselves, through the row
+characterisations `Gather.idealInst_step_iff_row` and `GBCA.pairInst_step_iff_row`.
 
-The round's bound bit is the third factor at every tier and is the gather-side counterpart of
-`GSub.GNetState.bound`. It is written at the `link` row from the first gather's core, no
-program reads it, and it meets the specification only at the last of the three substitutions,
-where `GBCA.PairRel` ties it to `excluded`. The frozen core plays the same part one level
-down: it is a field of `Gather.LowState` and of `Gather.IdealState` that no process reads and
-no guard consults, and the gather specification's own core is the value its return labels
-announce (D29).
+The round's bound bit is the whole state of the layer's network, a component that
+carries no messages and is the gather-side counterpart of `GSub.GNetState.bound`. It is
+written at the first gather's return to a process from the core that return carries, no
+program reads it, and it meets the specification only at the last of the three
+substitutions, where `GBCA.PairRel` ties it to `excluded`. The frozen core plays the
+same part one level down: it is a field of the gather network that no process reads and
+no guard consults, and the gather specification's own core is the value its return
+labels announce (D29).
 
-Which component owns a payload is a design decision and not bookkeeping. A gather's `BIND`
-payloads travel by reliable broadcast rather than on the gather network, so a committed
-payload is write-once whatever later happens to its sender. A payload held in a network
-is pinned only by its sender's honesty, and D1 withdraws that at any moment. The decision is
-legible in the message types: `Gather.GaMsg` carries `echo` and `vote` and no `BIND`
-constructor, and at the protocol a bind payload is tagged `brbBind1` or `brbBind2`, a
-broadcast instance's message rather than a gather's. The counting argument the choice enables
-is `DESIGN-GatherTiers.md`.
+Which component owns a payload is a design decision and not bookkeeping. A gather's
+`BIND` payloads travel by reliable broadcast rather than on the gather network, so a
+committed payload is write-once whatever later happens to its sender. A payload held in
+a network is pinned only by its sender's honesty, and D1 withdraws that at any moment.
+The decision is legible in the message types: `Gather.GaMsg` carries `echo` and `vote`
+and no `BIND` constructor, and at the protocol a bind payload is tagged `brbBind1` or
+`brbBind2`, a broadcast instance's message rather than a gather's. The counting argument
+the choice enables is `DESIGN-GatherTiers.md`.
 
 At the protocol shape the three stages are `AFW.composed ⊑ AFW.hybrid1 ⊑ AFW.hybrid2 ⊑
-hybrid`, each the four congruences applied to one family substitution under a single context
-term:
+hybrid`, each the four congruences applied to one family substitution under a single
+context term:
 
 ```
 (((SIDE.parallel ((System.syncProduct (coreProcN P)).parallel
@@ -150,17 +176,18 @@ term:
     (netEvtLabels P.n)).relabel).abstract (Lab.hiddenAPI P.n)
 ```
 
-`SIDE` is the family of round tiers — `AFW.lowSide`, `AFW.idealSide`, `AFW.pairSide` — and
-`GSub.gbcaSide` and `specSide` stand in the same position in the other chain. The context
-term is the same expression in all five, which is why the third stage's target is `hybrid P`
-itself and why the two chains meet there.
+`SIDE` is the family of round tiers — `AFW.lowSide`, `AFW.idealSide`, `AFW.pairSide` —
+and `GSub.gbcaSide` and `specSide` stand in the same position in the other chain. The
+context term is the same expression in all five, which is why the third stage's target
+is `hybrid P` itself and why the two chains meet there.
 
-Beneath `AFW.composed` the protocol collapses the round's `4n + 2` network states into the
-one sent-set family the adversary holds, tagging each message with the instance it belongs
-to: `AFW.Msg` carries a constructor per layer, `ga1`, `ga2`, `brbIn1`, `brbBind1`, `brbIn2`
-and `brbBind2`. `AFW.StageRec` is the composed reading's instance-major indexing transposed,
-one process's local state in each of those instances, and `AFW.Ghost` is the adversary's
-record for one round, the two frozen cores beside the bound bit.
+Beneath `AFW.composed` the protocol collapses the round's `4n + 2` network states into
+the one sent-set family the adversary holds, tagging each message with the instance it
+belongs to: `AFW.Msg` carries a constructor per layer, `ga1`, `ga2`, `brbIn1`,
+`brbBind1`, `brbIn2` and `brbBind2`. `AFW.StageRec` is the composed reading's
+instance-major indexing transposed, one process's local state in each of those
+instances, and `AFW.Ghost` is the adversary's record for one round, the two frozen cores
+beside the bound bit.
 
 ## Where each network is external
 
@@ -181,8 +208,9 @@ the sent sets do, so it disappears with the round at the substitution.
 
 The gather-based chain carries `4n + 2` of them per round: one for each gather instance, and
 one for each of the `4n` broadcast instances beneath the two. They disappear in two stages
-rather than one, the broadcast networks at `GBCA.lowRefines` and the gather networks
-at `GBCA.idealRefines`, each inside the component being exchanged.
+rather than one, the broadcast networks at `Gather.gatherLow`, carried into the round by
+`GBCA.lowPairRefines`, and the gather networks at `Gather.gatherCore`, carried by
+`GBCA.idealRefines`, each inside the component being exchanged.
 
 Every invariant therefore reads its network through accessors on a pair — the
 `GBCA.ImplState` accessors in `ABA/ABDY/Impl.lean`, the `ABAState` accessors in

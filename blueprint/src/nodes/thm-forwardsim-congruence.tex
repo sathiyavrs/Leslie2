@@ -1,0 +1,21 @@
+\begin{theorem}[Forward simulation is a congruence for the composition operators]
+  \label{thm:forwardsim-congruence}
+  \lean{PLTS.ForwardSimulation.parallel_right}\lean{PLTS.ForwardSimulation.parallel_left}\lean{PLTS.ForwardSimulation.syncProduct}\lean{PLTS.ForwardSimulation.abstract}\lean{PLTS.ForwardSimulation.relabel}\lean{PLTS.ForwardSimulation.trans}\leanok
+  \uses{def:forwardsim, def:process-algebra, def:relabel, def:syncproduct}
+  Let $sys_C$ be forward-simulated by $sys_A$ along $R$, both over one label type.
+  Then $sys_C \parallel sys_B$ is forward-simulated by $sys_A \parallel sys_B$, and $sys_B \parallel sys_C$ by $sys_B \parallel sys_A$, along $R$ paired with equality on the held component.
+  A family of simulations, one per index of a finite type, gives a simulation between the two full-synchronisation products, along the pointwise relation.
+  Hiding a label set $L$ on both sides and restricting along the left embedding each preserve the simulation along $R$ itself.
+  Two forward simulations compose, along the composite of the two relations, and \leandecl{PLTS.ForwardSimulation.congr} transports a simulation along a pointwise equivalence of relations.
+  Replacing one component of a composition by a system that simulates it is an application of these, and every substitution inside a gather instance and inside a graded-agreement round is proved that way.
+\end{theorem}
+
+\begin{proof}\leanok
+  \uses{def:forwardsim, def:process-algebra, def:syncproduct, def:weakstep}
+  The five congruences share one decomposition.
+  A weak transition $q \overset{l}{\Longrightarrow} q'$ is a finite run whose trace is the single label $l$, so it splits into a silent run, one transition on $l$, and a second silent run, and the same three pieces reassemble a weak transition.
+  A silent run transports along any map of states that carries silent steps to silent steps, which is what embeds the moving component's internal run into the composite with the other components held where they stand.
+  The transition on $l$ is then matched in one step by the composite itself: a synchronised transition of the product, a $\tau$-transition of the abstraction when $l$ is hidden, or an $l$-transition of the restricted system.
+  For the full-synchronisation product the silent prefixes are sequenced one coordinate at a time, and the synchronised transition fires once every coordinate stands at the source of its own transition on $l$.
+  For the composition of two simulations, a transition of the concrete system is answered by a run of the middle system, and that run is answered by a run of the abstract system one transition at a time.
+\end{proof}

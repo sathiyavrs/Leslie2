@@ -33,6 +33,13 @@ and is recovered from `syncProduct` by the **rendezvous idiom**:
 Ownership is thus expressed on the components, not on the product operator, which
 keeps the operator itself uniform: a single conjunction over the whole family.
 
+Forward simulation is a congruence for the product
+(`ForwardSimulation.syncProduct`, `Framework/Congruence.lean`): per-component
+simulations lift to the pointwise relation on the product, so a component of a
+synchronised product may be replaced by a system that simulates it, as a factor of
+`System.parallel` may. Contextual refinement therefore covers contexts built from
+`syncProduct` as well.
+
 Full synchronisation preserves `System.IsLTS` (`System.syncProduct_isLTS`): a
 product of Diracs is the Dirac on the tuple of their points (`piPMF_pure`), and a
 single-coordinate update of an all-Dirac family is a Dirac too

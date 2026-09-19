@@ -6,8 +6,8 @@ protocol chain are in `Results.lean` — `ABDY.main`, `ABDY.refines`, `ABDY.chai
 `ABDY.protocol_safe`, `ABDY.protocol_traces`, `ABDY.composed_safe`, and the shared
 `hybrid_spec` — and those of the gather-based chain in `AFW/FlatSim.lean` — `AFW.main`,
 `AFW.refines`, `AFW.chainSim`, `AFW.protocol_composed` — beside the composed-level
-`AFW.composed_refines`, `AFW.composed_safe`, `AFW.chainSimComposed` and
-`GBCA.gatherRoundRefines` in `Round/Binding.lean`, all axiom-clean and guarded. Each chain
+`AFW.composed_refines`, `AFW.composed_safe`, `AFW.chainSimComposed` in `AFW/Chain.lean`
+and `GBCA.gatherRoundRefines` in `Round/Binding.lean`, all axiom-clean and guarded. Each chain
 carries two headlines about its ghost-free reading, in `ABDY/Erasure.lean` and
 `AFW/Erasure.lean`: `protocol_erasure`, the equality of achievable trace distributions
 between the protocol and that reading, and `protocol₀_safe`, Validity and Agreement at it. The two
@@ -28,7 +28,14 @@ ABDY.protocol  ⊑  ABDY.composed                                  ⊑  hybrid  
 One GBCA specification, two verified implementations, each carried from the protocol
 as it runs. The first line carries the direct implementation (ABDY22's Algorithm 6,
 D18), the second the gather-based one (AFW25's two-gather construction, D24), and the
-two chains share every link from `hybrid` up.
+two chains share every link from `hybrid` up. Every system above a protocol is a
+composition of components, down to the programs that run it. On the first line a round
+is the `n` stage programs beside the round's network. On the second a round is `n`
+programs beside the network of the graded-agreement layer, in parallel with two gather
+instances, and a gather instance is `n` programs beside the gather network, in parallel
+with `2n` reliable-broadcast instances, each of them `n` programs beside the instance's
+network. The three inner links of the second line each replace one tier of those
+components by the tier above it.
 
 A system below that meeting point belongs to one implementation or the other and is
 named for its source: `ABDY`, after Abraham, Ben-David and Yandamuri, and `AFW`, after
@@ -82,15 +89,24 @@ Two return labels announce a value that no program computes. A graded-agreement 
 `retG r id out β` names the round's bound bit `β` beside the graded outcome, and a gather
 return `ret id g C` names the instance's common core beside the map (D29). Each value is
 state of the specification, written once by an internal rule. The implementations hold the
-same value as ghost state: the bound bit is a field of the round's network state, and the
-core a field of the gather instance's state, computed by `Gather.coreOf` from that
-instance's network state alone. In the flat readings both belong to the network
+same value as ghost state, in each case at the component whose own state determines it. A
+gather instance's core is a field of the gather network, computed by `Gather.coreOf` from
+that network's sent sets and corrupted set alone. ABDY22's round holds the bound bit as a
+field of the round's network state; the gather-based round gives it a component of its
+own, the network of the graded-agreement layer, which carries no messages and holds the
+bit alone. In the flat readings both belong to the network
 adversary, which holds a ghost record per round (D30). No program's record carries
 either and no program's row reads one. The two graded-agreement return rows of the
 network do read the round's record, and what they read from it is the value the label
 announces, never whether the row fires: the read admits a bit at every state
 (`ghostOut_total` in `Reading/Erase.lean`). The announcement therefore leaves every
 execution of the protocol as it is.
+
+What a program does hold of a sub-protocol's answer is its own record of what the
+instances have returned to it: the stores `Gather.ProcRec.delivIn` and `delivBind`,
+written on the broadcast return events. Four rows of a gather program read them —
+`sndEcho`, `sndVote`, `bindCall` and `ret` — so they are state a guard consults and not
+ghost state.
 
 For the bound bit that inertness is a theorem.
 `Reading/Erase.lean` erases the adversary's ghost record onto the ghost-free reading
@@ -115,8 +131,9 @@ implementations' readings along theirs.
 ## Scope
 
 GBCA is verified to **implementation** level, by both implementations — the
-gather-based one down through gather and Bracha's reliable broadcast, both encoded at
-specification and implementation level of their own; WCC is **assumed** at specification level
+gather-based one down through gather and Bracha's reliable broadcast, each of them a
+composition of programs beside the instance's network and encoded at specification and
+implementation level of its own; WCC is **assumed** at specification level
 (its coin is `wccPMF`). Both trace predicates are read at never-corrupted returners.
 `ValidityTrace` is the paper-form predicate (D13): every return of `b` by a never-corrupted
 process is preceded by a `callABA _ b` from a caller that is never corrupted anywhere in the
@@ -134,7 +151,7 @@ does.
 Each departure from the source blueprint carries a label D1–D33, cited at the point where
 it applies. The registry — every active label glossed, and the numbers the range skips —
 is the Deviations paragraph of `../../blueprint/src/content.tex`.
-`../NOTES-Fidelity.md` covers how the encoding stands against its two sources beyond that
+`../NOTES-Fidelity.md` covers how the encoding stands against its sources beyond that
 registry.
 
 ## The files
@@ -169,8 +186,8 @@ everything. Within a folder the files are alphabetical.
 | file | lines | what it is |
 |---|---|---|
 | `Reading/Alphabet.lean` | 209 | The rendezvous alphabet `NLabP n M` a flat reading speaks, parametric in the stage message type, with the label pullback the coin oracle is read along. |
-| `Reading/Flat.lean` | 1534 | **The flat reading of a protocol**, parametric in the graded-agreement implementation: the shared rows of a program and of the network adversary, the adversary's per-round ghost record with its update and its output (D30), the pipeline that composes them beside the coin oracle, and the inversion lemmas that read a row off its label. |
-| `Reading/Erase.lean` | 405 | **The ghost-free reading** `Net.flat₀`, the same reading over a one-element ghost record with its returns free to announce any bit, and `Net.flat_erasure`: the two readings achieve the same trace distributions, by a state erasure of the network adversary carried through the pipeline. |
+| `Reading/Flat.lean` | 1537 | **The flat reading of a protocol**, parametric in the graded-agreement implementation: the shared rows of a program and of the network adversary, the adversary's per-round ghost record with its update and its output (D30), the pipeline that composes them beside the coin oracle, and the inversion lemmas that read a row off its label. |
+| `Reading/Erase.lean` | 407 | **The ghost-free reading** `Net.flat₀`, the same reading over a one-element ghost record with its returns free to announce any bit, and `Net.flat_erasure`: the two readings achieve the same trace distributions, by a state erasure of the network adversary carried through the pipeline. |
 
 **`ABA/ABDY/`** — the implementation of ABDY22, and the composed reading over it.
 
@@ -190,9 +207,9 @@ everything. Within a folder the files are alphabetical.
 
 | file | lines | what it is |
 |---|---|---|
-| `Core/Abs.lean` | 332 | `Abs` preservation for the stutter rows, and the assembly `Inv.step`. |
+| `Core/Abs.lean` | 326 | `Abs` preservation for the stutter rows, and the assembly `Inv.step`. |
 | `Core/Run.lean` | 53 | The abstract-state run kit: `SpecStep.decide` as a τ-run (`decide_step`), and a run closed by a visible step (`weakStep_of_run_then_step`). |
-| `Core/Inv.lean` | 3900 | Step inversion for `hybrid`, then preservation of `Inv` across every row. The bulk of the proof text. |
+| `Core/Inv.lean` | 3902 | Step inversion for `hybrid`, then preservation of `Inv` across every row. The bulk of the proof text. |
 | `Core/NonVacuity.lean` | 648 | A concrete 20-step run of `hybrid P4` to a `retABA` decision, so the simulation about it is not vacuous. |
 | `Core/Rel.lean` | 676 | The core simulation's relation: the lazy abstract state `Abs` and the concrete invariant `Inv`. |
 | `Core/Sim.lean` | 415 | **`coreSim`**: the simulation proof itself, one row per concrete step class. |
@@ -207,8 +224,8 @@ everything. Within a folder the files are alphabetical.
 
 | file | lines | what it is |
 |---|---|---|
-| `Broadcast/Impl.lean` | 145 | Bracha's three message levels (blueprint Algorithm 6) over the two-part state. |
-| `Broadcast/ImplSim.lean` | 996 | `brbRefines`: the Bracha instance refines TS 6, the committed value certified by an ECHO receipt quorum, the commit fired on demand. Exports the chain-data answers the gather files replay. |
+| `Broadcast/Impl.lean` | 145 | `BRB.ImplStep`, the rows of the composed instance: Bracha's three message levels (blueprint Algorithm 6) over the two-part state. |
+| `Broadcast/ImplSim.lean` | 996 | `brbRefines`: the Bracha instance refines TS 6, the committed value certified by an ECHO receipt quorum, the commit fired on demand. Carries the relation `BRB.InstRel`, which the gather substitution lifts, and the instance invariant `BRB.Inv`, which the flat link carries. |
 | `Broadcast/Spec.lean` | 160 | The reliable-broadcast specification, per leader (blueprint TS 6, safety-only): the input/committed-value split with the guarded commit (D27). |
 | `Broadcast/Sub.lean` | 951 | **The Bracha instance, composed**: `BRB.implInst`, the `n` per-process programs beside the instance's network with the instance's own events hidden, and the row characterisation `implInst_step_iff_row` that reads a transition off its label. |
 
@@ -219,7 +236,7 @@ everything. Within a folder the files are alphabetical.
 | `Gather/Core.lean` | 1405 | The invariant of the gather-over-BRB instance and the counting argument for its core: `coreOf` has `n − f` committed entries and lies below the committed `BIND` payload of every process outside `F`, with the `f + 1` freeze certificate the specification's bind guard consumes. |
 | `Gather/Ideal.lean` | 603 | `Gather.IdealStep`, the rule table of the gather instance over `2n` BRB specification coordinates (blueprint Algorithm 4, the binding form of AFW25's Algorithm 5), stated over the composition's state, with the row characterisation `idealInst_step_iff_row`. |
 | `Gather/IdealSim.lean` | 962 | `gatherCore`: the gather-over-BRB instance refines TS 4. The return run commits the entries it reads, freezes the core at `coreOf` of the network state, and returns, in one weak transition. |
-| `Gather/Low.lean` | 518 | `Gather.LowStep`, the same table with each BRB coordinate a composed Bracha instance; delivery as a receipt-quorum predicate (D28). |
+| `Gather/Low.lean` | 518 | `Gather.LowStep`, the same table with each broadcast coordinate a composed Bracha instance, whose own rows a gather row carries as a hypothesis, with the row characterisation `lowInst_step_iff_row`. |
 | `Gather/LowSim.lean` | 134 | `gatherLow`: the broadcast substitution inside gather, per coordinate, carried through the composition by the congruences. |
 | `Gather/Safety.lean` | 148 | `CoreTrace`, the common core read off a trace, and `specInst_core` at the specification. |
 | `Gather/Spec.lean` | 215 | The gather specification (blueprint TS 4): call/commit split (D26) and the write-once core the return labels announce (D29). |
@@ -257,9 +274,11 @@ and imports no implementation, which is what lets both flat readings instantiate
 `ABDY/Protocol.lean`; the protocol enters only at `ABDY/ProtocolSim.lean`, which is where the two
 readings meet, and `Results.lean` reaches it through that file.
 
-The gather-based files form their own stack over `Vocabulary/NetworkState.lean` and the unchanged
-`Spec/GBCA.lean`, meeting the rest of the development in three places: `Round/Counting.lean`
-reads the shared round alphabet, `AFW/Flat.lean` instantiates `Reading/Flat.lean`, and
+The gather-based files form their own stack over `Vocabulary/NetworkState.lean` and
+`Spec/GBCA.lean`, meeting the rest of the development in four places: `Round/Counting.lean`
+reads the shared round alphabet, `Round/Sub.lean` imports `ABDY/Instances.lean`, whose
+`GSub.gPull` and `GSub.liftedSpec` read the graded-agreement specification over the
+family alphabet the round speaks, `AFW/Flat.lean` instantiates `Reading/Flat.lean`, and
 `AFW/Chain.lean` imports `Results.lean` for the shared links from `hybrid` up. Nothing
 in the protocol chain imports a gather-based file, so either chain reads standalone.
 
@@ -278,13 +297,16 @@ For the two sub-protocol interfaces, read the specification beside the trace pro
 carries: `Spec/GBCA.lean` with `Spec/GBCASafety.lean`'s `specInst_binding`, and
 `Gather/Spec.lean` with `Gather/Safety.lean`'s `specInst_core`.
 
-For the gather-based chain: `Broadcast/Spec.lean` → `Gather/Spec.lean` →
-`Round/Counting.lean`'s module docstring (the algorithm and its counting) →
-`Round/Sub.lean`'s (the round's components) → `AFW/Flat.lean`'s (the system that runs) →
-`AFW/Chain.lean`'s and `AFW/FlatSim.lean`'s (the assembly). `Gather/Core.lean`'s
-docstring is the counting argument behind the core, and is read against
-`Gather/Spec.lean` alone. The simulation files export their answers as τ-chain data
-consumed one level up, so each `*Sim` file is readable against the one below it.
+For the gather-based chain, by module docstring: `Broadcast/Sub.lean` →
+`Gather/Sub.lean` → `Round/Sub.lean` → `Round/Pair.lean` → `AFW/Chain.lean` →
+`AFW/FlatSim.lean`. The first three give the components of one level each, the alphabet
+they speak and the row characterisation that reads a transition of the composition off
+its label; `Round/Pair.lean` is the row table the counting refinement runs on;
+`AFW/Chain.lean` is the assembly at the protocol shape and `AFW/FlatSim.lean` the link
+to `AFW/Flat.lean`, the system that runs. The two counting arguments are
+`Gather/Core.lean`, read against `Gather/Spec.lean` alone, and `Round/Counting.lean`.
+Each `*Sim` file rests on the row characterisation of the composition it is about, so it
+is readable against the file that states those rows.
 
 ## Where else to look
 
@@ -321,7 +343,3 @@ pseudocode and the proof bodies).
   and a finitely-supported family combinator in `Framework/`. The finite-program
   principle does not ask for it: the network is the adversary, the coin an assumed
   oracle, and the instance family a specification-side reading.
-- **Decomposing the gather-based composed reading**: its graded-agreement side is a family
-  of single rule tables over joint states (D28), where the protocol chain's round is a
-  composition of the stage programs beside their network. The target, and what
-  reaching it takes, is `../TODO-Decomposing-AFW-Composed.md`.

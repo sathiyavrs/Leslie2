@@ -1,0 +1,19 @@
+\begin{definition}[The gather instance as a composition]
+  \label{def:aba-gather-sub}
+  \lean{PLTS.ABA.Gather.ProcRec}\lean{PLTS.ABA.Gather.GaNetState}\lean{PLTS.ABA.Gather.GaEvt}\lean{PLTS.ABA.Gather.inPull}\lean{PLTS.ABA.Gather.bindPull}\lean{PLTS.ABA.Gather.specPull}\lean{PLTS.ABA.Gather.SubStateAt}\lean{PLTS.ABA.Gather.instAt}\lean{PLTS.ABA.Gather.liftedSpec}\leanok
+  \uses{def:aba-gather-spec, def:aba-brb-impl, def:aba-networkstate, def:syncproduct, def:process-algebra, def:idle-family, def:relabel}
+  One gather instance over a payload type $X$, taken apart into the components that run it.
+  The gather tier is the $n$ gather programs under $\mathrm{syncProduct}$ beside the gather network.
+  The broadcast tier is $2n$ reliable-broadcast instances, one per process for the inputs and one per process for the $\mathrm{BIND}$ payloads (D32).
+  The two tiers run in parallel, the instance's own events are hidden, and the result is read back over the interface alphabet: \leandecl{PLTS.ABA.Gather.instAt}, which takes the broadcast tier as an argument.
+  Five events are hidden --- the gather multicast, the gather delivery, the return of an input instance, and the call and the return of a bind instance --- so what an outside system sees of the instance is the call, the per-process returns, corruption and the call loop.
+  A gather program holds one process's record and the messages delivered to it, indexed by sender, and its guards read that record and those sets alone.
+  Beside the gather fields the record holds two stores: $\mathit{delivIn}(k)$, the value the instance broadcasting $k$'s input returned here, and $\mathit{delivBind}(q)$, the payload the instance broadcasting $q$'s $\mathrm{BIND}$ payload returned here.
+  Each is written on that instance's return event, and a guard that consumes a returned value reads the store rather than a neighbouring component.
+  The gather network holds the per-sender sent sets, the corrupted set and the instance's core, and reads no program's record; the core is a function of the sent sets and the corrupted set, which is what lets that component hold it (D29).
+  A broadcast instance joins the composition along a pullback that names it, \leandecl{PLTS.ABA.Gather.inPull} for an input instance and \leandecl{PLTS.ABA.Gather.bindPull} for a bind instance.
+  A label carrying another instance's index has no image under the pullback and leaves that instance standing still, while corruption and the silent label have an image at every instance, so $\mathrm{fail}$ reaches the whole composition at once (D1).
+  The specification answers its call label on two rows, the call and the input-enabledness loop, and the gather record and a broadcast instance are different components, so one label carrying both rows would carry the two mixed pairs as well.
+  The loop therefore has a label of its own, and the specification is read along \leandecl{PLTS.ABA.Gather.specPull}, which sends the loop to the call, where the specification's own loop row answers it.
+  Plugging Bracha instances or broadcast specifications into the broadcast tier gives the two instances of the two definitions below.
+\end{definition}

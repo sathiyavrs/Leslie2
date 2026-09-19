@@ -1,10 +1,17 @@
 \begin{definition}[The BRB implementation instance]
   \label{def:aba-brb-impl}
-  \lean{PLTS.ABA.BRB.BMsg}\lean{PLTS.ABA.BRB.PState}\lean{PLTS.ABA.BRB.ImplState}\lean{PLTS.ABA.BRB.ImplStep}\lean{PLTS.ABA.BRB.implInst}\leanok
-  \uses{def:aba-brb-spec, def:aba-networkstate}
+  \lean{PLTS.ABA.BRB.BMsg}\lean{PLTS.ABA.BRB.PState}\lean{PLTS.ABA.BRB.ImplState}\lean{PLTS.ABA.BRB.BEvt}\lean{PLTS.ABA.BRB.specPull}\lean{PLTS.ABA.BRB.ImplStep}\lean{PLTS.ABA.BRB.implInst}\lean{PLTS.ABA.BRB.implInst_step_iff_row}\leanok
+  \uses{def:aba-brb-spec, def:aba-networkstate, def:syncproduct, def:process-algebra, def:relabel}
   Bracha's algorithm~\cite{Bra87} --- Algorithm~6 of~\cite{LeslieBP} --- over the two-part state of Definition~\ref{def:aba-networkstate}.
+  The instance is the $n$ per-process programs under $\mathrm{syncProduct}$ beside the instance's network, with the two rendezvous hidden: \leandecl{PLTS.ABA.BRB.implInst}.
+  A program holds one process's record and the messages delivered to it, indexed by sender; it holds no sent set and no corrupted set, and its guards read its own record and its own delivered sets.
+  The network holds the per-sender sent sets and the corrupted set and reads no program's record.
+  A multicast is a joint step of the sender, which writes its record, and the network, which records the message; a delivery is a joint step of the network, which checks that the message is sent under the named sender, and the receiver, which files it under that sender's row.
   The message type is $\mathrm{BMsg}(M) = \{\langle\mathrm{INIT}, m\rangle, \langle\mathrm{ECHO}, m\rangle, \langle\mathrm{VOTE}, m\rangle : m \in M\}$, and a process record holds its input beside the write-once send fields $\mathit{sentEcho}$ and $\mathit{sentVote}$ and its return flag.
-  The rows are the environment call at the leader with its loop, asynchronous delivery and Byzantine injection on the network (D5, D1), and the levels: $\mathrm{ECHO}\,m$ on a delivered $\langle\mathrm{INIT}, m\rangle$ from the leader, $\mathrm{VOTE}\,m$ on an $n{-}f$ $\mathrm{ECHO}\,m$ receipt quorum or on $f{+}1$ $\mathrm{VOTE}\,m$ receipts (the amplification row), and the return of $m$ at $n{-}f$ $\mathrm{VOTE}\,m$ receipts, at a process that has not returned.
-  The instance runs those rows as $n$ per-process programs beside the instance's network, synchronising on the multicast and the delivery, which are hidden; the rows above are that composition read as one table over the two-part state.
-  Full construction: \leandecl{PLTS.ABA.BRB.implInst}.
+  What leaves the instance is the environment call at the leader with its loop, the per-process returns and corruption (D5, D1).
+  The specification answers its call label on two rows, the call and the input-enabledness loop, and the leader's record and the network's sent sets are different components, so one label carrying both rows would also carry the leader looping while the network posts $\langle\mathrm{INIT}, m\rangle$.
+  The loop therefore has a label of its own, and the specification is read along \leandecl{PLTS.ABA.BRB.specPull}, which sends that label to the call, where the specification's own loop row answers it.
+  \leandecl{PLTS.ABA.BRB.implInst_step_iff_row} is the row characterisation: at a specification label, the transitions of the composition over the labels the projection sends there are exactly the rows of \leandecl{PLTS.ABA.BRB.ImplStep} at that label, on the same state and with the same distribution.
+  Those rows are the levels of the algorithm: $\mathrm{ECHO}\,m$ on a delivered $\langle\mathrm{INIT}, m\rangle$ from the leader, $\mathrm{VOTE}\,m$ on an $n{-}f$ $\mathrm{ECHO}\,m$ receipt quorum or on $f{+}1$ $\mathrm{VOTE}\,m$ receipts (the amplification row), and the return of $m$ at $n{-}f$ $\mathrm{VOTE}\,m$ receipts, at a process that has not returned.
+  The call and the call loop are the two rows over the call label; every other specification label has a single label of the interface over it.
 \end{definition}

@@ -60,8 +60,9 @@ broadcast across the whole composition.
 A gather program reads no neighbouring coordinate. What a broadcast instance has
 returned to it is written on the return event into its own record: `delivIn k`
 is the value instance `k` returned here, `delivBind q` is the payload bind
-instance `q` returned here. The guards that today read `approved` or `apIn` read
-these stores.
+instance `q` returned here. The four rows that read what has been returned —
+`sndEcho`, `sndVote`, `bindCall` and `ret` — read the stores through
+`holdsIn`, `holdsBind` and `approvedBy`.
 
 ## The core
 

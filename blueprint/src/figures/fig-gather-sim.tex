@@ -16,7 +16,7 @@
   \draw[->, thick] (ideal) -- (pair);
   \draw[->, thick] (pair)  -- (spec);
   \node[conc] (r1) at (5.6,1.15)
-    {every $\mathrm{ECHO}$, $\mathrm{VOTE}$ and delivery\\ of a Bracha instance};
+    {every $\mathrm{ECHO}$, $\mathrm{VOTE}$, delivery\\ and return of a Bracha instance};
   \node[conc] (r2) at (5.6,-0.45)
     {every $\mathrm{ECHO}$, $\mathrm{VOTE}$ and $\mathrm{BIND}$\\ of a gather instance};
   \node[conc] (r3) at (5.6,-2.05)
@@ -24,11 +24,11 @@
   \draw[dashed, ->] (r1) -- (1.65,1.15) node[note, pos=0.72, above]{$\mathrm{LowPairRel}$};
   \draw[dashed, ->] (r2) -- (1.65,-0.45) node[note, pos=0.72, above]{$\mathrm{IdealRel}$};
   \draw[dashed, ->] (r3) -- (1.65,-2.05) node[note, pos=0.72, above]{$\mathrm{PairRel}$};
-  \node[note, anchor=west] at (8.5,1.15)  {a stutter of the\\ BRB coordinate};
-  \node[note, anchor=west] at (8.5,-0.45) {a stutter; a delivery is\\ a receipt quorum (D28)};
+  \node[note, anchor=west] at (8.5,1.15)  {a stutter or a return\\ of the BRB specification};
+  \node[note, anchor=west] at (8.5,-0.45) {a stutter; a broadcast\\ return writes a store};
   \node[note, anchor=west] at (8.5,-2.05) {a run, or a single\\ graded return};
   \node[font=\footnotesize, align=center] at (5.0,-3.85)
     {each stage idealises away one layer and holds the layers above it equal;\\
-     the bound coordinate is held equal by the two substitutions,\\
-     and $\mathrm{PairRel}$ pins $excluded$ to its complement};
+     the two upper stages are congruence applications, the layer's network held equal,\\
+     and $\mathrm{PairRel}$ pins $excluded$ to the complement of the bit it holds};
 \end{tikzpicture}

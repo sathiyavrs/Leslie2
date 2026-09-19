@@ -1,6 +1,8 @@
 \begin{definition}[The BRB implementation instance]
   \label{def:aba-brb-impl}
-  \lean{PLTS.ABA.BRB.BMsg}\lean{PLTS.ABA.BRB.PState}\lean{PLTS.ABA.BRB.ImplState}\lean{PLTS.ABA.BRB.ImplStep}\lean{PLTS.ABA.BRB.implInst}\leanok
-  \uses{def:aba-brb-spec, def:aba-networkstate}
-  Bracha's algorithm~\cite{Bra87} --- Algorithm~6 of~\cite{LeslieBP} --- over the two-part state: the leader multicasts $\mathrm{INIT}$, a process echoes the leader's $\mathrm{INIT}$ once, votes once on an $n{-}f$ $\mathrm{ECHO}$ quorum or on $f{+}1$ $\mathrm{VOTE}$ receipts, and returns a value at $n{-}f$ $\mathrm{VOTE}$ receipts of it, run as the $n$ per-process programs beside the instance's network: \leandecl{PLTS.ABA.BRB.implInst}.
+  \lean{PLTS.ABA.BRB.BMsg}\lean{PLTS.ABA.BRB.PState}\lean{PLTS.ABA.BRB.ImplState}\lean{PLTS.ABA.BRB.BEvt}\lean{PLTS.ABA.BRB.specPull}\lean{PLTS.ABA.BRB.ImplStep}\lean{PLTS.ABA.BRB.implInst}\lean{PLTS.ABA.BRB.implInst_step_iff_row}\leanok
+  \uses{def:aba-brb-spec, def:aba-networkstate, def:syncproduct, def:process-algebra, def:relabel}
+  Bracha's algorithm~\cite{Bra87} --- Algorithm~6 of~\cite{LeslieBP} --- run as the $n$ per-process programs beside the instance's network, with the multicast and the delivery hidden: the leader multicasts $\mathrm{INIT}$, a process echoes the leader's $\mathrm{INIT}$ once, votes once on an $n{-}f$ $\mathrm{ECHO}$ quorum or on $f{+}1$ $\mathrm{VOTE}$ receipts, and returns a value at $n{-}f$ $\mathrm{VOTE}$ receipts of it --- \leandecl{PLTS.ABA.BRB.implInst}.
+  The specification answers its call label on two rows, the call and the input-enabledness loop; the composition takes the loop on a label of its own and reads the specification along \leandecl{PLTS.ABA.BRB.specPull}, which sends the loop to the call.
+  \leandecl{PLTS.ABA.BRB.implInst_step_iff_row} states the transitions of the composition at one specification label as a list of cases, one per row of \leandecl{PLTS.ABA.BRB.ImplStep}.
 \end{definition}

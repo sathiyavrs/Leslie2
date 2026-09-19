@@ -1,7 +1,7 @@
 \begin{theorem}[The gather-based substitution]
   \label{thm:aba-afw-substitution}
   \lean{PLTS.ABA.AFW.RlowAll}\lean{PLTS.ABA.AFW.RidealAll}\lean{PLTS.ABA.AFW.RpairAll}\lean{PLTS.ABA.AFW.famLowSimProb}\lean{PLTS.ABA.AFW.famIdealSimProb}\lean{PLTS.ABA.AFW.famPairSimProb}\lean{PLTS.ABA.AFW.substSim}\lean{PLTS.ABA.AFW.substitution}\leanok
-  \uses{def:aba-afw-sides, def:aba-hybrid, thm:gbca-tier-refines, thm:gbca-pair-refines, thm:mapidle-cong, thm:gbca-family-refines, thm:precong-parallel, thm:precong-abstract, thm:precong-relabel, thm:forward-sound}
+  \uses{def:aba-afw-sides, def:aba-hybrid, thm:gbca-tier-refines, thm:gbca-pair-refines, thm:gbca-family-refines, thm:precong-parallel, thm:precong-abstract, thm:precong-relabel, thm:forward-sound}
   Three stages carry the gather-based composed reading to the protocol-shaped specification:
   \[
     \afw{\mathrm{composed}}(P) \;\sqsubseteq\; \afw{\mathrm{hybrid}}_1(P) \;\sqsubseteq\; \afw{\mathrm{hybrid}}_2(P) \;\sqsubseteq\; \mathrm{hybrid}(P).
@@ -12,7 +12,7 @@
 \end{theorem}
 
 \begin{proof}\leanok
-  \uses{def:aba-afw-sides, def:aba-hybrid, thm:gbca-tier-refines, thm:gbca-pair-refines, thm:mapidle-cong, thm:gbca-family-refines, thm:precong-parallel, thm:precong-abstract, thm:precong-relabel, thm:forward-sound}
+  \uses{def:aba-afw-sides, def:aba-hybrid, thm:gbca-tier-refines, thm:gbca-pair-refines, thm:gbca-family-refines, thm:precong-parallel, thm:precong-abstract, thm:precong-relabel, thm:forward-sound}
   Theorem~\ref{thm:mapidle-cong} lifts each per-round simulation along $\mathrm{gPull}$; the family congruence of Theorem~\ref{thm:gbca-family-refines} lifts the result to the sides, its broadcast hypothesis discharged by the lockstep-corruption compatibility of each relation; and each family substitution runs under the syntactically identical context by $\mathrm{parallel\_right}$ followed by $\mathrm{abstract}$, $\mathrm{relabel}$ and $\mathrm{abstract}$, exactly as the substitution of Theorem~\ref{thm:aba-substitution} does.
   The stages compose by Result~2, and the inclusion is the composite of the three stage inclusions.
 \end{proof}

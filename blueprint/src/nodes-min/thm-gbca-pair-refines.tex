@@ -5,6 +5,7 @@
   The two-gather round is forward-simulated by the GBCA specification instance (Transition System~2): \leandecl{PLTS.ABA.GBCA.pairRefines}.
   The exclusion set and the grade guard are certified on the two cores, each written once, --- a bit is excluded when the first core carries it on fewer than $|S| - f$ entries --- and excludes fire on demand under the returns that need them.
   The bit a return announces is the round's bound bit, so the specification's guard on the announcement and its guard pair on the value are the same pair.
+  The candidate's certificate is recorded at the first gather's return and consumed at the second gather's call, and the grade's at the second gather's return and consumed at the graded return, the program's record carrying each across its two events.
 \end{theorem}
 
 \begin{proof}\leanok

@@ -1,0 +1,8 @@
+\begin{definition}[The graded-agreement round as a composition]
+  \label{def:aba-round-sub}
+  \lean{PLTS.ABA.GBCA.ProcRec}\lean{PLTS.ABA.GBCA.REvt}\lean{PLTS.ABA.GBCA.PLab}\lean{PLTS.ABA.GBCA.procPull}\lean{PLTS.ABA.GBCA.ga1Pull}\lean{PLTS.ABA.GBCA.ga2Pull}\lean{PLTS.ABA.GBCA.layer}\lean{PLTS.ABA.GBCA.RoundStateAt}\lean{PLTS.ABA.GBCA.roundInstAt}\leanok
+  \uses{def:aba-gather-sub, def:aba-gbca-net, def:aba-labels, def:syncproduct, def:process-algebra, def:idle-family, def:relabel}
+  The round-$r$ graded-agreement round over two gather instances: the $n$ graded-agreement programs beside the network of Definition~\ref{def:aba-gbca-net}, in parallel with two gather instances of Definition~\ref{def:aba-gather-sub}, the round's three events hidden and the result read over the family alphabet $\mathrm{NLab}(n)$ --- \leandecl{PLTS.ABA.GBCA.roundInstAt}, which takes the two gather systems as arguments.
+  A program holds one process's record of the round --- its input, its candidate, whether it has called the second gather, its graded outcome and its return flag --- and moves at each of the round's four moments: the first gather's return and the second gather's call are two events, and so are the second gather's return and the round's graded return.
+  Each gather is read along a pullback that names it, \leandecl{PLTS.ABA.GBCA.ga1Pull} or \leandecl{PLTS.ABA.GBCA.ga2Pull}, and each program along \leandecl{PLTS.ABA.GBCA.procPull}, which reads a Byzantine call as a call, a Byzantine return as a return, and the family's two call loops as the loop.
+\end{definition}

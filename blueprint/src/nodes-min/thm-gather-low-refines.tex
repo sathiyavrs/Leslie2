@@ -1,8 +1,8 @@
 \begin{theorem}[Gather broadcast substitution]
   \label{thm:gather-low-refines}
   \lean{PLTS.ABA.Gather.LowRel}\lean{PLTS.ABA.Gather.gatherLow}\leanok
-  \uses{def:aba-gather-low, def:aba-gather-ideal, thm:brb-refines}
-  The gather implementation over Bracha instances is forward-simulated by the gather implementation over broadcast specifications, along the per-coordinate broadcast refinement relation, the lagging specification coordinates advanced by $\tau$-chains under the rows that read them: \leandecl{PLTS.ABA.Gather.gatherLow}.
+  \uses{def:aba-gather-low, def:aba-gather-ideal, thm:brb-refines, thm:forwardsim-congruence}
+  The gather implementation over Bracha instances is forward-simulated by the gather implementation over broadcast specifications, by congruence: the broadcast refinement of Theorem~\ref{thm:brb-refines}, read along the pullback naming each of the $2n$ coordinates, is carried through the two products, the parallel composition with the gather tier held, the hiding and the restriction by Theorem~\ref{thm:forwardsim-congruence} --- \leandecl{PLTS.ABA.Gather.gatherLow}, along \leandecl{PLTS.ABA.Gather.LowRel}, the gather tier held equal beside the broadcast relation at every coordinate.
 \end{theorem}
 
 \begin{proof}\leanok

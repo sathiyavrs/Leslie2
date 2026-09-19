@@ -1,14 +1,15 @@
 \begin{theorem}[The two substitutions inside the round]
   \label{thm:gbca-tier-refines}
   \lean{PLTS.ABA.GBCA.LowPairRel}\lean{PLTS.ABA.GBCA.lowPairRefines}\lean{PLTS.ABA.GBCA.IdealRel}\lean{PLTS.ABA.GBCA.idealRefines}\leanok
-  \uses{def:aba-gbca-gather-low, def:aba-gbca-pair, thm:gather-low-refines, thm:gather-core}
-  Each reading of the round is forward-simulated by the one above it, along the componentwise pairing of the gather-level relation with the equality of the bound coordinate: the fully concrete instance by the instance over broadcast components, along Theorem~\ref{thm:gather-low-refines}'s relation at both gather coordinates, and that instance by the two-gather round over specifications, along Theorem~\ref{thm:gather-core}'s.
-  The round's bound bit is the third factor of each of the three states, and neither substitution touches it.
+  \uses{def:aba-gbca-gather-low, def:aba-gbca-pair, thm:gather-low-refines, thm:gather-core, thm:forwardsim-congruence}
+  Each tier of the round is forward-simulated by the one above it, along the layer held equal beside the gather-level relation at both gather slots: the fully concrete tier by the tier over broadcast specifications, along Theorem~\ref{thm:gather-low-refines}'s relation, and that tier by the round over gather specifications, along Theorem~\ref{thm:gather-core}'s.
+  The programs and the layer's network, which holds the bound bit, stand equal on both sides, and neither substitution touches them.
+  Both proofs are applications of Theorem~\ref{thm:forwardsim-congruence}.
 \end{theorem}
 
 \begin{proof}\leanok
   \uses{def:aba-gbca-gather-low, def:aba-gbca-pair, thm:gather-low-refines, thm:gather-core, def:forwardsim}
-  The gather simulations export their answers as $\tau$-chains of the component instance closed by the answering row --- the internal reach, the fused call, and the return run --- and each row of the pair carries one component's row as a premise.
-  The proof maps the exported chain into the pair coordinatewise, the other coordinate standing still, and closes it with the pair's own row; the link row concatenates the first coordinate's return run and the second coordinate's call answer into one silent run.
-  Corruption is the lockstep transform on both sides, answered by the componentwise broadcast-compatibility of the gather relations.
+  The gather simulation is read along the pullback naming each slot by the congruence for the partial pullback, the two slots are joined by transitivity with one gather held on each side, and the result is carried through the parallel composition with the layer held, the hiding of the round's events and the restriction to the family alphabet.
+  The composite relation is rewritten to the stated one, its middle state being determined by the equalities.
+  Corruption is the family's broadcast into the two gathers on both sides, answered by the broadcast compatibility of the gather relations at each slot.
 \end{proof}

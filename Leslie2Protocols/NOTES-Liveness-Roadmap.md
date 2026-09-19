@@ -77,7 +77,7 @@ In this repo's terms: the statement lives naturally at the trace-distribution le
 bounds DO transfer along fair-trace-distribution inclusions, being universally quantified
 over the trace distributions of the including system.
 
-## 2. What exists today, per repo
+## 2. What each repository supplies
 
 **Leslie2 (this repo)** — probabilistic simulation, *complete*:
 - Weak probabilistic forward simulation with proven soundness AND transitivity

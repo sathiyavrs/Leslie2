@@ -11,7 +11,7 @@ from the protocol as it runs down to a small specification, by probabilistic for
 simulation, with two verified implementations of its graded-agreement sub-protocol —
 one direct, one built over gather and reliable broadcast. Each is carried from the
 protocol as it runs, through one flat reading written parametrically in the
-implementation and instantiated twice. 48 files in nine content-themed
+implementation and instantiated twice. 53 files in nine content-themed
 sub-folders, given in dependency order in its own file guide,
 [`ABA/README.md`](ABA/README.md).
 
@@ -30,6 +30,7 @@ beside the three in the core.
 | [`Relabel.lean`](Framework/Relabel.lean) | 468 | Extended alphabets and restriction along the left summand, with the precongruence for it. |
 | [`WeakRun.lean`](Framework/WeakRun.lean) | 196 | Weak runs from step chains: prepending a silent step, and the k-fold run — a chain of silent steps closed by one external step. |
 | [`MapIdleSim.lean`](Framework/MapIdleSim.lean) | 191 | Forward simulation is a congruence for reading both systems over a finer alphabet along a partial label map. |
+| [`Congruence.lean`](Framework/Congruence.lean) | 850 | Forward simulation is a congruence for the operators a composition is built from — binary parallel on either side, the full-synchronisation product of a finite family, hiding and restriction — with the weak-run splitting and transport lemmas the four proofs share. |
 | [`Erasure.lean`](Framework/Erasure.lean) | 376 | Erasure of a state component no transition's firing depends on: the projection and lift clauses, the equality of achievable trace distributions they give, and the congruences that carry an erasure through composition, hiding and restriction. |
 
 ## Notes
@@ -39,10 +40,9 @@ beside the three in the core.
 | [`DESIGN-Composition.md`](DESIGN-Composition.md) | Why the chains are cut where they are: what the composition buys, what each component owns and where it disappears, and what the DECIDED model already weakens. |
 | [`DESIGN-CoreSim.md`](DESIGN-CoreSim.md) | The narrative account of the core simulation `hybrid ⊑ ABA.spec` — the abstract state, the invariant, and the certificates decided values ride on. |
 | [`DESIGN-GBCASim.md`](DESIGN-GBCASim.md) | The narrative account of the per-instance GBCA refinement — exclude-on-demand, the receipt-pattern certificates, and the run structure. |
-| [`DESIGN-GatherTiers.md`](DESIGN-GatherTiers.md) | The narrative account of the gather-based GBCA stack — the counting argument behind the gather specification's core, the BIND-by-broadcast pinning, the counting at the pair tier, the chain-data discipline of its simulations, and the flat reading beneath the composed one. |
+| [`DESIGN-GatherTiers.md`](DESIGN-GatherTiers.md) | The narrative account of the gather-based GBCA stack — the compositions at each level, the counting argument behind the gather specification's core, the BIND-by-broadcast pinning, the counting at the pair tier, the substitutions as congruence applications, and the flat reading beneath the composed one. |
 | [`NOTES-Fidelity.md`](NOTES-Fidelity.md) | How the encoding stands against its sources — the Leslie blueprint, ABDY22 and AFW25: where it follows one against another, and what it deliberately does not reproduce. |
 | [`NOTES-Liveness-Roadmap.md`](NOTES-Liveness-Roadmap.md) | Termination is out of scope; this is what proving it would take. |
-| [`TODO-Decomposing-AFW-Composed.md`](TODO-Decomposing-AFW-Composed.md) | The gather-based chain is not decomposed below the round; this is the target that would make the two chains uniform, and what reaching it takes. |
 
 The prose account of the case study is the ABA chapter of the repository's blueprint
 (`../blueprint/src/`), which carries it in two editions over one set of statements.

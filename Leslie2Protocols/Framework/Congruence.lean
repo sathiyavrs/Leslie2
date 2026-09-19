@@ -18,7 +18,11 @@ built from: binary parallel composition, on either side
 full-synchronisation product of a finite family
 (`ForwardSimulation.syncProduct`); hiding a set of labels
 (`ForwardSimulation.abstract`); and restriction along the left summand of an
-extended alphabet (`ForwardSimulation.relabel`).
+extended alphabet (`ForwardSimulation.relabel`). Contextual refinement therefore
+extends to contexts built from those operators, synchronised-product contexts
+among them: a component of such a context may be replaced by a system that
+simulates it, and the whole composition is simulated by the composition over the
+replacement.
 
 The proofs share one decomposition. A weak transition `q =l=> q'` is a
 finite run whose trace is the single label `l`, so it splits into a silent run,
