@@ -166,9 +166,9 @@ everything. Within a folder the files are alphabetical.
 
 | file | lines | what it is |
 |---|---|---|
-| `Vocabulary/NetworkState.lean` | 408 | The two-part vocabulary of the gather-based development: network state (D5) beside `n` process local states, with the multicast/delivery/corrupt operations and the quorum-intersection kit, stated once and shared by the three sub-protocol encodings. |
+| `Vocabulary/NetworkState.lean` | 429 | The two-part vocabulary of the gather-based development: network state (D5) beside `n` process local states, with the multicast/delivery/corrupt operations and the quorum-intersection kit, stated once and shared by the three sub-protocol encodings. |
 | `Vocabulary/Labels.lean` | 147 | The shared label alphabet `Lab n`: the visible API, the hidden sub-protocol handshakes, `τ`. |
-| `Vocabulary/Params.lean` | 127 | The parameters `P` — `n`, `f` with `n > 3f`, and the coin distribution `wccPMF` with its ε/δ bounds. |
+| `Vocabulary/Params.lean` | 143 | The parameters `P` — `n`, `f` with `n > 3f`, the reliable broadcast's `ECHO` quorum `echoQuorum`, and the coin distribution `wccPMF` with its ε/δ bounds. |
 | `Vocabulary/RoundLoop.lean` | 249 | **The ABA round loop**, per process and nothing else: the phase machine, the control record, the round-loop record. |
 
 **`ABA/Spec/`** — what both implementations are measured against.
@@ -224,24 +224,24 @@ everything. Within a folder the files are alphabetical.
 
 | file | lines | what it is |
 |---|---|---|
-| `Broadcast/Impl.lean` | 145 | `BRB.ImplStep`, the rows of the composed instance: Bracha's three message levels (blueprint Algorithm 6) over the two-part state. |
-| `Broadcast/ImplSim.lean` | 996 | `brbRefines`: the Bracha instance refines TS 6, the committed value certified by an ECHO receipt quorum, the commit fired on demand. Carries the relation `BRB.InstRel`, which the gather substitution lifts, and the instance invariant `BRB.Inv`, which the flat link carries. |
+| `Broadcast/Impl.lean` | 149 | `BRB.ImplStep`, the rows of the composed instance: Bracha's three message levels in the form of AFW25's Algorithm 1 (D34) over the two-part state. |
+| `Broadcast/ImplSim.lean` | 1072 | `brbRefines`: the Bracha instance refines TS 6, the committed value certified by an ECHO receipt quorum, the commit fired on demand. Carries the relation `BRB.InstRel`, which the gather substitution lifts, and the instance invariant `BRB.Inv`, which the flat link carries. |
 | `Broadcast/Spec.lean` | 160 | The reliable-broadcast specification, per leader (blueprint TS 6, safety-only): the input/committed-value split with the guarded commit (D27). |
-| `Broadcast/Sub.lean` | 951 | **The Bracha instance, composed**: `BRB.implInst`, the `n` per-process programs beside the instance's network with the instance's own events hidden, and the row characterisation `implInst_step_iff_row` that reads a transition off its label. |
+| `Broadcast/Sub.lean` | 956 | **The Bracha instance, composed**: `BRB.implInst`, the `n` per-process programs beside the instance's network with the instance's own events hidden, and the row characterisation `implInst_step_iff_row` that reads a transition off its label. |
 
 **`ABA/Gather/`** — gather over reliable broadcast.
 
 | file | lines | what it is |
 |---|---|---|
-| `Gather/Core.lean` | 1405 | The invariant of the gather-over-BRB instance and the counting argument for its core: `coreOf` has `n − f` committed entries and lies below the committed `BIND` payload of every process outside `F`, with the `f + 1` freeze certificate the specification's bind guard consumes. |
-| `Gather/Ideal.lean` | 603 | `Gather.IdealStep`, the rule table of the gather instance over `2n` BRB specification coordinates (blueprint Algorithm 4, the binding form of AFW25's Algorithm 5), stated over the composition's state, with the row characterisation `idealInst_step_iff_row`. |
-| `Gather/IdealSim.lean` | 962 | `gatherCore`: the gather-over-BRB instance refines TS 4. The return run commits the entries it reads, freezes the core at `coreOf` of the network state, and returns, in one weak transition. |
-| `Gather/Low.lean` | 518 | `Gather.LowStep`, the same table with each broadcast coordinate a composed Bracha instance, whose own rows a gather row carries as a hypothesis, with the row characterisation `lowInst_step_iff_row`. |
+| `Gather/Core.lean` | 1483 | The invariant of the gather-over-BRB instance and the counting argument for its core: `coreOf` has `n − f` committed entries and lies below the committed `BIND` payload of every process outside `F`, with the `f + 1` freeze certificate the specification's bind guard consumes. |
+| `Gather/Ideal.lean` | 623 | `Gather.IdealStep`, the rule table of the gather instance over `2n` BRB specification coordinates (blueprint Algorithm 4, the binding form of AFW25's Algorithm 5), stated over the composition's state, with the row characterisation `idealInst_step_iff_row`. |
+| `Gather/IdealSim.lean` | 980 | `gatherCore`: the gather-over-BRB instance refines TS 4. The return run commits the entries it reads, freezes the core at `coreOf` of the network state, and returns, in one weak transition. |
+| `Gather/Low.lean` | 534 | `Gather.LowStep`, the same table with each broadcast coordinate a composed Bracha instance, whose own rows a gather row carries as a hypothesis, with the row characterisation `lowInst_step_iff_row`. |
 | `Gather/LowSim.lean` | 134 | `gatherLow`: the broadcast substitution inside gather, per coordinate, carried through the composition by the congruences. |
 | `Gather/Safety.lean` | 148 | `CoreTrace`, the common core read off a trace, and `specInst_core` at the specification. |
 | `Gather/Spec.lean` | 215 | The gather specification (blueprint TS 4): call/commit split (D26) and the write-once core the return labels announce (D29). |
-| `Gather/Sub.lean` | 1469 | **The gather instance, composed**: `n` gather programs beside the gather network, in parallel with `2n` composed broadcast instances — `Gather.idealInst` over the broadcast specifications and `Gather.lowInst` over Bracha's — read back over the gather alphabet extended by the call loop. |
-| `Gather/Vocabulary.lean` | 167 | The records a gather instance is written over — the `ECHO`/`VOTE` messages and the per-process record — and the core `coreOf` of a gather network state, with the incidence lemmas the counting argument sums. |
+| `Gather/Sub.lean` | 1518 | **The gather instance, composed**: `n` gather programs beside the gather network, in parallel with `2n` composed broadcast instances — `Gather.idealInst` over the broadcast specifications and `Gather.lowInst` over Bracha's — read back over the gather alphabet extended by the call loop. |
+| `Gather/Vocabulary.lean` | 173 | The records a gather instance is written over — the `ECHO`/`VOTE` messages and the per-process record — and the core `coreOf` of a gather network state, with the incidence lemmas the counting argument sums. |
 
 **`ABA/Round/`** — the two-gather round and the three tiers that carry it.
 
@@ -259,11 +259,11 @@ everything. Within a folder the files are alphabetical.
 | file | lines | what it is |
 |---|---|---|
 | `AFW/Chain.lean` | 398 | **The gather-based chain**: the sides `lowSide`, `idealSide` and `pairSide`, the three stages `AFW.composed ⊑ AFW.hybrid1 ⊑ AFW.hybrid2 ⊑ hybrid`, and the composed-level headlines `AFW.composed_refines`, `AFW.composed_safe`, `AFW.chainSimComposed`. Four axiom checks. |
-| `AFW/Flat.lean` | 721 | **The gather-based protocol as it runs**: the flat reading at AFW25's two-gather construction — the tagged message type collapsing a round's `4n + 2` network states into one sent-set family, the process-major stage record, the adversary's ghost record of the two cores and the bound bit, and the 23 stage-side rows. |
-| `AFW/FlatSim.lean` | 2155 | **`AFW.protocolSim`**, **`AFW.main`**: the gather-based protocol carried into `AFW.composed` along a relation that computes the composed state from the flat one, the ghost record included, and the headlines `AFW.refines`, `AFW.main`, `AFW.chainSim` it yields. Five axiom checks. |
+| `AFW/Flat.lean` | 829 | **The gather-based protocol as it runs**: the flat reading at AFW25's two-gather construction — the tagged message type collapsing a round's `4n + 2` network states into one sent-set family, the process-major stage record, the adversary's ghost record of the two cores and the bound bit, and the 23 stage-side rows. |
+| `AFW/FlatSim.lean` | 2161 | **`AFW.protocolSim`**, **`AFW.main`**: the gather-based protocol carried into `AFW.composed` along a relation that computes the composed state from the flat one, the ghost record included, and the headlines `AFW.refines`, `AFW.main`, `AFW.chainSim` it yields. Five axiom checks. |
 | `AFW/Erasure.lean` | 111 | **`AFW.protocol₀`** and **`AFW.protocol_erasure`**: the gather-based protocol with the adversary's record of the two cores and the bound bit dropped, and the headlines re-derived at it — `protocol₀_composed`, `protocol₀_refines`, `protocol₀_safe`, `protocol₀_traces`. Five axiom checks. |
-| `AFW/Frame.lean` | 2726 | The view of the composed round after one flat row: for each row of the flat reading, the round's view after it is the view before it with the composed round's own effect applied. |
-| `AFW/View.lean` | 790 | `AFW.toRound`, the view that computes a composed state from a flat one, the relation `AFW.ProtocolRel` it carries, and the builders that assemble a transition of the composed reading. |
+| `AFW/Frame.lean` | 2855 | The view of the composed round after one flat row: for each row of the flat reading, the round's view after it is the view before it with the composed round's own effect applied. |
+| `AFW/View.lean` | 814 | `AFW.toRound`, the view that computes a composed state from a flat one, the relation `AFW.ProtocolRel` it carries, and the builders that assemble a transition of the composed reading. |
 
 The pieces both compositions are built from are in `ABDY/Components.lean`, over the alphabet of
 `Reading/Alphabet.lean`. `ABDY/Protocol.lean` and `ABDY/Instances.lean` each import it and neither

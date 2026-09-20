@@ -39,11 +39,14 @@ one tag, recovered from the adversary's single tagged sent family by
 A gather program of the composed reading holds two stores — what each
 broadcast instance has returned to it. The flat reading keeps no store: it
 reads a receipt quorum on the process's own local state in that instance
-(`AFW.apIn1` and its three companions). `storeIn` is that reading as a
-function: the value on which the local state holds an `n − f` `VOTE` receipt
-quorum, and `none` where there is no such value. Under the broadcast invariant
-`BRB.Inv` at most one value carries a quorum (`storeIn_eq_of_quorum`), so the
-function agrees with the flat guard wherever the flat guard fires.
+(`AFW.apIn1` and its three companions). `AFW.storeIn` (`ABA/AFW/Flat.lean`) is
+that reading as a function: the value on which the local state holds a
+`2f + 1` `VOTE` receipt quorum, and `none` where there is no such value. Under
+the broadcast invariant `BRB.Inv` at most one value carries a quorum
+(`storeIn_eq_of_quorum`), so the function agrees with the flat guard wherever
+the flat guard fires. The accepted pairs a gather's `ECHO` carries,
+`AFW.acceptedIn1` and `AFW.acceptedIn2`, are the accepted pairs of the gather
+program the view assembles (`acceptedIn1_gaProcView`, `acceptedIn2_gaProcView`).
 
 The composed broadcast program carries a return flag, which the flat reading
 never sets. `brbLocal` supplies it from the store: a process has returned in an
@@ -125,29 +128,21 @@ theorem unBind2_inj (i : Fin n) : ∀ a a' (b : BRB.BMsg (Gather.APSet n (Option
 
 variable {X : Type}
 
-open scoped Classical in
-/-- What a broadcast instance has returned to this process: the value on which
-the process's own local state in that instance holds an `n − f` `VOTE` receipt
-quorum. -/
-noncomputable def storeIn (P : Params) {X : Type} [DecidableEq X]
-    (p : LocalState P.n (BRB.PState X) (BRB.BMsg X)) : Option X :=
-  if h : ∃ v, P.n - P.f ≤ p.recvCount (BRB.BMsg.vote v) then some (Classical.choose h) else none
-
 /-- The store holds a value exactly when some value has a receipt quorum. -/
 theorem storeIn_isSome_iff (P : Params) [DecidableEq X]
     (p : LocalState P.n (BRB.PState X) (BRB.BMsg X)) :
-    (storeIn P p).isSome ↔ ∃ v, P.n - P.f ≤ p.recvCount (BRB.BMsg.vote v) := by
+    (storeIn P p).isSome ↔ ∃ v, 2 * P.f + 1 ≤ p.recvCount (BRB.BMsg.vote v) := by
   unfold storeIn
-  by_cases h : ∃ v, P.n - P.f ≤ p.recvCount (BRB.BMsg.vote v)
+  by_cases h : ∃ v, 2 * P.f + 1 ≤ p.recvCount (BRB.BMsg.vote v)
   · rw [dif_pos h]; exact iff_of_true rfl h
   · rw [dif_neg h]; exact iff_of_false (by simp) h
 
 /-- The value the store holds has a receipt quorum. -/
 theorem storeIn_spec (P : Params) [DecidableEq X]
     {p : LocalState P.n (BRB.PState X) (BRB.BMsg X)} {x : X} (h : storeIn P p = some x) :
-    P.n - P.f ≤ p.recvCount (BRB.BMsg.vote x) := by
+    2 * P.f + 1 ≤ p.recvCount (BRB.BMsg.vote x) := by
   unfold storeIn at h
-  by_cases hq : ∃ v, P.n - P.f ≤ p.recvCount (BRB.BMsg.vote v)
+  by_cases hq : ∃ v, 2 * P.f + 1 ≤ p.recvCount (BRB.BMsg.vote v)
   · rw [dif_pos hq] at h
     obtain rfl : Classical.choose hq = x := Option.some.inj h
     exact Classical.choose_spec hq
@@ -160,13 +155,13 @@ value is certified, so the value the store chooses is the one the quorum
 carries. -/
 theorem storeIn_eq_of_quorum (P : Params) [DecidableEq X] {k : Fin P.n}
     {s : BRB.ImplState P.n X} (hInv : BRB.Inv P k s) {j : Fin P.n} {x : X}
-    (hq : P.n - P.f ≤ (s.1 j).recvCount (BRB.BMsg.vote x)) :
+    (hq : 2 * P.f + 1 ≤ (s.1 j).recvCount (BRB.BMsg.vote x)) :
     storeIn P (s.1 j) = some x := by
-  have hex : ∃ v, P.n - P.f ≤ (s.1 j).recvCount (BRB.BMsg.vote v) := ⟨x, hq⟩
+  have hex : ∃ v, 2 * P.f + 1 ≤ (s.1 j).recvCount (BRB.BMsg.vote v) := ⟨x, hq⟩
   unfold storeIn
   rw [dif_pos hex]
   refine congrArg some ?_
-  have h1 : P.n - P.f ≤ s.recvCount j (BRB.BMsg.vote (Classical.choose hex)) :=
+  have h1 : 2 * P.f + 1 ≤ s.recvCount j (BRB.BMsg.vote (Classical.choose hex)) :=
     Classical.choose_spec hex
   exact BRB.echoCert_unique hInv (BRB.echoCert_of_vote_quorum hInv h1)
     (BRB.echoCert_of_vote_quorum hInv (i := j) (m := x) hq)
@@ -182,7 +177,6 @@ theorem storeIn_initial (P : Params) [DecidableEq X] :
       (BRB.BMsg.vote v) = 0 := by
     simp [LocalState.recvCount]
   rw [h0] at hv
-  have := P.f_lt_n_sub_f
   omega
 
 /-- One process's local state in a broadcast instance, as the composed
@@ -207,6 +201,24 @@ noncomputable def gaProcView (P : Params) (X : Type) [DecidableEq X]
       delivIn := fun k => storeIn P (bIn k)
       delivBind := fun q => storeIn P (bBind q) }
   recv := ga.recv
+
+/-- **The first gather's accepted pairs are the accepted pairs of the gather
+program the view assembles**: the view supplies that program's input store as
+`storeIn` at each of the `n` input-broadcast instances, and `AFW.acceptedIn1`
+is the pairs of that same reading. -/
+theorem acceptedIn1_gaProcView (P : Params) (s : StageRec P.n) :
+    (gaProcView P Bool s.ga1 s.brbIn1 s.brbBind1).proc.accepted = acceptedIn1 P s := by
+  ext ⟨k, v⟩
+  rw [Gather.ProcRec.mem_accepted, mem_acceptedIn1]
+  exact Iff.rfl
+
+/-- The same at the second gather. -/
+theorem acceptedIn2_gaProcView (P : Params) (s : StageRec P.n) :
+    (gaProcView P (Option Bool) s.ga2 s.brbIn2 s.brbBind2).proc.accepted
+      = acceptedIn2 P s := by
+  ext ⟨k, v⟩
+  rw [Gather.ProcRec.mem_accepted, mem_acceptedIn2]
+  exact Iff.rfl
 
 /-! ### The composed round, assembled -/
 
@@ -308,6 +320,18 @@ variable (u : ∀ _ : Fin P.n, AFW.ProcRec P.n) (w : NetState P.n) (r : ℕ)
     Gather.brbBind (toGa2 P u w r) q
       = ((fun i => brbLocal P (((u i).2.stage r).brbBind2 q)),
           ⟨slice (unBind2 q) (unBind2_inj q) (w.sent r), w.F⟩) := rfl
+
+/-- The first gather's `ECHO` payload, read through the view: the accepted
+pairs of the sender's round record are the accepted pairs the composed gather
+program holds. -/
+theorem accepted_toGa1 (j : Fin P.n) :
+    ((Gather.ga (toGa1 P u w r)).proc j).accepted = acceptedIn1 P ((u j).2.stage r) :=
+  acceptedIn1_gaProcView P ((u j).2.stage r)
+
+/-- The same at the second gather. -/
+theorem accepted_toGa2 (j : Fin P.n) :
+    ((Gather.ga (toGa2 P u w r)).proc j).accepted = acceptedIn2 P ((u j).2.stage r) :=
+  acceptedIn2_gaProcView P ((u j).2.stage r)
 
 /-- **The two readings of the first gather's core agree**: the instance's core
 is read off its network state alone, and that network state is the one

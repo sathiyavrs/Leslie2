@@ -11,14 +11,17 @@ import Leslie2Protocols.ABA.Broadcast.Spec
 
 The state of one Byzantine Reliable Broadcast instance with designated leader
 `ldr` over an arbitrary payload type `M`, and its rows. The rows transcribe
-Bracha's algorithm (Bracha 1987; blueprint Algorithm 6). The message pattern,
-per process:
+Bracha's algorithm (Bracha 1987) in the form of AFW25's Algorithm 1. The
+message pattern, per process:
 
 * the leader, on being called with `m`, multicasts `⟨INIT, m⟩`;
-* `⟨ECHO, m⟩` — multicast on receipt of `⟨INIT, m⟩` from the leader, once;
-* `⟨VOTE, m⟩` — multicast on an `n − f` `ECHO m` receipt quorum, or amplified
-  from `f + 1` `VOTE m` receipts, once;
-* return `m` — on an `n − f` `VOTE m` receipt quorum.
+* `⟨ECHO, m⟩` — multicast on receipt of `⟨INIT, m⟩` from the leader, on an
+  `ECHO m` receipt quorum, or on `f + 1` `VOTE m` receipts, once;
+* `⟨VOTE, m⟩` — multicast on an `ECHO m` receipt quorum, or amplified from
+  `f + 1` `VOTE m` receipts, once;
+* return `m` — on `2f + 1` `VOTE m` receipts.
+
+The `ECHO` quorum is `ABA.Params.echoQuorum`, more than `(n + f) / 2` senders.
 
 The state is the generic two-part shape (`ABA.SubState`,
 `ABA/Vocabulary/NetworkState.lean`): each process's local record and delivered
@@ -104,17 +107,18 @@ inductive ImplStep (P : Params) (ldr : Fin P.n) :
   | deliver (s : ImplState P.n M) (i j : Fin P.n) (m : BMsg M)
       (h : m ∈ s.sent j) :
       ImplStep P ldr s .tau (PMF.pure (s.recvMsg i j m))
-  /-- `ECHO`: `⟨INIT, m⟩` received from the leader, no `ECHO` sent yet. -/
+  /-- `ECHO`: `⟨INIT, m⟩` received from the leader, an `ECHO m` receipt quorum,
+  or `f + 1` `VOTE m` receipts; no `ECHO` sent yet. -/
   | echo (s : ImplState P.n M) (j : Fin P.n) (m : M)
-      (hrecv : BMsg.init m ∈ s.recv j ldr)
+      (hrecv : BMsg.init m ∈ s.recv j ldr ∨ P.echoQuorum ≤ s.recvCount j (.echo m) ∨
+        P.f + 1 ≤ s.recvCount j (.vote m))
       (hsend : (s.proc j).sentEcho = none) :
       ImplStep P ldr s .tau
         (PMF.pure ((s.setProc j { s.proc j with sentEcho := some m }).mcast
           j (.echo m)))
-  /-- `VOTE` (quorum case): an `n − f` `ECHO m` receipt quorum, no `VOTE`
-  sent yet. -/
+  /-- `VOTE` (quorum case): an `ECHO m` receipt quorum, no `VOTE` sent yet. -/
   | voteQuorum (s : ImplState P.n M) (j : Fin P.n) (m : M)
-      (hcnt : P.n - P.f ≤ s.recvCount j (.echo m))
+      (hcnt : P.echoQuorum ≤ s.recvCount j (.echo m))
       (hsend : (s.proc j).sentVote = none) :
       ImplStep P ldr s .tau
         (PMF.pure ((s.setProc j { s.proc j with sentVote := some m }).mcast
@@ -130,9 +134,9 @@ inductive ImplStep (P : Params) (ldr : Fin P.n) :
   /-- Byzantine injection: a corrupted sender multicasts anything. -/
   | byz (s : ImplState P.n M) (j : Fin P.n) (m : BMsg M) (h : j ∈ s.F) :
       ImplStep P ldr s .tau (PMF.pure (s.mcast j m))
-  /-- Return: an `n − f` `VOTE m` receipt quorum. -/
+  /-- Return: `2f + 1` `VOTE m` receipts. -/
   | ret (s : ImplState P.n M) (id : Fin P.n) (m : M)
-      (hcnt : P.n - P.f ≤ s.recvCount id (.vote m))
+      (hcnt : 2 * P.f + 1 ≤ s.recvCount id (.vote m))
       (hr : (s.proc id).returned = false) :
       ImplStep P ldr s (.ret id m)
         (PMF.pure (s.setProc id { s.proc id with returned := true }))

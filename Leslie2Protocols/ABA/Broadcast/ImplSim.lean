@@ -29,19 +29,21 @@ it as a receipt-pattern certificate, in the exclusion-on-demand style of the GBC
 refinement: the specification's `commit` is fired inside the return run, at
 the first return that needs it.
 
-* `BRB.EchoCert s m` — some receiver holds an `n − f` `ECHO m` receipt
-  quorum. F-blind (it counts receipts, not honesty) and monotone (receipts
-  only accumulate), so it survives every rule and every corruption.
+* `BRB.EchoCert s m` — some receiver holds an `ECHO m` receipt quorum, more
+  than `(n + f) / 2` senders. F-blind (it counts receipts, not honesty) and
+  monotone (receipts only accumulate), so it survives every rule and every
+  corruption.
 * At most one value is ever echo-certified (`echoCert_unique`): two `ECHO`
   receipt quorums share an honest sender, whose `sentEcho` field is
   write-once.
-* Every return guard yields a certificate (`echoCert_of_vote_quorum`): an
-  `n − f` `VOTE m` receipt quorum contains an honest voter, whose vote is
+* Every return guard yields a certificate (`echoCert_of_vote_quorum`): a
+  `2f + 1` `VOTE m` receipt quorum contains an honest voter, whose vote is
   backed — through the amplification chain, collapsed by the invariant clause
   `vote_backed` — by an `ECHO m` receipt quorum.
 * A certificate identifies the honest leader's input
-  (`input_of_echoCert`): an `ECHO` quorum contains an honest echoer, whose
-  echo is backed by an `⟨INIT, m⟩` receipt from the leader's sent.
+  (`input_of_echoCert`): an `ECHO` quorum contains an honest echoer, and an
+  honest echo carries the leader's input — the invariant clause `echo_prov`,
+  which covers the three disjuncts of the `ECHO` guard.
 
 The matching: internal rules stutter; `call` and `fail` are answered by their
 specification rows; `ret id m` is answered by `ret` alone when `val` is
@@ -59,10 +61,10 @@ variable {M : Type} [DecidableEq M] {P : Params} {ldr : Fin P.n}
 
 /-! ### The certificate -/
 
-/-- `m` is echo-certified: some receiver holds an `n − f` `ECHO m` receipt
-quorum. F-blind and monotone — receipts only accumulate. -/
+/-- `m` is echo-certified: some receiver holds an `ECHO m` receipt quorum.
+F-blind and monotone — receipts only accumulate. -/
 def EchoCert (P : Params) (s : ImplState P.n M) (m : M) : Prop :=
-  ∃ i, P.n - P.f ≤ s.recvCount i (.echo m)
+  ∃ i, P.echoQuorum ≤ s.recvCount i (.echo m)
 
 @[simp] theorem echoCert_setProc (s : ImplState P.n M) (j : Fin P.n)
     (p : PState M) (m : M) :
@@ -87,9 +89,10 @@ theorem EchoCert.recvMsg {s : ImplState P.n M} {m : M} (h : EchoCert P s m)
 /-! ### The invariant -/
 
 /-- The BRB implementation invariant. The `*_conf` clauses tie an honest
-sender's sent to its write-once field; `echo_backed` / `vote_backed` tie the
-fields to the receipts that justified them, with the amplification chain
-collapsed into `EchoCert`. -/
+sender's sent to its write-once field; `echo_prov` carries an honest echo back
+to an honest leader's call record, and `vote_backed` ties an honest vote to the
+receipts that justified it, with the amplification chain collapsed into
+`EchoCert`. -/
 structure Inv (P : Params) (ldr : Fin P.n) (s : ImplState P.n M) : Prop where
   /-- The corruption budget. -/
   F_card : s.F.card ≤ P.f
@@ -101,9 +104,11 @@ structure Inv (P : Params) (ldr : Fin P.n) (s : ImplState P.n M) : Prop where
   /-- An honest sender's sent `ECHO` matches its write-once field. -/
   echo_conf : ∀ k ∉ s.F, ∀ m, BMsg.echo m ∈ s.sent k →
     (s.proc k).sentEcho = some m
-  /-- An honest echo is backed by an `INIT` receipt from the leader. -/
-  echo_backed : ∀ k ∉ s.F, ∀ m, (s.proc k).sentEcho = some m →
-    BMsg.init m ∈ s.recv k ldr
+  /-- An honest echo of `m` carries the leader's input: under an honest leader,
+  `m` is what the leader was called with. Each of the three disjuncts of the
+  `ECHO` guard leads back to that call record. -/
+  echo_prov : ∀ k ∉ s.F, ∀ m, (s.proc k).sentEcho = some m →
+    ldr ∈ s.F ∨ (s.proc ldr).input = some m
   /-- An honest sender's sent `VOTE` matches its write-once field. -/
   vote_conf : ∀ k ∉ s.F, ∀ m, BMsg.vote m ∈ s.sent k →
     (s.proc k).sentVote = some m
@@ -116,6 +121,28 @@ structure Inv (P : Params) (ldr : Fin P.n) (s : ImplState P.n M) : Prop where
 theorem Inv.initial : Inv P ldr (ImplState.initial P.n M) := by
   refine ⟨by simp [ImplState.initial], ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
     simp [ImplState.initial, PState.initial]
+
+/-- An `ECHO m` receipt quorum holds an honest echoer of `m`: the quorum
+exceeds the corruption budget (`f < echoQuorum`), and an honest sender's sent
+`ECHO` matches its write-once field. -/
+theorem Inv.honest_echoer {s : ImplState P.n M} (hInv : Inv P ldr s) {i : Fin P.n} {m : M}
+    (hcnt : P.echoQuorum ≤ s.recvCount i (.echo m)) :
+    ∃ k, k ∉ s.F ∧ (s.proc k).sentEcho = some m := by
+  have hlt : s.F.card < s.recvCount i (.echo m) :=
+    lt_of_le_of_lt hInv.F_card (lt_of_lt_of_le P.f_lt_echoQuorum hcnt)
+  obtain ⟨k, hkF, hkrecv⟩ := SubState.exists_sender_notMem s.F hlt
+  exact ⟨k, hkF, hInv.echo_conf k hkF m (hInv.recv_sub i k hkrecv)⟩
+
+/-- `f + 1` `VOTE m` receipts hold an honest voter for `m`: they exceed the
+corruption budget, and an honest sender's sent `VOTE` matches its write-once
+field. -/
+theorem Inv.honest_voter {s : ImplState P.n M} (hInv : Inv P ldr s) {i : Fin P.n} {m : M}
+    (hcnt : P.f + 1 ≤ s.recvCount i (.vote m)) :
+    ∃ k, k ∉ s.F ∧ (s.proc k).sentVote = some m := by
+  have hlt : s.F.card < s.recvCount i (.vote m) :=
+    lt_of_lt_of_le (Nat.lt_succ_of_le hInv.F_card) hcnt
+  obtain ⟨k, hkF, hkrecv⟩ := SubState.exists_sender_notMem s.F hlt
+  exact ⟨k, hkF, hInv.vote_conf k hkF m (hInv.recv_sub i k hkrecv)⟩
 
 /-- The invariant is preserved by every implementation step. -/
 theorem Inv.step {s : ImplState P.n M} {l : Lab P.n M} {μ : PMF (ImplState P.n M)}
@@ -150,13 +177,20 @@ theorem Inv.step {s : ImplState P.n M} {l : Lab P.n M} {μ : PMF (ImplState P.n 
         · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hkl]
           exact hpre
     · intro k hk m' hslot
-      simp only [SubState.mcast_recv, SubState.setProc_recv]
-      by_cases hkl : k = ldr
-      · subst hkl
-        rw [SubState.mcast_proc, SubState.setProc_proc_self] at hslot
-        exact hInv.echo_backed k (by simpa using hk) m' hslot
-      · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hkl] at hslot
-        exact hInv.echo_backed k (by simpa using hk) m' hslot
+      by_cases hldr : ldr ∈ s.F
+      · exact Or.inl (by simpa using hldr)
+      · exfalso
+        have hslot' : (s.proc k).sentEcho = some m' := by
+          by_cases hkl : k = ldr
+          · subst hkl
+            rw [SubState.mcast_proc, SubState.setProc_proc_self] at hslot
+            exact hslot
+          · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hkl] at hslot
+            exact hslot
+        rcases hInv.echo_prov k (by simpa using hk) m' hslot' with hldrF | hin
+        · exact hldr hldrF
+        · rw [h] at hin
+          exact absurd hin (by simp)
     · intro k hk m' hmem
       rw [SubState.mem_mcast_sent, SubState.setProc_sent] at hmem
       rcases hmem with ⟨-, hm'⟩ | hold
@@ -200,8 +234,8 @@ theorem Inv.step {s : ImplState P.n M} {l : Lab P.n M} {μ : PMF (ImplState P.n 
       exact hInv.echo_conf k (by simpa using hk) m' hmem
     · intro k hk m' hslot
       rw [SubState.recvMsg_proc] at hslot
-      exact SubState.mem_recvMsg_recv.mpr
-        (Or.inr (hInv.echo_backed k (by simpa using hk) m' hslot))
+      rw [SubState.recvMsg_proc]
+      simpa using hInv.echo_prov k (by simpa using hk) m' hslot
     · intro k hk m' hmem
       rw [SubState.recvMsg_sent] at hmem
       rw [SubState.recvMsg_proc]
@@ -241,14 +275,32 @@ theorem Inv.step {s : ImplState P.n M} {l : Lab P.n M} {μ : PMF (ImplState P.n 
         · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hkl]
           exact hpre
     · intro k hk m' hslot
-      simp only [SubState.mcast_recv, SubState.setProc_recv]
+      suffices h : ldr ∈ s.F ∨ (s.proc ldr).input = some m' by
+        rcases h with h | h
+        · exact Or.inl (by simpa using h)
+        · refine Or.inr ?_
+          by_cases hkl : ldr = j
+          · rw [SubState.mcast_proc, hkl, SubState.setProc_proc_self]
+            rw [hkl] at h
+            exact h
+          · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hkl]
+            exact h
       by_cases hkl : k = j
       · subst hkl
         rw [SubState.mcast_proc, SubState.setProc_proc_self] at hslot
         obtain rfl : m = m' := by injection hslot
-        exact hrecv
+        by_cases hldr : ldr ∈ s.F
+        · exact Or.inl hldr
+        · rcases hrecv with hinit | hq | hv
+          · exact Or.inr (hInv.init_conf hldr m (hInv.recv_sub _ ldr hinit))
+          · obtain ⟨k', hk'F, hk'⟩ := hInv.honest_echoer hq
+            exact hInv.echo_prov k' hk'F m hk'
+          · obtain ⟨k', hk'F, hk'⟩ := hInv.honest_voter hv
+            obtain ⟨i, hi⟩ := hInv.vote_backed k' hk'F m hk'
+            obtain ⟨k'', hk''F, hk''⟩ := hInv.honest_echoer hi
+            exact hInv.echo_prov k'' hk''F m hk''
       · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hkl] at hslot
-        exact hInv.echo_backed k (by simpa using hk) m' hslot
+        exact hInv.echo_prov k (by simpa using hk) m' hslot
     · intro k hk m' hmem
       rw [SubState.mem_mcast_sent, SubState.setProc_sent] at hmem
       rcases hmem with ⟨-, hm'⟩ | hold
@@ -299,13 +351,22 @@ theorem Inv.step {s : ImplState P.n M} {l : Lab P.n M} {μ : PMF (ImplState P.n 
         · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hkl]
           exact hpre
     · intro k hk m' hslot
-      simp only [SubState.mcast_recv, SubState.setProc_recv]
-      by_cases hkl : k = j
-      · subst hkl
-        rw [SubState.mcast_proc, SubState.setProc_proc_self] at hslot
-        exact hInv.echo_backed k (by simpa using hk) m' hslot
-      · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hkl] at hslot
-        exact hInv.echo_backed k (by simpa using hk) m' hslot
+      have hslot' : (s.proc k).sentEcho = some m' := by
+        by_cases hkl : k = j
+        · subst hkl
+          rw [SubState.mcast_proc, SubState.setProc_proc_self] at hslot
+          exact hslot
+        · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hkl] at hslot
+          exact hslot
+      rcases hInv.echo_prov k (by simpa using hk) m' hslot' with hldrF | hin
+      · exact Or.inl (by simpa using hldrF)
+      · refine Or.inr ?_
+        by_cases hkl : ldr = j
+        · rw [SubState.mcast_proc, hkl, SubState.setProc_proc_self]
+          rw [hkl] at hin
+          exact hin
+        · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hkl]
+          exact hin
     · intro k hk m' hmem
       rw [SubState.mem_mcast_sent, SubState.setProc_sent] at hmem
       rcases hmem with ⟨rfl, hm'⟩ | hold
@@ -358,13 +419,22 @@ theorem Inv.step {s : ImplState P.n M} {l : Lab P.n M} {μ : PMF (ImplState P.n 
         · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hkl]
           exact hpre
     · intro k hk m' hslot
-      simp only [SubState.mcast_recv, SubState.setProc_recv]
-      by_cases hkl : k = j
-      · subst hkl
-        rw [SubState.mcast_proc, SubState.setProc_proc_self] at hslot
-        exact hInv.echo_backed k (by simpa using hk) m' hslot
-      · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hkl] at hslot
-        exact hInv.echo_backed k (by simpa using hk) m' hslot
+      have hslot' : (s.proc k).sentEcho = some m' := by
+        by_cases hkl : k = j
+        · subst hkl
+          rw [SubState.mcast_proc, SubState.setProc_proc_self] at hslot
+          exact hslot
+        · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hkl] at hslot
+          exact hslot
+      rcases hInv.echo_prov k (by simpa using hk) m' hslot' with hldrF | hin
+      · exact Or.inl (by simpa using hldrF)
+      · refine Or.inr ?_
+        by_cases hkl : ldr = j
+        · rw [SubState.mcast_proc, hkl, SubState.setProc_proc_self]
+          rw [hkl] at hin
+          exact hin
+        · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hkl]
+          exact hin
     · intro k hk m' hmem
       rw [SubState.mem_mcast_sent, SubState.setProc_sent] at hmem
       rcases hmem with ⟨rfl, hm'⟩ | hold
@@ -414,8 +484,8 @@ theorem Inv.step {s : ImplState P.n M} {l : Lab P.n M} {μ : PMF (ImplState P.n 
       · exact hInv.echo_conf k (by simpa using hk) m' hold
     · intro k hk m' hslot
       rw [SubState.mcast_proc] at hslot
-      rw [SubState.mcast_recv]
-      exact hInv.echo_backed k (by simpa using hk) m' hslot
+      rw [SubState.mcast_proc]
+      simpa using hInv.echo_prov k (by simpa using hk) m' hslot
     · intro k hk m' hmem
       rw [SubState.mem_mcast_sent] at hmem
       rw [SubState.mcast_proc]
@@ -453,13 +523,22 @@ theorem Inv.step {s : ImplState P.n M} {l : Lab P.n M} {μ : PMF (ImplState P.n 
       · rw [SubState.setProc_proc_ne _ _ _ hkl]
         exact hpre
     · intro k hk m' hslot
-      rw [SubState.setProc_recv]
-      by_cases hkl : k = id
-      · subst hkl
-        rw [SubState.setProc_proc_self] at hslot
-        exact hInv.echo_backed k (by simpa using hk) m' hslot
-      · rw [SubState.setProc_proc_ne _ _ _ hkl] at hslot
-        exact hInv.echo_backed k (by simpa using hk) m' hslot
+      have hslot' : (s.proc k).sentEcho = some m' := by
+        by_cases hkl : k = id
+        · subst hkl
+          rw [SubState.setProc_proc_self] at hslot
+          exact hslot
+        · rw [SubState.setProc_proc_ne _ _ _ hkl] at hslot
+          exact hslot
+      rcases hInv.echo_prov k (by simpa using hk) m' hslot' with hldrF | hin
+      · exact Or.inl (by simpa using hldrF)
+      · refine Or.inr ?_
+        by_cases hkl : ldr = id
+        · rw [hkl, SubState.setProc_proc_self]
+          rw [hkl] at hin
+          exact hin
+        · rw [SubState.setProc_proc_ne _ _ _ hkl]
+          exact hin
     · intro k hk m' hmem
       rw [SubState.setProc_sent] at hmem
       have hpre := hInv.vote_conf k (by simpa using hk) m' hmem
@@ -497,8 +576,10 @@ theorem Inv.step {s : ImplState P.n M} {l : Lab P.n M} {μ : PMF (ImplState P.n 
       exact hInv.echo_conf k (hF k hk) m' hmem
     · intro k hk m' hslot
       rw [SubState.corrupt_proc] at hslot
-      rw [SubState.corrupt_recv]
-      exact hInv.echo_backed k (hF k hk) m' hslot
+      rw [SubState.corrupt_proc]
+      rcases hInv.echo_prov k (hF k hk) m' hslot with hldrF | hin
+      · exact Or.inl (SubState.corrupt_F_subset s id hldrF)
+      · exact Or.inr hin
     · intro k hk m' hmem
       rw [SubState.corrupt_sent] at hmem
       rw [SubState.corrupt_proc]
@@ -516,36 +597,31 @@ theorem echoCert_unique {s : ImplState P.n M} (hInv : Inv P ldr s) {m m' : M}
     (h : EchoCert P s m) (h' : EchoCert P s m') : m = m' := by
   obtain ⟨i, hi⟩ := h
   obtain ⟨i', hi'⟩ := h'
-  obtain ⟨k, hkF, hkm, hkm'⟩ := SubState.exists_honest_recv₂ hInv.F_card hi hi'
+  obtain ⟨k, hkF, hkm, hkm'⟩ := SubState.exists_honest_recv₂_echoQuorum hInv.F_card hi hi'
   have h1 := hInv.echo_conf k hkF m (hInv.recv_sub i k hkm)
   have h2 := hInv.echo_conf k hkF m' (hInv.recv_sub i' k hkm')
   rw [h1] at h2
   injection h2
 
-/-- Every `n − f` `VOTE m` receipt quorum yields the certificate: it contains
+/-- Every `2f + 1` `VOTE m` receipt quorum yields the certificate: it contains
 an honest voter, and honest votes are backed. -/
 theorem echoCert_of_vote_quorum {s : ImplState P.n M} (hInv : Inv P ldr s)
-    {i : Fin P.n} {m : M} (hcnt : P.n - P.f ≤ s.recvCount i (.vote m)) :
+    {i : Fin P.n} {m : M} (hcnt : 2 * P.f + 1 ≤ s.recvCount i (.vote m)) :
     EchoCert P s m := by
-  have hlt : s.F.card < s.recvCount i (.vote m) :=
-    lt_of_le_of_lt hInv.F_card (lt_of_lt_of_le P.f_lt_n_sub_f hcnt)
-  obtain ⟨k, hkF, hkrecv⟩ := SubState.exists_sender_notMem s.F hlt
-  exact hInv.vote_backed k hkF m
-    (hInv.vote_conf k hkF m (hInv.recv_sub i k hkrecv))
+  obtain ⟨k, hkF, hkslot⟩ := hInv.honest_voter (le_trans (by omega) hcnt)
+  exact hInv.vote_backed k hkF m hkslot
 
 /-- Under an honest leader, the certificate identifies the leader's input: the
-`ECHO` quorum contains an honest echoer, backed by an `INIT` receipt from the
-leader's sent. -/
+`ECHO` quorum contains an honest echoer, whose echo carries the leader's
+input. -/
 theorem input_of_echoCert {s : ImplState P.n M} (hInv : Inv P ldr s)
     (hldr : ldr ∉ s.F) {m : M} (hc : EchoCert P s m) :
     (s.proc ldr).input = some m := by
   obtain ⟨i, hi⟩ := hc
-  have hlt : s.F.card < s.recvCount i (.echo m) :=
-    lt_of_le_of_lt hInv.F_card (lt_of_lt_of_le P.f_lt_n_sub_f hi)
-  obtain ⟨k, hkF, hkrecv⟩ := SubState.exists_sender_notMem s.F hlt
-  have hslot := hInv.echo_conf k hkF m (hInv.recv_sub i k hkrecv)
-  have hinit := hInv.echo_backed k hkF m hslot
-  exact hInv.init_conf hldr m (hInv.recv_sub k ldr hinit)
+  obtain ⟨k, hkF, hkslot⟩ := hInv.honest_echoer hi
+  rcases hInv.echo_prov k hkF m hkslot with hldrF | hin
+  · exact absurd hldrF hldr
+  · exact hin
 
 /-! ### The relation -/
 
@@ -962,7 +1038,7 @@ specification's committed value: either it is already this value, or the
 `commit` guard holds towards it, the relation restored either way. -/
 theorem commitReach {P : Params} {ldr : Fin P.n} {s : ImplState P.n M}
     {t : SpecState P.n M} (hR : InstRel P ldr s t) {id : Fin P.n} {m : M}
-    (hcnt : P.n - P.f ≤ s.recvCount id (.vote m)) :
+    (hcnt : 2 * P.f + 1 ≤ s.recvCount id (.vote m)) :
     (t.val = some m ∧ InstRel P ldr s t) ∨
     (t.val = none ∧ (ldr ∈ t.F ∨ t.input = some m) ∧
       InstRel P ldr s { t with val := some m }) := by

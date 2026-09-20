@@ -397,6 +397,7 @@ gather specification's rows can replay without re-proving the run. -/
 theorem retRun {s : IdealState P.n X} {t : SpecState P.n X}
     (hR : CoreRel P s t) {id : Fin P.n} {g : Fin P.n → Option X}
     (hin : ((ga s).proc id).input ≠ none)
+    (hbind : ((ga s).proc id).sentBind ≠ none)
     (hsub : ∀ k x, g k = some x → holdsIn ((ga s).proc id) k x)
     (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
       ∀ q ∈ Q, ∃ U, holdsBind ((ga s).proc id) q U ∧ APSet.subMap U g)
@@ -413,7 +414,7 @@ theorem retRun {s : IdealState P.n X} {t : SpecState P.n X}
         { ts.getLastD t with ret := Function.update (ts.getLastD t).ret id true } := by
   classical
   set C : APSet P.n X := (core s).getD (coreOfNet P (ga s).2) with hC_def
-  have hInv' := hR.inv.step (IdealStep.ret s id g hin hsub hQ hr)
+  have hInv' := hR.inv.step (IdealStep.ret s id g hin hbind hsub hQ hr)
     (by rw [PMF.mem_support_pure_iff])
   have hsubv : ∀ k x, g k = some x → (brbIn s k).val = some x :=
     fun k x hx => hR.inv.delivIn_val id k x (hsub k x hx)
@@ -622,7 +623,7 @@ theorem coreRel_tau {s s' : IdealState P.n X} {t : SpecState P.n X}
     intro k
     rw [SubState.recvMsg_proc]
     exact hR.ret_eq k
-  | echo j A hin happ hcard hsend =>
+  | echo j hin hcard hsend =>
     have hs' := PMF.pure_injective hμ
     subst hs'
     refine ⟨hInv', hR.call_eq, ?_, hR.F_eq, hR.val_cert, hR.core_eq, hR.core_cert⟩
@@ -634,7 +635,7 @@ theorem coreRel_tau {s s' : IdealState P.n X} {t : SpecState P.n X}
       exact hR.ret_eq k
     · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hk]
       exact hR.ret_eq k
-  | vote j U hin happ hQ hsend =>
+  | vote j U hin hech happ hQ hsend =>
     have hs' := PMF.pure_injective hμ
     subst hs'
     refine ⟨hInv', hR.call_eq, ?_, hR.F_eq, hR.val_cert, hR.core_eq, hR.core_cert⟩
@@ -646,18 +647,34 @@ theorem coreRel_tau {s s' : IdealState P.n X} {t : SpecState P.n X}
       exact hR.ret_eq k
     · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hk]
       exact hR.ret_eq k
-  | bindCall j U hin happ hQ hb =>
+  | bindCall j U hin hvot hsnd happ hQ hb =>
     have hs' := PMF.pure_injective hμ
     subst hs'
-    refine ⟨hInv', hR.call_eq, hR.ret_eq, hR.F_eq, hR.val_cert, hR.core_eq, ?_⟩
-    intro C hC
-    exact le_trans (hR.core_cert C hC) (Finset.card_le_card
-      (bindAbove_mono (IdealStep.bindCall s j U hin happ hQ hb)
-        (by rw [PMF.mem_support_pure_iff]) C))
-  | bindCallSpecLoop j U hin happ hQ =>
+    refine ⟨hInv', hR.call_eq, ?_, hR.F_eq, hR.val_cert, hR.core_eq, ?_⟩
+    · dsimp only [ga_setBrbBind, ga_setGa]
+      intro k
+      by_cases hk : k = j
+      · subst hk
+        rw [SubState.setProc_proc_self]
+        exact hR.ret_eq k
+      · rw [SubState.setProc_proc_ne _ _ _ hk]
+        exact hR.ret_eq k
+    · intro C hC
+      exact le_trans (hR.core_cert C hC) (Finset.card_le_card
+        (bindAbove_mono (IdealStep.bindCall s j U hin hvot hsnd happ hQ hb)
+          (by rw [PMF.mem_support_pure_iff]) C))
+  | bindCallSpecLoop j U hin hvot hsnd happ hQ =>
     have hs' := PMF.pure_injective hμ
     subst hs'
-    exact hR
+    refine ⟨hInv', hR.call_eq, ?_, hR.F_eq, hR.val_cert, hR.core_eq, hR.core_cert⟩
+    dsimp only [ga_setGa]
+    intro k
+    by_cases hk : k = j
+    · subst hk
+      rw [SubState.setProc_proc_self]
+      exact hR.ret_eq k
+    · rw [SubState.setProc_proc_ne _ _ _ hk]
+      exact hR.ret_eq k
   | byz j m hmem =>
     have hs' := PMF.pure_injective hμ
     subst hs'
@@ -779,25 +796,26 @@ theorem coreRel_row (P : Params) (X : Type) [DecidableEq X] (q₁ : IdealState P
     subst hq₁'
     exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
       coreRel_tau hR (IdealStep.deliver q₁ i j m h)⟩
-  | echo j A hin happ hcard hsend =>
+  | echo j hin hcard hsend =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
-      coreRel_tau hR (IdealStep.echo q₁ j A hin happ hcard hsend)⟩
-  | vote j U hin happ hQ hsend =>
+      coreRel_tau hR (IdealStep.echo q₁ j hin hcard hsend)⟩
+  | vote j U hin hech happ hQ hsend =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
-      coreRel_tau hR (IdealStep.vote q₁ j U hin happ hQ hsend)⟩
-  | bindCall j U hin happ hQ hb =>
+      coreRel_tau hR (IdealStep.vote q₁ j U hin hech happ hQ hsend)⟩
+  | bindCall j U hin hvot hsnd happ hQ hb =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
-      coreRel_tau hR (IdealStep.bindCall q₁ j U hin happ hQ hb)⟩
-  | bindCallSpecLoop j U hin happ hQ =>
+      coreRel_tau hR (IdealStep.bindCall q₁ j U hin hvot hsnd happ hQ hb)⟩
+  | bindCallSpecLoop j U hin hvot hsnd happ hQ =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
-    exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩, hR⟩
+    exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
+      coreRel_tau hR (IdealStep.bindCallSpecLoop q₁ j U hin hvot hsnd happ hQ)⟩
   | byz j m h =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
@@ -813,11 +831,11 @@ theorem coreRel_row (P : Params) (X : Type) [DecidableEq X] (q₁ : IdealState P
     subst hq₁'
     exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
       coreRel_tau hR (IdealStep.bindRet q₁ q j U hv hr)⟩
-  | ret id g hin hsub hQ hr =>
+  | ret id g hin hbind hsub hQ hr =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     obtain ⟨ts, hchain, hcore, hmem, hcov, hret1, hRel⟩ :=
-      retRun hR hin hsub hQ hr
+      retRun hR hin hbind hsub hQ hr
     have hretstep : Step P (ts.getLastD q₂)
         (Lab.ret id g ((core q₁).getD (coreOfNet P (ga q₁).2)))
         (PMF.pure { ts.getLastD q₂ with

@@ -258,11 +258,8 @@ A \emph{ghost output} is a value a specification holds as state and announces on
 There are two in this development, the round's bound bit and a gather instance's core, and both are called that below.
 A \emph{state erasure} deletes a state component that no transition's firing depends on, and the \emph{ghost-free reading} of a protocol is its flat reading with the adversary's ghost record deleted.
 Bracha's third message level is $\mathrm{VOTE}$ here and in the source blueprint, where both~\cite{ABDY22} and~\cite{AFW25} write $\mathrm{READY}$.
-Its echo threshold is $n-f$ here and in the source blueprint, where~\cite{AFW25} writes $(n+f)/2$.
-Its return quorum is $n-f$ where~\cite{AFW25} writes $2f+1$, the two coinciding at $n = 3f+1$.
-Its echo step fires on an $\mathrm{INIT}$ receipt alone, which is the one trigger of \leandeclnamed{BRB.ImplStep.echo}{PLTS.ABA.BRB.ImplStep.echo} and of Algorithm~6 of the source blueprint, where line~2 of Algorithm~1 of~\cite{AFW25} fires on that receipt or on $(n+f)/2$ echoes or on $f+1$ readies.
-Those two further triggers bear on Totality alone.
-The encoding follows the source blueprint at each point, so none of the four carries a deviation label.
+Its steps fire on the receipts and at the quorums of Algorithm~1 of~\cite{AFW25}, where Algorithm~6 of the source blueprint fires the echo step on an $\mathrm{INIT}$ receipt alone and puts $n-f$ at every quorum.
+The naming difference carries no deviation label, and the rest is D34.
 
 
 \paragraph{Outside the model.}
@@ -349,6 +346,15 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
   \item D33: both gathers of the round are the binding form, where the second call of Algorithm~4 of~\cite{AFW25} is non-binding.
     The round's counting reads the grade off a common core of the second gather, and Remark~22 of~\cite{AFW25} makes the core of a non-binding gather a prophecy variable in the sense of~\cite{AL91}, determined by the completed execution alone, which a forward simulation cannot write at the specification's rule, since the value chosen there must hold in every extension.
     The binding form makes it a history variable, determined by the prefix, and a binding gather is a non-binding gather with one phase more, so every execution of the round is an execution of Algorithm~4 of~\cite{AFW25}.
+  \item D34: Bracha's rounds follow Algorithm~1 of~\cite{AFW25}, where Algorithm~6 of the source blueprint fires the echo step on an $\mathrm{INIT}$ receipt alone and puts $n-f$ at every quorum.
+    The echo step fires on an $\mathrm{INIT}$ receipt from the leader, on $\mathrm{ECHO}\,m$ receipts from more than $(n+f)/2$ senders, or on $f{+}1$ $\mathrm{VOTE}\,m$ receipts, which are the three cases of the guard of \leandeclnamed{echo}{PLTS.ABA.BRB.ImplStep.echo}.
+    The vote step fires on that $\mathrm{ECHO}$ quorum or on $f{+}1$ $\mathrm{VOTE}\,m$ receipts, and the return takes $2f{+}1$ $\mathrm{VOTE}\,m$ receipts.
+    The quorum is \leandecl{PLTS.ABA.Params.echoQuorum}, which is $(n+f)/2 + 1$, and the third message level is named $\mathrm{VOTE}$ here and in the source blueprint where both~\cite{ABDY22} and~\cite{AFW25} write $\mathrm{READY}$.
+    The certificate the refinement carries is an $\mathrm{ECHO}$ receipt quorum at that size, and an honest echo of $m$ carries the leader's input unless the leader is corrupted.
+  \item D35: the gather rows carry the order in which Algorithm~5 of~\cite{AFW25} sends, where Algorithm~4 of the source blueprint states each send as a rule firing on its receipts alone.
+    The vote requires the sender's own $\mathrm{ECHO}$, the bind call requires the sender's own $\mathrm{VOTE}$ and no earlier bind call, and the return requires the returner's own bind call, which the write-once field $\mathit{sentBind}$ of the gather record holds.
+    The $\mathrm{ECHO}$ payload is the set of entries the sender's input store holds, which is what Algorithm~5 of~\cite{AFW25} and Algorithm~4 of the source blueprint both send.
+    The row fires once that set has $n-f$ entries, which is the source blueprint's guard.
 \end{itemize}
 
 
@@ -1807,7 +1813,9 @@ A system of this section therefore carries the name of its counterpart in the se
       rather than on the network, which is what pins a committed payload
       against a sender corrupted later.
       A set of (process, payload) pairs is \emph{approved} when every pair is
-      a delivered broadcast.}
+      a delivered broadcast.
+      Each send waits for the sender's own send at the level below, which is
+      the order of the sends of Algorithm~5 of~\cite{AFW25} (D35).}
     \label{alg:gather-brb}
     \begin{algorithmic}
         \State \textbf{Input:} a payload $m$; $p_k$ is the leader of
@@ -1818,29 +1826,34 @@ A system of this section therefore carries the name of its counterpart in the se
         \State \textbf{upon} $|AP| \ge n - f$ and no $\mathrm{ECHO}$ sent:
           send $\langle \mathrm{ECHO}, AP \rangle$ to all
         \State \textbf{upon} approved $\langle \mathrm{ECHO}, AP_j \rangle$
-          from $n - f$ senders and no $\mathrm{VOTE}$ sent: send $\langle \mathrm{VOTE}, \bigcup_j AP_j \rangle$ to all
+          from $n - f$ senders, having sent $\mathrm{ECHO}$ and no $\mathrm{VOTE}$ sent: send $\langle \mathrm{VOTE}, \bigcup_j AP_j \rangle$ to all
         \State \textbf{upon} approved $\langle \mathrm{VOTE}, AP_j \rangle$
-          from $n - f$ senders and no $\mathrm{BIND}$ sent: broadcast $\bigcup_j AP_j$ as the $\mathrm{BIND}$ payload
-        \State \textbf{upon} $n - f$ delivered $\mathrm{BIND}$ payloads:
-          \textbf{return} their union
+          from $n - f$ senders, having sent $\mathrm{VOTE}$ and no $\mathrm{BIND}$ sent: broadcast $\bigcup_j AP_j$ as the $\mathrm{BIND}$ payload
+        \State \textbf{upon} $n - f$ delivered $\mathrm{BIND}$ payloads,
+          having broadcast $\mathrm{BIND}$: \textbf{return} their union
     \end{algorithmic}
 \end{algorithm}
 
 \begin{algorithm}
-    \caption{Reliable broadcast, Algorithm~6 of the source
-      blueprint~\cite{LeslieBP}, from Bracha \cite{Bra87}.}
+    \caption{Reliable broadcast, Algorithm~1 of~\cite{AFW25}, from
+      Bracha \cite{Bra87}.
+      Algorithm~6 of the source blueprint~\cite{LeslieBP} fires the echo
+      step on an $\mathrm{INIT}$ receipt alone and puts $n-f$ at every
+      quorum (D34).}
     \label{alg:brb}
     \begin{algorithmic}
         \State \textbf{Input:} a payload $m$ at the leader
         \medskip
         \State \textbf{if} leader: send $\langle \mathrm{INIT}, m \rangle$ to all
-        \State \textbf{upon} $\langle \mathrm{INIT}, m \rangle$ from the leader
-          and no $\mathrm{ECHO}$ sent: send $\langle \mathrm{ECHO}, m \rangle$ to all
-        \State \textbf{upon} $\langle \mathrm{ECHO}, m \rangle$ from $n - f$
-          senders and no $\mathrm{VOTE}$ sent: send $\langle \mathrm{VOTE}, m \rangle$ to all
+        \State \textbf{upon} $\langle \mathrm{INIT}, m \rangle$ from the
+          leader, or $\langle \mathrm{ECHO}, m \rangle$ from more than
+          $(n+f)/2$ senders, or $\langle \mathrm{VOTE}, m \rangle$ from
+          $f + 1$ senders, and no $\mathrm{ECHO}$ sent: send $\langle \mathrm{ECHO}, m \rangle$ to all
+        \State \textbf{upon} $\langle \mathrm{ECHO}, m \rangle$ from more than
+          $(n+f)/2$ senders and no $\mathrm{VOTE}$ sent: send $\langle \mathrm{VOTE}, m \rangle$ to all
         \State \textbf{upon} $\langle \mathrm{VOTE}, m \rangle$ from $f + 1$
           senders and no $\mathrm{VOTE}$ sent: send $\langle \mathrm{VOTE}, m \rangle$ to all
-        \State \textbf{upon} $\langle \mathrm{VOTE}, m \rangle$ from $n - f$
+        \State \textbf{upon} $\langle \mathrm{VOTE}, m \rangle$ from $2f + 1$
           senders: \textbf{return} $m$
     \end{algorithmic}
 \end{algorithm}
@@ -1850,9 +1863,9 @@ A system of this section therefore carries the name of its counterpart in the se
 
 
 Reliable broadcast is the bottom layer, and its specification is the first point dynamic corruption shapes.
-Under Transition System~6 an honest call pins every return to the called value, and Algorithm~\ref{alg:brb} with the leader corrupted after its $\mathrm{INIT}$ leaves a window that pinning forbids: until some correct process holds an $n{-}f$ $\mathrm{ECHO}$ quorum, the injections of the now-corrupted leader can make the rounds deliver a different value.
+Under Transition System~6 an honest call pins every return to the called value, and Algorithm~\ref{alg:brb} with the leader corrupted after its $\mathrm{INIT}$ leaves a window that pinning forbids: until some correct process holds an $\mathrm{ECHO}$ quorum of more than $(n+f)/2$ senders, the injections of the now-corrupted leader can make the rounds deliver a different value.
 The encoding therefore splits the recorded input from the committed value and guards the internal commit by $\mathit{ldr} \in F \vee input = m$ (D27): the corrupted leader's power is a commit of any value, the honest leader's value is pinned, and the window closes at the commit rather than at the call.
-The refinement certifies the committed value by an $n{-}f$ $\mathrm{ECHO}$ receipt quorum --- $F$-blind, monotone, unique by quorum intersection over the write-once echoes --- and fires the abstract commit on demand, as a two-step weak run under the first return.
+The refinement certifies the committed value by an $\mathrm{ECHO}$ receipt quorum of more than $(n+f)/2$ senders --- $F$-blind, monotone, unique by quorum intersection over the write-once echoes --- and fires the abstract commit on demand, as a two-step weak run under the first return.
 See \leanmodule{Leslie2Protocols/ABA/Vocabulary/NetworkState},
 \leanmodule{Leslie2Protocols/ABA/Broadcast/Spec},
 \leanmodule{Leslie2Protocols/ABA/Broadcast/Impl} and
@@ -1972,7 +1985,7 @@ Three things separate that stage side from the composed reading's, and all three
 A round of the composed reading carries $4n+2$ networks, one per sub-protocol instance, while the adversary of a flat reading carries one sent-set family per round; a stage message therefore carries a tag naming the network it belongs to, and for a broadcast message the instance, whose index is its leader.
 The sender index stays the sender, so a threshold still counts distinct senders (D5).
 And the composed reading indexes the local states by instance and then by process, while a program must hold its own data and no one else's; the stage record is therefore transposed, holding one process's local state in every instance.
-And a flat program takes one row per thing it does, so the graded-agreement call broadcasts the input, the $\mathrm{BIND}$ send is a broadcast call, and the first gather's return to a process is that process's call of the second gather (D28), where the composed round takes two events for each; the flat reading has no broadcast return either, a gather guard reading an $n{-}f$ $\mathrm{VOTE}$ receipt quorum on the process's own local state in the instance where a composed program reads its store.
+And a flat program takes one row per thing it does, so the graded-agreement call broadcasts the input, the $\mathrm{BIND}$ send is a broadcast call, and the first gather's return to a process is that process's call of the second gather (D28), where the composed round takes two events for each; the flat reading has no broadcast return either, a gather guard reading a $2f{+}1$ $\mathrm{VOTE}$ receipt quorum on the process's own local state in the instance where a composed program reads its store.
 None of the three loses anything, because every guard of the gather-based implementation reads the acting process's own local states and the networks, and the two rows that read a network --- the adversary's delivery and its Byzantine injection --- belong to the adversary in either reading.
 Assembling the composed state from the flat one undoes all three: the local states are transposed back, each network's sent set is sliced out of the tagged sent-set family, and a program's stores are read off its own local states in the broadcast instances as the values with a vote quorum there.
 That assembly is the simulation relation of Theorem~\ref{thm:aba-afw-protocol-composed}, which is a function rather than a correspondence --- the composed state is computed from the flat one --- and the proof obligation of a row is which of the six slices takes the message it sends; a fused row is answered by a run of two events of the composed round, through a named intermediate state.

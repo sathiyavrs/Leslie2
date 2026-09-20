@@ -32,7 +32,7 @@ is answered by a run of two transitions and not by one. There are three:
 * the link, answered by the hidden events `ret1` and `call2` of round `r`;
 * the graded return, answered by the hidden event `ret2` and then the visible
   `retG`;
-* a broadcast delivery that completes an `n − f` `VOTE` receipt quorum,
+* a broadcast delivery that completes a `2f + 1` `VOTE` receipt quorum,
   answered by the instance's delivery and then its return.
 
 `AFW.match_group` therefore concludes in a weak run of the composed group,
@@ -42,7 +42,7 @@ and `AFW.match_step` carries that run through the sub-protocol hiding with
 ## The store against the flat receipt quorum
 
 A gather program of the composed reading holds what each broadcast instance has
-returned to it; the flat reading reads an `n − f` `VOTE` receipt quorum on the
+returned to it; the flat reading reads a `2f + 1` `VOTE` receipt quorum on the
 process's own local state instead. `AFW.storeIn_eq_of_quorum` identifies the
 two under `AFW.StoreInv`, and `AFW.holdsIn_ga1` and its three
 companions are that identification at the four broadcast families. A delivery
@@ -155,7 +155,7 @@ theorem stage_gsnd_ga2 (P : Params) {j : Fin P.n} {c : CoreRec P.n}
 /-! ### The store against the flat receipt quorum
 
 A gather program of the composed reading reads its store; the flat reading
-reads an `n − f` `VOTE` receipt quorum on the process's own local state in the
+reads a `2f + 1` `VOTE` receipt quorum on the process's own local state in the
 instance. Under `StoreInv` the two agree wherever the flat guard fires. -/
 
 section Store
@@ -228,13 +228,13 @@ theorem storeIn_deliver_cases {i j k : Fin P.n} {s : BRB.ImplState P.n X}
       (storeIn P (s.1 j) = none ∧
         ∃ v, storeIn P ((s.1 j).deliverTo k m) = some v) := by
   have hpost : (s.recvMsg j k m).1 j = (s.1 j).deliverTo k m := Function.update_self _ _ _
-  have hmono : ∀ y : X, P.n - P.f ≤ (s.1 j).recvCount (BRB.BMsg.vote y) →
-      P.n - P.f ≤ ((s.1 j).deliverTo k m).recvCount (BRB.BMsg.vote y) := by
+  have hmono : ∀ y : X, 2 * P.f + 1 ≤ (s.1 j).recvCount (BRB.BMsg.vote y) →
+      2 * P.f + 1 ≤ ((s.1 j).deliverTo k m).recvCount (BRB.BMsg.vote y) := by
     intro y hy
     have h1 := SubState.recvCount_le_recvMsg s j k m j (BRB.BMsg.vote y)
     rw [SubState.recvCount_eq_box, SubState.recvCount_eq_box, hpost] at h1
     exact le_trans hy h1
-  by_cases hq : ∃ y, P.n - P.f ≤ ((s.1 j).deliverTo k m).recvCount (BRB.BMsg.vote y)
+  by_cases hq : ∃ y, 2 * P.f + 1 ≤ ((s.1 j).deliverTo k m).recvCount (BRB.BMsg.vote y)
   · obtain ⟨v, hv⟩ := hq
     have hsome : storeIn P ((s.1 j).deliverTo k m) = some v := by
       have h := storeIn_eq_of_quorum P hInv (j := j) (x := v) (by rw [hpost]; exact hv)
@@ -550,15 +550,15 @@ theorem lowStep_invStep {X : Type} [DecidableEq X] {s : Gather.LowState P.n X}
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     exact ⟨InvStep.stand P k _, InvStep.stand P k _⟩
-  | echo q A hin happ hcard hsend =>
+  | echo q hin hcard hsend =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     exact ⟨InvStep.stand P k _, InvStep.stand P k _⟩
-  | vote q U hin happ hQ hsend =>
+  | vote q U hin hech happ hQ hsend =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     exact ⟨InvStep.stand P k _, InvStep.stand P k _⟩
-  | bindCall q U hin happ hQ hbc =>
+  | bindCall q U hin hvot hsnd happ hQ hbc =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     exact ⟨InvStep.stand P k _,
@@ -575,7 +575,7 @@ theorem lowStep_invStep {X : Type} [DecidableEq X] {s : Gather.LowState P.n X}
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     exact ⟨InvStep.stand P k _, invStep_update _ q d hb k⟩
-  | ret id g hin hsub hQ hr =>
+  | ret id g hin hbind hsub hQ hr =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     exact ⟨InvStep.stand P k _, InvStep.stand P k _⟩
@@ -738,14 +738,17 @@ theorem stage_answer_gsnd (P : Params) {u : ∀ _ : Fin P.n, AFW.ProcRec P.n}
         ((w.gsent r j m).writeGhost (ghostStep P) (Sum.inr (.gsnd r j m))) r) := by
   subst hu
   cases h with
-  | ga1Echo _ _ _ A hh hterm hin happ hcard hsend =>
-    have hrow := Gather.LowStep.echo (toGa1 P u w r) j A hin
-      (fun q hq => holdsIn_ga1 hI r j q.1 (happ q hq)) hcard hsend
+  | ga1Echo _ _ _ hh hterm hin hcard hsend =>
+    have hacc : ((Gather.ga (toGa1 P u w r)).proc j).accepted
+        = acceptedIn1 P ((u j).2.stage r) := accepted_toGa1 u w r j
+    have hrow := Gather.LowStep.echo (toGa1 P u w r) j hin
+      (by rw [hacc]; exact hcard) hsend
+    rw [hacc] at hrow
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_, ?_⟩ <;>
       rw [toRound_ga1Echo rfl]
     · exact lowPairInst_run_one (lowPairInst_ga1Tau (toRound P u w r) hrow)
     · exact roundInv_ga1 (roundInv_of_storeInv hI r) rfl hrow
-  | ga1Vote _ _ _ U hh hterm hin happ hQ hsend =>
+  | ga1Vote _ _ _ U hh hterm hin hech happ hQ hsend =>
     have hQ' : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ A, Gather.GaMsg.echo A ∈ (Gather.ga (toGa1 P u w r)).recv j q ∧
           Gather.approvedBy ((Gather.ga (toGa1 P u w r)).proc j) A ∧ A ⊆ U := by
@@ -753,13 +756,13 @@ theorem stage_answer_gsnd (P : Params) {u : ∀ _ : Fin P.n, AFW.ProcRec P.n}
       refine ⟨Q, hcard, fun q hq => ?_⟩
       obtain ⟨A, hA1, hA2, hA3⟩ := hmem q hq
       exact ⟨A, hA1, fun z hz => holdsIn_ga1 hI r j z.1 (hA2 z hz), hA3⟩
-    have hrow := Gather.LowStep.vote (toGa1 P u w r) j U hin
+    have hrow := Gather.LowStep.vote (toGa1 P u w r) j U hin hech
       (fun q hq => holdsIn_ga1 hI r j q.1 (happ q hq)) hQ' hsend
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_, ?_⟩ <;>
       rw [toRound_ga1Vote rfl]
     · exact lowPairInst_run_one (lowPairInst_ga1Tau (toRound P u w r) hrow)
     · exact roundInv_ga1 (roundInv_of_storeInv hI r) rfl hrow
-  | ga1Bind _ _ _ U hh hterm hin hbc happ hQ =>
+  | ga1Bind _ _ _ U hh hterm hin hvot hsnd hbc happ hQ =>
     have hQ' : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ W, Gather.GaMsg.vote W ∈ (Gather.ga (toGa1 P u w r)).recv j q ∧
           Gather.approvedBy ((Gather.ga (toGa1 P u w r)).proc j) W ∧ W ⊆ U := by
@@ -767,20 +770,23 @@ theorem stage_answer_gsnd (P : Params) {u : ∀ _ : Fin P.n, AFW.ProcRec P.n}
       refine ⟨Q, hcard, fun q hq => ?_⟩
       obtain ⟨W, hW1, hW2, hW3⟩ := hmem q hq
       exact ⟨W, hW1, fun z hz => holdsIn_ga1 hI r j z.1 (hW2 z hz), hW3⟩
-    have hrow := Gather.LowStep.bindCall (toGa1 P u w r) j U hin
+    have hrow := Gather.LowStep.bindCall (toGa1 P u w r) j U hin hvot hsnd
       (fun q hq => holdsIn_ga1 hI r j q.1 (happ q hq)) hQ' hbc
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_, ?_⟩ <;>
       rw [toRound_ga1Bind rfl]
     · exact lowPairInst_run_one (lowPairInst_ga1Tau (toRound P u w r) hrow)
     · exact roundInv_ga1 (roundInv_of_storeInv hI r) rfl hrow
-  | ga2Echo _ _ _ A hh hterm hin happ hcard hsend =>
-    have hrow := Gather.LowStep.echo (toGa2 P u w r) j A hin
-      (fun q hq => holdsIn_ga2 hI r j q.1 (happ q hq)) hcard hsend
+  | ga2Echo _ _ _ hh hterm hin hcard hsend =>
+    have hacc : ((Gather.ga (toGa2 P u w r)).proc j).accepted
+        = acceptedIn2 P ((u j).2.stage r) := accepted_toGa2 u w r j
+    have hrow := Gather.LowStep.echo (toGa2 P u w r) j hin
+      (by rw [hacc]; exact hcard) hsend
+    rw [hacc] at hrow
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_, ?_⟩ <;>
       rw [toRound_ga2Echo rfl]
     · exact lowPairInst_run_one (lowPairInst_ga2Tau (toRound P u w r) hrow)
     · exact roundInv_ga2 (roundInv_of_storeInv hI r) rfl hrow
-  | ga2Vote _ _ _ U hh hterm hin happ hQ hsend =>
+  | ga2Vote _ _ _ U hh hterm hin hech happ hQ hsend =>
     have hQ' : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ A, Gather.GaMsg.echo A ∈ (Gather.ga (toGa2 P u w r)).recv j q ∧
           Gather.approvedBy ((Gather.ga (toGa2 P u w r)).proc j) A ∧ A ⊆ U := by
@@ -788,13 +794,13 @@ theorem stage_answer_gsnd (P : Params) {u : ∀ _ : Fin P.n, AFW.ProcRec P.n}
       refine ⟨Q, hcard, fun q hq => ?_⟩
       obtain ⟨A, hA1, hA2, hA3⟩ := hmem q hq
       exact ⟨A, hA1, fun z hz => holdsIn_ga2 hI r j z.1 (hA2 z hz), hA3⟩
-    have hrow := Gather.LowStep.vote (toGa2 P u w r) j U hin
+    have hrow := Gather.LowStep.vote (toGa2 P u w r) j U hin hech
       (fun q hq => holdsIn_ga2 hI r j q.1 (happ q hq)) hQ' hsend
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_, ?_⟩ <;>
       rw [toRound_ga2Vote rfl]
     · exact lowPairInst_run_one (lowPairInst_ga2Tau (toRound P u w r) hrow)
     · exact roundInv_ga2 (roundInv_of_storeInv hI r) rfl hrow
-  | ga2Bind _ _ _ U hh hterm hin hbc happ hQ =>
+  | ga2Bind _ _ _ U hh hterm hin hvot hsnd hbc happ hQ =>
     have hQ' : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ W, Gather.GaMsg.vote W ∈ (Gather.ga (toGa2 P u w r)).recv j q ∧
           Gather.approvedBy ((Gather.ga (toGa2 P u w r)).proc j) W ∧ W ⊆ U := by
@@ -802,13 +808,13 @@ theorem stage_answer_gsnd (P : Params) {u : ∀ _ : Fin P.n, AFW.ProcRec P.n}
       refine ⟨Q, hcard, fun q hq => ?_⟩
       obtain ⟨W, hW1, hW2, hW3⟩ := hmem q hq
       exact ⟨W, hW1, fun z hz => holdsIn_ga2 hI r j z.1 (hW2 z hz), hW3⟩
-    have hrow := Gather.LowStep.bindCall (toGa2 P u w r) j U hin
+    have hrow := Gather.LowStep.bindCall (toGa2 P u w r) j U hin hvot hsnd
       (fun q hq => holdsIn_ga2 hI r j q.1 (happ q hq)) hQ' hbc
     refine ⟨_, rfl, rfl, fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', ?_, ?_⟩ <;>
       rw [toRound_ga2Bind rfl]
     · exact lowPairInst_run_one (lowPairInst_ga2Tau (toRound P u w r) hrow)
     · exact roundInv_ga2 (roundInv_of_storeInv hI r) rfl hrow
-  | link _ _ _ g hh hterm hin hsubap hQ hr1 hin2 hbin2 =>
+  | link _ _ _ g hh hterm hin hbind hsubap hQ hr1 hin2 hbin2 =>
     have hQ' : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ U, Gather.holdsBind ((Gather.ga (toGa1 P u w r)).proc j) q U ∧
           Gather.APSet.subMap U g := by
@@ -819,7 +825,7 @@ theorem stage_answer_gsnd (P : Params) {u : ∀ _ : Fin P.n, AFW.ProcRec P.n}
     have hrow1 : Gather.LowStep P (GBCA.ga1 (toRound P u w r))
         (.ret j g (ret1Core P (toRound P u w r)))
         (PMF.pure (GBCA.ga1 (afterRet1 P (toRound P u w r) j g))) :=
-      Gather.LowStep.ret _ j g hin
+      Gather.LowStep.ret _ j g hin hbind
         (fun k x hx => holdsIn_ga1 hI r j k (hsubap k x hx)) hQ' hr1
     have hrow2 : Gather.LowStep P (GBCA.ga2 (afterRet1 P (toRound P u w r) j g))
         (.call j (GBCA.cand P g))
@@ -926,7 +932,7 @@ theorem stage_answer_gsnd (P : Params) {u : ∀ _ : Fin P.n, AFW.ProcRec P.n}
 A delivery of the flat reading files the message in the receiver's own local
 state of the network state the message's tag names. A gather message moves the
 gather instance alone. A broadcast message moves the broadcast instance, and,
-where it completes the receiver's `n − f` `VOTE` quorum, the instance returns
+where it completes the receiver's `2f + 1` `VOTE` quorum, the instance returns
 to the receiver as well, which is a second transition of the round. -/
 
 /-- A delivery in an input-broadcast instance of the first gather, answered -/
@@ -1200,7 +1206,7 @@ theorem stage_answer_retG (P : Params) {u : ∀ _ : Fin P.n, AFW.ProcRec P.n}
         (w.writeGhost (ghostStep P) (Sum.inl (.retG r j out bnd))) r) := by
   subst hu
   cases h with
-  | retG _ _ _ g _ hh hph hr hterm hin hsubap hQ hr2 =>
+  | retG _ _ _ g _ hh hph hr hterm hin hbind hsubap hQ hr2 =>
     obtain ⟨β, hβ⟩ := Option.ne_none_iff_exists'.mp (hset j hin)
     have hb : bnd = (GBCA.bound (toRound P u w r)).getD (GBCA.boundOfCore P ∅) := by
       rw [hbnd]
@@ -1217,7 +1223,7 @@ theorem stage_answer_retG (P : Params) {u : ∀ _ : Fin P.n, AFW.ProcRec P.n}
     have hrow : Gather.LowStep P (GBCA.ga2 (toRound P u w r))
         (.ret j g (ret2Core P (toRound P u w r)))
         (PMF.pure (GBCA.ga2 (afterRet2 P (toRound P u w r) j g))) :=
-      Gather.LowStep.ret _ j g hin
+      Gather.LowStep.ret _ j g hin hbind
         (fun k x hx => holdsIn_ga2 hI r j k (hsubap k x hx)) hQ' hr2
     refine ⟨_, rfl, hh, hph, hr, rfl,
       fun r' hr' => StageSideRecP.stage_setStage_ne _ _ _ hr', fun r' => ?_, ?_, ?_⟩

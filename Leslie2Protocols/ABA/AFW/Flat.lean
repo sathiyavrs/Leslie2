@@ -53,13 +53,15 @@ the receiver's own local state, dispatched on the tag. Three rows are fused
 broadcast call, and the first gather's return to a process is that process's
 call of the second gather.
 
-The Bracha return is not a row here. A gather guard reads an `n − f` `VOTE`
+The Bracha return is not a row here. A gather guard reads a `2f + 1` `VOTE`
 receipt quorum on the acting process's own local state in the instance —
 `apIn1` and its three companions — so what an instance has returned to a
 process is a receipt count on that process's own record. A gather program of
 the composed reading holds the returned value in a store
-(`Gather.holdsIn`, `Gather.holdsBind`), and `AFW.storeIn`
-(`ABA/AFW/View.lean`) is the reading that identifies the two.
+(`Gather.holdsIn`, `Gather.holdsBind`), and `AFW.storeIn` is the reading that
+identifies the two. The first gather's `ECHO` payload is the process's
+accepted pairs, `AFW.acceptedIn1`, which is that reading at each of the `n`
+input-broadcast instances.
 
 ## The network adversary's ghost
 
@@ -283,21 +285,21 @@ noncomputable abbrev announcedBound (P : Params) (w : NetState P.n) (r : ℕ)
 
 /-! ### The receipt predicates
 
-The flat reading has no broadcast return: a gather guard reads an `n − f` `VOTE`
+The flat reading has no broadcast return: a gather guard reads a `2f + 1` `VOTE`
 receipt quorum on the acting process's own local state in the instance, where a
 program of the composed round reads the store that instance's return wrote (D28).
 Each predicate below is a count on the acting process's own record. -/
 
 variable {P : Params}
 
-/-- The process holds the pair `(k, v)` of the first gather: an `n − f`
+/-- The process holds the pair `(k, v)` of the first gather: a `2f + 1`
 `VOTE v` receipt quorum in the input-broadcast instance `k`. -/
 def apIn1 (P : Params) (s : StageRec P.n) (k : Fin P.n) (v : Bool) : Prop :=
-  P.n - P.f ≤ (s.brbIn1 k).recvCount (BRB.BMsg.vote v)
+  2 * P.f + 1 ≤ (s.brbIn1 k).recvCount (BRB.BMsg.vote v)
 
 /-- The process holds `q`'s bind payload of the first gather. -/
 def apBind1 (P : Params) (s : StageRec P.n) (q : Fin P.n) (U : APSet P.n Bool) : Prop :=
-  P.n - P.f ≤ (s.brbBind1 q).recvCount (BRB.BMsg.vote U)
+  2 * P.f + 1 ≤ (s.brbBind1 q).recvCount (BRB.BMsg.vote U)
 
 /-- A payload set of the first gather is approved here: every pair is held. -/
 def approved1 (P : Params) (s : StageRec P.n) (A : APSet P.n Bool) : Prop :=
@@ -305,16 +307,87 @@ def approved1 (P : Params) (s : StageRec P.n) (A : APSet P.n Bool) : Prop :=
 
 /-- The process holds the pair `(k, v)` of the second gather. -/
 def apIn2 (P : Params) (s : StageRec P.n) (k : Fin P.n) (v : Option Bool) : Prop :=
-  P.n - P.f ≤ (s.brbIn2 k).recvCount (BRB.BMsg.vote v)
+  2 * P.f + 1 ≤ (s.brbIn2 k).recvCount (BRB.BMsg.vote v)
 
 /-- The process holds `q`'s bind payload of the second gather. -/
 def apBind2 (P : Params) (s : StageRec P.n) (q : Fin P.n)
     (U : APSet P.n (Option Bool)) : Prop :=
-  P.n - P.f ≤ (s.brbBind2 q).recvCount (BRB.BMsg.vote U)
+  2 * P.f + 1 ≤ (s.brbBind2 q).recvCount (BRB.BMsg.vote U)
 
 /-- A payload set of the second gather is approved here. -/
 def approved2 (P : Params) (s : StageRec P.n) (A : APSet P.n (Option Bool)) : Prop :=
   ∀ p ∈ A, apIn2 P s p.1 p.2
+
+/-! ### The accepted pairs
+
+The `ECHO` payload of a gather is the sender's accepted pairs, `AP_i` of
+AFW25's Algorithm 5, line 9. A gather program of the composed reading reads
+them off its input store. The flat reading keeps none, so `(k, v)` is accepted
+here exactly when the instance broadcasting `k`'s input has returned `v` here.
+`storeIn` is that return as a function: the value on which the process's own
+local state in the instance holds a `2f + 1` `VOTE` receipt quorum, and `none`
+where there is no such value. `acceptedIn1` is its pairs over the first
+gather's `n` input-broadcast instances, and `acceptedIn2` over the second
+gather's. -/
+
+open scoped Classical in
+/-- What a broadcast instance has returned to this process: the value on which
+the process's own local state in that instance holds a `2f + 1` `VOTE` receipt
+quorum. -/
+noncomputable def storeIn (P : Params) {X : Type} [DecidableEq X]
+    (p : LocalState P.n (BRB.PState X) (BRB.BMsg X)) : Option X :=
+  if h : ∃ v, 2 * P.f + 1 ≤ p.recvCount (BRB.BMsg.vote v) then some (Classical.choose h)
+  else none
+
+/-- The accepted pairs of the first gather: the pairs `(k, v)` whose
+input-broadcast instance `k` has returned `v` here. -/
+noncomputable def acceptedIn1 (P : Params) (s : StageRec P.n) : APSet P.n Bool :=
+  Finset.univ.biUnion fun k =>
+    match storeIn P (s.brbIn1 k) with
+    | some v => {(k, v)}
+    | none => ∅
+
+/-- The accepted pairs of the second gather. -/
+noncomputable def acceptedIn2 (P : Params) (s : StageRec P.n) : APSet P.n (Option Bool) :=
+  Finset.univ.biUnion fun k =>
+    match storeIn P (s.brbIn2 k) with
+    | some v => {(k, v)}
+    | none => ∅
+
+/-- A pair of the first gather is accepted exactly when its input-broadcast
+instance has returned its value here. -/
+theorem mem_acceptedIn1 {P : Params} {s : StageRec P.n} {k : Fin P.n} {v : Bool} :
+    (k, v) ∈ acceptedIn1 P s ↔ storeIn P (s.brbIn1 k) = some v := by
+  constructor
+  · intro h
+    obtain ⟨k', -, hk'⟩ := Finset.mem_biUnion.mp h
+    split at hk'
+    · rename_i v' hd
+      rw [Finset.mem_singleton, Prod.mk.injEq] at hk'
+      obtain ⟨rfl, rfl⟩ := hk'
+      exact hd
+    · exact absurd hk' (by simp)
+  · intro h
+    refine Finset.mem_biUnion.mpr ⟨k, Finset.mem_univ k, ?_⟩
+    rw [h]
+    simp
+
+/-- The same at the second gather. -/
+theorem mem_acceptedIn2 {P : Params} {s : StageRec P.n} {k : Fin P.n} {v : Option Bool} :
+    (k, v) ∈ acceptedIn2 P s ↔ storeIn P (s.brbIn2 k) = some v := by
+  constructor
+  · intro h
+    obtain ⟨k', -, hk'⟩ := Finset.mem_biUnion.mp h
+    split at hk'
+    · rename_i v' hd
+      rw [Finset.mem_singleton, Prod.mk.injEq] at hk'
+      obtain ⟨rfl, rfl⟩ := hk'
+      exact hd
+    · exact absurd hk' (by simp)
+  · intro h
+    refine Finset.mem_biUnion.mpr ⟨k, Finset.mem_univ k, ?_⟩
+    rw [h]
+    simp
 
 /-! ### The stage-side rows -/
 
@@ -351,22 +424,28 @@ inductive StageStep (P : Params) (j : Fin P.n) :
       (hin : ((p.stage r).ga1.proc).input ≠ none) :
       StageStep P j (c, p) (Sum.inr (.gcallLoop r j b))
         (PMF.pure (c.setProc { c.proc with phase := .awaitG }, p))
-  /-- The first gather's `ECHO`: the process holds `n − f` pairs. -/
-  | ga1Echo (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ) (A : APSet P.n Bool)
+  /-- The first gather's `ECHO`: the process is called and its accepted pairs
+  number at least `n − f`, the source blueprint's `|AP| ≥ n − f`. The payload is
+  those pairs, `T_i ← AP_i` of AFW25's Algorithm 5, line 9. -/
+  | ga1Echo (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ)
       (hh : c.corrupted = false) (hterm : p.terminated = false)
       (hin : ((p.stage r).ga1.proc).input ≠ none)
-      (happ : approved1 P (p.stage r) A) (hcard : P.n - P.f ≤ A.card)
+      (hcard : P.n - P.f ≤ (acceptedIn1 P (p.stage r)).card)
       (hsend : ((p.stage r).ga1.proc).sentEcho = none) :
-      StageStep P j (c, p) (Sum.inr (.gsnd r j (.ga1 (.echo A))))
+      StageStep P j (c, p) (Sum.inr (.gsnd r j (.ga1 (.echo (acceptedIn1 P (p.stage r))))))
         (PMF.pure (c, p.setStage r
           { (p.stage r) with
             ga1 := (p.stage r).ga1.setP
-              { ((p.stage r).ga1.proc) with sentEcho := some A } }))
+              { ((p.stage r).ga1.proc) with
+                sentEcho := some (acceptedIn1 P (p.stage r)) } }))
   /-- The first gather's `VOTE`: `n − f` senders' `ECHO` payloads, each held
-  here and contained in the vote payload, are delivered. -/
+  here and contained in the vote payload, are delivered, and the process has
+  multicast its own `ECHO`. The main thread of AFW25's Algorithm 5 sends `ECHO`
+  before `VOTE`. -/
   | ga1Vote (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ) (U : APSet P.n Bool)
       (hh : c.corrupted = false) (hterm : p.terminated = false)
       (hin : ((p.stage r).ga1.proc).input ≠ none)
+      (hech : ((p.stage r).ga1.proc).sentEcho ≠ none)
       (happ : approved1 P (p.stage r) U)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ A, GaMsg.echo A ∈ ((p.stage r).ga1.recv q) ∧
@@ -379,10 +458,15 @@ inductive StageStep (P : Params) (j : Fin P.n) :
               { ((p.stage r).ga1.proc) with sentVote := some U } }))
   /-- The first gather's `BIND`: `n − f` senders' `VOTE` payloads, each held
   here and contained in the bind payload, are delivered; the payload is
-  broadcast through the process's own bind-broadcast instance. -/
+  broadcast through the process's own bind-broadcast instance and written to the
+  gather record. The process has multicast its own `VOTE` and has not called its
+  own bind broadcast. The main thread of AFW25's Algorithm 5 sends `VOTE` before
+  `BIND`, and sends `BIND` once, at line 17. -/
   | ga1Bind (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ) (U : APSet P.n Bool)
       (hh : c.corrupted = false) (hterm : p.terminated = false)
       (hin : ((p.stage r).ga1.proc).input ≠ none)
+      (hvot : ((p.stage r).ga1.proc).sentVote ≠ none)
+      (hsnd : ((p.stage r).ga1.proc).sentBind = none)
       (hbc : (((p.stage r).brbBind1 j).proc).input = none)
       (happ : approved1 P (p.stage r) U)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
@@ -391,26 +475,29 @@ inductive StageStep (P : Params) (j : Fin P.n) :
       StageStep P j (c, p) (Sum.inr (.gsnd r j (.brbBind1 j (.init U))))
         (PMF.pure (c, p.setStage r
           { (p.stage r) with
+            ga1 := (p.stage r).ga1.setP
+              { ((p.stage r).ga1.proc) with sentBind := some U }
             brbBind1 := Function.update (p.stage r).brbBind1 j
               (((p.stage r).brbBind1 j).setP
                 { (((p.stage r).brbBind1 j).proc) with input := some U }) }))
   /-- The second gather's `ECHO`. -/
   | ga2Echo (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ)
-      (A : APSet P.n (Option Bool))
       (hh : c.corrupted = false) (hterm : p.terminated = false)
       (hin : ((p.stage r).ga2.proc).input ≠ none)
-      (happ : approved2 P (p.stage r) A) (hcard : P.n - P.f ≤ A.card)
+      (hcard : P.n - P.f ≤ (acceptedIn2 P (p.stage r)).card)
       (hsend : ((p.stage r).ga2.proc).sentEcho = none) :
-      StageStep P j (c, p) (Sum.inr (.gsnd r j (.ga2 (.echo A))))
+      StageStep P j (c, p) (Sum.inr (.gsnd r j (.ga2 (.echo (acceptedIn2 P (p.stage r))))))
         (PMF.pure (c, p.setStage r
           { (p.stage r) with
             ga2 := (p.stage r).ga2.setP
-              { ((p.stage r).ga2.proc) with sentEcho := some A } }))
+              { ((p.stage r).ga2.proc) with
+                sentEcho := some (acceptedIn2 P (p.stage r)) } }))
   /-- The second gather's `VOTE`. -/
   | ga2Vote (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ)
       (U : APSet P.n (Option Bool))
       (hh : c.corrupted = false) (hterm : p.terminated = false)
       (hin : ((p.stage r).ga2.proc).input ≠ none)
+      (hech : ((p.stage r).ga2.proc).sentEcho ≠ none)
       (happ : approved2 P (p.stage r) U)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ A, GaMsg.echo A ∈ ((p.stage r).ga2.recv q) ∧
@@ -426,6 +513,8 @@ inductive StageStep (P : Params) (j : Fin P.n) :
       (U : APSet P.n (Option Bool))
       (hh : c.corrupted = false) (hterm : p.terminated = false)
       (hin : ((p.stage r).ga2.proc).input ≠ none)
+      (hvot : ((p.stage r).ga2.proc).sentVote ≠ none)
+      (hsnd : ((p.stage r).ga2.proc).sentBind = none)
       (hbc : (((p.stage r).brbBind2 j).proc).input = none)
       (happ : approved2 P (p.stage r) U)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
@@ -434,16 +523,21 @@ inductive StageStep (P : Params) (j : Fin P.n) :
       StageStep P j (c, p) (Sum.inr (.gsnd r j (.brbBind2 j (.init U))))
         (PMF.pure (c, p.setStage r
           { (p.stage r) with
+            ga2 := (p.stage r).ga2.setP
+              { ((p.stage r).ga2.proc) with sentBind := some U }
             brbBind2 := Function.update (p.stage r).brbBind2 j
               (((p.stage r).brbBind2 j).setP
                 { (((p.stage r).brbBind2 j).proc) with input := some U }) }))
   /-- The first gather returns and the process calls the second gather with
   the candidate, broadcasting it through its own input-broadcast instance of
-  the second gather (D24, D28). -/
+  the second gather (D24, D28). The returner has called its own bind broadcast:
+  the `BIND` broadcast of AFW25's Algorithm 5, line 17, precedes the wait of
+  line 18. -/
   | link (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ)
       (g : Fin P.n → Option Bool)
       (hh : c.corrupted = false) (hterm : p.terminated = false)
       (hin : ((p.stage r).ga1.proc).input ≠ none)
+      (hbind : ((p.stage r).ga1.proc).sentBind ≠ none)
       (hsubap : ∀ k x, g k = some x → apIn1 P (p.stage r) k x)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ U, apBind1 P (p.stage r) q U ∧ APSet.subMap U g)
@@ -463,13 +557,14 @@ inductive StageStep (P : Params) (j : Fin P.n) :
                 { (((p.stage r).brbIn2 j).proc) with
                   input := some (GBCA.cand P g) }) }))
   /-- The second gather returns and the round returns the graded outcome
-  (D24). -/
+  (D24). The returner has called its own bind broadcast. -/
   | retG (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ)
       (g : Fin P.n → Option (Option Bool)) (bnd : Bool)
       (hh : c.corrupted = false)
       (hph : c.proc.phase = .awaitG) (hr : c.proc.round = r)
       (hterm : p.terminated = false)
       (hin : ((p.stage r).ga2.proc).input ≠ none)
+      (hbind : ((p.stage r).ga2.proc).sentBind ≠ none)
       (hsubap : ∀ k x, g k = some x → apIn2 P (p.stage r) k x)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ U, apBind2 P (p.stage r) q U ∧ APSet.subMap U g)
@@ -483,10 +578,13 @@ inductive StageStep (P : Params) (j : Fin P.n) :
               ga2 := (p.stage r).ga2.setP
                 { ((p.stage r).ga2.proc) with returned := true } }))
   /-- `ECHO` in an input-broadcast instance of the first gather: the leader's
-  `⟨INIT, m⟩` is delivered here and no `ECHO` is out. -/
+  `⟨INIT, m⟩` is delivered here, or an `ECHO m` receipt quorum is, or `f + 1`
+  `VOTE m` receipts are; no `ECHO` is out. -/
   | in1Echo (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ) (i : Fin P.n)
       (m : Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hrecv : BRB.BMsg.init m ∈ ((p.stage r).brbIn1 i).recv i)
+      (hrecv : BRB.BMsg.init m ∈ ((p.stage r).brbIn1 i).recv i ∨
+        P.echoQuorum ≤ ((p.stage r).brbIn1 i).recvCount (.echo m) ∨
+        P.f + 1 ≤ ((p.stage r).brbIn1 i).recvCount (.vote m))
       (hsend : (((p.stage r).brbIn1 i).proc).sentEcho = none) :
       StageStep P j (c, p) (Sum.inr (.gsnd r j (.brbIn1 i (.echo m))))
         (PMF.pure (c, p.setStage r
@@ -494,11 +592,11 @@ inductive StageStep (P : Params) (j : Fin P.n) :
             brbIn1 := Function.update (p.stage r).brbIn1 i
               (((p.stage r).brbIn1 i).setP
                 { (((p.stage r).brbIn1 i).proc) with sentEcho := some m }) }))
-  /-- `VOTE` on an `n − f` `ECHO` quorum in an input-broadcast instance of the
+  /-- `VOTE` on an `ECHO m` receipt quorum in an input-broadcast instance of the
   first gather. -/
   | in1VoteQuorum (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ) (i : Fin P.n)
       (m : Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hcnt : P.n - P.f ≤ ((p.stage r).brbIn1 i).recvCount (.echo m))
+      (hcnt : P.echoQuorum ≤ ((p.stage r).brbIn1 i).recvCount (.echo m))
       (hsend : (((p.stage r).brbIn1 i).proc).sentVote = none) :
       StageStep P j (c, p) (Sum.inr (.gsnd r j (.brbIn1 i (.vote m))))
         (PMF.pure (c, p.setStage r
@@ -520,7 +618,9 @@ inductive StageStep (P : Params) (j : Fin P.n) :
   /-- `ECHO` in a bind-broadcast instance of the first gather. -/
   | bind1Echo (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ) (i : Fin P.n)
       (m : APSet P.n Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hrecv : BRB.BMsg.init m ∈ ((p.stage r).brbBind1 i).recv i)
+      (hrecv : BRB.BMsg.init m ∈ ((p.stage r).brbBind1 i).recv i ∨
+        P.echoQuorum ≤ ((p.stage r).brbBind1 i).recvCount (.echo m) ∨
+        P.f + 1 ≤ ((p.stage r).brbBind1 i).recvCount (.vote m))
       (hsend : (((p.stage r).brbBind1 i).proc).sentEcho = none) :
       StageStep P j (c, p) (Sum.inr (.gsnd r j (.brbBind1 i (.echo m))))
         (PMF.pure (c, p.setStage r
@@ -528,11 +628,11 @@ inductive StageStep (P : Params) (j : Fin P.n) :
             brbBind1 := Function.update (p.stage r).brbBind1 i
               (((p.stage r).brbBind1 i).setP
                 { (((p.stage r).brbBind1 i).proc) with sentEcho := some m }) }))
-  /-- `VOTE` on an `n − f` `ECHO` quorum in a bind-broadcast instance of the
+  /-- `VOTE` on an `ECHO m` receipt quorum in a bind-broadcast instance of the
   first gather. -/
   | bind1VoteQuorum (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ) (i : Fin P.n)
       (m : APSet P.n Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hcnt : P.n - P.f ≤ ((p.stage r).brbBind1 i).recvCount (.echo m))
+      (hcnt : P.echoQuorum ≤ ((p.stage r).brbBind1 i).recvCount (.echo m))
       (hsend : (((p.stage r).brbBind1 i).proc).sentVote = none) :
       StageStep P j (c, p) (Sum.inr (.gsnd r j (.brbBind1 i (.vote m))))
         (PMF.pure (c, p.setStage r
@@ -555,7 +655,9 @@ inductive StageStep (P : Params) (j : Fin P.n) :
   /-- `ECHO` in an input-broadcast instance of the second gather. -/
   | in2Echo (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ) (i : Fin P.n)
       (m : Option Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hrecv : BRB.BMsg.init m ∈ ((p.stage r).brbIn2 i).recv i)
+      (hrecv : BRB.BMsg.init m ∈ ((p.stage r).brbIn2 i).recv i ∨
+        P.echoQuorum ≤ ((p.stage r).brbIn2 i).recvCount (.echo m) ∨
+        P.f + 1 ≤ ((p.stage r).brbIn2 i).recvCount (.vote m))
       (hsend : (((p.stage r).brbIn2 i).proc).sentEcho = none) :
       StageStep P j (c, p) (Sum.inr (.gsnd r j (.brbIn2 i (.echo m))))
         (PMF.pure (c, p.setStage r
@@ -563,11 +665,11 @@ inductive StageStep (P : Params) (j : Fin P.n) :
             brbIn2 := Function.update (p.stage r).brbIn2 i
               (((p.stage r).brbIn2 i).setP
                 { (((p.stage r).brbIn2 i).proc) with sentEcho := some m }) }))
-  /-- `VOTE` on an `n − f` `ECHO` quorum in an input-broadcast instance of the
+  /-- `VOTE` on an `ECHO m` receipt quorum in an input-broadcast instance of the
   second gather. -/
   | in2VoteQuorum (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ) (i : Fin P.n)
       (m : Option Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hcnt : P.n - P.f ≤ ((p.stage r).brbIn2 i).recvCount (.echo m))
+      (hcnt : P.echoQuorum ≤ ((p.stage r).brbIn2 i).recvCount (.echo m))
       (hsend : (((p.stage r).brbIn2 i).proc).sentVote = none) :
       StageStep P j (c, p) (Sum.inr (.gsnd r j (.brbIn2 i (.vote m))))
         (PMF.pure (c, p.setStage r
@@ -591,7 +693,9 @@ inductive StageStep (P : Params) (j : Fin P.n) :
   | bind2Echo (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ) (i : Fin P.n)
       (m : APSet P.n (Option Bool)) (hh : c.corrupted = false)
       (hterm : p.terminated = false)
-      (hrecv : BRB.BMsg.init m ∈ ((p.stage r).brbBind2 i).recv i)
+      (hrecv : BRB.BMsg.init m ∈ ((p.stage r).brbBind2 i).recv i ∨
+        P.echoQuorum ≤ ((p.stage r).brbBind2 i).recvCount (.echo m) ∨
+        P.f + 1 ≤ ((p.stage r).brbBind2 i).recvCount (.vote m))
       (hsend : (((p.stage r).brbBind2 i).proc).sentEcho = none) :
       StageStep P j (c, p) (Sum.inr (.gsnd r j (.brbBind2 i (.echo m))))
         (PMF.pure (c, p.setStage r
@@ -599,12 +703,12 @@ inductive StageStep (P : Params) (j : Fin P.n) :
             brbBind2 := Function.update (p.stage r).brbBind2 i
               (((p.stage r).brbBind2 i).setP
                 { (((p.stage r).brbBind2 i).proc) with sentEcho := some m }) }))
-  /-- `VOTE` on an `n − f` `ECHO` quorum in a bind-broadcast instance of the
+  /-- `VOTE` on an `ECHO m` receipt quorum in a bind-broadcast instance of the
   second gather. -/
   | bind2VoteQuorum (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ) (i : Fin P.n)
       (m : APSet P.n (Option Bool)) (hh : c.corrupted = false)
       (hterm : p.terminated = false)
-      (hcnt : P.n - P.f ≤ ((p.stage r).brbBind2 i).recvCount (.echo m))
+      (hcnt : P.echoQuorum ≤ ((p.stage r).brbBind2 i).recvCount (.echo m))
       (hsend : (((p.stage r).brbBind2 i).proc).sentVote = none) :
       StageStep P j (c, p) (Sum.inr (.gsnd r j (.brbBind2 i (.vote m))))
         (PMF.pure (c, p.setStage r

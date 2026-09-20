@@ -16,7 +16,8 @@ state.
 A gather instance's plain-multicast messages are the `ECHO` and `VOTE` payload
 sets (`GaMsg`); the `BIND` payloads travel by reliable broadcast and are not
 messages of the network. `PRec` is the local record of one process: its input,
-the `ECHO` and the `VOTE` payload it has multicast, and its return flag.
+the `ECHO` and the `VOTE` payload it has multicast, the `BIND` payload it has
+handed to its own bind broadcast, and its return flag.
 
 `coreOf` reads a payload set off the sent sets and the corrupted set of a gather
 network state, and nothing else. The incidence lemmas stated beneath it read
@@ -38,8 +39,9 @@ inductive GaMsg (n : ℕ) (X : Type) : Type
   | vote (A : APSet n X)
   deriving DecidableEq
 
-/-- The local record of one process in one gather instance. The `BIND` field
-is the process's own bind-BRB instance's call record, not a field here. -/
+/-- The local record of one process in one gather instance. The payload handed
+to the process's own bind broadcast is a field here; the payloads a bind
+broadcast has returned here are fields of `ProcRec` (`ABA/Gather/Sub.lean`). -/
 structure PRec (n : ℕ) (X : Type) : Type where
   /-- The payload received via `call` (`none` before the call). -/
   input : Option X
@@ -47,6 +49,9 @@ structure PRec (n : ℕ) (X : Type) : Type where
   sentEcho : Option (APSet n X)
   /-- The `VOTE` payload multicast, if any (write-once). -/
   sentVote : Option (APSet n X)
+  /-- The `BIND` payload handed to the process's own bind broadcast, if any
+  (write-once). -/
+  sentBind : Option (APSet n X)
   /-- Whether this process has returned. -/
   returned : Bool
   deriving DecidableEq
@@ -56,6 +61,7 @@ def PRec.initial (n : ℕ) (X : Type) : PRec n X where
   input := none
   sentEcho := none
   sentVote := none
+  sentBind := none
   returned := false
 
 /-! ### The core of a gather network state

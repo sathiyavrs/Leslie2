@@ -120,6 +120,68 @@ theorem IdealConf.initial : IdealConf P ((idealInst P X).init) := by
     simp [ga, brbIn, brbBind, ProcRec.initial, PRec.initial, BRB.SpecState.initial,
       GaNetState.initial, SubState.proc, SubState.sent, SubState.recv, SubState.F]
 
+omit [DecidableEq X] in
+/-- **The conformance clauses are blind to the `BIND` field**: no clause reads
+it, so a write to it at one program carries them over. -/
+theorem IdealConf.setSentBind {s : IdealState P.n X} (hConf : IdealConf P s) (j : Fin P.n)
+    (U : APSet P.n X) :
+    IdealConf P (setGa s ((ga s).setProc j { (ga s).proc j with sentBind := some U })) := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  all_goals dsimp only [ga_setGa, brbIn_setGa, brbBind_setGa, SubState.setProc_F,
+    SubState.setProc_sent]
+  · exact hConf.F_card
+  · exact hConf.F_in_eq
+  · exact hConf.F_bind_eq
+  · simp only [SubState.setProc_recv]
+    exact hConf.recv_sub
+  · intro j' k v hv
+    by_cases hk : j' = j
+    · subst hk
+      rw [SubState.setProc_proc_self] at hv
+      exact hConf.delivIn_val j' k v hv
+    · rw [SubState.setProc_proc_ne _ _ _ hk] at hv
+      exact hConf.delivIn_val j' k v hv
+  · intro j' q U' hU'
+    by_cases hk : j' = j
+    · subst hk
+      rw [SubState.setProc_proc_self] at hU'
+      exact hConf.delivBind_val j' q U' hU'
+    · rw [SubState.setProc_proc_ne _ _ _ hk] at hU'
+      exact hConf.delivBind_val j' q U' hU'
+  · exact hConf.inVal_prov
+  · exact hConf.bindVal_prov
+  · intro j' hj A hA
+    by_cases hk : j' = j
+    · subst hk
+      rw [SubState.setProc_proc_self]
+      exact hConf.echo_conf j' hj A hA
+    · rw [SubState.setProc_proc_ne _ _ _ hk]
+      exact hConf.echo_conf j' hj A hA
+  · intro j' hj A hA
+    by_cases hk : j' = j
+    · subst hk
+      rw [SubState.setProc_proc_self] at hA
+      exact hConf.echo_card j' hj A hA
+    · rw [SubState.setProc_proc_ne _ _ _ hk] at hA
+      exact hConf.echo_card j' hj A hA
+  · intro j' hj W hW
+    by_cases hk : j' = j
+    · subst hk
+      rw [SubState.setProc_proc_self]
+      exact hConf.vote_conf j' hj W hW
+    · rw [SubState.setProc_proc_ne _ _ _ hk]
+      exact hConf.vote_conf j' hj W hW
+  · simp only [SubState.setProc_recv]
+    intro j' hj W hW
+    by_cases hk : j' = j
+    · subst hk
+      rw [SubState.setProc_proc_self] at hW
+      exact hConf.vote_backed j' hj W hW
+    · rw [SubState.setProc_proc_ne _ _ _ hk] at hW
+      exact hConf.vote_backed j' hj W hW
+  · simp only [SubState.setProc_recv]
+    exact hConf.bind_backed
+
 /-- The conformance clauses are preserved by every step. -/
 theorem IdealConf.step {s : IdealState P.n X} {l : Lab P.n X}
     {μ : PMF (IdealState P.n X)} (hInv : IdealConf P s) (hstep : IdealStep P s l μ)
@@ -428,7 +490,7 @@ theorem IdealConf.step {s : IdealState P.n X} {l : Lab P.n X}
       exact ⟨Q, hQc, fun q hq => by
         obtain ⟨W, hW, hWU⟩ := hQ q hq
         exact ⟨W, SubState.mem_recvMsg_recv.mpr (Or.inr hW), hWU⟩⟩
-  | echo j A hin happ hcard hsend =>
+  | echo j hin hcard hsend =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
@@ -461,7 +523,7 @@ theorem IdealConf.step {s : IdealState P.n X} {l : Lab P.n X}
     · intro j' hj A' hA'
       rw [SubState.mem_mcast_sent, SubState.setProc_sent] at hA'
       rcases hA' with ⟨rfl, hm'⟩ | hold
-      · obtain rfl : A' = A := by injection hm'
+      · obtain rfl : A' = ((ga s).proc j').accepted := by injection hm'
         rw [SubState.mcast_proc, SubState.setProc_proc_self]
       · have hpre := hInv.echo_conf j' hj A' hold
         by_cases hk : j' = j
@@ -474,7 +536,7 @@ theorem IdealConf.step {s : IdealState P.n X} {l : Lab P.n X}
       by_cases hk : j' = j
       · subst hk
         rw [SubState.mcast_proc, SubState.setProc_proc_self] at hA'
-        obtain rfl : A = A' := by injection hA'
+        obtain rfl : ((ga s).proc j').accepted = A' := by injection hA'
         exact hcard
       · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hk] at hA'
         exact hInv.echo_card j' hj A' hA'
@@ -500,7 +562,7 @@ theorem IdealConf.step {s : IdealState P.n X} {l : Lab P.n X}
     · intro j' hj U hU
       simp only [SubState.mcast_recv, SubState.setProc_recv]
       exact hInv.bind_backed j' hj U hU
-  | vote j U hin happ hQ hsend =>
+  | vote j U hin hech happ hQ hsend =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
@@ -575,9 +637,11 @@ theorem IdealConf.step {s : IdealState P.n X} {l : Lab P.n X}
     · intro j' hj U' hU'
       simp only [SubState.mcast_recv, SubState.setProc_recv]
       exact hInv.bind_backed j' hj U' hU'
-  | bindCall j U hin happ hQ hb =>
+  | bindCall j U hin hvot hsnd happ hQ hb =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
+    refine IdealConf.setSentBind (s := setBrbBind s (Function.update (brbBind s) j
+      { brbBind s j with input := some U })) ?_ j U
     refine ⟨hInv.F_card, hInv.F_in_eq, ?_, hInv.recv_sub, hInv.delivIn_val, ?_,
       hInv.inVal_prov, ?_, hInv.echo_conf, hInv.echo_card, hInv.vote_conf,
       hInv.vote_backed, ?_⟩
@@ -618,10 +682,10 @@ theorem IdealConf.step {s : IdealState P.n X} {l : Lab P.n X}
           exact ⟨W, hW, hWU⟩⟩
       · rw [Function.update_of_ne hq] at hU'
         exact hInv.bind_backed j' hj U' hU'
-  | bindCallSpecLoop j U hin happ hQ =>
+  | bindCallSpecLoop j U hin hvot hsnd happ hQ =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    exact hInv
+    exact hInv.setSentBind j U
   | byz j m h =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
@@ -851,7 +915,7 @@ theorem IdealConf.step {s : IdealState P.n X} {l : Lab P.n X}
         exact hInv.bind_backed j' hj U' hU'
       · rw [Function.update_of_ne hq] at hU'
         exact hInv.bind_backed j' hj U' hU'
-  | ret id g hin hsub hQ hr =>
+  | ret id g hin hbind hsub hQ hr =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
@@ -1037,8 +1101,8 @@ theorem echoAppr_initial :
   simp [ga, SubState.proc, ProcRec.initial, PRec.initial] at hA
 
 /-- **The approval of an `ECHO` field is inductive**: only `IdealStep.echo`
-writes the field, and its guard is the approval of the payload it writes by the
-writer's own store. -/
+writes the field, and the payload it writes is the entries of the writer's own
+store. -/
 theorem echoAppr_step {s s' : IdealState P.n X} {l : Lab P.n X}
     {μ : PMF (IdealState P.n X)} (hConf : IdealConf P s)
     (hEA : ∀ (j : Fin P.n) (A : APSet P.n X),
@@ -1063,22 +1127,36 @@ theorem echoAppr_step {s s' : IdealState P.n X} {l : Lab P.n X}
       by_cases hk : j = id
       · subst hk; rw [SubState.setProc_proc_self] at hA; exact hA
       · rw [SubState.setProc_proc_ne _ _ _ hk] at hA; exact hA
-  | echo j₀ A₀ hin happ hcard hsend =>
+  | echo j₀ hin hcard hsend =>
       rw [PMF.mem_support_pure_iff] at hs'; subst hs'
       dsimp only [ga_setGa] at hA
       rw [SubState.mcast_proc] at hA
       by_cases hk : j = j₀
       · subst hk
         rw [SubState.setProc_proc_self] at hA
-        obtain rfl : A₀ = A := Option.some.inj hA
-        exact approved_of_approvedBy hConf happ
+        obtain rfl : ((ga s).proc j).accepted = A := Option.some.inj hA
+        exact approved_of_approvedBy hConf (ProcRec.accepted_subMap ((ga s).proc j))
       · rw [SubState.setProc_proc_ne _ _ _ hk] at hA
         exact hEA j A hA
-  | vote j₀ U hin happ hQ hsend =>
+  | vote j₀ U hin hech happ hQ hsend =>
       rw [PMF.mem_support_pure_iff] at hs'; subst hs'
       refine hEA j A ?_
       dsimp only [ga_setGa] at hA
       rw [SubState.mcast_proc] at hA
+      by_cases hk : j = j₀
+      · subst hk; rw [SubState.setProc_proc_self] at hA; exact hA
+      · rw [SubState.setProc_proc_ne _ _ _ hk] at hA; exact hA
+  | bindCall j₀ U hin hvot hsnd happ hQ hb =>
+      rw [PMF.mem_support_pure_iff] at hs'; subst hs'
+      refine hEA j A ?_
+      dsimp only [ga_setBrbBind, ga_setGa] at hA
+      by_cases hk : j = j₀
+      · subst hk; rw [SubState.setProc_proc_self] at hA; exact hA
+      · rw [SubState.setProc_proc_ne _ _ _ hk] at hA; exact hA
+  | bindCallSpecLoop j₀ U hin hvot hsnd happ hQ =>
+      rw [PMF.mem_support_pure_iff] at hs'; subst hs'
+      refine hEA j A ?_
+      dsimp only [ga_setGa] at hA
       by_cases hk : j = j₀
       · subst hk; rw [SubState.setProc_proc_self] at hA; exact hA
       · rw [SubState.setProc_proc_ne _ _ _ hk] at hA; exact hA
@@ -1096,7 +1174,7 @@ theorem echoAppr_step {s s' : IdealState P.n X} {l : Lab P.n X}
       by_cases hk : j = j₀
       · subst hk; rw [SubState.setProc_proc_self] at hA; exact hA
       · rw [SubState.setProc_proc_ne _ _ _ hk] at hA; exact hA
-  | ret id g hin hsub hQ hr =>
+  | ret id g hin hbind hsub hQ hr =>
       rw [PMF.mem_support_pure_iff] at hs'; subst hs'
       refine hEA j A ?_
       dsimp only [ga_setCore, ga_setGa] at hA
@@ -1127,7 +1205,7 @@ together with the approval of every `ECHO` field. -/
 structure IdealInv (P : Params) (s : IdealState P.n X) : Prop extends IdealConf P s where
   /-- The payload set in a process's `ECHO` field consists of committed input
   entries. No honesty side condition: only `IdealStep.echo` writes the field,
-  and its guard holds of a corrupted sender too. -/
+  and a corrupted sender's accepted pairs are entries of its store too. -/
   echo_appr : ∀ (j : Fin P.n) (A : APSet P.n X),
     ((ga s).proc j).sentEcho = some A → approved s A
 
@@ -1341,7 +1419,7 @@ theorem bindVal_mono {s s' : IdealState P.n X} {l : Lab P.n X}
       by_cases hq : q = q'
       · subst hq; rw [hv] at h; exact absurd h (by simp)
       · rw [Function.update_of_ne hq]; exact h
-  | bindCall j U' hin happ hQ hb =>
+  | bindCall j U' hin hvot hsnd happ hQ hb =>
       rw [PMF.mem_support_pure_iff] at hs'; subst hs'
       dsimp only [brbBind_setBrbBind]
       by_cases hq : q = j

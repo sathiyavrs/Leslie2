@@ -62,7 +62,7 @@ returned to it is written on the return event into its own record: `delivIn k`
 is the value instance `k` returned here, `delivBind q` is the payload bind
 instance `q` returned here. The four rows that read what has been returned —
 `sndEcho`, `sndVote`, `bindCall` and `ret` — read the stores through
-`holdsIn`, `holdsBind` and `approvedBy`.
+`ProcRec.accepted`, `holdsIn`, `holdsBind` and `approvedBy`.
 
 ## The core
 
@@ -159,6 +159,36 @@ def holdsBind {n : ℕ} {X : Type} (p : ProcRec n X) (q : Fin n) (U : APSet n X)
 /-- A payload set is approved by `p` when `p` holds every one of its pairs. -/
 def approvedBy {n : ℕ} {X : Type} (p : ProcRec n X) (A : APSet n X) : Prop :=
   A.subMap p.delivIn
+
+/-- The accepted pairs of `p`: the entries of its input store. AFW25's
+Algorithm 5 writes this set `AP_i` and multicasts it as the `ECHO` payload. -/
+def ProcRec.accepted {n : ℕ} {X : Type} [DecidableEq X] (p : ProcRec n X) : APSet n X :=
+  Finset.univ.biUnion fun k =>
+    match p.delivIn k with
+    | some v => {(k, v)}
+    | none => ∅
+
+/-- A pair is accepted exactly when the input store holds it. -/
+theorem ProcRec.mem_accepted {n : ℕ} {X : Type} [DecidableEq X] {p : ProcRec n X}
+    {k : Fin n} {v : X} : (k, v) ∈ p.accepted ↔ p.delivIn k = some v := by
+  constructor
+  · intro h
+    obtain ⟨k', -, hk'⟩ := Finset.mem_biUnion.mp h
+    split at hk'
+    · rename_i v' hd
+      rw [Finset.mem_singleton, Prod.mk.injEq] at hk'
+      obtain ⟨rfl, rfl⟩ := hk'
+      exact hd
+    · exact absurd hk' (by simp)
+  · intro h
+    refine Finset.mem_biUnion.mpr ⟨k, Finset.mem_univ k, ?_⟩
+    rw [h]
+    simp
+
+/-- The accepted pairs are entries of the input store. -/
+theorem ProcRec.accepted_subMap {n : ℕ} {X : Type} [DecidableEq X] (p : ProcRec n X) :
+    p.accepted.subMap p.delivIn :=
+  fun _ ha => ProcRec.mem_accepted.mp ha
 
 /-- The state of the gather network: the per-sender sent sets and the corrupted
 set beside the instance's core. -/
@@ -263,16 +293,19 @@ inductive ProcStep (P : Params) (j : Fin P.n) :
   /-- A call loop at another process is not `j`'s business. -/
   | callLoopIdle (p) (i : Fin P.n) (x : X) (hi : i ≠ j) :
       ProcStep P j p (Sum.inl (Sum.inr (.callLoop i x))) (PMF.pure p)
-  /-- `ECHO A`: `j` is called, holds every pair of `A`, and `A` has at least
-  `n − f` pairs. -/
-  | sndEcho (p) (A : APSet P.n X) (hin : p.proc.input ≠ none)
-      (happ : approvedBy p.proc A) (hcard : P.n - P.f ≤ A.card)
+  /-- `ECHO`: `j` is called and its accepted pairs number at least `n − f`, the
+  source blueprint's `|AP| ≥ n − f`. The payload is those pairs, `T_i ← AP_i` of
+  AFW25's Algorithm 5, line 9. -/
+  | sndEcho (p) (hin : p.proc.input ≠ none)
+      (hcard : P.n - P.f ≤ p.proc.accepted.card)
       (hsend : p.proc.sentEcho = none) :
-      ProcStep P j p (Sum.inr (.snd j (.echo A)))
-        (PMF.pure (p.setP { p.proc with sentEcho := some A }))
+      ProcStep P j p (Sum.inr (.snd j (.echo p.proc.accepted)))
+        (PMF.pure (p.setP { p.proc with sentEcho := some p.proc.accepted }))
   /-- `VOTE U`: `n − f` senders' approved `ECHO` payloads, each contained in
-  `U`, are delivered here. -/
+  `U`, are delivered here, and `j` has multicast its own `ECHO`. The main thread
+  of AFW25's Algorithm 5 sends `ECHO` before `VOTE`. -/
   | sndVote (p) (U : APSet P.n X) (hin : p.proc.input ≠ none)
+      (hech : p.proc.sentEcho ≠ none)
       (happ : approvedBy p.proc U)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ A, GaMsg.echo A ∈ p.recv q ∧ approvedBy p.proc A ∧ A ⊆ U)
@@ -296,13 +329,19 @@ inductive ProcStep (P : Params) (j : Fin P.n) :
   | inRetIdle (p) (k i : Fin P.n) (v : X) (hi : i ≠ j) :
       ProcStep P j p (Sum.inr (.inRet k i v)) (PMF.pure p)
   /-- `BIND U`: `n − f` senders' approved `VOTE` payloads, each contained in
-  `U`, are delivered here. The record does not move; the bind instance's own
-  guard decides whether the call lands. -/
+  `U`, are delivered here, `j` has multicast its own `VOTE`, and `j` has not
+  called its own bind broadcast. The main thread of AFW25's Algorithm 5 sends
+  `VOTE` before `BIND`, and sends `BIND` once, at line 17. The payload handed
+  to the broadcast is written to the record; the bind instance's own guard decides
+  whether the call lands. -/
   | bindCall (p) (U : APSet P.n X) (hin : p.proc.input ≠ none)
+      (hvot : p.proc.sentVote ≠ none)
+      (hsnd : p.proc.sentBind = none)
       (happ : approvedBy p.proc U)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ W, GaMsg.vote W ∈ p.recv q ∧ approvedBy p.proc W ∧ W ⊆ U) :
-      ProcStep P j p (Sum.inr (.bindCall j U)) (PMF.pure p)
+      ProcStep P j p (Sum.inr (.bindCall j U))
+        (PMF.pure (p.setP { p.proc with sentBind := some U }))
   /-- Another process's bind call is not `j`'s business. -/
   | bindCallIdle (p) (i : Fin P.n) (U : APSet P.n X) (hi : i ≠ j) :
       ProcStep P j p (Sum.inr (.bindCall i U)) (PMF.pure p)
@@ -313,9 +352,12 @@ inductive ProcStep (P : Params) (j : Fin P.n) :
   /-- A bind instance's return to another process is not `j`'s business. -/
   | bindRetIdle (p) (q i : Fin P.n) (U : APSet P.n X) (hi : i ≠ j) :
       ProcStep P j p (Sum.inr (.bindRet q i U)) (PMF.pure p)
-  /-- Return: the output's entries are held here, and `n − f` bind payloads
-  held here are sub-maps of it. The core on the label is the network's. -/
+  /-- Return: the output's entries are held here, `n − f` bind payloads held
+  here are sub-maps of it, and `j` has called its own bind broadcast. The `BIND`
+  broadcast of AFW25's Algorithm 5, line 17, precedes the wait of line 18. The
+  core on the label is the network's. -/
   | ret (p) (g : Fin P.n → Option X) (C : APSet P.n X) (hin : p.proc.input ≠ none)
+      (hbind : p.proc.sentBind ≠ none)
       (hsub : ∀ k x, g k = some x → holdsIn p.proc k x)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ U, holdsBind p.proc q U ∧ APSet.subMap U g)
@@ -1204,12 +1246,14 @@ theorem stepG_callLoop {i : Fin P.n} {x : X}
 
 theorem stepG_ret_own {g : Fin P.n → Option X} {C : APSet P.n X}
     (h : ProcStep P j p (Sum.inl (Sum.inl (.ret j g C))) ν) :
-    p.proc.input ≠ none ∧ (∀ k x, g k = some x → holdsIn p.proc k x) ∧
+    p.proc.input ≠ none ∧ p.proc.sentBind ≠ none ∧
+      (∀ k x, g k = some x → holdsIn p.proc k x) ∧
       (∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ U, holdsBind p.proc q U ∧ APSet.subMap U g) ∧
       p.proc.returned = false ∧ ν = PMF.pure (p.setP { p.proc with returned := true }) := by
   cases h
-  case ret => exact ⟨by assumption, by assumption, by assumption, by assumption, rfl⟩
+  case ret =>
+    exact ⟨by assumption, by assumption, by assumption, by assumption, by assumption, rfl⟩
   case retIdle => exact absurd rfl ‹_ ≠ j›
 
 theorem stepG_ret_foreign {i : Fin P.n} {g : Fin P.n → Option X} {C : APSet P.n X} (hi : i ≠ j)
@@ -1225,20 +1269,22 @@ theorem stepG_fail {i : Fin P.n} (h : ProcStep P j p (Sum.inl (Sum.inl (.fail i)
 
 theorem stepG_snd_echo_own {A : APSet P.n X}
     (h : ProcStep P j p (Sum.inr (.snd j (.echo A))) ν) :
-    p.proc.input ≠ none ∧ approvedBy p.proc A ∧ P.n - P.f ≤ A.card ∧
-      p.proc.sentEcho = none ∧ ν = PMF.pure (p.setP { p.proc with sentEcho := some A }) := by
+    A = p.proc.accepted ∧ p.proc.input ≠ none ∧ P.n - P.f ≤ p.proc.accepted.card ∧
+      p.proc.sentEcho = none ∧
+      ν = PMF.pure (p.setP { p.proc with sentEcho := some p.proc.accepted }) := by
   cases h
-  case sndEcho => exact ⟨by assumption, by assumption, by assumption, by assumption, rfl⟩
+  case sndEcho => exact ⟨rfl, by assumption, by assumption, by assumption, rfl⟩
   case sndIdle => exact absurd rfl ‹_ ≠ j›
 
 theorem stepG_snd_vote_own {U : APSet P.n X}
     (h : ProcStep P j p (Sum.inr (.snd j (.vote U))) ν) :
-    p.proc.input ≠ none ∧ approvedBy p.proc U ∧
+    p.proc.input ≠ none ∧ p.proc.sentEcho ≠ none ∧ approvedBy p.proc U ∧
       (∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ A, GaMsg.echo A ∈ p.recv q ∧ approvedBy p.proc A ∧ A ⊆ U) ∧
       p.proc.sentVote = none ∧ ν = PMF.pure (p.setP { p.proc with sentVote := some U }) := by
   cases h
-  case sndVote => exact ⟨by assumption, by assumption, by assumption, by assumption, rfl⟩
+  case sndVote =>
+    exact ⟨by assumption, by assumption, by assumption, by assumption, by assumption, rfl⟩
   case sndIdle => exact absurd rfl ‹_ ≠ j›
 
 theorem stepG_snd_foreign {i : Fin P.n} {m : GaMsg P.n X} (hi : i ≠ j)
@@ -1274,12 +1320,14 @@ theorem stepG_inRet_foreign {k i : Fin P.n} {v : X} (hi : i ≠ j)
 
 theorem stepG_bindCall_own {U : APSet P.n X}
     (h : ProcStep P j p (Sum.inr (.bindCall j U)) ν) :
-    p.proc.input ≠ none ∧ approvedBy p.proc U ∧
+    p.proc.input ≠ none ∧ p.proc.sentVote ≠ none ∧ p.proc.sentBind = none ∧
+      approvedBy p.proc U ∧
       (∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ W, GaMsg.vote W ∈ p.recv q ∧ approvedBy p.proc W ∧ W ⊆ U) ∧
-      ν = PMF.pure p := by
+      ν = PMF.pure (p.setP { p.proc with sentBind := some U }) := by
   cases h
-  case bindCall => exact ⟨by assumption, by assumption, by assumption, rfl⟩
+  case bindCall =>
+    exact ⟨by assumption, by assumption, by assumption, by assumption, by assumption, rfl⟩
   case bindCallIdle => exact absurd rfl ‹_ ≠ j›
 
 theorem stepG_bindCall_foreign {i : Fin P.n} {U : APSet P.n X} (hi : i ≠ j)

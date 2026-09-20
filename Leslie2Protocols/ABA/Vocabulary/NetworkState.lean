@@ -24,7 +24,7 @@ types, so the shape is stated here once, generically:
   the network state, with the multicast / delivery / corruption updates
   (`mcast`, `recvMsg`, `corrupt`), the receipt counts (`recvCount`), the
   frame lemmas each update leaves behind, and the quorum-counting kit
-  (`exists_sender_notMem`, `exists_honest_recv₂`).
+  (`exists_sender_notMem`, `exists_honest_recv₂`, `exists_honest_recv₂_echoQuorum`).
 
 The model conventions are the development's D1 (corruption is the total Dirac
 budget-guarded transform of the network state, the local states are corruption-blind) and
@@ -394,6 +394,27 @@ theorem exists_honest_recv₂ {P : Params} {s : SubState P.n Pr M} (hF : s.F.car
     refine le_trans (Finset.card_le_univ _) ?_
     simp
   have hf := P.hf
+  have hlt : s.F.card < ((Finset.univ.filter (fun j => m ∈ s.recv i j)) ∩
+      (Finset.univ.filter (fun j => m' ∈ s.recv i' j))).card := by omega
+  obtain ⟨j, hj, hjF⟩ := exists_honest_of_card_lt hlt
+  rw [Finset.mem_inter, Finset.mem_filter, Finset.mem_filter] at hj
+  exact ⟨j, hjF, hj.1.2, hj.2.2⟩
+
+/-- Two `echoQuorum` receipt quorums (at possibly different receivers) share an
+honest sender: `2 * echoQuorum − n > f ≥ |F|`. -/
+theorem exists_honest_recv₂_echoQuorum {P : Params} {s : SubState P.n Pr M}
+    (hF : s.F.card ≤ P.f) {i i' : Fin P.n} {m m' : M}
+    (h : P.echoQuorum ≤ s.recvCount i m) (h' : P.echoQuorum ≤ s.recvCount i' m') :
+    ∃ j, j ∉ s.F ∧ m ∈ s.recv i j ∧ m' ∈ s.recv i' j := by
+  unfold recvCount at h h'
+  have hcard := Finset.card_union_add_card_inter
+    (Finset.univ.filter (fun j => m ∈ s.recv i j))
+    (Finset.univ.filter (fun j => m' ∈ s.recv i' j))
+  have hun : ((Finset.univ.filter (fun j => m ∈ s.recv i j)) ∪
+      (Finset.univ.filter (fun j => m' ∈ s.recv i' j))).card ≤ P.n := by
+    refine le_trans (Finset.card_le_univ _) ?_
+    simp
+  have hq := P.n_add_f_lt_two_mul_echoQuorum
   have hlt : s.F.card < ((Finset.univ.filter (fun j => m ∈ s.recv i j)) ∩
       (Finset.univ.filter (fun j => m' ∈ s.recv i' j))).card := by omega
   obtain ⟨j, hj, hjF⟩ := exists_honest_of_card_lt hlt

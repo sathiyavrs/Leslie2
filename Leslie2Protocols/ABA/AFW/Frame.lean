@@ -33,7 +33,7 @@ Three rows of the flat reading are answered by two events of the composed
 round. The link is `ret1` and `call2`: `toRound_ret1_call2` states the view
 after it as `afterCall2` of `afterRet1`, and `afterRet1` is the round after the
 first event alone. The graded return is `ret2` and `retG`, with `afterRet2` the
-intermediate state. A delivery that completes an `n − f` `VOTE` quorum is the
+intermediate state. A delivery that completes a `2f + 1` `VOTE` quorum is the
 broadcast instance's `dlv` and then the gather's `inRet` (or `bindRet`), with
 `afterDlvIn1` and its three companions the intermediate states.
 
@@ -41,7 +41,7 @@ broadcast instance's `dlv` and then the gather's `inRet` (or `bindRet`), with
 
 `storeIn` reads the delivered sets, so a broadcast delivery moves two
 coordinates of the view at once. The instance's local state takes the message.
-And where the delivery completes the receiver's `n − f` `VOTE` quorum, the
+And where the delivery completes the receiver's `2f + 1` `VOTE` quorum, the
 receiver's return flag in that instance goes on and the receiver's gather store
 records the value. The quorum lemmas (`toRound_dlvIn1_ret` and its three
 companions) carry the hypothesis that the store holds `v` after the delivery;
@@ -1069,44 +1069,173 @@ theorem toRound_ga2Vote (hu : (u j).2 = p) (r : ℕ) (U : Gather.APSet P.n (Opti
   rw [toRound_ghostId (Sum.inr (.gsnd r j (.ga2 (.vote U)))) (fun _ _ => rfl)]
   exact toRound_ga2Send rfl r _ (.vote U) rfl rfl
 
-/-- The first gather's `BIND`, read through the view: the payload is the input
-of the sender's own bind-broadcast instance, which broadcasts it. -/
+/-- The first gather's `BIND`, read through the view: the payload is written to
+the sender's gather record and is the input of the sender's own bind-broadcast
+instance, which broadcasts it. -/
 theorem toRound_ga1Bind (hu : (u j).2 = p) (r : ℕ) (U : Gather.APSet P.n Bool) :
     toRound P (Function.update u j (c, p.setStage r
         { p.stage r with
+          ga1 := (p.stage r).ga1.setP
+            { ((p.stage r).ga1.proc) with sentBind := some U }
           brbBind1 := Function.update (p.stage r).brbBind1 j
             (((p.stage r).brbBind1 j).setP
               { (((p.stage r).brbBind1 j).proc) with input := some U }) }))
       ((w.gsent r j (.brbBind1 j (.init U))).writeGhost (ghostStep P)
         (Sum.inr (.gsnd r j (.brbBind1 j (.init U))))) r
       = GBCA.setGa1 (toRound P u w r)
-          (Gather.setBrbBind (toGa1 P u w r)
+          (Gather.setBrbBind
+            (Gather.setGa (toGa1 P u w r)
+              ((Gather.ga (toGa1 P u w r)).setProc j
+                { (Gather.ga (toGa1 P u w r)).proc j with sentBind := some U }))
             (Function.update (Gather.brbBind (toGa1 P u w r)) j
               (((Gather.brbBind (toGa1 P u w r) j).setProc j
                   { (Gather.brbBind (toGa1 P u w r) j).proc j with input := some U }).mcast
                 j (.init U)))) := by
   subst hu
-  rw [toRound_ghostId (Sum.inr (.gsnd r j (.brbBind1 j (.init U)))) (fun _ _ => rfl)]
-  exact toRound_bind1Send rfl r j _ (.init U)
+  rw [toRound_ghostId (Sum.inr (.gsnd r j (.brbBind1 j (.init U)))) (fun _ _ => rfl),
+    toRound_write]
+  refine roundStateAt_ext ?_ rfl (subStateAt_ext ?_ ?_ ?_ rfl) (subStateAt_ext ?_ ?_ ?_ rfl)
+  · simp only [GBCA.procs, GBCA.setGa1, toRound, toRoundUpd, toProc, LocalState.setP]
+    exact Function.update_eq_self _ _
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
+    · simp only [Gather.ga, Gather.setBrbBind, Gather.setGa, GBCA.ga1, GBCA.setGa1, toRound,
+      toRoundUpd, toGa1, gaProcView, storeIn_update_setP]
+      simp only [SubState.setProc, SubState.proc, LocalState.setP]
+    · simp only [Gather.ga, Gather.setBrbBind, Gather.setGa, GBCA.ga1, GBCA.setGa1, toRound,
+      toRoundUpd, toGa1]
+      exact slice_post_none unGa1 unGa1_inj (w.sent r) j (.brbBind1 j (.init U)) rfl
+  · funext k
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
+    · simp only [Gather.brbIn, Gather.setBrbBind, Gather.setGa, GBCA.ga1, GBCA.setGa1,
+      toRound, toRoundUpd, toGa1]
+      exact Function.update_eq_self _ _
+    · simp only [Gather.brbIn, Gather.setBrbBind, Gather.setGa, GBCA.ga1, GBCA.setGa1,
+      toRound, toRoundUpd, toGa1]
+      exact slice_post_none (unIn1 k) (unIn1_inj k) (w.sent r) j (.brbBind1 j (.init U)) rfl
+  · funext k
+    by_cases hk : k = j
+    · subst hk
+      refine Prod.ext ?_ (networkState_ext ?_ ?_)
+      · simp only [Gather.brbBind, Gather.setBrbBind, Gather.setGa, GBCA.ga1, GBCA.setGa1,
+        toRound, toRoundUpd, toGa1, Function.update_self, SubState.mcast, SubState.setProc,
+        SubState.proc, brbLocal, LocalState.setP, storeIn_mk_eq]
+      · simp only [Gather.brbBind, Gather.setBrbBind, Gather.setGa, GBCA.ga1, GBCA.setGa1,
+        toRound, toRoundUpd, toGa1, Function.update_self, SubState.mcast, NetworkState.post]
+        exact slice_post_some (unBind1 k) (unBind1_inj k) (w.sent r) k
+          (.brbBind1 k (.init U)) (.init U) (by simp [unBind1])
+      · simp only [Gather.brbBind, Gather.setBrbBind, Gather.setGa, GBCA.ga1, GBCA.setGa1,
+        toRound, toRoundUpd, toGa1, Function.update_self, SubState.mcast, SubState.setProc,
+        NetworkState.post]
+    · refine Prod.ext ?_ (networkState_ext ?_ ?_)
+      · simp only [Gather.brbBind, Gather.setBrbBind, Gather.setGa, GBCA.ga1, GBCA.setGa1,
+        toRound, toRoundUpd, toGa1, Function.update_of_ne hk]
+        exact Function.update_eq_self _ _
+      · simp only [Gather.brbBind, Gather.setBrbBind, Gather.setGa, GBCA.ga1, GBCA.setGa1,
+        toRound, toRoundUpd, toGa1, Function.update_of_ne hk]
+        exact slice_post_none (unBind1 k) (unBind1_inj k) (w.sent r) j (.brbBind1 j (.init U))
+          (by simp [unBind1, Ne.symm hk])
+      · simp only [Gather.brbBind, Gather.setBrbBind, Gather.setGa, GBCA.ga1, GBCA.setGa1,
+        toRound, toRoundUpd, toGa1, Function.update_of_ne hk]
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
+    · simp only [Gather.ga, GBCA.ga2, GBCA.setGa1, toRound, toRoundUpd, toGa2]
+      exact Function.update_eq_self _ _
+    · simp only [Gather.ga, GBCA.ga2, GBCA.setGa1, toRound, toRoundUpd, toGa2]
+      exact slice_post_none unGa2 unGa2_inj (w.sent r) j (.brbBind1 j (.init U)) rfl
+  · funext k
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
+    · simp only [Gather.brbIn, GBCA.ga2, GBCA.setGa1, toRound, toRoundUpd, toGa2]
+      exact Function.update_eq_self _ _
+    · simp only [Gather.brbIn, GBCA.ga2, GBCA.setGa1, toRound, toRoundUpd, toGa2]
+      exact slice_post_none (unIn2 k) (unIn2_inj k) (w.sent r) j (.brbBind1 j (.init U)) rfl
+  · funext k
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
+    · simp only [Gather.brbBind, GBCA.ga2, GBCA.setGa1, toRound, toRoundUpd, toGa2]
+      exact Function.update_eq_self _ _
+    · simp only [Gather.brbBind, GBCA.ga2, GBCA.setGa1, toRound, toRoundUpd, toGa2]
+      exact slice_post_none (unBind2 k) (unBind2_inj k) (w.sent r) j (.brbBind1 j (.init U)) rfl
 
 /-- The second gather's `BIND`, read through the view. -/
 theorem toRound_ga2Bind (hu : (u j).2 = p) (r : ℕ) (U : Gather.APSet P.n (Option Bool)) :
     toRound P (Function.update u j (c, p.setStage r
         { p.stage r with
+          ga2 := (p.stage r).ga2.setP
+            { ((p.stage r).ga2.proc) with sentBind := some U }
           brbBind2 := Function.update (p.stage r).brbBind2 j
             (((p.stage r).brbBind2 j).setP
               { (((p.stage r).brbBind2 j).proc) with input := some U }) }))
       ((w.gsent r j (.brbBind2 j (.init U))).writeGhost (ghostStep P)
         (Sum.inr (.gsnd r j (.brbBind2 j (.init U))))) r
       = GBCA.setGa2 (toRound P u w r)
-          (Gather.setBrbBind (toGa2 P u w r)
+          (Gather.setBrbBind
+            (Gather.setGa (toGa2 P u w r)
+              ((Gather.ga (toGa2 P u w r)).setProc j
+                { (Gather.ga (toGa2 P u w r)).proc j with sentBind := some U }))
             (Function.update (Gather.brbBind (toGa2 P u w r)) j
               (((Gather.brbBind (toGa2 P u w r) j).setProc j
                   { (Gather.brbBind (toGa2 P u w r) j).proc j with input := some U }).mcast
                 j (.init U)))) := by
   subst hu
-  rw [toRound_ghostId (Sum.inr (.gsnd r j (.brbBind2 j (.init U)))) (fun _ _ => rfl)]
-  exact toRound_bind2Send rfl r j _ (.init U)
+  rw [toRound_ghostId (Sum.inr (.gsnd r j (.brbBind2 j (.init U)))) (fun _ _ => rfl),
+    toRound_write]
+  refine roundStateAt_ext ?_ rfl (subStateAt_ext ?_ ?_ ?_ rfl) (subStateAt_ext ?_ ?_ ?_ rfl)
+  · simp only [GBCA.procs, GBCA.setGa2, toRound, toRoundUpd, toProc, LocalState.setP]
+    exact Function.update_eq_self _ _
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
+    · simp only [Gather.ga, GBCA.ga1, GBCA.setGa2, toRound, toRoundUpd, toGa1]
+      exact Function.update_eq_self _ _
+    · simp only [Gather.ga, GBCA.ga1, GBCA.setGa2, toRound, toRoundUpd, toGa1]
+      exact slice_post_none unGa1 unGa1_inj (w.sent r) j (.brbBind2 j (.init U)) rfl
+  · funext k
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
+    · simp only [Gather.brbIn, GBCA.ga1, GBCA.setGa2, toRound, toRoundUpd, toGa1]
+      exact Function.update_eq_self _ _
+    · simp only [Gather.brbIn, GBCA.ga1, GBCA.setGa2, toRound, toRoundUpd, toGa1]
+      exact slice_post_none (unIn1 k) (unIn1_inj k) (w.sent r) j (.brbBind2 j (.init U)) rfl
+  · funext k
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
+    · simp only [Gather.brbBind, GBCA.ga1, GBCA.setGa2, toRound, toRoundUpd, toGa1]
+      exact Function.update_eq_self _ _
+    · simp only [Gather.brbBind, GBCA.ga1, GBCA.setGa2, toRound, toRoundUpd, toGa1]
+      exact slice_post_none (unBind1 k) (unBind1_inj k) (w.sent r) j (.brbBind2 j (.init U)) rfl
+  · refine Prod.ext ?_ (networkState_ext ?_ rfl)
+    · simp only [Gather.ga, Gather.setBrbBind, Gather.setGa, GBCA.ga2, GBCA.setGa2, toRound,
+      toRoundUpd, toGa2, gaProcView, storeIn_update_setP]
+      simp only [SubState.setProc, SubState.proc, LocalState.setP]
+    · simp only [Gather.ga, Gather.setBrbBind, Gather.setGa, GBCA.ga2, GBCA.setGa2, toRound,
+      toRoundUpd, toGa2]
+      exact slice_post_none unGa2 unGa2_inj (w.sent r) j (.brbBind2 j (.init U)) rfl
+  · funext k
+    refine Prod.ext ?_ (networkState_ext ?_ rfl)
+    · simp only [Gather.brbIn, Gather.setBrbBind, Gather.setGa, GBCA.ga2, GBCA.setGa2,
+      toRound, toRoundUpd, toGa2]
+      exact Function.update_eq_self _ _
+    · simp only [Gather.brbIn, Gather.setBrbBind, Gather.setGa, GBCA.ga2, GBCA.setGa2,
+      toRound, toRoundUpd, toGa2]
+      exact slice_post_none (unIn2 k) (unIn2_inj k) (w.sent r) j (.brbBind2 j (.init U)) rfl
+  · funext k
+    by_cases hk : k = j
+    · subst hk
+      refine Prod.ext ?_ (networkState_ext ?_ ?_)
+      · simp only [Gather.brbBind, Gather.setBrbBind, Gather.setGa, GBCA.ga2, GBCA.setGa2,
+        toRound, toRoundUpd, toGa2, Function.update_self, SubState.mcast, SubState.setProc,
+        SubState.proc, brbLocal, LocalState.setP, storeIn_mk_eq]
+      · simp only [Gather.brbBind, Gather.setBrbBind, Gather.setGa, GBCA.ga2, GBCA.setGa2,
+        toRound, toRoundUpd, toGa2, Function.update_self, SubState.mcast, NetworkState.post]
+        exact slice_post_some (unBind2 k) (unBind2_inj k) (w.sent r) k
+          (.brbBind2 k (.init U)) (.init U) (by simp [unBind2])
+      · simp only [Gather.brbBind, Gather.setBrbBind, Gather.setGa, GBCA.ga2, GBCA.setGa2,
+        toRound, toRoundUpd, toGa2, Function.update_self, SubState.mcast, SubState.setProc,
+        NetworkState.post]
+    · refine Prod.ext ?_ (networkState_ext ?_ ?_)
+      · simp only [Gather.brbBind, Gather.setBrbBind, Gather.setGa, GBCA.ga2, GBCA.setGa2,
+        toRound, toRoundUpd, toGa2, Function.update_of_ne hk]
+        exact Function.update_eq_self _ _
+      · simp only [Gather.brbBind, Gather.setBrbBind, Gather.setGa, GBCA.ga2, GBCA.setGa2,
+        toRound, toRoundUpd, toGa2, Function.update_of_ne hk]
+        exact slice_post_none (unBind2 k) (unBind2_inj k) (w.sent r) j (.brbBind2 j (.init U))
+          (by simp [unBind2, Ne.symm hk])
+      · simp only [Gather.brbBind, Gather.setBrbBind, Gather.setGa, GBCA.ga2, GBCA.setGa2,
+        toRound, toRoundUpd, toGa2, Function.update_of_ne hk]
 
 /-- `ECHO` in an input-broadcast instance of the first gather, read through the
 view. -/
@@ -1632,7 +1761,7 @@ theorem toRound_ret2_retG (hu : (u j).2 = p) (r : ℕ)
 A delivery of the flat reading files the message in the receiver's own local
 state of the network state the message's tag names. A gather message moves the
 gather instance alone. A broadcast message moves the broadcast instance, and,
-where it completes an `n − f` `VOTE` quorum at the receiver, the instance
+where it completes a `2f + 1` `VOTE` quorum at the receiver, the instance
 returns to the receiver as well: the return flag goes on and the receiver's
 gather store records the value. -/
 
@@ -1804,7 +1933,7 @@ theorem toRound_dlvIn1 (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
     · simp
 
 /-- A delivery in an input-broadcast instance of the first gather that
-completes an `n − f` `VOTE` quorum, read through the view. -/
+completes a `2f + 1` `VOTE` quorum, read through the view. -/
 theorem toRound_dlvIn1_ret (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
     (mm : BRB.BMsg Bool) (v : Bool)
     (hst : storeIn P (((p.stage r).brbIn1 i).deliverTo k mm) = some v) :
@@ -1944,7 +2073,7 @@ theorem toRound_dlvBind1 (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
     · simp
 
 /-- A delivery in a bind-broadcast instance of the first gather that completes
-an `n − f` `VOTE` quorum, read through the view. -/
+a `2f + 1` `VOTE` quorum, read through the view. -/
 theorem toRound_dlvBind1_ret (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
     (mm : BRB.BMsg (Gather.APSet P.n Bool)) (v : Gather.APSet P.n Bool)
     (hst : storeIn P (((p.stage r).brbBind1 i).deliverTo k mm) = some v) :
@@ -2083,7 +2212,7 @@ theorem toRound_dlvIn2 (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
     · simp
 
 /-- A delivery in an input-broadcast instance of the second gather that
-completes an `n − f` `VOTE` quorum, read through the view. -/
+completes a `2f + 1` `VOTE` quorum, read through the view. -/
 theorem toRound_dlvIn2_ret (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
     (mm : BRB.BMsg (Option Bool)) (v : Option Bool)
     (hst : storeIn P (((p.stage r).brbIn2 i).deliverTo k mm) = some v) :
@@ -2223,7 +2352,7 @@ theorem toRound_dlvBind2 (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
     · simp
 
 /-- A delivery in a bind-broadcast instance of the second gather that completes
-an `n − f` `VOTE` quorum, read through the view. -/
+a `2f + 1` `VOTE` quorum, read through the view. -/
 theorem toRound_dlvBind2_ret (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
     (mm : BRB.BMsg (Gather.APSet P.n (Option Bool))) (v : Gather.APSet P.n (Option Bool))
     (hst : storeIn P (((p.stage r).brbBind2 i).deliverTo k mm) = some v) :

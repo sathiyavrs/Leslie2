@@ -1,8 +1,8 @@
 # Fidelity — the encoding against its sources
 
 A registry of the places where the ABA encoding and the artifacts it answers to do not
-coincide, restricted to divergences carrying no D-number — together with §1, the one
-place where the two sources disagree with each other and the encoding must pick a side —
+coincide, restricted to divergences carrying no D-number — together with §1, where the
+sources disagree with each other and the encoding must pick a side —
 for a reader holding the sources open beside the Lean.
 
 **Three sources, in a chain.** The *source blueprint* — "Verifying ABA with Leslie",
@@ -21,20 +21,22 @@ form of AFW25's Algorithm 5, and AFW25's Algorithm 4 — graded agreement from t
 gather calls — is the source of record for the gather-based GBCA implementation
 (D24), which the source blueprint does not contain. Bare algorithm numbers in this
 file are the source blueprint's. The encoding
-follows the source blueprint; where the source blueprint departs from ABDY22 the
-encoding inherits the departure, with the single exception of §1.
+follows the source blueprint; where the source blueprint departs from a paper the
+encoding inherits the departure, except at the items of §1.
 
 **The D-registry is elsewhere.** The catalogued deviations — D1, D4, D5, D8–D19, D21–D24,
-D26–D33, with D12 refined to D12′ — are cited at the point of use in the ABA module
+D26–D35, with D12 refined to D12′ — are cited at the point of use in the ABA module
 docstrings and glossed one by one in the blueprint chapter (the Deviations paragraph of
 `blueprint/src/content.tex`), which is the registry of record.
 
-## 1. Where the encoding follows ABDY22 against the source blueprint
+## 1. Where the encoding follows a paper against the source blueprint
 
-Three items. The first is the one place the encoding parts from the source blueprint
-rather than inheriting its parting from ABDY22. The other two are properties the two
-sources state in different forms, where what the encoding proves is one form and its
-relation to the other belongs here.
+Five items. Three are places where the encoding follows a paper the source blueprint
+departs from, rather than inheriting the departure: ABDY22's Algorithm 6 at the
+graded-agreement implementation (D18), AFW25's Algorithm 1 at Bracha's rounds (D34), and
+AFW25's Algorithm 5 at the gather rows (D35). The other two are properties the sources
+state in different forms, where what the encoding proves is one form and its relation to
+the other belongs here.
 
 The verified GBCA implementation (`GBCA.ImplStep`) transcribes **ABDY22's Algorithm 6 in
 full** — six rounds, the message levels INPUT, ECHO, VOTE, BIND, ECHO5 (the paper's `echo`
@@ -81,6 +83,26 @@ receiving `echo4` messages from `2t + 1` parties" where the pseudocode's lines 1
 `n − t`. The two coincide only at `n = 3t + 1`; the encoding follows the pseudocode
 (`n − f`).
 
+**Bracha's rounds follow AFW25's Algorithm 1.** The echo step fires on an `INIT` receipt
+from the leader, on more than `(n+f)/2` `ECHO m` receipts, or on `f + 1` `VOTE m`
+receipts; the vote step fires on more than `(n+f)/2` `ECHO m` receipts or on `f + 1`
+`VOTE m` receipts; and the return takes `2f + 1` `VOTE m` receipts
+(`BRB.ImplStep.echo`, `voteQuorum`, `voteAmp`, `ret`). Algorithm 6 of the source
+blueprint fires the echo step on an `INIT` receipt alone and puts `n − f` at every
+quorum. That is deviation **D34**, and the quorum is `Params.echoQuorum`, which is
+`(n + f) / 2 + 1`; `BRB.EchoCert` is at that size, and the invariant clause `echo_prov`
+carries an honest echo of `m` back to `ldr ∈ F ∨ input ldr = some m`.
+
+**The gather rows follow AFW25's Algorithm 5.** Its main thread sends phase 2, waits,
+sends phase 3, waits, sends phase 4, waits and returns (lines 10–20), and the rows carry
+that order: `Gather.ProcStep.sndVote` requires the sender's own `ECHO`, `bindCall`
+requires its own `VOTE` and no earlier bind call, and `ret` requires the returner's own
+bind call, which the write-once field `Gather.PRec.sentBind` holds. Line 9 of the same
+algorithm sets the `ECHO` payload to the sender's accepted-pair set, and
+`ProcRec.accepted` — the entries of the sender's input store — is that payload.
+Algorithm 4 of the source blueprint states the rows as `upon` handlers without the order;
+that is deviation **D35**.
+
 **Validity in two forms.** ABDY22's Definition 2.2 states Validity as unanimity: if all
 non-faulty parties receive the same value `v` as input, all non-faulty parties commit `v`.
 The source blueprint states it as provenance (p. 6): if a correct process returns `b` then
@@ -122,15 +144,10 @@ reading widens the implementation's nondeterminism; every guard the proofs consu
 monotone in the chosen set, and the refinements hold for the wider reading, hence for
 the union.
 
-**The gather `ECHO` payload read as a bound.** AFW25's Algorithm 5 sets `T_id ← AP_id` at
-line 9 and Algorithm 4 sends `⟨echo, AP⟩`: in both the payload is the whole accepted-pair
-set. `Gather.IdealStep.echo` and `Gather.LowStep.echo` take any `A` under
-`happ : approvedBy … A` and `hcard : P.n - P.f ≤ A.card`, and the flat rows
-`AFW.StageStep.ga1Echo` and `ga2Echo` carry the same pair of guards. A proper subset of
-the accepted pairs may therefore be sent. The accepted-pair set is one such choice, so the
-reading widens the implementation's nondeterminism; every guard the proofs consume is
-monotone in the payload, and the refinements hold for the wider reading, hence for the
-accepted-pair set.
+**The gather `ECHO` size guard.** Algorithm 4 of the source blueprint sends
+`⟨echo, AP⟩` on `|AP| ≥ n − f` where line 8 of AFW25's Algorithm 5 waits for
+`|AP_id| = n − f`, and the echo rows take the `≥` form, the accepted-pair set growing
+one entry per delivery and the row firing at any point past the bound.
 
 **The coin's `⊤` outcome answered at the return.** `WCC.Step.callResolve` draws the coin
 inside the access that carries the caller count above `f`, which is Fig. 7 of the ghost-variables draft against
@@ -244,7 +261,10 @@ at `Net.ABAProcStepN` (`ABA/ABDY/Protocol.lean`) with the reads taken through `p
   the encoding follows the paper's own reading rather than tightening it: what precedes
   the first **wait until** block is not a block a process runs to its end but the
   **upon** handler of Algorithm 6's lines 5–7, which multicasts `ECHO`, so a process may
-  reach that block and send its `VOTE` with its own `ECHO` still pending.
+  reach that block and send its `VOTE` with its own `ECHO` still pending. The gather
+  tables carry the same chain: `Gather.IdealStep.vote` requires the sender's own `ECHO`,
+  `bindCall` requires its own `VOTE` and no earlier bind call, and `ret` requires the
+  returner's own bind call (D35).
 - **The denials of the higher cases.** Each rule carries the denials of the cases above
   it in its own block. In a return block the `⊥` rule denies its block's case (a) at
   either bit
@@ -267,19 +287,6 @@ at `Net.ABAProcStepN` (`ABA/ABDY/Protocol.lean`) with the reads taken through `p
   row on neither call label and takes no further round-loop step. That excluded region is
   accepted rather than repaired: a terminated process is one whose own return has already
   fired, and no statement of the development is about what it does afterwards.
-
-The gather tables render a sequential thread and carry no own-send guard on its sends.
-AFW25's Algorithm 5 runs its main thread in sequence: send phase 2, wait, send phase 3,
-wait, send phase 4, wait, return (lines 10–20). `Gather.IdealStep.vote` carries no
-`sentEcho ≠ none`, `bindCall` carries no `sentVote ≠ none`, and `ret` carries no guard
-that the returner's own `BIND` broadcast was called; the one participation guard at each
-is D8's `hin`. `Gather.LowStep` repeats those guards, and so do the flat rows
-`AFW.StageStep.ga1Vote`, `ga1Bind`, `ga2Vote` and `ga2Bind`. A process may therefore vote
-on an `n − f` `ECHO` quorum without having echoed, and return on an `n − f` `BIND`
-certificate without having broadcast its own. The round tier holds the order of AFW25's
-Algorithm 4 in the write-once flags of `GBCA.PairStep`, so the widening sits at the gather
-tier alone, and it runs in the direction a refinement admits: each table moves more freely
-than the thread it renders.
 
 **Absent from the specifications.** Four of the placements below are chosen and two are
 forced by where the authorisation of a Byzantine handshake row sits (D11), which cannot be
@@ -360,9 +367,10 @@ repaired at the rule; the seventh entry is a cross-reference.
 - **TS 6 pins the delivered value at the call, which Bracha's rounds do not.** Under
   TS 6 an honest `call(m)` sets the single `call` field to `m`, every return hands out
   `call`, and the corrupted-leader rule can only spoil the field (`call = ⊤`, no
-  returns) before the first return. Algorithm 6 with the leader corrupted *after* its
-  `INIT` multicast leaves more open: until some correct process holds an `n − f` ECHO
-  quorum, the corrupted leader's injections can make the rounds deliver a value
+  returns) before the first return. Bracha's rounds with the leader corrupted *after* its
+  `INIT` multicast leave more open: until some correct process holds an ECHO quorum of
+  more than `(n+f)/2` senders, the corrupted leader's injections can make the rounds
+  deliver a value
   other than `m`, and no resolution of TS 6's nondeterminism returns it — the
   specification excludes its own implementation under D1's dynamic corruption.
   `BRB.SpecState` splits the recorded `input` from the committed `val` and guards the

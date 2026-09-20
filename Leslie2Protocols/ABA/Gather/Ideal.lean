@@ -146,18 +146,24 @@ inductive IdealStep (P : Params) :
   | deliver (s : IdealState P.n X) (i j : Fin P.n) (m : GaMsg P.n X)
       (h : m ∈ (ga s).sent j) :
       IdealStep P s .tau (PMF.pure (setGa s ((ga s).recvMsg i j m)))
-  /-- `ECHO`: the process holds every pair of a payload set of at least `n − f`
-  pairs. -/
-  | echo (s : IdealState P.n X) (j : Fin P.n) (A : APSet P.n X)
-      (hin : ((ga s).proc j).input ≠ none) (happ : approvedBy ((ga s).proc j) A)
-      (hcard : P.n - P.f ≤ A.card) (hsend : ((ga s).proc j).sentEcho = none) :
+  /-- `ECHO`: the process is called and its accepted pairs number at least
+  `n − f`, the source blueprint's `|AP| ≥ n − f`. The payload is those pairs,
+  `T_i ← AP_i` of AFW25's Algorithm 5, line 9. -/
+  | echo (s : IdealState P.n X) (j : Fin P.n)
+      (hin : ((ga s).proc j).input ≠ none)
+      (hcard : P.n - P.f ≤ ((ga s).proc j).accepted.card)
+      (hsend : ((ga s).proc j).sentEcho = none) :
       IdealStep P s .tau
         (PMF.pure (setGa s (((ga s).setProc j
-          { (ga s).proc j with sentEcho := some A }).mcast j (.echo A))))
+          { (ga s).proc j with sentEcho := some ((ga s).proc j).accepted }).mcast j
+            (.echo ((ga s).proc j).accepted))))
   /-- `VOTE`: `n − f` senders' approved `ECHO` payloads, each contained in the
-  vote payload, are delivered here. -/
+  vote payload, are delivered here, and the process has multicast its own
+  `ECHO`. The main thread of AFW25's Algorithm 5 sends `ECHO` before `VOTE`. -/
   | vote (s : IdealState P.n X) (j : Fin P.n) (U : APSet P.n X)
-      (hin : ((ga s).proc j).input ≠ none) (happ : approvedBy ((ga s).proc j) U)
+      (hin : ((ga s).proc j).input ≠ none)
+      (hech : ((ga s).proc j).sentEcho ≠ none)
+      (happ : approvedBy ((ga s).proc j) U)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ A, GaMsg.echo A ∈ (ga s).recv j q ∧ approvedBy ((ga s).proc j) A ∧ A ⊆ U)
       (hsend : ((ga s).proc j).sentVote = none) :
@@ -165,22 +171,36 @@ inductive IdealStep (P : Params) :
         (PMF.pure (setGa s (((ga s).setProc j
           { (ga s).proc j with sentVote := some U }).mcast j (.vote U))))
   /-- `BIND`: `n − f` senders' approved `VOTE` payloads, each contained in the
-  bind payload, are delivered here, and the bind instance records it. -/
+  bind payload, are delivered here, and the bind instance records the payload.
+  The process has multicast its own `VOTE` and has not called its own bind
+  broadcast. The main thread of AFW25's Algorithm 5 sends `VOTE` before `BIND`,
+  and sends `BIND` once, at line 17. The payload handed to the broadcast is
+  written to the gather record. -/
   | bindCall (s : IdealState P.n X) (j : Fin P.n) (U : APSet P.n X)
-      (hin : ((ga s).proc j).input ≠ none) (happ : approvedBy ((ga s).proc j) U)
+      (hin : ((ga s).proc j).input ≠ none)
+      (hvot : ((ga s).proc j).sentVote ≠ none)
+      (hsnd : ((ga s).proc j).sentBind = none)
+      (happ : approvedBy ((ga s).proc j) U)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ W, GaMsg.vote W ∈ (ga s).recv j q ∧ approvedBy ((ga s).proc j) W ∧ W ⊆ U)
       (hb : (brbBind s j).input = none) :
       IdealStep P s .tau
-        (PMF.pure (setBrbBind s (Function.update (brbBind s) j
-          { brbBind s j with input := some U })))
-  /-- `BIND` with the bind instance answering on its loop row: nothing
-  moves. -/
+        (PMF.pure (setBrbBind (setGa s ((ga s).setProc j
+            { (ga s).proc j with sentBind := some U }))
+          (Function.update (brbBind s) j { brbBind s j with input := some U })))
+  /-- `BIND` with the bind instance answering on its loop row: the payload handed
+  to the broadcast is written to the gather record alone. The process has
+  multicast its own `VOTE` and has not called its own bind broadcast. -/
   | bindCallSpecLoop (s : IdealState P.n X) (j : Fin P.n) (U : APSet P.n X)
-      (hin : ((ga s).proc j).input ≠ none) (happ : approvedBy ((ga s).proc j) U)
+      (hin : ((ga s).proc j).input ≠ none)
+      (hvot : ((ga s).proc j).sentVote ≠ none)
+      (hsnd : ((ga s).proc j).sentBind = none)
+      (happ : approvedBy ((ga s).proc j) U)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ W, GaMsg.vote W ∈ (ga s).recv j q ∧ approvedBy ((ga s).proc j) W ∧ W ⊆ U) :
-      IdealStep P s .tau (PMF.pure s)
+      IdealStep P s .tau
+        (PMF.pure (setGa s ((ga s).setProc j
+          { (ga s).proc j with sentBind := some U })))
   /-- Byzantine injection on the gather network. -/
   | byz (s : IdealState P.n X) (j : Fin P.n) (m : GaMsg P.n X) (h : j ∈ (ga s).F) :
       IdealStep P s .tau (PMF.pure (setGa s ((ga s).mcast j m)))
@@ -204,11 +224,14 @@ inductive IdealStep (P : Params) :
               delivBind := Function.update ((ga s).proc j).delivBind q (some U) }))
           (Function.update (brbBind s) q
             { brbBind s q with ret := Function.update (brbBind s q).ret j true })))
-  /-- Return: the output's entries are held here, and `n − f` bind payloads
-  held here are sub-maps of it. The label carries the instance's core, which
-  this row writes if it is unwritten. -/
+  /-- Return: the output's entries are held here, `n − f` bind payloads held
+  here are sub-maps of it, and the returner has called its own bind broadcast.
+  The `BIND` broadcast of AFW25's Algorithm 5, line 17, precedes the wait of line
+  18. The label carries the instance's core, which this row writes if it is
+  unwritten. -/
   | ret (s : IdealState P.n X) (id : Fin P.n) (g : Fin P.n → Option X)
       (hin : ((ga s).proc id).input ≠ none)
+      (hbind : ((ga s).proc id).sentBind ≠ none)
       (hsub : ∀ k x, g k = some x → holdsIn ((ga s).proc id) k x)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ U, holdsBind ((ga s).proc id) q U ∧ APSet.subMap U g)
@@ -272,13 +295,13 @@ theorem idealInst_step_row (P : Params) :
       subst hw; subst ha; subst hb
       cases m with
       | echo A =>
-        obtain ⟨hinp, happ, hcard, hsend, hx⟩ := stepG_snd_echo_own (hproc j)
+        obtain ⟨rfl, hinp, hcard, hsend, hx⟩ := stepG_snd_echo_own (hproc j)
         rw [sub_setProc_post (PMF.pure_injective hx) hfor]
-        exact IdealStep.echo _ j A hinp happ hcard hsend
+        exact IdealStep.echo _ j hinp hcard hsend
       | vote U =>
-        obtain ⟨hinp, happ, hQ, hsend, hx⟩ := stepG_snd_vote_own (hproc j)
+        obtain ⟨hinp, hech, happ, hQ, hsend, hx⟩ := stepG_snd_vote_own (hproc j)
         rw [sub_setProc_post (PMF.pure_injective hx) hfor]
-        exact IdealStep.vote _ j U hinp happ hQ hsend
+        exact IdealStep.vote _ j U hinp hech happ hQ hsend
     | dlv i j m =>
       obtain ⟨hmem, hw⟩ := netStep_dlv hnet
       have hw' : w' = w := PMF.pure_injective hw
@@ -309,12 +332,9 @@ theorem idealInst_step_row (P : Params) :
       have hw : w' = w := PMF.pure_injective (netStep_bindCall hnet)
       have ha : a' = a := funext fun k => lift_step_none rfl (hin k)
       subst hw; subst ha
-      obtain ⟨hinp, happ, hQ, hxj⟩ := stepG_bindCall_own (hproc j)
-      have hxall : ∀ i, x i = u i := by
-        intro i
-        by_cases hi : i = j
-        · subst hi; exact PMF.pure_injective hxj
-        · exact PMF.pure_injective (stepG_bindCall_foreign (Ne.symm hi) (hproc i))
+      obtain ⟨hinp, hvot, hsnd, happ, hQ, hxj⟩ := stepG_bindCall_own (hproc j)
+      have hfor : ∀ i, i ≠ j → x i = u i :=
+        fun i hi => PMF.pure_injective (stepG_bindCall_foreign (Ne.symm hi) (hproc i))
       have hbf : ∀ q, q ≠ j → b' q = b q :=
         fun q hq => lift_step_none (by simp [hq]) (hbind q)
       rcases specStep_call (liftSpec_row (lb := Sum.inl (BRB.Lab.call U)) (by simp) rfl
@@ -322,15 +342,15 @@ theorem idealInst_step_row (P : Params) :
       · have hb : b' = Function.update b j { b j with input := some U } :=
           funPin (PMF.pure_injective hbq) hbf
         subst hb
-        rw [sub_idle hxall, sub_setBrbBind]
-        exact IdealStep.bindCall _ j U hinp happ hQ hbin
+        rw [procFun_update (PMF.pure_injective hxj) hfor]
+        exact IdealStep.bindCall _ j U hinp hvot hsnd happ hQ hbin
       · have hb : b' = b := funext fun q => by
           by_cases hq : q = j
           · subst hq; exact PMF.pure_injective hbq
           · exact hbf q hq
         subst hb
-        rw [sub_idle hxall]
-        exact IdealStep.bindCallSpecLoop _ j U hinp happ hQ
+        rw [sub_setProc (PMF.pure_injective hxj) hfor]
+        exact IdealStep.bindCallSpecLoop _ j U hinp hvot hsnd happ hQ
     | bindRet q j U =>
       have hw : w' = w := PMF.pure_injective (netStep_bindRet hnet)
       have ha : a' = a := funext fun k => lift_step_none rfl (hin k)
@@ -404,12 +424,12 @@ theorem idealInst_step_row (P : Params) :
           have ha : a' = a := funext fun k => lift_step_none rfl (hin k)
           have hb : b' = b := funext fun q => lift_step_none rfl (hbind q)
           subst hw'; subst ha; subst hb
-          obtain ⟨hinp, hsub, hQ, hr, hxj⟩ := stepG_ret_own (hproc id)
+          obtain ⟨hinp, hbnd, hsub, hQ, hr, hxj⟩ := stepG_ret_own (hproc id)
           have hfor : ∀ i, i ≠ id → x i = u i :=
             fun i hi => PMF.pure_injective (stepG_ret_foreign (Ne.symm hi) (hproc i))
           refine ⟨_, rfl, ?_⟩
           rw [sub_ret (PMF.pure_injective hxj) hfor]
-          exact IdealStep.ret _ id g hinp hsub hQ hr
+          exact IdealStep.ret _ id g hinp hbnd hsub hQ hr
         | fail id =>
           have hw : w' = { w with net := w.net.corrupt P id } :=
             PMF.pure_injective (netStep_fail hnet)
@@ -511,33 +531,33 @@ theorem row_idealInst_step (P : Params) :
       (procStep_update (ProcStep.dlvRecv (u i) j m)
         (fun i' hi' => ProcStep.dlvIdle (u i') i j m (Ne.symm hi')))
       (NetStep.dlv w i j m h) (fun k => lift_idle rfl) (fun q => lift_idle rfl)⟩
-  | echo j A hin happ hcard hsend =>
-    exact ⟨Sum.inl Lab.tau, rfl, instAt_event_step (a' := a) (b' := b) (GaEvt.snd j (.echo A))
-      (procStep_update (ProcStep.sndEcho (u j) A hin happ hcard hsend)
-        (fun i hi => ProcStep.sndIdle (u i) j (.echo A) (Ne.symm hi)))
-      (NetStep.snd w j (.echo A)) (fun k => lift_idle rfl) (fun q => lift_idle rfl)⟩
-  | vote j U hin happ hQ hsend =>
+  | echo j hin hcard hsend =>
+    exact ⟨Sum.inl Lab.tau, rfl, instAt_event_step (a' := a) (b' := b)
+      (GaEvt.snd j (.echo (u j).proc.accepted))
+      (procStep_update (ProcStep.sndEcho (u j) hin hcard hsend)
+        (fun i hi => ProcStep.sndIdle (u i) j (.echo (u j).proc.accepted) (Ne.symm hi)))
+      (NetStep.snd w j (.echo (u j).proc.accepted)) (fun k => lift_idle rfl)
+      (fun q => lift_idle rfl)⟩
+  | vote j U hin hech happ hQ hsend =>
     exact ⟨Sum.inl Lab.tau, rfl, instAt_event_step (a' := a) (b' := b) (GaEvt.snd j (.vote U))
-      (procStep_update (ProcStep.sndVote (u j) U hin happ hQ hsend)
+      (procStep_update (ProcStep.sndVote (u j) U hin hech happ hQ hsend)
         (fun i hi => ProcStep.sndIdle (u i) j (.vote U) (Ne.symm hi)))
       (NetStep.snd w j (.vote U)) (fun k => lift_idle rfl) (fun q => lift_idle rfl)⟩
-  | bindCall j U hin happ hQ hb =>
-    refine ⟨Sum.inl Lab.tau, rfl,
-      instAt_event_step (x := u) (w' := w) (a' := a) (GaEvt.bindCall j U) (fun i => ?_)
+  | bindCall j U hin hvot hsnd happ hQ hb =>
+    exact ⟨Sum.inl Lab.tau, rfl,
+      instAt_event_step (w' := w) (a' := a) (GaEvt.bindCall j U)
+        (procStep_update (ProcStep.bindCall (u j) U hin hvot hsnd happ hQ)
+          (fun i hi => ProcStep.bindCallIdle (u i) j U (Ne.symm hi)))
         (NetStep.bindCallIdle w j U) (fun k => lift_idle rfl)
         (lift_update (by simp) (fun q hq => by simp [hq])
           (row_liftedSpec_step (l := Sum.inl (BRB.Lab.call U)) rfl
             (BRB.Step.call (b j) U hb)))⟩
-    by_cases hi : i = j
-    · subst hi; exact ProcStep.bindCall (u i) U hin happ hQ
-    · exact ProcStep.bindCallIdle (u i) j U (Ne.symm hi)
-  | bindCallSpecLoop j U hin happ hQ =>
+  | bindCallSpecLoop j U hin hvot hsnd happ hQ =>
     refine ⟨Sum.inl Lab.tau, rfl,
-      instAt_event_step (x := u) (w' := w) (a' := a) (b' := b) (GaEvt.bindCall j U)
-        (fun i => ?_) (NetStep.bindCallIdle w j U) (fun k => lift_idle rfl) (fun q => ?_)⟩
-    · by_cases hi : i = j
-      · subst hi; exact ProcStep.bindCall (u i) U hin happ hQ
-      · exact ProcStep.bindCallIdle (u i) j U (Ne.symm hi)
+      instAt_event_step (w' := w) (a' := a) (b' := b) (GaEvt.bindCall j U)
+        (procStep_update (ProcStep.bindCall (u j) U hin hvot hsnd happ hQ)
+          (fun i hi => ProcStep.bindCallIdle (u i) j U (Ne.symm hi)))
+        (NetStep.bindCallIdle w j U) (fun k => lift_idle rfl) (fun q => ?_)⟩
     · by_cases hq : q = j
       · subst hq
         exact row_lift_step (by simp)
@@ -562,10 +582,10 @@ theorem row_idealInst_step (P : Params) :
       (lift_update (by simp) (fun q' hq' => by simp [hq'])
         (row_liftedSpec_step (l := Sum.inl (BRB.Lab.ret j U)) rfl
           (BRB.Step.ret (b q) j U hv hr)))⟩
-  | ret id g hin hsub hQ hr =>
+  | ret id g hin hbind hsub hQ hr =>
     exact ⟨Sum.inl (.ret id g (w.core.getD (coreOfNet P w.net))), rfl,
       instAt_lab_step (a' := a) (b' := b) (by simp)
-        (procStep_update (ProcStep.ret (u id) g _ hin hsub hQ hr)
+        (procStep_update (ProcStep.ret (u id) g _ hin hbind hsub hQ hr)
           (fun i hi => ProcStep.retIdle (u i) id g _ (Ne.symm hi)))
         (NetStep.ret w id g) (fun k => lift_idle rfl) (fun q => lift_idle rfl)⟩
   | fail id =>

@@ -135,14 +135,18 @@ inductive ProcStep (P : Params) (ldr j : Fin P.n) :
   /-- The call loop: the record does not move (`ImplStep.callLoop`). -/
   | callLoop (p) (m : M) :
       ProcStep P ldr j p (Sum.inl (Sum.inr (.callLoop m))) (PMF.pure p)
-  /-- `ECHO m`: `⟨INIT, m⟩` delivered from the leader, no `ECHO` sent yet
+  /-- `ECHO m`: `⟨INIT, m⟩` delivered from the leader, an `ECHO m` receipt
+  quorum, or `f + 1` `VOTE m` receipts; no `ECHO` sent yet
   (`ImplStep.echo`). -/
-  | sndEcho (p) (m : M) (hrecv : BMsg.init m ∈ p.recv ldr) (hsend : p.proc.sentEcho = none) :
+  | sndEcho (p) (m : M)
+      (hrecv : BMsg.init m ∈ p.recv ldr ∨ P.echoQuorum ≤ p.recvCount (.echo m) ∨
+        P.f + 1 ≤ p.recvCount (.vote m))
+      (hsend : p.proc.sentEcho = none) :
       ProcStep P ldr j p (Sum.inr (.snd j (.echo m)))
         (PMF.pure (p.setP { p.proc with sentEcho := some m }))
-  /-- `VOTE m` (quorum case): an `n − f` `ECHO m` receipt quorum, no `VOTE`
-  sent yet (`ImplStep.voteQuorum`). -/
-  | sndVoteQuorum (p) (m : M) (hcnt : P.n - P.f ≤ p.recvCount (.echo m))
+  /-- `VOTE m` (quorum case): an `ECHO m` receipt quorum, no `VOTE` sent yet
+  (`ImplStep.voteQuorum`). -/
+  | sndVoteQuorum (p) (m : M) (hcnt : P.echoQuorum ≤ p.recvCount (.echo m))
       (hsend : p.proc.sentVote = none) :
       ProcStep P ldr j p (Sum.inr (.snd j (.vote m)))
         (PMF.pure (p.setP { p.proc with sentVote := some m }))
@@ -162,9 +166,9 @@ inductive ProcStep (P : Params) (ldr j : Fin P.n) :
   /-- A delivery to another process: not `j`'s business. -/
   | dlvIdle (p) (i k : Fin P.n) (m : BMsg M) (hi : i ≠ j) :
       ProcStep P ldr j p (Sum.inr (.dlv i k m)) (PMF.pure p)
-  /-- Return: an `n − f` `VOTE m` receipt quorum on the record's own delivered
-  sets, and the record has not returned (`ImplStep.ret`). -/
-  | ret (p) (m : M) (hcnt : P.n - P.f ≤ p.recvCount (.vote m)) (hr : p.proc.returned = false) :
+  /-- Return: `2f + 1` `VOTE m` receipts on the record's own delivered sets,
+  and the record has not returned (`ImplStep.ret`). -/
+  | ret (p) (m : M) (hcnt : 2 * P.f + 1 ≤ p.recvCount (.vote m)) (hr : p.proc.returned = false) :
       ProcStep P ldr j p (Sum.inl (Sum.inl (.ret j m)))
         (PMF.pure (p.setP { p.proc with returned := true }))
   /-- A return at another process: not `j`'s business. -/
@@ -598,7 +602,7 @@ theorem stepB_callLoop {m : M}
 
 theorem stepB_ret_own {m : M}
     (h : ProcStep P ldr j p (Sum.inl (Sum.inl (.ret j m))) ν) :
-    P.n - P.f ≤ p.recvCount (.vote m) ∧ p.proc.returned = false ∧
+    2 * P.f + 1 ≤ p.recvCount (.vote m) ∧ p.proc.returned = false ∧
       ν = PMF.pure (p.setP { p.proc with returned := true }) := by
   cases h
   case ret => exact ⟨by assumption, by assumption, rfl⟩
@@ -622,7 +626,8 @@ theorem stepB_snd_init_own {m : M}
 
 theorem stepB_snd_echo_own {m : M}
     (h : ProcStep P ldr j p (Sum.inr (.snd j (.echo m))) ν) :
-    BMsg.init m ∈ p.recv ldr ∧ p.proc.sentEcho = none ∧
+    (BMsg.init m ∈ p.recv ldr ∨ P.echoQuorum ≤ p.recvCount (.echo m) ∨
+        P.f + 1 ≤ p.recvCount (.vote m)) ∧ p.proc.sentEcho = none ∧
       ν = PMF.pure (p.setP { p.proc with sentEcho := some m }) := by
   cases h
   case sndEcho => exact ⟨by assumption, by assumption, rfl⟩
@@ -630,7 +635,7 @@ theorem stepB_snd_echo_own {m : M}
 
 theorem stepB_snd_vote_own {m : M}
     (h : ProcStep P ldr j p (Sum.inr (.snd j (.vote m))) ν) :
-    (P.n - P.f ≤ p.recvCount (.echo m) ∨ P.f + 1 ≤ p.recvCount (.vote m)) ∧
+    (P.echoQuorum ≤ p.recvCount (.echo m) ∨ P.f + 1 ≤ p.recvCount (.vote m)) ∧
       p.proc.sentVote = none ∧
       ν = PMF.pure (p.setP { p.proc with sentVote := some m }) := by
   cases h

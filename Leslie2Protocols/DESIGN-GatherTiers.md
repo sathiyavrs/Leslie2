@@ -111,8 +111,8 @@ here. The return of an instance is a hidden event of the gather composition
 (`Gather.GaEvt.inRet`, `bindRet`), on which that instance takes its own return
 row and the receiving program writes its store. The four rows that read what has
 been returned — `sndEcho`, `sndVote`, `bindCall` and `ret` — read the stores
-through `Gather.holdsIn`, `holdsBind` and `approvedBy`, in the same shape at both
-gather tiers. The tie between a store and the instance it records is an
+through `Gather.ProcRec.accepted`, `holdsIn`, `holdsBind` and `approvedBy`, in the
+same shape at both gather tiers. The tie between a store and the instance it records is an
 invariant clause of `Gather.IdealConf` (`delivIn_val`, `delivBind_val`): a
 stored value is the instance's committed value, established at the return event
 and kept by the write-once commit.
@@ -194,8 +194,9 @@ makes the objects the certificate counts stable.
 
 The same dynamic-corruption reading, one level down. TS 6 pins the delivered
 value at an honest `call`; Bracha's rounds with the leader corrupted after
-its `INIT` but before any honest ECHO quorum can deliver a different value,
-so the pinned specification excludes its own implementation
+its `INIT` can deliver a different value until some correct process holds an
+ECHO quorum of more than `(n+f)/2` senders, so the pinned specification
+excludes its own implementation
 (`NOTES-Fidelity.md` §5). `BRB.SpecState` therefore splits `input` (the
 call's record) from `val` (the committed value), with the commit τ-rule
 guarded `ldr ∈ F ∨ input = some m`: the corrupted leader's power is a commit
@@ -372,7 +373,7 @@ three are forced by the flat shape.
   graded-agreement call broadcasts the input, the `BIND` send is a broadcast
   call, and the first gather's return to a process is that process's call of the
   second gather (D28). The flat reading has no broadcast return either: a gather
-  guard reads an `n − f` `VOTE` receipt quorum on the acting process's own local
+  guard reads a `2f + 1` `VOTE` receipt quorum on the acting process's own local
   state in the instance (`apIn1` and its companions), where a composed gather
   program reads its store.
 
