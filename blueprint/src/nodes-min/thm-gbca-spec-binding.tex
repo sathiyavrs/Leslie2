@@ -1,12 +1,13 @@
 \begin{theorem}[Binding and graded agreement of the GBCA specification]
   \label{thm:gbca-spec-binding}
-  \lean{PLTS.ABA.GBCA.excluded_card_le_one}\lean{PLTS.ABA.GBCA.retG_value_agree}\lean{PLTS.ABA.GBCA.retG_bound_agree}\lean{PLTS.ABA.GBCA.retG_value_eq_bound}\lean{PLTS.ABA.GBCA.retC_excluded_nonempty}\leanok
+  \lean{PLTS.ABA.GBCA.excluded_card_le_one}\lean{PLTS.ABA.GBCA.retG_value_agree}\lean{PLTS.ABA.GBCA.retG_grade_exclusive}\lean{PLTS.ABA.GBCA.retG_bound_agree}\lean{PLTS.ABA.GBCA.retG_value_eq_bound}\lean{PLTS.ABA.GBCA.retC_excluded_nonempty}\leanok
   \uses{def:aba-gbca-spec}
   Along one execution of the round-$r$ GBCA specification instance, any two returns that hand out a bit hand out the same bit, any two returns announce the same bit, and a return that hands out a bit announces the bit it hands out: \leandecl{PLTS.ABA.GBCA.retG_value_agree}, \leandecl{PLTS.ABA.GBCA.retG_bound_agree} and \leandecl{PLTS.ABA.GBCA.retG_value_eq_bound}.
+  No execution carries both an $A$-return and a $C$-return, which is the second clause of graded agreement: \leandecl{PLTS.ABA.GBCA.retG_grade_exclusive}, read off the trace as \leandecl{PLTS.ABA.GBCA.specInst_grade_agree}.
   The exclusion set holds at most one bit at every state, and a $C$-return leaves it nonempty at every later state, which is the Graded Binding witness: \leandecl{PLTS.ABA.GBCA.excluded_card_le_one} and \leandecl{PLTS.ABA.GBCA.retC_excluded_nonempty}.
 \end{theorem}
 
 \begin{proof}\leanok
   \uses{def:aba-gbca-spec}
-  Monotonicity of the exclusion set and the bound $|excluded| \le 1$ give every clause; see \leandecl{PLTS.ABA.GBCA.retG_value_agree}.
+  Monotonicity of the exclusion set and the bound $|excluded| \le 1$ give every clause but the last, and monotonicity of the write-once grade lock gives that one; see \leandecl{PLTS.ABA.GBCA.retG_value_agree} and \leandecl{PLTS.ABA.GBCA.retG_grade_exclusive}.
 \end{proof}

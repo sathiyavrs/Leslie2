@@ -31,8 +31,10 @@ docstrings and glossed one by one in the blueprint chapter (the Deviations parag
 
 ## 1. Where the encoding follows ABDY22 against the source blueprint
 
-The one substantive item, and the one place the encoding parts from the source blueprint
-rather than inheriting its parting from ABDY22.
+Three items. The first is the one place the encoding parts from the source blueprint
+rather than inheriting its parting from ABDY22. The other two are properties the two
+sources state in different forms, where what the encoding proves is one form and its
+relation to the other belongs here.
 
 The verified GBCA implementation (`GBCA.ImplStep`) transcribes **ABDY22's Algorithm 6 in
 full** — six rounds, the message levels INPUT, ECHO, VOTE, BIND, ECHO5 (the paper's `echo`
@@ -79,6 +81,25 @@ receiving `echo4` messages from `2t + 1` parties" where the pseudocode's lines 1
 `n − t`. The two coincide only at `n = 3t + 1`; the encoding follows the pseudocode
 (`n − f`).
 
+**Validity in two forms.** ABDY22's Definition 2.2 states Validity as unanimity: if all
+non-faulty parties receive the same value `v` as input, all non-faulty parties commit `v`.
+The source blueprint states it as provenance (p. 6): if a correct process returns `b` then
+a correct process had `b` as input. `ValidityTrace` is the provenance form, and so is the
+Validity conjunct of `ABDY.main`. The safety half of the unanimity form follows from it: a
+correct return under a unanimous input can only be the bit every correct process holds.
+The half asking that every non-faulty party commit at all is liveness, and is out of scope
+(§6). Where this file writes "the papers' Validity" elsewhere, the provenance form is
+meant.
+
+**Agreement is read at the returns, ABDY22's at the commits.** ABDY22's Definition 2.2
+states Agreement of `commit`, and line 7 of its Algorithm 2 commits at grade 2.
+Algorithm 1 puts the DECIDED gossip on top of that framework and returns on an `n − f`
+DECIDED receipt quorum, and `AgreementTrace` quantifies over those returns, the `retABA`
+labels of a trace. A round's graded outputs are `retG` labels, which `Lab.hiddenAPI` hides
+at the flat reading, so agreement on the grade-`A` outputs is stated by no theorem of the
+development. The encoding is faithful to Algorithm 1 here, and ABDY22's Agreement is about
+the earlier event.
+
 ## 2. Interpretation-level readings
 
 **"Received once."** The wait case (b) of Algorithm 6 requires that "⟨echo5, b⟩ has been
@@ -100,6 +121,16 @@ contained in the committed inputs may be returned. The union is one such choice,
 reading widens the implementation's nondeterminism; every guard the proofs consume is
 monotone in the chosen set, and the refinements hold for the wider reading, hence for
 the union.
+
+**The gather `ECHO` payload read as a bound.** AFW25's Algorithm 5 sets `T_id ← AP_id` at
+line 9 and Algorithm 4 sends `⟨echo, AP⟩`: in both the payload is the whole accepted-pair
+set. `Gather.IdealStep.echo` and `Gather.LowStep.echo` take any `A` under
+`happ : approvedBy … A` and `hcard : P.n - P.f ≤ A.card`, and the flat rows
+`AFW.StageStep.ga1Echo` and `ga2Echo` carry the same pair of guards. A proper subset of
+the accepted pairs may therefore be sent. The accepted-pair set is one such choice, so the
+reading widens the implementation's nondeterminism; every guard the proofs consume is
+monotone in the payload, and the refinements hold for the wider reading, hence for the
+accepted-pair set.
 
 **The coin's `⊤` outcome answered at the return.** `WCC.Step.callResolve` draws the coin
 inside the access that carries the caller count above `f`, which is Fig. 7 of the ghost-variables draft against
@@ -124,6 +155,15 @@ refinements hold for it. What the deferral withholds is a return, which is liven
 
 The `guess` label and the `guess` state field are omitted under either
 reading (D4, §6).
+
+**Line 2's multicast fused into the call.** ABDY22's Algorithm 6 takes its input `x` as
+a parameter and multicasts `⟨INPUT, x⟩` at line 2, its first statement. `GBCA.ImplStep.call`
+writes `input`, `sentInput` and the multicast in one step, so no state of the
+implementation holds a called process whose `INPUT` has not been sent. The sent sets are
+read by `ImplStep.deliver` alone, so a send the adversary would delay is a delivery it
+delays instead, and the same receipt patterns are reachable under either rendering. D28 is
+the fusion of a sub-protocol's call and return into a caller's row, and does not cover
+this one.
 
 **Terminating `return` as state.** The pseudocode's `return` ends the process; the
 encoding renders that as a fire-once flag — `ProcState.returned`, guarded by the `hr`
@@ -228,9 +268,22 @@ at `Net.ABAProcStepN` (`ABA/ABDY/Protocol.lean`) with the reads taken through `p
   accepted rather than repaired: a terminated process is one whose own return has already
   fired, and no statement of the development is about what it does afterwards.
 
-**Absent from the specifications.** Three of the placements below are chosen and two are
+The gather tables render a sequential thread and carry no own-send guard on its sends.
+AFW25's Algorithm 5 runs its main thread in sequence: send phase 2, wait, send phase 3,
+wait, send phase 4, wait, return (lines 10–20). `Gather.IdealStep.vote` carries no
+`sentEcho ≠ none`, `bindCall` carries no `sentVote ≠ none`, and `ret` carries no guard
+that the returner's own `BIND` broadcast was called; the one participation guard at each
+is D8's `hin`. `Gather.LowStep` repeats those guards, and so do the flat rows
+`AFW.StageStep.ga1Vote`, `ga1Bind`, `ga2Vote` and `ga2Bind`. A process may therefore vote
+on an `n − f` `ECHO` quorum without having echoed, and return on an `n − f` `BIND`
+certificate without having broadcast its own. The round tier holds the order of AFW25's
+Algorithm 4 in the write-once flags of `GBCA.PairStep`, so the widening sits at the gather
+tier alone, and it runs in the direction a refinement admits: each table moves more freely
+than the thread it renders.
+
+**Absent from the specifications.** Four of the placements below are chosen and two are
 forced by where the authorisation of a Byzantine handshake row sits (D11), which cannot be
-repaired at the rule; the sixth entry is a cross-reference.
+repaired at the rule; the seventh entry is a cross-reference.
 
 - **`GBCASpec.Step`, every rule (chosen).** No rule of the graded-agreement specification
   requires a send at the level below, denies a higher case, or guards a return on a call.
@@ -257,6 +310,17 @@ repaired at the rule; the sixth entry is a cross-reference.
   process may take it as an honest one does. `SpecStep.retByz` (D23) sits beside it and
   carries the arbitrary return, so the rule pair adds behaviour where an honesty guard on
   `SpecStep.ret` would only remove it.
+- **`SpecStep.fail` without an input-enabledness loop (chosen).** TS 1 pairs its guarded
+  corruption rule with the loop `⊤ --fail(id)--> ⊤`. `SpecStep.fail` carries
+  `hnew : id ∉ s.F` and `hbud : s.F.card < P.f` as rule guards, and no other rule of
+  `ABA.spec` accepts a `fail id` label, so a repeated or over-budget corruption has no
+  transition there. Every other specification of the chain keeps the same test inside
+  `corrupt` and leaves the rule total: `GBCA.Step.fail`, `WCC.Step.fail`,
+  `Gather.Step.fail` and `BRB.Step.fail` accept every `fail` label and let the transform
+  decide what the state does. The network adversary's `fail` row carries the two guards
+  `SpecStep.fail` carries, so the two sides enable the same labels and no refinement is
+  affected. The guard itself is D1; the loop TS 1 carries beside it is what this entry
+  records.
 - **The `2f + 1` commit read as a relay threshold (cross-reference).**
   `ABAProcStepN.terminate` reads `2f + 1` DECIDED receipts where the paper's condition is
   that the process may stop without holding another back. That delta is the third D22
@@ -321,6 +385,11 @@ repaired at the rule; the sixth entry is a cross-reference.
   of a sender outside `F` dominated by `f + 1` processes outside `F`, a counting argument
   over the sent sets locates such a sender, and BIND-by-reliable-broadcast is what keeps
   the payloads the certificate counts write-once under D1's adaptive corruption.
+  The two guards of `bindCore` are needed together. `S` is a set of pairs, so
+  `hcard : P.n - P.f ≤ S.card` counts entries and not identifiers; `hval`, which is
+  `APSet.subMap S s.val`, holds `S` below the write-once map `val` and so forces the
+  first components apart, and `APSet.card_le_gdom` is the step from the two to `n − f`
+  distinct identifiers.
   That broadcast of the `BIND` payloads is D32, and the binding form of both of the
   round's gathers, which is what makes the second gather's core a history variable
   rather than the prophecy variable of Remark 22, is D33.
@@ -354,7 +423,11 @@ Unpredictability, inexpressible once the guess is dropped.
   `3f < n` puts at `n − f` or above (`f ≥ 1`, which an injection presupposes). `voteBot`
   is then enabled already and no injection is wanted. So the bit-valued injection reaches
   every guard the non-bit one would, and no safety- or termination-relevant behaviour is
-  lost.
+  lost. `GBCA.Msg.input` carries a `Bool` as well, so `⟨INPUT, ⊥⟩` cannot be
+  injected either. That restriction needs no argument of its own. Every guard reading
+  `INPUT` reads it at a named bit: `hcnt` of `ImplStep.relay`, `hcnt` of `ImplStep.echo`,
+  and the two counts of `bothValid`. There is no payload-blind `INPUT` count for a non-bit
+  payload to raise.
 - **Termination.** ABA's ε-sure Termination, GBCA's Termination and WCC's ε′-sure
   Termination (pp. 6–7) are unclaimed — `ABDY.main` is Validity ∧
   Agreement. The same holds one level down: gather's Termination and BRB's Totality
@@ -434,11 +507,29 @@ point of it. The witness axis stays as strong as the papers': the caller `Validi
 produces must itself be never corrupted, not merely a member of a support set a later
 `fail` could taint.
 
+One level down the interface binds corrupted returners too. At the composed reading
+`GProcStep.byzRetA`, `byzRetB` and `byzRetC` repeat the honest rules' guards, and
+`GSub.gPull` sends the Byzantine return onto `GBCA.Step.retA`, `retB` and `retC`, which
+carry no honesty exemption. `GBCA.specInst_binding`, `retG_value_agree` and
+`specInst_validity` therefore quantify over every returner of a round, where ABDY22's
+Definition 3.2 quantifies over the non-faulty parties. A corrupted process's graded return
+is held to the guards an honest one's is held to, so the round's contract is the stronger
+of the two and the theorems above it lose nothing.
+
 ## 7. Adjacent open items
 
-Neither is a fidelity gap; both sit under Future work in `ABA/README.md`.
+Both sit under Future work in `ABA/README.md`. The first is not a fidelity gap; the second
+is one at statement level, under an environment that may call a process more than once.
 **Achievability** — `Core/NonVacuity.lean` carries the non-vacuity run on `hybrid`, the system
 the core simulation takes as its subject, and a machine-checked positive-mass trace for
 `ABDY.protocol`, the system `ABDY.main` is about, is outstanding.
-**`ValidityTrace` witness strengthening** — the witness clause accepts any preceding
-`callABA id' b`, where the proof yields a stronger ghost-backed one.
+**`ValidityTrace` under repeated calls** — the witness clause accepts any earlier
+`callABA id' b` at a never-corrupted `id'`. The program records its first call
+(`FlatProcStep.input`, guard `c.proc.input = none`) and absorbs every later one
+(`FlatProcStep.inputLoop`), so a call arriving after the first carries the other bit into
+the trace and leaves the run alone, and it satisfies the clause. The theorem therefore
+coincides with the provenance form of Validity (§1) under the environment assumption that
+each process is called once, and is weaker without it. A first-call restatement changes the
+abstract state before it changes the predicate: the specification's ghost record holds the
+last pre-decision call (`SpecStep.callSet`, D16), so there is no first-call witness for the
+clause to read.

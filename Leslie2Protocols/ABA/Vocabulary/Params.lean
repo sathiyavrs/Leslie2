@@ -12,8 +12,8 @@ import Leslie2.Systems.Trace
 The protocol parameters shared by every system in the ABA case study:
 
 * `ABA.Params` — the number of processes `n`, the corruption budget `f` (with
-  `3 * f < n`), the coin goodness `ε` and the coin failure probability `δ`
-  (with `2 * ε + δ ≤ 1`).
+  `3 * f < n`), the coin goodness `ε` (with `0 < ε`) and the coin failure
+  probability `δ` (with `2 * ε + δ ≤ 1`).
 * `ABA.Params.wccPMF` — *the* coin distribution of the development, over
   `ABA.CoinOutcome`: `bit b` with probability `ε` for each bit `b` (all
   correct processes get `b`), `adv` (the adversary-controlled outcome `⊤`,
@@ -32,8 +32,8 @@ namespace ABA
 
 /-- The global parameters of the ABA development: `n` processes of which at
 most `f` may be corrupted (`3 * f < n`), and an `ε`-good, `δ`-failing weak
-common coin (`2 * ε + δ ≤ 1`, so that the four coin outcomes have total mass
-one). -/
+common coin (`0 < ε` and `2 * ε + δ ≤ 1`, so that the two good outcomes carry
+mass and the four coin outcomes have total mass one). -/
 structure Params where
   /-- Number of processes. -/
   n : ℕ
@@ -48,6 +48,8 @@ structure Params where
   /-- The two good outcomes and the failure outcome fit inside a probability:
   `2ε + δ ≤ 1`. -/
   hδ : 2 * ε + δ ≤ 1
+  /-- The coin's goodness is positive. -/
+  hεpos : 0 < ε
 
 /-- The outcome of one weak-common-coin resolution: the common bit `b`, the
 adversary-controlled outcome `⊤` (delivery happens, but the adversary picks

@@ -168,7 +168,7 @@ everything. Within a folder the files are alphabetical.
 |---|---|---|
 | `Vocabulary/NetworkState.lean` | 408 | The two-part vocabulary of the gather-based development: network state (D5) beside `n` process local states, with the multicast/delivery/corrupt operations and the quorum-intersection kit, stated once and shared by the three sub-protocol encodings. |
 | `Vocabulary/Labels.lean` | 147 | The shared label alphabet `Lab n`: the visible API, the hidden sub-protocol handshakes, `τ`. |
-| `Vocabulary/Params.lean` | 125 | The parameters `P` — `n`, `f` with `n > 3f`, and the coin distribution `wccPMF` with its ε/δ bounds. |
+| `Vocabulary/Params.lean` | 127 | The parameters `P` — `n`, `f` with `n > 3f`, and the coin distribution `wccPMF` with its ε/δ bounds. |
 | `Vocabulary/RoundLoop.lean` | 249 | **The ABA round loop**, per process and nothing else: the phase machine, the control record, the round-loop record. |
 
 **`ABA/Spec/`** — what both implementations are measured against.
@@ -178,7 +178,7 @@ everything. Within a folder the files are alphabetical.
 | `Spec/ABA.lean` | 235 | **The top-level ABA specification**, the system all safety is measured against. Eight rules over `SpecState`, whose control mode carries the flip (D21) and two of which are the corrupted interface (D23). The decision is guarded by the `f + 1` support guard `SuppOK` alone (D13). |
 | `Spec/ABASafety.lean` | 717 | `spec_safe`: every positive-mass trace of `ABA.spec` is valid and agreeing. The trace predicates live here. |
 | `Spec/GBCA.lean` | 292 | The graded binding crusader agreement specification, per round. Binding is negative, and every return announces the round's bound bit (D19, D29). |
-| `Spec/GBCASafety.lean` | 683 | Binding, graded agreement and Validity's safety half for the GBCA specification instance. `specInst_binding` reads binding off a trace. |
+| `Spec/GBCASafety.lean` | 875 | Binding, graded agreement and Validity's safety half for the GBCA specification instance. `specInst_binding` reads binding off a trace. |
 | `Spec/WCC.lean` | 259 | The weak common coin specification, per round, and the coin value domain `TVal`. The call carries three rows: an unguarded loop that records nothing, one that records a caller, and one that records the caller whose access carries the count above `f` and draws the coin in the same step (D31). Held at specification level by design. |
 
 **`ABA/Reading/`** — the flat reading, parametric in the graded-agreement implementation.
@@ -331,10 +331,14 @@ pseudocode and the proof bodies).
   headline conditional on a trace-level budget predicate. It is unnecessary here: in
   `ABDY/Protocol.lean` the budget is a component guard on the one local state that owns the corrupted
   set, so `ABDY.protocol_safe` and `ABDY.protocol_traces` need no hypothesis on the trace.
-- **`ValidityTrace` witness strengthening**: the current witness clause accepts any
-  preceding `callABA id' b`; the proof yields a stronger ghost-backed witness. Care: while
-  nothing is decided the D13 ghost record holds the bit of the *last* `SpecStep.callSet`
-  (D16 overwrite), so a "first call" restatement is not immediate.
+- **`ValidityTrace` under repeated calls**: the witness clause accepts any earlier
+  `callABA id' b` at a never-corrupted `id'`, and the program absorbs every call after its
+  first (`FlatProcStep.inputLoop`), so a later call carrying the other bit satisfies the
+  clause without reaching the run. The theorem coincides with the sources' Validity under
+  the environment assumption that each process is called once, and is a statement-level gap
+  without it. A first-call form changes the abstract state before it changes the clause:
+  while nothing is decided the D13 ghost record holds the bit of the *last*
+  `SpecStep.callSet` (D16 overwrite), so there is no first call for the witness to read.
 - **By-type finiteness of the environment coordinates** (not pursued): the process types
   enforce finitely many variables by construction — the finite map of stage records, one
   round counter — where the network's round-indexed sent sets, the coin family, and the

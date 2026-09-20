@@ -3,6 +3,7 @@
   \lean{PLTS.ABA.GBCA.specInst_validity}\leanok
   \uses{def:aba-gbca-spec, thm:trace-support}
   On a trace of the GBCA specification instance whose every round-$r$ call carries $v$ unless its caller is corrupted somewhere along the trace, every round-$r$ return hands out $v$: \leandecl{PLTS.ABA.GBCA.specInst_validity}.
+  Neither a $C$-return nor a $B$-return occurs on such a trace, so every return is an $A$-return of $v$: \leandecl{PLTS.ABA.GBCA.specInst_no_retC} and \leandecl{PLTS.ABA.GBCA.specInst_no_retB}.
 \end{theorem}
 
 \begin{proof}\leanok

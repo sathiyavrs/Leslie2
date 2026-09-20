@@ -75,7 +75,7 @@ never-failing `ε = 1/2` coin, so that each bit outcome carries positive mass
 `2 * ε + δ ≤ 1` holds with equality (`2 * (1/2) + 0 = 1`); the adversarial `⊤`
 outcome and the failure outcome then both have mass `0`. -/
 noncomputable abbrev P4 : Params := ⟨4, 1, by omega, 1 / 2, 0, by
-  rw [add_zero, one_div, ENNReal.mul_inv_cancel] <;> simp⟩
+  rw [add_zero, one_div, ENNReal.mul_inv_cancel] <;> simp, by simp⟩
 
 namespace NonVacuity
 
