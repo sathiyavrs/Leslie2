@@ -7,7 +7,7 @@
     \operatorname{ATD}(\mathrm{hybrid}(P)) \;\subseteq\;
     \operatorname{ATD}(\mathrm{spec}(P)).
   \]
-  The two systems are compared on the ABA interface alone, namely $\mathrm{callABA}(i,b)$, $\mathrm{retABA}(i,b)$, $\mathrm{fail}(i)$ and $\tau$; the sub-protocol API, the labels $\mathrm{callG}(r,i,b)$, $\mathrm{retG}(r,i,g,d)$, $\mathrm{callW}(r,i)$ and $\mathrm{retW}(r,i,c)$ for $r \in \mathbb{N}$, $i \in [n]$, bits $b$, $c$ and $d$ and graded outcomes $g \in \{A\,0, A\,1, B\,0, B\,1, C\}$, is hidden at the outer frame of $\mathrm{hybrid}(P)$. Headline: \leandecl{PLTS.ABA.hybrid_spec}.
+  The two systems are compared on the ABA interface alone, namely $\mathrm{callABA}(i,b)$, $\mathrm{retABA}(i,b)$, $\mathrm{fail}(i)$ and $\tau$; the sub-protocol API, the labels $\mathrm{callG}(r,i,b)$, $\mathrm{retG}(r,i,g,d)$, $\mathrm{callW}(r,i)$ and $\mathrm{retW}(r,i,c)$ for $r \in \mathbb{N}$, $i \in [n]$, bits $b$, $c$ and $d$ and graded outcomes $g \in \{(0,2), (1,2), (0,1), (1,1), (\bot,0)\}$, is hidden at the outer frame of $\mathrm{hybrid}(P)$. Headline: \leandecl{PLTS.ABA.hybrid_spec}.
 \end{theorem}
 
 \begin{proof}\leanok
@@ -21,7 +21,7 @@
   Outside that disjunction it pins the ghost record as well: it agrees with the committed input at every honest process, in both phases.
   There are three cases.
   First, a hidden row: the abstract state answers by a stutter in the $\mathrm{AbstractState}$ frame, the coin's resolving call under the constant coupling that sends every outcome to the one unchanged abstract state.
-  Second, the first $\mathrm{retABA}$ of the run: the abstract state answers by a single weak step that binds, fills, decides and returns, its bind licensed by the $f{+}1$ input support carried in the invariant and its $A$-lock certificate obtained by a pigeonhole on the $n-f$ DECIDED tally behind the return.
+  Second, the first $\mathrm{retABA}$ of the run: the abstract state answers by a single weak step that binds, fills, decides and returns, its bind licensed by the $f{+}1$ input support carried in the invariant and its grade-2 lock certificate obtained by a pigeonhole on the $n-f$ DECIDED tally behind the return.
   Third, a $\mathrm{fail}$ row: the abstract state answers by the corruption broadcast.
   Either way the relation is restored, so $\mathrm{hybridSpecificationRelation}$ is a probabilistic forward simulation, and soundness (Theorem~\ref{thm:forward-sound}) turns it into the stated inclusion, \leandecl{PLTS.ABA.hybrid_spec}.
 \end{proof}

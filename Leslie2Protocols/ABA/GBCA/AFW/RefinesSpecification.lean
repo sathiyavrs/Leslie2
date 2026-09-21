@@ -31,11 +31,11 @@ are in scope, and `secondGatherCall_candidate` transfers the candidate to the se
 call record at `secondGatherCall`. The graded outcome is recorded at `secondGatherReturn`, and
 `out_certificate` is what the second gather's return guards certify about it:
 
-* an `A v` outcome is heavy at `some v` in the second gather's core and heavy
+* a `grade2 v` outcome is heavy at `some v` in the second gather's core and heavy
   at `v` in the first gather's;
-* a `B v` outcome is heavy at `v` in the first gather's core and carries
+* a `grade1 v` outcome is heavy at `v` in the first gather's core and carries
   `f + 1` committed-entry support for `!v`;
-* a `C` outcome is light at both bits in the second gather's core and carries
+* a grade-0 outcome is light at both bits in the second gather's core and carries
   `f + 1` committed-entry support for each bit.
 
 Both cores are write-once, so the certificate survives every later row.
@@ -231,20 +231,20 @@ theorem firstGatherSupport_congr {t t' : Gather.SpecState P.n Bool} (hval : t'.v
 
 /-! ### The invariant -/
 
-/-- What a recorded graded outcome certifies. An `A v` outcome is heavy at
+/-- What a recorded graded outcome certifies. A `grade2 v` outcome is heavy at
 `some v` in the second gather's core and heavy at `v` in the first gather's; a
-`B v` outcome is heavy at `v` in the first gather's core and carries `f + 1`
-committed-entry support for `!v`; a `C` outcome is light at both bits in the
+`grade1 v` outcome is heavy at `v` in the first gather's core and carries `f + 1`
+committed-entry support for `!v`; a grade-0 outcome is light at both bits in the
 second gather's core and carries `f + 1` support for each bit. -/
 def OutputCertificate (P : Parameters) (s : RoundStateOverGatherSpecifications P.n) : GBCAOutput →
   Prop
-  | .A v =>
+  | .grade2 v =>
       (∃ S, (secondGather s).core = some S ∧ S.card - P.f ≤ AcceptedPairs.count S (some v)) ∧
       (∃ S, (firstGather s).core = some S ∧ S.card - P.f ≤ AcceptedPairs.count S v)
-  | .B v =>
+  | .grade1 v =>
       (∃ S, (firstGather s).core = some S ∧ S.card - P.f ≤ AcceptedPairs.count S v) ∧
       P.f + 1 ≤ firstGatherSupport (firstGather s) (!v)
-  | .C =>
+  | .grade0 =>
       (∃ S, (secondGather s).core = some S ∧ ∀ w, AcceptedPairs.count S (some w) ≤ P.f) ∧
       ∀ b, P.f + 1 ≤ firstGatherSupport (firstGather s) b
 
@@ -261,13 +261,13 @@ theorem OutputCertificate.mono {s s' : RoundStateOverGatherSpecifications P.n} (
         GBCAOutput}
     (h : OutputCertificate P s out) : OutputCertificate P s' out := by
   cases out with
-  | A v =>
+  | grade2 v =>
     obtain ⟨⟨S, hS, hh⟩, S', hS', hh'⟩ := h
     exact ⟨⟨S, by rw [h2]; exact hS, hh⟩, S', by rw [h1]; exact hS', hh'⟩
-  | B v =>
+  | grade1 v =>
     obtain ⟨⟨S, hS, hh⟩, hw⟩ := h
     exact ⟨⟨S, by rw [h1]; exact hS, hh⟩, le_trans hw (hv _)⟩
-  | C =>
+  | grade0 =>
     obtain ⟨⟨S, hS, hl⟩, hw⟩ := h
     exact ⟨⟨S, by rw [h2]; exact hS, hl⟩, fun b => le_trans (hw b) (hv b)⟩
 
@@ -492,15 +492,15 @@ theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l
         refine ⟨(hInv.out_certificate k out hk).1, ?_⟩
         have hc := (hInv.out_certificate k out hk).2
         cases out with
-        | A v =>
+        | grade2 v =>
           obtain ⟨-, S', hS', -⟩ := hc
           rw [h0] at hS'
           exact absurd hS' (by simp)
-        | B v =>
+        | grade1 v =>
           obtain ⟨⟨S', hS', -⟩, -⟩ := hc
           rw [h0] at hS'
           exact absurd hS' (by simp)
-        | C => exact hc
+        | grade0 => exact hc
       · intro S' hS'
         dsimp only [firstGather_setFirstGather] at hS'
         obtain rfl : S = S' := by
@@ -563,12 +563,12 @@ theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l
         refine ⟨(hInv.out_certificate k out hk).1, ?_⟩
         have hc := (hInv.out_certificate k out hk).2
         cases out with
-        | A v =>
+        | grade2 v =>
           obtain ⟨⟨S', hS', -⟩, -⟩ := hc
           rw [h0] at hS'
           exact absurd hS' (by simp)
-        | B v => exact hc
-        | C =>
+        | grade1 v => exact hc
+        | grade0 =>
           obtain ⟨⟨S', hS', -⟩, -⟩ := hc
           rw [h0] at hS'
           exact absurd hS' (by simp)
@@ -810,19 +810,19 @@ theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l
             (count_le_firstGatherSupport (hInv.firstGatherCore_val S hS) wt)
       have hcert : OutputCertificate P s (gradeOf P g) := by
         cases hout : gradeOf P g with
-        | A v =>
-          refine ⟨⟨C, hC, count_aboveThreshold_of_subMap hmem (gradeOf_A hout)⟩, hheavy1 v ?_⟩
-          have := gradeOf_A hout
+        | grade2 v =>
+          refine ⟨⟨C, hC, count_aboveThreshold_of_subMap hmem (gradeOf_grade2 hout)⟩, hheavy1 v ?_⟩
+          have := gradeOf_grade2 hout
           omega
-        | B v =>
-          obtain ⟨hBcnt, hBnotA⟩ := gradeOf_B hout
+        | grade1 v =>
+          obtain ⟨hBcnt, hBnotA⟩ := gradeOf_grade1 hout
           refine ⟨hheavy1 v hBcnt, hsupp (!v) ?_⟩
           simp only [Bool.not_not]
           rw [card_ne_valueCount]
           have := hBnotA v
           omega
-        | C =>
-          have hCgrade := gradeOf_C hout
+        | grade0 =>
+          have hCgrade := gradeOf_grade0 hout
           refine ⟨⟨C, hC,
             fun w => le_trans (AcceptedPairs.count_le_valueCount hmem (some w)) (hCgrade w)⟩,
               fun b => hsupp b ?_⟩
@@ -978,13 +978,13 @@ structure SpecificationRelation (P : Parameters) (s : RoundStateOverGatherSpecif
   exclusion is written inside the first return's run, which announces that
   bit. -/
   excluded_bound : ∀ b ∈ t.excluded, ∃ β, bound s = some β ∧ b = !β
-  /-- The `A` grade guard is certified by a value heavy in the second gather's
+  /-- The grade-2 guard is certified by a value heavy in the second gather's
   core. -/
-  gradeA_evidence : t.grade = some true → ∃ S v, (secondGather s).core = some S ∧
+  grade2_evidence : t.grade = some true → ∃ S v, (secondGather s).core = some S ∧
     S.card - P.f ≤ AcceptedPairs.count S (some v)
-  /-- The `C` grade guard is certified by the second gather's core being light
+  /-- The grade-0 guard is certified by the second gather's core being light
   at both bits. -/
-  gradeC_evidence : t.grade = some false → ∃ S, (secondGather s).core = some S ∧
+  grade0_evidence : t.grade = some false → ∃ S, (secondGather s).core = some S ∧
     ∀ v, AcceptedPairs.count S (some v) ≤ P.f
 
 /-- The relation holds initially. -/
@@ -1025,11 +1025,11 @@ theorem specificationRelation_corrupt {r : ℕ} {s : RoundStateOverGatherSpecifi
     exact hR.excluded_bound b hb
   · intro hg
     rw [GBCA.corrupt_grade] at hg
-    obtain ⟨S, v, hS, hh⟩ := hR.gradeA_evidence hg
+    obtain ⟨S, v, hS, hh⟩ := hR.grade2_evidence hg
     exact ⟨S, v, by rw [secondGather_corruptAll, Gather.corrupt_core]; exact hS, hh⟩
   · intro hg
     rw [GBCA.corrupt_grade] at hg
-    obtain ⟨S, hS, hl⟩ := hR.gradeC_evidence hg
+    obtain ⟨S, hS, hl⟩ := hR.grade0_evidence hg
     exact ⟨S, by rw [secondGather_corruptAll, Gather.corrupt_core]; exact hS, hl⟩
 
 /-! ### The row-wise leg -/
@@ -1059,7 +1059,7 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateO
         Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
           (GBCA.Step.call q₂ id b (by rw [hR.call_eq id]; exact hcall))⟩,
         hInv', ?_, ?_, hR.F_eq, hR.exclusion_certificate, hR.excluded_bound,
-        hR.gradeA_evidence, hR.gradeC_evidence⟩
+        hR.grade2_evidence, hR.grade0_evidence⟩
       · intro k
         dsimp only [firstGather_setFirstGather]
         by_cases hk : k = id
@@ -1080,7 +1080,7 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateO
       subst ht1
       refine ⟨q₂, Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
         (GBCA.Step.callLoop q₂ id b)⟩, hInv', hR.call_eq, ?_, hR.F_eq,
-        hR.exclusion_certificate, hR.excluded_bound, hR.gradeA_evidence, hR.gradeC_evidence⟩
+        hR.exclusion_certificate, hR.excluded_bound, hR.grade2_evidence, hR.grade0_evidence⟩
       intro k
       dsimp only [programs_setFirstGather, programs_setPrograms]
       by_cases hk : k = id
@@ -1101,7 +1101,7 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateO
         Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
           (GBCA.Step.call q₂ id b (by rw [hR.call_eq id]; exact hcall))⟩,
         hInv', ?_, hR.ret_eq, hR.F_eq, hR.exclusion_certificate, hR.excluded_bound,
-        hR.gradeA_evidence, hR.gradeC_evidence⟩
+        hR.grade2_evidence, hR.grade0_evidence⟩
       intro k
       dsimp only [firstGather_setFirstGather]
       by_cases hk : k = id
@@ -1124,13 +1124,13 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateO
       subst ht1
       exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩, hInv',
         hR.call_eq, hR.ret_eq, hR.F_eq, hR.exclusion_certificate, hR.excluded_bound,
-        hR.gradeA_evidence, hR.gradeC_evidence⟩
+        hR.grade2_evidence, hR.grade0_evidence⟩
     | bindCore S h0 hval hcard =>
       have ht1 := PMF.pure_injective hμ
       subst ht1
       refine ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩, hInv',
         hR.call_eq, hR.ret_eq, hR.F_eq, ?_, hR.excluded_bound,
-        hR.gradeA_evidence, hR.gradeC_evidence⟩
+        hR.grade2_evidence, hR.grade0_evidence⟩
       intro b hb
       obtain ⟨S', hS', -⟩ := hR.exclusion_certificate b hb
       rw [h0] at hS'
@@ -1145,7 +1145,7 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateO
       subst ht2
       exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩, hInv',
         hR.call_eq, hR.ret_eq, hR.F_eq, hR.exclusion_certificate, hR.excluded_bound,
-        hR.gradeA_evidence, hR.gradeC_evidence⟩
+        hR.grade2_evidence, hR.grade0_evidence⟩
     | bindCore S h0 hval hcard =>
       have ht2 := PMF.pure_injective hμ
       subst ht2
@@ -1153,11 +1153,11 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateO
         hR.call_eq, hR.ret_eq, hR.F_eq, hR.exclusion_certificate, hR.excluded_bound,
         ?_, ?_⟩
       · intro hg
-        obtain ⟨S', v, hS', -⟩ := hR.gradeA_evidence hg
+        obtain ⟨S', v, hS', -⟩ := hR.grade2_evidence hg
         rw [h0] at hS'
         exact absurd hS' (by simp)
       · intro hg
-        obtain ⟨S', hS', -⟩ := hR.gradeC_evidence hg
+        obtain ⟨S', hS', -⟩ := hR.grade0_evidence hg
         rw [h0] at hS'
         exact absurd hS' (by simp)
   | firstGatherReturn id g C t1 hin hc h =>
@@ -1169,8 +1169,8 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateO
       have ht1 := PMF.pure_injective hμ
       subst ht1
       refine ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩, hInv',
-        hR.call_eq, ?_, hR.F_eq, hR.exclusion_certificate, ?_, hR.gradeA_evidence,
-        hR.gradeC_evidence⟩
+        hR.call_eq, ?_, hR.F_eq, hR.exclusion_certificate, ?_, hR.grade2_evidence,
+        hR.grade0_evidence⟩
       · intro k
         dsimp only [programs_setBound, programs_setFirstGather, programs_setPrograms]
         by_cases hk : k = id
@@ -1197,11 +1197,11 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateO
       · rw [Function.update_of_ne hk]
         exact hR.ret_eq k
     · intro hg
-      obtain ⟨S, v, hS, hh⟩ := hR.gradeA_evidence hg
+      obtain ⟨S, v, hS, hh⟩ := hR.grade2_evidence hg
       exact ⟨S, v, by dsimp only [secondGather_setSecondGather,
         secondGather_setPrograms]; rw [hcore2]; exact hS, hh⟩
     · intro hg
-      obtain ⟨S, hS, hl⟩ := hR.gradeC_evidence hg
+      obtain ⟨S, hS, hl⟩ := hR.grade0_evidence hg
       exact ⟨S, by dsimp only [secondGather_setSecondGather,
         secondGather_setPrograms]; rw [hcore2]; exact hS, hl⟩
   | secondGatherReturn id g C t2 h2 ho h =>
@@ -1214,7 +1214,7 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateO
       subst ht2
       refine ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩, hInv',
         hR.call_eq, ?_, hR.F_eq, hR.exclusion_certificate, hR.excluded_bound,
-        hR.gradeA_evidence, hR.gradeC_evidence⟩
+        hR.grade2_evidence, hR.grade0_evidence⟩
       intro k
       dsimp only [programs_setSecondGather, programs_setPrograms]
       by_cases hk : k = id
@@ -1258,7 +1258,7 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateO
       rfl
     rw [hbndeq]
     cases out with
-    | A v =>
+    | grade2 v =>
       obtain ⟨⟨C₂, hC₂, hA_ev⟩, S', hS', hheavy⟩ := hcert
       obtain rfl : S = S' := by
         rw [hS] at hS'; exact Option.some.inj hS'
@@ -1276,7 +1276,7 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateO
         · exact Or.inl rfl
         · cases b
           · exfalso
-            obtain ⟨S₂, hS₂, hlight₂⟩ := hR.gradeC_evidence hgr
+            obtain ⟨S₂, hS₂, hlight₂⟩ := hR.grade0_evidence hgr
             rw [hC₂] at hS₂
             obtain rfl : C₂ = S₂ := Option.some.inj hS₂
             have hlv := hlight₂ v
@@ -1284,7 +1284,7 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateO
           · exact Or.inr rfl
       by_cases hbv : (!v) ∈ q₂.excluded
       · refine ⟨_, Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
-          (GBCA.Step.retA q₂ id v β hlive hbv (by rw [hβv]; exact hbv)
+          (GBCA.Step.retGrade2 q₂ id v β hlive hbv (by rw [hβv]; exact hbv)
             hgA hretflag)⟩,
           hInv', hR.call_eq, hret_eq, hR.F_eq, hR.exclusion_certificate,
           hR.excluded_bound, ?_, ?_⟩
@@ -1309,12 +1309,12 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateO
                 hSval (by omega))
             hd0
         have hret2 : (GBCA.specInst P r).LStep
-            { q₂ with excluded := insert (!v) q₂.excluded } (.retG r id (.A v) β)
+            { q₂ with excluded := insert (!v) q₂.excluded } (.retG r id (.grade2 v) β)
             { q₂ with
               excluded := insert (!v) q₂.excluded
               grade := some true
               ret := Function.update q₂.ret id true } :=
-          GBCA.Step.retA _ id v β (by rw [hd0]; simp)
+          GBCA.Step.retGrade2 _ id v β (by rw [hd0]; simp)
             (Finset.mem_insert_self _ _)
             (by rw [hβv]; exact Finset.mem_insert_self _ _) hgA hretflag
         refine ⟨_, Or.inr ⟨by simp, weakLStep_tauThen hexclude hret2 (by simp)⟩,
@@ -1336,7 +1336,7 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateO
           exact ⟨C₂, v, hC₂, hA_ev⟩
         · intro hgr
           exact absurd hgr (by simp)
-    | B v =>
+    | grade1 v =>
       obtain ⟨⟨S', hS', hheavy⟩, hw1⟩ := hcert
       obtain rfl : S = S' := by
         rw [hS] at hS'; exact Option.some.inj hS'
@@ -1354,10 +1354,10 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateO
           hw1
       by_cases hbv : (!v) ∈ q₂.excluded
       · exact ⟨_, Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
-          (GBCA.Step.retB q₂ id v β hlive hbv (by rw [hβv]; exact hbv)
+          (GBCA.Step.retGrade1 q₂ id v β hlive hbv (by rw [hβv]; exact hbv)
             hw hretflag)⟩,
           hInv', hR.call_eq, hret_eq, hR.F_eq, hR.exclusion_certificate,
-          hR.excluded_bound, hR.gradeA_evidence, hR.gradeC_evidence⟩
+          hR.excluded_bound, hR.grade2_evidence, hR.grade0_evidence⟩
       · have hd0 : q₂.excluded = ∅ := by
           rw [Finset.eq_empty_iff_forall_notMem]
           intro b' hb'
@@ -1375,16 +1375,16 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateO
                 hSval (by omega))
             hd0
         have hret2 : (GBCA.specInst P r).LStep
-            { q₂ with excluded := insert (!v) q₂.excluded } (.retG r id (.B v) β)
+            { q₂ with excluded := insert (!v) q₂.excluded } (.retG r id (.grade1 v) β)
             { q₂ with
               excluded := insert (!v) q₂.excluded
               ret := Function.update q₂.ret id true } :=
-          GBCA.Step.retB _ id v β (by rw [hd0]; simp)
+          GBCA.Step.retGrade1 _ id v β (by rw [hd0]; simp)
             (Finset.mem_insert_self _ _)
             (by rw [hβv]; exact Finset.mem_insert_self _ _) hw hretflag
         refine ⟨_, Or.inr ⟨by simp, weakLStep_tauThen hexclude hret2 (by simp)⟩,
-          hInv', hR.call_eq, hret_eq, hR.F_eq, ?_, ?_, hR.gradeA_evidence,
-          hR.gradeC_evidence⟩
+          hInv', hR.call_eq, hret_eq, hR.F_eq, ?_, ?_, hR.grade2_evidence,
+          hR.grade0_evidence⟩
         · intro b hb
           dsimp only at hb
           rw [hd0, Finset.mem_insert] at hb
@@ -1398,7 +1398,7 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateO
           rcases hb with rfl | hb
           · exact ⟨β, hβ, by rw [hβv]⟩
           · simp at hb
-    | C =>
+    | grade0 =>
       obtain ⟨⟨C₂, hC₂, hClight⟩, hsupp1⟩ := hcert
       have hC₂card : P.n - P.f ≤ C₂.card := hR.invariant.secondGatherCore_card C₂ hC₂
       have hsupp : ∀ b : Bool, P.f + 1 ≤ (Finset.univ.filter
@@ -1411,7 +1411,7 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateO
         · cases b
           · exact Or.inr rfl
           · exfalso
-            obtain ⟨S₂, v', hS₂, hh⟩ := hR.gradeA_evidence hgr
+            obtain ⟨S₂, v', hS₂, hh⟩ := hR.grade2_evidence hgr
             rw [hC₂] at hS₂
             obtain rfl : C₂ = S₂ := Option.some.inj hS₂
             have hlv := hClight v'
@@ -1424,12 +1424,12 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateO
             (by rw [Bool.not_not]; exact hsupp β)
             hdne
         have hret2 : (GBCA.specInst P r).LStep
-            { q₂ with excluded := insert (!β) q₂.excluded } (.retG r id .C β)
+            { q₂ with excluded := insert (!β) q₂.excluded } (.retG r id .grade0 β)
             { q₂ with
               excluded := insert (!β) q₂.excluded
               grade := some false
               ret := Function.update q₂.ret id true } :=
-          GBCA.Step.retC _ id β (Finset.mem_insert_self _ _)
+          GBCA.Step.retGrade0 _ id β (Finset.mem_insert_self _ _)
             (hsupp true) (hsupp false) hgC hretflag
         refine ⟨_, Or.inr ⟨by simp, weakLStep_tauThen hexclude hret2 (by simp)⟩,
           hInv', hR.call_eq, hret_eq, hR.F_eq, ?_, ?_, ?_, ?_⟩
@@ -1453,7 +1453,7 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateO
         have hbeq := hexcl b hb
         subst hbeq
         refine ⟨_, Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
-          (GBCA.Step.retC q₂ id β hb (hsupp true) (hsupp false) hgC hretflag)⟩,
+          (GBCA.Step.retGrade0 q₂ id β hb (hsupp true) (hsupp false) hgC hretflag)⟩,
           hInv', hR.call_eq, hret_eq, hR.F_eq, hR.exclusion_certificate,
           hR.excluded_bound, ?_, ?_⟩
         · intro hgr

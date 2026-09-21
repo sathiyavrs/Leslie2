@@ -274,10 +274,10 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
           p.setRoundRecord r ((p.roundRecord r).setProcess { (p.roundRecord r).process with
             input := some b,
             sentInput := Function.update (p.roundRecord r).process.sentInput b true })))
-  /-- Return with grade `A v`: an `n − f` `ECHO5 v` quorum. The stage record has
+  /-- Return with outcome `grade2 v`: an `n − f` `ECHO5 v` quorum. The stage record has
   been called and its own `ECHO5` is out. Case (1) heads the algorithm's chain,
   so there is no higher case to deny. -/
-  | retG_A (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (v : Bool) (bnd : Bool)
+  | retGGrade2 (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (v : Bool) (bnd : Bool)
       (hh : c.corrupted = false)
       (hph : c.process.phase = .awaitG) (hr : c.process.round = r)
       (hterm : p.terminated = false)
@@ -285,50 +285,52 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
       (hlv : (p.roundRecord r).process.sentEcho5 ≠ none)
       (hcnt : P.n - P.f ≤ (p.roundRecord r).receivedCount (.echo5 (some v)))
       (hret : (p.roundRecord r).process.returned = false) :
-      RoundStep P j (c, p) (Sum.inl (.retG r j (.A v) bnd))
+      RoundStep P j (c, p) (Sum.inl (.retG r j (.grade2 v) bnd))
         (PMF.pure (c.setProcess { c.process with
-            estimate := (GBCAOutput.A v).estimate, lastGrade := some (.A v), phase := .toCallW },
+            estimate := (GBCAOutput.grade2 v).estimate, lastGrade := some (.grade2 v),
+              phase := .toCallW },
           p.setRoundRecord r ((p.roundRecord r).setProcess { (p.roundRecord r).process with
             returned := true })))
-  /-- Return with grade `B v`: an `n − f` any-`ECHO5` quorum containing
+  /-- Return with outcome `grade1 v`: an `n − f` any-`ECHO5` quorum containing
   `ECHO5 v`, `f + 1` `BIND v`s and `|Valid| > 1`. The stage record has been
-  called, its own `ECHO5` is out, and `hnotA` denies case (1) at either bit. -/
-  | retG_B (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (v : Bool) (bnd : Bool)
+  called, its own `ECHO5` is out, and `hnotGrade2` denies case (1) at either bit. -/
+  | retGGrade1 (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (v : Bool) (bnd : Bool)
       (hh : c.corrupted = false)
       (hph : c.process.phase = .awaitG) (hr : c.process.round = r)
       (hterm : p.terminated = false)
       (hin : (p.roundRecord r).process.input ≠ none)
       (hlv : (p.roundRecord r).process.sentEcho5 ≠ none)
-      (hnotA : ∀ v, (p.roundRecord r).receivedCount (.echo5 (some v)) < P.n - P.f)
+      (hnotGrade2 : ∀ v, (p.roundRecord r).receivedCount (.echo5 (some v)) < P.n - P.f)
       (hcnt : P.n - P.f ≤ (p.roundRecord r).echo5Count)
       (honce : ∃ k, GBCA.ByABDY.Message.echo5 (some v) ∈ (p.roundRecord r).received k)
       (hbind : P.f + 1 ≤ (p.roundRecord r).receivedCount (.bind (some v)))
       (hval : (p.roundRecord r).bothValid P)
       (hret : (p.roundRecord r).process.returned = false) :
-      RoundStep P j (c, p) (Sum.inl (.retG r j (.B v) bnd))
+      RoundStep P j (c, p) (Sum.inl (.retG r j (.grade1 v) bnd))
         (PMF.pure (c.setProcess { c.process with
-            estimate := (GBCAOutput.B v).estimate, lastGrade := some (.B v), phase := .toCallW },
+            estimate := (GBCAOutput.grade1 v).estimate, lastGrade := some (.grade1 v),
+              phase := .toCallW },
           p.setRoundRecord r ((p.roundRecord r).setProcess { (p.roundRecord r).process with
             returned := true })))
-  /-- Return with grade `C`: an `n − f` `ECHO5 ⊥` quorum and `|Valid| > 1`. The
-  stage record has been called, its own `ECHO5` is out, `hnotA` denies case (1)
-  at either bit, and `hnotB` denies case (2) in the reduced form
-  `GBCA.ByABDY.ImplementationStep.retC` states. -/
-  | retG_C (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (bnd : Bool)
+  /-- Return with outcome `grade0`: an `n − f` `ECHO5 ⊥` quorum and `|Valid| > 1`. The
+  stage record has been called, its own `ECHO5` is out, `hnotGrade2` denies case (1)
+  at either bit, and `hnotGrade1` denies case (2) in the reduced form
+  `GBCA.ByABDY.ImplementationStep.retGrade0` states. -/
+  | retGGrade0 (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (bnd : Bool)
       (hh : c.corrupted = false)
       (hph : c.process.phase = .awaitG) (hr : c.process.round = r)
       (hterm : p.terminated = false)
       (hin : (p.roundRecord r).process.input ≠ none)
       (hlv : (p.roundRecord r).process.sentEcho5 ≠ none)
-      (hnotA : ∀ v, (p.roundRecord r).receivedCount (.echo5 (some v)) < P.n - P.f)
-      (hnotB : ∀ v, (∃ k, GBCA.ByABDY.Message.echo5 (some v) ∈ (p.roundRecord r).received k) →
+      (hnotGrade2 : ∀ v, (p.roundRecord r).receivedCount (.echo5 (some v)) < P.n - P.f)
+      (hnotGrade1 : ∀ v, (∃ k, GBCA.ByABDY.Message.echo5 (some v) ∈ (p.roundRecord r).received k) →
         (p.roundRecord r).receivedCount (.bind (some v)) < P.f + 1)
       (hcnt : P.n - P.f ≤ (p.roundRecord r).receivedCount (.echo5 none))
       (hval : (p.roundRecord r).bothValid P)
       (hret : (p.roundRecord r).process.returned = false) :
-      RoundStep P j (c, p) (Sum.inl (.retG r j .C bnd))
+      RoundStep P j (c, p) (Sum.inl (.retG r j .grade0 bnd))
         (PMF.pure (c.setProcess { c.process with
-            estimate := GBCAOutput.C.estimate, lastGrade := some .C, phase := .toCallW },
+            estimate := GBCAOutput.grade0.estimate, lastGrade := some .grade0, phase := .toCallW },
           p.setRoundRecord r ((p.roundRecord r).setProcess { (p.roundRecord r).process with
             returned := true })))
   /-- The stage `INPUT` relay: `f + 1` receipts of `⟨INPUT, b⟩` in the stage
@@ -611,15 +613,16 @@ theorem programStep_callG_own {r : ℕ} {b : Bool}
   case callGIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
-theorem programStep_retG_A_own {r : ℕ} {v bnd : Bool}
-    (h : ABAProgramStep P j q (Sum.inl (.retG r j (.A v) bnd)) ν) :
+theorem programStep_retGGrade2_own {r : ℕ} {v bnd : Bool}
+    (h : ABAProgramStep P j q (Sum.inl (.retG r j (.grade2 v) bnd)) ν) :
     q.1.corrupted = false ∧
       q.1.process.phase = .awaitG ∧ q.1.process.round = r ∧ q.2.terminated = false ∧
       (q.2.roundRecord r).process.input ≠ none ∧ (q.2.roundRecord r).process.sentEcho5 ≠ none ∧
       P.n - P.f ≤ (q.2.roundRecord r).receivedCount (.echo5 (some v)) ∧
       (q.2.roundRecord r).process.returned = false ∧
       ν = PMF.pure (q.1.setProcess { q.1.process with
-          estimate := (GBCAOutput.A v).estimate, lastGrade := some (.A v), phase := .toCallW },
+          estimate := (GBCAOutput.grade2 v).estimate, lastGrade := some (.grade2 v),
+            phase := .toCallW },
         q.2.setRoundRecord r
           ((q.2.roundRecord r).setProcess { (q.2.roundRecord r).process with returned := true })) :=
             by
@@ -631,8 +634,8 @@ theorem programStep_retG_A_own {r : ℕ} {v bnd : Bool}
   case retGIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
-theorem programStep_retG_B_own {r : ℕ} {v bnd : Bool}
-    (h : ABAProgramStep P j q (Sum.inl (.retG r j (.B v) bnd)) ν) :
+theorem programStep_retGGrade1_own {r : ℕ} {v bnd : Bool}
+    (h : ABAProgramStep P j q (Sum.inl (.retG r j (.grade1 v) bnd)) ν) :
     q.1.corrupted = false ∧
       q.1.process.phase = .awaitG ∧ q.1.process.round = r ∧ q.2.terminated = false ∧
       (q.2.roundRecord r).process.input ≠ none ∧ (q.2.roundRecord r).process.sentEcho5 ≠ none ∧
@@ -643,7 +646,8 @@ theorem programStep_retG_B_own {r : ℕ} {v bnd : Bool}
       (q.2.roundRecord r).bothValid P ∧
       (q.2.roundRecord r).process.returned = false ∧
       ν = PMF.pure (q.1.setProcess { q.1.process with
-          estimate := (GBCAOutput.B v).estimate, lastGrade := some (.B v), phase := .toCallW },
+          estimate := (GBCAOutput.grade1 v).estimate, lastGrade := some (.grade1 v),
+            phase := .toCallW },
         q.2.setRoundRecord r
           ((q.2.roundRecord r).setProcess { (q.2.roundRecord r).process with returned := true })) :=
             by
@@ -656,8 +660,8 @@ theorem programStep_retG_B_own {r : ℕ} {v bnd : Bool}
   case retGIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
-theorem programStep_retG_C_own {r : ℕ} {bnd : Bool}
-    (h : ABAProgramStep P j q (Sum.inl (.retG r j .C bnd)) ν) :
+theorem programStep_retGGrade0_own {r : ℕ} {bnd : Bool}
+    (h : ABAProgramStep P j q (Sum.inl (.retG r j .grade0 bnd)) ν) :
     q.1.corrupted = false ∧
       q.1.process.phase = .awaitG ∧ q.1.process.round = r ∧ q.2.terminated = false ∧
       (q.2.roundRecord r).process.input ≠ none ∧ (q.2.roundRecord r).process.sentEcho5 ≠ none ∧
@@ -668,7 +672,7 @@ theorem programStep_retG_C_own {r : ℕ} {bnd : Bool}
       (q.2.roundRecord r).bothValid P ∧
       (q.2.roundRecord r).process.returned = false ∧
       ν = PMF.pure (q.1.setProcess { q.1.process with
-          estimate := GBCAOutput.C.estimate, lastGrade := some .C, phase := .toCallW },
+          estimate := GBCAOutput.grade0.estimate, lastGrade := some .grade0, phase := .toCallW },
         q.2.setRoundRecord r
           ((q.2.roundRecord r).setProcess { (q.2.roundRecord r).process with returned := true })) :=
             by

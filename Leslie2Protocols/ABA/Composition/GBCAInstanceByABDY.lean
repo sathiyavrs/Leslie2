@@ -70,8 +70,9 @@ broadcasts `fail` to every round at once.
 * **The round's bound bit.** The ghost field `NetworkState.bound` belongs to the
   network, so the two return rows that write it are the network's
   (`GBCANetworkStep.retGIdle`, `GBCANetworkStep.byzantineRetG`), and a program's return row takes
-  the announced bit free. The write is the one in `ImplementationStep.retA`/`retB`/`retC`,
-  which is what keeps `composition_projects` an equality.
+  the announced bit free. The write is the one in
+  `ImplementationStep.retGrade2`/`retGrade1`/`retGrade0`, which is what keeps `composition_projects`
+  an equality.
 * **D18 (the five message levels).** The send rows are the five levels
   `INPUT / ECHO / VOTE / BIND / ECHO5` and the three graded returns of the
   cited algorithm, not the four-round compression. The rows are taken in the
@@ -80,7 +81,7 @@ broadcasts `fail` to every round at once.
   for no own send, the `ECHO` they read being sent by an `upon` handler that
   may still be pending. The `⊥` rows and the returns carry the negations
   that the algorithm's if/else chain implies, the return rows in the reduced
-  form `GBCA.ByABDY.ImplementationStep.retC` states.
+  form `GBCA.ByABDY.ImplementationStep.retGrade0` states.
 
 ## The interface
 
@@ -186,42 +187,42 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
   (`ImplementationStep.callLoop`). -/
   | callLoop (p : GBCA.ByABDY.RoundRecord P.n) (id : Fin P.n) (b : Bool) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inr (.gbcaCallLoop r id b))) (PMF.pure p)
-  /-- Return with grade `A v`: an `n − f` `ECHO5 v` quorum, the record called
-  and its own `ECHO5` out (`ImplementationStep.retA`). -/
-  | retA (p : GBCA.ByABDY.RoundRecord P.n) (v : Bool) (bnd : Bool)
+  /-- Return with outcome `grade2 v`: an `n − f` `ECHO5 v` quorum, the record called
+  and its own `ECHO5` out (`ImplementationStep.retGrade2`). -/
+  | retGrade2 (p : GBCA.ByABDY.RoundRecord P.n) (v : Bool) (bnd : Bool)
       (hin : p.process.input ≠ none)
       (hlv : p.process.sentEcho5 ≠ none)
       (hcnt : P.n - P.f ≤ p.receivedCount (.echo5 (some v)))
       (hret : p.process.returned = false) :
-      GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r j (.A v) bnd)))
+      GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r j (.grade2 v) bnd)))
         (PMF.pure (p.setProcess { p.process with returned := true }))
-  /-- Return with grade `B v`: an `n − f` any-`ECHO5` quorum containing
+  /-- Return with outcome `grade1 v`: an `n − f` any-`ECHO5` quorum containing
   `ECHO5 v`, `f + 1` `BIND v`s and `|Valid| > 1`, the record called, its own
-  `ECHO5` out and case (1) denied at either bit (`ImplementationStep.retB`). -/
-  | retB (p : GBCA.ByABDY.RoundRecord P.n) (v : Bool) (bnd : Bool)
+  `ECHO5` out and case (1) denied at either bit (`ImplementationStep.retGrade1`). -/
+  | retGrade1 (p : GBCA.ByABDY.RoundRecord P.n) (v : Bool) (bnd : Bool)
       (hin : p.process.input ≠ none)
       (hlv : p.process.sentEcho5 ≠ none)
-      (hnotA : ∀ v, p.receivedCount (.echo5 (some v)) < P.n - P.f)
+      (hnotGrade2 : ∀ v, p.receivedCount (.echo5 (some v)) < P.n - P.f)
       (hcnt : P.n - P.f ≤ p.echo5Count)
       (honce : ∃ k, GBCA.ByABDY.Message.echo5 (some v) ∈ p.received k)
       (hbind : P.f + 1 ≤ p.receivedCount (.bind (some v)))
       (hval : p.bothValid P)
       (hret : p.process.returned = false) :
-      GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r j (.B v) bnd)))
+      GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r j (.grade1 v) bnd)))
         (PMF.pure (p.setProcess { p.process with returned := true }))
-  /-- Return with grade `C`: an `n − f` `ECHO5 ⊥` quorum and `|Valid| > 1`, the
+  /-- Return with outcome `grade0`: an `n − f` `ECHO5 ⊥` quorum and `|Valid| > 1`, the
   record called, its own `ECHO5` out, case (1) denied at either bit and case (2)
-  denied in the reduced form `ImplementationStep.retC` states. -/
-  | retC (p : GBCA.ByABDY.RoundRecord P.n) (bnd : Bool)
+  denied in the reduced form `ImplementationStep.retGrade0` states. -/
+  | retGrade0 (p : GBCA.ByABDY.RoundRecord P.n) (bnd : Bool)
       (hin : p.process.input ≠ none)
       (hlv : p.process.sentEcho5 ≠ none)
-      (hnotA : ∀ v, p.receivedCount (.echo5 (some v)) < P.n - P.f)
-      (hnotB : ∀ v, (∃ k, GBCA.ByABDY.Message.echo5 (some v) ∈ p.received k) →
+      (hnotGrade2 : ∀ v, p.receivedCount (.echo5 (some v)) < P.n - P.f)
+      (hnotGrade1 : ∀ v, (∃ k, GBCA.ByABDY.Message.echo5 (some v) ∈ p.received k) →
         p.receivedCount (.bind (some v)) < P.f + 1)
       (hcnt : P.n - P.f ≤ p.receivedCount (.echo5 none))
       (hval : p.bothValid P)
       (hret : p.process.returned = false) :
-      GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r j .C bnd)))
+      GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r j .grade0 bnd)))
         (PMF.pure (p.setProcess { p.process with returned := true }))
   /-- A return to another process: not `j`'s business. -/
   | retIdle (p : GBCA.ByABDY.RoundRecord P.n) (id : Fin P.n) (out : GBCAOutput) (bnd : Bool)
@@ -241,40 +242,40 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
   does not move (`ImplementationStep.callLoop`). -/
   | byzantineCallLoop (p : GBCA.ByABDY.RoundRecord P.n) (k : Fin P.n) (b : Bool) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineCallGLoop r k b))) (PMF.pure p)
-  /-- A Byzantine grade-`A` return (D11): the honest row's evidence and guard, and
-  the same record write (`ImplementationStep.retA`). -/
-  | byzantineRetA (p : GBCA.ByABDY.RoundRecord P.n) (v : Bool) (bnd : Bool)
+  /-- A Byzantine grade-2 return (D11): the honest row's evidence and guard, and
+  the same record write (`ImplementationStep.retGrade2`). -/
+  | byzantineRetGrade2 (p : GBCA.ByABDY.RoundRecord P.n) (v : Bool) (bnd : Bool)
       (hin : p.process.input ≠ none)
       (hlv : p.process.sentEcho5 ≠ none)
       (hcnt : P.n - P.f ≤ p.receivedCount (.echo5 (some v)))
       (hret : p.process.returned = false) :
-      GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r j (.A v) bnd)))
+      GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r j (.grade2 v) bnd)))
         (PMF.pure (p.setProcess { p.process with returned := true }))
-  /-- A Byzantine grade-`B` return (D11): the honest row's evidence, denial and
-  guard, and the same record write (`ImplementationStep.retB`). -/
-  | byzantineRetB (p : GBCA.ByABDY.RoundRecord P.n) (v : Bool) (bnd : Bool)
+  /-- A Byzantine grade-1 return (D11): the honest row's evidence, denial and
+  guard, and the same record write (`ImplementationStep.retGrade1`). -/
+  | byzantineRetGrade1 (p : GBCA.ByABDY.RoundRecord P.n) (v : Bool) (bnd : Bool)
       (hin : p.process.input ≠ none)
       (hlv : p.process.sentEcho5 ≠ none)
-      (hnotA : ∀ v, p.receivedCount (.echo5 (some v)) < P.n - P.f)
+      (hnotGrade2 : ∀ v, p.receivedCount (.echo5 (some v)) < P.n - P.f)
       (hcnt : P.n - P.f ≤ p.echo5Count)
       (honce : ∃ k, GBCA.ByABDY.Message.echo5 (some v) ∈ p.received k)
       (hbind : P.f + 1 ≤ p.receivedCount (.bind (some v)))
       (hval : p.bothValid P)
       (hret : p.process.returned = false) :
-      GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r j (.B v) bnd)))
+      GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r j (.grade1 v) bnd)))
         (PMF.pure (p.setProcess { p.process with returned := true }))
-  /-- A Byzantine grade-`C` return (D11): the honest row's evidence, denials and
-  guard, and the same record write (`ImplementationStep.retC`). -/
-  | byzantineRetC (p : GBCA.ByABDY.RoundRecord P.n) (bnd : Bool)
+  /-- A Byzantine grade-0 return (D11): the honest row's evidence, denials and
+  guard, and the same record write (`ImplementationStep.retGrade0`). -/
+  | byzantineRetGrade0 (p : GBCA.ByABDY.RoundRecord P.n) (bnd : Bool)
       (hin : p.process.input ≠ none)
       (hlv : p.process.sentEcho5 ≠ none)
-      (hnotA : ∀ v, p.receivedCount (.echo5 (some v)) < P.n - P.f)
-      (hnotB : ∀ v, (∃ k, GBCA.ByABDY.Message.echo5 (some v) ∈ p.received k) →
+      (hnotGrade2 : ∀ v, p.receivedCount (.echo5 (some v)) < P.n - P.f)
+      (hnotGrade1 : ∀ v, (∃ k, GBCA.ByABDY.Message.echo5 (some v) ∈ p.received k) →
         p.receivedCount (.bind (some v)) < P.f + 1)
       (hcnt : P.n - P.f ≤ p.receivedCount (.echo5 none))
       (hval : p.bothValid P)
       (hret : p.process.returned = false) :
-      GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r j .C bnd)))
+      GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r j .grade0 bnd)))
         (PMF.pure (p.setProcess { p.process with returned := true }))
   /-- A Byzantine return at another process: not `j`'s business. -/
   | byzantineRetIdle (p : GBCA.ByABDY.RoundRecord P.n) (k : Fin P.n) (out : GBCAOutput) (bnd : Bool)
@@ -404,7 +405,7 @@ inductive GBCANetworkStep (P : Parameters) (r : ℕ) :
         (PMF.pure (w.recordGBCASend id (.input b)))
   /-- A return sends nothing, and writes the round's bound bit: the label's
   `bnd` is the bit on record if there is one and `boundOf`'s otherwise, and it
-  goes on record (`ImplementationStep.retA`/`retB`/`retC`). -/
+  goes on record (`ImplementationStep.retGrade2`/`retGrade1`/`retGrade0`). -/
   | retGIdle (w : NetworkState P.n) (id : Fin P.n) (out : GBCAOutput) (bnd : Bool)
       (hbnd : bnd = w.bound.getD (GBCA.ByABDY.boundOf w.sent w.F out)) :
       GBCANetworkStep P r w (Sum.inl (Sum.inl (.retG r id out bnd)))
@@ -718,18 +719,18 @@ theorem gbcaProgramStep_gbcaCallLoop {id : Fin P.n} {b : Bool}
   cases h
   case callLoop => rfl
 
-theorem gbcaProgramStep_retG_A_own {v bnd : Bool}
-    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r j (.A v) bnd))) ν) :
+theorem gbcaProgramStep_retGGrade2_own {v bnd : Bool}
+    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r j (.grade2 v) bnd))) ν) :
     p.process.input ≠ none ∧ p.process.sentEcho5 ≠ none ∧
       P.n - P.f ≤ p.receivedCount (.echo5 (some v)) ∧ p.process.returned = false ∧
       ν = PMF.pure (p.setProcess { p.process with returned := true }) := by
   cases h
-  case retA =>
+  case retGrade2 =>
     exact ⟨by assumption, by assumption, by assumption, by assumption, rfl⟩
   case retIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem gbcaProgramStep_retG_B_own {v bnd : Bool}
-    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r j (.B v) bnd))) ν) :
+theorem gbcaProgramStep_retGGrade1_own {v bnd : Bool}
+    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r j (.grade1 v) bnd))) ν) :
     p.process.input ≠ none ∧ p.process.sentEcho5 ≠ none ∧
       (∀ v, p.receivedCount (.echo5 (some v)) < P.n - P.f) ∧
       P.n - P.f ≤ p.echo5Count ∧ (∃ k, GBCA.ByABDY.Message.echo5 (some v) ∈ p.received k) ∧
@@ -737,13 +738,13 @@ theorem gbcaProgramStep_retG_B_own {v bnd : Bool}
       p.process.returned = false ∧
       ν = PMF.pure (p.setProcess { p.process with returned := true }) := by
   cases h
-  case retB =>
+  case retGrade1 =>
     exact ⟨by assumption, by assumption, by assumption, by assumption,
       by assumption, by assumption, by assumption, by assumption, rfl⟩
   case retIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem gbcaProgramStep_retG_C_own {bnd : Bool}
-    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r j .C bnd))) ν) :
+theorem gbcaProgramStep_retGGrade0_own {bnd : Bool}
+    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r j .grade0 bnd))) ν) :
     p.process.input ≠ none ∧ p.process.sentEcho5 ≠ none ∧
       (∀ v, p.receivedCount (.echo5 (some v)) < P.n - P.f) ∧
       (∀ v, (∃ k, GBCA.ByABDY.Message.echo5 (some v) ∈ p.received k) →
@@ -752,7 +753,7 @@ theorem gbcaProgramStep_retG_C_own {bnd : Bool}
       p.process.returned = false ∧
       ν = PMF.pure (p.setProcess { p.process with returned := true }) := by
   cases h
-  case retC =>
+  case retGrade0 =>
     exact ⟨by assumption, by assumption, by assumption, by assumption,
       by assumption, by assumption, by assumption, rfl⟩
   case retIdle => exact absurd rfl ‹_ ≠ j›
@@ -787,18 +788,18 @@ theorem gbcaProgramStep_byzantineCallGLoop {k : Fin P.n} {b : Bool}
   cases h
   case byzantineCallLoop => rfl
 
-theorem gbcaProgramStep_byzantineRetG_A_own {v bnd : Bool}
-    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r j (.A v) bnd))) ν) :
+theorem gbcaProgramStep_byzantineRetGGrade2_own {v bnd : Bool}
+    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r j (.grade2 v) bnd))) ν) :
     p.process.input ≠ none ∧ p.process.sentEcho5 ≠ none ∧
       P.n - P.f ≤ p.receivedCount (.echo5 (some v)) ∧ p.process.returned = false ∧
       ν = PMF.pure (p.setProcess { p.process with returned := true }) := by
   cases h
-  case byzantineRetA =>
+  case byzantineRetGrade2 =>
     exact ⟨by assumption, by assumption, by assumption, by assumption, rfl⟩
   case byzantineRetIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem gbcaProgramStep_byzantineRetG_B_own {v bnd : Bool}
-    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r j (.B v) bnd))) ν) :
+theorem gbcaProgramStep_byzantineRetGGrade1_own {v bnd : Bool}
+    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r j (.grade1 v) bnd))) ν) :
     p.process.input ≠ none ∧ p.process.sentEcho5 ≠ none ∧
       (∀ v, p.receivedCount (.echo5 (some v)) < P.n - P.f) ∧
       P.n - P.f ≤ p.echo5Count ∧ (∃ k, GBCA.ByABDY.Message.echo5 (some v) ∈ p.received k) ∧
@@ -806,13 +807,13 @@ theorem gbcaProgramStep_byzantineRetG_B_own {v bnd : Bool}
       p.process.returned = false ∧
       ν = PMF.pure (p.setProcess { p.process with returned := true }) := by
   cases h
-  case byzantineRetB =>
+  case byzantineRetGrade1 =>
     exact ⟨by assumption, by assumption, by assumption, by assumption,
       by assumption, by assumption, by assumption, by assumption, rfl⟩
   case byzantineRetIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem gbcaProgramStep_byzantineRetG_C_own {bnd : Bool}
-    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r j .C bnd))) ν) :
+theorem gbcaProgramStep_byzantineRetGGrade0_own {bnd : Bool}
+    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r j .grade0 bnd))) ν) :
     p.process.input ≠ none ∧ p.process.sentEcho5 ≠ none ∧
       (∀ v, p.receivedCount (.echo5 (some v)) < P.n - P.f) ∧
       (∀ v, (∃ k, GBCA.ByABDY.Message.echo5 (some v) ∈ p.received k) →
@@ -821,7 +822,7 @@ theorem gbcaProgramStep_byzantineRetG_C_own {bnd : Bool}
       p.process.returned = false ∧
       ν = PMF.pure (p.setProcess { p.process with returned := true }) := by
   cases h
-  case byzantineRetC =>
+  case byzantineRetGrade0 =>
     exact ⟨by assumption, by assumption, by assumption, by assumption,
       by assumption, by assumption, by assumption, rfl⟩
   case byzantineRetIdle => exact absurd rfl ‹_ ≠ j›
@@ -1329,7 +1330,7 @@ anywhere:
 | `callG` (caller writes, network records) | `ImplementationStep.call` |
 | `gbcaCallLoop`, `byzantineCallGLoop` | `ImplementationStep.callLoop` |
 | `byzantineCallG` (D11) | `ImplementationStep.call` |
-| `retG` / `byzantineRetG`, by grade | `ImplementationStep.retA` / `retB` / `retC` |
+| `retG` / `byzantineRetG`, by grade | `ImplementationStep.retGrade2` / `retGrade1` / `retGrade0` |
 | hidden `send` rendezvous, by level | the eight protocol `τ` rules |
 | hidden `deliver` rendezvous | `ImplementationStep.deliver` |
 | network-local injection | `ImplementationStep.byzantine` |
@@ -1443,21 +1444,23 @@ theorem composition_projects (P : Parameters) (r : ℕ) :
             fun i hi => PMF.pure_injective (gbcaProgramStep_retG_foreign (Ne.symm hi) (hall i))
           refine ⟨_, rfl, ?_⟩
           cases out with
-          | A v =>
-            obtain ⟨hin, hlv, hcnt, hret, hx⟩ := gbcaProgramStep_retG_A_own (hall id)
+          | grade2 v =>
+            obtain ⟨hin, hlv, hcnt, hret, hx⟩ := gbcaProgramStep_retGGrade2_own (hall id)
             rw [composition_setProcess_setBound (PMF.pure_injective hx) hfor]
-            exact GBCA.ByABDY.ImplementationStep.retA _ id v bnd hin hlv hcnt hret hbnd
-          | B v =>
-            obtain ⟨hin, hlv, hnotA, hcnt, honce, hbind, hval, hret, hx⟩ :=
-              gbcaProgramStep_retG_B_own (hall id)
+            exact GBCA.ByABDY.ImplementationStep.retGrade2 _ id v bnd hin hlv hcnt hret hbnd
+          | grade1 v =>
+            obtain ⟨hin, hlv, hnotGrade2, hcnt, honce, hbind, hval, hret, hx⟩ :=
+              gbcaProgramStep_retGGrade1_own (hall id)
             rw [composition_setProcess_setBound (PMF.pure_injective hx) hfor]
-            exact GBCA.ByABDY.ImplementationStep.retB _ id v bnd hin hlv hnotA hcnt honce hbind hval
+            exact GBCA.ByABDY.ImplementationStep.retGrade1 _ id v bnd hin hlv hnotGrade2 hcnt honce
+              hbind hval
               hret hbnd
-          | C =>
-            obtain ⟨hin, hlv, hnotA, hnotB, hcnt, hval, hret, hx⟩ :=
-              gbcaProgramStep_retG_C_own (hall id)
+          | grade0 =>
+            obtain ⟨hin, hlv, hnotGrade2, hnotGrade1, hcnt, hval, hret, hx⟩ :=
+              gbcaProgramStep_retGGrade0_own (hall id)
             rw [composition_setProcess_setBound (PMF.pure_injective hx) hfor]
-            exact GBCA.ByABDY.ImplementationStep.retC _ id bnd hin hlv hnotA hnotB hcnt hval hret
+            exact GBCA.ByABDY.ImplementationStep.retGrade0 _ id bnd hin hlv hnotGrade2 hnotGrade1
+              hcnt hval hret
               hbnd
       | inr ev =>
         cases ev with
@@ -1506,21 +1509,23 @@ theorem composition_projects (P : Parameters) (r : ℕ) :
               i))
           refine ⟨_, rfl, ?_⟩
           cases out with
-          | A v =>
-            obtain ⟨hin, hlv, hcnt, hret, hx⟩ := gbcaProgramStep_byzantineRetG_A_own (hall k)
+          | grade2 v =>
+            obtain ⟨hin, hlv, hcnt, hret, hx⟩ := gbcaProgramStep_byzantineRetGGrade2_own (hall k)
             rw [composition_setProcess_setBound (PMF.pure_injective hx) hfor]
-            exact GBCA.ByABDY.ImplementationStep.retA _ k v bnd hin hlv hcnt hret hbnd
-          | B v =>
-            obtain ⟨hin, hlv, hnotA, hcnt, honce, hbind, hval, hret, hx⟩ :=
-              gbcaProgramStep_byzantineRetG_B_own (hall k)
+            exact GBCA.ByABDY.ImplementationStep.retGrade2 _ k v bnd hin hlv hcnt hret hbnd
+          | grade1 v =>
+            obtain ⟨hin, hlv, hnotGrade2, hcnt, honce, hbind, hval, hret, hx⟩ :=
+              gbcaProgramStep_byzantineRetGGrade1_own (hall k)
             rw [composition_setProcess_setBound (PMF.pure_injective hx) hfor]
-            exact GBCA.ByABDY.ImplementationStep.retB _ k v bnd hin hlv hnotA hcnt honce hbind hval
+            exact GBCA.ByABDY.ImplementationStep.retGrade1 _ k v bnd hin hlv hnotGrade2 hcnt honce
+              hbind hval
               hret hbnd
-          | C =>
-            obtain ⟨hin, hlv, hnotA, hnotB, hcnt, hval, hret, hx⟩ :=
-              gbcaProgramStep_byzantineRetG_C_own (hall k)
+          | grade0 =>
+            obtain ⟨hin, hlv, hnotGrade2, hnotGrade1, hcnt, hval, hret, hx⟩ :=
+              gbcaProgramStep_byzantineRetGGrade0_own (hall k)
             rw [composition_setProcess_setBound (PMF.pure_injective hx) hfor]
-            exact GBCA.ByABDY.ImplementationStep.retC _ k bnd hin hlv hnotA hnotB hcnt hval hret
+            exact GBCA.ByABDY.ImplementationStep.retGrade0 _ k bnd hin hlv hnotGrade2 hnotGrade1
+              hcnt hval hret
               hbnd
 
 /-! ### The round instance is refined by the graded agreement specification

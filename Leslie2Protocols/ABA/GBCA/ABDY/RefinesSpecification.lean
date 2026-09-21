@@ -39,11 +39,11 @@ carries receipt evidence for them instead:
   `2(n − f) > n + f` (`no_disjoint_quorums`). The relation bounds `excluded` from
   above and never from below: which bits are actually excluded is recovered by
   case analysis at the return rows, not stored.
-* `gradeA_evidence` / `gradeC_evidence` — an `A`-side grade lock is backed by an `n − f`
-  `ECHO5 v` receipt quorum, a `C`-side lock by an `n − f` `ECHO5 ⊥` quorum. Two
+* `grade2_evidence` / `grade0_evidence` — a grade-2 lock is backed by an `n − f`
+  `ECHO5 v` receipt quorum, a grade-0 lock by an `n − f` `ECHO5 ⊥` quorum. Two
   opposing quorums intersect in an honest process that would have multicast
   two different `ECHO5` payloads, contradicting the write-once `echo5_once` —
-  which is the A/C exclusivity the specification's grade guard demands
+  which is the grade-2 / grade-0 exclusivity the specification's grade guard demands
   (`grade_ne_false_of_echo5_quorum`, `grade_ne_true_of_echo5Bot_quorum`).
 * `bound_excluded` — the round's bound bit and the specification's `excluded`
   determine each other: `excluded = excludedOf bound`, empty while the bit is
@@ -56,25 +56,25 @@ carries receipt evidence for them instead:
   announces its own value (`SpecificationRelation.retBound_eq`) — the return's `n − f`
   `VOTE v` receipt quorum refutes a certificate for `v`
   (`not_exclusionCertificate_of_voteQuorum`), so a bit on record is `v`, and a bit
-  computed here is `v` by `boundOf`. A `C`-return announces
-  `boundOf`'s bit, whose complement is certified by `exclusionCertificate_boundOf_C`:
+  computed here is `v` by `boundOf`. A grade-0 return announces
+  `boundOf`'s bit, whose complement is certified by `exclusionCertificate_boundOf_grade0`:
   an honest bit-voter's `vote_confirmed` receipt quorum is Case A for the opposite
   bit, and where there is no honest bit-voter the all-⊥ wall
   (`exclusionCertificate_of_noCorrectVote`) certifies both bits at once.
 
 The specification excludes a bit by the internal τ-transition `bindUnset`, so an
 implementation return that needs a not-yet-excluded bit excluded is answered by a
-two-step weak run (`weakLStep_tauThen`; `excludeThenRetA_run`,
-`excludeThenRetB_run`, `excludeThenRetC_run`). Every return row does the same
+two-step weak run (`weakLStep_tauThen`; `excludeThenRetGrade2_run`,
+`excludeThenRetGrade1_run`, `excludeThenRetGrade0_run`). Every return row does the same
 decidable case split on the specification's `excluded`, and the run fires
 whenever the exclusion is missing. Each return's own evidence derives the
-certificate: `retA`'s `ECHO5 v` quorum and `retB`'s `f + 1` `BIND v` receipts
+certificate: `retGrade2`'s `ECHO5 v` quorum and `retGrade1`'s `f + 1` `BIND v` receipts
 both route to an `n − f` `VOTE v` receipt quorum at an honest process
 (`bind_receipts_of_echo5_quorum`, `voteQuorum_of_bind_receipts`), which excludes
 `!v` — the quorum itself is a `VoteQuorumAgainst` (`exclusionCertificate_of_voteQuorum`) — and
 certifies `v` alive (`not_exclusionCertificate_of_voteQuorum`, which is what discharges
 the guard pair `v ∉ excluded ∧ (!v) ∈ excluded` and with it value agreement between
-successive returns). The `C`-return's `ECHO5 ⊥` quorum yields a certificate
+successive returns). The grade-0 return's `ECHO5 ⊥` quorum yields a certificate
 for *some* bit (`exclusionCertificate_of_echo5Bot_quorum`): if an honest bit-voter exists
 anywhere, its `vote_confirmed` receipt quorum is Case A for the opposite bit; otherwise the honest
 vote prefix is all-⊥ and the `VoteQuorumAgainst` holds for both
@@ -85,7 +85,7 @@ refine it to an `n − f` `INPUT v` receipt quorum (`inputQuorum_of_echoReceiptQ
 whose honest senders hold an input (`input_called`, D8) — that is the quorum
 guard (`quorum_of_msg_quorum`) — and whose count feeds
 `Invariant.support_of_input_receipts` for the `f + 1` InputSupport count (D15). At the
-`C`-return the guards read the returner's own `|Valid| > 1` evidence instead
+grade-0 return the guards read the returner's own `|Valid| > 1` evidence instead
 (`inputSupport_of_bothValid` closes both bits at once), so they are available whichever
 bit the certificate names. `SpecificationRelation.callSupport` transports the counts to the
 specification side along `call_eq`/`F_eq`.
@@ -779,17 +779,17 @@ theorem Invariant.step {r : ℕ} {s : ImplementationState P.n} {l : Label P.n}
         hI.input_origin b G hFG hGc j' hjG (hsentG G hFG j' _ hjG hm')
     · exact fun b j' hF hm' => hI.input_support b j' hF (hs j' _ hF hm')
     · exact fun j' b hF hm' => hI.input_called j' b hF (hs j' _ hF hm')
-  | retA id v bnd _hin _hlv hcnt hr _hbnd =>
+  | retGrade2 id v bnd _hin _hlv hcnt hr _hbnd =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     refine Invariant.setBound ?_ bnd
     exact hI.setProcess_unchanged rfl rfl rfl rfl rfl
-  | retB id v bnd _hin _hlv _hnotA hcnt honce hbind hval hr _hbnd =>
+  | retGrade1 id v bnd _hin _hlv _hnotGrade2 hcnt honce hbind hval hr _hbnd =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     refine Invariant.setBound ?_ bnd
     exact hI.setProcess_unchanged rfl rfl rfl rfl rfl
-  | retC id bnd _hin _hlv _hnotA _hnotB hcnt hval hr _hbnd =>
+  | retGrade0 id bnd _hin _hlv _hnotGrade2 _hnotGrade1 hcnt hval hr _hbnd =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     refine Invariant.setBound ?_ bnd
@@ -1068,7 +1068,7 @@ theorem not_exclusionCertificate_of_voteQuorum {s : ImplementationState P.n} (hI
       rw [hsv] at hcommit
       exact hne (Option.some.inj hcommit)
 
-/-- **Availability at the `C`-return**: an `n − f` `ECHO5 ⊥` receipt quorum
+/-- **Availability at the grade-0 return**: an `n − f` `ECHO5 ⊥` receipt quorum
 certifies *some* excluded bit. Classical dichotomy on "an honest bit-voter
 exists somewhere": if yes, its `vote_confirmed` receipt quorum is Case A for the
 opposite bit; if no, the quorum's honest `ECHO5` sender holds `n − f` any-`BIND`
@@ -1117,7 +1117,7 @@ theorem exclusionCertificate_of_noCorrectVote {s : ImplementationState P.n} (hI 
       subst hnone
       exact Or.inr ⟨none, hI.vote_once q none hqF hqs, by simp⟩
 
-/-- **Availability at the `C`-return**: an `n − f` `ECHO5 ⊥` receipt quorum
+/-- **Availability at the grade-0 return**: an `n − f` `ECHO5 ⊥` receipt quorum
 certifies *some* excluded bit. Classical dichotomy on "an honest bit-voter
 exists somewhere": if yes, its `vote_confirmed` receipt quorum is Case A for the
 opposite bit; if no, the all-⊥ wall of `exclusionCertificate_of_noCorrectVote`
@@ -1133,16 +1133,16 @@ theorem exclusionCertificate_of_echo5Bot_quorum {s : ImplementationState P.n} (h
     exact ⟨k, hI.vote_confirmed k b hkF hks⟩
   · exact ⟨false, exclusionCertificate_of_noCorrectVote hI h hcase false⟩
 
-/-- **The `C`-return's announced bit is certified.** At an `n − f` `ECHO5 ⊥`
+/-- **The grade-0 return's announced bit is certified.** At an `n − f` `ECHO5 ⊥`
 receipt quorum the complement of `boundOf … C` carries an exclude certificate.
 Where an honest bit-voter exists its `vote_confirmed` receipt quorum is Case A for
 the opposite bit, which is the bit `boundOf` names; where none exists the wall
 covers both bits at once. -/
-theorem exclusionCertificate_boundOf_C {s : ImplementationState P.n} (hI : Invariant P s)
+theorem exclusionCertificate_boundOf_grade0 {s : ImplementationState P.n} (hI : Invariant P s)
     {i : Fin P.n} (h : P.n - P.f ≤ s.receivedCount i (.echo5 none)) :
-    ExclusionCertificate P s (!(boundOf s.sent s.F .C)) := by
+    ExclusionCertificate P s (!(boundOf s.sent s.F .grade0)) := by
   classical
-  rw [boundOf_C]
+  rw [boundOf_grade0]
   split_ifs with h1 h2
   · obtain ⟨k, hkF, hks⟩ := h1
     exact Or.inl ⟨k, hI.vote_confirmed k true hkF hks⟩
@@ -1183,13 +1183,13 @@ structure SpecificationRelation (P : Parameters) (s : ImplementationState P.n) (
   F_eq : t.F = s.F
   /-- Every excluded bit carries a monotone exclude certificate. -/
   exclusion_certificate : ∀ b, b ∈ t.excluded → ExclusionCertificate P s b
-  /-- An `A`-side grade lock is backed by an `n − f` `ECHO5 v` receipt quorum
+  /-- A grade-2 lock is backed by an `n − f` `ECHO5 v` receipt quorum
   for some bit `v`. -/
-  gradeA_evidence : t.grade = some true →
+  grade2_evidence : t.grade = some true →
     ∃ v i, P.n - P.f ≤ s.receivedCount i (.echo5 (some v))
-  /-- A `C`-side grade lock is backed by an `n − f` `ECHO5 ⊥` receipt
+  /-- A grade-0 lock is backed by an `n − f` `ECHO5 ⊥` receipt
   quorum. -/
-  gradeC_evidence : t.grade = some false →
+  grade0_evidence : t.grade = some false →
     ∃ i, P.n - P.f ≤ s.receivedCount i (.echo5 none)
   /-- The round's bound bit determines the exclusion set: nothing is excluded
   while the bit is unwritten, and the complement of the bit is the one excluded
@@ -1211,8 +1211,8 @@ theorem specificationRelation_init (P : Parameters) (r : ℕ) :
   ret_eq := fun _ => rfl
   F_eq := rfl
   exclusion_certificate := fun b hb => absurd hb (Finset.notMem_empty b)
-  gradeA_evidence := fun h => absurd h (by simp [SpecState.initial])
-  gradeC_evidence := fun h => absurd h (by simp [SpecState.initial])
+  grade2_evidence := fun h => absurd h (by simp [SpecState.initial])
+  grade0_evidence := fun h => absurd h (by simp [SpecState.initial])
   bound_excluded := rfl
 
 /-- The bound bit on record carries an exclude certificate for its complement:
@@ -1247,7 +1247,7 @@ theorem SpecificationRelation.retBound_eq {s : ImplementationState P.n} {t : Spe
 
 /-! ### Deriving the spec guards -/
 
-/-- D15 derivation at `retB`/`retC`: `|Valid| > 1` evidence yields the
+/-- D15 derivation at `retGrade1`/`retGrade0`: `|Valid| > 1` evidence yields the
 `f + 1` F-blind genuine-holder support for either bit — its `n − f ≥ f + 1`
 `INPUT` receipt quorum for that bit sits at the returner itself. -/
 theorem inputSupport_of_bothValid {s : ImplementationState P.n} (hI : Invariant P s)
@@ -1303,15 +1303,15 @@ theorem bindUnset_guards {s : ImplementationState P.n} {t : SpecState P.n}
     (fun j hj hm' => hR.invariant.input_called j v hj hm') hm, ?_⟩
   exact hR.callSupport (hR.invariant.support_of_input_receipts (le_trans (by omega) hm))
 
-/-- A/C-exclusivity, `A`-side: an `n − f` `ECHO5 v` receipt quorum rules out
-a `C`-side grade lock (the two `ECHO5` quorums would intersect in an honest
+/-- Grade exclusivity, grade-2 side: an `n − f` `ECHO5 v` receipt quorum rules out
+a grade-0 lock (the two `ECHO5` quorums would intersect in an honest
 process with two different `ECHO5` payloads, against `echo5_once`). -/
 theorem grade_ne_false_of_echo5_quorum {s : ImplementationState P.n} {t : SpecState P.n}
     (hR : SpecificationRelation P s t) {id : Fin P.n} {v : Bool}
     (hcnt : P.n - P.f ≤ s.receivedCount id (.echo5 (some v))) :
     t.grade ≠ some false := by
   intro hg
-  obtain ⟨i', hc⟩ := hR.gradeC_evidence hg
+  obtain ⟨i', hc⟩ := hR.grade0_evidence hg
   obtain ⟨j, hjF, hj1,
     hj2⟩ := ImplementationState.exists_correct_received₂ hR.invariant.F_card hcnt hc
   have e1 := hR.invariant.echo5_once j (some v) hjF (hR.invariant.received_subset_sent id j _ hj1)
@@ -1319,14 +1319,14 @@ theorem grade_ne_false_of_echo5_quorum {s : ImplementationState P.n} {t : SpecSt
   rw [e1] at e2
   exact absurd (Option.some.inj e2) (by simp)
 
-/-- A/C-exclusivity, `C`-side: an `n − f` `ECHO5 ⊥` receipt quorum rules out
-an `A`-side grade lock. -/
+/-- Grade exclusivity, grade-0 side: an `n − f` `ECHO5 ⊥` receipt quorum rules out
+a grade-2 lock. -/
 theorem grade_ne_true_of_echo5Bot_quorum {s : ImplementationState P.n} {t : SpecState P.n}
     (hR : SpecificationRelation P s t) {id : Fin P.n}
     (hcnt : P.n - P.f ≤ s.receivedCount id (.echo5 none)) :
     t.grade ≠ some true := by
   intro hg
-  obtain ⟨v', i', hc⟩ := hR.gradeA_evidence hg
+  obtain ⟨v', i', hc⟩ := hR.grade2_evidence hg
   obtain ⟨j, hjF, hj1,
     hj2⟩ := ImplementationState.exists_correct_received₂ hR.invariant.F_card hc hcnt
   have e1 := hR.invariant.echo5_once j (some v') hjF (hR.invariant.received_subset_sent i' j _ hj1)
@@ -1346,29 +1346,29 @@ theorem excluded_eq_singleton {d : Finset Bool} {v : Bool}
     (h1 : v ∉ d) (h2 : (!v) ∈ d) : d = {!v} := by
   ext b; cases b <;> cases v <;> simp_all
 
-/-- `bindUnset (!v) ; retA v` from an all-alive state (`excluded = ∅`, the
+/-- `bindUnset (!v) ; retGrade2 v` from an all-alive state (`excluded = ∅`, the
 `bindUnset` guard). The `bindUnset (!v)` support guard reads `some (!(!v))`; `Bool.not_not` rewrites
 it to `hw`'s `some v`. The exclusion of `!v` is also
 the announced bit's guard, so the return announces `v`. -/
-theorem excludeThenRetA_run {r : ℕ} {t : SpecState P.n} {id : Fin P.n} {v : Bool}
+theorem excludeThenRetGrade2_run {r : ℕ} {t : SpecState P.n} {id : Fin P.n} {v : Bool}
     (hq : t.quorum P)
     (hw : P.f + 1 ≤ (Finset.univ.filter
       (fun k => t.call k = some v ∨ k ∈ t.F)).card)
     (hlive : v ∉ t.excluded) (hd0 : t.excluded = ∅)
     (hg : t.grade = none ∨ t.grade = some true)
     (hr : t.ret id = false) :
-    (specInst P r).weakLStep t (.retG r id (.A v) v)
+    (specInst P r).weakLStep t (.retG r id (.grade2 v) v)
       { t with
         excluded := insert (!v) t.excluded, grade := some true,
                ret := Function.update t.ret id true } := by
   have h1 : (specInst P r).LStep t Silent.τ { t with excluded := insert (!v) t.excluded } :=
     Step.bindUnset t (!v) hq (by simpa only [Bool.not_not] using hw) hd0
   have h2 : (specInst P r).LStep { t with excluded := insert (!v) t.excluded }
-      (.retG r id (.A v) v)
+      (.retG r id (.grade2 v) v)
       { t with
         excluded := insert (!v) t.excluded, grade := some true,
                ret := Function.update t.ret id true } := by
-    refine Step.retA { t with excluded := insert (!v) t.excluded } id v v ?_
+    refine Step.retGrade2 { t with excluded := insert (!v) t.excluded } id v v ?_
       (Finset.mem_insert_self (!v) t.excluded)
       (Finset.mem_insert_self (!v) t.excluded) hg hr
     rw [Finset.mem_insert]
@@ -1377,9 +1377,9 @@ theorem excludeThenRetA_run {r : ℕ} {t : SpecState P.n} {id : Fin P.n} {v : Bo
     · exact hlive hv
   exact weakLStep_tauThen h1 h2 (by simp)
 
-/-- `bindUnset (!v) ; retB v`: the same run with the dissent count in
+/-- `bindUnset (!v) ; retGrade1 v`: the same run with the dissent count in
 place of the grade guard. -/
-theorem excludeThenRetB_run {r : ℕ} {t : SpecState P.n} {id : Fin P.n} {v : Bool}
+theorem excludeThenRetGrade1_run {r : ℕ} {t : SpecState P.n} {id : Fin P.n} {v : Bool}
     (hq : t.quorum P)
     (hw : P.f + 1 ≤ (Finset.univ.filter
       (fun k => t.call k = some v ∨ k ∈ t.F)).card)
@@ -1387,18 +1387,18 @@ theorem excludeThenRetB_run {r : ℕ} {t : SpecState P.n} {id : Fin P.n} {v : Bo
     (hd : P.f + 1 ≤ (Finset.univ.filter
       (fun k => t.call k = some (!v) ∨ k ∈ t.F)).card)
     (hr : t.ret id = false) :
-    (specInst P r).weakLStep t (.retG r id (.B v) v)
+    (specInst P r).weakLStep t (.retG r id (.grade1 v) v)
       { t with
         excluded := insert (!v) t.excluded,
                ret := Function.update t.ret id true } := by
   have h1 : (specInst P r).LStep t Silent.τ { t with excluded := insert (!v) t.excluded } :=
     Step.bindUnset t (!v) hq (by simpa only [Bool.not_not] using hw) hd0
   have h2 : (specInst P r).LStep { t with excluded := insert (!v) t.excluded }
-      (.retG r id (.B v) v)
+      (.retG r id (.grade1 v) v)
       { t with
         excluded := insert (!v) t.excluded,
                ret := Function.update t.ret id true } := by
-    refine Step.retB { t with excluded := insert (!v) t.excluded } id v v ?_
+    refine Step.retGrade1 { t with excluded := insert (!v) t.excluded } id v v ?_
       (Finset.mem_insert_self (!v) t.excluded)
       (Finset.mem_insert_self (!v) t.excluded) hd hr
     rw [Finset.mem_insert]
@@ -1407,10 +1407,10 @@ theorem excludeThenRetB_run {r : ℕ} {t : SpecState P.n} {id : Fin P.n} {v : Bo
     · exact hlive hv
   exact weakLStep_tauThen h1 h2 (by simp)
 
-/-- `bindUnset (!bnd) ; retC` from an all-alive state (`excluded = ∅`, the
+/-- `bindUnset (!bnd) ; retGrade0` from an all-alive state (`excluded = ∅`, the
 `bindUnset` guard): the exclusion of `!bnd` is the announced bit's guard, so the
 return announces `bnd`. -/
-theorem excludeThenRetC_run {r : ℕ} {t : SpecState P.n} {id : Fin P.n} {bnd : Bool}
+theorem excludeThenRetGrade0_run {r : ℕ} {t : SpecState P.n} {id : Fin P.n} {bnd : Bool}
     (hq : t.quorum P)
     (hw : P.f + 1 ≤ (Finset.univ.filter
       (fun k => t.call k = some bnd ∨ k ∈ t.F)).card)
@@ -1421,7 +1421,7 @@ theorem excludeThenRetC_run {r : ℕ} {t : SpecState P.n} {id : Fin P.n} {bnd : 
       (fun k => t.call k = some false ∨ k ∈ t.F)).card)
     (hg : t.grade = none ∨ t.grade = some false)
     (hr : t.ret id = false) :
-    (specInst P r).weakLStep t (.retG r id .C bnd)
+    (specInst P r).weakLStep t (.retG r id .grade0 bnd)
       { t with
         excluded := insert (!bnd) t.excluded, grade := some false,
                ret := Function.update t.ret id true } := by
@@ -1429,11 +1429,11 @@ theorem excludeThenRetC_run {r : ℕ} {t : SpecState P.n} {id : Fin P.n} {bnd : 
       { t with excluded := insert (!bnd) t.excluded } :=
     Step.bindUnset t (!bnd) hq (by simpa only [Bool.not_not] using hw) hd0
   have h2 : (specInst P r).LStep { t with excluded := insert (!bnd) t.excluded }
-      (.retG r id .C bnd)
+      (.retG r id .grade0 bnd)
       { t with
         excluded := insert (!bnd) t.excluded, grade := some false,
                ret := Function.update t.ret id true } :=
-    Step.retC { t with excluded := insert (!bnd) t.excluded } id bnd
+    Step.retGrade0 { t with excluded := insert (!bnd) t.excluded } id bnd
       (Finset.mem_insert_self (!bnd) t.excluded) hwT hwF hg hr
   exact weakLStep_tauThen h1 h2 (by simp)
 
@@ -1469,7 +1469,7 @@ theorem refinesSpecification (P : Parameters) (r : ℕ) :
       Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
         (Step.call q2 id b (by rw [hRR.call_eq]; exact h))⟩,
       hI', ?_, ?_, hRR.F_eq, ?_,
-      by simpa using hRR.gradeA_evidence, by simpa using hRR.gradeC_evidence,
+      by simpa using hRR.grade2_evidence, by simpa using hRR.grade0_evidence,
       hRR.bound_excluded⟩
     · intro k
       change Function.update q2.call id (some b) k = _
@@ -1503,11 +1503,11 @@ theorem refinesSpecification (P : Parameters) (r : ℕ) :
         (fun i' j' m' hm' => ImplementationState.mem_receiveMessage_received.mpr (Or.inr hm'))
         (fun k w hk => by simpa using hk) (Finset.Subset.refl _) (hRR.exclusion_certificate b hb)
     · intro hg
-      obtain ⟨v0, i0, hi0⟩ := hRR.gradeA_evidence hg
+      obtain ⟨v0, i0, hi0⟩ := hRR.grade2_evidence hg
       exact ⟨v0, i0,
         le_trans hi0 (ImplementationState.receivedCount_le_receiveMessage q1 i j m i0 _)⟩
     · intro hg
-      obtain ⟨i0, hi0⟩ := hRR.gradeC_evidence hg
+      obtain ⟨i0, hi0⟩ := hRR.grade0_evidence hg
       exact ⟨i0, le_trans hi0 (ImplementationState.receivedCount_le_receiveMessage q1 i j m i0 _)⟩
   | relay j b hin hcnt hsend =>
     rw [PMF.mem_support_pure_iff] at hq1'
@@ -1516,7 +1516,7 @@ theorem refinesSpecification (P : Parameters) (r : ℕ) :
       hI', ?_, ?_, hRR.F_eq,
       fun b' hb' => exclusionCertificate_send (by intro w hw; exact hw)
         (hRR.exclusion_certificate b' hb'),
-      by simpa using hRR.gradeA_evidence, by simpa using hRR.gradeC_evidence,
+      by simpa using hRR.grade2_evidence, by simpa using hRR.grade0_evidence,
       hRR.bound_excluded⟩
     · intro k
       by_cases hk : k = j
@@ -1537,7 +1537,7 @@ theorem refinesSpecification (P : Parameters) (r : ℕ) :
       hI', ?_, ?_, hRR.F_eq,
       fun b' hb' => exclusionCertificate_send (by intro w hw; exact hw)
         (hRR.exclusion_certificate b' hb'),
-      by simpa using hRR.gradeA_evidence, by simpa using hRR.gradeC_evidence,
+      by simpa using hRR.grade2_evidence, by simpa using hRR.grade0_evidence,
       hRR.bound_excluded⟩
     · intro k
       by_cases hk : k = j
@@ -1559,7 +1559,7 @@ theorem refinesSpecification (P : Parameters) (r : ℕ) :
       fun b' hb' => exclusionCertificate_send
         (by intro w hw; rw [hsend] at hw; simp at hw)
         (hRR.exclusion_certificate b' hb'),
-      by simpa using hRR.gradeA_evidence, by simpa using hRR.gradeC_evidence,
+      by simpa using hRR.grade2_evidence, by simpa using hRR.grade0_evidence,
       hRR.bound_excluded⟩
     · intro k
       by_cases hk : k = j
@@ -1581,7 +1581,7 @@ theorem refinesSpecification (P : Parameters) (r : ℕ) :
       fun b' hb' => exclusionCertificate_send
         (by intro w hw; rw [hsend] at hw; simp at hw)
         (hRR.exclusion_certificate b' hb'),
-      by simpa using hRR.gradeA_evidence, by simpa using hRR.gradeC_evidence,
+      by simpa using hRR.grade2_evidence, by simpa using hRR.grade0_evidence,
       hRR.bound_excluded⟩
     · intro k
       by_cases hk : k = j
@@ -1602,7 +1602,7 @@ theorem refinesSpecification (P : Parameters) (r : ℕ) :
       hI', ?_, ?_, hRR.F_eq,
       fun b' hb' => exclusionCertificate_send (by intro w hw; exact hw)
         (hRR.exclusion_certificate b' hb'),
-      by simpa using hRR.gradeA_evidence, by simpa using hRR.gradeC_evidence,
+      by simpa using hRR.grade2_evidence, by simpa using hRR.grade0_evidence,
       hRR.bound_excluded⟩
     · intro k
       by_cases hk : k = j
@@ -1623,7 +1623,7 @@ theorem refinesSpecification (P : Parameters) (r : ℕ) :
       hI', ?_, ?_, hRR.F_eq,
       fun b' hb' => exclusionCertificate_send (by intro w hw; exact hw)
         (hRR.exclusion_certificate b' hb'),
-      by simpa using hRR.gradeA_evidence, by simpa using hRR.gradeC_evidence,
+      by simpa using hRR.grade2_evidence, by simpa using hRR.grade0_evidence,
       hRR.bound_excluded⟩
     · intro k
       by_cases hk : k = j
@@ -1644,7 +1644,7 @@ theorem refinesSpecification (P : Parameters) (r : ℕ) :
       hI', ?_, ?_, hRR.F_eq,
       fun b' hb' => exclusionCertificate_send (by intro w hw; exact hw)
         (hRR.exclusion_certificate b' hb'),
-      by simpa using hRR.gradeA_evidence, by simpa using hRR.gradeC_evidence,
+      by simpa using hRR.grade2_evidence, by simpa using hRR.grade0_evidence,
       hRR.bound_excluded⟩
     · intro k
       by_cases hk : k = j
@@ -1665,7 +1665,7 @@ theorem refinesSpecification (P : Parameters) (r : ℕ) :
       hI', ?_, ?_, hRR.F_eq,
       fun b' hb' => exclusionCertificate_send (by intro w hw; exact hw)
         (hRR.exclusion_certificate b' hb'),
-      by simpa using hRR.gradeA_evidence, by simpa using hRR.gradeC_evidence,
+      by simpa using hRR.grade2_evidence, by simpa using hRR.grade0_evidence,
       hRR.bound_excluded⟩
     · intro k
       by_cases hk : k = j
@@ -1683,9 +1683,9 @@ theorem refinesSpecification (P : Parameters) (r : ℕ) :
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'
     exact ⟨q2, Or.inl ⟨rfl, System.weakLSilent_refl _ q2⟩,
-      hI', hRR.call_eq, hRR.ret_eq, hRR.F_eq, hRR.exclusion_certificate, hRR.gradeA_evidence,
-      hRR.gradeC_evidence, hRR.bound_excluded⟩
-  | retA id v bnd _hin _hlv hcnt hr hbnd =>
+      hI', hRR.call_eq, hRR.ret_eq, hRR.F_eq, hRR.exclusion_certificate, hRR.grade2_evidence,
+      hRR.grade0_evidence, hRR.bound_excluded⟩
+  | retGrade2 id v bnd _hin _hlv hcnt hr hbnd =>
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'
     have hret : q2.ret id = false := by
@@ -1695,7 +1695,7 @@ theorem refinesSpecification (P : Parameters) (r : ℕ) :
     obtain ⟨k, hkF, hvq⟩ :=
       voteQuorum_of_bind_receipts hRR.invariant (i := k₁) (v := v) (by omega)
     have hbv : v = bnd :=
-      (hbnd.trans (hRR.retBound_eq hvq (boundOf_A q1.sent q1.F v))).symm
+      (hbnd.trans (hRR.retBound_eq hvq (boundOf_grade2 q1.sent q1.F v))).symm
     subst hbv
     have hlive : v ∉ q2.excluded := fun hv =>
       not_exclusionCertificate_of_voteQuorum hRR.invariant hvq (hRR.exclusion_certificate v hv)
@@ -1712,7 +1712,7 @@ theorem refinesSpecification (P : Parameters) (r : ℕ) :
       grade := some true,
                         ret := Function.update q2.ret id true },
         Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
-          (Step.retA q2 id v v hlive hexcluded hexcluded hgr hret)⟩,
+          (Step.retGrade2 q2 id v v hlive hexcluded hexcluded hgr hret)⟩,
         hI', ?_, ?_, hRR.F_eq,
         fun b hb => exclusionCertificate_setBound (exclusionCertificate_ret
           (hRR.exclusion_certificate b hb)),
@@ -1741,7 +1741,7 @@ theorem refinesSpecification (P : Parameters) (r : ℕ) :
       refine ⟨{ q2 with
         excluded := insert (!v) q2.excluded, grade := some true,
                         ret := Function.update q2.ret id true },
-        Or.inr ⟨by simp, excludeThenRetA_run hq hw hlive hd0 hgr hret⟩,
+        Or.inr ⟨by simp, excludeThenRetGrade2_run hq hw hlive hd0 hgr hret⟩,
         hI', ?_, ?_, hRR.F_eq, ?_,
         fun _ => ⟨v, id, by simpa using hcnt⟩,
         fun hgf => absurd hgf (by simp),
@@ -1769,7 +1769,7 @@ theorem refinesSpecification (P : Parameters) (r : ℕ) :
             (exclusionCertificate_ret (exclusionCertificate_of_voteQuorum hRR.invariant hvq))
         · exact exclusionCertificate_setBound (exclusionCertificate_ret (hRR.exclusion_certificate b
             hb))
-  | retB id v bnd _hin _hlv _hnotA hcnt honce hbind hval hr hbnd =>
+  | retGrade1 id v bnd _hin _hlv _hnotGrade2 hcnt honce hbind hval hr hbnd =>
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'
     have hret : q2.ret id = false := by
@@ -1777,7 +1777,7 @@ theorem refinesSpecification (P : Parameters) (r : ℕ) :
     have hfn := P.f_lt_n_sub_f
     obtain ⟨k, hkF, hvq⟩ := voteQuorum_of_bind_receipts hRR.invariant hbind
     have hbv : v = bnd :=
-      (hbnd.trans (hRR.retBound_eq hvq (boundOf_B q1.sent q1.F v))).symm
+      (hbnd.trans (hRR.retBound_eq hvq (boundOf_grade1 q1.sent q1.F v))).symm
     subst hbv
     have hlive : v ∉ q2.excluded := fun hv =>
       not_exclusionCertificate_of_voteQuorum hRR.invariant hvq (hRR.exclusion_certificate v hv)
@@ -1787,11 +1787,11 @@ theorem refinesSpecification (P : Parameters) (r : ℕ) :
     by_cases hexcluded : (!v) ∈ q2.excluded
     · refine ⟨{ q2 with ret := Function.update q2.ret id true },
         Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
-          (Step.retB q2 id v v hlive hexcluded hexcluded hd hret)⟩,
+          (Step.retGrade1 q2 id v v hlive hexcluded hexcluded hd hret)⟩,
         hI', ?_, ?_, hRR.F_eq,
         fun b hb => exclusionCertificate_setBound (exclusionCertificate_ret
           (hRR.exclusion_certificate b hb)),
-        by simpa using hRR.gradeA_evidence, by simpa using hRR.gradeC_evidence,
+        by simpa using hRR.grade2_evidence, by simpa using hRR.grade0_evidence,
         by simpa using excluded_eq_singleton hlive hexcluded⟩
       · intro k'
         by_cases hk : k' = id
@@ -1815,9 +1815,9 @@ theorem refinesSpecification (P : Parameters) (r : ℕ) :
       refine ⟨{ q2 with
         excluded := insert (!v) q2.excluded,
                         ret := Function.update q2.ret id true },
-        Or.inr ⟨by simp, excludeThenRetB_run hq hw hlive hd0 hd hret⟩,
-        hI', ?_, ?_, hRR.F_eq, ?_, by simpa using hRR.gradeA_evidence,
-        by simpa using hRR.gradeC_evidence, by simp [hd0]⟩
+        Or.inr ⟨by simp, excludeThenRetGrade1_run hq hw hlive hd0 hd hret⟩,
+        hI', ?_, ?_, hRR.F_eq, ?_, by simpa using hRR.grade2_evidence,
+        by simpa using hRR.grade0_evidence, by simp [hd0]⟩
       · intro k'
         by_cases hk : k' = id
         · subst hk
@@ -1841,7 +1841,7 @@ theorem refinesSpecification (P : Parameters) (r : ℕ) :
             (exclusionCertificate_ret (exclusionCertificate_of_voteQuorum hRR.invariant hvq))
         · exact exclusionCertificate_setBound (exclusionCertificate_ret (hRR.exclusion_certificate b
             hb))
-  | retC id bnd _hin _hlv _hnotA _hnotB hcnt hval hr hbnd =>
+  | retGrade0 id bnd _hin _hlv _hnotGrade2 _hnotGrade1 hcnt hval hr hbnd =>
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'
     have hret : q2.ret id = false := by
@@ -1865,10 +1865,10 @@ theorem refinesSpecification (P : Parameters) (r : ℕ) :
     | none =>
       -- the round has not returned yet: exclude the announced bit's complement
       rw [hb, excludedOf_none] at hex
-      have hbv : bnd = boundOf q1.sent q1.F .C := by
+      have hbv : bnd = boundOf q1.sent q1.F .grade0 := by
         rw [hbnd, hb]; rfl
       have hcert : ExclusionCertificate P q1 (!bnd) := by
-        rw [hbv]; exact exclusionCertificate_boundOf_C hRR.invariant hcnt
+        rw [hbv]; exact exclusionCertificate_boundOf_grade0 hRR.invariant hcnt
       have hq : q2.quorum P := quorum_of_msg_quorum hRR
         (fun j hj hm' => hRR.invariant.input_called j true hj hm')
         (ImplementationState.bothValid_le hval true)
@@ -1878,7 +1878,7 @@ theorem refinesSpecification (P : Parameters) (r : ℕ) :
       refine ⟨{ q2 with
         excluded := insert (!bnd) q2.excluded, grade := some false,
                         ret := Function.update q2.ret id true },
-        Or.inr ⟨by simp, excludeThenRetC_run hq hw hex hwT hwF hgr hret⟩,
+        Or.inr ⟨by simp, excludeThenRetGrade0_run hq hw hex hwT hwF hgr hret⟩,
         hI', ?_, ?_, hRR.F_eq, ?_,
         fun hgt => absurd hgt (by simp),
         fun _ => ⟨id, by simpa using hcnt⟩,
@@ -1917,7 +1917,7 @@ theorem refinesSpecification (P : Parameters) (r : ℕ) :
         grade := some false,
                         ret := Function.update q2.ret id true },
         Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
-          (Step.retC q2 id bnd hmem hwT hwF hgr hret)⟩,
+          (Step.retGrade0 q2 id bnd hmem hwT hwF hgr hret)⟩,
         hI', ?_, ?_, hRR.F_eq,
         fun b hb' => exclusionCertificate_setBound (exclusionCertificate_ret
           (hRR.exclusion_certificate b hb')),
@@ -1962,11 +1962,11 @@ theorem refinesSpecification (P : Parameters) (r : ℕ) :
         exact hk
     · intro hg
       rw [corrupt_grade] at hg
-      obtain ⟨v0, i0, hi0⟩ := hRR.gradeA_evidence hg
+      obtain ⟨v0, i0, hi0⟩ := hRR.grade2_evidence hg
       exact ⟨v0, i0, by rw [ImplementationState.corrupt_receivedCount]; exact hi0⟩
     · intro hg
       rw [corrupt_grade] at hg
-      obtain ⟨i0, hi0⟩ := hRR.gradeC_evidence hg
+      obtain ⟨i0, hi0⟩ := hRR.grade0_evidence hg
       exact ⟨i0, by rw [ImplementationState.corrupt_receivedCount]; exact hi0⟩
     · rw [corrupt_excluded, ImplementationState.corrupt_bound]
       exact hRR.bound_excluded
@@ -2007,13 +2007,13 @@ theorem specificationRelation_corrupt (P : Parameters) (r : ℕ) (id : Fin P.n)
           (fun j w hw => by rw [ImplementationState.corrupt_process]; exact hw)
           (ImplementationState.corrupt_F_subset x id)
           (hR.exclusion_certificate b hb)
-      gradeA_evidence := fun hg => by
+      grade2_evidence := fun hg => by
         rw [corrupt_grade] at hg
-        obtain ⟨v, i, hi⟩ := hR.gradeA_evidence hg
+        obtain ⟨v, i, hi⟩ := hR.grade2_evidence hg
         exact ⟨v, i, by rw [ImplementationState.corrupt_receivedCount]; exact hi⟩
-      gradeC_evidence := fun hg => by
+      grade0_evidence := fun hg => by
         rw [corrupt_grade] at hg
-        obtain ⟨i, hi⟩ := hR.gradeC_evidence hg
+        obtain ⟨i, hi⟩ := hR.grade0_evidence hg
         exact ⟨i, by rw [ImplementationState.corrupt_receivedCount]; exact hi⟩
       bound_excluded := by
         rw [corrupt_excluded, ImplementationState.corrupt_bound]

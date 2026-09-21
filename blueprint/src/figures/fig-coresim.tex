@@ -14,8 +14,8 @@
   % bottom row: the abstract state's two nodes
   \node[state, initial, initial text={}] (p1) at (4.8,0)
     {Phase 1\\ $val=\bot$\\ ghost sync};
-  \node[state, accepting] (p2) at (12.0,0)
-    {Phase 2\\ $val=v$\\ ($A$-certificate)};
+  \node[state, accepting, inner sep=5pt] (p2) at (12.0,0)
+    {Phase 2\\ $val=v$\\ (grade-2\\ certificate)};
   \draw[->] (p1) to[loop left, looseness=4]
     node[left=2pt, font=\footnotesize, align=center]{stutter\\ (constant\\ coupling)} (p1);
   \draw[->, thick] (p1) -- (p2)

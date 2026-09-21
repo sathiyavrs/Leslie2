@@ -75,16 +75,16 @@ block's case (a) at either bit, and the returns read as Algorithm 6's
 * `echo5Bot` — `n − f` any-`BIND` receipts, own `BIND` out, `bothValid`, and no
   `n − f` `BIND b` quorum at either bit, multicast `ECHO5 ⊥`;
 * `byzantine` — a corrupted sender multicasts anything;
-* `retA id v` — an `n − f` `ECHO5 v` receipt quorum, the process called and its
+* `retGrade2 id v` — an `n − f` `ECHO5 v` receipt quorum, the process called and its
   own `ECHO5` out (grade 2 — case (a), which heads the chain and denies nothing);
-* `retB id v` — `n − f` any-`ECHO5` receipts, at least one `ECHO5 v` receipt,
+* `retGrade1 id v` — `n − f` any-`ECHO5` receipts, at least one `ECHO5 v` receipt,
   **`f + 1` `BIND v` receipts**, and `bothValid`, the process called, its own
-  `ECHO5` out and case (a) denied at either bit (`hnotA`) (grade 1 — Algorithm 6's
+  `ECHO5` out and case (a) denied at either bit (`hnotGrade2`) (grade 1 — Algorithm 6's
   line-25 condition: the `t + 1` `echo4` check is what puts an honest `BIND v`
   behind every grade-1 output);
-* `retC id` — an `n − f` `ECHO5 ⊥` receipt quorum and `bothValid`, the process
-  called, its own `ECHO5` out, case (a) denied at either bit (`hnotA`), and
-  case (b) denied in reduced form (`hnotB`: `∀ v, (∃ k, echo5 (some v) ∈ received id k)
+* `retGrade0 id` — an `n − f` `ECHO5 ⊥` receipt quorum and `bothValid`, the process
+  called, its own `ECHO5` out, case (a) denied at either bit (`hnotGrade2`), and
+  case (b) denied in reduced form (`hnotGrade1`: `∀ v, (∃ k, echo5 (some v) ∈ received id k)
   → receivedCount (.bind (some v)) < f + 1`) — the reduction is sound because case
   (b)'s other two conjuncts, the `n − f` any-`ECHO5` quorum and `bothValid`, are
   this row's own `hcnt` and `hval`, an `n − f` `ECHO5 ⊥` quorum being in
@@ -94,7 +94,7 @@ block's case (a) at either bit, and the returns read as Algorithm 6's
 The three return rows each announce a bit and write it back, and no other row
 touches the field. `GBCA.ByABDY.boundOf sent F out` is the bit a return of outcome
 `out` announces where the round has none on record: `v` at a value-bearing
-outcome, and at `C` the payload of an honest `⟨VOTE, b⟩` sender, `true` where
+outcome, and at grade `0` the payload of an honest `⟨VOTE, b⟩` sender, `true` where
 there is none. An honest `⟨VOTE, b⟩` sender holds an `n − f` `⟨ECHO, b⟩`
 receipt quorum and at most one bit carries such a quorum, so on a reachable
 state at most one branch applies. A return announces
@@ -103,8 +103,8 @@ returns. The bit is a ghost output (D29): it enters no guard of Algorithm 6 and
 no field a program holds.
 
 The load-bearing depth of the return evidence: **every grade-≥1 output names a
-bit with an honest `BIND` behind it** — `retA` via `n − f` `ECHO5 v` →
-honest `ECHO5` sender → `n − f` `BIND v` receipts → honest binder; `retB` via
+bit with an honest `BIND` behind it** — `retGrade2` via `n − f` `ECHO5 v` →
+honest `ECHO5` sender → `n − f` `BIND v` receipts → honest binder; `retGrade1` via
 `f + 1 > |F|` `BIND v` receipts directly — and an honest `BIND v` sits on an
 `n − f` `VOTE v` receipt quorum. The `VOTE` level is write-once, so that
 quorum is the object the binding argument counts (paper Lemmas 4.8/4.9 through
@@ -122,14 +122,14 @@ instance can no longer hand out. The rules:
   `f + 1 ≤ #{id | s.call id = some (!b) ∨ id ∈ s.F}` (the D15 InputSupport count,
   at the *surviving* bit `!b`), and `hd0 : s.excluded = ∅`; effect
   `excluded := insert b s.excluded`;
-* `retA id v bnd` — guards `v ∉ s.excluded`, `(!v) ∈ s.excluded`,
+* `retGrade2 id v bnd` — guards `v ∉ s.excluded`, `(!v) ∈ s.excluded`,
   `(!bnd) ∈ s.excluded`, `s.grade = none ∨ s.grade = some true`,
   `s.ret id = false`; effect `grade := some true`, mark returned;
-* `retB id v bnd` — guards `v ∉ s.excluded`, `(!v) ∈ s.excluded`,
+* `retGrade1 id v bnd` — guards `v ∉ s.excluded`, `(!v) ∈ s.excluded`,
   `(!bnd) ∈ s.excluded`, the D15 dissent count
   `f + 1 ≤ #{id' | s.call id' = some (!v) ∨ id' ∈ s.F}`, `s.ret id = false`;
   effect: mark returned;
-* `retC id bnd` — guards `(!bnd) ∈ s.excluded`, the two D15 counts (one per
+* `retGrade0 id bnd` — guards `(!bnd) ∈ s.excluded`, the two D15 counts (one per
   bit), `s.grade = none ∨ s.grade = some false`, `s.ret id = false`; effect
   `grade := some false`, mark returned;
 * `fail` — D1 corruption, `excluded` untouched.
@@ -144,15 +144,15 @@ property of the trace alone (`GBCA.BindingTrace`, `specInst_binding`).
 The `hd0` guard admits `bindUnset` from the empty set only, so an instance excludes
 at most once and every reachable state has `excluded ∈ {∅, {b}}`
 (`GBCASafety.excluded_card_le_one`). The once-only exclude is also what keeps a round
-completable: after an `A`-return a second exclusion would leave no live bit for the
-value-bearing returns while the `A` grade guard blocks `retC`, stranding the processes
+completable: after a grade-2 return a second exclusion would leave no live bit for the
+value-bearing returns while the grade-2 guard blocks `retGrade0`, stranding the processes
 yet to return.
 
 `excluded` is monotone (only `bindUnset` writes it, by `insert`), so the graded
 binding property is structural: an excluded bit is never handed out (`v ∉ excluded`
-guards both value-bearing returns), every `A`/`B`-return pins `(!v) ∈ excluded`
+guards both value-bearing returns), every grade-2 or grade-1 return pins `(!v) ∈ excluded`
 whence any two value-bearing returns agree on the surviving bit, and a
-`C`-return forces `excluded ≠ ∅` permanently — from that moment at most one bit is
+grade-0 return forces `excluded ≠ ∅` permanently — from that moment at most one bit is
 ever alive, which is the paper's Binding. Provenance (D14/D15) is carried by
 `bindUnset`'s InputSupport count for the surviving bit: a bit `v` handed out at
 grade ≥ 1 requires `(!v) ∈ excluded`, whose `bindUnset (!v)` certified `f + 1`
@@ -169,12 +169,12 @@ structure SpecificationRelation (P : Parameters) (s : ImplementationState P.n) (
   F_eq      : t.F = s.F
   exclusion_certificate : ∀ b, b ∈ t.excluded → ExclusionCertificate P s b
   bound_excluded : t.excluded = excludedOf s.bound
-  gradeA_evidence : t.grade = some true  → ∃ v i, P.n - P.f ≤ s.receivedCount i (.echo5 (some v))
-  gradeC_evidence : t.grade = some false → ∃ i,   P.n - P.f ≤ s.receivedCount i (.echo5 none)
+  grade2_evidence : t.grade = some true  → ∃ v i, P.n - P.f ≤ s.receivedCount i (.echo5 (some v))
+  grade0_evidence : t.grade = some false → ∃ i,   P.n - P.f ≤ s.receivedCount i (.echo5 none)
 ```
 
 `call_eq`/`ret_eq`/`F_eq` are the exact abstraction rows, identical in shape
-to every other instance relation of the development. `gradeA_evidence`/`gradeC_evidence`
+to every other instance relation of the development. `grade2_evidence`/`grade0_evidence`
 are the A/C-exclusivity certificates, read at the `ECHO5` level (the level the
 returns read): two opposing `n − f` `ECHO5` quorums intersect in an honest
 process with two different `ECHO5` payloads, contradicting the write-once
@@ -279,10 +279,10 @@ theorem bind_receipts_of_echo5_quorum (hI : Invariant P s) {i v}
     ∃ k, k ∉ s.F ∧ P.n - P.f ≤ s.receivedCount k (.bind (some v))
 ```
 
-(`retA`: echo5 quorum → honest `ECHO5` sender → `echo5_confirmed`; then `n − f ≥ f + 1` and
+(`retGrade2`: echo5 quorum → honest `ECHO5` sender → `echo5_confirmed`; then `n − f ≥ f + 1` and
 the first chain: bind receipts → honest binder (`f + 1 > |F|`) → `bind_confirmed`.
-`retB`: its `f + 1` `BIND v` receipts enter the first chain directly.) The
-`C`-return has no distinguished bit; its evidence yields a certificate for
+`retGrade1`: its `f + 1` `BIND v` receipts enter the first chain directly.) The
+grade-0 return has no distinguished bit; its evidence yields a certificate for
 *some* bit:
 
 ```lean
@@ -322,7 +322,7 @@ theorem bindUnset_guards (hR : SpecificationRelation P s t) {v} (hq : EchoReceip
 its count feeds `Invariant.support_of_input_receipts` → `SpecificationRelation.callSupport` for the
 InputSupport count. The `EchoReceiptQuorum v` input is supplied by
 `echoReceiptQuorum_of_vote_receipts` off the derived `VOTE v` quorum
-(`n − f ≥ f + 1`). At the `C`-return (excluding an arbitrary certified `b*`,
+(`n − f ≥ f + 1`). At the grade-0 return (excluding an arbitrary certified `b*`,
 support bit `!b*`), both guards come instead from the returner's own
 `bothValid`: the per-bit `n − f` `INPUT` receipt quorum gives the quorum guard
 through `quorum_of_msg_quorum`/`input_called`, and `inputSupport_of_bothValid` gives the
@@ -331,7 +331,7 @@ bit the certificate names.
 
 ### Case A / Case B as named invariants
 
-The soundness fact "the surviving bit at any C-return is determined by prefix
+The soundness fact "the surviving bit at any grade-0 return is determined by prefix
 receipts" is not a lemma of the simulation file; it is the conjunction of the
 certificate properties above, and it is what makes a *plain forward*
 simulation sufficient (no prophecy): at every moment the simulation must
@@ -344,7 +344,7 @@ carriers:
   `ECHO v` quorum, excludes `!v` forever): quorum intersection on the write-once
   `ECHO` level.
 * **Case B** — the **no**-branch of `exclusionCertificate_of_echo5Bot_quorum` (a
-  `C`-return over an all-⊥ honest vote prefix excludes both bits): the
+  grade-0 return over an all-⊥ honest vote prefix excludes both bits): the
   `VoteQuorumAgainst` counting on the write-once `VOTE` level.
 
 ## Exclusion scheduling and run shapes
@@ -358,28 +358,28 @@ the exclusion is missing, whatever returns came before. Every run carries
 bit the row announces:
 
 ```lean
-/-- `bindUnset (!v) ; retA v` from an all-alive state (`excluded = ∅`). -/
-theorem excludeThenRetA_run {r t id v}
+/-- `bindUnset (!v) ; retGrade2 v` from an all-alive state (`excluded = ∅`). -/
+theorem excludeThenRetGrade2_run {r t id v}
     (hq : t.quorum P)
     (hw : P.f + 1 ≤ (Finset.univ.filter
       (fun k => t.call k = some v ∨ k ∈ t.F)).card)
     (hlive : v ∉ t.excluded) (hd0 : t.excluded = ∅)
     (hg : t.grade = none ∨ t.grade = some true) (hr : t.ret id = false) :
-    (specInst P r).weakLStep t (.retG r id (.A v) v)
+    (specInst P r).weakLStep t (.retG r id (.grade2 v) v)
       { t with excluded := insert (!v) t.excluded, grade := some true,
                ret := Function.update t.ret id true }
 ```
 
 (the `bindUnset (!v)` support guard reads `some (!(!v))`; `Bool.not_not`
-rewrites it to `hw`'s `some v`, and `retA`'s `v ∉ insert (!v) t.excluded` follows
-from `hlive` and `v ≠ !v`). `excludeThenRetB_run` is the same with the dissent
+rewrites it to `hw`'s `some v`, and `retGrade2`'s `v ∉ insert (!v) t.excluded` follows
+from `hlive` and `v ≠ !v`). `excludeThenRetGrade1_run` is the same with the dissent
 count `f + 1 ≤ #{k | t.call k = some (!v) ∨ k ∈ t.F}` in place of the grade
 guard, landing in `{ t with excluded := insert (!v) t.excluded, ret := … }`. The
-`C`-side run excludes one arbitrary bit:
+grade-0 side run excludes one arbitrary bit:
 
 ```lean
-/-- `bindUnset b ; retC` from an all-alive state (`excluded = ∅`). -/
-theorem excludeThenRetC_run {r t id b}
+/-- `bindUnset b ; retGrade0` from an all-alive state (`excluded = ∅`). -/
+theorem excludeThenRetGrade0_run {r t id b}
     (hq : t.quorum P)
     (hw : P.f + 1 ≤ (Finset.univ.filter
       (fun k => t.call k = some (!b) ∨ k ∈ t.F)).card)
@@ -387,17 +387,17 @@ theorem excludeThenRetC_run {r t id b}
     (hwT : P.f + 1 ≤ #{k | t.call k = some true  ∨ k ∈ t.F})
     (hwF : P.f + 1 ≤ #{k | t.call k = some false ∨ k ∈ t.F})
     (hg : t.grade = none ∨ t.grade = some false) (hr : t.ret id = false) :
-    (specInst P r).weakLStep t (.retG r id .C)
+    (specInst P r).weakLStep t (.retG r id .grade0)
       { t with excluded := insert b t.excluded, grade := some false,
                ret := Function.update t.ret id true }
 ```
 
-(`retC`'s `1 ≤ excluded.card` holds because `insert` is nonempty).
+(`retGrade0`'s `1 ≤ excluded.card` holds because `insert` is nonempty).
 
 ### Where `hd0` comes from at the call sites
 
 The two value-return rows derive it from the branch they are in rather than
-carrying it in the relation. At `retA`/`retB` the row already holds
+carrying it in the relation. At `retGrade2`/`retGrade1` the row already holds
 `hlive : v ∉ t.excluded` (the certificate refutation) and enters the run branch
 under `hexcluded : (!v) ∉ t.excluded`, and a `Finset Bool` missing both `v` and `!v` is
 empty:
@@ -407,15 +407,15 @@ theorem excluded_empty_of_both {d : Finset Bool} {v : Bool}
     (h1 : v ∉ d) (h2 : (!v) ∉ d) : d = ∅
 ```
 
-so the call sites read `excludeThenRetA_run hq hw hlive (excluded_empty_of_both
-hlive hexcluded) hgr hret`, and likewise for `retB`. The `retC` row splits on
+so the call sites read `excludeThenRetGrade2_run hq hw hlive (excluded_empty_of_both
+hlive hexcluded) hgr hret`, and likewise for `retGrade1`. The `retGrade0` row splits on
 `Finset.eq_empty_or_nonempty t.excluded` outright, so its empty branch *is* `hd0`
-and its nonempty branch answers with a single `Step.retC`.
+and its nonempty branch answers with a single `Step.retGrade0`.
 
-### Which bit the `C`-return excludes
+### Which bit the grade-0 return excludes
 
-`retC` fires the run only from `t.excluded = ∅` (otherwise `1 ≤ t.excluded.card`
-already holds and a single `Step.retC` answers). The excluded bit is
+`retGrade0` fires the run only from `t.excluded = ∅` (otherwise `1 ≤ t.excluded.card`
+already holds and a single `Step.retGrade0` answers). The excluded bit is
 `b* := Classical.choose (exclusionCertificate_of_echo5Bot_quorum …)` — the certified bit
 its evidence names: the opposite of the unique honestly-voted bit when one
 exists (Case A branch), and canonically `false` in the neither-bit-decidable
@@ -423,7 +423,7 @@ case (Case B branch, where both bits are certified and the choice is
 arbitrary). Soundness never depends on the choice: both spec-side guards of
 `bindUnset b*` hold for either bit (they read `bothValid`), and a certified
 bit can never carry later return evidence, so no future row is obstructed by
-the pick — if some later `retB v` were to need `v` alive, its evidence proves
+the pick — if some later `retGrade1 v` were to need `v` alive, its evidence proves
 `¬ ExclusionCertificate P s' v`, and `ExclusionCertificate.mono` shows `v` was never certified,
 hence never picked.
 
@@ -440,42 +440,42 @@ hence never picked.
 | `bindBit` / `bindBot` | τ | stutter | frame: sender's `sentBind` only |
 | `echo5Bit` / `echo5Bot` | τ | stutter | frame: sender's `sentEcho5` only (nothing in the relation reads `sentEcho5` outside `Invariant`) |
 | `byzantine` | τ | stutter | frame: `sent` set of a corrupted sender only |
-| `retA id v` | `retG r id (A v)` | `(!v) ∈ excluded`: single `Step.retA`; else: `excludeThenRetA_run` | see below |
-| `retB id v` | `retG r id (B v)` | `(!v) ∈ excluded`: single `Step.retB`; else: `excludeThenRetB_run` | see below |
-| `retC id` | `retG r id C` | `excluded ≠ ∅`: single `Step.retC`; else: `excludeThenRetC_run` on `b*` | see below |
+| `retGrade2 id v` | `retG r id (A v)` | `(!v) ∈ excluded`: single `Step.retGrade2`; else: `excludeThenRetGrade2_run` | see below |
+| `retGrade1 id v` | `retG r id (B v)` | `(!v) ∈ excluded`: single `Step.retGrade1`; else: `excludeThenRetGrade1_run` | see below |
+| `retGrade0 id` | `retG r id C` | `excluded ≠ ∅`: single `Step.retGrade0`; else: `excludeThenRetGrade0_run` on `b*` | see below |
 | `fail id` | `fail id` | `Step.fail` (lockstep `corrupt`) | `corrupt_F_eq`; `excluded` untouched by spec `corrupt`; `exclusion_certificate` via `ExclusionCertificate.mono` (`corrupt_received`/`corrupt_process`/`corrupt_F_subset`); grade evs via `corrupt_receivedCount` |
 
 The three return rows in detail. Common first move: derive the honest
 `VOTE`-level quorum —
 
-* `retA`: `hcnt : n − f ≤ receivedCount id (.echo5 (some v))` →
+* `retGrade2`: `hcnt : n − f ≤ receivedCount id (.echo5 (some v))` →
   `bind_receipts_of_echo5_quorum` → `voteQuorum_of_bind_receipts` (via
   `n − f ≥ f + 1`) → `hvq : n − f ≤ receivedCount k (.vote (some v))`;
-* `retB`: `hbind : f + 1 ≤ receivedCount id (.bind (some v))` →
+* `retGrade1`: `hbind : f + 1 ≤ receivedCount id (.bind (some v))` →
   `voteQuorum_of_bind_receipts` → `hvq`;
 
 then
 
 1. `hlive : v ∉ t.excluded` — from `exclusion_certificate` contraposed by
    `not_exclusionCertificate_of_voteQuorum hvq`;
-2. grade guard (`retA` only) — `grade_ne_false_of_echo5_quorum`: the `ECHO5 v`
-   quorum against `gradeC_evidence`'s `ECHO5 ⊥` quorum meets in an honest
+2. grade guard (`retGrade2` only) — `grade_ne_false_of_echo5_quorum`: the `ECHO5 v`
+   quorum against `grade0_evidence`'s `ECHO5 ⊥` quorum meets in an honest
    double `ECHO5` sender, contradicting `echo5_once`;
-3. dissent count (`retB` only) — `callSupport (inputSupport_of_bothValid hval (!v))`;
+3. dissent count (`retGrade1` only) — `callSupport (inputSupport_of_bothValid hval (!v))`;
 4. case `(!v) ∈ t.excluded`: single labelled step. Case `(!v) ∉ t.excluded`: run, with
    `bindUnset_guards` fed by `echoReceiptQuorum_of_vote_receipts hvq` and `hd0` by
    `excluded_empty_of_both hlive hexcluded`;
 5. restore: `exclusion_certificate` — old bits by `ExclusionCertificate.mono` (the step only sets
    `returned`), the new bit `!v` by `exclusionCertificate_of_voteQuorum hvq`;
-   `gradeA_evidence := ⟨v, id, hcnt⟩` (`retA`), other grade evidence by
+   `grade2_evidence := ⟨v, id, hcnt⟩` (`retGrade2`), other grade evidence by
    monotonicity or vacuity.
 
-`retC`: `hwT`/`hwF` from `inputSupport_of_bothValid hval`, the `C` grade guard from
-`grade_ne_true_of_echo5Bot_quorum` (`ECHO5 ⊥` quorum against `gradeA_evidence`'s
+`retGrade0`: `hwT`/`hwF` from `inputSupport_of_bothValid hval`, the grade-0 guard from
+`grade_ne_true_of_echo5Bot_quorum` (`ECHO5 ⊥` quorum against `grade2_evidence`'s
 `ECHO5 v` quorum, honest double `ECHO5` sender, `echo5_once`), the run's `b*` and its
 certificate from `exclusionCertificate_of_echo5Bot_quorum`, the `bindUnset` quorum guard
 from `quorum_of_msg_quorum` on `bothValid`'s `INPUT` quorum; restore
-`gradeC_evidence := ⟨id, hcnt⟩` and `exclusion_certificate` as above with `ExclusionCertificate b*`
+`grade0_evidence := ⟨id, hcnt⟩` and `exclusion_certificate` as above with `ExclusionCertificate b*`
 for the new member.
 
 Value agreement needs no dedicated lemmas: agreement between successive returns
@@ -485,14 +485,14 @@ is the guard pair `v ∉ excluded ∧ (!v) ∈ excluded` itself, discharged per 
 The announced bit is discharged the same way. A value-bearing return announces
 its own value (`SpecificationRelation.retBound_eq`): the return's `n − f` `VOTE v` receipt
 quorum refutes a certificate for `v`, so a bit already on record is `v` by
-`SpecificationRelation.bound_certificate`, and a bit computed here is `v` by `boundOf`. A `C`-return
-announces `boundOf`'s bit, whose complement is certified by
-`exclusionCertificate_boundOf_C`: an honest bit-voter's `vote_confirmed` receipt quorum is
-Case A for the opposite bit, and where there is no honest bit-voter the all-⊥
-wall (`exclusionCertificate_of_noCorrectVote`) certifies both bits at once. In that
-all-⊥ run no bit is ever handed out, and the bit the `C`-returns announce is
-the surviving one — `boundOf` reads `true` there, and the run excludes `false`
-— which is sound because the bit is a ghost output and answers no process.
+`SpecificationRelation.bound_certificate`, and a bit computed here is `v` by `boundOf`. A grade-0
+return announces `boundOf`'s bit, whose complement is certified by
+`exclusionCertificate_boundOf_grade0`: an honest bit-voter's `vote_confirmed` receipt quorum is Case
+A for the opposite bit, and where there is no honest bit-voter the all-⊥ wall
+(`exclusionCertificate_of_noCorrectVote`) certifies both bits at once. In that all-⊥ run no bit is
+ever handed out, and the bit the grade-0 returns announce is the surviving one — `boundOf` reads
+`true` there, and the run excludes `false` — which is sound because the bit is a ghost output and
+answers no process.
 
 ## Invariant inventory
 
@@ -620,26 +620,26 @@ receipts in place of `f + 1` `BIND v` receipts, with the `ECHO5` level elided
 and the returns reading `BIND` quorums — admits the following binding
 violation, which pins both D18 and the certificate design. Prefix: `p1`, `p2`,
 `p3` are called and echo `0`, `1`, `0` respectively; with both bits `Valid`
-everywhere, all three vote ⊥, bind ⊥ (and echo5 ⊥), and `p1` C-returns off the
+everywhere, all three vote ⊥, bind ⊥ (and echo5 ⊥), and `p1` grade-0 returns off the
 three ⊥-receipts while `p4` is held unscheduled at the echo stage. Extension
 A: `p4` echoes `0` and votes `0` off the `ECHO 0` senders `{p1, p3, p4}`;
 `p2` is corrupted and injects `VOTE 0` and `BIND 0`; `p3` collects `f + 1 = 2`
-`VOTE 0` receipts from `{p4, p2}` and B-returns `0`. Extension B is the
-mirror image (corrupt `p1`, hand out `1`) — one C-return, two extensions,
+`VOTE 0` receipts from `{p4, p2}` and grade-1 returns `0`. Extension B is the
+mirror image (corrupt `p1`, hand out `1`) — one grade-0 return, two extensions,
 two different surviving bits: binding fails, and no forward simulation into
 any binding-faithful spec exists.
 
 Against the D18 evidence level the attack dies: in extension A, `p3`'s
-`retB 0` needs `f + 1 = 2` `BIND 0` receipts, hence an honest `BIND 0` sender
+`retGrade1 0` needs `f + 1 = 2` `BIND 0` receipts, hence an honest `BIND 0` sender
 (`2 > |F| = 1`), hence an `n − f = 3`-strong `VOTE 0` receipt quorum at that
 sender. But the prefix pinned the write-once votes of `p1`, `p2`, `p3` at ⊥,
 and `p2` is the corrupted process position, so the `VOTE 0` senders available in any
 extension are at most `{p4} ∪ F = {p4, p2}` — `2 < 3`, no quorum, no honest
-`BIND 0`, no `retB 0` (and a fortiori no `retA 0`: an honest `ECHO5 0` needs
+`BIND 0`, no `retGrade1 0` (and a fortiori no `retGrade2 0`: an honest `ECHO5 0` needs
 three `BIND 0` senders). Symmetrically for bit `1` in extension B. In
-certificate terms: at `p1`'s C-return the honest `BIND ⊥` senders' vote
+certificate terms: at `p1`'s grade-0 return the honest `BIND ⊥` senders' vote
 quorums pin `{p1, p2, p3}` as committed-⊥-or-`F`, which is `VoteQuorumAgainst` at
-`n − f = 3` for **both** bits — exactly the `∃ b, ExclusionCertificate` the `retC` run
+`n − f = 3` for **both** bits — exactly the `∃ b, ExclusionCertificate` the `retGrade0` run
 consumes, and exactly why no later receipt pattern can contradict the exclusion.
 
 ## Where the shapes surface downstream
@@ -648,8 +648,8 @@ The exclusion set and the exclusion certificate are read directly by the files a
 one. The `HybridRefinesSpecification/Relation.lean` chain and
 `HybridRefinesSpecification/Simulation.lean` phrase the round skeleton over `excluded`:
 `IsLastBound g r` is `(g r).excluded ≠ ∅ ∧ (g (r + 1)).excluded = ∅`, `RoundSettled g r` is
-`(g r).excluded ≠ ∅ ∨ (g r).grade = some false`, and `a_commit`, `gradeA_needs_bind`,
-`bind_support` and the A-lock certificates are keyed on the guard pair
+`(g r).excluded ≠ ∅ ∨ (g r).grade = some false`, and `grade2Lock_commit`, `grade2_needs_bind`,
+`bind_support` and the grade-2 lock certificates are keyed on the guard pair
 `(!b) ∈ excluded ∧ b ∉ excluded` — the D19 rendering of `bind = some b`, with
 `bind ≠ none` rendered as `excluded ≠ ∅`. `GBCASim.specificationRelation_corrupt` carries the
 `exclusion_certificate` row through `ExclusionCertificate.mono`, whose three hypotheses it
@@ -679,12 +679,12 @@ replacing a round's instance by the graded agreement specification.
    looser than `∈`/`∉`, so `!v ∈ s.excluded` silently elaborates as the coerced
    `!(decide (v ∈ s.excluded))`; every membership guard on the negated bit must be
    written `(!v) ∈ s.excluded` / `(!v) ∉ t.excluded`.
-2. **`retB`'s `honce` receipt.** The implementation's `retB` keeps the
+2. **`retGrade1`'s `honce` receipt.** The implementation's `retGrade1` keeps the
    algorithm's "at least one `ECHO5 v` receipt" guard. The simulation never
    reads it (the `f + 1` `BIND v` receipts carry all evidence), so it rides
    along as pure conformance; it must not be dropped from the rule — the rule
    is the algorithm.
-3. **Canonical `C`-exclude via `Classical.choose`.** The `retC` row consumes
+3. **Canonical grade-0 exclude via `Classical.choose`.** The `retGrade0` row consumes
    `∃ b, ExclusionCertificate P s b` nonconstructively. If a later development (e.g. a
    quantitative or decidability layer) needs the choice computable, replace it
    with the explicit case split (`if EchoReceiptQuorum … true then false else …`);
@@ -696,7 +696,7 @@ replacing a round's instance by the graded agreement specification.
    taking only `∅` and singletons. A separate conjunct would create restoration
    obligations on every row for no benefit, and each run gets its `hd0` from the
    branch analysis of its own row (`excluded_empty_of_both` at the value
-   returns, the `bound` split at `retC`). Recorded so nobody "strengthens" the
+   returns, the `bound` split at `retGrade0`). Recorded so nobody "strengthens" the
    relation into extra work.
 5. **`VoteQuorumAgainst` reads process-local fields.** Unlike `EchoReceiptQuorum` it counts
    `sentVote` fields, not receipts — still monotone in `F` (a corrupted field

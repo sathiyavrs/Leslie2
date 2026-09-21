@@ -16,11 +16,11 @@
   \node[state] (bnd) at (9.0,0)  {BIND\,$v$};
   \node[state] (sea) at (9.0,-2.2) {ECHO5\,$v$};
   \node[ret]   (ra)  at (11.3,-0.6)
-    {ret\,$A\,b$\\[1pt]{\scriptsize $n{-}f$ ECHO5\,$b$}\\[1pt]{\scriptsize $bnd = b$}};
+    {ret\,$(b,2)$\\[1pt]{\scriptsize $n{-}f$ ECHO5\,$b$}\\[1pt]{\scriptsize $bnd = b$}};
   \node[ret]   (rb)  at (11.3,-2.2)
-    {ret\,$B\,b$\\[1pt]{\scriptsize $f{+}1$ BIND\,$b$}\\[1pt]{\scriptsize $bnd = b$}};
+    {ret\,$(b,1)$\\[1pt]{\scriptsize $f{+}1$ BIND\,$b$}\\[1pt]{\scriptsize $bnd = b$}};
   \node[ret]   (rc)  at (11.3,-3.8)
-    {ret\,$C$\\[1pt]{\scriptsize $n{-}f$ ECHO5\,$\bot$}\\[1pt]{\scriptsize $bnd$ off the sent sets}};
+    {ret\,$(\bot,0)$\\[1pt]{\scriptsize $n{-}f$ ECHO5\,$\bot$}\\[1pt]{\scriptsize $bnd$ off the sent sets}};
   \path
     (inp) edge node[lbl, above]{$n{-}f$} (ech)
     (ech) edge node[lbl, above]{$n{-}f$} (vot)

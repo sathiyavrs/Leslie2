@@ -35,11 +35,11 @@ Every one of `hybrid_step_tau`'s six disjuncts is answered by a stutter: the
 abstract state is untouched by every hidden row and only moves at the visible rows
 (`callABA`/`retABA`/`fail`), handled in `HybridRefinesSpecification/Simulation.lean`. All six lemmas
 below are instances of a single frame argument: `AbstractState` inspects only `F`, the
-per-process `input`/`returned` projections, and the `g`-side `A`-lock
+per-process `input`/`returned` projections, and the `g`-side grade-2 lock
 certificate — and each row preserves all three. -/
 
 /-- `AbstractState` transfers along any frame that preserves `F`, the per-process
-`input`/`returned` projections, and the `A`-certificate/holder-pin package. -/
+`input`/`returned` projections, and the grade-2 certificate/holder-pin package. -/
 theorem AbstractState.unchangedBy {P : Parameters} {g g' : ℕ → GBCA.SpecState P.n} {c c' : ABAState
   P}
     {w w' : ℕ → WCC.SpecState P.n} {a : SpecState P.n} (hA : AbstractState P g c w a)

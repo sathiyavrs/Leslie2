@@ -22,9 +22,9 @@ Per process, the construction is
 occurring at least `|S| − f` times in `S`, `⊥` if
   neither does (`GBCA.candidate`);
 * `T ← Gather₂(candidate)` — the candidate through the second instance; * the graded return
-(`GBCA.gradeOf`): `(v, A)` if some bit's entries reach
-  `|T| − f`, else `(v, B)` if they reach `f + 1` — at most one bit can —
-  else `(⊥, C)`.
+(`GBCA.gradeOf`): `(v, 2)` if some bit's entries reach
+  `|T| − f`, else `(v, 1)` if they reach `f + 1` — at most one bit can —
+  else `(⊥, 0)`.
 
 ## The bound bit
 
@@ -266,17 +266,17 @@ theorem candidate_none {P : Parameters} {g : Fin P.n → Option Bool}
   · exact lt_of_not_ge h2
   · exact lt_of_not_ge h1
 
-/-- The graded outcome after the second gather: `A` at `|T| − f` entries of
-one bit, `B` at `f + 1`, `C` below both. -/
+/-- The graded outcome after the second gather: grade `2` at `|T| − f` entries of
+one bit, grade `1` at `f + 1`, grade `0` below both. -/
 def gradeOf (P : Parameters) (g : Fin P.n → Option (Option Bool)) : GBCAOutput :=
-  if domainCount g - P.f ≤ valueCount g (some true) then .A true
-  else if domainCount g - P.f ≤ valueCount g (some false) then .A false
-  else if P.f + 1 ≤ valueCount g (some true) then .B true
-  else if P.f + 1 ≤ valueCount g (some false) then .B false
-  else .C
+  if domainCount g - P.f ≤ valueCount g (some true) then .grade2 true
+  else if domainCount g - P.f ≤ valueCount g (some false) then .grade2 false
+  else if P.f + 1 ≤ valueCount g (some true) then .grade1 true
+  else if P.f + 1 ≤ valueCount g (some false) then .grade1 false
+  else .grade0
 
-theorem gradeOf_A {P : Parameters} {g : Fin P.n → Option (Option Bool)} {v : Bool}
-    (h : gradeOf P g = .A v) : domainCount g - P.f ≤ valueCount g (some v) := by
+theorem gradeOf_grade2 {P : Parameters} {g : Fin P.n → Option (Option Bool)} {v : Bool}
+    (h : gradeOf P g = .grade2 v) : domainCount g - P.f ≤ valueCount g (some v) := by
   unfold gradeOf at h
   split_ifs at h with h1 h2 h3 h4
   · obtain rfl : true = v := by injection h
@@ -284,8 +284,8 @@ theorem gradeOf_A {P : Parameters} {g : Fin P.n → Option (Option Bool)} {v : B
   · obtain rfl : false = v := by injection h
     exact h2
 
-theorem gradeOf_B {P : Parameters} {g : Fin P.n → Option (Option Bool)} {v : Bool}
-    (h : gradeOf P g = .B v) :
+theorem gradeOf_grade1 {P : Parameters} {g : Fin P.n → Option (Option Bool)} {v : Bool}
+    (h : gradeOf P g = .grade1 v) :
     P.f + 1 ≤ valueCount g (some v) ∧ ∀ w, valueCount g (some w) < domainCount g - P.f := by
   unfold gradeOf at h
   split_ifs at h with h1 h2 h3 h4
@@ -302,8 +302,8 @@ theorem gradeOf_B {P : Parameters} {g : Fin P.n → Option (Option Bool)} {v : B
     · exact lt_of_not_ge h2
     · exact lt_of_not_ge h1
 
-theorem gradeOf_C {P : Parameters} {g : Fin P.n → Option (Option Bool)}
-    (h : gradeOf P g = .C) : ∀ w, valueCount g (some w) ≤ P.f := by
+theorem gradeOf_grade0 {P : Parameters} {g : Fin P.n → Option (Option Bool)}
+    (h : gradeOf P g = .grade0) : ∀ w, valueCount g (some w) ≤ P.f := by
   unfold gradeOf at h
   split_ifs at h with h1 h2 h3 h4
   intro w

@@ -62,9 +62,9 @@ resolves, so a resolution matching it decides. That precondition is structural h
 than an assumption a liveness proof would have to carry. At the specification, GBCA's
 exclusion set `excluded` only grows — its single writer inserts and corruption does not
 touch it — and both value-bearing returns demand `v ∉ excluded ∧ !v ∈ excluded`, so any
-two graded returns of one round hand out the same bit and a `C`-return pins a bit that no
+two graded returns of one round hand out the same bit and a grade-0 return pins a bit that no
 extension of the run hands out at grade ≥ 1: `retG_value_agree`, `specInst_binding`,
-`retC_excluded_nonempty` (`ABA/GBCA/SpecificationSafety.lean`), each from monotonicity
+`retGrade0_excluded_nonempty` (`ABA/GBCA/SpecificationSafety.lean`), each from monotonicity
 alone, no invariant. The precondition is on the trace, not only on the state: every return
 of a round announces the round's bound bit on its label (D29), so `specInst_binding` reads
 it off the labels of a single trace, and the coin's race is against a bit the trace has
@@ -197,7 +197,7 @@ Ordered by expected value-for-effort:
 One cost note, on any of the three. The achievability item of `ABA/README.md` — an
 explicit scheduler taking `protocol fourProcesses` to a two-return trace of positive mass — is
 expensive under the wait-until order and the case denials: every stage send
-waits on the sender's own send at the level below, and every return but `retA` discharges
+waits on the sender's own send at the level below, and every return but `retGrade2` discharges
 the denials of the cases above it, so a witness has to schedule the full five-level
 exchange at each participating process and then exhibit those denials at each returner.
 
@@ -284,24 +284,23 @@ monotonicity of `excluded` and would hold without it — but a fair reading of t
 specification is not.
 
 Suppose the guard were the per-bit one, `b ∉ excluded`, so that a round could exclude both bits in
-turn. Take a mixed round: a quorum, `f + 1` F-blind support at each bit, and an `A`-return
+turn. Take a mixed round: a quorum, `f + 1` F-blind support at each bit, and a grade-2 return
 of `v` already fired. `bindUnset v` is then enabled — its guards would be the quorum, `f + 1`
 support for the spared bit `!v`, and `v` not yet excluded, none of which the return disturbs —
 so under a blanket-fair marking of the internal transitions every fair scheduler must
-eventually fire it. After that exclusion no bit is alive: `retA` and `retB` are disabled at both
-bits, and `retC` is disabled by the `A` grade guard (`grade = some true`). The processes that had
-not yet returned never return, in any extension, under any scheduler. Spec-level
-Termination — "if `n − f` correct processes take part then all correct processes eventually
-return" — would then be false of the specification itself, and no marking on the
-implementation side could repair it.
+eventually fire it. After that exclusion no bit is alive: `retGrade2` and `retGrade1` are disabled
+at both bits, and `retGrade0` is disabled by the grade-2 guard (`grade = some true`). The processes
+that had not yet returned never return, in any extension, under any scheduler. Spec-level
+Termination — "if `n − f` correct processes take part then all correct processes eventually return"
+— would then be false of the specification itself, and no marking on the implementation side could
+repair it.
 
 The `excluded = ∅` guard removes those states rather than the obligation. Every reachable state
 has `excluded ∈ {∅, {b}}` (`GBCASafety.excluded_card_le_one`), the surviving bit stays alive, and
-the `A` grade guard still admits `A`- and `B`-returns. The resolution is structural, so no marking
-has anything to decide here. The same holds of TS 1's flip (§5), where the one-shot guard
+the grade-2 guard still admits grade-2 and grade-1 returns. The resolution is structural, so no
+marking has anything to decide here. The same holds of TS 1's flip (§5), where the one-shot guard
 and the absorbing `ControlMode.noRuleEnabled` settle the question in the step relation rather than
-in a
-marking.
+in a marking.
 
 **Termination proof sketch for the specification as encoded.** Assume the `n − f` honest
 processes have called, so the quorum guard holds and holds forever (the count is monotone
@@ -311,13 +310,13 @@ All three guards of `bindUnset (!v)` therefore hold, and they persist until the 
 taken, so weak fairness fires it; `excluded = {!v}` from then on, and `v` is alive at every
 later state.
 
-Split on whether the dissent count at `!v` ever reaches `f + 1`. If it never does, `retB`
-and `retC` stay disabled forever — each asks `f + 1` at the dissenting bit, `retC` at both
-bits — and no `C`-lock can arise, so `retA v` is enabled at every un-returned process for
+Split on whether the dissent count at `!v` ever reaches `f + 1`. If it never does, `retGrade1`
+and `retGrade0` stay disabled forever — each asks `f + 1` at the dissenting bit, `retGrade0` at both
+bits — and no grade-0 lock can arise, so `retGrade2 v` is enabled at every un-returned process for
 the rest of the run and the round decides. This is the near-unanimous case: under unanimous
 honest input the count is capped by the corruption budget outright
 (`GBCASafety.support_le_of_unanimous`). If the count does reach `f + 1`, then from that point
-`retB v` is enabled at every un-returned process, whatever the grade lock, since `retB`
+`retGrade1 v` is enabled at every un-returned process, whatever the grade lock, since `retGrade1`
 reads no grade. Either way each un-returned process has a return enabled from some point on
 and permanently, so a fair scheduler answers it. Nothing in the sketch mentions the coin: it
 is a statement about one GBCA instance, and it is what item 1 of §4 would have to supply for

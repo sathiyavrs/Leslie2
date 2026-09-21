@@ -63,9 +63,10 @@ the first to the second at the visible `retABA` that opens phase 2.
 - `phase` — the two-phase disjunction on `a.val`:
   - **Phase 1** (pre-first-return): `a.val = none`.
   - **Phase 2** (post-first-return): `∃ v, a.val = some v`, `v` is permanently certified
-    by a concrete `A`-lock (`∃ r, ACert P g c r v` — § Certificates), and every honest
-    holder of an `A`-decision names `v` (`∀ j b', j ∉ c.F → AHolder P c j b' → b' = v`,
-    the `F`-free universal that survives corruption of the original witnesses).
+    by a concrete grade-2 lock (`∃ r, Grade2Certificate P g c r v` — § Certificates), and every
+    honest holder of a grade-2 decision names `v`
+    (`∀ j b', j ∉ c.F → Grade2Holder P c j b' → b' = v`, the `F`-free universal that survives
+    corruption of the original witnesses).
 
 A `callABA` at an honest process is answered row for row. The commit row fires at
 `input = none` and is answered by `SpecStep.callSet`, whose guard is the empty ghost entry
@@ -98,7 +99,7 @@ is written by `bindUnset`, and a value-bearing return needs the *live pair*
 that pair. It states them through certificates, which name their bit off a single
 permanent membership `(!b) ∈ (g r).excluded` plus commitments that only `call`, `F` and the
 honest `processes` fields can affect. That is the design, and it is sound; the certificates are
-what `Invariant.decided_source`, `Invariant.grade_A_source` and phase 2 of `AbstractState` carry.
+what `Invariant.decided_source`, `Invariant.grade2_source` and phase 2 of `AbstractState` carry.
 
 The certificate form is stronger than the specification requires. `bindUnset`
 carries the guard `excluded = ∅`, so a round excludes at most once
@@ -106,10 +107,10 @@ carries the guard `excluded = ∅`, so a round excludes at most once
 established by a return is in fact permanent, and pair-form invariants are maintainable.
 Trading the certificates for the pair is therefore available as a simplification. It is
 recorded here as an option and is not scheduled work: the exchange would touch
-`decided_source`, `grade_A_source`, `AbstractState`'s phase 2 and every `AbstractStateUnchanged`
+`decided_source`, `grade2_source`, `AbstractState`'s phase 2 and every `AbstractStateUnchanged`
 obligation, and the certificate form needs no reachability argument of its own.
 
-- **`ACommit P g c r b`** — the permanent commitments of an `A`-locked round: the live
+- **`Grade2Commitment P g c r b`** — the permanent commitments of a grade-2-locked round: the live
   pair at every round `r' ≥ r` (round `r` itself included), every honest call above `r`,
   every honest est past `r`, and
   every honest `OutcomeHolder` of round `r`'s outcome names `b`. `OutcomeHolder` is the
@@ -118,33 +119,34 @@ obligation, and the certificate form needs no reachability argument of its own.
   between `retG r` and `retG (r + 1)`. Each component is monotone-stable: the first only
   loses instances as `excluded` grows, the rest read write-once `call` and honest `processes`
   fields.
-- **`ACert P g c r b`** := `(g r).grade = some true ∧ (!b) ∈ (g r).excluded ∧ ACommit P g c r b`
-  — an `A`-locked round whose surviving bit at lock time was `b`, plus those commitments.
-  `(!b) ∈ excluded` is permanent (`excluded` only grows), so a certificate names `b` forever
-  whatever else the round does. This, not a live pair, is what `Invariant.decided_source` and
-  `Invariant.grade_A_source` produce and what phase 2 of `AbstractState` holds.
-  `ACommit.of_unchanged` / `ACert.of_unchanged` transport both along any step that keeps `excluded`,
-  `call`, honest `round`/`estimate`, reflects carriers and only grows `F` (`hF : c.F ⊆ c'.F` — the
-  honesty side conditions are all of the form `id ∉ F`, so they must be re-derived through the
-  larger set); `ACert.of_unchanged` additionally requires the round's grade preserved.
+- **`Grade2Certificate P g c r b`** := `(g r).grade = some true ∧ (!b) ∈ (g r).excluded ∧
+  Grade2Commitment P g c r b` — a grade-2-locked round whose surviving bit at lock time was `b`,
+  plus those commitments. `(!b) ∈ excluded` is permanent (`excluded` only grows), so a certificate
+  names `b` forever whatever else the round does. This, not a live pair, is what
+  `Invariant.decided_source` and `Invariant.grade2_source` produce and what phase 2 of
+  `AbstractState` holds. `Grade2Commitment.of_unchanged` / `Grade2Certificate.of_unchanged`
+  transport both along any step that keeps `excluded`, `call`, honest `round`/`estimate`, reflects
+  carriers and only grows `F` (`hF : c.F ⊆ c'.F` — the honesty side conditions are all of the form
+  `id ∉ F`, so they must be re-derived through the larger set); `Grade2Certificate.of_unchanged`
+  additionally requires the round's grade preserved.
 - **`Invariant.excluded_support` (I28)** — every exclusion keeps its D15 guard: `b ∈ (g r).excluded`
   implies `f + 1` F-blind call support for the spared bit `!b` at round `r`. Both `call` and `F`
   only grow, so the count is permanent, and `GBCA.exists_correct_caller` derives it into a
   never-corrupted caller of `!b`. That derivation is what recovers a round's value from the
   membership alone, with no live pair in hand.
 - **`Invariant.outcomeHolder_agree` (I29)** — any two honest carriers of round `r`'s outcome agree,
-  unless the round is `C`-locked. This is the state residue of the order argument "two
+  unless the round is grade-0-locked. This is the state residue of the order argument "two
   opposite value-bearing returns cannot both fire at one round": the first excludes the
   rival bit, and the second's liveness guard then fails. The conjunct carries that
   argument as state, so no row has to replay it.
-- **`Invariant.alock_agree` (I30)** — any two honest `AHolder`s agree globally, across rounds,
-  where `AHolder P c id b` is a live `A`-grade `lastGrade = some (.A b)` or a sent
-  `b ∈ decidedSent id`. Each new holder is compared at its own `retG` row, where the
-  fresh return's live pair meets the existing holder's certificate.
+- **`Invariant.grade2Lock_agree` (I30)** — any two honest `Grade2Holder`s agree globally, across
+  rounds, where `Grade2Holder P c id b` is a live grade-2 `lastGrade = some (.grade2 b)` or a sent
+  `b ∈ decidedSent id`. Each new holder is compared at its own `retG` row, where the fresh return's
+  live pair meets the existing holder's certificate.
 - **`AbstractStateUnchanged P g g' c c'`** — the `AbstractState`-side transport a step row hands
-  back: every `ACert` on the pre-state has an `ACert` on the post-state *at some round* (`∃ r1` —
-  the bit is preserved, the round is re-existentialized, which is what lets a row relocate a
-  certificate), and phase 2's holder universal survives given its certificate.
+  back: every `Grade2Certificate` on the pre-state has a `Grade2Certificate` on the post-state *at
+  some round* (`∃ r1` — the bit is preserved, the round is re-existentialized, which is what lets a
+  row relocate a certificate), and phase 2's holder universal survives given its certificate.
   `AbstractStateUnchanged.refl` covers every row that touches neither certificates nor holders. Each
   `Invariant.step_*` lemma returns `Invariant ∧ AbstractStateUnchanged`, and
   `AbstractState.unchangedBy` consumes exactly that; the certificate is what pins a *fresh* holder
@@ -186,7 +188,7 @@ which the bit is a reading of.
 The single run is `decide_step` (`HybridRefinesSpecification/WeakTransitions.lean`), fired
 at the phase-1 `retABA`. `SpecStep.decide` is Dirac, so the run is one step; what the row
 supplies is its three guards, each read off the concrete state at the round `rA` of the
-`ACert` derived from a never-corrupted DECIDED sender of `b`.
+`Grade2Certificate` derived from a never-corrupted DECIDED sender of `b`.
 
 - `hv : a.val = none` — phase 1 itself.
 - `hm : a.mode ≠ .terminal` — the `mode_flipEnabled` field: an abstract state that never flips
@@ -274,7 +276,7 @@ and its recorded input is a genuine prior `callABA`.
 ### D14 — TS 2 Validity (InputSupport guards)
 
 The blueprint's TS 2 certifies its binding step by a *single* honest witness
-(`∃ id ∉ F, call id = b`), and `B`/`C` dissent by a single honest dissenter — the same
+(`∃ id ∉ F, call id = b`), and grade-1 / grade-0 dissent by a single honest dissenter — the same
 singular-witness provenance loss one level down, and `hybrid` built on it provably
 violates Validity (§ Why this shape). ABDY22's implementation carries the `f + 1` via
 Valid-set relay thresholds; TS 2 abstracts it to one witness.
@@ -287,12 +289,12 @@ bit at a time, write-once per bit and `excluded` monotone.
 
 - `bindUnset b` counts support for the bit it spares, `!b`, alongside a quorum on the
   calls and `b ∉ excluded`;
-- `retB v` counts support for the dissenting bit `!v`, alongside the live pair
-  `v ∉ excluded ∧ (!v) ∈ excluded` for the bit it hands out — the same pair `retA v` reads;
-- `retC` hands out no bit and reads no live pair, only `(!bnd) ∈ excluded` for the bit
+- `retGrade1 v` counts support for the dissenting bit `!v`, alongside the live pair
+  `v ∉ excluded ∧ (!v) ∈ excluded` for the bit it hands out — the same pair `retGrade2 v` reads;
+- `retGrade0` hands out no bit and reads no live pair, only `(!bnd) ∈ excluded` for the bit
   `bnd` it announces: it carries one such count for **each** bit — which is exactly what
-  certifies that no single bit is the right answer — plus the `C`-side grade guard
-  enforcing A/C exclusivity.
+  certifies that no single bit is the right answer — plus the grade-0 guard
+  enforcing grade-2 / grade-0 exclusivity.
 
 Directly `F`-blind — the count is monotone in `F` and `call`, so it is
 immune to later `fail`s — and the budget pigeonhole transfers verbatim: among `f + 1`
@@ -319,11 +321,12 @@ monotone throughout. The derivation splits by D14 site.
   by a monotone *exclude certificate* `ExclusionCertificate P s b` (the opposite bit owns the unique
   `n − f` `ECHO` receipt quorum, or an `n − f` wall of processes is each corrupted or committed to a
   non-`b` `VOTE` payload — the two ways an `n − f` `VOTE b` quorum is made impossible forever). A
-  value-bearing return restores it from its own ECHO5-level evidence: `retA`'s `n − f` `ECHO5 v`
-  quorum, and `retB`'s `f + 1` `BIND v` receipts as the grade-1 witness (all five D18 levels, not
-  the source's compressed `VOTE`-level reading). Both route to an `n − f` `VOTE v` receipt quorum at
-  an honest process (`bind_receipts_of_echo5_quorum` then `voteQuorum_of_bind_receipts`); that
-  quorum is itself the wall, so `exclusionCertificate_of_voteQuorum` certifies `!v` excluded, and
+  value-bearing return restores it from its own ECHO5-level evidence: `retGrade2`'s `n − f` `ECHO5
+  v` quorum, and `retGrade1`'s `f + 1` `BIND v` receipts as the grade-1 witness (all five D18
+  levels, not the source's compressed `VOTE`-level reading). Both route to an `n − f` `VOTE v`
+  receipt quorum at an honest process (`bind_receipts_of_echo5_quorum` then
+  `voteQuorum_of_bind_receipts`); that quorum is itself the wall, so
+  `exclusionCertificate_of_voteQuorum` certifies `!v` excluded, and
   `not_exclusionCertificate_of_voteQuorum` refutes any certificate for `v` — the live half `v ∉
   excluded` of the guard pair, read against `exclusion_certificate`.
 - **The `bindUnset` guards.** These are derived separately, from an `EchoReceiptQuorum` — at
@@ -333,10 +336,10 @@ monotone throughout. The derivation splits by D14 site.
   receipt quorum (`inputQuorum_of_echoReceiptQuorum`), whose honest senders hold an input
   (`input_called`, D8) — that is the quorum guard (`quorum_of_msg_quorum`) — and whose
   count feeds `Invariant.support_of_input_receipts` for the `f + 1` InputSupport count.
-- The `retB`/`retC` counts ride on the `|Valid| > 1` evidence the returner itself holds:
+- The `retGrade1`/`retGrade0` counts ride on the `|Valid| > 1` evidence the returner itself holds:
   it is an `n − f ≥ f + 1` `INPUT` receipt quorum for *each* bit, so `inputSupport_of_bothValid`
-  closes both bits at once — which is what `retC`'s two per-bit guards need, and what
-  covers `retB`'s dissent bit with no separate dissent-relay argument.
+  closes both bits at once — which is what `retGrade0`'s two per-bit guards need, and what
+  covers `retGrade1`'s dissent bit with no separate dissent-relay argument.
 
 `SpecificationRelation.callSupport` carries every such count to the specification side along
 `call_eq`/`F_eq`. `call_eq` stays exact and the corruption row needs no extra work — the
@@ -345,9 +348,9 @@ mirrors.
 
 Since the specification excludes by an internal τ-transition, an implementation return
 meeting a specification state whose needed bit is not yet excluded is answered by the
-two-step weak run `bindUnset (!v) ; retA v` (resp. `; retB v`),
-`excludeThenRetA_run`/`excludeThenRetB_run`. `retC` reads no live pair, but it does need
-`1 ≤ excluded.card`, so it too takes the run (`excludeThenRetC_run`) from an all-alive
+two-step weak run `bindUnset (!v) ; retGrade2 v` (resp. `; retGrade1 v`),
+`excludeThenRetGrade2_run`/`excludeThenRetGrade1_run`. `retGrade0` reads no live pair, but it does
+need `1 ≤ excluded.card`, so it too takes the run (`excludeThenRetGrade0_run`) from an all-alive
 state; every return row runs the same decidable case split on `excluded`.
 
 ### D12′ — the DECIDED equivocation gap
@@ -361,16 +364,16 @@ records that only grow. `sendDecided` inserts; delivery is the `decidedDeliver` 
 (receiver, sender, bit), with soundness `b ∈ decidedSent j` on the network's half and an
 at-most-once `b ∉ decidedReceived i j` guard on the receiver's; `byzantineDecided` is guarded *only*
 by
-`k ∈ F`. Honest sent sets stay at card ≤ 1 in reachable states (A-grade certificates pin
+`k ∈ F`. Honest sent sets stay at card ≤ 1 in reachable states (grade-2 certificates pin
 one bit), but no card invariant is needed. The invariant rewiring
 (`HybridRefinesSpecification/Relation.lean`): `received_sound` becomes per-bit and
 *honesty-free* (`b ∈ decidedReceived i j → b ∈ decidedSent j`, preserved by pure monotonicity,
 since sent sets never shrink); `decided_source` becomes per sent bit
-(`id ∉ F → b ∈ decidedSent id → ∃ r` A-lock certificate for `b`) — the equivocation-robust form:
-corrupted equivocators may pad any bit's tally, but the `retABA`-row pigeonhole (`n − f`
-distinct senders of `b`, `|F| ≤ f`, `n − f > f`) recovers a never-corrupted sender of `b`,
-whose sent `b` carries the A-lock certificate that the phase-1 `SpecStep.decide` step and
-phase 2's `AbstractState` certificate both need.
+(`id ∉ F → b ∈ decidedSent id → ∃ r` grade-2 lock certificate for `b`) — the equivocation-robust
+form: corrupted equivocators may pad any bit's tally, but the `retABA`-row pigeonhole (`n − f`
+distinct senders of `b`, `|F| ≤ f`, `n − f > f`) recovers a never-corrupted sender of `b`, whose
+sent `b` carries the grade-2 lock certificate that the phase-1 `SpecStep.decide` step and phase 2's
+`AbstractState` certificate both need.
 
 ## `Invariant`: the concrete invariant (`HybridRefinesSpecification/Relation.lean`)
 
@@ -384,7 +387,7 @@ fields), grouped:
 - **F-lockstep**: `F_gbca`, `F_wcc` (every instance's `F` equals `c.F`), `F_card`.
 - **Round structure**, keyed throughout on
   `RoundSettled g r := (g r).excluded ≠ ∅ ∨ (g r).grade = some false` — "round `r` is finished",
-  which is strictly weaker than "round `r` has excluded a bit", since a `C`-return excludes
+  which is strictly weaker than "round `r` has excluded a bit", since a grade-0 return excludes
   nothing itself:
   `down_settled` (closed rounds downward-closed), `quiescent` (cofinitely many rounds open),
   `round_bound`, `call_round`, `wcc_callRound`, `wcc_bound`/`wcc_called` (coin resolutions and
@@ -392,12 +395,12 @@ fields), grouped:
   `RoundSettled.congr`/`RoundSettled.of_unchanged`
   are the two transport lemmas every row's frame facts feed.
 - **The coin clauses, established at the resolving call**: `wcc_bound`, `wcc_order` and
-  `flip_alock` are the conjuncts that read `(w r).val`, and the one row that writes it is
+  `flip_grade2Lock` are the conjuncts that read `(w r).val`, and the one row that writes it is
   `callW`'s resolving row, so `Invariant.step_callW_resolve` carries all three. Its input is
   `Invariant.exists_correct_wcaller`: the threshold counts more than `f` callers of round `r`
   and `F_card` bounds the corrupted set by `f`, so the callers outnumber it and one of
   them is never corrupted. That caller's `wcc_called`, `wcc_callRound` and `wccCalled_witness`
-  carry `wcc_bound`, `wcc_order` and `flip_alock` in turn. `agree_locked`'s round-`r` corner is
+  carry `wcc_bound`, `wcc_order` and `flip_grade2Lock` in turn. `agree_locked`'s round-`r` corner is
   vacuous, `round_flip` at an honest process past round `r` contradicting `val = ⊥`. The
   other two rows of `callW` — the input-enabledness loop and the recording call — move
   neither `val` nor `F`, and both go through `Invariant.step_callW_dirac`; `Invariant.step_callW`
@@ -405,41 +408,41 @@ fields), grouped:
 - **Input/est provenance**: `input_gbcaRound0`, `input_gbcaRound0_permanent`, `input_called`,
   `phase_input`, `estimate0`, `estimate_ret`, `estimate_previous`, `estimate_previous_ne`,
   `call_provenance`, `bind_succ` (a bit excluded at round `r + 1` was already excluded at round `r`,
-  or round `r` closed `C`-locked with round `r`'s coin at `.bit v` *or* `.top` — a `⊤` coin lets the
-  adopting return pick any matching bit, so the coin disjunct alone does not pin `v`; only the
-  `C`-lock does, and every downstream use reads just that half), `c_chain`.
-- **Locks and DECIDED**: `a_commit` (an `A`-locked round whose surviving bit `b` is still
-  alive yields `ACommit` for `b` — the live-pair form, hypothesis-guarded so that no row
-  has to establish the pair to use it), `agree_locked` (keyed on the frontier reading
-  `IsLastBound g r := (g r).excluded ≠ ∅ ∧ (g (r + 1)).excluded = ∅`), `gradeA_needs_bind`
-  (A-side only: `retA` reads the live pair, so an `A`-graded round has a non-empty
-  exclusion set — a `C`-return reads no pair and constrains none), `grade_A_source` and
-  `decided_source` (both producing an `ACert`, the pair-free form), `received_sound` (D12′
-  per-bit and honesty-free — see above), `bound_quorum` (a round with a non-empty
-  exclusion set has met the quorum).
-- **Certificates**: `excluded_support` (I28), `outcomeHolder_agree` (I29), `alock_agree` (I30) — the
-  three conjuncts that state a round's value without the live pair; see § Certificates.
+  or round `r` closed grade-0-locked with round `r`'s coin at `.bit v` *or* `.top` — a `⊤` coin lets
+  the adopting return pick any matching bit, so the coin disjunct alone does not pin `v`; only the
+  grade-0 lock does, and every downstream use reads just that half), `grade0Lock_chain`.
+- **Locks and DECIDED**: `grade2Lock_commit` (a grade-2-locked round whose surviving bit `b` is
+  still alive yields `Grade2Commitment` for `b` — the live-pair form, hypothesis-guarded so that no
+  row has to establish the pair to use it), `agree_locked` (keyed on the frontier reading
+  `IsLastBound g r := (g r).excluded ≠ ∅ ∧ (g (r + 1)).excluded = ∅`), `grade2_needs_bind` (grade-2
+  side only: `retGrade2` reads the live pair, so a round graded `2` has a non-empty exclusion
+  set — a grade-0 return reads no pair and constrains none), `grade2_source` and
+  `decided_source` (both producing a `Grade2Certificate`, the pair-free form),
+  `received_sound` (D12′ per-bit and honesty-free — see above), `bound_quorum` (a round with
+  a non-empty exclusion set has met the quorum).
+- **Certificates**: `excluded_support` (I28), `outcomeHolder_agree` (I29), `grade2Lock_agree` (I30)
+  — the three conjuncts that state a round's value without the live pair; see § Certificates.
 - **Support sent sets**: `bind_support` (I26) — a round whose exclusion set names `!v` carries a
   permanent `f + 1` input-or-`F` sent set for `v` (`RoundLoopInputSupport`, the concrete mirror of
   TS 1's
   `InputSupport`), established
-  at `bindUnset` — and `clock_support` (I27), which keeps a `C`-locked round's `retC` guards
-  themselves: `f + 1` F-blind call-or-`F` support for *each* bit, in count form. Both are
-  permanent and monotone (`call` and `F` only grow). `support_of_call_count` reads any such
-  count back as an input sent set by strong induction on the round — round 0 wholesale via
+  at `bindUnset` — and `grade0Lock_support` (I27), which keeps a grade-0-locked round's `retGrade0`
+  guards themselves: `f + 1` F-blind call-or-`F` support for *each* bit, in count form. Both are
+  permanent and monotone (`call` and `F` only grow). `support_of_call_count` reads any such count
+  back as an input sent set by strong induction on the round — round 0 wholesale via
   `input_gbcaRound0_permanent`, `r ≥ 1` by deriving one honest caller whose `call_provenance`
-  provenance routes into the previous round's `bind_support` or into its `clock_support` count, a
-  smaller instance of the same statement — and that is what supplies `SpecStep.decide`'s `hs`
+  provenance routes into the previous round's `bind_support` or into its `grade0Lock_support` count,
+  a smaller instance of the same statement — and that is what supplies `SpecStep.decide`'s `hs`
   through phase 1's ghost sync, by `inputSupport_of_roundLoopInputSupport`. The both-bit shape of
-  `clock_support` is also what keeps a `C`-lock incompatible with an agreeing coin underneath it
-  (`no_cgrade_succ_of_support`), and what forces a `C`-lock one round down
-  (`c_chain_of_both_supports`): `exists_correct_caller` turns the two counts into honest round-`(r +
-  1)` callers of opposite bits, which are opposite-valued carriers of round `r`'s outcome, and
-  `outcomeHolder_agree` admits those only at a `C`-locked round.
-- **Dissent bookkeeping**: `flip_alock`, `retG_witness`, `wccCalled_witness`,
+  `grade0Lock_support` is also what keeps a grade-0 lock incompatible with an agreeing coin
+  underneath it (`no_grade0Lock_succ_of_support`), and what forces a grade-0 lock one round down
+  (`grade0Lock_chain_of_both_supports`): `exists_correct_caller` turns the two counts into honest
+  round-`(r + 1)` callers of opposite bits, which are opposite-valued carriers of round `r`'s
+  outcome, and `outcomeHolder_agree` admits those only at a grade-0-locked round.
+- **Dissent bookkeeping**: `flip_grade2Lock`, `retG_witness`, `wccCalled_witness`,
   `idle_no_wccCall`, each keyed on the permanent `F`-free `DissentWitness` (with its
   `transport` lemma for frame-agnostic preservation). The support sent sets `bind_support`/
-  `clock_support` latently subsume much of this residue machinery — both are permanent
+  `grade0Lock_support` latently subsume much of this residue machinery — both are permanent
   `F`-free provenance facts — so folding the residue conjuncts into the sent sets is a
   recorded future refactor.
 
@@ -471,8 +474,8 @@ recording them is what pins the design.
    the concrete (`a = absMap (g,c,w)`) with `a.val` tied to the concrete `bindUnset` row,
    `SpecStep.decide` is forced the moment a round excludes the dissenting bit under unanimous
    calls — but a
-   late joiner can then submit a dissenting `callABA`, enable a `C`-grade at that round,
-   steer the next round to spare the opposite value, `A`-lock it, and DECIDE against the
+   late joiner can then submit a dissenting `callABA`, enable a grade-0 at that round,
+   steer the next round to spare the opposite value, grade-2 lock it, and DECIDE against the
    already-committed abstract `val`. Hence laziness: the abstract state commits as late as possible.
 2. **A flipping abstract state fails.** The abstract state could in principle answer the
 concrete coin row
@@ -495,7 +498,7 @@ concrete coin row
    D13 `f + 1` `F`-blind support discipline.
 5. **The singular witness loses provenance (TS 2).** Deterministically at `n = 4, f = 1`,
    inputs `1,0,0,0`: TS 2's single-witness exclude of `0` fires off the sole `1`-holder,
-   leaving `1` as round 0's surviving bit; `retB`-adopt
+   leaving `1` as round 0's surviving bit; `retGrade1`-adopt
    propagates `estimate := 1`, round-1 unanimity decides `1`, `fail 0`, `retABA 1 1` — yet
    every never-corrupted process input `0`. A single certifying witness is exactly the
    D13 loss one level down; hence the D14 InputSupport guards.
@@ -503,7 +506,7 @@ concrete coin row
    the D14 counts spec-side, filling empty `F`-entries at the *implementation* relation
    instead of counting them. This dies on a pre-corruption genuine call: at `n = 4,
    f = 1`, a genuine `callG 3 0` forces the correct entry 3 to mirror `0`; after `fail 3`
-   the adversary amplifies `INPUT 1` to a `BIND 1` and a visible `retA 0 1`, but the spec
+   the adversary amplifies `INPUT 1` to a `BIND 1` and a visible `retGrade2 0 1`, but the spec
    state has `#callers(1) = 1 < 2` and entry 3 is *genuinely full* — no τ fills it, since a
    fill needs an *empty* `F`-field. The spec does emit the trace, via a different run that
    answers `callG 3 0` with a loop and byzantine-fills entry 3 with `1` after `fail 3`; but that

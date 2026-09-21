@@ -229,11 +229,11 @@ theorem deliverDecided_decidedReceived_of_ne (s : ABAState P) (i j : Fin P.n) (b
 
 /-- The round advance of process `id` on receiving the coin `c` (fused
 DECIDED-send, deviation D10): adopt the coin when the estimate is `⊥`,
-multicast `⟨DECIDED, b⟩` when the round's grade was `A b`, clear the grade and
+multicast `⟨DECIDED, b⟩` when the round's outcome was `grade2 b`, clear the grade and
 move to `toCallG` of the next round. -/
 def stepRound (s : ABAState P) (id : Fin P.n) (c : Bool) : ABAState P :=
   (match (s.processes id).lastGrade with
-    | some (.A b) => s.sendDecided id b
+    | some (.grade2 b) => s.sendDecided id b
     | _ => s).setProcess id
     { s.processes id with
       estimate := some ((s.processes id).estimate.getD c),
@@ -285,33 +285,33 @@ theorem stepRound_processes_ne (s : ABAState P) (id : Fin P.n) (c : Bool)
   unfold decidedCount
   rw [stepRound_decidedReceived]
 
-/-- On an `A b` grade the round advance multicasts `⟨DECIDED, b⟩`. -/
-theorem stepRound_decidedSent_of_A (s : ABAState P) (id : Fin P.n) (c b : Bool)
-    (h : (s.processes id).lastGrade = some (.A b)) :
+/-- On a `grade2 b` outcome the round advance multicasts `⟨DECIDED, b⟩`. -/
+theorem stepRound_decidedSent_of_grade2 (s : ABAState P) (id : Fin P.n) (c b : Bool)
+    (h : (s.processes id).lastGrade = some (.grade2 b)) :
     (s.stepRound id c).decidedSent =
       Function.update s.decidedSent id (insert b (s.decidedSent id)) := by
   unfold stepRound
   rw [h]
   rfl
 
-/-- Without an `A` grade the round advance leaves the DECIDED sets alone. -/
-theorem stepRound_decidedSent_of_not_A (s : ABAState P) (id : Fin P.n) (c : Bool)
-    (h : ∀ b, (s.processes id).lastGrade ≠ some (.A b)) :
+/-- Without a grade-2 outcome the round advance leaves the DECIDED sets alone. -/
+theorem stepRound_decidedSent_of_not_grade2 (s : ABAState P) (id : Fin P.n) (c : Bool)
+    (h : ∀ b, (s.processes id).lastGrade ≠ some (.grade2 b)) :
     (s.stepRound id c).decidedSent = s.decidedSent := by
   unfold stepRound
   cases hg : (s.processes id).lastGrade with
   | none => rfl
   | some out =>
     cases out with
-    | A b => exact absurd hg (h b)
-    | B b => rfl
-    | C => rfl
+    | grade2 b => exact absurd hg (h b)
+    | grade1 b => rfl
+    | grade0 => rfl
 
-/-- The round advance when the round carried no `A` grade: the round loop's
+/-- The round advance when the round carried no grade-2 outcome: the round loop's
 own advance, the network untouched. -/
 theorem stepRound_plain (C : ∀ _ : Fin P.n, RoundLoopRecord P.n) (A : ABANetworkState P.n)
     (id : Fin P.n) (co : Bool)
-    (hg : ∀ v : Bool, (C id).process.lastGrade ≠ some (.A v)) :
+    (hg : ∀ v : Bool, (C id).process.lastGrade ≠ some (.grade2 v)) :
     stepRound (P := P) (C, A) id co
       = (Function.update C id ((C id).stepRound co), A) := by
   unfold stepRound
@@ -319,18 +319,19 @@ theorem stepRound_plain (C : ∀ _ : Fin P.n, RoundLoopRecord P.n) (A : ABANetwo
   | none => rw [show (processes (P := P) (C, A) id).lastGrade = none from hlg]; rfl
   | some out =>
     cases out with
-    | A v => exact absurd hlg (hg v)
-    | B v => rw [show (processes (P := P) (C, A) id).lastGrade = some (.B v) from hlg]; rfl
-    | C => rw [show (processes (P := P) (C, A) id).lastGrade = some .C from hlg]; rfl
+    | grade2 v => exact absurd hlg (hg v)
+    | grade1 v => rw [show (processes (P := P) (C,
+      A) id).lastGrade = some (.grade1 v) from hlg]; rfl
+    | grade0 => rw [show (processes (P := P) (C, A) id).lastGrade = some .grade0 from hlg]; rfl
 
-/-- The round advance on an `A b` grade: the round loop's advance joined with
+/-- The round advance on a `grade2 b` outcome: the round loop's advance joined with
 the network's publication of `b` (the fused DECIDED-send, D10). -/
 theorem stepRound_publish (C : ∀ _ : Fin P.n, RoundLoopRecord P.n) (A : ABANetworkState P.n)
-    (id : Fin P.n) (co b : Bool) (hg : (C id).process.lastGrade = some (.A b)) :
+    (id : Fin P.n) (co b : Bool) (hg : (C id).process.lastGrade = some (.grade2 b)) :
     stepRound (P := P) (C, A) id co
       = (Function.update C id ((C id).stepRound co), A.recordDecided id b) := by
   unfold stepRound
-  rw [show (processes (P := P) (C, A) id).lastGrade = some (.A b) from hg]
+  rw [show (processes (P := P) (C, A) id).lastGrade = some (.grade2 b) from hg]
   rfl
 
 /-- Corruption (deviations D1, D23): total, Dirac, monotone in `F`. The

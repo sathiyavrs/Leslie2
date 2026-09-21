@@ -54,7 +54,7 @@ diffusion state (conjunct 6), and input coherence (conjunct 5 — the honest
 * **D10 (fused DECIDED-send).** Algorithm 1's `elif g = A: send ⟨DECIDED, b⟩`
   is performed inside the round advance `RoundLoopRecord.stepRound`, joined with the
   network's publication of the bit: receiving the round's coin adopts it when
-  `estimate = ⊥`, multicasts `⟨DECIDED, b⟩` when the round's grade was `A b`,
+  `estimate = ⊥`, multicasts `⟨DECIDED, b⟩` when the round's outcome was `grade2 b`,
   clears `lastGrade` and advances to the next round, all in one Dirac
   transition. The joint step is the `retWPublish` rendezvous, whose round-loop
   half is the advance and whose network half is the sent insert.
@@ -119,18 +119,20 @@ inductive Phase : Type
   | awaitW
   deriving DecidableEq, Repr
 
-/-- The estimate a graded outcome dictates: `A b`/`B b` set the estimate to
-`b`, `C` clears it to `⊥` (awaiting the coin). -/
+/-- The estimate a graded outcome dictates: `grade2 b`/`grade1 b` set the estimate to
+`b`, grade `0` clears it to `⊥` (awaiting the coin). -/
 def GBCAOutput.estimate : GBCAOutput → Option Bool
-  | .A b => some b
-  | .B b => some b
-  | .C => none
+  | .grade2 b => some b
+  | .grade1 b => some b
+  | .grade0 => none
 
-@[simp] theorem GBCAOutput.estimate_A (b : Bool) : (GBCAOutput.A b).estimate = some b := rfl
+@[simp] theorem GBCAOutput.estimate_grade2 (b : Bool) : (GBCAOutput.grade2 b).estimate = some b :=
+  rfl
 
-@[simp] theorem GBCAOutput.estimate_B (b : Bool) : (GBCAOutput.B b).estimate = some b := rfl
+@[simp] theorem GBCAOutput.estimate_grade1 (b : Bool) : (GBCAOutput.grade1 b).estimate = some b :=
+  rfl
 
-@[simp] theorem GBCAOutput.estimate_C : (GBCAOutput.C).estimate = none := rfl
+@[simp] theorem GBCAOutput.estimate_grade0 : (GBCAOutput.grade0).estimate = none := rfl
 
 /-- The per-process state of the ABA core. (No field mentions `n`; the
 parameter is kept so the record is addressed uniformly as `RoundLoopState n`
@@ -233,7 +235,7 @@ def receiveDecided (q : RoundLoopRecord n) (k : Fin n) (b : Bool) : RoundLoopRec
 
 /-- The round advance on receiving the coin `c`: adopt the coin if the
 estimate is `⊥`, clear the grade, open the next round. The `⟨DECIDED, b⟩`
-publication the advance carries on an `A` grade (D10) is the network's half of
+publication the advance carries on a grade-2 outcome (D10) is the network's half of
 the joint step, so no row of it appears here. -/
 def stepRound (q : RoundLoopRecord n) (c : Bool) : RoundLoopRecord n :=
   q.setProcess

@@ -53,7 +53,7 @@ inductive NetworkEvent (n : ℕ) (M : Type) : Type
   /-- DECIDED delivery: sender `j`'s `⟨DECIDED, b⟩` reaches receiver `i`. -/
   | decidedDeliver (i j : Fin n) (b : Bool)
   /-- The coin return fused with a `⟨DECIDED, b⟩` publication (D10): the
-  round-`r` coin `c` returns to `id`, whose grade was `A b`. -/
+  round-`r` coin `c` returns to `id`, whose outcome was `grade2 b`. -/
   | retWPublish (r : ℕ) (id : Fin n) (c : Bool) (b : Bool)
   /-- The graded-agreement call against an already-called stage record. -/
   | gbcaCallLoop (r : ℕ) (id : Fin n) (b : Bool)

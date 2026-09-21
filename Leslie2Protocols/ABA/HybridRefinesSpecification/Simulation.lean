@@ -302,10 +302,10 @@ theorem hybridRefinesSpecification (P : Parameters) :
         obtain ⟨j, hjF, hjrecv⟩ := hex
         have hjsent : b ∈ ABAState.decidedSent (C, A) j := hI.received_sound id j b hjrecv
         obtain ⟨rA, hrA_certificate⟩ := hI.decided_source j b hjF hjsent
-        -- the abstract-side holder pin for `b`: every honest `A`-decision holder agrees with the
-        -- derived sender's sent bit (I30)
-        have hpinb : ∀ j0 b0', j0 ∉ ABAState.F (C, A) → AHolder P (C, A) j0 b0' → b0' = b :=
-          fun j0 b0' hj0 hh0 => hI.alock_agree j0 j b0' b hj0 hjF hh0 (Or.inr hjsent)
+        -- the abstract-side holder pin for `b`: every honest grade-2 decision holder
+        -- agrees with the derived sender's sent bit (I30)
+        have hpinb : ∀ j0 b0', j0 ∉ ABAState.F (C, A) → Grade2Holder P (C, A) j0 b0' → b0' = b :=
+          fun j0 b0' hj0 hh0 => hI.grade2Lock_agree j0 j b0' b hj0 hjF hh0 (Or.inr hjsent)
         have hretfalse : a.ret id = false := by
           rw [hAbs.ret_eq id]; exact hret
         have hCF : c'.F = ABAState.F (C, A) := ABAState.setProcess_F _ _ _

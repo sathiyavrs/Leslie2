@@ -264,12 +264,12 @@ The two-event link and return place the certificates in the invariant
 (`candidate_bound`, `secondGatherCall_bound`). The graded outcome's certificate,
 `OutputCertificate`, is established at `secondGatherReturn` from the second gather's return and
 consumed at `retG`, which sees the outcome alone (`out_certificate`). The return rows then mirror
-`GBCASim.refinesSpecification` shape for shape: an `A`/`B` return hands out the bound bit and
-certifies `ExclusionEvidence` of its complement, and the `C`-return announces the bit the first
-return wrote. The D15 support counts come off the first core through the committed-entry provenance
-— a core entry is a committed entry, a committed entry of an honest process is its call, and the
-count is `F`-blind (`callSupport_of_core`) — or off an honest `⊥` candidate. Exclusions fire on
-demand as the two-step run `bindUnset; ret`, as in the direct refinement.
+`GBCASim.refinesSpecification` shape for shape: a grade-2 or grade-1 return hands out the bound bit
+and certifies `ExclusionEvidence` of its complement, and the grade-0 return announces the bit the
+first return wrote. The D15 support counts come off the first core through the committed-entry
+provenance — a core entry is a committed entry, a committed entry of an honest process is its call,
+and the count is `F`-blind (`callSupport_of_core`) — or off an honest `⊥` candidate. Exclusions fire
+on demand as the two-step run `bindUnset; ret`, as in the direct refinement.
 
 ## Substitution by congruence
 

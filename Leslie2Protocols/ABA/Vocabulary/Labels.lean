@@ -39,14 +39,14 @@ Unpredictability property, which is out of scope here.
 namespace PLTS
 namespace ABA
 
-/-- Graded outcome of a GBCA instance: `(b, A)`, `(b, B)` or `(⊥, C)`. -/
+/-- The graded outcome of a GBCA instance: `(b, 2)`, `(b, 1)` or `(⊥, 0)`. -/
 inductive GBCAOutput : Type
-  /-- Highest grade: output `b` with grade `A` (decide). -/
-  | A (b : Bool)
-  /-- Middle grade: output `b` with grade `B` (adopt). -/
-  | B (b : Bool)
-  /-- Lowest grade: no output (`⊥`), grade `C` (adopt the coin). -/
-  | C
+  /-- Highest grade: output `b` with grade `2` (decide). -/
+  | grade2 (b : Bool)
+  /-- Middle grade: output `b` with grade `1` (adopt). -/
+  | grade1 (b : Bool)
+  /-- Lowest grade: no output (`⊥`), grade `0` (adopt the coin). -/
+  | grade0
   deriving DecidableEq, Repr
 
 /-- The shared label alphabet of the ABA development over `n` processes.

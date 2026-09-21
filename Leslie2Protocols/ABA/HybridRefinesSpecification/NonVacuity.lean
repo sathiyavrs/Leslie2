@@ -27,8 +27,8 @@ complete decision — starting from its initial state:
 * `step_bindUnset` — the round-`0` specification's `bindUnset` internal
   transition excluding the bit `false` (a family `τ`, `n − f` quorum met at
   `n = 4, f = 1` by the three callers of `true`);
-* `step_retG₀/₁/₂` — the three graded-agreement `A`-return handshakes
-  (`retG 0`, *hidden*), the first locking the round grade to the `A`-side. Each
+* `step_retG₀/₁/₂` — the three graded-agreement grade-2 return handshakes
+  (`retG 0`, *hidden*), the first locking the round grade to the grade-2 side. Each
   return announces the bound bit `true`. Its complement is the bit that
   `step_bindUnset` excluded, which is exactly the return's guard, so the ghost
   output leaves the run intact;
@@ -72,7 +72,7 @@ then, on each side, the state the step named in the list above leaves behind:
 `gbcaSpecificationsAfterReturn0` and `gbcaSpecificationsAfterFail`; `coinAfterRecordingCall0`,
 `coinAfterResolvingCall`, `coinAfterReturn0` and
 `coinAfterFail`. The updates are `abaInput`, `abaCallG`, `abaRetG`, `abaCallW`
-on the ABA side, `gbcaSpecificationCall` and `gbcaSpecificationRetA` on the
+on the ABA side, `gbcaSpecificationCall` and `gbcaSpecificationRetGrade2` on the
 round specifications, and `coinCall`, `coinResolve` and `coinReturn` on the coin
 oracle. Reading a state name gives the step it follows, and reading an update
 name gives the label it answers.
@@ -156,7 +156,7 @@ noncomputable def abaCallG (id : Fin 4) (s : ABAState fourProcesses) : ABAState 
 the estimate, record the grade, head for the coin. -/
 noncomputable def abaRetG (id : Fin 4) (s : ABAState fourProcesses) : ABAState fourProcesses :=
   s.setProcess id { s.processes id with
-    estimate := some true, lastGrade := some (.A true), phase := .toCallW }
+    estimate := some true, lastGrade := some (.grade2 true), phase := .toCallW }
 
 /-- The ABA-side update of a `callW r id` emit: advance to `awaitW`. -/
 noncomputable def abaCallW (id : Fin 4) (s : ABAState fourProcesses) : ABAState fourProcesses :=
@@ -167,8 +167,8 @@ def gbcaSpecificationCall (id : Fin 4) (s : ℕ → GBCA.SpecState 4) : ℕ → 
   Function.update s 0 { s 0 with call := Function.update (s 0).call id (some true) }
 
 /-- The round-`0` specification update of an `A true` return by `id`: lock the
-grade to the `A`-side and record the return. -/
-def gbcaSpecificationRetA (id : Fin 4) (s : ℕ → GBCA.SpecState 4) : ℕ → GBCA.SpecState 4 :=
+grade to the grade-2 side and record the return. -/
+def gbcaSpecificationRetGrade2 (id : Fin 4) (s : ℕ → GBCA.SpecState 4) : ℕ → GBCA.SpecState 4 :=
   Function.update s 0 { s 0 with grade := some true, ret := Function.update (s 0).ret id true }
 
 /-- The round-`0` coin update of a recording call by `id`: record `id` as a
@@ -208,12 +208,12 @@ sparing `true`. -/
 def gbcaSpecificationsAfterBindUnset : ℕ → GBCA.SpecState 4 := Function.update
   gbcaSpecificationsAfterCall2 0 { gbcaSpecificationsAfterCall2 0 with excluded := {false} }
 
-/-- Round specifications after the three round-`0` `A`-returns. -/
-def gbcaSpecificationsAfterReturn0 : ℕ → GBCA.SpecState 4 := gbcaSpecificationRetA 0
+/-- Round specifications after the three round-`0` grade-2 returns. -/
+def gbcaSpecificationsAfterReturn0 : ℕ → GBCA.SpecState 4 := gbcaSpecificationRetGrade2 0
   gbcaSpecificationsAfterBindUnset
-def gbcaSpecificationsAfterReturn1 : ℕ → GBCA.SpecState 4 := gbcaSpecificationRetA 1
+def gbcaSpecificationsAfterReturn1 : ℕ → GBCA.SpecState 4 := gbcaSpecificationRetGrade2 1
   gbcaSpecificationsAfterReturn0
-def gbcaSpecificationsAfterReturn2 : ℕ → GBCA.SpecState 4 := gbcaSpecificationRetA 2
+def gbcaSpecificationsAfterReturn2 : ℕ → GBCA.SpecState 4 := gbcaSpecificationRetGrade2 2
   gbcaSpecificationsAfterReturn1
 
 /-- ABA-side states after the three round-`0` graded-agreement returns. -/
@@ -421,72 +421,81 @@ theorem step_bindUnset :
     (GBCA.Step.bindUnset (P := fourProcesses) (r := 0) (gbcaSpecificationsAfterCall2 0) false
       (by unfold GBCA.SpecState.quorum; decide) (by decide) (by decide)))
 
-/-! ### Steps 8–10: the three graded-agreement `A`-returns (`retG 0`, hidden) -/
+/-! ### Steps 8–10: the three graded-agreement grade-2 returns (`retG 0`, hidden) -/
 
-/-- Process `0` takes an `A`-return of the bound value `true`: the round-`0`
+/-- Process `0` takes a grade-2 return of the bound value `true`: the round-`0`
 specification locks the grade and records the return, the round loop adopts the
 estimate and heads for the coin. -/
 theorem step_retG₀ :
     (hybrid fourProcesses).step (hybridStateOf gbcaSpecificationsAfterBindUnset abaAfterCallG2
       coinInitial) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn0 abaAfterRetG0
         coinInitial)) := by
-  refine hybrid_hidden fourProcesses (l := Label.retG 0 (0 : Fin 4) (.A true) true) (by simp) ?_
+  refine hybrid_hidden fourProcesses (l := Label.retG 0 (0 : Fin 4) (.grade2 true) true)
+    (by simp) ?_
   have h := hybridExtended_vis_step fourProcesses (G := gbcaSpecificationsAfterBindUnset) (C :=
     abaAfterCallG2.1) (A := abaAfterCallG2.2) (o := coinInitial)
-    (L := Sum.inl (Label.retG 0 (0 : Fin 4) (.A true) true)) (by simp)
-    (gbcaSpecificationFamily_owned fourProcesses rfl rfl (GBCA.Step.retA (P := fourProcesses) (r :=
-      0) (gbcaSpecificationsAfterBindUnset 0) 0 true true
-      (by decide) (by decide) (by decide) (Or.inl rfl) rfl))
-    (roundLoops_at 0 (RoundLoopStep.retG (P := fourProcesses) (abaAfterCallG2.1 0) 0 (.A true) true
-      (by decide)
-        (by decide) (by decide))
-      (fun j hj => RoundLoopStep.retGIdle (P := fourProcesses) (abaAfterCallG2.1 j) 0 0 (.A true)
-        true (Ne.symm hj)))
-    (ABANetworkStep.retGIdle (P := fourProcesses) abaAfterCallG2.2 0 0 (.A true) true)
+    (L := Sum.inl (Label.retG 0 (0 : Fin 4) (.grade2 true) true)) (by simp)
+    (gbcaSpecificationFamily_owned fourProcesses rfl rfl
+      (GBCA.Step.retGrade2 (P := fourProcesses) (r := 0)
+        (gbcaSpecificationsAfterBindUnset 0) 0 true true
+        (by decide) (by decide) (by decide) (Or.inl rfl) rfl))
+    (roundLoops_at 0
+      (RoundLoopStep.retG (P := fourProcesses) (abaAfterCallG2.1 0) 0 (.grade2 true) true
+        (by decide) (by decide) (by decide))
+      (fun j hj =>
+        RoundLoopStep.retGIdle (P := fourProcesses) (abaAfterCallG2.1 j) 0 0 (.grade2 true)
+          true (Ne.symm hj)))
+    (ABANetworkStep.retGIdle (P := fourProcesses) abaAfterCallG2.2 0 0 (.grade2 true) true)
     (wccIdle coinInitial (by simp) rfl (by simp [Label.isFail]))
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
 
-/-- Process `1`'s round-`0` `A`-return. -/
+/-- Process `1`'s round-`0` grade-2 return. -/
 theorem step_retG₁ :
     (hybrid fourProcesses).step (hybridStateOf gbcaSpecificationsAfterReturn0 abaAfterRetG0
       coinInitial) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn1 abaAfterRetG1
         coinInitial)) := by
-  refine hybrid_hidden fourProcesses (l := Label.retG 0 (1 : Fin 4) (.A true) true) (by simp) ?_
+  refine hybrid_hidden fourProcesses (l := Label.retG 0 (1 : Fin 4) (.grade2 true) true)
+    (by simp) ?_
   have h := hybridExtended_vis_step fourProcesses (G := gbcaSpecificationsAfterReturn0) (C :=
     abaAfterRetG0.1) (A := abaAfterRetG0.2) (o := coinInitial)
-    (L := Sum.inl (Label.retG 0 (1 : Fin 4) (.A true) true)) (by simp)
-    (gbcaSpecificationFamily_owned fourProcesses rfl rfl (GBCA.Step.retA (P := fourProcesses) (r :=
-      0) (gbcaSpecificationsAfterReturn0 0) 1 true true
-      (by decide) (by decide) (by decide) (Or.inr rfl) (by decide)))
-    (roundLoops_at 1 (RoundLoopStep.retG (P := fourProcesses) (abaAfterRetG0.1 1) 0 (.A true) true
-      (by decide)
-        (by decide) (by decide))
-      (fun j hj => RoundLoopStep.retGIdle (P := fourProcesses) (abaAfterRetG0.1 j) 0 1 (.A true)
-        true (Ne.symm hj)))
-    (ABANetworkStep.retGIdle (P := fourProcesses) abaAfterRetG0.2 0 1 (.A true) true)
+    (L := Sum.inl (Label.retG 0 (1 : Fin 4) (.grade2 true) true)) (by simp)
+    (gbcaSpecificationFamily_owned fourProcesses rfl rfl
+      (GBCA.Step.retGrade2 (P := fourProcesses) (r := 0)
+        (gbcaSpecificationsAfterReturn0 0) 1 true true
+        (by decide) (by decide) (by decide) (Or.inr rfl) (by decide)))
+    (roundLoops_at 1
+      (RoundLoopStep.retG (P := fourProcesses) (abaAfterRetG0.1 1) 0 (.grade2 true) true
+        (by decide) (by decide) (by decide))
+      (fun j hj =>
+        RoundLoopStep.retGIdle (P := fourProcesses) (abaAfterRetG0.1 j) 0 1 (.grade2 true)
+          true (Ne.symm hj)))
+    (ABANetworkStep.retGIdle (P := fourProcesses) abaAfterRetG0.2 0 1 (.grade2 true) true)
     (wccIdle coinInitial (by simp) rfl (by simp [Label.isFail]))
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
 
-/-- Process `2`'s round-`0` `A`-return. -/
+/-- Process `2`'s round-`0` grade-2 return. -/
 theorem step_retG₂ :
     (hybrid fourProcesses).step (hybridStateOf gbcaSpecificationsAfterReturn1 abaAfterRetG1
       coinInitial) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterRetG2
         coinInitial)) := by
-  refine hybrid_hidden fourProcesses (l := Label.retG 0 (2 : Fin 4) (.A true) true) (by simp) ?_
+  refine hybrid_hidden fourProcesses (l := Label.retG 0 (2 : Fin 4) (.grade2 true) true)
+    (by simp) ?_
   have h := hybridExtended_vis_step fourProcesses (G := gbcaSpecificationsAfterReturn1) (C :=
     abaAfterRetG1.1) (A := abaAfterRetG1.2) (o := coinInitial)
-    (L := Sum.inl (Label.retG 0 (2 : Fin 4) (.A true) true)) (by simp)
-    (gbcaSpecificationFamily_owned fourProcesses rfl rfl (GBCA.Step.retA (P := fourProcesses) (r :=
-      0) (gbcaSpecificationsAfterReturn1 0) 2 true true
-      (by decide) (by decide) (by decide) (Or.inr rfl) (by decide)))
-    (roundLoops_at 2 (RoundLoopStep.retG (P := fourProcesses) (abaAfterRetG1.1 2) 0 (.A true) true
-      (by decide)
-        (by decide) (by decide))
-      (fun j hj => RoundLoopStep.retGIdle (P := fourProcesses) (abaAfterRetG1.1 j) 0 2 (.A true)
-        true (Ne.symm hj)))
-    (ABANetworkStep.retGIdle (P := fourProcesses) abaAfterRetG1.2 0 2 (.A true) true)
+    (L := Sum.inl (Label.retG 0 (2 : Fin 4) (.grade2 true) true)) (by simp)
+    (gbcaSpecificationFamily_owned fourProcesses rfl rfl
+      (GBCA.Step.retGrade2 (P := fourProcesses) (r := 0)
+        (gbcaSpecificationsAfterReturn1 0) 2 true true
+        (by decide) (by decide) (by decide) (Or.inr rfl) (by decide)))
+    (roundLoops_at 2
+      (RoundLoopStep.retG (P := fourProcesses) (abaAfterRetG1.1 2) 0 (.grade2 true) true
+        (by decide) (by decide) (by decide))
+      (fun j hj =>
+        RoundLoopStep.retGIdle (P := fourProcesses) (abaAfterRetG1.1 j) 0 2 (.grade2 true)
+          true (Ne.symm hj)))
+    (ABANetworkStep.retGIdle (P := fourProcesses) abaAfterRetG1.2 0 2 (.grade2 true) true)
     (wccIdle coinInitial (by simp) rfl (by simp [Label.isFail]))
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
@@ -546,8 +555,7 @@ theorem step_callW₁ :
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsAfterReturn2 (by simp) rfl
       not_false)
     (roundLoops_at 1 (RoundLoopStep.callW (P := fourProcesses) (abaAfterCallW0.1 1) 0 (by decide)
-      (by
-      decide) (by decide))
+      (by decide) (by decide))
       (fun j hj => RoundLoopStep.callWIdle (P := fourProcesses) (abaAfterCallW0.1 j) 0 1 (Ne.symm
         hj)))
     (ABANetworkStep.callWIdle (P := fourProcesses) abaAfterCallW0.2 0 1)
@@ -597,8 +605,7 @@ theorem step_callW₂ :
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsAfterReturn2 (by simp) rfl
       not_false)
     (roundLoops_at 2 (RoundLoopStep.callW (P := fourProcesses) (abaAfterCallW1.1 2) 0 (by decide)
-      (by
-      decide) (by decide))
+      (by decide) (by decide))
       (fun j hj => RoundLoopStep.callWIdle (P := fourProcesses) (abaAfterCallW1.1 j) 0 2 (Ne.symm
         hj)))
     (ABANetworkStep.callWIdle (P := fourProcesses) abaAfterCallW1.2 0 2)

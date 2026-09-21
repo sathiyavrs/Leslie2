@@ -40,9 +40,9 @@ the other belongs here.
 
 The verified GBCA implementation (`GBCA.ByABDY.ImplementationStep`) transcribes **ABDY22's Algorithm
 6 in full** — six rounds, the message levels INPUT, ECHO, VOTE, BIND, ECHO5 (the paper's
-`echo` through `echo5`), and that algorithm's three decide conditions, `retA` an `n − f`
-`ECHO5 v` receipt quorum, `retB` an `n − f` any-`ECHO5` quorum containing `ECHO5 v` with
-`f + 1` `BIND v` receipts and `|Valid| > 1`, `retC` an `n − f` `ECHO5 ⊥` quorum with
+`echo` through `echo5`), and that algorithm's three decide conditions, `retGrade2` an `n − f`
+`ECHO5 v` receipt quorum, `retGrade1` an `n − f` any-`ECHO5` quorum containing `ECHO5 v` with
+`f + 1` `BIND v` receipts and `|Valid| > 1`, `retGrade0` an `n − f` `ECHO5 ⊥` quorum with
 `|Valid| > 1`. That is deviation **D18**, and what it departs from is the source
 blueprint's Algorithm 2, a **four-round compression** of Algorithm 6: the `echo5` level
 elided, the decide conditions read one message level down, and `f + 1` `VOTE v` receipts
@@ -51,7 +51,7 @@ as the grade-1 witness where Algorithm 6 reads `f + 1` `BIND v`.
 The compression is not merely shallower; it violates the paper's Graded Binding. One
 process held at the echo stage through a grade-0 decision can afterwards direct its
 write-once echo at either bit, and one corruption completes the `f + 1` `VOTE v` count
-for the bit of the adversary's choice, so two extensions of a single `C`-return hand out
+for the bit of the adversary's choice, so two extensions of a single grade-0 return hand out
 two different bits and no binding-faithful specification simulates the compression. The
 concrete violation at `n = 4, f = 1` is written out in `DESIGN-GBCASim.md`. At the D18
 evidence level the same attack dies: `f + 1 > |F|` `BIND v` receipts put an honest
@@ -75,8 +75,8 @@ the guards rather than in the cardinality. `excluded` is monotone and written on
 Graded Agreement is the return guard pair `v ∉ excluded ∧ !v ∈ excluded` and Binding is
 the guard `(!bnd) ∈ excluded` every return carries for the bit `bnd` it announces, both
 proved from monotonicity alone in `GBCA/SpecificationSafety.lean` (`retG_value_agree`,
-`specInst_binding`, `retC_excluded_nonempty`) with no auxiliary invariant; the same file
-carries Validity's safety half (`specInst_validity`, `specInst_no_retC`).
+`specInst_binding`, `retGrade0_excluded_nonempty`) with no auxiliary invariant; the same file
+carries Validity's safety half (`specInst_validity`, `specInst_no_retGrade0`).
 
 A transcription question of ABDY22's own: the prose preceding Algorithm 6 says "upon
 receiving `echo4` messages from `2t + 1` parties" where the pseudocode's lines 19–20 say
@@ -118,21 +118,20 @@ states Agreement of `commit`, and line 7 of its Algorithm 2 commits at grade 2.
 Algorithm 1 puts the DECIDED gossip on top of that framework and returns on an `n − f`
 DECIDED receipt quorum, and `AgreementTrace` quantifies over those returns, the `retABA`
 labels of a trace. A round's graded outputs are `retG` labels, which `Label.hiddenAPI` hides
-at the flat reading, so agreement on the grade-`A` outputs is stated by no theorem of the
+at the flat reading, so agreement on the grade-2 outputs is stated by no theorem of the
 development. The encoding is faithful to Algorithm 1 here, and ABDY22's Agreement is about
 the earlier event.
 
 ## 2. Interpretation-level readings
 
 **"Received once."** The wait case (b) of Algorithm 6 requires that "⟨echo5, b⟩ has been
-received once". `ImplementationStep.retB` reads this as *from at least one sender*: `honce : ∃ k,
-Message.echo5 (some v) ∈ s.recv id k`, not as a cardinality constraint of exactly one
-receipt. The hypothesis is a genuine part of the rule, carried through the protocol's
-rendering by `ABAProgramStep.retG_B` and through the round instance's Byzantine handshake row
-counterpart `GBCAProgramStep.byzantineRetB`, but no proof
-consumes it: the refinement's `retB` rows bind it and leave it unused, discharging the
-`B`-return's specification-side guards from the `f + 1` `BIND v` receipts and `hval`
-instead. Either reading supports the same theorems.
+received once". `ImplementationStep.retGrade1` reads this as *from at least one sender*: `honce : ∃
+k, Message.echo5 (some v) ∈ s.recv id k`, not as a cardinality constraint of exactly one receipt.
+The hypothesis is a genuine part of the rule, carried through the protocol's rendering by
+`ABAProgramStep.retGGrade1` and through the round instance's Byzantine handshake row counterpart
+`GBCAProgramStep.byzantineRetGrade1`, but no proof consumes it: the refinement's `retGrade1` rows
+bind it and leave it unused, discharging the grade-1 return's specification-side guards from the `f
++ 1` `BIND v` receipts and `hval` instead. Either reading supports the same theorems.
 
 **Unions read as bounds.** Algorithm 4's sends are unions: on `n − f` approved echoes a
 process sends `⟨vote, ⋃ AP_id⟩`, and likewise at the BIND and return steps. The gather
@@ -185,14 +184,14 @@ does not cover this one.
 
 **Terminating `return` as state.** The pseudocode's `return` ends the process; the
 encoding renders that as a fire-once flag — `ProcessRecord.returned`, guarded by the `hr`
-hypothesis of all three GBCA returns `ImplementationStep.retA`, `retB` and `retC`, and
-`RoundLoopState.returned`, guarded at `RoundLoopStep.ret`. The
-guard has no surface counterpart in Algorithm 1 or Algorithm 2, which name no such
-variable; the control-flow fact it expresses does. (At specification level it is no
-interpretation: TS 1 and TS 2 carry `ret[id] = ⊥` guards of their own.) At the protocol,
-returning and terminating are two fields and two rules: `RoundLoopState.returned` records that
-`ABAProgramStep.ret` has fired, and `ABDY.RoundRecordMap.terminated`, whose sole writer is
-`ABAProgramStep.terminate`, records that the process has stopped participating (D22, §6).
+hypothesis of all three GBCA returns `ImplementationStep.retGrade2`, `retGrade1` and `retGrade0`,
+and `RoundLoopState.returned`, guarded at `RoundLoopStep.ret`. The guard has no surface counterpart
+in Algorithm 1 or Algorithm 2, which name no such variable; the control-flow fact it expresses does.
+(At specification level it is no interpretation: TS 1 and TS 2 carry `ret[id] = ⊥` guards of their
+own.) At the protocol, returning and terminating are two fields and two rules:
+`RoundLoopState.returned` records that `ABAProgramStep.ret` has fired, and
+`ABDY.RoundRecordMap.terminated`, whose sole writer is `ABAProgramStep.terminate`, records that the
+process has stopped participating (D22, §6).
 
 **The announced values on the return labels (D29).** The source blueprint puts the binding
 content on the return label at both levels. Its TS 2 returns `bind` beside the graded
@@ -273,14 +272,14 @@ it each guard falls on, and whether that placement was chosen or forced.
   it in its own block. In a return block the `⊥` rule denies its block's case (a) at
   either bit
   (`hnot : ∀ b, receivedCount (level below, b) < n − f` at `voteBot`, `bindBot`, `echo5Bot`).
-  In the decide block `retB` and `retC` carry `hnotA`, the denial of case (1) at either
-  bit, and `retC` carries `hnotB`, the denial of case (2) in reduced form:
-  `∀ v, (∃ k, echo5 (some v) ∈ received id k) → receivedCount (.bind (some v)) < f + 1`. Case (2)
-  asks at a bit `v` for four things — an `n − f` any-`ECHO5` quorum, a received `ECHO5 v`,
-  `f + 1` `BIND v` receipts and `|Valid| > 1` — of which the first and the last are
-  `retC`'s own `hcnt` and `hval`, an `n − f` `ECHO5 ⊥` quorum being in particular an
-  `n − f` any-`ECHO5` quorum; the reduced `hnotB` denies the remaining pair. The
-  docstring of `ImplementationStep.retC` states the reduction.
+  In the decide block `retGrade1` and `retGrade0` carry `hnotGrade2`, the denial of case (1) at
+  either bit, and `retGrade0` carries `hnotGrade1`, the denial of case (2) in reduced form: `∀ v, (∃
+  k, echo5 (some v) ∈ received id k) → receivedCount (.bind (some v)) < f + 1`. Case (2) asks at a
+  bit `v` for four things — an `n − f` any-`ECHO5` quorum, a received `ECHO5 v`, `f + 1` `BIND v`
+  receipts and `|Valid| > 1` — of which the first and the last are `retGrade0`'s own `hcnt` and
+  `hval`, an `n − f` `ECHO5 ⊥` quorum being in particular an `n − f` any-`ECHO5` quorum; the reduced
+  `hnotGrade1` denies the remaining pair. The docstring of `ImplementationStep.retGrade0` states the
+  reduction.
 - **The return call guards.** All three returns require `input ≠ none`, the D8 guard
   carried from the sends over to the returns: a process that was never called does not
   return from the round.
@@ -364,9 +363,9 @@ repaired at the rule; the seventh entry is a cross-reference.
   6; the encoding follows Algorithm 6 instead (D18) — §1.
 - **The Graded Agreement clause is ill-typed** as stated: "if two correct processes return
   `(b, X)` and `(b′, X′)` then `b = 0 ⟹ b′ ≠ 1` and `X = A ⟹ X′ ≠ ⊥`" (p. 6), with `⊥` in
-  a grade position ranging over `{A, B, C}`. It reads as grade `C`, and is realized as the
-  `grade` guard's `A`/`C` exclusivity, the `hg` guards of `PLTS.ABA.GBCA.Step.retA` and
-  `PLTS.ABA.GBCA.Step.retC`.
+  a grade position ranging over `{2, 1, 0}`. It reads as grade `0`, and is realized as the
+  `grade` guard's grade-2 / grade-0 exclusivity, the `hg` guards of `PLTS.ABA.GBCA.Step.retGrade2`
+  and `PLTS.ABA.GBCA.Step.retGrade0`.
 - **TS 1's `Initial` clause names an undeclared field** `out` (source p. 18), absent from
   the same system's `State` line. It is omitted: `PLTS.ABA.SpecState` declares `input`,
   `ret`, `F`, `val` and `mode`, and nothing else.
@@ -456,7 +455,7 @@ for Unpredictability, inexpressible once the guess is dropped.
   with its own `f + 1` relay and `n − f` thresholds. Neither is encoded: the grade is the
   local count on the second gather's return (D24), which drops a communication stage. Line
   5 takes the returned bit from the `f + 1` test and line 6 the grade from the `|T| − f`
-  test, and grade `A` ties both to the latter — sound because `|T| − f ≥ n − 2f ≥ f + 1`
+  test, and grade `2` ties both to the latter — sound because `|T| − f ≥ n − 2f ≥ f + 1`
   carries the heavy bit past the `f + 1` bar, where AFW25's Lemma 18 makes it unique.
 - **SRSD and AVSS (TS 5 and TS 7).** Not encoded, nor is the source's Algorithm 3, the
   coin implementation over gather and SRSD that they serve. In the source, gather serves
@@ -524,13 +523,13 @@ produces must itself be never corrupted, not merely a member of a support set a 
 trace, the event that carries the caller's input.
 
 One level down the interface binds corrupted returners too. At the composed reading
-`GBCAProgramStep.byzantineRetA`, `byzantineRetB` and `byzantineRetC` repeat the honest
-rules' guards, and `GBCA.ByABDY.gbcaLabelMap` sends the Byzantine return onto
-`GBCA.Step.retA`, `retB` and `retC`, which carry no honesty exemption.
-`GBCA.specInst_binding`, `retG_value_agree` and `specInst_validity` therefore quantify over
-every returner of a round, where ABDY22's Definition 3.2 quantifies over the non-faulty
-parties. A corrupted process's graded return is held to the guards an honest one's is held
-to, so the round's contract is the stronger of the two and the theorems above it lose nothing.
+`GBCAProgramStep.byzantineRetGrade2`, `byzantineRetGrade1` and `byzantineRetGrade0` repeat the
+honest rules' guards, and `GBCA.ByABDY.gbcaLabelMap` sends the Byzantine return onto
+`GBCA.Step.retGrade2`, `retGrade1` and `retGrade0`, which carry no honesty exemption.
+`GBCA.specInst_binding`, `retG_value_agree` and `specInst_validity` therefore quantify over every
+returner of a round, where ABDY22's Definition 3.2 quantifies over the non-faulty parties. A
+corrupted process's graded return is held to the guards an honest one's is held to, so the round's
+contract is the stronger of the two and the theorems above it lose nothing.
 
 ## 7. An adjacent open item
 

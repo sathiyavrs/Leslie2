@@ -129,11 +129,11 @@ Asynchronous Byzantine Agreement (ABA) takes a bit from each process and may ret
   \item $\varepsilon$-sure Termination: once $n-f$ correct processes take part, all correct processes return with probability $1-\varepsilon$.
 \end{itemize}
 
-Graded Binding Crusader Agreement (GBCA) takes a bit and may return a graded value in $\{(0,A),\ (0,B),\ (\bot,C),\ (1,B),\ (1,A)\}$.
+Graded Binding Crusader Agreement (GBCA) takes a bit and may return a graded value in $\{(0,2),\ (0,1),\ (\bot,0),\ (1,1),\ (1,2)\}$.
 \begin{itemize}
-  \item Validity: a correct process failing to return $(b,A)$ implies a correct process had $1-b$ as input.
-  \item Graded Agreement: returns $(b,X)$ and $(b',X')$ of correct processes satisfy $b = 0 \Rightarrow b' \neq 1$ and $X = A \Rightarrow X' \neq \bot$.
-  \item Binding: when a correct process returns, a bound value $b$ is defined and no extension of the execution returns $(1-b,B)$ or $(1-b,A)$ to a correct process.
+  \item Validity: a correct process failing to return $(b,2)$ implies a correct process had $1-b$ as input.
+  \item Graded Agreement: returns $(b,X)$ and $(b',X')$ of correct processes satisfy $b = 0 \Rightarrow b' \neq 1$ and $X = 2 \Rightarrow X' \neq \bot$.
+  \item Binding: when a correct process returns, a bound value $b$ is defined and no extension of the execution returns $(1-b,1)$ or $(1-b,2)$ to a correct process.
   \item Termination: once $n-f$ correct processes take part, all correct processes return.
 \end{itemize}
 
@@ -153,6 +153,7 @@ Transition System~1 is the ABA specification, Transition System~2 the GBCA speci
 A rule is cited by its Lean constructor name, a deviation label in parentheses marks a point where an encoding departs from~\cite{LeslieBP}, and where a node names ABDY22's Algorithm~$k$ it means the numbering of~\cite{ABDY22}.
 A \emph{ghost output} is a value a specification holds as state and announces on a return label, which no program reads and on which no row's firing depends (D29); the round's bound bit and a gather instance's core are the two.
 A \emph{state erasure} deletes a state component that no transition's firing depends on, and the \emph{ghost-free reading} of a protocol is its flat reading with the adversary's ghost record deleted.
+The grades are $2$, $1$ and $0$ here and in~\cite{ABDY22} and~\cite{AFW25}, where Transition System~2 of the source blueprint writes $A$, $B$ and $C$.
 Bracha's third message level is $\mathrm{VOTE}$ here and in the source blueprint, where both~\cite{ABDY22} and~\cite{AFW25} write $\mathrm{READY}$.
 Its steps fire on the receipts and at the quorums of Algorithm~1 of~\cite{AFW25}, where Algorithm~6 of the source blueprint fires the echo step on an $\mathrm{INIT}$ receipt alone and puts $n-f$ at every quorum.
 The naming difference carries no deviation label, and the rest is D34.
@@ -181,7 +182,7 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
   \item D13: the Validity provenance apparatus on Transition System~1, namely a ghost record $input$ of the genuine $\mathrm{callABA}$ events and an $f+1$ support guard \leandecl{PLTS.ABA.InputSupport} on the decision.
     The record has one honest writer, the interface rule \leandeclnamed{callSet}{PLTS.ABA.SpecStep.callSet}, whose guard is the empty entry, so its write is a first write.
     The input-enabledness loop \leandeclnamed{callLoop}{PLTS.ABA.SpecStep.callLoop} carries the call label at a filled entry and writes nothing (D36).
-  \item D14: $f+1$ support guards on the GBCA specification's binding, on the dissenting bit at its $B$-return, and on each of the two bits at its $C$-return.
+  \item D14: $f+1$ support guards on the GBCA specification's binding, on the dissenting bit at its grade-1 return, and on each of the two bits at its grade-0 return.
   \item D15: the $F$-blind form of those support counts, namely $f+1$ distinct callers-or-corrupted.
   \item D16: the two-phase abstract state used by the core simulation, which defers the specification's $\tau$-progress to a single \leandeclnamed{decide}{PLTS.ABA.SpecStep.decide} step under the first visible return.
   \item D17: a fourth outcome $\dagger$, of mass $\failmass$, on the single distribution both coin resolutions follow, where the source's two range over $\{0,1,\top\}$.
@@ -194,7 +195,7 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
     Termination is \leandeclnamed{terminate}{PLTS.ABA.Implementation.ProgramStep.terminate}, which fires once the process's own return has fired and $2f+1$ DECIDED receipts are on its record, sets the flag alone, and carries the replacement guard of D23.
   \item D23: when a process is corrupted its program is replaced, \leandeclnamed{failSelf}{PLTS.ABA.Implementation.ProgramStep.failSelf} writing the flag \leandecl{PLTS.ABA.RoundLoopRecord.corrupted}, every honest row requiring an unreplaced program, and the replaced program being the single self-loop \leandeclnamed{corruptedIdle}{PLTS.ABA.Implementation.ProgramStep.corruptedIdle}.
     Both networks carry the Byzantine visible return $\mathrm{retABA}(id,b)$ under the authorisation $id \in F$ alone, and Transition System~1's image of the replacement is \leandeclnamed{callByzantine}{PLTS.ABA.SpecStep.callByzantine}, recording a bit unrelated to the one its label declares, beside \leandeclnamed{retByzantine}{PLTS.ABA.SpecStep.retByzantine}, returning any bit at any time without moving the state.
-  \item D24: the gather-based GBCA implementation follows Algorithm~4 of~\cite{AFW25} at $R = 2$, with the grade read off the second gather's counts in place of the approximate-agreement subroutine of lines~7 and~8: $(v, A)$ at $|{\rm dom}\, h| - f$ entries of $v$, $(v, B)$ at $f{+}1$, $(\bot, C)$ below both.
+  \item D24: the gather-based GBCA implementation follows Algorithm~4 of~\cite{AFW25} at $R = 2$, with the grade read off the second gather's counts in place of the approximate-agreement subroutine of lines~7 and~8: $(v, 2)$ at $|{\rm dom}\, h| - f$ entries of $v$, $(v, 1)$ at $f{+}1$, $(\bot, 0)$ below both.
     The source supplies no gather-based GBCA, its gather serving the coin construction, which stays at specification level here.
   \item D26: the gather specification records calls and committed entries in separate fields, a per-entry internal commit writing $val(k)$ once under $k \in F \vee call(k) = v$, in place of Transition System~4's rule writing $call$ itself at a corrupted process.
     The rule writing the core fires on a set of committed entries of size at least $n-f$, where Transition System~4 fires on more than $n-f$ recorded calls and puts no size bound on the set it takes.
@@ -271,9 +272,9 @@ See \leanmodule{Leslie2Protocols/ABA/GBCA/Specification}.
 
 \input{nodes-min/def-aba-gbca-spec}
 
-\blueprintfig{fig-gbca-lifecycle}{The GBCA specification instance \leandecl{PLTS.ABA.GBCA.specInst} (Transition System 2): the reachable states quotiented to the pair $(|excluded|, grade)$, the single exclusion \leandeclnamed{bindUnset}{PLTS.ABA.GBCA.Step.bindUnset} under an $f{+}1$ support guard, and the mutually exclusive A/C grade guard.
-The seven bit-labelled reachable states are drawn as their four-state quotient by the exchange of $0$ and $1$; $(\emptyset,\mathrm A)$ and $(\emptyset,\mathrm C)$ are unreachable, every graded return requiring $excluded \neq \emptyset$.
-The graded returns are \leandeclnamed{retA}{PLTS.ABA.GBCA.Step.retA}, \leandeclnamed{retB}{PLTS.ABA.GBCA.Step.retB} and \leandeclnamed{retC}{PLTS.ABA.GBCA.Step.retC}, and every $\mathrm{InputSupport}$ count in their guards is $f{+}1$ distinct callers-or-corrupted (D15).
+\blueprintfig{fig-gbca-lifecycle}{The GBCA specification instance \leandecl{PLTS.ABA.GBCA.specInst} (Transition System 2): the reachable states quotiented to the pair $(|excluded|, grade)$, the single exclusion \leandeclnamed{bindUnset}{PLTS.ABA.GBCA.Step.bindUnset} under an $f{+}1$ support guard, and the mutually exclusive grade-2 / grade-0 guard.
+The seven bit-labelled reachable states are drawn as their four-state quotient by the exchange of $0$ and $1$; $(\emptyset,2)$ and $(\emptyset,0)$ are unreachable, every graded return requiring $excluded \neq \emptyset$.
+The graded returns are \leandeclnamed{retGrade2}{PLTS.ABA.GBCA.Step.retGrade2}, \leandeclnamed{retGrade1}{PLTS.ABA.GBCA.Step.retGrade1} and \leandeclnamed{retGrade0}{PLTS.ABA.GBCA.Step.retGrade0}, and every $\mathrm{InputSupport}$ count in their guards is $f{+}1$ distinct callers-or-corrupted (D15).
 Each of the three carries the round's bound bit on its label, drawn beside it as $bnd = 1{-}b$: a return announces the complement of the excluded bit, so every return of a round announces one bit (D29).}
 
 \input{nodes-min/thm-gbca-spec-binding}
@@ -330,7 +331,7 @@ The stage record itself is in \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Impleme
 \input{nodes-min/def-aba-gbca-impl}
 
 \blueprintfig{fig-gbca-impl}{The GBCA implementation instance \leandecl{PLTS.ABA.GBCA.ByABDY.implementation}, ABDY22's Algorithm~6 (D18): the per-process stage automaton and, framed, the authenticated set-based network of D5.
-Each return box carries the bit its label announces: the $A$- and $B$-returns the bit they hand out, the $C$-return the bit read off the sent sets.
+Each return box carries the bit its label announces: the grade-2 and grade-1 returns the bit they hand out, the grade-0 return the bit read off the sent sets.
 The network holds that bit for the round as a ghost, written at the first return and announced at every return, and no program's record holds it (D29).}
 
 \subsection{The programs and the protocol}
@@ -371,7 +372,7 @@ See \leanmodule{Leslie2Protocols/ABA/Vocabulary/RoundLoop} and \leanmodule{Lesli
 
 \input{nodes-min/def-aba-core}
 
-\blueprintfig{fig-core-phases}{The round loop \leandecl{PLTS.ABA.Composition.roundLoopProgram}: the per-process five-phase handshake cycle, the fused DECIDED multicast at the $A$-grade coin return (D10), and the DECIDED sets guarding $\mathrm{retABA}$.
+\blueprintfig{fig-core-phases}{The round loop \leandecl{PLTS.ABA.Composition.roundLoopProgram}: the per-process five-phase handshake cycle, the fused DECIDED multicast at the grade-2 coin return (D10), and the DECIDED sets guarding $\mathrm{retABA}$.
 A corruption leaves the machine at whatever phase it reaches: every edge drawn carries the guard that the program is unreplaced, so the phase field stands still from the corruption on (D23).
 The \texttt{inputLoop} self-loop absorbs $\mathrm{callABA}$ at a process whose input is set (D36), so it stands at every phase the \texttt{input} edge leads to and is drawn at $\mathrm{toCallG}$ alone.}
 
@@ -502,7 +503,7 @@ The round calls gather on the input bits, takes as candidate the bit carried by 
 Both gathers are the binding form (D33).
 The round is a composition too: $n$ programs beside the network of the graded-agreement layer, which carries no messages and holds the round's bound bit, in parallel with the two gathers read along pullbacks naming them.
 The first gather's return to a process and that process's call of the second gather are two events, and so are the second gather's return and the round's graded return; the program's record carries the round across each pair.
-The refinement into Transition System~2 is pure counting on the two cores, each written once: a bit the first core carries on fewer than $|S| - f$ entries is excluded and stays excluded, a core heavy at one candidate leaves the other light, and the $A$/$C$ grade guard is heaviness of the second core against its lightness.
+The refinement into Transition System~2 is pure counting on the two cores, each written once: a bit the first core carries on fewer than $|S| - f$ entries is excluded and stays excluded, a core heavy at one candidate leaves the other light, and the grade-2 / grade-0 guard is heaviness of the second core against its lightness.
 The round's bound bit is the heavy bit of the first core, written at the first gather's first return and announced by every graded return, and it is the bit whose complement each return excludes.
 See \leanmodule{Leslie2Protocols/ABA/GBCA/AFW/Counting}, \leanmodule{Leslie2Protocols/ABA/GBCA/AFW/Composition}, \leanmodule{Leslie2Protocols/ABA/GBCA/AFW/StepOverGatherSpecifications}, \leanmodule{Leslie2Protocols/ABA/GBCA/AFW/RefinesSpecification}, \leanmodule{Leslie2Protocols/ABA/GBCA/AFW/GatherSubstitutions} and \leanmodule{Leslie2Protocols/ABA/GBCA/AFW/Binding}.
 

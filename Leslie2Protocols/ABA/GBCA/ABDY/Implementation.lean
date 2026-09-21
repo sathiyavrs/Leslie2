@@ -30,9 +30,9 @@ Each process runs the message pattern
   after `n − f` `ECHO`s of any payload with `|Valid| > 1`;
 * `BIND v` — the same pattern one level up, over `VOTE`s; * `ECHO5 v` — the same pattern one level
 up again, over `BIND`s;
-* return — grade `A b` after an `n − f` `ECHO5 b` quorum, `B b` after an
+* return — grade `2` at `b` after an `n − f` `ECHO5 b` quorum, grade `1` at `b` after an
   `n − f` any-`ECHO5` quorum containing `b` with `f + 1` `BIND b`s and
-  `|Valid| > 1`, and `C` after an `n − f` `ECHO5 ⊥` quorum with `|Valid| > 1`.
+  `|Valid| > 1`, and grade `0` after an `n − f` `ECHO5 ⊥` quorum with `|Valid| > 1`.
 
 Every transition is Dirac; asynchrony and Byzantine behaviour are modelled
 by nondeterministic `τ`-transitions.
@@ -47,7 +47,7 @@ by nondeterministic `τ`-transitions.
   process held at the echo stage through a grade-0 decision can afterwards
   direct its write-once echo at either bit, and one corruption completes
   `f + 1` `VOTE v` for the bit of the adversary's choice — so two extensions of
-  a single `C`-return hand out two different bits. The encoding therefore
+  a single grade-0 return hand out two different bits. The encoding therefore
   follows the cited algorithm rather than the blueprint's compression; the
   upstream blueprint carries a matching red annotation.
 
@@ -148,21 +148,21 @@ The bit is a ghost output: no program reads it, and the three return rows are
 the only rows that read it. -/
 def boundOf {n : ℕ} (sent : Fin n → Finset Message) (F : Finset (Fin n)) :
     GBCAOutput → Bool
-  | .A v => v
-  | .B v => v
-  | .C =>
+  | .grade2 v => v
+  | .grade1 v => v
+  | .grade0 =>
       if ∃ k, k ∉ F ∧ Message.vote (some true) ∈ sent k then true
       else if ∃ k, k ∉ F ∧ Message.vote (some false) ∈ sent k then false
       else true
 
-@[simp] theorem boundOf_A {n : ℕ} (sent : Fin n → Finset Message) (F : Finset (Fin n))
-    (v : Bool) : boundOf sent F (.A v) = v := rfl
+@[simp] theorem boundOf_grade2 {n : ℕ} (sent : Fin n → Finset Message) (F : Finset (Fin n))
+    (v : Bool) : boundOf sent F (.grade2 v) = v := rfl
 
-@[simp] theorem boundOf_B {n : ℕ} (sent : Fin n → Finset Message) (F : Finset (Fin n))
-    (v : Bool) : boundOf sent F (.B v) = v := rfl
+@[simp] theorem boundOf_grade1 {n : ℕ} (sent : Fin n → Finset Message) (F : Finset (Fin n))
+    (v : Bool) : boundOf sent F (.grade1 v) = v := rfl
 
-theorem boundOf_C {n : ℕ} (sent : Fin n → Finset Message) (F : Finset (Fin n)) :
-    boundOf sent F .C =
+theorem boundOf_grade0 {n : ℕ} (sent : Fin n → Finset Message) (F : Finset (Fin n)) :
+    boundOf sent F .grade0 =
       if ∃ k, k ∉ F ∧ Message.vote (some true) ∈ sent k then true
       else if ∃ k, k ∉ F ∧ Message.vote (some false) ∈ sent k then false
       else true := rfl
@@ -813,55 +813,55 @@ inductive ImplementationStep (P : Parameters) (r : ℕ) :
   /-- Byzantine injection: a corrupted sender multicasts anything. -/
   | byzantine (s : ImplementationState P.n) (j : Fin P.n) (m : Message) (h : j ∈ s.F) :
       ImplementationStep P r s .tau (PMF.pure (s.multicast j m))
-  /-- `A`-return (decide case (1)): an `n − f` `ECHO5 v` quorum. The process
+  /-- Grade-2 return (decide case (1)): an `n − f` `ECHO5 v` quorum. The process
   has called and its own `ECHO5` is out. Case (1) heads the chain, so there is
   no higher case to deny. -/
-  | retA (s : ImplementationState P.n) (id : Fin P.n) (v : Bool) (bnd : Bool)
+  | retGrade2 (s : ImplementationState P.n) (id : Fin P.n) (v : Bool) (bnd : Bool)
       (hin : (s.process id).input ≠ none)
       (hlv : (s.process id).sentEcho5 ≠ none)
       (hcnt : P.n - P.f ≤ s.receivedCount id (.echo5 (some v)))
       (hr : (s.process id).returned = false)
-      (hbnd : bnd = s.bound.getD (boundOf s.sent s.F (.A v))) :
-      ImplementationStep P r s (.retG r id (.A v) bnd)
+      (hbnd : bnd = s.bound.getD (boundOf s.sent s.F (.grade2 v))) :
+      ImplementationStep P r s (.retG r id (.grade2 v) bnd)
         (PMF.pure ((s.setProcess id { s.process id with returned := true }).setBound bnd))
-  /-- `B`-return (decide case (2)): an `n − f` any-`ECHO5` quorum containing
+  /-- Grade-1 return (decide case (2)): an `n − f` any-`ECHO5` quorum containing
   `ECHO5 v`, `f + 1` `BIND v`s and `|Valid| > 1`. The `f + 1` `BIND v` receipts
   put an honest `BIND v` sender — hence an `n − f` `VOTE v` receipt quorum —
   behind every grade-1 output. The process has called, its own `ECHO5` is out,
-  and no higher case holds: `hnotA` denies case (1) at either bit. -/
-  | retB (s : ImplementationState P.n) (id : Fin P.n) (v : Bool) (bnd : Bool)
+  and no higher case holds: `hnotGrade2` denies case (1) at either bit. -/
+  | retGrade1 (s : ImplementationState P.n) (id : Fin P.n) (v : Bool) (bnd : Bool)
       (hin : (s.process id).input ≠ none)
       (hlv : (s.process id).sentEcho5 ≠ none)
-      (hnotA : ∀ v, s.receivedCount id (.echo5 (some v)) < P.n - P.f)
+      (hnotGrade2 : ∀ v, s.receivedCount id (.echo5 (some v)) < P.n - P.f)
       (hcnt : P.n - P.f ≤ s.echo5Count id)
       (honce : ∃ k, Message.echo5 (some v) ∈ s.received id k)
       (hbind : P.f + 1 ≤ s.receivedCount id (.bind (some v)))
       (hval : s.bothValid P id)
       (hr : (s.process id).returned = false)
-      (hbnd : bnd = s.bound.getD (boundOf s.sent s.F (.B v))) :
-      ImplementationStep P r s (.retG r id (.B v) bnd)
+      (hbnd : bnd = s.bound.getD (boundOf s.sent s.F (.grade1 v))) :
+      ImplementationStep P r s (.retG r id (.grade1 v) bnd)
         (PMF.pure ((s.setProcess id { s.process id with returned := true }).setBound bnd))
-  /-- `C`-return (decide case (3)): an `n − f` `ECHO5 ⊥` quorum and
+  /-- Grade-0 return (decide case (3)): an `n − f` `ECHO5 ⊥` quorum and
   `|Valid| > 1`. The process has called, its own `ECHO5` is out, and no higher
-  case holds: `hnotA` denies case (1) at either bit, and `hnotB` denies
+  case holds: `hnotGrade2` denies case (1) at either bit, and `hnotGrade1` denies
   case (2). The denial of case (2) is carried in reduced form. Case (2) asks
   for four things at a bit `v`: an `n − f` any-`ECHO5` quorum, a received
   `ECHO5 v`, `f + 1` `BIND v` receipts, and `|Valid| > 1`. This row's own
   `hcnt` and `hval` already supply the first and the last, an `n − f`
   `ECHO5 ⊥` quorum being in particular an `n − f` any-`ECHO5` quorum. What is
   left to deny is the pair of the received `ECHO5 v` and the `f + 1` `BIND v`
-  receipts, which is what `hnotB` states. -/
-  | retC (s : ImplementationState P.n) (id : Fin P.n) (bnd : Bool)
+  receipts, which is what `hnotGrade1` states. -/
+  | retGrade0 (s : ImplementationState P.n) (id : Fin P.n) (bnd : Bool)
       (hin : (s.process id).input ≠ none)
       (hlv : (s.process id).sentEcho5 ≠ none)
-      (hnotA : ∀ v, s.receivedCount id (.echo5 (some v)) < P.n - P.f)
-      (hnotB : ∀ v, (∃ k, Message.echo5 (some v) ∈ s.received id k) →
+      (hnotGrade2 : ∀ v, s.receivedCount id (.echo5 (some v)) < P.n - P.f)
+      (hnotGrade1 : ∀ v, (∃ k, Message.echo5 (some v) ∈ s.received id k) →
         s.receivedCount id (.bind (some v)) < P.f + 1)
       (hcnt : P.n - P.f ≤ s.receivedCount id (.echo5 none))
       (hval : s.bothValid P id)
       (hr : (s.process id).returned = false)
-      (hbnd : bnd = s.bound.getD (boundOf s.sent s.F .C)) :
-      ImplementationStep P r s (.retG r id .C bnd)
+      (hbnd : bnd = s.bound.getD (boundOf s.sent s.F .grade0)) :
+      ImplementationStep P r s (.retG r id .grade0 bnd)
         (PMF.pure ((s.setProcess id { s.process id with returned := true }).setBound bnd))
   /-- Corruption (deviation D1). -/
   | fail (s : ImplementationState P.n) (id : Fin P.n) :

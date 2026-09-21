@@ -204,20 +204,20 @@ Processes start with a bit in $\{0,1\}$ and may return a bit.
 Graded Binding Crusader Agreement (GBCA).
 Processes start with a binary input in $\{0,1\}$ and may return a value in
 \[
-  \{(0,A),\ (0,B),\ (\bot,C),\ (1,B),\ (1,A)\}.
+  \{(0,2),\ (0,1),\ (\bot,0),\ (1,1),\ (1,2)\}.
 \]
 \begin{itemize}
-  \item Validity: if a correct process does not return $(b,A)$ then a correct
+  \item Validity: if a correct process does not return $(b,2)$ then a correct
     process had $1-b$ as input.
   \item Graded Agreement: if two correct processes return $(b,X)$ and
-    $(b',X')$ then $b = 0 \Rightarrow b' \neq 1$ and $X = A \Rightarrow X' \neq \bot$.
+    $(b',X')$ then $b = 0 \Rightarrow b' \neq 1$ and $X = 2 \Rightarrow X' \neq \bot$.
   \item Binding: when a correct process returns then a bound value $b$ is
-    defined and, in all extensions of the execution, correct processes do not return $(1-b,B)$ or $(1-b,A)$.
+    defined and, in all extensions of the execution, correct processes do not return $(1-b,1)$ or $(1-b,2)$.
   \item Termination: if $n-f$ correct processes take part in the protocol then
     all correct processes will eventually return.
 \end{itemize}
-In the second clause of Graded Agreement the symbol $\bot$ stands in the grade component, where the return domain admits only $A$, $B$ and $C$. It is read here as the grade $C$, the sole grade paired with the value $\bot$.
-The encoding realises that reading: an $A$-return and a $C$-return of the same instance exclude one another.
+In the second clause of Graded Agreement the symbol $\bot$ stands in the grade component, where the return domain admits only $2$, $1$ and $0$. It is read here as the grade $0$, the sole grade paired with the value $\bot$.
+The encoding realises that reading: a grade-2 return and a grade-0 return of the same instance exclude one another.
 The bound value of the Binding clause is realised by its complement: the specification carries the set of bits it can no longer hand out, and the clause's $1-b$ is a member of that set (D19).
 
 Weak Common Coin (WCC).
@@ -257,6 +257,7 @@ A cross-reference of the form ``Algorithm~\ref{alg:aba-core}'' always points to 
 A \emph{ghost output} is a value a specification holds as state and announces on a return label, which no program reads and on which no row's firing depends (D29).
 There are two in this development, the round's bound bit and a gather instance's core, and both are called that below.
 A \emph{state erasure} deletes a state component that no transition's firing depends on, and the \emph{ghost-free reading} of a protocol is its flat reading with the adversary's ghost record deleted.
+The grades are $2$, $1$ and $0$ here and in~\cite{ABDY22} and~\cite{AFW25}, where Transition System~2 of the source blueprint writes $A$, $B$ and $C$.
 Bracha's third message level is $\mathrm{VOTE}$ here and in the source blueprint, where both~\cite{ABDY22} and~\cite{AFW25} write $\mathrm{READY}$.
 Its steps fire on the receipts and at the quorums of Algorithm~1 of~\cite{AFW25}, where Algorithm~6 of the source blueprint fires the echo step on an $\mathrm{INIT}$ receipt alone and puts $n-f$ at every quorum.
 The naming difference carries no deviation label, and the rest is D34.
@@ -300,14 +301,14 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
   \item D13: the Validity provenance apparatus on Transition System~1, namely a ghost record $input$ of the genuine $\mathrm{callABA}$ events and an $f+1$ support guard \leandecl{PLTS.ABA.InputSupport} on the decision.
     The record has one honest writer, the interface rule \leandeclnamed{callSet}{PLTS.ABA.SpecStep.callSet}, whose guard is the empty entry, so its write is a first write.
     Rule~2, the input-enabledness loop \leandeclnamed{callLoop}{PLTS.ABA.SpecStep.callLoop}, carries the call label at a filled entry and writes nothing (D36), and the corrupted rule of D23 writes the record too.
-  \item D14: $f+1$ support guards on the GBCA specification's binding, on the dissenting bit at its $B$-return, and on each of the two bits at its $C$-return.
+  \item D14: $f+1$ support guards on the GBCA specification's binding, on the dissenting bit at its grade-1 return, and on each of the two bits at its grade-0 return.
   \item D15: the $F$-blind form of those support counts, namely $f+1$ distinct callers-or-corrupted.
   \item D16: the two-phase abstract state used by the core simulation, which defers the specification's $\tau$-progress to a single \leandeclnamed{decide}{PLTS.ABA.SpecStep.decide} step under the first visible return.
   \item D17: a fourth outcome $\dagger$, of mass $\failmass$, on the single distribution both coin resolutions follow, where the source's two range over $\{0,1,\top\}$.
     At Transition System~3 it delivers to no process, and at Transition System~1 it puts the system into the mode $noRuleEnabled$, which enables no $\tau$-rule.
   \item D18: the GBCA implementation transcribes ABDY22's Algorithm~6 in full, over the message levels INPUT, ECHO, VOTE, BIND and ECHO5, in place of the source's compression of it.
     That compression elides the ECHO5 level and takes $f{+}1$ $\mathrm{VOTE}\,v$ receipts as the grade-$1$ witness where Algorithm~6 takes $f{+}1$ $\mathrm{BIND}\,v$ receipts, which violates Binding.
-    One process held at the echo stage through a $C$-return may afterwards direct its write-once echo at either bit, and a single corruption completes the $f{+}1$ count for the bit the adversary picks, so two extensions of one $C$-return hand out two different bits.
+    One process held at the echo stage through a grade-0 return may afterwards direct its write-once echo at either bit, and a single corruption completes the $f{+}1$ count for the bit the adversary picks, so two extensions of one grade-0 return hand out two different bits.
   \item D19: binding is negative and the exclusion set is the state, the GBCA specification carrying $excluded \subseteq \{0,1\}$ under one inserting internal rule and no removing rule, in place of the source's bound value $bind \in \{0,1,\bot\}$, so that a return's guard on the bit it announces is $1-bnd \in excluded$ where the source's is $bind = bnd$ (Definition~\ref{def:aba-gbca-spec}).
     The bound value embeds onto the reachable states, $bind = \bot$ as $excluded = \emptyset$ and $bind = b$ as $excluded = \{1-b\}$, and the source's guard $bind = \bot$ on binding becomes $excluded = \emptyset$.
   \item D21: Transition System~1 is eight rules over the record $\{input, ret, F, val, mode\}$, in place of the source's per-process call row and its four-valued $coin \in \{0,1,\bot,\top\}$.
@@ -318,7 +319,7 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
   \item D23: when a process is corrupted its program is replaced, \leandeclnamed{failSelf}{PLTS.ABA.Implementation.ProgramStep.failSelf} writing the flag \leandecl{PLTS.ABA.RoundLoopRecord.corrupted}, every honest row requiring an unreplaced program, and the replaced program being the single self-loop \leandeclnamed{corruptedIdle}{PLTS.ABA.Implementation.ProgramStep.corruptedIdle}.
     Both networks carry the Byzantine visible return $\mathrm{retABA}(id,b)$ under the authorisation $id \in F$ alone, and Transition System~1's image of the replacement is \leandeclnamed{callByzantine}{PLTS.ABA.SpecStep.callByzantine}, recording a bit unrelated to the one its label declares, beside \leandeclnamed{retByzantine}{PLTS.ABA.SpecStep.retByzantine}, returning any bit at any time without moving the state.
     The self-loop is taken on every label other than $\tau$ and the labels on which the process would act on its own sub-protocol messages, where it has no row at all; those run through the handshake rows of D11 and the injections $\mathrm{byzantineGBCA}$ and $\mathrm{byzantineDecided}$.
-  \item D24: the gather-based GBCA implementation follows Algorithm~4 of~\cite{AFW25} at $R = 2$, with the grade read off the second gather's counts in place of the approximate-agreement subroutine of lines~7 and~8: $(v, A)$ at $|{\rm dom}\, h| - f$ entries of $v$, $(v, B)$ at $f{+}1$, $(\bot, C)$ below both.
+  \item D24: the gather-based GBCA implementation follows Algorithm~4 of~\cite{AFW25} at $R = 2$, with the grade read off the second gather's counts in place of the approximate-agreement subroutine of lines~7 and~8: $(v, 2)$ at $|{\rm dom}\, h| - f$ entries of $v$, $(v, 1)$ at $f{+}1$, $(\bot, 0)$ below both.
     The source supplies no gather-based GBCA, its gather serving the coin construction, which stays at specification level here.
     Reading the grade off a process's own counts is sound because $|{\rm dom}\, h| - f \ge n - 2f \ge f + 1$ carries the heavy bit past the $f{+}1$ bar, where Lemma~18 of~\cite{AFW25} makes it unique.
   \item D26: the gather specification records calls and committed entries in separate fields, a per-entry internal commit writing $val(k)$ once under $k \in F \vee call(k) = v$, in place of Transition System~4's rule writing $call$ itself at a corrupted process.
@@ -568,17 +569,17 @@ Transition Systems~2 and~3 are the specifications of the two sub-protocols, give
 
 \input{nodes/def-aba-gbca-spec}
 
-\blueprintfig{fig-gbca-lifecycle}{The GBCA specification instance \leandecl{PLTS.ABA.GBCA.specInst} (Transition System 2): the reachable states quotiented to the pair $(|excluded|, grade)$, the single exclusion under an $f{+}1$ support guard, and the mutually exclusive A/C grade guard.
-The bit-labelled reachable states are $(\emptyset,\bot)$, $(\{b\},\bot)$, $(\{b\},\mathrm A)$ and $(\{b\},\mathrm C)$ for each bit $b$, seven in all, and the four drawn states are their quotient by the exchange of $0$ and $1$.
-The pairs $(\emptyset,\mathrm A)$ and $(\emptyset,\mathrm C)$ are unreachable, since every graded return requires $excluded \neq \emptyset$.
+\blueprintfig{fig-gbca-lifecycle}{The GBCA specification instance \leandecl{PLTS.ABA.GBCA.specInst} (Transition System 2): the reachable states quotiented to the pair $(|excluded|, grade)$, the single exclusion under an $f{+}1$ support guard, and the mutually exclusive grade-2 / grade-0 guard.
+The bit-labelled reachable states are $(\emptyset,\bot)$, $(\{b\},\bot)$, $(\{b\},2)$ and $(\{b\},0)$ for each bit $b$, seven in all, and the four drawn states are their quotient by the exchange of $0$ and $1$.
+The pairs $(\emptyset,2)$ and $(\emptyset,0)$ are unreachable, since every graded return requires $excluded \neq \emptyset$.
 The exclusion set never holds two bits: \leandeclnamed{bindUnset}{PLTS.ABA.GBCA.Step.bindUnset} is its only writer and is enabled from $excluded = \emptyset$ alone, so no second exclusion appears anywhere in the figure.
 The exclude edge names the bit it excludes, so $1{-}b$ is the surviving bit at every state to its right.
 The abstraction does not track $ret$, so a repeat return is a self-loop.
 Binding (rule~3, \leandeclnamed{bindUnset}{PLTS.ABA.GBCA.Step.bindUnset}) fires under a quorum with $f{+}1$ $\mathrm{InputSupport}$ support for the surviving bit and excludes the other.
-\leandeclnamed{retA}{PLTS.ABA.GBCA.Step.retA} (rule~5) hands out the surviving bit and sets the grade to $A$; it loops on $(1,\mathrm A)$.
-\leandeclnamed{retB}{PLTS.ABA.GBCA.Step.retB} (rule~4) hands out the surviving bit under $f{+}1$ dissent support; it writes neither component and carries no grade guard, so it loops on all three states with $|excluded| = 1$.
-\leandeclnamed{retC}{PLTS.ABA.GBCA.Step.retC} (rule~6) carries $f{+}1$ support for each of the two bits, hands out no bit and needs only that the complement of the bit it announces be excluded; it sets the grade to $C$ from $(1,\bot)$ and loops on $(1,\mathrm C)$.
-The $A$ and $C$ grade guards are mutually exclusive, \leandeclnamed{retA}{PLTS.ABA.GBCA.Step.retA} needing $grade \in \{\bot,\mathrm A\}$ and \leandeclnamed{retC}{PLTS.ABA.GBCA.Step.retC} needing $grade \in \{\bot,\mathrm C\}$.
+\leandeclnamed{retGrade2}{PLTS.ABA.GBCA.Step.retGrade2} (rule~5) hands out the surviving bit and locks the grade at $2$; it loops on $(1,2)$.
+\leandeclnamed{retGrade1}{PLTS.ABA.GBCA.Step.retGrade1} (rule~4) hands out the surviving bit under $f{+}1$ dissent support; it writes neither component and carries no grade guard, so it loops on all three states with $|excluded| = 1$.
+\leandeclnamed{retGrade0}{PLTS.ABA.GBCA.Step.retGrade0} (rule~6) carries $f{+}1$ support for each of the two bits, hands out no bit and needs only that the complement of the bit it announces be excluded; it locks the grade at $0$ from $(1,\bot)$ and loops on $(1,0)$.
+The grade-2 and grade-0 guards are mutually exclusive, \leandeclnamed{retGrade2}{PLTS.ABA.GBCA.Step.retGrade2} needing the grade unset or already $2$ and \leandeclnamed{retGrade0}{PLTS.ABA.GBCA.Step.retGrade0} needing it unset or already $0$.
 Each of the three returns carries the round's bound bit on its label, drawn beside it as $bnd = 1{-}b$: a return announces the complement of the excluded bit, so every return of a round announces one bit (D29).
 Every $\mathrm{InputSupport}$ count is $f{+}1$ distinct callers-or-corrupted (D15) and $F$-blind.
 The \leandeclnamed{fail}{PLTS.ABA.GBCA.Step.fail} broadcast (rule~7) is enabled in every state and is omitted.
@@ -592,19 +593,19 @@ The \leandeclnamed{fail}{PLTS.ABA.GBCA.Step.fail} broadcast (rule~7) is enabled 
   \item $call : [n] \to \{0,1,\bot\}$, the pending input of each process, $\bot$ when unset.
   \item $ret : [n] \to \mathbb{B}$, which processes have received their return.
   \item $excluded \subseteq \{0,1\}$, the exclusion set: the bits the instance can no longer hand out, written only by the internal binding transition (D19).
-  \item $grade : \{0,1,\bot\}$, the grade lock, $1$ after an $A$-return and $0$ after a $C$-return.
+  \item $grade : \{0,1,\bot\}$, the grade lock, written $1$ by a grade-2 return and $0$ by a grade-0 return.
   \item $F \subseteq [n]$, the corrupted set, a local copy kept in lockstep by the $\mathrm{fail}$ broadcast.
 \end{itemize}
 \noindent Binding is internal specification state, it is negative information, and every return announces the surviving bit (D19, D29).
 The set $excluded$ starts empty, and its only writer is the internal transition \leandeclnamed{bindUnset}{PLTS.ABA.GBCA.Step.bindUnset}, which fires from $excluded = \emptyset$ alone and inserts one bit.
 No rule ever revives a bit, so $excluded$ grows along every execution, the exclusion happens at most once per instance, and every reachable state has $excluded = \emptyset$ or $excluded = \{b\}$ for one bit $b$.
-The $A$- and $B$-returns hand out a bit that is alive while the other bit is excluded; the $C$-return hands out no bit.
+The grade-2 and grade-1 returns hand out a bit that is alive while the other bit is excluded; the grade-0 return hands out no bit.
 All three take a bit $bnd$ under the guard $1-bnd \in excluded$ and announce it on the label.
 That bit is a ghost output (D29): it is the bound value the specification holds, read off the exclusion set, and no program of any system below reads it.
 The source blueprint's bound value embeds onto those reachable states, $bind = \bot$ as $excluded = \emptyset$ and $bind = b$ as $excluded = \{1-b\}$, so the two state shapes differ in the guards rather than in the cardinality (D19).
 
 \noindent\textbf{Labels.}
-$\mathrm{callG}(r,id,b)$, $\mathrm{retG}(r,id,out,bnd)$ with $out \in \{A\,b,\ B\,b,\ C\}$, $\mathrm{fail}(id)$ and $\tau$, for $id \in [n]$ and $b, bnd \in \mathbb{B}$.
+$\mathrm{callG}(r,id,b)$, $\mathrm{retG}(r,id,out,bnd)$ with $out \in \{(b,2),\ (b,1),\ (\bot,0)\}$, $\mathrm{fail}(id)$ and $\tau$, for $id \in [n]$ and $b, bnd \in \mathbb{B}$.
 The instance steps on these labels only; the family combinator supplies idle self-loops on every other label, the API labels of every round $r' \neq r$ among them.
 
 \noindent\textbf{Input-enabled labels.}
@@ -636,22 +637,22 @@ Guard
 \noindent The support count is at the bit the rule \emph{spares}: excluding $b$ is certified --- witnessed by a \emph{receipt pattern}, an $F$-blind count on the delivered sets that is monotone along every execution --- by $f{+}1$ callers-or-corrupted of $1-b$.
 The third guard admits the rule from the empty exclusion set only, so an instance excludes at most once and $excluded$ is a singleton ever after.
 
-\noindent\textbf{4.} \leandeclnamed{retB}{PLTS.ABA.GBCA.Step.retB} (D14, D15, D19, D29).
+\noindent\textbf{4.} \leandeclnamed{retGrade1}{PLTS.ABA.GBCA.Step.retGrade1} (D14, D15, D19, D29).
 Guard
 \[ \begin{aligned}
      &v \notin excluded,\quad 1-v \in excluded,\quad 1-bnd \in excluded,\\
      &\bigl|\{id' \in [n] \mid call[id'] = 1-v \vee id' \in F\}\bigr| \ge f + 1,\\
      &ret[id] = \mathrm{false}.
    \end{aligned} \]
-\[ s \xrightarrow{\;\mathrm{retG}(r,id,B\,v,bnd)\;}
+\[ s \xrightarrow{\;\mathrm{retG}(r,id,(v,1),bnd)\;}
    \delta\bigl(s[\,ret[id] := \mathrm{true}\,]\bigr) \]
 
-\noindent\textbf{5.} \leandeclnamed{retA}{PLTS.ABA.GBCA.Step.retA} (D19, D29).
+\noindent\textbf{5.} \leandeclnamed{retGrade2}{PLTS.ABA.GBCA.Step.retGrade2} (D19, D29).
 Guard $v \notin excluded$, $1-v \in excluded$, $1-bnd \in excluded$, $grade \in \{\bot, 1\}$ and $ret[id] = \mathrm{false}$.
-\[ s \xrightarrow{\;\mathrm{retG}(r,id,A\,v,bnd)\;}
+\[ s \xrightarrow{\;\mathrm{retG}(r,id,(v,2),bnd)\;}
    \delta\bigl(s[\,grade := 1,\ ret[id] := \mathrm{true}\,]\bigr) \]
 
-\noindent\textbf{6.} \leandeclnamed{retC}{PLTS.ABA.GBCA.Step.retC} (D14, D15, D19, D29).
+\noindent\textbf{6.} \leandeclnamed{retGrade0}{PLTS.ABA.GBCA.Step.retGrade0} (D14, D15, D19, D29).
 Guard
 \[ \begin{aligned}
      &1-bnd \in excluded,\\
@@ -659,7 +660,7 @@ Guard
      &\bigl|\{id' \in [n] \mid call[id'] = 0 \vee id' \in F\}\bigr| \ge f + 1,\\
      &grade \in \{\bot, 0\},\quad ret[id] = \mathrm{false}.
    \end{aligned} \]
-\[ s \xrightarrow{\;\mathrm{retG}(r,id,C,bnd)\;}
+\[ s \xrightarrow{\;\mathrm{retG}(r,id,(\bot,0),bnd)\;}
    \delta\bigl(s[\,grade := 0,\ ret[id] := \mathrm{true}\,]\bigr) \]
 
 \noindent\textbf{7.} \leandeclnamed{fail}{PLTS.ABA.GBCA.Step.fail} (D1).
@@ -691,13 +692,13 @@ $w \neq 1-v$, so $w = v$.
 Two returns of one execution therefore name the same bit whatever their grades,
 and once any value-bearing return has fired a single bit is the only one any
 extension can ever hand out.
-The $C$-return's guard $1-bnd \in excluded$ is the Binding clause read on this state:
+The grade-0 return's guard $1-bnd \in excluded$ is the Binding clause read on this state:
 $1-bnd$ is a bit that no correct process is handed at grade $\ge 1$
 in any extension, because the value-bearing returns cannot hand out an excluded bit and
 $excluded$ only grows.
-A $C$-return therefore commits the instance --- from that point at most one bit
+A grade-0 return therefore commits the instance --- from that point at most one bit
 is alive anywhere in the future --- which is what makes handing out no bit the
-right answer, and it is why every return, $C$-returns included, requires an exclusion
+right answer, and it is why every return, grade-0 returns included, requires an exclusion
 to have happened.
 }
 
@@ -717,7 +718,7 @@ each of them that hands out a value hands out that bit --- and every step of a
 refinement chain then transports it with no further argument.
 The announcement adds no power to the scheduler.
 The bit is a ghost output: no program reads it and no row's firing turns on it,
-and a round that hands out no value ends with $C$-returns alone which name
+and a round that hands out no value ends with grade-0 returns alone which name
 the surviving bit all the same.
 }
 
@@ -725,16 +726,16 @@ the surviving bit all the same.
 The guard $excluded = \emptyset$ on \leandeclnamed{bindUnset}{PLTS.ABA.GBCA.Step.bindUnset} is what keeps every round
 completable.
 Let us see what a second exclusion would cost.
-Suppose the rule were enabled again after an $A$-return of $v$, and fired on
+Suppose the rule were enabled again after a grade-2 return of $v$, and fired on
 $v$ itself.
 The processes yet to return would then have no return available: the
-value-bearing returns need a bit outside $excluded$, and there is none, while the $C$-return
-is blocked by the $A$ grade guard.
+value-bearing returns need a bit outside $excluded$, and there is none, while the grade-0 return
+is blocked by the grade-2 guard.
 The round would be stranded, and a fair scheduler could not complete it.
 Under the once-only guard no such state is reachable.
 A round that has answered one process at grade $\ge 1$ can answer every other
-process the same way, since the surviving bit stays alive and the $A$ grade guard
-admits further $A$- and $B$-returns.
+process the same way, since the surviving bit stays alive and the grade-2 guard
+admits further grade-2 and grade-1 returns.
 }
 
 \dynamics{What the contract requires and what is proved here}{%
@@ -743,10 +744,10 @@ The specification instance settles two of them outright and the safety half of
 a third.
 Graded Agreement is the guard pair on the value side and the grade guard on the
 grade side, both structural (Theorem~\ref{thm:gbca-spec-binding}).
-Binding is the $C$-return guard read through monotonicity, again a theorem of
+Binding is the grade-0 return guard read through monotonicity, again a theorem of
 the same statement.
 Validity has a safety half, that under unanimous honest input $v$ every return
-of the instance hands out $v$ and no $C$-return occurs, and that half is
+of the instance hands out $v$ and no grade-0 return occurs, and that half is
 Theorem~\ref{thm:gbca-spec-validity}.
 What the clause requires beyond that half --- that the grade is the top one, and
 that every correct process is answered at all --- is a statement about which
@@ -756,16 +757,16 @@ Fairness is not encoded here, so those clauses lie outside this development.
 
 \dynamics{What the grades promise}{%
 The grade records how much of the round its holder is committed to.
-An $A$-return commits to the surviving bit and is the grade that licenses a
+A grade-2 return commits to the surviving bit and is the grade that licenses a
 decision.
-A $B$-return carries the surviving bit as the next estimate but records that
+A grade-1 return carries the surviving bit as the next estimate but records that
 dissent was seen.
-A $C$-return carries no value, and its holder falls back on the coin.
-The $A$ and $C$ grade guards are mutually exclusive: once an $A$-return has
-occurred no $C$-return is enabled at that instance, and once a $C$-return has
-occurred no $A$-return is.
-The exclude, the dissenting bit at a $B$-return and each of the two bits at a
-$C$-return are guarded by $f+1$ distinct supporters, counted $F$-blind, so the
+A grade-0 return carries no value, and its holder falls back on the coin.
+The grade-2 and grade-0 guards are mutually exclusive: once a grade-2 return has
+occurred no grade-0 return is enabled at that instance, and once a grade-0 return has
+occurred no grade-2 return is.
+The exclude, the dissenting bit at a grade-1 return and each of the two bits at a
+grade-0 return are guarded by $f+1$ distinct supporters, counted $F$-blind, so the
 count is monotone in $F$ and immune to later corruptions.
 At most $f$ processes are ever corrupted, so any such set of $f+1$ contains a
 member outside the final corrupted set, hence a never-corrupted genuine caller.
@@ -1086,9 +1087,9 @@ against.
           processes and $|\mathit{Valid}| > 1$ \textbf{or}
         \State\quad (c) receiving $\langle\mathrm{ECHO5}, \bot\rangle$ from at least
           $n - f$ processes and $|\mathit{Valid}| > 1$
-        \State\quad \textbf{if} (a) \textbf{then} \textbf{return} $(b, A)$
-          \textbf{elif} (b) \textbf{then} \textbf{return} $(b, B)$
-          \textbf{else} \textbf{return} $(\bot, C)$
+        \State\quad \textbf{if} (a) \textbf{then} \textbf{return} $(b, 2)$
+          \textbf{elif} (b) \textbf{then} \textbf{return} $(b, 1)$
+          \textbf{else} \textbf{return} $(\bot, 0)$
     \end{algorithmic}
 \end{algorithm}
 
@@ -1097,8 +1098,8 @@ against.
 
 \blueprintfig{fig-gbca-impl}{The GBCA implementation instance \leandecl{PLTS.ABA.GBCA.ByABDY.implementation} (Algorithm~\ref{alg:gbca-impl}, D18): the per-process stage automaton and, framed, the authenticated set-based network.
 On a call a process multicasts $\langle\mathrm{INPUT},b\rangle$ and relays it after $f{+}1$ receipts; an $n{-}f$ quorum at each stage produces the next multicast $\langle\mathrm{ECHO},b\rangle$, $\langle\mathrm{VOTE},v\rangle$, $\langle\mathrm{BIND},v\rangle$, then $\langle\mathrm{ECHO5},v\rangle$, the levels from $\mathrm{BIND}$ down requiring the process's own send at the level below.
-The returns are $A\,b$ on an $n{-}f$ ECHO5-$b$ quorum, $B\,b$ on an $n{-}f$ any-ECHO5 quorum with $f{+}1$ BIND-$b$ and $|\mathrm{Valid}|>1$, and $C$ on an $n{-}f$ ECHO5-$\bot$ quorum with $|\mathrm{Valid}|>1$: the three cases of the last wait-until block of Algorithm~\ref{alg:gbca-impl}, taken as the if/elif/else chain that block writes, so a return denies the cases above it and requires the process's own ECHO5.
-Each return box also carries the bit its label announces: the $A$- and $B$-returns the bit they hand out, the $C$-return the bit read off the sent sets.
+The returns are $(b,2)$ on an $n{-}f$ ECHO5-$b$ quorum, $(b,1)$ on an $n{-}f$ any-ECHO5 quorum with $f{+}1$ BIND-$b$ and $|\mathrm{Valid}|>1$, and $(\bot,0)$ on an $n{-}f$ ECHO5-$\bot$ quorum with $|\mathrm{Valid}|>1$: the three cases of the last wait-until block of Algorithm~\ref{alg:gbca-impl}, taken as the if/elif/else chain that block writes, so a return denies the cases above it and requires the process's own ECHO5.
+Each return box also carries the bit its label announces: the grade-2 and grade-1 returns the bit they hand out, the grade-0 return the bit read off the sent sets.
 The dashed local state is the D5 network: per-sender sent and received message sets, adversary $\mathrm{deliver}$, Byzantine injection for $j\in F$, and the round's bound bit, a ghost written at the first return and announced at every return (D29).}
 
 The Lean encoding of Algorithm~\ref{alg:gbca-impl} is the round-$r$ instance
@@ -1245,14 +1246,14 @@ Rule & Label & Guard & Effect \\
 \hline
 \leandeclnamed{byzantine}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.byzantine} & $\tau$ & $j \in F$ & multicast $m$ at $j$ (D5) \\
 \hline
-\leandeclnamed{retA}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.retA} & $\mathrm{retG}(r,i,A\,v,bnd)$
+\leandeclnamed{retGrade2}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.retGrade2} & $\mathrm{retG}(r,i,(v,2),bnd)$
   & $\mathit{input}_i$, $\mathit{sentEcho5}_i$ set,
   & mark $i$ returned; \\
  & & $\#_i(\mathrm{SL}\,v) \ge n{-}f$, & $\mathit{bound} \gets bnd$ (D29) \\
  & & $bnd$ the round's bound bit (D29), & \\
  & & $\mathit{returned}_i$ false & \\
 \hline
-\leandeclnamed{retB}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.retB} & $\mathrm{retG}(r,i,B\,v,bnd)$
+\leandeclnamed{retGrade1}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.retGrade1} & $\mathrm{retG}(r,i,(v,1),bnd)$
   & $\mathit{input}_i$, $\mathit{sentEcho5}_i$ set,
   & mark $i$ returned; \\
  & & $\#_i(\mathrm{SL}) \ge n{-}f$, $\mathit{Val}_i = \{0,1\}$, & $\mathit{bound} \gets bnd$ (D29) \\
@@ -1262,7 +1263,7 @@ Rule & Label & Guard & Effect \\
  & & $bnd$ the round's bound bit (D29), & \\
  & & $\mathit{returned}_i$ false & \\
 \hline
-\leandeclnamed{retC}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.retC} & $\mathrm{retG}(r,i,C,bnd)$
+\leandeclnamed{retGrade0}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.retGrade0} & $\mathrm{retG}(r,i,(\bot,0),bnd)$
   & $\mathit{input}_i$, $\mathit{sentEcho5}_i$ set,
   & mark $i$ returned; \\
  & & $\#_i(\mathrm{SL}\,\bot) \ge n{-}f$, $\mathit{Val}_i = \{0,1\}$, & $\mathit{bound} \gets bnd$ (D29) \\
@@ -1282,7 +1283,7 @@ Rule & Label & Guard & Effect \\
 The four \textbf{wait until} blocks of Algorithm~\ref{alg:gbca-impl} are the guards of \leandeclnamed{voteBit}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.voteBit}/\allowbreak\leandeclnamed{voteBot}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.voteBot},
 \leandeclnamed{bindBit}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.bindBit}/\allowbreak\leandeclnamed{bindBot}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.bindBot},
 \leandeclnamed{echo5Bit}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.echo5Bit}/\allowbreak\leandeclnamed{echo5Bot}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.echo5Bot} and
-\leandeclnamed{retA}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.retA}/\allowbreak\leandeclnamed{retB}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.retB}/\allowbreak\leandeclnamed{retC}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.retC}; the write-once fields
+\leandeclnamed{retGrade2}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.retGrade2}/\allowbreak\leandeclnamed{retGrade1}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.retGrade1}/\allowbreak\leandeclnamed{retGrade0}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.retGrade0}; the write-once fields
 $\mathit{sentEcho}$, $\mathit{sentVote}$, $\mathit{sentBind}$, $\mathit{sentEcho5}$ carry the ``not sent yet'' side conditions.
 The blocks are taken in the order Algorithm~\ref{alg:gbca-impl} writes them.
 A process reaches a block only after executing the send the block above it ends with, and that is the guard $\mathit{sentVote}_j$ set on the two $\mathrm{BIND}$ rules, $\mathit{sentBind}_j$ set on the two $\mathrm{ECHO5}$ rules, and $\mathit{sentEcho5}_i$ set on the three return rules.
@@ -1290,11 +1291,11 @@ The two $\mathrm{VOTE}$ rules carry no such guard.
 What precedes the first \textbf{wait until} block is not a block a process must execute to the end but the \textbf{upon} handler that multicasts $\mathrm{ECHO}$, so a process may reach that block with its own $\mathrm{ECHO}$ still pending.
 In each of the three return blocks the two rules are exclusive: the $\bot$ rule denies its block's case (a) at either bit, which is the \textbf{else} of that block's last line.
 The three return rules are the three wait-until cases of the last block: case (a) is an $n{-}f$ $\mathrm{ECHO5}\,v$ quorum, case (b) an $n{-}f$ any-$\mathrm{ECHO5}$ quorum containing $\mathrm{ECHO5}\,v$ together with $f{+}1$ $\mathrm{BIND}\,v$ receipts and $|\mathit{Valid}| > 1$, and case (c) an $n{-}f$ $\mathrm{ECHO5}\,\bot$ quorum with $|\mathit{Valid}| > 1$.
-That block ends in an \textbf{if}/\textbf{elif}/\textbf{else}, so each rule carries the denials of the cases above it beside the receipts its own case names: \leandeclnamed{retB}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.retB} denies case (a) at either bit, and \leandeclnamed{retC}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.retC} denies case (a) at either bit and case (b).
+That block ends in an \textbf{if}/\textbf{elif}/\textbf{else}, so each rule carries the denials of the cases above it beside the receipts its own case names: \leandeclnamed{retGrade1}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.retGrade1} denies case (a) at either bit, and \leandeclnamed{retGrade0}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.retGrade0} denies case (a) at either bit and case (b).
 The denial of case (b) is carried in reduced form.
 Case (b) requires at a bit $v$ four things: an $n{-}f$ any-$\mathrm{ECHO5}$ quorum, a received $\mathrm{ECHO5}\,v$, $f{+}1$ $\mathrm{BIND}\,v$ receipts and $|\mathit{Valid}| > 1$.
 The first and the last are supplied by
-\leandeclnamed{retC}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.retC}'s own guard, an $n{-}f$
+\leandeclnamed{retGrade0}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.retGrade0}'s own guard, an $n{-}f$
 $\mathrm{ECHO5}\,\bot$ quorum being in particular an $n{-}f$ any-$\mathrm{ECHO5}$ quorum, so what is left to deny is the pair of the received $\mathrm{ECHO5}\,v$ and the $f{+}1$ $\mathrm{BIND}\,v$ receipts.
 All three rules ask further that the returning process has been called, the D8 guard carried from the sends over to the returns.
 Case (c) returns no bit.
@@ -1427,12 +1428,12 @@ The self-loops of a process carry \leandeclnamed{inputLoop}{PLTS.ABA.Composition
 The step \leandeclnamed{retG}{PLTS.ABA.Composition.RoundLoopStep.retG} sets $estimate$ to the grade.
 The bound bit the same label carries is a ghost output, and no row of the loop reads it (D29).
 The coin return has two rows.
-The step \leandeclnamed{retW}{PLTS.ABA.Composition.RoundLoopStep.retW} increments the round and adopts the coin when $estimate = \bot$; the step \leandeclnamed{retWPublish}{PLTS.ABA.Composition.RoundLoopStep.retWPublish} does the same on an $A$-grade return and multicasts $\langle\mathrm{DECIDED},b\rangle$, the sent set insert being the network's half of that rendezvous, \leandeclnamed{retWPublish}{PLTS.ABA.Composition.ABANetworkStep.retWPublish} (D10).
+The step \leandeclnamed{retW}{PLTS.ABA.Composition.RoundLoopStep.retW} increments the round and adopts the coin when $estimate = \bot$; the step \leandeclnamed{retWPublish}{PLTS.ABA.Composition.RoundLoopStep.retWPublish} does the same on a grade-2 return and multicasts $\langle\mathrm{DECIDED},b\rangle$, the sent set insert being the network's half of that rendezvous, \leandeclnamed{retWPublish}{PLTS.ABA.Composition.ABANetworkStep.retWPublish} (D10).
 The DECIDED sets are round-agnostic, carrying no round index.
 A delivery pairs the network's authenticity guard \leandeclnamed{decidedDeliver}{PLTS.ABA.Composition.ABANetworkStep.decidedDeliver} with the receiver's write \leandeclnamed{decidedDeliverReceive}{PLTS.ABA.Composition.RoundLoopStep.decidedDeliverReceive}; a relay pairs the sender's $f{+}1$ receipt count \leandeclnamed{decidedSendRelay}{PLTS.ABA.Composition.RoundLoopStep.decidedSendRelay} with the network's write-once insert \leandeclnamed{decidedSend}{PLTS.ABA.Composition.ABANetworkStep.decidedSend}; and \leandeclnamed{byzantineDecided}{PLTS.ABA.Composition.ABANetworkStep.byzantineDecided} is the network's own $\tau$-loop, by which $id \in F$ records either bit (D12$'$).
 The exit \texttt{retABA}\,$id\,b$ fires once $n-f$ distinct senders of $b$ have been delivered to $id$, the count read at \leandeclnamed{ret}{PLTS.ABA.Composition.RoundLoopStep.ret}, and $b$ lies in $id$'s own sent set, read at \leandeclnamed{retABA}{PLTS.ABA.Composition.ABANetworkStep.retABA}.
 
-\blueprintfig{fig-core-phases}{The round loop \leandecl{PLTS.ABA.Composition.roundLoopProgram}: the per-process five-phase handshake cycle, the fused DECIDED multicast at the $A$-grade coin return (D10), and the DECIDED sets guarding $\mathrm{retABA}$.
+\blueprintfig{fig-core-phases}{The round loop \leandecl{PLTS.ABA.Composition.roundLoopProgram}: the per-process five-phase handshake cycle, the fused DECIDED multicast at the grade-2 coin return (D10), and the DECIDED sets guarding $\mathrm{retABA}$.
 Every edge drawn carries the guard that the process's own program is unreplaced, so a corruption leaves the machine at the phase it has reached and the phase field stands still from there (D23).
 The \texttt{inputLoop} self-loop absorbs $\mathrm{callABA}$ at a process whose input is set (D36), so it stands at every phase the \texttt{input} edge leads to and is drawn at $\mathrm{toCallG}$ alone.}
 
@@ -1485,7 +1486,7 @@ Write
   \#_i(b) \;=\; |\{\, j \in [n] \;:\; b \in \mathit{decidedReceived}(i,j) \,\}|
 \]
 for the number of distinct senders whose $\langle\mathrm{DECIDED}, b\rangle$ has been delivered to $i$; this is the count the return guard reads.
-Write $\mathrm{estimate}(A\,b) = \mathrm{estimate}(B\,b) = b$ and $\mathrm{estimate}(C) = \bot$ for the estimate a graded outcome dictates.
+Write $\mathrm{estimate}(b,2) = \mathrm{estimate}(b,1) = b$ and $\mathrm{estimate}(\bot,0) = \bot$ for the estimate a graded outcome dictates.
 In the table $\mathrm{DEC}\,b$ abbreviates $\langle\mathrm{DECIDED}, b\rangle$ and ``mcast'' abbreviates the insertion of a payload into the sender's $\mathit{decidedSent}$ set.
 A row is a rule of a round loop, a rule of the ABA-side network, or a rendezvous of one of each; where a row has two halves the table names both, and a guard is annotated with the component that reads it.
 A label of the extended alphabet is written with the $\to\tau$ the composition applies to it.
@@ -1523,7 +1524,7 @@ Rule & Label & Guard & Effect \\
 \leandeclnamed{retW}{PLTS.ABA.Composition.RoundLoopStep.retW} & $\mathrm{retW}(r,i,c)$
   & $\mathit{phase}_i = \mathrm{awaitW}$, $\mathit{round}_i = r$,
   & $\mathit{estimate}_i \gets c$ if $\mathit{estimate}_i = \bot$; \\
- & & $\mathit{lastGrade}_i$ not an $A$
+ & & $\mathit{lastGrade}_i$ not a grade $2$
   & clear $\mathit{lastGrade}_i$; \\
  & & & $\mathit{round}_i \gets r + 1$; \\
  & & & $\mathit{phase}_i \gets \mathrm{toCallG}$ \\
@@ -1532,7 +1533,7 @@ Rule & Label & Guard & Effect \\
   & $\mathit{phase}_i = \mathrm{awaitW}$, $\mathit{round}_i = r$,
   & the effect of $\mathrm{retW}$, and \\
 \leandeclnamed{retWPublish}{PLTS.ABA.Composition.ABANetworkStep.retWPublish} & \quad $\to\tau$
-  & $\mathit{lastGrade}_i = A\,b$ (round loop)
+  & $\mathit{lastGrade}_i = (b,2)$ (round loop)
   & multicast $\mathrm{DEC}\,b$ at $i$ (D10) \\
 \hline
 \leandeclnamed{byzantineCallG}{PLTS.ABA.Composition.ABANetworkStep.byzantineCallG}, & $\mathrm{byzantineCallG}(r,i,b)$
@@ -1606,10 +1607,10 @@ The relay guard of \leandeclnamed{decidedSendRelay}{PLTS.ABA.Composition.RoundLo
 \dynamics{The round loop}{%
 Each process runs a five-phase cycle: idle, ready to call the round's GBCA,
 awaiting its return, ready to call the round's coin, awaiting the coin.
-The graded outcome fixes the next estimate, an $A$- or $B$-return of value $b$
-setting it to $b$ and a $C$-return clearing it to $\bot$; a cleared estimate is
+The graded outcome fixes the next estimate, a grade-2 or grade-1 return of value $b$
+setting it to $b$ and a grade-0 return clearing it to $\bot$; a cleared estimate is
 filled by the coin of the same round, and a set estimate ignores that coin.
-When the round's grade was $A\,b$, the step that receives the coin also
+When the round's outcome was $(b,2)$, the step that receives the coin also
 multicasts $\langle \mathrm{DECIDED}, b \rangle$ and advances the round.
 A process holding $\langle \mathrm{DECIDED}, b \rangle$ from $f+1$ distinct
 senders and not having multicast $\langle \mathrm{DECIDED}, b \rangle$ itself multicasts
@@ -1624,7 +1625,7 @@ than $f$ processes, hence in an honest one.
 The own-multicast clause makes every return the endpoint of a diffusion its
 own holder joined.
 That an honest process never sends both payloads is not a property of the round
-loop in isolation --- nothing in its rules forbids two $A$-grades of opposite
+loop in isolation --- nothing in its rules forbids two grade-2 outcomes of opposite
 bits in different rounds --- but of the composition, where Graded Agreement on
 the GBCA family rules that pair out; the round loop alone guarantees only that
 each process returns at most once, by the flag its return rule sets.
@@ -1648,7 +1649,7 @@ The gather-based implementation is carried by the refinements of Section~\ref{se
 The implementation call, the network deliveries (including Byzantine injection), and the graded returns align to the specification's $\mathrm{call}$, its stutter, and its graded returns, with $F$ aligned on both sides.
 Every delivery, relay, echo, vote, bind and echo5 row maps to a specification stutter, and the implementation call maps to the specification call.
 A return whose bit the specification has not yet excluded is answered by a weak run: it maps to the weak step $\mathrm{bindUnset};\mathrm{ret}$, whose $f{+}1$ support is supplied by the $input\_support$ invariant and whose excluded bit is pinned by the return's own exclusion certificate.
-Every return row does the same case split on $excluded$, $C$-returns included, however many returns preceded it; a return whose exclusion has already happened maps to a single graded specification return.
+Every return row does the same case split on $excluded$, grade-0 returns included, however many returns preceded it; a return whose exclusion has already happened maps to a single graded specification return.
 The relation also reads $excluded$ off the network state's bound bit: empty while the bit is unwritten, and the singleton of the bit's complement once a return has written it.}
 
 \input{nodes/thm-aba-subsim}
@@ -1795,10 +1796,10 @@ A system of this section therefore carries the name of its counterpart in the se
           $c \gets v$ \textbf{else} $c \gets \bot$
         \State $T \gets \mathrm{G}_2(c)$
         \State \textbf{if} some $v \ne \bot$ appears $\ge |T| - f$ times in $T$:
-          \textbf{return} $(v, A)$
+          \textbf{return} $(v, 2)$
         \State \textbf{elif} some $v \ne \bot$ appears $\ge f + 1$ times in $T$:
-          \textbf{return} $(v, B)$ \Comment{unique at $f{+}1$ (\cite{AFW25}, Lemma~18)}
-        \State \textbf{else} \textbf{return} $(\bot, C)$
+          \textbf{return} $(v, 1)$ \Comment{unique at $f{+}1$ (\cite{AFW25}, Lemma~18)}
+        \State \textbf{else} \textbf{return} $(\bot, 0)$
     \end{algorithmic}
 \end{algorithm}
 
@@ -1938,7 +1939,7 @@ The round is Algorithm~\ref{alg:gbca-gather} as a composition: $n$ programs besi
 The call is the first gather's call; the first gather's return to a process, which records the candidate, and that process's call of the second gather are two events; and so are the second gather's return, which records the grade off its counts, and the round's graded return (D24).
 Both gathers are the binding form (D33).
 The refinement into Transition System~2 is counting on the two cores, each written once.
-A returned map heavy at a value --- all but $f$ entries --- makes the core the return carries heavy at it; a core heavy at one value leaves every other value at most $f$ entries on it, its $\ge n - f \ge 2f + 1$ entries admitting one value on all but $2f$, which is at once the uniqueness of the $B$-bit and the $A$/$C$ exclusivity of the grade guard.
+A returned map heavy at a value --- all but $f$ entries --- makes the core the return carries heavy at it; a core heavy at one value leaves every other value at most $f$ entries on it, its $\ge n - f \ge 2f + 1$ entries admitting one value on all but $2f$, which is at once the uniqueness of the grade-1 bit and the grade-2 / grade-0 exclusivity of the grade guard.
 The round's bound bit is the heavy bit of the first core, written by the layer's network at the first gather's first return and announced by every graded return (D29).
 The exclusion certificate --- the first core light at the excluded bit --- stands from the moment the core is written, so the specification's monotone $excluded$ is certified with no relay machinery, and the exclusion-on-demand discipline of the direct implementation's refinement carries over unchanged: a return needing an exclusion the specification does not yet hold is answered by the run $\mathrm{bindUnset}; \mathrm{ret}$, whose excluded bit is the complement of the bit the return announces.
 See \leanmodule{Leslie2Protocols/ABA/GBCA/AFW/Counting},

@@ -205,10 +205,10 @@ inductive RoundLoopStep (P : Parameters) (j : Fin P.n) :
   | callWIdle (c : RoundLoopRecord P.n) (r : ℕ) (id : Fin P.n) (hid : id ≠ j) :
       RoundLoopStep P j c (Sum.inl (.callW r id)) (PMF.pure c)
   /-- The coin return without a publication: the round advances and nothing is
-  multicast, the round's grade not being an `A` (D10). -/
+  multicast, the round's grade not being a grade-2 outcome (D10). -/
   | retW (c : RoundLoopRecord P.n) (r : ℕ) (co : Bool) (hh : c.corrupted = false)
       (hph : c.process.phase = .awaitW) (hr : c.process.round = r)
-      (hgr : ∀ v : Bool, c.process.lastGrade ≠ some (.A v)) :
+      (hgr : ∀ v : Bool, c.process.lastGrade ≠ some (.grade2 v)) :
       RoundLoopStep P j c (Sum.inl (.retW r j co)) (PMF.pure (c.stepRound co))
   /-- A coin return to another process: not `j`'s business. -/
   | retWIdle (c : RoundLoopRecord P.n) (r : ℕ) (id : Fin P.n) (co : Bool) (hid : id ≠ j) :
@@ -244,12 +244,12 @@ inductive RoundLoopStep (P : Parameters) (j : Fin P.n) :
   | decidedDeliverIdle (c : RoundLoopRecord P.n) (i k : Fin P.n) (b : Bool) (hi : i ≠ j) :
       RoundLoopStep P j c (Sum.inr (.decidedDeliver i k b)) (PMF.pure c)
   /-- The coin return fused with the `⟨DECIDED, b⟩` publication (D10): the
-  round's grade was `A b`, so the round advance publishes `b`, the sent insert
+  round's outcome was `grade2 b`, so the round advance publishes `b`, the sent insert
   being `ABANetwork`'s half. -/
   | retWPublish (c : RoundLoopRecord P.n) (r : ℕ) (co : Bool) (b : Bool)
       (hh : c.corrupted = false)
       (hph : c.process.phase = .awaitW) (hr : c.process.round = r)
-      (hgr : c.process.lastGrade = some (.A b)) :
+      (hgr : c.process.lastGrade = some (.grade2 b)) :
       RoundLoopStep P j c (Sum.inr (.retWPublish r j co b)) (PMF.pure (c.stepRound co))
   /-- A fused coin return at another process: not `j`'s business. -/
   | retWPublishIdle (c : RoundLoopRecord P.n) (r : ℕ) (id : Fin P.n) (co : Bool) (b : Bool)
@@ -595,7 +595,7 @@ theorem roundLoopStep_callW_foreign {r : ℕ} {id : Fin P.n} (hid : id ≠ j)
 theorem roundLoopStep_retW_own {r : ℕ} {co : Bool}
     (h : RoundLoopStep P j c (Sum.inl (.retW r j co)) ν) :
     (c.corrupted = false ∧ c.process.phase = .awaitW ∧ c.process.round = r ∧
-      (∀ v : Bool, c.process.lastGrade ≠ some (.A v)) ∧
+      (∀ v : Bool, c.process.lastGrade ≠ some (.grade2 v)) ∧
       ν = PMF.pure (c.stepRound co)) ∨
     (c.corrupted = true ∧ ν = PMF.pure c) := by
   cases h
@@ -662,7 +662,7 @@ theorem roundLoopStep_decidedDeliver_foreign {i k : Fin P.n} {b : Bool} (hi : i 
 theorem roundLoopStep_retWPublish_self {r : ℕ} {co b : Bool}
     (h : RoundLoopStep P j c (Sum.inr (.retWPublish r j co b)) ν) :
     c.corrupted = false ∧ c.process.phase = .awaitW ∧ c.process.round = r ∧
-      c.process.lastGrade = some (.A b) ∧ ν = PMF.pure (c.stepRound co) := by
+      c.process.lastGrade = some (.grade2 b) ∧ ν = PMF.pure (c.stepRound co) := by
   cases h
   case retWPublish =>
     exact ⟨by assumption, by assumption, by assumption, by assumption, rfl⟩

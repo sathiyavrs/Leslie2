@@ -353,12 +353,12 @@ inductive ProgramStep (P : Parameters) (M S : Type)
       (r : ℕ) (id : Fin P.n) (hid : id ≠ j) :
       ProgramStep P M S roundStep j (c, p) (Sum.inl (.callW r id)) (PMF.pure (c, p))
   /-- The coin return without a publication: the round advances and nothing is
-  multicast, the round's grade not being an `A` (D10). The advance opens a new
+  multicast, the round's grade not being a grade-2 outcome (D10). The advance opens a new
   round; the stage records the process holds are retained across it (D22). -/
   | retW (c : RoundLoopRecord P.n) (p : RoundRecordMap S) (r : ℕ) (co : Bool)
       (hh : c.corrupted = false)
       (hph : c.process.phase = .awaitW) (hr : c.process.round = r)
-      (hgr : ∀ v : Bool, c.process.lastGrade ≠ some (.A v)) :
+      (hgr : ∀ v : Bool, c.process.lastGrade ≠ some (.grade2 v)) :
       ProgramStep P M S roundStep j (c, p) (Sum.inl (.retW r j co))
         (PMF.pure (c.stepRound co, p))
   /-- A coin return to another process: not `j`'s business. -/
@@ -409,13 +409,13 @@ inductive ProgramStep (P : Parameters) (M S : Type)
       (i k : Fin P.n) (b : Bool) (hi : i ≠ j) :
       ProgramStep P M S roundStep j (c, p) (Sum.inr (.decidedDeliver i k b)) (PMF.pure (c, p))
   /-- The coin return fused with the `⟨DECIDED, b⟩` publication (D10): the
-  round's grade was `A b`, so the round advance publishes `b`, the sent insert
+  round's outcome was `grade2 b`, so the round advance publishes `b`, the sent insert
   being the network's half. The advance opens a new round; the stage records
   the process holds are retained across it (D22). -/
   | retWPublish (c : RoundLoopRecord P.n) (p : RoundRecordMap S)
       (r : ℕ) (co : Bool) (b : Bool) (hh : c.corrupted = false)
       (hph : c.process.phase = .awaitW) (hr : c.process.round = r)
-      (hgr : c.process.lastGrade = some (.A b)) :
+      (hgr : c.process.lastGrade = some (.grade2 b)) :
       ProgramStep P M S roundStep j (c, p) (Sum.inr (.retWPublish r j co b))
         (PMF.pure (c.stepRound co, p))
   /-- A fused coin return at another process: not `j`'s business. -/
@@ -829,7 +829,7 @@ theorem programStep_callW_foreign {r : ℕ} {id : Fin P.n} (hid : id ≠ j)
 theorem programStep_retW_own {r : ℕ} {co : Bool}
     (h : ProgramStep P M S roundStep j q (Sum.inl (.retW r j co)) ν) :
     (q.1.corrupted = false ∧ q.1.process.phase = .awaitW ∧ q.1.process.round = r ∧
-      (∀ v : Bool, q.1.process.lastGrade ≠ some (.A v)) ∧
+      (∀ v : Bool, q.1.process.lastGrade ≠ some (.grade2 v)) ∧
       ν = PMF.pure (q.1.stepRound co, q.2)) ∨
     (q.1.corrupted = true ∧ ν = PMF.pure q) := by
   cases h
@@ -936,7 +936,7 @@ theorem programStep_retWPublish_self {r : ℕ} {co b : Bool}
     (h : ProgramStep P M S roundStep j q (Sum.inr (.retWPublish r j co b)) ν) :
     q.1.corrupted = false ∧
       q.1.process.phase = .awaitW ∧ q.1.process.round = r ∧
-      q.1.process.lastGrade = some (.A b) ∧
+      q.1.process.lastGrade = some (.grade2 b) ∧
       ν = PMF.pure (q.1.stepRound co, q.2) := by
   cases h
   case roundRow h' => exact (IsRoundRuleTable.own h').elim

@@ -892,26 +892,26 @@ theorem match_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
           (processes id).2.setRoundRecord r (((processes id).2.roundRecord r).setProcess
             { ((processes id).2.roundRecord r).process with returned := true })) := by
       cases out with
-      | A v =>
-        obtain ⟨hh, hph, hrr, -, hin, hlv, hcnt, hret, hxid⟩ := programStep_retG_A_own (hall id)
-        exact ⟨hph, hrr, hh, GBCA.ByABDY.GBCAProgramStep.retA _ v bnd (by rw [hcol]; exact hin)
+      | grade2 v =>
+        obtain ⟨hh, hph, hrr, -, hin, hlv, hcnt, hret, hxid⟩ := programStep_retGGrade2_own (hall id)
+        exact ⟨hph, hrr, hh, GBCA.ByABDY.GBCAProgramStep.retGrade2 _ v bnd (by rw [hcol]; exact hin)
           (by rw [hcol]; exact hlv) (by rw [hcol]; exact hcnt)
           (by rw [hcol]; exact hret), pure_inj hxid⟩
-      | B v =>
-        obtain ⟨hh, hph, hrr, -, hin, hlv, hnotA, hcnt, honce, hbind, hval, hret,
-          hxid⟩ := programStep_retG_B_own (hall id)
-        exact ⟨hph, hrr, hh, GBCA.ByABDY.GBCAProgramStep.retB _ v bnd (by rw [hcol]; exact hin)
-          (by rw [hcol]; exact hlv) (by rw [hcol]; exact hnotA)
+      | grade1 v =>
+        obtain ⟨hh, hph, hrr, -, hin, hlv, hnotGrade2, hcnt, honce, hbind, hval, hret,
+          hxid⟩ := programStep_retGGrade1_own (hall id)
+        exact ⟨hph, hrr, hh, GBCA.ByABDY.GBCAProgramStep.retGrade1 _ v bnd (by rw [hcol]; exact hin)
+          (by rw [hcol]; exact hlv) (by rw [hcol]; exact hnotGrade2)
           (by rw [hcol]; exact hcnt) (by rw [hcol]; exact honce)
           (by rw [hcol]; exact hbind)
           (by rw [hcol]; exact hval) (by rw [hcol]; exact hret),
           pure_inj hxid⟩
-      | C =>
-        obtain ⟨hh, hph, hrr, -, hin, hlv, hnotA, hnotB, hcnt, hval, hret, hxid⟩ :=
-          programStep_retG_C_own (hall id)
-        exact ⟨hph, hrr, hh, GBCA.ByABDY.GBCAProgramStep.retC _ bnd (by rw [hcol]; exact hin)
-          (by rw [hcol]; exact hlv) (by rw [hcol]; exact hnotA)
-          (by rw [hcol]; exact hnotB) (by rw [hcol]; exact hcnt)
+      | grade0 =>
+        obtain ⟨hh, hph, hrr, -, hin, hlv, hnotGrade2, hnotGrade1, hcnt, hval, hret, hxid⟩ :=
+          programStep_retGGrade0_own (hall id)
+        exact ⟨hph, hrr, hh, GBCA.ByABDY.GBCAProgramStep.retGrade0 _ bnd (by rw [hcol]; exact hin)
+          (by rw [hcol]; exact hlv) (by rw [hcol]; exact hnotGrade2)
+          (by rw [hcol]; exact hnotGrade1) (by rw [hcol]; exact hcnt)
           (by rw [hcol]; exact hval) (by rw [hcol]; exact hret),
           pure_inj hxid⟩
     obtain ⟨hph, hrr, hh, hrow, hx⟩ := hstage
