@@ -1,14 +1,13 @@
-# Design — the per-instance GBCA refinement `GBCA.implInst ⊑ GBCA.specInst` (`implRefines`)
+# Design — the per-instance GBCA refinement `GBCA.ByABDY.implInst ⊑ GBCA.specInst` (`implRefines`)
 
-Companion design document to the Lean proof in `ABA/ABDY/ImplSim.lean` (relation,
-invariant, run lemmas, per-row simulation), against the implementation shape
-in `ABA/ABDY/Impl.lean` (deviation D18: all five message levels of
-ABDY22's Algorithm 6) and the specification shape in `ABA/Spec/GBCA.lean`
-(deviation D19: the exclusion set `excluded : Finset Bool` as the state shape,
-with the bound value announced on the return labels, D29). The refinement
-paragraphs of `blueprint/src/content.tex` — the exclusion certificate, the
-`VOTE` wall, and the two-step exclusion-then-return run — are a condensation of
-this document.
+Companion design document to the Lean proof in `ABA/GBCA/ABDY/RefinesSpecification.lean`
+(relation, invariant, run lemmas, per-row simulation), against the implementation shape in
+`ABA/GBCA/ABDY/Implementation.lean` (deviation D18: all five message levels of ABDY22's
+Algorithm 6) and the specification shape in `ABA/GBCA/Specification.lean` (deviation D19:
+the exclusion set `excluded : Finset Bool` as the state shape, with the bound value
+announced on the return labels, D29). The refinement paragraphs of
+`blueprint/src/content.tex` — the exclusion certificate, the `VOTE` wall, and the two-step
+exclusion-then-return run — are a condensation of this document.
 
 ## Systems
 
@@ -18,10 +17,9 @@ specInst P r : System (SpecState P.n) (Lab P.n)     -- graded-binding spec, D1/D
 target       : ForwardSimulation (implInst P r) (specInst P r) (instRel P r)
 ```
 
-Both systems are Dirac-transition LTSs. The instance refinement reaches the
-ℕ-indexed families through the round instance (`ABA/ABDY/Instances.lean`), whose
-family lifting takes its broadcast ingredient from
-`GBCASim.instRel_corrupt`.
+Both systems are Dirac-transition LTSs. The instance refinement reaches the ℕ-indexed
+families through the round instance (`ABA/Composition/GBCAInstanceByABDY.lean`), whose
+family lifting takes its broadcast ingredient from `GBCASim.instRel_corrupt`.
 
 ### The implementation (D18): the five message levels
 
@@ -92,7 +90,7 @@ block's case (a) at either bit, and the returns read as Algorithm 6's
 * `fail` — D1 determinised corruption.
 
 The three return rows each announce a bit and write it back, and no other row
-touches the field. `GBCA.boundOf sent F out` is the bit a return of outcome
+touches the field. `GBCA.ByABDY.boundOf sent F out` is the bit a return of outcome
 `out` announces where the round has none on record: `v` at a value-bearing
 outcome, and at `C` the payload of an honest `⟨VOTE, b⟩` sender, `true` where
 there is none. An honest `⟨VOTE, b⟩` sender holds an `n − f` `⟨ECHO, b⟩`
@@ -502,7 +500,7 @@ The kit the proof draws on, most of it common to the instance refinements of
 the development; the `ECHO5`-level τ-rows (`echo5Bit`/`echo5Bot`) are frame cases
 identical in shape to `bindBit`/`bindBot` and need nothing beyond it:
 
-* the weak-transition kit of `Framework/FamilySim.lean`:
+* the weak-transition kit of `Framework/FamilySimulation.lean`:
   `System.weakLStep_of_step` and `weakLStep_tauThen`;
 * network plumbing: `recv_sub`, `recvCount_le_recvMsg`, `mem_mcast_sent`,
   `mem_recvMsg_recv`, `exists_sender_notMem`, `exists_honest_recv₂`,
@@ -557,7 +555,7 @@ theorem voteCount_le_recvMsg (s : ImplState n) (i j : Fin n) (m : Msg) (i' : Fin
 
 ### Certificate and derivation lemmas
 
-Collected statements (all defined in `ABDY/ImplSim.lean` unless noted):
+Collected statements (all defined in `GBCA/ABDY/RefinesSpecification.lean` unless noted):
 
 ```lean
 def VoteWall (P : Params) (s : ImplState P.n) (b : Bool) : Prop := …   -- § exclude certificates
@@ -644,30 +642,30 @@ consumes, and exactly why no later receipt pattern can contradict the exclusion.
 
 ## Where the shapes surface downstream
 
-The exclusion set and the exclusion certificate are read directly by the files
-above this one. The `Core/Rel.lean` chain and `Core/Sim.lean` phrase the round skeleton
-over `excluded`: `IsLastBound g r` is `(g r).excluded ≠ ∅ ∧ (g (r + 1)).excluded = ∅`,
-`Closed g r` is `(g r).excluded ≠ ∅ ∨ (g r).grade = some false`, and `a_commit`,
-`gradeA_needs_bind`, `bind_supp` and the A-lock certificates are keyed on the
-guard pair `(!b) ∈ excluded ∧ b ∉ excluded` — the D19 rendering of `bind = some b`,
-with `bind ≠ none` rendered as `excluded ≠ ∅`. `GBCASim.instRel_corrupt`
-carries the `excluded_cert` row through `ExcludedCert.mono`, whose three hypotheses it
-discharges by `corrupt_recv`, `corrupt_proc` and `corrupt_F_subset`.
-`ABDY/Protocol.lean`'s rendering carries the same levels inside one
-process: the stage record `GBCA.StageRec` keeps the write-once `sentEcho5` field in
-its `proc` record and carries its own `echo5Count` over its received set rows, the
-rendezvous rows `gsndEcho5Bit`/`gsndEcho5Bot` are the echo5 multicasts read off
-that record, and the three `retG` rows (and their `byzRetG` counterparts) read the echo5
-level off it. No translation is needed to the global view: the round-`r` `ImplState`
-*is* the round instance's own state — the stage records with their received set rows
-beside the round's network state, which holds the per-sender sent sets and the
-corrupted set — and `ImplState.echo5Count` reads the receiving program's received set
-rows directly. So `GSub.subSim` consumes `implRefines` as it stands: the
-projection `sub_projects` (`ABA/ABDY/Instances.lean`) matches every round-instance
-transition with the implementation instance's at that same state, one step for
-one step, and this file's refinement answers it, its weak answer read back at the
-round instance's interface — which is what licenses replacing a round's instance
-by the graded agreement specification.
+The exclusion set and the exclusion certificate are read directly by the files above this
+one. The `HybridRefinesSpecification/Relation.lean` chain and
+`HybridRefinesSpecification/Simulation.lean` phrase the round skeleton over `excluded`:
+`IsLastBound g r` is `(g r).excluded ≠ ∅ ∧ (g (r + 1)).excluded = ∅`, `Closed g r` is
+`(g r).excluded ≠ ∅ ∨ (g r).grade = some false`, and `a_commit`, `gradeA_needs_bind`,
+`bind_supp` and the A-lock certificates are keyed on the guard pair
+`(!b) ∈ excluded ∧ b ∉ excluded` — the D19 rendering of `bind = some b`, with
+`bind ≠ none` rendered as `excluded ≠ ∅`. `GBCASim.instRel_corrupt` carries the
+`excluded_cert` row through `ExcludedCert.mono`, whose three hypotheses it discharges by
+`corrupt_recv`, `corrupt_proc` and `corrupt_F_subset`.
+`ImplementationByABDY/System.lean`'s rendering carries the same levels inside one process:
+the stage record `GBCA.ByABDY.StageRec` keeps the write-once `sentEcho5` field in its
+`proc` record and carries its own `echo5Count` over its received set rows, the rendezvous
+rows `gsndEcho5Bit`/`gsndEcho5Bot` are the echo5 multicasts read off that record, and the
+three `retG` rows (and their `byzRetG` counterparts) read the echo5 level off it. No
+translation is needed to the global view: the round-`r` `ImplState` *is* the round
+instance's own state — the stage records with their received set rows beside the round's
+network state, which holds the per-sender sent sets and the corrupted set — and
+`ImplState.echo5Count` reads the receiving program's received set rows directly. So
+`GBCA.ByABDY.subSim` consumes `implRefines` as it stands: the projection `sub_projects`
+(`ABA/Composition/GBCAInstanceByABDY.lean`) matches every round-instance transition with
+the implementation instance's at that same state, one step for one step, and this file's
+refinement answers it, its weak answer read back at the round instance's interface — which
+is what licenses replacing a round's instance by the graded agreement specification.
 
 ## Risks and open points
 

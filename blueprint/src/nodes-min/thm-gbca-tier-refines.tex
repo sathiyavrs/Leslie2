@@ -1,11 +1,11 @@
 \begin{theorem}[The two substitutions inside the round]
   \label{thm:gbca-tier-refines}
-  \lean{PLTS.ABA.GBCA.LowPairRel}\lean{PLTS.ABA.GBCA.lowPairRefines}\lean{PLTS.ABA.GBCA.IdealRel}\lean{PLTS.ABA.GBCA.idealRefines}\leanok
+  \lean{PLTS.ABA.GBCA.ByAFW.LowPairRel}\lean{PLTS.ABA.GBCA.ByAFW.lowPairRefines}\lean{PLTS.ABA.GBCA.ByAFW.IdealRel}\lean{PLTS.ABA.GBCA.ByAFW.idealRefines}\leanok
   \uses{def:aba-gbca-gather-low, def:aba-gbca-pair, thm:gather-low-refines, thm:gather-core, thm:forwardsim-congruence}
-  Each tier of the round is forward-simulated by the one above it, by congruence: the gather simulation of Theorem~\ref{thm:gather-low-refines}, respectively Theorem~\ref{thm:gather-core}, is read along the pullback naming each of the two gather slots and carried through the round's operators with the layer held, by Theorem~\ref{thm:forwardsim-congruence} --- \leandecl{PLTS.ABA.GBCA.lowPairRefines} along \leandecl{PLTS.ABA.GBCA.LowPairRel} and \leandecl{PLTS.ABA.GBCA.idealRefines} along \leandecl{PLTS.ABA.GBCA.IdealRel}, each the layer held equal beside the gather relation at both slots.
+  Each tier of the round is forward-simulated by the one above it, by congruence: the gather simulation of Theorem~\ref{thm:gather-low-refines}, respectively Theorem~\ref{thm:gather-core}, is read along the pullback naming each of the two gather slots and carried through the round's operators with the layer held, by Theorem~\ref{thm:forwardsim-congruence} --- \leandecl{PLTS.ABA.GBCA.ByAFW.lowPairRefines} along \leandecl{PLTS.ABA.GBCA.ByAFW.LowPairRel} and \leandecl{PLTS.ABA.GBCA.ByAFW.idealRefines} along \leandecl{PLTS.ABA.GBCA.ByAFW.IdealRel}, each the layer held equal beside the gather relation at both slots.
 \end{theorem}
 
 \begin{proof}\leanok
   \uses{def:aba-gbca-gather-low, def:aba-gbca-pair, thm:gather-low-refines, thm:gather-core, def:forwardsim}
-  See the Lean proofs of \leandecl{PLTS.ABA.GBCA.lowPairRefines} and \leandecl{PLTS.ABA.GBCA.idealRefines}.
+  See the Lean proofs of \leandecl{PLTS.ABA.GBCA.ByAFW.lowPairRefines} and \leandecl{PLTS.ABA.GBCA.ByAFW.idealRefines}.
 \end{proof}

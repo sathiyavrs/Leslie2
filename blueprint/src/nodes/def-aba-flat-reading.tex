@@ -1,6 +1,6 @@
 \begin{definition}[The flat reading of a protocol]
   \label{def:aba-flat-reading}
-  \lean{PLTS.ABA.Net.NetEvtP}\lean{PLTS.ABA.Net.actsAt}\lean{PLTS.ABA.Net.wccPull}\lean{PLTS.ABA.Net.StageSideRecP}\lean{PLTS.ABA.Net.StageRecord}\lean{PLTS.ABA.Net.NetStateP}\lean{PLTS.ABA.Net.roundOf}\lean{PLTS.ABA.Net.NetStateP.writeGhost}\lean{PLTS.ABA.Net.stageOwn}\lean{PLTS.ABA.Net.FlatProcStep}\lean{PLTS.ABA.Net.FlatNetStep}\lean{PLTS.ABA.Net.IsStageTable}\lean{PLTS.ABA.Net.flat}\leanok
+  \lean{PLTS.ABA.Implementation.NetEvtP}\lean{PLTS.ABA.Implementation.actsAt}\lean{PLTS.ABA.Implementation.wccPull}\lean{PLTS.ABA.Implementation.StageSideRecP}\lean{PLTS.ABA.Implementation.StageRecord}\lean{PLTS.ABA.Implementation.NetStateP}\lean{PLTS.ABA.Implementation.roundOf}\lean{PLTS.ABA.Implementation.NetStateP.writeGhost}\lean{PLTS.ABA.Implementation.stageOwn}\lean{PLTS.ABA.Implementation.FlatProcStep}\lean{PLTS.ABA.Implementation.FlatNetStep}\lean{PLTS.ABA.Implementation.IsStageTable}\lean{PLTS.ABA.Implementation.flat}\leanok
   \uses{def:aba-labels, def:aba-params, def:aba-core-vocab, def:relabel, def:syncproduct, def:process-algebra, def:idle-family}
   A protocol as it runs: $n$ programs, one per process, beside one network adversary and the coin oracle.
   A program reads its own records, its own received sets and its own replacement flag, and nothing else about corruption --- not the corrupted set, not the budget, not another process's status (D23) --- while the adversary holds the round-tagged message sets, the DECIDED sets and the corrupted set with its budget, and it alone has rows on the Byzantine labels.
@@ -15,7 +15,7 @@
   and the lemmas that read a row off its label.
   Which rows belong to the implementation is settled by the label: a program's row is the implementation's business exactly when its label is one of $\mathrm{stageOwn}(j)$ --- the graded-agreement call and return at $j$, $j$'s own stage multicast, a delivery addressed to $j$, and $j$'s own call against an already-called record.
   A reading must supply four things about its rows: that they carry such a label, that they fire only at an unreplaced program, that they are Dirac, and that a return row takes the announced bit free, firing at every other bit with the same successor (D29).
-  That is \leandecl{PLTS.ABA.Net.IsStageTable}; the lemmas that read a row off its label consume the first three, and Theorem~\ref{thm:aba-erasure} the fourth.
+  That is \leandecl{PLTS.ABA.Implementation.IsStageTable}; the lemmas that read a row off its label consume the first three, and Theorem~\ref{thm:aba-erasure} the fourth.
   The rendezvous alphabet is parametric in $M$ in its two stage constructors and fixed in every other, and is hidden before it leaves the composition, so two readings of the same protocol need not agree on it.
   The adversary holds one further record, and a reading supplies it too (D30).
   For each round $r$ its state carries a ghost record $ghostRec(r)$ of a type $G$ the reading fixes.
@@ -27,5 +27,5 @@
   A reading that computes the announced bit writes the record at the first return of a round, from the sent sets and the corrupted set, reads the same record back at every later return of that round, and instantiates the relation as the equation between the announced bit and that record.
   A reading that leaves the announcement to the adversary instantiates the relation as the full one, and the bit is then unconstrained (Definition~\ref{def:aba-ghost-free}).
   The content is the reading's own, the two instantiations holding different records and writing them at different rows, which is why $G$, $\mathrm{ghostStep}$ and $\mathrm{ghostOut}$ are parameters here as $M$, $S$ and the implementation's rows are.
-  Full construction: \leandecl{PLTS.ABA.Net.flat}.
+  Full construction: \leandecl{PLTS.ABA.Implementation.flat}.
 \end{definition}

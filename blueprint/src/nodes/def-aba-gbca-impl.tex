@@ -1,6 +1,6 @@
 \begin{definition}[The GBCA implementation instance]
   \label{def:aba-gbca-impl}
-  \lean{PLTS.ABA.GBCA.boundOf}\lean{PLTS.ABA.GBCA.implInst}\leanok
+  \lean{PLTS.ABA.GBCA.ByABDY.boundOf}\lean{PLTS.ABA.GBCA.ByABDY.implInst}\leanok
   \uses{def:aba-labels, def:aba-params, def:aba-gbca-vocab}
   Graded agreement read as one per-round PLTS over the pair of local states that hold a round's state, the analysis form of \algoref{alg:gbca-impl}{the GBCA implementation}, which is ABDY22's Algorithm~6 (D18).
   Each process runs a five-stage exchange over the message levels of Definition~\ref{def:aba-gbca-vocab}: it multicasts $\langle\mathrm{INPUT},b\rangle$ on a call and relays it on $f{+}1$ receipts, and each higher level is multicast into its own write-once field under an $n{-}f$ quorum at the level below and prior participation (D8), the levels from $\mathrm{BIND}$ down requiring in addition that the process's own send at the level below is already out.
@@ -13,5 +13,5 @@
   A return of outcome $out$ announces the bit already on record if the round has returned before and $\mathrm{boundOf}$'s bit otherwise, and writes it back, so a round announces one bit on all of its returns.
   The announced bit enters no guard of the algorithm and no field a program holds.
   It is the pair of the $n$ stage records of Definition~\ref{def:aba-procnet} and the round's network state of Definition~\ref{def:aba-gbcasub}: the network is a component of the state rather than a field of it, and the four names $proc$, $sent$, $recv$ and $F$ used below are accessors on that pair.
-  Full rule table: \leandecl{PLTS.ABA.GBCA.implInst}.
+  Full rule table: \leandecl{PLTS.ABA.GBCA.ByABDY.implInst}.
 \end{definition}

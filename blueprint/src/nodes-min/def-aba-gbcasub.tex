@@ -1,7 +1,7 @@
 \begin{definition}[The round's graded-agreement instance]
   \label{def:aba-gbcasub}
-  \lean{PLTS.ABA.GSub.GEvt}\lean{PLTS.ABA.GSub.GLab}\lean{PLTS.ABA.GSub.gEvents}\lean{PLTS.ABA.GSub.GProcStep}\lean{PLTS.ABA.GSub.gbcaProc}\lean{PLTS.ABA.GSub.GNetState}\lean{PLTS.ABA.GSub.GNetState.corrupt}\lean{PLTS.ABA.GSub.GNetStep}\lean{PLTS.ABA.GSub.gNet}\lean{PLTS.ABA.GBCA.ImplState}\lean{PLTS.ABA.GSub.subPre}\lean{PLTS.ABA.GSub.sub}\lean{PLTS.ABA.GSub.gOwns}\lean{PLTS.ABA.GSub.gAct}\lean{PLTS.ABA.GSub.gbcaSide}\leanok
+  \lean{PLTS.ABA.GBCA.ByABDY.GEvt}\lean{PLTS.ABA.GBCA.ByABDY.GLab}\lean{PLTS.ABA.GBCA.ByABDY.gEvents}\lean{PLTS.ABA.GBCA.ByABDY.GProcStep}\lean{PLTS.ABA.GBCA.ByABDY.gbcaProc}\lean{PLTS.ABA.GBCA.ByABDY.GNetState}\lean{PLTS.ABA.GBCA.ByABDY.GNetState.corrupt}\lean{PLTS.ABA.GBCA.ByABDY.GNetStep}\lean{PLTS.ABA.GBCA.ByABDY.gNet}\lean{PLTS.ABA.GBCA.ByABDY.ImplState}\lean{PLTS.ABA.GBCA.ByABDY.subPre}\lean{PLTS.ABA.GBCA.ByABDY.sub}\lean{PLTS.ABA.GBCA.ByABDY.gOwns}\lean{PLTS.ABA.GBCA.ByABDY.gAct}\lean{PLTS.ABA.GBCA.ByABDY.gbcaSide}\leanok
   \uses{def:aba-procnet, def:aba-netadv, def:aba-gbca-vocab, def:relabel, def:syncproduct, def:idle-family, def:process-algebra}
-  One round of graded agreement cut into $n$ local stage programs beside that round's own network, together with the $\mathbb{N}$-indexed family of such rounds that is the graded-agreement side of the protocol: \leandecl{PLTS.ABA.GSub.sub} and \leandecl{PLTS.ABA.GSub.gbcaSide}.
+  One round of graded agreement cut into $n$ local stage programs beside that round's own network, together with the $\mathbb{N}$-indexed family of such rounds that is the graded-agreement side of the protocol: \leandecl{PLTS.ABA.GBCA.ByABDY.sub} and \leandecl{PLTS.ABA.GBCA.ByABDY.gbcaSide}.
   The network holds the round's per-sender message sets, the corrupted set and the round's bound bit, the last a ghost output the return rows write and announce (D29).
 \end{definition}

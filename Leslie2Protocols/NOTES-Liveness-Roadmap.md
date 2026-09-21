@@ -15,13 +15,14 @@ scheduler, the protocol decides with probability 1 — at `δ_f = 0`, and **fair
 with probability at least `1 − g(ε, δ_f)` — in general.
 
 The failure mass is in the encoding, not in the statement of the goal. Both coin
-resolutions of the development follow `ABA.Params.wccPMF` (`ABA/Vocabulary/Params.lean`), which puts
-mass `δ_f` (the Lean field `Params.δ`, `δ_f` in the blueprint) on the outcome `undelivered`: the
-coin resolves without delivering. In TS 3 that outcome is absorbing — `WCC.Step.callResolve`
-fires once per instance and `WCC.Step.ret` has a positive guard — so the
-processes awaiting an undelivered round's return never return, in any extension, under any
-scheduler. A single such round therefore strands positive mass, and no fairness
-assumption recovers it. The honest target carries the failure mass.
+resolutions of the development follow `ABA.Params.wccPMF`
+(`ABA/Vocabulary/Parameters.lean`), which puts mass `δ_f` (the Lean field `Params.δ`,
+`δ_f` in the blueprint) on the outcome `undelivered`: the coin resolves without
+delivering. In TS 3 that outcome is absorbing — `WCC.Step.callResolve` fires once per
+instance and `WCC.Step.ret` has a positive guard — so the processes awaiting an
+undelivered round's return never return, in any extension, under any scheduler. A single
+such round therefore strands positive mass, and no fairness assumption recovers it. The
+honest target carries the failure mass.
 
 The function `g` is protocol-side, and its value there is left open. Each round is a race
 between the `δ_f` failure mass and a decision: a resolution matches the round's surviving
@@ -58,18 +59,19 @@ supermartingales in Caesar):
 turns on a precondition the coin cannot see: the round's value is fixed before the coin
 resolves, so a resolution matching it decides. That precondition is structural here rather
 than an assumption a liveness proof would have to carry. At the specification, GBCA's
-exclusion set `excluded` only grows — its single writer inserts and corruption does not touch
-it — and both value-bearing returns demand `v ∉ excluded ∧ !v ∈ excluded`, so any two graded
-returns of one round hand out the same bit and a `C`-return pins a bit that no extension
-of the run hands out at grade ≥ 1: `retG_value_agree`, `specInst_binding`,
-`retC_excluded_nonempty` (`ABA/Spec/GBCASafety.lean`), each from monotonicity alone, no invariant.
-The precondition is on the trace, not only on the state: every return of a round announces
-the round's bound bit on its label (D29), so `specInst_binding` reads it off the labels of a
-single trace, and the coin's race is against a bit the trace has already named.
-At the implementation the encoding is ABDY22's Algorithm 6 in full (D18), whose Binding
-the paper proves. The precondition is therefore available on both sides of the refinement,
-and a liveness effort inherits it rather than re-deriving it; what it must supply is the
-probabilistic part, the race between the coin's `ε` mass and the `δ_f` failure mass.
+exclusion set `excluded` only grows — its single writer inserts and corruption does not
+touch it — and both value-bearing returns demand `v ∉ excluded ∧ !v ∈ excluded`, so any
+two graded returns of one round hand out the same bit and a `C`-return pins a bit that no
+extension of the run hands out at grade ≥ 1: `retG_value_agree`, `specInst_binding`,
+`retC_excluded_nonempty` (`ABA/GBCA/SpecificationSafety.lean`), each from monotonicity
+alone, no invariant. The precondition is on the trace, not only on the state: every return
+of a round announces the round's bound bit on its label (D29), so `specInst_binding` reads
+it off the labels of a single trace, and the coin's race is against a bit the trace has
+already named. At the implementation the encoding is ABDY22's Algorithm 6 in full (D18),
+whose Binding the paper proves. The precondition is therefore available on both sides of
+the refinement, and a liveness effort inherits it rather than re-deriving it; what it must
+supply is the probabilistic part, the race between the coin's `ε` mass and the `δ_f`
+failure mass.
 
 In this repo's terms: the statement lives naturally at the trace-distribution level —
 "every fair-achievable trace distribution of `ABA.spec` gives mass at least
@@ -152,44 +154,44 @@ expected at the `protocol ↔ ABA.spec` boundary.
 Ordered by expected value-for-effort:
 
 1. **Spec-level liveness, simulation for safety only** (mirrors the successful BRB/BCA
-   pivot AND the consensus-src architecture). Prove the §1 target for `ABA.spec`
-   directly: port the fairness/WF1/leads-to toolkit to PLTS traces, state the decide-mass
-   property over fair schedulers, and discharge it with a supermartingale/variant
-   certificate — either by bridging `Leslie/Prob`'s proven-conditional
-   `FairASTCertificate.sound` to the PLTS model, or by re-deriving the rule on
-   Leslie2's model (the `Leslie2Extra/Measure` Ionescu–Tulcea line supplies the
-   trajectory measure). consensus-src's GBCA/Ben-Or certificates show what the variant
-   functions look like. Deliverable: "under fair scheduling, `ABA.spec` decides with
-   probability at least `1 − g(ε, δ_f)`", the `δ_f = 0` case reading as a.s. decision;
-   combined with the existing safety refinement this is already a strong end-point.
+   pivot AND the consensus-src architecture). Prove the §1 target for `ABA.spec` directly:
+   port the fairness/WF1/leads-to toolkit to PLTS traces, state the decide-mass property
+   over fair schedulers, and discharge it with a supermartingale/variant certificate —
+   either by bridging `Leslie/Prob`'s proven-conditional `FairASTCertificate.sound` to the
+   PLTS model, or by re-deriving the rule on Leslie2's model (the `Leslie2Extra/Measure`
+   Ionescu–Tulcea line supplies the trajectory measure). consensus-src's GBCA/Ben-Or
+   certificates show what the variant functions look like. Deliverable: "under fair
+   scheduling, `ABA.spec` decides with probability at least `1 − g(ε, δ_f)`", the
+   `δ_f = 0` case reading as a.s. decision; combined with the existing safety refinement
+   this is already a strong end-point.
 2. **The §6.3 port** (ambitious add-on): `FairWeakProbabilisticSimulation` — merge
    `WeakDivPreserving`'s stutter-ranking with `Leslie2Extra/Fairness`'s probabilistic
    descent/König machinery over Leslie2's weak simulation. Sound transfer of fair
    trace-distribution inclusion would push the spec-level mass bound down the chain to
-   `ABDY.protocol`, which is where a fair-scheduling statement about this protocol belongs.
-   All three steps are inclusions in the same direction, `protocol ⊑ composed ⊑
-   hybrid ⊑ ABA.spec`, so a mass bound established at `ABA.spec` has to be
-   transported down all three, the composition link (`ABDY.protocolSim`,
-   `ABA/ABDY/ProtocolSim.lean`) included. That link imposes no constraint on the amplification
-   axis. Under D22 a process retains the stage record of every round it has touched and
-   answers that round's messages under an instance-local guard, whichever round its loop is
-   in, which is the behaviour ABDY22's Lemmas 4.6 and E.5 are stated under; and
-   `ABAProcStepN.terminate` fires only once the process's own return has fired and `2f + 1`
-   DECIDED receipts are on record, so the concrete stopping point is a terminate in the
-   paper's sense — the endpoint a fairness marking would stop at. Nothing in the
-   development says when that step fires, or that it ever does: the marking itself and
-   every statement about it are what a campaign has to supply.
-   Budget the corrupt-fairness mismatch as the primary risk: the fairness markings on
-   both sides must be chosen so that ideal-side actions are fair only under honest
-   enablement (state-dependent `fair_labels` — the witness already supports
-   state-dependence; the BRB/BCA failure was a modeling choice as much as a theorem gap).
-   The two failure outcomes agree by construction (§5), so the markings have nothing to
-   reconcile on that axis.
+   `ABDY.protocol`, which is where a fair-scheduling statement about this protocol
+   belongs. All three steps are inclusions in the same direction, `protocol ⊑ composed ⊑
+   hybrid ⊑ ABA.spec`, so a mass bound established at `ABA.spec` has to be transported
+   down all three, the composition link (`ABDY.protocolSim`,
+   `ABA/ImplementationByABDY/Simulation.lean`) included. That link imposes no constraint
+   on the amplification axis. Under D22 a process retains the stage record of every round
+   it has touched and answers that round's messages under an instance-local guard,
+   whichever round its loop is in, which is the behaviour ABDY22's Lemmas 4.6 and E.5 are
+   stated under; and `ABAProcStepN.terminate` fires only once the process's own return has
+   fired and `2f + 1` DECIDED receipts are on record, so the concrete stopping point is a
+   terminate in the paper's sense — the endpoint a fairness marking would stop at. Nothing
+   in the development says when that step fires, or that it ever does: the marking itself
+   and every statement about it are what a campaign has to supply. Budget the
+   corrupt-fairness mismatch as the primary risk: the fairness markings on both sides must
+   be chosen so that ideal-side actions are fair only under honest enablement
+   (state-dependent `fair_labels` — the witness already supports state-dependence; the
+   BRB/BCA failure was a modeling choice as much as a theorem gap). The two failure
+   outcomes agree by construction (§5), so the markings have nothing to reconcile on that
+   axis.
 3. **Model unification** (background hygiene): Leslie_LTS's PLTS + adapters are
    step-shape-identical to Leslie2's `System`; its sorried `WeakProbabilistic`/
    `ProbSimulation` layers are subsumed by Leslie2's proven ones. Converging on one
-   probabilistic model would let the LTS liveness toolkit and Leslie2's simulation
-   stack meet without duplication.
+   probabilistic model would let the LTS liveness toolkit and Leslie2's simulation stack
+   meet without duplication.
 
 One cost note, on any of the three. The achievability item of `ABA/README.md` — an
 explicit scheduler taking `protocol P4` to a two-return trace of positive mass — is
@@ -238,13 +240,13 @@ the bound §1 records.
 
 **The guard and the liveness half of Validity.** `hmix` also settles the unanimous case
 structurally, at the specification and with no proof obligation. A supported bit has a
-never-corrupted recorded inputter (`SuppOK.honest_supporter`, `Spec/ABASafety.lean`), so under
-honest unanimity on `v` the bit `!v` is supported by corrupted identifiers alone, at most
-`f` of them, and `hmix` fails at every state such a run reaches. The flip is then
-unreachable, and with it every probabilistic branch of the system: the unanimous path is
-Dirac, and `SpecStep.decide` can write only `v`. That is the liveness half of Validity —
-"if all correct processes input `v` then all correct processes return `v`" — held by the
-shape of the guard rather than by an argument.
+never-corrupted recorded inputter (`SuppOK.honest_supporter`,
+`Specifications/ABASafety.lean`), so under honest unanimity on `v` the bit `!v` is
+supported by corrupted identifiers alone, at most `f` of them, and `hmix` fails at every
+state such a run reaches. The flip is then unreachable, and with it every probabilistic
+branch of the system: the unanimous path is Dirac, and `SpecStep.decide` can write only
+`v`. That is the liveness half of Validity — "if all correct processes input `v` then all
+correct processes return `v`" — held by the shape of the guard rather than by an argument.
 
 **Transfer caveat: the δ-exposure of the unanimous path.** The spec-level guarantee
 transfers to the protocol only at `δ_f = 0`, or under a protocol-side reordering. With
@@ -269,10 +271,11 @@ is why the specification carries the mode and not the bit.
 
 ## 6. Design note: the GBCA exclusion under fairness
 
-The GBCA specification's `bindUnset` carries the guard `excluded = ∅` (`ABA/Spec/GBCA.lean`), so
-one exclusion happens per instance. Safety is indifferent to the guard — every statement of
-`Spec/GBCASafety.lean` rests on monotonicity of `excluded` and would hold without it — but a fair
-reading of the specification is not.
+The GBCA specification's `bindUnset` carries the guard `excluded = ∅`
+(`ABA/GBCA/Specification.lean`), so one exclusion happens per instance. Safety is
+indifferent to the guard — every statement of `GBCA/SpecificationSafety.lean` rests on
+monotonicity of `excluded` and would hold without it — but a fair reading of the
+specification is not.
 
 Suppose the guard were the per-bit one, `b ∉ excluded`, so that a round could exclude both bits in
 turn. Take a mixed round: a quorum, `f + 1` F-blind support at each bit, and an `A`-return
@@ -323,13 +326,13 @@ the sub-protocol position.
 - Certificates: `Leslie/Prob/Liveness.lean` (`FairASTCertificate`, `sound` at :1719)
 - This repo's fairness line: `Leslie2Extra/Fairness/Simulation/{Defs,Soundness}.lean`
 - The protocol, whose programs read their own replacement flag and nothing else about
-  corruption (D23): `ABA/ABDY/Protocol.lean` (`ABDY.protocol`, `netAdv`), with
-  its reading as a composition of components in `ABA/ABDY/Hybrid.lean` (`ABDY.composed`) and the
-  inclusion into it in `ABA/ABDY/ProtocolSim.lean` (`ABDY.ProtocolRel`, `ABDY.protocolSim`,
-  `ABDY.protocol_composed`) — the presentation to state fair
-  termination over if it is to be stated of the protocol: the `fail` row belongs
-  to the network adversary and is guarded by `k ∉ F ∧ |F| < f`, so `fail` is enabled
-  exactly while budget remains and the marking of `fail` is read off that component's
-  own state.
-- Paper validation of fair AST for this protocol family: `Papers/consensus-src`
-  (Ben-Or + graded consensus, SMT-checked in Caesar)
+  corruption (D23): `ABA/ImplementationByABDY/System.lean` (`ABDY.protocol`, `netAdv`),
+  with its reading as a composition of components in
+  `ABA/Composition/HybridAndSubstitution.lean` (`ABDY.composed`) and the inclusion into it
+  in `ABA/ImplementationByABDY/Simulation.lean` (`ABDY.ProtocolRel`, `ABDY.protocolSim`,
+  `ABDY.protocol_composed`) — the presentation to state fair termination over if it is to
+  be stated of the protocol: the `fail` row belongs to the network adversary and is
+  guarded by `k ∉ F ∧ |F| < f`, so `fail` is enabled exactly while budget remains and the
+  marking of `fail` is read off that component's own state.
+- Paper validation of fair AST for this protocol family: `Papers/consensus-src` (Ben-Or +
+  graded consensus, SMT-checked in Caesar)

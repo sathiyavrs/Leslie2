@@ -1,6 +1,6 @@
 \begin{theorem}[GBCA instance refinement]
   \label{thm:gbca-inst-refines}
-  \lean{PLTS.ABA.GBCA.implRefines}\leanok
+  \lean{PLTS.ABA.GBCA.ByABDY.implRefines}\leanok
   \uses{def:aba-gbca-impl, def:aba-gbca-spec}
   The GBCA implementation instance is forward-simulated, instance by instance, by the GBCA specification instance.
   The relation reads the specification's $call$, $ret$ and $F$ off the implementation state and certifies its $excluded$ and $grade$ by receipt patterns: a \emph{exclude certificate} for every member of $excluded$, and an $n{-}f$ ECHO5 quorum for each side of the grade guard.

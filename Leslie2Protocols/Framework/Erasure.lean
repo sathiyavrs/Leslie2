@@ -7,9 +7,9 @@ Authors: Sathiya / Claude
 import Leslie2.Results
 import Leslie2.Simulation.ForwardLTS
 import Leslie2.Simulation.TraceMap
-import Leslie2Protocols.Framework.IdleFamily
+import Leslie2Protocols.Framework.LoopsAndInstanceFamilies
 import Leslie2Protocols.Framework.Relabel
-import Leslie2Protocols.Framework.SyncProduct
+import Leslie2Protocols.Framework.SynchronisedProduct
 
 /-!
 # Erasure of an auxiliary state component
@@ -52,8 +52,8 @@ An erasure survives parallel composition on either side, against a component who
 relation is saturated along `φ` (`System.LabelSaturated`); abstraction of a `φ`-saturated
 set of labels; and restriction along the left summand of an extended alphabet
 (`Framework/Relabel.lean`). Saturation itself is preserved by parallel composition,
-abstraction, the full-synchronisation product (`Framework/SyncProduct.lean`) and the partial
-label pullback `System.mapIdle` (`Framework/IdleFamily.lean`).
+abstraction, the full-synchronisation product (`Framework/SynchronisedProduct.lean`) and the partial
+label pullback `System.mapIdle` (`Framework/LoopsAndInstanceFamilies.lean`).
 -/
 
 namespace PLTS

@@ -1,7 +1,7 @@
 \begin{definition}[The GBCA implementation instance]
   \label{def:aba-gbca-impl}
-  \lean{PLTS.ABA.GBCA.boundOf}\lean{PLTS.ABA.GBCA.implInst}\leanok
+  \lean{PLTS.ABA.GBCA.ByABDY.boundOf}\lean{PLTS.ABA.GBCA.ByABDY.implInst}\leanok
   \uses{def:aba-labels, def:aba-params, def:aba-gbca-vocab}
-  Graded agreement read as one per-round PLTS over the pair of local states that hold a round's state --- the $n$ stage records beside the round's network state --- transcribing ABDY22's Algorithm~6 over the five message levels (D18): \leandecl{PLTS.ABA.GBCA.implInst}.
-  The network state holds one field more, the round's bound bit: the three return rows announce \leandecl{PLTS.ABA.GBCA.boundOf} of the round's sent sets, the corrupted set and the outcome where the round has no bit on record, and the bit on record otherwise, and write it back (D29).
+  Graded agreement read as one per-round PLTS over the pair of local states that hold a round's state --- the $n$ stage records beside the round's network state --- transcribing ABDY22's Algorithm~6 over the five message levels (D18): \leandecl{PLTS.ABA.GBCA.ByABDY.implInst}.
+  The network state holds one field more, the round's bound bit: the three return rows announce \leandecl{PLTS.ABA.GBCA.ByABDY.boundOf} of the round's sent sets, the corrupted set and the outcome where the round has no bit on record, and the bit on record otherwise, and write it back (D29).
 \end{definition}

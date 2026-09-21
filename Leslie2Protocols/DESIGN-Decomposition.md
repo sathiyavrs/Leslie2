@@ -1,17 +1,16 @@
 # Design — the decomposition of the gather-based chain
 
-The gather-based chain runs over compositions at every level. A
-reliable-broadcast instance is `n` programs beside the instance's network
-(`BRB.implInst`, `ABA/Broadcast/Sub.lean`); a gather instance is `n` programs
-beside the gather network, in parallel with `2n` broadcast instances read along
-pullbacks naming them (`Gather.instAt`, `ABA/Gather/Sub.lean`); a round is `n`
-graded-agreement programs beside the network of the graded-agreement layer, in
-parallel with two gathers (`GBCA.roundInstAt`, `ABA/Round/Sub.lean`). The
-protocol chain's round, `GSub.sub` (`ABA/ABDY/Instances.lean`), is the template
-every level copies: components synchronise on the instance's own events, the
-events are hidden, and the result is read back over the instance's interface.
-`DESIGN-GatherTiers.md` is the account of the stack; `DESIGN-Composition.md` is
-the account of what each component owns.
+The gather-based chain runs over compositions at every level. A reliable-broadcast
+instance is `n` programs beside the instance's network (`BRB.implInst`,
+`ABA/ReliableBroadcast/BrachaComposition.lean`); a gather instance is `n` programs beside
+the gather network, in parallel with `2n` broadcast instances read along pullbacks naming
+them (`Gather.instAt`, `ABA/Gather/Composition.lean`); a round is `n` graded-agreement
+programs beside the network of the graded-agreement layer, in parallel with two gathers
+(`GBCA.ByAFW.roundInstAt`, `ABA/GBCA/AFW/Composition.lean`). The protocol chain's round,
+`GBCA.ByABDY.sub` (`ABA/Composition/GBCAInstanceByABDY.lean`), is the template every level
+copies: components synchronise on the instance's own events, the events are hidden, and
+the result is read back over the instance's interface. `DESIGN-GatherTiers.md` is the
+account of the stack; `DESIGN-Composition.md` is the account of what each component owns.
 
 This note records five constraints the proofs impose on that shape. Each names
 the statement that is false or unprovable without it, so that a reader can
@@ -36,20 +35,19 @@ offers the call alone, and at the loop label the reverse. The refinement into
 the specification fails with it, since a second call with another payload would
 let the specification record and commit a value the instance never broadcast.
 
-**The constraint.** Each composition speaks an alphabet in which the loop is its
-own label: `BRB.InstLab = Lab ⊕ Extra` with `Extra.callLoop m`,
-`Gather.InstLab = Lab ⊕ Extra` with `Extra.callLoop id x`, and the round
-speaks `NLab` natively, whose `NetEvt.gcallLoop` and `byzCallGLoop` are its
-loop labels. On the call label the caller has one row and the network posts; on
-the loop label every component stands still. The specification is read along a
-pullback that sends the loop to the call (`BRB.specPull`, `Gather.specPull`,
-`GSub.gPull`), so its own loop row answers the loop label. The level above
-pulls the composition's alphabet back from its own (`Gather.inPull`,
-`Gather.bindPull`, `GBCA.ga1Pull`, `GBCA.ga2Pull`). The row characterisation is
-then exact in the form quantified over the interface labels:
+**The constraint.** Each composition speaks an alphabet in which the loop is its own
+label: `BRB.InstLab = Lab ⊕ Extra` with `Extra.callLoop m`, `Gather.InstLab = Lab ⊕ Extra`
+with `Extra.callLoop id x`, and the round speaks `NLab` natively, whose `NetEvt.gcallLoop`
+and `byzCallGLoop` are its loop labels. On the call label the caller has one row and the
+network posts; on the loop label every component stands still. The specification is read
+along a pullback that sends the loop to the call (`BRB.specPull`, `Gather.specPull`,
+`GBCA.ByABDY.gPull`), so its own loop row answers the loop label. The level above pulls
+the composition's alphabet back from its own (`Gather.inPull`, `Gather.bindPull`,
+`GBCA.ByAFW.ga1Pull`, `GBCA.ByAFW.ga2Pull`). The row characterisation is then exact in the
+form quantified over the interface labels:
 `(∃ l, specPull l = some l₀ ∧ implInst.step s l μ) ↔ ImplStep s l₀ μ`
 (`BRB.implInst_step_iff_row`, `Gather.idealInst_step_iff_row`,
-`Gather.lowInst_step_iff_row`, `GBCA.pairInst_step_iff_row`).
+`Gather.lowInst_step_iff_row`, `GBCA.ByAFW.pairInst_step_iff_row`).
 
 ## 2. The gather specification's call record follows the input instance
 
@@ -79,21 +77,20 @@ specification-side tier: the concrete gather over Bracha has one row per label.
 
 ## 3. The composed program drops its grade on the graded return
 
-`GBCA.ProcStep.retG` is guarded by `out = some out` and `returned = false` and
+`GBCA.ByAFW.ProcStep.retG` is guarded by `out = some out` and `returned = false` and
 writes `out := none, returned := true`.
 
-**What fails.** The flat link's relation computes the composed state from the
-flat one (`AFW.toRound`), and the flat state keeps a process's grade in its
-round-loop record alone, overwritten every round. A round's grade after its
-return is not recoverable from the flat state. If the program's record kept the
-grade, `AFW.toProc` could not be a function, `AFW.ProtocolRel` would lose the
-conjunct `t.1 = fun r => toRound P u w r`, and every frame lemma of
-`ABA/AFW/Frame.lean`, which states the view after a row as that function
-applied, would have no statement.
+**What fails.** The flat link's relation computes the composed state from the flat one
+(`AFW.toRound`), and the flat state keeps a process's grade in its round-loop record
+alone, overwritten every round. A round's grade after its return is not recoverable from
+the flat state. If the program's record kept the grade, `AFW.toProc` could not be a
+function, `AFW.ProtocolRel` would lose the conjunct `t.1 = fun r => toRound P u w r`, and
+every frame lemma of `ABA/ImplementationByAFW/RoundProjectionStep.lean`, which states the
+view after a row as that function applied, would have no statement.
 
 **The constraint.** The grade is held only between `ret2` and `retG`, inside a
 run whose intermediate state is named (`AFW.afterRet2`) and related to no flat
-state; `toProc` sets `out := none`; `GBCA.PairInv.out_cert` is vacuous for a
+state; `toProc` sets `out := none`; `GBCA.ByAFW.PairInv.out_cert` is vacuous for a
 returned process.
 
 ## 4. A label outside a round's interface blocks the round
@@ -104,15 +101,15 @@ rendezvous — must not be answered by every factor standing still.
 
 **What fails.** If every pullback returned `none` on such a label, the round
 would self-loop on it. The rendezvous have no specification label under
-`GSub.gPull`, so `GBCA.pairInst_step_row` is false there. The ABA and coin
+`GBCA.ByABDY.gPull`, so `GBCA.ByAFW.pairInst_step_row` is false there. The ABA and coin
 labels have one, and `GBCA.Step` has no row at it, so
-`GBCA.pairInst_step_iff_row` is false there and `GBCA.pairRefines` is
-unprovable: `GSub.liftedSpec` has no transition at those labels, and neither
-has `GSub.sub`.
+`GBCA.ByAFW.pairInst_step_iff_row` is false there and `GBCA.ByAFW.pairRefines` is
+unprovable: `GBCA.ByABDY.liftedSpec` has no transition at those labels, and neither
+has `GBCA.ByABDY.sub`.
 
-**The constraint.** `GBCA.procPull` sends every off-interface family label to
-`PLab.outside`, on which neither `GBCA.ProcStep` nor `GBCA.NetStep` has a row,
-so the round blocks exactly where `GSub.sub` blocks. `fail` alone maps to
+**The constraint.** `GBCA.ByAFW.procPull` sends every off-interface family label to
+`PLab.outside`, on which neither `GBCA.ByAFW.ProcStep` nor `GBCA.ByAFW.NetStep` has a row,
+so the round blocks exactly where `GBCA.ByABDY.sub` blocks. `fail` alone maps to
 `none`: the layer stands still on the round's own `fail` row, the gathers
 corrupt, and in the family the label is answered by the broadcast act
 (`AFW.gActLow`) and not by the instance.
@@ -154,7 +151,7 @@ hypothesis that the systems are Dirac, and proves two simulations compose.
 Contextual refinement therefore covers contexts built from `syncProduct` as
 well as from `parallel`, `abstract`, `relabel`, `System.family` and
 `System.mapIdle`. The substitutions inside a gather instance and inside a round
-(`Gather.gatherLow`, `GBCA.lowPairRefines`, `GBCA.idealRefines`) are
+(`Gather.gatherLow`, `GBCA.ByAFW.lowPairRefines`, `GBCA.ByAFW.idealRefines`) are
 applications of these congruences and of nothing else.
 
 The `2n` broadcast instances of a gather and the two gathers of a round are

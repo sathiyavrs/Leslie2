@@ -4,9 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.Core.Sim
-import Leslie2Protocols.ABA.ABDY.ProtocolSim
-import Leslie2Protocols.ABA.ABDY.Hybrid
+import Leslie2Protocols.ABA.HybridRefinesSpecification.Simulation
+import Leslie2Protocols.ABA.ImplementationByABDY.Simulation
+import Leslie2Protocols.ABA.Composition.HybridAndSubstitution
 
 /-!
 # The main theorems of the ABA case study
@@ -25,23 +25,24 @@ has touched, in a finite map — and terminates at `2f + 1` DECIDED receipts
 (D22).
 
 The abstract side is `ABA.spec P`, the single-automaton reading of agreement,
-whose traces satisfy Validity and Agreement (`spec_safe`, `Spec/ABASafety.lean`).
+whose traces satisfy Validity and Agreement (`spec_safe`, `Specifications/ABASafety.lean`).
 
 ## The chain
 
 Three probabilistic forward simulations carry the protocol to the
 specification:
 
-1. `ABDY.protocolSim` (`ABDY/ProtocolSim.lean`) — the protocol into the composed
+1. `ABDY.protocolSim` (`ImplementationByABDY/Simulation.lean`) — the protocol into the composed
    reading, along the Dirac lift of `ABDY.ProtocolRel`. The relation pins every
    composed coordinate against the protocol state; the inclusion is
    one-directional because a round instance also answers the Byzantine handshake rows
    (D11) and the processes the protocol has terminated (D22).
-2. `ABDY.substSim` (`ABDY/Hybrid.lean`) — replace each round's graded-agreement
+2. `ABDY.substSim` (`Composition/HybridAndSubstitution.lean`) — replace each round's
+graded-agreement
    instance by its specification, the other three components untouched: the
    family substitution carried by four congruences (`parallel_right`,
    `abstract`, `relabel`, `abstract`).
-3. `coreSim` (`Core/Sim.lean`) — the hand-built simulation of the
+3. `coreSim` (`HybridRefinesSpecification/Simulation.lean`) — the hand-built simulation of the
    protocol-shaped specification against the ABA specification, read in the
    composed coordinates: the round specifications, the `n` round loops, the
    ABA-side network and the coin oracle, each still a component of the state the
@@ -58,13 +59,13 @@ Graded agreement is carried to implementation level: each round is a group of
 stage programs beside that round's own network, moved by the same
 network adversary. Each round's graded return announces that round's bound bit
 (D29), a ghost output that rides the `retG` label and that no component's state
-records. `GBCA.BindingTrace` (`Spec/GBCASafety.lean`) is the property it
+records. `GBCA.BindingTrace` (`GBCA/SpecificationSafety.lean`) is the property it
 carries. The **common coin is held at specification level** — the
 ε-coin is `Params.wccPMF`, not a Gather/SRSD implementation — so the honest
 reading is *graded agreement verified to implementation level; the coin
 assumed at specification level*.
 
-`ValidityTrace` (`Spec/ABASafety.lean`) is the paper-form predicate: a bit
+`ValidityTrace` (`Specifications/ABASafety.lean`) is the paper-form predicate: a bit
 returned by a never-corrupted process is the bit of the first `callABA` of a
 *never-corrupted* (`NeverCorrupted`) caller, earlier in the trace. A process
 has one input, and its first call is the event that carries it, so this is the
@@ -81,7 +82,7 @@ clean axiom list `[propext, Classical.choice, Quot.sound]`.
 namespace PLTS
 namespace ABA
 
-open Net Comp
+open Implementation Composition
 
 /-! ### The chain, link by link
 

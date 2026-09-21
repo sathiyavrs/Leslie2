@@ -40,8 +40,8 @@ labels, advancing the process's `phase` and recording the returned data, while
 the sub-protocol state itself lives in the round specifications and the coin
 oracle — and no network state: the DECIDED sets and the corrupted set belong
 to the network. The transitions themselves are `CoreProcStepN`
-(`ABA/ABDY/Components.lean`), the rows of a round-loop record `CoreRec` over the
-extended alphabet, and `Net.ABAProcStepN` (`ABA/ABDY/Protocol.lean`), the rows of
+(`ABA/Composition/Components.lean`), the rows of a round-loop record `CoreRec` over the
+extended alphabet, and `ABDY.ABAProcStepN` (`ABA/ImplementationByABDY/System.lean`), the rows of
 the protocol program that carries a round loop beside its stage-side record. This file realises the Core-side
 assumptions of `DESIGN-CoreSim.md`: the phase machine (invariant conjunct 4), the DECIDED
 diffusion state (conjunct 6), and input coherence (conjunct 5 — the honest
@@ -67,7 +67,7 @@ diffusion state (conjunct 6), and input coherence (conjunct 5 — the honest
 * **D12′ (per-process DECIDED sets, equivocation-capable).** The DECIDED
   multicast state is the network's per-process sent
   `dsent : Fin n → Finset Bool`, read on the ABA side as `decidedSent`
-  (`ABA/ABDY/ABAState.lean`) and mirroring graded agreement's D5 sent-set pattern.
+  (`ABA/Composition/ABAState.lean`) and mirroring graded agreement's D5 sent-set pattern.
   Honest sends insert into the sent (the fused `retWPub` publication and the
   `f + 1` relay `dsnd`; in reachable states DECIDED coherence keeps every
   honest sent at card ≤ 1, so the insert is a first write or a no-op re-send
@@ -182,7 +182,7 @@ end ProcCore
 A process's control record is not by itself what the composition moves: a
 round loop also holds the DECIDED payloads delivered to it. The record below
 pairs the two, and is one component of the ABA-side state the core simulation
-reads (`ABA/ABDY/ABAState.lean`). -/
+reads (`ABA/Composition/ABAState.lean`). -/
 
 /-- The round-loop record of one process: its own control record and the
 DECIDED payloads delivered to it, indexed by sender. There is no record of

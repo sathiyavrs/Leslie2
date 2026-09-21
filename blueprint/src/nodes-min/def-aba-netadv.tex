@@ -1,7 +1,7 @@
 \begin{definition}[The network adversary]
   \label{def:aba-netadv}
-  \lean{PLTS.ABA.Net.NetState}\lean{PLTS.ABA.Net.NetState.corrupt}\lean{PLTS.ABA.Net.abdyGhostStep}\lean{PLTS.ABA.Net.abdyGhostOut}\lean{PLTS.ABA.Net.NetStep}\lean{PLTS.ABA.Net.netAdv}\leanok
+  \lean{PLTS.ABA.ABDY.NetState}\lean{PLTS.ABA.ABDY.NetState.corrupt}\lean{PLTS.ABA.ABDY.abdyGhostStep}\lean{PLTS.ABA.ABDY.abdyGhostOut}\lean{PLTS.ABA.ABDY.NetStep}\lean{PLTS.ABA.ABDY.netAdv}\leanok
   \uses{def:aba-procnet, def:aba-labels, def:aba-params}
-  The one local state holding what no process may see: the per-sender sent sets of the stage messages and of the DECIDED payloads, and the corrupted set with its budget, which guards its $\mathrm{fail}$ row (D1) and authorises the five Byzantine handshake rows (D11), the two injections and the Byzantine return $\mathrm{retByz}$ (D23): \leandecl{PLTS.ABA.Net.netAdv}.
-  Its ghost record of a round is one bit, the round's bound bit: a return records the bit its own label announces where the round has none on record, and the two return rows fire only with that bit equal to \leandecl{PLTS.ABA.Net.abdyGhostOut}, which is the bit on record or \leandecl{PLTS.ABA.GBCA.boundOf} of the round's messages (D29, D30).
+  The one local state holding what no process may see: the per-sender sent sets of the stage messages and of the DECIDED payloads, and the corrupted set with its budget, which guards its $\mathrm{fail}$ row (D1) and authorises the five Byzantine handshake rows (D11), the two injections and the Byzantine return $\mathrm{retByz}$ (D23): \leandecl{PLTS.ABA.ABDY.netAdv}.
+  Its ghost record of a round is one bit, the round's bound bit: a return records the bit its own label announces where the round has none on record, and the two return rows fire only with that bit equal to \leandecl{PLTS.ABA.ABDY.abdyGhostOut}, which is the bit on record or \leandecl{PLTS.ABA.GBCA.ByABDY.boundOf} of the round's messages (D29, D30).
 \end{definition}

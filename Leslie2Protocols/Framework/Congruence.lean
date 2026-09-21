@@ -4,8 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.Framework.WeakRun
-import Leslie2Protocols.Framework.SyncProduct
+import Leslie2Protocols.Framework.WeakTransitionsFromChains
+import Leslie2Protocols.Framework.SynchronisedProduct
 import Leslie2Protocols.Framework.Relabel
 
 /-!
@@ -46,7 +46,7 @@ Chains of `LStep`s are the other reading of a weak run, and on a system all of
 whose transitions are Dirac (`System.IsLTS`) the two readings agree:
 `System.weakLSilent_chain` and `System.weakLStep_chains` invert a run into
 chains, where `System.weakLSilent_ofChain` and `System.weakLStep_tausThen`
-(`Framework/WeakRun.lean`) build a run from chains.
+(`Framework/WeakTransitionsFromChains.lean`) build a run from chains.
 -/
 
 open Stream'

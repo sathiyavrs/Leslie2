@@ -292,9 +292,9 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
   \item D5: a set-based authenticated network with per-sender message sets.
   \item D8: protocol sends and returns guarded by prior participation.
   \item D9: $0$-based round indexing.
-  \item D10: the per-round bookkeeping between the coin return and the next call fused into the coin-return step, \leandeclnamed{retW}{PLTS.ABA.Net.FlatProcStep.retW} beside \leandeclnamed{retWPub}{PLTS.ABA.Net.FlatProcStep.retWPub}, the second multicasting DECIDED on an $A$ grade.
+  \item D10: the per-round bookkeeping between the coin return and the next call fused into the coin-return step, \leandeclnamed{retW}{PLTS.ABA.Implementation.FlatProcStep.retW} beside \leandeclnamed{retWPub}{PLTS.ABA.Implementation.FlatProcStep.retWPub}, the second multicasting DECIDED on an $A$ grade.
   \item D11: Byzantine call and return rules at each handshake.
-    In a flat reading the graded-agreement pair has no row at the process its label names: \leandeclnamed{byzCallGIdle}{PLTS.ABA.Net.FlatProcStep.byzCallGIdle} and \leandeclnamed{byzRetGIdle}{PLTS.ABA.Net.FlatProcStep.byzRetGIdle} carry $k \neq j$, and \leandeclnamed{corruptedIdle}{PLTS.ABA.Net.FlatProcStep.corruptedIdle} excludes the labels of $\mathrm{actsAt}\,j$.
+    In a flat reading the graded-agreement pair has no row at the process its label names: \leandeclnamed{byzCallGIdle}{PLTS.ABA.Implementation.FlatProcStep.byzCallGIdle} and \leandeclnamed{byzRetGIdle}{PLTS.ABA.Implementation.FlatProcStep.byzRetGIdle} carry $k \neq j$, and \leandeclnamed{corruptedIdle}{PLTS.ABA.Implementation.FlatProcStep.corruptedIdle} excludes the labels of $\mathrm{actsAt}\,j$.
     A flat reading therefore neither calls into nor returns from a round at a corrupted process, both labels being hidden, and the composed reading answers them, so a flat reading is included in its composed reading and the inclusion holds in that direction alone.
   \item D12$'$: per-process DECIDED sent sets and received sets, delivery per (receiver, sender, bit), and Byzantine equivocation in those sent sets.
   \item D13: the Validity provenance apparatus on Transition System~1, namely a ghost record $input$ of the genuine $\mathrm{callABA}$ events and an $f+1$ support guard \leandecl{PLTS.ABA.SuppOK} on the decision.
@@ -312,10 +312,10 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
     The bound value embeds onto the reachable states, $bind = \bot$ as $excluded = \emptyset$ and $bind = b$ as $excluded = \{1-b\}$, and the source's guard $bind = \bot$ on binding becomes $excluded = \emptyset$.
   \item D21: Transition System~1 is eight rules over the record $\{input, ret, F, val, mode\}$, in place of the source's per-process call row and its four-valued $coin \in \{0,1,\bot,\top\}$.
     The mode $mode \in \{idle, locked, terminal\}$ the flip writes is the round structure the source spreads over a call row, a bound value and a coin field.
-  \item D22: retention with termination, a process holding the stage record of every round it has touched in the finite map of \leandecl{PLTS.ABA.Net.StageSideRecP}, where a round never touched reads as the initial record, and the stage-side message rows reading the record their own label tags rather than the one the round loop stands at.
-    Termination is \leandeclnamed{terminate}{PLTS.ABA.Net.FlatProcStep.terminate}, which fires once the process's own return has fired and $2f+1$ DECIDED receipts are on its record, sets the flag alone, and carries the replacement guard of D23.
+  \item D22: retention with termination, a process holding the stage record of every round it has touched in the finite map of \leandecl{PLTS.ABA.Implementation.StageSideRecP}, where a round never touched reads as the initial record, and the stage-side message rows reading the record their own label tags rather than the one the round loop stands at.
+    Termination is \leandeclnamed{terminate}{PLTS.ABA.Implementation.FlatProcStep.terminate}, which fires once the process's own return has fired and $2f+1$ DECIDED receipts are on its record, sets the flag alone, and carries the replacement guard of D23.
     The message rows of a stage are round-indexed rather than round-guarded, reading and writing the record their own label tags whichever round the round loop stands at, while the graded call and the three graded returns keep the round-loop guard.
-  \item D23: when a process is corrupted its program is replaced, \leandeclnamed{failSelf}{PLTS.ABA.Net.FlatProcStep.failSelf} writing the flag \leandecl{PLTS.ABA.CoreRec.corrupted}, every honest row requiring an unreplaced program, and the replaced program being the single self-loop \leandeclnamed{corruptedIdle}{PLTS.ABA.Net.FlatProcStep.corruptedIdle}.
+  \item D23: when a process is corrupted its program is replaced, \leandeclnamed{failSelf}{PLTS.ABA.Implementation.FlatProcStep.failSelf} writing the flag \leandecl{PLTS.ABA.CoreRec.corrupted}, every honest row requiring an unreplaced program, and the replaced program being the single self-loop \leandeclnamed{corruptedIdle}{PLTS.ABA.Implementation.FlatProcStep.corruptedIdle}.
     Both networks carry the Byzantine visible return $\mathrm{retABA}(id,b)$ under the authorisation $id \in F$ alone, and Transition System~1's image of the replacement is \leandeclnamed{callByz}{PLTS.ABA.SpecStep.callByz}, recording a bit unrelated to the one its label declares, beside \leandeclnamed{retByz}{PLTS.ABA.SpecStep.retByz}, returning any bit at any time without moving the state.
     The self-loop is taken on every label other than $\tau$ and the labels on which the process would act on its own sub-protocol messages, where it has no row at all; those run through the handshake rows of D11 and the injections $\mathrm{byzG}$ and $\mathrm{byzD}$.
   \item D24: the gather-based GBCA implementation follows Algorithm~4 of~\cite{AFW25} at $R = 2$, with the grade read off the second gather's counts in place of the approximate-agreement subroutine of lines~7 and~8: $(v, A)$ at $|{\rm dom}\, h| - f$ entries of $v$, $(v, B)$ at $f{+}1$, $(\bot, C)$ below both.
@@ -332,7 +332,7 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
     A network component holds each of them and no program reads one.
     A gather instance's core is the field $core$ of the gather network, beside the per-sender sent sets and the corrupted set; the bound bit of a round of the direct implementation is a field of that round's network, and the bound bit of a gather-based round is the whole state of the network of its graded-agreement layer, which exchanges no messages; a flat reading holds both in the ghost record of D30.
     Announcing the value is what puts binding, a property of the extensions of an execution, on a single trace.
-  \item D30: a flat reading is parametric in a per-round ghost record, held by the network adversary of \leandecl{PLTS.ABA.Net.flat} alongside the message sets and the corrupted set, and read by no program.
+  \item D30: a flat reading is parametric in a per-round ghost record, held by the network adversary of \leandecl{PLTS.ABA.Implementation.flat} alongside the message sets and the corrupted set, and read by no program.
     Two parameters carry it: an update applied on every row, which replaces the record of the round the label names and leaves the other rounds alone, and an output relation on the announced bit guarding the two graded-agreement return rows, whose three instantiations are Definition~\ref{def:aba-ghost-free}.
     The two algorithms hold different records, one bit for ABDY22's reading and the two gathers' cores beside the bit for the gather-based one, and write them at different rows.
     The composed reading of the same protocol holds those values in the network components of the round, and the view that links the two readings reads the record onto them.
@@ -354,7 +354,7 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
     The vote requires the sender's own $\mathrm{ECHO}$, the bind call requires the sender's own $\mathrm{VOTE}$ and no earlier bind call, and the return requires the returner's own bind call, which the write-once field $\mathit{sentBind}$ of the gather record holds.
     The $\mathrm{ECHO}$ payload is the set of entries the sender's input store holds, which is what Algorithm~5 of~\cite{AFW25} and Algorithm~4 of the source blueprint both send.
     The row fires once that set has $n-f$ entries, which is the source blueprint's guard.
-  \item D36: the input-enabledness loop of the ABA interface is guarded on the record it stands beside, \leandeclnamed{inputLoop}{PLTS.ABA.Net.FlatProcStep.inputLoop} absorbing a call at a process holding an input and the commit row carrying the label at a process holding none, and Transition System~1 splitting the label the same way, \leandeclnamed{callLoop}{PLTS.ABA.SpecStep.callLoop} looping at a filled record entry and \leandeclnamed{callSet}{PLTS.ABA.SpecStep.callSet} writing an empty one, where the source's loop is enabled at every state beside its recording rule, so that a first call may be dropped there and a later one recorded.
+  \item D36: the input-enabledness loop of the ABA interface is guarded on the record it stands beside, \leandeclnamed{inputLoop}{PLTS.ABA.Implementation.FlatProcStep.inputLoop} absorbing a call at a process holding an input and the commit row carrying the label at a process holding none, and Transition System~1 splitting the label the same way, \leandeclnamed{callLoop}{PLTS.ABA.SpecStep.callLoop} looping at a filled record entry and \leandeclnamed{callSet}{PLTS.ABA.SpecStep.callSet} writing an empty one, where the source's loop is enabled at every state beside its recording rule, so that a first call may be dropped there and a later one recorded.
     The call label is enabled at every state on both sides, and every write to the ghost record is a first write, so the record holds each never-corrupted process's first genuine call.
     That call is the witness Validity names: \leandecl{PLTS.ABA.ValidityTrace} asks of every return of $b$ by a never-corrupted process an earlier $\mathrm{callABA}(id',b)$ at a never-corrupted $id'$, first among $id'$'s $\mathrm{callABA}$ labels in the trace.
 \end{itemize}
@@ -1095,7 +1095,7 @@ against.
 
 \input{nodes/def-aba-gbca-impl}
 
-\blueprintfig{fig-gbca-impl}{The GBCA implementation instance \leandecl{PLTS.ABA.GBCA.implInst} (Algorithm~\ref{alg:gbca-impl}, D18): the per-process stage automaton and, framed, the authenticated set-based network.
+\blueprintfig{fig-gbca-impl}{The GBCA implementation instance \leandecl{PLTS.ABA.GBCA.ByABDY.implInst} (Algorithm~\ref{alg:gbca-impl}, D18): the per-process stage automaton and, framed, the authenticated set-based network.
 On a call a process multicasts $\langle\mathrm{INPUT},b\rangle$ and relays it after $f{+}1$ receipts; an $n{-}f$ quorum at each stage produces the next multicast $\langle\mathrm{ECHO},b\rangle$, $\langle\mathrm{VOTE},v\rangle$, $\langle\mathrm{BIND},v\rangle$, then $\langle\mathrm{ECHO5},v\rangle$, the levels from $\mathrm{BIND}$ down requiring the process's own send at the level below.
 The returns are $A\,b$ on an $n{-}f$ ECHO5-$b$ quorum, $B\,b$ on an $n{-}f$ any-ECHO5 quorum with $f{+}1$ BIND-$b$ and $|\mathrm{Valid}|>1$, and $C$ on an $n{-}f$ ECHO5-$\bot$ quorum with $|\mathrm{Valid}|>1$: the three cases of the last wait-until block of Algorithm~\ref{alg:gbca-impl}, taken as the if/elif/else chain that block writes, so a return denies the cases above it and requires the process's own ECHO5.
 Each return box also carries the bit its label announces: the $A$- and $B$-returns the bit they hand out, the $C$-return the bit read off the sent sets.
@@ -1120,7 +1120,7 @@ Every rule of the instance is Dirac.
 A rule is therefore determined by its guard and its state update, and the table
 below carries no distribution column.
 
-The local state of one process is the record $\mathrm{ProcState}$, \leandecl{PLTS.ABA.GBCA.ProcState}, with fields
+The local state of one process is the record $\mathrm{ProcState}$, \leandecl{PLTS.ABA.GBCA.ByABDY.ProcState}, with fields
 \begin{itemize}
   \item $\mathit{input}$ --- the bit supplied by the environment call; unset
     before the call.
@@ -1143,7 +1143,7 @@ It is the pair
   \mathrm{ImplState}(n) \;=\;
     \bigl([n] \to \mathrm{StageRec}(n)\bigr) \times \mathrm{GNetState}(n),
 \]
-\leandecl{PLTS.ABA.GBCA.ImplState}: the $n$ stage records of
+\leandecl{PLTS.ABA.GBCA.ByABDY.ImplState}: the $n$ stage records of
 Definition~\ref{def:aba-procnet}, each holding one process's $\mathrm{ProcState}$ beside the messages delivered to it, and the round's network state of Definition~\ref{def:aba-gbcasub}, holding the per-sender sent sets, the corrupted set and the round's bound bit.
 The rules below are written in five accessors on that pair.
 \begin{itemize}
@@ -1160,7 +1160,7 @@ The rules below are written in five accessors on that pair.
     else (D29).
 \end{itemize}
 The bound bit is the one field of the state that is not the protocol's own data.
-\leandecl{PLTS.ABA.GBCA.boundOf} computes it from $\mathit{sent}$, $F$ and the graded outcome: a value-bearing outcome gives the value it hands out, and an outcome carrying no value gives the payload of an honest $\langle\mathrm{VOTE}, b\rangle$ sender, $1$ where there is none.
+\leandecl{PLTS.ABA.GBCA.ByABDY.boundOf} computes it from $\mathit{sent}$, $F$ and the graded outcome: a value-bearing outcome gives the value it hands out, and an outcome carrying no value gives the payload of an honest $\langle\mathrm{VOTE}, b\rangle$ sender, $1$ where there is none.
 An honest $\langle\mathrm{VOTE}, b\rangle$ sender holds an $n{-}f$ $\langle\mathrm{ECHO}, b\rangle$ receipt quorum and at most one bit carries such a quorum, so on a reachable state the two bit branches exclude one another.
 A return of outcome $out$ announces $\mathit{bound}$ where the round has a bit on record and $\mathrm{boundOf}(\mathit{sent}, F, out)$ where it has none, and writes it back, so a round announces one bit on all of its returns.
 No guard of the algorithm reads the field.
@@ -1186,73 +1186,73 @@ The two $\mathrm{VOTE}$ rows ask for no own send, the $\mathrm{ECHO}$ they read 
 \hline
 Rule & Label & Guard & Effect \\
 \hline
-\leandeclnamed{call}{PLTS.ABA.GBCA.ImplStep.call} & $\mathrm{callG}(r,i,b)$ & $\mathit{input}_i$ unset
+\leandeclnamed{call}{PLTS.ABA.GBCA.ByABDY.ImplStep.call} & $\mathrm{callG}(r,i,b)$ & $\mathit{input}_i$ unset
   & $\mathit{input}_i \gets b$; \\
  & & & $\mathit{sentInput}_i(b) \gets$ true; \\
  & & & mcast $\mathrm{IN}\,b$ \\
 \hline
-\leandeclnamed{callLoop}{PLTS.ABA.GBCA.ImplStep.callLoop} & $\mathrm{callG}(r,i,b)$ & ---
+\leandeclnamed{callLoop}{PLTS.ABA.GBCA.ByABDY.ImplStep.callLoop} & $\mathrm{callG}(r,i,b)$ & ---
   & identity (self-loop) \\
 \hline
-\leandeclnamed{deliver}{PLTS.ABA.GBCA.ImplStep.deliver} & $\tau$ & $m \in \mathit{sent}(j)$
+\leandeclnamed{deliver}{PLTS.ABA.GBCA.ByABDY.ImplStep.deliver} & $\tau$ & $m \in \mathit{sent}(j)$
   & add $m$ to $\mathit{recv}(i,j)$ (D5) \\
 \hline
-\leandeclnamed{relay}{PLTS.ABA.GBCA.ImplStep.relay} & $\tau$
+\leandeclnamed{relay}{PLTS.ABA.GBCA.ByABDY.ImplStep.relay} & $\tau$
   & $\mathit{input}_j$ set, $\#_j(\mathrm{IN}\,b) \ge f{+}1$,
   & $\mathit{sentInput}_j(b) \gets$ true; \\
  & & $\mathit{sentInput}_j(b)$ false & mcast $\mathrm{IN}\,b$ (D8) \\
 \hline
-\leandeclnamed{echo}{PLTS.ABA.GBCA.ImplStep.echo} & $\tau$
+\leandeclnamed{echo}{PLTS.ABA.GBCA.ByABDY.ImplStep.echo} & $\tau$
   & $\mathit{input}_j$ set, $\mathit{sentEcho}_j$ unset,
   & $\mathit{sentEcho}_j \gets b$; \\
  & & $\#_j(\mathrm{IN}\,b) \ge n{-}f$ & mcast $\mathrm{EC}\,b$ (D8) \\
 \hline
-\leandeclnamed{voteBit}{PLTS.ABA.GBCA.ImplStep.voteBit} & $\tau$
+\leandeclnamed{voteBit}{PLTS.ABA.GBCA.ByABDY.ImplStep.voteBit} & $\tau$
   & $\mathit{input}_j$ set, $\mathit{sentVote}_j$ unset,
   & $\mathit{sentVote}_j \gets b$; \\
  & & $\#_j(\mathrm{EC}\,b) \ge n{-}f$ & mcast $\mathrm{VT}\,b$ (D8) \\
 \hline
-\leandeclnamed{voteBot}{PLTS.ABA.GBCA.ImplStep.voteBot} & $\tau$
+\leandeclnamed{voteBot}{PLTS.ABA.GBCA.ByABDY.ImplStep.voteBot} & $\tau$
   & $\mathit{input}_j$ set, $\mathit{sentVote}_j$ unset,
   & $\mathit{sentVote}_j \gets \bot$; \\
  & & $\#_j(\mathrm{EC}) \ge n{-}f$, $\mathit{Val}_j = \{0,1\}$,
   & mcast $\mathrm{VT}\,\bot$ (D8) \\
  & & $\#_j(\mathrm{EC}\,b) < n{-}f$ for both $b$ & \\
 \hline
-\leandeclnamed{bindBit}{PLTS.ABA.GBCA.ImplStep.bindBit} & $\tau$
+\leandeclnamed{bindBit}{PLTS.ABA.GBCA.ByABDY.ImplStep.bindBit} & $\tau$
   & $\mathit{input}_j$, $\mathit{sentVote}_j$ set, $\mathit{sentBind}_j$ unset,
   & $\mathit{sentBind}_j \gets b$; \\
  & & $\#_j(\mathrm{VT}\,b) \ge n{-}f$ & mcast $\mathrm{BD}\,b$ (D8) \\
 \hline
-\leandeclnamed{bindBot}{PLTS.ABA.GBCA.ImplStep.bindBot} & $\tau$
+\leandeclnamed{bindBot}{PLTS.ABA.GBCA.ByABDY.ImplStep.bindBot} & $\tau$
   & $\mathit{input}_j$, $\mathit{sentVote}_j$ set, $\mathit{sentBind}_j$ unset,
   & $\mathit{sentBind}_j \gets \bot$; \\
  & & $\#_j(\mathrm{VT}) \ge n{-}f$, $\mathit{Val}_j = \{0,1\}$,
   & mcast $\mathrm{BD}\,\bot$ (D8) \\
  & & $\#_j(\mathrm{VT}\,b) < n{-}f$ for both $b$ & \\
 \hline
-\leandeclnamed{echo5Bit}{PLTS.ABA.GBCA.ImplStep.echo5Bit} & $\tau$
+\leandeclnamed{echo5Bit}{PLTS.ABA.GBCA.ByABDY.ImplStep.echo5Bit} & $\tau$
   & $\mathit{input}_j$, $\mathit{sentBind}_j$ set, $\mathit{sentEcho5}_j$ unset,
   & $\mathit{sentEcho5}_j \gets b$; \\
  & & $\#_j(\mathrm{BD}\,b) \ge n{-}f$ & mcast $\mathrm{SL}\,b$ (D8) \\
 \hline
-\leandeclnamed{echo5Bot}{PLTS.ABA.GBCA.ImplStep.echo5Bot} & $\tau$
+\leandeclnamed{echo5Bot}{PLTS.ABA.GBCA.ByABDY.ImplStep.echo5Bot} & $\tau$
   & $\mathit{input}_j$, $\mathit{sentBind}_j$ set, $\mathit{sentEcho5}_j$ unset,
   & $\mathit{sentEcho5}_j \gets \bot$; \\
  & & $\#_j(\mathrm{BD}) \ge n{-}f$, $\mathit{Val}_j = \{0,1\}$,
   & mcast $\mathrm{SL}\,\bot$ (D8) \\
  & & $\#_j(\mathrm{BD}\,b) < n{-}f$ for both $b$ & \\
 \hline
-\leandeclnamed{byz}{PLTS.ABA.GBCA.ImplStep.byz} & $\tau$ & $j \in F$ & mcast $m$ at $j$ (D5) \\
+\leandeclnamed{byz}{PLTS.ABA.GBCA.ByABDY.ImplStep.byz} & $\tau$ & $j \in F$ & mcast $m$ at $j$ (D5) \\
 \hline
-\leandeclnamed{retA}{PLTS.ABA.GBCA.ImplStep.retA} & $\mathrm{retG}(r,i,A\,v,bnd)$
+\leandeclnamed{retA}{PLTS.ABA.GBCA.ByABDY.ImplStep.retA} & $\mathrm{retG}(r,i,A\,v,bnd)$
   & $\mathit{input}_i$, $\mathit{sentEcho5}_i$ set,
   & mark $i$ returned; \\
  & & $\#_i(\mathrm{SL}\,v) \ge n{-}f$, & $\mathit{bound} \gets bnd$ (D29) \\
  & & $bnd$ the round's bound bit (D29), & \\
  & & $\mathit{returned}_i$ false & \\
 \hline
-\leandeclnamed{retB}{PLTS.ABA.GBCA.ImplStep.retB} & $\mathrm{retG}(r,i,B\,v,bnd)$
+\leandeclnamed{retB}{PLTS.ABA.GBCA.ByABDY.ImplStep.retB} & $\mathrm{retG}(r,i,B\,v,bnd)$
   & $\mathit{input}_i$, $\mathit{sentEcho5}_i$ set,
   & mark $i$ returned; \\
  & & $\#_i(\mathrm{SL}) \ge n{-}f$, $\mathit{Val}_i = \{0,1\}$, & $\mathit{bound} \gets bnd$ (D29) \\
@@ -1262,7 +1262,7 @@ Rule & Label & Guard & Effect \\
  & & $bnd$ the round's bound bit (D29), & \\
  & & $\mathit{returned}_i$ false & \\
 \hline
-\leandeclnamed{retC}{PLTS.ABA.GBCA.ImplStep.retC} & $\mathrm{retG}(r,i,C,bnd)$
+\leandeclnamed{retC}{PLTS.ABA.GBCA.ByABDY.ImplStep.retC} & $\mathrm{retG}(r,i,C,bnd)$
   & $\mathit{input}_i$, $\mathit{sentEcho5}_i$ set,
   & mark $i$ returned; \\
  & & $\#_i(\mathrm{SL}\,\bot) \ge n{-}f$, $\mathit{Val}_i = \{0,1\}$, & $\mathit{bound} \gets bnd$ (D29) \\
@@ -1272,17 +1272,17 @@ Rule & Label & Guard & Effect \\
  & & $bnd$ the round's bound bit (D29), & \\
  & & $\mathit{returned}_i$ false & \\
 \hline
-\leandeclnamed{fail}{PLTS.ABA.GBCA.ImplStep.fail} & $\mathrm{fail}(i)$ & ---
+\leandeclnamed{fail}{PLTS.ABA.GBCA.ByABDY.ImplStep.fail} & $\mathrm{fail}(i)$ & ---
   & $F \gets F \cup \{i\}$ if $i \notin F$ \\
  & & & and $|F| < f$; else identity \\
 \hline
 \end{tabular}
 \end{center}
 
-The four \textbf{wait until} blocks of Algorithm~\ref{alg:gbca-impl} are the guards of \leandeclnamed{voteBit}{PLTS.ABA.GBCA.ImplStep.voteBit}/\allowbreak\leandeclnamed{voteBot}{PLTS.ABA.GBCA.ImplStep.voteBot},
-\leandeclnamed{bindBit}{PLTS.ABA.GBCA.ImplStep.bindBit}/\allowbreak\leandeclnamed{bindBot}{PLTS.ABA.GBCA.ImplStep.bindBot},
-\leandeclnamed{echo5Bit}{PLTS.ABA.GBCA.ImplStep.echo5Bit}/\allowbreak\leandeclnamed{echo5Bot}{PLTS.ABA.GBCA.ImplStep.echo5Bot} and
-\leandeclnamed{retA}{PLTS.ABA.GBCA.ImplStep.retA}/\allowbreak\leandeclnamed{retB}{PLTS.ABA.GBCA.ImplStep.retB}/\allowbreak\leandeclnamed{retC}{PLTS.ABA.GBCA.ImplStep.retC}; the write-once fields
+The four \textbf{wait until} blocks of Algorithm~\ref{alg:gbca-impl} are the guards of \leandeclnamed{voteBit}{PLTS.ABA.GBCA.ByABDY.ImplStep.voteBit}/\allowbreak\leandeclnamed{voteBot}{PLTS.ABA.GBCA.ByABDY.ImplStep.voteBot},
+\leandeclnamed{bindBit}{PLTS.ABA.GBCA.ByABDY.ImplStep.bindBit}/\allowbreak\leandeclnamed{bindBot}{PLTS.ABA.GBCA.ByABDY.ImplStep.bindBot},
+\leandeclnamed{echo5Bit}{PLTS.ABA.GBCA.ByABDY.ImplStep.echo5Bit}/\allowbreak\leandeclnamed{echo5Bot}{PLTS.ABA.GBCA.ByABDY.ImplStep.echo5Bot} and
+\leandeclnamed{retA}{PLTS.ABA.GBCA.ByABDY.ImplStep.retA}/\allowbreak\leandeclnamed{retB}{PLTS.ABA.GBCA.ByABDY.ImplStep.retB}/\allowbreak\leandeclnamed{retC}{PLTS.ABA.GBCA.ByABDY.ImplStep.retC}; the write-once fields
 $\mathit{sentEcho}$, $\mathit{sentVote}$, $\mathit{sentBind}$, $\mathit{sentEcho5}$ carry the ``not sent yet'' side conditions.
 The blocks are taken in the order Algorithm~\ref{alg:gbca-impl} writes them.
 A process reaches a block only after executing the send the block above it ends with, and that is the guard $\mathit{sentVote}_j$ set on the two $\mathrm{BIND}$ rules, $\mathit{sentBind}_j$ set on the two $\mathrm{ECHO5}$ rules, and $\mathit{sentEcho5}_i$ set on the three return rules.
@@ -1290,11 +1290,11 @@ The two $\mathrm{VOTE}$ rules carry no such guard.
 What precedes the first \textbf{wait until} block is not a block a process must execute to the end but the \textbf{upon} handler that multicasts $\mathrm{ECHO}$, so a process may reach that block with its own $\mathrm{ECHO}$ still pending.
 In each of the three return blocks the two rules are exclusive: the $\bot$ rule denies its block's case (a) at either bit, which is the \textbf{else} of that block's last line.
 The three return rules are the three wait-until cases of the last block: case (a) is an $n{-}f$ $\mathrm{ECHO5}\,v$ quorum, case (b) an $n{-}f$ any-$\mathrm{ECHO5}$ quorum containing $\mathrm{ECHO5}\,v$ together with $f{+}1$ $\mathrm{BIND}\,v$ receipts and $|\mathit{Valid}| > 1$, and case (c) an $n{-}f$ $\mathrm{ECHO5}\,\bot$ quorum with $|\mathit{Valid}| > 1$.
-That block ends in an \textbf{if}/\textbf{elif}/\textbf{else}, so each rule carries the denials of the cases above it beside the receipts its own case names: \leandeclnamed{retB}{PLTS.ABA.GBCA.ImplStep.retB} denies case (a) at either bit, and \leandeclnamed{retC}{PLTS.ABA.GBCA.ImplStep.retC} denies case (a) at either bit and case (b).
+That block ends in an \textbf{if}/\textbf{elif}/\textbf{else}, so each rule carries the denials of the cases above it beside the receipts its own case names: \leandeclnamed{retB}{PLTS.ABA.GBCA.ByABDY.ImplStep.retB} denies case (a) at either bit, and \leandeclnamed{retC}{PLTS.ABA.GBCA.ByABDY.ImplStep.retC} denies case (a) at either bit and case (b).
 The denial of case (b) is carried in reduced form.
 Case (b) requires at a bit $v$ four things: an $n{-}f$ any-$\mathrm{ECHO5}$ quorum, a received $\mathrm{ECHO5}\,v$, $f{+}1$ $\mathrm{BIND}\,v$ receipts and $|\mathit{Valid}| > 1$.
 The first and the last are supplied by
-\leandeclnamed{retC}{PLTS.ABA.GBCA.ImplStep.retC}'s own guard, an $n{-}f$
+\leandeclnamed{retC}{PLTS.ABA.GBCA.ByABDY.ImplStep.retC}'s own guard, an $n{-}f$
 $\mathrm{ECHO5}\,\bot$ quorum being in particular an $n{-}f$ any-$\mathrm{ECHO5}$ quorum, so what is left to deny is the pair of the received $\mathrm{ECHO5}\,v$ and the $f{+}1$ $\mathrm{BIND}\,v$ receipts.
 All three rules ask further that the returning process has been called, the D8 guard carried from the sends over to the returns.
 Case (c) returns no bit.
@@ -1306,7 +1306,7 @@ The $excluded$ and $grade$ fields of Transition System~2 are abstractions of the
 The inventory above is one rule table, and the composition of Definition~\ref{def:aba-gbcasub} is $n$ programs beside a network.
 They are two presentations of the same round on the same state, and each rule of the table is a rule of the composition with its participants named.
 A rule that touches both halves is a rendezvous:
-\leandeclnamed{deliver}{PLTS.ABA.GBCA.ImplStep.deliver} reads the network state's sent set
+\leandeclnamed{deliver}{PLTS.ABA.GBCA.ByABDY.ImplStep.deliver} reads the network state's sent set
 in its guard and writes the receiver's row, so it splits into the two halves of a $\mathrm{gdlv}$ rendezvous, the network supplying the guard $m \in \mathit{sent}(j)$ and the receiver performing the row update.
 No rule reads a second process, and Definitions~\ref{def:aba-procnet} and~\ref{def:aba-netadv} are where each guard is written against one process record.
 
@@ -1319,9 +1319,9 @@ No rule reads a second process, and Definitions~\ref{def:aba-procnet} and~\ref{d
 
 \input{nodes/def-aba-protocol}
 
-\blueprintfig{fig-protocol}{The protocol \leandecl{PLTS.ABA.ABDY.protocol}: the $n$ programs $\mathrm{ABAProcN}(P,j)$, \leandecl{PLTS.ABA.Net.ABAProcN}, under $\mathrm{syncProduct}$, the network adversary \leandecl{PLTS.ABA.Net.netAdv} and the coin oracle beside the group.
+\blueprintfig{fig-protocol}{The protocol \leandecl{PLTS.ABA.ABDY.protocol}: the $n$ programs $\mathrm{ABAProcN}(P,j)$, \leandecl{PLTS.ABA.ABDY.ABAProcN}, under $\mathrm{syncProduct}$, the network adversary \leandecl{PLTS.ABA.ABDY.netAdv} and the coin oracle beside the group.
 Each program holds one process's round loop beside its stage-side record, the stage record of every round it has touched and its termination flag (D22); every guard of its forty-three rules reads that program's own record, and what any of them reads of corruption is that record's own replacement flag (D23).
-Its state \leandecl{PLTS.ABA.Net.NetState} holds the sent sets $sent(r,j)$ and $dsent(j)$, the corrupted set $F$ and the ghost record $ghostRec(r)$ of each round, that round's bound bit (D30); its twenty-one rules supply the other half of every send, every delivery, every Byzantine handshake row and the Byzantine return, and the corruption budget is the guard on its own $\mathrm{fail}$ row.
+Its state \leandecl{PLTS.ABA.ABDY.NetState} holds the sent sets $sent(r,j)$ and $dsent(j)$, the corrupted set $F$ and the ghost record $ghostRec(r)$ of each round, that round's bound bit (D30); its twenty-one rules supply the other half of every send, every delivery, every Byzantine handshake row and the Byzantine return, and the corruption budget is the guard on its own $\mathrm{fail}$ row.
 The inner dashed frame is $\mathrm{relabel} \circ \mathrm{abstract}\,\mathrm{netEvtLabels}$: every $\mathrm{gsnd}$, $\mathrm{gdlv}$, $\mathrm{dsnd}$, $\mathrm{ddlv}$, $\mathrm{retWPub}$, $\mathrm{gcallLoop}$ and Byzantine handshake row becomes $\tau$.
 The coin oracle is joined through the partial map $\mathrm{wccPull}$, so the handshake rows $\mathrm{byzCallW}$ and $\mathrm{byzRetW}$ and the fused return $\mathrm{retWPub}$ reach it as coin handshakes while the network labels leave it idle.
 The outer dashed frame is $\mathrm{abstract}_H$, which hides the coin handshake $\mathrm{callW}/\mathrm{retW}$; what leaves it is the API $\mathrm{callABA}/\mathrm{retABA}/\mathrm{fail}$ together with $\tau$.
@@ -1385,7 +1385,7 @@ The instance of Definition~\ref{def:aba-gbcasub} is drawn to own it.
 \input{nodes/def-aba-composed}
 
 \blueprintfig{fig-composed}{The composed system \leandecl{PLTS.ABA.ABDY.composed} and the substitution: the four components of Definition~\ref{def:aba-composed} inside the two hiding frames of the protocol's pipeline.
-The round instance $\mathrm{sub}(P,r)$, \leandecl{PLTS.ABA.GSub.sub}, is drawn open: the $n$ stage programs of round $r$ beside that round's own network, with the multicast and the delivery hidden inside the instance's own frame.
+The round instance $\mathrm{sub}(P,r)$, \leandecl{PLTS.ABA.GBCA.ByABDY.sub}, is drawn open: the $n$ stage programs of round $r$ beside that round's own network, with the multicast and the delivery hidden inside the instance's own frame.
 The left position is the refinable one: Theorem~\ref{thm:aba-substitution} replaces the family of round instances by the family of round specifications and leaves the other three components as they stand.
 Everything the round's network holds --- the stage sent sets, the delivery guard, the injection $\mathrm{byzG}$, and the round's bound bit, a ghost the three return rows write and announce (D29) --- is inside the replaced component.
 The DECIDED sets, the corrupted set with its budget, and the authorisation $k \in F$ of every Byzantine handshake row are outside it, at $\mathrm{aNet}(P)$, and survive the replacement unchanged.}
@@ -1423,16 +1423,16 @@ The DECIDED sets, the corrupted set with its budget, and the authorisation $k \i
 
 \input{nodes/def-aba-core}
 
-The self-loops of a process carry \leandeclnamed{inputLoop}{PLTS.ABA.Comp.CoreProcStepN.inputLoop}, which takes $\mathrm{callABA}$ at a process whose input is set (D36), together with the four rows on which every round loop stands while a Byzantine handshake row moves stage or coin content, \leandeclnamed{byzCallGIdle}{PLTS.ABA.Comp.CoreProcStepN.byzCallGIdle}, \leandeclnamed{byzRetGIdle}{PLTS.ABA.Comp.CoreProcStepN.byzRetGIdle}, \leandeclnamed{byzCallWIdle}{PLTS.ABA.Comp.CoreProcStepN.byzCallWIdle} and \leandeclnamed{byzRetWIdle}{PLTS.ABA.Comp.CoreProcStepN.byzRetWIdle}; the guard $k \in F$ that authorises such a row is the network's, at \leandeclnamed{byzCallG}{PLTS.ABA.Comp.ANetStep.byzCallG}, \leandeclnamed{byzRetG}{PLTS.ABA.Comp.ANetStep.byzRetG}, \leandeclnamed{byzCallW}{PLTS.ABA.Comp.ANetStep.byzCallW} and \leandeclnamed{byzRetW}{PLTS.ABA.Comp.ANetStep.byzRetW} (D11).
-The step \leandeclnamed{retG}{PLTS.ABA.Comp.CoreProcStepN.retG} sets $est$ to the grade.
+The self-loops of a process carry \leandeclnamed{inputLoop}{PLTS.ABA.Composition.CoreProcStepN.inputLoop}, which takes $\mathrm{callABA}$ at a process whose input is set (D36), together with the four rows on which every round loop stands while a Byzantine handshake row moves stage or coin content, \leandeclnamed{byzCallGIdle}{PLTS.ABA.Composition.CoreProcStepN.byzCallGIdle}, \leandeclnamed{byzRetGIdle}{PLTS.ABA.Composition.CoreProcStepN.byzRetGIdle}, \leandeclnamed{byzCallWIdle}{PLTS.ABA.Composition.CoreProcStepN.byzCallWIdle} and \leandeclnamed{byzRetWIdle}{PLTS.ABA.Composition.CoreProcStepN.byzRetWIdle}; the guard $k \in F$ that authorises such a row is the network's, at \leandeclnamed{byzCallG}{PLTS.ABA.Composition.ANetStep.byzCallG}, \leandeclnamed{byzRetG}{PLTS.ABA.Composition.ANetStep.byzRetG}, \leandeclnamed{byzCallW}{PLTS.ABA.Composition.ANetStep.byzCallW} and \leandeclnamed{byzRetW}{PLTS.ABA.Composition.ANetStep.byzRetW} (D11).
+The step \leandeclnamed{retG}{PLTS.ABA.Composition.CoreProcStepN.retG} sets $est$ to the grade.
 The bound bit the same label carries is a ghost output, and no row of the loop reads it (D29).
 The coin return has two rows.
-The step \leandeclnamed{retW}{PLTS.ABA.Comp.CoreProcStepN.retW} increments the round and adopts the coin when $est = \bot$; the step \leandeclnamed{retWPub}{PLTS.ABA.Comp.CoreProcStepN.retWPub} does the same on an $A$-grade return and multicasts $\langle\mathrm{DECIDED},b\rangle$, the sent set insert being the network's half of that rendezvous, \leandeclnamed{retWPub}{PLTS.ABA.Comp.ANetStep.retWPub} (D10).
+The step \leandeclnamed{retW}{PLTS.ABA.Composition.CoreProcStepN.retW} increments the round and adopts the coin when $est = \bot$; the step \leandeclnamed{retWPub}{PLTS.ABA.Composition.CoreProcStepN.retWPub} does the same on an $A$-grade return and multicasts $\langle\mathrm{DECIDED},b\rangle$, the sent set insert being the network's half of that rendezvous, \leandeclnamed{retWPub}{PLTS.ABA.Composition.ANetStep.retWPub} (D10).
 The DECIDED sets are round-agnostic, carrying no round index.
-A delivery pairs the network's authenticity guard \leandeclnamed{ddlv}{PLTS.ABA.Comp.ANetStep.ddlv} with the receiver's write \leandeclnamed{ddlvRecv}{PLTS.ABA.Comp.CoreProcStepN.ddlvRecv}; a relay pairs the sender's $f{+}1$ receipt count \leandeclnamed{dsndRelay}{PLTS.ABA.Comp.CoreProcStepN.dsndRelay} with the network's write-once insert \leandeclnamed{dsnd}{PLTS.ABA.Comp.ANetStep.dsnd}; and \leandeclnamed{byzD}{PLTS.ABA.Comp.ANetStep.byzD} is the network's own $\tau$-loop, by which $id \in F$ records either bit (D12$'$).
-The exit \texttt{retABA}\,$id\,b$ fires once $n-f$ distinct senders of $b$ have been delivered to $id$, the count read at \leandeclnamed{ret}{PLTS.ABA.Comp.CoreProcStepN.ret}, and $b$ lies in $id$'s own sent set, read at \leandeclnamed{retABA}{PLTS.ABA.Comp.ANetStep.retABA}.
+A delivery pairs the network's authenticity guard \leandeclnamed{ddlv}{PLTS.ABA.Composition.ANetStep.ddlv} with the receiver's write \leandeclnamed{ddlvRecv}{PLTS.ABA.Composition.CoreProcStepN.ddlvRecv}; a relay pairs the sender's $f{+}1$ receipt count \leandeclnamed{dsndRelay}{PLTS.ABA.Composition.CoreProcStepN.dsndRelay} with the network's write-once insert \leandeclnamed{dsnd}{PLTS.ABA.Composition.ANetStep.dsnd}; and \leandeclnamed{byzD}{PLTS.ABA.Composition.ANetStep.byzD} is the network's own $\tau$-loop, by which $id \in F$ records either bit (D12$'$).
+The exit \texttt{retABA}\,$id\,b$ fires once $n-f$ distinct senders of $b$ have been delivered to $id$, the count read at \leandeclnamed{ret}{PLTS.ABA.Composition.CoreProcStepN.ret}, and $b$ lies in $id$'s own sent set, read at \leandeclnamed{retABA}{PLTS.ABA.Composition.ANetStep.retABA}.
 
-\blueprintfig{fig-core-phases}{The round loop \leandecl{PLTS.ABA.Comp.coreProcN}: the per-process five-phase handshake cycle, the fused DECIDED multicast at the $A$-grade coin return (D10), and the DECIDED sets guarding $\mathrm{retABA}$.
+\blueprintfig{fig-core-phases}{The round loop \leandecl{PLTS.ABA.Composition.coreProcN}: the per-process five-phase handshake cycle, the fused DECIDED multicast at the $A$-grade coin return (D10), and the DECIDED sets guarding $\mathrm{retABA}$.
 Every edge drawn carries the guard that the process's own program is unreplaced, so a corruption leaves the machine at the phase it has reached and the phase field stands still from there (D23).
 The \texttt{inputLoop} self-loop absorbs $\mathrm{callABA}$ at a process whose input is set (D36), so it stands at every phase the \texttt{input} edge leads to and is drawn at $\mathrm{toCallG}$ alone.}
 
@@ -1497,30 +1497,30 @@ Every round-loop row below other than $\mathrm{failSelf}$ and $\mathrm{corrupted
 \hline
 Rule & Label & Guard & Effect \\
 \hline
-\leandeclnamed{input}{PLTS.ABA.Comp.CoreProcStepN.input} & $\mathrm{callABA}(i,b)$ & $\mathit{input}_i$ unset
+\leandeclnamed{input}{PLTS.ABA.Composition.CoreProcStepN.input} & $\mathrm{callABA}(i,b)$ & $\mathit{input}_i$ unset
   & $\mathit{input}_i, \mathit{est}_i \gets b$; \\
  & & & $\mathit{round}_i \gets 0$ (D9); \\
  & & & $\mathit{phase}_i \gets \mathrm{toCallG}$ \\
 \hline
-\leandeclnamed{inputLoop}{PLTS.ABA.Comp.CoreProcStepN.inputLoop} & $\mathrm{callABA}(i,b)$ & $\mathit{input}_i$ set
+\leandeclnamed{inputLoop}{PLTS.ABA.Composition.CoreProcStepN.inputLoop} & $\mathrm{callABA}(i,b)$ & $\mathit{input}_i$ set
   & identity (self-loop) \\
 \hline
-\leandeclnamed{callG}{PLTS.ABA.Comp.CoreProcStepN.callG} & $\mathrm{callG}(r,i,b)$
+\leandeclnamed{callG}{PLTS.ABA.Composition.CoreProcStepN.callG} & $\mathrm{callG}(r,i,b)$
   & $\mathit{phase}_i = \mathrm{toCallG}$, $\mathit{round}_i = r$,
   & $\mathit{phase}_i \gets \mathrm{awaitG}$ \\
  & & $\mathit{est}_i = b$ & \\
 \hline
-\leandeclnamed{retG}{PLTS.ABA.Comp.CoreProcStepN.retG} & $\mathrm{retG}(r,i,g,bnd)$
+\leandeclnamed{retG}{PLTS.ABA.Composition.CoreProcStepN.retG} & $\mathrm{retG}(r,i,g,bnd)$
   & $\mathit{phase}_i = \mathrm{awaitG}$, $\mathit{round}_i = r$
   & $\mathit{est}_i \gets \mathrm{est}(g)$; \\
  & & & $\mathit{lastGrade}_i \gets g$; \\
  & & & $\mathit{phase}_i \gets \mathrm{toCallW}$ \\
 \hline
-\leandeclnamed{callW}{PLTS.ABA.Comp.CoreProcStepN.callW} & $\mathrm{callW}(r,i)$
+\leandeclnamed{callW}{PLTS.ABA.Composition.CoreProcStepN.callW} & $\mathrm{callW}(r,i)$
   & $\mathit{phase}_i = \mathrm{toCallW}$, $\mathit{round}_i = r$
   & $\mathit{phase}_i \gets \mathrm{awaitW}$ \\
 \hline
-\leandeclnamed{retW}{PLTS.ABA.Comp.CoreProcStepN.retW} & $\mathrm{retW}(r,i,c)$
+\leandeclnamed{retW}{PLTS.ABA.Composition.CoreProcStepN.retW} & $\mathrm{retW}(r,i,c)$
   & $\mathit{phase}_i = \mathrm{awaitW}$, $\mathit{round}_i = r$,
   & $\mathit{est}_i \gets c$ if $\mathit{est}_i = \bot$; \\
  & & $\mathit{lastGrade}_i$ not an $A$
@@ -1528,66 +1528,66 @@ Rule & Label & Guard & Effect \\
  & & & $\mathit{round}_i \gets r + 1$; \\
  & & & $\mathit{phase}_i \gets \mathrm{toCallG}$ \\
 \hline
-\leandeclnamed{retWPub}{PLTS.ABA.Comp.CoreProcStepN.retWPub}, & $\mathrm{retWPub}(r,i,c,b)$
+\leandeclnamed{retWPub}{PLTS.ABA.Composition.CoreProcStepN.retWPub}, & $\mathrm{retWPub}(r,i,c,b)$
   & $\mathit{phase}_i = \mathrm{awaitW}$, $\mathit{round}_i = r$,
   & the effect of $\mathrm{retW}$, and \\
-\leandeclnamed{retWPub}{PLTS.ABA.Comp.ANetStep.retWPub} & \quad $\to\tau$
+\leandeclnamed{retWPub}{PLTS.ABA.Composition.ANetStep.retWPub} & \quad $\to\tau$
   & $\mathit{lastGrade}_i = A\,b$ (round loop)
   & mcast $\mathrm{DEC}\,b$ at $i$ (D10) \\
 \hline
-\leandeclnamed{byzCallG}{PLTS.ABA.Comp.ANetStep.byzCallG}, & $\mathrm{byzCallG}(r,i,b)$
+\leandeclnamed{byzCallG}{PLTS.ABA.Composition.ANetStep.byzCallG}, & $\mathrm{byzCallG}(r,i,b)$
   & $i \in F$ (network)
   & no round-loop data (D11) \\
-\leandeclnamed{byzCallGIdle}{PLTS.ABA.Comp.CoreProcStepN.byzCallGIdle} & \quad $\to\tau$ & & \\
+\leandeclnamed{byzCallGIdle}{PLTS.ABA.Composition.CoreProcStepN.byzCallGIdle} & \quad $\to\tau$ & & \\
 \hline
-\leandeclnamed{byzRetG}{PLTS.ABA.Comp.ANetStep.byzRetG}, & $\mathrm{byzRetG}(r,i,g)$
+\leandeclnamed{byzRetG}{PLTS.ABA.Composition.ANetStep.byzRetG}, & $\mathrm{byzRetG}(r,i,g)$
   & $i \in F$ (network)
   & no round-loop data (D11) \\
-\leandeclnamed{byzRetGIdle}{PLTS.ABA.Comp.CoreProcStepN.byzRetGIdle} & \quad $\to\tau$ & & \\
+\leandeclnamed{byzRetGIdle}{PLTS.ABA.Composition.CoreProcStepN.byzRetGIdle} & \quad $\to\tau$ & & \\
 \hline
-\leandeclnamed{byzCallW}{PLTS.ABA.Comp.ANetStep.byzCallW}, & $\mathrm{byzCallW}(r,i)$
+\leandeclnamed{byzCallW}{PLTS.ABA.Composition.ANetStep.byzCallW}, & $\mathrm{byzCallW}(r,i)$
   & $i \in F$ (network)
   & no round-loop data (D11) \\
-\leandeclnamed{byzCallWIdle}{PLTS.ABA.Comp.CoreProcStepN.byzCallWIdle} & \quad $\to\tau$ & & \\
+\leandeclnamed{byzCallWIdle}{PLTS.ABA.Composition.CoreProcStepN.byzCallWIdle} & \quad $\to\tau$ & & \\
 \hline
-\leandeclnamed{byzRetW}{PLTS.ABA.Comp.ANetStep.byzRetW}, & $\mathrm{byzRetW}(r,i,c)$
+\leandeclnamed{byzRetW}{PLTS.ABA.Composition.ANetStep.byzRetW}, & $\mathrm{byzRetW}(r,i,c)$
   & $i \in F$ (network)
   & no round-loop data (D11) \\
-\leandeclnamed{byzRetWIdle}{PLTS.ABA.Comp.CoreProcStepN.byzRetWIdle} & \quad $\to\tau$ & & \\
+\leandeclnamed{byzRetWIdle}{PLTS.ABA.Composition.CoreProcStepN.byzRetWIdle} & \quad $\to\tau$ & & \\
 \hline
-\leandeclnamed{ddlv}{PLTS.ABA.Comp.ANetStep.ddlv}, & $\mathrm{ddlv}(i,j,b)$
+\leandeclnamed{ddlv}{PLTS.ABA.Composition.ANetStep.ddlv}, & $\mathrm{ddlv}(i,j,b)$
   & $b \in \mathit{decidedSent}_j$ (network),
   & add $b$ to $\mathit{decidedRecv}(i,j)$ \\
-\leandeclnamed{ddlvRecv}{PLTS.ABA.Comp.CoreProcStepN.ddlvRecv} & \quad $\to\tau$
+\leandeclnamed{ddlvRecv}{PLTS.ABA.Composition.CoreProcStepN.ddlvRecv} & \quad $\to\tau$
   & $b \notin \mathit{decidedRecv}(i,j)$ (receiver) & (D12$'$) \\
 \hline
-\leandeclnamed{dsndRelay}{PLTS.ABA.Comp.CoreProcStepN.dsndRelay}, & $\mathrm{dsnd}(i,b)$
+\leandeclnamed{dsndRelay}{PLTS.ABA.Composition.CoreProcStepN.dsndRelay}, & $\mathrm{dsnd}(i,b)$
   & $\#_i(b) \ge f{+}1$ (sender),
   & mcast $\mathrm{DEC}\,b$ at $i$ \\
-\leandeclnamed{dsnd}{PLTS.ABA.Comp.ANetStep.dsnd} & \quad $\to\tau$
+\leandeclnamed{dsnd}{PLTS.ABA.Composition.ANetStep.dsnd} & \quad $\to\tau$
   & $b \notin \mathit{decidedSent}_i$ (network) & \\
 \hline
-\leandeclnamed{byzD}{PLTS.ABA.Comp.ANetStep.byzD} & $\tau$ & $i \in F$
+\leandeclnamed{byzD}{PLTS.ABA.Composition.ANetStep.byzD} & $\tau$ & $i \in F$
   & mcast $\mathrm{DEC}\,b$ at $i$ (D12$'$) \\
 \hline
-\leandeclnamed{ret}{PLTS.ABA.Comp.CoreProcStepN.ret}, & $\mathrm{retABA}(i,b)$
+\leandeclnamed{ret}{PLTS.ABA.Composition.CoreProcStepN.ret}, & $\mathrm{retABA}(i,b)$
   & $\#_i(b) \ge n{-}f$, $\mathit{returned}_i$ false
   & mark $i$ returned \\
-\leandeclnamed{retABA}{PLTS.ABA.Comp.ANetStep.retABA} & & \quad (returner),
+\leandeclnamed{retABA}{PLTS.ABA.Composition.ANetStep.retABA} & & \quad (returner),
   $b \in \mathit{decidedSent}_i$ (network) & \\
 \hline
-\leandeclnamed{corruptedIdle}{PLTS.ABA.Comp.CoreProcStepN.corruptedIdle}, & $\mathrm{retABA}(i,b)$
+\leandeclnamed{corruptedIdle}{PLTS.ABA.Composition.CoreProcStepN.corruptedIdle}, & $\mathrm{retABA}(i,b)$
   & program of $i$ replaced (returner),
   & identity (D23) \\
-\leandeclnamed{retByz}{PLTS.ABA.Comp.ANetStep.retByz} & & $i \in F$ (network) & \\
+\leandeclnamed{retByz}{PLTS.ABA.Composition.ANetStep.retByz} & & $i \in F$ (network) & \\
 \hline
-\leandeclnamed{failSelf}{PLTS.ABA.Comp.CoreProcStepN.failSelf}, & $\mathrm{fail}(i)$
+\leandeclnamed{failSelf}{PLTS.ABA.Composition.CoreProcStepN.failSelf}, & $\mathrm{fail}(i)$
   & $i \notin F$, $|F| < f$ (network),
   & $F \gets F \cup \{i\}$; \\
-\leandeclnamed{fail}{PLTS.ABA.Comp.ANetStep.fail} & & program of $i$ unreplaced (D23)
+\leandeclnamed{fail}{PLTS.ABA.Composition.ANetStep.fail} & & program of $i$ unreplaced (D23)
   & replace the program of $i$ \\
 \hline
-\leandeclnamed{corruptedIdle}{PLTS.ABA.Comp.CoreProcStepN.corruptedIdle} & any label but $\tau$
+\leandeclnamed{corruptedIdle}{PLTS.ABA.Composition.CoreProcStepN.corruptedIdle} & any label but $\tau$
   & program of $i$ replaced, & identity (D23) \\
  & \quad and but $\mathrm{actsAt}(i)$ & \quad the label outside $\mathrm{actsAt}(i)$ & \\
 \hline
@@ -1598,10 +1598,10 @@ Membership of $F$ is tested at the network alone: by the four Byzantine handshak
 A round loop reads its own replacement flag and no more, so no rule of it names the corrupted set, the budget, or another process's status (D23).
 The honest return row is the notable case: an unreplaced program must pass the same $n - f$ DECIDED count whether or not its process is in $F$, and the specification's rule~5 is likewise blind to honesty.
 What a corruption buys at the interface is the row beneath it, which requires no DECIDED evidence at all.
-The corruption rule \leandeclnamed{fail}{PLTS.ABA.Comp.ANetStep.fail} is a synchronisation of every component of the composition, each keeping its own copy of $F$; at the process it names the round loop's half is \leandeclnamed{failSelf}{PLTS.ABA.Comp.CoreProcStepN.failSelf}, which writes the replacement flag, and at every other process it is \leandeclnamed{failIdle}{PLTS.ABA.Comp.CoreProcStepN.failIdle}, another process's corruption being no business of theirs.
+The corruption rule \leandeclnamed{fail}{PLTS.ABA.Composition.ANetStep.fail} is a synchronisation of every component of the composition, each keeping its own copy of $F$; at the process it names the round loop's half is \leandeclnamed{failSelf}{PLTS.ABA.Composition.CoreProcStepN.failSelf}, which writes the replacement flag, and at every other process it is \leandeclnamed{failIdle}{PLTS.ABA.Composition.CoreProcStepN.failIdle}, another process's corruption being no business of theirs.
 Since every honest row carries the replacement guard, the record of a corrupted process stands still from that point: its phase, estimate, round, grade and receipt rows are what they were at the corruption.
-The $\mathrm{est}$-update of \leandeclnamed{retW}{PLTS.ABA.Comp.CoreProcStepN.retW} is Algorithm~\ref{alg:aba-core}'s branch \textbf{if} $b = \bot$ \textbf{then} $b \gets c$, and the conditional multicast is its branch \textbf{elif} $g = A$; the branch is taken by choosing between the two coin-return rows, and the multicast is fused with the round advance into one Dirac step (D10).
-The relay guard of \leandeclnamed{dsndRelay}{PLTS.ABA.Comp.CoreProcStepN.dsndRelay} and \leandeclnamed{dsnd}{PLTS.ABA.Comp.ANetStep.dsnd} is payload-specific, matching Algorithm~\ref{alg:aba-core}'s clause ``having not sent it'': a sent set already holding the other payload does not block the relay of $b$.
+The $\mathrm{est}$-update of \leandeclnamed{retW}{PLTS.ABA.Composition.CoreProcStepN.retW} is Algorithm~\ref{alg:aba-core}'s branch \textbf{if} $b = \bot$ \textbf{then} $b \gets c$, and the conditional multicast is its branch \textbf{elif} $g = A$; the branch is taken by choosing between the two coin-return rows, and the multicast is fused with the round advance into one Dirac step (D10).
+The relay guard of \leandeclnamed{dsndRelay}{PLTS.ABA.Composition.CoreProcStepN.dsndRelay} and \leandeclnamed{dsnd}{PLTS.ABA.Composition.ANetStep.dsnd} is payload-specific, matching Algorithm~\ref{alg:aba-core}'s clause ``having not sent it'': a sent set already holding the other payload does not block the relay of $b$.
 
 \dynamics{The round loop}{%
 Each process runs a five-phase cycle: idle, ready to call the round's GBCA,
@@ -1631,7 +1631,7 @@ each process returns at most once, by the flag its return rule sets.
 }
 
 The round-loop inventory is read on a pair of components, as the one above is, and every guard in the table is read at one component: the counts of
-\leandeclnamed{dsndRelay}{PLTS.ABA.Comp.CoreProcStepN.dsndRelay} and \leandeclnamed{ret}{PLTS.ABA.Comp.CoreProcStepN.ret} range over one receiver's own rows, and the
+\leandeclnamed{dsndRelay}{PLTS.ABA.Composition.CoreProcStepN.dsndRelay} and \leandeclnamed{ret}{PLTS.ABA.Composition.CoreProcStepN.ret} range over one receiver's own rows, and the
 soundness guard $b \in dsent(j)$ that licenses a delivery is the network's, split from the freshness guard $b \notin decIn(i)$ and the write at the receiver.
 Definitions~\ref{def:aba-procnet} and~\ref{def:aba-netadv} write the same rules at the finer cut, where the round loop shares a record with the stage records and the DECIDED sets share a component with the stage sent sets.
 
@@ -1644,7 +1644,7 @@ The gather-based implementation is carried by the refinements of Section~\ref{se
 
 \input{nodes/thm-gbca-inst-refines}
 
-\blueprintfig{fig-gbca-sim}{The GBCA instance forward simulation \leandecl{PLTS.ABA.GBCA.implRefines}, along the relation \leandecl{PLTS.ABA.GBCA.instRel}: implementation rows above, specification-instance states below, dashed verticals the relation.
+\blueprintfig{fig-gbca-sim}{The GBCA instance forward simulation \leandecl{PLTS.ABA.GBCA.ByABDY.implRefines}, along the relation \leandecl{PLTS.ABA.GBCA.ByABDY.instRel}: implementation rows above, specification-instance states below, dashed verticals the relation.
 The implementation call, the network deliveries (including Byzantine injection), and the graded returns align to the specification's $\mathrm{call}$, its stutter, and its graded returns, with $F$ aligned on both sides.
 Every delivery, relay, echo, vote, bind and echo5 row maps to a specification stutter, and the implementation call maps to the specification call.
 A return whose bit the specification has not yet excluded is answered by a weak run: it maps to the weak step $\mathrm{bindUnset};\mathrm{ret}$, whose $f{+}1$ support is supplied by the $input\_supp$ invariant and whose excluded bit is pinned by the return's own exclusion certificate.
@@ -1866,10 +1866,10 @@ Reliable broadcast is the bottom layer, and its specification is the first point
 Under Transition System~6 an honest call pins every return to the called value, and Algorithm~\ref{alg:brb} with the leader corrupted after its $\mathrm{INIT}$ leaves a window that pinning forbids: until some correct process holds an $\mathrm{ECHO}$ quorum of more than $(n+f)/2$ senders, the injections of the now-corrupted leader can make the rounds deliver a different value.
 The encoding therefore splits the recorded input from the committed value and guards the internal commit by $\mathit{ldr} \in F \vee input = m$ (D27): the corrupted leader's power is a commit of any value, the honest leader's value is pinned, and the window closes at the commit rather than at the call.
 The refinement certifies the committed value by an $\mathrm{ECHO}$ receipt quorum of more than $(n+f)/2$ senders --- $F$-blind, monotone, unique by quorum intersection over the write-once echoes --- and fires the abstract commit on demand, as a two-step weak run under the first return.
-See \leanmodule{Leslie2Protocols/ABA/Vocabulary/NetworkState},
-\leanmodule{Leslie2Protocols/ABA/Broadcast/Spec},
-\leanmodule{Leslie2Protocols/ABA/Broadcast/Impl} and
-\leanmodule{Leslie2Protocols/ABA/Broadcast/ImplSim}.
+See \leanmodule{Leslie2Protocols/ABA/Vocabulary/ProcessAndNetworkState},
+\leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/Specification},
+\leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/BrachaImplementation} and
+\leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/BrachaRefinesSpecification}.
 
 \input{nodes/def-aba-networkstate}
 \input{nodes/def-aba-brb-spec}
@@ -1906,13 +1906,13 @@ A program keeps its own stores of what the broadcast instances have returned to 
 The implementation is verified in two substitutions.
 The gather-over-broadcast tier places the $2n$ broadcast specifications in the broadcast slots and is carried to Transition System~4 by the core refinement, whose returns are answered by one weak run --- the abstract commits, the write of the core where the specification holds none, the return --- with the core read off the gather network's own state.
 The fully concrete tier places a Bracha instance in each slot and is carried to the previous one by congruence, the broadcast refinement lifted along the pullback naming each instance and through the operators the instance is built from.
-See \leanmodule{Leslie2Protocols/ABA/Gather/Spec},
-\leanmodule{Leslie2Protocols/ABA/Gather/Vocabulary},
-\leanmodule{Leslie2Protocols/ABA/Gather/Sub},
-\leanmodule{Leslie2Protocols/ABA/Gather/Ideal},
-\leanmodule{Leslie2Protocols/ABA/Gather/IdealSim},
-\leanmodule{Leslie2Protocols/ABA/Gather/Low} and
-\leanmodule{Leslie2Protocols/ABA/Gather/LowSim}.
+See \leanmodule{Leslie2Protocols/ABA/Gather/Specification},
+\leanmodule{Leslie2Protocols/ABA/Gather/MessagesAndCommonCore},
+\leanmodule{Leslie2Protocols/ABA/Gather/Composition},
+\leanmodule{Leslie2Protocols/ABA/Gather/RowsOverBroadcastSpecification},
+\leanmodule{Leslie2Protocols/ABA/Gather/RefinesSpecification},
+\leanmodule{Leslie2Protocols/ABA/Gather/RowsOverBracha} and
+\leanmodule{Leslie2Protocols/ABA/Gather/BroadcastSubstitution}.
 
 \input{nodes/def-aba-gather-spec}
 
@@ -1941,12 +1941,12 @@ The refinement into Transition System~2 is counting on the two cores, each writt
 A returned map heavy at a value --- all but $f$ entries --- makes the core the return carries heavy at it; a core heavy at one value leaves every other value at most $f$ entries on it, its $\ge n - f \ge 2f + 1$ entries admitting one value on all but $2f$, which is at once the uniqueness of the $B$-bit and the $A$/$C$ exclusivity of the grade guard.
 The round's bound bit is the heavy bit of the first core, written by the layer's network at the first gather's first return and announced by every graded return (D29).
 The exclusion certificate --- the first core light at the excluded bit --- stands from the moment the core is written, so the specification's monotone $excluded$ is certified with no relay machinery, and the exclusion-on-demand discipline of the direct implementation's refinement carries over unchanged: a return needing an exclusion the specification does not yet hold is answered by the run $\mathrm{bindUnset}; \mathrm{ret}$, whose excluded bit is the complement of the bit the return announces.
-See \leanmodule{Leslie2Protocols/ABA/Round/Counting},
-\leanmodule{Leslie2Protocols/ABA/Round/Sub},
-\leanmodule{Leslie2Protocols/ABA/Round/Pair},
-\leanmodule{Leslie2Protocols/ABA/Round/PairSim},
-\leanmodule{Leslie2Protocols/ABA/Round/Substitutions} and
-\leanmodule{Leslie2Protocols/ABA/Round/Binding}.
+See \leanmodule{Leslie2Protocols/ABA/GBCA/AFW/Counting},
+\leanmodule{Leslie2Protocols/ABA/GBCA/AFW/Composition},
+\leanmodule{Leslie2Protocols/ABA/GBCA/AFW/RowsOverGatherSpecifications},
+\leanmodule{Leslie2Protocols/ABA/GBCA/AFW/RefinesSpecification},
+\leanmodule{Leslie2Protocols/ABA/GBCA/AFW/GatherSubstitutions} and
+\leanmodule{Leslie2Protocols/ABA/GBCA/AFW/Binding}.
 
 \input{nodes/def-aba-gbca-net}
 \input{nodes/def-aba-round-sub}
@@ -1954,20 +1954,20 @@ See \leanmodule{Leslie2Protocols/ABA/Round/Counting},
 \input{nodes/thm-gbca-pair-refines}
 \input{nodes/def-aba-gbca-gather-low}
 
-\blueprintfig{fig-gather-tiers}{One round of the gather-based implementation, \leandecl{PLTS.ABA.GBCA.lowPairInst}, drawn open, and the three substitutions that carry it to Transition System~2.
+\blueprintfig{fig-gather-tiers}{One round of the gather-based implementation, \leandecl{PLTS.ABA.GBCA.ByAFW.lowPairInst}, drawn open, and the three substitutions that carry it to Transition System~2.
 A round is $n$ graded-agreement programs beside the network of the graded-agreement layer, which holds the bound bit and nothing else, in parallel with two gather instances of the binding form (D33), one over the input bits and one over the candidates; each gather is $n$ programs beside the gather network, which holds the core, in parallel with $2n$ Bracha instances.
 That is $4n + 2$ networks in a single round --- $2n$ broadcasts for the inputs and $2n$ for the $\mathrm{BIND}$ payloads (D32, D33), beside the two gather networks --- which is the count the flat reading collapses into one tagged sent-set family.
-The three tiers above it --- the three systems that carry one round, from the pair of gather specifications down to Bracha --- replace one layer at a time: \leandecl{PLTS.ABA.GBCA.lowPairRefines} replaces each Bracha instance by the BRB specification, by congruence, \leandecl{PLTS.ABA.GBCA.idealRefines} each gather instance by the gather specification, by congruence, and \leandecl{PLTS.ABA.GBCA.pairRefines} reads the grade off the two cores, each written once, and the exclusion set off the round's bound bit.
+The three tiers above it --- the three systems that carry one round, from the pair of gather specifications down to Bracha --- replace one layer at a time: \leandecl{PLTS.ABA.GBCA.ByAFW.lowPairRefines} replaces each Bracha instance by the BRB specification, by congruence, \leandecl{PLTS.ABA.GBCA.ByAFW.idealRefines} each gather instance by the gather specification, by congruence, and \leandecl{PLTS.ABA.GBCA.ByAFW.pairRefines} reads the grade off the two cores, each written once, and the exclusion set off the round's bound bit.
 At each tier the layer's network holds that bound bit, written at the first gather's first return and untouched by either substitution.
 Each is a plain forward simulation, so the three compose.}
 \input{nodes/thm-gbca-tier-refines}
 
 \blueprintfig{fig-gather-sim}{The three tier simulations of one round, with the concrete rows on the right and the relation dashed.
 Each stage idealises away one layer and holds the layers above it equal.
-Under \leandecl{PLTS.ABA.GBCA.LowPairRel} every $\mathrm{ECHO}$, $\mathrm{VOTE}$ and delivery of a Bracha instance is answered by a stutter of the specification coordinate that replaces it.
-Under \leandecl{PLTS.ABA.GBCA.IdealRel} gather's own rows stutter in the same way, and a broadcast return, which writes a program's store, is answered by the specification's return.
-Under \leandecl{PLTS.ABA.GBCA.PairRel} the return rows carry the refinement: a return whose bit the specification has not yet excluded is answered by the weak run $\mathrm{bindUnset};\mathrm{ret}$, and a return whose exclusion has already happened is a single graded return.
-The layer's network is held equal by the two substitutions, and \leandecl{PLTS.ABA.GBCA.PairRel} pins $excluded$ to the complement of the bit standing there.}
+Under \leandecl{PLTS.ABA.GBCA.ByAFW.LowPairRel} every $\mathrm{ECHO}$, $\mathrm{VOTE}$ and delivery of a Bracha instance is answered by a stutter of the specification coordinate that replaces it.
+Under \leandecl{PLTS.ABA.GBCA.ByAFW.IdealRel} gather's own rows stutter in the same way, and a broadcast return, which writes a program's store, is answered by the specification's return.
+Under \leandecl{PLTS.ABA.GBCA.ByAFW.PairRel} the return rows carry the refinement: a return whose bit the specification has not yet excluded is answered by the weak run $\mathrm{bindUnset};\mathrm{ret}$, and a return whose exclusion has already happened is a single graded return.
+The layer's network is held equal by the two substitutions, and \leandecl{PLTS.ABA.GBCA.ByAFW.PairRel} pins $excluded$ to the complement of the bit standing there.}
 \input{nodes/thm-gbca-gather-refines}
 
 Both implementations of Transition System~2 stand above, so binding can be read at each of them.
@@ -1994,10 +1994,10 @@ The adversary's ghost record is the third thing this instantiation supplies (D30
 The link's broadcast of the candidate writes the first core, read off the first gather's slice of the tagged sent sets, and the bound bit as that core's heavy bit; a graded return writes the second core the same way and fires only with the bit its label carries equal to the one on record.
 The composed round holds those three in its network components, which no program reads, so the relation reads them off the ghost record and a row's ghost write is the round's write of them.
 One clause of the relation is not a reading of the flat state: a process whose round-$r$ second-gather local state carries an input has passed the round's link, so the round's bound bit is on record, and that is what the announced bit of a graded return rests on.
-See \leanmodule{Leslie2Protocols/ABA/AFW/Flat},
-\leanmodule{Leslie2Protocols/ABA/AFW/View},
-\leanmodule{Leslie2Protocols/ABA/AFW/Frame} and
-\leanmodule{Leslie2Protocols/ABA/AFW/FlatSim}.
+See \leanmodule{Leslie2Protocols/ABA/ImplementationByAFW/System},
+\leanmodule{Leslie2Protocols/ABA/ImplementationByAFW/RoundProjection},
+\leanmodule{Leslie2Protocols/ABA/ImplementationByAFW/RoundProjectionStep} and
+\leanmodule{Leslie2Protocols/ABA/ImplementationByAFW/Simulation}.
 
 \input{nodes/def-aba-afw-protocol}
 
@@ -2023,7 +2023,7 @@ One specification, two verified implementations, one meeting point at $\mathrm{h
   \;\sqsubseteq\; \mathrm{spec}(P).
 \]
 The first step is Theorem~\ref{thm:aba-afw-protocol-composed}, the middle three are the stages of Theorem~\ref{thm:aba-afw-substitution}, and the last is Theorem~\ref{thm:aba-hybrid-spec}, shared with the direct chain.
-See \leanmodule{Leslie2Protocols/ABA/AFW/Chain}.
+See \leanmodule{Leslie2Protocols/ABA/ImplementationByAFW/CompositionChain}.
 
 
 \input{nodes/def-aba-afw-sides}
@@ -2044,8 +2044,8 @@ The other three components stand unchanged throughout.}
 
 Both chains run over a reading whose adversary keeps a record for each round, and the record is deleted here.
 The route is the erasure of Definition~\ref{def:erasure-sim} at the network adversary, carried through the composition pipeline by its congruences and collapsed at the hidden alphabet.
-The construction is in \leanmodule{Leslie2Protocols/ABA/Reading/Erase}.
-The two instantiations are in \leanmodule{Leslie2Protocols/ABA/ABDY/Erasure} and in \leanmodule{Leslie2Protocols/ABA/AFW/Erasure}.
+The construction is in \leanmodule{Leslie2Protocols/ABA/GhostErasure/GhostFreeSystem}.
+The two instantiations are in \leanmodule{Leslie2Protocols/ABA/GhostErasure/ImplementationByABDY} and in \leanmodule{Leslie2Protocols/ABA/GhostErasure/ImplementationByAFW}.
 
 \input{nodes/def-aba-ghost-free}
 

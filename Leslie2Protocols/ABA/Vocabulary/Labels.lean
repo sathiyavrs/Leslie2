@@ -5,7 +5,7 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2.Systems.Trace
-import Leslie2Protocols.ABA.Vocabulary.Params
+import Leslie2Protocols.ABA.Vocabulary.Parameters
 
 /-!
 # The shared label alphabet of the ABA development

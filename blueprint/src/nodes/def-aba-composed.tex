@@ -1,6 +1,6 @@
 \begin{definition}[The composed system]
   \label{def:aba-composed}
-  \lean{PLTS.ABA.Comp.CoreProcStepN}\lean{PLTS.ABA.Comp.coreProcN}\lean{PLTS.ABA.Comp.ANetState}\lean{PLTS.ABA.Comp.ANetState.corrupt}\lean{PLTS.ABA.Comp.ANetStep}\lean{PLTS.ABA.Comp.aNet}\lean{PLTS.ABA.Comp.ComposedState}\lean{PLTS.ABA.ABDY.composedPre}\lean{PLTS.ABA.ABDY.composedGroup}\lean{PLTS.ABA.ABDY.composed}\leanok
+  \lean{PLTS.ABA.Composition.CoreProcStepN}\lean{PLTS.ABA.Composition.coreProcN}\lean{PLTS.ABA.Composition.ANetState}\lean{PLTS.ABA.Composition.ANetState.corrupt}\lean{PLTS.ABA.Composition.ANetStep}\lean{PLTS.ABA.Composition.aNet}\lean{PLTS.ABA.Composition.ComposedState}\lean{PLTS.ABA.ABDY.composedPre}\lean{PLTS.ABA.ABDY.composedGroup}\lean{PLTS.ABA.ABDY.composed}\leanok
   \uses{def:aba-gbcasub, def:aba-procnet, def:aba-netadv, def:aba-protocol, def:aba-core-vocab, def:relabel, def:syncproduct, def:process-algebra}
   The protocol read as a composition of four components over the extended alphabet $\mathrm{NLab}(n)$: the family $\mathrm{gbcaSide}(P)$ of round instances, the round loop $\mathrm{coreProcN}(P,j)$ of each process, the ABA-side network $\mathrm{aNet}(P)$ holding the DECIDED sets (D12$'$) and the corrupted set with its budget, and the coin oracle joined through $\mathrm{wccPull}$.
   \[
@@ -10,11 +10,11 @@
   \]
   runs through the pipeline of Definition~\ref{def:aba-protocol} component for component, giving $\abdy{\mathrm{composedGroup}}(P)$ inside the inner frame and $\abdy{\mathrm{composed}}(P)$ inside the outer.
   A round loop is not round-filtered: it answers every round's $\mathrm{callG}$, its own as a participant and every other process's as a bystander.
-  A corruption replaces the program of the process it names (D23), here as at the protocol: the round loop carries the flag, its own half of the $\mathrm{fail}$ row writes it, every other row is enabled only while it is down, and in place of those rows the replaced program is the self-loop \leandeclnamed{corruptedIdle}{PLTS.ABA.Comp.CoreProcStepN.corruptedIdle}.
-  The ABA-side network holds the other half: its $\mathrm{fail}$ row carries the guard $k \notin F \wedge |F| < f$, and its \leandeclnamed{retByz}{PLTS.ABA.Comp.ANetStep.retByz} row lets a corrupted process return without DECIDED evidence, pairing with that self-loop.
+  A corruption replaces the program of the process it names (D23), here as at the protocol: the round loop carries the flag, its own half of the $\mathrm{fail}$ row writes it, every other row is enabled only while it is down, and in place of those rows the replaced program is the self-loop \leandeclnamed{corruptedIdle}{PLTS.ABA.Composition.CoreProcStepN.corruptedIdle}.
+  The ABA-side network holds the other half: its $\mathrm{fail}$ row carries the guard $k \notin F \wedge |F| < f$, and its \leandeclnamed{retByz}{PLTS.ABA.Composition.ANetStep.retByz} row lets a corrupted process return without DECIDED evidence, pairing with that self-loop.
   A round instance is a component of the composite at every moment, so the graded-agreement coordinate of a composed state is $\mathbb{N} \to \mathrm{ImplState}(n)$: every round keeps its stage records and its network state for the whole run, whichever round each process is in.
   The processes hold those stage records too (D22).
   What no process holds is the network state of a round, and a round instance, carrying no termination flag, answers a send or a delivery at a process the protocol has terminated.
   The graded-agreement family occupies the left argument of the outer parallel composition, which is the refinable position.
-  Full construction: \leandecl{PLTS.ABA.ABDY.composed}, over \leandecl{PLTS.ABA.Comp.coreProcN} and \leandecl{PLTS.ABA.Comp.aNet}.
+  Full construction: \leandecl{PLTS.ABA.ABDY.composed}, over \leandecl{PLTS.ABA.Composition.coreProcN} and \leandecl{PLTS.ABA.Composition.aNet}.
 \end{definition}

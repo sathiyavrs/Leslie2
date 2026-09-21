@@ -40,3 +40,6 @@ blueprint/src/*.toc
 
 # Local presentation, not part of the repository
 slides/
+
+# Python bytecode from the checker scripts
+__pycache__/
