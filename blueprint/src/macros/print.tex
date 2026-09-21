@@ -20,9 +20,10 @@
 \newcommand{\blueprintfig}[2]{\begin{figure}[htbp]\centering\input{figures/#1}\caption{#2}\end{figure}}
 % Lean names and module paths are set through the url package, which hyperref
 % loads: it keeps underscores safe in text mode and, unlike a single \texttt
-% box, breaks a long name across lines at the listed characters.
+% box, breaks a long name across lines. The xurl package allows the break after
+% any character, which a long camel-case segment needs.
+\usepackage{xurl}
 \urlstyle{tt}
-\def\UrlBreaks{\do\.\do\_\do\/\do\-}
 % A visible Lean declaration reference.
 % The two-argument form typesets its short display name alone.
 \newcommand{\leandecl}[1]{\nolinkurl{#1}}

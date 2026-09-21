@@ -689,7 +689,7 @@ theorem exists_correct_received₂ {P : Parameters} {s : ImplementationState P.n
       (Finset.univ.filter (fun j => m' ∈ s.received i' j))).card ≤ P.n := by
     refine le_trans (Finset.card_le_univ _) ?_
     simp
-  have hf := P.hf
+  have hf := P.hResilience
   have hlt : s.F.card < ((Finset.univ.filter (fun j => m ∈ s.received i j)) ∩
       (Finset.univ.filter (fun j => m' ∈ s.received i' j))).card := by
         omega

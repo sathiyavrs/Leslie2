@@ -1,6 +1,6 @@
 \begin{theorem}[Gather broadcast substitution]
   \label{thm:gather-low-refines}
-  \lean{PLTS.ABA.Gather.LowRel}\lean{PLTS.ABA.Gather.gatherLow}\leanok
+  \lean{PLTS.ABA.Gather.BroadcastSubstitutionRelation}\lean{PLTS.ABA.Gather.broadcastSubstitution}\leanok
   \uses{def:aba-gather-low, def:aba-gather-ideal, thm:brb-refines, thm:forwardsim-congruence}
   The gather implementation over Bracha instances is forward-simulated by the gather implementation over broadcast specifications.
   The relation holds the gather tier --- the programs with their stores and the gather network with its core --- equal, beside the broadcast refinement relation of Theorem~\ref{thm:brb-refines} at each of the $2n$ coordinates.

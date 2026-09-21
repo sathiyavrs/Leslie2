@@ -1,11 +1,11 @@
 \begin{theorem}[Gather-based GBCA round refinement]
   \label{thm:gbca-gather-refines}
-  \lean{PLTS.ABA.GBCA.gatherImplRefines}\lean{PLTS.ABA.GBCA.gatherRoundRefines}\leanok
+  \lean{PLTS.ABA.GBCA.roundOverBracha_refinesSpecification}\lean{PLTS.ABA.GBCA.roundOverBracha_specificationTraces}\leanok
   \uses{thm:gbca-tier-refines, thm:gbca-pair-refines, thm:forward-trans, lem:hyperstep-weakstep}
-  The gather-based GBCA implementation refines the GBCA specification instance, round by round: the three simulations, taken probabilistically, compose to \leandecl{PLTS.ABA.GBCA.gatherImplRefines}, and $\operatorname{ATD}$ inclusion follows: \leandecl{PLTS.ABA.GBCA.gatherRoundRefines}.
+  The gather-based GBCA implementation refines the GBCA specification instance, round by round: the three simulations, taken probabilistically, compose to \leandecl{PLTS.ABA.GBCA.roundOverBracha_refinesSpecification}, and $\operatorname{ATD}$ inclusion follows: \leandecl{PLTS.ABA.GBCA.roundOverBracha_specificationTraces}.
 \end{theorem}
 
 \begin{proof}\leanok
   \uses{thm:gbca-tier-refines, thm:gbca-pair-refines, thm:forward-trans, lem:hyperstep-weakstep}
-  See the Lean proof of \leandecl{PLTS.ABA.GBCA.gatherImplRefines}.
+  See the Lean proof of \leandecl{PLTS.ABA.GBCA.roundOverBracha_refinesSpecification}.
 \end{proof}

@@ -1,6 +1,6 @@
 \begin{theorem}[Forward simulation is a congruence for the composition operators]
   \label{thm:forwardsim-congruence}
-  \lean{PLTS.ForwardSimulation.parallel_right}\lean{PLTS.ForwardSimulation.parallel_left}\lean{PLTS.ForwardSimulation.syncProduct}\lean{PLTS.ForwardSimulation.abstract}\lean{PLTS.ForwardSimulation.relabel}\lean{PLTS.ForwardSimulation.trans}\leanok
+  \lean{PLTS.ForwardSimulation.parallel_right}\lean{PLTS.ForwardSimulation.parallel_left}\lean{PLTS.ForwardSimulation.synchronisedProduct}\lean{PLTS.ForwardSimulation.abstract}\lean{PLTS.ForwardSimulation.relabel}\lean{PLTS.ForwardSimulation.trans}\leanok
   \uses{def:forwardsim, def:process-algebra, def:relabel, def:syncproduct}
   Let $sys_C$ be forward-simulated by $sys_A$ along $R$, both over one label type.
   Then $sys_C \parallel sys_B$ is forward-simulated by $sys_A \parallel sys_B$, and $sys_B \parallel sys_C$ by $sys_B \parallel sys_A$, along $R$ paired with equality on the held component.

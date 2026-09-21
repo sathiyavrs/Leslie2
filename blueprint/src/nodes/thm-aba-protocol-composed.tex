@@ -1,14 +1,14 @@
 \begin{theorem}[The protocol under its composed reading]
   \label{thm:aba-protocol-composed}
-  \lean{PLTS.ABA.ABDY.ProtocolState}\lean{PLTS.ABA.ABDY.ProtocolRel}\lean{PLTS.ABA.ABDY.protocolRel_mk}\lean{PLTS.ABA.ABDY.protocolRel_init}\lean{PLTS.ABA.ABDY.protocolSim}\lean{PLTS.ABA.ABDY.protocol_composed}\leanok
+  \lean{PLTS.ABA.ABDY.ProtocolState}\lean{PLTS.ABA.ABDY.ProtocolRelation}\lean{PLTS.ABA.ABDY.protocolRelation_mk}\lean{PLTS.ABA.ABDY.protocolRelation_init}\lean{PLTS.ABA.ABDY.protocolSim}\lean{PLTS.ABA.ABDY.protocol_composed}\leanok
   \uses{def:aba-composed, def:aba-procnet, def:aba-netadv, def:aba-protocol, def:forwardsim, def:pmfrel, def:achievable, thm:forward-sound}
-  For all parameters $P$, the protocol is forward-simulated by its composed reading along the Dirac lift of the relation $\mathrm{ProtocolRel}(P)$, and hence
+  For all parameters $P$, the protocol is forward-simulated by its composed reading along the Dirac lift of the relation $\mathrm{ProtocolRelation}(P)$, and hence
   \[
     \operatorname{ATD}(\abdy{\mathrm{protocol}}(P)) \;\subseteq\;
     \operatorname{ATD}(\abdy{\mathrm{composed}}(P)).
   \]
   The two presentations hold the same stage data indexed two ways, by process on the protocol side and by round on the composed one.
-  $\mathrm{ProtocolRel}(P)$ pins, of a composed state, everything a state of the protocol determines, in five unguarded conjuncts: the round loops agree, replacement flags included (D23); the coin oracle is the same component on both sides; the ABA-side network is the network adversary's DECIDED sets beside its corrupted set; the network state of round $r$ is that adversary's round-$r$ sent sets beside the same corrupted set and its ghost record of that round, the round's bound bit; and the entry of process $j$ in the instance of round $r$ is the stage record of round $r$ that $j$ holds, a round $j$ has not touched reading as the initial stage record on both sides.
+  $\mathrm{ProtocolRelation}(P)$ pins, of a composed state, everything a state of the protocol determines, in five unguarded conjuncts: the round loops agree, replacement flags included (D23); the coin oracle is the same component on both sides; the ABA-side network is the network adversary's DECIDED sets beside its corrupted set; the network state of round $r$ is that adversary's round-$r$ sent sets beside the same corrupted set and its ghost record of that round, the round's bound bit; and the entry of process $j$ in the instance of round $r$ is the stage record of round $r$ that $j$ holds, a round $j$ has not touched reading as the initial stage record on both sides.
   A composed state is therefore determined by any state of the protocol related to it.
   The determination is not injective: no composed state carries a termination flag, so two states of the protocol differing only in which processes have terminated are related to the same composed state (D22).
   Headline: \leandecl{PLTS.ABA.ABDY.protocol_composed}.
@@ -16,7 +16,7 @@
 
 \begin{proof}\leanok
   \uses{def:aba-composed, def:aba-procnet, def:aba-netadv, def:aba-protocol, def:forwardsim, def:pmfrel, def:achievable, thm:forward-sound}
-  The initial states are related, \leandecl{PLTS.ABA.ABDY.protocolRel_init}: everything is initial, so each process's stage-side record is off the map at every round and $\mathrm{roundRecord}\,r$ is the initial stage record there, which is the entry the composed initial state carries.
+  The initial states are related, \leandecl{PLTS.ABA.ABDY.protocolRelation_init}: everything is initial, so each process's stage-side record is off the map at every round and $\mathrm{roundRecord}\,r$ is the initial stage record there, which is the entry the composed initial state carries.
   For the step condition, take a state of the protocol, a composed state related to it, and a row out of that protocol state.
   Every transition of the protocol is a product of Dirac factors beside the coin oracle's successor distribution, and so is the composed transition that answers it.
   The two presentations carry the same oracle, so the coupling is functional in the oracle coordinate and the matched outcomes differ in no coordinate the relation constrains.

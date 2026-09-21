@@ -348,7 +348,7 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
   \item D34: Bracha's rounds follow Algorithm~1 of~\cite{AFW25}, where Algorithm~6 of the source blueprint fires the echo step on an $\mathrm{INIT}$ receipt alone and puts $n-f$ at every quorum.
     The echo step fires on an $\mathrm{INIT}$ receipt from the leader, on $\mathrm{ECHO}\,m$ receipts from more than $(n+f)/2$ senders, or on $f{+}1$ $\mathrm{VOTE}\,m$ receipts, which are the three cases of the guard of \leandeclnamed{echo}{PLTS.ABA.BRB.BrachaStep.echo}.
     The vote step fires on that $\mathrm{ECHO}$ quorum or on $f{+}1$ $\mathrm{VOTE}\,m$ receipts, and the return takes $2f{+}1$ $\mathrm{VOTE}\,m$ receipts.
-    The quorum is \leandecl{PLTS.ABA.Parameters.echoQuorum}, which is $(n+f)/2 + 1$, and the third message level is named $\mathrm{VOTE}$ here and in the source blueprint where both~\cite{ABDY22} and~\cite{AFW25} write $\mathrm{READY}$.
+    The quorum is \leandecl{PLTS.ABA.Parameters.echoReceiptQuorum}, which is $(n+f)/2 + 1$, and the third message level is named $\mathrm{VOTE}$ here and in the source blueprint where both~\cite{ABDY22} and~\cite{AFW25} write $\mathrm{READY}$.
     The certificate the refinement carries is an $\mathrm{ECHO}$ receipt quorum at that size, and an honest echo of $m$ carries the leader's input unless the leader is corrupted.
   \item D35: the gather rows carry the order in which Algorithm~5 of~\cite{AFW25} sends, where Algorithm~4 of the source blueprint states each send as a rule firing on its receipts alone.
     The vote requires the sender's own $\mathrm{ECHO}$, the bind call requires the sender's own $\mathrm{VOTE}$ and no earlier bind call, and the return requires the returner's own bind call, which the write-once field $\mathit{sentBind}$ of the gather record holds.
@@ -1319,13 +1319,13 @@ No rule reads a second process, and Definitions~\ref{def:aba-procnet} and~\ref{d
 
 \input{nodes/def-aba-protocol}
 
-\blueprintfig{fig-protocol}{The protocol \leandecl{PLTS.ABA.ABDY.protocol}: the $n$ programs $\mathrm{ABAProgram}(P,j)$, \leandecl{PLTS.ABA.ABDY.ABAProgram}, under $\mathrm{syncProduct}$, the network adversary \leandecl{PLTS.ABA.ABDY.network} and the coin oracle beside the group.
+\blueprintfig{fig-protocol}{The protocol \leandecl{PLTS.ABA.ABDY.protocol}: the $n$ programs $\mathrm{ABAProgram}(P,j)$, \leandecl{PLTS.ABA.ABDY.ABAProgram}, under $\mathrm{synchronisedProduct}$, the network adversary \leandecl{PLTS.ABA.ABDY.network} and the coin oracle beside the group.
 Each program holds one process's round loop beside its stage-side record, the stage record of every round it has touched and its termination flag (D22); every guard of its forty-three rules reads that program's own record, and what any of them reads of corruption is that record's own replacement flag (D23).
 Its state \leandecl{PLTS.ABA.ABDY.NetworkState} holds the sent sets $sent(r,j)$ and $decidedSent(j)$, the corrupted set $F$ and the ghost record $ghostRecord(r)$ of each round, that round's bound bit (D30); its twenty-one rules supply the other half of every send, every delivery, every Byzantine handshake row and the Byzantine return, and the corruption budget is the guard on its own $\mathrm{fail}$ row.
 The inner dashed frame is $\mathrm{relabel} \circ \mathrm{abstract}\,\mathrm{networkEventLabels}$: every $\mathrm{gbcaSend}$, $\mathrm{gbcaDeliver}$, $\mathrm{decidedSend}$, $\mathrm{decidedDeliver}$, $\mathrm{retWPublish}$, $\mathrm{gbcaCallLoop}$ and Byzantine handshake row becomes $\tau$.
 The coin oracle is joined through the partial map $\mathrm{coinLabelMap}$, so the handshake rows $\mathrm{byzantineCallW}$ and $\mathrm{byzantineRetW}$ and the fused return $\mathrm{retWPublish}$ reach it as coin handshakes while the network labels leave it idle.
 The outer dashed frame is $\mathrm{abstract}_H$, which hides the coin handshake $\mathrm{callW}/\mathrm{retW}$; what leaves it is the API $\mathrm{callABA}/\mathrm{retABA}/\mathrm{fail}$ together with $\tau$.
-The dashed vertical is Theorem~\ref{thm:aba-protocol-composed}: the protocol is forward-simulated by the same system read as a composition of components, along the Dirac lift of $\mathrm{ProtocolRel}$.}
+The dashed vertical is Theorem~\ref{thm:aba-protocol-composed}: the protocol is forward-simulated by the same system read as a composition of components, along the Dirac lift of $\mathrm{ProtocolRelation}$.}
 
 \dynamics{What is distributed and what is not}{%
 Calling the encoding a distributed algorithm is a claim about which state a
@@ -1644,10 +1644,10 @@ The gather-based implementation is carried by the refinements of Section~\ref{se
 
 \input{nodes/thm-gbca-inst-refines}
 
-\blueprintfig{fig-gbca-sim}{The GBCA instance forward simulation \leandecl{PLTS.ABA.GBCA.ByABDY.refinesSpecification}, along the relation \leandecl{PLTS.ABA.GBCA.ByABDY.instRel}: implementation rows above, specification-instance states below, dashed verticals the relation.
+\blueprintfig{fig-gbca-sim}{The GBCA instance forward simulation \leandecl{PLTS.ABA.GBCA.ByABDY.refinesSpecification}, along the relation \leandecl{PLTS.ABA.GBCA.ByABDY.specificationRelation}: implementation rows above, specification-instance states below, dashed verticals the relation.
 The implementation call, the network deliveries (including Byzantine injection), and the graded returns align to the specification's $\mathrm{call}$, its stutter, and its graded returns, with $F$ aligned on both sides.
 Every delivery, relay, echo, vote, bind and echo5 row maps to a specification stutter, and the implementation call maps to the specification call.
-A return whose bit the specification has not yet excluded is answered by a weak run: it maps to the weak step $\mathrm{bindUnset};\mathrm{ret}$, whose $f{+}1$ support is supplied by the $input\_supp$ invariant and whose excluded bit is pinned by the return's own exclusion certificate.
+A return whose bit the specification has not yet excluded is answered by a weak run: it maps to the weak step $\mathrm{bindUnset};\mathrm{ret}$, whose $f{+}1$ support is supplied by the $input\_support$ invariant and whose excluded bit is pinned by the return's own exclusion certificate.
 Every return row does the same case split on $excluded$, $C$-returns included, however many returns preceded it; a return whose exclusion has already happened maps to a single graded specification return.
 The relation also reads $excluded$ off the network state's bound bit: empty while the bit is unwritten, and the singleton of the bit's complement once a return has written it.}
 
@@ -1705,7 +1705,7 @@ Its relation is defined on the state of $\mathrm{hybrid}(P)$ itself, where the r
 
 \input{nodes/thm-aba-hybrid-spec}
 
-\blueprintfig{fig-coresim}{The simulation of Theorem~\ref{thm:aba-hybrid-spec}, \leandecl{PLTS.ABA.coreSim}: the two-phase abstract state, its stutter answering every concrete row --- the coin's resolving call, the one probabilistic row among them, included --- under a constant coupling, and the single \leandeclnamed{decide}{PLTS.ABA.SpecStep.decide} step that leads the first $\mathrm{retABA}$, the two together forming one weak step.}
+\blueprintfig{fig-coresim}{The simulation of Theorem~\ref{thm:aba-hybrid-spec}, \leandecl{PLTS.ABA.hybridRefinesSpecification}: the two-phase abstract state, its stutter answering every concrete row --- the coin's resolving call, the one probabilistic row among them, included --- under a constant coupling, and the single \leandeclnamed{decide}{PLTS.ABA.SpecStep.decide} step that leads the first $\mathrm{retABA}$, the two together forming one weak step.}
 
 \dynamics{What the simulation buys}{%
 The abstract state of a state of the hybrid is lazy.
@@ -1738,7 +1738,7 @@ Three steps separate the protocol from the ABA specification:
   \;\overset{\text{(2)}}{\sqsubseteq}\; \mathrm{hybrid}(P)
   \;\overset{\text{(3)}}{\sqsubseteq}\; \mathrm{spec}(P),
 \]
-where (1) is the composition inclusion of Theorem~\ref{thm:aba-protocol-composed}, along the Dirac lift of $\mathrm{ProtocolRel}(P)$; (2) the substitution of Theorem~\ref{thm:aba-substitution}; and (3) the refinement of Theorem~\ref{thm:aba-hybrid-spec}, the hand-built core simulation.
+where (1) is the composition inclusion of Theorem~\ref{thm:aba-protocol-composed}, along the Dirac lift of $\mathrm{ProtocolRelation}(P)$; (2) the substitution of Theorem~\ref{thm:aba-substitution}; and (3) the refinement of Theorem~\ref{thm:aba-hybrid-spec}, the hand-built core simulation.
 The subject of the chain is the protocol.
 No step of it leaves the protocol's vocabulary for the sake of the argument, and neither does the proof of any step: all three are read in the protocol's coordinates throughout, the relation of (3) included.
 The safety carried along the chain is the pair of predicates of Theorem~\ref{thm:aba-spec-safe}, read at never-corrupted returners (D23).
@@ -1957,17 +1957,17 @@ See \leanmodule{Leslie2Protocols/ABA/GBCA/AFW/Counting},
 \blueprintfig{fig-gather-tiers}{One round of the gather-based implementation, \leandecl{PLTS.ABA.GBCA.ByAFW.roundOverBracha}, drawn open, and the three substitutions that carry it to Transition System~2.
 A round is $n$ graded-agreement programs beside the network of the graded-agreement layer, which holds the bound bit and nothing else, in parallel with two gather instances of the binding form (D33), one over the input bits and one over the candidates; each gather is $n$ programs beside the gather network, which holds the core, in parallel with $2n$ Bracha instances.
 That is $4n + 2$ networks in a single round --- $2n$ broadcasts for the inputs and $2n$ for the $\mathrm{BIND}$ payloads (D32, D33), beside the two gather networks --- which is the count the flat reading collapses into one tagged sent-set family.
-The three tiers above it --- the three systems that carry one round, from the pair of gather specifications down to Bracha --- replace one layer at a time: \leandecl{PLTS.ABA.GBCA.ByAFW.lowPairRefines} replaces each Bracha instance by the BRB specification, by congruence, \leandecl{PLTS.ABA.GBCA.ByAFW.idealRefines} each gather instance by the gather specification, by congruence, and \leandecl{PLTS.ABA.GBCA.ByAFW.pairRefines} reads the grade off the two cores, each written once, and the exclusion set off the round's bound bit.
+The three tiers above it --- the three systems that carry one round, from the pair of gather specifications down to Bracha --- replace one layer at a time: \leandecl{PLTS.ABA.GBCA.ByAFW.broadcastSubstitution} replaces each Bracha instance by the BRB specification, by congruence, \leandecl{PLTS.ABA.GBCA.ByAFW.gatherSubstitution} each gather instance by the gather specification, by congruence, and \leandecl{PLTS.ABA.GBCA.ByAFW.refinesSpecification} reads the grade off the two cores, each written once, and the exclusion set off the round's bound bit.
 At each tier the layer's network holds that bound bit, written at the first gather's first return and untouched by either substitution.
 Each is a plain forward simulation, so the three compose.}
 \input{nodes/thm-gbca-tier-refines}
 
 \blueprintfig{fig-gather-sim}{The three tier simulations of one round, with the concrete rows on the right and the relation dashed.
 Each stage idealises away one layer and holds the layers above it equal.
-Under \leandecl{PLTS.ABA.GBCA.ByAFW.LowPairRel} every $\mathrm{ECHO}$, $\mathrm{VOTE}$ and delivery of a Bracha instance is answered by a stutter of the specification coordinate that replaces it.
-Under \leandecl{PLTS.ABA.GBCA.ByAFW.IdealRel} gather's own rows stutter in the same way, and a broadcast return, which writes a program's store, is answered by the specification's return.
-Under \leandecl{PLTS.ABA.GBCA.ByAFW.PairRel} the return rows carry the refinement: a return whose bit the specification has not yet excluded is answered by the weak run $\mathrm{bindUnset};\mathrm{ret}$, and a return whose exclusion has already happened is a single graded return.
-The layer's network is held equal by the two substitutions, and \leandecl{PLTS.ABA.GBCA.ByAFW.PairRel} pins $excluded$ to the complement of the bit standing there.}
+Under \leandecl{PLTS.ABA.GBCA.ByAFW.BroadcastSubstitutionRelation} every $\mathrm{ECHO}$, $\mathrm{VOTE}$ and delivery of a Bracha instance is answered by a stutter of the specification coordinate that replaces it.
+Under \leandecl{PLTS.ABA.GBCA.ByAFW.GatherSubstitutionRelation} gather's own rows stutter in the same way, and a broadcast return, which writes a program's store, is answered by the specification's return.
+Under \leandecl{PLTS.ABA.GBCA.ByAFW.SpecificationRelation} the return rows carry the refinement: a return whose bit the specification has not yet excluded is answered by the weak run $\mathrm{bindUnset};\mathrm{ret}$, and a return whose exclusion has already happened is a single graded return.
+The layer's network is held equal by the two substitutions, and \leandecl{PLTS.ABA.GBCA.ByAFW.SpecificationRelation} pins $excluded$ to the complement of the bit standing there.}
 \input{nodes/thm-gbca-gather-refines}
 
 Both implementations of Transition System~2 stand above, so binding can be read at each of them.

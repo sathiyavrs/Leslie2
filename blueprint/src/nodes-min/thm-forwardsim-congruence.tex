@@ -1,12 +1,12 @@
 \begin{theorem}[Forward simulation is a congruence for the composition operators]
   \label{thm:forwardsim-congruence}
-  \lean{PLTS.ForwardSimulation.parallel_right}\lean{PLTS.ForwardSimulation.parallel_left}\lean{PLTS.ForwardSimulation.syncProduct}\lean{PLTS.ForwardSimulation.abstract}\lean{PLTS.ForwardSimulation.relabel}\lean{PLTS.ForwardSimulation.trans}\leanok
+  \lean{PLTS.ForwardSimulation.parallel_right}\lean{PLTS.ForwardSimulation.parallel_left}\lean{PLTS.ForwardSimulation.synchronisedProduct}\lean{PLTS.ForwardSimulation.abstract}\lean{PLTS.ForwardSimulation.relabel}\lean{PLTS.ForwardSimulation.trans}\leanok
   \uses{def:forwardsim, def:process-algebra, def:relabel, def:syncproduct}
-  Forward simulation between labelled transition systems survives each operator a composition is built from --- parallel composition on either side, the full-synchronisation product of a finite family, hiding a label set, and restriction along the left embedding --- and two forward simulations compose: \leandecl{PLTS.ForwardSimulation.parallel_right}, \leandecl{PLTS.ForwardSimulation.parallel_left}, \leandecl{PLTS.ForwardSimulation.syncProduct}, \leandecl{PLTS.ForwardSimulation.abstract}, \leandecl{PLTS.ForwardSimulation.relabel} and \leandecl{PLTS.ForwardSimulation.trans}.
+  Forward simulation between labelled transition systems survives each operator a composition is built from --- parallel composition on either side, the full-synchronisation product of a finite family, hiding a label set, and restriction along the left embedding --- and two forward simulations compose: \leandecl{PLTS.ForwardSimulation.parallel_right}, \leandecl{PLTS.ForwardSimulation.parallel_left}, \leandecl{PLTS.ForwardSimulation.synchronisedProduct}, \leandecl{PLTS.ForwardSimulation.abstract}, \leandecl{PLTS.ForwardSimulation.relabel} and \leandecl{PLTS.ForwardSimulation.trans}.
   Replacing one component of a composition by a system that simulates it is an application of these, and every substitution inside a gather instance and inside a graded-agreement round is proved that way.
 \end{theorem}
 
 \begin{proof}\leanok
   \uses{def:forwardsim, def:process-algebra, def:syncproduct, def:weakstep}
-  See the Lean proofs of \leandecl{PLTS.ForwardSimulation.parallel_right}, \leandecl{PLTS.ForwardSimulation.syncProduct}, \leandecl{PLTS.ForwardSimulation.abstract}, \leandecl{PLTS.ForwardSimulation.relabel} and \leandecl{PLTS.ForwardSimulation.trans}.
+  See the Lean proofs of \leandecl{PLTS.ForwardSimulation.parallel_right}, \leandecl{PLTS.ForwardSimulation.synchronisedProduct}, \leandecl{PLTS.ForwardSimulation.abstract}, \leandecl{PLTS.ForwardSimulation.relabel} and \leandecl{PLTS.ForwardSimulation.trans}.
 \end{proof}

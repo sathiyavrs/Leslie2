@@ -5,7 +5,7 @@
   The composed system of Definition~\ref{def:aba-composed} with its graded-agreement component replaced by the family $\mathrm{gbcaSpecificationFamily}(P)$ of round specifications, the other three components and the whole pipeline unchanged:
   \[
     \mathrm{hybridExtended}(P) \;=\;
-      \mathrm{gbcaSpecificationFamily}(P) \parallel \bigl(\mathrm{syncProduct}_{j}\ \mathrm{roundLoopProgram}(P,j)
+      \mathrm{gbcaSpecificationFamily}(P) \parallel \bigl(\mathrm{synchronisedProduct}_{j}\ \mathrm{roundLoopProgram}(P,j)
         \parallel (\mathrm{ABANetwork}(P) \parallel \mathrm{coinOverRoundAlphabet}(P))\bigr),
   \]
   and $\mathrm{hybrid}(P)$ is that read through the two frames of $\abdy{\mathrm{composed}}(P)$. The system stays in the protocol's own coordinates: the round loops are $n$ programs, the DECIDED sets and the corrupted set are the ABA-side network's, and only the graded-agreement rounds are read at specification level.

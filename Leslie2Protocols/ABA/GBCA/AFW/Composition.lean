@@ -91,7 +91,7 @@ structure ProcessRecord (n : ℕ) : Type where
   /-- Whether the second gather has been called here. -/
   called2 : Bool
   /-- The graded outcome the second gather's return determines. -/
-  out : Option GBCAOutput
+  output : Option GBCAOutput
   /-- Whether the round has returned here. -/
   returned : Bool
   deriving DecidableEq
@@ -134,7 +134,8 @@ def roundEvents (n : ℕ) : Set (RoundLabel n) := {l | ∃ e : RoundEvent n, l =
 @[simp] theorem inr_mem_roundEvents {n : ℕ} (e : RoundEvent n) : Sum.inr e ∈ roundEvents n := ⟨e,
   rfl⟩
 
-@[simp] theorem rlab_tau (n : ℕ) : (Silent.τ : RoundLabel n) = Sum.inl (Sum.inl Label.tau) := rfl
+@[simp] theorem roundLabel_tau (n : ℕ) :
+    (Silent.τ : RoundLabel n) = Sum.inl (Sum.inl Label.tau) := rfl
 
 /-! ### The program's alphabet -/
 
@@ -164,7 +165,7 @@ inductive ProgramLabel (n : ℕ) : Type
 
 instance {n : ℕ} : Silent (ProgramLabel n) := ⟨ProgramLabel.tau⟩
 
-@[simp] theorem plab_tau (n : ℕ) : (Silent.τ : ProgramLabel n) = ProgramLabel.tau := rfl
+@[simp] theorem programLabel_tau (n : ℕ) : (Silent.τ : ProgramLabel n) = ProgramLabel.tau := rfl
 
 /-! ### The pullbacks
 
@@ -455,8 +456,9 @@ inductive ProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
       ProgramStep P r j p (.secondGatherCall i x) (PMF.pure p)
   /-- The second gather returns here: record the grade of its entries. -/
   | secondGatherReturn (p : ProcessRecord P.n) (g : Fin P.n → Option (Option Bool))
-      (C : Gather.AcceptedPairs P.n (Option Bool)) (h2 : p.called2 = true) (ho : p.out = none) :
-      ProgramStep P r j p (.secondGatherReturn j g C) (PMF.pure { p with out := some (gradeOf P g)
+      (C : Gather.AcceptedPairs P.n (Option Bool)) (h2 : p.called2 = true) (ho : p.output = none) :
+      ProgramStep P r j p (.secondGatherReturn j g C) (PMF.pure { p with output := some (gradeOf P
+        g)
         })
   /-- The second gather's return to another process: not `j`'s business. -/
   | secondGatherReturnIdle (p : ProcessRecord P.n) (i : Fin P.n) (g : Fin P.n → Option (Option
@@ -466,10 +468,10 @@ inductive ProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
   /-- The round returns the recorded grade. The return announces the grade and
   the record drops it. The announced bit is the layer's network's to
   determine. -/
-  | retG (p : ProcessRecord P.n) (out : GBCAOutput) (bnd : Bool) (ho : p.out = some out)
+  | retG (p : ProcessRecord P.n) (out : GBCAOutput) (bnd : Bool) (ho : p.output = some out)
       (hr : p.returned = false) :
       ProgramStep P r j p (.retG r j out bnd)
-        (PMF.pure { p with out := none, returned := true })
+        (PMF.pure { p with output := none, returned := true })
   /-- A return to another process: not `j`'s business. -/
   | retGIdle (p : ProcessRecord P.n) (i : Fin P.n) (out : GBCAOutput) (bnd : Bool) (hi : i ≠ j) :
       ProgramStep P r j p (.retG r i out bnd) (PMF.pure p)
@@ -537,7 +539,7 @@ noncomputable def GBCANetwork (P : Parameters) (r : ℕ) : System (Option Bool) 
 network, each read along `programLabelMap`. -/
 noncomputable def roundPrograms (P : Parameters) (r : ℕ) :
     System ((∀ _ : Fin P.n, ProcessRecord P.n) × Option Bool) (RoundLabel P.n) :=
-  (System.syncProduct (fun j => (gbcaProgram P r j).mapIdle (programLabelMap P.n))).parallel
+  (System.synchronisedProduct (fun j => (gbcaProgram P r j).mapIdle (programLabelMap P.n))).parallel
     ((GBCANetwork P r).mapIdle (programLabelMap P.n))
 
 @[simp] theorem roundPrograms_init (P : Parameters) (r : ℕ) :
@@ -749,8 +751,9 @@ theorem GBCANetwork_isLTS (P : Parameters) (r : ℕ) : (GBCANetwork P r).IsLTS :
 
 /-- The synchronised group of programs is an LTS. -/
 theorem programsProduct_isLTS (P : Parameters) (r : ℕ) :
-    (System.syncProduct (fun j => (gbcaProgram P r j).mapIdle (programLabelMap P.n))).IsLTS :=
-  System.syncProduct_isLTS (fun j => System.mapIdle_isLTS _ (gbcaProgram_isLTS P r j))
+    (System.synchronisedProduct (fun j => (gbcaProgram P r j).mapIdle (programLabelMap P.n))).IsLTS
+      :=
+  System.synchronisedProduct_isLTS (fun j => System.mapIdle_isLTS _ (gbcaProgram_isLTS P r j))
 
 /-- The layer is an LTS. -/
 theorem roundPrograms_isLTS (P : Parameters) (r : ℕ) : (roundPrograms P r).IsLTS :=
@@ -796,12 +799,12 @@ theorem roundOverGatherSpecifications_isLTS (P : Parameters) (r : ℕ) :
 of the round's ports or one of its events. -/
 theorem programStep_no_tau {j : Fin P.n} {p : ProcessRecord P.n} {ν : PMF (ProcessRecord P.n)}
     (h : ProgramStep P r j p (Silent.τ : ProgramLabel P.n) ν) : False := by
-  rw [plab_tau] at h; cases h
+  rw [programLabel_tau] at h; cases h
 
 /-- No rule of the layer's network fires on the silent label. -/
 theorem networkStep_no_tau {w : Option Bool} {μ : PMF (Option Bool)}
     (h : NetworkStep P r w (Silent.τ : ProgramLabel P.n) μ) : False := by
-  rw [plab_tau] at h; cases h
+  rw [programLabel_tau] at h; cases h
 
 /-- No program rule fires on a family label outside the round's interface. -/
 theorem programStep_outside {j : Fin P.n} {p : ProcessRecord P.n} {ν : PMF (ProcessRecord P.n)}
@@ -815,7 +818,8 @@ theorem networkStep_outside {w : Option Bool} {μ : PMF (Option Bool)}
 /-- The program group has no silent transition. -/
 theorem programsProduct_no_tau {u : ∀ _ : Fin P.n, ProcessRecord P.n}
     {μ : PMF (∀ _ : Fin P.n, ProcessRecord P.n)}
-    (h : (System.syncProduct (fun j => (gbcaProgram P r j).mapIdle (programLabelMap P.n))).step u
+    (h : (System.synchronisedProduct (fun j => (gbcaProgram P r j).mapIdle (programLabelMap
+      P.n))).step u
       (Silent.τ : RoundLabel P.n) μ) : False := by
   rcases h with ⟨hτ, -⟩ | ⟨-, i, μ_i, hstep, -⟩
   · exact hτ rfl
@@ -836,7 +840,7 @@ end Determinacy
 
 /-! ### Reading and building the round's transitions
 
-The pipeline is `relabel ∘ abstract ∘ parallel ∘ (parallel ∘ syncProduct,
+The pipeline is `relabel ∘ abstract ∘ parallel ∘ (parallel ∘ synchronisedProduct,
 mapIdle, mapIdle)`; the lemmas below unfold it once and for all, in both
 directions. -/
 
@@ -871,8 +875,8 @@ variable {P : Parameters} {r : ℕ} {u x : ∀ _ : Fin P.n, ProcessRecord P.n} {
   {L : RoundLabel P.n}
 
 /-- A label with an image other than the silent one is visible. -/
-theorem rlab_ne_tau {lp : ProgramLabel P.n} (hlp : programLabelMap P.n L = some lp) (hlpτ : lp ≠
-  ProgramLabel.tau) :
+theorem roundLabel_ne_tau {lp : ProgramLabel P.n} (hlp : programLabelMap P.n L = some lp)
+    (hlpτ : lp ≠ ProgramLabel.tau) :
     L ≠ (Silent.τ : RoundLabel P.n) := by
   intro hc
   subst hc
@@ -880,8 +884,8 @@ theorem rlab_ne_tau {lp : ProgramLabel P.n} (hlp : programLabelMap P.n L = some 
   exact hlpτ (Option.some.inj hlp).symm
 
 /-- A label with no image at a program is visible. -/
-theorem rlab_ne_tau_of_none (hlp : programLabelMap P.n L = none) : L ≠ (Silent.τ : RoundLabel P.n)
-  := by
+theorem roundLabel_ne_tau_of_none (hlp : programLabelMap P.n L = none) :
+    L ≠ (Silent.τ : RoundLabel P.n) := by
   intro hc
   subst hc
   rw [programLabelMap_tau] at hlp
@@ -891,7 +895,8 @@ theorem rlab_ne_tau_of_none (hlp : programLabelMap P.n L = none) : L ≠ (Silent
 program steps, and the joint distribution is Dirac. -/
 theorem programsProduct_inv (hL : L ≠ (Silent.τ : RoundLabel P.n))
     {μ : PMF (∀ _ : Fin P.n, ProcessRecord P.n)}
-    (h : (System.syncProduct (fun j => (gbcaProgram P r j).mapIdle (programLabelMap P.n))).step u L
+    (h : (System.synchronisedProduct (fun j => (gbcaProgram P r j).mapIdle (programLabelMap
+      P.n))).step u L
       μ) :
     ∃ x : ∀ _ : Fin P.n, ProcessRecord P.n, μ = PMF.pure x ∧
       ∀ i, ((gbcaProgram P r i).mapIdle (programLabelMap P.n)).step (u i) L (PMF.pure (x i)) :=
@@ -901,7 +906,7 @@ theorem programsProduct_inv (hL : L ≠ (Silent.τ : RoundLabel P.n))
 theorem roundPrograms_idle_inv (hlp : programLabelMap P.n L = none)
     {μ : PMF ((∀ _ : Fin P.n, ProcessRecord P.n) × Option Bool)}
     (h : (roundPrograms P r).step (u, v) L μ) : μ = PMF.pure (u, v) := by
-  have hL := rlab_ne_tau_of_none hlp
+  have hL := roundLabel_ne_tau_of_none hlp
   rw [roundPrograms, System.parallel_step] at h
   rcases h with ⟨-, μ₁, μ₂, hs, hn, rfl⟩ | ⟨hτ, -⟩ | ⟨hτ, -⟩
   · obtain ⟨y, rfl, hall⟩ := programsProduct_inv hL hs
@@ -920,7 +925,7 @@ theorem roundPrograms_label_inv {lp : ProgramLabel P.n} (hlp : programLabelMap P
     (h : (roundPrograms P r).step (u, v) L μ) :
     ∃ (x : ∀ _ : Fin P.n, ProcessRecord P.n) (v' : Option Bool), μ = PMF.pure (x, v') ∧
       (∀ i, ProgramStep P r i (u i) lp (PMF.pure (x i))) ∧ NetworkStep P r v lp (PMF.pure v') := by
-  have hL := rlab_ne_tau hlp hlpτ
+  have hL := roundLabel_ne_tau hlp hlpτ
   rw [roundPrograms, System.parallel_step] at h
   rcases h with ⟨-, μ₁, μ₂, hs, hn, rfl⟩ | ⟨hτ, -⟩ | ⟨hτ, -⟩
   · obtain ⟨y, rfl, hall⟩ := programsProduct_inv hL hs
@@ -960,9 +965,9 @@ theorem roundPrograms_label_pure {lp : ProgramLabel P.n} (hlp : programLabelMap 
 theorem roundPrograms_idle_step (hlp : programLabelMap P.n L = none) :
     (roundPrograms P r).step (u, v) L (PMF.pure (u, v)) := by
   rw [roundPrograms, System.parallel_step]
-  exact Or.inl ⟨rlab_ne_tau_of_none hlp, PMF.pure u, PMF.pure v,
-    Gather.synchronisedProductMapIdle_pure (rlab_ne_tau_of_none hlp) (fun i => Gather.lift_idle
-      hlp),
+  exact Or.inl ⟨roundLabel_ne_tau_of_none hlp, PMF.pure u, PMF.pure v,
+    Gather.synchronisedProductMapIdle_pure (roundLabel_ne_tau_of_none hlp)
+      (fun i => Gather.lift_idle hlp),
     Gather.lift_idle hlp, (prodPMF_pure_pure _ _).symm⟩
 
 /-- Build the layer's joint transition from the programs' rows and the row of
@@ -974,8 +979,8 @@ theorem roundPrograms_label_step {lp : ProgramLabel P.n} (hlp : programLabelMap 
     (hnet : NetworkStep P r v lp (PMF.pure v')) :
     (roundPrograms P r).step (u, v) L (PMF.pure (x, v')) := by
   rw [roundPrograms, System.parallel_step]
-  exact Or.inl ⟨rlab_ne_tau hlp hlpτ, PMF.pure x, PMF.pure v',
-    Gather.synchronisedProductMapIdle_pure (rlab_ne_tau hlp hlpτ)
+  exact Or.inl ⟨roundLabel_ne_tau hlp hlpτ, PMF.pure x, PMF.pure v',
+    Gather.synchronisedProductMapIdle_pure (roundLabel_ne_tau hlp hlpτ)
       (fun i => Gather.row_lift_step hlp (hproc i)),
     Gather.row_lift_step hlp hnet, (prodPMF_pure_pure _ _).symm⟩
 
@@ -1112,7 +1117,7 @@ theorem roundOverGathers_label_step {l : ExtendedLabel P.n} (hl : l ≠ Sum.inl 
       (c', d'))) := by
   refine (roundOverGathers_step_iff P r firstGather secondGather _ _ _).mpr
     (Or.inr (roundOverGathersExtended_label_step ?_ hlayer hga1 hga2))
-  rw [rlab_tau]
+  rw [roundLabel_tau]
   simpa using hl
 
 /-- A silent step of the first gather is a silent transition of the round. -/
@@ -1207,7 +1212,7 @@ theorem programStep_secondGatherCall_foreign {i : Fin P.n} {x : Option Bool} (hi
 theorem programStep_secondGatherReturn_own {g : Fin P.n → Option (Option Bool)}
     {C : Gather.AcceptedPairs P.n (Option Bool)} (h : ProgramStep P r j p (.secondGatherReturn j g
       C) ν) :
-    p.called2 = true ∧ p.out = none ∧ ν = PMF.pure { p with out := some (gradeOf P g) } := by
+    p.called2 = true ∧ p.output = none ∧ ν = PMF.pure { p with output := some (gradeOf P g) } := by
   cases h
   case secondGatherReturn => exact ⟨by assumption, by assumption, rfl⟩
   case secondGatherReturnIdle => exact absurd rfl ‹_ ≠ j›
@@ -1222,8 +1227,8 @@ theorem programStep_secondGatherReturn_foreign {i : Fin P.n} {g : Fin P.n → Op
 
 theorem programStep_retG_own {out : GBCAOutput} {bnd : Bool}
     (h : ProgramStep P r j p (.retG r j out bnd) ν) :
-    p.out = some out ∧ p.returned = false ∧
-      ν = PMF.pure { p with out := none, returned := true } := by
+    p.output = some out ∧ p.returned = false ∧
+      ν = PMF.pure { p with output := none, returned := true } := by
   cases h
   case retG => exact ⟨by assumption, by assumption, rfl⟩
   case retGIdle => exact absurd rfl ‹_ ≠ j›

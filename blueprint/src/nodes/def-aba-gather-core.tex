@@ -1,6 +1,6 @@
 \begin{definition}[The core of a gather network state]
   \label{def:aba-gather-core}
-  \lean{PLTS.ABA.Gather.correct}\lean{PLTS.ABA.Gather.dominatedBy}\lean{PLTS.ABA.Gather.dominators}\lean{PLTS.ABA.Gather.echoOf}\lean{PLTS.ABA.Gather.coreOf}\lean{PLTS.ABA.Gather.IdealInv}\lean{PLTS.ABA.Gather.single_core}\lean{PLTS.ABA.Gather.single_core_approved}\lean{PLTS.ABA.Gather.bindAbove}\lean{PLTS.ABA.Gather.coreOf_recorded}\leanok
+  \lean{PLTS.ABA.Gather.correct}\lean{PLTS.ABA.Gather.dominatedBy}\lean{PLTS.ABA.Gather.dominators}\lean{PLTS.ABA.Gather.echoOf}\lean{PLTS.ABA.Gather.coreOf}\lean{PLTS.ABA.Gather.Invariant}\lean{PLTS.ABA.Gather.single_core}\lean{PLTS.ABA.Gather.single_core_approved}\lean{PLTS.ABA.Gather.bindAbove}\lean{PLTS.ABA.Gather.coreOf_recorded}\leanok
   \uses{def:aba-gather-ideal, def:aba-params}
   The core of the instance of Definition~\ref{def:aba-gather-ideal} is a payload set read off one network state, and the size bound the core rule of Definition~\ref{def:aba-gather-spec} requires is a theorem about it.
   Write $w$ for a gather network state, that is, the per-sender sent sets beside the corrupted set.
@@ -21,7 +21,7 @@
     n - f - |F| \;\le\; |\mathrm{dominators}(w, j_0)|,
   \]
   and $n - f - |F| \ge f + 1$ at $3f < n$ and $|F| \le f$.
-  The invariant \leandecl{PLTS.ABA.Gather.IdealInv} ties an honest sender's sent messages to its write-once fields and those fields to the receipt quorums behind them, and adds one clause, $echo\_appr$: every entry in any process's $\mathrm{ECHO}$ field is a committed input-broadcast entry.
+  The invariant \leandecl{PLTS.ABA.Gather.Invariant} ties an honest sender's sent messages to its write-once fields and those fields to the receipt quorums behind them, and adds one clause, $echo\_approved$: every entry in any process's $\mathrm{ECHO}$ field is a committed input-broadcast entry.
   Under it, once one process outside $F$ holds a committed $\mathrm{BIND}$ payload, the core has at least $n - f$ entries, its entries are committed input-broadcast entries, and it lies below the committed $\mathrm{BIND}$ payload of every process outside $F$.\lean{PLTS.ABA.Gather.single_core}\lean{PLTS.ABA.Gather.single_core_approved}\leanok{} That the core lies below such a payload $U$ is the transfer: the $f{+}1$ dominators of the sender the core comes from meet the $n - f$ $\mathrm{VOTE}$ quorum backing $U$, and the meeting process's write-once $\mathrm{VOTE}$ payload lies above the core and below $U$.
   The size bound is the $\mathrm{ECHO}$ payload's own, an honest sender sending $n - f$ entries in it.
   The certificate that holds the returns after the first to the core that first return writes is $\mathrm{bindAbove}$, the coordinates holding a committed $\mathrm{BIND}$ payload above it.

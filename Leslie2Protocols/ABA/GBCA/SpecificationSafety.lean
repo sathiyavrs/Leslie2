@@ -76,13 +76,13 @@ formulation, taken verbatim: `NeverCorrupted P t id` is non-membership in
 `failSet P t k` for every `k`, the trace-level fold of D1-`corrupt` over the
 `fail` labels, so a `fail id` that the budget refuses does not count as
 corruption. Validity is the D15 counts read against that budget. The state
-carries no invariant beyond a bookkeeping one (`CallInv`: every pending input
+carries no invariant beyond a bookkeeping one (`CallInvariant`: every pending input
 is attributed to a `callG` event of the history, and `F` is the fold of the
 history's `fail` labels); the argument is then a pigeonhole. At any state,
 every id supporting the dissenting bit `!v` is corrupted at some stage of the
 trace — a caller of `!v` by unanimity, an `F`-member by the fold — and
 `failSet` is monotone in the stage, so the whole support set sits inside one
-`failSet P t K`, of size at most `f` (`supp_le_of_unanimous`). The D15 guards
+`failSet P t K`, of size at most `f` (`support_le_of_unanimous`). The D15 guards
 asking `f + 1` there are therefore unreachable: `bindUnset v` never fires, so
 `v` is alive at every state (`excluded_notMem_of_unanimous`), which forces the
 value-bearing returns to hand out `v`; the same cap refutes the `C`-return's
@@ -265,7 +265,7 @@ theorem retG_value_guards {s : SpecState P.n} {id : Fin P.n} {o : GBCAOutput}
 
 /-- The D15 dissent count of a `B`-return: `f + 1` support at the bit it does
 not hand out. -/
-private theorem retB_supp {s : SpecState P.n} {id : Fin P.n} {v β : Bool}
+private theorem retB_support {s : SpecState P.n} {id : Fin P.n} {v β : Bool}
     {μ : PMF (SpecState P.n)} (hstep : Step P r s (.retG r id (.B v) β) μ) :
     P.f + 1 ≤
       (Finset.univ.filter (fun id' => s.call id' = some (!v) ∨ id' ∈ s.F)).card :=
@@ -529,23 +529,23 @@ theorem corrupt_F (s : SpecState P.n) (id : Fin P.n) :
 to a `callG` event of the label history, and the corrupted set is exactly the
 fold of D1-`corrupt` over that history. Both conjuncts are read off the rules:
 `call` is written only by the `callG`-labelled rule, `F` only by `fail`. -/
-structure CallInv (P : Parameters) (r : ℕ) (pre : List (Label P.n))
+structure CallInvariant (P : Parameters) (r : ℕ) (pre : List (Label P.n))
     (s : SpecState P.n) : Prop where
   /-- Every pending input has a `callG` event behind it. -/
-  call_src : ∀ id b, s.call id = some b → Label.callG r id b ∈ pre
+  call_source : ∀ id b, s.call id = some b → Label.callG r id b ∈ pre
   /-- The corrupted set is the fold of the history's `fail` labels. -/
   F_eq : s.F = failSetOfList P pre
 
-theorem CallInv.initial (P : Parameters) (r : ℕ) :
-    CallInv P r [] (SpecState.initial P.n) where
-  call_src := fun _ _ h => absurd h (by simp [SpecState.initial])
+theorem CallInvariant.initial (P : Parameters) (r : ℕ) :
+    CallInvariant P r [] (SpecState.initial P.n) where
+  call_source := fun _ _ h => absurd h (by simp [SpecState.initial])
   F_eq := rfl
 
 /-- **Bookkeeping-invariant preservation.** -/
-theorem CallInv.step {pre : List (Label P.n)} {s : SpecState P.n} {l : Label P.n}
+theorem CallInvariant.step {pre : List (Label P.n)} {s : SpecState P.n} {l : Label P.n}
     {μ : PMF (SpecState P.n)} {s' : SpecState P.n}
-    (hI : CallInv P r pre s) (hstep : Step P r s l μ) (hs' : s' ∈ μ.support) :
-    CallInv P r (pre ++ [l]) s' := by
+    (hI : CallInvariant P r pre s) (hstep : Step P r s l μ) (hs' : s' ∈ μ.support) :
+    CallInvariant P r (pre ++ [l]) s' := by
   have mono : ∀ {l' : Label P.n}, l' ∈ pre → l' ∈ pre ++ [l] :=
     fun h => List.mem_append_left _ h
   cases hstep with
@@ -560,7 +560,7 @@ theorem CallInv.step {pre : List (Label P.n)} {s : SpecState P.n} {l : Label P.n
         obtain rfl := Option.some.inj h_in
         exact List.mem_append_right _ (List.mem_singleton.mpr rfl)
       · rw [Function.update_of_ne h_eq] at h_in
-        exact mono (hI.call_src id' b' h_in)
+        exact mono (hI.call_source id' b' h_in)
     · rw [failSetOfList_append]
       exact hI.F_eq
   | fail id =>
@@ -568,12 +568,12 @@ theorem CallInv.step {pre : List (Label P.n)} {s : SpecState P.n} {l : Label P.n
     refine ⟨?_, ?_⟩
     · intro id' b' h_in
       rw [corrupt_call] at h_in
-      exact mono (hI.call_src id' b' h_in)
+      exact mono (hI.call_source id' b' h_in)
     · rw [failSetOfList_append, corrupt_F, hI.F_eq]
       rfl
   | _ =>
     rw [PMF.mem_support_pure_iff] at hs'; subst hs'
-    exact ⟨fun id' b' h_in => mono (hI.call_src id' b' h_in), by
+    exact ⟨fun id' b' h_in => mono (hI.call_source id' b' h_in), by
       rw [failSetOfList_append]; exact hI.F_eq⟩
 
 /-! ### The budget bound on support for the dissenting bit -/
@@ -584,7 +584,7 @@ could draw on is corrupted at some stage of the trace: a caller of `!v` by the
 unanimity hypothesis, an `F`-member because `F` is the trace-level fold. The
 stages form a chain, so the whole set sits inside a single `failSet P t K`,
 which the budget caps at `f`. -/
-theorem supp_le_of_unanimous {t : Seq (Label P.n)} {v : Bool} {s : SpecState P.n}
+theorem support_le_of_unanimous {t : Seq (Label P.n)} {v : Bool} {s : SpecState P.n}
     {j : ℕ} (hun : UnanimousInput P r v t)
     (hcall : ∀ id b, s.call id = some b → Label.callG r id b ∈ t)
     (hF : s.F = failSet P t j) :
@@ -610,7 +610,7 @@ theorem supp_le_of_unanimous {t : Seq (Label P.n)} {v : Bool} {s : SpecState P.n
 /-- **The transfer.** At every state of a genuine execution whose label list is
 `labs` and whose trace is the external filter of `labs`, every pending input
 has its `callG` event in the trace, and the corrupted set is the trace-level
-fold at some stage. Both come from `CallInv` on the history `labs.take k`,
+fold at some stage. Both come from `CallInvariant` on the history `labs.take k`,
 which the filter carries to the trace: it keeps every `fail` label, so the
 fold is unchanged, and prefixes stay prefixes. -/
 theorem trace_transfer {e : AlterSeq (SpecState P.n) (Label P.n)}
@@ -623,14 +623,14 @@ theorem trace_transfer {e : AlterSeq (SpecState P.n) (Label P.n)}
     {k : ℕ} {s : SpecState P.n} (hst : e.stateAt k = some s) :
     (∀ id b, s.call id = some b → Label.callG r id b ∈ t) ∧
       ∃ j, s.F = failSet P t j := by
-  have hI := is_exec_induction_labels (sys := specInst P r) (CallInv P r)
-    (CallInv.initial P r) (fun pre s l μ s' hI hstep hs' => hI.step hstep hs')
+  have hI := is_exec_induction_labels (sys := specInst P r) (CallInvariant P r)
+    (CallInvariant.initial P r) (fun pre s l μ s' hI hstep hs' => hI.step hstep hs')
     he k s hst
   rw [AlterSeq.labelsUpTo_eq_take h_map k] at hI
   obtain ⟨m, hm⟩ : ∃ m, ((labs.take k).filter p).length = m := ⟨_, rfl⟩
   refine ⟨fun id b h => ?_, ⟨m, ?_⟩⟩
   · rw [← h_t, Seq_mem_ofList, List.mem_filter]
-    exact ⟨List.mem_of_mem_take (hI.call_src id b h), hpcall r id b⟩
+    exact ⟨List.mem_of_mem_take (hI.call_source id b h), hpcall r id b⟩
   · rw [hI.F_eq, ← failSetOfList_filter hpfail (labs.take k),
       take_filter_eq_take p labs hm, ← h_t, failSet_ofList]
 
@@ -638,7 +638,7 @@ theorem trace_transfer {e : AlterSeq (SpecState P.n) (Label P.n)}
 
 /-- **Under unanimous input `v`, the bit `v` is alive at every state.** The
 only rule that could exclude it is `bindUnset v`, whose D15 guard counts `f + 1`
-supporters of `!v` — refuted by `supp_le_of_unanimous` at the very state where
+supporters of `!v` — refuted by `support_le_of_unanimous` at the very state where
 the rule would fire. -/
 theorem excluded_notMem_of_unanimous {e : AlterSeq (SpecState P.n) (Label P.n)}
     {t : Seq (Label P.n)} {v : Bool} (he : is_exec e (specInst P r))
@@ -667,35 +667,35 @@ theorem excluded_notMem_of_unanimous {e : AlterSeq (SpecState P.n) (Label P.n)}
         rw [show e.stateAt (k + 1) = (e.trans.get? k).map Prod.snd from rfl,
           hg] at hs
         exact ⟨q, rfl, Option.some.inj hs⟩
-    obtain ⟨s₀, μ, h_state, h_step, h_supp⟩ := he.1 k l s'' h_get
+    obtain ⟨s₀, μ, h_state, h_step, h_support⟩ := he.1 k l s'' h_get
     have hprev : v ∉ s₀.excluded := ih s₀ h_state
     obtain ⟨hcall, j, hF⟩ := hbr k s₀ h_state
     subst h_snd
     cases h_step with
     | bindUnset b hq hw hd0 =>
-      rw [PMF.mem_support_pure_iff] at h_supp
-      subst h_supp
+      rw [PMF.mem_support_pure_iff] at h_support
+      subst h_support
       have hbv : b ≠ v := by
         intro hb
         subst hb
-        have := supp_le_of_unanimous hun hcall hF
+        have := support_le_of_unanimous hun hcall hF
         omega
       simp only [Finset.mem_insert, not_or]
       exact ⟨fun h => hbv h.symm, hprev⟩
     | fail id =>
-      rw [PMF.mem_support_pure_iff] at h_supp
-      subst h_supp
+      rw [PMF.mem_support_pure_iff] at h_support
+      subst h_support
       rw [corrupt_excluded]
       exact hprev
     | _ =>
-      rw [PMF.mem_support_pure_iff] at h_supp
-      subst h_supp
+      rw [PMF.mem_support_pure_iff] at h_support
+      subst h_support
       exact hprev
 
 /-! ### The return refutation -/
 
 /-- Both D15 counts of a `C`-return: `f + 1` support at each bit. -/
-private theorem retC_supp {s : SpecState P.n} {id : Fin P.n} {β : Bool}
+private theorem retC_support {s : SpecState P.n} {id : Fin P.n} {β : Bool}
     {μ : PMF (SpecState P.n)} (hstep : Step P r s (.retG r id .C β) μ)
     (c : Bool) :
     P.f + 1 ≤
@@ -733,8 +733,8 @@ theorem retG_value_of_unanimous {t : Seq (Label P.n)} {v β : Bool}
   | C =>
     exfalso
     obtain ⟨j, hFj⟩ := hF
-    have h1 := retC_supp hstep (!v)
-    have h2 := supp_le_of_unanimous hun hcall hFj
+    have h1 := retC_support hstep (!v)
+    have h2 := support_le_of_unanimous hun hcall hFj
     omega
 
 /-- Pulling a trace label back to an event of the witness execution. -/
@@ -830,8 +830,8 @@ theorem specInst_no_retB (P : Parameters) (r : ℕ) (v : Bool) :
   obtain rfl : w = v := by
     have h := retG_value_of_unanimous hun hcall ⟨j, hFj⟩ hlive hstep
     simpa using h
-  have h1 := retB_supp hstep
-  have h2 := supp_le_of_unanimous hun hcall hFj
+  have h1 := retB_support hstep
+  have h2 := support_le_of_unanimous hun hcall hFj
   omega
 
 /-! ### Mechanical axiom check

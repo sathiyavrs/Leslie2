@@ -57,24 +57,24 @@ probabilistic composite:
 
 ```
 roundOverBracha P r                   -- two gather-over-Bracha instances
-  ⊑ lowPairRefines                    (broadcast substitution, by congruence)
+  ⊑ broadcastSubstitution                    (broadcast substitution, by congruence)
 roundOverBroadcastSpecification P r   -- two gather-over-BRB.Spec instances
-  ⊑ idealRefines                      (gather substitution, by congruence)
+  ⊑ gatherSubstitution                      (gather substitution, by congruence)
 roundOverGatherSpecifications P r     -- two gather specifications + the layer's network
-  ⊑ pairRefines                       (core counting into TS 2, on the composition)
+  ⊑ refinesSpecification                       (core counting into TS 2, on the composition)
 GBCA.specInst P r                     -- GBCA/Specification.lean, D19/D29, read along
                                       -- GBCA.ByABDY.gbcaLabelMap
 
-gatherImplRefines P r : roundOverBracha ⊑ GBCA.ByABDY.specificationOverRoundAlphabet   (probabilistic, trans ×2)
+roundOverBracha_refinesSpecification P r : roundOverBracha ⊑ GBCA.ByABDY.specificationOverRoundAlphabet   (probabilistic, trans ×2)
 ```
 
 Beneath the round, the two gather tiers and the broadcast tier, citable on their
 own:
 
 ```
-BRB.brachaInstance P ldr M ⊑ BRB.specInst P ldr M     (brbRefines, ReliableBroadcast/BrachaRefinesSpecification.lean)
-Gather.instanceOverBracha P X   ⊑ Gather.instanceOverBroadcastSpecification P X      (gatherLow,  Gather/BroadcastSubstitution.lean, by congruence)
-Gather.instanceOverBroadcastSpecification P X ⊑ Gather.specInst P X       (gatherCore, Gather/RefinesSpecification.lean)
+BRB.brachaInstance P ldr M ⊑ BRB.specInst P ldr M     (brachaRefinesSpecification, ReliableBroadcast/BrachaRefinesSpecification.lean)
+Gather.instanceOverBracha P X   ⊑ Gather.instanceOverBroadcastSpecification P X      (broadcastSubstitution,  Gather/BroadcastSubstitution.lean, by congruence)
+Gather.instanceOverBroadcastSpecification P X ⊑ Gather.specInst P X       (refinesSpecification, Gather/RefinesSpecification.lean)
 ```
 
 Each composition speaks an alphabet of its own, in which the call's
@@ -124,10 +124,9 @@ been returned — `sendEcho`, `sendVote`, `bindCall` and `ret` — read the stor
 through `Gather.ProcessRecord.accepted`, `holdsInputBroadcastReturn`, `holdsBindBroadcastReturn` and
 `approvedBy`, in the
 same shape at both gather tiers. The tie between a store and the instance it records is an
-invariant clause of `Gather.IdealConf` (`inputBroadcastReturned_val`, `bindBroadcastReturned_val`):
-a
-stored value is the instance's committed value, established at the return event
-and kept by the write-once commit.
+invariant clause of `Gather.Conformance` (`inputBroadcastReturned_val`,
+`bindBroadcastReturned_val`): a stored value is the instance's committed value, established at the
+return event and kept by the write-once commit.
 
 A round program's record (`GBCA.ByAFW.ProcessRecord`) holds the process's input, its
 candidate, whether it has called the second gather, its graded outcome and its
@@ -161,7 +160,7 @@ of `j`. Write `dominatedBy w q` for the senders `q` dominates and
 `Gather.coreOf P w` is the `ECHO` payload of a sender outside `F` carrying at
 least `f + 1` dominators, and `∅` where there is no such sender. It reads the
 sent sets and the corrupted set alone (`coreOf_networkState_only`,
-`coreOfNet`), so the gather network computes it from its own state and writes
+`coreOfNetwork`), so the gather network computes it from its own state and writes
 it at the first return (D29).
 
 **The counting.** Read `dominatedBy` as an incidence whose rows and columns are
@@ -223,14 +222,14 @@ fire it inside the weak answer of the first row that reads it —
 `ABA/Gather/RefinesSpecification.lean` under a return.
 
 The gather specification's call record follows the input instance's record
-rather than the gather program's (`Gather.CoreRel.call_eq`). The specification's
+rather than the gather program's (`Gather.SpecificationRelation.call_eq`). The specification's
 call record and an input instance's call record move on the same interface
 labels, the call and the call loop, under the same write-once guard, and a
 broadcast specification answers either label on either of its two rows; the
 gather program's record and the instance's record can therefore differ, and the
 specification's `commit` guard is dischargeable against the instance's.
 
-## Counting at the pair tier (`pairRefines`)
+## Counting at the pair tier (`refinesSpecification`)
 
 `roundOverGatherSpecifications` is AFW25's Algorithm 4 at `R = 2`, its two-gather branch
 (D24): candidate at `|dom g| − f` occurrences after the first gather, grade at
@@ -249,7 +248,7 @@ and the three certificates are readings of that:
   being light (`count_boundOfCore_belowThreshold`); the layer's network writes it at the
   first gather's return, from the core that return carries;
 - the exclusion certificate is
-  `ExcludedEv b = ∃ S, core₁ = some S ∧ count S b < |S| − f`. The core is
+  `ExclusionEvidence b = ∃ S, core₁ = some S ∧ count S b < |S| − f`. The core is
   write-once, so the certificate is frozen the moment it holds — monotonicity
   for free, where the direct implementation's refinement maintains monotone
   receipt walls;
@@ -257,20 +256,19 @@ and the three certificates are readings of that:
   `some v` on the A side and light at both bits on the C side.
 
 The two-event link and return place the certificates in the invariant
-(`GBCA.ByAFW.PairInv`). A candidate is heavy in the first core (`cand_heavy`) or, at
-`⊥`, certifies `f + 1` for both bits (`cand_bot`); both are established at
+(`GBCA.ByAFW.Invariant`). A candidate is heavy in the first core (`candidate_aboveThreshold`) or, at
+`⊥`, certifies `f + 1` for both bits (`candidate_bot`); both are established at
 `firstGatherReturn`, where the first gather's return carries the core, and consumed at
 `secondGatherCall`, where the second gather's call record takes the candidate
 (`secondGatherCall_candidate`). The bound bit is on record from the first `firstGatherReturn` on
-(`cand_bound`, `secondGatherCall_bound`). The graded outcome's certificate, `OutCert`, is
-established at `secondGatherReturn` from the second gather's return and consumed at `retG`,
-which sees the outcome alone (`out_cert`). The return rows then mirror
-`GBCASim.refinesSpecification` shape for shape: an `A`/`B` return hands out the bound bit
-and certifies `ExcludedEv` of its complement, and the `C`-return announces the
-bit the first return wrote. The D15 support counts come off the first core
-through the committed-entry provenance — a core entry is a committed entry, a
-committed entry of an honest process is its call, and the count is `F`-blind
-(`supp_spec_of_core`) — or off an honest `⊥` candidate. Exclusions fire on
+(`candidate_bound`, `secondGatherCall_bound`). The graded outcome's certificate,
+`OutputCertificate`, is established at `secondGatherReturn` from the second gather's return and
+consumed at `retG`, which sees the outcome alone (`out_certificate`). The return rows then mirror
+`GBCASim.refinesSpecification` shape for shape: an `A`/`B` return hands out the bound bit and
+certifies `ExclusionEvidence` of its complement, and the `C`-return announces the bit the first
+return wrote. The D15 support counts come off the first core through the committed-entry provenance
+— a core entry is a committed entry, a committed entry of an honest process is its call, and the
+count is `F`-blind (`callSupport_of_core`) — or off an honest `⊥` candidate. Exclusions fire on
 demand as the two-step run `bindUnset; ret`, as in the direct refinement.
 
 ## Substitution by congruence
@@ -282,19 +280,19 @@ either side, the synchronised product of a finite family, hiding and restriction
 and two simulations compose. Every substitution inside a composition of the stack
 is proved that way and nothing else:
 
-- `Gather.gatherLow` lifts `BRB.brbRefines` at each of the `2n` broadcast
-  coordinates along the pullback naming the coordinate
-  (`ForwardSimulation.mapIdle`), through the two synchronised products, the
-  parallel composition with the gather tier held, the hiding and the
-  restriction; its relation `Gather.LowRel` is the gather tier held equal beside
-  `BRB.InstRel` at every coordinate (`ABA/Gather/BroadcastSubstitution.lean`);
-- `GBCA.ByAFW.lowPairRefines` and `GBCA.ByAFW.idealRefines` lift `Gather.gatherLow` and
-  `Gather.gatherCore` at each of the two gather coordinates the same way, with
-  the layer held (`ABA/GBCA/AFW/GatherSubstitutions.lean`); their relations hold the
-  layer equal beside the gather relation at each gather.
+- `Gather.broadcastSubstitution` lifts `BRB.brachaRefinesSpecification` at each of the `2n`
+  broadcast coordinates along the pullback naming the coordinate (`ForwardSimulation.mapIdle`),
+  through the two synchronised products, the parallel composition with the gather tier held, the
+  hiding and the restriction; its relation `Gather.BroadcastSubstitutionRelation` is the gather tier
+  held equal beside `BRB.SpecificationRelation` at every coordinate
+  (`ABA/Gather/BroadcastSubstitution.lean`);
+- `GBCA.ByAFW.broadcastSubstitution` and `GBCA.ByAFW.gatherSubstitution` lift
+  `Gather.broadcastSubstitution` and `Gather.refinesSpecification` at each of the two gather
+  coordinates the same way, with the layer held (`ABA/GBCA/AFW/GatherSubstitutions.lean`); their
+  relations hold the layer equal beside the gather relation at each gather.
 
-The two refinements into a specification, `Gather.gatherCore` and
-`GBCA.ByAFW.pairRefines`, are proved on the compositions themselves. Each composition
+The two refinements into a specification, `Gather.refinesSpecification` and
+`GBCA.ByAFW.refinesSpecification`, are proved on the compositions themselves. Each composition
 carries a row characterisation — `Gather.instanceOverBroadcastSpecification_step_iff_row`,
 `GBCA.ByAFW.roundOverGatherSpecifications_step_iff_row` — stating that its transitions over
 the labels the pullback sends to one specification label are exactly the rows of a rule table
@@ -303,8 +301,8 @@ at that label (`Gather.StepOverBroadcastSpecification`,
 distribution. A refinement is then a case analysis over the rows, and the specification's
 answer, a run of `specInst`, is lifted to the specification read along the pullback by a
 section of it (`Gather.weakLStep_specificationOverInstanceAlphabet`,
-`GBCA.ByABDY.weakLStep_specificationOverRoundAlphabet`), as `GBCA.ByABDY.subSim` does for
-the protocol chain's round.
+`GBCA.ByABDY.weakLStep_specificationOverRoundAlphabet`), as `GBCA.ByABDY.instanceSubstitution` does
+for the protocol chain's round.
 
 Two facts of the characterisations are worth reading. A specification answers its call
 label on two rows, so where a specification is a component the composition offers both
@@ -320,20 +318,20 @@ Two ingredients, both shared with the protocol chain:
 
 - **The family congruence** (`ForwardSimulation.family`): per-round simulations lift to
   the ℕ-indexed sides; the broadcast hypothesis is each relation's lockstep-corruption
-  statement (`lowPairRel_corrupt`, `idealRel_corrupt`, `pairRel_corrupt`), exactly as
-  `subSim_failAct` discharges it for the protocol chain. The family's act corrupts the two
-  gathers of every round and leaves the programs and the layer's network alone.
+  statement (`broadcastSubstitutionRelation_corrupt`, `gatherSubstitutionRelation_corrupt`,
+  `specificationRelation_corrupt`), exactly as `instanceSubstitution_failAct` discharges it for the
+  protocol chain. The family's act corrupts the two gathers of every round and leaves the programs
+  and the layer's network alone.
 - **The four congruences** (`parallel_right`, `abstract`, `relabel`, `abstract`): each
   family substitution runs under the composed reading's own context, the same term
-  `Composition/HybridAndSubstitution.lean`'s `ABDY.substSim` uses, so the third stage's
-  target is definitionally `hybrid P`.
+  `Composition/HybridAndSubstitution.lean`'s `ABDY.substitutionSimulation` uses, so the third
+  stage's target is definitionally `hybrid P`.
 
 The round speaks the family alphabet natively, so no lift precedes the family;
-the sides are `System.family (GBCA.ByAFW.roundOverBracha P) roundOwnsLabel isFailLabel gActLow` and
-their two siblings, as `GBCA.ByABDY.gbcaInstanceFamily` is. The stages compose by
-`ProbabilisticForwardSimulation.trans`; the inclusions compose by
-`Set.Subset.trans` and never invoke transitivity of simulation — the two routes
-of `Results.lean`, reproduced.
+the sides are `System.family (GBCA.ByAFW.roundOverBracha P) roundOwnsLabel isFailLabel
+corruptionOverBracha` and their two siblings, as `GBCA.ByABDY.gbcaInstanceFamily` is. The stages
+compose by `ProbabilisticForwardSimulation.trans`; the inclusions compose by `Set.Subset.trans` and
+never invoke transitivity of simulation — the two routes of `Results.lean`, reproduced.
 
 ## The protocol beneath the composed reading (`ImplementationByAFW/System.lean`,
 `ImplementationByAFW/RoundProjection.lean`, `ImplementationByAFW/RoundProjectionStep.lean`,
@@ -389,7 +387,7 @@ three are forced by the flat shape.
   state in the instance (`firstGatherAcceptedInputs` and its companions), where a composed gather
   program reads its store.
 
-`AFW.ProtocolRel` has six conjuncts. The round loop, the coin oracle and the
+`AFW.ProtocolRelation` has six conjuncts. The round loop, the coin oracle and the
 ABA-side network are shared objects, and the round family is *computed* from
 the flat state by `AFW.roundProjection`, which undoes the three separations: it
 transposes the local states back, slices each network's sent set out of the
@@ -411,18 +409,18 @@ at `GBCA.boundOfCore` of that core; a graded return freezes the second core the
 same way. The composed `firstGatherReturn` and `secondGatherReturn` freeze the same two values off
 the core
 their gather's return carries, and the values agree because each is
-`Gather.coreOfNet` of one network's state (`coreOfNet_firstGatherProjection`,
-`coreOfNet_secondGatherProjection`).
+`Gather.coreOfNetwork` of one network's state (`coreOfNetwork_firstGatherProjection`,
+`coreOfNetwork_secondGatherProjection`).
 
-The fifth conjunct, `AFW.BoundInv`, is what makes the announced bits agree: a
+The fifth conjunct, `AFW.BoundInvariant`, is what makes the announced bits agree: a
 process whose round-`r` second-gather local state carries an input has passed
 that round's link, so the round's bound bit is on record. The sixth,
-`AFW.StoreInv`, is the broadcast invariant `BRB.Inv` at every broadcast
+`AFW.BroadcastReturnsInvariant`, is the broadcast invariant `BRB.Invariant` at every broadcast
 instance of the view. It is what identifies the stored value with the value a
 flat guard names: a flat row hands its composed counterpart a specific value
 with a vote quorum, the store holds the value the view chose, and under the
 invariant two vote quorums at one process name one value
-(`BRB.echoCert_unique`, `AFW.broadcastReturnsFor_eq_of_quorum`). The invariant is carried
+(`BRB.echoCertificate_unique`, `AFW.broadcastReturnsFor_eq_of_quorum`). The invariant is carried
 on the composed side and re-established after every matched row by the
 instance's own preservation lemma, since every matched composed step is a
 genuine step of the instance.

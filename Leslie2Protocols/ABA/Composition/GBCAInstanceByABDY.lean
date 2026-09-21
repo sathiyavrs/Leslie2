@@ -92,7 +92,7 @@ that messagesOf is a different component of the protocol system.
 
 ## The replacement
 
-`subSim` is what licenses replacing the round instance by the graded
+`instanceSubstitution` is what licenses replacing the round instance by the graded
 agreement specification. It runs through the implementation instance of
 `GBCA/ABDY/Implementation.lean` in two legs.
 
@@ -157,7 +157,7 @@ def gbcaEvents (n : ℕ) : Set (GBCALabel n) := {l | ∃ e : GBCAEvent n, l = Su
 @[simp] theorem inr_mem_gbcaEvents {n : ℕ} (e : GBCAEvent n) :
     Sum.inr e ∈ gbcaEvents n := ⟨e, rfl⟩
 
-@[simp] theorem glab_tau (n : ℕ) :
+@[simp] theorem gbcaLabel_tau (n : ℕ) :
     (Silent.τ : GBCALabel n) = Sum.inl (Sum.inl Label.tau) := rfl
 
 /-! ### The local graded-agreement program
@@ -461,7 +461,7 @@ noncomputable def GBCANetwork (P : Parameters) (r : ℕ) :
 /-- The programs beside the network, over the instance-internal alphabet. -/
 noncomputable def compositionExtended (P : Parameters) (r : ℕ) :
     System (GBCA.ByABDY.ImplementationState P.n) (GBCALabel P.n) :=
-  (System.syncProduct (gbcaProgram P r)).parallel (GBCANetwork P r)
+  (System.synchronisedProduct (gbcaProgram P r)).parallel (GBCANetwork P r)
 
 /-- **The round-`r` instance**: the programs beside the network, the two
 rendezvous hidden, the result read back over the shared extended alphabet. Its
@@ -538,8 +538,8 @@ theorem GBCANetwork_isLTS (P : Parameters) (r : ℕ) : (GBCANetwork P r).IsLTS :
 
 /-- The synchronised group of programs is an LTS. -/
 theorem gbcaProgramProduct_isLTS (P : Parameters) (r : ℕ) :
-    (System.syncProduct (gbcaProgram P r)).IsLTS :=
-  System.syncProduct_isLTS (gbcaProgram_isLTS P r)
+    (System.synchronisedProduct (gbcaProgram P r)).IsLTS :=
+  System.synchronisedProduct_isLTS (gbcaProgram_isLTS P r)
 
 /-- The programs beside the network form an LTS. -/
 theorem compositionExtended_isLTS (P : Parameters) (r : ℕ) : (compositionExtended P r).IsLTS :=
@@ -559,11 +559,11 @@ exactly the network's injections and the hidden rendezvous. -/
 theorem gbcaProgramStep_no_tau {P : Parameters} {r : ℕ} {j : Fin P.n}
     {p : GBCA.ByABDY.RoundRecord P.n} {ν : PMF (GBCA.ByABDY.RoundRecord P.n)}
     (h : GBCAProgramStep P r j p (Silent.τ : GBCALabel P.n) ν) : False := by
-  rw [glab_tau] at h; cases h
+  rw [gbcaLabel_tau] at h; cases h
 
 /-! ### Reading and building instance transitions
 
-The pipeline is `relabel ∘ abstract ∘ parallel ∘ syncProduct`; the lemmas
+The pipeline is `relabel ∘ abstract ∘ parallel ∘ synchronisedProduct`; the lemmas
 below unfold it once and for all, in both directions. -/
 
 /-- A synchronised transition of the program group on a visible label: every
@@ -571,10 +571,10 @@ program steps, and the joint distribution is Dirac. -/
 theorem gbcaProgramProduct_inv {P : Parameters} {r : ℕ} {u : ∀ _ : Fin P.n,
     GBCA.ByABDY.RoundRecord P.n} {l : GBCALabel P.n} {μ : PMF (∀ _ : Fin P.n,
       GBCA.ByABDY.RoundRecord P.n)}
-    (h : (System.syncProduct (gbcaProgram P r)).step u l μ) :
+    (h : (System.synchronisedProduct (gbcaProgram P r)).step u l μ) :
     ∃ x : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n,
       μ = PMF.pure x ∧ ∀ i, GBCAProgramStep P r i (u i) l (PMF.pure (x i)) := by
-  rw [System.syncProduct_step] at h
+  rw [System.synchronisedProduct_step] at h
   rcases h with ⟨-, μ_, hall, rfl⟩ | ⟨rfl, i, μ_i, hstep, -⟩
   · have hx : ∀ i, ∃ p', μ_ i = PMF.pure p' := fun i => gbcaProgramStep_dirac (hall i)
     choose x hx using hx
@@ -590,15 +590,15 @@ theorem gbcaProgramProduct_pure {P : Parameters} {r : ℕ}
     {u x : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n} {l : GBCALabel P.n}
     (hl : l ≠ Silent.τ)
     (h : ∀ i, GBCAProgramStep P r i (u i) l (PMF.pure (x i))) :
-    (System.syncProduct (gbcaProgram P r)).step u l (PMF.pure x) := by
-  rw [System.syncProduct_step]
+    (System.synchronisedProduct (gbcaProgram P r)).step u l (PMF.pure x) := by
+  rw [System.synchronisedProduct_step]
   exact Or.inl ⟨hl, fun i => PMF.pure (x i), h, (piPMF_pure x).symm⟩
 
 /-- The program group has no silent transition: no program has a `τ` row. -/
 theorem gbcaProgramProduct_no_tau {P : Parameters} {r : ℕ}
     {u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n}
     {μ : PMF (∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n)}
-    (h : (System.syncProduct (gbcaProgram P r)).step u (Silent.τ : GBCALabel P.n) μ) :
+    (h : (System.synchronisedProduct (gbcaProgram P r)).step u (Silent.τ : GBCALabel P.n) μ) :
     False := by
   rcases h with ⟨hτ, -⟩ | ⟨-, i, μ_i, hstep, -⟩
   · exact hτ rfl
@@ -643,7 +643,7 @@ theorem compositionExtended_label_step (P : Parameters) (r : ℕ)
     (hn : GBCANetworkStep P r w (Sum.inl l) (PMF.pure w')) :
     (compositionExtended P r).step (u, w) (Sum.inl l) (PMF.pure (x, w')) := by
   have hne : (Sum.inl l : GBCALabel P.n) ≠ Silent.τ := by
-    rw [glab_tau]; simpa using hl
+    rw [gbcaLabel_tau]; simpa using hl
   rw [compositionExtended, System.parallel_step]
   exact Or.inl ⟨hne, PMF.pure x, PMF.pure w', gbcaProgramProduct_pure hne hall, hn,
     (prodPMF_pure_pure _ _).symm⟩
@@ -1533,17 +1533,19 @@ instance's interface along a section of `gbcaLabelMap` — which is where a Byza
 handshake row is answered by the specification's own call or return row (D11). -/
 
 /-- **The simulation relation of the round instance**: the relation
-`GBCA.ByABDY.instRel` of the implementation, which the shared state lets it be
+`GBCA.ByABDY.specificationRelation` of the implementation, which the shared state lets it be
 verbatim. -/
-def Rsub (P : Parameters) (r : ℕ) (σ : GBCA.ByABDY.ImplementationState P.n) (s : GBCA.SpecState P.n)
+def substitutionRelation (P : Parameters) (r : ℕ) (σ : GBCA.ByABDY.ImplementationState P.n) (s :
+  GBCA.SpecState P.n)
   : Prop :=
-  GBCA.ByABDY.instRel P r σ s
+  GBCA.ByABDY.specificationRelation P r σ s
 
 /-- **The per-round instance simulation**: the round-`r` instance is forward
 simulated by the round-`r` graded agreement specification, read over the
 instance's interface. -/
-theorem subSim (P : Parameters) (r : ℕ) :
-    ForwardSimulation (composition P r) (specificationOverRoundAlphabet P r) (Rsub P r) := by
+theorem instanceSubstitution (P : Parameters) (r : ℕ) :
+    ForwardSimulation (composition P r) (specificationOverRoundAlphabet P r) (substitutionRelation P
+      r) := by
   constructor
   intro q₁ q₂ hR l μ hstep q₁' hq₁'
   obtain ⟨l₀, hpull, himpl⟩ := composition_projects P r q₁ l μ hstep
@@ -1577,18 +1579,18 @@ def specificationCorruptionAct (P : Parameters) : ExtendedLabel P.n → GBCA.Spe
 
 /-- The initial states of the instance and of its specification are
 related. -/
-theorem subSim_init (P : Parameters) (r : ℕ) :
-    Rsub P r (composition P r).init (GBCA.specInst P r).init :=
-  GBCA.ByABDY.instRel_init P r
+theorem instanceSubstitution_init (P : Parameters) (r : ℕ) :
+    substitutionRelation P r (composition P r).init (GBCA.specInst P r).init :=
+  GBCA.ByABDY.specificationRelation_init P r
 
 /-- **Broadcast compatibility**: corruption preserves the instance relation.
 The network state's corrupted set is the implementation's, so the two guards
 `k ∉ F ∧ |F| < f` agree and the implementation-level statement
-(`GBCA.ByABDY.instRel_corrupt`) applies verbatim (D1). -/
-theorem subSim_failAct (P : Parameters) :
+(`GBCA.ByABDY.specificationRelation_corrupt`) applies verbatim (D1). -/
+theorem instanceSubstitution_failAct (P : Parameters) :
     ∀ l : ExtendedLabel P.n, isFailLabel l → ∀ (r : ℕ) (σ : GBCA.ByABDY.ImplementationState P.n)
-      (s : GBCA.SpecState P.n), Rsub P r σ s →
-      Rsub P r (corruptionAct P l σ) (specificationCorruptionAct P l s) := by
+      (s : GBCA.SpecState P.n), substitutionRelation P r σ s →
+      substitutionRelation P r (corruptionAct P l σ) (specificationCorruptionAct P l s) := by
   rintro l hl r ⟨u, w⟩ s hR
   cases l with
   | inr e => cases e <;> exact hl.elim
@@ -1597,7 +1599,7 @@ theorem subSim_failAct (P : Parameters) :
     | fail k =>
       have hs : corruptionAct P (Sum.inl (Label.fail k)) (u, w)
           = GBCA.ByABDY.ImplementationState.corrupt P k (u, w) := composition_corrupt k
-      have hc := GBCA.ByABDY.instRel_corrupt P r k hR
+      have hc := GBCA.ByABDY.specificationRelation_corrupt P r k hR
       rw [← hs] at hc
       exact hc
     | tau => exact hl.elim
@@ -1610,9 +1612,9 @@ theorem subSim_failAct (P : Parameters) :
 
 /-! ### Mechanical axiom check -/
 
-/-- info: 'PLTS.ABA.GBCA.ByABDY.subSim' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.GBCA.ByABDY.instanceSubstitution' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms subSim
+#print axioms instanceSubstitution
 
 /-- info: 'PLTS.ABA.GBCA.ByABDY.composition_projects' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in

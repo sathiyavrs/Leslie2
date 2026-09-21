@@ -5,7 +5,7 @@
   The protocol read as a composition of four components over the extended alphabet $\mathrm{ExtendedLabel}(n)$: the family $\mathrm{gbcaInstanceFamily}(P)$ of round instances, the round loop $\mathrm{roundLoopProgram}(P,j)$ of each process, the ABA-side network $\mathrm{ABANetwork}(P)$ holding the DECIDED sets (D12$'$) and the corrupted set with its budget, and the coin oracle joined through $\mathrm{coinLabelMap}$.
   \[
     \abdy{\mathrm{composedExtended}}(P) \;=\;
-      \mathrm{gbcaInstanceFamily}(P) \parallel \bigl(\mathrm{syncProduct}_{j}\ \mathrm{roundLoopProgram}(P,j)
+      \mathrm{gbcaInstanceFamily}(P) \parallel \bigl(\mathrm{synchronisedProduct}_{j}\ \mathrm{roundLoopProgram}(P,j)
         \parallel (\mathrm{ABANetwork}(P) \parallel \mathrm{coinOverRoundAlphabet}(P))\bigr)
   \]
   runs through the pipeline of Definition~\ref{def:aba-protocol} component for component, giving $\abdy{\mathrm{composedHidden}}(P)$ inside the inner frame and $\abdy{\mathrm{composed}}(P)$ inside the outer.

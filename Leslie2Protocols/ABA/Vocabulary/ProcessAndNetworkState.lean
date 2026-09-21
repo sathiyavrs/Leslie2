@@ -24,7 +24,8 @@ types, so the shape is stated here once, generically:
   the network state, with the multicast / delivery / corruption updates
   (`multicast`, `receiveMessage`, `corrupt`), the receipt counts (`receivedCount`), the
   frame lemmas each update leaves behind, and the quorum-counting kit
-  (`exists_sender_notMem`, `exists_correct_received₂`, `exists_correct_received₂_echoQuorum`).
+  (`exists_sender_notMem`, `exists_correct_received₂`,
+  `exists_correct_received₂_echoReceiptQuorum`).
 
 The model conventions are the development's D1 (corruption is the total Dirac
 budget-guarded transform of the network state, the local states are corruption-blind) and
@@ -261,7 +262,7 @@ theorem exists_correct_inter {P : Parameters} {F Q Q' : Finset (Fin P.n)}
   have hun : (Q ∪ Q').card ≤ P.n := by
     refine le_trans (Finset.card_le_univ _) ?_
     simp
-  have hf := P.hf
+  have hf := P.hResilience
   have hlt : F.card < (Q ∩ Q').card := by
     omega
   obtain ⟨q, hq, hqF⟩ := exists_correct_of_card_lt hlt
@@ -276,7 +277,7 @@ theorem exists_mem_inter_of_quorum {P : Parameters} {K Q : Finset (Fin P.n)}
   have hun : (K ∪ Q).card ≤ P.n := by
     refine le_trans (Finset.card_le_univ _) ?_
     simp
-  have hf := P.hf
+  have hf := P.hResilience
   have hlt : 0 < (K ∩ Q).card := by
     omega
   obtain ⟨q, hq⟩ := Finset.card_pos.mp hlt
@@ -395,7 +396,7 @@ theorem exists_correct_received₂ {P : Parameters} {s : InstanceState P.n Pr M}
       (Finset.univ.filter (fun j => m' ∈ s.received i' j))).card ≤ P.n := by
     refine le_trans (Finset.card_le_univ _) ?_
     simp
-  have hf := P.hf
+  have hf := P.hResilience
   have hlt : s.F.card < ((Finset.univ.filter (fun j => m ∈ s.received i j)) ∩
       (Finset.univ.filter (fun j => m' ∈ s.received i' j))).card := by
         omega
@@ -403,11 +404,12 @@ theorem exists_correct_received₂ {P : Parameters} {s : InstanceState P.n Pr M}
   rw [Finset.mem_inter, Finset.mem_filter, Finset.mem_filter] at hj
   exact ⟨j, hjF, hj.1.2, hj.2.2⟩
 
-/-- Two `echoQuorum` receipt quorums (at possibly different receivers) share an
-honest sender: `2 * echoQuorum − n > f ≥ |F|`. -/
-theorem exists_correct_received₂_echoQuorum {P : Parameters} {s : InstanceState P.n Pr M}
+/-- Two `echoReceiptQuorum` receipt quorums (at possibly different receivers) share an
+honest sender: `2 * echoReceiptQuorum − n > f ≥ |F|`. -/
+theorem exists_correct_received₂_echoReceiptQuorum {P : Parameters} {s : InstanceState P.n Pr M}
     (hF : s.F.card ≤ P.f) {i i' : Fin P.n} {m m' : M}
-    (h : P.echoQuorum ≤ s.receivedCount i m) (h' : P.echoQuorum ≤ s.receivedCount i' m') :
+    (h : P.echoReceiptQuorum ≤ s.receivedCount i m) (h' : P.echoReceiptQuorum ≤ s.receivedCount i'
+      m') :
     ∃ j, j ∉ s.F ∧ m ∈ s.received i j ∧ m' ∈ s.received i' j := by
   unfold receivedCount at h h'
   have hcard := Finset.card_union_add_card_inter
@@ -417,7 +419,7 @@ theorem exists_correct_received₂_echoQuorum {P : Parameters} {s : InstanceStat
       (Finset.univ.filter (fun j => m' ∈ s.received i' j))).card ≤ P.n := by
     refine le_trans (Finset.card_le_univ _) ?_
     simp
-  have hq := P.n_add_f_lt_two_mul_echoQuorum
+  have hq := P.n_add_f_lt_two_mul_echoReceiptQuorum
   have hlt : s.F.card < ((Finset.univ.filter (fun j => m ∈ s.received i j)) ∩
       (Finset.univ.filter (fun j => m' ∈ s.received i' j))).card := by
         omega

@@ -1,6 +1,6 @@
 \begin{theorem}[Gather core refinement]
   \label{thm:gather-core}
-  \lean{PLTS.ABA.Gather.IdealInv}\lean{PLTS.ABA.Gather.CoreRel}\lean{PLTS.ABA.Gather.gatherCore}\leanok
+  \lean{PLTS.ABA.Gather.Invariant}\lean{PLTS.ABA.Gather.SpecificationRelation}\lean{PLTS.ABA.Gather.refinesSpecification}\leanok
   \uses{def:aba-gather-ideal, def:aba-gather-spec, def:aba-gather-core}
   The gather implementation over broadcast specifications is forward-simulated by Transition System~4.
   The relation reads the specification's $call$ off the input instances' records, $ret$ and $F$ off the gather tier, certifies each committed abstract entry by the corresponding input-broadcast commitment, holds the two sides' cores equal, and certifies a written core by the count

@@ -125,7 +125,7 @@ noncomputable def composedExtended (P : Parameters) : System (Composition.Compos
   (ExtendedLabel
   P.n) :=
   (GBCA.ByABDY.gbcaInstanceFamily P).parallel
-    ((System.syncProduct (Composition.roundLoopProgram P)).parallel
+    ((System.synchronisedProduct (Composition.roundLoopProgram P)).parallel
       ((Composition.ABANetwork P).parallel (coinOverRoundAlphabet P)))
 
 /-- **The composed group**: the rendezvous alphabet hidden, the result read
@@ -334,7 +334,7 @@ abbrev HybridState (P : Parameters) : Type :=
 `ABDY.composedExtended` with its graded-agreement component replaced. -/
 noncomputable def hybridExtended (P : Parameters) : System (HybridState P) (ExtendedLabel P.n) :=
   (gbcaSpecificationFamily P).parallel
-    ((System.syncProduct (roundLoopProgram P)).parallel ((ABANetwork P).parallel
+    ((System.synchronisedProduct (roundLoopProgram P)).parallel ((ABANetwork P).parallel
       (coinOverRoundAlphabet P)))
 
 /-- **The protocol-shaped specification**: the rendezvous alphabet hidden,
@@ -347,29 +347,30 @@ noncomputable def hybrid (P : Parameters) : System (HybridState P) (Label P.n) :
 
 /-- The pointwise round relation: every round's instance state is related to
 that round's specification state. -/
-def RsubAll (P : Parameters) (s : ℕ → GBCA.ByABDY.ImplementationState P.n)
+def substitutionRelationFamily (P : Parameters) (s : ℕ → GBCA.ByABDY.ImplementationState P.n)
     (t : ℕ → GBCA.SpecState P.n) : Prop :=
-  ∀ r, GBCA.ByABDY.Rsub P r (s r) (t r)
+  ∀ r, GBCA.ByABDY.substitutionRelation P r (s r) (t r)
 
 /-- **The family substitution**: the graded-agreement side of the protocol is
 forward simulated by the specification side, round by round. The per-round
-simulation is `GBCA.ByABDY.subSim`; the broadcast compatibility is
-`GBCA.ByABDY.subSim_failAct`. -/
-theorem famSubSim (P : Parameters) :
-    ForwardSimulation (GBCA.ByABDY.gbcaInstanceFamily P) (gbcaSpecificationFamily P) (RsubAll P) :=
+simulation is `GBCA.ByABDY.instanceSubstitution`; the broadcast compatibility is
+`GBCA.ByABDY.instanceSubstitution_failAct`. -/
+theorem familySubstitution (P : Parameters) :
+    ForwardSimulation (GBCA.ByABDY.gbcaInstanceFamily P) (gbcaSpecificationFamily P)
+      (substitutionRelationFamily P) :=
   ForwardSimulation.family GBCA.ByABDY.roundOwnsLabel GBCA.ByABDY.isFailLabel
     (GBCA.ByABDY.corruptionAct P)
     (GBCA.ByABDY.specificationCorruptionAct P)
-    (GBCA.ByABDY.subSim P) (GBCA.ByABDY.subSim_failAct P)
+    (GBCA.ByABDY.instanceSubstitution P) (GBCA.ByABDY.instanceSubstitution_failAct P)
 
 /-- The family substitution as a probabilistic forward simulation: both sides
 are LTS, and the relation holds at the initial states. -/
-theorem famSubSimProb (P : Parameters) :
+theorem familySubstitutionSimulation (P : Parameters) :
     ProbabilisticForwardSimulation (GBCA.ByABDY.gbcaInstanceFamily P) (gbcaSpecificationFamily P)
-      (diracRel (RsubAll P)) :=
+      (diracRel (substitutionRelationFamily P)) :=
   ForwardSimulation.toProbabilistic (GBCA.ByABDY.gbcaInstanceFamily_isLTS P)
     (gbcaSpecificationFamily_isLTS P)
-    (fun r => GBCA.ByABDY.subSim_init P r) (famSubSim P)
+    (fun r => GBCA.ByABDY.instanceSubstitution_init P r) (familySubstitution P)
 
 namespace ABDY
 
@@ -378,11 +379,11 @@ congruences applied to the family substitution under the composed system's own
 context — `parallel_right` for the three untouched components, `abstract` for the
 rendezvous alphabet, `relabel` for the read-back over `Label n`, and `abstract`
 for the sub-protocol API. -/
-noncomputable def substSim (P : Parameters) :
+noncomputable def substitutionSimulation (P : Parameters) :
     ProbabilisticForwardSimulation (composed P) (hybrid P)
-      (parallelRel (diracRel (RsubAll P))) :=
-  ((((famSubSimProb P).parallel_right
-    ((System.syncProduct (roundLoopProgram P)).parallel
+      (parallelRel (diracRel (substitutionRelationFamily P))) :=
+  ((((familySubstitutionSimulation P).parallel_right
+    ((System.synchronisedProduct (roundLoopProgram P)).parallel
       ((ABANetwork P).parallel (coinOverRoundAlphabet P)))).abstract
         (networkEventLabels P.n)).relabel).abstract (Label.hiddenAPI P.n)
 
@@ -390,7 +391,7 @@ noncomputable def substSim (P : Parameters) :
 composed system is achievable by the protocol-shaped specification. -/
 theorem substitution (P : Parameters) :
     achievableTraceDists (composed P) ⊆ achievableTraceDists (hybrid P) :=
-  (substSim P).achievableTraceDists_subset
+  (substitutionSimulation P).achievableTraceDists_subset
 
 end ABDY
 
@@ -622,7 +623,7 @@ theorem hybridExtended_vis_inv (P : Parameters) {G : ℕ → GBCA.SpecState P.n}
 
 /-- Build a silent transition of the four components from a specification-side
 one. -/
-theorem hybridExtended_tau_spec (P : Parameters) {G G' : ℕ → GBCA.SpecState P.n}
+theorem hybridExtended_tau_specification (P : Parameters) {G G' : ℕ → GBCA.SpecState P.n}
     {C : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A : ABANetworkState P.n}
     {o : ℕ → WCC.SpecState P.n}
     (hG : (gbcaSpecificationFamily P).step G (Sum.inl Label.tau) (PMF.pure G')) :

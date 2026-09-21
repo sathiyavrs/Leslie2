@@ -1,6 +1,6 @@
 \begin{theorem}[Substitution]
   \label{thm:aba-substitution}
-  \lean{PLTS.ABA.ABDY.substSim}\lean{PLTS.ABA.ABDY.substitution}\leanok
+  \lean{PLTS.ABA.ABDY.substitutionSimulation}\lean{PLTS.ABA.ABDY.substitution}\leanok
   \uses{def:aba-hybrid, def:aba-composed, thm:gbca-family-refines, thm:precong-parallel, thm:precong-abstract, thm:precong-relabel, thm:forward-sound, def:achievable}
   Replacing each round's graded-agreement instance by its specification, the other three components untouched, is a probabilistic forward simulation of $\abdy{\mathrm{composed}}(P)$ by $\mathrm{hybrid}(P)$, and hence
   \[

@@ -10,15 +10,15 @@ import Leslie2Protocols.Framework.FamilySimulation
 /-!
 # The BRB refinement: Bracha's protocol implements Transition System 6
 
-`BRB.brbRefines`: the reliable-broadcast instance `BRB.brachaInstance`
+`BRB.brachaRefinesSpecification`: the reliable-broadcast instance `BRB.brachaInstance`
 (`ABA/ReliableBroadcast/BrachaComposition.lean`) is forward simulated by the BRB specification
 instance with the same leader, read over the instance's interface
-(`BRB.specificationOverInstanceAlphabet`), along `BRB.InstRel`.
+(`BRB.specificationOverInstanceAlphabet`), along `BRB.SpecificationRelation`.
 
 The refinement runs in two legs. The first is strong and functional: a
 transition of the instance is one row of `BRB.BrachaStep` at the same state, at
 the specification label the interface label projects to (`BRB.brachaInstance_step_row`).
-The second is the row-level matching `instRel_row`, whose answer is a weak run
+The second is the row-level matching `specificationRelation_row`, whose answer is a weak run
 of the specification over `BRB.Label`; it is lifted to the interface along a
 section of `BRB.specificationLabelMap`, which is where the call loop is answered by the
 specification's own loop row.
@@ -29,27 +29,27 @@ it as a receipt-pattern certificate, in the exclusion-on-demand style of the GBC
 refinement: the specification's `commit` is fired inside the return run, at
 the first return that needs it.
 
-* `BRB.EchoCert s m` — some receiver holds an `ECHO m` receipt quorum, more
+* `BRB.EchoCertificate s m` — some receiver holds an `ECHO m` receipt quorum, more
   than `(n + f) / 2` senders. F-blind (it counts receipts, not honesty) and
   monotone (receipts only accumulate), so it survives every rule and every
   corruption.
-* At most one value is ever echo-certified (`echoCert_unique`): two `ECHO`
+* At most one value is ever echo-certified (`echoCertificate_unique`): two `ECHO`
   receipt quorums share an honest sender, whose `sentEcho` field is
   write-once.
-* Every return guard yields a certificate (`echoCert_of_vote_quorum`): a
+* Every return guard yields a certificate (`echoCertificate_of_vote_quorum`): a
   `2f + 1` `VOTE m` receipt quorum contains an honest voter, whose vote is
   backed — through the amplification chain, collapsed by the invariant clause
   `vote_backed` — by an `ECHO m` receipt quorum.
 * A certificate identifies the honest leader's input
-  (`input_of_echoCert`): an `ECHO` quorum contains an honest echoer, and an
-  honest echo carries the leader's input — the invariant clause `echo_prov`,
+  (`input_of_echoCertificate`): an `ECHO` quorum contains an honest echoer, and an
+  honest echo carries the leader's input — the invariant clause `echo_provenance`,
   which covers the three disjuncts of the `ECHO` guard.
 
 The matching: internal rules stutter; `call` and `fail` are answered by their
 specification rows; `ret id m` is answered by `ret` alone when `val` is
 already committed (the certificates identify the values), and by the two-step
 run `commit ; ret` (`weakLStep_tauThen`) when it is not — with `commit`'s
-guard discharged by `input_of_echoCert` under an honest leader and by
+guard discharged by `input_of_echoCertificate` under an honest leader and by
 membership in `F` otherwise.
 -/
 
@@ -63,91 +63,93 @@ variable {M : Type} [DecidableEq M] {P : Parameters} {ldr : Fin P.n}
 
 /-- `m` is echo-certified: some receiver holds an `ECHO m` receipt quorum.
 F-blind and monotone — receipts only accumulate. -/
-def EchoCert (P : Parameters) (s : BrachaState P.n M) (m : M) : Prop :=
-  ∃ i, P.echoQuorum ≤ s.receivedCount i (.echo m)
+def EchoCertificate (P : Parameters) (s : BrachaState P.n M) (m : M) : Prop :=
+  ∃ i, P.echoReceiptQuorum ≤ s.receivedCount i (.echo m)
 
-@[simp] theorem echoCert_setProcess (s : BrachaState P.n M) (j : Fin P.n)
+@[simp] theorem echoCertificate_setProcess (s : BrachaState P.n M) (j : Fin P.n)
     (p : ProcessRecord M) (m : M) :
-    EchoCert P (s.setProcess j p) m ↔ EchoCert P s m := by
-  simp [EchoCert]
+    EchoCertificate P (s.setProcess j p) m ↔ EchoCertificate P s m := by
+  simp [EchoCertificate]
 
-@[simp] theorem echoCert_multicast (s : BrachaState P.n M) (j : Fin P.n)
+@[simp] theorem echoCertificate_multicast (s : BrachaState P.n M) (j : Fin P.n)
     (x : Message M) (m : M) :
-    EchoCert P (s.multicast j x) m ↔ EchoCert P s m := by
-  simp [EchoCert]
+    EchoCertificate P (s.multicast j x) m ↔ EchoCertificate P s m := by
+  simp [EchoCertificate]
 
-@[simp] theorem echoCert_corrupt (s : BrachaState P.n M) (id : Fin P.n) (m : M) :
-    EchoCert P (s.corrupt P id) m ↔ EchoCert P s m := by
-  simp [EchoCert]
+@[simp] theorem echoCertificate_corrupt (s : BrachaState P.n M) (id : Fin P.n) (m : M) :
+    EchoCertificate P (s.corrupt P id) m ↔ EchoCertificate P s m := by
+  simp [EchoCertificate]
 
 /-- Deliveries preserve the certificate: counts only grow. -/
-theorem EchoCert.receiveMessage {s : BrachaState P.n M} {m : M} (h : EchoCert P s m)
-    (i j : Fin P.n) (x : Message M) : EchoCert P (s.receiveMessage i j x) m := by
+theorem EchoCertificate.receiveMessage {s : BrachaState P.n M} {m : M} (h : EchoCertificate P s m)
+    (i j : Fin P.n) (x : Message M) : EchoCertificate P (s.receiveMessage i j x) m := by
   obtain ⟨i', hi'⟩ := h
   exact ⟨i', le_trans hi' (InstanceState.receivedCount_le_receiveMessage s i j x i' _)⟩
 
 /-! ### The invariant -/
 
-/-- The BRB implementation invariant. The `*_conf` clauses tie an honest
-sender's sent to its write-once field; `echo_prov` carries an honest echo back
+/-- The BRB implementation invariant. The `*_confirmed` clauses tie an honest
+sender's sent to its write-once field; `echo_provenance` carries an honest echo back
 to an honest leader's call record, and `vote_backed` ties an honest vote to the
 receipts that justified it, with the amplification chain collapsed into
-`EchoCert`. -/
-structure Inv (P : Parameters) (ldr : Fin P.n) (s : BrachaState P.n M) : Prop where
+`EchoCertificate`. -/
+structure Invariant (P : Parameters) (ldr : Fin P.n) (s : BrachaState P.n M) : Prop where
   /-- The corruption budget. -/
   F_card : s.F.card ≤ P.f
   /-- Delivered messages were multicast. -/
-  recv_sub : ∀ i k, s.received i k ⊆ s.sent k
+  received_subset_sent : ∀ i k, s.received i k ⊆ s.sent k
   /-- An honest leader's sent `INIT` carries its input. -/
-  init_conf : ldr ∉ s.F → ∀ m, Message.init m ∈ s.sent ldr →
+  init_confirmed : ldr ∉ s.F → ∀ m, Message.init m ∈ s.sent ldr →
     (s.process ldr).input = some m
   /-- An honest sender's sent `ECHO` matches its write-once field. -/
-  echo_conf : ∀ k ∉ s.F, ∀ m, Message.echo m ∈ s.sent k →
+  echo_confirmed : ∀ k ∉ s.F, ∀ m, Message.echo m ∈ s.sent k →
     (s.process k).sentEcho = some m
   /-- An honest echo of `m` carries the leader's input: under an honest leader,
   `m` is what the leader was called with. Each of the three disjuncts of the
   `ECHO` guard leads back to that call record. -/
-  echo_prov : ∀ k ∉ s.F, ∀ m, (s.process k).sentEcho = some m →
+  echo_provenance : ∀ k ∉ s.F, ∀ m, (s.process k).sentEcho = some m →
     ldr ∈ s.F ∨ (s.process ldr).input = some m
   /-- An honest sender's sent `VOTE` matches its write-once field. -/
-  vote_conf : ∀ k ∉ s.F, ∀ m, Message.vote m ∈ s.sent k →
+  vote_confirmed : ∀ k ∉ s.F, ∀ m, Message.vote m ∈ s.sent k →
     (s.process k).sentVote = some m
   /-- An honest vote is backed by an `ECHO` receipt quorum somewhere: the
   quorum rule witnesses itself, and the amplification rule inherits the
   witness from an honest backer. -/
-  vote_backed : ∀ k ∉ s.F, ∀ m, (s.process k).sentVote = some m → EchoCert P s m
+  vote_backed : ∀ k ∉ s.F, ∀ m, (s.process k).sentVote = some m → EchoCertificate P s m
 
 /-- The invariant holds initially. -/
-theorem Inv.initial : Inv P ldr (BrachaState.initial P.n M) := by
+theorem Invariant.initial : Invariant P ldr (BrachaState.initial P.n M) := by
   refine ⟨by simp [BrachaState.initial], ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
     simp [BrachaState.initial, ProcessRecord.initial]
 
 /-- An `ECHO m` receipt quorum holds an honest echoer of `m`: the quorum
-exceeds the corruption budget (`f < echoQuorum`), and an honest sender's sent
+exceeds the corruption budget (`f < echoReceiptQuorum`), and an honest sender's sent
 `ECHO` matches its write-once field. -/
-theorem Inv.correct_echoer {s : BrachaState P.n M} (hInv : Inv P ldr s) {i : Fin P.n} {m : M}
-    (hcnt : P.echoQuorum ≤ s.receivedCount i (.echo m)) :
+theorem Invariant.correct_echoer {s : BrachaState P.n M} (hInv : Invariant P ldr s) {i : Fin P.n} {m
+  : M}
+    (hcnt : P.echoReceiptQuorum ≤ s.receivedCount i (.echo m)) :
     ∃ k, k ∉ s.F ∧ (s.process k).sentEcho = some m := by
   have hlt : s.F.card < s.receivedCount i (.echo m) :=
-    lt_of_le_of_lt hInv.F_card (lt_of_lt_of_le P.f_lt_echoQuorum hcnt)
+    lt_of_le_of_lt hInv.F_card (lt_of_lt_of_le P.f_lt_echoReceiptQuorum hcnt)
   obtain ⟨k, hkF, hkrecv⟩ := InstanceState.exists_sender_notMem s.F hlt
-  exact ⟨k, hkF, hInv.echo_conf k hkF m (hInv.recv_sub i k hkrecv)⟩
+  exact ⟨k, hkF, hInv.echo_confirmed k hkF m (hInv.received_subset_sent i k hkrecv)⟩
 
 /-- `f + 1` `VOTE m` receipts hold an honest voter for `m`: they exceed the
 corruption budget, and an honest sender's sent `VOTE` matches its write-once
 field. -/
-theorem Inv.correct_voter {s : BrachaState P.n M} (hInv : Inv P ldr s) {i : Fin P.n} {m : M}
+theorem Invariant.correct_voter {s : BrachaState P.n M} (hInv : Invariant P ldr s) {i : Fin P.n} {m
+  : M}
     (hcnt : P.f + 1 ≤ s.receivedCount i (.vote m)) :
     ∃ k, k ∉ s.F ∧ (s.process k).sentVote = some m := by
   have hlt : s.F.card < s.receivedCount i (.vote m) :=
     lt_of_lt_of_le (Nat.lt_succ_of_le hInv.F_card) hcnt
   obtain ⟨k, hkF, hkrecv⟩ := InstanceState.exists_sender_notMem s.F hlt
-  exact ⟨k, hkF, hInv.vote_conf k hkF m (hInv.recv_sub i k hkrecv)⟩
+  exact ⟨k, hkF, hInv.vote_confirmed k hkF m (hInv.received_subset_sent i k hkrecv)⟩
 
 /-- The invariant is preserved by every implementation step. -/
-theorem Inv.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (BrachaState P.n M)}
-    (hInv : Inv P ldr s) (hstep : BrachaStep P ldr s l μ)
-    {s' : BrachaState P.n M} (hs' : s' ∈ μ.support) : Inv P ldr s' := by
+theorem Invariant.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (BrachaState P.n M)}
+    (hInv : Invariant P ldr s) (hstep : BrachaStep P ldr s l μ)
+    {s' : BrachaState P.n M} (hs' : s' ∈ μ.support) : Invariant P ldr s' := by
   cases hstep with
   | call m h =>
     rw [PMF.mem_support_pure_iff] at hs'
@@ -156,20 +158,20 @@ theorem Inv.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (BrachaStat
     · intro i k x hx
       simp only [InstanceState.multicast_received, InstanceState.setProcess_received] at hx
       rw [InstanceState.mem_multicast_sent, InstanceState.setProcess_sent]
-      exact Or.inr (hInv.recv_sub i k hx)
+      exact Or.inr (hInv.received_subset_sent i k hx)
     · intro hldr m' hmem
       rw [InstanceState.mem_multicast_sent, InstanceState.setProcess_sent] at hmem
       rcases hmem with ⟨-, hm'⟩ | hold
       · obtain rfl : m' = m := by injection hm'
         simp
-      · have hin := hInv.init_conf (by simpa using hldr) m' hold
+      · have hin := hInv.init_confirmed (by simpa using hldr) m' hold
         rw [h] at hin
         exact absurd hin (by simp)
     · intro k hk m' hmem
       rw [InstanceState.mem_multicast_sent, InstanceState.setProcess_sent] at hmem
       rcases hmem with ⟨-, hm'⟩ | hold
       · exact absurd hm' (by simp)
-      · have hpre := hInv.echo_conf k (by simpa using hk) m' hold
+      · have hpre := hInv.echo_confirmed k (by simpa using hk) m' hold
         by_cases hkl : k = ldr
         · subst hkl
           rw [InstanceState.multicast_process, InstanceState.setProcess_process_self]
@@ -188,7 +190,7 @@ theorem Inv.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (BrachaStat
           · rw [InstanceState.multicast_process,
             InstanceState.setProcess_process_ne _ _ _ hkl] at hslot
             exact hslot
-        rcases hInv.echo_prov k (by simpa using hk) m' hslot' with hldrF | hin
+        rcases hInv.echo_provenance k (by simpa using hk) m' hslot' with hldrF | hin
         · exact hldr hldrF
         · rw [h] at hin
           exact absurd hin (by simp)
@@ -196,7 +198,7 @@ theorem Inv.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (BrachaStat
       rw [InstanceState.mem_multicast_sent, InstanceState.setProcess_sent] at hmem
       rcases hmem with ⟨-, hm'⟩ | hold
       · exact absurd hm' (by simp)
-      · have hpre := hInv.vote_conf k (by simpa using hk) m' hold
+      · have hpre := hInv.vote_confirmed k (by simpa using hk) m' hold
         by_cases hkl : k = ldr
         · subst hkl
           rw [InstanceState.multicast_process, InstanceState.setProcess_process_self]
@@ -204,7 +206,7 @@ theorem Inv.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (BrachaStat
         · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hkl]
           exact hpre
     · intro k hk m' hslot
-      rw [echoCert_multicast, echoCert_setProcess]
+      rw [echoCertificate_multicast, echoCertificate_setProcess]
       by_cases hkl : k = ldr
       · subst hkl
         rw [InstanceState.multicast_process, InstanceState.setProcess_process_self] at hslot
@@ -224,23 +226,23 @@ theorem Inv.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (BrachaStat
       rw [InstanceState.receiveMessage_sent]
       rcases hx with ⟨-, rfl, rfl⟩ | hold
       · exact h
-      · exact hInv.recv_sub i' k hold
+      · exact hInv.received_subset_sent i' k hold
     · intro hldr m' hmem
       rw [InstanceState.receiveMessage_sent] at hmem
       rw [InstanceState.receiveMessage_process]
-      exact hInv.init_conf (by simpa using hldr) m' hmem
+      exact hInv.init_confirmed (by simpa using hldr) m' hmem
     · intro k hk m' hmem
       rw [InstanceState.receiveMessage_sent] at hmem
       rw [InstanceState.receiveMessage_process]
-      exact hInv.echo_conf k (by simpa using hk) m' hmem
+      exact hInv.echo_confirmed k (by simpa using hk) m' hmem
     · intro k hk m' hslot
       rw [InstanceState.receiveMessage_process] at hslot
       rw [InstanceState.receiveMessage_process]
-      simpa using hInv.echo_prov k (by simpa using hk) m' hslot
+      simpa using hInv.echo_provenance k (by simpa using hk) m' hslot
     · intro k hk m' hmem
       rw [InstanceState.receiveMessage_sent] at hmem
       rw [InstanceState.receiveMessage_process]
-      exact hInv.vote_conf k (by simpa using hk) m' hmem
+      exact hInv.vote_confirmed k (by simpa using hk) m' hmem
     · intro k hk m' hslot
       rw [InstanceState.receiveMessage_process] at hslot
       exact (hInv.vote_backed k (by simpa using hk) m' hslot).receiveMessage i j m
@@ -251,12 +253,12 @@ theorem Inv.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (BrachaStat
     · intro i k x hx
       simp only [InstanceState.multicast_received, InstanceState.setProcess_received] at hx
       rw [InstanceState.mem_multicast_sent, InstanceState.setProcess_sent]
-      exact Or.inr (hInv.recv_sub i k hx)
+      exact Or.inr (hInv.received_subset_sent i k hx)
     · intro hldr m' hmem
       rw [InstanceState.mem_multicast_sent, InstanceState.setProcess_sent] at hmem
       rcases hmem with ⟨-, hm'⟩ | hold
       · exact absurd hm' (by simp)
-      · have hpre := hInv.init_conf (by simpa using hldr) m' hold
+      · have hpre := hInv.init_confirmed (by simpa using hldr) m' hold
         by_cases hkl : ldr = j
         · rw [InstanceState.multicast_process, hkl, InstanceState.setProcess_process_self]
           rw [hkl] at hpre
@@ -268,7 +270,7 @@ theorem Inv.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (BrachaStat
       rcases hmem with ⟨rfl, hm'⟩ | hold
       · obtain rfl : m' = m := by injection hm'
         simp
-      · have hpre := hInv.echo_conf k (by simpa using hk) m' hold
+      · have hpre := hInv.echo_confirmed k (by simpa using hk) m' hold
         by_cases hkl : k = j
         · subst hkl
           rw [hsend] at hpre
@@ -294,20 +296,20 @@ theorem Inv.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (BrachaStat
         by_cases hldr : ldr ∈ s.F
         · exact Or.inl hldr
         · rcases hrecv with hinit | hq | hv
-          · exact Or.inr (hInv.init_conf hldr m (hInv.recv_sub _ ldr hinit))
+          · exact Or.inr (hInv.init_confirmed hldr m (hInv.received_subset_sent _ ldr hinit))
           · obtain ⟨k', hk'F, hk'⟩ := hInv.correct_echoer hq
-            exact hInv.echo_prov k' hk'F m hk'
+            exact hInv.echo_provenance k' hk'F m hk'
           · obtain ⟨k', hk'F, hk'⟩ := hInv.correct_voter hv
             obtain ⟨i, hi⟩ := hInv.vote_backed k' hk'F m hk'
             obtain ⟨k'', hk''F, hk''⟩ := hInv.correct_echoer hi
-            exact hInv.echo_prov k'' hk''F m hk''
+            exact hInv.echo_provenance k'' hk''F m hk''
       · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hkl] at hslot
-        exact hInv.echo_prov k (by simpa using hk) m' hslot
+        exact hInv.echo_provenance k (by simpa using hk) m' hslot
     · intro k hk m' hmem
       rw [InstanceState.mem_multicast_sent, InstanceState.setProcess_sent] at hmem
       rcases hmem with ⟨-, hm'⟩ | hold
       · exact absurd hm' (by simp)
-      · have hpre := hInv.vote_conf k (by simpa using hk) m' hold
+      · have hpre := hInv.vote_confirmed k (by simpa using hk) m' hold
         by_cases hkl : k = j
         · subst hkl
           rw [InstanceState.multicast_process, InstanceState.setProcess_process_self]
@@ -315,7 +317,7 @@ theorem Inv.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (BrachaStat
         · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hkl]
           exact hpre
     · intro k hk m' hslot
-      rw [echoCert_multicast, echoCert_setProcess]
+      rw [echoCertificate_multicast, echoCertificate_setProcess]
       by_cases hkl : k = j
       · subst hkl
         rw [InstanceState.multicast_process, InstanceState.setProcess_process_self] at hslot
@@ -329,12 +331,12 @@ theorem Inv.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (BrachaStat
     · intro i k x hx
       simp only [InstanceState.multicast_received, InstanceState.setProcess_received] at hx
       rw [InstanceState.mem_multicast_sent, InstanceState.setProcess_sent]
-      exact Or.inr (hInv.recv_sub i k hx)
+      exact Or.inr (hInv.received_subset_sent i k hx)
     · intro hldr m' hmem
       rw [InstanceState.mem_multicast_sent, InstanceState.setProcess_sent] at hmem
       rcases hmem with ⟨-, hm'⟩ | hold
       · exact absurd hm' (by simp)
-      · have hpre := hInv.init_conf (by simpa using hldr) m' hold
+      · have hpre := hInv.init_confirmed (by simpa using hldr) m' hold
         by_cases hkl : ldr = j
         · rw [InstanceState.multicast_process, hkl, InstanceState.setProcess_process_self]
           rw [hkl] at hpre
@@ -345,7 +347,7 @@ theorem Inv.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (BrachaStat
       rw [InstanceState.mem_multicast_sent, InstanceState.setProcess_sent] at hmem
       rcases hmem with ⟨-, hm'⟩ | hold
       · exact absurd hm' (by simp)
-      · have hpre := hInv.echo_conf k (by simpa using hk) m' hold
+      · have hpre := hInv.echo_confirmed k (by simpa using hk) m' hold
         by_cases hkl : k = j
         · subst hkl
           rw [InstanceState.multicast_process, InstanceState.setProcess_process_self]
@@ -361,7 +363,7 @@ theorem Inv.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (BrachaStat
         · rw [InstanceState.multicast_process,
           InstanceState.setProcess_process_ne _ _ _ hkl] at hslot
           exact hslot
-      rcases hInv.echo_prov k (by simpa using hk) m' hslot' with hldrF | hin
+      rcases hInv.echo_provenance k (by simpa using hk) m' hslot' with hldrF | hin
       · exact Or.inl (by simpa using hldrF)
       · refine Or.inr ?_
         by_cases hkl : ldr = j
@@ -375,7 +377,7 @@ theorem Inv.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (BrachaStat
       rcases hmem with ⟨rfl, hm'⟩ | hold
       · obtain rfl : m' = m := by injection hm'
         simp
-      · have hpre := hInv.vote_conf k (by simpa using hk) m' hold
+      · have hpre := hInv.vote_confirmed k (by simpa using hk) m' hold
         by_cases hkl : k = j
         · subst hkl
           rw [hsend] at hpre
@@ -383,7 +385,7 @@ theorem Inv.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (BrachaStat
         · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hkl]
           exact hpre
     · intro k hk m' hslot
-      rw [echoCert_multicast, echoCert_setProcess]
+      rw [echoCertificate_multicast, echoCertificate_setProcess]
       by_cases hkl : k = j
       · subst hkl
         rw [InstanceState.multicast_process, InstanceState.setProcess_process_self] at hslot
@@ -399,12 +401,12 @@ theorem Inv.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (BrachaStat
     · intro i k x hx
       simp only [InstanceState.multicast_received, InstanceState.setProcess_received] at hx
       rw [InstanceState.mem_multicast_sent, InstanceState.setProcess_sent]
-      exact Or.inr (hInv.recv_sub i k hx)
+      exact Or.inr (hInv.received_subset_sent i k hx)
     · intro hldr m' hmem
       rw [InstanceState.mem_multicast_sent, InstanceState.setProcess_sent] at hmem
       rcases hmem with ⟨-, hm'⟩ | hold
       · exact absurd hm' (by simp)
-      · have hpre := hInv.init_conf (by simpa using hldr) m' hold
+      · have hpre := hInv.init_confirmed (by simpa using hldr) m' hold
         by_cases hkl : ldr = j
         · rw [InstanceState.multicast_process, hkl, InstanceState.setProcess_process_self]
           rw [hkl] at hpre
@@ -415,7 +417,7 @@ theorem Inv.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (BrachaStat
       rw [InstanceState.mem_multicast_sent, InstanceState.setProcess_sent] at hmem
       rcases hmem with ⟨-, hm'⟩ | hold
       · exact absurd hm' (by simp)
-      · have hpre := hInv.echo_conf k (by simpa using hk) m' hold
+      · have hpre := hInv.echo_confirmed k (by simpa using hk) m' hold
         by_cases hkl : k = j
         · subst hkl
           rw [InstanceState.multicast_process, InstanceState.setProcess_process_self]
@@ -431,7 +433,7 @@ theorem Inv.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (BrachaStat
         · rw [InstanceState.multicast_process,
           InstanceState.setProcess_process_ne _ _ _ hkl] at hslot
           exact hslot
-      rcases hInv.echo_prov k (by simpa using hk) m' hslot' with hldrF | hin
+      rcases hInv.echo_provenance k (by simpa using hk) m' hslot' with hldrF | hin
       · exact Or.inl (by simpa using hldrF)
       · refine Or.inr ?_
         by_cases hkl : ldr = j
@@ -445,7 +447,7 @@ theorem Inv.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (BrachaStat
       rcases hmem with ⟨rfl, hm'⟩ | hold
       · obtain rfl : m' = m := by injection hm'
         simp
-      · have hpre := hInv.vote_conf k (by simpa using hk) m' hold
+      · have hpre := hInv.vote_confirmed k (by simpa using hk) m' hold
         by_cases hkl : k = j
         · subst hkl
           rw [hsend] at hpre
@@ -453,7 +455,7 @@ theorem Inv.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (BrachaStat
         · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hkl]
           exact hpre
     · intro k hk m' hslot
-      rw [echoCert_multicast, echoCert_setProcess]
+      rw [echoCertificate_multicast, echoCertificate_setProcess]
       by_cases hkl : k = j
       · subst hkl
         rw [InstanceState.multicast_process, InstanceState.setProcess_process_self] at hslot
@@ -463,8 +465,8 @@ theorem Inv.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (BrachaStat
         have hlt : s.F.card < s.receivedCount k (.vote m) :=
           lt_of_lt_of_le (Nat.lt_succ_of_le hInv.F_card) hcnt
         obtain ⟨k', hk'F, hk'recv⟩ := InstanceState.exists_sender_notMem s.F hlt
-        have hk'sent := hInv.recv_sub k k' hk'recv
-        have hk'field := hInv.vote_conf k' hk'F m hk'sent
+        have hk'sent := hInv.received_subset_sent k k' hk'recv
+        have hk'field := hInv.vote_confirmed k' hk'F m hk'sent
         exact hInv.vote_backed k' hk'F m hk'field
       · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hkl] at hslot
         exact hInv.vote_backed k (by simpa using hk) m' hslot
@@ -475,32 +477,32 @@ theorem Inv.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (BrachaStat
     · intro i k x hx
       rw [InstanceState.multicast_received] at hx
       rw [InstanceState.mem_multicast_sent]
-      exact Or.inr (hInv.recv_sub i k hx)
+      exact Or.inr (hInv.received_subset_sent i k hx)
     · intro hldr m' hmem
       rw [InstanceState.mem_multicast_sent] at hmem
       rw [InstanceState.multicast_process]
       rcases hmem with ⟨rfl, -⟩ | hold
       · exact absurd hj (by simpa using hldr)
-      · exact hInv.init_conf (by simpa using hldr) m' hold
+      · exact hInv.init_confirmed (by simpa using hldr) m' hold
     · intro k hk m' hmem
       rw [InstanceState.mem_multicast_sent] at hmem
       rw [InstanceState.multicast_process]
       rcases hmem with ⟨rfl, -⟩ | hold
       · exact absurd hj (by simpa using hk)
-      · exact hInv.echo_conf k (by simpa using hk) m' hold
+      · exact hInv.echo_confirmed k (by simpa using hk) m' hold
     · intro k hk m' hslot
       rw [InstanceState.multicast_process] at hslot
       rw [InstanceState.multicast_process]
-      simpa using hInv.echo_prov k (by simpa using hk) m' hslot
+      simpa using hInv.echo_provenance k (by simpa using hk) m' hslot
     · intro k hk m' hmem
       rw [InstanceState.mem_multicast_sent] at hmem
       rw [InstanceState.multicast_process]
       rcases hmem with ⟨rfl, -⟩ | hold
       · exact absurd hj (by simpa using hk)
-      · exact hInv.vote_conf k (by simpa using hk) m' hold
+      · exact hInv.vote_confirmed k (by simpa using hk) m' hold
     · intro k hk m' hslot
       rw [InstanceState.multicast_process] at hslot
-      rw [echoCert_multicast]
+      rw [echoCertificate_multicast]
       exact hInv.vote_backed k (by simpa using hk) m' hslot
   | ret id m hcnt hr =>
     rw [PMF.mem_support_pure_iff] at hs'
@@ -509,10 +511,10 @@ theorem Inv.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (BrachaStat
     · intro i k x hx
       rw [InstanceState.setProcess_received] at hx
       rw [InstanceState.setProcess_sent]
-      exact hInv.recv_sub i k hx
+      exact hInv.received_subset_sent i k hx
     · intro hldr m' hmem
       rw [InstanceState.setProcess_sent] at hmem
-      have hpre := hInv.init_conf (by simpa using hldr) m' hmem
+      have hpre := hInv.init_confirmed (by simpa using hldr) m' hmem
       by_cases hkl : ldr = id
       · rw [hkl, InstanceState.setProcess_process_self]
         rw [hkl] at hpre
@@ -521,7 +523,7 @@ theorem Inv.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (BrachaStat
         exact hpre
     · intro k hk m' hmem
       rw [InstanceState.setProcess_sent] at hmem
-      have hpre := hInv.echo_conf k (by simpa using hk) m' hmem
+      have hpre := hInv.echo_confirmed k (by simpa using hk) m' hmem
       by_cases hkl : k = id
       · subst hkl
         rw [InstanceState.setProcess_process_self]
@@ -536,7 +538,7 @@ theorem Inv.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (BrachaStat
           exact hslot
         · rw [InstanceState.setProcess_process_ne _ _ _ hkl] at hslot
           exact hslot
-      rcases hInv.echo_prov k (by simpa using hk) m' hslot' with hldrF | hin
+      rcases hInv.echo_provenance k (by simpa using hk) m' hslot' with hldrF | hin
       · exact Or.inl (by simpa using hldrF)
       · refine Or.inr ?_
         by_cases hkl : ldr = id
@@ -547,7 +549,7 @@ theorem Inv.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (BrachaStat
           exact hin
     · intro k hk m' hmem
       rw [InstanceState.setProcess_sent] at hmem
-      have hpre := hInv.vote_conf k (by simpa using hk) m' hmem
+      have hpre := hInv.vote_confirmed k (by simpa using hk) m' hmem
       by_cases hkl : k = id
       · subst hkl
         rw [InstanceState.setProcess_process_self]
@@ -555,7 +557,7 @@ theorem Inv.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (BrachaStat
       · rw [InstanceState.setProcess_process_ne _ _ _ hkl]
         exact hpre
     · intro k hk m' hslot
-      rw [echoCert_setProcess]
+      rw [echoCertificate_setProcess]
       by_cases hkl : k = id
       · subst hkl
         rw [InstanceState.setProcess_process_self] at hslot
@@ -571,72 +573,73 @@ theorem Inv.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (BrachaStat
     · intro i k x hx
       rw [InstanceState.corrupt_received] at hx
       rw [InstanceState.corrupt_sent]
-      exact hInv.recv_sub i k hx
+      exact hInv.received_subset_sent i k hx
     · intro hldr m' hmem
       rw [InstanceState.corrupt_sent] at hmem
       rw [InstanceState.corrupt_process]
-      exact hInv.init_conf (hF ldr hldr) m' hmem
+      exact hInv.init_confirmed (hF ldr hldr) m' hmem
     · intro k hk m' hmem
       rw [InstanceState.corrupt_sent] at hmem
       rw [InstanceState.corrupt_process]
-      exact hInv.echo_conf k (hF k hk) m' hmem
+      exact hInv.echo_confirmed k (hF k hk) m' hmem
     · intro k hk m' hslot
       rw [InstanceState.corrupt_process] at hslot
       rw [InstanceState.corrupt_process]
-      rcases hInv.echo_prov k (hF k hk) m' hslot with hldrF | hin
+      rcases hInv.echo_provenance k (hF k hk) m' hslot with hldrF | hin
       · exact Or.inl (InstanceState.corrupt_F_subset s id hldrF)
       · exact Or.inr hin
     · intro k hk m' hmem
       rw [InstanceState.corrupt_sent] at hmem
       rw [InstanceState.corrupt_process]
-      exact hInv.vote_conf k (hF k hk) m' hmem
+      exact hInv.vote_confirmed k (hF k hk) m' hmem
     · intro k hk m' hslot
       rw [InstanceState.corrupt_process] at hslot
-      rw [echoCert_corrupt]
+      rw [echoCertificate_corrupt]
       exact hInv.vote_backed k (hF k hk) m' hslot
 
 /-! ### Deriving the certificate -/
 
 /-- At most one value is ever echo-certified: two `ECHO` receipt quorums share
 an honest sender, whose `sentEcho` field is write-once. -/
-theorem echoCert_unique {s : BrachaState P.n M} (hInv : Inv P ldr s) {m m' : M}
-    (h : EchoCert P s m) (h' : EchoCert P s m') : m = m' := by
+theorem echoCertificate_unique {s : BrachaState P.n M} (hInv : Invariant P ldr s) {m m' : M}
+    (h : EchoCertificate P s m) (h' : EchoCertificate P s m') : m = m' := by
   obtain ⟨i, hi⟩ := h
   obtain ⟨i', hi'⟩ := h'
-  obtain ⟨k, hkF, hkm, hkm'⟩ := InstanceState.exists_correct_received₂_echoQuorum hInv.F_card hi hi'
-  have h1 := hInv.echo_conf k hkF m (hInv.recv_sub i k hkm)
-  have h2 := hInv.echo_conf k hkF m' (hInv.recv_sub i' k hkm')
+  obtain ⟨k, hkF, hkm,
+    hkm'⟩ := InstanceState.exists_correct_received₂_echoReceiptQuorum hInv.F_card hi hi'
+  have h1 := hInv.echo_confirmed k hkF m (hInv.received_subset_sent i k hkm)
+  have h2 := hInv.echo_confirmed k hkF m' (hInv.received_subset_sent i' k hkm')
   rw [h1] at h2
   injection h2
 
 /-- Every `2f + 1` `VOTE m` receipt quorum yields the certificate: it contains
 an honest voter, and honest votes are backed. -/
-theorem echoCert_of_vote_quorum {s : BrachaState P.n M} (hInv : Inv P ldr s)
+theorem echoCertificate_of_vote_quorum {s : BrachaState P.n M} (hInv : Invariant P ldr s)
     {i : Fin P.n} {m : M} (hcnt : 2 * P.f + 1 ≤ s.receivedCount i (.vote m)) :
-    EchoCert P s m := by
+    EchoCertificate P s m := by
   obtain ⟨k, hkF, hkslot⟩ := hInv.correct_voter (le_trans (by omega) hcnt)
   exact hInv.vote_backed k hkF m hkslot
 
 /-- Under an honest leader, the certificate identifies the leader's input: the
 `ECHO` quorum contains an honest echoer, whose echo carries the leader's
 input. -/
-theorem input_of_echoCert {s : BrachaState P.n M} (hInv : Inv P ldr s)
-    (hldr : ldr ∉ s.F) {m : M} (hc : EchoCert P s m) :
+theorem input_of_echoCertificate {s : BrachaState P.n M} (hInv : Invariant P ldr s)
+    (hldr : ldr ∉ s.F) {m : M} (hc : EchoCertificate P s m) :
     (s.process ldr).input = some m := by
   obtain ⟨i, hi⟩ := hc
   obtain ⟨k, hkF, hkslot⟩ := hInv.correct_echoer hi
-  rcases hInv.echo_prov k hkF m hkslot with hldrF | hin
+  rcases hInv.echo_provenance k hkF m hkslot with hldrF | hin
   · exact absurd hldrF hldr
   · exact hin
 
 /-! ### The relation -/
 
-/-- The BRB refinement relation. `val_cert` bounds the specification's
+/-- The BRB refinement relation. `val_certificate` bounds the specification's
 committed value by the certificate; the other clauses are projections. -/
-structure InstRel (P : Parameters) (ldr : Fin P.n) (s : BrachaState P.n M)
+structure SpecificationRelation (P : Parameters) (ldr : Fin P.n) (s : BrachaState P.n M)
     (t : SpecState P.n M) : Prop where
   /-- The implementation invariant. -/
-  inv : Inv P ldr s
+  invariant : Invariant P ldr s
   /-- The call records agree. -/
   input_eq : t.input = (s.process ldr).input
   /-- The return flags agree. -/
@@ -644,20 +647,20 @@ structure InstRel (P : Parameters) (ldr : Fin P.n) (s : BrachaState P.n M)
   /-- The corrupted sets agree. -/
   F_eq : t.F = s.F
   /-- A committed value is echo-certified. -/
-  val_cert : ∀ m, t.val = some m → EchoCert P s m
+  val_certificate : ∀ m, t.val = some m → EchoCertificate P s m
 
 /-- The relation holds initially. -/
-theorem instRel_init :
-    InstRel P ldr (BrachaState.initial P.n M) (SpecState.initial P.n M) := by
-  refine ⟨Inv.initial, ?_, ?_, ?_, ?_⟩ <;>
+theorem specificationRelation_init :
+    SpecificationRelation P ldr (BrachaState.initial P.n M) (SpecState.initial P.n M) := by
+  refine ⟨Invariant.initial, ?_, ?_, ?_, ?_⟩ <;>
     simp [BrachaState.initial, SpecState.initial, ProcessRecord.initial]
 
 /-- **Broadcast compatibility**: the relation is preserved by corrupting both
 sides at once — the abstract state the family lifting consumes. -/
-theorem instRel_corrupt {s : BrachaState P.n M} {t : SpecState P.n M}
-    (hR : InstRel P ldr s t) (id : Fin P.n) :
-    InstRel P ldr (s.corrupt P id) (t.corrupt P id) := by
-  refine ⟨hR.inv.step (BrachaStep.fail s id) (by rw [PMF.mem_support_pure_iff]),
+theorem specificationRelation_corrupt {s : BrachaState P.n M} {t : SpecState P.n M}
+    (hR : SpecificationRelation P ldr s t) (id : Fin P.n) :
+    SpecificationRelation P ldr (s.corrupt P id) (t.corrupt P id) := by
+  refine ⟨hR.invariant.step (BrachaStep.fail s id) (by rw [PMF.mem_support_pure_iff]),
     ?_, ?_, ?_, ?_⟩
   · rw [corrupt_input, InstanceState.corrupt_process]
     exact hR.input_eq
@@ -667,22 +670,22 @@ theorem instRel_corrupt {s : BrachaState P.n M} {t : SpecState P.n M}
   · rw [SpecState.corrupt_F, InstanceState.corrupt_F, hR.F_eq]
   · intro m hm
     rw [corrupt_val] at hm
-    rw [echoCert_corrupt]
-    exact hR.val_cert m hm
+    rw [echoCertificate_corrupt]
+    exact hR.val_certificate m hm
 
 /-- **The relation across one row**: every row of `BrachaStep` at a related pair
 is answered by a weak run of the specification instance, and the answer is
 again related. Internal rows stutter; `call` and `fail` are answered by their
 specification rows; `ret id m` is answered by `ret` alone when `val` is already
 committed, and by the two-step run `commit ; ret` when it is not. -/
-theorem instRel_row (P : Parameters) (ldr : Fin P.n) (q₁ : BrachaState P.n M)
-    (q₂ : SpecState P.n M) (hR : InstRel P ldr q₁ q₂) (l : Label P.n M)
+theorem specificationRelation_row (P : Parameters) (ldr : Fin P.n) (q₁ : BrachaState P.n M)
+    (q₂ : SpecState P.n M) (hR : SpecificationRelation P ldr q₁ q₂) (l : Label P.n M)
     (μ : PMF (BrachaState P.n M)) (hstep : BrachaStep P ldr q₁ l μ)
     (q₁' : BrachaState P.n M) (hq₁' : q₁' ∈ μ.support) :
     ∃ q₂', ((l = Silent.τ ∧ (specInst P ldr M).weakLSilent q₂ q₂') ∨
       (¬ l = Silent.τ ∧ (specInst P ldr M).weakLStep q₂ l q₂')) ∧
-      InstRel P ldr q₁' q₂' := by
-  have hInv' := hR.inv.step hstep hq₁'
+      SpecificationRelation P ldr q₁' q₂' := by
+  have hInv' := hR.invariant.step hstep hq₁'
   cases hstep with
   | call m h =>
     rw [PMF.mem_support_pure_iff] at hq₁'
@@ -700,8 +703,8 @@ theorem instRel_row (P : Parameters) (ldr : Fin P.n) (q₁ : BrachaState P.n M)
         exact hR.ret_eq k
     · simpa using hR.F_eq
     · intro m' hm'
-      rw [echoCert_multicast, echoCert_setProcess]
-      exact hR.val_cert m' hm'
+      rw [echoCertificate_multicast, echoCertificate_setProcess]
+      exact hR.val_certificate m' hm'
   | callLoop m =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
@@ -719,7 +722,7 @@ theorem instRel_row (P : Parameters) (ldr : Fin P.n) (q₁ : BrachaState P.n M)
       exact hR.ret_eq k
     · simpa using hR.F_eq
     · intro m' hm'
-      exact (hR.val_cert m' hm').receiveMessage i j m
+      exact (hR.val_certificate m' hm').receiveMessage i j m
   | echo j m hrecv hsend =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
@@ -739,8 +742,8 @@ theorem instRel_row (P : Parameters) (ldr : Fin P.n) (q₁ : BrachaState P.n M)
         exact hR.ret_eq k
     · simpa using hR.F_eq
     · intro m' hm'
-      rw [echoCert_multicast, echoCert_setProcess]
-      exact hR.val_cert m' hm'
+      rw [echoCertificate_multicast, echoCertificate_setProcess]
+      exact hR.val_certificate m' hm'
   | voteQuorum j m hcnt hsend =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
@@ -760,8 +763,8 @@ theorem instRel_row (P : Parameters) (ldr : Fin P.n) (q₁ : BrachaState P.n M)
         exact hR.ret_eq k
     · simpa using hR.F_eq
     · intro m' hm'
-      rw [echoCert_multicast, echoCert_setProcess]
-      exact hR.val_cert m' hm'
+      rw [echoCertificate_multicast, echoCertificate_setProcess]
+      exact hR.val_certificate m' hm'
   | voteAmplification j m hcnt hsend =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
@@ -781,8 +784,8 @@ theorem instRel_row (P : Parameters) (ldr : Fin P.n) (q₁ : BrachaState P.n M)
         exact hR.ret_eq k
     · simpa using hR.F_eq
     · intro m' hm'
-      rw [echoCert_multicast, echoCert_setProcess]
-      exact hR.val_cert m' hm'
+      rw [echoCertificate_multicast, echoCertificate_setProcess]
+      exact hR.val_certificate m' hm'
   | byzantine j m hj =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
@@ -795,18 +798,18 @@ theorem instRel_row (P : Parameters) (ldr : Fin P.n) (q₁ : BrachaState P.n M)
       exact hR.ret_eq k
     · simpa using hR.F_eq
     · intro m' hm'
-      rw [echoCert_multicast]
-      exact hR.val_cert m' hm'
+      rw [echoCertificate_multicast]
+      exact hR.val_certificate m' hm'
   | ret id m hcnt hr =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
-    have hcert : EchoCert P q₁ m := echoCert_of_vote_quorum hR.inv hcnt
+    have hcert : EchoCertificate P q₁ m := echoCertificate_of_vote_quorum hR.invariant hcnt
     have hretQ : q₂.ret id = false := by
       rw [hR.ret_eq id]; exact hr
     have hRel : ∀ t' : SpecState P.n M, t'.val = some m →
         t'.input = q₂.input → t'.F = q₂.F →
         t'.ret = q₂.ret →
-        InstRel P ldr (q₁.setProcess id { q₁.process id with returned := true })
+        SpecificationRelation P ldr (q₁.setProcess id { q₁.process id with returned := true })
           { t' with ret := Function.update t'.ret id true } := by
       intro t' hval hinput hF hret
       refine ⟨hInv', ?_, ?_, ?_, ?_⟩
@@ -830,7 +833,7 @@ theorem instRel_row (P : Parameters) (ldr : Fin P.n) (q₁ : BrachaState P.n M)
         rw [hF]
         exact hR.F_eq
       · intro m' hm'
-        rw [echoCert_setProcess]
+        rw [echoCertificate_setProcess]
         obtain rfl : m = m' := by
           have := hval
           rw [show ({ t' with ret := Function.update t'.ret id true } :
@@ -841,7 +844,7 @@ theorem instRel_row (P : Parameters) (ldr : Fin P.n) (q₁ : BrachaState P.n M)
     cases hval : q₂.val with
     | some m' =>
       obtain rfl : m = m' :=
-        echoCert_unique hR.inv hcert (hR.val_cert m' hval)
+        echoCertificate_unique hR.invariant hcert (hR.val_certificate m' hval)
       refine ⟨{ q₂ with ret := Function.update q₂.ret id true },
         Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
           (Step.ret q₂ id m hval hretQ)⟩, ?_⟩
@@ -854,7 +857,7 @@ theorem instRel_row (P : Parameters) (ldr : Fin P.n) (q₁ : BrachaState P.n M)
         · exact Or.inl (by rw [hR.F_eq]; exact hldr)
         · exact Or.inr (by
             rw [hR.input_eq]
-            exact input_of_echoCert hR.inv hldr hcert)
+            exact input_of_echoCertificate hR.invariant hldr hcert)
       have hret : (specInst P ldr M).LStep { q₂ with val := some m }
           (.ret id m)
           { q₂ with val := some m, ret := Function.update q₂.ret id true } :=
@@ -865,22 +868,23 @@ theorem instRel_row (P : Parameters) (ldr : Fin P.n) (q₁ : BrachaState P.n M)
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     exact ⟨q₂.corrupt P id, Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
-      (Step.fail q₂ id)⟩, instRel_corrupt hR id⟩
+      (Step.fail q₂ id)⟩, specificationRelation_corrupt hR id⟩
 
 /-- **The BRB refinement**: the reliable-broadcast instance is forward
 simulated by the specification instance with the same leader, read over the
 instance's interface. A transition of the instance is one row of `BrachaStep`
 (`BRB.brachaInstance_step_row`), the row is answered by a weak run of the specification
-(`instRel_row`), and that run is lifted to the interface along a section of
+(`specificationRelation_row`), and that run is lifted to the interface along a section of
 `specificationLabelMap` — which is where the call loop is answered by the specification's
 own loop row. -/
-theorem brbRefines (P : Parameters) (ldr : Fin P.n) :
-    ForwardSimulation (brachaInstance P ldr M) (specificationOverInstanceAlphabet P ldr M) (InstRel
+theorem brachaRefinesSpecification (P : Parameters) (ldr : Fin P.n) :
+    ForwardSimulation (brachaInstance P ldr M) (specificationOverInstanceAlphabet P ldr M)
+      (SpecificationRelation
       P ldr) := by
   constructor
   intro q₁ q₂ hR l μ hstep q₁' hq₁'
   obtain ⟨l₀, hpull, hrow⟩ := brachaInstance_step_row P ldr q₁ l μ hstep
-  obtain ⟨s', hdis, hrel⟩ := instRel_row P ldr q₁ q₂ hR l₀ μ hrow q₁' hq₁'
+  obtain ⟨s', hdis, hrel⟩ := specificationRelation_row P ldr q₁ q₂ hR l₀ μ hrow q₁' hq₁'
   refine ⟨s', ?_, hrel⟩
   rcases hdis with ⟨hτ, hweak⟩ | ⟨hτ, hweak⟩
   · exact Or.inl ⟨specificationLabelMap_eq_tau (by rw [hpull, hτ]; rfl),
@@ -901,10 +905,10 @@ call across the fused effects, and the on-demand commit that a derived
 delivery licenses. -/
 
 /-- The relation across any internal row, the specification stuttering. -/
-theorem instRel_tau {P : Parameters} {ldr : Fin P.n} {s s' : BrachaState P.n M}
-    {t : SpecState P.n M} (hR : InstRel P ldr s t)
-    (hstep : BrachaStep P ldr s Label.tau (PMF.pure s')) : InstRel P ldr s' t := by
-  have hInv' := hR.inv.step hstep (by rw [PMF.mem_support_pure_iff])
+theorem specificationRelation_tau {P : Parameters} {ldr : Fin P.n} {s s' : BrachaState P.n M}
+    {t : SpecState P.n M} (hR : SpecificationRelation P ldr s t)
+    (hstep : BrachaStep P ldr s Label.tau (PMF.pure s')) : SpecificationRelation P ldr s' t := by
+  have hInv' := hR.invariant.step hstep (by rw [PMF.mem_support_pure_iff])
   generalize hμ : (PMF.pure s' : PMF (BrachaState P.n M)) = μ at hstep
   cases hstep with
   | deliver i j m h =>
@@ -918,7 +922,7 @@ theorem instRel_tau {P : Parameters} {ldr : Fin P.n} {s s' : BrachaState P.n M}
       exact hR.ret_eq k
     · simpa using hR.F_eq
     · intro m' hm'
-      exact (hR.val_cert m' hm').receiveMessage i j m
+      exact (hR.val_certificate m' hm').receiveMessage i j m
   | echo j m hrecv hsend =>
     have hs' := PMF.pure_injective hμ
     subst hs'
@@ -937,8 +941,8 @@ theorem instRel_tau {P : Parameters} {ldr : Fin P.n} {s s' : BrachaState P.n M}
         exact hR.ret_eq k
     · simpa using hR.F_eq
     · intro m' hm'
-      rw [echoCert_multicast, echoCert_setProcess]
-      exact hR.val_cert m' hm'
+      rw [echoCertificate_multicast, echoCertificate_setProcess]
+      exact hR.val_certificate m' hm'
   | voteQuorum j m hcnt hsend =>
     have hs' := PMF.pure_injective hμ
     subst hs'
@@ -957,8 +961,8 @@ theorem instRel_tau {P : Parameters} {ldr : Fin P.n} {s s' : BrachaState P.n M}
         exact hR.ret_eq k
     · simpa using hR.F_eq
     · intro m' hm'
-      rw [echoCert_multicast, echoCert_setProcess]
-      exact hR.val_cert m' hm'
+      rw [echoCertificate_multicast, echoCertificate_setProcess]
+      exact hR.val_certificate m' hm'
   | voteAmplification j m hcnt hsend =>
     have hs' := PMF.pure_injective hμ
     subst hs'
@@ -977,8 +981,8 @@ theorem instRel_tau {P : Parameters} {ldr : Fin P.n} {s s' : BrachaState P.n M}
         exact hR.ret_eq k
     · simpa using hR.F_eq
     · intro m' hm'
-      rw [echoCert_multicast, echoCert_setProcess]
-      exact hR.val_cert m' hm'
+      rw [echoCertificate_multicast, echoCertificate_setProcess]
+      exact hR.val_certificate m' hm'
   | byzantine j m hj =>
     have hs' := PMF.pure_injective hμ
     subst hs'
@@ -990,8 +994,8 @@ theorem instRel_tau {P : Parameters} {ldr : Fin P.n} {s s' : BrachaState P.n M}
       exact hR.ret_eq k
     · simpa using hR.F_eq
     · intro m' hm'
-      rw [echoCert_multicast]
-      exact hR.val_cert m' hm'
+      rw [echoCertificate_multicast]
+      exact hR.val_certificate m' hm'
 
 /-- An internal row leaves the corrupted set alone. -/
 theorem brachaStep_tau_F {P : Parameters} {ldr : Fin P.n} {s s' : BrachaState P.n M}
@@ -1020,13 +1024,13 @@ theorem brachaStep_tau_F {P : Parameters} {ldr : Fin P.n} {s s' : BrachaState P.
     simp
 
 /-- The relation across the leader's call, the specification calling too. -/
-theorem instRel_call {P : Parameters} {ldr : Fin P.n} {s : BrachaState P.n M}
-    {t : SpecState P.n M} (hR : InstRel P ldr s t) {m : M}
+theorem specificationRelation_call {P : Parameters} {ldr : Fin P.n} {s : BrachaState P.n M}
+    {t : SpecState P.n M} (hR : SpecificationRelation P ldr s t) {m : M}
     (h : (s.process ldr).input = none) :
-    InstRel P ldr
+    SpecificationRelation P ldr
       ((s.setProcess ldr { s.process ldr with input := some m }).multicast ldr (.init m))
       { t with input := some m } := by
-  refine ⟨hR.inv.step (BrachaStep.call s m h) (by rw [PMF.mem_support_pure_iff]),
+  refine ⟨hR.invariant.step (BrachaStep.call s m h) (by rw [PMF.mem_support_pure_iff]),
     ?_, ?_, ?_, ?_⟩
   · dsimp only
     rw [InstanceState.multicast_process, InstanceState.setProcess_process_self]
@@ -1039,19 +1043,19 @@ theorem instRel_call {P : Parameters} {ldr : Fin P.n} {s : BrachaState P.n M}
       exact hR.ret_eq k
   · simpa using hR.F_eq
   · intro m' hm'
-    rw [echoCert_multicast, echoCert_setProcess]
-    exact hR.val_cert m' hm'
+    rw [echoCertificate_multicast, echoCertificate_setProcess]
+    exact hR.val_certificate m' hm'
 
 /-- **The on-demand commit.** A `VOTE` receipt quorum licenses the
 specification's committed value: either it is already this value, or the
 `commit` guard holds towards it, the relation restored either way. -/
 theorem commitReach {P : Parameters} {ldr : Fin P.n} {s : BrachaState P.n M}
-    {t : SpecState P.n M} (hR : InstRel P ldr s t) {id : Fin P.n} {m : M}
+    {t : SpecState P.n M} (hR : SpecificationRelation P ldr s t) {id : Fin P.n} {m : M}
     (hcnt : 2 * P.f + 1 ≤ s.receivedCount id (.vote m)) :
-    (t.val = some m ∧ InstRel P ldr s t) ∨
+    (t.val = some m ∧ SpecificationRelation P ldr s t) ∨
     (t.val = none ∧ (ldr ∈ t.F ∨ t.input = some m) ∧
-      InstRel P ldr s { t with val := some m }) := by
-  have hcert : EchoCert P s m := echoCert_of_vote_quorum hR.inv hcnt
+      SpecificationRelation P ldr s { t with val := some m }) := by
+  have hcert : EchoCertificate P s m := echoCertificate_of_vote_quorum hR.invariant hcnt
   rcases hval : t.val with _ | m'
   · right
     have hcommit : ldr ∈ t.F ∨ t.input = some m := by
@@ -1059,8 +1063,8 @@ theorem commitReach {P : Parameters} {ldr : Fin P.n} {s : BrachaState P.n M}
       · exact Or.inl (by rw [hR.F_eq]; exact hldr)
       · exact Or.inr (by
           rw [hR.input_eq]
-          exact input_of_echoCert hR.inv hldr hcert)
-    refine ⟨rfl, hcommit, hR.inv, ?_, hR.ret_eq, hR.F_eq, ?_⟩
+          exact input_of_echoCertificate hR.invariant hldr hcert)
+    refine ⟨rfl, hcommit, hR.invariant, ?_, hR.ret_eq, hR.F_eq, ?_⟩
     · dsimp only
       exact hR.input_eq
     · intro m'' hm''
@@ -1070,12 +1074,12 @@ theorem commitReach {P : Parameters} {ldr : Fin P.n} {s : BrachaState P.n M}
       exact hcert
   · left
     obtain rfl : m' = m :=
-      echoCert_unique hR.inv (hR.val_cert m' hval) hcert
+      echoCertificate_unique hR.invariant (hR.val_certificate m' hval) hcert
     exact ⟨rfl, hR⟩
 
-/-- info: 'PLTS.ABA.BRB.brbRefines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.BRB.brachaRefinesSpecification' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms brbRefines
+#print axioms brachaRefinesSpecification
 
 end BRB
 end ABA

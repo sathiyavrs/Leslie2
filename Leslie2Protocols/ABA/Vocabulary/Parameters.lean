@@ -14,7 +14,7 @@ The protocol parameters shared by every system in the ABA case study:
 * `ABA.Parameters` — the number of processes `n`, the corruption budget `f` (with
   `3 * f < n`), the coin goodness `ε` (with `0 < ε`) and the coin failure
   probability `δ` (with `2 * ε + δ ≤ 1`).
-* `ABA.Parameters.echoQuorum` — the reliable broadcast's `ECHO` quorum, `(n + f) / 2 + 1`,
+* `ABA.Parameters.echoReceiptQuorum` — the reliable broadcast's `ECHO` quorum, `(n + f) / 2 + 1`,
   which is more than `(n + f) / 2` (AFW25's Algorithm 1).
 * `ABA.Parameters.wccPMF` — *the* coin distribution of the development, over
   `ABA.CoinOutcome`: `bit b` with probability `ε` for each bit `b` (all
@@ -42,7 +42,7 @@ structure Parameters where
   /-- Corruption budget. -/
   f : ℕ
   /-- Optimal-resilience bound `3f < n`. -/
-  hf : 3 * f < n
+  hResilience : 3 * f < n
   /-- Coin goodness. -/
   ε : ENNReal
   /-- Coin failure probability: the mass on which the coin never delivers. -/
@@ -121,21 +121,22 @@ noncomputable def wccPMF (P : Parameters) : PMF CoinOutcome :=
 /-- The quorum size `n - f` exceeds `f`: any `n - f` processes contain a
 correct one even after removing `f` corrupted ones. -/
 theorem f_lt_n_sub_f (P : Parameters) : P.f < P.n - P.f := by
-  have := P.hf; omega
+  have := P.hResilience; omega
 
 /-- The `ECHO` quorum of the reliable broadcast: more than `(n + f) / 2`
 senders (AFW25's Algorithm 1, line 2). -/
-def echoQuorum (P : Parameters) : ℕ := (P.n + P.f) / 2 + 1
+def echoReceiptQuorum (P : Parameters) : ℕ := (P.n + P.f) / 2 + 1
 
 /-- Two `ECHO` quorums have more than `n + f` members between them:
-`n + f < 2 * echoQuorum`. -/
-theorem n_add_f_lt_two_mul_echoQuorum (P : Parameters) : P.n + P.f < 2 * P.echoQuorum := by
-  unfold echoQuorum; omega
+`n + f < 2 * echoReceiptQuorum`. -/
+theorem n_add_f_lt_two_mul_echoReceiptQuorum (P : Parameters) : P.n + P.f < 2 * P.echoReceiptQuorum
+  := by
+  unfold echoReceiptQuorum; omega
 
 /-- The `ECHO` quorum exceeds the corruption budget: `f ≤ (n + f) / 2` since
 `f ≤ n`, so any `ECHO` quorum contains a correct sender. -/
-theorem f_lt_echoQuorum (P : Parameters) : P.f < P.echoQuorum := by
-  have := P.hf; unfold echoQuorum; omega
+theorem f_lt_echoReceiptQuorum (P : Parameters) : P.f < P.echoReceiptQuorum := by
+  have := P.hResilience; unfold echoReceiptQuorum; omega
 
 end Parameters
 

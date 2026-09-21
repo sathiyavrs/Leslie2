@@ -11,7 +11,7 @@ import Leslie2Protocols.ABA.Composition.ABAState
 # Non-vacuity witnesses for the protocol-shaped specification
 
 Machine-checked evidence that the composed system `hybrid P` can actually
-execute a nontrivial prefix: the core simulation `ABA.coreSim` about it is not
+execute a nontrivial prefix: the core simulation `ABA.hybridRefinesSpecification` about it is not
 vacuously true through an immediate deadlock.
 
 We fix the small parameter set `fourProcesses` (`n = 4`, `f = 1`, `ε = 1/2`) and exhibit a
@@ -104,7 +104,7 @@ def hybridStateOf (G : ℕ → GBCA.SpecState 4) (s : ABAState fourProcesses) (o
 /-- The round loops on a label one of them owns: the addressed loop takes its
 row, the others stand still, and the group's successor is the pointwise
 update. -/
-theorem coreLoops_at {C : ∀ _ : Fin 4, RoundLoopRecord 4} (id : Fin 4) {L : ExtendedLabel 4}
+theorem roundLoops_at {C : ∀ _ : Fin 4, RoundLoopRecord 4} (id : Fin 4) {L : ExtendedLabel 4}
     {c' : RoundLoopRecord 4} (hown : RoundLoopStep fourProcesses id (C id) L (PMF.pure c'))
     (hidle : ∀ j, j ≠ id → RoundLoopStep fourProcesses j (C j) L (PMF.pure (C j))) (i : Fin 4) :
     RoundLoopStep fourProcesses i (C i) L (PMF.pure (Function.update C id c' i)) := by
@@ -290,7 +290,7 @@ theorem step_callABA₀ :
     abaInitial.1) (A := abaInitial.2) (o := coinInitial)
     (L := Sum.inl (Label.callABA (0 : Fin 4) true)) (by simp)
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsInitial (by simp) rfl not_false)
-    (coreLoops_at 0 (RoundLoopStep.input (P := fourProcesses) (abaInitial.1 0) true rfl rfl)
+    (roundLoops_at 0 (RoundLoopStep.input (P := fourProcesses) (abaInitial.1 0) true rfl rfl)
       (fun j hj => RoundLoopStep.callABAIdle (P := fourProcesses) (abaInitial.1 j) 0 true (Ne.symm
         hj)))
     (ABANetworkStep.callABAIdle (P := fourProcesses) abaInitial.2 0 true)
@@ -308,7 +308,7 @@ theorem step_callABA₁ :
     abaAfterInput0.1) (A := abaAfterInput0.2) (o := coinInitial)
     (L := Sum.inl (Label.callABA (1 : Fin 4) true)) (by simp)
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsInitial (by simp) rfl not_false)
-    (coreLoops_at 1 (RoundLoopStep.input (P := fourProcesses) (abaAfterInput0.1 1) true (by decide)
+    (roundLoops_at 1 (RoundLoopStep.input (P := fourProcesses) (abaAfterInput0.1 1) true (by decide)
       (by decide))
       (fun j hj => RoundLoopStep.callABAIdle (P := fourProcesses) (abaAfterInput0.1 j) 1 true
         (Ne.symm hj)))
@@ -327,7 +327,7 @@ theorem step_callABA₂ :
     abaAfterInput1.1) (A := abaAfterInput1.2) (o := coinInitial)
     (L := Sum.inl (Label.callABA (2 : Fin 4) true)) (by simp)
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsInitial (by simp) rfl not_false)
-    (coreLoops_at 2 (RoundLoopStep.input (P := fourProcesses) (abaAfterInput1.1 2) true (by decide)
+    (roundLoops_at 2 (RoundLoopStep.input (P := fourProcesses) (abaAfterInput1.1 2) true (by decide)
       (by decide))
       (fun j hj => RoundLoopStep.callABAIdle (P := fourProcesses) (abaAfterInput1.1 j) 2 true
         (Ne.symm hj)))
@@ -350,7 +350,7 @@ theorem step_callG₀ :
     (L := Sum.inl (Label.callG 0 (0 : Fin 4) true)) (by simp)
     (gbcaSpecificationFamily_owned fourProcesses rfl rfl (GBCA.Step.call (P := fourProcesses) (r :=
       0) (gbcaSpecificationsInitial 0) 0 true rfl))
-    (coreLoops_at 0 (RoundLoopStep.callG (P := fourProcesses) (abaAfterInput2.1 0) 0 true (by
+    (roundLoops_at 0 (RoundLoopStep.callG (P := fourProcesses) (abaAfterInput2.1 0) 0 true (by
       decide) (by decide)
         (by decide) (by decide))
       (fun j hj => RoundLoopStep.callGIdle (P := fourProcesses) (abaAfterInput2.1 j) 0 0 true
@@ -372,7 +372,7 @@ theorem step_callG₁ :
     (gbcaSpecificationFamily_owned fourProcesses rfl rfl (GBCA.Step.call (P := fourProcesses) (r :=
       0) (gbcaSpecificationsAfterCall0 0) 1 true (by
       decide)))
-    (coreLoops_at 1 (RoundLoopStep.callG (P := fourProcesses) (abaAfterCallG0.1 1) 0 true (by
+    (roundLoops_at 1 (RoundLoopStep.callG (P := fourProcesses) (abaAfterCallG0.1 1) 0 true (by
       decide) (by decide)
         (by decide) (by decide))
       (fun j hj => RoundLoopStep.callGIdle (P := fourProcesses) (abaAfterCallG0.1 j) 0 1 true
@@ -395,7 +395,7 @@ theorem step_callG₂ :
     (gbcaSpecificationFamily_owned fourProcesses rfl rfl (GBCA.Step.call (P := fourProcesses) (r :=
       0) (gbcaSpecificationsAfterCall1 0) 2 true (by
       decide)))
-    (coreLoops_at 2 (RoundLoopStep.callG (P := fourProcesses) (abaAfterCallG1.1 2) 0 true (by
+    (roundLoops_at 2 (RoundLoopStep.callG (P := fourProcesses) (abaAfterCallG1.1 2) 0 true (by
       decide) (by decide)
         (by decide) (by decide))
       (fun j hj => RoundLoopStep.callGIdle (P := fourProcesses) (abaAfterCallG1.1 j) 0 2 true
@@ -417,7 +417,7 @@ theorem step_bindUnset :
       coinInitial) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterBindUnset
         abaAfterCallG2 coinInitial)) := by
   refine hybrid_vis fourProcesses (by simp) ?_
-  exact hybridExtended_tau_spec fourProcesses (gbcaSpecificationFamily_tau fourProcesses
+  exact hybridExtended_tau_specification fourProcesses (gbcaSpecificationFamily_tau fourProcesses
     (GBCA.Step.bindUnset (P := fourProcesses) (r := 0) (gbcaSpecificationsAfterCall2 0) false
       (by unfold GBCA.SpecState.quorum; decide) (by decide) (by decide)))
 
@@ -437,7 +437,7 @@ theorem step_retG₀ :
     (gbcaSpecificationFamily_owned fourProcesses rfl rfl (GBCA.Step.retA (P := fourProcesses) (r :=
       0) (gbcaSpecificationsAfterBindUnset 0) 0 true true
       (by decide) (by decide) (by decide) (Or.inl rfl) rfl))
-    (coreLoops_at 0 (RoundLoopStep.retG (P := fourProcesses) (abaAfterCallG2.1 0) 0 (.A true) true
+    (roundLoops_at 0 (RoundLoopStep.retG (P := fourProcesses) (abaAfterCallG2.1 0) 0 (.A true) true
       (by decide)
         (by decide) (by decide))
       (fun j hj => RoundLoopStep.retGIdle (P := fourProcesses) (abaAfterCallG2.1 j) 0 0 (.A true)
@@ -459,7 +459,7 @@ theorem step_retG₁ :
     (gbcaSpecificationFamily_owned fourProcesses rfl rfl (GBCA.Step.retA (P := fourProcesses) (r :=
       0) (gbcaSpecificationsAfterReturn0 0) 1 true true
       (by decide) (by decide) (by decide) (Or.inr rfl) (by decide)))
-    (coreLoops_at 1 (RoundLoopStep.retG (P := fourProcesses) (abaAfterRetG0.1 1) 0 (.A true) true
+    (roundLoops_at 1 (RoundLoopStep.retG (P := fourProcesses) (abaAfterRetG0.1 1) 0 (.A true) true
       (by decide)
         (by decide) (by decide))
       (fun j hj => RoundLoopStep.retGIdle (P := fourProcesses) (abaAfterRetG0.1 j) 0 1 (.A true)
@@ -481,7 +481,7 @@ theorem step_retG₂ :
     (gbcaSpecificationFamily_owned fourProcesses rfl rfl (GBCA.Step.retA (P := fourProcesses) (r :=
       0) (gbcaSpecificationsAfterReturn1 0) 2 true true
       (by decide) (by decide) (by decide) (Or.inr rfl) (by decide)))
-    (coreLoops_at 2 (RoundLoopStep.retG (P := fourProcesses) (abaAfterRetG1.1 2) 0 (.A true) true
+    (roundLoops_at 2 (RoundLoopStep.retG (P := fourProcesses) (abaAfterRetG1.1 2) 0 (.A true) true
       (by decide)
         (by decide) (by decide))
       (fun j hj => RoundLoopStep.retGIdle (P := fourProcesses) (abaAfterRetG1.1 j) 0 2 (.A true)
@@ -506,7 +506,7 @@ theorem step_callW₀ :
     (L := Sum.inl (Label.callW 0 (0 : Fin 4))) (by simp)
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsAfterReturn2 (by simp) rfl
       not_false)
-    (coreLoops_at 0 (RoundLoopStep.callW (P := fourProcesses) (abaAfterRetG2.1 0) 0 (by decide) (by
+    (roundLoops_at 0 (RoundLoopStep.callW (P := fourProcesses) (abaAfterRetG2.1 0) 0 (by decide) (by
       decide) (by decide))
       (fun j hj => RoundLoopStep.callWIdle (P := fourProcesses) (abaAfterRetG2.1 j) 0 0 (Ne.symm
         hj)))
@@ -545,7 +545,8 @@ theorem step_callW₁ :
     (L := Sum.inl (Label.callW 0 (1 : Fin 4))) (by simp)
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsAfterReturn2 (by simp) rfl
       not_false)
-    (coreLoops_at 1 (RoundLoopStep.callW (P := fourProcesses) (abaAfterCallW0.1 1) 0 (by decide) (by
+    (roundLoops_at 1 (RoundLoopStep.callW (P := fourProcesses) (abaAfterCallW0.1 1) 0 (by decide)
+      (by
       decide) (by decide))
       (fun j hj => RoundLoopStep.callWIdle (P := fourProcesses) (abaAfterCallW0.1 j) 0 1 (Ne.symm
         hj)))
@@ -595,7 +596,8 @@ theorem step_callW₂ :
     (L := Sum.inl (Label.callW 0 (2 : Fin 4))) (by simp)
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsAfterReturn2 (by simp) rfl
       not_false)
-    (coreLoops_at 2 (RoundLoopStep.callW (P := fourProcesses) (abaAfterCallW1.1 2) 0 (by decide) (by
+    (roundLoops_at 2 (RoundLoopStep.callW (P := fourProcesses) (abaAfterCallW1.1 2) 0 (by decide)
+      (by
       decide) (by decide))
       (fun j hj => RoundLoopStep.callWIdle (P := fourProcesses) (abaAfterCallW1.1 j) 0 2 (Ne.symm
         hj)))
@@ -622,7 +624,8 @@ theorem step_retW₀ :
     (L := Sum.inr (.retWPublish 0 (0 : Fin 4) true true)) (by simp)
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsAfterReturn2 (by simp) rfl
       not_false)
-    (coreLoops_at 0 (RoundLoopStep.retWPublish (P := fourProcesses) (abaAfterCallW2.1 0) 0 true true
+    (roundLoops_at 0 (RoundLoopStep.retWPublish (P := fourProcesses) (abaAfterCallW2.1 0) 0 true
+      true
       (by decide)
         (by decide) (by decide) (by decide))
       (fun j hj => RoundLoopStep.retWPublishIdle (P := fourProcesses) (abaAfterCallW2.1 j) 0 0 true
@@ -646,7 +649,7 @@ theorem step_retW₁ :
     (L := Sum.inr (.retWPublish 0 (1 : Fin 4) true true)) (by simp)
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsAfterReturn2 (by simp) rfl
       not_false)
-    (coreLoops_at 1 (RoundLoopStep.retWPublish (P := fourProcesses) (abaAfterRoundStep0.1 1) 0 true
+    (roundLoops_at 1 (RoundLoopStep.retWPublish (P := fourProcesses) (abaAfterRoundStep0.1 1) 0 true
       true (by decide)
         (by decide) (by decide) (by decide))
       (fun j hj => RoundLoopStep.retWPublishIdle (P := fourProcesses) (abaAfterRoundStep0.1 j) 0 1
@@ -671,7 +674,7 @@ theorem step_retW₂ :
     (L := Sum.inr (.retWPublish 0 (2 : Fin 4) true true)) (by simp)
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsAfterReturn2 (by simp) rfl
       not_false)
-    (coreLoops_at 2 (RoundLoopStep.retWPublish (P := fourProcesses) (abaAfterRoundStep1.1 2) 0 true
+    (roundLoops_at 2 (RoundLoopStep.retWPublish (P := fourProcesses) (abaAfterRoundStep1.1 2) 0 true
       true (by decide)
         (by decide) (by decide) (by decide))
       (fun j hj => RoundLoopStep.retWPublishIdle (P := fourProcesses) (abaAfterRoundStep1.1 j) 0 2
@@ -699,7 +702,7 @@ theorem step_deliver₀ :
     (L := Sum.inr (.decidedDeliver (0 : Fin 4) (0 : Fin 4) true)) (by simp)
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsAfterReturn2 (by simp) rfl
       not_false)
-    (coreLoops_at 0 (RoundLoopStep.decidedDeliverReceive (P := fourProcesses) (abaAfterRoundStep2.1
+    (roundLoops_at 0 (RoundLoopStep.decidedDeliverReceive (P := fourProcesses) (abaAfterRoundStep2.1
       0) 0 true (by decide) (by decide))
       (fun j hj => RoundLoopStep.decidedDeliverIdle (P := fourProcesses) (abaAfterRoundStep2.1 j) 0
         0 true (Ne.symm hj)))
@@ -720,7 +723,8 @@ theorem step_deliver₁ :
     (L := Sum.inr (.decidedDeliver (0 : Fin 4) (1 : Fin 4) true)) (by simp)
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsAfterReturn2 (by simp) rfl
       not_false)
-    (coreLoops_at 0 (RoundLoopStep.decidedDeliverReceive (P := fourProcesses) (abaAfterDeliver0.1 0)
+    (roundLoops_at 0 (RoundLoopStep.decidedDeliverReceive (P := fourProcesses) (abaAfterDeliver0.1
+      0)
       1 true (by decide) (by decide))
       (fun j hj => RoundLoopStep.decidedDeliverIdle (P := fourProcesses) (abaAfterDeliver0.1 j) 0 1
         true (Ne.symm hj)))
@@ -742,7 +746,8 @@ theorem step_deliver₂ :
     (L := Sum.inr (.decidedDeliver (0 : Fin 4) (2 : Fin 4) true)) (by simp)
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsAfterReturn2 (by simp) rfl
       not_false)
-    (coreLoops_at 0 (RoundLoopStep.decidedDeliverReceive (P := fourProcesses) (abaAfterDeliver1.1 0)
+    (roundLoops_at 0 (RoundLoopStep.decidedDeliverReceive (P := fourProcesses) (abaAfterDeliver1.1
+      0)
       2 true (by decide) (by decide))
       (fun j hj => RoundLoopStep.decidedDeliverIdle (P := fourProcesses) (abaAfterDeliver1.1 j) 0 2
         true (Ne.symm hj)))
@@ -770,7 +775,7 @@ theorem step_retABA :
     (L := Sum.inl (Label.retABA (0 : Fin 4) true)) (by simp)
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsAfterReturn2 (by simp) rfl
       not_false)
-    (coreLoops_at 0 (RoundLoopStep.ret (P := fourProcesses) (abaAfterDeliver2.1 0) true (by decide)
+    (roundLoops_at 0 (RoundLoopStep.ret (P := fourProcesses) (abaAfterDeliver2.1 0) true (by decide)
       (by decide) (by decide))
       (fun j hj => RoundLoopStep.retABAIdle (P := fourProcesses) (abaAfterDeliver2.1 j) 0 true
         (Ne.symm hj)))
@@ -795,7 +800,7 @@ theorem step_fail :
     abaInitial.1) (A := abaInitial.2) (o := coinInitial)
     (L := Sum.inl (Label.fail (0 : Fin 4))) (by simp)
     (gbcaSpecificationFamily_fail fourProcesses gbcaSpecificationsInitial 0)
-    (coreLoops_at 0 (RoundLoopStep.failSelf (P := fourProcesses) (abaInitial.1 0) rfl)
+    (roundLoops_at 0 (RoundLoopStep.failSelf (P := fourProcesses) (abaInitial.1 0) rfl)
       (fun j hj => RoundLoopStep.failIdle (P := fourProcesses) (abaInitial.1 j) 0 (Ne.symm hj)))
     (ABANetworkStep.fail (P := fourProcesses) abaInitial.2 0 (by decide) (by decide))
     ((System.mapIdle_step_some (coinLabelMap_inl (Label.fail (0 : Fin 4))) _).mpr

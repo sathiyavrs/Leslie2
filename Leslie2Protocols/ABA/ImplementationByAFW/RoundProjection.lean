@@ -42,7 +42,7 @@ reads a receipt quorum on the process's own local state in that instance
 (`AFW.firstGatherAcceptedInputs` and its three companions). `AFW.broadcastReturnsFor`
 (`ABA/ImplementationByAFW/System.lean`) is that reading as a function: the value on which the local
 state holds a `2f + 1` `VOTE` receipt quorum, and `none` where there is no such value. Under
-the broadcast invariant `BRB.Inv` at most one value carries a quorum
+the broadcast invariant `BRB.Invariant` at most one value carries a quorum
 (`broadcastReturnsFor_eq_of_quorum`), so the function agrees with the flat guard wherever
 the flat guard fires. The accepted pairs a gather's `ECHO` carries,
 `AFW.firstGatherAcceptedPairs` and `AFW.secondGatherAcceptedPairs`, are the accepted pairs of the
@@ -61,13 +61,13 @@ holds those three as the ghost record of the round (`AFW.Ghost`), so the view
 reads them off it, and a row's ghost write is the round's write of them
 (`roundProjection_writeGhost`, `roundProjection_writeGhost_ne`, `roundProjection_ghostId`). The two
 readings of a gather's core agree because each is `Gather.coreOf` of the same
-network state (`coreOfNet_firstGatherProjection`, `coreOfNet_secondGatherProjection`).
+network state (`coreOfNetwork_firstGatherProjection`, `coreOfNetwork_secondGatherProjection`).
 
 ## The two clauses that are not readings
 
-`BoundInv` says that a process whose round-`r` second-gather local state
+`BoundInvariant` says that a process whose round-`r` second-gather local state
 carries an input has passed the round's link, so the round's bound bit is on
-record. `StoreInv` says that `BRB.Inv` holds at each of the round's `4n`
+record. `BroadcastReturnsInvariant` says that `BRB.Invariant` holds at each of the round's `4n`
 broadcast instances, which is what makes the store a function of the flat state
 in the sense the flat guards need.
 -/
@@ -149,7 +149,7 @@ theorem broadcastReturnsFor_isSome_iff (P : Parameters) [DecidableEq X]
   · rw [dif_neg h]; exact iff_of_false (by simp) h
 
 /-- The value the store holds has a receipt quorum. -/
-theorem broadcastReturnsFor_spec (P : Parameters) [DecidableEq X]
+theorem broadcastReturnsFor_voteQuorum (P : Parameters) [DecidableEq X]
     {p : LocalState P.n (BRB.ProcessRecord X) (BRB.Message X)} {x : X} (h : broadcastReturnsFor P p
       = some x) :
     2 * P.f + 1 ≤ p.receivedCount (BRB.Message.vote x) := by
@@ -166,7 +166,7 @@ invariant a `VOTE` receipt quorum yields the echo certificate, and at most one
 value is certified, so the value the store chooses is the one the quorum
 carries. -/
 theorem broadcastReturnsFor_eq_of_quorum (P : Parameters) [DecidableEq X] {k : Fin P.n}
-    {s : BRB.BrachaState P.n X} (hInv : BRB.Inv P k s) {j : Fin P.n} {x : X}
+    {s : BRB.BrachaState P.n X} (hInv : BRB.Invariant P k s) {j : Fin P.n} {x : X}
     (hq : 2 * P.f + 1 ≤ (s.1 j).receivedCount (BRB.Message.vote x)) :
     broadcastReturnsFor P (s.1 j) = some x := by
   have hex : ∃ v, 2 * P.f + 1 ≤ (s.1 j).receivedCount (BRB.Message.vote v) := ⟨x, hq⟩
@@ -175,8 +175,8 @@ theorem broadcastReturnsFor_eq_of_quorum (P : Parameters) [DecidableEq X] {k : F
   refine congrArg some ?_
   have h1 : 2 * P.f + 1 ≤ s.receivedCount j (BRB.Message.vote (Classical.choose hex)) :=
     Classical.choose_spec hex
-  exact BRB.echoCert_unique hInv (BRB.echoCert_of_vote_quorum hInv h1)
-    (BRB.echoCert_of_vote_quorum hInv (i := j) (m := x) hq)
+  exact BRB.echoCertificate_unique hInv (BRB.echoCertificate_of_vote_quorum hInv h1)
+    (BRB.echoCertificate_of_vote_quorum hInv (i := j) (m := x) hq)
 
 /-- The store of an untouched local state is empty: nothing is delivered, and
 a receipt quorum is at least one receipt. -/
@@ -285,7 +285,7 @@ def programProjection {n : ℕ} (st : RoundRecord n) : GBCA.ByAFW.ProcessRecord 
   input := st.firstGather.process.input
   candidate := st.secondGather.process.input
   called2 := st.secondGather.process.input.isSome
-  out := none
+  output := none
   returned := st.secondGather.process.returned
 
 /-- The round-`r` state of the composed reading, read off the flat state: the
@@ -379,16 +379,16 @@ theorem accepted_secondGatherProjection (j : Fin P.n) :
 /-- **The two readings of the first gather's core agree**: the instance's core
 is read off its network state alone, and that network state is the one
 `AFW.firstGatherOf` hands the adversary. -/
-theorem coreOfNet_firstGatherProjection :
-    Gather.coreOfNet P (Gather.gatherTier (firstGatherProjection P u w r)).2 = Gather.coreOf P
+theorem coreOfNetwork_firstGatherProjection :
+    Gather.coreOfNetwork P (Gather.gatherTier (firstGatherProjection P u w r)).2 = Gather.coreOf P
       (firstGatherOf P w r) :=
-  (Gather.coreOf_eq_coreOfNet P (firstGatherOf P w r)).symm
+  (Gather.coreOf_eq_coreOfNetwork P (firstGatherOf P w r)).symm
 
 /-- The same for the second gather's core. -/
-theorem coreOfNet_secondGatherProjection :
-    Gather.coreOfNet P (Gather.gatherTier (secondGatherProjection P u w r)).2 = Gather.coreOf P
+theorem coreOfNetwork_secondGatherProjection :
+    Gather.coreOfNetwork P (Gather.gatherTier (secondGatherProjection P u w r)).2 = Gather.coreOf P
       (secondGatherOf P w r) :=
-  (Gather.coreOf_eq_coreOfNet P (secondGatherOf P w r)).symm
+  (Gather.coreOf_eq_coreOfNetwork P (secondGatherOf P w r)).symm
 
 end Readers
 
@@ -530,7 +530,7 @@ called**: a process whose round-`r` second-gather local state carries an input
 has passed the round's link, and the link writes the bound bit. This is what
 the graded return's announced bit rests on, and it is one of the two clauses of
 the relation that are not readings of the flat state. -/
-def BoundInv (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n)
+def BoundInvariant (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n)
     (w : NetworkState P.n) : Prop :=
   ∀ (r : ℕ) (i : Fin P.n), (((u i).2.roundRecord r).secondGather.process).input ≠ none →
     (w.ghostRecord r).2.2 ≠ none
@@ -539,13 +539,17 @@ def BoundInv (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n)
 is what identifies the store with the value a flat receipt quorum carries
 (`broadcastReturnsFor_eq_of_quorum`), and it is the second clause of the relation that is
 not a reading of the flat state. -/
-def StoreInv (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n)
+def BroadcastReturnsInvariant (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n)
     (w : NetworkState P.n) : Prop :=
   ∀ (r : ℕ) (k : Fin P.n),
-    BRB.Inv P k (Gather.inputBroadcasts (GBCA.ByAFW.firstGather (roundProjection P u w r)) k) ∧
-      BRB.Inv P k (Gather.bindBroadcasts (GBCA.ByAFW.firstGather (roundProjection P u w r)) k) ∧
-      BRB.Inv P k (Gather.inputBroadcasts (GBCA.ByAFW.secondGather (roundProjection P u w r)) k) ∧
-      BRB.Inv P k (Gather.bindBroadcasts (GBCA.ByAFW.secondGather (roundProjection P u w r)) k)
+    BRB.Invariant P k (Gather.inputBroadcasts (GBCA.ByAFW.firstGather (roundProjection P u w r)) k)
+      ∧
+      BRB.Invariant P k (Gather.bindBroadcasts (GBCA.ByAFW.firstGather (roundProjection P u w r)) k)
+        ∧
+      BRB.Invariant P k (Gather.inputBroadcasts (GBCA.ByAFW.secondGather (roundProjection P u w r))
+        k) ∧
+      BRB.Invariant P k (Gather.bindBroadcasts (GBCA.ByAFW.secondGather (roundProjection P u w r))
+        k)
 
 /-- **The composition relation**: the round loops and the coin oracle are
 shared, the ABA-side network is the DECIDED sets beside the corrupted set,
@@ -553,38 +557,39 @@ every round's state is the view `roundProjection` of the flat state, the bound b
 called round is on record, and the broadcast invariant holds at every instance.
 The first four conjuncts are unguarded, so they determine the composed state
 from the flat one. -/
-def ProtocolRel (P : Parameters) (s : ProtocolState P) (t : ComposedState P) : Prop :=
+def ProtocolRelation (P : Parameters) (s : ProtocolState P) (t : ComposedState P) : Prop :=
   (∀ j, (s.1 j).1 = t.2.1 j) ∧
     s.2.2 = t.2.2.2 ∧
     t.2.2.1 = ⟨s.2.1.decidedSent, s.2.1.F⟩ ∧
     t.1 = (fun r => roundProjection P s.1 s.2.1 r) ∧
-    BoundInv P s.1 s.2.1 ∧
-    StoreInv P s.1 s.2.1
+    BoundInvariant P s.1 s.2.1 ∧
+    BroadcastReturnsInvariant P s.1 s.2.1
 
-theorem protocolRel_mk (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n)
+theorem protocolRelation_mk (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n)
     (w : NetworkState P.n) (o : ℕ → WCC.SpecState P.n) (G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n)
     (C : ∀ _ : Fin P.n, RoundLoopRecord P.n) (A : ABANetworkState P.n)
     (o' : ℕ → WCC.SpecState P.n) :
-    ProtocolRel P (u, w, o) (G, C, A, o') ↔
+    ProtocolRelation P (u, w, o) (G, C, A, o') ↔
       ((∀ j, (u j).1 = C j) ∧ o = o' ∧ A = ⟨w.decidedSent, w.F⟩ ∧
-        (G = fun r => roundProjection P u w r) ∧ BoundInv P u w ∧ StoreInv P u w) := Iff.rfl
+        (G = fun r => roundProjection P u w r) ∧ BoundInvariant P u w ∧ BroadcastReturnsInvariant P
+          u w) := Iff.rfl
 
 /-- The bound invariant survives a row that leaves every process's
 second-gather local input where it stands and keeps on record every bound bit
 already there. -/
-theorem boundInv_of {u x : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} {w v : NetworkState P.n}
-    (hI : BoundInv P u w)
+theorem boundInvariant_of {u x : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} {w v : NetworkState P.n}
+    (hI : BoundInvariant P u w)
     (hx : ∀ i r, (((x i).2.roundRecord r).secondGather.process).input
       = (((u i).2.roundRecord r).secondGather.process).input)
     (hv : ∀ r, (w.ghostRecord r).2.2 ≠ none → (v.ghostRecord r).2.2 ≠ none) :
-    BoundInv P x v :=
+    BoundInvariant P x v :=
   fun r i hne => hv r (hI r i (by rw [← hx i r]; exact hne))
 
 /-- The initial states are related: every round of the view is the composed
 round's initial state, and the broadcast invariant holds at every instance
 there. -/
-theorem protocolRel_init (P : Parameters) :
-    ProtocolRel P (protocol P).init (composed P).init := by
+theorem protocolRelation_init (P : Parameters) :
+    ProtocolRelation P (protocol P).init (composed P).init := by
   refine ⟨fun _ => rfl, rfl, rfl, ?_, fun _ _ h => absurd rfl h, ?_⟩
   · funext r
     exact (roundProjection_init P r).symm
@@ -598,7 +603,8 @@ theorem protocolRel_init (P : Parameters) :
           GBCA.ByAFW.secondGather q)
           (roundProjection_init P r)
     rw [h1, h2]
-    exact ⟨BRB.Inv.initial, BRB.Inv.initial, BRB.Inv.initial, BRB.Inv.initial⟩
+    exact ⟨BRB.Invariant.initial, BRB.Invariant.initial, BRB.Invariant.initial,
+      BRB.Invariant.initial⟩
 
 
 /-! ### Building a transition of the composed reading
@@ -611,7 +617,7 @@ loops, the ABA-side network and the lifted oracle. -/
 noncomputable def composedExtended (P : Parameters) :
     System (ComposedState P) (ExtendedLabel P.n) :=
   (roundFamilyOverBracha P).parallel
-    ((System.syncProduct (roundLoopProgram P)).parallel
+    ((System.synchronisedProduct (roundLoopProgram P)).parallel
       ((ABANetwork P).parallel (coinOverRoundAlphabet P)))
 
 /-- The composed group: the rendezvous alphabet hidden, read back over
@@ -667,7 +673,7 @@ theorem roundFamilyOverBracha_fail (P : Parameters) (G : ℕ → GBCA.ByAFW.Roun
   :
   Fin P.n) :
     (roundFamilyOverBracha P).step G (Sum.inl (Label.fail k))
-      (PMF.pure (fun r => gActLow P (Sum.inl (Label.fail k)) (G r))) := by
+      (PMF.pure (fun r => corruptionOverBracha P (Sum.inl (Label.fail k)) (G r))) := by
   rw [roundFamilyOverBracha, System.family_step_iff]
   exact Or.inr (Or.inr (Or.inl ⟨by simp, rfl, trivial, rfl⟩))
 
@@ -679,7 +685,7 @@ theorem contextStep (P : Parameters) {C C' : ∀ _ : Fin P.n, RoundLoopRecord P.
     (hC : ∀ i, RoundLoopStep P i (C i) L (PMF.pure (C' i)))
     (hA : ABANetworkStep P A L (PMF.pure A'))
     (hW : (coinOverRoundAlphabet P).step o L ν) :
-    ((System.syncProduct (roundLoopProgram P)).parallel ((ABANetwork P).parallel
+    ((System.synchronisedProduct (roundLoopProgram P)).parallel ((ABANetwork P).parallel
       (coinOverRoundAlphabet P))).step
       (C, A, o) L (prodPMF (PMF.pure C') (prodPMF (PMF.pure A') ν)) := by
   rw [System.parallel_step]
@@ -704,7 +710,8 @@ theorem composedExtended_vis_step (P : Parameters) {G G' : ℕ → GBCA.ByAFW.Ro
     hG, contextStep P hL hC hA hW, rfl⟩
 
 /-- Build a silent transition of the four components from a round's own. -/
-theorem composedExtended_tau_low (P : Parameters) {G G' : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n}
+theorem composedExtended_tau_overBracha (P : Parameters) {G G' : ℕ → GBCA.ByAFW.RoundStateOverBracha
+  P.n}
     {C : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A : ABANetworkState P.n}
     {o : ℕ → WCC.SpecState P.n}
     (hG : (roundFamilyOverBracha P).step G (Sum.inl Label.tau) (PMF.pure G')) :
@@ -834,7 +841,7 @@ theorem roundFamilyOverBracha_silentRun (P : Parameters) {G : ℕ → GBCA.ByAFW
       r) q) :
     (roundFamilyOverBracha P).weakLSilent G (Function.update G r q) := by
   rw [roundFamilyOverBracha]
-  exact System.weakLSilent_family roundOwnsLabel isFailLabel (gActLow P) h
+  exact System.weakLSilent_family roundOwnsLabel isFailLabel (corruptionOverBracha P) h
 
 /-- A run of one round on a label that round owns is a weak transition of the
 graded-agreement side at that coordinate. -/
@@ -846,7 +853,7 @@ theorem roundFamilyOverBracha_weakStep (P : Parameters) {G : ℕ → GBCA.ByAFW.
     (h : (GBCA.ByAFW.roundOverBracha P r).weakLStep (G r) L q) :
     (roundFamilyOverBracha P).weakLStep G L (Function.update G r q) := by
   rw [roundFamilyOverBracha]
-  exact System.weakLStep_family roundOwnsLabel isFailLabel (gActLow P) hL h
+  exact System.weakLStep_family roundOwnsLabel isFailLabel (corruptionOverBracha P) hL h
 
 /-- **A silent run of the graded-agreement side is a silent weak transition of
 the composed group**: the three other components stand at their states
@@ -859,7 +866,7 @@ theorem composedHidden_weakTau (P : Parameters) {G G' : ℕ → GBCA.ByAFW.Round
   have h1 : weakTau (roundFamilyOverBracha P) (PMF.pure G) (PMF.pure G') :=
     weakTau_of_weakLSilent (roundFamilyOverBracha P) (roundFamilyOverBracha_isLTS P) h
   have h2 := weakTau_parallel_left (roundFamilyOverBracha P)
-    ((System.syncProduct (roundLoopProgram P)).parallel ((ABANetwork P).parallel
+    ((System.synchronisedProduct (roundLoopProgram P)).parallel ((ABANetwork P).parallel
       (coinOverRoundAlphabet P)))
     ((C, A, o)) h1
   rw [prodPMF_pure_pure, prodPMF_pure_pure] at h2
@@ -885,7 +892,7 @@ theorem composedHidden_weakStep (P : Parameters) {G G' : ℕ → GBCA.ByAFW.Roun
   have h1 : weakStep (roundFamilyOverBracha P) (PMF.pure G) (Sum.inl l) (PMF.pure G') :=
     weakStep_of_weakLStep (roundFamilyOverBracha P) (roundFamilyOverBracha_isLTS P) hL hG
   have h2 := weakStep_parallel_sync (roundFamilyOverBracha P)
-    ((System.syncProduct (roundLoopProgram P)).parallel ((ABANetwork P).parallel
+    ((System.synchronisedProduct (roundLoopProgram P)).parallel ((ABANetwork P).parallel
       (coinOverRoundAlphabet P)))
     hL h1 (contextStep P hL hC hA hW)
   rw [prodPMF_pure_pure] at h2

@@ -53,9 +53,9 @@
   \node[tier] (spec)  at (5.95,-8.9)
     {$\mathrm{GBCA.specInst}(P,r)$: Transition System 2};
   \draw[->] (5.95,-5.75) -- (ideal.north)
-    node[lbl, midway, anchor=west, xshift=4pt]{$\mathrm{lowPairRefines}$, by congruence};
+    node[lbl, midway, anchor=west, xshift=4pt]{$\mathrm{broadcastSubstitution}$, by congruence};
   \draw[->] (ideal) -- (pair)
-    node[lbl, midway, anchor=west, xshift=4pt]{$\mathrm{idealRefines}$, by congruence};
+    node[lbl, midway, anchor=west, xshift=4pt]{$\mathrm{gatherSubstitution}$, by congruence};
   \draw[->] (pair) -- (spec)
-    node[lbl, midway, anchor=west, xshift=4pt]{$\mathrm{pairRefines}$, along $\mathrm{PairRel}$};
+    node[lbl, midway, anchor=west, xshift=4pt]{$\mathrm{refinesSpecification}$, along $\mathrm{SpecificationRelation}$};
 \end{tikzpicture}

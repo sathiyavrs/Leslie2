@@ -626,7 +626,8 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
     Fin P.n)
       (m : Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
       (hrecv : BRB.Message.init m ∈ ((p.roundRecord r).firstGatherInputBroadcasts i).received i ∨
-        P.echoQuorum ≤ ((p.roundRecord r).firstGatherInputBroadcasts i).receivedCount (.echo m) ∨
+        P.echoReceiptQuorum ≤ ((p.roundRecord r).firstGatherInputBroadcasts i).receivedCount (.echo
+          m) ∨
         P.f + 1 ≤ ((p.roundRecord r).firstGatherInputBroadcasts i).receivedCount (.vote m))
       (hsend : (((p.roundRecord r).firstGatherInputBroadcasts i).process).sentEcho = none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.firstGatherInputBroadcasts i (.echo m))))
@@ -642,7 +643,8 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
   | firstGatherInputBroadcastVoteQuorum (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ)
     (i : Fin P.n)
       (m : Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hcnt : P.echoQuorum ≤ ((p.roundRecord r).firstGatherInputBroadcasts i).receivedCount (.echo
+      (hcnt : P.echoReceiptQuorum ≤ ((p.roundRecord r).firstGatherInputBroadcasts i).receivedCount
+        (.echo
         m))
       (hsend : (((p.roundRecord r).firstGatherInputBroadcasts i).process).sentVote = none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.firstGatherInputBroadcasts i (.vote m))))
@@ -672,7 +674,8 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
     P.n)
       (m : AcceptedPairs P.n Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
       (hrecv : BRB.Message.init m ∈ ((p.roundRecord r).firstGatherBindBroadcasts i).received i ∨
-        P.echoQuorum ≤ ((p.roundRecord r).firstGatherBindBroadcasts i).receivedCount (.echo m) ∨
+        P.echoReceiptQuorum ≤ ((p.roundRecord r).firstGatherBindBroadcasts i).receivedCount (.echo
+          m) ∨
         P.f + 1 ≤ ((p.roundRecord r).firstGatherBindBroadcasts i).receivedCount (.vote m))
       (hsend : (((p.roundRecord r).firstGatherBindBroadcasts i).process).sentEcho = none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.firstGatherBindBroadcasts i (.echo m))))
@@ -688,7 +691,8 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
   | firstGatherBindBroadcastVoteQuorum (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (i
     : Fin P.n)
       (m : AcceptedPairs P.n Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hcnt : P.echoQuorum ≤ ((p.roundRecord r).firstGatherBindBroadcasts i).receivedCount (.echo
+      (hcnt : P.echoReceiptQuorum ≤ ((p.roundRecord r).firstGatherBindBroadcasts i).receivedCount
+        (.echo
         m))
       (hsend : (((p.roundRecord r).firstGatherBindBroadcasts i).process).sentVote = none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.firstGatherBindBroadcasts i (.vote m))))
@@ -719,7 +723,8 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
     Fin P.n)
       (m : Option Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
       (hrecv : BRB.Message.init m ∈ ((p.roundRecord r).secondGatherInputBroadcasts i).received i ∨
-        P.echoQuorum ≤ ((p.roundRecord r).secondGatherInputBroadcasts i).receivedCount (.echo m) ∨
+        P.echoReceiptQuorum ≤ ((p.roundRecord r).secondGatherInputBroadcasts i).receivedCount (.echo
+          m) ∨
         P.f + 1 ≤ ((p.roundRecord r).secondGatherInputBroadcasts i).receivedCount (.vote m))
       (hsend : (((p.roundRecord r).secondGatherInputBroadcasts i).process).sentEcho = none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.secondGatherInputBroadcasts i (.echo m))))
@@ -736,7 +741,8 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
   | secondGatherInputBroadcastVoteQuorum (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ)
     (i : Fin P.n)
       (m : Option Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hcnt : P.echoQuorum ≤ ((p.roundRecord r).secondGatherInputBroadcasts i).receivedCount (.echo
+      (hcnt : P.echoReceiptQuorum ≤ ((p.roundRecord r).secondGatherInputBroadcasts i).receivedCount
+        (.echo
         m))
       (hsend : (((p.roundRecord r).secondGatherInputBroadcasts i).process).sentVote = none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.secondGatherInputBroadcasts i (.vote m))))
@@ -770,7 +776,8 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
       (m : AcceptedPairs P.n (Option Bool)) (hh : c.corrupted = false)
       (hterm : p.terminated = false)
       (hrecv : BRB.Message.init m ∈ ((p.roundRecord r).secondGatherBindBroadcasts i).received i ∨
-        P.echoQuorum ≤ ((p.roundRecord r).secondGatherBindBroadcasts i).receivedCount (.echo m) ∨
+        P.echoReceiptQuorum ≤ ((p.roundRecord r).secondGatherBindBroadcasts i).receivedCount (.echo
+          m) ∨
         P.f + 1 ≤ ((p.roundRecord r).secondGatherBindBroadcasts i).receivedCount (.vote m))
       (hsend : (((p.roundRecord r).secondGatherBindBroadcasts i).process).sentEcho = none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.secondGatherBindBroadcasts i (.echo m))))
@@ -787,7 +794,8 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
     (i : Fin P.n)
       (m : AcceptedPairs P.n (Option Bool)) (hh : c.corrupted = false)
       (hterm : p.terminated = false)
-      (hcnt : P.echoQuorum ≤ ((p.roundRecord r).secondGatherBindBroadcasts i).receivedCount (.echo
+      (hcnt : P.echoReceiptQuorum ≤ ((p.roundRecord r).secondGatherBindBroadcasts i).receivedCount
+        (.echo
         m))
       (hsend : (((p.roundRecord r).secondGatherBindBroadcasts i).process).sentVote = none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.secondGatherBindBroadcasts i (.vote m))))

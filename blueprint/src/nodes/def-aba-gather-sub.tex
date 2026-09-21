@@ -3,7 +3,7 @@
   \lean{PLTS.ABA.Gather.ProcessRecord}\lean{PLTS.ABA.Gather.NetworkState}\lean{PLTS.ABA.Gather.GatherEvent}\lean{PLTS.ABA.Gather.inputBroadcastLabelMap}\lean{PLTS.ABA.Gather.bindBroadcastLabelMap}\lean{PLTS.ABA.Gather.specificationLabelMap}\lean{PLTS.ABA.Gather.StateOverBroadcasts}\lean{PLTS.ABA.Gather.instanceOverBroadcasts}\lean{PLTS.ABA.Gather.specificationOverInstanceAlphabet}\leanok
   \uses{def:aba-gather-spec, def:aba-brb-impl, def:aba-networkstate, def:syncproduct, def:process-algebra, def:idle-family, def:relabel}
   One gather instance over a payload type $X$, taken apart into the components that run it.
-  The gather tier is the $n$ gather programs under $\mathrm{syncProduct}$ beside the gather network.
+  The gather tier is the $n$ gather programs under $\mathrm{synchronisedProduct}$ beside the gather network.
   The broadcast tier is $2n$ reliable-broadcast instances, one per process for the inputs and one per process for the $\mathrm{BIND}$ payloads (D32).
   The two tiers run in parallel, the instance's own events are hidden, and the result is read back over the interface alphabet: \leandecl{PLTS.ABA.Gather.instanceOverBroadcasts}, which takes the broadcast tier as an argument.
   Five events are hidden --- the gather multicast, the gather delivery, the return of an input instance, and the call and the return of a bind instance --- so what an outside system sees of the instance is the call, the per-process returns, corruption and the call loop.

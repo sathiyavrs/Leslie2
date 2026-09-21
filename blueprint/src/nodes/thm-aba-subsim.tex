@@ -1,6 +1,6 @@
 \begin{theorem}[A round's instance is refined by its specification]
   \label{thm:aba-subsim}
-  \lean{PLTS.ABA.GBCA.ByABDY.composition_projects}\lean{PLTS.ABA.GBCA.ByABDY.gbcaLabelMap}\lean{PLTS.ABA.GBCA.ByABDY.specificationOverRoundAlphabet}\lean{PLTS.ABA.GBCA.ByABDY.Rsub}\lean{PLTS.ABA.GBCA.ByABDY.subSim}\lean{PLTS.ABA.GBCA.ByABDY.subSim_init}\lean{PLTS.ABA.GBCA.ByABDY.subSim_failAct}\leanok
+  \lean{PLTS.ABA.GBCA.ByABDY.composition_projects}\lean{PLTS.ABA.GBCA.ByABDY.gbcaLabelMap}\lean{PLTS.ABA.GBCA.ByABDY.specificationOverRoundAlphabet}\lean{PLTS.ABA.GBCA.ByABDY.substitutionRelation}\lean{PLTS.ABA.GBCA.ByABDY.instanceSubstitution}\lean{PLTS.ABA.GBCA.ByABDY.instanceSubstitution_init}\lean{PLTS.ABA.GBCA.ByABDY.instanceSubstitution_failAct}\leanok
   \uses{def:aba-gbcasub, def:aba-gbca-impl, def:aba-gbca-spec, thm:gbca-inst-refines, def:forwardsim}
   For all parameters $P$ and every round $r$, the round instance $\mathrm{composition}(P,r)$ is forward-simulated by the round-$r$ GBCA specification instance, read over its interface.
   The relation is the relation of Theorem~\ref{thm:gbca-inst-refines} itself, the round instance and the implementation instance being two presentations of one round over one state.

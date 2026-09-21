@@ -28,7 +28,7 @@ such an execution and holds at most one bit, which is what the binding
 argument of `ABA/GBCA/SpecificationSafety.lean` runs on.
 
 The three tiers of the round reach the lifted specification through
-`GBCA.ByAFW.pairRefines` and the two substitutions of `GBCA/AFW/GatherSubstitutions.lean`.
+`GBCA.ByAFW.refinesSpecification` and the two substitutions of `GBCA/AFW/GatherSubstitutions.lean`.
 Each inherits binding along its inclusion: `GBCA.roundOverGatherSpecifications_binding`,
 `GBCA.roundOverBroadcastSpecification_binding` and `GBCA.roundOverBracha_binding`.
 -/
@@ -213,58 +213,50 @@ theorem specificationOverRoundAlphabet_binding (P : Parameters) (r : ℕ) :
 
 /-- Trace-distribution inclusion of the round over the gather specifications in
 the specification read over the round's interface, the soundness of
-`pairRefines`. -/
+`refinesSpecification`. -/
 theorem roundOverGatherSpecifications_refines (P : Parameters) (r : ℕ) :
     achievableTraceDists (roundOverGatherSpecifications P r) ⊆ achievableTraceDists
       (GBCA.ByABDY.specificationOverRoundAlphabet P r) :=
   (ForwardSimulation.toProbabilistic (roundOverGatherSpecifications_isLTS P r)
     (GBCA.ByABDY.specificationOverRoundAlphabet_isLTS P r)
-    (pairRel_init P r) (pairRefines P r)).achievableTraceDists_subset
+    (specificationRelation_init P r) (refinesSpecification P r)).achievableTraceDists_subset
 
 /-- **The round over the gather instances over Bracha's broadcast refines the
 specification**: the two substitutions and the counting simulation, each taken
 probabilistically, joined by Result 2
 (`ProbabilisticForwardSimulation.trans`). -/
-theorem gatherImplRefines (P : Parameters) (r : ℕ) :
+theorem roundOverBracha_refinesSpecification (P : Parameters) (r : ℕ) :
     ProbabilisticForwardSimulation (roundOverBracha P r) (GBCA.ByABDY.specificationOverRoundAlphabet
       P r)
-      (compRel (diracRel (LowPairRel P))
-        (compRel (diracRel (IdealRel P)) (diracRel (PairRel P)))) :=
+      (compRel (diracRel (BroadcastSubstitutionRelation P))
+        (compRel (diracRel (GatherSubstitutionRelation P)) (diracRel (SpecificationRelation P)))) :=
   (ForwardSimulation.toProbabilistic (roundOverBracha_isLTS P r)
     (roundOverBroadcastSpecification_isLTS P r)
-      (lowPairRel_init P r) (lowPairRefines P r)).trans
+      (broadcastSubstitutionRelation_init P r) (broadcastSubstitution P r)).trans
     ((ForwardSimulation.toProbabilistic (roundOverBroadcastSpecification_isLTS P r)
       (roundOverGatherSpecifications_isLTS P r)
-        (idealRel_init P r) (idealRefines P r)).trans
+        (gatherSubstitutionRelation_init P r) (gatherSubstitution P r)).trans
       (ForwardSimulation.toProbabilistic (roundOverGatherSpecifications_isLTS P r)
         (GBCA.ByABDY.specificationOverRoundAlphabet_isLTS P r)
-        (pairRel_init P r) (pairRefines P r)))
+        (specificationRelation_init P r) (refinesSpecification P r)))
 
 /-- The soundness inclusion of the round reading: every trace distribution
 achievable by the round over the gather instances over Bracha's broadcast is
 achievable by the lifted specification. -/
-theorem gatherRoundRefines (P : Parameters) (r : ℕ) :
+theorem roundOverBracha_specificationTraces (P : Parameters) (r : ℕ) :
     achievableTraceDists (roundOverBracha P r) ⊆ achievableTraceDists
       (GBCA.ByABDY.specificationOverRoundAlphabet P r) :=
-  (gatherImplRefines P r).achievableTraceDists_subset
+  (roundOverBracha_refinesSpecification P r).achievableTraceDists_subset
 
 /-- The soundness inclusion of the gather substitution above the counting
 simulation: every trace distribution achievable by the round over the gather
 instances over the broadcast specification is achievable by the lifted
 specification. -/
-theorem idealRoundRefines (P : Parameters) (r : ℕ) :
+theorem roundOverBroadcastSpecification_specificationTraces (P : Parameters) (r : ℕ) :
     achievableTraceDists (roundOverBroadcastSpecification P r) ⊆ achievableTraceDists
       (GBCA.ByABDY.specificationOverRoundAlphabet P r) :=
   Set.Subset.trans (roundOverBroadcastSpecification_refines P r)
     (roundOverGatherSpecifications_refines P r)
-
-/-- The soundness inclusion of the counting simulation alone: every trace
-distribution achievable by the round over the gather specifications is
-achievable by the lifted specification. -/
-theorem pairRoundRefines (P : Parameters) (r : ℕ) :
-    achievableTraceDists (roundOverGatherSpecifications P r) ⊆ achievableTraceDists
-      (GBCA.ByABDY.specificationOverRoundAlphabet P r) :=
-  roundOverGatherSpecifications_refines P r
 
 /-! ### Binding of the three tiers -/
 
@@ -272,25 +264,30 @@ theorem pairRoundRefines (P : Parameters) (r : ℕ) :
 positive-probability trace of the round is bound to one bit: all its round-`r`
 returns announce that bit, and every one of them that hands out a value hands
 out it. Binding is a property of the labels (`BindingTraceExtended`), so
-`pairRoundRefines` carries it from `specificationOverRoundAlphabet_binding`. -/
+`roundOverGatherSpecifications_refines` carries it from
+`specificationOverRoundAlphabet_binding`. -/
 theorem roundOverGatherSpecifications_binding (P : Parameters) (r : ℕ) :
     ∀ D ∈ achievableTraceDists (roundOverGatherSpecifications P r), ∀ t, D t ≠ 0 →
       BindingTraceExtended P r t :=
-  safety_transfer (pairRoundRefines P r) (specificationOverRoundAlphabet_binding P r)
+  safety_transfer (roundOverGatherSpecifications_refines P r)
+    (specificationOverRoundAlphabet_binding P r)
 
 /-- **Binding of the round over the gather instances over the broadcast
-specification, on a trace**, along the inclusion `idealRoundRefines`. -/
+specification, on a trace**, along the inclusion
+`roundOverBroadcastSpecification_specificationTraces`. -/
 theorem roundOverBroadcastSpecification_binding (P : Parameters) (r : ℕ) :
     ∀ D ∈ achievableTraceDists (roundOverBroadcastSpecification P r), ∀ t, D t ≠ 0 →
       BindingTraceExtended P r t :=
-  safety_transfer (idealRoundRefines P r) (specificationOverRoundAlphabet_binding P r)
+  safety_transfer (roundOverBroadcastSpecification_specificationTraces P r)
+    (specificationOverRoundAlphabet_binding P r)
 
 /-- **Binding of the round over the gather instances over Bracha's broadcast,
-on a trace**, along the three-tier inclusion `gatherRoundRefines`. -/
+on a trace**, along the three-tier inclusion `roundOverBracha_specificationTraces`. -/
 theorem roundOverBracha_binding (P : Parameters) (r : ℕ) :
     ∀ D ∈ achievableTraceDists (roundOverBracha P r), ∀ t, D t ≠ 0 →
       BindingTraceExtended P r t :=
-  safety_transfer (gatherRoundRefines P r) (specificationOverRoundAlphabet_binding P r)
+  safety_transfer (roundOverBracha_specificationTraces P r) (specificationOverRoundAlphabet_binding
+    P r)
 
 /-! ### Mechanical axiom check
 
@@ -300,13 +297,13 @@ No headline may acquire a `sorryAx` dependence. -/
 #guard_msgs in
 #print axioms specificationOverRoundAlphabet_binding
 
-/-- info: 'PLTS.ABA.GBCA.gatherImplRefines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.GBCA.roundOverBracha_refinesSpecification' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms gatherImplRefines
+#print axioms roundOverBracha_refinesSpecification
 
-/-- info: 'PLTS.ABA.GBCA.gatherRoundRefines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.GBCA.roundOverBracha_specificationTraces' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms gatherRoundRefines
+#print axioms roundOverBracha_specificationTraces
 
 /-- info: 'PLTS.ABA.GBCA.roundOverGatherSpecifications_binding' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in

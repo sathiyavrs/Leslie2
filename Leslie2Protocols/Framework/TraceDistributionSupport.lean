@@ -227,13 +227,13 @@ theorem is_partial_exec_of_probOf_ofList_ne_zero
       fun h0 => h_ne (by rw [h0, mul_zero])
     have ih' := ih h_pre
     -- The last transition is a genuine step from the end state of the prefix.
-    obtain ⟨μ, h_supp, h_s'⟩ :=
+    obtain ⟨μ, h_support, h_s'⟩ :=
       pe.exists_step_of_kernel_ne_zero ⟨s₀, Seq.ofList M⟩ a.1 a.2 (by
         rcases a with ⟨l, s'⟩; exact h_ker)
     have h_step : sys.step (AlterSeq.endStateOfList s₀ M) a.1 μ :=
       pe.scheduler.valid ⟨s₀, Seq.ofList M⟩ M.length (AlterSeq.endStateOfList s₀ M)
         (AlterSeq.ofList_terminatedAt_length M)
-        (AlterSeq.stateAt_ofList_length s₀ M) a.1 μ h_supp
+        (AlterSeq.stateAt_ofList_length s₀ M) a.1 μ h_support
     -- Assemble `is_partial_exec` for the extended execution.
     intro n l s' hget
     rw [show (⟨s₀, Seq.ofList (M ++ [a])⟩ : AlterSeq State Label).trans
@@ -467,8 +467,8 @@ theorem is_exec_induction (I : State → Prop)
       | some p =>
         rw [show e.stateAt (k+1) = (e.trans.get? k).map Prod.snd from rfl, hg] at hs
         exact ⟨p, rfl, Option.some.inj hs⟩
-    obtain ⟨s₀, μ, h_state, h_step, h_supp⟩ := he.1 k l s' h_get
-    exact h_snd ▸ hstep s₀ l μ s' (ih s₀ h_state) h_step h_supp
+    obtain ⟨s₀, μ, h_state, h_step, h_support⟩ := he.1 k l s' h_get
+    exact h_snd ▸ hstep s₀ l μ s' (ih s₀ h_state) h_step h_support
 
 omit [Silent Label] in
 /-- **Forward stability.** A step-stable predicate propagates from any reached
@@ -498,9 +498,9 @@ theorem is_exec_stable (P : State → Prop)
         | some p =>
           rw [show e.stateAt (k+1) = (e.trans.get? k).map Prod.snd from rfl, hg] at hn
           exact ⟨p, rfl, Option.some.inj hn⟩
-      obtain ⟨s₀, μ, h_state, h_step, h_supp⟩ := he.1 k l s'' h_get
+      obtain ⟨s₀, μ, h_state, h_step, h_support⟩ := he.1 k l s'' h_get
       have hPk : P s₀ := ih s s₀ (by omega) hm h_state hP
-      exact h_snd ▸ hstep s₀ l μ s'' hPk h_step h_supp
+      exact h_snd ▸ hstep s₀ l μ s'' hPk h_step h_support
     · rw [hm] at hn
       exact (Option.some.inj hn) ▸ hP
 
@@ -549,12 +549,12 @@ theorem is_exec_induction_labels (I : List Label → State → Prop)
       | some p =>
         rw [show e.stateAt (k+1) = (e.trans.get? k).map Prod.snd from rfl, hg] at hs
         exact ⟨p, rfl, Option.some.inj hs⟩
-    obtain ⟨s₀, μ, h_state, h_step, h_supp⟩ := he.1 k l s' h_get
+    obtain ⟨s₀, μ, h_state, h_step, h_support⟩ := he.1 k l s' h_get
     have h_labels : e.labelsUpTo (k + 1) = e.labelsUpTo k ++ [l] := by
       rw [AlterSeq.labelsUpTo, h_get]
       rfl
     rw [h_labels]
-    exact h_snd ▸ hstep (e.labelsUpTo k) s₀ l μ s' (ih s₀ h_state) h_step h_supp
+    exact h_snd ▸ hstep (e.labelsUpTo k) s₀ l μ s' (ih s₀ h_state) h_step h_support
 
 end Induction
 

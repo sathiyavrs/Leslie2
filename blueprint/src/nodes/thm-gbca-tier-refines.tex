@@ -1,6 +1,6 @@
 \begin{theorem}[The two substitutions inside the round]
   \label{thm:gbca-tier-refines}
-  \lean{PLTS.ABA.GBCA.ByAFW.LowPairRel}\lean{PLTS.ABA.GBCA.ByAFW.lowPairRefines}\lean{PLTS.ABA.GBCA.ByAFW.IdealRel}\lean{PLTS.ABA.GBCA.ByAFW.idealRefines}\leanok
+  \lean{PLTS.ABA.GBCA.ByAFW.BroadcastSubstitutionRelation}\lean{PLTS.ABA.GBCA.ByAFW.broadcastSubstitution}\lean{PLTS.ABA.GBCA.ByAFW.GatherSubstitutionRelation}\lean{PLTS.ABA.GBCA.ByAFW.gatherSubstitution}\leanok
   \uses{def:aba-gbca-gather-low, def:aba-gbca-pair, thm:gather-low-refines, thm:gather-core, thm:forwardsim-congruence}
   Each tier of the round is forward-simulated by the one above it, along the layer held equal beside the gather-level relation at both gather slots: the fully concrete tier by the tier over broadcast specifications, along Theorem~\ref{thm:gather-low-refines}'s relation, and that tier by the round over gather specifications, along Theorem~\ref{thm:gather-core}'s.
   The programs and the layer's network, which holds the bound bit, stand equal on both sides, and neither substitution touches them.

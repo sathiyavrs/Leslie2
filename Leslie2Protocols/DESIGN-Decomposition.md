@@ -70,15 +70,14 @@ instance's commit of `x`, the state has `(inputBroadcasts k).val = some x`, no i
 `k`'s program and `k ∉ F`, and the return run must discharge the gather
 specification's commit guard `k ∈ F ∨ call k = some x`. If the specification's
 `call` tracked the program's input, that guard is false there, and
-`Gather.gatherCore` is unprovable.
+`Gather.refinesSpecification` is unprovable.
 
-**The constraint.** `Gather.CoreRel.call_eq : ∀ k, t.call k = (inputBroadcasts s k).input`.
-The specification's call record and an input instance's record move on the
-same interface labels under the same write-once guard, so `coreRel_row` answers
-`callProgramLoop` with `Gather.Step.call` and `callSpecLoop` with
-`Gather.Step.callLoop`. `Gather.IdealConf` carries no clause on the two records;
-`coreRel_call` takes both guards. The permissiveness sits at a
-specification-side tier: the concrete gather over Bracha has one row per label.
+**The constraint.** `Gather.SpecificationRelation.call_eq : ∀ k, t.call k = (inputBroadcasts s
+k).input`. The specification's call record and an input instance's record move on the same interface
+labels under the same write-once guard, so `specificationRelation_row` answers `callProgramLoop`
+with `Gather.Step.call` and `callSpecLoop` with `Gather.Step.callLoop`. `Gather.Conformance` carries
+no clause on the two records; `specificationRelation_call` takes both guards. The permissiveness
+sits at a specification-side tier: the concrete gather over Bracha has one row per label.
 
 ## 3. The composed program drops its grade on the graded return
 
@@ -89,14 +88,14 @@ writes `out := none, returned := true`.
 (`AFW.roundProjection`), and the flat state keeps a process's grade in its round-loop record
 alone, overwritten every round. A round's grade after its return is not recoverable from
 the flat state. If the program's record kept the grade, `AFW.programProjection` could not be a
-function, `AFW.ProtocolRel` would lose the conjunct `t.1 = fun r => roundProjection P u w r`, and
-every frame lemma of `ABA/ImplementationByAFW/RoundProjectionStep.lean`, which states the
-view after a row as that function applied, would have no statement.
+function, `AFW.ProtocolRelation` would lose the conjunct `t.1 = fun r => roundProjection P u w r`,
+and every frame lemma of `ABA/ImplementationByAFW/RoundProjectionStep.lean`, which states the view
+after a row as that function applied, would have no statement.
 
 **The constraint.** The grade is held only between `secondGatherReturn` and `retG`, inside a
 run whose intermediate state is named (`AFW.afterSecondGatherReturn`) and related to no flat
-state; `programProjection` sets `out := none`; `GBCA.ByAFW.PairInv.out_cert` is vacuous for a
-returned process.
+state; `programProjection` sets `out := none`; `GBCA.ByAFW.Invariant.out_certificate` is vacuous for
+a returned process.
 
 ## 4. A label outside a round's interface blocks the round
 
@@ -109,7 +108,7 @@ would self-loop on it. The rendezvous have no specification label under
 `GBCA.ByABDY.gbcaLabelMap`, so `GBCA.ByAFW.roundOverGatherSpecifications_step_row` is false
 there. The ABA and coin labels have one, and `GBCA.Step` has no row at it, so
 `GBCA.ByAFW.roundOverGatherSpecifications_step_iff_row` is false there and
-`GBCA.ByAFW.pairRefines` is unprovable: `GBCA.ByABDY.specificationOverRoundAlphabet` has no
+`GBCA.ByAFW.refinesSpecification` is unprovable: `GBCA.ByABDY.specificationOverRoundAlphabet` has no
 transition at those labels, and neither has `GBCA.ByABDY.composition`.
 
 **The constraint.** `GBCA.ByAFW.programLabelMap` sends every off-interface family label to
@@ -117,7 +116,7 @@ transition at those labels, and neither has `GBCA.ByABDY.composition`.
 `GBCA.ByAFW.NetworkStep` has a row, so the round blocks exactly where
 `GBCA.ByABDY.composition` blocks. `fail` alone maps to `none`: the layer stands still on the
 round's own `fail` row, the gathers corrupt, and in the family the label is answered by the
-broadcast act (`AFW.gActLow`) and not by the instance.
+broadcast act (`AFW.corruptionOverBracha`) and not by the instance.
 
 ## 5. The flat link carries the broadcast invariant on the composed side
 
@@ -137,15 +136,15 @@ rather than a function, filled inside the matching run, needs the same fact: an
 earlier fill with another value would leave the instance returned and the
 second value unreachable.
 
-**The constraint.** `AFW.ProtocolRel` carries `AFW.StoreInv`, the invariant
-`BRB.Inv` at every broadcast instance of the view, and
+**The constraint.** `AFW.ProtocolRelation` carries `AFW.BroadcastReturnsInvariant`, the invariant
+`BRB.Invariant` at every broadcast instance of the view, and
 `AFW.broadcastReturnsFor_eq_of_quorum` reads the uniqueness off it through
-`BRB.echoCert_of_vote_quorum` and `BRB.echoCert_unique`. The invariant holds
-initially by `BRB.Inv.initial`, and after each matched row the view's instances
-have moved by their own rows or stood still (`AFW.InvStep`), so `BRB.Inv.step`
+`BRB.echoCertificate_of_vote_quorum` and `BRB.echoCertificate_unique`. The invariant holds
+initially by `BRB.Invariant.initial`, and after each matched row the view's instances
+have moved by their own rows or stood still (`AFW.InvariantStep`), so `BRB.Invariant.step`
 re-establishes it. No invariant over the flat adversary's sent sets is written.
 `broadcastReturnsFor` carries `[DecidableEq X]` explicitly, so its count is syntactically
-the count `BRB.Inv` is stated on.
+the count `BRB.Invariant` is stated on.
 
 ## Two consequences for the theory
 
@@ -153,14 +152,14 @@ the count `BRB.Inv` is stated on.
 transition systems a congruence for parallel composition on either side, the
 synchronised product of a finite family, hiding and restriction, with no
 hypothesis that the systems are Dirac, and proves two simulations compose.
-Contextual refinement therefore covers contexts built from `syncProduct` as
+Contextual refinement therefore covers contexts built from `synchronisedProduct` as
 well as from `parallel`, `abstract`, `relabel`, `System.family` and
 `System.mapIdle`. The substitutions inside a gather instance and inside a round
-(`Gather.gatherLow`, `GBCA.ByAFW.lowPairRefines`, `GBCA.ByAFW.idealRefines`) are
-applications of these congruences and of nothing else.
+(`Gather.broadcastSubstitution`, `GBCA.ByAFW.broadcastSubstitution`,
+`GBCA.ByAFW.gatherSubstitution`) are applications of these congruences and of nothing else.
 
 The `2n` broadcast instances of a gather and the two gathers of a round are
-placed under `syncProduct` and `parallel` after a `mapIdle` lift along a
+placed under `synchronisedProduct` and `parallel` after a `mapIdle` lift along a
 pullback naming each instance, so a label carrying another instance's index
 leaves an instance standing still. A chain of binary parallel compositions
 indexed by a symbolic `n` has no expression; the product of lifted instances is

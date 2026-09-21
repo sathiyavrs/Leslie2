@@ -10,7 +10,7 @@ import Leslie2.Systems.LTS
 /-!
 # Full-synchronisation product of a finite family
 
-`System.syncProduct sys` composes a finite family `sys i : System (State i) Label`
+`System.synchronisedProduct sys` composes a finite family `sys i : System (State i) Label`
 over one shared alphabet under **full synchronisation**: on every visible label
 *all* components step simultaneously on that label, and the joint next-state
 distribution is the independent product `piPMF`. The silent label `τ` is the sole
@@ -19,7 +19,7 @@ their state, as in `System.parallel`.
 
 This is the dual of `System.interleave` (in `ProcessAlgebra/Composition.lean`),
 which synchronises nothing; the sync-set composition `∥_S` sits between the two
-and is recovered from `syncProduct` by the **rendezvous idiom**:
+and is recovered from `synchronisedProduct` by the **rendezvous idiom**:
 
 * every component carries idle self-loops (`System.withIdle`, in
   `Framework/LoopsAndInstanceFamilies.lean`) on the labels it does not own, so a component that
@@ -34,13 +34,13 @@ Ownership is thus expressed on the components, not on the product operator, whic
 keeps the operator itself uniform: a single conjunction over the whole family.
 
 Forward simulation is a congruence for the product
-(`ForwardSimulation.syncProduct`, `Framework/Congruence.lean`): per-component
+(`ForwardSimulation.synchronisedProduct`, `Framework/Congruence.lean`): per-component
 simulations lift to the pointwise relation on the product, so a component of a
 synchronised product may be replaced by a system that simulates it, as a factor of
 `System.parallel` may. Contextual refinement therefore covers contexts built from
-`syncProduct` as well.
+`synchronisedProduct` as well.
 
-Full synchronisation preserves `System.IsLTS` (`System.syncProduct_isLTS`): a
+Full synchronisation preserves `System.IsLTS` (`System.synchronisedProduct_isLTS`): a
 product of Diracs is the Dirac on the tuple of their points (`piPMF_pure`), and a
 single-coordinate update of an all-Dirac family is a Dirac too
 (`piPMF_update_pure`). The binary composition `System.parallel` preserves it for
@@ -119,7 +119,7 @@ on `l`, and the joint next-state distribution is the independent product `piPMF`
 of the per-component distributions; on the silent label `τ` exactly one component
 steps and all the others hold their state (the `Function.update` of the all-Dirac
 family used by `System.interleave`). -/
-def syncProduct (sys : ∀ i, System (State i) Label) :
+def synchronisedProduct (sys : ∀ i, System (State i) Label) :
     System (∀ i, State i) Label where
   init := fun i => (sys i).init
   step s l μ :=
@@ -131,12 +131,12 @@ def syncProduct (sys : ∀ i, System (State i) Label) :
       (sys i).step (s i) Silent.τ μ_i ∧
       μ = piPMF (Function.update (fun j => PMF.pure (s j)) i μ_i))
 
-@[simp] theorem syncProduct_init (sys : ∀ i, System (State i) Label) :
-    (syncProduct sys).init = fun i => (sys i).init := rfl
+@[simp] theorem synchronisedProduct_init (sys : ∀ i, System (State i) Label) :
+    (synchronisedProduct sys).init = fun i => (sys i).init := rfl
 
-@[simp] theorem syncProduct_step (sys : ∀ i, System (State i) Label)
+@[simp] theorem synchronisedProduct_step (sys : ∀ i, System (State i) Label)
     (s : ∀ i, State i) (l : Label) (μ : PMF (∀ i, State i)) :
-    (syncProduct sys).step s l μ ↔
+    (synchronisedProduct sys).step s l μ ↔
       (l ≠ Silent.τ ∧ ∃ μ_ : ∀ i, PMF (State i),
         (∀ i, (sys i).step (s i) l (μ_ i)) ∧ μ = piPMF μ_) ∨
       (l = Silent.τ ∧ ∃ (i : ι) (μ_i : PMF (State i)),
@@ -147,8 +147,8 @@ def syncProduct (sys : ∀ i, System (State i) Label) :
 /-- A full-synchronisation product of LTS components is an LTS: the synchronised
 distribution is a product of Diracs, and the interleaved one a single-coordinate
 update of an all-Dirac family. -/
-theorem syncProduct_isLTS {sys : ∀ i, System (State i) Label}
-    (h : ∀ i, (sys i).IsLTS) : (syncProduct sys).IsLTS := by
+theorem synchronisedProduct_isLTS {sys : ∀ i, System (State i) Label}
+    (h : ∀ i, (sys i).IsLTS) : (synchronisedProduct sys).IsLTS := by
   classical
   rintro s l μ (⟨-, μ_, hstep, rfl⟩ | ⟨-, i, μ_i, hstep, rfl⟩)
   · choose x hx using fun i => h i (s i) l (μ_ i) (hstep i)
@@ -163,7 +163,7 @@ end Family
 /-! ### Determinacy of a binary composition
 
 Binary parallel composition preserves the LTS property, the companion of
-`System.syncProduct_isLTS`: a synchronised step is a product of two Diracs and
+`System.synchronisedProduct_isLTS`: a synchronised step is a product of two Diracs and
 an interleaved one holds the other component's state. -/
 
 /-- **A binary composition of LTS components is an LTS.** -/

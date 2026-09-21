@@ -110,7 +110,7 @@ def broadcastEvents (n : ℕ) (M : Type) : Set (BroadcastLabel n M) := {l | ∃ 
 @[simp] theorem inr_mem_broadcastEvents {n : ℕ} {M : Type} (e : BroadcastEvent n M) :
     Sum.inr e ∈ broadcastEvents n M := ⟨e, rfl⟩
 
-@[simp] theorem blab_tau (n : ℕ) (M : Type) :
+@[simp] theorem broadcastLabel_tau (n : ℕ) (M : Type) :
     (Silent.τ : BroadcastLabel n M) = Sum.inl (Sum.inl Label.tau) := rfl
 
 /-! ### The local program
@@ -140,14 +140,14 @@ inductive ProgramStep (P : Parameters) (ldr j : Fin P.n) :
   quorum, or `f + 1` `VOTE m` receipts; no `ECHO` sent yet
   (`BrachaStep.echo`). -/
   | sendEcho (p) (m : M)
-      (hrecv : Message.init m ∈ p.received ldr ∨ P.echoQuorum ≤ p.receivedCount (.echo m) ∨
+      (hrecv : Message.init m ∈ p.received ldr ∨ P.echoReceiptQuorum ≤ p.receivedCount (.echo m) ∨
         P.f + 1 ≤ p.receivedCount (.vote m))
       (hsend : p.process.sentEcho = none) :
       ProgramStep P ldr j p (Sum.inr (.send j (.echo m)))
         (PMF.pure (p.setProcess { p.process with sentEcho := some m }))
   /-- `VOTE m` (quorum case): an `ECHO m` receipt quorum, no `VOTE` sent yet
   (`BrachaStep.voteQuorum`). -/
-  | sendVoteQuorum (p) (m : M) (hcnt : P.echoQuorum ≤ p.receivedCount (.echo m))
+  | sendVoteQuorum (p) (m : M) (hcnt : P.echoReceiptQuorum ≤ p.receivedCount (.echo m))
       (hsend : p.process.sentVote = none) :
       ProgramStep P ldr j p (Sum.inr (.send j (.vote m)))
         (PMF.pure (p.setProcess { p.process with sentVote := some m }))
@@ -253,7 +253,7 @@ noncomputable def broadcastNetwork (P : Parameters) (ldr : Fin P.n) (M : Type) [
 noncomputable def brachaInstanceExtended (P : Parameters) (ldr : Fin P.n) (M : Type) [DecidableEq M]
   :
     System (BrachaState P.n M) (BroadcastLabel P.n M) :=
-  (System.syncProduct (broadcastProgram P ldr (M := M))).parallel (broadcastNetwork P ldr M)
+  (System.synchronisedProduct (broadcastProgram P ldr (M := M))).parallel (broadcastNetwork P ldr M)
 
 /-- **The reliable-broadcast instance**: the programs beside the network, the
 two rendezvous hidden, the result read back over the interface alphabet. -/
@@ -342,8 +342,8 @@ theorem broadcastNetwork_isLTS (P : Parameters) (ldr : Fin P.n) : (broadcastNetw
 
 /-- The synchronised group of programs is an LTS. -/
 theorem broadcastProgramProduct_isLTS (P : Parameters) (ldr : Fin P.n) :
-    (System.syncProduct (broadcastProgram P ldr (M := M))).IsLTS :=
-  System.syncProduct_isLTS (broadcastProgram_isLTS P ldr)
+    (System.synchronisedProduct (broadcastProgram P ldr (M := M))).IsLTS :=
+  System.synchronisedProduct_isLTS (broadcastProgram_isLTS P ldr)
 
 /-- The programs beside the network form an LTS. -/
 theorem brachaInstanceExtended_isLTS (P : Parameters) (ldr : Fin P.n) : (brachaInstanceExtended P
@@ -368,7 +368,7 @@ theorem programStep_no_tau {P : Parameters} {ldr j : Fin P.n} {p : LocalState P.
   (Message M)}
     {ν : PMF (LocalState P.n (ProcessRecord M) (Message M))}
     (h : ProgramStep P ldr j p (Silent.τ : BroadcastLabel P.n M) ν) : False := by
-  rw [blab_tau] at h; cases h
+  rw [broadcastLabel_tau] at h; cases h
 
 /-! ### Weak runs of the lifted specification
 
@@ -446,7 +446,7 @@ theorem weakLStep_specificationOverInstanceAlphabet {M : Type} (P : Parameters) 
 
 /-! ### Reading and building instance transitions
 
-The pipeline is `relabel ∘ abstract ∘ parallel ∘ syncProduct`; the lemmas below
+The pipeline is `relabel ∘ abstract ∘ parallel ∘ synchronisedProduct`; the lemmas below
 unfold it once and for all, in both directions. -/
 
 /-- A synchronised transition of the program group on a visible label: every
@@ -454,10 +454,10 @@ program steps, and the joint distribution is Dirac. -/
 theorem broadcastProgramProduct_inv {P : Parameters} {ldr : Fin P.n}
     {u : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord M) (Message M)} {l : BroadcastLabel P.n M}
     {μ : PMF (∀ _ : Fin P.n, LocalState P.n (ProcessRecord M) (Message M))}
-    (h : (System.syncProduct (broadcastProgram P ldr (M := M))).step u l μ) :
+    (h : (System.synchronisedProduct (broadcastProgram P ldr (M := M))).step u l μ) :
     ∃ x : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord M) (Message M),
       μ = PMF.pure x ∧ ∀ i, ProgramStep P ldr i (u i) l (PMF.pure (x i)) := by
-  rw [System.syncProduct_step] at h
+  rw [System.synchronisedProduct_step] at h
   rcases h with ⟨-, μ_, hall, rfl⟩ | ⟨rfl, i, μ_i, hstep, -⟩
   · have hx : ∀ i, ∃ p', μ_ i = PMF.pure p' := fun i => programStep_dirac (hall i)
     choose x hx using hx
@@ -472,15 +472,16 @@ steps. -/
 theorem broadcastProgramProduct_pure {P : Parameters} {ldr : Fin P.n}
     {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord M) (Message M)} {l : BroadcastLabel P.n M}
     (hl : l ≠ Silent.τ) (h : ∀ i, ProgramStep P ldr i (u i) l (PMF.pure (x i))) :
-    (System.syncProduct (broadcastProgram P ldr (M := M))).step u l (PMF.pure x) := by
-  rw [System.syncProduct_step]
+    (System.synchronisedProduct (broadcastProgram P ldr (M := M))).step u l (PMF.pure x) := by
+  rw [System.synchronisedProduct_step]
   exact Or.inl ⟨hl, fun i => PMF.pure (x i), h, (piPMF_pure x).symm⟩
 
 /-- The program group has no silent transition: no program has a `τ` row. -/
 theorem broadcastProgramProduct_no_tau {P : Parameters} {ldr : Fin P.n}
     {u : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord M) (Message M)}
     {μ : PMF (∀ _ : Fin P.n, LocalState P.n (ProcessRecord M) (Message M))}
-    (h : (System.syncProduct (broadcastProgram P ldr (M := M))).step u (Silent.τ : BroadcastLabel
+    (h : (System.synchronisedProduct (broadcastProgram P ldr (M := M))).step u (Silent.τ :
+      BroadcastLabel
       P.n M) μ) :
     False := by
   rcases h with ⟨hτ, -⟩ | ⟨-, i, μ_i, hstep, -⟩
@@ -525,7 +526,7 @@ theorem brachaInstanceExtended_label_step (P : Parameters) (ldr : Fin P.n)
     (hn : NetworkStep P ldr w (Sum.inl l) (PMF.pure w')) :
     (brachaInstanceExtended P ldr M).step (u, w) (Sum.inl l) (PMF.pure (x, w')) := by
   have hne : (Sum.inl l : BroadcastLabel P.n M) ≠ Silent.τ := by
-    rw [blab_tau]; simpa using hl
+    rw [broadcastLabel_tau]; simpa using hl
   rw [brachaInstanceExtended, System.parallel_step]
   exact Or.inl ⟨hne, PMF.pure x, PMF.pure w', broadcastProgramProduct_pure hne hall, hn,
     (prodPMF_pure_pure _ _).symm⟩
@@ -661,7 +662,7 @@ theorem programStep_send_init_own {m : M}
 
 theorem programStep_send_echo_own {m : M}
     (h : ProgramStep P ldr j p (Sum.inr (.send j (.echo m))) ν) :
-    (Message.init m ∈ p.received ldr ∨ P.echoQuorum ≤ p.receivedCount (.echo m) ∨
+    (Message.init m ∈ p.received ldr ∨ P.echoReceiptQuorum ≤ p.receivedCount (.echo m) ∨
         P.f + 1 ≤ p.receivedCount (.vote m)) ∧ p.process.sentEcho = none ∧
       ν = PMF.pure (p.setProcess { p.process with sentEcho := some m }) := by
   cases h
@@ -670,7 +671,7 @@ theorem programStep_send_echo_own {m : M}
 
 theorem programStep_send_vote_own {m : M}
     (h : ProgramStep P ldr j p (Sum.inr (.send j (.vote m))) ν) :
-    (P.echoQuorum ≤ p.receivedCount (.echo m) ∨ P.f + 1 ≤ p.receivedCount (.vote m)) ∧
+    (P.echoReceiptQuorum ≤ p.receivedCount (.echo m) ∨ P.f + 1 ≤ p.receivedCount (.vote m)) ∧
       p.process.sentVote = none ∧
       ν = PMF.pure (p.setProcess { p.process with sentVote := some m }) := by
   cases h

@@ -1,9 +1,9 @@
 \begin{theorem}[The gather-based substitution]
   \label{thm:aba-afw-substitution}
-  \lean{PLTS.ABA.AFW.RlowAll}\lean{PLTS.ABA.AFW.RidealAll}\lean{PLTS.ABA.AFW.RpairAll}\lean{PLTS.ABA.AFW.famLowSimProb}\lean{PLTS.ABA.AFW.famIdealSimProb}\lean{PLTS.ABA.AFW.famPairSimProb}\lean{PLTS.ABA.AFW.substSim}\lean{PLTS.ABA.AFW.substitution}\leanok
+  \lean{PLTS.ABA.AFW.broadcastSubstitutionRelationFamily}\lean{PLTS.ABA.AFW.gatherSubstitutionRelationFamily}\lean{PLTS.ABA.AFW.roundSpecificationSubstitutionRelationFamily}\lean{PLTS.ABA.AFW.familyBroadcastSubstitutionSimulation}\lean{PLTS.ABA.AFW.familyGatherSubstitutionSimulation}\lean{PLTS.ABA.AFW.familyRoundSpecificationSubstitutionSimulation}\lean{PLTS.ABA.AFW.substitutionSimulation}\lean{PLTS.ABA.AFW.substitution}\leanok
   \uses{def:aba-afw-sides, def:aba-hybrid, thm:gbca-tier-refines, thm:gbca-pair-refines, thm:gbca-family-refines, thm:precong-parallel, thm:precong-abstract, thm:precong-relabel, thm:forward-sound}
   Each substitution inside the round, lifted by the family congruence and run under the composed reading's own context through the four congruences, is a stage from one protocol-shaped system to the next; the third stage lands on $\mathrm{hybrid}(P)$ itself.
-  Chaining the stages gives \leandecl{PLTS.ABA.AFW.substSim} and the inclusion $\operatorname{ATD}(\afw{\mathrm{composed}}(P)) \subseteq \operatorname{ATD}(\mathrm{hybrid}(P))$: \leandecl{PLTS.ABA.AFW.substitution}.
+  Chaining the stages gives \leandecl{PLTS.ABA.AFW.substitutionSimulation} and the inclusion $\operatorname{ATD}(\afw{\mathrm{composed}}(P)) \subseteq \operatorname{ATD}(\mathrm{hybrid}(P))$: \leandecl{PLTS.ABA.AFW.substitution}.
 \end{theorem}
 
 \begin{proof}\leanok

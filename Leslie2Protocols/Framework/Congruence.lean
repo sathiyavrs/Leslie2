@@ -16,7 +16,7 @@ A forward simulation between labelled transition systems (`ForwardSimulation`,
 built from: binary parallel composition, on either side
 (`ForwardSimulation.parallel_right`, `ForwardSimulation.parallel_left`); the
 full-synchronisation product of a finite family
-(`ForwardSimulation.syncProduct`); hiding a set of labels
+(`ForwardSimulation.synchronisedProduct`); hiding a set of labels
 (`ForwardSimulation.abstract`); and restriction along the left summand of an
 extended alphabet (`ForwardSimulation.relabel`). Contextual refinement therefore
 extends to contexts built from those operators, synchronised-product contexts
@@ -555,29 +555,29 @@ variable {ι : Type} [Fintype ι] [DecidableEq ι] {SA : ι → Type} {Label : T
 
 /-- A silent run at one coordinate embeds into the product, the other
 coordinates held. -/
-theorem System.weakLSilent_syncProduct_update {A : ∀ i, System (SA i) Label}
+theorem System.weakLSilent_synchronisedProduct_update {A : ∀ i, System (SA i) Label}
     (t : ∀ i, SA i) (i : ι) {x y : SA i} (h : (A i).weakLSilent x y) :
-    (System.syncProduct A).weakLSilent (Function.update t i x) (Function.update t i y) := by
+    (System.synchronisedProduct A).weakLSilent (Function.update t i x) (Function.update t i y) := by
   refine System.weakLSilent_transport (f := fun z => Function.update t i z) ?_ h
   intro u μ z hu hz
   refine ⟨piPMF (Function.update (fun j => PMF.pure (Function.update t i u j)) i μ),
-    (System.syncProduct_step A (Function.update t i u) Silent.τ _).mpr
+    (System.synchronisedProduct_step A (Function.update t i u) Silent.τ _).mpr
       (Or.inr ⟨rfl, i, μ, by rw [Function.update_self]; exact hu, rfl⟩), ?_⟩
   rw [piPMF_update_pure, PMF.mem_support_map_iff]
   exact ⟨z, hz, Function.update_idem ..⟩
 
 /-- Silent runs at every coordinate embed into the product: the coordinates are
 moved one at a time, the others held. -/
-theorem System.weakLSilent_syncProduct {A : ∀ i, System (SA i) Label} {t u : ∀ i, SA i}
-    (h : ∀ i, (A i).weakLSilent (t i) (u i)) : (System.syncProduct A).weakLSilent t u := by
+theorem System.weakLSilent_synchronisedProduct {A : ∀ i, System (SA i) Label} {t u : ∀ i, SA i}
+    (h : ∀ i, (A i).weakLSilent (t i) (u i)) : (System.synchronisedProduct A).weakLSilent t u := by
   classical
   suffices H : ∀ S : Finset ι,
-      (System.syncProduct A).weakLSilent t (fun j => if j ∈ S then u j else t j) by
+      (System.synchronisedProduct A).weakLSilent t (fun j => if j ∈ S then u j else t j) by
     have h1 := H Finset.univ
     simpa using h1
   intro S
   induction S using Finset.induction_on with
-  | empty => simpa using System.weakLSilent_refl (System.syncProduct A) t
+  | empty => simpa using System.weakLSilent_refl (System.synchronisedProduct A) t
   | @insert i S hi ih =>
     have hkey : (fun j => if j ∈ insert i S then u j else t j)
         = Function.update (fun j => if j ∈ S then u j else t j) i (u i) := by
@@ -593,28 +593,28 @@ theorem System.weakLSilent_syncProduct {A : ∀ i, System (SA i) Label} {t u : �
       by_cases hj : j = i
       · subst hj; rw [Function.update_self]; simp [hi]
       · rw [Function.update_of_ne hj]
-    have hrun := System.weakLSilent_syncProduct_update
+    have hrun := System.weakLSilent_synchronisedProduct_update
       (fun j => if j ∈ S then u j else t j) i (h i)
     rwa [heq] at hrun
 
 end SyncProduct
 
-/-- **Forward simulation is a congruence for `System.syncProduct`.** Per-component
+/-- **Forward simulation is a congruence for `System.synchronisedProduct`.** Per-component
 forward simulations lift to the pointwise relation on the product. A silent step
 moves one component, which the component's own silent answer matches with the
 others held; a visible step moves every component at once, and the product of
 the components' answers is a silent run of the product, one synchronised
 transition on the label, and a second silent run. -/
-theorem ForwardSimulation.syncProduct {ι : Type} [Fintype ι] [DecidableEq ι]
+theorem ForwardSimulation.synchronisedProduct {ι : Type} [Fintype ι] [DecidableEq ι]
     {SC SA : ι → Type} {Label : Type} [Silent Label]
     {C : ∀ i, System (SC i) Label} {A : ∀ i, System (SA i) Label}
     {R : ∀ i, SC i → SA i → Prop} (sim : ∀ i, ForwardSimulation (C i) (A i) (R i)) :
-    ForwardSimulation (System.syncProduct C) (System.syncProduct A)
+    ForwardSimulation (System.synchronisedProduct C) (System.synchronisedProduct A)
       (fun s t => ∀ i, R i (s i) (t i)) := by
   classical
   constructor
   intro s t hR l μ hstep s' hmem
-  rw [System.syncProduct_step] at hstep
+  rw [System.synchronisedProduct_step] at hstep
   rcases hstep with ⟨hl, μ_, hsteps, rfl⟩ | ⟨hτ, i, μ_i, hstepi, rfl⟩
   · -- synchronised visible step: every component moves on `l`
     rw [mem_support_piPMF] at hmem
@@ -633,10 +633,10 @@ theorem ForwardSimulation.syncProduct {ι : Type} [Fintype ι] [DecidableEq ι]
       obtain ⟨-, x, z, ν, h1, h2, h3, h4⟩ := System.weakLStep_split (hy i)
       exact ⟨x, z, ν, h1, h2, h3, h4⟩
     choose x z ν hpre hstepA hmemA hpost using hsplit
-    have hsync : (System.syncProduct A).step x l (piPMF ν) :=
-      (System.syncProduct_step A x l _).mpr (Or.inl ⟨hl, ν, hstepA, rfl⟩)
-    exact ⟨y, Or.inr ⟨hl, System.weakLStep_ofSplit hl (System.weakLSilent_syncProduct hpre)
-      hsync (mem_support_piPMF.mpr hmemA) (System.weakLSilent_syncProduct hpost)⟩, hRy⟩
+    have hsync : (System.synchronisedProduct A).step x l (piPMF ν) :=
+      (System.synchronisedProduct_step A x l _).mpr (Or.inl ⟨hl, ν, hstepA, rfl⟩)
+    exact ⟨y, Or.inr ⟨hl, System.weakLStep_ofSplit hl (System.weakLSilent_synchronisedProduct hpre)
+      hsync (mem_support_piPMF.mpr hmemA) (System.weakLSilent_synchronisedProduct hpost)⟩, hRy⟩
   · -- interleaved silent step: one component moves
     subst hτ
     rw [piPMF_update_pure, PMF.mem_support_map_iff] at hmem
@@ -644,7 +644,7 @@ theorem ForwardSimulation.syncProduct {ι : Type} [Fintype ι] [DecidableEq ι]
     obtain ⟨v, hdisj, hR'⟩ := (sim i).step (s i) (t i) (hR i) Silent.τ μ_i hstepi w hw
     rcases hdisj with ⟨-, hsil⟩ | ⟨hnτ, -⟩
     · refine ⟨Function.update t i v, Or.inl ⟨rfl, ?_⟩, ?_⟩
-      · have hrun := System.weakLSilent_syncProduct_update t i hsil
+      · have hrun := System.weakLSilent_synchronisedProduct_update t i hsil
         rwa [Function.update_eq_self] at hrun
       · intro j
         by_cases hj : j = i
@@ -835,9 +835,9 @@ clean axiom list `[propext, Classical.choice, Quot.sound]`. -/
 #guard_msgs in
 #print axioms ForwardSimulation.parallel_left
 
-/-- info: 'PLTS.ForwardSimulation.syncProduct' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ForwardSimulation.synchronisedProduct' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms ForwardSimulation.syncProduct
+#print axioms ForwardSimulation.synchronisedProduct
 
 /-- info: 'PLTS.ForwardSimulation.abstract' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in

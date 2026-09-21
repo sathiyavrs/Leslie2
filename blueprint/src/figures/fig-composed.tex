@@ -43,7 +43,7 @@
     {one instance per round $r \in \mathbb{N}$; $\mathrm{fail}$ broadcast to all};
   % ---- components 2 to 4
   \node[comp] (cores) at (8.55,1.1)
-    {the $n$ round loops\\ $\mathrm{syncProduct}_{j}$\\ $\mathrm{roundLoopProgram}(P,j)$};
+    {the $n$ round loops\\ $\mathrm{synchronisedProduct}_{j}$\\ $\mathrm{roundLoopProgram}(P,j)$};
   \node[comp] (anet) at (8.55,-0.7)
     {$\mathrm{ABANetwork}(P)$: sent sets $decidedSent(j)$,\\
      corrupted set $F$ with $|F| < f$,\\

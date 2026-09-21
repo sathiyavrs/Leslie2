@@ -24,7 +24,7 @@ counterpart in the gather-based chain's `AFW`, and the qualifier is dropped belo
 
 ## The relation
 
-`ProtocolRel` pins every coordinate of a composed state, in five conjuncts and
+`ProtocolRelation` pins every coordinate of a composed state, in five conjuncts and
 under no guard. Both returns of a round read the ghost record of that round for
 the bit they announce and write it back, so the two sides announce one bit and
 the fourth conjunct is restored by `rel_setBound`.
@@ -52,7 +52,7 @@ are related to the same composed state.
 ## What this file supplies
 
 `protocolSim`, a probabilistic forward simulation of `composed P` by
-`protocol P` along the Dirac lift of `ProtocolRel P`, and the trace-distribution
+`protocol P` along the Dirac lift of `ProtocolRelation P`, and the trace-distribution
 inclusion `protocol_composed` it yields. The inclusion is one-directional
 because the composed reading takes transitions the protocol declines. A round
 instance has a row for the Byzantine graded-agreement rows, and no protocol
@@ -77,7 +77,7 @@ messagesOf of the adversary's sent sets beside the same corrupted set and the
 adversary's ghost record of that round; and the entry of process `j` in the
 instance of round `r` is the stage record of round `r` that `j` holds (D22). No
 conjunct is guarded, so the composed state is determined. -/
-def ProtocolRel (P : Parameters) (u : ProtocolState P) (t : ComposedState P) : Prop :=
+def ProtocolRelation (P : Parameters) (u : ProtocolState P) (t : ComposedState P) : Prop :=
   (∀ j, (u.1 j).1 = t.2.1 j) ∧
   u.2.2 = t.2.2.2 ∧
   t.2.2.1 = ⟨u.2.1.decidedSent, u.2.1.F⟩ ∧
@@ -85,12 +85,12 @@ def ProtocolRel (P : Parameters) (u : ProtocolState P) (t : ComposedState P) : P
   (∀ j r, (t.1 r).1 j = (u.1 j).2.roundRecord r)
 
 /-- The relation, read at an explicit pair of states. -/
-theorem protocolRel_mk (P : Parameters) (processes : ∀ _ : Fin P.n,
+theorem protocolRelation_mk (P : Parameters) (processes : ∀ _ : Fin P.n,
     ProcessRecord P.n) (w : NetworkState P.n) (o : ℕ → WCC.SpecState P.n) (G : ℕ →
       GBCA.ByABDY.ImplementationState P.n)
     (C : ∀ _ : Fin P.n, RoundLoopRecord P.n) (A : ABANetworkState P.n)
     (o' : ℕ → WCC.SpecState P.n) :
-    ProtocolRel P (processes, w, o) (G, C, A, o') ↔
+    ProtocolRelation P (processes, w, o) (G, C, A, o') ↔
       (∀ j, (processes j).1 = C j) ∧
       o = o' ∧
       A = ⟨w.decidedSent, w.F⟩ ∧
@@ -108,9 +108,9 @@ differ in no coordinate the relation constrains. -/
 
 /-- A Dirac protocol outcome matched by a single related composed state. -/
 private theorem match_pure (P : Parameters) {s : ProtocolState P} {t : ComposedState P}
-    (h : ProtocolRel P s t) :
+    (h : ProtocolRelation P s t) :
     ∃ Ω : PMF (PMF (ComposedState P)),
-      PMFRel (diracRel (ProtocolRel P)) (PMF.pure s) Ω ∧ Ω.bind id = PMF.pure t := by
+      PMFRel (diracRel (ProtocolRelation P)) (PMF.pure s) Ω ∧ Ω.bind id = PMF.pure t := by
   refine ⟨PMF.pure (PMF.pure t), ⟨PMF.pure (s, PMF.pure t), ?_, ?_, ?_⟩, ?_⟩
   · rw [PMF.pure_map]
   · rw [PMF.pure_map]
@@ -127,9 +127,9 @@ private theorem match_prod (P : Parameters) {x : ∀ _ : Fin P.n, ProcessRecord 
     {w : NetworkState P.n} {G : ℕ → GBCA.ByABDY.ImplementationState P.n}
     {C : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A : ABANetworkState P.n}
     {ν : PMF (ℕ → WCC.SpecState P.n)}
-    (h : ∀ o ∈ ν.support, ProtocolRel P (x, w, o) (G, C, A, o)) :
+    (h : ∀ o ∈ ν.support, ProtocolRelation P (x, w, o) (G, C, A, o)) :
     ∃ Ω : PMF (PMF (ComposedState P)),
-      PMFRel (diracRel (ProtocolRel P)) (prodPMF (PMF.pure x) (prodPMF (PMF.pure w) ν)) Ω ∧
+      PMFRel (diracRel (ProtocolRelation P)) (prodPMF (PMF.pure x) (prodPMF (PMF.pure w) ν)) Ω ∧
       Ω.bind id =
         prodPMF (PMF.pure G) (prodPMF (PMF.pure C) (prodPMF (PMF.pure A) ν)) := by
   refine ⟨ν.map (fun o => PMF.pure ((G, C, A, o) : ComposedState P)),
@@ -221,7 +221,7 @@ private theorem rel_setBound {P : Parameters} {G : ℕ → GBCA.ByABDY.Implement
     simp
 
 /-- The network state's corruption act and the adversary's agree. -/
-private theorem corrupt_gnet {P : Parameters} (w : NetworkState P.n) (k : Fin P.n) (r : ℕ) :
+private theorem corrupt_gbcaNetwork {P : Parameters} (w : NetworkState P.n) (k : Fin P.n) (r : ℕ) :
     (⟨w.sent r, w.F, w.ghostRecord r⟩ : GBCA.ByABDY.NetworkState P.n).corrupt P k =
       ⟨(NetworkState.corrupt P k w).sent r, (NetworkState.corrupt P k w).F,
         (NetworkState.corrupt P k w).ghostRecord r⟩ := by
@@ -229,7 +229,7 @@ private theorem corrupt_gnet {P : Parameters} (w : NetworkState P.n) (k : Fin P.
     simp [GBCA.ByABDY.NetworkState.corrupt, Implementation.NetworkState.corrupt, hc]
 
 /-- The ABA-side network's corruption act and the adversary's agree. -/
-private theorem corrupt_anet {P : Parameters} (w : NetworkState P.n) (k : Fin P.n) :
+private theorem corrupt_abaNetwork {P : Parameters} (w : NetworkState P.n) (k : Fin P.n) :
     ABANetworkState.corrupt P k ⟨w.decidedSent, w.F⟩ =
       ⟨(NetworkState.corrupt P k w).decidedSent, (NetworkState.corrupt P k w).F⟩ := by
   by_cases hc : k ∉ w.F ∧ w.F.card < P.f <;>
@@ -279,13 +279,13 @@ private theorem match_vis (P : Parameters) {x : ∀ _ : Fin P.n, ProcessRecord P
     {ω : PMF (ℕ → WCC.SpecState P.n)}
     {G G' : ℕ → GBCA.ByABDY.ImplementationState P.n} {C C' : ∀ _ : Fin P.n, RoundLoopRecord P.n}
     {A A' : ABANetworkState P.n} {L : ExtendedLabel P.n} (hL : L ≠ Silent.τ)
-    (hrel : ∀ o' ∈ ω.support, ProtocolRel P (x, w', o') (G', C', A', o'))
+    (hrel : ∀ o' ∈ ω.support, ProtocolRelation P (x, w', o') (G', C', A', o'))
     (hGs : (GBCA.ByABDY.gbcaInstanceFamily P).step G L (PMF.pure G'))
     (hCs : ∀ i, RoundLoopStep P i (C i) L (PMF.pure (C' i)))
     (hAs : ABANetworkStep P A L (PMF.pure A'))
     (hWs : (coinOverRoundAlphabet P).step o L ω) :
     ∃ Ω : PMF (PMF (ComposedState P)),
-      PMFRel (diracRel (ProtocolRel P))
+      PMFRel (diracRel (ProtocolRelation P))
         (prodPMF (PMF.pure x) (prodPMF (PMF.pure w') ω)) Ω ∧
       (composedExtended P).step (G, C, A, o) L (Ω.bind id) := by
   obtain ⟨Ω, hr, hbind⟩ := match_prod P hrel
@@ -298,10 +298,10 @@ private theorem match_round (P : Parameters) {x : ∀ _ : Fin P.n, ProcessRecord
     {G : ℕ → GBCA.ByABDY.ImplementationState P.n} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
     {A : ABANetworkState P.n} {r : ℕ} {X : GBCA.ByABDY.ImplementationState P.n} (hν : ν = PMF.pure
       o)
-    (hrel : ProtocolRel P (x, w', o) (Function.update G r X, C, A, o))
+    (hrel : ProtocolRelation P (x, w', o) (Function.update G r X, C, A, o))
     (hsub : (GBCA.ByABDY.composition P r).step (G r) (Sum.inl Label.tau) (PMF.pure X)) :
     ∃ Ω : PMF (PMF (ComposedState P)),
-      PMFRel (diracRel (ProtocolRel P))
+      PMFRel (diracRel (ProtocolRelation P))
         (prodPMF (PMF.pure x) (prodPMF (PMF.pure w') ν)) Ω ∧
       (composedHidden P).step (G, C, A, o) Label.tau (Ω.bind id) := by
   subst hν
@@ -334,24 +334,24 @@ composed side by the ABA-side network's Byzantine row (D23). -/
 theorem match_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord P.n}
     {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
     {G : ℕ → GBCA.ByABDY.ImplementationState P.n} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
-    {A : ABANetworkState P.n} (hR : ProtocolRel P (processes, w, o) (G, C, A, o))
+    {A : ABANetworkState P.n} (hR : ProtocolRelation P (processes, w, o) (G, C, A, o))
     (e : NetworkEvent P.n) {μ : PMF (ProtocolState P)}
     (h : (protocolExtended P).step (processes, w, o) (Sum.inr e) μ) :
     ∃ Ω : PMF (PMF (ComposedState P)),
-      PMFRel (diracRel (ProtocolRel P)) μ Ω ∧
+      PMFRel (diracRel (ProtocolRelation P)) μ Ω ∧
       (composedHidden P).step (G, C, A, o) Label.tau (Ω.bind id) := by
-  obtain ⟨hC, -, hA, hG, hst⟩ := (protocolRel_mk P _ _ _ _ _ _ _).mp hR
+  obtain ⟨hC, -, hA, hG, hst⟩ := (protocolRelation_mk P _ _ _ _ _ _ _).mp hR
   have hCeq : ∀ i, C i = (processes i).1 := fun i => (hC i).symm
   obtain ⟨x, w', ν, hall, hn, hWs, rfl⟩ := protocolExtended_event_inv P h
   have hLne : (Sum.inr e : ExtendedLabel P.n) ≠ Silent.τ := by
     simp
   have hvis : ∀ {G' : ℕ → GBCA.ByABDY.ImplementationState P.n} {A' : ABANetworkState P.n},
-      (∀ o' ∈ ν.support, ProtocolRel P (x, w', o') (G', fun i => (x i).1, A', o')) →
+      (∀ o' ∈ ν.support, ProtocolRelation P (x, w', o') (G', fun i => (x i).1, A', o')) →
       (GBCA.ByABDY.gbcaInstanceFamily P).step G (Sum.inr e) (PMF.pure G') →
       (∀ i, RoundLoopStep P i (C i) (Sum.inr e) (PMF.pure ((x i).1))) →
       ABANetworkStep P A (Sum.inr e) (PMF.pure A') →
       ∃ Ω : PMF (PMF (ComposedState P)),
-        PMFRel (diracRel (ProtocolRel P))
+        PMFRel (diracRel (ProtocolRelation P))
           (prodPMF (PMF.pure x) (prodPMF (PMF.pure w') ν)) Ω ∧
         (composedHidden P).step (G, C, A, o) Label.tau (Ω.bind id) := by
     intro G' A' hrel hGs hCs hAs
@@ -453,7 +453,7 @@ theorem match_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
       · subst hi; rw [hx]; exact hC i
       · rw [hfor i hi]; exact hC i
     have h5 := rel_roundRecord P j hst hfor hGfor hown
-    exact match_round P rfl ((protocolRel_mk P _ _ _ _ _ _ _).mpr
+    exact match_round P rfl ((protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨hxcore, rfl, by simpa using hA, rel_recordGBCASend hG r j m _, h5⟩)
       (GBCA.ByABDY.composition_event_step P r (GBCA.ByABDY.GBCAEvent.send j m)
         (gprocs_family j nd hrow
@@ -495,7 +495,7 @@ theorem match_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
       · subst hi'; rw [hx]; exact hC i'
       · rw [hfor i' hi']; exact hC i'
     have h5 := rel_roundRecord P i hst hfor hGfor hown
-    exact match_round P rfl ((protocolRel_mk P _ _ _ _ _ _ _).mpr
+    exact match_round P rfl ((protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨hxcore, rfl, hA, fun r' => by rw [update_snd G r _ r']; exact hG r', h5⟩)
       (GBCA.ByABDY.composition_event_step P r (GBCA.ByABDY.GBCAEvent.deliver i k m)
         (gprocs_family i _ (GBCA.ByABDY.GBCAProgramStep.deliverReceive _ k m)
@@ -512,7 +512,7 @@ theorem match_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
           exact pure_inj hdx
       · exact pure_inj (programStep_decidedSend_foreign (Ne.symm hi) (hall i))
     have h5 := rel_none P (G' := G) hst hx (fun _ _ => rfl)
-    refine hvis (A' := A.recordDecided j b) (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
+    refine hvis (A' := A.recordDecided j b) (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, by rw [hA]; simp [ABANetworkState.recordDecided,
         NetworkState.recordDecided], fun r => by rw [hG r]; simp [NetworkState.recordDecided], h5⟩)
       (gbcaInstanceFamily_idle P G hLne (by simp) not_false) (fun i => ?_)
@@ -534,7 +534,7 @@ theorem match_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
     have hown : ∀ r, (G r).1 i = (x i).2.roundRecord r := by
       intro r; simp only [hx]; exact hst i r
     have h5 := rel_roundRecord P i hst hfor (fun _ _ _ => rfl) hown
-    refine hvis (A' := A) (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
+    refine hvis (A' := A) (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, hA, hG, h5⟩)
       (gbcaInstanceFamily_idle P G hLne (by simp) not_false) (fun i' => ?_)
       (ABANetworkStep.decidedDeliver A i k b (by rw [hA]; exact hdp))
@@ -551,7 +551,7 @@ theorem match_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
     have hown : ∀ r, (G r).1 id = (x id).2.roundRecord r := by
       intro r; simp only [hx]; exact hst id r
     have h5 := rel_roundRecord P id hst hfor (fun _ _ _ => rfl) hown
-    refine hvis (A' := A.recordDecided id b) (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
+    refine hvis (A' := A.recordDecided id b) (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, by rw [hA]; simp [ABANetworkState.recordDecided,
         NetworkState.recordDecided], fun r' => by rw [hG r']; simp [NetworkState.recordDecided],
           h5⟩)
@@ -573,7 +573,7 @@ theorem match_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
     have hown : ∀ r, (G r).1 id = (x id).2.roundRecord r := by
       intro r; simp only [hx]; exact hst id r
     have h5 := rel_roundRecord P id hst hfor (fun _ _ _ => rfl) hown
-    refine hvis (A' := A) (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
+    refine hvis (A' := A) (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, hA, hG, h5⟩)
       (gbcaInstanceFamily_owned_id P G r (by simp)
         (GBCA.ByABDY.composition_label_step P r (by simp)
@@ -592,7 +592,7 @@ theorem match_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
       simpa using pure_inj hw
     have hx : ∀ i, x i = processes i := fun i => pure_inj (programStep_byzantineCallGLoop (hall i))
     have h5 := rel_none P (G' := G) hst hx (fun _ _ => rfl)
-    refine hvis (A' := A) (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
+    refine hvis (A' := A) (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, hA, hG, h5⟩)
       (gbcaInstanceFamily_owned_id P G r (by simp)
         (GBCA.ByABDY.composition_label_step P r (by simp)
@@ -606,7 +606,7 @@ theorem match_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
       simpa using pure_inj hw
     have hx : ∀ i, x i = processes i := fun i => pure_inj (programStep_byzantineCallW (hall i))
     have h5 := rel_none P (G' := G) hst hx (fun _ _ => rfl)
-    refine hvis (A' := A) (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
+    refine hvis (A' := A) (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, hA, hG, h5⟩)
       (gbcaInstanceFamily_idle P G hLne (by simp) not_false) (fun i => ?_)
       (ABANetworkStep.byzantineCallW A r k (by rw [hA]; exact hF))
@@ -617,7 +617,7 @@ theorem match_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
       simpa using pure_inj hw
     have hx : ∀ i, x i = processes i := fun i => pure_inj (programStep_byzantineRetW (hall i))
     have h5 := rel_none P (G' := G) hst hx (fun _ _ => rfl)
-    refine hvis (A' := A) (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
+    refine hvis (A' := A) (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, hA, hG, h5⟩)
       (gbcaInstanceFamily_idle P G hLne (by simp) not_false) (fun i => ?_)
       (ABANetworkStep.byzantineRetW A r k b (by rw [hA]; exact hF))
@@ -627,13 +627,13 @@ theorem match_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
 theorem match_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord P.n}
     {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
     {G : ℕ → GBCA.ByABDY.ImplementationState P.n} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
-    {A : ABANetworkState P.n} (hR : ProtocolRel P (processes, w, o) (G, C, A, o))
+    {A : ABANetworkState P.n} (hR : ProtocolRelation P (processes, w, o) (G, C, A, o))
     {l : Label P.n} (hl : l ≠ Label.tau) {μ : PMF (ProtocolState P)}
     (h : (protocolExtended P).step (processes, w, o) (Sum.inl l) μ) :
     ∃ Ω : PMF (PMF (ComposedState P)),
-      PMFRel (diracRel (ProtocolRel P)) μ Ω ∧
+      PMFRel (diracRel (ProtocolRelation P)) μ Ω ∧
       (composedHidden P).step (G, C, A, o) l (Ω.bind id) := by
-  obtain ⟨hC, -, hA, hG, hst⟩ := (protocolRel_mk P _ _ _ _ _ _ _).mp hR
+  obtain ⟨hC, -, hA, hG, hst⟩ := (protocolRelation_mk P _ _ _ _ _ _ _).mp hR
   have hCeq : ∀ i, C i = (processes i).1 := fun i => (hC i).symm
   obtain ⟨x, w', ω, hall, hn, hOr, rfl⟩ := protocolExtended_label_inv P hl h
   have hWl : (coinOverRoundAlphabet P).step o (Sum.inl l) ω :=
@@ -641,7 +641,7 @@ theorem match_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
   have hLne : (Sum.inl l : ExtendedLabel P.n) ≠ Silent.τ := by
     simpa using hl
   suffices hsuf : ∃ Ω : PMF (PMF (ComposedState P)),
-      PMFRel (diracRel (ProtocolRel P))
+      PMFRel (diracRel (ProtocolRelation P))
         (prodPMF (PMF.pure x) (prodPMF (PMF.pure w') ω)) Ω ∧
       (composedExtended P).step (G, C, A, o) (Sum.inl l) (Ω.bind id) by
     obtain ⟨Ω, hr, hs⟩ := hsuf
@@ -662,7 +662,7 @@ theorem match_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
       have hown : ∀ r, (G r).1 id = (x id).2.roundRecord r := by
         intro r; simp only [hx]; exact hst id r
       have h5 := rel_roundRecord P id hst hfor (fun _ _ _ => rfl) hown
-      refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
+      refine match_vis P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, hG, h5⟩) hGs (fun i => ?_)
         (ABANetworkStep.callABAIdle A id b) hWl
       by_cases hi : i = id
@@ -674,7 +674,7 @@ theorem match_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
         · subst hi; exact pure_inj hxid
         · exact hfor i hi
       have h5 := rel_none P (G' := G) hst hx (fun _ _ => rfl)
-      refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
+      refine match_vis P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, hG, h5⟩) hGs (fun i => ?_)
         (ABANetworkStep.callABAIdle A id b) hWl
       rw [hCeq i, hx i]
@@ -703,7 +703,7 @@ theorem match_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
       have hown : ∀ r, (G r).1 id = (x id).2.roundRecord r := by
         intro r; simp only [hx]; exact hst id r
       have h5 := rel_roundRecord P id hst hfor (fun _ _ _ => rfl) hown
-      refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
+      refine match_vis P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, hG, h5⟩) hGs (fun i => ?_) hAs hWl
       by_cases hi : i = id
       · subst hi; rw [hCeq i, hx]; exact RoundLoopStep.ret _ b hh hcnt hret
@@ -714,7 +714,7 @@ theorem match_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
         · subst hi; exact pure_inj hxid
         · exact hfor i hi
       have h5 := rel_none P (G' := G) hst hx (fun _ _ => rfl)
-      refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
+      refine match_vis P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, hG, h5⟩) hGs (fun i => ?_) hAs hWl
       rw [hCeq i, hx i]
       by_cases hi : i = id
@@ -734,7 +734,7 @@ theorem match_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
       have hown : ∀ r, (G r).1 id = (x id).2.roundRecord r := by
         intro r; simp only [hx]; exact hst id r
       have h5 := rel_roundRecord P id hst hfor (fun _ _ _ => rfl) hown
-      refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
+      refine match_vis P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, hG, h5⟩) hGs (fun i => ?_)
         (ABANetworkStep.callWIdle A r id) hWl
       by_cases hi : i = id
@@ -746,7 +746,7 @@ theorem match_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
         · subst hi; exact pure_inj hxid
         · exact hfor i hi
       have h5 := rel_none P (G' := G) hst hx (fun _ _ => rfl)
-      refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
+      refine match_vis P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, hG, h5⟩) hGs (fun i => ?_)
         (ABANetworkStep.callWIdle A r id) hWl
       rw [hCeq i, hx i]
@@ -765,7 +765,7 @@ theorem match_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
       have hown : ∀ r, (G r).1 id = (x id).2.roundRecord r := by
         intro r; simp only [hx]; exact hst id r
       have h5 := rel_roundRecord P id hst hfor (fun _ _ _ => rfl) hown
-      refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
+      refine match_vis P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, hG, h5⟩) hGs (fun i => ?_)
         (ABANetworkStep.retWIdle A r id co) hWl
       by_cases hi : i = id
@@ -777,7 +777,7 @@ theorem match_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
         · subst hi; exact pure_inj hxid
         · exact hfor i hi
       have h5 := rel_none P (G' := G) hst hx (fun _ _ => rfl)
-      refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
+      refine match_vis P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, hG, h5⟩) hGs (fun i => ?_)
         (ABANetworkStep.retWIdle A r id co) hWl
       rw [hCeq i, hx i]
@@ -796,16 +796,16 @@ theorem match_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
       (fun _ _ _ => by simp only [corruptionAct_fail])
       (fun r => by simp only [corruptionAct_fail]; rw [hstg]; exact hst k r)
     have hrel : ∀ o' : ℕ → WCC.SpecState P.n,
-        ProtocolRel P ((x, NetworkState.corrupt P k w, o') : ProtocolState P)
+        ProtocolRelation P ((x, NetworkState.corrupt P k w, o') : ProtocolState P)
           (((fun r => GBCA.ByABDY.corruptionAct P (Sum.inl (Label.fail k)) (G r)),
             (fun i => (x i).1), ABANetworkState.corrupt P k A, o') : ComposedState P) := by
       intro o'
-      refine (protocolRel_mk P _ _ _ _ _ _ _).mpr ⟨fun _ => rfl, rfl, ?_, ?_, h5⟩
-      · rw [hA]; exact corrupt_anet w k
+      refine (protocolRelation_mk P _ _ _ _ _ _ _).mpr ⟨fun _ => rfl, rfl, ?_, ?_, h5⟩
+      · rw [hA]; exact corrupt_abaNetwork w k
       · intro r
         simp only [corruptionAct_fail]
         rw [hG r]
-        exact corrupt_gnet w k r
+        exact corrupt_gbcaNetwork w k r
     refine match_vis P hLne (fun o' _ => hrel o') (gbcaInstanceFamily_fail P G k) (fun i => ?_)
       (ABANetworkStep.fail A k (by rw [hA]; exact hnew) (by rw [hA]; exact hbud)) hWl
     by_cases hi : i = k
@@ -864,7 +864,7 @@ theorem match_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
       · rw [Function.update_of_ne hr', RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr']
         exact hst id r'
     have h5 := rel_roundRecord P id hst hfor hGfor hown
-    refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
+    refine match_vis P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, by simpa using hA, rel_recordGBCASend hG r id (.input b) _,
         h5⟩) hGs (fun i => ?_) (ABANetworkStep.callGIdle A r id b) hWl
     by_cases hi : i = id
@@ -945,7 +945,7 @@ theorem match_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
       · rw [Function.update_of_ne hr', RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr']
         exact hst id r'
     have h5 := rel_roundRecord P id hst hfor hGfor hown
-    refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
+    refine match_vis P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, by simpa using hA,
         rel_setBound hG r bnd _ hfix (by simp) (fun r' hr' =>
           writeGhost_retG_ne P w r id out bnd hr'), h5⟩) hGs (fun i => ?_)
@@ -961,23 +961,23 @@ still; the adversary's two injections are answered by a transition. -/
 theorem match_tau (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord P.n}
     {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
     {G : ℕ → GBCA.ByABDY.ImplementationState P.n} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
-    {A : ABANetworkState P.n} (hR : ProtocolRel P (processes, w, o) (G, C, A, o))
+    {A : ABANetworkState P.n} (hR : ProtocolRelation P (processes, w, o) (G, C, A, o))
     {μ : PMF (ProtocolState P)}
     (h : (protocolExtended P).step (processes, w, o) (Sum.inl Label.tau) μ) :
     ∃ Ω : PMF (PMF (ComposedState P)),
-      PMFRel (diracRel (ProtocolRel P)) μ Ω ∧
+      PMFRel (diracRel (ProtocolRelation P)) μ Ω ∧
       ((composedHidden P).step (G, C, A, o) Label.tau (Ω.bind id) ∨
         Ω.bind id = PMF.pure (G, C, A, o)) := by
-  obtain ⟨hC, -, hA, hG, hst⟩ := (protocolRel_mk P _ _ _ _ _ _ _).mp hR
+  obtain ⟨hC, -, hA, hG, hst⟩ := (protocolRelation_mk P _ _ _ _ _ _ _).mp hR
   rcases protocolExtended_tau_inv P h with ⟨i, y, hy, rfl⟩ | ⟨w', hn, rfl⟩
   · obtain ⟨-, -, -, -, -, hyeq⟩ := programStep_tau_terminate hy
     obtain rfl : y = ((processes i).1, { (processes i).2 with terminated := true }) :=
       pure_inj hyeq
-    have hrel' : ProtocolRel P
+    have hrel' : ProtocolRelation P
         ((Function.update processes i ((processes i).1,
           { (processes i).2 with terminated := true }), w, o) : ProtocolState P)
         ((G, C, A, o) : ComposedState P) := by
-      refine (protocolRel_mk P _ _ _ _ _ _ _).mpr ⟨fun j => ?_, rfl, hA, hG, fun j r => ?_⟩
+      refine (protocolRelation_mk P _ _ _ _ _ _ _).mpr ⟨fun j => ?_, rfl, hA, hG, fun j r => ?_⟩
       · by_cases hj : j = i
         · subst hj; rw [Function.update_self]; exact hC j
         · rw [Function.update_of_ne hj]; exact hC j
@@ -991,10 +991,10 @@ theorem match_tau (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord P
       have hFG : k ∈ ((G r).2).F := by
         rw [hG r]; exact hF
       have hfst := update_fst G r (X := ((G r).1, ((G r).2).recordGBCASend k m)) rfl
-      have hrel' : ProtocolRel P ((processes, w.recordGBCASend r k m, o) : ProtocolState P)
+      have hrel' : ProtocolRelation P ((processes, w.recordGBCASend r k m, o) : ProtocolState P)
           ((Function.update G r ((G r).1, ((G r).2).recordGBCASend k m), C, A, o) :
             ComposedState P) := by
-        refine (protocolRel_mk P _ _ _ _ _ _ _).mpr
+        refine (protocolRelation_mk P _ _ _ _ _ _ _).mpr
           ⟨hC, rfl, by simpa using hA, ?_, ?_⟩
         · intro r'
           by_cases hr : r' = r
@@ -1015,9 +1015,9 @@ theorem match_tau (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord P
     · obtain rfl : w' = w.recordDecided k b := pure_inj hw
       have hFA : k ∈ A.F := by
         rw [hA]; exact hF
-      have hrel' : ProtocolRel P ((processes, w.recordDecided k b, o) : ProtocolState P)
+      have hrel' : ProtocolRelation P ((processes, w.recordDecided k b, o) : ProtocolState P)
           ((G, C, A.recordDecided k b, o) : ComposedState P) := by
-        refine (protocolRel_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, ?_, ?_, hst⟩
+        refine (protocolRelation_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, ?_, ?_, hst⟩
         · rw [hA]; simp [ABANetworkState.recordDecided, NetworkState.recordDecided]
         · intro r; rw [hG r]; simp [NetworkState.recordDecided]
       obtain ⟨Ω, hrel, hbind⟩ := match_pure P hrel'
@@ -1034,18 +1034,18 @@ sides, so a hidden protocol rendezvous is answered by a silent transition of
 the composed group. The second disjunct is the composed answer to `terminate`:
 the state stands still under a silent protocol label. -/
 theorem match_hidden (P : Parameters) {u : ProtocolState P} {t : ComposedState P}
-    (hR : ProtocolRel P u t) {l : Label P.n} {μ : PMF (ProtocolState P)}
+    (hR : ProtocolRelation P u t) {l : Label P.n} {μ : PMF (ProtocolState P)}
     (h : (protocolHidden P).step u l μ) :
     ∃ Ω : PMF (PMF (ComposedState P)),
-      PMFRel (diracRel (ProtocolRel P)) μ Ω ∧
+      PMFRel (diracRel (ProtocolRelation P)) μ Ω ∧
         ((composedHidden P).step t l (Ω.bind id) ∨
           (l = Label.tau ∧ Ω.bind id = PMF.pure t)) := by
   obtain ⟨processes, w, o⟩ := u
   obtain ⟨G, C, A, o'⟩ := t
-  obtain ⟨hC, ho, hA, hG, hst⟩ := (protocolRel_mk P _ _ _ _ _ _ _).mp hR
+  obtain ⟨hC, ho, hA, hG, hst⟩ := (protocolRelation_mk P _ _ _ _ _ _ _).mp hR
   subst ho
-  have hR : ProtocolRel P (processes, w, o) (G, C, A, o) :=
-    (protocolRel_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, hA, hG, hst⟩
+  have hR : ProtocolRelation P (processes, w, o) (G, C, A, o) :=
+    (protocolRelation_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, hA, hG, hst⟩
   rcases (protocolHidden_step_iff P _ _ _).mp h with ⟨rfl, e, hstep⟩ | hstep
   · obtain ⟨Ω, hrel, hs⟩ := match_event P hR e hstep
     exact ⟨Ω, hrel, Or.inl hs⟩
@@ -1061,10 +1061,10 @@ both sides, and every other label is answered on the nose or by standing
 still. A hidden label is never `τ`, so the standing-still answer arises only
 under `τ`, where the reflexivity of `weakTau` discharges it. -/
 theorem match_step (P : Parameters) {u : ProtocolState P} {t : ComposedState P}
-    (hR : ProtocolRel P u t) {l : Label P.n} {μ : PMF (ProtocolState P)}
+    (hR : ProtocolRelation P u t) {l : Label P.n} {μ : PMF (ProtocolState P)}
     (h : (protocol P).step u l μ) :
     ∃ Ω : PMF (PMF (ComposedState P)),
-      PMFRel (diracRel (ProtocolRel P)) μ Ω ∧
+      PMFRel (diracRel (ProtocolRelation P)) μ Ω ∧
         ((l = Silent.τ ∧ weakTau (composed P) (PMF.pure t) (Ω.bind id)) ∨
          (¬ (l = Silent.τ) ∧ weakStep (composed P) (PMF.pure t) l (Ω.bind id))) := by
   rcases (protocol_step_iff P u l μ).mp h with ⟨rfl, l', hmem, hg⟩ | ⟨hnm, hg⟩
@@ -1085,19 +1085,19 @@ theorem match_step (P : Parameters) {u : ProtocolState P} {t : ComposedState P}
 /-- The two initial states are related: everything is initial, so every column
 is the initial stage record, which is what an untouched round reads as on the
 protocol side. -/
-theorem protocolRel_init (P : Parameters) :
-    ProtocolRel P (protocol P).init (composed P).init :=
+theorem protocolRelation_init (P : Parameters) :
+    ProtocolRelation P (protocol P).init (composed P).init :=
   ⟨fun _ => rfl, rfl, rfl, fun _ => rfl,
     fun _ r => (RoundRecordMap.initial_roundRecord P.n r).symm⟩
 
 /-- **The protocol forward-simulates into its composed reading**
-along the Dirac lift of `ProtocolRel`. -/
+along the Dirac lift of `ProtocolRelation`. -/
 theorem protocolSim (P : Parameters) :
     ProbabilisticForwardSimulation (protocol P) (composed P)
-      (diracRel (ProtocolRel P)) where
+      (diracRel (ProtocolRelation P)) where
   init := ⟨PMF.pure (composed P).init,
     fun _ hs => by rwa [PMF.mem_support_pure_iff] at hs,
-    (composed P).init, rfl, protocolRel_init P⟩
+    (composed P).init, rfl, protocolRelation_init P⟩
   step := by
     rintro s_C μ_A ⟨t, rfl, hR⟩ l μ_C hstep
     exact match_step P hR hstep

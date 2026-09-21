@@ -1,4 +1,4 @@
-% GBCA instance forward simulation (PLTS.ABA.GBCA.ByABDY.refinesSpecification, instRel).
+% GBCA instance forward simulation (PLTS.ABA.GBCA.ByABDY.refinesSpecification, specificationRelation).
 \begin{tikzpicture}[
     >={Stealth[round]}, semithick, on grid,
     conc/.style={draw, rounded corners, minimum height=0.85cm, align=center,
@@ -24,15 +24,15 @@
     node[pos=0.5, below=4pt, font=\footnotesize, align=center, text width=6.8cm,
          fill=white, inner sep=1.5pt]
       {weak step \texttt{bindUnset};\,\texttt{ret}\\
-       $f{+}1$ via $input\_supp$, the excluded bit via the exclusion certificate};
-  % instRel verticals
+       $f{+}1$ via $input\_support$, the excluded bit via the exclusion certificate};
+  % specificationRelation verticals
   \draw[dashed, ->] (t1) -- (p1) node[pos=0.55, right=1pt, font=\scriptsize]{call};
   \draw[dashed, ->] (t2.south) -- (3.1,0.3);
   \draw[dashed, ->] (t3.south) -- (8.2,0.3)
     node[pos=0.45, right=1pt, font=\scriptsize]{run};
   \draw[dashed, ->] (t4) -- (p2) node[pos=0.55, right=1pt, font=\scriptsize]{graded};
   \node[font=\footnotesize, align=center] at (6.6,-3.1)
-    {dashed $=$ $\mathrm{instRel}$; deliveries/relay/echo/vote/bind/echo5 $\mapsto$ stutter;\\
+    {dashed $=$ $\mathrm{specificationRelation}$; deliveries/relay/echo/vote/bind/echo5 $\mapsto$ stutter;\\
      every return row splits on $excluded$, $C$-returns included;\\
      $excluded$ is the excluded-bit reading of the network state's bound bit};
 \end{tikzpicture}

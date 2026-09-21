@@ -17,8 +17,8 @@ where the gather-based chain passes from implementation to specification, as
 
 ## The relation is a function
 
-`AFW.ProtocolRel` (`ABA/ImplementationByAFW/RoundProjection.lean`) determines the composed state
-from the flat one: the round loops and the coin oracle are shared, the ABA-side
+`AFW.ProtocolRelation` (`ABA/ImplementationByAFW/RoundProjection.lean`) determines the composed
+state from the flat one: the round loops and the coin oracle are shared, the ABA-side
 network is the DECIDED sets beside the corrupted set, and every round is the
 view `AFW.roundProjection`. `AFW.match_pure` and `AFW.match_prod` are the
 two couplings that answer a Dirac outcome and an outcome whose only free
@@ -44,8 +44,8 @@ and `AFW.match_step` carries that run through the sub-protocol hiding with
 A gather program of the composed reading holds what each broadcast instance has
 returned to it; the flat reading reads a `2f + 1` `VOTE` receipt quorum on the
 process's own local state instead. `AFW.broadcastReturnsFor_eq_of_quorum` identifies the
-two under `AFW.StoreInv`, and `AFW.holdsInputBroadcastReturn_firstGather` and its three
-companions are that identification at the four broadcast families. A delivery
+two under `AFW.BroadcastReturnsInvariant`, and `AFW.holdsInputBroadcastReturn_firstGather` and its
+three companions are that identification at the four broadcast families. A delivery
 moves the store in one way only: `AFW.broadcastReturnsFor_deliver_cases` says that it
 either leaves the store where it stands or fills an empty store, which is the
 dichotomy between the plain delivery lemmas of `ABA/ImplementationByAFW/RoundProjectionStep.lean`
@@ -53,12 +53,12 @@ and their quorum companions.
 
 ## The two clauses that are not readings
 
-`AFW.RoundInv` is `AFW.StoreInv` at one round, and
-`AFW.storeInv_update` carries it across a row from the round the row names.
+`AFW.RoundInvariant` is `AFW.BroadcastReturnsInvariant` at one round, and
+`AFW.broadcastReturnsInvariant_update` carries it across a row from the round the row names.
 Every row of a gather instance moves each of its `2n` broadcast instances by
-`AFW.InvStep` (`AFW.lowStep_invStep`), so `AFW.roundInv_firstGather` and
-`AFW.roundInv_secondGather` re-establish the invariant from the rows the answer
-fires. `AFW.boundInv_of` and `AFW.writeGhost_bound` carry the bound
+`AFW.InvariantStep` (`AFW.stepOverBracha_invariantStep`), so `AFW.roundInvariant_firstGather` and
+`AFW.roundInvariant_secondGather` re-establish the invariant from the rows the answer
+fires. `AFW.boundInvariant_of` and `AFW.writeGhost_bound` carry the bound
 invariant, whose one open case is the link: there the ghost write puts the
 round's bound bit on record, which is `AFW.roundRecord_gbcaSend_secondGather`.
 -/
@@ -77,9 +77,9 @@ coordinate is the oracle's is matched outcome by outcome. -/
 
 /-- A Dirac outcome matched by the single composed state it is read as. -/
 private theorem match_pure (P : Parameters) {s : ProtocolState P} {t : ComposedState P}
-    (h : ProtocolRel P s t) :
+    (h : ProtocolRelation P s t) :
     ∃ Ω : PMF (PMF (ComposedState P)),
-      PMFRel (diracRel (ProtocolRel P)) (PMF.pure s) Ω ∧ Ω.bind id = PMF.pure t := by
+      PMFRel (diracRel (ProtocolRelation P)) (PMF.pure s) Ω ∧ Ω.bind id = PMF.pure t := by
   refine ⟨PMF.pure (PMF.pure t), ⟨PMF.pure (s, PMF.pure t), ?_, ?_, ?_⟩, ?_⟩
   · rw [PMF.pure_map]
   · rw [PMF.pure_map]
@@ -96,9 +96,9 @@ private theorem match_prod (P : Parameters) {x : ∀ _ : Fin P.n, AFW.ProcessRec
     {w : NetworkState P.n} {G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n}
     {C : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A : ABANetworkState P.n}
     {ν : PMF (ℕ → WCC.SpecState P.n)}
-    (h : ∀ o ∈ ν.support, ProtocolRel P (x, w, o) (G, C, A, o)) :
+    (h : ∀ o ∈ ν.support, ProtocolRelation P (x, w, o) (G, C, A, o)) :
     ∃ Ω : PMF (PMF (ComposedState P)),
-      PMFRel (diracRel (ProtocolRel P))
+      PMFRel (diracRel (ProtocolRelation P))
         (prodPMF (PMF.pure x) (prodPMF (PMF.pure w) ν)) Ω ∧
       Ω.bind id =
         prodPMF (PMF.pure G) (prodPMF (PMF.pure C) (prodPMF (PMF.pure A) ν)) := by
@@ -158,7 +158,7 @@ theorem roundRecord_gbcaSend_secondGather (P : Parameters) {j : Fin P.n} {c : Ro
 
 A gather program of the composed reading reads its store; the flat reading
 reads a `2f + 1` `VOTE` receipt quorum on the process's own local state in the
-instance. Under `StoreInv` the two agree wherever the flat guard fires. -/
+instance. Under `BroadcastReturnsInvariant` the two agree wherever the flat guard fires. -/
 
 section Store
 
@@ -173,7 +173,8 @@ variable {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} {w : NetworkState P.n}
 
 /-- The first gather's input store holds the value a flat receipt quorum
 carries. -/
-theorem holdsInputBroadcastReturn_firstGather (hI : StoreInv P u w) (r : ℕ) (j k : Fin P.n) {x :
+theorem holdsInputBroadcastReturn_firstGather (hI : BroadcastReturnsInvariant P u w) (r : ℕ) (j k :
+  Fin P.n) {x :
   Bool}
     (hq : firstGatherAcceptedInputs P ((u j).2.roundRecord r) k x) :
     Gather.holdsInputBroadcastReturn ((Gather.gatherTier (GBCA.ByAFW.firstGather (roundProjection P
@@ -182,7 +183,8 @@ theorem holdsInputBroadcastReturn_firstGather (hI : StoreInv P u w) (r : ℕ) (j
 
 /-- The first gather's bind store holds the payload a flat receipt quorum
 carries. -/
-theorem holdsBindBroadcastReturn_firstGather (hI : StoreInv P u w) (r : ℕ) (j q : Fin P.n)
+theorem holdsBindBroadcastReturn_firstGather (hI : BroadcastReturnsInvariant P u w) (r : ℕ) (j q :
+  Fin P.n)
     {U : Gather.AcceptedPairs P.n Bool} (hq : firstGatherAcceptedBinds P ((u j).2.roundRecord r) q
       U) :
     Gather.holdsBindBroadcastReturn ((Gather.gatherTier (GBCA.ByAFW.firstGather (roundProjection P u
@@ -191,7 +193,8 @@ theorem holdsBindBroadcastReturn_firstGather (hI : StoreInv P u w) (r : ℕ) (j 
 
 /-- The second gather's input store holds the value a flat receipt quorum
 carries. -/
-theorem holdsInputBroadcastReturn_secondGather (hI : StoreInv P u w) (r : ℕ) (j k : Fin P.n) {x :
+theorem holdsInputBroadcastReturn_secondGather (hI : BroadcastReturnsInvariant P u w) (r : ℕ) (j k :
+  Fin P.n) {x :
   Option Bool}
     (hq : secondGatherAcceptedInputs P ((u j).2.roundRecord r) k x) :
     Gather.holdsInputBroadcastReturn ((Gather.gatherTier (GBCA.ByAFW.secondGather (roundProjection P
@@ -200,7 +203,8 @@ theorem holdsInputBroadcastReturn_secondGather (hI : StoreInv P u w) (r : ℕ) (
 
 /-- The second gather's bind store holds the payload a flat receipt quorum
 carries. -/
-theorem holdsBindBroadcastReturn_secondGather (hI : StoreInv P u w) (r : ℕ) (j q : Fin P.n)
+theorem holdsBindBroadcastReturn_secondGather (hI : BroadcastReturnsInvariant P u w) (r : ℕ) (j q :
+  Fin P.n)
     {U : Gather.AcceptedPairs P.n (Option Bool)} (hq : secondGatherAcceptedBinds P ((u
       j).2.roundRecord r) q U) :
     Gather.holdsBindBroadcastReturn ((Gather.gatherTier (GBCA.ByAFW.secondGather (roundProjection P
@@ -226,7 +230,7 @@ theorem brachaStep_ret_of_store {i j k : Fin P.n} {s : BRB.BrachaState P.n X}
         { (s.receiveMessage j k m).process j with returned := true })) := by
   refine BRB.BrachaStep.ret _ j v ?_ ?_
   · rw [InstanceState.receivedCount_eq_localState, receiveMessage_self]
-    exact broadcastReturnsFor_spec P hst
+    exact broadcastReturnsFor_voteQuorum P hst
   · rw [InstanceState.receiveMessage_process]
     exact hr
 
@@ -234,7 +238,7 @@ theorem brachaStep_ret_of_store {i j k : Fin P.n} {s : BRB.BrachaState P.n X}
 invariant at most one value carries a receipt quorum, so a delivery either
 leaves the store where it stands or fills an empty store. -/
 theorem broadcastReturnsFor_deliver_cases {i j k : Fin P.n} {s : BRB.BrachaState P.n X}
-    {m : BRB.Message X} (hInv : BRB.Inv P i (s.receiveMessage j k m)) :
+    {m : BRB.Message X} (hInv : BRB.Invariant P i (s.receiveMessage j k m)) :
     broadcastReturnsFor P ((s.1 j).deliverTo k m) = broadcastReturnsFor P (s.1 j) ∨
       (broadcastReturnsFor P (s.1 j) = none ∧
         ∃ v, broadcastReturnsFor P ((s.1 j).deliverTo k m) = some v) := by
@@ -256,7 +260,7 @@ theorem broadcastReturnsFor_deliver_cases {i j k : Fin P.n} {s : BRB.BrachaState
     · obtain ⟨v', hv'⟩ := Option.ne_none_iff_exists'.mp hb
       refine Or.inl ?_
       have h := broadcastReturnsFor_eq_of_quorum P hInv (j := j) (x := v')
-        (by rw [hpost]; exact hmono v' (broadcastReturnsFor_spec P hv'))
+        (by rw [hpost]; exact hmono v' (broadcastReturnsFor_voteQuorum P hv'))
       rw [hpost] at h
       rw [h, hv']
   · simp only [not_exists, not_le] at hq
@@ -474,7 +478,7 @@ theorem roundOverBracha_secondGatherCall (s : GBCA.ByAFW.RoundStateOverBracha P.
 second gather takes its return. -/
 theorem roundOverBracha_secondGatherReturn (s : GBCA.ByAFW.RoundStateOverBracha P.n) (id : Fin P.n)
     (g : Fin P.n → Option (Option Bool))
-    (h2 : (GBCA.ByAFW.programs s id).called2 = true) (ho : (GBCA.ByAFW.programs s id).out = none)
+    (h2 : (GBCA.ByAFW.programs s id).called2 = true) (ho : (GBCA.ByAFW.programs s id).output = none)
     (h : Gather.StepOverBracha P (GBCA.ByAFW.secondGather s) (.ret id g (secondGatherReturnCore P
       s))
       (PMF.pure (GBCA.ByAFW.secondGather (afterSecondGatherReturn P s id g)))) :
@@ -499,7 +503,7 @@ marks the record returned, and the bit the label carries is the one on
 record. -/
 theorem roundOverBracha_retG (s : GBCA.ByAFW.RoundStateOverBracha P.n) (id : Fin P.n) (out :
   GBCAOutput)
-    (ho : (GBCA.ByAFW.programs s id).out = some out) (hr : (GBCA.ByAFW.programs s id).returned =
+    (ho : (GBCA.ByAFW.programs s id).output = some out) (hr : (GBCA.ByAFW.programs s id).returned =
       false) :
     (GBCA.ByAFW.roundOverBracha P r).step s
       (Sum.inl (Label.retG r id out ((GBCA.ByAFW.bound s).getD (GBCA.boundOfCore P ∅))))
@@ -545,148 +549,154 @@ end RoundRows
 
 /-! ### The broadcast invariant across a row
 
-`StoreInv` is the broadcast invariant at the `4n` instances of every round.
-`RoundInv` is that clause at one round, `storeInv_update` carries it across a
-row from the round the row names, and `roundInv_firstGather`, `roundInv_secondGather` and
-`roundInv_frame` re-establish it from the rows the composed answer fires. -/
+`BroadcastReturnsInvariant` is the broadcast invariant at the `4n` instances of every round.
+`RoundInvariant` is that clause at one round, `broadcastReturnsInvariant_update` carries it across a
+row from the round the row names, and `roundInvariant_firstGather`, `roundInvariant_secondGather`
+and `roundInvariant_of_unchanged` re-establish it from the rows the composed answer fires. -/
 
 section Invariant
 
 variable {P : Parameters}
 
 /-- **The broadcast invariant at the `4n` instances of one round.** -/
-def RoundInv (P : Parameters) (s : GBCA.ByAFW.RoundStateOverBracha P.n) : Prop :=
-  ∀ k : Fin P.n, BRB.Inv P k (Gather.inputBroadcasts (GBCA.ByAFW.firstGather s) k) ∧
-    BRB.Inv P k (Gather.bindBroadcasts (GBCA.ByAFW.firstGather s) k) ∧
-    BRB.Inv P k (Gather.inputBroadcasts (GBCA.ByAFW.secondGather s) k) ∧
-    BRB.Inv P k (Gather.bindBroadcasts (GBCA.ByAFW.secondGather s) k)
+def RoundInvariant (P : Parameters) (s : GBCA.ByAFW.RoundStateOverBracha P.n) : Prop :=
+  ∀ k : Fin P.n, BRB.Invariant P k (Gather.inputBroadcasts (GBCA.ByAFW.firstGather s) k) ∧
+    BRB.Invariant P k (Gather.bindBroadcasts (GBCA.ByAFW.firstGather s) k) ∧
+    BRB.Invariant P k (Gather.inputBroadcasts (GBCA.ByAFW.secondGather s) k) ∧
+    BRB.Invariant P k (Gather.bindBroadcasts (GBCA.ByAFW.secondGather s) k)
 
-/-- `StoreInv` is `RoundInv` at every round of the view. -/
-theorem storeInv_iff_roundInv (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n) (w : NetworkState P.n) :
-    StoreInv P u w ↔ ∀ r, RoundInv P (roundProjection P u w r) := Iff.rfl
+/-- `BroadcastReturnsInvariant` is `RoundInvariant` at every round of the view. -/
+theorem broadcastReturnsInvariant_iff_roundInvariant (u : ∀ _ : Fin P.n,
+    AFW.ProcessRecord P.n) (w : NetworkState P.n) : BroadcastReturnsInvariant P u w ↔ ∀ r,
+      RoundInvariant P (roundProjection P u w r) := Iff.rfl
 
 /-- **Every row of a gather instance moves each of its `2n` broadcast instances
 by one row or not at all.** -/
-theorem lowStep_invStep {X : Type} [DecidableEq X] {s : Gather.StateOverBracha P.n X}
+theorem stepOverBracha_invariantStep {X : Type} [DecidableEq X] {s : Gather.StateOverBracha P.n X}
     {l₀ : Gather.Label P.n X} {μ : PMF (Gather.StateOverBracha P.n X)}
     (h : Gather.StepOverBracha P s l₀ μ) {s' : Gather.StateOverBracha P.n X}
     (hs' : s' ∈ μ.support) (k : Fin P.n) :
-    InvStep P k (Gather.inputBroadcasts s k) (Gather.inputBroadcasts s' k) ∧
-      InvStep P k (Gather.bindBroadcasts s k) (Gather.bindBroadcasts s' k) := by
+    InvariantStep P k (Gather.inputBroadcasts s k) (Gather.inputBroadcasts s' k) ∧
+      InvariantStep P k (Gather.bindBroadcasts s k) (Gather.bindBroadcasts s' k) := by
   cases h with
   | call id x hin hb =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    exact ⟨invStep_update _ id _ (BRB.BrachaStep.call (Gather.inputBroadcasts s id) x hb) k,
-      InvStep.stand P k _⟩
+    exact ⟨invariantStep_update _ id _ (BRB.BrachaStep.call (Gather.inputBroadcasts s id) x hb) k,
+      InvariantStep.stand P k _⟩
   | callLoop id x =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    exact ⟨InvStep.stand P k _, InvStep.stand P k _⟩
+    exact ⟨InvariantStep.stand P k _, InvariantStep.stand P k _⟩
   | inputBroadcastTau q c hb =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    exact ⟨invStep_update _ q c hb k, InvStep.stand P k _⟩
+    exact ⟨invariantStep_update _ q c hb k, InvariantStep.stand P k _⟩
   | bindBroadcastTau q d hb =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    exact ⟨InvStep.stand P k _, invStep_update _ q d hb k⟩
+    exact ⟨InvariantStep.stand P k _, invariantStep_update _ q d hb k⟩
   | deliver i q m hm =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    exact ⟨InvStep.stand P k _, InvStep.stand P k _⟩
+    exact ⟨InvariantStep.stand P k _, InvariantStep.stand P k _⟩
   | echo q hin hcard hsend =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    exact ⟨InvStep.stand P k _, InvStep.stand P k _⟩
+    exact ⟨InvariantStep.stand P k _, InvariantStep.stand P k _⟩
   | vote q U hin hech happ hQ hsend =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    exact ⟨InvStep.stand P k _, InvStep.stand P k _⟩
+    exact ⟨InvariantStep.stand P k _, InvariantStep.stand P k _⟩
   | bindCall q U hin hvot hsnd happ hQ hbc =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    exact ⟨InvStep.stand P k _,
-      invStep_update _ q _ (BRB.BrachaStep.call (Gather.bindBroadcasts s q) U hbc) k⟩
+    exact ⟨InvariantStep.stand P k _,
+      invariantStep_update _ q _ (BRB.BrachaStep.call (Gather.bindBroadcasts s q) U hbc) k⟩
   | byzantine q m hF =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    exact ⟨InvStep.stand P k _, InvStep.stand P k _⟩
+    exact ⟨InvariantStep.stand P k _, InvariantStep.stand P k _⟩
   | inputBroadcastRet q i v c hb =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    exact ⟨invStep_update _ q c hb k, InvStep.stand P k _⟩
+    exact ⟨invariantStep_update _ q c hb k, InvariantStep.stand P k _⟩
   | bindRet q i U d hb =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    exact ⟨InvStep.stand P k _, invStep_update _ q d hb k⟩
+    exact ⟨InvariantStep.stand P k _, invariantStep_update _ q d hb k⟩
   | ret id g hin hbind hsub hQ hr =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    exact ⟨InvStep.stand P k _, InvStep.stand P k _⟩
+    exact ⟨InvariantStep.stand P k _, InvariantStep.stand P k _⟩
   | fail id =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    exact ⟨InvStep.row (BRB.BrachaStep.fail (Gather.inputBroadcasts s k) id),
-      InvStep.row (BRB.BrachaStep.fail (Gather.bindBroadcasts s k) id)⟩
+    exact ⟨InvariantStep.row (BRB.BrachaStep.fail (Gather.inputBroadcasts s k) id),
+      InvariantStep.row (BRB.BrachaStep.fail (Gather.bindBroadcasts s k) id)⟩
 
 variable {s t : GBCA.ByAFW.RoundStateOverBracha P.n}
 
 /-- A row that leaves both gather instances where they stand keeps the
 invariant. -/
-theorem roundInv_frame (hR : RoundInv P s) (h1 : GBCA.ByAFW.firstGather t = GBCA.ByAFW.firstGather
+theorem roundInvariant_of_unchanged (hR : RoundInvariant P s) (h1 : GBCA.ByAFW.firstGather t =
+  GBCA.ByAFW.firstGather
   s)
-    (h2 : GBCA.ByAFW.secondGather t = GBCA.ByAFW.secondGather s) : RoundInv P t := by
+    (h2 : GBCA.ByAFW.secondGather t = GBCA.ByAFW.secondGather s) : RoundInvariant P t := by
   intro k
   rw [h1, h2]
   exact hR k
 
 /-- A row of the first gather keeps the invariant. -/
-theorem roundInv_firstGather {l₀ : Gather.Label P.n Bool} (hR : RoundInv P s)
+theorem roundInvariant_firstGather {l₀ : Gather.Label P.n Bool} (hR : RoundInvariant P s)
     (h2 : GBCA.ByAFW.secondGather t = GBCA.ByAFW.secondGather s)
     (h : Gather.StepOverBracha P (GBCA.ByAFW.firstGather s) l₀ (PMF.pure (GBCA.ByAFW.firstGather
       t))) :
-    RoundInv P t := by
+    RoundInvariant P t := by
   intro k
-  obtain ⟨h1', h2'⟩ := lowStep_invStep h (s' := GBCA.ByAFW.firstGather t) (by simp) k
+  obtain ⟨h1', h2'⟩ := stepOverBracha_invariantStep h (s' := GBCA.ByAFW.firstGather t) (by simp) k
   rw [h2]
-  exact ⟨h1'.inv (hR k).1, h2'.inv (hR k).2.1, (hR k).2.2.1, (hR k).2.2.2⟩
+  exact ⟨h1'.invariant (hR k).1, h2'.invariant (hR k).2.1, (hR k).2.2.1, (hR k).2.2.2⟩
 
 /-- A row of the second gather keeps the invariant. -/
-theorem roundInv_secondGather {l₀ : Gather.Label P.n (Option Bool)} (hR : RoundInv P s)
+theorem roundInvariant_secondGather {l₀ : Gather.Label P.n (Option Bool)} (hR : RoundInvariant P s)
     (h1 : GBCA.ByAFW.firstGather t = GBCA.ByAFW.firstGather s)
     (h : Gather.StepOverBracha P (GBCA.ByAFW.secondGather s) l₀ (PMF.pure (GBCA.ByAFW.secondGather
       t))) :
-    RoundInv P t := by
+    RoundInvariant P t := by
   intro k
-  obtain ⟨h1', h2'⟩ := lowStep_invStep h (s' := GBCA.ByAFW.secondGather t) (by simp) k
+  obtain ⟨h1', h2'⟩ := stepOverBracha_invariantStep h (s' := GBCA.ByAFW.secondGather t) (by simp) k
   rw [h1]
-  exact ⟨(hR k).1, (hR k).2.1, h1'.inv (hR k).2.2.1, h2'.inv (hR k).2.2.2⟩
+  exact ⟨(hR k).1, (hR k).2.1, h1'.invariant (hR k).2.2.1, h2'.invariant (hR k).2.2.2⟩
 
 /-- A row that moves both gather instances keeps the invariant. -/
-theorem roundInv_both {l₁ : Gather.Label P.n Bool} {l₂ : Gather.Label P.n (Option Bool)}
-    (hR : RoundInv P s)
+theorem roundInvariant_both {l₁ : Gather.Label P.n Bool} {l₂ : Gather.Label P.n (Option Bool)}
+    (hR : RoundInvariant P s)
     (h₁ : Gather.StepOverBracha P (GBCA.ByAFW.firstGather s) l₁ (PMF.pure (GBCA.ByAFW.firstGather
       t)))
     (h₂ : Gather.StepOverBracha P (GBCA.ByAFW.secondGather s) l₂ (PMF.pure (GBCA.ByAFW.secondGather
       t))) :
-    RoundInv P t := by
+    RoundInvariant P t := by
   intro k
-  obtain ⟨ha, hb⟩ := lowStep_invStep h₁ (s' := GBCA.ByAFW.firstGather t) (by simp) k
-  obtain ⟨hc, hd⟩ := lowStep_invStep h₂ (s' := GBCA.ByAFW.secondGather t) (by simp) k
-  exact ⟨ha.inv (hR k).1, hb.inv (hR k).2.1, hc.inv (hR k).2.2.1, hd.inv (hR k).2.2.2⟩
+  obtain ⟨ha, hb⟩ := stepOverBracha_invariantStep h₁ (s' := GBCA.ByAFW.firstGather t) (by simp) k
+  obtain ⟨hc, hd⟩ := stepOverBracha_invariantStep h₂ (s' := GBCA.ByAFW.secondGather t) (by simp) k
+  exact ⟨ha.invariant (hR k).1, hb.invariant (hR k).2.1, hc.invariant (hR k).2.2.1,
+    hd.invariant (hR k).2.2.2⟩
 
 /-- The broadcast invariant at one round of the view. -/
-theorem roundInv_of_storeInv {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} {w : NetworkState P.n}
-    (hI : StoreInv P u w) (r : ℕ) : RoundInv P (roundProjection P u w r) := hI r
+theorem roundInvariant_of_broadcastReturnsInvariant {u : ∀ _ : Fin P.n,
+    AFW.ProcessRecord P.n} {w : NetworkState P.n} (hI : BroadcastReturnsInvariant P u w) (r : ℕ) :
+      RoundInvariant P (roundProjection P u w r) :=
+      hI r
 
 /-- **The broadcast invariant across a row**: the round the row names carries
 it, and every other round stands still. -/
-theorem storeInv_update {u x : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} {w v : NetworkState P.n}
-    {r : ℕ} {Z : GBCA.ByAFW.RoundStateOverBracha P.n} (hI : StoreInv P u w)
+theorem broadcastReturnsInvariant_update {u x : ∀ _ : Fin P.n,
+    AFW.ProcessRecord P.n} {w v : NetworkState P.n} {r : ℕ} {Z : GBCA.ByAFW.RoundStateOverBracha
+      P.n} (hI : BroadcastReturnsInvariant P u w)
     (hfam : (fun r' => roundProjection P x v r') = Function.update (fun r' => roundProjection P u w
       r') r Z)
-    (hZ : RoundInv P Z) : StoreInv P x v := by
+    (hZ : RoundInvariant P Z) : BroadcastReturnsInvariant P x v := by
   intro r' k
   have h : roundProjection P x v r' = Function.update (fun r'' => roundProjection P u w r'') r Z r'
     :=
@@ -710,53 +720,55 @@ assembles, and the programs and the round's bound bit are untouched (D1). -/
 theorem roundProjection_fail {P : Parameters} (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n)
     (w : NetworkState P.n) (r : ℕ) (k : Fin P.n) :
     roundProjection P u (Implementation.NetworkState.corrupt P k w) r
-      = gActLow P (Sum.inl (Label.fail k)) (roundProjection P u w r) := by
+      = corruptionOverBracha P (Sum.inl (Label.fail k)) (roundProjection P u w r) := by
   refine roundStateAt_ext ?_ ?_ (stateOverBroadcasts_ext ?_ ?_ ?_ ?_) (stateOverBroadcasts_ext ?_ ?_
     ?_ ?_)
-  · simp only [GBCA.ByAFW.programs, roundProjection, gActLow, GBCA.ByAFW.corruptAll,
+  · simp only [GBCA.ByAFW.programs, roundProjection, corruptionOverBracha, GBCA.ByAFW.corruptAll,
       Implementation.NetworkState.corrupt]
-  · simp only [GBCA.ByAFW.bound, roundProjection, gActLow, GBCA.ByAFW.corruptAll,
+  · simp only [GBCA.ByAFW.bound, roundProjection, corruptionOverBracha, GBCA.ByAFW.corruptAll,
     Implementation.NetworkState.corrupt]
     split_ifs <;> rfl
   · refine Prod.ext rfl (networkState_ext ?_ ?_) <;>
       simp only [Gather.gatherTier, GBCA.ByAFW.firstGather, roundProjection, firstGatherProjection,
-        gActLow, GBCA.ByAFW.corruptAll, Gather.corruptAll, InstanceState.corrupt,
+        corruptionOverBracha, GBCA.ByAFW.corruptAll, Gather.corruptAll, InstanceState.corrupt,
           Implementation.NetworkState.corrupt, ABA.NetworkState.corrupt] <;>
       split_ifs <;> rfl
   · funext q
     refine Prod.ext rfl (networkState_ext ?_ ?_) <;>
       simp only [Gather.inputBroadcasts, GBCA.ByAFW.firstGather, roundProjection,
-        firstGatherProjection, gActLow, GBCA.ByAFW.corruptAll, Gather.corruptAll,
+        firstGatherProjection, corruptionOverBracha, GBCA.ByAFW.corruptAll, Gather.corruptAll,
           InstanceState.corrupt, Implementation.NetworkState.corrupt, ABA.NetworkState.corrupt] <;>
       split_ifs <;> rfl
   · funext q
     refine Prod.ext rfl (networkState_ext ?_ ?_) <;>
       simp only [Gather.bindBroadcasts, GBCA.ByAFW.firstGather, roundProjection,
-        firstGatherProjection, gActLow, GBCA.ByAFW.corruptAll, Gather.corruptAll,
+        firstGatherProjection, corruptionOverBracha, GBCA.ByAFW.corruptAll, Gather.corruptAll,
           InstanceState.corrupt, Implementation.NetworkState.corrupt, ABA.NetworkState.corrupt] <;>
       split_ifs <;> rfl
   · simp only [Gather.core, GBCA.ByAFW.firstGather, roundProjection, firstGatherProjection,
-      gActLow, GBCA.ByAFW.corruptAll, Gather.corruptAll, Implementation.NetworkState.corrupt]
+      corruptionOverBracha, GBCA.ByAFW.corruptAll, Gather.corruptAll,
+        Implementation.NetworkState.corrupt]
     split_ifs <;> rfl
   · refine Prod.ext rfl (networkState_ext ?_ ?_) <;>
       simp only [Gather.gatherTier, GBCA.ByAFW.secondGather, roundProjection,
-        secondGatherProjection, gActLow, GBCA.ByAFW.corruptAll, Gather.corruptAll,
+        secondGatherProjection, corruptionOverBracha, GBCA.ByAFW.corruptAll, Gather.corruptAll,
           InstanceState.corrupt, Implementation.NetworkState.corrupt, ABA.NetworkState.corrupt] <;>
       split_ifs <;> rfl
   · funext q
     refine Prod.ext rfl (networkState_ext ?_ ?_) <;>
       simp only [Gather.inputBroadcasts, GBCA.ByAFW.secondGather, roundProjection,
-        secondGatherProjection, gActLow, GBCA.ByAFW.corruptAll, Gather.corruptAll,
+        secondGatherProjection, corruptionOverBracha, GBCA.ByAFW.corruptAll, Gather.corruptAll,
           InstanceState.corrupt, Implementation.NetworkState.corrupt, ABA.NetworkState.corrupt] <;>
       split_ifs <;> rfl
   · funext q
     refine Prod.ext rfl (networkState_ext ?_ ?_) <;>
       simp only [Gather.bindBroadcasts, GBCA.ByAFW.secondGather, roundProjection,
-        secondGatherProjection, gActLow, GBCA.ByAFW.corruptAll, Gather.corruptAll,
+        secondGatherProjection, corruptionOverBracha, GBCA.ByAFW.corruptAll, Gather.corruptAll,
           InstanceState.corrupt, Implementation.NetworkState.corrupt, ABA.NetworkState.corrupt] <;>
       split_ifs <;> rfl
   · simp only [Gather.core, GBCA.ByAFW.secondGather, roundProjection, secondGatherProjection,
-      gActLow, GBCA.ByAFW.corruptAll, Gather.corruptAll, Implementation.NetworkState.corrupt]
+      corruptionOverBracha, GBCA.ByAFW.corruptAll, Gather.corruptAll,
+        Implementation.NetworkState.corrupt]
     split_ifs <;> rfl
 
 /-- **The whole family of rounds after a Byzantine injection**: the round the
@@ -789,7 +801,7 @@ as its own rules move it. The link is the one send answered by two events. -/
 
 theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     (w : NetworkState P.n) {j : Fin P.n} {c : RoundLoopRecord P.n} {p : RoundRecordMap P.n}
-    (hu : (u j).2 = p) (hI : StoreInv P u w) {r : ℕ} {m : Message P.n}
+    (hu : (u j).2 = p) (hI : BroadcastReturnsInvariant P u w) {r : ℕ} {m : Message P.n}
     {μ : PMF (AFW.ProcessRecord P.n)}
     (h : RoundStep P j (c, p) (Sum.inr (.gbcaSend r j m)) μ) :
     ∃ x : AFW.ProcessRecord P.n, μ = PMF.pure x ∧ x.1 = c ∧
@@ -797,7 +809,7 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
       (GBCA.ByAFW.roundOverBracha P r).weakLSilent (roundProjection P u w r)
         (roundProjection P (Function.update u j x)
           ((w.recordGBCASend r j m).writeGhost (ghostStep P) (Sum.inr (.gbcaSend r j m))) r) ∧
-      RoundInv P (roundProjection P (Function.update u j x)
+      RoundInvariant P (roundProjection P (Function.update u j x)
         ((w.recordGBCASend r j m).writeGhost (ghostStep P) (Sum.inr (.gbcaSend r j m))) r) := by
   subst hu
   cases h with
@@ -812,7 +824,7 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr', ?_,
         ?_⟩ <;> rw [roundProjection_firstGatherEcho rfl]
     · exact roundOverBracha_run_one (roundOverBracha_firstGatherTau (roundProjection P u w r) hrow)
-    · exact roundInv_firstGather (roundInv_of_storeInv hI r) rfl hrow
+    · exact roundInvariant_firstGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow
   | firstGatherVote _ _ _ U hh hterm hin hech happ hQ hsend =>
     have hQ' : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ A,
@@ -830,7 +842,7 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr', ?_,
         ?_⟩ <;> rw [roundProjection_firstGatherVote rfl]
     · exact roundOverBracha_run_one (roundOverBracha_firstGatherTau (roundProjection P u w r) hrow)
-    · exact roundInv_firstGather (roundInv_of_storeInv hI r) rfl hrow
+    · exact roundInvariant_firstGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow
   | firstGatherBind _ _ _ U hh hterm hin hvot hsnd hbc happ hQ =>
     have hQ' : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ W,
@@ -848,7 +860,7 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr', ?_,
         ?_⟩ <;> rw [roundProjection_firstGatherBind rfl]
     · exact roundOverBracha_run_one (roundOverBracha_firstGatherTau (roundProjection P u w r) hrow)
-    · exact roundInv_firstGather (roundInv_of_storeInv hI r) rfl hrow
+    · exact roundInvariant_firstGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow
   | secondGatherEcho _ _ _ hh hterm hin hcard hsend =>
     have hacc : ((Gather.gatherTier (secondGatherProjection P u w r)).process j).accepted
         = secondGatherAcceptedPairs P ((u j).2.roundRecord r) := accepted_secondGatherProjection u w
@@ -860,7 +872,7 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr', ?_,
         ?_⟩ <;> rw [roundProjection_secondGatherEcho rfl]
     · exact roundOverBracha_run_one (roundOverBracha_secondGatherTau (roundProjection P u w r) hrow)
-    · exact roundInv_secondGather (roundInv_of_storeInv hI r) rfl hrow
+    · exact roundInvariant_secondGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow
   | secondGatherVote _ _ _ U hh hterm hin hech happ hQ hsend =>
     have hQ' : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ A,
@@ -878,7 +890,7 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr', ?_,
         ?_⟩ <;> rw [roundProjection_secondGatherVote rfl]
     · exact roundOverBracha_run_one (roundOverBracha_secondGatherTau (roundProjection P u w r) hrow)
-    · exact roundInv_secondGather (roundInv_of_storeInv hI r) rfl hrow
+    · exact roundInvariant_secondGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow
   | secondGatherBind _ _ _ U hh hterm hin hvot hsnd hbc happ hQ =>
     have hQ' : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ W,
@@ -896,7 +908,7 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr', ?_,
         ?_⟩ <;> rw [roundProjection_secondGatherBind rfl]
     · exact roundOverBracha_run_one (roundOverBracha_secondGatherTau (roundProjection P u w r) hrow)
-    · exact roundInv_secondGather (roundInv_of_storeInv hI r) rfl hrow
+    · exact roundInvariant_secondGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow
   | firstGatherReturnThenSecondGatherCall _ _ _ g hh hterm hin hbind hsubap hQ hr1 hin2 hbin2 =>
     have hQ' : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ U,
@@ -928,9 +940,9 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
           (GBCA.candidate P g)
           (by simp [afterFirstGatherReturn]) (by simp [afterFirstGatherReturn, programProjection,
             hin2]) hin2 hbin2)
-    · have hR1 : RoundInv P (afterFirstGatherReturn P (roundProjection P u w r) j g) :=
-        roundInv_firstGather (roundInv_of_storeInv hI r) rfl hrow1
-      exact roundInv_secondGather hR1 rfl hrow2
+    · have hR1 : RoundInvariant P (afterFirstGatherReturn P (roundProjection P u w r) j g) :=
+        roundInvariant_firstGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow1
+      exact roundInvariant_secondGather hR1 rfl hrow2
   | firstGatherInputBroadcastEcho _ _ _ i mm hh hterm hrecv hsend =>
     have hrow := Gather.StepOverBracha.inputBroadcastTau (firstGatherProjection P u w r) i _
       (BRB.BrachaStep.echo (Gather.inputBroadcasts (firstGatherProjection P u w r) i) j mm hrecv
@@ -939,7 +951,7 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr', ?_,
         ?_⟩ <;> rw [roundProjection_firstGatherInputBroadcastEcho rfl]
     · exact roundOverBracha_run_one (roundOverBracha_firstGatherTau (roundProjection P u w r) hrow)
-    · exact roundInv_firstGather (roundInv_of_storeInv hI r) rfl hrow
+    · exact roundInvariant_firstGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow
   | firstGatherInputBroadcastVoteQuorum _ _ _ i mm hh hterm hcnt hsend =>
     have hrow := Gather.StepOverBracha.inputBroadcastTau (firstGatherProjection P u w r) i _
       (BRB.BrachaStep.voteQuorum (Gather.inputBroadcasts (firstGatherProjection P u w r) i) j mm
@@ -948,7 +960,7 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr', ?_,
         ?_⟩ <;> rw [roundProjection_in1Vote rfl]
     · exact roundOverBracha_run_one (roundOverBracha_firstGatherTau (roundProjection P u w r) hrow)
-    · exact roundInv_firstGather (roundInv_of_storeInv hI r) rfl hrow
+    · exact roundInvariant_firstGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow
   | firstGatherInputBroadcastVoteAmplification _ _ _ i mm hh hterm hcnt hsend =>
     have hrow := Gather.StepOverBracha.inputBroadcastTau (firstGatherProjection P u w r) i _
       (BRB.BrachaStep.voteAmplification (Gather.inputBroadcasts (firstGatherProjection P u w r) i) j
@@ -957,7 +969,7 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr', ?_,
         ?_⟩ <;> rw [roundProjection_in1Vote rfl]
     · exact roundOverBracha_run_one (roundOverBracha_firstGatherTau (roundProjection P u w r) hrow)
-    · exact roundInv_firstGather (roundInv_of_storeInv hI r) rfl hrow
+    · exact roundInvariant_firstGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow
   | firstGatherBindBroadcastEcho _ _ _ i mm hh hterm hrecv hsend =>
     have hrow := Gather.StepOverBracha.bindBroadcastTau (firstGatherProjection P u w r) i _
       (BRB.BrachaStep.echo (Gather.bindBroadcasts (firstGatherProjection P u w r) i) j mm hrecv
@@ -966,7 +978,7 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr', ?_,
         ?_⟩ <;> rw [roundProjection_firstGatherBindBroadcastEcho rfl]
     · exact roundOverBracha_run_one (roundOverBracha_firstGatherTau (roundProjection P u w r) hrow)
-    · exact roundInv_firstGather (roundInv_of_storeInv hI r) rfl hrow
+    · exact roundInvariant_firstGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow
   | firstGatherBindBroadcastVoteQuorum _ _ _ i mm hh hterm hcnt hsend =>
     have hrow := Gather.StepOverBracha.bindBroadcastTau (firstGatherProjection P u w r) i _
       (BRB.BrachaStep.voteQuorum (Gather.bindBroadcasts (firstGatherProjection P u w r) i) j mm hcnt
@@ -975,7 +987,7 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr', ?_,
         ?_⟩ <;> rw [roundProjection_bind1Vote rfl]
     · exact roundOverBracha_run_one (roundOverBracha_firstGatherTau (roundProjection P u w r) hrow)
-    · exact roundInv_firstGather (roundInv_of_storeInv hI r) rfl hrow
+    · exact roundInvariant_firstGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow
   | firstGatherBindBroadcastVoteAmplification _ _ _ i mm hh hterm hcnt hsend =>
     have hrow := Gather.StepOverBracha.bindBroadcastTau (firstGatherProjection P u w r) i _
       (BRB.BrachaStep.voteAmplification (Gather.bindBroadcasts (firstGatherProjection P u w r) i) j
@@ -984,7 +996,7 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr', ?_,
         ?_⟩ <;> rw [roundProjection_bind1Vote rfl]
     · exact roundOverBracha_run_one (roundOverBracha_firstGatherTau (roundProjection P u w r) hrow)
-    · exact roundInv_firstGather (roundInv_of_storeInv hI r) rfl hrow
+    · exact roundInvariant_firstGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow
   | secondGatherInputBroadcastEcho _ _ _ i mm hh hterm hrecv hsend =>
     have hrow := Gather.StepOverBracha.inputBroadcastTau (secondGatherProjection P u w r) i _
       (BRB.BrachaStep.echo (Gather.inputBroadcasts (secondGatherProjection P u w r) i) j mm hrecv
@@ -993,7 +1005,7 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr', ?_,
         ?_⟩ <;> rw [roundProjection_secondGatherInputBroadcastEcho rfl]
     · exact roundOverBracha_run_one (roundOverBracha_secondGatherTau (roundProjection P u w r) hrow)
-    · exact roundInv_secondGather (roundInv_of_storeInv hI r) rfl hrow
+    · exact roundInvariant_secondGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow
   | secondGatherInputBroadcastVoteQuorum _ _ _ i mm hh hterm hcnt hsend =>
     have hrow := Gather.StepOverBracha.inputBroadcastTau (secondGatherProjection P u w r) i _
       (BRB.BrachaStep.voteQuorum (Gather.inputBroadcasts (secondGatherProjection P u w r) i) j mm
@@ -1002,7 +1014,7 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr', ?_,
         ?_⟩ <;> rw [roundProjection_in2Vote rfl]
     · exact roundOverBracha_run_one (roundOverBracha_secondGatherTau (roundProjection P u w r) hrow)
-    · exact roundInv_secondGather (roundInv_of_storeInv hI r) rfl hrow
+    · exact roundInvariant_secondGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow
   | secondGatherInputBroadcastVoteAmplification _ _ _ i mm hh hterm hcnt hsend =>
     have hrow := Gather.StepOverBracha.inputBroadcastTau (secondGatherProjection P u w r) i _
       (BRB.BrachaStep.voteAmplification (Gather.inputBroadcasts (secondGatherProjection P u w r) i)
@@ -1011,7 +1023,7 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr', ?_,
         ?_⟩ <;> rw [roundProjection_in2Vote rfl]
     · exact roundOverBracha_run_one (roundOverBracha_secondGatherTau (roundProjection P u w r) hrow)
-    · exact roundInv_secondGather (roundInv_of_storeInv hI r) rfl hrow
+    · exact roundInvariant_secondGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow
   | secondGatherBindBroadcastEcho _ _ _ i mm hh hterm hrecv hsend =>
     have hrow := Gather.StepOverBracha.bindBroadcastTau (secondGatherProjection P u w r) i _
       (BRB.BrachaStep.echo (Gather.bindBroadcasts (secondGatherProjection P u w r) i) j mm hrecv
@@ -1020,7 +1032,7 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr', ?_,
         ?_⟩ <;> rw [roundProjection_secondGatherBindBroadcastEcho rfl]
     · exact roundOverBracha_run_one (roundOverBracha_secondGatherTau (roundProjection P u w r) hrow)
-    · exact roundInv_secondGather (roundInv_of_storeInv hI r) rfl hrow
+    · exact roundInvariant_secondGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow
   | secondGatherBindBroadcastVoteQuorum _ _ _ i mm hh hterm hcnt hsend =>
     have hrow := Gather.StepOverBracha.bindBroadcastTau (secondGatherProjection P u w r) i _
       (BRB.BrachaStep.voteQuorum (Gather.bindBroadcasts (secondGatherProjection P u w r) i) j mm
@@ -1029,7 +1041,7 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr', ?_,
         ?_⟩ <;> rw [roundProjection_bind2Vote rfl]
     · exact roundOverBracha_run_one (roundOverBracha_secondGatherTau (roundProjection P u w r) hrow)
-    · exact roundInv_secondGather (roundInv_of_storeInv hI r) rfl hrow
+    · exact roundInvariant_secondGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow
   | secondGatherBindBroadcastVoteAmplification _ _ _ i mm hh hterm hcnt hsend =>
     have hrow := Gather.StepOverBracha.bindBroadcastTau (secondGatherProjection P u w r) i _
       (BRB.BrachaStep.voteAmplification (Gather.bindBroadcasts (secondGatherProjection P u w r) i) j
@@ -1038,7 +1050,7 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr', ?_,
         ?_⟩ <;> rw [roundProjection_bind2Vote rfl]
     · exact roundOverBracha_run_one (roundOverBracha_secondGatherTau (roundProjection P u w r) hrow)
-    · exact roundInv_secondGather (roundInv_of_storeInv hI r) rfl hrow
+    · exact roundInvariant_secondGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow
 
 
 /-! ### Answering a delivery
@@ -1052,14 +1064,14 @@ to the receiver as well, which is a second transition of the round. -/
 /-- A delivery in an input-broadcast instance of the first gather, answered -/
 theorem answer_deliverFirstGatherInputBroadcast (P : Parameters) {u : ∀ _ : Fin P.n,
     AFW.ProcessRecord P.n} (w : NetworkState P.n) {j : Fin P.n} {c : RoundLoopRecord P.n} (hI :
-      StoreInv P u w) (r : ℕ) (i k : Fin P.n)
+      BroadcastReturnsInvariant P u w) (r : ℕ) (i k : Fin P.n)
     (mm : BRB.Message Bool) (hsent : Message.firstGatherInputBroadcasts i mm ∈ w.sent r k) :
     (GBCA.ByAFW.roundOverBracha P r).weakLSilent (roundProjection P u w r)
         (roundProjection P (Function.update u j (c,
           (u j).2.deliverTo r k (.firstGatherInputBroadcasts i mm))) (w.writeGhost (ghostStep P)
             (Sum.inr (.gbcaDeliver r j k (.firstGatherInputBroadcasts i
             mm)))) r) ∧
-      RoundInv P (roundProjection P (Function.update u j (c,
+      RoundInvariant P (roundProjection P (Function.update u j (c,
         (u j).2.deliverTo r k (.firstGatherInputBroadcasts i mm))) (w.writeGhost (ghostStep P)
           (Sum.inr (.gbcaDeliver r j k (.firstGatherInputBroadcasts i
           mm)))) r) := by
@@ -1070,12 +1082,13 @@ theorem answer_deliverFirstGatherInputBroadcast (P : Parameters) {u : ∀ _ : Fi
       ((mem_messagesOf (hf := firstGatherInputBroadcastMessageOf_inj i)).mpr ⟨_, hsent,
         by simp [firstGatherInputBroadcastMessageOf]⟩)
   have hrow₁ := Gather.StepOverBracha.inputBroadcastTau (firstGatherProjection P u w r) i _ hdlv
-  have hInv' : BRB.Inv P i ((Gather.inputBroadcasts (firstGatherProjection P u w r)
+  have hInv' : BRB.Invariant P i ((Gather.inputBroadcasts (firstGatherProjection P u w r)
     i).receiveMessage j k mm) :=
-    (InvStep.row hdlv).inv (roundInv_of_storeInv hI r i).1
-  have hR₁ : RoundInv P (afterFirstGatherInputBroadcastDeliver P (roundProjection P u w r) i j k mm)
+    (InvariantStep.row hdlv).invariant (roundInvariant_of_broadcastReturnsInvariant hI r i).1
+  have hR₁ : RoundInvariant P (afterFirstGatherInputBroadcastDeliver P (roundProjection P u w r) i j
+    k mm)
     :=
-    roundInv_firstGather (roundInv_of_storeInv hI r) rfl hrow₁
+    roundInvariant_firstGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow₁
   rcases broadcastReturnsFor_deliver_cases (i := i) (j := j) (k := k) hInv' with hst | ⟨hnone, v,
     hst⟩
   · rw [roundProjection_deliverFirstGatherInputBroadcast rfl r i k mm hst]
@@ -1104,12 +1117,12 @@ theorem answer_deliverFirstGatherInputBroadcast (P : Parameters) {u : ∀ _ : Fi
     exact ⟨roundOverBracha_run_two (roundOverBracha_firstGatherTau (roundProjection P u w r) hrow₁)
         (roundOverBracha_firstGatherTau (afterFirstGatherInputBroadcastDeliver P (roundProjection P
           u w r) i j k mm) hrow₂),
-      roundInv_firstGather hR₁ rfl hrow₂⟩
+      roundInvariant_firstGather hR₁ rfl hrow₂⟩
 
 /-- A delivery in a bind-broadcast instance of the first gather, answered -/
 theorem answer_deliverFirstGatherBindBroadcast (P : Parameters) {u : ∀ _ : Fin P.n,
     AFW.ProcessRecord P.n} (w : NetworkState P.n) {j : Fin P.n} {c : RoundLoopRecord P.n} (hI :
-      StoreInv P u w) (r : ℕ) (i k : Fin P.n)
+      BroadcastReturnsInvariant P u w) (r : ℕ) (i k : Fin P.n)
     (mm : BRB.Message (Gather.AcceptedPairs P.n Bool)) (hsent : Message.firstGatherBindBroadcasts i
       mm ∈ w.sent r k) :
     (GBCA.ByAFW.roundOverBracha P r).weakLSilent (roundProjection P u w r)
@@ -1117,7 +1130,7 @@ theorem answer_deliverFirstGatherBindBroadcast (P : Parameters) {u : ∀ _ : Fin
           (u j).2.deliverTo r k (.firstGatherBindBroadcasts i mm))) (w.writeGhost (ghostStep P)
             (Sum.inr (.gbcaDeliver r j k (.firstGatherBindBroadcasts i
             mm)))) r) ∧
-      RoundInv P (roundProjection P (Function.update u j (c,
+      RoundInvariant P (roundProjection P (Function.update u j (c,
         (u j).2.deliverTo r k (.firstGatherBindBroadcasts i mm))) (w.writeGhost (ghostStep P)
           (Sum.inr (.gbcaDeliver r j k (.firstGatherBindBroadcasts i
           mm)))) r) := by
@@ -1128,12 +1141,14 @@ theorem answer_deliverFirstGatherBindBroadcast (P : Parameters) {u : ∀ _ : Fin
       ((mem_messagesOf (hf := firstGatherBindBroadcastMessageOf_inj i)).mpr ⟨_, hsent,
         by simp [firstGatherBindBroadcastMessageOf]⟩)
   have hrow₁ := Gather.StepOverBracha.bindBroadcastTau (firstGatherProjection P u w r) i _ hdlv
-  have hInv' : BRB.Inv P i ((Gather.bindBroadcasts (firstGatherProjection P u w r) i).receiveMessage
+  have hInv' : BRB.Invariant P i ((Gather.bindBroadcasts (firstGatherProjection P u w r)
+    i).receiveMessage
     j k mm) :=
-    (InvStep.row hdlv).inv (roundInv_of_storeInv hI r i).2.1
-  have hR₁ : RoundInv P (afterFirstGatherBindBroadcastDeliver P (roundProjection P u w r) i j k mm)
+    (InvariantStep.row hdlv).invariant (roundInvariant_of_broadcastReturnsInvariant hI r i).2.1
+  have hR₁ : RoundInvariant P (afterFirstGatherBindBroadcastDeliver P (roundProjection P u w r) i j
+    k mm)
     :=
-    roundInv_firstGather (roundInv_of_storeInv hI r) rfl hrow₁
+    roundInvariant_firstGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow₁
   rcases broadcastReturnsFor_deliver_cases (i := i) (j := j) (k := k) hInv' with hst | ⟨hnone, v,
     hst⟩
   · rw [roundProjection_deliverFirstGatherBindBroadcast rfl r i k mm hst]
@@ -1161,12 +1176,12 @@ theorem answer_deliverFirstGatherBindBroadcast (P : Parameters) {u : ∀ _ : Fin
     exact ⟨roundOverBracha_run_two (roundOverBracha_firstGatherTau (roundProjection P u w r) hrow₁)
         (roundOverBracha_firstGatherTau (afterFirstGatherBindBroadcastDeliver P (roundProjection P u
           w r) i j k mm) hrow₂),
-      roundInv_firstGather hR₁ rfl hrow₂⟩
+      roundInvariant_firstGather hR₁ rfl hrow₂⟩
 
 /-- A delivery in an input-broadcast instance of the second gather, answered -/
 theorem answer_deliverSecondGatherInputBroadcast (P : Parameters) {u : ∀ _ : Fin P.n,
     AFW.ProcessRecord P.n} (w : NetworkState P.n) {j : Fin P.n} {c : RoundLoopRecord P.n} (hI :
-      StoreInv P u w) (r : ℕ) (i k : Fin P.n)
+      BroadcastReturnsInvariant P u w) (r : ℕ) (i k : Fin P.n)
     (mm : BRB.Message (Option Bool)) (hsent : Message.secondGatherInputBroadcasts i mm ∈ w.sent r k)
       :
     (GBCA.ByAFW.roundOverBracha P r).weakLSilent (roundProjection P u w r)
@@ -1174,7 +1189,7 @@ theorem answer_deliverSecondGatherInputBroadcast (P : Parameters) {u : ∀ _ : F
           (u j).2.deliverTo r k (.secondGatherInputBroadcasts i mm))) (w.writeGhost (ghostStep P)
             (Sum.inr (.gbcaDeliver r j k (.secondGatherInputBroadcasts i
             mm)))) r) ∧
-      RoundInv P (roundProjection P (Function.update u j (c,
+      RoundInvariant P (roundProjection P (Function.update u j (c,
         (u j).2.deliverTo r k (.secondGatherInputBroadcasts i mm))) (w.writeGhost (ghostStep P)
           (Sum.inr (.gbcaDeliver r j k (.secondGatherInputBroadcasts i
           mm)))) r) := by
@@ -1185,12 +1200,13 @@ theorem answer_deliverSecondGatherInputBroadcast (P : Parameters) {u : ∀ _ : F
       ((mem_messagesOf (hf := secondGatherInputBroadcastMessageOf_inj i)).mpr ⟨_, hsent,
         by simp [secondGatherInputBroadcastMessageOf]⟩)
   have hrow₁ := Gather.StepOverBracha.inputBroadcastTau (secondGatherProjection P u w r) i _ hdlv
-  have hInv' : BRB.Inv P i ((Gather.inputBroadcasts (secondGatherProjection P u w r)
+  have hInv' : BRB.Invariant P i ((Gather.inputBroadcasts (secondGatherProjection P u w r)
     i).receiveMessage j k mm) :=
-    (InvStep.row hdlv).inv (roundInv_of_storeInv hI r i).2.2.1
-  have hR₁ : RoundInv P (afterSecondGatherInputBroadcastDeliver P (roundProjection P u w r) i j k
+    (InvariantStep.row hdlv).invariant (roundInvariant_of_broadcastReturnsInvariant hI r i).2.2.1
+  have hR₁ : RoundInvariant P (afterSecondGatherInputBroadcastDeliver P (roundProjection P u w r) i
+    j k
     mm) :=
-    roundInv_secondGather (roundInv_of_storeInv hI r) rfl hrow₁
+    roundInvariant_secondGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow₁
   rcases broadcastReturnsFor_deliver_cases (i := i) (j := j) (k := k) hInv' with hst | ⟨hnone, v,
     hst⟩
   · rw [roundProjection_deliverSecondGatherInputBroadcast rfl r i k mm hst]
@@ -1219,12 +1235,12 @@ theorem answer_deliverSecondGatherInputBroadcast (P : Parameters) {u : ∀ _ : F
     exact ⟨roundOverBracha_run_two (roundOverBracha_secondGatherTau (roundProjection P u w r) hrow₁)
         (roundOverBracha_secondGatherTau (afterSecondGatherInputBroadcastDeliver P (roundProjection
           P u w r) i j k mm) hrow₂),
-      roundInv_secondGather hR₁ rfl hrow₂⟩
+      roundInvariant_secondGather hR₁ rfl hrow₂⟩
 
 /-- A delivery in a bind-broadcast instance of the second gather, answered -/
 theorem answer_deliverSecondGatherBindBroadcast (P : Parameters) {u : ∀ _ : Fin P.n,
     AFW.ProcessRecord P.n} (w : NetworkState P.n) {j : Fin P.n} {c : RoundLoopRecord P.n} (hI :
-      StoreInv P u w) (r : ℕ) (i k : Fin P.n)
+      BroadcastReturnsInvariant P u w) (r : ℕ) (i k : Fin P.n)
     (mm : BRB.Message (Gather.AcceptedPairs P.n (Option Bool))) (hsent :
       Message.secondGatherBindBroadcasts i mm ∈ w.sent r k) :
     (GBCA.ByAFW.roundOverBracha P r).weakLSilent (roundProjection P u w r)
@@ -1232,7 +1248,7 @@ theorem answer_deliverSecondGatherBindBroadcast (P : Parameters) {u : ∀ _ : Fi
           (u j).2.deliverTo r k (.secondGatherBindBroadcasts i mm))) (w.writeGhost (ghostStep P)
             (Sum.inr (.gbcaDeliver r j k (.secondGatherBindBroadcasts i
             mm)))) r) ∧
-      RoundInv P (roundProjection P (Function.update u j (c,
+      RoundInvariant P (roundProjection P (Function.update u j (c,
         (u j).2.deliverTo r k (.secondGatherBindBroadcasts i mm))) (w.writeGhost (ghostStep P)
           (Sum.inr (.gbcaDeliver r j k (.secondGatherBindBroadcasts i
           mm)))) r) := by
@@ -1243,12 +1259,13 @@ theorem answer_deliverSecondGatherBindBroadcast (P : Parameters) {u : ∀ _ : Fi
       ((mem_messagesOf (hf := secondGatherBindBroadcastMessageOf_inj i)).mpr ⟨_, hsent,
         by simp [secondGatherBindBroadcastMessageOf]⟩)
   have hrow₁ := Gather.StepOverBracha.bindBroadcastTau (secondGatherProjection P u w r) i _ hdlv
-  have hInv' : BRB.Inv P i ((Gather.bindBroadcasts (secondGatherProjection P u w r)
+  have hInv' : BRB.Invariant P i ((Gather.bindBroadcasts (secondGatherProjection P u w r)
     i).receiveMessage j k mm) :=
-    (InvStep.row hdlv).inv (roundInv_of_storeInv hI r i).2.2.2
-  have hR₁ : RoundInv P (afterSecondGatherBindBroadcastDeliver P (roundProjection P u w r) i j k mm)
+    (InvariantStep.row hdlv).invariant (roundInvariant_of_broadcastReturnsInvariant hI r i).2.2.2
+  have hR₁ : RoundInvariant P (afterSecondGatherBindBroadcastDeliver P (roundProjection P u w r) i j
+    k mm)
     :=
-    roundInv_secondGather (roundInv_of_storeInv hI r) rfl hrow₁
+    roundInvariant_secondGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow₁
   rcases broadcastReturnsFor_deliver_cases (i := i) (j := j) (k := k) hInv' with hst | ⟨hnone, v,
     hst⟩
   · rw [roundProjection_deliverSecondGatherBindBroadcast rfl r i k mm hst]
@@ -1277,11 +1294,12 @@ theorem answer_deliverSecondGatherBindBroadcast (P : Parameters) {u : ∀ _ : Fi
     exact ⟨roundOverBracha_run_two (roundOverBracha_secondGatherTau (roundProjection P u w r) hrow₁)
         (roundOverBracha_secondGatherTau (afterSecondGatherBindBroadcastDeliver P (roundProjection P
           u w r) i j k mm) hrow₂),
-      roundInv_secondGather hR₁ rfl hrow₂⟩
+      roundInvariant_secondGather hR₁ rfl hrow₂⟩
 
 theorem roundRecord_answer_gbcaDeliver (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     (w : NetworkState P.n) {j : Fin P.n} {c : RoundLoopRecord P.n} {p : RoundRecordMap P.n}
-    (hu : (u j).2 = p) (hI : StoreInv P u w) {r : ℕ} {k : Fin P.n} {m : Message P.n}
+    (hu : (u j).2 = p) (hI : BroadcastReturnsInvariant P u w) {r : ℕ} {k : Fin P.n} {m : Message
+      P.n}
     {μ : PMF (AFW.ProcessRecord P.n)} (hsent : m ∈ w.sent r k)
     (h : RoundStep P j (c, p) (Sum.inr (.gbcaDeliver r j k m)) μ) :
     ∃ x : AFW.ProcessRecord P.n, μ = PMF.pure x ∧ x.1 = c ∧
@@ -1292,7 +1310,7 @@ theorem roundRecord_answer_gbcaDeliver (P : Parameters) {u : ∀ _ : Fin P.n, AF
       (GBCA.ByAFW.roundOverBracha P r).weakLSilent (roundProjection P u w r)
         (roundProjection P (Function.update u j x)
           (w.writeGhost (ghostStep P) (Sum.inr (.gbcaDeliver r j k m))) r) ∧
-      RoundInv P (roundProjection P (Function.update u j x)
+      RoundInvariant P (roundProjection P (Function.update u j x)
         (w.writeGhost (ghostStep P) (Sum.inr (.gbcaDeliver r j k m))) r) := by
   subst hu
   cases h with
@@ -1311,7 +1329,7 @@ theorem roundRecord_answer_gbcaDeliver (P : Parameters) {u : ∀ _ : Fin P.n, AF
         (GBCA.ByAFW.roundOverBracha P r).weakLSilent (roundProjection P u w r)
             (roundProjection P (Function.update u j (c, (u j).2.deliverTo r k m))
               (w.writeGhost (ghostStep P) (Sum.inr (.gbcaDeliver r j k m))) r) ∧
-          RoundInv P (roundProjection P (Function.update u j (c, (u j).2.deliverTo r k m))
+          RoundInvariant P (roundProjection P (Function.update u j (c, (u j).2.deliverTo r k m))
             (w.writeGhost (ghostStep P) (Sum.inr (.gbcaDeliver r j k m))) r) := by
       cases m with
       | firstGather mm =>
@@ -1320,14 +1338,14 @@ theorem roundRecord_answer_gbcaDeliver (P : Parameters) {u : ∀ _ : Fin P.n, AF
         rw [roundProjection_deliverFirstGather rfl]
         exact ⟨roundOverBracha_run_one (roundOverBracha_firstGatherTau (roundProjection P u w r)
           hrow),
-          roundInv_firstGather (roundInv_of_storeInv hI r) rfl hrow⟩
+          roundInvariant_firstGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow⟩
       | secondGather mm =>
         have hrow := Gather.StepOverBracha.deliver (secondGatherProjection P u w r) j k mm
           ((mem_messagesOf (hf := secondGatherMessageOf_inj)).mpr ⟨_, hsent, rfl⟩)
         rw [roundProjection_deliverSecondGather rfl]
         exact ⟨roundOverBracha_run_one (roundOverBracha_secondGatherTau (roundProjection P u w r)
           hrow),
-          roundInv_secondGather (roundInv_of_storeInv hI r) rfl hrow⟩
+          roundInvariant_secondGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow⟩
       | firstGatherInputBroadcasts i mm =>
         exact answer_deliverFirstGatherInputBroadcast P w hI r i k mm hsent
       | firstGatherBindBroadcasts i mm =>
@@ -1346,7 +1364,7 @@ theorem roundRecord_answer_gbcaDeliver (P : Parameters) {u : ∀ _ : Fin P.n, AF
 /-- The graded-agreement call of the flat reading is the round's own call. -/
 theorem roundRecord_answer_callG (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     (w : NetworkState P.n) {j : Fin P.n} {c : RoundLoopRecord P.n} {p : RoundRecordMap P.n}
-    (hu : (u j).2 = p) (hI : StoreInv P u w) {r : ℕ} {b : Bool}
+    (hu : (u j).2 = p) (hI : BroadcastReturnsInvariant P u w) {r : ℕ} {b : Bool}
     {μ : PMF (AFW.ProcessRecord P.n)}
     (h : RoundStep P j (c, p) (Sum.inl (.callG r j b)) μ) :
     ∃ x : AFW.ProcessRecord P.n, μ = PMF.pure x ∧
@@ -1361,7 +1379,7 @@ theorem roundRecord_answer_callG (P : Parameters) {u : ∀ _ : Fin P.n, AFW.Proc
         (roundProjection P (Function.update u j x)
           ((w.recordGBCASend r j (gbcaCallPayload P j b)).writeGhost (ghostStep P)
             (Sum.inl (.callG r j b))) r) ∧
-      RoundInv P (roundProjection P (Function.update u j x)
+      RoundInvariant P (roundProjection P (Function.update u j x)
         ((w.recordGBCASend r j (gbcaCallPayload P j b)).writeGhost (ghostStep P)
           (Sum.inl (.callG r j b))) r) := by
   subst hu
@@ -1378,14 +1396,15 @@ theorem roundRecord_answer_callG (P : Parameters) {u : ∀ _ : Fin P.n, AFW.Proc
       exact System.weakLStep_of_step (by simp)
         (roundOverBracha_callG (roundProjection P u w r) j b hin hin hbin)
     · rw [gbcaCallPayload, roundProjection_callG rfl]
-      exact roundInv_firstGather (roundInv_of_storeInv hI r) rfl hrow
+      exact roundInvariant_firstGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow
 
 /-- The graded-agreement return of the flat reading is the second gather's
 return followed by the round's own return, the grade read off the second
 gather's output. -/
 theorem roundRecord_answer_retG (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     (w : NetworkState P.n) {j : Fin P.n} {c : RoundLoopRecord P.n} {p : RoundRecordMap P.n}
-    (hu : (u j).2 = p) (hI : StoreInv P u w) {r : ℕ} {out : GBCAOutput} {bnd : Bool}
+    (hu : (u j).2 = p) (hI : BroadcastReturnsInvariant P u w) {r : ℕ} {out : GBCAOutput} {bnd :
+      Bool}
     {μ : PMF (AFW.ProcessRecord P.n)} (hbnd : bnd = ghostOut P w r j out)
     (hset : ∀ i, (((u i).2.roundRecord r).secondGather.process).input ≠ none →
       (w.ghostRecord r).2.2 ≠ none)
@@ -1402,7 +1421,7 @@ theorem roundRecord_answer_retG (P : Parameters) {u : ∀ _ : Fin P.n, AFW.Proce
         bnd))
         (roundProjection P (Function.update u j x)
           (w.writeGhost (ghostStep P) (Sum.inl (.retG r j out bnd))) r) ∧
-      RoundInv P (roundProjection P (Function.update u j x)
+      RoundInvariant P (roundProjection P (Function.update u j x)
         (w.writeGhost (ghostStep P) (Sum.inl (.retG r j out bnd))) r) := by
   subst hu
   cases h with
@@ -1435,7 +1454,8 @@ theorem roundRecord_answer_retG (P : Parameters) {u : ∀ _ : Fin P.n, AFW.Proce
       · rw [Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr']
     · rw [roundProjection_secondGatherReturn_retG rfl]
       have hprocs : GBCA.ByAFW.programs (afterSecondGatherReturn P (roundProjection P u w r) j g) j
-          = { GBCA.ByAFW.programs (roundProjection P u w r) j with out := some (GBCA.gradeOf P g) }
+          = { GBCA.ByAFW.programs (roundProjection P u w r) j with output := some (GBCA.gradeOf P g)
+            }
             := by
         simp [afterSecondGatherReturn]
       refine roundOverBracha_wstep_two (by simp)
@@ -1446,9 +1466,9 @@ theorem roundRecord_answer_retG (P : Parameters) {u : ∀ _ : Fin P.n, AFW.Proce
       change (((u j).2.roundRecord r).secondGather.process).input.isSome = true
       exact Option.isSome_iff_ne_none.mpr hin
     · rw [roundProjection_secondGatherReturn_retG rfl]
-      have hR₂ : RoundInv P (afterSecondGatherReturn P (roundProjection P u w r) j g) :=
-        roundInv_secondGather (roundInv_of_storeInv hI r) rfl hrow
-      exact roundInv_frame hR₂ rfl rfl
+      have hR₂ : RoundInvariant P (afterSecondGatherReturn P (roundProjection P u w r) j g) :=
+        roundInvariant_secondGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow
+      exact roundInvariant_of_unchanged hR₂ rfl rfl
 
 /-- The call against an already-called record: the round loop moves, the round
 takes its input-enabledness loop and the view stands still. -/
@@ -1475,46 +1495,47 @@ The adversary multicasts on behalf of a corrupted sender. The message reaches
 the network state its tag names and no record moves. -/
 
 theorem byzantine_answer (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n)
-    (w : NetworkState P.n) (hI : StoreInv P u w) (r : ℕ) {k : Fin P.n} (m : Message P.n)
+    (w : NetworkState P.n) (hI : BroadcastReturnsInvariant P u w) (r : ℕ) {k : Fin P.n} (m : Message
+      P.n)
     (hF : k ∈ w.F) :
     (GBCA.ByAFW.roundOverBracha P r).step (roundProjection P u w r) (Sum.inl Label.tau)
         (PMF.pure (roundProjection P u (w.recordGBCASend r k m) r)) ∧
-      RoundInv P (roundProjection P u (w.recordGBCASend r k m) r) := by
+      RoundInvariant P (roundProjection P u (w.recordGBCASend r k m) r) := by
   cases m with
   | firstGather mm =>
     have hrow := Gather.StepOverBracha.byzantine (firstGatherProjection P u w r) k mm hF
     rw [roundProjection_byzantineFirstGather]
     exact ⟨roundOverBracha_firstGatherTau (roundProjection P u w r) hrow,
-      roundInv_firstGather (roundInv_of_storeInv hI r) rfl hrow⟩
+      roundInvariant_firstGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow⟩
   | secondGather mm =>
     have hrow := Gather.StepOverBracha.byzantine (secondGatherProjection P u w r) k mm hF
     rw [roundProjection_byzantineSecondGather]
     exact ⟨roundOverBracha_secondGatherTau (roundProjection P u w r) hrow,
-      roundInv_secondGather (roundInv_of_storeInv hI r) rfl hrow⟩
+      roundInvariant_secondGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow⟩
   | firstGatherInputBroadcasts i mm =>
     have hrow := Gather.StepOverBracha.inputBroadcastTau (firstGatherProjection P u w r) i _
       (BRB.BrachaStep.byzantine (Gather.inputBroadcasts (firstGatherProjection P u w r) i) k mm hF)
     rw [roundProjection_byzantineFirstGatherInputBroadcast]
     exact ⟨roundOverBracha_firstGatherTau (roundProjection P u w r) hrow,
-      roundInv_firstGather (roundInv_of_storeInv hI r) rfl hrow⟩
+      roundInvariant_firstGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow⟩
   | firstGatherBindBroadcasts i mm =>
     have hrow := Gather.StepOverBracha.bindBroadcastTau (firstGatherProjection P u w r) i _
       (BRB.BrachaStep.byzantine (Gather.bindBroadcasts (firstGatherProjection P u w r) i) k mm hF)
     rw [roundProjection_byzantineFirstGatherBindBroadcast]
     exact ⟨roundOverBracha_firstGatherTau (roundProjection P u w r) hrow,
-      roundInv_firstGather (roundInv_of_storeInv hI r) rfl hrow⟩
+      roundInvariant_firstGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow⟩
   | secondGatherInputBroadcasts i mm =>
     have hrow := Gather.StepOverBracha.inputBroadcastTau (secondGatherProjection P u w r) i _
       (BRB.BrachaStep.byzantine (Gather.inputBroadcasts (secondGatherProjection P u w r) i) k mm hF)
     rw [roundProjection_byzantineSecondGatherInputBroadcast]
     exact ⟨roundOverBracha_secondGatherTau (roundProjection P u w r) hrow,
-      roundInv_secondGather (roundInv_of_storeInv hI r) rfl hrow⟩
+      roundInvariant_secondGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow⟩
   | secondGatherBindBroadcasts i mm =>
     have hrow := Gather.StepOverBracha.bindBroadcastTau (secondGatherProjection P u w r) i _
       (BRB.BrachaStep.byzantine (Gather.bindBroadcasts (secondGatherProjection P u w r) i) k mm hF)
     rw [roundProjection_byzantineSecondGatherBindBroadcast]
     exact ⟨roundOverBracha_secondGatherTau (roundProjection P u w r) hrow,
-      roundInv_secondGather (roundInv_of_storeInv hI r) rfl hrow⟩
+      roundInvariant_secondGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow⟩
 
 
 /-! ### Assembling a matched run
@@ -1531,13 +1552,13 @@ private theorem match_vis (P : Parameters) {x : ∀ _ : Fin P.n, AFW.ProcessReco
     {ν : PMF (ℕ → WCC.SpecState P.n)} {G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n}
     {C : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A : ABANetworkState P.n}
     {o : ℕ → WCC.SpecState P.n} {l : Label P.n} (hl : l ≠ Label.tau)
-    (hrel : ∀ o' ∈ ν.support, ProtocolRel P (x, w', o') (G', C', A', o'))
+    (hrel : ∀ o' ∈ ν.support, ProtocolRelation P (x, w', o') (G', C', A', o'))
     (hG : (roundFamilyOverBracha P).weakLStep G (Sum.inl l) G')
     (hC : ∀ i, RoundLoopStep P i (C i) (Sum.inl l) (PMF.pure (C' i)))
     (hA : ABANetworkStep P A (Sum.inl l) (PMF.pure A'))
     (hW : (coinOverRoundAlphabet P).step o (Sum.inl l) ν) :
     ∃ Ω : PMF (PMF (ComposedState P)),
-      PMFRel (diracRel (ProtocolRel P))
+      PMFRel (diracRel (ProtocolRelation P))
         (prodPMF (PMF.pure x) (prodPMF (PMF.pure w') ν)) Ω ∧
       weakStep (composedHidden P) (PMF.pure ((G, C, A, o) : ComposedState P)) l
         (Ω.bind id) := by
@@ -1552,13 +1573,13 @@ private theorem match_hiddenRendezvous (P : Parameters) {x : ∀ _ : Fin P.n, AF
     {ν : PMF (ℕ → WCC.SpecState P.n)} {G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n}
     {C : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A : ABANetworkState P.n}
     {o : ℕ → WCC.SpecState P.n} (e : NetworkEvent P.n)
-    (hrel : ∀ o' ∈ ν.support, ProtocolRel P (x, w', o') (G', C', A', o'))
+    (hrel : ∀ o' ∈ ν.support, ProtocolRelation P (x, w', o') (G', C', A', o'))
     (hG : (roundFamilyOverBracha P).step G (Sum.inr e) (PMF.pure G'))
     (hC : ∀ i, RoundLoopStep P i (C i) (Sum.inr e) (PMF.pure (C' i)))
     (hA : ABANetworkStep P A (Sum.inr e) (PMF.pure A'))
     (hW : (coinOverRoundAlphabet P).step o (Sum.inr e) ν) :
     ∃ Ω : PMF (PMF (ComposedState P)),
-      PMFRel (diracRel (ProtocolRel P))
+      PMFRel (diracRel (ProtocolRelation P))
         (prodPMF (PMF.pure x) (prodPMF (PMF.pure w') ν)) Ω ∧
       weakTau (composedHidden P) (PMF.pure ((G, C, A, o) : ComposedState P)) (Ω.bind id) := by
   obtain ⟨Ω, hr, hb⟩ := match_prod P hrel
@@ -1573,19 +1594,19 @@ private theorem match_run (P : Parameters) {x : ∀ _ : Fin P.n, AFW.ProcessReco
     {w' : NetworkState P.n} {G' G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n}
     {C : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A : ABANetworkState P.n}
     {o : ℕ → WCC.SpecState P.n}
-    (hrel : ProtocolRel P (x, w', o) (G', C, A, o))
+    (hrel : ProtocolRelation P (x, w', o) (G', C, A, o))
     (hG : (roundFamilyOverBracha P).weakLSilent G G') :
     ∃ Ω : PMF (PMF (ComposedState P)),
-      PMFRel (diracRel (ProtocolRel P)) (PMF.pure ((x, w', o) : ProtocolState P)) Ω ∧
+      PMFRel (diracRel (ProtocolRelation P)) (PMF.pure ((x, w', o) : ProtocolState P)) Ω ∧
       weakTau (composedHidden P) (PMF.pure ((G, C, A, o) : ComposedState P)) (Ω.bind id) := by
   obtain ⟨Ω, hr, hb⟩ := match_pure P hrel
   exact ⟨Ω, hr, hb ▸ composedHidden_weakTau P C A o hG⟩
 
 /-- A composed state that stands still. -/
 private theorem match_still (P : Parameters) {s : ProtocolState P} {t : ComposedState P}
-    (h : ProtocolRel P s t) :
+    (h : ProtocolRelation P s t) :
     ∃ Ω : PMF (PMF (ComposedState P)),
-      PMFRel (diracRel (ProtocolRel P)) (PMF.pure s) Ω ∧
+      PMFRel (diracRel (ProtocolRelation P)) (PMF.pure s) Ω ∧
       weakTau (composedHidden P) (PMF.pure t) (Ω.bind id) := by
   obtain ⟨Ω, hr, hb⟩ := match_pure P h
   exact ⟨Ω, hr, hb ▸ weakTau_refl (composedHidden P) (PMF.pure t)⟩
@@ -1599,13 +1620,13 @@ are answered by a transition. -/
 theorem match_tau (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
     {G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
-    {A : ABANetworkState P.n} (hR : ProtocolRel P (u, w, o) (G, C, A, o))
+    {A : ABANetworkState P.n} (hR : ProtocolRelation P (u, w, o) (G, C, A, o))
     {μ : PMF (ProtocolState P)}
     (h : (protocolExtended P).step (u, w, o) (Sum.inl Label.tau) μ) :
     ∃ Ω : PMF (PMF (ComposedState P)),
-      PMFRel (diracRel (ProtocolRel P)) μ Ω ∧
+      PMFRel (diracRel (ProtocolRelation P)) μ Ω ∧
       weakTau (composedHidden P) (PMF.pure ((G, C, A, o) : ComposedState P)) (Ω.bind id) := by
-  obtain ⟨hC, -, hA, hGv, hB, hI⟩ := (protocolRel_mk P _ _ _ _ _ _ _).mp hR
+  obtain ⟨hC, -, hA, hGv, hB, hI⟩ := (protocolRelation_mk P _ _ _ _ _ _ _).mp hR
   rcases systemExtended_tau_inv h with ⟨i, y, hstep, rfl⟩ | ⟨w', hn, rfl⟩
   · obtain ⟨b, hh, hret, hcnt, hterm, hy⟩ := programStep_tau_terminate hstep
     obtain rfl : y = ((u i).1, { (u i).2 with terminated := true }) := pure_inj hy
@@ -1619,10 +1640,10 @@ theorem match_tau (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     have hview : ∀ r, roundProjection P (Function.update u i ((u i).1,
         { (u i).2 with terminated := true })) w r = roundProjection P u w r :=
       fun r => roundProjection_congr (fun j => hst j r)
-    refine match_still P ((protocolRel_mk P _ _ _ _ _ _ _).mpr
+    refine match_still P ((protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨fun j => ?_, rfl, hA, ?_,
-        boundInv_of hB (fun j r => by rw [hst j r]) (fun _ hb => hb),
-        storeInv_congr hI hview⟩)
+        boundInvariant_of hB (fun j r => by rw [hst j r]) (fun _ hb => hb),
+        broadcastReturnsInvariant_congr hI hview⟩)
     · by_cases hj : j = i
       · subst hj; rw [Function.update_self]; exact hC j
       · rw [Function.update_of_ne hj]; exact hC j
@@ -1633,20 +1654,20 @@ theorem match_tau (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     · obtain rfl : w' = w.recordGBCASend r k m := pure_inj hw
       obtain ⟨hstep, hinv⟩ := byzantine_answer P u w hI r m hF
       have hfam := roundProjectionFamily_byzantine u w r k m
-      refine match_run P ((protocolRel_mk P _ _ _ _ _ _ _).mpr
+      refine match_run P ((protocolRelation_mk P _ _ _ _ _ _ _).mpr
           ⟨hC, rfl, by simpa using hA, hfam.symm,
-            boundInv_of hB (fun _ _ => rfl) (fun _ hb => hb),
-            storeInv_update hI hfam hinv⟩) ?_
+            boundInvariant_of hB (fun _ _ => rfl) (fun _ hb => hb),
+            broadcastReturnsInvariant_update hI hfam hinv⟩) ?_
       rw [hGv]
-      exact System.weakLSilent_family roundOwnsLabel isFailLabel (gActLow P)
+      exact System.weakLSilent_family roundOwnsLabel isFailLabel (corruptionOverBracha P)
         (roundOverBracha_run_one hstep)
     · obtain rfl : w' = w.recordDecided k b := pure_inj hw
-      have hrel : ProtocolRel P (u, w.recordDecided k b, o)
+      have hrel : ProtocolRelation P (u, w.recordDecided k b, o)
           (G, C, ⟨(w.recordDecided k b).decidedSent, (w.recordDecided k b).F⟩, o) :=
-        (protocolRel_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, rfl,
+        (protocolRelation_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, rfl,
           by rw [hGv]; funext r; rfl,
-          boundInv_of hB (fun _ _ => rfl) (fun _ hb => hb),
-          storeInv_congr hI (fun _ => rfl)⟩
+          boundInvariant_of hB (fun _ _ => rfl) (fun _ hb => hb),
+          broadcastReturnsInvariant_congr hI (fun _ => rfl)⟩
       obtain ⟨Ω, hr, hb⟩ := match_pure P hrel
       refine ⟨Ω, hr, ?_⟩
       rw [hb]
@@ -1660,14 +1681,14 @@ theorem match_tau (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
 theorem match_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
     {G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
-    {A : ABANetworkState P.n} (hR : ProtocolRel P (u, w, o) (G, C, A, o))
+    {A : ABANetworkState P.n} (hR : ProtocolRelation P (u, w, o) (G, C, A, o))
     {l : Label P.n} (hl : l ≠ Label.tau) {μ : PMF (ProtocolState P)}
     (h : (protocolExtended P).step (u, w, o) (Sum.inl l) μ) :
     ∃ Ω : PMF (PMF (ComposedState P)),
-      PMFRel (diracRel (ProtocolRel P)) μ Ω ∧
+      PMFRel (diracRel (ProtocolRelation P)) μ Ω ∧
       weakStep (composedHidden P) (PMF.pure ((G, C, A, o) : ComposedState P)) l
         (Ω.bind id) := by
-  obtain ⟨hC, -, hA, hGv, hB, hI⟩ := (protocolRel_mk P _ _ _ _ _ _ _).mp hR
+  obtain ⟨hC, -, hA, hGv, hB, hI⟩ := (protocolRelation_mk P _ _ _ _ _ _ _).mp hR
   obtain ⟨x, w', ω, hall, hn, hOr, rfl⟩ := systemExtended_label_inv hl h
   have hWl : (coinOverRoundAlphabet P).step o (Sum.inl l) ω :=
     (System.mapIdle_step_some (coinLabelMap_inl l) ω).mpr hOr
@@ -1686,10 +1707,11 @@ theorem match_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
       · subst hi
         rcases programStep_callABA_own (hall i) with ⟨-, -, hx⟩ | ⟨-, hx⟩ <;> rw [pure_inj hx]
       · rw [hfor i hi]
-    refine match_vis P hl (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
+    refine match_vis P hl (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact roundProjection_unchanged hsame w',
-          boundInv_of hB (fun i r => by rw [hsame i]) (fun _ hb => hb),
-          storeInv_congr hI (fun r => roundProjection_congr (fun i => by rw [hsame i]))⟩)
+          boundInvariant_of hB (fun i r => by rw [hsame i]) (fun _ hb => hb),
+          broadcastReturnsInvariant_congr hI (fun r => roundProjection_congr (fun i => by rw [hsame
+            i]))⟩)
       (System.weakLStep_of_step hLne (roundFamilyOverBracha_idle P G hLne (by simp) not_false))
       (fun i => ?_) (ABANetworkStep.callABAIdle A id b) hWl
     rw [hCeq i]
@@ -1719,10 +1741,11 @@ theorem match_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
       rcases hdp with hd | hf
       · exact ABANetworkStep.retABA ⟨w'.decidedSent, w'.F⟩ id b hd
       · exact ABANetworkStep.retByzantine ⟨w'.decidedSent, w'.F⟩ id b hf
-    refine match_vis P hl (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
+    refine match_vis P hl (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact roundProjection_unchanged hsame w',
-          boundInv_of hB (fun i r => by rw [hsame i]) (fun _ hb => hb),
-          storeInv_congr hI (fun r => roundProjection_congr (fun i => by rw [hsame i]))⟩)
+          boundInvariant_of hB (fun i r => by rw [hsame i]) (fun _ hb => hb),
+          broadcastReturnsInvariant_congr hI (fun r => roundProjection_congr (fun i => by rw [hsame
+            i]))⟩)
       (System.weakLStep_of_step hLne (roundFamilyOverBracha_idle P G hLne (by simp) not_false))
       (fun i => ?_) hAn hWl
     rw [hCeq i]
@@ -1743,10 +1766,11 @@ theorem match_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
       · subst hi
         rcases programStep_callW_own (hall i) with ⟨-, -, -, hx⟩ | ⟨-, hx⟩ <;> rw [pure_inj hx]
       · rw [hfor i hi]
-    refine match_vis P hl (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
+    refine match_vis P hl (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact roundProjection_unchanged hsame w',
-          boundInv_of hB (fun i r => by rw [hsame i]) (fun _ hb => hb),
-          storeInv_congr hI (fun r => roundProjection_congr (fun i => by rw [hsame i]))⟩)
+          boundInvariant_of hB (fun i r => by rw [hsame i]) (fun _ hb => hb),
+          broadcastReturnsInvariant_congr hI (fun r => roundProjection_congr (fun i => by rw [hsame
+            i]))⟩)
       (System.weakLStep_of_step hLne (roundFamilyOverBracha_idle P G hLne (by simp) not_false))
       (fun i => ?_) (ABANetworkStep.callWIdle A r id) hWl
     rw [hCeq i]
@@ -1767,10 +1791,11 @@ theorem match_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
       · subst hi
         rcases programStep_retW_own (hall i) with ⟨-, -, -, -, hx⟩ | ⟨-, hx⟩ <;> rw [pure_inj hx]
       · rw [hfor i hi]
-    refine match_vis P hl (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
+    refine match_vis P hl (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact roundProjection_unchanged hsame w',
-          boundInv_of hB (fun i r => by rw [hsame i]) (fun _ hb => hb),
-          storeInv_congr hI (fun r => roundProjection_congr (fun i => by rw [hsame i]))⟩)
+          boundInvariant_of hB (fun i r => by rw [hsame i]) (fun _ hb => hb),
+          broadcastReturnsInvariant_congr hI (fun r => roundProjection_congr (fun i => by rw [hsame
+            i]))⟩)
       (System.weakLStep_of_step hLne (roundFamilyOverBracha_idle P G hLne (by simp) not_false))
       (fun i => ?_) (ABANetworkStep.retWIdle A r id co) hWl
     rw [hCeq i]
@@ -1793,16 +1818,17 @@ theorem match_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
         rcases programStep_fail_own (hall i) with ⟨-, hx⟩ | ⟨-, hx⟩ <;> rw [pure_inj hx]
       · rw [hfor i hi]
     have hview : ∀ r, roundProjection P x (Implementation.NetworkState.corrupt P k w) r
-        = gActLow P (Sum.inl (Label.fail k)) (roundProjection P u w r) := fun r =>
+        = corruptionOverBracha P (Sum.inl (Label.fail k)) (roundProjection P u w r) := fun r =>
       (roundProjection_congr (fun i => by rw [hsame i])).trans (roundProjection_fail u w r k)
-    have hSI : StoreInv P x (Implementation.NetworkState.corrupt P k w) := by
+    have hSI : BroadcastReturnsInvariant P x (Implementation.NetworkState.corrupt P k w) := by
       intro r
       rw [hview r]
-      exact roundInv_both (roundInv_of_storeInv hI r) (Gather.StepOverBracha.fail _ k)
+      exact roundInvariant_both (roundInvariant_of_broadcastReturnsInvariant hI r)
         (Gather.StepOverBracha.fail _ k)
-    refine match_vis P hl (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
+        (Gather.StepOverBracha.fail _ k)
+    refine match_vis P hl (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, ?_, ?_,
-          boundInv_of hB (fun i r => by rw [hsame i]) (fun _ hb => by simpa using hb),
+          boundInvariant_of hB (fun i r => by rw [hsame i]) (fun _ hb => by simpa using hb),
           hSI⟩)
       (System.weakLStep_of_step hLne (roundFamilyOverBracha_fail P G k)) (fun i => ?_)
       (ABANetworkStep.fail A k (by rw [hA]; exact hnew) (by rw [hA]; exact hbud)) hWl
@@ -1856,10 +1882,10 @@ theorem match_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
           by_cases hi : i = id
           · subst hi; exact hoff r' hr'
           · rw [hfor i hi])).trans (roundProjection_otherSent u w hr' id _ rfl)
-    refine match_vis P hl (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
+    refine match_vis P hl (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, by rw [hA]; simp, hfam.symm,
-          boundInv_of hB hxg (fun _ hb => writeGhost_bound _ (by simpa using hb)),
-          storeInv_update hI hfam hinv⟩)
+          boundInvariant_of hB hxg (fun _ hb => writeGhost_bound _ (by simpa using hb)),
+          broadcastReturnsInvariant_update hI hfam hinv⟩)
       (by rw [hGv]; exact roundFamilyOverBracha_weakStep P (by simp) hlow)
       (fun i => ?_) (ABANetworkStep.callGIdle A r id b) hWl
     rw [hCeq i]
@@ -1906,10 +1932,10 @@ theorem match_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
           by_cases hi : i = id
           · subst hi; exact hoff r' hr'
           · rw [hfor i hi])
-    refine match_vis P hl (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
+    refine match_vis P hl (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, by rw [hA]; simp, hfam.symm,
-          boundInv_of hB hxg (fun _ hb => writeGhost_bound _ hb),
-          storeInv_update hI hfam hinv⟩)
+          boundInvariant_of hB hxg (fun _ hb => writeGhost_bound _ hb),
+          broadcastReturnsInvariant_update hI hfam hinv⟩)
       (by rw [hGv]; exact roundFamilyOverBracha_weakStep P (by simp) hlow)
       (fun i => ?_) (ABANetworkStep.retGIdle A r id out bnd) hWl
     rw [hCeq i]
@@ -1930,20 +1956,20 @@ rendezvous. -/
 theorem match_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
     {G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
-    {A : ABANetworkState P.n} (hR : ProtocolRel P (u, w, o) (G, C, A, o))
+    {A : ABANetworkState P.n} (hR : ProtocolRelation P (u, w, o) (G, C, A, o))
     (e : NetworkEvent P.n (Message P.n)) {μ : PMF (ProtocolState P)}
     (h : (protocolExtended P).step (u, w, o) (Sum.inr e) μ) :
     ∃ Ω : PMF (PMF (ComposedState P)),
-      PMFRel (diracRel (ProtocolRel P)) μ Ω ∧
+      PMFRel (diracRel (ProtocolRelation P)) μ Ω ∧
       weakTau (composedHidden P) (PMF.pure ((G, C, A, o) : ComposedState P)) (Ω.bind id) := by
-  obtain ⟨hC, -, hA, hGv, hB, hI⟩ := (protocolRel_mk P _ _ _ _ _ _ _).mp hR
+  obtain ⟨hC, -, hA, hGv, hB, hI⟩ := (protocolRelation_mk P _ _ _ _ _ _ _).mp hR
   have hCeq : ∀ i, C i = (u i).1 := fun i => (hC i).symm
   obtain ⟨x, w', ν, hall, hn, hWs, rfl⟩ := systemExtended_event_inv h
   have hrun : ∀ {G' : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n}, ν = PMF.pure o →
-      ProtocolRel P (x, w', o) (G', C, A, o) →
+      ProtocolRelation P (x, w', o) (G', C, A, o) →
       (roundFamilyOverBracha P).weakLSilent G G' →
       ∃ Ω : PMF (PMF (ComposedState P)),
-        PMFRel (diracRel (ProtocolRel P))
+        PMFRel (diracRel (ProtocolRelation P))
           (prodPMF (PMF.pure x) (prodPMF (PMF.pure w') ν)) Ω ∧
         weakTau (composedHidden P) (PMF.pure ((G, C, A, o) : ComposedState P))
           (Ω.bind id) := by
@@ -1986,11 +2012,11 @@ theorem match_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
           by_cases hi : i = j
           · subst hi; exact hoff r' hr'
           · rw [hfor i hi])).trans (roundProjection_otherSent u w hr' j m rfl)
-    have hbI : BoundInv P x
+    have hbI : BoundInvariant P x
         ((w.recordGBCASend r j m).writeGhost (ghostStep P) (Sum.inr (.gbcaSend r j m))) := by
       rcases roundRecord_gbcaSend_secondGather P (roundRow_of_own rfl (hall j)) with
         hkeep | ⟨q, y, rfl⟩
-      · refine boundInv_of hB (fun i r'' => ?_)
+      · refine boundInvariant_of hB (fun i r'' => ?_)
           (fun _ hb => writeGhost_bound _ (by simpa using hb))
         by_cases hi : i = j
         · subst hi; exact hkeep _ rfl r''
@@ -2005,15 +2031,15 @@ theorem match_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
           by_cases hi : i = j
           · subst hi; rwa [hoff r'' hr''] at hne
           · rwa [hfor i hi] at hne
-    refine hrun rfl ((protocolRel_mk P _ _ _ _ _ _ _).mpr
+    refine hrun rfl ((protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨fun i => by
         rw [hCeq i]
         by_cases hi : i = j
         · subst hi; rw [hcore]
         · rw [hfor i hi], rfl, by rw [hA]; simp, hfam.symm, hbI,
-        storeInv_update hI hfam hinv⟩) ?_
+        broadcastReturnsInvariant_update hI hfam hinv⟩) ?_
     rw [hGv]
-    exact System.weakLSilent_family roundOwnsLabel isFailLabel (gActLow P) hlow
+    exact System.weakLSilent_family roundOwnsLabel isFailLabel (corruptionOverBracha P) hlow
   | gbcaDeliver r i k m =>
     obtain rfl : ν = PMF.pure o :=
       (System.mapIdle_step_none (coinLabelMap_gbcaDeliver r i k m) ν).mp hWs
@@ -2055,16 +2081,16 @@ theorem match_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
           by_cases hi : i' = i
           · subst hi; exact hoff r' hr'
           · rw [hfor i' hi])
-    refine hrun rfl ((protocolRel_mk P _ _ _ _ _ _ _).mpr
+    refine hrun rfl ((protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨fun i' => by
         rw [hCeq i']
         by_cases hi : i' = i
         · subst hi; rw [hcore]
         · rw [hfor i' hi], rfl, by rw [hA]; simp, hfam.symm,
-        boundInv_of hB hxg (fun _ hb => writeGhost_bound _ hb),
-        storeInv_update hI hfam hinv⟩) ?_
+        boundInvariant_of hB hxg (fun _ hb => writeGhost_bound _ hb),
+        broadcastReturnsInvariant_update hI hfam hinv⟩) ?_
     rw [hGv]
-    exact System.weakLSilent_family roundOwnsLabel isFailLabel (gActLow P) hlow
+    exact System.weakLSilent_family roundOwnsLabel isFailLabel (corruptionOverBracha P) hlow
   | decidedSend j b =>
     obtain ⟨hd, hw⟩ := networkStep_decidedSend hn
     obtain rfl : w' = w.recordDecided j b := pure_inj hw
@@ -2076,11 +2102,12 @@ theorem match_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
           exact pure_inj hxi
       · exact pure_inj (programStep_decidedSend_foreign (Ne.symm hi) (hall i))
     refine match_hiddenRendezvous P (.decidedSend j b) (fun o' _ =>
-      (protocolRel_mk P _ _ _ _ _ _ _).mpr
+      (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun i => by rw [hx i], rfl, by rw [hA]; rfl, by
           rw [hGv]; funext r; exact (roundProjection_congr (fun i => by rw [hx i])).symm,
-          boundInv_of hB (fun i r => by rw [hx i]) (fun _ hb => hb),
-          storeInv_congr hI (fun r => roundProjection_congr (fun i => by rw [hx i]))⟩)
+          boundInvariant_of hB (fun i r => by rw [hx i]) (fun _ hb => hb),
+          broadcastReturnsInvariant_congr hI (fun r => roundProjection_congr (fun i => by rw [hx
+            i]))⟩)
       (roundFamilyOverBracha_idle P G (by simp) (by simp) not_false) (fun i => ?_)
       (hA ▸ ABANetworkStep.decidedSend ⟨w.decidedSent, w.F⟩ j b hd) hWs
     rw [hCeq i]
@@ -2102,10 +2129,11 @@ theorem match_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
       · subst hi; rw [pure_inj hxi]
       · rw [hfor i' hi]
     refine match_hiddenRendezvous P (.decidedDeliver i k b) (fun o' _ =>
-      (protocolRel_mk P _ _ _ _ _ _ _).mpr
+      (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact roundProjection_unchanged hsame w',
-          boundInv_of hB (fun i' r => by rw [hsame i']) (fun _ hb => hb),
-          storeInv_congr hI (fun r => roundProjection_congr (fun i' => by rw [hsame i']))⟩)
+          boundInvariant_of hB (fun i' r => by rw [hsame i']) (fun _ hb => hb),
+          broadcastReturnsInvariant_congr hI (fun r => roundProjection_congr (fun i' => by rw [hsame
+            i']))⟩)
       (roundFamilyOverBracha_idle P G (by simp) (by simp) not_false) (fun i' => ?_)
       (hA ▸ ABANetworkStep.decidedDeliver ⟨w'.decidedSent, w'.F⟩ i k b hd) hWs
     rw [hCeq i']
@@ -2129,11 +2157,11 @@ theorem match_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
         (roundProjection_ghostId (Sum.inr (NetworkEvent.retWPublish r id cc b))
           (fun _ _ => rfl) u _ r')
     refine match_hiddenRendezvous P (.retWPublish r id cc b) (fun o' _ =>
-      (protocolRel_mk P _ _ _ _ _ _ _).mpr
+      (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, by rw [hA]; rfl, by rw [hGv]; funext r'; exact (hview r').symm,
-          boundInv_of hB (fun i r' => by rw [hsame i])
+          boundInvariant_of hB (fun i r' => by rw [hsame i])
             (fun _ hb => writeGhost_bound _ hb),
-          storeInv_congr hI hview⟩)
+          broadcastReturnsInvariant_congr hI hview⟩)
       (roundFamilyOverBracha_idle P G (by simp) (by simp) not_false) (fun i => ?_)
       (hA ▸ ABANetworkStep.retWPublish ⟨w.decidedSent, w.F⟩ r id cc b) hWs
     rw [hCeq i]
@@ -2164,11 +2192,11 @@ theorem match_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
         (roundProjection_ghostId (Sum.inr (NetworkEvent.gbcaCallLoop r id b))
           (fun _ _ => rfl) u w r')
     refine match_hiddenRendezvous P (.gbcaCallLoop r id b) (fun o' _ =>
-      (protocolRel_mk P _ _ _ _ _ _ _).mpr
+      (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, by rw [hA]; simp, by rw [hGv]; funext r'; exact (hview r').symm,
-          boundInv_of hB (fun i r' => by rw [hsame i])
+          boundInvariant_of hB (fun i r' => by rw [hsame i])
             (fun _ hb => writeGhost_bound _ hb),
-          storeInv_congr hI hview⟩)
+          broadcastReturnsInvariant_congr hI hview⟩)
       (roundFamilyOverBracha_owned_id P G r (by simp) (by rw [hGv]; exact hlow))
       (fun i => ?_) (ABANetworkStep.gbcaCallLoop A r id b) hWs
     rw [hCeq i]
@@ -2189,11 +2217,11 @@ theorem match_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
         (roundProjection_ghostId (Sum.inr (NetworkEvent.byzantineCallGLoop r k b))
           (fun _ _ => rfl) u w r')
     refine match_hiddenRendezvous P (.byzantineCallGLoop r k b) (fun o' _ =>
-      (protocolRel_mk P _ _ _ _ _ _ _).mpr
+      (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun i => by rw [hx i], rfl, hA, by rw [hGv]; funext r'; exact (hview r').symm,
-          boundInv_of hB (fun i r' => by rw [hx i])
+          boundInvariant_of hB (fun i r' => by rw [hx i])
             (fun _ hb => writeGhost_bound _ hb),
-          storeInv_congr hI hview⟩)
+          broadcastReturnsInvariant_congr hI hview⟩)
       (roundFamilyOverBracha_owned_id P G r (by simp)
         (by rw [hGv]; exact roundOverBracha_byzantineCallLoop (roundProjection P u w r) k b))
       (fun i => ?_) (hA ▸ ABANetworkStep.byzantineCallGLoop ⟨w.decidedSent, w.F⟩ r k b hF) hWs
@@ -2211,11 +2239,11 @@ theorem match_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
         (roundProjection_ghostId (Sum.inr (NetworkEvent.byzantineCallW r k))
           (fun _ _ => rfl) u w r')
     refine match_hiddenRendezvous P (.byzantineCallW r k) (fun o' _ =>
-      (protocolRel_mk P _ _ _ _ _ _ _).mpr
+      (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun i => by rw [hx i], rfl, hA, by rw [hGv]; funext r'; exact (hview r').symm,
-          boundInv_of hB (fun i r' => by rw [hx i])
+          boundInvariant_of hB (fun i r' => by rw [hx i])
             (fun _ hb => writeGhost_bound _ hb),
-          storeInv_congr hI hview⟩)
+          broadcastReturnsInvariant_congr hI hview⟩)
       (roundFamilyOverBracha_idle P G (by simp) (by simp) not_false) (fun i => ?_)
       (hA ▸ ABANetworkStep.byzantineCallW ⟨w.decidedSent, w.F⟩ r k hF) hWs
     rw [hCeq i]
@@ -2232,11 +2260,11 @@ theorem match_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
         (roundProjection_ghostId (Sum.inr (NetworkEvent.byzantineRetW r k b))
           (fun _ _ => rfl) u w r')
     refine match_hiddenRendezvous P (.byzantineRetW r k b) (fun o' _ =>
-      (protocolRel_mk P _ _ _ _ _ _ _).mpr
+      (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun i => by rw [hx i], rfl, hA, by rw [hGv]; funext r'; exact (hview r').symm,
-          boundInv_of hB (fun i r' => by rw [hx i])
+          boundInvariant_of hB (fun i r' => by rw [hx i])
             (fun _ hb => writeGhost_bound _ hb),
-          storeInv_congr hI hview⟩)
+          broadcastReturnsInvariant_congr hI hview⟩)
       (roundFamilyOverBracha_idle P G (by simp) (by simp) not_false) (fun i => ?_)
       (hA ▸ ABANetworkStep.byzantineRetW ⟨w.decidedSent, w.F⟩ r k b hF) hWs
     rw [hCeq i]
@@ -2251,18 +2279,18 @@ theorem match_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
 both sides, so a hidden rendezvous of the flat reading is answered by a silent
 run of the composed group. -/
 theorem match_hidden (P : Parameters) {s : ProtocolState P} {t : ComposedState P}
-    (hR : ProtocolRel P s t) {l : Label P.n} {μ : PMF (ProtocolState P)}
+    (hR : ProtocolRelation P s t) {l : Label P.n} {μ : PMF (ProtocolState P)}
     (h : (protocolHidden P).step s l μ) :
     ∃ Ω : PMF (PMF (ComposedState P)),
-      PMFRel (diracRel (ProtocolRel P)) μ Ω ∧
+      PMFRel (diracRel (ProtocolRelation P)) μ Ω ∧
         ((l = Label.tau ∧ weakTau (composedHidden P) (PMF.pure t) (Ω.bind id)) ∨
           (l ≠ Label.tau ∧ weakStep (composedHidden P) (PMF.pure t) l (Ω.bind id))) := by
   obtain ⟨u, w, o⟩ := s
   obtain ⟨G, C, A, o'⟩ := t
-  obtain ⟨hC, ho, hA, hGv, hB, hI⟩ := (protocolRel_mk P _ _ _ _ _ _ _).mp hR
+  obtain ⟨hC, ho, hA, hGv, hB, hI⟩ := (protocolRelation_mk P _ _ _ _ _ _ _).mp hR
   subst ho
-  have hR' : ProtocolRel P (u, w, o) (G, C, A, o) :=
-    (protocolRel_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, hA, hGv, hB, hI⟩
+  have hR' : ProtocolRelation P (u, w, o) (G, C, A, o) :=
+    (protocolRelation_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, hA, hGv, hB, hI⟩
   rcases (systemHidden_step_iff _ _ _).mp h with ⟨rfl, e, hstep⟩ | hstep
   · obtain ⟨Ω, hrel, hs⟩ := match_event P hR' e hstep
     exact ⟨Ω, hrel, Or.inl ⟨rfl, hs⟩⟩
@@ -2276,10 +2304,10 @@ theorem match_hidden (P : Parameters) {s : ProtocolState P} {t : ComposedState P
 /-- **The matching at the system level**: a hidden sub-protocol label is silent
 on both sides, and every other label is answered on the nose or by a run. -/
 theorem match_step (P : Parameters) {s : ProtocolState P} {t : ComposedState P}
-    (hR : ProtocolRel P s t) {l : Label P.n} {μ : PMF (ProtocolState P)}
+    (hR : ProtocolRelation P s t) {l : Label P.n} {μ : PMF (ProtocolState P)}
     (h : (protocol P).step s l μ) :
     ∃ Ω : PMF (PMF (ComposedState P)),
-      PMFRel (diracRel (ProtocolRel P)) μ Ω ∧
+      PMFRel (diracRel (ProtocolRelation P)) μ Ω ∧
         ((l = Silent.τ ∧ weakTau (composed P) (PMF.pure t) (Ω.bind id)) ∨
          (¬ (l = Silent.τ) ∧ weakStep (composed P) (PMF.pure t) l (Ω.bind id))) := by
   rcases (system_step_iff s l μ).mp h with ⟨rfl, l', hmem, hg⟩ | ⟨hnm, hg⟩
@@ -2299,10 +2327,10 @@ theorem match_step (P : Parameters) {s : ProtocolState P} {t : ComposedState P}
 along the Dirac lift of the view. -/
 theorem protocolSim (P : Parameters) :
     ProbabilisticForwardSimulation (protocol P) (composed P)
-      (diracRel (ProtocolRel P)) where
+      (diracRel (ProtocolRelation P)) where
   init := ⟨PMF.pure (composed P).init,
     fun _ hs => by rwa [PMF.mem_support_pure_iff] at hs,
-    (composed P).init, rfl, protocolRel_init P⟩
+    (composed P).init, rfl, protocolRelation_init P⟩
   step := by
     rintro s_C μ_A ⟨t, rfl, hR⟩ l μ_C hstep
     exact match_step P hR hstep
@@ -2340,12 +2368,12 @@ composition simulation joined with the chain from the composed reading by
 Result 2. -/
 noncomputable def chainSim (P : Parameters) :
     ProbabilisticForwardSimulation (protocol P) (spec P)
-      (compRel (diracRel (ProtocolRel P))
+      (compRel (diracRel (ProtocolRelation P))
         (compRel
-          (compRel (parallelRel (diracRel (RlowAll P)))
-            (compRel (parallelRel (diracRel (RidealAll P)))
-              (parallelRel (diracRel (RpairAll P)))))
-          (coreRel P))) :=
+          (compRel (parallelRel (diracRel (broadcastSubstitutionRelationFamily P)))
+            (compRel (parallelRel (diracRel (gatherSubstitutionRelationFamily P)))
+              (parallelRel (diracRel (roundSpecificationSubstitutionRelationFamily P)))))
+          (hybridSpecificationRelation P))) :=
   (protocolSim P).trans (chainSimComposed P)
 
 /-! ### Mechanical axiom check -/

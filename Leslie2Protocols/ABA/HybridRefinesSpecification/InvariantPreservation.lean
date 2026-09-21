@@ -10,7 +10,7 @@ import Leslie2Protocols.ABA.Composition.HybridAndSubstitution
 /-!
 # The core-simulation invariant: step inversion and preservation
 
-Stages A and B of the proof that `coreR` is a simulation relation
+Stages A and B of the proof that `hybridSpecificationStateRelation` is a simulation relation
 (`DESIGN-CoreSim.md`), on top of the relation and invariant of
 `HybridRefinesSpecification/Relation.lean`.
 
@@ -20,13 +20,13 @@ Stages A and B of the proof that `coreR` is a simulation relation
   is the six-way disjunction the τ-side of the simulation dispatches on; its
   τ has more sources than the visible labels do, the whole rendezvous alphabet
   being hidden, and each of those sources collapses into one of the six.
-* **Stage B** — preservation of `Inv`: one `Inv.step_*` lemma per row of Stage
+* **Stage B** — preservation of `Invariant`: one `Invariant.step_*` lemma per row of Stage
   A's inversion, each carrying all forty invariant fields across that
   row.
 
-The assembly of the two into `Inv.step` is in
-`HybridRefinesSpecification/AbstractStatePreservation.lean`, beside the `Abs`-side stutter lemmas it
-is stated with.
+The assembly of the two into `Invariant.step` is in
+`HybridRefinesSpecification/AbstractStatePreservation.lean`, beside the `AbstractState`-side stutter
+lemmas it is stated with.
 -/
 
 namespace PLTS
@@ -580,7 +580,7 @@ theorem hybrid_step_tau (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
         exact Or.inr (Or.inl ⟨PMF.pure (ABAState.sendDecided (C, A) k b),
           Or.inr (Or.inr ⟨k, b, hF, rfl⟩), by rw [PMF.pure_map, prodPMF_pure_pure]; rfl⟩)
 
-/-! ### Stage B: preservation of `Inv` -/
+/-! ### Stage B: preservation of `Invariant` -/
 
 /-- WCC corruption changes only `F`. -/
 theorem WCC.corrupt_val {P : Parameters} (id : Fin P.n) (s : WCC.SpecState P.n) :
@@ -590,7 +590,7 @@ theorem WCC.corrupt_called {P : Parameters} (id : Fin P.n) (s : WCC.SpecState P.
     (s.corrupt P id).called = s.called := by unfold WCC.SpecState.corrupt; split <;> rfl
 
 /-- The GBCA corruption of a state agreeing with the core on `F` agrees with the core's
-corruption on `F` (keeps `F_g` in lockstep across a `fail` broadcast). -/
+corruption on `F` (keeps `F_gbca` in lockstep across a `fail` broadcast). -/
 theorem GBCA.corrupt_F_eq {P : Parameters} (id : Fin P.n) (s : GBCA.SpecState P.n)
     (c : ABAState P) (h : s.F = c.F) :
     (s.corrupt P id).F = (c.corrupt P id).F := by
@@ -598,25 +598,27 @@ theorem GBCA.corrupt_F_eq {P : Parameters} (id : Fin P.n) (s : GBCA.SpecState P.
   rw [ABAState.corrupt_F, h]; split_ifs <;> simp [h]
 
 /-- The WCC corruption of a state agreeing with the core on `F` agrees with the core's
-corruption on `F` (keeps `F_w` in lockstep across a `fail` broadcast). -/
+corruption on `F` (keeps `F_wcc` in lockstep across a `fail` broadcast). -/
 theorem WCC.corrupt_F_eq {P : Parameters} (id : Fin P.n) (s : WCC.SpecState P.n)
     (c : ABAState P) (h : s.F = c.F) :
     (s.corrupt P id).F = (c.corrupt P id).F := by
   unfold WCC.SpecState.corrupt
   rw [ABAState.corrupt_F, h]; split_ifs <;> simp [h]
 
-/-- `retABA`: a never-corrupted process's return only sets `returned`, a field `Inv` never
-inspects, so `Inv` transfers verbatim modulo the pointwise-unchanged projections of `processes`.
-A corrupted process's return is a state identity, and `Inv` transfers outright. -/
-theorem Inv.step_retABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
-    {w : ℕ → WCC.SpecState P.n} (hI : Inv P g c w) (id : Fin P.n) (b : Bool)
+/-- `retABA`: a never-corrupted process's return only sets `returned`, a field `Invariant` never
+inspects, so `Invariant` transfers verbatim modulo the pointwise-unchanged projections of
+`processes`. A corrupted process's return is a state identity, and `Invariant` transfers outright.
+-/
+theorem Invariant.step_retABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
+    {c : ABAState P}
+    {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (id : Fin P.n) (b : Bool)
     {μc : PMF (ABAState P)}
     (hstep : (id ∉ c.F ∧ P.n - P.f ≤ c.decidedCount id b ∧ b ∈ c.decidedSent id ∧
         (c.processes id).returned = false ∧
         μc = PMF.pure (c.setProcess id { c.processes id with returned := true })) ∨
       (id ∈ c.F ∧ μc = PMF.pure c))
     {c' : ABAState P} (hc' : c' ∈ μc.support) :
-    Inv P g c' w ∧ AbsFrame P g g c c' := by
+    Invariant P g c' w ∧ AbstractStateUnchanged P g g c c' := by
   rcases hstep with hstep | ⟨-, rfl⟩
   · obtain ⟨-, -, -, -, rfl⟩ := hstep
     rw [PMF.mem_support_pure_iff] at hc'
@@ -653,7 +655,7 @@ theorem Inv.step_retABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : A
       unfold OutcomeHolder at hc ⊢
       rwa [hEst, hRound, hPhase] at hc
     have hCert : ∀ r' b', ACert P g c r' b' → ACert P g c' r' b' := fun r' b' =>
-      ACert.of_frame rfl (fun _ => rfl) (fun _ _ => rfl)
+      ACert.of_unchanged rfl (fun _ => rfl) (fun _ _ => rfl)
         (by rw [hF] : c.F ⊆ c'.F) hRound hEst (fun id0 v => hCarr r' id0 v)
     have hHold : ∀ id' b', AHolder P c' id' b' → AHolder P c id' b' := by
       intro id' b' h
@@ -662,77 +664,77 @@ theorem Inv.step_retABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : A
     refine And.intro ?_ ⟨fun r0 b0 hc => ⟨r0, hCert r0 b0 hc⟩,
       fun v _ hpin j b' hj hh => hpin j b' (hF ▸ hj) (hHold j b' hh)⟩
     refine ⟨fun id' => by rw [hCorr, hF]; exact hI.corrupted_F id',
-      fun r => (hI.F_g r).trans hF.symm, fun r => ?_, ?_, ?_, ?_, ?_,
-      hI.down_closed, hI.quiescent, hI.w_bound, ?_, ?_, ?_, ?_, ?_,
+      fun r => (hI.F_gbca r).trans hF.symm, fun r => ?_, ?_, ?_, ?_, ?_,
+      hI.down_settled, hI.quiescent, hI.wcc_bound, ?_, ?_, ?_, ?_, ?_,
       hI.gradeA_needs_bind, ?_, ?_, ?_, ?_, ?_, ?_, hI.bind_succ, ?_, ?_, hI.c_chain, ?_,
-      hI.w_order, ?_, ?_, ?_, ?_, ?_, ?_, hI.bound_quorum,
-      fun r v hb => (hI.bind_supp r v hb).mono
+      hI.wcc_order, ?_, ?_, ?_, ?_, ?_, ?_, hI.bound_quorum,
+      fun r v hb => (hI.bind_support r v hb).mono
         (fun id' b' h => by rw [hInput]; exact h) (fun x hx => by rw [hF]; exact hx),
-      hI.clock_supp, hI.excluded_supp,
-      fun r' i j v v' hm hm' h h' => hI.carrier_agree r' i j v v' (hF ▸ hm) (hF ▸ hm')
+      hI.clock_support, hI.excluded_support,
+      fun r' i j v v' hm hm' h h' => hI.outcomeHolder_agree r' i j v v' (hF ▸ hm) (hF ▸ hm')
         (hCarr _ _ _ h) (hCarr _ _ _ h'),
       fun i j b₀ b₀' hm hm' h h' => hI.alock_agree i j b₀ b₀' (hF ▸ hm) (hF ▸ hm')
         (hHold _ _ h) (hHold _ _ h')⟩
-    · rw [hF]; exact hI.F_w r
+    · rw [hF]; exact hI.F_wcc r
     · rw [hF]; exact hI.F_card
-    · intro id' b' hmem hcall; rw [hInput]; exact hI.input_g0 id' b' (hF ▸ hmem) hcall
+    · intro id' b' hmem hcall; rw [hInput]; exact hI.input_gbcaRound0 id' b' (hF ▸ hmem) hcall
     · intro r id' hmem hcall; rw [hInput]; exact hI.input_called r id' (hF ▸ hmem) hcall
     · intro id' hmem hne; rw [hPhase] at hne; rw [hInput]; exact hI.phase_input id' (hF ▸ hmem) hne
-    · intro i j b' h; rw [hDR] at h; rw [hDS]; exact hI.recv_sound i j b' h
+    · intro i j b' h; rw [hDR] at h; rw [hDS]; exact hI.received_sound i j b' h
     · intro id' b' hmem h; rw [hDS] at h
-      exact (hI.decided_src id' b' (hF ▸ hmem) h).imp (fun r => hCert r b')
+      exact (hI.decided_source id' b' (hF ▸ hmem) h).imp (fun r => hCert r b')
     · intro r b' hg hb
-      exact ACommit.of_frame (fun _ => rfl) (fun _ _ => rfl)
+      exact ACommit.of_unchanged (fun _ => rfl) (fun _ _ => rfl)
         (by rw [hF]) hRound hEst (fun id0 v => hCarr r id0 v) (hI.a_commit r b' hg hb)
     · intro id' hmem r hr; exact hI.round_bound id' (hF ▸ hmem) r (hRound id' ▸ hr)
     · intro r v hlast hb hcoin id' hmem hr
       rw [hEst]; exact hI.agree_locked r v hlast hb hcoin id' (hF ▸ hmem) (hRound id' ▸ hr)
     · intro r id' hmem hcall; rw [hRound]; exact hI.call_round r id' (hF ▸ hmem) hcall
-    · intro r id' hmem hcalled; exact hI.w_called r id' (hF ▸ hmem) hcalled
+    · intro r id' hmem hcalled; exact hI.wcc_called r id' (hF ▸ hmem) hcalled
     · intro r id' hmem hr; rw [hRound] at hr; exact hI.round_flip r id' (hF ▸ hmem) hr
     · intro id' hmem hround hphase
       rw [hRound] at hround; rw [hPhase] at hphase
-      rw [hEst, hInput]; exact hI.est0 id' (hF ▸ hmem) hround hphase
+      rw [hEst, hInput]; exact hI.estimate0 id' (hF ▸ hmem) hround hphase
     · intro id' b' hlg; rw [hLastGrade] at hlg
-      exact (hI.grade_A_src id' b' hlg).imp (fun r => hCert r b')
+      exact (hI.grade_A_source id' b' hlg).imp (fun r => hCert r b')
     · intro r id' hmem hround hphase
       rw [hRound] at hround; rw [hPhase] at hphase
-      rw [hEst]; exact hI.est_ret r id' (hF ▸ hmem) hround hphase
-    · intro r id' v hmem hcall; exact hI.call_prov r id' v (hF ▸ hmem) hcall
+      rw [hEst]; exact hI.estimate_ret r id' (hF ▸ hmem) hround hphase
+    · intro r id' v hmem hcall; exact hI.call_provenance r id' v (hF ▸ hmem) hcall
     · intro r id' hmem hround hphase v hest
       rw [hRound] at hround; rw [hPhase] at hphase; rw [hEst] at hest
-      exact hI.est_prev r id' (hF ▸ hmem) hround hphase v hest
+      exact hI.estimate_previous r id' (hF ▸ hmem) hround hphase v hest
     · intro id' hmem hround hphase
       rw [hRound] at hround; rw [hPhase] at hphase; rw [hEst]
-      exact hI.est_prev_ne id' (hF ▸ hmem) hround hphase
+      exact hI.estimate_previous_ne id' (hF ▸ hmem) hround hphase
     · intro id' b' h
-      rcases hI.input_g0_perm id' b' h with hin | hf
+      rcases hI.input_gbcaRound0_permanent id' b' h with hin | hf
       · left; rw [hInput]; exact hin
       · right; rw [hF]; exact hf
-    · intro r id' hmem hcalled; rw [hRound]; exact hI.w_call_round r id' (hF ▸ hmem) hcalled
+    · intro r id' hmem hcalled; rw [hRound]; exact hI.wcc_callRound r id' (hF ▸ hmem) hcalled
     · intro r h
       rcases hI.flip_alock r h with hg | hd
       · left; exact hg
       · right; exact DissentWitness.transport rfl rfl (fun hh => hh) (fun id' => hInput id') hd
-    · intro id' hmem hin r'; rw [hInput] at hin; exact hI.idle_no_wcall id' (hF ▸ hmem) hin r'
+    · intro id' hmem hin r'; rw [hInput] at hin; exact hI.idle_no_wccCall id' (hF ▸ hmem) hin r'
     · intro r id' hmem h
       rw [hRound] at h; rw [hPhase] at h
-      rcases hI.retg_residue r id' (hF ▸ hmem) h with hg | hd
+      rcases hI.retG_witness r id' (hF ▸ hmem) h with hg | hd
       · left; exact hg
       · right; exact DissentWitness.transport rfl rfl (fun hh => hh) (fun id'' => hInput id'') hd
     · intro r id' hmem hcalled
-      rcases hI.wcalled_residue r id' (hF ▸ hmem) hcalled with hg | hd
+      rcases hI.wccCalled_witness r id' (hF ▸ hmem) hcalled with hg | hd
       · left; exact hg
       · right; exact DissentWitness.transport rfl rfl (fun hh => hh) (fun id'' => hInput id'') hd
   · rw [PMF.mem_support_pure_iff] at hc'
     subst hc'
-    exact ⟨hI, AbsFrame.refl P g _⟩
+    exact ⟨hI, AbstractStateUnchanged.refl P g _⟩
 
 /-- `callABA`: either a never-corrupted process's genuine external input (guarded by
 `input = none`, so `input_called` rules out the "already called GBCA" corner) or the idle
 self-loop. -/
-theorem Inv.step_callABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
-    {w : ℕ → WCC.SpecState P.n} (hI : Inv P g c w) (id : Fin P.n) (b : Bool)
+theorem Invariant.step_callABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
+    {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (id : Fin P.n) (b : Bool)
     {μc : PMF (ABAState P)}
     (hstep :
       (id ∉ c.F ∧ (c.processes id).input = none ∧
@@ -740,7 +742,7 @@ theorem Inv.step_callABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : 
             input := some b, estimate := some b, round := 0, phase := .toCallG })) ∨
         ((c.corrupted id = true ∨ (c.processes id).input ≠ none) ∧ μc = PMF.pure c))
     {c' : ABAState P} (hc' : c' ∈ μc.support) :
-    Inv P g c' w ∧ AbsFrame P g g c c' := by
+    Invariant P g c' w ∧ AbstractStateUnchanged P g g c c' := by
   rcases hstep with ⟨-, hin, rfl⟩ | ⟨-, rfl⟩
   · rw [PMF.mem_support_pure_iff] at hc'; subst hc'
     set c' := c.setProcess id { c.processes id with
@@ -799,13 +801,13 @@ theorem Inv.step_callABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : 
     refine And.intro ?_ ⟨fun r0 b0 hc => ⟨r0, hCertTrans r0 b0 hc⟩,
       fun v _ hpin j b' hj hh => hpin j b' (hF ▸ hj) (hHold j b' hh)⟩
     refine ⟨fun id' => by rw [hCorr, hF]; exact hI.corrupted_F id',
-      fun r => (hI.F_g r).trans hF.symm, fun r => hF ▸ hI.F_w r, hF ▸ hI.F_card,
-      ?_, ?_, ?_, hI.down_closed, hI.quiescent, hI.w_bound, ?_, ?_, ?_, ?_, ?_,
+      fun r => (hI.F_gbca r).trans hF.symm, fun r => hF ▸ hI.F_wcc r, hF ▸ hI.F_card,
+      ?_, ?_, ?_, hI.down_settled, hI.quiescent, hI.wcc_bound, ?_, ?_, ?_, ?_, ?_,
       hI.gradeA_needs_bind, ?_, ?_, ?_, ?_, ?_, ?_, hI.bind_succ, ?_, ?_, hI.c_chain, ?_,
-      hI.w_order, ?_, ?_, ?_, ?_, ?_, ?_, hI.bound_quorum,
-      fun r v hb => (hI.bind_supp r v hb).mono hInMono (fun x hx => by rw [hF]; exact hx),
-      hI.clock_supp, hI.excluded_supp,
-      fun r' i j v v' hm hm' h h' => hI.carrier_agree r' i j v v' (hF ▸ hm) (hF ▸ hm')
+      hI.wcc_order, ?_, ?_, ?_, ?_, ?_, ?_, hI.bound_quorum,
+      fun r v hb => (hI.bind_support r v hb).mono hInMono (fun x hx => by rw [hF]; exact hx),
+      hI.clock_support, hI.excluded_support,
+      fun r' i j v v' hm hm' h h' => hI.outcomeHolder_agree r' i j v v' (hF ▸ hm) (hF ▸ hm')
         (hCarrTrans _ _ _ h) (hCarrTrans _ _ _ h'),
       fun i j b₀ b₀' hm hm' h h' => hI.alock_agree i j b₀ b₀' (hF ▸ hm) (hF ▸ hm')
         (hHold _ _ h) (hHold _ _ h')⟩
@@ -815,7 +817,7 @@ theorem Inv.step_callABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : 
         have hne : (g 0).call id ≠ none := by
           rw [hcall]; simp
         exact absurd hin (hI.input_called 0 id (hF ▸ hmem) hne)
-      · rw [hNe id' h]; exact hI.input_g0 id' b' (hF ▸ hmem) hcall
+      · rw [hNe id' h]; exact hI.input_gbcaRound0 id' b' (hF ▸ hmem) hcall
     · intro r id' hmem hcall
       by_cases h : id' = id
       · rw [h]; simp [hSelf]
@@ -824,9 +826,9 @@ theorem Inv.step_callABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : 
       by_cases h : id' = id
       · rw [h]; simp [hSelf]
       · rw [hNe id' h] at hne ⊢; exact hI.phase_input id' (hF ▸ hmem) hne
-    · intro i j b' h; rw [hDR] at h; rw [hDS]; exact hI.recv_sound i j b' h
+    · intro i j b' h; rw [hDR] at h; rw [hDS]; exact hI.received_sound i j b' h
     · intro id' b' hmem h; rw [hDS] at h
-      exact (hI.decided_src id' b' (hF ▸ hmem) h).imp (fun r => hCertTrans r b')
+      exact (hI.decided_source id' b' (hF ▸ hmem) h).imp (fun r => hCertTrans r b')
     · intro r b' hg hb
       obtain ⟨h1, h2, h3, h4⟩ := hI.a_commit r b' hg hb
       refine ⟨h1, h2, fun id' hmem hr => ?_,
@@ -846,7 +848,7 @@ theorem Inv.step_callABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : 
       by_cases h : id' = id
       · rw [h] at hcall hmem; exact absurd hin (hI.input_called r id (hF ▸ hmem) hcall)
       · rw [hNe id' h]; exact hI.call_round r id' (hF ▸ hmem) hcall
-    · intro r id' hmem hcalled; exact hI.w_called r id' (hF ▸ hmem) hcalled
+    · intro r id' hmem hcalled; exact hI.wcc_called r id' (hF ▸ hmem) hcalled
     · intro r id' hmem hr
       by_cases h : id' = id
       · subst h; simp [hSelf] at hr
@@ -854,43 +856,43 @@ theorem Inv.step_callABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : 
     · intro id' hmem hround hphase
       by_cases h : id' = id
       · subst h; simp [hSelf]
-      · rw [hNe id' h] at hround hphase ⊢; exact hI.est0 id' (hF ▸ hmem) hround hphase
+      · rw [hNe id' h] at hround hphase ⊢; exact hI.estimate0 id' (hF ▸ hmem) hround hphase
     · intro id' b' hlg
       by_cases h : id' = id
       · rw [h] at hlg; rw [hSelf] at hlg
-        exact (hI.grade_A_src id b' hlg).imp (fun r => hCertTrans r b')
+        exact (hI.grade_A_source id b' hlg).imp (fun r => hCertTrans r b')
       · rw [hNe id' h] at hlg
-        exact (hI.grade_A_src id' b' hlg).imp (fun r => hCertTrans r b')
+        exact (hI.grade_A_source id' b' hlg).imp (fun r => hCertTrans r b')
     · intro r id' hmem hround hphase
       by_cases h : id' = id
       · subst h; simp [hSelf] at hphase
-      · rw [hNe id' h] at hround hphase ⊢; exact hI.est_ret r id' (hF ▸ hmem) hround hphase
-    · intro r id' v hmem hcall; exact hI.call_prov r id' v (hF ▸ hmem) hcall
+      · rw [hNe id' h] at hround hphase ⊢; exact hI.estimate_ret r id' (hF ▸ hmem) hround hphase
+    · intro r id' v hmem hcall; exact hI.call_provenance r id' v (hF ▸ hmem) hcall
     · intro r id' hmem hround hphase v hest
       by_cases h : id' = id
       · subst h; simp [hSelf] at hround
       · rw [hNe id' h] at hround hphase hest
-        exact hI.est_prev r id' (hF ▸ hmem) hround hphase v hest
+        exact hI.estimate_previous r id' (hF ▸ hmem) hround hphase v hest
     · intro id' hmem hround hphase
       by_cases h : id' = id
       · subst h; simp [hSelf] at hround
       · rw [hNe id' h] at hround hphase ⊢
-        exact hI.est_prev_ne id' (hF ▸ hmem) hround hphase
+        exact hI.estimate_previous_ne id' (hF ▸ hmem) hround hphase
     · intro id' b' h
-      rcases hI.input_g0_perm id' b' h with hpre | hf
+      rcases hI.input_gbcaRound0_permanent id' b' h with hpre | hf
       · by_cases hid : id' = id
         · rw [hid, hin] at hpre; exact absurd hpre (by simp)
         · left; rw [hNe id' hid]; exact hpre
       · right; rw [hF]; exact hf
-    · -- `w_call_round`'s `id' = id` corner: `id` was just idle (`hin`), so `idle_no_wcall`
+    · -- `wcc_callRound`'s `id' = id` corner: `id` was just idle (`hin`), so `idle_no_wccCall`
       -- rules out `id` having ever called any `WCC` instance.
       intro r id' hmem hcalled
       by_cases hid : id' = id
       · rw [hid] at hmem hcalled
-        have := hI.idle_no_wcall id (hF ▸ hmem) hin r
+        have := hI.idle_no_wccCall id (hF ▸ hmem) hin r
         rw [this] at hcalled
         exact absurd hcalled (by simp)
-      · rw [hNe id' hid]; exact hI.w_call_round r id' (hF ▸ hmem) hcalled
+      · rw [hNe id' hid]; exact hI.wcc_callRound r id' (hF ▸ hmem) hcalled
     · -- `flip_alock`: `g` is untouched entirely; the only wrinkle is the `r = 0` dissent
       -- witness possibly naming `id` itself, ruled out by `hin : input = none` (the fresh
       -- honest input can't have been the opposing dissenter).
@@ -910,31 +912,31 @@ theorem Inv.step_callABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : 
     · intro id' hmem hin' r'
       by_cases h : id' = id
       · subst h; simp [hSelf] at hin'
-      · rw [hNe id' h] at hin'; exact hI.idle_no_wcall id' (hF ▸ hmem) hin' r'
+      · rw [hNe id' h] at hin'; exact hI.idle_no_wccCall id' (hF ▸ hmem) hin' r'
     · intro r id' hmem hp
       by_cases h : id' = id
       · subst h; simp [hSelf] at hp
       · rw [hNe id' h] at hp
-        rcases hI.retg_residue r id' (hF ▸ hmem) hp with hg | hd
+        rcases hI.retG_witness r id' (hF ▸ hmem) hp with hg | hd
         · left; exact hg
         · right; exact hDissTrans r hd
     · intro r id' hmem hcalled
-      rcases hI.wcalled_residue r id' (hF ▸ hmem) hcalled with hg | hd
+      rcases hI.wccCalled_witness r id' (hF ▸ hmem) hcalled with hg | hd
       · left; exact hg
       · right; exact hDissTrans r hd
   · rw [PMF.mem_support_pure_iff] at hc'; subst hc'
-    exact ⟨hI, AbsFrame.refl P g _⟩
+    exact ⟨hI, AbstractStateUnchanged.refl P g _⟩
 
 /-- `fail`: a genuine synchronised corruption of all three components, under the row's own
 guards — the named process is not corrupted yet and the budget has room. `F` only grows, and
 every other projection is untouched, so honesty hypotheses transfer via `F`-monotonicity. The
 two guards are what puts the replacement flag and the corrupted set in lockstep (I0, D23):
 the flag goes up at `id` and `F` gains exactly `id`. -/
-theorem Inv.step_fail {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
-    {w : ℕ → WCC.SpecState P.n} (hI : Inv P g c w) (id : Fin P.n)
+theorem Invariant.step_fail {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
+    {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (id : Fin P.n)
     (hnew : id ∉ c.F) (hbud : c.F.card < P.f) :
-    Inv P (fun r => (g r).corrupt P id) (c.corrupt P id) (fun r => (w r).corrupt P id) ∧
-      AbsFrame P g (fun r => (g r).corrupt P id) c (c.corrupt P id) := by
+    Invariant P (fun r => (g r).corrupt P id) (c.corrupt P id) (fun r => (w r).corrupt P id) ∧
+      AbstractStateUnchanged P g (fun r => (g r).corrupt P id) c (c.corrupt P id) := by
   set g' := fun r => (g r).corrupt P id with hg'def
   set c' := c.corrupt P id with hc'def
   set w' := fun r => (w r).corrupt P id with hw'def
@@ -946,8 +948,8 @@ theorem Inv.step_fail {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
   have hprocs : c'.processes = c.processes := ABAState.corrupt_processes c id
   have hDS : c'.decidedSent = c.decidedSent := ABAState.corrupt_decidedSent c id
   have hDR : c'.decidedReceived = c.decidedReceived := ABAState.corrupt_decidedReceived c id
-  have hFg : ∀ r, (g' r).F = c'.F := fun r => GBCA.corrupt_F_eq id (g r) c (hI.F_g r)
-  have hFw : ∀ r, (w' r).F = c'.F := fun r => WCC.corrupt_F_eq id (w r) c (hI.F_w r)
+  have hFg : ∀ r, (g' r).F = c'.F := fun r => GBCA.corrupt_F_eq id (g r) c (hI.F_gbca r)
+  have hFw : ∀ r, (w' r).F = c'.F := fun r => WCC.corrupt_F_eq id (w r) c (hI.F_wcc r)
   have hFsub : c.F ⊆ c'.F := by
     rw [hc'def, ABAState.corrupt_F]; split_ifs with hcond
     · exact Finset.subset_insert _ _
@@ -966,7 +968,7 @@ theorem Inv.step_fail {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
     unfold OutcomeHolder at hc ⊢
     rwa [hprocs, hcall (r' + 1)] at hc
   have hCertTrans : ∀ r' b', ACert P g c r' b' → ACert P g' c' r' b' := fun r' b' =>
-    ACert.of_frame (hgrade r') hbind (fun r'' id' => congrFun (hcall r'') id') hFsub
+    ACert.of_unchanged (hgrade r') hbind (fun r'' id' => congrFun (hcall r'') id') hFsub
       (fun id' => by rw [hprocs]) (fun id' => by rw [hprocs])
       (fun id0 v => hCarrTrans r' id0 v)
   have hHold : ∀ id₀ b₀, AHolder P c' id₀ b₀ → AHolder P c id₀ b₀ := by
@@ -985,15 +987,15 @@ theorem Inv.step_fail {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
     · rw [hc'def, ABAState.corrupt_corrupted_ne c id h, hI.corrupted_F id']; simp [h]
   refine ⟨hCorr, fun r => hFg r, fun r => hFw r, hFcard, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
     ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
-    fun r v hb => (hI.bind_supp r v (by rw [← hbind r]; exact hb)).mono
+    fun r v hb => (hI.bind_support r v (by rw [← hbind r]; exact hb)).mono
       (fun id' b' h => by rw [hprocs]; exact h) hFsub,
-    fun r b hgf => GBCA.callSupp_mono (fun id' h => by rw [hcall r]; exact h)
-      (by rw [hFg r, hI.F_g r]; exact hFsub)
-      (hI.clock_supp r b (by rw [← hgrade r]; exact hgf)),
-    fun r b h => GBCA.callSupp_mono (fun id' h' => by rw [hcall r]; exact h')
-      (by rw [hFg r, hI.F_g r]; exact hFsub)
-      (hI.excluded_supp r b (by rw [← hbind r]; exact h)),
-    fun r' i j v v' hm hm' h h' => hI.carrier_agree r' i j v v'
+    fun r b hgf => GBCA.callSupport_mono (fun id' h => by rw [hcall r]; exact h)
+      (by rw [hFg r, hI.F_gbca r]; exact hFsub)
+      (hI.clock_support r b (by rw [← hgrade r]; exact hgf)),
+    fun r b h => GBCA.callSupport_mono (fun id' h' => by rw [hcall r]; exact h')
+      (by rw [hFg r, hI.F_gbca r]; exact hFsub)
+      (hI.excluded_support r b (by rw [← hbind r]; exact h)),
+    fun r' i j v v' hm hm' h h' => hI.outcomeHolder_agree r' i j v v'
       (fun hh => hm (hFsub hh)) (fun hh => hm' (hFsub hh))
       (hCarrTrans _ _ _ h) (hCarrTrans _ _ _ h') |>.imp (fun hh => hh) (fun hh => by
         rw [hgrade r']; exact hh),
@@ -1002,7 +1004,7 @@ theorem Inv.step_fail {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
       (hHold _ _ h) (hHold _ _ h')⟩
   · intro id' b' hmem hcall0
     rw [hprocs]; rw [hcall 0] at hcall0
-    exact hI.input_g0 id' b' (fun h => hmem (hFsub h)) hcall0
+    exact hI.input_gbcaRound0 id' b' (fun h => hmem (hFsub h)) hcall0
   · intro r id' hmem hcall0
     rw [hprocs]; rw [hcall r] at hcall0
     exact hI.input_called r id' (fun h => hmem (hFsub h)) hcall0
@@ -1010,18 +1012,18 @@ theorem Inv.step_fail {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
     rw [hprocs] at hne ⊢; exact hI.phase_input id' (fun h => hmem (hFsub h)) hne
   · intro r h
     rw [RoundSettled.congr (hbind r) (hgrade r)]
-    exact hI.down_closed r ((RoundSettled.congr (hbind (r + 1)) (hgrade (r + 1))).mp h)
+    exact hI.down_settled r ((RoundSettled.congr (hbind (r + 1)) (hgrade (r + 1))).mp h)
   · obtain ⟨R, hR⟩ := hI.quiescent
     exact ⟨R, fun r hr h => hR r hr ((RoundSettled.congr (hbind r) (hgrade r)).mp h)⟩
   · intro r h
     rw [hval r] at h; rw [RoundSettled.congr (hbind r) (hgrade r)]
-    exact hI.w_bound r h
+    exact hI.wcc_bound r h
   · intro i j b' h
     rw [hDR] at h; rw [hDS]
-    exact hI.recv_sound i j b' h
+    exact hI.received_sound i j b' h
   · intro id' b' hmem h
     rw [hDS] at h
-    exact (hI.decided_src id' b' (fun h' => hmem (hFsub h')) h).imp (fun r => hCertTrans r b')
+    exact (hI.decided_source id' b' (fun h' => hmem (hFsub h')) h).imp (fun r => hCertTrans r b')
   · intro r b' hgr hbr
     rw [hgrade r] at hgr; rw [hbind r] at hbr
     obtain ⟨h1, h2, h3, h4⟩ := hI.a_commit r b' hgr hbr
@@ -1044,19 +1046,19 @@ theorem Inv.step_fail {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
     exact hI.call_round r id' (fun h => hmem (hFsub h)) hcall0
   · intro r id' hmem hcalled0
     rw [hcalled r] at hcalled0; rw [RoundSettled.congr (hbind r) (hgrade r)]
-    exact hI.w_called r id' (fun h => hmem (hFsub h)) hcalled0
+    exact hI.wcc_called r id' (fun h => hmem (hFsub h)) hcalled0
   · intro r id' hmem hround
     rw [hprocs] at hround; rw [hval r]
     exact hI.round_flip r id' (fun h => hmem (hFsub h)) hround
   · intro id' hmem hround hphase
     rw [hprocs] at hround hphase ⊢
-    exact hI.est0 id' (fun h => hmem (hFsub h)) hround hphase
+    exact hI.estimate0 id' (fun h => hmem (hFsub h)) hround hphase
   · intro id' b' hlg
     rw [hprocs] at hlg
-    exact (hI.grade_A_src id' b' hlg).imp (fun r => hCertTrans r b')
+    exact (hI.grade_A_source id' b' hlg).imp (fun r => hCertTrans r b')
   · intro r id' hmem hround hphase
     rw [hprocs] at hround hphase
-    obtain ⟨hnone, hsome⟩ := hI.est_ret r id' (fun h => hmem (hFsub h)) hround hphase
+    obtain ⟨hnone, hsome⟩ := hI.estimate_ret r id' (fun h => hmem (hFsub h)) hround hphase
     rw [hprocs]
     refine ⟨fun he => ?_, fun b' hb' => ?_⟩
     · obtain ⟨hg0, hno⟩ := hnone he
@@ -1069,23 +1071,23 @@ theorem Inv.step_fail {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
     exact hI.bind_succ r v h
   · intro r id' v hmem hcall0
     rw [hcall (r + 1)] at hcall0; rw [hbind r, hgrade r, hval r]
-    exact hI.call_prov r id' v (fun h => hmem (hFsub h)) hcall0
+    exact hI.call_provenance r id' v (fun h => hmem (hFsub h)) hcall0
   · intro r id' hmem hround hphase v hest
     rw [hprocs] at hround hphase hest; rw [hbind r, hgrade r, hval r]
-    exact hI.est_prev r id' (fun h => hmem (hFsub h)) hround hphase v hest
+    exact hI.estimate_previous r id' (fun h => hmem (hFsub h)) hround hphase v hest
   · intro r h; rw [hgrade (r + 1)] at h; rw [hgrade r]; exact hI.c_chain r h
   · intro id' hmem hround hphase
     rw [hprocs] at hround hphase ⊢
-    exact hI.est_prev_ne id' (fun h => hmem (hFsub h)) hround hphase
-  · intro r h; rw [hval] at h ⊢; exact hI.w_order r h
+    exact hI.estimate_previous_ne id' (fun h => hmem (hFsub h)) hround hphase
+  · intro r h; rw [hval] at h ⊢; exact hI.wcc_order r h
   · intro id' b' h
     rw [hcall 0] at h; rw [hprocs]
-    rcases hI.input_g0_perm id' b' h with hin | hf
+    rcases hI.input_gbcaRound0_permanent id' b' h with hin | hf
     · left; exact hin
     · right; exact hFsub hf
   · intro r id' hmem hcalled0
     rw [hcalled r] at hcalled0; rw [hprocs]
-    exact hI.w_call_round r id' (fun h => hmem (hFsub h)) hcalled0
+    exact hI.wcc_callRound r id' (fun h => hmem (hFsub h)) hcalled0
   · intro r h
     rw [hval] at h
     rcases hI.flip_alock r h with hg | hd
@@ -1095,38 +1097,38 @@ theorem Inv.step_fail {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
         (fun id' => by rw [hprocs]) hd
   · intro id' hmem hin r
     rw [hprocs] at hin; rw [hcalled r]
-    exact hI.idle_no_wcall id' (fun h => hmem (hFsub h)) hin r
+    exact hI.idle_no_wccCall id' (fun h => hmem (hFsub h)) hin r
   · intro r id' hmem hp
     rw [hprocs] at hp
-    rcases hI.retg_residue r id' (fun h => hmem (hFsub h)) hp with hg | hd
+    rcases hI.retG_witness r id' (fun h => hmem (hFsub h)) hp with hg | hd
     · left; rw [hgrade]; exact hg
     · right
       exact DissentWitness.transport (hbind r) (hbind (r - 1)) (fun hh => (hgrade (r - 1)) ▸ hh)
         (fun id' => by rw [hprocs]) hd
   · intro r id' hmem hcalled0
     rw [hcalled r] at hcalled0
-    rcases hI.wcalled_residue r id' (fun h => hmem (hFsub h)) hcalled0 with hg | hd
+    rcases hI.wccCalled_witness r id' (fun h => hmem (hFsub h)) hcalled0 with hg | hd
     · left; rw [hgrade]; exact hg
     · right
       exact DissentWitness.transport (hbind r) (hbind (r - 1)) (fun hh => (hgrade (r - 1)) ▸ hh)
         (fun id' => by rw [hprocs]) hd
   · intro r h
     rw [hbind r] at h
-    exact GBCA.SpecState.quorum_mono (by rw [hFg r, hI.F_g r]; exact hFsub)
+    exact GBCA.SpecState.quorum_mono (by rw [hFg r, hI.F_gbca r]; exact hFsub)
       (fun id' hne => by rw [hcall r]; exact hne) (hI.bound_quorum r h)
 
 /-- `bindUnset` (the GBCA family's only genuine `τ`-step): excludes one bit of round `r`'s
-exclusion set. `down_closed`'s round-`r` corner needs "a call at round `r` implies current
-round `≥ r`", a fact `Inv` doesn't carry explicitly — handed off. The value-transport
+exclusion set. `down_settled`'s round-`r` corner needs "a call at round `r` implies current
+round `≥ r`", a fact `Invariant` doesn't carry explicitly — handed off. The value-transport
 corners lean on the exclusion's own D15 guard: the spared bit `!b` keeps `f + 1` F-blind call
 support at round `r`, whose derived honest caller pins `!b` against every standing
 commitment. -/
-theorem Inv.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
-    {w : ℕ → WCC.SpecState P.n} (hI : Inv P g c w) (r : ℕ)
+theorem Invariant.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
+    {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (r : ℕ)
     {μr : PMF (GBCA.SpecState P.n)} (hstep : GBCA.Step P r (g r) .tau μr)
     {gr' : GBCA.SpecState P.n} (hgr' : gr' ∈ μr.support) :
-    Inv P (Function.update g r gr') c w ∧
-      AbsFrame P g (Function.update g r gr') c c := by
+    Invariant P (Function.update g r gr') c w ∧
+      AbstractStateUnchanged P g (Function.update g r gr') c c := by
   cases hstep
   case bindUnset b _hq _hw hd0 =>
     rw [PMF.mem_support_pure_iff] at hgr'; subst hgr'
@@ -1155,9 +1157,9 @@ theorem Inv.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : 
       · subst h; rw [hExcludedSelf]; exact Finset.mem_insert_of_mem hx
       · rw [hExcludedNe r' h]; exact hx
     obtain ⟨id0, hid0F, hcall0⟩ :=
-      GBCA.exists_correct_caller _hw (by rw [hI.F_g r]; exact hI.F_card)
+      GBCA.exists_correct_caller _hw (by rw [hI.F_gbca r]; exact hI.F_card)
     have hFid0 : id0 ∉ c.F := by
-      rw [← hI.F_g r]; exact hid0F
+      rw [← hI.F_gbca r]; exact hid0F
     have hClosedNe : ∀ r', r' ≠ r → (RoundSettled g' r' ↔ RoundSettled g r') :=
       fun r' h => RoundSettled.congr (hExcludedNe r' h) (hGradeeq r')
     have hClosedSelf : RoundSettled g' r := Or.inl (by rw [hExcludedSelf]; simp)
@@ -1199,17 +1201,17 @@ theorem Inv.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : 
       exact ⟨(hGradeeq r'').trans hg1, hExcludedMono r'' _ hd1, hCommitTrans r'' b'' hd1 hcm⟩
     refine And.intro ?_ ⟨fun r0 b0 hc => ⟨r0, hCertTrans r0 b0 hc⟩,
       fun v _ hpin => hpin⟩
-    refine ⟨hI.corrupted_F, fun r' => (hFeq r').trans (hI.F_g r'), hI.F_w, hI.F_card,
+    refine ⟨hI.corrupted_F, fun r' => (hFeq r').trans (hI.F_gbca r'), hI.F_wcc, hI.F_card,
       ?_, ?_, hI.phase_input,
       ?_, ?_, ?_,
-      hI.recv_sound, ?_, ?_, ?_, ?_, ?_, ?_, ?_, hI.round_flip, hI.est0, ?_, ?_,
-      ?_, ?_, ?_, ?_, hI.est_prev_ne, hI.w_order, ?_, hI.w_call_round, ?_,
-      hI.idle_no_wcall, ?_, ?_, ?_, ?_, ?_, ?_,
-      fun r₀ i j v v' hm hm' h h' => (hI.carrier_agree r₀ i j v v' hm hm'
+      hI.received_sound, ?_, ?_, ?_, ?_, ?_, ?_, ?_, hI.round_flip, hI.estimate0, ?_, ?_,
+      ?_, ?_, ?_, ?_, hI.estimate_previous_ne, hI.wcc_order, ?_, hI.wcc_callRound, ?_,
+      hI.idle_no_wccCall, ?_, ?_, ?_, ?_, ?_, ?_,
+      fun r₀ i j v v' hm hm' h h' => (hI.outcomeHolder_agree r₀ i j v v' hm hm'
         (hCarrTrans _ _ _ h) (hCarrTrans _ _ _ h')).imp (fun x => x)
         (fun hh => (hGradeeq r₀).trans hh),
       hI.alock_agree⟩
-    · intro id b' hmem hcall; rw [hCalleq] at hcall; exact hI.input_g0 id b' hmem hcall
+    · intro id b' hmem hcall; rw [hCalleq] at hcall; exact hI.input_gbcaRound0 id b' hmem hcall
     · intro r' id hmem hcall; rw [hCalleq] at hcall; exact hI.input_called r' id hmem hcall
     · intro r' h
       by_cases h2 : r' = r
@@ -1218,24 +1220,24 @@ theorem Inv.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : 
         · -- the fresh exclusion at `r' + 1` had an honest caller of the spared bit, whose
           -- round progress closes `r'`
           obtain ⟨id0, hid0F, hcall0⟩ :=
-            GBCA.exists_correct_caller _hw (by rw [hI.F_g r]; exact hI.F_card)
+            GBCA.exists_correct_caller _hw (by rw [hI.F_gbca r]; exact hI.F_card)
           have hFid0 : id0 ∉ c.F := by
-            rw [← hI.F_g r]; exact hid0F
+            rw [← hI.F_gbca r]; exact hid0F
           have hcr : r ≤ (c.processes id0).round :=
             hI.call_round r id0 hFid0 (by rw [hcall0]; simp)
           rw [hClosedNe r' h2]
           exact hI.round_bound id0 hFid0 r' (by omega)
         · rw [hClosedNe r' h2]
-          exact hI.down_closed r' ((hClosedNe (r' + 1) h1).mp h)
+          exact hI.down_settled r' ((hClosedNe (r' + 1) h1).mp h)
     · obtain ⟨R, hR⟩ := hI.quiescent
       exact ⟨max R (r + 1), fun r' hr' h =>
         hR r' (by omega) ((hClosedNe r' (by omega)).mp h)⟩
     · intro r' h
       by_cases h2 : r' = r
       · subst h2; exact hClosedSelf
-      · rw [hClosedNe r' h2]; exact hI.w_bound r' h
+      · rw [hClosedNe r' h2]; exact hI.wcc_bound r' h
     · intro id b' hmem h
-      exact (hI.decided_src id b' hmem h).imp (fun r'' => hCertTrans r'' b')
+      exact (hI.decided_source id b' hmem h).imp (fun r'' => hCertTrans r'' b')
     · intro r' b' hgr hbr
       rw [hGradeeq] at hgr
       have hpair : (!b') ∈ (g r').excluded ∧ b' ∉ (g r').excluded := by
@@ -1274,7 +1276,7 @@ theorem Inv.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : 
             rw [← hExcludedNe (r' + 1) h1]; exact hlast.2
           by_cases hexcluded0 : (g r').excluded = ∅
           · -- round `r'` was fresh before this exclusion, hence already `C`-blocked upward;
-            -- `est_prev` pins `id`'s estimate to the agreeing coin's bit.
+            -- `estimate_previous` pins `id`'s estimate to the agreeing coin's bit.
             have hnoC : (g (r' + 1)).grade ≠ some false :=
               fun hh => hI.no_cgrade_succ r' v hcoin (by rw [hexcluded0]; simp) hh
             have hround1 : (c.processes id).round = r' + 1 := by
@@ -1284,7 +1286,7 @@ theorem Inv.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : 
               · exact hnoC hh
             by_cases hgroup : (c.processes id).phase = .toCallW ∨ (c.processes id).phase = .awaitW
             · exfalso
-              obtain ⟨hnone, hsome⟩ := hI.est_ret (r' + 1) id hmem hround1 hgroup
+              obtain ⟨hnone, hsome⟩ := hI.estimate_ret (r' + 1) id hmem hround1 hgroup
               rcases Option.eq_none_or_eq_some ((c.processes id).estimate) with he | ⟨u, he⟩
               · exact hnoC (hnone he).1
               · have hu := hsome u he
@@ -1298,9 +1300,9 @@ theorem Inv.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : 
                 · exact absurd (Or.inl hph2) hgroup
                 · exact absurd (Or.inr hph2) hgroup
               obtain ⟨u, he⟩ :=
-                Option.ne_none_iff_exists'.mp (hI.est_prev_ne id hmem (by omega) hphase3)
+                Option.ne_none_iff_exists'.mp (hI.estimate_previous_ne id hmem (by omega) hphase3)
               rw [he]
-              rcases hI.est_prev r' id hmem hround1 hphase3 u he with hbu | ⟨-, hw0⟩
+              rcases hI.estimate_previous r' id hmem hround1 hphase3 u he with hbu | ⟨-, hw0⟩
               · rw [hexcluded0] at hbu; simp at hbu
               · rcases hw0 with hh | hh
                 · rw [hcoin] at hh; simp only [CoinValue.bit.injEq] at hh; rw [hh]
@@ -1334,11 +1336,11 @@ theorem Inv.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : 
     · intro r' id hmem hcalled
       by_cases h2 : r' = r
       · subst h2; exact hClosedSelf
-      · rw [hClosedNe r' h2]; exact hI.w_called r' id hmem hcalled
+      · rw [hClosedNe r' h2]; exact hI.wcc_called r' id hmem hcalled
     · intro id b hlg
-      exact (hI.grade_A_src id b hlg).imp (fun r'' => hCertTrans r'' b)
+      exact (hI.grade_A_source id b hlg).imp (fun r'' => hCertTrans r'' b)
     · intro r' id hmem hround hphase
-      obtain ⟨hnone, hsome⟩ := hI.est_ret r' id hmem hround hphase
+      obtain ⟨hnone, hsome⟩ := hI.estimate_ret r' id hmem hround hphase
       refine ⟨fun he => ?_, fun b' hb' => ?_⟩
       · obtain ⟨hg0, hno⟩ := hnone he
         refine ⟨(hGradeeq r').trans hg0, fun r₀ hr0 hgr0 => ?_⟩
@@ -1350,10 +1352,10 @@ theorem Inv.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : 
       · rw [h1, hExcludedSelf] at h
         rcases Finset.mem_insert.mp h with hnew | hold
         · -- the fresh exclusion: the spared bit `!b = v` was carried by the derived
-          -- honest caller, whose `call_prov` provenance is the conclusion verbatim
+          -- honest caller, whose `call_provenance` provenance is the conclusion verbatim
           have hveq : v = !b := by
             revert hnew; cases v <;> cases b <;> simp
-          have hcp := hI.call_prov r' id0 (!b) hFid0 (by rw [h1]; exact hcall0)
+          have hcp := hI.call_provenance r' id0 (!b) hFid0 (by rw [h1]; exact hcall0)
           rw [← hveq] at hcp
           rcases hcp with hd | ⟨hg0, hw0⟩
           · exact Or.inl (hExcludedMono r' _ hd)
@@ -1367,28 +1369,28 @@ theorem Inv.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : 
         · exact Or.inr ⟨(hGradeeq r').trans hg0, hw0⟩
     · intro r' id v hmem hcall
       rw [hCalleq] at hcall
-      rcases hI.call_prov r' id v hmem hcall with hd | ⟨hg0, hw0⟩
+      rcases hI.call_provenance r' id v hmem hcall with hd | ⟨hg0, hw0⟩
       · exact Or.inl (hExcludedMono r' _ hd)
       · exact Or.inr ⟨(hGradeeq r').trans hg0, hw0⟩
     · intro r' id hmem hround hphase v hest
-      rcases hI.est_prev r' id hmem hround hphase v hest with hd | ⟨hg0, hw0⟩
+      rcases hI.estimate_previous r' id hmem hround hphase v hest with hd | ⟨hg0, hw0⟩
       · exact Or.inl (hExcludedMono r' _ hd)
       · exact Or.inr ⟨(hGradeeq r').trans hg0, hw0⟩
     · intro r' h
       rw [hGradeeq] at h ⊢
       exact hI.c_chain r' h
-    · intro id b' h; rw [hCalleq] at h; exact hI.input_g0_perm id b' h
+    · intro id b' h; rw [hCalleq] at h; exact hI.input_gbcaRound0_permanent id b' h
     · -- `flip_alock`: `grade` and every residue component are monotone-transported
       intro r' h
       rcases hI.flip_alock r' h with hg | hd
       · left; rw [hGradeeq]; exact hg
       · right; exact hDissTrans r' hd
     · intro r' id hmem hp
-      rcases hI.retg_residue r' id hmem hp with hg | hd
+      rcases hI.retG_witness r' id hmem hp with hg | hd
       · left; rw [hGradeeq]; exact hg
       · right; exact hDissTrans r' hd
     · intro r' id hmem hcalled
-      rcases hI.wcalled_residue r' id hmem hcalled with hg | hd
+      rcases hI.wccCalled_witness r' id hmem hcalled with hg | hd
       · left; rw [hGradeeq]; exact hg
       · right; exact hDissTrans r' hd
     · intro r' h
@@ -1404,35 +1406,35 @@ theorem Inv.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : 
         rcases Finset.mem_insert.mp hb' with hnew | hold
         · have hveq : v = !b := by revert hnew; cases v <;> cases b <;> simp
           rw [hveq]
-          exact hI.supp_of_call_count r (!b) _hw
-        · exact hI.bind_supp r v hold
-      · rw [hExcludedNe r' h2] at hb'; exact hI.bind_supp r' v hb'
+          exact hI.support_of_call_count r (!b) _hw
+        · exact hI.bind_support r v hold
+      · rw [hExcludedNe r' h2] at hb'; exact hI.bind_support r' v hb'
     · intro r' b' hgf
       rw [hGradeeq] at hgf
-      exact GBCA.callSupp_mono (fun id' h => by rw [hCalleq r']; exact h) (hFeq r').ge
-        (hI.clock_supp r' b' hgf)
+      exact GBCA.callSupport_mono (fun id' h => by rw [hCalleq r']; exact h) (hFeq r').ge
+        (hI.clock_support r' b' hgf)
     · -- I28 establishment: the fresh exclusion records its own guard; old exclusions keep theirs
       intro r' b' hb'
       have hcnt : ∀ r₀ b₀, P.f + 1 ≤ (Finset.univ.filter
           (fun id' => (g r₀).call id' = some (!b₀) ∨ id' ∈ (g r₀).F)).card →
           P.f + 1 ≤ (Finset.univ.filter
           (fun id' => (g' r₀).call id' = some (!b₀) ∨ id' ∈ (g' r₀).F)).card :=
-        fun r₀ b₀ hh => GBCA.callSupp_mono (fun id' h => by rw [hCalleq r₀]; exact h)
+        fun r₀ b₀ hh => GBCA.callSupport_mono (fun id' h => by rw [hCalleq r₀]; exact h)
           (hFeq r₀).ge hh
       by_cases h2 : r' = r
       · rw [h2] at hb' ⊢
         rw [hExcludedSelf] at hb'
         rcases Finset.mem_insert.mp hb' with hnew | hold
         · rw [hnew]; exact hcnt r b _hw
-        · exact hcnt r b' (hI.excluded_supp r b' hold)
+        · exact hcnt r b' (hI.excluded_support r b' hold)
       · rw [hExcludedNe r' h2] at hb'
-        exact hcnt r' b' (hI.excluded_supp r' b' hb')
+        exact hcnt r' b' (hI.excluded_support r' b' hb')
 
 /-- Core `τ`: DECIDED delivery, echo, or byzantine injection. All three leave `processes`/`F`
-untouched, so only `recv_sound`/`decided_src` need real work; the `echo` case's honest
+untouched, so only `received_sound`/`decided_source` need real work; the `echo` case's honest
 sender comes from an `f + 1`-vs-`≤ f` pigeonhole on the delivered senders. -/
-theorem Inv.step_coreTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
-    {w : ℕ → WCC.SpecState P.n} (hI : Inv P g c w)
+theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
+    {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w)
     {μc : PMF (ABAState P)}
     (hstep :
       (∃ i j b, b ∈ c.decidedSent j ∧ b ∉ c.decidedReceived i j ∧
@@ -1441,7 +1443,7 @@ theorem Inv.step_coreTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : 
           μc = PMF.pure (c.sendDecided id b)) ∨
         (∃ id b, id ∈ c.F ∧ μc = PMF.pure (c.sendDecided id b)))
     {c' : ABAState P} (hc' : c' ∈ μc.support) :
-    Inv P g c' w ∧ AbsFrame P g g c c' := by
+    Invariant P g c' w ∧ AbstractStateUnchanged P g g c c' := by
   rcases hstep with ⟨i, j, b, hs, hr, rfl⟩ | ⟨id, b, hcnt, hs, rfl⟩ | ⟨id, b, hF, rfl⟩
   · -- deliver
     rw [PMF.mem_support_pure_iff] at hc'; subst hc'
@@ -1451,7 +1453,7 @@ theorem Inv.step_coreTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : 
     have hDS : (c.deliverDecided i j b).decidedSent = c.decidedSent :=
       ABAState.deliverDecided_decidedSent _ _ _ _
     have hCert : ∀ r' b', ACert P g c r' b' → ACert P g (c.deliverDecided i j b) r' b' :=
-      fun r' b' => ACert.of_frame rfl (fun _ => rfl) (fun _ _ => rfl)
+      fun r' b' => ACert.of_unchanged rfl (fun _ => rfl) (fun _ _ => rfl)
         (by rw [hFeq] : c.F ⊆ _) (fun id' => by rw [hProcs]) (fun id' => by rw [hProcs])
         (fun id0 v hcar => by unfold OutcomeHolder at hcar ⊢; rwa [hProcs] at hcar)
     refine And.intro ?_ ⟨fun r0 b0 hc => ⟨r0, hCert r0 b0 hc⟩,
@@ -1459,21 +1461,21 @@ theorem Inv.step_coreTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : 
         (by unfold AHolder at hh ⊢; rwa [hProcs, hDS] at hh)⟩
     refine ⟨fun id' => by
         rw [ABAState.deliverDecided_corrupted, hFeq]; exact hI.corrupted_F id',
-      fun r => by rw [hFeq]; exact hI.F_g r, fun r => by rw [hFeq]; exact hI.F_w r,
-      hFeq ▸ hI.F_card, ?_, ?_, ?_, hI.down_closed, hI.quiescent, hI.w_bound, ?_, ?_, ?_, ?_, ?_,
+      fun r => by rw [hFeq]; exact hI.F_gbca r, fun r => by rw [hFeq]; exact hI.F_wcc r,
+      hFeq ▸ hI.F_card, ?_, ?_, ?_, hI.down_settled, hI.quiescent, hI.wcc_bound, ?_, ?_, ?_, ?_, ?_,
       hI.gradeA_needs_bind, ?_, ?_, ?_, ?_, ?_, ?_, hI.bind_succ, ?_, ?_, hI.c_chain, ?_,
-      hI.w_order, ?_, ?_, ?_, ?_, ?_, ?_, hI.bound_quorum,
-      fun r v hb => (hI.bind_supp r v hb).mono
+      hI.wcc_order, ?_, ?_, ?_, ?_, ?_, ?_, hI.bound_quorum,
+      fun r v hb => (hI.bind_support r v hb).mono
         (fun id' b' h => by rw [hProcs]; exact h) (fun x hx => by rw [hFeq]; exact hx),
-      hI.clock_supp, hI.excluded_supp,
-      fun r' i0 j0 v v' hm hm' h h' => hI.carrier_agree r' i0 j0 v v' (hFeq ▸ hm) (hFeq ▸ hm')
+      hI.clock_support, hI.excluded_support,
+      fun r' i0 j0 v v' hm hm' h h' => hI.outcomeHolder_agree r' i0 j0 v v' (hFeq ▸ hm) (hFeq ▸ hm')
         (by unfold OutcomeHolder at h ⊢; rwa [hProcs] at h)
         (by unfold OutcomeHolder at h' ⊢; rwa [hProcs] at h'),
       fun i0 j0 b0 b0' hm hm' h h' => hI.alock_agree i0 j0 b0 b0' (hFeq ▸ hm) (hFeq ▸ hm')
         (by unfold AHolder at h ⊢; rwa [hProcs, hDS] at h)
         (by unfold AHolder at h' ⊢; rwa [hProcs, hDS] at h')⟩
     · intro id' b' hmem hcall
-      rw [hProcs]; exact hI.input_g0 id' b' (hFeq ▸ hmem) hcall
+      rw [hProcs]; exact hI.input_gbcaRound0 id' b' (hFeq ▸ hmem) hcall
     · intro r id' hmem hcall
       rw [hProcs]; exact hI.input_called r id' (hFeq ▸ hmem) hcall
     · intro id' hmem hne
@@ -1485,12 +1487,12 @@ theorem Inv.step_coreTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : 
         rw [ABAState.deliverDecided_decidedReceived_self, Finset.mem_insert] at h
         rcases h with rfl | h
         · exact hs
-        · exact hI.recv_sound i' j' b' h
+        · exact hI.received_sound i' j' b' h
       · rw [ABAState.deliverDecided_decidedReceived_of_ne _ _ _ _ (by tauto)] at h
-        exact hI.recv_sound i' j' b' h
+        exact hI.received_sound i' j' b' h
     · intro id' b' hmem h
       rw [hDS] at h
-      exact (hI.decided_src id' b' (hFeq ▸ hmem) h).imp (fun r => hCert r b')
+      exact (hI.decided_source id' b' (hFeq ▸ hmem) h).imp (fun r => hCert r b')
     · intro r b' hgr hbr
       obtain ⟨h1, h2, h3, h4⟩ := hI.a_commit r b' hgr hbr
       refine ⟨h1, h2, fun id' hmem hround => ?_,
@@ -1502,37 +1504,37 @@ theorem Inv.step_coreTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : 
     · intro r v hlast hbr hcoin id' hmem hround
       rw [hProcs] at hround ⊢; exact hI.agree_locked r v hlast hbr hcoin id' (hFeq ▸ hmem) hround
     · intro r id' hmem hcall; rw [hProcs]; exact hI.call_round r id' (hFeq ▸ hmem) hcall
-    · intro r id' hmem hcalled; exact hI.w_called r id' (hFeq ▸ hmem) hcalled
+    · intro r id' hmem hcalled; exact hI.wcc_called r id' (hFeq ▸ hmem) hcalled
     · intro r id' hmem hround
       rw [hProcs] at hround; exact hI.round_flip r id' (hFeq ▸ hmem) hround
     · intro id' hmem hround hphase
-      rw [hProcs] at hround hphase ⊢; exact hI.est0 id' (hFeq ▸ hmem) hround hphase
+      rw [hProcs] at hround hphase ⊢; exact hI.estimate0 id' (hFeq ▸ hmem) hround hphase
     · intro id' b' hlg
       rw [hProcs] at hlg
-      exact (hI.grade_A_src id' b' hlg).imp (fun r => hCert r b')
+      exact (hI.grade_A_source id' b' hlg).imp (fun r => hCert r b')
     · intro r id' hmem hround hphase
-      rw [hProcs] at hround hphase ⊢; exact hI.est_ret r id' (hFeq ▸ hmem) hround hphase
-    · intro r id' v hmem hcall; exact hI.call_prov r id' v (hFeq ▸ hmem) hcall
+      rw [hProcs] at hround hphase ⊢; exact hI.estimate_ret r id' (hFeq ▸ hmem) hround hphase
+    · intro r id' v hmem hcall; exact hI.call_provenance r id' v (hFeq ▸ hmem) hcall
     · intro r id' hmem hround hphase v hest
       rw [hProcs] at hround hphase hest
-      exact hI.est_prev r id' (hFeq ▸ hmem) hround hphase v hest
+      exact hI.estimate_previous r id' (hFeq ▸ hmem) hround hphase v hest
     · intro id' hmem hround hphase
       rw [hProcs] at hround hphase ⊢
-      exact hI.est_prev_ne id' (hFeq ▸ hmem) hround hphase
-    · intro id' b' h; rw [hProcs]; exact hI.input_g0_perm id' b' h
-    · intro r id' hmem hcalled; rw [hProcs]; exact hI.w_call_round r id' (hFeq ▸ hmem) hcalled
+      exact hI.estimate_previous_ne id' (hFeq ▸ hmem) hround hphase
+    · intro id' b' h; rw [hProcs]; exact hI.input_gbcaRound0_permanent id' b' h
+    · intro r id' hmem hcalled; rw [hProcs]; exact hI.wcc_callRound r id' (hFeq ▸ hmem) hcalled
     · intro r h
       rcases hI.flip_alock r h with hg | hd
       · left; exact hg
       · right; exact DissentWitness.transport rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
-    · intro id' hmem hin r; rw [hProcs] at hin; exact hI.idle_no_wcall id' (hFeq ▸ hmem) hin r
+    · intro id' hmem hin r; rw [hProcs] at hin; exact hI.idle_no_wccCall id' (hFeq ▸ hmem) hin r
     · intro r id' hmem hp
       rw [hProcs] at hp
-      rcases hI.retg_residue r id' (hFeq ▸ hmem) hp with hg | hd
+      rcases hI.retG_witness r id' (hFeq ▸ hmem) hp with hg | hd
       · left; exact hg
       · right; exact DissentWitness.transport rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
     · intro r id' hmem hcalled
-      rcases hI.wcalled_residue r id' (hFeq ▸ hmem) hcalled with hg | hd
+      rcases hI.wccCalled_witness r id' (hFeq ▸ hmem) hcalled with hg | hd
       · left; exact hg
       · right; exact DissentWitness.transport rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
   · -- echo: an honest sender among the `f + 1` counted deliveries
@@ -1551,10 +1553,10 @@ theorem Inv.step_coreTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : 
       (Finset.not_subset (s := Finset.univ.filter (fun j => b ∈ c.decidedReceived id j))
         (t := c.F)).mp (fun hsub => absurd (Finset.card_le_card hsub) (by omega))
     rw [Finset.mem_filter] at hjmem
-    have hjsent : b ∈ c.decidedSent j := hI.recv_sound id j b hjmem.2
-    obtain ⟨r0, hcert0⟩ := hI.decided_src j b hjF hjsent
+    have hjsent : b ∈ c.decidedSent j := hI.received_sound id j b hjmem.2
+    obtain ⟨r0, hcert0⟩ := hI.decided_source j b hjF hjsent
     have hCert : ∀ r' b', ACert P g c r' b' → ACert P g (c.sendDecided id b) r' b' :=
-      fun r' b' => ACert.of_frame rfl (fun _ => rfl) (fun _ _ => rfl)
+      fun r' b' => ACert.of_unchanged rfl (fun _ => rfl) (fun _ _ => rfl)
         (by rw [hFeq] : c.F ⊆ _) (fun id' => by rw [hProcs]) (fun id' => by rw [hProcs])
         (fun id0 v hcar => by unfold OutcomeHolder at hcar ⊢; rwa [hProcs] at hcar)
     have hHold : ∀ i0 b0, i0 ∉ c.F → AHolder P (c.sendDecided id b) i0 b0 →
@@ -1571,14 +1573,14 @@ theorem Inv.step_coreTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : 
         exact hpin j0 b' hj0 hh0⟩
     refine ⟨fun id' => by
         rw [ABAState.sendDecided_corrupted, hFeq]; exact hI.corrupted_F id',
-      fun r => by rw [hFeq]; exact hI.F_g r, fun r => by rw [hFeq]; exact hI.F_w r,
-      hFeq ▸ hI.F_card, ?_, ?_, ?_, hI.down_closed, hI.quiescent, hI.w_bound, ?_, ?_, ?_, ?_, ?_,
+      fun r => by rw [hFeq]; exact hI.F_gbca r, fun r => by rw [hFeq]; exact hI.F_wcc r,
+      hFeq ▸ hI.F_card, ?_, ?_, ?_, hI.down_settled, hI.quiescent, hI.wcc_bound, ?_, ?_, ?_, ?_, ?_,
       hI.gradeA_needs_bind, ?_, ?_, ?_, ?_, ?_, ?_, hI.bind_succ, ?_, ?_, hI.c_chain, ?_,
-      hI.w_order, ?_, ?_, ?_, ?_, ?_, ?_, hI.bound_quorum,
-      fun r v hb => (hI.bind_supp r v hb).mono
+      hI.wcc_order, ?_, ?_, ?_, ?_, ?_, ?_, hI.bound_quorum,
+      fun r v hb => (hI.bind_support r v hb).mono
         (fun id' b' h => by rw [hProcs]; exact h) (fun x hx => by rw [hFeq]; exact hx),
-      hI.clock_supp, hI.excluded_supp,
-      fun r' i0 j0 v v' hm hm' h h' => hI.carrier_agree r' i0 j0 v v' (hFeq ▸ hm) (hFeq ▸ hm')
+      hI.clock_support, hI.excluded_support,
+      fun r' i0 j0 v v' hm hm' h h' => hI.outcomeHolder_agree r' i0 j0 v v' (hFeq ▸ hm) (hFeq ▸ hm')
         (by unfold OutcomeHolder at h ⊢; rwa [hProcs] at h)
         (by unfold OutcomeHolder at h' ⊢; rwa [hProcs] at h'),
       fun i0 j0 b0 b0' hm hm' h h' => by
@@ -1586,14 +1588,14 @@ theorem Inv.step_coreTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : 
         obtain ⟨jb, hjbF, hjb⟩ := hHold j0 b0' (hFeq ▸ hm') h'
         exact hI.alock_agree ja jb b0 b0' hjaF hjbF hja hjb⟩
     · intro id' b' hmem hcall
-      rw [hProcs]; exact hI.input_g0 id' b' (hFeq ▸ hmem) hcall
+      rw [hProcs]; exact hI.input_gbcaRound0 id' b' (hFeq ▸ hmem) hcall
     · intro r id' hmem hcall
       rw [hProcs]; exact hI.input_called r id' (hFeq ▸ hmem) hcall
     · intro id' hmem hne
       rw [hProcs] at hne ⊢; exact hI.phase_input id' (hFeq ▸ hmem) hne
     · intro i' j' b' h
       rw [hDR] at h
-      exact ABAState.sendDecided_decidedSent_mono _ _ _ (hI.recv_sound i' j' b' h)
+      exact ABAState.sendDecided_decidedSent_mono _ _ _ (hI.received_sound i' j' b' h)
     · intro id' b' hmem h
       rw [ABAState.sendDecided_decidedSent] at h
       by_cases hid : id' = id
@@ -1601,9 +1603,9 @@ theorem Inv.step_coreTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : 
         rw [Function.update_self, Finset.mem_insert] at h
         rcases h with rfl | h
         · exact ⟨r0, hCert r0 b' hcert0⟩
-        · exact (hI.decided_src id' b' (hFeq ▸ hmem) h).imp (fun r => hCert r b')
+        · exact (hI.decided_source id' b' (hFeq ▸ hmem) h).imp (fun r => hCert r b')
       · rw [Function.update_of_ne hid] at h
-        exact (hI.decided_src id' b' (hFeq ▸ hmem) h).imp (fun r => hCert r b')
+        exact (hI.decided_source id' b' (hFeq ▸ hmem) h).imp (fun r => hCert r b')
     · intro r b' hgr hbr
       obtain ⟨h1, h2, h3, h4⟩ := hI.a_commit r b' hgr hbr
       refine ⟨h1, h2, fun id' hmem hround => ?_,
@@ -1615,39 +1617,39 @@ theorem Inv.step_coreTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : 
     · intro r v hlast hbr hcoin id' hmem hround
       rw [hProcs] at hround ⊢; exact hI.agree_locked r v hlast hbr hcoin id' (hFeq ▸ hmem) hround
     · intro r id' hmem hcall; rw [hProcs]; exact hI.call_round r id' (hFeq ▸ hmem) hcall
-    · intro r id' hmem hcalled; exact hI.w_called r id' (hFeq ▸ hmem) hcalled
+    · intro r id' hmem hcalled; exact hI.wcc_called r id' (hFeq ▸ hmem) hcalled
     · intro r id' hmem hround
       rw [hProcs] at hround; exact hI.round_flip r id' (hFeq ▸ hmem) hround
     · intro id' hmem hround hphase
-      rw [hProcs] at hround hphase ⊢; exact hI.est0 id' (hFeq ▸ hmem) hround hphase
+      rw [hProcs] at hround hphase ⊢; exact hI.estimate0 id' (hFeq ▸ hmem) hround hphase
     · intro id' b' hlg
-      rw [hProcs] at hlg; exact hI.grade_A_src id' b' hlg
+      rw [hProcs] at hlg; exact hI.grade_A_source id' b' hlg
     · intro r id' hmem hround hphase
-      rw [hProcs] at hround hphase; exact hI.est_ret r id' (hFeq ▸ hmem) hround hphase
-    · intro r id' v hmem hcall; exact hI.call_prov r id' v (hFeq ▸ hmem) hcall
+      rw [hProcs] at hround hphase; exact hI.estimate_ret r id' (hFeq ▸ hmem) hround hphase
+    · intro r id' v hmem hcall; exact hI.call_provenance r id' v (hFeq ▸ hmem) hcall
     · intro r id' hmem hround hphase v hest
       rw [hProcs] at hround hphase hest
-      exact hI.est_prev r id' (hFeq ▸ hmem) hround hphase v hest
+      exact hI.estimate_previous r id' (hFeq ▸ hmem) hround hphase v hest
     · intro id' hmem hround hphase
       rw [hProcs] at hround hphase ⊢
-      exact hI.est_prev_ne id' (hFeq ▸ hmem) hround hphase
-    · intro id' b' h; rw [hProcs]; exact hI.input_g0_perm id' b' h
-    · intro r id' hmem hcalled; rw [hProcs]; exact hI.w_call_round r id' (hFeq ▸ hmem) hcalled
+      exact hI.estimate_previous_ne id' (hFeq ▸ hmem) hround hphase
+    · intro id' b' h; rw [hProcs]; exact hI.input_gbcaRound0_permanent id' b' h
+    · intro r id' hmem hcalled; rw [hProcs]; exact hI.wcc_callRound r id' (hFeq ▸ hmem) hcalled
     · intro r h
       rcases hI.flip_alock r h with hg | hd
       · left; exact hg
       · right; exact DissentWitness.transport rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
-    · intro id' hmem hin r; rw [hProcs] at hin; exact hI.idle_no_wcall id' (hFeq ▸ hmem) hin r
+    · intro id' hmem hin r; rw [hProcs] at hin; exact hI.idle_no_wccCall id' (hFeq ▸ hmem) hin r
     · intro r id' hmem hp
       rw [hProcs] at hp
-      rcases hI.retg_residue r id' (hFeq ▸ hmem) hp with hg | hd
+      rcases hI.retG_witness r id' (hFeq ▸ hmem) hp with hg | hd
       · left; exact hg
       · right; exact DissentWitness.transport rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
     · intro r id' hmem hcalled
-      rcases hI.wcalled_residue r id' (hFeq ▸ hmem) hcalled with hg | hd
+      rcases hI.wccCalled_witness r id' (hFeq ▸ hmem) hcalled with hg | hd
       · left; exact hg
       · right; exact DissentWitness.transport rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
-  · -- byzantine DECIDED injection: `id ∈ F`, so honest `decided_src` at `id` is vacuous
+  · -- byzantine DECIDED injection: `id ∈ F`, so honest `decided_source` at `id` is vacuous
     rw [PMF.mem_support_pure_iff] at hc'; subst hc'
     have hProcs : (c.sendDecided id b).processes = c.processes := ABAState.sendDecided_processes _ _
       _
@@ -1655,7 +1657,7 @@ theorem Inv.step_coreTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : 
     have hDR : (c.sendDecided id b).decidedReceived = c.decidedReceived :=
       ABAState.sendDecided_decidedReceived _ _ _
     have hCert : ∀ r' b', ACert P g c r' b' → ACert P g (c.sendDecided id b) r' b' :=
-      fun r' b' => ACert.of_frame rfl (fun _ => rfl) (fun _ _ => rfl)
+      fun r' b' => ACert.of_unchanged rfl (fun _ => rfl) (fun _ _ => rfl)
         (by rw [hFeq] : c.F ⊆ _) (fun id' => by rw [hProcs]) (fun id' => by rw [hProcs])
         (fun id0 v hcar => by unfold OutcomeHolder at hcar ⊢; rwa [hProcs] at hcar)
     have hHold : ∀ i0 b0, i0 ∉ c.F → AHolder P (c.sendDecided id b) i0 b0 →
@@ -1670,33 +1672,33 @@ theorem Inv.step_coreTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : 
       fun v _ hpin j b' hj hh => hpin j b' (hFeq ▸ hj) (hHold j b' (hFeq ▸ hj) hh)⟩
     refine ⟨fun id' => by
         rw [ABAState.sendDecided_corrupted, hFeq]; exact hI.corrupted_F id',
-      fun r => by rw [hFeq]; exact hI.F_g r, fun r => by rw [hFeq]; exact hI.F_w r,
-      hFeq ▸ hI.F_card, ?_, ?_, ?_, hI.down_closed, hI.quiescent, hI.w_bound, ?_, ?_, ?_, ?_, ?_,
+      fun r => by rw [hFeq]; exact hI.F_gbca r, fun r => by rw [hFeq]; exact hI.F_wcc r,
+      hFeq ▸ hI.F_card, ?_, ?_, ?_, hI.down_settled, hI.quiescent, hI.wcc_bound, ?_, ?_, ?_, ?_, ?_,
       hI.gradeA_needs_bind, ?_, ?_, ?_, ?_, ?_, ?_, hI.bind_succ, ?_, ?_, hI.c_chain, ?_,
-      hI.w_order, ?_, ?_, ?_, ?_, ?_, ?_, hI.bound_quorum,
-      fun r v hb => (hI.bind_supp r v hb).mono
+      hI.wcc_order, ?_, ?_, ?_, ?_, ?_, ?_, hI.bound_quorum,
+      fun r v hb => (hI.bind_support r v hb).mono
         (fun id' b' h => by rw [hProcs]; exact h) (fun x hx => by rw [hFeq]; exact hx),
-      hI.clock_supp, hI.excluded_supp,
-      fun r' i0 j0 v v' hm hm' h h' => hI.carrier_agree r' i0 j0 v v' (hFeq ▸ hm) (hFeq ▸ hm')
+      hI.clock_support, hI.excluded_support,
+      fun r' i0 j0 v v' hm hm' h h' => hI.outcomeHolder_agree r' i0 j0 v v' (hFeq ▸ hm) (hFeq ▸ hm')
         (by unfold OutcomeHolder at h ⊢; rwa [hProcs] at h)
         (by unfold OutcomeHolder at h' ⊢; rwa [hProcs] at h'),
       fun i0 j0 b0 b0' hm hm' h h' => hI.alock_agree i0 j0 b0 b0' (hFeq ▸ hm) (hFeq ▸ hm')
         (hHold i0 b0 (hFeq ▸ hm) h) (hHold j0 b0' (hFeq ▸ hm') h')⟩
     · intro id' b' hmem hcall
-      rw [hProcs]; exact hI.input_g0 id' b' (hFeq ▸ hmem) hcall
+      rw [hProcs]; exact hI.input_gbcaRound0 id' b' (hFeq ▸ hmem) hcall
     · intro r id' hmem hcall
       rw [hProcs]; exact hI.input_called r id' (hFeq ▸ hmem) hcall
     · intro id' hmem hne
       rw [hProcs] at hne ⊢; exact hI.phase_input id' (hFeq ▸ hmem) hne
     · intro i' j' b' h
       rw [hDR] at h
-      exact ABAState.sendDecided_decidedSent_mono _ _ _ (hI.recv_sound i' j' b' h)
+      exact ABAState.sendDecided_decidedSent_mono _ _ _ (hI.received_sound i' j' b' h)
     · intro id' b' hmem h
       rw [ABAState.sendDecided_decidedSent] at h
       by_cases hid : id' = id
       · subst hid; exact absurd (hFeq ▸ hmem) (not_not.mpr hF)
       · rw [Function.update_of_ne hid] at h
-        exact (hI.decided_src id' b' (hFeq ▸ hmem) h).imp (fun r => hCert r b')
+        exact (hI.decided_source id' b' (hFeq ▸ hmem) h).imp (fun r => hCert r b')
     · intro r b' hgr hbr
       obtain ⟨h1, h2, h3, h4⟩ := hI.a_commit r b' hgr hbr
       refine ⟨h1, h2, fun id' hmem hround => ?_,
@@ -1708,44 +1710,45 @@ theorem Inv.step_coreTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : 
     · intro r v hlast hbr hcoin id' hmem hround
       rw [hProcs] at hround ⊢; exact hI.agree_locked r v hlast hbr hcoin id' (hFeq ▸ hmem) hround
     · intro r id' hmem hcall; rw [hProcs]; exact hI.call_round r id' (hFeq ▸ hmem) hcall
-    · intro r id' hmem hcalled; exact hI.w_called r id' (hFeq ▸ hmem) hcalled
+    · intro r id' hmem hcalled; exact hI.wcc_called r id' (hFeq ▸ hmem) hcalled
     · intro r id' hmem hround
       rw [hProcs] at hround; exact hI.round_flip r id' (hFeq ▸ hmem) hround
     · intro id' hmem hround hphase
-      rw [hProcs] at hround hphase ⊢; exact hI.est0 id' (hFeq ▸ hmem) hround hphase
+      rw [hProcs] at hround hphase ⊢; exact hI.estimate0 id' (hFeq ▸ hmem) hround hphase
     · intro id' b' hlg
       rw [hProcs] at hlg
-      exact (hI.grade_A_src id' b' hlg).imp (fun r => hCert r b')
+      exact (hI.grade_A_source id' b' hlg).imp (fun r => hCert r b')
     · intro r id' hmem hround hphase
-      rw [hProcs] at hround hphase; exact hI.est_ret r id' (hFeq ▸ hmem) hround hphase
-    · intro r id' v hmem hcall; exact hI.call_prov r id' v (hFeq ▸ hmem) hcall
+      rw [hProcs] at hround hphase; exact hI.estimate_ret r id' (hFeq ▸ hmem) hround hphase
+    · intro r id' v hmem hcall; exact hI.call_provenance r id' v (hFeq ▸ hmem) hcall
     · intro r id' hmem hround hphase v hest
       rw [hProcs] at hround hphase hest
-      exact hI.est_prev r id' (hFeq ▸ hmem) hround hphase v hest
+      exact hI.estimate_previous r id' (hFeq ▸ hmem) hround hphase v hest
     · intro id' hmem hround hphase
       rw [hProcs] at hround hphase ⊢
-      exact hI.est_prev_ne id' (hFeq ▸ hmem) hround hphase
-    · intro id' b' h; rw [hProcs]; exact hI.input_g0_perm id' b' h
-    · intro r id' hmem hcalled; rw [hProcs]; exact hI.w_call_round r id' (hFeq ▸ hmem) hcalled
+      exact hI.estimate_previous_ne id' (hFeq ▸ hmem) hround hphase
+    · intro id' b' h; rw [hProcs]; exact hI.input_gbcaRound0_permanent id' b' h
+    · intro r id' hmem hcalled; rw [hProcs]; exact hI.wcc_callRound r id' (hFeq ▸ hmem) hcalled
     · intro r h
       rcases hI.flip_alock r h with hg | hd
       · left; exact hg
       · right; exact DissentWitness.transport rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
-    · intro id' hmem hin r; rw [hProcs] at hin; exact hI.idle_no_wcall id' (hFeq ▸ hmem) hin r
+    · intro id' hmem hin r; rw [hProcs] at hin; exact hI.idle_no_wccCall id' (hFeq ▸ hmem) hin r
     · intro r id' hmem hp
       rw [hProcs] at hp
-      rcases hI.retg_residue r id' (hFeq ▸ hmem) hp with hg | hd
+      rcases hI.retG_witness r id' (hFeq ▸ hmem) hp with hg | hd
       · left; exact hg
       · right; exact DissentWitness.transport rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
     · intro r id' hmem hcalled
-      rcases hI.wcalled_residue r id' (hFeq ▸ hmem) hcalled with hg | hd
+      rcases hI.wccCalled_witness r id' (hFeq ▸ hmem) hcalled with hg | hd
       · left; exact hg
       · right; exact DissentWitness.transport rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
 
 /-- A round whose caller count has passed `f` has a never-corrupted caller: the callers
 outnumber the corrupted set, which `F_card` bounds by `f`. -/
-theorem Inv.exists_correct_wcaller {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
-    {w : ℕ → WCC.SpecState P.n} (hI : Inv P g c w) {r : ℕ}
+theorem Invariant.exists_correct_wcaller {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState
+  P}
+    {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) {r : ℕ}
     (hq : (w r).threshold P) : ∃ id, id ∉ c.F ∧ (w r).called id = true := by
   by_contra hcon
   have hsub : (Finset.univ.filter (fun id => (w r).called id)) ⊆ c.F := by
@@ -1761,14 +1764,14 @@ theorem Inv.exists_correct_wcaller {P : Parameters} {g : ℕ → GBCA.SpecState 
 /-- The coin resolution the resolving call carries: round `r`'s caller count has passed `f`
 at an unresolved `val`, and the drawn outcome is written to `val`. The clauses that read
 `(w r).val` are re-established from the threshold, which supplies a never-corrupted caller of
-round `r` (`Inv.exists_correct_wcaller`); that caller's `w_called`, `w_call_round` and
-`wcalled_residue` carry `w_bound`, `w_order` and `flip_alock` respectively. `agree_locked`'s
+round `r` (`Invariant.exists_correct_wcaller`); that caller's `wcc_called`, `wcc_callRound` and
+`wccCalled_witness` carry `wcc_bound`, `wcc_order` and `flip_alock` respectively. `agree_locked`'s
 round-`r` corner is vacuous, since `round_flip` at an honest process past round `r` contradicts
 `val = ⊥`. -/
-theorem Inv.step_callW_resolve {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
-    {w : ℕ → WCC.SpecState P.n} (hI : Inv P g c w) (r : ℕ)
+theorem Invariant.step_callW_resolve {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
+    {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (r : ℕ)
     (hq : (w r).threshold P) (hv : (w r).val = .bot) (o : CoinOutcome) :
-    Inv P g c (Function.update w r { w r with val := o.toCoinValue }) := by
+    Invariant P g c (Function.update w r { w r with val := o.toCoinValue }) := by
   set w' := Function.update w r { w r with val := o.toCoinValue } with hw'def
   have hFeq : ∀ r', (w' r').F = (w r').F := by
     intro r'; by_cases h : r' = r
@@ -1782,19 +1785,20 @@ theorem Inv.step_callW_resolve {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
     intro r'; by_cases h : r' = r
     · subst h; rw [hw'def, Function.update_self]
     · rw [hw'def, Function.update_of_ne h]
-  refine ⟨hI.corrupted_F, hI.F_g, fun r' => (hFeq r').trans (hI.F_w r'), hI.F_card,
-    hI.input_g0,
-    hI.input_called, hI.phase_input, hI.down_closed, hI.quiescent, ?_, hI.recv_sound,
-    hI.decided_src, hI.a_commit, hI.round_bound, ?_, hI.gradeA_needs_bind, hI.call_round, ?_, ?_,
-    hI.est0, hI.grade_A_src, hI.est_ret, ?_, ?_, ?_, hI.c_chain, hI.est_prev_ne,
-    ?_, hI.input_g0_perm, ?_, ?_, ?_, hI.retg_residue, ?_, hI.bound_quorum,
-    hI.bind_supp, hI.clock_supp, hI.excluded_supp, hI.carrier_agree, hI.alock_agree⟩
+  refine ⟨hI.corrupted_F, hI.F_gbca, fun r' => (hFeq r').trans (hI.F_wcc r'), hI.F_card,
+    hI.input_gbcaRound0,
+    hI.input_called, hI.phase_input, hI.down_settled, hI.quiescent, ?_, hI.received_sound,
+    hI.decided_source, hI.a_commit, hI.round_bound, ?_, hI.gradeA_needs_bind, hI.call_round, ?_, ?_,
+    hI.estimate0, hI.grade_A_source, hI.estimate_ret, ?_, ?_, ?_, hI.c_chain,
+      hI.estimate_previous_ne,
+    ?_, hI.input_gbcaRound0_permanent, ?_, ?_, ?_, hI.retG_witness, ?_, hI.bound_quorum,
+    hI.bind_support, hI.clock_support, hI.excluded_support, hI.outcomeHolder_agree, hI.alock_agree⟩
   · intro r' h
     by_cases h2 : r' = r
     · obtain ⟨id0, hid0cF, hid0called⟩ :=
         hI.exists_correct_wcaller (r := r') (by rw [h2]; exact hq)
-      exact hI.w_called r' id0 hid0cF hid0called
-    · rw [hValNe r' h2] at h; exact hI.w_bound r' h
+      exact hI.wcc_called r' id0 hid0cF hid0called
+    · rw [hValNe r' h2] at h; exact hI.wcc_bound r' h
   · intro r' v hlast hbr hcoin id hmem hround
     by_cases h2 : r' = r
     · have hround' : r < (c.processes id).round := by rw [← h2]; exact hround
@@ -1802,7 +1806,7 @@ theorem Inv.step_callW_resolve {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
     · rw [hValNe r' h2] at hcoin
       exact hI.agree_locked r' v hlast hbr hcoin id hmem hround
   · intro r' id hmem hcalled
-    rw [hCalledEq] at hcalled; exact hI.w_called r' id hmem hcalled
+    rw [hCalledEq] at hcalled; exact hI.wcc_called r' id hmem hcalled
   · intro r' id hmem hround
     by_cases h2 : r' = r
     · subst h2; rw [hValSelf]; cases o <;> simp [CoinOutcome.toCoinValue]
@@ -1816,7 +1820,7 @@ theorem Inv.step_callW_resolve {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
       · rcases hw0 with hh | hh <;> rw [hv] at hh <;> simp at hh
     · rw [hValNe r' h2]; exact hb
   · intro r' id v hmem hcall
-    have hcp := hI.call_prov r' id v hmem hcall
+    have hcp := hI.call_provenance r' id v hmem hcall
     by_cases h2 : r' = r
     · rw [h2] at hcp ⊢
       rcases hcp with hbv | ⟨hg0, hw0⟩
@@ -1824,48 +1828,48 @@ theorem Inv.step_callW_resolve {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
       · rcases hw0 with hh | hh <;> rw [hv] at hh <;> simp at hh
     · rw [hValNe r' h2]; exact hcp
   · intro r' id hmem hround hphase v hest
-    have hep := hI.est_prev r' id hmem hround hphase v hest
+    have hep := hI.estimate_previous r' id hmem hround hphase v hest
     by_cases h2 : r' = r
     · rw [h2] at hep ⊢
       rcases hep with hbv | ⟨hg0, hw0⟩
       · exact Or.inl hbv
       · rcases hw0 with hh | hh <;> rw [hv] at hh <;> simp at hh
     · rw [hValNe r' h2]; exact hep
-  · -- `w_order`: pass-through, except at round `r`'s predecessor, where the honest caller
+  · -- `wcc_order`: pass-through, except at round `r`'s predecessor, where the honest caller
     -- of round `r` has already passed round `r - 1`, so `round_flip` applies to it.
     intro r' h
     by_cases h2 : r' = r
     · subst h2; rw [hValSelf]; cases o <;> simp [CoinOutcome.toCoinValue]
     · by_cases h1 : r' + 1 = r
       · obtain ⟨id0, hid0cF, hid0called⟩ := hI.exists_correct_wcaller (r := r) hq
-        have hcr := hI.w_call_round r id0 hid0cF hid0called
+        have hcr := hI.wcc_callRound r id0 hid0cF hid0called
         rw [hValNe r' h2]
         exact hI.round_flip r' id0 hid0cF (by omega)
-      · rw [hValNe (r' + 1) h1] at h; rw [hValNe r' h2]; exact hI.w_order r' h
-  · intro r' id hmem hcalled; rw [hCalledEq] at hcalled; exact hI.w_call_round r' id hmem hcalled
-  · -- `flip_alock`'s establishment: round `r`'s honest caller feeds `wcalled_residue`
+      · rw [hValNe (r' + 1) h1] at h; rw [hValNe r' h2]; exact hI.wcc_order r' h
+  · intro r' id hmem hcalled; rw [hCalledEq] at hcalled; exact hI.wcc_callRound r' id hmem hcalled
+  · -- `flip_alock`'s establishment: round `r`'s honest caller feeds `wccCalled_witness`
     -- directly.
     intro r' h
     by_cases h2 : r' = r
     · obtain ⟨id0, hid0cF, hid0called⟩ :=
         hI.exists_correct_wcaller (r := r') (by rw [h2]; exact hq)
-      exact hI.wcalled_residue r' id0 hid0cF hid0called
+      exact hI.wccCalled_witness r' id0 hid0cF hid0called
     · rw [hValNe r' h2] at h; exact hI.flip_alock r' h
-  · intro id hmem hin r'; rw [hCalledEq]; exact hI.idle_no_wcall id hmem hin r'
+  · intro id hmem hin r'; rw [hCalledEq]; exact hI.idle_no_wccCall id hmem hin r'
   · intro r' id hmem hcalled
-    rw [hCalledEq] at hcalled; exact hI.wcalled_residue r' id hmem hcalled
+    rw [hCalledEq] at hcalled; exact hI.wccCalled_witness r' id hmem hcalled
 
 /-- The Dirac rows of `callW` — the input-enabledness loop and the recording call. The WCC
 instance touches only `.called`, and only at `id`; the core touches only `.phase`, and only at
-`id`. `Inv` inspects neither, so this is pure bookkeeping. -/
-theorem Inv.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
-    {w : ℕ → WCC.SpecState P.n} (hI : Inv P g c w) (r : ℕ) (id : Fin P.n)
+`id`. `Invariant` inspects neither, so this is pure bookkeeping. -/
+theorem Invariant.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
+    {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (r : ℕ) (id : Fin P.n)
     {wr' : WCC.SpecState P.n} (hWF : wr'.F = (w r).F) (hWval : wr'.val = (w r).val)
     (hWcalled : ∀ j, j ≠ id → wr'.called j = (w r).called j)
     {c' : ABAState P}
     (hCstep : ((c.processes id).phase = .toCallW ∧ (c.processes id).round = r ∧
         c' = c.setProcess id { c.processes id with phase := .awaitW }) ∨ (id ∈ c.F ∧ c' = c)) :
-    Inv P g c' (Function.update w r wr') ∧ AbsFrame P g g c c' := by
+    Invariant P g c' (Function.update w r wr') ∧ AbstractStateUnchanged P g g c c' := by
   have hWNe : ∀ r', r' ≠ r → Function.update w r wr' r' = w r' := fun r' h =>
     Function.update_of_ne h wr' w
   have hFweq : ∀ r', (Function.update w r wr' r').F = (w r').F := by
@@ -1911,7 +1915,7 @@ theorem Inv.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
           exact hk
       · rw [hc'eq] at hk; exact hk
   have hCert : ∀ r' b', ACert P g c r' b' → ACert P g c' r' b' :=
-    fun r' b' => ACert.of_frame rfl (fun _ => rfl) (fun _ _ => rfl)
+    fun r' b' => ACert.of_unchanged rfl (fun _ => rfl) (fun _ _ => rfl)
       (by rw [hCF] : c.F ⊆ _) (fun id' => (hCprocs id').2.2) (fun id' => (hCprocs id').2.1)
       (fun id0 v => hCarr r' id0 v)
   have hHold : ∀ i0 b0, AHolder P c' i0 b0 → AHolder P c i0 b0 := by
@@ -1925,19 +1929,20 @@ theorem Inv.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
     · rw [hc'eq]; exact ABAState.setProcess_corrupted _ _ _
     · rw [hc'eq]
   refine ⟨fun id' => by rw [hCcorr, hCF]; exact hI.corrupted_F id',
-    fun r' => hCF ▸ hI.F_g r', fun r' => (hFweq r').trans (hCF ▸ hI.F_w r'),
+    fun r' => hCF ▸ hI.F_gbca r', fun r' => (hFweq r').trans (hCF ▸ hI.F_wcc r'),
     hCF ▸ hI.F_card,
-    ?_, ?_, ?_, hI.down_closed, hI.quiescent, ?_, ?_, ?_, ?_, ?_, ?_,
+    ?_, ?_, ?_, hI.down_settled, hI.quiescent, ?_, ?_, ?_, ?_, ?_, ?_,
     hI.gradeA_needs_bind, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, hI.c_chain, ?_,
     ?_, ?_, ?_, ?_, ?_, ?_, ?_, hI.bound_quorum,
-    fun r' v hb => (hI.bind_supp r' v hb).mono
+    fun r' v hb => (hI.bind_support r' v hb).mono
       (fun id' b' h => by rw [(hCprocs id').1]; exact h) (fun x hx => by rw [hCF]; exact hx),
-    hI.clock_supp, hI.excluded_supp,
-    fun r₀ i0 j0 v v' hm hm' h h' => hI.carrier_agree r₀ i0 j0 v v' (hCF ▸ hm) (hCF ▸ hm')
+    hI.clock_support, hI.excluded_support,
+    fun r₀ i0 j0 v v' hm hm' h h' => hI.outcomeHolder_agree r₀ i0 j0 v v' (hCF ▸ hm) (hCF ▸ hm')
       (hCarr _ _ _ h) (hCarr _ _ _ h'),
     fun i0 j0 b0 b0' hm hm' h h' => hI.alock_agree i0 j0 b0 b0' (hCF ▸ hm) (hCF ▸ hm')
       (hHold _ _ h) (hHold _ _ h')⟩
-  · intro id' b' hmem hcall; rw [(hCprocs id').1]; exact hI.input_g0 id' b' (hCF ▸ hmem) hcall
+  · intro id' b' hmem hcall; rw [(hCprocs id').1]; exact hI.input_gbcaRound0 id' b' (hCF ▸ hmem)
+      hcall
   · intro r' id' hmem hcall
     rw [(hCprocs id').1]; exact hI.input_called r' id' (hCF ▸ hmem) hcall
   · intro id' hmem hne
@@ -1952,10 +1957,10 @@ theorem Inv.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
           rw [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid] at hne; exact hne
         exact hI.phase_input id' (hCF ▸ hmem) hne'
     · rw [hc'eq] at hne; rw [(hCprocs id').1]; exact hI.phase_input id' (hCF ▸ hmem) hne
-  · intro r' h; rw [hValeq] at h; exact hI.w_bound r' h
-  · intro i j b h; rw [hCDR] at h; rw [hCDS]; exact hI.recv_sound i j b h
+  · intro r' h; rw [hValeq] at h; exact hI.wcc_bound r' h
+  · intro i j b h; rw [hCDR] at h; rw [hCDS]; exact hI.received_sound i j b h
   · intro id' b' hmem h; rw [hCDS] at h
-    exact (hI.decided_src id' b' (hCF ▸ hmem) h).imp (fun r' => hCert r' b')
+    exact (hI.decided_source id' b' (hCF ▸ hmem) h).imp (fun r' => hCert r' b')
   · intro r' b' hgr hbr
     obtain ⟨h1, h2, h3, h4⟩ := hI.a_commit r' b' hgr hbr
     refine ⟨h1, fun r'' id' b'' hr hmem hcall => h2 r'' id' b'' hr (hCF ▸ hmem) hcall,
@@ -1976,7 +1981,7 @@ theorem Inv.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
       by_cases hid : id' = id
       · rw [hid] at hmem
         rcases hCstep with ⟨hph, hr, hc'eq⟩ | ⟨hF, hc'eq⟩
-        · obtain ⟨hnone, hsome⟩ := hI.est_ret r id (hCF ▸ hmem) hr (Or.inl hph)
+        · obtain ⟨hnone, hsome⟩ := hI.estimate_ret r id (hCF ▸ hmem) hr (Or.inl hph)
           by_cases hE : (c.processes id).estimate = none
           · exact Or.inr (hnone hE).1
           · obtain ⟨b, hb⟩ := Option.ne_none_iff_exists'.mp hE
@@ -1986,8 +1991,8 @@ theorem Inv.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
               simp at hm)
         · exact absurd (hCF ▸ hmem) (not_not.mpr hF)
       · rw [hWcalled id' hid] at hcalled
-        exact hI.w_called r id' (hCF ▸ hmem) hcalled
-    · rw [hWNe r' h2] at hcalled; exact hI.w_called r' id' (hCF ▸ hmem) hcalled
+        exact hI.wcc_called r id' (hCF ▸ hmem) hcalled
+    · rw [hWNe r' h2] at hcalled; exact hI.wcc_called r' id' (hCF ▸ hmem) hcalled
   · intro r' id' hmem hround
     rw [hValeq]; rw [(hCprocs id').2.2] at hround
     exact hI.round_flip r' id' (hCF ▸ hmem) hround
@@ -2000,12 +2005,12 @@ theorem Inv.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
         simp only [hc'eq, ABAState.setProcess_processes_self] at hphase
         rcases hphase with h | h | h <;> simp at h
       · simp only [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid] at hphase
-        rw [(hCprocs id').2.1, (hCprocs id').1]; exact hI.est0 id' (hCF ▸ hmem) hround hphase
+        rw [(hCprocs id').2.1, (hCprocs id').1]; exact hI.estimate0 id' (hCF ▸ hmem) hround hphase
     · rw [hc'eq] at hphase
-      rw [(hCprocs id').2.1, (hCprocs id').1]; exact hI.est0 id' (hCF ▸ hmem) hround hphase
+      rw [(hCprocs id').2.1, (hCprocs id').1]; exact hI.estimate0 id' (hCF ▸ hmem) hround hphase
   · intro id' b' hlg
     rw [hLastGrade] at hlg
-    exact (hI.grade_A_src id' b' hlg).imp (fun r' => hCert r' b')
+    exact (hI.grade_A_source id' b' hlg).imp (fun r' => hCert r' b')
   · intro r' id' hmem hround hphase
     rcases hCstep with ⟨hph, hr, hc'eq⟩ | ⟨-, hc'eq⟩
     · by_cases hid : id' = id
@@ -2014,15 +2019,15 @@ theorem Inv.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
           simpa [hc'eq, ABAState.setProcess_processes_self] using hround
         have hreq : r' = r := hround'.symm.trans hr
         rw [hid, hreq, (hCprocs id).2.1]
-        exact hI.est_ret r id (hCF ▸ (hid ▸ hmem)) hr (Or.inl hph)
+        exact hI.estimate_ret r id (hCF ▸ (hid ▸ hmem)) hr (Or.inl hph)
       · simp only [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid] at hround hphase
         rw [(hCprocs id').2.1]
-        exact hI.est_ret r' id' (hCF ▸ hmem) hround hphase
+        exact hI.estimate_ret r' id' (hCF ▸ hmem) hround hphase
     · rw [hc'eq] at hround hphase
       rw [(hCprocs id').2.1]
-      exact hI.est_ret r' id' (hCF ▸ hmem) hround hphase
+      exact hI.estimate_ret r' id' (hCF ▸ hmem) hround hphase
   · intro r' v h; rw [hValeq]; exact hI.bind_succ r' v h
-  · intro r' id' v hmem hcall; rw [hValeq]; exact hI.call_prov r' id' v (hCF ▸ hmem) hcall
+  · intro r' id' v hmem hcall; rw [hValeq]; exact hI.call_provenance r' id' v (hCF ▸ hmem) hcall
   · intro r' id' hmem hround hphase v hest
     rw [(hCprocs id').2.2] at hround; rw [(hCprocs id').2.1] at hest; rw [hValeq]
     rcases hCstep with ⟨hph, hr, hc'eq⟩ | ⟨-, hc'eq⟩
@@ -2032,9 +2037,9 @@ theorem Inv.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
         simp only [hc'eq, ABAState.setProcess_processes_self] at hphase
         rcases hphase with h | h | h <;> simp at h
       · simp only [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid] at hphase
-        exact hI.est_prev r' id' (hCF ▸ hmem) hround hphase v hest
+        exact hI.estimate_previous r' id' (hCF ▸ hmem) hround hphase v hest
     · rw [hc'eq] at hphase
-      exact hI.est_prev r' id' (hCF ▸ hmem) hround hphase v hest
+      exact hI.estimate_previous r' id' (hCF ▸ hmem) hround hphase v hest
   · intro id' hmem hround hphase
     rw [(hCprocs id').2.2] at hround
     rcases hCstep with ⟨hph, hr, hc'eq⟩ | ⟨-, hc'eq⟩
@@ -2045,16 +2050,16 @@ theorem Inv.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
         rcases hphase with h | h | h <;> simp at h
       · simp only [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid] at hphase
         rw [(hCprocs id').2.1]
-        exact hI.est_prev_ne id' (hCF ▸ hmem) hround hphase
+        exact hI.estimate_previous_ne id' (hCF ▸ hmem) hround hphase
     · rw [hc'eq] at hphase
       rw [(hCprocs id').2.1]
-      exact hI.est_prev_ne id' (hCF ▸ hmem) hround hphase
-  · intro r' h; rw [hValeq] at h ⊢; exact hI.w_order r' h
+      exact hI.estimate_previous_ne id' (hCF ▸ hmem) hround hphase
+  · intro r' h; rw [hValeq] at h ⊢; exact hI.wcc_order r' h
   · intro id' b' h
-    rcases hI.input_g0_perm id' b' h with hin | hf
+    rcases hI.input_gbcaRound0_permanent id' b' h with hin | hf
     · left; rw [(hCprocs id').1]; exact hin
     · right; rw [hCF]; exact hf
-  · -- `w_call_round`'s establishment: an honest caller of `WCC_r` just finished `GBCA_r`
+  · -- `wcc_callRound`'s establishment: an honest caller of `WCC_r` just finished `GBCA_r`
     -- (`r ≤ round` from `hr : (c.processes id).round = r`, unaffected by `callW`).
     intro r' id' hmem hcalled
     by_cases h2 : r' = r
@@ -2066,9 +2071,9 @@ theorem Inv.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
         · omega
         · rw [hid] at hmem; exact absurd (hCF ▸ hmem) (not_not.mpr hF)
       · rw [hWcalled id' hid] at hcalled
-        rw [(hCprocs id').2.2]; exact hI.w_call_round r id' (hCF ▸ hmem) hcalled
+        rw [(hCprocs id').2.2]; exact hI.wcc_callRound r id' (hCF ▸ hmem) hcalled
     · rw [hWNe r' h2] at hcalled
-      rw [(hCprocs id').2.2]; exact hI.w_call_round r' id' (hCF ▸ hmem) hcalled
+      rw [(hCprocs id').2.2]; exact hI.wcc_callRound r' id' (hCF ▸ hmem) hcalled
   · intro r' h
     rw [hValeq] at h
     rcases hI.flip_alock r' h with hg | hd
@@ -2087,10 +2092,10 @@ theorem Inv.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
           exact absurd hin (hI.phase_input id hmem' (by rw [hph]; simp))
         · rw [hid] at hmem; exact hmem (hCF ▸ hF)
       · rw [hWcalled id' hid]
-        exact hI.idle_no_wcall id' (hCF ▸ hmem) hin r
+        exact hI.idle_no_wccCall id' (hCF ▸ hmem) hin r
     · rw [hWNe r' h2]
       rw [(hCprocs id').1] at hin
-      exact hI.idle_no_wcall id' (hCF ▸ hmem) hin r'
+      exact hI.idle_no_wccCall id' (hCF ▸ hmem) hin r'
   · intro r' id' hmem hp
     rw [(hCprocs id').2.2] at hp
     have hphaseImp : ((c'.processes id').phase = .toCallW ∨ (c'.processes id').phase = .awaitW) →
@@ -2107,7 +2112,7 @@ theorem Inv.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
       rcases hp with ⟨hround, hphase⟩ | hlt
       · exact Or.inl ⟨hround, hphaseImp hphase⟩
       · exact Or.inr hlt
-    rcases hI.retg_residue r' id' (hCF ▸ hmem) hp' with hg | hd
+    rcases hI.retG_witness r' id' (hCF ▸ hmem) hp' with hg | hd
     · left; exact hg
     · right; exact DissentWitness.transport rfl rfl (fun h => h) (fun id' => (hCprocs id').1) hd
   · intro r' id' hmem hcalled
@@ -2117,28 +2122,28 @@ theorem Inv.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
       by_cases hid : id' = id
       · rw [hid] at hmem
         rcases hCstep with ⟨hph, hr, hc'eq⟩ | ⟨hF, hc'eq⟩
-        · rcases hI.retg_residue r id (hCF ▸ hmem) (Or.inl ⟨hr, Or.inl hph⟩) with hg | hd
+        · rcases hI.retG_witness r id (hCF ▸ hmem) (Or.inl ⟨hr, Or.inl hph⟩) with hg | hd
           · left; exact hg
           · right
             exact DissentWitness.transport rfl rfl (fun h => h) (fun id' => (hCprocs id').1) hd
         · exact absurd (hCF ▸ hmem) (not_not.mpr hF)
       · rw [hWcalled id' hid] at hcalled
-        rcases hI.wcalled_residue r id' (hCF ▸ hmem) hcalled with hg | hd
+        rcases hI.wccCalled_witness r id' (hCF ▸ hmem) hcalled with hg | hd
         · left; exact hg
         · right
           exact DissentWitness.transport rfl rfl (fun h => h) (fun id' => (hCprocs id').1) hd
     · rw [hWNe r' h2] at hcalled
-      rcases hI.wcalled_residue r' id' (hCF ▸ hmem) hcalled with hg | hd
+      rcases hI.wccCalled_witness r' id' (hCF ▸ hmem) hcalled with hg | hd
       · left; exact hg
       · right; exact DissentWitness.transport rfl rfl (fun h => h) (fun id' => (hCprocs id').1) hd
 
 /-- `callW`, assembled from the three rows of `WCC.step_callW_inv`. The loop and the
-recording call leave `val` and `F` alone, so both are `Inv.step_callW_dirac`. The resolving
+recording call leave `val` and `F` alone, so both are `Invariant.step_callW_dirac`. The resolving
 call records `id` by that same bookkeeping and then writes the drawn outcome to `val`
-(`Inv.step_callW_resolve`); the two updates compose into one because `Function.update` is
+(`Invariant.step_callW_resolve`); the two updates compose into one because `Function.update` is
 idempotent at the round it writes. -/
-theorem Inv.step_callW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
-    {w : ℕ → WCC.SpecState P.n} (hI : Inv P g c w) (r : ℕ) (id : Fin P.n)
+theorem Invariant.step_callW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
+    {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (r : ℕ) (id : Fin P.n)
     {μw' : PMF (WCC.SpecState P.n)} (hstepW : WCC.Step P r (w r) (.callW r id) μw')
     {μc : PMF (ABAState P)}
     (hstepC :
@@ -2147,7 +2152,7 @@ theorem Inv.step_callW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : AB
         (id ∈ c.F ∧ μc = PMF.pure c))
     {wr' : WCC.SpecState P.n} (hwr' : wr' ∈ μw'.support)
     {c' : ABAState P} (hc' : c' ∈ μc.support) :
-    Inv P g c' (Function.update w r wr') ∧ AbsFrame P g g c c' := by
+    Invariant P g c' (Function.update w r wr') ∧ AbstractStateUnchanged P g g c c' := by
   have hCstep : ((c.processes id).phase = .toCallW ∧ (c.processes id).round = r ∧
       c' = c.setProcess id { c.processes id with phase := .awaitW }) ∨ (id ∈ c.F ∧ c' = c) := by
     rcases hstepC with ⟨hph, hr, rfl⟩ | ⟨hF, rfl⟩
@@ -2170,13 +2175,13 @@ theorem Inv.step_callW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : AB
     rw [hw₁, Function.update_idem] at hres
     exact hres
 /-- `callG`: the GBCA instance only ever touches `.call` (never `.F`/`.excluded`/`.grade`), the
-core only ever touches `.phase` at `id` (never `.input`/`.estimate`/`.round`). `input_g0`/
+core only ever touches `.phase` at `id` (never `.input`/`.estimate`/`.round`). `input_gbcaRound0`/
 `input_called`'s honest-fresh-call corner needs "`estimate = input` before any round-`0` return"
-(phase/input coherence, not an explicit `Inv` conjunct) — handed off; `a_commit`'s second
+(phase/input coherence, not an explicit `Invariant` conjunct) — handed off; `a_commit`'s second
 conjunct is derived cleanly from its own third conjunct plus the honest call guard
 `estimate = b`. -/
-theorem Inv.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
-    {w : ℕ → WCC.SpecState P.n} (hI : Inv P g c w) (r : ℕ) (id : Fin P.n) (b : Bool)
+theorem Invariant.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
+    {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (r : ℕ) (id : Fin P.n) (b : Bool)
     {μr : PMF (GBCA.SpecState P.n)} (hstepG : GBCA.Step P r (g r) (.callG r id b) μr)
     {μc : PMF (ABAState P)}
     (hstepC :
@@ -2186,8 +2191,8 @@ theorem Inv.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : AB
         (id ∈ c.F ∧ μc = PMF.pure c))
     {gr' : GBCA.SpecState P.n} (hgr' : gr' ∈ μr.support)
     {c' : ABAState P} (hc' : c' ∈ μc.support) :
-    Inv P (Function.update g r gr') c' w ∧
-      AbsFrame P g (Function.update g r gr') c c' := by
+    Invariant P (Function.update g r gr') c' w ∧
+      AbstractStateUnchanged P g (Function.update g r gr') c c' := by
   have hGframe : gr'.F = (g r).F ∧ gr'.excluded = (g r).excluded ∧ gr'.grade = (g r).grade := by
     cases hstepG with
     | call h => rw [PMF.mem_support_pure_iff] at hgr'; subst hgr'; exact ⟨rfl, rfl, rfl⟩
@@ -2337,31 +2342,31 @@ theorem Inv.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : AB
     · rw [hc'eq]; exact ABAState.setProcess_corrupted _ _ _
     · rw [hc'eq]
   refine ⟨fun id' => by rw [hCcorr, hCF]; exact hI.corrupted_F id',
-    fun r' => (hFgeq r').trans (hCF ▸ hI.F_g r'), fun r' => hCF ▸ hI.F_w r',
+    fun r' => (hFgeq r').trans (hCF ▸ hI.F_gbca r'), fun r' => hCF ▸ hI.F_wcc r',
     hCF ▸ hI.F_card,
     ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
     ?_, ?_, ?_, fun r' h => by rw [hGradeeq] at h ⊢; exact hI.c_chain r' h, ?_,
-    hI.w_order, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
-    fun r' v hb => (hI.bind_supp r' v (by rw [← hBindeq r']; exact hb)).mono
+    hI.wcc_order, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
+    fun r' v hb => (hI.bind_support r' v (by rw [← hBindeq r']; exact hb)).mono
       (fun id' b' h => by rw [(hCprocs id').1]; exact h) (fun x hx => by rw [hCF]; exact hx),
-    fun r' b' hgf => GBCA.callSupp_mono
+    fun r' b' hgf => GBCA.callSupport_mono
       (fun id' h => by
         by_cases hrr : r' = r
         · subst hrr; rw [Function.update_self]; exact hCallMono id' b' h
         · rw [hGeq r' hrr]; exact h)
-      (hFgeq r').ge (hI.clock_supp r' b' ((hGradeeq r').symm.trans hgf)),
-    fun r' b0 hbd => GBCA.callSupp_mono
+      (hFgeq r').ge (hI.clock_support r' b' ((hGradeeq r').symm.trans hgf)),
+    fun r' b0 hbd => GBCA.callSupport_mono
       (fun id' h => by
         by_cases hrr : r' = r
         · subst hrr; rw [Function.update_self]; exact hCallMono id' (!b0) h
         · rw [hGeq r' hrr]; exact h)
-      (hFgeq r').ge (hI.excluded_supp r' b0 (by rw [← hBindeq r']; exact hbd)),
-    fun r₀ i0 j0 v v' hm hm' h h' => (hI.carrier_agree r₀ i0 j0 v v' (hCF ▸ hm) (hCF ▸ hm')
+      (hFgeq r').ge (hI.excluded_support r' b0 (by rw [← hBindeq r']; exact hbd)),
+    fun r₀ i0 j0 v v' hm hm' h h' => (hI.outcomeHolder_agree r₀ i0 j0 v v' (hCF ▸ hm) (hCF ▸ hm')
       (hCarrTrans r₀ i0 v (hCF ▸ hm) h) (hCarrTrans r₀ j0 v' (hCF ▸ hm') h')).imp
       (fun x => x) (fun hh => (hGradeeq r₀).trans hh),
     fun i0 j0 b0 b0' hm hm' h h' => hI.alock_agree i0 j0 b0 b0' (hCF ▸ hm) (hCF ▸ hm')
       (hHold _ _ h) (hHold _ _ h')⟩
-  · -- input_g0
+  · -- input_gbcaRound0
     intro id' b' hmem hcall
     rw [(hCprocs id').1]
     by_cases hr0 : r = 0
@@ -2374,17 +2379,17 @@ theorem Inv.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : AB
           · rw [hid]
             have hmem' : id ∉ c.F := by
               rw [← hCF, ← hid]; exact hmem
-            have he0 := hI.est0 id hmem' (hr.trans hr0) (Or.inr (Or.inl hph))
+            have he0 := hI.estimate0 id hmem' (hr.trans hr0) (Or.inr (Or.inl hph))
             rw [← he0, hest, hcall]
           · rw [hid] at hmem; exact absurd (hCF ▸ hmem) (not_not.mpr hF)
         · rw [hself, hr0] at hcall
           rw [hid] at hmem ⊢
-          exact hI.input_g0 id b' (hCF ▸ hmem) hcall
+          exact hI.input_gbcaRound0 id b' (hCF ▸ hmem) hcall
       · have := hGcallval id' b' hcall hid
         rw [hr0] at this
-        exact hI.input_g0 id' b' (hCF ▸ hmem) this
+        exact hI.input_gbcaRound0 id' b' (hCF ▸ hmem) this
     · rw [hGeq 0 (Ne.symm hr0)] at hcall
-      exact hI.input_g0 id' b' (hCF ▸ hmem) hcall
+      exact hI.input_gbcaRound0 id' b' (hCF ▸ hmem) hcall
   · -- input_called
     intro r' id' hmem hcall
     rw [(hCprocs id').1]
@@ -2418,19 +2423,19 @@ theorem Inv.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : AB
     · rw [hc'eq] at hne
       rw [(hCprocs id').1]
       exact hI.phase_input id' (hCF ▸ hmem) hne
-  · -- down_closed
+  · -- down_settled
     intro r' h
     rw [RoundSettled.congr (hBindeq r') (hGradeeq r')]
-    exact hI.down_closed r' ((RoundSettled.congr (hBindeq (r' + 1)) (hGradeeq (r' + 1))).mp h)
+    exact hI.down_settled r' ((RoundSettled.congr (hBindeq (r' + 1)) (hGradeeq (r' + 1))).mp h)
   · -- quiescent
     obtain ⟨R, hR⟩ := hI.quiescent
     exact ⟨R, fun r' hr' h => hR r' hr' ((RoundSettled.congr (hBindeq r') (hGradeeq r')).mp h)⟩
-  · -- w_bound
-    intro r' h; rw [RoundSettled.congr (hBindeq r') (hGradeeq r')]; exact hI.w_bound r' h
-  · intro i j b' h; rw [hCDR] at h; rw [hCDS]; exact hI.recv_sound i j b' h
+  · -- wcc_bound
+    intro r' h; rw [RoundSettled.congr (hBindeq r') (hGradeeq r')]; exact hI.wcc_bound r' h
+  · intro i j b' h; rw [hCDR] at h; rw [hCDS]; exact hI.received_sound i j b' h
   · intro id' b' hmem h
     rw [hCDS] at h
-    exact (hI.decided_src id' b' (hCF ▸ hmem) h).imp (fun r0 => hCertTrans r0 b')
+    exact (hI.decided_source id' b' (hCF ▸ hmem) h).imp (fun r0 => hCertTrans r0 b')
   · intro r0 b0 hgr hbr
     rw [hGradeeq] at hgr; rw [hBindeq] at hbr
     exact hCommitTrans r0 b0 (hI.a_commit r0 b0 hgr hbr)
@@ -2462,7 +2467,7 @@ theorem Inv.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : AB
       rw [(hCprocs id').2.2]; exact hI.call_round r' id' (hCF ▸ hmem) hcall
   · intro r' id' hmem hcalled
     rw [RoundSettled.congr (hBindeq r') (hGradeeq r')]
-    exact hI.w_called r' id' (hCF ▸ hmem) hcalled
+    exact hI.wcc_called r' id' (hCF ▸ hmem) hcalled
   · intro r' id' hmem hround
     rw [(hCprocs id').2.2] at hround
     exact hI.round_flip r' id' (hCF ▸ hmem) hround
@@ -2472,18 +2477,18 @@ theorem Inv.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : AB
       · have hmem' : id ∉ c.F := by rw [← hCF, ← hid]; exact hmem
         rw [hid, (hCprocs id).2.2] at hround
         rw [hid, (hCprocs id).1, (hCprocs id).2.1]
-        exact hI.est0 id hmem' hround (Or.inr (Or.inl hph))
+        exact hI.estimate0 id hmem' hround (Or.inr (Or.inl hph))
       · rw [(hCprocs id').2.2] at hround
         rw [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid] at hphase
         rw [(hCprocs id').1, (hCprocs id').2.1]
-        exact hI.est0 id' (hCF ▸ hmem) hround hphase
+        exact hI.estimate0 id' (hCF ▸ hmem) hround hphase
     · rw [hc'eq] at hphase
       rw [(hCprocs id').2.2] at hround
       rw [(hCprocs id').1, (hCprocs id').2.1]
-      exact hI.est0 id' (hCF ▸ hmem) hround hphase
+      exact hI.estimate0 id' (hCF ▸ hmem) hround hphase
   · intro id' b' hlg
     rw [hLastGradeG] at hlg
-    exact (hI.grade_A_src id' b' hlg).imp (fun r0 => hCertTrans r0 b')
+    exact (hI.grade_A_source id' b' hlg).imp (fun r0 => hCertTrans r0 b')
   · intro r' id' hmem hround hphase
     rcases hCcall with ⟨hph, hr, hest, hc'eq⟩ | ⟨hF, hc'eq⟩
     · by_cases hid : id' = id
@@ -2492,7 +2497,7 @@ theorem Inv.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : AB
         rcases hphase with h | h <;> simp at h
       · rw [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid] at hround hphase
         rw [(hCprocs id').2.1]
-        obtain ⟨hnone, hsome⟩ := hI.est_ret r' id' (hCF ▸ hmem) hround hphase
+        obtain ⟨hnone, hsome⟩ := hI.estimate_ret r' id' (hCF ▸ hmem) hround hphase
         refine ⟨fun he => ?_, fun b hb => ?_⟩
         · obtain ⟨hg0, hno⟩ := hnone he
           refine ⟨by rw [hGradeeq]; exact hg0, fun r₀ hr0 hgr0 => ?_⟩
@@ -2501,7 +2506,7 @@ theorem Inv.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : AB
         · rw [hBindeq]; exact hsome b hb
     · rw [hc'eq] at hround hphase
       rw [(hCprocs id').2.1]
-      obtain ⟨hnone, hsome⟩ := hI.est_ret r' id' (hCF ▸ hmem) hround hphase
+      obtain ⟨hnone, hsome⟩ := hI.estimate_ret r' id' (hCF ▸ hmem) hround hphase
       refine ⟨fun he => ?_, fun b hb => ?_⟩
       · obtain ⟨hg0, hno⟩ := hnone he
         refine ⟨by rw [hGradeeq]; exact hg0, fun r₀ hr0 hgr0 => ?_⟩
@@ -2520,44 +2525,44 @@ theorem Inv.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : AB
         · rw [hself, Option.some_inj] at hcall
           rcases hCcall with ⟨hph, hr, hest, -⟩ | ⟨hF, -⟩
           · have hround : (c.processes id).round = r' + 1 := by rw [hr, h1]
-            have hep := hI.est_prev r' id (hCF ▸ hmem) hround (Or.inr (Or.inl hph)) b hest
+            have hep := hI.estimate_previous r' id (hCF ▸ hmem) hround (Or.inr (Or.inl hph)) b hest
             rw [hBindeq r', hGradeeq r']
             rwa [hcall] at hep
           · exact absurd hF (hCF ▸ hmem)
         · rw [hself] at hcall
           rw [hBindeq r', hGradeeq r']
-          exact hI.call_prov r' id v (hCF ▸ hmem) (by rw [h1]; exact hcall)
+          exact hI.call_provenance r' id v (hCF ▸ hmem) (by rw [h1]; exact hcall)
       · rw [h1, Function.update_self] at hcall
         have hcv := hGcallval id' v hcall hid
         rw [hBindeq r', hGradeeq r']
-        exact hI.call_prov r' id' v (hCF ▸ hmem) (by rw [h1]; exact hcv)
+        exact hI.call_provenance r' id' v (hCF ▸ hmem) (by rw [h1]; exact hcv)
     · rw [hGeq (r' + 1) h1] at hcall
       rw [hBindeq r', hGradeeq r']
-      exact hI.call_prov r' id' v (hCF ▸ hmem) hcall
+      exact hI.call_provenance r' id' v (hCF ▸ hmem) hcall
   · intro r' id' hmem hround hphase v hest
     rw [(hCprocs id').2.2] at hround; rw [(hCprocs id').2.1] at hest
     rw [hBindeq r', hGradeeq r']
     rcases hCcall with ⟨hph, -, -, hc'eq⟩ | ⟨-, hc'eq⟩
     · by_cases hid : id' = id
       · rw [hid] at hmem hround hest
-        exact hI.est_prev r' id (hCF ▸ hmem) hround (Or.inr (Or.inl hph)) v hest
+        exact hI.estimate_previous r' id (hCF ▸ hmem) hround (Or.inr (Or.inl hph)) v hest
       · rw [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid] at hphase
-        exact hI.est_prev r' id' (hCF ▸ hmem) hround hphase v hest
+        exact hI.estimate_previous r' id' (hCF ▸ hmem) hround hphase v hest
     · rw [hc'eq] at hphase
-      exact hI.est_prev r' id' (hCF ▸ hmem) hround hphase v hest
+      exact hI.estimate_previous r' id' (hCF ▸ hmem) hround hphase v hest
   · intro id' hmem hround hphase
     rw [(hCprocs id').2.2] at hround
     rw [(hCprocs id').2.1]
     rcases hCcall with ⟨hph, hr, -, hc'eq⟩ | ⟨-, hc'eq⟩
     · by_cases hid : id' = id
       · rw [hid] at hmem hround ⊢
-        exact hI.est_prev_ne id (hCF ▸ hmem) hround (Or.inr (Or.inl hph))
+        exact hI.estimate_previous_ne id (hCF ▸ hmem) hround (Or.inr (Or.inl hph))
       · rw [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid] at hphase
-        exact hI.est_prev_ne id' (hCF ▸ hmem) hround hphase
+        exact hI.estimate_previous_ne id' (hCF ▸ hmem) hround hphase
     · rw [hc'eq] at hphase
-      exact hI.est_prev_ne id' (hCF ▸ hmem) hround hphase
-  · -- `input_g0_perm`: mirrors `input_g0`'s establishment above, with an `id' ∈ F` escape
-    -- hatch replacing the honesty hypothesis.
+      exact hI.estimate_previous_ne id' (hCF ▸ hmem) hround hphase
+  · -- `input_gbcaRound0_permanent`: mirrors `input_gbcaRound0`'s establishment
+    -- above, with an `id' ∈ F` escape hatch replacing the honesty hypothesis.
     intro id' b' h
     by_cases hmem : id' ∈ c.F
     · right; rw [hCF]; exact hmem
@@ -2573,25 +2578,25 @@ theorem Inv.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : AB
             · rw [hid]
               have hmem' : id ∉ c.F := by
                 rw [hid] at hmem; exact hmem
-              have he0 := hI.est0 id hmem' (hr.trans hr0) (Or.inr (Or.inl hph))
+              have he0 := hI.estimate0 id hmem' (hr.trans hr0) (Or.inr (Or.inl hph))
               rw [← he0, hest, h]
             · rw [hid] at hmem; exact absurd hF hmem
           · rw [hself, hr0] at h
             rw [hid] at hmem ⊢
-            rcases hI.input_g0_perm id b' h with hin | hf
+            rcases hI.input_gbcaRound0_permanent id b' h with hin | hf
             · exact hin
             · exact absurd hf hmem
         · have hcv := hGcallval id' b' h hid
           rw [hr0] at hcv
-          rcases hI.input_g0_perm id' b' hcv with hin | hf
+          rcases hI.input_gbcaRound0_permanent id' b' hcv with hin | hf
           · exact hin
           · exact absurd hf hmem
       · rw [hGeq 0 (Ne.symm hr0)] at h
-        rcases hI.input_g0_perm id' b' h with hin | hf
+        rcases hI.input_gbcaRound0_permanent id' b' h with hin | hf
         · exact hin
         · exact absurd hf hmem
   · intro r' id' hmem hcalled
-    rw [(hCprocs id').2.2]; exact hI.w_call_round r' id' (hCF ▸ hmem) hcalled
+    rw [(hCprocs id').2.2]; exact hI.wcc_callRound r' id' (hCF ▸ hmem) hcalled
   · intro r' h
     rcases hI.flip_alock r' h with hg | hd
     · left; rw [hGradeeq]; exact hg
@@ -2599,7 +2604,7 @@ theorem Inv.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : AB
       exact DissentWitness.transport (hBindeq r') (hBindeq (r' - 1))
         (fun h => (hGradeeq (r' - 1)) ▸ h) (fun id' => (hCprocs id').1) hd
   · intro id' hmem hin r'
-    rw [(hCprocs id').1] at hin; exact hI.idle_no_wcall id' (hCF ▸ hmem) hin r'
+    rw [(hCprocs id').1] at hin; exact hI.idle_no_wccCall id' (hCF ▸ hmem) hin r'
   · intro r' id' hmem hp
     rw [(hCprocs id').2.2] at hp
     have hp' : ((c.processes id').round = r' ∧
@@ -2618,12 +2623,12 @@ theorem Inv.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : AB
         · rwa [hPhaseNe id' hid] at hphase
       · exact Or.inr hlt
     rw [hGradeeq]
-    rcases hI.retg_residue r' id' (hCF ▸ hmem) hp' with hg | hd
+    rcases hI.retG_witness r' id' (hCF ▸ hmem) hp' with hg | hd
     · left; exact hg
     · right; exact DissentWitness.transport (hBindeq r') (hBindeq (r' - 1))
         (fun h => (hGradeeq (r' - 1)) ▸ h) (fun id' => (hCprocs id').1) hd
   · intro r' id' hmem hcalled
-    rcases hI.wcalled_residue r' id' (hCF ▸ hmem) hcalled with hg | hd
+    rcases hI.wccCalled_witness r' id' (hCF ▸ hmem) hcalled with hg | hd
     · left; rw [hGradeeq]; exact hg
     · right
       exact DissentWitness.transport (hBindeq r') (hBindeq (r' - 1))
@@ -2649,8 +2654,8 @@ round `r' ≥ r` either has an empty exclusion set or the same live pair, and is
 be a bit already excluded at `r'` — hence `!b`, by the inductive pair — unless `r'` itself just
 closed `C`-locked (ruled out by the IH), and `c_chain` propagates the absence of a `C`-lock
 downward, so its contrapositive propagates it upward along the induction. -/
-theorem Inv.commit_up {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
-    {w : ℕ → WCC.SpecState P.n} (hI : Inv P g c w) :
+theorem Invariant.commit_up {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
+    {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) :
     ∀ r b, (g r).grade ≠ some false → (!b) ∈ (g r).excluded → b ∉ (g r).excluded →
       ∀ r', r ≤ r' →
         ((g r').excluded = ∅ ∨ ((!b) ∈ (g r').excluded ∧ b ∉ (g r').excluded)) ∧
@@ -2681,8 +2686,8 @@ theorem Inv.commit_up {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
         exact absurd hbb (by cases b <;> simp)
 
 /-- `C`-locks propagate downward to every earlier round, by iterating `c_chain`. -/
-theorem Inv.c_chain_down {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
-    {w : ℕ → WCC.SpecState P.n} (hI : Inv P g c w) :
+theorem Invariant.c_chain_down {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
+    {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) :
     ∀ r r', r ≤ r' → (g r').grade = some false → (g r).grade = some false := by
   intro r r' hrr'
   induction r', hrr' using Nat.le_induction with
@@ -2690,12 +2695,12 @@ theorem Inv.c_chain_down {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : 
   | succ r' hrr' ih => intro h; exact ih (hI.c_chain r' h)
 
 /-- `retG`: the GBCA instance only ever touches `.grade`/`.ret` (never `.F`/`.excluded`/`.call`;
-`.ret` isn't inspected by `Inv`), the core only ever touches `.estimate`/`.lastGrade`/`.phase` at
-`id` (never `.round`/`.input`). The genuinely hard obligations — `a_commit`'s *new*
+`.ret` isn't inspected by `Invariant`), the core only ever touches `.estimate`/`.lastGrade`/`.phase`
+at `id` (never `.round`/`.input`). The genuinely hard obligations — `a_commit`'s *new*
 round-`r` commitment and `agree_locked`'s est-transfer at `id` — are handed off; they need
 GBCA's own Graded-Agreement safety property, not local bookkeeping. -/
-theorem Inv.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
-    {w : ℕ → WCC.SpecState P.n} (hI : Inv P g c w) (r : ℕ) (id : Fin P.n) (out : GBCAOutput)
+theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
+    {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (r : ℕ) (id : Fin P.n) (out : GBCAOutput)
     (bnd : Bool)
     {μr : PMF (GBCA.SpecState P.n)} (hstepG : GBCA.Step P r (g r) (.retG r id out bnd) μr)
     {μc : PMF (ABAState P)}
@@ -2706,8 +2711,8 @@ theorem Inv.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
         (id ∈ c.F ∧ μc = PMF.pure c))
     {gr' : GBCA.SpecState P.n} (hgr' : gr' ∈ μr.support)
     {c' : ABAState P} (hc' : c' ∈ μc.support) :
-    Inv P (Function.update g r gr') c' w ∧
-      AbsFrame P g (Function.update g r gr') c c' := by
+    Invariant P (Function.update g r gr') c' w ∧
+      AbstractStateUnchanged P g (Function.update g r gr') c c' := by
   have hGframe : gr'.F = (g r).F ∧ gr'.excluded = (g r).excluded ∧ gr'.call = (g r).call := by
     cases hstepG with
     | retB _ _ _ _ _ _ _ _ =>
@@ -2748,7 +2753,7 @@ theorem Inv.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
     fun r' h => RoundSettled.congr (hBindeq r') (by rw [hGeq r' h])
   have hClosedTo : ∀ r', RoundSettled g r' → RoundSettled (Function.update g r gr') r' := by
     intro r' h
-    refine RoundSettled.of_frame (hBindeq r') (fun hh => ?_) h
+    refine RoundSettled.of_unchanged (hBindeq r') (fun hh => ?_) h
     by_cases h2 : r' = r
     · rw [h2, hGself]; exact hGgradeFalse (by rw [← h2]; exact hh)
     · rw [hGeq r' h2]; exact hh
@@ -2791,7 +2796,7 @@ theorem Inv.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
     cases hstepG with
     | retB _ _ _ _ _ _ _ _ =>
       rw [PMF.mem_support_pure_iff] at hgr'
-      intro hgf b; rw [hgr'] at hgf; exact hI.clock_supp r b hgf
+      intro hgf b; rw [hgr'] at hgf; exact hI.clock_support r b hgf
     | retA _ _ _ _ _ _ _ _ =>
       rw [PMF.mem_support_pure_iff] at hgr'
       intro hgf; rw [hgr'] at hgf; simp at hgf
@@ -2863,13 +2868,13 @@ theorem Inv.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
       (!v1) ∈ (g r).excluded ∨ (g r).grade = some false := by
     intro j1 v1 hj hcar
     rcases hcar with hcall | ⟨he, hk⟩
-    · rcases hI.call_prov r j1 v1 hj hcall with hd | ⟨hgf, -⟩
+    · rcases hI.call_provenance r j1 v1 hj hcall with hd | ⟨hgf, -⟩
       · exact Or.inl hd
       · exact Or.inr hgf
     · rcases hk with ⟨hr0, hph⟩ | ⟨hr0, hph⟩
-      · obtain ⟨-, hsome⟩ := hI.est_ret r j1 hj hr0 hph
+      · obtain ⟨-, hsome⟩ := hI.estimate_ret r j1 hj hr0 hph
         exact Or.inl (hsome v1 he)
-      · rcases hI.est_prev r j1 hj hr0 hph v1 he with hd | ⟨hgf, -⟩
+      · rcases hI.estimate_previous r j1 hj hr0 hph v1 he with hd | ⟨hgf, -⟩
         · exact Or.inl hd
         · exact Or.inr hgf
   have hCommitTrans : ∀ r0 b0, (g r0).grade = some true → ACommit P g c r0 b0 →
@@ -2921,7 +2926,7 @@ theorem Inv.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
         (c.processes id').estimate = some b0 := by
       intro id' hmem2 hround2
       by_cases hgroup : (c.processes id').phase = .toCallW ∨ (c.processes id').phase = .awaitW
-      · obtain ⟨hnone, hsome⟩ := hI.est_ret (c.processes id').round id' hmem2 rfl hgroup
+      · obtain ⟨hnone, hsome⟩ := hI.estimate_ret (c.processes id').round id' hmem2 rfl hgroup
         rcases Option.eq_none_or_eq_some ((c.processes id').estimate) with he | ⟨v, he⟩
         · exfalso
           obtain ⟨hgf, -⟩ := hnone he
@@ -2946,11 +2951,11 @@ theorem Inv.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
           · exact absurd (Or.inr hph2) hgroup
         have hround1 : (c.processes id').round ≠ 0 := by
           omega
-        have hne := hI.est_prev_ne id' hmem2 hround1 hphase3
+        have hne := hI.estimate_previous_ne id' hmem2 hround1 hphase3
         obtain ⟨v, he⟩ := Option.ne_none_iff_exists'.mp hne
         have hr'eq2 : (c.processes id').round = (c.processes id').round - 1 + 1 := by
           omega
-        have hep := hI.est_prev ((c.processes id').round - 1) id' hmem2 hr'eq2 hphase3 v he
+        have hep := hI.estimate_previous ((c.processes id').round - 1) id' hmem2 hr'eq2 hphase3 v he
         rw [he]
         rcases hep with hbv | ⟨hgf, -⟩
         · rcases (hCU ((c.processes id').round - 1) (by omega)).1 with hn | ⟨hres', hlive'⟩
@@ -2976,7 +2981,7 @@ theorem Inv.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
         omega
       rw [hCalleq] at hcall
       rw [hr'eq] at hcall
-      have hcp := hI.call_prov (r' - 1) id' b'' (hCF ▸ hmem) hcall
+      have hcp := hI.call_provenance (r' - 1) id' b'' (hCF ▸ hmem) hcall
       have hcu2 := hCU (r' - 1) (by omega)
       rcases hcp with hbv | ⟨hgf, -⟩
       · rcases hcu2.1 with hn | ⟨hres', hlive'⟩
@@ -3052,11 +3057,11 @@ theorem Inv.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
           simp at h1
         have hFC := hFreshCommit b1 hgne huexcluded' hulive'
         obtain ⟨id0, hid0F, hcall0⟩ := GBCA.exists_correct_caller
-          (hI.excluded_supp r1 (!b1') hres1) (by rw [hI.F_g r1]; exact hI.F_card)
+          (hI.excluded_support r1 (!b1') hres1) (by rw [hI.F_gbca r1]; exact hI.F_card)
         have hcall0' : (g r1).call id0 = some b1' := by
           simpa using hcall0
         have hid0c' : id0 ∉ c'.F := by
-          rw [hCF, ← hI.F_g r1]; exact hid0F
+          rw [hCF, ← hI.F_gbca r1]; exact hid0F
         exact hFC.2.1 r1 id0 b1' hgt hid0c' (by rw [hCalleq r1]; exact hcall0')
     · rw [hout] at hoe; simp at hoe
   refine And.intro ?_ ⟨fun r0 b0 hc => ⟨r0, hCertTrans r0 b0 hc⟩,
@@ -3071,13 +3076,13 @@ theorem Inv.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
     · rw [hc'eq]; exact ABAState.setProcess_corrupted _ _ _
     · rw [hc'eq]
   refine ⟨fun id' => by rw [hCcorr, hCF]; exact hI.corrupted_F id',
-    fun r' => (hFgeq r').trans (hCF ▸ hI.F_g r'), fun r' => hCF ▸ hI.F_w r',
+    fun r' => (hFgeq r').trans (hCF ▸ hI.F_gbca r'), fun r' => hCF ▸ hI.F_wcc r',
     hCF ▸ hI.F_card,
     ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
-    ?_, ?_, ?_, ?_, ?_, hI.w_order, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    ?_, ?_, ?_, ?_, ?_, hI.wcc_order, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro id' b' hmem hcall
     rw [(hCprocs id').1]; rw [hCalleq] at hcall
-    exact hI.input_g0 id' b' (hCF ▸ hmem) hcall
+    exact hI.input_gbcaRound0 id' b' (hCF ▸ hmem) hcall
   · intro r' id' hmem hcall
     rw [(hCprocs id').1]; rw [hCalleq] at hcall; exact hI.input_called r' id' (hCF ▸ hmem) hcall
   · intro id' hmem hne
@@ -3092,29 +3097,29 @@ theorem Inv.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
           rw [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid] at hne; exact hne
         exact hI.phase_input id' (hCF ▸ hmem) hne'
     · rw [hc'eq] at hne; rw [(hCprocs id').1]; exact hI.phase_input id' (hCF ▸ hmem) hne
-  · -- `down_closed`: off the returning round nothing moved; at `r' + 1 = r` a `C`-return's
+  · -- `down_settled`: off the returning round nothing moved; at `r' + 1 = r` a `C`-return's
     -- both-bit support pushes the `C`-lock down one round (`c_chain_of_both_supports`).
     intro r' h
     by_cases h2 : r' = r
-    · exact hClosedTo r' (hI.down_closed r' ((hClosedEq (r' + 1) (by omega)).mp h))
+    · exact hClosedTo r' (hI.down_settled r' ((hClosedEq (r' + 1) (by omega)).mp h))
     · rw [hClosedEq r' h2]
       by_cases h1 : r' + 1 = r
       · rcases h with hb | hgf
-        · refine hI.down_closed r' (Or.inl ?_)
+        · refine hI.down_settled r' (Or.inl ?_)
           rw [← hBindeq (r' + 1)]; exact hb
         · have hgself : Function.update g r gr' (r' + 1) = gr' := by rw [h1]; exact hGself
           rw [hgself] at hgf
           exact Or.inr (hI.c_chain_of_both_supports r' (by rw [h1]; exact hCsupp hgf true)
             (by rw [h1]; exact hCsupp hgf false))
-      · exact hI.down_closed r' ((hClosedEq (r' + 1) h1).mp h)
+      · exact hI.down_settled r' ((hClosedEq (r' + 1) h1).mp h)
   · obtain ⟨R, hR⟩ := hI.quiescent
     exact ⟨max R (r + 1), fun r' hr' h =>
       hR r' (by omega) ((hClosedEq r' (by omega)).mp h)⟩
-  · intro r' h; exact hClosedTo r' (hI.w_bound r' h)
-  · intro i j b' h; rw [hCDR] at h; rw [hCDS]; exact hI.recv_sound i j b' h
+  · intro r' h; exact hClosedTo r' (hI.wcc_bound r' h)
+  · intro i j b' h; rw [hCDR] at h; rw [hCDS]; exact hI.received_sound i j b' h
   · intro id' b' hmem h
     rw [hCDS] at h
-    exact (hI.decided_src id' b' (hCF ▸ hmem) h).imp (fun r0 => hCertTrans r0 b')
+    exact (hI.decided_source id' b' (hCF ▸ hmem) h).imp (fun r0 => hCertTrans r0 b')
   · intro r0 b0 hgr hbr
     by_cases hr0r : r0 = r
     · rw [hr0r, Function.update_self] at hgr hbr
@@ -3172,7 +3177,7 @@ theorem Inv.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
           · rw [← heq] at huexcluded
             rw [hlast'.2] at huexcluded
             simp at huexcluded
-          · exact hI.no_cgrade_succ_of_supp r' v hcoin hbnd (by rw [heq]; exact hCsupp hgf (!v))
+          · exact hI.no_cgrade_succ_of_support r' v hcoin hbnd (by rw [heq]; exact hCsupp hgf (!v))
         · rcases hI.round_bound id hmem' (r' + 1) (by omega) with hh | hh
           · exact hh hlast'.2
           · exact hI.no_cgrade_succ r' v hcoin hbnd hh
@@ -3192,7 +3197,7 @@ theorem Inv.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
     rw [(hCprocs id').2]
     exact hI.call_round r' id' (hCF ▸ hmem) hcall
   · intro r' id' hmem hcalled
-    exact hClosedTo r' (hI.w_called r' id' (hCF ▸ hmem) hcalled)
+    exact hClosedTo r' (hI.wcc_called r' id' (hCF ▸ hmem) hcalled)
   · intro r' id' hmem hround
     rw [(hCprocs id').2] at hround
     exact hI.round_flip r' id' (hCF ▸ hmem) hround
@@ -3205,11 +3210,11 @@ theorem Inv.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
       · rw [(hCprocs id').2] at hround
         rw [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid] at hphase
         rw [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid]
-        exact hI.est0 id' (hCF ▸ hmem) hround hphase
+        exact hI.estimate0 id' (hCF ▸ hmem) hround hphase
     · rw [(hCprocs id').2] at hround
       rw [hc'eq] at hphase
       rw [hc'eq]
-      exact hI.est0 id' (hCF ▸ hmem) hround hphase
+      exact hI.estimate0 id' (hCF ▸ hmem) hround hphase
   · intro id' b' hlg
     rcases hCstepG with ⟨hph, hr, hc'eq⟩ | ⟨hF, hc'eq⟩
     · by_cases hid : id' = id
@@ -3235,9 +3240,9 @@ theorem Inv.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
             exact hFreshCommit b' hgne (hveq ▸ hexcluded) (hveq ▸ hlive)
           · exfalso; rw [hlg] at hoe; simp at hoe
       · rw [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid] at hlg
-        exact (hI.grade_A_src id' b' hlg).imp (fun r0 => hCertTrans r0 b')
+        exact (hI.grade_A_source id' b' hlg).imp (fun r0 => hCertTrans r0 b')
     · rw [hc'eq] at hlg
-      exact (hI.grade_A_src id' b' hlg).imp (fun r0 => hCertTrans r0 b')
+      exact (hI.grade_A_source id' b' hlg).imp (fun r0 => hCertTrans r0 b')
   · intro r' id' hmem hround hphase
     rcases hCstepG with ⟨hph, hr, hc'eq⟩ | ⟨hF, hc'eq⟩
     · by_cases hid : id' = id
@@ -3263,7 +3268,7 @@ theorem Inv.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
           · exfalso; rw [hoe] at hb; exact absurd hb (by simp)
       · rw [(hCprocs id').2] at hround
         rw [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid] at hphase
-        obtain ⟨hnone, hsome⟩ := hI.est_ret r' id' (hCF ▸ hmem) hround hphase
+        obtain ⟨hnone, hsome⟩ := hI.estimate_ret r' id' (hCF ▸ hmem) hround hphase
         rw [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid]
         refine ⟨fun he => ?_, fun b hb => by rw [hBindeq]; exact hsome b hb⟩
         obtain ⟨hg0, hno⟩ := hnone he
@@ -3281,7 +3286,7 @@ theorem Inv.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
           · rw [hGeq r₀ hr0eq] at hgr0
             exact hno r₀ hr0 hgr0
     · rw [hc'eq] at hround hphase
-      obtain ⟨hnone, hsome⟩ := hI.est_ret r' id' (hCF ▸ hmem) hround hphase
+      obtain ⟨hnone, hsome⟩ := hI.estimate_ret r' id' (hCF ▸ hmem) hround hphase
       rw [hc'eq]
       refine ⟨fun he => ?_, fun b hb => by rw [hBindeq]; exact hsome b hb⟩
       obtain ⟨hg0, hno⟩ := hnone he
@@ -3308,7 +3313,7 @@ theorem Inv.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
       · rw [hGeq r' h2]; exact Or.inr ⟨hgf, hw0⟩
   · intro r' id' v hmem hcall
     rw [hCalleq] at hcall
-    rcases hI.call_prov r' id' v (hCF ▸ hmem) hcall with hbv | ⟨hgf, hw0⟩
+    rcases hI.call_provenance r' id' v (hCF ▸ hmem) hcall with hbv | ⟨hgf, hw0⟩
     · rw [hBindeq r']; exact Or.inl hbv
     · by_cases h2 : r' = r
       · rw [h2] at hgf hw0 ⊢; rw [Function.update_self]
@@ -3322,14 +3327,14 @@ theorem Inv.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
         rw [hid, hc'eq, ABAState.setProcess_processes_self] at hphase
         rcases hphase with h | h | h <;> simp at h
       · rw [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid] at hphase hest
-        rcases hI.est_prev r' id' (hCF ▸ hmem) hround hphase v hest with hbv | ⟨hgf, hw0⟩
+        rcases hI.estimate_previous r' id' (hCF ▸ hmem) hround hphase v hest with hbv | ⟨hgf, hw0⟩
         · rw [hBindeq r']; exact Or.inl hbv
         · by_cases h2 : r' = r
           · rw [h2] at hgf hw0 ⊢; rw [Function.update_self]
             exact Or.inr ⟨hGgradeFalse hgf, hw0⟩
           · rw [hGeq r' h2]; exact Or.inr ⟨hgf, hw0⟩
     · rw [hc'eq] at hphase hest
-      rcases hI.est_prev r' id' (hCF ▸ hmem) hround hphase v hest with hbv | ⟨hgf, hw0⟩
+      rcases hI.estimate_previous r' id' (hCF ▸ hmem) hround hphase v hest with hbv | ⟨hgf, hw0⟩
       · rw [hBindeq r']; exact Or.inl hbv
       · by_cases h2 : r' = r
         · rw [h2] at hgf hw0 ⊢; rw [Function.update_self]
@@ -3357,16 +3362,16 @@ theorem Inv.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
         rw [hid, hc'eq, ABAState.setProcess_processes_self] at hphase
         rcases hphase with h | h | h <;> simp at h
       · rw [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid] at hphase ⊢
-        exact hI.est_prev_ne id' (hCF ▸ hmem) hround hphase
+        exact hI.estimate_previous_ne id' (hCF ▸ hmem) hround hphase
     · rw [hc'eq] at hphase ⊢
-      exact hI.est_prev_ne id' (hCF ▸ hmem) hround hphase
+      exact hI.estimate_previous_ne id' (hCF ▸ hmem) hround hphase
   · intro id' b' h
     rw [hCalleq] at h
-    rcases hI.input_g0_perm id' b' h with hin | hf
+    rcases hI.input_gbcaRound0_permanent id' b' h with hin | hf
     · left; rw [(hCprocs id').1]; exact hin
     · right; rw [hCF]; exact hf
   · intro r' id' hmem hcalled
-    rw [(hCprocs id').2]; exact hI.w_call_round r' id' (hCF ▸ hmem) hcalled
+    rw [(hCprocs id').2]; exact hI.wcc_callRound r' id' (hCF ▸ hmem) hcalled
   · intro r' h
     rcases hI.flip_alock r' h with hg | hd
     · left
@@ -3382,11 +3387,12 @@ theorem Inv.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
           (fun hgf => by rwa [hGeq (r' - 1) hrr1]) (fun id' => (hCprocs id').1) hd
   · intro id' hmem hin r'
     rw [(hCprocs id').1] at hin
-    exact hI.idle_no_wcall id' (hCF ▸ hmem) hin r'
-  · -- `retg_residue`'s establishment: the freshly-`retG`'d `id` at round `r` (`awaitG →
+    exact hI.idle_no_wccCall id' (hCF ▸ hmem) hin r'
+  · -- `retG_witness`'s establishment: the freshly-`retG`'d `id` at round `r` (`awaitG →
     -- toCallW`) gets a fresh grade/dissent fact from the genuine GBCA return guards
     -- (`retA`/`retC` grade the round outright; `retB`'s dissent converts to `DissentWitness`
-    -- via `input_g0`/`call_prov`, mirroring `DissentWitness`'s own provenance argument);
+    -- via `input_gbcaRound0`/`call_provenance`, mirroring `DissentWitness`'s own
+    -- provenance argument);
     -- everywhere else is `hTransport`-routed pass-through of the pre-state fact.
     intro r' id' hmem hp
     rcases hp with ⟨hround, hphase⟩ | hlt
@@ -3405,57 +3411,57 @@ theorem Inv.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
             by_cases hgn : (g r).grade = none
             · right
               obtain ⟨id0, hid0F, hcall0⟩ :=
-                GBCA.exists_correct_caller hw (by rw [hI.F_g r]; exact hI.F_card)
+                GBCA.exists_correct_caller hw (by rw [hI.F_gbca r]; exact hI.F_card)
               have hcF0 : id0 ∉ c.F := by
-                rw [← hI.F_g r]; exact hid0F
+                rw [← hI.F_gbca r]; exact hid0F
               refine ⟨v, by rw [hBindeq r]; exact hexcluded, ?_⟩
               by_cases hr0 : r = 0
               · rw [if_pos hr0]
                 refine ⟨id0, ?_⟩
                 rw [(hCprocs id0).1]
-                exact hI.input_g0 id0 (!v) hcF0 (by rw [← hr0]; exact hcall0)
+                exact hI.input_gbcaRound0 id0 (!v) hcF0 (by rw [← hr0]; exact hcall0)
               · rw [if_neg hr0]
                 have heqr : r - 1 + 1 = r := by
                   omega
-                have hcp := hI.call_prov (r - 1) id0 (!v) hcF0 (by rw [heqr]; exact hcall0)
+                have hcp := hI.call_provenance (r - 1) id0 (!v) hcF0 (by rw [heqr]; exact hcall0)
                 rcases hcp with hbv | ⟨hgf, -⟩
                 · left; rw [hGeq (r - 1) (by omega)]; simpa using hbv
                 · right; rw [hGeq (r - 1) (by omega)]; exact hgf
             · left; rw [hgr']; exact hgn
         · rw [(hCprocs id').2] at hround
           rw [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid] at hphase
-          exact hTransport r' (hI.retg_residue r' id' (hCF ▸ hmem) (Or.inl ⟨hround, hphase⟩))
+          exact hTransport r' (hI.retG_witness r' id' (hCF ▸ hmem) (Or.inl ⟨hround, hphase⟩))
       · rw [(hCprocs id').2] at hround
         rw [hc'eq] at hphase
-        exact hTransport r' (hI.retg_residue r' id' (hCF ▸ hmem) (Or.inl ⟨hround, hphase⟩))
+        exact hTransport r' (hI.retG_witness r' id' (hCF ▸ hmem) (Or.inl ⟨hround, hphase⟩))
     · rw [(hCprocs id').2] at hlt
-      exact hTransport r' (hI.retg_residue r' id' (hCF ▸ hmem) (Or.inr hlt))
+      exact hTransport r' (hI.retG_witness r' id' (hCF ▸ hmem) (Or.inr hlt))
   · intro r' id' hmem hcalled
-    exact hTransport r' (hI.wcalled_residue r' id' (hCF ▸ hmem) hcalled)
+    exact hTransport r' (hI.wccCalled_witness r' id' (hCF ▸ hmem) hcalled)
   · intro r' h
     rw [hBindeq] at h
     exact GBCA.SpecState.quorum_of_eq (hFgeq r') (hCalleq r') (hI.bound_quorum r' h)
   · -- I26: `retG` never touches `excluded`, sent sets pass through the `c`-frame
     intro r' v hb
     rw [hBindeq r'] at hb
-    exact (hI.bind_supp r' v hb).mono
+    exact (hI.bind_support r' v hb).mono
       (fun id' b' h => by rw [(hCprocs id').1]; exact h) (fun x hx => by rw [hCF]; exact hx)
   · -- I27: `retG` never touches `call`/`F`; off the returning round the grade is untouched
     -- too, and on it `hCsupp` reads the guards straight off the return.
     intro r' b' hgf
-    refine GBCA.callSupp_mono (s := g r') (fun id' h => by rw [hCalleq r']; exact h)
+    refine GBCA.callSupport_mono (s := g r') (fun id' h => by rw [hCalleq r']; exact h)
       (hFgeq r').ge ?_
     by_cases hrr : r' = r
     · rw [hrr, hGself] at hgf
       rw [hrr]
       exact hCsupp hgf b'
     · rw [hGeq r' hrr] at hgf
-      exact hI.clock_supp r' b' hgf
+      exact hI.clock_support r' b' hgf
   · -- I28: `retG` never touches `excluded`/`call`/`F`
     intro r' b0 hbd
     rw [hBindeq r'] at hbd
-    exact GBCA.callSupp_mono (fun id' h => by rw [hCalleq r']; exact h) (hFgeq r').ge
-      (hI.excluded_supp r' b0 hbd)
+    exact GBCA.callSupport_mono (fun id' h => by rw [hCalleq r']; exact h) (hFgeq r').ge
+      (hI.excluded_support r' b0 hbd)
   · -- I29 establishment: a fresh value-bearing return's carrier meets every standing
     -- opposite carrier's permanent residue head-on — the return's own liveness guard
     -- refutes it; a `C`-return locks the round's grade instead.
@@ -3482,13 +3488,13 @@ theorem Inv.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
         (!v1) ∈ (g r).excluded ∨ (g r).grade = some false := by
       intro j1 v1 hj hcar
       rcases hcar with hcall | ⟨he, hk⟩
-      · rcases hI.call_prov r j1 v1 hj hcall with hd | ⟨hgf, -⟩
+      · rcases hI.call_provenance r j1 v1 hj hcall with hd | ⟨hgf, -⟩
         · exact Or.inl hd
         · exact Or.inr hgf
       · rcases hk with ⟨hr0, hph⟩ | ⟨hr0, hph⟩
-        · obtain ⟨-, hsome⟩ := hI.est_ret r j1 hj hr0 hph
+        · obtain ⟨-, hsome⟩ := hI.estimate_ret r j1 hj hr0 hph
           exact Or.inl (hsome v1 he)
-        · rcases hI.est_prev r j1 hj hr0 hph v1 he with hd | ⟨hgf, -⟩
+        · rcases hI.estimate_previous r j1 hj hr0 hph v1 he with hd | ⟨hgf, -⟩
           · exact Or.inl hd
           · exact Or.inr hgf
     have hnewpin : ∀ vnew j1 v1, j1 ∉ c.F → out.estimate = some vnew → OutcomeHolder P g c r j1 v1 →
@@ -3513,7 +3519,7 @@ theorem Inv.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
       · rwa [hGeq r₁ h2]
     rcases hred i0 v h with hold0 | ⟨-, hreq0, hev0⟩
     · rcases hred j0 v' h' with hold1 | ⟨-, hreq1, hev1⟩
-      · exact (hI.carrier_agree r₀ i0 j0 v v' (hCF ▸ hm) (hCF ▸ hm') hold0 hold1).imp
+      · exact (hI.outcomeHolder_agree r₀ i0 j0 v v' (hCF ▸ hm) (hCF ▸ hm') hold0 hold1).imp
           (fun x => x) (hGradeTo r₀)
       · rcases hnewpin v' i0 v (hCF ▸ hm) hev1 (hreq1 ▸ hold0) with hvv | hgf
         · exact Or.inl hvv
@@ -3530,8 +3536,8 @@ theorem Inv.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
       intro b1 hout j1 b1' hj hold
       have hcert : ∃ r1, ACert P g c r1 b1' := by
         rcases hold with h1 | h1
-        · exact hI.grade_A_src j1 b1' h1
-        · exact hI.decided_src j1 b1' hj h1
+        · exact hI.grade_A_source j1 b1' h1
+        · exact hI.decided_source j1 b1' hj h1
       obtain ⟨r1, hcv1⟩ := hcert
       exact hpinCert b1 hout r1 b1' hcv1
     rcases hRedH i0 b0 h with hold0 | ⟨-, hout0⟩
@@ -3544,14 +3550,14 @@ theorem Inv.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
         simpa using hout1
 
 /-- `retW`: `g` is untouched entirely; the WCC instance only touches `.ret` (not inspected by
-`Inv`); the core's `stepRound` touches `estimate`/`lastGrade`/`round`/`phase` at `id` and
+`Invariant`); the core's `stepRound` touches `estimate`/`lastGrade`/`round`/`phase` at `id` and
 conditionally `decidedSent id` (on an `A`-grade). `round_bound`'s freshly-included round is
-covered by `w_bound` (the coin having resolved closes the round); the DECIDED-on-`A`-grade
-witness for `decided_src`, and the `a_commit`/`agree_locked` extension to `id`'s new round,
+covered by `wcc_bound` (the coin having resolved closes the round); the DECIDED-on-`A`-grade
+witness for `decided_source`, and the `a_commit`/`agree_locked` extension to `id`'s new round,
 need the cross-round `lastGrade`-to-`(g r).grade/.excluded` correlation (GBCA Graded Agreement)
-that isn't a local `Inv` consequence — handed off. -/
-theorem Inv.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
-    {w : ℕ → WCC.SpecState P.n} (hI : Inv P g c w) (r : ℕ) (id : Fin P.n) (b : Bool)
+that isn't a local `Invariant` consequence — handed off. -/
+theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
+    {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (r : ℕ) (id : Fin P.n) (b : Bool)
     {μw' : PMF (WCC.SpecState P.n)} (hstepW : WCC.Step P r (w r) (.retW r id b) μw')
     {μc : PMF (ABAState P)}
     (hstepC :
@@ -3560,7 +3566,7 @@ theorem Inv.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
         (id ∈ c.F ∧ μc = PMF.pure c))
     {wr' : WCC.SpecState P.n} (hwr' : wr' ∈ μw'.support)
     {c' : ABAState P} (hc' : c' ∈ μc.support) :
-    Inv P g c' (Function.update w r wr') ∧ AbsFrame P g g c c' := by
+    Invariant P g c' (Function.update w r wr') ∧ AbstractStateUnchanged P g g c c' := by
   have hWeq : (Function.update w r wr' r).F = (w r).F ∧
       (Function.update w r wr' r).val = (w r).val := by
     rw [Function.update_self]; cases hstepW with
@@ -3654,7 +3660,7 @@ theorem Inv.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
             rcases Option.eq_none_or_eq_some ((c.processes id).estimate) with hoe | ⟨bv, hoe⟩
             · exfalso
               obtain ⟨hg0', -⟩ :=
-                (hI.est_ret r id (hFeq ▸ (hid ▸ hmem)) hr (Or.inr hph)).1 hoe
+                (hI.estimate_ret r id (hFeq ▸ (hid ▸ hmem)) hr (Or.inr hph)).1 hoe
               rw [hr0r] at hg0
               exact absurd (hg0.symm.trans hg0') (by simp)
             · have hbv0 : bv = b0 :=
@@ -3666,7 +3672,7 @@ theorem Inv.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
         · exact h4 id0 v (hFeq ▸ hmem) hold
         · rcases Option.eq_none_or_eq_some ((c.processes id).estimate) with hoe | ⟨bv, hoe⟩
           · obtain ⟨hg0', -⟩ :=
-              (hI.est_ret r id (hFeq ▸ (heq0 ▸ hmem)) hr (Or.inr hph)).1 hoe
+              (hI.estimate_ret r id (hFeq ▸ (heq0 ▸ hmem)) hr (Or.inr hph)).1 hoe
             rw [hreq] at hg0
             exact absurd (hg0.symm.trans hg0') (by simp)
           · have hv : v = bv := by rw [hoe] at hev; simpa using hev.symm
@@ -3697,38 +3703,38 @@ theorem Inv.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
       fun v _ hpin j b' hj hh => hpin j b' (hFeq ▸ hj) (hRedHW j b' hh)⟩
     refine ⟨fun id' => by
         rw [ABAState.stepRound_corrupted, hFeq]; exact hI.corrupted_F id',
-      fun r' => hFeq ▸ hI.F_g r', fun r' => (hFweq r').trans (hFeq ▸ hI.F_w r'),
-      hFeq ▸ hI.F_card, ?_, ?_, ?_, hI.down_closed, hI.quiescent,
-      fun r' h => hI.w_bound r' (by rw [← hValeq r']; exact h),
+      fun r' => hFeq ▸ hI.F_gbca r', fun r' => (hFweq r').trans (hFeq ▸ hI.F_wcc r'),
+      hFeq ▸ hI.F_card, ?_, ?_, ?_, hI.down_settled, hI.quiescent,
+      fun r' h => hI.wcc_bound r' (by rw [← hValeq r']; exact h),
       ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, hI.c_chain, ?_,
       ?_, ?_, ?_, ?_, ?_, ?_, ?_, hI.bound_quorum,
-      fun r' v hb2 => (hI.bind_supp r' v hb2).mono
+      fun r' v hb2 => (hI.bind_support r' v hb2).mono
         (fun id2 b2 h => by
           by_cases hid2 : id2 = id
           · rw [hid2, hInputEq]; exact hid2 ▸ h
           · rw [hProcNe id2 hid2]; exact h)
         (fun x hx => by rw [hFeq]; exact hx),
-      hI.clock_supp, hI.excluded_supp,
+      hI.clock_support, hI.excluded_support,
       fun r₀ i0 j0 v v' hm hm' h h' => by
         rcases hRedW r₀ i0 v h with hold0 | ⟨heq0, hreq0, hev0⟩
         · rcases hRedW r₀ j0 v' h' with hold1 | ⟨heq1, hreq1, hev1⟩
-          · exact hI.carrier_agree r₀ i0 j0 v v' (hFeq ▸ hm) (hFeq ▸ hm') hold0 hold1
+          · exact hI.outcomeHolder_agree r₀ i0 j0 v v' (hFeq ▸ hm) (hFeq ▸ hm') hold0 hold1
           · rcases Option.eq_none_or_eq_some ((c.processes id).estimate) with hoe | ⟨bv, hoe⟩
             · obtain ⟨hg0, -⟩ :=
-                (hI.est_ret r id (hFeq ▸ (heq1 ▸ hm')) hr (Or.inr hph)).1 hoe
+                (hI.estimate_ret r id (hFeq ▸ (heq1 ▸ hm')) hr (Or.inr hph)).1 hoe
               exact Or.inr (by rw [hreq1]; exact hg0)
             · have hv' : v' = bv := by rw [hoe] at hev1; simpa using hev1.symm
               rw [hv']
-              exact hI.carrier_agree r₀ i0 id v bv (hFeq ▸ hm) (hFeq ▸ (heq1 ▸ hm')) hold0
+              exact hI.outcomeHolder_agree r₀ i0 id v bv (hFeq ▸ hm) (hFeq ▸ (heq1 ▸ hm')) hold0
                 (hreq1 ▸ hIdCarr bv hoe)
         · rcases hRedW r₀ j0 v' h' with hold1 | ⟨heq1, hreq1, hev1⟩
           · rcases Option.eq_none_or_eq_some ((c.processes id).estimate) with hoe | ⟨bv, hoe⟩
             · obtain ⟨hg0, -⟩ :=
-                (hI.est_ret r id (hFeq ▸ (heq0 ▸ hm)) hr (Or.inr hph)).1 hoe
+                (hI.estimate_ret r id (hFeq ▸ (heq0 ▸ hm)) hr (Or.inr hph)).1 hoe
               exact Or.inr (by rw [hreq0]; exact hg0)
             · have hv0 : v = bv := by rw [hoe] at hev0; simpa using hev0.symm
               rw [hv0]
-              exact hI.carrier_agree r₀ id j0 bv v' (hFeq ▸ (heq0 ▸ hm)) (hFeq ▸ hm')
+              exact hI.outcomeHolder_agree r₀ id j0 bv v' (hFeq ▸ (heq0 ▸ hm)) (hFeq ▸ hm')
                 (hreq0 ▸ hIdCarr bv hoe) hold1
           · exact Or.inl (hev0.symm.trans hev1),
       fun i0 j0 b0 b0' hm hm' h h' => hI.alock_agree i0 j0 b0 b0' (hFeq ▸ hm) (hFeq ▸ hm')
@@ -3736,8 +3742,8 @@ theorem Inv.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
     · intro id' b' hmem hcall
       by_cases h : id' = id
       · rw [h] at hmem hcall; rw [h, hInputEq]
-        exact hI.input_g0 id b' (hFeq ▸ hmem) hcall
-      · rw [hProcNe id' h]; exact hI.input_g0 id' b' (hFeq ▸ hmem) hcall
+        exact hI.input_gbcaRound0 id b' (hFeq ▸ hmem) hcall
+      · rw [hProcNe id' h]; exact hI.input_gbcaRound0 id' b' (hFeq ▸ hmem) hcall
     · intro r' id' hmem hcall
       by_cases h : id' = id
       · rw [h] at hmem hcall; rw [h, hInputEq]
@@ -3752,33 +3758,33 @@ theorem Inv.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
     · intro i j b' h
       rw [hDReq] at h
       rcases hDSeq with heq | ⟨b0, hlg, heq⟩
-      · rw [heq]; exact hI.recv_sound i j b' h
+      · rw [heq]; exact hI.received_sound i j b' h
       · rw [heq]
         by_cases hji : j = id
         -- the sent set only grows (D12′): the old receipt stays covered
         · rw [hji] at h ⊢
           rw [Function.update_self]
-          exact Finset.mem_insert_of_mem (hI.recv_sound i id b' h)
-        · rw [Function.update_of_ne hji]; exact hI.recv_sound i j b' h
+          exact Finset.mem_insert_of_mem (hI.received_sound i id b' h)
+        · rw [Function.update_of_ne hji]; exact hI.received_sound i j b' h
     · intro id' b' hmem h
       rcases hDSeq with heq | ⟨b0, hlg, heq⟩
       · rw [heq] at h
-        exact (hI.decided_src id' b' (hFeq ▸ hmem) h).imp (fun r0 => hCertW r0 b')
+        exact (hI.decided_source id' b' (hFeq ▸ hmem) h).imp (fun r0 => hCertW r0 b')
       · rw [heq] at h
         by_cases hid : id' = id
         · rw [hid, Function.update_self, Finset.mem_insert] at h
           rcases h with rfl | h
-          · exact (hI.grade_A_src id b' hlg).imp (fun r0 => hCertW r0 b')
-          · exact (hI.decided_src id b' (hFeq ▸ hid ▸ hmem) h).imp (fun r0 => hCertW r0 b')
+          · exact (hI.grade_A_source id b' hlg).imp (fun r0 => hCertW r0 b')
+          · exact (hI.decided_source id b' (hFeq ▸ hid ▸ hmem) h).imp (fun r0 => hCertW r0 b')
         · rw [Function.update_of_ne hid] at h
-          exact (hI.decided_src id' b' (hFeq ▸ hmem) h).imp (fun r0 => hCertW r0 b')
+          exact (hI.decided_source id' b' (hFeq ▸ hmem) h).imp (fun r0 => hCertW r0 b')
     · intro r0 b0 hgr hbr
       exact hCommitW r0 b0 hgr (hI.a_commit r0 b0 hgr hbr)
     · intro id' hmem r' hround
       by_cases h : id' = id
       · rw [h] at hmem; rw [h, hRoundEq] at hround
         by_cases hr' : r' = (c.processes id).round
-        · rw [hr', hr]; exact hI.w_bound r hWval
+        · rw [hr', hr]; exact hI.wcc_bound r hWval
         · exact hI.round_bound id (hFeq ▸ hmem) r' (by omega)
       · rw [hProcNe id' h] at hround; exact hI.round_bound id' (hFeq ▸ hmem) r' hround
     · intro r' v hlast hbr hcoin id' hmem hround
@@ -3791,7 +3797,7 @@ theorem Inv.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
         · have hr'eq : r' = (c.processes id).round := by omega
           have hr'r : r' = r := hr'eq.trans hr
           rw [hid]; simp only [hProcSelf]
-          obtain ⟨hnone, hsome⟩ := hI.est_ret r id (hFeq ▸ (hid ▸ hmem)) hr (Or.inr hph)
+          obtain ⟨hnone, hsome⟩ := hI.estimate_ret r id (hFeq ▸ (hid ▸ hmem)) hr (Or.inr hph)
           by_cases holdE : (c.processes id).estimate = none
           · obtain ⟨hg0, -⟩ := hnone holdE
             have hbeqv : b = v := hCoinEq v (by rw [← hr'r]; exact hcoin)
@@ -3815,7 +3821,7 @@ theorem Inv.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
       · rw [hProcNe id' h]
         exact hI.call_round r' id' (hFeq ▸ hmem) hcall
     · intro r' id' hmem hcalled
-      rw [hCalledEq] at hcalled; exact hI.w_called r' id' (hFeq ▸ hmem) hcalled
+      rw [hCalledEq] at hcalled; exact hI.wcc_called r' id' (hFeq ▸ hmem) hcalled
     · intro r' id' hmem hround
       by_cases h : id' = id
       · rw [h, hRoundEq] at hround
@@ -3832,12 +3838,12 @@ theorem Inv.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
         rw [h, hRoundEq] at hround
         omega
       · rw [hProcNe id' h] at hround hphase ⊢
-        exact hI.est0 id' (hFeq ▸ hmem) hround hphase
+        exact hI.estimate0 id' (hFeq ▸ hmem) hround hphase
     · intro id' b' hlg
       by_cases h : id' = id
       · exfalso; rw [h, hProcSelf] at hlg; simp at hlg
       · rw [hProcNe id' h] at hlg
-        exact (hI.grade_A_src id' b' hlg).imp (fun r0 => hCertW r0 b')
+        exact (hI.grade_A_source id' b' hlg).imp (fun r0 => hCertW r0 b')
     · intro r' id' hmem hround hphase
       by_cases h : id' = id
       · exfalso
@@ -3845,10 +3851,10 @@ theorem Inv.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
         rcases hphase with hp | hp <;> simp at hp
       · rw [hProcNe id' h] at hround hphase
         rw [hProcNe id' h]
-        exact hI.est_ret r' id' (hFeq ▸ hmem) hround hphase
+        exact hI.estimate_ret r' id' (hFeq ▸ hmem) hround hphase
     · intro r' v h; rw [hValeq r']; exact hI.bind_succ r' v h
     · intro r' id' v hmem hcall
-      rw [hValeq r']; exact hI.call_prov r' id' v (hFeq ▸ hmem) hcall
+      rw [hValeq r']; exact hI.call_provenance r' id' v (hFeq ▸ hmem) hcall
     · intro r' id' hmem hround hphase v hest
       by_cases hid : id' = id
       · rw [hid, hRoundEq] at hround
@@ -3859,7 +3865,7 @@ theorem Inv.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
           have hcopy := hest
           rw [hid, hProcSelf] at hcopy
           exact Option.some_inj.mp hcopy
-        have hep := hI.est_ret r id (hFeq ▸ (hid ▸ hmem)) hr (Or.inr hph)
+        have hep := hI.estimate_ret r id (hFeq ▸ (hid ▸ hmem)) hr (Or.inr hph)
         rcases Option.eq_none_or_eq_some ((c.processes id).estimate) with hoe | ⟨bv, hoe⟩
         · rw [hoe] at hveq; simp at hveq
           obtain ⟨hg0, -⟩ := hep.1 hoe
@@ -3871,30 +3877,30 @@ theorem Inv.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
           rw [← hveq]; exact Or.inl hbveq
       · rw [hProcNe id' hid] at hround hphase hest
         rw [hValeq r']
-        exact hI.est_prev r' id' (hFeq ▸ hmem) hround hphase v hest
+        exact hI.estimate_previous r' id' (hFeq ▸ hmem) hround hphase v hest
     · intro id' hmem hround hphase
       by_cases hid : id' = id
       · rw [hid, hProcSelf]; simp
       · rw [hProcNe id' hid] at hround hphase ⊢
-        exact hI.est_prev_ne id' (hFeq ▸ hmem) hround hphase
-    · intro r' h; rw [hValeq] at h ⊢; exact hI.w_order r' h
+        exact hI.estimate_previous_ne id' (hFeq ▸ hmem) hround hphase
+    · intro r' h; rw [hValeq] at h ⊢; exact hI.wcc_order r' h
     · intro id' b' h
       by_cases hid : id' = id
       · rw [hid] at h ⊢
-        rcases hI.input_g0_perm id b' h with hin | hf
+        rcases hI.input_gbcaRound0_permanent id b' h with hin | hf
         · left; rw [hInputEq]; exact hin
         · right; rw [hFeq]; exact hf
       · rw [hProcNe id' hid]
-        rcases hI.input_g0_perm id' b' h with hin | hf
+        rcases hI.input_gbcaRound0_permanent id' b' h with hin | hf
         · left; exact hin
         · right; rw [hFeq]; exact hf
     · intro r' id' hmem hcalled
       rw [hCalledEq] at hcalled
       by_cases h : id' = id
       · rw [h, hRoundEq]; rw [h] at hmem hcalled
-        exact le_trans (hI.w_call_round r' id (hFeq ▸ hmem) hcalled) (by omega)
+        exact le_trans (hI.wcc_callRound r' id (hFeq ▸ hmem) hcalled) (by omega)
       · rw [hProcNe id' h]
-        exact hI.w_call_round r' id' (hFeq ▸ hmem) hcalled
+        exact hI.wcc_callRound r' id' (hFeq ▸ hmem) hcalled
     · intro r' h
       rw [hValeq] at h
       rcases hI.flip_alock r' h with hg | hd
@@ -3909,9 +3915,9 @@ theorem Inv.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
       by_cases h : id' = id
       · rw [h] at hmem hin
         rw [h]; rw [hInputEq] at hin
-        exact hI.idle_no_wcall id (hFeq ▸ hmem) hin r'
+        exact hI.idle_no_wccCall id (hFeq ▸ hmem) hin r'
       · rw [hProcNe id' h] at hin
-        exact hI.idle_no_wcall id' (hFeq ▸ hmem) hin r'
+        exact hI.idle_no_wccCall id' (hFeq ▸ hmem) hin r'
     · intro r' id' hmem hp
       by_cases hid : id' = id
       · rw [hid] at hmem hp
@@ -3921,50 +3927,51 @@ theorem Inv.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABA
           rcases hphase with h | h <;> simp at h
         · rw [hRoundEq] at hlt0
           by_cases hlt : r' < (c.processes id).round
-          · rcases hI.retg_residue r' id (hFeq ▸ hmem) (Or.inr hlt) with hg | hd
+          · rcases hI.retG_witness r' id (hFeq ▸ hmem) (Or.inr hlt) with hg | hd
             · left; exact hg
             · right; exact hDR2 r' hd
           · have hreq : r' = r := by omega
-            rcases hI.retg_residue r id (hFeq ▸ hmem) (Or.inl ⟨hr, Or.inr hph⟩) with hg | hd
+            rcases hI.retG_witness r id (hFeq ▸ hmem) (Or.inl ⟨hr, Or.inr hph⟩) with hg | hd
             · left; rw [hreq]; exact hg
             · right; rw [hreq]; exact hDR2 r hd
       · rw [hProcNe id' hid] at hp
-        rcases hI.retg_residue r' id' (hFeq ▸ hmem) hp with hg | hd
+        rcases hI.retG_witness r' id' (hFeq ▸ hmem) hp with hg | hd
         · left; exact hg
         · right; exact hDR2 r' hd
     · intro r' id' hmem hcalled
       rw [hCalledEq] at hcalled
-      rcases hI.wcalled_residue r' id' (hFeq ▸ hmem) hcalled with hg | hd
+      rcases hI.wccCalled_witness r' id' (hFeq ▸ hmem) hcalled with hg | hd
       · left; exact hg
       · right; exact hDR2 r' hd
   · rw [PMF.mem_support_pure_iff] at hc'; subst hc'
-    refine And.intro ?_ (AbsFrame.refl P g _)
-    refine ⟨hI.corrupted_F, hI.F_g, fun r' => (hFweq r').trans (hI.F_w r'), hI.F_card,
-      hI.input_g0, hI.input_called, hI.phase_input, hI.down_closed, hI.quiescent,
-      fun r' h => hI.w_bound r' (by rw [← hValeq r']; exact h),
-      hI.recv_sound, hI.decided_src, hI.a_commit, hI.round_bound, ?_,
-      hI.gradeA_needs_bind, hI.call_round, ?_, ?_, hI.est0, hI.grade_A_src, hI.est_ret,
-      ?_, ?_, ?_, hI.c_chain, hI.est_prev_ne,
-      ?_, hI.input_g0_perm, ?_, ?_, ?_, hI.retg_residue, ?_, hI.bound_quorum,
-      hI.bind_supp, hI.clock_supp, hI.excluded_supp, hI.carrier_agree, hI.alock_agree⟩
+    refine And.intro ?_ (AbstractStateUnchanged.refl P g _)
+    refine ⟨hI.corrupted_F, hI.F_gbca, fun r' => (hFweq r').trans (hI.F_wcc r'), hI.F_card,
+      hI.input_gbcaRound0, hI.input_called, hI.phase_input, hI.down_settled, hI.quiescent,
+      fun r' h => hI.wcc_bound r' (by rw [← hValeq r']; exact h),
+      hI.received_sound, hI.decided_source, hI.a_commit, hI.round_bound, ?_,
+      hI.gradeA_needs_bind, hI.call_round, ?_, ?_, hI.estimate0, hI.grade_A_source, hI.estimate_ret,
+      ?_, ?_, ?_, hI.c_chain, hI.estimate_previous_ne,
+      ?_, hI.input_gbcaRound0_permanent, ?_, ?_, ?_, hI.retG_witness, ?_, hI.bound_quorum,
+      hI.bind_support, hI.clock_support, hI.excluded_support, hI.outcomeHolder_agree,
+        hI.alock_agree⟩
     · intro r' v hlast hbr hcoin id' hmem hround
       rw [hValeq] at hcoin
       exact hI.agree_locked r' v hlast hbr hcoin id' hmem hround
     · intro r' id' hmem hcalled
-      rw [hCalledEq] at hcalled; exact hI.w_called r' id' hmem hcalled
+      rw [hCalledEq] at hcalled; exact hI.wcc_called r' id' hmem hcalled
     · intro r' id' hmem hround
       rw [hValeq]; exact hI.round_flip r' id' hmem hround
     · intro r' v h; rw [hValeq r']; exact hI.bind_succ r' v h
-    · intro r' id' v hmem hcall; rw [hValeq r']; exact hI.call_prov r' id' v hmem hcall
+    · intro r' id' v hmem hcall; rw [hValeq r']; exact hI.call_provenance r' id' v hmem hcall
     · intro r' id' hmem hround hphase v hest
-      rw [hValeq r']; exact hI.est_prev r' id' hmem hround hphase v hest
-    · intro r' h; rw [hValeq] at h ⊢; exact hI.w_order r' h
+      rw [hValeq r']; exact hI.estimate_previous r' id' hmem hround hphase v hest
+    · intro r' h; rw [hValeq] at h ⊢; exact hI.wcc_order r' h
     · intro r' id' hmem hcalled
-      rw [hCalledEq] at hcalled; exact hI.w_call_round r' id' hmem hcalled
+      rw [hCalledEq] at hcalled; exact hI.wcc_callRound r' id' hmem hcalled
     · intro r' h; rw [hValeq] at h; exact hI.flip_alock r' h
-    · intro id' hmem hin r'; rw [hCalledEq]; exact hI.idle_no_wcall id' hmem hin r'
+    · intro id' hmem hin r'; rw [hCalledEq]; exact hI.idle_no_wccCall id' hmem hin r'
     · intro r' id' hmem hcalled
-      rw [hCalledEq] at hcalled; exact hI.wcalled_residue r' id' hmem hcalled
+      rw [hCalledEq] at hcalled; exact hI.wccCalled_witness r' id' hmem hcalled
 
 end ABA
 end PLTS

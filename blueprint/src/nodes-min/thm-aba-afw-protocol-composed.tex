@@ -1,8 +1,8 @@
 \begin{theorem}[The gather-based composition]
   \label{thm:aba-afw-protocol-composed}
-  \lean{PLTS.ABA.AFW.broadcastReturnsFor}\lean{PLTS.ABA.AFW.roundProjection}\lean{PLTS.ABA.AFW.StoreInv}\lean{PLTS.ABA.AFW.ProtocolRel}\lean{PLTS.ABA.AFW.protocolSim}\lean{PLTS.ABA.AFW.protocol_composed}\leanok
+  \lean{PLTS.ABA.AFW.broadcastReturnsFor}\lean{PLTS.ABA.AFW.roundProjection}\lean{PLTS.ABA.AFW.BroadcastReturnsInvariant}\lean{PLTS.ABA.AFW.ProtocolRelation}\lean{PLTS.ABA.AFW.protocolSim}\lean{PLTS.ABA.AFW.protocol_composed}\leanok
   \uses{def:aba-afw-protocol, def:aba-afw-sides, thm:forward-sound, def:achievable}
-  The gather-based protocol is forward-simulated by its composed reading, along the Dirac lift of a relation that computes the composed state from the flat one --- a program's stores as the values with a vote quorum on its own local states, \leandecl{PLTS.ABA.AFW.broadcastReturnsFor} --- and carries the broadcast invariant at every instance of the view, \leandecl{PLTS.ABA.AFW.StoreInv}, which identifies a stored value with the value a flat guard names; hence $\operatorname{ATD}(\afw{\mathrm{protocol}}(P)) \subseteq \operatorname{ATD}(\afw{\mathrm{composed}}(P))$: \leandecl{PLTS.ABA.AFW.protocolSim}, \leandecl{PLTS.ABA.AFW.protocol_composed}.
+  The gather-based protocol is forward-simulated by its composed reading, along the Dirac lift of a relation that computes the composed state from the flat one --- a program's stores as the values with a vote quorum on its own local states, \leandecl{PLTS.ABA.AFW.broadcastReturnsFor} --- and carries the broadcast invariant at every instance of the view, \leandecl{PLTS.ABA.AFW.BroadcastReturnsInvariant}, which identifies a stored value with the value a flat guard names; hence $\operatorname{ATD}(\afw{\mathrm{protocol}}(P)) \subseteq \operatorname{ATD}(\afw{\mathrm{composed}}(P))$: \leandecl{PLTS.ABA.AFW.protocolSim}, \leandecl{PLTS.ABA.AFW.protocol_composed}.
   The three fused rows of the flat reading (D28) are answered by runs of two events of the composed round.
 \end{theorem}
 

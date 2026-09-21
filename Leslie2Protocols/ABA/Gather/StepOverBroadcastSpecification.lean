@@ -258,10 +258,11 @@ inductive StepOverBroadcastSpecification (P : Parameters) :
         ∀ q ∈ Q, ∃ U,
           holdsBindBroadcastReturn ((gatherTier s).process id) q U ∧ AcceptedPairs.subMap U g)
       (hr : ((gatherTier s).process id).returned = false) :
-      StepOverBroadcastSpecification P s (.ret id g ((core s).getD (coreOfNet P (gatherTier s).2)))
+      StepOverBroadcastSpecification P s (.ret id g ((core s).getD (coreOfNetwork P (gatherTier
+        s).2)))
         (PMF.pure (setCore (setGatherTier s ((gatherTier s).setProcess id
           { (gatherTier s).process id with returned := true }))
-          (some ((core s).getD (coreOfNet P (gatherTier s).2)))))
+          (some ((core s).getD (coreOfNetwork P (gatherTier s).2)))))
   /-- Corruption (deviation D1), in lockstep across the gather network state
   and every broadcast coordinate. -/
   | fail (s : StateOverBroadcastSpecification P.n X) (id : Fin P.n) :
@@ -450,7 +451,7 @@ theorem instanceOverBroadcastSpecification_step_row (P : Parameters) :
         | ret id g C =>
           obtain ⟨hC, hw⟩ := networkStep_ret hnet
           subst hC
-          have hw' : w' = { w with core := some (w.core.getD (coreOfNet P w.network)) } :=
+          have hw' : w' = { w with core := some (w.core.getD (coreOfNetwork P w.network)) } :=
             PMF.pure_injective hw
           have ha : a' = a := funext fun k => lift_step_none rfl (hin k)
           have hb : b' = b := funext fun q => lift_step_none rfl (hbind q)
@@ -632,7 +633,7 @@ theorem row_instanceOverBroadcastSpecification_step (P : Parameters) :
         (row_specificationOverInstanceAlphabet_step (l := Sum.inl (BRB.Label.ret j U)) rfl
           (BRB.Step.ret (b q) j U hv hr)))⟩
   | ret id g hin hbind hsub hQ hr =>
-    exact ⟨Sum.inl (.ret id g (w.core.getD (coreOfNet P w.network))), rfl,
+    exact ⟨Sum.inl (.ret id g (w.core.getD (coreOfNetwork P w.network))), rfl,
       instanceOverBroadcasts_label_step (a' := a) (b' := b) (by simp)
         (programStep_update (ProgramStep.ret (u id) g _ hin hbind hsub hQ hr)
           (fun i hi => ProgramStep.retIdle (u i) id g _ (Ne.symm hi)))

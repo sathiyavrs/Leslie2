@@ -316,7 +316,7 @@ and `retC` stay disabled forever — each asks `f + 1` at the dissenting bit, `r
 bits — and no `C`-lock can arise, so `retA v` is enabled at every un-returned process for
 the rest of the run and the round decides. This is the near-unanimous case: under unanimous
 honest input the count is capped by the corruption budget outright
-(`GBCASafety.supp_le_of_unanimous`). If the count does reach `f + 1`, then from that point
+(`GBCASafety.support_le_of_unanimous`). If the count does reach `f + 1`, then from that point
 `retB v` is enabled at every un-returned process, whatever the grade lock, since `retB`
 reads no grade. Either way each un-returned process has a return enabled from some point on
 and permanently, so a fair scheduler answers it. Nothing in the sketch mentions the coin: it
@@ -336,7 +336,7 @@ the sub-protocol position.
   corruption (D23): `ABA/ImplementationByABDY/System.lean` (`ABDY.protocol`, `network`),
   with its reading as a composition of components in
   `ABA/Composition/HybridAndSubstitution.lean` (`ABDY.composed`) and the inclusion into it
-  in `ABA/ImplementationByABDY/Simulation.lean` (`ABDY.ProtocolRel`, `ABDY.protocolSim`,
+  in `ABA/ImplementationByABDY/Simulation.lean` (`ABDY.ProtocolRelation`, `ABDY.protocolSim`,
   `ABDY.protocol_composed`) — the presentation to state fair termination over if it is to
   be stated of the protocol: the `fail` row belongs to the network adversary and is
   guarded by `k ∉ F ∧ |F| < f`, so `fail` is enabled exactly while budget remains and the

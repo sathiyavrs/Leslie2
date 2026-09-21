@@ -89,8 +89,8 @@ receipts; the vote step fires on more than `(n+f)/2` `ECHO m` receipts or on `f 
 `VOTE m` receipts; and the return takes `2f + 1` `VOTE m` receipts
 (`BRB.BrachaStep.echo`, `voteQuorum`, `voteAmplification`, `ret`). Algorithm 6 of the source
 blueprint fires the echo step on an `INIT` receipt alone and puts `n − f` at every
-quorum. That is deviation **D34**, and the quorum is `Parameters.echoQuorum`, which is
-`(n + f) / 2 + 1`; `BRB.EchoCert` is at that size, and the invariant clause `echo_prov`
+quorum. That is deviation **D34**, and the quorum is `Parameters.echoReceiptQuorum`, which is
+`(n + f) / 2 + 1`; `BRB.EchoCertificate` is at that size, and the invariant clause `echo_provenance`
 carries an honest echo of `m` back to `ldr ∈ F ∨ input ldr = some m`.
 
 **The gather rows follow AFW25's Algorithm 5.** Its main thread sends phase 2, waits,
@@ -316,7 +316,7 @@ repaired at the rule; the seventh entry is a cross-reference.
 - **`RoundLoopStep`'s DECIDED rows (chosen).** `RoundLoopStep.ret` and
   `RoundLoopStep.decidedSendRelay` read the receipt counts alone, without the `input ≠ none`
   guard their `ABAProgramStep` counterparts carry. The composed reading is the abstraction
-  the protocol is carried into, and a guard there would ripple through `ABDY.ProtocolRel` and
+  the protocol is carried into, and a guard there would ripple through `ABDY.ProtocolRelation` and
   the core simulation.
 - **`SpecStep.ret` without an honesty guard (chosen).** The honest return's guards are
   `val = some b` and `ret id = false`, and nothing about the returner, so a corrupted
@@ -348,12 +348,12 @@ repaired at the rule; the seventh entry is a cross-reference.
   re-proposal carries a bit input only by a later-corrupted process through to a return.
   `Specifications/ABA.lean` reproduces neither rule. `PLTS.ABA.SpecStep.decide` is the
   sole writer of `val` and fires only from `val = ⊥`, so the decision value is written
-  once and Agreement is structural (`PLTS.ABA.SpecInv.val_stable`); and it carries the D13
-  support guard `PLTS.ABA.InputSupport`, which is where the Validity trace dies — the
-  counterexample check in `Specifications/ABA.lean` records it, with inputs `1,0,0,0` at
-  `n = 4, f = 1` and the sole `1`-inputter corrupted leaving one supporter of `1` against
-  the `f + 1 = 2` the guard demands. The eight-rule shape this leaves, with the control
-  mode carrying the flip, is deviation **D21**.
+  once and Agreement is structural (`PLTS.ABA.SpecificationInvariant.val_stable`); and it carries
+  the D13 support guard `PLTS.ABA.InputSupport`, which is where the Validity trace dies — the
+  counterexample check in `Specifications/ABA.lean` records it, with inputs `1,0,0,0` at `n = 4, f =
+  1` and the sole `1`-inputter corrupted leaving one supporter of `1` against the `f + 1 = 2` the
+  guard demands. The eight-rule shape this leaves, with the control mode carrying the flip, is
+  deviation **D21**.
 - **TS 2's singular binding witness** (`∃ id ∉ F, call[id] = b`, source p. 19) loses
   provenance one level down, and `hybrid` over it violates Validity; the deterministic
   trace is in `GBCA/Specification.lean`'s module docstring, under D14. Both TS 1 defects

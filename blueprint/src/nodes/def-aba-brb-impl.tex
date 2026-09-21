@@ -3,7 +3,7 @@
   \lean{PLTS.ABA.BRB.Message}\lean{PLTS.ABA.BRB.ProcessRecord}\lean{PLTS.ABA.BRB.BrachaState}\lean{PLTS.ABA.BRB.BroadcastEvent}\lean{PLTS.ABA.BRB.specificationLabelMap}\lean{PLTS.ABA.BRB.BrachaStep}\lean{PLTS.ABA.BRB.brachaInstance}\lean{PLTS.ABA.BRB.brachaInstance_step_iff_row}\leanok
   \uses{def:aba-brb-spec, def:aba-networkstate, def:syncproduct, def:process-algebra, def:relabel}
   Bracha's algorithm~\cite{Bra87} --- Algorithm~1 of~\cite{AFW25} (D34) --- over the two-part state of Definition~\ref{def:aba-networkstate}.
-  The instance is the $n$ per-process programs under $\mathrm{syncProduct}$ beside the instance's network, with the two rendezvous hidden: \leandecl{PLTS.ABA.BRB.brachaInstance}.
+  The instance is the $n$ per-process programs under $\mathrm{synchronisedProduct}$ beside the instance's network, with the two rendezvous hidden: \leandecl{PLTS.ABA.BRB.brachaInstance}.
   A program holds one process's record and the messages delivered to it, indexed by sender; it holds no sent set and no corrupted set, and its guards read its own record and its own delivered sets.
   The network holds the per-sender sent sets and the corrupted set and reads no program's record.
   A multicast is a joint step of the sender, which writes its record, and the network, which records the message; a delivery is a joint step of the network, which checks that the message is sent under the named sender, and the receiver, which files it under that sender's row.

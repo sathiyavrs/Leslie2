@@ -48,13 +48,13 @@ ghost record (D30). `ABA/ImplementationByABDY/System.lean` and
 A process record of a protocol carries the round-loop record beside the stage record of every
 round the process has touched, and a flag saying whether the process has terminated (D22). A
 composed state carries one graded-agreement instance per round at every moment, and no
-termination flag. `ABDY.ProtocolRel` and `AFW.ProtocolRel` pin every composed coordinate
+termination flag. `ABDY.ProtocolRelation` and `AFW.ProtocolRelation` pin every composed coordinate
 against the protocol state: a round instance's local states are the stage records the
 processes hold for that round, and its network states are the adversary's sent sets for it.
 Those conjuncts are unguarded, so a composed state is determined by any protocol state
-related to it. `AFW.ProtocolRel` carries one further conjunct, `AFW.BoundInv`, which is not
-a reading of the protocol state: a round whose second gather has been called has its bound
-bit on record, which is what the graded return's announced bit rests on.
+related to it. `AFW.ProtocolRelation` carries one further conjunct, `AFW.BoundInvariant`, which is
+not a reading of the protocol state: a round whose second gather has been called has its bound bit
+on record, which is what the graded return's announced bit rests on.
 
 What makes each link one-directional is on the composed side, and it is the same on both. A
 round instance has a row for the Byzantine graded-agreement rows and no program of a protocol
@@ -134,36 +134,35 @@ carries the round across them.
 Three substitutions take one tier to the next, and each removes exactly what the
 component it replaces owned.
 
-- `Gather.gatherLow` replaces each of a gather's `2n` Bracha instances by a broadcast
+- `Gather.broadcastSubstitution` replaces each of a gather's `2n` Bracha instances by a broadcast
   specification. An instance's programs and its network die together; what survives of
   each is the committed value, written once.
-- `Gather.gatherCore` replaces a gather instance by the gather specification. The `n`
+- `Gather.refinesSpecification` replaces a gather instance by the gather specification. The `n`
   gather programs, the gather network and the `2n` broadcast specifications beneath them
   die together; what survives is the per-entry committed record and the frozen core.
-- `GBCA.ByAFW.pairRefines` replaces the round over the two gather specifications by
+- `GBCA.ByAFW.refinesSpecification` replaces the round over the two gather specifications by
   `GBCA.specInst`. The graded-agreement programs, the layer's network and the two gather
   specifications die; what survives is `excluded` and `grade`.
 
-The first two are applied inside the round by congruence. `GBCA.ByAFW.lowPairRefines`
-carries `Gather.gatherLow` and `GBCA.ByAFW.idealRefines` carries `Gather.gatherCore`
-through the operators a round is built from — `mapIdle` at the gather coordinate,
-`parallel_left` and `parallel_right` to hold the layer and the other gather, then
+The first two are applied inside the round by congruence. `GBCA.ByAFW.broadcastSubstitution`
+carries `Gather.broadcastSubstitution` and `GBCA.ByAFW.gatherSubstitution` carries
+`Gather.refinesSpecification` through the operators a round is built from — `mapIdle` at the gather
+coordinate, `parallel_left` and `parallel_right` to hold the layer and the other gather, then
 `abstract` and `relabel` (`ABA/GBCA/AFW/GatherSubstitutions.lean`, over
-`Framework/Congruence.lean`), and `Gather.gatherLow` itself carries `BRB.brbRefines`
-through the operators a gather instance is built from, `syncProduct` among them.
-`Gather.gatherCore` and `GBCA.ByAFW.pairRefines` are proved on the compositions
-themselves, through the row characterisations
-`Gather.instanceOverBroadcastSpecification_step_iff_row` and
+`Framework/Congruence.lean`), and `Gather.broadcastSubstitution` itself carries
+`BRB.brachaRefinesSpecification` through the operators a gather instance is built from,
+`synchronisedProduct` among them. `Gather.refinesSpecification` and
+`GBCA.ByAFW.refinesSpecification` are proved on the compositions themselves, through the row
+characterisations `Gather.instanceOverBroadcastSpecification_step_iff_row` and
 `GBCA.ByAFW.roundOverGatherSpecifications_step_iff_row`.
 
 The round's bound bit is the whole state of the layer's network, a component that carries
 no messages and is the gather-side counterpart of `GBCA.ByABDY.NetworkState.bound`. It is
 written at the first gather's return to a process from the core that return carries, no
 program reads it, and it meets the specification only at the last of the three
-substitutions, where `GBCA.ByAFW.PairRel` ties it to `excluded`. The frozen core plays the
-same part one level down: it is a field of the gather network that no process reads and no
-guard consults, and the gather specification's own core is the value its return labels
-announce (D29).
+substitutions, where `GBCA.ByAFW.SpecificationRelation` ties it to `excluded`. The frozen core plays
+the same part one level down: it is a field of the gather network that no process reads and no guard
+consults, and the gather specification's own core is the value its return labels announce (D29).
 
 Which component owns a payload is a design decision and not bookkeeping. A gather's
 `BIND` payloads travel by reliable broadcast rather than on the gather network, so a
@@ -181,7 +180,7 @@ AFW.composedOverBroadcastSpecification ⊑ AFW.composedOverGatherSpecifications 
 each the four congruences applied to one family substitution under a single context term:
 
 ```
-(((SIDE.parallel ((System.syncProduct (roundLoopProgram P)).parallel
+(((SIDE.parallel ((System.synchronisedProduct (roundLoopProgram P)).parallel
                   ((ABANetwork P).parallel (coinOverRoundAlphabet P)))).abstract
     (networkEventLabels P.n)).relabel).abstract (Label.hiddenAPI P.n)
 ```
@@ -207,8 +206,8 @@ beside the bound bit.
 No network is internal to a process, and none is a field of a process record.
 
 Both chains carry the ABA-side DECIDED network `Composition.ABANetwork`. It is a component of
-every system of both chains and the second component of `ABAState`, the state `coreRel` is
-defined on, and neither chain idealizes it.
+every system of both chains and the second component of `ABAState`, the state
+`hybridSpecificationRelation` is defined on, and neither chain idealizes it.
 
 Below that the two chains own different things. ABDY22's carries one further network, the
 round's network `GBCA.ByABDY.GBCANetwork`, a component of `ABDY.composed` and of `hybrid`, which
@@ -222,9 +221,10 @@ substitution.
 
 The gather-based chain carries `4n + 2` of them per round: one for each gather instance,
 and one for each of the `4n` broadcast instances beneath the two. They disappear in two
-stages rather than one, the broadcast networks at `Gather.gatherLow`, carried into the
-round by `GBCA.ByAFW.lowPairRefines`, and the gather networks at `Gather.gatherCore`,
-carried by `GBCA.ByAFW.idealRefines`, each inside the component being exchanged.
+stages rather than one, the broadcast networks at `Gather.broadcastSubstitution`, carried into the
+round by `GBCA.ByAFW.broadcastSubstitution`, and the gather networks at
+`Gather.refinesSpecification`, carried by `GBCA.ByAFW.gatherSubstitution`, each inside the component
+being exchanged.
 
 Every invariant therefore reads its network through accessors on a pair — the
 `GBCA.ByABDY.ImplementationState` accessors in `ABA/GBCA/ABDY/Implementation.lean`, the `ABAState`

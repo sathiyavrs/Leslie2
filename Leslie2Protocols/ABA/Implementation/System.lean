@@ -654,7 +654,7 @@ variable (P : Parameters) (M S G : Type) [DecidableEq M] [Inhabited G]
 /-- The three components side by side, over the extended alphabet: the
 synchronised process group, the network adversary and the lifted oracle. -/
 noncomputable def systemExtended : System (State P M S G) (ExtendedLabel P.n M) :=
-  (System.syncProduct (program P M S roundStep)).parallel
+  (System.synchronisedProduct (program P M S roundStep)).parallel
     ((network P M G callPayload ghostStep ghostOut).parallel (coinOverExtendedAlphabet P M))
 
 /-- The rendezvous alphabet hidden, the result read back over `Label n`. -/
@@ -1212,16 +1212,16 @@ theorem recordGBCASend_sent_ne [DecidableEq M] (s : NetworkState n M G)
 
 end Fields
 
-@[simp] theorem netCorrupt_sent {P : Parameters} {M G : Type} (s : NetworkState P.n M G)
+@[simp] theorem networkCorrupt_sent {P : Parameters} {M G : Type} (s : NetworkState P.n M G)
     (k : Fin P.n) : (NetworkState.corrupt P k s).sent = s.sent := by
   unfold NetworkState.corrupt; split <;> rfl
 
-@[simp] theorem netCorrupt_decidedSent {P : Parameters} {M G : Type} (s : NetworkState P.n M G)
+@[simp] theorem networkCorrupt_decidedSent {P : Parameters} {M G : Type} (s : NetworkState P.n M G)
     (k : Fin P.n) : (NetworkState.corrupt P k s).decidedSent = s.decidedSent := by
   unfold NetworkState.corrupt; split <;> rfl
 
 /-- Corruption leaves the ghost where it stands. -/
-@[simp] theorem netCorrupt_ghostRecord {P : Parameters} {M G : Type} (s : NetworkState P.n M G)
+@[simp] theorem networkCorrupt_ghostRecord {P : Parameters} {M G : Type} (s : NetworkState P.n M G)
     (k : Fin P.n) : (NetworkState.corrupt P k s).ghostRecord = s.ghostRecord := by
   unfold NetworkState.corrupt; split <;> rfl
 
@@ -1351,7 +1351,7 @@ end Forget
 
 /-! ### Reading composite transitions
 
-The pipeline is `relabel ∘ abstract ∘ parallel ∘ parallel ∘ syncProduct`; the
+The pipeline is `relabel ∘ abstract ∘ parallel ∘ parallel ∘ synchronisedProduct`; the
 lemmas below unfold it once and for all. -/
 
 section Composite
@@ -1365,10 +1365,10 @@ variable {P : Parameters} {M S : Type}
 process steps, and the joint distribution is Dirac. -/
 theorem programProduct_inv {u : ∀ _ : Fin P.n, ProcessRecord P.n S} {l : ExtendedLabel P.n M}
     {μ : PMF (∀ _ : Fin P.n, ProcessRecord P.n S)} (hl : l ≠ Silent.τ)
-    (h : (System.syncProduct (program P M S roundStep)).step u l μ) :
+    (h : (System.synchronisedProduct (program P M S roundStep)).step u l μ) :
     ∃ x : ∀ _ : Fin P.n, ProcessRecord P.n S,
       μ = PMF.pure x ∧ ∀ i, ProgramStep P M S roundStep i (u i) l (PMF.pure (x i)) := by
-  rw [System.syncProduct_step] at h
+  rw [System.synchronisedProduct_step] at h
   rcases h with ⟨-, μ_, hall, rfl⟩ | ⟨rfl, i, μ_i, hstep, -⟩
   · have hx : ∀ i, ∃ p', μ_ i = PMF.pure p' := fun i => programStep_dirac (hall i)
     choose x hx using hx
@@ -1382,7 +1382,7 @@ theorem programProduct_inv {u : ∀ _ : Fin P.n, ProcessRecord P.n S} {l : Exten
 one program moves and the rest hold their state. -/
 theorem programProduct_tau_inv {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
     {μ : PMF (∀ _ : Fin P.n, ProcessRecord P.n S)}
-    (h : (System.syncProduct (program P M S roundStep)).step u
+    (h : (System.synchronisedProduct (program P M S roundStep)).step u
       (Silent.τ : ExtendedLabel P.n M) μ) :
     ∃ (i : Fin P.n) (y : ProcessRecord P.n S),
       ProgramStep P M S roundStep i (u i) (Silent.τ : ExtendedLabel P.n M) (PMF.pure y) ∧

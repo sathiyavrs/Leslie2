@@ -1,10 +1,10 @@
 \begin{theorem}[The gather-based composition]
   \label{thm:aba-afw-protocol-composed}
-  \lean{PLTS.ABA.AFW.broadcastReturnsFor}\lean{PLTS.ABA.AFW.roundProjection}\lean{PLTS.ABA.AFW.StoreInv}\lean{PLTS.ABA.AFW.ProtocolRel}\lean{PLTS.ABA.AFW.protocolSim}\lean{PLTS.ABA.AFW.protocol_composed}\leanok
+  \lean{PLTS.ABA.AFW.broadcastReturnsFor}\lean{PLTS.ABA.AFW.roundProjection}\lean{PLTS.ABA.AFW.BroadcastReturnsInvariant}\lean{PLTS.ABA.AFW.ProtocolRelation}\lean{PLTS.ABA.AFW.protocolSim}\lean{PLTS.ABA.AFW.protocol_composed}\leanok
   \uses{def:aba-afw-protocol, def:aba-afw-sides, thm:forward-sound, def:achievable}
   The gather-based protocol is forward-simulated by its composed reading, and hence every trace distribution it achieves is achieved there.
   The relation has six conjuncts: the round loops and the coin oracle are shared objects, the ABA-side network is the DECIDED sets beside the corrupted set, each round's instance is the view $\mathrm{roundProjection}$ of the flat state, the bound bit of every round whose second gather has been called is on record, and the broadcast invariant holds at every broadcast instance of the view.
-  The first four are unguarded, so they determine the composed state from the flat one; the fifth, \leandecl{PLTS.ABA.AFW.BoundInv}, and the sixth, \leandecl{PLTS.ABA.AFW.StoreInv}, are the two clauses that are not readings of the flat state.
+  The first four are unguarded, so they determine the composed state from the flat one; the fifth, \leandecl{PLTS.ABA.AFW.BoundInvariant}, and the sixth, \leandecl{PLTS.ABA.AFW.BroadcastReturnsInvariant}, are the two clauses that are not readings of the flat state.
   Assembling the view undoes the three separations between the flat reading and the composed one --- the local states are transposed back out of the round records the $n$ processes hold, each network's sent set is sliced out of the adversary's single tagged sent-set family, and a program's stores are read off its own local states in the broadcast instances as the values with a vote quorum there, \leandecl{PLTS.ABA.AFW.broadcastReturnsFor} --- and it reads the two gathers' cores and the round's bound bit off the adversary's ghost record of that round.
   The broadcast invariant is what identifies a stored value with the value a flat guard names: a flat row hands its composed counterpart a specific value with a vote quorum, the store holds the value the view chose, and under the invariant two vote quorums at one process name one value.
 \end{theorem}

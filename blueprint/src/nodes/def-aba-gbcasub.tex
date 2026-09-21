@@ -8,7 +8,7 @@
   \[
     \mathrm{composition}(P,r) \;=\; \mathrm{relabel}\Bigl(
       \mathrm{abstract}_{\mathrm{GBCAEvent}(n)}\bigl(
-        \bigl(\mathrm{syncProduct}_{j \in [n]}\ \mathrm{gbcaProgram}(P,r,j)\bigr)
+        \bigl(\mathrm{synchronisedProduct}_{j \in [n]}\ \mathrm{gbcaProgram}(P,r,j)\bigr)
           \parallel \mathrm{GBCANetwork}(P,r)\bigr)\Bigr)
   \]
   is read over $\mathrm{GBCALabel}(n) = \mathrm{ExtendedLabel}(n) \oplus \mathrm{GBCAEvent}(n)$ and then over $\mathrm{ExtendedLabel}(n)$, where $\mathrm{GBCAEvent}(n)$ is the alphabet of the two rendezvous of one round, the multicast and the delivery.

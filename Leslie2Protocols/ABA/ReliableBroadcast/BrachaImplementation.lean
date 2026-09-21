@@ -21,7 +21,7 @@ of `⟨INIT, m⟩` from the leader, on an
   `f + 1` `VOTE m` receipts, once;
 * return `m` — on `2f + 1` `VOTE m` receipts.
 
-The `ECHO` quorum is `ABA.Parameters.echoQuorum`, more than `(n + f) / 2` senders.
+The `ECHO` quorum is `ABA.Parameters.echoReceiptQuorum`, more than `(n + f) / 2` senders.
 
 The state is the generic two-part shape (`ABA.InstanceState`,
 `ABA/Vocabulary/ProcessAndNetworkState.lean`): each process's local record and delivered
@@ -111,7 +111,8 @@ inductive BrachaStep (P : Parameters) (ldr : Fin P.n) :
   /-- `ECHO`: `⟨INIT, m⟩` received from the leader, an `ECHO m` receipt quorum,
   or `f + 1` `VOTE m` receipts; no `ECHO` sent yet. -/
   | echo (s : BrachaState P.n M) (j : Fin P.n) (m : M)
-      (hrecv : Message.init m ∈ s.received j ldr ∨ P.echoQuorum ≤ s.receivedCount j (.echo m) ∨
+      (hrecv : Message.init m ∈ s.received j ldr ∨ P.echoReceiptQuorum ≤ s.receivedCount j (.echo m)
+        ∨
         P.f + 1 ≤ s.receivedCount j (.vote m))
       (hsend : (s.process j).sentEcho = none) :
       BrachaStep P ldr s .tau
@@ -119,7 +120,7 @@ inductive BrachaStep (P : Parameters) (ldr : Fin P.n) :
           j (.echo m)))
   /-- `VOTE` (quorum case): an `ECHO m` receipt quorum, no `VOTE` sent yet. -/
   | voteQuorum (s : BrachaState P.n M) (j : Fin P.n) (m : M)
-      (hcnt : P.echoQuorum ≤ s.receivedCount j (.echo m))
+      (hcnt : P.echoReceiptQuorum ≤ s.receivedCount j (.echo m))
       (hsend : (s.process j).sentVote = none) :
       BrachaStep P ldr s .tau
         (PMF.pure ((s.setProcess j { s.process j with sentVote := some m }).multicast

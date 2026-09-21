@@ -31,44 +31,44 @@ could taint.
 The proof is invariant reasoning along genuine executions (via
 `TraceSupport`), on two invariants:
 
-* `SpecInv` — the state invariant, in two clauses: the corrupted set respects
+* `SpecificationInvariant` — the state invariant, in two clauses: the corrupted set respects
   the budget (`F_le`), and the decision value carries `f + 1` F-blind
-  supporters (`val_supp`). The second clause is `SpecStep.decide`'s own guard
+  supporters (`val_support`). The second clause is `SpecStep.decide`'s own guard
   at the one rule that writes `val`. Every rule that only grows the ghost
   record carries it by `InputSupport.mono`; `SpecStep.callByzantine`, whose write may
   replace a recorded bit, carries it by `InputSupport.callByzantine` instead, the writer
   being counted through the `F` disjunct.
-* `ValInv` — the label-history-aware invariant, in four clauses. The corrupted
+* `ValidityInvariant` — the label-history-aware invariant, in four clauses. The corrupted
   set is exactly the fold of D1-`corrupt` over the labels seen so far
-  (`F_eq`), `SpecInv` holds (`inv`), and the ghost record agrees with the
+  (`F_eq`), `SpecificationInvariant` holds (`invariant`), and the ghost record agrees with the
   history at every uncorrupted process: a recorded input is attributed either
   to the corruption of its own entry or to the first `callABA` of its process
-  (`input_src`), and an uncorrupted process whose first `callABA` carries `b`
-  has `b` recorded (`src_input`). The two record clauses carry each other at
-  `SpecStep.callSet`, whose guard is the empty entry: by `src_input` such an
+  (`input_source`), and an uncorrupted process whose first `callABA` carries `b`
+  has `b` recorded (`source_input`). The two record clauses carry each other at
+  `SpecStep.callSet`, whose guard is the empty entry: by `source_input` such an
   entry says no earlier `callABA` of that process was recorded, so the label
-  the rule carries is the first. `SpecStep.callByzantine` takes `input_src`'s
+  the rule carries is the first. `SpecStep.callByzantine` takes `input_source`'s
   corruption disjunct.
 
 Both branches run off one locator, `exists_retSite`: a `retABA` at trace
-position `m` sits at an execution position whose pre-state carries `ValInv`
+position `m` sits at an execution position whose pre-state carries `ValidityInvariant`
 over the label prefix, has corrupted set the fold at `m`, and each process's
 first `callABA` of that prefix reappears below `m` in the trace, first there
 as well.
 
-Agreement rests on `SpecInv.val_stable`: `SpecStep.decide` is the sole writer
+Agreement rests on `SpecificationInvariant.val_stable`: `SpecStep.decide` is the sole writer
 of `val` and fires only from `val = ⊥`, so the decision value never changes
 once written. A never-corrupted returner is outside the fold at `m`, hence
 outside the pre-state's corrupted set, so `retABA_inv`'s second disjunct is
 impossible and both returns read that one value.
 
 Validity is a budget pigeonhole at the return. `retABA_inv` reads the returned
-bit off the pre-state's decision value and `SpecInv.val_supp` yields `f + 1`
+bit off the pre-state's decision value and `SpecificationInvariant.val_support` yields `f + 1`
 supporters of that bit. Every supporter is either ghost-recorded or
 ever-corrupted, and at most `f` ids are ever corrupted (`failSet` never
 exceeds the budget), so some recorded supporter is never corrupted
 (`exists_neverCorrupted_supporter`). Such a supporter lies in no prefix fold,
-so `ValInv.input_src` yields its first `callABA` event.
+so `ValidityInvariant.input_source` yields its first `callABA` event.
 
 The same pigeonhole in the state alone is `InputSupport.correct_supporter`: a
 supported bit has an uncorrupted recorded inputter. It is what makes the
@@ -305,16 +305,17 @@ theorem InputSupport.correct_supporter {s : SpecState P.n} {b : Bool}
 
 /-- The state invariant of `ABA.spec`: the corrupted set respects the budget,
 and the decision value carries `f + 1` F-blind supporters (D13). -/
-structure SpecInv (P : Parameters) (s : SpecState P.n) : Prop where
+structure SpecificationInvariant (P : Parameters) (s : SpecState P.n) : Prop where
   /-- The corrupted set stays inside the budget. -/
   F_le : s.F.card ≤ P.f
   /-- The decision value has `f + 1` supporters. -/
-  val_supp : ∀ v, s.val = some v → InputSupport P s v
+  val_support : ∀ v, s.val = some v → InputSupport P s v
 
-theorem SpecInv.initial (P : Parameters) : SpecInv P (SpecState.initial P.n) where
+theorem SpecificationInvariant.initial (P : Parameters) : SpecificationInvariant P
+  (SpecState.initial P.n) where
   F_le := by
     simp [SpecState.initial]
-  val_supp := fun _ h => absurd h (by simp [SpecState.initial])
+  val_support := fun _ h => absurd h (by simp [SpecState.initial])
 
 /-! Field stability of `corrupt`. -/
 
@@ -357,10 +358,10 @@ theorem corrupt_card_le (hF : s.F.card ≤ P.f) : (s.corrupt P id).F.card ≤ P.
 
 end Corrupt
 
-/-- **Invariant preservation.** `SpecInv` is preserved by every step. -/
-theorem SpecInv.step {s : SpecState P.n} {l : Label P.n} {μ : PMF (SpecState P.n)}
-    {s' : SpecState P.n} (hI : SpecInv P s)
-    (hstep : SpecStep P s l μ) (hs' : s' ∈ μ.support) : SpecInv P s' := by
+/-- **Invariant preservation.** `SpecificationInvariant` is preserved by every step. -/
+theorem SpecificationInvariant.step {s : SpecState P.n} {l : Label P.n} {μ : PMF (SpecState P.n)}
+    {s' : SpecState P.n} (hI : SpecificationInvariant P s)
+    (hstep : SpecStep P s l μ) (hs' : s' ∈ μ.support) : SpecificationInvariant P s' := by
   cases hstep with
   | callSet id b h =>
     -- the write is at an empty entry, so the record only grows and
@@ -373,7 +374,7 @@ theorem SpecInv.step {s : SpecState P.n} {l : Label P.n} {μ : PMF (SpecState P.
       · subst h_eq; rw [hv] at h; exact absurd h (by simp)
       · rw [Function.update_of_ne h_eq]; exact hv
     exact ⟨hI.F_le, fun v hv =>
-      (hI.val_supp v hv).mono (fun i => hnew i v) (Finset.Subset.refl _)⟩
+      (hI.val_support v hv).mono (fun i => hnew i v) (Finset.Subset.refl _)⟩
   | callLoop id b h =>
     -- the loop writes nothing
     rw [PMF.mem_support_pure_iff] at hs'; subst hs'
@@ -382,7 +383,7 @@ theorem SpecInv.step {s : SpecState P.n} {l : Label P.n} {μ : PMF (SpecState P.
     -- every branch writes `mode` alone
     rw [PMF.mem_support_map_iff] at hs'
     obtain ⟨o, -, rfl⟩ := hs'
-    cases o <;> exact ⟨hI.F_le, hI.val_supp⟩
+    cases o <;> exact ⟨hI.F_le, hI.val_support⟩
   | decide b hv hs hm =>
     -- the guard `hs` is the conclusion
     rw [PMF.mem_support_pure_iff] at hs'; subst hs'
@@ -391,25 +392,25 @@ theorem SpecInv.step {s : SpecState P.n} {l : Label P.n} {μ : PMF (SpecState P.
     exact hs
   | ret id b h₁ h₂ =>
     rw [PMF.mem_support_pure_iff] at hs'; subst hs'
-    exact ⟨hI.F_le, hI.val_supp⟩
+    exact ⟨hI.F_le, hI.val_support⟩
   | fail id hnew hbud =>
     -- `F` grows inside the budget, and `InputSupport` is monotone in it
     rw [PMF.mem_support_pure_iff] at hs'; subst hs'
     refine ⟨corrupt_card_le s id hI.F_le, fun v hv => ?_⟩
     rw [corrupt_val] at hv
-    exact (hI.val_supp v hv).mono
+    exact (hI.val_support v hv).mono
       (fun i hh => by rw [corrupt_input]; exact hh) (corrupt_F_subset s id)
   | callByzantine id b b' hF =>
     -- `val` and `F` are untouched; `id ∈ F` keeps the overwritten field counted
     rw [PMF.mem_support_pure_iff] at hs'; subst hs'
-    exact ⟨hI.F_le, fun v hv => (hI.val_supp v hv).callByzantine hF⟩
+    exact ⟨hI.F_le, fun v hv => (hI.val_support v hv).callByzantine hF⟩
   | retByzantine id b hF =>
     rw [PMF.mem_support_pure_iff] at hs'; subst hs'
     exact hI
 
 /-- **Write-once decision.** `SpecStep.decide` is the sole writer of `val` and
 fires only from `val = ⊥`, so `val = some b` is preserved by every step. -/
-theorem SpecInv.val_stable {s : SpecState P.n} {l : Label P.n}
+theorem SpecificationInvariant.val_stable {s : SpecState P.n} {l : Label P.n}
     {μ : PMF (SpecState P.n)} {s' : SpecState P.n} {b : Bool}
     (hv : s.val = some b) (hstep : SpecStep P s l μ) (hs' : s' ∈ μ.support) :
     s'.val = some b := by
@@ -547,32 +548,34 @@ theorem firstCall_take_pullback {n : ℕ} {L : List (Label n)} {m : ℕ} {id : F
 
 /-- The history-aware invariant: the ghost record agrees with the label
 history at every uncorrupted process, and the corrupted set is exactly the
-fold of D1-`corrupt` over the labels seen so far. `input_src` attributes a
+fold of D1-`corrupt` over the labels seen so far. `input_source` attributes a
 recorded input either to the corruption of its own entry or to the process's
 first `callABA` in the history. The first disjunct is what `SpecStep.callByzantine`
 takes: its write is unrelated to the label it carries, and its guard puts the
-writer in the corrupted set. `src_input` is the converse reading at an
+writer in the corrupted set. `source_input` is the converse reading at an
 uncorrupted process, and it is what reads an empty entry as saying no earlier
 `callABA` of that process was recorded. -/
-structure ValInv (P : Parameters) (pre : List (Label P.n)) (s : SpecState P.n) : Prop where
-  inv : SpecInv P s
-  input_src : ∀ id b, s.input id = some b →
+structure ValidityInvariant (P : Parameters) (pre : List (Label P.n)) (s : SpecState P.n) : Prop
+  where
+  invariant : SpecificationInvariant P s
+  input_source : ∀ id b, s.input id = some b →
     id ∈ failSetOfList P pre ∨ firstCall pre id = some b
-  src_input : ∀ id b, id ∉ failSetOfList P pre → firstCall pre id = some b →
+  source_input : ∀ id b, id ∉ failSetOfList P pre → firstCall pre id = some b →
     s.input id = some b
   F_eq : s.F = failSetOfList P pre
 
-theorem ValInv.initial (P : Parameters) : ValInv P [] (SpecState.initial P.n) where
-  inv := SpecInv.initial P
-  input_src := fun _ _ h => absurd h (by simp [SpecState.initial])
-  src_input := fun _ _ _ h => absurd h (by simp)
+theorem ValidityInvariant.initial (P : Parameters) : ValidityInvariant P [] (SpecState.initial P.n)
+  where
+  invariant := SpecificationInvariant.initial P
+  input_source := fun _ _ h => absurd h (by simp [SpecState.initial])
+  source_input := fun _ _ _ h => absurd h (by simp)
   F_eq := rfl
 
 /-- **History-invariant preservation.** -/
-theorem ValInv.step {pre : List (Label P.n)} {s : SpecState P.n} {l : Label P.n}
+theorem ValidityInvariant.step {pre : List (Label P.n)} {s : SpecState P.n} {l : Label P.n}
     {μ : PMF (SpecState P.n)} {s' : SpecState P.n}
-    (hI : ValInv P pre s) (hstep : SpecStep P s l μ) (hs' : s' ∈ μ.support) :
-    ValInv P (pre ++ [l]) s' := by
+    (hI : ValidityInvariant P pre s) (hstep : SpecStep P s l μ) (hs' : s' ∈ μ.support) :
+    ValidityInvariant P (pre ++ [l]) s' := by
   have mono : ∀ {id' : Fin P.n} {b' : Bool},
       (id' ∈ failSetOfList P pre ∨ firstCall pre id' = some b') →
       (id' ∈ failSetOfList P (pre ++ [l]) ∨ firstCall (pre ++ [l]) id' = some b') :=
@@ -580,10 +583,10 @@ theorem ValInv.step {pre : List (Label P.n)} {s : SpecState P.n} {l : Label P.n}
       (fun hf => firstCall_append_of_some hf l)
   have hnc : ∀ {id' : Fin P.n}, id' ∉ failSetOfList P (pre ++ [l]) → id' ∉ failSetOfList P pre :=
     fun h hm => h (failSetOfList_subset_append pre l hm)
-  have h_inv' := hI.inv.step hstep hs'
+  have h_inv' := hI.invariant.step hstep hs'
   cases hstep with
   | callSet id b h =>
-    -- the guard is the empty entry, which by `src_input` says no earlier
+    -- the guard is the empty entry, which by `source_input` says no earlier
     -- `callABA id _` was recorded, so this label is `id`'s first call
     rw [PMF.mem_support_pure_iff] at hs'; subst hs'
     have hfresh : id ∈ failSetOfList P pre ∨ firstCall pre id = none := by
@@ -592,7 +595,7 @@ theorem ValInv.step {pre : List (Label P.n)} {s : SpecState P.n} {l : Label P.n}
       · refine Or.inr ?_
         cases hf : firstCall pre id with
         | none => rfl
-        | some c => exact absurd (hI.src_input id c hmem hf) (by rw [h]; simp)
+        | some c => exact absurd (hI.source_input id c hmem hf) (by rw [h]; simp)
     refine ⟨h_inv', ?_, ?_, ?_⟩
     · intro id' b' h_in
       replace h_in : Function.update s.input id (some b) id' = some b' := h_in
@@ -603,7 +606,7 @@ theorem ValInv.step {pre : List (Label P.n)} {s : SpecState P.n} {l : Label P.n}
         exact hfresh.imp (fun hm => failSetOfList_subset_append pre _ hm)
           (fun hf => firstCall_append_self hf _)
       · rw [Function.update_of_ne h_eq] at h_in
-        exact mono (hI.input_src id' b' h_in)
+        exact mono (hI.input_source id' b' h_in)
     · intro id' b' hmem hf
       by_cases h_eq : id' = id
       · subst h_eq
@@ -614,28 +617,28 @@ theorem ValInv.step {pre : List (Label P.n)} {s : SpecState P.n} {l : Label P.n}
         rw [firstCall_append_of_ne_call pre hne] at hf
         change Function.update s.input id (some b) id' = some b'
         rw [Function.update_of_ne h_eq]
-        exact hI.src_input id' b' (hnc hmem) hf
+        exact hI.source_input id' b' (hnc hmem) hf
     · change s.F = failSetOfList P (pre ++ [Label.callABA id b])
       rw [failSetOfList_append]
       exact hI.F_eq
   | callLoop id b h =>
     -- the loop writes nothing, and its guard is a filled entry, which by
-    -- `input_src` already holds an earlier call's bit at an uncorrupted `id`
+    -- `input_source` already holds an earlier call's bit at an uncorrupted `id`
     rw [PMF.mem_support_pure_iff] at hs'
     rw [hs'] at h_inv' ⊢
-    refine ⟨h_inv', fun id' b' h_in => mono (hI.input_src id' b' h_in), ?_, ?_⟩
+    refine ⟨h_inv', fun id' b' h_in => mono (hI.input_source id' b' h_in), ?_, ?_⟩
     · intro id' b' hmem hf
       by_cases h_eq : id' = id
       · subst h_eq
         obtain ⟨c, hc⟩ : ∃ c, s.input id' = some c := Option.ne_none_iff_exists'.mp h
         have hpre : firstCall pre id' = some c :=
-          (hI.input_src id' c hc).resolve_left (hnc hmem)
+          (hI.input_source id' c hc).resolve_left (hnc hmem)
         rw [firstCall_append_of_some hpre _] at hf
         rw [hc, hf]
       · have hne : ∀ b'', Label.callABA id b ≠ Label.callABA id' b'' := by
           intro b'' hcon; injection hcon with hid _; exact h_eq hid.symm
         rw [firstCall_append_of_ne_call pre hne] at hf
-        exact hI.src_input id' b' (hnc hmem) hf
+        exact hI.source_input id' b' (hnc hmem) hf
     · rw [failSetOfList_append]
       exact hI.F_eq
   | coinFlip hm hv hmix =>
@@ -647,24 +650,24 @@ theorem ValInv.step {pre : List (Label P.n)} {s : SpecState P.n} {l : Label P.n}
         firstCall (pre ++ [Label.tau]) id' = some b' → s.input id' = some b' := by
       intro id' b' hmem hf
       rw [firstCall_append_of_ne_call pre (by simp)] at hf
-      exact hI.src_input id' b' (hnc hmem) hf
+      exact hI.source_input id' b' (hnc hmem) hf
     cases o <;>
-      exact ⟨h_inv', fun id' b' h_in => mono (hI.input_src id' b' h_in), hsrc, hFeq⟩
+      exact ⟨h_inv', fun id' b' h_in => mono (hI.input_source id' b' h_in), hsrc, hFeq⟩
   | decide b hv hs hm =>
     rw [PMF.mem_support_pure_iff] at hs'; subst hs'
-    refine ⟨h_inv', fun id' b' h_in => mono (hI.input_src id' b' h_in), ?_, ?_⟩
+    refine ⟨h_inv', fun id' b' h_in => mono (hI.input_source id' b' h_in), ?_, ?_⟩
     · intro id' b' hmem hf
       rw [firstCall_append_of_ne_call pre (by simp)] at hf
-      exact hI.src_input id' b' (hnc hmem) hf
+      exact hI.source_input id' b' (hnc hmem) hf
     · change s.F = failSetOfList P (pre ++ [Label.tau])
       rw [failSetOfList_append]
       exact hI.F_eq
   | ret id b h₁ h₂ =>
     rw [PMF.mem_support_pure_iff] at hs'; subst hs'
-    refine ⟨h_inv', fun id' b' h_in => mono (hI.input_src id' b' h_in), ?_, ?_⟩
+    refine ⟨h_inv', fun id' b' h_in => mono (hI.input_source id' b' h_in), ?_, ?_⟩
     · intro id' b' hmem hf
       rw [firstCall_append_of_ne_call pre (by simp)] at hf
-      exact hI.src_input id' b' (hnc hmem) hf
+      exact hI.source_input id' b' (hnc hmem) hf
     · change s.F = failSetOfList P (pre ++ [Label.retABA id b])
       rw [failSetOfList_append]
       exact hI.F_eq
@@ -673,11 +676,11 @@ theorem ValInv.step {pre : List (Label P.n)} {s : SpecState P.n} {l : Label P.n}
     refine ⟨h_inv', ?_, ?_, ?_⟩
     · intro id' b' h_in
       rw [corrupt_input] at h_in
-      exact mono (hI.input_src id' b' h_in)
+      exact mono (hI.input_source id' b' h_in)
     · intro id' b' hmem hf
       rw [firstCall_append_of_ne_call pre (by simp)] at hf
       rw [corrupt_input]
-      exact hI.src_input id' b' (hnc hmem) hf
+      exact hI.source_input id' b' (hnc hmem) hf
     · rw [failSetOfList_append, corrupt_F, hI.F_eq]
       rfl
   | callByzantine id b b' hF =>
@@ -692,7 +695,7 @@ theorem ValInv.step {pre : List (Label P.n)} {s : SpecState P.n} {l : Label P.n}
       · subst h_eq
         exact Or.inl (failSetOfList_subset_append pre _ (hI.F_eq ▸ hF))
       · rw [Function.update_of_ne h_eq] at h_in
-        exact mono (hI.input_src id' b'' h_in)
+        exact mono (hI.input_source id' b'' h_in)
     · intro id' b'' hmem hf
       have h_eq : id' ≠ id := by
         rintro rfl; exact hmem (hFeq ▸ hF)
@@ -701,15 +704,15 @@ theorem ValInv.step {pre : List (Label P.n)} {s : SpecState P.n} {l : Label P.n}
       rw [firstCall_append_of_ne_call pre hne] at hf
       change Function.update s.input id (some b') id' = some b''
       rw [Function.update_of_ne h_eq]
-      exact hI.src_input id' b'' (hnc hmem) hf
+      exact hI.source_input id' b'' (hnc hmem) hf
   | retByzantine id b hF =>
     -- the rule is a no-op, so the invariant only has to absorb the new label
     rw [PMF.mem_support_pure_iff] at hs'
     rw [hs'] at h_inv' ⊢
-    refine ⟨h_inv', fun id' b' h_in => mono (hI.input_src id' b' h_in), ?_, ?_⟩
+    refine ⟨h_inv', fun id' b' h_in => mono (hI.input_source id' b' h_in), ?_, ?_⟩
     · intro id' b' hmem hf
       rw [firstCall_append_of_ne_call pre (by simp)] at hf
-      exact hI.src_input id' b' (hnc hmem) hf
+      exact hI.source_input id' b' (hnc hmem) hf
     · rw [failSetOfList_append]
       exact hI.F_eq
 
@@ -735,7 +738,7 @@ private theorem val_agree_le {e : AlterSeq (SpecState P.n) (Label P.n)}
     (hst₁ : e.stateAt k₁ = some s₁) (hst₂ : e.stateAt k₂ = some s₂)
     (hv₁ : s₁.val = some b) (hv₂ : s₂.val = some b') : b = b' := by
   have h_stable := is_exec_stable (sys := spec P) (fun s => s.val = some b)
-    (fun s l μ s' hv hstep hs' => SpecInv.val_stable hv hstep hs')
+    (fun s l μ s' hv hstep hs' => SpecificationInvariant.val_stable hv hstep hs')
     he k₁ k₂ s₁ s₂ hk hst₁ hst₂ hv₁
   rw [h_stable] at hv₂
   exact Option.some.inj hv₂
@@ -782,7 +785,7 @@ private theorem exists_retSite (P : Parameters) {pe : ProbabilisticExecution (sp
         ∃ (j : ℕ) (s : SpecState P.n) (μ : PMF (SpecState P.n))
           (pre : List (Label P.n)),
           e.stateAt j = some s ∧ SpecStep P s (Label.retABA id b) μ ∧
-          ValInv P pre s ∧ s.F = failSet P t m ∧
+          ValidityInvariant P pre s ∧ s.F = failSet P t m ∧
           ∀ id' b', firstCall pre id' = some b' →
             ∃ k, k < m ∧ t.get? k = some (Label.callABA id' b') ∧
               ∀ k' < k, ∀ b'', t.get? k' ≠ some (Label.callABA id' b'') := by
@@ -812,7 +815,7 @@ private theorem exists_retSite (P : Parameters) {pe : ProbabilisticExecution (sp
       exact ⟨q.2, by rw [← hk]⟩
   obtain ⟨s, μ, h_state, h_step, -⟩ := h_exec.1 j _ _ h_get
   have h_VI := is_exec_induction_labels (sys := spec P)
-    (fun pre s => ValInv P pre s) (ValInv.initial P)
+    (fun pre s => ValidityInvariant P pre s) (ValidityInvariant.initial P)
     (fun pre s l μ s' hI hstep hs' => hI.step hstep hs') h_exec j s h_state
   rw [AlterSeq.labelsUpTo_eq_take h_map j] at h_VI
   -- the trace-prefix transfer: `s.F` is the trace-level fold at position `m`
@@ -850,7 +853,7 @@ theorem spec_safe (P : Parameters) :
   have h_correct : ∀ m id b, t.get? m = some (Label.retABA id b) →
       NeverCorrupted P t id →
       ∃ (j : ℕ) (s : SpecState P.n) (pre : List (Label P.n)),
-        e.stateAt j = some s ∧ ValInv P pre s ∧ s.val = some b ∧
+        e.stateAt j = some s ∧ ValidityInvariant P pre s ∧ s.val = some b ∧
         s.F = failSet P t m ∧
         ∀ id' b', firstCall pre id' = some b' →
           ∃ k, k < m ∧ t.get? k = some (Label.callABA id' b') ∧
@@ -869,8 +872,8 @@ theorem spec_safe (P : Parameters) :
     obtain ⟨j, s, pre, h_state, h_VI, h_val, h_transfer, h_push⟩ :=
       h_correct m id b h_ret h_nc
     obtain ⟨id', h_in, h_nc'⟩ :=
-      exists_neverCorrupted_supporter (h_VI.inv.val_supp b h_val) h_transfer
-    rcases h_VI.input_src id' b h_in with hmem | hcall
+      exists_neverCorrupted_supporter (h_VI.invariant.val_support b h_val) h_transfer
+    rcases h_VI.input_source id' b h_in with hmem | hcall
     · -- a never-corrupted supporter is in no prefix fold
       refine absurd ?_ (h_nc' m)
       rw [← h_transfer, h_VI.F_eq]

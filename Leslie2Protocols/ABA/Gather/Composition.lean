@@ -68,8 +68,8 @@ instance `q` returned here. The four rows that read what has been returned —
 ## The core
 
 The core is a function of the gather network state alone
-(`coreOf_networkState_only`), so the gather network holds it. `coreOfNet` reads
-it off the network state, `coreOf_eq_coreOfNet` identifies the two readings, and
+(`coreOf_networkState_only`), so the gather network holds it. `coreOfNetwork` reads
+it off the network state, `coreOf_eq_coreOfNetwork` identifies the two readings, and
 the network's `ret` row writes the core and carries it on the label.
 -/
 
@@ -122,7 +122,7 @@ def gatherEvents (n : ℕ) (X : Type) : Set (GatherLabel n X) := {l | ∃ e : Ga
 @[simp] theorem inr_mem_gatherEvents {n : ℕ} {X : Type} (e : GatherEvent n X) :
     Sum.inr e ∈ gatherEvents n X := ⟨e, rfl⟩
 
-@[simp] theorem galab_tau (n : ℕ) (X : Type) :
+@[simp] theorem gatherLabel_tau (n : ℕ) (X : Type) :
     (Silent.τ : GatherLabel n X) = Sum.inl (Sum.inl Label.tau) := rfl
 
 @[simp] theorem instlab_tau (n : ℕ) (X : Type) :
@@ -213,14 +213,15 @@ def NetworkState.initial (n : ℕ) (X : Type) : NetworkState n X :=
 
 /-- The core read off a network state. The local records are not consulted
 (`coreOf_networkState_only`), so any record vector gives the same set. -/
-noncomputable def coreOfNet {X : Type} (P : Parameters) (w : ABA.NetworkState P.n (Message P.n X)) :
+noncomputable def coreOfNetwork {X : Type} (P : Parameters) (w : ABA.NetworkState P.n (Message P.n
+  X)) :
     AcceptedPairs P.n X :=
   coreOf P ((fun _ => LocalState.initial P.n (Message P.n X) (BaseProcessRecord.initial P.n X)), w)
 
 /-- The core of an instance state is the core of its network state. -/
-theorem coreOf_eq_coreOfNet {X : Type} (P : Parameters)
+theorem coreOf_eq_coreOfNetwork {X : Type} (P : Parameters)
     (w : InstanceState P.n (BaseProcessRecord P.n X) (Message P.n X)) :
-    coreOf P w = coreOfNet P w.2 :=
+    coreOf P w = coreOfNetwork P w.2 :=
   coreOf_networkState_only w _ rfl
 
 /-! ### The pullbacks
@@ -432,8 +433,8 @@ inductive NetworkStep (P : Parameters) :
   /-- Return: the label carries the core, which this row writes if it is
   unwritten. -/
   | ret (w) (id : Fin P.n) (g : Fin P.n → Option X) :
-      NetworkStep P w (Sum.inl (Sum.inl (.ret id g (w.core.getD (coreOfNet P w.network)))))
-        (PMF.pure { w with core := some (w.core.getD (coreOfNet P w.network)) })
+      NetworkStep P w (Sum.inl (Sum.inl (.ret id g (w.core.getD (coreOfNetwork P w.network)))))
+        (PMF.pure { w with core := some (w.core.getD (coreOfNetwork P w.network)) })
   /-- Corruption (deviation D1). -/
   | fail (w) (i : Fin P.n) :
       NetworkStep P w (Sum.inl (Sum.inl (.fail i))) (PMF.pure { w with
@@ -476,7 +477,7 @@ noncomputable def gatherPrograms (P : Parameters) (X : Type) [DecidableEq X] :
     System ((∀ _ : Fin P.n,
       LocalState P.n (ProcessRecord P.n X) (Message P.n X)) × NetworkState P.n X) (GatherLabel P.n
         X) :=
-  (System.syncProduct (gatherProgram P (X := X))).parallel (gatherNetwork P X)
+  (System.synchronisedProduct (gatherProgram P (X := X))).parallel (gatherNetwork P X)
 
 /-- The state of the composition whose broadcast instances have state `B` for
 the inputs and `B'` for the `BIND` payloads. -/
@@ -492,8 +493,9 @@ noncomputable def instanceOverBroadcastsExtended (P : Parameters) (X : Type) [De
     (BBind : ∀ _ : Fin P.n, System B' (BRB.InstanceLabel P.n (AcceptedPairs P.n X))) :
     System (StateOverBroadcasts P.n X B B') (GatherLabel P.n X) :=
   (gatherPrograms P X).parallel
-    ((System.syncProduct (fun k => (BIn k).mapIdle (inputBroadcastLabelMap P.n X k))).parallel
-      (System.syncProduct (fun q => (BBind q).mapIdle (bindBroadcastLabelMap P.n X q))))
+    ((System.synchronisedProduct (fun k => (BIn k).mapIdle (inputBroadcastLabelMap P.n X
+      k))).parallel
+      (System.synchronisedProduct (fun q => (BBind q).mapIdle (bindBroadcastLabelMap P.n X q))))
 
 /-- **The gather instance** over the broadcast tier `BIn`, `BBind`: the two
 tiers in parallel, the instance's events hidden, the result read back over the
@@ -698,9 +700,10 @@ theorem gatherNetwork_isLTS (P : Parameters) : (gatherNetwork P X).IsLTS := fun 
   h
 
 /-- The synchronised group of gather programs is an LTS. -/
-theorem gatherProgramProduct_isLTS (P : Parameters) : (System.syncProduct (gatherProgram P (X :=
+theorem gatherProgramProduct_isLTS (P : Parameters) : (System.synchronisedProduct (gatherProgram P
+  (X :=
   X))).IsLTS :=
-  System.syncProduct_isLTS (gatherProgram_isLTS P)
+  System.synchronisedProduct_isLTS (gatherProgram_isLTS P)
 
 /-- The gather tier is an LTS. -/
 theorem gatherPrograms_isLTS (P : Parameters) : (gatherPrograms P X).IsLTS :=
@@ -714,8 +717,8 @@ theorem instanceOverBroadcastsExtended_isLTS (P : Parameters) {B B' : Type}
     (instanceOverBroadcastsExtended P X BIn BBind).IsLTS :=
   System.parallel_isLTS (gatherPrograms_isLTS P)
     (System.parallel_isLTS
-      (System.syncProduct_isLTS (fun k => System.mapIdle_isLTS _ (hIn k)))
-      (System.syncProduct_isLTS (fun q => System.mapIdle_isLTS _ (hBind q))))
+      (System.synchronisedProduct_isLTS (fun k => System.mapIdle_isLTS _ (hIn k)))
+      (System.synchronisedProduct_isLTS (fun q => System.mapIdle_isLTS _ (hBind q))))
 
 /-- The gather instance is an LTS. -/
 theorem instanceOverBroadcasts_isLTS (P : Parameters) {B B' : Type}
@@ -746,7 +749,7 @@ theorem programStep_no_tau {P : Parameters} {j : Fin P.n}
     {p : LocalState P.n (ProcessRecord P.n X) (Message P.n X)}
     {ν : PMF (LocalState P.n (ProcessRecord P.n X) (Message P.n X))}
     (h : ProgramStep P j p (Silent.τ : GatherLabel P.n X) ν) : False := by
-  rw [galab_tau] at h; cases h
+  rw [gatherLabel_tau] at h; cases h
 
 end Determinacy
 
@@ -878,8 +881,8 @@ theorem weakLStep_specificationOverInstanceAlphabet [DecidableEq X] (P : Paramet
 
 /-! ### Reading and building instance transitions
 
-The pipeline is `relabel ∘ abstract ∘ parallel ∘ (syncProduct, syncProduct,
-syncProduct)`; the lemmas below unfold it once and for all, in both
+The pipeline is `relabel ∘ abstract ∘ parallel ∘ (synchronisedProduct, synchronisedProduct,
+synchronisedProduct)`; the lemmas below unfold it once and for all, in both
 directions. -/
 
 /-- The instance's step relation, unfolded to the hidden-event case and the
@@ -922,10 +925,10 @@ theorem lift_idle {A₀ : System B Lbl} {ψ : Λ → Option Lbl} {c : B} (hψ : 
 /-- A synchronised transition of the lifted family on a visible label: every
 instance steps, and the joint distribution is Dirac. -/
 theorem synchronisedProductMapIdle_inv (hA : ∀ k, (A k).IsLTS) (hL : L ≠ Silent.τ)
-    (h : (System.syncProduct (fun k => (A k).mapIdle (φ k))).step a L μ) :
+    (h : (System.synchronisedProduct (fun k => (A k).mapIdle (φ k))).step a L μ) :
     ∃ a' : ∀ _ : Fin n, B, μ = PMF.pure a' ∧
       ∀ k, ((A k).mapIdle (φ k)).step (a k) L (PMF.pure (a' k)) := by
-  rw [System.syncProduct_step] at h
+  rw [System.synchronisedProduct_step] at h
   rcases h with ⟨-, μ_, hall, rfl⟩ | ⟨hτ, -⟩
   · have hx : ∀ k, ∃ c, μ_ k = PMF.pure c :=
       fun k => System.mapIdle_isLTS (φ k) (hA k) _ _ _ (hall k)
@@ -940,23 +943,23 @@ theorem synchronisedProductMapIdle_inv (hA : ∀ k, (A k).IsLTS) (hL : L ≠ Sil
 Dirac steps. -/
 theorem synchronisedProductMapIdle_pure (hL : L ≠ Silent.τ)
     (h : ∀ k, ((A k).mapIdle (φ k)).step (a k) L (PMF.pure (a' k))) :
-    (System.syncProduct (fun k => (A k).mapIdle (φ k))).step a L (PMF.pure a') := by
-  rw [System.syncProduct_step]
+    (System.synchronisedProduct (fun k => (A k).mapIdle (φ k))).step a L (PMF.pure a') := by
+  rw [System.synchronisedProduct_step]
   exact Or.inl ⟨hL, fun k => PMF.pure (a' k), h, (piPMF_pure a').symm⟩
 
 /-- On a label no pullback has an image at, the lifted family stands still. -/
 theorem synchronisedProductMapIdle_none (hL : L ≠ Silent.τ) (hφ : ∀ k, φ k L = none) :
-    (System.syncProduct (fun k => (A k).mapIdle (φ k))).step a L (PMF.pure a) :=
+    (System.synchronisedProduct (fun k => (A k).mapIdle (φ k))).step a L (PMF.pure a) :=
   synchronisedProductMapIdle_pure hL fun k => lift_idle (hφ k)
 
 /-- A silent transition of the lifted family is a silent transition of exactly
 one instance. -/
 theorem synchronisedProductMapIdle_tau_inv [Silent Lbl] (hA : ∀ k, (A k).IsLTS)
     (hτ : ∀ k, φ k (Silent.τ : Λ) = some (Silent.τ : Lbl))
-    (h : (System.syncProduct (fun k => (A k).mapIdle (φ k))).step a (Silent.τ : Λ) μ) :
+    (h : (System.synchronisedProduct (fun k => (A k).mapIdle (φ k))).step a (Silent.τ : Λ) μ) :
     ∃ (k : Fin n) (c : B), μ = PMF.pure (Function.update a k c) ∧
       (A k).step (a k) (Silent.τ : Lbl) (PMF.pure c) := by
-  rw [System.syncProduct_step] at h
+  rw [System.synchronisedProduct_step] at h
   rcases h with ⟨hne, -⟩ | ⟨-, k, μ_k, hstep, rfl⟩
   · exact absurd rfl hne
   · rw [System.mapIdle_step_some (hτ k)] at hstep
@@ -968,9 +971,9 @@ family. -/
 theorem synchronisedProductMapIdle_tau_step [Silent Lbl] {k : Fin n} {c : B}
     (hτ : φ k (Silent.τ : Λ) = some (Silent.τ : Lbl))
     (h : (A k).step (a k) (Silent.τ : Lbl) (PMF.pure c)) :
-    (System.syncProduct (fun k => (A k).mapIdle (φ k))).step a (Silent.τ : Λ)
+    (System.synchronisedProduct (fun k => (A k).mapIdle (φ k))).step a (Silent.τ : Λ)
       (PMF.pure (Function.update a k c)) := by
-  rw [System.syncProduct_step]
+  rw [System.synchronisedProduct_step]
   refine Or.inr ⟨rfl, k, PMF.pure c, ?_, ?_⟩
   · rw [System.mapIdle_step_some hτ]; exact h
   · rw [piPMF_update_pure, PMF.pure_map]
@@ -988,11 +991,12 @@ variable [DecidableEq X] {P : Parameters}
 /-- A synchronised transition of the gather programs on a visible label: every
 program steps, and the joint distribution is Dirac. -/
 theorem gatherProgramProduct_inv {μ : PMF (∀ _ : Fin P.n,
-    LocalState P.n (ProcessRecord P.n X) (Message P.n X))} (h : (System.syncProduct (gatherProgram P
+    LocalState P.n (ProcessRecord P.n X) (Message P.n X))} (h : (System.synchronisedProduct
+      (gatherProgram P
       (X := X))).step u l μ) :
     ∃ x : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord P.n X) (Message P.n X),
       μ = PMF.pure x ∧ ∀ i, ProgramStep P i (u i) l (PMF.pure (x i)) := by
-  rw [System.syncProduct_step] at h
+  rw [System.synchronisedProduct_step] at h
   rcases h with ⟨-, μ_, hall, rfl⟩ | ⟨rfl, i, μ_i, hstep, -⟩
   · have hx : ∀ i, ∃ p', μ_ i = PMF.pure p' := fun i => programStep_dirac (hall i)
     choose y hy using hx
@@ -1005,14 +1009,16 @@ theorem gatherProgramProduct_inv {μ : PMF (∀ _ : Fin P.n,
 /-- Build a synchronised transition of the gather programs from per-process
 Dirac steps. -/
 theorem gatherProgramProduct_pure (hl : l ≠ Silent.τ) (h : ∀ i,
-    ProgramStep P i (u i) l (PMF.pure (x i))) : (System.syncProduct (gatherProgram P (X := X))).step
+    ProgramStep P i (u i) l (PMF.pure (x i))) : (System.synchronisedProduct (gatherProgram P (X :=
+      X))).step
       u l (PMF.pure x) := by
-  rw [System.syncProduct_step]
+  rw [System.synchronisedProduct_step]
   exact Or.inl ⟨hl, fun i => PMF.pure (x i), h, (piPMF_pure x).symm⟩
 
 /-- The gather programs have no silent transition: no program has a `τ` row. -/
 theorem gatherProgramProduct_no_tau {μ : PMF (∀ _ : Fin P.n,
-    LocalState P.n (ProcessRecord P.n X) (Message P.n X))} (h : (System.syncProduct (gatherProgram P
+    LocalState P.n (ProcessRecord P.n X) (Message P.n X))} (h : (System.synchronisedProduct
+      (gatherProgram P
       (X := X))).step u (Silent.τ : GatherLabel P.n X) μ) :
       False := by
   rcases h with ⟨hτ, -⟩ | ⟨-, i, μ_i, hstep, -⟩
@@ -1191,7 +1197,7 @@ theorem instanceOverBroadcasts_label_step {l : InstanceLabel P.n X} (hl : l ≠ 
       b'))) := by
   refine (instanceOverBroadcasts_step_iff P X BIn BBind _ _ _).mpr (Or.inr
     (instanceOverBroadcastsExtended_label_step ?_ hproc hnet hin hbind))
-  rw [galab_tau]
+  rw [gatherLabel_tau]
   simpa using hl
 
 /-- An injection of the gather network is a silent transition of the
@@ -1479,7 +1485,7 @@ theorem networkStep_callLoop {id : Fin P.n} {x : X}
 
 theorem networkStep_ret {id : Fin P.n} {g : Fin P.n → Option X} {C : AcceptedPairs P.n X}
     (h : NetworkStep P w (Sum.inl (Sum.inl (.ret id g C))) μ) :
-    C = w.core.getD (coreOfNet P w.network) ∧ μ = PMF.pure { w with core := some C } := by
+    C = w.core.getD (coreOfNetwork P w.network) ∧ μ = PMF.pure { w with core := some C } := by
   cases h; exact ⟨rfl, rfl⟩
 
 theorem networkStep_fail {i : Fin P.n} (h : NetworkStep P w (Sum.inl (Sum.inl (.fail i))) μ) :

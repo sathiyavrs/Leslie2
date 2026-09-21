@@ -321,9 +321,9 @@ theorem program_labelSaturated [IsRoundRuleTable P M S roundStep] (j : Fin P.n) 
 /-- **The process group is saturated along the erasure**: full synchronisation carries
 the saturation of every program. -/
 theorem programSyncProduct_labelSaturated [IsRoundRuleTable P M S roundStep] :
-    (System.syncProduct (program P M S roundStep)).LabelSaturated
+    (System.synchronisedProduct (program P M S roundStep)).LabelSaturated
       (forgetBoundExtended (M := M)) :=
-  System.LabelSaturated.syncProduct (program_labelSaturated P M S roundStep)
+  System.LabelSaturated.synchronisedProduct (program_labelSaturated P M S roundStep)
     separatesSilent_forgetBoundExtended
 
 /-- **The coin family is saturated along the erasure of the announced bound bit.** A

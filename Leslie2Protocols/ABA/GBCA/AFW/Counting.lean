@@ -324,7 +324,7 @@ def boundOfCore (P : Parameters) (S : AcceptedPairs P.n Bool) : Bool :=
 theorem boundOfCore_of_aboveThreshold {P : Parameters} {S : AcceptedPairs P.n Bool} {v : Bool}
     (hcard : P.n - P.f ≤ S.card) (hv : S.card - P.f ≤ AcceptedPairs.count S v) :
     boundOfCore P S = v := by
-  have hf := P.hf
+  have hf := P.hResilience
   have hsplit : AcceptedPairs.count S true + AcceptedPairs.count S false ≤ S.card := by
     unfold AcceptedPairs.count
     rw [← Finset.card_union_of_disjoint]
@@ -344,7 +344,7 @@ theorem boundOfCore_of_aboveThreshold {P : Parameters} {S : AcceptedPairs P.n Bo
 theorem count_boundOfCore_belowThreshold {P : Parameters} {S : AcceptedPairs P.n Bool}
     (hcard : P.n - P.f ≤ S.card) :
     AcceptedPairs.count S (!boundOfCore P S) < S.card - P.f := by
-  have hf := P.hf
+  have hf := P.hResilience
   have hsplit : AcceptedPairs.count S true + AcceptedPairs.count S false ≤ S.card := by
     unfold AcceptedPairs.count
     rw [← Finset.card_union_of_disjoint]

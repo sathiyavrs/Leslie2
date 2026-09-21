@@ -1,11 +1,11 @@
 \begin{theorem}[Two-gather round refinement]
   \label{thm:gbca-pair-refines}
-  \lean{PLTS.ABA.GBCA.count_aboveThreshold_of_subMap}\lean{PLTS.ABA.GBCA.boundOfCore_of_aboveThreshold}\lean{PLTS.ABA.GBCA.count_boundOfCore_belowThreshold}\lean{PLTS.ABA.GBCA.ByAFW.PairInv}\lean{PLTS.ABA.GBCA.ByAFW.ExcludedEv}\lean{PLTS.ABA.GBCA.ByAFW.PairRel}\lean{PLTS.ABA.GBCA.ByAFW.pairRefines}\leanok
+  \lean{PLTS.ABA.GBCA.count_aboveThreshold_of_subMap}\lean{PLTS.ABA.GBCA.boundOfCore_of_aboveThreshold}\lean{PLTS.ABA.GBCA.count_boundOfCore_belowThreshold}\lean{PLTS.ABA.GBCA.ByAFW.Invariant}\lean{PLTS.ABA.GBCA.ByAFW.ExclusionEvidence}\lean{PLTS.ABA.GBCA.ByAFW.SpecificationRelation}\lean{PLTS.ABA.GBCA.ByAFW.refinesSpecification}\leanok
   \uses{def:aba-gbca-pair, def:aba-gbca-spec}
   The two-gather round is forward-simulated by the GBCA specification instance (Transition System~2).
   The relation reads the specification's $call$, $ret$ and $F$ off the pair and certifies its $excluded$ and $grade$ on the two cores, each written once: a bit $b$ is excluded under
   \[
-    \mathrm{ExcludedEv}(b) \;=\; \exists\, S,\ core_1 = S \,\wedge\, \#\{(k, b) \in S\} < |S| - f,
+    \mathrm{ExclusionEvidence}(b) \;=\; \exists\, S,\ core_1 = S \,\wedge\, \#\{(k, b) \in S\} < |S| - f,
   \]
   the $A$ grade guard by the second core being heavy at one bit, and the $C$ grade guard by the second core being light at both; the cores being write-once, every certificate stands from the moment it is written.
   One clause more pins the exclusion set from below: an excluded bit is the complement of the round's bound bit.
@@ -16,7 +16,7 @@
   \uses{def:aba-gbca-pair, def:aba-gbca-spec, def:forwardsim}
   The counting is on the cores, and rests on $|S| \ge n - f > 2f$ at $3f < n$.
   A returned map heavy at $x$ --- all but $f$ entries --- makes the core the return carries heavy at $x$, the core sitting below the map up to $f$ entries (the core form of Lemma~13 of~\cite{AFW25}); a core heavy at $x$ is heavy at no other value, its shared entries admitting one value on all but $2f$ (Proposition~14 and Lemma~18, and the $A$/$C$ exclusivity of the grade guard).
-  A candidate $v$ arriving at the second gather is heavy in the first core, recorded by the invariant at the first gather's return that computed it and read again at the second gather's call, so $v$ is the bound bit $\mathrm{boundOfCore}$ names and a standing $\mathrm{ExcludedEv}(v)$ is refuted.
+  A candidate $v$ arriving at the second gather is heavy in the first core, recorded by the invariant at the first gather's return that computed it and read again at the second gather's call, so $v$ is the bound bit $\mathrm{boundOfCore}$ names and a standing $\mathrm{ExclusionEvidence}(v)$ is refuted.
   Every return announces that bit, so the exclusion clause leaves each of the three return rows the same two cases: the complement of the announced bit is already excluded, and the return fires alone; or nothing is excluded, and the run $\mathrm{bindUnset}; \mathrm{ret}$ fires, its certificate being that the first core counts the complement below $|S| - f$.
   A value-bearing return hands out the announced bit, by heaviness in the first core, so the specification's guard pair $v \notin excluded$, $1-v \in excluded$ is the pair the announcement already supplies, and the exclusion's $f{+}1$ support and the $B$-return's dissent count are read off the core through the committed-entry provenance, which is $F$-blind.
   The invariant ties each gather's committed entries to honest calls, records what the computed candidate certifies about the first core, says that the first gather's return writes the candidate and the bound bit together, and records at the second gather's return the certificate the graded return consumes, since that return sees the recorded grade alone; every internal row preserves it, and corruption is answered by the specification's own $\mathrm{fail}$ under the lockstep of the two corrupted sets.

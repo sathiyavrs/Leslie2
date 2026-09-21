@@ -11,15 +11,15 @@ import Leslie2Protocols.ABA.Gather.StepOverBroadcastSpecification
 
 The invariant of `Gather.instanceOverBroadcastSpecification` (`ABA/Gather/Composition.lean`), stated
 over the composition's state through the views `gatherTier`, `inputBroadcasts`, `bindBroadcasts`,
-`core`, and the argument that `coreOfNet` is a bound core. At every state at which some process
-outside `F` holds a committed `BIND` payload, `coreOfNet` has at least `n − f`
+`core`, and the argument that `coreOfNetwork` is a bound core. At every state at which some process
+outside `F` holds a committed `BIND` payload, `coreOfNetwork` has at least `n − f`
 entries, its entries are committed input entries, and it lies below the
 committed `BIND` payload of every process outside `F`.
 
 The counting is over one incidence on the gather network state, so the lemmas
 that read that state alone — `mem_correct`, `mem_dominatedBy`,
 `correct_filter_dominatedBy`, `sum_dominatedBy` — are the ones of
-`ABA/Gather/MessagesAndCommonCore.lean`, applied to `netOf`.
+`ABA/Gather/MessagesAndCommonCore.lean`, applied to `networkOf`.
 
 ## The stores
 
@@ -34,7 +34,7 @@ and they survive because a committed value is written once.
 The composition answers `call id x` on four rows and the call loop is a label
 of its own, so an input instance may record a payload on a label at which the
 gather record stands still. The provenance of a commitment therefore reads the
-input instance's own call record, which is what `inVal_prov` states.
+input instance's own call record, which is what `inputBroadcastVal_provenance` states.
 -/
 
 namespace PLTS
@@ -46,42 +46,43 @@ variable {X : Type} [DecidableEq X] {P : Parameters}
 /-- The gather network state of the composition, read as an instance state over
 the gather record. The core and the incidence read the sent sets and the
 corrupted set, and no local record. -/
-def netOf {n : ℕ} (s : StateOverBroadcastSpecification n X) : InstanceState n (BaseProcessRecord n
+def networkOf {n : ℕ} (s : StateOverBroadcastSpecification n X) : InstanceState n (BaseProcessRecord
+  n
   X) (Message n X) :=
   ((fun _ => LocalState.initial n (Message n X) (BaseProcessRecord.initial n X)), (gatherTier s).2)
 
 omit [DecidableEq X] in
-@[simp] theorem netOf_sent {n : ℕ} (s : StateOverBroadcastSpecification n X) :
-    (netOf s).sent = (gatherTier s).sent := rfl
+@[simp] theorem networkOf_sent {n : ℕ} (s : StateOverBroadcastSpecification n X) :
+    (networkOf s).sent = (gatherTier s).sent := rfl
 
 omit [DecidableEq X] in
-@[simp] theorem netOf_F {n : ℕ} (s : StateOverBroadcastSpecification n X) : (netOf s).F =
+@[simp] theorem networkOf_F {n : ℕ} (s : StateOverBroadcastSpecification n X) : (networkOf s).F =
   (gatherTier s).F
   := rfl
 
 omit [DecidableEq X] in
 /-- The core of the composition's gather network state. -/
-theorem coreOf_netOf (s : StateOverBroadcastSpecification P.n X) :
-    coreOf P (netOf s) = coreOfNet P (gatherTier s).2 := rfl
+theorem coreOf_networkOf (s : StateOverBroadcastSpecification P.n X) :
+    coreOf P (networkOf s) = coreOfNetwork P (gatherTier s).2 := rfl
 
 /-! ### The conformance clauses -/
 
-/-- The conformance clauses. The `*_conf` clauses tie an honest sender's sent to
+/-- The conformance clauses. The `*_confirmed` clauses tie an honest sender's sent to
 its write-once field, the `*_backed` clauses tie the fields to the receipts that
 justified them, the store clauses tie a program's store to the commitment that
 wrote it, and the provenance clauses are the broadcast commit guards, recorded
 per instance. -/
-structure IdealConf (P : Parameters) (s : StateOverBroadcastSpecification P.n X) : Prop where
+structure Conformance (P : Parameters) (s : StateOverBroadcastSpecification P.n X) : Prop where
   /-- The corruption budget. -/
   F_card : (gatherTier s).F.card ≤ P.f
   /-- The input instances' corrupted sets are in lockstep with the gather
   network state's. -/
-  F_in_eq : ∀ k, (inputBroadcasts s k).F = (gatherTier s).F
+  F_inputBroadcast_eq : ∀ k, (inputBroadcasts s k).F = (gatherTier s).F
   /-- The bind instances' corrupted sets are in lockstep with the gather
   network state's. -/
   F_bind_eq : ∀ k, (bindBroadcasts s k).F = (gatherTier s).F
   /-- Delivered messages were multicast. -/
-  recv_sub : ∀ i k, (gatherTier s).received i k ⊆ (gatherTier s).sent k
+  received_subset_sent : ∀ i k, (gatherTier s).received i k ⊆ (gatherTier s).sent k
   /-- A value in a program's input store is the committed value of the instance
   that returned it. -/
   inputBroadcastReturned_val : ∀ j k v,
@@ -93,20 +94,20 @@ structure IdealConf (P : Parameters) (s : StateOverBroadcastSpecification P.n X)
     (bindBroadcasts s q).val = some U
   /-- A committed input entry of an honest process is the payload its input
   instance recorded. -/
-  inVal_prov : ∀ k v, (inputBroadcasts s k).val = some v →
+  inputBroadcastVal_provenance : ∀ k v, (inputBroadcasts s k).val = some v →
     k ∈ (gatherTier s).F ∨ (inputBroadcasts s k).input = some v
   /-- A committed bind payload of an honest process is the payload its bind
   instance recorded. -/
-  bindVal_prov : ∀ k U, (bindBroadcasts s k).val = some U →
+  bindBroadcastVal_provenance : ∀ k U, (bindBroadcasts s k).val = some U →
     k ∈ (gatherTier s).F ∨ (bindBroadcasts s k).input = some U
   /-- An honest sender's sent `ECHO` matches its write-once field. -/
-  echo_conf : ∀ j ∉ (gatherTier s).F, ∀ A, Message.echo A ∈ (gatherTier s).sent j →
+  echo_confirmed : ∀ j ∉ (gatherTier s).F, ∀ A, Message.echo A ∈ (gatherTier s).sent j →
     ((gatherTier s).process j).sentEcho = some A
   /-- An honest echo payload has at least `n − f` entries. -/
   echo_card : ∀ j ∉ (gatherTier s).F, ∀ A, ((gatherTier s).process j).sentEcho = some A →
     P.n - P.f ≤ A.card
   /-- An honest sender's sent `VOTE` matches its write-once field. -/
-  vote_conf : ∀ j ∉ (gatherTier s).F, ∀ W, Message.vote W ∈ (gatherTier s).sent j →
+  vote_confirmed : ∀ j ∉ (gatherTier s).F, ∀ W, Message.vote W ∈ (gatherTier s).sent j →
     ((gatherTier s).process j).sentVote = some W
   /-- An honest vote is backed by `n − f` senders' echo payloads, each contained
   in it. -/
@@ -120,7 +121,7 @@ structure IdealConf (P : Parameters) (s : StateOverBroadcastSpecification P.n X)
       ∀ q ∈ Q, ∃ W, Message.vote W ∈ (gatherTier s).received j q ∧ W ⊆ U
 
 /-- The conformance clauses hold initially. -/
-theorem IdealConf.initial : IdealConf P ((instanceOverBroadcastSpecification P X).init) := by
+theorem Conformance.initial : Conformance P ((instanceOverBroadcastSpecification P X).init) := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
     simp [gatherTier, inputBroadcasts, bindBroadcasts, ProcessRecord.initial,
       BaseProcessRecord.initial, BRB.SpecState.initial, NetworkState.initial,
@@ -129,19 +130,20 @@ theorem IdealConf.initial : IdealConf P ((instanceOverBroadcastSpecification P X
 omit [DecidableEq X] in
 /-- **The conformance clauses are blind to the `BIND` field**: no clause reads
 it, so a write to it at one program carries them over. -/
-theorem IdealConf.setSentBind {s : StateOverBroadcastSpecification P.n X} (hConf : IdealConf P s) (j
+theorem Conformance.setSentBind {s : StateOverBroadcastSpecification P.n X} (hConf : Conformance P
+  s) (j
   : Fin P.n)
     (U : AcceptedPairs P.n X) :
-    IdealConf P (setGatherTier s ((gatherTier s).setProcess j { (gatherTier s).process j with
+    Conformance P (setGatherTier s ((gatherTier s).setProcess j { (gatherTier s).process j with
       sentBind := some U })) := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   all_goals dsimp only [gatherTier_setGatherTier, inputBroadcasts_setGatherTier,
     bindBroadcasts_setGatherTier, InstanceState.setProcess_F, InstanceState.setProcess_sent]
   · exact hConf.F_card
-  · exact hConf.F_in_eq
+  · exact hConf.F_inputBroadcast_eq
   · exact hConf.F_bind_eq
   · simp only [InstanceState.setProcess_received]
-    exact hConf.recv_sub
+    exact hConf.received_subset_sent
   · intro j' k v hv
     by_cases hk : j' = j
     · subst hk
@@ -156,15 +158,15 @@ theorem IdealConf.setSentBind {s : StateOverBroadcastSpecification P.n X} (hConf
       exact hConf.bindBroadcastReturned_val j' q U' hU'
     · rw [InstanceState.setProcess_process_ne _ _ _ hk] at hU'
       exact hConf.bindBroadcastReturned_val j' q U' hU'
-  · exact hConf.inVal_prov
-  · exact hConf.bindVal_prov
+  · exact hConf.inputBroadcastVal_provenance
+  · exact hConf.bindBroadcastVal_provenance
   · intro j' hj A hA
     by_cases hk : j' = j
     · subst hk
       rw [InstanceState.setProcess_process_self]
-      exact hConf.echo_conf j' hj A hA
+      exact hConf.echo_confirmed j' hj A hA
     · rw [InstanceState.setProcess_process_ne _ _ _ hk]
-      exact hConf.echo_conf j' hj A hA
+      exact hConf.echo_confirmed j' hj A hA
   · intro j' hj A hA
     by_cases hk : j' = j
     · subst hk
@@ -176,9 +178,9 @@ theorem IdealConf.setSentBind {s : StateOverBroadcastSpecification P.n X} (hConf
     by_cases hk : j' = j
     · subst hk
       rw [InstanceState.setProcess_process_self]
-      exact hConf.vote_conf j' hj W hW
+      exact hConf.vote_confirmed j' hj W hW
     · rw [InstanceState.setProcess_process_ne _ _ _ hk]
-      exact hConf.vote_conf j' hj W hW
+      exact hConf.vote_confirmed j' hj W hW
   · simp only [InstanceState.setProcess_received]
     intro j' hj W hW
     by_cases hk : j' = j
@@ -191,10 +193,10 @@ theorem IdealConf.setSentBind {s : StateOverBroadcastSpecification P.n X} (hConf
     exact hConf.bind_backed
 
 /-- The conformance clauses are preserved by every step. -/
-theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.n X}
-    {μ : PMF (StateOverBroadcastSpecification P.n X)} (hInv : IdealConf P s) (hstep :
+theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.n X}
+    {μ : PMF (StateOverBroadcastSpecification P.n X)} (hInv : Conformance P s) (hstep :
       StepOverBroadcastSpecification P s l μ)
-    {s' : StateOverBroadcastSpecification P.n X} (hs' : s' ∈ μ.support) : IdealConf P s' := by
+    {s' : StateOverBroadcastSpecification P.n X} (hs' : s' ∈ μ.support) : Conformance P s' := by
   cases hstep with
   | call id x h hb =>
     rw [PMF.mem_support_pure_iff] at hs'
@@ -208,14 +210,14 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
       by_cases hk : k = id
       · subst hk
         rw [Function.update_self]
-        exact hInv.F_in_eq k
+        exact hInv.F_inputBroadcast_eq k
       · rw [Function.update_of_ne hk]
-        exact hInv.F_in_eq k
+        exact hInv.F_inputBroadcast_eq k
     · exact hInv.F_bind_eq
     · intro i k m hm
       rw [InstanceState.setProcess_received] at hm
       rw [InstanceState.setProcess_sent]
-      exact hInv.recv_sub i k hm
+      exact hInv.received_subset_sent i k hm
     · intro j k v hv
       have hv0 : ((gatherTier s).process j).inputBroadcastReturned k = some v := by
         by_cases hj : j = id
@@ -241,16 +243,16 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
       by_cases hk : k = id
       · subst hk
         rw [Function.update_self] at hv ⊢
-        rcases hInv.inVal_prov k v hv with hF | hin
+        rcases hInv.inputBroadcastVal_provenance k v hv with hF | hin
         · exact Or.inl hF
         · rw [hb] at hin
           exact absurd hin (by simp)
       · rw [Function.update_of_ne hk] at hv ⊢
-        exact hInv.inVal_prov k v hv
-    · exact hInv.bindVal_prov
+        exact hInv.inputBroadcastVal_provenance k v hv
+    · exact hInv.bindBroadcastVal_provenance
     · intro j hj A hA
       rw [InstanceState.setProcess_sent] at hA
-      have hpre := hInv.echo_conf j hj A hA
+      have hpre := hInv.echo_confirmed j hj A hA
       by_cases hk : j = id
       · subst hk
         rw [InstanceState.setProcess_process_self]
@@ -266,7 +268,7 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
         exact hInv.echo_card j hj A hA
     · intro j hj W hW
       rw [InstanceState.setProcess_sent] at hW
-      have hpre := hInv.vote_conf j hj W hW
+      have hpre := hInv.vote_confirmed j hj W hW
       by_cases hk : j = id
       · subst hk
         rw [InstanceState.setProcess_process_self]
@@ -291,12 +293,12 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
     all_goals dsimp only [gatherTier_setGatherTier, inputBroadcasts_setGatherTier,
       bindBroadcasts_setGatherTier]
     · exact hInv.F_card
-    · exact hInv.F_in_eq
+    · exact hInv.F_inputBroadcast_eq
     · exact hInv.F_bind_eq
     · intro i k m hm
       rw [InstanceState.setProcess_received] at hm
       rw [InstanceState.setProcess_sent]
-      exact hInv.recv_sub i k hm
+      exact hInv.received_subset_sent i k hm
     · intro j k v hv
       by_cases hj : j = id
       · subst hj
@@ -311,11 +313,11 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
         exact hInv.bindBroadcastReturned_val j q U hU
       · rw [InstanceState.setProcess_process_ne _ _ _ hj] at hU
         exact hInv.bindBroadcastReturned_val j q U hU
-    · exact hInv.inVal_prov
-    · exact hInv.bindVal_prov
+    · exact hInv.inputBroadcastVal_provenance
+    · exact hInv.bindBroadcastVal_provenance
     · intro j hj A hA
       rw [InstanceState.setProcess_sent] at hA
-      have hpre := hInv.echo_conf j hj A hA
+      have hpre := hInv.echo_confirmed j hj A hA
       by_cases hk : j = id
       · subst hk
         rw [InstanceState.setProcess_process_self]
@@ -331,7 +333,7 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
         exact hInv.echo_card j hj A hA
     · intro j hj W hW
       rw [InstanceState.setProcess_sent] at hW
-      have hpre := hInv.vote_conf j hj W hW
+      have hpre := hInv.vote_confirmed j hj W hW
       by_cases hk : j = id
       · subst hk
         rw [InstanceState.setProcess_process_self]
@@ -352,17 +354,18 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
   | callProgramLoop id x hb =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    refine ⟨hInv.F_card, ?_, hInv.F_bind_eq, hInv.recv_sub, ?_, hInv.bindBroadcastReturned_val, ?_,
-      hInv.bindVal_prov, hInv.echo_conf, hInv.echo_card, hInv.vote_conf,
+    refine ⟨hInv.F_card, ?_, hInv.F_bind_eq, hInv.received_subset_sent, ?_,
+      hInv.bindBroadcastReturned_val, ?_, hInv.bindBroadcastVal_provenance, hInv.echo_confirmed,
+        hInv.echo_card, hInv.vote_confirmed,
       hInv.vote_backed, hInv.bind_backed⟩
     all_goals dsimp only [gatherTier_setInputBroadcasts, inputBroadcasts_setInputBroadcasts]
     · intro k
       by_cases hk : k = id
       · subst hk
         rw [Function.update_self]
-        exact hInv.F_in_eq k
+        exact hInv.F_inputBroadcast_eq k
       · rw [Function.update_of_ne hk]
-        exact hInv.F_in_eq k
+        exact hInv.F_inputBroadcast_eq k
     · intro j k v hv
       by_cases hk : k = id
       · subst hk
@@ -374,12 +377,12 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
       by_cases hk : k = id
       · subst hk
         rw [Function.update_self] at hv ⊢
-        rcases hInv.inVal_prov k v hv with hF | hin
+        rcases hInv.inputBroadcastVal_provenance k v hv with hF | hin
         · exact Or.inl hF
         · rw [hb] at hin
           exact absurd hin (by simp)
       · rw [Function.update_of_ne hk] at hv ⊢
-        exact hInv.inVal_prov k v hv
+        exact hInv.inputBroadcastVal_provenance k v hv
   | callLoop id x =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
@@ -387,17 +390,18 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
   | commitInputEntry k v hv hm =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    refine ⟨hInv.F_card, ?_, hInv.F_bind_eq, hInv.recv_sub, ?_, hInv.bindBroadcastReturned_val, ?_,
-      hInv.bindVal_prov, hInv.echo_conf, hInv.echo_card, hInv.vote_conf,
+    refine ⟨hInv.F_card, ?_, hInv.F_bind_eq, hInv.received_subset_sent, ?_,
+      hInv.bindBroadcastReturned_val, ?_, hInv.bindBroadcastVal_provenance, hInv.echo_confirmed,
+        hInv.echo_card, hInv.vote_confirmed,
       hInv.vote_backed, hInv.bind_backed⟩
     all_goals dsimp only [gatherTier_setInputBroadcasts, inputBroadcasts_setInputBroadcasts]
     · intro k'
       by_cases hk : k' = k
       · subst hk
         rw [Function.update_self]
-        exact hInv.F_in_eq k'
+        exact hInv.F_inputBroadcast_eq k'
       · rw [Function.update_of_ne hk]
-        exact hInv.F_in_eq k'
+        exact hInv.F_inputBroadcast_eq k'
     · intro j k' v' hv'
       by_cases hk : k' = k
       · subst hk
@@ -414,15 +418,16 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
         obtain rfl : v = v' := by
           injection hvv
         rcases hm with hF | hin
-        · exact Or.inl (hInv.F_in_eq k' ▸ hF)
+        · exact Or.inl (hInv.F_inputBroadcast_eq k' ▸ hF)
         · exact Or.inr hin
       · rw [Function.update_of_ne hk] at hv' ⊢
-        exact hInv.inVal_prov k' v' hv'
+        exact hInv.inputBroadcastVal_provenance k' v' hv'
   | commitBindEntry q U hv hm =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    refine ⟨hInv.F_card, hInv.F_in_eq, ?_, hInv.recv_sub, hInv.inputBroadcastReturned_val, ?_,
-      hInv.inVal_prov, ?_, hInv.echo_conf, hInv.echo_card, hInv.vote_conf,
+    refine ⟨hInv.F_card, hInv.F_inputBroadcast_eq, ?_, hInv.received_subset_sent,
+      hInv.inputBroadcastReturned_val, ?_, hInv.inputBroadcastVal_provenance, ?_,
+        hInv.echo_confirmed, hInv.echo_card, hInv.vote_confirmed,
       hInv.vote_backed, ?_⟩
     all_goals dsimp only [gatherTier_setBindBroadcasts, bindBroadcasts_setBindBroadcasts]
     · intro q'
@@ -451,7 +456,7 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
         · exact Or.inl (hInv.F_bind_eq q' ▸ hF)
         · exact Or.inr hin
       · rw [Function.update_of_ne hq] at hU' ⊢
-        exact hInv.bindVal_prov q' U' hU'
+        exact hInv.bindBroadcastVal_provenance q' U' hU'
     · intro j hj U' hU'
       by_cases hq : j = q
       · subst hq
@@ -466,33 +471,33 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
     all_goals dsimp only [gatherTier_setGatherTier, inputBroadcasts_setGatherTier,
       bindBroadcasts_setGatherTier]
     · exact hInv.F_card
-    · exact hInv.F_in_eq
+    · exact hInv.F_inputBroadcast_eq
     · exact hInv.F_bind_eq
     · intro i' k m' hm'
       rw [InstanceState.mem_receiveMessage_received] at hm'
       rw [InstanceState.receiveMessage_sent]
       rcases hm' with ⟨-, rfl, rfl⟩ | hold
       · exact h
-      · exact hInv.recv_sub i' k hold
+      · exact hInv.received_subset_sent i' k hold
     · intro j' k v hv
       rw [InstanceState.receiveMessage_process] at hv
       exact hInv.inputBroadcastReturned_val j' k v hv
     · intro j' q U hU
       rw [InstanceState.receiveMessage_process] at hU
       exact hInv.bindBroadcastReturned_val j' q U hU
-    · exact hInv.inVal_prov
-    · exact hInv.bindVal_prov
+    · exact hInv.inputBroadcastVal_provenance
+    · exact hInv.bindBroadcastVal_provenance
     · intro j' hj A hA
       rw [InstanceState.receiveMessage_sent] at hA
       rw [InstanceState.receiveMessage_process]
-      exact hInv.echo_conf j' hj A hA
+      exact hInv.echo_confirmed j' hj A hA
     · intro j' hj A hA
       rw [InstanceState.receiveMessage_process] at hA
       exact hInv.echo_card j' hj A hA
     · intro j' hj W hW
       rw [InstanceState.receiveMessage_sent] at hW
       rw [InstanceState.receiveMessage_process]
-      exact hInv.vote_conf j' hj W hW
+      exact hInv.vote_confirmed j' hj W hW
     · intro j' hj W hW
       rw [InstanceState.receiveMessage_process] at hW
       obtain ⟨Q, hQc, hQ⟩ := hInv.vote_backed j' hj W hW
@@ -511,12 +516,12 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
     all_goals dsimp only [gatherTier_setGatherTier, inputBroadcasts_setGatherTier,
       bindBroadcasts_setGatherTier]
     · exact hInv.F_card
-    · exact hInv.F_in_eq
+    · exact hInv.F_inputBroadcast_eq
     · exact hInv.F_bind_eq
     · intro i k m hm
       simp only [InstanceState.multicast_received, InstanceState.setProcess_received] at hm
       rw [InstanceState.mem_multicast_sent, InstanceState.setProcess_sent]
-      exact Or.inr (hInv.recv_sub i k hm)
+      exact Or.inr (hInv.received_subset_sent i k hm)
     · intro j' k v hv
       rw [InstanceState.multicast_process] at hv
       by_cases hk : j' = j
@@ -533,14 +538,14 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
         exact hInv.bindBroadcastReturned_val j' q U hU
       · rw [InstanceState.setProcess_process_ne _ _ _ hk] at hU
         exact hInv.bindBroadcastReturned_val j' q U hU
-    · exact hInv.inVal_prov
-    · exact hInv.bindVal_prov
+    · exact hInv.inputBroadcastVal_provenance
+    · exact hInv.bindBroadcastVal_provenance
     · intro j' hj A' hA'
       rw [InstanceState.mem_multicast_sent, InstanceState.setProcess_sent] at hA'
       rcases hA' with ⟨rfl, hm'⟩ | hold
       · obtain rfl : A' = ((gatherTier s).process j').accepted := by injection hm'
         rw [InstanceState.multicast_process, InstanceState.setProcess_process_self]
-      · have hpre := hInv.echo_conf j' hj A' hold
+      · have hpre := hInv.echo_confirmed j' hj A' hold
         by_cases hk : j' = j
         · subst hk
           rw [hsend] at hpre
@@ -560,7 +565,7 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
       rw [InstanceState.mem_multicast_sent, InstanceState.setProcess_sent] at hW
       rcases hW with ⟨-, hm'⟩ | hold
       · exact absurd hm' (by simp)
-      · have hpre := hInv.vote_conf j' hj W hold
+      · have hpre := hInv.vote_confirmed j' hj W hold
         by_cases hk : j' = j
         · subst hk
           rw [InstanceState.multicast_process, InstanceState.setProcess_process_self]
@@ -585,12 +590,12 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
     all_goals dsimp only [gatherTier_setGatherTier, inputBroadcasts_setGatherTier,
       bindBroadcasts_setGatherTier]
     · exact hInv.F_card
-    · exact hInv.F_in_eq
+    · exact hInv.F_inputBroadcast_eq
     · exact hInv.F_bind_eq
     · intro i k m hm
       simp only [InstanceState.multicast_received, InstanceState.setProcess_received] at hm
       rw [InstanceState.mem_multicast_sent, InstanceState.setProcess_sent]
-      exact Or.inr (hInv.recv_sub i k hm)
+      exact Or.inr (hInv.received_subset_sent i k hm)
     · intro j' k v hv
       rw [InstanceState.multicast_process] at hv
       by_cases hk : j' = j
@@ -607,13 +612,13 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
         exact hInv.bindBroadcastReturned_val j' q U' hU'
       · rw [InstanceState.setProcess_process_ne _ _ _ hk] at hU'
         exact hInv.bindBroadcastReturned_val j' q U' hU'
-    · exact hInv.inVal_prov
-    · exact hInv.bindVal_prov
+    · exact hInv.inputBroadcastVal_provenance
+    · exact hInv.bindBroadcastVal_provenance
     · intro j' hj A' hA'
       rw [InstanceState.mem_multicast_sent, InstanceState.setProcess_sent] at hA'
       rcases hA' with ⟨-, hm'⟩ | hold
       · exact absurd hm' (by simp)
-      · have hpre := hInv.echo_conf j' hj A' hold
+      · have hpre := hInv.echo_confirmed j' hj A' hold
         by_cases hk : j' = j
         · subst hk
           rw [InstanceState.multicast_process, InstanceState.setProcess_process_self]
@@ -632,7 +637,7 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
       rcases hW with ⟨rfl, hm'⟩ | hold
       · obtain rfl : W = U := by injection hm'
         rw [InstanceState.multicast_process, InstanceState.setProcess_process_self]
-      · have hpre := hInv.vote_conf j' hj W hold
+      · have hpre := hInv.vote_confirmed j' hj W hold
         by_cases hk : j' = j
         · subst hk
           rw [hsend] at hpre
@@ -658,10 +663,11 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
   | bindCall j U hin hvot hsnd happ hQ hb =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    refine IdealConf.setSentBind (s := setBindBroadcasts s (Function.update (bindBroadcasts s) j
+    refine Conformance.setSentBind (s := setBindBroadcasts s (Function.update (bindBroadcasts s) j
       { bindBroadcasts s j with input := some U })) ?_ j U
-    refine ⟨hInv.F_card, hInv.F_in_eq, ?_, hInv.recv_sub, hInv.inputBroadcastReturned_val, ?_,
-      hInv.inVal_prov, ?_, hInv.echo_conf, hInv.echo_card, hInv.vote_conf,
+    refine ⟨hInv.F_card, hInv.F_inputBroadcast_eq, ?_, hInv.received_subset_sent,
+      hInv.inputBroadcastReturned_val, ?_, hInv.inputBroadcastVal_provenance, ?_,
+        hInv.echo_confirmed, hInv.echo_card, hInv.vote_confirmed,
       hInv.vote_backed, ?_⟩
     all_goals dsimp only [gatherTier_setBindBroadcasts, bindBroadcasts_setBindBroadcasts]
     · intro q
@@ -682,12 +688,12 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
       by_cases hq : q = j
       · subst hq
         rw [Function.update_self] at hU' ⊢
-        rcases hInv.bindVal_prov q U' hU' with hF | hin'
+        rcases hInv.bindBroadcastVal_provenance q U' hU' with hF | hin'
         · exact Or.inl hF
         · rw [hb] at hin'
           exact absurd hin' (by simp)
       · rw [Function.update_of_ne hq] at hU' ⊢
-        exact hInv.bindVal_prov q U' hU'
+        exact hInv.bindBroadcastVal_provenance q U' hU'
     · intro j' hj U' hU'
       by_cases hq : j' = j
       · subst hq
@@ -712,26 +718,26 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
     all_goals dsimp only [gatherTier_setGatherTier, inputBroadcasts_setGatherTier,
       bindBroadcasts_setGatherTier]
     · exact hInv.F_card
-    · exact hInv.F_in_eq
+    · exact hInv.F_inputBroadcast_eq
     · exact hInv.F_bind_eq
     · intro i k m' hm'
       rw [InstanceState.multicast_received] at hm'
       rw [InstanceState.mem_multicast_sent]
-      exact Or.inr (hInv.recv_sub i k hm')
+      exact Or.inr (hInv.received_subset_sent i k hm')
     · intro j' k v hv
       rw [InstanceState.multicast_process] at hv
       exact hInv.inputBroadcastReturned_val j' k v hv
     · intro j' q U hU
       rw [InstanceState.multicast_process] at hU
       exact hInv.bindBroadcastReturned_val j' q U hU
-    · exact hInv.inVal_prov
-    · exact hInv.bindVal_prov
+    · exact hInv.inputBroadcastVal_provenance
+    · exact hInv.bindBroadcastVal_provenance
     · intro j' hj A hA
       rw [InstanceState.mem_multicast_sent] at hA
       rw [InstanceState.multicast_process]
       rcases hA with ⟨rfl, -⟩ | hold
       · exact absurd h hj
-      · exact hInv.echo_conf j' hj A hold
+      · exact hInv.echo_confirmed j' hj A hold
     · intro j' hj A hA
       rw [InstanceState.multicast_process] at hA
       exact hInv.echo_card j' hj A hA
@@ -740,7 +746,7 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
       rw [InstanceState.multicast_process]
       rcases hW with ⟨rfl, -⟩ | hold
       · exact absurd h hj
-      · exact hInv.vote_conf j' hj W hold
+      · exact hInv.vote_confirmed j' hj W hold
     · intro j' hj W hW
       rw [InstanceState.multicast_process] at hW
       rw [InstanceState.multicast_received]
@@ -760,14 +766,14 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
       by_cases hk : k' = k
       · subst hk
         rw [Function.update_self]
-        exact hInv.F_in_eq k'
+        exact hInv.F_inputBroadcast_eq k'
       · rw [Function.update_of_ne hk]
-        exact hInv.F_in_eq k'
+        exact hInv.F_inputBroadcast_eq k'
     · exact hInv.F_bind_eq
     · intro i k' m hm
       rw [InstanceState.setProcess_received] at hm
       rw [InstanceState.setProcess_sent]
-      exact hInv.recv_sub i k' hm
+      exact hInv.received_subset_sent i k' hm
     · intro j' k' v' hv'
       by_cases hj : j' = j
       · subst hj
@@ -801,13 +807,13 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
       by_cases hk : k' = k
       · subst hk
         rw [Function.update_self] at hv' ⊢
-        exact hInv.inVal_prov k' v' hv'
+        exact hInv.inputBroadcastVal_provenance k' v' hv'
       · rw [Function.update_of_ne hk] at hv' ⊢
-        exact hInv.inVal_prov k' v' hv'
-    · exact hInv.bindVal_prov
+        exact hInv.inputBroadcastVal_provenance k' v' hv'
+    · exact hInv.bindBroadcastVal_provenance
     · intro j' hj A hA
       rw [InstanceState.setProcess_sent] at hA
-      have hpre := hInv.echo_conf j' hj A hA
+      have hpre := hInv.echo_confirmed j' hj A hA
       by_cases hk : j' = j
       · subst hk
         rw [InstanceState.setProcess_process_self]
@@ -823,7 +829,7 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
         exact hInv.echo_card j' hj A hA
     · intro j' hj W hW
       rw [InstanceState.setProcess_sent] at hW
-      have hpre := hInv.vote_conf j' hj W hW
+      have hpre := hInv.vote_confirmed j' hj W hW
       by_cases hk : j' = j
       · subst hk
         rw [InstanceState.setProcess_process_self]
@@ -849,7 +855,7 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
       bindBroadcasts_setBindBroadcasts, inputBroadcasts_setBindBroadcasts,
         inputBroadcasts_setGatherTier]
     · exact hInv.F_card
-    · exact hInv.F_in_eq
+    · exact hInv.F_inputBroadcast_eq
     · intro q'
       by_cases hq : q' = q
       · subst hq
@@ -860,7 +866,7 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
     · intro i k m hm
       rw [InstanceState.setProcess_received] at hm
       rw [InstanceState.setProcess_sent]
-      exact hInv.recv_sub i k hm
+      exact hInv.received_subset_sent i k hm
     · intro j' k v hv'
       by_cases hj : j' = j
       · subst hj
@@ -890,17 +896,17 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
           exact hInv.bindBroadcastReturned_val j' q' U' hU'
         · rw [Function.update_of_ne hq]
           exact hInv.bindBroadcastReturned_val j' q' U' hU'
-    · exact hInv.inVal_prov
+    · exact hInv.inputBroadcastVal_provenance
     · intro q' U' hU'
       by_cases hq : q' = q
       · subst hq
         rw [Function.update_self] at hU' ⊢
-        exact hInv.bindVal_prov q' U' hU'
+        exact hInv.bindBroadcastVal_provenance q' U' hU'
       · rw [Function.update_of_ne hq] at hU' ⊢
-        exact hInv.bindVal_prov q' U' hU'
+        exact hInv.bindBroadcastVal_provenance q' U' hU'
     · intro j' hj A hA
       rw [InstanceState.setProcess_sent] at hA
-      have hpre := hInv.echo_conf j' hj A hA
+      have hpre := hInv.echo_confirmed j' hj A hA
       by_cases hk : j' = j
       · subst hk
         rw [InstanceState.setProcess_process_self]
@@ -916,7 +922,7 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
         exact hInv.echo_card j' hj A hA
     · intro j' hj W hW
       rw [InstanceState.setProcess_sent] at hW
-      have hpre := hInv.vote_conf j' hj W hW
+      have hpre := hInv.vote_confirmed j' hj W hW
       by_cases hk : j' = j
       · subst hk
         rw [InstanceState.setProcess_process_self]
@@ -946,12 +952,12 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
     all_goals dsimp only [gatherTier_setCore, gatherTier_setGatherTier, inputBroadcasts_setCore,
       inputBroadcasts_setGatherTier, bindBroadcasts_setCore, bindBroadcasts_setGatherTier]
     · exact hInv.F_card
-    · exact hInv.F_in_eq
+    · exact hInv.F_inputBroadcast_eq
     · exact hInv.F_bind_eq
     · intro i k m hm
       rw [InstanceState.setProcess_received] at hm
       rw [InstanceState.setProcess_sent]
-      exact hInv.recv_sub i k hm
+      exact hInv.received_subset_sent i k hm
     · intro j k v hv
       by_cases hj : j = id
       · subst hj
@@ -966,11 +972,11 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
         exact hInv.bindBroadcastReturned_val j q U hU
       · rw [InstanceState.setProcess_process_ne _ _ _ hj] at hU
         exact hInv.bindBroadcastReturned_val j q U hU
-    · exact hInv.inVal_prov
-    · exact hInv.bindVal_prov
+    · exact hInv.inputBroadcastVal_provenance
+    · exact hInv.bindBroadcastVal_provenance
     · intro j hj A hA
       rw [InstanceState.setProcess_sent] at hA
-      have hpre := hInv.echo_conf j hj A hA
+      have hpre := hInv.echo_confirmed j hj A hA
       by_cases hk : j = id
       · subst hk
         rw [InstanceState.setProcess_process_self]
@@ -986,7 +992,7 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
         exact hInv.echo_card j hj A hA
     · intro j hj W hW
       rw [InstanceState.setProcess_sent] at hW
-      have hpre := hInv.vote_conf j hj W hW
+      have hpre := hInv.vote_confirmed j hj W hW
       by_cases hk : j = id
       · subst hk
         rw [InstanceState.setProcess_process_self]
@@ -1014,13 +1020,13 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
       bindBroadcasts_corruptAll]
     · exact InstanceState.corrupt_card_le (gatherTier s) id hInv.F_card
     · intro k
-      rw [BRB.SpecState.corrupt_F, InstanceState.corrupt_F, hInv.F_in_eq k]
+      rw [BRB.SpecState.corrupt_F, InstanceState.corrupt_F, hInv.F_inputBroadcast_eq k]
     · intro k
       rw [BRB.SpecState.corrupt_F, InstanceState.corrupt_F, hInv.F_bind_eq k]
     · intro i k m hm
       rw [InstanceState.corrupt_received] at hm
       rw [InstanceState.corrupt_sent]
-      exact hInv.recv_sub i k hm
+      exact hInv.received_subset_sent i k hm
     · intro j k v hv
       rw [InstanceState.corrupt_process] at hv
       rw [BRB.corrupt_val]
@@ -1032,26 +1038,26 @@ theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.
     · intro k v hv
       rw [BRB.corrupt_val] at hv
       rw [BRB.corrupt_input]
-      rcases hInv.inVal_prov k v hv with hkF | hin
+      rcases hInv.inputBroadcastVal_provenance k v hv with hkF | hin
       · exact Or.inl (InstanceState.corrupt_F_subset (gatherTier s) id hkF)
       · exact Or.inr hin
     · intro k U hU
       rw [BRB.corrupt_val] at hU
       rw [BRB.corrupt_input]
-      rcases hInv.bindVal_prov k U hU with hkF | hin
+      rcases hInv.bindBroadcastVal_provenance k U hU with hkF | hin
       · exact Or.inl (InstanceState.corrupt_F_subset (gatherTier s) id hkF)
       · exact Or.inr hin
     · intro j hj A hA
       rw [InstanceState.corrupt_sent] at hA
       rw [InstanceState.corrupt_process]
-      exact hInv.echo_conf j (hF j hj) A hA
+      exact hInv.echo_confirmed j (hF j hj) A hA
     · intro j hj A hA
       rw [InstanceState.corrupt_process] at hA
       exact hInv.echo_card j (hF j hj) A hA
     · intro j hj W hW
       rw [InstanceState.corrupt_sent] at hW
       rw [InstanceState.corrupt_process]
-      exact hInv.vote_conf j (hF j hj) W hW
+      exact hInv.vote_confirmed j (hF j hj) W hW
     · intro j hj W hW
       rw [InstanceState.corrupt_process] at hW
       rw [InstanceState.corrupt_received]
@@ -1068,7 +1074,7 @@ omit [DecidableEq X] in
 /-- A payload set approved by one program's input store is approved at the
 instance: each entry of the store is the committed value of the instance that
 returned it. -/
-theorem approved_of_approvedBy {s : StateOverBroadcastSpecification P.n X} (hConf : IdealConf P s)
+theorem approved_of_approvedBy {s : StateOverBroadcastSpecification P.n X} (hConf : Conformance P s)
     {j : Fin P.n} {A : AcceptedPairs P.n X} (h : approvedBy ((gatherTier s).process j) A) :
     approved s A :=
   fun p hp => hConf.inputBroadcastReturned_val j p.1 p.2 (h p hp)
@@ -1120,7 +1126,7 @@ theorem approved_mono {s s' : StateOverBroadcastSpecification P.n X} {l : Label 
   | _ => rw [PMF.mem_support_pure_iff] at hs'; subst hs'; exact h
 
 /-- The `ECHO` fields of the initial state are empty. -/
-theorem echoAppr_initial :
+theorem echoApproved_initial :
     ∀ (j : Fin P.n) (A : AcceptedPairs P.n X),
       ((gatherTier ((instanceOverBroadcastSpecification P X).init)).process j).sentEcho = some A →
         approved ((instanceOverBroadcastSpecification P X).init) A := by
@@ -1130,8 +1136,8 @@ theorem echoAppr_initial :
 /-- **The approval of an `ECHO` field is inductive**: only `StepOverBroadcastSpecification.echo`
 writes the field, and the payload it writes is the entries of the writer's own
 store. -/
-theorem echoAppr_step {s s' : StateOverBroadcastSpecification P.n X} {l : Label P.n X}
-    {μ : PMF (StateOverBroadcastSpecification P.n X)} (hConf : IdealConf P s)
+theorem echoApproved_step {s s' : StateOverBroadcastSpecification P.n X} {l : Label P.n X}
+    {μ : PMF (StateOverBroadcastSpecification P.n X)} (hConf : Conformance P s)
     (hEA : ∀ (j : Fin P.n) (A : AcceptedPairs P.n X),
       ((gatherTier s).process j).sentEcho = some A → approved s A)
     (hstep : StepOverBroadcastSpecification P s l μ) (hs' : s' ∈ μ.support) :
@@ -1230,46 +1236,47 @@ theorem echoAppr_step {s s' : StateOverBroadcastSpecification P.n X} {l : Label 
 
 /-- **The invariant of the composed gather instance**: the conformance clauses,
 together with the approval of every `ECHO` field. -/
-structure IdealInv (P : Parameters) (s : StateOverBroadcastSpecification P.n X) : Prop extends
-  IdealConf
+structure Invariant (P : Parameters) (s : StateOverBroadcastSpecification P.n X) : Prop extends
+  Conformance
   P s where
   /-- The payload set in a process's `ECHO` field consists of committed input
   entries. No honesty side condition: only `StepOverBroadcastSpecification.echo` writes the field,
   and a corrupted sender's accepted pairs are entries of its store too. -/
-  echo_appr : ∀ (j : Fin P.n) (A : AcceptedPairs P.n X),
+  echo_approved : ∀ (j : Fin P.n) (A : AcceptedPairs P.n X),
     ((gatherTier s).process j).sentEcho = some A → approved s A
 
 /-- The invariant holds initially. -/
-theorem IdealInv.initial : IdealInv P ((instanceOverBroadcastSpecification P X).init) :=
-  ⟨IdealConf.initial, echoAppr_initial⟩
+theorem Invariant.initial : Invariant P ((instanceOverBroadcastSpecification P X).init) :=
+  ⟨Conformance.initial, echoApproved_initial⟩
 
 /-- The invariant is preserved by every step. -/
-theorem IdealInv.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.n X}
-    {μ : PMF (StateOverBroadcastSpecification P.n X)} (hInv : IdealInv P s) (hstep :
+theorem Invariant.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.n X}
+    {μ : PMF (StateOverBroadcastSpecification P.n X)} (hInv : Invariant P s) (hstep :
       StepOverBroadcastSpecification P s l μ)
-    {s' : StateOverBroadcastSpecification P.n X} (hs' : s' ∈ μ.support) : IdealInv P s' :=
-  ⟨hInv.toIdealConf.step hstep hs', echoAppr_step hInv.toIdealConf hInv.echo_appr hstep hs'⟩
+    {s' : StateOverBroadcastSpecification P.n X} (hs' : s' ∈ μ.support) : Invariant P s' :=
+  ⟨hInv.toConformance.step hstep hs',
+    echoApproved_step hInv.toConformance hInv.echo_approved hstep hs'⟩
 
 
 /-! ### The incidence on the gather network state
 
 The rows of the incidence read the sent sets and the corrupted set, so
 `mem_correct`, `card_correct`, `mem_dominatedBy`, `correct_filter_dominatedBy` and
-`sum_dominatedBy` apply to `netOf` as they stand. What the invariant supplies is
+`sum_dominatedBy` apply to `networkOf` as they stand. What the invariant supplies is
 the width of a row. -/
 
 omit [DecidableEq X] in
 /-- The `ECHO` payload of a process outside `F` is the one its `sentEcho` field
 holds. -/
-theorem echoOf_eq {s : StateOverBroadcastSpecification P.n X} (hInv : IdealInv P s) {j : Fin P.n}
+theorem echoOf_eq {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s) {j : Fin P.n}
     (hj : j ∉ (gatherTier s).F) {A : AcceptedPairs P.n X} (hA : Message.echo A ∈ (gatherTier s).sent
       j) :
-    echoOf (netOf s) j = A := by
+    echoOf (networkOf s) j = A := by
   classical
-  have hex : ∃ A : AcceptedPairs P.n X, Message.echo A ∈ (netOf s).sent j := ⟨A, hA⟩
+  have hex : ∃ A : AcceptedPairs P.n X, Message.echo A ∈ (networkOf s).sent j := ⟨A, hA⟩
   rw [echoOf, dif_pos hex]
-  have h1 := hInv.echo_conf j hj _ hex.choose_spec
-  have h2 := hInv.echo_conf j hj A hA
+  have h1 := hInv.echo_confirmed j hj _ hex.choose_spec
+  have h2 := hInv.echo_confirmed j hj A hA
   rw [h1] at h2
   exact Option.some.inj h2
 
@@ -1278,23 +1285,23 @@ omit [DecidableEq X] in
 senders. Its `VOTE` payload, if it has one, is backed by `n − f` `ECHO`
 receipts; if it has none the condition is vacuous and the row is
 everything. -/
-theorem dominatedBy_card {s : StateOverBroadcastSpecification P.n X} (hInv : IdealInv P s) {q : Fin
+theorem dominatedBy_card {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s) {q : Fin
   P.n}
-    (hq : q ∉ (gatherTier s).F) : P.n - P.f ≤ (dominatedBy (netOf s) q).card := by
+    (hq : q ∉ (gatherTier s).F) : P.n - P.f ≤ (dominatedBy (networkOf s) q).card := by
   classical
   by_cases hv : ∃ W : AcceptedPairs P.n X, Message.vote W ∈ (gatherTier s).sent q
   · obtain ⟨W, hW⟩ := hv
-    have hslot := hInv.vote_conf q hq W hW
+    have hslot := hInv.vote_confirmed q hq W hW
     obtain ⟨Q, hQc, hQm⟩ := hInv.vote_backed q hq W hslot
     refine le_trans hQc (Finset.card_le_card fun j hj => ?_)
     rw [mem_dominatedBy]
     intro W' hW'
-    have hslot' := hInv.vote_conf q hq W' hW'
+    have hslot' := hInv.vote_confirmed q hq W' hW'
     rw [hslot] at hslot'
     obtain rfl : W = W' := Option.some.inj hslot'
     obtain ⟨A, hA, hAW⟩ := hQm j hj
-    exact ⟨A, hInv.recv_sub q j hA, hAW⟩
-  · have hall : dominatedBy (netOf s) q = Finset.univ := by
+    exact ⟨A, hInv.received_subset_sent q j hA, hAW⟩
+  · have hall : dominatedBy (networkOf s) q = Finset.univ := by
       refine Finset.eq_univ_iff_forall.mpr fun j => ?_
       rw [mem_dominatedBy]
       intro W hW
@@ -1306,12 +1313,12 @@ open scoped Classical in
 omit [DecidableEq X] in
 /-- A row of a process outside `F` meets the processes outside `F` in at least
 `n − f − |F|` of them. -/
-theorem dominatedBy_correct_card {s : StateOverBroadcastSpecification P.n X} (hInv : IdealInv P s)
+theorem dominatedBy_correct_card {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s)
     {q : Fin P.n} (hq : q ∉ (gatherTier s).F) :
     P.n - P.f - (gatherTier s).F.card ≤
-      ((correct (netOf s)).filter (fun j => j ∈ dominatedBy (netOf s) q)).card := by
-  rw [correct_filter_dominatedBy, netOf_F]
-  have h1 := Finset.le_card_sdiff (gatherTier s).F (dominatedBy (netOf s) q)
+      ((correct (networkOf s)).filter (fun j => j ∈ dominatedBy (networkOf s) q)).card := by
+  rw [correct_filter_dominatedBy, networkOf_F]
+  have h1 := Finset.le_card_sdiff (gatherTier s).F (dominatedBy (networkOf s) q)
   have h2 := dominatedBy_card hInv hq
   omega
 
@@ -1319,29 +1326,29 @@ open scoped Classical in
 omit [DecidableEq X] in
 /-- **The pigeonhole.** Some sender outside `F` has at least `n − f − |F|`
 dominators. -/
-theorem exists_dominators {s : StateOverBroadcastSpecification P.n X} (hInv : IdealInv P s) :
-    ∃ j₀, j₀ ∈ correct (netOf s) ∧
-      P.n - P.f - (gatherTier s).F.card ≤ (dominators (netOf s) j₀).card := by
+theorem exists_dominators {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s) :
+    ∃ j₀, j₀ ∈ correct (networkOf s) ∧
+      P.n - P.f - (gatherTier s).F.card ≤ (dominators (networkOf s) j₀).card := by
   by_contra hc
   push Not at hc
   have hF := hInv.F_card
-  have hf := P.hf
-  set H : Finset (Fin P.n) := correct (netOf s) with hH
+  have hf := P.hResilience
+  set H : Finset (Fin P.n) := correct (networkOf s) with hH
   set m : ℕ := P.n - P.f - (gatherTier s).F.card with hm
   have hHcard : H.card = P.n - (gatherTier s).F.card := card_correct
   have hpos : 0 < H.card := by
     omega
-  have hlow : ∀ q ∈ H, m ≤ ((correct (netOf s)).filter
-      (fun j => j ∈ dominatedBy (netOf s) q)).card :=
+  have hlow : ∀ q ∈ H, m ≤ ((correct (networkOf s)).filter
+      (fun j => j ∈ dominatedBy (networkOf s) q)).card :=
     fun q hq => dominatedBy_correct_card hInv (mem_correct.mp (hH ▸ hq))
   have hsum2 : H.card * m
-      ≤ ∑ q ∈ H, ((correct (netOf s)).filter
-        (fun j => j ∈ dominatedBy (netOf s) q)).card := by
+      ≤ ∑ q ∈ H, ((correct (networkOf s)).filter
+        (fun j => j ∈ dominatedBy (networkOf s) q)).card := by
     simpa [smul_eq_mul] using Finset.card_nsmul_le_sum H _ m hlow
   rw [sum_dominatedBy, ← hH] at hsum2
-  have hle : ∀ j ∈ H, (dominators (netOf s) j).card ≤ m - 1 := fun j hj => by
+  have hle : ∀ j ∈ H, (dominators (networkOf s) j).card ≤ m - 1 := fun j hj => by
     have := hc j (hH ▸ hj); omega
-  have hsum1 : ∑ j ∈ H, (dominators (netOf s) j).card ≤ H.card * (m - 1) := by
+  have hsum1 : ∑ j ∈ H, (dominators (networkOf s) j).card ≤ H.card * (m - 1) := by
     simpa [smul_eq_mul] using Finset.sum_le_card_nsmul H _ (m - 1) hle
   have hstrict : H.card * (m - 1) < H.card * m :=
     mul_lt_mul_of_pos_left (by omega) hpos
@@ -1356,18 +1363,18 @@ its `ECHO` payload below every committed `BIND` payload of a process outside
 `F`: the dominators meet that payload's backing `VOTE` quorum of `n − f`, and
 the meeting process's write-once `VOTE` payload lies above the `ECHO` payload
 and below the `BIND` payload. -/
-theorem transfer {s : StateOverBroadcastSpecification P.n X} (hInv : IdealInv P s) {j₀ : Fin P.n}
-    (hj₀ : j₀ ∉ (gatherTier s).F) (hcnt : P.f + 1 ≤ (dominators (netOf s) j₀).card)
+theorem transfer {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s) {j₀ : Fin P.n}
+    (hj₀ : j₀ ∉ (gatherTier s).F) (hcnt : P.f + 1 ≤ (dominators (networkOf s) j₀).card)
     {k : Fin P.n} (hk : k ∉ (gatherTier s).F) {U : AcceptedPairs P.n X}
     (hU : (bindBroadcasts s k).val = some U) :
     ∃ A, Message.echo A ∈ (gatherTier s).sent j₀ ∧ P.n - P.f ≤ A.card ∧ A ⊆ U := by
   obtain ⟨V, hVc, hVm⟩ :=
-    hInv.bind_backed k hk U ((hInv.bindVal_prov k U hU).resolve_left hk)
+    hInv.bind_backed k hk U ((hInv.bindBroadcastVal_provenance k U hU).resolve_left hk)
   obtain ⟨q, hqK, hqV⟩ := InstanceState.exists_mem_inter_of_quorum hcnt hVc
   rw [dominators, Finset.mem_filter] at hqK
   obtain ⟨W, hWrecv, hWU⟩ := hVm q hqV
-  obtain ⟨A, hA, hAW⟩ := mem_dominatedBy.mp hqK.2 W (hInv.recv_sub k q hWrecv)
-  exact ⟨A, hA, hInv.echo_card j₀ hj₀ A (hInv.echo_conf j₀ hj₀ A hA),
+  obtain ⟨A, hA, hAW⟩ := mem_dominatedBy.mp hqK.2 W (hInv.received_subset_sent k q hWrecv)
+  exact ⟨A, hA, hInv.echo_card j₀ hj₀ A (hInv.echo_confirmed j₀ hj₀ A hA),
     subset_trans hAW hWU⟩
 
 open scoped Classical in
@@ -1375,42 +1382,42 @@ omit [DecidableEq X] in
 /-- The core is the write-once `ECHO` payload of a sender outside `F` with at
 least `f + 1` dominators, as soon as some process outside `F` holds a committed
 `BIND` payload. -/
-theorem core_witness {s : StateOverBroadcastSpecification P.n X} (hInv : IdealInv P s)
+theorem core_witness {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s)
     {k₀ : Fin P.n} (hk₀ : k₀ ∉ (gatherTier s).F) {U₀ : AcceptedPairs P.n X}
     (hU₀ : (bindBroadcasts s k₀).val = some U₀) :
-    ∃ j₁, j₁ ∉ (gatherTier s).F ∧ P.f + 1 ≤ (dominators (netOf s) j₁).card ∧
-      Message.echo (coreOfNet P (gatherTier s).2) ∈ (gatherTier s).sent j₁ ∧
-      ((gatherTier s).process j₁).sentEcho = some (coreOfNet P (gatherTier s).2) := by
+    ∃ j₁, j₁ ∉ (gatherTier s).F ∧ P.f + 1 ≤ (dominators (networkOf s) j₁).card ∧
+      Message.echo (coreOfNetwork P (gatherTier s).2) ∈ (gatherTier s).sent j₁ ∧
+      ((gatherTier s).process j₁).sentEcho = some (coreOfNetwork P (gatherTier s).2) := by
   have hF := hInv.F_card
-  have hf := P.hf
-  have hex : ∃ j, j ∈ correct (netOf s) ∧ P.f + 1 ≤ (dominators (netOf s) j).card := by
+  have hf := P.hResilience
+  have hex : ∃ j, j ∈ correct (networkOf s) ∧ P.f + 1 ≤ (dominators (networkOf s) j).card := by
     obtain ⟨j₀, hj₀, hcnt⟩ := exists_dominators hInv
     exact ⟨j₀, hj₀, by omega⟩
   have hspec := hex.choose_spec
   have hj₁F : hex.choose ∉ (gatherTier s).F := mem_correct.mp hspec.1
   obtain ⟨A, hA, -, -⟩ := transfer hInv hj₁F hspec.2 hk₀ hU₀
-  have hcore : coreOfNet P (gatherTier s).2 = A := by
-    rw [← coreOf_netOf, coreOf, dif_pos hex]
+  have hcore : coreOfNetwork P (gatherTier s).2 = A := by
+    rw [← coreOf_networkOf, coreOf, dif_pos hex]
     exact echoOf_eq hInv hj₁F hA
   exact ⟨hex.choose, hj₁F, hspec.2, by rw [hcore]; exact hA,
-    by rw [hcore]; exact hInv.echo_conf _ hj₁F A hA⟩
+    by rw [hcore]; exact hInv.echo_confirmed _ hj₁F A hA⟩
 
 omit [DecidableEq X] in
 /-- **The single core.** Once some process outside `F` holds a committed `BIND`
 payload, the core has at least `n − f` entries and lies below the committed
 `BIND` payload of every process outside `F`. -/
-theorem single_core {s : StateOverBroadcastSpecification P.n X} (hInv : IdealInv P s)
+theorem single_core {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s)
     {k₀ : Fin P.n} (hk₀ : k₀ ∉ (gatherTier s).F) {U₀ : AcceptedPairs P.n X}
     (hU₀ : (bindBroadcasts s k₀).val = some U₀) :
-    P.n - P.f ≤ (coreOfNet P (gatherTier s).2).card ∧
+    P.n - P.f ≤ (coreOfNetwork P (gatherTier s).2).card ∧
       ∀ k ∉ (gatherTier s).F, ∀ U : AcceptedPairs P.n X, (bindBroadcasts s k).val = some U →
-        coreOfNet P (gatherTier s).2 ⊆ U := by
+        coreOfNetwork P (gatherTier s).2 ⊆ U := by
   obtain ⟨j₁, hj₁F, hcnt, hsent, hslot⟩ := core_witness hInv hk₀ hU₀
   refine ⟨hInv.echo_card j₁ hj₁F _ hslot, ?_⟩
   intro k hk U hU
   obtain ⟨A, hA, -, hAU⟩ := transfer hInv hj₁F hcnt hk hU
-  have hEq : A = coreOfNet P (gatherTier s).2 := by
-    have h1 := hInv.echo_conf j₁ hj₁F A hA
+  have hEq : A = coreOfNetwork P (gatherTier s).2 := by
+    have h1 := hInv.echo_confirmed j₁ hj₁F A hA
     rw [hslot] at h1
     exact (Option.some.inj h1).symm
   rw [← hEq]
@@ -1419,12 +1426,12 @@ theorem single_core {s : StateOverBroadcastSpecification P.n X} (hInv : IdealInv
 omit [DecidableEq X] in
 /-- **The core is approved**: its entries are committed input entries, the
 `ECHO` field it comes from carrying only such entries. -/
-theorem single_core_approved {s : StateOverBroadcastSpecification P.n X} (hInv : IdealInv P s)
+theorem single_core_approved {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s)
     {k₀ : Fin P.n} (hk₀ : k₀ ∉ (gatherTier s).F) {U₀ : AcceptedPairs P.n X}
     (hU₀ : (bindBroadcasts s k₀).val = some U₀) :
-    approved s (coreOfNet P (gatherTier s).2) := by
+    approved s (coreOfNetwork P (gatherTier s).2) := by
   obtain ⟨j₁, -, -, -, hslot⟩ := core_witness hInv hk₀ hU₀
-  exact hInv.echo_appr j₁ _ hslot
+  exact hInv.echo_approved j₁ _ hslot
 
 /-! ### The freeze certificate -/
 
@@ -1490,14 +1497,15 @@ are committed input entries, and at least `f + 1` coordinates hold a committed
 `BIND` payload above it. The last is the certificate that holds the returns
 after the first to this core: it is blind to `F` and monotone
 (`bindAbove_mono`), and an `n − f` return quorum meets it. -/
-theorem coreOf_recorded {s : StateOverBroadcastSpecification P.n X} (hInv : IdealInv P s)
+theorem coreOf_recorded {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s)
     {Q : Finset (Fin P.n)} (hQc : P.n - P.f ≤ Q.card)
     (hQm : ∀ q ∈ Q, ∃ U : AcceptedPairs P.n X, (bindBroadcasts s q).val = some U) :
-    P.n - P.f ≤ (coreOfNet P (gatherTier s).2).card ∧ approved s (coreOfNet P (gatherTier s).2) ∧
-      P.f + 1 ≤ (bindAbove s (coreOfNet P (gatherTier s).2)).card := by
+    P.n - P.f ≤ (coreOfNetwork P (gatherTier s).2).card ∧ approved s (coreOfNetwork P (gatherTier
+      s).2) ∧
+      P.f + 1 ≤ (bindAbove s (coreOfNetwork P (gatherTier s).2)).card := by
   classical
   have hF := hInv.F_card
-  have hf := P.hf
+  have hf := P.hResilience
   have hH : P.f + 1 ≤ (Q \ (gatherTier s).F).card := by
     have h1 := Finset.le_card_sdiff (gatherTier s).F Q
     omega

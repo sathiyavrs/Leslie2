@@ -456,10 +456,10 @@ theorem roundLoopStep_no_tau {P : Parameters} {j : Fin P.n} {c : RoundLoopRecord
 /-- A synchronised transition of the round-loop group on a visible label. -/
 theorem roundLoopProduct_inv {P : Parameters} {C : ∀ _ : Fin P.n,
     RoundLoopRecord P.n} {l : ExtendedLabel P.n} {μ : PMF (∀ _ : Fin P.n, RoundLoopRecord P.n)}
-    (h : (System.syncProduct (roundLoopProgram P)).step C l μ) :
+    (h : (System.synchronisedProduct (roundLoopProgram P)).step C l μ) :
     ∃ y : ∀ _ : Fin P.n, RoundLoopRecord P.n,
       μ = PMF.pure y ∧ ∀ i, RoundLoopStep P i (C i) l (PMF.pure (y i)) := by
-  rw [System.syncProduct_step] at h
+  rw [System.synchronisedProduct_step] at h
   rcases h with ⟨-, μ_, hall, rfl⟩ | ⟨rfl, i, μ_i, hstep, -⟩
   · have hy : ∀ i, ∃ c', μ_ i = PMF.pure c' := fun i => roundLoopStep_dirac (hall i)
     choose y hy using hy
@@ -474,14 +474,15 @@ Dirac steps. -/
 theorem roundLoopProduct_pure {P : Parameters} {C y : ∀ _ : Fin P.n, RoundLoopRecord P.n}
     {l : ExtendedLabel P.n} (hl : l ≠ Silent.τ)
     (h : ∀ i, RoundLoopStep P i (C i) l (PMF.pure (y i))) :
-    (System.syncProduct (roundLoopProgram P)).step C l (PMF.pure y) := by
-  rw [System.syncProduct_step]
+    (System.synchronisedProduct (roundLoopProgram P)).step C l (PMF.pure y) := by
+  rw [System.synchronisedProduct_step]
   exact Or.inl ⟨hl, fun i => PMF.pure (y i), h, (piPMF_pure y).symm⟩
 
 /-- The round-loop group has no silent transition. -/
 theorem roundLoopProduct_no_tau {P : Parameters} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
     {μ : PMF (∀ _ : Fin P.n, RoundLoopRecord P.n)}
-    (h : (System.syncProduct (roundLoopProgram P)).step C (Silent.τ : ExtendedLabel P.n) μ) :
+    (h : (System.synchronisedProduct (roundLoopProgram P)).step C (Silent.τ : ExtendedLabel P.n) μ)
+      :
     False := by
   rcases h with ⟨hτ, -⟩ | ⟨-, i, μ_i, hstep, -⟩
   · exact hτ rfl

@@ -18,12 +18,12 @@ The gather-based implementation is carried to the protocol-shaped
 specification `hybrid` in three stages. Each stage replaces one tier of the
 round by the tier above it, at every round at once:
 
-1. `substSimLow` — the broadcast substitution, from the round over the gather
+1. `broadcastSubstitution` — the broadcast substitution, from the round over the gather
    instances over Bracha's broadcast to the round over the gather instances
    over the broadcast specification;
-2. `substSimIdeal` — the gather substitution, into the round over the gather
+2. `gatherSubstitution` — the gather substitution, into the round over the gather
    specifications;
-3. `substSimPair` — the counting simulation, into the round specification.
+3. `roundSpecificationSubstitution` — the counting simulation, into the round specification.
 
 The systems the stages run between are `composed`, `composedOverBroadcastSpecification`,
 `composedOverGatherSpecifications` and `hybrid`. Each has a graded-agreement side and three further
@@ -39,16 +39,17 @@ lifted coin oracle, and the pipeline over them — the rendezvous alphabet
 hidden, the result read back over `Label n`, the sub-protocol API hidden — is the
 context term of `ABDY.composed` and `hybrid`, character for character. The
 third stage therefore lands on `hybrid P` itself, and the shared links
-`hybrid_spec` and `coreSim` carry the gather-based chain to the ABA
+`hybrid_spec` and `hybridRefinesSpecification` carry the gather-based chain to the ABA
 specification from there.
 
 Each side carries a broadcast act, and the act of a round state corrupts the
 round's two gather instances at once while leaving the programs and the round's
-bound bit untouched (D1): `gActLow`, `gActIdeal` and `gActPair` are
-`GBCA.ByAFW.corruptAll` over the corruption of the tier's gather states, and
-`GBCA.ByABDY.specificationCorruptionAct` is the act of the specification side. The three relations
-survive those acts — `lowSim_failAct`, `idealSim_failAct`, `pairSim_failAct` —
-which is the side condition `ForwardSimulation.family` consumes.
+bound bit untouched (D1): `corruptionOverBracha`, `corruptionOverBroadcastSpecification` and
+`corruptionOverGatherSpecifications` are `GBCA.ByAFW.corruptAll` over the corruption of the tier's
+gather states, and `GBCA.ByABDY.specificationCorruptionAct` is the act of the specification side.
+The three relations survive those acts — `broadcastSubstitution_failAct`,
+`gatherSubstitution_failAct`, `roundSpecificationSubstitution_failAct` — which is the side condition
+`ForwardSimulation.family` consumes.
 
 `substitution` is the three-stage inclusion, `composed_refines` chains it with
 `hybrid_spec`, `composed_safe` reads off Validity and Agreement, and
@@ -70,7 +71,7 @@ it holds; the round's programs and its bound bit are untouched (D1). -/
 
 /-- The broadcast corruption act on a round over the gather instances over
 Bracha's broadcast. -/
-def gActLow (P : Parameters) :
+def corruptionOverBracha (P : Parameters) :
     ExtendedLabel P.n → GBCA.ByAFW.RoundStateOverBracha P.n → GBCA.ByAFW.RoundStateOverBracha P.n
   | Sum.inl (.fail k), s =>
     GBCA.ByAFW.corruptAll P k
@@ -80,7 +81,7 @@ def gActLow (P : Parameters) :
 
 /-- The broadcast corruption act on a round over the gather instances over the
 broadcast specification. -/
-def gActIdeal (P : Parameters) :
+def corruptionOverBroadcastSpecification (P : Parameters) :
     ExtendedLabel P.n → GBCA.ByAFW.RoundStateOverBroadcastSpecification P.n →
       GBCA.ByAFW.RoundStateOverBroadcastSpecification P.n
   | Sum.inl (.fail k), s =>
@@ -90,7 +91,7 @@ def gActIdeal (P : Parameters) :
   | _, s => s
 
 /-- The broadcast corruption act on a round over the gather specifications. -/
-def gActPair (P : Parameters) :
+def corruptionOverGatherSpecifications (P : Parameters) :
     ExtendedLabel P.n → GBCA.ByAFW.RoundStateOverGatherSpecifications P.n →
       GBCA.ByAFW.RoundStateOverGatherSpecifications P.n
   | Sum.inl (.fail k), s =>
@@ -103,16 +104,18 @@ The three relations survive the corruption broadcast: the rounds' own
 lockstep-corruption statements, taken on the extended `fail` label. -/
 
 /-- Corruption preserves the broadcast substitution relation. -/
-theorem lowSim_failAct (P : Parameters) :
+theorem broadcastSubstitution_failAct (P : Parameters) :
     ∀ l : ExtendedLabel P.n, isFailLabel l → ∀ (_ : ℕ) (x : GBCA.ByAFW.RoundStateOverBracha P.n)
-      (y : GBCA.ByAFW.RoundStateOverBroadcastSpecification P.n), GBCA.ByAFW.LowPairRel P x y →
-      GBCA.ByAFW.LowPairRel P (gActLow P l x) (gActIdeal P l y) := by
+      (y : GBCA.ByAFW.RoundStateOverBroadcastSpecification P.n),
+        GBCA.ByAFW.BroadcastSubstitutionRelation P x y →
+      GBCA.ByAFW.BroadcastSubstitutionRelation P (corruptionOverBracha P l x)
+        (corruptionOverBroadcastSpecification P l y) := by
   rintro l hl _ x y hR
   cases l with
   | inr e => cases e <;> exact hl.elim
   | inl l₀ =>
     cases l₀ with
-    | fail k => exact GBCA.ByAFW.lowPairRel_corrupt hR k
+    | fail k => exact GBCA.ByAFW.broadcastSubstitutionRelation_corrupt hR k
     | tau => exact hl.elim
     | callABA id b => exact hl.elim
     | retABA id b => exact hl.elim
@@ -122,17 +125,19 @@ theorem lowSim_failAct (P : Parameters) :
     | retW r' id b => exact hl.elim
 
 /-- Corruption preserves the gather substitution relation. -/
-theorem idealSim_failAct (P : Parameters) :
+theorem gatherSubstitution_failAct (P : Parameters) :
     ∀ l : ExtendedLabel P.n,
       isFailLabel l → ∀ (_ : ℕ) (x : GBCA.ByAFW.RoundStateOverBroadcastSpecification P.n) (y :
-        GBCA.ByAFW.RoundStateOverGatherSpecifications P.n), GBCA.ByAFW.IdealRel P x y →
-      GBCA.ByAFW.IdealRel P (gActIdeal P l x) (gActPair P l y) := by
+        GBCA.ByAFW.RoundStateOverGatherSpecifications P.n),
+          GBCA.ByAFW.GatherSubstitutionRelation P x y →
+      GBCA.ByAFW.GatherSubstitutionRelation P (corruptionOverBroadcastSpecification P l x)
+        (corruptionOverGatherSpecifications P l y) := by
   rintro l hl _ x y hR
   cases l with
   | inr e => cases e <;> exact hl.elim
   | inl l₀ =>
     cases l₀ with
-    | fail k => exact GBCA.ByAFW.idealRel_corrupt hR k
+    | fail k => exact GBCA.ByAFW.gatherSubstitutionRelation_corrupt hR k
     | tau => exact hl.elim
     | callABA id b => exact hl.elim
     | retABA id b => exact hl.elim
@@ -142,17 +147,18 @@ theorem idealSim_failAct (P : Parameters) :
     | retW r' id b => exact hl.elim
 
 /-- Corruption preserves the counting relation. -/
-theorem pairSim_failAct (P : Parameters) :
+theorem roundSpecificationSubstitution_failAct (P : Parameters) :
     ∀ l : ExtendedLabel P.n,
       isFailLabel l → ∀ (_ : ℕ) (x : GBCA.ByAFW.RoundStateOverGatherSpecifications P.n) (y :
-        GBCA.SpecState P.n), GBCA.ByAFW.PairRel P x y →
-      GBCA.ByAFW.PairRel P (gActPair P l x) (specificationCorruptionAct P l y) := by
+        GBCA.SpecState P.n), GBCA.ByAFW.SpecificationRelation P x y →
+      GBCA.ByAFW.SpecificationRelation P (corruptionOverGatherSpecifications P l x)
+        (specificationCorruptionAct P l y) := by
   rintro l hl r x y hR
   cases l with
   | inr e => cases e <;> exact hl.elim
   | inl l₀ =>
     cases l₀ with
-    | fail k => exact GBCA.ByAFW.pairRel_corrupt (r := r) hR k
+    | fail k => exact GBCA.ByAFW.specificationRelation_corrupt (r := r) hR k
     | tau => exact hl.elim
     | callABA id b => exact hl.elim
     | retABA id b => exact hl.elim
@@ -171,7 +177,7 @@ every round's gather instances in lockstep, and everything else idles. -/
 gather instances over Bracha's broadcast. -/
 noncomputable def roundFamilyOverBracha (P : Parameters) :
     System (ℕ → GBCA.ByAFW.RoundStateOverBracha P.n) (ExtendedLabel P.n) :=
-  System.family (GBCA.ByAFW.roundOverBracha P) roundOwnsLabel isFailLabel (gActLow P)
+  System.family (GBCA.ByAFW.roundOverBracha P) roundOwnsLabel isFailLabel (corruptionOverBracha P)
 
 /-- The side is an LTS: every round is. -/
 theorem roundFamilyOverBracha_isLTS (P : Parameters) : (roundFamilyOverBracha P).IsLTS :=
@@ -180,7 +186,8 @@ theorem roundFamilyOverBracha_isLTS (P : Parameters) : (roundFamilyOverBracha P)
 /-- The side over the gather instances over the broadcast specification. -/
 noncomputable def roundFamilyOverBroadcastSpecification (P : Parameters) :
     System (ℕ → GBCA.ByAFW.RoundStateOverBroadcastSpecification P.n) (ExtendedLabel P.n) :=
-  System.family (GBCA.ByAFW.roundOverBroadcastSpecification P) roundOwnsLabel isFailLabel (gActIdeal
+  System.family (GBCA.ByAFW.roundOverBroadcastSpecification P) roundOwnsLabel isFailLabel
+    (corruptionOverBroadcastSpecification
     P)
 
 /-- The side is an LTS. -/
@@ -191,7 +198,8 @@ theorem roundFamilyOverBroadcastSpecification_isLTS (P : Parameters) :
 /-- The side over the gather specifications. -/
 noncomputable def roundFamilyOverGatherSpecifications (P : Parameters) :
     System (ℕ → GBCA.ByAFW.RoundStateOverGatherSpecifications P.n) (ExtendedLabel P.n) :=
-  System.family (GBCA.ByAFW.roundOverGatherSpecifications P) roundOwnsLabel isFailLabel (gActPair P)
+  System.family (GBCA.ByAFW.roundOverGatherSpecifications P) roundOwnsLabel isFailLabel
+    (corruptionOverGatherSpecifications P)
 
 /-- The side is an LTS. -/
 theorem roundFamilyOverGatherSpecifications_isLTS (P : Parameters) :
@@ -201,68 +209,76 @@ theorem roundFamilyOverGatherSpecifications_isLTS (P : Parameters) :
 /-! ### The family substitutions -/
 
 /-- The pointwise round relation of the broadcast substitution. -/
-def RlowAll (P : Parameters) (s : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n)
+def broadcastSubstitutionRelationFamily (P : Parameters) (s : ℕ → GBCA.ByAFW.RoundStateOverBracha
+  P.n)
     (t : ℕ → GBCA.ByAFW.RoundStateOverBroadcastSpecification P.n) : Prop :=
-  ∀ r, GBCA.ByAFW.LowPairRel P (s r) (t r)
+  ∀ r, GBCA.ByAFW.BroadcastSubstitutionRelation P (s r) (t r)
 
 /-- The pointwise round relation of the gather substitution. -/
-def RidealAll (P : Parameters) (s : ℕ → GBCA.ByAFW.RoundStateOverBroadcastSpecification P.n)
+def gatherSubstitutionRelationFamily (P : Parameters) (s : ℕ →
+  GBCA.ByAFW.RoundStateOverBroadcastSpecification P.n)
     (t : ℕ → GBCA.ByAFW.RoundStateOverGatherSpecifications P.n) : Prop :=
-  ∀ r, GBCA.ByAFW.IdealRel P (s r) (t r)
+  ∀ r, GBCA.ByAFW.GatherSubstitutionRelation P (s r) (t r)
 
 /-- The pointwise round relation of the counting simulation. -/
-def RpairAll (P : Parameters) (s : ℕ → GBCA.ByAFW.RoundStateOverGatherSpecifications P.n)
+def roundSpecificationSubstitutionRelationFamily (P : Parameters) (s : ℕ →
+  GBCA.ByAFW.RoundStateOverGatherSpecifications P.n)
     (t : ℕ → GBCA.SpecState P.n) : Prop :=
-  ∀ r, GBCA.ByAFW.PairRel P (s r) (t r)
+  ∀ r, GBCA.ByAFW.SpecificationRelation P (s r) (t r)
 
 /-- The family substitution of the first stage, round by round. -/
-theorem famLowSim (P : Parameters) :
-    ForwardSimulation (roundFamilyOverBracha P) (roundFamilyOverBroadcastSpecification P) (RlowAll
+theorem familyBroadcastSubstitution (P : Parameters) :
+    ForwardSimulation (roundFamilyOverBracha P) (roundFamilyOverBroadcastSpecification P)
+      (broadcastSubstitutionRelationFamily
       P) :=
-  ForwardSimulation.family roundOwnsLabel isFailLabel (gActLow P) (gActIdeal P)
-    (GBCA.ByAFW.lowPairRefines P) (lowSim_failAct P)
+  ForwardSimulation.family roundOwnsLabel isFailLabel (corruptionOverBracha P)
+    (corruptionOverBroadcastSpecification P)
+    (GBCA.ByAFW.broadcastSubstitution P) (broadcastSubstitution_failAct P)
 
 /-- The family substitution of the second stage. -/
-theorem famIdealSim (P : Parameters) :
+theorem familyGatherSubstitution (P : Parameters) :
     ForwardSimulation (roundFamilyOverBroadcastSpecification P) (roundFamilyOverGatherSpecifications
-      P) (RidealAll P) :=
-  ForwardSimulation.family roundOwnsLabel isFailLabel (gActIdeal P) (gActPair P)
-    (GBCA.ByAFW.idealRefines P) (idealSim_failAct P)
+      P) (gatherSubstitutionRelationFamily P) :=
+  ForwardSimulation.family roundOwnsLabel isFailLabel (corruptionOverBroadcastSpecification P)
+    (corruptionOverGatherSpecifications P)
+    (GBCA.ByAFW.gatherSubstitution P) (gatherSubstitution_failAct P)
 
 /-- The family substitution of the third stage, into the specification
 side. -/
-theorem famPairSim (P : Parameters) :
-    ForwardSimulation (roundFamilyOverGatherSpecifications P) (gbcaSpecificationFamily P) (RpairAll
+theorem familyRoundSpecificationSubstitution (P : Parameters) :
+    ForwardSimulation (roundFamilyOverGatherSpecifications P) (gbcaSpecificationFamily P)
+      (roundSpecificationSubstitutionRelationFamily
       P) :=
-  ForwardSimulation.family roundOwnsLabel isFailLabel (gActPair P) (specificationCorruptionAct P)
-    (GBCA.ByAFW.pairRefines P) (pairSim_failAct P)
+  ForwardSimulation.family roundOwnsLabel isFailLabel (corruptionOverGatherSpecifications P)
+    (specificationCorruptionAct P)
+    (GBCA.ByAFW.refinesSpecification P) (roundSpecificationSubstitution_failAct P)
 
 /-- The first family substitution, probabilistically. -/
-theorem famLowSimProb (P : Parameters) :
+theorem familyBroadcastSubstitutionSimulation (P : Parameters) :
     ProbabilisticForwardSimulation (roundFamilyOverBracha P) (roundFamilyOverBroadcastSpecification
       P)
-      (diracRel (RlowAll P)) :=
+      (diracRel (broadcastSubstitutionRelationFamily P)) :=
   ForwardSimulation.toProbabilistic (roundFamilyOverBracha_isLTS P)
     (roundFamilyOverBroadcastSpecification_isLTS P)
-    (fun r => GBCA.ByAFW.lowPairRel_init P r) (famLowSim P)
+    (fun r => GBCA.ByAFW.broadcastSubstitutionRelation_init P r) (familyBroadcastSubstitution P)
 
 /-- The second family substitution, probabilistically. -/
-theorem famIdealSimProb (P : Parameters) :
+theorem familyGatherSubstitutionSimulation (P : Parameters) :
     ProbabilisticForwardSimulation (roundFamilyOverBroadcastSpecification P)
       (roundFamilyOverGatherSpecifications P)
-      (diracRel (RidealAll P)) :=
+      (diracRel (gatherSubstitutionRelationFamily P)) :=
   ForwardSimulation.toProbabilistic (roundFamilyOverBroadcastSpecification_isLTS P)
     (roundFamilyOverGatherSpecifications_isLTS P)
-    (fun r => GBCA.ByAFW.idealRel_init P r) (famIdealSim P)
+    (fun r => GBCA.ByAFW.gatherSubstitutionRelation_init P r) (familyGatherSubstitution P)
 
 /-- The third family substitution, probabilistically. -/
-theorem famPairSimProb (P : Parameters) :
+theorem familyRoundSpecificationSubstitutionSimulation (P : Parameters) :
     ProbabilisticForwardSimulation (roundFamilyOverGatherSpecifications P) (gbcaSpecificationFamily
       P)
-      (diracRel (RpairAll P)) :=
+      (diracRel (roundSpecificationSubstitutionRelationFamily P)) :=
   ForwardSimulation.toProbabilistic (roundFamilyOverGatherSpecifications_isLTS P)
     (gbcaSpecificationFamily_isLTS P)
-    (fun r => GBCA.ByAFW.pairRel_init P r) (famPairSim P)
+    (fun r => GBCA.ByAFW.specificationRelation_init P r) (familyRoundSpecificationSubstitution P)
 
 /-! ## The protocol-shaped systems
 
@@ -291,7 +307,7 @@ side beside the composed reading's other three components, through the two
 hiding frames. -/
 noncomputable def composed (P : Parameters) : System (ComposedState P) (Label P.n) :=
   ((((roundFamilyOverBracha P).parallel
-    ((System.syncProduct (roundLoopProgram P)).parallel
+    ((System.synchronisedProduct (roundLoopProgram P)).parallel
       ((ABANetwork P).parallel (coinOverRoundAlphabet P)))).abstract
         (networkEventLabels P.n)).relabel).abstract (Label.hiddenAPI P.n)
 
@@ -299,7 +315,7 @@ noncomputable def composed (P : Parameters) : System (ComposedState P) (Label P.
 noncomputable def composedOverBroadcastSpecification (P : Parameters) : System
   (ComposedOverBroadcastSpecificationState P) (Label P.n) :=
   ((((roundFamilyOverBroadcastSpecification P).parallel
-    ((System.syncProduct (roundLoopProgram P)).parallel
+    ((System.synchronisedProduct (roundLoopProgram P)).parallel
       ((ABANetwork P).parallel (coinOverRoundAlphabet P)))).abstract
         (networkEventLabels P.n)).relabel).abstract (Label.hiddenAPI P.n)
 
@@ -307,7 +323,7 @@ noncomputable def composedOverBroadcastSpecification (P : Parameters) : System
 noncomputable def composedOverGatherSpecifications (P : Parameters) : System
   (ComposedOverGatherSpecificationsState P) (Label P.n) :=
   ((((roundFamilyOverGatherSpecifications P).parallel
-    ((System.syncProduct (roundLoopProgram P)).parallel
+    ((System.synchronisedProduct (roundLoopProgram P)).parallel
       ((ABANetwork P).parallel (coinOverRoundAlphabet P)))).abstract
         (networkEventLabels P.n)).relabel).abstract (Label.hiddenAPI P.n)
 
@@ -315,43 +331,43 @@ noncomputable def composedOverGatherSpecifications (P : Parameters) : System
 
 /-- The first stage at the protocol shape: the four congruences applied to the
 first family substitution under the composed reading's own context. -/
-noncomputable def substSimLow (P : Parameters) :
+noncomputable def broadcastSubstitution (P : Parameters) :
     ProbabilisticForwardSimulation (composed P) (composedOverBroadcastSpecification P)
-      (parallelRel (diracRel (RlowAll P))) :=
-  ((((famLowSimProb P).parallel_right
-    ((System.syncProduct (roundLoopProgram P)).parallel
+      (parallelRel (diracRel (broadcastSubstitutionRelationFamily P))) :=
+  ((((familyBroadcastSubstitutionSimulation P).parallel_right
+    ((System.synchronisedProduct (roundLoopProgram P)).parallel
       ((ABANetwork P).parallel (coinOverRoundAlphabet P)))).abstract
         (networkEventLabels P.n)).relabel).abstract (Label.hiddenAPI P.n)
 
 /-- The second stage at the protocol shape. -/
-noncomputable def substSimIdeal (P : Parameters) :
+noncomputable def gatherSubstitution (P : Parameters) :
     ProbabilisticForwardSimulation (composedOverBroadcastSpecification P)
       (composedOverGatherSpecifications P)
-      (parallelRel (diracRel (RidealAll P))) :=
-  ((((famIdealSimProb P).parallel_right
-    ((System.syncProduct (roundLoopProgram P)).parallel
+      (parallelRel (diracRel (gatherSubstitutionRelationFamily P))) :=
+  ((((familyGatherSubstitutionSimulation P).parallel_right
+    ((System.synchronisedProduct (roundLoopProgram P)).parallel
       ((ABANetwork P).parallel (coinOverRoundAlphabet P)))).abstract
         (networkEventLabels P.n)).relabel).abstract (Label.hiddenAPI P.n)
 
 /-- The third stage at the protocol shape, into the protocol-shaped
 specification `hybrid P` — the point where the gather-based chain meets the
 ABDY chain. -/
-noncomputable def substSimPair (P : Parameters) :
+noncomputable def roundSpecificationSubstitution (P : Parameters) :
     ProbabilisticForwardSimulation (composedOverGatherSpecifications P) (hybrid P)
-      (parallelRel (diracRel (RpairAll P))) :=
-  ((((famPairSimProb P).parallel_right
-    ((System.syncProduct (roundLoopProgram P)).parallel
+      (parallelRel (diracRel (roundSpecificationSubstitutionRelationFamily P))) :=
+  ((((familyRoundSpecificationSubstitutionSimulation P).parallel_right
+    ((System.synchronisedProduct (roundLoopProgram P)).parallel
       ((ABANetwork P).parallel (coinOverRoundAlphabet P)))).abstract
         (networkEventLabels P.n)).relabel).abstract (Label.hiddenAPI P.n)
 
 /-- **The gather-based substitution simulation**: the three stages joined by
 Result 2. -/
-noncomputable def substSim (P : Parameters) :
+noncomputable def substitutionSimulation (P : Parameters) :
     ProbabilisticForwardSimulation (composed P) (hybrid P)
-      (compRel (parallelRel (diracRel (RlowAll P)))
-        (compRel (parallelRel (diracRel (RidealAll P)))
-          (parallelRel (diracRel (RpairAll P))))) :=
-  (substSimLow P).trans ((substSimIdeal P).trans (substSimPair P))
+      (compRel (parallelRel (diracRel (broadcastSubstitutionRelationFamily P)))
+        (compRel (parallelRel (diracRel (gatherSubstitutionRelationFamily P)))
+          (parallelRel (diracRel (roundSpecificationSubstitutionRelationFamily P))))) :=
+  (broadcastSubstitution P).trans ((gatherSubstitution P).trans (roundSpecificationSubstitution P))
 
 /-- **The gather-based substitution inclusion**: every trace distribution
 achievable by the gather-based composed reading is achievable by the
@@ -360,9 +376,9 @@ protocol-shaped specification. The three stage inclusions are chained by
 simulation. -/
 theorem substitution (P : Parameters) :
     achievableTraceDists (composed P) ⊆ achievableTraceDists (hybrid P) :=
-  Set.Subset.trans (substSimLow P).achievableTraceDists_subset
-    (Set.Subset.trans (substSimIdeal P).achievableTraceDists_subset
-      (substSimPair P).achievableTraceDists_subset)
+  Set.Subset.trans (broadcastSubstitution P).achievableTraceDists_subset
+    (Set.Subset.trans (gatherSubstitution P).achievableTraceDists_subset
+      (roundSpecificationSubstitution P).achievableTraceDists_subset)
 
 /-! ## The headlines -/
 
@@ -388,11 +404,11 @@ Result 2. -/
 noncomputable def chainSimComposed (P : Parameters) :
     ProbabilisticForwardSimulation (composed P) (spec P)
       (compRel
-        (compRel (parallelRel (diracRel (RlowAll P)))
-          (compRel (parallelRel (diracRel (RidealAll P)))
-            (parallelRel (diracRel (RpairAll P)))))
-        (coreRel P)) :=
-  (substSim P).trans (coreSim P)
+        (compRel (parallelRel (diracRel (broadcastSubstitutionRelationFamily P)))
+          (compRel (parallelRel (diracRel (gatherSubstitutionRelationFamily P)))
+            (parallelRel (diracRel (roundSpecificationSubstitutionRelationFamily P)))))
+        (hybridSpecificationRelation P)) :=
+  (substitutionSimulation P).trans (hybridRefinesSpecification P)
 
 /-! ### Mechanical axiom check -/
 

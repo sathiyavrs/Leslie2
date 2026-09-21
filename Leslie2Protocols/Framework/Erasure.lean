@@ -331,10 +331,10 @@ theorem System.LabelSaturated.abstract {sys : System S1 L} (h : sys.LabelSaturat
   · exact Or.inr ⟨fun hm => hl ((hsat l' l hlab.symm).mp hm), h s l l' μ hlab hstep⟩
 
 /-- Saturation is preserved by the full-synchronisation product of a finite family. -/
-theorem System.LabelSaturated.syncProduct {ι : Type} [Fintype ι] [DecidableEq ι]
+theorem System.LabelSaturated.synchronisedProduct {ι : Type} [Fintype ι] [DecidableEq ι]
     {State : ι → Type} {sys : ∀ i, System (State i) L}
     (h : ∀ i, (sys i).LabelSaturated φ) (hτ : SeparatesSilent φ) :
-    (System.syncProduct sys).LabelSaturated φ := by
+    (System.synchronisedProduct sys).LabelSaturated φ := by
   rintro s l l' μ hlab (⟨hl, μ_, hstep, rfl⟩ | ⟨rfl, i, μ_i, hstep, rfl⟩)
   · have hl' : l' ≠ Silent.τ := fun hc => hl (hτ l (by rw [hlab, hc]))
     exact Or.inl ⟨hl', μ_, fun i => h i (s i) l l' (μ_ i) hlab (hstep i), rfl⟩

@@ -33,16 +33,17 @@ Three probabilistic forward simulations carry the protocol to the
 specification:
 
 1. `ABDY.protocolSim` (`ImplementationByABDY/Simulation.lean`) — the protocol into the composed
-   reading, along the Dirac lift of `ABDY.ProtocolRel`. The relation pins every
+   reading, along the Dirac lift of `ABDY.ProtocolRelation`. The relation pins every
    composed coordinate against the protocol state; the inclusion is
    one-directional because a round instance also answers the Byzantine handshake rows
    (D11) and the processes the protocol has terminated (D22).
-2. `ABDY.substSim` (`Composition/HybridAndSubstitution.lean`) — replace each round's
+2. `ABDY.substitutionSimulation` (`Composition/HybridAndSubstitution.lean`) — replace each round's
 graded-agreement
    instance by its specification, the other three components untouched: the
    family substitution carried by four congruences (`parallel_right`,
    `abstract`, `relabel`, `abstract`).
-3. `coreSim` (`HybridRefinesSpecification/Simulation.lean`) — the hand-built simulation of the
+3. `hybridRefinesSpecification` (`HybridRefinesSpecification/Simulation.lean`) — the hand-built
+simulation of the
    protocol-shaped specification against the ABA specification, read in the
    composed coordinates: the round specifications, the `n` round loops, the
    ABA-side network and the coin oracle, each still a component of the state the
@@ -88,7 +89,7 @@ open Implementation Composition
 
 Carry the protocol reading into the composed reading (`ABDY.protocol_composed`),
 substitute each round's graded-agreement instance by its specification at the
-protocol shape (`ABDY.substitution`), then take the core simulation (`coreSim`).
+protocol shape (`ABDY.substitution`), then take the core simulation (`hybridRefinesSpecification`).
 Every step is a simulation between systems the protocol reading itself
 names. -/
 
@@ -96,7 +97,7 @@ names. -/
 soundness of the core simulation. -/
 theorem hybrid_spec (P : Parameters) :
     achievableTraceDists (hybrid P) ⊆ achievableTraceDists (spec P) :=
-  (coreSim P).achievableTraceDists_subset
+  (hybridRefinesSpecification P).achievableTraceDists_subset
 
 namespace ABDY
 
@@ -158,9 +159,10 @@ the composite of their three relations — the Dirac lift of the composition
 relation, the pointwise round substitution, and the core relation. -/
 noncomputable def chainSim (P : Parameters) :
     ProbabilisticForwardSimulation (protocol P) (spec P)
-      (compRel (diracRel (ProtocolRel P))
-        (compRel (parallelRel (diracRel (RsubAll P))) (coreRel P))) :=
-  (protocolSim P).trans ((substSim P).trans (coreSim P))
+      (compRel (diracRel (ProtocolRelation P))
+        (compRel (parallelRel (diracRel (substitutionRelationFamily P)))
+          (hybridSpecificationRelation P))) :=
+  (protocolSim P).trans ((substitutionSimulation P).trans (hybridRefinesSpecification P))
 
 /-! ### Mechanical axiom check
 

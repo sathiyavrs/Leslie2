@@ -49,15 +49,15 @@ three companions) carry the hypothesis that the store holds `v` after the delive
 (`roundProjection_deliverFirstGatherInputBroadcast` and its companions) carry the
 hypothesis that the store does not move. `AFW.broadcastReturnsFor_eq_of_quorum` identifies the
 store with the value a flat receipt quorum carries, which is what supplies
-those hypotheses under `AFW.StoreInv`.
+those hypotheses under `AFW.BroadcastReturnsInvariant`.
 
 ## The two clauses that are not readings
 
-`StoreInv` and `BoundInv` are the conjuncts of `AFW.ProtocolRel` that no
-frame lemma supplies. `storeInv_of` carries the first across a row from the
+`BroadcastReturnsInvariant` and `BoundInvariant` are the conjuncts of `AFW.ProtocolRelation` that no
+frame lemma supplies. `broadcastReturnsInvariant_of` carries the first across a row from the
 moves of the round's `4n` broadcast instances, each an application of
-`BRB.Inv.step`, and `storeInv_congr` covers a row that leaves every round's
-view where it stands. `boundInv_writeGhost` carries the second.
+`BRB.Invariant.step`, and `broadcastReturnsInvariant_congr` covers a row that leaves every round's
+view where it stands. `boundInvariant_writeGhost` carries the second.
 -/
 
 namespace PLTS
@@ -1986,14 +1986,14 @@ theorem secondGatherProjection_write (u : ∀ _ : Fin P.n,
 of the gather's network state where none is on record. -/
 noncomputable def firstGatherReturnCore (P : Parameters) (s : GBCA.ByAFW.RoundStateOverBracha P.n) :
     Gather.AcceptedPairs P.n Bool :=
-  (Gather.core (GBCA.ByAFW.firstGather s)).getD (Gather.coreOfNet P (Gather.gatherTier
+  (Gather.core (GBCA.ByAFW.firstGather s)).getD (Gather.coreOfNetwork P (Gather.gatherTier
     (GBCA.ByAFW.firstGather s)).2)
 
 /-- The core the second gather's return carries. -/
 noncomputable def secondGatherReturnCore (P : Parameters) (s : GBCA.ByAFW.RoundStateOverBracha P.n)
   :
     Gather.AcceptedPairs P.n (Option Bool) :=
-  (Gather.core (GBCA.ByAFW.secondGather s)).getD (Gather.coreOfNet P (Gather.gatherTier
+  (Gather.core (GBCA.ByAFW.secondGather s)).getD (Gather.coreOfNetwork P (Gather.gatherTier
     (GBCA.ByAFW.secondGather s)).2)
 
 /-- **The round after the first gather's return to `j` over `g`**: the program
@@ -2038,7 +2038,7 @@ noncomputable def afterSecondGatherReturn (P : Parameters) (s : GBCA.ByAFW.Round
     (g : Fin P.n → Option (Option Bool)) : GBCA.ByAFW.RoundStateOverBracha P.n :=
   GBCA.ByAFW.setSecondGather
     (GBCA.ByAFW.setPrograms s (Function.update (GBCA.ByAFW.programs s) j
-      { GBCA.ByAFW.programs s j with out := some (GBCA.gradeOf P g) }))
+      { GBCA.ByAFW.programs s j with output := some (GBCA.gradeOf P g) }))
     (Gather.setCore
       (Gather.setGatherTier (GBCA.ByAFW.secondGather s)
         ((Gather.gatherTier (GBCA.ByAFW.secondGather s)).setProcess j
@@ -2050,7 +2050,7 @@ grade and marks the record returned. -/
 def afterRetG (P : Parameters) (s : GBCA.ByAFW.RoundStateOverBracha P.n) (j : Fin P.n) :
     GBCA.ByAFW.RoundStateOverBracha P.n :=
   GBCA.ByAFW.setPrograms s (Function.update (GBCA.ByAFW.programs s) j
-    { GBCA.ByAFW.programs s j with out := none, returned := true })
+    { GBCA.ByAFW.programs s j with output := none, returned := true })
 
 /-- **The link, read through the view.** The first gather returns to `j`, which
 records the candidate and calls the second gather with it; the round's
@@ -2077,8 +2077,8 @@ theorem roundProjection_firstGatherReturn_secondGatherCall (hu : (u j).2 = p) (r
   have hcore : Gather.coreOf P
       (firstGatherOf P (w.recordGBCASend r j (.secondGatherInputBroadcasts j (.init (GBCA.candidate
         P g)))) r)
-      = Gather.coreOfNet P (Gather.gatherTier (firstGatherProjection P u w r)).2 := by
-    rw [coreOfNet_firstGatherProjection]
+      = Gather.coreOfNetwork P (Gather.gatherTier (firstGatherProjection P u w r)).2 := by
+    rw [coreOfNetwork_firstGatherProjection]
     refine Gather.coreOf_networkState_only _ _ (networkState_ext ?_ rfl)
     simp only [firstGatherOf, recordGBCASend_sent_self]
     exact messagesOf_recordSent_none firstGatherMessageOf firstGatherMessageOf_inj (w.sent r) j
@@ -2271,7 +2271,7 @@ theorem roundProjection_secondGatherReturn_retG (hu : (u j).2 = p) (r : ℕ)
         bindBroadcasts_secondGather_roundProjectionUpdate, bindBroadcasts_secondGatherProjection]
       exact Prod.ext (Function.update_eq_self _ _) rfl
     · simp only [Gather.core_setCore, secondGatherReturnCore, secondGather_roundProjection,
-        core_secondGatherProjection, coreOfNet_secondGatherProjection]
+        core_secondGatherProjection, coreOfNetwork_secondGatherProjection]
 
 /-! ### A delivery
 
@@ -3538,85 +3538,88 @@ end Rows
 
 /-! ### The two clauses that are not readings
 
-`StoreInv` and `BoundInv` are the conjuncts of `AFW.ProtocolRel` that no
+`BroadcastReturnsInvariant` and `BoundInvariant` are the conjuncts of `AFW.ProtocolRelation` that no
 frame lemma supplies. Each survives a row instance by instance: a broadcast
 instance either stands still or takes a row of `BRB.BrachaStep`, which
-`BRB.Inv.step` carries, and a process's second-gather local input is written at
+`BRB.Invariant.step` carries, and a process's second-gather local input is written at
 the link alone. -/
 
 section Invariants
 
 /-- One broadcast instance's move across a row: it stands still, or it takes a
 row of `BRB.BrachaStep`. -/
-def InvStep (P : Parameters) {M : Type} [DecidableEq M] (ldr : Fin P.n)
+def InvariantStep (P : Parameters) {M : Type} [DecidableEq M] (ldr : Fin P.n)
     (s s' : BRB.BrachaState P.n M) : Prop :=
   s' = s ∨ ∃ l, BRB.BrachaStep P ldr s l (PMF.pure s')
 
 /-- An instance that stands still. -/
-theorem InvStep.stand {M : Type} [DecidableEq M] (P : Parameters) (ldr : Fin P.n)
-    (s : BRB.BrachaState P.n M) : InvStep P ldr s s := Or.inl rfl
+theorem InvariantStep.stand {M : Type} [DecidableEq M] (P : Parameters) (ldr : Fin P.n)
+    (s : BRB.BrachaState P.n M) : InvariantStep P ldr s s := Or.inl rfl
 
 /-- An instance that takes a row. -/
-theorem InvStep.row {M : Type} [DecidableEq M] {P : Parameters} {ldr : Fin P.n}
+theorem InvariantStep.row {M : Type} [DecidableEq M] {P : Parameters} {ldr : Fin P.n}
     {s s' : BRB.BrachaState P.n M} {l : BRB.Label P.n M}
-    (h : BRB.BrachaStep P ldr s l (PMF.pure s')) : InvStep P ldr s s' := Or.inr ⟨l, h⟩
+    (h : BRB.BrachaStep P ldr s l (PMF.pure s')) : InvariantStep P ldr s s' := Or.inr ⟨l, h⟩
 
 /-- **The broadcast invariant survives one instance's move.** -/
-theorem InvStep.inv {M : Type} [DecidableEq M] {P : Parameters} {ldr : Fin P.n}
-    {s s' : BRB.BrachaState P.n M} (h : InvStep P ldr s s') (hInv : BRB.Inv P ldr s) :
-    BRB.Inv P ldr s' := by
+theorem InvariantStep.invariant {M : Type} [DecidableEq M] {P : Parameters} {ldr : Fin P.n}
+    {s s' : BRB.BrachaState P.n M} (h : InvariantStep P ldr s s') (hInv : BRB.Invariant P ldr s) :
+    BRB.Invariant P ldr s' := by
   rcases h with rfl | ⟨l, hl⟩
   · exact hInv
   · exact hInv.step hl (by simp)
 
 /-- A row that moves one instance of a family: that instance takes its row and
 every other instance stands still. -/
-theorem invStep_update {M : Type} [DecidableEq M] {P : Parameters}
+theorem invariantStep_update {M : Type} [DecidableEq M] {P : Parameters}
     (b : Fin P.n → BRB.BrachaState P.n M) (i : Fin P.n) (s' : BRB.BrachaState P.n M)
     {l : BRB.Label P.n M} (h : BRB.BrachaStep P i (b i) l (PMF.pure s')) (k : Fin P.n) :
-    InvStep P k (b k) (Function.update b i s' k) := by
+    InvariantStep P k (b k) (Function.update b i s' k) := by
   by_cases hk : k = i
-  · subst hk; rw [Function.update_self]; exact InvStep.row h
-  · rw [Function.update_of_ne hk]; exact InvStep.stand P k (b k)
+  · subst hk; rw [Function.update_self]; exact InvariantStep.row h
+  · rw [Function.update_of_ne hk]; exact InvariantStep.stand P k (b k)
 
 variable {u x : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} {w v : NetworkState P.n}
 
 /-- **The broadcast invariant survives a row**: at each of a round's `4n`
 instances the state after the row is the state before it or a `BRB.BrachaStep`
 successor of it. -/
-theorem storeInv_of (hI : StoreInv P u w)
+theorem broadcastReturnsInvariant_of (hI : BroadcastReturnsInvariant P u w)
     (h1 : ∀ r k,
-      InvStep P k (Gather.inputBroadcasts (GBCA.ByAFW.firstGather (roundProjection P u w r)) k)
+      InvariantStep P k (Gather.inputBroadcasts (GBCA.ByAFW.firstGather (roundProjection P u w r))
+        k)
         (Gather.inputBroadcasts (GBCA.ByAFW.firstGather (roundProjection P x v r)) k))
     (h2 : ∀ r k,
-      InvStep P k (Gather.bindBroadcasts (GBCA.ByAFW.firstGather (roundProjection P u w r)) k)
+      InvariantStep P k (Gather.bindBroadcasts (GBCA.ByAFW.firstGather (roundProjection P u w r)) k)
         (Gather.bindBroadcasts (GBCA.ByAFW.firstGather (roundProjection P x v r)) k))
     (h3 : ∀ r k,
-      InvStep P k (Gather.inputBroadcasts (GBCA.ByAFW.secondGather (roundProjection P u w r)) k)
+      InvariantStep P k (Gather.inputBroadcasts (GBCA.ByAFW.secondGather (roundProjection P u w r))
+        k)
         (Gather.inputBroadcasts (GBCA.ByAFW.secondGather (roundProjection P x v r)) k))
     (h4 : ∀ r k,
-      InvStep P k (Gather.bindBroadcasts (GBCA.ByAFW.secondGather (roundProjection P u w r)) k)
+      InvariantStep P k (Gather.bindBroadcasts (GBCA.ByAFW.secondGather (roundProjection P u w r))
+        k)
         (Gather.bindBroadcasts (GBCA.ByAFW.secondGather (roundProjection P x v r)) k)) :
-    StoreInv P x v :=
-  fun r k => ⟨(h1 r k).inv (hI r k).1, (h2 r k).inv (hI r k).2.1,
-    (h3 r k).inv (hI r k).2.2.1, (h4 r k).inv (hI r k).2.2.2⟩
+    BroadcastReturnsInvariant P x v :=
+  fun r k => ⟨(h1 r k).invariant (hI r k).1, (h2 r k).invariant (hI r k).2.1,
+    (h3 r k).invariant (hI r k).2.2.1, (h4 r k).invariant (hI r k).2.2.2⟩
 
 /-- A row that leaves every round's view where it stands keeps the broadcast
 invariant. -/
-theorem storeInv_congr (hI : StoreInv P u w) (h : ∀ r,
-    roundProjection P x v r = roundProjection P u w r) : StoreInv P x v :=
+theorem broadcastReturnsInvariant_congr (hI : BroadcastReturnsInvariant P u w) (h : ∀ r,
+    roundProjection P x v r = roundProjection P u w r) : BroadcastReturnsInvariant P x v :=
   fun r k => by rw [h r]; exact hI r k
 
 /-- The bound invariant survives a row that leaves every process's
 second-gather local input where it stands and writes the ghost through
 `AFW.ghostStep`. -/
-theorem boundInv_writeGhost (hI : BoundInv P u w)
+theorem boundInvariant_writeGhost (hI : BoundInvariant P u w)
     (hx : ∀ i r,
       (((x i).2.roundRecord r).secondGather.process).input = (((u i).2.roundRecord
         r).secondGather.process).input)
     (hv : ∀ r, v.ghostRecord r = w.ghostRecord r) (L : ExtendedLabel P.n (Message P.n)) :
-    BoundInv P x (v.writeGhost (ghostStep P) L) :=
-  boundInv_of hI hx (fun r h => writeGhost_bound L (by rw [hv r]; exact h))
+    BoundInvariant P x (v.writeGhost (ghostStep P) L) :=
+  boundInvariant_of hI hx (fun r h => writeGhost_bound L (by rw [hv r]; exact h))
 
 end Invariants
 

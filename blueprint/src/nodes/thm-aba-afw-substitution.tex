@@ -1,6 +1,6 @@
 \begin{theorem}[The gather-based substitution]
   \label{thm:aba-afw-substitution}
-  \lean{PLTS.ABA.AFW.RlowAll}\lean{PLTS.ABA.AFW.RidealAll}\lean{PLTS.ABA.AFW.RpairAll}\lean{PLTS.ABA.AFW.famLowSimProb}\lean{PLTS.ABA.AFW.famIdealSimProb}\lean{PLTS.ABA.AFW.famPairSimProb}\lean{PLTS.ABA.AFW.substSim}\lean{PLTS.ABA.AFW.substitution}\leanok
+  \lean{PLTS.ABA.AFW.broadcastSubstitutionRelationFamily}\lean{PLTS.ABA.AFW.gatherSubstitutionRelationFamily}\lean{PLTS.ABA.AFW.roundSpecificationSubstitutionRelationFamily}\lean{PLTS.ABA.AFW.familyBroadcastSubstitutionSimulation}\lean{PLTS.ABA.AFW.familyGatherSubstitutionSimulation}\lean{PLTS.ABA.AFW.familyRoundSpecificationSubstitutionSimulation}\lean{PLTS.ABA.AFW.substitutionSimulation}\lean{PLTS.ABA.AFW.substitution}\leanok
   \uses{def:aba-afw-sides, def:aba-hybrid, thm:gbca-tier-refines, thm:gbca-pair-refines, thm:gbca-family-refines, thm:precong-parallel, thm:precong-abstract, thm:precong-relabel, thm:forward-sound}
   Three stages carry the gather-based composed reading to the protocol-shaped specification:
   \[
@@ -8,7 +8,7 @@
   \]
   Each stage is one substitution inside the round --- the broadcast substitution, the gather substitution, the counting refinement --- lifted to the $\mathbb{N}$-indexed family by the family congruence under the lockstep broadcast compatibility, and run under the composed reading's own context through the four congruences of the pipeline.
   The third stage lands on $\mathrm{hybrid}(P)$ itself, the system the core simulation starts from, so the two implementation chains share every link from there up.
-  Chaining the stages gives the simulation $\mathrm{substSim}$, and chaining their soundness inclusions gives $\operatorname{ATD}(\afw{\mathrm{composed}}(P)) \subseteq \operatorname{ATD}(\mathrm{hybrid}(P))$.
+  Chaining the stages gives the simulation $\mathrm{substitutionSimulation}$, and chaining their soundness inclusions gives $\operatorname{ATD}(\afw{\mathrm{composed}}(P)) \subseteq \operatorname{ATD}(\mathrm{hybrid}(P))$.
 \end{theorem}
 
 \begin{proof}\leanok

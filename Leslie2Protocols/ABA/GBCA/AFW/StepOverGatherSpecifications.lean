@@ -159,18 +159,18 @@ inductive StepOverGatherSpecifications (P : Parameters) (r : ℕ) :
     Option (Option
     Bool))
       (C : Gather.AcceptedPairs P.n (Option Bool)) (t2 : Gather.SpecState P.n (Option Bool))
-      (h2 : (programs s id).called2 = true) (ho : (programs s id).out = none)
+      (h2 : (programs s id).called2 = true) (ho : (programs s id).output = none)
       (h : Gather.Step P (secondGather s) (.ret id g C) (PMF.pure t2)) :
       StepOverGatherSpecifications P r s .tau
         (PMF.pure (setSecondGather (setPrograms s (Function.update (programs s) id
-          { programs s id with out := some (gradeOf P g) })) t2))
+          { programs s id with output := some (gradeOf P g) })) t2))
   /-- The round returns the grade program `id` holds, announcing the round's
   bound bit. The return announces the grade and the record drops it. -/
   | retG (s : RoundStateOverGatherSpecifications P.n) (id : Fin P.n) (out : GBCAOutput)
-      (ho : (programs s id).out = some out) (hr : (programs s id).returned = false) :
+      (ho : (programs s id).output = some out) (hr : (programs s id).returned = false) :
       StepOverGatherSpecifications P r s (.retG r id out ((bound s).getD (boundOfCore P ∅)))
         (PMF.pure (setPrograms s (Function.update (programs s) id
-          { programs s id with out := none, returned := true })))
+          { programs s id with output := none, returned := true })))
   /-- Corruption (deviation D1): the two gather instances corrupted in
   lockstep, the programs and the round's bound bit untouched. -/
   | fail (s : RoundStateOverGatherSpecifications P.n) (id : Fin P.n) :
@@ -443,7 +443,7 @@ theorem row_roundOverGatherSpecifications_step (P : Parameters) (r : ℕ) :
     exact ⟨Sum.inl Label.tau, rfl, roundOverGathers_event_step _ hlayer hg1 hg2⟩
   | secondGatherReturn id g C t2 h2 ho h =>
     have hlayer : (roundPrograms P r).step (u, v) (Sum.inr (RoundEvent.secondGatherReturn id g C))
-        (PMF.pure (Function.update u id { u id with out := some (gradeOf P g) }, v)) :=
+        (PMF.pure (Function.update u id { u id with output := some (gradeOf P g) }, v)) :=
       roundPrograms_label_step (lp := .secondGatherReturn id g C) (by simp) (by simp)
         (programStep_update (ProgramStep.secondGatherReturn (u id) g C h2 ho)
           (fun i hi => ProgramStep.secondGatherReturnIdle (u i) id g C (Ne.symm hi)))
@@ -459,7 +459,7 @@ theorem row_roundOverGatherSpecifications_step (P : Parameters) (r : ℕ) :
   | retG id out ho hr =>
     have hlayer : (roundPrograms P r).step (u, v)
         (Sum.inl (Sum.inl (Label.retG r id out (v.getD (boundOfCore P ∅)))))
-        (PMF.pure (Function.update u id { u id with out := none, returned := true }, v)) :=
+        (PMF.pure (Function.update u id { u id with output := none, returned := true }, v)) :=
       roundPrograms_label_step (lp := .retG r id out (v.getD (boundOfCore P ∅))) (by simp) (by simp)
         (programStep_update (ProgramStep.retG (u id) out _ ho hr)
           (fun i hi => ProgramStep.retGIdle (u i) id out _ (Ne.symm hi)))
