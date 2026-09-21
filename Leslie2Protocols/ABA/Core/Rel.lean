@@ -18,7 +18,7 @@ is `Mode.idle` throughout. It decides once, in the `SpecStep.decide` τ-step
 that leads the first `retABA` row.
 
 * `Abs` — the abstract-state constraints (C1 `F_eq`, C2 `ret_eq`, `mode_idle`,
-  and C3/C7 `phase`).
+  `input_sync`, and C3/C7 `phase`).
 * `Inv` — the concrete invariant (forty fields, docstring-numbered
   I0–I30, a few numbers covering a small group of fields: the replacement
   flag against the corrupted set, F-lockstep, input
@@ -103,15 +103,16 @@ def AHolder (P : Params) (c : ABAState P) (id : Fin P.n) (b : Bool) : Prop :=
 never fires `SpecStep.coinFlip`: its mode is `Mode.idle` throughout, so
 `SpecStep.decide` stays enabled at every state it reaches. It lives in one of
 two phases keyed on `a.val`. In **phase 1**, before the first visible return,
-nothing is decided and the ghost record `a.input` carries every committed
-concrete input; every hidden row is answered by a stutter. In **phase 2**,
-entered by the `SpecStep.decide` step that answers the first `retABA` row,
-`a.val = some v` and `v` is certified by a concrete `A`-lock.
+nothing is decided and every hidden row is answered by a stutter. In **phase
+2**, entered by the `SpecStep.decide` step that answers the first `retABA`
+row, `a.val = some v` and `v` is certified by a concrete `A`-lock.
 
-The ghost record is synced only where the concrete input is committed. A
-`callABA` answered by the concrete self-loop banks junk under
-`SpecStep.callLoop`, and that junk lands only in fields where the sync clause
-is vacuous. -/
+The ghost record `a.input` agrees with the committed concrete input at every
+honest process, in both phases. A `callABA` at a process holding no input
+commits the bit on both sides, and at a process holding one the concrete loop
+and `SpecStep.callLoop` both write nothing. At a corrupted process the clause
+is vacuous, and the counts that read the record carry such a process through
+their `id ∈ F` disjunct. -/
 structure Abs (P : Params) (g : ℕ → GBCA.SpecState P.n) (c : ABAState P)
     (w : ℕ → WCC.SpecState P.n) (a : SpecState P.n) : Prop where
   /-- C1: corrupted sets agree. -/
@@ -120,14 +121,16 @@ structure Abs (P : Params) (g : ℕ → GBCA.SpecState P.n) (c : ABAState P)
   ret_eq : ∀ id, a.ret id = (c.procs id).returned
   /-- The abstract state never flips: its mode is `Mode.idle` at every reachable state. -/
   mode_idle : a.mode = .idle
-  /-- C3/C7: the two-phase discipline. Phase 1 (pre-return): undecided, ghost
-  record synced on committed inputs. Phase 2 (post-return): `val = some v`
-  with `v` certified by a full `A`-certificate, and every honest `A`-decision
-  holder — live grade or sent DECIDED — names `v` (the F-free universal that
-  survives corruption of the original witnesses). -/
+  /-- The ghost record and the committed input agree at every honest process,
+  in both phases. -/
+  input_sync : ∀ id, id ∉ c.F → a.input id = (c.procs id).input
+  /-- C3/C7: the two-phase discipline. Phase 1 (pre-return): nothing is
+  decided. Phase 2 (post-return): `val = some v` with `v` certified by a full
+  `A`-certificate, and every honest `A`-decision holder — live grade or sent
+  DECIDED — names `v` (the F-free universal that survives corruption of the
+  original witnesses). -/
   phase :
-    (a.val = none ∧
-      (∀ id b, (c.procs id).input = some b → a.input id = some b)) ∨
+    a.val = none ∨
     (∃ v, a.val = some v ∧
       (∃ r, ACert P g c r v) ∧
       (∀ j b', j ∉ c.F → AHolder P c j b' → b' = v))
@@ -516,16 +519,19 @@ theorem GBCA.callSupp_mono {P : Params} {s s' : GBCA.SpecState P.n} {b : Bool}
 
 /-- **Support transfer (D13)** : the concrete input-or-`F` sent for `b`
 (`Inv.bind_supp`) reads on the abstract state as the `SpecStep.decide` guard `SuppOK`,
-for any abstract state whose corrupted set is `c.F` and whose ghost record carries every
-committed concrete input. -/
+for any abstract state whose corrupted set is `c.F` and whose ghost record agrees with
+the committed concrete input at every honest process. A corrupted supporter is carried
+by the `id ∈ F` disjunct of both counts, where the ghost record is read by neither. -/
 theorem suppOK_of_inputSupp {P : Params} {c : ABAState P} {a : SpecState P.n} {b : Bool}
     (haF : a.F = c.F)
-    (hghost : ∀ id b', (c.procs id).input = some b' → a.input id = some b')
+    (hghost : ∀ id, id ∉ c.F → a.input id = (c.procs id).input)
     (h : InputSupp P c b) : SuppOK P a b := by
   refine le_trans h (Finset.card_le_card ?_)
   intro x hx
   simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hx ⊢
-  exact hx.imp (hghost x b) (fun hF => by rw [haF]; exact hF)
+  by_cases hxF : x ∈ c.F
+  · exact Or.inr (by rw [haF]; exact hxF)
+  · exact hx.imp (fun h' => by rw [hghost x hxF]; exact h') (fun hF => by rw [haF]; exact hF)
 
 /-- **Sent establishment (D13).** A D15 count over round-`r` calls (`f + 1`
 callers-or-`F` of `b`) yields the permanent input-or-`F` sent for `b`: wholesale via
@@ -670,7 +676,8 @@ theorem Abs.initial (P : Params) :
   F_eq := rfl
   ret_eq := fun _ => rfl
   mode_idle := rfl
-  phase := Or.inl ⟨rfl, fun id b h => absurd h (by simp [ABAState.initial])⟩
+  input_sync := fun _ _ => by simp [ABAState.initial, SpecState.initial]
+  phase := Or.inl rfl
 
 end ABA
 end PLTS

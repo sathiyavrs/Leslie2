@@ -62,7 +62,8 @@ oracle idle on a label outside their own API and the ABA-side network has no
 row of its own, so the whole transition is the addressed round loop's — the
 genuine input of a never-corrupted process, guarded by `input = ⊥`, or a
 self-loop, which is the input-enabledness row of a process whose program
-stands and the replaced program's own row otherwise (D23). -/
+stands and holds an input, and the replaced program's own row otherwise
+(D23, D36). -/
 theorem hybrid_step_callABA (P : Params) (G : ℕ → GBCA.SpecState P.n)
     (C : ∀ _ : Fin P.n, CoreRec P.n) (A : ANetState P.n)
     (o : ℕ → WCC.SpecState P.n) (id : Fin P.n) (b : Bool)
@@ -74,7 +75,9 @@ theorem hybrid_step_callABA (P : Params) (G : ℕ → GBCA.SpecState P.n)
             μc = PMF.pure (ABAState.setProc (C, A) id
               { ABAState.procs (C, A) id with
                 input := some b, est := some b, round := 0, phase := .toCallG })) ∨
-          μc = PMF.pure (C, A)) ∧
+          ((ABAState.corrupted (C, A) id = true ∨
+              (ABAState.procs (C, A) id).input ≠ none) ∧
+            μc = PMF.pure (C, A))) ∧
         μ = prodPMF (PMF.pure G) (μc.map fun c => (c.1, c.2, o)) := by
   have hWlift : (wccLift P).step o (Sum.inl (Lab.callABA id b)) (PMF.pure o) :=
     (System.mapIdle_step_some (wccPull_inl (Lab.callABA id b)) (PMF.pure o)).mpr
@@ -94,7 +97,7 @@ theorem hybrid_step_callABA (P : Params) (G : ℕ → GBCA.SpecState P.n)
         obtain rfl : A = A' := (pureN_inj (aStep_callABA hA)).symm
         obtain rfl : ω = PMF.pure o := wccFamily_idle_inv P (by simp) rfl (by simp [Lab.isFail])
           ((System.mapIdle_step_some (wccPull_inl (Lab.callABA id b)) _).mp hW)
-        rcases stepC_callABA_own (hall id) with ⟨hh, hin, hx0⟩ | hx0
+        rcases stepC_callABA_own (hall id) with ⟨hh, hin, hx0⟩ | ⟨hloop, hx0⟩
         · obtain rfl : C' = Function.update C id ((C id).setProc { (C id).proc with
               input := some b, est := some b, round := 0, phase := .toCallG }) :=
             coresN_update hx0 (fun i hi => stepC_callABA_foreign (Ne.symm hi) (hall i))
@@ -107,14 +110,14 @@ theorem hybrid_step_callABA (P : Params) (G : ℕ → GBCA.SpecState P.n)
             by_cases hi : i = id
             · subst hi; exact hx0
             · exact stepC_callABA_foreign (Ne.symm hi) (hall i)).symm
-          exact ⟨PMF.pure (C, A), Or.inr rfl, by
+          exact ⟨PMF.pure (C, A), Or.inr ⟨hloop, rfl⟩, by
             simp only [PMF.pure_map, prodPMF_pure_pure]⟩
   · rintro ⟨μc, hdisj, rfl⟩
     rw [hybrid_step_iff]
     refine Or.inr ⟨by simp, ?_⟩
     rw [hybridGroup_step_iff]
     refine Or.inr ?_
-    rcases hdisj with ⟨hnF, hin, rfl⟩ | rfl
+    rcases hdisj with ⟨hnF, hin, rfl⟩ | ⟨hloop, rfl⟩
     · have h := hybridPre_vis_step P (L := Sum.inl (Lab.callABA id b)) (by simp)
         (specSide_idle P G (by simp) rfl not_false)
         (coresN_family id ((C id).setProc { (C id).proc with
@@ -129,8 +132,10 @@ theorem hybrid_step_callABA (P : Params) (G : ℕ → GBCA.SpecState P.n)
         (fun i => by
           by_cases hi : i = id
           · subst hi
+            simp only [ABAState.corrupted_apply, ABAState.procs_apply] at hloop
             cases hb : (C i).corrupted
             · exact CoreProcStepN.inputLoop (C i) b hb
+                (hloop.resolve_left (by rw [hb]; simp))
             · exact CoreProcStepN.corruptedIdle (C i) _ hb (by simp) (by simp [actsAt])
           · exact CoreProcStepN.callABAIdle (C i) id b (Ne.symm hi))
         (ANetStep.callABAIdle A id b) hWlift
@@ -716,10 +721,10 @@ theorem Inv.step_callABA {P : Params} {g : ℕ → GBCA.SpecState P.n} {c : ABAS
       (id ∉ c.F ∧ (c.procs id).input = none ∧
           μc = PMF.pure (c.setProc id { c.procs id with
             input := some b, est := some b, round := 0, phase := .toCallG })) ∨
-        μc = PMF.pure c)
+        ((c.corrupted id = true ∨ (c.procs id).input ≠ none) ∧ μc = PMF.pure c))
     {c' : ABAState P} (hc' : c' ∈ μc.support) :
     Inv P g c' w ∧ AbsFrame P g g c c' := by
-  rcases hstep with ⟨-, hin, rfl⟩ | rfl
+  rcases hstep with ⟨-, hin, rfl⟩ | ⟨-, rfl⟩
   · rw [PMF.mem_support_pure_iff] at hc'; subst hc'
     set c' := c.setProc id { c.procs id with
       input := some b, est := some b, round := 0, phase := .toCallG } with hc'def

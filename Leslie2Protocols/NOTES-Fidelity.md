@@ -327,7 +327,8 @@ repaired at the rule; the seventh entry is a cross-reference.
   decide what the state does. The network adversary's `fail` row carries the two guards
   `SpecStep.fail` carries, so the two sides enable the same labels and no refinement is
   affected. The guard itself is D1; the loop TS 1 carries beside it is what this entry
-  records.
+  records. TS 1's other input-enabledness loop, the one on `callABA`, is guarded here as
+  well: `SpecStep.callLoop` fires at a filled record entry (D36).
 - **The `2f + 1` commit read as a relay threshold (cross-reference).**
   `ABAProcStepN.terminate` reads `2f + 1` DECIDED receipts where the paper's condition is
   that the process may stop without holding another back. That delta is the third D22
@@ -513,7 +514,8 @@ non-membership in every stage of `failSet`, the fold of the D1 transform over th
 labels seen so far, so a process corrupted at any point of the trace is excluded at every
 point of it. The witness axis stays as strong as the papers': the caller `ValidityTrace`
 produces must itself be never corrupted, not merely a member of a support set a later
-`fail` could taint.
+`fail` could taint, and the call it produces is that caller's first `callABA` of the
+trace, the event that carries the caller's input.
 
 One level down the interface binds corrupted returners too. At the composed reading
 `GProcStep.byzRetA`, `byzRetB` and `byzRetC` repeat the honest rules' guards, and
@@ -524,20 +526,9 @@ Definition 3.2 quantifies over the non-faulty parties. A corrupted process's gra
 is held to the guards an honest one's is held to, so the round's contract is the stronger
 of the two and the theorems above it lose nothing.
 
-## 7. Adjacent open items
+## 7. An adjacent open item
 
-Both sit under Future work in `ABA/README.md`. The first is not a fidelity gap; the second
-is one at statement level, under an environment that may call a process more than once.
+It sits under Future work in `ABA/README.md`, and it is not a fidelity gap.
 **Achievability** — `Core/NonVacuity.lean` carries the non-vacuity run on `hybrid`, the system
 the core simulation takes as its subject, and a machine-checked positive-mass trace for
 `ABDY.protocol`, the system `ABDY.main` is about, is outstanding.
-**`ValidityTrace` under repeated calls** — the witness clause accepts any earlier
-`callABA id' b` at a never-corrupted `id'`. The program records its first call
-(`FlatProcStep.input`, guard `c.proc.input = none`) and absorbs every later one
-(`FlatProcStep.inputLoop`), so a call arriving after the first carries the other bit into
-the trace and leaves the run alone, and it satisfies the clause. The theorem therefore
-coincides with the provenance form of Validity (§1) under the environment assumption that
-each process is called once, and is weaker without it. A first-call restatement changes the
-abstract state before it changes the predicate: the specification's ghost record holds the
-last pre-decision call (`SpecStep.callSet`, D16), so there is no first-call witness for the
-clause to read.

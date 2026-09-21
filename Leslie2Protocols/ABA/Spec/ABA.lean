@@ -37,11 +37,14 @@ enables no `τ`-rule at all (D17). The flip names no coin bit. Reading `lock` as
 agreeing with a round's reference value is an outcome coupling of a
 refinement, not a component of this system.
 
-The flip is guarded by both bits carrying `f + 1` support, and the sum of the
-two support counts never decreases (an overwrite moves a supporter from one
-count to the other, a first write or a corruption adds to one), so a state
-passing that guard leaves some bit supported ever after and the decision stays
-enabled at `Mode.locked`; the Lean lemma is deferred.
+The flip is guarded by both bits carrying `f + 1` support, and each of the two
+support counts is monotone on its own: every ghost write is a first write, a
+corrupted process's write leaves both counts unchanged, its entry being
+counted through `F` whatever it holds, and a corruption leaves neither count
+smaller, the process it names being counted at both bits from then on and
+possibly at one of them already.
+So a state passing that guard leaves both bits supported ever after and the
+decision stays enabled at `Mode.locked`; the Lean lemma is deferred.
 
 Provenance rests on the ghost record and the support guard `SuppOK` (D13).
 `SpecStep.decide` is the sole writer of `val`. Its guards are `val = ⊥`,
@@ -49,9 +52,10 @@ Provenance rests on the ghost record and the support guard `SuppOK` (D13).
 on the value decided. The rule is therefore enabled whenever some bit carries
 `f + 1` recorded-or-corrupt supporters and the mode is not `Mode.terminal`; no
 count of participating processes is read anywhere in the system.
-`SpecStep.callSet` overwrites the ghost record while nothing is decided, so
-the record holds the bit of the last such call (D16); `SpecStep.callLoop` is
-the input-enabledness loop and records first-write-wins.
+The record holds each process's first genuine call (D16). `SpecStep.callSet`
+writes at an empty entry and `SpecStep.callLoop`, the input-enabledness loop,
+loops at a filled one, so the label is enabled at every state and every ghost
+write is a first write.
 -/
 
 namespace PLTS
@@ -143,18 +147,17 @@ noncomputable def flipPMF (P : Params) : PMF FlipOutcome :=
 inductive SpecStep (P : Params) :
     SpecState P.n → Lab P.n → PMF (SpecState P.n) → Prop
   /-- Rule 1: an environment call records its bit in the ghost record. The
-  write is an overwrite (D13, D16): while nothing is decided the record is
-  revisable, so it holds the bit of the last such call. -/
-  | callSet (s : SpecState P.n) (id : Fin P.n) (b : Bool) (hv : s.val = none) :
+  guard `h` is the empty entry, so the write is a first write and the record
+  holds the bit of the process's first genuine call (D13, D16). -/
+  | callSet (s : SpecState P.n) (id : Fin P.n) (b : Bool) (h : s.input id = none) :
       SpecStep P s (.callABA id b)
         (PMF.pure { s with input := Function.update s.input id (some b) })
-  /-- Rule 2: the input-enabledness loop for `callABA`. The label is enabled in
-  every state; the ghost record takes the bit first-write-wins (D13). -/
-  | callLoop (s : SpecState P.n) (id : Fin P.n) (b : Bool) :
-      SpecStep P s (.callABA id b)
-        (PMF.pure { s with input := if s.input id = none
-                             then Function.update s.input id (some b)
-                             else s.input })
+  /-- Rule 2: the input-enabledness loop for `callABA`, at a process whose
+  entry is filled. Rule 1 carries the label at an empty entry and this rule
+  carries it at a filled one, so the label is enabled in every state; the loop
+  writes nothing (D13). -/
+  | callLoop (s : SpecState P.n) (id : Fin P.n) (b : Bool) (h : s.input id ≠ none) :
+      SpecStep P s (.callABA id b) (PMF.pure s)
   /-- Rule 3 (the flip): the only non-Dirac rule of the system. From
   `Mode.idle`, with nothing decided, one flip resolves by `flipPMF` into
   `Mode.locked` with probability `ε`, back into `Mode.idle` with probability
@@ -220,6 +223,19 @@ example :
     let F : Finset (Fin 4) := {0}
     ¬ (1 + 1 ≤ (Finset.univ.filter (fun id => input id = some true ∨ id ∈ F)).card) := by
   decide
+
+/-- **First-write check (D16).** A call at an uncorrupted process holding no
+input is answered by rule 1 alone: rule 2 asks for a filled entry and
+`SpecStep.callByz` for a corrupted caller, so the bit reaches the ghost
+record. -/
+example (P : Params) (s : SpecState P.n) (id : Fin P.n) (b : Bool)
+    (h : s.input id = none) (hF : id ∉ s.F) (μ : PMF (SpecState P.n))
+    (hstep : SpecStep P s (.callABA id b) μ) :
+    μ = PMF.pure { s with input := Function.update s.input id (some b) } := by
+  cases hstep with
+  | callSet => rfl
+  | callLoop _ _ hne => exact absurd h hne
+  | callByz _ _ _ hmem => exact absurd hmem hF
 
 /-- The ABA specification system (blueprint Transition System 1). -/
 noncomputable def spec (P : Params) : System (SpecState P.n) (Lab P.n) where

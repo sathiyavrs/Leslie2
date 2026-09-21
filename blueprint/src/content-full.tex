@@ -298,12 +298,11 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
     A flat reading therefore neither calls into nor returns from a round at a corrupted process, both labels being hidden, and the composed reading answers them, so a flat reading is included in its composed reading and the inclusion holds in that direction alone.
   \item D12$'$: per-process DECIDED sent sets and received sets, delivery per (receiver, sender, bit), and Byzantine equivocation in those sent sets.
   \item D13: the Validity provenance apparatus on Transition System~1, namely a ghost record $input$ of the genuine $\mathrm{callABA}$ events and an $f+1$ support guard \leandecl{PLTS.ABA.SuppOK} on the decision.
-    The record has two honest writers, the interface rules \leandeclnamed{callSet}{PLTS.ABA.SpecStep.callSet} and \leandeclnamed{callLoop}{PLTS.ABA.SpecStep.callLoop}.
-    Rule~1 overwrites the record while nothing is decided, rule~2 is the unguarded loop that makes $\mathrm{callABA}$ input-enabled and records first-write-wins, and the corrupted rule of D23 writes it too.
+    The record has one honest writer, the interface rule \leandeclnamed{callSet}{PLTS.ABA.SpecStep.callSet}, whose guard is the empty entry, so its write is a first write.
+    Rule~2, the input-enabledness loop \leandeclnamed{callLoop}{PLTS.ABA.SpecStep.callLoop}, carries the call label at a filled entry and writes nothing (D36), and the corrupted rule of D23 writes the record too.
   \item D14: $f+1$ support guards on the GBCA specification's binding, on the dissenting bit at its $B$-return, and on each of the two bits at its $C$-return.
   \item D15: the $F$-blind form of those support counts, namely $f+1$ distinct callers-or-corrupted.
   \item D16: the two-phase abstract state used by the core simulation, which defers the specification's $\tau$-progress to a single \leandeclnamed{decide}{PLTS.ABA.SpecStep.decide} step under the first visible return.
-    The deferral rests on that overwrite: a bit written to the record by the unguarded loop rule stays revisable until a value is decided.
   \item D17: a fourth outcome $\dagger$, of mass $\failmass$, on the single distribution both coin resolutions follow, where the source's two range over $\{0,1,\top\}$.
     At Transition System~3 it delivers to no process, and at Transition System~1 it puts the system into the mode $terminal$, which enables no $\tau$-rule.
   \item D18: the GBCA implementation transcribes ABDY22's Algorithm~6 in full, over the message levels INPUT, ECHO, VOTE, BIND and ECHO5, in place of the source's compression of it.
@@ -355,6 +354,9 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
     The vote requires the sender's own $\mathrm{ECHO}$, the bind call requires the sender's own $\mathrm{VOTE}$ and no earlier bind call, and the return requires the returner's own bind call, which the write-once field $\mathit{sentBind}$ of the gather record holds.
     The $\mathrm{ECHO}$ payload is the set of entries the sender's input store holds, which is what Algorithm~5 of~\cite{AFW25} and Algorithm~4 of the source blueprint both send.
     The row fires once that set has $n-f$ entries, which is the source blueprint's guard.
+  \item D36: the input-enabledness loop of the ABA interface is guarded on the record it stands beside, \leandeclnamed{inputLoop}{PLTS.ABA.Net.FlatProcStep.inputLoop} absorbing a call at a process holding an input and the commit row carrying the label at a process holding none, and Transition System~1 splitting the label the same way, \leandeclnamed{callLoop}{PLTS.ABA.SpecStep.callLoop} looping at a filled record entry and \leandeclnamed{callSet}{PLTS.ABA.SpecStep.callSet} writing an empty one, where the source's loop is enabled at every state beside its recording rule, so that a first call may be dropped there and a later one recorded.
+    The call label is enabled at every state on both sides, and every write to the ghost record is a first write, so the record holds each never-corrupted process's first genuine call.
+    That call is the witness Validity names: \leandecl{PLTS.ABA.ValidityTrace} asks of every return of $b$ by a never-corrupted process an earlier $\mathrm{callABA}(id',b)$ at a never-corrupted $id'$, first among $id'$'s $\mathrm{callABA}$ labels in the trace.
 \end{itemize}
 
 
@@ -387,17 +389,18 @@ Rule 3 (\leandeclnamed{coinFlip}{PLTS.ABA.SpecStep.coinFlip}) is the branch out 
 Its three outcomes carry $\varepsilon$, $1-\varepsilon-\failmass$ and $\failmass$: the flip locks, leaves the state unchanged, or fails to deliver (D17).
 Rule 4 (\leandeclnamed{decide}{PLTS.ABA.SpecStep.decide}) is the sole writer of $val$, and it is the only $\tau$-rule that \emph{locked} can enable.
 Enabledness is wider than the control graph shows.
-Rule 2 fires in every state and rule 1 wherever $val = \bot$; rule 6 fires wherever the identifier it names is uncorrupted and the budget has room, and rules 7 and 8 wherever the identifier it names is corrupted.
+Rule 1 fires wherever $input[id] = \bot$ and rule 2 wherever $input[id] \neq \bot$; rule 6 fires wherever the identifier it names is uncorrupted and the budget has room, and rules 7 and 8 wherever the identifier it names is corrupted.
 Rule 3 requires the mixedness guard beside $mode = idle$ and $val = \bot$: both bits must carry $f{+}1$ support, so an execution on which one bit is never supported never flips.
 Rule 4 is enabled at every state with $val = \bot$, $mode \neq terminal$ and some bit carrying $f{+}1$ support, hence at \emph{idle} as well as at \emph{locked}.
-At \emph{decided} the enabled rules are 2, 5, 6, 7 and 8, and at \emph{terminal} they are 1, 2, 6, 7 and 8; neither state enables a $\tau$-rule.
+At \emph{decided} the enabled rules are 1, 2, 5, 6, 7 and 8, and at \emph{terminal} they are 1, 2, 6, 7 and 8; neither state enables a $\tau$-rule.
 The guards on rule 4 are the entire constraint on the value decided (D13).
 
 \blueprintfig{fig-ts1-rules}{Transition System 1, the ABA specification \leandecl{PLTS.ABA.spec}: the four control states, keyed on the mode, and the flip branch of rule 3, whose $\tau$-step is drawn with an undirected stem and one edge per outcome — lock, release and failure to deliver, naming no coin bit.
 A locked flip cannot be discarded: at $locked$ the decision is the only $\tau$-rule the mode can enable.
 The undelivered branch of mass $\failmass$ (D17) is absorbing: $terminal$ enables no $\tau$-rule.
 The flip carries the mixedness guard, so the branch is reachable only from a state where both bits carry $f{+}1$ support.
-Rules 1 and 2 are drawn on $idle$ alone; rule 1 is enabled wherever no value is decided, rule 2 everywhere.
+Rules 1 and 2 are drawn on $idle$ alone.
+Rule 1 is enabled at a process whose record entry is empty and rule 2 at a process whose entry is filled, so the call label is enabled in every state (D36).
 Three of the eight rules are not drawn: rule 6 (\leandeclnamed{fail}{PLTS.ABA.SpecStep.fail}), the guarded corruption rule (D1), and rules 7 and 8 (\leandeclnamed{callByz}{PLTS.ABA.SpecStep.callByz} and \leandeclnamed{retByz}{PLTS.ABA.SpecStep.retByz}), the corrupted interface (D23), each enabled at a corrupted process in every state and none of them writing the mode.}
 
 \noindent\textbf{Transition System 1: the ABA specification.}
@@ -416,7 +419,7 @@ The source blueprint's $Initial$ clause mentions an undeclared $out$ field; the 
 
 \noindent\textbf{Labels.} $\mathrm{callABA}(id,b)$, $\mathrm{retABA}(id,b)$, $\mathrm{fail}(id)$ and $\tau$, for $id \in [n]$ and $b \in \mathbb{B}$.
 
-\noindent\textbf{Input-enabled labels.} $\mathrm{callABA}(id,b)$, by the unconditional loop rule~2.
+\noindent\textbf{Input-enabled labels.} $\mathrm{callABA}(id,b)$, by rules~1 and~2 together, rule~1 at an empty record entry and rule~2 at a filled one (D36).
 The label $\mathrm{fail}(id)$ is enabled where $id \notin F$ and $|F| < f$, the guards of rule~6 (D1).
 
 \noindent\textbf{Initial.} $input = \bot^{[n]}$, $ret = \mathrm{false}^{[n]}$, $F = \emptyset$, $val = \bot$ and $mode = idle$, the superscript marking a constant map on $[n]$.
@@ -427,19 +430,16 @@ Write $SuppOK(s,b)$ for
 the $f{+}1$ $F$-blind support of $b$ (D13, D15), \leandecl{PLTS.ABA.SuppOK}.
 
 \medskip
-\noindent\textbf{1.} \leandeclnamed{callSet}{PLTS.ABA.SpecStep.callSet} (D13, D16).
-Guard $val = \bot$.
+\noindent\textbf{1.} \leandeclnamed{callSet}{PLTS.ABA.SpecStep.callSet} (D13, D36).
+Guard $input[id] = \bot$.
 \[ s \xrightarrow{\;\mathrm{callABA}(id,b)\;}
    \delta\bigl(s[\,input[id] := b\,]\bigr) \]
-The write is an overwrite: while nothing is decided the record is revisable, so it holds the bit of the last such call.
+The write is a first write: the guard is the empty entry, so the record holds the bit of the process's first genuine call.
 
-\noindent\textbf{2.} \leandeclnamed{callLoop}{PLTS.ABA.SpecStep.callLoop} (D13).
-No guard.
-\[ s \xrightarrow{\;\mathrm{callABA}(id,b)\;}
-   \begin{cases}
-     \delta\bigl(s[\,input[id] := b\,]\bigr) & \text{if } input[id] = \bot,\\
-     \delta(s) & \text{otherwise.}
-   \end{cases} \]
+\noindent\textbf{2.} \leandeclnamed{callLoop}{PLTS.ABA.SpecStep.callLoop} (D13, D36).
+Guard $input[id] \neq \bot$.
+\[ s \xrightarrow{\;\mathrm{callABA}(id,b)\;} \delta(s) \]
+The rule writes nothing.
 
 \noindent\textbf{3.} \leandeclnamed{coinFlip}{PLTS.ABA.SpecStep.coinFlip} (D17, D21).
 Guard $mode = idle$, $val = \bot$ and $SuppOK(s,b)$ for each of the two bits $b$, the mixedness guard.
@@ -1423,7 +1423,7 @@ The DECIDED sets, the corrupted set with its budget, and the authorisation $k \i
 
 \input{nodes/def-aba-core}
 
-The idle self-loop of a process carries \leandeclnamed{inputLoop}{PLTS.ABA.Comp.CoreProcStepN.inputLoop} together with the four rows on which every round loop stands while a Byzantine handshake row moves stage or coin content, \leandeclnamed{byzCallGIdle}{PLTS.ABA.Comp.CoreProcStepN.byzCallGIdle}, \leandeclnamed{byzRetGIdle}{PLTS.ABA.Comp.CoreProcStepN.byzRetGIdle}, \leandeclnamed{byzCallWIdle}{PLTS.ABA.Comp.CoreProcStepN.byzCallWIdle} and \leandeclnamed{byzRetWIdle}{PLTS.ABA.Comp.CoreProcStepN.byzRetWIdle}; the guard $k \in F$ that authorises such a row is the network's, at \leandeclnamed{byzCallG}{PLTS.ABA.Comp.ANetStep.byzCallG}, \leandeclnamed{byzRetG}{PLTS.ABA.Comp.ANetStep.byzRetG}, \leandeclnamed{byzCallW}{PLTS.ABA.Comp.ANetStep.byzCallW} and \leandeclnamed{byzRetW}{PLTS.ABA.Comp.ANetStep.byzRetW} (D11).
+The self-loops of a process carry \leandeclnamed{inputLoop}{PLTS.ABA.Comp.CoreProcStepN.inputLoop}, which takes $\mathrm{callABA}$ at a process whose input is set (D36), together with the four rows on which every round loop stands while a Byzantine handshake row moves stage or coin content, \leandeclnamed{byzCallGIdle}{PLTS.ABA.Comp.CoreProcStepN.byzCallGIdle}, \leandeclnamed{byzRetGIdle}{PLTS.ABA.Comp.CoreProcStepN.byzRetGIdle}, \leandeclnamed{byzCallWIdle}{PLTS.ABA.Comp.CoreProcStepN.byzCallWIdle} and \leandeclnamed{byzRetWIdle}{PLTS.ABA.Comp.CoreProcStepN.byzRetWIdle}; the guard $k \in F$ that authorises such a row is the network's, at \leandeclnamed{byzCallG}{PLTS.ABA.Comp.ANetStep.byzCallG}, \leandeclnamed{byzRetG}{PLTS.ABA.Comp.ANetStep.byzRetG}, \leandeclnamed{byzCallW}{PLTS.ABA.Comp.ANetStep.byzCallW} and \leandeclnamed{byzRetW}{PLTS.ABA.Comp.ANetStep.byzRetW} (D11).
 The step \leandeclnamed{retG}{PLTS.ABA.Comp.CoreProcStepN.retG} sets $est$ to the grade.
 The bound bit the same label carries is a ghost output, and no row of the loop reads it (D29).
 The coin return has two rows.
@@ -1433,7 +1433,8 @@ A delivery pairs the network's authenticity guard \leandeclnamed{ddlv}{PLTS.ABA.
 The exit \texttt{retABA}\,$id\,b$ fires once $n-f$ distinct senders of $b$ have been delivered to $id$, the count read at \leandeclnamed{ret}{PLTS.ABA.Comp.CoreProcStepN.ret}, and $b$ lies in $id$'s own sent set, read at \leandeclnamed{retABA}{PLTS.ABA.Comp.ANetStep.retABA}.
 
 \blueprintfig{fig-core-phases}{The round loop \leandecl{PLTS.ABA.Comp.coreProcN}: the per-process five-phase handshake cycle, the fused DECIDED multicast at the $A$-grade coin return (D10), and the DECIDED sets guarding $\mathrm{retABA}$.
-Every edge drawn carries the guard that the process's own program is unreplaced, so a corruption leaves the machine at the phase it has reached and the phase field stands still from there (D23).}
+Every edge drawn carries the guard that the process's own program is unreplaced, so a corruption leaves the machine at the phase it has reached and the phase field stands still from there (D23).
+The \texttt{inputLoop} self-loop absorbs $\mathrm{callABA}$ at a process whose input is set (D36), so it stands at every phase the \texttt{input} edge leads to and is drawn at $\mathrm{toCallG}$ alone.}
 
 The Lean encoding of Algorithm~\ref{alg:aba-core} is the round-loop program $\mathrm{coreProcN}(P,j)$ of each process together with the ABA-side network $\mathrm{aNet}(P)$, both read over the extended alphabet $\mathrm{NLab}(n)$ of Definition~\ref{def:aba-procnet}.
 It is the round-loop control only.
@@ -1485,7 +1486,7 @@ Write
 \]
 for the number of distinct senders whose $\langle\mathrm{DECIDED}, b\rangle$ has been delivered to $i$; this is the count the return guard reads.
 Write $\mathrm{est}(A\,b) = \mathrm{est}(B\,b) = b$ and $\mathrm{est}(C) = \bot$ for the estimate a graded outcome dictates.
-In the table $\mathrm{DEC}\,b$ abbreviates $\langle\mathrm{DECIDED}, b\rangle$, ``mcast'' abbreviates the insertion of a payload into the sender's $\mathit{decidedSent}$ set, and a dash marks an unguarded rule.
+In the table $\mathrm{DEC}\,b$ abbreviates $\langle\mathrm{DECIDED}, b\rangle$ and ``mcast'' abbreviates the insertion of a payload into the sender's $\mathit{decidedSent}$ set.
 A row is a rule of a round loop, a rule of the ABA-side network, or a rendezvous of one of each; where a row has two halves the table names both, and a guard is annotated with the component that reads it.
 A label of the extended alphabet is written with the $\to\tau$ the composition applies to it.
 Every round-loop row below other than $\mathrm{failSelf}$ and $\mathrm{corruptedIdle}$ carries in addition the guard that the acting process's own program is unreplaced (D23); the Guard column does not repeat it.
@@ -1501,7 +1502,7 @@ Rule & Label & Guard & Effect \\
  & & & $\mathit{round}_i \gets 0$ (D9); \\
  & & & $\mathit{phase}_i \gets \mathrm{toCallG}$ \\
 \hline
-\leandeclnamed{inputLoop}{PLTS.ABA.Comp.CoreProcStepN.inputLoop} & $\mathrm{callABA}(i,b)$ & ---
+\leandeclnamed{inputLoop}{PLTS.ABA.Comp.CoreProcStepN.inputLoop} & $\mathrm{callABA}(i,b)$ & $\mathit{input}_i$ set
   & identity (self-loop) \\
 \hline
 \leandeclnamed{callG}{PLTS.ABA.Comp.CoreProcStepN.callG} & $\mathrm{callG}(r,i,b)$
@@ -1718,9 +1719,8 @@ The entire decision is deferred to the first visible return, where a single
 weak step writes the decision value before the return label is emitted.
 The abstract state's mode is $idle$ at every state it reaches, so the decision is
 enabled when that return arrives.
-What licenses the deferral is the overwrite of rule~1 of Transition System~1
-(D16): a bit written to the ghost record by the unguarded loop rule stays
-revisable until a value is decided.
+Every write to the ghost record is a first write, matched with the concrete commit that carries the same label, so the record and the committed input agree at every honest process in both phases (D36).
+The two-phase abstract state is deviation D16, and it is what holds the decision back to that return.
 The soundness theorem for probabilistic forward simulation then gives the
 conclusion: every achievable trace distribution of the protocol is an
 achievable trace distribution of the specification.

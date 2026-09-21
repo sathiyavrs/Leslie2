@@ -298,9 +298,12 @@ inductive FlatProcStep (P : Params) (M S : Type)
       FlatProcStep P M S stageStep j (c, p) (Sum.inl (.callABA j b))
         (PMF.pure (c.setProc { c.proc with
           input := some b, est := some b, round := 0, phase := .toCallG }, p))
-  /-- Input-enabledness loop on `j`'s own `callABA`. -/
+  /-- Input-enabledness loop on `j`'s own `callABA`: the loop absorbs a call at
+  a process holding an input. The `input` row carries the label at a process
+  holding none, so the label is enabled in every state and a first call at a
+  process whose program stands commits (D36). -/
   | inputLoop (c : CoreRec P.n) (p : StageSideRecP S) (b : Bool)
-      (hh : c.corrupted = false) :
+      (hh : c.corrupted = false) (hin : c.proc.input ≠ none) :
       FlatProcStep P M S stageStep j (c, p) (Sum.inl (.callABA j b)) (PMF.pure (c, p))
   /-- An input addressed elsewhere: not `j`'s business. -/
   | callABAIdle (c : CoreRec P.n) (p : StageSideRecP S)
@@ -743,13 +746,13 @@ theorem stepN_callABA_own {b : Bool}
     (q.1.corrupted = false ∧ q.1.proc.input = none ∧
       ν = PMF.pure (q.1.setProc { q.1.proc with
         input := some b, est := some b, round := 0, phase := .toCallG }, q.2)) ∨
-    ν = PMF.pure q := by
+    ((q.1.corrupted = true ∨ q.1.proc.input ≠ none) ∧ ν = PMF.pure q) := by
   cases h
   case stageRow h' => exact (IsStageTable.own h').elim
   case input => exact Or.inl ⟨by assumption, by assumption, rfl⟩
-  case inputLoop => exact Or.inr rfl
+  case inputLoop => exact Or.inr ⟨Or.inr (by assumption), rfl⟩
   case callABAIdle => exact absurd rfl ‹_ ≠ j›
-  case corruptedIdle => exact Or.inr rfl
+  case corruptedIdle => exact Or.inr ⟨Or.inl (by assumption), rfl⟩
 
 theorem stepN_callABA_foreign {id : Fin P.n} {b : Bool} (hid : id ≠ j)
     (h : FlatProcStep P M S stageStep j q (Sum.inl (.callABA id b)) ν) :

@@ -15,12 +15,13 @@ chain and `CoreSimRun`'s run kit into `coreSim`, the probabilistic forward
 simulation `hybrid P ⊑ spec P` along `coreRel P`.
 
 The rows dispatch as follows. A visible `callABA` is answered by
-`SpecStep.callSet` while nothing is decided and by `SpecStep.callLoop`
-afterwards. A never-corrupted process's visible `retABA` is answered by
-`SpecStep.decide` followed by
-`SpecStep.ret` on the first such row, and by `SpecStep.ret` alone on every
-later one. Every hidden row, the coin's resolving call included, is answered by
-a stutter: the abstract state's mode stays `Mode.idle`, so it never fires
+`SpecStep.callSet` at a never-corrupted process holding no input, by
+`SpecStep.callLoop` at a never-corrupted process holding one, and by
+`SpecStep.callByz` at a corrupted process. A never-corrupted process's visible
+`retABA` is answered by `SpecStep.decide` followed by `SpecStep.ret` on the
+first such row, and by `SpecStep.ret` alone on every later one. Every hidden
+row, the coin's resolving call included, is answered by a stutter: the
+abstract state's mode stays `Mode.idle`, so it never fires
 `SpecStep.coinFlip` and `SpecStep.decide` remains enabled when the first
 return arrives. A `fail` is answered by `SpecStep.fail`, whose two guards are
 the concrete row's own, read across `Abs.F_eq`.
@@ -196,9 +197,9 @@ theorem coreSim (P : Params) :
       rw [hybrid_step_callABA P g C A w id b hI.corrupted_F] at hstep
       obtain ⟨μc, hstepC, rfl⟩ := hstep
       have hdisj := hstepC
-      rcases hdisj with ⟨-, hin, rfl⟩ | rfl
-      · -- genuine fresh input: `callSet` in phase 1 (an overwrite of any self-loop-banked
-        -- junk), `callLoop` in phase 2 (first-write-wins ghost)
+      rcases hdisj with ⟨hidF, hin, rfl⟩ | ⟨hloop, rfl⟩
+      · -- the commit row at a never-corrupted process holding no input: `SpecStep.callSet`,
+        -- whose empty-entry guard is `input_sync` read at `id`
         set c' := ABAState.setProc (C, A) id { ABAState.procs (C, A) id with
           input := some b, est := some b, round := 0, phase := .toCallG } with hc'def
         have hc'mem : c' ∈ (PMF.pure c').support := by rw [PMF.mem_support_pure_iff]
@@ -210,72 +211,60 @@ theorem coreSim (P : Params) :
           rw [hc'def]; exact ABAState.setProc_procs_self _ _ _
         have hNe : ∀ id', id' ≠ id → c'.procs id' = ABAState.procs (C, A) id' := by
           intro id' h; rw [hc'def]; exact ABAState.setProc_procs_ne _ _ _ h
-        rcases hAbs.phase with ⟨hv, hghost⟩ | ⟨v, hv2, ⟨r0, hcv0⟩, hpin⟩
-        · -- phase 1: `SpecStep.callSet`, whose overwrite restores the ghost sync
-          set a' : SpecState P.n :=
-            { a with input := Function.update a.input id (some b) } with ha'def
-          have hAbs' : Abs P g c' w a' := by
-            refine ⟨by rw [hCF]; exact hAbs.F_eq, fun id' => ?_, hAbs.mode_idle,
-              Or.inl ⟨hv, ?_⟩⟩
-            · show a.ret id' = (c'.procs id').returned
-              by_cases h : id' = id
-              · rw [h, hSelf]; exact hAbs.ret_eq id
-              · rw [hNe id' h]; exact hAbs.ret_eq id'
-            · intro id' b' hb'
-              show Function.update a.input id (some b) id' = some b'
-              by_cases h : id' = id
-              · rw [h, Function.update_self]
-                rw [h, hSelf] at hb'
-                exact hb'
-              · rw [Function.update_of_ne h]
-                rw [hNe id' h] at hb'
-                exact hghost id' b' hb'
-          simp only [prodPMF_pure_abaRow]
-          obtain ⟨ω, hRel, hbid⟩ := dirac_step (g, c'.1, c'.2, w) a' ⟨hIA', hAbs'⟩
-          refine ⟨ω, hRel, Or.inr ⟨by simp, ?_⟩⟩
-          rw [hbid]
-          exact weakStep_strong (SpecStep.callSet a id b hv)
-        · -- phase 2: `SpecStep.callLoop` (the decision blocks `callSet`'s guard)
-          set a' : SpecState P.n := { a with
-            input := if a.input id = none then Function.update a.input id (some b)
-              else a.input } with ha'def
-          have hAbs' : Abs P g c' w a' := by
-            refine ⟨by rw [hCF]; exact hAbs.F_eq, fun id' => ?_, hAbs.mode_idle,
-              Or.inr ⟨v, hv2, hIAF.2.1 r0 v hcv0, hIAF.2.2 v ⟨r0, hcv0⟩ hpin⟩⟩
-            show a.ret id' = (c'.procs id').returned
+        have hempty : a.input id = none := by rw [hAbs.input_sync id hidF]; exact hin
+        set a' : SpecState P.n :=
+          { a with input := Function.update a.input id (some b) } with ha'def
+        have hAbs' : Abs P g c' w a' := by
+          refine ⟨by rw [hCF]; exact hAbs.F_eq, fun id' => ?_, hAbs.mode_idle,
+            fun id' hid' => ?_, ?_⟩
+          · show a.ret id' = (c'.procs id').returned
             by_cases h : id' = id
             · rw [h, hSelf]; exact hAbs.ret_eq id
             · rw [hNe id' h]; exact hAbs.ret_eq id'
-          simp only [prodPMF_pure_abaRow]
-          obtain ⟨ω, hRel, hbid⟩ := dirac_step (g, c'.1, c'.2, w) a' ⟨hIA', hAbs'⟩
-          refine ⟨ω, hRel, Or.inr ⟨by simp, ?_⟩⟩
-          rw [hbid]
-          exact weakStep_strong (SpecStep.callLoop a id b)
-      · -- concrete self-loop: `callLoop` in either phase (a junk ghost may bank; phase 1's
-        -- sync clause only tracks committed concrete inputs, which are untouched here)
-        set a' : SpecState P.n := { a with
-          input := if a.input id = none then Function.update a.input id (some b)
-            else a.input } with ha'def
-        have hAbs' : Abs P g (C, A) w a' := by
-          refine ⟨hAbs.F_eq, hAbs.ret_eq, hAbs.mode_idle, ?_⟩
-          rcases hAbs.phase with ⟨hv, hghost⟩ | hph2
-          · refine Or.inl ⟨hv, ?_⟩
-            intro id' b' hin'
-            have hgin : a.input id' = some b' := hghost id' b' hin'
-            show (if a.input id = none then Function.update a.input id (some b)
-              else a.input) id' = some b'
+          · rw [hCF] at hid'
+            show Function.update a.input id (some b) id' = (c'.procs id').input
             by_cases h : id' = id
-            · rw [if_neg (by rw [← h, hgin]; simp)]
-              exact hgin
-            · by_cases hcond : a.input id = none
-              · rw [if_pos hcond, Function.update_of_ne h]; exact hgin
-              · rw [if_neg hcond]; exact hgin
-          · exact Or.inr hph2
+            · rw [h, Function.update_self, hSelf]
+            · rw [Function.update_of_ne h, hNe id' h]
+              exact hAbs.input_sync id' hid'
+          · rcases hAbs.phase with hv | ⟨v, hv2, ⟨r0, hcv0⟩, hpin⟩
+            · exact Or.inl hv
+            · exact Or.inr ⟨v, hv2, hIAF.2.1 r0 v hcv0, hIAF.2.2 v ⟨r0, hcv0⟩ hpin⟩
         simp only [prodPMF_pure_abaRow]
-        obtain ⟨ω, hRel, hbid⟩ := dirac_step (g, C, A, w) a' ⟨hI, hAbs'⟩
+        obtain ⟨ω, hRel, hbid⟩ := dirac_step (g, c'.1, c'.2, w) a' ⟨hIA', hAbs'⟩
         refine ⟨ω, hRel, Or.inr ⟨by simp, ?_⟩⟩
         rw [hbid]
-        exact weakStep_strong (SpecStep.callLoop a id b)
+        exact weakStep_strong (SpecStep.callSet a id b hempty)
+      · by_cases hidF : id ∈ ABAState.F (C, A)
+        · -- the replaced program's self-loop: `SpecStep.callByz`, whose write lands at a
+          -- corrupted process, where `input_sync` is vacuous
+          set a' : SpecState P.n :=
+            { a with input := Function.update a.input id (some b) } with ha'def
+          have hAbs' : Abs P g (C, A) w a' := by
+            refine ⟨hAbs.F_eq, hAbs.ret_eq, hAbs.mode_idle, fun id' hid' => ?_, hAbs.phase⟩
+            have hne : id' ≠ id := by intro h; rw [h] at hid'; exact hid' hidF
+            show Function.update a.input id (some b) id' = (ABAState.procs (C, A) id').input
+            rw [Function.update_of_ne hne]
+            exact hAbs.input_sync id' hid'
+          simp only [prodPMF_pure_abaRow]
+          obtain ⟨ω, hRel, hbid⟩ := dirac_step (g, C, A, w) a' ⟨hI, hAbs'⟩
+          refine ⟨ω, hRel, Or.inr ⟨by simp, ?_⟩⟩
+          rw [hbid]
+          exact weakStep_strong (SpecStep.callByz a id b b (hAbs.F_eq ▸ hidF))
+        · -- the input-enabledness loop at a never-corrupted process holding an input:
+          -- `SpecStep.callLoop`, whose filled-entry guard is `input_sync` read at `id`
+          have hcorr : ABAState.corrupted (C, A) id = false := by
+            cases hb : ABAState.corrupted (C, A) id
+            · rfl
+            · exact absurd ((hI.corrupted_F id).mp hb) hidF
+          have hfilled : a.input id ≠ none := by
+            rw [hAbs.input_sync id hidF]
+            exact hloop.resolve_left (by rw [hcorr]; simp)
+          simp only [prodPMF_pure_abaRow]
+          obtain ⟨ω, hRel, hbid⟩ := dirac_step (g, C, A, w) a ⟨hI, hAbs⟩
+          refine ⟨ω, hRel, Or.inr ⟨by simp, ?_⟩⟩
+          rw [hbid]
+          exact weakStep_strong (SpecStep.callLoop a id b hfilled)
     | retABA id b =>
       rw [hybrid_step_retABA P g C A w id b hI.corrupted_F] at hstep
       obtain ⟨μc, hstepC, rfl⟩ := hstep
@@ -311,10 +300,20 @@ theorem coreSim (P : Params) :
           fun j0 b0' hj0 hh0 => hI.alock_agree j0 j b0' b hj0 hjF hh0 (Or.inr hjsent)
         have hretfalse : a.ret id = false := by rw [hAbs.ret_eq id]; exact hret
         have hCF : c'.F = ABAState.F (C, A) := ABAState.setProc_F _ _ _
-        rcases hAbs.phase with ⟨hv, hghost⟩ | ⟨v, hv2, ⟨r0, hcv0⟩, hpin⟩
+        have hInputEq : ∀ id', (c'.procs id').input = (ABAState.procs (C, A) id').input := by
+          intro id'
+          by_cases h : id' = id
+          · rw [h, hc'def, ABAState.setProc_procs_self]
+          · rw [hc'def, ABAState.setProc_procs_ne _ _ _ h]
+        have hSync : ∀ id', id' ∉ c'.F → a.input id' = (c'.procs id').input := by
+          intro id' hid'
+          rw [hCF] at hid'
+          rw [hInputEq id']
+          exact hAbs.input_sync id' hid'
+        rcases hAbs.phase with hv | ⟨v, hv2, ⟨r0, hcv0⟩, hpin⟩
         · -- phase 1: the `decide` τ-step, then `SpecStep.ret`
           have hsup : SuppOK P a b :=
-            suppOK_of_inputSupp hAbs.F_eq hghost (hI.bind_supp rA b hrA_cert.2.1)
+            suppOK_of_inputSupp hAbs.F_eq hAbs.input_sync (hI.bind_supp rA b hrA_cert.2.1)
           have hmode : a.mode ≠ .terminal := by rw [hAbs.mode_idle]; exact fun h => by cases h
           set a1 : SpecState P.n := { a with val := some b, mode := .idle } with ha1def
           have hrun : weakTau (spec P) (PMF.pure a) (PMF.pure a1) :=
@@ -323,7 +322,7 @@ theorem coreSim (P : Params) :
           have hretid : a1.ret id = false := hretfalse
           set a'' : SpecState P.n := { a1 with ret := Function.update a1.ret id true } with ha''def
           have hAbs'' : Abs P g c' w a'' := by
-            refine ⟨?_, ?_, rfl, Or.inr ⟨b, rfl, hIAF.2.1 rA b hrA_cert,
+            refine ⟨?_, ?_, rfl, hSync, Or.inr ⟨b, rfl, hIAF.2.1 rA b hrA_cert,
               hIAF.2.2 b ⟨rA, hrA_cert⟩ hpinb⟩⟩
             · show a.F = c'.F
               rw [hAbs.F_eq, hCF]
@@ -345,7 +344,7 @@ theorem coreSim (P : Params) :
           have hvalb : a.val = some b := by rw [hv2, hD3]
           set a'' : SpecState P.n := { a with ret := Function.update a.ret id true } with ha''def
           have hAbs'' : Abs P g c' w a'' := by
-            refine ⟨?_, ?_, hAbs.mode_idle, Or.inr ⟨v, hv2, hIAF.2.1 r0 v hcv0,
+            refine ⟨?_, ?_, hAbs.mode_idle, hSync, Or.inr ⟨v, hv2, hIAF.2.1 r0 v hcv0,
               hIAF.2.2 v ⟨r0, hcv0⟩ hpin⟩⟩
             · show a.F = c'.F
               rw [hAbs.F_eq, hCF]
@@ -379,7 +378,7 @@ theorem coreSim (P : Params) :
       have hFsub := ABAState.corrupt_F_subset (C, A) id
       have hAbs' : Abs P (fun r => (g r).corrupt P id) c'
           (fun r => (w r).corrupt P id) (a.corrupt P id) := by
-        refine ⟨?_, ?_, ?_, ?_⟩
+        refine ⟨?_, ?_, ?_, ?_, ?_⟩
         · show (a.corrupt P id).F = c'.F
           rw [hc'def, ABAState.corrupt_F]
           unfold SpecState.corrupt
@@ -388,11 +387,11 @@ theorem coreSim (P : Params) :
         · intro id'
           rw [corrupt_ret, hc'def, ABAState.corrupt_procs]; exact hAbs.ret_eq id'
         · rw [corrupt_mode]; exact hAbs.mode_idle
-        · rcases hAbs.phase with ⟨hv, hghost⟩ | ⟨v, hv, ⟨r0, hcv0⟩, hpin⟩
-          · refine Or.inl ⟨by rw [corrupt_val]; exact hv, ?_⟩
-            intro id' b' h
-            rw [hc'def, ABAState.corrupt_procs] at h
-            rw [corrupt_input]; exact hghost id' b' h
+        · intro id' hid'
+          rw [corrupt_input, hc'def, ABAState.corrupt_procs]
+          exact hAbs.input_sync id' (fun hh => hid' (hFsub hh))
+        · rcases hAbs.phase with hv | ⟨v, hv, ⟨r0, hcv0⟩, hpin⟩
+          · exact Or.inl (by rw [corrupt_val]; exact hv)
           · exact Or.inr ⟨v, by rw [corrupt_val]; exact hv,
               (hI.step_fail id hnew hbud).2.1 r0 v hcv0,
               (hI.step_fail id hnew hbud).2.2 v ⟨r0, hcv0⟩ hpin⟩

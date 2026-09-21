@@ -47,9 +47,10 @@ theorem Abs.frame {P : Params} {g g' : ℕ → GBCA.SpecState P.n} {c c' : ABASt
     (hAF : AbsFrame P g g' c c') :
     Abs P g' c' w' a := by
   refine ⟨hA.F_eq.trans hF.symm, fun id => (hA.ret_eq id).trans (hret id).symm,
-    hA.mode_idle, ?_⟩
-  rcases hA.phase with ⟨hv, hghost⟩ | ⟨v, hv, ⟨r, hcv⟩, hpin⟩
-  · exact Or.inl ⟨hv, fun id b h => hghost id b (by rw [← hin id]; exact h)⟩
+    hA.mode_idle,
+    fun id hid => (hA.input_sync id (by rw [← hF]; exact hid)).trans (hin id).symm, ?_⟩
+  rcases hA.phase with hv | ⟨v, hv, ⟨r, hcv⟩, hpin⟩
+  · exact Or.inl hv
   · exact Or.inr ⟨v, hv, hAF.1 r v hcv, hAF.2 v ⟨r, hcv⟩ hpin⟩
 
 /-- `bindUnset`: stutters; the row's `AbsFrame` package carries the certificates. -/

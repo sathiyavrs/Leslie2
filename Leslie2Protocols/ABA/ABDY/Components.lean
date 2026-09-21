@@ -156,8 +156,12 @@ inductive CoreProcStepN (P : Params) (j : Fin P.n) :
       CoreProcStepN P j c (Sum.inl (.callABA j b))
         (PMF.pure (c.setProc { c.proc with
           input := some b, est := some b, round := 0, phase := .toCallG }))
-  /-- Input-enabledness loop on `j`'s own `callABA`. -/
-  | inputLoop (c : CoreRec P.n) (b : Bool) (hh : c.corrupted = false) :
+  /-- Input-enabledness loop on `j`'s own `callABA`: the loop absorbs a call at
+  a process holding an input. The `input` row carries the label at a process
+  holding none, so the label is enabled in every state and a first call at a
+  process whose program stands commits (D36). -/
+  | inputLoop (c : CoreRec P.n) (b : Bool) (hh : c.corrupted = false)
+      (hin : c.proc.input ≠ none) :
       CoreProcStepN P j c (Sum.inl (.callABA j b)) (PMF.pure c)
   /-- An input addressed elsewhere: not `j`'s business. -/
   | callABAIdle (c : CoreRec P.n) (id : Fin P.n) (b : Bool) (hid : id ≠ j) :
@@ -499,12 +503,12 @@ theorem stepC_callABA_own {b : Bool}
     (c.corrupted = false ∧ c.proc.input = none ∧
       ν = PMF.pure (c.setProc { c.proc with
         input := some b, est := some b, round := 0, phase := .toCallG })) ∨
-    ν = PMF.pure c := by
+    ((c.corrupted = true ∨ c.proc.input ≠ none) ∧ ν = PMF.pure c) := by
   cases h
   case input => exact Or.inl ⟨by assumption, by assumption, rfl⟩
-  case inputLoop => exact Or.inr rfl
+  case inputLoop => exact Or.inr ⟨Or.inr (by assumption), rfl⟩
   case callABAIdle => exact absurd rfl ‹_ ≠ j›
-  case corruptedIdle => exact Or.inr rfl
+  case corruptedIdle => exact Or.inr ⟨Or.inl (by assumption), rfl⟩
 
 theorem stepC_callABA_foreign {id : Fin P.n} {b : Bool} (hid : id ≠ j)
     (h : CoreProcStepN P j c (Sum.inl (.callABA id b)) ν) : ν = PMF.pure c := by

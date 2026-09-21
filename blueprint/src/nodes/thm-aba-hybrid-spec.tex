@@ -18,6 +18,7 @@
   Both read the two ABA-side components through the accessors of Definition~\ref{def:aba-core}, so the whole relation is written in the coordinates the system already has and no change of system precedes it.
   Take a state of $\mathrm{hybrid}(P)$ satisfying $\mathrm{Inv} \wedge \mathrm{Abs}$ and a row out of it.
   $\mathrm{Abs}$ pins the corrupted set, the returns and $mode = idle$, so the abstract state never fires \leandeclnamed{coinFlip}{PLTS.ABA.SpecStep.coinFlip}, and it is two-phase on the abstract state's $val$ (D16).
+  Outside that disjunction it pins the ghost record as well: it agrees with the committed input at every honest process, in both phases.
   There are three cases.
   First, a hidden row: the abstract state answers by a stutter in the $\mathrm{Abs}$ frame, the coin's resolving call under the constant coupling that sends every outcome to the one unchanged abstract state.
   Second, the first $\mathrm{retABA}$ of the run: the abstract state answers by a single weak step that binds, fills, decides and returns, its bind licensed by the $f{+}1$ input support carried in the invariant and its $A$-lock certificate obtained by a pigeonhole on the $n-f$ DECIDED tally behind the return.

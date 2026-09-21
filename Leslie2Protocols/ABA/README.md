@@ -136,9 +136,10 @@ composition of programs beside the instance's network and encoded at specificati
 implementation level of its own; WCC is **assumed** at specification level
 (its coin is `wccPMF`). Both trace predicates are read at never-corrupted returners.
 `ValidityTrace` is the paper-form predicate (D13): every return of `b` by a never-corrupted
-process is preceded by a `callABA _ b` from a caller that is never corrupted anywhere in the
-trace, and `AgreementTrace` asks two such returns to carry the same bit. That is the
-quantification of the papers' own contracts, and it is what the model forces: the model
+process is preceded by the first `callABA` of a caller that is never corrupted anywhere in
+the trace, and that call carries `b`; `AgreementTrace` asks two such returns to carry the
+same bit. A process has one input, and its first call is the event that carries it. That is
+the quantification of the papers' own contracts, and it is what the model forces: the model
 contains the corrupted interface, so a corrupted process may call one bit and record
 another, and may return either bit at any time (D23). The `f + 1` `SuppOK` support counts
 are the invariant machinery that makes this provable, not the predicate itself. Safety
@@ -148,7 +149,7 @@ does.
 
 ## Deviations
 
-Each departure from the source blueprint carries a label D1–D33, cited at the point where
+Each departure from the source blueprint carries a label D1–D36, cited at the point where
 it applies. The registry — every active label glossed, and the numbers the range skips —
 is the Deviations paragraph of `../../blueprint/src/content.tex`.
 `../NOTES-Fidelity.md` covers how the encoding stands against its sources beyond that
@@ -175,8 +176,8 @@ everything. Within a folder the files are alphabetical.
 
 | file | lines | what it is |
 |---|---|---|
-| `Spec/ABA.lean` | 235 | **The top-level ABA specification**, the system all safety is measured against. Eight rules over `SpecState`, whose control mode carries the flip (D21) and two of which are the corrupted interface (D23). The decision is guarded by the `f + 1` support guard `SuppOK` alone (D13). |
-| `Spec/ABASafety.lean` | 717 | `spec_safe`: every positive-mass trace of `ABA.spec` is valid and agreeing. The trace predicates live here. |
+| `Spec/ABA.lean` | 251 | **The top-level ABA specification**, the system all safety is measured against. Eight rules over `SpecState`, whose control mode carries the flip (D21) and two of which are the corrupted interface (D23). The decision is guarded by the `f + 1` support guard `SuppOK` alone (D13). |
+| `Spec/ABASafety.lean` | 889 | `spec_safe`: every positive-mass trace of `ABA.spec` is valid and agreeing. The trace predicates live here. |
 | `Spec/GBCA.lean` | 292 | The graded binding crusader agreement specification, per round. Binding is negative, and every return announces the round's bound bit (D19, D29). |
 | `Spec/GBCASafety.lean` | 875 | Binding, graded agreement and Validity's safety half for the GBCA specification instance. `specInst_binding` reads binding off a trace. |
 | `Spec/WCC.lean` | 259 | The weak common coin specification, per round, and the coin value domain `TVal`. The call carries three rows: an unguarded loop that records nothing, one that records a caller, and one that records the caller whose access carries the count above `f` and draws the coin in the same step (D31). Held at specification level by design. |
@@ -186,7 +187,7 @@ everything. Within a folder the files are alphabetical.
 | file | lines | what it is |
 |---|---|---|
 | `Reading/Alphabet.lean` | 209 | The rendezvous alphabet `NLabP n M` a flat reading speaks, parametric in the stage message type, with the label pullback the coin oracle is read along. |
-| `Reading/Flat.lean` | 1537 | **The flat reading of a protocol**, parametric in the graded-agreement implementation: the shared rows of a program and of the network adversary, the adversary's per-round ghost record with its update and its output (D30), the pipeline that composes them beside the coin oracle, and the inversion lemmas that read a row off its label. |
+| `Reading/Flat.lean` | 1540 | **The flat reading of a protocol**, parametric in the graded-agreement implementation: the shared rows of a program and of the network adversary, the adversary's per-round ghost record with its update and its output (D30), the pipeline that composes them beside the coin oracle, and the inversion lemmas that read a row off its label. |
 | `Reading/Erase.lean` | 407 | **The ghost-free reading** `Net.flat₀`, the same reading over a one-element ghost record with its returns free to announce any bit, and `Net.flat_erasure`: the two readings achieve the same trace distributions, by a state erasure of the network adversary carried through the pipeline. |
 
 **`ABA/ABDY/`** — the implementation of ABDY22, and the composed reading over it.
@@ -194,7 +195,7 @@ everything. Within a folder the files are alphabetical.
 | file | lines | what it is |
 |---|---|---|
 | `ABDY/ABAState.lean` | 380 | The ABA-side state as one object: the round-loop records beside the DECIDED network, with the accessors the invariant is stated in. |
-| `ABDY/Components.lean` | 850 | The extended alphabet `NLab n` at ABDY22's messages, the coin oracle read along its label pullback, the round loop of one process, and the ABA-side network — the pieces the two compositions are built from. |
+| `ABDY/Components.lean` | 854 | The extended alphabet `NLab n` at ABDY22's messages, the coin oracle read along its label pullback, the round loop of one process, and the ABA-side network — the pieces the two compositions are built from. |
 | `ABDY/Hybrid.lean` | 699 | **`ABDY.composed`**, **`ABDY.substSim`**: the same protocol read as four components, one round instance per round retained at every moment, and that graded-agreement component then replaced by its specification under the four congruences. |
 | `ABDY/Instances.lean` | 1659 | **The round's graded-agreement instance** and the licence to replace it, `subSim`. |
 | `ABDY/Impl.lean` | 882 | **The GBCA implementation**, ABDY22's Algorithm 6 in full (D18). Its state is the stage records beside the round's network state, which holds the round's bound bit (D29). |
@@ -207,18 +208,18 @@ everything. Within a folder the files are alphabetical.
 
 | file | lines | what it is |
 |---|---|---|
-| `Core/Abs.lean` | 326 | `Abs` preservation for the stutter rows, and the assembly `Inv.step`. |
+| `Core/Abs.lean` | 327 | `Abs` preservation for the stutter rows, and the assembly `Inv.step`. |
 | `Core/Run.lean` | 53 | The abstract-state run kit: `SpecStep.decide` as a τ-run (`decide_step`), and a run closed by a visible step (`weakStep_of_run_then_step`). |
-| `Core/Inv.lean` | 3902 | Step inversion for `hybrid`, then preservation of `Inv` across every row. The bulk of the proof text. |
+| `Core/Inv.lean` | 3907 | Step inversion for `hybrid`, then preservation of `Inv` across every row. The bulk of the proof text. |
 | `Core/NonVacuity.lean` | 648 | A concrete 20-step run of `hybrid P4` to a `retABA` decision, so the simulation about it is not vacuous. |
-| `Core/Rel.lean` | 676 | The core simulation's relation: the lazy abstract state `Abs` and the concrete invariant `Inv`. |
-| `Core/Sim.lean` | 415 | **`coreSim`**: the simulation proof itself, one row per concrete step class. |
+| `Core/Rel.lean` | 683 | The core simulation's relation: the lazy abstract state `Abs` and the concrete invariant `Inv`. |
+| `Core/Sim.lean` | 414 | **`coreSim`**: the simulation proof itself, one row per concrete step class. |
 
 **`ABA/`** — the headlines.
 
 | file | lines | what it is |
 |---|---|---|
-| `Results.lean` | 218 | The deliverables of the protocol chain, gathered so every citable statement is in one file. Thirteen `#guard_msgs` axiom checks. |
+| `Results.lean` | 220 | The deliverables of the protocol chain, gathered so every citable statement is in one file. Thirteen `#guard_msgs` axiom checks. |
 
 **`ABA/Broadcast/`** — Bracha's reliable broadcast.
 
@@ -331,14 +332,6 @@ pseudocode and the proof bodies).
   headline conditional on a trace-level budget predicate. It is unnecessary here: in
   `ABDY/Protocol.lean` the budget is a component guard on the one local state that owns the corrupted
   set, so `ABDY.protocol_safe` and `ABDY.protocol_traces` need no hypothesis on the trace.
-- **`ValidityTrace` under repeated calls**: the witness clause accepts any earlier
-  `callABA id' b` at a never-corrupted `id'`, and the program absorbs every call after its
-  first (`FlatProcStep.inputLoop`), so a later call carrying the other bit satisfies the
-  clause without reaching the run. The theorem coincides with the sources' Validity under
-  the environment assumption that each process is called once, and is a statement-level gap
-  without it. A first-call form changes the abstract state before it changes the clause:
-  while nothing is decided the D13 ghost record holds the bit of the *last*
-  `SpecStep.callSet` (D16 overwrite), so there is no first call for the witness to read.
 - **By-type finiteness of the environment coordinates** (not pursued): the process types
   enforce finitely many variables by construction — the finite map of stage records, one
   round counter — where the network's round-indexed sent sets, the coin family, and the

@@ -638,7 +638,7 @@ theorem match_lab (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
       pureN_inj (stepN_callABA_foreign (Ne.symm hi) (hall i))
     have hGs : (GSub.gbcaSide P).step G (Sum.inl (Lab.callABA id b)) (PMF.pure G) :=
       gbcaSide_idle P G hLne (by simp) not_false
-    rcases stepN_callABA_own (hall id) with ⟨hh, hin, hxid⟩ | hxid
+    rcases stepN_callABA_own (hall id) with ⟨hh, hin, hxid⟩ | ⟨hloop, hxid⟩
     · have hx : x id = ((procs id).1.setProc { (procs id).1.proc with
           input := some b, est := some b, round := 0, phase := .toCallG },
           (procs id).2) := pureN_inj hxid
@@ -665,7 +665,7 @@ theorem match_lab (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
       · subst hi
         by_cases hc : (procs i).1.corrupted = true
         · exact CoreProcStepN.corruptedIdle _ _ hc (by simp) not_false
-        · exact CoreProcStepN.inputLoop _ b (by simpa using hc)
+        · exact CoreProcStepN.inputLoop _ b (by simpa using hc) (hloop.resolve_left hc)
       · exact CoreProcStepN.callABAIdle _ id b (Ne.symm hi)
   | retABA id b =>
     obtain ⟨hdp, hw⟩ := netStep_retABA hn

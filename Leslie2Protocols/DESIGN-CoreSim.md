@@ -51,24 +51,28 @@ the first to the second at the visible `retABA` that opens phase 2.
 - `F_eq : a.F = c.F`
 - `ret_eq : ∀ id, a.ret id = (c.procs id).returned`
 - `mode_idle : a.mode = .idle` (the abstract state never fires `SpecStep.coinFlip`)
+- `input_sync : ∀ id, id ∉ c.F → a.input id = (c.procs id).input` — the ghost record and
+  the committed input agree at every honest process. The clause is an equality and it
+  sits outside the phase disjunction, so it holds in both phases. At a corrupted process
+  it says nothing, and the counts that read the record carry such a process through their
+  `id ∈ F` disjunct.
 - `phase` — the two-phase disjunction on `a.val`:
-  - **Phase 1** (pre-first-return): `a.val = none`, and the ghost record is synced on
-    every committed input
-    (`∀ id b, (c.procs id).input = some b → a.input id = some b`). The clause is
-    one-way: it constrains `a.input` only at the entries where the concrete input is
-    committed, and says nothing about the others.
+  - **Phase 1** (pre-first-return): `a.val = none`.
   - **Phase 2** (post-first-return): `∃ v, a.val = some v`, `v` is permanently certified
     by a concrete `A`-lock (`∃ r, ACert P g c r v` — § Certificates), and every honest
     holder of an `A`-decision names `v` (`∀ j b', j ∉ c.F → AHolder P c j b' → b' = v`,
     the `F`-free universal that survives corruption of the original witnesses).
 
-Phase 1 banks each genuine `callABA` with `SpecStep.callSet`, whose ghost overwrite —
-licensed by the guard `val = ⊥` — restores the sync however much junk a concrete
-self-loop has banked through `SpecStep.callLoop`. The abstract state stays undecided and answers
-every hidden row with a stutter. The single `retABA` answer runs `SpecStep.decide` as the
-τ-tail leading the return (§ Row dispositions), landing the abstract state in phase 2. From there
-`a.val` pins the decided value for good, so every later row is a stutter, a
-`SpecStep.callLoop`, or a direct `SpecStep.ret`.
+A `callABA` at an honest process is answered row for row. The commit row fires at
+`input = none` and is answered by `SpecStep.callSet`, whose guard is the empty ghost entry
+`input_sync` supplies; the concrete loop fires at `input ≠ none` and is answered by
+`SpecStep.callLoop`, whose guard is the filled entry the same clause supplies. The ghost
+write happens at `SpecStep.callSet` alone and is a first write, matched with the concrete
+commit, so `input_sync` is restored on the nose. In phase 1 the abstract state stays
+undecided and answers every hidden row with a stutter. The single `retABA` answer runs
+`SpecStep.decide` as the τ-tail leading the return (§ Row dispositions), landing the
+abstract state in phase 2. From there `a.val` pins the decided value for good, so every
+later row is a stutter, one of the two `callABA` answers, or a direct `SpecStep.ret`.
 
 ### The frame lemma
 
@@ -156,8 +160,9 @@ translation.
 |---|---|---|
 | every hidden handshake (`callG`/`retG`/`callW`/`retW`), `bindUnset`, DECIDED gossip τ | τ | stutter (`Abs.frame`; only `Inv` moves) |
 | `callW` at the row that resolves `WCC_r`'s coin | τ | constant-coupled stutter via the generic `stutter_step` (`Core/Sim.lean`): coupling `Ω := μ_C.map (·, pure a)`, so `ω = pure (pure a)` and `ω.bind id = pure a` (the abstract state never flips, so every outcome of the draw lands on the same `a`) |
-| `callABA id b`, phase 1, genuine (idle-exit input) | `callABA id b` | `SpecStep.callSet` (the overwrite banks the concrete input and restores the ghost sync) |
-| `callABA id b`, otherwise (phase 2, or a concrete self-loop) | `callABA id b` | `SpecStep.callLoop` (first-write-wins; no `Abs`-field change) |
+| `callABA id b`, `id ∉ F`, the commit row (`input = none`) | `callABA id b` | `SpecStep.callSet` (a first write at the empty ghost entry `input_sync` supplies; both sides commit `b`) |
+| `callABA id b`, `id ∉ F`, the concrete loop (`input ≠ none`) | `callABA id b` | `SpecStep.callLoop` (the filled ghost entry `input_sync` supplies; neither side moves) |
+| `callABA id b`, `id ∈ F` | `callABA id b` | `SpecStep.callByz` (D23): the ghost at a corrupted id is unconstrained |
 | `retABA id b`, `id ∉ F`, phase 1 | `retABA id b` | `decide_step` then `SpecStep.ret` (`weakStep_of_run_then_step`) — see below |
 | `retABA id b`, `id ∉ F`, phase 2 | `retABA id b` | `SpecStep.ret` directly (phase 2's holder universal, applied to the honest DECIDED sender it derives, pins `b = v`) |
 | `retABA id b`, `id ∈ F` | `retABA id b` | `SpecStep.retByz` (D23): neither side moves, in either phase |
@@ -204,22 +209,23 @@ corruption with no future-peeking guard (`3f < n` supplies `n − 2f ≥ f + 1`)
 
 What `Spec/ABA.lean` carries:
 
-- **Ghost** `input : Fin n → Option Bool` in `SpecState`. `SpecStep.callSet` records by
-  overwrite under the guard `val = ⊥`; `SpecStep.callLoop` is unguarded and records
-  first-write-wins (`input := if s.input id = none then update … else s.input`). Both are
-  sound — every event of either rule is a genuine `callABA` trace event — and the
-  overwrite is load-bearing: it is what keeps the record revisable while the abstract state is
-  undecided (§ Why this shape, item 7). No honesty guards anywhere; every support count
-  is `F`-blind, hence immune to later `fail`s.
+- **Ghost** `input : Fin n → Option Bool` in `SpecState`. `SpecStep.callSet` records
+  under the guard `s.input id = none`, so its write is a first write; `SpecStep.callLoop`
+  carries the call label at a filled entry and writes nothing (D36). Both are sound —
+  every event of either rule is a genuine `callABA` trace event — and the record holds
+  each never-corrupted process's first call, which is the witness `ValidityTrace` names
+  (§ Why this shape, item 7). No honesty guards anywhere; every support count is
+  `F`-blind, hence immune to later `fail`s.
 - **`SpecStep.decide`** is the sole writer of `val`, and its provenance guard
   `hs : SuppOK P s b`, the `f + 1` recorded-or-corrupt supporters of `b`, is the entire
   constraint on the value decided. It restricts which bit may be decided, and does so by
   design: `n − 2f` honest callers can split as low as `⌈(f+1)/2⌉` per bit, so a given bit
   need not be supported. The rule is enabled at `Mode.locked`, where it is the only
-  enabled `τ`-rule, exactly when some bit is supported. No individual count is monotone —
-  `SpecStep.callSet`'s overwrite takes its writer out of one of the two supporter sets —
-  but the sum of the two counts is, so a state that has passed the flip's mixedness guard
-  leaves some bit supported ever after. Spec liveness is unclaimed beyond that.
+  enabled `τ`-rule, exactly when some bit is supported. Each of the two counts is
+  monotone on its own: every ghost write is a first write, and `SpecStep.fail` and
+  `SpecStep.callByz` move an id into the `id ∈ s.F` disjunct, which counts it at both
+  bits. So a state that has passed the flip's mixedness guard leaves both bits supported
+  ever after. Spec liveness is unclaimed beyond that.
 - **The mode loop (D21) carries no value.** `SpecStep.coinFlip` names no coin bit and
   writes nothing but `mode`, so no bit can enter the system through the one probabilistic
   rule; licensing a coin bit would re-admit a Validity-breaking decision at probability
@@ -488,18 +494,14 @@ recording them is what pins the design.
    choice needs knowledge of the later `fail`, a prophecy out of reach of any forward
    simulation. So provenance must be carried by `F`-blind *counts* (D14/`input_supp`), not
    by spec-side fills — the sent set guards beat the fills.
-7. **Deciding early junks the ghost (the lazy wall).** This is the argument D16 rests on,
-   and with it `SpecStep.callSet`'s overwrite. `SpecStep.callLoop`'s ghost write is
-   first-write-wins, and `SpecStep.callSet` is guarded by `val = ⊥`, so once the abstract state has
-   decided, a `callABA` row can only answer with `callLoop` and the record is frozen
-   wherever it is already set. Suppose the abstract state decided before the first return. A
-   concrete `inputLoop` answers `callABA id b̂` as a no-op while `id`'s input is
-   uncommitted; the decided abstract state must answer it with `callLoop`, banking ghost `b̂`; and a
-   later genuine `callABA id b` (`b ≠ b̂`) can never overwrite it, leaving `a.input id`
-   permanently wrong. At `n = 4, f = 1`, mixed round-0 inputs force the early decision,
-   pre-emptive self-loops junk every future `b`-inputter, and a round-0 `retC` plus a
-   `⊤`-coin flip develop an `A`-lock for `b` whose `f + 1` support is carried entirely by
-   junked inputters — leaving `SpecStep.decide`'s `hs` for `b` undischargeable. Hence the
-   two-phase abstract state (D16): it decides only under the first return, so a genuine call always
-   answers `SpecStep.callSet` and the overwrite repairs whatever a self-loop banked. The
-   overwrite and the laziness are one design: each is useless without the other.
+7. **The first call commits, so the ghost takes no junk.** `CoreProcStepN.inputLoop`
+   carries `c.proc.input ≠ none` and the commit row `CoreProcStepN.input` carries
+   `c.proc.input = none`, so a `callABA` at an honest process whose input is unset
+   commits, and a process's first call is never absorbed by the loop (D36).
+   On the abstract side `SpecStep.callSet` fires at the empty ghost entry and
+   `SpecStep.callLoop` at the filled one, and `input_sync` is what matches the two guards
+   to the concrete row that fired. Every ghost write is therefore a first write, matched
+   with the concrete commit, and the record holds each never-corrupted process's first
+   call. The two-phase abstract state (D16) is a valid relation over this shape and is
+   what `coreSim` is built on; an eager abstract state, deciding before the first visible
+   return, is not pursued.

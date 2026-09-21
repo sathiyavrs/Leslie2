@@ -64,9 +64,11 @@ carries. The **common coin is held at specification level** — the
 reading is *graded agreement verified to implementation level; the coin
 assumed at specification level*.
 
-`ValidityTrace` (`Spec/ABASafety.lean`) is the paper-form predicate: a decided bit
-must carry a provenance clause witnessed by a *never-corrupted*
-(`NeverCorrupted`) supporter, matching the papers' correct-process Validity.
+`ValidityTrace` (`Spec/ABASafety.lean`) is the paper-form predicate: a bit
+returned by a never-corrupted process is the bit of the first `callABA` of a
+*never-corrupted* (`NeverCorrupted`) caller, earlier in the trace. A process
+has one input, and its first call is the event that carries it, so this is the
+papers' correct-process Validity.
 What is proven is safety — Validity and Agreement for every
 positive-probability trace. Termination, liveness, unpredictability and
 fairness are not claimed.

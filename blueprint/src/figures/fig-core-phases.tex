@@ -15,10 +15,12 @@
     (tcg)  edge node[elbl, above]{\texttt{callG}} (awg)
     (awg)  edge node[elbl, above]{\texttt{retG}} (tcw)
     (tcw)  edge node[elbl, above]{\texttt{callW}} (aww)
-    (idle) edge[loop above, looseness=5]
-      node[lbl, above]{\texttt{inputLoop}} (idle);
+    % inputLoop sits at every phase but idle; it is drawn at toCallG, on the
+    % upper left so that the round back-edge can come down on the upper right
+    (tcg)  edge[loop, out=110, in=150, looseness=7]
+      node[lbl, above left, text width=1.6cm, align=center]{\texttt{inputLoop}} (tcg);
   % round back-edge, routed over the top so it clears the DECIDED node below
-  \draw[->] (aww) to[out=115, in=65, looseness=0.55]
+  \draw[->] (aww) to[out=115, in=50, looseness=0.55]
     node[lbl, above]{\texttt{retW}: round${+}1$ (D10)} (tcg);
   % the DECIDED sets, below the row; detail in caption
   \node[draw, dashed, rounded corners, align=center, font=\footnotesize,

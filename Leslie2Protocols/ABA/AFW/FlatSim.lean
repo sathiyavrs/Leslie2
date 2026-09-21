@@ -1476,7 +1476,7 @@ theorem match_lab (P : Params) {u : ∀ _ : Fin P.n, AFW.ProcRec P.n}
       intro i
       by_cases hi : i = id
       · subst hi
-        rcases stepN_callABA_own (hall i) with ⟨-, -, hx⟩ | hx <;> rw [pureN_inj hx]
+        rcases stepN_callABA_own (hall i) with ⟨-, -, hx⟩ | ⟨-, hx⟩ <;> rw [pureN_inj hx]
       · rw [hfor i hi]
     refine match_vis P hl (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact view_unchanged hsame w',
@@ -1487,12 +1487,12 @@ theorem match_lab (P : Params) {u : ∀ _ : Fin P.n, AFW.ProcRec P.n}
     rw [hCeq i]
     by_cases hi : i = id
     · subst hi
-      rcases stepN_callABA_own (hall i) with ⟨hh, hin, hx⟩ | hx
+      rcases stepN_callABA_own (hall i) with ⟨hh, hin, hx⟩ | ⟨hloop, hx⟩
       · rw [pureN_inj hx]; exact CoreProcStepN.input _ b hh hin
       · rw [pureN_inj hx]
         by_cases hc : (u i).1.corrupted = true
         · exact CoreProcStepN.corruptedIdle _ _ hc (by simp) not_false
-        · exact CoreProcStepN.inputLoop _ b (by simpa using hc)
+        · exact CoreProcStepN.inputLoop _ b (by simpa using hc) (hloop.resolve_left hc)
     · rw [hfor i hi]; exact CoreProcStepN.callABAIdle _ id b (Ne.symm hi)
   | retABA id b =>
     obtain ⟨hdp, hw⟩ := netStep_retABA hn
