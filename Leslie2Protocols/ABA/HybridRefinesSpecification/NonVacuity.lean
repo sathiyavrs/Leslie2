@@ -46,7 +46,7 @@ complete decision — starting from its initial state:
   the network's publication of `⟨DECIDED, true⟩`, giving three distinct
   DECIDED-true senders;
 * `step_deliver₀/₁/₂` — the adversary delivers all three receipts to process `0`
-  (a rendezvous on `ddlv`, *hidden*), meeting the `n − f = 3` return quorum;
+  (a rendezvous on `decidedDeliver`, *hidden*), meeting the `n − f = 3` return quorum;
 * `step_retABA` — process `0` fires `retABA 0 true`: the decision.
 
 Plus `step_fail` — a `fail` broadcast synchronising all four components.
@@ -89,10 +89,10 @@ def st (G : ℕ → GBCA.SpecState 4) (s : ABAState P4) (o : ℕ → WCC.SpecSta
 /-- The round loops on a label one of them owns: the addressed loop takes its
 row, the others stand still, and the group's successor is the pointwise
 update. -/
-theorem coreLoops_at {C : ∀ _ : Fin 4, CoreRec 4} (id : Fin 4) {L : NLab 4}
-    {c' : CoreRec 4} (hown : CoreProcStepN P4 id (C id) L (PMF.pure c'))
-    (hidle : ∀ j, j ≠ id → CoreProcStepN P4 j (C j) L (PMF.pure (C j))) (i : Fin 4) :
-    CoreProcStepN P4 i (C i) L (PMF.pure (Function.update C id c' i)) := by
+theorem coreLoops_at {C : ∀ _ : Fin 4, CoreRec 4} (id : Fin 4) {L : ExtendedLabel 4}
+    {c' : CoreRec 4} (hown : RoundLoopStep P4 id (C id) L (PMF.pure c'))
+    (hidle : ∀ j, j ≠ id → RoundLoopStep P4 j (C j) L (PMF.pure (C j))) (i : Fin 4) :
+    RoundLoopStep P4 i (C i) L (PMF.pure (Function.update C id c' i)) := by
   by_cases h : i = id
   · subst h; rw [Function.update_self]; exact hown
   · rw [Function.update_of_ne h]; exact hidle i h
@@ -100,8 +100,8 @@ theorem coreLoops_at {C : ∀ _ : Fin 4, CoreRec 4} (id : Fin 4) {L : NLab 4}
 /-- The coin oracle on a label one of its rounds owns, at a row whose successor
 need not be a point mass: the family's successor is the round's, pushed forward
 along the update at that round. -/
-theorem wccFamilyStep (o : ℕ → WCC.SpecState 4) {l : Lab 4} {r : ℕ}
-    {μ : PMF (WCC.SpecState 4)} (hr : Lab.wccRound l = some r)
+theorem wccFamilyStep (o : ℕ → WCC.SpecState 4) {l : Label 4} {r : ℕ}
+    {μ : PMF (WCC.SpecState 4)} (hr : Label.wccRound l = some r)
     (h : WCC.Step P4 r (o r) l μ) :
     (WCC.specFamily P4).step o l (μ.map (Function.update o r)) := by
   rw [WCC.specFamily, System.family_step_iff]
@@ -109,10 +109,10 @@ theorem wccFamilyStep (o : ℕ → WCC.SpecState 4) {l : Lab 4} {r : ℕ}
 
 /-- The coin oracle's idle row on a shared label that is neither `τ`, nor one
 of its own handshakes, nor `fail`. -/
-theorem wccIdle (o : ℕ → WCC.SpecState 4) {l : Lab 4} (hl : l ≠ Lab.tau)
-    (hr : Lab.wccRound l = none) (hf : ¬ Lab.isFail l) :
-    (wccLift P4).step o (Sum.inl l) (PMF.pure o) :=
-  (System.mapIdle_step_some (wccPull_inl l) (PMF.pure o)).mpr
+theorem wccIdle (o : ℕ → WCC.SpecState 4) {l : Label 4} (hl : l ≠ Label.tau)
+    (hr : Label.wccRound l = none) (hf : ¬ Label.isFail l) :
+    (coinOverRoundAlphabet P4).step o (Sum.inl l) (PMF.pure o) :=
+  (System.mapIdle_step_some (coinLabelMap_inl l) (PMF.pure o)).mpr
     (wccFamilyN_idle P4 o hl hr hf)
 
 /-! ### Named states of the run -/
@@ -251,46 +251,46 @@ theorem hybrid_init : (hybrid P4).init = st G0 S0 W0 := rfl
 `0`'s round loop takes `input`, the other three and the remaining components
 idle. -/
 theorem step_callABA₀ :
-    (hybrid P4).step (st G0 S0 W0) (Lab.callABA (0 : Fin 4) true)
+    (hybrid P4).step (st G0 S0 W0) (Label.callABA (0 : Fin 4) true)
       (PMF.pure (st G0 S1 W0)) := by
   refine hybrid_vis P4 (by simp) ?_
   have h := hybridPre_vis_step P4 (G := G0) (C := S0.1) (A := S0.2) (o := W0)
-    (L := Sum.inl (Lab.callABA (0 : Fin 4) true)) (by simp)
-    (specSide_idle P4 G0 (by simp) rfl not_false)
-    (coreLoops_at 0 (CoreProcStepN.input (P := P4) (S0.1 0) true rfl rfl)
-      (fun j hj => CoreProcStepN.callABAIdle (P := P4) (S0.1 j) 0 true (Ne.symm hj)))
-    (ANetStep.callABAIdle (P := P4) S0.2 0 true)
-    (wccIdle W0 (by simp) rfl (by simp [Lab.isFail]))
+    (L := Sum.inl (Label.callABA (0 : Fin 4) true)) (by simp)
+    (gbcaSpecificationFamily_idle P4 G0 (by simp) rfl not_false)
+    (coreLoops_at 0 (RoundLoopStep.input (P := P4) (S0.1 0) true rfl rfl)
+      (fun j hj => RoundLoopStep.callABAIdle (P := P4) (S0.1 j) 0 true (Ne.symm hj)))
+    (ABANetworkStep.callABAIdle (P := P4) S0.2 0 true)
+    (wccIdle W0 (by simp) rfl (by simp [Label.isFail]))
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
 
 /-- Second input: process `1`. -/
 theorem step_callABA₁ :
-    (hybrid P4).step (st G0 S1 W0) (Lab.callABA (1 : Fin 4) true)
+    (hybrid P4).step (st G0 S1 W0) (Label.callABA (1 : Fin 4) true)
       (PMF.pure (st G0 S2 W0)) := by
   refine hybrid_vis P4 (by simp) ?_
   have h := hybridPre_vis_step P4 (G := G0) (C := S1.1) (A := S1.2) (o := W0)
-    (L := Sum.inl (Lab.callABA (1 : Fin 4) true)) (by simp)
-    (specSide_idle P4 G0 (by simp) rfl not_false)
-    (coreLoops_at 1 (CoreProcStepN.input (P := P4) (S1.1 1) true (by decide) (by decide))
-      (fun j hj => CoreProcStepN.callABAIdle (P := P4) (S1.1 j) 1 true (Ne.symm hj)))
-    (ANetStep.callABAIdle (P := P4) S1.2 1 true)
-    (wccIdle W0 (by simp) rfl (by simp [Lab.isFail]))
+    (L := Sum.inl (Label.callABA (1 : Fin 4) true)) (by simp)
+    (gbcaSpecificationFamily_idle P4 G0 (by simp) rfl not_false)
+    (coreLoops_at 1 (RoundLoopStep.input (P := P4) (S1.1 1) true (by decide) (by decide))
+      (fun j hj => RoundLoopStep.callABAIdle (P := P4) (S1.1 j) 1 true (Ne.symm hj)))
+    (ABANetworkStep.callABAIdle (P := P4) S1.2 1 true)
+    (wccIdle W0 (by simp) rfl (by simp [Label.isFail]))
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
 
 /-- Third input: process `2`. -/
 theorem step_callABA₂ :
-    (hybrid P4).step (st G0 S2 W0) (Lab.callABA (2 : Fin 4) true)
+    (hybrid P4).step (st G0 S2 W0) (Label.callABA (2 : Fin 4) true)
       (PMF.pure (st G0 S3 W0)) := by
   refine hybrid_vis P4 (by simp) ?_
   have h := hybridPre_vis_step P4 (G := G0) (C := S2.1) (A := S2.2) (o := W0)
-    (L := Sum.inl (Lab.callABA (2 : Fin 4) true)) (by simp)
-    (specSide_idle P4 G0 (by simp) rfl not_false)
-    (coreLoops_at 2 (CoreProcStepN.input (P := P4) (S2.1 2) true (by decide) (by decide))
-      (fun j hj => CoreProcStepN.callABAIdle (P := P4) (S2.1 j) 2 true (Ne.symm hj)))
-    (ANetStep.callABAIdle (P := P4) S2.2 2 true)
-    (wccIdle W0 (by simp) rfl (by simp [Lab.isFail]))
+    (L := Sum.inl (Label.callABA (2 : Fin 4) true)) (by simp)
+    (gbcaSpecificationFamily_idle P4 G0 (by simp) rfl not_false)
+    (coreLoops_at 2 (RoundLoopStep.input (P := P4) (S2.1 2) true (by decide) (by decide))
+      (fun j hj => RoundLoopStep.callABAIdle (P := P4) (S2.1 j) 2 true (Ne.symm hj)))
+    (ABANetworkStep.callABAIdle (P := P4) S2.2 2 true)
+    (wccIdle W0 (by simp) rfl (by simp [Label.isFail]))
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
 
@@ -299,47 +299,49 @@ theorem step_callABA₂ :
 /-- First graded-agreement call: process `0`'s round loop hands over its
 estimate and the round-`0` specification takes its owned `call`. -/
 theorem step_callG₀ :
-    (hybrid P4).step (st G0 S3 W0) Lab.tau (PMF.pure (st G1 Sc1 W0)) := by
-  refine hybrid_hidden P4 (l := Lab.callG 0 (0 : Fin 4) true) (by simp) ?_
+    (hybrid P4).step (st G0 S3 W0) Label.tau (PMF.pure (st G1 Sc1 W0)) := by
+  refine hybrid_hidden P4 (l := Label.callG 0 (0 : Fin 4) true) (by simp) ?_
   have h := hybridPre_vis_step P4 (G := G0) (C := S3.1) (A := S3.2) (o := W0)
-    (L := Sum.inl (Lab.callG 0 (0 : Fin 4) true)) (by simp)
-    (specSide_owned P4 rfl rfl (GBCA.Step.call (P := P4) (r := 0) (G0 0) 0 true rfl))
-    (coreLoops_at 0 (CoreProcStepN.callG (P := P4) (S3.1 0) 0 true (by decide) (by decide)
+    (L := Sum.inl (Label.callG 0 (0 : Fin 4) true)) (by simp)
+    (gbcaSpecificationFamily_owned P4 rfl rfl (GBCA.Step.call (P := P4) (r := 0) (G0 0) 0 true rfl))
+    (coreLoops_at 0 (RoundLoopStep.callG (P := P4) (S3.1 0) 0 true (by decide) (by decide)
         (by decide) (by decide))
-      (fun j hj => CoreProcStepN.callGIdle (P := P4) (S3.1 j) 0 0 true (Ne.symm hj)))
-    (ANetStep.callGIdle (P := P4) S3.2 0 0 true)
-    (wccIdle W0 (by simp) rfl (by simp [Lab.isFail]))
+      (fun j hj => RoundLoopStep.callGIdle (P := P4) (S3.1 j) 0 0 true (Ne.symm hj)))
+    (ABANetworkStep.callGIdle (P := P4) S3.2 0 0 true)
+    (wccIdle W0 (by simp) rfl (by simp [Label.isFail]))
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
 
 /-- Second graded-agreement call: process `1`. -/
 theorem step_callG₁ :
-    (hybrid P4).step (st G1 Sc1 W0) Lab.tau (PMF.pure (st G2 Sc2 W0)) := by
-  refine hybrid_hidden P4 (l := Lab.callG 0 (1 : Fin 4) true) (by simp) ?_
+    (hybrid P4).step (st G1 Sc1 W0) Label.tau (PMF.pure (st G2 Sc2 W0)) := by
+  refine hybrid_hidden P4 (l := Label.callG 0 (1 : Fin 4) true) (by simp) ?_
   have h := hybridPre_vis_step P4 (G := G1) (C := Sc1.1) (A := Sc1.2) (o := W0)
-    (L := Sum.inl (Lab.callG 0 (1 : Fin 4) true)) (by simp)
-    (specSide_owned P4 rfl rfl (GBCA.Step.call (P := P4) (r := 0) (G1 0) 1 true (by decide)))
-    (coreLoops_at 1 (CoreProcStepN.callG (P := P4) (Sc1.1 1) 0 true (by decide) (by decide)
+    (L := Sum.inl (Label.callG 0 (1 : Fin 4) true)) (by simp)
+    (gbcaSpecificationFamily_owned P4 rfl rfl (GBCA.Step.call (P := P4) (r := 0) (G1 0) 1 true (by
+      decide)))
+    (coreLoops_at 1 (RoundLoopStep.callG (P := P4) (Sc1.1 1) 0 true (by decide) (by decide)
         (by decide) (by decide))
-      (fun j hj => CoreProcStepN.callGIdle (P := P4) (Sc1.1 j) 0 1 true (Ne.symm hj)))
-    (ANetStep.callGIdle (P := P4) Sc1.2 0 1 true)
-    (wccIdle W0 (by simp) rfl (by simp [Lab.isFail]))
+      (fun j hj => RoundLoopStep.callGIdle (P := P4) (Sc1.1 j) 0 1 true (Ne.symm hj)))
+    (ABANetworkStep.callGIdle (P := P4) Sc1.2 0 1 true)
+    (wccIdle W0 (by simp) rfl (by simp [Label.isFail]))
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
 
 /-- Third graded-agreement call: process `2`. The round-`0` specification now
 holds three inputs. -/
 theorem step_callG₂ :
-    (hybrid P4).step (st G2 Sc2 W0) Lab.tau (PMF.pure (st G3 Sc3 W0)) := by
-  refine hybrid_hidden P4 (l := Lab.callG 0 (2 : Fin 4) true) (by simp) ?_
+    (hybrid P4).step (st G2 Sc2 W0) Label.tau (PMF.pure (st G3 Sc3 W0)) := by
+  refine hybrid_hidden P4 (l := Label.callG 0 (2 : Fin 4) true) (by simp) ?_
   have h := hybridPre_vis_step P4 (G := G2) (C := Sc2.1) (A := Sc2.2) (o := W0)
-    (L := Sum.inl (Lab.callG 0 (2 : Fin 4) true)) (by simp)
-    (specSide_owned P4 rfl rfl (GBCA.Step.call (P := P4) (r := 0) (G2 0) 2 true (by decide)))
-    (coreLoops_at 2 (CoreProcStepN.callG (P := P4) (Sc2.1 2) 0 true (by decide) (by decide)
+    (L := Sum.inl (Label.callG 0 (2 : Fin 4) true)) (by simp)
+    (gbcaSpecificationFamily_owned P4 rfl rfl (GBCA.Step.call (P := P4) (r := 0) (G2 0) 2 true (by
+      decide)))
+    (coreLoops_at 2 (RoundLoopStep.callG (P := P4) (Sc2.1 2) 0 true (by decide) (by decide)
         (by decide) (by decide))
-      (fun j hj => CoreProcStepN.callGIdle (P := P4) (Sc2.1 j) 0 2 true (Ne.symm hj)))
-    (ANetStep.callGIdle (P := P4) Sc2.2 0 2 true)
-    (wccIdle W0 (by simp) rfl (by simp [Lab.isFail]))
+      (fun j hj => RoundLoopStep.callGIdle (P := P4) (Sc2.1 j) 0 2 true (Ne.symm hj)))
+    (ABANetworkStep.callGIdle (P := P4) Sc2.2 0 2 true)
+    (wccIdle W0 (by simp) rfl (by simp [Label.isFail]))
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
 
@@ -351,9 +353,9 @@ is met, so `bindUnset` excludes the bit `false` (the three callers of `true` sup
 the `f + 1` support for the surviving bit). This is a family `τ`, interleaved on
 the specification side while the other three components hold. -/
 theorem step_bindUnset :
-    (hybrid P4).step (st G3 Sc3 W0) Lab.tau (PMF.pure (st Gb Sc3 W0)) := by
+    (hybrid P4).step (st G3 Sc3 W0) Label.tau (PMF.pure (st Gb Sc3 W0)) := by
   refine hybrid_vis P4 (by simp) ?_
-  exact hybridPre_tau_spec P4 (specSide_tau P4
+  exact hybridPre_tau_spec P4 (gbcaSpecificationFamily_tau P4
     (GBCA.Step.bindUnset (P := P4) (r := 0) (G3 0) false
       (by unfold GBCA.SpecState.quorum; decide) (by decide) (by decide)))
 
@@ -363,49 +365,49 @@ theorem step_bindUnset :
 specification locks the grade and records the return, the round loop adopts the
 estimate and heads for the coin. -/
 theorem step_retG₀ :
-    (hybrid P4).step (st Gb Sc3 W0) Lab.tau (PMF.pure (st Gr Sr W0)) := by
-  refine hybrid_hidden P4 (l := Lab.retG 0 (0 : Fin 4) (.A true) true) (by simp) ?_
+    (hybrid P4).step (st Gb Sc3 W0) Label.tau (PMF.pure (st Gr Sr W0)) := by
+  refine hybrid_hidden P4 (l := Label.retG 0 (0 : Fin 4) (.A true) true) (by simp) ?_
   have h := hybridPre_vis_step P4 (G := Gb) (C := Sc3.1) (A := Sc3.2) (o := W0)
-    (L := Sum.inl (Lab.retG 0 (0 : Fin 4) (.A true) true)) (by simp)
-    (specSide_owned P4 rfl rfl (GBCA.Step.retA (P := P4) (r := 0) (Gb 0) 0 true true
+    (L := Sum.inl (Label.retG 0 (0 : Fin 4) (.A true) true)) (by simp)
+    (gbcaSpecificationFamily_owned P4 rfl rfl (GBCA.Step.retA (P := P4) (r := 0) (Gb 0) 0 true true
       (by decide) (by decide) (by decide) (Or.inl rfl) rfl))
-    (coreLoops_at 0 (CoreProcStepN.retG (P := P4) (Sc3.1 0) 0 (.A true) true (by decide)
+    (coreLoops_at 0 (RoundLoopStep.retG (P := P4) (Sc3.1 0) 0 (.A true) true (by decide)
         (by decide) (by decide))
-      (fun j hj => CoreProcStepN.retGIdle (P := P4) (Sc3.1 j) 0 0 (.A true) true (Ne.symm hj)))
-    (ANetStep.retGIdle (P := P4) Sc3.2 0 0 (.A true) true)
-    (wccIdle W0 (by simp) rfl (by simp [Lab.isFail]))
+      (fun j hj => RoundLoopStep.retGIdle (P := P4) (Sc3.1 j) 0 0 (.A true) true (Ne.symm hj)))
+    (ABANetworkStep.retGIdle (P := P4) Sc3.2 0 0 (.A true) true)
+    (wccIdle W0 (by simp) rfl (by simp [Label.isFail]))
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
 
 /-- Process `1`'s round-`0` `A`-return. -/
 theorem step_retG₁ :
-    (hybrid P4).step (st Gr Sr W0) Lab.tau (PMF.pure (st Ga1 Sq1 W0)) := by
-  refine hybrid_hidden P4 (l := Lab.retG 0 (1 : Fin 4) (.A true) true) (by simp) ?_
+    (hybrid P4).step (st Gr Sr W0) Label.tau (PMF.pure (st Ga1 Sq1 W0)) := by
+  refine hybrid_hidden P4 (l := Label.retG 0 (1 : Fin 4) (.A true) true) (by simp) ?_
   have h := hybridPre_vis_step P4 (G := Gr) (C := Sr.1) (A := Sr.2) (o := W0)
-    (L := Sum.inl (Lab.retG 0 (1 : Fin 4) (.A true) true)) (by simp)
-    (specSide_owned P4 rfl rfl (GBCA.Step.retA (P := P4) (r := 0) (Gr 0) 1 true true
+    (L := Sum.inl (Label.retG 0 (1 : Fin 4) (.A true) true)) (by simp)
+    (gbcaSpecificationFamily_owned P4 rfl rfl (GBCA.Step.retA (P := P4) (r := 0) (Gr 0) 1 true true
       (by decide) (by decide) (by decide) (Or.inr rfl) (by decide)))
-    (coreLoops_at 1 (CoreProcStepN.retG (P := P4) (Sr.1 1) 0 (.A true) true (by decide)
+    (coreLoops_at 1 (RoundLoopStep.retG (P := P4) (Sr.1 1) 0 (.A true) true (by decide)
         (by decide) (by decide))
-      (fun j hj => CoreProcStepN.retGIdle (P := P4) (Sr.1 j) 0 1 (.A true) true (Ne.symm hj)))
-    (ANetStep.retGIdle (P := P4) Sr.2 0 1 (.A true) true)
-    (wccIdle W0 (by simp) rfl (by simp [Lab.isFail]))
+      (fun j hj => RoundLoopStep.retGIdle (P := P4) (Sr.1 j) 0 1 (.A true) true (Ne.symm hj)))
+    (ABANetworkStep.retGIdle (P := P4) Sr.2 0 1 (.A true) true)
+    (wccIdle W0 (by simp) rfl (by simp [Label.isFail]))
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
 
 /-- Process `2`'s round-`0` `A`-return. -/
 theorem step_retG₂ :
-    (hybrid P4).step (st Ga1 Sq1 W0) Lab.tau (PMF.pure (st Ga2 Sq2 W0)) := by
-  refine hybrid_hidden P4 (l := Lab.retG 0 (2 : Fin 4) (.A true) true) (by simp) ?_
+    (hybrid P4).step (st Ga1 Sq1 W0) Label.tau (PMF.pure (st Ga2 Sq2 W0)) := by
+  refine hybrid_hidden P4 (l := Label.retG 0 (2 : Fin 4) (.A true) true) (by simp) ?_
   have h := hybridPre_vis_step P4 (G := Ga1) (C := Sq1.1) (A := Sq1.2) (o := W0)
-    (L := Sum.inl (Lab.retG 0 (2 : Fin 4) (.A true) true)) (by simp)
-    (specSide_owned P4 rfl rfl (GBCA.Step.retA (P := P4) (r := 0) (Ga1 0) 2 true true
+    (L := Sum.inl (Label.retG 0 (2 : Fin 4) (.A true) true)) (by simp)
+    (gbcaSpecificationFamily_owned P4 rfl rfl (GBCA.Step.retA (P := P4) (r := 0) (Ga1 0) 2 true true
       (by decide) (by decide) (by decide) (Or.inr rfl) (by decide)))
-    (coreLoops_at 2 (CoreProcStepN.retG (P := P4) (Sq1.1 2) 0 (.A true) true (by decide)
+    (coreLoops_at 2 (RoundLoopStep.retG (P := P4) (Sq1.1 2) 0 (.A true) true (by decide)
         (by decide) (by decide))
-      (fun j hj => CoreProcStepN.retGIdle (P := P4) (Sq1.1 j) 0 2 (.A true) true (Ne.symm hj)))
-    (ANetStep.retGIdle (P := P4) Sq1.2 0 2 (.A true) true)
-    (wccIdle W0 (by simp) rfl (by simp [Lab.isFail]))
+      (fun j hj => RoundLoopStep.retGIdle (P := P4) (Sq1.1 j) 0 2 (.A true) true (Ne.symm hj)))
+    (ABANetworkStep.retGIdle (P := P4) Sq1.2 0 2 (.A true) true)
+    (wccIdle W0 (by simp) rfl (by simp [Label.isFail]))
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
 
@@ -415,15 +417,15 @@ second call resolving it -/
 /-- Process `0` calls the round-`0` coin. One caller leaves the count at `f`, so
 the call only records. -/
 theorem step_callW₀ :
-    (hybrid P4).step (st Ga2 Sq2 W0) Lab.tau (PMF.pure (st Ga2 Sw0 Wc0)) := by
-  refine hybrid_hidden P4 (l := Lab.callW 0 (0 : Fin 4)) (by simp) ?_
+    (hybrid P4).step (st Ga2 Sq2 W0) Label.tau (PMF.pure (st Ga2 Sw0 Wc0)) := by
+  refine hybrid_hidden P4 (l := Label.callW 0 (0 : Fin 4)) (by simp) ?_
   have h := hybridPre_vis_step P4 (G := Ga2) (C := Sq2.1) (A := Sq2.2) (o := W0)
-    (L := Sum.inl (Lab.callW 0 (0 : Fin 4))) (by simp)
-    (specSide_idle P4 Ga2 (by simp) rfl not_false)
-    (coreLoops_at 0 (CoreProcStepN.callW (P := P4) (Sq2.1 0) 0 (by decide) (by decide) (by decide))
-      (fun j hj => CoreProcStepN.callWIdle (P := P4) (Sq2.1 j) 0 0 (Ne.symm hj)))
-    (ANetStep.callWIdle (P := P4) Sq2.2 0 0)
-    ((System.mapIdle_step_some (wccPull_inl (Lab.callW 0 (0 : Fin 4))) _).mpr
+    (L := Sum.inl (Label.callW 0 (0 : Fin 4))) (by simp)
+    (gbcaSpecificationFamily_idle P4 Ga2 (by simp) rfl not_false)
+    (coreLoops_at 0 (RoundLoopStep.callW (P := P4) (Sq2.1 0) 0 (by decide) (by decide) (by decide))
+      (fun j hj => RoundLoopStep.callWIdle (P := P4) (Sq2.1 j) 0 0 (Ne.symm hj)))
+    (ABANetworkStep.callWIdle (P := P4) Sq2.2 0 0)
+    ((System.mapIdle_step_some (coinLabelMap_inl (Label.callW 0 (0 : Fin 4))) _).mpr
       (wccFamily_owned P4 W0 rfl (WCC.Step.callRecord (P := P4) (r := 0) (W0 0) 0 (by decide)
         (by simp only [WCC.SpecState.threshold]; decide))))
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
@@ -445,15 +447,15 @@ noncomputable def resolveμ : PMF (HybridState P4) :=
 `2 > f` at `val = ⊥`, so the call records the caller and draws `val` from
 `wccPMF`: the run's single probabilistic step. -/
 theorem step_callW₁ :
-    (hybrid P4).step (st Ga2 Sw0 Wc0) Lab.tau resolveμ := by
-  refine hybrid_hidden P4 (l := Lab.callW 0 (1 : Fin 4)) (by simp) ?_
+    (hybrid P4).step (st Ga2 Sw0 Wc0) Label.tau resolveμ := by
+  refine hybrid_hidden P4 (l := Label.callW 0 (1 : Fin 4)) (by simp) ?_
   exact hybridPre_vis_step P4 (G := Ga2) (C := Sw0.1) (A := Sw0.2) (o := Wc0)
-    (L := Sum.inl (Lab.callW 0 (1 : Fin 4))) (by simp)
-    (specSide_idle P4 Ga2 (by simp) rfl not_false)
-    (coreLoops_at 1 (CoreProcStepN.callW (P := P4) (Sw0.1 1) 0 (by decide) (by decide) (by decide))
-      (fun j hj => CoreProcStepN.callWIdle (P := P4) (Sw0.1 j) 0 1 (Ne.symm hj)))
-    (ANetStep.callWIdle (P := P4) Sw0.2 0 1)
-    ((System.mapIdle_step_some (wccPull_inl (Lab.callW 0 (1 : Fin 4))) _).mpr
+    (L := Sum.inl (Label.callW 0 (1 : Fin 4))) (by simp)
+    (gbcaSpecificationFamily_idle P4 Ga2 (by simp) rfl not_false)
+    (coreLoops_at 1 (RoundLoopStep.callW (P := P4) (Sw0.1 1) 0 (by decide) (by decide) (by decide))
+      (fun j hj => RoundLoopStep.callWIdle (P := P4) (Sw0.1 j) 0 1 (Ne.symm hj)))
+    (ABANetworkStep.callWIdle (P := P4) Sw0.2 0 1)
+    ((System.mapIdle_step_some (coinLabelMap_inl (Label.callW 0 (1 : Fin 4))) _).mpr
       (wccFamilyStep Wc0 rfl (WCC.Step.callResolve (P := P4) (r := 0) (Wc0 0) 1 (by decide)
         (by decide) (by simp only [WCC.SpecState.threshold]; decide))))
 
@@ -482,15 +484,15 @@ theorem step_callW₁_mass : resolveμ (st Ga2 Sw1 Wres) = P4.ε := by
 /-- Process `2` calls the round-`0` coin. `val` is resolved, so the resolving
 row's guard is closed and this call only records. -/
 theorem step_callW₂ :
-    (hybrid P4).step (st Ga2 Sw1 Wres) Lab.tau (PMF.pure (st Ga2 Sw2 Wc2)) := by
-  refine hybrid_hidden P4 (l := Lab.callW 0 (2 : Fin 4)) (by simp) ?_
+    (hybrid P4).step (st Ga2 Sw1 Wres) Label.tau (PMF.pure (st Ga2 Sw2 Wc2)) := by
+  refine hybrid_hidden P4 (l := Label.callW 0 (2 : Fin 4)) (by simp) ?_
   have h := hybridPre_vis_step P4 (G := Ga2) (C := Sw1.1) (A := Sw1.2) (o := Wres)
-    (L := Sum.inl (Lab.callW 0 (2 : Fin 4))) (by simp)
-    (specSide_idle P4 Ga2 (by simp) rfl not_false)
-    (coreLoops_at 2 (CoreProcStepN.callW (P := P4) (Sw1.1 2) 0 (by decide) (by decide) (by decide))
-      (fun j hj => CoreProcStepN.callWIdle (P := P4) (Sw1.1 j) 0 2 (Ne.symm hj)))
-    (ANetStep.callWIdle (P := P4) Sw1.2 0 2)
-    ((System.mapIdle_step_some (wccPull_inl (Lab.callW 0 (2 : Fin 4))) _).mpr
+    (L := Sum.inl (Label.callW 0 (2 : Fin 4))) (by simp)
+    (gbcaSpecificationFamily_idle P4 Ga2 (by simp) rfl not_false)
+    (coreLoops_at 2 (RoundLoopStep.callW (P := P4) (Sw1.1 2) 0 (by decide) (by decide) (by decide))
+      (fun j hj => RoundLoopStep.callWIdle (P := P4) (Sw1.1 j) 0 2 (Ne.symm hj)))
+    (ABANetworkStep.callWIdle (P := P4) Sw1.2 0 2)
+    ((System.mapIdle_step_some (coinLabelMap_inl (Label.callW 0 (2 : Fin 4))) _).mpr
       (wccFamily_owned P4 Wres rfl (WCC.Step.callRecord (P := P4) (r := 0) (Wres 0) 2 (by decide)
         (by simp only [WCC.SpecState.threshold]; decide))))
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
@@ -502,16 +504,16 @@ of `⟨DECIDED, true⟩`. -/
 
 /-- Process `0` receives the coin and multicasts `⟨DECIDED, true⟩`. -/
 theorem step_retW₀ :
-    (hybrid P4).step (st Ga2 Sw2 Wc2) Lab.tau (PMF.pure (st Ga2 Ss0 Wr0)) := by
+    (hybrid P4).step (st Ga2 Sw2 Wc2) Label.tau (PMF.pure (st Ga2 Ss0 Wr0)) := by
   refine hybrid_rendezvous P4 (e := .retWPub 0 (0 : Fin 4) true true) ?_
   have h := hybridPre_vis_step P4 (G := Ga2) (C := Sw2.1) (A := Sw2.2) (o := Wc2)
     (L := Sum.inr (.retWPub 0 (0 : Fin 4) true true)) (by simp)
-    (specSide_idle P4 Ga2 (by simp) rfl not_false)
-    (coreLoops_at 0 (CoreProcStepN.retWPub (P := P4) (Sw2.1 0) 0 true true (by decide)
+    (gbcaSpecificationFamily_idle P4 Ga2 (by simp) rfl not_false)
+    (coreLoops_at 0 (RoundLoopStep.retWPub (P := P4) (Sw2.1 0) 0 true true (by decide)
         (by decide) (by decide) (by decide))
-      (fun j hj => CoreProcStepN.retWPubIdle (P := P4) (Sw2.1 j) 0 0 true true (Ne.symm hj)))
-    (ANetStep.retWPub (P := P4) Sw2.2 0 0 true true)
-    ((System.mapIdle_step_some (wccPull_retWPub 0 (0 : Fin 4) true true) _).mpr
+      (fun j hj => RoundLoopStep.retWPubIdle (P := P4) (Sw2.1 j) 0 0 true true (Ne.symm hj)))
+    (ABANetworkStep.retWPub (P := P4) Sw2.2 0 0 true true)
+    ((System.mapIdle_step_some (coinLabelMap_retWPub 0 (0 : Fin 4) true true) _).mpr
       (wccFamily_owned P4 Wc2 rfl
         (WCC.Step.ret (P := P4) (r := 0) (Wc2 0) 0 true (Or.inr (by decide)) (by decide))))
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
@@ -519,16 +521,16 @@ theorem step_retW₀ :
 
 /-- Process `1` receives the coin and multicasts `⟨DECIDED, true⟩`. -/
 theorem step_retW₁ :
-    (hybrid P4).step (st Ga2 Ss0 Wr0) Lab.tau (PMF.pure (st Ga2 Ss1 Wr1)) := by
+    (hybrid P4).step (st Ga2 Ss0 Wr0) Label.tau (PMF.pure (st Ga2 Ss1 Wr1)) := by
   refine hybrid_rendezvous P4 (e := .retWPub 0 (1 : Fin 4) true true) ?_
   have h := hybridPre_vis_step P4 (G := Ga2) (C := Ss0.1) (A := Ss0.2) (o := Wr0)
     (L := Sum.inr (.retWPub 0 (1 : Fin 4) true true)) (by simp)
-    (specSide_idle P4 Ga2 (by simp) rfl not_false)
-    (coreLoops_at 1 (CoreProcStepN.retWPub (P := P4) (Ss0.1 1) 0 true true (by decide)
+    (gbcaSpecificationFamily_idle P4 Ga2 (by simp) rfl not_false)
+    (coreLoops_at 1 (RoundLoopStep.retWPub (P := P4) (Ss0.1 1) 0 true true (by decide)
         (by decide) (by decide) (by decide))
-      (fun j hj => CoreProcStepN.retWPubIdle (P := P4) (Ss0.1 j) 0 1 true true (Ne.symm hj)))
-    (ANetStep.retWPub (P := P4) Ss0.2 0 1 true true)
-    ((System.mapIdle_step_some (wccPull_retWPub 0 (1 : Fin 4) true true) _).mpr
+      (fun j hj => RoundLoopStep.retWPubIdle (P := P4) (Ss0.1 j) 0 1 true true (Ne.symm hj)))
+    (ABANetworkStep.retWPub (P := P4) Ss0.2 0 1 true true)
+    ((System.mapIdle_step_some (coinLabelMap_retWPub 0 (1 : Fin 4) true true) _).mpr
       (wccFamily_owned P4 Wr0 rfl
         (WCC.Step.ret (P := P4) (r := 0) (Wr0 0) 1 true (Or.inr (by decide)) (by decide))))
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
@@ -537,65 +539,68 @@ theorem step_retW₁ :
 /-- Process `2` receives the coin and multicasts `⟨DECIDED, true⟩`; three
 distinct senders now hold `⟨DECIDED, true⟩`. -/
 theorem step_retW₂ :
-    (hybrid P4).step (st Ga2 Ss1 Wr1) Lab.tau (PMF.pure (st Ga2 Ss2 Wr2)) := by
+    (hybrid P4).step (st Ga2 Ss1 Wr1) Label.tau (PMF.pure (st Ga2 Ss2 Wr2)) := by
   refine hybrid_rendezvous P4 (e := .retWPub 0 (2 : Fin 4) true true) ?_
   have h := hybridPre_vis_step P4 (G := Ga2) (C := Ss1.1) (A := Ss1.2) (o := Wr1)
     (L := Sum.inr (.retWPub 0 (2 : Fin 4) true true)) (by simp)
-    (specSide_idle P4 Ga2 (by simp) rfl not_false)
-    (coreLoops_at 2 (CoreProcStepN.retWPub (P := P4) (Ss1.1 2) 0 true true (by decide)
+    (gbcaSpecificationFamily_idle P4 Ga2 (by simp) rfl not_false)
+    (coreLoops_at 2 (RoundLoopStep.retWPub (P := P4) (Ss1.1 2) 0 true true (by decide)
         (by decide) (by decide) (by decide))
-      (fun j hj => CoreProcStepN.retWPubIdle (P := P4) (Ss1.1 j) 0 2 true true (Ne.symm hj)))
-    (ANetStep.retWPub (P := P4) Ss1.2 0 2 true true)
-    ((System.mapIdle_step_some (wccPull_retWPub 0 (2 : Fin 4) true true) _).mpr
+      (fun j hj => RoundLoopStep.retWPubIdle (P := P4) (Ss1.1 j) 0 2 true true (Ne.symm hj)))
+    (ABANetworkStep.retWPub (P := P4) Ss1.2 0 2 true true)
+    ((System.mapIdle_step_some (coinLabelMap_retWPub 0 (2 : Fin 4) true true) _).mpr
       (wccFamily_owned P4 Wr1 rfl
         (WCC.Step.ret (P := P4) (r := 0) (Wr1 0) 2 true (Or.inr (by decide)) (by decide))))
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
 
 /-! ### Steps 17–19: the adversary delivers the three `⟨DECIDED, true⟩` to
-process `0` (a `ddlv` rendezvous of the receiving round loop with the
+process `0` (a `decidedDeliver` rendezvous of the receiving round loop with the
 network). -/
 
 /-- Deliver process `0`'s own `⟨DECIDED, true⟩`. -/
 theorem step_deliver₀ :
-    (hybrid P4).step (st Ga2 Ss2 Wr2) Lab.tau (PMF.pure (st Ga2 Sd0 Wr2)) := by
-  refine hybrid_rendezvous P4 (e := .ddlv (0 : Fin 4) (0 : Fin 4) true) ?_
+    (hybrid P4).step (st Ga2 Ss2 Wr2) Label.tau (PMF.pure (st Ga2 Sd0 Wr2)) := by
+  refine hybrid_rendezvous P4 (e := .decidedDeliver (0 : Fin 4) (0 : Fin 4) true) ?_
   have h := hybridPre_vis_step P4 (G := Ga2) (C := Ss2.1) (A := Ss2.2) (o := Wr2)
-    (L := Sum.inr (.ddlv (0 : Fin 4) (0 : Fin 4) true)) (by simp)
-    (specSide_idle P4 Ga2 (by simp) rfl not_false)
-    (coreLoops_at 0 (CoreProcStepN.ddlvRecv (P := P4) (Ss2.1 0) 0 true (by decide) (by decide))
-      (fun j hj => CoreProcStepN.ddlvIdle (P := P4) (Ss2.1 j) 0 0 true (Ne.symm hj)))
-    (ANetStep.ddlv (P := P4) Ss2.2 0 0 true (by decide))
-    ((System.mapIdle_step_none (wccPull_ddlv (0 : Fin 4) (0 : Fin 4) true) _).mpr rfl)
+    (L := Sum.inr (.decidedDeliver (0 : Fin 4) (0 : Fin 4) true)) (by simp)
+    (gbcaSpecificationFamily_idle P4 Ga2 (by simp) rfl not_false)
+    (coreLoops_at 0 (RoundLoopStep.ddlvRecv (P := P4) (Ss2.1 0) 0 true (by decide) (by decide))
+      (fun j hj => RoundLoopStep.ddlvIdle (P := P4) (Ss2.1 j) 0 0 true (Ne.symm hj)))
+    (ABANetworkStep.decidedDeliver (P := P4) Ss2.2 0 0 true (by decide))
+    ((System.mapIdle_step_none (coinLabelMap_decidedDeliver (0 : Fin 4) (0 : Fin 4) true) _).mpr
+      rfl)
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
 
 /-- Deliver process `1`'s `⟨DECIDED, true⟩` to process `0`. -/
 theorem step_deliver₁ :
-    (hybrid P4).step (st Ga2 Sd0 Wr2) Lab.tau (PMF.pure (st Ga2 Sd1 Wr2)) := by
-  refine hybrid_rendezvous P4 (e := .ddlv (0 : Fin 4) (1 : Fin 4) true) ?_
+    (hybrid P4).step (st Ga2 Sd0 Wr2) Label.tau (PMF.pure (st Ga2 Sd1 Wr2)) := by
+  refine hybrid_rendezvous P4 (e := .decidedDeliver (0 : Fin 4) (1 : Fin 4) true) ?_
   have h := hybridPre_vis_step P4 (G := Ga2) (C := Sd0.1) (A := Sd0.2) (o := Wr2)
-    (L := Sum.inr (.ddlv (0 : Fin 4) (1 : Fin 4) true)) (by simp)
-    (specSide_idle P4 Ga2 (by simp) rfl not_false)
-    (coreLoops_at 0 (CoreProcStepN.ddlvRecv (P := P4) (Sd0.1 0) 1 true (by decide) (by decide))
-      (fun j hj => CoreProcStepN.ddlvIdle (P := P4) (Sd0.1 j) 0 1 true (Ne.symm hj)))
-    (ANetStep.ddlv (P := P4) Sd0.2 0 1 true (by decide))
-    ((System.mapIdle_step_none (wccPull_ddlv (0 : Fin 4) (1 : Fin 4) true) _).mpr rfl)
+    (L := Sum.inr (.decidedDeliver (0 : Fin 4) (1 : Fin 4) true)) (by simp)
+    (gbcaSpecificationFamily_idle P4 Ga2 (by simp) rfl not_false)
+    (coreLoops_at 0 (RoundLoopStep.ddlvRecv (P := P4) (Sd0.1 0) 1 true (by decide) (by decide))
+      (fun j hj => RoundLoopStep.ddlvIdle (P := P4) (Sd0.1 j) 0 1 true (Ne.symm hj)))
+    (ABANetworkStep.decidedDeliver (P := P4) Sd0.2 0 1 true (by decide))
+    ((System.mapIdle_step_none (coinLabelMap_decidedDeliver (0 : Fin 4) (1 : Fin 4) true) _).mpr
+      rfl)
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
 
 /-- Deliver process `2`'s `⟨DECIDED, true⟩` to process `0`; process `0` now has
 the `n − f = 3` distinct senders it needs. -/
 theorem step_deliver₂ :
-    (hybrid P4).step (st Ga2 Sd1 Wr2) Lab.tau (PMF.pure (st Ga2 Sd2 Wr2)) := by
-  refine hybrid_rendezvous P4 (e := .ddlv (0 : Fin 4) (2 : Fin 4) true) ?_
+    (hybrid P4).step (st Ga2 Sd1 Wr2) Label.tau (PMF.pure (st Ga2 Sd2 Wr2)) := by
+  refine hybrid_rendezvous P4 (e := .decidedDeliver (0 : Fin 4) (2 : Fin 4) true) ?_
   have h := hybridPre_vis_step P4 (G := Ga2) (C := Sd1.1) (A := Sd1.2) (o := Wr2)
-    (L := Sum.inr (.ddlv (0 : Fin 4) (2 : Fin 4) true)) (by simp)
-    (specSide_idle P4 Ga2 (by simp) rfl not_false)
-    (coreLoops_at 0 (CoreProcStepN.ddlvRecv (P := P4) (Sd1.1 0) 2 true (by decide) (by decide))
-      (fun j hj => CoreProcStepN.ddlvIdle (P := P4) (Sd1.1 j) 0 2 true (Ne.symm hj)))
-    (ANetStep.ddlv (P := P4) Sd1.2 0 2 true (by decide))
-    ((System.mapIdle_step_none (wccPull_ddlv (0 : Fin 4) (2 : Fin 4) true) _).mpr rfl)
+    (L := Sum.inr (.decidedDeliver (0 : Fin 4) (2 : Fin 4) true)) (by simp)
+    (gbcaSpecificationFamily_idle P4 Ga2 (by simp) rfl not_false)
+    (coreLoops_at 0 (RoundLoopStep.ddlvRecv (P := P4) (Sd1.1 0) 2 true (by decide) (by decide))
+      (fun j hj => RoundLoopStep.ddlvIdle (P := P4) (Sd1.1 j) 0 2 true (Ne.symm hj)))
+    (ABANetworkStep.decidedDeliver (P := P4) Sd1.2 0 2 true (by decide))
+    ((System.mapIdle_step_none (coinLabelMap_decidedDeliver (0 : Fin 4) (2 : Fin 4) true) _).mpr
+      rfl)
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
 
@@ -607,16 +612,16 @@ round loop's. The whole 20-step run, every step a Dirac except the single
 `ε`-mass coin resolution, carries positive probability and ends in a genuine
 `retABA`. -/
 theorem step_retABA :
-    (hybrid P4).step (st Ga2 Sd2 Wr2) (Lab.retABA (0 : Fin 4) true)
+    (hybrid P4).step (st Ga2 Sd2 Wr2) (Label.retABA (0 : Fin 4) true)
       (PMF.pure (st Ga2 Sfin Wr2)) := by
   refine hybrid_vis P4 (by simp) ?_
   have h := hybridPre_vis_step P4 (G := Ga2) (C := Sd2.1) (A := Sd2.2) (o := Wr2)
-    (L := Sum.inl (Lab.retABA (0 : Fin 4) true)) (by simp)
-    (specSide_idle P4 Ga2 (by simp) rfl not_false)
-    (coreLoops_at 0 (CoreProcStepN.ret (P := P4) (Sd2.1 0) true (by decide) (by decide) (by decide))
-      (fun j hj => CoreProcStepN.retABAIdle (P := P4) (Sd2.1 j) 0 true (Ne.symm hj)))
-    (ANetStep.retABA (P := P4) Sd2.2 0 true (by decide))
-    (wccIdle Wr2 (by simp) rfl (by simp [Lab.isFail]))
+    (L := Sum.inl (Label.retABA (0 : Fin 4) true)) (by simp)
+    (gbcaSpecificationFamily_idle P4 Ga2 (by simp) rfl not_false)
+    (coreLoops_at 0 (RoundLoopStep.ret (P := P4) (Sd2.1 0) true (by decide) (by decide) (by decide))
+      (fun j hj => RoundLoopStep.retABAIdle (P := P4) (Sd2.1 j) 0 true (Ne.symm hj)))
+    (ABANetworkStep.retABA (P := P4) Sd2.2 0 true (by decide))
+    (wccIdle Wr2 (by simp) rfl (by simp [Label.isFail]))
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
 
@@ -628,16 +633,16 @@ network by its own `fail` row, which carries the guards, the named round loop
 by replacing its own program (deviation D23), and the other three round loops
 by standing still (deviation D1). -/
 theorem step_fail :
-    (hybrid P4).step (st G0 S0 W0) (Lab.fail (0 : Fin 4))
+    (hybrid P4).step (st G0 S0 W0) (Label.fail (0 : Fin 4))
       (PMF.pure (st Gf Sf Wf)) := by
   refine hybrid_vis P4 (by simp) ?_
   have h := hybridPre_vis_step P4 (G := G0) (C := S0.1) (A := S0.2) (o := W0)
-    (L := Sum.inl (Lab.fail (0 : Fin 4))) (by simp)
-    (specSide_fail P4 G0 0)
-    (coreLoops_at 0 (CoreProcStepN.failSelf (P := P4) (S0.1 0) rfl)
-      (fun j hj => CoreProcStepN.failIdle (P := P4) (S0.1 j) 0 (Ne.symm hj)))
-    (ANetStep.fail (P := P4) S0.2 0 (by decide) (by decide))
-    ((System.mapIdle_step_some (wccPull_inl (Lab.fail (0 : Fin 4))) _).mpr
+    (L := Sum.inl (Label.fail (0 : Fin 4))) (by simp)
+    (gbcaSpecificationFamily_fail P4 G0 0)
+    (coreLoops_at 0 (RoundLoopStep.failSelf (P := P4) (S0.1 0) rfl)
+      (fun j hj => RoundLoopStep.failIdle (P := P4) (S0.1 j) 0 (Ne.symm hj)))
+    (ABANetworkStep.fail (P := P4) S0.2 0 (by decide) (by decide))
+    ((System.mapIdle_step_some (coinLabelMap_inl (Label.fail (0 : Fin 4))) _).mpr
       (wccFamily_fail P4 W0 0))
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h

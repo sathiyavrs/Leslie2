@@ -599,7 +599,7 @@ private theorem Inv.setBound {s : ImplState P.n} (hI : Inv P s) (β : Bool) :
 
 /-- **Invariant preservation.** `Inv` is preserved by every implementation
 step. -/
-theorem Inv.step {r : ℕ} {s : ImplState P.n} {l : Lab P.n}
+theorem Inv.step {r : ℕ} {s : ImplState P.n} {l : Label P.n}
     {μ : PMF (ImplState P.n)} {s' : ImplState P.n} (hI : Inv P s)
     (hstep : ImplStep P r s l μ) (hs' : s' ∈ μ.support) : Inv P s' := by
   cases hstep with
@@ -745,7 +745,7 @@ theorem Inv.step {r : ℕ} {s : ImplState P.n} {l : Lab P.n}
       (Or.inl ⟨fun w heq => by simp at heq, rfl⟩)
       (Or.inl ⟨fun w heq => by simp at heq, rfl⟩)
       (Or.inr ⟨none, rfl, rfl, hsend⟩)
-  | byz j m hjF =>
+  | byzantine j m hjF =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     have hsentG : ∀ (G : Finset (Fin P.n)), s.F ⊆ G → ∀ j' m', j' ∉ G →
@@ -1656,7 +1656,7 @@ theorem implRefines (P : Params) (r : ℕ) :
         simpa using hRR.ret_eq k
       · rw [proc_send_ne hk]
         exact hRR.ret_eq k
-  | byz j m hjF =>
+  | byzantine j m hjF =>
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'
     exact ⟨q2, Or.inl ⟨rfl, System.weakLSilent_refl _ q2⟩,

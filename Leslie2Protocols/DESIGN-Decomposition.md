@@ -1,13 +1,13 @@
 # Design — the decomposition of the gather-based chain
 
 The gather-based chain runs over compositions at every level. A reliable-broadcast
-instance is `n` programs beside the instance's network (`BRB.implInst`,
+instance is `n` programs beside the instance's network (`BRB.brachaInstance`,
 `ABA/ReliableBroadcast/BrachaComposition.lean`); a gather instance is `n` programs beside
 the gather network, in parallel with `2n` broadcast instances read along pullbacks naming
 them (`Gather.instAt`, `ABA/Gather/Composition.lean`); a round is `n` graded-agreement
 programs beside the network of the graded-agreement layer, in parallel with two gathers
-(`GBCA.ByAFW.roundInstAt`, `ABA/GBCA/AFW/Composition.lean`). The protocol chain's round,
-`GBCA.ByABDY.sub` (`ABA/Composition/GBCAInstanceByABDY.lean`), is the template every level
+(`GBCA.ByAFW.roundAt`, `ABA/GBCA/AFW/Composition.lean`). The protocol chain's round,
+`GBCA.ByABDY.composition` (`ABA/Composition/GBCAInstanceByABDY.lean`), is the template every level
 copies: components synchronise on the instance's own events, the events are hidden, and
 the result is read back over the instance's interface. `DESIGN-GatherTiers.md` is the
 account of the stack; `DESIGN-Composition.md` is the account of what each component owns.
@@ -25,37 +25,41 @@ the network into components, and on one shared label each takes either row.
 Two of the four combinations are behaviours of no row table: the leader loops
 while the network posts `⟨INIT, m⟩`, and the leader records while the network
 posts nothing. The first reaches a state whose network holds the message and
-whose leader holds no input, which only `BRB.ImplStep.byz` produces and only
+whose leader holds no input, which only `BRB.BrachaStep.byzantine` produces and only
 under `ldr ∈ F`.
 
 **What fails.** The row characterisation stated label by label,
-`implInst.step s l μ ↔ ∃ l₀, specPull l = some l₀ ∧ ImplStep s l₀ μ`, is
+`brachaInstance.step s l μ ↔ ∃ l₀, specificationLabelMap l = some l₀ ∧ BrachaStep s l₀ μ`,
+is
 false: at the call label the right side admits the loop and the left side
 offers the call alone, and at the loop label the reverse. The refinement into
 the specification fails with it, since a second call with another payload would
 let the specification record and commit a value the instance never broadcast.
 
 **The constraint.** Each composition speaks an alphabet in which the loop is its own
-label: `BRB.InstLab = Lab ⊕ Extra` with `Extra.callLoop m`, `Gather.InstLab = Lab ⊕ Extra`
-with `Extra.callLoop id x`, and the round speaks `NLab` natively, whose `NetEvt.gcallLoop`
-and `byzCallGLoop` are its loop labels. On the call label the caller has one row and the
-network posts; on the loop label every component stands still. The specification is read
-along a pullback that sends the loop to the call (`BRB.specPull`, `Gather.specPull`,
-`GBCA.ByABDY.gPull`), so its own loop row answers the loop label. The level above pulls
-the composition's alphabet back from its own (`Gather.inPull`, `Gather.bindPull`,
-`GBCA.ByAFW.ga1Pull`, `GBCA.ByAFW.ga2Pull`). The row characterisation is then exact in the
-form quantified over the interface labels:
-`(∃ l, specPull l = some l₀ ∧ implInst.step s l μ) ↔ ImplStep s l₀ μ`
-(`BRB.implInst_step_iff_row`, `Gather.idealInst_step_iff_row`,
-`Gather.lowInst_step_iff_row`, `GBCA.ByAFW.pairInst_step_iff_row`).
+label: `BRB.InstanceLabel = Label ⊕ LoopLabel` with `LoopLabel.callLoop m`,
+`Gather.InstanceLabel = Label ⊕ LoopLabel`
+with `LoopLabel.callLoop id x`, and the round speaks `ExtendedLabel` natively, whose
+`NetworkEvent.gcallLoop` and `byzantineCallGLoop` are its loop labels. On the call label the
+caller has one row and the network posts; on the loop label every component stands still.
+The specification is read along a pullback that sends the loop to the call
+(`BRB.specificationLabelMap`, `Gather.specificationLabelMap`, `GBCA.ByABDY.gbcaLabelMap`),
+so its own loop row answers the loop label. The level above pulls the composition's alphabet
+back from its own (`Gather.inputBroadcastLabelMap`, `Gather.bindBroadcastLabelMap`,
+`GBCA.ByAFW.firstGatherLabelMap`, `GBCA.ByAFW.secondGatherLabelMap`). The row
+characterisation is then exact in the form quantified over the interface labels: `(∃ l,
+specificationLabelMap l = some l₀ ∧ brachaInstance.step s l μ) ↔ BrachaStep s l₀ μ`
+(`BRB.brachaInstance_step_iff_row`,
+`Gather.instanceOverBroadcastSpecification_step_iff_row`,
+`Gather.instanceOverBracha_step_iff_row`, `GBCA.ByAFW.roundOverGatherSpecifications_step_iff_row`).
 
 ## 2. The gather specification's call record follows the input instance
 
 At the tier over broadcast specifications, the input broadcast of process `k`
-is `BRB.liftedSpec` read along `inPull k`, and a specification answers the
-gather's call and the gather's loop on either of its two rows. Over one
+is `BRB.specificationOverInstanceAlphabet` read along `inputBroadcastLabelMap k`, and a
+specification answers the gather's call and the gather's loop on either of its two rows. Over one
 specification label the composition therefore has four call rows
-(`Gather.IdealStep.call`, `callSpecLoop`, `callProcLoop`, `callLoop`): both
+(`Gather.StepOverBroadcastSpecification.call`, `callSpecLoop`, `callProcLoop`, `callLoop`): both
 record, the program alone, the instance alone, neither.
 
 **What fails.** A clause tying the gather program's input to the instance's
@@ -77,7 +81,7 @@ specification-side tier: the concrete gather over Bracha has one row per label.
 
 ## 3. The composed program drops its grade on the graded return
 
-`GBCA.ByAFW.ProcStep.retG` is guarded by `out = some out` and `returned = false` and
+`GBCA.ByAFW.ProgramStep.retG` is guarded by `out = some out` and `returned = false` and
 writes `out := none, returned := true`.
 
 **What fails.** The flat link's relation computes the composed state from the flat one
@@ -95,24 +99,24 @@ returned process.
 
 ## 4. A label outside a round's interface blocks the round
 
-The round is read over `NLab` natively. A family label that is none of the
+The round is read over `ExtendedLabel` natively. A family label that is none of the
 round's own — `callABA`, `retABA`, `callW`, `retW`, the protocol network's
 rendezvous — must not be answered by every factor standing still.
 
 **What fails.** If every pullback returned `none` on such a label, the round
 would self-loop on it. The rendezvous have no specification label under
-`GBCA.ByABDY.gPull`, so `GBCA.ByAFW.pairInst_step_row` is false there. The ABA and coin
-labels have one, and `GBCA.Step` has no row at it, so
-`GBCA.ByAFW.pairInst_step_iff_row` is false there and `GBCA.ByAFW.pairRefines` is
-unprovable: `GBCA.ByABDY.liftedSpec` has no transition at those labels, and neither
-has `GBCA.ByABDY.sub`.
+`GBCA.ByABDY.gbcaLabelMap`, so `GBCA.ByAFW.roundOverGatherSpecifications_step_row` is false
+there. The ABA and coin labels have one, and `GBCA.Step` has no row at it, so
+`GBCA.ByAFW.roundOverGatherSpecifications_step_iff_row` is false there and
+`GBCA.ByAFW.pairRefines` is unprovable: `GBCA.ByABDY.specificationOverRoundAlphabet` has no
+transition at those labels, and neither has `GBCA.ByABDY.composition`.
 
-**The constraint.** `GBCA.ByAFW.procPull` sends every off-interface family label to
-`PLab.outside`, on which neither `GBCA.ByAFW.ProcStep` nor `GBCA.ByAFW.NetStep` has a row,
-so the round blocks exactly where `GBCA.ByABDY.sub` blocks. `fail` alone maps to
-`none`: the layer stands still on the round's own `fail` row, the gathers
-corrupt, and in the family the label is answered by the broadcast act
-(`AFW.gActLow`) and not by the instance.
+**The constraint.** `GBCA.ByAFW.programLabelMap` sends every off-interface family label to
+`ProgramLabel.outside`, on which neither `GBCA.ByAFW.ProgramStep` nor
+`GBCA.ByAFW.NetworkStep` has a row, so the round blocks exactly where
+`GBCA.ByABDY.composition` blocks. `fail` alone maps to `none`: the layer stands still on the
+round's own `fail` row, the gathers corrupt, and in the family the label is answered by the
+broadcast act (`AFW.gActLow`) and not by the instance.
 
 ## 5. The flat link carries the broadcast invariant on the composed side
 

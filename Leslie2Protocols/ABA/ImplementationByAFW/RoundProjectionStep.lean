@@ -34,7 +34,7 @@ round. The link is `ret1` and `call2`: `toRound_ret1_call2` states the view
 after it as `afterCall2` of `afterRet1`, and `afterRet1` is the round after the
 first event alone. The graded return is `ret2` and `retG`, with `afterRet2` the
 intermediate state. A delivery that completes a `2f + 1` `VOTE` quorum is the
-broadcast instance's `dlv` and then the gather's `inRet` (or `bindRet`), with
+broadcast instance's `deliver` and then the gather's `inRet` (or `bindRet`), with
 `afterDlvIn1` and its three companions the intermediate states.
 
 ## The store and the return flag
@@ -303,7 +303,7 @@ and the bound bit are the adversary's ghost record of the round, which a write
 leaves alone. -/
 noncomputable def toRoundUpd (P : Params) (u : ∀ _ : Fin P.n, AFW.ProcRec P.n)
     (w : NetState P.n) (r : ℕ) (j : Fin P.n) (sr : StageRec P.n)
-    (sent : Fin P.n → Finset (Msg P.n)) : GBCA.ByAFW.LowPairState P.n :=
+    (sent : Fin P.n → Finset (Msg P.n)) : GBCA.ByAFW.RoundStateOverBracha P.n :=
   ((Function.update (fun i => toProc ((u i).2.stage r)) j (toProc sr),
       (w.ghostRec r).2.2),
     (((Function.update
@@ -568,8 +568,8 @@ variable {u : ∀ _ : Fin P.n, AFW.ProcRec P.n} {w : NetState P.n} {j : Fin P.n}
 /-! ### A send of a gather instance
 
 A gather's `ECHO` and `VOTE` write the sender's gather record and record on the
-gather's network state. Each is the gather's `snd` event, which
-`Gather.LowStep.echo` and `Gather.LowStep.vote` write through
+gather's network state. Each is the gather's `send` event, which
+`Gather.StepOverBracha.echo` and `Gather.StepOverBracha.vote` write through
 `Gather.setGa`. -/
 
 /-- A send of the first gather, read through the view. -/
@@ -693,8 +693,8 @@ theorem toRound_ga2Send (hu : (u j).2 = p) (r : ℕ) (pr : Gather.PRec P.n (Opti
 /-! ### A send in a broadcast instance
 
 A Bracha row writes the sender's local state in one broadcast instance and
-records on that instance's network state. Each is the instance's `snd` event,
-which `BRB.ImplStep.echo`, `BRB.ImplStep.voteQuorum` and `BRB.ImplStep.voteAmp`
+records on that instance's network state. Each is the instance's `send` event,
+which `BRB.BrachaStep.echo`, `BRB.BrachaStep.voteQuorum` and `BRB.BrachaStep.voteAmp`
 write, and the composed round reaches it through `Gather.setBrbIn` or
 `Gather.setBrbBind`. The return flag the view supplies is the store's, which a
 local write does not move.
@@ -1017,14 +1017,14 @@ theorem toRound_ga1Echo (hu : (u j).2 = p) (r : ℕ) (A : Gather.APSet P.n Bool)
           ga1 := (p.stage r).ga1.setP
             { ((p.stage r).ga1.proc) with sentEcho := some A } }))
       ((w.gsent r j (.ga1 (.echo A))).writeGhost (ghostStep P)
-        (Sum.inr (.gsnd r j (.ga1 (.echo A))))) r
+        (Sum.inr (.gbcaSend r j (.ga1 (.echo A))))) r
       = GBCA.ByAFW.setGa1 (toRound P u w r)
           (Gather.setGa (toGa1 P u w r)
             (((Gather.ga (toGa1 P u w r)).setProc j
                 { (Gather.ga (toGa1 P u w r)).proc j with sentEcho := some A }).mcast
               j (.echo A))) := by
   subst hu
-  rw [toRound_ghostId (Sum.inr (.gsnd r j (.ga1 (.echo A)))) (fun _ _ => rfl)]
+  rw [toRound_ghostId (Sum.inr (.gbcaSend r j (.ga1 (.echo A)))) (fun _ _ => rfl)]
   exact toRound_ga1Send rfl r _ (.echo A) rfl
 
 /-- The first gather's `VOTE`, read through the view. -/
@@ -1034,14 +1034,14 @@ theorem toRound_ga1Vote (hu : (u j).2 = p) (r : ℕ) (U : Gather.APSet P.n Bool)
           ga1 := (p.stage r).ga1.setP
             { ((p.stage r).ga1.proc) with sentVote := some U } }))
       ((w.gsent r j (.ga1 (.vote U))).writeGhost (ghostStep P)
-        (Sum.inr (.gsnd r j (.ga1 (.vote U))))) r
+        (Sum.inr (.gbcaSend r j (.ga1 (.vote U))))) r
       = GBCA.ByAFW.setGa1 (toRound P u w r)
           (Gather.setGa (toGa1 P u w r)
             (((Gather.ga (toGa1 P u w r)).setProc j
                 { (Gather.ga (toGa1 P u w r)).proc j with sentVote := some U }).mcast
               j (.vote U))) := by
   subst hu
-  rw [toRound_ghostId (Sum.inr (.gsnd r j (.ga1 (.vote U)))) (fun _ _ => rfl)]
+  rw [toRound_ghostId (Sum.inr (.gbcaSend r j (.ga1 (.vote U)))) (fun _ _ => rfl)]
   exact toRound_ga1Send rfl r _ (.vote U) rfl
 
 /-- The second gather's `ECHO`, read through the view. -/
@@ -1051,14 +1051,14 @@ theorem toRound_ga2Echo (hu : (u j).2 = p) (r : ℕ) (A : Gather.APSet P.n (Opti
           ga2 := (p.stage r).ga2.setP
             { ((p.stage r).ga2.proc) with sentEcho := some A } }))
       ((w.gsent r j (.ga2 (.echo A))).writeGhost (ghostStep P)
-        (Sum.inr (.gsnd r j (.ga2 (.echo A))))) r
+        (Sum.inr (.gbcaSend r j (.ga2 (.echo A))))) r
       = GBCA.ByAFW.setGa2 (toRound P u w r)
           (Gather.setGa (toGa2 P u w r)
             (((Gather.ga (toGa2 P u w r)).setProc j
                 { (Gather.ga (toGa2 P u w r)).proc j with sentEcho := some A }).mcast
               j (.echo A))) := by
   subst hu
-  rw [toRound_ghostId (Sum.inr (.gsnd r j (.ga2 (.echo A)))) (fun _ _ => rfl)]
+  rw [toRound_ghostId (Sum.inr (.gbcaSend r j (.ga2 (.echo A)))) (fun _ _ => rfl)]
   exact toRound_ga2Send rfl r _ (.echo A) rfl rfl
 
 /-- The second gather's `VOTE`, read through the view. -/
@@ -1068,14 +1068,14 @@ theorem toRound_ga2Vote (hu : (u j).2 = p) (r : ℕ) (U : Gather.APSet P.n (Opti
           ga2 := (p.stage r).ga2.setP
             { ((p.stage r).ga2.proc) with sentVote := some U } }))
       ((w.gsent r j (.ga2 (.vote U))).writeGhost (ghostStep P)
-        (Sum.inr (.gsnd r j (.ga2 (.vote U))))) r
+        (Sum.inr (.gbcaSend r j (.ga2 (.vote U))))) r
       = GBCA.ByAFW.setGa2 (toRound P u w r)
           (Gather.setGa (toGa2 P u w r)
             (((Gather.ga (toGa2 P u w r)).setProc j
                 { (Gather.ga (toGa2 P u w r)).proc j with sentVote := some U }).mcast
               j (.vote U))) := by
   subst hu
-  rw [toRound_ghostId (Sum.inr (.gsnd r j (.ga2 (.vote U)))) (fun _ _ => rfl)]
+  rw [toRound_ghostId (Sum.inr (.gbcaSend r j (.ga2 (.vote U)))) (fun _ _ => rfl)]
   exact toRound_ga2Send rfl r _ (.vote U) rfl rfl
 
 /-- The first gather's `BIND`, read through the view: the payload is written to
@@ -1090,7 +1090,7 @@ theorem toRound_ga1Bind (hu : (u j).2 = p) (r : ℕ) (U : Gather.APSet P.n Bool)
             (((p.stage r).brbBind1 j).setP
               { (((p.stage r).brbBind1 j).proc) with input := some U }) }))
       ((w.gsent r j (.brbBind1 j (.init U))).writeGhost (ghostStep P)
-        (Sum.inr (.gsnd r j (.brbBind1 j (.init U))))) r
+        (Sum.inr (.gbcaSend r j (.brbBind1 j (.init U))))) r
       = GBCA.ByAFW.setGa1 (toRound P u w r)
           (Gather.setBrbBind
             (Gather.setGa (toGa1 P u w r)
@@ -1101,7 +1101,7 @@ theorem toRound_ga1Bind (hu : (u j).2 = p) (r : ℕ) (U : Gather.APSet P.n Bool)
                   { (Gather.brbBind (toGa1 P u w r) j).proc j with input := some U }).mcast
                 j (.init U)))) := by
   subst hu
-  rw [toRound_ghostId (Sum.inr (.gsnd r j (.brbBind1 j (.init U)))) (fun _ _ => rfl),
+  rw [toRound_ghostId (Sum.inr (.gbcaSend r j (.brbBind1 j (.init U)))) (fun _ _ => rfl),
     toRound_write]
   refine roundStateAt_ext ?_ rfl (subStateAt_ext ?_ ?_ ?_ rfl) (subStateAt_ext ?_ ?_ ?_ rfl)
   · simp only [GBCA.ByAFW.procs, GBCA.ByAFW.setGa1, toRound, toRoundUpd, toProc, LocalState.setP]
@@ -1176,7 +1176,7 @@ theorem toRound_ga2Bind (hu : (u j).2 = p) (r : ℕ) (U : Gather.APSet P.n (Opti
             (((p.stage r).brbBind2 j).setP
               { (((p.stage r).brbBind2 j).proc) with input := some U }) }))
       ((w.gsent r j (.brbBind2 j (.init U))).writeGhost (ghostStep P)
-        (Sum.inr (.gsnd r j (.brbBind2 j (.init U))))) r
+        (Sum.inr (.gbcaSend r j (.brbBind2 j (.init U))))) r
       = GBCA.ByAFW.setGa2 (toRound P u w r)
           (Gather.setBrbBind
             (Gather.setGa (toGa2 P u w r)
@@ -1187,7 +1187,7 @@ theorem toRound_ga2Bind (hu : (u j).2 = p) (r : ℕ) (U : Gather.APSet P.n (Opti
                   { (Gather.brbBind (toGa2 P u w r) j).proc j with input := some U }).mcast
                 j (.init U)))) := by
   subst hu
-  rw [toRound_ghostId (Sum.inr (.gsnd r j (.brbBind2 j (.init U)))) (fun _ _ => rfl),
+  rw [toRound_ghostId (Sum.inr (.gbcaSend r j (.brbBind2 j (.init U)))) (fun _ _ => rfl),
     toRound_write]
   refine roundStateAt_ext ?_ rfl (subStateAt_ext ?_ ?_ ?_ rfl) (subStateAt_ext ?_ ?_ ?_ rfl)
   · simp only [GBCA.ByAFW.procs, GBCA.ByAFW.setGa2, toRound, toRoundUpd, toProc, LocalState.setP]
@@ -1261,7 +1261,7 @@ theorem toRound_in1Echo (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n) (m : Bool) :
             (((p.stage r).brbIn1 i).setP
               { (((p.stage r).brbIn1 i).proc) with sentEcho := some m }) }))
       ((w.gsent r j (.brbIn1 i (.echo m))).writeGhost (ghostStep P)
-        (Sum.inr (.gsnd r j (.brbIn1 i (.echo m))))) r
+        (Sum.inr (.gbcaSend r j (.brbIn1 i (.echo m))))) r
       = GBCA.ByAFW.setGa1 (toRound P u w r)
           (Gather.setBrbIn (toGa1 P u w r)
             (Function.update (Gather.brbIn (toGa1 P u w r)) i
@@ -1269,7 +1269,7 @@ theorem toRound_in1Echo (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n) (m : Bool) :
                   { (Gather.brbIn (toGa1 P u w r) i).proc j with sentEcho := some m }).mcast
                 j (.echo m)))) := by
   subst hu
-  rw [toRound_ghostId (Sum.inr (.gsnd r j (.brbIn1 i (.echo m)))) (fun _ _ => rfl)]
+  rw [toRound_ghostId (Sum.inr (.gbcaSend r j (.brbIn1 i (.echo m)))) (fun _ _ => rfl)]
   exact toRound_in1Send rfl r i _ (.echo m)
 
 /-- `VOTE` in an input-broadcast instance of the first gather, read through the
@@ -1281,7 +1281,7 @@ theorem toRound_in1Vote (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n) (m : Bool) :
             (((p.stage r).brbIn1 i).setP
               { (((p.stage r).brbIn1 i).proc) with sentVote := some m }) }))
       ((w.gsent r j (.brbIn1 i (.vote m))).writeGhost (ghostStep P)
-        (Sum.inr (.gsnd r j (.brbIn1 i (.vote m))))) r
+        (Sum.inr (.gbcaSend r j (.brbIn1 i (.vote m))))) r
       = GBCA.ByAFW.setGa1 (toRound P u w r)
           (Gather.setBrbIn (toGa1 P u w r)
             (Function.update (Gather.brbIn (toGa1 P u w r)) i
@@ -1289,7 +1289,7 @@ theorem toRound_in1Vote (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n) (m : Bool) :
                   { (Gather.brbIn (toGa1 P u w r) i).proc j with sentVote := some m }).mcast
                 j (.vote m)))) := by
   subst hu
-  rw [toRound_ghostId (Sum.inr (.gsnd r j (.brbIn1 i (.vote m)))) (fun _ _ => rfl)]
+  rw [toRound_ghostId (Sum.inr (.gbcaSend r j (.brbIn1 i (.vote m)))) (fun _ _ => rfl)]
   exact toRound_in1Send rfl r i _ (.vote m)
 
 /-- `ECHO` in a bind-broadcast instance of the first gather, read through the
@@ -1301,7 +1301,7 @@ theorem toRound_bind1Echo (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n) (m : Gather
             (((p.stage r).brbBind1 i).setP
               { (((p.stage r).brbBind1 i).proc) with sentEcho := some m }) }))
       ((w.gsent r j (.brbBind1 i (.echo m))).writeGhost (ghostStep P)
-        (Sum.inr (.gsnd r j (.brbBind1 i (.echo m))))) r
+        (Sum.inr (.gbcaSend r j (.brbBind1 i (.echo m))))) r
       = GBCA.ByAFW.setGa1 (toRound P u w r)
           (Gather.setBrbBind (toGa1 P u w r)
             (Function.update (Gather.brbBind (toGa1 P u w r)) i
@@ -1309,7 +1309,7 @@ theorem toRound_bind1Echo (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n) (m : Gather
                   { (Gather.brbBind (toGa1 P u w r) i).proc j with sentEcho := some m }).mcast
                 j (.echo m)))) := by
   subst hu
-  rw [toRound_ghostId (Sum.inr (.gsnd r j (.brbBind1 i (.echo m)))) (fun _ _ => rfl)]
+  rw [toRound_ghostId (Sum.inr (.gbcaSend r j (.brbBind1 i (.echo m)))) (fun _ _ => rfl)]
   exact toRound_bind1Send rfl r i _ (.echo m)
 
 /-- `VOTE` in a bind-broadcast instance of the first gather, read through the
@@ -1321,7 +1321,7 @@ theorem toRound_bind1Vote (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n) (m : Gather
             (((p.stage r).brbBind1 i).setP
               { (((p.stage r).brbBind1 i).proc) with sentVote := some m }) }))
       ((w.gsent r j (.brbBind1 i (.vote m))).writeGhost (ghostStep P)
-        (Sum.inr (.gsnd r j (.brbBind1 i (.vote m))))) r
+        (Sum.inr (.gbcaSend r j (.brbBind1 i (.vote m))))) r
       = GBCA.ByAFW.setGa1 (toRound P u w r)
           (Gather.setBrbBind (toGa1 P u w r)
             (Function.update (Gather.brbBind (toGa1 P u w r)) i
@@ -1329,7 +1329,7 @@ theorem toRound_bind1Vote (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n) (m : Gather
                   { (Gather.brbBind (toGa1 P u w r) i).proc j with sentVote := some m }).mcast
                 j (.vote m)))) := by
   subst hu
-  rw [toRound_ghostId (Sum.inr (.gsnd r j (.brbBind1 i (.vote m)))) (fun _ _ => rfl)]
+  rw [toRound_ghostId (Sum.inr (.gbcaSend r j (.brbBind1 i (.vote m)))) (fun _ _ => rfl)]
   exact toRound_bind1Send rfl r i _ (.vote m)
 
 /-- `ECHO` in an input-broadcast instance of the second gather, read through
@@ -1341,7 +1341,7 @@ theorem toRound_in2Echo (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n) (m : Option B
             (((p.stage r).brbIn2 i).setP
               { (((p.stage r).brbIn2 i).proc) with sentEcho := some m }) }))
       ((w.gsent r j (.brbIn2 i (.echo m))).writeGhost (ghostStep P)
-        (Sum.inr (.gsnd r j (.brbIn2 i (.echo m))))) r
+        (Sum.inr (.gbcaSend r j (.brbIn2 i (.echo m))))) r
       = GBCA.ByAFW.setGa2 (toRound P u w r)
           (Gather.setBrbIn (toGa2 P u w r)
             (Function.update (Gather.brbIn (toGa2 P u w r)) i
@@ -1349,7 +1349,7 @@ theorem toRound_in2Echo (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n) (m : Option B
                   { (Gather.brbIn (toGa2 P u w r) i).proc j with sentEcho := some m }).mcast
                 j (.echo m)))) := by
   subst hu
-  rw [toRound_ghostId (Sum.inr (.gsnd r j (.brbIn2 i (.echo m)))) (fun _ _ => rfl)]
+  rw [toRound_ghostId (Sum.inr (.gbcaSend r j (.brbIn2 i (.echo m)))) (fun _ _ => rfl)]
   exact toRound_in2Send rfl r i _ (.echo m)
 
 /-- `VOTE` in an input-broadcast instance of the second gather, read through
@@ -1361,7 +1361,7 @@ theorem toRound_in2Vote (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n) (m : Option B
             (((p.stage r).brbIn2 i).setP
               { (((p.stage r).brbIn2 i).proc) with sentVote := some m }) }))
       ((w.gsent r j (.brbIn2 i (.vote m))).writeGhost (ghostStep P)
-        (Sum.inr (.gsnd r j (.brbIn2 i (.vote m))))) r
+        (Sum.inr (.gbcaSend r j (.brbIn2 i (.vote m))))) r
       = GBCA.ByAFW.setGa2 (toRound P u w r)
           (Gather.setBrbIn (toGa2 P u w r)
             (Function.update (Gather.brbIn (toGa2 P u w r)) i
@@ -1369,7 +1369,7 @@ theorem toRound_in2Vote (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n) (m : Option B
                   { (Gather.brbIn (toGa2 P u w r) i).proc j with sentVote := some m }).mcast
                 j (.vote m)))) := by
   subst hu
-  rw [toRound_ghostId (Sum.inr (.gsnd r j (.brbIn2 i (.vote m)))) (fun _ _ => rfl)]
+  rw [toRound_ghostId (Sum.inr (.gbcaSend r j (.brbIn2 i (.vote m)))) (fun _ _ => rfl)]
   exact toRound_in2Send rfl r i _ (.vote m)
 
 /-- `ECHO` in a bind-broadcast instance of the second gather, read through the
@@ -1382,7 +1382,7 @@ theorem toRound_bind2Echo (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
             (((p.stage r).brbBind2 i).setP
               { (((p.stage r).brbBind2 i).proc) with sentEcho := some m }) }))
       ((w.gsent r j (.brbBind2 i (.echo m))).writeGhost (ghostStep P)
-        (Sum.inr (.gsnd r j (.brbBind2 i (.echo m))))) r
+        (Sum.inr (.gbcaSend r j (.brbBind2 i (.echo m))))) r
       = GBCA.ByAFW.setGa2 (toRound P u w r)
           (Gather.setBrbBind (toGa2 P u w r)
             (Function.update (Gather.brbBind (toGa2 P u w r)) i
@@ -1390,7 +1390,7 @@ theorem toRound_bind2Echo (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
                   { (Gather.brbBind (toGa2 P u w r) i).proc j with sentEcho := some m }).mcast
                 j (.echo m)))) := by
   subst hu
-  rw [toRound_ghostId (Sum.inr (.gsnd r j (.brbBind2 i (.echo m)))) (fun _ _ => rfl)]
+  rw [toRound_ghostId (Sum.inr (.gbcaSend r j (.brbBind2 i (.echo m)))) (fun _ _ => rfl)]
   exact toRound_bind2Send rfl r i _ (.echo m)
 
 /-- `VOTE` in a bind-broadcast instance of the second gather, read through the
@@ -1403,7 +1403,7 @@ theorem toRound_bind2Vote (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
             (((p.stage r).brbBind2 i).setP
               { (((p.stage r).brbBind2 i).proc) with sentVote := some m }) }))
       ((w.gsent r j (.brbBind2 i (.vote m))).writeGhost (ghostStep P)
-        (Sum.inr (.gsnd r j (.brbBind2 i (.vote m))))) r
+        (Sum.inr (.gbcaSend r j (.brbBind2 i (.vote m))))) r
       = GBCA.ByAFW.setGa2 (toRound P u w r)
           (Gather.setBrbBind (toGa2 P u w r)
             (Function.update (Gather.brbBind (toGa2 P u w r)) i
@@ -1411,7 +1411,7 @@ theorem toRound_bind2Vote (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
                   { (Gather.brbBind (toGa2 P u w r) i).proc j with sentVote := some m }).mcast
                 j (.vote m)))) := by
   subst hu
-  rw [toRound_ghostId (Sum.inr (.gsnd r j (.brbBind2 i (.vote m)))) (fun _ _ => rfl)]
+  rw [toRound_ghostId (Sum.inr (.gbcaSend r j (.brbBind2 i (.vote m)))) (fun _ _ => rfl)]
   exact toRound_bind2Send rfl r i _ (.vote m)
 
 /-! ### The graded-agreement call and its loop
@@ -1419,7 +1419,7 @@ theorem toRound_bind2Vote (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
 The call is fused (D28): the round's first gather records the input and the
 caller's own input-broadcast instance of that gather is called with it. The
 composed round answers on one label, whose program row records the input and
-whose first gather takes `Gather.LowStep.call`. The call against an
+whose first gather takes `Gather.StepOverBracha.call`. The call against an
 already-called record moves the round loop alone, which the view does not
 read. -/
 
@@ -1537,20 +1537,20 @@ theorem toGa2_write (u : ∀ _ : Fin P.n, AFW.ProcRec P.n) (w : NetState P.n)
 
 /-- The core the first gather's return carries: the one on record, and the core
 of the gather's network state where none is on record. -/
-noncomputable def ret1Core (P : Params) (s : GBCA.ByAFW.LowPairState P.n) :
+noncomputable def ret1Core (P : Params) (s : GBCA.ByAFW.RoundStateOverBracha P.n) :
     Gather.APSet P.n Bool :=
   (Gather.core (GBCA.ByAFW.ga1 s)).getD (Gather.coreOfNet P (Gather.ga (GBCA.ByAFW.ga1 s)).2)
 
 /-- The core the second gather's return carries. -/
-noncomputable def ret2Core (P : Params) (s : GBCA.ByAFW.LowPairState P.n) :
+noncomputable def ret2Core (P : Params) (s : GBCA.ByAFW.RoundStateOverBracha P.n) :
     Gather.APSet P.n (Option Bool) :=
   (Gather.core (GBCA.ByAFW.ga2 s)).getD (Gather.coreOfNet P (Gather.ga (GBCA.ByAFW.ga2 s)).2)
 
 /-- **The round after the first gather's return to `j` over `g`**: the program
 records the candidate, the round's bound bit is written from the core the
-return carries, and the first gather takes `Gather.LowStep.ret`. -/
-noncomputable def afterRet1 (P : Params) (s : GBCA.ByAFW.LowPairState P.n) (j : Fin P.n)
-    (g : Fin P.n → Option Bool) : GBCA.ByAFW.LowPairState P.n :=
+return carries, and the first gather takes `Gather.StepOverBracha.ret`. -/
+noncomputable def afterRet1 (P : Params) (s : GBCA.ByAFW.RoundStateOverBracha P.n) (j : Fin P.n)
+    (g : Fin P.n → Option Bool) : GBCA.ByAFW.RoundStateOverBracha P.n :=
   GBCA.ByAFW.setGa1
     (GBCA.ByAFW.setBound
       (GBCA.ByAFW.setProcs s (Function.update (GBCA.ByAFW.procs s) j
@@ -1563,9 +1563,9 @@ noncomputable def afterRet1 (P : Params) (s : GBCA.ByAFW.LowPairState P.n) (j : 
       (some (ret1Core P s)))
 
 /-- **The round after `j`'s call of the second gather with `x`**: the program
-marks the call and the second gather takes `Gather.LowStep.call`. -/
-noncomputable def afterCall2 (P : Params) (s : GBCA.ByAFW.LowPairState P.n) (j : Fin P.n)
-    (x : Option Bool) : GBCA.ByAFW.LowPairState P.n :=
+marks the call and the second gather takes `Gather.StepOverBracha.call`. -/
+noncomputable def afterCall2 (P : Params) (s : GBCA.ByAFW.RoundStateOverBracha P.n) (j : Fin P.n)
+    (x : Option Bool) : GBCA.ByAFW.RoundStateOverBracha P.n :=
   GBCA.ByAFW.setGa2
     (GBCA.ByAFW.setProcs s (Function.update (GBCA.ByAFW.procs s) j
       { GBCA.ByAFW.procs s j with called2 := true }))
@@ -1579,9 +1579,9 @@ noncomputable def afterCall2 (P : Params) (s : GBCA.ByAFW.LowPairState P.n) (j :
           j (.init x))))
 
 /-- **The round after the second gather's return to `j` over `g`**: the program
-records the grade and the second gather takes `Gather.LowStep.ret`. -/
-noncomputable def afterRet2 (P : Params) (s : GBCA.ByAFW.LowPairState P.n) (j : Fin P.n)
-    (g : Fin P.n → Option (Option Bool)) : GBCA.ByAFW.LowPairState P.n :=
+records the grade and the second gather takes `Gather.StepOverBracha.ret`. -/
+noncomputable def afterRet2 (P : Params) (s : GBCA.ByAFW.RoundStateOverBracha P.n) (j : Fin P.n)
+    (g : Fin P.n → Option (Option Bool)) : GBCA.ByAFW.RoundStateOverBracha P.n :=
   GBCA.ByAFW.setGa2
     (GBCA.ByAFW.setProcs s (Function.update (GBCA.ByAFW.procs s) j
       { GBCA.ByAFW.procs s j with out := some (GBCA.gradeOf P g) }))
@@ -1593,8 +1593,8 @@ noncomputable def afterRet2 (P : Params) (s : GBCA.ByAFW.LowPairState P.n) (j : 
 
 /-- **The round after its graded return to `j`**: the program announces the
 grade and marks the record returned. -/
-def afterRetG (P : Params) (s : GBCA.ByAFW.LowPairState P.n) (j : Fin P.n) :
-    GBCA.ByAFW.LowPairState P.n :=
+def afterRetG (P : Params) (s : GBCA.ByAFW.RoundStateOverBracha P.n) (j : Fin P.n) :
+    GBCA.ByAFW.RoundStateOverBracha P.n :=
   GBCA.ByAFW.setProcs s (Function.update (GBCA.ByAFW.procs s) j
     { GBCA.ByAFW.procs s j with out := none, returned := true })
 
@@ -1613,7 +1613,7 @@ theorem toRound_ret1_call2 (hu : (u j).2 = p) (r : ℕ) (g : Fin P.n → Option 
               { (((p.stage r).brbIn2 j).proc) with
                 input := some (GBCA.cand P g) }) }))
       ((w.gsent r j (.brbIn2 j (.init (GBCA.cand P g)))).writeGhost (ghostStep P)
-        (Sum.inr (.gsnd r j (.brbIn2 j (.init (GBCA.cand P g)))))) r
+        (Sum.inr (.gbcaSend r j (.brbIn2 j (.init (GBCA.cand P g)))))) r
       = afterCall2 P (afterRet1 P (toRound P u w r) j g) j (GBCA.cand P g) := by
   subst hu
   have hcore : Gather.coreOf P
@@ -1731,7 +1731,7 @@ theorem toRound_ret2_retG (hu : (u j).2 = p) (r : ℕ)
       = afterRetG P (afterRet2 P (toRound P u w r) j g) j := by
   subst hu
   rw [toRound_writeGhost _ _ (rfl : roundOf (Sum.inl
-      (Lab.retG r j (GBCA.gradeOf P g) bnd)) = some r),
+      (Label.retG r j (GBCA.gradeOf P g) bnd)) = some r),
     toGa1_writeNoSent, toGa2_writeNoSent]
   refine roundStateAt_ext ?_ ?_ ?_ ?_
   · simp only [afterRetG, afterRet2, GBCA.ByAFW.procs_setProcs, GBCA.ByAFW.procs_setGa2,
@@ -1787,11 +1787,11 @@ gather store records the value. -/
 theorem toRound_dlvGa1 (hu : (u j).2 = p) (r : ℕ) (k : Fin P.n)
     (mm : Gather.GaMsg P.n Bool) :
     toRound P (Function.update u j (c, p.deliverTo r k (.ga1 mm)))
-        (w.writeGhost (ghostStep P) (Sum.inr (.gdlv r j k (.ga1 mm)))) r
+        (w.writeGhost (ghostStep P) (Sum.inr (.gbcaDeliver r j k (.ga1 mm)))) r
       = GBCA.ByAFW.setGa1 (toRound P u w r)
           (Gather.setGa (toGa1 P u w r) ((Gather.ga (toGa1 P u w r)).recvMsg j k mm)) := by
   subst hu
-  rw [toRound_ghostId (Sum.inr (.gdlv r j k (.ga1 mm))) (fun _ _ => rfl)]
+  rw [toRound_ghostId (Sum.inr (.gbcaDeliver r j k (.ga1 mm))) (fun _ _ => rfl)]
   simp only [StageSideRecP.deliverTo, stageRecord_deliverTo, StageRec.deliverTo]
   rw [toRound_writeNoSent]
   refine roundStateAt_ext ?_ ?_ ?_ ?_
@@ -1830,11 +1830,11 @@ theorem toRound_dlvGa1 (hu : (u j).2 = p) (r : ℕ) (k : Fin P.n)
 theorem toRound_dlvGa2 (hu : (u j).2 = p) (r : ℕ) (k : Fin P.n)
     (mm : Gather.GaMsg P.n (Option Bool)) :
     toRound P (Function.update u j (c, p.deliverTo r k (.ga2 mm)))
-        (w.writeGhost (ghostStep P) (Sum.inr (.gdlv r j k (.ga2 mm)))) r
+        (w.writeGhost (ghostStep P) (Sum.inr (.gbcaDeliver r j k (.ga2 mm)))) r
       = GBCA.ByAFW.setGa2 (toRound P u w r)
           (Gather.setGa (toGa2 P u w r) ((Gather.ga (toGa2 P u w r)).recvMsg j k mm)) := by
   subst hu
-  rw [toRound_ghostId (Sum.inr (.gdlv r j k (.ga2 mm))) (fun _ _ => rfl)]
+  rw [toRound_ghostId (Sum.inr (.gbcaDeliver r j k (.ga2 mm))) (fun _ _ => rfl)]
   simp only [StageSideRecP.deliverTo, stageRecord_deliverTo, StageRec.deliverTo]
   rw [toRound_writeNoSent]
   refine roundStateAt_ext ?_ ?_ ?_ ?_
@@ -1871,8 +1871,8 @@ theorem toRound_dlvGa2 (hu : (u j).2 = p) (r : ℕ) (k : Fin P.n)
 
 /-- **The round after a delivery in an input-broadcast instance of the first
 gather.** -/
-noncomputable def afterDlvIn1 (P : Params) (s : GBCA.ByAFW.LowPairState P.n)
-    (i j k : Fin P.n) (m : BRB.BMsg Bool) : GBCA.ByAFW.LowPairState P.n :=
+noncomputable def afterDlvIn1 (P : Params) (s : GBCA.ByAFW.RoundStateOverBracha P.n)
+    (i j k : Fin P.n) (m : BRB.BMsg Bool) : GBCA.ByAFW.RoundStateOverBracha P.n :=
   GBCA.ByAFW.setGa1 s
     (Gather.setBrbIn (GBCA.ByAFW.ga1 s)
       (Function.update (Gather.brbIn (GBCA.ByAFW.ga1 s)) i
@@ -1881,8 +1881,8 @@ noncomputable def afterDlvIn1 (P : Params) (s : GBCA.ByAFW.LowPairState P.n)
 /-- **The round after an input-broadcast instance of the first gather returns
 `v` to `j`**: the instance's return flag goes on at `j` and `j`'s gather
 store records the value. -/
-noncomputable def afterInRet1 (P : Params) (s : GBCA.ByAFW.LowPairState P.n)
-    (i j : Fin P.n) (v : Bool) : GBCA.ByAFW.LowPairState P.n :=
+noncomputable def afterInRet1 (P : Params) (s : GBCA.ByAFW.RoundStateOverBracha P.n)
+    (i j : Fin P.n) (v : Bool) : GBCA.ByAFW.RoundStateOverBracha P.n :=
   GBCA.ByAFW.setGa1 s
     (Gather.setBrbIn
       (Gather.setGa (GBCA.ByAFW.ga1 s)
@@ -1901,10 +1901,10 @@ theorem toRound_dlvIn1 (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
     (hst : storeIn P (((p.stage r).brbIn1 i).deliverTo k mm)
       = storeIn P ((p.stage r).brbIn1 i)) :
     toRound P (Function.update u j (c, p.deliverTo r k (.brbIn1 i mm)))
-        (w.writeGhost (ghostStep P) (Sum.inr (.gdlv r j k (.brbIn1 i mm)))) r
+        (w.writeGhost (ghostStep P) (Sum.inr (.gbcaDeliver r j k (.brbIn1 i mm)))) r
       = afterDlvIn1 P (toRound P u w r) i j k mm := by
   subst hu
-  rw [toRound_ghostId (Sum.inr (.gdlv r j k (.brbIn1 i mm))) (fun _ _ => rfl)]
+  rw [toRound_ghostId (Sum.inr (.gbcaDeliver r j k (.brbIn1 i mm))) (fun _ _ => rfl)]
   simp only [StageSideRecP.deliverTo, stageRecord_deliverTo, StageRec.deliverTo]
   rw [toRound_writeNoSent]
   refine roundStateAt_ext ?_ ?_ ?_ ?_
@@ -1956,10 +1956,10 @@ theorem toRound_dlvIn1_ret (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
     (mm : BRB.BMsg Bool) (v : Bool)
     (hst : storeIn P (((p.stage r).brbIn1 i).deliverTo k mm) = some v) :
     toRound P (Function.update u j (c, p.deliverTo r k (.brbIn1 i mm)))
-        (w.writeGhost (ghostStep P) (Sum.inr (.gdlv r j k (.brbIn1 i mm)))) r
+        (w.writeGhost (ghostStep P) (Sum.inr (.gbcaDeliver r j k (.brbIn1 i mm)))) r
       = afterInRet1 P (afterDlvIn1 P (toRound P u w r) i j k mm) i j v := by
   subst hu
-  rw [toRound_ghostId (Sum.inr (.gdlv r j k (.brbIn1 i mm))) (fun _ _ => rfl)]
+  rw [toRound_ghostId (Sum.inr (.gbcaDeliver r j k (.brbIn1 i mm))) (fun _ _ => rfl)]
   simp only [StageSideRecP.deliverTo, stageRecord_deliverTo, StageRec.deliverTo]
   rw [toRound_writeNoSent]
   refine roundStateAt_ext ?_ ?_ ?_ ?_
@@ -2011,8 +2011,9 @@ theorem toRound_dlvIn1_ret (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
 
 /-- **The round after a delivery in a bind-broadcast instance of the first
 gather.** -/
-noncomputable def afterDlvBind1 (P : Params) (s : GBCA.ByAFW.LowPairState P.n)
-    (i j k : Fin P.n) (m : BRB.BMsg (Gather.APSet P.n Bool)) : GBCA.ByAFW.LowPairState P.n :=
+noncomputable def afterDlvBind1 (P : Params) (s : GBCA.ByAFW.RoundStateOverBracha P.n)
+    (i j k : Fin P.n) (m : BRB.BMsg (Gather.APSet P.n Bool)) : GBCA.ByAFW.RoundStateOverBracha P.n
+      :=
   GBCA.ByAFW.setGa1 s
     (Gather.setBrbBind (GBCA.ByAFW.ga1 s)
       (Function.update (Gather.brbBind (GBCA.ByAFW.ga1 s)) i
@@ -2021,8 +2022,8 @@ noncomputable def afterDlvBind1 (P : Params) (s : GBCA.ByAFW.LowPairState P.n)
 /-- **The round after a bind-broadcast instance of the first gather returns `v`
 to `j`**: the instance's return flag goes on at `j` and `j`'s gather store
 records the value. -/
-noncomputable def afterBindRet1 (P : Params) (s : GBCA.ByAFW.LowPairState P.n)
-    (i j : Fin P.n) (v : Gather.APSet P.n Bool) : GBCA.ByAFW.LowPairState P.n :=
+noncomputable def afterBindRet1 (P : Params) (s : GBCA.ByAFW.RoundStateOverBracha P.n)
+    (i j : Fin P.n) (v : Gather.APSet P.n Bool) : GBCA.ByAFW.RoundStateOverBracha P.n :=
   GBCA.ByAFW.setGa1 s
     (Gather.setBrbBind
       (Gather.setGa (GBCA.ByAFW.ga1 s)
@@ -2041,10 +2042,10 @@ theorem toRound_dlvBind1 (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
     (hst : storeIn P (((p.stage r).brbBind1 i).deliverTo k mm)
       = storeIn P ((p.stage r).brbBind1 i)) :
     toRound P (Function.update u j (c, p.deliverTo r k (.brbBind1 i mm)))
-        (w.writeGhost (ghostStep P) (Sum.inr (.gdlv r j k (.brbBind1 i mm)))) r
+        (w.writeGhost (ghostStep P) (Sum.inr (.gbcaDeliver r j k (.brbBind1 i mm)))) r
       = afterDlvBind1 P (toRound P u w r) i j k mm := by
   subst hu
-  rw [toRound_ghostId (Sum.inr (.gdlv r j k (.brbBind1 i mm))) (fun _ _ => rfl)]
+  rw [toRound_ghostId (Sum.inr (.gbcaDeliver r j k (.brbBind1 i mm))) (fun _ _ => rfl)]
   simp only [StageSideRecP.deliverTo, stageRecord_deliverTo, StageRec.deliverTo]
   rw [toRound_writeNoSent]
   refine roundStateAt_ext ?_ ?_ ?_ ?_
@@ -2096,10 +2097,10 @@ theorem toRound_dlvBind1_ret (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
     (mm : BRB.BMsg (Gather.APSet P.n Bool)) (v : Gather.APSet P.n Bool)
     (hst : storeIn P (((p.stage r).brbBind1 i).deliverTo k mm) = some v) :
     toRound P (Function.update u j (c, p.deliverTo r k (.brbBind1 i mm)))
-        (w.writeGhost (ghostStep P) (Sum.inr (.gdlv r j k (.brbBind1 i mm)))) r
+        (w.writeGhost (ghostStep P) (Sum.inr (.gbcaDeliver r j k (.brbBind1 i mm)))) r
       = afterBindRet1 P (afterDlvBind1 P (toRound P u w r) i j k mm) i j v := by
   subst hu
-  rw [toRound_ghostId (Sum.inr (.gdlv r j k (.brbBind1 i mm))) (fun _ _ => rfl)]
+  rw [toRound_ghostId (Sum.inr (.gbcaDeliver r j k (.brbBind1 i mm))) (fun _ _ => rfl)]
   simp only [StageSideRecP.deliverTo, stageRecord_deliverTo, StageRec.deliverTo]
   rw [toRound_writeNoSent]
   refine roundStateAt_ext ?_ ?_ ?_ ?_
@@ -2150,8 +2151,8 @@ theorem toRound_dlvBind1_ret (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
 
 /-- **The round after a delivery in an input-broadcast instance of the second
 gather.** -/
-noncomputable def afterDlvIn2 (P : Params) (s : GBCA.ByAFW.LowPairState P.n)
-    (i j k : Fin P.n) (m : BRB.BMsg (Option Bool)) : GBCA.ByAFW.LowPairState P.n :=
+noncomputable def afterDlvIn2 (P : Params) (s : GBCA.ByAFW.RoundStateOverBracha P.n)
+    (i j k : Fin P.n) (m : BRB.BMsg (Option Bool)) : GBCA.ByAFW.RoundStateOverBracha P.n :=
   GBCA.ByAFW.setGa2 s
     (Gather.setBrbIn (GBCA.ByAFW.ga2 s)
       (Function.update (Gather.brbIn (GBCA.ByAFW.ga2 s)) i
@@ -2160,8 +2161,8 @@ noncomputable def afterDlvIn2 (P : Params) (s : GBCA.ByAFW.LowPairState P.n)
 /-- **The round after an input-broadcast instance of the second gather returns
 `v` to `j`**: the instance's return flag goes on at `j` and `j`'s gather
 store records the value. -/
-noncomputable def afterInRet2 (P : Params) (s : GBCA.ByAFW.LowPairState P.n)
-    (i j : Fin P.n) (v : Option Bool) : GBCA.ByAFW.LowPairState P.n :=
+noncomputable def afterInRet2 (P : Params) (s : GBCA.ByAFW.RoundStateOverBracha P.n)
+    (i j : Fin P.n) (v : Option Bool) : GBCA.ByAFW.RoundStateOverBracha P.n :=
   GBCA.ByAFW.setGa2 s
     (Gather.setBrbIn
       (Gather.setGa (GBCA.ByAFW.ga2 s)
@@ -2180,10 +2181,10 @@ theorem toRound_dlvIn2 (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
     (hst : storeIn P (((p.stage r).brbIn2 i).deliverTo k mm)
       = storeIn P ((p.stage r).brbIn2 i)) :
     toRound P (Function.update u j (c, p.deliverTo r k (.brbIn2 i mm)))
-        (w.writeGhost (ghostStep P) (Sum.inr (.gdlv r j k (.brbIn2 i mm)))) r
+        (w.writeGhost (ghostStep P) (Sum.inr (.gbcaDeliver r j k (.brbIn2 i mm)))) r
       = afterDlvIn2 P (toRound P u w r) i j k mm := by
   subst hu
-  rw [toRound_ghostId (Sum.inr (.gdlv r j k (.brbIn2 i mm))) (fun _ _ => rfl)]
+  rw [toRound_ghostId (Sum.inr (.gbcaDeliver r j k (.brbIn2 i mm))) (fun _ _ => rfl)]
   simp only [StageSideRecP.deliverTo, stageRecord_deliverTo, StageRec.deliverTo]
   rw [toRound_writeNoSent]
   refine roundStateAt_ext ?_ ?_ ?_ ?_
@@ -2235,10 +2236,10 @@ theorem toRound_dlvIn2_ret (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
     (mm : BRB.BMsg (Option Bool)) (v : Option Bool)
     (hst : storeIn P (((p.stage r).brbIn2 i).deliverTo k mm) = some v) :
     toRound P (Function.update u j (c, p.deliverTo r k (.brbIn2 i mm)))
-        (w.writeGhost (ghostStep P) (Sum.inr (.gdlv r j k (.brbIn2 i mm)))) r
+        (w.writeGhost (ghostStep P) (Sum.inr (.gbcaDeliver r j k (.brbIn2 i mm)))) r
       = afterInRet2 P (afterDlvIn2 P (toRound P u w r) i j k mm) i j v := by
   subst hu
-  rw [toRound_ghostId (Sum.inr (.gdlv r j k (.brbIn2 i mm))) (fun _ _ => rfl)]
+  rw [toRound_ghostId (Sum.inr (.gbcaDeliver r j k (.brbIn2 i mm))) (fun _ _ => rfl)]
   simp only [StageSideRecP.deliverTo, stageRecord_deliverTo, StageRec.deliverTo]
   rw [toRound_writeNoSent]
   refine roundStateAt_ext ?_ ?_ ?_ ?_
@@ -2290,8 +2291,9 @@ theorem toRound_dlvIn2_ret (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
 
 /-- **The round after a delivery in a bind-broadcast instance of the second
 gather.** -/
-noncomputable def afterDlvBind2 (P : Params) (s : GBCA.ByAFW.LowPairState P.n)
-    (i j k : Fin P.n) (m : BRB.BMsg (Gather.APSet P.n (Option Bool))) : GBCA.ByAFW.LowPairState P.n
+noncomputable def afterDlvBind2 (P : Params) (s : GBCA.ByAFW.RoundStateOverBracha P.n)
+    (i j k : Fin P.n) (m : BRB.BMsg (Gather.APSet P.n (Option Bool))) :
+      GBCA.ByAFW.RoundStateOverBracha P.n
       :=
   GBCA.ByAFW.setGa2 s
     (Gather.setBrbBind (GBCA.ByAFW.ga2 s)
@@ -2301,8 +2303,8 @@ noncomputable def afterDlvBind2 (P : Params) (s : GBCA.ByAFW.LowPairState P.n)
 /-- **The round after a bind-broadcast instance of the second gather returns
 `v` to `j`**: the instance's return flag goes on at `j` and `j`'s gather
 store records the value. -/
-noncomputable def afterBindRet2 (P : Params) (s : GBCA.ByAFW.LowPairState P.n)
-    (i j : Fin P.n) (v : Gather.APSet P.n (Option Bool)) : GBCA.ByAFW.LowPairState P.n :=
+noncomputable def afterBindRet2 (P : Params) (s : GBCA.ByAFW.RoundStateOverBracha P.n)
+    (i j : Fin P.n) (v : Gather.APSet P.n (Option Bool)) : GBCA.ByAFW.RoundStateOverBracha P.n :=
   GBCA.ByAFW.setGa2 s
     (Gather.setBrbBind
       (Gather.setGa (GBCA.ByAFW.ga2 s)
@@ -2321,10 +2323,10 @@ theorem toRound_dlvBind2 (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
     (hst : storeIn P (((p.stage r).brbBind2 i).deliverTo k mm)
       = storeIn P ((p.stage r).brbBind2 i)) :
     toRound P (Function.update u j (c, p.deliverTo r k (.brbBind2 i mm)))
-        (w.writeGhost (ghostStep P) (Sum.inr (.gdlv r j k (.brbBind2 i mm)))) r
+        (w.writeGhost (ghostStep P) (Sum.inr (.gbcaDeliver r j k (.brbBind2 i mm)))) r
       = afterDlvBind2 P (toRound P u w r) i j k mm := by
   subst hu
-  rw [toRound_ghostId (Sum.inr (.gdlv r j k (.brbBind2 i mm))) (fun _ _ => rfl)]
+  rw [toRound_ghostId (Sum.inr (.gbcaDeliver r j k (.brbBind2 i mm))) (fun _ _ => rfl)]
   simp only [StageSideRecP.deliverTo, stageRecord_deliverTo, StageRec.deliverTo]
   rw [toRound_writeNoSent]
   refine roundStateAt_ext ?_ ?_ ?_ ?_
@@ -2376,10 +2378,10 @@ theorem toRound_dlvBind2_ret (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
     (mm : BRB.BMsg (Gather.APSet P.n (Option Bool))) (v : Gather.APSet P.n (Option Bool))
     (hst : storeIn P (((p.stage r).brbBind2 i).deliverTo k mm) = some v) :
     toRound P (Function.update u j (c, p.deliverTo r k (.brbBind2 i mm)))
-        (w.writeGhost (ghostStep P) (Sum.inr (.gdlv r j k (.brbBind2 i mm)))) r
+        (w.writeGhost (ghostStep P) (Sum.inr (.gbcaDeliver r j k (.brbBind2 i mm)))) r
       = afterBindRet2 P (afterDlvBind2 P (toRound P u w r) i j k mm) i j v := by
   subst hu
-  rw [toRound_ghostId (Sum.inr (.gdlv r j k (.brbBind2 i mm))) (fun _ _ => rfl)]
+  rw [toRound_ghostId (Sum.inr (.gbcaDeliver r j k (.brbBind2 i mm))) (fun _ _ => rfl)]
   simp only [StageSideRecP.deliverTo, stageRecord_deliverTo, StageRec.deliverTo]
   rw [toRound_writeNoSent]
   refine roundStateAt_ext ?_ ?_ ?_ ?_
@@ -2728,7 +2730,7 @@ theorem toRound_otherRow (hu : (u j).2 = p) {r r' : ℕ} (hr : r' ≠ r)
 
 /-- A send of round `r`, read at another round. -/
 theorem toRound_other (hu : (u j).2 = p) {r r' : ℕ} (hr : r' ≠ r) (sr : StageRec P.n)
-    (m : Msg P.n) {L : NLabP P.n (Msg P.n)} (hL : roundOf L = some r) :
+    (m : Msg P.n) {L : ExtendedLabel P.n (Msg P.n)} (hL : roundOf L = some r) :
     toRound P (Function.update u j (c, p.setStage r sr))
         ((w.gsent r j m).writeGhost (ghostStep P) L) r' = toRound P u w r' := by
   rw [toRound_writeGhost_ne _ _ hL hr]
@@ -2736,7 +2738,7 @@ theorem toRound_other (hu : (u j).2 = p) {r r' : ℕ} (hr : r' ≠ r) (sr : Stag
 
 /-- A row of round `r` that records nothing, read at another round. -/
 theorem toRound_otherNoSent (hu : (u j).2 = p) {r r' : ℕ} (hr : r' ≠ r)
-    (sr : StageRec P.n) {L : NLabP P.n (Msg P.n)} (hL : roundOf L = some r) :
+    (sr : StageRec P.n) {L : ExtendedLabel P.n (Msg P.n)} (hL : roundOf L = some r) :
     toRound P (Function.update u j (c, p.setStage r sr))
         (w.writeGhost (ghostStep P) L) r' = toRound P u w r' := by
   rw [toRound_writeGhost_ne _ _ hL hr]
@@ -2745,7 +2747,7 @@ theorem toRound_otherNoSent (hu : (u j).2 = p) {r r' : ℕ} (hr : r' ≠ r)
 /-- A Byzantine injection of round `r`, read at another round. -/
 theorem toRound_otherSent (u : ∀ _ : Fin P.n, AFW.ProcRec P.n) (w : NetState P.n)
     {r r' : ℕ} (hr : r' ≠ r) (k : Fin P.n) (m : Msg P.n)
-    {L : NLabP P.n (Msg P.n)} (hL : roundOf L = some r) :
+    {L : ExtendedLabel P.n (Msg P.n)} (hL : roundOf L = some r) :
     toRound P u ((w.gsent r k m).writeGhost (ghostStep P) L) r' = toRound P u w r' := by
   rw [toRound_writeGhost_ne _ _ hL hr]
   simp only [toRound, toGa1, toGa2, gsent_sent_ne w r k m hr, gsent_F, gsent_ghostRec]
@@ -2753,7 +2755,8 @@ theorem toRound_otherSent (u : ∀ _ : Fin P.n, AFW.ProcRec P.n) (w : NetState P
 /-- **The whole family of rounds after a send**: the round the row names moves,
 the rest stand still. -/
 theorem toRoundFam (hu : (u j).2 = p) (r : ℕ) (sr : StageRec P.n) (m : Msg P.n)
-    {L : NLabP P.n (Msg P.n)} (hL : roundOf L = some r) (X : GBCA.ByAFW.LowPairState P.n)
+    {L : ExtendedLabel P.n (Msg P.n)} (hL : roundOf L = some r) (X : GBCA.ByAFW.RoundStateOverBracha
+      P.n)
     (hX : toRound P (Function.update u j (c, p.setStage r sr))
       ((w.gsent r j m).writeGhost (ghostStep P) L) r = X) :
     (fun r' => toRound P (Function.update u j (c, p.setStage r sr))
@@ -2766,7 +2769,8 @@ theorem toRoundFam (hu : (u j).2 = p) (r : ℕ) (sr : StageRec P.n) (m : Msg P.n
 
 /-- The same, for a row that records nothing. -/
 theorem toRoundFamNoSent (hu : (u j).2 = p) (r : ℕ) (sr : StageRec P.n)
-    {L : NLabP P.n (Msg P.n)} (hL : roundOf L = some r) (X : GBCA.ByAFW.LowPairState P.n)
+    {L : ExtendedLabel P.n (Msg P.n)} (hL : roundOf L = some r) (X : GBCA.ByAFW.RoundStateOverBracha
+      P.n)
     (hX : toRound P (Function.update u j (c, p.setStage r sr))
       (w.writeGhost (ghostStep P) L) r = X) :
     (fun r' => toRound P (Function.update u j (c, p.setStage r sr))
@@ -2779,8 +2783,8 @@ theorem toRoundFamNoSent (hu : (u j).2 = p) (r : ℕ) (sr : StageRec P.n)
 
 /-- The same, for a Byzantine injection. -/
 theorem toRoundFamSent (u : ∀ _ : Fin P.n, AFW.ProcRec P.n) (w : NetState P.n) (r : ℕ)
-    (k : Fin P.n) (m : Msg P.n) {L : NLabP P.n (Msg P.n)} (hL : roundOf L = some r)
-    (X : GBCA.ByAFW.LowPairState P.n)
+    (k : Fin P.n) (m : Msg P.n) {L : ExtendedLabel P.n (Msg P.n)} (hL : roundOf L = some r)
+    (X : GBCA.ByAFW.RoundStateOverBracha P.n)
     (hX : toRound P u ((w.gsent r k m).writeGhost (ghostStep P) L) r = X) :
     (fun r' => toRound P u ((w.gsent r k m).writeGhost (ghostStep P) L) r')
       = Function.update (fun r' => toRound P u w r') r X := by
@@ -2795,30 +2799,30 @@ end Rows
 
 `StoreInv` and `BoundInv` are the conjuncts of `AFW.ProtocolRel` that no
 frame lemma supplies. Each survives a row instance by instance: a broadcast
-instance either stands still or takes a row of `BRB.ImplStep`, which
+instance either stands still or takes a row of `BRB.BrachaStep`, which
 `BRB.Inv.step` carries, and a process's second-gather local input is written at
 the link alone. -/
 
 section Invariants
 
 /-- One broadcast instance's move across a row: it stands still, or it takes a
-row of `BRB.ImplStep`. -/
+row of `BRB.BrachaStep`. -/
 def InvStep (P : Params) {M : Type} [DecidableEq M] (ldr : Fin P.n)
-    (s s' : BRB.ImplState P.n M) : Prop :=
-  s' = s ∨ ∃ l, BRB.ImplStep P ldr s l (PMF.pure s')
+    (s s' : BRB.BrachaState P.n M) : Prop :=
+  s' = s ∨ ∃ l, BRB.BrachaStep P ldr s l (PMF.pure s')
 
 /-- An instance that stands still. -/
 theorem InvStep.stand {M : Type} [DecidableEq M] (P : Params) (ldr : Fin P.n)
-    (s : BRB.ImplState P.n M) : InvStep P ldr s s := Or.inl rfl
+    (s : BRB.BrachaState P.n M) : InvStep P ldr s s := Or.inl rfl
 
 /-- An instance that takes a row. -/
 theorem InvStep.row {M : Type} [DecidableEq M] {P : Params} {ldr : Fin P.n}
-    {s s' : BRB.ImplState P.n M} {l : BRB.Lab P.n M}
-    (h : BRB.ImplStep P ldr s l (PMF.pure s')) : InvStep P ldr s s' := Or.inr ⟨l, h⟩
+    {s s' : BRB.BrachaState P.n M} {l : BRB.Label P.n M}
+    (h : BRB.BrachaStep P ldr s l (PMF.pure s')) : InvStep P ldr s s' := Or.inr ⟨l, h⟩
 
 /-- **The broadcast invariant survives one instance's move.** -/
 theorem InvStep.inv {M : Type} [DecidableEq M] {P : Params} {ldr : Fin P.n}
-    {s s' : BRB.ImplState P.n M} (h : InvStep P ldr s s') (hInv : BRB.Inv P ldr s) :
+    {s s' : BRB.BrachaState P.n M} (h : InvStep P ldr s s') (hInv : BRB.Inv P ldr s) :
     BRB.Inv P ldr s' := by
   rcases h with rfl | ⟨l, hl⟩
   · exact hInv
@@ -2827,8 +2831,8 @@ theorem InvStep.inv {M : Type} [DecidableEq M] {P : Params} {ldr : Fin P.n}
 /-- A row that moves one instance of a family: that instance takes its row and
 every other instance stands still. -/
 theorem invStep_update {M : Type} [DecidableEq M] {P : Params}
-    (b : Fin P.n → BRB.ImplState P.n M) (i : Fin P.n) (s' : BRB.ImplState P.n M)
-    {l : BRB.Lab P.n M} (h : BRB.ImplStep P i (b i) l (PMF.pure s')) (k : Fin P.n) :
+    (b : Fin P.n → BRB.BrachaState P.n M) (i : Fin P.n) (s' : BRB.BrachaState P.n M)
+    {l : BRB.Label P.n M} (h : BRB.BrachaStep P i (b i) l (PMF.pure s')) (k : Fin P.n) :
     InvStep P k (b k) (Function.update b i s' k) := by
   by_cases hk : k = i
   · subst hk; rw [Function.update_self]; exact InvStep.row h
@@ -2837,7 +2841,7 @@ theorem invStep_update {M : Type} [DecidableEq M] {P : Params}
 variable {u x : ∀ _ : Fin P.n, AFW.ProcRec P.n} {w v : NetState P.n}
 
 /-- **The broadcast invariant survives a row**: at each of a round's `4n`
-instances the state after the row is the state before it or a `BRB.ImplStep`
+instances the state after the row is the state before it or a `BRB.BrachaStep`
 successor of it. -/
 theorem storeInv_of (hI : StoreInv P u w)
     (h1 : ∀ r k, InvStep P k (Gather.brbIn (GBCA.ByAFW.ga1 (toRound P u w r)) k)
@@ -2862,7 +2866,7 @@ second-gather local input where it stands and writes the ghost through
 `AFW.ghostStep`. -/
 theorem boundInv_writeGhost (hI : BoundInv P u w)
     (hx : ∀ i r, (((x i).2.stage r).ga2.proc).input = (((u i).2.stage r).ga2.proc).input)
-    (hv : ∀ r, v.ghostRec r = w.ghostRec r) (L : NLabP P.n (Msg P.n)) :
+    (hv : ∀ r, v.ghostRec r = w.ghostRec r) (L : ExtendedLabel P.n (Msg P.n)) :
     BoundInv P x (v.writeGhost (ghostStep P) L) :=
   boundInv_of hI hx (fun r h => writeGhost_bound L (by rw [hv r]; exact h))
 

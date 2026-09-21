@@ -1,5 +1,6 @@
 % The gather-based round and its three substitutions
-% (PLTS.ABA.GBCA.ByAFW.lowPairInst, idealInst, pairInst, GBCA.specInst).
+% (PLTS.ABA.GBCA.ByAFW.roundOverBracha, roundOverBroadcastSpecification,
+% roundOverGatherSpecifications, GBCA.specInst).
 % The bottom tier is drawn open: n programs beside the layer's network, in
 % parallel with two gather instances, each n programs beside the gather network
 % in parallel with 2n Bracha instances, so 4n + 2 networks in one round.
@@ -17,7 +18,7 @@
   % ---- the bottom tier, drawn open
   \draw[dashed, rounded corners] (-0.35,-5.75) rectangle (11.05,-0.15);
   \node[font=\scriptsize, anchor=west] at (-0.2,-0.45)
-    {$\mathrm{lowPairInst}(P,r)$: programs, the layer's network, two gather instances, all concrete};
+    {$\mathrm{roundOverBracha}(P,r)$: programs, the layer's network, two gather instances, all concrete};
   % the layer
   \node[prog, anchor=north west, text width=5.0cm] at (0.05,-0.75)
     {graded-agreement programs $1 \cdots n$:\\ input, candidate, grade, return flag};
@@ -44,9 +45,9 @@
     {each Bracha instance $n$ programs beside its network; $4n + 2$ networks in one round};
   % ---- the three tiers above it
   \node[tier] (ideal) at (5.35,-6.5)
-    {$\mathrm{idealInst}(P,r)$: each Bracha instance replaced by the BRB specification};
+    {$\mathrm{roundOverBroadcastSpecification}(P,r)$: each Bracha instance replaced by the BRB specification};
   \node[tier] (pair)  at (5.35,-7.7)
-    {$\mathrm{pairInst}(P,r)$: each gather instance replaced by the gather specification};
+    {$\mathrm{roundOverGatherSpecifications}(P,r)$: each gather instance replaced by the gather specification};
   \node[tier] (spec)  at (5.35,-8.9)
     {$\mathrm{GBCA.specInst}(P,r)$: Transition System 2};
   \draw[->] (5.35,-5.75) -- (ideal.north)

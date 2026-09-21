@@ -201,7 +201,7 @@ other round's record stands still. -/
 private theorem rel_setBound {P : Params} {G : ℕ → GBCA.ByABDY.ImplState P.n}
     {w : NetState P.n} (hG : ∀ r', (G r').2 = ⟨w.sent r', w.F, w.ghostRec r'⟩)
     (r : ℕ) (bnd : Bool) (u : ∀ _ : Fin P.n, GBCA.ByABDY.StageRec P.n)
-    (hfix : (w.ghostRec r).getD bnd = bnd) {L : NLab P.n}
+    (hfix : (w.ghostRec r).getD bnd = bnd) {L : ExtendedLabel P.n}
     (hself : (w.writeGhost (abdyGhostStep P) L).ghostRec r
       = some ((w.ghostRec r).getD bnd))
     (hne : ∀ r', r' ≠ r →
@@ -276,12 +276,12 @@ private theorem match_vis (P : Params) {x : ∀ _ : Fin P.n, ProcRec P.n}
     {w' : NetState P.n} {o : ℕ → WCC.SpecState P.n}
     {ω : PMF (ℕ → WCC.SpecState P.n)}
     {G G' : ℕ → GBCA.ByABDY.ImplState P.n} {C C' : ∀ _ : Fin P.n, CoreRec P.n}
-    {A A' : ANetState P.n} {L : NLab P.n} (hL : L ≠ Silent.τ)
+    {A A' : ANetState P.n} {L : ExtendedLabel P.n} (hL : L ≠ Silent.τ)
     (hrel : ∀ o' ∈ ω.support, ProtocolRel P (x, w', o') (G', C', A', o'))
-    (hGs : (GBCA.ByABDY.gbcaSide P).step G L (PMF.pure G'))
-    (hCs : ∀ i, CoreProcStepN P i (C i) L (PMF.pure (C' i)))
-    (hAs : ANetStep P A L (PMF.pure A'))
-    (hWs : (wccLift P).step o L ω) :
+    (hGs : (GBCA.ByABDY.gbcaInstanceFamily P).step G L (PMF.pure G'))
+    (hCs : ∀ i, RoundLoopStep P i (C i) L (PMF.pure (C' i)))
+    (hAs : ABANetworkStep P A L (PMF.pure A'))
+    (hWs : (coinOverRoundAlphabet P).step o L ω) :
     ∃ Ω : PMF (PMF (ComposedState P)),
       PMFRel (diracRel (ProtocolRel P))
         (prodPMF (PMF.pure x) (prodPMF (PMF.pure w') ω)) Ω ∧
@@ -296,17 +296,17 @@ private theorem match_round (P : Params) {x : ∀ _ : Fin P.n, ProcRec P.n}
     {G : ℕ → GBCA.ByABDY.ImplState P.n} {C : ∀ _ : Fin P.n, CoreRec P.n}
     {A : ANetState P.n} {r : ℕ} {X : GBCA.ByABDY.ImplState P.n} (hν : ν = PMF.pure o)
     (hrel : ProtocolRel P (x, w', o) (Function.update G r X, C, A, o))
-    (hsub : (GBCA.ByABDY.sub P r).step (G r) (Sum.inl Lab.tau) (PMF.pure X)) :
+    (hsub : (GBCA.ByABDY.composition P r).step (G r) (Sum.inl Label.tau) (PMF.pure X)) :
     ∃ Ω : PMF (PMF (ComposedState P)),
       PMFRel (diracRel (ProtocolRel P))
         (prodPMF (PMF.pure x) (prodPMF (PMF.pure w') ν)) Ω ∧
-      (composedGroup P).step (G, C, A, o) Lab.tau (Ω.bind id) := by
+      (composedGroup P).step (G, C, A, o) Label.tau (Ω.bind id) := by
   subst hν
   obtain ⟨Ω, hr, hbind⟩ := match_pure P hrel
   refine ⟨Ω, ?_, ?_⟩
   · rw [prodPMF_pure_pure, prodPMF_pure_pure]; exact hr
   · rw [hbind]
-    exact composedGroup_of_tau P (composedPre_tau_gbca P (gbcaSide_tau P G r hsub))
+    exact composedGroup_of_tau P (composedPre_tau_gbca P (gbcaInstanceFamily_tau P G r hsub))
 
 /-! ### The handshake rows the protocol process group cannot take
 
@@ -332,59 +332,60 @@ theorem match_event (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
     {w : NetState P.n} {o : ℕ → WCC.SpecState P.n}
     {G : ℕ → GBCA.ByABDY.ImplState P.n} {C : ∀ _ : Fin P.n, CoreRec P.n}
     {A : ANetState P.n} (hR : ProtocolRel P (procs, w, o) (G, C, A, o))
-    (e : NetEvt P.n) {μ : PMF (ProtocolState P)}
-    (h : (protocolPre P).step (procs, w, o) (Sum.inr e) μ) :
+    (e : NetworkEvent P.n) {μ : PMF (ProtocolState P)}
+    (h : (protocolExtended P).step (procs, w, o) (Sum.inr e) μ) :
     ∃ Ω : PMF (PMF (ComposedState P)),
       PMFRel (diracRel (ProtocolRel P)) μ Ω ∧
-      (composedGroup P).step (G, C, A, o) Lab.tau (Ω.bind id) := by
+      (composedGroup P).step (G, C, A, o) Label.tau (Ω.bind id) := by
   obtain ⟨hC, -, hA, hG, hst⟩ := (protocolRel_mk P _ _ _ _ _ _ _).mp hR
   have hCeq : ∀ i, C i = (procs i).1 := fun i => (hC i).symm
-  obtain ⟨x, w', ν, hall, hn, hWs, rfl⟩ := protocolPre_event_inv P h
-  have hLne : (Sum.inr e : NLab P.n) ≠ Silent.τ := by simp
+  obtain ⟨x, w', ν, hall, hn, hWs, rfl⟩ := protocolExtended_event_inv P h
+  have hLne : (Sum.inr e : ExtendedLabel P.n) ≠ Silent.τ := by simp
   have hvis : ∀ {G' : ℕ → GBCA.ByABDY.ImplState P.n} {A' : ANetState P.n},
       (∀ o' ∈ ν.support, ProtocolRel P (x, w', o') (G', fun i => (x i).1, A', o')) →
-      (GBCA.ByABDY.gbcaSide P).step G (Sum.inr e) (PMF.pure G') →
-      (∀ i, CoreProcStepN P i (C i) (Sum.inr e) (PMF.pure ((x i).1))) →
-      ANetStep P A (Sum.inr e) (PMF.pure A') →
+      (GBCA.ByABDY.gbcaInstanceFamily P).step G (Sum.inr e) (PMF.pure G') →
+      (∀ i, RoundLoopStep P i (C i) (Sum.inr e) (PMF.pure ((x i).1))) →
+      ABANetworkStep P A (Sum.inr e) (PMF.pure A') →
       ∃ Ω : PMF (PMF (ComposedState P)),
         PMFRel (diracRel (ProtocolRel P))
           (prodPMF (PMF.pure x) (prodPMF (PMF.pure w') ν)) Ω ∧
-        (composedGroup P).step (G, C, A, o) Lab.tau (Ω.bind id) := by
+        (composedGroup P).step (G, C, A, o) Label.tau (Ω.bind id) := by
     intro G' A' hrel hGs hCs hAs
     obtain ⟨Ω, hr, hs⟩ := match_vis P hLne hrel hGs hCs hAs hWs
     exact ⟨Ω, hr, composedGroup_of_event P e hs⟩
   cases e with
-  | gsnd r j m =>
+  | gbcaSend r j m =>
     obtain rfl : ν = PMF.pure o :=
-      (System.mapIdle_step_none (wccPull_gsnd r j m) ν).mp hWs
-    obtain rfl : w' = w.gsent r j m := by simpa using pureN_inj (netStep_gsnd hn)
+      (System.mapIdle_step_none (coinLabelMap_gbcaSend r j m) ν).mp hWs
+    obtain rfl : w' = w.gsent r j m := by simpa using pureN_inj (netStep_gbcaSend hn)
     have hcol : (G r).1 j = (procs j).2.stage r := hst j r
     have hstage : ∃ nd : GBCA.ByABDY.StageRec P.n,
-        GBCA.ByABDY.GProcStep P r j ((G r).1 j) (Sum.inr (GBCA.ByABDY.GEvt.snd j m)) (PMF.pure nd) ∧
+        GBCA.ByABDY.GBCAProgramStep P r j ((G r).1 j) (Sum.inr (GBCA.ByABDY.GBCAEvent.send j m))
+          (PMF.pure nd) ∧
         x j = ((procs j).1, (procs j).2.setStage r nd) := by
       cases m with
       | input b =>
-        obtain ⟨-, -, hin, hcnt, hsend, hxid⟩ := stepN_gsnd_input_self (hall j)
-        exact ⟨_, GBCA.ByABDY.GProcStep.sndRelay _ b (by rw [hcol]; exact hin)
+        obtain ⟨-, -, hin, hcnt, hsend, hxid⟩ := stepN_gbcaSend_input_self (hall j)
+        exact ⟨_, GBCA.ByABDY.GBCAProgramStep.sndRelay _ b (by rw [hcol]; exact hin)
           (by rw [hcol]; exact hcnt) (by rw [hcol]; exact hsend),
           by rw [hcol]; exact pureN_inj hxid⟩
       | echo b =>
-        obtain ⟨-, -, hin, hcnt, hsend, hxid⟩ := stepN_gsnd_echo_self (hall j)
-        exact ⟨_, GBCA.ByABDY.GProcStep.sndEcho _ b (by rw [hcol]; exact hin)
+        obtain ⟨-, -, hin, hcnt, hsend, hxid⟩ := stepN_gbcaSend_echo_self (hall j)
+        exact ⟨_, GBCA.ByABDY.GBCAProgramStep.sndEcho _ b (by rw [hcol]; exact hin)
           (by rw [hcol]; exact hcnt) (by rw [hcol]; exact hsend),
           by rw [hcol]; exact pureN_inj hxid⟩
       | vote v =>
         cases v with
         | some b =>
-          obtain ⟨-, -, hin, hcnt, hsend, hxid⟩ := stepN_gsnd_voteBit_self (hall j)
-          exact ⟨_, GBCA.ByABDY.GProcStep.sndVoteBit _ b (by rw [hcol]; exact hin)
+          obtain ⟨-, -, hin, hcnt, hsend, hxid⟩ := stepN_gbcaSend_voteBit_self (hall j)
+          exact ⟨_, GBCA.ByABDY.GBCAProgramStep.sndVoteBit _ b (by rw [hcol]; exact hin)
             (by rw [hcol]; exact hcnt)
             (by rw [hcol]; exact hsend),
             by rw [hcol]; exact pureN_inj hxid⟩
         | none =>
           obtain ⟨-, -, hin, hnot, hcnt, hval, hsend, hxid⟩ :=
-            stepN_gsnd_voteBot_self (hall j)
-          exact ⟨_, GBCA.ByABDY.GProcStep.sndVoteBot _ (by rw [hcol]; exact hin)
+            stepN_gbcaSend_voteBot_self (hall j)
+          exact ⟨_, GBCA.ByABDY.GBCAProgramStep.sndVoteBot _ (by rw [hcol]; exact hin)
             (by rw [hcol]; exact hnot)
             (by rw [hcol]; exact hcnt) (by rw [hcol]; exact hval)
             (by rw [hcol]; exact hsend),
@@ -392,15 +393,15 @@ theorem match_event (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
       | bind v =>
         cases v with
         | some b =>
-          obtain ⟨-, -, hin, hlv, hcnt, hsend, hxid⟩ := stepN_gsnd_bindBit_self (hall j)
-          exact ⟨_, GBCA.ByABDY.GProcStep.sndBindBit _ b (by rw [hcol]; exact hin)
+          obtain ⟨-, -, hin, hlv, hcnt, hsend, hxid⟩ := stepN_gbcaSend_bindBit_self (hall j)
+          exact ⟨_, GBCA.ByABDY.GBCAProgramStep.sndBindBit _ b (by rw [hcol]; exact hin)
             (by rw [hcol]; exact hlv) (by rw [hcol]; exact hcnt)
             (by rw [hcol]; exact hsend),
             by rw [hcol]; exact pureN_inj hxid⟩
         | none =>
           obtain ⟨-, -, hin, hlv, hnot, hcnt, hval, hsend, hxid⟩ :=
-            stepN_gsnd_bindBot_self (hall j)
-          exact ⟨_, GBCA.ByABDY.GProcStep.sndBindBot _ (by rw [hcol]; exact hin)
+            stepN_gbcaSend_bindBot_self (hall j)
+          exact ⟨_, GBCA.ByABDY.GBCAProgramStep.sndBindBot _ (by rw [hcol]; exact hin)
             (by rw [hcol]; exact hlv) (by rw [hcol]; exact hnot)
             (by rw [hcol]; exact hcnt) (by rw [hcol]; exact hval)
             (by rw [hcol]; exact hsend),
@@ -408,22 +409,22 @@ theorem match_event (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
       | «echo5» v =>
         cases v with
         | some b =>
-          obtain ⟨-, -, hin, hlv, hcnt, hsend, hxid⟩ := stepN_gsnd_echo5Bit_self (hall j)
-          exact ⟨_, GBCA.ByABDY.GProcStep.sndEcho5Bit _ b (by rw [hcol]; exact hin)
+          obtain ⟨-, -, hin, hlv, hcnt, hsend, hxid⟩ := stepN_gbcaSend_echo5Bit_self (hall j)
+          exact ⟨_, GBCA.ByABDY.GBCAProgramStep.sndEcho5Bit _ b (by rw [hcol]; exact hin)
             (by rw [hcol]; exact hlv) (by rw [hcol]; exact hcnt)
             (by rw [hcol]; exact hsend),
             by rw [hcol]; exact pureN_inj hxid⟩
         | none =>
           obtain ⟨-, -, hin, hlv, hnot, hcnt, hval, hsend, hxid⟩ :=
-            stepN_gsnd_echo5Bot_self (hall j)
-          exact ⟨_, GBCA.ByABDY.GProcStep.sndEcho5Bot _ (by rw [hcol]; exact hin)
+            stepN_gbcaSend_echo5Bot_self (hall j)
+          exact ⟨_, GBCA.ByABDY.GBCAProgramStep.sndEcho5Bot _ (by rw [hcol]; exact hin)
             (by rw [hcol]; exact hlv) (by rw [hcol]; exact hnot)
             (by rw [hcol]; exact hcnt) (by rw [hcol]; exact hval)
             (by rw [hcol]; exact hsend),
             by rw [hcol]; exact pureN_inj hxid⟩
     obtain ⟨nd, hrow, hx⟩ := hstage
     have hfor : ∀ i, i ≠ j → x i = procs i := fun i hi =>
-      pureN_inj (stepN_gsnd_foreign (Ne.symm hi) (hall i))
+      pureN_inj (stepN_gbcaSend_foreign (Ne.symm hi) (hall i))
     have hGfor : ∀ i r', i ≠ j →
         ((Function.update G r
           (Function.update ((G r).1) j nd, ((G r).2).gsent j m)) r').1 i =
@@ -449,21 +450,21 @@ theorem match_event (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
     have h5 := rel_stage P j hst hfor hGfor hown
     exact match_round P rfl ((protocolRel_mk P _ _ _ _ _ _ _).mpr
       ⟨hxcore, rfl, by simpa using hA, rel_gsent hG r j m _, h5⟩)
-      (GBCA.ByABDY.sub_event_step P r (GBCA.ByABDY.GEvt.snd j m)
+      (GBCA.ByABDY.composition_event_step P r (GBCA.ByABDY.GBCAEvent.send j m)
         (gprocs_family j nd hrow
-          (fun i hi => GBCA.ByABDY.GProcStep.sndIdle _ j m (Ne.symm hi)))
-        (GBCA.ByABDY.GNetStep.snd _ j m))
-  | gdlv r i k m =>
+          (fun i hi => GBCA.ByABDY.GBCAProgramStep.sndIdle _ j m (Ne.symm hi)))
+        (GBCA.ByABDY.GBCANetworkStep.send _ j m))
+  | gbcaDeliver r i k m =>
     obtain rfl : ν = PMF.pure o :=
-      (System.mapIdle_step_none (wccPull_gdlv r i k m) ν).mp hWs
-    obtain ⟨hmem, hw⟩ := netStep_gdlv hn
+      (System.mapIdle_step_none (coinLabelMap_gbcaDeliver r i k m) ν).mp hWs
+    obtain ⟨hmem, hw⟩ := netStep_gbcaDeliver hn
     obtain rfl : w' = w := by simpa using pureN_inj hw
-    obtain ⟨-, -, hxid⟩ := stepN_gdlv_self (hall i)
+    obtain ⟨-, -, hxid⟩ := stepN_gbcaDeliver_self (hall i)
     have hcol : (G r).1 i = (procs i).2.stage r := hst i r
     have hx : x i = ((procs i).1, (procs i).2.setStage r (((G r).1 i).deliverTo k m)) := by
       rw [hcol]; exact pureN_inj hxid
     have hfor : ∀ i', i' ≠ i → x i' = procs i' := fun i' hi' =>
-      pureN_inj (stepN_gdlv_foreign (Ne.symm hi') (hall i'))
+      pureN_inj (stepN_gbcaDeliver_foreign (Ne.symm hi') (hall i'))
     have hGfor : ∀ i' r', i' ≠ i →
         ((Function.update G r
           (Function.update ((G r).1) i (((G r).1 i).deliverTo k m), (G r).2)) r').1 i' =
@@ -489,50 +490,50 @@ theorem match_event (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
     have h5 := rel_stage P i hst hfor hGfor hown
     exact match_round P rfl ((protocolRel_mk P _ _ _ _ _ _ _).mpr
       ⟨hxcore, rfl, hA, fun r' => by rw [update_snd G r _ r']; exact hG r', h5⟩)
-      (GBCA.ByABDY.sub_event_step P r (GBCA.ByABDY.GEvt.dlv i k m)
-        (gprocs_family i _ (GBCA.ByABDY.GProcStep.dlvRecv _ k m)
-          (fun i' hi' => GBCA.ByABDY.GProcStep.dlvIdle _ i k m (Ne.symm hi')))
-        (GBCA.ByABDY.GNetStep.dlv _ i k m (by rw [hG r]; exact hmem)))
-  | dsnd j b =>
-    obtain ⟨hdp, hw⟩ := netStep_dsnd hn
+      (GBCA.ByABDY.composition_event_step P r (GBCA.ByABDY.GBCAEvent.deliver i k m)
+        (gprocs_family i _ (GBCA.ByABDY.GBCAProgramStep.dlvRecv _ k m)
+          (fun i' hi' => GBCA.ByABDY.GBCAProgramStep.dlvIdle _ i k m (Ne.symm hi')))
+        (GBCA.ByABDY.GBCANetworkStep.deliver _ i k m (by rw [hG r]; exact hmem)))
+  | decidedSend j b =>
+    obtain ⟨hdp, hw⟩ := netStep_decidedSend hn
     obtain rfl : w' = w.dput j b := pureN_inj hw
     have hx : ∀ i, x i = procs i := by
       intro i
       by_cases hi : i = j
       · subst hi
-        rcases stepN_dsnd_self (hall i) with ⟨-, -, -, hdx⟩ | ⟨-, hdx⟩ <;>
+        rcases stepN_decidedSend_self (hall i) with ⟨-, -, -, hdx⟩ | ⟨-, hdx⟩ <;>
           exact pureN_inj hdx
-      · exact pureN_inj (stepN_dsnd_foreign (Ne.symm hi) (hall i))
+      · exact pureN_inj (stepN_decidedSend_foreign (Ne.symm hi) (hall i))
     have h5 := rel_none P (G' := G) hst hx (fun _ _ => rfl)
     refine hvis (A' := A.dput j b) (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, by rw [hA]; simp [ANetState.dput, NetState.dput],
         fun r => by rw [hG r]; simp [NetState.dput], h5⟩)
-      (gbcaSide_idle P G hLne (by simp) not_false) (fun i => ?_)
-      (ANetStep.dsnd A j b (by rw [hA]; exact hdp))
+      (gbcaInstanceFamily_idle P G hLne (by simp) not_false) (fun i => ?_)
+      (ABANetworkStep.decidedSend A j b (by rw [hA]; exact hdp))
     rw [hCeq i, hx i]
     by_cases hi : i = j
     · subst hi
-      rcases stepN_dsnd_self (hall i) with ⟨hh, -, hdcnt, -⟩ | ⟨hh, -⟩
-      · exact CoreProcStepN.dsndRelay _ b hh hdcnt
-      · exact CoreProcStepN.corruptedIdle _ _ hh (by simp) not_false
-    · exact CoreProcStepN.dsndIdle _ j b (Ne.symm hi)
-  | ddlv i k b =>
-    obtain ⟨hdp, hw⟩ := netStep_ddlv hn
+      rcases stepN_decidedSend_self (hall i) with ⟨hh, -, hdcnt, -⟩ | ⟨hh, -⟩
+      · exact RoundLoopStep.dsndRelay _ b hh hdcnt
+      · exact RoundLoopStep.corruptedIdle _ _ hh (by simp) not_false
+    · exact RoundLoopStep.dsndIdle _ j b (Ne.symm hi)
+  | decidedDeliver i k b =>
+    obtain ⟨hdp, hw⟩ := netStep_decidedDeliver hn
     obtain rfl : w' = w := pureN_inj hw
-    obtain ⟨hhd, hnotin, hxid⟩ := stepN_ddlv_self (hall i)
+    obtain ⟨hhd, hnotin, hxid⟩ := stepN_decidedDeliver_self (hall i)
     have hx : x i = ((procs i).1.recvDec k b, (procs i).2) := pureN_inj hxid
     have hfor : ∀ i', i' ≠ i → x i' = procs i' := fun i' hi' =>
-      pureN_inj (stepN_ddlv_foreign (Ne.symm hi') (hall i'))
+      pureN_inj (stepN_decidedDeliver_foreign (Ne.symm hi') (hall i'))
     have hown : ∀ r, (G r).1 i = (x i).2.stage r := by
       intro r; simp only [hx]; exact hst i r
     have h5 := rel_stage P i hst hfor (fun _ _ _ => rfl) hown
     refine hvis (A' := A) (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, hA, hG, h5⟩)
-      (gbcaSide_idle P G hLne (by simp) not_false) (fun i' => ?_)
-      (ANetStep.ddlv A i k b (by rw [hA]; exact hdp))
+      (gbcaInstanceFamily_idle P G hLne (by simp) not_false) (fun i' => ?_)
+      (ABANetworkStep.decidedDeliver A i k b (by rw [hA]; exact hdp))
     by_cases hi' : i' = i
-    · subst hi'; rw [hCeq i', hx]; exact CoreProcStepN.ddlvRecv _ k b hhd hnotin
-    · rw [hCeq i', hfor i' hi']; exact CoreProcStepN.ddlvIdle _ i k b (Ne.symm hi')
+    · subst hi'; rw [hCeq i', hx]; exact RoundLoopStep.ddlvRecv _ k b hhd hnotin
+    · rw [hCeq i', hfor i' hi']; exact RoundLoopStep.ddlvIdle _ i k b (Ne.symm hi')
   | retWPub r id co b =>
     obtain rfl : w' = w.dput id b := by simpa using pureN_inj (netStep_retWPub hn)
     obtain ⟨hh, hph, hrr, hgr, hxid⟩ := stepN_retWPub_self (hall id)
@@ -545,12 +546,12 @@ theorem match_event (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
     refine hvis (A' := A.dput id b) (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, by rw [hA]; simp [ANetState.dput, NetState.dput],
         fun r' => by rw [hG r']; simp [NetState.dput], h5⟩)
-      (gbcaSide_idle P G hLne (by simp) not_false) (fun i => ?_)
-      (ANetStep.retWPub A r id co b)
+      (gbcaInstanceFamily_idle P G hLne (by simp) not_false) (fun i => ?_)
+      (ABANetworkStep.retWPub A r id co b)
     by_cases hi : i = id
-    · subst hi; rw [hCeq i, hx]; exact CoreProcStepN.retWPub _ r co b hh hph hrr hgr
+    · subst hi; rw [hCeq i, hx]; exact RoundLoopStep.retWPub _ r co b hh hph hrr hgr
     · rw [hCeq i, hfor i hi]
-      exact CoreProcStepN.retWPubIdle _ r id co b (Ne.symm hi)
+      exact RoundLoopStep.retWPubIdle _ r id co b (Ne.symm hi)
   | gcallLoop r id b =>
     obtain rfl : w' = w := by simpa using pureN_inj (netStep_gcallLoop hn)
     obtain ⟨hh, hph, hrr, hest, -, hxid⟩ := stepN_gcallLoop_self (hall id)
@@ -563,67 +564,67 @@ theorem match_event (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
     have h5 := rel_stage P id hst hfor (fun _ _ _ => rfl) hown
     refine hvis (A' := A) (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, hA, hG, h5⟩)
-      (gbcaSide_owned_id P G r (by simp)
-        (GBCA.ByABDY.sub_lab_step P r (by simp)
-          (fun i => GBCA.ByABDY.GProcStep.callLoop _ id b)
-          (GBCA.ByABDY.GNetStep.gcallLoop _ id b))) (fun i => ?_)
-      (ANetStep.gcallLoop A r id b)
+      (gbcaInstanceFamily_owned_id P G r (by simp)
+        (GBCA.ByABDY.composition_lab_step P r (by simp)
+          (fun i => GBCA.ByABDY.GBCAProgramStep.callLoop _ id b)
+          (GBCA.ByABDY.GBCANetworkStep.gcallLoop _ id b))) (fun i => ?_)
+      (ABANetworkStep.gcallLoop A r id b)
     by_cases hi : i = id
-    · subst hi; rw [hCeq i, hx]; exact CoreProcStepN.gcallLoop _ r b hh hph hrr hest
+    · subst hi; rw [hCeq i, hx]; exact RoundLoopStep.gcallLoop _ r b hh hph hrr hest
     · rw [hCeq i, hfor i hi]
-      exact CoreProcStepN.gcallLoopIdle _ r id b (Ne.symm hi)
-  | byzCallG r k b => exact (stepN_byzCallG_noStep (hall k)).elim
-  | byzRetG r k out => exact (stepN_byzRetG_noStep (hall k)).elim
-  | byzCallGLoop r k b =>
-    obtain ⟨hF, hw⟩ := netStep_byzCallGLoop hn
+      exact RoundLoopStep.gcallLoopIdle _ r id b (Ne.symm hi)
+  | byzantineCallG r k b => exact (stepN_byzantineCallG_noStep (hall k)).elim
+  | byzantineRetG r k out => exact (stepN_byzantineRetG_noStep (hall k)).elim
+  | byzantineCallGLoop r k b =>
+    obtain ⟨hF, hw⟩ := netStep_byzantineCallGLoop hn
     obtain rfl : w' = w := by simpa using pureN_inj hw
-    have hx : ∀ i, x i = procs i := fun i => pureN_inj (stepN_byzCallGLoop (hall i))
+    have hx : ∀ i, x i = procs i := fun i => pureN_inj (stepN_byzantineCallGLoop (hall i))
     have h5 := rel_none P (G' := G) hst hx (fun _ _ => rfl)
     refine hvis (A' := A) (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, hA, hG, h5⟩)
-      (gbcaSide_owned_id P G r (by simp)
-        (GBCA.ByABDY.sub_lab_step P r (by simp)
-          (fun i => GBCA.ByABDY.GProcStep.byzCallLoop _ k b)
-          (GBCA.ByABDY.GNetStep.byzCallGLoop _ k b))) (fun i => ?_)
-      (ANetStep.byzCallGLoop A r k b (by rw [hA]; exact hF))
-    rw [hCeq i, hx i]; exact CoreProcStepN.byzCallGLoopIdle _ r k b
-  | byzCallW r k =>
-    obtain ⟨hF, hw⟩ := netStep_byzCallW hn
+      (gbcaInstanceFamily_owned_id P G r (by simp)
+        (GBCA.ByABDY.composition_lab_step P r (by simp)
+          (fun i => GBCA.ByABDY.GBCAProgramStep.byzantineCallLoop _ k b)
+          (GBCA.ByABDY.GBCANetworkStep.byzantineCallGLoop _ k b))) (fun i => ?_)
+      (ABANetworkStep.byzantineCallGLoop A r k b (by rw [hA]; exact hF))
+    rw [hCeq i, hx i]; exact RoundLoopStep.byzantineCallGLoopIdle _ r k b
+  | byzantineCallW r k =>
+    obtain ⟨hF, hw⟩ := netStep_byzantineCallW hn
     obtain rfl : w' = w := by simpa using pureN_inj hw
-    have hx : ∀ i, x i = procs i := fun i => pureN_inj (stepN_byzCallW (hall i))
+    have hx : ∀ i, x i = procs i := fun i => pureN_inj (stepN_byzantineCallW (hall i))
     have h5 := rel_none P (G' := G) hst hx (fun _ _ => rfl)
     refine hvis (A' := A) (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, hA, hG, h5⟩)
-      (gbcaSide_idle P G hLne (by simp) not_false) (fun i => ?_)
-      (ANetStep.byzCallW A r k (by rw [hA]; exact hF))
-    rw [hCeq i, hx i]; exact CoreProcStepN.byzCallWIdle _ r k
-  | byzRetW r k b =>
-    obtain ⟨hF, hw⟩ := netStep_byzRetW hn
+      (gbcaInstanceFamily_idle P G hLne (by simp) not_false) (fun i => ?_)
+      (ABANetworkStep.byzantineCallW A r k (by rw [hA]; exact hF))
+    rw [hCeq i, hx i]; exact RoundLoopStep.byzantineCallWIdle _ r k
+  | byzantineRetW r k b =>
+    obtain ⟨hF, hw⟩ := netStep_byzantineRetW hn
     obtain rfl : w' = w := by simpa using pureN_inj hw
-    have hx : ∀ i, x i = procs i := fun i => pureN_inj (stepN_byzRetW (hall i))
+    have hx : ∀ i, x i = procs i := fun i => pureN_inj (stepN_byzantineRetW (hall i))
     have h5 := rel_none P (G' := G) hst hx (fun _ _ => rfl)
     refine hvis (A' := A) (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, hA, hG, h5⟩)
-      (gbcaSide_idle P G hLne (by simp) not_false) (fun i => ?_)
-      (ANetStep.byzRetW A r k b (by rw [hA]; exact hF))
-    rw [hCeq i, hx i]; exact CoreProcStepN.byzRetWIdle _ r k b
+      (gbcaInstanceFamily_idle P G hLne (by simp) not_false) (fun i => ?_)
+      (ABANetworkStep.byzantineRetW A r k b (by rw [hA]; exact hF))
+    rw [hCeq i, hx i]; exact RoundLoopStep.byzantineRetWIdle _ r k b
 
 /-- The matching on a visible shared label. -/
 theorem match_lab (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
     {w : NetState P.n} {o : ℕ → WCC.SpecState P.n}
     {G : ℕ → GBCA.ByABDY.ImplState P.n} {C : ∀ _ : Fin P.n, CoreRec P.n}
     {A : ANetState P.n} (hR : ProtocolRel P (procs, w, o) (G, C, A, o))
-    {l : Lab P.n} (hl : l ≠ Lab.tau) {μ : PMF (ProtocolState P)}
-    (h : (protocolPre P).step (procs, w, o) (Sum.inl l) μ) :
+    {l : Label P.n} (hl : l ≠ Label.tau) {μ : PMF (ProtocolState P)}
+    (h : (protocolExtended P).step (procs, w, o) (Sum.inl l) μ) :
     ∃ Ω : PMF (PMF (ComposedState P)),
       PMFRel (diracRel (ProtocolRel P)) μ Ω ∧
       (composedGroup P).step (G, C, A, o) l (Ω.bind id) := by
   obtain ⟨hC, -, hA, hG, hst⟩ := (protocolRel_mk P _ _ _ _ _ _ _).mp hR
   have hCeq : ∀ i, C i = (procs i).1 := fun i => (hC i).symm
-  obtain ⟨x, w', ω, hall, hn, hOr, rfl⟩ := protocolPre_lab_inv P hl h
-  have hWl : (wccLift P).step o (Sum.inl l) ω :=
-    (System.mapIdle_step_some (wccPull_inl l) ω).mpr hOr
-  have hLne : (Sum.inl l : NLab P.n) ≠ Silent.τ := by simpa using hl
+  obtain ⟨x, w', ω, hall, hn, hOr, rfl⟩ := protocolExtended_lab_inv P hl h
+  have hWl : (coinOverRoundAlphabet P).step o (Sum.inl l) ω :=
+    (System.mapIdle_step_some (coinLabelMap_inl l) ω).mpr hOr
+  have hLne : (Sum.inl l : ExtendedLabel P.n) ≠ Silent.τ := by simpa using hl
   suffices hsuf : ∃ Ω : PMF (PMF (ComposedState P)),
       PMFRel (diracRel (ProtocolRel P))
         (prodPMF (PMF.pure x) (prodPMF (PMF.pure w') ω)) Ω ∧
@@ -636,8 +637,9 @@ theorem match_lab (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
     obtain rfl : w' = w := pureN_inj (netStep_callABA hn)
     have hfor : ∀ i, i ≠ id → x i = procs i := fun i hi =>
       pureN_inj (stepN_callABA_foreign (Ne.symm hi) (hall i))
-    have hGs : (GBCA.ByABDY.gbcaSide P).step G (Sum.inl (Lab.callABA id b)) (PMF.pure G) :=
-      gbcaSide_idle P G hLne (by simp) not_false
+    have hGs : (GBCA.ByABDY.gbcaInstanceFamily P).step G (Sum.inl (Label.callABA id b)) (PMF.pure G)
+      :=
+      gbcaInstanceFamily_idle P G hLne (by simp) not_false
     rcases stepN_callABA_own (hall id) with ⟨hh, hin, hxid⟩ | ⟨hloop, hxid⟩
     · have hx : x id = ((procs id).1.setProc { (procs id).1.proc with
           input := some b, est := some b, round := 0, phase := .toCallG },
@@ -647,10 +649,10 @@ theorem match_lab (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
       have h5 := rel_stage P id hst hfor (fun _ _ _ => rfl) hown
       refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, hG, h5⟩) hGs (fun i => ?_)
-        (ANetStep.callABAIdle A id b) hWl
+        (ABANetworkStep.callABAIdle A id b) hWl
       by_cases hi : i = id
-      · subst hi; rw [hCeq i, hx]; exact CoreProcStepN.input _ b hh hin
-      · rw [hCeq i, hfor i hi]; exact CoreProcStepN.callABAIdle _ id b (Ne.symm hi)
+      · subst hi; rw [hCeq i, hx]; exact RoundLoopStep.input _ b hh hin
+      · rw [hCeq i, hfor i hi]; exact RoundLoopStep.callABAIdle _ id b (Ne.symm hi)
     · have hx : ∀ i, x i = procs i := by
         intro i
         by_cases hi : i = id
@@ -659,25 +661,26 @@ theorem match_lab (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
       have h5 := rel_none P (G' := G) hst hx (fun _ _ => rfl)
       refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, hG, h5⟩) hGs (fun i => ?_)
-        (ANetStep.callABAIdle A id b) hWl
+        (ABANetworkStep.callABAIdle A id b) hWl
       rw [hCeq i, hx i]
       by_cases hi : i = id
       · subst hi
         by_cases hc : (procs i).1.corrupted = true
-        · exact CoreProcStepN.corruptedIdle _ _ hc (by simp) not_false
-        · exact CoreProcStepN.inputLoop _ b (by simpa using hc) (hloop.resolve_left hc)
-      · exact CoreProcStepN.callABAIdle _ id b (Ne.symm hi)
+        · exact RoundLoopStep.corruptedIdle _ _ hc (by simp) not_false
+        · exact RoundLoopStep.inputLoop _ b (by simpa using hc) (hloop.resolve_left hc)
+      · exact RoundLoopStep.callABAIdle _ id b (Ne.symm hi)
   | retABA id b =>
     obtain ⟨hdp, hw⟩ := netStep_retABA hn
     obtain rfl : w' = w := pureN_inj hw
     have hfor : ∀ i, i ≠ id → x i = procs i := fun i hi =>
       pureN_inj (stepN_retABA_foreign (Ne.symm hi) (hall i))
-    have hGs : (GBCA.ByABDY.gbcaSide P).step G (Sum.inl (Lab.retABA id b)) (PMF.pure G) :=
-      gbcaSide_idle P G hLne (by simp) not_false
-    have hAs : ANetStep P A (Sum.inl (Lab.retABA id b)) (PMF.pure A) := by
+    have hGs : (GBCA.ByABDY.gbcaInstanceFamily P).step G (Sum.inl (Label.retABA id b)) (PMF.pure G)
+      :=
+      gbcaInstanceFamily_idle P G hLne (by simp) not_false
+    have hAs : ABANetworkStep P A (Sum.inl (Label.retABA id b)) (PMF.pure A) := by
       rcases hdp with hd | hF
-      · exact ANetStep.retABA A id b (by rw [hA]; exact hd)
-      · exact ANetStep.retByz A id b (by rw [hA]; exact hF)
+      · exact ABANetworkStep.retABA A id b (by rw [hA]; exact hd)
+      · exact ABANetworkStep.retByz A id b (by rw [hA]; exact hF)
     rcases stepN_retABA_own (hall id) with ⟨hh, -, hcnt, hret, hxid⟩ | ⟨hh, hxid⟩
     · have hx : x id =
           ((procs id).1.setProc { (procs id).1.proc with returned := true },
@@ -688,8 +691,8 @@ theorem match_lab (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
       refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, hG, h5⟩) hGs (fun i => ?_) hAs hWl
       by_cases hi : i = id
-      · subst hi; rw [hCeq i, hx]; exact CoreProcStepN.ret _ b hh hcnt hret
-      · rw [hCeq i, hfor i hi]; exact CoreProcStepN.retABAIdle _ id b (Ne.symm hi)
+      · subst hi; rw [hCeq i, hx]; exact RoundLoopStep.ret _ b hh hcnt hret
+      · rw [hCeq i, hfor i hi]; exact RoundLoopStep.retABAIdle _ id b (Ne.symm hi)
     · have hx : ∀ i, x i = procs i := by
         intro i
         by_cases hi : i = id
@@ -700,14 +703,15 @@ theorem match_lab (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
         ⟨fun _ => rfl, rfl, hA, hG, h5⟩) hGs (fun i => ?_) hAs hWl
       rw [hCeq i, hx i]
       by_cases hi : i = id
-      · subst hi; exact CoreProcStepN.corruptedIdle _ _ hh (by simp) not_false
-      · exact CoreProcStepN.retABAIdle _ id b (Ne.symm hi)
+      · subst hi; exact RoundLoopStep.corruptedIdle _ _ hh (by simp) not_false
+      · exact RoundLoopStep.retABAIdle _ id b (Ne.symm hi)
   | callW r id =>
     obtain rfl : w' = w := pureN_inj (netStep_callW hn)
     have hfor : ∀ i, i ≠ id → x i = procs i := fun i hi =>
       pureN_inj (stepN_callW_foreign (Ne.symm hi) (hall i))
-    have hGs : (GBCA.ByABDY.gbcaSide P).step G (Sum.inl (Lab.callW r id)) (PMF.pure G) :=
-      gbcaSide_idle P G hLne (by simp) not_false
+    have hGs : (GBCA.ByABDY.gbcaInstanceFamily P).step G (Sum.inl (Label.callW r id)) (PMF.pure G)
+      :=
+      gbcaInstanceFamily_idle P G hLne (by simp) not_false
     rcases stepN_callW_own (hall id) with ⟨hh, hph, hrr, hxid⟩ | ⟨hh, hxid⟩
     · have hx : x id =
           ((procs id).1.setProc { (procs id).1.proc with phase := .awaitW },
@@ -717,10 +721,10 @@ theorem match_lab (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
       have h5 := rel_stage P id hst hfor (fun _ _ _ => rfl) hown
       refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, hG, h5⟩) hGs (fun i => ?_)
-        (ANetStep.callWIdle A r id) hWl
+        (ABANetworkStep.callWIdle A r id) hWl
       by_cases hi : i = id
-      · subst hi; rw [hCeq i, hx]; exact CoreProcStepN.callW _ r hh hph hrr
-      · rw [hCeq i, hfor i hi]; exact CoreProcStepN.callWIdle _ r id (Ne.symm hi)
+      · subst hi; rw [hCeq i, hx]; exact RoundLoopStep.callW _ r hh hph hrr
+      · rw [hCeq i, hfor i hi]; exact RoundLoopStep.callWIdle _ r id (Ne.symm hi)
     · have hx : ∀ i, x i = procs i := by
         intro i
         by_cases hi : i = id
@@ -729,17 +733,18 @@ theorem match_lab (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
       have h5 := rel_none P (G' := G) hst hx (fun _ _ => rfl)
       refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, hG, h5⟩) hGs (fun i => ?_)
-        (ANetStep.callWIdle A r id) hWl
+        (ABANetworkStep.callWIdle A r id) hWl
       rw [hCeq i, hx i]
       by_cases hi : i = id
-      · subst hi; exact CoreProcStepN.corruptedIdle _ _ hh (by simp) not_false
-      · exact CoreProcStepN.callWIdle _ r id (Ne.symm hi)
+      · subst hi; exact RoundLoopStep.corruptedIdle _ _ hh (by simp) not_false
+      · exact RoundLoopStep.callWIdle _ r id (Ne.symm hi)
   | retW r id co =>
     obtain rfl : w' = w := pureN_inj (netStep_retW hn)
     have hfor : ∀ i, i ≠ id → x i = procs i := fun i hi =>
       pureN_inj (stepN_retW_foreign (Ne.symm hi) (hall i))
-    have hGs : (GBCA.ByABDY.gbcaSide P).step G (Sum.inl (Lab.retW r id co)) (PMF.pure G) :=
-      gbcaSide_idle P G hLne (by simp) not_false
+    have hGs : (GBCA.ByABDY.gbcaInstanceFamily P).step G (Sum.inl (Label.retW r id co)) (PMF.pure G)
+      :=
+      gbcaInstanceFamily_idle P G hLne (by simp) not_false
     rcases stepN_retW_own (hall id) with ⟨hh, hph, hrr, hgr, hxid⟩ | ⟨hh, hxid⟩
     · have hx : x id = ((procs id).1.stepRound co, (procs id).2) := pureN_inj hxid
       have hown : ∀ r, (G r).1 id = (x id).2.stage r := by
@@ -747,10 +752,10 @@ theorem match_lab (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
       have h5 := rel_stage P id hst hfor (fun _ _ _ => rfl) hown
       refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, hG, h5⟩) hGs (fun i => ?_)
-        (ANetStep.retWIdle A r id co) hWl
+        (ABANetworkStep.retWIdle A r id co) hWl
       by_cases hi : i = id
-      · subst hi; rw [hCeq i, hx]; exact CoreProcStepN.retW _ r co hh hph hrr hgr
-      · rw [hCeq i, hfor i hi]; exact CoreProcStepN.retWIdle _ r id co (Ne.symm hi)
+      · subst hi; rw [hCeq i, hx]; exact RoundLoopStep.retW _ r co hh hph hrr hgr
+      · rw [hCeq i, hfor i hi]; exact RoundLoopStep.retWIdle _ r id co (Ne.symm hi)
     · have hx : ∀ i, x i = procs i := by
         intro i
         by_cases hi : i = id
@@ -759,11 +764,11 @@ theorem match_lab (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
       have h5 := rel_none P (G' := G) hst hx (fun _ _ => rfl)
       refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, hG, h5⟩) hGs (fun i => ?_)
-        (ANetStep.retWIdle A r id co) hWl
+        (ABANetworkStep.retWIdle A r id co) hWl
       rw [hCeq i, hx i]
       by_cases hi : i = id
-      · subst hi; exact CoreProcStepN.corruptedIdle _ _ hh (by simp) not_false
-      · exact CoreProcStepN.retWIdle _ r id co (Ne.symm hi)
+      · subst hi; exact RoundLoopStep.corruptedIdle _ _ hh (by simp) not_false
+      · exact RoundLoopStep.retWIdle _ r id co (Ne.symm hi)
   | fail k =>
     obtain ⟨hnew, hbud, hw⟩ := netStep_fail hn
     obtain rfl : w' = NetState.corrupt P k w := pureN_inj hw
@@ -772,12 +777,12 @@ theorem match_lab (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
     have hstg : (x k).2 = (procs k).2 := by
       rcases stepN_fail_own (hall k) with ⟨-, hxk⟩ | ⟨-, hxk⟩ <;> rw [pureN_inj hxk]
     have h5 := rel_stage P k (G' := fun r =>
-      GBCA.ByABDY.gAct P (Sum.inl (Lab.fail k)) (G r)) hst hfor
+      GBCA.ByABDY.gAct P (Sum.inl (Label.fail k)) (G r)) hst hfor
       (fun _ _ _ => by simp only [gAct_fail])
       (fun r => by simp only [gAct_fail]; rw [hstg]; exact hst k r)
     have hrel : ∀ o' : ℕ → WCC.SpecState P.n,
         ProtocolRel P ((x, NetState.corrupt P k w, o') : ProtocolState P)
-          (((fun r => GBCA.ByABDY.gAct P (Sum.inl (Lab.fail k)) (G r)),
+          (((fun r => GBCA.ByABDY.gAct P (Sum.inl (Label.fail k)) (G r)),
             (fun i => (x i).1), ANetState.corrupt P k A, o') : ComposedState P) := by
       intro o'
       refine (protocolRel_mk P _ _ _ _ _ _ _).mpr ⟨fun _ => rfl, rfl, ?_, ?_, h5⟩
@@ -786,15 +791,15 @@ theorem match_lab (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
         simp only [gAct_fail]
         rw [hG r]
         exact corrupt_gnet w k r
-    refine match_vis P hLne (fun o' _ => hrel o') (gbcaSide_fail P G k) (fun i => ?_)
-      (ANetStep.fail A k (by rw [hA]; exact hnew) (by rw [hA]; exact hbud)) hWl
+    refine match_vis P hLne (fun o' _ => hrel o') (gbcaInstanceFamily_fail P G k) (fun i => ?_)
+      (ABANetworkStep.fail A k (by rw [hA]; exact hnew) (by rw [hA]; exact hbud)) hWl
     by_cases hi : i = k
     · subst hi
       rcases stepN_fail_own (hall i) with ⟨hh, hxk⟩ | ⟨hh, hxk⟩
-      · rw [hCeq i, pureN_inj hxk]; exact CoreProcStepN.failSelf _ hh
+      · rw [hCeq i, pureN_inj hxk]; exact RoundLoopStep.failSelf _ hh
       · rw [hCeq i, pureN_inj hxk]
-        exact CoreProcStepN.corruptedIdle _ _ hh (by simp) not_false
-    · rw [hCeq i, hfor i hi]; exact CoreProcStepN.failIdle _ k (Ne.symm hi)
+        exact RoundLoopStep.corruptedIdle _ _ hh (by simp) not_false
+    · rw [hCeq i, hfor i hi]; exact RoundLoopStep.failIdle _ k (Ne.symm hi)
   | callG r id b =>
     obtain rfl : w' = w.gsent r id (.input b) := by
       simpa [gCallPayload] using pureN_inj (netStep_callG hn)
@@ -809,18 +814,18 @@ theorem match_lab (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
             sentInput :=
               Function.update ((procs id).2.stage r).proc.sentInput b true })) :=
       pureN_inj hxid
-    have hGs : (GBCA.ByABDY.gbcaSide P).step G (Sum.inl (Lab.callG r id b))
+    have hGs : (GBCA.ByABDY.gbcaInstanceFamily P).step G (Sum.inl (Label.callG r id b))
         (PMF.pure (Function.update G r
           (Function.update ((G r).1) id (((G r).1 id).setP { ((G r).1 id).proc with
             input := some b,
             sentInput := Function.update ((G r).1 id).proc.sentInput b true }),
           ((G r).2).gsent id (.input b)))) :=
-      gbcaSide_owned P G r (by simp)
-        (GBCA.ByABDY.sub_lab_step P r (by simp)
+      gbcaInstanceFamily_owned P G r (by simp)
+        (GBCA.ByABDY.composition_lab_step P r (by simp)
           (gprocs_family id _
-            (GBCA.ByABDY.GProcStep.call _ b (by rw [hcol]; exact hin))
-            (fun i hi => GBCA.ByABDY.GProcStep.callIdle _ id b (Ne.symm hi)))
-          (GBCA.ByABDY.GNetStep.callG _ id b))
+            (GBCA.ByABDY.GBCAProgramStep.call _ b (by rw [hcol]; exact hin))
+            (fun i hi => GBCA.ByABDY.GBCAProgramStep.callIdle _ id b (Ne.symm hi)))
+          (GBCA.ByABDY.GBCANetworkStep.callG _ id b))
     have hGfor : ∀ j r', j ≠ id →
         ((Function.update G r
           (Function.update ((G r).1) id (((G r).1 id).setP { ((G r).1 id).proc with
@@ -845,14 +850,14 @@ theorem match_lab (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
     have h5 := rel_stage P id hst hfor hGfor hown
     refine match_vis P hLne (fun o' _ => (protocolRel_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, by simpa using hA, rel_gsent hG r id (.input b) _,
-        h5⟩) hGs (fun i => ?_) (ANetStep.callGIdle A r id b) hWl
+        h5⟩) hGs (fun i => ?_) (ABANetworkStep.callGIdle A r id b) hWl
     by_cases hi : i = id
-    · subst hi; rw [hCeq i, hx]; exact CoreProcStepN.callG _ r b hh hph hrr hest
-    · rw [hCeq i, hfor i hi]; exact CoreProcStepN.callGIdle _ r id b (Ne.symm hi)
+    · subst hi; rw [hCeq i, hx]; exact RoundLoopStep.callG _ r b hh hph hrr hest
+    · rw [hCeq i, hfor i hi]; exact RoundLoopStep.callGIdle _ r id b (Ne.symm hi)
   | retG r id out bnd =>
     obtain ⟨hbnd, hw⟩ := netStep_retG hn
     obtain rfl :
-        w' = w.writeGhost (abdyGhostStep P) (Sum.inl (Lab.retG r id out bnd)) :=
+        w' = w.writeGhost (abdyGhostStep P) (Sum.inl (Label.retG r id out bnd)) :=
       pureN_inj hw
     have hfix : (w.ghostRec r).getD bnd = bnd := ghostOut_getD hbnd
     have hfor : ∀ i, i ≠ id → x i = procs i := fun i hi =>
@@ -863,7 +868,8 @@ theorem match_lab (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
       rw [hG r]; exact hbnd
     have hstage : ∃ hph : (procs id).1.proc.phase = Phase.awaitG,
         (procs id).1.proc.round = r ∧ (procs id).1.corrupted = false ∧
-        GBCA.ByABDY.GProcStep P r id ((G r).1 id) (Sum.inl (Sum.inl (Lab.retG r id out bnd)))
+        GBCA.ByABDY.GBCAProgramStep P r id ((G r).1 id) (Sum.inl (Sum.inl (Label.retG r id out
+          bnd)))
           (PMF.pure (((G r).1 id).setP { ((G r).1 id).proc with returned := true })) ∧
         x id = ((procs id).1.setProc { (procs id).1.proc with
           est := out.est, lastGrade := some out, phase := .toCallW },
@@ -872,13 +878,13 @@ theorem match_lab (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
       cases out with
       | A v =>
         obtain ⟨hh, hph, hrr, -, hin, hlv, hcnt, hret, hxid⟩ := stepN_retG_A_own (hall id)
-        exact ⟨hph, hrr, hh, GBCA.ByABDY.GProcStep.retA _ v bnd (by rw [hcol]; exact hin)
+        exact ⟨hph, hrr, hh, GBCA.ByABDY.GBCAProgramStep.retA _ v bnd (by rw [hcol]; exact hin)
           (by rw [hcol]; exact hlv) (by rw [hcol]; exact hcnt)
           (by rw [hcol]; exact hret), pureN_inj hxid⟩
       | B v =>
         obtain ⟨hh, hph, hrr, -, hin, hlv, hnotA, hcnt, honce, hbind, hval, hret,
           hxid⟩ := stepN_retG_B_own (hall id)
-        exact ⟨hph, hrr, hh, GBCA.ByABDY.GProcStep.retB _ v bnd (by rw [hcol]; exact hin)
+        exact ⟨hph, hrr, hh, GBCA.ByABDY.GBCAProgramStep.retB _ v bnd (by rw [hcol]; exact hin)
           (by rw [hcol]; exact hlv) (by rw [hcol]; exact hnotA)
           (by rw [hcol]; exact hcnt) (by rw [hcol]; exact honce)
           (by rw [hcol]; exact hbind)
@@ -887,22 +893,22 @@ theorem match_lab (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
       | C =>
         obtain ⟨hh, hph, hrr, -, hin, hlv, hnotA, hnotB, hcnt, hval, hret, hxid⟩ :=
           stepN_retG_C_own (hall id)
-        exact ⟨hph, hrr, hh, GBCA.ByABDY.GProcStep.retC _ bnd (by rw [hcol]; exact hin)
+        exact ⟨hph, hrr, hh, GBCA.ByABDY.GBCAProgramStep.retC _ bnd (by rw [hcol]; exact hin)
           (by rw [hcol]; exact hlv) (by rw [hcol]; exact hnotA)
           (by rw [hcol]; exact hnotB) (by rw [hcol]; exact hcnt)
           (by rw [hcol]; exact hval) (by rw [hcol]; exact hret),
           pureN_inj hxid⟩
     obtain ⟨hph, hrr, hh, hrow, hx⟩ := hstage
-    have hGs : (GBCA.ByABDY.gbcaSide P).step G (Sum.inl (Lab.retG r id out bnd))
+    have hGs : (GBCA.ByABDY.gbcaInstanceFamily P).step G (Sum.inl (Label.retG r id out bnd))
         (PMF.pure (Function.update G r
           (Function.update ((G r).1) id
             (((G r).1 id).setP { ((G r).1 id).proc with returned := true }),
           ((G r).2).setBound bnd))) :=
-      gbcaSide_owned P G r (by simp)
-        (GBCA.ByABDY.sub_lab_step P r (by simp)
+      gbcaInstanceFamily_owned P G r (by simp)
+        (GBCA.ByABDY.composition_lab_step P r (by simp)
           (gprocs_family id _ hrow
-            (fun i hi => GBCA.ByABDY.GProcStep.retIdle _ id out bnd (Ne.symm hi)))
-          (GBCA.ByABDY.GNetStep.retGIdle _ id out bnd hbnd'))
+            (fun i hi => GBCA.ByABDY.GBCAProgramStep.retIdle _ id out bnd (Ne.symm hi)))
+          (GBCA.ByABDY.GBCANetworkStep.retGIdle _ id out bnd hbnd'))
     have hGfor : ∀ j r', j ≠ id →
         ((Function.update G r
           (Function.update ((G r).1) id
@@ -927,11 +933,11 @@ theorem match_lab (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
       ⟨fun _ => rfl, rfl, by simpa using hA,
         rel_setBound hG r bnd _ hfix (by simp) (fun r' hr' =>
           writeGhost_retG_ne P w r id out bnd hr'), h5⟩) hGs (fun i => ?_)
-      (ANetStep.retGIdle A r id out bnd) hWl
+      (ABANetworkStep.retGIdle A r id out bnd) hWl
     by_cases hi : i = id
-    · subst hi; rw [hCeq i, hx]; exact CoreProcStepN.retG _ r out bnd hh hph hrr
+    · subst hi; rw [hCeq i, hx]; exact RoundLoopStep.retG _ r out bnd hh hph hrr
     · rw [hCeq i, hfor i hi]
-      exact CoreProcStepN.retGIdle _ r id out bnd (Ne.symm hi)
+      exact RoundLoopStep.retGIdle _ r id out bnd (Ne.symm hi)
 
 /-- The matching on the silent label. The protocol's own `terminate` row writes
 no coordinate the relation reads, so the composed answer to it is to stand
@@ -941,13 +947,13 @@ theorem match_tau (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
     {G : ℕ → GBCA.ByABDY.ImplState P.n} {C : ∀ _ : Fin P.n, CoreRec P.n}
     {A : ANetState P.n} (hR : ProtocolRel P (procs, w, o) (G, C, A, o))
     {μ : PMF (ProtocolState P)}
-    (h : (protocolPre P).step (procs, w, o) (Sum.inl Lab.tau) μ) :
+    (h : (protocolExtended P).step (procs, w, o) (Sum.inl Label.tau) μ) :
     ∃ Ω : PMF (PMF (ComposedState P)),
       PMFRel (diracRel (ProtocolRel P)) μ Ω ∧
-      ((composedGroup P).step (G, C, A, o) Lab.tau (Ω.bind id) ∨
+      ((composedGroup P).step (G, C, A, o) Label.tau (Ω.bind id) ∨
         Ω.bind id = PMF.pure (G, C, A, o)) := by
   obtain ⟨hC, -, hA, hG, hst⟩ := (protocolRel_mk P _ _ _ _ _ _ _).mp hR
-  rcases protocolPre_tau_inv P h with ⟨i, y, hy, rfl⟩ | ⟨w', hn, rfl⟩
+  rcases protocolExtended_tau_inv P h with ⟨i, y, hy, rfl⟩ | ⟨w', hn, rfl⟩
   · obtain ⟨-, -, -, -, -, hyeq⟩ := stepN_tau_terminate hy
     obtain rfl : y = ((procs i).1, { (procs i).2 with terminated := true }) :=
       pureN_inj hyeq
@@ -986,8 +992,8 @@ theorem match_tau (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
       obtain ⟨Ω, hrel, hbind⟩ := match_pure P hrel'
       refine ⟨Ω, hrel, Or.inl ?_⟩
       rw [hbind]
-      exact composedGroup_of_tau P (composedPre_tau_gbca P (gbcaSide_tau P G r
-        (GBCA.ByABDY.sub_tau_net P r (GBCA.ByABDY.GNetStep.byzG _ k m hFG))))
+      exact composedGroup_of_tau P (composedPre_tau_gbca P (gbcaInstanceFamily_tau P G r
+        (GBCA.ByABDY.composition_tau_net P r (GBCA.ByABDY.GBCANetworkStep.byzantineG _ k m hFG))))
     · obtain rfl : w' = w.dput k b := pureN_inj hw
       have hFA : k ∈ A.F := by rw [hA]; exact hF
       have hrel' : ProtocolRel P ((procs, w.dput k b, o) : ProtocolState P)
@@ -998,7 +1004,8 @@ theorem match_tau (P : Params) {procs : ∀ _ : Fin P.n, ProcRec P.n}
       obtain ⟨Ω, hrel, hbind⟩ := match_pure P hrel'
       refine ⟨Ω, hrel, Or.inl ?_⟩
       rw [hbind]
-      exact composedGroup_of_tau P (composedPre_tau_aNet P (ANetStep.byzD A k b hFA))
+      exact composedGroup_of_tau P (composedPre_tau_ABANetwork P (ABANetworkStep.byzantineD A k b
+        hFA))
 
 /-! ### The simulation -/
 
@@ -1007,22 +1014,22 @@ sides, so a hidden protocol rendezvous is answered by a silent transition of
 the composed group. The second disjunct is the composed answer to `terminate`:
 the state stands still under a silent protocol label. -/
 theorem match_group (P : Params) {u : ProtocolState P} {t : ComposedState P}
-    (hR : ProtocolRel P u t) {l : Lab P.n} {μ : PMF (ProtocolState P)}
-    (h : (protocolGroup P).step u l μ) :
+    (hR : ProtocolRel P u t) {l : Label P.n} {μ : PMF (ProtocolState P)}
+    (h : (protocolHidden P).step u l μ) :
     ∃ Ω : PMF (PMF (ComposedState P)),
       PMFRel (diracRel (ProtocolRel P)) μ Ω ∧
         ((composedGroup P).step t l (Ω.bind id) ∨
-          (l = Lab.tau ∧ Ω.bind id = PMF.pure t)) := by
+          (l = Label.tau ∧ Ω.bind id = PMF.pure t)) := by
   obtain ⟨procs, w, o⟩ := u
   obtain ⟨G, C, A, o'⟩ := t
   obtain ⟨hC, ho, hA, hG, hst⟩ := (protocolRel_mk P _ _ _ _ _ _ _).mp hR
   subst ho
   have hR : ProtocolRel P (procs, w, o) (G, C, A, o) :=
     (protocolRel_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, hA, hG, hst⟩
-  rcases (protocolGroup_step_iff P _ _ _).mp h with ⟨rfl, e, hstep⟩ | hstep
+  rcases (protocolHidden_step_iff P _ _ _).mp h with ⟨rfl, e, hstep⟩ | hstep
   · obtain ⟨Ω, hrel, hs⟩ := match_event P hR e hstep
     exact ⟨Ω, hrel, Or.inl hs⟩
-  · by_cases hl : l = Lab.tau
+  · by_cases hl : l = Label.tau
     · subst hl
       obtain ⟨Ω, hrel, hs⟩ := match_tau P hR hstep
       exact ⟨Ω, hrel, hs.imp id (fun hp => ⟨rfl, hp⟩)⟩
@@ -1034,7 +1041,7 @@ both sides, and every other label is answered on the nose or by standing
 still. A hidden label is never `τ`, so the standing-still answer arises only
 under `τ`, where the reflexivity of `weakTau` discharges it. -/
 theorem match_step (P : Params) {u : ProtocolState P} {t : ComposedState P}
-    (hR : ProtocolRel P u t) {l : Lab P.n} {μ : PMF (ProtocolState P)}
+    (hR : ProtocolRel P u t) {l : Label P.n} {μ : PMF (ProtocolState P)}
     (h : (protocol P).step u l μ) :
     ∃ Ω : PMF (PMF (ComposedState P)),
       PMFRel (diracRel (ProtocolRel P)) μ Ω ∧
@@ -1045,7 +1052,7 @@ theorem match_step (P : Params) {u : ProtocolState P} {t : ComposedState P}
     rcases hlay with hlay | ⟨rfl, -⟩
     · exact ⟨Ω, hrel, Or.inl ⟨rfl, weakTau_of_step rfl
         ((System.abstract_step _ _ _ _ _).mpr (Or.inl ⟨rfl, l', hmem, hlay⟩))⟩⟩
-    · exact absurd hmem Lab.tau_not_mem_hiddenAPI
+    · exact absurd hmem Label.tau_not_mem_hiddenAPI
   · obtain ⟨Ω, hrel, hlay⟩ := match_group P hR hg
     rcases hlay with hlay | ⟨rfl, hpure⟩
     · have hstep : (composed P).step t l (Ω.bind id) :=

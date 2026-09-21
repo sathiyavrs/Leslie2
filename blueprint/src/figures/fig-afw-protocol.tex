@@ -10,10 +10,10 @@
   \draw[dashed, rounded corners] (-1.2,-3.95) rectangle (11.0,3.3);
   \node[font=\footnotesize] at (8.6,3.0) {$\mathrm{abstract}\,\mathrm{hiddenAPI}$};
   \draw[dashed, rounded corners] (-0.9,-3.65) rectangle (10.7,2.6);
-  \node[font=\footnotesize] at (7.2,2.32)
-    {$\mathrm{relabel} \circ \mathrm{abstract}\,\mathrm{netEvtLabels}$};
+  \node[font=\footnotesize] at (7.5,2.32)
+    {$\mathrm{relabel} \circ \mathrm{abstract}\,\mathrm{networkEventLabels}$};
   \draw[thick] (-0.75,1.75) -- (10.55,1.75);
-  \node[ann, anchor=west] at (-0.55,2.05) {$\mathrm{NLab}(n)$ over the tagged messages};
+  \node[ann, anchor=west] at (-0.55,2.05) {$\mathrm{ExtendedLabel}(n)$ over the tagged messages};
   % the n programs
   \node[prog] (p1) at (0.65,0.4) {program $1$};
   \node[prog, minimum width=3.0cm] (pj) at (4.3,0.4)
@@ -27,7 +27,7 @@
     {the network adversary:\\ one tagged sent-set family per round,\\
      the DECIDED sets, $F$, the ghost record};
   \node[comp] (w) at (7.8,-1.95)
-    {$\mathrm{WCC.specFamily}(P)$ along $\mathrm{wccPull}$};
+    {$\mathrm{WCC.specFamily}(P)$\\ along $\mathrm{coinLabelMap}$};
   \draw[<->] (-0.75,1.75) -- (-0.75,-1.95) -- (adv.west);
   \draw[<->] (10.55,1.75) -- (10.55,-1.95) -- (w.east);
   \node[ann] at (4.9,-3.25)

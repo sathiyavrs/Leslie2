@@ -1,14 +1,14 @@
 \begin{definition}[The gather implementation over Bracha instances]
   \label{def:aba-gather-low}
-  \lean{PLTS.ABA.Gather.LowState}\lean{PLTS.ABA.Gather.LowStep}\lean{PLTS.ABA.Gather.lowInst}\lean{PLTS.ABA.Gather.lowInst_step_iff_row}\leanok
+  \lean{PLTS.ABA.Gather.StateOverBracha}\lean{PLTS.ABA.Gather.StepOverBracha}\lean{PLTS.ABA.Gather.instanceOverBracha}\lean{PLTS.ABA.Gather.instanceOverBracha_step_iff_row}\leanok
   \uses{def:aba-gather-sub, def:aba-gather-ideal, def:aba-brb-impl}
   The fully concrete gather instance: the composition of Definition~\ref{def:aba-gather-sub} with each broadcast coordinate a Bracha instance of Definition~\ref{def:aba-brb-impl}.
-  The state is the gather programs and the gather network beside $2n$ Bracha states, and \leandecl{PLTS.ABA.Gather.LowStep} is the rule table that states the composition's transitions over it.
+  The state is the gather programs and the gather network beside $2n$ Bracha states, and \leandecl{PLTS.ABA.Gather.StepOverBracha} is the rule table that states the composition's transitions over it.
   A row that reaches a broadcast instance carries that instance's own row as a hypothesis, through the row characterisation of Definition~\ref{def:aba-brb-impl}: a silent step, a return and a corruption enter the rows that way.
   The call is the one place the two levels of alphabet meet.
   A Bracha instance answers its call on the broadcast of $\langle\mathrm{INIT}, x\rangle$ and on its own loop row, and those sit at the two labels of its interface, so the gather call carries the broadcast and the gather call loop moves nothing.
   The internal rows of the $2n$ instances --- their deliveries, their echoes, their votes and the adversary's injections --- are the silent rows of the composition, and a return of an instance is one of the composition's hidden events, which writes the returned value into the store of the process it reaches.
   The gather tier is the same at both tiers, so the stores, the guards that read them, the $\mathrm{ECHO}$/$\mathrm{VOTE}$ exchange and the return are written here exactly as they are in Definition~\ref{def:aba-gather-ideal}.
   Corruption is one broadcast across the gather network and every Bracha coordinate (D1), and the gather network writes the core at the first return and carries it on every return label (D29).
-  \leandecl{PLTS.ABA.Gather.lowInst_step_iff_row} is the row characterisation, in the same shape as the one above.
+  \leandecl{PLTS.ABA.Gather.instanceOverBracha_step_iff_row} is the row characterisation, in the same shape as the one above.
 \end{definition}

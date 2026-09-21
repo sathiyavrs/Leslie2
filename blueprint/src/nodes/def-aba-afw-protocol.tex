@@ -1,6 +1,6 @@
 \begin{definition}[The gather-based protocol]
   \label{def:aba-afw-protocol}
-  \lean{PLTS.ABA.AFW.Msg}\lean{PLTS.ABA.AFW.StageRec}\lean{PLTS.ABA.AFW.StageStep}\lean{PLTS.ABA.AFW.gCallPayload}\lean{PLTS.ABA.AFW.Ghost}\lean{PLTS.ABA.AFW.ga1Of}\lean{PLTS.ABA.AFW.ga2Of}\lean{PLTS.ABA.AFW.ghostStep}\lean{PLTS.ABA.AFW.ghostOut}\lean{PLTS.ABA.AFW.protocolPre}\lean{PLTS.ABA.AFW.protocolGroup}\lean{PLTS.ABA.AFW.protocol}\leanok
+  \lean{PLTS.ABA.AFW.Msg}\lean{PLTS.ABA.AFW.StageRec}\lean{PLTS.ABA.AFW.RoundStep}\lean{PLTS.ABA.AFW.gCallPayload}\lean{PLTS.ABA.AFW.Ghost}\lean{PLTS.ABA.AFW.ga1Of}\lean{PLTS.ABA.AFW.ga2Of}\lean{PLTS.ABA.AFW.ghostStep}\lean{PLTS.ABA.AFW.ghostOut}\lean{PLTS.ABA.AFW.protocolExtended}\lean{PLTS.ABA.AFW.protocolHidden}\lean{PLTS.ABA.AFW.protocol}\leanok
   \uses{def:aba-flat-reading, def:aba-gbca-gather-low, def:aba-gather-low, def:aba-gather-core}
   The flat reading of Definition~\ref{def:aba-flat-reading} at the gather-based implementation, supplying the four things it requires.
   The message type is tagged: a round of that implementation carries $4n+2$ network states --- one for each gather instance and one for each of the $4n$ Bracha instances --- and the tag names the network state a message belongs to, and for a Bracha message the instance, whose index is its leader.
@@ -8,7 +8,7 @@
   The stage record is process-major.
   The composed reading indexes the local states by instance and then by process, and a program must hold its own data and no one else's, so $\mathrm{StageRec}$ holds process $j$'s local state in each gather instance and its local state in each of the $n$ instances of each broadcast family.
   Every guard of the gather-based implementation reads the acting process's own local states and the network states, and the two rows that read a network state --- the adversary's delivery and its Byzantine injection --- belong to the adversary, so the rearrangement loses nothing.
-  The rows are those of $\mathrm{Gather.LowStep}$ and $\mathrm{GBCA.lowPairInst}$ cut into their process half and their network half: a send writes the sender's own record and the network records the message, and a delivery files the message in the receiver's own local state, dispatched on the tag.
+  The rows are those of $\mathrm{Gather.StepOverBracha}$ and $\mathrm{GBCA.roundOverBracha}$ cut into their process half and their network half: a send writes the sender's own record and the network records the message, and a delivery files the message in the receiver's own local state, dispatched on the tag.
   Three rows are fused, as they are in the composed reading (D28): the graded-agreement call broadcasts the input, the $\mathrm{BIND}$ send is a broadcast call, and the first gather's return to a process is that process's call of the second gather.
   The broadcast return is not a row: gather reads a broadcast delivery as a $2f{+}1$ $\mathrm{VOTE}$ receipt quorum, never through a returned flag, and the composed reading embeds only the silent rows of a Bracha instance.
   The ghost record of a round is $\mathrm{Ghost}(n)$, the first gather's core, the second gather's core and the round's bound bit, each written once (D29, D30).

@@ -63,7 +63,7 @@ theorem Abs.step_gbcaTau {P : Params} {g : ℕ → GBCA.SpecState P.n} {c : ABAS
     Abs P (Function.update g r gr') c w a :=
   hA.frame rfl (fun _ => rfl) (fun _ => rfl) (Inv.step_gbcaTau hI r hstep hgr').2
 
-/-- Core `τ` (DECIDED delivery/echo/byz injection): stutters; `F`/`procs` untouched. -/
+/-- Core `τ` (DECIDED delivery/echo/byzantine injection): stutters; `F`/`procs` untouched. -/
 theorem Abs.step_coreTau {P : Params} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} {a : SpecState P.n} (hA : Abs P g c w a)
     (hI : Inv P g c w)
@@ -220,7 +220,7 @@ theorem mem_support_coinRow {P : Params} {μc : PMF (ABAState P)}
 the matching `Inv.step_*` helper (Stage B) in each case. -/
 theorem Inv.step {P : Params} {g : ℕ → GBCA.SpecState P.n}
     {C : ∀ _ : Fin P.n, CoreRec P.n} {A : ANetState P.n}
-    {w : ℕ → WCC.SpecState P.n} (hI : Inv P g (C, A) w) {l : Lab P.n} {μ : PMF (HybridState P)}
+    {w : ℕ → WCC.SpecState P.n} (hI : Inv P g (C, A) w) {l : Label P.n} {μ : PMF (HybridState P)}
     (hstep : (hybrid P).step (g, C, A, w) l μ)
     {g' : ℕ → GBCA.SpecState P.n} {C' : ∀ _ : Fin P.n, CoreRec P.n} {A' : ANetState P.n}
     {w' : ℕ → WCC.SpecState P.n}
@@ -307,22 +307,22 @@ theorem Inv.step {P : Params} {g : ℕ → GBCA.SpecState P.n}
     exfalso; rw [hybrid_step_iff] at hstep
     rcases hstep with ⟨hτ, -⟩ | ⟨hnotmem, -⟩
     · exact absurd hτ (by simp)
-    · exact hnotmem (Lab.callG_mem_hiddenAPI r id b)
+    · exact hnotmem (Label.callG_mem_hiddenAPI r id b)
   | retG r id out bnd =>
     exfalso; rw [hybrid_step_iff] at hstep
     rcases hstep with ⟨hτ, -⟩ | ⟨hnotmem, -⟩
     · exact absurd hτ (by simp)
-    · exact hnotmem (Lab.retG_mem_hiddenAPI r id out bnd)
+    · exact hnotmem (Label.retG_mem_hiddenAPI r id out bnd)
   | callW r id =>
     exfalso; rw [hybrid_step_iff] at hstep
     rcases hstep with ⟨hτ, -⟩ | ⟨hnotmem, -⟩
     · exact absurd hτ (by simp)
-    · exact hnotmem (Lab.callW_mem_hiddenAPI r id)
+    · exact hnotmem (Label.callW_mem_hiddenAPI r id)
   | retW r id b =>
     exfalso; rw [hybrid_step_iff] at hstep
     rcases hstep with ⟨hτ, -⟩ | ⟨hnotmem, -⟩
     · exact absurd hτ (by simp)
-    · exact hnotmem (Lab.retW_mem_hiddenAPI r id b)
+    · exact hnotmem (Label.retW_mem_hiddenAPI r id b)
 
 end ABA
 end PLTS

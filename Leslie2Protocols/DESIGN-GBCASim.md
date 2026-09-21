@@ -12,8 +12,8 @@ exclusion-then-return run — are a condensation of this document.
 ## Systems
 
 ```
-implInst P r : System (ImplState P.n) (Lab P.n)     -- ABDY22 Algorithm 6, D1/D5/D8/D18
-specInst P r : System (SpecState P.n) (Lab P.n)     -- graded-binding spec, D1/D14/D15/D19
+implInst P r : System (ImplState P.n) (Label P.n)     -- ABDY22 Algorithm 6, D1/D5/D8/D18
+specInst P r : System (SpecState P.n) (Label P.n)     -- graded-binding spec, D1/D14/D15/D19
 target       : ForwardSimulation (implInst P r) (specInst P r) (instRel P r)
 ```
 
@@ -72,7 +72,7 @@ block's case (a) at either bit, and the returns read as Algorithm 6's
   (write-once);
 * `echo5Bot` — `n − f` any-`BIND` receipts, own `BIND` out, `bothValid`, and no
   `n − f` `BIND b` quorum at either bit, multicast `ECHO5 ⊥`;
-* `byz` — a corrupted sender multicasts anything;
+* `byzantine` — a corrupted sender multicasts anything;
 * `retA id v` — an `n − f` `ECHO5 v` receipt quorum, the process called and its
   own `ECHO5` out (grade 2 — case (a), which heads the chain and denies nothing);
 * `retB id v` — `n − f` any-`ECHO5` receipts, at least one `ECHO5 v` receipt,
@@ -437,7 +437,7 @@ never picked.
 | `voteBit` / `voteBot` | τ | stutter | `sentVote` goes `none → some _`: `ExcludedCert.mono`'s persistence hypothesis holds vacuously-forward (wall members already committed) |
 | `bindBit` / `bindBot` | τ | stutter | frame: sender's `sentBind` only |
 | `echo5Bit` / `echo5Bot` | τ | stutter | frame: sender's `sentEcho5` only (nothing in the relation reads `sentEcho5` outside `Inv`) |
-| `byz` | τ | stutter | frame: `sent` set of a corrupted sender only |
+| `byzantine` | τ | stutter | frame: `sent` set of a corrupted sender only |
 | `retA id v` | `retG r id (A v)` | `(!v) ∈ excluded`: single `Step.retA`; else: `excludeThenRetA_run` | see below |
 | `retB id v` | `retG r id (B v)` | `(!v) ∈ excluded`: single `Step.retB`; else: `excludeThenRetB_run` | see below |
 | `retC id` | `retG r id C` | `excluded ≠ ∅`: single `Step.retC`; else: `excludeThenRetC_run` on `b*` | see below |
@@ -656,12 +656,12 @@ one. The `HybridRefinesSpecification/Relation.lean` chain and
 the stage record `GBCA.ByABDY.StageRec` keeps the write-once `sentEcho5` field in its
 `proc` record and carries its own `echo5Count` over its received set rows, the rendezvous
 rows `gsndEcho5Bit`/`gsndEcho5Bot` are the echo5 multicasts read off that record, and the
-three `retG` rows (and their `byzRetG` counterparts) read the echo5 level off it. No
+three `retG` rows (and their `byzantineRetG` counterparts) read the echo5 level off it. No
 translation is needed to the global view: the round-`r` `ImplState` *is* the round
 instance's own state — the stage records with their received set rows beside the round's
 network state, which holds the per-sender sent sets and the corrupted set — and
 `ImplState.echo5Count` reads the receiving program's received set rows directly. So
-`GBCA.ByABDY.subSim` consumes `implRefines` as it stands: the projection `sub_projects`
+`GBCA.ByABDY.subSim` consumes `implRefines` as it stands: the projection `composition_projects`
 (`ABA/Composition/GBCAInstanceByABDY.lean`) matches every round-instance transition with
 the implementation instance's at that same state, one step for one step, and this file's
 refinement answers it, its weak answer read back at the round instance's interface — which

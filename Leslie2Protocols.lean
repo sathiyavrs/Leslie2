@@ -9,7 +9,7 @@ import Leslie2Protocols.ABA.GBCA.AFW.Composition
 import Leslie2Protocols.ABA.GBCA.AFW.Counting
 import Leslie2Protocols.ABA.GBCA.AFW.GatherSubstitutions
 import Leslie2Protocols.ABA.GBCA.AFW.RefinesSpecification
-import Leslie2Protocols.ABA.GBCA.AFW.RowsOverGatherSpecifications
+import Leslie2Protocols.ABA.GBCA.AFW.StepOverGatherSpecifications
 import Leslie2Protocols.ABA.GBCA.Specification
 import Leslie2Protocols.ABA.GBCA.SpecificationSafety
 import Leslie2Protocols.ABA.Gather.BroadcastSubstitution
@@ -18,9 +18,9 @@ import Leslie2Protocols.ABA.Gather.CommonCoreCounting
 import Leslie2Protocols.ABA.Gather.Composition
 import Leslie2Protocols.ABA.Gather.MessagesAndCommonCore
 import Leslie2Protocols.ABA.Gather.RefinesSpecification
-import Leslie2Protocols.ABA.Gather.RowsOverBracha
-import Leslie2Protocols.ABA.Gather.RowsOverBroadcastSpecification
 import Leslie2Protocols.ABA.Gather.Specification
+import Leslie2Protocols.ABA.Gather.StepOverBracha
+import Leslie2Protocols.ABA.Gather.StepOverBroadcastSpecification
 import Leslie2Protocols.ABA.GhostErasure.GhostFreeSystem
 import Leslie2Protocols.ABA.GhostErasure.ImplementationByABDY
 import Leslie2Protocols.ABA.GhostErasure.ImplementationByAFW

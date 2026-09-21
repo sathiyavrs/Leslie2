@@ -8,9 +8,9 @@
     lvl/.style={draw, rounded corners, minimum width=3.1cm, minimum height=0.8cm,
       align=center, font=\footnotesize, inner sep=3pt},
     note/.style={font=\scriptsize, align=left}]
-  \node[lvl] (low)   at (0,1.95)  {$\mathrm{lowPairInst}$};
-  \node[lvl] (ideal) at (0,0.35)  {$\mathrm{idealInst}$};
-  \node[lvl] (pair)  at (0,-1.25) {$\mathrm{pairInst}$};
+  \node[lvl] (low)   at (0,1.95)  {$\mathrm{roundOverBracha}$};
+  \node[lvl] (ideal) at (0,0.35)  {$\mathrm{roundOverBroadcastSpecification}$};
+  \node[lvl] (pair)  at (0,-1.25) {$\mathrm{roundOverGatherSpecifications}$};
   \node[lvl] (spec)  at (0,-2.85) {$\mathrm{GBCA.specInst}$};
   \draw[->, thick] (low)   -- (ideal);
   \draw[->, thick] (ideal) -- (pair);

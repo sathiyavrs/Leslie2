@@ -53,7 +53,7 @@ theorem ret_guards {s : SpecState P.n X} {id : Fin P.n} {g : Fin P.n → Option 
 only from `core = none`, so the value survives every later rule and every
 corruption. -/
 theorem core_stable {C : APSet P.n X} :
-    ∀ (s : SpecState P.n X) (l : Lab P.n X) (μ : PMF (SpecState P.n X))
+    ∀ (s : SpecState P.n X) (l : Label P.n X) (μ : PMF (SpecState P.n X))
       (s' : SpecState P.n X), s.core = some C → Step P s l μ → s' ∈ μ.support →
       s'.core = some C := by
   intro s l μ s' hC hstep hs'
@@ -68,7 +68,7 @@ theorem core_stable {C : APSet P.n X} :
 
 /-- **The size bound is an invariant.** The core is written only by
 `bindCore`, whose guard `hcard` is the bound. -/
-theorem core_card {e : AlterSeq (SpecState P.n X) (Lab P.n X)}
+theorem core_card {e : AlterSeq (SpecState P.n X) (Label P.n X)}
     (he : is_exec e (specInst P X)) :
     ∀ (k : ℕ) (s : SpecState P.n X), e.stateAt k = some s →
       ∀ C, s.core = some C → P.n - P.f ≤ C.card := by
@@ -99,11 +99,11 @@ theorem core_card {e : AlterSeq (SpecState P.n X) (Lab P.n X)}
 /-- **The core on a trace.** Every return label of the trace carries one and
 the same payload set, that set has at least `n − f` entries, and the returned
 map has every entry of it. -/
-def CoreTrace (P : Params) {X : Type} (t : Seq (Lab P.n X)) : Prop :=
+def CoreTrace (P : Params) {X : Type} (t : Seq (Label P.n X)) : Prop :=
   (∀ (id : Fin P.n) (g : Fin P.n → Option X) (C : APSet P.n X),
-      Lab.ret id g C ∈ t → P.n - P.f ≤ C.card ∧ APSet.subMap C g) ∧
+      Label.ret id g C ∈ t → P.n - P.f ≤ C.card ∧ APSet.subMap C g) ∧
     ∀ (id₁ id₂ : Fin P.n) (g₁ g₂ : Fin P.n → Option X) (C₁ C₂ : APSet P.n X),
-      Lab.ret id₁ g₁ C₁ ∈ t → Lab.ret id₂ g₂ C₂ ∈ t → C₁ = C₂
+      Label.ret id₁ g₁ C₁ ∈ t → Label.ret id₂ g₂ C₂ ∈ t → C₁ = C₂
 
 /-- **The specification instance binds one core.** -/
 theorem specInst_core (P : Params) (X : Type) [DecidableEq X] :

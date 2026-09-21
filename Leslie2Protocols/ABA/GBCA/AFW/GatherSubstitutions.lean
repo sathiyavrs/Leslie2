@@ -15,10 +15,10 @@ import Leslie2.Results
 # The two gather substitutions inside the round
 
 The round over the gather instances over Bracha's broadcast
-(`GBCA.ByAFW.lowPairInst`) is forward simulated by the round over the gather instances
-over the broadcast specification (`GBCA.ByAFW.idealInst`), and that one by the round
-over the gather specifications (`GBCA.ByAFW.pairInst`). The two relations are
-`GBCA.ByAFW.LowPairRel` and `GBCA.ByAFW.IdealRel`: the layer held equal, and each
+(`GBCA.ByAFW.roundOverBracha`) is forward simulated by the round over the gather instances
+over the broadcast specification (`GBCA.ByAFW.roundOverBroadcastSpecification`), and that one by the
+round over the gather specifications (`GBCA.ByAFW.roundOverGatherSpecifications`). The two relations
+are `GBCA.ByAFW.LowPairRel` and `GBCA.ByAFW.IdealRel`: the layer held equal, and each
 of the two gather coordinates related by the substitution of that tier
 (`Gather.LowRel`, `Gather.CoreRel`).
 
@@ -52,8 +52,8 @@ namespace Gather
 
 /-- **Broadcast compatibility at the gather instance**: the broadcast
 substitution relation is preserved by corrupting both instances at once. -/
-theorem lowRel_corrupt {X : Type} [DecidableEq X] {P : Params} {s : LowState P.n X}
-    {t : IdealState P.n X} (hR : LowRel P s t) (id : Fin P.n) :
+theorem lowRel_corrupt {X : Type} [DecidableEq X] {P : Params} {s : StateOverBracha P.n X}
+    {t : StateOverBroadcastSpecification P.n X} (hR : LowRel P s t) (id : Fin P.n) :
     LowRel P (corruptAll P id (SubState.corrupt P id) (SubState.corrupt P id) s)
       (corruptAll P id (BRB.SpecState.corrupt P id) (BRB.SpecState.corrupt P id) t) :=
   ⟨congrArg (fun x => (x.1, { x.2 with net := x.2.net.corrupt P id })) hR.ga_eq,
@@ -69,10 +69,11 @@ namespace GBCA.ByAFW
 /-- The broadcast substitution relation of the round: the layer equal, and each
 gather coordinate related to its broadcast-specification coordinate by the
 gather substitution relation. -/
-structure LowPairRel (P : Params) (s : LowPairState P.n) (t : IdealState P.n) : Prop where
+structure LowPairRel (P : Params) (s : RoundStateOverBracha P.n) (t :
+  RoundStateOverBroadcastSpecification P.n) : Prop where
   /-- The programs and the round's bound bit are untouched by the
   substitution. -/
-  layer_eq : s.1 = t.1
+  roundPrograms_eq : s.1 = t.1
   /-- The first gather coordinate is substituted. -/
   ga1Rel : Gather.LowRel P (ga1 s) (ga1 t)
   /-- The second gather coordinate is substituted. -/
@@ -80,7 +81,7 @@ structure LowPairRel (P : Params) (s : LowPairState P.n) (t : IdealState P.n) : 
 
 /-- The relation holds initially. -/
 theorem lowPairRel_init (P : Params) (r : ℕ) :
-    LowPairRel P (lowPairInst P r).init (idealInst P r).init :=
+    LowPairRel P (roundOverBracha P r).init (roundOverBroadcastSpecification P r).init :=
   ⟨rfl, Gather.lowRel_init, Gather.lowRel_init⟩
 
 /-- **The broadcast substitution inside the round.** The round over the gather
@@ -88,18 +89,24 @@ instances over Bracha's broadcast is forward simulated by the round over the
 gather instances over the broadcast specification. Each gather coordinate
 carries the substitution; the congruences carry it through the round. -/
 theorem lowPairRefines (P : Params) (r : ℕ) :
-    ForwardSimulation (lowPairInst P r) (idealInst P r) (LowPairRel P) := by
-  have h1 : ForwardSimulation ((Gather.lowInst P Bool).mapIdle (ga1Pull P.n))
-      ((Gather.idealInst P Bool).mapIdle (ga1Pull P.n)) (Gather.LowRel P) :=
-    ForwardSimulation.mapIdle (ga1Pull P.n) (ga1Pull_tau P.n)
-      (fun _ h => ga1Pull_eq_tau h) (Gather.gatherLow P Bool)
-  have h2 : ForwardSimulation ((Gather.lowInst P (Option Bool)).mapIdle (ga2Pull P.n))
-      ((Gather.idealInst P (Option Bool)).mapIdle (ga2Pull P.n)) (Gather.LowRel P) :=
-    ForwardSimulation.mapIdle (ga2Pull P.n) (ga2Pull_tau P.n)
-      (fun _ h => ga2Pull_eq_tau h) (Gather.gatherLow P (Option Bool))
-  have hGa := (h1.parallel_right ((Gather.lowInst P (Option Bool)).mapIdle (ga2Pull P.n))).trans
-    (h2.parallel_left ((Gather.idealInst P Bool).mapIdle (ga1Pull P.n)))
-  have hRound := ((hGa.parallel_left (layer P r)).abstract (rEvents P.n)).relabel
+    ForwardSimulation (roundOverBracha P r) (roundOverBroadcastSpecification P r) (LowPairRel P) :=
+      by
+  have h1 : ForwardSimulation ((Gather.instanceOverBracha P Bool).mapIdle (firstGatherLabelMap P.n))
+      ((Gather.instanceOverBroadcastSpecification P Bool).mapIdle (firstGatherLabelMap P.n))
+        (Gather.LowRel P) :=
+    ForwardSimulation.mapIdle (firstGatherLabelMap P.n) (firstGatherLabelMap_tau P.n)
+      (fun _ h => firstGatherLabelMap_eq_tau h) (Gather.gatherLow P Bool)
+  have h2 : ForwardSimulation ((Gather.instanceOverBracha P (Option Bool)).mapIdle
+    (secondGatherLabelMap P.n))
+      ((Gather.instanceOverBroadcastSpecification P (Option Bool)).mapIdle (secondGatherLabelMap
+        P.n)) (Gather.LowRel P) :=
+    ForwardSimulation.mapIdle (secondGatherLabelMap P.n) (secondGatherLabelMap_tau P.n)
+      (fun _ h => secondGatherLabelMap_eq_tau h) (Gather.gatherLow P (Option Bool))
+  have hGa := (h1.parallel_right ((Gather.instanceOverBracha P (Option Bool)).mapIdle
+    (secondGatherLabelMap P.n))).trans
+    (h2.parallel_left ((Gather.instanceOverBroadcastSpecification P Bool).mapIdle
+      (firstGatherLabelMap P.n)))
+  have hRound := ((hGa.parallel_left (roundPrograms P r)).abstract (roundEvents P.n)).relabel
   refine ForwardSimulation.congr (fun s t => ?_) hRound
   constructor
   · rintro ⟨hlayer, ⟨c₁, c₂⟩, ⟨h1', rfl⟩, rfl, h2'⟩
@@ -112,10 +119,11 @@ theorem lowPairRefines (P : Params) (r : ℕ) :
 /-- The gather substitution relation of the round: the layer equal, and each
 gather coordinate related to its specification coordinate by the gather
 refinement relation. -/
-structure IdealRel (P : Params) (s : IdealState P.n) (t : PairState P.n) : Prop where
+structure IdealRel (P : Params) (s : RoundStateOverBroadcastSpecification P.n) (t :
+  RoundStateOverGatherSpecifications P.n) : Prop where
   /-- The programs and the round's bound bit are untouched by the
   substitution. -/
-  layer_eq : s.1 = t.1
+  roundPrograms_eq : s.1 = t.1
   /-- The first gather coordinate is substituted. -/
   ga1Rel : Gather.CoreRel P (ga1 s) (ga1 t)
   /-- The second gather coordinate is substituted. -/
@@ -123,25 +131,33 @@ structure IdealRel (P : Params) (s : IdealState P.n) (t : PairState P.n) : Prop 
 
 /-- The relation holds initially. -/
 theorem idealRel_init (P : Params) (r : ℕ) :
-    IdealRel P (idealInst P r).init (pairInst P r).init :=
+    IdealRel P (roundOverBroadcastSpecification P r).init (roundOverGatherSpecifications P r).init
+      :=
   ⟨rfl, Gather.coreRel_init, Gather.coreRel_init⟩
 
 /-- **The gather substitution inside the round.** The round over the gather
 instances over the broadcast specification is forward simulated by the round
 over the gather specifications. -/
 theorem idealRefines (P : Params) (r : ℕ) :
-    ForwardSimulation (idealInst P r) (pairInst P r) (IdealRel P) := by
-  have h1 : ForwardSimulation ((Gather.idealInst P Bool).mapIdle (ga1Pull P.n))
-      ((Gather.liftedSpec P Bool).mapIdle (ga1Pull P.n)) (Gather.CoreRel P) :=
-    ForwardSimulation.mapIdle (ga1Pull P.n) (ga1Pull_tau P.n)
-      (fun _ h => ga1Pull_eq_tau h) (Gather.gatherCore P Bool)
-  have h2 : ForwardSimulation ((Gather.idealInst P (Option Bool)).mapIdle (ga2Pull P.n))
-      ((Gather.liftedSpec P (Option Bool)).mapIdle (ga2Pull P.n)) (Gather.CoreRel P) :=
-    ForwardSimulation.mapIdle (ga2Pull P.n) (ga2Pull_tau P.n)
-      (fun _ h => ga2Pull_eq_tau h) (Gather.gatherCore P (Option Bool))
-  have hGa := (h1.parallel_right ((Gather.idealInst P (Option Bool)).mapIdle (ga2Pull P.n))).trans
-    (h2.parallel_left ((Gather.liftedSpec P Bool).mapIdle (ga1Pull P.n)))
-  have hRound := ((hGa.parallel_left (layer P r)).abstract (rEvents P.n)).relabel
+    ForwardSimulation (roundOverBroadcastSpecification P r) (roundOverGatherSpecifications P r)
+      (IdealRel P) := by
+  have h1 : ForwardSimulation ((Gather.instanceOverBroadcastSpecification P Bool).mapIdle
+    (firstGatherLabelMap P.n))
+      ((Gather.specificationOverInstanceAlphabet P Bool).mapIdle (firstGatherLabelMap P.n))
+        (Gather.CoreRel P) :=
+    ForwardSimulation.mapIdle (firstGatherLabelMap P.n) (firstGatherLabelMap_tau P.n)
+      (fun _ h => firstGatherLabelMap_eq_tau h) (Gather.gatherCore P Bool)
+  have h2 : ForwardSimulation ((Gather.instanceOverBroadcastSpecification P (Option Bool)).mapIdle
+    (secondGatherLabelMap P.n))
+      ((Gather.specificationOverInstanceAlphabet P (Option Bool)).mapIdle (secondGatherLabelMap
+        P.n)) (Gather.CoreRel P) :=
+    ForwardSimulation.mapIdle (secondGatherLabelMap P.n) (secondGatherLabelMap_tau P.n)
+      (fun _ h => secondGatherLabelMap_eq_tau h) (Gather.gatherCore P (Option Bool))
+  have hGa := (h1.parallel_right ((Gather.instanceOverBroadcastSpecification P (Option
+    Bool)).mapIdle (secondGatherLabelMap P.n))).trans
+    (h2.parallel_left ((Gather.specificationOverInstanceAlphabet P Bool).mapIdle
+      (firstGatherLabelMap P.n)))
+  have hRound := ((hGa.parallel_left (roundPrograms P r)).abstract (roundEvents P.n)).relabel
   refine ForwardSimulation.congr (fun s t => ?_) hRound
   constructor
   · rintro ⟨hlayer, ⟨c₁, c₂⟩, ⟨h1', rfl⟩, rfl, h2'⟩
@@ -154,23 +170,28 @@ theorem idealRefines (P : Params) (r : ℕ) :
 /-- Trace-distribution inclusion of the round over the gather instances over
 Bracha's broadcast in the round over the gather instances over the broadcast
 specification. -/
-theorem lowPairInst_refines (P : Params) (r : ℕ) :
-    achievableTraceDists (lowPairInst P r) ⊆ achievableTraceDists (idealInst P r) :=
-  (ForwardSimulation.toProbabilistic (lowPairInst_isLTS P r) (idealInst_isLTS P r)
+theorem roundOverBracha_refines (P : Params) (r : ℕ) :
+    achievableTraceDists (roundOverBracha P r) ⊆ achievableTraceDists
+      (roundOverBroadcastSpecification P r) :=
+  (ForwardSimulation.toProbabilistic (roundOverBracha_isLTS P r)
+    (roundOverBroadcastSpecification_isLTS P r)
     (lowPairRel_init P r) (lowPairRefines P r)).achievableTraceDists_subset
 
 /-- Trace-distribution inclusion of the round over the gather instances over
 the broadcast specification in the round over the gather specifications. -/
-theorem idealInst_refines (P : Params) (r : ℕ) :
-    achievableTraceDists (idealInst P r) ⊆ achievableTraceDists (pairInst P r) :=
-  (ForwardSimulation.toProbabilistic (idealInst_isLTS P r) (pairInst_isLTS P r)
+theorem roundOverBroadcastSpecification_refines (P : Params) (r : ℕ) :
+    achievableTraceDists (roundOverBroadcastSpecification P r) ⊆ achievableTraceDists
+      (roundOverGatherSpecifications P r) :=
+  (ForwardSimulation.toProbabilistic (roundOverBroadcastSpecification_isLTS P r)
+    (roundOverGatherSpecifications_isLTS P r)
     (idealRel_init P r) (idealRefines P r)).achievableTraceDists_subset
 
 /-! ### Broadcast compatibility -/
 
 /-- **Broadcast compatibility of the broadcast substitution**: the relation is
 preserved by corrupting both rounds at once. -/
-theorem lowPairRel_corrupt {P : Params} {s : LowPairState P.n} {t : IdealState P.n}
+theorem lowPairRel_corrupt {P : Params} {s : RoundStateOverBracha P.n} {t :
+  RoundStateOverBroadcastSpecification P.n}
     (hR : LowPairRel P s t) (id : Fin P.n) :
     LowPairRel P
       (corruptAll P id
@@ -180,11 +201,12 @@ theorem lowPairRel_corrupt {P : Params} {s : LowPairState P.n} {t : IdealState P
         (fun i => Gather.corruptAll P i (BRB.SpecState.corrupt P i) (BRB.SpecState.corrupt P i))
         (fun i => Gather.corruptAll P i (BRB.SpecState.corrupt P i) (BRB.SpecState.corrupt P i))
         t) :=
-  ⟨hR.layer_eq, Gather.lowRel_corrupt hR.ga1Rel id, Gather.lowRel_corrupt hR.ga2Rel id⟩
+  ⟨hR.roundPrograms_eq, Gather.lowRel_corrupt hR.ga1Rel id, Gather.lowRel_corrupt hR.ga2Rel id⟩
 
 /-- **Broadcast compatibility of the gather substitution**: the relation is
 preserved by corrupting both rounds at once. -/
-theorem idealRel_corrupt {P : Params} {s : IdealState P.n} {t : PairState P.n}
+theorem idealRel_corrupt {P : Params} {s : RoundStateOverBroadcastSpecification P.n} {t :
+  RoundStateOverGatherSpecifications P.n}
     (hR : IdealRel P s t) (id : Fin P.n) :
     IdealRel P
       (corruptAll P id
@@ -193,7 +215,7 @@ theorem idealRel_corrupt {P : Params} {s : IdealState P.n} {t : PairState P.n}
         s)
       (corruptAll P id (fun i => Gather.SpecState.corrupt P i)
         (fun i => Gather.SpecState.corrupt P i) t) :=
-  ⟨hR.layer_eq, Gather.coreRel_corrupt hR.ga1Rel id, Gather.coreRel_corrupt hR.ga2Rel id⟩
+  ⟨hR.roundPrograms_eq, Gather.coreRel_corrupt hR.ga1Rel id, Gather.coreRel_corrupt hR.ga2Rel id⟩
 
 /-! ### Mechanical axiom check -/
 
@@ -205,13 +227,13 @@ theorem idealRel_corrupt {P : Params} {s : IdealState P.n} {t : PairState P.n}
 #guard_msgs in
 #print axioms idealRefines
 
-/-- info: 'PLTS.ABA.GBCA.ByAFW.lowPairInst_refines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.GBCA.ByAFW.roundOverBracha_refines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms lowPairInst_refines
+#print axioms roundOverBracha_refines
 
-/-- info: 'PLTS.ABA.GBCA.ByAFW.idealInst_refines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.GBCA.ByAFW.roundOverBroadcastSpecification_refines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms idealInst_refines
+#print axioms roundOverBroadcastSpecification_refines
 
 end GBCA.ByAFW
 end ABA

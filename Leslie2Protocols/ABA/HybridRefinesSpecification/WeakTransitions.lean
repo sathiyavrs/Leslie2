@@ -43,7 +43,7 @@ theorem decide_step {a : SpecState P.n} {b : Bool} (hv : a.val = none)
 /-- A `weakTau` run followed by a genuine (possibly visible) single step is a `weakStep`: the
 run is the leading τ-closure, the step is the middle hyper-step (`hyperStep_pure_of_step`), and
 the trailing τ-closure is the trivial reflexivity at the final state. -/
-theorem weakStep_of_run_then_step {a a' a'' : SpecState P.n} {l : Lab P.n}
+theorem weakStep_of_run_then_step {a a' a'' : SpecState P.n} {l : Label P.n}
     (hrun : weakTau (spec P) (PMF.pure a) (PMF.pure a'))
     (hstep : SpecStep P a' l (PMF.pure a'')) :
     weakStep (spec P) (PMF.pure a) l (PMF.pure a'') :=

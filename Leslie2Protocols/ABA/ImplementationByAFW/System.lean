@@ -45,7 +45,7 @@ loses nothing.
 
 ## The rows
 
-The stage-side rows are the rows of `Gather.LowStep` and `GBCA.ByAFW.lowPairInst`
+The stage-side rows are the rows of `Gather.StepOverBracha` and `GBCA.ByAFW.roundOverBracha`
 cut into their process half and their network half. A send writes the sender's
 own record and the network records the message; a delivery files the message in
 the receiver's own local state, dispatched on the tag. Three rows are fused
@@ -68,7 +68,7 @@ input-broadcast instances.
 The record the adversary holds for round `r` is `AFW.Ghost`: the first
 gather's frozen core, the second gather's frozen core, and the round's bound
 bit, each written once. `AFW.ghostStep` writes it. The link's broadcast of the
-candidate — the label `gsnd r j (brbIn2 j (init _))`, which no other row
+candidate — the label `gbcaSend r j (brbIn2 j (init _))`, which no other row
 carries — freezes the first core at `Gather.coreOf` of the round's first
 gather network state and the bound bit at `GBCA.boundOfCore` of that core; a
 graded return freezes the second core the same way. Every other label leaves
@@ -257,14 +257,14 @@ gather's core and the round's bound bit, a graded return freezes the second
 gather's core, and every other label leaves the record where it stands. Each
 field is written once. -/
 noncomputable def ghostStep (P : Params) :
-    NLabP P.n (Msg P.n) → NetState P.n → Ghost P.n → Ghost P.n
-  | Sum.inr (.gsnd r _ (.brbIn2 _ (.init _))), w, G =>
+    ExtendedLabel P.n (Msg P.n) → NetState P.n → Ghost P.n → Ghost P.n
+  | Sum.inr (.gbcaSend r _ (.brbIn2 _ (.init _))), w, G =>
       (some (G.1.getD (Gather.coreOf P (ga1Of P w r))), G.2.1,
         some (G.2.2.getD (GBCA.boundOfCore P
           (G.1.getD (Gather.coreOf P (ga1Of P w r))))))
   | Sum.inl (.retG r _ _ _), w, G =>
       (G.1, some (G.2.1.getD (Gather.coreOf P (ga2Of P w r))), G.2.2)
-  | Sum.inr (.byzRetG r _ _ _), w, G =>
+  | Sum.inr (.byzantineRetG r _ _ _), w, G =>
       (G.1, some (G.2.1.getD (Gather.coreOf P (ga2Of P w r))), G.2.2)
   | _, _, G => G
 
@@ -393,8 +393,8 @@ theorem mem_acceptedIn2 {P : Params} {s : StageRec P.n} {k : Fin P.n} {v : Optio
 
 /-- The stage-side rows of process `j`: the two gather instances, the `4n`
 Bracha instances beneath them, the three fused rows, and the delivery. -/
-inductive StageStep (P : Params) (j : Fin P.n) :
-    ProcRec P.n → NLabP P.n (Msg P.n) → PMF (ProcRec P.n) → Prop
+inductive RoundStep (P : Params) (j : Fin P.n) :
+    ProcRec P.n → ExtendedLabel P.n (Msg P.n) → PMF (ProcRec P.n) → Prop
   /-- The graded-agreement call: the round loop hands its estimate to the
   round's first gather, which records it and broadcasts it through the
   process's own input-broadcast instance. The `⟨INIT, b⟩` multicast is the
@@ -406,7 +406,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
       (hest : c.proc.est = some b)
       (hin : ((p.stage r).ga1.proc).input = none)
       (hbin : (((p.stage r).brbIn1 j).proc).input = none) :
-      StageStep P j (c, p) (Sum.inl (.callG r j b))
+      RoundStep P j (c, p) (Sum.inl (.callG r j b))
         (PMF.pure (c.setProc { c.proc with phase := .awaitG },
           p.setStage r
             { (p.stage r) with
@@ -422,7 +422,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
       (hph : c.proc.phase = .toCallG) (hr : c.proc.round = r)
       (hest : c.proc.est = some b)
       (hin : ((p.stage r).ga1.proc).input ≠ none) :
-      StageStep P j (c, p) (Sum.inr (.gcallLoop r j b))
+      RoundStep P j (c, p) (Sum.inr (.gcallLoop r j b))
         (PMF.pure (c.setProc { c.proc with phase := .awaitG }, p))
   /-- The first gather's `ECHO`: the process is called and its accepted pairs
   number at least `n − f`, the source blueprint's `|AP| ≥ n − f`. The payload is
@@ -432,7 +432,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
       (hin : ((p.stage r).ga1.proc).input ≠ none)
       (hcard : P.n - P.f ≤ (acceptedIn1 P (p.stage r)).card)
       (hsend : ((p.stage r).ga1.proc).sentEcho = none) :
-      StageStep P j (c, p) (Sum.inr (.gsnd r j (.ga1 (.echo (acceptedIn1 P (p.stage r))))))
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.ga1 (.echo (acceptedIn1 P (p.stage r))))))
         (PMF.pure (c, p.setStage r
           { (p.stage r) with
             ga1 := (p.stage r).ga1.setP
@@ -451,7 +451,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
         ∀ q ∈ Q, ∃ A, GaMsg.echo A ∈ ((p.stage r).ga1.recv q) ∧
           approved1 P (p.stage r) A ∧ A ⊆ U)
       (hsend : ((p.stage r).ga1.proc).sentVote = none) :
-      StageStep P j (c, p) (Sum.inr (.gsnd r j (.ga1 (.vote U))))
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.ga1 (.vote U))))
         (PMF.pure (c, p.setStage r
           { (p.stage r) with
             ga1 := (p.stage r).ga1.setP
@@ -472,7 +472,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ W, GaMsg.vote W ∈ ((p.stage r).ga1.recv q) ∧
           approved1 P (p.stage r) W ∧ W ⊆ U) :
-      StageStep P j (c, p) (Sum.inr (.gsnd r j (.brbBind1 j (.init U))))
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.brbBind1 j (.init U))))
         (PMF.pure (c, p.setStage r
           { (p.stage r) with
             ga1 := (p.stage r).ga1.setP
@@ -486,7 +486,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
       (hin : ((p.stage r).ga2.proc).input ≠ none)
       (hcard : P.n - P.f ≤ (acceptedIn2 P (p.stage r)).card)
       (hsend : ((p.stage r).ga2.proc).sentEcho = none) :
-      StageStep P j (c, p) (Sum.inr (.gsnd r j (.ga2 (.echo (acceptedIn2 P (p.stage r))))))
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.ga2 (.echo (acceptedIn2 P (p.stage r))))))
         (PMF.pure (c, p.setStage r
           { (p.stage r) with
             ga2 := (p.stage r).ga2.setP
@@ -503,7 +503,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
         ∀ q ∈ Q, ∃ A, GaMsg.echo A ∈ ((p.stage r).ga2.recv q) ∧
           approved2 P (p.stage r) A ∧ A ⊆ U)
       (hsend : ((p.stage r).ga2.proc).sentVote = none) :
-      StageStep P j (c, p) (Sum.inr (.gsnd r j (.ga2 (.vote U))))
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.ga2 (.vote U))))
         (PMF.pure (c, p.setStage r
           { (p.stage r) with
             ga2 := (p.stage r).ga2.setP
@@ -520,7 +520,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ W, GaMsg.vote W ∈ ((p.stage r).ga2.recv q) ∧
           approved2 P (p.stage r) W ∧ W ⊆ U) :
-      StageStep P j (c, p) (Sum.inr (.gsnd r j (.brbBind2 j (.init U))))
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.brbBind2 j (.init U))))
         (PMF.pure (c, p.setStage r
           { (p.stage r) with
             ga2 := (p.stage r).ga2.setP
@@ -544,8 +544,8 @@ inductive StageStep (P : Params) (j : Fin P.n) :
       (hr1 : ((p.stage r).ga1.proc).returned = false)
       (hin2 : ((p.stage r).ga2.proc).input = none)
       (hbin2 : (((p.stage r).brbIn2 j).proc).input = none) :
-      StageStep P j (c, p)
-        (Sum.inr (.gsnd r j (.brbIn2 j (.init (GBCA.cand P g)))))
+      RoundStep P j (c, p)
+        (Sum.inr (.gbcaSend r j (.brbIn2 j (.init (GBCA.cand P g)))))
         (PMF.pure (c, p.setStage r
           { (p.stage r) with
             ga1 := (p.stage r).ga1.setP
@@ -569,7 +569,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ U, apBind2 P (p.stage r) q U ∧ APSet.subMap U g)
       (hr2 : ((p.stage r).ga2.proc).returned = false) :
-      StageStep P j (c, p) (Sum.inl (.retG r j (GBCA.gradeOf P g) bnd))
+      RoundStep P j (c, p) (Sum.inl (.retG r j (GBCA.gradeOf P g) bnd))
         (PMF.pure (c.setProc { c.proc with
             est := (GBCA.gradeOf P g).est, lastGrade := some (GBCA.gradeOf P g),
             phase := .toCallW },
@@ -586,7 +586,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
         P.echoQuorum ≤ ((p.stage r).brbIn1 i).recvCount (.echo m) ∨
         P.f + 1 ≤ ((p.stage r).brbIn1 i).recvCount (.vote m))
       (hsend : (((p.stage r).brbIn1 i).proc).sentEcho = none) :
-      StageStep P j (c, p) (Sum.inr (.gsnd r j (.brbIn1 i (.echo m))))
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.brbIn1 i (.echo m))))
         (PMF.pure (c, p.setStage r
           { (p.stage r) with
             brbIn1 := Function.update (p.stage r).brbIn1 i
@@ -598,7 +598,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
       (m : Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
       (hcnt : P.echoQuorum ≤ ((p.stage r).brbIn1 i).recvCount (.echo m))
       (hsend : (((p.stage r).brbIn1 i).proc).sentVote = none) :
-      StageStep P j (c, p) (Sum.inr (.gsnd r j (.brbIn1 i (.vote m))))
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.brbIn1 i (.vote m))))
         (PMF.pure (c, p.setStage r
           { (p.stage r) with
             brbIn1 := Function.update (p.stage r).brbIn1 i
@@ -609,7 +609,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
       (m : Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
       (hcnt : P.f + 1 ≤ ((p.stage r).brbIn1 i).recvCount (.vote m))
       (hsend : (((p.stage r).brbIn1 i).proc).sentVote = none) :
-      StageStep P j (c, p) (Sum.inr (.gsnd r j (.brbIn1 i (.vote m))))
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.brbIn1 i (.vote m))))
         (PMF.pure (c, p.setStage r
           { (p.stage r) with
             brbIn1 := Function.update (p.stage r).brbIn1 i
@@ -622,7 +622,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
         P.echoQuorum ≤ ((p.stage r).brbBind1 i).recvCount (.echo m) ∨
         P.f + 1 ≤ ((p.stage r).brbBind1 i).recvCount (.vote m))
       (hsend : (((p.stage r).brbBind1 i).proc).sentEcho = none) :
-      StageStep P j (c, p) (Sum.inr (.gsnd r j (.brbBind1 i (.echo m))))
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.brbBind1 i (.echo m))))
         (PMF.pure (c, p.setStage r
           { (p.stage r) with
             brbBind1 := Function.update (p.stage r).brbBind1 i
@@ -634,7 +634,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
       (m : APSet P.n Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
       (hcnt : P.echoQuorum ≤ ((p.stage r).brbBind1 i).recvCount (.echo m))
       (hsend : (((p.stage r).brbBind1 i).proc).sentVote = none) :
-      StageStep P j (c, p) (Sum.inr (.gsnd r j (.brbBind1 i (.vote m))))
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.brbBind1 i (.vote m))))
         (PMF.pure (c, p.setStage r
           { (p.stage r) with
             brbBind1 := Function.update (p.stage r).brbBind1 i
@@ -646,7 +646,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
       (m : APSet P.n Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
       (hcnt : P.f + 1 ≤ ((p.stage r).brbBind1 i).recvCount (.vote m))
       (hsend : (((p.stage r).brbBind1 i).proc).sentVote = none) :
-      StageStep P j (c, p) (Sum.inr (.gsnd r j (.brbBind1 i (.vote m))))
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.brbBind1 i (.vote m))))
         (PMF.pure (c, p.setStage r
           { (p.stage r) with
             brbBind1 := Function.update (p.stage r).brbBind1 i
@@ -659,7 +659,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
         P.echoQuorum ≤ ((p.stage r).brbIn2 i).recvCount (.echo m) ∨
         P.f + 1 ≤ ((p.stage r).brbIn2 i).recvCount (.vote m))
       (hsend : (((p.stage r).brbIn2 i).proc).sentEcho = none) :
-      StageStep P j (c, p) (Sum.inr (.gsnd r j (.brbIn2 i (.echo m))))
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.brbIn2 i (.echo m))))
         (PMF.pure (c, p.setStage r
           { (p.stage r) with
             brbIn2 := Function.update (p.stage r).brbIn2 i
@@ -671,7 +671,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
       (m : Option Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
       (hcnt : P.echoQuorum ≤ ((p.stage r).brbIn2 i).recvCount (.echo m))
       (hsend : (((p.stage r).brbIn2 i).proc).sentVote = none) :
-      StageStep P j (c, p) (Sum.inr (.gsnd r j (.brbIn2 i (.vote m))))
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.brbIn2 i (.vote m))))
         (PMF.pure (c, p.setStage r
           { (p.stage r) with
             brbIn2 := Function.update (p.stage r).brbIn2 i
@@ -683,7 +683,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
       (m : Option Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
       (hcnt : P.f + 1 ≤ ((p.stage r).brbIn2 i).recvCount (.vote m))
       (hsend : (((p.stage r).brbIn2 i).proc).sentVote = none) :
-      StageStep P j (c, p) (Sum.inr (.gsnd r j (.brbIn2 i (.vote m))))
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.brbIn2 i (.vote m))))
         (PMF.pure (c, p.setStage r
           { (p.stage r) with
             brbIn2 := Function.update (p.stage r).brbIn2 i
@@ -697,7 +697,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
         P.echoQuorum ≤ ((p.stage r).brbBind2 i).recvCount (.echo m) ∨
         P.f + 1 ≤ ((p.stage r).brbBind2 i).recvCount (.vote m))
       (hsend : (((p.stage r).brbBind2 i).proc).sentEcho = none) :
-      StageStep P j (c, p) (Sum.inr (.gsnd r j (.brbBind2 i (.echo m))))
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.brbBind2 i (.echo m))))
         (PMF.pure (c, p.setStage r
           { (p.stage r) with
             brbBind2 := Function.update (p.stage r).brbBind2 i
@@ -710,7 +710,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
       (hterm : p.terminated = false)
       (hcnt : P.echoQuorum ≤ ((p.stage r).brbBind2 i).recvCount (.echo m))
       (hsend : (((p.stage r).brbBind2 i).proc).sentVote = none) :
-      StageStep P j (c, p) (Sum.inr (.gsnd r j (.brbBind2 i (.vote m))))
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.brbBind2 i (.vote m))))
         (PMF.pure (c, p.setStage r
           { (p.stage r) with
             brbBind2 := Function.update (p.stage r).brbBind2 i
@@ -723,7 +723,7 @@ inductive StageStep (P : Params) (j : Fin P.n) :
       (hterm : p.terminated = false)
       (hcnt : P.f + 1 ≤ ((p.stage r).brbBind2 i).recvCount (.vote m))
       (hsend : (((p.stage r).brbBind2 i).proc).sentVote = none) :
-      StageStep P j (c, p) (Sum.inr (.gsnd r j (.brbBind2 i (.vote m))))
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.brbBind2 i (.vote m))))
         (PMF.pure (c, p.setStage r
           { (p.stage r) with
             brbBind2 := Function.update (p.stage r).brbBind2 i
@@ -733,14 +733,14 @@ inductive StageStep (P : Params) (j : Fin P.n) :
   tag names. Authenticity is the network's conjunct. -/
   | gdlvRecv (c : CoreRec P.n) (p : StageSideRec P.n) (r : ℕ) (k : Fin P.n)
       (m : Msg P.n) (hh : c.corrupted = false) (hterm : p.terminated = false) :
-      StageStep P j (c, p) (Sum.inr (.gdlv r j k m))
+      RoundStep P j (c, p) (Sum.inr (.gbcaDeliver r j k m))
         (PMF.pure (c, p.deliverTo r k m))
 
 /-- The rows above meet the flat reading's conditions: each carries a label of
-`stageOwn j`, each fires only at an unreplaced program, each is Dirac, and the
+`roundOwn j`, each fires only at an unreplaced program, each is Dirac, and the
 return takes the announced bit free (D29). -/
 instance instIsStageTable (P : Params) :
-    IsStageTable P (Msg P.n) (StageRec P.n) (StageStep P) where
+    IsRoundRuleTable P (Msg P.n) (StageRec P.n) (RoundStep P) where
   own h := by cases h <;> rfl
   honest h := by cases h <;> assumption
   dirac h := by cases h <;> exact ⟨_, rfl⟩
@@ -791,36 +791,37 @@ gather. -/
 def gCallPayload (P : Params) : Fin P.n → Bool → Msg P.n := fun id b => .brbIn1 id (.init b)
 
 /-- The step relation of the program of process `j`. -/
-abbrev ProcStep (P : Params) (j : Fin P.n) :
-    ProcRec P.n → NLabP P.n (Msg P.n) → PMF (ProcRec P.n) → Prop :=
-  FlatProcStep P (Msg P.n) (StageRec P.n) (StageStep P) j
+abbrev ProgramStep (P : Params) (j : Fin P.n) :
+    ProcRec P.n → ExtendedLabel P.n (Msg P.n) → PMF (ProcRec P.n) → Prop :=
+  Implementation.ProgramStep P (Msg P.n) (StageRec P.n) (RoundStep P) j
 
 /-- The step relation of the network adversary. -/
-abbrev NetStep (P : Params) :
-    NetState P.n → NLabP P.n (Msg P.n) → PMF (NetState P.n) → Prop :=
-  FlatNetStep P (Msg P.n) (Ghost P.n) (gCallPayload P) (ghostStep P) (announcedBound P)
+abbrev NetworkStep (P : Params) :
+    NetState P.n → ExtendedLabel P.n (Msg P.n) → PMF (NetState P.n) → Prop :=
+  Implementation.NetworkStep P (Msg P.n) (Ghost P.n) (gCallPayload P) (ghostStep P)
+    (announcedBound P)
 
 /-- The state of the gather-based protocol: the process family, the network
 adversary and the coin oracle. -/
 abbrev ProtocolState (P : Params) : Type :=
-  Implementation.FlatState P (Msg P.n) (StageRec P.n) (Ghost P.n)
+  Implementation.State P (Msg P.n) (StageRec P.n) (Ghost P.n)
 
 /-- The three components side by side, over the extended alphabet. -/
-noncomputable def protocolPre (P : Params) :
-    System (ProtocolState P) (Implementation.NLabP P.n (Msg P.n)) :=
-  Implementation.flatPre P (Msg P.n) (StageRec P.n) (Ghost P.n) (StageStep P)
+noncomputable def protocolExtended (P : Params) :
+    System (ProtocolState P) (Implementation.ExtendedLabel P.n (Msg P.n)) :=
+  Implementation.systemExtended P (Msg P.n) (StageRec P.n) (Ghost P.n) (RoundStep P)
     (gCallPayload P) (ghostStep P) (announcedBound P)
 
 /-- The gather-based protocol group: the rendezvous alphabet hidden, the
-result read back over `Lab n`. -/
-noncomputable def protocolGroup (P : Params) : System (ProtocolState P) (Lab P.n) :=
-  Implementation.flatGroup P (Msg P.n) (StageRec P.n) (Ghost P.n) (StageStep P)
+result read back over `Label n`. -/
+noncomputable def protocolHidden (P : Params) : System (ProtocolState P) (Label P.n) :=
+  Implementation.systemHidden P (Msg P.n) (StageRec P.n) (Ghost P.n) (RoundStep P)
     (gCallPayload P) (ghostStep P) (announcedBound P)
 
 /-- **The gather-based protocol**: the group with the sub-protocol API
 hidden. -/
-noncomputable def protocol (P : Params) : System (ProtocolState P) (Lab P.n) :=
-  Implementation.flat P (Msg P.n) (StageRec P.n) (Ghost P.n) (StageStep P)
+noncomputable def protocol (P : Params) : System (ProtocolState P) (Label P.n) :=
+  Implementation.system P (Msg P.n) (StageRec P.n) (Ghost P.n) (RoundStep P)
     (gCallPayload P) (ghostStep P) (announcedBound P)
 
 end AFW

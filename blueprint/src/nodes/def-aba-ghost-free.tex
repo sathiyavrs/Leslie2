@@ -1,12 +1,12 @@
 \begin{definition}[The ghost-free reading]
   \label{def:aba-ghost-free}
-  \lean{PLTS.ABA.Implementation.flat₀}\lean{PLTS.ABA.ABDY.protocol₀}\lean{PLTS.ABA.AFW.protocol₀}\leanok
+  \lean{PLTS.ABA.Implementation.systemGhostFree}\lean{PLTS.ABA.ABDY.protocol₀}\lean{PLTS.ABA.AFW.protocol₀}\leanok
   \uses{def:aba-flat-reading, def:aba-protocol, def:aba-afw-protocol}
   The flat reading of Definition~\ref{def:aba-flat-reading} at a one-element ghost record.
   The programs, the network rows, the coin oracle and the composition pipeline are those of the reading; what the instantiation settles is the adversary's record and the guard of the two graded-agreement return rows.
   The record of a round is the one element, so the update of D30 writes nothing that can be read back.
   The output of D30 is the full relation, so a graded-agreement return fires at either value of the bound bit its label carries, and the bit a return announces is the adversary's own choice.
-  Full construction: \leandecl{PLTS.ABA.Implementation.flat₀}.
+  Full construction: \leandecl{PLTS.ABA.Implementation.systemGhostFree}.
 
   The two protocols have ghost-free readings at their own stage message type, stage record and stage-side rows: \leandecl{PLTS.ABA.ABDY.protocol₀} against Definition~\ref{def:aba-protocol}, and \leandecl{PLTS.ABA.AFW.protocol₀} against Definition~\ref{def:aba-afw-protocol}.
   Each is the protocol it is named for with the adversary's record dropped and nothing else changed, so each has the same alphabet as the protocol and sits in the same composition.

@@ -56,10 +56,12 @@ private theorem stutter_step {P : Params} (μ_C : PMF (HybridState P)) (a : Spec
     (hA : ∀ s' ∈ μ_C.support, coreR P s' a) :
     ∃ ω : PMF (PMF (SpecState P.n)),
       PMFRel (coreRel P) μ_C ω ∧ weakTau (spec P) (PMF.pure a) (ω.bind id) := by
-  set Ω : PMF (HybridState P × PMF (SpecState P.n)) := μ_C.map (fun s' => (s', PMF.pure a)) with hΩdef
+  set Ω : PMF (HybridState P × PMF (SpecState P.n)) := μ_C.map (fun s' => (s',
+    PMF.pure a)) with hΩdef
   have hFst : Ω.map Prod.fst = μ_C := by
     rw [hΩdef, PMF.map_comp]
-    have hcomp : (Prod.fst ∘ fun s' => (s', PMF.pure a)) = (id : HybridState P → HybridState P) := rfl
+    have hcomp : (Prod.fst ∘ fun s' => (s',
+      PMF.pure a)) = (id : HybridState P → HybridState P) := rfl
     rw [hcomp, PMF.map_id]
   have hSnd : Ω.map Prod.snd = PMF.pure (PMF.pure a) := by
     rw [hΩdef, PMF.map_comp]
@@ -108,8 +110,8 @@ private theorem dirac_step {P : Params} (s_C' : HybridState P) (a' : SpecState P
 
 /-- A hidden-API label can never be visible at the `hybrid` level (it is always relabeled
 to `τ` by the outer hiding), so any purported `hybrid`-step carrying one is vacuous. -/
-private theorem hidden_label_impossible {P : Params} {s_C : HybridState P} {l : Lab P.n}
-    {μ_C : PMF (HybridState P)} (hmem : l ∈ Lab.hiddenAPI P.n) (hne : l ≠ Silent.τ)
+private theorem hidden_label_impossible {P : Params} {s_C : HybridState P} {l : Label P.n}
+    {μ_C : PMF (HybridState P)} (hmem : l ∈ Label.hiddenAPI P.n) (hne : l ≠ Silent.τ)
     (hstep : (hybrid P).step s_C l μ_C) : False := by
   rw [hybrid_step_iff] at hstep
   rcases hstep with ⟨h, -⟩ | ⟨h, -⟩
@@ -143,7 +145,7 @@ theorem coreSim (P : Params) :
           obtain ⟨⟨gr', hgr', heq⟩, rfl, rfl, rfl⟩ := hs'
           exact ⟨hI', by rw [← heq]; exact hAbs.step_gbcaTau hI r hstepG hgr'⟩)
         exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
-      · -- rows 2/8: the view's own τ (DECIDED delivery/echo/byz)
+      · -- rows 2/8: the view's own τ (DECIDED delivery/echo/byzantine)
         obtain ⟨ω, hRel, hWeak⟩ := stutter_step _ a (fun s' hs' => by
           obtain ⟨g', C', A', w'⟩ := s'
           have hI' := hI.step hstep hs'

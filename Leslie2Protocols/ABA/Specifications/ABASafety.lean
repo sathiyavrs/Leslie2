@@ -91,17 +91,17 @@ def corruptF (P : Params) (id : Fin P.n) (F : Finset (Fin P.n)) : Finset (Fin P.
 
 /-- Fold one label into the corrupted set: `corruptF` on `fail id`, identity
 on every other label. -/
-def failStep (P : Params) (F : Finset (Fin P.n)) : Lab P.n → Finset (Fin P.n)
+def failStep (P : Params) (F : Finset (Fin P.n)) : Label P.n → Finset (Fin P.n)
   | .fail id => corruptF P id F
   | _ => F
 
 /-- The corrupted set determined by a label list: the fold of D1-`corrupt`
 over its `fail` labels. -/
-def failSetL (P : Params) (L : List (Lab P.n)) : Finset (Fin P.n) :=
+def failSetL (P : Params) (L : List (Label P.n)) : Finset (Fin P.n) :=
   L.foldl (failStep P) ∅
 
 /-- The corrupted set after the first `k` labels of a trace. -/
-def failSet (P : Params) (t : Seq (Lab P.n)) : ℕ → Finset (Fin P.n)
+def failSet (P : Params) (t : Seq (Label P.n)) : ℕ → Finset (Fin P.n)
   | 0 => ∅
   | k + 1 =>
     match t.get? k with
@@ -109,7 +109,7 @@ def failSet (P : Params) (t : Seq (Lab P.n)) : ℕ → Finset (Fin P.n)
     | none => failSet P t k
 
 /-- `id` is never corrupted along the trace `t`. -/
-def NeverCorrupted (P : Params) (t : Seq (Lab P.n)) (id : Fin P.n) : Prop :=
+def NeverCorrupted (P : Params) (t : Seq (Label P.n)) (id : Fin P.n) : Prop :=
   ∀ k, id ∉ failSet P t k
 
 /-! ### The trace-level safety predicates -/
@@ -119,29 +119,29 @@ position `m`) by a never-corrupted process is preceded by a `callABA id' b`
 event that is `id'`'s first `callABA` of the trace, with the caller `id'`
 never corrupted anywhere along the trace. A process has one input, and its
 first call is the event that carries it. -/
-def ValidityTrace (P : Params) (t : Seq (Lab P.n)) : Prop :=
-  ∀ m id b, t.get? m = some (Lab.retABA id b) → NeverCorrupted P t id →
-    ∃ k, k < m ∧ ∃ id', t.get? k = some (Lab.callABA id' b) ∧
+def ValidityTrace (P : Params) (t : Seq (Label P.n)) : Prop :=
+  ∀ m id b, t.get? m = some (Label.retABA id b) → NeverCorrupted P t id →
+    ∃ k, k < m ∧ ∃ id', t.get? k = some (Label.callABA id' b) ∧
       NeverCorrupted P t id' ∧
-      ∀ k' < k, ∀ b', t.get? k' ≠ some (Lab.callABA id' b')
+      ∀ k' < k, ∀ b', t.get? k' ≠ some (Label.callABA id' b')
 
 /-- **Agreement** (trace form): any two returns by never-corrupted processes
 carry the same bit. -/
-def AgreementTrace (P : Params) (t : Seq (Lab P.n)) : Prop :=
-  ∀ id b id' b', Lab.retABA id b ∈ t → Lab.retABA id' b' ∈ t →
+def AgreementTrace (P : Params) (t : Seq (Label P.n)) : Prop :=
+  ∀ id b id' b', Label.retABA id b ∈ t → Label.retABA id' b' ∈ t →
     NeverCorrupted P t id → NeverCorrupted P t id' → b = b'
 
 /-! ### Budget and monotonicity of the corruption fold -/
 
-@[simp] theorem failSet_zero (t : Seq (Lab P.n)) : failSet P t 0 = ∅ := rfl
+@[simp] theorem failSet_zero (t : Seq (Label P.n)) : failSet P t 0 = ∅ := rfl
 
-theorem failSet_succ (t : Seq (Lab P.n)) (k : ℕ) :
+theorem failSet_succ (t : Seq (Label P.n)) (k : ℕ) :
     failSet P t (k + 1) =
       match t.get? k with
       | some l => failStep P (failSet P t k) l
       | none => failSet P t k := rfl
 
-theorem subset_failStep (F : Finset (Fin P.n)) (l : Lab P.n) :
+theorem subset_failStep (F : Finset (Fin P.n)) (l : Label P.n) :
     F ⊆ failStep P F l := by
   cases l <;> try exact fun _ h => h
   case fail id =>
@@ -152,7 +152,7 @@ theorem subset_failStep (F : Finset (Fin P.n)) (l : Lab P.n) :
     · exact Finset.Subset.refl _
 
 theorem failStep_card_le {F : Finset (Fin P.n)} (h : F.card ≤ P.f)
-    (l : Lab P.n) : (failStep P F l).card ≤ P.f := by
+    (l : Label P.n) : (failStep P F l).card ≤ P.f := by
   cases l <;> try exact h
   case fail id =>
     change (corruptF P id F).card ≤ P.f
@@ -164,7 +164,7 @@ theorem failStep_card_le {F : Finset (Fin P.n)} (h : F.card ≤ P.f)
       omega
     · exact h
 
-theorem failSet_card_le (t : Seq (Lab P.n)) :
+theorem failSet_card_le (t : Seq (Label P.n)) :
     ∀ k, (failSet P t k).card ≤ P.f := by
   intro k
   induction k with
@@ -175,7 +175,7 @@ theorem failSet_card_le (t : Seq (Lab P.n)) :
     | some l => exact failStep_card_le ih l
     | none => exact ih
 
-theorem failSet_mono (t : Seq (Lab P.n)) {k k' : ℕ} (h : k ≤ k') :
+theorem failSet_mono (t : Seq (Label P.n)) {k k' : ℕ} (h : k ≤ k') :
     failSet P t k ⊆ failSet P t k' := by
   induction k' with
   | zero =>
@@ -190,22 +190,22 @@ theorem failSet_mono (t : Seq (Lab P.n)) {k k' : ℕ} (h : k ≤ k') :
       | some l => exact subset_failStep _ l
       | none => exact fun _ hx => hx
 
-theorem failSetL_append (L : List (Lab P.n)) (l : Lab P.n) :
+theorem failSetL_append (L : List (Label P.n)) (l : Label P.n) :
     failSetL P (L ++ [l]) = failStep P (failSetL P L) l := by
   unfold failSetL
   rw [List.foldl_append, List.foldl_cons, List.foldl_nil]
 
 /-- The list-level fold is monotone under extending the list by one label. -/
-theorem failSetL_subset_append (L : List (Lab P.n)) (l : Lab P.n) :
+theorem failSetL_subset_append (L : List (Label P.n)) (l : Label P.n) :
     failSetL P L ⊆ failSetL P (L ++ [l]) := by
   rw [failSetL_append]
   exact subset_failStep _ l
 
 /-- Folding over a filtered list agrees with folding over the original when
 the filter keeps every `fail` label. -/
-theorem foldl_failStep_filter {p : Lab P.n → Bool}
+theorem foldl_failStep_filter {p : Label P.n → Bool}
     (hp : ∀ id : Fin P.n, p (.fail id) = true) :
-    ∀ (L : List (Lab P.n)) (F : Finset (Fin P.n)),
+    ∀ (L : List (Label P.n)) (F : Finset (Fin P.n)),
       (L.filter p).foldl (failStep P) F = L.foldl (failStep P) F := by
   intro L
   induction L with
@@ -221,14 +221,14 @@ theorem foldl_failStep_filter {p : Lab P.n → Bool}
       exact ih F
 
 /-- `failSetL` ignores filtering that keeps every `fail` label. -/
-theorem failSetL_filter {p : Lab P.n → Bool}
-    (hp : ∀ id : Fin P.n, p (.fail id) = true) (L : List (Lab P.n)) :
+theorem failSetL_filter {p : Label P.n → Bool}
+    (hp : ∀ id : Fin P.n, p (.fail id) = true) (L : List (Label P.n)) :
     failSetL P (L.filter p) = failSetL P L :=
   foldl_failStep_filter hp L ∅
 
 /-- The trace-level fold over `Seq.ofList` is the list-level fold of the
 `take`-prefix. -/
-theorem failSet_ofList (L : List (Lab P.n)) :
+theorem failSet_ofList (L : List (Label P.n)) :
     ∀ k, failSet P (Seq.ofList L) k = failSetL P (L.take k) := by
   intro k
   induction k with
@@ -247,7 +247,7 @@ theorem failSet_ofList (L : List (Lab P.n)) :
 
 /-- A finite set each of whose members is eventually corrupted is corrupted
 at a single uniform stage (`failSet` is monotone in the stage). -/
-theorem exists_uniform_stage (t : Seq (Lab P.n)) (S : Finset (Fin P.n)) :
+theorem exists_uniform_stage (t : Seq (Label P.n)) (S : Finset (Fin P.n)) :
     (∀ id ∈ S, ∃ k, id ∈ failSet P t k) →
     ∃ K, ∀ id ∈ S, id ∈ failSet P t K := by
   classical
@@ -357,7 +357,7 @@ theorem corrupt_card_le (hF : s.F.card ≤ P.f) : (s.corrupt P id).F.card ≤ P.
 end Corrupt
 
 /-- **Invariant preservation.** `SpecInv` is preserved by every step. -/
-theorem SpecInv.step {s : SpecState P.n} {l : Lab P.n} {μ : PMF (SpecState P.n)}
+theorem SpecInv.step {s : SpecState P.n} {l : Label P.n} {μ : PMF (SpecState P.n)}
     {s' : SpecState P.n} (hI : SpecInv P s)
     (hstep : SpecStep P s l μ) (hs' : s' ∈ μ.support) : SpecInv P s' := by
   cases hstep with
@@ -408,7 +408,7 @@ theorem SpecInv.step {s : SpecState P.n} {l : Lab P.n} {μ : PMF (SpecState P.n)
 
 /-- **Write-once decision.** `SpecStep.decide` is the sole writer of `val` and
 fires only from `val = ⊥`, so `val = some b` is preserved by every step. -/
-theorem SpecInv.val_stable {s : SpecState P.n} {l : Lab P.n}
+theorem SpecInv.val_stable {s : SpecState P.n} {l : Label P.n}
     {μ : PMF (SpecState P.n)} {s' : SpecState P.n} {b : Bool}
     (hv : s.val = some b) (hstep : SpecStep P s l μ) (hs' : s' ∈ μ.support) :
     s'.val = some b := by
@@ -437,17 +437,17 @@ theorem SpecInv.val_stable {s : SpecState P.n} {l : Lab P.n}
 
 /-- The bit of the first `callABA id _` label of a label list, and `none` when
 the list carries no such label. -/
-def firstCall {n : ℕ} : List (Lab n) → Fin n → Option Bool
+def firstCall {n : ℕ} : List (Label n) → Fin n → Option Bool
   | [], _ => none
-  | List.cons (Lab.callABA id' b) L, id => if id' = id then some b else firstCall L id
+  | List.cons (Label.callABA id' b) L, id => if id' = id then some b else firstCall L id
   | List.cons _ L, id => firstCall L id
 
 @[simp] theorem firstCall_nil {n : ℕ} (id : Fin n) :
-    firstCall ([] : List (Lab n)) id = none := rfl
+    firstCall ([] : List (Label n)) id = none := rfl
 
 /-- `firstCall` reads the first of two joined lists that carries a call at
 `id`. -/
-theorem firstCall_append {n : ℕ} (L L' : List (Lab n)) (id : Fin n) :
+theorem firstCall_append {n : ℕ} (L L' : List (Label n)) (id : Fin n) :
     firstCall (L ++ L') id = (firstCall L id).or (firstCall L' id) := by
   induction L with
   | nil => simp
@@ -456,21 +456,21 @@ theorem firstCall_append {n : ℕ} (L L' : List (Lab n)) (id : Fin n) :
     split <;> simp
 
 /-- A first call already in the history stays the first call. -/
-theorem firstCall_append_of_some {n : ℕ} {L : List (Lab n)} {id : Fin n} {b : Bool}
-    (h : firstCall L id = some b) (l : Lab n) : firstCall (L ++ [l]) id = some b := by
+theorem firstCall_append_of_some {n : ℕ} {L : List (Label n)} {id : Fin n} {b : Bool}
+    (h : firstCall L id = some b) (l : Label n) : firstCall (L ++ [l]) id = some b := by
   rw [firstCall_append, h]; rfl
 
 /-- Extending a list that carries no call at `id` by `callABA id b` makes
 that label `id`'s first call. -/
-theorem firstCall_append_self {n : ℕ} {L : List (Lab n)} {id : Fin n}
+theorem firstCall_append_self {n : ℕ} {L : List (Label n)} {id : Fin n}
     (h : firstCall L id = none) (b : Bool) :
-    firstCall (L ++ [Lab.callABA id b]) id = some b := by
+    firstCall (L ++ [Label.callABA id b]) id = some b := by
   rw [firstCall_append, h]
   simp [firstCall]
 
 /-- A label that is not a call at `id` leaves `id`'s first call where it is. -/
-theorem firstCall_append_of_ne_call {n : ℕ} (L : List (Lab n)) {l : Lab n}
-    {id : Fin n} (h : ∀ b, l ≠ Lab.callABA id b) :
+theorem firstCall_append_of_ne_call {n : ℕ} (L : List (Label n)) {l : Label n}
+    {id : Fin n} (h : ∀ b, l ≠ Label.callABA id b) :
     firstCall (L ++ [l]) id = firstCall L id := by
   have hl : firstCall [l] id = none := by
     cases l
@@ -480,8 +480,8 @@ theorem firstCall_append_of_ne_call {n : ℕ} (L : List (Lab n)) {l : Lab n}
   simp
 
 /-- `firstCall` ignores filtering that keeps every `callABA` label. -/
-theorem firstCall_filter {n : ℕ} {p : Lab n → Bool}
-    (hp : ∀ (id : Fin n) (b : Bool), p (.callABA id b) = true) (L : List (Lab n))
+theorem firstCall_filter {n : ℕ} {p : Label n → Bool}
+    (hp : ∀ (id : Fin n) (b : Bool), p (.callABA id b) = true) (L : List (Label n))
     (id : Fin n) : firstCall (L.filter p) id = firstCall L id := by
   induction L with
   | nil => rfl
@@ -497,17 +497,17 @@ theorem firstCall_filter {n : ℕ} {p : Lab n → Bool}
 /-- The first `callABA id _` of a list sits at a position no earlier
 `callABA id _` precedes. -/
 theorem firstCall_getElem? {n : ℕ} :
-    ∀ (L : List (Lab n)) {id : Fin n} {b : Bool}, firstCall L id = some b →
-      ∃ k : ℕ, L[k]? = some (Lab.callABA id b) ∧
-        ∀ k' < k, ∀ b', L[k']? ≠ some (Lab.callABA id b') := by
+    ∀ (L : List (Label n)) {id : Fin n} {b : Bool}, firstCall L id = some b →
+      ∃ k : ℕ, L[k]? = some (Label.callABA id b) ∧
+        ∀ k' < k, ∀ b', L[k']? ≠ some (Label.callABA id b') := by
   intro L
   induction L with
   | nil => intro id b h; exact absurd h (by simp)
   | cons l L ih =>
     intro id b h
-    have hlater : (∀ b', l ≠ Lab.callABA id b') → firstCall L id = some b →
-        ∃ k : ℕ, (l :: L)[k]? = some (Lab.callABA id b) ∧
-          ∀ k' < k, ∀ b'', (l :: L)[k']? ≠ some (Lab.callABA id b'') := by
+    have hlater : (∀ b', l ≠ Label.callABA id b') → firstCall L id = some b →
+        ∃ k : ℕ, (l :: L)[k]? = some (Label.callABA id b) ∧
+          ∀ k' < k, ∀ b'', (l :: L)[k']? ≠ some (Label.callABA id b'') := by
       intro hne hL
       obtain ⟨k, hk, hmin⟩ := ih hL
       refine ⟨k + 1, by simpa using hk, ?_⟩
@@ -528,10 +528,10 @@ theorem firstCall_getElem? {n : ℕ} :
 
 /-- A first `callABA id _` inside a prefix is a first `callABA id _` of the
 whole list, at a position below the prefix length. -/
-theorem firstCall_take_pullback {n : ℕ} {L : List (Lab n)} {m : ℕ} {id : Fin n}
+theorem firstCall_take_pullback {n : ℕ} {L : List (Label n)} {m : ℕ} {id : Fin n}
     {b : Bool} (h : firstCall (L.take m) id = some b) :
-    ∃ k : ℕ, k < m ∧ L[k]? = some (Lab.callABA id b) ∧
-      ∀ k' < k, ∀ b', L[k']? ≠ some (Lab.callABA id b') := by
+    ∃ k : ℕ, k < m ∧ L[k]? = some (Label.callABA id b) ∧
+      ∀ k' < k, ∀ b', L[k']? ≠ some (Label.callABA id b') := by
   obtain ⟨k, hk, hmin⟩ := firstCall_getElem? (L.take m) h
   have hk_lt : k < m := by
     have h1 := (List.getElem?_eq_some_iff.mp hk).1
@@ -552,7 +552,7 @@ takes: its write is unrelated to the label it carries, and its guard puts the
 writer in the corrupted set. `src_input` is the converse reading at an
 uncorrupted process, and it is what reads an empty entry as saying no earlier
 `callABA` of that process was recorded. -/
-structure ValInv (P : Params) (pre : List (Lab P.n)) (s : SpecState P.n) : Prop where
+structure ValInv (P : Params) (pre : List (Label P.n)) (s : SpecState P.n) : Prop where
   inv : SpecInv P s
   input_src : ∀ id b, s.input id = some b →
     id ∈ failSetL P pre ∨ firstCall pre id = some b
@@ -567,7 +567,7 @@ theorem ValInv.initial (P : Params) : ValInv P [] (SpecState.initial P.n) where
   F_eq := rfl
 
 /-- **History-invariant preservation.** -/
-theorem ValInv.step {pre : List (Lab P.n)} {s : SpecState P.n} {l : Lab P.n}
+theorem ValInv.step {pre : List (Label P.n)} {s : SpecState P.n} {l : Label P.n}
     {μ : PMF (SpecState P.n)} {s' : SpecState P.n}
     (hI : ValInv P pre s) (hstep : SpecStep P s l μ) (hs' : s' ∈ μ.support) :
     ValInv P (pre ++ [l]) s' := by
@@ -607,13 +607,13 @@ theorem ValInv.step {pre : List (Lab P.n)} {s : SpecState P.n} {l : Lab P.n}
       · subst h_eq
         rw [firstCall_append_self (hfresh.resolve_left (hnc hmem)) b] at hf
         simpa using hf
-      · have hne : ∀ b'', Lab.callABA id b ≠ Lab.callABA id' b'' := by
+      · have hne : ∀ b'', Label.callABA id b ≠ Label.callABA id' b'' := by
           intro b'' hcon; injection hcon with hid _; exact h_eq hid.symm
         rw [firstCall_append_of_ne_call pre hne] at hf
         change Function.update s.input id (some b) id' = some b'
         rw [Function.update_of_ne h_eq]
         exact hI.src_input id' b' (hnc hmem) hf
-    · change s.F = failSetL P (pre ++ [Lab.callABA id b])
+    · change s.F = failSetL P (pre ++ [Label.callABA id b])
       rw [failSetL_append]
       exact hI.F_eq
   | callLoop id b h =>
@@ -630,7 +630,7 @@ theorem ValInv.step {pre : List (Lab P.n)} {s : SpecState P.n} {l : Lab P.n}
           (hI.input_src id' c hc).resolve_left (hnc hmem)
         rw [firstCall_append_of_some hpre _] at hf
         rw [hc, hf]
-      · have hne : ∀ b'', Lab.callABA id b ≠ Lab.callABA id' b'' := by
+      · have hne : ∀ b'', Label.callABA id b ≠ Label.callABA id' b'' := by
           intro b'' hcon; injection hcon with hid _; exact h_eq hid.symm
         rw [firstCall_append_of_ne_call pre hne] at hf
         exact hI.src_input id' b' (hnc hmem) hf
@@ -639,10 +639,10 @@ theorem ValInv.step {pre : List (Lab P.n)} {s : SpecState P.n} {l : Lab P.n}
   | coinFlip hm hv hmix =>
     rw [PMF.mem_support_map_iff] at hs'
     obtain ⟨o, -, rfl⟩ := hs'
-    have hFeq : s.F = failSetL P (pre ++ [Lab.tau]) := by
+    have hFeq : s.F = failSetL P (pre ++ [Label.tau]) := by
       rw [failSetL_append]; exact hI.F_eq
-    have hsrc : ∀ id' b', id' ∉ failSetL P (pre ++ [Lab.tau]) →
-        firstCall (pre ++ [Lab.tau]) id' = some b' → s.input id' = some b' := by
+    have hsrc : ∀ id' b', id' ∉ failSetL P (pre ++ [Label.tau]) →
+        firstCall (pre ++ [Label.tau]) id' = some b' → s.input id' = some b' := by
       intro id' b' hmem hf
       rw [firstCall_append_of_ne_call pre (by simp)] at hf
       exact hI.src_input id' b' (hnc hmem) hf
@@ -654,7 +654,7 @@ theorem ValInv.step {pre : List (Lab P.n)} {s : SpecState P.n} {l : Lab P.n}
     · intro id' b' hmem hf
       rw [firstCall_append_of_ne_call pre (by simp)] at hf
       exact hI.src_input id' b' (hnc hmem) hf
-    · change s.F = failSetL P (pre ++ [Lab.tau])
+    · change s.F = failSetL P (pre ++ [Label.tau])
       rw [failSetL_append]
       exact hI.F_eq
   | ret id b h₁ h₂ =>
@@ -663,7 +663,7 @@ theorem ValInv.step {pre : List (Lab P.n)} {s : SpecState P.n} {l : Lab P.n}
     · intro id' b' hmem hf
       rw [firstCall_append_of_ne_call pre (by simp)] at hf
       exact hI.src_input id' b' (hnc hmem) hf
-    · change s.F = failSetL P (pre ++ [Lab.retABA id b])
+    · change s.F = failSetL P (pre ++ [Label.retABA id b])
       rw [failSetL_append]
       exact hI.F_eq
   | fail id hnew hbud =>
@@ -681,7 +681,7 @@ theorem ValInv.step {pre : List (Lab P.n)} {s : SpecState P.n} {l : Lab P.n}
   | callByz id b b' hF =>
     -- the write is unrelated to the label, and the guard puts `id` in `F`
     rw [PMF.mem_support_pure_iff] at hs'; subst hs'
-    have hFeq : s.F = failSetL P (pre ++ [Lab.callABA id b]) := by
+    have hFeq : s.F = failSetL P (pre ++ [Label.callABA id b]) := by
       rw [failSetL_append]; exact hI.F_eq
     refine ⟨h_inv', ?_, ?_, hFeq⟩
     · intro id' b'' h_in
@@ -694,7 +694,7 @@ theorem ValInv.step {pre : List (Lab P.n)} {s : SpecState P.n} {l : Lab P.n}
     · intro id' b'' hmem hf
       have h_eq : id' ≠ id := by
         rintro rfl; exact hmem (hFeq ▸ hF)
-      have hne : ∀ b₀, Lab.callABA id b ≠ Lab.callABA id' b₀ := by
+      have hne : ∀ b₀, Label.callABA id b ≠ Label.callABA id' b₀ := by
         intro b₀ hcon; injection hcon with hid _; exact h_eq hid.symm
       rw [firstCall_append_of_ne_call pre hne] at hf
       change Function.update s.input id (some b') id' = some b''
@@ -727,7 +727,7 @@ private theorem retABA_inv {s : SpecState P.n} {id : Fin P.n} {b : Bool}
 
 /-- Two decision values read along one genuine execution agree
 (`k₁ ≤ k₂` case). -/
-private theorem val_agree_le {e : AlterSeq (SpecState P.n) (Lab P.n)}
+private theorem val_agree_le {e : AlterSeq (SpecState P.n) (Label P.n)}
     (he : is_exec e (spec P)) {k₁ k₂ : ℕ} (hk : k₁ ≤ k₂)
     {s₁ s₂ : SpecState P.n} {b b' : Bool}
     (hst₁ : e.stateAt k₁ = some s₁) (hst₂ : e.stateAt k₂ = some s₂)
@@ -740,7 +740,7 @@ private theorem val_agree_le {e : AlterSeq (SpecState P.n) (Lab P.n)}
 
 /-- The budget pigeonhole: `f + 1` supporters minus at most `f`
 ever-corrupted ids leave a never-corrupted recorded inputter. -/
-theorem exists_neverCorrupted_supporter {t : Seq (Lab P.n)} {s : SpecState P.n}
+theorem exists_neverCorrupted_supporter {t : Seq (Label P.n)} {s : SpecState P.n}
     {v : Bool} {m : ℕ} (hsupp : SuppOK P s v) (hF : s.F = failSet P t m) :
     ∃ id, s.input id = some v ∧ NeverCorrupted P t id := by
   by_contra hc
@@ -773,22 +773,22 @@ predicates are read off this one
 statement: Validity needs the invariant and the pushback, Agreement needs the
 execution position and the fold. -/
 private theorem exists_retSite (P : Params) {pe : ProbabilisticExecution (spec P)}
-    (h_init : pe.initState = PMF.pure (spec P).init) (t : Seq (Lab P.n))
+    (h_init : pe.initState = PMF.pure (spec P).init) (t : Seq (Label P.n))
     (h_ne : (spec P).traceProb pe t ≠ 0) :
-    ∃ e : AlterSeq (SpecState P.n) (Lab P.n), is_exec e (spec P) ∧
-      ∀ m id b, t.get? m = some (Lab.retABA id b) →
+    ∃ e : AlterSeq (SpecState P.n) (Label P.n), is_exec e (spec P) ∧
+      ∀ m id b, t.get? m = some (Label.retABA id b) →
         ∃ (j : ℕ) (s : SpecState P.n) (μ : PMF (SpecState P.n))
-          (pre : List (Lab P.n)),
-          e.stateAt j = some s ∧ SpecStep P s (Lab.retABA id b) μ ∧
+          (pre : List (Label P.n)),
+          e.stateAt j = some s ∧ SpecStep P s (Label.retABA id b) μ ∧
           ValInv P pre s ∧ s.F = failSet P t m ∧
           ∀ id' b', firstCall pre id' = some b' →
-            ∃ k, k < m ∧ t.get? k = some (Lab.callABA id' b') ∧
-              ∀ k' < k, ∀ b'', t.get? k' ≠ some (Lab.callABA id' b'') := by
+            ∃ k, k < m ∧ t.get? k = some (Label.callABA id' b') ∧
+              ∀ k' < k, ∀ b'', t.get? k' ≠ some (Label.callABA id' b'') := by
   obtain ⟨e, labs, h_exec, h_map, h_t⟩ :=
     exists_exec_of_traceProb_ne_zero_ord pe h_init t h_ne
   rw [Seq.ofList_filter] at h_t
   -- generalise the external-label filter to an opaque Boolean predicate
-  obtain ⟨p, hpfail, hpcall, h_t⟩ : ∃ p : Lab P.n → Bool,
+  obtain ⟨p, hpfail, hpcall, h_t⟩ : ∃ p : Label P.n → Bool,
       (∀ id : Fin P.n, p (.fail id) = true) ∧
       (∀ (id : Fin P.n) (b : Bool), p (.callABA id b) = true) ∧
       Seq.ofList (labs.filter p) = t :=
@@ -798,7 +798,7 @@ private theorem exists_retSite (P : Params) {pe : ProbabilisticExecution (spec P
   -- trace position `m` pulls back to an execution event `j`
   rw [← h_t, Seq.ofList_get?] at h_ret
   obtain ⟨j, hj, hlen⟩ := filter_getElem?_pullback p labs m _ h_ret
-  obtain ⟨s'', h_get⟩ : ∃ s'', e.trans.get? j = some (Lab.retABA id b, s'') := by
+  obtain ⟨s'', h_get⟩ : ∃ s'', e.trans.get? j = some (Label.retABA id b, s'') := by
     have hk : (e.trans.get? j).map Prod.fst = labs[j]? := by
       rw [← Seq.map_get?, h_map, Seq.ofList_get?]
     rw [hj] at hk
@@ -845,14 +845,14 @@ theorem spec_safe (P : Params) :
   obtain ⟨e, h_exec, hloc⟩ := exists_retSite P h_init t h_ne
   -- a never-corrupted returner is outside the fold at `m`, so `retABA_inv`'s
   -- second disjunct is impossible and the honest rule read `val`
-  have h_honest : ∀ m id b, t.get? m = some (Lab.retABA id b) →
+  have h_honest : ∀ m id b, t.get? m = some (Label.retABA id b) →
       NeverCorrupted P t id →
-      ∃ (j : ℕ) (s : SpecState P.n) (pre : List (Lab P.n)),
+      ∃ (j : ℕ) (s : SpecState P.n) (pre : List (Label P.n)),
         e.stateAt j = some s ∧ ValInv P pre s ∧ s.val = some b ∧
         s.F = failSet P t m ∧
         ∀ id' b', firstCall pre id' = some b' →
-          ∃ k, k < m ∧ t.get? k = some (Lab.callABA id' b') ∧
-            ∀ k' < k, ∀ b'', t.get? k' ≠ some (Lab.callABA id' b'') := by
+          ∃ k, k < m ∧ t.get? k = some (Label.callABA id' b') ∧
+            ∀ k' < k, ∀ b'', t.get? k' ≠ some (Label.callABA id' b'') := by
     intro m id b h_ret h_nc
     obtain ⟨j, s, μ, pre, h_state, h_step, h_VI, h_transfer, h_push⟩ := hloc m id b h_ret
     refine ⟨j, s, pre, h_state, h_VI, ?_, h_transfer, h_push⟩

@@ -4,13 +4,13 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.Gather.RowsOverBroadcastSpecification
+import Leslie2Protocols.ABA.Gather.StepOverBroadcastSpecification
 
 /-!
 # The core of the composed gather instance over broadcast specifications
 
-The invariant of `Gather.idealInst` (`ABA/Gather/Composition.lean`), stated over the
-composition's state through the views `ga`, `brbIn`, `brbBind`, `core`, and the
+The invariant of `Gather.instanceOverBroadcastSpecification` (`ABA/Gather/Composition.lean`), stated
+over the composition's state through the views `ga`, `brbIn`, `brbBind`, `core`, and the
 argument that `coreOfNet` is a bound core. At every state at which some process
 outside `F` holds a committed `BIND` payload, `coreOfNet` has at least `n − f`
 entries, its entries are committed input entries, and it lies below the
@@ -46,19 +46,20 @@ variable {X : Type} [DecidableEq X] {P : Params}
 /-- The gather network state of the composition, read as an instance state over
 the gather record. The core and the incidence read the sent sets and the
 corrupted set, and no local record. -/
-def netOf {n : ℕ} (s : IdealState n X) : SubState n (PRec n X) (GaMsg n X) :=
+def netOf {n : ℕ} (s : StateOverBroadcastSpecification n X) : SubState n (PRec n X) (GaMsg n X) :=
   ((fun _ => LocalState.initial n (GaMsg n X) (PRec.initial n X)), (ga s).2)
 
 omit [DecidableEq X] in
-@[simp] theorem netOf_sent {n : ℕ} (s : IdealState n X) :
+@[simp] theorem netOf_sent {n : ℕ} (s : StateOverBroadcastSpecification n X) :
     (netOf s).sent = (ga s).sent := rfl
 
 omit [DecidableEq X] in
-@[simp] theorem netOf_F {n : ℕ} (s : IdealState n X) : (netOf s).F = (ga s).F := rfl
+@[simp] theorem netOf_F {n : ℕ} (s : StateOverBroadcastSpecification n X) : (netOf s).F = (ga s).F
+  := rfl
 
 omit [DecidableEq X] in
 /-- The core of the composition's gather network state. -/
-theorem coreOf_netOf (s : IdealState P.n X) :
+theorem coreOf_netOf (s : StateOverBroadcastSpecification P.n X) :
     coreOf P (netOf s) = coreOfNet P (ga s).2 := rfl
 
 /-! ### The conformance clauses -/
@@ -68,7 +69,7 @@ its write-once field, the `*_backed` clauses tie the fields to the receipts that
 justified them, the store clauses tie a program's store to the commitment that
 wrote it, and the provenance clauses are the broadcast commit guards, recorded
 per instance. -/
-structure IdealConf (P : Params) (s : IdealState P.n X) : Prop where
+structure IdealConf (P : Params) (s : StateOverBroadcastSpecification P.n X) : Prop where
   /-- The corruption budget. -/
   F_card : (ga s).F.card ≤ P.f
   /-- The input instances' corrupted sets are in lockstep with the gather
@@ -115,7 +116,7 @@ structure IdealConf (P : Params) (s : IdealState P.n X) : Prop where
       ∀ q ∈ Q, ∃ W, GaMsg.vote W ∈ (ga s).recv j q ∧ W ⊆ U
 
 /-- The conformance clauses hold initially. -/
-theorem IdealConf.initial : IdealConf P ((idealInst P X).init) := by
+theorem IdealConf.initial : IdealConf P ((instanceOverBroadcastSpecification P X).init) := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
     simp [ga, brbIn, brbBind, ProcRec.initial, PRec.initial, BRB.SpecState.initial,
       GaNetState.initial, SubState.proc, SubState.sent, SubState.recv, SubState.F]
@@ -123,7 +124,8 @@ theorem IdealConf.initial : IdealConf P ((idealInst P X).init) := by
 omit [DecidableEq X] in
 /-- **The conformance clauses are blind to the `BIND` field**: no clause reads
 it, so a write to it at one program carries them over. -/
-theorem IdealConf.setSentBind {s : IdealState P.n X} (hConf : IdealConf P s) (j : Fin P.n)
+theorem IdealConf.setSentBind {s : StateOverBroadcastSpecification P.n X} (hConf : IdealConf P s) (j
+  : Fin P.n)
     (U : APSet P.n X) :
     IdealConf P (setGa s ((ga s).setProc j { (ga s).proc j with sentBind := some U })) := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
@@ -183,9 +185,10 @@ theorem IdealConf.setSentBind {s : IdealState P.n X} (hConf : IdealConf P s) (j 
     exact hConf.bind_backed
 
 /-- The conformance clauses are preserved by every step. -/
-theorem IdealConf.step {s : IdealState P.n X} {l : Lab P.n X}
-    {μ : PMF (IdealState P.n X)} (hInv : IdealConf P s) (hstep : IdealStep P s l μ)
-    {s' : IdealState P.n X} (hs' : s' ∈ μ.support) : IdealConf P s' := by
+theorem IdealConf.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.n X}
+    {μ : PMF (StateOverBroadcastSpecification P.n X)} (hInv : IdealConf P s) (hstep :
+      StepOverBroadcastSpecification P s l μ)
+    {s' : StateOverBroadcastSpecification P.n X} (hs' : s' ∈ μ.support) : IdealConf P s' := by
   cases hstep with
   | call id x h hb =>
     rw [PMF.mem_support_pure_iff] at hs'
@@ -686,7 +689,7 @@ theorem IdealConf.step {s : IdealState P.n X} {l : Lab P.n X}
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     exact hInv.setSentBind j U
-  | byz j m h =>
+  | byzantine j m h =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
@@ -1043,17 +1046,18 @@ omit [DecidableEq X] in
 /-- A payload set approved by one program's input store is approved at the
 instance: each entry of the store is the committed value of the instance that
 returned it. -/
-theorem approved_of_approvedBy {s : IdealState P.n X} (hConf : IdealConf P s)
+theorem approved_of_approvedBy {s : StateOverBroadcastSpecification P.n X} (hConf : IdealConf P s)
     {j : Fin P.n} {A : APSet P.n X} (h : approvedBy ((ga s).proc j) A) :
     approved s A :=
   fun p hp => hConf.delivIn_val j p.1 p.2 (h p hp)
 
 /-- Committed input entries are write-once, so `approved` is monotone along
 every rule. -/
-theorem approved_mono {s s' : IdealState P.n X} {l : Lab P.n X}
-    {μ : PMF (IdealState P.n X)} (hstep : IdealStep P s l μ)
+theorem approved_mono {s s' : StateOverBroadcastSpecification P.n X} {l : Label P.n X}
+    {μ : PMF (StateOverBroadcastSpecification P.n X)} (hstep : StepOverBroadcastSpecification P s l
+      μ)
     (hs' : s' ∈ μ.support) {A : APSet P.n X} (h : approved s A) : approved s' A := by
-  have key : ∀ t : IdealState P.n X,
+  have key : ∀ t : StateOverBroadcastSpecification P.n X,
       (∀ k v, (brbIn s k).val = some v → (brbIn t k).val = some v) → approved t A :=
     fun t ht p hp => ht p.1 p.2 (h p hp)
   cases hstep with
@@ -1095,19 +1099,19 @@ theorem approved_mono {s s' : IdealState P.n X} {l : Lab P.n X}
 /-- The `ECHO` fields of the initial state are empty. -/
 theorem echoAppr_initial :
     ∀ (j : Fin P.n) (A : APSet P.n X),
-      ((ga ((idealInst P X).init)).proc j).sentEcho = some A →
-        approved ((idealInst P X).init) A := by
+      ((ga ((instanceOverBroadcastSpecification P X).init)).proc j).sentEcho = some A →
+        approved ((instanceOverBroadcastSpecification P X).init) A := by
   intro j A hA
   simp [ga, SubState.proc, ProcRec.initial, PRec.initial] at hA
 
-/-- **The approval of an `ECHO` field is inductive**: only `IdealStep.echo`
+/-- **The approval of an `ECHO` field is inductive**: only `StepOverBroadcastSpecification.echo`
 writes the field, and the payload it writes is the entries of the writer's own
 store. -/
-theorem echoAppr_step {s s' : IdealState P.n X} {l : Lab P.n X}
-    {μ : PMF (IdealState P.n X)} (hConf : IdealConf P s)
+theorem echoAppr_step {s s' : StateOverBroadcastSpecification P.n X} {l : Label P.n X}
+    {μ : PMF (StateOverBroadcastSpecification P.n X)} (hConf : IdealConf P s)
     (hEA : ∀ (j : Fin P.n) (A : APSet P.n X),
       ((ga s).proc j).sentEcho = some A → approved s A)
-    (hstep : IdealStep P s l μ) (hs' : s' ∈ μ.support) :
+    (hstep : StepOverBroadcastSpecification P s l μ) (hs' : s' ∈ μ.support) :
     ∀ (j : Fin P.n) (A : APSet P.n X),
       ((ga s').proc j).sentEcho = some A → approved s' A := by
   intro j A hA
@@ -1186,7 +1190,7 @@ theorem echoAppr_step {s s' : IdealState P.n X} {l : Lab P.n X}
       refine hEA j A ?_
       dsimp only [ga_setGa] at hA
       rw [SubState.recvMsg_proc] at hA; exact hA
-  | byz j₀ m hj =>
+  | byzantine j₀ m hj =>
       rw [PMF.mem_support_pure_iff] at hs'; subst hs'
       refine hEA j A ?_
       dsimp only [ga_setGa] at hA
@@ -1202,21 +1206,23 @@ theorem echoAppr_step {s s' : IdealState P.n X} {l : Lab P.n X}
 
 /-- **The invariant of the composed gather instance**: the conformance clauses,
 together with the approval of every `ECHO` field. -/
-structure IdealInv (P : Params) (s : IdealState P.n X) : Prop extends IdealConf P s where
+structure IdealInv (P : Params) (s : StateOverBroadcastSpecification P.n X) : Prop extends IdealConf
+  P s where
   /-- The payload set in a process's `ECHO` field consists of committed input
-  entries. No honesty side condition: only `IdealStep.echo` writes the field,
+  entries. No honesty side condition: only `StepOverBroadcastSpecification.echo` writes the field,
   and a corrupted sender's accepted pairs are entries of its store too. -/
   echo_appr : ∀ (j : Fin P.n) (A : APSet P.n X),
     ((ga s).proc j).sentEcho = some A → approved s A
 
 /-- The invariant holds initially. -/
-theorem IdealInv.initial : IdealInv P ((idealInst P X).init) :=
+theorem IdealInv.initial : IdealInv P ((instanceOverBroadcastSpecification P X).init) :=
   ⟨IdealConf.initial, echoAppr_initial⟩
 
 /-- The invariant is preserved by every step. -/
-theorem IdealInv.step {s : IdealState P.n X} {l : Lab P.n X}
-    {μ : PMF (IdealState P.n X)} (hInv : IdealInv P s) (hstep : IdealStep P s l μ)
-    {s' : IdealState P.n X} (hs' : s' ∈ μ.support) : IdealInv P s' :=
+theorem IdealInv.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.n X}
+    {μ : PMF (StateOverBroadcastSpecification P.n X)} (hInv : IdealInv P s) (hstep :
+      StepOverBroadcastSpecification P s l μ)
+    {s' : StateOverBroadcastSpecification P.n X} (hs' : s' ∈ μ.support) : IdealInv P s' :=
   ⟨hInv.toIdealConf.step hstep hs', echoAppr_step hInv.toIdealConf hInv.echo_appr hstep hs'⟩
 
 
@@ -1230,7 +1236,7 @@ the width of a row. -/
 omit [DecidableEq X] in
 /-- The `ECHO` payload of a process outside `F` is the one its `sentEcho` field
 holds. -/
-theorem echoOf_eq {s : IdealState P.n X} (hInv : IdealInv P s) {j : Fin P.n}
+theorem echoOf_eq {s : StateOverBroadcastSpecification P.n X} (hInv : IdealInv P s) {j : Fin P.n}
     (hj : j ∉ (ga s).F) {A : APSet P.n X} (hA : GaMsg.echo A ∈ (ga s).sent j) :
     echoOf (netOf s) j = A := by
   classical
@@ -1246,7 +1252,8 @@ omit [DecidableEq X] in
 senders. Its `VOTE` payload, if it has one, is backed by `n − f` `ECHO`
 receipts; if it has none the condition is vacuous and the row is
 everything. -/
-theorem dominatedBy_card {s : IdealState P.n X} (hInv : IdealInv P s) {q : Fin P.n}
+theorem dominatedBy_card {s : StateOverBroadcastSpecification P.n X} (hInv : IdealInv P s) {q : Fin
+  P.n}
     (hq : q ∉ (ga s).F) : P.n - P.f ≤ (dominatedBy (netOf s) q).card := by
   classical
   by_cases hv : ∃ W : APSet P.n X, GaMsg.vote W ∈ (ga s).sent q
@@ -1273,7 +1280,7 @@ open scoped Classical in
 omit [DecidableEq X] in
 /-- A row of a process outside `F` meets the processes outside `F` in at least
 `n − f − |F|` of them. -/
-theorem dominatedBy_honest_card {s : IdealState P.n X} (hInv : IdealInv P s)
+theorem dominatedBy_honest_card {s : StateOverBroadcastSpecification P.n X} (hInv : IdealInv P s)
     {q : Fin P.n} (hq : q ∉ (ga s).F) :
     P.n - P.f - (ga s).F.card ≤
       ((honest (netOf s)).filter (fun j => j ∈ dominatedBy (netOf s) q)).card := by
@@ -1286,7 +1293,7 @@ open scoped Classical in
 omit [DecidableEq X] in
 /-- **The pigeonhole.** Some sender outside `F` has at least `n − f − |F|`
 dominators. -/
-theorem exists_dominators {s : IdealState P.n X} (hInv : IdealInv P s) :
+theorem exists_dominators {s : StateOverBroadcastSpecification P.n X} (hInv : IdealInv P s) :
     ∃ j₀, j₀ ∈ honest (netOf s) ∧
       P.n - P.f - (ga s).F.card ≤ (dominators (netOf s) j₀).card := by
   by_contra hc
@@ -1322,7 +1329,7 @@ its `ECHO` payload below every committed `BIND` payload of a process outside
 `F`: the dominators meet that payload's backing `VOTE` quorum of `n − f`, and
 the meeting process's write-once `VOTE` payload lies above the `ECHO` payload
 and below the `BIND` payload. -/
-theorem transfer {s : IdealState P.n X} (hInv : IdealInv P s) {j₀ : Fin P.n}
+theorem transfer {s : StateOverBroadcastSpecification P.n X} (hInv : IdealInv P s) {j₀ : Fin P.n}
     (hj₀ : j₀ ∉ (ga s).F) (hcnt : P.f + 1 ≤ (dominators (netOf s) j₀).card)
     {k : Fin P.n} (hk : k ∉ (ga s).F) {U : APSet P.n X}
     (hU : (brbBind s k).val = some U) :
@@ -1341,7 +1348,7 @@ omit [DecidableEq X] in
 /-- The core is the write-once `ECHO` payload of a sender outside `F` with at
 least `f + 1` dominators, as soon as some process outside `F` holds a committed
 `BIND` payload. -/
-theorem core_witness {s : IdealState P.n X} (hInv : IdealInv P s)
+theorem core_witness {s : StateOverBroadcastSpecification P.n X} (hInv : IdealInv P s)
     {k₀ : Fin P.n} (hk₀ : k₀ ∉ (ga s).F) {U₀ : APSet P.n X}
     (hU₀ : (brbBind s k₀).val = some U₀) :
     ∃ j₁, j₁ ∉ (ga s).F ∧ P.f + 1 ≤ (dominators (netOf s) j₁).card ∧
@@ -1365,7 +1372,7 @@ omit [DecidableEq X] in
 /-- **The single core.** Once some process outside `F` holds a committed `BIND`
 payload, the core has at least `n − f` entries and lies below the committed
 `BIND` payload of every process outside `F`. -/
-theorem single_core {s : IdealState P.n X} (hInv : IdealInv P s)
+theorem single_core {s : StateOverBroadcastSpecification P.n X} (hInv : IdealInv P s)
     {k₀ : Fin P.n} (hk₀ : k₀ ∉ (ga s).F) {U₀ : APSet P.n X}
     (hU₀ : (brbBind s k₀).val = some U₀) :
     P.n - P.f ≤ (coreOfNet P (ga s).2).card ∧
@@ -1385,7 +1392,7 @@ theorem single_core {s : IdealState P.n X} (hInv : IdealInv P s)
 omit [DecidableEq X] in
 /-- **The core is approved**: its entries are committed input entries, the
 `ECHO` field it comes from carrying only such entries. -/
-theorem single_core_approved {s : IdealState P.n X} (hInv : IdealInv P s)
+theorem single_core_approved {s : StateOverBroadcastSpecification P.n X} (hInv : IdealInv P s)
     {k₀ : Fin P.n} (hk₀ : k₀ ∉ (ga s).F) {U₀ : APSet P.n X}
     (hU₀ : (brbBind s k₀).val = some U₀) :
     approved s (coreOfNet P (ga s).2) := by
@@ -1397,19 +1404,20 @@ theorem single_core_approved {s : IdealState P.n X} (hInv : IdealInv P s)
 open scoped Classical in
 /-- The coordinates holding a committed `BIND` payload above `C`. The condition
 is blind to `F`. -/
-noncomputable def bindAbove (s : IdealState P.n X) (C : APSet P.n X) :
+noncomputable def bindAbove (s : StateOverBroadcastSpecification P.n X) (C : APSet P.n X) :
     Finset (Fin P.n) :=
   Finset.univ.filter (fun q => ∃ U, (brbBind s q).val = some U ∧ C ⊆ U)
 
 open scoped Classical in
-theorem mem_bindAbove {s : IdealState P.n X} {C : APSet P.n X} {q : Fin P.n} :
+theorem mem_bindAbove {s : StateOverBroadcastSpecification P.n X} {C : APSet P.n X} {q : Fin P.n} :
     q ∈ bindAbove s C ↔ ∃ U, (brbBind s q).val = some U ∧ C ⊆ U := by
   rw [bindAbove, Finset.mem_filter]
   exact ⟨fun h => h.2, fun h => ⟨Finset.mem_univ _, h⟩⟩
 
 /-- A committed `BIND` payload is never rewritten. -/
-theorem bindVal_mono {s s' : IdealState P.n X} {l : Lab P.n X}
-    {μ : PMF (IdealState P.n X)} (hstep : IdealStep P s l μ) (hs' : s' ∈ μ.support)
+theorem bindVal_mono {s s' : StateOverBroadcastSpecification P.n X} {l : Label P.n X}
+    {μ : PMF (StateOverBroadcastSpecification P.n X)} (hstep : StepOverBroadcastSpecification P s l
+      μ) (hs' : s' ∈ μ.support)
     {q : Fin P.n} {U : APSet P.n X} (h : (brbBind s q).val = some U) :
     (brbBind s' q).val = some U := by
   cases hstep with
@@ -1439,8 +1447,9 @@ theorem bindVal_mono {s s' : IdealState P.n X} {l : Lab P.n X}
 
 /-- **The certificate is monotone.** The coordinates holding a committed `BIND`
 payload above `C` only accumulate, under every rule and every corruption. -/
-theorem bindAbove_mono {s s' : IdealState P.n X} {l : Lab P.n X}
-    {μ : PMF (IdealState P.n X)} (hstep : IdealStep P s l μ) (hs' : s' ∈ μ.support)
+theorem bindAbove_mono {s s' : StateOverBroadcastSpecification P.n X} {l : Label P.n X}
+    {μ : PMF (StateOverBroadcastSpecification P.n X)} (hstep : StepOverBroadcastSpecification P s l
+      μ) (hs' : s' ∈ μ.support)
     (C : APSet P.n X) : bindAbove s C ⊆ bindAbove s' C := by
   intro q hq
   rw [mem_bindAbove] at hq ⊢
@@ -1453,7 +1462,7 @@ are committed input entries, and at least `f + 1` coordinates hold a committed
 `BIND` payload above it. The last is the certificate that holds the returns
 after the first to this core: it is blind to `F` and monotone
 (`bindAbove_mono`), and an `n − f` return quorum meets it. -/
-theorem coreOf_freeze {s : IdealState P.n X} (hInv : IdealInv P s)
+theorem coreOf_freeze {s : StateOverBroadcastSpecification P.n X} (hInv : IdealInv P s)
     {Q : Finset (Fin P.n)} (hQc : P.n - P.f ≤ Q.card)
     (hQm : ∀ q ∈ Q, ∃ U : APSet P.n X, (brbBind s q).val = some U) :
     P.n - P.f ≤ (coreOfNet P (ga s).2).card ∧ approved s (coreOfNet P (ga s).2) ∧

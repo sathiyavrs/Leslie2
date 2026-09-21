@@ -145,7 +145,7 @@ noncomputable def flipPMF (P : Params) : PMF FlipOutcome :=
 
 /-- The step relation of the ABA specification. -/
 inductive SpecStep (P : Params) :
-    SpecState P.n → Lab P.n → PMF (SpecState P.n) → Prop
+    SpecState P.n → Label P.n → PMF (SpecState P.n) → Prop
   /-- Rule 1: an environment call records its bit in the ghost record. The
   guard `h` is the empty entry, so the write is a first write and the record
   holds the bit of the process's first genuine call (D13, D16). -/
@@ -238,13 +238,13 @@ example (P : Params) (s : SpecState P.n) (id : Fin P.n) (b : Bool)
   | callByz _ _ _ hmem => exact absurd hmem hF
 
 /-- The ABA specification system (blueprint Transition System 1). -/
-noncomputable def spec (P : Params) : System (SpecState P.n) (Lab P.n) where
+noncomputable def spec (P : Params) : System (SpecState P.n) (Label P.n) where
   init := SpecState.initial P.n
   step := SpecStep P
 
 @[simp] theorem spec_init (P : Params) : (spec P).init = SpecState.initial P.n := rfl
 
-@[simp] theorem spec_step (P : Params) (s : SpecState P.n) (l : Lab P.n)
+@[simp] theorem spec_step (P : Params) (s : SpecState P.n) (l : Label P.n)
     (μ : PMF (SpecState P.n)) : (spec P).step s l μ ↔ SpecStep P s l μ := Iff.rfl
 
 end ABA

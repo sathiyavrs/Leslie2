@@ -28,7 +28,7 @@ The proof is the state erasure of `ABA/GhostErasure/GhostFreeSystem.lean` carrie
 composition pipeline. Its hypothesis is that every round, process and graded outcome
 admits an announced bit, which here is the equation `bnd = AFW.ghostOut P w r id out`
 read at its own right-hand side. The announced bit is silent at protocol level — a
-`retG` label lies in `Lab.hiddenAPI` — which is why no label map appears in the
+`retG` label lies in `Label.hiddenAPI` — which is why no label map appears in the
 statement.
 -/
 
@@ -42,8 +42,8 @@ open Implementation
 `AFW.protocol` beside the network adversary over the trivial ghost, whose
 graded-agreement returns announce any bit. -/
 noncomputable def protocol₀ (P : Params) :
-    System (Implementation.FlatState P (Msg P.n) (StageRec P.n) Unit) (Lab P.n) :=
-  Implementation.flat₀ P (Msg P.n) (StageRec P.n) (StageStep P) (gCallPayload P)
+    System (Implementation.State P (Msg P.n) (StageRec P.n) Unit) (Label P.n) :=
+  Implementation.systemGhostFree P (Msg P.n) (StageRec P.n) (RoundStep P) (gCallPayload P)
 
 /-- **The ghost costs nothing.** The record the network adversary keeps for each round is
 written by no guard and read by no program, and the label that announces its bit is
@@ -51,7 +51,7 @@ hidden at protocol level, so the protocol and the ghost-free protocol achieve th
 trace distributions. -/
 theorem protocol_erasure (P : Params) :
     achievableTraceDists (protocol P) = achievableTraceDists (protocol₀ P) :=
-  Implementation.flat_erasure P (Msg P.n) (StageRec P.n) (Ghost P.n) (StageStep P)
+  Implementation.system_erasure P (Msg P.n) (StageRec P.n) (Ghost P.n) (RoundStep P)
     (gCallPayload P) (ghostStep P) (announcedBound P)
     (fun w r id out => ⟨ghostOut P w r id out, rfl⟩)
 

@@ -12,7 +12,7 @@ import Leslie2Protocols.ABA.Vocabulary.Parameters
 
 Every system of the case study — the round loops, `ABA.Spec`, the `GBCA` instance
 families and the `WCC` spec family — lives over the single label type
-`ABA.Lab n`. Sub-protocol API labels are tagged with their round `r : ℕ`
+`ABA.Label n`. Sub-protocol API labels are tagged with their round `r : ℕ`
 (the source blueprint's Algorithm 1 uses countably many `GBCA_r` / `WCC_r`
 instances).
 
@@ -51,7 +51,7 @@ inductive GbcaOut : Type
 
 /-- The shared label alphabet of the ABA development over `n` processes.
 GBCA/WCC API labels are tagged with their round `r : ℕ`. -/
-inductive Lab (n : ℕ) : Type
+inductive Label (n : ℕ) : Type
   /-- The silent label. -/
   | tau
   /-- Environment calls ABA at process `id` with input bit `b`. -/
@@ -75,29 +75,29 @@ inductive Lab (n : ℕ) : Type
   | fail (id : Fin n)
   deriving DecidableEq, Repr
 
-instance {n : ℕ} : Silent (Lab n) := ⟨Lab.tau⟩
+instance {n : ℕ} : Silent (Label n) := ⟨Label.tau⟩
 
-namespace Lab
+namespace Label
 
 variable {n : ℕ}
 
-@[simp] theorem silent_eq : (Silent.τ : Lab n) = Lab.tau := rfl
+@[simp] theorem silent_eq : (Silent.τ : Label n) = Label.tau := rfl
 
 /-- The GBCA round a label belongs to, if any. -/
-def gbcaRound : Lab n → Option ℕ
+def gbcaRound : Label n → Option ℕ
   | callG r _ _ => some r
   | retG r _ _ _ => some r
   | _ => none
 
 /-- The WCC round a label belongs to, if any. -/
-def wccRound : Lab n → Option ℕ
+def wccRound : Label n → Option ℕ
   | callW r _ => some r
   | retW r _ _ => some r
   | _ => none
 
 /-- A label is global iff it is a corruption event: every component of the
 composition (and every instance of a family) steps on it simultaneously. -/
-def isFail : Lab n → Prop
+def isFail : Label n → Prop
   | fail _ => True
   | _ => False
 
@@ -107,41 +107,41 @@ instance : DecidablePred (isFail (n := n)) := fun l => by
 /-- The sub-protocol API: every GBCA- or WCC-tagged label. These are the
 labels hidden (sent to `τ`) in the hybrids. `τ`, the ABA API and `fail`
 stay visible. -/
-def hiddenAPI (n : ℕ) : Set (Lab n) :=
+def hiddenAPI (n : ℕ) : Set (Label n) :=
   {l | l.gbcaRound ≠ none ∨ l.wccRound ≠ none}
 
-@[simp] theorem tau_not_mem_hiddenAPI : Lab.tau ∉ hiddenAPI n := by
+@[simp] theorem tau_not_mem_hiddenAPI : Label.tau ∉ hiddenAPI n := by
   simp [hiddenAPI, gbcaRound, wccRound]
 
 @[simp] theorem callG_mem_hiddenAPI (r : ℕ) (id : Fin n) (b : Bool) :
-    Lab.callG r id b ∈ hiddenAPI n := by
+    Label.callG r id b ∈ hiddenAPI n := by
   simp [hiddenAPI, gbcaRound]
 
 @[simp] theorem retG_mem_hiddenAPI (r : ℕ) (id : Fin n) (out : GbcaOut)
-    (bnd : Bool) : Lab.retG r id out bnd ∈ hiddenAPI n := by
+    (bnd : Bool) : Label.retG r id out bnd ∈ hiddenAPI n := by
   simp [hiddenAPI, gbcaRound]
 
 @[simp] theorem callW_mem_hiddenAPI (r : ℕ) (id : Fin n) :
-    Lab.callW r id ∈ hiddenAPI n := by
+    Label.callW r id ∈ hiddenAPI n := by
   simp [hiddenAPI, gbcaRound, wccRound]
 
 @[simp] theorem retW_mem_hiddenAPI (r : ℕ) (id : Fin n) (b : Bool) :
-    Lab.retW r id b ∈ hiddenAPI n := by
+    Label.retW r id b ∈ hiddenAPI n := by
   simp [hiddenAPI, gbcaRound, wccRound]
 
 @[simp] theorem callABA_not_mem_hiddenAPI (id : Fin n) (b : Bool) :
-    Lab.callABA id b ∉ hiddenAPI n := by
+    Label.callABA id b ∉ hiddenAPI n := by
   simp [hiddenAPI, gbcaRound, wccRound]
 
 @[simp] theorem retABA_not_mem_hiddenAPI (id : Fin n) (b : Bool) :
-    Lab.retABA id b ∉ hiddenAPI n := by
+    Label.retABA id b ∉ hiddenAPI n := by
   simp [hiddenAPI, gbcaRound, wccRound]
 
 @[simp] theorem fail_not_mem_hiddenAPI (id : Fin n) :
-    Lab.fail id ∉ hiddenAPI n := by
+    Label.fail id ∉ hiddenAPI n := by
   simp [hiddenAPI, gbcaRound, wccRound]
 
-end Lab
+end Label
 
 end ABA
 end PLTS

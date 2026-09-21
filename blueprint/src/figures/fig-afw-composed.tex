@@ -1,5 +1,5 @@
 % The gather-based composed system and its three-stage substitution
-% (PLTS.ABA.AFW.composed, lowSide, idealSide, pairSide, hybrid1, hybrid2).
+% (PLTS.ABA.AFW.composed, roundFamilyOverBracha, roundFamilyOverBroadcastSpecification, roundFamilyOverGatherSpecifications, composedOverBroadcastSpecification, composedOverGatherSpecifications).
 % Component for component ABDY22's composed system; what differs is the
 % position and that the substitution runs in three stages, not one.
 \begin{tikzpicture}[
@@ -13,26 +13,26 @@
   \draw[dashed, rounded corners] (-1.1,-3.3) rectangle (11.1,3.0);
   \node[font=\footnotesize] at (8.5,2.7) {$\mathrm{abstract}\,\mathrm{hiddenAPI}$};
   \draw[dashed, rounded corners] (-0.8,-3.0) rectangle (10.8,2.3);
-  \node[font=\footnotesize] at (7.1,2.02)
-    {$\mathrm{relabel} \circ \mathrm{abstract}\,\mathrm{netEvtLabels}$};
+  \node[font=\footnotesize] at (7.5,2.02)
+    {$\mathrm{relabel} \circ \mathrm{abstract}\,\mathrm{networkEventLabels}$};
   \draw[thick] (-0.5,1.45) -- (10.5,1.45);
-  \node[ann, anchor=west] at (-0.45,1.72) {$\mathrm{NLab}(n)$: every component steps};
+  \node[ann, anchor=west] at (-0.45,1.72) {$\mathrm{ExtendedLabel}(n)$: every component steps};
   % the refinable position
-  \node[posn] (low) at (2.3,0.1)
-    {$\mathrm{lowSide}(P)$: one composed round\\ per $r \in \mathbb{N}$, each $4n{+}2$ networks};
+  \node[posn, text width=4.6cm] (low) at (2.3,0.1)
+    {$\mathrm{roundFamilyOverBracha}(P)$: one composed round\\ per $r \in \mathbb{N}$, each $4n{+}2$ networks};
   \draw[<->] (2.3,1.45) -- (2.3,0.75);
   % the three untouched components, fed from a spine clear of both columns
   \node[comp] (cores) at (8.4,0.6)  {the $n$ round loops};
-  \node[comp] (anet)  at (8.4,-0.7) {$\mathrm{aNet}(P)$: the DECIDED sets,\\ $F$ with $|F| < f$};
-  \node[comp] (w)     at (8.4,-2.0) {$\mathrm{WCC.specFamily}(P)$\\ along $\mathrm{wccPull}$};
+  \node[comp] (anet)  at (8.4,-0.7) {$\mathrm{ABANetwork}(P)$: the DECIDED sets,\\ $F$ with $|F| < f$};
+  \node[comp] (w)     at (8.4,-2.0) {$\mathrm{WCC.specFamily}(P)$\\ along $\mathrm{coinLabelMap}$};
   \foreach \y in {0.6,-0.7,-2.0} \draw[<->] (5.7,1.45) -- (5.7,\y) -- (6.3,\y);
   % the three stages
   \node[posn, minimum height=0.75cm] (ideal) at (2.3,-4.5)
-    {$\mathrm{idealSide}(P)$ \ \ giving $\afw{\mathrm{hybrid}}_1(P)$};
+    {$\mathrm{roundFamilyOverBroadcastSpecification}(P)$ \ \ giving $\afw{\mathrm{hybrid}}_1(P)$};
   \node[posn, minimum height=0.75cm] (pair)  at (2.3,-5.8)
-    {$\mathrm{pairSide}(P)$ \ \ giving $\afw{\mathrm{hybrid}}_2(P)$};
+    {$\mathrm{roundFamilyOverGatherSpecifications}(P)$ \ \ giving $\afw{\mathrm{hybrid}}_2(P)$};
   \node[posn, minimum height=0.75cm] (spec)  at (2.3,-7.1)
-    {$\mathrm{specSide}(P)$ \ \ giving $\mathrm{hybrid}(P)$};
+    {$\mathrm{gbcaSpecificationFamily}(P)$ \ \ giving $\mathrm{hybrid}(P)$};
   \draw[->, dashed] (2.3,-3.3) -- (ideal.north);
   \draw[->, dashed] (ideal) -- (pair);
   \draw[->, dashed] (pair) -- (spec);

@@ -1,6 +1,6 @@
 \begin{definition}[The gather specification instance]
   \label{def:aba-gather-spec}
-  \lean{PLTS.ABA.Gather.APSet}\lean{PLTS.ABA.Gather.APSet.subMap}\lean{PLTS.ABA.Gather.Lab}\lean{PLTS.ABA.Gather.SpecState}\lean{PLTS.ABA.Gather.SpecState.corrupt}\lean{PLTS.ABA.Gather.Step}\lean{PLTS.ABA.Gather.specInst}\leanok
+  \lean{PLTS.ABA.Gather.APSet}\lean{PLTS.ABA.Gather.APSet.subMap}\lean{PLTS.ABA.Gather.Label}\lean{PLTS.ABA.Gather.SpecState}\lean{PLTS.ABA.Gather.SpecState.corrupt}\lean{PLTS.ABA.Gather.Step}\lean{PLTS.ABA.Gather.specInst}\leanok
   \uses{def:aba-params}
   Transition System~4 with the call/commit split and one bound core.
   Calls are recorded per process; each entry commits once, to any payload at a corrupted process and to the recorded call otherwise (D26); one internal rule writes, once, a set of committed entries of size at least $n-f$; and a return delivers a sub-map of the committed entries containing that set, which its label carries: \leandecl{PLTS.ABA.Gather.specInst}.

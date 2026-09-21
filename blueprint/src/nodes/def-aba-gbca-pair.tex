@@ -1,6 +1,6 @@
 \begin{definition}[The two-gather round]
   \label{def:aba-gbca-pair}
-  \lean{PLTS.ABA.GBCA.cand}\lean{PLTS.ABA.GBCA.gradeOf}\lean{PLTS.ABA.GBCA.boundOfCore}\lean{PLTS.ABA.GBCA.ByAFW.PairState}\lean{PLTS.ABA.GBCA.ByAFW.PairStep}\lean{PLTS.ABA.GBCA.ByAFW.pairInst}\lean{PLTS.ABA.GBCA.ByAFW.pairInst_step_iff_row}\leanok
+  \lean{PLTS.ABA.GBCA.cand}\lean{PLTS.ABA.GBCA.gradeOf}\lean{PLTS.ABA.GBCA.boundOfCore}\lean{PLTS.ABA.GBCA.ByAFW.RoundStateOverGatherSpecifications}\lean{PLTS.ABA.GBCA.ByAFW.StepOverGatherSpecifications}\lean{PLTS.ABA.GBCA.ByAFW.roundOverGatherSpecifications}\lean{PLTS.ABA.GBCA.ByAFW.roundOverGatherSpecifications_step_iff_row}\leanok
   \uses{def:aba-round-sub, def:aba-gbca-net, def:aba-gather-spec, def:aba-gbca-spec, def:aba-labels}
   The graded agreement of~\cite{AFW25} --- its Algorithm~4 at $R = 2$, the two-gather branch, with the grade read off the second gather's counts in place of the approximate-agreement subroutine of lines~7 and~8 (D24) --- over two gather specification instances of Definition~\ref{def:aba-gather-spec}, each the binding form (D33), the first at payload type $\mathbb{B}$ and the second at $\mathbb{B} \cup \{\bot\}$.
   The round is the composition of Definition~\ref{def:aba-round-sub}: its state is the $n$ program records beside the layer's network, in parallel with the two gather states, and a program's record holds the process's input, its candidate, whether it has called the second gather, its graded outcome and its return flag.
@@ -19,5 +19,5 @@
   It is written at the round's first $\mathrm{ret1}$ and once only, as $\mathrm{boundOfCore}$ of the core the first gather's return carries, and every graded return announces it on its label.
   For a payload set $S$, $\mathrm{boundOfCore}(S)$ is the bit heavy in $S$ --- carried by at least $|S| - f$ of its entries --- and $1$ where neither bit is.
   At the sizes the core rule of Definition~\ref{def:aba-gather-spec} allows, $|S| \ge n - f > 2f$, at most one bit is heavy, so a return handing out $v$ announces $v$ and a return handing out nothing announces a bit whose complement no return can hand out.
-  Full construction: \leandecl{PLTS.ABA.GBCA.ByAFW.pairInst}; the rule table is \leandecl{PLTS.ABA.GBCA.ByAFW.PairStep}, and \leandecl{PLTS.ABA.GBCA.ByAFW.pairInst_step_iff_row} states that the round's transitions over the family labels the pullback sends to one specification label are exactly its rows at that label.
+  Full construction: \leandecl{PLTS.ABA.GBCA.ByAFW.roundOverGatherSpecifications}; the rule table is \leandecl{PLTS.ABA.GBCA.ByAFW.StepOverGatherSpecifications}, and \leandecl{PLTS.ABA.GBCA.ByAFW.roundOverGatherSpecifications_step_iff_row} states that the round's transitions over the family labels the pullback sends to one specification label are exactly its rows at that label.
 \end{definition}

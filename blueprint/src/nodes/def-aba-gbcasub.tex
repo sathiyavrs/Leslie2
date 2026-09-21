@@ -1,18 +1,18 @@
 \begin{definition}[The round's graded-agreement instance]
   \label{def:aba-gbcasub}
-  \lean{PLTS.ABA.GBCA.ByABDY.GEvt}\lean{PLTS.ABA.GBCA.ByABDY.GLab}\lean{PLTS.ABA.GBCA.ByABDY.gEvents}\lean{PLTS.ABA.GBCA.ByABDY.GProcStep}\lean{PLTS.ABA.GBCA.ByABDY.gbcaProc}\lean{PLTS.ABA.GBCA.ByABDY.GNetState}\lean{PLTS.ABA.GBCA.ByABDY.GNetState.corrupt}\lean{PLTS.ABA.GBCA.ByABDY.GNetStep}\lean{PLTS.ABA.GBCA.ByABDY.gNet}\lean{PLTS.ABA.GBCA.ByABDY.ImplState}\lean{PLTS.ABA.GBCA.ByABDY.subPre}\lean{PLTS.ABA.GBCA.ByABDY.sub}\lean{PLTS.ABA.GBCA.ByABDY.gOwns}\lean{PLTS.ABA.GBCA.ByABDY.gAct}\lean{PLTS.ABA.GBCA.ByABDY.gbcaSide}\leanok
+  \lean{PLTS.ABA.GBCA.ByABDY.GBCAEvent}\lean{PLTS.ABA.GBCA.ByABDY.GBCALabel}\lean{PLTS.ABA.GBCA.ByABDY.gbcaEvents}\lean{PLTS.ABA.GBCA.ByABDY.GBCAProgramStep}\lean{PLTS.ABA.GBCA.ByABDY.gbcaProgram}\lean{PLTS.ABA.GBCA.ByABDY.GNetState}\lean{PLTS.ABA.GBCA.ByABDY.GNetState.corrupt}\lean{PLTS.ABA.GBCA.ByABDY.GBCANetworkStep}\lean{PLTS.ABA.GBCA.ByABDY.GBCANetwork}\lean{PLTS.ABA.GBCA.ByABDY.ImplState}\lean{PLTS.ABA.GBCA.ByABDY.compositionExtended}\lean{PLTS.ABA.GBCA.ByABDY.composition}\lean{PLTS.ABA.GBCA.ByABDY.gOwns}\lean{PLTS.ABA.GBCA.ByABDY.gAct}\lean{PLTS.ABA.GBCA.ByABDY.gbcaInstanceFamily}\leanok
   \uses{def:aba-procnet, def:aba-netadv, def:aba-gbca-vocab, def:relabel, def:syncproduct, def:idle-family, def:process-algebra}
-  One round of graded agreement taken apart into the pieces that run it: $n$ local stage programs $\mathrm{gbcaProc}(P,r,j)$, each holding one stage record of Definition~\ref{def:aba-procnet}, beside that round's own network $\mathrm{gNet}(P,r)$, which holds the round's per-sender message sets (D5), the corrupted set and the round's bound bit.
+  One round of graded agreement taken apart into the pieces that run it: $n$ local stage programs $\mathrm{gbcaProgram}(P,r,j)$, each holding one stage record of Definition~\ref{def:aba-procnet}, beside that round's own network $\mathrm{GBCANetwork}(P,r)$, which holds the round's per-sender message sets (D5), the corrupted set and the round's bound bit.
   That bit is a ghost output (D29): the three return rows write it and announce it, and no program's record holds it.
   The instance
   \[
-    \mathrm{sub}(P,r) \;=\; \mathrm{relabel}\Bigl(
-      \mathrm{abstract}_{\mathrm{GEvt}(n)}\bigl(
-        \bigl(\mathrm{syncProduct}_{j \in [n]}\ \mathrm{gbcaProc}(P,r,j)\bigr)
-          \parallel \mathrm{gNet}(P,r)\bigr)\Bigr)
+    \mathrm{composition}(P,r) \;=\; \mathrm{relabel}\Bigl(
+      \mathrm{abstract}_{\mathrm{GBCAEvent}(n)}\bigl(
+        \bigl(\mathrm{syncProduct}_{j \in [n]}\ \mathrm{gbcaProgram}(P,r,j)\bigr)
+          \parallel \mathrm{GBCANetwork}(P,r)\bigr)\Bigr)
   \]
-  is read over $\mathrm{GLab}(n) = \mathrm{NLab}(n) \oplus \mathrm{GEvt}(n)$ and then over $\mathrm{NLab}(n)$, where $\mathrm{GEvt}(n)$ is the alphabet of the two rendezvous of one round, the multicast and the delivery.
+  is read over $\mathrm{GBCALabel}(n) = \mathrm{ExtendedLabel}(n) \oplus \mathrm{GBCAEvent}(n)$ and then over $\mathrm{ExtendedLabel}(n)$, where $\mathrm{GBCAEvent}(n)$ is the alphabet of the two rendezvous of one round, the multicast and the delivery.
   They carry no round tag, the round being the identity of the instance they belong to, and they are hidden before they leave the instance, so its interface is the round's ports alone: $\mathrm{callG}(r,\cdot,\cdot)$, $\mathrm{retG}(r,\cdot,\cdot,\cdot)$, $\mathrm{gcallLoop}(r,\cdot,\cdot)$ and the three Byzantine graded-agreement rows of round $r$, whose effect the instance carries and whose authorisation $k \in F$ is read outside it (D11).
-  The graded-agreement side of the protocol is the $\mathbb{N}$-indexed family $\mathrm{gbcaSide}(P)$ over $\mathrm{sub}(P,\cdot)$, in which the ownership map $\mathrm{gOwns}$ sends each interface label class to its round tag, a round-tagged label moves its round alone, and $\mathrm{fail}(k)$ is the broadcast that keeps every round's copy of the corrupted set in lockstep (D1).
-  Full construction: \leandecl{PLTS.ABA.GBCA.ByABDY.sub} and \leandecl{PLTS.ABA.GBCA.ByABDY.gbcaSide}.
+  The graded-agreement side of the protocol is the $\mathbb{N}$-indexed family $\mathrm{gbcaInstanceFamily}(P)$ over $\mathrm{composition}(P,\cdot)$, in which the ownership map $\mathrm{gOwns}$ sends each interface label class to its round tag, a round-tagged label moves its round alone, and $\mathrm{fail}(k)$ is the broadcast that keeps every round's copy of the corrupted set in lockstep (D1).
+  Full construction: \leandecl{PLTS.ABA.GBCA.ByABDY.composition} and \leandecl{PLTS.ABA.GBCA.ByABDY.gbcaInstanceFamily}.
 \end{definition}

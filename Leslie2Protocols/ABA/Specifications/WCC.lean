@@ -31,8 +31,8 @@ resolution writes.
 ## Why the corrupted set is not counted
 
 The threshold is `P.f < |{id | called id}|`: it counts accesses. A corrupted
-process reaches the instance as a caller, since `wccPull` sends its
-`byzCallW r k` to `callW r k`, so `called` already counts it. Were `F` added
+process reaches the instance as a caller, since `coinLabelMap` sends its
+`byzantineCallW r k` to `callW r k`, so `called` already counts it. Were `F` added
 to the count, a corruption would be able to carry the count across the
 threshold; the family combinator broadcasts `fail` by a deterministic
 transform, so that resolution would have to be drawn on a Dirac row.
@@ -156,7 +156,7 @@ end SpecState
 
 /-- The step relation of the round-`r` WCC specification instance. -/
 inductive Step (P : Params) (r : ℕ) :
-    SpecState P.n → Lab P.n → PMF (SpecState P.n) → Prop
+    SpecState P.n → Label P.n → PMF (SpecState P.n) → Prop
   /-- A process calls the coin and the call records nothing further: either the
   call leaves the caller count at `f` or below, or `val` is already resolved. -/
   | callRecord (s : SpecState P.n) (id : Fin P.n) (h : s.called id = false)
@@ -220,7 +220,7 @@ theorem step_callW_support {P : Params} {r : ℕ} {s : SpecState P.n} {id : Fin 
     simp
 
 /-- The round-`r` WCC specification instance. -/
-noncomputable def specInst (P : Params) (r : ℕ) : System (SpecState P.n) (Lab P.n) where
+noncomputable def specInst (P : Params) (r : ℕ) : System (SpecState P.n) (Label P.n) where
   init := SpecState.initial P.n
   step := Step P r
 
@@ -228,29 +228,29 @@ noncomputable def specInst (P : Params) (r : ℕ) : System (SpecState P.n) (Lab 
     (specInst P r).init = SpecState.initial P.n := rfl
 
 @[simp] theorem specInst_step (P : Params) (r : ℕ) (s : SpecState P.n)
-    (l : Lab P.n) (μ : PMF (SpecState P.n)) :
+    (l : Label P.n) (μ : PMF (SpecState P.n)) :
     (specInst P r).step s l μ ↔ Step P r s l μ := Iff.rfl
 
 /-- The broadcast transform of the WCC family: corruption on `fail id`,
 identity on every other label. -/
-def failAct (P : Params) : Lab P.n → SpecState P.n → SpecState P.n
+def failAct (P : Params) : Label P.n → SpecState P.n → SpecState P.n
   | .fail id, s => s.corrupt P id
   | _, s => s
 
 /-- The ℕ-indexed family of WCC specification instances: one instance per
 round, `fail` broadcast to all of them, idle on foreign labels. -/
 noncomputable def specFamily (P : Params) :
-    System (ℕ → SpecState P.n) (Lab P.n) :=
-  System.family (specInst P) Lab.wccRound Lab.isFail (failAct P)
+    System (ℕ → SpecState P.n) (Label P.n) :=
+  System.family (specInst P) Label.wccRound Label.isFail (failAct P)
 
 /-- The family has no silent row: its instances have none, and every remaining
 row of `System.family` carries a label other than `τ`. -/
 theorem specFamily_tau_inv (P : Params) {o : ℕ → SpecState P.n}
-    {ω : PMF (ℕ → SpecState P.n)} : ¬ (specFamily P).step o Lab.tau ω := by
+    {ω : PMF (ℕ → SpecState P.n)} : ¬ (specFamily P).step o Label.tau ω := by
   rw [specFamily, System.family_step_iff]
   rintro (⟨-, r, μr, hstep, -⟩ | ⟨r, hr, -⟩ | ⟨hτ, -⟩ | ⟨hτ, -⟩)
   · exact step_tau_inv hstep
-  · exact absurd hr (by simp [Lab.wccRound])
+  · exact absurd hr (by simp [Label.wccRound])
   · exact hτ rfl
   · exact hτ rfl
 

@@ -331,7 +331,7 @@ structure Inv (P : Params) (g : ℕ → GBCA.SpecState P.n) (c : ABAState P)
       (c.procs id).phase = .awaitG) →
     (c.procs id).est = (c.procs id).input
   /-- I12 : an `A`-grade traces back to a genuine `GBCA` `A`-return. Honesty-free:
-  the round loop's `CoreProcStepN.retG` records the outcome carried on the shared `retG`
+  the round loop's `RoundLoopStep.retG` records the outcome carried on the shared `retG`
   label, so it is the outcome the round specification's return guards
   (`retA`/`retB`/`retC`) licensed, regardless of `id`'s corruption; this is needed
   corruption-free in `step_retW`'s `recv_sound`/`decided_src` rows, which have no honesty
@@ -388,7 +388,7 @@ structure Inv (P : Params) (g : ℕ → GBCA.SpecState P.n) (c : ABAState P)
   /-- I20 : `F`-free residue of round-`0` `GBCA` call provenance — either the input
   is genuinely committed (write-once, permanent) or the caller was already corrupted (`F` only
   grows, so this disjunct is permanent too). Established at the `callG` round-`0` row (honest:
-  `est0`; byz: the corruption ctor). -/
+  `est0`; byzantine: the corruption ctor). -/
   input_g0_perm : ∀ id b, (g 0).call id = some b → (c.procs id).input = some b ∨ id ∈ c.F
   /-- I21' : the `WCC`-side analogue of `call_round` (I8) — an honest `WCC_r`
   caller has reached round `r`. Established at the `callW` row exactly like `call_round` is at

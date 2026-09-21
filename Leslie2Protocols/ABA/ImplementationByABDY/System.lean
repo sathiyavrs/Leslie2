@@ -28,7 +28,7 @@ nothing else:
   `GBCA/ABDY/Implementation.lean` (D18);
 * the per-process per-round stage record, `GBCA.ByABDY.StageRec`, held by round in a
   finite map (D22);
-* the rows of the implementation, `AbdyStageStep`: the graded-agreement call, the
+* the rows of the implementation, `RoundStep`: the graded-agreement call, the
   eight stage multicasts, the stage delivery, the call against an
   already-called record, and the three graded returns;
 * the network adversary's ghost — the type `Option Bool` of a round's bound
@@ -133,9 +133,9 @@ return rows: the bit a return announces is `abdyGhostOut` of the round. -/
 /-- The ghost write of a row: a return records the bit its label announces
 where the round has none on record; every other row leaves the record alone. -/
 def abdyGhostStep (P : Params) :
-    NLab P.n → NetState P.n → Option Bool → Option Bool
+    ExtendedLabel P.n → NetState P.n → Option Bool → Option Bool
   | Sum.inl (.retG _ _ _ bnd), _, g => some (g.getD bnd)
-  | Sum.inr (.byzRetG _ _ _ bnd), _, g => some (g.getD bnd)
+  | Sum.inr (.byzantineRetG _ _ _ bnd), _, g => some (g.getD bnd)
   | _, _, g => g
 
 /-- The ghost output of a return: the round's bound bit on record, and
@@ -155,7 +155,7 @@ abbrev abdyAnnouncedBound (P : Params) (s : NetState P.n) (r : ℕ) (id : Fin P.
 
 /-- A row whose ghost write is the identity leaves the adversary's whole state
 where it stands. Every row but the two returns is such a row. -/
-theorem writeGhost_abdy_id (P : Params) (w : NetState P.n) (L : NLab P.n)
+theorem writeGhost_abdy_id (P : Params) (w : NetState P.n) (L : ExtendedLabel P.n)
     (h : ∀ g, abdyGhostStep P L w g = g) :
     w.writeGhost (abdyGhostStep P) L = w := by
   unfold NetStateP.writeGhost
@@ -168,7 +168,7 @@ section GhostFrame
 variable (P : Params) (w : NetState P.n)
 
 @[simp] theorem writeGhost_tau :
-    w.writeGhost (abdyGhostStep P) (Sum.inl Lab.tau) = w :=
+    w.writeGhost (abdyGhostStep P) (Sum.inl Label.tau) = w :=
   writeGhost_abdy_id P w _ fun _ => rfl
 @[simp] theorem writeGhost_callABA (id : Fin P.n) (b : Bool) :
     w.writeGhost (abdyGhostStep P) (Sum.inl (.callABA id b)) = w :=
@@ -188,17 +188,17 @@ variable (P : Params) (w : NetState P.n)
 @[simp] theorem writeGhost_fail (k : Fin P.n) :
     w.writeGhost (abdyGhostStep P) (Sum.inl (.fail k)) = w :=
   writeGhost_abdy_id P w _ fun _ => rfl
-@[simp] theorem writeGhost_gsnd (r : ℕ) (j : Fin P.n) (m : GBCA.ByABDY.Msg) :
-    w.writeGhost (abdyGhostStep P) (Sum.inr (.gsnd r j m)) = w :=
+@[simp] theorem writeGhost_gbcaSend (r : ℕ) (j : Fin P.n) (m : GBCA.ByABDY.Msg) :
+    w.writeGhost (abdyGhostStep P) (Sum.inr (.gbcaSend r j m)) = w :=
   writeGhost_abdy_id P w _ fun _ => rfl
-@[simp] theorem writeGhost_gdlv (r : ℕ) (i j : Fin P.n) (m : GBCA.ByABDY.Msg) :
-    w.writeGhost (abdyGhostStep P) (Sum.inr (.gdlv r i j m)) = w :=
+@[simp] theorem writeGhost_gbcaDeliver (r : ℕ) (i j : Fin P.n) (m : GBCA.ByABDY.Msg) :
+    w.writeGhost (abdyGhostStep P) (Sum.inr (.gbcaDeliver r i j m)) = w :=
   writeGhost_abdy_id P w _ fun _ => rfl
-@[simp] theorem writeGhost_dsnd (j : Fin P.n) (b : Bool) :
-    w.writeGhost (abdyGhostStep P) (Sum.inr (.dsnd j b)) = w :=
+@[simp] theorem writeGhost_decidedSend (j : Fin P.n) (b : Bool) :
+    w.writeGhost (abdyGhostStep P) (Sum.inr (.decidedSend j b)) = w :=
   writeGhost_abdy_id P w _ fun _ => rfl
-@[simp] theorem writeGhost_ddlv (i j : Fin P.n) (b : Bool) :
-    w.writeGhost (abdyGhostStep P) (Sum.inr (.ddlv i j b)) = w :=
+@[simp] theorem writeGhost_decidedDeliver (i j : Fin P.n) (b : Bool) :
+    w.writeGhost (abdyGhostStep P) (Sum.inr (.decidedDeliver i j b)) = w :=
   writeGhost_abdy_id P w _ fun _ => rfl
 @[simp] theorem writeGhost_retWPub (r : ℕ) (id : Fin P.n) (c b : Bool) :
     w.writeGhost (abdyGhostStep P) (Sum.inr (.retWPub r id c b)) = w :=
@@ -206,17 +206,17 @@ variable (P : Params) (w : NetState P.n)
 @[simp] theorem writeGhost_gcallLoop (r : ℕ) (id : Fin P.n) (b : Bool) :
     w.writeGhost (abdyGhostStep P) (Sum.inr (.gcallLoop r id b)) = w :=
   writeGhost_abdy_id P w _ fun _ => rfl
-@[simp] theorem writeGhost_byzCallG (r : ℕ) (k : Fin P.n) (b : Bool) :
-    w.writeGhost (abdyGhostStep P) (Sum.inr (.byzCallG r k b)) = w :=
+@[simp] theorem writeGhost_byzantineCallG (r : ℕ) (k : Fin P.n) (b : Bool) :
+    w.writeGhost (abdyGhostStep P) (Sum.inr (.byzantineCallG r k b)) = w :=
   writeGhost_abdy_id P w _ fun _ => rfl
-@[simp] theorem writeGhost_byzCallGLoop (r : ℕ) (k : Fin P.n) (b : Bool) :
-    w.writeGhost (abdyGhostStep P) (Sum.inr (.byzCallGLoop r k b)) = w :=
+@[simp] theorem writeGhost_byzantineCallGLoop (r : ℕ) (k : Fin P.n) (b : Bool) :
+    w.writeGhost (abdyGhostStep P) (Sum.inr (.byzantineCallGLoop r k b)) = w :=
   writeGhost_abdy_id P w _ fun _ => rfl
-@[simp] theorem writeGhost_byzCallW (r : ℕ) (k : Fin P.n) :
-    w.writeGhost (abdyGhostStep P) (Sum.inr (.byzCallW r k)) = w :=
+@[simp] theorem writeGhost_byzantineCallW (r : ℕ) (k : Fin P.n) :
+    w.writeGhost (abdyGhostStep P) (Sum.inr (.byzantineCallW r k)) = w :=
   writeGhost_abdy_id P w _ fun _ => rfl
-@[simp] theorem writeGhost_byzRetW (r : ℕ) (k : Fin P.n) (b : Bool) :
-    w.writeGhost (abdyGhostStep P) (Sum.inr (.byzRetW r k b)) = w :=
+@[simp] theorem writeGhost_byzantineRetW (r : ℕ) (k : Fin P.n) (b : Bool) :
+    w.writeGhost (abdyGhostStep P) (Sum.inr (.byzantineRetW r k b)) = w :=
   writeGhost_abdy_id P w _ fun _ => rfl
 
 /-! The two return rows, which do write. The ghost record of the round the
@@ -235,15 +235,15 @@ theorem writeGhost_retG_ne (r : ℕ) (id : Fin P.n) (out : GbcaOut) (bnd : Bool)
       = w.ghostRec r' :=
   writeGhost_ghostRec_ne w rfl h
 
-@[simp] theorem writeGhost_byzRetG_self (r : ℕ) (k : Fin P.n) (out : GbcaOut)
+@[simp] theorem writeGhost_byzantineRetG_self (r : ℕ) (k : Fin P.n) (out : GbcaOut)
     (bnd : Bool) :
-    (w.writeGhost (abdyGhostStep P) (Sum.inr (.byzRetG r k out bnd))).ghostRec r
+    (w.writeGhost (abdyGhostStep P) (Sum.inr (.byzantineRetG r k out bnd))).ghostRec r
       = some ((w.ghostRec r).getD bnd) :=
   writeGhost_ghostRec_self w rfl
 
-theorem writeGhost_byzRetG_ne (r : ℕ) (k : Fin P.n) (out : GbcaOut) (bnd : Bool)
+theorem writeGhost_byzantineRetG_ne (r : ℕ) (k : Fin P.n) (out : GbcaOut) (bnd : Bool)
     {r' : ℕ} (h : r' ≠ r) :
-    (w.writeGhost (abdyGhostStep P) (Sum.inr (.byzRetG r k out bnd))).ghostRec r'
+    (w.writeGhost (abdyGhostStep P) (Sum.inr (.byzantineRetG r k out bnd))).ghostRec r'
       = w.ghostRec r' :=
   writeGhost_ghostRec_ne w rfl h
 
@@ -254,8 +254,8 @@ end GhostFrame
 /-- The stage-side rows of process `j`: the graded-agreement call, the eight
 multicasts of the five message levels, the stage delivery, the call against an
 already-called record, and the three graded returns. -/
-inductive AbdyStageStep (P : Params) (j : Fin P.n) :
-    ProcRec P.n → NLab P.n → PMF (ProcRec P.n) → Prop
+inductive RoundStep (P : Params) (j : Fin P.n) :
+    ProcRec P.n → ExtendedLabel P.n → PMF (ProcRec P.n) → Prop
   /-- The graded-agreement call: the round loop hands its estimate to the stage
   record of round `r`, which opens. The `⟨INPUT, b⟩` multicast is the network's
   half. -/
@@ -264,7 +264,7 @@ inductive AbdyStageStep (P : Params) (j : Fin P.n) :
       (hph : c.proc.phase = .toCallG) (hr : c.proc.round = r)
       (hterm : p.terminated = false)
       (hest : c.proc.est = some b) (hin : (p.stage r).proc.input = none) :
-      AbdyStageStep P j (c, p) (Sum.inl (.callG r j b))
+      RoundStep P j (c, p) (Sum.inl (.callG r j b))
         (PMF.pure (c.setProc { c.proc with phase := .awaitG },
           p.setStage r ((p.stage r).setP { (p.stage r).proc with
             input := some b,
@@ -280,7 +280,7 @@ inductive AbdyStageStep (P : Params) (j : Fin P.n) :
       (hlv : (p.stage r).proc.sentEcho5 ≠ none)
       (hcnt : P.n - P.f ≤ (p.stage r).recvCount (.echo5 (some v)))
       (hret : (p.stage r).proc.returned = false) :
-      AbdyStageStep P j (c, p) (Sum.inl (.retG r j (.A v) bnd))
+      RoundStep P j (c, p) (Sum.inl (.retG r j (.A v) bnd))
         (PMF.pure (c.setProc { c.proc with
             est := (GbcaOut.A v).est, lastGrade := some (.A v), phase := .toCallW },
           p.setStage r ((p.stage r).setP { (p.stage r).proc with returned := true })))
@@ -299,7 +299,7 @@ inductive AbdyStageStep (P : Params) (j : Fin P.n) :
       (hbind : P.f + 1 ≤ (p.stage r).recvCount (.bind (some v)))
       (hval : (p.stage r).bothValid P)
       (hret : (p.stage r).proc.returned = false) :
-      AbdyStageStep P j (c, p) (Sum.inl (.retG r j (.B v) bnd))
+      RoundStep P j (c, p) (Sum.inl (.retG r j (.B v) bnd))
         (PMF.pure (c.setProc { c.proc with
             est := (GbcaOut.B v).est, lastGrade := some (.B v), phase := .toCallW },
           p.setStage r ((p.stage r).setP { (p.stage r).proc with returned := true })))
@@ -319,7 +319,7 @@ inductive AbdyStageStep (P : Params) (j : Fin P.n) :
       (hcnt : P.n - P.f ≤ (p.stage r).recvCount (.echo5 none))
       (hval : (p.stage r).bothValid P)
       (hret : (p.stage r).proc.returned = false) :
-      AbdyStageStep P j (c, p) (Sum.inl (.retG r j .C bnd))
+      RoundStep P j (c, p) (Sum.inl (.retG r j .C bnd))
         (PMF.pure (c.setProc { c.proc with
             est := GbcaOut.C.est, lastGrade := some .C, phase := .toCallW },
           p.setStage r ((p.stage r).setP { (p.stage r).proc with returned := true })))
@@ -331,7 +331,7 @@ inductive AbdyStageStep (P : Params) (j : Fin P.n) :
       (hin : (p.stage r).proc.input ≠ none)
       (hcnt : P.f + 1 ≤ (p.stage r).recvCount (.input b))
       (hsend : (p.stage r).proc.sentInput b = false) :
-      AbdyStageStep P j (c, p) (Sum.inr (.gsnd r j (.input b)))
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.input b)))
         (PMF.pure (c, p.setStage r ((p.stage r).setP { (p.stage r).proc with
           sentInput := Function.update (p.stage r).proc.sentInput b true })))
   /-- The stage `ECHO`: an `n − f` `INPUT b` quorum (D18, D22). -/
@@ -341,7 +341,7 @@ inductive AbdyStageStep (P : Params) (j : Fin P.n) :
       (hin : (p.stage r).proc.input ≠ none)
       (hcnt : P.n - P.f ≤ (p.stage r).recvCount (.input b))
       (hsend : (p.stage r).proc.sentEcho = none) :
-      AbdyStageStep P j (c, p) (Sum.inr (.gsnd r j (.echo b)))
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.echo b)))
         (PMF.pure (c, p.setStage r
           ((p.stage r).setP { (p.stage r).proc with sentEcho := some b })))
   /-- The stage `VOTE b`: an `n − f` `ECHO b` quorum. The stage record's own
@@ -353,7 +353,7 @@ inductive AbdyStageStep (P : Params) (j : Fin P.n) :
       (hin : (p.stage r).proc.input ≠ none)
       (hcnt : P.n - P.f ≤ (p.stage r).recvCount (.echo b))
       (hsend : (p.stage r).proc.sentVote = none) :
-      AbdyStageStep P j (c, p) (Sum.inr (.gsnd r j (.vote (some b))))
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.vote (some b))))
         (PMF.pure (c, p.setStage r
           ((p.stage r).setP { (p.stage r).proc with sentVote := some (some b) })))
   /-- The stage `VOTE ⊥`: `n − f` `ECHO`s of any payload and `|Valid| > 1`, and
@@ -367,7 +367,7 @@ inductive AbdyStageStep (P : Params) (j : Fin P.n) :
       (hnot : ∀ b, (p.stage r).recvCount (.echo b) < P.n - P.f)
       (hcnt : P.n - P.f ≤ (p.stage r).echoCount)
       (hval : (p.stage r).bothValid P) (hsend : (p.stage r).proc.sentVote = none) :
-      AbdyStageStep P j (c, p) (Sum.inr (.gsnd r j (.vote none)))
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.vote none)))
         (PMF.pure (c, p.setStage r
           ((p.stage r).setP { (p.stage r).proc with sentVote := some none })))
   /-- The stage `BIND b`: an `n − f` `VOTE b` quorum, the stage record's own
@@ -379,7 +379,7 @@ inductive AbdyStageStep (P : Params) (j : Fin P.n) :
       (hlv : (p.stage r).proc.sentVote ≠ none)
       (hcnt : P.n - P.f ≤ (p.stage r).recvCount (.vote (some b)))
       (hsend : (p.stage r).proc.sentBind = none) :
-      AbdyStageStep P j (c, p) (Sum.inr (.gsnd r j (.bind (some b))))
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.bind (some b))))
         (PMF.pure (c, p.setStage r
           ((p.stage r).setP { (p.stage r).proc with sentBind := some (some b) })))
   /-- The stage `BIND ⊥`: `n − f` `VOTE`s of any payload and `|Valid| > 1`, the
@@ -393,7 +393,7 @@ inductive AbdyStageStep (P : Params) (j : Fin P.n) :
       (hnot : ∀ b, (p.stage r).recvCount (.vote (some b)) < P.n - P.f)
       (hcnt : P.n - P.f ≤ (p.stage r).voteCount)
       (hval : (p.stage r).bothValid P) (hsend : (p.stage r).proc.sentBind = none) :
-      AbdyStageStep P j (c, p) (Sum.inr (.gsnd r j (.bind none)))
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.bind none)))
         (PMF.pure (c, p.setStage r
           ((p.stage r).setP { (p.stage r).proc with sentBind := some none })))
   /-- The stage `ECHO5 b`: an `n − f` `BIND b` quorum, the stage record's own
@@ -405,7 +405,7 @@ inductive AbdyStageStep (P : Params) (j : Fin P.n) :
       (hlv : (p.stage r).proc.sentBind ≠ none)
       (hcnt : P.n - P.f ≤ (p.stage r).recvCount (.bind (some b)))
       (hsend : (p.stage r).proc.sentEcho5 = none) :
-      AbdyStageStep P j (c, p) (Sum.inr (.gsnd r j (.echo5 (some b))))
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.echo5 (some b))))
         (PMF.pure (c, p.setStage r
           ((p.stage r).setP { (p.stage r).proc with sentEcho5 := some (some b) })))
   /-- The stage `ECHO5 ⊥`: `n − f` `BIND`s of any payload and `|Valid| > 1`, the
@@ -419,7 +419,7 @@ inductive AbdyStageStep (P : Params) (j : Fin P.n) :
       (hnot : ∀ b, (p.stage r).recvCount (.bind (some b)) < P.n - P.f)
       (hcnt : P.n - P.f ≤ (p.stage r).bindCount)
       (hval : (p.stage r).bothValid P) (hsend : (p.stage r).proc.sentEcho5 = none) :
-      AbdyStageStep P j (c, p) (Sum.inr (.gsnd r j (.echo5 none)))
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.echo5 none)))
         (PMF.pure (c, p.setStage r
           ((p.stage r).setP { (p.stage r).proc with sentEcho5 := some none })))
   /-- Stage delivery, receiver's half: file the message under the sender's
@@ -428,7 +428,7 @@ inductive AbdyStageStep (P : Params) (j : Fin P.n) :
   | gdlvRecv (c : CoreRec P.n) (p : StageSideRec P.n)
       (r : ℕ) (k : Fin P.n) (m : GBCA.ByABDY.Msg) (hh : c.corrupted = false)
       (hterm : p.terminated = false) :
-      AbdyStageStep P j (c, p) (Sum.inr (.gdlv r j k m))
+      RoundStep P j (c, p) (Sum.inr (.gbcaDeliver r j k m))
         (PMF.pure (c, p.deliverTo r k m))
   /-- The graded-agreement call against an already-called stage record: the
   round loop moves, the stage record does not. The row carries no termination
@@ -440,14 +440,14 @@ inductive AbdyStageStep (P : Params) (j : Fin P.n) :
       (hph : c.proc.phase = .toCallG) (hr : c.proc.round = r)
       (hest : c.proc.est = some b)
       (hin : (p.stage r).proc.input ≠ none) :
-      AbdyStageStep P j (c, p) (Sum.inr (.gcallLoop r j b))
+      RoundStep P j (c, p) (Sum.inr (.gcallLoop r j b))
         (PMF.pure (c.setProc { c.proc with phase := .awaitG }, p))
 
 /-- The rows above meet the flat reading's conditions: each carries a label of
-`stageOwn j`, each fires only at an unreplaced program, each is Dirac, and each
+`roundOwn j`, each fires only at an unreplaced program, each is Dirac, and each
 of the three returns takes the announced bit free (D29). -/
 instance instIsStageTable (P : Params) :
-    IsStageTable P GBCA.ByABDY.Msg (GBCA.ByABDY.StageRec P.n) (AbdyStageStep P) where
+    IsRoundRuleTable P GBCA.ByABDY.Msg (GBCA.ByABDY.StageRec P.n) (RoundStep P) where
   own h := by cases h <;> rfl
   honest h := by cases h <;> assumption
   dirac h := by cases h <;> exact ⟨_, rfl⟩
@@ -457,51 +457,53 @@ instance instIsStageTable (P : Params) :
 
 /-- The step relation of the program of process `j`: the flat reading's rows
 beside ABDY22's own stage-side rows. -/
-abbrev ABAProcStepN (P : Params) (j : Fin P.n) :
-    ProcRec P.n → NLab P.n → PMF (ProcRec P.n) → Prop :=
-  FlatProcStep P GBCA.ByABDY.Msg (GBCA.ByABDY.StageRec P.n) (AbdyStageStep P) j
+abbrev ABAProgramStep (P : Params) (j : Fin P.n) :
+    ProcRec P.n → ExtendedLabel P.n → PMF (ProcRec P.n) → Prop :=
+  ProgramStep P GBCA.ByABDY.Msg (GBCA.ByABDY.StageRec P.n) (RoundStep P) j
 
 /-- The message the graded-agreement call multicasts: `⟨INPUT, b⟩`. -/
 def gCallPayload (P : Params) : Fin P.n → Bool → GBCA.ByABDY.Msg := fun _ b => .input b
 
 /-- The step relation of the network adversary. -/
-abbrev NetStep (P : Params) : NetState P.n → NLab P.n → PMF (NetState P.n) → Prop :=
-  FlatNetStep P GBCA.ByABDY.Msg (Option Bool) (gCallPayload P) (abdyGhostStep P)
+abbrev NetworkStep (P : Params) : NetState P.n → ExtendedLabel P.n → PMF (NetState P.n) → Prop :=
+  Implementation.NetworkStep P GBCA.ByABDY.Msg (Option Bool) (gCallPayload P)
+    (abdyGhostStep P)
     (abdyAnnouncedBound P)
 
 /-- The program of process `j`. -/
-noncomputable abbrev ABAProcN (P : Params) (j : Fin P.n) :
-    System (ProcRec P.n) (NLab P.n) :=
-  flatProcN P GBCA.ByABDY.Msg (GBCA.ByABDY.StageRec P.n) (AbdyStageStep P) j
+noncomputable abbrev ABAProgram (P : Params) (j : Fin P.n) :
+    System (ProcRec P.n) (ExtendedLabel P.n) :=
+  program P GBCA.ByABDY.Msg (GBCA.ByABDY.StageRec P.n) (RoundStep P) j
 
 /-- The network adversary. -/
-noncomputable abbrev netAdv (P : Params) : System (NetState P.n) (NLab P.n) :=
-  flatNetAdv P GBCA.ByABDY.Msg (Option Bool) (gCallPayload P) (abdyGhostStep P)
+noncomputable abbrev network (P : Params) : System (NetState P.n) (ExtendedLabel P.n) :=
+  Implementation.network P GBCA.ByABDY.Msg (Option Bool) (gCallPayload P) (abdyGhostStep P)
     (abdyAnnouncedBound P)
 
 
 /-- The state of the protocol: the process family, the network adversary and
 the coin oracle. -/
 abbrev ProtocolState (P : Params) : Type :=
-  Implementation.FlatState P GBCA.ByABDY.Msg (GBCA.ByABDY.StageRec P.n) (Option Bool)
+  Implementation.State P GBCA.ByABDY.Msg (GBCA.ByABDY.StageRec P.n) (Option Bool)
 
 /-- The three components side by side, over the extended alphabet: the
 synchronised process group, the network adversary and the lifted oracle. -/
-noncomputable def protocolPre (P : Params) : System (ProtocolState P) (Composition.NLab P.n) :=
-  Implementation.flatPre P GBCA.ByABDY.Msg (GBCA.ByABDY.StageRec P.n) (Option Bool)
-    (ABDY.AbdyStageStep P)
+noncomputable def protocolExtended (P : Params) : System (ProtocolState P)
+  (Composition.ExtendedLabel P.n) :=
+  Implementation.systemExtended P GBCA.ByABDY.Msg (GBCA.ByABDY.StageRec P.n) (Option Bool)
+    (ABDY.RoundStep P)
     (ABDY.gCallPayload P) (ABDY.abdyGhostStep P) (ABDY.abdyAnnouncedBound P)
 
 /-- **The protocol group**: the rendezvous alphabet hidden, the result read
-back over `Lab n`. -/
-noncomputable def protocolGroup (P : Params) : System (ProtocolState P) (Lab P.n) :=
-  Implementation.flatGroup P GBCA.ByABDY.Msg (GBCA.ByABDY.StageRec P.n) (Option Bool)
-    (ABDY.AbdyStageStep P)
+back over `Label n`. -/
+noncomputable def protocolHidden (P : Params) : System (ProtocolState P) (Label P.n) :=
+  Implementation.systemHidden P GBCA.ByABDY.Msg (GBCA.ByABDY.StageRec P.n) (Option Bool)
+    (ABDY.RoundStep P)
     (ABDY.gCallPayload P) (ABDY.abdyGhostStep P) (ABDY.abdyAnnouncedBound P)
 
 /-- **The protocol system**: the group with the sub-protocol API hidden. -/
-noncomputable def protocol (P : Params) : System (ProtocolState P) (Lab P.n) :=
-  Implementation.flat P GBCA.ByABDY.Msg (GBCA.ByABDY.StageRec P.n) (Option Bool) (ABDY.AbdyStageStep
+noncomputable def protocol (P : Params) : System (ProtocolState P) (Label P.n) :=
+  Implementation.system P GBCA.ByABDY.Msg (GBCA.ByABDY.StageRec P.n) (Option Bool) (ABDY.RoundStep
     P)
     (ABDY.gCallPayload P) (ABDY.abdyGhostStep P) (ABDY.abdyAnnouncedBound P)
 
@@ -510,58 +512,58 @@ noncomputable def protocol (P : Params) : System (ProtocolState P) (Lab P.n) :=
 
 The flat reading's own lemmas, named at this instantiation. -/
 
-theorem protocolGroup_step_iff (P : Params) (q : ABDY.ProtocolState P) (l : Lab P.n)
+theorem protocolHidden_step_iff (P : Params) (q : ABDY.ProtocolState P) (l : Label P.n)
     (μ : PMF (ABDY.ProtocolState P)) :
-    (ABDY.protocolGroup P).step q l μ ↔
-      (l = .tau ∧ ∃ e : NetEvt P.n, (ABDY.protocolPre P).step q (Sum.inr e) μ) ∨
-      (ABDY.protocolPre P).step q (Sum.inl l) μ :=
-  flatGroup_step_iff q l μ
+    (ABDY.protocolHidden P).step q l μ ↔
+      (l = .tau ∧ ∃ e : NetworkEvent P.n, (ABDY.protocolExtended P).step q (Sum.inr e) μ) ∨
+      (ABDY.protocolExtended P).step q (Sum.inl l) μ :=
+  systemHidden_step_iff q l μ
 
-theorem protocol_step_iff (P : Params) (q : ABDY.ProtocolState P) (l : Lab P.n)
+theorem protocol_step_iff (P : Params) (q : ABDY.ProtocolState P) (l : Label P.n)
     (μ : PMF (ABDY.ProtocolState P)) :
     (ABDY.protocol P).step q l μ ↔
-      (l = .tau ∧ ∃ l' ∈ Lab.hiddenAPI P.n, (ABDY.protocolGroup P).step q l' μ) ∨
-      (l ∉ Lab.hiddenAPI P.n ∧ (ABDY.protocolGroup P).step q l μ) :=
-  flat_step_iff q l μ
+      (l = .tau ∧ ∃ l' ∈ Label.hiddenAPI P.n, (ABDY.protocolHidden P).step q l' μ) ∨
+      (l ∉ Label.hiddenAPI P.n ∧ (ABDY.protocolHidden P).step q l μ) :=
+  system_step_iff q l μ
 
 /-- A rendezvous transition: every process, the network and the lifted oracle
 move together, and only the oracle's successor can fail to be a Dirac. -/
-theorem protocolPre_event_inv (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
-    {w : NetState P.n} {o : ℕ → WCC.SpecState P.n} {e : NetEvt P.n}
+theorem protocolExtended_event_inv (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
+    {w : NetState P.n} {o : ℕ → WCC.SpecState P.n} {e : NetworkEvent P.n}
     {μ : PMF (ABDY.ProtocolState P)}
-    (h : (ABDY.protocolPre P).step (u, w, o) (Sum.inr e) μ) :
+    (h : (ABDY.protocolExtended P).step (u, w, o) (Sum.inr e) μ) :
     ∃ (x : ∀ _ : Fin P.n, ProcRec P.n) (w' : NetState P.n)
       (μ₃ : PMF (ℕ → WCC.SpecState P.n)),
-      (∀ i, ABAProcStepN P i (u i) (Sum.inr e) (PMF.pure (x i))) ∧
-      NetStep P w (Sum.inr e) (PMF.pure w') ∧
-      (wccLift P).step o (Sum.inr e) μ₃ ∧
+      (∀ i, ABAProgramStep P i (u i) (Sum.inr e) (PMF.pure (x i))) ∧
+      NetworkStep P w (Sum.inr e) (PMF.pure w') ∧
+      (coinOverRoundAlphabet P).step o (Sum.inr e) μ₃ ∧
       μ = prodPMF (PMF.pure x) (prodPMF (PMF.pure w') μ₃) :=
-  flatPre_event_inv h
+  systemExtended_event_inv h
 
 /-- A visible shared-label transition. -/
-theorem protocolPre_lab_inv (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
-    {w : NetState P.n} {o : ℕ → WCC.SpecState P.n} {l : Lab P.n} (hl : l ≠ Lab.tau)
+theorem protocolExtended_lab_inv (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
+    {w : NetState P.n} {o : ℕ → WCC.SpecState P.n} {l : Label P.n} (hl : l ≠ Label.tau)
     {μ : PMF (ABDY.ProtocolState P)}
-    (h : (ABDY.protocolPre P).step (u, w, o) (Sum.inl l) μ) :
+    (h : (ABDY.protocolExtended P).step (u, w, o) (Sum.inl l) μ) :
     ∃ (x : ∀ _ : Fin P.n, ProcRec P.n) (w' : NetState P.n)
       (ω : PMF (ℕ → WCC.SpecState P.n)),
-      (∀ i, ABAProcStepN P i (u i) (Sum.inl l) (PMF.pure (x i))) ∧
-      NetStep P w (Sum.inl l) (PMF.pure w') ∧
+      (∀ i, ABAProgramStep P i (u i) (Sum.inl l) (PMF.pure (x i))) ∧
+      NetworkStep P w (Sum.inl l) (PMF.pure w') ∧
       (WCC.specFamily P).step o l ω ∧
       μ = prodPMF (PMF.pure x) (prodPMF (PMF.pure w') ω) :=
-  flatPre_lab_inv hl h
+  systemExtended_lab_inv hl h
 
 /-- A silent shared-label transition: one process terminating, or the network's
 own injection. The coin oracle has no silent row, so it contributes none. -/
-theorem protocolPre_tau_inv (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
+theorem protocolExtended_tau_inv (P : Params) {u : ∀ _ : Fin P.n, ProcRec P.n}
     {w : NetState P.n} {o : ℕ → WCC.SpecState P.n}
     {μ : PMF (ABDY.ProtocolState P)}
-    (h : (ABDY.protocolPre P).step (u, w, o) (Sum.inl Lab.tau) μ) :
+    (h : (ABDY.protocolExtended P).step (u, w, o) (Sum.inl Label.tau) μ) :
     (∃ (i : Fin P.n) (y : ProcRec P.n),
-      ABAProcStepN P i (u i) (Sum.inl Lab.tau) (PMF.pure y) ∧
+      ABAProgramStep P i (u i) (Sum.inl Label.tau) (PMF.pure y) ∧
       μ = PMF.pure (Function.update u i y, w, o)) ∨
-    (∃ w', NetStep P w (Sum.inl .tau) (PMF.pure w') ∧ μ = PMF.pure (u, w', o)) :=
-  flatPre_tau_inv h
+    (∃ w', NetworkStep P w (Sum.inl .tau) (PMF.pure w') ∧ μ = PMF.pure (u, w', o)) :=
+  systemExtended_tau_inv h
 
 /-! ### ABDY22's own rows, by label class
 
@@ -576,7 +578,7 @@ section StageInversion
 variable {P : Params} {j : Fin P.n} {q : ProcRec P.n} {ν : PMF (ProcRec P.n)}
 
 theorem stepN_callG_own {r : ℕ} {b : Bool}
-    (h : ABAProcStepN P j q (Sum.inl (.callG r j b)) ν) :
+    (h : ABAProgramStep P j q (Sum.inl (.callG r j b)) ν) :
     q.1.corrupted = false ∧
       q.1.proc.phase = .toCallG ∧ q.1.proc.round = r ∧ q.2.terminated = false ∧
       q.1.proc.est = some b ∧ (q.2.stage r).proc.input = none ∧
@@ -593,7 +595,7 @@ theorem stepN_callG_own {r : ℕ} {b : Bool}
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
 theorem stepN_retG_A_own {r : ℕ} {v bnd : Bool}
-    (h : ABAProcStepN P j q (Sum.inl (.retG r j (.A v) bnd)) ν) :
+    (h : ABAProgramStep P j q (Sum.inl (.retG r j (.A v) bnd)) ν) :
     q.1.corrupted = false ∧
       q.1.proc.phase = .awaitG ∧ q.1.proc.round = r ∧ q.2.terminated = false ∧
       (q.2.stage r).proc.input ≠ none ∧ (q.2.stage r).proc.sentEcho5 ≠ none ∧
@@ -612,7 +614,7 @@ theorem stepN_retG_A_own {r : ℕ} {v bnd : Bool}
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
 theorem stepN_retG_B_own {r : ℕ} {v bnd : Bool}
-    (h : ABAProcStepN P j q (Sum.inl (.retG r j (.B v) bnd)) ν) :
+    (h : ABAProgramStep P j q (Sum.inl (.retG r j (.B v) bnd)) ν) :
     q.1.corrupted = false ∧
       q.1.proc.phase = .awaitG ∧ q.1.proc.round = r ∧ q.2.terminated = false ∧
       (q.2.stage r).proc.input ≠ none ∧ (q.2.stage r).proc.sentEcho5 ≠ none ∧
@@ -636,7 +638,7 @@ theorem stepN_retG_B_own {r : ℕ} {v bnd : Bool}
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
 theorem stepN_retG_C_own {r : ℕ} {bnd : Bool}
-    (h : ABAProcStepN P j q (Sum.inl (.retG r j .C bnd)) ν) :
+    (h : ABAProgramStep P j q (Sum.inl (.retG r j .C bnd)) ν) :
     q.1.corrupted = false ∧
       q.1.proc.phase = .awaitG ∧ q.1.proc.round = r ∧ q.2.terminated = false ∧
       (q.2.stage r).proc.input ≠ none ∧ (q.2.stage r).proc.sentEcho5 ≠ none ∧
@@ -659,8 +661,8 @@ theorem stepN_retG_C_own {r : ℕ} {bnd : Bool}
   case retGIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
-theorem stepN_gsnd_input_self {r : ℕ} {b : Bool}
-    (h : ABAProcStepN P j q (Sum.inr (.gsnd r j (.input b))) ν) :
+theorem stepN_gbcaSend_input_self {r : ℕ} {b : Bool}
+    (h : ABAProgramStep P j q (Sum.inr (.gbcaSend r j (.input b))) ν) :
     q.1.corrupted = false ∧
       q.2.terminated = false ∧ (q.2.stage r).proc.input ≠ none ∧
       P.f + 1 ≤ (q.2.stage r).recvCount (.input b) ∧
@@ -675,8 +677,8 @@ theorem stepN_gsnd_input_self {r : ℕ} {b : Bool}
   case gsndIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
-theorem stepN_gsnd_echo_self {r : ℕ} {b : Bool}
-    (h : ABAProcStepN P j q (Sum.inr (.gsnd r j (.echo b))) ν) :
+theorem stepN_gbcaSend_echo_self {r : ℕ} {b : Bool}
+    (h : ABAProgramStep P j q (Sum.inr (.gbcaSend r j (.echo b))) ν) :
     q.1.corrupted = false ∧
       q.2.terminated = false ∧ (q.2.stage r).proc.input ≠ none ∧
       P.n - P.f ≤ (q.2.stage r).recvCount (.input b) ∧
@@ -691,8 +693,8 @@ theorem stepN_gsnd_echo_self {r : ℕ} {b : Bool}
   case gsndIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
-theorem stepN_gsnd_voteBit_self {r : ℕ} {b : Bool}
-    (h : ABAProcStepN P j q (Sum.inr (.gsnd r j (.vote (some b)))) ν) :
+theorem stepN_gbcaSend_voteBit_self {r : ℕ} {b : Bool}
+    (h : ABAProgramStep P j q (Sum.inr (.gbcaSend r j (.vote (some b)))) ν) :
     q.1.corrupted = false ∧
       q.2.terminated = false ∧ (q.2.stage r).proc.input ≠ none ∧
       P.n - P.f ≤ (q.2.stage r).recvCount (.echo b) ∧
@@ -707,8 +709,8 @@ theorem stepN_gsnd_voteBit_self {r : ℕ} {b : Bool}
   case gsndIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
-theorem stepN_gsnd_voteBot_self {r : ℕ}
-    (h : ABAProcStepN P j q (Sum.inr (.gsnd r j (.vote none))) ν) :
+theorem stepN_gbcaSend_voteBot_self {r : ℕ}
+    (h : ABAProgramStep P j q (Sum.inr (.gbcaSend r j (.vote none))) ν) :
     q.1.corrupted = false ∧
       q.2.terminated = false ∧ (q.2.stage r).proc.input ≠ none ∧
       (∀ b, (q.2.stage r).recvCount (.echo b) < P.n - P.f) ∧
@@ -724,8 +726,8 @@ theorem stepN_gsnd_voteBot_self {r : ℕ}
   case gsndIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
-theorem stepN_gsnd_bindBit_self {r : ℕ} {b : Bool}
-    (h : ABAProcStepN P j q (Sum.inr (.gsnd r j (.bind (some b)))) ν) :
+theorem stepN_gbcaSend_bindBit_self {r : ℕ} {b : Bool}
+    (h : ABAProgramStep P j q (Sum.inr (.gbcaSend r j (.bind (some b)))) ν) :
     q.1.corrupted = false ∧
       q.2.terminated = false ∧ (q.2.stage r).proc.input ≠ none ∧
       (q.2.stage r).proc.sentVote ≠ none ∧
@@ -741,8 +743,8 @@ theorem stepN_gsnd_bindBit_self {r : ℕ} {b : Bool}
   case gsndIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
-theorem stepN_gsnd_bindBot_self {r : ℕ}
-    (h : ABAProcStepN P j q (Sum.inr (.gsnd r j (.bind none))) ν) :
+theorem stepN_gbcaSend_bindBot_self {r : ℕ}
+    (h : ABAProgramStep P j q (Sum.inr (.gbcaSend r j (.bind none))) ν) :
     q.1.corrupted = false ∧
       q.2.terminated = false ∧ (q.2.stage r).proc.input ≠ none ∧
       (q.2.stage r).proc.sentVote ≠ none ∧
@@ -759,8 +761,8 @@ theorem stepN_gsnd_bindBot_self {r : ℕ}
   case gsndIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
-theorem stepN_gsnd_echo5Bit_self {r : ℕ} {b : Bool}
-    (h : ABAProcStepN P j q (Sum.inr (.gsnd r j (.echo5 (some b)))) ν) :
+theorem stepN_gbcaSend_echo5Bit_self {r : ℕ} {b : Bool}
+    (h : ABAProgramStep P j q (Sum.inr (.gbcaSend r j (.echo5 (some b)))) ν) :
     q.1.corrupted = false ∧
       q.2.terminated = false ∧ (q.2.stage r).proc.input ≠ none ∧
       (q.2.stage r).proc.sentBind ≠ none ∧
@@ -776,8 +778,8 @@ theorem stepN_gsnd_echo5Bit_self {r : ℕ} {b : Bool}
   case gsndIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
-theorem stepN_gsnd_echo5Bot_self {r : ℕ}
-    (h : ABAProcStepN P j q (Sum.inr (.gsnd r j (.echo5 none))) ν) :
+theorem stepN_gbcaSend_echo5Bot_self {r : ℕ}
+    (h : ABAProgramStep P j q (Sum.inr (.gbcaSend r j (.echo5 none))) ν) :
     q.1.corrupted = false ∧
       q.2.terminated = false ∧ (q.2.stage r).proc.input ≠ none ∧
       (q.2.stage r).proc.sentBind ≠ none ∧
@@ -794,8 +796,8 @@ theorem stepN_gsnd_echo5Bot_self {r : ℕ}
   case gsndIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
-theorem stepN_gdlv_self {r : ℕ} {k : Fin P.n} {m : GBCA.ByABDY.Msg}
-    (h : ABAProcStepN P j q (Sum.inr (.gdlv r j k m)) ν) :
+theorem stepN_gbcaDeliver_self {r : ℕ} {k : Fin P.n} {m : GBCA.ByABDY.Msg}
+    (h : ABAProgramStep P j q (Sum.inr (.gbcaDeliver r j k m)) ν) :
     q.1.corrupted = false ∧ q.2.terminated = false ∧
       ν = PMF.pure (q.1, q.2.deliverTo r k m) := by
   cases h
@@ -806,7 +808,7 @@ theorem stepN_gdlv_self {r : ℕ} {k : Fin P.n} {m : GBCA.ByABDY.Msg}
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
 theorem stepN_gcallLoop_self {r : ℕ} {b : Bool}
-    (h : ABAProcStepN P j q (Sum.inr (.gcallLoop r j b)) ν) :
+    (h : ABAProgramStep P j q (Sum.inr (.gcallLoop r j b)) ν) :
     q.1.corrupted = false ∧
       q.1.proc.phase = .toCallG ∧ q.1.proc.round = r ∧ q.1.proc.est = some b ∧
       (q.2.stage r).proc.input ≠ none ∧

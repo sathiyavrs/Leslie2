@@ -1,4 +1,5 @@
-# Design — the gather-based GBCA stack `GBCA.ByAFW.lowPairInst ⊑ … ⊑ GBCA.specInst` and its chain
+# Design — the gather-based GBCA stack `GBCA.ByAFW.roundOverBracha ⊑ … ⊑ GBCA.specInst` and
+its chain
 
 Companion design document to the gather-based implementation of graded agreement: the
 sub-protocol compositions (`ABA/Vocabulary/ProcessAndNetworkState.lean`,
@@ -6,11 +7,11 @@ sub-protocol compositions (`ABA/Vocabulary/ProcessAndNetworkState.lean`,
 `ABA/ReliableBroadcast/BrachaComposition.lean`,
 `ABA/ReliableBroadcast/BrachaImplementation.lean`, `ABA/Gather/Specification.lean`,
 `ABA/Gather/MessagesAndCommonCore.lean`, `ABA/Gather/Composition.lean`,
-`ABA/Gather/RowsOverBroadcastSpecification.lean`, `ABA/Gather/RowsOverBracha.lean`), their
+`ABA/Gather/StepOverBroadcastSpecification.lean`, `ABA/Gather/StepOverBracha.lean`), their
 refinements (`ABA/ReliableBroadcast/BrachaRefinesSpecification.lean`,
 `ABA/Gather/RefinesSpecification.lean`, `ABA/Gather/BroadcastSubstitution.lean`), the
 two-gather round and its three tiers (`ABA/GBCA/AFW/Counting.lean`,
-`ABA/GBCA/AFW/Composition.lean`, `ABA/GBCA/AFW/RowsOverGatherSpecifications.lean`,
+`ABA/GBCA/AFW/Composition.lean`, `ABA/GBCA/AFW/StepOverGatherSpecifications.lean`,
 `ABA/GBCA/AFW/RefinesSpecification.lean`, `ABA/GBCA/AFW/GatherSubstitutions.lean`,
 `ABA/GBCA/AFW/Binding.lean`), the assembly at the protocol shape
 (`ABA/ImplementationByAFW/CompositionChain.lean`), and the protocol beneath it
@@ -36,16 +37,18 @@ Three levels are built that way, each the level below it in parallel with a tier
 of its own.
 
 ```
-BRB.implInst P ldr M     -- n programs beside the instance's network (ReliableBroadcast/BrachaComposition.lean)
+BRB.brachaInstance P ldr M     -- n programs beside the instance's network (ReliableBroadcast/BrachaComposition.lean)
 Gather.instAt P X BIn BBind
                          -- n gather programs beside the gather network, in parallel with
                          -- 2n broadcast instances, each read along a pullback naming it
-                         -- (Gather/Composition.lean); lowInst plugs in Bracha, idealInst the
+                         -- (Gather/Composition.lean); instanceOverBracha plugs in Bracha,
+                         -- instanceOverBroadcastSpecification the
                          -- broadcast specifications
-GBCA.ByAFW.roundInstAt P r ga1 ga2
+GBCA.ByAFW.roundAt P r ga1 ga2
                          -- n graded-agreement programs beside the layer's network, in
-                         -- parallel with two gathers read along ga1Pull/ga2Pull
-                         -- (GBCA/AFW/Composition.lean); lowPairInst, idealInst, pairInst by the
+                         -- parallel with two gathers read along firstGatherLabelMap/secondGatherLabelMap
+                         -- (GBCA/AFW/Composition.lean); roundOverBracha,
+                         -- roundOverBroadcastSpecification, roundOverGatherSpecifications by the
                          -- gather system plugged in
 ```
 
@@ -53,35 +56,36 @@ Per round, three forward simulations between the tiers, and their
 probabilistic composite:
 
 ```
-lowPairInst P r   -- two gather-over-Bracha instances
-  ⊑ lowPairRefines    (broadcast substitution, by congruence)
-idealInst P r     -- two gather-over-BRB.Spec instances
-  ⊑ idealRefines      (gather substitution, by congruence)
-pairInst P r      -- two gather specifications + the layer's network
-  ⊑ pairRefines       (core counting into TS 2, on the composition)
-GBCA.specInst P r -- GBCA/Specification.lean, D19/D29, read along GBCA.ByABDY.gPull
+roundOverBracha P r                   -- two gather-over-Bracha instances
+  ⊑ lowPairRefines                    (broadcast substitution, by congruence)
+roundOverBroadcastSpecification P r   -- two gather-over-BRB.Spec instances
+  ⊑ idealRefines                      (gather substitution, by congruence)
+roundOverGatherSpecifications P r     -- two gather specifications + the layer's network
+  ⊑ pairRefines                       (core counting into TS 2, on the composition)
+GBCA.specInst P r                     -- GBCA/Specification.lean, D19/D29, read along
+                                      -- GBCA.ByABDY.gbcaLabelMap
 
-gatherImplRefines P r : lowPairInst ⊑ GBCA.ByABDY.liftedSpec   (probabilistic, trans ×2)
+gatherImplRefines P r : roundOverBracha ⊑ GBCA.ByABDY.specificationOverRoundAlphabet   (probabilistic, trans ×2)
 ```
 
 Beneath the round, the two gather tiers and the broadcast tier, citable on their
 own:
 
 ```
-BRB.implInst P ldr M ⊑ BRB.specInst P ldr M     (brbRefines, ReliableBroadcast/BrachaRefinesSpecification.lean)
-Gather.lowInst P X   ⊑ Gather.idealInst P X      (gatherLow,  Gather/BroadcastSubstitution.lean, by congruence)
-Gather.idealInst P X ⊑ Gather.specInst P X       (gatherCore, Gather/RefinesSpecification.lean)
+BRB.brachaInstance P ldr M ⊑ BRB.specInst P ldr M     (brbRefines, ReliableBroadcast/BrachaRefinesSpecification.lean)
+Gather.instanceOverBracha P X   ⊑ Gather.instanceOverBroadcastSpecification P X      (gatherLow,  Gather/BroadcastSubstitution.lean, by congruence)
+Gather.instanceOverBroadcastSpecification P X ⊑ Gather.specInst P X       (gatherCore, Gather/RefinesSpecification.lean)
 ```
 
 Each composition speaks an alphabet of its own, in which the call's
 input-enabledness loop is a label of its own, and its specification is read
-along a pullback that sends the loop to the call (`BRB.specPull`,
-`Gather.specPull`): the specification answers its call label on two rows, and a
+along a pullback that sends the loop to the call (`BRB.specificationLabelMap`,
+`Gather.specificationLabelMap`): the specification answers its call label on two rows, and a
 composition whose caller and network are different components could otherwise
 combine the caller's loop with the network's post. The round speaks the family
-alphabet `NLab P.n` natively, as the protocol chain's round `GBCA.ByABDY.sub` does, so
-the family's call loops are its loop labels and `GBCA.ByABDY.gPull` reads its
-specification.
+alphabet `ExtendedLabel P.n` natively, as the protocol chain's round
+`GBCA.ByABDY.composition` does, so the family's call loops are its loop labels and
+`GBCA.ByABDY.gbcaLabelMap` reads its specification.
 
 At the protocol shape (`ImplementationByAFW/CompositionChain.lean`), each round tier is
 gathered into the ℕ-indexed family under the corruption broadcast and put through the
@@ -89,7 +93,7 @@ composed reading's pipeline; the three substitutions become three stages whose l
 on `hybrid P`:
 
 ```
-AFW.protocol ⊑ AFW.composed ⊑ AFW.hybrid1 ⊑ AFW.hybrid2 ⊑ hybrid ⊑ ABA.spec
+AFW.protocol ⊑ AFW.composed ⊑ AFW.composedOverBroadcastSpecification ⊑ AFW.composedOverGatherSpecifications ⊑ hybrid ⊑ ABA.spec
 ```
 
 Beneath `AFW.composed` is `AFW.protocol`, the gather-based protocol as it runs
@@ -102,7 +106,7 @@ Every protocol-shaped system and headline of this chain sits in the namespace
 `AFW`, after Attiya, Flam and Welch, and carries the name of its counterpart in
 the protocol chain: `AFW.composed` is to the gather-based implementation what
 `ABDY.composed` is to ABDY22's. A `G` elsewhere in the development is graded
-agreement — `callG`, `retG`, `gNet`, `GNetState` — and never the chain.
+agreement — `callG`, `retG`, `GBCANetwork`, `GNetState` — and never the chain.
 
 ## What a program holds of a sub-protocol's answer
 
@@ -114,7 +118,7 @@ A gather program's record (`Gather.ProcRec`) extends the local record with two
 stores: `delivIn k`, the value the input-broadcast instance `k` has returned
 here, and `delivBind q`, the payload the bind-broadcast instance `q` has returned
 here. The return of an instance is a hidden event of the gather composition
-(`Gather.GaEvt.inRet`, `bindRet`), on which that instance takes its own return
+(`Gather.GatherEvent.inRet`, `bindRet`), on which that instance takes its own return
 row and the receiving program writes its store. The four rows that read what has
 been returned — `sndEcho`, `sndVote`, `bindCall` and `ret` — read the stores
 through `Gather.ProcRec.accepted`, `holdsIn`, `holdsBind` and `approvedBy`, in the
@@ -226,8 +230,8 @@ specification's `commit` guard is dischargeable against the instance's.
 
 ## Counting at the pair tier (`pairRefines`)
 
-`pairInst` is AFW25's Algorithm 4 at `R = 2`, its two-gather branch (D24): candidate at
-`|dom g| − f` occurrences after the first gather, grade at
+`roundOverGatherSpecifications` is AFW25's Algorithm 4 at `R = 2`, its two-gather branch
+(D24): candidate at `|dom g| − f` occurrences after the first gather, grade at
 `|dom h| − f` / `f + 1` after the second. The refinement into TS 2 certifies
 the specification's `excluded` and `grade` on the two instances' frozen cores.
 One transfer lemma carries a count from a returned map down to a core below
@@ -289,23 +293,24 @@ is proved that way and nothing else:
 
 The two refinements into a specification, `Gather.gatherCore` and
 `GBCA.ByAFW.pairRefines`, are proved on the compositions themselves. Each composition
-carries a row characterisation — `Gather.idealInst_step_iff_row`,
-`GBCA.ByAFW.pairInst_step_iff_row` — stating that its transitions over the labels the
-pullback sends to one specification label are exactly the rows of a rule table
-at that label (`Gather.IdealStep`, `GBCA.ByAFW.PairStep`), on the same state and with
-the same distribution. A refinement is then a case analysis over the rows, and
-the specification's answer, a run of `specInst`, is lifted to the specification
-read along the pullback by a section of it (`Gather.weakLStep_liftedSpec`,
-`GBCA.ByABDY.weakLStep_liftedSpec`), as `GBCA.ByABDY.subSim` does for the protocol chain's
-round.
+carries a row characterisation — `Gather.instanceOverBroadcastSpecification_step_iff_row`,
+`GBCA.ByAFW.roundOverGatherSpecifications_step_iff_row` — stating that its transitions over
+the labels the pullback sends to one specification label are exactly the rows of a rule table
+at that label (`Gather.StepOverBroadcastSpecification`,
+`GBCA.ByAFW.StepOverGatherSpecifications`), on the same state and with the same
+distribution. A refinement is then a case analysis over the rows, and the specification's
+answer, a run of `specInst`, is lifted to the specification read along the pullback by a
+section of it (`Gather.weakLStep_specificationOverInstanceAlphabet`,
+`GBCA.ByABDY.weakLStep_specificationOverRoundAlphabet`), as `GBCA.ByABDY.subSim` does for
+the protocol chain's round.
 
 Two facts of the characterisations are worth reading. A specification answers its call
 label on two rows, so where a specification is a component the composition offers both
 rows under either interface label, and the rule table lists the combinations: four call
 rows at the gather-over-specification tier, two at the round's pair tier. And a label
 outside a round's interface blocks the round rather than letting it idle
-(`GBCA.ByAFW.PLab.outside`), exactly as `GBCA.ByABDY.sub` blocks, which is what makes the
-pair tier's characterisation exact at the specification's labels.
+(`GBCA.ByAFW.ProgramLabel.outside`), exactly as `GBCA.ByABDY.composition` blocks, which is
+what makes the pair tier's characterisation exact at the specification's labels.
 
 ## The assembly at the protocol shape (`ImplementationByAFW/CompositionChain.lean`)
 
@@ -322,13 +327,15 @@ Two ingredients, both shared with the protocol chain:
   target is definitionally `hybrid P`.
 
 The round speaks the family alphabet natively, so no lift precedes the family;
-the sides are `System.family (GBCA.ByAFW.lowPairInst P) gOwns isFailN gActLow` and
-their two siblings, as `GBCA.ByABDY.gbcaSide` is. The stages compose by
+the sides are `System.family (GBCA.ByAFW.roundOverBracha P) gOwns isFailN gActLow` and
+their two siblings, as `GBCA.ByABDY.gbcaInstanceFamily` is. The stages compose by
 `ProbabilisticForwardSimulation.trans`; the inclusions compose by
 `Set.Subset.trans` and never invoke transitivity of simulation — the two routes
 of `Results.lean`, reproduced.
 
-## The protocol beneath the composed reading (`ImplementationByAFW/System.lean`, `ImplementationByAFW/RoundProjection.lean`, `ImplementationByAFW/RoundProjectionStep.lean`, `ImplementationByAFW/Simulation.lean`)
+## The protocol beneath the composed reading (`ImplementationByAFW/System.lean`,
+`ImplementationByAFW/RoundProjection.lean`, `ImplementationByAFW/RoundProjectionStep.lean`,
+`ImplementationByAFW/Simulation.lean`)
 
 `AFW.composed P` is the gather-based protocol read as a composition of components. What
 runs is a flat system: `n` programs, each reading its own records and nothing else, beside
@@ -343,14 +350,14 @@ record `G` with its update `ghostStep` and its output `ghostOut` (D30).
 `ABA/ImplementationByABDY/System.lean` instantiates it at ABDY22's implementation;
 `ABA/ImplementationByAFW/System.lean` instantiates it here.
 
-The division of labour is by label. `Implementation.stageOwn j` is the set of label
+The division of labour is by label. `Implementation.roundOwn j` is the set of label
 classes an implementation owns at process `j`: the graded-agreement call and
 return, `j`'s own stage multicast, a delivery addressed to `j`, and `j`'s call
-against an already-opened record. An instantiation supplies `Implementation.IsStageTable`
+against an already-opened record. An instantiation supplies `Implementation.IsRoundRuleTable`
 — its rows carry such a label, fire only at an unreplaced program, and are
 Dirac — and the shared inversion lemmas consume exactly those three facts.
 `AFW.stageRow_of_own` runs the argument the other way: a program's step on a
-label of `stageOwn j` is a step of the implementation, which is what lets each
+label of `roundOwn j` is a step of the implementation, which is what lets each
 case of the simulation rule the others out.
 
 Three things separate the flat stage side from the composed reading's, and all

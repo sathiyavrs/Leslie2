@@ -39,11 +39,11 @@ a graded outcome dictates (`GbcaOut.est`), and the per-process control record
 labels, advancing the process's `phase` and recording the returned data, while
 the sub-protocol state itself lives in the round specifications and the coin
 oracle — and no network state: the DECIDED sets and the corrupted set belong
-to the network. The transitions themselves are `CoreProcStepN`
+to the network. The transitions themselves are `RoundLoopStep`
 (`ABA/Composition/Components.lean`), the rows of a round-loop record `CoreRec` over the
-extended alphabet, and `ABDY.ABAProcStepN` (`ABA/ImplementationByABDY/System.lean`), the rows of
-the protocol program that carries a round loop beside its stage-side record. This file realises the Core-side
-assumptions of `DESIGN-CoreSim.md`: the phase machine (invariant conjunct 4), the DECIDED
+extended alphabet, and `ABDY.ABAProgramStep` (`ABA/ImplementationByABDY/System.lean`), the rows of
+the protocol program that carries a round loop beside its stage-side record. This file realises the
+Core-side assumptions of `DESIGN-CoreSim.md`: the phase machine (invariant conjunct 4), the DECIDED
 diffusion state (conjunct 6), and input coherence (conjunct 5 — the honest
 `callG` guard ties the emitted bit to the current estimate).
 
@@ -69,12 +69,12 @@ diffusion state (conjunct 6), and input coherence (conjunct 5 — the honest
   `dsent : Fin n → Finset Bool`, read on the ABA side as `decidedSent`
   (`ABA/Composition/ABAState.lean`) and mirroring graded agreement's D5 sent-set pattern.
   Honest sends insert into the sent (the fused `retWPub` publication and the
-  `f + 1` relay `dsnd`; in reachable states DECIDED coherence keeps every
+  `f + 1` relay `decidedSend`; in reachable states DECIDED coherence keeps every
   honest sent at card ≤ 1, so the insert is a first write or a no-op re-send
-  of the same bit). Byzantine injection (`byzD`, guarded only by `k ∈ F`) may
+  of the same bit). Byzantine injection (`byzantineD`, guarded only by `k ∈ F`) may
   insert either or both bits at any time — a corrupted process may send
   `DECIDED 0` to one receiver and `DECIDED 1` to another (delivery is
-  selective). The delivery rendezvous `ddlv` moves one sent bit into the
+  selective). The delivery rendezvous `decidedDeliver` moves one sent bit into the
   receiver's own row `decidedRecv i j` at most once per (receiver, sender,
   bit) triple, with soundness `b ∈ decidedSent j` on the network's half; the
   `retABA` quorum guard counts distinct *senders* per bit (`decidedCount`).

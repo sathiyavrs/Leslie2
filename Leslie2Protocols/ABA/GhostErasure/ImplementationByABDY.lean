@@ -25,7 +25,7 @@ The proof is the state erasure of `ABA/GhostErasure/GhostFreeSystem.lean` carrie
 composition pipeline. Its hypothesis is that every round, process and graded outcome
 admits an announced bit, which here is the equation `bnd = ABDY.abdyGhostOut P s r id out`
 read at its own right-hand side. The announced bit is silent at protocol level — a
-`retG` label lies in `Lab.hiddenAPI` — which is why no label map appears in the
+`retG` label lies in `Label.hiddenAPI` — which is why no label map appears in the
 statement.
 -/
 
@@ -39,8 +39,8 @@ open Implementation
 `ABDY.protocol` beside the network adversary over the trivial ghost, whose
 graded-agreement returns announce any bit. -/
 noncomputable def protocol₀ (P : Params) :
-    System (Implementation.FlatState P GBCA.ByABDY.Msg (GBCA.ByABDY.StageRec P.n) Unit) (Lab P.n) :=
-  Implementation.flat₀ P GBCA.ByABDY.Msg (GBCA.ByABDY.StageRec P.n) (ABDY.AbdyStageStep P)
+    System (Implementation.State P GBCA.ByABDY.Msg (GBCA.ByABDY.StageRec P.n) Unit) (Label P.n) :=
+  Implementation.systemGhostFree P GBCA.ByABDY.Msg (GBCA.ByABDY.StageRec P.n) (ABDY.RoundStep P)
     (ABDY.gCallPayload P)
 
 /-- **The ghost costs nothing.** The bound bit the network adversary records is written
@@ -49,8 +49,8 @@ level, so the protocol and the ghost-free protocol achieve the same trace
 distributions. -/
 theorem protocol_erasure (P : Params) :
     achievableTraceDists (protocol P) = achievableTraceDists (protocol₀ P) :=
-  Implementation.flat_erasure P GBCA.ByABDY.Msg (GBCA.ByABDY.StageRec P.n) (Option Bool)
-    (ABDY.AbdyStageStep P)
+  Implementation.system_erasure P GBCA.ByABDY.Msg (GBCA.ByABDY.StageRec P.n) (Option Bool)
+    (ABDY.RoundStep P)
     (ABDY.gCallPayload P) (ABDY.abdyGhostStep P) (ABDY.abdyAnnouncedBound P)
     (fun s r id out => ⟨ABDY.abdyGhostOut P s r id out, rfl⟩)
 

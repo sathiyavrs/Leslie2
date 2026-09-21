@@ -80,9 +80,9 @@ theorem hybrid_step_callABA (P : Params) (G : ℕ → GBCA.SpecState P.n)
               (ABAState.procs (C, A) id).input ≠ none) ∧
             μc = PMF.pure (C, A))) ∧
         μ = prodPMF (PMF.pure G) (μc.map fun c => (c.1, c.2, o)) := by
-  have hWlift : (wccLift P).step o (Sum.inl (Lab.callABA id b)) (PMF.pure o) :=
-    (System.mapIdle_step_some (wccPull_inl (Lab.callABA id b)) (PMF.pure o)).mpr
-      (wccFamilyN_idle P o (by simp) rfl (by simp [Lab.isFail]))
+  have hWlift : (coinOverRoundAlphabet P).step o (Sum.inl (Label.callABA id b)) (PMF.pure o) :=
+    (System.mapIdle_step_some (coinLabelMap_inl (Label.callABA id b)) (PMF.pure o)).mpr
+      (wccFamilyN_idle P o (by simp) rfl (by simp [Label.isFail]))
   constructor
   · intro hstep
     rw [hybrid_step_iff] at hstep
@@ -94,10 +94,10 @@ theorem hybrid_step_callABA (P : Params) (G : ℕ → GBCA.SpecState P.n)
       · obtain ⟨G', C', A', ω, hG, hall, hA, hW, rfl⟩ :=
           hybridPre_vis_inv P (by simp) hpre
         obtain rfl : G = G' :=
-          (pureN_inj (specSide_idle_inv P hG (by simp) rfl not_false)).symm
+          (pureN_inj (gbcaSpecificationFamily_idle_inv P hG (by simp) rfl not_false)).symm
         obtain rfl : A = A' := (pureN_inj (aStep_callABA hA)).symm
-        obtain rfl : ω = PMF.pure o := wccFamily_idle_inv P (by simp) rfl (by simp [Lab.isFail])
-          ((System.mapIdle_step_some (wccPull_inl (Lab.callABA id b)) _).mp hW)
+        obtain rfl : ω = PMF.pure o := wccFamily_idle_inv P (by simp) rfl (by simp [Label.isFail])
+          ((System.mapIdle_step_some (coinLabelMap_inl (Label.callABA id b)) _).mp hW)
         rcases stepC_callABA_own (hall id) with ⟨hh, hin, hx0⟩ | ⟨hloop, hx0⟩
         · obtain rfl : C' = Function.update C id ((C id).setProc { (C id).proc with
               input := some b, est := some b, round := 0, phase := .toCallG }) :=
@@ -119,27 +119,27 @@ theorem hybrid_step_callABA (P : Params) (G : ℕ → GBCA.SpecState P.n)
     rw [hybridGroup_step_iff]
     refine Or.inr ?_
     rcases hdisj with ⟨hnF, hin, rfl⟩ | ⟨hloop, rfl⟩
-    · have h := hybridPre_vis_step P (L := Sum.inl (Lab.callABA id b)) (by simp)
-        (specSide_idle P G (by simp) rfl not_false)
+    · have h := hybridPre_vis_step P (L := Sum.inl (Label.callABA id b)) (by simp)
+        (gbcaSpecificationFamily_idle P G (by simp) rfl not_false)
         (coresN_family id ((C id).setProc { (C id).proc with
             input := some b, est := some b, round := 0, phase := .toCallG })
-          (CoreProcStepN.input (C id) b ((corrupted_eq_false_iff hcorr id).mpr hnF) hin)
-          (fun i hi => CoreProcStepN.callABAIdle (C i) id b (Ne.symm hi)))
-        (ANetStep.callABAIdle A id b) hWlift
+          (RoundLoopStep.input (C id) b ((corrupted_eq_false_iff hcorr id).mpr hnF) hin)
+          (fun i hi => RoundLoopStep.callABAIdle (C i) id b (Ne.symm hi)))
+        (ABANetworkStep.callABAIdle A id b) hWlift
       simp only [PMF.pure_map, prodPMF_pure_pure] at h ⊢
       exact h
-    · have h := hybridPre_vis_step P (L := Sum.inl (Lab.callABA id b)) (by simp)
-        (specSide_idle P G (by simp) rfl not_false)
+    · have h := hybridPre_vis_step P (L := Sum.inl (Label.callABA id b)) (by simp)
+        (gbcaSpecificationFamily_idle P G (by simp) rfl not_false)
         (fun i => by
           by_cases hi : i = id
           · subst hi
             simp only [ABAState.corrupted_apply, ABAState.procs_apply] at hloop
             cases hb : (C i).corrupted
-            · exact CoreProcStepN.inputLoop (C i) b hb
+            · exact RoundLoopStep.inputLoop (C i) b hb
                 (hloop.resolve_left (by rw [hb]; simp))
-            · exact CoreProcStepN.corruptedIdle (C i) _ hb (by simp) (by simp [actsAt])
-          · exact CoreProcStepN.callABAIdle (C i) id b (Ne.symm hi))
-        (ANetStep.callABAIdle A id b) hWlift
+            · exact RoundLoopStep.corruptedIdle (C i) _ hb (by simp) (by simp [actsAt])
+          · exact RoundLoopStep.callABAIdle (C i) id b (Ne.symm hi))
+        (ABANetworkStep.callABAIdle A id b) hWlift
       simp only [PMF.pure_map, prodPMF_pure_pure] at h ⊢
       exact h
 
@@ -164,9 +164,9 @@ theorem hybrid_step_retABA (P : Params) (G : ℕ → GBCA.SpecState P.n)
               { ABAState.procs (C, A) id with returned := true })) ∨
           (id ∈ ABAState.F (C, A) ∧ μc = PMF.pure (C, A))) ∧
         μ = prodPMF (PMF.pure G) (μc.map fun c => (c.1, c.2, o)) := by
-  have hWlift : (wccLift P).step o (Sum.inl (Lab.retABA id b)) (PMF.pure o) :=
-    (System.mapIdle_step_some (wccPull_inl (Lab.retABA id b)) (PMF.pure o)).mpr
-      (wccFamilyN_idle P o (by simp) rfl (by simp [Lab.isFail]))
+  have hWlift : (coinOverRoundAlphabet P).step o (Sum.inl (Label.retABA id b)) (PMF.pure o) :=
+    (System.mapIdle_step_some (coinLabelMap_inl (Label.retABA id b)) (PMF.pure o)).mpr
+      (wccFamilyN_idle P o (by simp) rfl (by simp [Label.isFail]))
   constructor
   · intro hstep
     rw [hybrid_step_iff] at hstep
@@ -178,11 +178,11 @@ theorem hybrid_step_retABA (P : Params) (G : ℕ → GBCA.SpecState P.n)
       · obtain ⟨G', C', A', ω, hG, hall, hA, hW, rfl⟩ :=
           hybridPre_vis_inv P (by simp) hpre
         obtain rfl : G = G' :=
-          (pureN_inj (specSide_idle_inv P hG (by simp) rfl not_false)).symm
+          (pureN_inj (gbcaSpecificationFamily_idle_inv P hG (by simp) rfl not_false)).symm
         obtain ⟨hsent, hA'⟩ := aStep_retABA hA
         obtain rfl : A = A' := (pureN_inj hA').symm
-        obtain rfl : ω = PMF.pure o := wccFamily_idle_inv P (by simp) rfl (by simp [Lab.isFail])
-          ((System.mapIdle_step_some (wccPull_inl (Lab.retABA id b)) _).mp hW)
+        obtain rfl : ω = PMF.pure o := wccFamily_idle_inv P (by simp) rfl (by simp [Label.isFail])
+          ((System.mapIdle_step_some (coinLabelMap_inl (Label.retABA id b)) _).mp hW)
         rcases stepC_retABA_own (hall id) with ⟨hh, hcnt, hret, hx0⟩ | ⟨hh, hx0⟩
         · have hnF : id ∉ ABAState.F (C, A) := (corrupted_eq_false_iff hcorr id).mp hh
           obtain rfl : C' = Function.update C id
@@ -204,23 +204,23 @@ theorem hybrid_step_retABA (P : Params) (G : ℕ → GBCA.SpecState P.n)
     rw [hybridGroup_step_iff]
     refine Or.inr ?_
     rcases hdisj with ⟨hnF, hcnt, hsent, hret, rfl⟩ | ⟨hF, rfl⟩
-    · have h := hybridPre_vis_step P (L := Sum.inl (Lab.retABA id b)) (by simp)
-        (specSide_idle P G (by simp) rfl not_false)
+    · have h := hybridPre_vis_step P (L := Sum.inl (Label.retABA id b)) (by simp)
+        (gbcaSpecificationFamily_idle P G (by simp) rfl not_false)
         (coresN_family id ((C id).setProc { (C id).proc with returned := true })
-          (CoreProcStepN.ret (C id) b ((corrupted_eq_false_iff hcorr id).mpr hnF) hcnt hret)
-          (fun i hi => CoreProcStepN.retABAIdle (C i) id b (Ne.symm hi)))
-        (ANetStep.retABA A id b hsent) hWlift
+          (RoundLoopStep.ret (C id) b ((corrupted_eq_false_iff hcorr id).mpr hnF) hcnt hret)
+          (fun i hi => RoundLoopStep.retABAIdle (C i) id b (Ne.symm hi)))
+        (ABANetworkStep.retABA A id b hsent) hWlift
       simp only [PMF.pure_map, prodPMF_pure_pure] at h ⊢
       exact h
-    · have h := hybridPre_vis_step P (L := Sum.inl (Lab.retABA id b)) (by simp)
-        (specSide_idle P G (by simp) rfl not_false)
+    · have h := hybridPre_vis_step P (L := Sum.inl (Label.retABA id b)) (by simp)
+        (gbcaSpecificationFamily_idle P G (by simp) rfl not_false)
         (fun i => by
           by_cases hi : i = id
           · subst hi
-            exact CoreProcStepN.corruptedIdle (C i) _ ((hcorr i).mpr hF) (by simp)
+            exact RoundLoopStep.corruptedIdle (C i) _ ((hcorr i).mpr hF) (by simp)
               (by simp [actsAt])
-          · exact CoreProcStepN.retABAIdle (C i) id b (Ne.symm hi))
-        (ANetStep.retByz A id b hF) hWlift
+          · exact RoundLoopStep.retABAIdle (C i) id b (Ne.symm hi))
+        (ABANetworkStep.retByz A id b hF) hWlift
       simp only [PMF.pure_map, prodPMF_pure_pure] at h ⊢
       exact h
 
@@ -252,11 +252,11 @@ theorem hybrid_step_fail (P : Params) (G : ℕ → GBCA.SpecState P.n)
       · obtain ⟨G', C', A', ω, hG, hall, hA, hW, rfl⟩ :=
           hybridPre_vis_inv P (by simp) hpre
         obtain rfl : G' = fun r => (G r).corrupt P id :=
-          pureN_inj (specSide_fail_inv P id hG)
+          pureN_inj (gbcaSpecificationFamily_fail_inv P id hG)
         obtain ⟨hnew, hbud, hA'⟩ := aStep_fail hA
         obtain rfl : A' = ANetState.corrupt P id A := pureN_inj hA'
         obtain rfl : ω = PMF.pure (fun r => (o r).corrupt P id) := wccFamily_fail_inv P id
-          ((System.mapIdle_step_some (wccPull_inl (Lab.fail id)) _).mp hW)
+          ((System.mapIdle_step_some (coinLabelMap_inl (Label.fail id)) _).mp hW)
         have hh : (C id).corrupted = false := (corrupted_eq_false_iff hcorr id).mpr hnew
         obtain rfl : C' = Function.update C id { C id with corrupted := true } := by
           refine coresN_update ?_ (fun i hi => stepC_fail_foreign (Ne.symm hi) (hall i))
@@ -271,13 +271,13 @@ theorem hybrid_step_fail (P : Params) (G : ℕ → GBCA.SpecState P.n)
     refine Or.inr ⟨by simp, ?_⟩
     rw [hybridGroup_step_iff]
     refine Or.inr ?_
-    have h := hybridPre_vis_step P (L := Sum.inl (Lab.fail id)) (by simp)
-      (specSide_fail P G id)
+    have h := hybridPre_vis_step P (L := Sum.inl (Label.fail id)) (by simp)
+      (gbcaSpecificationFamily_fail P G id)
       (coresN_family id { C id with corrupted := true }
-        (CoreProcStepN.failSelf (C id) ((corrupted_eq_false_iff hcorr id).mpr hnew))
-        (fun i hi => CoreProcStepN.failIdle (C i) id (Ne.symm hi)))
-      (ANetStep.fail A id hnew hbud)
-      ((System.mapIdle_step_some (wccPull_inl (Lab.fail id)) _).mpr (wccFamily_fail P o id))
+        (RoundLoopStep.failSelf (C id) ((corrupted_eq_false_iff hcorr id).mpr hnew))
+        (fun i hi => RoundLoopStep.failIdle (C i) id (Ne.symm hi)))
+      (ABANetworkStep.fail A id hnew hbud)
+      ((System.mapIdle_step_some (coinLabelMap_inl (Label.fail id)) _).mpr (wccFamily_fail P o id))
     simp only [PMF.pure_map, prodPMF_pure_pure] at h ⊢
     exact h
 
@@ -290,8 +290,8 @@ reached either by the shared label under the sub-protocol hiding or by the
 rendezvous that stands for it (`gcallLoop`, the Byzantine handshake rows, and
 the fused coin return `retWPub`). The coin resolves inside the `callW`
 handshake (D31), so the coin oracle's draw arrives under that handshake's
-source. A replaced program contributes no source of its own: its self-loop on `callG`, `retG`, `callW`,
-`retW` and `dsnd` reads as the corrupted branch already present at those rows,
+source. A replaced program contributes no source of its own: its self-loop on `callG`, `retG`,
+`callW`, `retW` and `decidedSend` reads as the corrupted branch already present at those rows,
 `id ∈ F` being supplied by I0 (D23). -/
 theorem hybrid_step_tau (P : Params) (G : ℕ → GBCA.SpecState P.n)
     (C : ∀ _ : Fin P.n, CoreRec P.n) (A : ANetState P.n)
@@ -361,10 +361,10 @@ theorem hybrid_step_tau (P : Params) (G : ℕ → GBCA.SpecState P.n)
       | callG r id b =>
         obtain ⟨G', C', A', ω, hG, hall, hA, hW, rfl⟩ :=
           hybridPre_vis_inv P (by simp) hpre
-        obtain ⟨X, hstepG, rfl⟩ := specSide_owned_step P rfl (by simp) rfl hG
+        obtain ⟨X, hstepG, rfl⟩ := gbcaSpecificationFamily_owned_step P rfl (by simp) rfl hG
         obtain rfl : A = A' := (pureN_inj (aStep_callG hA)).symm
-        obtain rfl : ω = PMF.pure o := wccFamily_idle_inv P (by simp) rfl (by simp [Lab.isFail])
-          ((System.mapIdle_step_some (wccPull_inl (Lab.callG r id b)) _).mp hW)
+        obtain rfl : ω = PMF.pure o := wccFamily_idle_inv P (by simp) rfl (by simp [Label.isFail])
+          ((System.mapIdle_step_some (coinLabelMap_inl (Label.callG r id b)) _).mp hW)
         obtain ⟨-, hph, hr, hest, hx0⟩ := stepC_callG_own (hall id)
         obtain rfl : C' = Function.update C id
             ((C id).setProc { (C id).proc with phase := .awaitG }) :=
@@ -377,10 +377,10 @@ theorem hybrid_step_tau (P : Params) (G : ℕ → GBCA.SpecState P.n)
       | retG r id out bnd =>
         obtain ⟨G', C', A', ω, hG, hall, hA, hW, rfl⟩ :=
           hybridPre_vis_inv P (by simp) hpre
-        obtain ⟨X, hstepG, rfl⟩ := specSide_owned_step P rfl (by simp) rfl hG
+        obtain ⟨X, hstepG, rfl⟩ := gbcaSpecificationFamily_owned_step P rfl (by simp) rfl hG
         obtain rfl : A = A' := (pureN_inj (aStep_retG hA)).symm
-        obtain rfl : ω = PMF.pure o := wccFamily_idle_inv P (by simp) rfl (by simp [Lab.isFail])
-          ((System.mapIdle_step_some (wccPull_inl (Lab.retG r id out bnd)) _).mp hW)
+        obtain rfl : ω = PMF.pure o := wccFamily_idle_inv P (by simp) rfl (by simp [Label.isFail])
+          ((System.mapIdle_step_some (coinLabelMap_inl (Label.retG r id out bnd)) _).mp hW)
         obtain ⟨-, hph, hr, hx0⟩ := stepC_retG_own (hall id)
         obtain rfl : C' = Function.update C id ((C id).setProc
             { (C id).proc with est := out.est, lastGrade := some out, phase := .toCallW }) :=
@@ -395,10 +395,10 @@ theorem hybrid_step_tau (P : Params) (G : ℕ → GBCA.SpecState P.n)
         obtain ⟨G', C', A', ω, hG, hall, hA, hW, rfl⟩ :=
           hybridPre_vis_inv P (by simp) hpre
         obtain rfl : G = G' :=
-          (pureN_inj (specSide_idle_inv P hG (by simp) rfl not_false)).symm
+          (pureN_inj (gbcaSpecificationFamily_idle_inv P hG (by simp) rfl not_false)).symm
         obtain rfl : A = A' := (pureN_inj (aStep_callW hA)).symm
         obtain ⟨μw', hstepW, rfl⟩ := wccFamily_owned_inv P (by simp) rfl
-          ((System.mapIdle_step_some (wccPull_inl (Lab.callW r id)) _).mp hW)
+          ((System.mapIdle_step_some (coinLabelMap_inl (Label.callW r id)) _).mp hW)
         rcases stepC_callW_own (hall id) with ⟨-, hph, hr, hx0⟩ | ⟨hh, hx0⟩
         · obtain rfl : C' = Function.update C id
               ((C id).setProc { (C id).proc with phase := .awaitW }) :=
@@ -418,10 +418,10 @@ theorem hybrid_step_tau (P : Params) (G : ℕ → GBCA.SpecState P.n)
         obtain ⟨G', C', A', ω, hG, hall, hA, hW, rfl⟩ :=
           hybridPre_vis_inv P (by simp) hpre
         obtain rfl : G = G' :=
-          (pureN_inj (specSide_idle_inv P hG (by simp) rfl not_false)).symm
+          (pureN_inj (gbcaSpecificationFamily_idle_inv P hG (by simp) rfl not_false)).symm
         obtain rfl : A = A' := (pureN_inj (aStep_retW hA)).symm
         obtain ⟨μw', hstepW, rfl⟩ := wccFamily_owned_inv P (by simp) rfl
-          ((System.mapIdle_step_some (wccPull_inl (Lab.retW r id c)) _).mp hW)
+          ((System.mapIdle_step_some (coinLabelMap_inl (Label.retW r id c)) _).mp hW)
         rcases stepC_retW_own (hall id) with ⟨-, hph, hr, hgr, hx0⟩ | ⟨hh, hx0⟩
         · obtain rfl : C' = Function.update C id ((C id).stepRound c) :=
             coresN_update hx0 (fun i hi => stepC_retW_foreign (Ne.symm hi) (hall i))
@@ -442,44 +442,44 @@ theorem hybrid_step_tau (P : Params) (G : ℕ → GBCA.SpecState P.n)
       obtain ⟨G', C', A', ω, hG, hall, hA, hW, rfl⟩ :=
         hybridPre_vis_inv P (by simp) hpre
       cases e with
-      | gsnd r j m => exact (aStep_gsnd_noStep hA).elim
-      | gdlv r i j m => exact (aStep_gdlv_noStep hA).elim
-      | dsnd j b =>
+      | gbcaSend r j m => exact (aStep_gbcaSend_noStep hA).elim
+      | gbcaDeliver r i j m => exact (aStep_gbcaDeliver_noStep hA).elim
+      | decidedSend j b =>
         obtain rfl : G = G' :=
-          (pureN_inj (specSide_idle_inv P hG (by simp) rfl not_false)).symm
+          (pureN_inj (gbcaSpecificationFamily_idle_inv P hG (by simp) rfl not_false)).symm
         have hx0 : (PMF.pure (C' j) : PMF (CoreRec P.n)) = PMF.pure (C j) := by
-          rcases stepC_dsnd_self (hall j) with ⟨-, -, h⟩ | ⟨-, h⟩ <;> exact h
+          rcases stepC_decidedSend_self (hall j) with ⟨-, -, h⟩ | ⟨-, h⟩ <;> exact h
         obtain rfl : C = C' := (coresN_id fun i => by
           by_cases hi : i = j
           · subst hi; exact hx0
-          · exact stepC_dsnd_foreign (Ne.symm hi) (hall i)).symm
-        obtain ⟨hsent, hA'⟩ := aStep_dsnd hA
+          · exact stepC_decidedSend_foreign (Ne.symm hi) (hall i)).symm
+        obtain ⟨hsent, hA'⟩ := aStep_decidedSend hA
         obtain rfl : A' = A.dput j b := pureN_inj hA'
         obtain rfl : ω = PMF.pure o :=
-          (System.mapIdle_step_none (wccPull_dsnd j b) ω).mp hW
+          (System.mapIdle_step_none (coinLabelMap_decidedSend j b) ω).mp hW
         refine Or.inr (Or.inl ⟨PMF.pure (ABAState.sendDecided (C, A) j b), ?_, by
           simp only [PMF.pure_map, prodPMF_pure_pure]; rfl⟩)
-        rcases stepC_dsnd_self (hall j) with ⟨-, hcnt, -⟩ | ⟨hh, -⟩
+        rcases stepC_decidedSend_self (hall j) with ⟨-, hcnt, -⟩ | ⟨hh, -⟩
         · exact Or.inr (Or.inl ⟨j, b, hcnt, hsent, rfl⟩)
         · exact Or.inr (Or.inr ⟨j, b, (hcorr j).mp hh, rfl⟩)
-      | ddlv i j b =>
+      | decidedDeliver i j b =>
         obtain rfl : G = G' :=
-          (pureN_inj (specSide_idle_inv P hG (by simp) rfl not_false)).symm
-        obtain ⟨-, hnr, hx0⟩ := stepC_ddlv_self (hall i)
+          (pureN_inj (gbcaSpecificationFamily_idle_inv P hG (by simp) rfl not_false)).symm
+        obtain ⟨-, hnr, hx0⟩ := stepC_decidedDeliver_self (hall i)
         obtain rfl : C' = Function.update C i ((C i).recvDec j b) :=
-          coresN_update hx0 (fun k hk => stepC_ddlv_foreign (Ne.symm hk) (hall k))
-        obtain ⟨hmem, hA'⟩ := aStep_ddlv hA
+          coresN_update hx0 (fun k hk => stepC_decidedDeliver_foreign (Ne.symm hk) (hall k))
+        obtain ⟨hmem, hA'⟩ := aStep_decidedDeliver hA
         obtain rfl : A = A' := (pureN_inj hA').symm
         obtain rfl : ω = PMF.pure o :=
-          (System.mapIdle_step_none (wccPull_ddlv i j b) ω).mp hW
+          (System.mapIdle_step_none (coinLabelMap_decidedDeliver i j b) ω).mp hW
         exact Or.inr (Or.inl ⟨PMF.pure (ABAState.deliverDecided (C, A) i j b),
           Or.inl ⟨i, j, b, hmem, hnr, rfl⟩, by
             simp only [PMF.pure_map, prodPMF_pure_pure]; rfl⟩)
       | retWPub r id c b =>
         obtain rfl : G = G' :=
-          (pureN_inj (specSide_idle_inv P hG (by simp) rfl not_false)).symm
+          (pureN_inj (gbcaSpecificationFamily_idle_inv P hG (by simp) rfl not_false)).symm
         obtain ⟨μw', hstepW, rfl⟩ := wccFamily_owned_inv P (by simp) rfl
-          ((System.mapIdle_step_some (wccPull_retWPub r id c b) ω).mp hW)
+          ((System.mapIdle_step_some (coinLabelMap_retWPub r id c b) ω).mp hW)
         obtain ⟨-, hph, hr, hgA, hx0⟩ := stepC_retWPub_self (hall id)
         obtain rfl : C' = Function.update C id ((C id).stepRound c) :=
           coresN_update hx0 (fun k hk => stepC_retWPub_foreign (Ne.symm hk) (hall k))
@@ -489,75 +489,75 @@ theorem hybrid_step_tau (P : Params) (G : ℕ → GBCA.SpecState P.n)
           Or.inl ⟨hph, hr, rfl⟩, ?_⟩))))
         rw [PMF.pure_bind, ABAState.stepRound_pub C A id c b hgA]
       | gcallLoop r id b =>
-        obtain ⟨X, hstepG, rfl⟩ := specSide_owned_step P rfl (by simp) rfl hG
+        obtain ⟨X, hstepG, rfl⟩ := gbcaSpecificationFamily_owned_step P rfl (by simp) rfl hG
         obtain ⟨-, hph, hr, hest, hx0⟩ := stepC_gcallLoop_self (hall id)
         obtain rfl : C' = Function.update C id
             ((C id).setProc { (C id).proc with phase := .awaitG }) :=
           coresN_update hx0 (fun k hk => stepC_gcallLoop_foreign (Ne.symm hk) (hall k))
         obtain rfl : A = A' := (pureN_inj (aStep_gcallLoop hA)).symm
         obtain rfl : ω = PMF.pure o :=
-          (System.mapIdle_step_none (wccPull_gcallLoop r id b) ω).mp hW
+          (System.mapIdle_step_none (coinLabelMap_gcallLoop r id b) ω).mp hW
         exact Or.inr (Or.inr (Or.inl ⟨r, id, b, PMF.pure X,
           PMF.pure (ABAState.setProc (C, A) id
             { ABAState.procs (C, A) id with phase := .awaitG }),
           hstepG, Or.inl ⟨hph, hr, hest, rfl⟩, by
             simp only [PMF.pure_map, prodPMF_pure_pure]; rfl⟩))
-      | byzCallG r k b =>
-        obtain ⟨X, hstepG, rfl⟩ := specSide_owned_step P rfl (by simp) rfl hG
-        obtain rfl : C = C' := (coresN_id fun i => stepC_byzCallG (hall i)).symm
-        obtain ⟨hF, hA'⟩ := aStep_byzCallG hA
+      | byzantineCallG r k b =>
+        obtain ⟨X, hstepG, rfl⟩ := gbcaSpecificationFamily_owned_step P rfl (by simp) rfl hG
+        obtain rfl : C = C' := (coresN_id fun i => stepC_byzantineCallG (hall i)).symm
+        obtain ⟨hF, hA'⟩ := aStep_byzantineCallG hA
         obtain rfl : A = A' := (pureN_inj hA').symm
         obtain rfl : ω = PMF.pure o :=
-          (System.mapIdle_step_none (wccPull_byzCallG r k b) ω).mp hW
+          (System.mapIdle_step_none (coinLabelMap_byzantineCallG r k b) ω).mp hW
         exact Or.inr (Or.inr (Or.inl ⟨r, k, b, PMF.pure X, PMF.pure (C, A),
           hstepG, Or.inr ⟨hF, rfl⟩, by
             simp only [PMF.pure_map, prodPMF_pure_pure]⟩))
-      | byzCallGLoop r k b =>
-        obtain ⟨X, hstepG, rfl⟩ := specSide_owned_step P rfl (by simp) rfl hG
-        obtain rfl : C = C' := (coresN_id fun i => stepC_byzCallGLoop (hall i)).symm
-        obtain ⟨hF, hA'⟩ := aStep_byzCallGLoop hA
+      | byzantineCallGLoop r k b =>
+        obtain ⟨X, hstepG, rfl⟩ := gbcaSpecificationFamily_owned_step P rfl (by simp) rfl hG
+        obtain rfl : C = C' := (coresN_id fun i => stepC_byzantineCallGLoop (hall i)).symm
+        obtain ⟨hF, hA'⟩ := aStep_byzantineCallGLoop hA
         obtain rfl : A = A' := (pureN_inj hA').symm
         obtain rfl : ω = PMF.pure o :=
-          (System.mapIdle_step_none (wccPull_byzCallGLoop r k b) ω).mp hW
+          (System.mapIdle_step_none (coinLabelMap_byzantineCallGLoop r k b) ω).mp hW
         exact Or.inr (Or.inr (Or.inl ⟨r, k, b, PMF.pure X, PMF.pure (C, A),
           hstepG, Or.inr ⟨hF, rfl⟩, by
             simp only [PMF.pure_map, prodPMF_pure_pure]⟩))
-      | byzRetG r k out bnd =>
-        obtain ⟨X, hstepG, rfl⟩ := specSide_owned_step P rfl (by simp) rfl hG
-        obtain rfl : C = C' := (coresN_id fun i => stepC_byzRetG (hall i)).symm
-        obtain ⟨hF, hA'⟩ := aStep_byzRetG hA
+      | byzantineRetG r k out bnd =>
+        obtain ⟨X, hstepG, rfl⟩ := gbcaSpecificationFamily_owned_step P rfl (by simp) rfl hG
+        obtain rfl : C = C' := (coresN_id fun i => stepC_byzantineRetG (hall i)).symm
+        obtain ⟨hF, hA'⟩ := aStep_byzantineRetG hA
         obtain rfl : A = A' := (pureN_inj hA').symm
         obtain rfl : ω = PMF.pure o :=
-          (System.mapIdle_step_none (wccPull_byzRetG r k out bnd) ω).mp hW
+          (System.mapIdle_step_none (coinLabelMap_byzantineRetG r k out bnd) ω).mp hW
         exact Or.inr (Or.inr (Or.inr (Or.inl ⟨r, k, out, bnd, PMF.pure X,
           PMF.pure (C, A), hstepG, Or.inr ⟨hF, rfl⟩, by
             simp only [PMF.pure_map, prodPMF_pure_pure]⟩)))
-      | byzCallW r k =>
+      | byzantineCallW r k =>
         obtain rfl : G = G' :=
-          (pureN_inj (specSide_idle_inv P hG (by simp) rfl not_false)).symm
-        obtain rfl : C = C' := (coresN_id fun i => stepC_byzCallW (hall i)).symm
-        obtain ⟨hF, hA'⟩ := aStep_byzCallW hA
+          (pureN_inj (gbcaSpecificationFamily_idle_inv P hG (by simp) rfl not_false)).symm
+        obtain rfl : C = C' := (coresN_id fun i => stepC_byzantineCallW (hall i)).symm
+        obtain ⟨hF, hA'⟩ := aStep_byzantineCallW hA
         obtain rfl : A = A' := (pureN_inj hA').symm
         obtain ⟨μw', hstepW, rfl⟩ := wccFamily_owned_inv P (by simp) rfl
-          ((System.mapIdle_step_some (wccPull_byzCallW r k) ω).mp hW)
+          ((System.mapIdle_step_some (coinLabelMap_byzantineCallW r k) ω).mp hW)
         exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨r, k, μw',
           PMF.pure (C, A), hstepW, Or.inr ⟨hF, rfl⟩, by rw [PMF.pure_bind]⟩))))
-      | byzRetW r k b =>
+      | byzantineRetW r k b =>
         obtain rfl : G = G' :=
-          (pureN_inj (specSide_idle_inv P hG (by simp) rfl not_false)).symm
-        obtain rfl : C = C' := (coresN_id fun i => stepC_byzRetW (hall i)).symm
-        obtain ⟨hF, hA'⟩ := aStep_byzRetW hA
+          (pureN_inj (gbcaSpecificationFamily_idle_inv P hG (by simp) rfl not_false)).symm
+        obtain rfl : C = C' := (coresN_id fun i => stepC_byzantineRetW (hall i)).symm
+        obtain ⟨hF, hA'⟩ := aStep_byzantineRetW hA
         obtain rfl : A = A' := (pureN_inj hA').symm
         obtain ⟨μw', hstepW, rfl⟩ := wccFamily_owned_inv P (by simp) rfl
-          ((System.mapIdle_step_some (wccPull_byzRetW r k b) ω).mp hW)
+          ((System.mapIdle_step_some (coinLabelMap_byzantineRetW r k b) ω).mp hW)
         exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr ⟨r, k, b, μw',
           PMF.pure (C, A), hstepW, Or.inr ⟨hF, rfl⟩, by rw [PMF.pure_bind]⟩))))
     · -- genuine `τ`: the binding exclusion or the network's Byzantine injection
       rcases hybridPre_tau_inv P hpre with ⟨G', hspec, rfl⟩ | ⟨A', hnet, rfl⟩
-      · obtain ⟨r, X, hstepG, hGeq⟩ := specSide_tau_inv P hspec
+      · obtain ⟨r, X, hstepG, hGeq⟩ := gbcaSpecificationFamily_tau_inv P hspec
         obtain rfl : G' = Function.update G r X := pureN_inj hGeq
-        rw [GBCA.ByABDY.liftedSpec,
-          System.mapIdle_step_some (GBCA.ByABDY.gPull_inl (Lab.tau : Lab P.n))] at hstepG
+        rw [GBCA.ByABDY.specificationOverRoundAlphabet,
+          System.mapIdle_step_some (GBCA.ByABDY.gbcaLabelMap_inl (Label.tau : Label P.n))] at hstepG
         exact Or.inl ⟨r, PMF.pure X, hstepG, by rw [PMF.pure_map, prodPMF_pure_pure]⟩
       · obtain ⟨k, b, hF, hA'⟩ := aStep_tau hnet
         obtain rfl : A' = A.dput k b := pureN_inj hA'
@@ -2190,7 +2190,7 @@ theorem Inv.step_callG {P : Params} {g : ℕ → GBCA.SpecState P.n} {c : ABASta
       exact ⟨rfl, rfl, rfl, fun id' => ⟨rfl, rfl, rfl⟩⟩
   obtain ⟨hCF, hCDS, hCDR, hCprocs⟩ := hCframe
   -- The one fact needing case analysis: `gr'.call`, as an unconditional description
-  -- (`Or.inl`: a fresh honest/byz `call` at `id`; `Or.inr`: `callLoop`, unaffected).
+  -- (`Or.inl`: a fresh honest/byzantine `call` at `id`; `Or.inr`: `callLoop`, unaffected).
   have hGcall : (gr' = { g r with call := Function.update (g r).call id (some b) }) ∨
       gr' = g r := by
     cases hstepG with

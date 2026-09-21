@@ -176,7 +176,7 @@ Ordered by expected value-for-effort:
    on the amplification axis. Under D22 a process retains the stage record of every round
    it has touched and answers that round's messages under an instance-local guard,
    whichever round its loop is in, which is the behaviour ABDY22's Lemmas 4.6 and E.5 are
-   stated under; and `ABAProcStepN.terminate` fires only once the process's own return has
+   stated under; and `ABAProgramStep.terminate` fires only once the process's own return has
    fired and `2f + 1` DECIDED receipts are on record, so the concrete stopping point is a
    terminate in the paper's sense — the endpoint a fairness marking would stop at. Nothing
    in the development says when that step fires, or that it ever does: the marking itself
@@ -326,7 +326,7 @@ the sub-protocol position.
 - Certificates: `Leslie/Prob/Liveness.lean` (`FairASTCertificate`, `sound` at :1719)
 - This repo's fairness line: `Leslie2Extra/Fairness/Simulation/{Defs,Soundness}.lean`
 - The protocol, whose programs read their own replacement flag and nothing else about
-  corruption (D23): `ABA/ImplementationByABDY/System.lean` (`ABDY.protocol`, `netAdv`),
+  corruption (D23): `ABA/ImplementationByABDY/System.lean` (`ABDY.protocol`, `network`),
   with its reading as a composition of components in
   `ABA/Composition/HybridAndSubstitution.lean` (`ABDY.composed`) and the inclusion into it
   in `ABA/ImplementationByABDY/Simulation.lean` (`ABDY.ProtocolRel`, `ABDY.protocolSim`,

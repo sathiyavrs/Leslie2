@@ -1,14 +1,14 @@
 \begin{definition}[The network adversary]
   \label{def:aba-netadv}
-  \lean{PLTS.ABA.ABDY.NetState}\lean{PLTS.ABA.ABDY.NetState.corrupt}\lean{PLTS.ABA.ABDY.abdyGhostStep}\lean{PLTS.ABA.ABDY.abdyGhostOut}\lean{PLTS.ABA.ABDY.NetStep}\lean{PLTS.ABA.ABDY.netAdv}\leanok
+  \lean{PLTS.ABA.ABDY.NetState}\lean{PLTS.ABA.ABDY.NetState.corrupt}\lean{PLTS.ABA.ABDY.abdyGhostStep}\lean{PLTS.ABA.ABDY.abdyGhostOut}\lean{PLTS.ABA.ABDY.NetworkStep}\lean{PLTS.ABA.ABDY.network}\leanok
   \uses{def:aba-procnet, def:aba-labels, def:aba-params}
-  The network adversary $\mathrm{netAdv}(P)$ holds what a process may not see: the round-tagged sent sets $sent(r,j)$ of the stage messages $j$ has multicast in round $r$ (D5), the sent sets $dsent(j)$ of the DECIDED payloads $j$ has multicast (D12$'$), and the corrupted set $F$ with its budget, the guard $k \notin F \wedge |F| < f$ on the $\mathrm{fail}$ row (D1).
-  It supplies the other half of every send and every delivery, the delivery guards $m \in sent(r,j)$ and $b \in dsent(j)$ being the soundness of the authenticated network; it carries the authorisation $k \in F$ of each of the five Byzantine handshake rows (D11), and the two injections $\mathrm{byzG}$ and $\mathrm{byzD}$, by which a corrupted sender adds an arbitrary stage message or either DECIDED bit to its own sent set and so equivocates.
+  The network adversary $\mathrm{network}(P)$ holds what a process may not see: the round-tagged sent sets $sent(r,j)$ of the stage messages $j$ has multicast in round $r$ (D5), the sent sets $dsent(j)$ of the DECIDED payloads $j$ has multicast (D12$'$), and the corrupted set $F$ with its budget, the guard $k \notin F \wedge |F| < f$ on the $\mathrm{fail}$ row (D1).
+  It supplies the other half of every send and every delivery, the delivery guards $m \in sent(r,j)$ and $b \in dsent(j)$ being the soundness of the authenticated network; it carries the authorisation $k \in F$ of each of the five Byzantine handshake rows (D11), and the two injections $\mathrm{byzantineG}$ and $\mathrm{byzantineD}$, by which a corrupted sender adds an arbitrary stage message or either DECIDED bit to its own sent set and so equivocates.
   Its row $\mathrm{retByz}$ carries the same authorisation and lets a corrupted process return either bit with none of the DECIDED evidence the honest return row requires; the replaced program's self-loop is the other half of it (D23).
   It is the flat reading of Definition~\ref{def:aba-flat-reading} at $G = \mathbb{B} \cup \{\bot\}$, so its ghost record of a round is one bit, the round's bound bit (D29, D30).
   The write $\mathrm{abdyGhostStep}$ is a return recording the bit its own label announces where the round has none on record, and every other row leaving the record alone, so the record is write-once and the honest return and the Byzantine one write it alike.
   The read $\mathrm{abdyGhostOut}$ is the bit on record where the round has one, and $\mathrm{boundOf}$ of the round's sent sets, the corrupted set and the graded outcome where it has none.
   The ghost output of D30 is instantiated here as the equation between the bit a return announces and $\mathrm{abdyGhostOut}$ at the state before the row, so the announcement is determined by the adversary's state.
   It is the bit a round's own network state holds, computed from the adversary's round-tagged sent sets.
-  Full rule table: \leandecl{PLTS.ABA.ABDY.netAdv}.
+  Full rule table: \leandecl{PLTS.ABA.ABDY.network}.
 \end{definition}

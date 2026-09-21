@@ -6,7 +6,7 @@ Authors: Sathiya / Claude
 
 import Leslie2Protocols.ABA.ImplementationByAFW.System
 import Leslie2Protocols.ABA.ImplementationByAFW.CompositionChain
-import Leslie2Protocols.ABA.Gather.RowsOverBracha
+import Leslie2Protocols.ABA.Gather.StepOverBracha
 import Leslie2Protocols.ABA.ReliableBroadcast.BrachaRefinesSpecification
 import Leslie2Protocols.Framework.FamilySimulation
 import Leslie2Protocols.Framework.WeakTransitionsFromChains
@@ -154,7 +154,7 @@ invariant a `VOTE` receipt quorum yields the echo certificate, and at most one
 value is certified, so the value the store chooses is the one the quorum
 carries. -/
 theorem storeIn_eq_of_quorum (P : Params) [DecidableEq X] {k : Fin P.n}
-    {s : BRB.ImplState P.n X} (hInv : BRB.Inv P k s) {j : Fin P.n} {x : X}
+    {s : BRB.BrachaState P.n X} (hInv : BRB.Inv P k s) {j : Fin P.n} {x : X}
     (hq : 2 * P.f + 1 ≤ (s.1 j).recvCount (BRB.BMsg.vote x)) :
     storeIn P (s.1 j) = some x := by
   have hex : ∃ v, 2 * P.f + 1 ≤ (s.1 j).recvCount (BRB.BMsg.vote v) := ⟨x, hq⟩
@@ -229,7 +229,7 @@ the local state vectors transposed out of the round records the processes hold,
 the network states sliced out of the adversary's tagged sent sets, and the
 instance's core the first field of the adversary's ghost record. -/
 noncomputable def toGa1 (P : Params) (u : ∀ _ : Fin P.n, AFW.ProcRec P.n)
-    (w : NetState P.n) (r : ℕ) : Gather.LowState P.n Bool :=
+    (w : NetState P.n) (r : ℕ) : Gather.StateOverBracha P.n Bool :=
   ((fun i => gaProcView P Bool ((u i).2.stage r).ga1 ((u i).2.stage r).brbIn1
         ((u i).2.stage r).brbBind1,
       ⟨⟨slice unGa1 unGa1_inj (w.sent r), w.F⟩, (w.ghostRec r).1⟩),
@@ -241,7 +241,7 @@ noncomputable def toGa1 (P : Params) (u : ∀ _ : Fin P.n, AFW.ProcRec P.n)
 /-- The round-`r` state of the second gather instance, read off the flat state,
 its core the second field of the adversary's ghost record. -/
 noncomputable def toGa2 (P : Params) (u : ∀ _ : Fin P.n, AFW.ProcRec P.n)
-    (w : NetState P.n) (r : ℕ) : Gather.LowState P.n (Option Bool) :=
+    (w : NetState P.n) (r : ℕ) : Gather.StateOverBracha P.n (Option Bool) :=
   ((fun i => gaProcView P (Option Bool) ((u i).2.stage r).ga2 ((u i).2.stage r).brbIn2
         ((u i).2.stage r).brbBind2,
       ⟨⟨slice unGa2 unGa2_inj (w.sent r), w.F⟩, (w.ghostRec r).2.1⟩),
@@ -264,7 +264,7 @@ def toProc {n : ℕ} (st : StageRec n) : GBCA.ByAFW.ProcRec n where
 /-- The round-`r` state of the composed reading, read off the flat state: the
 process records beside the round's bound bit, and the two gather instances. -/
 noncomputable def toRound (P : Params) (u : ∀ _ : Fin P.n, AFW.ProcRec P.n)
-    (w : NetState P.n) (r : ℕ) : GBCA.ByAFW.LowPairState P.n :=
+    (w : NetState P.n) (r : ℕ) : GBCA.ByAFW.RoundStateOverBracha P.n :=
   ((fun j => toProc ((u j).2.stage r), (w.ghostRec r).2.2),
     (toGa1 P u w r, toGa2 P u w r))
 
@@ -359,7 +359,7 @@ found. -/
 the two cores and the bound bit are the written record, every other coordinate
 the view before the write. -/
 theorem toRound_writeGhost (v : ∀ _ : Fin P.n, AFW.ProcRec P.n) (w : NetState P.n)
-    {L : NLabP P.n (Msg P.n)} {r : ℕ} (h : roundOf L = some r) :
+    {L : ExtendedLabel P.n (Msg P.n)} {r : ℕ} (h : roundOf L = some r) :
     toRound P v (w.writeGhost (ghostStep P) L) r
       = ((fun j => toProc ((v j).2.stage r), (ghostStep P L w (w.ghostRec r)).2.2),
          (Gather.setCore (toGa1 P v w r) (ghostStep P L w (w.ghostRec r)).1,
@@ -370,7 +370,7 @@ theorem toRound_writeGhost (v : ∀ _ : Fin P.n, AFW.ProcRec P.n) (w : NetState 
 
 /-- The ghost write leaves every other round's view where it stands. -/
 theorem toRound_writeGhost_ne (v : ∀ _ : Fin P.n, AFW.ProcRec P.n) (w : NetState P.n)
-    {L : NLabP P.n (Msg P.n)} {r r' : ℕ} (h : roundOf L = some r) (hr : r' ≠ r) :
+    {L : ExtendedLabel P.n (Msg P.n)} {r r' : ℕ} (h : roundOf L = some r) (hr : r' ≠ r) :
     toRound P v (w.writeGhost (ghostStep P) L) r' = toRound P v w r' := by
   unfold NetStateP.writeGhost
   rw [h]
@@ -378,7 +378,7 @@ theorem toRound_writeGhost_ne (v : ∀ _ : Fin P.n, AFW.ProcRec P.n) (w : NetSta
 
 /-- A row whose ghost write returns the record it found leaves every round's
 view where it stands. -/
-theorem toRound_ghostId (L : NLabP P.n (Msg P.n))
+theorem toRound_ghostId (L : ExtendedLabel P.n (Msg P.n))
     (h : ∀ (v : NetState P.n) (G : Ghost P.n), ghostStep P L v G = G)
     (x : ∀ _ : Fin P.n, AFW.ProcRec P.n) (w : NetState P.n) (r' : ℕ) :
     toRound P x (w.writeGhost (ghostStep P) L) r' = toRound P x w r' := by
@@ -389,13 +389,13 @@ theorem toRound_ghostId (L : NLabP P.n (Msg P.n))
 
 /-- The ghost write never clears a round's bound bit: `AFW.ghostStep` writes
 the third field at the link alone, and writes it `some`. -/
-theorem ghostStep_bound (L : NLabP P.n (Msg P.n)) (v : NetState P.n)
+theorem ghostStep_bound (L : ExtendedLabel P.n (Msg P.n)) (v : NetState P.n)
     (G : Ghost P.n) (h : G.2.2 ≠ none) : (ghostStep P L v G).2.2 ≠ none := by
   unfold ghostStep
   split <;> simp_all
 
 /-- The bound bit of a round on record stays on record across any row. -/
-theorem writeGhost_bound {w : NetState P.n} (L : NLabP P.n (Msg P.n)) {r : ℕ}
+theorem writeGhost_bound {w : NetState P.n} (L : ExtendedLabel P.n (Msg P.n)) {r : ℕ}
     (h : (w.ghostRec r).2.2 ≠ none) :
     ((w.writeGhost (ghostStep P) L).ghostRec r).2.2 ≠ none := by
   unfold NetStateP.writeGhost
@@ -411,13 +411,13 @@ and its bound bit are the record `AFW.ghostStep` writes, and every other
 coordinate is the send's own. -/
 theorem toRound_gsndGhost (v : ∀ _ : Fin P.n, AFW.ProcRec P.n) (w : NetState P.n)
     (r : ℕ) (j : Fin P.n) (m : Msg P.n) :
-    toRound P v ((w.gsent r j m).writeGhost (ghostStep P) (Sum.inr (.gsnd r j m))) r
+    toRound P v ((w.gsent r j m).writeGhost (ghostStep P) (Sum.inr (.gbcaSend r j m))) r
       = ((fun i => toProc ((v i).2.stage r),
-            (ghostStep P (Sum.inr (.gsnd r j m)) (w.gsent r j m) (w.ghostRec r)).2.2),
+            (ghostStep P (Sum.inr (.gbcaSend r j m)) (w.gsent r j m) (w.ghostRec r)).2.2),
          (Gather.setCore (toGa1 P v (w.gsent r j m) r)
-            (ghostStep P (Sum.inr (.gsnd r j m)) (w.gsent r j m) (w.ghostRec r)).1,
+            (ghostStep P (Sum.inr (.gbcaSend r j m)) (w.gsent r j m) (w.ghostRec r)).1,
           Gather.setCore (toGa2 P v (w.gsent r j m) r)
-            (ghostStep P (Sum.inr (.gsnd r j m)) (w.gsent r j m) (w.ghostRec r)).2.1)) :=
+            (ghostStep P (Sum.inr (.gbcaSend r j m)) (w.gsent r j m) (w.ghostRec r)).2.1)) :=
   toRound_writeGhost v _ rfl
 
 /-! ### The view at the initial state -/
@@ -453,16 +453,17 @@ theorem slice_empty {β : Type} (f : Msg n → Option β)
 untouched round reads as the initial record on the flat side, and the empty
 sent slices to the empty sent. -/
 theorem toRound_init (P : Params) (r : ℕ) :
-    toRound P (protocol P).init.1 (protocol P).init.2.1 r = (GBCA.ByAFW.lowPairInst P r).init := by
+    toRound P (protocol P).init.1 (protocol P).init.2.1 r = (GBCA.ByAFW.roundOverBracha P r).init :=
+      by
   have hproc : (protocol P).init.1
       = fun _ => (CoreRec.initial P.n, StageSideRecP.initial (StageRec P.n)) := rfl
   have hsent : ((protocol P).init.2.1).sent = fun _ _ => (∅ : Finset (Msg P.n)) := rfl
   have hF : ((protocol P).init.2.1).F = (∅ : Finset (Fin P.n)) := rfl
   have hghost : ((protocol P).init.2.1).ghostRec
       = fun _ => ((none, none, none) : Ghost P.n) := rfl
-  rw [GBCA.ByAFW.lowPairInst_init, toRound, toGa1, toGa2, hproc, hsent, hF, hghost]
-  simp [Gather.lowInst_init, GBCA.ByAFW.ProcRec.initial, toProc, StageRec.initial,
-    Gather.GaNetState.initial, NetworkState.initial, BRB.ImplState.initial,
+  rw [GBCA.ByAFW.roundOverBracha_init, toRound, toGa1, toGa2, hproc, hsent, hF, hghost]
+  simp [Gather.instanceOverBracha_init, GBCA.ByAFW.ProcRec.initial, toProc, StageRec.initial,
+    Gather.GaNetState.initial, NetworkState.initial, BRB.BrachaState.initial,
     SubState.initial, slice_empty, gaProcView_initial, brbLocal_initial]
   rfl
 
@@ -505,7 +506,7 @@ def ProtocolRel (P : Params) (s : ProtocolState P) (t : ComposedState P) : Prop 
     StoreInv P s.1 s.2.1
 
 theorem protocolRel_mk (P : Params) (u : ∀ _ : Fin P.n, AFW.ProcRec P.n)
-    (w : NetState P.n) (o : ℕ → WCC.SpecState P.n) (G : ℕ → GBCA.ByAFW.LowPairState P.n)
+    (w : NetState P.n) (o : ℕ → WCC.SpecState P.n) (G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n)
     (C : ∀ _ : Fin P.n, CoreRec P.n) (A : ANetState P.n)
     (o' : ℕ → WCC.SpecState P.n) :
     ProtocolRel P (u, w, o) (G, C, A, o') ↔
@@ -534,9 +535,10 @@ theorem protocolRel_init (P : Params) :
   · intro r k
     rw [ga1_toRound, ga2_toRound]
     have h1 : toGa1 P (protocol P).init.1 (protocol P).init.2.1 r
-        = (Gather.lowInst P Bool).init := congrArg (fun q => GBCA.ByAFW.ga1 q) (toRound_init P r)
+        = (Gather.instanceOverBracha P Bool).init := congrArg (fun q => GBCA.ByAFW.ga1 q)
+          (toRound_init P r)
     have h2 : toGa2 P (protocol P).init.1 (protocol P).init.2.1 r
-        = (Gather.lowInst P (Option Bool)).init := congrArg (fun q => GBCA.ByAFW.ga2 q)
+        = (Gather.instanceOverBracha P (Option Bool)).init := congrArg (fun q => GBCA.ByAFW.ga2 q)
           (toRound_init P r)
     rw [h1, h2]
     exact ⟨BRB.Inv.initial, BRB.Inv.initial, BRB.Inv.initial, BRB.Inv.initial⟩
@@ -550,67 +552,72 @@ loops, the ABA-side network and the lifted oracle. -/
 
 /-- The four components of the gather-based composed reading, side by side. -/
 noncomputable def composedPre (P : Params) :
-    System (ComposedState P) (NLab P.n) :=
-  (lowSide P).parallel
-    ((System.syncProduct (coreProcN P)).parallel
-      ((aNet P).parallel (wccLift P)))
+    System (ComposedState P) (ExtendedLabel P.n) :=
+  (roundFamilyOverBracha P).parallel
+    ((System.syncProduct (roundLoopProgram P)).parallel
+      ((ABANetwork P).parallel (coinOverRoundAlphabet P)))
 
 /-- The composed group: the rendezvous alphabet hidden, read back over
-`Lab n`. -/
+`Label n`. -/
 noncomputable def composedGroup (P : Params) :
-    System (ComposedState P) (Lab P.n) :=
-  ((composedPre P).abstract (netEvtLabels P.n)).relabel
+    System (ComposedState P) (Label P.n) :=
+  ((composedPre P).abstract (networkEventLabels P.n)).relabel
 
 theorem composed_eq (P : Params) :
-    composed P = (composedGroup P).abstract (Lab.hiddenAPI P.n) := rfl
+    composed P = (composedGroup P).abstract (Label.hiddenAPI P.n) := rfl
 
 /-- The round-`r` state moves on a label it owns. -/
-theorem lowSide_owned (P : Params) (G : ℕ → GBCA.ByAFW.LowPairState P.n) (r : ℕ)
-    {L : NLab P.n} (hL : gOwns L = some r) {q : GBCA.ByAFW.LowPairState P.n}
-    (h : (GBCA.ByAFW.lowPairInst P r).step (G r) L (PMF.pure q)) :
-    (lowSide P).step G L (PMF.pure (Function.update G r q)) := by
-  rw [lowSide, System.family_step_iff]
+theorem roundFamilyOverBracha_owned (P : Params) (G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n) (r :
+  ℕ)
+    {L : ExtendedLabel P.n} (hL : gOwns L = some r) {q : GBCA.ByAFW.RoundStateOverBracha P.n}
+    (h : (GBCA.ByAFW.roundOverBracha P r).step (G r) L (PMF.pure q)) :
+    (roundFamilyOverBracha P).step G L (PMF.pure (Function.update G r q)) := by
+  rw [roundFamilyOverBracha, System.family_step_iff]
   exact Or.inr (Or.inl ⟨r, hL, PMF.pure q, h, by rw [PMF.pure_map]⟩)
 
 /-- An owned label whose round stands still. -/
-theorem lowSide_owned_id (P : Params) (G : ℕ → GBCA.ByAFW.LowPairState P.n) (r : ℕ)
-    {L : NLab P.n} (hL : gOwns L = some r)
-    (h : (GBCA.ByAFW.lowPairInst P r).step (G r) L (PMF.pure (G r))) :
-    (lowSide P).step G L (PMF.pure G) := by
-  have hstep := lowSide_owned P G r hL h
+theorem roundFamilyOverBracha_owned_id (P : Params) (G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n) (r
+  : ℕ)
+    {L : ExtendedLabel P.n} (hL : gOwns L = some r)
+    (h : (GBCA.ByAFW.roundOverBracha P r).step (G r) L (PMF.pure (G r))) :
+    (roundFamilyOverBracha P).step G L (PMF.pure G) := by
+  have hstep := roundFamilyOverBracha_owned P G r hL h
   rwa [Function.update_eq_self] at hstep
 
 /-- The round-`r` state takes one of its own silent rules. -/
-theorem lowSide_tau (P : Params) (G : ℕ → GBCA.ByAFW.LowPairState P.n) (r : ℕ)
-    {q : GBCA.ByAFW.LowPairState P.n}
-    (h : (GBCA.ByAFW.lowPairInst P r).step (G r) (Sum.inl Lab.tau) (PMF.pure q)) :
-    (lowSide P).step G (Sum.inl Lab.tau) (PMF.pure (Function.update G r q)) := by
-  rw [lowSide, System.family_step_iff]
+theorem roundFamilyOverBracha_tau (P : Params) (G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n) (r : ℕ)
+    {q : GBCA.ByAFW.RoundStateOverBracha P.n}
+    (h : (GBCA.ByAFW.roundOverBracha P r).step (G r) (Sum.inl Label.tau) (PMF.pure q)) :
+    (roundFamilyOverBracha P).step G (Sum.inl Label.tau) (PMF.pure (Function.update G r q)) := by
+  rw [roundFamilyOverBracha, System.family_step_iff]
   exact Or.inl ⟨rfl, r, PMF.pure q, h, by rw [PMF.pure_map]⟩
 
 /-- A label no round owns and no broadcast: the family idles. -/
-theorem lowSide_idle (P : Params) (G : ℕ → GBCA.ByAFW.LowPairState P.n) {L : NLab P.n}
+theorem roundFamilyOverBracha_idle (P : Params) (G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n) {L :
+  ExtendedLabel P.n}
     (hτ : L ≠ Silent.τ) (hown : gOwns L = none) (hf : ¬ isFailN L) :
-    (lowSide P).step G L (PMF.pure G) := by
-  rw [lowSide, System.family_step_iff]
+    (roundFamilyOverBracha P).step G L (PMF.pure G) := by
+  rw [roundFamilyOverBracha, System.family_step_iff]
   exact Or.inr (Or.inr (Or.inr ⟨hτ, hown, hf, rfl⟩))
 
 /-- Corruption is broadcast to every round's coordinate. -/
-theorem lowSide_fail (P : Params) (G : ℕ → GBCA.ByAFW.LowPairState P.n) (k : Fin P.n) :
-    (lowSide P).step G (Sum.inl (Lab.fail k))
-      (PMF.pure (fun r => gActLow P (Sum.inl (Lab.fail k)) (G r))) := by
-  rw [lowSide, System.family_step_iff]
+theorem roundFamilyOverBracha_fail (P : Params) (G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n) (k :
+  Fin P.n) :
+    (roundFamilyOverBracha P).step G (Sum.inl (Label.fail k))
+      (PMF.pure (fun r => gActLow P (Sum.inl (Label.fail k)) (G r))) := by
+  rw [roundFamilyOverBracha, System.family_step_iff]
   exact Or.inr (Or.inr (Or.inl ⟨by simp, rfl, trivial, rfl⟩))
 
 /-- The three components beside the graded-agreement side move together on a
 visible label, the oracle's successor left free. -/
 theorem contextStep (P : Params) {C C' : ∀ _ : Fin P.n, CoreRec P.n}
     {A A' : ANetState P.n} {o : ℕ → WCC.SpecState P.n}
-    {ν : PMF (ℕ → WCC.SpecState P.n)} {L : NLab P.n} (hL : L ≠ Silent.τ)
-    (hC : ∀ i, CoreProcStepN P i (C i) L (PMF.pure (C' i)))
-    (hA : ANetStep P A L (PMF.pure A'))
-    (hW : (wccLift P).step o L ν) :
-    ((System.syncProduct (coreProcN P)).parallel ((aNet P).parallel (wccLift P))).step
+    {ν : PMF (ℕ → WCC.SpecState P.n)} {L : ExtendedLabel P.n} (hL : L ≠ Silent.τ)
+    (hC : ∀ i, RoundLoopStep P i (C i) L (PMF.pure (C' i)))
+    (hA : ABANetworkStep P A L (PMF.pure A'))
+    (hW : (coinOverRoundAlphabet P).step o L ν) :
+    ((System.syncProduct (roundLoopProgram P)).parallel ((ABANetwork P).parallel
+      (coinOverRoundAlphabet P))).step
       (C, A, o) L (prodPMF (PMF.pure C') (prodPMF (PMF.pure A') ν)) := by
   rw [System.parallel_step]
   refine Or.inl ⟨hL, PMF.pure C', prodPMF (PMF.pure A') ν, syncCore_pure hL hC, ?_, rfl⟩
@@ -619,14 +626,14 @@ theorem contextStep (P : Params) {C C' : ∀ _ : Fin P.n, CoreRec P.n}
 
 /-- Build a joint transition of the four components on a visible label, the
 oracle's successor left free. -/
-theorem composedPre_vis_step (P : Params) {G G' : ℕ → GBCA.ByAFW.LowPairState P.n}
+theorem composedPre_vis_step (P : Params) {G G' : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n}
     {C C' : ∀ _ : Fin P.n, CoreRec P.n} {A A' : ANetState P.n}
-    {o : ℕ → WCC.SpecState P.n} {ν : PMF (ℕ → WCC.SpecState P.n)} {L : NLab P.n}
+    {o : ℕ → WCC.SpecState P.n} {ν : PMF (ℕ → WCC.SpecState P.n)} {L : ExtendedLabel P.n}
     (hL : L ≠ Silent.τ)
-    (hG : (lowSide P).step G L (PMF.pure G'))
-    (hC : ∀ i, CoreProcStepN P i (C i) L (PMF.pure (C' i)))
-    (hA : ANetStep P A L (PMF.pure A'))
-    (hW : (wccLift P).step o L ν) :
+    (hG : (roundFamilyOverBracha P).step G L (PMF.pure G'))
+    (hC : ∀ i, RoundLoopStep P i (C i) L (PMF.pure (C' i)))
+    (hA : ABANetworkStep P A L (PMF.pure A'))
+    (hW : (coinOverRoundAlphabet P).step o L ν) :
     (composedPre P).step (G, C, A, o) L
       (prodPMF (PMF.pure G') (prodPMF (PMF.pure C') (prodPMF (PMF.pure A') ν))) := by
   rw [composedPre, System.parallel_step]
@@ -634,22 +641,22 @@ theorem composedPre_vis_step (P : Params) {G G' : ℕ → GBCA.ByAFW.LowPairStat
     hG, contextStep P hL hC hA hW, rfl⟩
 
 /-- Build a silent transition of the four components from a round's own. -/
-theorem composedPre_tau_low (P : Params) {G G' : ℕ → GBCA.ByAFW.LowPairState P.n}
+theorem composedPre_tau_low (P : Params) {G G' : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n}
     {C : ∀ _ : Fin P.n, CoreRec P.n} {A : ANetState P.n}
     {o : ℕ → WCC.SpecState P.n}
-    (hG : (lowSide P).step G (Sum.inl Lab.tau) (PMF.pure G')) :
-    (composedPre P).step (G, C, A, o) (Sum.inl Lab.tau) (PMF.pure (G', C, A, o)) := by
+    (hG : (roundFamilyOverBracha P).step G (Sum.inl Label.tau) (PMF.pure G')) :
+    (composedPre P).step (G, C, A, o) (Sum.inl Label.tau) (PMF.pure (G', C, A, o)) := by
   rw [composedPre, System.parallel_step]
   refine Or.inr (Or.inl ⟨rfl, PMF.pure G', hG, ?_⟩)
   rw [prodPMF_pure_pure]
 
 /-- Build a silent transition of the four components from an ABA-side network
 injection. -/
-theorem composedPre_tau_aNet (P : Params) {G : ℕ → GBCA.ByAFW.LowPairState P.n}
+theorem composedPre_tau_ABANetwork (P : Params) {G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n}
     {C : ∀ _ : Fin P.n, CoreRec P.n} {A A' : ANetState P.n}
     {o : ℕ → WCC.SpecState P.n}
-    (hA : ANetStep P A (Sum.inl Lab.tau) (PMF.pure A')) :
-    (composedPre P).step (G, C, A, o) (Sum.inl Lab.tau) (PMF.pure (G, C, A', o)) := by
+    (hA : ABANetworkStep P A (Sum.inl Label.tau) (PMF.pure A')) :
+    (composedPre P).step (G, C, A, o) (Sum.inl Label.tau) (PMF.pure (G, C, A', o)) := by
   rw [composedPre, System.parallel_step]
   refine Or.inr (Or.inr ⟨rfl,
     prodPMF (PMF.pure C) (prodPMF (PMF.pure A') (PMF.pure o)), ?_, ?_⟩)
@@ -661,29 +668,29 @@ theorem composedPre_tau_aNet (P : Params) {G : ℕ → GBCA.ByAFW.LowPairState P
 
 /-! ### The two hiding frames -/
 
-theorem composedGroup_step_iff (P : Params) (q : ComposedState P) (l : Lab P.n)
+theorem composedGroup_step_iff (P : Params) (q : ComposedState P) (l : Label P.n)
     (μ : PMF (ComposedState P)) :
     (composedGroup P).step q l μ ↔
-      (l = .tau ∧ ∃ e : NetEvt P.n, (composedPre P).step q (Sum.inr e) μ) ∨
+      (l = .tau ∧ ∃ e : NetworkEvent P.n, (composedPre P).step q (Sum.inr e) μ) ∨
       (composedPre P).step q (Sum.inl l) μ := by
   constructor
   · rintro (⟨hτ, l', ⟨e, rfl⟩, hstep⟩ | ⟨-, hstep⟩)
     · exact Or.inl ⟨Sum.inl_injective hτ, e, hstep⟩
     · exact Or.inr hstep
   · rintro (⟨rfl, e, hstep⟩ | hstep)
-    · exact Or.inl ⟨rfl, _, inr_mem_netEvtLabels e, hstep⟩
-    · exact Or.inr ⟨inl_notMem_netEvtLabels l, hstep⟩
+    · exact Or.inl ⟨rfl, _, inr_mem_networkEventLabels e, hstep⟩
+    · exact Or.inr ⟨inl_notMem_networkEventLabels l, hstep⟩
 
 theorem composedGroup_of_event (P : Params) {q : ComposedState P}
-    (e : NetEvt P.n) {μ : PMF (ComposedState P)}
+    (e : NetworkEvent P.n) {μ : PMF (ComposedState P)}
     (h : (composedPre P).step q (Sum.inr e) μ) :
-    (composedGroup P).step q Lab.tau μ :=
+    (composedGroup P).step q Label.tau μ :=
   (composedGroup_step_iff P _ _ _).mpr (Or.inl ⟨rfl, e, h⟩)
 
 theorem composedGroup_of_tau (P : Params) {q : ComposedState P}
     {μ : PMF (ComposedState P)}
-    (h : (composedPre P).step q (Sum.inl Lab.tau) μ) :
-    (composedGroup P).step q Lab.tau μ :=
+    (h : (composedPre P).step q (Sum.inl Label.tau) μ) :
+    (composedGroup P).step q Label.tau μ :=
   (composedGroup_step_iff P _ _ _).mpr (Or.inr h)
 
 /-! ### Transposing one written record
@@ -746,68 +753,73 @@ end Locals
 Three rows of the flat reading are answered by two transitions of the composed
 reading: the link by the hidden events `ret1` and `call2`, the graded return by
 the hidden event `ret2` and the visible `retG`, and a delivery completing a
-receipt quorum by the hidden events `dlv` and `inRet` (or `bindRet`). The
+receipt quorum by the hidden events `deliver` and `inRet` (or `bindRet`). The
 builders below carry a run of one round to the graded-agreement side, and a run
 of that side to the composed group. -/
 
 /-- A silent run of one round is a silent run of the graded-agreement side at
 that coordinate. -/
-theorem lowSide_silentRun (P : Params) {G : ℕ → GBCA.ByAFW.LowPairState P.n} {r : ℕ}
-    {q : GBCA.ByAFW.LowPairState P.n} (h : (GBCA.ByAFW.lowPairInst P r).weakLSilent (G r) q) :
-    (lowSide P).weakLSilent G (Function.update G r q) := by
-  rw [lowSide]
+theorem roundFamilyOverBracha_silentRun (P : Params) {G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n}
+  {r : ℕ}
+    {q : GBCA.ByAFW.RoundStateOverBracha P.n} (h : (GBCA.ByAFW.roundOverBracha P r).weakLSilent (G
+      r) q) :
+    (roundFamilyOverBracha P).weakLSilent G (Function.update G r q) := by
+  rw [roundFamilyOverBracha]
   exact System.weakLSilent_family gOwns isFailN (gActLow P) h
 
 /-- A run of one round on a label that round owns is a weak transition of the
 graded-agreement side at that coordinate. -/
-theorem lowSide_weakStep (P : Params) {G : ℕ → GBCA.ByAFW.LowPairState P.n} {r : ℕ}
-    {L : NLab P.n} {q : GBCA.ByAFW.LowPairState P.n} (hL : gOwns L = some r)
-    (h : (GBCA.ByAFW.lowPairInst P r).weakLStep (G r) L q) :
-    (lowSide P).weakLStep G L (Function.update G r q) := by
-  rw [lowSide]
+theorem roundFamilyOverBracha_weakStep (P : Params) {G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n} {r
+  : ℕ}
+    {L : ExtendedLabel P.n} {q : GBCA.ByAFW.RoundStateOverBracha P.n} (hL : gOwns L = some r)
+    (h : (GBCA.ByAFW.roundOverBracha P r).weakLStep (G r) L q) :
+    (roundFamilyOverBracha P).weakLStep G L (Function.update G r q) := by
+  rw [roundFamilyOverBracha]
   exact System.weakLStep_family gOwns isFailN (gActLow P) hL h
 
 /-- **A silent run of the graded-agreement side is a silent weak transition of
 the composed group**: the three other components stand at their states
 throughout. -/
-theorem composedGroup_weakTau (P : Params) {G G' : ℕ → GBCA.ByAFW.LowPairState P.n}
+theorem composedGroup_weakTau (P : Params) {G G' : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n}
     (C : ∀ _ : Fin P.n, CoreRec P.n) (A : ANetState P.n)
-    (o : ℕ → WCC.SpecState P.n) (h : (lowSide P).weakLSilent G G') :
+    (o : ℕ → WCC.SpecState P.n) (h : (roundFamilyOverBracha P).weakLSilent G G') :
     weakTau (composedGroup P) (PMF.pure ((G, C, A, o) : ComposedState P))
       (PMF.pure ((G', C, A, o) : ComposedState P)) := by
-  have h1 : weakTau (lowSide P) (PMF.pure G) (PMF.pure G') :=
-    weakTau_of_weakLSilent (lowSide P) (lowSide_isLTS P) h
-  have h2 := weakTau_parallel_left (lowSide P)
-    ((System.syncProduct (coreProcN P)).parallel ((aNet P).parallel (wccLift P)))
+  have h1 : weakTau (roundFamilyOverBracha P) (PMF.pure G) (PMF.pure G') :=
+    weakTau_of_weakLSilent (roundFamilyOverBracha P) (roundFamilyOverBracha_isLTS P) h
+  have h2 := weakTau_parallel_left (roundFamilyOverBracha P)
+    ((System.syncProduct (roundLoopProgram P)).parallel ((ABANetwork P).parallel
+      (coinOverRoundAlphabet P)))
     ((C, A, o)) h1
   rw [prodPMF_pure_pure, prodPMF_pure_pure] at h2
-  exact weakTau_relabel (weakTau_abstract (composedPre P) (netEvtLabels P.n) h2)
+  exact weakTau_relabel (weakTau_abstract (composedPre P) (networkEventLabels P.n) h2)
 
 /-- **A visible label the graded-agreement side answers by a run** and the three
 other components by one transition each is a weak transition of the composed
 group. The oracle's successor is left free, so the resulting distribution has
 the shape a probabilistic answer consumes. -/
-theorem composedGroup_weakStep (P : Params) {G G' : ℕ → GBCA.ByAFW.LowPairState P.n}
+theorem composedGroup_weakStep (P : Params) {G G' : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n}
     {C C' : ∀ _ : Fin P.n, CoreRec P.n} {A A' : ANetState P.n}
-    {o : ℕ → WCC.SpecState P.n} {ν : PMF (ℕ → WCC.SpecState P.n)} {l : Lab P.n}
-    (hl : l ≠ Lab.tau)
-    (hG : (lowSide P).weakLStep G (Sum.inl l) G')
-    (hC : ∀ i, CoreProcStepN P i (C i) (Sum.inl l) (PMF.pure (C' i)))
-    (hA : ANetStep P A (Sum.inl l) (PMF.pure A'))
-    (hW : (wccLift P).step o (Sum.inl l) ν) :
+    {o : ℕ → WCC.SpecState P.n} {ν : PMF (ℕ → WCC.SpecState P.n)} {l : Label P.n}
+    (hl : l ≠ Label.tau)
+    (hG : (roundFamilyOverBracha P).weakLStep G (Sum.inl l) G')
+    (hC : ∀ i, RoundLoopStep P i (C i) (Sum.inl l) (PMF.pure (C' i)))
+    (hA : ABANetworkStep P A (Sum.inl l) (PMF.pure A'))
+    (hW : (coinOverRoundAlphabet P).step o (Sum.inl l) ν) :
     weakStep (composedGroup P) (PMF.pure ((G, C, A, o) : ComposedState P)) l
       (prodPMF (PMF.pure G') (prodPMF (PMF.pure C') (prodPMF (PMF.pure A') ν))) := by
-  have hL : (Sum.inl l : NLab P.n) ≠ Silent.τ := by
+  have hL : (Sum.inl l : ExtendedLabel P.n) ≠ Silent.τ := by
     rw [nlab_tau]
     simpa using hl
-  have h1 : weakStep (lowSide P) (PMF.pure G) (Sum.inl l) (PMF.pure G') :=
-    weakStep_of_weakLStep (lowSide P) (lowSide_isLTS P) hL hG
-  have h2 := weakStep_parallel_sync (lowSide P)
-    ((System.syncProduct (coreProcN P)).parallel ((aNet P).parallel (wccLift P)))
+  have h1 : weakStep (roundFamilyOverBracha P) (PMF.pure G) (Sum.inl l) (PMF.pure G') :=
+    weakStep_of_weakLStep (roundFamilyOverBracha P) (roundFamilyOverBracha_isLTS P) hL hG
+  have h2 := weakStep_parallel_sync (roundFamilyOverBracha P)
+    ((System.syncProduct (roundLoopProgram P)).parallel ((ABANetwork P).parallel
+      (coinOverRoundAlphabet P)))
     hL h1 (contextStep P hL hC hA hW)
   rw [prodPMF_pure_pure] at h2
   exact weakStep_relabel
-    (weakStep_abstract (composedPre P) (netEvtLabels P.n) (by simp) h2)
+    (weakStep_abstract (composedPre P) (networkEventLabels P.n) (by simp) h2)
 
 end AFW
 

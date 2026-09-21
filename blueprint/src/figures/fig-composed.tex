@@ -1,11 +1,11 @@
 % The composed system and the substitution
-% (PLTS.ABA.composed, PLTS.ABA.GBCA.ByABDY.sub, PLTS.ABA.Composition.aNet, PLTS.ABA.hybrid).
+% (PLTS.ABA.composed, PLTS.ABA.GBCA.ByABDY.composition, PLTS.ABA.Composition.ABANetwork, PLTS.ABA.hybrid).
 \begin{tikzpicture}[
     >={Stealth[round]}, semithick,
     prog/.style={draw, rounded corners, align=center, font=\scriptsize,
       minimum width=1.6cm, minimum height=0.9cm, inner sep=2pt},
     comp/.style={draw, rounded corners, align=center, font=\scriptsize,
-      minimum width=4.5cm, minimum height=1.0cm, inner sep=3pt},
+      minimum width=4.5cm, minimum height=1.0cm, text width=4.2cm, inner sep=3pt},
     lbl/.style={font=\scriptsize, fill=white, inner sep=1.5pt},
     ann/.style={font=\scriptsize, align=center, inner sep=1.5pt}]
   % the outer frame: the sub-protocol API hidden
@@ -13,18 +13,18 @@
   \node[font=\footnotesize] at (8.6,3.6) {$\mathrm{abstract}\,\mathrm{hiddenAPI}$};
   % the inner frame: the rendezvous alphabet hidden
   \draw[dashed, rounded corners] (-0.8,-3.2) rectangle (10.9,3.15);
-  \node[font=\footnotesize] at (7.3,2.87)
-    {$\mathrm{relabel} \circ \mathrm{abstract}\,\mathrm{netEvtLabels}$};
+  \node[font=\footnotesize] at (7.6,2.87)
+    {$\mathrm{relabel} \circ \mathrm{abstract}\,\mathrm{networkEventLabels}$};
   % the shared bus
   \draw[thick] (-0.5,2.3) -- (10.6,2.3);
-  \node[ann, anchor=west] at (-0.55,2.6) {$\mathrm{NLab}(n)$: every component steps};
+  \node[ann, anchor=west] at (-0.55,2.6) {$\mathrm{ExtendedLabel}(n)$: every component steps};
   \draw[->] (10.6,2.3) -- (11.1,2.3) -- (11.1,4.1);
   \node[ann, anchor=north east] at (11.25,4.55)
     {visible $\mathrm{callABA}$,\\ $\mathrm{retABA}$, $\mathrm{fail}$};
   % ---- component 1: the round instance, drawn open
   \draw[dashed, rounded corners] (-0.4,-2.1) rectangle (5.5,1.6);
-  \node[font=\scriptsize] at (2.55,1.35)
-    {$\mathrm{sub}(P,r)$: $\mathrm{relabel} \circ \mathrm{abstract}\,\mathrm{GEvt}(n)$};
+  \node[font=\scriptsize, align=center] at (2.55,1.22)
+    {$\mathrm{composition}(P,r)$:\\ $\mathrm{relabel} \circ \mathrm{abstract}\,\mathrm{GBCAEvent}(n)$};
   \node[prog] (s1) at (0.55,0.5) {stage\\ program $1$};
   \node[prog] (sj) at (2.55,0.5) {stage\\ program $j$};
   \node[prog] (sn) at (4.55,0.5) {stage\\ program $n$};
@@ -35,7 +35,7 @@
     {the round's network:\\ $sent(j)$, $F$, the round's bound bit (D29)};
   \foreach \x in {0.55,2.55,4.55} \draw[<->] (\x,0.05) -- (\x,-0.95);
   \node[ann, fill=white] at (2.55,-0.45)
-    {$\mathrm{snd}(j,m)$, $\mathrm{dlv}(i,j,m) \to \tau$};
+    {$\mathrm{send}(j,m)$, $\mathrm{deliver}(i,j,m) \to \tau$};
   \draw[->] (0.6,2.3) -- (0.6,1.6);
   \node[ann, anchor=west] at (0.75,1.95)
     {$\mathrm{callG}\,r$, $\mathrm{retG}\,r$, round $r$'s handshake rows};
@@ -43,18 +43,18 @@
     {one instance per round $r \in \mathbb{N}$; $\mathrm{fail}$ broadcast to all};
   % ---- components 2 to 4
   \node[comp] (cores) at (8.55,1.1)
-    {the $n$ round loops\\ $\mathrm{syncProduct}_{j}\ \mathrm{coreProcN}(P,j)$};
+    {the $n$ round loops\\ $\mathrm{syncProduct}_{j}$\\ $\mathrm{roundLoopProgram}(P,j)$};
   \node[comp] (anet) at (8.55,-0.7)
-    {$\mathrm{aNet}(P)$: sent sets $dsent(j)$,\\
+    {$\mathrm{ABANetwork}(P)$: sent sets $dsent(j)$,\\
      corrupted set $F$ with $|F| < f$,\\
      every handshake row's guard $k \in F$};
   \node[comp] (w) at (8.55,-2.5)
-    {$\mathrm{WCC.specFamily}(P)$ along $\mathrm{wccPull}$\\
+    {$\mathrm{WCC.specFamily}(P)$ along $\mathrm{coinLabelMap}$\\
      the one non-Dirac component};
   \foreach \y in {1.1,-0.7,-2.5} \draw[<->] (5.95,2.3) -- (5.95,\y) -- (6.3,\y);
   % ---- the substitution
   \node[comp, minimum width=5.2cm] (spec) at (2.55,-4.45)
-    {$\mathrm{specSide}(P)$: the round specifications};
+    {$\mathrm{gbcaSpecificationFamily}(P)$: the round specifications};
   \draw[->, dashed] (2.55,-3.45) -- (2.55,-3.95);
   \node[lbl, anchor=west, align=left] at (2.8,-3.7)
     {this component alone is replaced};

@@ -104,7 +104,7 @@ variable {P : Params} {r : ℕ}
 /-! ### Monotonicity of the exclusion set -/
 
 /-- **The exclusion set never shrinks.** -/
-theorem Step.excluded_mono {s s' : SpecState P.n} {l : Lab P.n}
+theorem Step.excluded_mono {s s' : SpecState P.n} {l : Label P.n}
     {μ : PMF (SpecState P.n)} (hstep : Step P r s l μ) (hs' : s' ∈ μ.support) :
     s.excluded ⊆ s'.excluded := by
   cases hstep <;>
@@ -118,7 +118,7 @@ theorem Step.excluded_mono {s s' : SpecState P.n} {l : Lab P.n}
 /-! ### Run-level monotonicity -/
 
 /-- **An excluded bit stays excluded along a run.** -/
-theorem excluded_mem_stable {e : AlterSeq (SpecState P.n) (Lab P.n)}
+theorem excluded_mem_stable {e : AlterSeq (SpecState P.n) (Label P.n)}
     (he : is_exec e (specInst P r)) {k₁ k₂ : ℕ} (hk : k₁ ≤ k₂)
     {s₁ s₂ : SpecState P.n} {b : Bool}
     (hst₁ : e.stateAt k₁ = some s₁) (hst₂ : e.stateAt k₂ = some s₂)
@@ -132,7 +132,7 @@ theorem excluded_mem_stable {e : AlterSeq (SpecState P.n) (Lab P.n)}
 /-- **One exclude per instance, step level.** `bindUnset` is the only writer and
 it fires only from `excluded = ∅`, so it leaves a singleton; every other rule
 leaves the field alone. -/
-theorem Step.excluded_card_le_one {s s' : SpecState P.n} {l : Lab P.n}
+theorem Step.excluded_card_le_one {s s' : SpecState P.n} {l : Label P.n}
     {μ : PMF (SpecState P.n)} (hstep : Step P r s l μ) (hs' : s' ∈ μ.support)
     (h : s.excluded.card ≤ 1) : s'.excluded.card ≤ 1 := by
   cases hstep with
@@ -157,7 +157,7 @@ instance has `excluded.card ≤ 1`: the field starts empty and the single writer
 fires only from `∅`. Together with `Step.excluded_mono` this pins the reachable
 shape to `excluded ∈ {∅, {b}}` — the excluded-bit reading of the source blueprint's
 bound value (D19). -/
-theorem excluded_card_le_one {e : AlterSeq (SpecState P.n) (Lab P.n)}
+theorem excluded_card_le_one {e : AlterSeq (SpecState P.n) (Label P.n)}
     (he : is_exec e (specInst P r)) {k : ℕ} {s : SpecState P.n}
     (hst : e.stateAt k = some s) : s.excluded.card ≤ 1 :=
   is_exec_stable (sys := specInst P r) (fun s => s.excluded.card ≤ 1)
@@ -170,7 +170,7 @@ theorem excluded_card_le_one {e : AlterSeq (SpecState P.n) (Lab P.n)}
 /-- **The grade lock never changes once set.** `retA` writes `some true` and
 `retC` writes `some false`, each from a state whose grade is unset or already
 on the side it writes; no other rule touches the field, `corrupt` included. -/
-theorem Step.grade_mono {s s' : SpecState P.n} {l : Lab P.n} {g : Bool}
+theorem Step.grade_mono {s s' : SpecState P.n} {l : Label P.n} {g : Bool}
     {μ : PMF (SpecState P.n)} (hstep : Step P r s l μ) (hs' : s' ∈ μ.support)
     (hg : s.grade = some g) : s'.grade = some g := by
   cases hstep with
@@ -201,7 +201,7 @@ theorem Step.grade_mono {s s' : SpecState P.n} {l : Lab P.n} {g : Bool}
     exact hg
 
 /-- **A locked grade stays locked along a run.** -/
-theorem grade_stable {e : AlterSeq (SpecState P.n) (Lab P.n)}
+theorem grade_stable {e : AlterSeq (SpecState P.n) (Label P.n)}
     (he : is_exec e (specInst P r)) {k₁ k₂ : ℕ} (hk : k₁ ≤ k₂)
     {s₁ s₂ : SpecState P.n} {g : Bool}
     (hst₁ : e.stateAt k₁ = some s₁) (hst₂ : e.stateAt k₂ = some s₂)
@@ -306,7 +306,7 @@ private theorem retC_grade {s s' : SpecState P.n} {id : Fin P.n} {β : Bool}
 
 /-- Two bits excluded at one state of an execution are equal: the exclusion set
 holds at most one bit. -/
-private theorem excluded_eq_of_mem {e : AlterSeq (SpecState P.n) (Lab P.n)}
+private theorem excluded_eq_of_mem {e : AlterSeq (SpecState P.n) (Label P.n)}
     (he : is_exec e (specInst P r)) {k : ℕ} {s : SpecState P.n} {b₁ b₂ : Bool}
     (hst : e.stateAt k = some s) (h₁ : b₁ ∈ s.excluded) (h₂ : b₂ ∈ s.excluded) :
     b₁ = b₂ :=
@@ -315,7 +315,7 @@ private theorem excluded_eq_of_mem {e : AlterSeq (SpecState P.n) (Lab P.n)}
 /-- **A value-bearing return announces the bit it hands out.** The value guard
 excludes `!v` and the bound guard excludes `!β`, and a state of an execution
 excludes at most one bit. -/
-theorem retG_value_eq_bound {e : AlterSeq (SpecState P.n) (Lab P.n)}
+theorem retG_value_eq_bound {e : AlterSeq (SpecState P.n) (Label P.n)}
     (he : is_exec e (specInst P r)) {k : ℕ} {s : SpecState P.n} {id : Fin P.n}
     {o : GbcaOut} {v β : Bool} {μ : PMF (SpecState P.n)}
     (hst : e.stateAt k = some s) (hstep : Step P r s (.retG r id o β) μ)
@@ -328,7 +328,7 @@ theorem retG_value_eq_bound {e : AlterSeq (SpecState P.n) (Lab P.n)}
 /-! ### Binding and graded agreement along a run -/
 
 /-- Two value-bearing returns of one run agree on the bit (`k₁ ≤ k₂` case). -/
-private theorem retG_value_agree_le {e : AlterSeq (SpecState P.n) (Lab P.n)}
+private theorem retG_value_agree_le {e : AlterSeq (SpecState P.n) (Label P.n)}
     (he : is_exec e (specInst P r)) {k₁ k₂ : ℕ} (hk : k₁ ≤ k₂)
     {s₁ s₂ : SpecState P.n} {id₁ id₂ : Fin P.n} {o₁ o₂ : GbcaOut}
     {v₁ v₂ β₁ β₂ : Bool} {μ₁ μ₂ : PMF (SpecState P.n)}
@@ -348,7 +348,7 @@ along one execution of the round-`r` specification instance hand out the same
 bit, whatever their grades and whichever processes they answer. The whole
 argument is the guard pair plus monotonicity: the first return pins `!v₁` into
 `excluded`, `excluded` only grows, and the second return refuses an excluded bit. -/
-theorem retG_value_agree {e : AlterSeq (SpecState P.n) (Lab P.n)}
+theorem retG_value_agree {e : AlterSeq (SpecState P.n) (Label P.n)}
     (he : is_exec e (specInst P r)) {k₁ k₂ : ℕ}
     {s₁ s₂ : SpecState P.n} {id₁ id₂ : Fin P.n} {o₁ o₂ : GbcaOut}
     {v₁ v₂ β₁ β₂ : Bool} {μ₁ μ₂ : PMF (SpecState P.n)}
@@ -361,7 +361,7 @@ theorem retG_value_agree {e : AlterSeq (SpecState P.n) (Lab P.n)}
   · exact (retG_value_agree_le he h hst₂ hst₁ hstep₂ hstep₁ ho₂ ho₁).symm
 
 /-- Two returns of one run announce the same bit (`k₁ ≤ k₂` case). -/
-private theorem retG_bound_agree_le {e : AlterSeq (SpecState P.n) (Lab P.n)}
+private theorem retG_bound_agree_le {e : AlterSeq (SpecState P.n) (Label P.n)}
     (he : is_exec e (specInst P r)) {k₁ k₂ : ℕ} (hk : k₁ ≤ k₂)
     {s₁ s₂ : SpecState P.n} {id₁ id₂ : Fin P.n} {o₁ o₂ : GbcaOut} {β₁ β₂ : Bool}
     {μ₁ μ₂ : PMF (SpecState P.n)}
@@ -378,7 +378,7 @@ private theorem retG_bound_agree_le {e : AlterSeq (SpecState P.n) (Lab P.n)}
 the round-`r` specification instance announce the same bit. Each fires under
 `(!β) ∈ excluded`, the exclusion set only grows, and no state of an execution
 excludes two bits. -/
-theorem retG_bound_agree {e : AlterSeq (SpecState P.n) (Lab P.n)}
+theorem retG_bound_agree {e : AlterSeq (SpecState P.n) (Label P.n)}
     (he : is_exec e (specInst P r)) {k₁ k₂ : ℕ}
     {s₁ s₂ : SpecState P.n} {id₁ id₂ : Fin P.n} {o₁ o₂ : GbcaOut} {β₁ β₂ : Bool}
     {μ₁ μ₂ : PMF (SpecState P.n)}
@@ -393,7 +393,7 @@ theorem retG_bound_agree {e : AlterSeq (SpecState P.n) (Lab P.n)}
 return fires under `(!β) ∈ excluded`, so the exclusion set is nonempty in every
 later state of the execution: `!β` is a bit no extension of the run can ever hand
 out, and the announced `β` is the clause's witness. -/
-theorem retC_excluded_nonempty {e : AlterSeq (SpecState P.n) (Lab P.n)}
+theorem retC_excluded_nonempty {e : AlterSeq (SpecState P.n) (Label P.n)}
     (he : is_exec e (specInst P r)) {k₁ k₂ : ℕ} (hk : k₁ ≤ k₂)
     {s₁ s₂ : SpecState P.n} {id : Fin P.n} {β : Bool} {μ : PMF (SpecState P.n)}
     (hst₁ : e.stateAt k₁ = some s₁) (hst₂ : e.stateAt k₂ = some s₂)
@@ -405,7 +405,7 @@ specification instance carries both an `A`-return and a `C`-return. The
 `A`-return locks the grade to `some true` and the `C`-return to `some false`,
 each fires only from a state whose grade is unset or already on its own side,
 and `grade_stable` carries the earlier lock to the later return's state. -/
-theorem retG_grade_exclusive {e : AlterSeq (SpecState P.n) (Lab P.n)}
+theorem retG_grade_exclusive {e : AlterSeq (SpecState P.n) (Label P.n)}
     (he : is_exec e (specInst P r)) {k₁ k₂ : ℕ} (hne : k₁ ≠ k₂)
     {s₁' s₂' : SpecState P.n} {id₁ id₂ : Fin P.n} {v β₁ β₂ : Bool}
     (hg₁ : e.trans.get? k₁ = some (.retG r id₁ (.A v) β₁, s₁'))
@@ -430,24 +430,24 @@ theorem retG_grade_exclusive {e : AlterSeq (SpecState P.n) (Lab P.n)}
 
 /-- **The announced bit is one bit (trace form).** Any two round-`r` returns
 appearing in the trace announce the same bit. -/
-def BoundTrace (P : Params) (r : ℕ) (t : Seq (Lab P.n)) : Prop :=
+def BoundTrace (P : Params) (r : ℕ) (t : Seq (Label P.n)) : Prop :=
   ∀ (id₁ id₂ : Fin P.n) (o₁ o₂ : GbcaOut) (β₁ β₂ : Bool),
-    Lab.retG r id₁ o₁ β₁ ∈ t → Lab.retG r id₂ o₂ β₂ ∈ t → β₁ = β₂
+    Label.retG r id₁ o₁ β₁ ∈ t → Label.retG r id₂ o₂ β₂ ∈ t → β₁ = β₂
 
 /-- **Binding (trace form).** The round is bound to one bit on the trace: all
 round-`r` returns of the trace announce the same bit, and every one of them that
 hands out a value hands out that bit. -/
-def BindingTrace (P : Params) (r : ℕ) (t : Seq (Lab P.n)) : Prop :=
+def BindingTrace (P : Params) (r : ℕ) (t : Seq (Label P.n)) : Prop :=
   BoundTrace P r t ∧
     ∀ (id : Fin P.n) (o : GbcaOut) (β v : Bool),
-      Lab.retG r id o β ∈ t → outValue o = some v → v = β
+      Label.retG r id o β ∈ t → outValue o = some v → v = β
 
 /-- **Graded agreement (trace form).** Any two round-`r` returns of a bound trace
 that hand out a bit hand out the same bit: each hands out the bit it announces,
 and the two announcements agree. -/
-theorem BindingTrace.value_agree {t : Seq (Lab P.n)} (h : BindingTrace P r t)
+theorem BindingTrace.value_agree {t : Seq (Label P.n)} (h : BindingTrace P r t)
     {id₁ id₂ : Fin P.n} {o₁ o₂ : GbcaOut} {β₁ β₂ v₁ v₂ : Bool}
-    (h₁ : Lab.retG r id₁ o₁ β₁ ∈ t) (h₂ : Lab.retG r id₂ o₂ β₂ ∈ t)
+    (h₁ : Label.retG r id₁ o₁ β₁ ∈ t) (h₂ : Label.retG r id₂ o₂ β₂ ∈ t)
     (ho₁ : outValue o₁ = some v₁) (ho₂ : outValue o₂ = some v₂) : v₁ = v₂ := by
   rw [h.2 id₁ o₁ β₁ v₁ h₁ ho₁, h.2 id₂ o₂ β₂ v₂ h₂ ho₂]
   exact h.1 id₁ id₂ o₁ o₂ β₁ β₂ h₁ h₂
@@ -486,7 +486,7 @@ a bit hand out the same bit, is `retG_value_agree`, read on the trace by
 theorem specInst_grade_agree (P : Params) (r : ℕ) :
     ∀ D ∈ achievableTraceDists (specInst P r), ∀ t, D t ≠ 0 →
       ∀ (id₁ id₂ : Fin P.n) (v β₁ β₂ : Bool),
-        Lab.retG r id₁ (.A v) β₁ ∈ t → Lab.retG r id₂ .C β₂ ∉ t := by
+        Label.retG r id₁ (.A v) β₁ ∈ t → Label.retG r id₂ .C β₂ ∉ t := by
   rintro D ⟨pe, h_init, h_D⟩ t h_ne id₁ id₂ v β₁ β₂ hA hC
   rw [← h_D t] at h_ne
   obtain ⟨e, h_exec, h_char⟩ :=
@@ -505,16 +505,16 @@ trace carries `v`, unless its caller is corrupted somewhere along the trace.
 Corruption is `SpecSafety`'s trace-level notion (`NeverCorrupted`, the fold
 `failSet` of D1-`corrupt` over the `fail` labels), not the bare presence of a
 `fail` label: a `fail` the budget refuses corrupts nobody. -/
-def UnanimousInput (P : Params) (r : ℕ) (v : Bool) (t : Seq (Lab P.n)) : Prop :=
-  ∀ (id : Fin P.n) (b : Bool), Lab.callG r id b ∈ t →
+def UnanimousInput (P : Params) (r : ℕ) (v : Bool) (t : Seq (Label P.n)) : Prop :=
+  ∀ (id : Fin P.n) (b : Bool), Label.callG r id b ∈ t →
     b = v ∨ ¬ NeverCorrupted P t id
 
 /-- **Validity, safety half** (trace form): every round-`r` return of the trace
 hands out `v`. Returner-unconditional, and it excludes `C` outright, `C`
 handing out nothing. -/
-def ValidityTrace (P : Params) (r : ℕ) (v : Bool) (t : Seq (Lab P.n)) : Prop :=
+def ValidityTrace (P : Params) (r : ℕ) (v : Bool) (t : Seq (Label P.n)) : Prop :=
   ∀ (id : Fin P.n) (o : GbcaOut) (β : Bool),
-    Lab.retG r id o β ∈ t → outValue o = some v
+    Label.retG r id o β ∈ t → outValue o = some v
 
 /-! ### The bookkeeping invariant -/
 
@@ -527,10 +527,10 @@ theorem corrupt_F (s : SpecState P.n) (id : Fin P.n) :
 to a `callG` event of the label history, and the corrupted set is exactly the
 fold of D1-`corrupt` over that history. Both conjuncts are read off the rules:
 `call` is written only by the `callG`-labelled rule, `F` only by `fail`. -/
-structure CallInv (P : Params) (r : ℕ) (pre : List (Lab P.n))
+structure CallInv (P : Params) (r : ℕ) (pre : List (Label P.n))
     (s : SpecState P.n) : Prop where
   /-- Every pending input has a `callG` event behind it. -/
-  call_src : ∀ id b, s.call id = some b → Lab.callG r id b ∈ pre
+  call_src : ∀ id b, s.call id = some b → Label.callG r id b ∈ pre
   /-- The corrupted set is the fold of the history's `fail` labels. -/
   F_eq : s.F = failSetL P pre
 
@@ -540,11 +540,11 @@ theorem CallInv.initial (P : Params) (r : ℕ) :
   F_eq := rfl
 
 /-- **Bookkeeping-invariant preservation.** -/
-theorem CallInv.step {pre : List (Lab P.n)} {s : SpecState P.n} {l : Lab P.n}
+theorem CallInv.step {pre : List (Label P.n)} {s : SpecState P.n} {l : Label P.n}
     {μ : PMF (SpecState P.n)} {s' : SpecState P.n}
     (hI : CallInv P r pre s) (hstep : Step P r s l μ) (hs' : s' ∈ μ.support) :
     CallInv P r (pre ++ [l]) s' := by
-  have mono : ∀ {l' : Lab P.n}, l' ∈ pre → l' ∈ pre ++ [l] :=
+  have mono : ∀ {l' : Label P.n}, l' ∈ pre → l' ∈ pre ++ [l] :=
     fun h => List.mem_append_left _ h
   cases hstep with
   | call id b h =>
@@ -582,9 +582,9 @@ could draw on is corrupted at some stage of the trace: a caller of `!v` by the
 unanimity hypothesis, an `F`-member because `F` is the trace-level fold. The
 stages form a chain, so the whole set sits inside a single `failSet P t K`,
 which the budget caps at `f`. -/
-theorem supp_le_of_unanimous {t : Seq (Lab P.n)} {v : Bool} {s : SpecState P.n}
+theorem supp_le_of_unanimous {t : Seq (Label P.n)} {v : Bool} {s : SpecState P.n}
     {j : ℕ} (hun : UnanimousInput P r v t)
-    (hcall : ∀ id b, s.call id = some b → Lab.callG r id b ∈ t)
+    (hcall : ∀ id b, s.call id = some b → Label.callG r id b ∈ t)
     (hF : s.F = failSet P t j) :
     (Finset.univ.filter (fun id => s.call id = some (!v) ∨ id ∈ s.F)).card
       ≤ P.f := by
@@ -611,15 +611,15 @@ has its `callG` event in the trace, and the corrupted set is the trace-level
 fold at some stage. Both come from `CallInv` on the history `labs.take k`,
 which the filter carries to the trace: it keeps every `fail` label, so the
 fold is unchanged, and prefixes stay prefixes. -/
-theorem trace_transfer {e : AlterSeq (SpecState P.n) (Lab P.n)}
-    {labs : List (Lab P.n)} {t : Seq (Lab P.n)} {p : Lab P.n → Bool}
+theorem trace_transfer {e : AlterSeq (SpecState P.n) (Label P.n)}
+    {labs : List (Label P.n)} {t : Seq (Label P.n)} {p : Label P.n → Bool}
     (he : is_exec e (specInst P r))
     (h_map : e.trans.map Prod.fst = Seq.ofList labs)
     (hpfail : ∀ id : Fin P.n, p (.fail id) = true)
     (hpcall : ∀ (r' : ℕ) (id : Fin P.n) (b : Bool), p (.callG r' id b) = true)
     (h_t : Seq.ofList (labs.filter p) = t)
     {k : ℕ} {s : SpecState P.n} (hst : e.stateAt k = some s) :
-    (∀ id b, s.call id = some b → Lab.callG r id b ∈ t) ∧
+    (∀ id b, s.call id = some b → Label.callG r id b ∈ t) ∧
       ∃ j, s.F = failSet P t j := by
   have hI := is_exec_induction_labels (sys := specInst P r) (CallInv P r)
     (CallInv.initial P r) (fun pre s l μ s' hI hstep hs' => hI.step hstep hs')
@@ -638,10 +638,10 @@ theorem trace_transfer {e : AlterSeq (SpecState P.n) (Lab P.n)}
 only rule that could exclude it is `bindUnset v`, whose D15 guard counts `f + 1`
 supporters of `!v` — refuted by `supp_le_of_unanimous` at the very state where
 the rule would fire. -/
-theorem excluded_notMem_of_unanimous {e : AlterSeq (SpecState P.n) (Lab P.n)}
-    {t : Seq (Lab P.n)} {v : Bool} (he : is_exec e (specInst P r))
+theorem excluded_notMem_of_unanimous {e : AlterSeq (SpecState P.n) (Label P.n)}
+    {t : Seq (Label P.n)} {v : Bool} (he : is_exec e (specInst P r))
     (hbr : ∀ (k : ℕ) (s : SpecState P.n), e.stateAt k = some s →
-      (∀ id b, s.call id = some b → Lab.callG r id b ∈ t) ∧
+      (∀ id b, s.call id = some b → Label.callG r id b ∈ t) ∧
         ∃ j, s.F = failSet P t j)
     (hun : UnanimousInput P r v t) :
     ∀ k s, e.stateAt k = some s → v ∉ s.excluded := by
@@ -654,7 +654,7 @@ theorem excluded_notMem_of_unanimous {e : AlterSeq (SpecState P.n) (Lab P.n)}
     simp [specInst, SpecState.initial]
   | succ k ih =>
     intro s hs
-    obtain ⟨⟨l, s''⟩, h_get, h_snd⟩ : ∃ q : Lab P.n × SpecState P.n,
+    obtain ⟨⟨l, s''⟩, h_get, h_snd⟩ : ∃ q : Label P.n × SpecState P.n,
         e.trans.get? k = some q ∧ q.2 = s := by
       cases hg : e.trans.get? k with
       | none =>
@@ -708,10 +708,10 @@ private theorem retC_supp {s : SpecState P.n} {id : Fin P.n} {β : Bool}
 value-bearing return needs the other bit excluded, and `v` is not; a `C`-return
 needs `f + 1` support at both bits, and the dissenting one is capped by the
 budget. -/
-theorem retG_value_of_unanimous {t : Seq (Lab P.n)} {v β : Bool}
+theorem retG_value_of_unanimous {t : Seq (Label P.n)} {v β : Bool}
     {s : SpecState P.n} {id : Fin P.n} {o : GbcaOut} {μ : PMF (SpecState P.n)}
     (hun : UnanimousInput P r v t)
-    (hcall : ∀ id b, s.call id = some b → Lab.callG r id b ∈ t)
+    (hcall : ∀ id b, s.call id = some b → Label.callG r id b ∈ t)
     (hF : ∃ j, s.F = failSet P t j) (hlive : v ∉ s.excluded)
     (hstep : Step P r s (.retG r id o β) μ) : outValue o = some v := by
   have key : ∀ w : Bool, (!w) ∈ s.excluded → w = v := by
@@ -734,9 +734,9 @@ theorem retG_value_of_unanimous {t : Seq (Lab P.n)} {v β : Bool}
     omega
 
 /-- Pulling a trace label back to an event of the witness execution. -/
-private theorem event_of_mem_trace {e : AlterSeq (SpecState P.n) (Lab P.n)}
-    {labs : List (Lab P.n)} {t : Seq (Lab P.n)} {p : Lab P.n → Bool}
-    {l : Lab P.n} (h_map : e.trans.map Prod.fst = Seq.ofList labs)
+private theorem event_of_mem_trace {e : AlterSeq (SpecState P.n) (Label P.n)}
+    {labs : List (Label P.n)} {t : Seq (Label P.n)} {p : Label P.n → Bool}
+    {l : Label P.n} (h_map : e.trans.map Prod.fst = Seq.ofList labs)
     (h_t : Seq.ofList (labs.filter p) = t) (h_mem : l ∈ t) :
     ∃ k s', e.trans.get? k = some (l, s') := by
   rw [← h_t, Seq_mem_ofList, List.mem_filter] at h_mem
@@ -758,12 +758,12 @@ of the trace, whose corrupted set is the trace-level fold at some stage, and at
 which `v` is still alive. These are exactly the hypotheses the state-level
 refutations take. -/
 private theorem return_state_of_unanimous {v : Bool}
-    {D : Seq (Lab P.n) → ENNReal} (hD : D ∈ achievableTraceDists (specInst P r))
-    {t : Seq (Lab P.n)} (h_ne : D t ≠ 0) (hun : UnanimousInput P r v t)
-    {id : Fin P.n} {o : GbcaOut} {β : Bool} (h_mem : Lab.retG r id o β ∈ t) :
+    {D : Seq (Label P.n) → ENNReal} (hD : D ∈ achievableTraceDists (specInst P r))
+    {t : Seq (Label P.n)} (h_ne : D t ≠ 0) (hun : UnanimousInput P r v t)
+    {id : Fin P.n} {o : GbcaOut} {β : Bool} (h_mem : Label.retG r id o β ∈ t) :
     ∃ (s : SpecState P.n) (μ : PMF (SpecState P.n)),
       (∀ (id' : Fin P.n) (b : Bool),
-          s.call id' = some b → Lab.callG r id' b ∈ t) ∧
+          s.call id' = some b → Label.callG r id' b ∈ t) ∧
         (∃ j, s.F = failSet P t j) ∧ v ∉ s.excluded ∧
         Step P r s (.retG r id o β) μ := by
   obtain ⟨pe, h_init, h_D⟩ := hD
@@ -772,13 +772,13 @@ private theorem return_state_of_unanimous {v : Bool}
     exists_exec_of_traceProb_ne_zero_ord pe h_init t h_ne
   rw [Seq.ofList_filter] at h_t
   -- generalise the external-label filter to an opaque Boolean predicate
-  obtain ⟨p, hpfail, hpcall, h_t⟩ : ∃ p : Lab P.n → Bool,
+  obtain ⟨p, hpfail, hpcall, h_t⟩ : ∃ p : Label P.n → Bool,
       (∀ id : Fin P.n, p (.fail id) = true) ∧
       (∀ (r' : ℕ) (id : Fin P.n) (b : Bool), p (.callG r' id b) = true) ∧
       Seq.ofList (labs.filter p) = t :=
     ⟨_, fun id => by simp, fun r' id b => by simp, h_t⟩
   have hbr : ∀ (k : ℕ) (s : SpecState P.n), e.stateAt k = some s →
-      (∀ id b, s.call id = some b → Lab.callG r id b ∈ t) ∧
+      (∀ id b, s.call id = some b → Label.callG r id b ∈ t) ∧
         ∃ j, s.F = failSet P t j :=
     fun k s hst => trace_transfer h_exec h_map hpfail hpcall h_t hst
   have halive := excluded_notMem_of_unanimous h_exec hbr hun
@@ -806,7 +806,7 @@ corruption budget. -/
 theorem specInst_no_retC (P : Params) (r : ℕ) (v : Bool) :
     ∀ D ∈ achievableTraceDists (specInst P r), ∀ t, D t ≠ 0 →
       UnanimousInput P r v t →
-      ∀ (id : Fin P.n) (β : Bool), Lab.retG r id .C β ∉ t := by
+      ∀ (id : Fin P.n) (β : Bool), Label.retG r id .C β ∉ t := by
   intro D hD t h_ne hun id β h_mem
   have h := specInst_validity P r v D hD t h_ne hun id .C β h_mem
   simp at h
@@ -819,7 +819,7 @@ support at the other bit, which the corruption budget caps at `f`. -/
 theorem specInst_no_retB (P : Params) (r : ℕ) (v : Bool) :
     ∀ D ∈ achievableTraceDists (specInst P r), ∀ t, D t ≠ 0 →
       UnanimousInput P r v t →
-      ∀ (id : Fin P.n) (w β : Bool), Lab.retG r id (.B w) β ∉ t := by
+      ∀ (id : Fin P.n) (w β : Bool), Label.retG r id (.B w) β ∉ t := by
   intro D hD t h_ne hun id w β h_mem
   obtain ⟨s, μ, hcall, ⟨j, hFj⟩, hlive, hstep⟩ :=
     return_state_of_unanimous hD h_ne hun h_mem

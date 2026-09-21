@@ -10,7 +10,7 @@ import Leslie2Protocols.ABA.GBCA.Specification
 # The GBCA implementation instance (ABDY22 Algorithm 6)
 
 The round-`r` instance of the Graded Binding Crusader Agreement protocol, as an
-LTS over the shared alphabet `ABA.Lab n`.
+LTS over the shared alphabet `ABA.Label n`.
 
 *Attribution.* The file transcribes ABDY22's Algorithm 6 — the 6-round Graded
 Binding Crusader Agreement for Byzantine faults — directly. The level mapping is
@@ -73,7 +73,7 @@ pseudocode (`n − f`).
   `τ`-transition requiring `m ∈ sent j`). Thresholds count *distinct senders*
   in the receiver's delivered sets, so message duplication and point-to-point
   scheduling are absorbed into the set model. A corrupted sender may inject
-  any message into its `sent` set (`byz`).
+  any message into its `sent` set (`byzantine`).
 * **D8 (participation guard).** Protocol sends (`relay`, `echo`, `vote*`,
   `bind*`, `echo5*`) and the three returns require the process to have received
   its input (`input ≠ none`): the algorithm's handlers only run inside a called
@@ -688,7 +688,7 @@ end ImplState
 /-- The step relation of the round-`r` GBCA implementation instance
 (ABDY22 Algorithm 6, all five message levels). All transitions are Dirac. -/
 inductive ImplStep (P : Params) (r : ℕ) :
-    ImplState P.n → Lab P.n → PMF (ImplState P.n) → Prop
+    ImplState P.n → Label P.n → PMF (ImplState P.n) → Prop
   /-- The environment call arrives: record the input and multicast
   `⟨INPUT, b⟩`. -/
   | call (s : ImplState P.n) (id : Fin P.n) (b : Bool)
@@ -797,7 +797,7 @@ inductive ImplStep (P : Params) (r : ℕ) :
         (PMF.pure ((s.setProc j { s.proc j with sentEcho5 := some none }).mcast
           j (.echo5 none)))
   /-- Byzantine injection: a corrupted sender multicasts anything. -/
-  | byz (s : ImplState P.n) (j : Fin P.n) (m : Msg) (h : j ∈ s.F) :
+  | byzantine (s : ImplState P.n) (j : Fin P.n) (m : Msg) (h : j ∈ s.F) :
       ImplStep P r s .tau (PMF.pure (s.mcast j m))
   /-- `A`-return (decide case (1)): an `n − f` `ECHO5 v` quorum. The process
   has called and its own `ECHO5` is out. Case (1) heads the chain, so there is
@@ -854,7 +854,7 @@ inductive ImplStep (P : Params) (r : ℕ) :
       ImplStep P r s (.fail id) (PMF.pure (s.corrupt P id))
 
 /-- The round-`r` GBCA implementation instance. -/
-noncomputable def implInst (P : Params) (r : ℕ) : System (ImplState P.n) (Lab P.n) where
+noncomputable def implInst (P : Params) (r : ℕ) : System (ImplState P.n) (Label P.n) where
   init := ImplState.initial P.n
   step := ImplStep P r
 
@@ -862,7 +862,7 @@ noncomputable def implInst (P : Params) (r : ℕ) : System (ImplState P.n) (Lab 
     (implInst P r).init = ImplState.initial P.n := rfl
 
 @[simp] theorem implInst_step (P : Params) (r : ℕ) (s : ImplState P.n)
-    (l : Lab P.n) (μ : PMF (ImplState P.n)) :
+    (l : Label P.n) (μ : PMF (ImplState P.n)) :
     (implInst P r).step s l μ ↔ ImplStep P r s l μ := Iff.rfl
 
 /-- Every transition of the implementation instance is Dirac: the instance is

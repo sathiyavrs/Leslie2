@@ -28,8 +28,9 @@ corrupted set (`ABA.NetworkState`) and the instance's core; it reads no
 program's record.
 
 The composition is generic in the broadcast tier: `instAt` takes the `2n`
-instances as arguments, `lowInst` supplies Bracha instances (`BRB.implInst`) and
-`idealInst` supplies lifted broadcast specifications (`BRB.liftedSpec`).
+instances as arguments, `instanceOverBracha` supplies Bracha instances (`BRB.brachaInstance`) and
+`instanceOverBroadcastSpecification` supplies lifted broadcast specifications
+(`BRB.specificationOverInstanceAlphabet`).
 
 ## The alphabet
 
@@ -38,18 +39,18 @@ input-enabledness loop. The composition splits them across two labels, as the
 reliable-broadcast composition does one level down (`ABA/ReliableBroadcast/BrachaComposition.lean`).
 The gather record and the broadcast instance are different components, so a
 single label carrying both rows would also carry the mixed pairs. The loop
-therefore has a label of its own, `Extra.callLoop id x`, and the specification
-is read along `specPull`, which sends that label to `call id x`. The interface
-alphabet is `InstLab n X = Lab n X ⊕ Extra n X`.
+therefore has a label of its own, `LoopLabel.callLoop id x`, and the specification
+is read along `specificationLabelMap`, which sends that label to `call id x`. The interface
+alphabet is `InstanceLabel n X = Label n X ⊕ LoopLabel n X`.
 
-The instance-internal alphabet is `GaLab n X = InstLab n X ⊕ GaEvt n X`. Its
+The instance-internal alphabet is `GatherLabel n X = InstanceLabel n X ⊕ GatherEvent n X`. Its
 five events are the gather multicast and delivery, the return of an input
 instance, the call of a bind instance and the return of a bind instance. They
 are hidden before anything outside sees the instance: `instAt` speaks
-`InstLab n X`.
+`InstanceLabel n X`.
 
-A broadcast instance joins the composition along a pullback — `inPull k` for
-the instance broadcasting `k`'s input, `bindPull q` for the instance
+A broadcast instance joins the composition along a pullback — `inputBroadcastLabelMap k` for
+the instance broadcasting `k`'s input, `bindBroadcastLabelMap q` for the instance
 broadcasting `q`'s `BIND` payload. The pullback names the instance: a label
 carrying another instance's index has no image, and that instance stands still.
 Corruption and the silent label have an image at every instance, so `fail` is a
@@ -83,21 +84,21 @@ variable {X : Type}
 /-- The interface label of the call loop. The specification's `call id x`
 carries the call and the input-enabledness loop; the composition takes the loop
 on a label of its own. -/
-inductive Extra (n : ℕ) (X : Type) : Type
+inductive LoopLabel (n : ℕ) (X : Type) : Type
   /-- The input-enabledness loop of `call id x`. -/
   | callLoop (id : Fin n) (x : X)
 
 /-- The instance's interface alphabet: the specification's alphabet with the
 call loop beside it. -/
-abbrev InstLab (n : ℕ) (X : Type) : Type := Lab n X ⊕ Extra n X
+abbrev InstanceLabel (n : ℕ) (X : Type) : Type := Label n X ⊕ LoopLabel n X
 
 /-- The instance's own events: the gather multicast and delivery, the return of
 an input instance, and the call and return of a bind instance. -/
-inductive GaEvt (n : ℕ) (X : Type) : Type
+inductive GatherEvent (n : ℕ) (X : Type) : Type
   /-- Process `j` hands `m` to the gather network. -/
-  | snd (j : Fin n) (m : GaMsg n X)
+  | send (j : Fin n) (m : GaMsg n X)
   /-- The gather network delivers `j`'s `m` to `i`. -/
-  | dlv (i j : Fin n) (m : GaMsg n X)
+  | deliver (i j : Fin n) (m : GaMsg n X)
   /-- The instance broadcasting `k`'s input returns `v` to `j`. -/
   | inRet (k j : Fin n) (v : X)
   /-- Process `j` calls the instance broadcasting its `BIND` payload `U`. -/
@@ -108,27 +109,28 @@ inductive GaEvt (n : ℕ) (X : Type) : Type
 /-- The instance-internal alphabet: the interface alphabet plus the five
 events. Its silent label is `Sum.inl (Sum.inl tau)`, so every `Sum.inr` label is
 observable and hence hideable. -/
-abbrev GaLab (n : ℕ) (X : Type) : Type := InstLab n X ⊕ GaEvt n X
+abbrev GatherLabel (n : ℕ) (X : Type) : Type := InstanceLabel n X ⊕ GatherEvent n X
 
 /-- The event labels, hidden by the instance. -/
-def gaEvents (n : ℕ) (X : Type) : Set (GaLab n X) := {l | ∃ e : GaEvt n X, l = Sum.inr e}
+def gatherEvents (n : ℕ) (X : Type) : Set (GatherLabel n X) := {l | ∃ e : GatherEvent n X,
+  l = Sum.inr e}
 
-@[simp] theorem inl_notMem_gaEvents {n : ℕ} {X : Type} (l : InstLab n X) :
-    Sum.inl l ∉ gaEvents n X := by
-  simp [gaEvents]
+@[simp] theorem inl_notMem_gatherEvents {n : ℕ} {X : Type} (l : InstanceLabel n X) :
+    Sum.inl l ∉ gatherEvents n X := by
+  simp [gatherEvents]
 
-@[simp] theorem inr_mem_gaEvents {n : ℕ} {X : Type} (e : GaEvt n X) :
-    Sum.inr e ∈ gaEvents n X := ⟨e, rfl⟩
+@[simp] theorem inr_mem_gatherEvents {n : ℕ} {X : Type} (e : GatherEvent n X) :
+    Sum.inr e ∈ gatherEvents n X := ⟨e, rfl⟩
 
 @[simp] theorem galab_tau (n : ℕ) (X : Type) :
-    (Silent.τ : GaLab n X) = Sum.inl (Sum.inl Lab.tau) := rfl
+    (Silent.τ : GatherLabel n X) = Sum.inl (Sum.inl Label.tau) := rfl
 
 @[simp] theorem instlab_tau (n : ℕ) (X : Type) :
-    (Silent.τ : InstLab n X) = Sum.inl Lab.tau := rfl
+    (Silent.τ : InstanceLabel n X) = Sum.inl Label.tau := rfl
 
 /-- The silent label of a broadcast instance's interface alphabet. -/
 @[simp] theorem brbInstLab_tau (n : ℕ) (M : Type) :
-    (Silent.τ : BRB.InstLab n M) = Sum.inl BRB.Lab.tau := rfl
+    (Silent.τ : BRB.InstanceLabel n M) = Sum.inl BRB.Label.tau := rfl
 
 /-! ### The records -/
 
@@ -218,12 +220,13 @@ theorem coreOf_eq_coreOfNet {X : Type} (P : Params)
 
 /-! ### The pullbacks
 
-A broadcast instance speaks its own interface alphabet `BRB.InstLab`. It joins
+A broadcast instance speaks its own interface alphabet `BRB.InstanceLabel`. It joins
 the composition along a pullback that names it: a label carrying another
 instance's index has no image and leaves that instance idle. -/
 
 /-- The pullback along which the instance broadcasting `k`'s input is read. -/
-def inPull (n : ℕ) (X : Type) (k : Fin n) : GaLab n X → Option (BRB.InstLab n X)
+def inputBroadcastLabelMap (n : ℕ) (X : Type) (k : Fin n) : GatherLabel n X → Option
+  (BRB.InstanceLabel n X)
   | Sum.inl (Sum.inl .tau) => some (Sum.inl .tau)
   | Sum.inl (Sum.inl (.call id x)) => if k = id then some (Sum.inl (.call x)) else none
   | Sum.inl (Sum.inl (.fail id)) => some (Sum.inl (.fail id))
@@ -233,36 +236,41 @@ def inPull (n : ℕ) (X : Type) (k : Fin n) : GaLab n X → Option (BRB.InstLab 
 
 /-- The pullback along which the instance broadcasting `q`'s `BIND` payload is
 read. -/
-def bindPull (n : ℕ) (X : Type) (q : Fin n) : GaLab n X → Option (BRB.InstLab n (APSet n X))
+def bindBroadcastLabelMap (n : ℕ) (X : Type) (q : Fin n) : GatherLabel n X → Option
+  (BRB.InstanceLabel n (APSet n X))
   | Sum.inl (Sum.inl .tau) => some (Sum.inl .tau)
   | Sum.inl (Sum.inl (.fail id)) => some (Sum.inl (.fail id))
   | Sum.inr (.bindCall j U) => if q = j then some (Sum.inl (.call U)) else none
   | Sum.inr (.bindRet q' j U) => if q = q' then some (Sum.inl (.ret j U)) else none
   | _ => none
 
-@[simp] theorem inPull_tau (n : ℕ) (X : Type) (k : Fin n) :
-    inPull n X k (Silent.τ : GaLab n X) = some (Silent.τ : BRB.InstLab n X) := rfl
+@[simp] theorem inputBroadcastLabelMap_tau (n : ℕ) (X : Type) (k : Fin n) :
+    inputBroadcastLabelMap n X k (Silent.τ : GatherLabel n X) = some (Silent.τ : BRB.InstanceLabel n
+      X) := rfl
 
-@[simp] theorem bindPull_tau (n : ℕ) (X : Type) (q : Fin n) :
-    bindPull n X q (Silent.τ : GaLab n X) = some (Silent.τ : BRB.InstLab n (APSet n X)) := rfl
+@[simp] theorem bindBroadcastLabelMap_tau (n : ℕ) (X : Type) (q : Fin n) :
+    bindBroadcastLabelMap n X q (Silent.τ : GatherLabel n X) = some (Silent.τ : BRB.InstanceLabel n
+      (APSet n X)) := rfl
 
 /-- Only the silent label of the composition reaches the silent label of an
 input instance. -/
-theorem inPull_eq_tau {n : ℕ} {X : Type} {k : Fin n} {l : GaLab n X}
-    (h : inPull n X k l = some (Silent.τ : BRB.InstLab n X)) : l = Silent.τ := by
+theorem inputBroadcastLabelMap_eq_tau {n : ℕ} {X : Type} {k : Fin n} {l : GatherLabel n X}
+    (h : inputBroadcastLabelMap n X k l = some (Silent.τ : BRB.InstanceLabel n X)) : l = Silent.τ :=
+      by
   rcases l with (l | e) | e
-  · cases l <;> simp_all [inPull]
-  · cases e; simp_all [inPull]
-  · cases e <;> simp_all [inPull]
+  · cases l <;> simp_all [inputBroadcastLabelMap]
+  · cases e; simp_all [inputBroadcastLabelMap]
+  · cases e <;> simp_all [inputBroadcastLabelMap]
 
 /-- Only the silent label of the composition reaches the silent label of a bind
 instance. -/
-theorem bindPull_eq_tau {n : ℕ} {X : Type} {q : Fin n} {l : GaLab n X}
-    (h : bindPull n X q l = some (Silent.τ : BRB.InstLab n (APSet n X))) : l = Silent.τ := by
+theorem bindBroadcastLabelMap_eq_tau {n : ℕ} {X : Type} {q : Fin n} {l : GatherLabel n X}
+    (h : bindBroadcastLabelMap n X q l = some (Silent.τ : BRB.InstanceLabel n (APSet n X))) : l =
+      Silent.τ := by
   rcases l with (l | e) | e
-  · cases l <;> simp_all [bindPull]
-  · cases e; simp_all [bindPull]
-  · cases e <;> simp_all [bindPull]
+  · cases l <;> simp_all [bindBroadcastLabelMap]
+  · cases e; simp_all [bindBroadcastLabelMap]
+  · cases e <;> simp_all [bindBroadcastLabelMap]
 
 section Rules
 
@@ -277,29 +285,29 @@ instance's return the write of the store. -/
 
 /-- The step relation of the gather program of process `j`. All transitions are
 Dirac. -/
-inductive ProcStep (P : Params) (j : Fin P.n) :
-    LocalState P.n (ProcRec P.n X) (GaMsg P.n X) → GaLab P.n X →
+inductive ProgramStep (P : Params) (j : Fin P.n) :
+    LocalState P.n (ProcRec P.n X) (GaMsg P.n X) → GatherLabel P.n X →
       PMF (LocalState P.n (ProcRec P.n X) (GaMsg P.n X)) → Prop
   /-- The call arrives: record the payload. -/
   | call (p) (x : X) (h : p.proc.input = none) :
-      ProcStep P j p (Sum.inl (Sum.inl (.call j x)))
+      ProgramStep P j p (Sum.inl (Sum.inl (.call j x)))
         (PMF.pure (p.setP { p.proc with input := some x }))
   /-- A call at another process is not `j`'s business. -/
   | callIdle (p) (i : Fin P.n) (x : X) (hi : i ≠ j) :
-      ProcStep P j p (Sum.inl (Sum.inl (.call i x))) (PMF.pure p)
+      ProgramStep P j p (Sum.inl (Sum.inl (.call i x))) (PMF.pure p)
   /-- The call loop: the record does not move. -/
   | callLoop (p) (x : X) :
-      ProcStep P j p (Sum.inl (Sum.inr (.callLoop j x))) (PMF.pure p)
+      ProgramStep P j p (Sum.inl (Sum.inr (.callLoop j x))) (PMF.pure p)
   /-- A call loop at another process is not `j`'s business. -/
   | callLoopIdle (p) (i : Fin P.n) (x : X) (hi : i ≠ j) :
-      ProcStep P j p (Sum.inl (Sum.inr (.callLoop i x))) (PMF.pure p)
+      ProgramStep P j p (Sum.inl (Sum.inr (.callLoop i x))) (PMF.pure p)
   /-- `ECHO`: `j` is called and its accepted pairs number at least `n − f`, the
   source blueprint's `|AP| ≥ n − f`. The payload is those pairs, `T_i ← AP_i` of
   AFW25's Algorithm 5, line 9. -/
   | sndEcho (p) (hin : p.proc.input ≠ none)
       (hcard : P.n - P.f ≤ p.proc.accepted.card)
       (hsend : p.proc.sentEcho = none) :
-      ProcStep P j p (Sum.inr (.snd j (.echo p.proc.accepted)))
+      ProgramStep P j p (Sum.inr (.send j (.echo p.proc.accepted)))
         (PMF.pure (p.setP { p.proc with sentEcho := some p.proc.accepted }))
   /-- `VOTE U`: `n − f` senders' approved `ECHO` payloads, each contained in
   `U`, are delivered here, and `j` has multicast its own `ECHO`. The main thread
@@ -310,24 +318,24 @@ inductive ProcStep (P : Params) (j : Fin P.n) :
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ A, GaMsg.echo A ∈ p.recv q ∧ approvedBy p.proc A ∧ A ⊆ U)
       (hsend : p.proc.sentVote = none) :
-      ProcStep P j p (Sum.inr (.snd j (.vote U)))
+      ProgramStep P j p (Sum.inr (.send j (.vote U)))
         (PMF.pure (p.setP { p.proc with sentVote := some U }))
   /-- A multicast by another process is not `j`'s business. -/
   | sndIdle (p) (i : Fin P.n) (m : GaMsg P.n X) (hi : i ≠ j) :
-      ProcStep P j p (Sum.inr (.snd i m)) (PMF.pure p)
+      ProgramStep P j p (Sum.inr (.send i m)) (PMF.pure p)
   /-- Delivery, receiver's half: file the message under the sender's row. -/
   | dlvRecv (p) (i : Fin P.n) (m : GaMsg P.n X) :
-      ProcStep P j p (Sum.inr (.dlv j i m)) (PMF.pure (p.deliverTo i m))
+      ProgramStep P j p (Sum.inr (.deliver j i m)) (PMF.pure (p.deliverTo i m))
   /-- A delivery to another process is not `j`'s business. -/
   | dlvIdle (p) (i k : Fin P.n) (m : GaMsg P.n X) (hi : i ≠ j) :
-      ProcStep P j p (Sum.inr (.dlv i k m)) (PMF.pure p)
+      ProgramStep P j p (Sum.inr (.deliver i k m)) (PMF.pure p)
   /-- An input instance returns here: write the store. -/
   | inRetRecv (p) (k : Fin P.n) (v : X) :
-      ProcStep P j p (Sum.inr (.inRet k j v))
+      ProgramStep P j p (Sum.inr (.inRet k j v))
         (PMF.pure (p.setP { p.proc with delivIn := Function.update p.proc.delivIn k (some v) }))
   /-- An input instance's return to another process is not `j`'s business. -/
   | inRetIdle (p) (k i : Fin P.n) (v : X) (hi : i ≠ j) :
-      ProcStep P j p (Sum.inr (.inRet k i v)) (PMF.pure p)
+      ProgramStep P j p (Sum.inr (.inRet k i v)) (PMF.pure p)
   /-- `BIND U`: `n − f` senders' approved `VOTE` payloads, each contained in
   `U`, are delivered here, `j` has multicast its own `VOTE`, and `j` has not
   called its own bind broadcast. The main thread of AFW25's Algorithm 5 sends
@@ -340,18 +348,18 @@ inductive ProcStep (P : Params) (j : Fin P.n) :
       (happ : approvedBy p.proc U)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ W, GaMsg.vote W ∈ p.recv q ∧ approvedBy p.proc W ∧ W ⊆ U) :
-      ProcStep P j p (Sum.inr (.bindCall j U))
+      ProgramStep P j p (Sum.inr (.bindCall j U))
         (PMF.pure (p.setP { p.proc with sentBind := some U }))
   /-- Another process's bind call is not `j`'s business. -/
   | bindCallIdle (p) (i : Fin P.n) (U : APSet P.n X) (hi : i ≠ j) :
-      ProcStep P j p (Sum.inr (.bindCall i U)) (PMF.pure p)
+      ProgramStep P j p (Sum.inr (.bindCall i U)) (PMF.pure p)
   /-- A bind instance returns here: write the store. -/
   | bindRetRecv (p) (q : Fin P.n) (U : APSet P.n X) :
-      ProcStep P j p (Sum.inr (.bindRet q j U))
+      ProgramStep P j p (Sum.inr (.bindRet q j U))
         (PMF.pure (p.setP { p.proc with delivBind := Function.update p.proc.delivBind q (some U) }))
   /-- A bind instance's return to another process is not `j`'s business. -/
   | bindRetIdle (p) (q i : Fin P.n) (U : APSet P.n X) (hi : i ≠ j) :
-      ProcStep P j p (Sum.inr (.bindRet q i U)) (PMF.pure p)
+      ProgramStep P j p (Sum.inr (.bindRet q i U)) (PMF.pure p)
   /-- Return: the output's entries are held here, `n − f` bind payloads held
   here are sub-maps of it, and `j` has called its own bind broadcast. The `BIND`
   broadcast of AFW25's Algorithm 5, line 17, precedes the wait of line 18. The
@@ -362,15 +370,15 @@ inductive ProcStep (P : Params) (j : Fin P.n) :
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ U, holdsBind p.proc q U ∧ APSet.subMap U g)
       (hr : p.proc.returned = false) :
-      ProcStep P j p (Sum.inl (Sum.inl (.ret j g C)))
+      ProgramStep P j p (Sum.inl (Sum.inl (.ret j g C)))
         (PMF.pure (p.setP { p.proc with returned := true }))
   /-- A return at another process is not `j`'s business. -/
   | retIdle (p) (i : Fin P.n) (g : Fin P.n → Option X) (C : APSet P.n X) (hi : i ≠ j) :
-      ProcStep P j p (Sum.inl (Sum.inl (.ret i g C))) (PMF.pure p)
+      ProgramStep P j p (Sum.inl (Sum.inl (.ret i g C))) (PMF.pure p)
   /-- Corruption is the network's own write, and the local records are
   corruption-blind (D1). -/
   | failIdle (p) (i : Fin P.n) :
-      ProcStep P j p (Sum.inl (Sum.inl (.fail i))) (PMF.pure p)
+      ProgramStep P j p (Sum.inl (Sum.inl (.fail i))) (PMF.pure p)
 
 /-! ### The gather network
 
@@ -380,77 +388,78 @@ in every gather multicast and delivery, it is where a corrupted sender's
 injections enter (D5), and it writes the core at the first return. -/
 
 /-- The step relation of the gather network. All transitions are Dirac. -/
-inductive NetStep (P : Params) :
-    GaNetState P.n X → GaLab P.n X → PMF (GaNetState P.n X) → Prop
+inductive NetworkStep (P : Params) :
+    GaNetState P.n X → GatherLabel P.n X → PMF (GaNetState P.n X) → Prop
   /-- A call sends nothing. -/
   | call (w) (id : Fin P.n) (x : X) :
-      NetStep P w (Sum.inl (Sum.inl (.call id x))) (PMF.pure w)
+      NetworkStep P w (Sum.inl (Sum.inl (.call id x))) (PMF.pure w)
   /-- A call loop sends nothing. -/
   | callLoop (w) (id : Fin P.n) (x : X) :
-      NetStep P w (Sum.inl (Sum.inr (.callLoop id x))) (PMF.pure w)
+      NetworkStep P w (Sum.inl (Sum.inr (.callLoop id x))) (PMF.pure w)
   /-- The network's half of a multicast: record the message under its sender. -/
-  | snd (w) (j : Fin P.n) (m : GaMsg P.n X) :
-      NetStep P w (Sum.inr (.snd j m)) (PMF.pure { w with net := w.net.post j m })
+  | send (w) (j : Fin P.n) (m : GaMsg P.n X) :
+      NetworkStep P w (Sum.inr (.send j m)) (PMF.pure { w with net := w.net.post j m })
   /-- The network's half of a delivery: the message must be sent under the
   named sender, and delivery does not consume it (D5). -/
-  | dlv (w) (i j : Fin P.n) (m : GaMsg P.n X) (h : m ∈ w.net.sent j) :
-      NetStep P w (Sum.inr (.dlv i j m)) (PMF.pure w)
+  | deliver (w) (i j : Fin P.n) (m : GaMsg P.n X) (h : m ∈ w.net.sent j) :
+      NetworkStep P w (Sum.inr (.deliver i j m)) (PMF.pure w)
   /-- Byzantine injection: a corrupted sender multicasts anything, at any time
   (D5). -/
-  | byz (w) (j : Fin P.n) (m : GaMsg P.n X) (h : j ∈ w.net.F) :
-      NetStep P w (Sum.inl (Sum.inl .tau)) (PMF.pure { w with net := w.net.post j m })
+  | byzantine (w) (j : Fin P.n) (m : GaMsg P.n X) (h : j ∈ w.net.F) :
+      NetworkStep P w (Sum.inl (Sum.inl .tau)) (PMF.pure { w with net := w.net.post j m })
   /-- An input instance's return sends nothing. -/
   | inRetIdle (w) (k j : Fin P.n) (v : X) :
-      NetStep P w (Sum.inr (.inRet k j v)) (PMF.pure w)
+      NetworkStep P w (Sum.inr (.inRet k j v)) (PMF.pure w)
   /-- A bind call sends nothing. -/
   | bindCallIdle (w) (j : Fin P.n) (U : APSet P.n X) :
-      NetStep P w (Sum.inr (.bindCall j U)) (PMF.pure w)
+      NetworkStep P w (Sum.inr (.bindCall j U)) (PMF.pure w)
   /-- A bind instance's return sends nothing. -/
   | bindRetIdle (w) (q j : Fin P.n) (U : APSet P.n X) :
-      NetStep P w (Sum.inr (.bindRet q j U)) (PMF.pure w)
+      NetworkStep P w (Sum.inr (.bindRet q j U)) (PMF.pure w)
   /-- Return: the label carries the core, which this row writes if it is
   unwritten. -/
   | ret (w) (id : Fin P.n) (g : Fin P.n → Option X) :
-      NetStep P w (Sum.inl (Sum.inl (.ret id g (w.core.getD (coreOfNet P w.net)))))
+      NetworkStep P w (Sum.inl (Sum.inl (.ret id g (w.core.getD (coreOfNet P w.net)))))
         (PMF.pure { w with core := some (w.core.getD (coreOfNet P w.net)) })
   /-- Corruption (deviation D1). -/
   | fail (w) (i : Fin P.n) :
-      NetStep P w (Sum.inl (Sum.inl (.fail i))) (PMF.pure { w with net := w.net.corrupt P i })
+      NetworkStep P w (Sum.inl (Sum.inl (.fail i))) (PMF.pure { w with net := w.net.corrupt P i })
 
 /-! ### The two tiers -/
 
 /-- The gather program of process `j`. -/
-noncomputable def gaProc (P : Params) (j : Fin P.n) :
-    System (LocalState P.n (ProcRec P.n X) (GaMsg P.n X)) (GaLab P.n X) where
+noncomputable def gatherProgram (P : Params) (j : Fin P.n) :
+    System (LocalState P.n (ProcRec P.n X) (GaMsg P.n X)) (GatherLabel P.n X) where
   init := LocalState.initial P.n (GaMsg P.n X) (ProcRec.initial P.n X)
-  step := ProcStep P j
+  step := ProgramStep P j
 
-@[simp] theorem gaProc_init (P : Params) (j : Fin P.n) :
-    (gaProc P j (X := X)).init = LocalState.initial P.n (GaMsg P.n X) (ProcRec.initial P.n X) :=
+@[simp] theorem gatherProgram_init (P : Params) (j : Fin P.n) :
+    (gatherProgram P j (X := X)).init = LocalState.initial P.n (GaMsg P.n X) (ProcRec.initial P.n X)
+      :=
   rfl
 
-@[simp] theorem gaProc_step (P : Params) (j : Fin P.n)
-    (p : LocalState P.n (ProcRec P.n X) (GaMsg P.n X)) (l : GaLab P.n X)
+@[simp] theorem gatherProgram_step (P : Params) (j : Fin P.n)
+    (p : LocalState P.n (ProcRec P.n X) (GaMsg P.n X)) (l : GatherLabel P.n X)
     (ν : PMF (LocalState P.n (ProcRec P.n X) (GaMsg P.n X))) :
-    (gaProc P j).step p l ν ↔ ProcStep P j p l ν := Iff.rfl
+    (gatherProgram P j).step p l ν ↔ ProgramStep P j p l ν := Iff.rfl
 
 /-- The gather network. -/
-noncomputable def gaNet (P : Params) (X : Type) [DecidableEq X] :
-    System (GaNetState P.n X) (GaLab P.n X) where
+noncomputable def gatherNetwork (P : Params) (X : Type) [DecidableEq X] :
+    System (GaNetState P.n X) (GatherLabel P.n X) where
   init := GaNetState.initial P.n X
-  step := NetStep P
+  step := NetworkStep P
 
-@[simp] theorem gaNet_init (P : Params) :
-    (gaNet P X).init = GaNetState.initial P.n X := rfl
+@[simp] theorem gatherNetwork_init (P : Params) :
+    (gatherNetwork P X).init = GaNetState.initial P.n X := rfl
 
-@[simp] theorem gaNet_step (P : Params) (w : GaNetState P.n X) (l : GaLab P.n X)
-    (μ : PMF (GaNetState P.n X)) : (gaNet P X).step w l μ ↔ NetStep P w l μ := Iff.rfl
+@[simp] theorem gatherNetwork_step (P : Params) (w : GaNetState P.n X) (l : GatherLabel P.n X)
+    (μ : PMF (GaNetState P.n X)) : (gatherNetwork P X).step w l μ ↔ NetworkStep P w l μ := Iff.rfl
 
 /-- The gather tier: the programs beside the gather network. -/
 noncomputable def gaPart (P : Params) (X : Type) [DecidableEq X] :
     System ((∀ _ : Fin P.n, LocalState P.n (ProcRec P.n X) (GaMsg P.n X)) × GaNetState P.n X)
-      (GaLab P.n X) :=
-  (System.syncProduct (gaProc P (X := X))).parallel (gaNet P X)
+      (GatherLabel P.n X) :=
+  (System.syncProduct (gatherProgram P (X := X))).parallel (gatherNetwork P X)
 
 /-- The state of the composition whose broadcast instances have state `B` for
 the inputs and `B'` for the `BIND` payloads. -/
@@ -461,57 +470,58 @@ abbrev SubStateAt (n : ℕ) (X B B' : Type) : Type :=
 /-- The gather tier beside the broadcast tier, over the instance-internal
 alphabet. -/
 noncomputable def preAt (P : Params) (X : Type) [DecidableEq X] {B B' : Type}
-    (BIn : ∀ _ : Fin P.n, System B (BRB.InstLab P.n X))
-    (BBind : ∀ _ : Fin P.n, System B' (BRB.InstLab P.n (APSet P.n X))) :
-    System (SubStateAt P.n X B B') (GaLab P.n X) :=
+    (BIn : ∀ _ : Fin P.n, System B (BRB.InstanceLabel P.n X))
+    (BBind : ∀ _ : Fin P.n, System B' (BRB.InstanceLabel P.n (APSet P.n X))) :
+    System (SubStateAt P.n X B B') (GatherLabel P.n X) :=
   (gaPart P X).parallel
-    ((System.syncProduct (fun k => (BIn k).mapIdle (inPull P.n X k))).parallel
-      (System.syncProduct (fun q => (BBind q).mapIdle (bindPull P.n X q))))
+    ((System.syncProduct (fun k => (BIn k).mapIdle (inputBroadcastLabelMap P.n X k))).parallel
+      (System.syncProduct (fun q => (BBind q).mapIdle (bindBroadcastLabelMap P.n X q))))
 
 /-- **The gather instance** over the broadcast tier `BIn`, `BBind`: the two
 tiers in parallel, the instance's events hidden, the result read back over the
 interface alphabet. -/
 noncomputable def instAt (P : Params) (X : Type) [DecidableEq X] {B B' : Type}
-    (BIn : ∀ _ : Fin P.n, System B (BRB.InstLab P.n X))
-    (BBind : ∀ _ : Fin P.n, System B' (BRB.InstLab P.n (APSet P.n X))) :
-    System (SubStateAt P.n X B B') (InstLab P.n X) :=
-  ((preAt P X BIn BBind).abstract (gaEvents P.n X)).relabel
+    (BIn : ∀ _ : Fin P.n, System B (BRB.InstanceLabel P.n X))
+    (BBind : ∀ _ : Fin P.n, System B' (BRB.InstanceLabel P.n (APSet P.n X))) :
+    System (SubStateAt P.n X B B') (InstanceLabel P.n X) :=
+  ((preAt P X BIn BBind).abstract (gatherEvents P.n X)).relabel
 
 /-- The state of the gather instance over Bracha's broadcast. -/
-abbrev LowState (n : ℕ) (X : Type) : Type :=
-  SubStateAt n X (BRB.ImplState n X) (BRB.ImplState n (APSet n X))
+abbrev StateOverBracha (n : ℕ) (X : Type) : Type :=
+  SubStateAt n X (BRB.BrachaState n X) (BRB.BrachaState n (APSet n X))
 
 /-- The state of the gather instance over the broadcast specification. -/
-abbrev IdealState (n : ℕ) (X : Type) : Type :=
+abbrev StateOverBroadcastSpecification (n : ℕ) (X : Type) : Type :=
   SubStateAt n X (BRB.SpecState n X) (BRB.SpecState n (APSet n X))
 
 /-- **The gather instance over Bracha's broadcast.** -/
-noncomputable def lowInst (P : Params) (X : Type) [DecidableEq X] :
-    System (LowState P.n X) (InstLab P.n X) :=
-  instAt P X (fun k => BRB.implInst P k X) (fun q => BRB.implInst P q (APSet P.n X))
+noncomputable def instanceOverBracha (P : Params) (X : Type) [DecidableEq X] :
+    System (StateOverBracha P.n X) (InstanceLabel P.n X) :=
+  instAt P X (fun k => BRB.brachaInstance P k X) (fun q => BRB.brachaInstance P q (APSet P.n X))
 
 /-- **The gather instance over the broadcast specification.** -/
-noncomputable def idealInst (P : Params) (X : Type) [DecidableEq X] :
-    System (IdealState P.n X) (InstLab P.n X) :=
-  instAt P X (fun k => BRB.liftedSpec P k X) (fun q => BRB.liftedSpec P q (APSet P.n X))
+noncomputable def instanceOverBroadcastSpecification (P : Params) (X : Type) [DecidableEq X] :
+    System (StateOverBroadcastSpecification P.n X) (InstanceLabel P.n X) :=
+  instAt P X (fun k => BRB.specificationOverInstanceAlphabet P k X) (fun q =>
+    BRB.specificationOverInstanceAlphabet P q (APSet P.n X))
 
 @[simp] theorem instAt_init (P : Params) {B B' : Type}
-    (BIn : ∀ _ : Fin P.n, System B (BRB.InstLab P.n X))
-    (BBind : ∀ _ : Fin P.n, System B' (BRB.InstLab P.n (APSet P.n X))) :
+    (BIn : ∀ _ : Fin P.n, System B (BRB.InstanceLabel P.n X))
+    (BBind : ∀ _ : Fin P.n, System B' (BRB.InstanceLabel P.n (APSet P.n X))) :
     (instAt P X BIn BBind).init =
       (((fun _ => LocalState.initial P.n (GaMsg P.n X) (ProcRec.initial P.n X)),
         GaNetState.initial P.n X),
         ((fun k => (BIn k).init), (fun q => (BBind q).init))) := rfl
 
-@[simp] theorem lowInst_init (P : Params) :
-    (lowInst P X).init =
+@[simp] theorem instanceOverBracha_init (P : Params) :
+    (instanceOverBracha P X).init =
       (((fun _ => LocalState.initial P.n (GaMsg P.n X) (ProcRec.initial P.n X)),
         GaNetState.initial P.n X),
-        ((fun _ => BRB.ImplState.initial P.n X),
-          (fun _ => BRB.ImplState.initial P.n (APSet P.n X)))) := rfl
+        ((fun _ => BRB.BrachaState.initial P.n X),
+          (fun _ => BRB.BrachaState.initial P.n (APSet P.n X)))) := rfl
 
-@[simp] theorem idealInst_init (P : Params) :
-    (idealInst P X).init =
+@[simp] theorem instanceOverBroadcastSpecification_init (P : Params) :
+    (instanceOverBroadcastSpecification P X).init =
       (((fun _ => LocalState.initial P.n (GaMsg P.n X) (ProcRec.initial P.n X)),
         GaNetState.initial P.n X),
         ((fun _ => BRB.SpecState.initial P.n X),
@@ -618,7 +628,7 @@ end Views
 
 /-- A payload set is approved at the ideal tier when every pair is a committed
 entry of the input instance that carries it. -/
-def approved {n : ℕ} (s : IdealState n X) (A : APSet n X) : Prop :=
+def approved {n : ℕ} (s : StateOverBroadcastSpecification n X) (A : APSet n X) : Prop :=
   A.subMap (fun k => (brbIn s k).val)
 
 section Determinacy
@@ -632,34 +642,35 @@ the broadcast tier is. -/
 
 /-- Every gather program transition is Dirac. -/
 theorem procStep_dirac {P : Params} {j : Fin P.n} {p : LocalState P.n (ProcRec P.n X) (GaMsg P.n X)}
-    {l : GaLab P.n X} {ν : PMF (LocalState P.n (ProcRec P.n X) (GaMsg P.n X))}
-    (h : ProcStep P j p l ν) : ∃ p', ν = PMF.pure p' := by
+    {l : GatherLabel P.n X} {ν : PMF (LocalState P.n (ProcRec P.n X) (GaMsg P.n X))}
+    (h : ProgramStep P j p l ν) : ∃ p', ν = PMF.pure p' := by
   cases h <;> exact ⟨_, rfl⟩
 
 /-- Every gather network transition is Dirac. -/
-theorem netStep_dirac {P : Params} {w : GaNetState P.n X} {l : GaLab P.n X}
-    {μ : PMF (GaNetState P.n X)} (h : NetStep P w l μ) : ∃ w', μ = PMF.pure w' := by
+theorem netStep_dirac {P : Params} {w : GaNetState P.n X} {l : GatherLabel P.n X}
+    {μ : PMF (GaNetState P.n X)} (h : NetworkStep P w l μ) : ∃ w', μ = PMF.pure w' := by
   cases h <;> exact ⟨_, rfl⟩
 
 /-- A gather program is an LTS. -/
-theorem gaProc_isLTS (P : Params) (j : Fin P.n) : (gaProc P j (X := X)).IsLTS :=
+theorem gatherProgram_isLTS (P : Params) (j : Fin P.n) : (gatherProgram P j (X := X)).IsLTS :=
   fun _ _ _ h => procStep_dirac h
 
 /-- The gather network is an LTS. -/
-theorem gaNet_isLTS (P : Params) : (gaNet P X).IsLTS := fun _ _ _ h => netStep_dirac h
+theorem gatherNetwork_isLTS (P : Params) : (gatherNetwork P X).IsLTS := fun _ _ _ h => netStep_dirac
+  h
 
 /-- The synchronised group of gather programs is an LTS. -/
-theorem syncGa_isLTS (P : Params) : (System.syncProduct (gaProc P (X := X))).IsLTS :=
-  System.syncProduct_isLTS (gaProc_isLTS P)
+theorem syncGa_isLTS (P : Params) : (System.syncProduct (gatherProgram P (X := X))).IsLTS :=
+  System.syncProduct_isLTS (gatherProgram_isLTS P)
 
 /-- The gather tier is an LTS. -/
 theorem gaPart_isLTS (P : Params) : (gaPart P X).IsLTS :=
-  System.parallel_isLTS (syncGa_isLTS P) (gaNet_isLTS P)
+  System.parallel_isLTS (syncGa_isLTS P) (gatherNetwork_isLTS P)
 
 /-- The two tiers in parallel form an LTS. -/
 theorem preAt_isLTS (P : Params) {B B' : Type}
-    {BIn : ∀ _ : Fin P.n, System B (BRB.InstLab P.n X)}
-    {BBind : ∀ _ : Fin P.n, System B' (BRB.InstLab P.n (APSet P.n X))}
+    {BIn : ∀ _ : Fin P.n, System B (BRB.InstanceLabel P.n X)}
+    {BBind : ∀ _ : Fin P.n, System B' (BRB.InstanceLabel P.n (APSet P.n X))}
     (hIn : ∀ k, (BIn k).IsLTS) (hBind : ∀ q, (BBind q).IsLTS) :
     (preAt P X BIn BBind).IsLTS :=
   System.parallel_isLTS (gaPart_isLTS P)
@@ -669,19 +680,21 @@ theorem preAt_isLTS (P : Params) {B B' : Type}
 
 /-- The gather instance is an LTS. -/
 theorem instAt_isLTS (P : Params) {B B' : Type}
-    {BIn : ∀ _ : Fin P.n, System B (BRB.InstLab P.n X)}
-    {BBind : ∀ _ : Fin P.n, System B' (BRB.InstLab P.n (APSet P.n X))}
+    {BIn : ∀ _ : Fin P.n, System B (BRB.InstanceLabel P.n X)}
+    {BBind : ∀ _ : Fin P.n, System B' (BRB.InstanceLabel P.n (APSet P.n X))}
     (hIn : ∀ k, (BIn k).IsLTS) (hBind : ∀ q, (BBind q).IsLTS) :
     (instAt P X BIn BBind).IsLTS :=
   System.relabel_isLTS (System.abstract_isLTS (preAt_isLTS P hIn hBind) _)
 
 /-- The gather instance over Bracha's broadcast is an LTS. -/
-theorem lowInst_isLTS (P : Params) : (lowInst P X).IsLTS :=
-  instAt_isLTS P (fun k => BRB.implInst_isLTS P k) (fun q => BRB.implInst_isLTS P q)
+theorem instanceOverBracha_isLTS (P : Params) : (instanceOverBracha P X).IsLTS :=
+  instAt_isLTS P (fun k => BRB.brachaInstance_isLTS P k) (fun q => BRB.brachaInstance_isLTS P q)
 
 /-- The gather instance over the broadcast specification is an LTS. -/
-theorem idealInst_isLTS (P : Params) : (idealInst P X).IsLTS :=
-  instAt_isLTS P (fun k => BRB.liftedSpec_isLTS P k) (fun q => BRB.liftedSpec_isLTS P q)
+theorem instanceOverBroadcastSpecification_isLTS (P : Params) : (instanceOverBroadcastSpecification
+  P X).IsLTS :=
+  instAt_isLTS P (fun k => BRB.specificationOverInstanceAlphabet_isLTS P k) (fun q =>
+    BRB.specificationOverInstanceAlphabet_isLTS P q)
 
 /-- No gather program rule fires on `τ`: a program only ever moves in an event
 or on one of the interface labels. The composition's silent transitions are
@@ -690,120 +703,132 @@ tier's own silent steps. -/
 theorem procStep_no_tau {P : Params} {j : Fin P.n}
     {p : LocalState P.n (ProcRec P.n X) (GaMsg P.n X)}
     {ν : PMF (LocalState P.n (ProcRec P.n X) (GaMsg P.n X))}
-    (h : ProcStep P j p (Silent.τ : GaLab P.n X) ν) : False := by
+    (h : ProgramStep P j p (Silent.τ : GatherLabel P.n X) ν) : False := by
   rw [galab_tau] at h; cases h
 
 end Determinacy
 
 /-! ### The specification read over the instance's interface
 
-The specification speaks `Lab n X`; the instance speaks `InstLab n X`, in which
-the call loop is a label of its own. `specPull` identifies the loop with the
+The specification speaks `Label n X`; the instance speaks `InstanceLabel n X`, in which
+the call loop is a label of its own. `specificationLabelMap` identifies the loop with the
 specification label it stands for, so that the specification's own loop row
 answers it. -/
 
 /-- The projection of the interface alphabet onto the specification's
 alphabet. -/
-def specPull (n : ℕ) (X : Type) : InstLab n X → Option (Lab n X)
+def specificationLabelMap (n : ℕ) (X : Type) : InstanceLabel n X → Option (Label n X)
   | Sum.inl l => some l
   | Sum.inr (.callLoop id x) => some (.call id x)
 
-@[simp] theorem specPull_inl {n : ℕ} (l : Lab n X) : specPull n X (Sum.inl l) = some l := rfl
+@[simp] theorem specificationLabelMap_inl {n : ℕ} (l : Label n X) : specificationLabelMap n X
+  (Sum.inl l) = some l := rfl
 
-@[simp] theorem specPull_callLoop {n : ℕ} (id : Fin n) (x : X) :
-    specPull n X (Sum.inr (.callLoop id x)) = some (.call id x) := rfl
+@[simp] theorem specificationLabelMap_callLoop {n : ℕ} (id : Fin n) (x : X) :
+    specificationLabelMap n X (Sum.inr (.callLoop id x)) = some (.call id x) := rfl
 
 /-- The silent label projects to the silent label. -/
-@[simp] theorem specPull_tau (n : ℕ) (X : Type) :
-    specPull n X (Silent.τ : InstLab n X) = some (Silent.τ : Lab n X) := rfl
+@[simp] theorem specificationLabelMap_tau (n : ℕ) (X : Type) :
+    specificationLabelMap n X (Silent.τ : InstanceLabel n X) = some (Silent.τ : Label n X) := rfl
 
 /-- Only the silent label projects to the silent label: the call loop projects
 to the call. -/
-theorem specPull_eq_tau {n : ℕ} {l : InstLab n X} (h : specPull n X l = some Lab.tau) :
-    l = Sum.inl Lab.tau := by
+theorem specificationLabelMap_eq_tau {n : ℕ} {l : InstanceLabel n X} (h : specificationLabelMap n X
+  l = some Label.tau) :
+    l = Sum.inl Label.tau := by
   cases l with
   | inl l₀ => rw [Option.some.inj h]
   | inr e => cases e; simp at h
 
 /-- Every interface label carries a specification label. -/
-theorem specPull_isSome {n : ℕ} (l : InstLab n X) : ∃ l₀, specPull n X l = some l₀ := by
-  cases l with
+theorem specificationLabelMap_isSome {n : ℕ} (l : InstanceLabel n X) : ∃ l₀,
+  specificationLabelMap n X l = some l₀ := by cases l with
   | inl l₀ => exact ⟨l₀, rfl⟩
   | inr e => cases e; exact ⟨_, rfl⟩
 
 /-- **The lifted specification**: the gather specification read over the
 instance's interface. -/
-noncomputable def liftedSpec (P : Params) (X : Type) [DecidableEq X] :
-    System (SpecState P.n X) (InstLab P.n X) :=
-  (specInst P X).mapIdle (specPull P.n X)
+noncomputable def specificationOverInstanceAlphabet (P : Params) (X : Type) [DecidableEq X] :
+    System (SpecState P.n X) (InstanceLabel P.n X) :=
+  (specInst P X).mapIdle (specificationLabelMap P.n X)
 
-@[simp] theorem liftedSpec_init (P : Params) [DecidableEq X] :
-    (liftedSpec P X).init = SpecState.initial P.n X := rfl
+@[simp] theorem specificationOverInstanceAlphabet_init (P : Params) [DecidableEq X] :
+    (specificationOverInstanceAlphabet P X).init = SpecState.initial P.n X := rfl
 
 /-- The lifted specification is an LTS: the specification is, and reading it
 back adds only Dirac self-loops. -/
-theorem liftedSpec_isLTS (P : Params) [DecidableEq X] : (liftedSpec P X).IsLTS :=
+theorem specificationOverInstanceAlphabet_isLTS (P : Params) [DecidableEq X] :
+  (specificationOverInstanceAlphabet P X).IsLTS :=
   System.mapIdle_isLTS _ (specInst_isLTS P)
 
 /-! ### Weak runs of the lifted specification
 
-A weak run of the specification is read back along a section of `specPull`. The
+A weak run of the specification is read back along a section of `specificationLabelMap`. The
 section sends every label to its own copy on the left, except the one label the
 instance's step projects from, which is sent to the interface label the instance
 actually took. -/
 
 /-- The left injection: the interface label a specification label sits at. -/
-def sect {n : ℕ} : Lab n X → InstLab n X := Sum.inl
+def labelSection {n : ℕ} : Label n X → InstanceLabel n X := Sum.inl
 
 open scoped Classical in
-/-- The section of `specPull` that answers the interface label `l` over the
+/-- The section of `specificationLabelMap` that answers the interface label `l` over the
 specification label `l₀`. -/
-noncomputable def sectAt {n : ℕ} (l₀ : Lab n X) (l : InstLab n X) : Lab n X → InstLab n X :=
-  fun x => if x = l₀ then l else sect x
+noncomputable def sectionAt {n : ℕ} (l₀ : Label n X) (l : InstanceLabel n X) : Label n X →
+  InstanceLabel n X :=
+  fun x => if x = l₀ then l else labelSection x
 
-@[simp] theorem specPull_sect {n : ℕ} (x : Lab n X) : specPull n X (sect x) = some x := rfl
+@[simp] theorem specificationLabelMap_labelSection {n : ℕ} (x : Label n X) : specificationLabelMap n
+  X (labelSection x) = some x := rfl
 
 /-- The left injection reflects the silent label. -/
-theorem sect_eq_tau {n : ℕ} (x : Lab n X) :
-    (sect x : InstLab n X) = (Silent.τ : InstLab n X) ↔ x = (Silent.τ : Lab n X) :=
+theorem labelSection_eq_tau {n : ℕ} (x : Label n X) :
+    (labelSection x : InstanceLabel n X) = (Silent.τ : InstanceLabel n X) ↔ x = (Silent.τ : Label n
+      X) :=
   inl_eq_tau_iff x
 
-theorem specPull_sectAt {n : ℕ} {l₀ : Lab n X} {l : InstLab n X}
-    (hl : specPull n X l = some l₀) (x : Lab n X) : specPull n X (sectAt l₀ l x) = some x := by
-  unfold sectAt
+theorem specificationLabelMap_sectionAt {n : ℕ} {l₀ : Label n X} {l : InstanceLabel n X}
+    (hl : specificationLabelMap n X l = some l₀) (x : Label n X) : specificationLabelMap n X
+      (sectionAt l₀ l x) = some x := by
+  unfold sectionAt
   by_cases hx : x = l₀
   · rw [if_pos hx, hl, hx]
-  · rw [if_neg hx, specPull_sect]
+  · rw [if_neg hx, specificationLabelMap_labelSection]
 
-theorem sectAt_tau {n : ℕ} {l₀ : Lab n X} {l : InstLab n X} (hl : specPull n X l = some l₀)
-    (hl₀ : l₀ ≠ (Silent.τ : Lab n X)) (x : Lab n X) :
-    sectAt l₀ l x = (Silent.τ : InstLab n X) ↔ x = (Silent.τ : Lab n X) := by
-  unfold sectAt
+theorem sectionAt_tau {n : ℕ} {l₀ : Label n X} {l : InstanceLabel n X} (hl : specificationLabelMap n
+  X l = some l₀)
+    (hl₀ : l₀ ≠ (Silent.τ : Label n X)) (x : Label n X) :
+    sectionAt l₀ l x = (Silent.τ : InstanceLabel n X) ↔ x = (Silent.τ : Label n X) := by
+  unfold sectionAt
   by_cases hx : x = l₀
   · rw [if_pos hx, hx]
     constructor
     · intro hlτ
-      have h2 : some l₀ = some (Silent.τ : Lab n X) := by rw [← hl, hlτ]; rfl
+      have h2 : some l₀ = some (Silent.τ : Label n X) := by rw [← hl, hlτ]; rfl
       exact absurd (Option.some.inj h2) hl₀
     · intro h; exact absurd h hl₀
   · rw [if_neg hx]
-    exact sect_eq_tau x
+    exact labelSection_eq_tau x
 
 /-- A silent weak run of the specification is a silent weak run of the lifted
 specification. -/
-theorem weakLSilent_liftedSpec [DecidableEq X] (P : Params) {s s' : SpecState P.n X}
-    (h : (specInst P X).weakLSilent s s') : (liftedSpec P X).weakLSilent s s' :=
-  System.weakLSilent_mapIdle sect (fun _ => rfl) (fun x => sect_eq_tau x) h
+theorem weakLSilent_specificationOverInstanceAlphabet [DecidableEq X] (P : Params) {s s' : SpecState
+  P.n X}
+    (h : (specInst P X).weakLSilent s s') : (specificationOverInstanceAlphabet P X).weakLSilent s s'
+      :=
+  System.weakLSilent_mapIdle labelSection (fun _ => rfl) (fun x => labelSection_eq_tau x) h
 
 /-- A labelled weak run of the specification is a weak run of the lifted
 specification at any interface label projecting to the same specification
 label. -/
-theorem weakLStep_liftedSpec [DecidableEq X] (P : Params) {s s' : SpecState P.n X}
-    {l₀ : Lab P.n X} {l : InstLab P.n X} (hl₀ : l₀ ≠ (Silent.τ : Lab P.n X))
-    (hl : specPull P.n X l = some l₀) (h : (specInst P X).weakLStep s l₀ s') :
-    (liftedSpec P X).weakLStep s l s' :=
-  System.weakLStep_mapIdle (sectAt l₀ l) (specPull_sectAt hl) (sectAt_tau hl hl₀)
-    (by simp [sectAt]) h
+theorem weakLStep_specificationOverInstanceAlphabet [DecidableEq X] (P : Params) {s s' : SpecState
+  P.n X}
+    {l₀ : Label P.n X} {l : InstanceLabel P.n X} (hl₀ : l₀ ≠ (Silent.τ : Label P.n X))
+    (hl : specificationLabelMap P.n X l = some l₀) (h : (specInst P X).weakLStep s l₀ s') :
+    (specificationOverInstanceAlphabet P X).weakLStep s l s' :=
+  System.weakLStep_mapIdle (sectionAt l₀ l) (specificationLabelMap_sectionAt hl) (sectionAt_tau hl
+    hl₀)
+    (by simp [sectionAt]) h
 
 /-! ### Reading and building instance transitions
 
@@ -814,19 +839,20 @@ directions. -/
 /-- The instance's step relation, unfolded to the hidden-event case and the
 interface-label case. -/
 theorem instAt_step_iff (P : Params) (X : Type) [DecidableEq X] {B B' : Type}
-    (BIn : ∀ _ : Fin P.n, System B (BRB.InstLab P.n X))
-    (BBind : ∀ _ : Fin P.n, System B' (BRB.InstLab P.n (APSet P.n X)))
-    (s : SubStateAt P.n X B B') (l : InstLab P.n X) (μ : PMF (SubStateAt P.n X B B')) :
+    (BIn : ∀ _ : Fin P.n, System B (BRB.InstanceLabel P.n X))
+    (BBind : ∀ _ : Fin P.n, System B' (BRB.InstanceLabel P.n (APSet P.n X)))
+    (s : SubStateAt P.n X B B') (l : InstanceLabel P.n X) (μ : PMF (SubStateAt P.n X B B')) :
     (instAt P X BIn BBind).step s l μ ↔
-      (l = Sum.inl Lab.tau ∧ ∃ e : GaEvt P.n X, (preAt P X BIn BBind).step s (Sum.inr e) μ) ∨
+      (l = Sum.inl Label.tau ∧ ∃ e : GatherEvent P.n X,
+        (preAt P X BIn BBind).step s (Sum.inr e) μ) ∨
       (preAt P X BIn BBind).step s (Sum.inl l) μ := by
   constructor
   · rintro (⟨hτ, l', ⟨e, rfl⟩, hstep⟩ | ⟨-, hstep⟩)
     · exact Or.inl ⟨Sum.inl_injective hτ, e, hstep⟩
     · exact Or.inr hstep
   · rintro (⟨rfl, e, hstep⟩ | hstep)
-    · exact Or.inl ⟨rfl, _, inr_mem_gaEvents e, hstep⟩
-    · exact Or.inr ⟨inl_notMem_gaEvents l, hstep⟩
+    · exact Or.inl ⟨rfl, _, inr_mem_gatherEvents e, hstep⟩
+    · exact Or.inr ⟨inl_notMem_gatherEvents l, hstep⟩
 
 /-! ### The synchronised group of broadcast instances
 
@@ -909,14 +935,14 @@ end SyncLift
 section SyncGa
 
 variable [DecidableEq X] {P : Params}
-  {u x : ∀ _ : Fin P.n, LocalState P.n (ProcRec P.n X) (GaMsg P.n X)} {l : GaLab P.n X}
+  {u x : ∀ _ : Fin P.n, LocalState P.n (ProcRec P.n X) (GaMsg P.n X)} {l : GatherLabel P.n X}
 
 /-- A synchronised transition of the gather programs on a visible label: every
 program steps, and the joint distribution is Dirac. -/
 theorem syncGa_inv {μ : PMF (∀ _ : Fin P.n, LocalState P.n (ProcRec P.n X) (GaMsg P.n X))}
-    (h : (System.syncProduct (gaProc P (X := X))).step u l μ) :
+    (h : (System.syncProduct (gatherProgram P (X := X))).step u l μ) :
     ∃ x : ∀ _ : Fin P.n, LocalState P.n (ProcRec P.n X) (GaMsg P.n X),
-      μ = PMF.pure x ∧ ∀ i, ProcStep P i (u i) l (PMF.pure (x i)) := by
+      μ = PMF.pure x ∧ ∀ i, ProgramStep P i (u i) l (PMF.pure (x i)) := by
   rw [System.syncProduct_step] at h
   rcases h with ⟨-, μ_, hall, rfl⟩ | ⟨rfl, i, μ_i, hstep, -⟩
   · have hx : ∀ i, ∃ p', μ_ i = PMF.pure p' := fun i => procStep_dirac (hall i)
@@ -929,14 +955,15 @@ theorem syncGa_inv {μ : PMF (∀ _ : Fin P.n, LocalState P.n (ProcRec P.n X) (G
 
 /-- Build a synchronised transition of the gather programs from per-process
 Dirac steps. -/
-theorem syncGa_pure (hl : l ≠ Silent.τ) (h : ∀ i, ProcStep P i (u i) l (PMF.pure (x i))) :
-    (System.syncProduct (gaProc P (X := X))).step u l (PMF.pure x) := by
+theorem syncGa_pure (hl : l ≠ Silent.τ) (h : ∀ i, ProgramStep P i (u i) l (PMF.pure (x i))) :
+    (System.syncProduct (gatherProgram P (X := X))).step u l (PMF.pure x) := by
   rw [System.syncProduct_step]
   exact Or.inl ⟨hl, fun i => PMF.pure (x i), h, (piPMF_pure x).symm⟩
 
 /-- The gather programs have no silent transition: no program has a `τ` row. -/
 theorem syncGa_no_tau {μ : PMF (∀ _ : Fin P.n, LocalState P.n (ProcRec P.n X) (GaMsg P.n X))}
-    (h : (System.syncProduct (gaProc P (X := X))).step u (Silent.τ : GaLab P.n X) μ) : False := by
+    (h : (System.syncProduct (gatherProgram P (X := X))).step u (Silent.τ : GatherLabel P.n X) μ) :
+      False := by
   rcases h with ⟨hτ, -⟩ | ⟨-, i, μ_i, hstep, -⟩
   · exact hτ rfl
   · exact procStep_no_tau hstep
@@ -953,24 +980,25 @@ input instance or one bind instance. -/
 section PreAt
 
 variable [DecidableEq X] {P : Params} {B B' : Type}
-  {BIn : ∀ _ : Fin P.n, System B (BRB.InstLab P.n X)}
-  {BBind : ∀ _ : Fin P.n, System B' (BRB.InstLab P.n (APSet P.n X))}
+  {BIn : ∀ _ : Fin P.n, System B (BRB.InstanceLabel P.n X)}
+  {BBind : ∀ _ : Fin P.n, System B' (BRB.InstanceLabel P.n (APSet P.n X))}
   {u x : ∀ _ : Fin P.n, LocalState P.n (ProcRec P.n X) (GaMsg P.n X)}
   {w w' : GaNetState P.n X} {a a' : ∀ _ : Fin P.n, B} {b b' : ∀ _ : Fin P.n, B'}
-  {L : GaLab P.n X}
+  {L : GatherLabel P.n X}
 
 /-- **The joint inversion.** A visible transition of the two tiers: every
 factor steps on the label, and the joint distribution is their Dirac
 product. -/
 theorem preAt_joint_inv (hIn : ∀ k, (BIn k).IsLTS) (hBind : ∀ q, (BBind q).IsLTS)
-    {μ : PMF (SubStateAt P.n X B B')} (hL : L ≠ (Silent.τ : GaLab P.n X))
+    {μ : PMF (SubStateAt P.n X B B')} (hL : L ≠ (Silent.τ : GatherLabel P.n X))
     (h : (preAt P X BIn BBind).step ((u, w), (a, b)) L μ) :
     ∃ (x : ∀ _ : Fin P.n, LocalState P.n (ProcRec P.n X) (GaMsg P.n X)) (w' : GaNetState P.n X)
       (a' : ∀ _ : Fin P.n, B) (b' : ∀ _ : Fin P.n, B'),
       μ = PMF.pure ((x, w'), (a', b')) ∧
-      (∀ i, ProcStep P i (u i) L (PMF.pure (x i))) ∧ NetStep P w L (PMF.pure w') ∧
-      (∀ k, ((BIn k).mapIdle (inPull P.n X k)).step (a k) L (PMF.pure (a' k))) ∧
-      (∀ q, ((BBind q).mapIdle (bindPull P.n X q)).step (b q) L (PMF.pure (b' q))) := by
+      (∀ i, ProgramStep P i (u i) L (PMF.pure (x i))) ∧ NetworkStep P w L (PMF.pure w') ∧
+      (∀ k, ((BIn k).mapIdle (inputBroadcastLabelMap P.n X k)).step (a k) L (PMF.pure (a' k))) ∧
+      (∀ q,
+        ((BBind q).mapIdle (bindBroadcastLabelMap P.n X q)).step (b q) L (PMF.pure (b' q))) := by
   rw [preAt, System.parallel_step] at h
   rcases h with ⟨-, μ₁, μ₂, hga, hbr, rfl⟩ | ⟨hτ, -⟩ | ⟨hτ, -⟩
   · rw [gaPart, System.parallel_step] at hga
@@ -995,13 +1023,13 @@ injection of the gather network, a silent step of one input instance, or a
 silent step of one bind instance: no gather program has a `τ` row. -/
 theorem preAt_tau_inv (hIn : ∀ k, (BIn k).IsLTS) (hBind : ∀ q, (BBind q).IsLTS)
     {μ : PMF (SubStateAt P.n X B B')}
-    (h : (preAt P X BIn BBind).step ((u, w), (a, b)) (Silent.τ : GaLab P.n X) μ) :
+    (h : (preAt P X BIn BBind).step ((u, w), (a, b)) (Silent.τ : GatherLabel P.n X) μ) :
     (∃ v, μ = PMF.pure ((u, v), (a, b)) ∧
-      NetStep P w (Silent.τ : GaLab P.n X) (PMF.pure v)) ∨
+      NetworkStep P w (Silent.τ : GatherLabel P.n X) (PMF.pure v)) ∨
     (∃ (k : Fin P.n) (c : B), μ = PMF.pure ((u, w), (Function.update a k c, b)) ∧
-      (BIn k).step (a k) (Silent.τ : BRB.InstLab P.n X) (PMF.pure c)) ∨
+      (BIn k).step (a k) (Silent.τ : BRB.InstanceLabel P.n X) (PMF.pure c)) ∨
     (∃ (q : Fin P.n) (d : B'), μ = PMF.pure ((u, w), (a, Function.update b q d)) ∧
-      (BBind q).step (b q) (Silent.τ : BRB.InstLab P.n (APSet P.n X)) (PMF.pure d)) := by
+      (BBind q).step (b q) (Silent.τ : BRB.InstanceLabel P.n (APSet P.n X)) (PMF.pure d)) := by
   rw [preAt, System.parallel_step] at h
   rcases h with ⟨hτ, -⟩ | ⟨-, μ₁, hga, rfl⟩ | ⟨-, μ₂, hbr, rfl⟩
   · exact absurd rfl hτ
@@ -1014,18 +1042,23 @@ theorem preAt_tau_inv (hIn : ∀ k, (BIn k).IsLTS) (hBind : ∀ q, (BBind q).IsL
   · rw [System.parallel_step] at hbr
     rcases hbr with ⟨hτ, -⟩ | ⟨-, ρ₁, hi, rfl⟩ | ⟨-, ρ₂, hb, rfl⟩
     · exact absurd rfl hτ
-    · obtain ⟨k, c, rfl, hstep⟩ := syncLift_tau_inv hIn (fun k => inPull_tau P.n X k) hi
-      exact Or.inr (Or.inl ⟨k, c, by rw [prodPMF_pure_pure, prodPMF_pure_pure], hstep⟩)
-    · obtain ⟨q, d, rfl, hstep⟩ := syncLift_tau_inv hBind (fun q => bindPull_tau P.n X q) hb
-      exact Or.inr (Or.inr ⟨q, d, by rw [prodPMF_pure_pure, prodPMF_pure_pure], hstep⟩)
+    · obtain ⟨k, c, rfl, hstep⟩ :=
+        syncLift_tau_inv hIn (fun k => inputBroadcastLabelMap_tau P.n X k) hi
+      exact Or.inr
+        (Or.inl ⟨k, c, by rw [prodPMF_pure_pure, prodPMF_pure_pure], hstep⟩)
+    · obtain ⟨q, d, rfl, hstep⟩ :=
+        syncLift_tau_inv hBind (fun q => bindBroadcastLabelMap_tau P.n X q) hb
+      exact Or.inr
+        (Or.inr ⟨q, d, by rw [prodPMF_pure_pure, prodPMF_pure_pure], hstep⟩)
 
 /-- Build a visible transition of the two tiers from the four factors' Dirac
 steps. -/
-theorem preAt_lab_step (hL : L ≠ (Silent.τ : GaLab P.n X))
-    (hproc : ∀ i, ProcStep P i (u i) L (PMF.pure (x i)))
-    (hnet : NetStep P w L (PMF.pure w'))
-    (hin : ∀ k, ((BIn k).mapIdle (inPull P.n X k)).step (a k) L (PMF.pure (a' k)))
-    (hbind : ∀ q, ((BBind q).mapIdle (bindPull P.n X q)).step (b q) L (PMF.pure (b' q))) :
+theorem preAt_lab_step (hL : L ≠ (Silent.τ : GatherLabel P.n X))
+    (hproc : ∀ i, ProgramStep P i (u i) L (PMF.pure (x i)))
+    (hnet : NetworkStep P w L (PMF.pure w'))
+    (hin : ∀ k, ((BIn k).mapIdle (inputBroadcastLabelMap P.n X k)).step (a k) L (PMF.pure (a' k)))
+    (hbind : ∀ q,
+      ((BBind q).mapIdle (bindBroadcastLabelMap P.n X q)).step (b q) L (PMF.pure (b' q))) :
     (preAt P X BIn BBind).step ((u, w), (a, b)) L (PMF.pure ((x, w'), (a', b'))) := by
   rw [preAt, System.parallel_step]
   refine Or.inl ⟨hL, PMF.pure (x, w'), PMF.pure (a', b'), ?_, ?_,
@@ -1039,8 +1072,8 @@ theorem preAt_lab_step (hL : L ≠ (Silent.τ : GaLab P.n X))
 
 /-- Build a silent transition of the two tiers from an injection of the gather
 network. -/
-theorem preAt_tau_net (hn : NetStep P w (Silent.τ : GaLab P.n X) (PMF.pure w')) :
-    (preAt P X BIn BBind).step ((u, w), (a, b)) (Silent.τ : GaLab P.n X)
+theorem preAt_tau_net (hn : NetworkStep P w (Silent.τ : GatherLabel P.n X) (PMF.pure w')) :
+    (preAt P X BIn BBind).step ((u, w), (a, b)) (Silent.τ : GatherLabel P.n X)
       (PMF.pure ((u, w'), (a, b))) := by
   rw [preAt, System.parallel_step]
   refine Or.inr (Or.inl ⟨rfl, PMF.pure (u, w'), ?_, (prodPMF_pure_pure _ _).symm⟩)
@@ -1050,47 +1083,49 @@ theorem preAt_tau_net (hn : NetStep P w (Silent.τ : GaLab P.n X) (PMF.pure w'))
 /-- Build a silent transition of the two tiers from a silent step of one input
 instance. -/
 theorem preAt_tau_in {k : Fin P.n} {c : B}
-    (h : (BIn k).step (a k) (Silent.τ : BRB.InstLab P.n X) (PMF.pure c)) :
-    (preAt P X BIn BBind).step ((u, w), (a, b)) (Silent.τ : GaLab P.n X)
+    (h : (BIn k).step (a k) (Silent.τ : BRB.InstanceLabel P.n X) (PMF.pure c)) :
+    (preAt P X BIn BBind).step ((u, w), (a, b)) (Silent.τ : GatherLabel P.n X)
       (PMF.pure ((u, w), (Function.update a k c, b))) := by
   rw [preAt, System.parallel_step]
   refine Or.inr (Or.inr ⟨rfl, PMF.pure (Function.update a k c, b), ?_,
     (prodPMF_pure_pure _ _).symm⟩)
   rw [System.parallel_step]
   exact Or.inr (Or.inl ⟨rfl, PMF.pure (Function.update a k c),
-    syncLift_tau_step (inPull_tau P.n X k) h, (prodPMF_pure_pure _ _).symm⟩)
+    syncLift_tau_step (inputBroadcastLabelMap_tau P.n X k) h, (prodPMF_pure_pure _ _).symm⟩)
 
 /-- Build a silent transition of the two tiers from a silent step of one bind
 instance. -/
 theorem preAt_tau_bind {q : Fin P.n} {d : B'}
-    (h : (BBind q).step (b q) (Silent.τ : BRB.InstLab P.n (APSet P.n X)) (PMF.pure d)) :
-    (preAt P X BIn BBind).step ((u, w), (a, b)) (Silent.τ : GaLab P.n X)
+    (h : (BBind q).step (b q) (Silent.τ : BRB.InstanceLabel P.n (APSet P.n X)) (PMF.pure d)) :
+    (preAt P X BIn BBind).step ((u, w), (a, b)) (Silent.τ : GatherLabel P.n X)
       (PMF.pure ((u, w), (a, Function.update b q d))) := by
   rw [preAt, System.parallel_step]
   refine Or.inr (Or.inr ⟨rfl, PMF.pure (a, Function.update b q d), ?_,
     (prodPMF_pure_pure _ _).symm⟩)
   rw [System.parallel_step]
   exact Or.inr (Or.inr ⟨rfl, PMF.pure (Function.update b q d),
-    syncLift_tau_step (bindPull_tau P.n X q) h, (prodPMF_pure_pure _ _).symm⟩)
+    syncLift_tau_step (bindBroadcastLabelMap_tau P.n X q) h, (prodPMF_pure_pure _ _).symm⟩)
 
 /-- A hidden event is a silent transition of the instance. -/
-theorem instAt_event_step (e : GaEvt P.n X)
-    (hproc : ∀ i, ProcStep P i (u i) (Sum.inr e) (PMF.pure (x i)))
-    (hnet : NetStep P w (Sum.inr e) (PMF.pure w'))
-    (hin : ∀ k, ((BIn k).mapIdle (inPull P.n X k)).step (a k) (Sum.inr e) (PMF.pure (a' k)))
-    (hbind : ∀ q, ((BBind q).mapIdle (bindPull P.n X q)).step (b q) (Sum.inr e)
+theorem instAt_event_step (e : GatherEvent P.n X)
+    (hproc : ∀ i, ProgramStep P i (u i) (Sum.inr e) (PMF.pure (x i)))
+    (hnet : NetworkStep P w (Sum.inr e) (PMF.pure w'))
+    (hin : ∀ k,
+      ((BIn k).mapIdle (inputBroadcastLabelMap P.n X k)).step (a k) (Sum.inr e) (PMF.pure (a' k)))
+    (hbind : ∀ q, ((BBind q).mapIdle (bindBroadcastLabelMap P.n X q)).step (b q) (Sum.inr e)
       (PMF.pure (b' q))) :
-    (instAt P X BIn BBind).step ((u, w), (a, b)) (Sum.inl Lab.tau)
+    (instAt P X BIn BBind).step ((u, w), (a, b)) (Sum.inl Label.tau)
       (PMF.pure ((x, w'), (a', b'))) :=
   (instAt_step_iff P X BIn BBind _ _ _).mpr
     (Or.inl ⟨rfl, e, preAt_lab_step (by simp) hproc hnet hin hbind⟩)
 
 /-- A visible interface label is a transition of the instance. -/
-theorem instAt_lab_step {l : InstLab P.n X} (hl : l ≠ Sum.inl Lab.tau)
-    (hproc : ∀ i, ProcStep P i (u i) (Sum.inl l) (PMF.pure (x i)))
-    (hnet : NetStep P w (Sum.inl l) (PMF.pure w'))
-    (hin : ∀ k, ((BIn k).mapIdle (inPull P.n X k)).step (a k) (Sum.inl l) (PMF.pure (a' k)))
-    (hbind : ∀ q, ((BBind q).mapIdle (bindPull P.n X q)).step (b q) (Sum.inl l)
+theorem instAt_lab_step {l : InstanceLabel P.n X} (hl : l ≠ Sum.inl Label.tau)
+    (hproc : ∀ i, ProgramStep P i (u i) (Sum.inl l) (PMF.pure (x i)))
+    (hnet : NetworkStep P w (Sum.inl l) (PMF.pure w'))
+    (hin : ∀ k,
+      ((BIn k).mapIdle (inputBroadcastLabelMap P.n X k)).step (a k) (Sum.inl l) (PMF.pure (a' k)))
+    (hbind : ∀ q, ((BBind q).mapIdle (bindBroadcastLabelMap P.n X q)).step (b q) (Sum.inl l)
       (PMF.pure (b' q))) :
     (instAt P X BIn BBind).step ((u, w), (a, b)) l (PMF.pure ((x, w'), (a', b'))) := by
   refine (instAt_step_iff P X BIn BBind _ _ _).mpr (Or.inr (preAt_lab_step ?_ hproc hnet hin hbind))
@@ -1099,24 +1134,24 @@ theorem instAt_lab_step {l : InstLab P.n X} (hl : l ≠ Sum.inl Lab.tau)
 
 /-- An injection of the gather network is a silent transition of the
 instance. -/
-theorem instAt_tau_net (hn : NetStep P w (Silent.τ : GaLab P.n X) (PMF.pure w')) :
-    (instAt P X BIn BBind).step ((u, w), (a, b)) (Sum.inl Lab.tau)
+theorem instAt_tau_net (hn : NetworkStep P w (Silent.τ : GatherLabel P.n X) (PMF.pure w')) :
+    (instAt P X BIn BBind).step ((u, w), (a, b)) (Sum.inl Label.tau)
       (PMF.pure ((u, w'), (a, b))) :=
   (instAt_step_iff P X BIn BBind _ _ _).mpr (Or.inr (preAt_tau_net hn))
 
 /-- A silent step of one input instance is a silent transition of the
 instance. -/
 theorem instAt_tau_in {k : Fin P.n} {c : B}
-    (h : (BIn k).step (a k) (Silent.τ : BRB.InstLab P.n X) (PMF.pure c)) :
-    (instAt P X BIn BBind).step ((u, w), (a, b)) (Sum.inl Lab.tau)
+    (h : (BIn k).step (a k) (Silent.τ : BRB.InstanceLabel P.n X) (PMF.pure c)) :
+    (instAt P X BIn BBind).step ((u, w), (a, b)) (Sum.inl Label.tau)
       (PMF.pure ((u, w), (Function.update a k c, b))) :=
   (instAt_step_iff P X BIn BBind _ _ _).mpr (Or.inr (preAt_tau_in h))
 
 /-- A silent step of one bind instance is a silent transition of the
 instance. -/
 theorem instAt_tau_bind {q : Fin P.n} {d : B'}
-    (h : (BBind q).step (b q) (Silent.τ : BRB.InstLab P.n (APSet P.n X)) (PMF.pure d)) :
-    (instAt P X BIn BBind).step ((u, w), (a, b)) (Sum.inl Lab.tau)
+    (h : (BBind q).step (b q) (Silent.τ : BRB.InstanceLabel P.n (APSet P.n X)) (PMF.pure d)) :
+    (instAt P X BIn BBind).step ((u, w), (a, b)) (Sum.inl Label.tau)
       (PMF.pure ((u, w), (a, Function.update b q d))) :=
   (instAt_step_iff P X BIn BBind _ _ _).mpr (Or.inr (preAt_tau_bind h))
 
@@ -1128,47 +1163,49 @@ section PullRows
 
 variable {n : ℕ} (X : Type) (k q id j q' k' i : Fin n)
 
-@[simp] theorem inPull_call (x : X) :
-    inPull n X k (Sum.inl (Sum.inl (.call id x))) =
+@[simp] theorem inputBroadcastLabelMap_call (x : X) :
+    inputBroadcastLabelMap n X k (Sum.inl (Sum.inl (.call id x))) =
       if k = id then some (Sum.inl (.call x)) else none := rfl
-@[simp] theorem inPull_fail :
-    inPull n X k (Sum.inl (Sum.inl (Lab.fail (X := X) id))) = some (Sum.inl (.fail id)) := rfl
-@[simp] theorem inPull_ret (g : Fin n → Option X) (C : APSet n X) :
-    inPull n X k (Sum.inl (Sum.inl (.ret id g C))) = none := rfl
-@[simp] theorem inPull_callLoop (x : X) :
-    inPull n X k (Sum.inl (Sum.inr (.callLoop id x))) =
+@[simp] theorem inputBroadcastLabelMap_fail :
+    inputBroadcastLabelMap n X k (Sum.inl (Sum.inl (Label.fail (X := X) id))) = some (Sum.inl (.fail
+      id)) := rfl
+@[simp] theorem inputBroadcastLabelMap_ret (g : Fin n → Option X) (C : APSet n X) :
+    inputBroadcastLabelMap n X k (Sum.inl (Sum.inl (.ret id g C))) = none := rfl
+@[simp] theorem inputBroadcastLabelMap_callLoop (x : X) :
+    inputBroadcastLabelMap n X k (Sum.inl (Sum.inr (.callLoop id x))) =
       if k = id then some (Sum.inr (.callLoop x)) else none := rfl
-@[simp] theorem inPull_snd (m : GaMsg n X) :
-    inPull n X k (Sum.inr (.snd j m)) = none := rfl
-@[simp] theorem inPull_dlv (m : GaMsg n X) :
-    inPull n X k (Sum.inr (.dlv i j m)) = none := rfl
-@[simp] theorem inPull_inRet (v : X) :
-    inPull n X k (Sum.inr (.inRet k' j v)) =
+@[simp] theorem inputBroadcastLabelMap_send (m : GaMsg n X) :
+    inputBroadcastLabelMap n X k (Sum.inr (.send j m)) = none := rfl
+@[simp] theorem inputBroadcastLabelMap_deliver (m : GaMsg n X) :
+    inputBroadcastLabelMap n X k (Sum.inr (.deliver i j m)) = none := rfl
+@[simp] theorem inputBroadcastLabelMap_inRet (v : X) :
+    inputBroadcastLabelMap n X k (Sum.inr (.inRet k' j v)) =
       if k = k' then some (Sum.inl (.ret j v)) else none := rfl
-@[simp] theorem inPull_bindCall (U : APSet n X) :
-    inPull n X k (Sum.inr (.bindCall j U)) = none := rfl
-@[simp] theorem inPull_bindRet (U : APSet n X) :
-    inPull n X k (Sum.inr (.bindRet q' j U)) = none := rfl
+@[simp] theorem inputBroadcastLabelMap_bindCall (U : APSet n X) :
+    inputBroadcastLabelMap n X k (Sum.inr (.bindCall j U)) = none := rfl
+@[simp] theorem inputBroadcastLabelMap_bindRet (U : APSet n X) :
+    inputBroadcastLabelMap n X k (Sum.inr (.bindRet q' j U)) = none := rfl
 
-@[simp] theorem bindPull_call (x : X) :
-    bindPull n X q (Sum.inl (Sum.inl (.call id x))) = none := rfl
-@[simp] theorem bindPull_fail :
-    bindPull n X q (Sum.inl (Sum.inl (Lab.fail (X := X) id))) = some (Sum.inl (.fail id)) := rfl
-@[simp] theorem bindPull_ret (g : Fin n → Option X) (C : APSet n X) :
-    bindPull n X q (Sum.inl (Sum.inl (.ret id g C))) = none := rfl
-@[simp] theorem bindPull_callLoop (x : X) :
-    bindPull n X q (Sum.inl (Sum.inr (.callLoop id x))) = none := rfl
-@[simp] theorem bindPull_snd (m : GaMsg n X) :
-    bindPull n X q (Sum.inr (.snd j m)) = none := rfl
-@[simp] theorem bindPull_dlv (m : GaMsg n X) :
-    bindPull n X q (Sum.inr (.dlv i j m)) = none := rfl
-@[simp] theorem bindPull_inRet (v : X) :
-    bindPull n X q (Sum.inr (.inRet k' j v)) = none := rfl
-@[simp] theorem bindPull_bindCall (U : APSet n X) :
-    bindPull n X q (Sum.inr (.bindCall j U)) =
+@[simp] theorem bindBroadcastLabelMap_call (x : X) :
+    bindBroadcastLabelMap n X q (Sum.inl (Sum.inl (.call id x))) = none := rfl
+@[simp] theorem bindBroadcastLabelMap_fail :
+    bindBroadcastLabelMap n X q (Sum.inl (Sum.inl (Label.fail (X := X) id))) = some (Sum.inl (.fail
+      id)) := rfl
+@[simp] theorem bindBroadcastLabelMap_ret (g : Fin n → Option X) (C : APSet n X) :
+    bindBroadcastLabelMap n X q (Sum.inl (Sum.inl (.ret id g C))) = none := rfl
+@[simp] theorem bindBroadcastLabelMap_callLoop (x : X) :
+    bindBroadcastLabelMap n X q (Sum.inl (Sum.inr (.callLoop id x))) = none := rfl
+@[simp] theorem bindBroadcastLabelMap_send (m : GaMsg n X) :
+    bindBroadcastLabelMap n X q (Sum.inr (.send j m)) = none := rfl
+@[simp] theorem bindBroadcastLabelMap_deliver (m : GaMsg n X) :
+    bindBroadcastLabelMap n X q (Sum.inr (.deliver i j m)) = none := rfl
+@[simp] theorem bindBroadcastLabelMap_inRet (v : X) :
+    bindBroadcastLabelMap n X q (Sum.inr (.inRet k' j v)) = none := rfl
+@[simp] theorem bindBroadcastLabelMap_bindCall (U : APSet n X) :
+    bindBroadcastLabelMap n X q (Sum.inr (.bindCall j U)) =
       if q = j then some (Sum.inl (.call U)) else none := rfl
-@[simp] theorem bindPull_bindRet (U : APSet n X) :
-    bindPull n X q (Sum.inr (.bindRet q' j U)) =
+@[simp] theorem bindBroadcastLabelMap_bindRet (U : APSet n X) :
+    bindBroadcastLabelMap n X q (Sum.inr (.bindRet q' j U)) =
       if q = q' then some (Sum.inl (.ret j U)) else none := rfl
 
 end PullRows
@@ -1226,26 +1263,26 @@ variable [DecidableEq X] {P : Params} {j : Fin P.n}
   {p : LocalState P.n (ProcRec P.n X) (GaMsg P.n X)}
   {ν : PMF (LocalState P.n (ProcRec P.n X) (GaMsg P.n X))}
 
-theorem stepG_call_own {x : X} (h : ProcStep P j p (Sum.inl (Sum.inl (.call j x))) ν) :
+theorem stepG_call_own {x : X} (h : ProgramStep P j p (Sum.inl (Sum.inl (.call j x))) ν) :
     p.proc.input = none ∧ ν = PMF.pure (p.setP { p.proc with input := some x }) := by
   cases h
   case call => exact ⟨by assumption, rfl⟩
   case callIdle => exact absurd rfl ‹_ ≠ j›
 
 theorem stepG_call_foreign {i : Fin P.n} {x : X} (hi : i ≠ j)
-    (h : ProcStep P j p (Sum.inl (Sum.inl (.call i x))) ν) : ν = PMF.pure p := by
+    (h : ProgramStep P j p (Sum.inl (Sum.inl (.call i x))) ν) : ν = PMF.pure p := by
   cases h
   case call => exact absurd rfl hi
   case callIdle => rfl
 
 theorem stepG_callLoop {i : Fin P.n} {x : X}
-    (h : ProcStep P j p (Sum.inl (Sum.inr (.callLoop i x))) ν) : ν = PMF.pure p := by
+    (h : ProgramStep P j p (Sum.inl (Sum.inr (.callLoop i x))) ν) : ν = PMF.pure p := by
   cases h
   case callLoop => rfl
   case callLoopIdle => rfl
 
 theorem stepG_ret_own {g : Fin P.n → Option X} {C : APSet P.n X}
-    (h : ProcStep P j p (Sum.inl (Sum.inl (.ret j g C))) ν) :
+    (h : ProgramStep P j p (Sum.inl (Sum.inl (.ret j g C))) ν) :
     p.proc.input ≠ none ∧ p.proc.sentBind ≠ none ∧
       (∀ k x, g k = some x → holdsIn p.proc k x) ∧
       (∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
@@ -1257,18 +1294,18 @@ theorem stepG_ret_own {g : Fin P.n → Option X} {C : APSet P.n X}
   case retIdle => exact absurd rfl ‹_ ≠ j›
 
 theorem stepG_ret_foreign {i : Fin P.n} {g : Fin P.n → Option X} {C : APSet P.n X} (hi : i ≠ j)
-    (h : ProcStep P j p (Sum.inl (Sum.inl (.ret i g C))) ν) : ν = PMF.pure p := by
+    (h : ProgramStep P j p (Sum.inl (Sum.inl (.ret i g C))) ν) : ν = PMF.pure p := by
   cases h
   case ret => exact absurd rfl hi
   case retIdle => rfl
 
-theorem stepG_fail {i : Fin P.n} (h : ProcStep P j p (Sum.inl (Sum.inl (.fail i))) ν) :
+theorem stepG_fail {i : Fin P.n} (h : ProgramStep P j p (Sum.inl (Sum.inl (.fail i))) ν) :
     ν = PMF.pure p := by
   cases h
   case failIdle => rfl
 
-theorem stepG_snd_echo_own {A : APSet P.n X}
-    (h : ProcStep P j p (Sum.inr (.snd j (.echo A))) ν) :
+theorem stepG_send_echo_own {A : APSet P.n X}
+    (h : ProgramStep P j p (Sum.inr (.send j (.echo A))) ν) :
     A = p.proc.accepted ∧ p.proc.input ≠ none ∧ P.n - P.f ≤ p.proc.accepted.card ∧
       p.proc.sentEcho = none ∧
       ν = PMF.pure (p.setP { p.proc with sentEcho := some p.proc.accepted }) := by
@@ -1276,8 +1313,8 @@ theorem stepG_snd_echo_own {A : APSet P.n X}
   case sndEcho => exact ⟨rfl, by assumption, by assumption, by assumption, rfl⟩
   case sndIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem stepG_snd_vote_own {U : APSet P.n X}
-    (h : ProcStep P j p (Sum.inr (.snd j (.vote U))) ν) :
+theorem stepG_send_vote_own {U : APSet P.n X}
+    (h : ProgramStep P j p (Sum.inr (.send j (.vote U))) ν) :
     p.proc.input ≠ none ∧ p.proc.sentEcho ≠ none ∧ approvedBy p.proc U ∧
       (∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ A, GaMsg.echo A ∈ p.recv q ∧ approvedBy p.proc A ∧ A ⊆ U) ∧
@@ -1287,39 +1324,39 @@ theorem stepG_snd_vote_own {U : APSet P.n X}
     exact ⟨by assumption, by assumption, by assumption, by assumption, by assumption, rfl⟩
   case sndIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem stepG_snd_foreign {i : Fin P.n} {m : GaMsg P.n X} (hi : i ≠ j)
-    (h : ProcStep P j p (Sum.inr (.snd i m)) ν) : ν = PMF.pure p := by
+theorem stepG_send_foreign {i : Fin P.n} {m : GaMsg P.n X} (hi : i ≠ j)
+    (h : ProgramStep P j p (Sum.inr (.send i m)) ν) : ν = PMF.pure p := by
   cases h
   case sndIdle => rfl
   all_goals exact absurd rfl hi
 
-theorem stepG_dlv_own {k : Fin P.n} {m : GaMsg P.n X}
-    (h : ProcStep P j p (Sum.inr (.dlv j k m)) ν) : ν = PMF.pure (p.deliverTo k m) := by
+theorem stepG_deliver_own {k : Fin P.n} {m : GaMsg P.n X}
+    (h : ProgramStep P j p (Sum.inr (.deliver j k m)) ν) : ν = PMF.pure (p.deliverTo k m) := by
   cases h
   case dlvRecv => rfl
   case dlvIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem stepG_dlv_foreign {i k : Fin P.n} {m : GaMsg P.n X} (hi : i ≠ j)
-    (h : ProcStep P j p (Sum.inr (.dlv i k m)) ν) : ν = PMF.pure p := by
+theorem stepG_deliver_foreign {i k : Fin P.n} {m : GaMsg P.n X} (hi : i ≠ j)
+    (h : ProgramStep P j p (Sum.inr (.deliver i k m)) ν) : ν = PMF.pure p := by
   cases h
   case dlvRecv => exact absurd rfl hi
   case dlvIdle => rfl
 
 theorem stepG_inRet_own {k : Fin P.n} {v : X}
-    (h : ProcStep P j p (Sum.inr (.inRet k j v)) ν) :
+    (h : ProgramStep P j p (Sum.inr (.inRet k j v)) ν) :
     ν = PMF.pure (p.setP { p.proc with delivIn := Function.update p.proc.delivIn k (some v) }) := by
   cases h
   case inRetRecv => rfl
   case inRetIdle => exact absurd rfl ‹_ ≠ j›
 
 theorem stepG_inRet_foreign {k i : Fin P.n} {v : X} (hi : i ≠ j)
-    (h : ProcStep P j p (Sum.inr (.inRet k i v)) ν) : ν = PMF.pure p := by
+    (h : ProgramStep P j p (Sum.inr (.inRet k i v)) ν) : ν = PMF.pure p := by
   cases h
   case inRetRecv => exact absurd rfl hi
   case inRetIdle => rfl
 
 theorem stepG_bindCall_own {U : APSet P.n X}
-    (h : ProcStep P j p (Sum.inr (.bindCall j U)) ν) :
+    (h : ProgramStep P j p (Sum.inr (.bindCall j U)) ν) :
     p.proc.input ≠ none ∧ p.proc.sentVote ≠ none ∧ p.proc.sentBind = none ∧
       approvedBy p.proc U ∧
       (∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
@@ -1331,13 +1368,13 @@ theorem stepG_bindCall_own {U : APSet P.n X}
   case bindCallIdle => exact absurd rfl ‹_ ≠ j›
 
 theorem stepG_bindCall_foreign {i : Fin P.n} {U : APSet P.n X} (hi : i ≠ j)
-    (h : ProcStep P j p (Sum.inr (.bindCall i U)) ν) : ν = PMF.pure p := by
+    (h : ProgramStep P j p (Sum.inr (.bindCall i U)) ν) : ν = PMF.pure p := by
   cases h
   case bindCall => exact absurd rfl hi
   case bindCallIdle => rfl
 
 theorem stepG_bindRet_own {q : Fin P.n} {U : APSet P.n X}
-    (h : ProcStep P j p (Sum.inr (.bindRet q j U)) ν) :
+    (h : ProgramStep P j p (Sum.inr (.bindRet q j U)) ν) :
     ν = PMF.pure
       (p.setP { p.proc with delivBind := Function.update p.proc.delivBind q (some U) }) := by
   cases h
@@ -1345,7 +1382,7 @@ theorem stepG_bindRet_own {q : Fin P.n} {U : APSet P.n X}
   case bindRetIdle => exact absurd rfl ‹_ ≠ j›
 
 theorem stepG_bindRet_foreign {q i : Fin P.n} {U : APSet P.n X} (hi : i ≠ j)
-    (h : ProcStep P j p (Sum.inr (.bindRet q i U)) ν) : ν = PMF.pure p := by
+    (h : ProgramStep P j p (Sum.inr (.bindRet q i U)) ν) : ν = PMF.pure p := by
   cases h
   case bindRetRecv => exact absurd rfl hi
   case bindRetIdle => rfl
@@ -1359,47 +1396,47 @@ section NetInversion
 variable [DecidableEq X] {P : Params} {w : GaNetState P.n X} {μ : PMF (GaNetState P.n X)}
 
 theorem netStep_call {id : Fin P.n} {x : X}
-    (h : NetStep P w (Sum.inl (Sum.inl (.call id x))) μ) : μ = PMF.pure w := by
+    (h : NetworkStep P w (Sum.inl (Sum.inl (.call id x))) μ) : μ = PMF.pure w := by
   cases h; rfl
 
 theorem netStep_callLoop {id : Fin P.n} {x : X}
-    (h : NetStep P w (Sum.inl (Sum.inr (.callLoop id x))) μ) : μ = PMF.pure w := by
+    (h : NetworkStep P w (Sum.inl (Sum.inr (.callLoop id x))) μ) : μ = PMF.pure w := by
   cases h; rfl
 
 theorem netStep_ret {id : Fin P.n} {g : Fin P.n → Option X} {C : APSet P.n X}
-    (h : NetStep P w (Sum.inl (Sum.inl (.ret id g C))) μ) :
+    (h : NetworkStep P w (Sum.inl (Sum.inl (.ret id g C))) μ) :
     C = w.core.getD (coreOfNet P w.net) ∧ μ = PMF.pure { w with core := some C } := by
   cases h; exact ⟨rfl, rfl⟩
 
-theorem netStep_fail {i : Fin P.n} (h : NetStep P w (Sum.inl (Sum.inl (.fail i))) μ) :
+theorem netStep_fail {i : Fin P.n} (h : NetworkStep P w (Sum.inl (Sum.inl (.fail i))) μ) :
     μ = PMF.pure { w with net := w.net.corrupt P i } := by
   cases h; rfl
 
-theorem netStep_snd {j : Fin P.n} {m : GaMsg P.n X} (h : NetStep P w (Sum.inr (.snd j m)) μ) :
+theorem netStep_send {j : Fin P.n} {m : GaMsg P.n X} (h : NetworkStep P w (Sum.inr (.send j m)) μ) :
     μ = PMF.pure { w with net := w.net.post j m } := by
   cases h; rfl
 
-theorem netStep_dlv {i j : Fin P.n} {m : GaMsg P.n X}
-    (h : NetStep P w (Sum.inr (.dlv i j m)) μ) : m ∈ w.net.sent j ∧ μ = PMF.pure w := by
+theorem netStep_deliver {i j : Fin P.n} {m : GaMsg P.n X}
+    (h : NetworkStep P w (Sum.inr (.deliver i j m)) μ) : m ∈ w.net.sent j ∧ μ = PMF.pure w := by
   cases h; exact ⟨by assumption, rfl⟩
 
 theorem netStep_inRet {k j : Fin P.n} {v : X}
-    (h : NetStep P w (Sum.inr (.inRet k j v)) μ) : μ = PMF.pure w := by
+    (h : NetworkStep P w (Sum.inr (.inRet k j v)) μ) : μ = PMF.pure w := by
   cases h; rfl
 
 theorem netStep_bindCall {j : Fin P.n} {U : APSet P.n X}
-    (h : NetStep P w (Sum.inr (.bindCall j U)) μ) : μ = PMF.pure w := by
+    (h : NetworkStep P w (Sum.inr (.bindCall j U)) μ) : μ = PMF.pure w := by
   cases h; rfl
 
 theorem netStep_bindRet {q j : Fin P.n} {U : APSet P.n X}
-    (h : NetStep P w (Sum.inr (.bindRet q j U)) μ) : μ = PMF.pure w := by
+    (h : NetworkStep P w (Sum.inr (.bindRet q j U)) μ) : μ = PMF.pure w := by
   cases h; rfl
 
-theorem netStep_tau (h : NetStep P w (Sum.inl (Sum.inl .tau)) μ) :
+theorem netStep_tau (h : NetworkStep P w (Sum.inl (Sum.inl .tau)) μ) :
     ∃ (j : Fin P.n) (m : GaMsg P.n X), j ∈ w.net.F ∧
       μ = PMF.pure { w with net := w.net.post j m } := by
   cases h
-  case byz j m hF => exact ⟨j, m, hF, rfl⟩
+  case byzantine j m hF => exact ⟨j, m, hF, rfl⟩
 
 end NetInversion
 
@@ -1438,9 +1475,9 @@ theorem procFun_update {j : Fin P.n} {r : LocalState P.n (ProcRec P.n X) (GaMsg 
 /-- The participant's row beside the idle rows of every other program is the
 program group stepping into the updated function. -/
 theorem procStep_update {j : Fin P.n} {r : LocalState P.n (ProcRec P.n X) (GaMsg P.n X)}
-    {l : GaLab P.n X} (hj : ProcStep P j (u j) l (PMF.pure r))
-    (hne : ∀ i, i ≠ j → ProcStep P i (u i) l (PMF.pure (u i))) :
-    ∀ i, ProcStep P i (u i) l (PMF.pure (Function.update u j r i)) := by
+    {l : GatherLabel P.n X} (hj : ProgramStep P j (u j) l (PMF.pure r))
+    (hne : ∀ i, i ≠ j → ProgramStep P i (u i) l (PMF.pure (u i))) :
+    ∀ i, ProgramStep P i (u i) l (PMF.pure (Function.update u j r i)) := by
   intro i
   by_cases hi : i = j
   · subst hi; rw [Function.update_self]; exact hj

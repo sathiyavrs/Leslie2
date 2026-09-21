@@ -12,7 +12,7 @@ import Leslie2.Systems.LTS
 
 The specification of one Byzantine Reliable Broadcast instance with designated
 leader `ldr`, over an arbitrary payload type `M`, on its own alphabet
-`BRB.Lab n M`. Safety only: of the blueprint's three properties, Validity and
+`BRB.Label n M`. Safety only: of the blueprint's three properties, Validity and
 Agreement are carried and Totality is out of scope (deviation D27, with the
 development's standing scope cut on liveness).
 
@@ -43,7 +43,7 @@ namespace BRB
 
 /-- The alphabet of one BRB instance over payload type `M`: the leader's call,
 the per-process returns, and corruption. -/
-inductive Lab (n : ℕ) (M : Type) : Type
+inductive Label (n : ℕ) (M : Type) : Type
   /-- The silent label. -/
   | tau
   /-- The environment calls the leader with payload `m`. -/
@@ -54,10 +54,10 @@ inductive Lab (n : ℕ) (M : Type) : Type
   | fail (id : Fin n)
   deriving DecidableEq
 
-instance {n : ℕ} {M : Type} : Silent (Lab n M) := ⟨Lab.tau⟩
+instance {n : ℕ} {M : Type} : Silent (Label n M) := ⟨Label.tau⟩
 
-@[simp] theorem Lab.silent_eq {n : ℕ} {M : Type} :
-    (Silent.τ : Lab n M) = Lab.tau := rfl
+@[simp] theorem Label.silent_eq {n : ℕ} {M : Type} :
+    (Silent.τ : Label n M) = Label.tau := rfl
 
 /-- The state of one BRB specification instance. -/
 structure SpecState (n : ℕ) (M : Type) : Type where
@@ -115,7 +115,7 @@ theorem SpecState.corrupt_F (P : Params) (s : SpecState P.n M) (id : Fin P.n) :
 /-- The step relation of the BRB specification instance with leader `ldr`
 (blueprint Transition System 6, deviations D1/D27). -/
 inductive Step (P : Params) (ldr : Fin P.n) :
-    SpecState P.n M → Lab P.n M → PMF (SpecState P.n M) → Prop
+    SpecState P.n M → Label P.n M → PMF (SpecState P.n M) → Prop
   /-- The environment calls the leader. -/
   | call (s : SpecState P.n M) (m : M) (h : s.input = none) :
       Step P ldr s (.call m) (PMF.pure { s with input := some m })
@@ -139,7 +139,7 @@ inductive Step (P : Params) (ldr : Fin P.n) :
 
 /-- The BRB specification instance with leader `ldr`. -/
 noncomputable def specInst (P : Params) (ldr : Fin P.n) (M : Type) :
-    System (SpecState P.n M) (Lab P.n M) where
+    System (SpecState P.n M) (Label P.n M) where
   init := SpecState.initial P.n M
   step := Step P ldr
 
@@ -147,7 +147,7 @@ noncomputable def specInst (P : Params) (ldr : Fin P.n) (M : Type) :
     (specInst P ldr M).init = SpecState.initial P.n M := rfl
 
 @[simp] theorem specInst_step (P : Params) (ldr : Fin P.n) (s : SpecState P.n M)
-    (l : Lab P.n M) (μ : PMF (SpecState P.n M)) :
+    (l : Label P.n M) (μ : PMF (SpecState P.n M)) :
     (specInst P ldr M).step s l μ ↔ Step P ldr s l μ := Iff.rfl
 
 /-- Every BRB spec transition is Dirac: the instance is an LTS. -/

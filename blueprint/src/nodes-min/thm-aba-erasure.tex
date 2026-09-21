@@ -1,14 +1,14 @@
 \begin{theorem}[The announced bit is inert]
   \label{thm:aba-erasure}
-  \lean{PLTS.ABA.Implementation.flat_erasure}\lean{PLTS.ABA.ABDY.protocol_erasure}\lean{PLTS.ABA.AFW.protocol_erasure}\lean{PLTS.ABA.ABDY.protocol₀_safe}\lean{PLTS.ABA.AFW.protocol₀_safe}\leanok
+  \lean{PLTS.ABA.Implementation.system_erasure}\lean{PLTS.ABA.ABDY.protocol_erasure}\lean{PLTS.ABA.AFW.protocol_erasure}\lean{PLTS.ABA.ABDY.protocol₀_safe}\lean{PLTS.ABA.AFW.protocol₀_safe}\leanok
   \uses{def:erasure-sim, def:aba-ghost-free, def:aba-labels, def:achievable, thm:aba-main, thm:aba-afw-main}
-  Each protocol achieves exactly the trace distributions its ghost-free reading achieves: \leandecl{PLTS.ABA.ABDY.protocol_erasure} and \leandecl{PLTS.ABA.AFW.protocol_erasure}, both instances of \leandecl{PLTS.ABA.Implementation.flat_erasure}.
+  Each protocol achieves exactly the trace distributions its ghost-free reading achieves: \leandecl{PLTS.ABA.ABDY.protocol_erasure} and \leandecl{PLTS.ABA.AFW.protocol_erasure}, both instances of \leandecl{PLTS.ABA.Implementation.system_erasure}.
   No label map stands in either equation, a graded-agreement return being a label of the hidden alphabet of Definition~\ref{def:aba-labels}.
   Every conclusion of Theorem~\ref{thm:aba-main} and of Theorem~\ref{thm:aba-afw-main} therefore holds of the ghost-free reading, Validity and Agreement included: \leandecl{PLTS.ABA.ABDY.protocol₀_safe} and \leandecl{PLTS.ABA.AFW.protocol₀_safe}.
 \end{theorem}
 
 \begin{proof}\leanok
   \uses{def:erasure-sim, def:aba-ghost-free, def:aba-labels}
-  See the Lean proof of \leandecl{PLTS.ABA.Implementation.flat_erasure}.
+  See the Lean proof of \leandecl{PLTS.ABA.Implementation.system_erasure}.
   The two protocol statements are instances of it.
 \end{proof}

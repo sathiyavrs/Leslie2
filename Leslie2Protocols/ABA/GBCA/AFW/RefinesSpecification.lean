@@ -4,21 +4,21 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.GBCA.AFW.RowsOverGatherSpecifications
+import Leslie2Protocols.ABA.GBCA.AFW.StepOverGatherSpecifications
 import Leslie2Protocols.ABA.Composition.GBCAInstanceByABDY
 
 /-!
 # The refinement of the round over the gather specifications
 
 `GBCA.ByAFW.pairRefines`: the round over the gather specifications
-(`GBCA.ByAFW.pairInst`, `GBCA/AFW/Composition.lean`) forward-simulates the graded agreement
-specification read over the round's interface (`GBCA.ByABDY.liftedSpec`), along
-`GBCA.ByAFW.PairRel`.
+(`GBCA.ByAFW.roundOverGatherSpecifications`, `GBCA/AFW/Composition.lean`) forward-simulates the
+graded agreement specification read over the round's interface
+(`GBCA.ByABDY.specificationOverRoundAlphabet`), along `GBCA.ByAFW.PairRel`.
 
-A transition of the round is one row of `GBCA.ByAFW.PairStep`
-(`GBCA.ByAFW.pairInst_step_row`), the row is answered by a weak run of the
+A transition of the round is one row of `GBCA.ByAFW.StepOverGatherSpecifications`
+(`GBCA.ByAFW.roundOverGatherSpecifications_step_row`), the row is answered by a weak run of the
 specification (`pairRel_row`), and that run is lifted to the interface along a
-section of `GBCA.ByABDY.gPull`.
+section of `GBCA.ByABDY.gbcaLabelMap`.
 
 ## What the program's record carries
 
@@ -233,7 +233,7 @@ theorem supp1_congr {t t' : Gather.SpecState P.n Bool} (hval : t'.val = t.val)
 `B v` outcome is heavy at `v` in the first gather's core and carries `f + 1`
 committed-entry support for `!v`; a `C` outcome is light at both bits in the
 second gather's core and carries `f + 1` support for each bit. -/
-def OutCert (P : Params) (s : PairState P.n) : GbcaOut → Prop
+def OutCert (P : Params) (s : RoundStateOverGatherSpecifications P.n) : GbcaOut → Prop
   | .A v => (∃ S, (ga2 s).core = some S ∧ S.card - P.f ≤ APSet.cnt S (some v)) ∧
       (∃ S, (ga1 s).core = some S ∧ S.card - P.f ≤ APSet.cnt S v)
   | .B v => (∃ S, (ga1 s).core = some S ∧ S.card - P.f ≤ APSet.cnt S v) ∧
@@ -244,7 +244,8 @@ def OutCert (P : Params) (s : PairState P.n) : GbcaOut → Prop
 /-- The certificate reads the two cores and the first gather's committed-entry
 support. A state holding the same cores and at least that support carries
 it. -/
-theorem OutCert.mono {s s' : PairState P.n} (h1 : (ga1 s').core = (ga1 s).core)
+theorem OutCert.mono {s s' : RoundStateOverGatherSpecifications P.n} (h1 : (ga1 s').core = (ga1
+  s).core)
     (h2 : (ga2 s').core = (ga2 s).core)
     (hv : ∀ b, supp1 (ga1 s) b ≤ supp1 (ga1 s') b) {out : GbcaOut}
     (h : OutCert P s out) : OutCert P s' out := by
@@ -268,7 +269,7 @@ candidate writes the bound bit, and `bound_core` that the bit is read off the
 first gather's core; `out_cert` records what the second gather's return
 certifies about the grade; the `core*` clauses re-state the freeze guards,
 which the write-once cores keep true. -/
-structure PairInv (P : Params) (s : PairState P.n) : Prop where
+structure PairInv (P : Params) (s : RoundStateOverGatherSpecifications P.n) : Prop where
   /-- The corruption budget. -/
   F_card : (ga1 s).F.card ≤ P.f
   /-- The two corrupted sets are in lockstep. -/
@@ -306,14 +307,17 @@ structure PairInv (P : Params) (s : PairState P.n) : Prop where
   core2_card : ∀ S, (ga2 s).core = some S → P.n - P.f ≤ S.card
 
 /-- The invariant holds initially. -/
-theorem PairInv.initial (P : Params) (r : ℕ) : PairInv P ((pairInst P r).init) := by
+theorem PairInv.initial (P : Params) (r : ℕ) : PairInv P ((roundOverGatherSpecifications P r).init)
+  := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
-    simp [pairInst_init, procs, bound, ga1, ga2, Gather.SpecState.initial, ProcRec.initial]
+    simp [roundOverGatherSpecifications_init, procs, bound, ga1, ga2, Gather.SpecState.initial,
+      ProcRec.initial]
 
 /-- The invariant is preserved by every row. -/
-theorem PairInv.step {r : ℕ} {s : PairState P.n} {l : Lab P.n}
-    {μ : PMF (PairState P.n)} (hInv : PairInv P s) (hstep : PairStep P r s l μ)
-    {s' : PairState P.n} (hs' : s' ∈ μ.support) : PairInv P s' := by
+theorem PairInv.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l : Label P.n}
+    {μ : PMF (RoundStateOverGatherSpecifications P.n)} (hInv : PairInv P s) (hstep :
+      StepOverGatherSpecifications P r s l μ)
+    {s' : RoundStateOverGatherSpecifications P.n} (hs' : s' ∈ μ.support) : PairInv P s' := by
   cases hstep with
   | callG id b t1 h0 h =>
     rw [PMF.mem_support_pure_iff] at hs'
@@ -901,11 +905,12 @@ theorem PairInv.step {r : ℕ} {s : PairState P.n} {l : Lab P.n}
 
 /-- The exclusion certificate: the first gather's core counts `b` below
 `|S| − f`, so no later candidate is `b`. Frozen — the core is write-once. -/
-def ExcludedEv (P : Params) (s : PairState P.n) (b : Bool) : Prop :=
+def ExcludedEv (P : Params) (s : RoundStateOverGatherSpecifications P.n) (b : Bool) : Prop :=
   ∃ S, (ga1 s).core = some S ∧ APSet.cnt S b < S.card - P.f
 
 /-- The refinement relation of the round over the gather specifications. -/
-structure PairRel (P : Params) (s : PairState P.n) (t : GBCA.SpecState P.n) : Prop where
+structure PairRel (P : Params) (s : RoundStateOverGatherSpecifications P.n) (t : GBCA.SpecState P.n)
+  : Prop where
   /-- The invariant. -/
   inv : PairInv P s
   /-- The call records agree. -/
@@ -932,18 +937,21 @@ structure PairRel (P : Params) (s : PairState P.n) (t : GBCA.SpecState P.n) : Pr
 
 /-- The relation holds initially. -/
 theorem pairRel_init (P : Params) (r : ℕ) :
-    PairRel P ((pairInst P r).init) ((GBCA.ByABDY.liftedSpec P r).init) := by
+    PairRel P ((roundOverGatherSpecifications P r).init)
+      ((GBCA.ByABDY.specificationOverRoundAlphabet P r).init) := by
   refine ⟨PairInv.initial P r, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
-    simp [pairInst_init, procs, bound, ga1, ga2, Gather.SpecState.initial,
+    simp [roundOverGatherSpecifications_init, procs, bound, ga1, ga2, Gather.SpecState.initial,
       GBCA.SpecState.initial, ProcRec.initial]
 
 /-- **Broadcast compatibility**: the relation is preserved by corrupting both
 sides at once. -/
-theorem pairRel_corrupt {r : ℕ} {s : PairState P.n} {t : GBCA.SpecState P.n}
+theorem pairRel_corrupt {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {t : GBCA.SpecState
+  P.n}
     (hR : PairRel P s t) (id : Fin P.n) :
     PairRel P (corruptAll P id (Gather.SpecState.corrupt P) (Gather.SpecState.corrupt P) s)
       (t.corrupt P id) := by
-  refine ⟨hR.inv.step (r := r) (PairStep.fail s id) (by rw [PMF.mem_support_pure_iff]),
+  refine ⟨hR.inv.step (r := r) (StepOverGatherSpecifications.fail s id) (by rw
+    [PMF.mem_support_pure_iff]),
     ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro k
     dsimp only [ga1_corruptAll]
@@ -974,10 +982,11 @@ theorem pairRel_corrupt {r : ℕ} {s : PairState P.n} {t : GBCA.SpecState P.n}
 
 /-- **The row-wise leg**: every row of the round is answered by a weak run of
 the graded agreement specification, the relation restored. -/
-theorem pairRel_row (P : Params) (r : ℕ) (q₁ : PairState P.n)
-    (q₂ : GBCA.SpecState P.n) (hR : PairRel P q₁ q₂) (l₀ : Lab P.n)
-    (μ : PMF (PairState P.n)) (hrow : PairStep P r q₁ l₀ μ)
-    (q₁' : PairState P.n) (hq₁' : q₁' ∈ μ.support) :
+theorem pairRel_row (P : Params) (r : ℕ) (q₁ : RoundStateOverGatherSpecifications P.n)
+    (q₂ : GBCA.SpecState P.n) (hR : PairRel P q₁ q₂) (l₀ : Label P.n)
+    (μ : PMF (RoundStateOverGatherSpecifications P.n)) (hrow : StepOverGatherSpecifications P r q₁
+      l₀ μ)
+    (q₁' : RoundStateOverGatherSpecifications P.n) (hq₁' : q₁' ∈ μ.support) :
     ∃ q₂', ((l₀ = Silent.τ ∧ (GBCA.specInst P r).weakLSilent q₂ q₂') ∨
       (¬ l₀ = Silent.τ ∧ (GBCA.specInst P r).weakLStep q₂ l₀ q₂')) ∧
       PairRel P q₁' q₂' := by
@@ -1400,26 +1409,28 @@ theorem pairRel_row (P : Params) (r : ℕ) (q₁ : PairState P.n)
 
 /-- **The refinement of the round over the gather specifications**: the round
 forward-simulates the graded agreement specification read over the round's
-interface. A transition of the round is one row of `GBCA.ByAFW.PairStep`
-(`GBCA.ByAFW.pairInst_step_row`), the row is answered by a weak run of the
+interface. A transition of the round is one row of `GBCA.ByAFW.StepOverGatherSpecifications`
+(`GBCA.ByAFW.roundOverGatherSpecifications_step_row`), the row is answered by a weak run of the
 specification (`pairRel_row`), and that run is lifted to the interface along a
-section of `GBCA.ByABDY.gPull`. -/
+section of `GBCA.ByABDY.gbcaLabelMap`. -/
 theorem pairRefines (P : Params) (r : ℕ) :
-    ForwardSimulation (pairInst P r) (GBCA.ByABDY.liftedSpec P r) (PairRel P) := by
+    ForwardSimulation (roundOverGatherSpecifications P r)
+      (GBCA.ByABDY.specificationOverRoundAlphabet P r) (PairRel P) := by
   constructor
   intro q₁ q₂ hR l μ hstep q₁' hq₁'
-  obtain ⟨l₀, hpull, hrow⟩ := pairInst_step_row P r q₁ l μ hstep
+  obtain ⟨l₀, hpull, hrow⟩ := roundOverGatherSpecifications_step_row P r q₁ l μ hstep
   obtain ⟨t', hdis, hrel⟩ := pairRel_row P r q₁ q₂ hR l₀ μ hrow q₁' hq₁'
   refine ⟨t', ?_, hrel⟩
   rcases hdis with ⟨hτ, hweak⟩ | ⟨hτ, hweak⟩
-  · exact Or.inl ⟨GBCA.ByABDY.gPull_eq_tau (by rw [hpull, hτ]; rfl),
-      GBCA.ByABDY.weakLSilent_liftedSpec P r hweak⟩
-  · refine Or.inr ⟨?_, GBCA.ByABDY.weakLStep_liftedSpec P r hτ hpull hweak⟩
+  · exact Or.inl ⟨GBCA.ByABDY.gbcaLabelMap_eq_tau (by rw [hpull, hτ]; rfl),
+      GBCA.ByABDY.weakLSilent_specificationOverRoundAlphabet P r hweak⟩
+  · refine Or.inr ⟨?_, GBCA.ByABDY.weakLStep_specificationOverRoundAlphabet P r hτ hpull hweak⟩
     intro hl
     refine hτ ?_
-    have h2 : GBCA.ByABDY.gPull P.n (Silent.τ : Composition.NLab P.n) = some l₀ := by
+    have h2 : GBCA.ByABDY.gbcaLabelMap P.n (Silent.τ : Composition.ExtendedLabel P.n) = some l₀ :=
+      by
       rw [← hl]; exact hpull
-    rw [GBCA.ByABDY.gPull_tau] at h2
+    rw [GBCA.ByABDY.gbcaLabelMap_tau] at h2
     exact (Option.some.inj h2).symm
 
 /-! ### Mechanical axiom check -/

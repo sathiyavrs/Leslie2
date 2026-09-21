@@ -1,6 +1,6 @@
 \begin{definition}[The BRB specification instance]
   \label{def:aba-brb-spec}
-  \lean{PLTS.ABA.BRB.Lab}\lean{PLTS.ABA.BRB.SpecState}\lean{PLTS.ABA.BRB.SpecState.corrupt}\lean{PLTS.ABA.BRB.Step}\lean{PLTS.ABA.BRB.specInst}\leanok
+  \lean{PLTS.ABA.BRB.Label}\lean{PLTS.ABA.BRB.SpecState}\lean{PLTS.ABA.BRB.SpecState.corrupt}\lean{PLTS.ABA.BRB.Step}\lean{PLTS.ABA.BRB.specInst}\leanok
   \uses{def:aba-params}
   Transition System~6, read safety-only over an instance-local alphabet.
   An instance is parametric in the payload type $M$ and names a leader; its alphabet is $\{\mathrm{call}(m), \mathrm{ret}(id, m), \mathrm{fail}(id), \tau\}$ and its state is the record $\{input, val, ret, F\}$, the leader's recorded input and the committed value held in separate fields (D27).

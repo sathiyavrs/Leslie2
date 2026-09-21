@@ -11,7 +11,7 @@ import Leslie2.Systems.LTS
 # The gather specification (blueprint Transition System 4, repaired: D26)
 
 The specification of one gather instance over an arbitrary payload type `X`,
-on its own alphabet `Gather.Lab n X`. Processes call with a payload and may
+on its own alphabet `Gather.Label n X`. Processes call with a payload and may
 return a partial map `g : Fin n → Option X`. Safety only: Termination is out
 of scope.
 
@@ -77,7 +77,7 @@ theorem APSet.subMap_mono {n : ℕ} {X : Type} {U V : APSet n X}
   fun p hp => hV p (hUV hp)
 
 /-- The alphabet of one gather instance over payload type `X`. -/
-inductive Lab (n : ℕ) (X : Type) : Type
+inductive Label (n : ℕ) (X : Type) : Type
   /-- The silent label. -/
   | tau
   /-- The environment calls process `id` with payload `x`. -/
@@ -88,10 +88,10 @@ inductive Lab (n : ℕ) (X : Type) : Type
   /-- Corruption of process `id`. -/
   | fail (id : Fin n)
 
-instance {n : ℕ} {X : Type} : Silent (Lab n X) := ⟨Lab.tau⟩
+instance {n : ℕ} {X : Type} : Silent (Label n X) := ⟨Label.tau⟩
 
-@[simp] theorem Lab.silent_eq {n : ℕ} {X : Type} :
-    (Silent.τ : Lab n X) = Lab.tau := rfl
+@[simp] theorem Label.silent_eq {n : ℕ} {X : Type} :
+    (Silent.τ : Label n X) = Label.tau := rfl
 
 /-- The state of one gather specification instance. -/
 structure SpecState (n : ℕ) (X : Type) : Type where
@@ -157,7 +157,7 @@ theorem SpecState.corrupt_F (P : Params) (s : SpecState P.n X) (id : Fin P.n) :
 Transition System 4, with the committed entries in place of the source's
 call-borne values). -/
 inductive Step (P : Params) [DecidableEq X] :
-    SpecState P.n X → Lab P.n X → PMF (SpecState P.n X) → Prop
+    SpecState P.n X → Label P.n X → PMF (SpecState P.n X) → Prop
   /-- A process inputs its payload. -/
   | call (s : SpecState P.n X) (id : Fin P.n) (x : X) (h : s.call id = none) :
       Step P s (.call id x)
@@ -194,7 +194,7 @@ variable [DecidableEq X]
 
 /-- The gather specification instance. -/
 noncomputable def specInst (P : Params) (X : Type) [DecidableEq X] :
-    System (SpecState P.n X) (Lab P.n X) where
+    System (SpecState P.n X) (Label P.n X) where
   init := SpecState.initial P.n X
   step := Step P
 
@@ -202,7 +202,7 @@ noncomputable def specInst (P : Params) (X : Type) [DecidableEq X] :
     (specInst P X).init = SpecState.initial P.n X := rfl
 
 @[simp] theorem specInst_step (P : Params) (s : SpecState P.n X)
-    (l : Lab P.n X) (μ : PMF (SpecState P.n X)) :
+    (l : Label P.n X) (μ : PMF (SpecState P.n X)) :
     (specInst P X).step s l μ ↔ Step P s l μ := Iff.rfl
 
 /-- Every gather spec transition is Dirac: the instance is an LTS. -/

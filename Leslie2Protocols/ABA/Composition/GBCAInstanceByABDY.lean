@@ -32,15 +32,15 @@ which checks that the message is sent under the named sender, and the
 receiver, which files it under that sender's recv row.
 
 The two rendezvous — the multicast and the delivery — are labels of the
-instance-internal alphabet `GLab n = NLab n ⊕ GEvt n`, and they are hidden
-before anything outside sees the instance: `sub` speaks the shared extended
-alphabet `NLab n`, in which the round's interface is `callG r`, `retG r`,
+instance-internal alphabet `GBCALabel n = ExtendedLabel n ⊕ GBCAEvent n`, and they are hidden
+before anything outside sees the instance: `composition` speaks the shared extended
+alphabet `ExtendedLabel n`, in which the round's interface is `callG r`, `retG r`,
 `gcallLoop r` and the three Byzantine graded-agreement rows of round `r`.
-The stage-multicast and stage-delivery constructors of `NetEvt` are therefore
+The stage-multicast and stage-delivery constructors of `NetworkEvent` are therefore
 not part of that interface — no component offers them, so they carry no
 transition of the instance.
 
-`gbcaSide` is the ℕ-indexed family of these instances: `System.family`
+`gbcaInstanceFamily` is the ℕ-indexed family of these instances: `System.family`
 routes a round-tagged label to its round, takes `τ` at any round, and
 broadcasts `fail` to every round at once.
 
@@ -55,23 +55,23 @@ broadcasts `fail` to every round at once.
   of messages `j` has multicast in this round, and `recv k` at a program is
   the set of messages from `k` delivered there. Thresholds count distinct
   senders. A corrupted sender's injections enter its sent through the
-  network's own `byzG` transition.
+  network's own `byzantineG` transition.
 * **D8 (participation guard).** The protocol sends and the three returns
   require the record to have received its input: the algorithm's handlers only
   run inside a called instance.
 * **D11 (Byzantine handshake rows), split.** A handshake row is authorised by a
   `k ∈ F` guard and has an effect on the round's data. The instance carries
-  the effect and not the authorisation: `byzCallG` opens the stage record and
-  records its `⟨INPUT, b⟩` without any `k ∈ F` guard, and `byzRetG` sets the
+  the effect and not the authorisation: `byzantineCallG` opens the stage record and
+  records its `⟨INPUT, b⟩` without any `k ∈ F` guard, and `byzantineRetG` sets the
   `returned` flag and writes the round's bound bit on the same evidence,
   denials and guard an honest return needs. The guard belongs to the network
   that surrounds the instance, where it applies to the handshake-row label that
   stays visible at this boundary.
 * **The round's bound bit.** The ghost field `GNetState.bound` belongs to the
   network, so the two return rows that write it are the network's
-  (`GNetStep.retGIdle`, `GNetStep.byzRetG`), and a program's return row takes
+  (`GBCANetworkStep.retGIdle`, `GBCANetworkStep.byzantineRetG`), and a program's return row takes
   the announced bit free. The write is the one in `ImplStep.retA`/`retB`/`retC`,
-  which is what keeps `sub_projects` an equality.
+  which is what keeps `composition_projects` an equality.
 * **D18 (the five message levels).** The send rows are the five levels
   `INPUT / ECHO / VOTE / BIND / ECHO5` and the three graded returns of the
   cited algorithm, not the four-round compression. The rows are taken in the
@@ -99,7 +99,7 @@ agreement specification. It runs through the implementation instance of
 The first leg is strong and functional. The round instance and the
 implementation run on the same state: `GBCA.ByABDY.ImplState` is the pair of the stage
 records and the network state, which are exactly the local states composed here.
-`sub_projects` says that every transition of the round instance is a transition
+`composition_projects` says that every transition of the round instance is a transition
 of the implementation at that same state, one step for one step, with no
 stuttering: a joint call is the implementation's call, a hidden multicast or
 delivery is the protocol rule or the delivery it carries, a network injection is
@@ -109,12 +109,12 @@ on the other.
 
 The second leg is the per-instance refinement `GBCA.ByABDY.implRefines`
 (`GBCA/ABDY/RefinesSpecification.lean`), used as it stands. Its answer is a weak run of the
-specification over the shared alphabet `Lab n`, which is lifted to the
-instance's interface along `gPull`: the projection that reads a Byzantine
+specification over the shared alphabet `Label n`, which is lifted to the
+instance's interface along `gbcaLabelMap`: the projection that reads a Byzantine
 call row as a call, a Byzantine return row as a return, and the two call
 loops as calls, which the specification takes on its input-enabledness row
-(D11). The lifted specification `liftedSpec` — the specification read back
-along `gPull` — is the system that replaces the instance, and `gActSpec` is
+(D11). The lifted specification `specificationOverRoundAlphabet` — the specification read back
+along `gbcaLabelMap` — is the system that replaces the instance, and `gActSpec` is
 the broadcast corruption act it carries at that alphabet.
 -/
 
@@ -135,30 +135,30 @@ round is the identity of the instance they belong to, and they are hidden
 before the family sees the instance at all. -/
 
 /-- The internal rendezvous of one round: the multicast and the delivery. -/
-inductive GEvt (n : ℕ) : Type
+inductive GBCAEvent (n : ℕ) : Type
   /-- Process `j` hands `m` to the round's network. -/
-  | snd (j : Fin n) (m : GBCA.ByABDY.Msg)
+  | send (j : Fin n) (m : GBCA.ByABDY.Msg)
   /-- The network delivers `j`'s `m` to `i`. -/
-  | dlv (i j : Fin n) (m : GBCA.ByABDY.Msg)
+  | deliver (i j : Fin n) (m : GBCA.ByABDY.Msg)
   deriving DecidableEq
 
 /-- The instance-internal alphabet: the shared extended alphabet plus the two
 rendezvous. Its silent label is `Sum.inl τ`, so every `Sum.inr` label is
 observable and hence hideable. -/
-abbrev GLab (n : ℕ) : Type := NLab n ⊕ GEvt n
+abbrev GBCALabel (n : ℕ) : Type := ExtendedLabel n ⊕ GBCAEvent n
 
 /-- The rendezvous labels, hidden by the instance. -/
-def gEvents (n : ℕ) : Set (GLab n) := {l | ∃ e : GEvt n, l = Sum.inr e}
+def gbcaEvents (n : ℕ) : Set (GBCALabel n) := {l | ∃ e : GBCAEvent n, l = Sum.inr e}
 
-@[simp] theorem inl_notMem_gEvents {n : ℕ} (l : NLab n) :
-    Sum.inl l ∉ gEvents n := by
-  simp [gEvents]
+@[simp] theorem inl_notMem_gbcaEvents {n : ℕ} (l : ExtendedLabel n) :
+    Sum.inl l ∉ gbcaEvents n := by
+  simp [gbcaEvents]
 
-@[simp] theorem inr_mem_gEvents {n : ℕ} (e : GEvt n) :
-    Sum.inr e ∈ gEvents n := ⟨e, rfl⟩
+@[simp] theorem inr_mem_gbcaEvents {n : ℕ} (e : GBCAEvent n) :
+    Sum.inr e ∈ gbcaEvents n := ⟨e, rfl⟩
 
 @[simp] theorem glab_tau (n : ℕ) :
-    (Silent.τ : GLab n) = Sum.inl (Sum.inl Lab.tau) := rfl
+    (Silent.τ : GBCALabel n) = Sum.inl (Sum.inl Label.tau) := rfl
 
 /-! ### The local graded-agreement program
 
@@ -170,22 +170,22 @@ the round's own handshake ports and the two rendezvous. -/
 
 /-- The step relation of the local graded-agreement program of process `j` in
 round `r`. -/
-inductive GProcStep (P : Params) (r : ℕ) (j : Fin P.n) :
-    GBCA.ByABDY.StageRec P.n → GLab P.n → PMF (GBCA.ByABDY.StageRec P.n) → Prop
+inductive GBCAProgramStep (P : Params) (r : ℕ) (j : Fin P.n) :
+    GBCA.ByABDY.StageRec P.n → GBCALabel P.n → PMF (GBCA.ByABDY.StageRec P.n) → Prop
   /-- The call arrives: record the input and mark `⟨INPUT, b⟩` as multicast.
   The recording of that message is the network's half (`ImplStep.call`). -/
   | call (p : GBCA.ByABDY.StageRec P.n) (b : Bool) (h : p.proc.input = none) :
-      GProcStep P r j p (Sum.inl (Sum.inl (.callG r j b)))
+      GBCAProgramStep P r j p (Sum.inl (Sum.inl (.callG r j b)))
         (PMF.pure (p.setP { p.proc with
           input := some b,
           sentInput := Function.update p.proc.sentInput b true }))
   /-- A call addressed elsewhere: not `j`'s business. -/
   | callIdle (p : GBCA.ByABDY.StageRec P.n) (id : Fin P.n) (b : Bool) (hid : id ≠ j) :
-      GProcStep P r j p (Sum.inl (Sum.inl (.callG r id b))) (PMF.pure p)
+      GBCAProgramStep P r j p (Sum.inl (Sum.inl (.callG r id b))) (PMF.pure p)
   /-- A call against an already-called stage record: the record does not move
   (`ImplStep.callLoop`). -/
   | callLoop (p : GBCA.ByABDY.StageRec P.n) (id : Fin P.n) (b : Bool) :
-      GProcStep P r j p (Sum.inl (Sum.inr (.gcallLoop r id b))) (PMF.pure p)
+      GBCAProgramStep P r j p (Sum.inl (Sum.inr (.gcallLoop r id b))) (PMF.pure p)
   /-- Return with grade `A v`: an `n − f` `ECHO5 v` quorum, the record called
   and its own `ECHO5` out (`ImplStep.retA`). -/
   | retA (p : GBCA.ByABDY.StageRec P.n) (v : Bool) (bnd : Bool)
@@ -193,7 +193,7 @@ inductive GProcStep (P : Params) (r : ℕ) (j : Fin P.n) :
       (hlv : p.proc.sentEcho5 ≠ none)
       (hcnt : P.n - P.f ≤ p.recvCount (.echo5 (some v)))
       (hret : p.proc.returned = false) :
-      GProcStep P r j p (Sum.inl (Sum.inl (.retG r j (.A v) bnd)))
+      GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r j (.A v) bnd)))
         (PMF.pure (p.setP { p.proc with returned := true }))
   /-- Return with grade `B v`: an `n − f` any-`ECHO5` quorum containing
   `ECHO5 v`, `f + 1` `BIND v`s and `|Valid| > 1`, the record called, its own
@@ -207,7 +207,7 @@ inductive GProcStep (P : Params) (r : ℕ) (j : Fin P.n) :
       (hbind : P.f + 1 ≤ p.recvCount (.bind (some v)))
       (hval : p.bothValid P)
       (hret : p.proc.returned = false) :
-      GProcStep P r j p (Sum.inl (Sum.inl (.retG r j (.B v) bnd)))
+      GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r j (.B v) bnd)))
         (PMF.pure (p.setP { p.proc with returned := true }))
   /-- Return with grade `C`: an `n − f` `ECHO5 ⊥` quorum and `|Valid| > 1`, the
   record called, its own `ECHO5` out, case (1) denied at either bit and case (2)
@@ -221,38 +221,38 @@ inductive GProcStep (P : Params) (r : ℕ) (j : Fin P.n) :
       (hcnt : P.n - P.f ≤ p.recvCount (.echo5 none))
       (hval : p.bothValid P)
       (hret : p.proc.returned = false) :
-      GProcStep P r j p (Sum.inl (Sum.inl (.retG r j .C bnd)))
+      GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r j .C bnd)))
         (PMF.pure (p.setP { p.proc with returned := true }))
   /-- A return to another process: not `j`'s business. -/
   | retIdle (p : GBCA.ByABDY.StageRec P.n) (id : Fin P.n) (out : GbcaOut) (bnd : Bool)
       (hid : id ≠ j) :
-      GProcStep P r j p (Sum.inl (Sum.inl (.retG r id out bnd))) (PMF.pure p)
+      GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r id out bnd))) (PMF.pure p)
   /-- A Byzantine call (D11): the stage record opens on the named bit, exactly
   as an honest call opens it (`ImplStep.call`). -/
-  | byzCall (p : GBCA.ByABDY.StageRec P.n) (b : Bool) (h : p.proc.input = none) :
-      GProcStep P r j p (Sum.inl (Sum.inr (.byzCallG r j b)))
+  | byzantineCall (p : GBCA.ByABDY.StageRec P.n) (b : Bool) (h : p.proc.input = none) :
+      GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineCallG r j b)))
         (PMF.pure (p.setP { p.proc with
           input := some b,
           sentInput := Function.update p.proc.sentInput b true }))
   /-- A Byzantine call at another process: not `j`'s business. -/
-  | byzCallIdle (p : GBCA.ByABDY.StageRec P.n) (k : Fin P.n) (b : Bool) (hk : k ≠ j) :
-      GProcStep P r j p (Sum.inl (Sum.inr (.byzCallG r k b))) (PMF.pure p)
+  | byzantineCallIdle (p : GBCA.ByABDY.StageRec P.n) (k : Fin P.n) (b : Bool) (hk : k ≠ j) :
+      GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineCallG r k b))) (PMF.pure p)
   /-- A Byzantine call against an already-called stage record (D11): the record
   does not move (`ImplStep.callLoop`). -/
-  | byzCallLoop (p : GBCA.ByABDY.StageRec P.n) (k : Fin P.n) (b : Bool) :
-      GProcStep P r j p (Sum.inl (Sum.inr (.byzCallGLoop r k b))) (PMF.pure p)
+  | byzantineCallLoop (p : GBCA.ByABDY.StageRec P.n) (k : Fin P.n) (b : Bool) :
+      GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineCallGLoop r k b))) (PMF.pure p)
   /-- A Byzantine grade-`A` return (D11): the honest row's evidence and guard, and
   the same record write (`ImplStep.retA`). -/
-  | byzRetA (p : GBCA.ByABDY.StageRec P.n) (v : Bool) (bnd : Bool)
+  | byzantineRetA (p : GBCA.ByABDY.StageRec P.n) (v : Bool) (bnd : Bool)
       (hin : p.proc.input ≠ none)
       (hlv : p.proc.sentEcho5 ≠ none)
       (hcnt : P.n - P.f ≤ p.recvCount (.echo5 (some v)))
       (hret : p.proc.returned = false) :
-      GProcStep P r j p (Sum.inl (Sum.inr (.byzRetG r j (.A v) bnd)))
+      GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r j (.A v) bnd)))
         (PMF.pure (p.setP { p.proc with returned := true }))
   /-- A Byzantine grade-`B` return (D11): the honest row's evidence, denial and
   guard, and the same record write (`ImplStep.retB`). -/
-  | byzRetB (p : GBCA.ByABDY.StageRec P.n) (v : Bool) (bnd : Bool)
+  | byzantineRetB (p : GBCA.ByABDY.StageRec P.n) (v : Bool) (bnd : Bool)
       (hin : p.proc.input ≠ none)
       (hlv : p.proc.sentEcho5 ≠ none)
       (hnotA : ∀ v, p.recvCount (.echo5 (some v)) < P.n - P.f)
@@ -261,11 +261,11 @@ inductive GProcStep (P : Params) (r : ℕ) (j : Fin P.n) :
       (hbind : P.f + 1 ≤ p.recvCount (.bind (some v)))
       (hval : p.bothValid P)
       (hret : p.proc.returned = false) :
-      GProcStep P r j p (Sum.inl (Sum.inr (.byzRetG r j (.B v) bnd)))
+      GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r j (.B v) bnd)))
         (PMF.pure (p.setP { p.proc with returned := true }))
   /-- A Byzantine grade-`C` return (D11): the honest row's evidence, denials and
   guard, and the same record write (`ImplStep.retC`). -/
-  | byzRetC (p : GBCA.ByABDY.StageRec P.n) (bnd : Bool)
+  | byzantineRetC (p : GBCA.ByABDY.StageRec P.n) (bnd : Bool)
       (hin : p.proc.input ≠ none)
       (hlv : p.proc.sentEcho5 ≠ none)
       (hnotA : ∀ v, p.recvCount (.echo5 (some v)) < P.n - P.f)
@@ -274,19 +274,19 @@ inductive GProcStep (P : Params) (r : ℕ) (j : Fin P.n) :
       (hcnt : P.n - P.f ≤ p.recvCount (.echo5 none))
       (hval : p.bothValid P)
       (hret : p.proc.returned = false) :
-      GProcStep P r j p (Sum.inl (Sum.inr (.byzRetG r j .C bnd)))
+      GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r j .C bnd)))
         (PMF.pure (p.setP { p.proc with returned := true }))
   /-- A Byzantine return at another process: not `j`'s business. -/
-  | byzRetIdle (p : GBCA.ByABDY.StageRec P.n) (k : Fin P.n) (out : GbcaOut) (bnd : Bool)
+  | byzantineRetIdle (p : GBCA.ByABDY.StageRec P.n) (k : Fin P.n) (out : GbcaOut) (bnd : Bool)
       (hk : k ≠ j) :
-      GProcStep P r j p (Sum.inl (Sum.inr (.byzRetG r k out bnd))) (PMF.pure p)
+      GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r k out bnd))) (PMF.pure p)
   /-- `INPUT` relay: `f + 1` receipts of `⟨INPUT, b⟩`, not yet multicast
   (`ImplStep.relay`; D8, D18). -/
   | sndRelay (p : GBCA.ByABDY.StageRec P.n) (b : Bool)
       (hin : p.proc.input ≠ none)
       (hcnt : P.f + 1 ≤ p.recvCount (.input b))
       (hsend : p.proc.sentInput b = false) :
-      GProcStep P r j p (Sum.inr (.snd j (.input b)))
+      GBCAProgramStep P r j p (Sum.inr (.send j (.input b)))
         (PMF.pure (p.setP { p.proc with
           sentInput := Function.update p.proc.sentInput b true }))
   /-- `ECHO b`: an `n − f` `INPUT b` quorum (`ImplStep.echo`; D18). -/
@@ -294,7 +294,7 @@ inductive GProcStep (P : Params) (r : ℕ) (j : Fin P.n) :
       (hin : p.proc.input ≠ none)
       (hcnt : P.n - P.f ≤ p.recvCount (.input b))
       (hsend : p.proc.sentEcho = none) :
-      GProcStep P r j p (Sum.inr (.snd j (.echo b)))
+      GBCAProgramStep P r j p (Sum.inr (.send j (.echo b)))
         (PMF.pure (p.setP { p.proc with sentEcho := some b }))
   /-- `VOTE b`: an `n − f` `ECHO b` quorum. The record's own `ECHO` is sent by
   one of the algorithm's `upon` handlers and may still be pending, so no
@@ -303,7 +303,7 @@ inductive GProcStep (P : Params) (r : ℕ) (j : Fin P.n) :
       (hin : p.proc.input ≠ none)
       (hcnt : P.n - P.f ≤ p.recvCount (.echo b))
       (hsend : p.proc.sentVote = none) :
-      GProcStep P r j p (Sum.inr (.snd j (.vote (some b))))
+      GBCAProgramStep P r j p (Sum.inr (.send j (.vote (some b))))
         (PMF.pure (p.setP { p.proc with sentVote := some (some b) }))
   /-- `VOTE ⊥`: `n − f` `ECHO`s of any payload and `|Valid| > 1`, and no
   single-bit `ECHO` quorum on record. The record's own `ECHO` is sent by one of
@@ -315,7 +315,7 @@ inductive GProcStep (P : Params) (r : ℕ) (j : Fin P.n) :
       (hcnt : P.n - P.f ≤ p.echoCount)
       (hval : p.bothValid P)
       (hsend : p.proc.sentVote = none) :
-      GProcStep P r j p (Sum.inr (.snd j (.vote none)))
+      GBCAProgramStep P r j p (Sum.inr (.send j (.vote none)))
         (PMF.pure (p.setP { p.proc with sentVote := some none }))
   /-- `BIND b`: an `n − f` `VOTE b` quorum, the record's own `VOTE` already
   out (`ImplStep.bindBit`; D18). -/
@@ -324,7 +324,7 @@ inductive GProcStep (P : Params) (r : ℕ) (j : Fin P.n) :
       (hlv : p.proc.sentVote ≠ none)
       (hcnt : P.n - P.f ≤ p.recvCount (.vote (some b)))
       (hsend : p.proc.sentBind = none) :
-      GProcStep P r j p (Sum.inr (.snd j (.bind (some b))))
+      GBCAProgramStep P r j p (Sum.inr (.send j (.bind (some b))))
         (PMF.pure (p.setP { p.proc with sentBind := some (some b) }))
   /-- `BIND ⊥`: `n − f` `VOTE`s of any payload and `|Valid| > 1`, the record's
   own `VOTE` already out, and no single-bit `VOTE` quorum on record
@@ -336,7 +336,7 @@ inductive GProcStep (P : Params) (r : ℕ) (j : Fin P.n) :
       (hcnt : P.n - P.f ≤ p.voteCount)
       (hval : p.bothValid P)
       (hsend : p.proc.sentBind = none) :
-      GProcStep P r j p (Sum.inr (.snd j (.bind none)))
+      GBCAProgramStep P r j p (Sum.inr (.send j (.bind none)))
         (PMF.pure (p.setP { p.proc with sentBind := some none }))
   /-- `ECHO5 b`: an `n − f` `BIND b` quorum, the record's own `BIND` already
   out (`ImplStep.echo5Bit`; D18). -/
@@ -345,7 +345,7 @@ inductive GProcStep (P : Params) (r : ℕ) (j : Fin P.n) :
       (hlv : p.proc.sentBind ≠ none)
       (hcnt : P.n - P.f ≤ p.recvCount (.bind (some b)))
       (hsend : p.proc.sentEcho5 = none) :
-      GProcStep P r j p (Sum.inr (.snd j (.echo5 (some b))))
+      GBCAProgramStep P r j p (Sum.inr (.send j (.echo5 (some b))))
         (PMF.pure (p.setP { p.proc with sentEcho5 := some (some b) }))
   /-- `ECHO5 ⊥`: `n − f` `BIND`s of any payload and `|Valid| > 1`, the record's
   own `BIND` already out, and no single-bit `BIND` quorum on record
@@ -357,18 +357,18 @@ inductive GProcStep (P : Params) (r : ℕ) (j : Fin P.n) :
       (hcnt : P.n - P.f ≤ p.bindCount)
       (hval : p.bothValid P)
       (hsend : p.proc.sentEcho5 = none) :
-      GProcStep P r j p (Sum.inr (.snd j (.echo5 none)))
+      GBCAProgramStep P r j p (Sum.inr (.send j (.echo5 none)))
         (PMF.pure (p.setP { p.proc with sentEcho5 := some none }))
   /-- A multicast by another process: not `j`'s business. -/
   | sndIdle (p : GBCA.ByABDY.StageRec P.n) (k : Fin P.n) (m : GBCA.ByABDY.Msg) (hk : k ≠ j) :
-      GProcStep P r j p (Sum.inr (.snd k m)) (PMF.pure p)
+      GBCAProgramStep P r j p (Sum.inr (.send k m)) (PMF.pure p)
   /-- Delivery, receiver's half: file the message under the sender's recv row.
   Authenticity is the network's conjunct (`ImplStep.deliver`; D5). -/
   | dlvRecv (p : GBCA.ByABDY.StageRec P.n) (k : Fin P.n) (m : GBCA.ByABDY.Msg) :
-      GProcStep P r j p (Sum.inr (.dlv j k m)) (PMF.pure (p.deliverTo k m))
+      GBCAProgramStep P r j p (Sum.inr (.deliver j k m)) (PMF.pure (p.deliverTo k m))
   /-- A delivery to another process: not `j`'s business. -/
   | dlvIdle (p : GBCA.ByABDY.StageRec P.n) (i k : Fin P.n) (m : GBCA.ByABDY.Msg) (hi : i ≠ j) :
-      GProcStep P r j p (Sum.inr (.dlv i k m)) (PMF.pure p)
+      GBCAProgramStep P r j p (Sum.inr (.deliver i k m)) (PMF.pure p)
 
 /-! ### The round's network
 
@@ -381,109 +381,109 @@ them being the components of a round's state; what follows is its rule table. -/
 
 /-- The step relation of the round's network. All transitions are
 Dirac. -/
-inductive GNetStep (P : Params) (r : ℕ) :
-    GNetState P.n → GLab P.n → PMF (GNetState P.n) → Prop
+inductive GBCANetworkStep (P : Params) (r : ℕ) :
+    GNetState P.n → GBCALabel P.n → PMF (GNetState P.n) → Prop
   /-- The network's half of a multicast: sent the message under its sender.
   Authenticity is the sender's joint participation (D5). -/
-  | snd (w : GNetState P.n) (j : Fin P.n) (m : GBCA.ByABDY.Msg) :
-      GNetStep P r w (Sum.inr (.snd j m)) (PMF.pure (w.gsent j m))
+  | send (w : GNetState P.n) (j : Fin P.n) (m : GBCA.ByABDY.Msg) :
+      GBCANetworkStep P r w (Sum.inr (.send j m)) (PMF.pure (w.gsent j m))
   /-- The network's half of a delivery: the message must be sent under the
   named sender, and delivery does not consume it (`ImplStep.deliver`; D5). -/
-  | dlv (w : GNetState P.n) (i j : Fin P.n) (m : GBCA.ByABDY.Msg) (h : m ∈ w.sent j) :
-      GNetStep P r w (Sum.inr (.dlv i j m)) (PMF.pure w)
+  | deliver (w : GNetState P.n) (i j : Fin P.n) (m : GBCA.ByABDY.Msg) (h : m ∈ w.sent j) :
+      GBCANetworkStep P r w (Sum.inr (.deliver i j m)) (PMF.pure w)
   /-- Byzantine injection: a corrupted sender multicasts anything, at any time
-  (`ImplStep.byz`; D5, D11). -/
-  | byzG (w : GNetState P.n) (k : Fin P.n) (m : GBCA.ByABDY.Msg) (hF : k ∈ w.F) :
-      GNetStep P r w (Sum.inl (Sum.inl .tau)) (PMF.pure (w.gsent k m))
+  (`ImplStep.byzantine`; D5, D11). -/
+  | byzantineG (w : GNetState P.n) (k : Fin P.n) (m : GBCA.ByABDY.Msg) (hF : k ∈ w.F) :
+      GBCANetworkStep P r w (Sum.inl (Sum.inl .tau)) (PMF.pure (w.gsent k m))
   /-- The network's half of the call: sent the caller's `⟨INPUT, b⟩`
   (`ImplStep.call`). -/
   | callG (w : GNetState P.n) (id : Fin P.n) (b : Bool) :
-      GNetStep P r w (Sum.inl (Sum.inl (.callG r id b)))
+      GBCANetworkStep P r w (Sum.inl (Sum.inl (.callG r id b)))
         (PMF.pure (w.gsent id (.input b)))
   /-- A return sends nothing, and writes the round's bound bit: the label's
   `bnd` is the bit on record if there is one and `boundOf`'s otherwise, and it
   goes on record (`ImplStep.retA`/`retB`/`retC`). -/
   | retGIdle (w : GNetState P.n) (id : Fin P.n) (out : GbcaOut) (bnd : Bool)
       (hbnd : bnd = w.bound.getD (GBCA.ByABDY.boundOf w.sent w.F out)) :
-      GNetStep P r w (Sum.inl (Sum.inl (.retG r id out bnd)))
+      GBCANetworkStep P r w (Sum.inl (Sum.inl (.retG r id out bnd)))
         (PMF.pure (w.setBound bnd))
   /-- A call against an already-called stage record sends nothing
   (`ImplStep.callLoop`). -/
   | gcallLoop (w : GNetState P.n) (id : Fin P.n) (b : Bool) :
-      GNetStep P r w (Sum.inl (Sum.inr (.gcallLoop r id b))) (PMF.pure w)
+      GBCANetworkStep P r w (Sum.inl (Sum.inr (.gcallLoop r id b))) (PMF.pure w)
   /-- A Byzantine call (D11): its `⟨INPUT, b⟩` is sent here, and there is no
   `k ∈ F` guard on this row — the authorisation of that row belongs to the
   network outside the instance, where the handshake-row label stays visible. -/
-  | byzCallG (w : GNetState P.n) (k : Fin P.n) (b : Bool) :
-      GNetStep P r w (Sum.inl (Sum.inr (.byzCallG r k b)))
+  | byzantineCallG (w : GNetState P.n) (k : Fin P.n) (b : Bool) :
+      GBCANetworkStep P r w (Sum.inl (Sum.inr (.byzantineCallG r k b)))
         (PMF.pure (w.gsent k (.input b)))
   /-- A Byzantine call against an already-called stage record sends nothing
   (D11). -/
-  | byzCallGLoop (w : GNetState P.n) (k : Fin P.n) (b : Bool) :
-      GNetStep P r w (Sum.inl (Sum.inr (.byzCallGLoop r k b))) (PMF.pure w)
+  | byzantineCallGLoop (w : GNetState P.n) (k : Fin P.n) (b : Bool) :
+      GBCANetworkStep P r w (Sum.inl (Sum.inr (.byzantineCallGLoop r k b))) (PMF.pure w)
   /-- A Byzantine return sends nothing, and writes the round's bound bit
   exactly as the honest return does (D11). -/
-  | byzRetG (w : GNetState P.n) (k : Fin P.n) (out : GbcaOut) (bnd : Bool)
+  | byzantineRetG (w : GNetState P.n) (k : Fin P.n) (out : GbcaOut) (bnd : Bool)
       (hbnd : bnd = w.bound.getD (GBCA.ByABDY.boundOf w.sent w.F out)) :
-      GNetStep P r w (Sum.inl (Sum.inr (.byzRetG r k out bnd)))
+      GBCANetworkStep P r w (Sum.inl (Sum.inr (.byzantineRetG r k out bnd)))
         (PMF.pure (w.setBound bnd))
 
 /-! ### The instance and its family -/
 
 /-- The local graded-agreement program of process `j` in round `r`. -/
-noncomputable def gbcaProc (P : Params) (r : ℕ) (j : Fin P.n) :
-    System (GBCA.ByABDY.StageRec P.n) (GLab P.n) where
+noncomputable def gbcaProgram (P : Params) (r : ℕ) (j : Fin P.n) :
+    System (GBCA.ByABDY.StageRec P.n) (GBCALabel P.n) where
   init := GBCA.ByABDY.StageRec.initial P.n
-  step := GProcStep P r j
+  step := GBCAProgramStep P r j
 
-@[simp] theorem gbcaProc_init (P : Params) (r : ℕ) (j : Fin P.n) :
-    (gbcaProc P r j).init = GBCA.ByABDY.StageRec.initial P.n := rfl
+@[simp] theorem gbcaProgram_init (P : Params) (r : ℕ) (j : Fin P.n) :
+    (gbcaProgram P r j).init = GBCA.ByABDY.StageRec.initial P.n := rfl
 
-@[simp] theorem gbcaProc_step (P : Params) (r : ℕ) (j : Fin P.n)
-    (p : GBCA.ByABDY.StageRec P.n) (l : GLab P.n) (ν : PMF (GBCA.ByABDY.StageRec P.n)) :
-    (gbcaProc P r j).step p l ν ↔ GProcStep P r j p l ν := Iff.rfl
+@[simp] theorem gbcaProgram_step (P : Params) (r : ℕ) (j : Fin P.n)
+    (p : GBCA.ByABDY.StageRec P.n) (l : GBCALabel P.n) (ν : PMF (GBCA.ByABDY.StageRec P.n)) :
+    (gbcaProgram P r j).step p l ν ↔ GBCAProgramStep P r j p l ν := Iff.rfl
 
 /-- The round's network. -/
-noncomputable def gNet (P : Params) (r : ℕ) :
-    System (GNetState P.n) (GLab P.n) where
+noncomputable def GBCANetwork (P : Params) (r : ℕ) :
+    System (GNetState P.n) (GBCALabel P.n) where
   init := GNetState.initial P.n
-  step := GNetStep P r
+  step := GBCANetworkStep P r
 
-@[simp] theorem gNet_init (P : Params) (r : ℕ) :
-    (gNet P r).init = GNetState.initial P.n := rfl
+@[simp] theorem GBCANetwork_init (P : Params) (r : ℕ) :
+    (GBCANetwork P r).init = GNetState.initial P.n := rfl
 
-@[simp] theorem gNet_step (P : Params) (r : ℕ) (w : GNetState P.n)
-    (l : GLab P.n) (μ : PMF (GNetState P.n)) :
-    (gNet P r).step w l μ ↔ GNetStep P r w l μ := Iff.rfl
+@[simp] theorem GBCANetwork_step (P : Params) (r : ℕ) (w : GNetState P.n)
+    (l : GBCALabel P.n) (μ : PMF (GNetState P.n)) :
+    (GBCANetwork P r).step w l μ ↔ GBCANetworkStep P r w l μ := Iff.rfl
 
 /-- The programs beside the network, over the instance-internal alphabet. -/
-noncomputable def subPre (P : Params) (r : ℕ) :
-    System (GBCA.ByABDY.ImplState P.n) (GLab P.n) :=
-  (System.syncProduct (gbcaProc P r)).parallel (gNet P r)
+noncomputable def compositionExtended (P : Params) (r : ℕ) :
+    System (GBCA.ByABDY.ImplState P.n) (GBCALabel P.n) :=
+  (System.syncProduct (gbcaProgram P r)).parallel (GBCANetwork P r)
 
 /-- **The round-`r` instance**: the programs beside the network, the two
 rendezvous hidden, the result read back over the shared extended alphabet. Its
 interface is the round's ports — `callG r`, `retG r`, `gcallLoop r` and the
 three graded-agreement rows of round `r`. -/
-noncomputable def sub (P : Params) (r : ℕ) :
-    System (GBCA.ByABDY.ImplState P.n) (NLab P.n) :=
-  ((subPre P r).abstract (gEvents P.n)).relabel
+noncomputable def composition (P : Params) (r : ℕ) :
+    System (GBCA.ByABDY.ImplState P.n) (ExtendedLabel P.n) :=
+  ((compositionExtended P r).abstract (gbcaEvents P.n)).relabel
 
 /-- The round a label of the instance interface belongs to. Every other label
 of the shared extended alphabet — the ABA API, the coin ports, `fail`, the
 DECIDED sets, and the stage rendezvous of the protocol network — is owned by
 no round. -/
-def gOwns {n : ℕ} : NLab n → Option ℕ
+def gOwns {n : ℕ} : ExtendedLabel n → Option ℕ
   | Sum.inl (.callG r _ _) => some r
   | Sum.inl (.retG r _ _ _) => some r
   | Sum.inr (.gcallLoop r _ _) => some r
-  | Sum.inr (.byzCallG r _ _) => some r
-  | Sum.inr (.byzCallGLoop r _ _) => some r
-  | Sum.inr (.byzRetG r _ _ _) => some r
+  | Sum.inr (.byzantineCallG r _ _) => some r
+  | Sum.inr (.byzantineCallGLoop r _ _) => some r
+  | Sum.inr (.byzantineRetG r _ _ _) => some r
   | _ => none
 
 /-- Corruption is the one label every round takes at once. -/
-def isFailN {n : ℕ} : NLab n → Prop
+def isFailN {n : ℕ} : ExtendedLabel n → Prop
   | Sum.inl (.fail _) => True
   | _ => False
 
@@ -494,7 +494,7 @@ instance {n : ℕ} : DecidablePred (isFailN (n := n)) := fun l => by
 
 /-- The broadcast corruption act on an instance state: the round's network state
 records it, the stage records do not (D1). -/
-def gAct (P : Params) : NLab P.n → GBCA.ByABDY.ImplState P.n → GBCA.ByABDY.ImplState P.n
+def gAct (P : Params) : ExtendedLabel P.n → GBCA.ByABDY.ImplState P.n → GBCA.ByABDY.ImplState P.n
   | Sum.inl (.fail k), (u, w) => (u, w.corrupt P k)
   | _, s => s
 
@@ -502,9 +502,9 @@ def gAct (P : Params) : NLab P.n → GBCA.ByABDY.ImplState P.n → GBCA.ByABDY.I
 family of round instances. A round-tagged label moves its round alone, `τ`
 moves one round, and `fail` is the broadcast that keeps every round's copy of
 the corrupted set in lockstep. -/
-noncomputable def gbcaSide (P : Params) :
-    System (ℕ → GBCA.ByABDY.ImplState P.n) (NLab P.n) :=
-  System.family (sub P) gOwns isFailN (gAct P)
+noncomputable def gbcaInstanceFamily (P : Params) :
+    System (ℕ → GBCA.ByABDY.ImplState P.n) (ExtendedLabel P.n) :=
+  System.family (composition P) gOwns isFailN (gAct P)
 
 /-! ### Determinacy
 
@@ -514,48 +514,48 @@ resolution, which is not part of a graded-agreement round. -/
 
 /-- Every program transition is Dirac. -/
 theorem gProcStep_dirac {P : Params} {r : ℕ} {j : Fin P.n}
-    {p : GBCA.ByABDY.StageRec P.n} {l : GLab P.n} {ν : PMF (GBCA.ByABDY.StageRec P.n)}
-    (h : GProcStep P r j p l ν) : ∃ p', ν = PMF.pure p' := by
+    {p : GBCA.ByABDY.StageRec P.n} {l : GBCALabel P.n} {ν : PMF (GBCA.ByABDY.StageRec P.n)}
+    (h : GBCAProgramStep P r j p l ν) : ∃ p', ν = PMF.pure p' := by
   cases h <;> exact ⟨_, rfl⟩
 
 /-- Every network transition is Dirac. -/
-theorem gNetStep_dirac {P : Params} {r : ℕ} {w : GNetState P.n} {l : GLab P.n}
-    {μ : PMF (GNetState P.n)} (h : GNetStep P r w l μ) :
+theorem gNetStep_dirac {P : Params} {r : ℕ} {w : GNetState P.n} {l : GBCALabel P.n}
+    {μ : PMF (GNetState P.n)} (h : GBCANetworkStep P r w l μ) :
     ∃ w', μ = PMF.pure w' := by
   cases h <;> exact ⟨_, rfl⟩
 
 /-- A local program is an LTS. -/
-theorem gbcaProc_isLTS (P : Params) (r : ℕ) (j : Fin P.n) :
-    (gbcaProc P r j).IsLTS :=
+theorem gbcaProgram_isLTS (P : Params) (r : ℕ) (j : Fin P.n) :
+    (gbcaProgram P r j).IsLTS :=
   fun _ _ _ h => gProcStep_dirac h
 
 /-- The network is an LTS. -/
-theorem gNet_isLTS (P : Params) (r : ℕ) : (gNet P r).IsLTS :=
+theorem GBCANetwork_isLTS (P : Params) (r : ℕ) : (GBCANetwork P r).IsLTS :=
   fun _ _ _ h => gNetStep_dirac h
 
 /-- The synchronised group of programs is an LTS. -/
 theorem syncG_isLTS (P : Params) (r : ℕ) :
-    (System.syncProduct (gbcaProc P r)).IsLTS :=
-  System.syncProduct_isLTS (gbcaProc_isLTS P r)
+    (System.syncProduct (gbcaProgram P r)).IsLTS :=
+  System.syncProduct_isLTS (gbcaProgram_isLTS P r)
 
 /-- The programs beside the network form an LTS. -/
-theorem subPre_isLTS (P : Params) (r : ℕ) : (subPre P r).IsLTS :=
-  System.parallel_isLTS (syncG_isLTS P r) (gNet_isLTS P r)
+theorem compositionExtended_isLTS (P : Params) (r : ℕ) : (compositionExtended P r).IsLTS :=
+  System.parallel_isLTS (syncG_isLTS P r) (GBCANetwork_isLTS P r)
 
 /-- The instance is an LTS. -/
-theorem sub_isLTS (P : Params) (r : ℕ) : (sub P r).IsLTS :=
-  System.relabel_isLTS (System.abstract_isLTS (subPre_isLTS P r) _)
+theorem composition_isLTS (P : Params) (r : ℕ) : (composition P r).IsLTS :=
+  System.relabel_isLTS (System.abstract_isLTS (compositionExtended_isLTS P r) _)
 
 /-- The family of instances is an LTS. -/
-theorem gbcaSide_isLTS (P : Params) : (gbcaSide P).IsLTS :=
-  System.family_isLTS (sub_isLTS P) gOwns isFailN (gAct P)
+theorem gbcaInstanceFamily_isLTS (P : Params) : (gbcaInstanceFamily P).IsLTS :=
+  System.family_isLTS (composition_isLTS P) gOwns isFailN (gAct P)
 
 /-- No program rule fires on `τ`: a program only ever moves in a rendezvous or
 on one of the round's ports. The instance's silent transitions are therefore
 exactly the network's injections and the hidden rendezvous. -/
 theorem gProcStep_no_tau {P : Params} {r : ℕ} {j : Fin P.n}
     {p : GBCA.ByABDY.StageRec P.n} {ν : PMF (GBCA.ByABDY.StageRec P.n)}
-    (h : GProcStep P r j p (Silent.τ : GLab P.n) ν) : False := by
+    (h : GBCAProgramStep P r j p (Silent.τ : GBCALabel P.n) ν) : False := by
   rw [glab_tau] at h; cases h
 
 /-! ### Reading and building instance transitions
@@ -566,10 +566,10 @@ below unfold it once and for all, in both directions. -/
 /-- A synchronised transition of the program group on a visible label: every
 program steps, and the joint distribution is Dirac. -/
 theorem syncG_inv {P : Params} {r : ℕ} {u : ∀ _ : Fin P.n, GBCA.ByABDY.StageRec P.n}
-    {l : GLab P.n} {μ : PMF (∀ _ : Fin P.n, GBCA.ByABDY.StageRec P.n)}
-    (h : (System.syncProduct (gbcaProc P r)).step u l μ) :
+    {l : GBCALabel P.n} {μ : PMF (∀ _ : Fin P.n, GBCA.ByABDY.StageRec P.n)}
+    (h : (System.syncProduct (gbcaProgram P r)).step u l μ) :
     ∃ x : ∀ _ : Fin P.n, GBCA.ByABDY.StageRec P.n,
-      μ = PMF.pure x ∧ ∀ i, GProcStep P r i (u i) l (PMF.pure (x i)) := by
+      μ = PMF.pure x ∧ ∀ i, GBCAProgramStep P r i (u i) l (PMF.pure (x i)) := by
   rw [System.syncProduct_step] at h
   rcases h with ⟨-, μ_, hall, rfl⟩ | ⟨rfl, i, μ_i, hstep, -⟩
   · have hx : ∀ i, ∃ p', μ_ i = PMF.pure p' := fun i => gProcStep_dirac (hall i)
@@ -583,10 +583,10 @@ theorem syncG_inv {P : Params} {r : ℕ} {u : ∀ _ : Fin P.n, GBCA.ByABDY.Stage
 /-- Build a synchronised transition of the program group from per-process
 Dirac steps. -/
 theorem syncG_pure {P : Params} {r : ℕ}
-    {u x : ∀ _ : Fin P.n, GBCA.ByABDY.StageRec P.n} {l : GLab P.n}
+    {u x : ∀ _ : Fin P.n, GBCA.ByABDY.StageRec P.n} {l : GBCALabel P.n}
     (hl : l ≠ Silent.τ)
-    (h : ∀ i, GProcStep P r i (u i) l (PMF.pure (x i))) :
-    (System.syncProduct (gbcaProc P r)).step u l (PMF.pure x) := by
+    (h : ∀ i, GBCAProgramStep P r i (u i) l (PMF.pure (x i))) :
+    (System.syncProduct (gbcaProgram P r)).step u l (PMF.pure x) := by
   rw [System.syncProduct_step]
   exact Or.inl ⟨hl, fun i => PMF.pure (x i), h, (piPMF_pure x).symm⟩
 
@@ -594,7 +594,7 @@ theorem syncG_pure {P : Params} {r : ℕ}
 theorem syncG_no_tau {P : Params} {r : ℕ}
     {u : ∀ _ : Fin P.n, GBCA.ByABDY.StageRec P.n}
     {μ : PMF (∀ _ : Fin P.n, GBCA.ByABDY.StageRec P.n)}
-    (h : (System.syncProduct (gbcaProc P r)).step u (Silent.τ : GLab P.n) μ) :
+    (h : (System.syncProduct (gbcaProgram P r)).step u (Silent.τ : GBCALabel P.n) μ) :
     False := by
   rcases h with ⟨hτ, -⟩ | ⟨-, i, μ_i, hstep, -⟩
   · exact hτ rfl
@@ -602,79 +602,81 @@ theorem syncG_no_tau {P : Params} {r : ℕ}
 
 /-- The instance's step relation, unfolded to the hidden-rendezvous case and
 the shared-label case. -/
-theorem sub_step_iff (P : Params) (r : ℕ) (q : GBCA.ByABDY.ImplState P.n) (l : NLab P.n)
+theorem composition_step_iff (P : Params) (r : ℕ) (q : GBCA.ByABDY.ImplState P.n) (l : ExtendedLabel
+  P.n)
     (μ : PMF (GBCA.ByABDY.ImplState P.n)) :
-    (sub P r).step q l μ ↔
-      (l = Sum.inl Lab.tau ∧ ∃ e : GEvt P.n, (subPre P r).step q (Sum.inr e) μ) ∨
-      (subPre P r).step q (Sum.inl l) μ := by
+    (composition P r).step q l μ ↔
+      (l = Sum.inl Label.tau ∧ ∃ e : GBCAEvent P.n,
+        (compositionExtended P r).step q (Sum.inr e) μ) ∨
+      (compositionExtended P r).step q (Sum.inl l) μ := by
   constructor
   · rintro (⟨hτ, l', ⟨e, rfl⟩, hstep⟩ | ⟨-, hstep⟩)
     · exact Or.inl ⟨Sum.inl_injective hτ, e, hstep⟩
     · exact Or.inr hstep
   · rintro (⟨rfl, e, hstep⟩ | hstep)
-    · exact Or.inl ⟨rfl, _, inr_mem_gEvents e, hstep⟩
-    · exact Or.inr ⟨inl_notMem_gEvents l, hstep⟩
+    · exact Or.inl ⟨rfl, _, inr_mem_gbcaEvents e, hstep⟩
+    · exact Or.inr ⟨inl_notMem_gbcaEvents l, hstep⟩
 
 /-- Build a joint transition of the programs and the network on a rendezvous
 label. -/
-theorem subPre_event_step (P : Params) (r : ℕ)
+theorem compositionExtended_event_step (P : Params) (r : ℕ)
     {u x : ∀ _ : Fin P.n, GBCA.ByABDY.StageRec P.n} {w w' : GNetState P.n}
-    (e : GEvt P.n)
-    (hall : ∀ i, GProcStep P r i (u i) (Sum.inr e) (PMF.pure (x i)))
-    (hn : GNetStep P r w (Sum.inr e) (PMF.pure w')) :
-    (subPre P r).step (u, w) (Sum.inr e) (PMF.pure (x, w')) := by
-  rw [subPre, System.parallel_step]
+    (e : GBCAEvent P.n)
+    (hall : ∀ i, GBCAProgramStep P r i (u i) (Sum.inr e) (PMF.pure (x i)))
+    (hn : GBCANetworkStep P r w (Sum.inr e) (PMF.pure w')) :
+    (compositionExtended P r).step (u, w) (Sum.inr e) (PMF.pure (x, w')) := by
+  rw [compositionExtended, System.parallel_step]
   exact Or.inl ⟨by simp, PMF.pure x, PMF.pure w', syncG_pure (by simp) hall, hn,
     (prodPMF_pure_pure _ _).symm⟩
 
 /-- Build a joint transition of the programs and the network on a visible
 shared label. -/
-theorem subPre_lab_step (P : Params) (r : ℕ)
+theorem compositionExtended_lab_step (P : Params) (r : ℕ)
     {u x : ∀ _ : Fin P.n, GBCA.ByABDY.StageRec P.n} {w w' : GNetState P.n}
-    {l : NLab P.n} (hl : l ≠ Sum.inl Lab.tau)
-    (hall : ∀ i, GProcStep P r i (u i) (Sum.inl l) (PMF.pure (x i)))
-    (hn : GNetStep P r w (Sum.inl l) (PMF.pure w')) :
-    (subPre P r).step (u, w) (Sum.inl l) (PMF.pure (x, w')) := by
-  have hne : (Sum.inl l : GLab P.n) ≠ Silent.τ := by
+    {l : ExtendedLabel P.n} (hl : l ≠ Sum.inl Label.tau)
+    (hall : ∀ i, GBCAProgramStep P r i (u i) (Sum.inl l) (PMF.pure (x i)))
+    (hn : GBCANetworkStep P r w (Sum.inl l) (PMF.pure w')) :
+    (compositionExtended P r).step (u, w) (Sum.inl l) (PMF.pure (x, w')) := by
+  have hne : (Sum.inl l : GBCALabel P.n) ≠ Silent.τ := by
     rw [glab_tau]; simpa using hl
-  rw [subPre, System.parallel_step]
+  rw [compositionExtended, System.parallel_step]
   exact Or.inl ⟨hne, PMF.pure x, PMF.pure w', syncG_pure hne hall, hn,
     (prodPMF_pure_pure _ _).symm⟩
 
 /-- Build a silent transition of the programs and the network from a
 network-local one. -/
-theorem subPre_tau_net (P : Params) (r : ℕ)
+theorem compositionExtended_tau_net (P : Params) (r : ℕ)
     {u : ∀ _ : Fin P.n, GBCA.ByABDY.StageRec P.n} {w w' : GNetState P.n}
-    (hn : GNetStep P r w (Sum.inl (Sum.inl .tau)) (PMF.pure w')) :
-    (subPre P r).step (u, w) (Sum.inl (Sum.inl .tau)) (PMF.pure (u, w')) := by
-  rw [subPre, System.parallel_step]
+    (hn : GBCANetworkStep P r w (Sum.inl (Sum.inl .tau)) (PMF.pure w')) :
+    (compositionExtended P r).step (u, w) (Sum.inl (Sum.inl .tau)) (PMF.pure (u, w')) := by
+  rw [compositionExtended, System.parallel_step]
   exact Or.inr (Or.inr ⟨rfl, PMF.pure w', hn, (prodPMF_pure_pure _ _).symm⟩)
 
 /-- A hidden rendezvous is a silent transition of the instance. -/
-theorem sub_event_step (P : Params) (r : ℕ)
+theorem composition_event_step (P : Params) (r : ℕ)
     {u x : ∀ _ : Fin P.n, GBCA.ByABDY.StageRec P.n} {w w' : GNetState P.n}
-    (e : GEvt P.n)
-    (hall : ∀ i, GProcStep P r i (u i) (Sum.inr e) (PMF.pure (x i)))
-    (hn : GNetStep P r w (Sum.inr e) (PMF.pure w')) :
-    (sub P r).step (u, w) (Sum.inl Lab.tau) (PMF.pure (x, w')) :=
-  (sub_step_iff P r _ _ _).mpr
-    (Or.inl ⟨rfl, e, subPre_event_step P r e hall hn⟩)
+    (e : GBCAEvent P.n)
+    (hall : ∀ i, GBCAProgramStep P r i (u i) (Sum.inr e) (PMF.pure (x i)))
+    (hn : GBCANetworkStep P r w (Sum.inr e) (PMF.pure w')) :
+    (composition P r).step (u, w) (Sum.inl Label.tau) (PMF.pure (x, w')) :=
+  (composition_step_iff P r _ _ _).mpr
+    (Or.inl ⟨rfl, e, compositionExtended_event_step P r e hall hn⟩)
 
 /-- A visible shared label is a transition of the instance. -/
-theorem sub_lab_step (P : Params) (r : ℕ)
+theorem composition_lab_step (P : Params) (r : ℕ)
     {u x : ∀ _ : Fin P.n, GBCA.ByABDY.StageRec P.n} {w w' : GNetState P.n}
-    {l : NLab P.n} (hl : l ≠ Sum.inl Lab.tau)
-    (hall : ∀ i, GProcStep P r i (u i) (Sum.inl l) (PMF.pure (x i)))
-    (hn : GNetStep P r w (Sum.inl l) (PMF.pure w')) :
-    (sub P r).step (u, w) l (PMF.pure (x, w')) :=
-  (sub_step_iff P r _ _ _).mpr (Or.inr (subPre_lab_step P r hl hall hn))
+    {l : ExtendedLabel P.n} (hl : l ≠ Sum.inl Label.tau)
+    (hall : ∀ i, GBCAProgramStep P r i (u i) (Sum.inl l) (PMF.pure (x i)))
+    (hn : GBCANetworkStep P r w (Sum.inl l) (PMF.pure w')) :
+    (composition P r).step (u, w) l (PMF.pure (x, w')) :=
+  (composition_step_iff P r _ _ _).mpr (Or.inr (compositionExtended_lab_step P r hl hall hn))
 
 /-- A network-local injection is a silent transition of the instance. -/
-theorem sub_tau_net (P : Params) (r : ℕ)
+theorem composition_tau_net (P : Params) (r : ℕ)
     {u : ∀ _ : Fin P.n, GBCA.ByABDY.StageRec P.n} {w w' : GNetState P.n}
-    (hn : GNetStep P r w (Sum.inl (Sum.inl .tau)) (PMF.pure w')) :
-    (sub P r).step (u, w) (Sum.inl Lab.tau) (PMF.pure (u, w')) :=
-  (sub_step_iff P r _ _ _).mpr (Or.inr (subPre_tau_net P r hn))
+    (hn : GBCANetworkStep P r w (Sum.inl (Sum.inl .tau)) (PMF.pure w')) :
+    (composition P r).step (u, w) (Sum.inl Label.tau) (PMF.pure (u, w')) :=
+  (composition_step_iff P r _ _ _).mpr (Or.inr (compositionExtended_tau_net P r hn))
 
 /-! ### One program's rules, by label class
 
@@ -689,7 +691,7 @@ variable {P : Params} {r : ℕ} {j : Fin P.n} {p : GBCA.ByABDY.StageRec P.n}
   {ν : PMF (GBCA.ByABDY.StageRec P.n)}
 
 theorem stepG_callG_own {b : Bool}
-    (h : GProcStep P r j p (Sum.inl (Sum.inl (.callG r j b))) ν) :
+    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inl (.callG r j b))) ν) :
     p.proc.input = none ∧
       ν = PMF.pure (p.setP { p.proc with
         input := some b,
@@ -699,20 +701,20 @@ theorem stepG_callG_own {b : Bool}
   case callIdle => exact absurd rfl ‹_ ≠ j›
 
 theorem stepG_callG_foreign {id : Fin P.n} {b : Bool} (hid : id ≠ j)
-    (h : GProcStep P r j p (Sum.inl (Sum.inl (.callG r id b))) ν) :
+    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inl (.callG r id b))) ν) :
     ν = PMF.pure p := by
   cases h
   case call => exact absurd rfl hid
   case callIdle => rfl
 
 theorem stepG_gcallLoop {id : Fin P.n} {b : Bool}
-    (h : GProcStep P r j p (Sum.inl (Sum.inr (.gcallLoop r id b))) ν) :
+    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inr (.gcallLoop r id b))) ν) :
     ν = PMF.pure p := by
   cases h
   case callLoop => rfl
 
 theorem stepG_retG_A_own {v bnd : Bool}
-    (h : GProcStep P r j p (Sum.inl (Sum.inl (.retG r j (.A v) bnd))) ν) :
+    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r j (.A v) bnd))) ν) :
     p.proc.input ≠ none ∧ p.proc.sentEcho5 ≠ none ∧
       P.n - P.f ≤ p.recvCount (.echo5 (some v)) ∧ p.proc.returned = false ∧
       ν = PMF.pure (p.setP { p.proc with returned := true }) := by
@@ -722,7 +724,7 @@ theorem stepG_retG_A_own {v bnd : Bool}
   case retIdle => exact absurd rfl ‹_ ≠ j›
 
 theorem stepG_retG_B_own {v bnd : Bool}
-    (h : GProcStep P r j p (Sum.inl (Sum.inl (.retG r j (.B v) bnd))) ν) :
+    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r j (.B v) bnd))) ν) :
     p.proc.input ≠ none ∧ p.proc.sentEcho5 ≠ none ∧
       (∀ v, p.recvCount (.echo5 (some v)) < P.n - P.f) ∧
       P.n - P.f ≤ p.echo5Count ∧ (∃ k, GBCA.ByABDY.Msg.echo5 (some v) ∈ p.recv k) ∧
@@ -736,7 +738,7 @@ theorem stepG_retG_B_own {v bnd : Bool}
   case retIdle => exact absurd rfl ‹_ ≠ j›
 
 theorem stepG_retG_C_own {bnd : Bool}
-    (h : GProcStep P r j p (Sum.inl (Sum.inl (.retG r j .C bnd))) ν) :
+    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r j .C bnd))) ν) :
     p.proc.input ≠ none ∧ p.proc.sentEcho5 ≠ none ∧
       (∀ v, p.recvCount (.echo5 (some v)) < P.n - P.f) ∧
       (∀ v, (∃ k, GBCA.ByABDY.Msg.echo5 (some v) ∈ p.recv k) →
@@ -751,47 +753,47 @@ theorem stepG_retG_C_own {bnd : Bool}
   case retIdle => exact absurd rfl ‹_ ≠ j›
 
 theorem stepG_retG_foreign {id : Fin P.n} {out : GbcaOut} {bnd : Bool} (hid : id ≠ j)
-    (h : GProcStep P r j p (Sum.inl (Sum.inl (.retG r id out bnd))) ν) :
+    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r id out bnd))) ν) :
     ν = PMF.pure p := by
   cases h
   case retIdle => rfl
   all_goals exact absurd rfl hid
 
-theorem stepG_byzCallG_own {b : Bool}
-    (h : GProcStep P r j p (Sum.inl (Sum.inr (.byzCallG r j b))) ν) :
+theorem stepG_byzantineCallG_own {b : Bool}
+    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineCallG r j b))) ν) :
     p.proc.input = none ∧
       ν = PMF.pure (p.setP { p.proc with
         input := some b,
         sentInput := Function.update p.proc.sentInput b true }) := by
   cases h
-  case byzCall => exact ⟨by assumption, rfl⟩
-  case byzCallIdle => exact absurd rfl ‹_ ≠ j›
+  case byzantineCall => exact ⟨by assumption, rfl⟩
+  case byzantineCallIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem stepG_byzCallG_foreign {k : Fin P.n} {b : Bool} (hk : k ≠ j)
-    (h : GProcStep P r j p (Sum.inl (Sum.inr (.byzCallG r k b))) ν) :
+theorem stepG_byzantineCallG_foreign {k : Fin P.n} {b : Bool} (hk : k ≠ j)
+    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineCallG r k b))) ν) :
     ν = PMF.pure p := by
   cases h
-  case byzCall => exact absurd rfl hk
-  case byzCallIdle => rfl
+  case byzantineCall => exact absurd rfl hk
+  case byzantineCallIdle => rfl
 
-theorem stepG_byzCallGLoop {k : Fin P.n} {b : Bool}
-    (h : GProcStep P r j p (Sum.inl (Sum.inr (.byzCallGLoop r k b))) ν) :
+theorem stepG_byzantineCallGLoop {k : Fin P.n} {b : Bool}
+    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineCallGLoop r k b))) ν) :
     ν = PMF.pure p := by
   cases h
-  case byzCallLoop => rfl
+  case byzantineCallLoop => rfl
 
-theorem stepG_byzRetG_A_own {v bnd : Bool}
-    (h : GProcStep P r j p (Sum.inl (Sum.inr (.byzRetG r j (.A v) bnd))) ν) :
+theorem stepG_byzantineRetG_A_own {v bnd : Bool}
+    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r j (.A v) bnd))) ν) :
     p.proc.input ≠ none ∧ p.proc.sentEcho5 ≠ none ∧
       P.n - P.f ≤ p.recvCount (.echo5 (some v)) ∧ p.proc.returned = false ∧
       ν = PMF.pure (p.setP { p.proc with returned := true }) := by
   cases h
-  case byzRetA =>
+  case byzantineRetA =>
     exact ⟨by assumption, by assumption, by assumption, by assumption, rfl⟩
-  case byzRetIdle => exact absurd rfl ‹_ ≠ j›
+  case byzantineRetIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem stepG_byzRetG_B_own {v bnd : Bool}
-    (h : GProcStep P r j p (Sum.inl (Sum.inr (.byzRetG r j (.B v) bnd))) ν) :
+theorem stepG_byzantineRetG_B_own {v bnd : Bool}
+    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r j (.B v) bnd))) ν) :
     p.proc.input ≠ none ∧ p.proc.sentEcho5 ≠ none ∧
       (∀ v, p.recvCount (.echo5 (some v)) < P.n - P.f) ∧
       P.n - P.f ≤ p.echo5Count ∧ (∃ k, GBCA.ByABDY.Msg.echo5 (some v) ∈ p.recv k) ∧
@@ -799,13 +801,13 @@ theorem stepG_byzRetG_B_own {v bnd : Bool}
       p.proc.returned = false ∧
       ν = PMF.pure (p.setP { p.proc with returned := true }) := by
   cases h
-  case byzRetB =>
+  case byzantineRetB =>
     exact ⟨by assumption, by assumption, by assumption, by assumption,
       by assumption, by assumption, by assumption, by assumption, rfl⟩
-  case byzRetIdle => exact absurd rfl ‹_ ≠ j›
+  case byzantineRetIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem stepG_byzRetG_C_own {bnd : Bool}
-    (h : GProcStep P r j p (Sum.inl (Sum.inr (.byzRetG r j .C bnd))) ν) :
+theorem stepG_byzantineRetG_C_own {bnd : Bool}
+    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r j .C bnd))) ν) :
     p.proc.input ≠ none ∧ p.proc.sentEcho5 ≠ none ∧
       (∀ v, p.recvCount (.echo5 (some v)) < P.n - P.f) ∧
       (∀ v, (∃ k, GBCA.ByABDY.Msg.echo5 (some v) ∈ p.recv k) →
@@ -814,20 +816,20 @@ theorem stepG_byzRetG_C_own {bnd : Bool}
       p.proc.returned = false ∧
       ν = PMF.pure (p.setP { p.proc with returned := true }) := by
   cases h
-  case byzRetC =>
+  case byzantineRetC =>
     exact ⟨by assumption, by assumption, by assumption, by assumption,
       by assumption, by assumption, by assumption, rfl⟩
-  case byzRetIdle => exact absurd rfl ‹_ ≠ j›
+  case byzantineRetIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem stepG_byzRetG_foreign {k : Fin P.n} {out : GbcaOut} {bnd : Bool} (hk : k ≠ j)
-    (h : GProcStep P r j p (Sum.inl (Sum.inr (.byzRetG r k out bnd))) ν) :
+theorem stepG_byzantineRetG_foreign {k : Fin P.n} {out : GbcaOut} {bnd : Bool} (hk : k ≠ j)
+    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r k out bnd))) ν) :
     ν = PMF.pure p := by
   cases h
-  case byzRetIdle => rfl
+  case byzantineRetIdle => rfl
   all_goals exact absurd rfl hk
 
-theorem stepG_snd_input_own {b : Bool}
-    (h : GProcStep P r j p (Sum.inr (.snd j (.input b))) ν) :
+theorem stepG_send_input_own {b : Bool}
+    (h : GBCAProgramStep P r j p (Sum.inr (.send j (.input b))) ν) :
     p.proc.input ≠ none ∧ P.f + 1 ≤ p.recvCount (.input b) ∧
       p.proc.sentInput b = false ∧
       ν = PMF.pure (p.setP { p.proc with
@@ -837,8 +839,8 @@ theorem stepG_snd_input_own {b : Bool}
     exact ⟨by assumption, by assumption, by assumption, rfl⟩
   case sndIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem stepG_snd_echo_own {b : Bool}
-    (h : GProcStep P r j p (Sum.inr (.snd j (.echo b))) ν) :
+theorem stepG_send_echo_own {b : Bool}
+    (h : GBCAProgramStep P r j p (Sum.inr (.send j (.echo b))) ν) :
     p.proc.input ≠ none ∧ P.n - P.f ≤ p.recvCount (.input b) ∧
       p.proc.sentEcho = none ∧
       ν = PMF.pure (p.setP { p.proc with sentEcho := some b }) := by
@@ -846,8 +848,8 @@ theorem stepG_snd_echo_own {b : Bool}
   case sndEcho => exact ⟨by assumption, by assumption, by assumption, rfl⟩
   case sndIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem stepG_snd_voteBit_own {b : Bool}
-    (h : GProcStep P r j p (Sum.inr (.snd j (.vote (some b)))) ν) :
+theorem stepG_send_voteBit_own {b : Bool}
+    (h : GBCAProgramStep P r j p (Sum.inr (.send j (.vote (some b)))) ν) :
     p.proc.input ≠ none ∧
       P.n - P.f ≤ p.recvCount (.echo b) ∧ p.proc.sentVote = none ∧
       ν = PMF.pure (p.setP { p.proc with sentVote := some (some b) }) := by
@@ -856,8 +858,8 @@ theorem stepG_snd_voteBit_own {b : Bool}
     exact ⟨by assumption, by assumption, by assumption, rfl⟩
   case sndIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem stepG_snd_voteBot_own
-    (h : GProcStep P r j p (Sum.inr (.snd j (.vote none))) ν) :
+theorem stepG_send_voteBot_own
+    (h : GBCAProgramStep P r j p (Sum.inr (.send j (.vote none))) ν) :
     p.proc.input ≠ none ∧
       (∀ b, p.recvCount (.echo b) < P.n - P.f) ∧
       P.n - P.f ≤ p.echoCount ∧ p.bothValid P ∧
@@ -869,8 +871,8 @@ theorem stepG_snd_voteBot_own
       by assumption, rfl⟩
   case sndIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem stepG_snd_bindBit_own {b : Bool}
-    (h : GProcStep P r j p (Sum.inr (.snd j (.bind (some b)))) ν) :
+theorem stepG_send_bindBit_own {b : Bool}
+    (h : GBCAProgramStep P r j p (Sum.inr (.send j (.bind (some b)))) ν) :
     p.proc.input ≠ none ∧ p.proc.sentVote ≠ none ∧
       P.n - P.f ≤ p.recvCount (.vote (some b)) ∧ p.proc.sentBind = none ∧
       ν = PMF.pure (p.setP { p.proc with sentBind := some (some b) }) := by
@@ -879,8 +881,8 @@ theorem stepG_snd_bindBit_own {b : Bool}
     exact ⟨by assumption, by assumption, by assumption, by assumption, rfl⟩
   case sndIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem stepG_snd_bindBot_own
-    (h : GProcStep P r j p (Sum.inr (.snd j (.bind none))) ν) :
+theorem stepG_send_bindBot_own
+    (h : GBCAProgramStep P r j p (Sum.inr (.send j (.bind none))) ν) :
     p.proc.input ≠ none ∧ p.proc.sentVote ≠ none ∧
       (∀ b, p.recvCount (.vote (some b)) < P.n - P.f) ∧
       P.n - P.f ≤ p.voteCount ∧ p.bothValid P ∧
@@ -892,8 +894,8 @@ theorem stepG_snd_bindBot_own
       by assumption, by assumption, rfl⟩
   case sndIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem stepG_snd_echo5Bit_own {b : Bool}
-    (h : GProcStep P r j p (Sum.inr (.snd j (.echo5 (some b)))) ν) :
+theorem stepG_send_echo5Bit_own {b : Bool}
+    (h : GBCAProgramStep P r j p (Sum.inr (.send j (.echo5 (some b)))) ν) :
     p.proc.input ≠ none ∧ p.proc.sentBind ≠ none ∧
       P.n - P.f ≤ p.recvCount (.bind (some b)) ∧ p.proc.sentEcho5 = none ∧
       ν = PMF.pure (p.setP { p.proc with sentEcho5 := some (some b) }) := by
@@ -902,8 +904,8 @@ theorem stepG_snd_echo5Bit_own {b : Bool}
     exact ⟨by assumption, by assumption, by assumption, by assumption, rfl⟩
   case sndIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem stepG_snd_echo5Bot_own
-    (h : GProcStep P r j p (Sum.inr (.snd j (.echo5 none))) ν) :
+theorem stepG_send_echo5Bot_own
+    (h : GBCAProgramStep P r j p (Sum.inr (.send j (.echo5 none))) ν) :
     p.proc.input ≠ none ∧ p.proc.sentBind ≠ none ∧
       (∀ b, p.recvCount (.bind (some b)) < P.n - P.f) ∧
       P.n - P.f ≤ p.bindCount ∧ p.bothValid P ∧
@@ -915,21 +917,21 @@ theorem stepG_snd_echo5Bot_own
       by assumption, by assumption, rfl⟩
   case sndIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem stepG_snd_foreign {k : Fin P.n} {m : GBCA.ByABDY.Msg} (hk : k ≠ j)
-    (h : GProcStep P r j p (Sum.inr (.snd k m)) ν) : ν = PMF.pure p := by
+theorem stepG_send_foreign {k : Fin P.n} {m : GBCA.ByABDY.Msg} (hk : k ≠ j)
+    (h : GBCAProgramStep P r j p (Sum.inr (.send k m)) ν) : ν = PMF.pure p := by
   cases h
   case sndIdle => rfl
   all_goals exact absurd rfl hk
 
-theorem stepG_dlv_own {k : Fin P.n} {m : GBCA.ByABDY.Msg}
-    (h : GProcStep P r j p (Sum.inr (.dlv j k m)) ν) :
+theorem stepG_deliver_own {k : Fin P.n} {m : GBCA.ByABDY.Msg}
+    (h : GBCAProgramStep P r j p (Sum.inr (.deliver j k m)) ν) :
     ν = PMF.pure (p.deliverTo k m) := by
   cases h
   case dlvRecv => rfl
   case dlvIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem stepG_dlv_foreign {i k : Fin P.n} {m : GBCA.ByABDY.Msg} (hi : i ≠ j)
-    (h : GProcStep P r j p (Sum.inr (.dlv i k m)) ν) : ν = PMF.pure p := by
+theorem stepG_deliver_foreign {i k : Fin P.n} {m : GBCA.ByABDY.Msg} (hi : i ≠ j)
+    (h : GBCAProgramStep P r j p (Sum.inr (.deliver i k m)) ν) : ν = PMF.pure p := by
   cases h
   case dlvRecv => exact absurd rfl hi
   case dlvIdle => rfl
@@ -942,160 +944,166 @@ section NetInversion
 
 variable {P : Params} {r : ℕ} {w : GNetState P.n} {μ : PMF (GNetState P.n)}
 
-theorem gNetStep_snd {j : Fin P.n} {m : GBCA.ByABDY.Msg}
-    (h : GNetStep P r w (Sum.inr (.snd j m)) μ) :
+theorem gNetStep_send {j : Fin P.n} {m : GBCA.ByABDY.Msg}
+    (h : GBCANetworkStep P r w (Sum.inr (.send j m)) μ) :
     μ = PMF.pure (w.gsent j m) := by
   cases h; rfl
 
-theorem gNetStep_dlv {i j : Fin P.n} {m : GBCA.ByABDY.Msg}
-    (h : GNetStep P r w (Sum.inr (.dlv i j m)) μ) :
+theorem gNetStep_deliver {i j : Fin P.n} {m : GBCA.ByABDY.Msg}
+    (h : GBCANetworkStep P r w (Sum.inr (.deliver i j m)) μ) :
     m ∈ w.sent j ∧ μ = PMF.pure w := by
   cases h; exact ⟨by assumption, rfl⟩
 
-theorem gNetStep_tau (h : GNetStep P r w (Sum.inl (Sum.inl .tau)) μ) :
+theorem gNetStep_tau (h : GBCANetworkStep P r w (Sum.inl (Sum.inl .tau)) μ) :
     ∃ (k : Fin P.n) (m : GBCA.ByABDY.Msg), k ∈ w.F ∧ μ = PMF.pure (w.gsent k m) := by
   cases h
-  case byzG k m hF => exact ⟨k, m, hF, rfl⟩
+  case byzantineG k m hF => exact ⟨k, m, hF, rfl⟩
 
 end NetInversion
 
 /-! ### The specification read over the instance's interface
 
-The graded agreement specification speaks the shared alphabet `Lab n`; the
-instance speaks the extended alphabet `NLab n`, in which the three Byzantine
-handshake rows and the call loop of round `r` are separate labels. `gPull` is the
+The graded agreement specification speaks the shared alphabet `Label n`; the
+instance speaks the extended alphabet `ExtendedLabel n`, in which the three Byzantine
+handshake rows and the call loop of round `r` are separate labels. `gbcaLabelMap` is the
 projection that identifies them with the specification labels they stand for:
 a Byzantine call is a call, a Byzantine return is a return, and the two
 call loops are calls, which the specification takes on its input-enabledness
 row. Every other extended label — the protocol network's rendezvous, the coin
 handshake rows — are off the specification's interface and idles.
 
-The lifted specification `liftedSpec` is the specification read back along
-`gPull`. It is what the instance is replaced by: the handshake-row labels stay visible
+The lifted specification `specificationOverRoundAlphabet` is the specification read back along
+`gbcaLabelMap`. It is what the instance is replaced by: the handshake-row labels stay visible
 at this boundary, and their authorisation is the surrounding network's business
 (D11). -/
 
 /-- The projection of the extended alphabet onto the specification's alphabet.
 -/
-def gPull (n : ℕ) : NLab n → Option (Lab n)
+def gbcaLabelMap (n : ℕ) : ExtendedLabel n → Option (Label n)
   | Sum.inl l => some l
   | Sum.inr (.gcallLoop r id b) => some (.callG r id b)
-  | Sum.inr (.byzCallG r k b) => some (.callG r k b)
-  | Sum.inr (.byzCallGLoop r k b) => some (.callG r k b)
-  | Sum.inr (.byzRetG r k out bnd) => some (.retG r k out bnd)
+  | Sum.inr (.byzantineCallG r k b) => some (.callG r k b)
+  | Sum.inr (.byzantineCallGLoop r k b) => some (.callG r k b)
+  | Sum.inr (.byzantineRetG r k out bnd) => some (.retG r k out bnd)
   | Sum.inr _ => none
 
-@[simp] theorem gPull_inl {n : ℕ} (l : Lab n) : gPull n (Sum.inl l) = some l := rfl
+@[simp] theorem gbcaLabelMap_inl {n : ℕ} (l : Label n) : gbcaLabelMap n (Sum.inl l) = some l := rfl
 
-@[simp] theorem gPull_gcallLoop {n : ℕ} (r : ℕ) (id : Fin n) (b : Bool) :
-    gPull n (Sum.inr (.gcallLoop r id b)) = some (.callG r id b) := rfl
+@[simp] theorem gbcaLabelMap_gcallLoop {n : ℕ} (r : ℕ) (id : Fin n) (b : Bool) :
+    gbcaLabelMap n (Sum.inr (.gcallLoop r id b)) = some (.callG r id b) := rfl
 
-@[simp] theorem gPull_byzCallG {n : ℕ} (r : ℕ) (k : Fin n) (b : Bool) :
-    gPull n (Sum.inr (.byzCallG r k b)) = some (.callG r k b) := rfl
+@[simp] theorem gbcaLabelMap_byzantineCallG {n : ℕ} (r : ℕ) (k : Fin n) (b : Bool) :
+    gbcaLabelMap n (Sum.inr (.byzantineCallG r k b)) = some (.callG r k b) := rfl
 
-@[simp] theorem gPull_byzCallGLoop {n : ℕ} (r : ℕ) (k : Fin n) (b : Bool) :
-    gPull n (Sum.inr (.byzCallGLoop r k b)) = some (.callG r k b) := rfl
+@[simp] theorem gbcaLabelMap_byzantineCallGLoop {n : ℕ} (r : ℕ) (k : Fin n) (b : Bool) :
+    gbcaLabelMap n (Sum.inr (.byzantineCallGLoop r k b)) = some (.callG r k b) := rfl
 
-@[simp] theorem gPull_byzRetG {n : ℕ} (r : ℕ) (k : Fin n) (out : GbcaOut)
+@[simp] theorem gbcaLabelMap_byzantineRetG {n : ℕ} (r : ℕ) (k : Fin n) (out : GbcaOut)
     (bnd : Bool) :
-    gPull n (Sum.inr (.byzRetG r k out bnd)) = some (.retG r k out bnd) := rfl
+    gbcaLabelMap n (Sum.inr (.byzantineRetG r k out bnd)) = some (.retG r k out bnd) := rfl
 
-@[simp] theorem gPull_gsnd {n : ℕ} (r : ℕ) (j : Fin n) (m : GBCA.ByABDY.Msg) :
-    gPull n (Sum.inr (.gsnd r j m)) = none := rfl
+@[simp] theorem gbcaLabelMap_gbcaSend {n : ℕ} (r : ℕ) (j : Fin n) (m : GBCA.ByABDY.Msg) :
+    gbcaLabelMap n (Sum.inr (.gbcaSend r j m)) = none := rfl
 
-@[simp] theorem gPull_gdlv {n : ℕ} (r : ℕ) (i j : Fin n) (m : GBCA.ByABDY.Msg) :
-    gPull n (Sum.inr (.gdlv r i j m)) = none := rfl
+@[simp] theorem gbcaLabelMap_gbcaDeliver {n : ℕ} (r : ℕ) (i j : Fin n) (m : GBCA.ByABDY.Msg) :
+    gbcaLabelMap n (Sum.inr (.gbcaDeliver r i j m)) = none := rfl
 
-@[simp] theorem gPull_dsnd {n : ℕ} (j : Fin n) (b : Bool) :
-    gPull n (Sum.inr (.dsnd j b)) = none := rfl
+@[simp] theorem gbcaLabelMap_decidedSend {n : ℕ} (j : Fin n) (b : Bool) :
+    gbcaLabelMap n (Sum.inr (.decidedSend j b)) = none := rfl
 
-@[simp] theorem gPull_ddlv {n : ℕ} (i j : Fin n) (b : Bool) :
-    gPull n (Sum.inr (.ddlv i j b)) = none := rfl
+@[simp] theorem gbcaLabelMap_decidedDeliver {n : ℕ} (i j : Fin n) (b : Bool) :
+    gbcaLabelMap n (Sum.inr (.decidedDeliver i j b)) = none := rfl
 
-@[simp] theorem gPull_retWPub {n : ℕ} (r : ℕ) (id : Fin n) (c b : Bool) :
-    gPull n (Sum.inr (.retWPub r id c b)) = none := rfl
+@[simp] theorem gbcaLabelMap_retWPub {n : ℕ} (r : ℕ) (id : Fin n) (c b : Bool) :
+    gbcaLabelMap n (Sum.inr (.retWPub r id c b)) = none := rfl
 
-@[simp] theorem gPull_byzCallW {n : ℕ} (r : ℕ) (k : Fin n) :
-    gPull n (Sum.inr (.byzCallW r k)) = none := rfl
+@[simp] theorem gbcaLabelMap_byzantineCallW {n : ℕ} (r : ℕ) (k : Fin n) :
+    gbcaLabelMap n (Sum.inr (.byzantineCallW r k)) = none := rfl
 
-@[simp] theorem gPull_byzRetW {n : ℕ} (r : ℕ) (k : Fin n) (b : Bool) :
-    gPull n (Sum.inr (.byzRetW r k b)) = none := rfl
+@[simp] theorem gbcaLabelMap_byzantineRetW {n : ℕ} (r : ℕ) (k : Fin n) (b : Bool) :
+    gbcaLabelMap n (Sum.inr (.byzantineRetW r k b)) = none := rfl
 
 /-- The silent label projects to the silent label. -/
-@[simp] theorem gPull_tau (n : ℕ) :
-    gPull n (Silent.τ : NLab n) = some (Silent.τ : Lab n) := rfl
+@[simp] theorem gbcaLabelMap_tau (n : ℕ) :
+    gbcaLabelMap n (Silent.τ : ExtendedLabel n) = some (Silent.τ : Label n) := rfl
 
 /-- Only the silent label projects to the silent label: a handshake row projects to a
 handshake port, and every other extended label idles. -/
-theorem gPull_eq_tau {n : ℕ} {l : NLab n} (h : gPull n l = some Lab.tau) :
-    l = Sum.inl Lab.tau := by
+theorem gbcaLabelMap_eq_tau {n : ℕ} {l : ExtendedLabel n} (h : gbcaLabelMap n l = some Label.tau) :
+    l = Sum.inl Label.tau := by
   cases l with
   | inl l₀ => rw [Option.some.inj h]
   | inr e => cases e <;> simp at h
 
 /-- **The lifted specification**: the round-`r` graded agreement specification
 read over the instance's interface. -/
-noncomputable def liftedSpec (P : Params) (r : ℕ) :
-    System (GBCA.SpecState P.n) (NLab P.n) :=
-  (GBCA.specInst P r).mapIdle (gPull P.n)
+noncomputable def specificationOverRoundAlphabet (P : Params) (r : ℕ) :
+    System (GBCA.SpecState P.n) (ExtendedLabel P.n) :=
+  (GBCA.specInst P r).mapIdle (gbcaLabelMap P.n)
 
-@[simp] theorem liftedSpec_init (P : Params) (r : ℕ) :
-    (liftedSpec P r).init = GBCA.SpecState.initial P.n := rfl
+@[simp] theorem specificationOverRoundAlphabet_init (P : Params) (r : ℕ) :
+    (specificationOverRoundAlphabet P r).init = GBCA.SpecState.initial P.n := rfl
 
 /-- The lifted specification is an LTS: the specification is, and reading it
 back adds only Dirac self-loops. -/
-theorem liftedSpec_isLTS (P : Params) (r : ℕ) : (liftedSpec P r).IsLTS :=
+theorem specificationOverRoundAlphabet_isLTS (P : Params) (r : ℕ) : (specificationOverRoundAlphabet
+  P r).IsLTS :=
   System.mapIdle_isLTS _ (GBCA.specInst_isLTS P r)
 
 /-! ### Weak runs of the lifted specification
 
-A weak run of the specification is read back along a section of `gPull`. The
+A weak run of the specification is read back along a section of `gbcaLabelMap`. The
 section sends every label to its own copy on the left, except the one label the
 instance's step projects from, which is sent to the interface label the
 instance actually took — this is what turns a specification `callG` run into
 the answer to a Byzantine call row. -/
 
-/-- The section of `gPull` that answers the interface label `l` over the
+/-- The section of `gbcaLabelMap` that answers the interface label `l` over the
 specification label `l₀`. -/
-def gSect {n : ℕ} (l₀ : Lab n) (l : NLab n) : Lab n → NLab n :=
+def labelSection {n : ℕ} (l₀ : Label n) (l : ExtendedLabel n) : Label n → ExtendedLabel n :=
   fun x => if x = l₀ then l else Sum.inl x
 
-theorem gPull_gSect {n : ℕ} {l₀ : Lab n} {l : NLab n} (hl : gPull n l = some l₀)
-    (x : Lab n) : gPull n (gSect l₀ l x) = some x := by
-  unfold gSect
+theorem gbcaLabelMap_labelSection {n : ℕ} {l₀ : Label n} {l : ExtendedLabel n} (hl : gbcaLabelMap n
+  l = some l₀)
+    (x : Label n) : gbcaLabelMap n (labelSection l₀ l x) = some x := by
+  unfold labelSection
   by_cases hx : x = l₀
   · rw [if_pos hx, hl, hx]
-  · rw [if_neg hx, gPull_inl]
+  · rw [if_neg hx, gbcaLabelMap_inl]
 
-theorem gSect_tau {n : ℕ} {l₀ : Lab n} {l : NLab n} (hl : gPull n l = some l₀)
-    (hl₀ : l₀ ≠ (Silent.τ : Lab n)) (x : Lab n) :
-    gSect l₀ l x = (Silent.τ : NLab n) ↔ x = (Silent.τ : Lab n) := by
-  unfold gSect
+theorem labelSection_tau {n : ℕ} {l₀ : Label n} {l : ExtendedLabel n} (hl : gbcaLabelMap n l = some
+  l₀)
+    (hl₀ : l₀ ≠ (Silent.τ : Label n)) (x : Label n) :
+    labelSection l₀ l x = (Silent.τ : ExtendedLabel n) ↔ x = (Silent.τ : Label n) := by
+  unfold labelSection
   by_cases hx : x = l₀
   · rw [if_pos hx, hx]
     constructor
     · intro hlτ
-      have h2 : some l₀ = some (Silent.τ : Lab n) := by rw [← hl, hlτ]; rfl
+      have h2 : some l₀ = some (Silent.τ : Label n) := by rw [← hl, hlτ]; rfl
       exact absurd (Option.some.inj h2) hl₀
     · intro h; exact absurd h hl₀
   · rw [if_neg hx]
-    simp [Lab.silent_eq]
+    simp [Label.silent_eq]
 
 /-- A silent weak run of the specification is a silent weak run of the lifted
 specification. -/
-theorem weakLSilent_liftedSpec (P : Params) (r : ℕ) {s s' : GBCA.SpecState P.n}
-    (h : (GBCA.specInst P r).weakLSilent s s') : (liftedSpec P r).weakLSilent s s' :=
+theorem weakLSilent_specificationOverRoundAlphabet (P : Params) (r : ℕ) {s s' : GBCA.SpecState P.n}
+    (h : (GBCA.specInst P r).weakLSilent s s') : (specificationOverRoundAlphabet P r).weakLSilent s
+      s' :=
   System.weakLSilent_mapIdle Sum.inl (fun _ => rfl) (fun _ => by simp) h
 
 /-- A labelled weak run of the specification is a weak run of the lifted
 specification at any interface label projecting to the same specification
 label. -/
-theorem weakLStep_liftedSpec (P : Params) (r : ℕ) {s s' : GBCA.SpecState P.n}
-    {l₀ : Lab P.n} {l : NLab P.n} (hl₀ : l₀ ≠ (Silent.τ : Lab P.n))
-    (hl : gPull P.n l = some l₀)
-    (h : (GBCA.specInst P r).weakLStep s l₀ s') : (liftedSpec P r).weakLStep s l s' :=
-  System.weakLStep_mapIdle (gSect l₀ l) (gPull_gSect hl) (gSect_tau hl hl₀)
-    (by simp [gSect]) h
+theorem weakLStep_specificationOverRoundAlphabet (P : Params) (r : ℕ) {s s' : GBCA.SpecState P.n}
+    {l₀ : Label P.n} {l : ExtendedLabel P.n} (hl₀ : l₀ ≠ (Silent.τ : Label P.n))
+    (hl : gbcaLabelMap P.n l = some l₀)
+    (h : (GBCA.specInst P r).weakLStep s l₀ s') : (specificationOverRoundAlphabet P r).weakLStep s l
+      s' :=
+  System.weakLStep_mapIdle (labelSection l₀ l) (gbcaLabelMap_labelSection hl) (labelSection_tau hl
+    hl₀)
+    (by simp [labelSection]) h
 
 /-! ### One state, two presentations
 
@@ -1121,7 +1129,7 @@ theorem nodeFun_update {j : Fin P.n} {q : GBCA.ByABDY.StageRec P.n}
   · rw [hne i hi, Function.update_of_ne hi]
 
 /-- A record write at one program, with the network state untouched. -/
-theorem sub_setProc {j : Fin P.n} {pr : GBCA.ByABDY.ProcState}
+theorem composition_setProc {j : Fin P.n} {pr : GBCA.ByABDY.ProcState}
     (hj : x j = (u j).setP pr) (hne : ∀ i, i ≠ j → x i = u i) :
     ((x, w) : GBCA.ByABDY.ImplState P.n) = GBCA.ByABDY.ImplState.setProc (u, w) j pr := by
   rw [nodeFun_update hj hne]
@@ -1129,7 +1137,7 @@ theorem sub_setProc {j : Fin P.n} {pr : GBCA.ByABDY.ProcState}
 
 /-- A record write at one program together with the network state recording the message
 that write multicasts. -/
-theorem sub_setProc_gsent {j : Fin P.n} {pr : GBCA.ByABDY.ProcState} {m : GBCA.ByABDY.Msg}
+theorem composition_setProc_gsent {j : Fin P.n} {pr : GBCA.ByABDY.ProcState} {m : GBCA.ByABDY.Msg}
     (hj : x j = (u j).setP pr) (hne : ∀ i, i ≠ j → x i = u i) :
     ((x, w.gsent j m) : GBCA.ByABDY.ImplState P.n)
       = (GBCA.ByABDY.ImplState.setProc (u, w) j pr).mcast j m := by
@@ -1138,7 +1146,7 @@ theorem sub_setProc_gsent {j : Fin P.n} {pr : GBCA.ByABDY.ProcState} {m : GBCA.B
 
 /-- A record write at one program together with the network state's write of
 the round's bound bit. -/
-theorem sub_setProc_setBound {j : Fin P.n} {pr : GBCA.ByABDY.ProcState} {β : Bool}
+theorem composition_setProc_setBound {j : Fin P.n} {pr : GBCA.ByABDY.ProcState} {β : Bool}
     (hj : x j = (u j).setP pr) (hne : ∀ i, i ≠ j → x i = u i) :
     ((x, w.setBound β) : GBCA.ByABDY.ImplState P.n)
       = (GBCA.ByABDY.ImplState.setProc (u, w) j pr).setBound β := by
@@ -1146,12 +1154,12 @@ theorem sub_setProc_setBound {j : Fin P.n} {pr : GBCA.ByABDY.ProcState} {β : Bo
   rfl
 
 /-- The programs stand still. -/
-theorem sub_idle (hall : ∀ i, x i = u i) :
+theorem composition_idle (hall : ∀ i, x i = u i) :
     ((x, w) : GBCA.ByABDY.ImplState P.n) = (u, w) := by
   rw [funext hall]
 
 /-- A delivery: the receiver files the message under its sender's row. -/
-theorem sub_deliver {i k : Fin P.n} {m : GBCA.ByABDY.Msg}
+theorem composition_deliver {i k : Fin P.n} {m : GBCA.ByABDY.Msg}
     (hi : x i = (u i).deliverTo k m) (hne : ∀ i', i' ≠ i → x i' = u i') :
     ((x, w) : GBCA.ByABDY.ImplState P.n) = GBCA.ByABDY.ImplState.recvMsg (u, w) i k m := by
   rw [nodeFun_update hi hne]
@@ -1159,12 +1167,12 @@ theorem sub_deliver {i k : Fin P.n} {m : GBCA.ByABDY.Msg}
 
 /-- A Byzantine injection: the network state records a message under a corrupted
 sender. -/
-theorem sub_gsent {k : Fin P.n} {m : GBCA.ByABDY.Msg} :
+theorem composition_gsent {k : Fin P.n} {m : GBCA.ByABDY.Msg} :
     ((u, w.gsent k m) : GBCA.ByABDY.ImplState P.n)
       = GBCA.ByABDY.ImplState.mcast (u, w) k m := rfl
 
 /-- Corruption is the network state's own write, which is the implementation's (D1). -/
-theorem sub_corrupt (k : Fin P.n) :
+theorem composition_corrupt (k : Fin P.n) :
     ((u, w.corrupt P k) : GBCA.ByABDY.ImplState P.n)
       = GBCA.ByABDY.ImplState.corrupt P k (u, w) := rfl
 
@@ -1172,22 +1180,22 @@ end Frame
 
 /-! ### Reading an instance transition backwards
 
-Two inversions of the composition, the counterparts of `subPre_event_step` /
-`subPre_lab_step` / `subPre_tau_net`: on a visible label of the internal
+Two inversions of the composition, the counterparts of `compositionExtended_event_step` /
+`compositionExtended_lab_step` / `compositionExtended_tau_net`: on a visible label of the internal
 alphabet every program and the network step together, and on the silent label
 only the network moves. -/
 
 /-- A visible transition of the programs beside the network: every program and
 the network step on the label, and the joint distribution is their Dirac
 product. -/
-theorem subPre_joint_inv {P : Params} {r : ℕ}
-    {u : ∀ _ : Fin P.n, GBCA.ByABDY.StageRec P.n} {w : GNetState P.n} {L : GLab P.n}
-    {μ : PMF (GBCA.ByABDY.ImplState P.n)} (hL : L ≠ (Silent.τ : GLab P.n))
-    (h : (subPre P r).step (u, w) L μ) :
+theorem compositionExtended_joint_inv {P : Params} {r : ℕ}
+    {u : ∀ _ : Fin P.n, GBCA.ByABDY.StageRec P.n} {w : GNetState P.n} {L : GBCALabel P.n}
+    {μ : PMF (GBCA.ByABDY.ImplState P.n)} (hL : L ≠ (Silent.τ : GBCALabel P.n))
+    (h : (compositionExtended P r).step (u, w) L μ) :
     ∃ (x : ∀ _ : Fin P.n, GBCA.ByABDY.StageRec P.n) (w' : GNetState P.n),
-      μ = PMF.pure (x, w') ∧ (∀ i, GProcStep P r i (u i) L (PMF.pure (x i))) ∧
-        GNetStep P r w L (PMF.pure w') := by
-  rw [subPre, System.parallel_step] at h
+      μ = PMF.pure (x, w') ∧ (∀ i, GBCAProgramStep P r i (u i) L (PMF.pure (x i))) ∧
+        GBCANetworkStep P r w L (PMF.pure w') := by
+  rw [compositionExtended, System.parallel_step] at h
   rcases h with ⟨-, μ₁, μ₂, hs, hn, rfl⟩ | ⟨hτ, -⟩ | ⟨hτ, -⟩
   · obtain ⟨x, rfl, hall⟩ := syncG_inv hs
     obtain ⟨w', rfl⟩ := gNetStep_dirac hn
@@ -1197,13 +1205,13 @@ theorem subPre_joint_inv {P : Params} {r : ℕ}
 
 /-- A silent transition of the programs beside the network is a network-local
 injection: no program has a `τ` row. -/
-theorem subPre_tau_inv {P : Params} {r : ℕ}
+theorem compositionExtended_tau_inv {P : Params} {r : ℕ}
     {u : ∀ _ : Fin P.n, GBCA.ByABDY.StageRec P.n} {w : GNetState P.n}
     {μ : PMF (GBCA.ByABDY.ImplState P.n)}
-    (h : (subPre P r).step (u, w) (Sum.inl (Sum.inl Lab.tau)) μ) :
+    (h : (compositionExtended P r).step (u, w) (Sum.inl (Sum.inl Label.tau)) μ) :
     ∃ w' : GNetState P.n, μ = PMF.pure (u, w') ∧
-      GNetStep P r w (Sum.inl (Sum.inl Lab.tau)) (PMF.pure w') := by
-  rw [subPre, System.parallel_step] at h
+      GBCANetworkStep P r w (Sum.inl (Sum.inl Label.tau)) (PMF.pure w') := by
+  rw [compositionExtended, System.parallel_step] at h
   rcases h with ⟨hτ, -⟩ | ⟨-, μ₁, hs, rfl⟩ | ⟨-, μ₂, hn, rfl⟩
   · exact absurd rfl hτ
   · exact absurd hs syncG_no_tau
@@ -1221,77 +1229,77 @@ section NetRound
 variable {P : Params} {r : ℕ} {w : GNetState P.n} {μ : PMF (GNetState P.n)}
 
 theorem gNetStep_callG_round {r' : ℕ} {id : Fin P.n} {b : Bool}
-    (h : GNetStep P r w (Sum.inl (Sum.inl (.callG r' id b))) μ) :
+    (h : GBCANetworkStep P r w (Sum.inl (Sum.inl (.callG r' id b))) μ) :
     r' = r ∧ μ = PMF.pure (w.gsent id (.input b)) := by
   cases h; exact ⟨rfl, rfl⟩
 
 theorem gNetStep_retG_round {r' : ℕ} {id : Fin P.n} {out : GbcaOut} {bnd : Bool}
-    (h : GNetStep P r w (Sum.inl (Sum.inl (.retG r' id out bnd))) μ) :
+    (h : GBCANetworkStep P r w (Sum.inl (Sum.inl (.retG r' id out bnd))) μ) :
     r' = r ∧ bnd = w.bound.getD (GBCA.ByABDY.boundOf w.sent w.F out) ∧
       μ = PMF.pure (w.setBound bnd) := by
   cases h with
   | retGIdle _ _ _ hbnd => exact ⟨rfl, hbnd, rfl⟩
 
 theorem gNetStep_gcallLoop_round {r' : ℕ} {id : Fin P.n} {b : Bool}
-    (h : GNetStep P r w (Sum.inl (Sum.inr (.gcallLoop r' id b))) μ) :
+    (h : GBCANetworkStep P r w (Sum.inl (Sum.inr (.gcallLoop r' id b))) μ) :
     r' = r ∧ μ = PMF.pure w := by
   cases h; exact ⟨rfl, rfl⟩
 
-theorem gNetStep_byzCallG_round {r' : ℕ} {k : Fin P.n} {b : Bool}
-    (h : GNetStep P r w (Sum.inl (Sum.inr (.byzCallG r' k b))) μ) :
+theorem gNetStep_byzantineCallG_round {r' : ℕ} {k : Fin P.n} {b : Bool}
+    (h : GBCANetworkStep P r w (Sum.inl (Sum.inr (.byzantineCallG r' k b))) μ) :
     r' = r ∧ μ = PMF.pure (w.gsent k (.input b)) := by
   cases h; exact ⟨rfl, rfl⟩
 
-theorem gNetStep_byzCallGLoop_round {r' : ℕ} {k : Fin P.n} {b : Bool}
-    (h : GNetStep P r w (Sum.inl (Sum.inr (.byzCallGLoop r' k b))) μ) :
+theorem gNetStep_byzantineCallGLoop_round {r' : ℕ} {k : Fin P.n} {b : Bool}
+    (h : GBCANetworkStep P r w (Sum.inl (Sum.inr (.byzantineCallGLoop r' k b))) μ) :
     r' = r ∧ μ = PMF.pure w := by
   cases h; exact ⟨rfl, rfl⟩
 
-theorem gNetStep_byzRetG_round {r' : ℕ} {k : Fin P.n} {out : GbcaOut} {bnd : Bool}
-    (h : GNetStep P r w (Sum.inl (Sum.inr (.byzRetG r' k out bnd))) μ) :
+theorem gNetStep_byzantineRetG_round {r' : ℕ} {k : Fin P.n} {out : GbcaOut} {bnd : Bool}
+    (h : GBCANetworkStep P r w (Sum.inl (Sum.inr (.byzantineRetG r' k out bnd))) μ) :
     r' = r ∧ bnd = w.bound.getD (GBCA.ByABDY.boundOf w.sent w.F out) ∧
       μ = PMF.pure (w.setBound bnd) := by
   cases h with
-  | byzRetG _ _ _ hbnd => exact ⟨rfl, hbnd, rfl⟩
+  | byzantineRetG _ _ _ hbnd => exact ⟨rfl, hbnd, rfl⟩
 
 /-! The labels the network does not offer at all: the ABA API, the coin ports,
 corruption, and the protocol network's own rendezvous. -/
 
 theorem gNetStep_callABA_noStep {id : Fin P.n} {b : Bool}
-    (h : GNetStep P r w (Sum.inl (Sum.inl (.callABA id b))) μ) : False := by cases h
+    (h : GBCANetworkStep P r w (Sum.inl (Sum.inl (.callABA id b))) μ) : False := by cases h
 
 theorem gNetStep_retABA_noStep {id : Fin P.n} {b : Bool}
-    (h : GNetStep P r w (Sum.inl (Sum.inl (.retABA id b))) μ) : False := by cases h
+    (h : GBCANetworkStep P r w (Sum.inl (Sum.inl (.retABA id b))) μ) : False := by cases h
 
 theorem gNetStep_callW_noStep {r' : ℕ} {id : Fin P.n}
-    (h : GNetStep P r w (Sum.inl (Sum.inl (.callW r' id))) μ) : False := by cases h
+    (h : GBCANetworkStep P r w (Sum.inl (Sum.inl (.callW r' id))) μ) : False := by cases h
 
 theorem gNetStep_retW_noStep {r' : ℕ} {id : Fin P.n} {b : Bool}
-    (h : GNetStep P r w (Sum.inl (Sum.inl (.retW r' id b))) μ) : False := by cases h
+    (h : GBCANetworkStep P r w (Sum.inl (Sum.inl (.retW r' id b))) μ) : False := by cases h
 
 theorem gNetStep_fail_noStep {k : Fin P.n}
-    (h : GNetStep P r w (Sum.inl (Sum.inl (.fail k))) μ) : False := by cases h
+    (h : GBCANetworkStep P r w (Sum.inl (Sum.inl (.fail k))) μ) : False := by cases h
 
-theorem gNetStep_gsnd_noStep {r' : ℕ} {j : Fin P.n} {m : GBCA.ByABDY.Msg}
-    (h : GNetStep P r w (Sum.inl (Sum.inr (.gsnd r' j m))) μ) : False := by cases h
+theorem gNetStep_gbcaSend_noStep {r' : ℕ} {j : Fin P.n} {m : GBCA.ByABDY.Msg}
+    (h : GBCANetworkStep P r w (Sum.inl (Sum.inr (.gbcaSend r' j m))) μ) : False := by cases h
 
-theorem gNetStep_gdlv_noStep {r' : ℕ} {i j : Fin P.n} {m : GBCA.ByABDY.Msg}
-    (h : GNetStep P r w (Sum.inl (Sum.inr (.gdlv r' i j m))) μ) : False := by cases h
+theorem gNetStep_gbcaDeliver_noStep {r' : ℕ} {i j : Fin P.n} {m : GBCA.ByABDY.Msg}
+    (h : GBCANetworkStep P r w (Sum.inl (Sum.inr (.gbcaDeliver r' i j m))) μ) : False := by cases h
 
-theorem gNetStep_dsnd_noStep {j : Fin P.n} {b : Bool}
-    (h : GNetStep P r w (Sum.inl (Sum.inr (.dsnd j b))) μ) : False := by cases h
+theorem gNetStep_decidedSend_noStep {j : Fin P.n} {b : Bool}
+    (h : GBCANetworkStep P r w (Sum.inl (Sum.inr (.decidedSend j b))) μ) : False := by cases h
 
-theorem gNetStep_ddlv_noStep {i j : Fin P.n} {b : Bool}
-    (h : GNetStep P r w (Sum.inl (Sum.inr (.ddlv i j b))) μ) : False := by cases h
+theorem gNetStep_decidedDeliver_noStep {i j : Fin P.n} {b : Bool}
+    (h : GBCANetworkStep P r w (Sum.inl (Sum.inr (.decidedDeliver i j b))) μ) : False := by cases h
 
 theorem gNetStep_retWPub_noStep {r' : ℕ} {id : Fin P.n} {c b : Bool}
-    (h : GNetStep P r w (Sum.inl (Sum.inr (.retWPub r' id c b))) μ) : False := by cases h
+    (h : GBCANetworkStep P r w (Sum.inl (Sum.inr (.retWPub r' id c b))) μ) : False := by cases h
 
-theorem gNetStep_byzCallW_noStep {r' : ℕ} {k : Fin P.n}
-    (h : GNetStep P r w (Sum.inl (Sum.inr (.byzCallW r' k))) μ) : False := by cases h
+theorem gNetStep_byzantineCallW_noStep {r' : ℕ} {k : Fin P.n}
+    (h : GBCANetworkStep P r w (Sum.inl (Sum.inr (.byzantineCallW r' k))) μ) : False := by cases h
 
-theorem gNetStep_byzRetW_noStep {r' : ℕ} {k : Fin P.n} {b : Bool}
-    (h : GNetStep P r w (Sum.inl (Sum.inr (.byzRetW r' k b))) μ) : False := by cases h
+theorem gNetStep_byzantineRetW_noStep {r' : ℕ} {k : Fin P.n} {b : Bool}
+    (h : GBCANetworkStep P r w (Sum.inl (Sum.inr (.byzantineRetW r' k b))) μ) : False := by cases h
 
 end NetRound
 
@@ -1305,94 +1313,94 @@ anywhere:
 | round instance | implementation |
 | --- | --- |
 | `callG` (caller writes, network records) | `ImplStep.call` |
-| `gcallLoop`, `byzCallGLoop` | `ImplStep.callLoop` |
-| `byzCallG` (D11) | `ImplStep.call` |
-| `retG` / `byzRetG`, by grade | `ImplStep.retA` / `retB` / `retC` |
-| hidden `snd` rendezvous, by level | the eight protocol `τ` rules |
-| hidden `dlv` rendezvous | `ImplStep.deliver` |
-| network-local injection | `ImplStep.byz` |
+| `gcallLoop`, `byzantineCallGLoop` | `ImplStep.callLoop` |
+| `byzantineCallG` (D11) | `ImplStep.call` |
+| `retG` / `byzantineRetG`, by grade | `ImplStep.retA` / `retB` / `retC` |
+| hidden `send` rendezvous, by level | the eight protocol `τ` rules |
+| hidden `deliver` rendezvous | `ImplStep.deliver` |
+| network-local injection | `ImplStep.byzantine` |
 
 The two hidden rendezvous and the network's injection are silent on both sides,
-and `gPull` takes `τ` to `τ`. -/
+and `gbcaLabelMap` takes `τ` to `τ`. -/
 
 /-- **The strong projection lemma.** -/
-theorem sub_projects (P : Params) (r : ℕ) :
-    ∀ (σ : GBCA.ByABDY.ImplState P.n) (l : NLab P.n) (μ : PMF (GBCA.ByABDY.ImplState P.n)),
-      (sub P r).step σ l μ →
-      ∃ l₀, gPull P.n l = some l₀ ∧
+theorem composition_projects (P : Params) (r : ℕ) :
+    ∀ (σ : GBCA.ByABDY.ImplState P.n) (l : ExtendedLabel P.n) (μ : PMF (GBCA.ByABDY.ImplState P.n)),
+      (composition P r).step σ l μ →
+      ∃ l₀, gbcaLabelMap P.n l = some l₀ ∧
         (GBCA.ByABDY.implInst P r).step σ l₀ μ := by
   rintro ⟨u, w⟩ l μ hstep
-  rcases (sub_step_iff P r (u, w) l μ).mp hstep with ⟨rfl, e, hev⟩ | hlab
+  rcases (composition_step_iff P r (u, w) l μ).mp hstep with ⟨rfl, e, hev⟩ | hlab
   · -- a hidden rendezvous: an internal step of the implementation
-    obtain ⟨x, w', rfl, hall, hn⟩ := subPre_joint_inv (by simp) hev
-    refine ⟨Lab.tau, rfl, ?_⟩
+    obtain ⟨x, w', rfl, hall, hn⟩ := compositionExtended_joint_inv (by simp) hev
+    refine ⟨Label.tau, rfl, ?_⟩
     cases e with
-    | snd j m =>
+    | send j m =>
       have hfor : ∀ i, i ≠ j → x i = u i :=
-        fun i hi => PMF.pure_injective (stepG_snd_foreign (Ne.symm hi) (hall i))
-      have hw : w' = w.gsent j m := PMF.pure_injective (gNetStep_snd hn)
+        fun i hi => PMF.pure_injective (stepG_send_foreign (Ne.symm hi) (hall i))
+      have hw : w' = w.gsent j m := PMF.pure_injective (gNetStep_send hn)
       subst hw
       cases m with
       | input b =>
-        obtain ⟨hin, hcnt, hsend, hx⟩ := stepG_snd_input_own (hall j)
-        rw [sub_setProc_gsent (PMF.pure_injective hx) hfor]
+        obtain ⟨hin, hcnt, hsend, hx⟩ := stepG_send_input_own (hall j)
+        rw [composition_setProc_gsent (PMF.pure_injective hx) hfor]
         exact GBCA.ByABDY.ImplStep.relay _ j b hin hcnt hsend
       | echo b =>
-        obtain ⟨hin, hcnt, hsend, hx⟩ := stepG_snd_echo_own (hall j)
-        rw [sub_setProc_gsent (PMF.pure_injective hx) hfor]
+        obtain ⟨hin, hcnt, hsend, hx⟩ := stepG_send_echo_own (hall j)
+        rw [composition_setProc_gsent (PMF.pure_injective hx) hfor]
         exact GBCA.ByABDY.ImplStep.echo _ j b hin hcnt hsend
       | vote v =>
         cases v with
         | some b =>
-          obtain ⟨hin, hcnt, hsend, hx⟩ := stepG_snd_voteBit_own (hall j)
-          rw [sub_setProc_gsent (PMF.pure_injective hx) hfor]
+          obtain ⟨hin, hcnt, hsend, hx⟩ := stepG_send_voteBit_own (hall j)
+          rw [composition_setProc_gsent (PMF.pure_injective hx) hfor]
           exact GBCA.ByABDY.ImplStep.voteBit _ j b hin hcnt hsend
         | none =>
           obtain ⟨hin, hnot, hcnt, hval, hsend, hx⟩ :=
-            stepG_snd_voteBot_own (hall j)
-          rw [sub_setProc_gsent (PMF.pure_injective hx) hfor]
+            stepG_send_voteBot_own (hall j)
+          rw [composition_setProc_gsent (PMF.pure_injective hx) hfor]
           exact GBCA.ByABDY.ImplStep.voteBot _ j hin hnot hcnt hval hsend
       | bind v =>
         cases v with
         | some b =>
-          obtain ⟨hin, hlv, hcnt, hsend, hx⟩ := stepG_snd_bindBit_own (hall j)
-          rw [sub_setProc_gsent (PMF.pure_injective hx) hfor]
+          obtain ⟨hin, hlv, hcnt, hsend, hx⟩ := stepG_send_bindBit_own (hall j)
+          rw [composition_setProc_gsent (PMF.pure_injective hx) hfor]
           exact GBCA.ByABDY.ImplStep.bindBit _ j b hin hlv hcnt hsend
         | none =>
           obtain ⟨hin, hlv, hnot, hcnt, hval, hsend, hx⟩ :=
-            stepG_snd_bindBot_own (hall j)
-          rw [sub_setProc_gsent (PMF.pure_injective hx) hfor]
+            stepG_send_bindBot_own (hall j)
+          rw [composition_setProc_gsent (PMF.pure_injective hx) hfor]
           exact GBCA.ByABDY.ImplStep.bindBot _ j hin hlv hnot hcnt hval hsend
       | «echo5» v =>
         cases v with
         | some b =>
-          obtain ⟨hin, hlv, hcnt, hsend, hx⟩ := stepG_snd_echo5Bit_own (hall j)
-          rw [sub_setProc_gsent (PMF.pure_injective hx) hfor]
+          obtain ⟨hin, hlv, hcnt, hsend, hx⟩ := stepG_send_echo5Bit_own (hall j)
+          rw [composition_setProc_gsent (PMF.pure_injective hx) hfor]
           exact GBCA.ByABDY.ImplStep.echo5Bit _ j b hin hlv hcnt hsend
         | none =>
           obtain ⟨hin, hlv, hnot, hcnt, hval, hsend, hx⟩ :=
-            stepG_snd_echo5Bot_own (hall j)
-          rw [sub_setProc_gsent (PMF.pure_injective hx) hfor]
+            stepG_send_echo5Bot_own (hall j)
+          rw [composition_setProc_gsent (PMF.pure_injective hx) hfor]
           exact GBCA.ByABDY.ImplStep.echo5Bot _ j hin hlv hnot hcnt hval hsend
-    | dlv i j m =>
-      obtain ⟨hmem, hw⟩ := gNetStep_dlv hn
+    | deliver i j m =>
+      obtain ⟨hmem, hw⟩ := gNetStep_deliver hn
       have hw' : w' = w := PMF.pure_injective hw
       subst hw'
       have hfor : ∀ i', i' ≠ i → x i' = u i' :=
-        fun i' hi' => PMF.pure_injective (stepG_dlv_foreign (Ne.symm hi') (hall i'))
-      rw [sub_deliver (PMF.pure_injective (stepG_dlv_own (hall i))) hfor]
+        fun i' hi' => PMF.pure_injective (stepG_deliver_foreign (Ne.symm hi') (hall i'))
+      rw [composition_deliver (PMF.pure_injective (stepG_deliver_own (hall i))) hfor]
       exact GBCA.ByABDY.ImplStep.deliver _ i j m hmem
-  · by_cases hlτ : l = Sum.inl Lab.tau
+  · by_cases hlτ : l = Sum.inl Label.tau
     · -- the network's own injection
       subst hlτ
-      obtain ⟨w', rfl, hn⟩ := subPre_tau_inv hlab
+      obtain ⟨w', rfl, hn⟩ := compositionExtended_tau_inv hlab
       obtain ⟨k, m, hF, hw⟩ := gNetStep_tau hn
       have hw' : w' = w.gsent k m := PMF.pure_injective hw
       subst hw'
-      refine ⟨Lab.tau, rfl, ?_⟩
-      rw [sub_gsent]
-      exact GBCA.ByABDY.ImplStep.byz _ k m hF
-    · obtain ⟨x, w', rfl, hall, hn⟩ := subPre_joint_inv (by simpa using hlτ) hlab
+      refine ⟨Label.tau, rfl, ?_⟩
+      rw [composition_gsent]
+      exact GBCA.ByABDY.ImplStep.byzantine _ k m hF
+    · obtain ⟨x, w', rfl, hall, hn⟩ := compositionExtended_joint_inv (by simpa using hlτ) hlab
       cases l with
       | inl l₀ =>
         cases l₀ with
@@ -1410,7 +1418,7 @@ theorem sub_projects (P : Params) (r : ℕ) :
           have hfor : ∀ i, i ≠ id → x i = u i :=
             fun i hi => PMF.pure_injective (stepG_callG_foreign (Ne.symm hi) (hall i))
           refine ⟨_, rfl, ?_⟩
-          rw [sub_setProc_gsent (PMF.pure_injective hx) hfor]
+          rw [composition_setProc_gsent (PMF.pure_injective hx) hfor]
           exact GBCA.ByABDY.ImplStep.call _ id b hin
         | retG r' id out bnd =>
           obtain ⟨rfl, hbnd, hw⟩ := gNetStep_retG_round hn
@@ -1422,77 +1430,77 @@ theorem sub_projects (P : Params) (r : ℕ) :
           cases out with
           | A v =>
             obtain ⟨hin, hlv, hcnt, hret, hx⟩ := stepG_retG_A_own (hall id)
-            rw [sub_setProc_setBound (PMF.pure_injective hx) hfor]
+            rw [composition_setProc_setBound (PMF.pure_injective hx) hfor]
             exact GBCA.ByABDY.ImplStep.retA _ id v bnd hin hlv hcnt hret hbnd
           | B v =>
             obtain ⟨hin, hlv, hnotA, hcnt, honce, hbind, hval, hret, hx⟩ :=
               stepG_retG_B_own (hall id)
-            rw [sub_setProc_setBound (PMF.pure_injective hx) hfor]
+            rw [composition_setProc_setBound (PMF.pure_injective hx) hfor]
             exact GBCA.ByABDY.ImplStep.retB _ id v bnd hin hlv hnotA hcnt honce hbind hval
               hret hbnd
           | C =>
             obtain ⟨hin, hlv, hnotA, hnotB, hcnt, hval, hret, hx⟩ :=
               stepG_retG_C_own (hall id)
-            rw [sub_setProc_setBound (PMF.pure_injective hx) hfor]
+            rw [composition_setProc_setBound (PMF.pure_injective hx) hfor]
             exact GBCA.ByABDY.ImplStep.retC _ id bnd hin hlv hnotA hnotB hcnt hval hret hbnd
       | inr ev =>
         cases ev with
-        | gsnd r' j m => exact (gNetStep_gsnd_noStep hn).elim
-        | gdlv r' i j m => exact (gNetStep_gdlv_noStep hn).elim
-        | dsnd j b => exact (gNetStep_dsnd_noStep hn).elim
-        | ddlv i j b => exact (gNetStep_ddlv_noStep hn).elim
+        | gbcaSend r' j m => exact (gNetStep_gbcaSend_noStep hn).elim
+        | gbcaDeliver r' i j m => exact (gNetStep_gbcaDeliver_noStep hn).elim
+        | decidedSend j b => exact (gNetStep_decidedSend_noStep hn).elim
+        | decidedDeliver i j b => exact (gNetStep_decidedDeliver_noStep hn).elim
         | retWPub r' id c b => exact (gNetStep_retWPub_noStep hn).elim
-        | byzCallW r' k => exact (gNetStep_byzCallW_noStep hn).elim
-        | byzRetW r' k b => exact (gNetStep_byzRetW_noStep hn).elim
+        | byzantineCallW r' k => exact (gNetStep_byzantineCallW_noStep hn).elim
+        | byzantineRetW r' k b => exact (gNetStep_byzantineRetW_noStep hn).elim
         | gcallLoop r' id b =>
           obtain ⟨rfl, hw⟩ := gNetStep_gcallLoop_round hn
           have hw' : w' = w := PMF.pure_injective hw
           subst hw'
           have hidle : ∀ i, x i = u i := fun i => PMF.pure_injective (stepG_gcallLoop (hall i))
           refine ⟨_, rfl, ?_⟩
-          rw [sub_idle hidle]
+          rw [composition_idle hidle]
           exact GBCA.ByABDY.ImplStep.callLoop _ id b
-        | byzCallG r' k b =>
-          obtain ⟨rfl, hw⟩ := gNetStep_byzCallG_round hn
+        | byzantineCallG r' k b =>
+          obtain ⟨rfl, hw⟩ := gNetStep_byzantineCallG_round hn
           have hw' : w' = w.gsent k (.input b) := PMF.pure_injective hw
           subst hw'
-          obtain ⟨hin, hx⟩ := stepG_byzCallG_own (hall k)
+          obtain ⟨hin, hx⟩ := stepG_byzantineCallG_own (hall k)
           have hfor : ∀ i, i ≠ k → x i = u i :=
-            fun i hi => PMF.pure_injective (stepG_byzCallG_foreign (Ne.symm hi) (hall i))
+            fun i hi => PMF.pure_injective (stepG_byzantineCallG_foreign (Ne.symm hi) (hall i))
           refine ⟨_, rfl, ?_⟩
-          rw [sub_setProc_gsent (PMF.pure_injective hx) hfor]
+          rw [composition_setProc_gsent (PMF.pure_injective hx) hfor]
           exact GBCA.ByABDY.ImplStep.call _ k b hin
-        | byzCallGLoop r' k b =>
-          obtain ⟨rfl, hw⟩ := gNetStep_byzCallGLoop_round hn
+        | byzantineCallGLoop r' k b =>
+          obtain ⟨rfl, hw⟩ := gNetStep_byzantineCallGLoop_round hn
           have hw' : w' = w := PMF.pure_injective hw
           subst hw'
           have hidle : ∀ i, x i = u i :=
-            fun i => PMF.pure_injective (stepG_byzCallGLoop (hall i))
+            fun i => PMF.pure_injective (stepG_byzantineCallGLoop (hall i))
           refine ⟨_, rfl, ?_⟩
-          rw [sub_idle hidle]
+          rw [composition_idle hidle]
           exact GBCA.ByABDY.ImplStep.callLoop _ k b
-        | byzRetG r' k out bnd =>
-          obtain ⟨rfl, hbnd, hw⟩ := gNetStep_byzRetG_round hn
+        | byzantineRetG r' k out bnd =>
+          obtain ⟨rfl, hbnd, hw⟩ := gNetStep_byzantineRetG_round hn
           have hw' : w' = w.setBound bnd := PMF.pure_injective hw
           subst hw'
           have hfor : ∀ i, i ≠ k → x i = u i :=
-            fun i hi => PMF.pure_injective (stepG_byzRetG_foreign (Ne.symm hi) (hall i))
+            fun i hi => PMF.pure_injective (stepG_byzantineRetG_foreign (Ne.symm hi) (hall i))
           refine ⟨_, rfl, ?_⟩
           cases out with
           | A v =>
-            obtain ⟨hin, hlv, hcnt, hret, hx⟩ := stepG_byzRetG_A_own (hall k)
-            rw [sub_setProc_setBound (PMF.pure_injective hx) hfor]
+            obtain ⟨hin, hlv, hcnt, hret, hx⟩ := stepG_byzantineRetG_A_own (hall k)
+            rw [composition_setProc_setBound (PMF.pure_injective hx) hfor]
             exact GBCA.ByABDY.ImplStep.retA _ k v bnd hin hlv hcnt hret hbnd
           | B v =>
             obtain ⟨hin, hlv, hnotA, hcnt, honce, hbind, hval, hret, hx⟩ :=
-              stepG_byzRetG_B_own (hall k)
-            rw [sub_setProc_setBound (PMF.pure_injective hx) hfor]
+              stepG_byzantineRetG_B_own (hall k)
+            rw [composition_setProc_setBound (PMF.pure_injective hx) hfor]
             exact GBCA.ByABDY.ImplStep.retB _ k v bnd hin hlv hnotA hcnt honce hbind hval
               hret hbnd
           | C =>
             obtain ⟨hin, hlv, hnotA, hnotB, hcnt, hval, hret, hx⟩ :=
-              stepG_byzRetG_C_own (hall k)
-            rw [sub_setProc_setBound (PMF.pure_injective hx) hfor]
+              stepG_byzantineRetG_C_own (hall k)
+            rw [composition_setProc_setBound (PMF.pure_injective hx) hfor]
             exact GBCA.ByABDY.ImplStep.retC _ k bnd hin hlv hnotA hnotB hcnt hval hret hbnd
 
 /-! ### The round instance is refined by the graded agreement specification
@@ -1501,7 +1509,7 @@ The round instance's answer to a step is the implementation's answer, read
 through the per-instance refinement (`GBCA.ByABDY.implRefines`,
 `GBCA/ABDY/RefinesSpecification.lean`): the first leg is strong and functional, so nothing of that
 refinement is reproved here. The specification's weak answer is finally lifted to the round
-instance's interface along a section of `gPull` — which is where a Byzantine
+instance's interface along a section of `gbcaLabelMap` — which is where a Byzantine
 handshake row is answered by the specification's own call or return row (D11). -/
 
 /-- **The simulation relation of the round instance**: the relation
@@ -1514,20 +1522,20 @@ def Rsub (P : Params) (r : ℕ) (σ : GBCA.ByABDY.ImplState P.n) (s : GBCA.SpecS
 simulated by the round-`r` graded agreement specification, read over the
 instance's interface. -/
 theorem subSim (P : Params) (r : ℕ) :
-    ForwardSimulation (sub P r) (liftedSpec P r) (Rsub P r) := by
+    ForwardSimulation (composition P r) (specificationOverRoundAlphabet P r) (Rsub P r) := by
   constructor
   intro q₁ q₂ hR l μ hstep q₁' hq₁'
-  obtain ⟨l₀, hpull, himpl⟩ := sub_projects P r q₁ l μ hstep
+  obtain ⟨l₀, hpull, himpl⟩ := composition_projects P r q₁ l μ hstep
   obtain ⟨s', hdis, hrel⟩ := (GBCA.ByABDY.implRefines P r).step q₁ q₂ hR l₀ μ himpl q₁' hq₁'
   refine ⟨s', ?_, hrel⟩
   rcases hdis with ⟨hτ, hweak⟩ | ⟨hτ, hweak⟩
-  · exact Or.inl ⟨gPull_eq_tau (by rw [hpull, hτ]; rfl),
-      weakLSilent_liftedSpec P r hweak⟩
-  · refine Or.inr ⟨?_, weakLStep_liftedSpec P r hτ hpull hweak⟩
+  · exact Or.inl ⟨gbcaLabelMap_eq_tau (by rw [hpull, hτ]; rfl),
+      weakLSilent_specificationOverRoundAlphabet P r hweak⟩
+  · refine Or.inr ⟨?_, weakLStep_specificationOverRoundAlphabet P r hτ hpull hweak⟩
     intro hl
     refine hτ ?_
-    have h2 : gPull P.n (Silent.τ : NLab P.n) = some l₀ := by rw [← hl]; exact hpull
-    rw [gPull_tau] at h2
+    have h2 : gbcaLabelMap P.n (Silent.τ : ExtendedLabel P.n) = some l₀ := by rw [← hl]; exact hpull
+    rw [gbcaLabelMap_tau] at h2
     exact (Option.some.inj h2).symm
 
 /-! ### What the family lift will need
@@ -1539,14 +1547,14 @@ state lets stand verbatim. -/
 
 /-- The broadcast corruption act on a specification state, over the extended
 alphabet: `GBCA.failAct` taken on the extended `fail` label. -/
-def gActSpec (P : Params) : NLab P.n → GBCA.SpecState P.n → GBCA.SpecState P.n
+def gActSpec (P : Params) : ExtendedLabel P.n → GBCA.SpecState P.n → GBCA.SpecState P.n
   | Sum.inl (.fail k), s => s.corrupt P k
   | _, s => s
 
 /-- The initial states of the instance and of its specification are
 related. -/
 theorem subSim_init (P : Params) (r : ℕ) :
-    Rsub P r (sub P r).init (GBCA.specInst P r).init :=
+    Rsub P r (composition P r).init (GBCA.specInst P r).init :=
   GBCA.ByABDY.instRel_init P r
 
 /-- **Broadcast compatibility**: corruption preserves the instance relation.
@@ -1554,7 +1562,7 @@ The network state's corrupted set is the implementation's, so the two guards
 `k ∉ F ∧ |F| < f` agree and the implementation-level statement
 (`GBCA.ByABDY.instRel_corrupt`) applies verbatim (D1). -/
 theorem subSim_failAct (P : Params) :
-    ∀ l : NLab P.n, isFailN l → ∀ (r : ℕ) (σ : GBCA.ByABDY.ImplState P.n)
+    ∀ l : ExtendedLabel P.n, isFailN l → ∀ (r : ℕ) (σ : GBCA.ByABDY.ImplState P.n)
       (s : GBCA.SpecState P.n), Rsub P r σ s →
       Rsub P r (gAct P l σ) (gActSpec P l s) := by
   rintro l hl r ⟨u, w⟩ s hR
@@ -1563,8 +1571,8 @@ theorem subSim_failAct (P : Params) :
   | inl l₀ =>
     cases l₀ with
     | fail k =>
-      have hs : gAct P (Sum.inl (Lab.fail k)) (u, w)
-          = GBCA.ByABDY.ImplState.corrupt P k (u, w) := sub_corrupt k
+      have hs : gAct P (Sum.inl (Label.fail k)) (u, w)
+          = GBCA.ByABDY.ImplState.corrupt P k (u, w) := composition_corrupt k
       have hc := GBCA.ByABDY.instRel_corrupt P r k hR
       rw [← hs] at hc
       exact hc
@@ -1582,16 +1590,16 @@ theorem subSim_failAct (P : Params) :
 #guard_msgs in
 #print axioms subSim
 
-/-- info: 'PLTS.ABA.GBCA.ByABDY.sub_projects' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.GBCA.ByABDY.composition_projects' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms sub_projects
+#print axioms composition_projects
 
 end GBCA.ByABDY
 
 /-! ## The routing table, evaluated
 
 `gOwns` and `isFailN` are decided by a `rfl` at every label of the extended
-alphabet. The composed reading composes `gbcaSide` with local states that speak
+alphabet. The composed reading composes `gbcaInstanceFamily` with local states that speak
 that alphabet, so it discharges the routing side conditions by `simp`; the
 table below is what `simp` uses, and it lives under `PLTS.ABA.Composition` with the
 rest of the components' vocabulary. -/
@@ -1607,49 +1615,49 @@ section GOwns
 variable {n : ℕ}
 
 @[simp] theorem gOwns_callG (r : ℕ) (id : Fin n) (b : Bool) :
-    GBCA.ByABDY.gOwns (Sum.inl (Lab.callG r id b) : NLab n) = some r := rfl
+    GBCA.ByABDY.gOwns (Sum.inl (Label.callG r id b) : ExtendedLabel n) = some r := rfl
 @[simp] theorem gOwns_retG (r : ℕ) (id : Fin n) (out : GbcaOut) (bnd : Bool) :
-    GBCA.ByABDY.gOwns (Sum.inl (Lab.retG r id out bnd) : NLab n) = some r := rfl
+    GBCA.ByABDY.gOwns (Sum.inl (Label.retG r id out bnd) : ExtendedLabel n) = some r := rfl
 @[simp] theorem gOwns_gcallLoop (r : ℕ) (id : Fin n) (b : Bool) :
-    GBCA.ByABDY.gOwns (Sum.inr (.gcallLoop r id b) : NLab n) = some r := rfl
-@[simp] theorem gOwns_byzCallG (r : ℕ) (k : Fin n) (b : Bool) :
-    GBCA.ByABDY.gOwns (Sum.inr (.byzCallG r k b) : NLab n) = some r := rfl
-@[simp] theorem gOwns_byzCallGLoop (r : ℕ) (k : Fin n) (b : Bool) :
-    GBCA.ByABDY.gOwns (Sum.inr (.byzCallGLoop r k b) : NLab n) = some r := rfl
-@[simp] theorem gOwns_byzRetG (r : ℕ) (k : Fin n) (out : GbcaOut) (bnd : Bool) :
-    GBCA.ByABDY.gOwns (Sum.inr (.byzRetG r k out bnd) : NLab n) = some r := rfl
+    GBCA.ByABDY.gOwns (Sum.inr (.gcallLoop r id b) : ExtendedLabel n) = some r := rfl
+@[simp] theorem gOwns_byzantineCallG (r : ℕ) (k : Fin n) (b : Bool) :
+    GBCA.ByABDY.gOwns (Sum.inr (.byzantineCallG r k b) : ExtendedLabel n) = some r := rfl
+@[simp] theorem gOwns_byzantineCallGLoop (r : ℕ) (k : Fin n) (b : Bool) :
+    GBCA.ByABDY.gOwns (Sum.inr (.byzantineCallGLoop r k b) : ExtendedLabel n) = some r := rfl
+@[simp] theorem gOwns_byzantineRetG (r : ℕ) (k : Fin n) (out : GbcaOut) (bnd : Bool) :
+    GBCA.ByABDY.gOwns (Sum.inr (.byzantineRetG r k out bnd) : ExtendedLabel n) = some r := rfl
 
-@[simp] theorem gOwns_tau : GBCA.ByABDY.gOwns (Sum.inl Lab.tau : NLab n) = none := rfl
+@[simp] theorem gOwns_tau : GBCA.ByABDY.gOwns (Sum.inl Label.tau : ExtendedLabel n) = none := rfl
 @[simp] theorem gOwns_callABA (id : Fin n) (b : Bool) :
-    GBCA.ByABDY.gOwns (Sum.inl (Lab.callABA id b) : NLab n) = none := rfl
+    GBCA.ByABDY.gOwns (Sum.inl (Label.callABA id b) : ExtendedLabel n) = none := rfl
 @[simp] theorem gOwns_retABA (id : Fin n) (b : Bool) :
-    GBCA.ByABDY.gOwns (Sum.inl (Lab.retABA id b) : NLab n) = none := rfl
+    GBCA.ByABDY.gOwns (Sum.inl (Label.retABA id b) : ExtendedLabel n) = none := rfl
 @[simp] theorem gOwns_callW (r : ℕ) (id : Fin n) :
-    GBCA.ByABDY.gOwns (Sum.inl (Lab.callW r id) : NLab n) = none := rfl
+    GBCA.ByABDY.gOwns (Sum.inl (Label.callW r id) : ExtendedLabel n) = none := rfl
 @[simp] theorem gOwns_retW (r : ℕ) (id : Fin n) (c : Bool) :
-    GBCA.ByABDY.gOwns (Sum.inl (Lab.retW r id c) : NLab n) = none := rfl
+    GBCA.ByABDY.gOwns (Sum.inl (Label.retW r id c) : ExtendedLabel n) = none := rfl
 @[simp] theorem gOwns_fail (k : Fin n) :
-    GBCA.ByABDY.gOwns (Sum.inl (Lab.fail k) : NLab n) = none := rfl
-@[simp] theorem gOwns_gsnd (r : ℕ) (j : Fin n) (m : GBCA.ByABDY.Msg) :
-    GBCA.ByABDY.gOwns (Sum.inr (.gsnd r j m) : NLab n) = none := rfl
-@[simp] theorem gOwns_gdlv (r : ℕ) (i j : Fin n) (m : GBCA.ByABDY.Msg) :
-    GBCA.ByABDY.gOwns (Sum.inr (.gdlv r i j m) : NLab n) = none := rfl
-@[simp] theorem gOwns_dsnd (j : Fin n) (b : Bool) :
-    GBCA.ByABDY.gOwns (Sum.inr (.dsnd j b) : NLab n) = none := rfl
-@[simp] theorem gOwns_ddlv (i j : Fin n) (b : Bool) :
-    GBCA.ByABDY.gOwns (Sum.inr (.ddlv i j b) : NLab n) = none := rfl
+    GBCA.ByABDY.gOwns (Sum.inl (Label.fail k) : ExtendedLabel n) = none := rfl
+@[simp] theorem gOwns_gbcaSend (r : ℕ) (j : Fin n) (m : GBCA.ByABDY.Msg) :
+    GBCA.ByABDY.gOwns (Sum.inr (.gbcaSend r j m) : ExtendedLabel n) = none := rfl
+@[simp] theorem gOwns_gbcaDeliver (r : ℕ) (i j : Fin n) (m : GBCA.ByABDY.Msg) :
+    GBCA.ByABDY.gOwns (Sum.inr (.gbcaDeliver r i j m) : ExtendedLabel n) = none := rfl
+@[simp] theorem gOwns_decidedSend (j : Fin n) (b : Bool) :
+    GBCA.ByABDY.gOwns (Sum.inr (.decidedSend j b) : ExtendedLabel n) = none := rfl
+@[simp] theorem gOwns_decidedDeliver (i j : Fin n) (b : Bool) :
+    GBCA.ByABDY.gOwns (Sum.inr (.decidedDeliver i j b) : ExtendedLabel n) = none := rfl
 @[simp] theorem gOwns_retWPub (r : ℕ) (id : Fin n) (c b : Bool) :
-    GBCA.ByABDY.gOwns (Sum.inr (.retWPub r id c b) : NLab n) = none := rfl
-@[simp] theorem gOwns_byzCallW (r : ℕ) (k : Fin n) :
-    GBCA.ByABDY.gOwns (Sum.inr (.byzCallW r k) : NLab n) = none := rfl
-@[simp] theorem gOwns_byzRetW (r : ℕ) (k : Fin n) (b : Bool) :
-    GBCA.ByABDY.gOwns (Sum.inr (.byzRetW r k b) : NLab n) = none := rfl
+    GBCA.ByABDY.gOwns (Sum.inr (.retWPub r id c b) : ExtendedLabel n) = none := rfl
+@[simp] theorem gOwns_byzantineCallW (r : ℕ) (k : Fin n) :
+    GBCA.ByABDY.gOwns (Sum.inr (.byzantineCallW r k) : ExtendedLabel n) = none := rfl
+@[simp] theorem gOwns_byzantineRetW (r : ℕ) (k : Fin n) (b : Bool) :
+    GBCA.ByABDY.gOwns (Sum.inr (.byzantineRetW r k b) : ExtendedLabel n) = none := rfl
 
 @[simp] theorem isFailN_fail (k : Fin n) :
-    GBCA.ByABDY.isFailN (Sum.inl (Lab.fail k) : NLab n) := trivial
+    GBCA.ByABDY.isFailN (Sum.inl (Label.fail k) : ExtendedLabel n) := trivial
 
 theorem gAct_fail {P : Params} (k : Fin P.n) (s : GBCA.ByABDY.ImplState P.n) :
-    GBCA.ByABDY.gAct P (Sum.inl (Lab.fail k)) s = (s.1, s.2.corrupt P k) := rfl
+    GBCA.ByABDY.gAct P (Sum.inl (Label.fail k)) s = (s.1, s.2.corrupt P k) := rfl
 
 end GOwns
 

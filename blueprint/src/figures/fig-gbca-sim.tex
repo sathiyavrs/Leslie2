@@ -7,7 +7,8 @@
       text width=2.15cm, minimum size=2.5cm}]
   % top row: implementation run phases
   \node[conc] (t1) at (1.6,2.4) {input\\ (INPUT)};
-  \node[conc] (t2) at (4.8,2.4) {deliveries\\ relay/echo/vote/\\bind/echo5 (incl.\ byz)};
+  \node[conc, text width=2.7cm] (t2) at (4.8,2.4)
+    {deliveries\\ relay/echo/vote/\\ bind/echo5\\ (incl.\ byzantine)};
   \node[conc] (t3) at (8.2,2.4) {a return whose\\ exclusion is missing};
   \node[conc] (t4) at (11.6,2.4){a return whose\\ exclusion has happened};
   % bottom row: specification-instance states

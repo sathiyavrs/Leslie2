@@ -199,7 +199,7 @@ theorem SpecState.corrupt_F (P : Params) (s : SpecState P.n) (id : Fin P.n) :
 /-- The step relation of the round-`r` GBCA specification instance
 (blueprint Transition System 2, deviation D19). -/
 inductive Step (P : Params) (r : ℕ) :
-    SpecState P.n → Lab P.n → PMF (SpecState P.n) → Prop
+    SpecState P.n → Label P.n → PMF (SpecState P.n) → Prop
   /-- A process inputs its bit. -/
   | call (s : SpecState P.n) (id : Fin P.n) (b : Bool) (h : s.call id = none) :
       Step P r s (.callG r id b)
@@ -256,7 +256,7 @@ inductive Step (P : Params) (r : ℕ) :
       Step P r s (.fail id) (PMF.pure (s.corrupt P id))
 
 /-- The round-`r` GBCA specification instance. -/
-noncomputable def specInst (P : Params) (r : ℕ) : System (SpecState P.n) (Lab P.n) where
+noncomputable def specInst (P : Params) (r : ℕ) : System (SpecState P.n) (Label P.n) where
   init := SpecState.initial P.n
   step := Step P r
 
@@ -264,7 +264,7 @@ noncomputable def specInst (P : Params) (r : ℕ) : System (SpecState P.n) (Lab 
     (specInst P r).init = SpecState.initial P.n := rfl
 
 @[simp] theorem specInst_step (P : Params) (r : ℕ) (s : SpecState P.n)
-    (l : Lab P.n) (μ : PMF (SpecState P.n)) :
+    (l : Label P.n) (μ : PMF (SpecState P.n)) :
     (specInst P r).step s l μ ↔ Step P r s l μ := Iff.rfl
 
 /-- Every GBCA spec transition is Dirac: the instance is an LTS. -/
@@ -274,14 +274,14 @@ theorem specInst_isLTS (P : Params) (r : ℕ) : (specInst P r).IsLTS := by
 
 /-- The broadcast transform of the GBCA family: corruption on `fail id`,
 identity on every other label. -/
-def failAct (P : Params) : Lab P.n → SpecState P.n → SpecState P.n
+def failAct (P : Params) : Label P.n → SpecState P.n → SpecState P.n
   | .fail id, s => s.corrupt P id
   | _, s => s
 
 /-- The ℕ-indexed family of GBCA specification instances. -/
 noncomputable def specFamily (P : Params) :
-    System (ℕ → SpecState P.n) (Lab P.n) :=
-  System.family (specInst P) Lab.gbcaRound Lab.isFail (failAct P)
+    System (ℕ → SpecState P.n) (Label P.n) :=
+  System.family (specInst P) Label.gbcaRound Label.isFail (failAct P)
 
 /-- The GBCA spec family is an LTS. -/
 theorem specFamily_isLTS (P : Params) : (specFamily P).IsLTS :=

@@ -16,16 +16,16 @@ equivocation).
 ## Systems
 
 ```
-hybridPre := specSide ∥ (syncProduct coreProcN ∥ (aNet ∥ wccLift))
-hybrid    := ((hybridPre.abstract netEvtLabels).relabel).abstract hiddenAPI
+hybridPre := gbcaSpecificationFamily ∥ (syncProduct roundLoopProgram ∥ (ABANetwork ∥ coinOverRoundAlphabet))
+hybrid    := ((hybridPre.abstract networkEventLabels).relabel).abstract hiddenAPI
 target    : ProbabilisticForwardSimulation hybrid (ABA.spec P) coreRel
 ```
 
 The four components are the round specifications, the `n` round loops, the ABA-side
 network and the coin oracle, and they speak the extended alphabet of the protocol; the
-rendezvous labels are hidden, the result is read back over `Lab n`, and the sub-protocol
+rendezvous labels are hidden, the result is read back over `Label n`, and the sub-protocol
 API is hidden in turn (`Composition/HybridAndSubstitution.lean`). Corrupted-process
-handshakes are covered by the Byzantine handshake rows, authorised by `k ∈ F` at `aNet`
+handshakes are covered by the Byzantine handshake rows, authorised by `k ∈ F` at `ABANetwork`
 (D11). See `Vocabulary/RoundLoop.lean`'s module docstring for the per-process algorithm
 and deviations D9–D12′ (0-based rounds, the fused DECIDED-send in `retWPub`/`stepRound`,
 per-process DECIDED sets — see § D12′ below).
@@ -94,8 +94,8 @@ is written by `bindUnset`, and a value-bearing return needs the *live pair*
 `(!v) ∈ (g r).excluded ∧ v ∉ (g r).excluded`. The relation does not state decided values through
 that pair. It states them through certificates, which name their bit off a single
 permanent membership `(!b) ∈ (g r).excluded` plus commitments that only `call`, `F` and the
-honest `procs` fields can affect. That is the design, and it is sound; the certificates are what `Inv.decided_src`, `Inv.grade_A_src` and phase 2 of
-`Abs` carry.
+honest `procs` fields can affect. That is the design, and it is sound; the certificates are
+what `Inv.decided_src`, `Inv.grade_A_src` and phase 2 of `Abs` carry.
 
 The certificate form is stronger than the specification requires. `bindUnset`
 carries the guard `excluded = ∅`, so a round excludes at most once
@@ -140,10 +140,11 @@ certificate form needs no reachability argument of its own.
 - **`AbsFrame P g g' c c'`** — the `Abs`-side transport a step row hands back: every
   `ACert` on the pre-state has an `ACert` on the post-state *at some round* (`∃ r1` — the
   bit is preserved, the round is re-existentialized, which is what lets a row relocate a
-  certificate), and phase 2's holder universal survives given its certificate. `AbsFrame.refl` covers every row that touches
-  neither certificates nor holders. Each `Inv.step_*` lemma returns `Inv ∧ AbsFrame`,
-  and `Abs.frame` consumes exactly that; the certificate is what pins a *fresh* holder
-  in the corner where every original witness has been corrupted away.
+  certificate), and phase 2's holder universal survives given its certificate.
+  `AbsFrame.refl` covers every row that touches neither certificates nor holders. Each
+  `Inv.step_*` lemma returns `Inv ∧ AbsFrame`, and `Abs.frame` consumes exactly that; the
+  certificate is what pins a *fresh* holder in the corner where every original witness has
+  been corrupted away.
 
 ## Row dispositions
 
@@ -242,7 +243,7 @@ What `Specifications/ABA.lean` carries:
   bits, so neither changes which bits are supported. What they add is trace behaviour,
   which is why both trace predicates are read at never-corrupted returners.
 - **No spec-side fill rule.** The concrete adversary fills GBCA call entries through hidden
-  byz `callG` rows that carry no `callABA` event. Those entries are paid for by the
+  byzantine `callG` rows that carry no `callABA` event. Those entries are paid for by the
   `F` budget inside the count itself — the `id ∈ s.F` disjunct of `SuppOK` — rather than
   by a phantom ghost entry. A fill rule would have to place its entries knowing which
   process is corrupted later, a prophecy no forward simulation has
@@ -304,7 +305,7 @@ conjunct `input_supp`:
 ```
 
 Preservation: `call` adds a holder; a `relay`'s `f + 1` receipt senders are each in
-`F`, a holder, or a prior honest non-holder sender (the pre-state conjunct closes); `byz`
+`F`, a holder, or a prior honest non-holder sender (the pre-state conjunct closes); `byzantine`
 senders are in `F`; `fail` grows the count and shrinks the triggers; the count is
 monotone throughout. The derivation splits by D14 site.
 
@@ -351,9 +352,9 @@ X and `DECIDED 1` to Y — an under-approximation inconsistent with the equivoca
 sets of graded agreement. D12′ mirrors D5 in the DECIDED sets: the network's `dsent` and
 the round-loop records' receipt rows, read as one object (`Composition/ABAState.lean`) as
 `decidedSent : Fin n → Finset Bool` and `decidedRecv : Fin n → Fin n → Finset Bool`,
-records that only grow. `sendDecided` inserts; delivery is the `ddlv` rendezvous, per
+records that only grow. `sendDecided` inserts; delivery is the `decidedDeliver` rendezvous, per
 (receiver, sender, bit), with soundness `b ∈ decidedSent j` on the network's half and an
-at-most-once `b ∉ decidedRecv i j` guard on the receiver's; `byzD` is guarded *only* by
+at-most-once `b ∉ decidedRecv i j` guard on the receiver's; `byzantineD` is guarded *only* by
 `k ∈ F`. Honest sent sets stay at card ≤ 1 in reachable states (A-grade certificates pin
 one bit), but no card invariant is needed. The invariant rewiring
 (`HybridRefinesSpecification/Relation.lean`): `recv_sound` becomes per-bit and
@@ -381,8 +382,8 @@ fields), grouped:
   nothing itself:
   `down_closed` (closed rounds downward-closed), `quiescent` (cofinitely many rounds open),
   `round_bound`, `call_round`, `w_call_round`, `w_bound`/`w_called` (coin resolutions and
-  W-calls only at closed rounds), `w_order`, `round_flip`. `Closed.congr`/`Closed.of_frame` are the two
-  transport lemmas every row's frame facts feed.
+  W-calls only at closed rounds), `w_order`, `round_flip`. `Closed.congr`/`Closed.of_frame`
+  are the two transport lemmas every row's frame facts feed.
 - **The coin clauses, established at the resolving call**: `w_bound`, `w_order` and
   `flip_alock` are the conjuncts that read `(w r).val`, and the one row that writes it is
   `callW`'s resolving row, so `Inv.step_callW_resolve` carries all three. Its input is
@@ -465,7 +466,8 @@ recording them is what pins the design.
    late joiner can then submit a dissenting `callABA`, enable a `C`-grade at that round,
    steer the next round to spare the opposite value, `A`-lock it, and DECIDE against the
    already-committed abstract `val`. Hence laziness: the abstract state commits as late as possible.
-2. **A flipping abstract state fails.** The abstract state could in principle answer the concrete coin row
+2. **A flipping abstract state fails.** The abstract state could in principle answer the
+concrete coin row
    with `SpecStep.coinFlip` rather than a stutter. Two things break. `coinFlip` is the
    system's one non-Dirac rule, and `coreRel` is a `diracRel`, so the abstract side must
    stay a point mass at every reachable pair. And `flipPMF` puts mass `δ` on `exclude`: that
@@ -495,12 +497,12 @@ recording them is what pins the design.
    the adversary amplifies `INPUT 1` to a `BIND 1` and a visible `retA 0 1`, but the spec
    state has `#callers(1) = 1 < 2` and entry 3 is *genuinely full* — no τ fills it, since a
    fill needs an *empty* `F`-field. The spec does emit the trace, via a different run that
-   answers `callG 3 0` with a loop and byz-fills entry 3 with `1` after `fail 3`; but that
+   answers `callG 3 0` with a loop and byzantine-fills entry 3 with `1` after `fail 3`; but that
    choice needs knowledge of the later `fail`, a prophecy out of reach of any forward
    simulation. So provenance must be carried by `F`-blind *counts* (D14/`input_supp`), not
    by spec-side fills — the sent set guards beat the fills.
-7. **The first call commits, so the ghost takes no junk.** `CoreProcStepN.inputLoop`
-   carries `c.proc.input ≠ none` and the commit row `CoreProcStepN.input` carries
+7. **The first call commits, so the ghost takes no junk.** `RoundLoopStep.inputLoop`
+   carries `c.proc.input ≠ none` and the commit row `RoundLoopStep.input` carries
    `c.proc.input = none`, so a `callABA` at an honest process whose input is unset
    commits, and a process's first call is never absorbed by the loop (D36).
    On the abstract side `SpecStep.callSet` fires at the empty ghost entry and
