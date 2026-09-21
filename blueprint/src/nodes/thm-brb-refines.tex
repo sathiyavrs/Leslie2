@@ -5,7 +5,7 @@
   The Bracha instance is forward-simulated by Transition System~6.
   The relation reads the specification's $input$, $ret$ and $F$ off the implementation state and certifies its committed value by the certificate
   \[
-    \mathrm{EchoCert}(m) \;=\; \exists i,\ (n+f)/2 < \mathrm{recvCount}(i, \langle\mathrm{ECHO}, m\rangle),
+    \mathrm{EchoCert}(m) \;=\; \exists i,\ (n+f)/2 < \mathrm{receivedCount}(i, \langle\mathrm{ECHO}, m\rangle),
   \]
   which is $F$-blind and monotone in the delivered sets.
   The commit is fired on demand: a return of $m$ met by a specification state with $val = \bot$ is answered by the two-step weak run $\mathrm{commit}; \mathrm{ret}$, the commit's guard supplied by the certificate.
@@ -13,7 +13,7 @@
 
 \begin{proof}\leanok
   \uses{def:aba-brb-impl, def:aba-brb-spec, def:forwardsim}
-  The invariant carries receipt soundness ($recv \subseteq sent$), the write-once discipline of the honest $\mathrm{ECHO}$ and $\mathrm{VOTE}$ fields, and backing clauses: an honest $\mathrm{ECHO}\,m$ carries the leader's input unless the leader is corrupted, and an honest $\mathrm{VOTE}\,m$ is backed by an $\mathrm{ECHO}\,m$ quorum.
+  The invariant carries receipt soundness ($received \subseteq sent$), the write-once discipline of the honest $\mathrm{ECHO}$ and $\mathrm{VOTE}$ fields, and backing clauses: an honest $\mathrm{ECHO}\,m$ carries the leader's input unless the leader is corrupted, and an honest $\mathrm{VOTE}\,m$ is backed by an $\mathrm{ECHO}\,m$ quorum.
   The backing clause for votes absorbs the amplification row --- $f{+}1$ $\mathrm{VOTE}\,m$ receipts contain an honest one, whose own backing is reused --- so no induction along amplification chains is needed.
   Two certificates $\mathrm{EchoCert}(m)$ and $\mathrm{EchoCert}(m')$ share an honest echo sender by quorum intersection, and honest echoes are write-once, so $m = m'$: the certified value is unique, and at a never-corrupted leader it is the leader's input, which is the commit guard's honest branch.
   A return row yields the certificate from its $2f{+}1$ $\mathrm{VOTE}\,m$ receipts, which contain an honest $\mathrm{VOTE}\,m$ sender whose own backing is that certificate, and the answer is the run above when the specification has not committed and the single return otherwise.

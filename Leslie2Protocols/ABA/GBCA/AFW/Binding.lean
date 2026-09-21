@@ -15,7 +15,7 @@ import Leslie2.Results
 The round speaks the family alphabet `Composition.ExtendedLabel n`, in which a round-`r` return
 appears twice: as `Sum.inl (Label.retG r id out bnd)` and as the Byzantine row
 `Sum.inr (.byzantineRetG r id out bnd)`. `GBCA.ByABDY.gbcaLabelMap` sends both to the same
-specification return, and `GBCA.BindingTraceN` states binding at every
+specification return, and `GBCA.BindingTraceExtended` states binding at every
 label of a trace that `GBCA.ByABDY.gbcaLabelMap` sends to a round-`r` return, so both forms
 count.
 
@@ -41,7 +41,7 @@ namespace GBCA
 
 open Implementation Composition GBCA.ByAFW
 
-variable {P : Params} {r : ℕ}
+variable {P : Parameters} {r : ℕ}
 
 /-! ### Binding over the family alphabet -/
 
@@ -51,11 +51,13 @@ announce the same bit, and every one of them that hands out a value hands out
 that bit. A return is named by `Sum.inl (Label.retG r id out bnd)` and by the
 Byzantine row `Sum.inr (.byzantineRetG r id out bnd)` alike, `GBCA.ByABDY.gbcaLabelMap` sending
 both to the specification's return. -/
-def BindingTraceN (P : Params) (r : ℕ) (t : Seq (Composition.ExtendedLabel P.n)) : Prop :=
-  (∀ (l₁ l₂ : Composition.ExtendedLabel P.n) (id₁ id₂ : Fin P.n) (o₁ o₂ : GbcaOut) (β₁ β₂ : Bool),
+def BindingTraceExtended (P : Parameters) (r : ℕ) (t : Seq (Composition.ExtendedLabel P.n)) : Prop
+  :=
+  (∀ (l₁ l₂ : Composition.ExtendedLabel P.n) (id₁ id₂ : Fin P.n) (o₁ o₂ : GBCAOutput) (β₁ β₂ :
+    Bool),
       l₁ ∈ t → l₂ ∈ t → GBCA.ByABDY.gbcaLabelMap P.n l₁ = some (Label.retG r id₁ o₁ β₁) →
       GBCA.ByABDY.gbcaLabelMap P.n l₂ = some (Label.retG r id₂ o₂ β₂) → β₁ = β₂) ∧
-    ∀ (l : Composition.ExtendedLabel P.n) (id : Fin P.n) (o : GbcaOut) (β v : Bool),
+    ∀ (l : Composition.ExtendedLabel P.n) (id : Fin P.n) (o : GBCAOutput) (β v : Bool),
       l ∈ t → GBCA.ByABDY.gbcaLabelMap P.n l = some (Label.retG r id o β) →
       outValue o = some v → v = β
 
@@ -138,7 +140,7 @@ private theorem specificationOverRoundAlphabet_retG_bound_agree_le
     {e : AlterSeq (SpecState P.n) (Composition.ExtendedLabel P.n)} (he : is_exec e
       (GBCA.ByABDY.specificationOverRoundAlphabet P r))
     {k₁ k₂ : ℕ} (hk : k₁ ≤ k₂) {s₁ s₂ : SpecState P.n} {id₁ id₂ : Fin P.n}
-    {o₁ o₂ : GbcaOut} {β₁ β₂ : Bool} {μ₁ μ₂ : PMF (SpecState P.n)}
+    {o₁ o₂ : GBCAOutput} {β₁ β₂ : Bool} {μ₁ μ₂ : PMF (SpecState P.n)}
     (hst₁ : e.stateAt k₁ = some s₁) (hst₂ : e.stateAt k₂ = some s₂)
     (hstep₁ : Step P r s₁ (.retG r id₁ o₁ β₁) μ₁)
     (hstep₂ : Step P r s₂ (.retG r id₂ o₂ β₂) μ₂) : β₁ = β₂ := by
@@ -156,7 +158,7 @@ theorem specificationOverRoundAlphabet_retG_bound_agree {e : AlterSeq (SpecState
   (Composition.ExtendedLabel P.n)}
     (he : is_exec e (GBCA.ByABDY.specificationOverRoundAlphabet P r)) {k₁ k₂ : ℕ} {s₁ s₂ : SpecState
       P.n}
-    {id₁ id₂ : Fin P.n} {o₁ o₂ : GbcaOut} {β₁ β₂ : Bool}
+    {id₁ id₂ : Fin P.n} {o₁ o₂ : GBCAOutput} {β₁ β₂ : Bool}
     {μ₁ μ₂ : PMF (SpecState P.n)}
     (hst₁ : e.stateAt k₁ = some s₁) (hst₂ : e.stateAt k₂ = some s₂)
     (hstep₁ : Step P r s₁ (.retG r id₁ o₁ β₁) μ₁)
@@ -171,7 +173,7 @@ guard excludes `!β`, and a state of an execution excludes at most one bit. -/
 theorem specificationOverRoundAlphabet_retG_value_eq_bound {e : AlterSeq (SpecState P.n)
   (Composition.ExtendedLabel P.n)}
     (he : is_exec e (GBCA.ByABDY.specificationOverRoundAlphabet P r)) {k : ℕ} {s : SpecState P.n}
-    {id : Fin P.n} {o : GbcaOut} {v β : Bool} {μ : PMF (SpecState P.n)}
+    {id : Fin P.n} {o : GBCAOutput} {v β : Bool} {μ : PMF (SpecState P.n)}
     (hst : e.stateAt k = some s) (hstep : Step P r s (.retG r id o β) μ)
     (ho : outValue o = some v) : v = β := by
   have h := specificationOverRoundAlphabet_excluded_eq_of_mem he hst (retG_value_guards hstep ho).2
@@ -183,14 +185,14 @@ theorem specificationOverRoundAlphabet_retG_value_eq_bound {e : AlterSeq (SpecSt
 
 /-- **Binding of the specification read over the family alphabet**: every trace
 in the support of every achievable trace distribution of `GBCA.ByABDY.specificationOverRoundAlphabet
-P r` satisfies `BindingTraceN`. -/
-theorem specificationOverRoundAlphabet_binding (P : Params) (r : ℕ) :
+P r` satisfies `BindingTraceExtended`. -/
+theorem specificationOverRoundAlphabet_binding (P : Parameters) (r : ℕ) :
     ∀ D ∈ achievableTraceDists (GBCA.ByABDY.specificationOverRoundAlphabet P r), ∀ t, D t ≠ 0 →
-      BindingTraceN P r t := by
+      BindingTraceExtended P r t := by
   rintro D ⟨pe, h_init, h_D⟩ t h_ne
   rw [← h_D t] at h_ne
   obtain ⟨e, h_exec, h_char⟩ := exists_exec_of_traceProb_ne_zero pe h_init t h_ne
-  have hret : ∀ (l : Composition.ExtendedLabel P.n) (id : Fin P.n) (o : GbcaOut) (β : Bool),
+  have hret : ∀ (l : Composition.ExtendedLabel P.n) (id : Fin P.n) (o : GBCAOutput) (β : Bool),
       l ∈ t → GBCA.ByABDY.gbcaLabelMap P.n l = some (Label.retG r id o β) →
       ∃ (k : ℕ) (s : SpecState P.n) (μ : PMF (SpecState P.n)),
         e.stateAt k = some s ∧ Step P r s (Label.retG r id o β) μ := by
@@ -212,7 +214,7 @@ theorem specificationOverRoundAlphabet_binding (P : Params) (r : ℕ) :
 /-- Trace-distribution inclusion of the round over the gather specifications in
 the specification read over the round's interface, the soundness of
 `pairRefines`. -/
-theorem roundOverGatherSpecifications_refines (P : Params) (r : ℕ) :
+theorem roundOverGatherSpecifications_refines (P : Parameters) (r : ℕ) :
     achievableTraceDists (roundOverGatherSpecifications P r) ⊆ achievableTraceDists
       (GBCA.ByABDY.specificationOverRoundAlphabet P r) :=
   (ForwardSimulation.toProbabilistic (roundOverGatherSpecifications_isLTS P r)
@@ -223,7 +225,7 @@ theorem roundOverGatherSpecifications_refines (P : Params) (r : ℕ) :
 specification**: the two substitutions and the counting simulation, each taken
 probabilistically, joined by Result 2
 (`ProbabilisticForwardSimulation.trans`). -/
-theorem gatherImplRefines (P : Params) (r : ℕ) :
+theorem gatherImplRefines (P : Parameters) (r : ℕ) :
     ProbabilisticForwardSimulation (roundOverBracha P r) (GBCA.ByABDY.specificationOverRoundAlphabet
       P r)
       (compRel (diracRel (LowPairRel P))
@@ -241,7 +243,7 @@ theorem gatherImplRefines (P : Params) (r : ℕ) :
 /-- The soundness inclusion of the round reading: every trace distribution
 achievable by the round over the gather instances over Bracha's broadcast is
 achievable by the lifted specification. -/
-theorem gatherRoundRefines (P : Params) (r : ℕ) :
+theorem gatherRoundRefines (P : Parameters) (r : ℕ) :
     achievableTraceDists (roundOverBracha P r) ⊆ achievableTraceDists
       (GBCA.ByABDY.specificationOverRoundAlphabet P r) :=
   (gatherImplRefines P r).achievableTraceDists_subset
@@ -250,7 +252,7 @@ theorem gatherRoundRefines (P : Params) (r : ℕ) :
 simulation: every trace distribution achievable by the round over the gather
 instances over the broadcast specification is achievable by the lifted
 specification. -/
-theorem idealRoundRefines (P : Params) (r : ℕ) :
+theorem idealRoundRefines (P : Parameters) (r : ℕ) :
     achievableTraceDists (roundOverBroadcastSpecification P r) ⊆ achievableTraceDists
       (GBCA.ByABDY.specificationOverRoundAlphabet P r) :=
   Set.Subset.trans (roundOverBroadcastSpecification_refines P r)
@@ -259,7 +261,7 @@ theorem idealRoundRefines (P : Params) (r : ℕ) :
 /-- The soundness inclusion of the counting simulation alone: every trace
 distribution achievable by the round over the gather specifications is
 achievable by the lifted specification. -/
-theorem pairRoundRefines (P : Params) (r : ℕ) :
+theorem pairRoundRefines (P : Parameters) (r : ℕ) :
     achievableTraceDists (roundOverGatherSpecifications P r) ⊆ achievableTraceDists
       (GBCA.ByABDY.specificationOverRoundAlphabet P r) :=
   roundOverGatherSpecifications_refines P r
@@ -269,25 +271,25 @@ theorem pairRoundRefines (P : Params) (r : ℕ) :
 /-- **Binding of the round over the gather specifications, on a trace.** Every
 positive-probability trace of the round is bound to one bit: all its round-`r`
 returns announce that bit, and every one of them that hands out a value hands
-out it. Binding is a property of the labels (`BindingTraceN`), so
+out it. Binding is a property of the labels (`BindingTraceExtended`), so
 `pairRoundRefines` carries it from `specificationOverRoundAlphabet_binding`. -/
-theorem roundOverGatherSpecifications_binding (P : Params) (r : ℕ) :
+theorem roundOverGatherSpecifications_binding (P : Parameters) (r : ℕ) :
     ∀ D ∈ achievableTraceDists (roundOverGatherSpecifications P r), ∀ t, D t ≠ 0 →
-      BindingTraceN P r t :=
+      BindingTraceExtended P r t :=
   safety_transfer (pairRoundRefines P r) (specificationOverRoundAlphabet_binding P r)
 
 /-- **Binding of the round over the gather instances over the broadcast
 specification, on a trace**, along the inclusion `idealRoundRefines`. -/
-theorem roundOverBroadcastSpecification_binding (P : Params) (r : ℕ) :
+theorem roundOverBroadcastSpecification_binding (P : Parameters) (r : ℕ) :
     ∀ D ∈ achievableTraceDists (roundOverBroadcastSpecification P r), ∀ t, D t ≠ 0 →
-      BindingTraceN P r t :=
+      BindingTraceExtended P r t :=
   safety_transfer (idealRoundRefines P r) (specificationOverRoundAlphabet_binding P r)
 
 /-- **Binding of the round over the gather instances over Bracha's broadcast,
 on a trace**, along the three-tier inclusion `gatherRoundRefines`. -/
-theorem roundOverBracha_binding (P : Params) (r : ℕ) :
+theorem roundOverBracha_binding (P : Parameters) (r : ℕ) :
     ∀ D ∈ achievableTraceDists (roundOverBracha P r), ∀ t, D t ≠ 0 →
-      BindingTraceN P r t :=
+      BindingTraceExtended P r t :=
   safety_transfer (gatherRoundRefines P r) (specificationOverRoundAlphabet_binding P r)
 
 /-! ### Mechanical axiom check

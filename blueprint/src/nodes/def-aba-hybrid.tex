@@ -1,10 +1,10 @@
 \begin{definition}[The hybrid]
   \label{def:aba-hybrid}
-  \lean{PLTS.ABA.HybridState}\lean{PLTS.ABA.hybridPre}\lean{PLTS.ABA.hybrid}\leanok
+  \lean{PLTS.ABA.HybridState}\lean{PLTS.ABA.hybridExtended}\lean{PLTS.ABA.hybrid}\leanok
   \uses{def:aba-composed, def:aba-gbcasub, def:aba-gbca-spec, def:idle-family, def:relabel, def:process-algebra}
   The composed system of Definition~\ref{def:aba-composed} with its graded-agreement component replaced by the family $\mathrm{gbcaSpecificationFamily}(P)$ of round specifications, the other three components and the whole pipeline unchanged:
   \[
-    \mathrm{hybridPre}(P) \;=\;
+    \mathrm{hybridExtended}(P) \;=\;
       \mathrm{gbcaSpecificationFamily}(P) \parallel \bigl(\mathrm{syncProduct}_{j}\ \mathrm{roundLoopProgram}(P,j)
         \parallel (\mathrm{ABANetwork}(P) \parallel \mathrm{coinOverRoundAlphabet}(P))\bigr),
   \]

@@ -2,7 +2,7 @@
   \label{def:aba-protocol}
   \lean{PLTS.System.mapIdle}\lean{PLTS.ABA.Implementation.coinLabelMap}\lean{PLTS.ABA.Composition.coinOverRoundAlphabet}\lean{PLTS.ABA.ABDY.protocolExtended}\lean{PLTS.ABA.ABDY.protocolHidden}\lean{PLTS.ABA.ABDY.protocol}\leanok
   \uses{def:aba-netadv, def:aba-procnet, def:aba-flat-reading, def:aba-wcc-spec, def:aba-labels, def:relabel, def:syncproduct, def:process-algebra}
-  The coin oracle $\mathrm{WCC.specFamily}(P)$ has the alphabet $\mathrm{Label}(n)$, so it is read over the extended alphabet by the construction $\mathrm{mapIdle}$ along the partial map $\mathrm{coinLabelMap}$, which sends the two coin handshake rows and the fused return $\mathrm{retWPub}$ to the coin handshake they stand for and every other rendezvous label to none: a label with an image steps by that image's rows, and a label without one is a self-loop.
+  The coin oracle $\mathrm{WCC.specFamily}(P)$ has the alphabet $\mathrm{Label}(n)$, so it is read over the extended alphabet by the construction $\mathrm{mapIdle}$ along the partial map $\mathrm{coinLabelMap}$, which sends the two coin handshake rows and the fused return $\mathrm{retWPublish}$ to the coin handshake they stand for and every other rendezvous label to none: a label with an image steps by that image's rows, and a label without one is a self-loop.
   The protocol is built in three stages,
   \[
     \abdy{\mathrm{protocolExtended}}(P) \;=\;

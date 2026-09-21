@@ -48,7 +48,7 @@ a `g x`-step of the read-back system, with no condition on which labels occur
 in the witness execution. The second hypothesis, `g x = τ ↔ x = τ`, is what
 makes it trivial on traces: the transported execution hides exactly the
 transitions the original hid, so its trace is the original trace relabelled by
-`g` (`System.trace_mapLab`, in `Framework/TraceDistributionSupport.lean`).
+`g` (`System.trace_mapLabels`, in `Framework/TraceDistributionSupport.lean`).
 -/
 
 namespace PLTS
@@ -136,12 +136,12 @@ theorem System.weakLSilent_mapIdle (g : L → L') (hsec : ∀ x, φ (g x) = some
     (hgτ : ∀ x, g x = (Silent.τ : L') ↔ x = (Silent.τ : L))
     (h : sys.weakLSilent s s') : (sys.mapIdle φ).weakLSilent s s' := by
   obtain ⟨e, hterm, hpe, hinit, hend, htr⟩ := h
-  refine ⟨e.mapLab g, (AlterSeq.mapLab_trans_terminates_iff g e).mpr hterm,
-    is_partial_exec_mapLab g
+  refine ⟨e.mapLabels g, (AlterSeq.mapLabels_trans_terminates_iff g e).mpr hterm,
+    is_partial_exec_mapLabels g
       (fun _ x _ hx => (System.mapIdle_step_some (hsec x) _).mpr hx) hpe,
     hinit, ?_, ?_⟩
-  · rw [AlterSeq.endState_mapLab g e hterm]; exact hend
-  · rw [System.trace_mapLab _ sys g hgτ, htr, Stream'.Seq.map_nil]
+  · rw [AlterSeq.endState_mapLabels g e hterm]; exact hend
+  · rw [System.trace_mapLabels _ sys g hgτ, htr, Stream'.Seq.map_nil]
 
 /-- **A labelled weak run survives the read-back**: `q =l=> q'` of `sys` is
 `q =l'=> q'` of `sys.mapIdle φ` at any label `l'` the section `g` puts over
@@ -151,12 +151,12 @@ theorem System.weakLStep_mapIdle (g : L → L') (hsec : ∀ x, φ (g x) = some x
     {l : L} {l' : L'} (hgl : g l = l') (h : sys.weakLStep s l s') :
     (sys.mapIdle φ).weakLStep s l' s' := by
   obtain ⟨e, hterm, hpe, hinit, hend, htr⟩ := h
-  refine ⟨e.mapLab g, (AlterSeq.mapLab_trans_terminates_iff g e).mpr hterm,
-    is_partial_exec_mapLab g
+  refine ⟨e.mapLabels g, (AlterSeq.mapLabels_trans_terminates_iff g e).mpr hterm,
+    is_partial_exec_mapLabels g
       (fun _ x _ hx => (System.mapIdle_step_some (hsec x) _).mpr hx) hpe,
     hinit, ?_, ?_⟩
-  · rw [AlterSeq.endState_mapLab g e hterm]; exact hend
-  · rw [System.trace_mapLab _ sys g hgτ, htr, Stream'.Seq.map_cons,
+  · rw [AlterSeq.endState_mapLabels g e hterm]; exact hend
+  · rw [System.trace_mapLabels _ sys g hgτ, htr, Stream'.Seq.map_cons,
       Stream'.Seq.map_nil, hgl]
 
 end MapIdleWeak

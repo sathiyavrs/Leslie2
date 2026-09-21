@@ -38,13 +38,13 @@ of its own.
 
 ```
 BRB.brachaInstance P ldr M     -- n programs beside the instance's network (ReliableBroadcast/BrachaComposition.lean)
-Gather.instAt P X BIn BBind
+Gather.instanceOverBroadcasts P X BIn BBind
                          -- n gather programs beside the gather network, in parallel with
                          -- 2n broadcast instances, each read along a pullback naming it
                          -- (Gather/Composition.lean); instanceOverBracha plugs in Bracha,
                          -- instanceOverBroadcastSpecification the
                          -- broadcast specifications
-GBCA.ByAFW.roundAt P r ga1 ga2
+GBCA.ByAFW.roundOverGathers P r firstGather secondGather
                          -- n graded-agreement programs beside the layer's network, in
                          -- parallel with two gathers read along firstGatherLabelMap/secondGatherLabelMap
                          -- (GBCA/AFW/Composition.lean); roundOverBracha,
@@ -106,7 +106,7 @@ Every protocol-shaped system and headline of this chain sits in the namespace
 `AFW`, after Attiya, Flam and Welch, and carries the name of its counterpart in
 the protocol chain: `AFW.composed` is to the gather-based implementation what
 `ABDY.composed` is to ABDY22's. A `G` elsewhere in the development is graded
-agreement — `callG`, `retG`, `GBCANetwork`, `GNetState` — and never the chain.
+agreement — `callG`, `retG`, `GBCANetwork`, `NetworkState` — and never the chain.
 
 ## What a program holds of a sub-protocol's answer
 
@@ -114,24 +114,26 @@ A program reads no neighbouring component. What a sub-protocol has returned to a
 process is therefore written into that process's own record, on the return
 event, and read there.
 
-A gather program's record (`Gather.ProcRec`) extends the local record with two
-stores: `delivIn k`, the value the input-broadcast instance `k` has returned
-here, and `delivBind q`, the payload the bind-broadcast instance `q` has returned
+A gather program's record (`Gather.ProcessRecord`) extends the local record with two
+stores: `inputBroadcastReturned k`, the value the input-broadcast instance `k` has returned
+here, and `bindBroadcastReturned q`, the payload the bind-broadcast instance `q` has returned
 here. The return of an instance is a hidden event of the gather composition
-(`Gather.GatherEvent.inRet`, `bindRet`), on which that instance takes its own return
+(`Gather.GatherEvent.inputBroadcastRet`, `bindRet`), on which that instance takes its own return
 row and the receiving program writes its store. The four rows that read what has
-been returned — `sndEcho`, `sndVote`, `bindCall` and `ret` — read the stores
-through `Gather.ProcRec.accepted`, `holdsIn`, `holdsBind` and `approvedBy`, in the
+been returned — `sendEcho`, `sendVote`, `bindCall` and `ret` — read the stores
+through `Gather.ProcessRecord.accepted`, `holdsInputBroadcastReturn`, `holdsBindBroadcastReturn` and
+`approvedBy`, in the
 same shape at both gather tiers. The tie between a store and the instance it records is an
-invariant clause of `Gather.IdealConf` (`delivIn_val`, `delivBind_val`): a
+invariant clause of `Gather.IdealConf` (`inputBroadcastReturned_val`, `bindBroadcastReturned_val`):
+a
 stored value is the instance's committed value, established at the return event
 and kept by the write-once commit.
 
-A round program's record (`GBCA.ByAFW.ProcRec`) holds the process's input, its
+A round program's record (`GBCA.ByAFW.ProcessRecord`) holds the process's input, its
 candidate, whether it has called the second gather, its graded outcome and its
 return flag. The first gather's return and the second gather's call are two
-events, `ret1` and `call2`, and so are the second gather's return and the
-round's graded return, `ret2` and `retG`; the record is what carries the round
+events, `firstGatherReturn` and `secondGatherCall`, and so are the second gather's return and the
+round's graded return, `secondGatherReturn` and `retG`; the record is what carries the round
 across each pair. The graded return drops the recorded outcome, so a record
 holds no round's grade after its return.
 
@@ -140,7 +142,7 @@ holds no round's grade after its return.
 The classical binding property of gather says: once the first correct process
 returns, there is a set of at least `n − f` entries on which every future
 correct return is defined. TS 4 states this with a single set, and
-`Gather.SpecState.core : Option (APSet n X)` carries it. The internal rule
+`Gather.SpecState.core : Option (AcceptedPairs n X)` carries it. The internal rule
 `Gather.Step.bindCore` is its only writer and fires only from `core = none`,
 under two guards: the set's entries are committed entries (`hval`), and it has
 at least `n − f` of them (`hcard`). `Gather.Step.ret` demands that the returned
@@ -168,7 +170,7 @@ multicast above `n − f` delivered `ECHO` payloads, and `VOTE` is write-once, s
 `n − f ≤ (dominatedBy w q).card` for every `q` outside `F` — vacuously for a `q`
 that has multicast no `VOTE`, whose row is everything (`dominatedBy_card`).
 Restricting a row to the columns costs at most `|F|`, so every row carries at
-least `n − f − |F|` of them (`dominatedBy_honest_card`). Summing the rows and
+least `n − f − |F|` of them (`dominatedBy_correct_card`). Summing the rows and
 reading the same sum by columns (`sum_dominatedBy`) gives a column `j₀` outside
 `F` with `n − f − |F| ≤ (dominators w j₀).card` (`exists_dominators`), and
 `n − f − |F| ≥ f + 1` under `n > 3f` and `|F| ≤ f`. The core is `j₀`'s `ECHO`
@@ -183,7 +185,7 @@ and below `U` by the bind guard, so `coreOf P w ⊆ U` (`transfer`,
 and a stored value is a committed value, so the core's entries are committed
 entries (`single_core_approved`), which is `bindCore`'s other guard.
 
-**The freeze certificate.** `coreOf_freeze` packages the three facts with the
+**The freeze certificate.** `coreOf_recorded` packages the three facts with the
 count the simulation carries along the run: at least `f + 1` coordinates hold a
 committed `BIND` payload above the core (`Gather.bindAbove`). That count is
 blind to `F` and monotone under every rule (`bindAbove_mono`), so it survives
@@ -235,7 +237,7 @@ specification's `commit` guard is dischargeable against the instance's.
 `|dom h| − f` / `f + 1` after the second. The refinement into TS 2 certifies
 the specification's `excluded` and `grade` on the two instances' frozen cores.
 One transfer lemma carries a count from a returned map down to a core below
-it: `cnt_heavy_of_subMap` (AFW25 Lemma 13) says that a map heavy at `x` — all
+it: `count_aboveThreshold_of_subMap` (AFW25 Lemma 13) says that a map heavy at `x` — all
 but `f` of its entries — makes such a core heavy at `x` too, the core sitting
 below the map and losing at most `f` entries to it.
 
@@ -243,11 +245,11 @@ A core has at least `n − f > 2f` entries, so at most one value is heavy in it,
 and the three certificates are readings of that:
 
 - the round's bound bit is `GBCA.boundOfCore` of the first instance's core —
-  its heavy bit where one exists (`boundOfCore_of_heavy`), the complement
-  being light (`cnt_boundOfCore_light`); the layer's network writes it at the
+  its heavy bit where one exists (`boundOfCore_of_aboveThreshold`), the complement
+  being light (`count_boundOfCore_belowThreshold`); the layer's network writes it at the
   first gather's return, from the core that return carries;
 - the exclusion certificate is
-  `ExcludedEv b = ∃ S, core₁ = some S ∧ cnt S b < |S| − f`. The core is
+  `ExcludedEv b = ∃ S, core₁ = some S ∧ count S b < |S| − f`. The core is
   write-once, so the certificate is frozen the moment it holds — monotonicity
   for free, where the direct implementation's refinement maintains monotone
   receipt walls;
@@ -257,13 +259,13 @@ and the three certificates are readings of that:
 The two-event link and return place the certificates in the invariant
 (`GBCA.ByAFW.PairInv`). A candidate is heavy in the first core (`cand_heavy`) or, at
 `⊥`, certifies `f + 1` for both bits (`cand_bot`); both are established at
-`ret1`, where the first gather's return carries the core, and consumed at
-`call2`, where the second gather's call record takes the candidate
-(`call2_cand`). The bound bit is on record from the first `ret1` on
-(`cand_bound`, `call2_bound`). The graded outcome's certificate, `OutCert`, is
-established at `ret2` from the second gather's return and consumed at `retG`,
+`firstGatherReturn`, where the first gather's return carries the core, and consumed at
+`secondGatherCall`, where the second gather's call record takes the candidate
+(`secondGatherCall_candidate`). The bound bit is on record from the first `firstGatherReturn` on
+(`cand_bound`, `secondGatherCall_bound`). The graded outcome's certificate, `OutCert`, is
+established at `secondGatherReturn` from the second gather's return and consumed at `retG`,
 which sees the outcome alone (`out_cert`). The return rows then mirror
-`GBCASim.implRefines` shape for shape: an `A`/`B` return hands out the bound bit
+`GBCASim.refinesSpecification` shape for shape: an `A`/`B` return hands out the bound bit
 and certifies `ExcludedEv` of its complement, and the `C`-return announces the
 bit the first return wrote. The D15 support counts come off the first core
 through the committed-entry provenance — a core entry is a committed entry, a
@@ -327,7 +329,7 @@ Two ingredients, both shared with the protocol chain:
   target is definitionally `hybrid P`.
 
 The round speaks the family alphabet natively, so no lift precedes the family;
-the sides are `System.family (GBCA.ByAFW.roundOverBracha P) gOwns isFailN gActLow` and
+the sides are `System.family (GBCA.ByAFW.roundOverBracha P) roundOwnsLabel isFailLabel gActLow` and
 their two siblings, as `GBCA.ByABDY.gbcaInstanceFamily` is. The stages compose by
 `ProbabilisticForwardSimulation.trans`; the inclusions compose by
 `Set.Subset.trans` and never invoke transitivity of simulation — the two routes
@@ -356,7 +358,7 @@ return, `j`'s own stage multicast, a delivery addressed to `j`, and `j`'s call
 against an already-opened record. An instantiation supplies `Implementation.IsRoundRuleTable`
 — its rows carry such a label, fire only at an unreplaced program, and are
 Dirac — and the shared inversion lemmas consume exactly those three facts.
-`AFW.stageRow_of_own` runs the argument the other way: a program's step on a
+`AFW.roundRow_of_own` runs the argument the other way: a program's step on a
 label of `roundOwn j` is a step of the implementation, which is what lets each
 case of the simulation rule the others out.
 
@@ -365,7 +367,7 @@ three are forced by the flat shape.
 
 - **The tagged sent set.** A round of `AFW.composed` carries `4n + 2`
   network components — one per gather instance, one per Bracha instance. A flat
-  adversary carries one sent-set family per round, so `AFW.Msg n` tags each
+  adversary carries one sent-set family per round, so `AFW.Message n` tags each
   message with the network it belongs to, and for a Bracha message with the
   instance, whose index is its leader. The sender index stays the sender, so a
   threshold still counts distinct senders (D5). No new adversary rows are
@@ -373,7 +375,7 @@ three are forced by the flat shape.
   already payload-blind.
 - **The transposition.** The composed reading indexes local states by instance
   and then by process. A program must hold its own data and no one else's, so
-  `AFW.StageRec n` is process-major: process `j`'s local state in each gather
+  `AFW.RoundRecord n` is process-major: process `j`'s local state in each gather
   instance, and its local state in each of the `n` instances of each broadcast family.
   Nothing is lost, because every guard of the gather-based implementation
   reads the acting process's own local states and the networks, and the two rows that
@@ -384,16 +386,16 @@ three are forced by the flat shape.
   call, and the first gather's return to a process is that process's call of the
   second gather (D28). The flat reading has no broadcast return either: a gather
   guard reads a `2f + 1` `VOTE` receipt quorum on the acting process's own local
-  state in the instance (`apIn1` and its companions), where a composed gather
+  state in the instance (`firstGatherAcceptedInputs` and its companions), where a composed gather
   program reads its store.
 
 `AFW.ProtocolRel` has six conjuncts. The round loop, the coin oracle and the
 ABA-side network are shared objects, and the round family is *computed* from
-the flat state by `AFW.toRound`, which undoes the three separations: it
+the flat state by `AFW.roundProjection`, which undoes the three separations: it
 transposes the local states back, slices each network's sent set out of the
 tagged family by `Finset.filterMap`, and reads each store off the process's own
 local state in the instance as the value with a vote quorum there
-(`AFW.storeIn`), the composed broadcast program's return flag being whether the
+(`AFW.broadcastReturnsFor`), the composed broadcast program's return flag being whether the
 store holds a value. A round program's record is read off the process's two
 gather inputs and its second-gather return flag, its recorded outcome being
 `none` outside a run. Four of the six conjuncts are that computation, so there
@@ -402,13 +404,15 @@ is nothing to choose in the witness.
 The ghost is part of that computation. The composed round holds three values no
 guard of it reads — the core of each of its two gather networks and the layer's
 network's bound bit — and the adversary holds the same three as the round's
-ghost record `AFW.Ghost`, which `AFW.toRound` reads them off. Two rows write the
+ghost record `AFW.Ghost`, which `AFW.roundProjection` reads them off. Two rows write the
 record. The link's broadcast of the candidate freezes the first gather's core at
 `Gather.coreOf` of that gather's slice of the tagged sent sets, and the bound bit
 at `GBCA.boundOfCore` of that core; a graded return freezes the second core the
-same way. The composed `ret1` and `ret2` freeze the same two values off the core
+same way. The composed `firstGatherReturn` and `secondGatherReturn` freeze the same two values off
+the core
 their gather's return carries, and the values agree because each is
-`Gather.coreOfNet` of one network's state (`coreOfNet_toGa1`, `coreOfNet_toGa2`).
+`Gather.coreOfNet` of one network's state (`coreOfNet_firstGatherProjection`,
+`coreOfNet_secondGatherProjection`).
 
 The fifth conjunct, `AFW.BoundInv`, is what makes the announced bits agree: a
 process whose round-`r` second-gather local state carries an input has passed
@@ -418,7 +422,7 @@ instance of the view. It is what identifies the stored value with the value a
 flat guard names: a flat row hands its composed counterpart a specific value
 with a vote quorum, the store holds the value the view chose, and under the
 invariant two vote quorums at one process name one value
-(`BRB.echoCert_unique`, `AFW.storeIn_eq_of_quorum`). The invariant is carried
+(`BRB.echoCert_unique`, `AFW.broadcastReturnsFor_eq_of_quorum`). The invariant is carried
 on the composed side and re-established after every matched row by the
 instance's own preservation lemma, since every matched composed step is a
 genuine step of the instance.
@@ -427,17 +431,20 @@ The proof is organised around that computation.
 `ABA/ImplementationByAFW/RoundProjectionStep.lean` states, for every flat row, the view
 after the row as the composed round before the row with the corresponding composed effect
 applied, written through the round's updaters exactly as the row tables write it; the
-master lemma `toRound_write` pushes a one-point stage write and a single sent-set
+master lemma `roundProjection_write` pushes a one-point stage write and a single sent-set
 insertion inside every coordinate, and each row then owes only slice algebra, discharged
-by `slice_post_some` and `slice_post_none`. `ABA/ImplementationByAFW/Simulation.lean`
+by `slice_recordSent_some` and `slice_recordSent_none`. `ABA/ImplementationByAFW/Simulation.lean`
 matches each flat row by a run of the composed group: a send and a delivery are hidden
 events of the round instance, answered by one of its silent steps, the adversary's
 authenticity conjunct becoming membership in the sliced sent set; the call is the
 instance's own. Three flat rows are answered by two composed steps, through the
-intermediate states `Frame.lean` names: the link by `ret1` then `call2`, the graded return
-by `ret2` then the visible `retG`, and a delivery that completes a vote quorum by the
-instance's delivery then its return, which writes the store (`toRound_ret1_call2`,
-`toRound_ret2_retG`, the `_ret` delivery lemmas). The remaining labels move the round loop
+intermediate states `Frame.lean` names: the link by `firstGatherReturn` then `secondGatherCall`, the
+graded return
+by `secondGatherReturn` then the visible `retG`, and a delivery that completes a vote quorum by the
+instance's delivery then its return, which writes the store
+(`roundProjection_firstGatherReturn_secondGatherCall`,
+`roundProjection_secondGatherReturn_retG`, the `_ret` delivery lemmas). The remaining labels move
+the round loop
 and the ABA-side network while the family of rounds stands still, and corruption is one
 broadcast, the corrupted set the adversary holds being the corrupted set of every network
 under the same guard.

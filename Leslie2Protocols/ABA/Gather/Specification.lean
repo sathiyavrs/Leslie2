@@ -65,14 +65,14 @@ namespace ABA
 namespace Gather
 
 /-- A payload set: finitely many `(process, value)` pairs. -/
-abbrev APSet (n : ℕ) (X : Type) : Type := Finset (Fin n × X)
+abbrev AcceptedPairs (n : ℕ) (X : Type) : Type := Finset (Fin n × X)
 
 /-- The entries of `U` are entries of the partial map `h`. -/
-def APSet.subMap {n : ℕ} {X : Type} (U : APSet n X) (h : Fin n → Option X) : Prop :=
+def AcceptedPairs.subMap {n : ℕ} {X : Type} (U : AcceptedPairs n X) (h : Fin n → Option X) : Prop :=
   ∀ p ∈ U, h p.1 = some p.2
 
 /-- `subMap` is monotone in the payload set. -/
-theorem APSet.subMap_mono {n : ℕ} {X : Type} {U V : APSet n X}
+theorem AcceptedPairs.subMap_mono {n : ℕ} {X : Type} {U V : AcceptedPairs n X}
     {h : Fin n → Option X} (hUV : U ⊆ V) (hV : V.subMap h) : U.subMap h :=
   fun p hp => hV p (hUV hp)
 
@@ -84,7 +84,7 @@ inductive Label (n : ℕ) (X : Type) : Type
   | call (id : Fin n) (x : X)
   /-- Process `id` returns the partial map `g`, and the instance's core is
   `C`. -/
-  | ret (id : Fin n) (g : Fin n → Option X) (C : APSet n X)
+  | ret (id : Fin n) (g : Fin n → Option X) (C : AcceptedPairs n X)
   /-- Corruption of process `id`. -/
   | fail (id : Fin n)
 
@@ -104,7 +104,7 @@ structure SpecState (n : ℕ) (X : Type) : Type where
   ret : Fin n → Bool
   /-- The core: every return carries it. Written at most once, by
   `bindCore`. -/
-  core : Option (APSet n X)
+  core : Option (AcceptedPairs n X)
   /-- The corrupted set (local copy, kept in lockstep by `fail` broadcast). -/
   F : Finset (Fin n)
 
@@ -121,7 +121,7 @@ def initial (n : ℕ) (X : Type) : SpecState n X where
   F := ∅
 
 /-- Corruption (deviation D1): total, Dirac, monotone in `F`. -/
-def corrupt (P : Params) (id : Fin P.n) (s : SpecState P.n X) : SpecState P.n X :=
+def corrupt (P : Parameters) (id : Fin P.n) (s : SpecState P.n X) : SpecState P.n X :=
   if id ∉ s.F ∧ s.F.card < P.f then { s with F := insert id s.F } else s
 
 end SpecState
@@ -130,25 +130,25 @@ end SpecState
 
 variable {X : Type}
 
-@[simp] theorem corrupt_call (P : Params) (s : SpecState P.n X) (id : Fin P.n) :
+@[simp] theorem corrupt_call (P : Parameters) (s : SpecState P.n X) (id : Fin P.n) :
     (s.corrupt P id).call = s.call := by
   unfold SpecState.corrupt; split <;> rfl
 
-@[simp] theorem corrupt_val (P : Params) (s : SpecState P.n X) (id : Fin P.n) :
+@[simp] theorem corrupt_val (P : Parameters) (s : SpecState P.n X) (id : Fin P.n) :
     (s.corrupt P id).val = s.val := by
   unfold SpecState.corrupt; split <;> rfl
 
-@[simp] theorem corrupt_ret (P : Params) (s : SpecState P.n X) (id : Fin P.n) :
+@[simp] theorem corrupt_ret (P : Parameters) (s : SpecState P.n X) (id : Fin P.n) :
     (s.corrupt P id).ret = s.ret := by
   unfold SpecState.corrupt; split <;> rfl
 
-@[simp] theorem corrupt_core (P : Params) (s : SpecState P.n X) (id : Fin P.n) :
+@[simp] theorem corrupt_core (P : Parameters) (s : SpecState P.n X) (id : Fin P.n) :
     (s.corrupt P id).core = s.core := by
   unfold SpecState.corrupt; split <;> rfl
 
 /-- The corrupted set after a corruption. Not a simp lemma: it introduces an
 `ite`. -/
-theorem SpecState.corrupt_F (P : Params) (s : SpecState P.n X) (id : Fin P.n) :
+theorem SpecState.corrupt_F (P : Parameters) (s : SpecState P.n X) (id : Fin P.n) :
     (s.corrupt P id).F = if id ∉ s.F ∧ s.F.card < P.f then insert id s.F else s.F := by
   unfold SpecState.corrupt
   split_ifs <;> rfl
@@ -156,7 +156,7 @@ theorem SpecState.corrupt_F (P : Params) (s : SpecState P.n X) (id : Fin P.n) :
 /-- The step relation of the gather specification instance (blueprint
 Transition System 4, with the committed entries in place of the source's
 call-borne values). -/
-inductive Step (P : Params) [DecidableEq X] :
+inductive Step (P : Parameters) [DecidableEq X] :
     SpecState P.n X → Label P.n X → PMF (SpecState P.n X) → Prop
   /-- A process inputs its payload. -/
   | call (s : SpecState P.n X) (id : Fin P.n) (x : X) (h : s.call id = none) :
@@ -172,16 +172,16 @@ inductive Step (P : Params) [DecidableEq X] :
       Step P s .tau (PMF.pure { s with val := Function.update s.val k (some v) })
   /-- Binding: freeze the core. Its entries are committed entries and it has
   at least `n − f` of them. Fires at most once per instance. -/
-  | bindCore (s : SpecState P.n X) (S : APSet P.n X)
+  | bindCore (s : SpecState P.n X) (S : AcceptedPairs P.n X)
       (h0 : s.core = none)
-      (hval : APSet.subMap S s.val)
+      (hval : AcceptedPairs.subMap S s.val)
       (hcard : P.n - P.f ≤ S.card) :
       Step P s .tau (PMF.pure { s with core := some S })
   /-- A process returns a sub-map of the committed entries containing the
   core, which the label carries. -/
   | ret (s : SpecState P.n X) (id : Fin P.n) (g : Fin P.n → Option X)
-      (C : APSet P.n X) (hC : s.core = some C)
-      (hmem : APSet.subMap C g)
+      (C : AcceptedPairs P.n X) (hC : s.core = some C)
+      (hmem : AcceptedPairs.subMap C g)
       (hsub : ∀ k x, g k = some x → s.val k = some x)
       (hr : s.ret id = false) :
       Step P s (.ret id g C)
@@ -193,20 +193,20 @@ inductive Step (P : Params) [DecidableEq X] :
 variable [DecidableEq X]
 
 /-- The gather specification instance. -/
-noncomputable def specInst (P : Params) (X : Type) [DecidableEq X] :
+noncomputable def specInst (P : Parameters) (X : Type) [DecidableEq X] :
     System (SpecState P.n X) (Label P.n X) where
   init := SpecState.initial P.n X
   step := Step P
 
-@[simp] theorem specInst_init (P : Params) :
+@[simp] theorem specInst_init (P : Parameters) :
     (specInst P X).init = SpecState.initial P.n X := rfl
 
-@[simp] theorem specInst_step (P : Params) (s : SpecState P.n X)
+@[simp] theorem specInst_step (P : Parameters) (s : SpecState P.n X)
     (l : Label P.n X) (μ : PMF (SpecState P.n X)) :
     (specInst P X).step s l μ ↔ Step P s l μ := Iff.rfl
 
 /-- Every gather spec transition is Dirac: the instance is an LTS. -/
-theorem specInst_isLTS (P : Params) : (specInst P X).IsLTS := by
+theorem specInst_isLTS (P : Parameters) : (specInst P X).IsLTS := by
   rintro s l μ hstep
   cases hstep <;> exact ⟨_, rfl⟩
 

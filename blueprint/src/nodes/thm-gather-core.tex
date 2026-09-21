@@ -5,7 +5,7 @@
   The gather implementation over broadcast specifications is forward-simulated by Transition System~4.
   The relation reads the specification's $call$ off the input instances' records, $ret$ and $F$ off the gather tier, certifies each committed abstract entry by the corresponding input-broadcast commitment, holds the two sides' cores equal, and certifies a written core by the count
   \[
-    f + 1 \le |\{\, q \;:\; \exists\, U,\ \mathit{brbBind}(q).val = U \ \text{and}\ core \subseteq U \,\}|,
+    f + 1 \le |\{\, q \;:\; \exists\, U,\ \mathit{bindBroadcasts}(q).val = U \ \text{and}\ core \subseteq U \,\}|,
   \]
   which is $F$-blind and monotone, the broadcast values being write-once.
   A return is answered by one weak run: the abstract commits for the output's entries, the write of the core where the specification holds none, then the return.

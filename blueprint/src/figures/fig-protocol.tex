@@ -37,7 +37,7 @@
   \node[ann, anchor=west] at (-0.65,-0.68) {hidden to $\tau$};
   % the network adversary
   \node[comp] (adv) at (2.2,-2.45)
-    {$\mathrm{network}(P)$\\ sent sets, corrupted set $F$\\ ghost record $ghostRec(r)$};
+    {$\mathrm{network}(P)$\\ sent sets, corrupted set $F$\\ ghost record $ghostRecord(r)$};
   \draw[<->] (2.2,-0.35) -- (2.2,-1.80);
   \node[ann, anchor=east] at (2.05,-1.35) {handshake guard $k \in F$};
   % the coin oracle, joined through the pullback
@@ -45,7 +45,7 @@
     {$\mathrm{WCC.specFamily}(P)$\\ along $\mathrm{coinLabelMap}$};
   \draw[<->] (7.2,-0.35) -- (7.2,-1.95);
   \node[ann, anchor=west] at (7.35,-1.1)
-    {$\mathrm{callW}$, $\mathrm{retW}$, $\mathrm{retWPub}$,\\
+    {$\mathrm{callW}$, $\mathrm{retW}$, $\mathrm{retWPublish}$,\\
      $\mathrm{byzantineCallW}$,\\ $\mathrm{byzantineRetW}$};
   % the presentation it is included in
   \node[comp] (impl) at (4.9,-5.1) {$\mathrm{composed}(P)$};
@@ -54,5 +54,5 @@
     (4.9,-4.6);
   \node[ann, text width=11.6cm] at (4.9,-6.0)
     {the rendezvous alphabet is $\mathrm{gbcaSend}$, $\mathrm{gbcaDeliver}$, $\mathrm{decidedSend}$,
-     $\mathrm{decidedDeliver}$, $\mathrm{retWPub}$, $\mathrm{gcallLoop}$ and the five handshake rows};
+     $\mathrm{decidedDeliver}$, $\mathrm{retWPublish}$, $\mathrm{gbcaCallLoop}$ and the five handshake rows};
 \end{tikzpicture}

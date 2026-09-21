@@ -1,6 +1,6 @@
 \begin{theorem}[Two-gather round refinement]
   \label{thm:gbca-pair-refines}
-  \lean{PLTS.ABA.GBCA.cnt_heavy_of_subMap}\lean{PLTS.ABA.GBCA.boundOfCore_of_heavy}\lean{PLTS.ABA.GBCA.cnt_boundOfCore_light}\lean{PLTS.ABA.GBCA.ByAFW.PairInv}\lean{PLTS.ABA.GBCA.ByAFW.ExcludedEv}\lean{PLTS.ABA.GBCA.ByAFW.PairRel}\lean{PLTS.ABA.GBCA.ByAFW.pairRefines}\leanok
+  \lean{PLTS.ABA.GBCA.count_aboveThreshold_of_subMap}\lean{PLTS.ABA.GBCA.boundOfCore_of_aboveThreshold}\lean{PLTS.ABA.GBCA.count_boundOfCore_belowThreshold}\lean{PLTS.ABA.GBCA.ByAFW.PairInv}\lean{PLTS.ABA.GBCA.ByAFW.ExcludedEv}\lean{PLTS.ABA.GBCA.ByAFW.PairRel}\lean{PLTS.ABA.GBCA.ByAFW.pairRefines}\leanok
   \uses{def:aba-gbca-pair, def:aba-gbca-spec}
   The two-gather round is forward-simulated by the GBCA specification instance (Transition System~2).
   The relation reads the specification's $call$, $ret$ and $F$ off the pair and certifies its $excluded$ and $grade$ on the two cores, each written once: a bit $b$ is excluded under

@@ -1,4 +1,4 @@
-% GBCA implementation instance (PLTS.ABA.GBCA.ByABDY.implInst). Stage automaton,
+% GBCA implementation instance (PLTS.ABA.GBCA.ByABDY.implementation). Stage automaton,
 % ABDY22 Algorithm 6 in full (D18): five message levels, the returns reading
 % ECHO5 quorums with f+1 BIND v as the grade-1 witness. Each return announces
 % the round's bound bit bnd, the bit on record or, where none is, the bit its
@@ -34,7 +34,7 @@
   % D5 network side node, below the message row
   \node[draw, dashed, rounded corners, align=left, font=\footnotesize,
         minimum width=8.2cm, inner sep=5pt] (net) at (3.4,-3.4)
-    {\textbf{D5 network} (per-sender sent/recv sets):\ \ adversary $\mathrm{deliver}$,\ \ byzantine inject $j\in F$\\
+    {\textbf{D5 network} (per-sender sent/received sets):\ \ adversary $\mathrm{deliver}$,\ \ byzantine inject $j\in F$\\
      the round's bound bit: a ghost, written at the first return (D29)};
   \draw[dotted, ->] (net.north) -- (vot.south);
 \end{tikzpicture}

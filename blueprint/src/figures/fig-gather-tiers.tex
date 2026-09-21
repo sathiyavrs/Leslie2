@@ -7,50 +7,52 @@
 \begin{tikzpicture}[
     >={Stealth[round]}, semithick,
     tier/.style={draw, rounded corners, align=center, font=\scriptsize,
-      minimum width=9.2cm, minimum height=0.6cm, inner sep=3pt},
+      minimum width=10.4cm, minimum height=0.6cm, inner sep=3pt},
     prog/.style={draw, rounded corners, align=center, font=\scriptsize,
       minimum height=0.55cm, inner sep=2pt},
-    ga/.style={draw, dashed, rounded corners, align=center, font=\scriptsize,
-      minimum width=5.2cm, inner sep=2pt},
+    gatherTier/.style={draw, dashed, rounded corners, align=center, font=\scriptsize,
+      minimum width=5.8cm, inner sep=2pt},
     brb/.style={draw, align=center, font=\scriptsize,
-      minimum width=1.5cm, minimum height=0.5cm, inner sep=1pt},
+      minimum width=2.1cm, minimum height=0.5cm, inner sep=2pt},
+    brbgap/.style={draw, align=center, font=\scriptsize,
+      minimum width=0.55cm, minimum height=0.5cm, inner sep=1pt},
     lbl/.style={font=\scriptsize, align=left, fill=white, inner sep=1.5pt}]
   % ---- the bottom tier, drawn open
-  \draw[dashed, rounded corners] (-0.35,-5.75) rectangle (11.05,-0.15);
+  \draw[dashed, rounded corners] (-0.35,-5.75) rectangle (12.25,-0.15);
   \node[font=\scriptsize, anchor=west] at (-0.2,-0.45)
     {$\mathrm{roundOverBracha}(P,r)$: programs, the layer's network, two gather instances, all concrete};
   % the layer
   \node[prog, anchor=north west, text width=5.0cm] at (0.05,-0.75)
     {graded-agreement programs $1 \cdots n$:\\ input, candidate, grade, return flag};
-  \node[prog, anchor=north west, text width=5.0cm] at (5.65,-0.75)
+  \node[prog, anchor=north west, text width=5.0cm] at (6.25,-0.75)
     {the layer's network: no messages,\\ the round's bound bit (D29)};
   % the two gathers
-  \foreach \x/\t in {0.05/{gather 1, payloads \textsf{Bool}}, 5.65/{gather 2, payloads \textsf{Option Bool}}} {
-    \draw[dashed, rounded corners] (\x,-4.95) rectangle ({\x+5.2},-1.75);
+  \foreach \x/\t in {0.05/{gather 1, payloads \textsf{Bool}}, 6.25/{gather 2, payloads \textsf{Option Bool}}} {
+    \draw[dashed, rounded corners] (\x,-4.95) rectangle ({\x+5.8},-1.75);
     \node[font=\scriptsize, anchor=north west] at ({\x+0.05},-1.8) {\t};
     \node[prog, anchor=north west, text width=2.35cm] at ({\x+0.1},-2.15)
       {gather programs $1 \cdots n$,\\ with their stores};
-    \node[prog, anchor=north west, text width=2.35cm] at ({\x+2.7},-2.15)
+    \node[prog, anchor=north west, text width=2.35cm] at ({\x+3.1},-2.15)
       {the gather network:\\ $sent$, $F$, the core (D29)};
-    \node[brb, anchor=north west] at ({\x+0.1},-3.45) {$\mathrm{brbIn}\,1$};
-    \node[brb, anchor=north west] at ({\x+1.7},-3.45) {$\cdots$};
-    \node[brb, anchor=north west] at ({\x+3.3},-3.45) {$\mathrm{brbIn}\,n$};
-    \node[brb, anchor=north west] at ({\x+0.1},-4.1) {$\mathrm{brbBind}\,1$};
-    \node[brb, anchor=north west] at ({\x+1.7},-4.1) {$\cdots$};
-    \node[brb, anchor=north west] at ({\x+3.3},-4.1) {$\mathrm{brbBind}\,n$};
+    \node[brb, anchor=north west] at ({\x+0.15},-3.45) {$\mathrm{inputBroadcasts}\,1$};
+    \node[brbgap, anchor=north west] at ({\x+2.4},-3.45) {$\cdots$};
+    \node[brb, anchor=north west] at ({\x+3.1},-3.45) {$\mathrm{inputBroadcasts}\,n$};
+    \node[brb, anchor=north west] at ({\x+0.15},-4.1) {$\mathrm{bindBroadcasts}\,1$};
+    \node[brbgap, anchor=north west] at ({\x+2.4},-4.1) {$\cdots$};
+    \node[brb, anchor=north west] at ({\x+3.1},-4.1) {$\mathrm{bindBroadcasts}\,n$};
     \node[font=\scriptsize, anchor=north west] at ({\x+0.05},-4.6)
       {$2n$ Bracha instances};
   }
-  \node[font=\scriptsize, align=center, text width=10.4cm] at (5.35,-5.4)
+  \node[font=\scriptsize, align=center, text width=11.6cm] at (5.95,-5.4)
     {each Bracha instance $n$ programs beside its network; $4n + 2$ networks in one round};
   % ---- the three tiers above it
-  \node[tier] (ideal) at (5.35,-6.5)
+  \node[tier] (ideal) at (5.95,-6.5)
     {$\mathrm{roundOverBroadcastSpecification}(P,r)$: each Bracha instance replaced by the BRB specification};
-  \node[tier] (pair)  at (5.35,-7.7)
+  \node[tier] (pair)  at (5.95,-7.7)
     {$\mathrm{roundOverGatherSpecifications}(P,r)$: each gather instance replaced by the gather specification};
-  \node[tier] (spec)  at (5.35,-8.9)
+  \node[tier] (spec)  at (5.95,-8.9)
     {$\mathrm{GBCA.specInst}(P,r)$: Transition System 2};
-  \draw[->] (5.35,-5.75) -- (ideal.north)
+  \draw[->] (5.95,-5.75) -- (ideal.north)
     node[lbl, midway, anchor=west, xshift=4pt]{$\mathrm{lowPairRefines}$, by congruence};
   \draw[->] (ideal) -- (pair)
     node[lbl, midway, anchor=west, xshift=4pt]{$\mathrm{idealRefines}$, by congruence};

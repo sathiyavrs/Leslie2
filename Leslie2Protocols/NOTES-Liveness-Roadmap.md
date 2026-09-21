@@ -15,8 +15,8 @@ scheduler, the protocol decides with probability 1 — at `δ_f = 0`, and **fair
 with probability at least `1 − g(ε, δ_f)` — in general.
 
 The failure mass is in the encoding, not in the statement of the goal. Both coin
-resolutions of the development follow `ABA.Params.wccPMF`
-(`ABA/Vocabulary/Parameters.lean`), which puts mass `δ_f` (the Lean field `Params.δ`,
+resolutions of the development follow `ABA.Parameters.wccPMF`
+(`ABA/Vocabulary/Parameters.lean`), which puts mass `δ_f` (the Lean field `Parameters.δ`,
 `δ_f` in the blueprint) on the outcome `undelivered`: the coin resolves without
 delivering. In TS 3 that outcome is absorbing — `WCC.Step.callResolve` fires once per
 instance and `WCC.Step.ret` has a positive guard — so the processes awaiting an
@@ -31,11 +31,12 @@ compound over the round sequence depends on the fairness constraint chosen and o
 round structure the proof exposes.
 
 The specification pins the target the race is measured against. `ABA.spec` runs that race
-at one point, in the mode loop of §5: from `Mode.idle`, and only where both bits carry
+at one point, in the mode loop of §5: from `ControlMode.flipEnabled`, and only where both bits carry
 `f + 1` support, a flip locks with probability `ε` and fails to deliver with probability `δ_f`, the
-release mass `1 − ε − δ_f` returns to `Mode.idle`, and a lock is never discarded. A
+release mass `1 − ε − δ_f` returns to `ControlMode.flipEnabled`, and a lock is never discarded. A
 flip-only scheduler from such a state therefore reaches the terminal mode
-`Mode.terminal` with probability `δ_f / (ε + δ_f)`, and that is the specification-level bound
+`ControlMode.noRuleEnabled` with probability `δ_f / (ε + δ_f)`, and that is the specification-level
+bound
 a transfer would carry:
 
 ```
@@ -194,7 +195,7 @@ Ordered by expected value-for-effort:
    meet without duplication.
 
 One cost note, on any of the three. The achievability item of `ABA/README.md` — an
-explicit scheduler taking `protocol P4` to a two-return trace of positive mass — is
+explicit scheduler taking `protocol fourProcesses` to a two-return trace of positive mass — is
 expensive under the wait-until order and the case denials: every stage send
 waits on the sender's own send at the level below, and every return but `retA` discharges
 the denials of the cases above it, so a witness has to schedule the full five-level
@@ -208,19 +209,23 @@ safety; both matter to any fair-inclusion proof.
 In TS 3 the failure outcome is absorbing. `WCC.Step.callResolve` requires `hv : s.val = .bot`,
 so an instance resolves once — every later call takes `WCC.Step.callRecord` (D31) — and
 `WCC.Step.ret`'s guard `s.val = .top ∨ s.val = .bit b` is positive, so a resolution at
-`TVal.undelivered` enables no return in any extension.
+`CoinValue.undelivered` enables no return in any extension.
 
-In TS 1 the same mass puts the control mode at `Mode.terminal`, which is globally absorbing
+In TS 1 the same mass puts the control mode at `ControlMode.noRuleEnabled`, which is globally
+absorbing
 (D17). `PLTS.ABA.SpecStep.coinFlip` is one-shot: its guard `hm : s.mode = .idle` admits it
-only at `Mode.idle`, and its `undelivered` outcome — mass `δ_f` under `PLTS.ABA.flipPMF` — leaves
-the state at `Mode.terminal`. The only other `τ`-rule is `PLTS.ABA.SpecStep.decide`, whose
+only at `ControlMode.flipEnabled`, and its `undelivered` outcome — mass `δ_f` under
+`PLTS.ABA.flipPMF` — leaves
+the state at `ControlMode.noRuleEnabled`. The only other `τ`-rule is `PLTS.ABA.SpecStep.decide`,
+whose
 guard `hm : s.mode ≠ .terminal` rules out exactly that mode. A terminal-mode specification therefore
 decides nothing and returns nothing, in any extension, under any scheduler, which is what
 the absorbed TS 3 instance does one level down. The two encodings agree on what a fair
 scheduler can be obliged to do, and no marking has anything to reconcile between them.
 
 The lock is the symmetric half. `flipPMF` puts mass `ε` on `lock`, whose post-state is
-`Mode.locked`; there the flip demands `Mode.idle`, so `SpecStep.decide` is the only
+`ControlMode.decisionEnabled`; there the flip demands `ControlMode.flipEnabled`, so
+`SpecStep.decide` is the only
 `τ`-rule that can be enabled at all. It is enabled exactly when some bit carries `f + 1`
 support, and a state that has passed the flip's own guard leaves some bit supported ever
 after. The forcing runs on the *sum* of the two support counts. Neither count is monotone
@@ -228,19 +233,20 @@ by itself: `SpecStep.callSet`'s overwrite takes its writer out of one of the two
 sets. The sum is. An overwrite moves a supporter from one set to the other and leaves the
 sum where it was; a write into an empty entry raises it by one; a `fail` puts its
 identifier into both sets through the `id ∈ s.F` disjunct and raises it by one or two;
-`SpecStep.callByz` writes only at identifiers that disjunct already counts at both bits,
+`SpecStep.callByzantine` writes only at identifiers that disjunct already counts at both bits,
 so it moves neither count. The flip's `hmix` guard asks `f + 1` at each bit, so the sum
 stands at `2f + 2` or above at every lock, hence at every later state one of the two counts
 is `f + 1` or above and `SpecStep.decide` is enabled. A lock is never discarded: at a
 locked state the one internal move a scheduler has is the decision. The release mass
 `1 − ε − δ_f` returns the
-state to `Mode.idle`, where the flip is enabled again, so a flip-only scheduler runs the
+state to `ControlMode.flipEnabled`, where the flip is enabled again, so a flip-only scheduler runs
+the
 `ε`-versus-`δ_f` race to absorption and locks with probability `ε / (ε + δ_f)`. That is
 the bound §1 records.
 
 **The guard and the liveness half of Validity.** `hmix` also settles the unanimous case
 structurally, at the specification and with no proof obligation. A supported bit has a
-never-corrupted recorded inputter (`SuppOK.honest_supporter`,
+never-corrupted recorded inputter (`InputSupport.correct_supporter`,
 `Specifications/ABASafety.lean`), so under honest unanimity on `v` the bit `!v` is
 supported by corrupted identifiers alone, at most `f` of them, and `hmix` fails at every
 state such a run reaches. The flip is then unreachable, and with it every probabilistic
@@ -259,7 +265,7 @@ the unanimous case only when `δ_f = 0` or when the protocol is reordered to ski
 call on a grade the round has already settled. This is the campaign's transfer caveat and
 is recorded here rather than repaired.
 
-**The transfer hook.** The specification names no coin bit. `flipPMF` is `Params.wccPMF`
+**The transfer hook.** The specification names no coin bit. `flipPMF` is `Parameters.wccPMF`
 pushed forward along a map that forgets which bit was delivered: one bit to `lock`, the
 other bit and the adversarial outcome to `release`, the failure outcome to `undelivered`. The
 three masses are all the rules read. Reading `lock` as "the coin agreed with the round's
@@ -293,13 +299,14 @@ The `excluded = ∅` guard removes those states rather than the obligation. Ever
 has `excluded ∈ {∅, {b}}` (`GBCASafety.excluded_card_le_one`), the surviving bit stays alive, and
 the `A` grade guard still admits `A`- and `B`-returns. The resolution is structural, so no marking
 has anything to decide here. The same holds of TS 1's flip (§5), where the one-shot guard
-and the absorbing `Mode.terminal` settle the question in the step relation rather than in a
+and the absorbing `ControlMode.noRuleEnabled` settle the question in the step relation rather than
+in a
 marking.
 
 **Termination proof sketch for the specification as encoded.** Assume the `n − f` honest
 processes have called, so the quorum guard holds and holds forever (the count is monotone
 in `call` and `F`). The quorum's `n − f ≥ 2f + 1` callers-or-corrupted fall on two bits, so
-some bit `v` carries `f + 1` of them by pigeonhole — the `SuppOK(v)` count, itself monotone.
+some bit `v` carries `f + 1` of them by pigeonhole — the `InputSupport(v)` count, itself monotone.
 All three guards of `bindUnset (!v)` therefore hold, and they persist until the rule is
 taken, so weak fairness fires it; `excluded = {!v}` from then on, and `v` is alive at every
 later state.

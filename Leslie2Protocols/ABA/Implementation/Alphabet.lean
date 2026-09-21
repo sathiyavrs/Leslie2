@@ -25,7 +25,7 @@ over the alphabet here: the hidden-label set, the labels a process acts on
 (D23), the coin oracle's label pullback, and the lifted oracle itself. A
 reading fixes `M` and inherits all of it.
 
-The graded-agreement return `retG` carries `GbcaOut`, the interface's grade,
+The graded-agreement return `retG` carries `GBCAOutput`, the interface's grade,
 which is the specification's own value type and is shared by every
 implementation. It carries the round's bound bit beside it, and so does the
 Byzantine return row `byzantineRetG`: both returns of a round announce the same
@@ -54,9 +54,9 @@ inductive NetworkEvent (n : ℕ) (M : Type) : Type
   | decidedDeliver (i j : Fin n) (b : Bool)
   /-- The coin return fused with a `⟨DECIDED, b⟩` publication (D10): the
   round-`r` coin `c` returns to `id`, whose grade was `A b`. -/
-  | retWPub (r : ℕ) (id : Fin n) (c : Bool) (b : Bool)
+  | retWPublish (r : ℕ) (id : Fin n) (c : Bool) (b : Bool)
   /-- The graded-agreement call against an already-called stage record. -/
-  | gcallLoop (r : ℕ) (id : Fin n) (b : Bool)
+  | gbcaCallLoop (r : ℕ) (id : Fin n) (b : Bool)
   /-- A corrupted process takes the graded-agreement call, opening the stage
   record (D11). -/
   | byzantineCallG (r : ℕ) (k : Fin n) (b : Bool)
@@ -65,7 +65,7 @@ inductive NetworkEvent (n : ℕ) (M : Type) : Type
   | byzantineCallGLoop (r : ℕ) (k : Fin n) (b : Bool)
   /-- A corrupted process takes a graded-agreement return (D11), the round's
   bound bit `bnd` announced beside the graded outcome. -/
-  | byzantineRetG (r : ℕ) (k : Fin n) (out : GbcaOut) (bnd : Bool)
+  | byzantineRetG (r : ℕ) (k : Fin n) (out : GBCAOutput) (bnd : Bool)
   /-- A corrupted process takes the coin call (D11). -/
   | byzantineCallW (r : ℕ) (k : Fin n)
   /-- A corrupted process takes the coin return (D11). -/
@@ -87,7 +87,7 @@ def networkEventLabels (n : ℕ) {M : Type} : Set (ExtendedLabel n M) :=
 @[simp] theorem inr_mem_networkEventLabels {n : ℕ} {M : Type} (e : NetworkEvent n M) :
     Sum.inr e ∈ networkEventLabels (M := M) n := ⟨e, rfl⟩
 
-@[simp] theorem nlab_tau (n : ℕ) (M : Type) :
+@[simp] theorem extendedLabel_tau (n : ℕ) (M : Type) :
     (Silent.τ : ExtendedLabel n M) = Sum.inl Label.tau := rfl
 
 /-! ### The labels a process acts on
@@ -109,8 +109,8 @@ def actsAt {n : ℕ} {M : Type} (j : Fin n) : ExtendedLabel n M → Prop
   | Sum.inr (.gbcaSend _ k _) => k = j
   | Sum.inr (.gbcaDeliver _ i _ _) => i = j
   | Sum.inr (.decidedDeliver i _ _) => i = j
-  | Sum.inr (.gcallLoop _ id _) => id = j
-  | Sum.inr (.retWPub _ id _ _) => id = j
+  | Sum.inr (.gbcaCallLoop _ id _) => id = j
+  | Sum.inr (.retWPublish _ id _ _) => id = j
   | Sum.inr (.byzantineCallG _ k _) => k = j
   | Sum.inr (.byzantineCallGLoop _ k _) => k = j
   | Sum.inr (.byzantineRetG _ k _ _) => k = j
@@ -132,7 +132,7 @@ def coinLabelMap (n : ℕ) {M : Type} : ExtendedLabel n M → Option (Label n)
   | Sum.inl l => some l
   | Sum.inr (.byzantineCallW r k) => some (.callW r k)
   | Sum.inr (.byzantineRetW r k b) => some (.retW r k b)
-  | Sum.inr (.retWPub r id c _) => some (.retW r id c)
+  | Sum.inr (.retWPublish r id c _) => some (.retW r id c)
   | Sum.inr _ => none
 
 @[simp] theorem coinLabelMap_inl {n : ℕ} {M : Type} (l : Label n) :
@@ -144,8 +144,8 @@ def coinLabelMap (n : ℕ) {M : Type} : ExtendedLabel n M → Option (Label n)
 @[simp] theorem coinLabelMap_byzantineRetW {n : ℕ} {M : Type} (r : ℕ) (k : Fin n) (b : Bool) :
     coinLabelMap (M := M) n (Sum.inr (.byzantineRetW r k b)) = some (.retW r k b) := rfl
 
-@[simp] theorem coinLabelMap_retWPub {n : ℕ} {M : Type} (r : ℕ) (id : Fin n) (c b : Bool) :
-    coinLabelMap (M := M) n (Sum.inr (.retWPub r id c b)) = some (.retW r id c) := rfl
+@[simp] theorem coinLabelMap_retWPublish {n : ℕ} {M : Type} (r : ℕ) (id : Fin n) (c b : Bool) :
+    coinLabelMap (M := M) n (Sum.inr (.retWPublish r id c b)) = some (.retW r id c) := rfl
 
 @[simp] theorem coinLabelMap_gbcaSend {n : ℕ} {M : Type} (r : ℕ) (j : Fin n) (m : M) :
     coinLabelMap n (Sum.inr (.gbcaSend r j m)) = none := rfl
@@ -159,8 +159,8 @@ def coinLabelMap (n : ℕ) {M : Type} : ExtendedLabel n M → Option (Label n)
 @[simp] theorem coinLabelMap_decidedDeliver {n : ℕ} {M : Type} (i j : Fin n) (b : Bool) :
     coinLabelMap (M := M) n (Sum.inr (.decidedDeliver i j b)) = none := rfl
 
-@[simp] theorem coinLabelMap_gcallLoop {n : ℕ} {M : Type} (r : ℕ) (id : Fin n) (b : Bool) :
-    coinLabelMap (M := M) n (Sum.inr (.gcallLoop r id b)) = none := rfl
+@[simp] theorem coinLabelMap_gbcaCallLoop {n : ℕ} {M : Type} (r : ℕ) (id : Fin n) (b : Bool) :
+    coinLabelMap (M := M) n (Sum.inr (.gbcaCallLoop r id b)) = none := rfl
 
 @[simp] theorem coinLabelMap_byzantineCallG {n : ℕ} {M : Type} (r : ℕ) (k : Fin n) (b : Bool) :
     coinLabelMap (M := M) n (Sum.inr (.byzantineCallG r k b)) = none := rfl
@@ -168,18 +168,18 @@ def coinLabelMap (n : ℕ) {M : Type} : ExtendedLabel n M → Option (Label n)
 @[simp] theorem coinLabelMap_byzantineCallGLoop {n : ℕ} {M : Type} (r : ℕ) (k : Fin n) (b : Bool) :
     coinLabelMap (M := M) n (Sum.inr (.byzantineCallGLoop r k b)) = none := rfl
 
-@[simp] theorem coinLabelMap_byzantineRetG {n : ℕ} {M : Type} (r : ℕ) (k : Fin n) (out : GbcaOut)
+@[simp] theorem coinLabelMap_byzantineRetG {n : ℕ} {M : Type} (r : ℕ) (k : Fin n) (out : GBCAOutput)
     (bnd : Bool) : coinLabelMap (M := M) n (Sum.inr (.byzantineRetG r k out bnd)) = none := rfl
 
 /-! ### The lifted coin oracle -/
 
 /-- The coin oracle, read over the extended alphabet through the pullback. A
 reading fixes `M` and names the result `coinOverRoundAlphabet`. -/
-noncomputable def coinOverExtendedAlphabet (P : Params) (M : Type) :
+noncomputable def coinOverExtendedAlphabet (P : Parameters) (M : Type) :
     System (ℕ → WCC.SpecState P.n) (ExtendedLabel P.n M) :=
   (WCC.specFamily P).mapIdle (coinLabelMap P.n)
 
-@[simp] theorem coinOverExtendedAlphabet_init (P : Params) (M : Type) :
+@[simp] theorem coinOverExtendedAlphabet_init (P : Parameters) (M : Type) :
     (coinOverExtendedAlphabet P M).init = (WCC.specFamily P).init := rfl
 
 /-! ### The coin oracle's idle row over the shared alphabet -/
@@ -189,7 +189,7 @@ handshake of one of its own rounds, nor `fail`. Read through the pullback
 `coinLabelMap`, this is the oracle's row in every joint transition — of a protocol
 system, of its composed reading, and of the protocol-shaped specification
 (`ABA/Composition/HybridAndSubstitution.lean`) — that leaves the coin standing still. -/
-theorem wccFamilyN_idle (P : Params) (o : ℕ → WCC.SpecState P.n) {l : Label P.n}
+theorem wccFamily_idle (P : Parameters) (o : ℕ → WCC.SpecState P.n) {l : Label P.n}
     (hl : l ≠ Label.tau) (hr : Label.wccRound l = none) (hf : ¬ Label.isFail l) :
     (WCC.specFamily P).step o l (PMF.pure o) := by
   rw [WCC.specFamily, System.family_step_iff]
@@ -199,9 +199,10 @@ theorem wccFamilyN_idle (P : Params) (o : ℕ → WCC.SpecState P.n) {l : Label 
 
 A Dirac distribution determines its point. -/
 
-theorem pureN_inj {α : Type} {a b : α}
+theorem pure_inj {α : Type} {a b : α}
     (h : (PMF.pure a : PMF α) = PMF.pure b) : a = b := by
-  have hm : a ∈ (PMF.pure b).support := by rw [← h]; simp
+  have hm : a ∈ (PMF.pure b).support := by
+    rw [← h]; simp
   simpa using hm
 
 end Implementation

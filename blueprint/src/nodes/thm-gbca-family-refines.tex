@@ -9,7 +9,7 @@
 
 \begin{proof}\leanok
   \uses{thm:aba-subsim, def:idle-family, lem:hyperstep-weakstep}
-  The two families are built by the same construction from the same ownership map $\mathrm{gOwns}$, so an owned or silent label moves the one instance that owns it and is matched instance-wise by Theorem~\ref{thm:aba-subsim}, while a label owned by no round leaves both families in place.
+  The two families are built by the same construction from the same ownership map $\mathrm{roundOwnsLabel}$, so an owned or silent label moves the one instance that owns it and is matched instance-wise by Theorem~\ref{thm:aba-subsim}, while a label owned by no round leaves both families in place.
   A corruption broadcast is matched by the abstract family's own broadcast, using the compatibility lemma of Theorem~\ref{thm:aba-subsim} at every instance at once.
   Each round instance is an LTS and so is each lifted specification instance, so a family of them is an LTS by Definition~\ref{def:idle-family}, and the correspondence (Lemma~\ref{lem:hyperstep-weakstep}) applies once, at family level, yielding a probabilistic forward simulation along the Dirac lift of the pointwise relation.
 \end{proof}

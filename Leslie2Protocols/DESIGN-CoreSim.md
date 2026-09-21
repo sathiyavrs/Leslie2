@@ -16,8 +16,8 @@ equivocation).
 ## Systems
 
 ```
-hybridPre := gbcaSpecificationFamily ∥ (syncProduct roundLoopProgram ∥ (ABANetwork ∥ coinOverRoundAlphabet))
-hybrid    := ((hybridPre.abstract networkEventLabels).relabel).abstract hiddenAPI
+hybridExtended := gbcaSpecificationFamily ∥ (syncProduct roundLoopProgram ∥ (ABANetwork ∥ coinOverRoundAlphabet))
+hybrid    := ((hybridExtended.abstract networkEventLabels).relabel).abstract hiddenAPI
 target    : ProbabilisticForwardSimulation hybrid (ABA.spec P) coreRel
 ```
 
@@ -27,13 +27,13 @@ rendezvous labels are hidden, the result is read back over `Label n`, and the su
 API is hidden in turn (`Composition/HybridAndSubstitution.lean`). Corrupted-process
 handshakes are covered by the Byzantine handshake rows, authorised by `k ∈ F` at `ABANetwork`
 (D11). See `Vocabulary/RoundLoop.lean`'s module docstring for the per-process algorithm
-and deviations D9–D12′ (0-based rounds, the fused DECIDED-send in `retWPub`/`stepRound`,
+and deviations D9–D12′ (0-based rounds, the fused DECIDED-send in `retWPublish`/`stepRound`,
 per-process DECIDED sets — see § D12′ below).
 
-Concrete state: `(g, (C, (A, w)))` with `g : ℕ → GBCA.SpecState`, `C : ∀ j, CoreRec`,
-`A : ANetState`, `w : ℕ → WCC.SpecState`. The two ABA-side components are read as one
+Concrete state: `(g, (C, (A, w)))` with `g : ℕ → GBCA.SpecState`, `C : ∀ j, RoundLoopRecord`,
+`A : ABANetworkState`, `w : ℕ → WCC.SpecState`. The two ABA-side components are read as one
 object `c : ABAState := (C, A)` through the accessors of `Composition/ABAState.lean` —
-`procs`, `decidedSent`, `decidedRecv`, `F` — and every clause below names them, so the
+`processes`, `decidedSent`, `decidedReceived`, `F` — and every clause below names them, so the
 relation reads the hybrid state with no change of system. Abstract state:
 `a : ABA.SpecState`.
 
@@ -43,7 +43,8 @@ relation reads the hybrid state with no change of system. Abstract state:
 randomness couples outcome-to-outcome, so the abstract side stays Dirac.
 
 The abstract state is **lazy** and **never-flipping**. It never fires `SpecStep.coinFlip`, so its
-mode is `Mode.idle` at every state it reaches (field `mode_idle`), `SpecStep.decide` is
+mode is `ControlMode.flipEnabled` at every state it reaches (field `mode_flipEnabled`),
+`SpecStep.decide` is
 enabled throughout, and the concrete coin's resolving call couples to a stutter. And it never
 decides *between* rows: it occupies one of two phases, keyed on `a.val`, and crosses from
 the first to the second at the visible `retABA` that opens phase 2.
@@ -51,9 +52,9 @@ the first to the second at the visible `retABA` that opens phase 2.
 ### `Abs` fields (`HybridRefinesSpecification/Relation.lean`)
 
 - `F_eq : a.F = c.F`
-- `ret_eq : ∀ id, a.ret id = (c.procs id).returned`
-- `mode_idle : a.mode = .idle` (the abstract state never fires `SpecStep.coinFlip`)
-- `input_sync : ∀ id, id ∉ c.F → a.input id = (c.procs id).input` — the ghost record and
+- `ret_eq : ∀ id, a.ret id = (c.processes id).returned`
+- `mode_flipEnabled : a.mode = .idle` (the abstract state never fires `SpecStep.coinFlip`)
+- `input_sync : ∀ id, id ∉ c.F → a.input id = (c.processes id).input` — the ghost record and
   the committed input agree at every honest process. The clause is an equality and it
   sits outside the phase disjunction, so it holds in both phases. At a corrupted process
   it says nothing, and the counts that read the record carry such a process through their
@@ -94,7 +95,7 @@ is written by `bindUnset`, and a value-bearing return needs the *live pair*
 `(!v) ∈ (g r).excluded ∧ v ∉ (g r).excluded`. The relation does not state decided values through
 that pair. It states them through certificates, which name their bit off a single
 permanent membership `(!b) ∈ (g r).excluded` plus commitments that only `call`, `F` and the
-honest `procs` fields can affect. That is the design, and it is sound; the certificates are
+honest `processes` fields can affect. That is the design, and it is sound; the certificates are
 what `Inv.decided_src`, `Inv.grade_A_src` and phase 2 of `Abs` carry.
 
 The certificate form is stronger than the specification requires. `bindUnset`
@@ -109,10 +110,11 @@ certificate form needs no reachability argument of its own.
 - **`ACommit P g c r b`** — the permanent commitments of an `A`-locked round: the live
   pair at every round `r' ≥ r` (round `r` itself included), every honest call above `r`,
   every honest est past `r`, and
-  every honest `Carrier` of round `r`'s outcome names `b`. `Carrier` is the outcome-holder
+  every honest `OutcomeHolder` of round `r`'s outcome names `b`. `OutcomeHolder` is the
+  outcome-holder
   predicate — a round-`(r + 1)` GBCA call of `v`, or a committed est of `v` in the window
   between `retG r` and `retG (r + 1)`. Each component is monotone-stable: the first only
-  loses instances as `excluded` grows, the rest read write-once `call` and honest `procs`
+  loses instances as `excluded` grows, the rest read write-once `call` and honest `processes`
   fields.
 - **`ACert P g c r b`** := `(g r).grade = some true ∧ (!b) ∈ (g r).excluded ∧ ACommit P g c r b`
   — an `A`-locked round whose surviving bit at lock time was `b`, plus those commitments.
@@ -120,12 +122,12 @@ certificate form needs no reachability argument of its own.
   whatever else the round does. This, not a live pair, is what `Inv.decided_src` and
   `Inv.grade_A_src` produce and what phase 2 of `Abs` holds. `ACommit.of_frame` /
   `ACert.of_frame` transport both along any step that keeps `excluded`, `call`, honest
-  `round`/`est`, reflects carriers and only grows `F` (`hF : c.F ⊆ c'.F` — the honesty
+  `round`/`estimate`, reflects carriers and only grows `F` (`hF : c.F ⊆ c'.F` — the honesty
   side conditions are all of the form `id ∉ F`, so they must be re-derived through the
   larger set); `ACert.of_frame` additionally requires the round's grade preserved.
 - **`Inv.excluded_supp` (I28)** — every exclusion keeps its D15 guard: `b ∈ (g r).excluded` implies
   `f + 1` F-blind call support for the spared bit `!b` at round `r`. Both `call` and `F`
-  only grow, so the count is permanent, and `GBCA.exists_honest_caller` derives it into a
+  only grow, so the count is permanent, and `GBCA.exists_correct_caller` derives it into a
   never-corrupted caller of `!b`. That derivation is what recovers a round's value from the
   membership alone, with no live pair in hand.
 - **`Inv.carrier_agree` (I29)** — any two honest carriers of round `r`'s outcome agree,
@@ -166,10 +168,10 @@ translation.
 | `callW` at the row that resolves `WCC_r`'s coin | τ | constant-coupled stutter via the generic `stutter_step` (`HybridRefinesSpecification/Simulation.lean`): coupling `Ω := μ_C.map (·, pure a)`, so `ω = pure (pure a)` and `ω.bind id = pure a` (the abstract state never flips, so every outcome of the draw lands on the same `a`) |
 | `callABA id b`, `id ∉ F`, the commit row (`input = none`) | `callABA id b` | `SpecStep.callSet` (a first write at the empty ghost entry `input_sync` supplies; both sides commit `b`) |
 | `callABA id b`, `id ∉ F`, the concrete loop (`input ≠ none`) | `callABA id b` | `SpecStep.callLoop` (the filled ghost entry `input_sync` supplies; neither side moves) |
-| `callABA id b`, `id ∈ F` | `callABA id b` | `SpecStep.callByz` (D23): the ghost at a corrupted id is unconstrained |
+| `callABA id b`, `id ∈ F` | `callABA id b` | `SpecStep.callByzantine` (D23): the ghost at a corrupted id is unconstrained |
 | `retABA id b`, `id ∉ F`, phase 1 | `retABA id b` | `decide_step` then `SpecStep.ret` (`weakStep_of_run_then_step`) — see below |
 | `retABA id b`, `id ∉ F`, phase 2 | `retABA id b` | `SpecStep.ret` directly (phase 2's holder universal, applied to the honest DECIDED sender it derives, pins `b = v`) |
-| `retABA id b`, `id ∈ F` | `retABA id b` | `SpecStep.retByz` (D23): neither side moves, in either phase |
+| `retABA id b`, `id ∈ F` | `retABA id b` | `SpecStep.retByzantine` (D23): neither side moves, in either phase |
 | `fail id` | `fail id` | `SpecStep.fail` (same two guards via `F_eq`; robust in both phases) |
 
 A `retG` label carries the round's bound bit beside the graded outcome (D29). The whole
@@ -185,13 +187,14 @@ supplies is its three guards, each read off the concrete state at the round `rA`
 `ACert` derived from a never-corrupted DECIDED sender of `b`.
 
 - `hv : a.val = none` — phase 1 itself.
-- `hm : a.mode ≠ .terminal` — the `mode_idle` field: an abstract state that never flips
+- `hm : a.mode ≠ .terminal` — the `mode_flipEnabled` field: an abstract state that never flips
   never reaches it.
-- `hs : SuppOK P a b` — `suppOK_of_inputSupp` (`HybridRefinesSpecification/Relation.lean`)
+- `hs : InputSupport P a b` — `suppOK_of_inputSupp` (`HybridRefinesSpecification/Relation.lean`)
   reads the concrete input-or-`F` sent set `Inv.bind_supp rA b` through phase 1's ghost
   sync.
 
-The step writes `val := some b` and returns the mode to `Mode.idle`, so `mode_idle`
+The step writes `val := some b` and returns the mode to `ControlMode.flipEnabled`, so
+`mode_flipEnabled`
 survives it and phase 2 is entered with the certificate at `rA` in hand. The trailing
 `SpecStep.ret` is glued on by `weakStep_of_run_then_step`: the run is the leading
 τ-closure and the visible `retABA` the middle hyper-step.
@@ -223,13 +226,13 @@ What `Specifications/ABA.lean` carries:
   (§ Why this shape, item 7). No honesty guards anywhere; every support count is
   `F`-blind, hence immune to later `fail`s.
 - **`SpecStep.decide`** is the sole writer of `val`, and its provenance guard
-  `hs : SuppOK P s b`, the `f + 1` recorded-or-corrupt supporters of `b`, is the entire
+  `hs : InputSupport P s b`, the `f + 1` recorded-or-corrupt supporters of `b`, is the entire
   constraint on the value decided. It restricts which bit may be decided, and does so by
   design: `n − 2f` honest callers can split as low as `⌈(f+1)/2⌉` per bit, so a given bit
-  need not be supported. The rule is enabled at `Mode.locked`, where it is the only
+  need not be supported. The rule is enabled at `ControlMode.decisionEnabled`, where it is the only
   enabled `τ`-rule, exactly when some bit is supported. Each of the two counts is
   monotone on its own: every ghost write is a first write, and `SpecStep.fail` and
-  `SpecStep.callByz` move an id into the `id ∈ s.F` disjunct, which counts it at both
+  `SpecStep.callByzantine` move an id into the `id ∈ s.F` disjunct, which counts it at both
   bits. So a state that has passed the flip's mixedness guard leaves both bits supported
   ever after. Spec liveness is unclaimed beyond that.
 - **The mode loop (D21) carries no value.** `SpecStep.coinFlip` names no coin bit and
@@ -237,35 +240,37 @@ What `Specifications/ABA.lean` carries:
   rule; licensing a coin bit would re-admit a Validity-breaking decision at probability
   `ε`. Its `hmix` guard, `f + 1` support at *each* bit, is where the specification holds
   the liveness half of Validity: under honest unanimity the other bit is never supported
-  (`SuppOK.honest_supporter`), so the flip is unreachable and the unanimous path is Dirac.
-- **The corrupted interface (D23) constrains nothing.** `SpecStep.retByz` moves no field,
-  and `SpecStep.callByz` writes only at ids the `id ∈ s.F` disjunct already counts at both
+  (`InputSupport.correct_supporter`), so the flip is unreachable and the unanimous path is Dirac.
+- **The corrupted interface (D23) constrains nothing.** `SpecStep.retByzantine` moves no field,
+  and `SpecStep.callByzantine` writes only at ids the `id ∈ s.F` disjunct already counts at both
   bits, so neither changes which bits are supported. What they add is trace behaviour,
   which is why both trace predicates are read at never-corrupted returners.
 - **No spec-side fill rule.** The concrete adversary fills GBCA call entries through hidden
   byzantine `callG` rows that carry no `callABA` event. Those entries are paid for by the
-  `F` budget inside the count itself — the `id ∈ s.F` disjunct of `SuppOK` — rather than
+  `F` budget inside the count itself — the `id ∈ s.F` disjunct of `InputSupport` — rather than
   by a phantom ghost entry. A fill rule would have to place its entries knowing which
   process is corrupted later, a prophecy no forward simulation has
   (§ Why this shape, item 6).
 
 Provenance invariant (`SpecSafety.SpecInv`), with
-`SuppOK s v := f + 1 ≤ #{id | s.input id = some v ∨ id ∈ s.F}` (monotone in `F` and
-`input`, `SuppOK.mono`), in two clauses: `F_le`, the corrupted set within budget, and
-`val_supp`, `val = some v → SuppOK s v`. The second is `SpecStep.decide`'s own guard at
+`InputSupport s v := f + 1 ≤ #{id | s.input id = some v ∨ id ∈ s.F}` (monotone in `F` and
+`input`, `InputSupport.mono`), in two clauses: `F_le`, the corrupted set within budget, and
+`val_supp`, `val = some v → InputSupport s v`. The second is `SpecStep.decide`'s own guard at
 the one rule that writes `val`; every rule that only grows the ghost record carries it by
-`SuppOK.mono`, and `SpecStep.callByz`, whose write may replace a recorded bit, carries it
-by `SuppOK.callByz`, the writer being counted through the `F` disjunct. Attribution of the
+`InputSupport.mono`, and `SpecStep.callByzantine`, whose write may replace a recorded bit, carries
+it
+by `InputSupport.callByzantine`, the writer being counted through the `F` disjunct. Attribution of
+the
 record to genuine trace events is the separate label-history invariant `SpecSafety.ValInv`,
 whose `input_src` clause the two honest `callABA` rules restore by recording the bit their
-own label carries; `SpecStep.callByz` takes that clause's second disjunct, the corruption
+own label carries; `SpecStep.callByzantine` takes that clause's second disjunct, the corruption
 of its own entry.
 Validity endgame (the budget pigeonhole): at any `retABA _ v` by a never-corrupted
 returner, `val_supp` gives `f + 1` supporters; they cannot all lie in the final `F`
 (`|F| ≤ f`), so some supporter is never corrupted
 (`exists_neverCorrupted_supporter`) and its recorded input is a genuine prior `callABA`.
 
-### D14 — TS 2 Validity (SuppOK guards)
+### D14 — TS 2 Validity (InputSupport guards)
 
 The blueprint's TS 2 certifies its binding step by a *single* honest witness
 (`∃ id ∉ F, call id = b`), and `B`/`C` dissent by a single honest dissenter — the same
@@ -273,7 +278,7 @@ singular-witness provenance loss one level down, and `hybrid` built on it provab
 violates Validity (§ Why this shape). ABDY22's implementation carries the `f + 1` via
 Valid-set relay thresholds; TS 2 abstracts it to one witness.
 
-`GBCA/Specification.lean` instead uses TS 1's `SuppOK` shape at every provenance guard, as
+`GBCA/Specification.lean` instead uses TS 1's `InputSupport` shape at every provenance guard, as
 a count `f + 1 ≤ #{id | call id = some b ∨ id ∈ F}` at the bit that guard is about.
 Binding here is negative (D19): the state carries `excluded : Finset Bool`, the bits the
 instance can no longer hand out, and the internal τ-transition `bindUnset b` excludes one
@@ -300,8 +305,8 @@ D14's superset counts must be discharged from `GBCA.Impl`. The link is the `Inv`
 conjunct `input_supp`:
 
 ```
-∀ b j, j ∉ F → Msg.input b ∈ sent j →
-  (proc j).input = some b ∨ f + 1 ≤ #{id | (proc id).input = some b ∨ id ∈ F}
+∀ b j, j ∉ F → Message.input b ∈ sent j →
+  (process j).input = some b ∨ f + 1 ≤ #{id | (process id).input = some b ∨ id ∈ F}
 ```
 
 Preservation: `call` adds a holder; a `relay`'s `f + 1` receipt senders are each in
@@ -327,7 +332,7 @@ monotone throughout. The derivation splits by D14 site.
   `n − f` `ECHO v` certificate: refine it to an `n − f` `INPUT v`
   receipt quorum (`inputQuorum_of_echoQuorum`), whose honest senders hold an input
   (`input_called`, D8) — that is the quorum guard (`quorum_of_msg_quorum`) — and whose
-  count feeds `Inv.supp_of_input_receipts` for the `f + 1` SuppOK count.
+  count feeds `Inv.supp_of_input_receipts` for the `f + 1` InputSupport count.
 - The `retB`/`retC` counts ride on the `|Valid| > 1` evidence the returner itself holds:
   it is an `n − f ≥ f + 1` `INPUT` receipt quorum for *each* bit, so `suppI_of_valid`
   closes both bits at once — which is what `retC`'s two per-bit guards need, and what
@@ -349,16 +354,17 @@ state; every return row runs the same decidable case split on `excluded`.
 
 D12 models DECIDED gossip as a single per-process entry, which cannot send `DECIDED 0` to
 X and `DECIDED 1` to Y — an under-approximation inconsistent with the equivocating D5 sent
-sets of graded agreement. D12′ mirrors D5 in the DECIDED sets: the network's `dsent` and
+sets of graded agreement. D12′ mirrors D5 in the DECIDED sets: the network's `decidedSent` and
 the round-loop records' receipt rows, read as one object (`Composition/ABAState.lean`) as
-`decidedSent : Fin n → Finset Bool` and `decidedRecv : Fin n → Fin n → Finset Bool`,
+`decidedSent : Fin n → Finset Bool` and `decidedReceived : Fin n → Fin n → Finset Bool`,
 records that only grow. `sendDecided` inserts; delivery is the `decidedDeliver` rendezvous, per
 (receiver, sender, bit), with soundness `b ∈ decidedSent j` on the network's half and an
-at-most-once `b ∉ decidedRecv i j` guard on the receiver's; `byzantineD` is guarded *only* by
+at-most-once `b ∉ decidedReceived i j` guard on the receiver's; `byzantineDecided` is guarded *only*
+by
 `k ∈ F`. Honest sent sets stay at card ≤ 1 in reachable states (A-grade certificates pin
 one bit), but no card invariant is needed. The invariant rewiring
 (`HybridRefinesSpecification/Relation.lean`): `recv_sound` becomes per-bit and
-*honesty-free* (`b ∈ decidedRecv i j → b ∈ decidedSent j`, preserved by pure monotonicity,
+*honesty-free* (`b ∈ decidedReceived i j → b ∈ decidedSent j`, preserved by pure monotonicity,
 since sent sets never shrink); `decided_src` becomes per sent bit
 (`id ∉ F → b ∈ decidedSent id → ∃ r` A-lock cert for `b`) — the equivocation-robust form:
 corrupted equivocators may pad any bit's tally, but the `retABA`-row pigeonhole (`n − f`
@@ -377,17 +383,18 @@ fields), grouped:
   them (D23).
 - **F-lockstep**: `F_g`, `F_w` (every instance's `F` equals `c.F`), `F_card`.
 - **Round structure**, keyed throughout on
-  `Closed g r := (g r).excluded ≠ ∅ ∨ (g r).grade = some false` — "round `r` is finished",
+  `RoundSettled g r := (g r).excluded ≠ ∅ ∨ (g r).grade = some false` — "round `r` is finished",
   which is strictly weaker than "round `r` has excluded a bit", since a `C`-return excludes
   nothing itself:
   `down_closed` (closed rounds downward-closed), `quiescent` (cofinitely many rounds open),
   `round_bound`, `call_round`, `w_call_round`, `w_bound`/`w_called` (coin resolutions and
-  W-calls only at closed rounds), `w_order`, `round_flip`. `Closed.congr`/`Closed.of_frame`
+  W-calls only at closed rounds), `w_order`, `round_flip`.
+  `RoundSettled.congr`/`RoundSettled.of_frame`
   are the two transport lemmas every row's frame facts feed.
 - **The coin clauses, established at the resolving call**: `w_bound`, `w_order` and
   `flip_alock` are the conjuncts that read `(w r).val`, and the one row that writes it is
   `callW`'s resolving row, so `Inv.step_callW_resolve` carries all three. Its input is
-  `Inv.exists_honest_wcaller`: the threshold counts more than `f` callers of round `r`
+  `Inv.exists_correct_wcaller`: the threshold counts more than `f` callers of round `r`
   and `F_card` bounds the corrupted set by `f`, so the callers outnumber it and one of
   them is never corrupted. That caller's `w_called`, `w_call_round` and `wcalled_residue`
   carry `w_bound`, `w_order` and `flip_alock` in turn. `agree_locked`'s round-`r` corner is
@@ -413,8 +420,9 @@ fields), grouped:
 - **Certificates**: `excluded_supp` (I28), `carrier_agree` (I29), `alock_agree` (I30) — the
   three conjuncts that state a round's value without the live pair; see § Certificates.
 - **Support sent sets**: `bind_supp` (I26) — a round whose exclusion set names `!v` carries a
-  permanent `f + 1` input-or-`F` sent set for `v` (`InputSupp`, the concrete mirror of TS 1's
-  `SuppOK`), established
+  permanent `f + 1` input-or-`F` sent set for `v` (`RoundLoopInputSupport`, the concrete mirror of
+  TS 1's
+  `InputSupport`), established
   at `bindUnset` — and `clock_supp` (I27), which keeps a `C`-locked round's `retC` guards
   themselves: `f + 1` F-blind call-or-`F` support for *each* bit, in count form. Both are
   permanent and monotone (`call` and `F` only grow). `supp_of_call_count` reads any such
@@ -425,11 +433,11 @@ fields), grouped:
   through phase 1's ghost sync, by `suppOK_of_inputSupp`. The both-bit shape of `clock_supp` is also
   what keeps a `C`-lock incompatible with an agreeing coin underneath it
   (`no_cgrade_succ_of_supp`), and what forces a `C`-lock one round down
-  (`c_chain_of_both_supports`): `exists_honest_caller` turns the two counts into honest
+  (`c_chain_of_both_supports`): `exists_correct_caller` turns the two counts into honest
   round-`(r + 1)` callers of opposite bits, which are opposite-valued carriers of round
   `r`'s outcome, and `carrier_agree` admits those only at a `C`-locked round.
 - **Dissent bookkeeping**: `flip_alock`, `retg_residue`, `wcalled_residue`,
-  `idle_no_wcall`, each keyed on the permanent `F`-free `DissentResidue` (with its
+  `idle_no_wcall`, each keyed on the permanent `F`-free `DissentWitness` (with its
   `transport` lemma for frame-agnostic preservation). The support sent sets `bind_supp`/
   `clock_supp` latently subsume much of this residue machinery — both are permanent
   `F`-free provenance facts — so folding the residue conjuncts into the sent sets is a
@@ -471,9 +479,11 @@ concrete coin row
    with `SpecStep.coinFlip` rather than a stutter. Two things break. `coinFlip` is the
    system's one non-Dirac rule, and `coreRel` is a `diracRel`, so the abstract side must
    stay a point mass at every reachable pair. And `flipPMF` puts mass `δ` on `exclude`: that
-   branch reaches `Mode.terminal`, where `SpecStep.decide` is disabled forever, so on positive
+   branch reaches `ControlMode.noRuleEnabled`, where `SpecStep.decide` is disabled forever, so on
+   positive
    mass the abstract state could no longer answer the `retABA` that arrives later. Hence
-   `mode_idle`: the abstract state stutters at every flip and keeps `SpecStep.decide` enabled.
+   `mode_flipEnabled`: the abstract state stutters at every flip and keeps `SpecStep.decide`
+   enabled.
 3. **Unconditional honest-unanimity fails.** Requiring pairwise agreement of honest
    inputs whenever the abstract state is undecided is too strong: two opposite fresh inputs with
    nothing decided yet are reachable and would force a decision no support count backs. The
@@ -487,13 +497,13 @@ concrete coin row
 5. **The singular witness loses provenance (TS 2).** Deterministically at `n = 4, f = 1`,
    inputs `1,0,0,0`: TS 2's single-witness exclude of `0` fires off the sole `1`-holder,
    leaving `1` as round 0's surviving bit; `retB`-adopt
-   propagates `est := 1`, round-1 unanimity decides `1`, `fail 0`, `retABA 1 1` — yet
+   propagates `estimate := 1`, round-1 unanimity decides `1`, `fail 0`, `retABA 1 1` — yet
    every never-corrupted process input `0`. A single certifying witness is exactly the
-   D13 loss one level down; hence the D14 SuppOK guards.
+   D13 loss one level down; hence the D14 InputSupport guards.
 6. **Fill-only designs cannot be value-pinned (the wall).** One might try to discharge
    the D14 counts spec-side, filling empty `F`-entries at the *implementation* relation
    instead of counting them. This dies on a pre-corruption genuine call: at `n = 4,
-   f = 1`, a genuine `callG 3 0` forces the honest entry 3 to mirror `0`; after `fail 3`
+   f = 1`, a genuine `callG 3 0` forces the correct entry 3 to mirror `0`; after `fail 3`
    the adversary amplifies `INPUT 1` to a `BIND 1` and a visible `retA 0 1`, but the spec
    state has `#callers(1) = 1 < 2` and entry 3 is *genuinely full* — no τ fills it, since a
    fill needs an *empty* `F`-field. The spec does emit the trace, via a different run that
@@ -502,8 +512,8 @@ concrete coin row
    simulation. So provenance must be carried by `F`-blind *counts* (D14/`input_supp`), not
    by spec-side fills — the sent set guards beat the fills.
 7. **The first call commits, so the ghost takes no junk.** `RoundLoopStep.inputLoop`
-   carries `c.proc.input ≠ none` and the commit row `RoundLoopStep.input` carries
-   `c.proc.input = none`, so a `callABA` at an honest process whose input is unset
+   carries `c.process.input ≠ none` and the commit row `RoundLoopStep.input` carries
+   `c.process.input = none`, so a `callABA` at an honest process whose input is unset
    commits, and a process's first call is never absorbed by the loop (D36).
    On the abstract side `SpecStep.callSet` fires at the empty ghost entry and
    `SpecStep.callLoop` at the filled one, and `input_sync` is what matches the two guards

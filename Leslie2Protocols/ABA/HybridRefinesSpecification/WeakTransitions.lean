@@ -26,16 +26,16 @@ consume. Every lemma here is standalone and never mentions `Inv`/`Abs`/the concr
 namespace PLTS
 namespace ABA
 
-variable {P : Params}
+variable {P : Parameters}
 
 /-! ### The decide run -/
 
 /-- `SpecStep.decide` as a `weakTau` run. The rule is Dirac, so the run is
-a single step: `val` takes `b` and the mode returns to `Mode.idle`. -/
+a single step: `val` takes `b` and the mode returns to `ControlMode.flipEnabled`. -/
 theorem decide_step {a : SpecState P.n} {b : Bool} (hv : a.val = none)
-    (hs : SuppOK P a b) (hm : a.mode ≠ .terminal) :
+    (hs : InputSupport P a b) (hm : a.mode ≠ .noRuleEnabled) :
     weakTau (spec P) (PMF.pure a)
-      (PMF.pure { a with val := some b, mode := .idle }) :=
+      (PMF.pure { a with val := some b, mode := .flipEnabled }) :=
   weakTau_of_step rfl (SpecStep.decide a b hv hs hm)
 
 /-! ### Convenience: closing a run with a visible step -/

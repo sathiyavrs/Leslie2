@@ -316,8 +316,8 @@ private theorem update_rel {σC σA : Type} {R : ℕ → σC → σA → Prop}
 /-- **Forward simulation is a congruence for `System.family`.** Per-instance
 forward simulations `R r` lift to the pointwise relation on families, provided
 the broadcast transforms are `R`-compatible (`hglob`). Silent/owned steps are
-matched through the per-instance simulation and the coordinate embeddings;
-broadcast and idle steps are matched by the abstract family's own one-step
+matched through the per-instance simulation and the coordinate embeddings; broadcast and idle steps
+are matched by the abstract family's own one-step
 broadcast/idle transitions. -/
 theorem ForwardSimulation.family {σC σA : Type} {Label : Type} [Silent Label]
     {instC : ℕ → System σC Label} {instA : ℕ → System σA Label}

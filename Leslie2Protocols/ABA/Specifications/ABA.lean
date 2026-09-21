@@ -18,7 +18,7 @@ the corrupted set `F`, the decision value `val`, and a control mode
 `SpecStep.callSet` and `SpecStep.callLoop` carry the honest interface call,
 `SpecStep.coinFlip` is the mode loop, `SpecStep.decide` writes the decision
 value, `SpecStep.ret` carries the honest interface return, `SpecStep.fail` is
-corruption (D1), and `SpecStep.callByz` and `SpecStep.retByz` are the
+corruption (D1), and `SpecStep.callByzantine` and `SpecStep.retByzantine` are the
 corrupted interface. Every transition is Dirac except `SpecStep.coinFlip`.
 
 The interface is the full adversary's. A corrupted process's call records a
@@ -29,10 +29,10 @@ remove none. The trace predicates of `Specifications/ABASafety.lean` therefore q
 never-corrupted returners: a corrupted return carries an arbitrary bit, which
 no property of the system can constrain.
 
-The mode loop is the specification's liveness reading. From `Mode.idle` a
+The mode loop is the specification's liveness reading. From `ControlMode.flipEnabled` a
 flip locks with probability `ε`, fails to deliver with probability `δ`, and releases back
-to `Mode.idle` with the remaining mass. At `Mode.locked` the decision is the
-only `τ`-rule the mode can enable, so a lock is never discarded; `Mode.terminal`
+to `ControlMode.flipEnabled` with the remaining mass. At `ControlMode.decisionEnabled` the decision
+is the only `τ`-rule the mode can enable, so a lock is never discarded; `ControlMode.noRuleEnabled`
 enables no `τ`-rule at all (D17). The flip names no coin bit. Reading `lock` as the coin
 agreeing with a round's reference value is an outcome coupling of a
 refinement, not a component of this system.
@@ -44,13 +44,13 @@ counted through `F` whatever it holds, and a corruption leaves neither count
 smaller, the process it names being counted at both bits from then on and
 possibly at one of them already.
 So a state passing that guard leaves both bits supported ever after and the
-decision stays enabled at `Mode.locked`; the Lean lemma is deferred.
+decision stays enabled at `ControlMode.decisionEnabled`; the Lean lemma is deferred.
 
-Provenance rests on the ghost record and the support guard `SuppOK` (D13).
+Provenance rests on the ghost record and the support guard `InputSupport` (D13).
 `SpecStep.decide` is the sole writer of `val`. Its guards are `val = ⊥`,
-`SuppOK b` and `mode ≠ terminal`, and the support guard is the entire constraint
+`InputSupport b` and `mode ≠ terminal`, and the support guard is the entire constraint
 on the value decided. The rule is therefore enabled whenever some bit carries
-`f + 1` recorded-or-corrupt supporters and the mode is not `Mode.terminal`; no
+`f + 1` recorded-or-corrupt supporters and the mode is not `ControlMode.noRuleEnabled`; no
 count of participating processes is read anywhere in the system.
 The record holds each process's first genuine call (D16). `SpecStep.callSet`
 writes at an empty entry and `SpecStep.callLoop`, the input-enabledness loop,
@@ -63,13 +63,13 @@ namespace ABA
 
 /-- The control mode of the specification: waiting to flip, holding a lock, or
 frozen by a failed flip. -/
-inductive Mode : Type
+inductive ControlMode : Type
   /-- The flip is enabled and no lock is held. -/
-  | idle
+  | flipEnabled
   /-- A lock is held: the decision is the only enabled `τ`-rule. -/
-  | locked
+  | decisionEnabled
   /-- The flip failed to deliver (D17): no `τ`-rule is enabled. -/
-  | terminal
+  | noRuleEnabled
   deriving DecidableEq, Repr
 
 /-- The state of the ABA specification (Transition System 1). -/
@@ -84,7 +84,7 @@ structure SpecState (n : ℕ) where
   /-- The decision value: once `some v`, every return carries `v`. -/
   val : Option Bool
   /-- The control mode. -/
-  mode : Mode
+  mode : ControlMode
   deriving DecidableEq
 
 namespace SpecState
@@ -98,10 +98,10 @@ def initial (n : ℕ) : SpecState n where
   ret := fun _ => false
   F := ∅
   val := none
-  mode := .idle
+  mode := .flipEnabled
 
 /-- Corruption of `id` (deviation D1): total, Dirac, monotone in `F`. -/
-def corrupt (P : Params) (id : Fin P.n) (s : SpecState P.n) : SpecState P.n :=
+def corrupt (P : Parameters) (id : Fin P.n) (s : SpecState P.n) : SpecState P.n :=
   if id ∉ s.F ∧ s.F.card < P.f then { s with F := insert id s.F } else s
 
 end SpecState
@@ -109,12 +109,12 @@ end SpecState
 /-- D13 support for `v`: `f + 1` ids, each either ghost-recorded as inputting
 `v` or corrupted. The count is `F`-blind (D15), hence immune to later
 corruptions. -/
-def SuppOK (P : Params) (s : SpecState P.n) (v : Bool) : Prop :=
+def InputSupport (P : Parameters) (s : SpecState P.n) (v : Bool) : Prop :=
   P.f + 1 ≤ (Finset.univ.filter (fun id => s.input id = some v ∨ id ∈ s.F)).card
 
-theorem SuppOK.mono {P : Params} {s s' : SpecState P.n} {v : Bool}
-    (h : SuppOK P s v) (hin : ∀ id, s.input id = some v → s'.input id = some v)
-    (hF : s.F ⊆ s'.F) : SuppOK P s' v := by
+theorem InputSupport.mono {P : Parameters} {s s' : SpecState P.n} {v : Bool}
+    (h : InputSupport P s v) (hin : ∀ id, s.input id = some v → s'.input id = some v)
+    (hF : s.F ⊆ s'.F) : InputSupport P s' v := by
   refine le_trans h (Finset.card_le_card ?_)
   intro id hid
   rw [Finset.mem_filter] at hid ⊢
@@ -123,28 +123,28 @@ theorem SuppOK.mono {P : Params} {s s' : SpecState P.n} {v : Bool}
 /-- The outcome of one flip: it locks, releases, or fails to deliver. No coin bit is
 named. -/
 inductive FlipOutcome : Type
-  /-- The flip locks: the mode becomes `Mode.locked`. -/
-  | lock
-  /-- The flip releases: the mode stays `Mode.idle`. -/
-  | release
-  /-- The flip fails to deliver: the mode becomes `Mode.terminal` (D17). -/
+  /-- The flip locks: the mode becomes `ControlMode.decisionEnabled`. -/
+  | toDecisionEnabled
+  /-- The flip releases: the mode stays `ControlMode.flipEnabled`. -/
+  | toFlipEnabled
+  /-- The flip fails to deliver: the mode becomes `ControlMode.noRuleEnabled` (D17). -/
   | undelivered
   deriving DecidableEq, Repr
 
 /-- The flip distribution: mass `ε` on `lock`, `1 − ε − δ` on `release` and
 `δ` on `undelivered`. It is the image of the development's single coin distribution
-`Params.wccPMF` under a map that forgets the bit, one bit going to `lock` and
+`Parameters.wccPMF` under a map that forgets the bit, one bit going to `lock` and
 the other, together with the adversarial outcome, to `release`. The three
 masses are all the rules read; no rule names a coin bit. -/
-noncomputable def flipPMF (P : Params) : PMF FlipOutcome :=
+noncomputable def flipPMF (P : Parameters) : PMF FlipOutcome :=
   P.wccPMF.map (fun o => match o with
-    | .bit true => .lock
-    | .bit false => .release
-    | .adv => .release
+    | .bit true => .toDecisionEnabled
+    | .bit false => .toFlipEnabled
+    | .adversarial => .toFlipEnabled
     | .undelivered => .undelivered)
 
 /-- The step relation of the ABA specification. -/
-inductive SpecStep (P : Params) :
+inductive SpecStep (P : Parameters) :
     SpecState P.n → Label P.n → PMF (SpecState P.n) → Prop
   /-- Rule 1: an environment call records its bit in the ghost record. The
   guard `h` is the empty entry, so the write is a first write and the record
@@ -159,9 +159,9 @@ inductive SpecStep (P : Params) :
   | callLoop (s : SpecState P.n) (id : Fin P.n) (b : Bool) (h : s.input id ≠ none) :
       SpecStep P s (.callABA id b) (PMF.pure s)
   /-- Rule 3 (the flip): the only non-Dirac rule of the system. From
-  `Mode.idle`, with nothing decided, one flip resolves by `flipPMF` into
-  `Mode.locked` with probability `ε`, back into `Mode.idle` with probability
-  `1 − ε − δ`, and into `Mode.terminal` with probability `δ` (D17). It is
+  `ControlMode.flipEnabled`, with nothing decided, one flip resolves by `flipPMF` into
+  `ControlMode.decisionEnabled` with probability `ε`, back into `ControlMode.flipEnabled` with
+  probability `1 − ε − δ`, and into `ControlMode.noRuleEnabled` with probability `δ` (D17). It is
   one-shot: the three outcomes are the three modes, and the rule names no coin
   bit.
 
@@ -171,23 +171,23 @@ inductive SpecStep (P : Params) :
   reaches. The flip is then unreachable, and with it every probabilistic
   branch of the system, so the unanimous path is Dirac. This is the liveness
   half of Validity, held structurally by the guard rather than proven. -/
-  | coinFlip (s : SpecState P.n) (hm : s.mode = .idle) (hv : s.val = none)
-      (hmix : ∀ b, SuppOK P s b) :
+  | coinFlip (s : SpecState P.n) (hm : s.mode = .flipEnabled) (hv : s.val = none)
+      (hmix : ∀ b, InputSupport P s b) :
       SpecStep P s .tau
         ((flipPMF P).map (fun o => match o with
-          | .lock => { s with mode := .locked }
-          | .release => s
-          | .undelivered => { s with mode := .terminal }))
+          | .toDecisionEnabled => { s with mode := .decisionEnabled }
+          | .toFlipEnabled => s
+          | .undelivered => { s with mode := .noRuleEnabled }))
   /-- Rule 4 (decide): the sole writer of `val`. Its guards are `val = ⊥`
-  (`hv`), `SuppOK b` (`hs`) and `mode ≠ terminal` (`hm`), and the support guard is
+  (`hv`), `InputSupport b` (`hs`) and `mode ≠ terminal` (`hm`), and the support guard is
   the entire constraint on the decided value: the bit `b` carries `f + 1`
-  recorded-or-corrupt supporters (D13). An undelivered flip disables the rule (D17);
-  at `Mode.locked` it is the only enabled `τ`-rule, and it is enabled there
-  whenever some bit carries `f + 1` support. The mode returns to `Mode.idle`. -/
-  | decide (s : SpecState P.n) (b : Bool) (hv : s.val = none) (hs : SuppOK P s b)
-      (hm : s.mode ≠ .terminal) :
+  recorded-or-corrupt supporters (D13). An undelivered flip disables the rule (D17); at
+  `ControlMode.decisionEnabled` it is the only enabled `τ`-rule, and it is enabled there
+  whenever some bit carries `f + 1` support. The mode returns to `ControlMode.flipEnabled`. -/
+  | decide (s : SpecState P.n) (b : Bool) (hv : s.val = none) (hs : InputSupport P s b)
+      (hm : s.mode ≠ .noRuleEnabled) :
       SpecStep P s .tau
-        (PMF.pure { s with val := some b, mode := .idle })
+        (PMF.pure { s with val := some b, mode := .flipEnabled })
   /-- Rule 5 (return): a process returns the decision value. -/
   | ret (s : SpecState P.n) (id : Fin P.n) (b : Bool)
       (h₁ : s.val = some b) (h₂ : s.ret id = false) :
@@ -204,13 +204,13 @@ inductive SpecStep (P : Params) :
   /-- Rule 7 (corrupted call): the recorded bit is independent of the label's.
   A corrupted caller's declared input need not be what is recorded, so the rule
   writes an arbitrary `b'` under the sole guard `id ∈ s.F` (D23). -/
-  | callByz (s : SpecState P.n) (id : Fin P.n) (b b' : Bool) (hF : id ∈ s.F) :
+  | callByzantine (s : SpecState P.n) (id : Fin P.n) (b b' : Bool) (hF : id ∈ s.F) :
       SpecStep P s (.callABA id b)
         (PMF.pure { s with input := Function.update s.input id (some b') })
   /-- Rule 8 (corrupted return): a corrupted process returns anything at any
   time. The state does not move, and the honest return rule `SpecStep.ret`
   remains available to it (D23). -/
-  | retByz (s : SpecState P.n) (id : Fin P.n) (b : Bool) (hF : id ∈ s.F) :
+  | retByzantine (s : SpecState P.n) (id : Fin P.n) (b : Bool) (hF : id ∈ s.F) :
       SpecStep P s (.retABA id b) (PMF.pure s)
 
 /-- **Counterexample check (D13).** The Validity-violating trace dies at
@@ -226,25 +226,25 @@ example :
 
 /-- **First-write check (D16).** A call at an uncorrupted process holding no
 input is answered by rule 1 alone: rule 2 asks for a filled entry and
-`SpecStep.callByz` for a corrupted caller, so the bit reaches the ghost
+`SpecStep.callByzantine` for a corrupted caller, so the bit reaches the ghost
 record. -/
-example (P : Params) (s : SpecState P.n) (id : Fin P.n) (b : Bool)
+example (P : Parameters) (s : SpecState P.n) (id : Fin P.n) (b : Bool)
     (h : s.input id = none) (hF : id ∉ s.F) (μ : PMF (SpecState P.n))
     (hstep : SpecStep P s (.callABA id b) μ) :
     μ = PMF.pure { s with input := Function.update s.input id (some b) } := by
   cases hstep with
   | callSet => rfl
   | callLoop _ _ hne => exact absurd h hne
-  | callByz _ _ _ hmem => exact absurd hmem hF
+  | callByzantine _ _ _ hmem => exact absurd hmem hF
 
 /-- The ABA specification system (blueprint Transition System 1). -/
-noncomputable def spec (P : Params) : System (SpecState P.n) (Label P.n) where
+noncomputable def spec (P : Parameters) : System (SpecState P.n) (Label P.n) where
   init := SpecState.initial P.n
   step := SpecStep P
 
-@[simp] theorem spec_init (P : Params) : (spec P).init = SpecState.initial P.n := rfl
+@[simp] theorem spec_init (P : Parameters) : (spec P).init = SpecState.initial P.n := rfl
 
-@[simp] theorem spec_step (P : Params) (s : SpecState P.n) (l : Label P.n)
+@[simp] theorem spec_step (P : Parameters) (s : SpecState P.n) (l : Label P.n)
     (μ : PMF (SpecState P.n)) : (spec P).step s l μ ↔ SpecStep P s l μ := Iff.rfl
 
 end ABA

@@ -34,14 +34,14 @@ variable {S L L' : Type}
 
 /-- Transport a partial execution along a label map that turns each of the
 run's own transitions into a transition of `sys'` — the per-run refinement of
-`is_partial_exec_mapLab` (`Framework/TraceDistributionSupport.lean`). -/
-private theorem is_partial_exec_mapLab_on {sys : System S L} {sys' : System S L'}
+`is_partial_exec_mapLabels` (`Framework/TraceDistributionSupport.lean`). -/
+private theorem is_partial_exec_mapLabels_on {sys : System S L} {sys' : System S L'}
     (g : L → L') {e : AlterSeq S L} (hpe : is_partial_exec e sys)
     (hg : ∀ n lq, e.trans.get? n = some lq →
       ∀ sn μ, sys.step sn lq.1 μ → sys'.step sn (g lq.1) μ) :
-    is_partial_exec (e.mapLab g) sys' := by
+    is_partial_exec (e.mapLabels g) sys' := by
   intro n l s' hn
-  rw [show (e.mapLab g).trans = e.trans.map (fun lq : L × S => (g lq.1, lq.2)) from rfl,
+  rw [show (e.mapLabels g).trans = e.trans.map (fun lq : L × S => (g lq.1, lq.2)) from rfl,
     Stream'.Seq.map_get?] at hn
   cases hq : e.trans.get? n with
   | none =>
@@ -53,17 +53,17 @@ private theorem is_partial_exec_mapLab_on {sys : System S L} {sys' : System S L'
     simp only [Option.map_some, Option.some.injEq, Prod.mk.injEq] at hn
     obtain ⟨rfl, rfl⟩ := hn
     obtain ⟨sn, μ, hsn, hstep, hmem⟩ := hpe n l₀ x hq
-    exact ⟨sn, μ, by rw [AlterSeq.stateAt_mapLab]; exact hsn,
+    exact ⟨sn, μ, by rw [AlterSeq.stateAt_mapLabels]; exact hsn,
       hg n (l₀, x) hq sn μ hstep, hmem⟩
 
 /-- Relabelling every transition of a terminating run to `τ'` yields an
 empty-trace run. -/
-private theorem trace_mapLab_const_tau [Silent L'] (sys' : System S L')
+private theorem trace_mapLabels_const_tau [Silent L'] (sys' : System S L')
     (e : AlterSeq S L) (hterm : e.trans.Terminates) :
-    sys'.trace (e.mapLab (fun _ => (Silent.τ : L'))) = (Seq.nil : Seq L') := by
+    sys'.trace (e.mapLabels (fun _ => (Silent.τ : L'))) = (Seq.nil : Seq L') := by
   classical
   unfold System.trace
-  rw [show (e.mapLab (fun _ => (Silent.τ : L'))).trans
+  rw [show (e.mapLabels (fun _ => (Silent.τ : L'))).trans
       = e.trans.map (fun lq : L × S => ((Silent.τ : L'), lq.2)) from rfl,
     ← Stream'.Seq.ofList_toList e.trans hterm, Stream'.Seq.map_ofList_pub,
     Stream'.Seq.ofList_filter]
@@ -87,9 +87,9 @@ theorem System.weakLSilent_mapIdle_of {q q' : S}
     (hτ' : φ (Silent.τ : L') = some (Silent.τ : L))
     (h : sys.weakLSilent q q') : (sys.mapIdle φ).weakLSilent q q' := by
   obtain ⟨e, hterm, hpe, hinit, hend, htr⟩ := h
-  refine ⟨e.mapLab (fun _ => (Silent.τ : L')),
-    (AlterSeq.mapLab_trans_terminates_iff _ e).mpr hterm, ?_, hinit, ?_, ?_⟩
-  · refine is_partial_exec_mapLab_on _ hpe ?_
+  refine ⟨e.mapLabels (fun _ => (Silent.τ : L')),
+    (AlterSeq.mapLabels_trans_terminates_iff _ e).mpr hterm, ?_, hinit, ?_, ?_⟩
+  · refine is_partial_exec_mapLabels_on _ hpe ?_
     intro n lq hn sn μ hstep
     obtain ⟨l₀, s₀⟩ := lq
     have hτlab : l₀ = Silent.τ := by
@@ -100,9 +100,9 @@ theorem System.weakLSilent_mapIdle_of {q q' : S}
     subst hτlab
     change (sys.mapIdle φ).step sn (Silent.τ : L') μ
     exact (System.mapIdle_step_some hτ' μ).mpr hstep
-  · rw [AlterSeq.endState_mapLab _ e hterm]
+  · rw [AlterSeq.endState_mapLabels _ e hterm]
     exact hend
-  · exact trace_mapLab_const_tau _ e hterm
+  · exact trace_mapLabels_const_tau _ e hterm
 
 /-- **A labelled weak run survives the read-back** at any delegating label:
 `q =l=> q'` of `sys` is `q =l'=> q'` of `sys.mapIdle φ` whenever
@@ -120,15 +120,17 @@ theorem System.weakLStep_mapIdle_of {q q' : S} {l : L} {l' : L'}
     by_cases hx : x = Silent.τ
     · simp [hg, hx]
     · simp [hg, hx, hl']
-  have hgl : g l = l' := by simp [hg, hl]
-  refine ⟨e.mapLab g, (AlterSeq.mapLab_trans_terminates_iff g e).mpr hterm,
+  have hgl : g l = l' := by
+    simp [hg, hl]
+  refine ⟨e.mapLabels g, (AlterSeq.mapLabels_trans_terminates_iff g e).mpr hterm,
     ?_, hinit, ?_, ?_⟩
-  · refine is_partial_exec_mapLab_on g hpe ?_
+  · refine is_partial_exec_mapLabels_on g hpe ?_
     intro n lq hn sn μ hstep
     obtain ⟨l₀, s₀⟩ := lq
     by_cases hτl : l₀ = Silent.τ
     · subst hτl
-      have hgτ' : g Silent.τ = (Silent.τ : L') := by simp [hg]
+      have hgτ' : g Silent.τ = (Silent.τ : L') := by
+        simp [hg]
       rw [hgτ']
       exact (System.mapIdle_step_some hτ' μ).mpr hstep
     · obtain ⟨m, hm⟩ := mem_trace_of_external (sys := sys) hterm hn hτl
@@ -144,9 +146,9 @@ theorem System.weakLStep_mapIdle_of {q q' : S} {l : L} {l' : L'}
       subst hl₀
       rw [hgl]
       exact (System.mapIdle_step_some hφl μ).mpr hstep
-  · rw [AlterSeq.endState_mapLab g e hterm]
+  · rw [AlterSeq.endState_mapLabels g e hterm]
     exact hend
-  · rw [System.trace_mapLab _ sys g hgτ e, htr, Stream'.Seq.map_cons,
+  · rw [System.trace_mapLabels _ sys g hgτ e, htr, Stream'.Seq.map_cons,
       Stream'.Seq.map_nil, hgl]
 
 end Transport

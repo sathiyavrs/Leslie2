@@ -16,7 +16,7 @@
 
 \begin{proof}\leanok
   \uses{def:aba-composed, def:aba-procnet, def:aba-netadv, def:aba-protocol, def:forwardsim, def:pmfrel, def:achievable, thm:forward-sound}
-  The initial states are related, \leandecl{PLTS.ABA.ABDY.protocolRel_init}: everything is initial, so each process's stage-side record is off the map at every round and $\mathrm{stage}\,r$ is the initial stage record there, which is the entry the composed initial state carries.
+  The initial states are related, \leandecl{PLTS.ABA.ABDY.protocolRel_init}: everything is initial, so each process's stage-side record is off the map at every round and $\mathrm{roundRecord}\,r$ is the initial stage record there, which is the entry the composed initial state carries.
   For the step condition, take a state of the protocol, a composed state related to it, and a row out of that protocol state.
   Every transition of the protocol is a product of Dirac factors beside the coin oracle's successor distribution, and so is the composed transition that answers it.
   The two presentations carry the same oracle, so the coupling is functional in the oracle coordinate and the matched outcomes differ in no coordinate the relation constrains.

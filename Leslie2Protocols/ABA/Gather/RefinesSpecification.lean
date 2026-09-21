@@ -39,7 +39,7 @@ the return.
   input entry of an honest process is that input instance's call record, which
   the relation identifies with the specification's call record.
 * The core frozen is `coreOfNet` of the instance's gather network state, and the
-  two guards of `bindCore` are `Gather.coreOf_freeze`, which the returner's
+  two guards of `bindCore` are `Gather.coreOf_recorded`, which the returner's
   quorum of `n − f` committed bind payloads supplies.
 * Every return, the first included, is matched through the count
   `CoreRel.core_cert`: at least `f + 1` bind instances hold a committed payload
@@ -58,11 +58,11 @@ the relation identifies them.
 
 ## The safety headline
 
-`subDown` sends an interface label to the specification label it stands for.
+`toSpecificationLabel` sends an interface label to the specification label it stands for.
 An execution of `specificationOverInstanceAlphabet` has the states of a `specInst` execution and
-labels that `subDown` sends to its labels, so `specificationOverInstanceAlphabet_core` reads
-`CoreTrace` off the relabelled trace, and `instanceOverBroadcastSpecification_core` transfers it
-along the refinement.
+labels that `toSpecificationLabel` sends to its labels, so `specificationOverInstanceAlphabet_core`
+reads `CoreTrace` off the relabelled trace, and `instanceOverBroadcastSpecification_core` transfers
+it along the refinement.
 -/
 
 
@@ -70,26 +70,27 @@ namespace PLTS
 namespace ABA
 namespace Gather
 
-variable {X : Type} [DecidableEq X] {P : Params}
+variable {X : Type} [DecidableEq X] {P : Parameters}
 
 /-! ### The relation -/
 
 /-- The refinement relation of the composed gather instance. `val_cert` bounds
-the specification's committed entries by the input instances' commitments;
-`core_cert` is the count, blind to `F` and monotone, pinning the frozen core
+the specification's committed entries by the input instances' commitments; `core_cert` is the count,
+blind to `F` and monotone, pinning the frozen core
 below committed bind payloads. -/
-structure CoreRel (P : Params) (s : StateOverBroadcastSpecification P.n X) (t : SpecState P.n X) :
+structure CoreRel (P : Parameters) (s : StateOverBroadcastSpecification P.n X) (t : SpecState P.n X)
+  :
   Prop where
   /-- The instance invariant. -/
   inv : IdealInv P s
   /-- The call records agree with the input instances'. -/
-  call_eq : ∀ k, t.call k = (brbIn s k).input
+  call_eq : ∀ k, t.call k = (inputBroadcasts s k).input
   /-- The return flags agree. -/
-  ret_eq : ∀ id, t.ret id = ((ga s).proc id).returned
+  ret_eq : ∀ id, t.ret id = ((gatherTier s).process id).returned
   /-- The corrupted sets agree. -/
-  F_eq : t.F = (ga s).F
+  F_eq : t.F = (gatherTier s).F
   /-- A committed specification entry is a committed input entry. -/
-  val_cert : ∀ k v, t.val k = some v → (brbIn s k).val = some v
+  val_cert : ∀ k v, t.val k = some v → (inputBroadcasts s k).val = some v
   /-- The two sides hold the same core. -/
   core_eq : t.core = core s
   /-- At least `f + 1` bind instances hold a committed payload above the frozen
@@ -101,8 +102,9 @@ theorem coreRel_init :
     CoreRel P ((instanceOverBroadcastSpecification P X).init) ((specificationOverInstanceAlphabet P
       X).init) := by
   refine ⟨IdealInv.initial, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
-    simp [ga, brbIn, core, SpecState.initial, BRB.SpecState.initial, ProcRec.initial,
-      PRec.initial, GaNetState.initial, SubState.proc, SubState.F]
+    simp [gatherTier, inputBroadcasts, core, SpecState.initial, BRB.SpecState.initial,
+      ProcessRecord.initial, BaseProcessRecord.initial, NetworkState.initial,
+        InstanceState.process, InstanceState.F]
 
 /-- **Broadcast compatibility**: the relation is preserved by corrupting both
 sides at once. -/
@@ -112,14 +114,15 @@ theorem coreRel_corrupt {s : StateOverBroadcastSpecification P.n X} {t : SpecSta
       (t.corrupt P id) := by
   refine ⟨hR.inv.step (StepOverBroadcastSpecification.fail s id) (by rw [PMF.mem_support_pure_iff]),
     ?_, ?_, ?_, ?_, ?_, ?_⟩
-  all_goals dsimp only [ga_corruptAll, brbIn_corruptAll, brbBind_corruptAll, core_corruptAll]
+  all_goals dsimp only [gatherTier_corruptAll, inputBroadcasts_corruptAll,
+    bindBroadcasts_corruptAll, core_corruptAll]
   · intro k
     rw [corrupt_call, BRB.corrupt_input]
     exact hR.call_eq k
   · intro k
-    rw [corrupt_ret, SubState.corrupt_proc]
+    rw [corrupt_ret, InstanceState.corrupt_process]
     exact hR.ret_eq k
-  · rw [SpecState.corrupt_F, SubState.corrupt_F, hR.F_eq]
+  · rw [SpecState.corrupt_F, InstanceState.corrupt_F, hR.F_eq]
   · intro k v hv
     rw [corrupt_val] at hv
     rw [BRB.corrupt_val]
@@ -198,7 +201,8 @@ private theorem commitOne_val_new {k : Fin P.n} {t : SpecState P.n X}
           : SpecState P.n X).val k' = Function.update t.val k' (some ((g k').get hc.1)) k'
           from rfl, Function.update_self] at h
       right
-      obtain rfl : (g k').get hc.1 = v := by injection h
+      obtain rfl : (g k').get hc.1 = v := by
+        injection h
       exact (Option.some_get hc.1).symm
     · rw [show ({ t with val := Function.update t.val k (some ((g k).get hc.1)) }
           : SpecState P.n X).val k' = Function.update t.val k (some ((g k).get hc.1)) k'
@@ -283,7 +287,8 @@ private theorem commitList_val_new :
     ∀ (l : List (Fin P.n)) (t : SpecState P.n X) {k' : Fin P.n} {v : X},
       (commitList g l t).val k' = some v → t.val k' = some v ∨ g k' = some v
   | [], _, _, _, h => Or.inl h
-  | k :: l, t, _, _, h => by
+  | k :: l, t, _, _, h =>
+    by
     rcases commitList_val_new l (commitOne g k t) h with h' | h'
     · exact commitOne_val_new g h'
     · exact Or.inr h'
@@ -294,7 +299,8 @@ private theorem commitList_covers :
       (∀ k y x, g k = some x → t.val k = some y → y = x) →
       ∀ k ∈ l, ∀ x, g k = some x → (commitList g l t).val k = some x
   | [], _, _, k, hk, _, _ => absurd hk (by simp)
-  | k₀ :: l, t, hpre, k, hk, x, hx => by
+  | k₀ :: l, t, hpre, k, hk, x, hx =>
+    by
     have hpre' : ∀ k' y x', g k' = some x' → (commitOne g k₀ t).val k' = some y → y = x' := by
       intro k' y x' hx' hy
       rcases commitOne_val_new g hy with h' | h'
@@ -313,7 +319,8 @@ private theorem weakLStep_after_commits {l₀ : Label P.n X} {t' : SpecState P.n
       (specInst P X).weakLStep (commitList g l t) l₀ t' →
       (specInst P X).weakLStep t l₀ t'
   | [], _, _, htail => htail
-  | k :: rest, t, hg, htail => by
+  | k :: rest, t, hg, htail =>
+    by
     rcases commitOne_step g k t (fun x hx hv => hg k (by simp) x hx hv) with heq | hstep
     · rw [show commitList g (k :: rest) t = commitList g rest t from by
         rw [commitList, heq]] at htail
@@ -344,7 +351,8 @@ private theorem commitChain_getLastD :
     ∀ (l : List (Fin P.n)) (t : SpecState P.n X),
       (commitChain g l t).getLastD t = commitList g l t
   | [], _ => rfl
-  | k :: l, t => by
+  | k :: l, t =>
+    by
     rw [commitChain, commitList]
     split
     · next h =>
@@ -360,7 +368,8 @@ private theorem commitChain_isChain :
       (∀ k ∈ l, ∀ x, g k = some x → t.val k = none → k ∈ t.F ∨ t.call k = some x) →
       List.IsChain (fun a b => Step P a Label.tau (PMF.pure b)) (t :: commitChain g l t)
   | [], t, _ => List.isChain_singleton t
-  | k :: l, t, hg => by
+  | k :: l, t, hg =>
+    by
     rw [commitChain]
     split
     · next hc =>
@@ -400,33 +409,34 @@ gather specification's rows can replay without re-proving the run. -/
 
 theorem retRun {s : StateOverBroadcastSpecification P.n X} {t : SpecState P.n X}
     (hR : CoreRel P s t) {id : Fin P.n} {g : Fin P.n → Option X}
-    (hin : ((ga s).proc id).input ≠ none)
-    (hbind : ((ga s).proc id).sentBind ≠ none)
-    (hsub : ∀ k x, g k = some x → holdsIn ((ga s).proc id) k x)
+    (hin : ((gatherTier s).process id).input ≠ none)
+    (hbind : ((gatherTier s).process id).sentBind ≠ none)
+    (hsub : ∀ k x, g k = some x → holdsInputBroadcastReturn ((gatherTier s).process id) k x)
     (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
-      ∀ q ∈ Q, ∃ U, holdsBind ((ga s).proc id) q U ∧ APSet.subMap U g)
-    (hr : ((ga s).proc id).returned = false) :
+      ∀ q ∈ Q, ∃ U,
+        holdsBindBroadcastReturn ((gatherTier s).process id) q U ∧ AcceptedPairs.subMap U g)
+    (hr : ((gatherTier s).process id).returned = false) :
     ∃ ts : List (SpecState P.n X),
       List.IsChain (fun a b => Step P a Label.tau (PMF.pure b)) (t :: ts) ∧
-      (ts.getLastD t).core = some ((core s).getD (coreOfNet P (ga s).2)) ∧
-      APSet.subMap ((core s).getD (coreOfNet P (ga s).2)) g ∧
+      (ts.getLastD t).core = some ((core s).getD (coreOfNet P (gatherTier s).2)) ∧
+      AcceptedPairs.subMap ((core s).getD (coreOfNet P (gatherTier s).2)) g ∧
       (∀ k x, g k = some x → (ts.getLastD t).val k = some x) ∧
       (ts.getLastD t).ret id = false ∧
       CoreRel P
-        (setCore (setGa s ((ga s).setProc id { (ga s).proc id with returned := true }))
-          (some ((core s).getD (coreOfNet P (ga s).2))))
-        { ts.getLastD t with ret := Function.update (ts.getLastD t).ret id true } := by
-  classical
-  set C : APSet P.n X := (core s).getD (coreOfNet P (ga s).2) with hC_def
+        (setCore (setGatherTier s ((gatherTier s).setProcess id { (gatherTier s).process id with
+          returned := true }))
+          (some ((core s).getD (coreOfNet P (gatherTier s).2))))
+        { ts.getLastD t with ret := Function.update (ts.getLastD t).ret id true } := by classical
+  set C : AcceptedPairs P.n X := (core s).getD (coreOfNet P (gatherTier s).2) with hC_def
   have hInv' := hR.inv.step (StepOverBroadcastSpecification.ret s id g hin hbind hsub hQ hr)
     (by rw [PMF.mem_support_pure_iff])
-  have hsubv : ∀ k x, g k = some x → (brbIn s k).val = some x :=
-    fun k x hx => hR.inv.delivIn_val id k x (hsub k x hx)
+  have hsubv : ∀ k x, g k = some x → (inputBroadcasts s k).val = some x :=
+    fun k x hx => hR.inv.inputBroadcastReturned_val id k x (hsub k x hx)
   obtain ⟨Q, hQc, hQm0⟩ := hQ
-  have hQm : ∀ q ∈ Q, ∃ U, (brbBind s q).val = some U ∧ APSet.subMap U g := by
+  have hQm : ∀ q ∈ Q, ∃ U, (bindBroadcasts s q).val = some U ∧ AcceptedPairs.subMap U g := by
     intro q hq
     obtain ⟨U, hU, hUg⟩ := hQm0 q hq
-    exact ⟨U, hR.inv.delivBind_val id q U hU, hUg⟩
+    exact ⟨U, hR.inv.bindBroadcastReturned_val id q U hU, hUg⟩
   set l : List (Fin P.n) := (Finset.univ.filter (fun k => (g k).isSome)).toList with hl
   have hguard : ∀ k ∈ l, ∀ x, g k = some x → t.val k = none →
       k ∈ t.F ∨ t.call k = some x := by
@@ -454,10 +464,10 @@ theorem retRun {s : StateOverBroadcastSpecification P.n X} {t : SpecState P.n X}
     exact hr
   have hchain := commitChain_isChain g l t hguard
   have hlast := commitChain_getLastD g l t
-  set u : Fin P.n → APSet P.n X := fun q =>
-    if h : ∃ U, (brbBind s q).val = some U ∧ APSet.subMap U g
+  set u : Fin P.n → AcceptedPairs P.n X := fun q =>
+    if h : ∃ U, (bindBroadcasts s q).val = some U ∧ AcceptedPairs.subMap U g
     then h.choose else ∅ with hu_def
-  have hu : ∀ q ∈ Q, (brbBind s q).val = some (u q) ∧ APSet.subMap (u q) g := by
+  have hu : ∀ q ∈ Q, (bindBroadcasts s q).val = some (u q) ∧ AcceptedPairs.subMap (u q) g := by
     intro q hq
     have hex := hQm q hq
     rw [hu_def]
@@ -466,35 +476,38 @@ theorem retRun {s : StateOverBroadcastSpecification P.n X} {t : SpecState P.n X}
     exact hex.choose_spec
   -- A core with `f + 1` committed bind payloads above it is dominated by the
   -- returned map: the count meets the return quorum.
-  have key : ∀ C : APSet P.n X, P.f + 1 ≤ (bindAbove s C).card → APSet.subMap C g := by
+  have key : ∀ C : AcceptedPairs P.n X,
+    P.f + 1 ≤ (bindAbove s C).card → AcceptedPairs.subMap C g:= by
     intro C hcnt
-    obtain ⟨q, hqK, hqQ⟩ := SubState.exists_mem_inter_of_quorum hcnt hQc
+    obtain ⟨q, hqK, hqQ⟩ := InstanceState.exists_mem_inter_of_quorum hcnt hQc
     obtain ⟨U, hUval, hCU⟩ := mem_bindAbove.mp hqK
     have h2 := (hu q hqQ).1
     rw [hUval] at h2
     obtain rfl : U = u q := Option.some.inj h2
-    exact APSet.subMap_mono hCU (hu q hqQ).2
+    exact AcceptedPairs.subMap_mono hCU (hu q hqQ).2
   -- The relation across the pair of return effects, at the end of the chain.
   have hrel : ∀ (t' : SpecState P.n X), t'.call = (commitList g l t).call →
       t'.ret = (commitList g l t).ret → t'.F = (commitList g l t).F →
       (∀ k v, t'.val k = some v → (commitList g l t).val k = some v) →
       t'.core = some C → P.f + 1 ≤ (bindAbove s C).card →
       CoreRel P
-        (setCore (setGa s ((ga s).setProc id { (ga s).proc id with returned := true }))
+        (setCore (setGatherTier s ((gatherTier s).setProcess id { (gatherTier s).process id with
+          returned := true }))
           (some C))
         { t' with ret := Function.update t'.ret id true } := by
     intro t' hcall hret hF hval hcore hcnt
     refine ⟨hInv', ?_, ?_, ?_, ?_, ?_, ?_⟩
-    all_goals dsimp only [ga_setCore, ga_setGa, brbIn_setCore, brbIn_setGa, core_setCore]
+    all_goals dsimp only [gatherTier_setCore, gatherTier_setGatherTier, inputBroadcasts_setCore,
+      inputBroadcasts_setGatherTier, core_setCore]
     · intro k
       rw [hcall, commitList_call]
       exact hR.call_eq k
     · intro k
       by_cases hk : k = id
       · subst hk
-        rw [Function.update_self, SubState.setProc_proc_self]
+        rw [Function.update_self, InstanceState.setProcess_process_self]
       · rw [Function.update_of_ne hk, hret, commitList_ret,
-          SubState.setProc_proc_ne _ _ _ hk]
+          InstanceState.setProcess_process_ne _ _ _ hk]
         exact hR.ret_eq k
     · rw [hF, commitList_F]
       exact hR.F_eq
@@ -508,11 +521,12 @@ theorem retRun {s : StateOverBroadcastSpecification P.n X} {t : SpecState P.n X}
       exact hcnt
   rcases hcore : core s with _ | C₀
   · -- no core yet: freeze `coreOfNet` at the end of the chain
-    have hCcore : C = coreOfNet P (ga s).2 := by simp [hC_def, hcore]
+    have hCcore : C = coreOfNet P (gatherTier s).2 := by
+      simp [hC_def, hcore]
     obtain ⟨hcard, -, hcnt⟩ :=
-      coreOf_freeze hR.inv hQc (fun q hq => ⟨u q, (hu q hq).1⟩)
+      coreOf_recorded hR.inv hQc (fun q hq => ⟨u q, (hu q hq).1⟩)
     rw [← hCcore] at hcard hcnt
-    have hCg : APSet.subMap C g := key _ hcnt
+    have hCg : AcceptedPairs.subMap C g := key _ hcnt
     have hbind : Step P (commitList g l t) Label.tau
         (PMF.pure { commitList g l t with core := some C }) := by
       refine Step.bindCore _ C (by rw [commitList_core, hR.core_eq, hcore]) ?_ hcard
@@ -532,10 +546,11 @@ theorem retRun {s : StateOverBroadcastSpecification P.n X} {t : SpecState P.n X}
     · rw [List.getLastD_concat]
       exact hrel _ rfl rfl rfl (fun _ _ h => h) rfl hcnt
   · -- a core frozen earlier: the certificate meets the return quorum
-    have hCcore : C = C₀ := by simp [hC_def, hcore]
+    have hCcore : C = C₀ := by
+      simp [hC_def, hcore]
     have hcnt : P.f + 1 ≤ (bindAbove s C).card := by
       rw [hCcore]; exact hR.core_cert C₀ hcore
-    have hCg : APSet.subMap C g := key _ hcnt
+    have hCg : AcceptedPairs.subMap C g := key _ hcnt
     have hlastcore : (commitList g l t).core = some C := by
       rw [commitList_core, hR.core_eq, hcore, hCcore]
     refine ⟨commitChain g l t, hchain, ?_, hCg, ?_, ?_, ?_⟩
@@ -558,15 +573,17 @@ gather rows inside a larger rule table. -/
 and the specification all record the payload. -/
 theorem coreRel_call {s : StateOverBroadcastSpecification P.n X} {t : SpecState P.n X}
     (hR : CoreRel P s t) {id : Fin P.n} {x : X}
-    (h : ((ga s).proc id).input = none) (hb : (brbIn s id).input = none) :
+    (h : ((gatherTier s).process id).input = none) (hb : (inputBroadcasts s id).input = none) :
     CoreRel P
-      (setBrbIn (setGa s ((ga s).setProc id { (ga s).proc id with input := some x }))
-        (Function.update (brbIn s) id { brbIn s id with input := some x }))
+      (setInputBroadcasts (setGatherTier s ((gatherTier s).setProcess id { (gatherTier s).process id
+        with input := some x }))
+        (Function.update (inputBroadcasts s) id { inputBroadcasts s id with input := some x }))
       { t with call := Function.update t.call id (some x) } := by
   refine ⟨hR.inv.step (StepOverBroadcastSpecification.call s id x h hb) (by rw
     [PMF.mem_support_pure_iff]),
     ?_, ?_, ?_, ?_, ?_, ?_⟩
-  all_goals dsimp only [ga_setBrbIn, ga_setGa, brbIn_setBrbIn]
+  all_goals dsimp only [gatherTier_setInputBroadcasts, gatherTier_setGatherTier,
+    inputBroadcasts_setInputBroadcasts]
   · intro k
     by_cases hk : k = id
     · subst hk
@@ -576,9 +593,9 @@ theorem coreRel_call {s : StateOverBroadcastSpecification P.n X} {t : SpecState 
   · intro k
     by_cases hk : k = id
     · subst hk
-      rw [SubState.setProc_proc_self]
+      rw [InstanceState.setProcess_process_self]
       exact hR.ret_eq k
-    · rw [SubState.setProc_proc_ne _ _ _ hk]
+    · rw [InstanceState.setProcess_process_ne _ _ _ hk]
       exact hR.ret_eq k
   · exact hR.F_eq
   · intro k v hv
@@ -599,11 +616,11 @@ theorem coreRel_tau {s s' : StateOverBroadcastSpecification P.n X} {t : SpecStat
   have hInv' := hR.inv.step hstep (by rw [PMF.mem_support_pure_iff])
   generalize hμ : (PMF.pure s' : PMF (StateOverBroadcastSpecification P.n X)) = μ at hstep
   cases hstep with
-  | commitIn k v hv hm =>
+  | commitInputEntry k v hv hm =>
     have hs' := PMF.pure_injective hμ
     subst hs'
     refine ⟨hInv', ?_, hR.ret_eq, hR.F_eq, ?_, hR.core_eq, hR.core_cert⟩
-    all_goals dsimp only [brbIn_setBrbIn]
+    all_goals dsimp only [inputBroadcasts_setInputBroadcasts]
     · intro k'
       by_cases hk : k' = k
       · subst hk; rw [Function.update_self]; exact hR.call_eq k'
@@ -613,57 +630,57 @@ theorem coreRel_tau {s s' : StateOverBroadcastSpecification P.n X} {t : SpecStat
       by_cases hk : k' = k
       · subst hk; rw [hv] at hold; exact absurd hold (by simp)
       · rw [Function.update_of_ne hk]; exact hold
-  | commitBind q U hv hm =>
+  | commitBindEntry q U hv hm =>
     have hs' := PMF.pure_injective hμ
     subst hs'
     refine ⟨hInv', hR.call_eq, hR.ret_eq, hR.F_eq, hR.val_cert, hR.core_eq, ?_⟩
     intro C hC
     exact le_trans (hR.core_cert C hC) (Finset.card_le_card
-      (bindAbove_mono (StepOverBroadcastSpecification.commitBind s q U hv hm)
+      (bindAbove_mono (StepOverBroadcastSpecification.commitBindEntry s q U hv hm)
         (by rw [PMF.mem_support_pure_iff]) C))
   | deliver i j m h =>
     have hs' := PMF.pure_injective hμ
     subst hs'
     refine ⟨hInv', hR.call_eq, ?_, hR.F_eq, hR.val_cert, hR.core_eq, hR.core_cert⟩
-    dsimp only [ga_setGa]
+    dsimp only [gatherTier_setGatherTier]
     intro k
-    rw [SubState.recvMsg_proc]
+    rw [InstanceState.receiveMessage_process]
     exact hR.ret_eq k
   | echo j hin hcard hsend =>
     have hs' := PMF.pure_injective hμ
     subst hs'
     refine ⟨hInv', hR.call_eq, ?_, hR.F_eq, hR.val_cert, hR.core_eq, hR.core_cert⟩
-    dsimp only [ga_setGa]
+    dsimp only [gatherTier_setGatherTier]
     intro k
     by_cases hk : k = j
     · subst hk
-      rw [SubState.mcast_proc, SubState.setProc_proc_self]
+      rw [InstanceState.multicast_process, InstanceState.setProcess_process_self]
       exact hR.ret_eq k
-    · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hk]
+    · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hk]
       exact hR.ret_eq k
   | vote j U hin hech happ hQ hsend =>
     have hs' := PMF.pure_injective hμ
     subst hs'
     refine ⟨hInv', hR.call_eq, ?_, hR.F_eq, hR.val_cert, hR.core_eq, hR.core_cert⟩
-    dsimp only [ga_setGa]
+    dsimp only [gatherTier_setGatherTier]
     intro k
     by_cases hk : k = j
     · subst hk
-      rw [SubState.mcast_proc, SubState.setProc_proc_self]
+      rw [InstanceState.multicast_process, InstanceState.setProcess_process_self]
       exact hR.ret_eq k
-    · rw [SubState.mcast_proc, SubState.setProc_proc_ne _ _ _ hk]
+    · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hk]
       exact hR.ret_eq k
   | bindCall j U hin hvot hsnd happ hQ hb =>
     have hs' := PMF.pure_injective hμ
     subst hs'
     refine ⟨hInv', hR.call_eq, ?_, hR.F_eq, hR.val_cert, hR.core_eq, ?_⟩
-    · dsimp only [ga_setBrbBind, ga_setGa]
+    · dsimp only [gatherTier_setBindBroadcasts, gatherTier_setGatherTier]
       intro k
       by_cases hk : k = j
       · subst hk
-        rw [SubState.setProc_proc_self]
+        rw [InstanceState.setProcess_process_self]
         exact hR.ret_eq k
-      · rw [SubState.setProc_proc_ne _ _ _ hk]
+      · rw [InstanceState.setProcess_process_ne _ _ _ hk]
         exact hR.ret_eq k
     · intro C hC
       exact le_trans (hR.core_cert C hC) (Finset.card_le_card
@@ -673,35 +690,36 @@ theorem coreRel_tau {s s' : StateOverBroadcastSpecification P.n X} {t : SpecStat
     have hs' := PMF.pure_injective hμ
     subst hs'
     refine ⟨hInv', hR.call_eq, ?_, hR.F_eq, hR.val_cert, hR.core_eq, hR.core_cert⟩
-    dsimp only [ga_setGa]
+    dsimp only [gatherTier_setGatherTier]
     intro k
     by_cases hk : k = j
     · subst hk
-      rw [SubState.setProc_proc_self]
+      rw [InstanceState.setProcess_process_self]
       exact hR.ret_eq k
-    · rw [SubState.setProc_proc_ne _ _ _ hk]
+    · rw [InstanceState.setProcess_process_ne _ _ _ hk]
       exact hR.ret_eq k
   | byzantine j m hmem =>
     have hs' := PMF.pure_injective hμ
     subst hs'
     refine ⟨hInv', hR.call_eq, ?_, hR.F_eq, hR.val_cert, hR.core_eq, hR.core_cert⟩
-    dsimp only [ga_setGa]
+    dsimp only [gatherTier_setGatherTier]
     intro k
-    rw [SubState.mcast_proc]
+    rw [InstanceState.multicast_process]
     exact hR.ret_eq k
-  | inRet k j v hv hr =>
+  | inputBroadcastRet k j v hv hr =>
     have hs' := PMF.pure_injective hμ
     subst hs'
     refine ⟨hInv', ?_, ?_, hR.F_eq, ?_, hR.core_eq, hR.core_cert⟩
-    all_goals dsimp only [ga_setBrbIn, ga_setGa, brbIn_setBrbIn]
+    all_goals dsimp only [gatherTier_setInputBroadcasts, gatherTier_setGatherTier,
+      inputBroadcasts_setInputBroadcasts]
     · intro k'
       by_cases hk : k' = k
       · subst hk; rw [Function.update_self]; exact hR.call_eq k'
       · rw [Function.update_of_ne hk]; exact hR.call_eq k'
     · intro id'
       by_cases hj : id' = j
-      · subst hj; rw [SubState.setProc_proc_self]; exact hR.ret_eq id'
-      · rw [SubState.setProc_proc_ne _ _ _ hj]; exact hR.ret_eq id'
+      · subst hj; rw [InstanceState.setProcess_process_self]; exact hR.ret_eq id'
+      · rw [InstanceState.setProcess_process_ne _ _ _ hj]; exact hR.ret_eq id'
     · intro k' v' hv'
       by_cases hk : k' = k
       · subst hk; rw [Function.update_self]; exact hR.val_cert k' v' hv'
@@ -710,11 +728,11 @@ theorem coreRel_tau {s s' : StateOverBroadcastSpecification P.n X} {t : SpecStat
     have hs' := PMF.pure_injective hμ
     subst hs'
     refine ⟨hInv', hR.call_eq, ?_, hR.F_eq, hR.val_cert, hR.core_eq, ?_⟩
-    · dsimp only [ga_setBrbBind, ga_setGa]
+    · dsimp only [gatherTier_setBindBroadcasts, gatherTier_setGatherTier]
       intro id'
       by_cases hj : id' = j
-      · subst hj; rw [SubState.setProc_proc_self]; exact hR.ret_eq id'
-      · rw [SubState.setProc_proc_ne _ _ _ hj]; exact hR.ret_eq id'
+      · subst hj; rw [InstanceState.setProcess_process_self]; exact hR.ret_eq id'
+      · rw [InstanceState.setProcess_process_ne _ _ _ hj]; exact hR.ret_eq id'
     · intro C hC
       exact le_trans (hR.core_cert C hC) (Finset.card_le_card
         (bindAbove_mono (StepOverBroadcastSpecification.bindRet s q j U hv hr)
@@ -728,7 +746,8 @@ pair is answered by a weak run of the gather specification, and the answer is
 again related. Internal rows stutter; the four call rows and `fail` are answered
 by the specification's own rows; a return is answered by the run
 `commit* ; bindCore? ; ret`. -/
-theorem coreRel_row (P : Params) (X : Type) [DecidableEq X] (q₁ : StateOverBroadcastSpecification
+theorem coreRel_row (P : Parameters) (X : Type) [DecidableEq X] (q₁ :
+  StateOverBroadcastSpecification
   P.n X)
     (q₂ : SpecState P.n X) (hR : CoreRel P q₁ q₂) (l₀ : Label P.n X)
     (μ : PMF (StateOverBroadcastSpecification P.n X)) (hrow : StepOverBroadcastSpecification P q₁ l₀
@@ -753,24 +772,24 @@ theorem coreRel_row (P : Params) (X : Type) [DecidableEq X] (q₁ : StateOverBro
     refine ⟨hR.inv.step (StepOverBroadcastSpecification.callSpecLoop q₁ id x h)
       (by rw [PMF.mem_support_pure_iff]),
       hR.call_eq, ?_, hR.F_eq, hR.val_cert, hR.core_eq, hR.core_cert⟩
-    dsimp only [ga_setGa]
+    dsimp only [gatherTier_setGatherTier]
     intro k
     by_cases hk : k = id
     · subst hk
-      rw [SubState.setProc_proc_self]
+      rw [InstanceState.setProcess_process_self]
       exact hR.ret_eq k
-    · rw [SubState.setProc_proc_ne _ _ _ hk]
+    · rw [InstanceState.setProcess_process_ne _ _ _ hk]
       exact hR.ret_eq k
-  | callProcLoop id x hb =>
+  | callProgramLoop id x hb =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     refine ⟨{ q₂ with call := Function.update q₂.call id (some x) },
       Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
         (Step.call q₂ id x (by rw [hR.call_eq id]; exact hb))⟩, ?_⟩
-    refine ⟨hR.inv.step (StepOverBroadcastSpecification.callProcLoop q₁ id x hb)
+    refine ⟨hR.inv.step (StepOverBroadcastSpecification.callProgramLoop q₁ id x hb)
       (by rw [PMF.mem_support_pure_iff]),
       ?_, hR.ret_eq, hR.F_eq, ?_, hR.core_eq, hR.core_cert⟩
-    all_goals dsimp only [brbIn_setBrbIn]
+    all_goals dsimp only [inputBroadcasts_setInputBroadcasts]
     · intro k
       by_cases hk : k = id
       · subst hk
@@ -789,16 +808,16 @@ theorem coreRel_row (P : Params) (X : Type) [DecidableEq X] (q₁ : StateOverBro
     subst hq₁'
     exact ⟨q₂, Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
       (Step.callLoop q₂ id x)⟩, hR⟩
-  | commitIn k v hv hm =>
+  | commitInputEntry k v hv hm =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
-      coreRel_tau hR (StepOverBroadcastSpecification.commitIn q₁ k v hv hm)⟩
-  | commitBind q U hv hm =>
+      coreRel_tau hR (StepOverBroadcastSpecification.commitInputEntry q₁ k v hv hm)⟩
+  | commitBindEntry q U hv hm =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
-      coreRel_tau hR (StepOverBroadcastSpecification.commitBind q₁ q U hv hm)⟩
+      coreRel_tau hR (StepOverBroadcastSpecification.commitBindEntry q₁ q U hv hm)⟩
   | deliver i j m h =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
@@ -829,11 +848,11 @@ theorem coreRel_row (P : Params) (X : Type) [DecidableEq X] (q₁ : StateOverBro
     subst hq₁'
     exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
       coreRel_tau hR (StepOverBroadcastSpecification.byzantine q₁ j m h)⟩
-  | inRet k j v hv hr =>
+  | inputBroadcastRet k j v hv hr =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
-      coreRel_tau hR (StepOverBroadcastSpecification.inRet q₁ k j v hv hr)⟩
+      coreRel_tau hR (StepOverBroadcastSpecification.inputBroadcastRet q₁ k j v hv hr)⟩
   | bindRet q j U hv hr =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
@@ -845,7 +864,7 @@ theorem coreRel_row (P : Params) (X : Type) [DecidableEq X] (q₁ : StateOverBro
     obtain ⟨ts, hchain, hcore, hmem, hcov, hret1, hRel⟩ :=
       retRun hR hin hbind hsub hQ hr
     have hretstep : Step P (ts.getLastD q₂)
-        (Label.ret id g ((core q₁).getD (coreOfNet P (ga q₁).2)))
+        (Label.ret id g ((core q₁).getD (coreOfNet P (gatherTier q₁).2)))
         (PMF.pure { ts.getLastD q₂ with
           ret := Function.update (ts.getLastD q₂).ret id true }) :=
       Step.ret _ id g _ hcore hmem hcov hret1
@@ -865,7 +884,7 @@ the instance's interface. A transition of the instance is one row of
 `StepOverBroadcastSpecification` (`Gather.instanceOverBroadcastSpecification_step_row`), the row is
 answered by a weak run of the specification (`coreRel_row`), and that run is lifted to the interface
 along a section of `specificationLabelMap`. -/
-theorem gatherCore (P : Params) (X : Type) [DecidableEq X] :
+theorem gatherCore (P : Parameters) (X : Type) [DecidableEq X] :
     ForwardSimulation (instanceOverBroadcastSpecification P X) (specificationOverInstanceAlphabet P
       X) (CoreRel P) := by
   constructor
@@ -889,43 +908,44 @@ theorem gatherCore (P : Params) (X : Type) [DecidableEq X] :
 
 /-- The specification label an interface label stands for: the call loop stands
 for the call it loops on. -/
-def subDown {n : ℕ} : InstanceLabel n X → Label n X
+def toSpecificationLabel {n : ℕ} : InstanceLabel n X → Label n X
   | Sum.inl l => l
   | Sum.inr (.callLoop id x) => .call id x
 
 omit [DecidableEq X] in
-/-- The specification's alphabet read off an interface label is `subDown`. -/
-theorem specificationLabelMap_eq_subDown {n : ℕ} (l : InstanceLabel n X) :
-    specificationLabelMap n X l = some (subDown l) := by
+/-- The specification's alphabet read off an interface label is `toSpecificationLabel`. -/
+theorem specificationLabelMap_eq_toSpecificationLabel {n : ℕ} (l : InstanceLabel n X) :
+    specificationLabelMap n X l = some (toSpecificationLabel l) := by
   cases l with
   | inl l₀ => rfl
   | inr e => cases e; rfl
 
 /-- A transition of the lifted specification is a transition of the
-specification at the label `subDown` names. -/
-theorem specificationOverInstanceAlphabet_step_down (P : Params) {s : SpecState P.n X} {l :
+specification at the label `toSpecificationLabel` names. -/
+theorem specificationOverInstanceAlphabet_step_down (P : Parameters) {s : SpecState P.n X} {l :
   InstanceLabel P.n X}
     {μ : PMF (SpecState P.n X)} (h : (specificationOverInstanceAlphabet P X).step s l μ) :
-    (specInst P X).step s (subDown l) μ :=
-  (System.mapIdle_step_some (specificationLabelMap_eq_subDown l) μ).mp h
+    (specInst P X).step s (toSpecificationLabel l) μ :=
+  (System.mapIdle_step_some (specificationLabelMap_eq_toSpecificationLabel l) μ).mp h
 
 /-- **The lifted specification binds one core.** An execution of `specificationOverInstanceAlphabet`
-has the states of a `specInst` execution and labels that `subDown` sends to its
+has the states of a `specInst` execution and labels that `toSpecificationLabel` sends to its
 labels, so the guards of a return are read off the specification's own rows. -/
-theorem specificationOverInstanceAlphabet_core (P : Params) (X : Type) [DecidableEq X] :
+theorem specificationOverInstanceAlphabet_core (P : Parameters) (X : Type) [DecidableEq X] :
     ∀ D ∈ achievableTraceDists (specificationOverInstanceAlphabet P X), ∀ t, D t ≠ 0 →
-      CoreTrace P (t.map subDown) := by
+      CoreTrace P (t.map toSpecificationLabel) := by
   rintro D ⟨pe, h_init, h_D⟩ t h_ne
   rw [← h_D t] at h_ne
   obtain ⟨e, h_exec, h_char⟩ := exists_exec_of_traceProb_ne_zero pe h_init t h_ne
-  have h_exec' : is_exec (e.mapLab subDown) (specInst P X) :=
-    ⟨is_partial_exec_mapLab subDown (fun _ _ _ h => specificationOverInstanceAlphabet_step_down P h)
+  have h_exec' : is_exec (e.mapLabels toSpecificationLabel) (specInst P X) :=
+    ⟨is_partial_exec_mapLabels toSpecificationLabel (fun _ _ _ h =>
+      specificationOverInstanceAlphabet_step_down P h)
       h_exec.1,
       h_exec.2⟩
-  have hret : ∀ (id : Fin P.n) (g : Fin P.n → Option X) (C : APSet P.n X),
-      Label.ret id g C ∈ t.map subDown →
-      ∃ (k : ℕ) (s : SpecState P.n X), (e.mapLab subDown).stateAt k = some s ∧
-        s.core = some C ∧ APSet.subMap C g := by
+  have hret : ∀ (id : Fin P.n) (g : Fin P.n → Option X) (C : AcceptedPairs P.n X),
+      Label.ret id g C ∈ t.map toSpecificationLabel →
+      ∃ (k : ℕ) (s : SpecState P.n X), (e.mapLabels toSpecificationLabel).stateAt k = some s ∧
+        s.core = some C ∧ AcceptedPairs.subMap C g := by
     intro id g C h₁
     obtain ⟨l, hl, hdown⟩ := Stream'.Seq.exists_of_mem_map h₁
     obtain ⟨-, k, s', hg⟩ := (h_char l).mp hl
@@ -934,7 +954,7 @@ theorem specificationOverInstanceAlphabet_core (P : Params) (X : Type) [Decidabl
       have h2 := specificationOverInstanceAlphabet_step_down P hstep
       rwa [hdown] at h2
     obtain ⟨hC, hmem⟩ := ret_guards hstep'
-    exact ⟨k, s, by rw [AlterSeq.stateAt_mapLab]; exact hst, hC, hmem⟩
+    exact ⟨k, s, by rw [AlterSeq.stateAt_mapLabels]; exact hst, hC, hmem⟩
   refine ⟨?_, ?_⟩
   · intro id g C h₁
     obtain ⟨k, s, hst, hC, hmem⟩ := hret id g C h₁
@@ -957,7 +977,7 @@ theorem specificationOverInstanceAlphabet_core (P : Params) (X : Type) [Decidabl
 /-- Trace-distribution inclusion of the composed gather instance in the gather
 specification read over the instance's interface, the soundness of
 `gatherCore`. -/
-theorem instanceOverBroadcastSpecification_refines (P : Params) (X : Type) [DecidableEq X] :
+theorem instanceOverBroadcastSpecification_refines (P : Parameters) (X : Type) [DecidableEq X] :
     achievableTraceDists (instanceOverBroadcastSpecification P X) ⊆ achievableTraceDists
       (specificationOverInstanceAlphabet P X) :=
   (ForwardSimulation.toProbabilistic (instanceOverBroadcastSpecification_isLTS P)
@@ -965,9 +985,9 @@ theorem instanceOverBroadcastSpecification_refines (P : Params) (X : Type) [Deci
     coreRel_init (gatherCore P X)).achievableTraceDists_subset
 
 /-- **The composed gather instance binds one core.** -/
-theorem instanceOverBroadcastSpecification_core (P : Params) (X : Type) [DecidableEq X] :
+theorem instanceOverBroadcastSpecification_core (P : Parameters) (X : Type) [DecidableEq X] :
     ∀ D ∈ achievableTraceDists (instanceOverBroadcastSpecification P X), ∀ t, D t ≠ 0 →
-      CoreTrace P (t.map subDown) :=
+      CoreTrace P (t.map toSpecificationLabel) :=
   safety_transfer (instanceOverBroadcastSpecification_refines P X)
     (specificationOverInstanceAlphabet_core P X)
 

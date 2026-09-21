@@ -1,4 +1,5 @@
-# Design — the per-instance GBCA refinement `GBCA.ByABDY.implInst ⊑ GBCA.specInst` (`implRefines`)
+# Design — the per-instance GBCA refinement `GBCA.ByABDY.implementation ⊑ GBCA.specInst`
+(`refinesSpecification`)
 
 Companion design document to the Lean proof in `ABA/GBCA/ABDY/RefinesSpecification.lean`
 (relation, invariant, run lemmas, per-row simulation), against the implementation shape in
@@ -12,9 +13,9 @@ exclusion-then-return run — are a condensation of this document.
 ## Systems
 
 ```
-implInst P r : System (ImplState P.n) (Label P.n)     -- ABDY22 Algorithm 6, D1/D5/D8/D18
+implementation P r : System (ImplementationState P.n) (Label P.n)     -- ABDY22 Algorithm 6, D1/D5/D8/D18
 specInst P r : System (SpecState P.n) (Label P.n)     -- graded-binding spec, D1/D14/D15/D19
-target       : ForwardSimulation (implInst P r) (specInst P r) (instRel P r)
+target       : ForwardSimulation (implementation P r) (specInst P r) (instRel P r)
 ```
 
 Both systems are Dirac-transition LTSs. The instance refinement reaches the ℕ-indexed
@@ -26,7 +27,7 @@ family lifting takes its broadcast ingredient from `GBCASim.instRel_corrupt`.
 The implementation transcribes ABDY22's Algorithm 6. The message type is
 
 ```lean
-inductive Msg : Type
+inductive Message : Type
   | input (b : Bool)         -- ⟨echo,  b⟩ of Algorithm 6
   | echo  (b : Bool)         -- ⟨echo2, b⟩
   | vote  (v : Option Bool)  -- ⟨echo3, v⟩,  v ∈ {0, 1, ⊥}
@@ -34,12 +35,13 @@ inductive Msg : Type
   | echo5  (v : Option Bool)  -- ⟨echo5, v⟩
 ```
 
-and `ProcState` carries one write-once field per level above `INPUT`:
+and `ProcessRecord` carries one write-once field per level above `INPUT`:
 `sentEcho : Option Bool`, `sentVote sentBind sentEcho5 : Option (Option Bool)`,
-next to `input`, `sentInput : Bool → Bool` and `returned`. `ImplState` is the
+next to `input`, `sentInput : Bool → Bool` and `returned`. `ImplementationState` is the
 pair of the per-process stage records and the round's network state, the
-latter carrying the D5 set-based network (`sent`, `recv`), the corrupted set
-`F`, and the write-once ghost field `bound : Option Bool`. Derived counts: `recvCount i m` (distinct senders of the
+latter carrying the D5 set-based network (`sent`, `received`), the corrupted set
+`F`, and the write-once ghost field `bound : Option Bool`. Derived counts: `receivedCount i m`
+(distinct senders of the
 exact message `m` delivered to `i`), `echoCount`/`voteCount`/`bindCount`/
 `echo5Count i` (distinct senders of *any* payload at that level), and
 `bothValid P s i` (an `n − f` `INPUT b` receipt quorum at `i` for **each**
@@ -58,7 +60,7 @@ block's case (a) at either bit, and the returns read as Algorithm 6's
 
 * `call` / `callLoop` — record the input, multicast `INPUT b` / input-enabled
   self-loop;
-* `deliver` — adversarial move of a sent message into a `recv` cell;
+* `deliver` — adversarial move of a sent message into a `received` cell;
 * `relay` — `f + 1` `INPUT b` receipts, re-multicast `INPUT b` (amplification);
 * `echo` — `n − f` `INPUT b` receipts, multicast `ECHO b` (write-once);
 * `voteBit` — `n − f` `ECHO b` receipts, multicast `VOTE b` (write-once);
@@ -82,8 +84,8 @@ block's case (a) at either bit, and the returns read as Algorithm 6's
   behind every grade-1 output);
 * `retC id` — an `n − f` `ECHO5 ⊥` receipt quorum and `bothValid`, the process
   called, its own `ECHO5` out, case (a) denied at either bit (`hnotA`), and
-  case (b) denied in reduced form (`hnotB`: `∀ v, (∃ k, echo5 (some v) ∈ recv id k)
-  → recvCount (.bind (some v)) < f + 1`) — the reduction is sound because case
+  case (b) denied in reduced form (`hnotB`: `∀ v, (∃ k, echo5 (some v) ∈ received id k)
+  → receivedCount (.bind (some v)) < f + 1`) — the reduction is sound because case
   (b)'s other two conjuncts, the `n − f` any-`ECHO5` quorum and `bothValid`, are
   this row's own `hcnt` and `hval`, an `n − f` `ECHO5 ⊥` quorum being in
   particular an `n − f` any-`ECHO5` quorum (grade 0);
@@ -117,7 +119,7 @@ instance can no longer hand out. The rules:
 
 * `call` / `callLoop` — as in every instance spec (D15 file conventions);
 * `bindUnset b` (τ) — guards `s.quorum P`,
-  `f + 1 ≤ #{id | s.call id = some (!b) ∨ id ∈ s.F}` (the D15 SuppOK count,
+  `f + 1 ≤ #{id | s.call id = some (!b) ∨ id ∈ s.F}` (the D15 InputSupport count,
   at the *surviving* bit `!b`), and `hd0 : s.excluded = ∅`; effect
   `excluded := insert b s.excluded`;
 * `retA id v bnd` — guards `v ∉ s.excluded`, `(!v) ∈ s.excluded`,
@@ -152,7 +154,7 @@ guards both value-bearing returns), every `A`/`B`-return pins `(!v) ∈ excluded
 whence any two value-bearing returns agree on the surviving bit, and a
 `C`-return forces `excluded ≠ ∅` permanently — from that moment at most one bit is
 ever alive, which is the paper's Binding. Provenance (D14/D15) is carried by
-`bindUnset`'s SuppOK count for the surviving bit: a bit `v` handed out at
+`bindUnset`'s InputSupport count for the surviving bit: a bit `v` handed out at
 grade ≥ 1 requires `(!v) ∈ excluded`, whose `bindUnset (!v)` certified `f + 1`
 F-blind callers of `v`; the budget pigeonhole (`|F| ≤ f` forever) recovers a
 never-corrupted genuine caller of `v`.
@@ -160,15 +162,15 @@ never-corrupted genuine caller of `v`.
 ## The relation
 
 ```lean
-structure InstRel (P : Params) (s : ImplState P.n) (t : SpecState P.n) : Prop where
+structure InstRel (P : Parameters) (s : ImplementationState P.n) (t : SpecState P.n) : Prop where
   inv       : Inv P s
-  call_eq   : ∀ id, t.call id = (s.proc id).input
-  ret_eq    : ∀ id, t.ret id = (s.proc id).returned
+  call_eq   : ∀ id, t.call id = (s.process id).input
+  ret_eq    : ∀ id, t.ret id = (s.process id).returned
   F_eq      : t.F = s.F
   excluded_cert : ∀ b, b ∈ t.excluded → ExcludedCert P s b
   bound_excluded : t.excluded = excludedOf s.bound
-  gradeA_ev : t.grade = some true  → ∃ v i, P.n - P.f ≤ s.recvCount i (.echo5 (some v))
-  gradeC_ev : t.grade = some false → ∃ i,   P.n - P.f ≤ s.recvCount i (.echo5 none)
+  gradeA_ev : t.grade = some true  → ∃ v i, P.n - P.f ≤ s.receivedCount i (.echo5 (some v))
+  gradeC_ev : t.grade = some false → ∃ i,   P.n - P.f ≤ s.receivedCount i (.echo5 none)
 ```
 
 `call_eq`/`ret_eq`/`F_eq` are the exact abstraction rows, identical in shape
@@ -199,17 +201,17 @@ unwritten `excluded` is empty and the row answers with the two-step run.
 ```lean
 /-- Case A: the opposite bit owns the (unique) `n − f` `ECHO` receipt
 quorum. -/
-def EchoQuorum (P : Params) (s : ImplState P.n) (v : Bool) : Prop :=
-  ∃ i, P.n - P.f ≤ s.recvCount i (.echo v)
+def EchoQuorum (P : Parameters) (s : ImplementationState P.n) (v : Bool) : Prop :=
+  ∃ i, P.n - P.f ≤ s.receivedCount i (.echo v)
 
 /-- Case B: an `n − f` wall of processes each of which is corrupted or has
 committed its write-once `VOTE` field to a payload other than `some b`. -/
-def VoteWall (P : Params) (s : ImplState P.n) (b : Bool) : Prop :=
+def VoteWall (P : Parameters) (s : ImplementationState P.n) (b : Bool) : Prop :=
   P.n - P.f ≤ (Finset.univ.filter
-    (fun j => j ∈ s.F ∨ ∃ w, (s.proc j).sentVote = some w ∧ w ≠ some b)).card
+    (fun j => j ∈ s.F ∨ ∃ w, (s.process j).sentVote = some w ∧ w ≠ some b)).card
 
 /-- The exclude certificate licensing `b ∈ excluded` on the specification side. -/
-def ExcludedCert (P : Params) (s : ImplState P.n) (b : Bool) : Prop :=
+def ExcludedCert (P : Parameters) (s : ImplementationState P.n) (b : Bool) : Prop :=
   EchoQuorum P s (!b) ∨ VoteWall P s b
 ```
 
@@ -219,7 +221,7 @@ sole source to any grade-≥1 evidence for `b` — impossible forever:
 * **Case A** (`EchoQuorum P s (!b)`). Any `VOTE b` quorum contains an honest
   `VOTE b` sender (`n − f > f ≥ |F|`), whose `vote_conf` receipt quorum is an
   `n − f` `ECHO b` quorum; two same-level `n − f` quorums for different bits
-  share an honest sender (`exists_honest_recv₂`, `(n−f)+(n−f)−n > f`) that
+  share an honest sender (`exists_correct_received₂`, `(n−f)+(n−f)−n > f`) that
   multicast two `ECHO` payloads, contradicting the write-once `echo_once`.
   This is `echoQuorum_unique`.
 * **Case B** (`VoteWall P s b`). Any later `n − f` `VOTE b` quorum `Q` has all
@@ -235,12 +237,12 @@ The three certificate obligations:
 **(i) Monotonicity.** Receipts only grow (`deliver`), `sentVote` is
 write-once and never unset (guard `sentVote = none` on `voteBit`/`voteBot`,
 no rule clears it), and `F` only grows (`fail`); every other rule touches
-neither `recv`, `sentVote` nor `F`. Packaged as
+neither `received`, `sentVote` nor `F`. Packaged as
 
 ```lean
-theorem ExcludedCert.mono {s s' : ImplState P.n} {b : Bool}
-    (hrecv : ∀ i j m, m ∈ s.recv i j → m ∈ s'.recv i j)
-    (hvote : ∀ j w, (s.proc j).sentVote = some w → (s'.proc j).sentVote = some w)
+theorem ExcludedCert.mono {s s' : ImplementationState P.n} {b : Bool}
+    (hrecv : ∀ i j m, m ∈ s.received i j → m ∈ s'.received i j)
+    (hvote : ∀ j w, (s.process j).sentVote = some w → (s'.process j).sentVote = some w)
     (hF : s.F ⊆ s'.F) : ExcludedCert P s b → ExcludedCert P s' b
 ```
 
@@ -255,11 +257,11 @@ certificate:
 ```lean
 /-- Any `n − f` `VOTE v` receipt quorum excludes the opposite bit … -/
 theorem excludedCert_of_voteQuorum (hI : Inv P s) {i v}
-    (h : P.n - P.f ≤ s.recvCount i (.vote (some v))) : ExcludedCert P s (!v)
+    (h : P.n - P.f ≤ s.receivedCount i (.vote (some v))) : ExcludedCert P s (!v)
 
 /-- … and certifies that `v` itself is alive. -/
 theorem not_excludedCert_of_voteQuorum (hI : Inv P s) {i v}
-    (h : P.n - P.f ≤ s.recvCount i (.vote (some v))) : ¬ ExcludedCert P s v
+    (h : P.n - P.f ≤ s.receivedCount i (.vote (some v))) : ¬ ExcludedCert P s v
 ```
 
 `excludedCert_of_voteQuorum` lands in `VoteWall (!v)` — the quorum's members are
@@ -269,12 +271,12 @@ Both value-bearing returns route into a `VOTE` quorum by the derivation chain
 
 ```lean
 theorem voteQuorum_of_bind_receipts (hI : Inv P s) {i v}
-    (h : P.f + 1 ≤ s.recvCount i (.bind (some v))) :
-    ∃ k, k ∉ s.F ∧ P.n - P.f ≤ s.recvCount k (.vote (some v))
+    (h : P.f + 1 ≤ s.receivedCount i (.bind (some v))) :
+    ∃ k, k ∉ s.F ∧ P.n - P.f ≤ s.receivedCount k (.vote (some v))
 
 theorem bind_receipts_of_echo5_quorum (hI : Inv P s) {i v}
-    (h : P.n - P.f ≤ s.recvCount i (.echo5 (some v))) :
-    ∃ k, k ∉ s.F ∧ P.n - P.f ≤ s.recvCount k (.bind (some v))
+    (h : P.n - P.f ≤ s.receivedCount i (.echo5 (some v))) :
+    ∃ k, k ∉ s.F ∧ P.n - P.f ≤ s.receivedCount k (.bind (some v))
 ```
 
 (`retA`: echo5 quorum → honest `ECHO5` sender → `echo5_conf`; then `n − f ≥ f + 1` and
@@ -285,13 +287,13 @@ the first chain: bind receipts → honest binder (`f + 1 > |F|`) → `bind_conf`
 
 ```lean
 theorem excludedCert_of_echo5Bot_quorum (hI : Inv P s) {i}
-    (h : P.n - P.f ≤ s.recvCount i (.echo5 none)) : ∃ b, ExcludedCert P s b
+    (h : P.n - P.f ≤ s.receivedCount i (.echo5 none)) : ∃ b, ExcludedCert P s b
 ```
 
 Proof shape (this is the sketch's Case A/Case B dichotomy, formalised): the
 quorum contains an honest `ECHO5 ⊥` sender `p` (`n − f > f`); `echo5Bot_conf`
 gives `n − f ≤ s.bindCount p`, so `p` holds an honest any-payload `BIND`
-sender `k`. Classical case split on `∃ m b', m ∉ s.F ∧ Msg.vote (some b') ∈
+sender `k`. Classical case split on `∃ m b', m ∉ s.F ∧ Message.vote (some b') ∈
 s.sent m` (an honest bit-voter exists somewhere):
 
 * **yes** — `vote_conf` at `m` is an `n − f` `ECHO b'` quorum, so
@@ -318,7 +320,7 @@ theorem bindUnset_guards (hR : InstRel P s t) {v} (hq : EchoQuorum P s v) :
 (`inputQuorum_of_echoQuorum`), whose honest senders hold an input
 (`input_called`, D8): that is the quorum guard (`quorum_of_msg_quorum`), and
 its count feeds `Inv.supp_of_input_receipts` → `InstRel.spec_supp` for the
-SuppOK count. The `EchoQuorum v` input is supplied by
+InputSupport count. The `EchoQuorum v` input is supplied by
 `echoQuorum_of_vote_receipts` off the derived `VOTE v` quorum
 (`n − f ≥ f + 1`). At the `C`-return (excluding an arbitrary certified `b*`,
 support bit `!b*`), both guards come instead from the returner's own
@@ -431,7 +433,7 @@ never picked.
 |---|---|---|---|
 | `call` | `callG r id b` | `Step.call` (guard via `call_eq`) | `call_eq`/`ret_eq` re-pointwise; `excluded_cert` by `ExcludedCert.mono` (input write only); grade evs untouched |
 | `callLoop` | `callG r id b` | `Step.callLoop` | all fields unchanged |
-| `deliver` | τ | stutter (`weakLSilent_refl`) | `excluded_cert` via `ExcludedCert.mono` (recv grows); grade evs via `recvCount_le_recvMsg` |
+| `deliver` | τ | stutter (`weakLSilent_refl`) | `excluded_cert` via `ExcludedCert.mono` (received grows); grade evs via `receivedCount_le_receiveMessage` |
 | `relay` | τ | stutter | frame: sender's `sentInput` only |
 | `echo` | τ | stutter | frame: sender's `sentEcho` only |
 | `voteBit` / `voteBot` | τ | stutter | `sentVote` goes `none → some _`: `ExcludedCert.mono`'s persistence hypothesis holds vacuously-forward (wall members already committed) |
@@ -441,15 +443,15 @@ never picked.
 | `retA id v` | `retG r id (A v)` | `(!v) ∈ excluded`: single `Step.retA`; else: `excludeThenRetA_run` | see below |
 | `retB id v` | `retG r id (B v)` | `(!v) ∈ excluded`: single `Step.retB`; else: `excludeThenRetB_run` | see below |
 | `retC id` | `retG r id C` | `excluded ≠ ∅`: single `Step.retC`; else: `excludeThenRetC_run` on `b*` | see below |
-| `fail id` | `fail id` | `Step.fail` (lockstep `corrupt`) | `corrupt_F_eq`; `excluded` untouched by spec `corrupt`; `excluded_cert` via `ExcludedCert.mono` (`corrupt_recv`/`corrupt_proc`/`corrupt_F_subset`); grade evs via `corrupt_recvCount` |
+| `fail id` | `fail id` | `Step.fail` (lockstep `corrupt`) | `corrupt_F_eq`; `excluded` untouched by spec `corrupt`; `excluded_cert` via `ExcludedCert.mono` (`corrupt_received`/`corrupt_process`/`corrupt_F_subset`); grade evs via `corrupt_receivedCount` |
 
 The three return rows in detail. Common first move: derive the honest
 `VOTE`-level quorum —
 
-* `retA`: `hcnt : n − f ≤ recvCount id (.echo5 (some v))` →
+* `retA`: `hcnt : n − f ≤ receivedCount id (.echo5 (some v))` →
   `bind_receipts_of_echo5_quorum` → `voteQuorum_of_bind_receipts` (via
-  `n − f ≥ f + 1`) → `hvq : n − f ≤ recvCount k (.vote (some v))`;
-* `retB`: `hbind : f + 1 ≤ recvCount id (.bind (some v))` →
+  `n − f ≥ f + 1`) → `hvq : n − f ≤ receivedCount k (.vote (some v))`;
+* `retB`: `hbind : f + 1 ≤ receivedCount id (.bind (some v))` →
   `voteQuorum_of_bind_receipts` → `hvq`;
 
 then
@@ -487,7 +489,7 @@ quorum refutes a certificate for `v`, so a bit already on record is `v` by
 announces `boundOf`'s bit, whose complement is certified by
 `excludedCert_boundOf_C`: an honest bit-voter's `vote_conf` receipt quorum is
 Case A for the opposite bit, and where there is no honest bit-voter the all-⊥
-wall (`excludedCert_of_noHonestVote`) certifies both bits at once. In that
+wall (`excludedCert_of_noCorrectVote`) certifies both bits at once. In that
 all-⊥ run no bit is ever handed out, and the bit the `C`-returns announce is
 the surviving one — `boundOf` reads `true` there, and the run excludes `false`
 — which is sound because the bit is a ghost output and answers no process.
@@ -502,15 +504,15 @@ identical in shape to `bindBit`/`bindBot` and need nothing beyond it:
 
 * the weak-transition kit of `Framework/FamilySimulation.lean`:
   `System.weakLStep_of_step` and `weakLStep_tauThen`;
-* network plumbing: `recv_sub`, `recvCount_le_recvMsg`, `mem_mcast_sent`,
-  `mem_recvMsg_recv`, `exists_sender_notMem`, `exists_honest_recv₂`,
+* network plumbing: `recv_sub`, `receivedCount_le_receiveMessage`, `mem_multicast_sent`,
+  `mem_receiveMessage_received`, `exists_sender_notMem`, `exists_correct_received₂`,
   `corrupt_*` frame lemmas, `corrupt_F_eq`;
 * the corruption budget `F_card` and the D15 input machinery: `ImplSupp`,
   `ImplSupp.mono`, `input_orig`, `input_supp`, `input_called`,
   `Inv.supp_of_input_receipts`, `suppI_of_valid`, `InstRel.spec_supp`,
   `quorum_of_msg_quorum`, `inputQuorum_of_echoQuorum`;
 * the `ECHO`-level certificate: `EchoQuorum`, `echoQuorum_unique`,
-  `echoQuorum_of_vote_receipts`, and `bindUnset_guards` (quorum + SuppOK count
+  `echoQuorum_of_vote_receipts`, and `bindUnset_guards` (quorum + InputSupport count
   out of one `EchoQuorum`);
 * conformance and write-once clauses `echo_conf`, `echo_once`, `vote_input`,
   `vote_conf`, `bind_once`, `bind_conf` (`bind_once` serves here as a
@@ -520,18 +522,18 @@ identical in shape to `bindBit`/`bindBot` and need nothing beyond it:
 
 ```lean
 /-- Honest `VOTE` multicasts are recorded in the write-once `sentVote`. -/
-vote_once : ∀ j w, j ∉ s.F → Msg.vote w ∈ s.sent j → (s.proc j).sentVote = some w
+vote_once : ∀ j w, j ∉ s.F → Message.vote w ∈ s.sent j → (s.process j).sentVote = some w
 /-- Honest `BIND ⊥` is backed by `n − f` any-`VOTE` receipts. -/
-bindBot_conf : ∀ j, j ∉ s.F → Msg.bind none ∈ s.sent j → P.n - P.f ≤ s.voteCount j
+bindBot_conf : ∀ j, j ∉ s.F → Message.bind none ∈ s.sent j → P.n - P.f ≤ s.voteCount j
 /-- Honest `ECHO5` multicasts are recorded in the write-once `sentEcho5`. -/
-echo5_once : ∀ j w, j ∉ s.F → Msg.echo5 w ∈ s.sent j → (s.proc j).sentEcho5 = some w
+echo5_once : ∀ j w, j ∉ s.F → Message.echo5 w ∈ s.sent j → (s.process j).sentEcho5 = some w
 /-- Honest `ECHO5 b` is backed by an `n − f` `BIND b` receipt quorum. -/
-echo5_conf : ∀ j b, j ∉ s.F → Msg.echo5 (some b) ∈ s.sent j →
-  P.n - P.f ≤ s.recvCount j (.bind (some b))
+echo5_conf : ∀ j b, j ∉ s.F → Message.echo5 (some b) ∈ s.sent j →
+  P.n - P.f ≤ s.receivedCount j (.bind (some b))
 /-- Honest `ECHO5 ⊥` is backed by `n − f` any-`BIND` receipts. -/
-echo5Bot_conf : ∀ j, j ∉ s.F → Msg.echo5 none ∈ s.sent j → P.n - P.f ≤ s.bindCount j
+echo5Bot_conf : ∀ j, j ∉ s.F → Message.echo5 none ∈ s.sent j → P.n - P.f ≤ s.bindCount j
 /-- Honest `ECHO5` senders hold an input (D8, one level up). -/
-echo5_input : ∀ j w, j ∉ s.F → Msg.echo5 w ∈ s.sent j → (s.proc j).input ≠ none
+echo5_input : ∀ j w, j ∉ s.F → Message.echo5 w ∈ s.sent j → (s.process j).input ≠ none
 ```
 
 `vote_once` and `bindBot_conf` are forced by the exclusion certificates (`VoteWall`
@@ -543,12 +545,12 @@ Preservation is by the same three schemas as every other clause: the
 `_once` clauses by the `sentEcho5 = none`/`sentVote = none` send guards, the
 `_conf` clauses by the sending rule's own receipt guard plus count
 monotonicity, everything by frame elsewhere. Count monotonicity needs the
-any-payload analogues of `recvCount_le_recvMsg`:
+any-payload analogues of `receivedCount_le_receiveMessage`:
 
 ```lean
-theorem voteCount_le_recvMsg (s : ImplState n) (i j : Fin n) (m : Msg) (i' : Fin n) :
-    s.voteCount i' ≤ (s.recvMsg i j m).voteCount i'
--- likewise bindCount_le_recvMsg
+theorem voteCount_le_receiveMessage (s : ImplementationState n) (i j : Fin n) (m : Message) (i' : Fin n) :
+    s.voteCount i' ≤ (s.receiveMessage i j m).voteCount i'
+-- likewise bindCount_le_receiveMessage
 ```
 
 (same one-line `Finset.card_le_card` proof at both levels).
@@ -558,42 +560,42 @@ theorem voteCount_le_recvMsg (s : ImplState n) (i j : Fin n) (m : Msg) (i' : Fin
 Collected statements (all defined in `GBCA/ABDY/RefinesSpecification.lean` unless noted):
 
 ```lean
-def VoteWall (P : Params) (s : ImplState P.n) (b : Bool) : Prop := …   -- § exclude certificates
-def ExcludedCert (P : Params) (s : ImplState P.n) (b : Bool) : Prop :=
+def VoteWall (P : Parameters) (s : ImplementationState P.n) (b : Bool) : Prop := …   -- § exclude certificates
+def ExcludedCert (P : Parameters) (s : ImplementationState P.n) (b : Bool) : Prop :=
   EchoQuorum P s (!b) ∨ VoteWall P s b
 
-theorem ExcludedCert.mono {s s' : ImplState P.n} {b : Bool}
-    (hrecv : ∀ i j m, m ∈ s.recv i j → m ∈ s'.recv i j)
-    (hvote : ∀ j w, (s.proc j).sentVote = some w → (s'.proc j).sentVote = some w)
+theorem ExcludedCert.mono {s s' : ImplementationState P.n} {b : Bool}
+    (hrecv : ∀ i j m, m ∈ s.received i j → m ∈ s'.received i j)
+    (hvote : ∀ j w, (s.process j).sentVote = some w → (s'.process j).sentVote = some w)
     (hF : s.F ⊆ s'.F) : ExcludedCert P s b → ExcludedCert P s' b
 
-theorem voteQuorum_of_bind_receipts {s : ImplState P.n} (hI : Inv P s)
-    {i : Fin P.n} {v : Bool} (h : P.f + 1 ≤ s.recvCount i (.bind (some v))) :
-    ∃ k, k ∉ s.F ∧ P.n - P.f ≤ s.recvCount k (.vote (some v))
+theorem voteQuorum_of_bind_receipts {s : ImplementationState P.n} (hI : Inv P s)
+    {i : Fin P.n} {v : Bool} (h : P.f + 1 ≤ s.receivedCount i (.bind (some v))) :
+    ∃ k, k ∉ s.F ∧ P.n - P.f ≤ s.receivedCount k (.vote (some v))
 
-theorem bind_receipts_of_echo5_quorum {s : ImplState P.n} (hI : Inv P s)
-    {i : Fin P.n} {v : Bool} (h : P.n - P.f ≤ s.recvCount i (.echo5 (some v))) :
-    ∃ k, k ∉ s.F ∧ P.n - P.f ≤ s.recvCount k (.bind (some v))
+theorem bind_receipts_of_echo5_quorum {s : ImplementationState P.n} (hI : Inv P s)
+    {i : Fin P.n} {v : Bool} (h : P.n - P.f ≤ s.receivedCount i (.echo5 (some v))) :
+    ∃ k, k ∉ s.F ∧ P.n - P.f ≤ s.receivedCount k (.bind (some v))
 
-theorem excludedCert_of_voteQuorum {s : ImplState P.n} (hI : Inv P s)
-    {i : Fin P.n} {v : Bool} (h : P.n - P.f ≤ s.recvCount i (.vote (some v))) :
+theorem excludedCert_of_voteQuorum {s : ImplementationState P.n} (hI : Inv P s)
+    {i : Fin P.n} {v : Bool} (h : P.n - P.f ≤ s.receivedCount i (.vote (some v))) :
     ExcludedCert P s (!v)
 
-theorem not_excludedCert_of_voteQuorum {s : ImplState P.n} (hI : Inv P s)
-    {i : Fin P.n} {v : Bool} (h : P.n - P.f ≤ s.recvCount i (.vote (some v))) :
+theorem not_excludedCert_of_voteQuorum {s : ImplementationState P.n} (hI : Inv P s)
+    {i : Fin P.n} {v : Bool} (h : P.n - P.f ≤ s.receivedCount i (.vote (some v))) :
     ¬ ExcludedCert P s v
 
-theorem excludedCert_of_echo5Bot_quorum {s : ImplState P.n} (hI : Inv P s)
-    {i : Fin P.n} (h : P.n - P.f ≤ s.recvCount i (.echo5 none)) :
+theorem excludedCert_of_echo5Bot_quorum {s : ImplementationState P.n} (hI : Inv P s)
+    {i : Fin P.n} (h : P.n - P.f ≤ s.receivedCount i (.echo5 none)) :
     ∃ b, ExcludedCert P s b
 
-theorem grade_ne_false_of_echo5_quorum {s : ImplState P.n} {t : SpecState P.n}
+theorem grade_ne_false_of_echo5_quorum {s : ImplementationState P.n} {t : SpecState P.n}
     (hR : InstRel P s t) {id : Fin P.n} {v : Bool}
-    (hcnt : P.n - P.f ≤ s.recvCount id (.echo5 (some v))) : t.grade ≠ some false
+    (hcnt : P.n - P.f ≤ s.receivedCount id (.echo5 (some v))) : t.grade ≠ some false
 
-theorem grade_ne_true_of_echo5Bot_quorum {s : ImplState P.n} {t : SpecState P.n}
+theorem grade_ne_true_of_echo5Bot_quorum {s : ImplementationState P.n} {t : SpecState P.n}
     (hR : InstRel P s t) {id : Fin P.n}
-    (hcnt : P.n - P.f ≤ s.recvCount id (.echo5 none)) : t.grade ≠ some true
+    (hcnt : P.n - P.f ≤ s.receivedCount id (.echo5 none)) : t.grade ≠ some true
 ```
 
 The counting core shared by `not_excludedCert_of_voteQuorum` (Case B refutation)
@@ -602,13 +604,13 @@ and worth stating once:
 ```lean
 /-- Two `n − f`-sized subsets of `Fin n` meeting only inside `F` contradict
 `|F| ≤ f < n − 2f`. -/
-theorem no_disjoint_quorums {P : Params} {Q D F : Finset (Fin P.n)}
+theorem no_disjoint_quorums {P : Parameters} {Q D F : Finset (Fin P.n)}
     (hQ : P.n - P.f ≤ Q.card) (hD : P.n - P.f ≤ D.card)
     (hQD : Q ∩ D ⊆ F) (hF : F.card ≤ P.f) : False
 ```
 
 (`|Q| + |D| = |Q ∪ D| + |Q ∩ D| ≤ n + f`, against `2(n − f) > n + f` from
-`P.hf` — the same arithmetic as `exists_honest_recv₂`, exposed as a set
+`P.hf` — the same arithmetic as `exists_correct_received₂`, exposed as a set
 statement because `VoteWall` is a set of *processes*, not a receipt row).
 
 ## Why this shape: the compression attack dies at `n = 4, f = 1`
@@ -645,23 +647,24 @@ consumes, and exactly why no later receipt pattern can contradict the exclusion.
 The exclusion set and the exclusion certificate are read directly by the files above this
 one. The `HybridRefinesSpecification/Relation.lean` chain and
 `HybridRefinesSpecification/Simulation.lean` phrase the round skeleton over `excluded`:
-`IsLastBound g r` is `(g r).excluded ≠ ∅ ∧ (g (r + 1)).excluded = ∅`, `Closed g r` is
+`IsLastBound g r` is `(g r).excluded ≠ ∅ ∧ (g (r + 1)).excluded = ∅`, `RoundSettled g r` is
 `(g r).excluded ≠ ∅ ∨ (g r).grade = some false`, and `a_commit`, `gradeA_needs_bind`,
 `bind_supp` and the A-lock certificates are keyed on the guard pair
 `(!b) ∈ excluded ∧ b ∉ excluded` — the D19 rendering of `bind = some b`, with
 `bind ≠ none` rendered as `excluded ≠ ∅`. `GBCASim.instRel_corrupt` carries the
 `excluded_cert` row through `ExcludedCert.mono`, whose three hypotheses it discharges by
-`corrupt_recv`, `corrupt_proc` and `corrupt_F_subset`.
+`corrupt_received`, `corrupt_process` and `corrupt_F_subset`.
 `ImplementationByABDY/System.lean`'s rendering carries the same levels inside one process:
-the stage record `GBCA.ByABDY.StageRec` keeps the write-once `sentEcho5` field in its
-`proc` record and carries its own `echo5Count` over its received set rows, the rendezvous
-rows `gsndEcho5Bit`/`gsndEcho5Bot` are the echo5 multicasts read off that record, and the
+the stage record `GBCA.ByABDY.RoundRecord` keeps the write-once `sentEcho5` field in its
+`process` record and carries its own `echo5Count` over its received set rows, the rendezvous
+rows `gbcaSendEcho5Bit`/`gbcaSendEcho5Bot` are the echo5 multicasts read off that record, and the
 three `retG` rows (and their `byzantineRetG` counterparts) read the echo5 level off it. No
-translation is needed to the global view: the round-`r` `ImplState` *is* the round
+translation is needed to the global view: the round-`r` `ImplementationState` *is* the round
 instance's own state — the stage records with their received set rows beside the round's
 network state, which holds the per-sender sent sets and the corrupted set — and
-`ImplState.echo5Count` reads the receiving program's received set rows directly. So
-`GBCA.ByABDY.subSim` consumes `implRefines` as it stands: the projection `composition_projects`
+`ImplementationState.echo5Count` reads the receiving program's received set rows directly. So
+`GBCA.ByABDY.subSim` consumes `refinesSpecification` as it stands: the projection
+`composition_projects`
 (`ABA/Composition/GBCAInstanceByABDY.lean`) matches every round-instance transition with
 the implementation instance's at that same state, one step for one step, and this file's
 refinement answers it, its weak answer read back at the round instance's interface — which
@@ -700,8 +703,8 @@ is what licenses replacing a round's instance by the graded agreement specificat
    `sentVote` fields, not receipts — still monotone in `F` (a corrupted field
    stays in the wall via the `j ∈ F` disjunct) and in `sentVote` (write-once),
    which is all the simulation needs. Any per-process decomposition must
-   therefore be read through the same accessors as the other `proc`-field
-   predicates — `ImplState.proc` for the field and `ImplState.F` for the
+   therefore be read through the same accessors as the other `process`-field
+   predicates — `ImplementationState.process` for the field and `ImplementationState.F` for the
    corrupted set, the latter reading the set held by the round's own
    network state, which is the state's second component.
 6. **Vacuous-fill hazard in `excludedCert_of_echo5Bot_quorum`.** The Case B branch
@@ -709,6 +712,6 @@ is what licenses replacing a round's instance by the graded agreement specificat
    **no**-branch uses `bindBot_conf` on a *specific* honest `BIND` sender
    derived from `echo5Bot_conf`'s any-`BIND` count. That derivation wants
    `exists_sender_notMem` on an any-payload count, i.e. the payload-returning
-   variant `ImplState.exists_bind_sender_notMem`:
-   `∃ k w, k ∉ F ∧ Msg.bind w ∈ s.recv p k`, same proof as the exact-message
+   variant `ImplementationState.exists_bind_sender_notMem`:
+   `∃ k w, k ∉ F ∧ Message.bind w ∈ s.received p k`, same proof as the exact-message
    version.

@@ -1,15 +1,15 @@
 \begin{definition}[The gather instance as a composition]
   \label{def:aba-gather-sub}
-  \lean{PLTS.ABA.Gather.ProcRec}\lean{PLTS.ABA.Gather.GaNetState}\lean{PLTS.ABA.Gather.GatherEvent}\lean{PLTS.ABA.Gather.inputBroadcastLabelMap}\lean{PLTS.ABA.Gather.bindBroadcastLabelMap}\lean{PLTS.ABA.Gather.specificationLabelMap}\lean{PLTS.ABA.Gather.SubStateAt}\lean{PLTS.ABA.Gather.instAt}\lean{PLTS.ABA.Gather.specificationOverInstanceAlphabet}\leanok
+  \lean{PLTS.ABA.Gather.ProcessRecord}\lean{PLTS.ABA.Gather.NetworkState}\lean{PLTS.ABA.Gather.GatherEvent}\lean{PLTS.ABA.Gather.inputBroadcastLabelMap}\lean{PLTS.ABA.Gather.bindBroadcastLabelMap}\lean{PLTS.ABA.Gather.specificationLabelMap}\lean{PLTS.ABA.Gather.StateOverBroadcasts}\lean{PLTS.ABA.Gather.instanceOverBroadcasts}\lean{PLTS.ABA.Gather.specificationOverInstanceAlphabet}\leanok
   \uses{def:aba-gather-spec, def:aba-brb-impl, def:aba-networkstate, def:syncproduct, def:process-algebra, def:idle-family, def:relabel}
   One gather instance over a payload type $X$, taken apart into the components that run it.
   The gather tier is the $n$ gather programs under $\mathrm{syncProduct}$ beside the gather network.
   The broadcast tier is $2n$ reliable-broadcast instances, one per process for the inputs and one per process for the $\mathrm{BIND}$ payloads (D32).
-  The two tiers run in parallel, the instance's own events are hidden, and the result is read back over the interface alphabet: \leandecl{PLTS.ABA.Gather.instAt}, which takes the broadcast tier as an argument.
+  The two tiers run in parallel, the instance's own events are hidden, and the result is read back over the interface alphabet: \leandecl{PLTS.ABA.Gather.instanceOverBroadcasts}, which takes the broadcast tier as an argument.
   Five events are hidden --- the gather multicast, the gather delivery, the return of an input instance, and the call and the return of a bind instance --- so what an outside system sees of the instance is the call, the per-process returns, corruption and the call loop.
   A gather program holds one process's record and the messages delivered to it, indexed by sender, and its guards read that record and those sets alone.
   The gather fields are the payload the call recorded, the write-once fields $\mathit{sentEcho}$, $\mathit{sentVote}$ and $\mathit{sentBind}$ holding the $\mathrm{ECHO}$ and $\mathrm{VOTE}$ payloads the process has multicast and the $\mathrm{BIND}$ payload it has handed to its own bind instance, and the return flag.
-  Beside them the record holds two stores: $\mathit{delivIn}(k)$, the value the instance broadcasting $k$'s input returned here, and $\mathit{delivBind}(q)$, the payload the instance broadcasting $q$'s $\mathrm{BIND}$ payload returned here.
+  Beside them the record holds two stores: $\mathit{inputBroadcastReturned}(k)$, the value the instance broadcasting $k$'s input returned here, and $\mathit{bindBroadcastReturned}(q)$, the payload the instance broadcasting $q$'s $\mathrm{BIND}$ payload returned here.
   Each is written on that instance's return event, and a guard that consumes a returned value reads the store rather than a neighbouring component.
   The gather network holds the per-sender sent sets, the corrupted set and the instance's core, and reads no program's record; the core is a function of the sent sets and the corrupted set, which is what lets that component hold it (D29).
   A broadcast instance joins the composition along a pullback that names it, \leandecl{PLTS.ABA.Gather.inputBroadcastLabelMap} for an input instance and \leandecl{PLTS.ABA.Gather.bindBroadcastLabelMap} for a bind instance.

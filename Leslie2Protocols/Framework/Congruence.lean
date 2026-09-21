@@ -68,14 +68,14 @@ theorem getLast?_elim_cons (x : Label × State) (M : List (Label × State)) (d :
   | cons a rest ih => rw [List.getLast?_cons_cons, ih a d, ih a x.2]
 
 /-- The end state of a transition list is read from its tail. -/
-theorem AlterSeq.endStList_cons (q q₁ : State) (l₀ : Label) (L : List (Label × State)) :
-    AlterSeq.endStList q ((l₀, q₁) :: L) = AlterSeq.endStList q₁ L :=
+theorem AlterSeq.endStateOfList_cons (q q₁ : State) (l₀ : Label) (L : List (Label × State)) :
+    AlterSeq.endStateOfList q ((l₀, q₁) :: L) = AlterSeq.endStateOfList q₁ L :=
   getLast?_elim_cons (l₀, q₁) L q
 
 /-- The end state of a run over a transition list is the list's end state. -/
 theorem AlterSeq.endState_ofList (q : State) (L : List (Label × State)) :
     (⟨q, Seq.ofList L⟩ : AlterSeq State Label).endState (Stream'.Seq.terminates_ofList L)
-      = AlterSeq.endStList q L := by
+      = AlterSeq.endStateOfList q L := by
   rw [AlterSeq.endState_eq_getLast?, Stream'.Seq.toList_ofList]
   rfl
 
@@ -186,7 +186,7 @@ variable {State Label : Type} [Silent Label] {sys : System State Label}
 theorem System.weakLSilent_ofList {q : State} {L : List (Label × State)}
     (hpe : is_partial_exec ⟨q, Seq.ofList L⟩ sys)
     (htr : sys.trace ⟨q, Seq.ofList L⟩ = (Seq.nil : Seq Label)) :
-    sys.weakLSilent q (AlterSeq.endStList q L) :=
+    sys.weakLSilent q (AlterSeq.endStateOfList q L) :=
   ⟨⟨q, Seq.ofList L⟩, Stream'.Seq.terminates_ofList L, hpe, rfl,
     AlterSeq.endState_ofList q L, htr⟩
 
@@ -194,7 +194,7 @@ theorem System.weakLSilent_ofList {q : State} {L : List (Label × State)}
 theorem System.weakLSilent_exists_list {q q' : State} (h : sys.weakLSilent q q') :
     ∃ L : List (Label × State), is_partial_exec ⟨q, Seq.ofList L⟩ sys ∧
       sys.trace ⟨q, Seq.ofList L⟩ = (Seq.nil : Seq Label) ∧
-      AlterSeq.endStList q L = q' := by
+      AlterSeq.endStateOfList q L = q' := by
   obtain ⟨e, hterm, hpe, hinit, hend, htr⟩ := h
   subst hinit
   have he : (⟨e.init, Seq.ofList (e.trans.toList hterm)⟩ : AlterSeq State Label) = e := by
@@ -210,7 +210,7 @@ theorem System.weakLSilent_exists_list {q q' : State} (h : sys.weakLSilent q q')
 theorem System.weakLStep_exists_list {q q' : State} {l : Label} (h : sys.weakLStep q l q') :
     ∃ L : List (Label × State), is_partial_exec ⟨q, Seq.ofList L⟩ sys ∧
       sys.trace ⟨q, Seq.ofList L⟩ = (Seq.cons l Seq.nil : Seq Label) ∧
-      AlterSeq.endStList q L = q' := by
+      AlterSeq.endStateOfList q L = q' := by
   obtain ⟨e, hterm, hpe, hinit, hend, htr⟩ := h
   subst hinit
   have he : (⟨e.init, Seq.ofList (e.trans.toList hterm)⟩ : AlterSeq State Label) = e := by
@@ -273,7 +273,7 @@ private theorem weakLSilent_induction_ofList {State Label : Type} [Silent Label]
     (hcons : ∀ s μ x, sys.step s Silent.τ μ → x ∈ μ.support → P x → P s) :
     ∀ (L : List (Label × State)) (q : State), is_partial_exec ⟨q, Seq.ofList L⟩ sys →
       sys.trace ⟨q, Seq.ofList L⟩ = (Seq.nil : Seq Label) →
-      P (AlterSeq.endStList q L) → P q := by
+      P (AlterSeq.endStateOfList q L) → P q := by
   intro L
   induction L with
   | nil => intro q _ _ hP; exact hP
@@ -287,7 +287,7 @@ private theorem weakLSilent_induction_ofList {State Label : Type} [Silent Label]
       exact absurd htr Stream'.Seq.cons_ne_nil
     subst hl0
     obtain ⟨μ, hstep, hmem⟩ := is_partial_exec_head hpe
-    rw [AlterSeq.endStList_cons] at hP
+    rw [AlterSeq.endStateOfList_cons] at hP
     rw [System.trace_cons_internal sys q q₁ (Seq.ofList rest)] at htr
     exact hcons q μ q₁ hstep hmem (ih q₁ (is_partial_exec_tail hpe) htr hP)
 
@@ -329,7 +329,7 @@ private theorem weakLStep_split_ofList {State Label : Type} [Silent Label]
       sys.trace ⟨q, Seq.ofList L⟩ = (Seq.cons l Seq.nil : Seq Label) →
       ¬ l = Silent.τ ∧ ∃ (q₁ q₂ : State) (μ : PMF State), sys.weakLSilent q q₁ ∧
         sys.step q₁ l μ ∧ q₂ ∈ μ.support ∧
-        sys.weakLSilent q₂ (AlterSeq.endStList q L) := by
+        sys.weakLSilent q₂ (AlterSeq.endStateOfList q L) := by
   intro L
   induction L with
   | nil =>
@@ -342,7 +342,7 @@ private theorem weakLStep_split_ofList {State Label : Type} [Silent Label]
     rw [Stream'.Seq.ofList_cons] at hpe htr
     obtain ⟨μ, hstep, hmem⟩ := is_partial_exec_head hpe
     have hpe' : is_partial_exec ⟨q₁, Seq.ofList rest⟩ sys := is_partial_exec_tail hpe
-    rw [AlterSeq.endStList_cons]
+    rw [AlterSeq.endStateOfList_cons]
     by_cases hl0 : l₀ = Silent.τ
     · subst hl0
       rw [System.trace_cons_internal sys q q₁ (Seq.ofList rest)] at htr

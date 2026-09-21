@@ -93,7 +93,7 @@ the binding witness either way — `!bnd` is a bit that no extension can hand ou
   Valid-set relay thresholds; TS 2 abstracted it to one witness.
 * **D15 (the repair).** Every certificate is a count
   `f + 1 ≤ #{id | call id = some b ∨ id ∈ F}` at the relevant bit — exactly
-  TS 1's `SuppOK` shape (D13), directly `F`-blind: the count is monotone in `F`
+  TS 1's `InputSupport` shape (D13), directly `F`-blind: the count is monotone in `F`
   and in `call`, so it is immune to later `fail`s. On the exclusion set the
   counts sit at three places. `bindUnset b` counts support for the bit it
   *spares*, `!b`; the `retB` dissent guard counts support for the bit it does
@@ -156,12 +156,12 @@ def initial (n : ℕ) : SpecState n where
   F := ∅
 
 /-- The quorum guard `|{id ∉ F | call[id] ≠ ⊥} ∪ F| ≥ n − f`. -/
-def quorum (P : Params) (s : SpecState P.n) : Prop :=
+def quorum (P : Parameters) (s : SpecState P.n) : Prop :=
   P.n - P.f ≤ ((Finset.univ.filter (fun id => id ∉ s.F ∧ s.call id ≠ none)) ∪ s.F).card
 
 /-- Corruption (deviation D1): total, Dirac, monotone in `F`, and blind to
 `excluded`. -/
-def corrupt (P : Params) (id : Fin P.n) (s : SpecState P.n) : SpecState P.n :=
+def corrupt (P : Parameters) (id : Fin P.n) (s : SpecState P.n) : SpecState P.n :=
   if id ∉ s.F ∧ s.F.card < P.f then { s with F := insert id s.F } else s
 
 end SpecState
@@ -173,32 +173,32 @@ passes through it untouched. These four `@[simp]` lemmas are the canonical
 statements of that fact; the refinement, safety and core-simulation files all
 read them from here rather than reproving them locally. -/
 
-@[simp] theorem corrupt_call (P : Params) (s : SpecState P.n) (id : Fin P.n) :
+@[simp] theorem corrupt_call (P : Parameters) (s : SpecState P.n) (id : Fin P.n) :
     (s.corrupt P id).call = s.call := by
   unfold SpecState.corrupt; split <;> rfl
 
-@[simp] theorem corrupt_ret (P : Params) (s : SpecState P.n) (id : Fin P.n) :
+@[simp] theorem corrupt_ret (P : Parameters) (s : SpecState P.n) (id : Fin P.n) :
     (s.corrupt P id).ret = s.ret := by
   unfold SpecState.corrupt; split <;> rfl
 
-@[simp] theorem corrupt_excluded (P : Params) (s : SpecState P.n) (id : Fin P.n) :
+@[simp] theorem corrupt_excluded (P : Parameters) (s : SpecState P.n) (id : Fin P.n) :
     (s.corrupt P id).excluded = s.excluded := by
   unfold SpecState.corrupt; split <;> rfl
 
-@[simp] theorem corrupt_grade (P : Params) (s : SpecState P.n) (id : Fin P.n) :
+@[simp] theorem corrupt_grade (P : Parameters) (s : SpecState P.n) (id : Fin P.n) :
     (s.corrupt P id).grade = s.grade := by
   unfold SpecState.corrupt; split <;> rfl
 
 /-- The corrupted set after a corruption. Not a simp lemma: it introduces an
 `ite`. -/
-theorem SpecState.corrupt_F (P : Params) (s : SpecState P.n) (id : Fin P.n) :
+theorem SpecState.corrupt_F (P : Parameters) (s : SpecState P.n) (id : Fin P.n) :
     (s.corrupt P id).F = if id ∉ s.F ∧ s.F.card < P.f then insert id s.F else s.F := by
   unfold SpecState.corrupt
   split_ifs <;> rfl
 
 /-- The step relation of the round-`r` GBCA specification instance
 (blueprint Transition System 2, deviation D19). -/
-inductive Step (P : Params) (r : ℕ) :
+inductive Step (P : Parameters) (r : ℕ) :
     SpecState P.n → Label P.n → PMF (SpecState P.n) → Prop
   /-- A process inputs its bit. -/
   | call (s : SpecState P.n) (id : Fin P.n) (b : Bool) (h : s.call id = none) :
@@ -208,7 +208,7 @@ inductive Step (P : Params) (r : ℕ) :
   | callLoop (s : SpecState P.n) (id : Fin P.n) (b : Bool) :
       Step P r s (.callG r id b) (PMF.pure s)
   /-- Binding: a quorum has spoken and `f + 1` processes support the surviving
-  bit `!b` (D15, SuppOK form: caller or `F`-member); exclude `b`. Fires at most
+  bit `!b` (D15, InputSupport form: caller or `F`-member); exclude `b`. Fires at most
   once per instance — the guard is `excluded = ∅` — and `excluded` never shrinks. -/
   | bindUnset (s : SpecState P.n) (b : Bool)
       (hq : s.quorum P)
@@ -256,35 +256,35 @@ inductive Step (P : Params) (r : ℕ) :
       Step P r s (.fail id) (PMF.pure (s.corrupt P id))
 
 /-- The round-`r` GBCA specification instance. -/
-noncomputable def specInst (P : Params) (r : ℕ) : System (SpecState P.n) (Label P.n) where
+noncomputable def specInst (P : Parameters) (r : ℕ) : System (SpecState P.n) (Label P.n) where
   init := SpecState.initial P.n
   step := Step P r
 
-@[simp] theorem specInst_init (P : Params) (r : ℕ) :
+@[simp] theorem specInst_init (P : Parameters) (r : ℕ) :
     (specInst P r).init = SpecState.initial P.n := rfl
 
-@[simp] theorem specInst_step (P : Params) (r : ℕ) (s : SpecState P.n)
+@[simp] theorem specInst_step (P : Parameters) (r : ℕ) (s : SpecState P.n)
     (l : Label P.n) (μ : PMF (SpecState P.n)) :
     (specInst P r).step s l μ ↔ Step P r s l μ := Iff.rfl
 
 /-- Every GBCA spec transition is Dirac: the instance is an LTS. -/
-theorem specInst_isLTS (P : Params) (r : ℕ) : (specInst P r).IsLTS := by
+theorem specInst_isLTS (P : Parameters) (r : ℕ) : (specInst P r).IsLTS := by
   rintro s l μ hstep
   cases hstep <;> exact ⟨_, rfl⟩
 
 /-- The broadcast transform of the GBCA family: corruption on `fail id`,
 identity on every other label. -/
-def failAct (P : Params) : Label P.n → SpecState P.n → SpecState P.n
+def failAct (P : Parameters) : Label P.n → SpecState P.n → SpecState P.n
   | .fail id, s => s.corrupt P id
   | _, s => s
 
 /-- The ℕ-indexed family of GBCA specification instances. -/
-noncomputable def specFamily (P : Params) :
+noncomputable def specFamily (P : Parameters) :
     System (ℕ → SpecState P.n) (Label P.n) :=
   System.family (specInst P) Label.gbcaRound Label.isFail (failAct P)
 
 /-- The GBCA spec family is an LTS. -/
-theorem specFamily_isLTS (P : Params) : (specFamily P).IsLTS :=
+theorem specFamily_isLTS (P : Parameters) : (specFamily P).IsLTS :=
   System.family_isLTS (specInst_isLTS P) _ _ _
 
 end GBCA

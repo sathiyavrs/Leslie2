@@ -40,7 +40,7 @@ namespace PLTS
 namespace ABA
 
 /-- Graded outcome of a GBCA instance: `(b, A)`, `(b, B)` or `(⊥, C)`. -/
-inductive GbcaOut : Type
+inductive GBCAOutput : Type
   /-- Highest grade: output `b` with grade `A` (decide). -/
   | A (b : Bool)
   /-- Middle grade: output `b` with grade `B` (adopt). -/
@@ -66,7 +66,7 @@ inductive Label (n : ℕ) : Type
   round's specification holds, announced on the label — and no program reads
   it. Announcing it makes binding, a property of the branching structure, a
   property of the trace alone. -/
-  | retG (r : ℕ) (id : Fin n) (out : GbcaOut) (bnd : Bool)
+  | retG (r : ℕ) (id : Fin n) (out : GBCAOutput) (bnd : Bool)
   /-- Process `id` calls round-`r` WCC. -/
   | callW (r : ℕ) (id : Fin n)
   /-- Round-`r` WCC returns the coin bit `b` to `id`. -/
@@ -117,7 +117,7 @@ def hiddenAPI (n : ℕ) : Set (Label n) :=
     Label.callG r id b ∈ hiddenAPI n := by
   simp [hiddenAPI, gbcaRound]
 
-@[simp] theorem retG_mem_hiddenAPI (r : ℕ) (id : Fin n) (out : GbcaOut)
+@[simp] theorem retG_mem_hiddenAPI (r : ℕ) (id : Fin n) (out : GBCAOutput)
     (bnd : Bool) : Label.retG r id out bnd ∈ hiddenAPI n := by
   simp [hiddenAPI, gbcaRound]
 

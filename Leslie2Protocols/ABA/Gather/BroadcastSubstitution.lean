@@ -44,22 +44,23 @@ namespace PLTS
 namespace ABA
 namespace Gather
 
-variable {X : Type} [DecidableEq X] {P : Params}
+variable {X : Type} [DecidableEq X] {P : Parameters}
 
 /-! ### The relation -/
 
 /-- The broadcast substitution relation: the gather tier equal, and each
 broadcast coordinate related to its specification coordinate by the BRB
 refinement relation. -/
-structure LowRel (P : Params) (s : StateOverBracha P.n X) (t : StateOverBroadcastSpecification P.n
+structure LowRel (P : Parameters) (s : StateOverBracha P.n X) (t : StateOverBroadcastSpecification
+  P.n
   X) : Prop where
   /-- The gather programs and the gather network state are untouched by the
   substitution. -/
-  ga_eq : s.1 = t.1
+  gatherTier_eq : s.1 = t.1
   /-- Each input coordinate is BRB-refined. -/
-  inRel : ∀ k, BRB.InstRel P k (brbIn s k) (brbIn t k)
+  inRel : ∀ k, BRB.InstRel P k (inputBroadcasts s k) (inputBroadcasts t k)
   /-- Each bind coordinate is BRB-refined. -/
-  bindRel : ∀ q, BRB.InstRel P q (brbBind s q) (brbBind t q)
+  bindRel : ∀ q, BRB.InstRel P q (bindBroadcasts s q) (bindBroadcasts t q)
 
 /-- The relation holds initially. -/
 theorem lowRel_init : LowRel P (instanceOverBracha P X).init (instanceOverBroadcastSpecification P
@@ -72,7 +73,7 @@ theorem lowRel_init : LowRel P (instanceOverBracha P X).init (instanceOverBroadc
 is forward simulated by the gather instance over the broadcast specification.
 Each coordinate carries the BRB refinement; the congruences carry it through
 the composition. -/
-theorem gatherLow (P : Params) (X : Type) [DecidableEq X] :
+theorem gatherLow (P : Parameters) (X : Type) [DecidableEq X] :
     ForwardSimulation (instanceOverBracha P X) (instanceOverBroadcastSpecification P X) (LowRel P)
       := by
   have hIn : ∀ k : Fin P.n,
@@ -83,9 +84,11 @@ theorem gatherLow (P : Params) (X : Type) [DecidableEq X] :
       P.n X k)
       (fun _ h => inputBroadcastLabelMap_eq_tau h) (BRB.brbRefines P k)
   have hBind : ∀ q : Fin P.n,
-      ForwardSimulation ((BRB.brachaInstance P q (APSet P.n X)).mapIdle (bindBroadcastLabelMap P.n X
+      ForwardSimulation ((BRB.brachaInstance P q (AcceptedPairs P.n X)).mapIdle
+        (bindBroadcastLabelMap P.n X
         q))
-        ((BRB.specificationOverInstanceAlphabet P q (APSet P.n X)).mapIdle (bindBroadcastLabelMap
+        ((BRB.specificationOverInstanceAlphabet P q (AcceptedPairs P.n X)).mapIdle
+          (bindBroadcastLabelMap
           P.n X q)) (BRB.InstRel P q) :=
     fun q => ForwardSimulation.mapIdle (bindBroadcastLabelMap P.n X q) (bindBroadcastLabelMap_tau
       P.n X q)
@@ -93,12 +96,12 @@ theorem gatherLow (P : Params) (X : Type) [DecidableEq X] :
   have hSyncIn := ForwardSimulation.syncProduct hIn
   have hSyncBind := ForwardSimulation.syncProduct hBind
   have hBroad := (hSyncIn.parallel_right
-      (System.syncProduct fun q => (BRB.brachaInstance P q (APSet P.n X)).mapIdle
+      (System.syncProduct fun q => (BRB.brachaInstance P q (AcceptedPairs P.n X)).mapIdle
         (bindBroadcastLabelMap P.n X q))).trans
     (hSyncBind.parallel_left
       (System.syncProduct fun k => (BRB.specificationOverInstanceAlphabet P k X).mapIdle
         (inputBroadcastLabelMap P.n X k)))
-  have hSub := ((hBroad.parallel_left (gaPart P X)).abstract (gatherEvents P.n X)).relabel
+  have hSub := ((hBroad.parallel_left (gatherPrograms P X)).abstract (gatherEvents P.n X)).relabel
   refine ForwardSimulation.congr (fun s t => ?_) hSub
   constructor
   · rintro ⟨hga, ⟨b₁, b₂⟩, ⟨hin, rfl⟩, rfl, hbind⟩
@@ -110,7 +113,7 @@ theorem gatherLow (P : Params) (X : Type) [DecidableEq X] :
 
 /-- Trace-distribution inclusion of the gather instance over Bracha's broadcast
 in the gather instance over the broadcast specification. -/
-theorem instanceOverBracha_refines (P : Params) (X : Type) [DecidableEq X] :
+theorem instanceOverBracha_refines (P : Parameters) (X : Type) [DecidableEq X] :
     achievableTraceDists (instanceOverBracha P X) ⊆ achievableTraceDists
       (instanceOverBroadcastSpecification P X) :=
   (ForwardSimulation.toProbabilistic (instanceOverBracha_isLTS P)
@@ -121,9 +124,9 @@ theorem instanceOverBracha_refines (P : Params) (X : Type) [DecidableEq X] :
 return of a positive-probability trace names a set of at least `n − f` entries
 below the returned map, and every return names the same set. The two
 substitutions carry it down from the specification. -/
-theorem instanceOverBracha_core (P : Params) (X : Type) [DecidableEq X] :
+theorem instanceOverBracha_core (P : Parameters) (X : Type) [DecidableEq X] :
     ∀ D ∈ achievableTraceDists (instanceOverBracha P X), ∀ t, D t ≠ 0 →
-      CoreTrace P (t.map subDown) :=
+      CoreTrace P (t.map toSpecificationLabel) :=
   safety_transfer (Set.Subset.trans (instanceOverBracha_refines P X)
     (instanceOverBroadcastSpecification_refines P X))
     (specificationOverInstanceAlphabet_core P X)

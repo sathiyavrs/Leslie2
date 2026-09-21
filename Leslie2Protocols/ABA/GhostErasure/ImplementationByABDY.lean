@@ -38,38 +38,40 @@ open Implementation
 /-- **The ghost-free ABDY22 protocol**: the `n` programs and the coin oracle of
 `ABDY.protocol` beside the network adversary over the trivial ghost, whose
 graded-agreement returns announce any bit. -/
-noncomputable def protocol₀ (P : Params) :
-    System (Implementation.State P GBCA.ByABDY.Msg (GBCA.ByABDY.StageRec P.n) Unit) (Label P.n) :=
-  Implementation.systemGhostFree P GBCA.ByABDY.Msg (GBCA.ByABDY.StageRec P.n) (ABDY.RoundStep P)
-    (ABDY.gCallPayload P)
+noncomputable def protocol₀ (P : Parameters) :
+    System (Implementation.State P GBCA.ByABDY.Message (GBCA.ByABDY.RoundRecord P.n) Unit) (Label
+      P.n) :=
+  Implementation.systemGhostFree P GBCA.ByABDY.Message (GBCA.ByABDY.RoundRecord P.n) (ABDY.RoundStep
+    P)
+    (ABDY.gbcaCallPayload P)
 
 /-- **The ghost costs nothing.** The bound bit the network adversary records is written
 by no guard and read by no program, and the label that announces it is hidden at protocol
 level, so the protocol and the ghost-free protocol achieve the same trace
 distributions. -/
-theorem protocol_erasure (P : Params) :
+theorem protocol_erasure (P : Parameters) :
     achievableTraceDists (protocol P) = achievableTraceDists (protocol₀ P) :=
-  Implementation.system_erasure P GBCA.ByABDY.Msg (GBCA.ByABDY.StageRec P.n) (Option Bool)
+  Implementation.system_erasure P GBCA.ByABDY.Message (GBCA.ByABDY.RoundRecord P.n) (Option Bool)
     (ABDY.RoundStep P)
-    (ABDY.gCallPayload P) (ABDY.abdyGhostStep P) (ABDY.abdyAnnouncedBound P)
+    (ABDY.gbcaCallPayload P) (ABDY.abdyGhostStep P) (ABDY.abdyAnnouncedBound P)
     (fun s r id out => ⟨ABDY.abdyGhostOut P s r id out, rfl⟩)
 
 /-! ### The headlines at the ghost-free protocol -/
 
 /-- **The composition inclusion for the ghost-free protocol.** -/
-theorem protocol₀_composed (P : Params) :
+theorem protocol₀_composed (P : Parameters) :
     achievableTraceDists (protocol₀ P) ⊆ achievableTraceDists (composed P) :=
   Set.Subset.trans (protocol_erasure P).symm.subset (protocol_composed P)
 
 /-- **Trace-distribution refinement of the ghost-free protocol**: every trace
 distribution it achieves is achievable by the ABA specification. -/
-theorem protocol₀_refines (P : Params) :
+theorem protocol₀_refines (P : Parameters) :
     achievableTraceDists (protocol₀ P) ⊆ achievableTraceDists (spec P) :=
   Set.Subset.trans (protocol_erasure P).symm.subset (refines P)
 
 /-- **Correctness of the ghost-free protocol**: every positive-probability trace
 satisfies Validity and Agreement. -/
-theorem protocol₀_safe (P : Params) :
+theorem protocol₀_safe (P : Parameters) :
     ∀ D ∈ achievableTraceDists (protocol₀ P), ∀ t, D t ≠ 0 →
       ValidityTrace P t ∧ AgreementTrace P t :=
   safety_transfer (protocol₀_refines P) (spec_safe P)
@@ -77,7 +79,7 @@ theorem protocol₀_safe (P : Params) :
 /-- **Trace conservativity of the ghost-free protocol**: every positive-probability
 trace has positive probability under an achievable trace distribution of the
 protocol-shaped specification. -/
-theorem protocol₀_traces (P : Params) :
+theorem protocol₀_traces (P : Parameters) :
     ∀ D ∈ achievableTraceDists (protocol₀ P), ∀ t, D t ≠ 0 →
       ∃ D' ∈ achievableTraceDists (hybrid P), D' t ≠ 0 :=
   fun D hD _ ht =>

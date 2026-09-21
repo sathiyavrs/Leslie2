@@ -37,22 +37,22 @@ namespace PLTS
 namespace ABA
 namespace Gather
 
-variable {X : Type} [DecidableEq X] {P : Params}
+variable {X : Type} [DecidableEq X] {P : Parameters}
 
 /-! ### The core along a run -/
 
 /-- The guards of a return, read off its label. -/
 theorem ret_guards {s : SpecState P.n X} {id : Fin P.n} {g : Fin P.n → Option X}
-    {C : APSet P.n X} {μ : PMF (SpecState P.n X)}
+    {C : AcceptedPairs P.n X} {μ : PMF (SpecState P.n X)}
     (hstep : Step P s (.ret id g C) μ) :
-    s.core = some C ∧ APSet.subMap C g := by
+    s.core = some C ∧ AcceptedPairs.subMap C g := by
   cases hstep with
   | ret id' g' C' hC hmem _ _ => exact ⟨hC, hmem⟩
 
 /-- **The core is written once.** `bindCore` is its only writer and fires
 only from `core = none`, so the value survives every later rule and every
 corruption. -/
-theorem core_stable {C : APSet P.n X} :
+theorem core_stable {C : AcceptedPairs P.n X} :
     ∀ (s : SpecState P.n X) (l : Label P.n X) (μ : PMF (SpecState P.n X))
       (s' : SpecState P.n X), s.core = some C → Step P s l μ → s' ∈ μ.support →
       s'.core = some C := by
@@ -99,14 +99,14 @@ theorem core_card {e : AlterSeq (SpecState P.n X) (Label P.n X)}
 /-- **The core on a trace.** Every return label of the trace carries one and
 the same payload set, that set has at least `n − f` entries, and the returned
 map has every entry of it. -/
-def CoreTrace (P : Params) {X : Type} (t : Seq (Label P.n X)) : Prop :=
-  (∀ (id : Fin P.n) (g : Fin P.n → Option X) (C : APSet P.n X),
-      Label.ret id g C ∈ t → P.n - P.f ≤ C.card ∧ APSet.subMap C g) ∧
-    ∀ (id₁ id₂ : Fin P.n) (g₁ g₂ : Fin P.n → Option X) (C₁ C₂ : APSet P.n X),
+def CoreTrace (P : Parameters) {X : Type} (t : Seq (Label P.n X)) : Prop :=
+  (∀ (id : Fin P.n) (g : Fin P.n → Option X) (C : AcceptedPairs P.n X),
+      Label.ret id g C ∈ t → P.n - P.f ≤ C.card ∧ AcceptedPairs.subMap C g) ∧
+    ∀ (id₁ id₂ : Fin P.n) (g₁ g₂ : Fin P.n → Option X) (C₁ C₂ : AcceptedPairs P.n X),
       Label.ret id₁ g₁ C₁ ∈ t → Label.ret id₂ g₂ C₂ ∈ t → C₁ = C₂
 
 /-- **The specification instance binds one core.** -/
-theorem specInst_core (P : Params) (X : Type) [DecidableEq X] :
+theorem specInst_core (P : Parameters) (X : Type) [DecidableEq X] :
     ∀ D ∈ achievableTraceDists (specInst P X), ∀ t, D t ≠ 0 → CoreTrace P t := by
   rintro D ⟨pe, h_init, h_D⟩ t h_ne
   rw [← h_D t] at h_ne

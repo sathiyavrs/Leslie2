@@ -15,7 +15,7 @@ Each chain carries two headlines about its ghost-free reading, in
 and that reading, and `protocol₀_safe`, Validity and Agreement at it. The two sub-protocol
 interfaces carry headlines of their own: `GBCA.specInst_binding` in
 `GBCA/SpecificationSafety.lean`, with its four implementation readings
-`GBCA.ByABDY.implInst_binding` in `GBCA/ABDY/RefinesSpecification.lean` and
+`GBCA.ByABDY.implementation_binding` in `GBCA/ABDY/RefinesSpecification.lean` and
 `GBCA.roundOverGatherSpecifications_binding`,
 `GBCA.roundOverBroadcastSpecification_binding`, `GBCA.roundOverBracha_binding` in
 `GBCA/AFW/Binding.lean`; and `Gather.specInst_core` in
@@ -49,7 +49,7 @@ Attiya, Flam and Welch. Across the two namespaces a name means the same thing �
 ABDY22's — and `hybrid` and `ABA.spec`, which the chains share, are named in neither.
 The rest of the gather-based chain sits in `AFW` as well: its headlines are `AFW.main`
 and `AFW.refines`, where ABDY22's are `ABDY.main` and `ABDY.refines`. A `G` elsewhere in the
-development is graded agreement — `callG`, `retG`, `GBCANetwork`, `GNetState` — and never the
+development is graded agreement — `callG`, `retG`, `GBCANetwork`, `NetworkState` — and never the
 chain.
 
 Both flat readings are one construction. What a protocol reading fixes — the round
@@ -107,9 +107,10 @@ admits a bit at every state (`ghostOut_total` in `GhostErasure/GhostFreeSystem.l
 announcement therefore leaves every execution of the protocol as it is.
 
 What a program does hold of a sub-protocol's answer is its own record of what the
-instances have returned to it: the stores `Gather.ProcRec.delivIn` and `delivBind`,
+instances have returned to it: the stores `Gather.ProcessRecord.inputBroadcastReturned` and
+`bindBroadcastReturned`,
 written on the broadcast return events. Four rows of a gather program read them —
-`sndEcho`, `sndVote`, `bindCall` and `ret` — so they are state a guard consults and not
+`sendEcho`, `sendVote`, `bindCall` and `ret` — so they are state a guard consults and not
 ghost state.
 
 For the bound bit that inertness is a theorem. `GhostErasure/GhostFreeSystem.lean` erases
@@ -125,7 +126,7 @@ of them that hands out a value hands out that bit (`GBCA.BindingTrace`,
 `GBCA.specInst_binding`). Every return of a trace of `Gather.specInst` names one payload
 set, of at least `n − f` entries and below the returned map (`Gather.CoreTrace`,
 `Gather.specInst_core`). Both predicates are read off labels alone, so a
-trace-distribution inclusion transports them. `GBCA.ByABDY.implInst_binding`,
+trace-distribution inclusion transports them. `GBCA.ByABDY.implementation_binding`,
 `GBCA.roundOverGatherSpecifications_binding`, `GBCA.roundOverBroadcastSpecification_binding`
 and `GBCA.roundOverBracha_binding` are binding at the two verified graded-agreement
 implementations and at the two tiers between them, along their own refinements, and
@@ -145,7 +146,7 @@ the trace, and that call carries `b`; `AgreementTrace` asks two such returns to 
 same bit. A process has one input, and its first call is the event that carries it. That is
 the quantification of the papers' own contracts, and it is what the model forces: the model
 contains the corrupted interface, so a corrupted process may call one bit and record
-another, and may return either bit at any time (D23). The `f + 1` `SuppOK` support counts
+another, and may return either bit at any time (D23). The `f + 1` `InputSupport` support counts
 are the invariant machinery that makes this provable, not the predicate itself. Safety
 only — no termination, liveness, unpredictability or fairness. The protocol's `terminate`
 rule is a rule of the model, not a result: no theorem says when it fires, or that it ever
@@ -181,9 +182,9 @@ coin the protocol calls.
 
 | file | lines | what it is |
 |---|---|---|
-| `Specifications/ABA.lean` | 251 | **The top-level ABA specification**, the system all safety is measured against. Eight rules over `SpecState`, whose control mode carries the flip (D21) and two of which are the corrupted interface (D23). The decision is guarded by the `f + 1` support guard `SuppOK` alone (D13). |
+| `Specifications/ABA.lean` | 251 | **The top-level ABA specification**, the system all safety is measured against. Eight rules over `SpecState`, whose control mode carries the flip (D21) and two of which are the corrupted interface (D23). The decision is guarded by the `f + 1` support guard `InputSupport` alone (D13). |
 | `Specifications/ABASafety.lean` | 889 | `spec_safe`: every positive-mass trace of `ABA.spec` is valid and agreeing. The trace predicates live here. |
-| `Specifications/WCC.lean` | 259 | The weak common coin specification, per round, and the coin value domain `TVal`. The call carries three rows: an unguarded loop that records nothing, one that records a caller, and one that records the caller whose access carries the count above `f` and draws the coin in the same step (D31). Held at specification level by design. |
+| `Specifications/WCC.lean` | 259 | The weak common coin specification, per round, and the coin value domain `CoinValue`. The call carries three rows: an unguarded loop that records nothing, one that records a caller, and one that records the caller whose access carries the count above `f` and draws the coin in the same step (D31). Held at specification level by design. |
 
 **`ABA/Implementation/`** — the shape of a protocol as it runs, written once and
 parametric in the graded-agreement implementation: the process programs, the network
@@ -231,7 +232,7 @@ implementation of it.
 | file | lines | what it is |
 |---|---|---|
 | `GBCA/ABDY/Implementation.lean` | 876 | **The GBCA implementation**, ABDY22's Algorithm 6 in full (D18). Its state is the stage records beside the round's network state, which holds the round's bound bit (D29). |
-| `GBCA/ABDY/RefinesSpecification.lean` | 2013 | The per-instance refinement `implRefines`, by exclude-on-demand: `excluded` carried as a receipt-pattern certificate; its soundness inclusion `implInst_refines` with the binding it carries, `implInst_binding`; and the broadcast compatibility of the relation with the `fail` act (`instRel_corrupt`), which the family lifting consumes. Two axiom checks. |
+| `GBCA/ABDY/RefinesSpecification.lean` | 2013 | The per-instance refinement `refinesSpecification`, by exclude-on-demand: `excluded` carried as a receipt-pattern certificate; its soundness inclusion `implementation_refines` with the binding it carries, `implementation_binding`; and the broadcast compatibility of the relation with the `fail` act (`instRel_corrupt`), which the family lifting consumes. Two axiom checks. |
 
 **`ABA/Composition/`** — the components the composed systems are built from, the composed
 reading over them, and the hybrid.
@@ -247,9 +248,9 @@ reading over them, and the hybrid.
 
 | file | lines | what it is |
 |---|---|---|
-| `GBCA/AFW/Binding.lean` | 301 | Binding of the round over the family alphabet: `BindingTraceN` and `specificationOverRoundAlphabet_binding`, the round composite `gatherImplRefines` and `gatherRoundRefines`, and the binding each tier carries — `GBCA.roundOverGatherSpecifications_binding`, `GBCA.roundOverBroadcastSpecification_binding`, `GBCA.roundOverBracha_binding`. Six axiom checks. |
+| `GBCA/AFW/Binding.lean` | 301 | Binding of the round over the family alphabet: `BindingTraceExtended` and `specificationOverRoundAlphabet_binding`, the round composite `gatherImplRefines` and `gatherRoundRefines`, and the binding each tier carries — `GBCA.roundOverGatherSpecifications_binding`, `GBCA.roundOverBroadcastSpecification_binding`, `GBCA.roundOverBracha_binding`. Six axiom checks. |
 | `GBCA/AFW/Composition.lean` | 1155 | **The graded-agreement round, composed**: `n` round programs beside the layer's network, in parallel with two gather instances — `GBCA.ByAFW.roundOverGatherSpecifications` over the gather specifications, `GBCA.ByAFW.roundOverBroadcastSpecification` over gather-over-BRB, and **`GBCA.ByAFW.roundOverBracha`, the gather-based GBCA implementation**, over gather-over-Bracha — read over the family alphabet `ExtendedLabel n`. |
-| `GBCA/AFW/Counting.lean` | 362 | **The counting of the two-gather round** (AFW25 Algorithm 4 at R = 2, its approximate-agreement subroutine replaced by a local count, D24): the candidate/grade kit `cand` and `gradeOf`, the bound bit `boundOfCore` read off the first gather's core (D29), and the entry counts the refinement consumes. |
+| `GBCA/AFW/Counting.lean` | 362 | **The counting of the two-gather round** (AFW25 Algorithm 4 at R = 2, its approximate-agreement subroutine replaced by a local count, D24): the candidate/grade kit `candidate` and `gradeOf`, the bound bit `boundOfCore` read off the first gather's core (D29), and the entry counts the refinement consumes. |
 | `GBCA/AFW/GatherSubstitutions.lean` | 218 | `lowPairRefines` and `idealRefines`: the two gather substitutions inside the round, componentwise. |
 | `GBCA/AFW/RefinesSpecification.lean` | 1437 | `pairRefines`: the two-gather round refines the GBCA specification. Exclusion and grade certified on the two frozen cores, the surviving bit pinned by the bound bit; exclude-on-demand. |
 | `GBCA/AFW/StepOverGatherSpecifications.lean` | 449 | `GBCA.ByAFW.StepOverGatherSpecifications`, the rule table of the round over two gather specifications, stated over the round's state, with the row characterisation `roundOverGatherSpecifications_step_iff_row`. |
@@ -261,7 +262,7 @@ reading over them, and the hybrid.
 |---|---|---|
 | `HybridRefinesSpecification/AbstractStatePreservation.lean` | 327 | `Abs` preservation for the stutter rows, and the assembly `Inv.step`. |
 | `HybridRefinesSpecification/InvariantPreservation.lean` | 3907 | Step inversion for `hybrid`, then preservation of `Inv` across every row. The bulk of the proof text. |
-| `HybridRefinesSpecification/NonVacuity.lean` | 648 | A concrete 20-step run of `hybrid P4` to a `retABA` decision, so the simulation about it is not vacuous. |
+| `HybridRefinesSpecification/NonVacuity.lean` | 648 | A concrete 20-step run of `hybrid fourProcesses` to a `retABA` decision, so the simulation about it is not vacuous. |
 | `HybridRefinesSpecification/Relation.lean` | 683 | The core simulation's relation: the lazy abstract state `Abs` and the concrete invariant `Inv`. |
 | `HybridRefinesSpecification/Simulation.lean` | 414 | **`coreSim`**: the simulation proof itself, one row per concrete step class. |
 | `HybridRefinesSpecification/WeakTransitions.lean` | 53 | The abstract-state run kit: `SpecStep.decide` as a τ-run (`decide_step`), and a run closed by a visible step (`weakStep_of_run_then_step`). |
@@ -285,7 +286,7 @@ composed reading.
 | file | lines | what it is |
 |---|---|---|
 | `ImplementationByAFW/CompositionChain.lean` | 398 | **The gather-based chain**: the sides `roundFamilyOverBracha`, `roundFamilyOverBroadcastSpecification` and `roundFamilyOverGatherSpecifications`, the three stages `AFW.composed ⊑ AFW.composedOverBroadcastSpecification ⊑ AFW.composedOverGatherSpecifications ⊑ hybrid`, and the composed-level headlines `AFW.composed_refines`, `AFW.composed_safe`, `AFW.chainSimComposed`. Four axiom checks. |
-| `ImplementationByAFW/RoundProjection.lean` | 814 | `AFW.toRound`, the view that computes a composed state from a flat one, the relation `AFW.ProtocolRel` it carries, and the builders that assemble a transition of the composed reading. |
+| `ImplementationByAFW/RoundProjection.lean` | 814 | `AFW.roundProjection`, the view that computes a composed state from a flat one, the relation `AFW.ProtocolRel` it carries, and the builders that assemble a transition of the composed reading. |
 | `ImplementationByAFW/RoundProjectionStep.lean` | 2855 | The view of the composed round after one flat row: for each row of the flat reading, the round's view after it is the view before it with the composed round's own effect applied. |
 | `ImplementationByAFW/Simulation.lean` | 2161 | **`AFW.protocolSim`**, **`AFW.main`**: the gather-based protocol carried into `AFW.composed` along a relation that computes the composed state from the flat one, the ghost record included, and the headlines `AFW.refines`, `AFW.main`, `AFW.chainSim` it yields. Five axiom checks. |
 | `ImplementationByAFW/System.lean` | 829 | **The gather-based protocol as it runs**: the flat reading at AFW25's two-gather construction — the tagged message type collapsing a round's `4n + 2` network states into one sent-set family, the process-major stage record, the adversary's ghost record of the two cores and the bound bit, and the 23 stage-side rows. |
@@ -368,8 +369,8 @@ pseudocode and the proof bodies).
 
 ## Future work
 
-- **Achievability theorem**: one explicit scheduler taking `protocol P4` to a two-return
-  decision trace `t`, with `∃ D ∈ achievableTraceDists (protocol P4), D t ≠ 0` — the
+- **Achievability theorem**: one explicit scheduler taking `protocol fourProcesses` to a two-return
+  decision trace `t`, with `∃ D ∈ achievableTraceDists (protocol fourProcesses), D t ≠ 0` — the
   machine-checked non-vacuity for `ABDY.main`'s own system, exercising Agreement with two
   returns.
 - **Budget as an assumption throughout** (not pursued): the alternative shape is an

@@ -1,6 +1,6 @@
 \begin{definition}[The flat reading of a protocol]
   \label{def:aba-flat-reading}
-  \lean{PLTS.ABA.Implementation.NetworkEvent}\lean{PLTS.ABA.Implementation.actsAt}\lean{PLTS.ABA.Implementation.coinLabelMap}\lean{PLTS.ABA.Implementation.StageSideRecP}\lean{PLTS.ABA.Implementation.StageRecord}\lean{PLTS.ABA.Implementation.NetStateP}\lean{PLTS.ABA.Implementation.roundOf}\lean{PLTS.ABA.Implementation.NetStateP.writeGhost}\lean{PLTS.ABA.Implementation.roundOwn}\lean{PLTS.ABA.Implementation.ProgramStep}\lean{PLTS.ABA.Implementation.NetworkStep}\lean{PLTS.ABA.Implementation.IsRoundRuleTable}\lean{PLTS.ABA.Implementation.system}\leanok
+  \lean{PLTS.ABA.Implementation.NetworkEvent}\lean{PLTS.ABA.Implementation.actsAt}\lean{PLTS.ABA.Implementation.coinLabelMap}\lean{PLTS.ABA.Implementation.RoundRecordMap}\lean{PLTS.ABA.Implementation.IsRoundRecord}\lean{PLTS.ABA.Implementation.NetworkState}\lean{PLTS.ABA.Implementation.roundOf}\lean{PLTS.ABA.Implementation.NetworkState.writeGhost}\lean{PLTS.ABA.Implementation.roundOwn}\lean{PLTS.ABA.Implementation.ProgramStep}\lean{PLTS.ABA.Implementation.NetworkStep}\lean{PLTS.ABA.Implementation.IsRoundRuleTable}\lean{PLTS.ABA.Implementation.system}\leanok
   \uses{def:aba-labels, def:aba-params, def:aba-core-vocab, def:relabel, def:syncproduct, def:process-algebra, def:idle-family}
   A protocol as it runs: $n$ programs, one per process, beside one network adversary and the coin oracle.
   A program reads its own records, its own received sets and its own replacement flag, and nothing else about corruption --- not the corrupted set, not the budget, not another process's status (D23) --- while the adversary holds the round-tagged message sets, the DECIDED sets and the corrupted set with its budget, and it alone has rows on the Byzantine labels.
@@ -18,7 +18,7 @@
   That is \leandecl{PLTS.ABA.Implementation.IsRoundRuleTable}; the lemmas that read a row off its label consume the first three, and Theorem~\ref{thm:aba-erasure} the fourth.
   The rendezvous alphabet is parametric in $M$ in its two stage constructors and fixed in every other, and is hidden before it leaves the composition, so two readings of the same protocol need not agree on it.
   The adversary holds one further record, and a reading supplies it too (D30).
-  For each round $r$ its state carries a ghost record $ghostRec(r)$ of a type $G$ the reading fixes.
+  For each round $r$ its state carries a ghost record $ghostRecord(r)$ of a type $G$ the reading fixes.
   The record belongs to the network: no program's row reads it and no program's record holds it.
   Two parameters carry it.
   The first, $\mathrm{ghostStep}$, writes it: on every row the record of the round the label names --- $\mathrm{roundOf}$ of that label --- is replaced by $\mathrm{ghostStep}$ of the label, the adversary's state and the record standing there, the records of the other rounds are left where they stand, and a label naming no round leaves the whole ghost alone.

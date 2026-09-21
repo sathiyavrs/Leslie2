@@ -84,7 +84,7 @@ def initial (n : ℕ) (M : Type) : SpecState n M where
   F := ∅
 
 /-- Corruption (deviation D1): total, Dirac, monotone in `F`. -/
-def corrupt (P : Params) (id : Fin P.n) (s : SpecState P.n M) : SpecState P.n M :=
+def corrupt (P : Parameters) (id : Fin P.n) (s : SpecState P.n M) : SpecState P.n M :=
   if id ∉ s.F ∧ s.F.card < P.f then { s with F := insert id s.F } else s
 
 end SpecState
@@ -93,28 +93,28 @@ end SpecState
 
 variable {M : Type}
 
-@[simp] theorem corrupt_input (P : Params) (s : SpecState P.n M) (id : Fin P.n) :
+@[simp] theorem corrupt_input (P : Parameters) (s : SpecState P.n M) (id : Fin P.n) :
     (s.corrupt P id).input = s.input := by
   unfold SpecState.corrupt; split <;> rfl
 
-@[simp] theorem corrupt_val (P : Params) (s : SpecState P.n M) (id : Fin P.n) :
+@[simp] theorem corrupt_val (P : Parameters) (s : SpecState P.n M) (id : Fin P.n) :
     (s.corrupt P id).val = s.val := by
   unfold SpecState.corrupt; split <;> rfl
 
-@[simp] theorem corrupt_ret (P : Params) (s : SpecState P.n M) (id : Fin P.n) :
+@[simp] theorem corrupt_ret (P : Parameters) (s : SpecState P.n M) (id : Fin P.n) :
     (s.corrupt P id).ret = s.ret := by
   unfold SpecState.corrupt; split <;> rfl
 
 /-- The corrupted set after a corruption. Not a simp lemma: it introduces an
 `ite`. -/
-theorem SpecState.corrupt_F (P : Params) (s : SpecState P.n M) (id : Fin P.n) :
+theorem SpecState.corrupt_F (P : Parameters) (s : SpecState P.n M) (id : Fin P.n) :
     (s.corrupt P id).F = if id ∉ s.F ∧ s.F.card < P.f then insert id s.F else s.F := by
   unfold SpecState.corrupt
   split_ifs <;> rfl
 
 /-- The step relation of the BRB specification instance with leader `ldr`
 (blueprint Transition System 6, deviations D1/D27). -/
-inductive Step (P : Params) (ldr : Fin P.n) :
+inductive Step (P : Parameters) (ldr : Fin P.n) :
     SpecState P.n M → Label P.n M → PMF (SpecState P.n M) → Prop
   /-- The environment calls the leader. -/
   | call (s : SpecState P.n M) (m : M) (h : s.input = none) :
@@ -138,20 +138,20 @@ inductive Step (P : Params) (ldr : Fin P.n) :
       Step P ldr s (.fail id) (PMF.pure (s.corrupt P id))
 
 /-- The BRB specification instance with leader `ldr`. -/
-noncomputable def specInst (P : Params) (ldr : Fin P.n) (M : Type) :
+noncomputable def specInst (P : Parameters) (ldr : Fin P.n) (M : Type) :
     System (SpecState P.n M) (Label P.n M) where
   init := SpecState.initial P.n M
   step := Step P ldr
 
-@[simp] theorem specInst_init (P : Params) (ldr : Fin P.n) :
+@[simp] theorem specInst_init (P : Parameters) (ldr : Fin P.n) :
     (specInst P ldr M).init = SpecState.initial P.n M := rfl
 
-@[simp] theorem specInst_step (P : Params) (ldr : Fin P.n) (s : SpecState P.n M)
+@[simp] theorem specInst_step (P : Parameters) (ldr : Fin P.n) (s : SpecState P.n M)
     (l : Label P.n M) (μ : PMF (SpecState P.n M)) :
     (specInst P ldr M).step s l μ ↔ Step P ldr s l μ := Iff.rfl
 
 /-- Every BRB spec transition is Dirac: the instance is an LTS. -/
-theorem specInst_isLTS (P : Params) (ldr : Fin P.n) : (specInst P ldr M).IsLTS := by
+theorem specInst_isLTS (P : Parameters) (ldr : Fin P.n) : (specInst P ldr M).IsLTS := by
   rintro s l μ hstep
   cases hstep <;> exact ⟨_, rfl⟩
 

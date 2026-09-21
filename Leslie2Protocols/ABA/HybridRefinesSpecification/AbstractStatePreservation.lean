@@ -27,7 +27,7 @@ namespace ABA
 
 open Implementation Composition
 
-variable {P : Params}
+variable {P : Parameters}
 
 /-! ### Stage C: `Abs` preservation for the stutter rows
 
@@ -40,22 +40,22 @@ certificate — and each row preserves all three. -/
 
 /-- `Abs` transfers along any frame that preserves `F`, the per-process
 `input`/`returned` projections, and the `A`-certificate/holder-pin package. -/
-theorem Abs.frame {P : Params} {g g' : ℕ → GBCA.SpecState P.n} {c c' : ABAState P}
+theorem Abs.frame {P : Parameters} {g g' : ℕ → GBCA.SpecState P.n} {c c' : ABAState P}
     {w w' : ℕ → WCC.SpecState P.n} {a : SpecState P.n} (hA : Abs P g c w a)
     (hF : c'.F = c.F)
-    (hin : ∀ id, (c'.procs id).input = (c.procs id).input)
-    (hret : ∀ id, (c'.procs id).returned = (c.procs id).returned)
+    (hin : ∀ id, (c'.processes id).input = (c.processes id).input)
+    (hret : ∀ id, (c'.processes id).returned = (c.processes id).returned)
     (hAF : AbsFrame P g g' c c') :
     Abs P g' c' w' a := by
   refine ⟨hA.F_eq.trans hF.symm, fun id => (hA.ret_eq id).trans (hret id).symm,
-    hA.mode_idle,
+    hA.mode_flipEnabled,
     fun id hid => (hA.input_sync id (by rw [← hF]; exact hid)).trans (hin id).symm, ?_⟩
   rcases hA.phase with hv | ⟨v, hv, ⟨r, hcv⟩, hpin⟩
   · exact Or.inl hv
   · exact Or.inr ⟨v, hv, hAF.1 r v hcv, hAF.2 v ⟨r, hcv⟩ hpin⟩
 
 /-- `bindUnset`: stutters; the row's `AbsFrame` package carries the certificates. -/
-theorem Abs.step_gbcaTau {P : Params} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
+theorem Abs.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} {a : SpecState P.n} (hA : Abs P g c w a)
     (hI : Inv P g c w) (r : ℕ)
     {μr : PMF (GBCA.SpecState P.n)} (hstep : GBCA.Step P r (g r) .tau μr)
@@ -63,13 +63,13 @@ theorem Abs.step_gbcaTau {P : Params} {g : ℕ → GBCA.SpecState P.n} {c : ABAS
     Abs P (Function.update g r gr') c w a :=
   hA.frame rfl (fun _ => rfl) (fun _ => rfl) (Inv.step_gbcaTau hI r hstep hgr').2
 
-/-- Core `τ` (DECIDED delivery/echo/byzantine injection): stutters; `F`/`procs` untouched. -/
-theorem Abs.step_coreTau {P : Params} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
+/-- Core `τ` (DECIDED delivery/echo/byzantine injection): stutters; `F`/`processes` untouched. -/
+theorem Abs.step_coreTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} {a : SpecState P.n} (hA : Abs P g c w a)
     (hI : Inv P g c w)
     {μc : PMF (ABAState P)}
     (hstep :
-      (∃ i j b, b ∈ c.decidedSent j ∧ b ∉ c.decidedRecv i j ∧
+      (∃ i j b, b ∈ c.decidedSent j ∧ b ∉ c.decidedReceived i j ∧
           μc = PMF.pure (c.deliverDecided i j b)) ∨
         (∃ id b, P.f + 1 ≤ c.decidedCount id b ∧ b ∉ c.decidedSent id ∧
           μc = PMF.pure (c.sendDecided id b)) ∨
@@ -77,123 +77,124 @@ theorem Abs.step_coreTau {P : Params} {g : ℕ → GBCA.SpecState P.n} {c : ABAS
     {c' : ABAState P} (hc' : c' ∈ μc.support) :
     Abs P g c' w a := by
   have hAF := (Inv.step_coreTau hI hstep hc').2
-  have hCFrame : c'.F = c.F ∧ c'.procs = c.procs := by
+  have hCFrame : c'.F = c.F ∧ c'.processes = c.processes := by
     rcases hstep with ⟨i, j, b, hs, hr, rfl⟩ | ⟨id, b, hcnt, hs, rfl⟩ | ⟨id, b, hF, rfl⟩ <;>
       rw [PMF.mem_support_pure_iff] at hc' <;> subst hc'
-    · exact ⟨ABAState.deliverDecided_F _ _ _ _, ABAState.deliverDecided_procs _ _ _ _⟩
-    · exact ⟨ABAState.sendDecided_F _ _ _, ABAState.sendDecided_procs _ _ _⟩
-    · exact ⟨ABAState.sendDecided_F _ _ _, ABAState.sendDecided_procs _ _ _⟩
+    · exact ⟨ABAState.deliverDecided_F _ _ _ _, ABAState.deliverDecided_processes _ _ _ _⟩
+    · exact ⟨ABAState.sendDecided_F _ _ _, ABAState.sendDecided_processes _ _ _⟩
+    · exact ⟨ABAState.sendDecided_F _ _ _, ABAState.sendDecided_processes _ _ _⟩
   exact hA.frame hCFrame.1 (fun id => by rw [hCFrame.2]) (fun id => by rw [hCFrame.2]) hAF
 
 /-- `callG`: stutters; `Abs` reads none of the touched fields, certificates ride the
 row's `AbsFrame`. -/
-theorem Abs.step_callG {P : Params} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
+theorem Abs.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} {a : SpecState P.n}
     (hA : Abs P g c w a) (hI : Inv P g c w) (r : ℕ) (id : Fin P.n) (b : Bool)
     {μr : PMF (GBCA.SpecState P.n)} (hstepG : GBCA.Step P r (g r) (.callG r id b) μr)
     {μc : PMF (ABAState P)}
     (hstepC :
-      ((c.procs id).phase = .toCallG ∧ (c.procs id).round = r ∧
-          (c.procs id).est = some b ∧
-          μc = PMF.pure (c.setProc id { c.procs id with phase := .awaitG })) ∨
+      ((c.processes id).phase = .toCallG ∧ (c.processes id).round = r ∧
+          (c.processes id).estimate = some b ∧
+          μc = PMF.pure (c.setProcess id { c.processes id with phase := .awaitG })) ∨
         (id ∈ c.F ∧ μc = PMF.pure c))
     {gr' : GBCA.SpecState P.n} (hgr' : gr' ∈ μr.support)
     {c' : ABAState P} (hc' : c' ∈ μc.support) :
     Abs P (Function.update g r gr') c' w a := by
   have hAF := (Inv.step_callG hI r id b hstepG hstepC hgr' hc').2
-  have hCFrame : c'.F = c.F ∧ ∀ id', (c'.procs id').input = (c.procs id').input ∧
-      (c'.procs id').returned = (c.procs id').returned := by
+  have hCFrame : c'.F = c.F ∧ ∀ id', (c'.processes id').input = (c.processes id').input ∧
+      (c'.processes id').returned = (c.processes id').returned := by
     rcases hstepC with ⟨hph, hr, hest, rfl⟩ | ⟨hF, rfl⟩ <;>
       rw [PMF.mem_support_pure_iff] at hc' <;> subst hc'
-    · refine ⟨ABAState.setProc_F _ _ _, fun id' => ?_⟩
+    · refine ⟨ABAState.setProcess_F _ _ _, fun id' => ?_⟩
       by_cases h : id' = id
-      · subst h; rw [ABAState.setProc_procs_self]; exact ⟨rfl, rfl⟩
-      · rw [ABAState.setProc_procs_ne _ _ _ h]; exact ⟨rfl, rfl⟩
+      · subst h; rw [ABAState.setProcess_processes_self]; exact ⟨rfl, rfl⟩
+      · rw [ABAState.setProcess_processes_ne _ _ _ h]; exact ⟨rfl, rfl⟩
     · exact ⟨rfl, fun id' => ⟨rfl, rfl⟩⟩
   exact hA.frame hCFrame.1 (fun id' => (hCFrame.2 id').1) (fun id' => (hCFrame.2 id').2) hAF
 
 /-- `retG`: stutters; certificates and the holder pin ride the row's `AbsFrame`. -/
-theorem Abs.step_retG {P : Params} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
+theorem Abs.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} {a : SpecState P.n}
-    (hA : Abs P g c w a) (hI : Inv P g c w) (r : ℕ) (id : Fin P.n) (out : GbcaOut)
+    (hA : Abs P g c w a) (hI : Inv P g c w) (r : ℕ) (id : Fin P.n) (out : GBCAOutput)
     (bnd : Bool)
     {μr : PMF (GBCA.SpecState P.n)} (hstepG : GBCA.Step P r (g r) (.retG r id out bnd) μr)
     {μc : PMF (ABAState P)}
     (hstepC :
-      ((c.procs id).phase = .awaitG ∧ (c.procs id).round = r ∧
-          μc = PMF.pure (c.setProc id { c.procs id with
-            est := out.est, lastGrade := some out, phase := .toCallW })) ∨
+      ((c.processes id).phase = .awaitG ∧ (c.processes id).round = r ∧
+          μc = PMF.pure (c.setProcess id { c.processes id with
+            estimate := out.estimate, lastGrade := some out, phase := .toCallW })) ∨
         (id ∈ c.F ∧ μc = PMF.pure c))
     {gr' : GBCA.SpecState P.n} (hgr' : gr' ∈ μr.support)
     {c' : ABAState P} (hc' : c' ∈ μc.support) :
     Abs P (Function.update g r gr') c' w a := by
   have hAF := (Inv.step_retG hI r id out bnd hstepG hstepC hgr' hc').2
-  have hCFrame : c'.F = c.F ∧ ∀ id', (c'.procs id').input = (c.procs id').input ∧
-      (c'.procs id').returned = (c.procs id').returned := by
+  have hCFrame : c'.F = c.F ∧ ∀ id', (c'.processes id').input = (c.processes id').input ∧
+      (c'.processes id').returned = (c.processes id').returned := by
     rcases hstepC with ⟨hph, hr, rfl⟩ | ⟨hF, rfl⟩ <;>
       rw [PMF.mem_support_pure_iff] at hc' <;> subst hc'
-    · refine ⟨ABAState.setProc_F _ _ _, fun id' => ?_⟩
+    · refine ⟨ABAState.setProcess_F _ _ _, fun id' => ?_⟩
       by_cases h : id' = id
-      · subst h; rw [ABAState.setProc_procs_self]; exact ⟨rfl, rfl⟩
-      · rw [ABAState.setProc_procs_ne _ _ _ h]; exact ⟨rfl, rfl⟩
+      · subst h; rw [ABAState.setProcess_processes_self]; exact ⟨rfl, rfl⟩
+      · rw [ABAState.setProcess_processes_ne _ _ _ h]; exact ⟨rfl, rfl⟩
     · exact ⟨rfl, fun id' => ⟨rfl, rfl⟩⟩
   exact hA.frame hCFrame.1 (fun id' => (hCFrame.2 id').1) (fun id' => (hCFrame.2 id').2) hAF
 
 /-- `callW`: stutters. -/
-theorem Abs.step_callW {P : Params} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
+theorem Abs.step_callW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} {a : SpecState P.n}
     (hA : Abs P g c w a) (hI : Inv P g c w) (r : ℕ) (id : Fin P.n)
     {μw' : PMF (WCC.SpecState P.n)} (hstepW : WCC.Step P r (w r) (.callW r id) μw')
     {μc : PMF (ABAState P)}
     (hstepC :
-      ((c.procs id).phase = .toCallW ∧ (c.procs id).round = r ∧
-          μc = PMF.pure (c.setProc id { c.procs id with phase := .awaitW })) ∨
+      ((c.processes id).phase = .toCallW ∧ (c.processes id).round = r ∧
+          μc = PMF.pure (c.setProcess id { c.processes id with phase := .awaitW })) ∨
         (id ∈ c.F ∧ μc = PMF.pure c))
     {wr' : WCC.SpecState P.n} (hwr' : wr' ∈ μw'.support)
     {c' : ABAState P} (hc' : c' ∈ μc.support) :
     Abs P g c' (Function.update w r wr') a := by
   have hAF := (Inv.step_callW hI r id hstepW hstepC hwr' hc').2
-  have hCFrame : c'.F = c.F ∧ ∀ id', (c'.procs id').input = (c.procs id').input ∧
-      (c'.procs id').returned = (c.procs id').returned := by
+  have hCFrame : c'.F = c.F ∧ ∀ id', (c'.processes id').input = (c.processes id').input ∧
+      (c'.processes id').returned = (c.processes id').returned := by
     rcases hstepC with ⟨hph, hr, rfl⟩ | ⟨hF, rfl⟩ <;>
       rw [PMF.mem_support_pure_iff] at hc' <;> subst hc'
-    · refine ⟨ABAState.setProc_F _ _ _, fun id' => ?_⟩
+    · refine ⟨ABAState.setProcess_F _ _ _, fun id' => ?_⟩
       by_cases h : id' = id
-      · subst h; rw [ABAState.setProc_procs_self]; exact ⟨rfl, rfl⟩
-      · rw [ABAState.setProc_procs_ne _ _ _ h]; exact ⟨rfl, rfl⟩
+      · subst h; rw [ABAState.setProcess_processes_self]; exact ⟨rfl, rfl⟩
+      · rw [ABAState.setProcess_processes_ne _ _ _ h]; exact ⟨rfl, rfl⟩
     · exact ⟨rfl, fun id' => ⟨rfl, rfl⟩⟩
   exact hA.frame hCFrame.1 (fun id' => (hCFrame.2 id').1) (fun id' => (hCFrame.2 id').2) hAF
 
 /-- `retW`: stutters. -/
-theorem Abs.step_retW {P : Params} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
+theorem Abs.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} {a : SpecState P.n}
     (hA : Abs P g c w a) (hI : Inv P g c w) (r : ℕ) (id : Fin P.n) (b : Bool)
     {μw' : PMF (WCC.SpecState P.n)} (hstepW : WCC.Step P r (w r) (.retW r id b) μw')
     {μc : PMF (ABAState P)}
     (hstepC :
-      ((c.procs id).phase = .awaitW ∧ (c.procs id).round = r ∧
+      ((c.processes id).phase = .awaitW ∧ (c.processes id).round = r ∧
           μc = PMF.pure (c.stepRound id b)) ∨
         (id ∈ c.F ∧ μc = PMF.pure c))
     {wr' : WCC.SpecState P.n} (hwr' : wr' ∈ μw'.support)
     {c' : ABAState P} (hc' : c' ∈ μc.support) :
     Abs P g c' (Function.update w r wr') a := by
   have hAF := (Inv.step_retW hI r id b hstepW hstepC hwr' hc').2
-  have hCFrame : c'.F = c.F ∧ ∀ id', (c'.procs id').input = (c.procs id').input ∧
-      (c'.procs id').returned = (c.procs id').returned := by
+  have hCFrame : c'.F = c.F ∧ ∀ id', (c'.processes id').input = (c.processes id').input ∧
+      (c'.processes id').returned = (c.processes id').returned := by
     rcases hstepC with ⟨hph, hr, rfl⟩ | ⟨hF, rfl⟩ <;>
       rw [PMF.mem_support_pure_iff] at hc' <;> subst hc'
     · refine ⟨ABAState.stepRound_F _ _ _, fun id' => ?_⟩
       by_cases h : id' = id
-      · subst h; rw [ABAState.stepRound_procs_self _ _ _]; exact ⟨rfl, rfl⟩
-      · rw [ABAState.stepRound_procs_ne _ _ _ h]; exact ⟨rfl, rfl⟩
+      · subst h; rw [ABAState.stepRound_processes_self _ _ _]; exact ⟨rfl, rfl⟩
+      · rw [ABAState.stepRound_processes_ne _ _ _ h]; exact ⟨rfl, rfl⟩
     · exact ⟨rfl, fun id' => ⟨rfl, rfl⟩⟩
   exact hA.frame hCFrame.1 (fun id' => (hCFrame.2 id').1) (fun id' => (hCFrame.2 id').2) hAF
 /-! ### Assembly: `Inv` is preserved by every `hybrid` step -/
 
 /-- Reading a row where the ABA-side pair moves alone: the pair's own outcome,
 the coin oracle standing still. -/
-theorem mem_support_abaRow {P : Params} {μc : PMF (ABAState P)}
-    {o w' : ℕ → WCC.SpecState P.n} {C' : ∀ _ : Fin P.n, CoreRec P.n} {A' : ANetState P.n}
+theorem mem_support_abaRow {P : Parameters} {μc : PMF (ABAState P)}
+    {o w' : ℕ → WCC.SpecState P.n} {C' : ∀ _ : Fin P.n,
+      RoundLoopRecord P.n} {A' : ABANetworkState P.n}
     (h : (C', A', w') ∈ (μc.map fun c => (c.1, c.2, o)).support) :
     (C', A') ∈ μc.support ∧ w' = o := by
   rw [PMF.mem_support_map_iff] at h
@@ -203,9 +204,9 @@ theorem mem_support_abaRow {P : Params} {μc : PMF (ABAState P)}
   exact ⟨hc, rfl⟩
 
 /-- Reading a row where the ABA-side pair and the coin oracle move together. -/
-theorem mem_support_coinRow {P : Params} {μc : PMF (ABAState P)}
+theorem mem_support_coinRow {P : Parameters} {μc : PMF (ABAState P)}
     {μw' : PMF (WCC.SpecState P.n)} {o w' : ℕ → WCC.SpecState P.n} {r : ℕ}
-    {C' : ∀ _ : Fin P.n, CoreRec P.n} {A' : ANetState P.n}
+    {C' : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A' : ABANetworkState P.n}
     (h : (C', A', w') ∈ (μc.bind fun c => prodPMF (PMF.pure c.1)
       (prodPMF (PMF.pure c.2) (μw'.map (Function.update o r)))).support) :
     (C', A') ∈ μc.support ∧ ∃ wr' ∈ μw'.support, w' = Function.update o r wr' := by
@@ -218,11 +219,12 @@ theorem mem_support_coinRow {P : Params} {μc : PMF (ABAState P)}
 /-- **`Inv` is preserved.** Dispatches on the label class via `hybrid_step_callABA`/
 `hybrid_step_retABA`/`hybrid_step_fail` (Stage A1) and `hybrid_step_tau` (Stage A2), calling
 the matching `Inv.step_*` helper (Stage B) in each case. -/
-theorem Inv.step {P : Params} {g : ℕ → GBCA.SpecState P.n}
-    {C : ∀ _ : Fin P.n, CoreRec P.n} {A : ANetState P.n}
+theorem Inv.step {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
+    {C : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A : ABANetworkState P.n}
     {w : ℕ → WCC.SpecState P.n} (hI : Inv P g (C, A) w) {l : Label P.n} {μ : PMF (HybridState P)}
     (hstep : (hybrid P).step (g, C, A, w) l μ)
-    {g' : ℕ → GBCA.SpecState P.n} {C' : ∀ _ : Fin P.n, CoreRec P.n} {A' : ANetState P.n}
+    {g' : ℕ → GBCA.SpecState P.n} {C' : ∀ _ : Fin P.n,
+      RoundLoopRecord P.n} {A' : ABANetworkState P.n}
     {w' : ℕ → WCC.SpecState P.n}
     (hmem : (g', C', A', w') ∈ μ.support) :
     Inv P g' (C', A') w' := by

@@ -13,7 +13,7 @@
   \uses{def:aba-spec, thm:trace-support}
   By Theorem~\ref{thm:trace-support} it suffices to prove the two predicates on the events of every genuine execution, which we do by induction over the eight rules with the invariants $\mathrm{SpecInv}$ and $\mathrm{ValInv}$.
   For Agreement, the decision value $val$ is write-once by the shape of the system: \leandeclnamed{decide}{PLTS.ABA.SpecStep.decide} is its only writer and fires only from $val = \bot$.
-  A never-corrupted returner lies outside the corruption fold at its own position, hence outside the pre-state's corrupted set, so \leandeclnamed{retByz}{PLTS.ABA.SpecStep.retByz} is unavailable to it and its return reads that one value.
+  A never-corrupted returner lies outside the corruption fold at its own position, hence outside the pre-state's corrupted set, so \leandeclnamed{retByzantine}{PLTS.ABA.SpecStep.retByzantine} is unavailable to it and its return reads that one value.
   For Validity, $\mathrm{SpecInv}$ ties $val$ to an $f{+}1$ $F$-blind support, each member of which is either ghost-recorded as inputting the value or corrupted, and $\mathrm{ValInv}$'s clause $input\_src$ attributes each ghost record to the first $\mathrm{callABA}$ of its process in the label history.
   Its converse clause $src\_input$ carries that attribution through \leandeclnamed{callSet}{PLTS.ABA.SpecStep.callSet}: the rule's guard is the empty entry, which at an uncorrupted process says that no earlier $\mathrm{callABA}$ of that process stands in the history, so the label the rule carries is the first.
   The at most $f$ ever-corrupted processes, obtained as a trace-level fold of the $\mathrm{failSet}$, leave one of the $f{+}1$ supporters a never-corrupted recorded caller by a budget pigeonhole.

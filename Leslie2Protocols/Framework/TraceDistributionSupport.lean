@@ -28,12 +28,12 @@ trace distribution:
 * `safety_transfer` — trace-support safety transfers along
   `achievableTraceDists ⊆`.
 
-It also carries the label-side transport of a run: `AlterSeq.mapLab g` rewrites
+It also carries the label-side transport of a run: `AlterSeq.mapLabels g` rewrites
 the labels of a run in place, leaving its states — and therefore its
 termination, its `stateAt` and its `endState` — alone. A run of `sys` is a run
 of `sys'` once `g` turns every step of the one into a step of the other
-(`is_partial_exec_mapLab`), and its trace is the original trace relabelled
-whenever `g` preserves and reflects the silent label (`System.trace_mapLab`):
+(`is_partial_exec_mapLabels`), and its trace is the original trace relabelled
+whenever `g` preserves and reflects the silent label (`System.trace_mapLabels`):
 both sides then drop exactly the same transitions.
 -/
 
@@ -49,15 +49,15 @@ namespace AlterSeq
 
 /-- The end state of the finite transition list `L` started at `s₀`: the second
 component of the last transition, or `s₀` if there is none. -/
-def endStList (s₀ : State) (L : List (Label × State)) : State :=
+def endStateOfList (s₀ : State) (L : List (Label × State)) : State :=
   (L.getLast?).elim s₀ Prod.snd
 
-@[simp] theorem endStList_nil (s₀ : State) :
-    endStList s₀ ([] : List (Label × State)) = s₀ := rfl
+@[simp] theorem endStateOfList_nil (s₀ : State) :
+    endStateOfList s₀ ([] : List (Label × State)) = s₀ := rfl
 
-theorem endStList_concat (s₀ : State) (M : List (Label × State)) (a : Label × State) :
-    endStList s₀ (M ++ [a]) = a.2 := by
-  simp [endStList]
+theorem endStateOfList_concat (s₀ : State) (M : List (Label × State)) (a : Label × State) :
+    endStateOfList s₀ (M ++ [a]) = a.2 := by
+  simp [endStateOfList]
 
 /-- `Seq.ofList L` is terminated at `L.length`. -/
 theorem ofList_terminatedAt_length (L : List (Label × State)) :
@@ -66,18 +66,19 @@ theorem ofList_terminatedAt_length (L : List (Label × State)) :
   rw [Seq.ofList_get?]
   simp
 
-/-- The state after all of `⟨s₀, ofList L⟩`'s transitions is `endStList s₀ L`. -/
+/-- The state after all of `⟨s₀, ofList L⟩`'s transitions is `endStateOfList s₀ L`. -/
 theorem stateAt_ofList_length (s₀ : State) (L : List (Label × State)) :
     (⟨s₀, Seq.ofList L⟩ : AlterSeq State Label).stateAt L.length
-      = some (endStList s₀ L) := by
+      = some (endStateOfList s₀ L) := by
   rcases List.eq_nil_or_concat L with rfl | ⟨M, a, rfl⟩
   · rfl
   · simp only [List.concat_eq_append]
-    have hlen : (M ++ [a]).length = M.length + 1 := by simp
+    have hlen : (M ++ [a]).length = M.length + 1 := by
+      simp
     rw [hlen]
     show ((Seq.ofList (M ++ [a])).get? M.length).map Prod.snd = _
     rw [Seq.ofList_get?]
-    simp [endStList_concat]
+    simp [endStateOfList_concat]
 
 /-- `stateAt` of an `ofList (M ++ K)` execution agrees with the `ofList M`
 execution on positions `≤ M.length`. -/
@@ -98,19 +99,19 @@ end AlterSeq
 
 /-- Relabel the transitions of an alternating sequence, leaving its states
 untouched — the label-side companion of `AlterSeq.map`. -/
-def AlterSeq.mapLab {S L L' : Type} (g : L → L') (e : AlterSeq S L) :
+def AlterSeq.mapLabels {S L L' : Type} (g : L → L') (e : AlterSeq S L) :
     AlterSeq S L' where
   init := e.init
   trans := e.trans.map (fun lq => (g lq.1, lq.2))
 
-/-- `AlterSeq.mapLab` preserves termination: it rewrites labels in place. -/
-@[simp] theorem AlterSeq.mapLab_trans_terminates_iff {S L L' : Type} (g : L → L')
-    (e : AlterSeq S L) : (e.mapLab g).trans.Terminates ↔ e.trans.Terminates :=
+/-- `AlterSeq.mapLabels` preserves termination: it rewrites labels in place. -/
+@[simp] theorem AlterSeq.mapLabels_trans_terminates_iff {S L L' : Type} (g : L → L')
+    (e : AlterSeq S L) : (e.mapLabels g).trans.Terminates ↔ e.trans.Terminates :=
   Stream'.Seq.terminates_map_iff
 
-/-- `AlterSeq.mapLab` leaves the states of the run alone. -/
-theorem AlterSeq.stateAt_mapLab {S L L' : Type} (g : L → L') (e : AlterSeq S L)
-    (n : ℕ) : (e.mapLab g).stateAt n = e.stateAt n := by
+/-- `AlterSeq.mapLabels` leaves the states of the run alone. -/
+theorem AlterSeq.stateAt_mapLabels {S L L' : Type} (g : L → L') (e : AlterSeq S L)
+    (n : ℕ) : (e.mapLabels g).stateAt n = e.stateAt n := by
   cases n with
   | zero => rfl
   | succ k =>
@@ -121,11 +122,11 @@ theorem AlterSeq.stateAt_mapLab {S L L' : Type} (g : L → L') (e : AlterSeq S L
     | none => rfl
     | some lq => rfl
 
-/-- `AlterSeq.mapLab` leaves the end state of the run alone. -/
-theorem AlterSeq.endState_mapLab {S L L' : Type} (g : L → L') (e : AlterSeq S L)
-    (h : e.trans.Terminates) (h' : (e.mapLab g).trans.Terminates) :
-    (e.mapLab g).endState h' = e.endState h := by
-  have hterm_iff : ∀ n, (e.mapLab g).trans.TerminatedAt n ↔ e.trans.TerminatedAt n := by
+/-- `AlterSeq.mapLabels` leaves the end state of the run alone. -/
+theorem AlterSeq.endState_mapLabels {S L L' : Type} (g : L → L') (e : AlterSeq S L)
+    (h : e.trans.Terminates) (h' : (e.mapLabels g).trans.Terminates) :
+    (e.mapLabels g).endState h' = e.endState h := by
+  have hterm_iff : ∀ n, (e.mapLabels g).trans.TerminatedAt n ↔ e.trans.TerminatedAt n := by
     intro n
     change (e.trans.map fun lq => (g lq.1, lq.2)).get? n = none ↔ e.trans.get? n = none
     rw [Stream'.Seq.map_get?]
@@ -134,18 +135,18 @@ theorem AlterSeq.endState_mapLab {S L L' : Type} (g : L → L') (e : AlterSeq S 
     apply le_antisymm
     · exact Nat.find_le ((hterm_iff _).mpr (Nat.find_spec h))
     · exact Nat.find_le ((hterm_iff _).mp (Nat.find_spec h'))
-  have h1 := AlterSeq.stateAt_find_eq_endState (e.mapLab g) h'
-  rw [hfind, AlterSeq.stateAt_mapLab, AlterSeq.stateAt_find_eq_endState e h] at h1
+  have h1 := AlterSeq.stateAt_find_eq_endState (e.mapLabels g) h'
+  rw [hfind, AlterSeq.stateAt_mapLabels, AlterSeq.stateAt_find_eq_endState e h] at h1
   exact (Option.some.inj h1).symm
 
 /-- Transport a partial execution along a label map that turns every step of
 `sys` into a step of `sys'`. -/
-theorem is_partial_exec_mapLab {S L L' : Type} {sys : System S L} {sys' : System S L'}
+theorem is_partial_exec_mapLabels {S L L' : Type} {sys : System S L} {sys' : System S L'}
     (g : L → L') (hg : ∀ s l μ, sys.step s l μ → sys'.step s (g l) μ)
     {e : AlterSeq S L} (hpe : is_partial_exec e sys) :
-    is_partial_exec (e.mapLab g) sys' := by
+    is_partial_exec (e.mapLabels g) sys' := by
   intro n l s' hn
-  rw [show (e.mapLab g).trans = e.trans.map (fun lq : L × S => (g lq.1, lq.2)) from rfl,
+  rw [show (e.mapLabels g).trans = e.trans.map (fun lq : L × S => (g lq.1, lq.2)) from rfl,
     Stream'.Seq.map_get?] at hn
   cases hq : e.trans.get? n with
   | none => rw [hq] at hn; exact absurd hn (by simp)
@@ -155,22 +156,22 @@ theorem is_partial_exec_mapLab {S L L' : Type} {sys : System S L} {sys' : System
     simp only [Option.map_some, Option.some.injEq, Prod.mk.injEq] at hn
     obtain ⟨rfl, rfl⟩ := hn
     obtain ⟨sn, μ, hsn, hstep, hmem⟩ := hpe n l₀ x hq
-    exact ⟨sn, μ, by rw [AlterSeq.stateAt_mapLab]; exact hsn, hg sn l₀ μ hstep, hmem⟩
+    exact ⟨sn, μ, by rw [AlterSeq.stateAt_mapLabels]; exact hsn, hg sn l₀ μ hstep, hmem⟩
 
 /-- The trace of a relabelled execution is the relabelled trace, whenever the
 label map preserves and reflects the silent label: both sides drop exactly the
 same transitions. -/
-theorem System.trace_mapLab {S L L' : Type} [Silent L] [Silent L']
+theorem System.trace_mapLabels {S L L' : Type} [Silent L] [Silent L']
     (sys' : System S L') (sys : System S L) (g : L → L')
     (hgτ : ∀ x, g x = (Silent.τ : L') ↔ x = (Silent.τ : L))
-    (e : AlterSeq S L) : sys'.trace (e.mapLab g) = (sys.trace e).map g := by
+    (e : AlterSeq S L) : sys'.trace (e.mapLabels g) = (sys.trace e).map g := by
   have hp : (fun q : L' × S => ¬ (q.1 = (Silent.τ : L'))) ∘
       (fun lq : L × S => (g lq.1, lq.2))
       = fun lq : L × S => ¬ (lq.1 = (Silent.τ : L)) := by
     funext lq
     exact propext (not_congr (hgτ lq.1))
   unfold System.trace
-  rw [show (e.mapLab g).trans = e.trans.map (fun lq : L × S => (g lq.1, lq.2)) from rfl,
+  rw [show (e.mapLabels g).trans = e.trans.map (fun lq : L × S => (g lq.1, lq.2)) from rfl,
     Stream'.Seq.filter_map, hp, ← Stream'.Seq.map_comp, ← Stream'.Seq.map_comp]
   rfl
 
@@ -229,8 +230,8 @@ theorem is_partial_exec_of_probOf_ofList_ne_zero
     obtain ⟨μ, h_supp, h_s'⟩ :=
       pe.exists_step_of_kernel_ne_zero ⟨s₀, Seq.ofList M⟩ a.1 a.2 (by
         rcases a with ⟨l, s'⟩; exact h_ker)
-    have h_step : sys.step (AlterSeq.endStList s₀ M) a.1 μ :=
-      pe.scheduler.valid ⟨s₀, Seq.ofList M⟩ M.length (AlterSeq.endStList s₀ M)
+    have h_step : sys.step (AlterSeq.endStateOfList s₀ M) a.1 μ :=
+      pe.scheduler.valid ⟨s₀, Seq.ofList M⟩ M.length (AlterSeq.endStateOfList s₀ M)
         (AlterSeq.ofList_terminatedAt_length M)
         (AlterSeq.stateAt_ofList_length s₀ M) a.1 μ h_supp
     -- Assemble `is_partial_exec` for the extended execution.
@@ -258,7 +259,7 @@ theorem is_partial_exec_of_probOf_ofList_ne_zero
       obtain ⟨rfl, rfl⟩ : a.1 = l ∧ a.2 = s' := by
         have := Option.some.inj hget
         exact ⟨congr_arg Prod.fst this, congr_arg Prod.snd this⟩
-      exact ⟨AlterSeq.endStList s₀ M, μ, by
+      exact ⟨AlterSeq.endStateOfList s₀ M, μ, by
         rw [AlterSeq.stateAt_ofList_append_le s₀ M [a] (le_refl _)]
         exact AlterSeq.stateAt_ofList_length s₀ M, h_step, h_s'⟩
 
@@ -319,7 +320,8 @@ theorem filter_getElem?_pullback {α : Type} (p : α → Bool) :
     · rw [List.filter_cons_of_pos hx] at h
       cases m with
       | zero =>
-        obtain rfl : x = a := by simpa using h
+        obtain rfl : x = a := by
+          simpa using h
         exact ⟨0, rfl, by simp⟩
       | succ m' =>
         rw [List.getElem?_cons_succ] at h

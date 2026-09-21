@@ -17,7 +17,7 @@
   The relation is \leandecl{PLTS.ABA.coreRel}, the Dirac lift of \leandecl{PLTS.ABA.coreR}, and $\mathrm{coreR}$ is the conjunction of an invariant $\mathrm{Inv}$ on the concrete state with an abstraction predicate $\mathrm{Abs}$ tying it to the abstract one.
   Both read the two ABA-side components through the accessors of Definition~\ref{def:aba-core}, so the whole relation is written in the coordinates the system already has and no change of system precedes it.
   Take a state of $\mathrm{hybrid}(P)$ satisfying $\mathrm{Inv} \wedge \mathrm{Abs}$ and a row out of it.
-  $\mathrm{Abs}$ pins the corrupted set, the returns and $mode = idle$, so the abstract state never fires \leandeclnamed{coinFlip}{PLTS.ABA.SpecStep.coinFlip}, and it is two-phase on the abstract state's $val$ (D16).
+  $\mathrm{Abs}$ pins the corrupted set, the returns and $mode = flipEnabled$, so the abstract state never fires \leandeclnamed{coinFlip}{PLTS.ABA.SpecStep.coinFlip}, and it is two-phase on the abstract state's $val$ (D16).
   Outside that disjunction it pins the ghost record as well: it agrees with the committed input at every honest process, in both phases.
   There are three cases.
   First, a hidden row: the abstract state answers by a stutter in the $\mathrm{Abs}$ frame, the coin's resolving call under the constant coupling that sends every outcome to the one unchanged abstract state.

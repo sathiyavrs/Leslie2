@@ -61,7 +61,7 @@ network adversary. Each round's graded return announces that round's bound bit
 (D29), a ghost output that rides the `retG` label and that no component's state
 records. `GBCA.BindingTrace` (`GBCA/SpecificationSafety.lean`) is the property it
 carries. The **common coin is held at specification level** — the
-ε-coin is `Params.wccPMF`, not a Gather/SRSD implementation — so the honest
+ε-coin is `Parameters.wccPMF`, not a Gather/SRSD implementation — so the honest
 reading is *graded agreement verified to implementation level; the coin
 assumed at specification level*.
 
@@ -94,7 +94,7 @@ names. -/
 
 /-- **The protocol-shaped specification refines the ABA specification**: the
 soundness of the core simulation. -/
-theorem hybrid_spec (P : Params) :
+theorem hybrid_spec (P : Parameters) :
     achievableTraceDists (hybrid P) ⊆ achievableTraceDists (spec P) :=
   (coreSim P).achievableTraceDists_subset
 
@@ -106,7 +106,7 @@ adversary and the coin oracle satisfies Validity and Agreement. The corruption
 budget is a guard of the network adversary's own `fail` row, so every protocol
 execution is in budget by construction and nothing is assumed of the
 traces. -/
-theorem protocol_safe (P : Params) :
+theorem protocol_safe (P : Parameters) :
     ∀ D ∈ achievableTraceDists (protocol P), ∀ t, D t ≠ 0 →
       ValidityTrace P t ∧ AgreementTrace P t :=
   safety_transfer
@@ -118,7 +118,7 @@ theorem protocol_safe (P : Params) :
 positive-probability trace of the protocol has positive probability
 under an achievable trace distribution of the protocol-shaped
 specification. -/
-theorem protocol_traces (P : Params) :
+theorem protocol_traces (P : Parameters) :
     ∀ D ∈ achievableTraceDists (protocol P), ∀ t, D t ≠ 0 →
       ∃ D' ∈ achievableTraceDists (hybrid P), D' t ≠ 0 :=
   fun D hD _ ht => ⟨D, Set.Subset.trans (protocol_composed P) (substitution P) hD, ht⟩
@@ -126,7 +126,7 @@ theorem protocol_traces (P : Params) :
 /-- **Safety of the composed reading**: the substitution and the core
 simulation carry the composed reading to the specification, so it inherits the
 same guarantee. -/
-theorem composed_safe (P : Params) :
+theorem composed_safe (P : Parameters) :
     ∀ D ∈ achievableTraceDists (composed P), ∀ t, D t ≠ 0 →
       ValidityTrace P t ∧ AgreementTrace P t :=
   safety_transfer (Set.Subset.trans (substitution P) (hybrid_spec P)) (spec_safe P)
@@ -137,7 +137,7 @@ theorem composed_safe (P : Params) :
 fragment): every trace distribution achievable by the protocol is
 achievable by the ABA specification. The composition and the substitution give
 the first inclusion, the core simulation the second. -/
-theorem refines (P : Params) :
+theorem refines (P : Parameters) :
     achievableTraceDists (protocol P) ⊆ achievableTraceDists (spec P) :=
   Set.Subset.trans (protocol_composed P)
     (Set.Subset.trans (substitution P) (hybrid_spec P))
@@ -147,7 +147,7 @@ every positive-probability trace of the protocol satisfies Validity
 and Agreement. No side condition on the traces: the corruption budget is a
 guard of the network adversary's own `fail` row, so every protocol execution
 is in budget by construction. -/
-theorem main (P : Params) :
+theorem main (P : Parameters) :
     ∀ D ∈ achievableTraceDists (protocol P), ∀ t, D t ≠ 0 →
       ValidityTrace P t ∧ AgreementTrace P t :=
   safety_transfer (refines P) (spec_safe P)
@@ -156,7 +156,7 @@ theorem main (P : Params) :
 the chain joined by Result 2 (`ProbabilisticForwardSimulation.trans`), along
 the composite of their three relations — the Dirac lift of the composition
 relation, the pointwise round substitution, and the core relation. -/
-noncomputable def chainSim (P : Params) :
+noncomputable def chainSim (P : Parameters) :
     ProbabilisticForwardSimulation (protocol P) (spec P)
       (compRel (diracRel (ProtocolRel P))
         (compRel (parallelRel (diracRel (RsubAll P))) (coreRel P))) :=

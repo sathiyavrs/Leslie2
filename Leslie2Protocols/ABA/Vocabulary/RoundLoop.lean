@@ -33,14 +33,14 @@ paper is named.) Per process, on external input `b`:
       return b
 
 The file holds the algorithm alone: the handshake phase `Phase`, the estimate
-a graded outcome dictates (`GbcaOut.est`), and the per-process control record
-`ProcCore`. The record carries no sub-protocol state — the
+a graded outcome dictates (`GBCAOutput.estimate`), and the per-process control record
+`RoundLoopState`. The record carries no sub-protocol state — the
 `callG`/`retG`/`callW`/`retW` interactions are pure handshakes over the API
 labels, advancing the process's `phase` and recording the returned data, while
 the sub-protocol state itself lives in the round specifications and the coin
 oracle — and no network state: the DECIDED sets and the corrupted set belong
 to the network. The transitions themselves are `RoundLoopStep`
-(`ABA/Composition/Components.lean`), the rows of a round-loop record `CoreRec` over the
+(`ABA/Composition/Components.lean`), the rows of a round-loop record `RoundLoopRecord` over the
 extended alphabet, and `ABDY.ABAProgramStep` (`ABA/ImplementationByABDY/System.lean`), the rows of
 the protocol program that carries a round loop beside its stage-side record. This file realises the
 Core-side assumptions of `DESIGN-CoreSim.md`: the phase machine (invariant conjunct 4), the DECIDED
@@ -52,11 +52,11 @@ diffusion state (conjunct 6), and input coherence (conjunct 5 — the honest
 * **D9 (0-based rounds).** `round : ℕ` starts at `0` where Algorithm 1 starts
   at `r = 1`; the `GBCA_r`/`WCC_r` instance indices shift accordingly.
 * **D10 (fused DECIDED-send).** Algorithm 1's `elif g = A: send ⟨DECIDED, b⟩`
-  is performed inside the round advance `CoreRec.stepRound`, joined with the
+  is performed inside the round advance `RoundLoopRecord.stepRound`, joined with the
   network's publication of the bit: receiving the round's coin adopts it when
-  `est = ⊥`, multicasts `⟨DECIDED, b⟩` when the round's grade was `A b`,
+  `estimate = ⊥`, multicasts `⟨DECIDED, b⟩` when the round's grade was `A b`,
   clears `lastGrade` and advances to the next round, all in one Dirac
-  transition. The joint step is the `retWPub` rendezvous, whose round-loop
+  transition. The joint step is the `retWPublish` rendezvous, whose round-loop
   half is the advance and whose network half is the sent insert.
 * **D11 (Byzantine handshake rows).** Corrupted processes may make their
   sub-protocol handshakes arbitrarily: each of `callG`/`retG`/`callW`/`retW`
@@ -66,23 +66,23 @@ diffusion state (conjunct 6), and input coherence (conjunct 5 — the honest
   blocked by it.
 * **D12′ (per-process DECIDED sets, equivocation-capable).** The DECIDED
   multicast state is the network's per-process sent
-  `dsent : Fin n → Finset Bool`, read on the ABA side as `decidedSent`
+  `decidedSent : Fin n → Finset Bool`, read on the ABA side as `decidedSent`
   (`ABA/Composition/ABAState.lean`) and mirroring graded agreement's D5 sent-set pattern.
-  Honest sends insert into the sent (the fused `retWPub` publication and the
+  Honest sends insert into the sent (the fused `retWPublish` publication and the
   `f + 1` relay `decidedSend`; in reachable states DECIDED coherence keeps every
   honest sent at card ≤ 1, so the insert is a first write or a no-op re-send
-  of the same bit). Byzantine injection (`byzantineD`, guarded only by `k ∈ F`) may
+  of the same bit). Byzantine injection (`byzantineDecided`, guarded only by `k ∈ F`) may
   insert either or both bits at any time — a corrupted process may send
   `DECIDED 0` to one receiver and `DECIDED 1` to another (delivery is
   selective). The delivery rendezvous `decidedDeliver` moves one sent bit into the
-  receiver's own row `decidedRecv i j` at most once per (receiver, sender,
+  receiver's own row `decidedReceived i j` at most once per (receiver, sender,
   bit) triple, with soundness `b ∈ decidedSent j` on the network's half; the
   `retABA` quorum guard counts distinct *senders* per bit (`decidedCount`).
   The per-process sent sets (D12′) let a corrupted process equivocate in the
   DECIDED sets; a single-entry model would bar that — an under-approximation
   inconsistent with graded agreement.
 * **D23 (the corrupted process's replaced program).** A corruption replaces the
-  program of the process it names. `CoreRec.corrupted` carries the
+  program of the process it names. `RoundLoopRecord.corrupted` carries the
   replacement: the process's own half of `fail` writes the flag, every row
   that reads or writes the process's own record is guarded by
   `corrupted = false`, and the replaced program self-loops on every label of
@@ -121,43 +121,43 @@ inductive Phase : Type
 
 /-- The estimate a graded outcome dictates: `A b`/`B b` set the estimate to
 `b`, `C` clears it to `⊥` (awaiting the coin). -/
-def GbcaOut.est : GbcaOut → Option Bool
+def GBCAOutput.estimate : GBCAOutput → Option Bool
   | .A b => some b
   | .B b => some b
   | .C => none
 
-@[simp] theorem GbcaOut.est_A (b : Bool) : (GbcaOut.A b).est = some b := rfl
+@[simp] theorem GBCAOutput.estimate_A (b : Bool) : (GBCAOutput.A b).estimate = some b := rfl
 
-@[simp] theorem GbcaOut.est_B (b : Bool) : (GbcaOut.B b).est = some b := rfl
+@[simp] theorem GBCAOutput.estimate_B (b : Bool) : (GBCAOutput.B b).estimate = some b := rfl
 
-@[simp] theorem GbcaOut.est_C : (GbcaOut.C).est = none := rfl
+@[simp] theorem GBCAOutput.estimate_C : (GBCAOutput.C).estimate = none := rfl
 
 /-- The per-process state of the ABA core. (No field mentions `n`; the
-parameter is kept so the record is addressed uniformly as `ProcCore n`
+parameter is kept so the record is addressed uniformly as `RoundLoopState n`
 alongside the other per-process records of the development.) -/
-structure ProcCore (n : ℕ) : Type where
+structure RoundLoopState (n : ℕ) : Type where
   /-- The original external input (`callABA` payload), `none` before the call. -/
   input : Option Bool
   /-- The current estimate; `none` encodes the algorithm's `⊥` (awaiting the
   coin). -/
-  est : Option Bool
+  estimate : Option Bool
   /-- The current round (0-based, deviation D9). -/
   round : ℕ
   /-- The handshake phase. -/
   phase : Phase
   /-- The graded outcome returned by the *current* round's GBCA (`none` before
   the return; cleared by the round advance). -/
-  lastGrade : Option GbcaOut
+  lastGrade : Option GBCAOutput
   /-- Whether this process has returned (fired `retABA`). -/
   returned : Bool
   deriving DecidableEq
 
-namespace ProcCore
+namespace RoundLoopState
 
 /-- The initial per-process state: no input, estimate `⊥`, round `0`, idle. -/
-def initial (n : ℕ) : ProcCore n where
+def initial (n : ℕ) : RoundLoopState n where
   input := none
-  est := none
+  estimate := none
   round := 0
   phase := .idle
   lastGrade := none
@@ -165,7 +165,7 @@ def initial (n : ℕ) : ProcCore n where
 
 @[simp] theorem initial_input (n : ℕ) : (initial n).input = none := rfl
 
-@[simp] theorem initial_est (n : ℕ) : (initial n).est = none := rfl
+@[simp] theorem initial_estimate (n : ℕ) : (initial n).estimate = none := rfl
 
 @[simp] theorem initial_round (n : ℕ) : (initial n).round = 0 := rfl
 
@@ -175,7 +175,7 @@ def initial (n : ℕ) : ProcCore n where
 
 @[simp] theorem initial_returned (n : ℕ) : (initial n).returned = false := rfl
 
-end ProcCore
+end RoundLoopState
 
 /-! ### The round-loop record
 
@@ -187,63 +187,66 @@ reads (`ABA/Composition/ABAState.lean`). -/
 /-- The round-loop record of one process: its own control record and the
 DECIDED payloads delivered to it, indexed by sender. There is no record of
 what it has multicast — the DECIDED sets live in the network. -/
-structure CoreRec (n : ℕ) : Type where
+structure RoundLoopRecord (n : ℕ) : Type where
   /-- The process's own control record. -/
-  proc : ProcCore n
+  process : RoundLoopState n
   /-- The DECIDED payloads delivered to this process, indexed by sender. -/
-  decIn : Fin n → Finset Bool
+  decidedDelivered : Fin n → Finset Bool
   /-- Whether this process's program has been replaced (D23). The process's own
   half of `fail` writes the flag, and the guard of every honest row reads it.
   The record beneath the flag stands still from that point on. -/
   corrupted : Bool
   deriving DecidableEq
 
-namespace CoreRec
+namespace RoundLoopRecord
 
 variable {n : ℕ}
 
 /-- The initial round-loop record: idle control record, no receipts, program
 not replaced. -/
-def initial (n : ℕ) : CoreRec n where
-  proc := ProcCore.initial n
-  decIn := fun _ => ∅
+def initial (n : ℕ) : RoundLoopRecord n where
+  process := RoundLoopState.initial n
+  decidedDelivered := fun _ => ∅
   corrupted := false
 
 @[simp] theorem initial_corrupted (n : ℕ) : (initial n).corrupted = false := rfl
 
 /-- The number of distinct senders whose `⟨DECIDED, b⟩` this process holds. -/
-def decidedCount (q : CoreRec n) (b : Bool) : ℕ :=
-  (Finset.univ.filter (fun k => b ∈ q.decIn k)).card
+def decidedCount (q : RoundLoopRecord n) (b : Bool) : ℕ :=
+  (Finset.univ.filter (fun k => b ∈ q.decidedDelivered k)).card
 
 /-- Update the control record. -/
-def setProc (q : CoreRec n) (p : ProcCore n) : CoreRec n := { q with proc := p }
+def setProcess (q : RoundLoopRecord n) (p : RoundLoopState n) : RoundLoopRecord n := { q with
+  process := p }
 
-@[simp] theorem setProc_corrupted (q : CoreRec n) (p : ProcCore n) :
-    (q.setProc p).corrupted = q.corrupted := rfl
+@[simp] theorem setProcess_corrupted (q : RoundLoopRecord n) (p : RoundLoopState n) :
+    (q.setProcess p).corrupted = q.corrupted := rfl
 
 /-- Record a delivered `⟨DECIDED, b⟩` from sender `k`. -/
-def recvDec (q : CoreRec n) (k : Fin n) (b : Bool) : CoreRec n :=
-  { q with decIn := Function.update q.decIn k (insert b (q.decIn k)) }
+def receiveDecided (q : RoundLoopRecord n) (k : Fin n) (b : Bool) : RoundLoopRecord n :=
+  { q with
+    decidedDelivered :=
+      Function.update q.decidedDelivered k (insert b (q.decidedDelivered k)) }
 
-@[simp] theorem recvDec_corrupted (q : CoreRec n) (k : Fin n) (b : Bool) :
-    (q.recvDec k b).corrupted = q.corrupted := rfl
+@[simp] theorem receiveDecided_corrupted (q : RoundLoopRecord n) (k : Fin n) (b : Bool) :
+    (q.receiveDecided k b).corrupted = q.corrupted := rfl
 
 /-- The round advance on receiving the coin `c`: adopt the coin if the
 estimate is `⊥`, clear the grade, open the next round. The `⟨DECIDED, b⟩`
 publication the advance carries on an `A` grade (D10) is the network's half of
 the joint step, so no row of it appears here. -/
-def stepRound (q : CoreRec n) (c : Bool) : CoreRec n :=
-  q.setProc
-    { q.proc with
-      est := some (q.proc.est.getD c),
+def stepRound (q : RoundLoopRecord n) (c : Bool) : RoundLoopRecord n :=
+  q.setProcess
+    { q.process with
+      estimate := some (q.process.estimate.getD c),
       lastGrade := none,
-      round := q.proc.round + 1,
+      round := q.process.round + 1,
       phase := .toCallG }
 
-@[simp] theorem stepRound_corrupted (q : CoreRec n) (c : Bool) :
+@[simp] theorem stepRound_corrupted (q : RoundLoopRecord n) (c : Bool) :
     (q.stepRound c).corrupted = q.corrupted := rfl
 
-end CoreRec
+end RoundLoopRecord
 
 end ABA
 end PLTS

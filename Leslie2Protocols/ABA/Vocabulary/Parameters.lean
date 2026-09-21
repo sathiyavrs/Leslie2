@@ -11,14 +11,14 @@ import Leslie2.Systems.Trace
 
 The protocol parameters shared by every system in the ABA case study:
 
-* `ABA.Params` — the number of processes `n`, the corruption budget `f` (with
+* `ABA.Parameters` — the number of processes `n`, the corruption budget `f` (with
   `3 * f < n`), the coin goodness `ε` (with `0 < ε`) and the coin failure
   probability `δ` (with `2 * ε + δ ≤ 1`).
-* `ABA.Params.echoQuorum` — the reliable broadcast's `ECHO` quorum, `(n + f) / 2 + 1`,
+* `ABA.Parameters.echoQuorum` — the reliable broadcast's `ECHO` quorum, `(n + f) / 2 + 1`,
   which is more than `(n + f) / 2` (AFW25's Algorithm 1).
-* `ABA.Params.wccPMF` — *the* coin distribution of the development, over
+* `ABA.Parameters.wccPMF` — *the* coin distribution of the development, over
   `ABA.CoinOutcome`: `bit b` with probability `ε` for each bit `b` (all
-  correct processes get `b`), `adv` (the adversary-controlled outcome `⊤`,
+  correct processes get `b`), `adversarial` (the adversary-controlled outcome `⊤`,
   where delivery happens but the adversary picks each process's bit) with
   probability `1 - (2 * ε + δ)`, and `undelivered` — the coin fails and never
   delivers — with probability `δ`.
@@ -36,7 +36,7 @@ namespace ABA
 most `f` may be corrupted (`3 * f < n`), and an `ε`-good, `δ`-failing weak
 common coin (`0 < ε` and `2 * ε + δ ≤ 1`, so that the two good outcomes carry
 mass and the four coin outcomes have total mass one). -/
-structure Params where
+structure Parameters where
   /-- Number of processes. -/
   n : ℕ
   /-- Corruption budget. -/
@@ -49,9 +49,9 @@ structure Params where
   δ : ENNReal
   /-- The two good outcomes and the failure outcome fit inside a probability:
   `2ε + δ ≤ 1`. -/
-  hδ : 2 * ε + δ ≤ 1
+  hCoinMass : 2 * ε + δ ≤ 1
   /-- The coin's goodness is positive. -/
-  hεpos : 0 < ε
+  hGoodnessPositive : 0 < ε
 
 /-- The outcome of one weak-common-coin resolution: the common bit `b`, the
 adversary-controlled outcome `⊤` (delivery happens, but the adversary picks
@@ -61,7 +61,7 @@ inductive CoinOutcome : Type
   /-- The common bit `b`: every correct process receives `b`. -/
   | bit (b : Bool)
   /-- The adversary-controlled outcome `⊤`. -/
-  | adv
+  | adversarial
   /-- Delivery failure: the resolution never delivers. -/
   | undelivered
   deriving DecidableEq, Repr
@@ -69,75 +69,75 @@ inductive CoinOutcome : Type
 -- Explicit rather than derived: a derived instance leaves `Finset.univ` in a
 -- shape the mass-one proof cannot open.
 instance : Fintype CoinOutcome where
-  elems := {.bit false, .bit true, .adv, .undelivered}
+  elems := {.bit false, .bit true, .adversarial, .undelivered}
   complete := by
     intro o
     cases o with
     | bit b => cases b <;> decide
-    | adv => decide
+    | adversarial => decide
     | undelivered => decide
 
-namespace Params
+namespace Parameters
 
 /-- The two good outcomes alone fit inside a probability: `2ε ≤ 1`. -/
-theorem hε (P : Params) : 2 * P.ε ≤ 1 := le_trans le_self_add P.hδ
+theorem hGoodnessMass (P : Parameters) : 2 * P.ε ≤ 1 := le_trans le_self_add P.hCoinMass
 
 /-- The mass function of `wccPMF`: `ε` on each bit, `1 - (2ε + δ)` on the
 adversarial outcome, `δ` on delivery failure. -/
-noncomputable def wccMass (P : Params) : CoinOutcome → ENNReal
+noncomputable def wccMass (P : Parameters) : CoinOutcome → ENNReal
   | .bit _ => P.ε
-  | .adv => 1 - (2 * P.ε + P.δ)
+  | .adversarial => 1 - (2 * P.ε + P.δ)
   | .undelivered => P.δ
 
 /-- Total mass of the four coin outcomes is one:
 `(ε + ε) + (1 - (2ε + δ)) + δ = 1`. -/
-private theorem wcc_mass (P : Params) : (∑ o : CoinOutcome, P.wccMass o) = 1 := by
+private theorem wcc_mass (P : Parameters) : (∑ o : CoinOutcome, P.wccMass o) = 1 := by
   rw [show (Finset.univ : Finset CoinOutcome)
-      = {.bit false, .bit true, .adv, .undelivered} from rfl,
+      = {.bit false, .bit true, .adversarial, .undelivered} from rfl,
     Finset.sum_insert (by decide), Finset.sum_insert (by decide),
     Finset.sum_insert (by decide), Finset.sum_singleton]
   have key : ∀ x : ENNReal, P.ε + (P.ε + (x + P.δ)) = 2 * P.ε + P.δ + x := by
     intro x; rw [two_mul]; ring
-  rw [wccMass, wccMass, wccMass, wccMass, key, add_tsub_cancel_of_le P.hδ]
+  rw [wccMass, wccMass, wccMass, wccMass, key, add_tsub_cancel_of_le P.hCoinMass]
 
 /-- The outcome distribution of one weak-common-coin resolution: each bit with
 probability `ε`, delivery failure with probability `δ`, and the adversarial
-outcome `adv` (`⊤` in the blueprint) with the remaining mass. -/
-noncomputable def wccPMF (P : Params) : PMF CoinOutcome :=
+outcome `adversarial` (`⊤` in the blueprint) with the remaining mass. -/
+noncomputable def wccPMF (P : Parameters) : PMF CoinOutcome :=
   PMF.ofFintype P.wccMass P.wcc_mass
 
-@[simp] theorem wccPMF_apply_bit (P : Params) (b : Bool) :
+@[simp] theorem wccPMF_apply_bit (P : Parameters) (b : Bool) :
     P.wccPMF (.bit b) = P.ε := by
   simp [wccPMF, wccMass]
 
-@[simp] theorem wccPMF_apply_adv (P : Params) :
-    P.wccPMF .adv = 1 - (2 * P.ε + P.δ) := by
+@[simp] theorem wccPMF_apply_adversarial (P : Parameters) :
+    P.wccPMF .adversarial = 1 - (2 * P.ε + P.δ) := by
   simp [wccPMF, wccMass]
 
-@[simp] theorem wccPMF_apply_undelivered (P : Params) :
+@[simp] theorem wccPMF_apply_undelivered (P : Parameters) :
     P.wccPMF .undelivered = P.δ := by
   simp [wccPMF, wccMass]
 
 /-- The quorum size `n - f` exceeds `f`: any `n - f` processes contain a
 correct one even after removing `f` corrupted ones. -/
-theorem f_lt_n_sub_f (P : Params) : P.f < P.n - P.f := by
+theorem f_lt_n_sub_f (P : Parameters) : P.f < P.n - P.f := by
   have := P.hf; omega
 
 /-- The `ECHO` quorum of the reliable broadcast: more than `(n + f) / 2`
 senders (AFW25's Algorithm 1, line 2). -/
-def echoQuorum (P : Params) : ℕ := (P.n + P.f) / 2 + 1
+def echoQuorum (P : Parameters) : ℕ := (P.n + P.f) / 2 + 1
 
 /-- Two `ECHO` quorums have more than `n + f` members between them:
 `n + f < 2 * echoQuorum`. -/
-theorem n_add_f_lt_two_mul_echoQuorum (P : Params) : P.n + P.f < 2 * P.echoQuorum := by
+theorem n_add_f_lt_two_mul_echoQuorum (P : Parameters) : P.n + P.f < 2 * P.echoQuorum := by
   unfold echoQuorum; omega
 
 /-- The `ECHO` quorum exceeds the corruption budget: `f ≤ (n + f) / 2` since
 `f ≤ n`, so any `ECHO` quorum contains a correct sender. -/
-theorem f_lt_echoQuorum (P : Params) : P.f < P.echoQuorum := by
+theorem f_lt_echoQuorum (P : Parameters) : P.f < P.echoQuorum := by
   have := P.hf; unfold echoQuorum; omega
 
-end Params
+end Parameters
 
 end ABA
 end PLTS

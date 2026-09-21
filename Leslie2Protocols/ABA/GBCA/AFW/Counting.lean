@@ -18,11 +18,11 @@ D24).
 
 Per process, the construction is
 
-* `S ← Gather₁(b)` — the input bit through the first gather instance;
-* the candidate: the bit occurring at least `|S| − f` times in `S`, `⊥` if
-  neither does (`GBCA.cand`);
-* `T ← Gather₂(candidate)` — the candidate through the second instance;
-* the graded return (`GBCA.gradeOf`): `(v, A)` if some bit's entries reach
+* `S ← Gather₁(b)` — the input bit through the first gather instance; * the candidate: the bit
+occurring at least `|S| − f` times in `S`, `⊥` if
+  neither does (`GBCA.candidate`);
+* `T ← Gather₂(candidate)` — the candidate through the second instance; * the graded return
+(`GBCA.gradeOf`): `(v, A)` if some bit's entries reach
   `|T| − f`, else `(v, B)` if they reach `f + 1` — at most one bit can —
   else `(⊥, C)`.
 
@@ -32,16 +32,16 @@ Per process, the construction is
 its entries — and `true` when neither bit is. At the sizes the gather
 specification's `bindCore` allows (`|S| ≥ n − f > 2f`) at most one bit is
 heavy, so the definition is the heavy bit wherever one exists, and its
-complement is then light (`cnt_boundOfCore_light`): a return handing out `v`
+complement is then light (`count_boundOfCore_belowThreshold`): a return handing out `v`
 announces `v`, and a return handing out nothing announces a bit whose
 complement no return can hand out.
 
 ## The entry counts
 
-The per-process counts of a partial map (`gcount`, `gdom`) and of a payload set
-(`APSet.cnt`), the transfer of a heavy value into a payload set below the map
-(`cnt_heavy_of_subMap`), and the `F`-blind committed-entry support count
-`supp1`, read on a gather specification state.
+The per-process counts of a partial map (`valueCount`, `domainCount`) and of a payload set
+(`AcceptedPairs.count`), the transfer of a heavy value into a payload set below the map
+(`count_aboveThreshold_of_subMap`), and the `F`-blind committed-entry support count
+`firstGatherSupport`, read on a gather specification state.
 -/
 
 namespace PLTS
@@ -57,23 +57,23 @@ section Counting
 variable {n : ℕ} {α : Type} [DecidableEq α]
 
 /-- The number of processes whose entry in `g` is `x`. -/
-def gcount (g : Fin n → Option α) (x : α) : ℕ :=
+def valueCount (g : Fin n → Option α) (x : α) : ℕ :=
   (Finset.univ.filter (fun k => g k = some x)).card
 
 /-- The number of processes with an entry in `g`. -/
-def gdom (g : Fin n → Option α) : ℕ :=
+def domainCount (g : Fin n → Option α) : ℕ :=
   (Finset.univ.filter (fun k => g k ≠ none)).card
 
 /-- The number of entries of a payload set at value `x`. -/
-def APSet.cnt (U : APSet n α) (x : α) : ℕ :=
+def AcceptedPairs.count (U : AcceptedPairs n α) (x : α) : ℕ :=
   (U.filter (fun p => p.2 = x)).card
 
 /-- The entries of a sub-map payload set away from `x` are at most the
 map's entries away from `x`: the first components are distinct, and each
 carries an entry of `g` other than `x`. -/
-theorem APSet.card_sub_cnt_le {U : APSet n α} {g : Fin n → Option α}
+theorem AcceptedPairs.card_sub_count_le {U : AcceptedPairs n α} {g : Fin n → Option α}
     (hg : U.subMap g) (x : α) :
-    U.card - APSet.cnt U x ≤ gdom g - gcount g x := by
+    U.card - AcceptedPairs.count U x ≤ domainCount g - valueCount g x := by
   have hsplit := Finset.card_filter_add_card_filter_not
     (s := U) (p := fun p => p.2 = x)
   have himg : (U.filter (fun p => ¬ p.2 = x)).card
@@ -87,7 +87,8 @@ theorem APSet.card_sub_cnt_le {U : APSet n α} {g : Fin n → Option α}
       have h2 := hg q hq.1
       rw [hpq] at h1
       rw [h1] at h2
-      have h3 : p.2 = q.2 := by injection h2
+      have h3 : p.2 = q.2 := by
+        injection h2
       exact Prod.ext hpq h3
     rw [← Finset.card_image_of_injOn hinj]
     refine Finset.card_le_card ?_
@@ -101,7 +102,8 @@ theorem APSet.card_sub_cnt_le {U : APSet n α} {g : Fin n → Option α}
     intro hc
     obtain ⟨-, hc⟩ := hc
     rw [h1] at hc
-    have h4 : p.2 = x := by injection hc
+    have h4 : p.2 = x := by
+      injection hc
     exact hp.2 h4
   have hsub : (Finset.univ.filter (fun k => g k = some x))
       ⊆ (Finset.univ.filter (fun k => g k ≠ none)) := by
@@ -117,12 +119,12 @@ theorem APSet.card_sub_cnt_le {U : APSet n α} {g : Fin n → Option α}
             ∩ (Finset.univ.filter (fun k => g k ≠ none))).card :=
     Finset.card_sdiff
   rw [Finset.inter_eq_left.mpr hsub] at hsdiff
-  unfold APSet.cnt gdom gcount
+  unfold AcceptedPairs.count domainCount valueCount
   omega
 
 /-- A payload set's first components inject into the map's domain. -/
-theorem APSet.card_le_gdom {U : APSet n α} {g : Fin n → Option α}
-    (hg : U.subMap g) : U.card ≤ gdom g := by
+theorem AcceptedPairs.card_le_domainCount {U : AcceptedPairs n α} {g : Fin n → Option α}
+    (hg : U.subMap g) : U.card ≤ domainCount g := by
   have hinj : Set.InjOn Prod.fst ((U : Finset (Fin n × α)) : Set (Fin n × α)) := by
     intro p hp q hq hpq
     rw [Finset.mem_coe] at hp hq
@@ -130,7 +132,8 @@ theorem APSet.card_le_gdom {U : APSet n α} {g : Fin n → Option α}
     have h2 := hg q hq
     rw [hpq] at h1
     rw [h1] at h2
-    have h3 : p.2 = q.2 := by injection h2
+    have h3 : p.2 = q.2 := by
+      injection h2
     exact Prod.ext hpq h3
   rw [← Finset.card_image_of_injOn hinj]
   refine Finset.card_le_card ?_
@@ -144,8 +147,8 @@ theorem APSet.card_le_gdom {U : APSet n α} {g : Fin n → Option α}
   simp
 
 /-- A payload set's entries at `x` count below the map's. -/
-theorem APSet.cnt_le_gcount {U : APSet n α} {g : Fin n → Option α}
-    (hg : U.subMap g) (x : α) : APSet.cnt U x ≤ gcount g x := by
+theorem AcceptedPairs.count_le_valueCount {U : AcceptedPairs n α} {g : Fin n → Option α}
+    (hg : U.subMap g) (x : α) : AcceptedPairs.count U x ≤ valueCount g x := by
   have hinj : Set.InjOn Prod.fst
       ((U.filter (fun p => p.2 = x) : Finset (Fin n × α)) : Set (Fin n × α)) := by
     intro p hp q hq hpq
@@ -154,9 +157,10 @@ theorem APSet.cnt_le_gcount {U : APSet n α} {g : Fin n → Option α}
     have h2 := hg q hq.1
     rw [hpq] at h1
     rw [h1] at h2
-    have h3 : p.2 = q.2 := by injection h2
+    have h3 : p.2 = q.2 := by
+      injection h2
     exact Prod.ext hpq h3
-  unfold APSet.cnt
+  unfold AcceptedPairs.count
   rw [← Finset.card_image_of_injOn hinj]
   refine Finset.card_le_card ?_
   intro k hk
@@ -169,9 +173,9 @@ theorem APSet.cnt_le_gcount {U : APSet n α} {g : Fin n → Option α}
   rw [h1, hp.2]
 
 /-- The entries away from `x` count the domain minus `x`'s count. -/
-theorem card_ne_gcount (g : Fin n → Option α) (x : α) :
+theorem card_ne_valueCount (g : Fin n → Option α) (x : α) :
     (Finset.univ.filter (fun k => g k ≠ none ∧ g k ≠ some x)).card
-      = gdom g - gcount g x := by
+      = domainCount g - valueCount g x := by
   have hset : Finset.univ.filter (fun k => g k ≠ none ∧ g k ≠ some x)
       = (Finset.univ.filter (fun k => g k ≠ none))
         \ (Finset.univ.filter (fun k => g k = some x)) := by
@@ -200,9 +204,9 @@ theorem card_ne_gcount (g : Fin n → Option α) (x : α) :
   rfl
 
 /-- For a Boolean map the domain splits into the two value counts. -/
-theorem gdom_bool_sum (g : Fin n → Option Bool) :
-    gdom g = gcount g true + gcount g false := by
-  unfold gdom gcount
+theorem domainCount_bool_sum (g : Fin n → Option Bool) :
+    domainCount g = valueCount g true + valueCount g false := by
+  unfold domainCount valueCount
   rw [← Finset.card_union_of_disjoint]
   · congr 1
     ext k
@@ -219,16 +223,18 @@ theorem gdom_bool_sum (g : Fin n → Option Bool) :
   · rw [Finset.disjoint_filter]
     intro k _ h1 h2
     rw [h1] at h2
-    have : true = false := by injection h2
+    have : true = false := by
+      injection h2
     exact absurd this (by simp)
 
 /-- **Heavy transfer into a dominated payload set.** A value carried by all
 but `f` of a map's entries is carried by all but `f` of the entries of any
 payload set below that map. -/
-theorem cnt_heavy_of_subMap {P : Params} {U : APSet P.n α} {g : Fin P.n → Option α}
-    {x : α} (hg : U.subMap g) (hheavy : gdom g - P.f ≤ gcount g x) :
-    U.card - P.f ≤ APSet.cnt U x := by
-  have h1 := APSet.card_sub_cnt_le hg x
+theorem count_aboveThreshold_of_subMap {P : Parameters} {U : AcceptedPairs P.n α} {g : Fin P.n →
+  Option α}
+    {x : α} (hg : U.subMap g) (hheavy : domainCount g - P.f ≤ valueCount g x) :
+    U.card - P.f ≤ AcceptedPairs.count U x := by
+  have h1 := AcceptedPairs.card_sub_count_le hg x
   omega
 
 end Counting
@@ -238,23 +244,23 @@ end Counting
 /-- The candidate after the first gather: the bit carried by all but `f` of
 the returned entries, `⊥` if neither is. At the domains the return rules
 allow (`≥ n − f > 2f` entries) at most one bit can be. -/
-def cand (P : Params) (g : Fin P.n → Option Bool) : Option Bool :=
-  if gdom g - P.f ≤ gcount g true then some true
-  else if gdom g - P.f ≤ gcount g false then some false
+def candidate (P : Parameters) (g : Fin P.n → Option Bool) : Option Bool :=
+  if domainCount g - P.f ≤ valueCount g true then some true
+  else if domainCount g - P.f ≤ valueCount g false then some false
   else none
 
-theorem cand_some {P : Params} {g : Fin P.n → Option Bool} {v : Bool}
-    (h : cand P g = some v) : gdom g - P.f ≤ gcount g v := by
-  unfold cand at h
+theorem candidate_some {P : Parameters} {g : Fin P.n → Option Bool} {v : Bool}
+    (h : candidate P g = some v) : domainCount g - P.f ≤ valueCount g v := by
+  unfold candidate at h
   split_ifs at h with h1 h2
   · obtain rfl : true = v := by injection h
     exact h1
   · obtain rfl : false = v := by injection h
     exact h2
 
-theorem cand_none {P : Params} {g : Fin P.n → Option Bool}
-    (h : cand P g = none) (v : Bool) : gcount g v < gdom g - P.f := by
-  unfold cand at h
+theorem candidate_none {P : Parameters} {g : Fin P.n → Option Bool}
+    (h : candidate P g = none) (v : Bool) : valueCount g v < domainCount g - P.f := by
+  unfold candidate at h
   split_ifs at h with h1 h2
   cases v
   · exact lt_of_not_ge h2
@@ -262,15 +268,15 @@ theorem cand_none {P : Params} {g : Fin P.n → Option Bool}
 
 /-- The graded outcome after the second gather: `A` at `|T| − f` entries of
 one bit, `B` at `f + 1`, `C` below both. -/
-def gradeOf (P : Params) (g : Fin P.n → Option (Option Bool)) : GbcaOut :=
-  if gdom g - P.f ≤ gcount g (some true) then .A true
-  else if gdom g - P.f ≤ gcount g (some false) then .A false
-  else if P.f + 1 ≤ gcount g (some true) then .B true
-  else if P.f + 1 ≤ gcount g (some false) then .B false
+def gradeOf (P : Parameters) (g : Fin P.n → Option (Option Bool)) : GBCAOutput :=
+  if domainCount g - P.f ≤ valueCount g (some true) then .A true
+  else if domainCount g - P.f ≤ valueCount g (some false) then .A false
+  else if P.f + 1 ≤ valueCount g (some true) then .B true
+  else if P.f + 1 ≤ valueCount g (some false) then .B false
   else .C
 
-theorem gradeOf_A {P : Params} {g : Fin P.n → Option (Option Bool)} {v : Bool}
-    (h : gradeOf P g = .A v) : gdom g - P.f ≤ gcount g (some v) := by
+theorem gradeOf_A {P : Parameters} {g : Fin P.n → Option (Option Bool)} {v : Bool}
+    (h : gradeOf P g = .A v) : domainCount g - P.f ≤ valueCount g (some v) := by
   unfold gradeOf at h
   split_ifs at h with h1 h2 h3 h4
   · obtain rfl : true = v := by injection h
@@ -278,9 +284,9 @@ theorem gradeOf_A {P : Params} {g : Fin P.n → Option (Option Bool)} {v : Bool}
   · obtain rfl : false = v := by injection h
     exact h2
 
-theorem gradeOf_B {P : Params} {g : Fin P.n → Option (Option Bool)} {v : Bool}
+theorem gradeOf_B {P : Parameters} {g : Fin P.n → Option (Option Bool)} {v : Bool}
     (h : gradeOf P g = .B v) :
-    P.f + 1 ≤ gcount g (some v) ∧ ∀ w, gcount g (some w) < gdom g - P.f := by
+    P.f + 1 ≤ valueCount g (some v) ∧ ∀ w, valueCount g (some w) < domainCount g - P.f := by
   unfold gradeOf at h
   split_ifs at h with h1 h2 h3 h4
   · obtain rfl : true = v := by injection h
@@ -296,8 +302,8 @@ theorem gradeOf_B {P : Params} {g : Fin P.n → Option (Option Bool)} {v : Bool}
     · exact lt_of_not_ge h2
     · exact lt_of_not_ge h1
 
-theorem gradeOf_C {P : Params} {g : Fin P.n → Option (Option Bool)}
-    (h : gradeOf P g = .C) : ∀ w, gcount g (some w) ≤ P.f := by
+theorem gradeOf_C {P : Parameters} {g : Fin P.n → Option (Option Bool)}
+    (h : gradeOf P g = .C) : ∀ w, valueCount g (some w) ≤ P.f := by
   unfold gradeOf at h
   split_ifs at h with h1 h2 h3 h4
   intro w
@@ -308,19 +314,19 @@ theorem gradeOf_C {P : Params} {g : Fin P.n → Option (Option Bool)}
 /-- **The round's bound bit**, read off the first gather's core: the bit
 heavy in `S` — carried by at least `|S| − f` of its entries — and `true` when
 neither bit is. -/
-def boundOfCore (P : Params) (S : APSet P.n Bool) : Bool :=
-  if S.card - P.f ≤ APSet.cnt S true then true
-  else if S.card - P.f ≤ APSet.cnt S false then false
+def boundOfCore (P : Parameters) (S : AcceptedPairs P.n Bool) : Bool :=
+  if S.card - P.f ≤ AcceptedPairs.count S true then true
+  else if S.card - P.f ≤ AcceptedPairs.count S false then false
   else true
 
 /-- A heavy bit is the bound bit. Two bits cannot both be heavy at
 `|S| ≥ n − f`, so the heavy bit is the one the definition selects. -/
-theorem boundOfCore_of_heavy {P : Params} {S : APSet P.n Bool} {v : Bool}
-    (hcard : P.n - P.f ≤ S.card) (hv : S.card - P.f ≤ APSet.cnt S v) :
+theorem boundOfCore_of_aboveThreshold {P : Parameters} {S : AcceptedPairs P.n Bool} {v : Bool}
+    (hcard : P.n - P.f ≤ S.card) (hv : S.card - P.f ≤ AcceptedPairs.count S v) :
     boundOfCore P S = v := by
   have hf := P.hf
-  have hsplit : APSet.cnt S true + APSet.cnt S false ≤ S.card := by
-    unfold APSet.cnt
+  have hsplit : AcceptedPairs.count S true + AcceptedPairs.count S false ≤ S.card := by
+    unfold AcceptedPairs.count
     rw [← Finset.card_union_of_disjoint]
     · exact Finset.card_le_card (Finset.union_subset
         (Finset.filter_subset _ _) (Finset.filter_subset _ _))
@@ -330,17 +336,17 @@ theorem boundOfCore_of_heavy {P : Params} {S : APSet P.n Bool} {v : Bool}
       exact absurd h2 (by simp)
   unfold boundOfCore
   cases v
-  · have hT : ¬ S.card - P.f ≤ APSet.cnt S true := by omega
+  · have hT : ¬ S.card - P.f ≤ AcceptedPairs.count S true := by omega
     rw [if_neg hT, if_pos hv]
   · rw [if_pos hv]
 
 /-- The complement of the bound bit is light: no return can hand it out. -/
-theorem cnt_boundOfCore_light {P : Params} {S : APSet P.n Bool}
+theorem count_boundOfCore_belowThreshold {P : Parameters} {S : AcceptedPairs P.n Bool}
     (hcard : P.n - P.f ≤ S.card) :
-    APSet.cnt S (!boundOfCore P S) < S.card - P.f := by
+    AcceptedPairs.count S (!boundOfCore P S) < S.card - P.f := by
   have hf := P.hf
-  have hsplit : APSet.cnt S true + APSet.cnt S false ≤ S.card := by
-    unfold APSet.cnt
+  have hsplit : AcceptedPairs.count S true + AcceptedPairs.count S false ≤ S.card := by
+    unfold AcceptedPairs.count
     rw [← Finset.card_union_of_disjoint]
     · exact Finset.card_le_card (Finset.union_subset
         (Finset.filter_subset _ _) (Finset.filter_subset _ _))
@@ -354,7 +360,7 @@ theorem cnt_boundOfCore_light {P : Params} {S : APSet P.n Bool}
 /-! ### The support count -/
 
 /-- The `F`-blind committed-entry support count of a bit. -/
-def supp1 {P : Params} (t1 : Gather.SpecState P.n Bool) (v : Bool) : ℕ :=
+def firstGatherSupport {P : Parameters} (t1 : Gather.SpecState P.n Bool) (v : Bool) : ℕ :=
   (Finset.univ.filter (fun id => t1.val id = some v ∨ id ∈ t1.F)).card
 
 end GBCA
