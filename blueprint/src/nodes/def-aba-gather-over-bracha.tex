@@ -3,7 +3,7 @@
   \lean{PLTS.ABA.Gather.StateOverBracha}\lean{PLTS.ABA.Gather.StepOverBracha}\lean{PLTS.ABA.Gather.instanceOverBracha}\lean{PLTS.ABA.Gather.instanceOverBracha_step_iff_row}\leanok
   \uses{def:aba-gather-composition, def:aba-gather-over-broadcast-specification, def:aba-bracha-implementation}
   The fully concrete gather instance: the composition of Definition~\ref{def:aba-gather-composition} with each broadcast coordinate a Bracha instance of Definition~\ref{def:aba-bracha-implementation}.
-  The state is the gather programs and the gather network beside $2n$ Bracha states, and \leandecl{PLTS.ABA.Gather.StepOverBracha} is the rule table that states the composition's transitions over it.
+  The state is the gather programs and the gather network beside $2n$ Bracha states, and \leandecl{PLTS.ABA.Gather.StepOverBracha} lists the composition's transitions over it at the specification's labels, one row per case; it is a relation on that state, and the system is the composition.
   A row that reaches a broadcast instance carries that instance's own row as a hypothesis, through the row characterisation of Definition~\ref{def:aba-bracha-implementation}: a silent step, a return and a corruption enter the rows that way.
   The call is the one place the two levels of alphabet meet.
   A Bracha instance answers its call on the broadcast of $\langle\mathrm{INIT}, x\rangle$ and on its own loop row, and those sit at the two labels of its interface, so the gather call carries the broadcast and the gather call loop moves nothing.

@@ -259,9 +259,9 @@ in the specification, and whether that placement was chosen or forced.
   the first **wait until** block is not a block a process runs to its end but the
   **upon** handler of Algorithm 6's lines 5–7, which multicasts `ECHO`, so a process may
   reach that block and send its `VOTE` with its own `ECHO` still pending. The gather
-  tables carry the same chain: `Gather.StepOverBroadcastSpecification.vote` requires the
-  sender's own `ECHO`, `bindCall` requires its own `VOTE` and no earlier bind call, and
-  `ret` requires the returner's own bind call (D35).
+  programs carry the same chain: `Gather.ProgramStep.sendVote` requires the sender's own
+  `ECHO`, `Gather.ProgramStep.bindCall` requires its own `VOTE` and no earlier bind call,
+  and `Gather.ProgramStep.ret` requires the returner's own bind call (D35).
 - **The denials of the higher cases.** Each rule carries the denials of the cases above
   it in its own block. In a return block the `⊥` rule denies its block's case (a) at
   either bit

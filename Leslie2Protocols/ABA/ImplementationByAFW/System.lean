@@ -45,12 +45,14 @@ loses nothing.
 
 ## The rows
 
-The round rows are the rows of `Gather.StepOverBracha` and `GBCA.ByAFW.roundOverBracha` cut into
-their process half and their network half. A send writes the sender's own record and the network
-records the message; a delivery files the message in the receiver's own local state, dispatched on
-the tag. Three rows are fused (D28): the graded-agreement call broadcasts the input, the `BIND` send
-is a broadcast call, and the first gather's return to a process is that process's call of the second
-gather.
+The round rows are the rows of the programs of `GBCA.ByAFW.roundOverBracha`, written over the
+tagged message type: the rows of its graded-agreement programs (`GBCA.ByAFW.ProgramStep`), of its
+gather programs (`Gather.ProgramStep`) and of the Bracha programs beneath them (`BRB.ProgramStep`).
+Each is the process's half of a step whose network half is a row of the adversary. A send writes
+the sender's own record and the network records the message; a delivery files the message in the
+receiver's own local state, dispatched on the tag. Three rows are fused (D28): the
+graded-agreement call broadcasts the input, the `BIND` send is a broadcast call, and the first
+gather's return to a process is that process's call of the second gather.
 
 The Bracha return is not a row here. A gather guard reads a `2f + 1` `VOTE`
 receipt quorum on the acting process's own local state in the instance —

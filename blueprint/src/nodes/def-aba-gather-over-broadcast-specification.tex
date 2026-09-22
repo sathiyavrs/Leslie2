@@ -2,7 +2,7 @@
   \label{def:aba-gather-over-broadcast-specification}
   \lean{PLTS.ABA.Gather.Message}\lean{PLTS.ABA.Gather.BaseProcessRecord}\lean{PLTS.ABA.Gather.StateOverBroadcastSpecification}\lean{PLTS.ABA.Gather.StepOverBroadcastSpecification}\lean{PLTS.ABA.Gather.instanceOverBroadcastSpecification}\lean{PLTS.ABA.Gather.instanceOverBroadcastSpecification_step_iff_row}\leanok
   \uses{def:aba-gather-composition, def:aba-gather-spec, def:aba-brb-spec, def:aba-networkstate}
-  The gather instance of Definition~\ref{def:aba-gather-composition} whose broadcast tier is $2n$ broadcast specifications, and the rule table that states its transitions: \leandecl{PLTS.ABA.Gather.instanceOverBroadcastSpecification} and \leandecl{PLTS.ABA.Gather.StepOverBroadcastSpecification}.
+  The gather instance of Definition~\ref{def:aba-gather-composition} whose broadcast tier is $2n$ broadcast specifications, \leandecl{PLTS.ABA.Gather.instanceOverBroadcastSpecification}, and the rows that list its transitions at the specification's labels, \leandecl{PLTS.ABA.Gather.StepOverBroadcastSpecification}, a relation on the composition's state.
   The state is the gather programs and the gather network beside $2n$ broadcast-specification states: $\mathit{inputBroadcasts}(k)$, the instance in which $p_k$ broadcasts its input, and $\mathit{bindBroadcasts}(k)$, the instance in which $p_k$ broadcasts its $\mathrm{BIND}$ payload (D32).
   The rules are Algorithm~4 of~\cite{LeslieBP}, which is the binding form of Algorithm~5 of~\cite{AFW25}, with each reliable broadcast held at specification level.
   An entry set $A$ is \emph{approved at $j$} when $j$'s input broadcasts have returned every entry $(k, x) \in A$, which is that instance's return to $j$ and hence its commitment of $x$.
