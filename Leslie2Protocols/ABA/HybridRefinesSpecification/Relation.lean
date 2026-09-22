@@ -31,7 +31,7 @@ in `diracRel` by
 This file holds the two predicates, their frame and reader lemmas, and the
 initial states. The proof that `hybridSpecificationStateRelation` is a simulation relation runs in
 the two files above it: step inversion for `hybrid` and preservation of `Invariant` in
-`HybridRefinesSpecification/InvariantPreservation.lean`, `AbstractState` preservation for the
+`HybridRefinesSpecification/InvariantPreservation/`, `AbstractState` preservation for the
 stutter rows and the assembly in `HybridRefinesSpecification/AbstractStatePreservation.lean`.
 -/
 

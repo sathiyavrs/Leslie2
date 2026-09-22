@@ -2,7 +2,7 @@
 
 Companion design document to the Lean proof in
 `ABA/HybridRefinesSpecification/Relation.lean` (relation + invariant),
-`ABA/HybridRefinesSpecification/InvariantPreservation.lean` (step inversion and invariant
+`ABA/HybridRefinesSpecification/InvariantPreservation/` (step inversion and invariant
 preservation), `ABA/HybridRefinesSpecification/AbstractStatePreservation.lean` (the
 stutter rows and the assembly), `ABA/HybridRefinesSpecification/WeakTransitions.lean`
 (the abstract τ-run lemmas), and `ABA/HybridRefinesSpecification/Simulation.lean` (the per-row
@@ -154,9 +154,9 @@ obligation, and the certificate form needs no reachability argument of its own.
 ## Row dispositions
 
 Concrete steps are read through the Stage-A inversion lemmas of
-`HybridRefinesSpecification/InvariantPreservation.lean`, which take a `hybrid` transition
-back through the two hiding frames to the rows of its four components; each class is one
-row of `HybridRefinesSpecification/Simulation.lean`.
+`HybridRefinesSpecification/InvariantPreservation/StepInversion.lean`, which take a `hybrid`
+transition back through the two hiding frames to the rows of its four components; each class is
+one row of `HybridRefinesSpecification/Simulation.lean`.
 
 Three of the four Stage-A lemmas — `hybrid_step_callABA`, `hybrid_step_retABA`, `hybrid_step_tau` —
 take I0 as a hypothesis. A round loop's row is guarded by its own replacement flag and the ABA

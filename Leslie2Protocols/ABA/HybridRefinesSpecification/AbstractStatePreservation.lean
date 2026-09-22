@@ -18,7 +18,7 @@ assembly of Stages A–C.
   lemmas are instances of one frame argument, `AbstractState.unchangedBy`.
 * **Assembly** — `Invariant.step`: `Invariant` is preserved by every `hybrid` step,
   dispatching on the label class through Stage A's inversion lemmas and calling
-  the matching Stage B helper (`HybridRefinesSpecification/InvariantPreservation.lean`) in each
+  the matching Stage B helper (`HybridRefinesSpecification/InvariantPreservation/`) in each
   case.
 -/
 

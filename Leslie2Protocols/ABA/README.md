@@ -277,11 +277,28 @@ to replace it by the graded-agreement specification.
 | file | lines | what it is |
 |---|---|---|
 | `HybridRefinesSpecification/AbstractStatePreservation.lean` | 323 | `AbstractState` preservation for the stutter rows, and the assembly `Invariant.step`. |
-| `HybridRefinesSpecification/InvariantPreservation.lean` | 3995 | Step inversion for `hybrid`, then preservation of `Invariant` across every row. The bulk of the proof text. |
+| `HybridRefinesSpecification/InvariantPreservation.lean` | 30 | The module that imports the eleven files of `InvariantPreservation/`. |
 | `HybridRefinesSpecification/NonVacuity.lean` | 813 | A concrete 20-step run of `hybrid fourProcesses` to a `retABA` decision, so the simulation about it is not vacuous. |
 | `HybridRefinesSpecification/Relation.lean` | 691 | The core simulation's relation: the lazy abstract state `AbstractState` and the concrete invariant `Invariant`. |
 | `HybridRefinesSpecification/Simulation.lean` | 441 | **`hybridRefinesSpecification`**: the simulation proof itself, one row per concrete step class, and `hybrid_spec`, its soundness inclusion. One axiom check. |
 | `HybridRefinesSpecification/WeakTransitions.lean` | 52 | The abstract-state run lemmas: `SpecStep.decide` as a τ-run (`decide_step`), and a run closed by a visible step (`weakStep_of_run_then_step`). |
+
+**`ABA/HybridRefinesSpecification/InvariantPreservation/`** — step inversion for `hybrid`, and the
+preservation of `Invariant` across the rows of each label class.
+
+| file | lines | what it is |
+|---|---|---|
+| `HybridRefinesSpecification/InvariantPreservation/CallABA.lean` | 224 | `Invariant.step_callABA`: `Invariant` across a call of the ABA interface — a never-corrupted process's genuine external input, or the idle self-loop. |
+| `HybridRefinesSpecification/InvariantPreservation/CallG.lean` | 505 | `Invariant.step_callG`: `Invariant` across a call of the graded-agreement specification, which touches `.call` at the GBCA instance and `.phase` at the core. |
+| `HybridRefinesSpecification/InvariantPreservation/CallW.lean` | 465 | `Invariant.step_callW`: `Invariant` across a call of the coin, over the three rows of `WCC.step_callW_inversion` — the enabledness loop, the recording call, and the resolving call that writes the drawn outcome. |
+| `HybridRefinesSpecification/InvariantPreservation/Fail.lean` | 221 | `Invariant.step_fail`: `Invariant` across a synchronised corruption of all three components, where `F` gains exactly the named process. |
+| `HybridRefinesSpecification/InvariantPreservation/GBCATau.lean` | 343 | `Invariant.step_gbcaTau`: `Invariant` across `bindUnset`, the graded-agreement family's only genuine `τ`-step. |
+| `HybridRefinesSpecification/InvariantPreservation/RetABA.lean` | 153 | `Invariant.step_retABA`: `Invariant` across a return of the ABA interface, which sets `returned` alone. |
+| `HybridRefinesSpecification/InvariantPreservation/RetG.lean` | 943 | `Invariant.step_retG`: `Invariant` across a return of the graded-agreement specification, with the two round-chaining lemmas the proof runs on. |
+| `HybridRefinesSpecification/InvariantPreservation/RetW.lean` | 457 | `Invariant.step_retW`: `Invariant` across a return of the coin, the row that closes a round and sends DECIDED on a grade-2. |
+| `HybridRefinesSpecification/InvariantPreservation/RoundLoopTau.lean` | 344 | `Invariant.step_roundLoopTau`: `Invariant` across a core `τ` — DECIDED delivery, echo, or byzantine injection. |
+| `HybridRefinesSpecification/InvariantPreservation/SpecificationStateCorruption.lean` | 51 | The four readings of corruption at a graded-agreement or coin specification state that the `fail` row consumes. |
+| `HybridRefinesSpecification/InvariantPreservation/StepInversion.lean` | 564 | `hybrid_step_callABA`, `hybrid_step_retABA`, `hybrid_step_fail` and `hybrid_step_tau`: a transition of `hybrid` read back into the rows of its four components, with `corrupted_eq_false_iff`, the reading of a round loop's replacement flag on the corrupted set. |
 
 **`ABA/ImplementationByABDY/`** — ABDY22's protocol as it runs, and its simulation into the composed
 system.

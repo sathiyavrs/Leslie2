@@ -11,7 +11,7 @@ import Leslie2Protocols.ABA.HybridRefinesSpecification.WeakTransitions
 # The core simulation `hybrid ⊑ ABA.spec`
 
 Assembles the relation and invariant of `HybridRefinesSpecification/Relation.lean`, their
-preservation in `HybridRefinesSpecification/InvariantPreservation.lean` and
+preservation in `HybridRefinesSpecification/InvariantPreservation/` and
 `HybridRefinesSpecification/AbstractStatePreservation.lean`, and the weak transitions of
 `HybridRefinesSpecification/WeakTransitions.lean` into `hybridRefinesSpecification`, the
 probabilistic forward simulation `hybrid P ⊑ spec P` along `hybridSpecificationRelation P`.
