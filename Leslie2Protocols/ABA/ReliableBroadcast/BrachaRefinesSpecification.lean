@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.ReliableBroadcast.BrachaComposition
+import Leslie2Protocols.ABA.ReliableBroadcast.BrachaCompositionStepInversion
 import Leslie2Protocols.Framework.FamilySimulation
 
 /-!

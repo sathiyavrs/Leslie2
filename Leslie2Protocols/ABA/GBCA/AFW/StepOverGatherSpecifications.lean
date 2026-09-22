@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.GBCA.AFW.Composition
+import Leslie2Protocols.ABA.GBCA.AFW.CompositionStepInversion
 import Leslie2Protocols.ABA.Composition.GBCAInstanceByABDY.SpecificationOverRoundAlphabet
 import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 

@@ -5,6 +5,7 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.Gather.CompositionStepInversion
+import Leslie2Protocols.ABA.ReliableBroadcast.BrachaCompositionStepInversion
 import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 
 /-!

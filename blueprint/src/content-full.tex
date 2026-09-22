@@ -1946,6 +1946,7 @@ The round's bound bit is the bit the first core carries on at least $|S| - f$ en
 The exclusion certificate --- the first core carrying the excluded bit on fewer than $|S| - f$ entries --- stands from the moment the core is written, so the specification's monotone $excluded$ is certified with no relay machinery, and the exclusion-on-demand discipline of the direct implementation's refinement carries over unchanged: a return needing an exclusion the specification does not yet hold is answered by the run $\mathrm{bindUnset}; \mathrm{ret}$, whose excluded bit is the complement of the bit the return announces.
 See \leanmodule{Leslie2Protocols/ABA/GBCA/AFW/Counting},
 \leanmodule{Leslie2Protocols/ABA/GBCA/AFW/Composition},
+\leanmodule{Leslie2Protocols/ABA/GBCA/AFW/CompositionStepInversion},
 \leanmodule{Leslie2Protocols/ABA/GBCA/AFW/StepOverGatherSpecifications},
 \leanmodule{Leslie2Protocols/ABA/GBCA/AFW/RefinesSpecification},
 \leanmodule{Leslie2Protocols/ABA/GBCA/AFW/GatherSubstitutions} and

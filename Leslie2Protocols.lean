@@ -14,6 +14,7 @@ import Leslie2Protocols.ABA.GBCA.ABDY.RefinesSpecification
 import Leslie2Protocols.ABA.GBCA.ABDY.SpecificationRelation
 import Leslie2Protocols.ABA.GBCA.AFW.Binding
 import Leslie2Protocols.ABA.GBCA.AFW.Composition
+import Leslie2Protocols.ABA.GBCA.AFW.CompositionStepInversion
 import Leslie2Protocols.ABA.GBCA.AFW.Counting
 import Leslie2Protocols.ABA.GBCA.AFW.GatherSubstitutions
 import Leslie2Protocols.ABA.GBCA.AFW.RefinesSpecification
@@ -54,8 +55,10 @@ import Leslie2Protocols.ABA.ImplementationByAFW.Simulation
 import Leslie2Protocols.ABA.ImplementationByAFW.SimulationRows
 import Leslie2Protocols.ABA.ImplementationByAFW.System
 import Leslie2Protocols.ABA.ReliableBroadcast.BrachaComposition
+import Leslie2Protocols.ABA.ReliableBroadcast.BrachaCompositionStepInversion
 import Leslie2Protocols.ABA.ReliableBroadcast.BrachaImplementation
 import Leslie2Protocols.ABA.ReliableBroadcast.BrachaRefinesSpecification
+import Leslie2Protocols.ABA.ReliableBroadcast.BrachaSpecificationOverInstanceAlphabet
 import Leslie2Protocols.ABA.ReliableBroadcast.Specification
 import Leslie2Protocols.ABA.Results
 import Leslie2Protocols.ABA.Specifications.ABA

@@ -5,6 +5,8 @@ Companion design document to the gather-based implementation of graded agreement
 sub-protocol compositions (`ABA/Vocabulary/ProcessAndNetworkState.lean`,
 `ABA/ReliableBroadcast/Specification.lean`,
 `ABA/ReliableBroadcast/BrachaComposition.lean`,
+`ABA/ReliableBroadcast/BrachaSpecificationOverInstanceAlphabet.lean`,
+`ABA/ReliableBroadcast/BrachaCompositionStepInversion.lean`,
 `ABA/ReliableBroadcast/BrachaImplementation.lean`, `ABA/Gather/Specification.lean`,
 `ABA/Gather/MessagesAndCommonCore.lean`, `ABA/Gather/Composition.lean`,
 `ABA/Gather/SpecificationOverInstanceAlphabet.lean`,
@@ -13,7 +15,8 @@ sub-protocol compositions (`ABA/Vocabulary/ProcessAndNetworkState.lean`,
 refinements (`ABA/ReliableBroadcast/BrachaRefinesSpecification.lean`,
 `ABA/Gather/RefinesSpecification.lean`, `ABA/Gather/BroadcastSubstitution.lean`), the
 two-gather round and its three tiers (`ABA/GBCA/AFW/Counting.lean`,
-`ABA/GBCA/AFW/Composition.lean`, `ABA/GBCA/AFW/StepOverGatherSpecifications.lean`,
+`ABA/GBCA/AFW/Composition.lean`, `ABA/GBCA/AFW/CompositionStepInversion.lean`,
+`ABA/GBCA/AFW/StepOverGatherSpecifications.lean`,
 `ABA/GBCA/AFW/RefinesSpecification.lean`, `ABA/GBCA/AFW/GatherSubstitutions.lean`,
 `ABA/GBCA/AFW/Binding.lean`), the assembly at the protocol shape
 (`ABA/ImplementationByAFW/CompositionChain.lean`), and the protocol beneath it

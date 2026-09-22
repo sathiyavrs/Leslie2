@@ -198,9 +198,11 @@ implementation of it.
 
 | file | lines | what it is |
 |---|---|---|
-| `ReliableBroadcast/BrachaComposition.lean` | 983 | **The Bracha instance, composed**: `BRB.brachaInstance`, the `n` per-process programs beside the instance's network with the instance's own events hidden, and the row characterisation `brachaInstance_step_iff_row` that reads a transition off its label. |
+| `ReliableBroadcast/BrachaComposition.lean` | 257 | **The Bracha instance, composed**: `BRB.brachaInstance`, the `n` per-process programs beside the instance's network with the instance's own events hidden, over the interface alphabet in which the call loop is a label of its own. |
+| `ReliableBroadcast/BrachaCompositionStepInversion.lean` | 601 | The transitions of `BRB.brachaInstance` read off their labels: a step of the instance split into a hidden rendezvous and an interface label, a joint step read as the rows of the programs and the network, one program's row and the network's row per label class, the write each row makes on the composed state, and the row characterisation `brachaInstance_step_iff_row`. |
 | `ReliableBroadcast/BrachaImplementation.lean` | 151 | `BRB.BrachaStep`, the rows of the composed instance `BRB.brachaInstance`: Bracha's three message levels in the form of AFW25's Algorithm 1 (D34) over the two-part state, one row per case of `brachaInstance_step_iff_row`. A relation on that state; the system is the composition of `ReliableBroadcast/BrachaComposition.lean`. |
 | `ReliableBroadcast/BrachaRefinesSpecification.lean` | 1082 | `brachaRefinesSpecification`: the Bracha instance refines TS 6, the committed value certified by an ECHO receipt quorum, the commit fired on demand. Carries the relation `BRB.SpecificationRelation`, which the gather substitution lifts, and the instance invariant `BRB.Invariant`, which the simulation of the implementation into its composed system carries. |
+| `ReliableBroadcast/BrachaSpecificationOverInstanceAlphabet.lean` | 218 | `BRB.specificationOverInstanceAlphabet`: the broadcast specification read along `BRB.specificationLabelMap`, which sends the call loop to the call it stands for; the determinacy of the composition's rules, and the sections along which a weak run of the specification is read back over the instance's interface. |
 | `ReliableBroadcast/Specification.lean` | 160 | The reliable-broadcast specification, per leader (blueprint TS 6, safety-only): the input/committed-value split with the guarded commit (D27). |
 
 **`ABA/Gather/`** — gather over reliable broadcast.
@@ -216,7 +218,7 @@ implementation of it.
 | `Gather/RefinesSpecification.lean` | 1018 | `refinesSpecification`: the gather-over-BRB instance refines TS 4. The return run commits the entries it reads, writes the core at `coreOf` of the network state, and returns, in one weak transition. |
 | `Gather/Specification.lean` | 215 | The gather specification (blueprint TS 4): call/commit split (D26) and the write-once core the return labels announce (D29). |
 | `Gather/SpecificationOverInstanceAlphabet.lean` | 157 | `Gather.specificationOverInstanceAlphabet`: the gather specification read along `Gather.specificationLabelMap`, which sends the call loop to the call it stands for, with the sections along which a weak run of the specification is read back over the instance's interface. |
-| `Gather/StepOverBracha.lean` | 588 | `Gather.StepOverBracha`, the rows of `Gather.instanceOverBracha` stated over the composition's state, one per case of `instanceOverBracha_step_iff_row`; a row that reaches a broadcast coordinate carries that Bracha instance's own row as a hypothesis. A relation on that state; the system is the composition of `Gather/Composition.lean`. |
+| `Gather/StepOverBracha.lean` | 589 | `Gather.StepOverBracha`, the rows of `Gather.instanceOverBracha` stated over the composition's state, one per case of `instanceOverBracha_step_iff_row`; a row that reaches a broadcast coordinate carries that Bracha instance's own row as a hypothesis. A relation on that state; the system is the composition of `Gather/Composition.lean`. |
 | `Gather/StepOverBroadcastSpecification.lean` | 679 | `Gather.StepOverBroadcastSpecification`, the rows of `Gather.instanceOverBroadcastSpecification` (blueprint Algorithm 4, the binding form of AFW25's Algorithm 5) stated over the composition's state, one per case of `instanceOverBroadcastSpecification_step_iff_row`. A relation on that state; the system is the composition of `Gather/Composition.lean`. |
 
 **`ABA/GBCA/`** — the graded-agreement specification, and the binding it carries.
@@ -262,11 +264,12 @@ to replace it by the graded-agreement specification.
 | file | lines | what it is |
 |---|---|---|
 | `GBCA/AFW/Binding.lean` | 317 | Binding of the round over the family alphabet: `BindingTraceExtended` and `specificationOverRoundAlphabet_binding`, the round composite `roundOverBracha_refinesSpecification` and `roundOverBracha_specificationTraces`, and the binding each tier carries — `GBCA.roundOverGatherSpecifications_binding`, `GBCA.roundOverBroadcastSpecification_binding`, `GBCA.roundOverBracha_binding`. Six axiom checks. |
-| `GBCA/AFW/Composition.lean` | 1265 | **The graded-agreement round, composed**: `n` round programs beside the round's network, in parallel with two gather instances — `GBCA.ByAFW.roundOverGatherSpecifications` over the gather specifications, `GBCA.ByAFW.roundOverBroadcastSpecification` over gather-over-BRB, and **`GBCA.ByAFW.roundOverBracha`, the gather-based GBCA implementation**, over gather-over-Bracha — read over the family alphabet `ExtendedLabel n`. |
+| `GBCA/AFW/Composition.lean` | 838 | **The graded-agreement round, composed**: `n` round programs beside the round's network, in parallel with two gather instances — `GBCA.ByAFW.roundOverGatherSpecifications` over the gather specifications, `GBCA.ByAFW.roundOverBroadcastSpecification` over gather-over-BRB, and **`GBCA.ByAFW.roundOverBracha`, the gather-based GBCA implementation**, over gather-over-Bracha — read over the family alphabet `ExtendedLabel n`. |
+| `GBCA/AFW/CompositionStepInversion.lean` | 471 | The transitions of `GBCA.ByAFW.roundOverGathers` read off their labels: a step of the round split into a hidden event and a family label, a joint step read as the rows of the round's programs, the round's network and the two gather instances, and one graded-agreement program's row and the round's network's row per label class. |
 | `GBCA/AFW/Counting.lean` | 368 | **The counting of the two-gather round** (AFW25 Algorithm 4 at R = 2, its approximate-agreement subroutine replaced by a local count, D24): the candidate and the grade, `candidate` and `gradeOf`, the bound bit `boundOfCore` read off the first gather's core (D29), and the entry counts the refinement consumes. |
 | `GBCA/AFW/GatherSubstitutions.lean` | 242 | `broadcastSubstitution` and `gatherSubstitution`: the two gather substitutions inside the round, componentwise. |
 | `GBCA/AFW/RefinesSpecification.lean` | 1498 | `refinesSpecification`: the two-gather round refines the GBCA specification. Exclusion and grade certified on the two recorded cores, the surviving bit fixed by the bound bit; exclude-on-demand. |
-| `GBCA/AFW/StepOverGatherSpecifications.lean` | 528 | `GBCA.ByAFW.StepOverGatherSpecifications`, the rows of `GBCA.ByAFW.roundOverGatherSpecifications` stated over the round's state, one per case of `roundOverGatherSpecifications_step_iff_row`. A relation on that state; the system is the composition of `GBCA/AFW/Composition.lean`. |
+| `GBCA/AFW/StepOverGatherSpecifications.lean` | 529 | `GBCA.ByAFW.StepOverGatherSpecifications`, the rows of `GBCA.ByAFW.roundOverGatherSpecifications` stated over the round's state, one per case of `roundOverGatherSpecifications_step_iff_row`. A relation on that state; the system is the composition of `GBCA/AFW/Composition.lean`. |
 
 **`ABA/HybridRefinesSpecification/`** — the core simulation of the blueprint's §3,
 `hybrid ⊑ ABA.spec`, and its witnesses.
@@ -357,11 +360,12 @@ carries: `GBCA/Specification.lean` with `GBCA/SpecificationSafety.lean`'s
 `Gather/CommonCoreAtSpecification.lean`'s `specInst_core`.
 
 For the gather-based chain, by module docstring: `ReliableBroadcast/BrachaComposition.lean` →
-`Gather/Composition.lean` → `Gather/CompositionStepInversion.lean` → `GBCA/AFW/Composition.lean` →
-`GBCA/AFW/StepOverGatherSpecifications.lean` → `ImplementationByAFW/CompositionChain.lean` →
-`ImplementationByAFW/Simulation.lean`. The first four give the components of one level each, the
-alphabet they speak and the row characterisation that reads a transition of the composition off its
-label; `GBCA/AFW/StepOverGatherSpecifications.lean` is the row table the counting refinement runs
+`ReliableBroadcast/BrachaCompositionStepInversion.lean` → `Gather/Composition.lean` →
+`Gather/CompositionStepInversion.lean` → `GBCA/AFW/Composition.lean` →
+`GBCA/AFW/CompositionStepInversion.lean` → `GBCA/AFW/StepOverGatherSpecifications.lean` →
+`ImplementationByAFW/CompositionChain.lean` → `ImplementationByAFW/Simulation.lean`. The first six
+give the components of one level each, the alphabet they speak and the row characterisation that
+reads a transition of the composition off its label; `GBCA/AFW/StepOverGatherSpecifications.lean` is the row table the counting refinement runs
 on; `ImplementationByAFW/CompositionChain.lean` is the assembly at the protocol shape and
 `ImplementationByAFW/Simulation.lean` the simulation into `ImplementationByAFW/System.lean`, the
 system that runs, over the row answers of `ImplementationByAFW/SimulationRows.lean`. The two
