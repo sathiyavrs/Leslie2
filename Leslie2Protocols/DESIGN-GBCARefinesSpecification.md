@@ -1,8 +1,11 @@
 # Design — the per-instance GBCA refinement `GBCA.ByABDY.implementation ⊑ GBCA.specInst`
 (`refinesSpecification`)
 
-Companion design document to the Lean proof in `ABA/GBCA/ABDY/RefinesSpecification.lean` (relation,
-invariant, run lemmas, per-row simulation), against the implementation shape in
+Companion design document to the Lean proof in `ABA/GBCA/ABDY/Invariant.lean` (the inductive
+invariant), `ABA/GBCA/ABDY/ExclusionCertificate.lean` (the exclude certificates),
+`ABA/GBCA/ABDY/SpecificationRelation.lean` (the relation, the specification guards and the run
+lemmas) and `ABA/GBCA/ABDY/RefinesSpecification.lean` (the per-row simulation), against the
+implementation shape in
 `ABA/GBCA/ABDY/Implementation.lean` (deviation D18: all five message levels of ABDY22's Algorithm 6)
 and the specification shape in `ABA/GBCA/Specification.lean` (deviation D19: the exclusion set
 `excluded : Finset Bool` as the state shape, with the bound value announced on the return labels,
@@ -547,7 +550,8 @@ theorem voteCount_le_receiveMessage (s : ImplementationState n) (i j : Fin n) (m
 
 ### Certificate and derivation lemmas
 
-Collected statements (all defined in `GBCA/ABDY/RefinesSpecification.lean` unless noted):
+Collected statements (all defined in `GBCA/ABDY/ExclusionCertificate.lean`, the two grade lemmas
+in `GBCA/ABDY/SpecificationRelation.lean`):
 
 ```lean
 def VoteQuorumAgainst (P : Parameters) (s : ImplementationState P.n) (b : Bool) : Prop := …   -- § exclude certificates

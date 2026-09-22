@@ -382,7 +382,7 @@ The \texttt{inputLoop} self-loop absorbs $\mathrm{callABA}$ at a process whose i
 The work that carries this implementation into Transition System~2 is done once, on one round instance.
 The relation reads the specification's call entries, returns and corrupted set straight off the implementation state, and certifies the two fields the protocol does not hold, $excluded$ and $grade$, by \emph{receipt patterns}: $F$-blind counts on the delivered sets, monotone along every execution, that witness the value of such a field; an exclusion is fired on demand, as a two-step weak run under a return that needs it, which is why the obligation is discharged by a weak transition rather than by a single step.
 The exclusion set is also an equation on the round's bound bit: it is empty while the bit is unwritten and the singleton of the bit's complement once a return has written it.
-See \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/RefinesSpecification}.
+See \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Invariant}, \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/ExclusionCertificate}, \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/SpecificationRelation} and \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/RefinesSpecification}.
 
 \input{nodes-min/thm-gbca-implementation-refines-specification}
 

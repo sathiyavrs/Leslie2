@@ -230,8 +230,11 @@ implementation of it.
 
 | file | lines | what it is |
 |---|---|---|
+| `GBCA/ABDY/ExclusionCertificate.lean` | 329 | The exclude certificates `EchoReceiptQuorum` (Case A), `VoteQuorumAgainst` (Case B) and their disjunction `ExclusionCertificate`: monotone receipt evidence that a bit can never gain grade-≥1 support. The derivation chains read a certificate off a return's own receipts. |
 | `GBCA/ABDY/Implementation.lean` | 886 | **The GBCA implementation**, ABDY22's Algorithm 6 in full (D18). Its state is the round records beside the round's network state, which holds the round's bound bit (D29). |
-| `GBCA/ABDY/RefinesSpecification.lean` | 2039 | The per-instance refinement `refinesSpecification`, by exclude-on-demand: `excluded` carried as a receipt-pattern certificate; its soundness inclusion `implementation_refines` with the binding it carries, `implementation_binding`; and the broadcast compatibility of the relation with the `fail` act (`specificationRelation_corrupt`), which the family lifting consumes. Two axiom checks. |
+| `GBCA/ABDY/Invariant.lean` | 807 | The inductive invariant `Invariant` of the implementation instance: the corruption budget, delivery soundness, protocol conformance and write-once recording of correct multicasts, participation, budget-robust input origin, and the `f + 1` genuine-holder support `InputSupport` (D15). `Invariant.initial` and `Invariant.step` hold it at the initial state and along every row. |
+| `GBCA/ABDY/RefinesSpecification.lean` | 661 | The per-instance refinement `refinesSpecification`, by exclude-on-demand; its soundness inclusion `implementation_refines` with the binding it carries, `implementation_binding`; and the broadcast compatibility of the relation with the `fail` act (`specificationRelation_corrupt`), which the family lifting consumes. Two axiom checks. |
+| `GBCA/ABDY/SpecificationRelation.lean` | 344 | The simulation relation `specificationRelation`: the specification's `call`, `ret` and `F` read off the implementation state, `excluded` and `grade` carried as receipt-pattern certificates, and the round's bound bit tied to `excluded`. The specification's guards and the two-step exclusion-then-return runs are derived from it. |
 
 **`ABA/Composition/`** — the components the composed systems are built from, the composed
 system over them, and the hybrid.

@@ -93,8 +93,8 @@ rest of the round alone. The three return transitions are cases (1), (2), (3) of
 with `|Valid| > 1`. Beside the receipts of its own case, each return reads the receipts named by the
 cases above it in the chain, the process's own `ECHO5` field, and the call record. The binding and
 grade information that the specification tracks is an abstraction of these receipt patterns and
-lives only on the specification; the refinement (`GBCA/ABDY/RefinesSpecification.lean`) supplies it
-from the receipts.
+lives only on the specification; the simulation relation
+(`GBCA/ABDY/SpecificationRelation.lean`) supplies it from the receipts.
 
 ## The round's bound bit
 
