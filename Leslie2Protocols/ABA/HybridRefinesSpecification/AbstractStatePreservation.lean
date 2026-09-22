@@ -111,9 +111,8 @@ theorem AbstractState.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.
 `AbstractStateUnchanged`. -/
 theorem AbstractState.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} {a : SpecState P.n}
-    (hA : AbstractState P g c w a) (hI : Invariant P g c w) (r : ℕ) (id : Fin P.n) (out :
-      GBCAOutput)
-    (bnd : Bool)
+    (hA : AbstractState P g c w a) (hI : Invariant P g c w) (r : ℕ) (id : Fin P.n)
+    (out : GBCAOutput) (bnd : Bool)
     {μr : PMF (GBCA.SpecState P.n)} (hstepG : GBCA.Step P r (g r) (.retG r id out bnd) μr)
     {μc : PMF (ABAState P)}
     (hstepC :

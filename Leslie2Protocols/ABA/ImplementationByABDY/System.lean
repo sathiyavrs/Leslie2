@@ -219,7 +219,7 @@ variable (P : Parameters) (w : NetworkState P.n)
 
 /-! The two return rows, which do write. The ghost record of the round the
 label names holds the announced bit after the write, and every other round's
-record stands still. -/
+record is unchanged. -/
 
 @[simp] theorem writeGhost_retG_self (r : ℕ) (id : Fin P.n) (out : GBCAOutput)
     (bnd : Bool) :

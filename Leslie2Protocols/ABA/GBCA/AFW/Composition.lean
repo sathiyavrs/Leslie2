@@ -54,7 +54,7 @@ over it.
 A family label outside the round's interface — the ABA API, the coin ports and the rendezvous of the
 protocol's own networks — has the image `ProgramLabel.outside`, on which neither a program nor the
 round's network has a row. The round has no transition on such a label, and the family supplies the
-idle. Corruption is the exception: it has no image at all, so the round's programs stand still on it
+idle. Corruption is the exception: it has no image at all, so the round's programs remain unchanged on it
 while the two gather instances move.
 
 The round-internal alphabet is `RoundLabel n = ExtendedLabel n ⊕ RoundEvent n`. Its three events are
@@ -63,7 +63,7 @@ hidden before anything outside sees the round: `roundOverGathers` speaks `Extend
 ## Corruption
 
 `fail id` is a label of the interface. No program and no row of the round's network fires on it: the
-round's programs stand still and the two gather instances corrupt together. In the family of rounds
+round's programs remain unchanged and the two gather instances corrupt together. In the family of rounds
 the label is the broadcast act (`GBCA.ByABDY.isFailLabel`), applied to every round at once, and
 `GBCA.ByAFW.corruptAll` is the transform it applies — the two gather transforms, the programs and
 the bound bit untouched. -/
@@ -166,7 +166,7 @@ instance {n : ℕ} : Silent (ProgramLabel n) := ⟨ProgramLabel.tau⟩
 
 A program and the round's network are read along `programLabelMap`, the first gather along
 `firstGatherLabelMap`, the second along `secondGatherLabelMap`. A label with no image at a component
-leaves that component standing still. -/
+leaves that component unchanged. -/
 
 /-- The projection of the round-internal alphabet onto a program's alphabet. It
 reads a Byzantine call as a call, a Byzantine return as a return, and the two
@@ -859,7 +859,7 @@ theorem roundOverGathers_step_iff (P : Parameters) (r : ℕ) {G₁ G₂ : Type}
 
 /-! ### The transitions of the round's programs
 
-On a label with no image at a program the round's programs stand still. On a label with an image
+On a label with no image at a program the round's programs remain unchanged. On a label with an image
 every program takes its row at that image and the round's network takes its. -/
 
 section RoundPrograms
@@ -895,7 +895,7 @@ theorem programsProduct_inversion (hL : L ≠ (Silent.τ : RoundLabel P.n))
       ∀ i, ((gbcaProgram P r i).mapIdle (programLabelMap P.n)).step (u i) L (PMF.pure (x i)) :=
   Gather.synchronisedProductMapIdle_inversion (fun i => gbcaProgram_isLTS P r i) hL h
 
-/-- **The round's programs stand still** on a label with no image at a program. -/
+/-- **The round's programs remain unchanged** on a label with no image at a program. -/
 theorem roundPrograms_idle_inversion (hlp : programLabelMap P.n L = none)
     {μ : PMF ((∀ _ : Fin P.n, ProcessRecord P.n) × Option Bool)}
     (h : (roundPrograms P r).step (u, v) L μ) : μ = PMF.pure (u, v) := by
@@ -1239,8 +1239,8 @@ theorem networkStep_callLoop {id : Fin P.n} {b : Bool}
   (h : NetworkStep P r w (.callLoop r id b) μ) :
     μ = PMF.pure w := by cases h; rfl
 
-theorem networkStep_firstGatherReturn {id : Fin P.n} {g : Fin P.n → Option Bool} {C :
-  Gather.AcceptedPairs P.n Bool}
+theorem networkStep_firstGatherReturn {id : Fin P.n} {g : Fin P.n → Option Bool}
+    {C : Gather.AcceptedPairs P.n Bool}
     (h : NetworkStep P r w (.firstGatherReturn id g C) μ) :
     μ = PMF.pure (some (w.getD (boundOfCore P C))) := by cases h; rfl
 

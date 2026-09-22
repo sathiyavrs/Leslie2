@@ -334,7 +334,7 @@ theorem stepRound_publish (C : ∀ _ : Fin P.n, RoundLoopRecord P.n) (A : ABANet
 
 /-- Corruption (deviations D1, D23): total, Dirac, monotone in `F`. The
 network takes `id` into the corrupted set and the named round loop takes the
-replacement flag; every other round loop stands still. -/
+replacement flag; every other round loop is unchanged. -/
 def corrupt (P : Parameters) (id : Fin P.n) (s : ABAState P) : ABAState P :=
   (Function.update s.1 id { s.1 id with corrupted := true }, ABANetworkState.corrupt P id s.2)
 

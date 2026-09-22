@@ -160,7 +160,7 @@ gather specification's own core is the value its return labels announce (D29).
 Which component owns a payload is a design decision and not bookkeeping. A gather's
 `BIND` payloads are sent by reliable broadcast rather than on the gather network, so a
 committed payload is write-once whatever later happens to its sender. A payload held in
-a network stands only on its sender's correctness, and D1 withdraws that at any moment.
+a network is fixed only by its sender's correctness, and D1 withdraws that at any moment.
 The decision is legible in the message types: `Gather.Message` carries `echo` and `vote`
 and no `BIND` constructor, and at the protocol a bind payload is tagged `firstGatherBindBroadcasts`
 or

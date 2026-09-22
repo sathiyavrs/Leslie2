@@ -192,8 +192,8 @@ map lies above the recorded core.
 
 **Why the counting closes here.** `BIND` payloads are sent by reliable broadcast
 rather than on the gather network, so a committed payload is write-once
-whatever happens to its sender afterwards, where a multicast payload stands
-only on its sender's correctness and D1 withdraws that at any moment. A gather
+whatever happens to its sender afterwards, where a multicast payload is fixed
+only by its sender's correctness and D1 withdraws that at any moment. A gather
 instance holds one bind-broadcast instance per process, and the `BIND` send is
 that instance's call, a hidden event of the composition (D32), which is what
 makes the objects the certificate counts stable.
@@ -424,7 +424,7 @@ visible `retG`, and a
 delivery that completes a vote quorum by the instance's delivery then its return, which records the
 returned value (`roundProjection_firstGatherReturn_secondGatherCall`,
 `roundProjection_secondGatherReturn_retG`, the `_ret` delivery lemmas). The remaining labels move
-the round loop and the ABA network while the family of rounds stands still, and corruption is one
+the round loop and the ABA network while the family of rounds is unchanged, and corruption is one
 broadcast, the corrupted set the adversary holds being the corrupted set of every network under the
 same guard.
 

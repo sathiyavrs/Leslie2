@@ -261,7 +261,7 @@ inductive RoundLoopStep (P : Parameters) (j : Fin P.n) :
       (hid : id ≠ j) :
       RoundLoopStep P j c (Sum.inr (.gbcaCallLoop r id b)) (PMF.pure c)
   /-- A Byzantine graded-agreement call (D11) writes a round record and no round-loop data: every
-  round loop, the named one included, stands still. -/
+  round loop, the named one included, is unchanged. -/
   | byzantineCallGIdle (c : RoundLoopRecord P.n) (r : ℕ) (k : Fin P.n) (b : Bool) :
       RoundLoopStep P j c (Sum.inr (.byzantineCallG r k b)) (PMF.pure c)
   /-- A Byzantine graded-agreement call against an already-called round record (D11): nothing moves
@@ -603,7 +603,7 @@ theorem roundLoopStep_retW_foreign {r : ℕ} {id : Fin P.n} {co : Bool} (hid : i
   case corruptedIdle => rfl
 
 /-- The process's own corruption (D23): the flag goes up on a program not yet
-replaced, and a replaced program stands still. -/
+replaced, and a replaced program is unchanged. -/
 theorem roundLoopStep_fail_own (h : RoundLoopStep P j c (Sum.inl (.fail j)) ν) :
     (c.corrupted = false ∧ ν = PMF.pure { c with corrupted := true }) ∨
     (c.corrupted = true ∧ ν = PMF.pure c) := by

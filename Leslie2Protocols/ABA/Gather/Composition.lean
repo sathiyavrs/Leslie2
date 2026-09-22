@@ -52,7 +52,7 @@ are hidden before anything outside sees the instance: `instanceOverBroadcasts` s
 A broadcast instance joins the composition along a pullback — `inputBroadcastLabelMap k` for
 the instance broadcasting `k`'s input, `bindBroadcastLabelMap q` for the instance
 broadcasting `q`'s `BIND` payload. The pullback names the instance: a label
-carrying another instance's index has no image, and that instance stands still.
+carrying another instance's index has no image, and that instance is unchanged.
 Corruption and the silent label have an image at every instance, so `fail` is a
 broadcast across the whole composition.
 
@@ -907,7 +907,7 @@ variable {n : ℕ} {B Lbl Λ : Type} [Silent Λ] {A : ∀ _ : Fin n, System B Lb
   {μ : PMF (∀ _ : Fin n, B)}
 
 omit [Silent Λ] in
-/-- An instance whose pullback has no image at the label stands still. -/
+/-- An instance whose pullback has no image at the label is unchanged. -/
 theorem lift_idle {A₀ : System B Lbl} {ψ : Λ → Option Lbl} {c : B} (hψ : ψ L = none) :
     (A₀.mapIdle ψ).step c L (PMF.pure c) :=
   (System.mapIdle_step_none hψ _).mpr rfl
@@ -937,7 +937,7 @@ theorem synchronisedProductMapIdle_pure (hL : L ≠ Silent.τ)
   rw [System.synchronisedProduct_step]
   exact Or.inl ⟨hL, fun k => PMF.pure (a' k), h, (piPMF_pure a').symm⟩
 
-/-- On a label no pullback has an image at, the lifted family stands still. -/
+/-- On a label no pullback has an image at, the lifted family is unchanged. -/
 theorem synchronisedProductMapIdle_none (hL : L ≠ Silent.τ) (hφ : ∀ k, φ k L = none) :
     (System.synchronisedProduct (fun k => (A k).mapIdle (φ k))).step a L (PMF.pure a) :=
   synchronisedProductMapIdle_pure hL fun k => lift_idle (hφ k)
@@ -1134,7 +1134,8 @@ theorem instanceOverBroadcastsExtended_tau_network
   exact Or.inr (Or.inr ⟨rfl, PMF.pure w', hn, (prodPMF_pure_pure _ _).symm⟩)
 
 /-- Build a silent transition of the two tiers from a silent step of one input
-instance. -/ theorem instanceOverBroadcastsExtended_tau_in {k : Fin P.n} {c : B}
+instance. -/
+theorem instanceOverBroadcastsExtended_tau_input {k : Fin P.n} {c : B}
     (h : (BIn k).step (a k) (Silent.τ : BRB.InstanceLabel P.n X) (PMF.pure c)) :
     (instanceOverBroadcastsExtended P X BIn BBind).step ((u, w), (a, b))
     (Silent.τ : GatherLabel P.n X) (PMF.pure ((u, w), (Function.update a k c, b))) := by
@@ -1147,7 +1148,8 @@ instance. -/ theorem instanceOverBroadcastsExtended_tau_in {k : Fin P.n} {c : B}
       (prodPMF_pure_pure _ _).symm⟩)
 
 /-- Build a silent transition of the two tiers from a silent step of one bind
-instance. -/ theorem instanceOverBroadcastsExtended_tau_bind {q : Fin P.n} {d : B'}
+instance. -/
+theorem instanceOverBroadcastsExtended_tau_bind {q : Fin P.n} {d : B'}
     (h : (BBind q).step (b q) (Silent.τ : BRB.InstanceLabel P.n (AcceptedPairs P.n X)) (PMF.pure d))
     :
     (instanceOverBroadcastsExtended P X BIn BBind).step ((u, w), (a, b))
@@ -1190,7 +1192,8 @@ theorem instanceOverBroadcasts_label_step {l : InstanceLabel P.n X} (hl : l ≠ 
   simpa using hl
 
 /-- An injection of the gather network is a silent transition of the
-instance. -/ theorem instanceOverBroadcasts_tau_network
+instance. -/
+theorem instanceOverBroadcasts_tau_network
     (hn : NetworkStep P w (Silent.τ : GatherLabel P.n X) (PMF.pure w')) :
     (instanceOverBroadcasts P X BIn BBind).step ((u, w), (a, b)) (Sum.inl Label.tau)
     (PMF.pure ((u, w'), (a, b))) :=
@@ -1199,12 +1202,12 @@ instance. -/ theorem instanceOverBroadcasts_tau_network
 
 /-- A silent step of one input instance is a silent transition of the
 instance. -/
-theorem instanceOverBroadcasts_tau_in {k : Fin P.n} {c : B}
+theorem instanceOverBroadcasts_tau_input {k : Fin P.n} {c : B}
     (h : (BIn k).step (a k) (Silent.τ : BRB.InstanceLabel P.n X) (PMF.pure c)) :
     (instanceOverBroadcasts P X BIn BBind).step ((u, w), (a, b)) (Sum.inl Label.tau)
       (PMF.pure ((u, w), (Function.update a k c, b))) :=
   (instanceOverBroadcasts_step_iff P X BIn BBind _ _ _).mpr (Or.inr
-    (instanceOverBroadcastsExtended_tau_in h))
+    (instanceOverBroadcastsExtended_tau_input h))
 
 /-- A silent step of one bind instance is a silent transition of the
 instance. -/
@@ -1570,7 +1573,7 @@ theorem stateOverBroadcasts_setProcess_recordSent {j : Fin P.n} {pr : ProcessRec
   rw [programFunction_update hj hne]; rfl
 
 omit [DecidableEq X] in
-/-- The programs stand still and the network state is untouched. -/
+/-- The programs remain unchanged and the network state is untouched. -/
 theorem stateOverBroadcasts_idle (hall : ∀ i, x i = u i) :
     (((x, w), (a, b)) : StateOverBroadcasts P.n X B B') = ((u, w), (a, b)) := by
   rw [funext hall]

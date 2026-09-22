@@ -102,7 +102,7 @@ private theorem match_prod (P : Parameters) {x : ∀ _ : Fin P.n, AFW.ProcessRec
   refine ⟨ν.map (fun o => PMF.pure ((G, C, A, o) : ComposedState P)),
     ⟨ν.map (fun o => (((x, w, o) : ProtocolState P),
       PMF.pure ((G, C, A, o) : ComposedState P))), ?_, ?_, ?_⟩, ?_⟩
-  · rw [PMF.map_comp, prodPMF_pure₂]
+  · rw [PMF.map_comp, prodPMF_two_pure_factors]
     rfl
   · rw [PMF.map_comp]
     rfl
@@ -110,7 +110,7 @@ private theorem match_prod (P : Parameters) {x : ∀ _ : Fin P.n, AFW.ProcessRec
     rw [PMF.mem_support_map_iff] at hq
     obtain ⟨o, ho, rfl⟩ := hq
     exact ⟨(G, C, A, o), rfl, h o ho⟩
-  · rw [PMF.bind_map, prodPMF_pure₃]
+  · rw [PMF.bind_map, prodPMF_three_pure_factors]
     rfl
 
 /-! ### Reading a row off a label the process owns
@@ -674,7 +674,7 @@ theorem roundInvariant_of_broadcastReturnsInvariant {u : ∀ _ : Fin P.n, AFW.Pr
       hI r
 
 /-- **The broadcast invariant across a row**: the round the row names carries
-it, and every other round stands still. -/
+it, and every other round is unchanged. -/
 theorem broadcastReturnsInvariant_update {u x : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     {w v : NetworkState P.n} {r : ℕ} {Z : GBCA.ByAFW.RoundStateOverBracha P.n}
     (hI : BroadcastReturnsInvariant P u w)
@@ -756,7 +756,7 @@ theorem roundProjection_fail {P : Parameters} (u : ∀ _ : Fin P.n, AFW.ProcessR
     split_ifs <;> rfl
 
 /-- **The whole family of rounds after a Byzantine injection**: the round the
-message names moves, the rest stand still. -/
+message names moves, the rest remain unchanged. -/
 theorem roundProjectionFamily_byzantine {P : Parameters} (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n)
     (w : NetworkState P.n) (r : ℕ) (k : Fin P.n) (m : Message P.n) :
     (fun r' => roundProjection P u (w.recordGBCASend r k m) r') = Function.update
@@ -1377,9 +1377,8 @@ return followed by the round's own return, the grade read off the second
 gather's output. -/
 theorem roundRecord_answer_retG (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     (w : NetworkState P.n) {j : Fin P.n} {c : RoundLoopRecord P.n} {p : RoundRecordMap P.n}
-    (hu : (u j).2 = p) (hI : BroadcastReturnsInvariant P u w) {r : ℕ} {out : GBCAOutput} {bnd :
-      Bool}
-    {μ : PMF (AFW.ProcessRecord P.n)} (hbnd : bnd = ghostOutput P w r j out)
+    (hu : (u j).2 = p) (hI : BroadcastReturnsInvariant P u w) {r : ℕ} {out : GBCAOutput}
+    {bnd : Bool} {μ : PMF (AFW.ProcessRecord P.n)} (hbnd : bnd = ghostOutput P w r j out)
     (hset : ∀ i, (((u i).2.roundRecord r).secondGather.process).input ≠ none →
       (w.ghostRecord r).2.2 ≠ none)
     (h : RoundStep P j (c, p) (Sum.inl (.retG r j out bnd)) μ) :
@@ -1445,7 +1444,7 @@ theorem roundRecord_answer_retG (P : Parameters) {u : ∀ _ : Fin P.n, AFW.Proce
       exact roundInvariant_of_unchanged hR₂ rfl rfl
 
 /-- The call against an already-called record: the round loop moves, the round
-takes its input-enabledness loop and the view stands still. -/
+takes its input-enabledness loop and the view is unchanged. -/
 theorem roundRecord_answer_gbcaCallLoop (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     (w : NetworkState P.n) {j : Fin P.n} {c : RoundLoopRecord P.n} {p : RoundRecordMap P.n}
     (hu : (u j).2 = p) {r : ℕ} {b : Bool} {μ : PMF (AFW.ProcessRecord P.n)}
@@ -1575,7 +1574,7 @@ private theorem match_run (P : Parameters) {x : ∀ _ : Fin P.n, AFW.ProcessReco
   obtain ⟨Ω, hr, hb⟩ := match_pure P hrel
   exact ⟨Ω, hr, hb ▸ composedHidden_weakTau P C A o hG⟩
 
-/-- A composed state that stands still. -/
+/-- A composed state that is unchanged. -/
 private theorem match_unchanged (P : Parameters) {s : ProtocolState P} {t : ComposedState P}
     (h : ProtocolRelation P s t) :
     ∃ Ω : PMF (PMF (ComposedState P)),
@@ -1587,7 +1586,7 @@ private theorem match_unchanged (P : Parameters) {s : ProtocolState P} {t : Comp
 /-! ### The matching on the silent label
 
 The implementation's own `terminate` row writes no coordinate the relation reads,
-so the composed answer to it is to stand still; the adversary's two injections
+so the composed answer to it is to remain unchanged; the adversary's two injections
 are answered by a transition. -/
 
 theorem match_tau (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}

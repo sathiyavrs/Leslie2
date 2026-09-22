@@ -209,7 +209,7 @@ theorem gbcaInstanceFamily_owned (P : Parameters) (G : ℕ → GBCA.ByABDY.Imple
   rw [GBCA.ByABDY.gbcaInstanceFamily, System.family_step_iff]
   exact Or.inr (Or.inl ⟨r, hL, PMF.pure X, h, by rw [PMF.pure_map]⟩)
 
-/-- An owned label whose instance stands still. -/
+/-- An owned label whose instance is unchanged. -/
 theorem gbcaInstanceFamily_owned_id (P : Parameters) (G : ℕ → GBCA.ByABDY.ImplementationState P.n)
   (r : ℕ)
     {L : ExtendedLabel P.n} (hL : GBCA.ByABDY.roundOwnsLabel L = some r)
@@ -412,7 +412,7 @@ theorem gbcaSpecificationFamily_owned_inversion (P : Parameters) {G : ℕ → GB
   · rw [hL] at hown; exact absurd hown (by simp)
 
 /-- A round's own row, read into the specification: the label the round owns is answered by that
-round, every other round standing still. -/
+round, every other round unchanged. -/
 theorem gbcaSpecificationFamily_owned (P : Parameters) {G : ℕ → GBCA.SpecState P.n}
     {L : ExtendedLabel P.n} {l₀ : Label P.n} {r : ℕ} {X : GBCA.SpecState P.n}
     (hown : GBCA.ByABDY.roundOwnsLabel L = some r)
@@ -518,7 +518,7 @@ theorem wccFamily_owned_inversion (P : Parameters) {o : ℕ → WCC.SpecState P.
   · rw [hr] at hr''; exact absurd hr'' (by simp)
 
 /-- A round of the coin oracle answers the label it owns, every other round
-standing still. -/
+unchanged. -/
 theorem wccFamily_owned (P : Parameters) (o : ℕ → WCC.SpecState P.n) {l : Label P.n}
     {r : ℕ} {x : WCC.SpecState P.n} (hr : Label.wccRound l = some r)
     (h : WCC.Step P r (o r) l (PMF.pure x)) :

@@ -628,7 +628,7 @@ theorem roundFamilyOverBracha_owned (P : Parameters) (G : ℕ → GBCA.ByAFW.Rou
   rw [roundFamilyOverBracha, System.family_step_iff]
   exact Or.inr (Or.inl ⟨r, hL, PMF.pure q, h, by rw [PMF.pure_map]⟩)
 
-/-- An owned label whose round stands still. -/
+/-- An owned label whose round is unchanged. -/
 theorem roundFamilyOverBracha_owned_id (P : Parameters)
     (G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n) (r : ℕ) {L : ExtendedLabel P.n}
     (hL : roundOwnsLabel L = some r)

@@ -227,7 +227,7 @@ theorem hybrid_step_retABA (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
 guards the ABA network's row carries — the named process is not corrupted yet and the budget has
 room. The round specifications and the coin oracle each corrupt their own copy of `F` and the ABA
 network corrupts the view's; the named round loop replaces its own program by writing the flag
-(D23), and every other round loop stands still (D1). -/
+(D23), and every other round loop is unchanged (D1). -/
 theorem hybrid_step_fail (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
     (C : ∀ _ : Fin P.n, RoundLoopRecord P.n) (A : ABANetworkState P.n) (o : ℕ → WCC.SpecState P.n)
     (id : Fin P.n) (hcorr : ∀ k, ABAState.corrupted (C, A) k = true ↔ k ∈ ABAState.F (C, A))
@@ -2660,7 +2660,7 @@ grade-0-locked either: `bind_succ` forces every bit excluded at a freshly-bound 
 be a bit already excluded at `r'` — hence `!b`, by the inductive pair — unless `r'` itself just
 closed grade-0-locked (ruled out by the IH), and `grade0Lock_chain` propagates the absence of a
 grade-0 lock downward, so its contrapositive propagates it upward along the induction. -/
-theorem Invariant.commit_up {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
+theorem Invariant.commit_to_later_rounds {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) :
     ∀ r b, (g r).grade ≠ some false → (!b) ∈ (g r).excluded → b ∉ (g r).excluded →
       ∀ r', r ≤ r' →
@@ -2692,7 +2692,7 @@ theorem Invariant.commit_up {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
         exact absurd hbb (by cases b <;> simp)
 
 /-- Grade-0 locks propagate downward to every earlier round, by iterating `grade0Lock_chain`. -/
-theorem Invariant.grade0Lock_chain_down {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
+theorem Invariant.grade0Lock_chain_to_earlier_rounds {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
     {c : ABAState P} {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) :
     ∀ r r', r ≤ r' → (g r').grade = some false → (g r).grade = some false := by
   intro r r' hrr'
@@ -2842,7 +2842,7 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
           (fun hgf => by rwa [hGeq (r' - 1) hrr1]) (fun id' => (hCprocs id').1) hd
   -- A grade-0-locking return at round `r` pulls a grade-0 lock below every
   -- grade-2-locked round under `r` (its own both-bit supports via
-  -- `grade0Lock_chain_of_both_supports`, then `grade0Lock_chain_down`) — contradiction.
+  -- `grade0Lock_chain_of_both_supports`, then `grade0Lock_chain_to_earlier_rounds`) — contradiction.
   have hNoCAbove : ∀ r0, r0 < r → (g r0).grade = some true → gr'.grade = some false →
       False := by
     intro r0 hlt hg0 hgf
@@ -2850,7 +2850,7 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
       omega
     have hgf' := hI.grade0Lock_chain_of_both_supports (r - 1)
       (by rw [hr1]; exact hCsupp hgf true) (by rw [hr1]; exact hCsupp hgf false)
-    have hgf0 := hI.grade0Lock_chain_down r0 (r - 1) (by omega) hgf'
+    have hgf0 := hI.grade0Lock_chain_to_earlier_rounds r0 (r - 1) (by omega) hgf'
     rw [hg0] at hgf0; simp at hgf0
   -- OutcomeHolder reduction: a carrier of the post-state is an old carrier or the freshly
   -- returned `id` itself, holding the return's own output.
@@ -2925,13 +2925,13 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
     · rw [h2, hGself]; exact hGgradeTrue (h2 ▸ hg0)
     · rw [hGeq r0 h2]; exact hg0
   -- The *fresh* round-`r` commitment: a live pair at the returning round that is not (yet)
-  -- A grade-0-locked round commits everything at and above it, through `commit_up`'s
+  -- A grade-0-locked round commits everything at and above it, through `commit_to_later_rounds`'s
   -- pair invariant.
   have hFreshCommit : ∀ b0, (g r).grade ≠ some false →
       (!b0) ∈ (g r).excluded → b0 ∉ (g r).excluded →
       Grade2Commitment P (Function.update g r gr') c' r b0 := by
     intro b0 hgne hres0 hlive0
-    have hCU := hI.commit_up r b0 hgne hres0 hlive0
+    have hCU := hI.commit_to_later_rounds r b0 hgne hres0 hlive0
     have hconj3 : ∀ id', id' ∉ c.F → r < (c.processes id').round →
         (c.processes id').estimate = some b0 := by
       intro id' hmem2 hround2
@@ -3293,7 +3293,7 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
           · rw [hr0eq, Function.update_self] at hgr0
             by_cases hrr : r' = r
             · exact absurd hgr0 (by rw [hGgradeFalse (by rw [← hrr]; exact hg0)]; simp)
-            · have hgrfalse : (g r).grade = some false := hI.grade0Lock_chain_down r r' (by omega)
+            · have hgrfalse : (g r).grade = some false := hI.grade0Lock_chain_to_earlier_rounds r r' (by omega)
                 hg0
               rw [hGgradeFalse hgrfalse] at hgr0
               simp at hgr0
@@ -3312,7 +3312,7 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
         · rw [hr0eq, Function.update_self] at hgr0
           by_cases hrr : r' = r
           · exact absurd hgr0 (by rw [hGgradeFalse (by rw [← hrr]; exact hg0)]; simp)
-          · have hgrfalse : (g r).grade = some false := hI.grade0Lock_chain_down r r' (by omega) hg0
+          · have hgrfalse : (g r).grade = some false := hI.grade0Lock_chain_to_earlier_rounds r r' (by omega) hg0
             rw [hGgradeFalse hgrfalse] at hgr0
             simp at hgr0
         · rw [hGeq r₀ hr0eq] at hgr0

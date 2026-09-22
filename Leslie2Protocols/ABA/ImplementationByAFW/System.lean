@@ -377,7 +377,8 @@ noncomputable def secondGatherAcceptedPairs (P : Parameters) (s : RoundRecord P.
     | none => ∅
 
 /-- A pair of the first gather is accepted exactly when its input-broadcast
-instance has returned its value here. -/ theorem mem_firstGatherAcceptedPairs {P : Parameters}
+instance has returned its value here. -/
+theorem mem_firstGatherAcceptedPairs {P : Parameters}
     {s : RoundRecord P.n} {k : Fin P.n} {v : Bool} :
     (k, v) ∈ firstGatherAcceptedPairs P s ↔ broadcastReturnsFor P (s.firstGatherInputBroadcasts k) =
     some v := by
@@ -616,9 +617,8 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
   /-- `ECHO` in an input-broadcast instance of the first gather: the leader's
   `⟨INIT, m⟩` is delivered here, or an `ECHO m` receipt quorum is, or `f + 1`
   `VOTE m` receipts are; no `ECHO` is out. -/
-  | firstGatherInputBroadcastEcho (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (i :
-    Fin P.n)
-      (m : Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
+  | firstGatherInputBroadcastEcho (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ)
+      (i : Fin P.n) (m : Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
       (hrecv : BRB.Message.init m ∈ ((p.roundRecord r).firstGatherInputBroadcasts i).received i ∨
         P.echoReceiptQuorum ≤ ((p.roundRecord r).firstGatherInputBroadcasts i).receivedCount (.echo
           m) ∨
@@ -713,9 +713,8 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
                 { (((p.roundRecord r).firstGatherBindBroadcasts i).process) with sentVote := some m
                   }) }))
   /-- `ECHO` in an input-broadcast instance of the second gather. -/
-  | secondGatherInputBroadcastEcho (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (i :
-    Fin P.n)
-      (m : Option Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
+  | secondGatherInputBroadcastEcho (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ)
+      (i : Fin P.n) (m : Option Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
       (hrecv : BRB.Message.init m ∈ ((p.roundRecord r).secondGatherInputBroadcasts i).received i ∨
         P.echoReceiptQuorum ≤ ((p.roundRecord r).secondGatherInputBroadcasts i).receivedCount (.echo
           m) ∨
@@ -765,9 +764,8 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
                   sentVote :=
                     some m }) }))
   /-- `ECHO` in a bind-broadcast instance of the second gather. -/
-  | secondGatherBindBroadcastEcho (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (i :
-    Fin P.n)
-      (m : AcceptedPairs P.n (Option Bool)) (hh : c.corrupted = false)
+  | secondGatherBindBroadcastEcho (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ)
+      (i : Fin P.n) (m : AcceptedPairs P.n (Option Bool)) (hh : c.corrupted = false)
       (hterm : p.terminated = false)
       (hrecv : BRB.Message.init m ∈ ((p.roundRecord r).secondGatherBindBroadcasts i).received i ∨
         P.echoReceiptQuorum ≤ ((p.roundRecord r).secondGatherBindBroadcasts i).receivedCount (.echo

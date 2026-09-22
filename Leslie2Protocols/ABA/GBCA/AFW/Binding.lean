@@ -53,8 +53,8 @@ Byzantine row `Sum.inr (.byzantineRetG r id out bnd)` alike, `GBCA.ByABDY.gbcaLa
 both to the specification's return. -/
 def BindingTraceExtended (P : Parameters) (r : ℕ) (t : Seq (Composition.ExtendedLabel P.n)) : Prop
   :=
-  (∀ (l₁ l₂ : Composition.ExtendedLabel P.n) (id₁ id₂ : Fin P.n) (o₁ o₂ : GBCAOutput) (β₁ β₂ :
-    Bool),
+  (∀ (l₁ l₂ : Composition.ExtendedLabel P.n) (id₁ id₂ : Fin P.n) (o₁ o₂ : GBCAOutput)
+    (β₁ β₂ : Bool),
       l₁ ∈ t → l₂ ∈ t → GBCA.ByABDY.gbcaLabelMap P.n l₁ = some (Label.retG r id₁ o₁ β₁) →
       GBCA.ByABDY.gbcaLabelMap P.n l₂ = some (Label.retG r id₂ o₂ β₂) → β₁ = β₂) ∧
     ∀ (l : Composition.ExtendedLabel P.n) (id : Fin P.n) (o : GBCAOutput) (β v : Bool),

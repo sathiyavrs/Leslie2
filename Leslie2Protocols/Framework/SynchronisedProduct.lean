@@ -23,7 +23,7 @@ and is recovered from `synchronisedProduct` by the **rendezvous idiom**:
 
 * every component carries idle self-loops (`System.withIdle`, in
   `Framework/LoopsAndInstanceFamilies.lean`) on the labels it does not own, so a component that
-  is not a participant answers a foreign handshake by standing still;
+  is not a participant answers a foreign handshake by unchanged;
 * a label owned by exactly two components is then a communication: it moves those
   two and leaves every other component where it is;
 * a label owned by no component is blocked — no component offers it, so the
@@ -69,16 +69,16 @@ theorem prodPMF_pure_left_apply {α β : Type*}
   · simp
 
 /-- A product of two Dirac factors beside a third distribution. -/
-theorem prodPMF_pure₂ {α β γ : Type*} (a : α) (b : β) (ν : PMF γ) :
+theorem prodPMF_two_pure_factors {α β γ : Type*} (a : α) (b : β) (ν : PMF γ) :
     prodPMF (PMF.pure a) (prodPMF (PMF.pure b) ν) = ν.map (fun c => (a, b, c)) := by
   rw [prodPMF_pure_left, prodPMF_pure_left, PMF.map_comp]
   rfl
 
 /-- A product of three Dirac factors beside a fourth distribution. -/
-theorem prodPMF_pure₃ {α β γ δ : Type*} (a : α) (b : β) (c : γ) (ν : PMF δ) :
+theorem prodPMF_three_pure_factors {α β γ δ : Type*} (a : α) (b : β) (c : γ) (ν : PMF δ) :
     prodPMF (PMF.pure a) (prodPMF (PMF.pure b) (prodPMF (PMF.pure c) ν)) =
       ν.map (fun d => (a, b, c, d)) := by
-  rw [prodPMF_pure_left, prodPMF_pure₂, PMF.map_comp]
+  rw [prodPMF_pure_left, prodPMF_two_pure_factors, PMF.map_comp]
   rfl
 
 /-- Pushing an injective `f` forward, the mass at `f x` is the mass at `x`. -/

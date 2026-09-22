@@ -33,7 +33,7 @@ is written once.
 
 The composition answers `call id x` on four rows and the call loop is a label
 of its own, so an input instance may record a payload on a label at which the
-gather record stands still. The provenance of a commitment therefore reads the
+gather record is unchanged. The provenance of a commitment therefore reads the
 input instance's own call record, which is what `inputBroadcastVal_provenance` states.
 -/
 
@@ -282,7 +282,7 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
     · intro j hj U hU
       rw [InstanceState.setProcess_received]
       exact hInv.bind_backed j hj U hU
-  | callSpecLoop id x h =>
+  | callSpecificationLoop id x h =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
@@ -703,7 +703,7 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
           exact ⟨W, hW, hWU⟩⟩
       · rw [Function.update_of_ne hq] at hU'
         exact hInv.bind_backed j' hj U' hU'
-  | bindCallSpecLoop j U hin hvot hsnd happ hQ =>
+  | bindCallSpecificationLoop j U hin hvot hsnd happ hQ =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     exact hInv.setSentBind j U
@@ -1148,7 +1148,7 @@ theorem echoApproved_step {s s' : StateOverBroadcastSpecification P.n X} {l : La
       by_cases hk : j = id
       · subst hk; rw [InstanceState.setProcess_process_self] at hA; exact hA
       · rw [InstanceState.setProcess_process_ne _ _ _ hk] at hA; exact hA
-  | callSpecLoop id x hc =>
+  | callSpecificationLoop id x hc =>
       rw [PMF.mem_support_pure_iff] at hs'; subst hs'
       refine hEA j A ?_
       dsimp only [gatherTier_setGatherTier] at hA
@@ -1182,7 +1182,7 @@ theorem echoApproved_step {s s' : StateOverBroadcastSpecification P.n X} {l : La
       by_cases hk : j = j₀
       · subst hk; rw [InstanceState.setProcess_process_self] at hA; exact hA
       · rw [InstanceState.setProcess_process_ne _ _ _ hk] at hA; exact hA
-  | bindCallSpecLoop j₀ U hin hvot hsnd happ hQ =>
+  | bindCallSpecificationLoop j₀ U hin hvot hsnd happ hQ =>
       rw [PMF.mem_support_pure_iff] at hs'; subst hs'
       refine hEA j A ?_
       dsimp only [gatherTier_setGatherTier] at hA

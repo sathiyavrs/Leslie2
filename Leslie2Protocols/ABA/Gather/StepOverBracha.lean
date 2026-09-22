@@ -101,7 +101,7 @@ theorem brachaInstance_call_row {M : Type} [DecidableEq M] {P : Parameters} {ldr
     rfl
 
 omit [DecidableEq X] in
-/-- At the call-loop label the instance stands still. -/
+/-- At the call-loop label the instance is unchanged. -/
 theorem brachaInstance_callLoop_row {M : Type} [DecidableEq M] {P : Parameters} {ldr : Fin P.n}
     {s s' : BRB.BrachaState P.n M} {m : M}
     (h : (BRB.brachaInstance P ldr M).step s (Sum.inr (BRB.LoopLabel.callLoop m)) (PMF.pure s')) :
@@ -489,7 +489,7 @@ theorem row_instanceOverBracha_step (P : Parameters) :
       · exact lift_idle (by simp [hk])
   | inputBroadcastTau k c hb =>
     exact ⟨Sum.inl Label.tau, rfl,
-      instanceOverBroadcasts_tau_in (row_brachaInstance_step_inl (by simp) hb)⟩
+      instanceOverBroadcasts_tau_input (row_brachaInstance_step_inl (by simp) hb)⟩
   | bindBroadcastTau q d hb =>
     exact ⟨Sum.inl Label.tau, rfl,
       instanceOverBroadcasts_tau_bind (row_brachaInstance_step_inl (by simp) hb)⟩

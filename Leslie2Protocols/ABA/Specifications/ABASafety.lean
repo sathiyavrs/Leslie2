@@ -790,7 +790,7 @@ private theorem exists_retSite (P : Parameters) {pe : ProbabilisticExecution (sp
             ∃ k, k < m ∧ t.get? k = some (Label.callABA id' b') ∧
               ∀ k' < k, ∀ b'', t.get? k' ≠ some (Label.callABA id' b'') := by
   obtain ⟨e, labs, h_exec, h_map, h_t⟩ :=
-    exists_exec_of_traceProb_ne_zero_ord pe h_init t h_ne
+    exists_exec_of_traceProb_ne_zero_ordered pe h_init t h_ne
   rw [Seq.ofList_filter] at h_t
   -- generalise the external-label filter to an opaque Boolean predicate
   obtain ⟨p, hpfail, hpcall, h_t⟩ : ∃ p : Label P.n → Bool,
@@ -802,7 +802,7 @@ private theorem exists_retSite (P : Parameters) {pe : ProbabilisticExecution (sp
   intro m id b h_ret
   -- trace position `m` pulls back to an execution event `j`
   rw [← h_t, Seq.ofList_get?] at h_ret
-  obtain ⟨j, hj, hlen⟩ := filter_getElem?_pullback p labs m _ h_ret
+  obtain ⟨j, hj, hlen⟩ := filter_getElem?_index_preimage p labs m _ h_ret
   obtain ⟨s'', h_get⟩ : ∃ s'', e.trans.get? j = some (Label.retABA id b, s'') := by
     have hk : (e.trans.get? j).map Prod.fst = labs[j]? := by
       rw [← Seq.map_get?, h_map, Seq.ofList_get?]

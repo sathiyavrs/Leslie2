@@ -686,7 +686,7 @@ theorem specificationRelation_tau {s s' : StateOverBroadcastSpecification P.n X}
       exact le_trans (hR.core_certificate C hC) (Finset.card_le_card
         (bindAbove_mono (StepOverBroadcastSpecification.bindCall s j U hin hvot hsnd happ hQ hb)
           (by rw [PMF.mem_support_pure_iff]) C))
-  | bindCallSpecLoop j U hin hvot hsnd happ hQ =>
+  | bindCallSpecificationLoop j U hin hvot hsnd happ hQ =>
     have hs' := PMF.pure_injective hμ
     subst hs'
     refine ⟨hInv', hR.call_eq, ?_, hR.F_eq, hR.val_certificate, hR.core_eq, hR.core_certificate⟩
@@ -763,12 +763,12 @@ theorem specificationRelation_row (P : Parameters) (X : Type) [DecidableEq X]
       Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
         (Step.call q₂ id x (by rw [hR.call_eq id]; exact hb))⟩,
       specificationRelation_call hR h hb⟩
-  | callSpecLoop id x h =>
+  | callSpecificationLoop id x h =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     refine ⟨q₂, Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
       (Step.callLoop q₂ id x)⟩, ?_⟩
-    refine ⟨hR.invariant.step (StepOverBroadcastSpecification.callSpecLoop q₁ id x h)
+    refine ⟨hR.invariant.step (StepOverBroadcastSpecification.callSpecificationLoop q₁ id x h)
       (by rw [PMF.mem_support_pure_iff]),
       hR.call_eq, ?_, hR.F_eq, hR.val_certificate, hR.core_eq, hR.core_certificate⟩
     dsimp only [gatherTier_setGatherTier]
@@ -839,11 +839,11 @@ theorem specificationRelation_row (P : Parameters) (X : Type) [DecidableEq X]
     exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
       specificationRelation_tau hR (StepOverBroadcastSpecification.bindCall q₁ j U hin hvot hsnd
         happ hQ hb)⟩
-  | bindCallSpecLoop j U hin hvot hsnd happ hQ =>
+  | bindCallSpecificationLoop j U hin hvot hsnd happ hQ =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
-      specificationRelation_tau hR (StepOverBroadcastSpecification.bindCallSpecLoop q₁ j U hin hvot
+      specificationRelation_tau hR (StepOverBroadcastSpecification.bindCallSpecificationLoop q₁ j U hin hvot
         hsnd happ hQ)⟩
   | byzantine j m h =>
     rw [PMF.mem_support_pure_iff] at hq₁'

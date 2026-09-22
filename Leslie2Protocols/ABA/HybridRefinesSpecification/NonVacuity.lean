@@ -96,7 +96,7 @@ def hybridStateOf (G : ℕ → GBCA.SpecState 4) (s : ABAState fourProcesses)
     HybridState fourProcesses := (G, s.1, s.2, o)
 
 /-- The round loops on a label one of them owns: the addressed loop takes its
-row, the others stand still, and the group's successor is the pointwise
+row, the others remain unchanged, and the group's successor is the pointwise
 update. -/
 theorem roundLoops_at {C : ∀ _ : Fin 4, RoundLoopRecord 4} (id : Fin 4) {L : ExtendedLabel 4}
     {c' : RoundLoopRecord 4} (hown : RoundLoopStep fourProcesses id (C id) L (PMF.pure c'))
@@ -527,7 +527,7 @@ noncomputable def resolvedCoinDistribution : PMF (ℕ → WCC.SpecState 4) :=
     (Function.update coinAfterRecordingCall0 0)
 
 /-- The successor distribution of process `1`'s coin call: the round specifications and the ABA
-network stand still, process `1`'s round loop advances to `awaitW`, and the coin oracle resolves. -/
+network remain unchanged, process `1`'s round loop advances to `awaitW`, and the coin oracle resolves. -/
 noncomputable def resolvedHybridDistribution : PMF (HybridState fourProcesses) :=
   prodPMF (PMF.pure gbcaSpecificationsAfterReturn2) (prodPMF (PMF.pure abaAfterCallW1.1) (prodPMF
     (PMF.pure abaAfterCallW1.2) resolvedCoinDistribution))
@@ -789,7 +789,7 @@ theorem step_retABA :
 /-- Corruption of process `0`: the visible `fail 0` synchronises every component — the round
 specifications and the coin oracle by global broadcast, the ABA network by its own `fail` row, which
 carries the guards, the named round loop by replacing its own program (deviation D23), and the other
-three round loops by standing still (deviation D1). -/
+three round loops by unchanged (deviation D1). -/
 theorem step_fail :
     (hybrid fourProcesses).step (hybridStateOf gbcaSpecificationsInitial abaInitial coinInitial)
       (Label.fail (0 : Fin 4))

@@ -609,8 +609,8 @@ theorem corrupt_F {P : Parameters} (s : ImplementationState P.n) (id : Fin P.n) 
 
 /-! The bound-bit write moves no projection of the round. -/
 
-@[simp] theorem setBound_receivedCount (s : ImplementationState n) (β : Bool) (i : Fin n) (m :
-  Message) :
+@[simp] theorem setBound_receivedCount (s : ImplementationState n) (β : Bool) (i : Fin n)
+    (m : Message) :
     (s.setBound β).receivedCount i m = s.receivedCount i m := rfl
 @[simp] theorem setBound_echoCount (s : ImplementationState n) (β : Bool) (i : Fin n) :
     (s.setBound β).echoCount i = s.echoCount i := rfl

@@ -947,7 +947,7 @@ theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l
 /-! ### The relation -/
 
 /-- The exclusion certificate: the first gather's core counts `b` below
-`|S| − f`, so no later candidate is `b`. It stands — the core is write-once. -/
+`|S| − f`, so no later candidate is `b`. It survives every later step: the core is written once. -/
 def ExclusionEvidence (P : Parameters) (s : RoundStateOverGatherSpecifications P.n) (b : Bool) :
   Prop :=
   ∃ S, (firstGather s).core = some S ∧ AcceptedPairs.count S b < S.card - P.f

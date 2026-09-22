@@ -39,7 +39,7 @@ label: `BRB.InstanceLabel = Label ⊕ LoopLabel` with `LoopLabel.callLoop m`,
 `Gather.InstanceLabel = Label ⊕ LoopLabel`
 with `LoopLabel.callLoop id x`, and the round speaks `ExtendedLabel` natively, whose
 `NetworkEvent.gbcaCallLoop` and `byzantineCallGLoop` are its loop labels. On the call label the
-caller has one row and the network posts; on the loop label every component stands still.
+caller has one row and the network posts; on the loop label every component is unchanged.
 The specification is read along a pullback that sends the loop to the call
 (`BRB.specificationLabelMap`, `Gather.specificationLabelMap`, `GBCA.ByABDY.gbcaLabelMap`),
 so its own loop row answers the loop label. The level above pulls the composition's alphabet
@@ -57,11 +57,11 @@ At the tier over broadcast specifications, the input broadcast of process `k`
 is `BRB.specificationOverInstanceAlphabet` read along `inputBroadcastLabelMap k`, and a
 specification answers the gather's call and the gather's loop on either of its two rows. Over one
 specification label the composition therefore has four call rows
-(`Gather.StepOverBroadcastSpecification.call`, `callSpecLoop`, `callProgramLoop`, `callLoop`): both
+(`Gather.StepOverBroadcastSpecification.call`, `callSpecificationLoop`, `callProgramLoop`, `callLoop`): both
 record, the program alone, the instance alone, neither.
 
 **What fails.** A clause tying the gather program's input to the instance's
-record is inductive in neither direction, since `callSpecLoop` writes the one
+record is inductive in neither direction, since `callSpecificationLoop` writes the one
 and `callProgramLoop` the other. With `callProgramLoop k x` followed by the
 instance's commit of `x`, the state has `(inputBroadcasts k).val = some x`, no input at
 `k`'s program and `k ∉ F`, and the return run must discharge the gather
@@ -72,7 +72,7 @@ specification's commit guard `k ∈ F ∨ call k = some x`. If the specification
 **The constraint.** `Gather.SpecificationRelation.call_eq : ∀ k, t.call k = (inputBroadcasts s
 k).input`. The specification's call record and an input instance's record move on the same interface
 labels under the same write-once guard, so `specificationRelation_row` answers `callProgramLoop`
-with `Gather.Step.call` and `callSpecLoop` with `Gather.Step.callLoop`. `Gather.Conformance` carries
+with `Gather.Step.call` and `callSpecificationLoop` with `Gather.Step.callLoop`. `Gather.Conformance` carries
 no clause on the two records; `specificationRelation_call` takes both guards. The permissiveness
 sits at a specification tier: the concrete gather over Bracha has one row per label.
 
@@ -99,7 +99,7 @@ a returned process.
 
 The round is read over `ExtendedLabel` natively. A family label that is none of the
 round's own — `callABA`, `retABA`, `callW`, `retW`, the protocol network's
-rendezvous — must not be answered by every factor standing still.
+rendezvous — must not be answered by every factor unchanged.
 
 **What fails.** If every pullback returned `none` on such a label, the round
 would self-loop on it. The rendezvous have no specification label under
@@ -112,7 +112,7 @@ transition at those labels, and neither has `GBCA.ByABDY.composition`.
 **The constraint.** `GBCA.ByAFW.programLabelMap` sends every off-interface family label to
 `ProgramLabel.outside`, on which neither `GBCA.ByAFW.ProgramStep` nor `GBCA.ByAFW.NetworkStep` has a
 row, so the round blocks exactly where `GBCA.ByABDY.composition` blocks. `fail` alone maps to
-`none`: the round's programs stand still on the round's own `fail` row, the gathers corrupt, and in
+`none`: the round's programs remain unchanged on the round's own `fail` row, the gathers corrupt, and in
 the family the label is answered by the broadcast act (`AFW.corruptionOverBracha`) and not by the
 instance.
 
@@ -156,6 +156,6 @@ congruences and of nothing else.
 The `2n` broadcast instances of a gather and the two gathers of a round are
 placed under `synchronisedProduct` and `parallel` after a `mapIdle` lift along a
 pullback naming each instance, so a label carrying another instance's index
-leaves an instance standing still. A chain of binary parallel compositions
+leaves an instance unchanged. A chain of binary parallel compositions
 indexed by a symbolic `n` has no expression; the product of lifted instances is
 what carries a family of instances.

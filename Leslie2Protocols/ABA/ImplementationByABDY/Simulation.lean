@@ -130,7 +130,7 @@ private theorem match_prod (P : Parameters) {x : ∀ _ : Fin P.n, ProcessRecord 
   refine ⟨ν.map (fun o => PMF.pure ((G, C, A, o) : ComposedState P)),
     ⟨ν.map (fun o => (((x, w, o) : ProtocolState P),
       PMF.pure ((G, C, A, o) : ComposedState P))), ?_, ?_, ?_⟩, ?_⟩
-  · rw [PMF.map_comp, prodPMF_pure₂]
+  · rw [PMF.map_comp, prodPMF_two_pure_factors]
     rfl
   · rw [PMF.map_comp]
     rfl
@@ -138,7 +138,7 @@ private theorem match_prod (P : Parameters) {x : ∀ _ : Fin P.n, ProcessRecord 
     rw [PMF.mem_support_map_iff] at hp
     obtain ⟨o, ho, rfl⟩ := hp
     exact ⟨(G, C, A, o), rfl, h o ho⟩
-  · rw [PMF.bind_map, prodPMF_pure₃]
+  · rw [PMF.bind_map, prodPMF_three_pure_factors]
     rfl
 
 /-! ### Updating one round
@@ -195,7 +195,7 @@ private theorem ghostOutput_getD {P : Parameters} {w : NetworkState P.n} {r : �
 
 /-- The network state conjunct after a return of round `r`. The instance's bound
 bit and the adversary's ghost record of round `r` take the same bit, and every
-other round's record stands still. -/
+other round's record is unchanged. -/
 private theorem relation_setBound {P : Parameters} {G : ℕ → GBCA.ByABDY.ImplementationState P.n}
     {w : NetworkState P.n} (hG : ∀ r', (G r').2 = ⟨w.sent r', w.F, w.ghostRecord r'⟩)
     (r : ℕ) (bnd : Bool) (u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n)
@@ -286,7 +286,8 @@ private theorem match_visible (P : Parameters) {x : ∀ _ : Fin P.n, ProcessReco
   exact ⟨Ω, hr, hbind ▸ composedExtended_visible_step P hL hGs hCs hAs hWs⟩
 
 /-- A rendezvous the composed system answers inside one round: the
-instance of round `r` takes it as its own silent rule. -/ private theorem match_round
+instance of round `r` takes it as its own silent rule. -/
+private theorem match_round
     (P : Parameters) {x : ∀ _ : Fin P.n, ProcessRecord P.n} {w' : NetworkState P.n}
     {o : ℕ → WCC.SpecState P.n} {ν : PMF (ℕ → WCC.SpecState P.n)}
     {G : ℕ → GBCA.ByABDY.ImplementationState P.n} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
@@ -1020,7 +1021,7 @@ theorem match_tau (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord P
 
 /-- The matching at the group level: the rendezvous alphabet is hidden in both systems, so a hidden
 protocol rendezvous is answered by a silent transition of the composed group. The second disjunct is
-the composed answer to `terminate`: the state stands still under a silent protocol label. -/
+the composed answer to `terminate`: the state is unchanged under a silent protocol label. -/
 theorem match_hidden (P : Parameters) {u : ProtocolState P} {t : ComposedState P}
     (hR : ProtocolRelation P u t) {l : Label P.n} {μ : PMF (ProtocolState P)}
     (h : (protocolHidden P).step u l μ) :
@@ -1043,7 +1044,7 @@ theorem match_hidden (P : Parameters) {u : ProtocolState P} {t : ComposedState P
       exact ⟨Ω, hrel, Or.inl hs⟩
 
 /-- The matching at the system level: a hidden sub-protocol label is silent in both systems, and
-every other label is answered on the nose or by standing still. A hidden label is never `τ`, so the
+every other label is answered on the nose or by unchanged. A hidden label is never `τ`, so the
 standing-still answer arises only under `τ`, where the reflexivity of `weakTau` discharges it. -/
 theorem match_step (P : Parameters) {u : ProtocolState P} {t : ComposedState P}
     (hR : ProtocolRelation P u t) {l : Label P.n} {μ : PMF (ProtocolState P)}

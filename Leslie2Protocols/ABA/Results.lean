@@ -52,7 +52,8 @@ independent — the inclusion never invokes transitivity of simulation.
 ## Scope of the headline
 
 Graded agreement is carried to implementation level: each round is a group of graded-agreement
-programs beside that round's own network, and one network moves them all. Each round's graded
+programs beside that round's own network state, and the implementation's one network
+component holds and moves every round's. Each round's graded
 return announces that round's bound bit (D29), a ghost output that rides the `retG` label and that
 no component's state records. `GBCA.BindingTrace` (`GBCA/SpecificationSafety.lean`) is the property
 it carries. The **common coin is held at specification level** — the ε-coin is `Parameters.wccPMF`,

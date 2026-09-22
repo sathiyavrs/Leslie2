@@ -1424,7 +1424,7 @@ theorem excludeThenRetGrade0_run {r : ℕ} {t : SpecState P.n} {id : Fin P.n} {b
 
 /-- The two `corrupt` functions stay equal on aligned corrupted sets (a strong per-coordinate `fail`
 match, as required by the family lift). -/
-private theorem implementationSpec_corrupt_F_eq {t : SpecState P.n} {s : ImplementationState P.n}
+private theorem implementationSpecification_corrupt_F_eq {t : SpecState P.n} {s : ImplementationState P.n}
     (hF : t.F = s.F) (id : Fin P.n) :
     (t.corrupt P id).F = (s.corrupt P id).F := by
   rw [ImplementationState.corrupt_F]
@@ -1928,7 +1928,7 @@ theorem refinesSpecification (P : Parameters) (r : ℕ) :
     subst hq1'
     refine ⟨q2.corrupt P id,
       Or.inr ⟨by simp, System.weakLStep_of_step (by simp) (Step.fail q2 id)⟩,
-      hI', ?_, ?_, implementationSpec_corrupt_F_eq hRR.F_eq id, ?_, ?_, ?_, ?_⟩
+      hI', ?_, ?_, implementationSpecification_corrupt_F_eq hRR.F_eq id, ?_, ?_, ?_, ?_⟩
     · intro k
       rw [corrupt_call, ImplementationState.corrupt_process]
       exact hRR.call_eq k
@@ -1960,7 +1960,7 @@ The round-indexed family lift of the refinement takes `fail` as a broadcast act,
 round at once. It needs the per-round relation to be preserved by that act. The specification
 corruption projections (`corrupt_call`/`corrupt_ret`/`corrupt_excluded`/`corrupt_grade`) come from
 `ABA/GBCA/Specification.lean`; the two `corrupt` functions stay equal by
-`implementationSpec_corrupt_F_eq`. The statement is proved directly rather than through
+`implementationSpecification_corrupt_F_eq`. The statement is proved directly rather than through
 `refinesSpecification`, whose `fail` case only yields an existential match. Its consumer is the
 round instance's family lifting (`ABA/Composition/GBCAInstanceByABDY.lean`). -/
 
@@ -1980,7 +1980,7 @@ theorem specificationRelation_corrupt (P : Parameters) (r : ℕ) (id : Fin P.n)
       ret_eq := fun k => by
         rw [corrupt_ret, ImplementationState.corrupt_process]
         exact hR.ret_eq k
-      F_eq := implementationSpec_corrupt_F_eq hR.F_eq id
+      F_eq := implementationSpecification_corrupt_F_eq hR.F_eq id
       exclusion_certificate := fun b hb => by
         rw [corrupt_excluded] at hb
         exact ExclusionCertificate.mono

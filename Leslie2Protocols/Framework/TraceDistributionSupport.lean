@@ -305,7 +305,7 @@ theorem Seq_mem_ofList {α : Type} {a : α} {L : List α} :
 list: the element sits at some original index `j`, and the filter of the
 `j`-prefix has exactly the target length (its position in the filtered
 list). -/
-theorem filter_getElem?_pullback {α : Type} (p : α → Bool) :
+theorem filter_getElem?_index_preimage {α : Type} (p : α → Bool) :
     ∀ (L : List α) (m : ℕ) (a : α), (L.filter p)[m]? = some a →
       ∃ j, L[j]? = some a ∧ ((L.take j).filter p).length = m := by
   intro L
@@ -405,7 +405,7 @@ open Classical in
 execution's full label list is exposed, together with the fact that the
 trace is its external filter — enabling position-aware (ordered) safety
 predicates. -/
-theorem exists_exec_of_traceProb_ne_zero_ord
+theorem exists_exec_of_traceProb_ne_zero_ordered
     {sys : System State Label} (pe : ProbabilisticExecution sys)
     (hinit : pe.initState = PMF.pure sys.init)
     (t : Seq Label) (h : sys.traceProb pe t ≠ 0) :

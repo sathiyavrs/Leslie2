@@ -125,8 +125,8 @@ theorem broadcastSubstitution_failAct (P : Parameters) :
 /-- Corruption preserves the gather substitution relation. -/
 theorem gatherSubstitution_failAct (P : Parameters) :
     ∀ l : ExtendedLabel P.n,
-      isFailLabel l → ∀ (_ : ℕ) (x : GBCA.ByAFW.RoundStateOverBroadcastSpecification P.n) (y :
-        GBCA.ByAFW.RoundStateOverGatherSpecifications P.n),
+      isFailLabel l → ∀ (_ : ℕ) (x : GBCA.ByAFW.RoundStateOverBroadcastSpecification P.n)
+        (y : GBCA.ByAFW.RoundStateOverGatherSpecifications P.n),
           GBCA.ByAFW.GatherSubstitutionRelation P x y →
       GBCA.ByAFW.GatherSubstitutionRelation P (corruptionOverBroadcastSpecification P l x)
         (corruptionOverGatherSpecifications P l y) := by
@@ -147,8 +147,8 @@ theorem gatherSubstitution_failAct (P : Parameters) :
 /-- Corruption preserves the counting relation. -/
 theorem roundSpecificationSubstitution_failAct (P : Parameters) :
     ∀ l : ExtendedLabel P.n,
-      isFailLabel l → ∀ (_ : ℕ) (x : GBCA.ByAFW.RoundStateOverGatherSpecifications P.n) (y :
-        GBCA.SpecState P.n), GBCA.ByAFW.SpecificationRelation P x y →
+      isFailLabel l → ∀ (_ : ℕ) (x : GBCA.ByAFW.RoundStateOverGatherSpecifications P.n)
+        (y : GBCA.SpecState P.n), GBCA.ByAFW.SpecificationRelation P x y →
       GBCA.ByAFW.SpecificationRelation P (corruptionOverGatherSpecifications P l x)
         (specificationCorruptionAct P l y) := by
   rintro l hl r x y hR

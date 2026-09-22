@@ -320,7 +320,7 @@ theorem program_labelSaturated [IsRoundRuleTable P M S roundStep] (j : Fin P.n) 
 
 /-- **The process group is saturated along the erasure**: full synchronisation carries
 the saturation of every program. -/
-theorem programSyncProduct_labelSaturated [IsRoundRuleTable P M S roundStep] :
+theorem programSynchronisedProduct_labelSaturated [IsRoundRuleTable P M S roundStep] :
     (System.synchronisedProduct (program P M S roundStep)).LabelSaturated
       (forgetBoundExtended (M := M)) :=
   System.LabelSaturated.synchronisedProduct (program_labelSaturated P M S roundStep)
@@ -385,7 +385,7 @@ theorem system_stateErasure
   have hnet := network_erasure (callPayload := callPayload) (ghostStep := ghostStep)
     ghostOutput_total
   have hpre := (hnet.parallel_right (coinOverExtendedAlphabet_labelSaturated P M)).parallel_left
-    (programSyncProduct_labelSaturated P M S roundStep)
+    (programSynchronisedProduct_labelSaturated P M S roundStep)
   have hgroup := (hpre.abstract (networkEventLabels P.n)
     networkEventLabels_forgetBoundExtended).relabel
   exact hgroup.abstract_collapse (Label.hiddenAPI P.n) hiddenAPI_forgetBound

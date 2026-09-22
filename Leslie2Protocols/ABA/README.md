@@ -192,7 +192,7 @@ implementation of it.
 
 | file | lines | what it is |
 |---|---|---|
-| `ReliableBroadcast/BrachaComposition.lean` | 984 | **The Bracha instance, composed**: `BRB.brachaInstance`, the `n` per-process programs beside the instance's network with the instance's own events hidden, and the row characterisation `brachaInstance_step_iff_row` that reads a transition off its label. |
+| `ReliableBroadcast/BrachaComposition.lean` | 983 | **The Bracha instance, composed**: `BRB.brachaInstance`, the `n` per-process programs beside the instance's network with the instance's own events hidden, and the row characterisation `brachaInstance_step_iff_row` that reads a transition off its label. |
 | `ReliableBroadcast/BrachaImplementation.lean` | 151 | `BRB.BrachaStep`, the rows of the composed instance: Bracha's three message levels in the form of AFW25's Algorithm 1 (D34) over the two-part state. |
 | `ReliableBroadcast/BrachaRefinesSpecification.lean` | 1082 | `brachaRefinesSpecification`: the Bracha instance refines TS 6, the committed value certified by an ECHO receipt quorum, the commit fired on demand. Carries the relation `BRB.SpecificationRelation`, which the gather substitution lifts, and the instance invariant `BRB.Invariant`, which the simulation of the implementation into its composed system carries. |
 | `ReliableBroadcast/Specification.lean` | 160 | The reliable-broadcast specification, per leader (blueprint TS 6, safety-only): the input/committed-value split with the guarded commit (D27). |
@@ -204,7 +204,7 @@ implementation of it.
 | `Gather/BroadcastSubstitution.lean` | 150 | `broadcastSubstitution`: the broadcast substitution inside gather, per coordinate, carried through the composition by the congruences. |
 | `Gather/CommonCoreAtSpecification.lean` | 148 | `CoreTrace`, the common core read off a trace, and `specInst_core` at the specification. |
 | `Gather/CommonCoreCounting.lean` | 1520 | The invariant of the gather-over-BRB instance and the counting argument for its core: `coreOf` has `n − f` committed entries and lies below the committed `BIND` payload of every process outside `F`, with the `f + 1` certificate the specification's bind guard consumes. |
-| `Gather/Composition.lean` | 1628 | **The gather instance, composed**: `n` gather programs beside the gather network, in parallel with `2n` composed broadcast instances — `Gather.instanceOverBroadcastSpecification` over the broadcast specifications and `Gather.instanceOverBracha` over Bracha's — read back over the gather alphabet extended by the call loop. |
+| `Gather/Composition.lean` | 1631 | **The gather instance, composed**: `n` gather programs beside the gather network, in parallel with `2n` composed broadcast instances — `Gather.instanceOverBroadcastSpecification` over the broadcast specifications and `Gather.instanceOverBracha` over Bracha's — read back over the gather alphabet extended by the call loop. |
 | `Gather/MessagesAndCommonCore.lean` | 174 | The records a gather instance is written over — the `ECHO`/`VOTE` messages and the per-process record — and the core `coreOf` of a gather network state, with the incidence lemmas the counting argument sums. |
 | `Gather/RefinesSpecification.lean` | 1018 | `refinesSpecification`: the gather-over-BRB instance refines TS 4. The return run commits the entries it reads, writes the core at `coreOf` of the network state, and returns, in one weak transition. |
 | `Gather/StepOverBracha.lean` | 580 | `Gather.StepOverBracha`, the same table with each broadcast coordinate a composed Bracha instance, whose own rows a gather row carries as a hypothesis, with the row characterisation `instanceOverBracha_step_iff_row`. |
@@ -232,7 +232,7 @@ system over them, and the hybrid.
 |---|---|---|
 | `Composition/ABAState.lean` | 384 | The ABA state as one object: the round-loop records beside the DECIDED network, with the accessors the invariant is stated in. |
 | `Composition/Components.lean` | 847 | The extended alphabet `ExtendedLabel n` at ABDY22's messages, the coin oracle read along its label pullback, the round loop of one process, and the ABA network — the pieces the two compositions are built from. |
-| `Composition/GBCAInstanceByABDY.lean` | 1669 | **The round's graded-agreement instance** and the licence to replace it, `instanceSubstitution`. |
+| `Composition/GBCAInstanceByABDY.lean` | 1670 | **The round's graded-agreement instance** and the licence to replace it, `instanceSubstitution`. |
 | `Composition/HybridAndSubstitution.lean` | 699 | **`ABDY.composed`**, **`ABDY.substitutionSimulation`**: the same protocol read as four components, one round instance per round retained at every moment, and that graded-agreement component then replaced by its specification under the four congruences. |
 
 **`ABA/GBCA/AFW/`** — the two-gather round and the three tiers that carry it.
@@ -251,7 +251,7 @@ system over them, and the hybrid.
 
 | file | lines | what it is |
 |---|---|---|
-| `HybridRefinesSpecification/AbstractStatePreservation.lean` | 324 | `AbstractState` preservation for the stutter rows, and the assembly `Invariant.step`. |
+| `HybridRefinesSpecification/AbstractStatePreservation.lean` | 323 | `AbstractState` preservation for the stutter rows, and the assembly `Invariant.step`. |
 | `HybridRefinesSpecification/InvariantPreservation.lean` | 3995 | Step inversion for `hybrid`, then preservation of `Invariant` across every row. The bulk of the proof text. |
 | `HybridRefinesSpecification/NonVacuity.lean` | 813 | A concrete 20-step run of `hybrid fourProcesses` to a `retABA` decision, so the simulation about it is not vacuous. |
 | `HybridRefinesSpecification/Relation.lean` | 691 | The core simulation's relation: the lazy abstract state `AbstractState` and the concrete invariant `Invariant`. |
@@ -263,7 +263,7 @@ system.
 
 | file | lines | what it is |
 |---|---|---|
-| `ImplementationByABDY/Simulation.lean` | 1106 | **`ABDY.protocolSimulation`**, **`ABDY.protocol_composed`**: the protocol carried into the composed system along `ABDY.ProtocolRelation`, whose five unguarded conjuncts determine the composed state. |
+| `ImplementationByABDY/Simulation.lean` | 1107 | **`ABDY.protocolSimulation`**, **`ABDY.protocol_composed`**: the protocol carried into the composed system along `ABDY.ProtocolRelation`, whose five unguarded conjuncts determine the composed state. |
 | `ImplementationByABDY/System.lean` | 849 | **ABDY22's protocol as it runs**, and the subject of the protocol chain: the implementation at ABDY22's Algorithm 6 — its fourteen round rows, the payload the call multicasts, the adversary's bound-bit ghost, and the inversions they answer. |
 
 **`ABA/`** — the headlines.
@@ -279,8 +279,8 @@ system.
 | `ImplementationByAFW/CompositionChain.lean` | 425 | **The gather-based chain**: the families `roundFamilyOverBracha`, `roundFamilyOverBroadcastSpecification` and `roundFamilyOverGatherSpecifications`, the three stages `AFW.composed ⊑ AFW.composedOverBroadcastSpecification ⊑ AFW.composedOverGatherSpecifications ⊑ hybrid`, and the composed-level headlines `AFW.composed_refines`, `AFW.composed_safe`, `AFW.chainSimulationOfComposed`. Four axiom checks. |
 | `ImplementationByAFW/RoundProjection.lean` | 876 | `AFW.roundProjection`, the view that computes a composed state from the implementation, the relation `AFW.ProtocolRelation` it carries, and the builders that assemble a transition of the composed system. |
 | `ImplementationByAFW/RoundProjectionStep.lean` | 3610 | The view of the composed round after one implementation row: for each row of the implementation, the round's view after it is the view before it with the composed round's own effect applied. |
-| `ImplementationByAFW/Simulation.lean` | 2375 | **`AFW.protocolSimulation`**, **`AFW.main`**: the gather-based protocol carried into `AFW.composed` along a relation that computes the composed state from the implementation, the ghost record included, and the headlines `AFW.refines`, `AFW.main`, `AFW.chainSimulation` it yields. Five axiom checks. |
-| `ImplementationByAFW/System.lean` | 923 | **The gather-based protocol as it runs**: the implementation at AFW25's two-gather construction — the tagged message type collapsing a round's `4n + 2` network states into one sent-set family, the process-major round record, the adversary's ghost record of the two cores and the bound bit, and the 23 round rows. |
+| `ImplementationByAFW/Simulation.lean` | 2374 | **`AFW.protocolSimulation`**, **`AFW.main`**: the gather-based protocol carried into `AFW.composed` along a relation that computes the composed state from the implementation, the ghost record included, and the headlines `AFW.refines`, `AFW.main`, `AFW.chainSimulation` it yields. Five axiom checks. |
+| `ImplementationByAFW/System.lean` | 921 | **The gather-based protocol as it runs**: the implementation at AFW25's two-gather construction — the tagged message type collapsing a round's `4n + 2` network states into one sent-set family, the process-major round record, the adversary's ghost record of the two cores and the bound bit, and the 23 round rows. |
 
 **`ABA/GhostErasure/`** — the ghost-free system of each protocol, and the erasure that
 reaches it.

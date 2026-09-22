@@ -64,18 +64,18 @@ private theorem singleStep_partial_exec {q q' : State} {l : Label}
     rw [Stream'.Seq.get?_cons_succ, Stream'.Seq.get?_nil] at hk
     exact absurd hk (by simp)
 
-private theorem terminates₂ {l₀ l₁ : Label} {q₁ q₂ : State} :
+private theorem terminates_of_two_transitions {l₀ l₁ : Label} {q₁ q₂ : State} :
     (Seq.cons (l₀, q₁) (Seq.cons (l₁, q₂) Seq.nil) : Seq (Label × State)).Terminates :=
   Seq.terminates_cons_iff.mpr (Seq.terminates_cons_iff.mpr Seq.terminates_nil)
 
 /-- `endState` of a two-transition alternating sequence. -/
-private theorem endState₂ (q₀ : State) (l₀ : Label) (q₁ : State) (l₁ : Label)
+private theorem endState_of_two_transitions (q₀ : State) (l₀ : Label) (q₁ : State) (l₁ : Label)
     (q₂ : State) :
     (⟨q₀, Seq.cons (l₀, q₁) (Seq.cons (l₁, q₂) Seq.nil)⟩ : AlterSeq State Label).endState
-      terminates₂ = q₂ := by
+      terminates_of_two_transitions = q₂ := by
   classical
   set e : AlterSeq State Label := ⟨q₀, Seq.cons (l₀, q₁) (Seq.cons (l₁, q₂) Seq.nil)⟩ with he
-  have hterm : e.trans.Terminates := terminates₂
+  have hterm : e.trans.Terminates := terminates_of_two_transitions
   have hfind : Nat.find hterm = 2 := by
     refine le_antisymm (Nat.find_le (show e.trans.TerminatedAt 2 from rfl)) ?_
     rw [Nat.le_find_iff]
@@ -107,8 +107,8 @@ theorem System.weakLStep_of_step {q q' : State} {l : Label}
 theorem weakLStep_tauThen {q q₁ q' : State} {l : Label}
     (h1 : sys.LStep q Silent.τ q₁) (h2 : sys.LStep q₁ l q')
     (hl : ¬ l = Silent.τ) : sys.weakLStep q l q' := by
-  refine ⟨⟨q, Seq.cons (Silent.τ, q₁) (Seq.cons (l, q') Seq.nil)⟩, terminates₂,
-    ?_, rfl, endState₂ q Silent.τ q₁ l q', ?_⟩
+  refine ⟨⟨q, Seq.cons (Silent.τ, q₁) (Seq.cons (l, q') Seq.nil)⟩, terminates_of_two_transitions,
+    ?_, rfl, endState_of_two_transitions q Silent.τ q₁ l q', ?_⟩
   · intro k l' s' hk
     match k with
     | 0 =>

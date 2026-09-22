@@ -836,7 +836,7 @@ theorem programStep_retW_foreign {r : ℕ} {id : Fin P.n} {co : Bool} (hid : id 
   case corruptedIdle => rfl
 
 /-- The process's own corruption (D23): the flag goes up on a program not yet
-replaced, and a replaced program stands still. -/
+replaced, and a replaced program is unchanged. -/
 theorem programStep_fail_own (h : ProgramStep P M S roundStep j q (Sum.inl (.fail j)) ν) :
     (q.1.corrupted = false ∧ ν = PMF.pure ({ q.1 with corrupted := true }, q.2)) ∨
     (q.1.corrupted = true ∧ ν = PMF.pure q) := by

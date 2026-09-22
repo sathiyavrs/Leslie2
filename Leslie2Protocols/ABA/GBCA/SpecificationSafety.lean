@@ -768,7 +768,7 @@ private theorem return_state_of_unanimous {v : Bool} {D : Seq (Label P.n) → EN
   obtain ⟨pe, h_init, h_D⟩ := hD
   rw [← h_D t] at h_ne
   obtain ⟨e, labs, h_exec, h_map, h_t⟩ :=
-    exists_exec_of_traceProb_ne_zero_ord pe h_init t h_ne
+    exists_exec_of_traceProb_ne_zero_ordered pe h_init t h_ne
   rw [Seq.ofList_filter] at h_t
   -- generalise the external-label filter to an opaque Boolean predicate
   obtain ⟨p, hpfail, hpcall, h_t⟩ : ∃ p : Label P.n → Bool,

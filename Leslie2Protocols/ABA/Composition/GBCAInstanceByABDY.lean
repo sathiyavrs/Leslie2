@@ -1140,7 +1140,7 @@ theorem composition_setProcess_setBound {j : Fin P.n} {pr : GBCA.ByABDY.ProcessR
   rw [programFunction_update hj hne]
   rfl
 
-/-- The programs stand still. -/
+/-- The programs remain unchanged. -/
 theorem composition_idle (hall : ∀ i, x i = u i) :
     ((x, w) : GBCA.ByABDY.ImplementationState P.n) = (u, w) := by
   rw [funext hall]
@@ -1517,7 +1517,8 @@ def substitutionRelation (P : Parameters) (r : ℕ) (σ : GBCA.ByABDY.Implementa
 
 /-- **The per-round instance simulation**: the round-`r` instance is forward
 simulated by the round-`r` graded agreement specification, read over the
-instance's interface. -/ theorem instanceSubstitution (P : Parameters) (r : ℕ) :
+instance's interface. -/
+theorem instanceSubstitution (P : Parameters) (r : ℕ) :
     ForwardSimulation (composition P r) (specificationOverRoundAlphabet P r)
     (substitutionRelation P r) := by
   constructor

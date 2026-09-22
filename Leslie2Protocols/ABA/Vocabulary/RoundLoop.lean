@@ -190,7 +190,7 @@ structure RoundLoopRecord (n : ℕ) : Type where
   decidedDelivered : Fin n → Finset Bool
   /-- Whether this process's program has been replaced (D23). The process's own
   half of `fail` writes the flag, and the guard of every correct row reads it.
-  The record beneath the flag stands still from that point on. -/
+  The record beneath the flag is unchanged from that point on. -/
   corrupted : Bool
   deriving DecidableEq
 

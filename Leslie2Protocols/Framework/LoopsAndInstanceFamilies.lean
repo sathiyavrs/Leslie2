@@ -15,7 +15,7 @@ emulate the blueprint's sync-set composition `∥_S`:
 
 * `System.withIdle sys busy` — `sys` plus idle self-loops `s —l→ δ_s` on every
   label outside `busy`. Under full synchronisation, a non-participant then
-  answers every foreign handshake by standing still.
+  answers every foreign handshake by unchanged.
 
 * `System.mapIdle φ sys` — `sys` read over a finer alphabet `L'` along the
   partial label map `φ : L' → Option L`: a label `l'` with `φ l' = some l`

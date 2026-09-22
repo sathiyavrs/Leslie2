@@ -90,7 +90,7 @@ def networkEventLabels (n : ℕ) {M : Type} : Set (ExtendedLabel n M) :=
 /-! ### The labels a process acts on
 
 A corruption replaces the program of the process it names (D23). The replaced
-program stands still on every label it can take at all, and it can take every
+program is unchanged on every label it can take at all, and it can take every
 label except the ones below: those on which the process would act on its own
 sub-protocol messages. Those messages are the business of the Byzantine handshake rows
 (D11), which carry it with no row at the process they name. -/
@@ -184,7 +184,7 @@ noncomputable def coinOverExtendedAlphabet (P : Parameters) (M : Type) :
 handshake of one of its own rounds, nor `fail`. Read through the pullback
 `coinLabelMap`, this is the oracle's row in every joint transition — of a protocol
 system, of its composed system, and of the protocol-shaped specification
-(`ABA/Composition/HybridAndSubstitution.lean`) — that leaves the coin standing still. -/
+(`ABA/Composition/HybridAndSubstitution.lean`) — that leaves the coin unchanged. -/
 theorem wccFamily_idle (P : Parameters) (o : ℕ → WCC.SpecState P.n) {l : Label P.n}
     (hl : l ≠ Label.tau) (hr : Label.wccRound l = none) (hf : ¬ Label.isFail l) :
     (WCC.specFamily P).step o l (PMF.pure o) := by

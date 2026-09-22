@@ -1628,8 +1628,8 @@ theorem roundProjection_secondGatherBind (hu : (u j).2 = p) (r : ℕ) (U : Gathe
 
 /-- `ECHO` in an input-broadcast instance of the first gather, read through the
 view. -/
-theorem roundProjection_firstGatherInputBroadcastEcho (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n) (m :
-  Bool) :
+theorem roundProjection_firstGatherInputBroadcastEcho (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
+    (m : Bool) :
     roundProjection P (Function.update u j (c, p.setRoundRecord r
         { p.roundRecord r with
           firstGatherInputBroadcasts := Function.update (p.roundRecord r).firstGatherInputBroadcasts
@@ -1678,8 +1678,8 @@ theorem roundProjection_firstGatherInputBroadcastVote (hu : (u j).2 = p) (r : �
 
 /-- `ECHO` in a bind-broadcast instance of the first gather, read through the
 view. -/
-theorem roundProjection_firstGatherBindBroadcastEcho (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n) (m :
-  Gather.AcceptedPairs P.n Bool) :
+theorem roundProjection_firstGatherBindBroadcastEcho (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
+    (m : Gather.AcceptedPairs P.n Bool) :
     roundProjection P (Function.update u j (c, p.setRoundRecord r
         { p.roundRecord r with
           firstGatherBindBroadcasts := Function.update (p.roundRecord r).firstGatherBindBroadcasts i
@@ -1726,8 +1726,8 @@ theorem roundProjection_firstGatherBindBroadcastVote (hu : (u j).2 = p) (r : ℕ
 
 /-- `ECHO` in an input-broadcast instance of the second gather, read through
 the view. -/
-theorem roundProjection_secondGatherInputBroadcastEcho (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n) (m :
-  Option Bool) :
+theorem roundProjection_secondGatherInputBroadcastEcho (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
+    (m : Option Bool) :
     roundProjection P (Function.update u j (c, p.setRoundRecord r
         { p.roundRecord r with
           secondGatherInputBroadcasts := Function.update (p.roundRecord
@@ -1941,7 +1941,7 @@ theorem roundProjection_callG (hu : (u j).2 = p) (r : ℕ) (b : Bool) :
   · simp
 
 /-- The graded-agreement call against an already-called record, read through
-the view: the round loop moves and the view stands still. -/
+the view: the round loop moves and the view is unchanged. -/
 theorem roundProjection_gbcaCallLoop (hu : (u j).2 = p) (r r' : ℕ) (b : Bool)
     (c' : RoundLoopRecord P.n) :
     roundProjection P (Function.update u j (c', p))
@@ -3431,7 +3431,7 @@ theorem roundProjection_byzantineSecondGatherBindBroadcast
             Ne.symm hk])
     · simp
 
-/-! ### Every other round stands still
+/-! ### Every other round is unchanged
 
 A row names one round. The rounds it does not name read exactly as they did:
 the acting process's other round records are untouched, the adversary's sent
@@ -3473,7 +3473,7 @@ theorem roundProjection_otherSent (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n) (
     recordGBCASend_sent_ne w r k m hr, recordGBCASend_F, recordGBCASend_ghostRecord]
 
 /-- **The whole family of rounds after a send**: the round the row names moves,
-the rest stand still. -/
+the rest remain unchanged. -/
 theorem toRoundFamily (hu : (u j).2 = p) (r : ℕ) (sr : RoundRecord P.n) (m : Message P.n)
     {L : ExtendedLabel P.n (Message P.n)} (hL : roundOf L = some r)
     (X : GBCA.ByAFW.RoundStateOverBracha P.n)
@@ -3526,13 +3526,13 @@ second-gather local input is written at the return-then-call step alone. -/
 
 section Invariants
 
-/-- One broadcast instance's move across a row: it stands still, or it takes a
+/-- One broadcast instance's move across a row: it is unchanged, or it takes a
 row of `BRB.BrachaStep`. -/
 def InvariantStep (P : Parameters) {M : Type} [DecidableEq M] (ldr : Fin P.n)
     (s s' : BRB.BrachaState P.n M) : Prop :=
   s' = s ∨ ∃ l, BRB.BrachaStep P ldr s l (PMF.pure s')
 
-/-- An instance that stands still. -/
+/-- An instance that is unchanged. -/
 theorem InvariantStep.unchanged {M : Type} [DecidableEq M] (P : Parameters) (ldr : Fin P.n)
     (s : BRB.BrachaState P.n M) : InvariantStep P ldr s s := Or.inl rfl
 
@@ -3550,7 +3550,7 @@ theorem InvariantStep.invariant {M : Type} [DecidableEq M] {P : Parameters} {ldr
   · exact hInv.step hl (by simp)
 
 /-- A row that moves one instance of a family: that instance takes its row and
-every other instance stands still. -/
+every other instance is unchanged. -/
 theorem invariantStep_update {M : Type} [DecidableEq M] {P : Parameters}
     (b : Fin P.n → BRB.BrachaState P.n M) (i : Fin P.n) (s' : BRB.BrachaState P.n M)
     {l : BRB.Label P.n M} (h : BRB.BrachaStep P i (b i) l (PMF.pure s')) (k : Fin P.n) :

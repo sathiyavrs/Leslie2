@@ -56,7 +56,7 @@ labels; every other specification label has a single label over it.
 
 * **D1 (determinised `fail`).** `NetworkState.corrupt` is the total Dirac
   function guarded by `id ∉ F ∧ |F| < f`. It is the network's own row, and the
-  programs answer `fail` by standing still: the local records are
+  programs answer `fail` by unchanged: the local records are
   corruption-blind.
 * **D5 (set-based network).** Multicasts are idempotent: `sent j` is the set of
   messages `j` has multicast, and `received k` at a program is the set of messages
@@ -473,9 +473,8 @@ theorem broadcastProgramProduct_pure {P : Parameters} {ldr : Fin P.n}
 theorem broadcastProgramProduct_no_tau {P : Parameters} {ldr : Fin P.n}
     {u : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord M) (Message M)}
     {μ : PMF (∀ _ : Fin P.n, LocalState P.n (ProcessRecord M) (Message M))}
-    (h : (System.synchronisedProduct (broadcastProgram P ldr (M := M))).step u (Silent.τ :
-      BroadcastLabel
-      P.n M) μ) :
+    (h : (System.synchronisedProduct (broadcastProgram P ldr (M := M))).step u
+      (Silent.τ : BroadcastLabel P.n M) μ) :
     False := by
   rcases h with ⟨hτ, -⟩ | ⟨-, i, μ_i, hstep, -⟩
   · exact hτ rfl
@@ -769,7 +768,7 @@ theorem brachaInstance_setProcess_recordSent {j : Fin P.n} {pr : ProcessRecord M
   rfl
 
 omit [DecidableEq M] in
-/-- The programs stand still. -/
+/-- The programs remain unchanged. -/
 theorem brachaInstance_idle (hall : ∀ i, x i = u i) : ((x, w) : BrachaState P.n M) = (u, w) := by
   rw [funext hall]
 

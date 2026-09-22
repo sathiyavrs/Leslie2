@@ -15,14 +15,14 @@
   The map is finite by its type, so $j$ holds finitely many round records at every point of a run, and the round advance resets none of them.
   Every round's row is accordingly round-indexed rather than round-guarded: it reads and writes the round record of the round its own label tags, whichever round the round loop is in, under the guards of that round record and $terminated = \mathrm{false}$.
   Process $j$ therefore answers the messages of a round its round loop has passed, and a round delivery of any round is filed.
-  The row $terminate$ fires on $j$'s own return and $2f+1$ DECIDED receipts, and its effect is to set $terminated$ and nothing else, so the retained round records stand still from that point.
+  The row $terminate$ fires on $j$'s own return and $2f+1$ DECIDED receipts, and its effect is to set $terminated$ and nothing else, so the retained round records remain unchanged from that point.
   The DECIDED rows carry no termination guard, so a process that has terminated keeps relaying the payloads it holds.
   The return $retABA$ and the DECIDED relay are guarded by the round-loop record holding an input, so a process that was never called neither returns nor relays (D8).
   The row $gbcaCallLoop$ reads the round record of round $r$ without writing it, requiring that the record holds an input, and carries no termination guard.
   A process that has terminated at phase $toCallG$ over an uncalled round record therefore has a row on neither call label and takes no further round-loop step, an excluded region this definition accepts.
   There is no outbox and no copy of the corrupted set or its budget, so every guard of the automaton $\mathrm{ABAProgram}(P,j)$ reads $j$'s own record.
   A corruption replaces $j$'s program (D23).
-  The round-loop record carries the flag \leandecl{PLTS.ABA.RoundLoopRecord.corrupted}, written by $j$'s own half of the corruption broadcast, \leandeclnamed{failSelf}{PLTS.ABA.Implementation.ProgramStep.failSelf}; every other row above is enabled only while that flag is down, so the record stands still from the corruption and $terminate$ in particular never fires afterwards.
+  The round-loop record carries the flag \leandecl{PLTS.ABA.RoundLoopRecord.corrupted}, written by $j$'s own half of the corruption broadcast, \leandeclnamed{failSelf}{PLTS.ABA.Implementation.ProgramStep.failSelf}; every other row above is enabled only while that flag is down, so the record is unchanged from the corruption and $terminate$ in particular never fires afterwards.
   In place of those rows the replaced program is the single self-loop \leandeclnamed{corruptedIdle}{PLTS.ABA.Implementation.ProgramStep.corruptedIdle}, taken on every label other than $\tau$ and the labels of $\mathrm{actsAt}\,j$ --- the labels on which $j$ would act on its own sub-protocol messages --- where it has no row at all.
   Those messages enter through the handshake rows of D11 and the injections $\mathrm{byzantineGBCA}$ and $\mathrm{byzantineDecided}$.
   The visible return is the exception: the network's own $\mathrm{retByzantine}$ row requires $j \in F$ and no DECIDED evidence, and the self-loop is its other half.
