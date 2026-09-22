@@ -11,7 +11,7 @@ import Leslie2.Simulation.ForwardLTS
 
 A relation `R : S → T → Prop` lifts to distributions as `diracRel R`, which
 holds of a source state and a target distribution when that distribution is the
-point mass on an `R`-image of the state. Two sources admit a coupling by
+point mass on an `R`-image of the state. Two kinds of source admit a coupling by
 `PMFRel (diracRel R)` outright.
 
 `coupling_pure` takes a Dirac source to the point mass on a related target.

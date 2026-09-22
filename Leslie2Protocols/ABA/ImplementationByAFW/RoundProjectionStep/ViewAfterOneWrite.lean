@@ -13,7 +13,8 @@ import Leslie2Protocols.ABA.ImplementationByAFW.RoundProjection
 A row of the implementation writes the acting process's round record and records at most one
 tagged message. `roundProjection_write` and `roundProjection_writeNoSent` do that write once,
 through `roundProjectionUpdate`: each local state vector of the view becomes a one-point update of
-the old one, and each network state is recovered from the written sent family by its own tag.
+the old one, and each network state is recovered from the written sent family by its own tag
+(`messagesOf`).
 `messagesOf_recordSent_some` and `messagesOf_recordSent_none` are the sent algebra a row still
 owes, and one simp lemma per coordinate reads the written view off `roundProjectionUpdate`.
 `broadcastReturnsFor_update_setProcess` and `broadcastReturnsFor_update_deliverTo` read the family

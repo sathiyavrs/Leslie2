@@ -17,7 +17,7 @@ proofs over the implementation run on. The three writes on the message record le
 alone, and the ghost write leaves the message record alone and leaves the ghost alone too on a
 label naming no round.
 
-Two erasures read the implementation down. `NetworkState.forgetGhost` sends the network's state to
+Two erasures forget the ghost. `NetworkState.forgetGhost` sends the network's state to
 the state over the trivial ghost `Unit`, and it commutes with each of the three writes on the
 message record. Over `Unit` the ghost write is the identity, so the erasure of a ghost write is the
 erasure of the state it starts from. `forgetBound` sends a label to the label with the announced

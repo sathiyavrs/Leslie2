@@ -87,8 +87,9 @@ Safety properties are stated on the supports of achievable trace distributions, 
 The transfer is in \leanmodule{Leslie2Protocols/Framework/TraceDistributionSupport} and the composition operators are in \leanmodule{Leslie2/ProcessAlgebra/Composition} and \leanmodule{Leslie2/ProcessAlgebra/Abstract}.
 The synchronised product of the components is in \leanmodule{Leslie2Protocols/Framework/SynchronisedProduct} and the idle-padded instance families are in \leanmodule{Leslie2Protocols/Framework/LoopsAndInstanceFamilies}.
 The product of a family of components each read along its own pullback is in \leanmodule{Leslie2Protocols/Framework/SynchronisedProductAlongPullbacks}.
+The two couplings a Dirac lift admits --- a Dirac source matched by a related target, and a source pushed forward along a map matched outcome by outcome --- are in \leanmodule{Leslie2Protocols/Framework/DiracRelationCoupling}.
 The restriction along the left embedding and the precongruence it enjoys are both in \leanmodule{Leslie2Protocols/Framework/Relabel}.
-The read-back congruence transports a simulation over a finer alphabet, and \leanmodule{Leslie2Protocols/Framework/WeakTransitionsFromChains} supplies the weak runs of unbounded length --- a chain of silent steps, closed or not by one external step --- that the simulations of the case study answer multi-step obligations with.
+The read-back congruence, in \leanmodule{Leslie2Protocols/Framework/FinerAlphabetCongruence}, transports a simulation over a finer alphabet, and \leanmodule{Leslie2Protocols/Framework/WeakTransitionsFromChains} supplies the weak runs of unbounded length --- a chain of silent steps, closed or not by one external step --- that the simulations of the case study answer multi-step obligations with.
 The last statement of the list is the same congruence property at the level of labelled transition systems, for every operator at once, which is what a substitution inside a composition of components rests on; it is in \leanmodule{Leslie2Protocols/Framework/Congruence}.
 
 \input{nodes-min/thm-trace-support}
@@ -456,7 +457,7 @@ The Lean files are \leanmodule{Leslie2Protocols/ABA/Vocabulary/ProcessAndNetwork
 
 Reliable broadcast is the bottom tier, and its specification is the first point dynamic corruption shapes: a leader corrupted after its call may still direct the delivered value, so the committed value is a separate field written by a guarded internal rule, not the call's own record (D27).
 The implementation is Bracha's three message levels over the shared two-part state of Definition~\ref{def:aba-networkstate}, and its refinement certifies the committed value by an $\mathrm{ECHO}$ receipt quorum, firing the abstract commit on demand under the first return.
-See \leanmodule{Leslie2Protocols/ABA/Vocabulary/ProcessAndNetworkState}, \leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/Specification}, \leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/BrachaImplementation} and \leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/BrachaRefinesSpecification}.
+See \leanmodule{Leslie2Protocols/ABA/Vocabulary/ProcessAndNetworkState}, \leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/Specification}, \leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/BrachaImplementation}, \leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/BrachaComposition}, \leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/BrachaSpecificationOverInstanceAlphabet}, \leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/BrachaCompositionStepInversion} and \leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/BrachaRefinesSpecification}.
 
 \input{nodes-min/def-aba-networkstate}
 \input{nodes-min/def-aba-brb-spec}

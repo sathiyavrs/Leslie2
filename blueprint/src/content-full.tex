@@ -1869,7 +1869,10 @@ The encoding therefore splits the recorded input from the committed value and gu
 The refinement certifies the committed value by an $\mathrm{ECHO}$ receipt quorum of more than $(n+f)/2$ senders --- $F$-blind, monotone, unique by quorum intersection over the write-once echoes --- and fires the abstract commit on demand, as a two-step weak run under the first return.
 See \leanmodule{Leslie2Protocols/ABA/Vocabulary/ProcessAndNetworkState},
 \leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/Specification},
-\leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/BrachaImplementation} and
+\leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/BrachaImplementation},
+\leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/BrachaComposition},
+\leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/BrachaSpecificationOverInstanceAlphabet},
+\leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/BrachaCompositionStepInversion} and
 \leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/BrachaRefinesSpecification}.
 
 \input{nodes/def-aba-networkstate}

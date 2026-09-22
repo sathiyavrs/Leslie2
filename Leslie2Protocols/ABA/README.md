@@ -154,7 +154,8 @@ registry.
 ## The files
 
 Each file's module docstring is the account of record for it. The table gives one clause per
-file: what it holds, and the declarations a reader looks for. The folders are given in import order, and no folder imports one below it:
+file: what it holds, and the declarations a reader looks for. The folders are given in import
+order, and no folder imports one below it:
 `Vocabulary/` is written over by everything, `GhostErasure/` writes over everything.
 Within a folder the files are alphabetical. Each file holds one object or one result together
 with the lemmas that exist only to prove it, and Mathlib's `linter.style.longFile` caps a file

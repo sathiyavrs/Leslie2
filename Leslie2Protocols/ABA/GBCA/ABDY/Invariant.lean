@@ -22,8 +22,8 @@ that a corruption leaves them alone.
 
 The invariant carries
 
-* the corruption budget (`F_card`) and delivery soundness (`received_subset_sent`); * protocol
-conformance of correct multicasts (`echo_confirmed`, `vote_input`,
+* the corruption budget (`F_card`) and delivery soundness (`received_subset_sent`);
+* protocol conformance of correct multicasts (`echo_confirmed`, `vote_input`,
   `vote_confirmed`, `bind_confirmed`, `bindBot_confirmed`, `echo5_input`, `echo5_confirmed`,
   `echo5Bot_confirmed`): each correct `ECHO`/`VOTE`/`BIND`/`ECHO5` is backed by the
   receipt evidence that Algorithm 6 demands (receipts only grow, so the

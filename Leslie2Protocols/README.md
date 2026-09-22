@@ -19,8 +19,8 @@ guide, [`ABA/README.md`](ABA/README.md).
 
 The protocol-independent combinators the case study composes with, and the couplings a
 Dirac-lifted relation admits. One of the combinators — restriction along the left summand of
-an extended alphabet — is a fourth precongruence, beside the three in the core. Eleven files, given in import order in its own file guide,
-[`Framework/README.md`](Framework/README.md).
+an extended alphabet — is a fourth precongruence, beside the three in the core. Eleven files,
+given in import order in its own file guide, [`Framework/README.md`](Framework/README.md).
 
 | file | lines | what it is |
 |---|---|---|

@@ -3,7 +3,8 @@
 The protocol-independent combinators the ABA case study composes with, the congruences that
 carry a forward simulation through them, and the couplings a Dirac-lifted relation admits. One
 of the combinators — restriction along the left summand of an extended alphabet, in
-`Relabel.lean` — is a fourth precongruence, beside the three in the core library. The eleven files, in import order:
+`Relabel.lean` — is a fourth precongruence, beside the three in the core library. The eleven
+files, in import order:
 
 | file | lines | what it is |
 |---|---|---|

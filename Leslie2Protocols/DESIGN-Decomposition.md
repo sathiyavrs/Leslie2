@@ -86,7 +86,7 @@ state from the implementation (`AFW.roundProjection`), and the implementation's 
 process's grade in its round-loop record alone, overwritten every round. A round's grade after its
 return is not recoverable from the implementation's state. If the program's record kept the grade,
 `AFW.programProjection` could not be a function, `AFW.ProtocolRelation` would lose the conjunct `t.1
-= fun r => roundProjection P u w r`, and every frame lemma of
+= fun r => roundProjection P u w r`, and the frame lemmas of
 `ABA/ImplementationByAFW/RoundProjectionStep/`, which state the view after a row as that
 function applied, would have no statement.
 
