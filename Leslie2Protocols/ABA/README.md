@@ -11,7 +11,7 @@ following the "Verifying ABA with Leslie" blueprint. The headlines of both chain
 Each chain carries two headlines about its ghost-free system, in
 `GhostErasure/ImplementationByABDY.lean` and `GhostErasure/ImplementationByAFW.lean`:
 `protocol_erasure`, the equality of achievable trace distributions between the protocol and that
-ghost-free system, and `protocol₀_safe`, Validity and Agreement at it. The two sub-protocol
+ghost-free system, and `ghostFreeProtocol_safe`, Validity and Agreement at it. The two sub-protocol
 interfaces carry headlines of their own: `GBCA.specInst_binding` in `GBCA/SpecificationSafety.lean`,
 with its four implementations `GBCA.ByABDY.implementation_binding` in
 `GBCA/ABDY/RefinesSpecification.lean` and `GBCA.roundOverGatherSpecifications_binding`,
@@ -347,8 +347,8 @@ reaches it.
 | file | lines | what it is |
 |---|---|---|
 | `GhostErasure/GhostFreeSystem.lean` | 415 | **The ghost-free system** `Implementation.systemGhostFree`: `Implementation/System.lean` over a one-element ghost record, with its returns free to announce any bit, and `Implementation.system_erasure`, the two systems' equality of achievable trace distributions, by a state erasure of the network carried through the pipeline. |
-| `GhostErasure/ImplementationByABDY.lean` | 104 | **`ABDY.protocol₀`** and **`ABDY.protocol_erasure`**: the protocol with the adversary's bound-bit record dropped, and the headlines re-derived at it — `protocol₀_composed`, `protocol₀_refines`, `protocol₀_safe`, `protocol₀_traces`. Three axiom checks. |
-| `GhostErasure/ImplementationByAFW.lean` | 111 | **`AFW.protocol₀`** and **`AFW.protocol_erasure`**: the gather-based protocol with the adversary's record of the two cores and the bound bit dropped, and the headlines re-derived at it — `protocol₀_composed`, `protocol₀_refines`, `protocol₀_safe`, `protocol₀_traces`. Five axiom checks. |
+| `GhostErasure/ImplementationByABDY.lean` | 104 | **`ABDY.ghostFreeProtocol`** and **`ABDY.protocol_erasure`**: the protocol with the adversary's bound-bit record dropped, and the headlines re-derived at it — `ghostFreeProtocol_composed`, `ghostFreeProtocol_refines`, `ghostFreeProtocol_safe`, `ghostFreeProtocol_traces`. Three axiom checks. |
+| `GhostErasure/ImplementationByAFW.lean` | 111 | **`AFW.ghostFreeProtocol`** and **`AFW.protocol_erasure`**: the gather-based protocol with the adversary's record of the two cores and the bound bit dropped, and the headlines re-derived at it — `ghostFreeProtocol_composed`, `ghostFreeProtocol_refines`, `ghostFreeProtocol_safe`, `ghostFreeProtocol_traces`. Five axiom checks. |
 
 The pieces both compositions are built from are in `Composition/Components.lean`, over the
 alphabet of `Implementation/Alphabet.lean`. `ImplementationByABDY/System.lean` and

@@ -27,11 +27,11 @@ couplings that answer a Dirac outcome and an outcome whose only free coordinate 
 
 ## The matching, label class by label class
 
-`AFW.match_tau`, `AFW.match_label` and `AFW.match_event` answer the silent label, a visible shared
-label and a rendezvous of the implementation, each from the runs of
+`AFW.coupling_tau`, `AFW.coupling_label` and `AFW.coupling_event` answer the silent label, a
+visible shared label and a rendezvous of the implementation, each from the runs of
 `ABA/ImplementationByAFW/SimulationRows.lean`. An implementation row that fuses two events of the
-composed round is answered by a run of two transitions, so `AFW.match_hidden` concludes in a weak
-run of the composed group, and `AFW.match_step` carries that run through the sub-protocol hiding
+composed round is answered by a run of two transitions, so `AFW.coupling_hidden` concludes in a weak
+run of the composed group, and `AFW.coupling_step` carries that run through the sub-protocol hiding
 with `weakTau_abstract`, `weakTau_of_weakStep_mem` and `weakStep_abstract`.
 `AFW.protocolSimulation` is the forward simulation these matchings assemble, and
 `AFW.protocol_composed` the trace inclusion it yields. -/
@@ -50,7 +50,7 @@ alone. -/
 
 /-- A visible shared label: the four components move together, the oracle's
 successor free. -/
-private theorem match_visible (P : Parameters) {x : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
+private theorem coupling_visible (P : Parameters) {x : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     {w' : NetworkState P.n} {G' : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n}
     {C' : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A' : ABANetworkState P.n}
     {ν : PMF (ℕ → WCC.SpecState P.n)} {G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n}
@@ -74,7 +74,8 @@ private theorem match_visible (P : Parameters) {x : ∀ _ : Fin P.n, AFW.Process
 
 /-- A hidden rendezvous: the four components move together and the composed
 group reads the move as silent. -/
-private theorem match_hiddenRendezvous (P : Parameters) {x : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
+private theorem coupling_hiddenRendezvous (P : Parameters)
+    {x : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     {w' : NetworkState P.n} {G' : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n}
     {C' : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A' : ABANetworkState P.n}
     {ν : PMF (ℕ → WCC.SpecState P.n)} {G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n}
@@ -100,7 +101,7 @@ private theorem match_hiddenRendezvous (P : Parameters) {x : ∀ _ : Fin P.n, AF
 
 /-- A row internal to the graded-agreement family: the family takes a silent run and nothing else
 moves. -/
-private theorem match_run (P : Parameters) {x : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
+private theorem coupling_run (P : Parameters) {x : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     {w' : NetworkState P.n} {G' G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n}
     {C : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A : ABANetworkState P.n}
     {o : ℕ → WCC.SpecState P.n}
@@ -113,7 +114,7 @@ private theorem match_run (P : Parameters) {x : ∀ _ : Fin P.n, AFW.ProcessReco
   exact ⟨Ω, hr, hb ▸ composedHidden_weakTau P C A o hG⟩
 
 /-- A composed state that is unchanged. -/
-private theorem match_unchanged (P : Parameters) {s : ProtocolState P} {t : ComposedState P}
+private theorem coupling_unchanged (P : Parameters) {s : ProtocolState P} {t : ComposedState P}
     (h : ProtocolRelation P s t) :
     ∃ Ω : PMF (PMF (ComposedState P)),
       PMFRel (diracRel (ProtocolRelation P)) (PMF.pure s) Ω ∧
@@ -127,7 +128,7 @@ The implementation's own `terminate` row writes no coordinate the relation reads
 so the composed answer to it is to remain unchanged; the adversary's two injections
 are answered by a transition. -/
 
-theorem match_tau (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
+theorem coupling_tau (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
     {G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
     {A : ABANetworkState P.n} (hR : ProtocolRelation P (u, w, o) (G, C, A, o))
@@ -150,7 +151,7 @@ theorem match_tau (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     have hview : ∀ r, roundProjection P (Function.update u i ((u i).1,
         { (u i).2 with terminated := true })) w r = roundProjection P u w r :=
       fun r => roundProjection_congr (fun j => hst j r)
-    refine match_unchanged P ((protocolRelation_mk P _ _ _ _ _ _ _).mpr
+    refine coupling_unchanged P ((protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨fun j => ?_, rfl, hA, ?_,
         boundInvariant_of hB (fun j r => by rw [hst j r]) (fun _ hb => hb),
         broadcastReturnsInvariant_congr hI hview⟩)
@@ -164,7 +165,7 @@ theorem match_tau (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     · obtain rfl : w' = w.recordGBCASend r k m := pure_inj hw
       obtain ⟨hstep, hinv⟩ := byzantine_answer P u w hI r m hF
       have hfam := roundProjectionFamily_byzantine u w r k m
-      refine match_run P ((protocolRelation_mk P _ _ _ _ _ _ _).mpr
+      refine coupling_run P ((protocolRelation_mk P _ _ _ _ _ _ _).mpr
           ⟨hC, rfl, by simpa using hA, hfam.symm,
             boundInvariant_of hB (fun _ _ => rfl) (fun _ hb => hb),
             broadcastReturnsInvariant_update hI hfam hinv⟩) ?_
@@ -188,7 +189,7 @@ theorem match_tau (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
 
 /-! ### The matching on a visible shared label -/
 
-theorem match_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
+theorem coupling_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
     {G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
     {A : ABANetworkState P.n} (hR : ProtocolRelation P (u, w, o) (G, C, A, o))
@@ -217,7 +218,7 @@ theorem match_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
       · subst hi
         rcases programStep_callABA_own (hall i) with ⟨-, -, hx⟩ | ⟨-, hx⟩ <;> rw [pure_inj hx]
       · rw [hfor i hi]
-    refine match_visible P hl (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
+    refine coupling_visible P hl (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact roundProjection_unchanged hsame w',
           boundInvariant_of hB (fun i r => by rw [hsame i]) (fun _ hb => hb),
           broadcastReturnsInvariant_congr hI (fun r => roundProjection_congr (fun i => by rw [hsame
@@ -251,7 +252,7 @@ theorem match_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
       rcases hdp with hd | hf
       · exact ABANetworkStep.retABA ⟨w'.decidedSent, w'.F⟩ id b hd
       · exact ABANetworkStep.retByzantine ⟨w'.decidedSent, w'.F⟩ id b hf
-    refine match_visible P hl (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
+    refine coupling_visible P hl (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact roundProjection_unchanged hsame w',
           boundInvariant_of hB (fun i r => by rw [hsame i]) (fun _ hb => hb),
           broadcastReturnsInvariant_congr hI (fun r => roundProjection_congr (fun i => by rw [hsame
@@ -276,7 +277,7 @@ theorem match_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
       · subst hi
         rcases programStep_callW_own (hall i) with ⟨-, -, -, hx⟩ | ⟨-, hx⟩ <;> rw [pure_inj hx]
       · rw [hfor i hi]
-    refine match_visible P hl (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
+    refine coupling_visible P hl (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact roundProjection_unchanged hsame w',
           boundInvariant_of hB (fun i r => by rw [hsame i]) (fun _ hb => hb),
           broadcastReturnsInvariant_congr hI (fun r => roundProjection_congr (fun i => by rw [hsame
@@ -301,7 +302,7 @@ theorem match_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
       · subst hi
         rcases programStep_retW_own (hall i) with ⟨-, -, -, -, hx⟩ | ⟨-, hx⟩ <;> rw [pure_inj hx]
       · rw [hfor i hi]
-    refine match_visible P hl (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
+    refine coupling_visible P hl (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact roundProjection_unchanged hsame w',
           boundInvariant_of hB (fun i r => by rw [hsame i]) (fun _ hb => hb),
           broadcastReturnsInvariant_congr hI (fun r => roundProjection_congr (fun i => by rw [hsame
@@ -336,7 +337,7 @@ theorem match_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
       exact roundInvariant_both (roundInvariant_of_broadcastReturnsInvariant hI r)
         (Gather.StepOverBracha.fail _ k)
         (Gather.StepOverBracha.fail _ k)
-    refine match_visible P hl (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
+    refine coupling_visible P hl (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, ?_, ?_,
           boundInvariant_of hB (fun i r => by rw [hsame i]) (fun _ hb => by simpa using hb),
           hSI⟩)
@@ -392,7 +393,7 @@ theorem match_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
           by_cases hi : i = id
           · subst hi; exact hoff r' hr'
           · rw [hfor i hi])).trans (roundProjection_otherSent u w hr' id _ rfl)
-    refine match_visible P hl (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
+    refine coupling_visible P hl (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, by rw [hA]; simp, hfam.symm,
           boundInvariant_of hB hxg (fun _ hb => writeGhost_bound _ (by simpa using hb)),
           broadcastReturnsInvariant_update hI hfam hinv⟩)
@@ -442,7 +443,7 @@ theorem match_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
           by_cases hi : i = id
           · subst hi; exact hoff r' hr'
           · rw [hfor i hi])
-    refine match_visible P hl (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
+    refine coupling_visible P hl (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, by rw [hA]; simp, hfam.symm,
           boundInvariant_of hB hxg (fun _ hb => writeGhost_bound _ hb),
           broadcastReturnsInvariant_update hI hfam hinv⟩)
@@ -462,7 +463,7 @@ A send and a delivery are internal to the round, so the composed system answers 
 run of the graded-agreement family; the DECIDED rows, the fused coin return and the handshake rows
 are answered by the same rendezvous. -/
 
-theorem match_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
+theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
     {G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
     {A : ABANetworkState P.n} (hR : ProtocolRelation P (u, w, o) (G, C, A, o))
@@ -484,7 +485,7 @@ theorem match_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
           (Ω.bind id) := by
     intro G' hν hrel hGs
     subst hν
-    obtain ⟨Ω, hr, hs⟩ := match_run P hrel hGs
+    obtain ⟨Ω, hr, hs⟩ := coupling_run P hrel hGs
     refine ⟨Ω, ?_, hs⟩
     rwa [prodPMF_pure_pure, prodPMF_pure_pure]
   cases e with
@@ -610,7 +611,7 @@ theorem match_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
         rcases programStep_decidedSend_self (hall i) with ⟨-, -, -, hxi⟩ | ⟨-, hxi⟩ <;>
           exact pure_inj hxi
       · exact pure_inj (programStep_decidedSend_foreign (Ne.symm hi) (hall i))
-    refine match_hiddenRendezvous P (.decidedSend j b) (fun o' _ =>
+    refine coupling_hiddenRendezvous P (.decidedSend j b) (fun o' _ =>
       (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun i => by rw [hx i], rfl, by rw [hA]; rfl, by
           rw [hGv]; funext r; exact (roundProjection_congr (fun i => by rw [hx i])).symm,
@@ -637,7 +638,7 @@ theorem match_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
       by_cases hi : i' = i
       · subst hi; rw [pure_inj hxi]
       · rw [hfor i' hi]
-    refine match_hiddenRendezvous P (.decidedDeliver i k b) (fun o' _ =>
+    refine coupling_hiddenRendezvous P (.decidedDeliver i k b) (fun o' _ =>
       (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact roundProjection_unchanged hsame w',
           boundInvariant_of hB (fun i' r => by rw [hsame i']) (fun _ hb => hb),
@@ -665,7 +666,7 @@ theorem match_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
       (roundProjection_congr (fun i => by rw [hsame i])).trans
         (roundProjection_ghostId (Sum.inr (NetworkEvent.retWPublish r id cc b))
           (fun _ _ => rfl) u _ r')
-    refine match_hiddenRendezvous P (.retWPublish r id cc b) (fun o' _ =>
+    refine coupling_hiddenRendezvous P (.retWPublish r id cc b) (fun o' _ =>
       (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, by rw [hA]; rfl, by rw [hGv]; funext r'; exact (hview r').symm,
           boundInvariant_of hB (fun i r' => by rw [hsame i])
@@ -700,7 +701,7 @@ theorem match_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
       (roundProjection_congr (fun i => by rw [hsame i])).trans
         (roundProjection_ghostId (Sum.inr (NetworkEvent.gbcaCallLoop r id b))
           (fun _ _ => rfl) u w r')
-    refine match_hiddenRendezvous P (.gbcaCallLoop r id b) (fun o' _ =>
+    refine coupling_hiddenRendezvous P (.gbcaCallLoop r id b) (fun o' _ =>
       (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, by rw [hA]; simp, by rw [hGv]; funext r'; exact (hview r').symm,
           boundInvariant_of hB (fun i r' => by rw [hsame i])
@@ -725,7 +726,7 @@ theorem match_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
       (roundProjection_congr (fun i => by rw [hx i])).trans
         (roundProjection_ghostId (Sum.inr (NetworkEvent.byzantineCallGLoop r k b))
           (fun _ _ => rfl) u w r')
-    refine match_hiddenRendezvous P (.byzantineCallGLoop r k b) (fun o' _ =>
+    refine coupling_hiddenRendezvous P (.byzantineCallGLoop r k b) (fun o' _ =>
       (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun i => by rw [hx i], rfl, hA, by rw [hGv]; funext r'; exact (hview r').symm,
           boundInvariant_of hB (fun i r' => by rw [hx i])
@@ -747,7 +748,7 @@ theorem match_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
       (roundProjection_congr (fun i => by rw [hx i])).trans
         (roundProjection_ghostId (Sum.inr (NetworkEvent.byzantineCallW r k))
           (fun _ _ => rfl) u w r')
-    refine match_hiddenRendezvous P (.byzantineCallW r k) (fun o' _ =>
+    refine coupling_hiddenRendezvous P (.byzantineCallW r k) (fun o' _ =>
       (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun i => by rw [hx i], rfl, hA, by rw [hGv]; funext r'; exact (hview r').symm,
           boundInvariant_of hB (fun i r' => by rw [hx i])
@@ -768,7 +769,7 @@ theorem match_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
       (roundProjection_congr (fun i => by rw [hx i])).trans
         (roundProjection_ghostId (Sum.inr (NetworkEvent.byzantineRetW r k b))
           (fun _ _ => rfl) u w r')
-    refine match_hiddenRendezvous P (.byzantineRetW r k b) (fun o' _ =>
+    refine coupling_hiddenRendezvous P (.byzantineRetW r k b) (fun o' _ =>
       (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun i => by rw [hx i], rfl, hA, by rw [hGv]; funext r'; exact (hview r').symm,
           boundInvariant_of hB (fun i r' => by rw [hx i])
@@ -786,7 +787,7 @@ theorem match_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n
 
 /-- **The matching at the group level**: the rendezvous alphabet is hidden in both systems, so a
 hidden rendezvous of the implementation is answered by a silent run of the composed group. -/
-theorem match_hidden (P : Parameters) {s : ProtocolState P} {t : ComposedState P}
+theorem coupling_hidden (P : Parameters) {s : ProtocolState P} {t : ComposedState P}
     (hR : ProtocolRelation P s t) {l : Label P.n} {μ : PMF (ProtocolState P)}
     (h : (protocolHidden P).step s l μ) :
     ∃ Ω : PMF (PMF (ComposedState P)),
@@ -800,18 +801,18 @@ theorem match_hidden (P : Parameters) {s : ProtocolState P} {t : ComposedState P
   have hR' : ProtocolRelation P (u, w, o) (G, C, A, o) :=
     (protocolRelation_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, hA, hGv, hB, hI⟩
   rcases (systemHidden_step_iff _ _ _).mp h with ⟨rfl, e, hstep⟩ | hstep
-  · obtain ⟨Ω, hrel, hs⟩ := match_event P hR' e hstep
+  · obtain ⟨Ω, hrel, hs⟩ := coupling_event P hR' e hstep
     exact ⟨Ω, hrel, Or.inl ⟨rfl, hs⟩⟩
   · by_cases hl : l = Label.tau
     · subst hl
-      obtain ⟨Ω, hrel, hs⟩ := match_tau P hR' hstep
+      obtain ⟨Ω, hrel, hs⟩ := coupling_tau P hR' hstep
       exact ⟨Ω, hrel, Or.inl ⟨rfl, hs⟩⟩
-    · obtain ⟨Ω, hrel, hs⟩ := match_label P hR' hl hstep
+    · obtain ⟨Ω, hrel, hs⟩ := coupling_label P hR' hl hstep
       exact ⟨Ω, hrel, Or.inr ⟨hl, hs⟩⟩
 
 /-- **The matching at the system level**: a hidden sub-protocol label is silent in both systems, and
 every other label is answered on the nose or by a run. -/
-theorem match_step (P : Parameters) {s : ProtocolState P} {t : ComposedState P}
+theorem coupling_step (P : Parameters) {s : ProtocolState P} {t : ComposedState P}
     (hR : ProtocolRelation P s t) {l : Label P.n} {μ : PMF (ProtocolState P)}
     (h : (protocol P).step s l μ) :
     ∃ Ω : PMF (PMF (ComposedState P)),
@@ -819,12 +820,12 @@ theorem match_step (P : Parameters) {s : ProtocolState P} {t : ComposedState P}
         ((l = Silent.τ ∧ weakTau (composed P) (PMF.pure t) (Ω.bind id)) ∨
          (¬ (l = Silent.τ) ∧ weakStep (composed P) (PMF.pure t) l (Ω.bind id))) := by
   rcases (system_step_iff s l μ).mp h with ⟨rfl, l', hmem, hg⟩ | ⟨hnm, hg⟩
-  · obtain ⟨Ω, hrel, hlay⟩ := match_hidden P hR hg
+  · obtain ⟨Ω, hrel, hlay⟩ := coupling_hidden P hR hg
     rcases hlay with ⟨rfl, -⟩ | ⟨-, hlay⟩
     · exact absurd hmem Label.tau_not_mem_hiddenAPI
     · exact ⟨Ω, hrel, Or.inl ⟨rfl,
         weakTau_of_weakStep_mem (composedHidden P) (Label.hiddenAPI P.n) hmem hlay⟩⟩
-  · obtain ⟨Ω, hrel, hlay⟩ := match_hidden P hR hg
+  · obtain ⟨Ω, hrel, hlay⟩ := coupling_hidden P hR hg
     rcases hlay with ⟨rfl, hlay⟩ | ⟨hne, hlay⟩
     · exact ⟨Ω, hrel, Or.inl ⟨rfl,
         weakTau_abstract (composedHidden P) (Label.hiddenAPI P.n) hlay⟩⟩
@@ -841,7 +842,7 @@ theorem protocolSimulation (P : Parameters) :
     (composed P).init, rfl, protocolRelation_init P⟩
   step := by
     rintro s_C μ_A ⟨t, rfl, hR⟩ l μ_C hstep
-    exact match_step P hR hstep
+    exact coupling_step P hR hstep
 
 /-- **The composition inclusion**: every trace distribution the gather-based
 protocol achieves is achieved by its composed system. -/

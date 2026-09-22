@@ -1,10 +1,10 @@
 \begin{theorem}[The announced bit affects no trace distribution]
   \label{thm:aba-erasure}
-  \lean{PLTS.ABA.Implementation.system_erasure}\lean{PLTS.ABA.ABDY.protocol_erasure}\lean{PLTS.ABA.AFW.protocol_erasure}\lean{PLTS.ABA.ABDY.protocol₀_safe}\lean{PLTS.ABA.AFW.protocol₀_safe}\leanok
+  \lean{PLTS.ABA.Implementation.system_erasure}\lean{PLTS.ABA.ABDY.protocol_erasure}\lean{PLTS.ABA.AFW.protocol_erasure}\lean{PLTS.ABA.ABDY.ghostFreeProtocol_safe}\lean{PLTS.ABA.AFW.ghostFreeProtocol_safe}\leanok
   \uses{def:erasure-sim, def:aba-ghost-free, def:aba-labels, def:achievable, thm:aba-main, thm:aba-afw-main}
   Each protocol achieves exactly the trace distributions its ghost-free system achieves: \leandecl{PLTS.ABA.ABDY.protocol_erasure} and \leandecl{PLTS.ABA.AFW.protocol_erasure}, both instances of \leandecl{PLTS.ABA.Implementation.system_erasure}.
   No label map stands in either equation, a graded-agreement return being a label of the hidden alphabet of Definition~\ref{def:aba-labels}.
-  Every conclusion of Theorem~\ref{thm:aba-main} and of Theorem~\ref{thm:aba-afw-main} therefore holds of the ghost-free system, Validity and Agreement included: \leandecl{PLTS.ABA.ABDY.protocol₀_safe} and \leandecl{PLTS.ABA.AFW.protocol₀_safe}.
+  Every conclusion of Theorem~\ref{thm:aba-main} and of Theorem~\ref{thm:aba-afw-main} therefore holds of the ghost-free system, Validity and Agreement included: \leandecl{PLTS.ABA.ABDY.ghostFreeProtocol_safe} and \leandecl{PLTS.ABA.AFW.ghostFreeProtocol_safe}.
 \end{theorem}
 
 \begin{proof}\leanok

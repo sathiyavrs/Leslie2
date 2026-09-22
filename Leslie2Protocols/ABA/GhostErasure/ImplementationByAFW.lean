@@ -14,7 +14,7 @@ import Leslie2Protocols.ABA.Results
 The network of `AFW.protocol` holds one record per round that no program
 reads: the two gathers' recorded cores and the round's bound bit, written by
 `AFW.ghostStep` and announced on every graded-agreement return by `AFW.announcedBound`.
-`AFW.protocol₀` is the protocol as it runs with that record dropped and the adversary
+`AFW.ghostFreeProtocol` is the protocol as it runs with that record dropped and the adversary
 free to announce either bit on a return.
 
 `AFW.protocol_erasure` is the statement that the record costs nothing: the ghost never
@@ -42,7 +42,7 @@ open Implementation
 /-- **The ghost-free gather-based protocol**: the `n` programs and the coin oracle of
 `AFW.protocol` beside the network over the trivial ghost, whose
 graded-agreement returns announce any bit. -/
-noncomputable def protocol₀ (P : Parameters) :
+noncomputable def ghostFreeProtocol (P : Parameters) :
     System (Implementation.State P (Message P.n) (RoundRecord P.n) Unit) (Label P.n) :=
   Implementation.systemGhostFree P (Message P.n) (RoundRecord P.n) (RoundStep P) (gbcaCallPayload P)
 
@@ -51,7 +51,7 @@ written by no guard and read by no program, and the label that announces its bit
 hidden at protocol level, so the protocol and the ghost-free protocol achieve the same
 trace distributions. -/
 theorem protocol_erasure (P : Parameters) :
-    achievableTraceDists (protocol P) = achievableTraceDists (protocol₀ P) :=
+    achievableTraceDists (protocol P) = achievableTraceDists (ghostFreeProtocol P) :=
   Implementation.system_erasure P (Message P.n) (RoundRecord P.n) (Ghost P.n) (RoundStep P)
     (gbcaCallPayload P) (ghostStep P) (announcedBound P)
     (fun w r id out => ⟨ghostOutput P w r id out, rfl⟩)
@@ -59,31 +59,31 @@ theorem protocol_erasure (P : Parameters) :
 /-! ### The headlines at the ghost-free protocol -/
 
 /-- **The composition inclusion for the ghost-free protocol.** -/
-theorem protocol₀_composed (P : Parameters) :
-    achievableTraceDists (protocol₀ P) ⊆ achievableTraceDists (composed P) :=
+theorem ghostFreeProtocol_composed (P : Parameters) :
+    achievableTraceDists (ghostFreeProtocol P) ⊆ achievableTraceDists (composed P) :=
   Set.Subset.trans (protocol_erasure P).symm.subset (protocol_composed P)
 
 /-- **Trace-distribution refinement of the ghost-free protocol**: every trace
 distribution it achieves is achievable by the ABA specification. -/
-theorem protocol₀_refines (P : Parameters) :
-    achievableTraceDists (protocol₀ P) ⊆ achievableTraceDists (spec P) :=
+theorem ghostFreeProtocol_refines (P : Parameters) :
+    achievableTraceDists (ghostFreeProtocol P) ⊆ achievableTraceDists (spec P) :=
   Set.Subset.trans (protocol_erasure P).symm.subset (refines P)
 
 /-- **Correctness of the ghost-free protocol**: every positive-probability trace
 satisfies Validity and Agreement. -/
-theorem protocol₀_safe (P : Parameters) :
-    ∀ D ∈ achievableTraceDists (protocol₀ P), ∀ t, D t ≠ 0 →
+theorem ghostFreeProtocol_safe (P : Parameters) :
+    ∀ D ∈ achievableTraceDists (ghostFreeProtocol P), ∀ t, D t ≠ 0 →
       ValidityTrace P t ∧ AgreementTrace P t :=
-  safety_transfer (protocol₀_refines P) (spec_safe P)
+  safety_transfer (ghostFreeProtocol_refines P) (spec_safe P)
 
 /-- **Trace conservativity of the ghost-free protocol**: every
 positive-probability trace has positive probability under an achievable trace
 distribution of the protocol-shaped specification. -/
-theorem protocol₀_traces (P : Parameters) :
-    ∀ D ∈ achievableTraceDists (protocol₀ P), ∀ t, D t ≠ 0 →
+theorem ghostFreeProtocol_traces (P : Parameters) :
+    ∀ D ∈ achievableTraceDists (ghostFreeProtocol P), ∀ t, D t ≠ 0 →
       ∃ D' ∈ achievableTraceDists (hybrid P), D' t ≠ 0 :=
   fun D hD _ ht =>
-    ⟨D, Set.Subset.trans (protocol₀_composed P) (substitution P) hD, ht⟩
+    ⟨D, Set.Subset.trans (ghostFreeProtocol_composed P) (substitution P) hD, ht⟩
 
 /-! ### Mechanical axiom check -/
 
@@ -91,21 +91,21 @@ theorem protocol₀_traces (P : Parameters) :
 #guard_msgs in
 #print axioms protocol_erasure
 
-/-- info: 'PLTS.ABA.AFW.protocol₀_composed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.AFW.ghostFreeProtocol_composed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms protocol₀_composed
+#print axioms ghostFreeProtocol_composed
 
-/-- info: 'PLTS.ABA.AFW.protocol₀_refines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.AFW.ghostFreeProtocol_refines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms protocol₀_refines
+#print axioms ghostFreeProtocol_refines
 
-/-- info: 'PLTS.ABA.AFW.protocol₀_safe' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.AFW.ghostFreeProtocol_safe' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms protocol₀_safe
+#print axioms ghostFreeProtocol_safe
 
-/-- info: 'PLTS.ABA.AFW.protocol₀_traces' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.AFW.ghostFreeProtocol_traces' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms protocol₀_traces
+#print axioms ghostFreeProtocol_traces
 
 end AFW
 end ABA

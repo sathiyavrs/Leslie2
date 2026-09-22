@@ -188,7 +188,7 @@ variable {P : Parameters} {M G : Type} [DecidableEq M] [Inhabited G]
 
 /-- Over the trivial ghost a row's successor is the state its write starts from, so a
 row written with its ghost write is a row written without it. -/
-private theorem networkStep₀_drop {s t : NetworkState P.n M Unit} {L : ExtendedLabel P.n M}
+private theorem networkStepGhostFree_drop {s t : NetworkState P.n M Unit} {L : ExtendedLabel P.n M}
     (h : NetworkStep P M Unit callPayload (fun _ _ _ => ()) (fun _ _ _ _ _ => True) s L
       (PMF.pure (t.writeGhost (fun _ _ _ => ()) L))) :
     NetworkStep P M Unit callPayload (fun _ _ _ => ()) (fun _ _ _ _ _ => True) s L
@@ -223,7 +223,7 @@ theorem network_erasure
     cases h <;>
       simp only [PMF.pure_map, forgetGhost_writeGhost, forgetGhost_recordGBCASend,
         forgetGhost_recordDecided, forgetGhost_corrupt] <;>
-      apply networkStep₀_drop <;>
+      apply networkStepGhostFree_drop <;>
       first
         | exact NetworkStep.retByzantine _ _ _ (by assumption)
         | exact NetworkStep.byzantineDecided _ _ _ (by assumption)
