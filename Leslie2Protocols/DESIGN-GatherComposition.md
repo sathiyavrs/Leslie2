@@ -106,7 +106,7 @@ Every protocol-shaped system and headline of this chain sits in the namespace
 `AFW`, after Attiya, Flam and Welch, and carries the name of its counterpart in
 the protocol chain: `AFW.composed` is to the gather-based implementation what
 `ABDY.composed` is to ABDY22's. A `G` elsewhere in the development is graded
-agreement — `callG`, `retG`, `GBCANetwork`, `NetworkState` — and never the chain.
+agreement — `callG`, `retG`, `GBCANetwork`, `GBCAOutput` — and never the chain.
 
 ## What a program holds of a sub-protocol's answer
 
@@ -412,13 +412,15 @@ states, for every implementation row, the view after the row as the composed rou
 with the corresponding composed effect applied, written through the round's updaters exactly as the
 row tables write it; the master lemma `roundProjection_write` pushes a one-point round write and a
 single sent-set insertion inside every coordinate, and each row then owes only projection algebra,
-discharged by `slice_recordSent_some` and `slice_recordSent_none`.
+discharged by `messagesOf_recordSent_some` and `messagesOf_recordSent_none`.
 `ABA/ImplementationByAFW/Simulation.lean` matches each implementation row by a run of the composed
 group: a send and a delivery are hidden events of the round instance, answered by one of its silent
-steps, the adversary's authenticity conjunct becoming membership in the sliced sent set; the call is
-the instance's own. Three the implementation's rows are answered by two composed steps, through the
-intermediate states `Frame.lean` names: the return-then-call step by `firstGatherReturn` then
-`secondGatherCall`, the graded return by `secondGatherReturn` then the visible `retG`, and a
+steps, the adversary's authenticity conjunct becoming membership in the sent set projected onto
+the instance; the call is the instance's own. Three of the implementation's rows are answered by
+two composed steps, through the intermediate states
+`ABA/ImplementationByAFW/RoundProjectionStep.lean` names: the return-then-call step by
+`firstGatherReturn` then `secondGatherCall`, the graded return by `secondGatherReturn` then the
+visible `retG`, and a
 delivery that completes a vote quorum by the instance's delivery then its return, which records the
 returned value (`roundProjection_firstGatherReturn_secondGatherCall`,
 `roundProjection_secondGatherReturn_retG`, the `_ret` delivery lemmas). The remaining labels move

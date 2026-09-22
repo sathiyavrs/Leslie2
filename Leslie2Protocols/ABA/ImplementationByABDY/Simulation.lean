@@ -446,7 +446,7 @@ theorem match_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
     exact match_round P rfl ((protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨hxcore, rfl, by simpa using hA, relation_recordGBCASend hG r j m _, h5⟩)
       (GBCA.ByABDY.composition_event_step P r (GBCA.ByABDY.GBCAEvent.send j m)
-        (gprocs_family j nd hrow
+        (gbcaProgramStep_family j nd hrow
           (fun i hi => GBCA.ByABDY.GBCAProgramStep.sendIdle _ j m (Ne.symm hi)))
         (GBCA.ByABDY.GBCANetworkStep.send _ j m))
   | gbcaDeliver r i k m =>
@@ -488,7 +488,7 @@ theorem match_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
     exact match_round P rfl ((protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨hxcore, rfl, hA, fun r' => by rw [update_snd G r _ r']; exact hG r', h5⟩)
       (GBCA.ByABDY.composition_event_step P r (GBCA.ByABDY.GBCAEvent.deliver i k m)
-        (gprocs_family i _ (GBCA.ByABDY.GBCAProgramStep.deliverReceive _ k m)
+        (gbcaProgramStep_family i _ (GBCA.ByABDY.GBCAProgramStep.deliverReceive _ k m)
           (fun i' hi' => GBCA.ByABDY.GBCAProgramStep.deliverIdle _ i k m (Ne.symm hi')))
         (GBCA.ByABDY.GBCANetworkStep.deliver _ i k m (by rw [hG r]; exact hmem)))
   | decidedSend j b =>
@@ -828,7 +828,7 @@ theorem match_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
           ((G r).2).recordGBCASend id (.input b)))) :=
       gbcaInstanceFamily_owned P G r (by simp)
         (GBCA.ByABDY.composition_label_step P r (by simp)
-          (gprocs_family id _
+          (gbcaProgramStep_family id _
             (GBCA.ByABDY.GBCAProgramStep.call _ b (by rw [hcol]; exact hin))
             (fun i hi => GBCA.ByABDY.GBCAProgramStep.callIdle _ id b (Ne.symm hi)))
           (GBCA.ByABDY.GBCANetworkStep.callG _ id b))
@@ -912,7 +912,7 @@ theorem match_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
           ((G r).2).setBound bnd))) :=
       gbcaInstanceFamily_owned P G r (by simp)
         (GBCA.ByABDY.composition_label_step P r (by simp)
-          (gprocs_family id _ hrow
+          (gbcaProgramStep_family id _ hrow
             (fun i hi => GBCA.ByABDY.GBCAProgramStep.retIdle _ id out bnd (Ne.symm hi)))
           (GBCA.ByABDY.GBCANetworkStep.retGIdle _ id out bnd hbnd'))
     have hGfor : ∀ j r', j ≠ id →

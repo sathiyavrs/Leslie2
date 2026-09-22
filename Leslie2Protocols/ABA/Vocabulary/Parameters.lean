@@ -23,8 +23,8 @@ The protocol parameters shared by every system in the ABA case study:
   probability `1 - (2 * ε + δ)`, and `undelivered` — the coin fails and never
   delivers — with probability `δ`.
 
-Both coin resolutions of the case study read `wccPMF`. `WCC.Spec`'s flip maps
-it into its own state update. `ABA.Spec`'s flip (`SpecStep.coinFlip`) reads it
+Both coin resolutions of the case study read `wccPMF`. `WCC.specInst`'s flip maps
+it into its own state update. `ABA.spec`'s flip (`SpecStep.coinFlip`) reads it
 through the bit-forgetting map `ABA.flipPMF`, which keeps the masses
 `ε` / `1 - (ε + δ)` / `δ` and names no bit.
 -/

@@ -10,9 +10,9 @@ The asynchronous binary agreement development: machine-checked safety for random
 from the protocol as it runs down to a small specification, by probabilistic forward
 simulation, with two verified implementations of its graded-agreement sub-protocol —
 one direct, one built over gather and reliable broadcast. Each is carried from the
-protocol as it runs, through one the implementation written parametrically in the
-implementation and instantiated twice. 53 files, in thirteen content-themed
-sub-folders beside `ABA/Results.lean`, given in import order in its own file
+protocol as it runs, through one implementation shape written parametrically in the
+graded-agreement implementation and instantiated twice. 53 files, `ABA/Results.lean`
+beside thirteen content-themed sub-folders, given in import order in its own file
 guide, [`ABA/README.md`](ABA/README.md).
 
 ## `Framework/`
@@ -23,15 +23,15 @@ beside the three in the core.
 
 | file | lines | what it is |
 |---|---|---|
-| [`TraceDistributionSupport.lean`](Framework/TraceDistributionSupport.lean) | 572 | From trace-distribution support to genuine executions: the safety transfer, the invariant inductions, and the label transport of a run. |
+| [`TraceDistributionSupport.lean`](Framework/TraceDistributionSupport.lean) | 571 | From trace-distribution support to genuine executions: the safety transfer, the invariant inductions, and the label transport of a run. |
 | [`LoopsAndInstanceFamilies.lean`](Framework/LoopsAndInstanceFamilies.lean) | 216 | Idle padding, partial label pullbacks, and ℕ-indexed instance families with a broadcast disjunct. |
 | [`FamilySimulation.lean`](Framework/FamilySimulation.lean) | 373 | Forward simulation is a congruence for `System.family`: per-instance refinement lifts to the family. |
 | [`SynchronisedProduct.lean`](Framework/SynchronisedProduct.lean) | 184 | Full-synchronisation product of a finite family — a visible label moves every component, τ moves one. |
-| [`Relabel.lean`](Framework/Relabel.lean) | 468 | Extended alphabets and restriction along the left summand, with the precongruence for it. |
+| [`Relabel.lean`](Framework/Relabel.lean) | 472 | Extended alphabets and restriction along the left summand, with the precongruence for it. |
 | [`WeakTransitionsFromChains.lean`](Framework/WeakTransitionsFromChains.lean) | 196 | Weak runs from step chains: prepending a silent step, and the k-fold run — a chain of silent steps closed by one external step. |
-| [`FinerAlphabetCongruence.lean`](Framework/FinerAlphabetCongruence.lean) | 191 | Forward simulation is a congruence for reading both systems over a finer alphabet along a partial label map. |
-| [`Congruence.lean`](Framework/Congruence.lean) | 854 | Forward simulation is a congruence for the operators a composition is built from — binary parallel in either position, the full-synchronisation product of a finite family, hiding and restriction — with the weak-run splitting and transport lemmas the four proofs share. |
-| [`Erasure.lean`](Framework/Erasure.lean) | 376 | Erasure of a state component no transition's firing depends on: the projection and lift clauses, the equality of achievable trace distributions they give, and the congruences that carry an erasure through composition, hiding and restriction. |
+| [`FinerAlphabetCongruence.lean`](Framework/FinerAlphabetCongruence.lean) | 192 | Forward simulation is a congruence for reading both systems over a finer alphabet along a partial label map. |
+| [`Congruence.lean`](Framework/Congruence.lean) | 849 | Forward simulation is a congruence for the operators a composition is built from — binary parallel in either position, the full-synchronisation product of a finite family, hiding and restriction — with the weak-run splitting and transport lemmas the four proofs share. |
+| [`Erasure.lean`](Framework/Erasure.lean) | 375 | Erasure of a state component no transition's firing depends on: the projection and lift clauses, the equality of achievable trace distributions they give, and the congruences that carry an erasure through composition, hiding and restriction. |
 
 ## Notes
 

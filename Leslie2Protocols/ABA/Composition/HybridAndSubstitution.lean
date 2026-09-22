@@ -253,7 +253,7 @@ theorem gbcaInstanceFamily_fail (P : Parameters) (G : ℕ → GBCA.ByABDY.Implem
 /-! ### The program tuple of one round -/
 
 /-- One graded-agreement program moves and every other idles. -/
-theorem gprocs_family {P : Parameters} {r : ℕ}
+theorem gbcaProgramStep_family {P : Parameters} {r : ℕ}
     {u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n} {L : GBCA.ByABDY.GBCALabel P.n} (id : Fin P.n)
     (nd : GBCA.ByABDY.RoundRecord P.n)
     (hown : GBCA.ByABDY.GBCAProgramStep P r id (u id) L (PMF.pure nd))

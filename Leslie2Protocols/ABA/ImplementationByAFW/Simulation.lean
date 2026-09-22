@@ -716,8 +716,8 @@ theorem roundProjection_fail {P : Parameters} (u : ∀ _ : Fin P.n, AFW.ProcessR
     (w : NetworkState P.n) (r : ℕ) (k : Fin P.n) :
     roundProjection P u (Implementation.NetworkState.corrupt P k w) r
       = corruptionOverBracha P (Sum.inl (Label.fail k)) (roundProjection P u w r) := by
-  refine roundStateAt_ext ?_ ?_ (stateOverBroadcasts_ext ?_ ?_ ?_ ?_) (stateOverBroadcasts_ext ?_ ?_
-    ?_ ?_)
+  refine roundStateOverGathers_ext ?_ ?_ (stateOverBroadcasts_ext ?_ ?_ ?_ ?_)
+    (stateOverBroadcasts_ext ?_ ?_ ?_ ?_)
   · simp only [GBCA.ByAFW.programs, roundProjection, corruptionOverBracha, GBCA.ByAFW.corruptAll,
       Implementation.NetworkState.corrupt]
   · simp only [GBCA.ByAFW.bound, roundProjection, corruptionOverBracha, GBCA.ByAFW.corruptAll,

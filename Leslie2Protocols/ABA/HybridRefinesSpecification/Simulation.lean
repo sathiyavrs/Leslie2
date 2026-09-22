@@ -10,9 +10,11 @@ import Leslie2Protocols.ABA.HybridRefinesSpecification.WeakTransitions
 /-!
 # The core simulation `hybrid ⊑ ABA.spec`
 
-Assembles the invariant and relation of the `CoreSimRel`/`CoreSimInv`/`CoreSimAbs`
-chain and `CoreSimRun`'s run kit into `hybridRefinesSpecification`, the probabilistic forward
-simulation `hybrid P ⊑ spec P` along `hybridSpecificationRelation P`.
+Assembles the relation and invariant of `HybridRefinesSpecification/Relation.lean`, their
+preservation in `HybridRefinesSpecification/InvariantPreservation.lean` and
+`HybridRefinesSpecification/AbstractStatePreservation.lean`, and the weak transitions of
+`HybridRefinesSpecification/WeakTransitions.lean` into `hybridRefinesSpecification`, the
+probabilistic forward simulation `hybrid P ⊑ spec P` along `hybridSpecificationRelation P`.
 
 The rows dispatch as follows. A visible `callABA` is answered by
 `SpecStep.callSet` at a never-corrupted process holding no input, by
@@ -135,7 +137,7 @@ theorem hybridRefinesSpecification (P : Parameters) :
         ⟨r, id, b, μr, μc, hstepG, hstepC, rfl⟩ |
         ⟨r, id, out, bnd, μr, μc, hstepG, hstepC, rfl⟩ |
         ⟨r, id, μw', μc, hstepW, hstepC, rfl⟩ | ⟨r, id, b, μw', μc, hstepW, hstepC, rfl⟩
-      · -- row 3: `bindUnset` (`gbcaTau`) — the abstract state stutters
+      · -- row 3: the round's own `GBCA.Step.bindUnset` — the abstract state stutters
         obtain ⟨ω, hRel, hWeak⟩ := stutter_step _ a (fun s' hs' => by
           obtain ⟨g', C', A', w'⟩ := s'
           have hI' := hI.step hstep hs'

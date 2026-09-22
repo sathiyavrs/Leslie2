@@ -9,10 +9,10 @@
 
 \begin{proof}\leanok
   \uses{def:aba-gbca-instance-by-abdy, def:aba-gbca-impl, def:aba-gbca-spec, thm:gbca-inst-refines, def:forwardsim, def:weakstep}
-  The argument runs in two legs through the implementation instance of Definition~\ref{def:aba-gbca-impl} and reproves nothing of Theorem~\ref{thm:gbca-inst-refines}.
-  The first leg is the strong projection \leandecl{PLTS.ABA.GBCA.ByABDY.composition_projects}.
+  The argument runs in two steps through the implementation instance of Definition~\ref{def:aba-gbca-impl} and reproves nothing of Theorem~\ref{thm:gbca-inst-refines}.
+  The first step is the strong projection \leandecl{PLTS.ABA.GBCA.ByABDY.composition_projects}.
   The state of the implementation instance is the pair of the $n$ round records and the round's network state, which are exactly the components the round instance composes, so the two systems run on one state and no coordinate change is needed: every transition of the round instance is a transition of the implementation at that same state, one step for one step.
-  The second leg is the partial map \leandecl{PLTS.ABA.GBCA.ByABDY.gbcaLabelMap}, which identifies the handshake rows and the call loop of round $r$ with the specification labels they stand for, and along which the specification instance is read back by the construction $\mathrm{mapIdle}$ of Definition~\ref{def:aba-protocol}.
-  Composing the legs, a step of the round instance on $l$ is a step of the implementation on $\mathrm{gbcaLabelMap}(l)$, which Theorem~\ref{thm:gbca-inst-refines} answers by a weak transition transported segment by segment along the section of $\mathrm{gbcaLabelMap}$ that returns $l$; the specification is input-enabled on the Byzantine call and the Byzantine return, so that answer needs no rule of its own (D11).
+  The second step is the partial map \leandecl{PLTS.ABA.GBCA.ByABDY.gbcaLabelMap}, which identifies the handshake rows and the call loop of round $r$ with the specification labels they stand for, and along which the specification instance is read back by the construction $\mathrm{mapIdle}$ of Definition~\ref{def:aba-protocol}.
+  Composing the two, a step of the round instance on $l$ is a step of the implementation on $\mathrm{gbcaLabelMap}(l)$, which Theorem~\ref{thm:gbca-inst-refines} answers by a weak transition transported segment by segment along the section of $\mathrm{gbcaLabelMap}$ that returns $l$; the specification is input-enabled on the Byzantine call and the Byzantine return, so that answer needs no rule of its own (D11).
   The initial states are related, and the corruption broadcast preserves the relation, the network state's corrupted set being the implementation's and the two budget guards the same proposition (D1).
 \end{proof}

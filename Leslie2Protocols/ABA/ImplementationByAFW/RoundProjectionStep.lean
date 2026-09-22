@@ -93,9 +93,10 @@ theorem stateOverBroadcasts_ext {n : ℕ} {X B B' : Type} {a b : Gather.StateOve
 
 /-- A round state is its programs and its bound bit beside its two gather
 instances. -/
-theorem roundStateAt_ext {n : ℕ} {G₁ G₂ : Type} {a b : GBCA.ByAFW.RoundStateOverGathers n G₁ G₂}
-    (h1 : GBCA.ByAFW.programs a = GBCA.ByAFW.programs b) (h2 : GBCA.ByAFW.bound a = GBCA.ByAFW.bound
-      b)
+theorem roundStateOverGathers_ext {n : ℕ} {G₁ G₂ : Type}
+    {a b : GBCA.ByAFW.RoundStateOverGathers n G₁ G₂}
+    (h1 : GBCA.ByAFW.programs a = GBCA.ByAFW.programs b)
+    (h2 : GBCA.ByAFW.bound a = GBCA.ByAFW.bound b)
     (h3 : GBCA.ByAFW.firstGather a = GBCA.ByAFW.firstGather b)
     (h4 : GBCA.ByAFW.secondGather a = GBCA.ByAFW.secondGather b) : a = b := by
   obtain ⟨⟨ua, va⟩, ca, da⟩ := a
@@ -362,8 +363,8 @@ theorem roundProjection_write (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n) (w : 
     roundProjection P (Function.update u j (c,
       (u j).2.setRoundRecord r sr)) (w.recordGBCASend r j m) r = roundProjectionUpdate P u w r j sr
           (Function.update (w.sent r) j (insert m (w.sent r j))) := by
-  refine roundStateAt_ext ?_ rfl (stateOverBroadcasts_ext ?_ ?_ ?_ rfl) (stateOverBroadcasts_ext ?_
-    ?_ ?_ rfl)
+  refine roundStateOverGathers_ext ?_ rfl (stateOverBroadcasts_ext ?_ ?_ ?_ rfl)
+    (stateOverBroadcasts_ext ?_ ?_ ?_ rfl)
   · simp only [GBCA.ByAFW.programs, roundProjection, roundProjectionUpdate,
       roundRecord_update_self rfl, locals_programProjection_if]
   · refine Prod.ext ?_ (networkState_ext ?_ rfl)
@@ -412,8 +413,8 @@ theorem roundProjection_writeNoSent (u : ∀ _ : Fin P.n,
       (sr : RoundRecord P.n) :
     roundProjection P (Function.update u j (c, (u j).2.setRoundRecord r sr)) w r
       = roundProjectionUpdate P u w r j sr (w.sent r) := by
-  refine roundStateAt_ext ?_ rfl (stateOverBroadcasts_ext ?_ ?_ ?_ rfl) (stateOverBroadcasts_ext ?_
-    ?_ ?_ rfl)
+  refine roundStateOverGathers_ext ?_ rfl (stateOverBroadcasts_ext ?_ ?_ ?_ rfl)
+    (stateOverBroadcasts_ext ?_ ?_ ?_ rfl)
   · simp only [GBCA.ByAFW.programs, roundProjection, roundProjectionUpdate,
       roundRecord_update_self rfl, locals_programProjection_if]
   · refine Prod.ext ?_ (networkState_ext rfl rfl)
@@ -664,8 +665,8 @@ theorem roundProjection_firstGatherSend (hu : (u j).2 = p) (r : ℕ) (pr : Gathe
                     r).firstGatherBindBroadcasts q) }).multicast j m)) := by
   rw [← hu] at hin ⊢
   rw [roundProjection_write]
-  refine roundStateAt_ext ?_ rfl (stateOverBroadcasts_ext ?_ ?_ ?_ rfl) (stateOverBroadcasts_ext ?_
-    ?_ ?_ rfl)
+  refine roundStateOverGathers_ext ?_ rfl (stateOverBroadcasts_ext ?_ ?_ ?_ rfl)
+    (stateOverBroadcasts_ext ?_ ?_ ?_ rfl)
   · simp only [GBCA.ByAFW.programs, GBCA.ByAFW.setFirstGather, roundProjection,
       roundProjectionUpdate, programProjection, LocalState.setProcess, hin]
     exact Function.update_eq_self _ _
@@ -749,8 +750,8 @@ theorem roundProjection_secondGatherSend (hu : (u j).2 = p) (r : ℕ) (pr : Gath
                     r).secondGatherBindBroadcasts q) }).multicast j m)) := by
   rw [← hu] at hin hret ⊢
   rw [roundProjection_write]
-  refine roundStateAt_ext ?_ rfl (stateOverBroadcasts_ext ?_ ?_ ?_ rfl) (stateOverBroadcasts_ext ?_
-    ?_ ?_ rfl)
+  refine roundStateOverGathers_ext ?_ rfl (stateOverBroadcasts_ext ?_ ?_ ?_ rfl)
+    (stateOverBroadcasts_ext ?_ ?_ ?_ rfl)
   · simp only [GBCA.ByAFW.programs, GBCA.ByAFW.setSecondGather, roundProjection,
       roundProjectionUpdate, programProjection, LocalState.setProcess, hin, hret]
     exact Function.update_eq_self _ _
@@ -842,8 +843,8 @@ theorem roundProjection_firstGatherInputBroadcastSend (hu : (u j).2 = p) (r : �
                         i)).isSome }).multicast
                 j m))) := by
   rw [← hu, roundProjection_write]
-  refine roundStateAt_ext ?_ rfl (stateOverBroadcasts_ext ?_ ?_ ?_ rfl) (stateOverBroadcasts_ext ?_
-    ?_ ?_ rfl)
+  refine roundStateOverGathers_ext ?_ rfl (stateOverBroadcasts_ext ?_ ?_ ?_ rfl)
+    (stateOverBroadcasts_ext ?_ ?_ ?_ rfl)
   · simp only [GBCA.ByAFW.programs, GBCA.ByAFW.setFirstGather, roundProjection,
     roundProjectionUpdate, programProjection]
     exact Function.update_eq_self _ _
@@ -955,8 +956,8 @@ theorem roundProjection_firstGatherBindBroadcastSend (hu : (u j).2 = p) (r : ℕ
                         }).multicast
                 j m))) := by
   rw [← hu, roundProjection_write]
-  refine roundStateAt_ext ?_ rfl (stateOverBroadcasts_ext ?_ ?_ ?_ rfl) (stateOverBroadcasts_ext ?_
-    ?_ ?_ rfl)
+  refine roundStateOverGathers_ext ?_ rfl (stateOverBroadcasts_ext ?_ ?_ ?_ rfl)
+    (stateOverBroadcasts_ext ?_ ?_ ?_ rfl)
   · simp only [GBCA.ByAFW.programs, GBCA.ByAFW.setFirstGather, roundProjection,
     roundProjectionUpdate, programProjection]
     exact Function.update_eq_self _ _
@@ -1067,8 +1068,8 @@ theorem roundProjection_secondGatherInputBroadcastSend (hu : (u j).2 = p) (r : �
                         i)).isSome }).multicast
                 j m))) := by
   rw [← hu, roundProjection_write]
-  refine roundStateAt_ext ?_ rfl (stateOverBroadcasts_ext ?_ ?_ ?_ rfl) (stateOverBroadcasts_ext ?_
-    ?_ ?_ rfl)
+  refine roundStateOverGathers_ext ?_ rfl (stateOverBroadcasts_ext ?_ ?_ ?_ rfl)
+    (stateOverBroadcasts_ext ?_ ?_ ?_ rfl)
   · simp only [GBCA.ByAFW.programs, GBCA.ByAFW.setSecondGather, roundProjection,
     roundProjectionUpdate, programProjection]
     exact Function.update_eq_self _ _
@@ -1183,8 +1184,8 @@ theorem roundProjection_secondGatherBindBroadcastSend (hu : (u j).2 = p) (r : �
                         i)).isSome }).multicast
                 j m))) := by
   rw [← hu, roundProjection_write]
-  refine roundStateAt_ext ?_ rfl (stateOverBroadcasts_ext ?_ ?_ ?_ rfl) (stateOverBroadcasts_ext ?_
-    ?_ ?_ rfl)
+  refine roundStateOverGathers_ext ?_ rfl (stateOverBroadcasts_ext ?_ ?_ ?_ rfl)
+    (stateOverBroadcasts_ext ?_ ?_ ?_ rfl)
   · simp only [GBCA.ByAFW.programs, GBCA.ByAFW.setSecondGather, roundProjection,
     roundProjectionUpdate, programProjection]
     exact Function.update_eq_self _ _
@@ -1392,8 +1393,8 @@ theorem roundProjection_firstGatherBind (hu : (u j).2 = p) (r : ℕ) (U : Gather
   rw [roundProjection_ghostId (Sum.inr (.gbcaSend r j (.firstGatherBindBroadcasts j (.init U))))
     (fun _ _ => rfl),
     roundProjection_write]
-  refine roundStateAt_ext ?_ rfl (stateOverBroadcasts_ext ?_ ?_ ?_ rfl) (stateOverBroadcasts_ext ?_
-    ?_ ?_ rfl)
+  refine roundStateOverGathers_ext ?_ rfl (stateOverBroadcasts_ext ?_ ?_ ?_ rfl)
+    (stateOverBroadcasts_ext ?_ ?_ ?_ rfl)
   · simp only [GBCA.ByAFW.programs, GBCA.ByAFW.setFirstGather, roundProjection,
     roundProjectionUpdate, programProjection,
       LocalState.setProcess]
@@ -1525,8 +1526,8 @@ theorem roundProjection_secondGatherBind (hu : (u j).2 = p) (r : ℕ) (U : Gathe
   rw [roundProjection_ghostId (Sum.inr (.gbcaSend r j (.secondGatherBindBroadcasts j (.init U))))
     (fun _ _ => rfl),
     roundProjection_write]
-  refine roundStateAt_ext ?_ rfl (stateOverBroadcasts_ext ?_ ?_ ?_ rfl) (stateOverBroadcasts_ext ?_
-    ?_ ?_ rfl)
+  refine roundStateOverGathers_ext ?_ rfl (stateOverBroadcasts_ext ?_ ?_ ?_ rfl)
+    (stateOverBroadcasts_ext ?_ ?_ ?_ rfl)
   · simp only [GBCA.ByAFW.programs, GBCA.ByAFW.setSecondGather, roundProjection,
     roundProjectionUpdate, programProjection,
       LocalState.setProcess]
@@ -1858,8 +1859,8 @@ theorem roundProjection_callG (hu : (u j).2 = p) (r : ℕ) (b : Bool) :
                     input := some b }).multicast j (.init b)))) := by
   subst hu
   rw [roundProjection_ghostId (Sum.inl (.callG r j b)) (fun _ _ => rfl), roundProjection_write]
-  refine roundStateAt_ext ?_ ?_ (stateOverBroadcasts_ext ?_ ?_ ?_ ?_) (stateOverBroadcasts_ext ?_ ?_
-    ?_ ?_)
+  refine roundStateOverGathers_ext ?_ ?_ (stateOverBroadcasts_ext ?_ ?_ ?_ ?_)
+    (stateOverBroadcasts_ext ?_ ?_ ?_ ?_)
   · simp only [programs_roundProjectionUpdate, GBCA.ByAFW.programs_setFirstGather,
       GBCA.ByAFW.programs_setPrograms, programs_roundProjection_eq]
     refine congrArg (Function.update (fun i => programProjection ((u i).2.roundRecord r)) j) ?_
@@ -2080,7 +2081,7 @@ theorem roundProjection_firstGatherReturn_secondGatherCall (hu : (u j).2 = p) (r
     exact messagesOf_recordSent_none firstGatherMessageOf firstGatherMessageOf_inj (w.sent r) j
       (.secondGatherInputBroadcasts j (.init (GBCA.candidate P g))) rfl
   rw [roundProjection_gbcaSendGhost, firstGatherProjection_write, secondGatherProjection_write]
-  refine roundStateAt_ext ?_ ?_ ?_ ?_
+  refine roundStateOverGathers_ext ?_ ?_ ?_ ?_
   · simp only [afterSecondGatherCall, afterFirstGatherReturn, GBCA.ByAFW.programs_setSecondGather,
     GBCA.ByAFW.programs_setPrograms, GBCA.ByAFW.programs_setFirstGather,
       GBCA.ByAFW.programs_setBound, programs_roundProjection_eq, Function.update_idem,
@@ -2216,7 +2217,7 @@ theorem roundProjection_secondGatherReturn_retG (hu : (u j).2 = p) (r : ℕ)
   rw [roundProjection_writeGhost _ _ (rfl : roundOf (Sum.inl
       (Label.retG r j (GBCA.gradeOf P g) bnd)) = some r),
     firstGatherProjection_writeNoSent, secondGatherProjection_writeNoSent]
-  refine roundStateAt_ext ?_ ?_ ?_ ?_
+  refine roundStateOverGathers_ext ?_ ?_ ?_ ?_
   · simp only [afterRetG, afterSecondGatherReturn, GBCA.ByAFW.programs_setPrograms,
     GBCA.ByAFW.programs_setSecondGather, programs_roundProjection_eq, Function.update_idem,
       Function.update_self, roundRecord_update_self rfl,
@@ -2289,7 +2290,7 @@ theorem roundProjection_deliverFirstGather (hu : (u j).2 = p) (r : ℕ) (k : Fin
   rw [roundProjection_ghostId (Sum.inr (.gbcaDeliver r j k (.firstGather mm))) (fun _ _ => rfl)]
   simp only [Implementation.RoundRecordMap.deliverTo, roundRecord_deliverTo, RoundRecord.deliverTo]
   rw [roundProjection_writeNoSent]
-  refine roundStateAt_ext ?_ ?_ ?_ ?_
+  refine roundStateOverGathers_ext ?_ ?_ ?_ ?_
   · simp only [GBCA.ByAFW.programs_setFirstGather, programs_roundProjection_eq,
     programs_roundProjectionUpdate, programProjection, LocalState.deliverTo]
     exact Function.update_eq_self _ _
@@ -2339,7 +2340,7 @@ theorem roundProjection_deliverSecondGather (hu : (u j).2 = p) (r : ℕ) (k : Fi
   rw [roundProjection_ghostId (Sum.inr (.gbcaDeliver r j k (.secondGather mm))) (fun _ _ => rfl)]
   simp only [Implementation.RoundRecordMap.deliverTo, roundRecord_deliverTo, RoundRecord.deliverTo]
   rw [roundProjection_writeNoSent]
-  refine roundStateAt_ext ?_ ?_ ?_ ?_
+  refine roundStateOverGathers_ext ?_ ?_ ?_ ?_
   · simp only [GBCA.ByAFW.programs_setSecondGather, programs_roundProjection_eq,
     programs_roundProjectionUpdate, programProjection, LocalState.deliverTo]
     exact Function.update_eq_self _ _
@@ -2422,7 +2423,7 @@ theorem roundProjection_deliverFirstGatherInputBroadcast (hu : (u j).2 = p) (r :
     _ _ => rfl)]
   simp only [Implementation.RoundRecordMap.deliverTo, roundRecord_deliverTo, RoundRecord.deliverTo]
   rw [roundProjection_writeNoSent]
-  refine roundStateAt_ext ?_ ?_ ?_ ?_
+  refine roundStateOverGathers_ext ?_ ?_ ?_ ?_
   · simp only [afterFirstGatherInputBroadcastDeliver, GBCA.ByAFW.programs_setFirstGather,
     programs_roundProjection_eq, programs_roundProjectionUpdate,
       programProjection]
@@ -2494,7 +2495,7 @@ theorem roundProjection_deliverFirstGatherInputBroadcast_ret (hu : (u j).2 = p) 
     _ _ => rfl)]
   simp only [Implementation.RoundRecordMap.deliverTo, roundRecord_deliverTo, RoundRecord.deliverTo]
   rw [roundProjection_writeNoSent]
-  refine roundStateAt_ext ?_ ?_ ?_ ?_
+  refine roundStateOverGathers_ext ?_ ?_ ?_ ?_
   · simp only [afterFirstGatherInputBroadcastReturn, afterFirstGatherInputBroadcastDeliver,
     GBCA.ByAFW.programs_setFirstGather, programs_roundProjection_eq,
       programs_roundProjectionUpdate, programProjection]
@@ -2597,7 +2598,7 @@ theorem roundProjection_deliverFirstGatherBindBroadcast (hu : (u j).2 = p) (r : 
     _ _ => rfl)]
   simp only [Implementation.RoundRecordMap.deliverTo, roundRecord_deliverTo, RoundRecord.deliverTo]
   rw [roundProjection_writeNoSent]
-  refine roundStateAt_ext ?_ ?_ ?_ ?_
+  refine roundStateOverGathers_ext ?_ ?_ ?_ ?_
   · simp only [afterFirstGatherBindBroadcastDeliver, GBCA.ByAFW.programs_setFirstGather,
     programs_roundProjection_eq, programs_roundProjectionUpdate,
       programProjection]
@@ -2669,7 +2670,7 @@ theorem roundProjection_deliverFirstGatherBindBroadcast_ret (hu : (u j).2 = p) (
     _ _ => rfl)]
   simp only [Implementation.RoundRecordMap.deliverTo, roundRecord_deliverTo, RoundRecord.deliverTo]
   rw [roundProjection_writeNoSent]
-  refine roundStateAt_ext ?_ ?_ ?_ ?_
+  refine roundStateOverGathers_ext ?_ ?_ ?_ ?_
   · simp only [afterFirstGatherBindBroadcastReturn, afterFirstGatherBindBroadcastDeliver,
     GBCA.ByAFW.programs_setFirstGather, programs_roundProjection_eq,
       programs_roundProjectionUpdate, programProjection]
@@ -2770,7 +2771,7 @@ theorem roundProjection_deliverSecondGatherInputBroadcast (hu : (u j).2 = p) (r 
     (fun _ _ => rfl)]
   simp only [Implementation.RoundRecordMap.deliverTo, roundRecord_deliverTo, RoundRecord.deliverTo]
   rw [roundProjection_writeNoSent]
-  refine roundStateAt_ext ?_ ?_ ?_ ?_
+  refine roundStateOverGathers_ext ?_ ?_ ?_ ?_
   · simp only [afterSecondGatherInputBroadcastDeliver, GBCA.ByAFW.programs_setSecondGather,
     programs_roundProjection_eq, programs_roundProjectionUpdate,
       programProjection]
@@ -2843,7 +2844,7 @@ theorem roundProjection_deliverSecondGatherInputBroadcast_ret (hu : (u j).2 = p)
     (fun _ _ => rfl)]
   simp only [Implementation.RoundRecordMap.deliverTo, roundRecord_deliverTo, RoundRecord.deliverTo]
   rw [roundProjection_writeNoSent]
-  refine roundStateAt_ext ?_ ?_ ?_ ?_
+  refine roundStateOverGathers_ext ?_ ?_ ?_ ?_
   · simp only [afterSecondGatherInputBroadcastReturn, afterSecondGatherInputBroadcastDeliver,
     GBCA.ByAFW.programs_setSecondGather, programs_roundProjection_eq,
       programs_roundProjectionUpdate, programProjection]
@@ -2947,7 +2948,7 @@ theorem roundProjection_deliverSecondGatherBindBroadcast (hu : (u j).2 = p) (r :
     _ _ => rfl)]
   simp only [Implementation.RoundRecordMap.deliverTo, roundRecord_deliverTo, RoundRecord.deliverTo]
   rw [roundProjection_writeNoSent]
-  refine roundStateAt_ext ?_ ?_ ?_ ?_
+  refine roundStateOverGathers_ext ?_ ?_ ?_ ?_
   · simp only [afterSecondGatherBindBroadcastDeliver, GBCA.ByAFW.programs_setSecondGather,
     programs_roundProjection_eq, programs_roundProjectionUpdate,
       programProjection]
@@ -3020,7 +3021,7 @@ theorem roundProjection_deliverSecondGatherBindBroadcast_ret (hu : (u j).2 = p) 
     _ _ => rfl)]
   simp only [Implementation.RoundRecordMap.deliverTo, roundRecord_deliverTo, RoundRecord.deliverTo]
   rw [roundProjection_writeNoSent]
-  refine roundStateAt_ext ?_ ?_ ?_ ?_
+  refine roundStateOverGathers_ext ?_ ?_ ?_ ?_
   · simp only [afterSecondGatherBindBroadcastReturn, afterSecondGatherBindBroadcastDeliver,
     GBCA.ByAFW.programs_setSecondGather, programs_roundProjection_eq,
       programs_roundProjectionUpdate, programProjection]
@@ -3091,7 +3092,7 @@ theorem roundProjection_byzantineFirstGather (u : ∀ _ : Fin P.n,
       = GBCA.ByAFW.setFirstGather (roundProjection P u w r)
           (Gather.setGatherTier (firstGatherProjection P u w r) ((Gather.gatherTier
             (firstGatherProjection P u w r)).multicast k mm)) := by
-  refine roundStateAt_ext ?_ ?_ ?_ ?_
+  refine roundStateOverGathers_ext ?_ ?_ ?_ ?_
   · simp
   · simp
   · simp only [GBCA.ByAFW.firstGather_setFirstGather, firstGather_roundProjection]
@@ -3142,7 +3143,7 @@ theorem roundProjection_byzantineSecondGather (u : ∀ _ : Fin P.n,
       = GBCA.ByAFW.setSecondGather (roundProjection P u w r)
           (Gather.setGatherTier (secondGatherProjection P u w r) ((Gather.gatherTier
             (secondGatherProjection P u w r)).multicast k mm)) := by
-  refine roundStateAt_ext ?_ ?_ ?_ ?_
+  refine roundStateOverGathers_ext ?_ ?_ ?_ ?_
   · simp
   · simp
   · simp only [GBCA.ByAFW.firstGather_setSecondGather, firstGather_roundProjection]
@@ -3194,7 +3195,7 @@ theorem roundProjection_byzantineFirstGatherInputBroadcast (u : ∀ _ : Fin P.n,
           (Gather.setInputBroadcasts (firstGatherProjection P u w r)
             (Function.update (Gather.inputBroadcasts (firstGatherProjection P u w r)) i
               ((Gather.inputBroadcasts (firstGatherProjection P u w r) i).multicast k mm))) := by
-  refine roundStateAt_ext ?_ ?_ ?_ ?_
+  refine roundStateOverGathers_ext ?_ ?_ ?_ ?_
   · simp
   · simp
   · simp only [GBCA.ByAFW.firstGather_setFirstGather, firstGather_roundProjection]
@@ -3259,7 +3260,7 @@ theorem roundProjection_byzantineFirstGatherBindBroadcast (u : ∀ _ : Fin P.n,
           (Gather.setBindBroadcasts (firstGatherProjection P u w r)
             (Function.update (Gather.bindBroadcasts (firstGatherProjection P u w r)) i
               ((Gather.bindBroadcasts (firstGatherProjection P u w r) i).multicast k mm))) := by
-  refine roundStateAt_ext ?_ ?_ ?_ ?_
+  refine roundStateOverGathers_ext ?_ ?_ ?_ ?_
   · simp
   · simp
   · simp only [GBCA.ByAFW.firstGather_setFirstGather, firstGather_roundProjection]
@@ -3324,7 +3325,7 @@ theorem roundProjection_byzantineSecondGatherInputBroadcast (u : ∀ _ : Fin P.n
           (Gather.setInputBroadcasts (secondGatherProjection P u w r)
             (Function.update (Gather.inputBroadcasts (secondGatherProjection P u w r)) i
               ((Gather.inputBroadcasts (secondGatherProjection P u w r) i).multicast k mm))) := by
-  refine roundStateAt_ext ?_ ?_ ?_ ?_
+  refine roundStateOverGathers_ext ?_ ?_ ?_ ?_
   · simp
   · simp
   · simp only [GBCA.ByAFW.firstGather_setSecondGather, firstGather_roundProjection]
@@ -3390,7 +3391,7 @@ theorem roundProjection_byzantineSecondGatherBindBroadcast (u : ∀ _ : Fin P.n,
           (Gather.setBindBroadcasts (secondGatherProjection P u w r)
             (Function.update (Gather.bindBroadcasts (secondGatherProjection P u w r)) i
               ((Gather.bindBroadcasts (secondGatherProjection P u w r) i).multicast k mm))) := by
-  refine roundStateAt_ext ?_ ?_ ?_ ?_
+  refine roundStateOverGathers_ext ?_ ?_ ?_ ?_
   · simp
   · simp
   · simp only [GBCA.ByAFW.firstGather_setSecondGather, firstGather_roundProjection]

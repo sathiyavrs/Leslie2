@@ -206,7 +206,7 @@ survives it and phase 2 is entered with the certificate at `rA` in hand. The tra
 Four spec-level repairs make the simulation possible; each is a permanent, `F`-blind provenance
 discipline. D13/D14 repair the abstract specs (TS 1 = `ABA.spec`, TS 2 = the `GBCA` specification)
 against the papers' Validity; D15 is the F-blind counting form of their support guards, discharged
-at the implementation by the `GBCASim` derivation; D12′ closes a DECIDED-equivocation gap.
+at the implementation by the derivation of `DESIGN-GBCASim.md`; D12′ closes a DECIDED-equivocation gap.
 
 ### D13 — TS 1 Validity (ghost provenance)
 
@@ -297,9 +297,9 @@ the budget pigeonhole transfers verbatim: among `f + 1` supporters some member i
 `F`, hence a never-corrupted genuine caller. Corrupt supporters are paid for by the `F` budget
 itself, with no phantom-call bookkeeping and no specification fills.
 
-### D15 — the implementation derivation (`GBCASim`)
+### D15 — the implementation derivation (`DESIGN-GBCASim.md`)
 
-D14's superset counts must be discharged from `GBCA.Impl`. The connection is the `Invariant`
+D14's superset counts must be discharged from `GBCA.ByABDY.implementation`. The connection is the `Invariant`
 conjunct `input_support`:
 
 ```
@@ -392,7 +392,7 @@ fields), grouped:
 - **The coin clauses, established at the resolving call**: `wcc_bound`, `wcc_order` and
   `flip_grade2Lock` are the conjuncts that read `(w r).val`, and the one row that writes it is
   `callW`'s resolving row, so `Invariant.step_callW_resolve` carries all three. Its input is
-  `Invariant.exists_correct_wcaller`: the threshold counts more than `f` callers of round `r`
+  `Invariant.exists_correct_wccCaller`: the threshold counts more than `f` callers of round `r`
   and `F_card` bounds the corrupted set by `f`, so the callers outnumber it and one of
   them is never corrupted. That caller's `wcc_called`, `wcc_callRound` and `wccCalled_witness`
   carry `wcc_bound`, `wcc_order` and `flip_grade2Lock` in turn. `agree_locked`'s round-`r` corner is

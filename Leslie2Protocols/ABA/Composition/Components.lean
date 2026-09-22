@@ -488,7 +488,7 @@ non-participant as the identity. A participant's row carries the health guard
 `corrupted = false`, and on a label outside `actsAt j` the replaced program's
 self-loop is a second row on the same label (D23). -/
 
-section CoreInversion
+section RoundLoopInversion
 
 variable {P : Parameters} {j : Fin P.n} {c : RoundLoopRecord P.n} {ν : PMF (RoundLoopRecord P.n)}
 
@@ -715,7 +715,7 @@ theorem roundLoopStep_noStep {L : ExtendedLabel P.n} (hc : c.corrupted = true)
     (h : RoundLoopStep P j c L ν) : ν = PMF.pure c := by
   cases h <;> simp_all
 
-end CoreInversion
+end RoundLoopInversion
 
 /-! ### The ABA network's rules, by label class -/
 

@@ -46,7 +46,7 @@ Attiya, Flam and Welch. Across the two namespaces a name means the same thing �
 ABDY22's — and `hybrid` and `ABA.spec`, which the chains share, are named in neither.
 The rest of the gather-based chain sits in `AFW` as well: its headlines are `AFW.main`
 and `AFW.refines`, where ABDY22's are `ABDY.main` and `ABDY.refines`. A `G` elsewhere in the
-development is graded agreement — `callG`, `retG`, `GBCANetwork`, `NetworkState` — and never the
+development is graded agreement — `callG`, `retG`, `GBCANetwork`, `GBCAOutput` — and never the
 chain.
 
 Both implementations are one construction. What the protocol fixes — the round loop, the DECIDED
@@ -252,10 +252,10 @@ system over them, and the hybrid.
 | file | lines | what it is |
 |---|---|---|
 | `HybridRefinesSpecification/AbstractStatePreservation.lean` | 333 | `AbstractState` preservation for the stutter rows, and the assembly `Invariant.step`. |
-| `HybridRefinesSpecification/InvariantPreservation.lean` | 3992 | Step inversion for `hybrid`, then preservation of `Invariant` across every row. The bulk of the proof text. |
+| `HybridRefinesSpecification/InvariantPreservation.lean` | 3993 | Step inversion for `hybrid`, then preservation of `Invariant` across every row. The bulk of the proof text. |
 | `HybridRefinesSpecification/NonVacuity.lean` | 810 | A concrete 20-step run of `hybrid fourProcesses` to a `retABA` decision, so the simulation about it is not vacuous. |
 | `HybridRefinesSpecification/Relation.lean` | 690 | The core simulation's relation: the lazy abstract state `AbstractState` and the concrete invariant `Invariant`. |
-| `HybridRefinesSpecification/Simulation.lean` | 424 | **`hybridRefinesSpecification`**: the simulation proof itself, one row per concrete step class. |
+| `HybridRefinesSpecification/Simulation.lean` | 426 | **`hybridRefinesSpecification`**: the simulation proof itself, one row per concrete step class. |
 | `HybridRefinesSpecification/WeakTransitions.lean` | 52 | The abstract-state run kit: `SpecStep.decide` as a τ-run (`decide_step`), and a run closed by a visible step (`weakStep_of_run_then_step`). |
 
 **`ABA/ImplementationByABDY/`** — ABDY22's protocol as it runs, and its simulation into the composed
@@ -278,7 +278,7 @@ system.
 |---|---|---|
 | `ImplementationByAFW/CompositionChain.lean` | 429 | **The gather-based chain**: the families `roundFamilyOverBracha`, `roundFamilyOverBroadcastSpecification` and `roundFamilyOverGatherSpecifications`, the three stages `AFW.composed ⊑ AFW.composedOverBroadcastSpecification ⊑ AFW.composedOverGatherSpecifications ⊑ hybrid`, and the composed-level headlines `AFW.composed_refines`, `AFW.composed_safe`, `AFW.chainSimComposed`. Four axiom checks. |
 | `ImplementationByAFW/RoundProjection.lean` | 892 | `AFW.roundProjection`, the view that computes a composed state from the implementation, the relation `AFW.ProtocolRelation` it carries, and the builders that assemble a transition of the composed system. |
-| `ImplementationByAFW/RoundProjectionStep.lean` | 3623 | The view of the composed round after one implementation row: for each row of the implementation, the round's view after it is the view before it with the composed round's own effect applied. |
+| `ImplementationByAFW/RoundProjectionStep.lean` | 3624 | The view of the composed round after one implementation row: for each row of the implementation, the round's view after it is the view before it with the composed round's own effect applied. |
 | `ImplementationByAFW/Simulation.lean` | 2397 | **`AFW.protocolSim`**, **`AFW.main`**: the gather-based protocol carried into `AFW.composed` along a relation that computes the composed state from the implementation, the ghost record included, and the headlines `AFW.refines`, `AFW.main`, `AFW.chainSim` it yields. Five axiom checks. |
 | `ImplementationByAFW/System.lean` | 923 | **The gather-based protocol as it runs**: the implementation at AFW25's two-gather construction — the tagged message type collapsing a round's `4n + 2` network states into one sent-set family, the process-major round record, the adversary's ghost record of the two cores and the bound bit, and the 23 round rows. |
 

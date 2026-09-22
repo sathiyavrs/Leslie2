@@ -125,7 +125,7 @@ def gatherEvents (n : ℕ) (X : Type) : Set (GatherLabel n X) := {l | ∃ e : Ga
 @[simp] theorem gatherLabel_tau (n : ℕ) (X : Type) :
     (Silent.τ : GatherLabel n X) = Sum.inl (Sum.inl Label.tau) := rfl
 
-@[simp] theorem instlab_tau (n : ℕ) (X : Type) :
+@[simp] theorem instanceLabel_tau (n : ℕ) (X : Type) :
     (Silent.τ : InstanceLabel n X) = Sum.inl Label.tau := rfl
 
 /-- The silent label of a broadcast instance's interface alphabet. -/

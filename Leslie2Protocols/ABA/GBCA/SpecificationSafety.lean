@@ -70,7 +70,7 @@ commits the round, and the surviving bit stays available to every later return.
   is answered at all — is a fairness statement about which runs the scheduler
   must extend, outside the scope of a safety file.
 
-"Corrupted somewhere along the trace" is `SpecSafety`'s never-corrupted
+"Corrupted somewhere along the trace" is `Specifications/ABASafety.lean`'s never-corrupted
 formulation, taken verbatim: `NeverCorrupted P t id` is non-membership in
 `failSet P t k` for every `k`, the trace-level fold of D1-`corrupt` over the
 `fail` labels, so a `fail id` that the budget refuses does not count as
@@ -501,7 +501,7 @@ theorem specInst_grade_agree (P : Parameters) (r : ℕ) :
 
 /-- **Unanimous input at the correct processes `v`** (trace form): every round-`r` call of the
 trace carries `v`, unless its caller is corrupted somewhere along the trace.
-Corruption is `SpecSafety`'s trace-level notion (`NeverCorrupted`, the fold
+Corruption is `Specifications/ABASafety.lean`'s trace-level notion (`NeverCorrupted`, the fold
 `failSet` of D1-`corrupt` over the `fail` labels), not the bare presence of a
 `fail` label: a `fail` the budget refuses corrupts nobody. -/
 def UnanimousInput (P : Parameters) (r : ℕ) (v : Bool) (t : Seq (Label P.n)) : Prop :=

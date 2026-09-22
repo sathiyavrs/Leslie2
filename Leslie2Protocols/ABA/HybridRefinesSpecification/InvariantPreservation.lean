@@ -1746,8 +1746,8 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
 
 /-- A round whose caller count has passed `f` has a never-corrupted caller: the callers
 outnumber the corrupted set, which `F_card` bounds by `f`. -/
-theorem Invariant.exists_correct_wcaller {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState
-  P}
+theorem Invariant.exists_correct_wccCaller {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
+    {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) {r : ℕ}
     (hq : (w r).threshold P) : ∃ id, id ∉ c.F ∧ (w r).called id = true := by
   by_contra hcon
@@ -1764,7 +1764,7 @@ theorem Invariant.exists_correct_wcaller {P : Parameters} {g : ℕ → GBCA.Spec
 /-- The coin resolution the resolving call carries: round `r`'s caller count has passed `f`
 at an unresolved `val`, and the drawn outcome is written to `val`. The clauses that read
 `(w r).val` are re-established from the threshold, which supplies a never-corrupted caller of
-round `r` (`Invariant.exists_correct_wcaller`); that caller's `wcc_called`, `wcc_callRound` and
+round `r` (`Invariant.exists_correct_wccCaller`); that caller's `wcc_called`, `wcc_callRound` and
 `wccCalled_witness` carry `wcc_bound`, `wcc_order` and `flip_grade2Lock` respectively.
 `agree_locked`'s round-`r` corner is vacuous, since `round_flip` at a correct process past round `r`
 contradicts `val = ⊥`. -/
@@ -1798,7 +1798,7 @@ theorem Invariant.step_callW_resolve {P : Parameters} {g : ℕ → GBCA.SpecStat
   · intro r' h
     by_cases h2 : r' = r
     · obtain ⟨id0, hid0cF, hid0called⟩ :=
-        hI.exists_correct_wcaller (r := r') (by rw [h2]; exact hq)
+        hI.exists_correct_wccCaller (r := r') (by rw [h2]; exact hq)
       exact hI.wcc_called r' id0 hid0cF hid0called
     · rw [hValNe r' h2] at h; exact hI.wcc_bound r' h
   · intro r' v hlast hbr hcoin id hmem hround
@@ -1843,7 +1843,7 @@ theorem Invariant.step_callW_resolve {P : Parameters} {g : ℕ → GBCA.SpecStat
     by_cases h2 : r' = r
     · subst h2; rw [hValSelf]; cases o <;> simp [CoinOutcome.toCoinValue]
     · by_cases h1 : r' + 1 = r
-      · obtain ⟨id0, hid0cF, hid0called⟩ := hI.exists_correct_wcaller (r := r) hq
+      · obtain ⟨id0, hid0cF, hid0called⟩ := hI.exists_correct_wccCaller (r := r) hq
         have hcr := hI.wcc_callRound r id0 hid0cF hid0called
         rw [hValNe r' h2]
         exact hI.round_flip r' id0 hid0cF (by omega)
@@ -1854,7 +1854,7 @@ theorem Invariant.step_callW_resolve {P : Parameters} {g : ℕ → GBCA.SpecStat
     intro r' h
     by_cases h2 : r' = r
     · obtain ⟨id0, hid0cF, hid0called⟩ :=
-        hI.exists_correct_wcaller (r := r') (by rw [h2]; exact hq)
+        hI.exists_correct_wccCaller (r := r') (by rw [h2]; exact hq)
       exact hI.wccCalled_witness r' id0 hid0cF hid0called
     · rw [hValNe r' h2] at h; exact hI.flip_grade2Lock r' h
   · intro id hmem hin r'; rw [hCalledEq]; exact hI.idle_no_wccCall id hmem hin r'

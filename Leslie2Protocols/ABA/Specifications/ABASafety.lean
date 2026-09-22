@@ -29,7 +29,7 @@ never corrupted, not merely a member of some support set that a later `fail`
 could taint.
 
 The proof is invariant reasoning along genuine executions (via
-`TraceSupport`), on two invariants:
+`Framework/TraceDistributionSupport.lean`), on two invariants:
 
 * `SpecificationInvariant` — the state invariant, in two clauses: the corrupted set respects
   the budget (`F_le`), and the decision value carries `f + 1` F-blind

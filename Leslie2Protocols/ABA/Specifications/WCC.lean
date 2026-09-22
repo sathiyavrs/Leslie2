@@ -17,7 +17,7 @@ with probability `ε` (all correct processes receive that bit), the failure
 outcome with probability `δ`, and `⊤` with the remaining mass. Under `⊤`
 delivery happens and each process's returned bit is left to the adversary.
 That call is the only probabilistic transition of the instance, and the only
-one of the whole development besides `ABA.Spec`'s.
+one of the whole development besides `ABA.spec`'s.
 
 The call label therefore carries two rows. The recording call takes a caller
 that does not cross the threshold, or one at an already resolved `val`, and

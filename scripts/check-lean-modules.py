@@ -12,7 +12,7 @@ moved file leaves a dead pointer behind with no build failure.
   ``Leslie2/Results.lean``) or a library root (``Leslie2Protocols`` for
   ``Leslie2Protocols.lean``).
 * Module docstrings and the guides of ``Leslie2Protocols`` cite a file by its
-  path, as ``ABA/GatherFlat.lean`` or ``Framework/SyncProduct.lean``. A citation
+  path, as ``ABA/Gather/Composition.lean`` or ``Framework/SynchronisedProduct.lean``. A citation
   is written relative to whichever directory makes it read naturally, so it
   resolves when some file in the tree carries it as a trailing path.
 

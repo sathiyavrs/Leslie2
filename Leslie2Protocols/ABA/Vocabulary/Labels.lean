@@ -10,7 +10,7 @@ import Leslie2Protocols.ABA.Vocabulary.Parameters
 /-!
 # The shared label alphabet of the ABA development
 
-Every system of the case study — the round loops, `ABA.Spec`, the `GBCA` instance
+Every system of the case study — the round loops, `ABA.spec`, the `GBCA` instance
 families and the `WCC` spec family — lives over the single label type
 `ABA.Label n`. Sub-protocol API labels are tagged with their round `r : ℕ`
 (the source blueprint's Algorithm 1 uses countably many `GBCA_r` / `WCC_r`
