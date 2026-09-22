@@ -5,7 +5,7 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.Gather.CompositionStepInversion
-import Leslie2Protocols.ABA.ReliableBroadcast.BrachaCompositionStepInversion
+import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.CompositionStepInversion
 import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 
 /-!
@@ -25,7 +25,7 @@ same distribution.
 ## The broadcast tier
 
 A broadcast instance's own rows are `BRB.BrachaStep`
-(`ABA/ReliableBroadcast/BrachaImplementation.lean`), and `BRB.brachaInstance_step_iff_row` matches
+(`ABA/ReliableBroadcast/Bracha/Implementation.lean`), and `BRB.brachaInstance_step_iff_row` matches
 them against the instance's transitions. Each label of the composition reaches an instance at one
 label of its interface alphabet, and the rows there carry over: a silent step, a return and a
 corruption are the hypotheses `BRB.BrachaStep P k (inputBroadcasts s k) l₀ (PMF.pure c)` of

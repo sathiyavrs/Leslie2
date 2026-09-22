@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.ReliableBroadcast.BrachaSpecificationOverInstanceAlphabet
+import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.SpecificationOverInstanceAlphabet
 import Leslie2Protocols.Framework.SynchronisedProduct
 import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 
@@ -35,7 +35,7 @@ identify the state a row writes with `InstanceState.setProcess`, `InstanceState.
 
 `brachaInstance_step_iff_row` is the row characterisation: at a specification label `l₀`, the
 transitions of the composition over the labels `specificationLabelMap` sends to `l₀` are
-exactly the `l₀`-rows of `BRB.BrachaStep` (`ABA/ReliableBroadcast/BrachaImplementation.lean`),
+exactly the `l₀`-rows of `BRB.BrachaStep` (`ABA/ReliableBroadcast/Bracha/Implementation.lean`),
 one constructor per case, on the same product state and with the same distribution. The call
 and the call loop are the two rows of `call m`, taken at the two labels; every other
 specification label has a single label over it.
@@ -334,8 +334,8 @@ end NetworkStepInversion
 /-! ### The write a row makes on the composed state
 
 The local states and the network state are the two components of `BrachaState`
-(`ABA/ReliableBroadcast/BrachaImplementation.lean`), so the instance and the rule table `BrachaStep`
-run on the same state and every rule of the one is a rule of the other read in the
+(`ABA/ReliableBroadcast/Bracha/Implementation.lean`), so the instance and the rule table
+`BrachaStep` run on the same state and every rule of the one is a rule of the other read in the
 instance state's accessors. A joint step delivers a program function pointwise: its value at the
 acting process, and its agreement with the old one elsewhere. `Function.eq_update_iff` reads that
 function as the old one updated at the acting process, and the lemmas here identify the state a

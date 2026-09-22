@@ -200,12 +200,18 @@ implementation of it.
 
 | file | lines | what it is |
 |---|---|---|
-| `ReliableBroadcast/BrachaComposition.lean` | 257 | **The Bracha instance, composed**: `BRB.brachaInstance`, the `n` per-process programs beside the instance's network with the instance's own events hidden, over the interface alphabet in which the call loop is a label of its own. |
-| `ReliableBroadcast/BrachaCompositionStepInversion.lean` | 581 | The transitions of `BRB.brachaInstance` read off their labels: a step of the instance split into a hidden rendezvous and an interface label, a joint step read as the rows of the programs and the network, one program's row and the network's row per label class, the write each row makes on the composed state, and the row characterisation `brachaInstance_step_iff_row`. |
-| `ReliableBroadcast/BrachaImplementation.lean` | 151 | `BRB.BrachaStep`, the rows of the composed instance `BRB.brachaInstance`: Bracha's three message levels in the form of AFW25's Algorithm 1 (D34) over the two-part state, one row per case of `brachaInstance_step_iff_row`. A relation on that state; the system is the composition of `ReliableBroadcast/BrachaComposition.lean`. |
-| `ReliableBroadcast/BrachaRefinesSpecification.lean` | 1082 | `brachaRefinesSpecification`: the Bracha instance refines TS 6, the committed value certified by an ECHO receipt quorum, the commit fired on demand. Carries the relation `BRB.SpecificationRelation`, which the gather substitution lifts, and the instance invariant `BRB.Invariant`, which the simulation of the implementation into its composed system carries. |
-| `ReliableBroadcast/BrachaSpecificationOverInstanceAlphabet.lean` | 218 | `BRB.specificationOverInstanceAlphabet`: the broadcast specification read along `BRB.specificationLabelMap`, which sends the call loop to the call it stands for; the determinacy of the composition's rules, and the sections along which a weak run of the specification is read back over the instance's interface. |
 | `ReliableBroadcast/Specification.lean` | 160 | The reliable-broadcast specification, per leader (blueprint TS 6, safety-only): the input/committed-value split with the guarded commit (D27). |
+
+**`ABA/ReliableBroadcast/Bracha/`** — Bracha's implementation of that specification, and its
+refinement.
+
+| file | lines | what it is |
+|---|---|---|
+| `ReliableBroadcast/Bracha/Composition.lean` | 257 | **The Bracha instance, composed**: `BRB.brachaInstance`, the `n` per-process programs beside the instance's network with the instance's own events hidden, over the interface alphabet in which the call loop is a label of its own. |
+| `ReliableBroadcast/Bracha/CompositionStepInversion.lean` | 581 | The transitions of `BRB.brachaInstance` read off their labels: a step of the instance split into a hidden rendezvous and an interface label, a joint step read as the rows of the programs and the network, one program's row and the network's row per label class, the write each row makes on the composed state, and the row characterisation `brachaInstance_step_iff_row`. |
+| `ReliableBroadcast/Bracha/Implementation.lean` | 151 | `BRB.BrachaStep`, the rows of the composed instance `BRB.brachaInstance`: Bracha's three message levels in the form of AFW25's Algorithm 1 (D34) over the two-part state, one row per case of `brachaInstance_step_iff_row`. A relation on that state; the system is the composition of `ReliableBroadcast/Bracha/Composition.lean`. |
+| `ReliableBroadcast/Bracha/RefinesSpecification.lean` | 1082 | `brachaRefinesSpecification`: the Bracha instance refines TS 6, the committed value certified by an ECHO receipt quorum, the commit fired on demand. Carries the relation `BRB.SpecificationRelation`, which the gather substitution lifts, and the instance invariant `BRB.Invariant`, which the simulation of the implementation into its composed system carries. |
+| `ReliableBroadcast/Bracha/SpecificationOverInstanceAlphabet.lean` | 218 | `BRB.specificationOverInstanceAlphabet`: the broadcast specification read along `BRB.specificationLabelMap`, which sends the call loop to the call it stands for; the determinacy of the composition's rules, and the sections along which a weak run of the specification is read back over the instance's interface. |
 
 **`ABA/Gather/`** — gather over reliable broadcast.
 
@@ -394,8 +400,8 @@ carries: `GBCA/Specification.lean` with `GBCA/SpecificationSafety.lean`'s
 `specInst_binding`, and `Gather/Specification.lean` with
 `Gather/CommonCoreAtSpecification.lean`'s `specInst_core`.
 
-For the gather-based chain, by module docstring: `ReliableBroadcast/BrachaComposition.lean` →
-`ReliableBroadcast/BrachaCompositionStepInversion.lean` → `Gather/Composition.lean` →
+For the gather-based chain, by module docstring: `ReliableBroadcast/Bracha/Composition.lean` →
+`ReliableBroadcast/Bracha/CompositionStepInversion.lean` → `Gather/Composition.lean` →
 `Gather/CompositionStepInversion.lean` → `GBCA/AFW/Composition.lean` →
 `GBCA/AFW/CompositionStepInversion.lean` → `GBCA/AFW/StepOverGatherSpecifications.lean` →
 `Implementation/AFW/CompositionChain.lean` → `Implementation/AFW/Simulation.lean`. The first six

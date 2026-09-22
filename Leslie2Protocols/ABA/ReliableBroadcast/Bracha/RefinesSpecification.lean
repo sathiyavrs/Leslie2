@@ -4,14 +4,14 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.ReliableBroadcast.BrachaCompositionStepInversion
+import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.CompositionStepInversion
 import Leslie2Protocols.Framework.FamilySimulation
 
 /-!
 # The BRB refinement: Bracha's protocol implements Transition System 6
 
 `BRB.brachaRefinesSpecification`: the reliable-broadcast instance `BRB.brachaInstance`
-(`ABA/ReliableBroadcast/BrachaComposition.lean`) is forward simulated by the BRB specification
+(`ABA/ReliableBroadcast/Bracha/Composition.lean`) is forward simulated by the BRB specification
 instance with the same leader, read over the instance's interface
 (`BRB.specificationOverInstanceAlphabet`), along `BRB.SpecificationRelation`.
 

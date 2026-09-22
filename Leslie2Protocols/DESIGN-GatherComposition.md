@@ -4,15 +4,15 @@ and its chain
 Companion design document to the gather-based implementation of graded agreement: the
 sub-protocol compositions (`ABA/Vocabulary/ProcessAndNetworkState.lean`,
 `ABA/ReliableBroadcast/Specification.lean`,
-`ABA/ReliableBroadcast/BrachaComposition.lean`,
-`ABA/ReliableBroadcast/BrachaSpecificationOverInstanceAlphabet.lean`,
-`ABA/ReliableBroadcast/BrachaCompositionStepInversion.lean`,
-`ABA/ReliableBroadcast/BrachaImplementation.lean`, `ABA/Gather/Specification.lean`,
+`ABA/ReliableBroadcast/Bracha/Composition.lean`,
+`ABA/ReliableBroadcast/Bracha/SpecificationOverInstanceAlphabet.lean`,
+`ABA/ReliableBroadcast/Bracha/CompositionStepInversion.lean`,
+`ABA/ReliableBroadcast/Bracha/Implementation.lean`, `ABA/Gather/Specification.lean`,
 `ABA/Gather/MessagesAndCommonCore.lean`, `ABA/Gather/Composition.lean`,
 `ABA/Gather/SpecificationOverInstanceAlphabet.lean`,
 `ABA/Gather/CompositionStepInversion.lean`,
 `ABA/Gather/StepOverBroadcastSpecification.lean`, `ABA/Gather/StepOverBracha.lean`), their
-refinements (`ABA/ReliableBroadcast/BrachaRefinesSpecification.lean`,
+refinements (`ABA/ReliableBroadcast/Bracha/RefinesSpecification.lean`,
 `ABA/Gather/RefinesSpecification.lean`, `ABA/Gather/BroadcastSubstitution.lean`), the
 two-gather round and its three tiers (`ABA/GBCA/AFW/Counting.lean`,
 `ABA/GBCA/AFW/Composition.lean`, `ABA/GBCA/AFW/CompositionStepInversion.lean`,
@@ -43,7 +43,7 @@ Three levels are built that way, each the level below it in parallel with a tier
 of its own.
 
 ```
-BRB.brachaInstance P ldr M     -- n programs beside the instance's network (ReliableBroadcast/BrachaComposition.lean)
+BRB.brachaInstance P ldr M     -- n programs beside the instance's network (ReliableBroadcast/Bracha/Composition.lean)
 Gather.instanceOverBroadcasts P X BIn BBind
                          -- n gather programs beside the gather network, in parallel with
                          -- 2n broadcast instances, each read along a pullback naming it
@@ -78,7 +78,7 @@ Beneath the round, the two gather tiers and the broadcast tier, citable on their
 own:
 
 ```
-BRB.brachaInstance P ldr M ⊑ BRB.specInst P ldr M     (brachaRefinesSpecification, ReliableBroadcast/BrachaRefinesSpecification.lean)
+BRB.brachaInstance P ldr M ⊑ BRB.specInst P ldr M     (brachaRefinesSpecification, ReliableBroadcast/Bracha/RefinesSpecification.lean)
 Gather.instanceOverBracha P X   ⊑ Gather.instanceOverBroadcastSpecification P X      (broadcastSubstitution,  Gather/BroadcastSubstitution.lean, by congruence)
 Gather.instanceOverBroadcastSpecification P X ⊑ Gather.specInst P X       (refinesSpecification, Gather/RefinesSpecification.lean)
 ```

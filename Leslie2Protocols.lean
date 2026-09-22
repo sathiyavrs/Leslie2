@@ -75,11 +75,11 @@ import Leslie2Protocols.ABA.Implementation.CompositeTransitions
 import Leslie2Protocols.ABA.Implementation.NetworkStateWritesAndErasures
 import Leslie2Protocols.ABA.Implementation.StepInversion
 import Leslie2Protocols.ABA.Implementation.System
-import Leslie2Protocols.ABA.ReliableBroadcast.BrachaComposition
-import Leslie2Protocols.ABA.ReliableBroadcast.BrachaCompositionStepInversion
-import Leslie2Protocols.ABA.ReliableBroadcast.BrachaImplementation
-import Leslie2Protocols.ABA.ReliableBroadcast.BrachaRefinesSpecification
-import Leslie2Protocols.ABA.ReliableBroadcast.BrachaSpecificationOverInstanceAlphabet
+import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.Composition
+import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.CompositionStepInversion
+import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.Implementation
+import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.RefinesSpecification
+import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.SpecificationOverInstanceAlphabet
 import Leslie2Protocols.ABA.ReliableBroadcast.Specification
 import Leslie2Protocols.ABA.Results
 import Leslie2Protocols.ABA.Specifications.ABA

@@ -6,7 +6,7 @@ Authors: Sathiya / Claude
 
 import Leslie2Protocols.ABA.Gather.Composition
 import Leslie2Protocols.ABA.Gather.RefinesSpecification
-import Leslie2Protocols.ABA.ReliableBroadcast.BrachaRefinesSpecification
+import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.RefinesSpecification
 import Leslie2Protocols.Framework.Congruence
 import Leslie2Protocols.Framework.FinerAlphabetCongruence
 import Leslie2.Results
@@ -19,7 +19,7 @@ import Leslie2.Results
 specification (`Gather.instanceOverBroadcastSpecification`), along
 `Gather.BroadcastSubstitutionRelation` — the gather tier held equal, and each broadcast coordinate
 related to its specification coordinate by the BRB refinement relation (`BRB.SpecificationRelation`,
-`ABA/ReliableBroadcast/BrachaRefinesSpecification.lean`).
+`ABA/ReliableBroadcast/Bracha/RefinesSpecification.lean`).
 
 The proof is the congruence argument alone. The two instances are one expression over two broadcast
 tiers, so the BRB refinement (`BRB.brachaRefinesSpecification`) is carried through the operators

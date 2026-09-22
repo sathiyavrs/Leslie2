@@ -2,8 +2,8 @@
 
 The gather-based chain runs over compositions at every level. A reliable-broadcast instance is `n`
 programs beside the instance's network (`BRB.brachaInstance`,
-`ABA/ReliableBroadcast/BrachaComposition.lean`); a gather instance is `n` programs beside the gather
-network, in parallel with `2n` broadcast instances read along pullbacks naming them
+`ABA/ReliableBroadcast/Bracha/Composition.lean`); a gather instance is `n` programs beside the
+gather network, in parallel with `2n` broadcast instances read along pullbacks naming them
 (`Gather.instanceOverBroadcasts`, `ABA/Gather/Composition.lean`); a round is `n` graded-agreement
 programs beside the round's network, in parallel with two gathers (`GBCA.ByAFW.roundOverGathers`,
 `ABA/GBCA/AFW/Composition.lean`). The protocol chain's round, `GBCA.ByABDY.composition`

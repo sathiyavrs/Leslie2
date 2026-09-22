@@ -7,7 +7,7 @@ Authors: Sathiya / Claude
 import Leslie2Protocols.ABA.Implementation.AFW.System
 import Leslie2Protocols.ABA.Implementation.AFW.CompositionChain
 import Leslie2Protocols.ABA.Gather.StepOverBracha
-import Leslie2Protocols.ABA.ReliableBroadcast.BrachaRefinesSpecification
+import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.RefinesSpecification
 import Leslie2Protocols.Framework.FamilySimulation
 import Leslie2Protocols.Framework.WeakTransitionsFromChains
 import Leslie2Protocols.Framework.Congruence

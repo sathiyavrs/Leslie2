@@ -93,7 +93,7 @@ Three levels are built that way, each the level below it in parallel with a tier
 own:
 
 - a reliable-broadcast instance is `n` programs beside the instance's network at the
-  broadcast message type (`BRB.brachaInstance`, `ABA/ReliableBroadcast/BrachaComposition.lean`);
+  broadcast message type (`BRB.brachaInstance`, `ABA/ReliableBroadcast/Bracha/Composition.lean`);
 - a gather instance is `n` gather programs beside the gather network, in parallel with
   `2n` reliable-broadcast instances — one per process for the inputs, one per process for
   the `BIND` payloads — each read along a pullback that names it (`Gather.instanceOverBroadcasts`,

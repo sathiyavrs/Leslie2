@@ -7,7 +7,7 @@ Authors: Sathiya / Claude
 import Leslie2Protocols.ABA.Implementation.System
 import Leslie2Protocols.ABA.GBCA.AFW.Counting
 import Leslie2Protocols.ABA.Gather.MessagesAndCommonCore
-import Leslie2Protocols.ABA.ReliableBroadcast.BrachaImplementation
+import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.Implementation
 
 /-!
 # The gather-based protocol as it runs

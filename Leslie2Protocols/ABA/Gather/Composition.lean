@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.ReliableBroadcast.BrachaSpecificationOverInstanceAlphabet
+import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.SpecificationOverInstanceAlphabet
 import Leslie2Protocols.ABA.Gather.MessagesAndCommonCore
 import Leslie2Protocols.Framework.Relabel
 import Leslie2Protocols.Framework.SynchronisedProduct
@@ -36,7 +36,8 @@ instances as arguments, `instanceOverBracha` supplies Bracha instances (`BRB.bra
 
 The specification's `call id x` carries two rows, the call and the
 input-enabledness loop. The composition splits them across two labels, as the
-reliable-broadcast composition does one level down (`ABA/ReliableBroadcast/BrachaComposition.lean`).
+reliable-broadcast composition does one level down
+(`ABA/ReliableBroadcast/Bracha/Composition.lean`).
 The gather record and the broadcast instance are different components, so a
 single label carrying both rows would also carry the mixed pairs. The loop
 therefore has a label of its own, `LoopLabel.callLoop id x`. The interface

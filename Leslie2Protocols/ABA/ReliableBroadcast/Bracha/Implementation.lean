@@ -29,7 +29,7 @@ sets beside the instance's network state, under the development's D1
 (determinised corruption) and D5 (set-based network) conventions.
 
 `BrachaStep` is the rows of the instance `BRB.brachaInstance`
-(`ABA/ReliableBroadcast/BrachaComposition.lean`) — the `n` per-process programs beside the
+(`ABA/ReliableBroadcast/Bracha/Composition.lean`) — the `n` per-process programs beside the
 instance's network — stated over that product state, one constructor per case of
 `BRB.brachaInstance_step_iff_row`. It is a relation on the product state; the system is the
 composition.
@@ -87,7 +87,7 @@ def BrachaState.initial (n : ℕ) (M : Type) : BrachaState n M :=
 variable {M : Type} [DecidableEq M]
 
 /-- The rows of the reliable-broadcast instance with leader `ldr`
-(`BRB.brachaInstance`, `ABA/ReliableBroadcast/BrachaComposition.lean`), stated over the product
+(`BRB.brachaInstance`, `ABA/ReliableBroadcast/Bracha/Composition.lean`), stated over the product
 state: one constructor per case of `BRB.brachaInstance_step_iff_row`. The call and the call loop are
 the two rows of `call m`, which the instance takes at two labels. All
 transitions are Dirac. -/

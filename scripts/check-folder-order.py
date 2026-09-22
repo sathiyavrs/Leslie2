@@ -35,6 +35,7 @@ ORDER = (
     "Specifications",
     "Implementation",
     "ReliableBroadcast",
+    "ReliableBroadcast/Bracha",
     "Gather",
     "GBCA",
     "GBCA/ABDY",
