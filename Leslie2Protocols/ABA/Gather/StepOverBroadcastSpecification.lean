@@ -34,10 +34,8 @@ split reaches the bind call, whose two rows are `bindCall` and
 
 ## The corrupted set
 
-Each broadcast specification carries its own corrupted set, kept in lockstep
-with the gather network's by the `fail` row. A commit guard therefore reads the
-corrupted set of the instance it commits in.
--/
+Each broadcast specification carries its own corrupted set, kept equal to the gather network's by
+the `fail` row. A commit guard therefore reads the corrupted set of the instance it commits in. -/
 
 namespace PLTS
 namespace ABA
@@ -223,8 +221,7 @@ inductive StepOverBroadcastSpecification (P : Parameters) :
     (gatherTier s).F) :
       StepOverBroadcastSpecification P s .tau (PMF.pure (setGatherTier s ((gatherTier s).multicast j
         m)))
-  /-- An input instance returns its committed value to `j`, which files it in
-  its store. -/
+  /-- An input instance returns its committed value to `j`, which files it as its returned value. -/
   | inputBroadcastRet (s : StateOverBroadcastSpecification P.n X) (k j : Fin P.n) (v : X)
       (hv : (inputBroadcasts s k).val = some v) (hr : (inputBroadcasts s k).ret j = false) :
       StepOverBroadcastSpecification P s .tau
@@ -234,8 +231,7 @@ inductive StepOverBroadcastSpecification (P : Parameters) :
                 j).inputBroadcastReturned k (some v) }))
           (Function.update (inputBroadcasts s) k
             { inputBroadcasts s k with ret := Function.update (inputBroadcasts s k).ret j true })))
-  /-- A bind instance returns its committed payload to `j`, which files it in
-  its store. -/
+  /-- A bind instance returns its committed payload to `j`, which files it as its returned value. -/
   | bindRet (s : StateOverBroadcastSpecification P.n X) (q j : Fin P.n) (U : AcceptedPairs P.n X)
       (hv : (bindBroadcasts s q).val = some U) (hr : (bindBroadcasts s q).ret j = false) :
       StepOverBroadcastSpecification P s .tau
@@ -263,8 +259,8 @@ inductive StepOverBroadcastSpecification (P : Parameters) :
         (PMF.pure (setCore (setGatherTier s ((gatherTier s).setProcess id
           { (gatherTier s).process id with returned := true }))
           (some ((core s).getD (coreOfNetwork P (gatherTier s).2)))))
-  /-- Corruption (deviation D1), in lockstep across the gather network state
-  and every broadcast coordinate. -/
+  /-- Corruption (deviation D1), together across the gather network state and every broadcast
+  coordinate. -/
   | fail (s : StateOverBroadcastSpecification P.n X) (id : Fin P.n) :
       StepOverBroadcastSpecification P s (.fail id)
         (PMF.pure (corruptAll P id (BRB.SpecState.corrupt P id)
@@ -312,7 +308,7 @@ theorem instanceOverBroadcastSpecification_step_row (P : Parameters) :
         with ⟨rfl,
         e, hev⟩ | hlab
   · obtain ⟨x, w', a', b', rfl, hproc, hnet, hin, hbind⟩ :=
-      instanceOverBroadcastsExtended_joint_inv hIn hBind (by simp) hev
+      instanceOverBroadcastsExtended_joint_inversion hIn hBind (by simp) hev
     refine ⟨Label.tau, rfl, ?_⟩
     cases e with
     | send j m =>
@@ -401,7 +397,7 @@ theorem instanceOverBroadcastSpecification_step_row (P : Parameters) :
   · by_cases hlτ : l = Sum.inl Label.tau
     · subst hlτ
       refine ⟨Label.tau, rfl, ?_⟩
-      rcases instanceOverBroadcastsExtended_tau_inv hIn hBind hlab with ⟨v, rfl, hn⟩ | ⟨k, c, rfl,
+      rcases instanceOverBroadcastsExtended_tau_inversion hIn hBind hlab with ⟨v, rfl, hn⟩ | ⟨k, c, rfl,
         hs⟩ | ⟨q, d, rfl, hs⟩
       · obtain ⟨jj, m, hF, hv⟩ := networkStep_tau hn
         have hv' : v = { w with network := w.network.recordSent jj m } := PMF.pure_injective hv
@@ -419,7 +415,7 @@ theorem instanceOverBroadcastSpecification_step_row (P : Parameters) :
         rw [stateOverBroadcasts_setBindBroadcasts]
         exact StepOverBroadcastSpecification.commitBindEntry _ q U hval hm
     · obtain ⟨x, w', a', b', rfl, hproc, hnet, hin, hbind⟩ :=
-        instanceOverBroadcastsExtended_joint_inv hIn hBind (by simpa using hlτ) hlab
+        instanceOverBroadcastsExtended_joint_inversion hIn hBind (by simpa using hlτ) hlab
       cases l with
       | inl l₀ =>
         cases l₀ with

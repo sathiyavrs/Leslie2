@@ -37,13 +37,12 @@ commits the round, and the surviving bit stays available to every later return.
   the state of any other return; that return needs its own bit alive, so its bit
   is not `!v₁`, so on `Bool` it is `v₁`. No invariant, no quorum arithmetic, no
   reachability hypothesis beyond membership in one execution.
-* `retG_grade_exclusive` — **graded agreement, A/C clause**. The second clause
-  of Definition 3.2: no execution carries both a grade-2 return and a grade-0 return.
-  The `grade` field is the lock. `retGrade2` writes `some true` and `retGrade0` writes
-  `some false`, each firing only from a state whose grade is unset or already on
-  its own side, and no other rule touches the field, so `Step.grade_mono` holds
-  rule by rule and `grade_stable` carries the written value to every later
-  state. `specInst_grade_agree` is the same statement read off the trace.
+* `retG_grade_exclusive` — **graded agreement, grade-2/grade-0 clause**. The second clause of
+  Definition 3.2: no execution carries both a grade-2 return and a grade-0 return. The `grade` field
+  is the lock. `retGrade2` writes `some true` and `retGrade0` writes `some false`, each firing only
+  from a state whose grade is unset or already at the value it writes, and no other rule touches the
+  field, so `Step.grade_mono` holds rule by rule and `grade_stable` carries the written value to
+  every later state. `specInst_grade_agree` is the same statement read off the trace.
 * `retG_bound_agree` — **one bound bit per round**. Any two returns of one
   execution announce the same bit. Each return excludes the complement of the bit
   it announces, the run carries that exclusion forward, and no state excludes two
@@ -52,7 +51,7 @@ commits the round, and the surviving bit stays available to every later return.
   positive-probability trace of `specInst P r` carries a single round-`r`
   announced bit (`BoundTrace`), and every round-`r` return that names a bit
   (`outValue`, defined here: `grade2 b` and `grade1 b` name `b`, `grade0` names nothing) names
-  the announced one. The graded-agreement reading — any two bit-naming returns of
+  the announced one. The graded-agreement clause — any two bit-naming returns of
   the trace name the same bit — is `BindingTrace.value_agree`.
 * `retGrade0_excluded_nonempty` — the **Graded Binding witness**, as the bit the
   grade-0 return announces. After a grade-0 return announcing `β`, `excluded` is nonempty
@@ -155,7 +154,7 @@ theorem Step.excluded_card_le_one {s s' : SpecState P.n} {l : Label P.n}
 /-- **One exclude per instance.** Every state of every execution of the round-`r`
 instance has `excluded.card ≤ 1`: the field starts empty and the single writer
 fires only from `∅`. Together with `Step.excluded_mono` this pins the reachable
-shape to `excluded ∈ {∅, {b}}` — the excluded-bit reading of the source blueprint's
+shape to `excluded ∈ {∅, {b}}` — the excluded-bit form of the source blueprint's
 bound value (D19). -/
 theorem excluded_card_le_one {e : AlterSeq (SpecState P.n) (Label P.n)}
     (he : is_exec e (specInst P r)) {k : ℕ} {s : SpecState P.n}
@@ -167,9 +166,9 @@ theorem excluded_card_le_one {e : AlterSeq (SpecState P.n) (Label P.n)}
 
 /-! ### Monotonicity of the grade lock -/
 
-/-- **The grade lock never changes once set.** `retGrade2` writes `some true` and
-`retGrade0` writes `some false`, each from a state whose grade is unset or already
-on the side it writes; no other rule touches the field, `corrupt` included. -/
+/-- **The grade lock never changes once set.** `retGrade2` writes `some true` and `retGrade0` writes
+`some false`, each from a state whose grade is unset or already at the value it writes; no other
+rule touches the field, `corrupt` included. -/
 theorem Step.grade_mono {s s' : SpecState P.n} {l : Label P.n} {g : Bool}
     {μ : PMF (SpecState P.n)} (hstep : Step P r s l μ) (hs' : s' ∈ μ.support)
     (hg : s.grade = some g) : s'.grade = some g := by
@@ -226,14 +225,14 @@ def outValue : GBCAOutput → Option Bool
 @[simp] theorem outValue_grade0 : outValue .grade0 = none := rfl
 
 /-- A grade-2 return pins its bit alive and the other bit excluded. -/
-private theorem retGrade2_inv {s : SpecState P.n} {id : Fin P.n} {v β : Bool}
+private theorem retGrade2_inversion {s : SpecState P.n} {id : Fin P.n} {v β : Bool}
     {μ : PMF (SpecState P.n)} (hstep : Step P r s (.retG r id (.grade2 v) β) μ) :
     v ∉ s.excluded ∧ (!v) ∈ s.excluded :=
   match hstep with
   | .retGrade2 _ _ _ _ hlive hexcluded _ _ _ => ⟨hlive, hexcluded⟩
 
 /-- A grade-1 return pins its bit alive and the other bit excluded. -/
-private theorem retGrade1_inv {s : SpecState P.n} {id : Fin P.n} {v β : Bool}
+private theorem retGrade1_inversion {s : SpecState P.n} {id : Fin P.n} {v β : Bool}
     {μ : PMF (SpecState P.n)} (hstep : Step P r s (.retG r id (.grade1 v) β) μ) :
     v ∉ s.excluded ∧ (!v) ∈ s.excluded :=
   match hstep with
@@ -256,11 +255,11 @@ theorem retG_value_guards {s : SpecState P.n} {id : Fin P.n} {o : GBCAOutput}
   | grade2 w =>
     obtain rfl : w = v := by
       simpa using ho
-    exact retGrade2_inv hstep
+    exact retGrade2_inversion hstep
   | grade1 w =>
     obtain rfl : w = v := by
       simpa using ho
-    exact retGrade1_inv hstep
+    exact retGrade1_inversion hstep
   | grade0 => exact absurd ho (by simp)
 
 /-- The D15 dissent count of a grade-1 return: `f + 1` support at the bit it does
@@ -272,23 +271,21 @@ private theorem retGrade1_support {s : SpecState P.n} {id : Fin P.n} {v β : Boo
   match hstep with
   | .retGrade1 _ _ _ _ _ _ _ hw _ => hw
 
-/-- A grade-2 return fires from a state whose grade is unset or already on the
-grade-2 side. -/
+/-- A grade-2 return fires from a state whose grade is unset or already on grade 2. -/
 private theorem retGrade2_grade_guard {s : SpecState P.n} {id : Fin P.n} {v β : Bool}
     {μ : PMF (SpecState P.n)} (hstep : Step P r s (.retG r id (.grade2 v) β) μ) :
     s.grade = none ∨ s.grade = some true :=
   match hstep with
   | .retGrade2 _ _ _ _ _ _ _ hg _ => hg
 
-/-- A grade-0 return fires from a state whose grade is unset or already on the
-grade-0 side. -/
+/-- A grade-0 return fires from a state whose grade is unset or already on grade 0. -/
 private theorem retGrade0_grade_guard {s : SpecState P.n} {id : Fin P.n} {β : Bool}
     {μ : PMF (SpecState P.n)} (hstep : Step P r s (.retG r id .grade0 β) μ) :
     s.grade = none ∨ s.grade = some false :=
   match hstep with
   | .retGrade0 _ _ _ _ _ _ hg _ => hg
 
-/-- A grade-2 return locks the grade to the grade-2 side. -/
+/-- A grade-2 return locks the grade at 2. -/
 private theorem retGrade2_grade {s s' : SpecState P.n} {id : Fin P.n} {v β : Bool}
     {μ : PMF (SpecState P.n)} (hstep : Step P r s (.retG r id (.grade2 v) β) μ)
     (hs' : s' ∈ μ.support) : s'.grade = some true := by
@@ -297,7 +294,7 @@ private theorem retGrade2_grade {s s' : SpecState P.n} {id : Fin P.n} {v β : Bo
   subst hs'
   rfl
 
-/-- A grade-0 return locks the grade to the grade-0 side. -/
+/-- A grade-0 return locks the grade at 0. -/
 private theorem retGrade0_grade {s s' : SpecState P.n} {id : Fin P.n} {β : Bool}
     {μ : PMF (SpecState P.n)} (hstep : Step P r s (.retG r id .grade0 β) μ)
     (hs' : s' ∈ μ.support) : s'.grade = some false := by
@@ -402,11 +399,11 @@ theorem retGrade0_excluded_nonempty {e : AlterSeq (SpecState P.n) (Label P.n)}
     (hstep : Step P r s₁ (.retG r id .grade0 β) μ) : s₂.excluded.Nonempty :=
   ⟨!β, excluded_mem_stable he hk hst₁ hst₂ (retG_bound_guard hstep)⟩
 
-/-- **grade-2 / grade-0 exclusivity along a run.** No execution of the round-`r`
-specification instance carries both a grade-2 return and a grade-0 return. The
-grade-2 return locks the grade to `some true` and the grade-0 return to `some false`,
-each fires only from a state whose grade is unset or already on its own side,
-and `grade_stable` carries the earlier lock to the later return's state. -/
+/-- **grade-2 / grade-0 exclusivity along a run.** No execution of the round-`r` specification
+instance carries both a grade-2 return and a grade-0 return. The grade-2 return locks the grade to
+`some true` and the grade-0 return to `some false`, each fires only from a state whose grade is
+unset or already at the value it writes, and `grade_stable` carries the earlier lock to the later
+return's state. -/
 theorem retG_grade_exclusive {e : AlterSeq (SpecState P.n) (Label P.n)}
     (he : is_exec e (specInst P r)) {k₁ k₂ : ℕ} (hne : k₁ ≠ k₂)
     {s₁' s₂' : SpecState P.n} {id₁ id₂ : Fin P.n} {v β₁ β₂ : Bool}
@@ -502,7 +499,7 @@ theorem specInst_grade_agree (P : Parameters) (r : ℕ) :
 
 /-! ### Validity: the trace-level hypothesis and conclusion -/
 
-/-- **Unanimous honest input `v`** (trace form): every round-`r` call of the
+/-- **Unanimous input at the correct processes `v`** (trace form): every round-`r` call of the
 trace carries `v`, unless its caller is corrupted somewhere along the trace.
 Corruption is `SpecSafety`'s trace-level notion (`NeverCorrupted`, the fold
 `failSet` of D1-`corrupt` over the `fail` labels), not the bare presence of a
@@ -793,7 +790,7 @@ private theorem return_state_of_unanimous {v : Bool}
 
 /-- **Validity (safety half) of the GBCA specification instance**: on every
 trace in the support of every achievable trace distribution of
-`GBCA.specInst P r`, unanimous honest input `v` forces every round-`r` return
+`GBCA.specInst P r`, unanimous input at the correct processes `v` forces every round-`r` return
 to hand out `v`. The instance cannot invent the other bit, and cannot fall
 back on grade `0`. -/
 theorem specInst_validity (P : Parameters) (r : ℕ) (v : Bool) :
@@ -804,7 +801,7 @@ theorem specInst_validity (P : Parameters) (r : ℕ) (v : Bool) :
     return_state_of_unanimous hD h_ne hun h_mem
   exact retG_value_of_unanimous hun hcall hF hlive hstep
 
-/-- **No grade-0 return under unanimous honest input.** The grade-0 return's D15
+/-- **No grade-0 return under unanimous input at the correct processes.** The grade-0 return's D15
 guards ask `f + 1` support at *both* bits; the dissenting one is capped by the
 corruption budget. -/
 theorem specInst_no_retGrade0 (P : Parameters) (r : ℕ) (v : Bool) :
@@ -815,7 +812,7 @@ theorem specInst_no_retGrade0 (P : Parameters) (r : ℕ) (v : Bool) :
   have h := specInst_validity P r v D hD t h_ne hun id .grade0 β h_mem
   simp at h
 
-/-- **No grade-1 return under unanimous honest input.** The B-half of Validity's
+/-- **No grade-1 return under unanimous input at the correct processes.** The B-half of Validity's
 grade clause, the C-half being `specInst_no_retGrade0`: under unanimity every
 round-`r` return is a grade-2 return of the input bit. A grade-1 return hands out `v`
 (`retG_value_of_unanimous`), and its D15 dissent guard then asks `f + 1`

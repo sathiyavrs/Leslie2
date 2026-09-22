@@ -7,11 +7,11 @@ Authors: Sathiya / Claude
 import Leslie2Protocols.ABA.ImplementationByAFW.RoundProjection
 
 /-!
-# The view of the composed round after one flat row
+# The view of the composed round after one implementation row
 
 `AFW.roundProjection` (`ABA/ImplementationByAFW/RoundProjection.lean`) computes the round-`r` state
-of the composed reading from a state of `AFW.protocol P`. This file says where that
-state stands after one row of the flat reading: for each row, the view after
+of the composed system from a state of `AFW.protocol P`. This file says where that
+state stands after one row of the implementation: for each row, the view after
 the row is the view before the row with the composed round's own effect
 applied, written through the updaters `GBCA.ByAFW.setPrograms`, `GBCA.ByAFW.setBound`,
 `GBCA.ByAFW.setFirstGather`, `GBCA.ByAFW.setSecondGather`, `Gather.setGatherTier`,
@@ -29,8 +29,8 @@ row still owes is then sent algebra alone, which `messagesOf_recordSent_some` an
 
 ## Three rows against two events
 
-Three rows of the flat reading are answered by two events of the composed
-round. The link is `firstGatherReturn` and `secondGatherCall`:
+Three rows of the implementation are answered by two events of the composed round. The
+return-then-call step is `firstGatherReturn` and `secondGatherCall`:
 `roundProjection_firstGatherReturn_secondGatherCall` states the view after it as
 `afterSecondGatherCall` of `afterFirstGatherReturn`, and `afterFirstGatherReturn` is the round after
 the first event alone. The graded return is `secondGatherReturn` and `retG`, with
@@ -38,20 +38,20 @@ the first event alone. The graded return is `secondGatherReturn` and `retG`, wit
 is the broadcast instance's `deliver` and then the gather's `inputBroadcastRet` (or `bindRet`), with
 `afterFirstGatherInputBroadcastDeliver` and its three companions the intermediate states.
 
-## The store and the return flag
+## The returned value and the return flag
 
-`broadcastReturnsFor` reads the delivered sets, so a broadcast delivery moves two
-coordinates of the view at once. The instance's local state takes the message.
-And where the delivery completes the receiver's `2f + 1` `VOTE` quorum, the
-receiver's return flag in that instance goes on and the receiver's gather store
-records the value. The quorum lemmas (`roundProjection_deliverFirstGatherInputBroadcast_ret` and its
-three companions) carry the hypothesis that the store holds `v` after the delivery; the plain lemmas
-(`roundProjection_deliverFirstGatherInputBroadcast` and its companions) carry the
-hypothesis that the store does not move. `AFW.broadcastReturnsFor_eq_of_quorum` identifies the
-store with the value a flat receipt quorum carries, which is what supplies
-those hypotheses under `AFW.BroadcastReturnsInvariant`.
+`broadcastReturnsFor` reads the delivered sets, so a broadcast delivery moves two coordinates of the
+view at once. The instance's local state takes the message. And where the delivery completes the
+receiver's `2f + 1` `VOTE` quorum, the receiver's return flag in that instance goes on and what the
+receiver's gather instance returned records the value. The quorum lemmas
+(`roundProjection_deliverFirstGatherInputBroadcast_ret` and its three companions) carry the
+hypothesis that the returned value holds `v` after the delivery; the plain lemmas
+(`roundProjection_deliverFirstGatherInputBroadcast` and its companions) carry the hypothesis that
+the returned value does not move. `AFW.broadcastReturnsFor_eq_of_quorum` identifies the returned
+value with the value an implementation receipt quorum carries, which is what supplies those
+hypotheses under `AFW.BroadcastReturnsInvariant`.
 
-## The two clauses that are not readings
+## The two clauses that are not projections
 
 `BroadcastReturnsInvariant` and `BoundInvariant` are the conjuncts of `AFW.ProtocolRelation` that no
 frame lemma supplies. `broadcastReturnsInvariant_of` carries the first across a row from the
@@ -234,7 +234,7 @@ theorem locals_programProjection_if :
   rw [Function.update_apply]
   by_cases hi : i = j <;> simp [hi]
 
-theorem locals_view1_if :
+theorem locals_firstGatherLocalState_if :
     (fun i => gatherLocalState P Bool (if i = j then sr else Y i).firstGather
         (if i = j then sr else Y i).firstGatherInputBroadcasts (if i = j then sr else Y
           i).firstGatherBindBroadcasts)
@@ -247,7 +247,7 @@ theorem locals_view1_if :
   rw [Function.update_apply]
   by_cases hi : i = j <;> simp [hi]
 
-theorem locals_view2_if :
+theorem locals_secondGatherLocalState_if :
     (fun i => gatherLocalState P (Option Bool) (if i = j then sr else Y i).secondGather
         (if i = j then sr else Y i).secondGatherInputBroadcasts (if i = j then sr else Y
           i).secondGatherBindBroadcasts)
@@ -296,7 +296,7 @@ end Locals
 
 /-! ### The view after one write
 
-A row of the flat reading writes one component of the acting process's round
+A row of the implementation writes one component of the acting process's round
 record and records at most one tagged message. The two lemmas below are that
 write read through the view: each local state vector becomes a one-point
 update, and each network state is sliced out of the written sent family. What
@@ -368,7 +368,7 @@ theorem roundProjection_write (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n) (w : 
       roundRecord_update_self rfl, locals_programProjection_if]
   · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [Gather.gatherTier, GBCA.ByAFW.firstGather, roundProjection, roundProjectionUpdate,
-      firstGatherProjection, roundRecord_update_self rfl, locals_view1_if]
+      firstGatherProjection, roundRecord_update_self rfl, locals_firstGatherLocalState_if]
     · simp only [Gather.gatherTier, GBCA.ByAFW.firstGather, roundProjection, roundProjectionUpdate,
         firstGatherProjection, recordGBCASend_sent_self]
   · funext k
@@ -387,7 +387,7 @@ theorem roundProjection_write (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n) (w : 
         roundProjectionUpdate, firstGatherProjection, recordGBCASend_sent_self]
   · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [Gather.gatherTier, GBCA.ByAFW.secondGather, roundProjection,
-      roundProjectionUpdate, secondGatherProjection, roundRecord_update_self rfl, locals_view2_if]
+      roundProjectionUpdate, secondGatherProjection, roundRecord_update_self rfl, locals_secondGatherLocalState_if]
     · simp only [Gather.gatherTier, GBCA.ByAFW.secondGather, roundProjection,
         roundProjectionUpdate, secondGatherProjection, recordGBCASend_sent_self]
   · funext k
@@ -418,7 +418,7 @@ theorem roundProjection_writeNoSent (u : ∀ _ : Fin P.n,
       roundRecord_update_self rfl, locals_programProjection_if]
   · refine Prod.ext ?_ (networkState_ext rfl rfl)
     simp only [Gather.gatherTier, GBCA.ByAFW.firstGather, roundProjection, roundProjectionUpdate,
-      firstGatherProjection, roundRecord_update_self rfl, locals_view1_if]
+      firstGatherProjection, roundRecord_update_self rfl, locals_firstGatherLocalState_if]
   · funext k
     refine Prod.ext ?_ (networkState_ext rfl rfl)
     simp only [Gather.inputBroadcasts, GBCA.ByAFW.firstGather, roundProjection,
@@ -431,7 +431,7 @@ theorem roundProjection_writeNoSent (u : ∀ _ : Fin P.n,
         locals_firstGatherBindBroadcast_if]
   · refine Prod.ext ?_ (networkState_ext rfl rfl)
     simp only [Gather.gatherTier, GBCA.ByAFW.secondGather, roundProjection, roundProjectionUpdate,
-      secondGatherProjection, roundRecord_update_self rfl, locals_view2_if]
+      secondGatherProjection, roundRecord_update_self rfl, locals_secondGatherLocalState_if]
   · funext k
     refine Prod.ext ?_ (networkState_ext rfl rfl)
     simp only [Gather.inputBroadcasts, GBCA.ByAFW.secondGather, roundProjection,
@@ -445,16 +445,16 @@ theorem roundProjection_writeNoSent (u : ∀ _ : Fin P.n,
 
 end Frame
 
-/-! ### The store under a local write
+/-! ### The returned value under a local write
 
 `broadcastReturnsFor` counts `VOTE` receipts, so a write of a local record leaves it where
 it stands and a delivery is the only row that moves it. -/
 
-section Store
+section BroadcastReturns
 
 variable {X : Type} [DecidableEq X]
 
-/-- A local record write leaves the store where it stands. -/
+/-- A local record write leaves the returned value where it stands. -/
 theorem broadcastReturnsFor_setProcess (q : LocalState P.n (BRB.ProcessRecord X) (BRB.Message X))
     (pr : BRB.ProcessRecord X) : broadcastReturnsFor P (q.setProcess pr) = broadcastReturnsFor P q
       := rfl
@@ -467,14 +467,14 @@ theorem localState_setProcess_process {Pr M : Type} (q : LocalState P.n Pr M) (p
 theorem localState_setProcess_received {Pr M : Type} (q : LocalState P.n Pr M) (pr : Pr) :
     (q.setProcess pr).received = q.received := rfl
 
-/-- The store reads the delivered sets alone. -/
+/-- The returned value reads the delivered sets alone. -/
 theorem broadcastReturnsFor_mk_eq (pr : BRB.ProcessRecord X)
     (q : LocalState P.n (BRB.ProcessRecord X) (BRB.Message X)) :
     broadcastReturnsFor P ({ process := pr, received := q.received } :
       LocalState P.n (BRB.ProcessRecord X) (BRB.Message X)) =
         broadcastReturnsFor P q := rfl
 
-/-- A local record write in one instance leaves the whole store family where it
+/-- A local record write in one instance leaves the whole family of returned values where it
 stands. -/
 theorem broadcastReturnsFor_update_setProcess (b : Fin P.n → LocalState P.n (BRB.ProcessRecord X)
   (BRB.Message X))
@@ -486,7 +486,7 @@ theorem broadcastReturnsFor_update_setProcess (b : Fin P.n → LocalState P.n (B
   · subst hk; rw [Function.update_self, broadcastReturnsFor_setProcess]
   · rw [Function.update_of_ne hk]
 
-/-- A delivery in one instance, read through the store family. -/
+/-- A delivery in one instance, read through the family of returned values. -/
 theorem broadcastReturnsFor_update_deliverTo (b : Fin P.n → LocalState P.n (BRB.ProcessRecord X)
   (BRB.Message X))
     (i k : Fin P.n) (m : BRB.Message X) :
@@ -498,8 +498,7 @@ theorem broadcastReturnsFor_update_deliverTo (b : Fin P.n → LocalState P.n (BR
   · subst hk; rw [Function.update_self, Function.update_self]
   · rw [Function.update_of_ne hk, Function.update_of_ne hk]
 
-/-- A delivery that leaves the store where it stands, read through the return
-flag. -/
+/-- A delivery that leaves the returned value where it stands, read through the return flag. -/
 theorem broadcastLocalState_deliverTo (q : LocalState P.n (BRB.ProcessRecord X) (BRB.Message X)) (k
   : Fin P.n)
     (m : BRB.Message X) (h : broadcastReturnsFor P (q.deliverTo k m) = broadcastReturnsFor P q) :
@@ -520,7 +519,7 @@ theorem broadcastLocalState_deliverTo_ret (q : LocalState P.n (BRB.ProcessRecord
   rw [h]
   rfl
 
-end Store
+end BroadcastReturns
 
 /-! ### Reading the written view
 
@@ -817,13 +816,11 @@ theorem roundProjection_secondGatherSend (hu : (u j).2 = p) (r : ℕ) (pr : Gath
 
 /-! ### A send in a broadcast instance
 
-A Bracha row writes the sender's local state in one broadcast instance and
-records on that instance's network state. Each is the instance's `send` event,
-which `BRB.BrachaStep.echo`, `BRB.BrachaStep.voteQuorum` and `BRB.BrachaStep.voteAmplification`
-write, and the composed round reaches it through `Gather.setInputBroadcasts` or
-`Gather.setBindBroadcasts`. The return flag the view supplies is the store's, which a
-local write does not move.
--/
+A Bracha row writes the sender's local state in one broadcast instance and records on that
+instance's network state. Each is the instance's `send` event, which `BRB.BrachaStep.echo`,
+`BRB.BrachaStep.voteQuorum` and `BRB.BrachaStep.voteAmplification` write, and the composed round
+reaches it through `Gather.setInputBroadcasts` or `Gather.setBindBroadcasts`. The return flag the
+view supplies is the returned value's, which a local write does not move. -/
 
 /-- A send in an input-broadcast instance of the first gather, read through the
 view. -/
@@ -1281,7 +1278,7 @@ theorem roundProjection_secondGatherBindBroadcastSend (hu : (u j).2 = p) (r : �
 
 /-! ### The rows of the two gathers and of the broadcast instances
 
-Each row below is one flat row, read through the view over the effect the
+Each row below is one implementation row, read through the view over the effect the
 composed round's own row writes. -/
 
 /-- The first gather's `ECHO`, read through the view. -/
@@ -1657,7 +1654,7 @@ theorem roundProjection_firstGatherInputBroadcastEcho (hu : (u j).2 = p) (r : �
 
 /-- `VOTE` in an input-broadcast instance of the first gather, read through the
 view. The quorum row and the amplification row write this record. -/
-theorem roundProjection_in1Vote (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n) (m : Bool) :
+theorem roundProjection_firstGatherInputBroadcastVote (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n) (m : Bool) :
     roundProjection P (Function.update u j (c, p.setRoundRecord r
         { p.roundRecord r with
           firstGatherInputBroadcasts := Function.update (p.roundRecord r).firstGatherInputBroadcasts
@@ -1705,7 +1702,7 @@ theorem roundProjection_firstGatherBindBroadcastEcho (hu : (u j).2 = p) (r : ℕ
 
 /-- `VOTE` in a bind-broadcast instance of the first gather, read through the
 view. The quorum row and the amplification row write this record. -/
-theorem roundProjection_bind1Vote (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n) (m : Gather.AcceptedPairs
+theorem roundProjection_firstGatherBindBroadcastVote (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n) (m : Gather.AcceptedPairs
   P.n Bool) :
     roundProjection P (Function.update u j (c, p.setRoundRecord r
         { p.roundRecord r with
@@ -1754,7 +1751,7 @@ theorem roundProjection_secondGatherInputBroadcastEcho (hu : (u j).2 = p) (r : �
 
 /-- `VOTE` in an input-broadcast instance of the second gather, read through
 the view. The quorum row and the amplification row write this record. -/
-theorem roundProjection_in2Vote (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n) (m : Option Bool) :
+theorem roundProjection_secondGatherInputBroadcastVote (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n) (m : Option Bool) :
     roundProjection P (Function.update u j (c, p.setRoundRecord r
         { p.roundRecord r with
           secondGatherInputBroadcasts := Function.update (p.roundRecord
@@ -1803,7 +1800,7 @@ theorem roundProjection_secondGatherBindBroadcastEcho (hu : (u j).2 = p) (r : �
 
 /-- `VOTE` in a bind-broadcast instance of the second gather, read through the
 view. The quorum row and the amplification row write this record. -/
-theorem roundProjection_bind2Vote (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
+theorem roundProjection_secondGatherBindBroadcastVote (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
     (m : Gather.AcceptedPairs P.n (Option Bool)) :
     roundProjection P (Function.update u j (c, p.setRoundRecord r
         { p.roundRecord r with
@@ -1955,12 +1952,11 @@ theorem roundProjection_gbcaCallLoop (hu : (u j).2 = p) (r r' : ℕ) (b : Bool) 
   · subst hi; rw [Function.update_self, ← hu]
   · rw [Function.update_of_ne hi]
 
-/-! ### The link and the graded return
+/-! ### The return-then-call step and the graded return
 
-The link is answered by two events, `firstGatherReturn` and `secondGatherCall`; the graded return by
-`secondGatherReturn` and `retG`. Each pair is stated as one equation with the two effects
-composed, and the state between them is named so that a run can be built
-through it. -/
+The return-then-call step is answered by two events, `firstGatherReturn` and `secondGatherCall`; the
+graded return by `secondGatherReturn` and `retG`. Each pair is stated as one equation with the two
+effects composed, and the state between them is named so that a run can be built through it. -/
 
 /-- The view of one gather instance after a write. -/
 theorem firstGatherProjection_write (u : ∀ _ : Fin P.n,
@@ -2020,7 +2016,7 @@ noncomputable def afterSecondGatherCall (P : Parameters) (s : GBCA.ByAFW.RoundSt
     (x : Option Bool) : GBCA.ByAFW.RoundStateOverBracha P.n :=
   GBCA.ByAFW.setSecondGather
     (GBCA.ByAFW.setPrograms s (Function.update (GBCA.ByAFW.programs s) j
-      { GBCA.ByAFW.programs s j with called2 := true }))
+      { GBCA.ByAFW.programs s j with secondGatherCalled := true }))
     (Gather.setInputBroadcasts
       (Gather.setGatherTier (GBCA.ByAFW.secondGather s)
         ((Gather.gatherTier (GBCA.ByAFW.secondGather s)).setProcess j
@@ -2052,9 +2048,9 @@ def afterRetG (P : Parameters) (s : GBCA.ByAFW.RoundStateOverBracha P.n) (j : Fi
   GBCA.ByAFW.setPrograms s (Function.update (GBCA.ByAFW.programs s) j
     { GBCA.ByAFW.programs s j with output := none, returned := true })
 
-/-- **The link, read through the view.** The first gather returns to `j`, which
-records the candidate and calls the second gather with it; the round's
-bound bit is written from the core the return carries. -/
+/-- **The return-then-call step, read through the view.** The first gather returns to `j`, which
+records the candidate and calls the second gather with it; the round's bound bit is written from the
+core the return carries. -/
 theorem roundProjection_firstGatherReturn_secondGatherCall (hu : (u j).2 = p) (r : ℕ) (g : Fin P.n →
   Option Bool) :
     roundProjection P (Function.update u j (c, p.setRoundRecord r
@@ -2275,12 +2271,11 @@ theorem roundProjection_secondGatherReturn_retG (hu : (u j).2 = p) (r : ℕ)
 
 /-! ### A delivery
 
-A delivery of the flat reading files the message in the receiver's own local
-state of the network state the message's tag names. A gather message moves the
-gather instance alone. A broadcast message moves the broadcast instance, and,
-where it completes a `2f + 1` `VOTE` quorum at the receiver, the instance
-returns to the receiver as well: the return flag goes on and the receiver's
-gather store records the value. -/
+A delivery of the implementation files the message in the receiver's own local state of the network
+state the message's tag names. A gather message moves the gather instance alone. A broadcast message
+moves the broadcast instance, and, where it completes a `2f + 1` `VOTE` quorum at the receiver, the
+instance returns to the receiver as well: the return flag goes on and what the receiver's gather
+instance returned records the value. -/
 
 /-- A delivery on the first gather's network, read through the view. -/
 theorem roundProjection_deliverFirstGather (hu : (u j).2 = p) (r : ℕ) (k : Fin P.n)
@@ -2395,7 +2390,7 @@ noncomputable def afterFirstGatherInputBroadcastDeliver (P : Parameters) (s :
 
 /-- **The round after an input-broadcast instance of the first gather returns
 `v` to `j`**: the instance's return flag goes on at `j` and `j`'s gather
-store records the value. -/
+record files the value. -/
 noncomputable def afterFirstGatherInputBroadcastReturn (P : Parameters) (s :
   GBCA.ByAFW.RoundStateOverBracha P.n)
     (i j : Fin P.n) (v : Bool) : GBCA.ByAFW.RoundStateOverBracha P.n :=
@@ -2412,8 +2407,8 @@ noncomputable def afterFirstGatherInputBroadcastReturn (P : Parameters) (s :
           { (Gather.inputBroadcasts (GBCA.ByAFW.firstGather s) i).process j with returned := true
             })))
 
-/-- A delivery in an input-broadcast instance of the first gather that leaves
-the store where it stands, read through the view. -/
+/-- A delivery in an input-broadcast instance of the first gather that leaves the returned value
+where it stands, read through the view. -/
 theorem roundProjection_deliverFirstGatherInputBroadcast (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
     (mm : BRB.Message Bool)
     (hst : broadcastReturnsFor P (((p.roundRecord r).firstGatherInputBroadcasts i).deliverTo k mm)
@@ -2569,8 +2564,8 @@ noncomputable def afterFirstGatherBindBroadcastDeliver (P : Parameters) (s :
         ((Gather.bindBroadcasts (GBCA.ByAFW.firstGather s) i).receiveMessage j k m)))
 
 /-- **The round after a bind-broadcast instance of the first gather returns `v`
-to `j`**: the instance's return flag goes on at `j` and `j`'s gather store
-records the value. -/
+to `j`**: the instance's return flag goes on at `j` and `j`'s gather record
+files the value. -/
 noncomputable def afterFirstGatherBindBroadcastReturn (P : Parameters) (s :
   GBCA.ByAFW.RoundStateOverBracha P.n)
     (i j : Fin P.n) (v : Gather.AcceptedPairs P.n Bool) : GBCA.ByAFW.RoundStateOverBracha P.n :=
@@ -2587,8 +2582,8 @@ noncomputable def afterFirstGatherBindBroadcastReturn (P : Parameters) (s :
           { (Gather.bindBroadcasts (GBCA.ByAFW.firstGather s) i).process j with returned := true
             })))
 
-/-- A delivery in a bind-broadcast instance of the first gather that leaves the
-store where it stands, read through the view. -/
+/-- A delivery in a bind-broadcast instance of the first gather that leaves the returned value where
+it stands, read through the view. -/
 theorem roundProjection_deliverFirstGatherBindBroadcast (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
     (mm : BRB.Message (Gather.AcceptedPairs P.n Bool))
     (hst : broadcastReturnsFor P (((p.roundRecord r).firstGatherBindBroadcasts i).deliverTo k mm)
@@ -2743,7 +2738,7 @@ noncomputable def afterSecondGatherInputBroadcastDeliver (P : Parameters) (s :
 
 /-- **The round after an input-broadcast instance of the second gather returns
 `v` to `j`**: the instance's return flag goes on at `j` and `j`'s gather
-store records the value. -/
+record files the value. -/
 noncomputable def afterSecondGatherInputBroadcastReturn (P : Parameters) (s :
   GBCA.ByAFW.RoundStateOverBracha P.n)
     (i j : Fin P.n) (v : Option Bool) : GBCA.ByAFW.RoundStateOverBracha P.n :=
@@ -2760,8 +2755,8 @@ noncomputable def afterSecondGatherInputBroadcastReturn (P : Parameters) (s :
           { (Gather.inputBroadcasts (GBCA.ByAFW.secondGather s) i).process j with returned := true
             })))
 
-/-- A delivery in an input-broadcast instance of the second gather that leaves
-the store where it stands, read through the view. -/
+/-- A delivery in an input-broadcast instance of the second gather that leaves the returned value
+where it stands, read through the view. -/
 theorem roundProjection_deliverSecondGatherInputBroadcast (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
     (mm : BRB.Message (Option Bool))
     (hst : broadcastReturnsFor P (((p.roundRecord r).secondGatherInputBroadcasts i).deliverTo k mm)
@@ -2919,7 +2914,7 @@ noncomputable def afterSecondGatherBindBroadcastDeliver (P : Parameters) (s :
 
 /-- **The round after a bind-broadcast instance of the second gather returns
 `v` to `j`**: the instance's return flag goes on at `j` and `j`'s gather
-store records the value. -/
+record files the value. -/
 noncomputable def afterSecondGatherBindBroadcastReturn (P : Parameters) (s :
   GBCA.ByAFW.RoundStateOverBracha P.n)
     (i j : Fin P.n) (v : Gather.AcceptedPairs P.n (Option Bool)) : GBCA.ByAFW.RoundStateOverBracha
@@ -2937,8 +2932,8 @@ noncomputable def afterSecondGatherBindBroadcastReturn (P : Parameters) (s :
           { (Gather.bindBroadcasts (GBCA.ByAFW.secondGather s) i).process j with returned := true
             })))
 
-/-- A delivery in a bind-broadcast instance of the second gather that leaves
-the store where it stands, read through the view. -/
+/-- A delivery in a bind-broadcast instance of the second gather that leaves the returned value
+where it stands, read through the view. -/
 theorem roundProjection_deliverSecondGatherBindBroadcast (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
     (mm : BRB.Message (Gather.AcceptedPairs P.n (Option Bool)))
     (hst : broadcastReturnsFor P (((p.roundRecord r).secondGatherBindBroadcasts i).deliverTo k mm)
@@ -3493,7 +3488,7 @@ theorem roundProjection_otherSent (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n) (
 
 /-- **The whole family of rounds after a send**: the round the row names moves,
 the rest stand still. -/
-theorem toRoundFam (hu : (u j).2 = p) (r : ℕ) (sr : RoundRecord P.n) (m : Message P.n)
+theorem toRoundFamily (hu : (u j).2 = p) (r : ℕ) (sr : RoundRecord P.n) (m : Message P.n)
     {L : ExtendedLabel P.n (Message P.n)} (hL : roundOf L = some r) (X :
       GBCA.ByAFW.RoundStateOverBracha
       P.n)
@@ -3508,7 +3503,7 @@ theorem toRoundFam (hu : (u j).2 = p) (r : ℕ) (sr : RoundRecord P.n) (m : Mess
   · rw [Function.update_of_ne hr, roundProjection_other hu hr sr m hL]
 
 /-- The same, for a row that records nothing. -/
-theorem toRoundFamNoSent (hu : (u j).2 = p) (r : ℕ) (sr : RoundRecord P.n)
+theorem toRoundFamilyNoSent (hu : (u j).2 = p) (r : ℕ) (sr : RoundRecord P.n)
     {L : ExtendedLabel P.n (Message P.n)} (hL : roundOf L = some r) (X :
       GBCA.ByAFW.RoundStateOverBracha
       P.n)
@@ -3523,7 +3518,7 @@ theorem toRoundFamNoSent (hu : (u j).2 = p) (r : ℕ) (sr : RoundRecord P.n)
   · rw [Function.update_of_ne hr, roundProjection_otherNoSent hu hr sr hL]
 
 /-- The same, for a Byzantine injection. -/
-theorem toRoundFamSent (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n) (w : NetworkState P.n) (r : ℕ)
+theorem toRoundFamilySent (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n) (w : NetworkState P.n) (r : ℕ)
     (k : Fin P.n) (m : Message P.n) {L : ExtendedLabel P.n (Message P.n)} (hL : roundOf L = some r)
     (X : GBCA.ByAFW.RoundStateOverBracha P.n)
     (hX : roundProjection P u ((w.recordGBCASend r k m).writeGhost (ghostStep P) L) r = X) :
@@ -3536,13 +3531,12 @@ theorem toRoundFamSent (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n) (w : Network
 
 end Rows
 
-/-! ### The two clauses that are not readings
+/-! ### The two clauses that are not projections
 
 `BroadcastReturnsInvariant` and `BoundInvariant` are the conjuncts of `AFW.ProtocolRelation` that no
-frame lemma supplies. Each survives a row instance by instance: a broadcast
-instance either stands still or takes a row of `BRB.BrachaStep`, which
-`BRB.Invariant.step` carries, and a process's second-gather local input is written at
-the link alone. -/
+frame lemma supplies. Each survives a row instance by instance: a broadcast instance either stands
+still or takes a row of `BRB.BrachaStep`, which `BRB.Invariant.step` carries, and a process's
+second-gather local input is written at the return-then-call step alone. -/
 
 section Invariants
 

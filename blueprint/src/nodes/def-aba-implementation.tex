@@ -1,10 +1,10 @@
-\begin{definition}[The flat reading of a protocol]
-  \label{def:aba-flat-reading}
+\begin{definition}[The implementation of a protocol]
+  \label{def:aba-implementation}
   \lean{PLTS.ABA.Implementation.NetworkEvent}\lean{PLTS.ABA.Implementation.actsAt}\lean{PLTS.ABA.Implementation.coinLabelMap}\lean{PLTS.ABA.Implementation.RoundRecordMap}\lean{PLTS.ABA.Implementation.IsRoundRecord}\lean{PLTS.ABA.Implementation.NetworkState}\lean{PLTS.ABA.Implementation.roundOf}\lean{PLTS.ABA.Implementation.NetworkState.writeGhost}\lean{PLTS.ABA.Implementation.roundOwn}\lean{PLTS.ABA.Implementation.ProgramStep}\lean{PLTS.ABA.Implementation.NetworkStep}\lean{PLTS.ABA.Implementation.IsRoundRuleTable}\lean{PLTS.ABA.Implementation.system}\leanok
   \uses{def:aba-labels, def:aba-params, def:aba-core-vocab, def:relabel, def:syncproduct, def:process-algebra, def:idle-family}
   A protocol as it runs: $n$ programs, one per process, beside one network adversary and the coin oracle.
   A program reads its own records, its own received sets and its own replacement flag, and nothing else about corruption --- not the corrupted set, not the budget, not another process's status (D23) --- while the adversary holds the round-tagged message sets, the DECIDED sets and the corrupted set with its budget, and it alone has rows on the Byzantine labels.
-  The reading is parametric in three things a graded-agreement implementation supplies: its stage message type $M$, its per-process per-round stage record $S$, and its rows, given as a relation embedded in one constructor of the program table.
+  The system is parametric in three things a graded-agreement implementation supplies: its round message type $M$, its per-process per-round round record $S$, and its rows, given as a relation embedded in one constructor of the program table.
   What does not depend on them is written once --- the round loop, the DECIDED relay and its delivery, the coin handshake, corruption, the adversary's table, the composition pipeline
   \[
     \mathrm{system} \;=\;
@@ -13,19 +13,19 @@
           (\mathrm{synchronisedProduct}_{j \in [n]}\ \mathrm{program}(j)) \parallel (\mathrm{network} \parallel \mathrm{coinOverExtendedAlphabet}))\bigr)\Bigr),
   \]
   and the lemmas that read a row off its label.
-  Which rows belong to the implementation is settled by the label: a program's row is the implementation's business exactly when its label is one of $\mathrm{roundOwn}(j)$ --- the graded-agreement call and return at $j$, $j$'s own stage multicast, a delivery addressed to $j$, and $j$'s own call against an already-called record.
-  A reading must supply four things about its rows: that they carry such a label, that they fire only at an unreplaced program, that they are Dirac, and that a return row takes the announced bit free, firing at every other bit with the same successor (D29).
+  Which rows belong to the implementation is settled by the label: a program's row is the implementation's business exactly when its label is one of $\mathrm{roundOwn}(j)$ --- the graded-agreement call and return at $j$, $j$'s own round multicast, a delivery addressed to $j$, and $j$'s own call against an already-called record.
+  An implementation must supply four things about its rows: that they carry such a label, that they fire only at an unreplaced program, that they are Dirac, and that a return row takes the announced bit free, firing at every other bit with the same successor (D29).
   That is \leandecl{PLTS.ABA.Implementation.IsRoundRuleTable}; the lemmas that read a row off its label consume the first three, and Theorem~\ref{thm:aba-erasure} the fourth.
-  The rendezvous alphabet is parametric in $M$ in its two stage constructors and fixed in every other, and is hidden before it leaves the composition, so two readings of the same protocol need not agree on it.
-  The adversary holds one further record, and a reading supplies it too (D30).
-  For each round $r$ its state carries a ghost record $ghostRecord(r)$ of a type $G$ the reading fixes.
+  The rendezvous alphabet is parametric in $M$ in its two round constructors and fixed in every other, and is hidden before it leaves the composition, so two instantiations at the same protocol need not agree on it.
+  The adversary holds one further record, and an implementation supplies it too (D30).
+  For each round $r$ its state carries a ghost record $ghostRecord(r)$ of a type $G$ the implementation fixes.
   The record belongs to the network: no program's row reads it and no program's record holds it.
   Two parameters carry it.
   The first, $\mathrm{ghostStep}$, writes it: on every row the record of the round the label names --- $\mathrm{roundOf}$ of that label --- is replaced by $\mathrm{ghostStep}$ of the label, the adversary's state and the record standing there, the records of the other rounds are left where they stand, and a label naming no round leaves the whole ghost alone.
   That is $\mathrm{writeGhost}$, and it sits on the successor of every row of the adversary's table.
-  The second, $\mathrm{ghostOut}$, reads it out: it is a relation between the adversary's state, the round, the process being answered, the graded outcome and a bit, and it guards the two graded-agreement return rows, the honest $\mathrm{retG}$ and the Byzantine $\mathrm{byzantineRetG}$ at a replaced program, each of which fires only with the bound bit its label carries standing in the relation at the state before the row.
-  A reading that computes the announced bit writes the record at the first return of a round, from the sent sets and the corrupted set, reads the same record back at every later return of that round, and instantiates the relation as the equation between the announced bit and that record.
-  A reading that leaves the announcement to the adversary instantiates the relation as the full one, and the bit is then unconstrained (Definition~\ref{def:aba-ghost-free}).
-  The content is the reading's own, the two instantiations holding different records and writing them at different rows, which is why $G$, $\mathrm{ghostStep}$ and $\mathrm{ghostOut}$ are parameters here as $M$, $S$ and the implementation's rows are.
+  The second, $\mathrm{ghostOut}$, reads it out: it is a relation between the adversary's state, the round, the process being answered, the graded outcome and a bit, and it guards the two graded-agreement return rows, the correct $\mathrm{retG}$ and the Byzantine $\mathrm{byzantineRetG}$ at a replaced program, each of which fires only with the bound bit its label carries standing in the relation at the state before the row.
+  An implementation that computes the announced bit writes the record at the first return of a round, from the sent sets and the corrupted set, reads the same record back at every later return of that round, and instantiates the relation as the equation between the announced bit and that record.
+  An implementation that leaves the announcement to the adversary instantiates the relation as the full one, and the bit is then unconstrained (Definition~\ref{def:aba-ghost-free}).
+  The content is the implementation's own, the two instantiations holding different records and writing them at different rows, which is why $G$, $\mathrm{ghostStep}$ and $\mathrm{ghostOut}$ are parameters here as $M$, $S$ and the implementation's rows are.
   Full construction: \leandecl{PLTS.ABA.Implementation.system}.
 \end{definition}

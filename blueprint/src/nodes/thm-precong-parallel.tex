@@ -8,6 +8,6 @@
 \begin{proof}\leanok
   \uses{def:process-algebra, lem:decomp, lem:mix, lem:bind}
   Case on the three shapes of a composite step.
-  A synchronised visible step is answered by the abstract component's weak transition on the same label, tensored with the context's own step on that label; a $\tau$-step of the simulated component is answered by its weak transition, tensored with the context held fixed; a $\tau$-step of the context is answered by the context alone, the simulated side stuttering.
+  A synchronised visible step is answered by the abstract component's weak transition on the same label, tensored with the context's own step on that label; a $\tau$-step of the simulated component is answered by its weak transition, tensored with the context held fixed; a $\tau$-step of the context is answered by the context alone, the simulated component stuttering.
   Each case tensors a weak transition with a fixed or matching component, which is where the source-decomposition, source-mixing and target-convexity lemmas are used.
 \end{proof}

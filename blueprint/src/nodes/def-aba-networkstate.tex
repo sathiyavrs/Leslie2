@@ -9,6 +9,6 @@
     \mathrm{InstanceState}(n, Pr, M) \;=\; \bigl([n] \to \mathrm{LocalState}(n, Pr, M)\bigr) \times \mathrm{NetworkState}(n, M),
   \]
   read through the accessors $\mathit{process}$, $\mathit{sent}$, $\mathit{received}$ and $F$, and moved by $\mathrm{setProcess}$, the multicast $\mathrm{multicast}$, the delivery $\mathrm{receiveMessage}$ and the corruption transform $\mathrm{corrupt}$.
-  The receipt count $\mathrm{receivedCount}(i, m)$ is the number of distinct senders from which $i$ holds $m$, and the quorum-intersection lemmas --- two $n{-}f$ receipt sets meet in an honest sender at $3f < n$, and a receipt count above $|F|$ names an honest sender --- are stated once over the pair.
+  The receipt count $\mathrm{receivedCount}(i, m)$ is the number of distinct senders from which $i$ holds $m$, and the quorum-intersection lemmas --- two $n{-}f$ receipt sets meet in a correct sender at $3f < n$, and a receipt count above $|F|$ names a correct sender --- are stated once over the pair.
   Full construction: \leandecl{PLTS.ABA.InstanceState}.
 \end{definition}

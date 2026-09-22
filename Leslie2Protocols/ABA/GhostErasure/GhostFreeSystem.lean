@@ -8,16 +8,16 @@ import Leslie2Protocols.ABA.Implementation.System
 import Leslie2Protocols.Framework.Erasure
 
 /-!
-# Erasing a flat reading's ghost
+# Erasing the implementation's ghost
 
-The network adversary of a flat reading holds one record no program reads: the ghost
+The network adversary of the implementation holds one record no program reads: the ghost
 record `NetworkState.ghostRecord` of every round, written by `ghostStep` and read out by
 `ghostOut` at the two graded-agreement returns. That read decides the bit a return
 announces and not whether the return fires: the hypothesis `ghostOut_total` below asks it
 to admit a bit at every state. This file erases it.
 
-The reading it is erased to is `systemGhostFree`, the reading over the trivial ghost `Unit` whose
-`ghostOut` is the full relation: the same programs, the same network rows, and a
+The system it is erased to is `systemGhostFree`, the implementation over the trivial ghost
+`Unit` whose `ghostOut` is the full relation: the same programs, the same network rows, and a
 graded-agreement return free to announce either bit. The erasure is a `StateErasure`
 (`Framework/Erasure.lean`) along the projection
 
@@ -37,7 +37,7 @@ admits, which is what the hypothesis `ghostOut_total` supplies. Both algorithms 
 it, their `ghostOut` being an equation.
 
 The pipeline of `Implementation/System.lean` carries the erasure from the adversary to the
-reading. The three congruences of `Framework/Erasure.lean` ask the neighbours to be
+system. The three congruences of `Framework/Erasure.lean` ask the neighbours to be
 saturated along `φ`: the process group is, because a program's return row takes the
 announced bit free (`IsRoundRuleTable.boundBitFree`), and the coin oracle is, because a
 graded-agreement return is foreign to every coin round. Hiding `Label.hiddenAPI` collapses
@@ -51,7 +51,7 @@ namespace PLTS
 namespace ABA
 namespace Implementation
 
-/-! ### The ghost-free reading -/
+/-! ### The ghost-free system -/
 
 section Free
 
@@ -60,12 +60,12 @@ variable (P : Parameters) (M S : Type) [DecidableEq M]
       Prop)
     (callPayload : Fin P.n → Bool → M)
 
-/-- The adversary of the ghost-free reading: the network's table over the trivial ghost,
+/-- The adversary of the ghost-free system: the network's table over the trivial ghost,
 its two graded-agreement returns free to announce either bit. -/
 noncomputable def networkGhostFree : System (NetworkState P.n M Unit) (ExtendedLabel P.n M) :=
   network P M Unit callPayload (fun _ _ _ => ()) (fun _ _ _ _ _ => True)
 
-/-- **The ghost-free reading**: the flat reading whose adversary holds no ghost record
+/-- **The ghost-free system**: the implementation whose adversary holds no ghost record
 and announces any bit on a graded-agreement return. -/
 noncomputable def systemGhostFree : System (State P M S Unit) (Label P.n) :=
   system P M S Unit roundStep callPayload (fun _ _ _ => ()) (fun _ _ _ _ _ => True)
@@ -78,7 +78,7 @@ section Labels
 
 variable {n : ℕ} {M : Type}
 
-/-- The projection of a flat reading's state: the process family and the coin oracle
+/-- The projection of the implementation's state: the process family and the coin oracle
 stand, and the adversary's ghost record is dropped. -/
 def forgetGhostState {P : Parameters} {S G : Type} :
     State P M S G → State P M S Unit :=
@@ -114,7 +114,7 @@ abbrev forgetBoundExtended : ExtendedLabel n M → ExtendedLabel n M := Sum.map 
   forgetBoundEvent
 
 /-- Two labels of the extended alphabet agree under the erasure exactly when they are
-equal, or are graded-agreement returns — honest or Byzantine — of the same round,
+equal, or are graded-agreement returns — correct or Byzantine — of the same round,
 process and graded outcome. -/
 theorem forgetBoundExtended_eq_iff (l l' : ExtendedLabel n M) :
     forgetBoundExtended l = forgetBoundExtended l' ↔
@@ -359,9 +359,9 @@ theorem coinOverExtendedAlphabet_labelSaturated : (coinOverExtendedAlphabet P M)
 
 end Saturation
 
-/-! ### The erasure of a flat reading -/
+/-! ### The erasure of the implementation -/
 
-section FlatErasure
+section SystemErasure
 
 variable (P : Parameters) (M S G : Type) [DecidableEq M] [Inhabited G]
     (roundStep : Fin P.n → ProcessRecord P.n S → ExtendedLabel P.n M → PMF (ProcessRecord P.n S) →
@@ -371,7 +371,7 @@ variable (P : Parameters) (M S G : Type) [DecidableEq M] [Inhabited G]
     (ghostStep : ExtendedLabel P.n M → NetworkState P.n M G → G → G)
     (ghostOut : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop)
 
-/-- **A flat reading's ghost is erasable.** The adversary's erasure is carried through
+/-- **The implementation's ghost is erasable.** The adversary's erasure is carried through
 the composition pipeline by four congruences: parallel composition against the coin
 oracle, parallel composition against the process group, abstraction of the rendezvous
 alphabet, and restriction along the shared alphabet. Hiding `Label.hiddenAPI` then
@@ -393,7 +393,7 @@ theorem system_stateErasure
 
 /-- **The ghost changes no trace distribution.** The ghost decides no row's firing, the
 read admitting a bit at every state, and the bit it announces is hidden at protocol level,
-so the reading and the ghost-free reading achieve the same trace distributions. -/
+so the implementation and the ghost-free system achieve the same trace distributions. -/
 theorem system_erasure
     (ghostOut_total : ∀ (s : NetworkState P.n M G) (r : ℕ) (id : Fin P.n) (out : GBCAOutput),
       ∃ bnd, ghostOut s r id out bnd) :
@@ -402,7 +402,7 @@ theorem system_erasure
   (system_stateErasure P M S G roundStep callPayload ghostStep ghostOut
     ghostOut_total).achievableTraceDists_eq
 
-end FlatErasure
+end SystemErasure
 
 /-! ### Mechanical axiom check -/
 

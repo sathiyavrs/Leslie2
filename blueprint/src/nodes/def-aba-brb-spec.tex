@@ -8,7 +8,7 @@
   \[
     val = \bot \;\wedge\; \bigl(\mathit{ldr} \in F \vee input = m\bigr),
   \]
-  so a corrupted leader commits any value and an honest one commits its input; the return hands out $val$ at a process that has not returned; and $\mathrm{fail}$ is the total corruption transform (D1).
+  so a corrupted leader commits any value and a correct one commits its input; the return hands out $val$ at a process that has not returned; and $\mathrm{fail}$ is the total corruption transform (D1).
   The split of $input$ from $val$ is what a leader corrupted after its call requires: until the commit fires, such a leader may still direct the committed value, and the guard reads $F$ at the commit rather than at the call.
   Agreement and Validity are structural --- $val$ has one writer and keeps its value, and at a never-corrupted leader the guard pins $val$ to $input$.
   Totality, a liveness property, is not encoded.

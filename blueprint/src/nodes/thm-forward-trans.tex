@@ -9,6 +9,6 @@
   \uses{def:forwardsim, def:weakstep, lem:hyperstep-weakstep}
   The composite relation holds of $s_C$ and $\mu_A$ when some intermediate $\mu_B$ satisfies $R_{BC}$ against $s_C$ and simulates $\mu_A$ under $R_{AB}$.
   For the initial condition, bind the intermediate initial distribution against the constant abstract one.
-  For the step condition, match the concrete step on the $sys_B$ side, which yields a weak transition out of $\mu_B$, and lift that weak transition along $R_{AB}$ to a weak transition of $sys_A$.
+  For the step condition, match the concrete step at $sys_B$, which yields a weak transition out of $\mu_B$, and lift that weak transition along $R_{AB}$ to a weak transition of $sys_A$.
   That lift is the crux: it promotes a simulation of single steps to a simulation of the $\tau^\ast \cdot l \cdot \tau^\ast$ segments a weak transition is built from, and it supplies the coupling witnessing the composite relation on the successors.
 \end{proof}

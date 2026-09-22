@@ -18,12 +18,11 @@ a multicast, a delivery, or a Byzantine handshake row, because those are joint s
 components whose boundary the observer does not see. The extended alphabet
 `ExtendedLabel n M` adds them, and the composition hides them again.
 
-The alphabet is parametric in the graded-agreement message type `M`. Every
-constructor but the two that carry a stage message is independent of which
-graded-agreement implementation is being read, and so is everything defined
-over the alphabet here: the hidden-label set, the labels a process acts on
-(D23), the coin oracle's label pullback, and the lifted oracle itself. A
-reading fixes `M` and inherits all of it.
+The alphabet is parametric in the graded-agreement message type `M`. Every constructor but the two
+that carry a round message is independent of which graded-agreement implementation is being read,
+and so is everything defined over the alphabet here: the hidden-label set, the labels a process acts
+on (D23), the coin oracle's label pullback, and the lifted oracle itself. An implementation fixes `M`
+and inherits all of it.
 
 The graded-agreement return `retG` carries `GBCAOutput`, the interface's grade,
 which is the specification's own value type and is shared by every
@@ -38,15 +37,14 @@ namespace Implementation
 
 /-! ### The rendezvous alphabet -/
 
-/-- The rendezvous alphabet: the two networks, the Byzantine handshake rows, and the
-handshake branches the shared alphabet does not distinguish. The stage
-multicast and the stage delivery carry a message of the graded-agreement
-implementation being read. -/
+/-- The rendezvous alphabet: the two networks, the Byzantine handshake rows, and the handshake
+branches the shared alphabet does not distinguish. The round multicast and the round delivery carry
+a message of the graded-agreement implementation being read. -/
 inductive NetworkEvent (n : ℕ) (M : Type) : Type
-  /-- Stage-`r` multicast: sender `j` writes its record and the network sent sets
+  /-- Round-`r` multicast: sender `j` writes its record and the network sent sets
   `m` under `j`. -/
   | gbcaSend (r : ℕ) (j : Fin n) (m : M)
-  /-- Stage-`r` delivery: `m`, sent under sender `j`, reaches receiver `i`. -/
+  /-- Round-`r` delivery: `m`, sent under sender `j`, reaches receiver `i`. -/
   | gbcaDeliver (r : ℕ) (i j : Fin n) (m : M)
   /-- DECIDED relay: sender `j` publishes `⟨DECIDED, b⟩` on an `f + 1` quorum. -/
   | decidedSend (j : Fin n) (b : Bool)
@@ -55,13 +53,12 @@ inductive NetworkEvent (n : ℕ) (M : Type) : Type
   /-- The coin return fused with a `⟨DECIDED, b⟩` publication (D10): the
   round-`r` coin `c` returns to `id`, whose outcome was `grade2 b`. -/
   | retWPublish (r : ℕ) (id : Fin n) (c : Bool) (b : Bool)
-  /-- The graded-agreement call against an already-called stage record. -/
+  /-- The graded-agreement call against an already-called round record. -/
   | gbcaCallLoop (r : ℕ) (id : Fin n) (b : Bool)
-  /-- A corrupted process takes the graded-agreement call, opening the stage
-  record (D11). -/
+  /-- A corrupted process takes the graded-agreement call, opening the round record (D11). -/
   | byzantineCallG (r : ℕ) (k : Fin n) (b : Bool)
-  /-- A corrupted process takes the graded-agreement call against an
-  already-called stage record (D11). -/
+  /-- A corrupted process takes the graded-agreement call against an already-called round record
+  (D11). -/
   | byzantineCallGLoop (r : ℕ) (k : Fin n) (b : Bool)
   /-- A corrupted process takes a graded-agreement return (D11), the round's
   bound bit `bnd` announced beside the graded outcome. -/
@@ -98,11 +95,10 @@ label except the ones below: those on which the process would act on its own
 sub-protocol messages. Those messages are the business of the Byzantine handshake rows
 (D11), which carry it with no row at the process they name. -/
 
-/-- The labels on which process `j` acts on its own sub-protocol messages: its
-own graded-agreement call and return, its own stage multicast, the stage and
-DECIDED deliveries addressed to it, its own call against an already-called
-stage record, its own fused coin return, and the graded-agreement rows that
-name it. -/
+/-- The labels on which process `j` acts on its own sub-protocol messages: its own graded-agreement
+call and return, its own round multicast, the round and DECIDED deliveries addressed to it, its own
+call against an already-called round record, its own fused coin return, and the graded-agreement
+rows that name it. -/
 def actsAt {n : ℕ} {M : Type} (j : Fin n) : ExtendedLabel n M → Prop
   | Sum.inl (.callG _ id _) => id = j
   | Sum.inl (.retG _ id _ _) => id = j
@@ -174,7 +170,7 @@ def coinLabelMap (n : ℕ) {M : Type} : ExtendedLabel n M → Option (Label n)
 /-! ### The lifted coin oracle -/
 
 /-- The coin oracle, read over the extended alphabet through the pullback. A
-reading fixes `M` and names the result `coinOverRoundAlphabet`. -/
+implementation fixes `M` and names the result `coinOverRoundAlphabet`. -/
 noncomputable def coinOverExtendedAlphabet (P : Parameters) (M : Type) :
     System (ℕ → WCC.SpecState P.n) (ExtendedLabel P.n M) :=
   (WCC.specFamily P).mapIdle (coinLabelMap P.n)
@@ -187,7 +183,7 @@ noncomputable def coinOverExtendedAlphabet (P : Parameters) (M : Type) :
 /-- The coin oracle idles on a shared label that is neither `τ`, nor a
 handshake of one of its own rounds, nor `fail`. Read through the pullback
 `coinLabelMap`, this is the oracle's row in every joint transition — of a protocol
-system, of its composed reading, and of the protocol-shaped specification
+system, of its composed system, and of the protocol-shaped specification
 (`ABA/Composition/HybridAndSubstitution.lean`) — that leaves the coin standing still. -/
 theorem wccFamily_idle (P : Parameters) (o : ℕ → WCC.SpecState P.n) {l : Label P.n}
     (hl : l ≠ Label.tau) (hr : Label.wccRound l = none) (hf : ¬ Label.isFail l) :

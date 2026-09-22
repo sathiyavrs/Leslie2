@@ -6,7 +6,7 @@
   Validity is the paper form: every return $\mathrm{retABA}\,id\,b$ at trace position $m$ by a never-corrupted $id$ is preceded by a call $\mathrm{callABA}\,id'\,b$ at some $k < m$, where $id'$ is never corrupted anywhere along the trace and that call is $id'$'s first $\mathrm{callABA}$ of the trace.
   A process has one input, and its first call is the event that carries it.
   Agreement is that any two returns by never-corrupted processes carry the same bit.
-  Corruption is read at the trace level, as non-membership in every stage of the fold of the D1 transform over the $\mathrm{fail}$ labels seen so far.
+  Corruption is read at the trace level, as non-membership in every prefix of the fold of the D1 transform over the $\mathrm{fail}$ labels seen so far.
 \end{theorem}
 
 \begin{proof}\leanok

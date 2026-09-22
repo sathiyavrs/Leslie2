@@ -11,20 +11,17 @@ import Leslie2Protocols.ABA.Composition.HybridAndSubstitution
 /-!
 # The main theorems of the ABA case study
 
-The subject is the protocol `ABDY.protocol P`: `n` programs, one per process, beside
-two components that are not processes — the network adversary, which owns the
-message sets, the DECIDED sets and the corrupted set with its budget, and the
-common-coin oracle, the only component whose transitions are not Dirac. A
-program reads its own records, its own recv and its own replacement flag, and
-nothing else about corruption: not the corrupted set, not the budget, not
-another process's status. A corruption replaces the program of the process it
-names (D23); whether another process may be taken off-protocol is decided by
-the network's `k ∈ F` guard. A program holds its
-round loop beside its stage-side record — the stage record of every round it
-has touched, in a finite map — and terminates at `2f + 1` DECIDED receipts
-(D22).
+The subject is the protocol `ABDY.protocol P`: `n` programs, one per process, beside two components
+that are not processes — the network adversary, which owns the message sets, the DECIDED sets and
+the corrupted set with its budget, and the common-coin oracle, the only component whose transitions
+are not Dirac. A program reads its own records, its own recv and its own replacement flag, and
+nothing else about corruption: not the corrupted set, not the budget, not another process's status.
+A corruption replaces the program of the process it names (D23); whether another process may be
+taken off-protocol is decided by the network's `k ∈ F` guard. A program holds its round loop beside
+its round records — the round record of every round it has touched, in a finite map — and terminates
+at `2f + 1` DECIDED receipts (D22).
 
-The abstract side is `ABA.spec P`, the single-automaton reading of agreement,
+The abstract system is `ABA.spec P`, the single-automaton system of agreement,
 whose traces satisfy Validity and Agreement (`spec_safe`, `Specifications/ABASafety.lean`).
 
 ## The chain
@@ -33,7 +30,7 @@ Three probabilistic forward simulations carry the protocol to the
 specification:
 
 1. `ABDY.protocolSim` (`ImplementationByABDY/Simulation.lean`) — the protocol into the composed
-   reading, along the Dirac lift of `ABDY.ProtocolRelation`. The relation pins every
+   system, along the Dirac lift of `ABDY.ProtocolRelation`. The relation pins every
    composed coordinate against the protocol state; the inclusion is
    one-directional because a round instance also answers the Byzantine handshake rows
    (D11) and the processes the protocol has terminated (D22).
@@ -43,11 +40,9 @@ graded-agreement
    family substitution carried by four congruences (`parallel_right`,
    `abstract`, `relabel`, `abstract`).
 3. `hybridRefinesSpecification` (`HybridRefinesSpecification/Simulation.lean`) — the hand-built
-simulation of the
-   protocol-shaped specification against the ABA specification, read in the
-   composed coordinates: the round specifications, the `n` round loops, the
-   ABA-side network and the coin oracle, each still a component of the state the
-   relation is defined on.
+simulation of the protocol-shaped specification against the ABA specification, read in the composed
+coordinates: the round specifications, the `n` round loops, the ABA network and the coin oracle,
+each still a component of the state the relation is defined on.
 
 `ABDY.refines` chains the soundness inclusions of the three (Result 1) by
 `Set.Subset.trans`; `ABDY.chainSim` composes the three simulations themselves by
@@ -56,15 +51,13 @@ independent — the inclusion never invokes transitivity of simulation.
 
 ## Scope of the headline
 
-Graded agreement is carried to implementation level: each round is a group of
-stage programs beside that round's own network, moved by the same
-network adversary. Each round's graded return announces that round's bound bit
-(D29), a ghost output that rides the `retG` label and that no component's state
-records. `GBCA.BindingTrace` (`GBCA/SpecificationSafety.lean`) is the property it
-carries. The **common coin is held at specification level** — the
-ε-coin is `Parameters.wccPMF`, not a Gather/SRSD implementation — so the honest
-reading is *graded agreement verified to implementation level; the coin
-assumed at specification level*.
+Graded agreement is carried to implementation level: each round is a group of graded-agreement
+programs beside that round's own network, moved by the same network adversary. Each round's graded
+return announces that round's bound bit (D29), a ghost output that rides the `retG` label and that
+no component's state records. `GBCA.BindingTrace` (`GBCA/SpecificationSafety.lean`) is the property
+it carries. The **common coin is held at specification level** — the ε-coin is `Parameters.wccPMF`,
+not a Gather/SRSD implementation — so the correct statement is *graded agreement verified to
+implementation level; the coin assumed at specification level*.
 
 `ValidityTrace` (`Specifications/ABASafety.lean`) is the paper-form predicate: a bit
 returned by a never-corrupted process is the bit of the first `callABA` of a
@@ -85,12 +78,12 @@ namespace ABA
 
 open Implementation Composition
 
-/-! ### The chain, link by link
+/-! ### The chain, inclusion by inclusion
 
-Carry the protocol reading into the composed reading (`ABDY.protocol_composed`),
+Carry the protocol into the composed system (`ABDY.protocol_composed`),
 substitute each round's graded-agreement instance by its specification at the
 protocol shape (`ABDY.substitution`), then take the core simulation (`hybridRefinesSpecification`).
-Every step is a simulation between systems the protocol reading itself
+Every step is a simulation between systems the protocol itself
 names. -/
 
 /-- **The protocol-shaped specification refines the ABA specification**: the
@@ -101,7 +94,7 @@ theorem hybrid_spec (P : Parameters) :
 
 namespace ABDY
 
-/-- **Safety of the protocol reading**: every positive-probability trace of
+/-- **Safety of the protocol**: every positive-probability trace of
 every achievable trace distribution of the `n` programs beside the network
 adversary and the coin oracle satisfies Validity and Agreement. The corruption
 budget is a guard of the network adversary's own `fail` row, so every protocol
@@ -115,7 +108,7 @@ theorem protocol_safe (P : Parameters) :
       (Set.Subset.trans (substitution P) (hybrid_spec P)))
     (spec_safe P)
 
-/-- **Trace conservativity of the protocol reading**: every
+/-- **Trace conservativity of the protocol**: every
 positive-probability trace of the protocol has positive probability
 under an achievable trace distribution of the protocol-shaped
 specification. -/
@@ -124,8 +117,8 @@ theorem protocol_traces (P : Parameters) :
       ∃ D' ∈ achievableTraceDists (hybrid P), D' t ≠ 0 :=
   fun D hD _ ht => ⟨D, Set.Subset.trans (protocol_composed P) (substitution P) hD, ht⟩
 
-/-- **Safety of the composed reading**: the substitution and the core
-simulation carry the composed reading to the specification, so it inherits the
+/-- **Safety of the composed system**: the substitution and the core
+simulation carry the composed system to the specification, so it inherits the
 same guarantee. -/
 theorem composed_safe (P : Parameters) :
     ∀ D ∈ achievableTraceDists (composed P), ∀ t, D t ≠ 0 →
@@ -143,10 +136,9 @@ theorem refines (P : Parameters) :
   Set.Subset.trans (protocol_composed P)
     (Set.Subset.trans (substitution P) (hybrid_spec P))
 
-/-- **Correctness of ABA** (blueprint `thm:aba-main`, safety fragment):
-every positive-probability trace of the protocol satisfies Validity
-and Agreement. No side condition on the traces: the corruption budget is a
-guard of the network adversary's own `fail` row, so every protocol execution
+/-- **Correctness of ABA** (blueprint `thm:aba-main`, safety fragment): every positive-probability
+trace of the protocol satisfies Validity and Agreement. No extra hypothesis on the traces: the
+corruption budget is a guard of the network adversary's own `fail` row, so every protocol execution
 is in budget by construction. -/
 theorem main (P : Parameters) :
     ∀ D ∈ achievableTraceDists (protocol P), ∀ t, D t ≠ 0 →

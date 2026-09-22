@@ -36,7 +36,7 @@ returned map not yet committed, the freeze if the instance has no core yet, then
 the return.
 
 * Entry commits are licensed by the invariant's provenance clause: a committed
-  input entry of an honest process is that input instance's call record, which
+  input entry of a correct process is that input instance's call record, which
   the relation identifies with the specification's call record.
 * The core frozen is `coreOfNetwork` of the instance's gather network state, and the
   two guards of `bindCore` are `Gather.coreOf_recorded`, which the returner's
@@ -92,7 +92,7 @@ structure SpecificationRelation (P : Parameters) (s : StateOverBroadcastSpecific
   F_eq : t.F = (gatherTier s).F
   /-- A committed specification entry is a committed input entry. -/
   val_certificate : ∀ k v, t.val k = some v → (inputBroadcasts s k).val = some v
-  /-- The two sides hold the same core. -/
+  /-- The two systems hold the same core. -/
   core_eq : t.core = core s
   /-- At least `f + 1` bind instances hold a committed payload above the frozen
   core. -/
@@ -108,8 +108,7 @@ theorem specificationRelation_init :
       ProcessRecord.initial, BaseProcessRecord.initial, NetworkState.initial,
         InstanceState.process, InstanceState.F]
 
-/-- **Broadcast compatibility**: the relation is preserved by corrupting both
-sides at once. -/
+/-- **Broadcast compatibility**: the relation is preserved by corrupting both systems at once. -/
 theorem specificationRelation_corrupt {s : StateOverBroadcastSpecification P.n X} {t : SpecState P.n
   X}
     (hR : SpecificationRelation P s t) (id : Fin P.n) :

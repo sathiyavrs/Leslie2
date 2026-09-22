@@ -26,30 +26,28 @@ round by the tier above it, at every round at once:
 3. `roundSpecificationSubstitution` — the counting simulation, into the round specification.
 
 The systems the stages run between are `composed`, `composedOverBroadcastSpecification`,
-`composedOverGatherSpecifications` and `hybrid`. Each has a graded-agreement side and three further
-components. The side is an ℕ-indexed family of rounds — `roundFamilyOverBracha`,
+`composedOverGatherSpecifications` and `hybrid`. Each has a graded-agreement family and three
+further components. The component is an ℕ-indexed family of rounds — `roundFamilyOverBracha`,
 `roundFamilyOverBroadcastSpecification`, `roundFamilyOverGatherSpecifications` and
 `gbcaSpecificationFamily` — in which a round-tagged label moves its round alone, `τ` moves one
 round, `fail` reaches every round, and every other label idles. The round of a given index is itself
-a composition: the layer of programs and the round's network beside the round's two gather instances
-(`GBCA/AFW/Composition.lean`).
+a composition: the round's programs of programs and the round's network beside the round's two
+gather instances (`GBCA/AFW/Composition.lean`).
 
-The three further components are the round loops, the ABA-side network and the
-lifted coin oracle, and the pipeline over them — the rendezvous alphabet
-hidden, the result read back over `Label n`, the sub-protocol API hidden — is the
-context term of `ABDY.composed` and `hybrid`, character for character. The
-third stage therefore lands on `hybrid P` itself, and the shared links
-`hybrid_spec` and `hybridRefinesSpecification` carry the gather-based chain to the ABA
-specification from there.
+The three further components are the round loops, the ABA network and the lifted coin oracle, and
+the pipeline over them — the rendezvous alphabet hidden, the result read back over `Label n`, the
+sub-protocol API hidden — is the context term of `ABDY.composed` and `hybrid`, character for
+character. The third stage therefore lands on `hybrid P` itself, and the shared inclusions
+`hybrid_spec` and `hybridRefinesSpecification` carry the gather-based chain to the ABA specification
+from there.
 
-Each side carries a broadcast act, and the act of a round state corrupts the
-round's two gather instances at once while leaving the programs and the round's
-bound bit untouched (D1): `corruptionOverBracha`, `corruptionOverBroadcastSpecification` and
+Each family carries a broadcast act, and the act of a round state corrupts the round's two gather
+instances at once while leaving the programs and the round's bound bit untouched (D1):
+`corruptionOverBracha`, `corruptionOverBroadcastSpecification` and
 `corruptionOverGatherSpecifications` are `GBCA.ByAFW.corruptAll` over the corruption of the tier's
-gather states, and `GBCA.ByABDY.specificationCorruptionAct` is the act of the specification side.
-The three relations survive those acts — `broadcastSubstitution_failAct`,
-`gatherSubstitution_failAct`, `roundSpecificationSubstitution_failAct` — which is the side condition
-`ForwardSimulation.family` consumes.
+gather states, and `GBCA.ByABDY.specificationCorruptionAct` is the act of the specification. The
+three relations survive those acts — `broadcastSubstitution_failAct`, `gatherSubstitution_failAct`,
+`roundSpecificationSubstitution_failAct` — which is the premise `ForwardSimulation.family` consumes.
 
 `substitution` is the three-stage inclusion, `composed_refines` chains it with
 `hybrid_spec`, `composed_safe` reads off Validity and Agreement, and
@@ -100,8 +98,8 @@ def corruptionOverGatherSpecifications (P : Parameters) :
 
 /-! ### Broadcast compatibility
 
-The three relations survive the corruption broadcast: the rounds' own
-lockstep-corruption statements, taken on the extended `fail` label. -/
+The three relations survive the corruption broadcast: the rounds' own simultaneous-corruption
+statements, taken on the extended `fail` label. -/
 
 /-- Corruption preserves the broadcast substitution relation. -/
 theorem broadcastSubstitution_failAct (P : Parameters) :
@@ -167,41 +165,41 @@ theorem roundSpecificationSubstitution_failAct (P : Parameters) :
     | callW r' id => exact hl.elim
     | retW r' id b => exact hl.elim
 
-/-! ## The graded-agreement sides
+/-! ## The graded-agreement families
 
-Three ℕ-indexed families over the shape of `gbcaSpecificationFamily`: a round-tagged label
-moves its round alone, `τ` moves one round, `fail` is the broadcast that keeps
-every round's gather instances in lockstep, and everything else idles. -/
+Three ℕ-indexed families over the shape of `gbcaSpecificationFamily`: a round-tagged label moves its
+round alone, `τ` moves one round, `fail` is the broadcast that keeps every round's gather instances
+together, and everything else idles. -/
 
-/-- The gather-based graded-agreement side: the family of rounds over the
-gather instances over Bracha's broadcast. -/
+/-- The gather-based graded-agreement family: the family of rounds over the gather instances over
+Bracha's broadcast. -/
 noncomputable def roundFamilyOverBracha (P : Parameters) :
     System (ℕ → GBCA.ByAFW.RoundStateOverBracha P.n) (ExtendedLabel P.n) :=
   System.family (GBCA.ByAFW.roundOverBracha P) roundOwnsLabel isFailLabel (corruptionOverBracha P)
 
-/-- The side is an LTS: every round is. -/
+/-- The family is an LTS: every round is. -/
 theorem roundFamilyOverBracha_isLTS (P : Parameters) : (roundFamilyOverBracha P).IsLTS :=
   System.family_isLTS (GBCA.ByAFW.roundOverBracha_isLTS P) _ _ _
 
-/-- The side over the gather instances over the broadcast specification. -/
+/-- The family over the gather instances over the broadcast specification. -/
 noncomputable def roundFamilyOverBroadcastSpecification (P : Parameters) :
     System (ℕ → GBCA.ByAFW.RoundStateOverBroadcastSpecification P.n) (ExtendedLabel P.n) :=
   System.family (GBCA.ByAFW.roundOverBroadcastSpecification P) roundOwnsLabel isFailLabel
     (corruptionOverBroadcastSpecification
     P)
 
-/-- The side is an LTS. -/
+/-- The family is an LTS. -/
 theorem roundFamilyOverBroadcastSpecification_isLTS (P : Parameters) :
   (roundFamilyOverBroadcastSpecification P).IsLTS :=
   System.family_isLTS (GBCA.ByAFW.roundOverBroadcastSpecification_isLTS P) _ _ _
 
-/-- The side over the gather specifications. -/
+/-- The family over the gather specifications. -/
 noncomputable def roundFamilyOverGatherSpecifications (P : Parameters) :
     System (ℕ → GBCA.ByAFW.RoundStateOverGatherSpecifications P.n) (ExtendedLabel P.n) :=
   System.family (GBCA.ByAFW.roundOverGatherSpecifications P) roundOwnsLabel isFailLabel
     (corruptionOverGatherSpecifications P)
 
-/-- The side is an LTS. -/
+/-- The family is an LTS. -/
 theorem roundFamilyOverGatherSpecifications_isLTS (P : Parameters) :
   (roundFamilyOverGatherSpecifications P).IsLTS :=
   System.family_isLTS (GBCA.ByAFW.roundOverGatherSpecifications_isLTS P) _ _ _
@@ -243,8 +241,7 @@ theorem familyGatherSubstitution (P : Parameters) :
     (corruptionOverGatherSpecifications P)
     (GBCA.ByAFW.gatherSubstitution P) (gatherSubstitution_failAct P)
 
-/-- The family substitution of the third stage, into the specification
-side. -/
+/-- The family substitution of the third stage, into the specification. -/
 theorem familyRoundSpecificationSubstitution (P : Parameters) :
     ForwardSimulation (roundFamilyOverGatherSpecifications P) (gbcaSpecificationFamily P)
       (roundSpecificationSubstitutionRelationFamily
@@ -282,12 +279,11 @@ theorem familyRoundSpecificationSubstitutionSimulation (P : Parameters) :
 
 /-! ## The protocol-shaped systems
 
-The composed reading's pipeline — the graded-agreement side beside the round
-loops, the ABA-side network and the coin oracle, the rendezvous alphabet
-hidden, the result read back over `Label n`, the sub-protocol API hidden — taken
-at each tier of the gather-based construction. -/
+The composed system's pipeline — the graded-agreement family beside the round loops, the ABA network
+and the coin oracle, the rendezvous alphabet hidden, the result read back over `Label n`, the
+sub-protocol API hidden — taken at each tier of the gather-based construction. -/
 
-/-- The state of the gather-based composed reading. -/
+/-- The state of the gather-based composed system. -/
 abbrev ComposedState (P : Parameters) : Type :=
   (ℕ → GBCA.ByAFW.RoundStateOverBracha P.n) ×
     ((∀ _ : Fin P.n, RoundLoopRecord P.n) × (ABANetworkState P.n × (ℕ → WCC.SpecState P.n)))
@@ -302,9 +298,8 @@ abbrev ComposedOverGatherSpecificationsState (P : Parameters) : Type :=
   (ℕ → GBCA.ByAFW.RoundStateOverGatherSpecifications P.n) ×
     ((∀ _ : Fin P.n, RoundLoopRecord P.n) × (ABANetworkState P.n × (ℕ → WCC.SpecState P.n)))
 
-/-- **The gather-based composed reading**: the gather-based graded-agreement
-side beside the composed reading's other three components, through the two
-hiding frames. -/
+/-- **The gather-based composed system**: the gather-based graded-agreement family beside the
+composed system's other three components, through the two hiding frames. -/
 noncomputable def composed (P : Parameters) : System (ComposedState P) (Label P.n) :=
   ((((roundFamilyOverBracha P).parallel
     ((System.synchronisedProduct (roundLoopProgram P)).parallel
@@ -330,7 +325,7 @@ noncomputable def composedOverGatherSpecifications (P : Parameters) : System
 /-! ### The three-stage substitution -/
 
 /-- The first stage at the protocol shape: the four congruences applied to the
-first family substitution under the composed reading's own context. -/
+first family substitution under the composed system's own context. -/
 noncomputable def broadcastSubstitution (P : Parameters) :
     ProbabilisticForwardSimulation (composed P) (composedOverBroadcastSpecification P)
       (parallelRel (diracRel (broadcastSubstitutionRelationFamily P))) :=
@@ -370,7 +365,7 @@ noncomputable def substitutionSimulation (P : Parameters) :
   (broadcastSubstitution P).trans ((gatherSubstitution P).trans (roundSpecificationSubstitution P))
 
 /-- **The gather-based substitution inclusion**: every trace distribution
-achievable by the gather-based composed reading is achievable by the
+achievable by the gather-based composed system is achievable by the
 protocol-shaped specification. The three stage inclusions are chained by
 `Set.Subset.trans`; the inclusion never invokes transitivity of
 simulation. -/
@@ -382,7 +377,7 @@ theorem substitution (P : Parameters) :
 
 /-! ## The headlines -/
 
-/-- **Trace-distribution refinement of the gather-based composed reading**:
+/-- **Trace-distribution refinement of the gather-based composed system**:
 every trace distribution achievable by it is achievable by the ABA
 specification. The substitution gives the first inclusion, the shared core
 simulation the second. -/
@@ -390,8 +385,8 @@ theorem composed_refines (P : Parameters) :
     achievableTraceDists (composed P) ⊆ achievableTraceDists (spec P) :=
   Set.Subset.trans (substitution P) (hybrid_spec P)
 
-/-- **Safety of the gather-based reading**: every positive-probability trace
-of every achievable trace distribution of the gather-based composed reading
+/-- **Safety of the gather-based implementation**: every positive-probability trace
+of every achievable trace distribution of the gather-based composed system
 satisfies Validity and Agreement. -/
 theorem composed_safe (P : Parameters) :
     ∀ D ∈ achievableTraceDists (composed P), ∀ t, D t ≠ 0 →

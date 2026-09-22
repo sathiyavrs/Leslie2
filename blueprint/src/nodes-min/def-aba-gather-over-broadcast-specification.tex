@@ -1,9 +1,9 @@
 \begin{definition}[The gather implementation over broadcast specifications]
-  \label{def:aba-gather-ideal}
+  \label{def:aba-gather-over-broadcast-specification}
   \lean{PLTS.ABA.Gather.Message}\lean{PLTS.ABA.Gather.BaseProcessRecord}\lean{PLTS.ABA.Gather.StateOverBroadcastSpecification}\lean{PLTS.ABA.Gather.StepOverBroadcastSpecification}\lean{PLTS.ABA.Gather.instanceOverBroadcastSpecification}\lean{PLTS.ABA.Gather.instanceOverBroadcastSpecification_step_iff_row}\leanok
-  \uses{def:aba-gather-sub, def:aba-gather-spec, def:aba-brb-spec, def:aba-networkstate}
-  The gather instance of Definition~\ref{def:aba-gather-sub} whose broadcast tier is $2n$ broadcast specifications: \leandecl{PLTS.ABA.Gather.instanceOverBroadcastSpecification}.
-  Its rows are Algorithm~4 of~\cite{LeslieBP}, the binding form of Algorithm~5 of~\cite{AFW25}, stated over the composition's state: each process contributes its input and its $\mathrm{BIND}$ payload through its own broadcast instance (D32), an entry set is approved at a process when that process's input store holds every entry of it, a process multicasts the $n{-}f$ or more entries of its own input store as its $\mathrm{ECHO}$, and the $\mathrm{ECHO}$/$\mathrm{VOTE}$ exchange over approved sets runs on the gather network.
+  \uses{def:aba-gather-composition, def:aba-gather-spec, def:aba-brb-spec, def:aba-networkstate}
+  The gather instance of Definition~\ref{def:aba-gather-composition} whose broadcast tier is $2n$ broadcast specifications: \leandecl{PLTS.ABA.Gather.instanceOverBroadcastSpecification}.
+  Its rows are Algorithm~4 of~\cite{LeslieBP}, the binding form of Algorithm~5 of~\cite{AFW25}, stated over the composition's state: each process contributes its input and its $\mathrm{BIND}$ payload through its own broadcast instance (D32), an entry set is approved at a process when that process's input broadcasts have returned every entry of it, a process multicasts the $n{-}f$ or more entries its own input broadcasts returned as its $\mathrm{ECHO}$, and the $\mathrm{ECHO}$/$\mathrm{VOTE}$ exchange over approved sets runs on the gather network.
   Each send after the $\mathrm{ECHO}$ requires the sender's own send at the level below, and the bind call requires that no earlier bind call stands in the write-once field $\mathit{sentBind}$ of the record (D35).
   A return requires the returner's own bind call, $n{-}f$ bind stores below the output and the output below the input stores, and the gather network writes the core at the first of them (D29): \leandecl{PLTS.ABA.Gather.StepOverBroadcastSpecification}, matched against the transitions of the composition by \leandecl{PLTS.ABA.Gather.instanceOverBroadcastSpecification_step_iff_row}.
 \end{definition}

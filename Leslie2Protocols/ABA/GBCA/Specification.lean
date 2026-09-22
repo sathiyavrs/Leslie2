@@ -80,8 +80,8 @@ the binding witness either way — `!bnd` is a bit that no extension can hand ou
 ## Provenance (D14/D15)
 
 * **D14 (repair, load-bearing).** The source blueprint's TS 2 certifies binding
-  by a *single* honest witness (`∃ id ∉ F, call id = b`), and grade-1 / grade-0 dissent
-  likewise by a single honest dissenter. That singular witness is the same
+  by a *single* correct witness (`∃ id ∉ F, call id = b`), and grade-1 / grade-0 dissent
+  likewise by a single correct dissenter. That singular witness is the same
   provenance loss the D13 repair removes from Transition System 1, one level
   down: the witness may
   be corrupted later in the trace, after which nothing attributes the outcome to
@@ -108,7 +108,7 @@ the binding witness either way — `!bnd` is a bit that no extension can hand ou
   caller of `v` behind every value-bearing return.
 
 * **D19 (the state shape).** The source blueprint's TS 2 carries a bound value
-  `bind ∈ {0, 1, ⊥}`. The exclusion set is the excluded-bit reading of that
+  `bind ∈ {0, 1, ⊥}`. The exclusion set is the excluded-bit form of that
   value: `excluded ∈ {∅, {b}}`, embedding `bind = ⊥ ↦ excluded = ∅` and
   `bind = b ↦ excluded = {!b}`. The two states therefore differ in the guards, not
   in the cardinality. The blueprint's `bind = some v` guard on the
@@ -139,7 +139,7 @@ structure SpecState (n : ℕ) where
   /-- The grade lock: `some true` after a grade-2 return, `some false` after a
   grade-0 return (`⊥` before either). -/
   grade : Option Bool
-  /-- The corrupted set (local copy, kept in lockstep by `fail` broadcast). -/
+  /-- The corrupted set (local copy, kept equal by `fail` broadcast). -/
   F : Finset (Fin n)
   deriving DecidableEq
 
@@ -227,8 +227,8 @@ inductive Step (P : Parameters) (r : ℕ) :
       (hr : s.ret id = false) :
       Step P r s (.retG r id (.grade1 v) bnd)
         (PMF.pure { s with ret := Function.update s.ret id true })
-  /-- Grade-2 return: decide the surviving bit `v` (locks the grade to the grade-2 side).
-  Same guard pair and same announced bit as `retGrade1`. -/
+  /-- Grade-2 return: decide the surviving bit `v` (locks the grade at 2). Same guard pair and same
+  announced bit as `retGrade1`. -/
   | retGrade2 (s : SpecState P.n) (id : Fin P.n) (v : Bool) (bnd : Bool)
       (hlive : v ∉ s.excluded) (hexcluded : (!v) ∈ s.excluded)
       (hbnd : (!bnd) ∈ s.excluded)
@@ -236,11 +236,10 @@ inductive Step (P : Parameters) (r : ℕ) :
       (hr : s.ret id = false) :
       Step P r s (.retG r id (.grade2 v) bnd)
         (PMF.pure { s with grade := some true, ret := Function.update s.ret id true })
-  /-- Grade-0 return: no output, but the bound bit is announced. The guard
-  `(!bnd) ∈ excluded` is the Graded Binding witness, valid in every extension
-  because `excluded` only grows, and it names `bnd` as the surviving bit. Both
-  bits carry `f + 1` F-blind support (D15), which is what makes handing out no
-  bit the right answer; the grade is locked to the grade-0 side. -/
+  /-- Grade-0 return: no output, but the bound bit is announced. The guard `(!bnd) ∈ excluded` is
+  the Graded Binding witness, valid in every extension because `excluded` only grows, and it names
+  `bnd` as the surviving bit. Both bits carry `f + 1` F-blind support (D15), which is what makes
+  handing out no bit the right answer; the grade is locked at 0. -/
   | retGrade0 (s : SpecState P.n) (id : Fin P.n) (bnd : Bool)
       (hbnd : (!bnd) ∈ s.excluded)
       (hwT : P.f + 1 ≤ (Finset.univ.filter

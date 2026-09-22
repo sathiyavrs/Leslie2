@@ -1,7 +1,7 @@
 \begin{theorem}[Gather core refinement]
   \label{thm:gather-core}
   \lean{PLTS.ABA.Gather.Invariant}\lean{PLTS.ABA.Gather.SpecificationRelation}\lean{PLTS.ABA.Gather.refinesSpecification}\leanok
-  \uses{def:aba-gather-ideal, def:aba-gather-spec, def:aba-gather-core}
+  \uses{def:aba-gather-over-broadcast-specification, def:aba-gather-spec, def:aba-gather-core}
   The gather implementation over broadcast specifications is forward-simulated by Transition System~4.
   The relation reads the specification's $call$ off the input instances' records, $ret$ and $F$ off the gather tier, certifies each committed abstract entry by the corresponding input-broadcast commitment, holds the two sides' cores equal, and certifies a written core by the count
   \[
@@ -9,16 +9,16 @@
   \]
   which is $F$-blind and monotone, the broadcast values being write-once.
   A return is answered by one weak run: the abstract commits for the output's entries, the write of the core where the specification holds none, then the return.
-  The proof is a case analysis over the rows of Definition~\ref{def:aba-gather-ideal}, obtained from a transition of the composition by its row characterisation, and the specification's answer is lifted to the specification read along the pullback by a section of it.
+  The proof is a case analysis over the rows of Definition~\ref{def:aba-gather-over-broadcast-specification}, obtained from a transition of the composition by its row characterisation, and the specification's answer is lifted to the specification read along the pullback by a section of it.
 \end{theorem}
 
 \begin{proof}\leanok
-  \uses{def:aba-gather-ideal, def:aba-gather-spec, def:aba-gather-core, def:forwardsim}
-  The invariant ties each program's stores to the instances that wrote them --- a stored value is that instance's committed value --- ties an honest bind input to the $\mathrm{BIND}$ row's quorum guard, and carries approval-backing for the write-once $\mathrm{ECHO}$ and $\mathrm{VOTE}$ fields.
+  \uses{def:aba-gather-over-broadcast-specification, def:aba-gather-spec, def:aba-gather-core, def:forwardsim}
+  The invariant ties each program's stores to the instances that wrote them --- a stored value is that instance's committed value --- ties a correct bind input to the $\mathrm{BIND}$ row's quorum guard, and carries approval-backing for the write-once $\mathrm{ECHO}$ and $\mathrm{VOTE}$ fields.
   The specification's call record follows the input instances' records rather than the gather programs': the two move on the same interface labels under the same write-once guard, and a broadcast specification answers either label on either of its two call rows, so a gather record and its instance's record may differ, and the specification's commit guard is dischargeable against the instance's.
   The core written is the core of Definition~\ref{def:aba-gather-core}, read off the instance's network state, and the two guards of that write are its size bound and its approval, both supplied by the returner's own quorum of $n - f$ committed bind payloads.
   The same quorum supplies the $f{+}1$ coordinates whose committed payloads lie above the core, which is the count the relation carries.
   Every return after the first is matched through that count: it is $F$-blind and monotone, so it survives every later rule and every corruption, and the return's own $n{-}f$ quorum meets it in a coordinate whose committed payload lies above the core and below the returned map, which is what the return's $C \sqsubseteq g$ guard requires.
   Sending the $\mathrm{BIND}$ payload by reliable broadcast is what the count rests on: the count reads committed payloads, which a sender corrupted after the write cannot rewrite.
-  Every internal row is answered by the matching abstract commit or by a stutter, a broadcast return, which writes a store, by a stutter, and corruption by the specification's own $\mathrm{fail}$.
+  Every internal row is answered by the matching abstract commit or by a stutter, a broadcast return, which writes a program's record, by a stutter, and corruption by the specification's own $\mathrm{fail}$.
 \end{proof}

@@ -18,12 +18,11 @@ network. The instance is the unit the analysis replaces by the graded
 agreement specification, so it is drawn to be exactly what that replacement
 may see — the round's handshake ports and nothing else.
 
-A local program holds one stage record: the process's own protocol data and
-the messages delivered to it, indexed by sender (`GBCA.ByABDY.RoundRecord`). It holds
-no corrupted set, no corruption flag and no record of what it has multicast; its guards read the
-record and the recv, never the identity of the caller.
-The round loop that moves the ports is not here either — a call writes the
-stage record alone, a return sets the record's `returned` flag alone.
+A local program holds one round record: the process's own protocol data and the messages delivered
+to it, indexed by sender (`GBCA.ByABDY.RoundRecord`). It holds no corrupted set, no corruption flag
+and no record of what it has multicast; its guards read the record and the recv, never the identity
+of the caller. The round loop that moves the ports is not here either — a call writes the round
+record alone, a return sets the record's `returned` flag alone.
 
 The round's network holds the per-sender sent sets and the corrupted set.
 A multicast is a joint step of the sender, which writes its record, and the
@@ -31,14 +30,12 @@ network, which records the message; a delivery is a joint step of the network,
 which checks that the message is sent under the named sender, and the
 receiver, which files it under that sender's recv row.
 
-The two rendezvous — the multicast and the delivery — are labels of the
-instance-internal alphabet `GBCALabel n = ExtendedLabel n ⊕ GBCAEvent n`, and they are hidden
-before anything outside sees the instance: `composition` speaks the shared extended
-alphabet `ExtendedLabel n`, in which the round's interface is `callG r`, `retG r`,
-`gbcaCallLoop r` and the three Byzantine graded-agreement rows of round `r`.
-The stage-multicast and stage-delivery constructors of `NetworkEvent` are therefore
-not part of that interface — no component offers them, so they carry no
-transition of the instance.
+The two rendezvous — the multicast and the delivery — are labels of the instance-internal alphabet
+`GBCALabel n = ExtendedLabel n ⊕ GBCAEvent n`, and they are hidden before anything outside sees the
+instance: `composition` speaks the shared extended alphabet `ExtendedLabel n`, in which the round's
+interface is `callG r`, `retG r`, `gbcaCallLoop r` and the three Byzantine graded-agreement rows of
+round `r`. The round-multicast and round-delivery constructors of `NetworkEvent` are therefore not
+part of that interface — no component offers them, so they carry no transition of the instance.
 
 `gbcaInstanceFamily` is the ℕ-indexed family of these instances: `System.family`
 routes a round-tagged label to its round, takes `τ` at any round, and
@@ -46,11 +43,10 @@ broadcasts `fail` to every round at once.
 
 ## Model and deviations
 
-* **D1 (determinised `fail`).** `NetworkState.corrupt` is the total Dirac
-  function guarded by `k ∉ F ∧ |F| < f`. `fail` is not a row of any rule
-  table here: it is the family's broadcast act, applied to every round's
-  network simultaneously, which is what keeps the per-round copies of the
-  corrupted set in lockstep.
+* **D1 (determinised `fail`).** `NetworkState.corrupt` is the total Dirac function guarded by `k ∉ F
+  ∧ |F| < f`. `fail` is not a row of any rule table here: it is the family's broadcast act, applied
+  to every round's network simultaneously, which is what keeps the per-round copies of the corrupted
+  set together.
 * **D5 (set-based network).** Multicasts are idempotent: `sent j` is the set
   of messages `j` has multicast in this round, and `received k` at a program is
   the set of messages from `k` delivered there. Thresholds count distinct
@@ -59,14 +55,13 @@ broadcasts `fail` to every round at once.
 * **D8 (participation guard).** The protocol sends and the three returns
   require the record to have received its input: the algorithm's handlers only
   run inside a called instance.
-* **D11 (Byzantine handshake rows), split.** A handshake row is authorised by a
-  `k ∈ F` guard and has an effect on the round's data. The instance carries
-  the effect and not the authorisation: `byzantineCallG` opens the stage record and
-  records its `⟨INPUT, b⟩` without any `k ∈ F` guard, and `byzantineRetG` sets the
-  `returned` flag and writes the round's bound bit on the same evidence,
-  denials and guard an honest return needs. The guard belongs to the network
-  that surrounds the instance, where it applies to the handshake-row label that
-  stays visible at this boundary.
+* **D11 (Byzantine handshake rows), split.** A handshake row is authorised by a `k ∈ F` guard and
+  has an effect on the round's data. The instance carries the effect and not the authorisation:
+  `byzantineCallG` opens the round record and records its `⟨INPUT, b⟩` without any `k ∈ F` guard,
+  and `byzantineRetG` sets the `returned` flag and writes the round's bound bit on the same
+  evidence, denials and guard a correct return needs. The guard belongs to the network that
+  surrounds the instance, where it applies to the handshake-row label that stays visible at this
+  boundary.
 * **The round's bound bit.** The ghost field `NetworkState.bound` belongs to the
   network, so the two return rows that write it are the network's
   (`GBCANetworkStep.retGIdle`, `GBCANetworkStep.byzantineRetG`), and a program's return row takes
@@ -85,39 +80,35 @@ broadcasts `fail` to every round at once.
 
 ## The interface
 
-Every row mirrors the stage-visible half of one rule of the implementation
-instance (`GBCA/ABDY/Implementation.lean`), split between the program that owns the record
-and the network that owns the sent. What the implementation's rule writes on the
-core messagesOf — the round loop's phase, estimate and grade — appears nowhere here:
-that messagesOf is a different component of the protocol system.
+Every row mirrors the round-visible half of one rule of the implementation instance
+(`GBCA/ABDY/Implementation.lean`), split between the program that owns the record and the network
+that owns the sent. What the implementation's rule writes on the core messagesOf — the round loop's
+phase, estimate and grade — appears nowhere here: that messagesOf is a different component of the
+protocol system.
 
 ## The replacement
 
-`instanceSubstitution` is what licenses replacing the round instance by the graded
-agreement specification. It runs through the implementation instance of
-`GBCA/ABDY/Implementation.lean` in two legs.
+`instanceSubstitution` is what licenses replacing the round instance by the graded agreement
+specification. It runs through the implementation instance of `GBCA/ABDY/Implementation.lean` in two
+steps.
 
-The first leg is strong and functional. The round instance and the
-implementation run on the same state: `GBCA.ByABDY.ImplementationState` is the pair of the stage
-records and the network state, which are exactly the local states composed here.
-`composition_projects` says that every transition of the round instance is a transition
-of the implementation at that same state, one step for one step, with no
-stuttering: a joint call is the implementation's call, a hidden multicast or
-delivery is the protocol rule or the delivery it carries, a network injection is
-the implementation's Byzantine row. The two are one round under two
-presentations — a single rule table on one side, `n` programs beside a network
-on the other.
+The first step is strong and functional. The round instance and the implementation run on the same
+state: `GBCA.ByABDY.ImplementationState` is the pair of the round records and the network state,
+which are exactly the local states composed here. `composition_projects` says that every transition
+of the round instance is a transition of the implementation at that same state, one step for one
+step, with no stuttering: a joint call is the implementation's call, a hidden multicast or delivery
+is the protocol rule or the delivery it carries, a network injection is the implementation's
+Byzantine row. The two are one round under two presentations: a single rule table, and `n` programs
+beside a network.
 
-The second leg is the per-instance refinement `GBCA.ByABDY.refinesSpecification`
+The second step is the per-instance refinement `GBCA.ByABDY.refinesSpecification`
 (`GBCA/ABDY/RefinesSpecification.lean`), used as it stands. Its answer is a weak run of the
-specification over the shared alphabet `Label n`, which is lifted to the
-instance's interface along `gbcaLabelMap`: the projection that reads a Byzantine
-call row as a call, a Byzantine return row as a return, and the two call
-loops as calls, which the specification takes on its input-enabledness row
-(D11). The lifted specification `specificationOverRoundAlphabet` — the specification read back
+specification over the shared alphabet `Label n`, which is lifted to the instance's interface along
+`gbcaLabelMap`: the projection that reads a Byzantine call row as a call, a Byzantine return row as
+a return, and the two call loops as calls, which the specification takes on its input-enabledness
+row (D11). The lifted specification `specificationOverRoundAlphabet` — the specification read back
 along `gbcaLabelMap` — is the system that replaces the instance, and `specificationCorruptionAct` is
-the broadcast corruption act it carries at that alphabet.
--/
+the broadcast corruption act it carries at that alphabet. -/
 
 namespace PLTS
 namespace ABA
@@ -163,11 +154,10 @@ def gbcaEvents (n : ℕ) : Set (GBCALabel n) := {l | ∃ e : GBCAEvent n, l = Su
 
 /-! ### The local graded-agreement program
 
-Process `j`'s program in this round. Every guard reads the stage record and
-the recv and nothing else. A rendezvous row carries the program's half of a
-joint step with the network — on a send the record write, on a delivery the
-recv write. The rows are exactly the labels that reach the round's instance:
-the round's own handshake ports and the two rendezvous. -/
+Process `j`'s program in this round. Every guard reads the round record and the recv and nothing
+else. A rendezvous row carries the program's half of a joint step with the network — on a send the
+record write, on a delivery the recv write. The rows are exactly the labels that reach the round's
+instance: the round's own handshake ports and the two rendezvous. -/
 
 /-- The step relation of the local graded-agreement program of process `j` in
 round `r`. -/
@@ -183,7 +173,7 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
   /-- A call addressed elsewhere: not `j`'s business. -/
   | callIdle (p : GBCA.ByABDY.RoundRecord P.n) (id : Fin P.n) (b : Bool) (hid : id ≠ j) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inl (.callG r id b))) (PMF.pure p)
-  /-- A call against an already-called stage record: the record does not move
+  /-- A call against an already-called round record: the record does not move
   (`ImplementationStep.callLoop`). -/
   | callLoop (p : GBCA.ByABDY.RoundRecord P.n) (id : Fin P.n) (b : Bool) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inr (.gbcaCallLoop r id b))) (PMF.pure p)
@@ -228,8 +218,8 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
   | retIdle (p : GBCA.ByABDY.RoundRecord P.n) (id : Fin P.n) (out : GBCAOutput) (bnd : Bool)
       (hid : id ≠ j) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r id out bnd))) (PMF.pure p)
-  /-- A Byzantine call (D11): the stage record opens on the named bit, exactly
-  as an honest call opens it (`ImplementationStep.call`). -/
+  /-- A Byzantine call (D11): the round record opens on the named bit, exactly as a correct call
+  opens it (`ImplementationStep.call`). -/
   | byzantineCall (p : GBCA.ByABDY.RoundRecord P.n) (b : Bool) (h : p.process.input = none) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineCallG r j b)))
         (PMF.pure (p.setProcess { p.process with
@@ -238,11 +228,11 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
   /-- A Byzantine call at another process: not `j`'s business. -/
   | byzantineCallIdle (p : GBCA.ByABDY.RoundRecord P.n) (k : Fin P.n) (b : Bool) (hk : k ≠ j) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineCallG r k b))) (PMF.pure p)
-  /-- A Byzantine call against an already-called stage record (D11): the record
-  does not move (`ImplementationStep.callLoop`). -/
+  /-- A Byzantine call against an already-called round record (D11): the record does not move
+  (`ImplementationStep.callLoop`). -/
   | byzantineCallLoop (p : GBCA.ByABDY.RoundRecord P.n) (k : Fin P.n) (b : Bool) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineCallGLoop r k b))) (PMF.pure p)
-  /-- A Byzantine grade-2 return (D11): the honest row's evidence and guard, and
+  /-- A Byzantine grade-2 return (D11): the correct row's evidence and guard, and
   the same record write (`ImplementationStep.retGrade2`). -/
   | byzantineRetGrade2 (p : GBCA.ByABDY.RoundRecord P.n) (v : Bool) (bnd : Bool)
       (hin : p.process.input ≠ none)
@@ -251,7 +241,7 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
       (hret : p.process.returned = false) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r j (.grade2 v) bnd)))
         (PMF.pure (p.setProcess { p.process with returned := true }))
-  /-- A Byzantine grade-1 return (D11): the honest row's evidence, denial and
+  /-- A Byzantine grade-1 return (D11): the correct row's evidence, denial and
   guard, and the same record write (`ImplementationStep.retGrade1`). -/
   | byzantineRetGrade1 (p : GBCA.ByABDY.RoundRecord P.n) (v : Bool) (bnd : Bool)
       (hin : p.process.input ≠ none)
@@ -264,7 +254,7 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
       (hret : p.process.returned = false) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r j (.grade1 v) bnd)))
         (PMF.pure (p.setProcess { p.process with returned := true }))
-  /-- A Byzantine grade-0 return (D11): the honest row's evidence, denials and
+  /-- A Byzantine grade-0 return (D11): the correct row's evidence, denials and
   guard, and the same record write (`ImplementationStep.retGrade0`). -/
   | byzantineRetGrade0 (p : GBCA.ByABDY.RoundRecord P.n) (bnd : Bool)
       (hin : p.process.input ≠ none)
@@ -375,12 +365,11 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
 
 /-! ### The round's network
 
-The one local state of the instance that holds what no program may see: the per-sender
-sent sets and the corrupted set. It participates in every send by recording the
-message and in every delivery by checking that the message is sent, and it
-is where a corrupted sender's injections enter (D5). Its state record
-`NetworkState` stands beside the stage record in `GBCA/ABDY/Implementation.lean`, the two of
-them being the components of a round's state; what follows is its rule table. -/
+The one local state of the instance that holds what no program may see: the per-sender sent sets and
+the corrupted set. It participates in every send by recording the message and in every delivery by
+checking that the message is sent, and it is where a corrupted sender's injections enter (D5). Its
+state record `NetworkState` stands beside the round record in `GBCA/ABDY/Implementation.lean`, the
+two of them being the components of a round's state; what follows is its rule table. -/
 
 /-- The step relation of the round's network. All transitions are
 Dirac. -/
@@ -410,7 +399,7 @@ inductive GBCANetworkStep (P : Parameters) (r : ℕ) :
       (hbnd : bnd = w.bound.getD (GBCA.ByABDY.boundOf w.sent w.F out)) :
       GBCANetworkStep P r w (Sum.inl (Sum.inl (.retG r id out bnd)))
         (PMF.pure (w.setBound bnd))
-  /-- A call against an already-called stage record sends nothing
+  /-- A call against an already-called round record sends nothing
   (`ImplementationStep.callLoop`). -/
   | gbcaCallLoop (w : NetworkState P.n) (id : Fin P.n) (b : Bool) :
       GBCANetworkStep P r w (Sum.inl (Sum.inr (.gbcaCallLoop r id b))) (PMF.pure w)
@@ -420,12 +409,11 @@ inductive GBCANetworkStep (P : Parameters) (r : ℕ) :
   | byzantineCallG (w : NetworkState P.n) (k : Fin P.n) (b : Bool) :
       GBCANetworkStep P r w (Sum.inl (Sum.inr (.byzantineCallG r k b)))
         (PMF.pure (w.recordGBCASend k (.input b)))
-  /-- A Byzantine call against an already-called stage record sends nothing
-  (D11). -/
+  /-- A Byzantine call against an already-called round record sends nothing (D11). -/
   | byzantineCallGLoop (w : NetworkState P.n) (k : Fin P.n) (b : Bool) :
       GBCANetworkStep P r w (Sum.inl (Sum.inr (.byzantineCallGLoop r k b))) (PMF.pure w)
   /-- A Byzantine return sends nothing, and writes the round's bound bit
-  exactly as the honest return does (D11). -/
+  exactly as the correct return does (D11). -/
   | byzantineRetG (w : NetworkState P.n) (k : Fin P.n) (out : GBCAOutput) (bnd : Bool)
       (hbnd : bnd = w.bound.getD (GBCA.ByABDY.boundOf w.sent w.F out)) :
       GBCANetworkStep P r w (Sum.inl (Sum.inr (.byzantineRetG r k out bnd)))
@@ -472,10 +460,9 @@ noncomputable def composition (P : Parameters) (r : ℕ) :
     System (GBCA.ByABDY.ImplementationState P.n) (ExtendedLabel P.n) :=
   ((compositionExtended P r).abstract (gbcaEvents P.n)).relabel
 
-/-- The round a label of the instance interface belongs to. Every other label
-of the shared extended alphabet — the ABA API, the coin ports, `fail`, the
-DECIDED sets, and the stage rendezvous of the protocol network — is owned by
-no round. -/
+/-- The round a label of the instance interface belongs to. Every other label of the shared extended
+alphabet — the ABA API, the coin ports, `fail`, the DECIDED sets, and the round rendezvous of the
+protocol network — is owned by no round. -/
 def roundOwnsLabel {n : ℕ} : ExtendedLabel n → Option ℕ
   | Sum.inl (.callG r _ _) => some r
   | Sum.inl (.retG r _ _ _) => some r
@@ -495,17 +482,16 @@ instance {n : ℕ} : DecidablePred (isFailLabel (n := n)) := fun l => by
   | inl l => cases l <;> simp only [isFailLabel] <;> infer_instance
   | inr e => cases e <;> simp only [isFailLabel] <;> infer_instance
 
-/-- The broadcast corruption act on an instance state: the round's network state
-records it, the stage records do not (D1). -/
+/-- The broadcast corruption act on an instance state: the round's network state records it, the
+round records do not (D1). -/
 def corruptionAct (P : Parameters) : ExtendedLabel P.n → GBCA.ByABDY.ImplementationState P.n →
   GBCA.ByABDY.ImplementationState P.n
   | Sum.inl (.fail k), (u, w) => (u, w.corrupt P k)
   | _, s => s
 
-/-- **The graded-agreement side of the protocol**: the ℕ-indexed
-family of round instances. A round-tagged label moves its round alone, `τ`
-moves one round, and `fail` is the broadcast that keeps every round's copy of
-the corrupted set in lockstep. -/
+/-- **The graded-agreement family of the protocol**: the ℕ-indexed family of round instances. A
+round-tagged label moves its round alone, `τ` moves one round, and `fail` is the broadcast that
+keeps every round's copy of the corrupted set together. -/
 noncomputable def gbcaInstanceFamily (P : Parameters) :
     System (ℕ → GBCA.ByABDY.ImplementationState P.n) (ExtendedLabel P.n) :=
   System.family (composition P) roundOwnsLabel isFailLabel (corruptionAct P)
@@ -569,7 +555,7 @@ below unfold it once and for all, in both directions. -/
 
 /-- A synchronised transition of the program group on a visible label: every
 program steps, and the joint distribution is Dirac. -/
-theorem gbcaProgramProduct_inv {P : Parameters} {r : ℕ} {u : ∀ _ : Fin P.n,
+theorem gbcaProgramProduct_inversion {P : Parameters} {r : ℕ} {u : ∀ _ : Fin P.n,
     GBCA.ByABDY.RoundRecord P.n} {l : GBCALabel P.n} {μ : PMF (∀ _ : Fin P.n,
       GBCA.ByABDY.RoundRecord P.n)}
     (h : (System.synchronisedProduct (gbcaProgram P r)).step u l μ) :
@@ -686,10 +672,9 @@ theorem composition_tau_network (P : Parameters) (r : ℕ)
 
 /-! ### One program's rules, by label class
 
-Each lemma reads a row of the table off its label: the participant's row as
-its guards together with the Dirac it produces, and the idle row of a
-non-participant as the identity. The record and the distribution are
-variables, so `cases` unifies against any stage record. -/
+Each lemma reads a row of the table off its label: the participant's row as its guards together with
+the Dirac it produces, and the idle row of a non-participant as the identity. The record and the
+distribution are variables, so `cases` unifies against any round record. -/
 
 section ProcInversion
 
@@ -1118,13 +1103,12 @@ theorem weakLStep_specificationOverRoundAlphabet (P : Parameters) (r : ℕ) {s s
 
 /-! ### One state, two presentations
 
-The stage records and the network state are the two components of `GBCA.ByABDY.ImplementationState`
-(`GBCA/ABDY/Implementation.lean`), so the round instance and the implementation instance
-run on the same state and every rule of the one is a rule of the other read in
-the implementation's accessors. What the joint steps deliver, though, is a
-program function pinned pointwise — its value at the acting process, and its
-agreement with the old one elsewhere — where the implementation's rules write
-with `Function.update`. The lemmas here close that gap. -/
+The round records and the network state are the two components of `GBCA.ByABDY.ImplementationState`
+(`GBCA/ABDY/Implementation.lean`), so the round instance and the implementation instance run on the
+same state and every rule of the one is a rule of the other read in the implementation's accessors.
+What the joint steps deliver, though, is a program function pinned pointwise — its value at the
+acting process, and its agreement with the old one elsewhere — where the implementation's rules
+write with `Function.update`. The lemmas here close that gap. -/
 
 section Frame
 
@@ -1203,7 +1187,7 @@ only the network moves. -/
 /-- A visible transition of the programs beside the network: every program and
 the network step on the label, and the joint distribution is their Dirac
 product. -/
-theorem compositionExtended_joint_inv {P : Parameters} {r : ℕ}
+theorem compositionExtended_joint_inversion {P : Parameters} {r : ℕ}
     {u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n} {w : NetworkState P.n} {L : GBCALabel P.n}
     {μ : PMF (GBCA.ByABDY.ImplementationState P.n)} (hL : L ≠ (Silent.τ : GBCALabel P.n))
     (h : (compositionExtended P r).step (u, w) L μ) :
@@ -1212,7 +1196,7 @@ theorem compositionExtended_joint_inv {P : Parameters} {r : ℕ}
         GBCANetworkStep P r w L (PMF.pure w') := by
   rw [compositionExtended, System.parallel_step] at h
   rcases h with ⟨-, μ₁, μ₂, hs, hn, rfl⟩ | ⟨hτ, -⟩ | ⟨hτ, -⟩
-  · obtain ⟨x, rfl, hall⟩ := gbcaProgramProduct_inv hs
+  · obtain ⟨x, rfl, hall⟩ := gbcaProgramProduct_inversion hs
     obtain ⟨w', rfl⟩ := gbcaNetworkStep_dirac hn
     exact ⟨x, w', prodPMF_pure_pure _ _, hall, hn⟩
   · exact absurd hτ hL
@@ -1220,7 +1204,7 @@ theorem compositionExtended_joint_inv {P : Parameters} {r : ℕ}
 
 /-- A silent transition of the programs beside the network is a network-local
 injection: no program has a `τ` row. -/
-theorem compositionExtended_tau_inv {P : Parameters} {r : ℕ}
+theorem compositionExtended_tau_inversion {P : Parameters} {r : ℕ}
     {u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n} {w : NetworkState P.n}
     {μ : PMF (GBCA.ByABDY.ImplementationState P.n)}
     (h : (compositionExtended P r).step (u, w) (Sum.inl (Sum.inl Label.tau)) μ) :
@@ -1335,8 +1319,8 @@ anywhere:
 | hidden `deliver` rendezvous | `ImplementationStep.deliver` |
 | network-local injection | `ImplementationStep.byzantine` |
 
-The two hidden rendezvous and the network's injection are silent on both sides,
-and `gbcaLabelMap` takes `τ` to `τ`. -/
+The two hidden rendezvous and the network's injection are silent in both systems, and `gbcaLabelMap`
+takes `τ` to `τ`. -/
 
 /-- **The strong projection lemma.** -/
 theorem composition_projects (P : Parameters) (r : ℕ) :
@@ -1348,7 +1332,7 @@ theorem composition_projects (P : Parameters) (r : ℕ) :
   rintro ⟨u, w⟩ l μ hstep
   rcases (composition_step_iff P r (u, w) l μ).mp hstep with ⟨rfl, e, hev⟩ | hlab
   · -- a hidden rendezvous: an internal step of the implementation
-    obtain ⟨x, w', rfl, hall, hn⟩ := compositionExtended_joint_inv (by simp) hev
+    obtain ⟨x, w', rfl, hall, hn⟩ := compositionExtended_joint_inversion (by simp) hev
     refine ⟨Label.tau, rfl, ?_⟩
     cases e with
     | send j m =>
@@ -1409,14 +1393,14 @@ theorem composition_projects (P : Parameters) (r : ℕ) :
   · by_cases hlτ : l = Sum.inl Label.tau
     · -- the network's own injection
       subst hlτ
-      obtain ⟨w', rfl, hn⟩ := compositionExtended_tau_inv hlab
+      obtain ⟨w', rfl, hn⟩ := compositionExtended_tau_inversion hlab
       obtain ⟨k, m, hF, hw⟩ := gbcaNetworkStep_tau hn
       have hw' : w' = w.recordGBCASend k m := PMF.pure_injective hw
       subst hw'
       refine ⟨Label.tau, rfl, ?_⟩
       rw [composition_recordGBCASend]
       exact GBCA.ByABDY.ImplementationStep.byzantine _ k m hF
-    · obtain ⟨x, w', rfl, hall, hn⟩ := compositionExtended_joint_inv (by simpa using hlτ) hlab
+    · obtain ⟨x, w', rfl, hall, hn⟩ := compositionExtended_joint_inversion (by simpa using hlτ) hlab
       cases l with
       | inl l₀ =>
         cases l₀ with
@@ -1530,12 +1514,12 @@ theorem composition_projects (P : Parameters) (r : ℕ) :
 
 /-! ### The round instance is refined by the graded agreement specification
 
-The round instance's answer to a step is the implementation's answer, read
-through the per-instance refinement (`GBCA.ByABDY.refinesSpecification`,
-`GBCA/ABDY/RefinesSpecification.lean`): the first leg is strong and functional, so nothing of that
-refinement is reproved here. The specification's weak answer is finally lifted to the round
-instance's interface along a section of `gbcaLabelMap` — which is where a Byzantine
-handshake row is answered by the specification's own call or return row (D11). -/
+The round instance's answer to a step is the implementation's answer, read through the per-instance
+refinement (`GBCA.ByABDY.refinesSpecification`, `GBCA/ABDY/RefinesSpecification.lean`): the first
+step is strong and functional, so nothing of that refinement is reproved here. The specification's
+weak answer is finally lifted to the round instance's interface along a section of `gbcaLabelMap` —
+which is where a Byzantine handshake row is answered by the specification's own call or return row
+(D11). -/
 
 /-- **The simulation relation of the round instance**: the relation
 `GBCA.ByABDY.specificationRelation` of the implementation, which the shared state lets it be
@@ -1570,10 +1554,9 @@ theorem instanceSubstitution (P : Parameters) (r : ℕ) :
 
 /-! ### What the family lift will need
 
-The two side conditions of `ForwardSimulation.family` for the round-indexed
-family: the relation holds at the initial states, and it survives the broadcast
-corruption. Both are the implementation instance's own facts, which the shared
-state lets stand verbatim. -/
+The two premises of `ForwardSimulation.family` for the round-indexed family: the relation holds at
+the initial states, and it survives the broadcast corruption. Both are the implementation instance's
+own facts, which the shared state lets stand verbatim. -/
 
 /-- The broadcast corruption act on a specification state, over the extended
 alphabet: `GBCA.failAct` taken on the extended `fail` label. -/
@@ -1629,11 +1612,10 @@ end GBCA.ByABDY
 
 /-! ## The routing table, evaluated
 
-`roundOwnsLabel` and `isFailLabel` are decided by a `rfl` at every label of the extended
-alphabet. The composed reading composes `gbcaInstanceFamily` with local states that speak
-that alphabet, so it discharges the routing side conditions by `simp`; the
-table below is what `simp` uses, and it lives under `PLTS.ABA.Composition` with the
-rest of the components' vocabulary. -/
+`roundOwnsLabel` and `isFailLabel` are decided by a `rfl` at every label of the extended alphabet.
+The composed system composes `gbcaInstanceFamily` with local states that speak that alphabet, so it
+discharges the routing premises by `simp`; the table below is what `simp` uses, and it lives under
+`PLTS.ABA.Composition` with the rest of the components' vocabulary. -/
 
 namespace Composition
 

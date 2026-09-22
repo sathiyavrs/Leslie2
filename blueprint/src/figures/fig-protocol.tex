@@ -1,4 +1,4 @@
-% The protocol (PLTS.ABA.ABDY.ABAProgram, PLTS.ABA.ABDY.network, PLTS.ABA.protocol):
+% The protocol (PLTS.ABA.ABDY.ABAProgram, PLTS.ABA.ABDY.network, PLTS.ABA.ABDY.protocol):
 % n programs, the network adversary, the coin oracle.
 \begin{tikzpicture}[
     >={Stealth[round]}, semithick,
@@ -17,11 +17,11 @@
     {$\mathrm{relabel} \circ \mathrm{abstract}\,\mathrm{networkEventLabels}$};
   % the n programs
   \node[prog] (p1) at (0.6,1.0)
-    {$\mathrm{ABAProgram}(P,1)$\\ round loop\\ stage-side record};
+    {$\mathrm{ABAProgram}(P,1)$\\ round loop\\ round's record};
   \node[prog] (pj) at (4.9,1.0)
-    {$\mathrm{ABAProgram}(P,j)$\\ round loop\\ stage-side record};
+    {$\mathrm{ABAProgram}(P,j)$\\ round loop\\ round's record};
   \node[prog] (pn) at (8.9,1.0)
-    {$\mathrm{ABAProgram}(P,n)$\\ round loop\\ stage-side record};
+    {$\mathrm{ABAProgram}(P,n)$\\ round loop\\ round's record};
   \node[font=\footnotesize] at (2.75,1.0) {$\cdots$};
   \node[font=\footnotesize] at (6.9,1.0) {$\cdots$};
   % the synchronised bus over the extended alphabet
@@ -45,10 +45,10 @@
     {$\mathrm{WCC.specFamily}(P)$\\ along $\mathrm{coinLabelMap}$};
   \draw[<->] (7.2,-0.35) -- (7.2,-1.95);
   \node[ann, anchor=west] at (7.35,-1.1)
-    {$\mathrm{callW}$, $\mathrm{retW}$, $\mathrm{retWPublish}$,\\
+    {$\mathrm{callW}$, $\mathrm{retW}$,\\ $\mathrm{retWPublish}$,\\
      $\mathrm{byzantineCallW}$,\\ $\mathrm{byzantineRetW}$};
   % the presentation it is included in
-  \node[comp] (impl) at (4.9,-5.1) {$\mathrm{composed}(P)$};
+  \node[comp] (impl) at (4.9,-5.1) {$\abdy{\mathrm{composed}}(P)$};
   \draw[->, dashed] (4.9,-3.75) --
     node[lbl, anchor=west, xshift=4pt]{$\operatorname{ATD}$ inclusion, along $\mathrm{ProtocolRelation}$}
     (4.9,-4.6);

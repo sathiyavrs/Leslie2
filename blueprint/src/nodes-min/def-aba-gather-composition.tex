@@ -1,5 +1,5 @@
 \begin{definition}[The gather instance as a composition]
-  \label{def:aba-gather-sub}
+  \label{def:aba-gather-composition}
   \lean{PLTS.ABA.Gather.ProcessRecord}\lean{PLTS.ABA.Gather.NetworkState}\lean{PLTS.ABA.Gather.GatherEvent}\lean{PLTS.ABA.Gather.inputBroadcastLabelMap}\lean{PLTS.ABA.Gather.bindBroadcastLabelMap}\lean{PLTS.ABA.Gather.specificationLabelMap}\lean{PLTS.ABA.Gather.StateOverBroadcasts}\lean{PLTS.ABA.Gather.instanceOverBroadcasts}\lean{PLTS.ABA.Gather.specificationOverInstanceAlphabet}\leanok
   \uses{def:aba-gather-spec, def:aba-brb-impl, def:aba-networkstate, def:syncproduct, def:process-algebra, def:idle-family, def:relabel}
   One gather instance over a payload type $X$: the $n$ gather programs beside the gather network, in parallel with $2n$ reliable-broadcast instances, the instance's five events hidden and the result read back over its interface alphabet --- \leandecl{PLTS.ABA.Gather.instanceOverBroadcasts}, which takes the broadcast tier as an argument.

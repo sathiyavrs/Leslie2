@@ -302,7 +302,7 @@ end FamilyEmbedding
 
 /-- `Function.update` preserves the pointwise family relation when the updated
 coordinates are related. -/
-private theorem update_rel {σC σA : Type} {R : ℕ → σC → σA → Prop}
+private theorem update_relation {σC σA : Type} {R : ℕ → σC → σA → Prop}
     {s : ℕ → σC} {t : ℕ → σA} (hR : ∀ r, R r (s r) (t r)) {r : ℕ} {x : σC}
     {y : σA} (hxy : R r x y) (r' : ℕ) :
     R r' (Function.update s r x r') (Function.update t r y r') := by
@@ -340,7 +340,7 @@ theorem ForwardSimulation.family {σC σA : Type} {Label : Type} [Silent Label]
     rcases hdisj with ⟨-, hsil⟩ | ⟨hnτ, -⟩
     · exact ⟨Function.update t r y,
         Or.inl ⟨hτ, System.weakLSilent_family owns glob actA hsil⟩,
-        update_rel hR hRxy⟩
+        update_relation hR hRxy⟩
     · exact absurd hτ hnτ
   · -- (ii) owned instance step: match through `sim r`; a τ label goes through
     -- the silent embedding, an external one through the labelled embedding.
@@ -350,10 +350,10 @@ theorem ForwardSimulation.family {σC σA : Type} {Label : Type} [Silent Label]
     rcases hdisj with ⟨hτ, hsil⟩ | ⟨hnτ, hlab⟩
     · exact ⟨Function.update t r y,
         Or.inl ⟨hτ, System.weakLSilent_family owns glob actA hsil⟩,
-        update_rel hR hRxy⟩
+        update_relation hR hRxy⟩
     · exact ⟨Function.update t r y,
         Or.inr ⟨hnτ, System.weakLStep_family owns glob actA howns hlab⟩,
-        update_rel hR hRxy⟩
+        update_relation hR hRxy⟩
   · -- (iii) broadcast: the abstract family broadcasts in one step.
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'

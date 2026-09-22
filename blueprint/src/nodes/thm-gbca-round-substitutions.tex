@@ -1,0 +1,15 @@
+\begin{theorem}[The two substitutions inside the round]
+  \label{thm:gbca-round-substitutions}
+  \lean{PLTS.ABA.GBCA.ByAFW.BroadcastSubstitutionRelation}\lean{PLTS.ABA.GBCA.ByAFW.broadcastSubstitution}\lean{PLTS.ABA.GBCA.ByAFW.GatherSubstitutionRelation}\lean{PLTS.ABA.GBCA.ByAFW.gatherSubstitution}\leanok
+  \uses{def:aba-round-over-bracha, def:aba-round-over-gather-specifications, thm:gather-broadcast-substitution, thm:gather-core, thm:forwardsim-congruence}
+  Each tier of the round is forward-simulated by the one above it, along the round's programs and network held equal beside the gather-level relation at both gather slots: the fully concrete tier by the tier over broadcast specifications, along Theorem~\ref{thm:gather-broadcast-substitution}'s relation, and that tier by the round over gather specifications, along Theorem~\ref{thm:gather-core}'s.
+  The programs and the round's network, which holds the bound bit, stand equal in both systems, and neither substitution touches them.
+  Both proofs are applications of Theorem~\ref{thm:forwardsim-congruence}.
+\end{theorem}
+
+\begin{proof}\leanok
+  \uses{def:aba-round-over-bracha, def:aba-round-over-gather-specifications, thm:gather-broadcast-substitution, thm:gather-core, def:forwardsim}
+  The gather simulation is read along the pullback naming each slot by the congruence for the partial pullback, the two slots are joined by transitivity with one gather held in each system, and the result is carried through the parallel composition with the programs and the network held, the hiding of the round's events and the restriction to the family alphabet.
+  The composite relation is rewritten to the stated one, its middle state being determined by the equalities.
+  Corruption is the family's broadcast into the two gathers on both sides, answered by the broadcast compatibility of the gather relations at each slot.
+\end{proof}

@@ -16,24 +16,22 @@ import Leslie2Protocols.Framework.SynchronisedProduct
 /-!
 # The extended alphabet and the components composed over it
 
-The protocol is composed twice in this development. The protocol reading
-(`ABA/ImplementationByABDY/System.lean`) puts `n` per-process programs beside a network
-adversary and the coin oracle. The composed reading (`ABA/Composition/HybridAndSubstitution.lean`)
-cuts the same protocol into its components. Both compositions speak one
-alphabet, and some of what they compose is the same object on both sides.
-This file holds that alphabet and those components.
+The protocol is composed twice in this development. The protocol
+(`ABA/ImplementationByABDY/System.lean`) puts `n` per-process programs beside a network adversary
+and the coin oracle. The composed system (`ABA/Composition/HybridAndSubstitution.lean`) cuts the
+same protocol into its components. Both compositions speak one alphabet, and some of what they
+compose is the same object in both systems. This file holds that alphabet and those components.
 
 ## The extended alphabet
 
-`Label n` is the shared alphabet of the protocol and of its specification. It
-cannot name the two message networks, the Byzantine handshake rows, or the branches of
-a handshake that it does not distinguish. The rendezvous alphabet
-`NetworkEvent n M` names them, over a graded-agreement message type `M`
-(`ABA/Implementation/Alphabet.lean`); `NetworkEvent n` is that alphabet at the stage messages of
-`GBCA/ABDY/Implementation.lean`, and `ExtendedLabel n = Label n ⊕ NetworkEvent n` is the alphabet
-every component here speaks. Its silent label is `Sum.inl τ`, so every `Sum.inr`
-label is observable, and `networkEventLabels n` — the set of all of them — is what
-both compositions hide before reading the result back over `Label n`.
+`Label n` is the shared alphabet of the protocol and of its specification. It cannot name the two
+message networks, the Byzantine handshake rows, or the branches of a handshake that it does not
+distinguish. The rendezvous alphabet `NetworkEvent n M` names them, over a graded-agreement message
+type `M` (`ABA/Implementation/Alphabet.lean`); `NetworkEvent n` is that alphabet at the round
+messages of `GBCA/ABDY/Implementation.lean`, and `ExtendedLabel n = Label n ⊕ NetworkEvent n` is the
+alphabet every component here speaks. Its silent label is `Sum.inl τ`, so every `Sum.inr` label is
+observable, and `networkEventLabels n` — the set of all of them — is what both compositions hide
+before reading the result back over `Label n`.
 
 ## The coin oracle
 
@@ -46,13 +44,12 @@ is a component of both compositions, unchanged.
 
 ## The round loop of one process
 
-`RoundLoopStep` is the rule table of one process's round loop: the API rows
-`callABA` and `retABA`, the graded-agreement and coin handshakes, the DECIDED
-relay and its delivery, and an idle row for every label the process does not
-act on. It writes no stage record. The composed system runs `n` of these
-automata (`roundLoopProgram`) under a full-synchronisation product. The protocol
-composition fuses each round loop with the stage-side record into one program
-(`ABDY.ABAProgramStep`), whose record is the pair.
+`RoundLoopStep` is the rule table of one process's round loop: the API rows `callABA` and `retABA`,
+the graded-agreement and coin handshakes, the DECIDED relay and its delivery, and an idle row for
+every label the process does not act on. It writes no round record. The composed system runs `n` of
+these automata (`roundLoopProgram`) under a full-synchronisation product. The protocol composition
+fuses each round loop with the round records into one program (`ABDY.ABAProgramStep`), whose record
+is the pair.
 
 A corruption replaces the program of the process it names (D23). The flag
 `RoundLoopRecord.corrupted` goes up on the process's own half of `fail`, every
@@ -62,25 +59,24 @@ labels of `actsAt j` — the labels on which the process would act on its own
 sub-protocol messages — so those messages enter only through the Byzantine handshake rows
 (D11).
 
-## The ABA-side network
+## The ABA network
 
-`ABANetworkStep` is what the network adversary retains once the round networks have
-taken the stage sent sets: the DECIDED sets `decidedSent j`, the corrupted set `F` with
-its budget, and the authorisation of every Byzantine handshake row. `ABANetwork` is that
-automaton. Its `fail` row carries the budget guard `k ∉ F ∧ |F| < f`, so a
-corruption fires exactly when it takes effect, and its `retByzantine` row lets a
-corrupted process return without DECIDED evidence, pairing with the replaced
-program's self-loop on `retABA` (D23). It holds no ghost record: the bound bit
-a graded-agreement return announces belongs to the round, so the round's
-instance carries it and both rows here idle on it.
+`ABANetworkStep` is what the network adversary retains once the round networks have taken the round
+sent sets: the DECIDED sets `decidedSent j`, the corrupted set `F` with its budget, and the
+authorisation of every Byzantine handshake row. `ABANetwork` is that automaton. Its `fail` row
+carries the budget guard `k ∉ F ∧ |F| < f`, so a corruption fires exactly when it takes effect, and
+its `retByzantine` row lets a corrupted process return without DECIDED evidence, pairing with the
+replaced program's self-loop on `retABA` (D23). It holds no ghost record: the bound bit a
+graded-agreement return announces belongs to the round, so the round's instance carries it and both
+rows here idle on it.
 
 ## What this file supplies
 
 The two rule tables above, the two automata they carry, the determinacy of
 both tables, and the inversion tables that read a row of each off its label
 (`roundLoopStep_*`, `abaNetworkStep_*`) — among them `roundLoopStep_noStep`, which reads every row
-of a replaced program as a self-loop. It also supplies the readings of the
-synchronised round-loop group in both directions (`roundLoopProduct_inv`,
+of a replaced program as a self-loop. It also supplies the systems of the
+synchronised round-loop group in both directions (`roundLoopProduct_inversion`,
 `roundLoopProduct_pure`) and the lemmas that pin a round-loop tuple down from its
 per-process rows (`roundLoopRecords_*`).
 -/
@@ -94,12 +90,12 @@ open Implementation
 
 /-! ### The auxiliary alphabet
 
-The rendezvous alphabet, the hidden-label set, the labels a process acts on,
-the coin oracle's label pullback and the lifted oracle are parametric in the
-graded-agreement message type (`ABA/Implementation/Alphabet.lean`). This reading fixes that
-type to the stage messages of `GBCA/ABDY/Implementation.lean`. -/
+The rendezvous alphabet, the hidden-label set, the labels a process acts on, the coin oracle's label
+pullback and the lifted oracle are parametric in the graded-agreement message type
+(`ABA/Implementation/Alphabet.lean`). This file fixes that type to the round messages of
+`GBCA/ABDY/Implementation.lean`. -/
 
-/-- The rendezvous alphabet at the stage messages of `GBCA/ABDY/Implementation.lean`. -/
+/-- The rendezvous alphabet at the round messages of `GBCA/ABDY/Implementation.lean`. -/
 abbrev NetworkEvent (n : ℕ) : Type := Implementation.NetworkEvent n GBCA.ByABDY.Message
 
 /-- The extended alphabet. Its silent label is `Sum.inl τ`, so every
@@ -122,11 +118,10 @@ that `PLTS.ABA` itself carries only what the chain cites. -/
 
 /-! ### The round-loop program of one process
 
-The automaton that calls a round's graded-agreement instance and the coin, and
-decides. It writes no stage record: the five multicast levels and the stage
-delivery are internal to a round instance, so they leave no row here, and the
-three Byzantine graded-agreement rows change no round-loop data, which is
-why they appear below only as idle rows.
+The automaton that calls a round's graded-agreement instance and the coin, and decides. It writes no
+round record: the five multicast levels and the round delivery are internal to a round instance, so
+they leave no row here, and the three Byzantine graded-agreement rows change no round-loop data,
+which is why they appear below only as idle rows.
 
 The programs sit under a full-synchronisation product, so every label that can
 fire in the composite has a row: the participant's, or an idle one. Unlike the
@@ -172,8 +167,8 @@ inductive RoundLoopStep (P : Parameters) (j : Fin P.n) :
   /-- A return by another process: not `j`'s business. -/
   | retABAIdle (c : RoundLoopRecord P.n) (id : Fin P.n) (b : Bool) (hid : id ≠ j) :
       RoundLoopStep P j c (Sum.inl (.retABA id b)) (PMF.pure c)
-  /-- The graded-agreement call, round-loop half: hand the estimate over and
-  wait. Opening the stage record is the round instance's half. -/
+  /-- The graded-agreement call, round-loop half: hand the estimate over and wait. Opening the round
+  record is the round instance's half. -/
   | callG (c : RoundLoopRecord P.n) (r : ℕ) (b : Bool) (hh : c.corrupted = false)
       (hph : c.process.phase = .toCallG) (hr : c.process.round = r)
       (hest : c.process.estimate = some b) :
@@ -255,8 +250,8 @@ inductive RoundLoopStep (P : Parameters) (j : Fin P.n) :
   | retWPublishIdle (c : RoundLoopRecord P.n) (r : ℕ) (id : Fin P.n) (co : Bool) (b : Bool)
       (hid : id ≠ j) :
       RoundLoopStep P j c (Sum.inr (.retWPublish r id co b)) (PMF.pure c)
-  /-- The graded-agreement call against an already-called stage record: the
-  round loop moves and nothing else does — the whole row is core content. -/
+  /-- The graded-agreement call against an already-called round record: the round loop moves and
+  nothing else does — the whole row is core content. -/
   | gbcaCallLoop (c : RoundLoopRecord P.n) (r : ℕ) (b : Bool) (hh : c.corrupted = false)
       (hph : c.process.phase = .toCallG) (hr : c.process.round = r)
       (hest : c.process.estimate = some b) :
@@ -266,15 +261,15 @@ inductive RoundLoopStep (P : Parameters) (j : Fin P.n) :
   | gbcaCallLoopIdle (c : RoundLoopRecord P.n) (r : ℕ) (id : Fin P.n) (b : Bool)
       (hid : id ≠ j) :
       RoundLoopStep P j c (Sum.inr (.gbcaCallLoop r id b)) (PMF.pure c)
-  /-- A Byzantine graded-agreement call (D11) writes a stage record and no
-  round-loop data: every round loop, the named one included, stands still. -/
+  /-- A Byzantine graded-agreement call (D11) writes a round record and no round-loop data: every
+  round loop, the named one included, stands still. -/
   | byzantineCallGIdle (c : RoundLoopRecord P.n) (r : ℕ) (k : Fin P.n) (b : Bool) :
       RoundLoopStep P j c (Sum.inr (.byzantineCallG r k b)) (PMF.pure c)
-  /-- A Byzantine graded-agreement call against an already-called stage record
-  (D11): nothing moves anywhere. -/
+  /-- A Byzantine graded-agreement call against an already-called round record (D11): nothing moves
+  anywhere. -/
   | byzantineCallGLoopIdle (c : RoundLoopRecord P.n) (r : ℕ) (k : Fin P.n) (b : Bool) :
       RoundLoopStep P j c (Sum.inr (.byzantineCallGLoop r k b)) (PMF.pure c)
-  /-- A Byzantine graded-agreement return (D11): stage content only. -/
+  /-- A Byzantine graded-agreement return (D11): round content only. -/
   | byzantineRetGIdle (c : RoundLoopRecord P.n) (r : ℕ) (k : Fin P.n) (out : GBCAOutput)
       (bnd : Bool) :
       RoundLoopStep P j c (Sum.inr (.byzantineRetG r k out bnd)) (PMF.pure c)
@@ -292,8 +287,7 @@ What is left of the network adversary once the round-tagged sent sets have gone 
 the round networks: the DECIDED sets, the corrupted set with its budget, and
 the authorisation of every Byzantine handshake row. -/
 
-/-- The state of the ABA-side network: the DECIDED sets and the corrupted
-set. -/
+/-- The state of the ABA network: the DECIDED sets and the corrupted set. -/
 structure ABANetworkState (n : ℕ) : Type where
   /-- `decidedSent j` — the DECIDED payloads process `j` has multicast (D12′). -/
   decidedSent : Fin n → Finset Bool
@@ -326,7 +320,7 @@ def corrupt (P : Parameters) (id : Fin P.n) (a : ABANetworkState P.n) : ABANetwo
 
 end ABANetworkState
 
-/-- The step relation of the ABA-side network. All transitions are Dirac. -/
+/-- The step relation of the ABA network. All transitions are Dirac. -/
 inductive ABANetworkStep (P : Parameters) :
     ABANetworkState P.n → ExtendedLabel P.n → PMF (ABANetworkState P.n) → Prop
   /-- The DECIDED relay's half: the payload must not be sent yet (D12′). -/
@@ -339,16 +333,14 @@ inductive ABANetworkStep (P : Parameters) :
   /-- The fused coin return's half: sent the published payload (D10, D12′). -/
   | retWPublish (a : ABANetworkState P.n) (r : ℕ) (id : Fin P.n) (c : Bool) (b : Bool) :
       ABANetworkStep P a (Sum.inr (.retWPublish r id c b)) (PMF.pure (a.recordDecided id b))
-  /-- A graded-agreement call against an already-called stage record publishes
-  nothing here. -/
+  /-- A graded-agreement call against an already-called round record publishes nothing here. -/
   | gbcaCallLoop (a : ABANetworkState P.n) (r : ℕ) (id : Fin P.n) (b : Bool) :
       ABANetworkStep P a (Sum.inr (.gbcaCallLoop r id b)) (PMF.pure a)
   /-- The authorisation of a Byzantine graded-agreement call (D11): the round
   instance carries the effect, this component carries the guard. -/
   | byzantineCallG (a : ABANetworkState P.n) (r : ℕ) (k : Fin P.n) (b : Bool) (hF : k ∈ a.F) :
       ABANetworkStep P a (Sum.inr (.byzantineCallG r k b)) (PMF.pure a)
-  /-- The authorisation of a Byzantine call against an already-called stage
-  record (D11). -/
+  /-- The authorisation of a Byzantine call against an already-called round record (D11). -/
   | byzantineCallGLoop (a : ABANetworkState P.n) (r : ℕ) (k : Fin P.n) (b : Bool)
       (hF : k ∈ a.F) :
       ABANetworkStep P a (Sum.inr (.byzantineCallGLoop r k b)) (PMF.pure a)
@@ -370,7 +362,7 @@ inductive ABANetworkStep (P : Parameters) :
   | retABA (a : ABANetworkState P.n) (id : Fin P.n) (b : Bool) (h : b ∈ a.decidedSent id) :
       ABANetworkStep P a (Sum.inl (.retABA id b)) (PMF.pure a)
   /-- A corrupted process returns whatever it likes (D23): its program has been
-  replaced, so the DECIDED evidence the honest row asks for is not required of
+  replaced, so the DECIDED evidence the correct row asks for is not required of
   it. The authorisation is this component's `id ∈ F`, and the round loop's half
   is the replaced program's self-loop. -/
   | retByzantine (a : ABANetworkState P.n) (id : Fin P.n) (b : Bool) (hF : id ∈ a.F) :
@@ -416,7 +408,7 @@ noncomputable def roundLoopProgram (P : Parameters) (j : Fin P.n) :
     (l : ExtendedLabel P.n) (ν : PMF (RoundLoopRecord P.n)) :
     (roundLoopProgram P j).step c l ν ↔ RoundLoopStep P j c l ν := Iff.rfl
 
-/-- The ABA-side network. -/
+/-- The ABA network. -/
 noncomputable def ABANetwork (P : Parameters) : System (ABANetworkState P.n) (ExtendedLabel P.n)
   where
   init := ABANetworkState.initial P.n
@@ -436,7 +428,7 @@ theorem roundLoopStep_dirac {P : Parameters} {j : Fin P.n} {c : RoundLoopRecord 
     ∃ c', ν = PMF.pure c' := by
   cases h <;> exact ⟨_, rfl⟩
 
-/-- Every ABA-side network transition is Dirac. -/
+/-- Every ABA network transition is Dirac. -/
 theorem abaNetworkStep_dirac {P : Parameters} {a : ABANetworkState P.n} {l : ExtendedLabel P.n}
     {μ : PMF (ABANetworkState P.n)} (h : ABANetworkStep P a l μ) : ∃ a', μ = PMF.pure a' := by
   cases h <;> exact ⟨_, rfl⟩
@@ -454,7 +446,7 @@ theorem roundLoopStep_no_tau {P : Parameters} {j : Fin P.n} {c : RoundLoopRecord
 /-! ### Reading and building a transition of the round-loop group -/
 
 /-- A synchronised transition of the round-loop group on a visible label. -/
-theorem roundLoopProduct_inv {P : Parameters} {C : ∀ _ : Fin P.n,
+theorem roundLoopProduct_inversion {P : Parameters} {C : ∀ _ : Fin P.n,
     RoundLoopRecord P.n} {l : ExtendedLabel P.n} {μ : PMF (∀ _ : Fin P.n, RoundLoopRecord P.n)}
     (h : (System.synchronisedProduct (roundLoopProgram P)).step C l μ) :
     ∃ y : ∀ _ : Fin P.n, RoundLoopRecord P.n,
@@ -494,7 +486,7 @@ Each lemma reads a row of `RoundLoopStep` off its label: the participant's row
 as its guards together with the Dirac it produces, and the idle row of a
 non-participant as the identity. A participant's row carries the health guard
 `corrupted = false`, and on a label outside `actsAt j` the replaced program's
-self-loop is a second reading of the same label (D23). -/
+self-loop is a second row on the same label (D23). -/
 
 section CoreInversion
 
@@ -725,7 +717,7 @@ theorem roundLoopStep_noStep {L : ExtendedLabel P.n} (hc : c.corrupted = true)
 
 end CoreInversion
 
-/-! ### The ABA-side network's rules, by label class -/
+/-! ### The ABA network's rules, by label class -/
 
 section ANetInversion
 

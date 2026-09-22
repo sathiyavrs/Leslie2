@@ -9,15 +9,15 @@
   \[
     val(k) = \bot \;\wedge\; \bigl(k \in F \vee call(k) = v\bigr),
   \]
-  so a corrupted process commits any payload and an honest one its call (D26); \leandeclnamed{bindCore}{PLTS.ABA.Gather.Step.bindCore}, a $\tau$-rule writing $core$ once, to an entry set $S$ under
+  so a corrupted process commits any payload and a correct one its call (D26); \leandeclnamed{bindCore}{PLTS.ABA.Gather.Step.bindCore}, a $\tau$-rule writing $core$ once, to an entry set $S$ under
   \[
     core = \bot,\qquad S \sqsubseteq val,\qquad n - f \le |S|;
   \]
   the return of a partial map $g$ under $core = C \wedge C \sqsubseteq g \wedge g \subseteq val$, at a process that has not returned; and the total corruption transform (D1).
-  Agreement and Validity are consequences of $g \subseteq val$ and the honest commit guard.
+  Agreement and Validity are consequences of $g \subseteq val$ and the correct commit guard.
   The binding content is the write-once $core$, which no rule extends or rewrites, and the return label $\mathrm{ret}(id, g, C)$ names it beside the returner and the map it is handed.
   That is what makes the core a ghost output (D29): no process holds it, the set a return delivers is specification state, and the binding content is read off a trace rather than off a state.
   Two guards of that rule are what a return then delivers, $S \sqsubseteq val$ making the core's entries committed entries and $n - f \le |S|$ giving it the source's size.
-  Both are discharged at that rule from the prefix of the execution, on the implementation side, so the instance requires of that rule only what an implementation can supply.
+  Both are discharged at that rule from the prefix of the execution, at the implementation, so the instance requires of that rule only what an implementation can supply.
   Full construction: \leandecl{PLTS.ABA.Gather.specInst}.
 \end{definition}

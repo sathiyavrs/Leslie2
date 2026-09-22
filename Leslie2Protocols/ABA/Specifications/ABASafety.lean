@@ -59,10 +59,10 @@ as well.
 Agreement rests on `SpecificationInvariant.val_stable`: `SpecStep.decide` is the sole writer
 of `val` and fires only from `val = ⊥`, so the decision value never changes
 once written. A never-corrupted returner is outside the fold at `m`, hence
-outside the pre-state's corrupted set, so `retABA_inv`'s second disjunct is
+outside the pre-state's corrupted set, so `retABA_inversion`'s second disjunct is
 impossible and both returns read that one value.
 
-Validity is a budget pigeonhole at the return. `retABA_inv` reads the returned
+Validity is a budget pigeonhole at the return. `retABA_inversion` reads the returned
 bit off the pre-state's decision value and `SpecificationInvariant.val_support` yields `f + 1`
 supporters of that bit. Every supporter is either ghost-recorded or
 ever-corrupted, and at most `f` ids are ever corrupted (`failSet` never
@@ -72,7 +72,7 @@ so `ValidityInvariant.input_source` yields its first `callABA` event.
 
 The same pigeonhole in the state alone is `InputSupport.correct_supporter`: a
 supported bit has an uncorrupted recorded inputter. It is what makes the
-mixedness guard on `SpecStep.coinFlip` unsatisfiable under honest unanimity,
+mixedness guard on `SpecStep.coinFlip` unsatisfiable under unanimity among the correct processes,
 which is where the specification holds the liveness half of Validity.
 -/
 
@@ -262,7 +262,7 @@ theorem exists_uniform_prefix (t : Seq (Label P.n)) (S : Finset (Fin P.n)) :
     · exact failSet_mono t (le_max_left ka K) hka
     · exact failSet_mono t (le_max_right ka K) (hK id hid)
 
-/-! ### Two readings of the support count -/
+/-! ### Two forms of the support count -/
 
 /-- A corrupted call preserves support. The write at `id` may replace a
 recorded `v` by the other bit, so `InputSupport.mono` does not apply. The count is
@@ -284,7 +284,7 @@ theorem InputSupport.callByzantine {s : SpecState P.n} {id : Fin P.n} {b v : Boo
 /-- **The budget pigeonhole on a single bit.** A bit with `f + 1` supporters
 has one that is not corrupted in the state, and that one is recorded. This is
 what makes the mixedness guard `SpecStep.coinFlip`'s `hmix` unsatisfiable under
-honest unanimity: were both bits supported, each would carry a recorded
+unanimity among the correct processes: were both bits supported, each would carry a recorded
 uncorrupted inputter, and the two inputters disagree. -/
 theorem InputSupport.correct_supporter {s : SpecState P.n} {b : Bool}
     (h : InputSupport P s b) (hF : s.F.card ≤ P.f) :
@@ -552,7 +552,7 @@ fold of D1-`corrupt` over the labels seen so far. `input_source` attributes a
 recorded input either to the corruption of its own entry or to the process's
 first `callABA` in the history. The first disjunct is what `SpecStep.callByzantine`
 takes: its write is unrelated to the label it carries, and its guard puts the
-writer in the corrupted set. `source_input` is the converse reading at an
+writer in the corrupted set. `source_input` is the converse statement at an
 uncorrupted process, and it is what reads an empty entry as saying no earlier
 `callABA` of that process was recorded. -/
 structure ValidityInvariant (P : Parameters) (pre : List (Label P.n)) (s : SpecState P.n) : Prop
@@ -723,7 +723,7 @@ theorem ValidityInvariant.step {pre : List (Label P.n)} {s : SpecState P.n} {l :
 returned bit, or the returning process is corrupted in the pre-state. The two
 disjuncts are the two rules that carry the label, `SpecStep.ret` and
 `SpecStep.retByzantine`. -/
-private theorem retABA_inv {s : SpecState P.n} {id : Fin P.n} {b : Bool}
+private theorem retABA_inversion {s : SpecState P.n} {id : Fin P.n} {b : Bool}
     {μ : PMF (SpecState P.n)} (hstep : SpecStep P s (.retABA id b) μ) :
     s.val = some b ∨ id ∈ s.F :=
   match hstep with
@@ -848,8 +848,8 @@ theorem spec_safe (P : Parameters) :
   rintro D ⟨pe, h_init, h_D⟩ t h_ne
   rw [← h_D t] at h_ne
   obtain ⟨e, h_exec, hloc⟩ := exists_retSite P h_init t h_ne
-  -- a never-corrupted returner is outside the fold at `m`, so `retABA_inv`'s
-  -- second disjunct is impossible and the honest rule read `val`
+  -- a never-corrupted returner is outside the fold at `m`, so `retABA_inversion`'s
+  -- second disjunct is impossible and the rule for a correct process read `val`
   have h_correct : ∀ m id b, t.get? m = some (Label.retABA id b) →
       NeverCorrupted P t id →
       ∃ (j : ℕ) (s : SpecState P.n) (pre : List (Label P.n)),
@@ -861,7 +861,7 @@ theorem spec_safe (P : Parameters) :
     intro m id b h_ret h_nc
     obtain ⟨j, s, μ, pre, h_state, h_step, h_VI, h_transfer, h_push⟩ := hloc m id b h_ret
     refine ⟨j, s, pre, h_state, h_VI, ?_, h_transfer, h_push⟩
-    rcases retABA_inv h_step with hv | hmem
+    rcases retABA_inversion h_step with hv | hmem
     · exact hv
     · refine absurd ?_ (h_nc m)
       rw [← h_transfer]
@@ -880,7 +880,7 @@ theorem spec_safe (P : Parameters) :
       exact hmem
     · obtain ⟨k, hk_lt, hk, hmin⟩ := h_push id' b hcall
       exact ⟨k, hk_lt, id', hk, h_nc', hmin⟩
-  · -- Agreement: two honest returns read the write-once decision value
+  · -- Agreement: two correct returns read the write-once decision value
     intro id b id' b' h₁ h₂ h_nc h_nc'
     obtain ⟨m₁, hm₁⟩ := Seq.mem_iff_exists_get?.mp h₁
     obtain ⟨m₂, hm₂⟩ := Seq.mem_iff_exists_get?.mp h₂

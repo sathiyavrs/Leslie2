@@ -3,19 +3,19 @@
   \lean{PLTS.ABA.GBCA.ByABDY.refinesSpecification}\leanok
   \uses{def:aba-gbca-impl, def:aba-gbca-spec}
   The GBCA implementation instance is forward-simulated, instance by instance, by the GBCA specification instance.
-  The relation reads the specification's $call$, $ret$ and $F$ off the implementation state and certifies its $excluded$ and $grade$ by receipt patterns: a \emph{exclude certificate} for every member of $excluded$, and an $n{-}f$ ECHO5 quorum for each side of the grade guard.
+  The relation reads the specification's $call$, $ret$ and $F$ off the implementation state and certifies its $excluded$ and $grade$ by receipt patterns: a \emph{exclude certificate} for every member of $excluded$, and an $n{-}f$ ECHO5 quorum for each half of the grade guard.
   Exclusions are fired on demand: a return met by a specification state whose $excluded$ lacks the bit that return needs excluded is answered by the two-step weak run $\mathrm{bindUnset};\mathrm{ret}$, and every return row --- grade-0 returns included --- does the same case split on $excluded$, however many returns preceded it.
 \end{theorem}
 
 \begin{proof}\leanok
   \uses{def:aba-gbca-impl, def:aba-gbca-spec, def:forwardsim}
-  The relation is checked constructor by constructor, and the work is in the certificates it carries for the two fields the protocol does not store.
-  A member $b$ of $excluded$ is certified either by an $n{-}f$ $\mathrm{ECHO}\,(1-b)$ receipt quorum or by a set of $n{-}f$ processes each corrupted or committed by its write-once $\mathit{sentVote}$ to a payload other than $b$; each side of the grade guard is certified by an $n{-}f$ $\mathrm{ECHO5}$ quorum at its own payload.
+  The relation is checked constructor by constructor, and the work is in the certificates it carries for the two fields the protocol does not hold.
+  A member $b$ of $excluded$ is certified either by an $n{-}f$ $\mathrm{ECHO}\,(1-b)$ receipt quorum or by a set of $n{-}f$ processes each corrupted or committed by its write-once $\mathit{sentVote}$ to a payload other than $b$; each half of the grade guard is certified by an $n{-}f$ $\mathrm{ECHO5}$ quorum at its own payload.
   All of these are $F$-blind and monotone in the delivered sets, in the write-once send fields and in $F$, so they survive every step and every $\mathrm{fail}$.
   The clause $bound\_excluded$ pins $excluded$ as an equation on the round's bound bit: empty while the bit is unwritten, and the singleton of the bit's complement once a return has written it.
   The bit on record therefore supplies the guard $(1-bnd) \in excluded$ of a return that announces it.
   Two quorum intersections carry the argument: either exclude certificate makes an $n{-}f$ $\mathrm{VOTE}\,b$ quorum impossible forever, that quorum being the only source of grade-$\ge 1$ evidence for $b$; and an $n{-}f$ $\mathrm{ECHO5}\,v$ quorum cannot coexist with an $n{-}f$ $\mathrm{ECHO5}\,\bot$ quorum, which is grade-2 / grade-0 exclusivity.
-  A return of $v$ met by a state with $1-v \notin excluded$ derives from its own guard an honest $\mathrm{BIND}\,v$ sender, whose $n{-}f$ $\mathrm{VOTE}\,v$ quorum both certifies $1-v$ excluded and refutes any certificate for $v$, and refines to an $\mathrm{INPUT}\,v$ quorum supplying the quorum guard and the $f{+}1$ $\mathrm{InputSupport}$ count of the exclusion (D8, D15); a grade-0 return names no bit, so its evidence certifies some bit instead, by a split on whether any honest process ever voted a bit.
-  Every such count passes through the invariant clause $input\_support$, that an honest multicast of $\langle\mathrm{INPUT},b\rangle$ is by a genuine holder of $b$ or already certifies $f{+}1$ distinct processes each a genuine holder of $b$ or corrupted, and transporting one to the specification side is a rewrite along $call = \mathit{input}$ and the aligned corrupted sets.
+  A return of $v$ met by a state with $1-v \notin excluded$ derives from its own guard a correct $\mathrm{BIND}\,v$ sender, whose $n{-}f$ $\mathrm{VOTE}\,v$ quorum both certifies $1-v$ excluded and refutes any certificate for $v$, and refines to an $\mathrm{INPUT}\,v$ quorum supplying the quorum guard and the $f{+}1$ $\mathrm{InputSupport}$ count of the exclusion (D8, D15); a grade-0 return names no bit, so its evidence certifies some bit instead, by a split on whether any correct process ever voted a bit.
+  Every such count passes through the invariant clause $input\_support$, that a correct multicast of $\langle\mathrm{INPUT},b\rangle$ is by a genuine holder of $b$ or already certifies $f{+}1$ distinct processes each a genuine holder of $b$ or corrupted, and transporting one to the specification is a rewrite along $call = \mathit{input}$ and the aligned corrupted sets.
   A corruption row is answered by the specification's own $\mathrm{fail}$, and every delivery, relay and protocol-send row by a specification stutter.
 \end{proof}

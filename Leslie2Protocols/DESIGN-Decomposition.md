@@ -1,17 +1,16 @@
 # Design — the decomposition of the gather-based chain
 
-The gather-based chain runs over compositions at every level. A reliable-broadcast
-instance is `n` programs beside the instance's network (`BRB.brachaInstance`,
-`ABA/ReliableBroadcast/BrachaComposition.lean`); a gather instance is `n` programs beside
-the gather network, in parallel with `2n` broadcast instances read along pullbacks naming
-them (`Gather.instanceOverBroadcasts`, `ABA/Gather/Composition.lean`); a round is `n`
-graded-agreement
-programs beside the network of the graded-agreement layer, in parallel with two gathers
-(`GBCA.ByAFW.roundOverGathers`, `ABA/GBCA/AFW/Composition.lean`). The protocol chain's round,
-`GBCA.ByABDY.composition` (`ABA/Composition/GBCAInstanceByABDY.lean`), is the template every level
-copies: components synchronise on the instance's own events, the events are hidden, and
-the result is read back over the instance's interface. `DESIGN-GatherTiers.md` is the
-account of the stack; `DESIGN-Composition.md` is the account of what each component owns.
+The gather-based chain runs over compositions at every level. A reliable-broadcast instance is `n`
+programs beside the instance's network (`BRB.brachaInstance`,
+`ABA/ReliableBroadcast/BrachaComposition.lean`); a gather instance is `n` programs beside the gather
+network, in parallel with `2n` broadcast instances read along pullbacks naming them
+(`Gather.instanceOverBroadcasts`, `ABA/Gather/Composition.lean`); a round is `n` graded-agreement
+programs beside the round's network, in parallel with two gathers (`GBCA.ByAFW.roundOverGathers`,
+`ABA/GBCA/AFW/Composition.lean`). The protocol chain's round, `GBCA.ByABDY.composition`
+(`ABA/Composition/GBCAInstanceByABDY.lean`), is the template every level copies: components
+synchronise on the instance's own events, the events are hidden, and the result is read back over
+the instance's interface. `DESIGN-GatherComposition.md` is the account of the stack;
+`DESIGN-Composition.md` is the account of what each component owns.
 
 This note records five constraints the proofs impose on that shape. Each names
 the statement that is false or unprovable without it, so that a reader can
@@ -29,13 +28,11 @@ posts nothing. The first reaches a state whose network holds the message and
 whose leader holds no input, which only `BRB.BrachaStep.byzantine` produces and only
 under `ldr ∈ F`.
 
-**What fails.** The row characterisation stated label by label,
-`brachaInstance.step s l μ ↔ ∃ l₀, specificationLabelMap l = some l₀ ∧ BrachaStep s l₀ μ`,
-is
-false: at the call label the right side admits the loop and the left side
-offers the call alone, and at the loop label the reverse. The refinement into
-the specification fails with it, since a second call with another payload would
-let the specification record and commit a value the instance never broadcast.
+**What fails.** The row characterisation stated label by label, `brachaInstance.step s l μ ↔ ∃ l₀,
+specificationLabelMap l = some l₀ ∧ BrachaStep s l₀ μ`, is false: at the call label the right-hand
+side admits the loop and the left-hand side offers the call alone, and at the loop label the
+reverse. The refinement into the specification fails with it, since a second call with another
+payload would let the specification record and commit a value the instance never broadcast.
 
 **The constraint.** Each composition speaks an alphabet in which the loop is its own
 label: `BRB.InstanceLabel = Label ⊕ LoopLabel` with `LoopLabel.callLoop m`,
@@ -77,23 +74,24 @@ k).input`. The specification's call record and an input instance's record move o
 labels under the same write-once guard, so `specificationRelation_row` answers `callProgramLoop`
 with `Gather.Step.call` and `callSpecLoop` with `Gather.Step.callLoop`. `Gather.Conformance` carries
 no clause on the two records; `specificationRelation_call` takes both guards. The permissiveness
-sits at a specification-side tier: the concrete gather over Bracha has one row per label.
+sits at a specification tier: the concrete gather over Bracha has one row per label.
 
 ## 3. The composed program drops its grade on the graded return
 
 `GBCA.ByAFW.ProgramStep.retG` is guarded by `out = some out` and `returned = false` and
 writes `out := none, returned := true`.
 
-**What fails.** The flat link's relation computes the composed state from the flat one
-(`AFW.roundProjection`), and the flat state keeps a process's grade in its round-loop record
-alone, overwritten every round. A round's grade after its return is not recoverable from
-the flat state. If the program's record kept the grade, `AFW.programProjection` could not be a
-function, `AFW.ProtocolRelation` would lose the conjunct `t.1 = fun r => roundProjection P u w r`,
-and every frame lemma of `ABA/ImplementationByAFW/RoundProjectionStep.lean`, which states the view
-after a row as that function applied, would have no statement.
+**What fails.** The simulation of the implementation into its composed system computes the composed
+state from the implementation (`AFW.roundProjection`), and the implementation's state keeps a
+process's grade in its round-loop record alone, overwritten every round. A round's grade after its
+return is not recoverable from the implementation's state. If the program's record kept the grade,
+`AFW.programProjection` could not be a function, `AFW.ProtocolRelation` would lose the conjunct `t.1
+= fun r => roundProjection P u w r`, and every frame lemma of
+`ABA/ImplementationByAFW/RoundProjectionStep.lean`, which states the view after a row as that
+function applied, would have no statement.
 
-**The constraint.** The grade is held only between `secondGatherReturn` and `retG`, inside a
-run whose intermediate state is named (`AFW.afterSecondGatherReturn`) and related to no flat
+**The constraint.** The grade is held only between `secondGatherReturn` and `retG`, inside a run
+whose intermediate state is named (`AFW.afterSecondGatherReturn`) and related to no implementation
 state; `programProjection` sets `out := none`; `GBCA.ByAFW.Invariant.out_certificate` is vacuous for
 a returned process.
 
@@ -112,29 +110,27 @@ there. The ABA and coin labels have one, and `GBCA.Step` has no row at it, so
 transition at those labels, and neither has `GBCA.ByABDY.composition`.
 
 **The constraint.** `GBCA.ByAFW.programLabelMap` sends every off-interface family label to
-`ProgramLabel.outside`, on which neither `GBCA.ByAFW.ProgramStep` nor
-`GBCA.ByAFW.NetworkStep` has a row, so the round blocks exactly where
-`GBCA.ByABDY.composition` blocks. `fail` alone maps to `none`: the layer stands still on the
-round's own `fail` row, the gathers corrupt, and in the family the label is answered by the
-broadcast act (`AFW.corruptionOverBracha`) and not by the instance.
+`ProgramLabel.outside`, on which neither `GBCA.ByAFW.ProgramStep` nor `GBCA.ByAFW.NetworkStep` has a
+row, so the round blocks exactly where `GBCA.ByABDY.composition` blocks. `fail` alone maps to
+`none`: the round's programs stand still on the round's own `fail` row, the gathers corrupt, and in
+the family the label is answered by the broadcast act (`AFW.corruptionOverBracha`) and not by the
+instance.
 
-## 5. The flat link carries the broadcast invariant on the composed side
+## 5. The simulation into the composed system carries the broadcast invariant there
 
-The flat reading has no broadcast return: a gather guard reads an `n − f`
-`VOTE` receipt quorum on the acting process's own local state in the instance
-(`AFW.firstGatherAcceptedInputs` and its companions). A composed gather program reads its store,
-written on the instance's return event, whose guard is the same count. The view
-defines a store as the value with a quorum on that local state, chosen
-classically (`AFW.broadcastReturnsFor`).
+The implementation has no broadcast return: a gather guard reads an `n − f` `VOTE` receipt quorum on
+the acting process's own local state in the instance (`AFW.firstGatherAcceptedInputs` and its
+companions). A composed gather program reads what the instances returned, written on the instance's
+return event, whose guard is the same count. The view defines the returned value as the value with a
+quorum on that local state, chosen classically (`AFW.broadcastReturnsFor`).
 
-**What fails.** A flat row hands its composed counterpart a specific value `x`
-with a quorum; the composed row needs `inputBroadcastReturned k = some x`; the store holds the
-value the view chose. The two coincide only if two vote quorums at one process
-name one value. Without that fact the composed row's guard cannot be
-discharged and `AFW.protocolSim` is unprovable. A store defined as a relation
-rather than a function, filled inside the matching run, needs the same fact: an
-earlier fill with another value would leave the instance returned and the
-second value unreachable.
+**What fails.** An implementation row hands its composed counterpart a specific value `x` with a
+quorum; the composed row needs `inputBroadcastReturned k = some x`; the instance returned the value
+the view chose. The two coincide only if two vote quorums at one process name one value. Without
+that fact the composed row's guard cannot be discharged and `AFW.protocolSim` is unprovable. A
+returned value defined by a relation rather than a function, filled inside the matching run, needs
+the same fact: an earlier fill with another value would leave the instance returned and the second
+value unreachable.
 
 **The constraint.** `AFW.ProtocolRelation` carries `AFW.BroadcastReturnsInvariant`, the invariant
 `BRB.Invariant` at every broadcast instance of the view, and
@@ -142,21 +138,20 @@ second value unreachable.
 `BRB.echoCertificate_of_vote_quorum` and `BRB.echoCertificate_unique`. The invariant holds
 initially by `BRB.Invariant.initial`, and after each matched row the view's instances
 have moved by their own rows or stood still (`AFW.InvariantStep`), so `BRB.Invariant.step`
-re-establishes it. No invariant over the flat adversary's sent sets is written.
+re-establishes it. No invariant over the implementation's network's sent sets is written.
 `broadcastReturnsFor` carries `[DecidableEq X]` explicitly, so its count is syntactically
 the count `BRB.Invariant` is stated on.
 
 ## Two consequences for the theory
 
-`Framework/Congruence.lean` proves forward simulation between labelled
-transition systems a congruence for parallel composition on either side, the
-synchronised product of a finite family, hiding and restriction, with no
-hypothesis that the systems are Dirac, and proves two simulations compose.
-Contextual refinement therefore covers contexts built from `synchronisedProduct` as
-well as from `parallel`, `abstract`, `relabel`, `System.family` and
-`System.mapIdle`. The substitutions inside a gather instance and inside a round
-(`Gather.broadcastSubstitution`, `GBCA.ByAFW.broadcastSubstitution`,
-`GBCA.ByAFW.gatherSubstitution`) are applications of these congruences and of nothing else.
+`Framework/Congruence.lean` proves forward simulation between labelled transition systems a
+congruence for parallel composition in either position, the synchronised product of a finite family,
+hiding and restriction, with no hypothesis that the systems are Dirac, and proves two simulations
+compose. Contextual refinement therefore covers contexts built from `synchronisedProduct` as well as
+from `parallel`, `abstract`, `relabel`, `System.family` and `System.mapIdle`. The substitutions
+inside a gather instance and inside a round (`Gather.broadcastSubstitution`,
+`GBCA.ByAFW.broadcastSubstitution`, `GBCA.ByAFW.gatherSubstitution`) are applications of these
+congruences and of nothing else.
 
 The `2n` broadcast instances of a gather and the two gathers of a round are
 placed under `synchronisedProduct` and `parallel` after a `mapIdle` lift along a

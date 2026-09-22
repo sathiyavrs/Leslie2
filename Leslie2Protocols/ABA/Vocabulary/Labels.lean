@@ -27,8 +27,8 @@ handshake while everyone else no-ops in place.
   and the round-`r` instance of the respective family. A `retG` label names the
   round, the process being answered, the graded outcome it receives and the
   round's bound bit.
-* `fail id` — corruption; a genuine synchronisation of **all** components
-  (each keeps its own copy of the corrupted set `F`, updated in lockstep).
+* `fail id` — corruption; a genuine synchronisation of **all** components (each keeps its own copy
+  of the corrupted set `F`, updated together).
 * `hiddenAPI` — the sub-protocol API labels, hidden (sent to `τ`) in the
   composed systems via `System.abstract`.
 

@@ -21,10 +21,10 @@ of scope.
 * `val` — the committed entries: the one value each process's contribution
   can ever deliver. Each entry is written at most once, by the internal
   transition `commit`, whose guard `k ∈ F ∨ call k = some v` says a corrupted
-  process contributes anything and an honest one only its call. This is the
+  process contributes anything and a correct one only its call. This is the
   same split of the source's call field that the BRB specification makes
   (`ABA/ReliableBroadcast/Specification.lean`), one level up: entries travel by reliable broadcast,
-  so a process corrupted after an honest call can still direct its committed
+  so a process corrupted after a correct call can still direct its committed
   entry until first use, and a specification that pinned the entry at call
   time would refuse that execution. The source's Byzantine-call τ-rule is the
   corrupted half of `commit` (deviation D26).
@@ -105,7 +105,7 @@ structure SpecState (n : ℕ) (X : Type) : Type where
   /-- The core: every return carries it. Written at most once, by
   `bindCore`. -/
   core : Option (AcceptedPairs n X)
-  /-- The corrupted set (local copy, kept in lockstep by `fail` broadcast). -/
+  /-- The corrupted set (local copy, kept equal by `fail` broadcast). -/
   F : Finset (Fin n)
 
 namespace SpecState

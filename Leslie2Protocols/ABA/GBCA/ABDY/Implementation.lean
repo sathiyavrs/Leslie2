@@ -44,7 +44,7 @@ by nondeterministic `τ`-transitions.
   Algorithm 6: the `echo5` round is elided, the decide conditions read one level
   down, and the grade-1 evidence is `f + 1` `VOTE v` where Algorithm 6 has
   `t + 1` `echo4 v`. The compression violates the paper's Graded Binding. One
-  process held at the echo stage through a grade-0 decision can afterwards
+  process held before its `ECHO` through a grade-0 decision can afterwards
   direct its write-once echo at either bit, and one corruption completes
   `f + 1` `VOTE v` for the bit of the adversary's choice — so two extensions of
   a single grade-0 return hand out two different bits. The encoding therefore
@@ -52,7 +52,7 @@ by nondeterministic `τ`-transitions.
   upstream blueprint carries a matching red annotation.
 
 The grade-1 evidence is what the depth buys. `f + 1` `BIND v` receipts exceed
-the corruption budget, so they guarantee an honest `BIND v` sender, whose own
+the corruption budget, so they guarantee a correct `BIND v` sender, whose own
 wait-condition is an `n − f` `VOTE v` receipt quorum over the write-once `VOTE`
 level — and that quorum is the object the paper's binding argument counts
 (Lemmas 4.8/4.9 through E.9).
@@ -64,9 +64,9 @@ pseudocode (`n − f`).
 
 ## Model and deviations (continuing the project's D1–D4)
 
-* **D1 (determinised `fail`).** As in the spec instance, corruption is the
-  total Dirac function `ImplementationState.corrupt` — `F` stays in lockstep with every
-  other component under the `fail` broadcast.
+* **D1 (determinised `fail`).** As in the spec instance, corruption is the total Dirac function
+  `ImplementationState.corrupt` — `F` stays equal to every other component under the `fail`
+  broadcast.
 * **D5 (set-based network).** Multicasts are idempotent: each sender owns a
   *set* `sent j` of messages it has multicast, and `received i j` is the set of
   messages from `j` that the adversary has delivered to `i` (`deliver` is a
@@ -83,20 +83,18 @@ pseudocode (`n − f`).
   they read being sent by an `upon` handler that may still be pending. The
   return rules carry the negations that the algorithm's if/else chain implies.
 
-The state is exactly the protocol's own data, held in two halves: each process
-keeps its own local state beside the messages delivered to it, and the round's
-network state keeps the per-sender sent sets and the corrupted set. `ImplementationState` is
-their pair, so the network is a component of the state and not a field of it — a
-weaker network is a different second component and leaves the rest of the round
-alone. The three return transitions are cases (1), (2), (3) of Algorithm 6's
-lines 23–29: case (1) an `n − f` `ECHO5 v` quorum, case (2) an `n − f`
-any-`ECHO5` quorum containing `ECHO5 v` together with `f + 1` `BIND v`s and
-`|Valid| > 1`, case (3) an `n − f` `ECHO5 ⊥` quorum with `|Valid| > 1`. Beside
-the receipts of its own case, each return reads the receipts named by the
-cases above it in the chain, the process's own `ECHO5` field, and the call
-record. The binding and grade information that the specification tracks is an
-abstraction of these receipt patterns and lives only on the specification
-side; the refinement (`GBCA/ABDY/RefinesSpecification.lean`) supplies it from the receipts.
+The state is exactly the protocol's own data, held in two halves: each process keeps its own local
+state beside the messages delivered to it, and the round's network state keeps the per-sender sent
+sets and the corrupted set. `ImplementationState` is their pair, so the network is a component of
+the state and not a field of it — a weaker network is a different second component and leaves the
+rest of the round alone. The three return transitions are cases (1), (2), (3) of Algorithm 6's lines
+23–29: case (1) an `n − f` `ECHO5 v` quorum, case (2) an `n − f` any-`ECHO5` quorum containing
+`ECHO5 v` together with `f + 1` `BIND v`s and `|Valid| > 1`, case (3) an `n − f` `ECHO5 ⊥` quorum
+with `|Valid| > 1`. Beside the receipts of its own case, each return reads the receipts named by the
+cases above it in the chain, the process's own `ECHO5` field, and the call record. The binding and
+grade information that the specification tracks is an abstraction of these receipt patterns and
+lives only on the specification; the refinement (`GBCA/ABDY/RefinesSpecification.lean`) supplies it
+from the receipts.
 
 ## The round's bound bit
 
@@ -137,8 +135,8 @@ inductive Message : Type
 bit a return of outcome `out` announces on its label.
 
 A value-bearing outcome announces the value it hands out. An outcome carrying no
-value announces the payload of an honest `⟨VOTE, b⟩` sender, and `true` where
-there is none. An honest `⟨VOTE, b⟩` sender holds an `n − f` `⟨ECHO, b⟩`
+value announces the payload of a correct `⟨VOTE, b⟩` sender, and `true` where
+there is none. A correct `⟨VOTE, b⟩` sender holds an `n − f` `⟨ECHO, b⟩`
 receipt quorum and at most one bit carries such a quorum, so on a reachable
 state the two bit branches are exclusive and the order in which they are read
 is immaterial. Where neither branch applies no bit is ever handed out, and the
@@ -207,9 +205,8 @@ pair, so every field of the algorithm is a field of one local state or the other
 The network state carries the name of the instance that composes it beside the
 programs (`ABA/Composition/GBCAInstanceByABDY.lean`). -/
 
-/-- The stage record of one process: its own local state and the messages
-delivered to it, indexed by sender. There is no record of what it has sent —
-the sender's sent lives in the network. -/
+/-- The round record of one process: its own local state and the messages delivered to it, indexed
+by sender. There is no record of what it has sent — the sender's sent lives in the network. -/
 structure RoundRecord (n : ℕ) : Type where
   /-- The process's own protocol state. -/
   process : ProcessRecord
@@ -221,7 +218,7 @@ namespace RoundRecord
 
 variable {n : ℕ}
 
-/-- The initial stage record: nothing received, nothing done. -/
+/-- The initial round record: nothing received, nothing done. -/
 def initial (n : ℕ) : RoundRecord n where
   process := ProcessRecord.initial
   received := fun _ => ∅
@@ -334,8 +331,8 @@ theorem mem_recordGBCASend {w : NetworkState n} {j : Fin n} {m : GBCA.ByABDY.Mes
 end NetworkState
 
 
-/-- **The state of one GBCA implementation instance**: the `n` stage records
-beside the round's network state. -/
+/-- **The state of one GBCA implementation instance**: the `n` round records beside the round's
+network state. -/
 abbrev ImplementationState (n : ℕ) : Type := (∀ _ : Fin n,
   RoundRecord n) × GBCA.ByABDY.NetworkState n
 
@@ -353,7 +350,7 @@ def sent (s : ImplementationState n) : Fin n → Finset Message := s.2.sent
 def received (s : ImplementationState n) : Fin n → Fin n → Finset Message := fun i => (s.1
   i).received
 
-/-- The corrupted set (the network state's, kept in lockstep by `fail` broadcast). -/
+/-- The corrupted set (the network state's, kept equal by `fail` broadcast). -/
 def F (s : ImplementationState n) : Finset (Fin n) := s.2.F
 
 /-- The round's bound bit (the network state's). A ghost: no rule but the three
@@ -377,7 +374,7 @@ def setBound (s : ImplementationState n) (β : Bool) : ImplementationState n := 
     (β : Bool) : setBound (u, w) β = (u, w.setBound β) := rfl
 
 /-! The bound-bit write touches the network state's own field alone, so every
-other reading of the round passes through it. -/
+other projection of the round passes through it. -/
 
 @[simp] theorem setBound_process (s : ImplementationState n) (β : Bool) :
     (s.setBound β).process = s.process := rfl
@@ -476,7 +473,7 @@ theorem setProcess_process_ne (s : ImplementationState n) (j : Fin n) (p : Proce
     {k : Fin n} (h : k ≠ j) : (s.setProcess j p).process k = s.process k := by
   simp [setProcess, process, Function.update_of_ne h]
 
-/-! A record write leaves every reading of the delivered sets alone. -/
+/-! A record write leaves every projection of the delivered sets alone. -/
 
 @[simp] theorem setProcess_receivedCount (s : ImplementationState n) (j : Fin n) (p : ProcessRecord)
     (i : Fin n) (m : Message) : (s.setProcess j p).receivedCount i m = s.receivedCount i m := by
@@ -509,7 +506,7 @@ def multicast (s : ImplementationState n) (j : Fin n) (m : Message) : Implementa
 @[simp] theorem multicast_F (s : ImplementationState n) (j : Fin n) (m : Message) :
     (s.multicast j m).F = s.F := rfl
 
-/-! A multicast is the network state's write alone, so no reading of the delivered
+/-! A multicast is the network state's write alone, so no projection of the delivered
 sets moves. -/
 
 @[simp] theorem multicast_receivedCount (s : ImplementationState n) (j : Fin n) (m : Message)
@@ -540,8 +537,8 @@ theorem sent_subset_multicast (s : ImplementationState n) (j : Fin n) (m : Messa
     s.sent k ⊆ (s.multicast j m).sent k :=
   fun _ h => mem_multicast_sent.mpr (Or.inr h)
 
-/-- The adversary delivers `m` from sender `j` to receiver `i`: the receiver's
-stage record files it under `j`'s row. -/
+/-- The adversary delivers `m` from sender `j` to receiver `i`: the receiver's round record files it
+under `j`'s row. -/
 def receiveMessage (s : ImplementationState n) (i j : Fin n) (m : Message) : ImplementationState n
   :=
   (Function.update s.1 i ((s.1 i).deliverTo j m), s.2)
@@ -586,8 +583,8 @@ theorem receivedCount_le_receiveMessage (s : ImplementationState n) (i j : Fin n
   rw [Finset.mem_filter] at hk ⊢
   exact ⟨hk.1, mem_receiveMessage_received.mpr (Or.inr hk.2)⟩
 
-/-- Corruption (deviation D1): total, Dirac, in lockstep with the spec's, and
-the network state's own row — the stage records are corruption-blind. -/
+/-- Corruption (deviation D1): total, Dirac, equal to the spec's, and the network state's own row —
+the round records are corruption-blind. -/
 def corrupt (P : Parameters) (id : Fin P.n) (s : ImplementationState P.n) : ImplementationState P.n
   :=
   (s.1, GBCA.ByABDY.NetworkState.corrupt P id s.2)
@@ -604,14 +601,14 @@ def corrupt (P : Parameters) (id : Fin P.n) (s : ImplementationState P.n) : Impl
   unfold corrupt sent GBCA.ByABDY.NetworkState.corrupt; split <;> rfl
 
 /-- The corrupted set after a corruption. `F` is the one field corruption
-writes, and the budget guard sits in the network state, so the reading is stated here
+writes, and the budget guard sits in the network state, so the statement is made here
 rather than reached by unfolding. Not a simp lemma: it introduces an `ite`. -/
 theorem corrupt_F {P : Parameters} (s : ImplementationState P.n) (id : Fin P.n) :
     (s.corrupt P id).F = if id ∉ s.F ∧ s.F.card < P.f then insert id s.F else s.F := by
   unfold corrupt F GBCA.ByABDY.NetworkState.corrupt
   split_ifs <;> rfl
 
-/-! The bound-bit write moves no reading of the round. -/
+/-! The bound-bit write moves no projection of the round. -/
 
 @[simp] theorem setBound_receivedCount (s : ImplementationState n) (β : Bool) (i : Fin n) (m :
   Message) :
@@ -675,7 +672,7 @@ theorem exists_sender_notMem {P : Parameters} {s : ImplementationState P.n} (G :
   exact ⟨j, hjF, hjQ.2⟩
 
 /-- Two `n − f` receipt quorums (at possibly different receivers) share an
-honest sender: `(n−f) + (n−f) − n = n − 2f > f ≥ |F|`. -/
+correct sender: `(n−f) + (n−f) − n = n − 2f > f ≥ |F|`. -/
 theorem exists_correct_received₂ {P : Parameters} {s : ImplementationState P.n} (hF : s.F.card ≤
   P.f)
     {i i' : Fin P.n} {m m' : Message}
@@ -826,7 +823,7 @@ inductive ImplementationStep (P : Parameters) (r : ℕ) :
         (PMF.pure ((s.setProcess id { s.process id with returned := true }).setBound bnd))
   /-- Grade-1 return (decide case (2)): an `n − f` any-`ECHO5` quorum containing
   `ECHO5 v`, `f + 1` `BIND v`s and `|Valid| > 1`. The `f + 1` `BIND v` receipts
-  put an honest `BIND v` sender — hence an `n − f` `VOTE v` receipt quorum —
+  put a correct `BIND v` sender — hence an `n − f` `VOTE v` receipt quorum —
   behind every grade-1 output. The process has called, its own `ECHO5` is out,
   and no higher case holds: `hnotGrade2` denies case (1) at either bit. -/
   | retGrade1 (s : ImplementationState P.n) (id : Fin P.n) (v : Bool) (bnd : Bool)

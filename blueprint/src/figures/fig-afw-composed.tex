@@ -18,7 +18,7 @@
   \draw[thick] (-0.5,1.45) -- (10.5,1.45);
   \node[ann, anchor=west] at (-0.45,1.72) {$\mathrm{ExtendedLabel}(n)$: every component steps};
   % the refinable position
-  \node[posn, text width=4.6cm] (low) at (2.3,0.1)
+  \node[posn, text width=4.6cm] (overbracha) at (2.3,0.1)
     {$\mathrm{roundFamilyOverBracha}(P)$: one composed round\\ per $r \in \mathbb{N}$, each $4n{+}2$ networks};
   \draw[<->] (2.3,1.45) -- (2.3,0.75);
   % the three untouched components, fed from a spine clear of both columns
@@ -27,19 +27,19 @@
   \node[comp] (w)     at (8.4,-2.0) {$\mathrm{WCC.specFamily}(P)$\\ along $\mathrm{coinLabelMap}$};
   \foreach \y in {0.6,-0.7,-2.0} \draw[<->] (5.7,1.45) -- (5.7,\y) -- (6.3,\y);
   % the three stages
-  \node[posn, minimum height=0.75cm] (ideal) at (2.3,-4.5)
-    {$\mathrm{roundFamilyOverBroadcastSpecification}(P)$ \ \ giving $\afw{\mathrm{hybrid}}_1(P)$};
-  \node[posn, minimum height=0.75cm] (pair)  at (2.3,-5.8)
-    {$\mathrm{roundFamilyOverGatherSpecifications}(P)$ \ \ giving $\afw{\mathrm{hybrid}}_2(P)$};
+  \node[posn, minimum height=0.75cm] (overbrb) at (2.3,-4.5)
+    {$\mathrm{roundFamilyOverBroadcastSpecification}(P)$ \ \ giving $\afw{\mathrm{composed}}_{\mathrm{BRB}\,\mathrm{spec}}(P)$};
+  \node[posn, minimum height=0.75cm] (overgather)  at (2.3,-5.8)
+    {$\mathrm{roundFamilyOverGatherSpecifications}(P)$ \ \ giving $\afw{\mathrm{composed}}_{\mathrm{Gather}\,\mathrm{spec}}(P)$};
   \node[posn, minimum height=0.75cm] (spec)  at (2.3,-7.1)
     {$\mathrm{gbcaSpecificationFamily}(P)$ \ \ giving $\mathrm{hybrid}(P)$};
-  \draw[->, dashed] (2.3,-3.3) -- (ideal.north);
-  \draw[->, dashed] (ideal) -- (pair);
-  \draw[->, dashed] (pair) -- (spec);
-  \node[lbl, anchor=west] at (5.2,-3.95) {stage 1: the Bracha layer};
-  \node[lbl, anchor=west] at (5.2,-5.15) {stage 2: the gather layer};
+  \draw[->, dashed] (2.3,-3.3) -- (overbrb.north);
+  \draw[->, dashed] (overbrb) -- (overgather);
+  \draw[->, dashed] (overgather) -- (spec);
+  \node[lbl, anchor=west] at (5.2,-3.95) {stage 1: the Bracha tier};
+  \node[lbl, anchor=west] at (5.2,-5.15) {stage 2: the gather tier};
   \node[lbl, anchor=west] at (5.2,-6.45) {stage 3: the counting, onto Transition System 2};
   \node[ann, anchor=north west, text width=5.6cm] at (5.2,-6.9)
-    {the left position alone is replaced, three times; the other three components
-     stand throughout};
+    {the left position alone is \mbox{replaced}, three times; the other three
+     components stand throughout};
 \end{tikzpicture}

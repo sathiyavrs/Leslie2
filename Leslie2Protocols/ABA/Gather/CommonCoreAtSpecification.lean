@@ -11,7 +11,7 @@ import Leslie2.Results
 /-!
 # The binding of a gather instance, read off its traces
 
-`CoreTrace` is the instance-level reading of the core. Every return label of
+`CoreTrace` is the instance-level statement of the core. Every return label of
 the trace carries the same payload set `C`, that set has at least `n − f`
 entries, and the returned map has every entry of it. This is the source's
 Transition System 4 binding clause, quantified over the labels of a run

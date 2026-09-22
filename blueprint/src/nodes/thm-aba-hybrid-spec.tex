@@ -13,15 +13,15 @@
 \begin{proof}\leanok
   \uses{def:aba-hybrid, def:aba-spec, def:aba-core, def:aba-gbca-spec, def:aba-wcc-spec, def:aba-labels, def:process-algebra, def:idle-family, def:forwardsim, def:weakstep, def:pmfrel, def:achievable, thm:forward-sound}
   One probabilistic forward simulation carries the hybrid to the ABA specification, \leandecl{PLTS.ABA.hybridRefinesSpecification}, and it is built by hand and checked row by row.
-  A concrete state is the quadruple $\mathrm{HybridState}(P)$ of the round specifications, the $n$ round loops, the ABA-side network and the coin oracle, which is the state of $\mathrm{hybrid}(P)$ itself.
+  A concrete state is the quadruple $\mathrm{HybridState}(P)$ of the round specifications, the $n$ round loops, the ABA network and the coin oracle, which is the state of $\mathrm{hybrid}(P)$ itself.
   The relation is \leandecl{PLTS.ABA.hybridSpecificationRelation}, the Dirac lift of \leandecl{PLTS.ABA.hybridSpecificationStateRelation}, and $\mathrm{hybridSpecificationStateRelation}$ is the conjunction of an invariant $\mathrm{Invariant}$ on the concrete state with an abstraction predicate $\mathrm{AbstractState}$ tying it to the abstract one.
-  Both read the two ABA-side components through the accessors of Definition~\ref{def:aba-core}, so the whole relation is written in the coordinates the system already has and no change of system precedes it.
+  Both read the two ABA components through the accessors of Definition~\ref{def:aba-core}, so the whole relation is written in the coordinates the system already has and no change of system precedes it.
   Take a state of $\mathrm{hybrid}(P)$ satisfying $\mathrm{Invariant} \wedge \mathrm{AbstractState}$ and a row out of it.
   $\mathrm{AbstractState}$ pins the corrupted set, the returns and $mode = flipEnabled$, so the abstract state never fires \leandeclnamed{coinFlip}{PLTS.ABA.SpecStep.coinFlip}, and it is two-phase on the abstract state's $val$ (D16).
-  Outside that disjunction it pins the ghost record as well: it agrees with the committed input at every honest process, in both phases.
+  Outside that disjunction it pins the ghost record as well: it agrees with the committed input at every correct process, in both phases.
   There are three cases.
   First, a hidden row: the abstract state answers by a stutter in the $\mathrm{AbstractState}$ frame, the coin's resolving call under the constant coupling that sends every outcome to the one unchanged abstract state.
-  Second, the first $\mathrm{retABA}$ of the run: the abstract state answers by a single weak step that binds, fills, decides and returns, its bind licensed by the $f{+}1$ input support carried in the invariant and its grade-2 lock certificate obtained by a pigeonhole on the $n-f$ DECIDED tally behind the return.
+  Second, the first $\mathrm{retABA}$ of the run: the abstract state answers by a single weak step that binds, fills, decides and returns, its bind licensed by the $f{+}1$ input support carried in the invariant and its grade-2 certificate obtained by a pigeonhole on the $n-f$ DECIDED tally behind the return.
   Third, a $\mathrm{fail}$ row: the abstract state answers by the corruption broadcast.
   Either way the relation is restored, so $\mathrm{hybridSpecificationRelation}$ is a probabilistic forward simulation, and soundness (Theorem~\ref{thm:forward-sound}) turns it into the stated inclusion, \leandecl{PLTS.ABA.hybrid_spec}.
 \end{proof}

@@ -1,8 +1,8 @@
 \begin{theorem}[Gather-based GBCA round refinement]
   \label{thm:gbca-gather-refines}
   \lean{PLTS.ABA.GBCA.roundOverBracha_refinesSpecification}\lean{PLTS.ABA.GBCA.roundOverBracha_specificationTraces}\leanok
-  \uses{thm:gbca-tier-refines, thm:gbca-pair-refines, thm:forward-trans, lem:hyperstep-weakstep}
-  The gather-based GBCA implementation refines the GBCA specification instance, round by round: the two substitutions of Theorem~\ref{thm:gbca-tier-refines} and the counting refinement of Theorem~\ref{thm:gbca-pair-refines}, each taken probabilistically over the Dirac lift of its relation, compose by Result~2 to
+  \uses{thm:gbca-round-substitutions, thm:gbca-round-refines-specification, thm:forward-trans, lem:hyperstep-weakstep}
+  The gather-based GBCA implementation refines the GBCA specification instance, round by round: the two substitutions of Theorem~\ref{thm:gbca-round-substitutions} and the counting refinement of Theorem~\ref{thm:gbca-round-refines-specification}, each taken probabilistically over the Dirac lift of its relation, compose by Result~2 to
   \[
     \mathrm{roundOverBracha}(P, r) \;\sqsubseteq\; \mathrm{specInst}(P, r),
   \]
@@ -10,7 +10,7 @@
 \end{theorem}
 
 \begin{proof}\leanok
-  \uses{thm:gbca-tier-refines, thm:gbca-pair-refines, thm:forward-trans, lem:hyperstep-weakstep}
+  \uses{thm:gbca-round-substitutions, thm:gbca-round-refines-specification, thm:forward-trans, lem:hyperstep-weakstep}
   Every tier is an LTS and each relation holds at the initial states, so each plain simulation lifts to a probabilistic one, and \leandecl{PLTS.ProbabilisticForwardSimulation.trans} chains the three.
   The inclusion is the composite's soundness.
 \end{proof}

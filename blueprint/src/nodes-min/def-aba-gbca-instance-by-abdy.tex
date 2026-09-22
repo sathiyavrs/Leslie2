@@ -1,7 +1,7 @@
 \begin{definition}[The round's graded-agreement instance]
-  \label{def:aba-gbcasub}
+  \label{def:aba-gbca-instance-by-abdy}
   \lean{PLTS.ABA.GBCA.ByABDY.GBCAEvent}\lean{PLTS.ABA.GBCA.ByABDY.GBCALabel}\lean{PLTS.ABA.GBCA.ByABDY.gbcaEvents}\lean{PLTS.ABA.GBCA.ByABDY.GBCAProgramStep}\lean{PLTS.ABA.GBCA.ByABDY.gbcaProgram}\lean{PLTS.ABA.GBCA.ByABDY.NetworkState}\lean{PLTS.ABA.GBCA.ByABDY.NetworkState.corrupt}\lean{PLTS.ABA.GBCA.ByABDY.GBCANetworkStep}\lean{PLTS.ABA.GBCA.ByABDY.GBCANetwork}\lean{PLTS.ABA.GBCA.ByABDY.ImplementationState}\lean{PLTS.ABA.GBCA.ByABDY.compositionExtended}\lean{PLTS.ABA.GBCA.ByABDY.composition}\lean{PLTS.ABA.GBCA.ByABDY.roundOwnsLabel}\lean{PLTS.ABA.GBCA.ByABDY.corruptionAct}\lean{PLTS.ABA.GBCA.ByABDY.gbcaInstanceFamily}\leanok
-  \uses{def:aba-procnet, def:aba-netadv, def:aba-gbca-vocab, def:relabel, def:syncproduct, def:idle-family, def:process-algebra}
-  One round of graded agreement cut into $n$ local stage programs beside that round's own network, together with the $\mathbb{N}$-indexed family of such rounds that is the graded-agreement side of the protocol: \leandecl{PLTS.ABA.GBCA.ByABDY.composition} and \leandecl{PLTS.ABA.GBCA.ByABDY.gbcaInstanceFamily}.
+  \uses{def:aba-programs, def:aba-network, def:aba-gbca-vocab, def:relabel, def:syncproduct, def:idle-family, def:process-algebra}
+  One round of graded agreement cut into $n$ local graded-agreement programs beside that round's own network, together with the $\mathbb{N}$-indexed family of such rounds that is the graded-agreement component of the protocol: \leandecl{PLTS.ABA.GBCA.ByABDY.composition} and \leandecl{PLTS.ABA.GBCA.ByABDY.gbcaInstanceFamily}.
   The network holds the round's per-sender message sets, the corrupted set and the round's bound bit, the last a ghost output the return rows write and announce (D29).
 \end{definition}

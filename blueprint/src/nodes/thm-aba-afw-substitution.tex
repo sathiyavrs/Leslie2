@@ -1,18 +1,19 @@
 \begin{theorem}[The gather-based substitution]
   \label{thm:aba-afw-substitution}
   \lean{PLTS.ABA.AFW.broadcastSubstitutionRelationFamily}\lean{PLTS.ABA.AFW.gatherSubstitutionRelationFamily}\lean{PLTS.ABA.AFW.roundSpecificationSubstitutionRelationFamily}\lean{PLTS.ABA.AFW.familyBroadcastSubstitutionSimulation}\lean{PLTS.ABA.AFW.familyGatherSubstitutionSimulation}\lean{PLTS.ABA.AFW.familyRoundSpecificationSubstitutionSimulation}\lean{PLTS.ABA.AFW.substitutionSimulation}\lean{PLTS.ABA.AFW.substitution}\leanok
-  \uses{def:aba-afw-sides, def:aba-hybrid, thm:gbca-tier-refines, thm:gbca-pair-refines, thm:gbca-family-refines, thm:precong-parallel, thm:precong-abstract, thm:precong-relabel, thm:forward-sound}
-  Three stages carry the gather-based composed reading to the protocol-shaped specification:
+  \uses{def:aba-afw-round-families, def:aba-hybrid, thm:gbca-round-substitutions, thm:gbca-round-refines-specification, thm:gbca-family-refines, thm:precong-parallel, thm:precong-abstract, thm:precong-relabel, thm:forward-sound}
+  Three stages carry the gather-based composed system to the protocol-shaped specification:
   \[
-    \afw{\mathrm{composed}}(P) \;\sqsubseteq\; \afw{\mathrm{hybrid}}_1(P) \;\sqsubseteq\; \afw{\mathrm{hybrid}}_2(P) \;\sqsubseteq\; \mathrm{hybrid}(P).
+    \afw{\mathrm{composed}}(P) \;\sqsubseteq\; \afw{\mathrm{composed}}_{\mathrm{BRB}\,\mathrm{spec}}(P)
+      \;\sqsubseteq\; \afw{\mathrm{composed}}_{\mathrm{Gather}\,\mathrm{spec}}(P) \;\sqsubseteq\; \mathrm{hybrid}(P).
   \]
-  Each stage is one substitution inside the round --- the broadcast substitution, the gather substitution, the counting refinement --- lifted to the $\mathbb{N}$-indexed family by the family congruence under the lockstep broadcast compatibility, and run under the composed reading's own context through the four congruences of the pipeline.
-  The third stage lands on $\mathrm{hybrid}(P)$ itself, the system the core simulation starts from, so the two implementation chains share every link from there up.
+  Each stage is one substitution inside the round --- the broadcast substitution, the gather substitution, the counting refinement --- lifted to the $\mathbb{N}$-indexed family by the family congruence under the broadcast compatibility of each relation, and run under the composed system's own context through the four congruences of the pipeline.
+  The third stage lands on $\mathrm{hybrid}(P)$ itself, the system the core simulation starts from, so the two implementation chains share every step from there up.
   Chaining the stages gives the simulation $\mathrm{substitutionSimulation}$, and chaining their soundness inclusions gives $\operatorname{ATD}(\afw{\mathrm{composed}}(P)) \subseteq \operatorname{ATD}(\mathrm{hybrid}(P))$.
 \end{theorem}
 
 \begin{proof}\leanok
-  \uses{def:aba-afw-sides, def:aba-hybrid, thm:gbca-tier-refines, thm:gbca-pair-refines, thm:gbca-family-refines, thm:precong-parallel, thm:precong-abstract, thm:precong-relabel, thm:forward-sound}
-  Theorem~\ref{thm:mapidle-cong} lifts each per-round simulation along $\mathrm{gbcaLabelMap}$; the family congruence of Theorem~\ref{thm:gbca-family-refines} lifts the result to the sides, its broadcast hypothesis discharged by the lockstep-corruption compatibility of each relation; and each family substitution runs under the syntactically identical context by $\mathrm{parallel\_right}$ followed by $\mathrm{abstract}$, $\mathrm{relabel}$ and $\mathrm{abstract}$, exactly as the substitution of Theorem~\ref{thm:aba-substitution} does.
+  \uses{def:aba-afw-round-families, def:aba-hybrid, thm:gbca-round-substitutions, thm:gbca-round-refines-specification, thm:gbca-family-refines, thm:precong-parallel, thm:precong-abstract, thm:precong-relabel, thm:forward-sound}
+  Theorem~\ref{thm:mapidle-cong} lifts each per-round simulation along $\mathrm{gbcaLabelMap}$; the family congruence of Theorem~\ref{thm:gbca-family-refines} lifts the result to the families, its broadcast hypothesis discharged by each relation's own corruption compatibility; and each family substitution runs under the syntactically identical context by $\mathrm{parallel\_right}$ followed by $\mathrm{abstract}$, $\mathrm{relabel}$ and $\mathrm{abstract}$, exactly as the substitution of Theorem~\ref{thm:aba-substitution} does.
   The stages compose by Result~2, and the inclusion is the composite of the three stage inclusions.
 \end{proof}

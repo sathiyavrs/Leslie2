@@ -1,11 +1,11 @@
 \begin{theorem}[Gather broadcast substitution]
-  \label{thm:gather-low-refines}
+  \label{thm:gather-broadcast-substitution}
   \lean{PLTS.ABA.Gather.BroadcastSubstitutionRelation}\lean{PLTS.ABA.Gather.broadcastSubstitution}\leanok
-  \uses{def:aba-gather-low, def:aba-gather-ideal, thm:brb-refines, thm:forwardsim-congruence}
+  \uses{def:aba-gather-over-bracha, def:aba-gather-over-broadcast-specification, thm:brb-refines, thm:forwardsim-congruence}
   The gather implementation over Bracha instances is forward-simulated by the gather implementation over broadcast specifications, by congruence: the broadcast refinement of Theorem~\ref{thm:brb-refines}, read along the pullback naming each of the $2n$ coordinates, is carried through the two products, the parallel composition with the gather tier held, the hiding and the restriction by Theorem~\ref{thm:forwardsim-congruence} --- \leandecl{PLTS.ABA.Gather.broadcastSubstitution}, along \leandecl{PLTS.ABA.Gather.BroadcastSubstitutionRelation}, the gather tier held equal beside the broadcast relation at every coordinate.
 \end{theorem}
 
 \begin{proof}\leanok
-  \uses{def:aba-gather-low, def:aba-gather-ideal, thm:brb-refines, def:forwardsim}
+  \uses{def:aba-gather-over-bracha, def:aba-gather-over-broadcast-specification, thm:brb-refines, def:forwardsim}
   See the Lean proof of \leandecl{PLTS.ABA.Gather.broadcastSubstitution}.
 \end{proof}

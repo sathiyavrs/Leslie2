@@ -56,20 +56,20 @@ carrying another instance's index has no image, and that instance stands still.
 Corruption and the silent label have an image at every instance, so `fail` is a
 broadcast across the whole composition.
 
-## The stores
+## What the broadcast instances returned
 
-A gather program reads no neighbouring coordinate. What a broadcast instance has
-returned to it is written on the return event into its own record: `inputBroadcastReturned k`
-is the value instance `k` returned here, `bindBroadcastReturned q` is the payload bind
-instance `q` returned here. The four rows that read what has been returned —
-`sendEcho`, `sendVote`, `bindCall` and `ret` — read the stores through
-`ProcessRecord.accepted`, `holdsInputBroadcastReturn`, `holdsBindBroadcastReturn` and `approvedBy`.
+A gather program reads no neighbouring coordinate. What a broadcast instance has returned to it is
+written on the return event into its own record: `inputBroadcastReturned k` is the value instance
+`k` returned here, `bindBroadcastReturned q` is the payload bind instance `q` returned here. The
+four rows that read what has been returned — `sendEcho`, `sendVote`, `bindCall` and `ret` — read the
+returned values through `ProcessRecord.accepted`, `holdsInputBroadcastReturn`,
+`holdsBindBroadcastReturn` and `approvedBy`.
 
 ## The core
 
 The core is a function of the gather network state alone
 (`coreOf_networkState_only`), so the gather network holds it. `coreOfNetwork` reads
-it off the network state, `coreOf_eq_coreOfNetwork` identifies the two readings, and
+it off the network state, `coreOf_eq_coreOfNetwork` identifies the two systems, and
 the network's `ret` row writes the core and carries it on the label.
 -/
 
@@ -134,8 +134,8 @@ def gatherEvents (n : ℕ) (X : Type) : Set (GatherLabel n X) := {l | ∃ e : Ga
 
 /-! ### The records -/
 
-/-- The local record of one gather program: the gather record beside the stores
-of what the broadcast instances have returned here. -/
+/-- The local record of one gather program: the gather record beside the returned values of what the
+broadcast instances have returned here. -/
 structure ProcessRecord (n : ℕ) (X : Type) extends BaseProcessRecord n X where
   /-- `inputBroadcastReturned k` — the value the instance broadcasting `k`'s input returned
   here. -/
@@ -166,7 +166,7 @@ def holdsBindBroadcastReturn {n : ℕ} {X : Type} (p : ProcessRecord n X) (q : F
 def approvedBy {n : ℕ} {X : Type} (p : ProcessRecord n X) (A : AcceptedPairs n X) : Prop :=
   A.subMap p.inputBroadcastReturned
 
-/-- The accepted pairs of `p`: the entries of its input store. AFW25's
+/-- The accepted pairs of `p`: the entries of what its input instances returned. AFW25's
 Algorithm 5 writes this set `AP_i` and multicasts it as the `ECHO` payload. -/
 def ProcessRecord.accepted {n : ℕ} {X : Type} [DecidableEq X] (p : ProcessRecord n X) :
   AcceptedPairs n X :=
@@ -175,7 +175,7 @@ def ProcessRecord.accepted {n : ℕ} {X : Type} [DecidableEq X] (p : ProcessReco
     | some v => {(k, v)}
     | none => ∅
 
-/-- A pair is accepted exactly when the input store holds it. -/
+/-- A pair is accepted exactly when the input instance's returned value holds it. -/
 theorem ProcessRecord.mem_accepted {n : ℕ} {X : Type} [DecidableEq X] {p : ProcessRecord n X}
     {k : Fin n} {v : X} : (k, v) ∈ p.accepted ↔ p.inputBroadcastReturned k = some v := by
   constructor
@@ -192,7 +192,7 @@ theorem ProcessRecord.mem_accepted {n : ℕ} {X : Type} [DecidableEq X] {p : Pro
     rw [h]
     simp
 
-/-- The accepted pairs are entries of the input store. -/
+/-- The accepted pairs are entries of the input instance's returned value. -/
 theorem ProcessRecord.accepted_subMap {n : ℕ} {X : Type} [DecidableEq X] (p : ProcessRecord n X) :
     p.accepted.subMap p.inputBroadcastReturned :=
   fun _ ha => ProcessRecord.mem_accepted.mp ha
@@ -285,10 +285,9 @@ variable [DecidableEq X]
 
 /-! ### The gather program
 
-Process `j`'s program. Every guard reads its own record and its own delivered
-sets. An event row carries the program's half of a joint step: on a multicast
-the record write, on a delivery the write of the delivered set, on a broadcast
-instance's return the write of the store. -/
+Process `j`'s program. Every guard reads its own record and its own delivered sets. An event row
+carries the program's half of a joint step: on a multicast the record write, on a delivery the write
+of the delivered set, on a broadcast instance's return the recording of the returned value. -/
 
 /-- The step relation of the gather program of process `j`. All transitions are
 Dirac. -/
@@ -336,7 +335,7 @@ inductive ProgramStep (P : Parameters) (j : Fin P.n) :
   /-- A delivery to another process is not `j`'s business. -/
   | deliverIdle (p) (i k : Fin P.n) (m : Message P.n X) (hi : i ≠ j) :
       ProgramStep P j p (Sum.inr (.deliver i k m)) (PMF.pure p)
-  /-- An input instance returns here: write the store. -/
+  /-- An input instance returns here: record the returned value. -/
   | inputBroadcastRetReceive (p) (k : Fin P.n) (v : X) :
       ProgramStep P j p (Sum.inr (.inputBroadcastRet k j v))
         (PMF.pure (p.setProcess { p.process with
@@ -362,7 +361,7 @@ inductive ProgramStep (P : Parameters) (j : Fin P.n) :
   /-- Another process's bind call is not `j`'s business. -/
   | bindCallIdle (p) (i : Fin P.n) (U : AcceptedPairs P.n X) (hi : i ≠ j) :
       ProgramStep P j p (Sum.inr (.bindCall i U)) (PMF.pure p)
-  /-- A bind instance returns here: write the store. -/
+  /-- A bind instance returns here: record the returned value. -/
   | bindRetReceive (p) (q : Fin P.n) (U : AcceptedPairs P.n X) :
       ProgramStep P j p (Sum.inr (.bindRet q j U))
         (PMF.pure (p.setProcess { p.process with
@@ -554,7 +553,7 @@ end Rules
 
 The four components of the instance state, and the four writes that reach one
 of them. A row of either tier is stated through these, so that a guard reads
-`gatherTier s` where a flat reading reads the gather instance state. -/
+`gatherTier s` where the implementation reads the gather instance state. -/
 
 section Views
 
@@ -639,9 +638,9 @@ def setCore (s : StateOverBroadcasts n X B B') (c : Option (AcceptedPairs n X)) 
 @[simp] theorem core_setCore (s : StateOverBroadcasts n X B B') (c : Option (AcceptedPairs n X)) :
     core (setCore s c) = c := rfl
 
-/-- Corruption (deviation D1): the gather network state and every broadcast
-coordinate corrupted in lockstep, the programs untouched. The two transforms
-are the corruption of the tier's broadcast instances. -/
+/-- Corruption (deviation D1): the gather network state and every broadcast coordinate corrupted
+together, the programs untouched. The two transforms are the corruption of the tier's broadcast
+instances. -/
 def corruptAll (P : Parameters) (id : Fin P.n) (cIn : B → B) (cBind : B' → B')
     (s : StateOverBroadcasts P.n X B B') : StateOverBroadcasts P.n X B B' :=
   ((s.1.1, { s.1.2 with network := s.1.2.network.corrupt P id }),
@@ -664,8 +663,8 @@ def corruptAll (P : Parameters) (id : Fin P.n) (cIn : B → B) (cBind : B' → B
 
 end Views
 
-/-- A payload set is approved at the ideal tier when every pair is a committed
-entry of the input instance that carries it. -/
+/-- A payload set is approved at the tier over the broadcast specification when every pair is a
+committed entry of the input instance that carries it. -/
 def approved {n : ℕ} (s : StateOverBroadcastSpecification n X) (A : AcceptedPairs n X) : Prop :=
   A.subMap (fun k => (inputBroadcasts s k).val)
 
@@ -924,7 +923,7 @@ theorem lift_idle {A₀ : System B Lbl} {ψ : Λ → Option Lbl} {c : B} (hψ : 
 
 /-- A synchronised transition of the lifted family on a visible label: every
 instance steps, and the joint distribution is Dirac. -/
-theorem synchronisedProductMapIdle_inv (hA : ∀ k, (A k).IsLTS) (hL : L ≠ Silent.τ)
+theorem synchronisedProductMapIdle_inversion (hA : ∀ k, (A k).IsLTS) (hL : L ≠ Silent.τ)
     (h : (System.synchronisedProduct (fun k => (A k).mapIdle (φ k))).step a L μ) :
     ∃ a' : ∀ _ : Fin n, B, μ = PMF.pure a' ∧
       ∀ k, ((A k).mapIdle (φ k)).step (a k) L (PMF.pure (a' k)) := by
@@ -954,7 +953,7 @@ theorem synchronisedProductMapIdle_none (hL : L ≠ Silent.τ) (hφ : ∀ k, φ 
 
 /-- A silent transition of the lifted family is a silent transition of exactly
 one instance. -/
-theorem synchronisedProductMapIdle_tau_inv [Silent Lbl] (hA : ∀ k, (A k).IsLTS)
+theorem synchronisedProductMapIdle_tau_inversion [Silent Lbl] (hA : ∀ k, (A k).IsLTS)
     (hτ : ∀ k, φ k (Silent.τ : Λ) = some (Silent.τ : Lbl))
     (h : (System.synchronisedProduct (fun k => (A k).mapIdle (φ k))).step a (Silent.τ : Λ) μ) :
     ∃ (k : Fin n) (c : B), μ = PMF.pure (Function.update a k c) ∧
@@ -990,7 +989,7 @@ variable [DecidableEq X] {P : Parameters}
 
 /-- A synchronised transition of the gather programs on a visible label: every
 program steps, and the joint distribution is Dirac. -/
-theorem gatherProgramProduct_inv {μ : PMF (∀ _ : Fin P.n,
+theorem gatherProgramProduct_inversion {μ : PMF (∀ _ : Fin P.n,
     LocalState P.n (ProcessRecord P.n X) (Message P.n X))} (h : (System.synchronisedProduct
       (gatherProgram P
       (X := X))).step u l μ) :
@@ -1046,7 +1045,7 @@ variable [DecidableEq X] {P : Parameters} {B B' : Type}
 /-- **The joint inversion.** A visible transition of the two tiers: every
 factor steps on the label, and the joint distribution is their Dirac
 product. -/
-theorem instanceOverBroadcastsExtended_joint_inv (hIn : ∀ k, (BIn k).IsLTS) (hBind : ∀ q,
+theorem instanceOverBroadcastsExtended_joint_inversion (hIn : ∀ k, (BIn k).IsLTS) (hBind : ∀ q,
     (BBind q).IsLTS) {μ : PMF (StateOverBroadcasts P.n X B B')} (hL : L ≠ (Silent.τ : GatherLabel
       P.n X))
     (h : (instanceOverBroadcastsExtended P X BIn BBind).step ((u, w), (a, b)) L μ) :
@@ -1062,12 +1061,12 @@ theorem instanceOverBroadcastsExtended_joint_inv (hIn : ∀ k, (BIn k).IsLTS) (h
   rcases h with ⟨-, μ₁, μ₂, hga, hbr, rfl⟩ | ⟨hτ, -⟩ | ⟨hτ, -⟩
   · rw [gatherPrograms, System.parallel_step] at hga
     rcases hga with ⟨-, ν₁, ν₂, hs, hn, rfl⟩ | ⟨hτ, -⟩ | ⟨hτ, -⟩
-    · obtain ⟨y, rfl, hall⟩ := gatherProgramProduct_inv hs
+    · obtain ⟨y, rfl, hall⟩ := gatherProgramProduct_inversion hs
       obtain ⟨v, rfl⟩ := networkStep_dirac hn
       rw [System.parallel_step] at hbr
       rcases hbr with ⟨-, ρ₁, ρ₂, hi, hb, rfl⟩ | ⟨hτ, -⟩ | ⟨hτ, -⟩
-      · obtain ⟨c, rfl, hic⟩ := synchronisedProductMapIdle_inv hIn hL hi
-        obtain ⟨d, rfl, hbd⟩ := synchronisedProductMapIdle_inv hBind hL hb
+      · obtain ⟨c, rfl, hic⟩ := synchronisedProductMapIdle_inversion hIn hL hi
+        obtain ⟨d, rfl, hbd⟩ := synchronisedProductMapIdle_inversion hBind hL hb
         exact ⟨y, v, c, d, by rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure],
           hall, hn, hic, hbd⟩
       · exact absurd hτ hL
@@ -1080,7 +1079,7 @@ theorem instanceOverBroadcastsExtended_joint_inv (hIn : ∀ k, (BIn k).IsLTS) (h
 /-- **The silent inversion.** A silent transition of the two tiers is an
 injection of the gather network, a silent step of one input instance, or a
 silent step of one bind instance: no gather program has a `τ` row. -/
-theorem instanceOverBroadcastsExtended_tau_inv (hIn : ∀ k, (BIn k).IsLTS) (hBind : ∀ q,
+theorem instanceOverBroadcastsExtended_tau_inversion (hIn : ∀ k, (BIn k).IsLTS) (hBind : ∀ q,
     (BBind q).IsLTS) {μ : PMF (StateOverBroadcasts P.n X B B')}
     (h : (instanceOverBroadcastsExtended P X BIn BBind).step ((u, w), (a,
       b)) (Silent.τ : GatherLabel P.n X) μ) :
@@ -1104,11 +1103,11 @@ theorem instanceOverBroadcastsExtended_tau_inv (hIn : ∀ k, (BIn k).IsLTS) (hBi
     rcases hbr with ⟨hτ, -⟩ | ⟨-, ρ₁, hi, rfl⟩ | ⟨-, ρ₂, hb, rfl⟩
     · exact absurd rfl hτ
     · obtain ⟨k, c, rfl, hstep⟩ :=
-        synchronisedProductMapIdle_tau_inv hIn (fun k => inputBroadcastLabelMap_tau P.n X k) hi
+        synchronisedProductMapIdle_tau_inversion hIn (fun k => inputBroadcastLabelMap_tau P.n X k) hi
       exact Or.inr
         (Or.inl ⟨k, c, by rw [prodPMF_pure_pure, prodPMF_pure_pure], hstep⟩)
     · obtain ⟨q, d, rfl, hstep⟩ :=
-        synchronisedProductMapIdle_tau_inv hBind (fun q => bindBroadcastLabelMap_tau P.n X q) hb
+        synchronisedProductMapIdle_tau_inversion hBind (fun q => bindBroadcastLabelMap_tau P.n X q) hb
       exact Or.inr
         (Or.inr ⟨q, d, by rw [prodPMF_pure_pure, prodPMF_pure_pure], hstep⟩)
 

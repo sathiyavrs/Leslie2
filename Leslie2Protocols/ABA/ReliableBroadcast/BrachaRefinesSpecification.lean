@@ -15,13 +15,12 @@ import Leslie2Protocols.Framework.FamilySimulation
 instance with the same leader, read over the instance's interface
 (`BRB.specificationOverInstanceAlphabet`), along `BRB.SpecificationRelation`.
 
-The refinement runs in two legs. The first is strong and functional: a
-transition of the instance is one row of `BRB.BrachaStep` at the same state, at
-the specification label the interface label projects to (`BRB.brachaInstance_step_row`).
-The second is the row-level matching `specificationRelation_row`, whose answer is a weak run
-of the specification over `BRB.Label`; it is lifted to the interface along a
-section of `BRB.specificationLabelMap`, which is where the call loop is answered by the
-specification's own loop row.
+The refinement runs in two steps. The first is strong and functional: a transition of the instance
+is one row of `BRB.BrachaStep` at the same state, at the specification label the interface label
+projects to (`BRB.brachaInstance_step_row`). The second is the row-level matching
+`specificationRelation_row`, whose answer is a weak run of the specification over `BRB.Label`; it is
+lifted to the interface along a section of `BRB.specificationLabelMap`, which is where the call loop
+is answered by the specification's own loop row.
 
 The one piece of abstract information the specification tracks and the
 implementation does not is the committed value `val`. The refinement supplies
@@ -30,26 +29,26 @@ refinement: the specification's `commit` is fired inside the return run, at
 the first return that needs it.
 
 * `BRB.EchoCertificate s m` — some receiver holds an `ECHO m` receipt quorum, more
-  than `(n + f) / 2` senders. F-blind (it counts receipts, not honesty) and
+  than `(n + f) / 2` senders. F-blind (it counts receipts, not correctness) and
   monotone (receipts only accumulate), so it survives every rule and every
   corruption.
 * At most one value is ever echo-certified (`echoCertificate_unique`): two `ECHO`
-  receipt quorums share an honest sender, whose `sentEcho` field is
+  receipt quorums share a correct sender, whose `sentEcho` field is
   write-once.
 * Every return guard yields a certificate (`echoCertificate_of_vote_quorum`): a
-  `2f + 1` `VOTE m` receipt quorum contains an honest voter, whose vote is
+  `2f + 1` `VOTE m` receipt quorum contains a correct voter, whose vote is
   backed — through the amplification chain, collapsed by the invariant clause
   `vote_backed` — by an `ECHO m` receipt quorum.
-* A certificate identifies the honest leader's input
-  (`input_of_echoCertificate`): an `ECHO` quorum contains an honest echoer, and an
-  honest echo carries the leader's input — the invariant clause `echo_provenance`,
+* A certificate identifies the correct leader's input
+  (`input_of_echoCertificate`): an `ECHO` quorum contains a correct echoer, and an
+  correct echo carries the leader's input — the invariant clause `echo_provenance`,
   which covers the three disjuncts of the `ECHO` guard.
 
 The matching: internal rules stutter; `call` and `fail` are answered by their
 specification rows; `ret id m` is answered by `ret` alone when `val` is
 already committed (the certificates identify the values), and by the two-step
 run `commit ; ret` (`weakLStep_tauThen`) when it is not — with `commit`'s
-guard discharged by `input_of_echoCertificate` under an honest leader and by
+guard discharged by `input_of_echoCertificate` under a correct leader and by
 membership in `F` otherwise.
 -/
 
@@ -88,9 +87,9 @@ theorem EchoCertificate.receiveMessage {s : BrachaState P.n M} {m : M} (h : Echo
 
 /-! ### The invariant -/
 
-/-- The BRB implementation invariant. The `*_confirmed` clauses tie an honest
-sender's sent to its write-once field; `echo_provenance` carries an honest echo back
-to an honest leader's call record, and `vote_backed` ties an honest vote to the
+/-- The BRB implementation invariant. The `*_confirmed` clauses tie a correct
+sender's sent to its write-once field; `echo_provenance` carries a correct echo back
+to a correct leader's call record, and `vote_backed` ties a correct vote to the
 receipts that justified it, with the amplification chain collapsed into
 `EchoCertificate`. -/
 structure Invariant (P : Parameters) (ldr : Fin P.n) (s : BrachaState P.n M) : Prop where
@@ -98,23 +97,23 @@ structure Invariant (P : Parameters) (ldr : Fin P.n) (s : BrachaState P.n M) : P
   F_card : s.F.card ≤ P.f
   /-- Delivered messages were multicast. -/
   received_subset_sent : ∀ i k, s.received i k ⊆ s.sent k
-  /-- An honest leader's sent `INIT` carries its input. -/
+  /-- A correct leader's sent `INIT` carries its input. -/
   init_confirmed : ldr ∉ s.F → ∀ m, Message.init m ∈ s.sent ldr →
     (s.process ldr).input = some m
-  /-- An honest sender's sent `ECHO` matches its write-once field. -/
+  /-- A correct sender's sent `ECHO` matches its write-once field. -/
   echo_confirmed : ∀ k ∉ s.F, ∀ m, Message.echo m ∈ s.sent k →
     (s.process k).sentEcho = some m
-  /-- An honest echo of `m` carries the leader's input: under an honest leader,
+  /-- A correct echo of `m` carries the leader's input: under a correct leader,
   `m` is what the leader was called with. Each of the three disjuncts of the
   `ECHO` guard leads back to that call record. -/
   echo_provenance : ∀ k ∉ s.F, ∀ m, (s.process k).sentEcho = some m →
     ldr ∈ s.F ∨ (s.process ldr).input = some m
-  /-- An honest sender's sent `VOTE` matches its write-once field. -/
+  /-- A correct sender's sent `VOTE` matches its write-once field. -/
   vote_confirmed : ∀ k ∉ s.F, ∀ m, Message.vote m ∈ s.sent k →
     (s.process k).sentVote = some m
-  /-- An honest vote is backed by an `ECHO` receipt quorum somewhere: the
+  /-- A correct vote is backed by an `ECHO` receipt quorum somewhere: the
   quorum rule witnesses itself, and the amplification rule inherits the
-  witness from an honest backer. -/
+  witness from a correct backer. -/
   vote_backed : ∀ k ∉ s.F, ∀ m, (s.process k).sentVote = some m → EchoCertificate P s m
 
 /-- The invariant holds initially. -/
@@ -122,8 +121,8 @@ theorem Invariant.initial : Invariant P ldr (BrachaState.initial P.n M) := by
   refine ⟨by simp [BrachaState.initial], ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
     simp [BrachaState.initial, ProcessRecord.initial]
 
-/-- An `ECHO m` receipt quorum holds an honest echoer of `m`: the quorum
-exceeds the corruption budget (`f < echoReceiptQuorum`), and an honest sender's sent
+/-- An `ECHO m` receipt quorum holds a correct echoer of `m`: the quorum
+exceeds the corruption budget (`f < echoReceiptQuorum`), and a correct sender's sent
 `ECHO` matches its write-once field. -/
 theorem Invariant.correct_echoer {s : BrachaState P.n M} (hInv : Invariant P ldr s) {i : Fin P.n} {m
   : M}
@@ -134,8 +133,8 @@ theorem Invariant.correct_echoer {s : BrachaState P.n M} (hInv : Invariant P ldr
   obtain ⟨k, hkF, hkrecv⟩ := InstanceState.exists_sender_notMem s.F hlt
   exact ⟨k, hkF, hInv.echo_confirmed k hkF m (hInv.received_subset_sent i k hkrecv)⟩
 
-/-- `f + 1` `VOTE m` receipts hold an honest voter for `m`: they exceed the
-corruption budget, and an honest sender's sent `VOTE` matches its write-once
+/-- `f + 1` `VOTE m` receipts hold a correct voter for `m`: they exceed the
+corruption budget, and a correct sender's sent `VOTE` matches its write-once
 field. -/
 theorem Invariant.correct_voter {s : BrachaState P.n M} (hInv : Invariant P ldr s) {i : Fin P.n} {m
   : M}
@@ -461,7 +460,7 @@ theorem Invariant.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (Brac
         rw [InstanceState.multicast_process, InstanceState.setProcess_process_self] at hslot
         obtain rfl : m = m' := by
           injection hslot
-        -- amplification: an honest backer supplies the certificate
+        -- amplification: a correct backer supplies the certificate
         have hlt : s.F.card < s.receivedCount k (.vote m) :=
           lt_of_lt_of_le (Nat.lt_succ_of_le hInv.F_card) hcnt
         obtain ⟨k', hk'F, hk'recv⟩ := InstanceState.exists_sender_notMem s.F hlt
@@ -600,7 +599,7 @@ theorem Invariant.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (Brac
 /-! ### Deriving the certificate -/
 
 /-- At most one value is ever echo-certified: two `ECHO` receipt quorums share
-an honest sender, whose `sentEcho` field is write-once. -/
+a correct sender, whose `sentEcho` field is write-once. -/
 theorem echoCertificate_unique {s : BrachaState P.n M} (hInv : Invariant P ldr s) {m m' : M}
     (h : EchoCertificate P s m) (h' : EchoCertificate P s m') : m = m' := by
   obtain ⟨i, hi⟩ := h
@@ -613,15 +612,15 @@ theorem echoCertificate_unique {s : BrachaState P.n M} (hInv : Invariant P ldr s
   injection h2
 
 /-- Every `2f + 1` `VOTE m` receipt quorum yields the certificate: it contains
-an honest voter, and honest votes are backed. -/
+a correct voter, and correct votes are backed. -/
 theorem echoCertificate_of_vote_quorum {s : BrachaState P.n M} (hInv : Invariant P ldr s)
     {i : Fin P.n} {m : M} (hcnt : 2 * P.f + 1 ≤ s.receivedCount i (.vote m)) :
     EchoCertificate P s m := by
   obtain ⟨k, hkF, hkslot⟩ := hInv.correct_voter (le_trans (by omega) hcnt)
   exact hInv.vote_backed k hkF m hkslot
 
-/-- Under an honest leader, the certificate identifies the leader's input: the
-`ECHO` quorum contains an honest echoer, whose echo carries the leader's
+/-- Under a correct leader, the certificate identifies the leader's input: the
+`ECHO` quorum contains a correct echoer, whose echo carries the leader's
 input. -/
 theorem input_of_echoCertificate {s : BrachaState P.n M} (hInv : Invariant P ldr s)
     (hldr : ldr ∉ s.F) {m : M} (hc : EchoCertificate P s m) :
@@ -655,8 +654,8 @@ theorem specificationRelation_init :
   refine ⟨Invariant.initial, ?_, ?_, ?_, ?_⟩ <;>
     simp [BrachaState.initial, SpecState.initial, ProcessRecord.initial]
 
-/-- **Broadcast compatibility**: the relation is preserved by corrupting both
-sides at once — the abstract state the family lifting consumes. -/
+/-- **Broadcast compatibility**: the relation is preserved by corrupting both systems at once — the
+abstract state the family lifting consumes. -/
 theorem specificationRelation_corrupt {s : BrachaState P.n M} {t : SpecState P.n M}
     (hR : SpecificationRelation P ldr s t) (id : Fin P.n) :
     SpecificationRelation P ldr (s.corrupt P id) (t.corrupt P id) := by

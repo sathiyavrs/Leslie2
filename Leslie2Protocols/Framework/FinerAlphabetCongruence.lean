@@ -9,11 +9,10 @@ import Leslie2Protocols.Framework.FamilySimulation
 /-!
 # Forward simulation is a congruence for `System.mapIdle`
 
-A forward simulation between two systems over `L` survives reading both
-systems over a finer alphabet `L'` along the same partial label map
-`φ : L' → Option L` (`System.mapIdle`, `Framework/LoopsAndInstanceFamilies.lean`):
-delegated labels are matched through the simulation, and unmapped labels —
-idle self-loops on both sides — are matched by idling
+A forward simulation between two systems over `L` survives reading both systems over a finer
+alphabet `L'` along the same partial label map `φ : L' → Option L` (`System.mapIdle`,
+`Framework/LoopsAndInstanceFamilies.lean`): delegated labels are matched through the simulation, and
+unmapped labels — idle self-loops in both systems — are matched by idling
 (`ForwardSimulation.mapIdle`).
 
 The only hypotheses are a τ round-trip for `φ`: the silent label of `L'`
@@ -180,7 +179,7 @@ theorem ForwardSimulation.mapIdle {T : Type} [Silent L] [Silent L']
         exact hlτ (Option.some.inj hφ).symm
       exact ⟨q₂', Or.inr ⟨hl'τ,
         System.weakLStep_mapIdle_of hτ' hφ hlτ hl'τ hlab⟩, hR'⟩
-  · -- Idle self-loop: the abstract side idles on the same label.
+  · -- Idle self-loop: the abstract system idles on the same label.
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     have hl'τ : ¬ l' = Silent.τ := by

@@ -1,0 +1,6 @@
+\begin{definition}[The gather-based round families and their protocol-shaped systems]
+  \label{def:aba-afw-round-families}
+  \lean{PLTS.ABA.AFW.corruptionOverBracha}\lean{PLTS.ABA.AFW.corruptionOverBroadcastSpecification}\lean{PLTS.ABA.AFW.corruptionOverGatherSpecifications}\lean{PLTS.ABA.AFW.roundFamilyOverBracha}\lean{PLTS.ABA.AFW.roundFamilyOverBroadcastSpecification}\lean{PLTS.ABA.AFW.roundFamilyOverGatherSpecifications}\lean{PLTS.ABA.AFW.composed}\lean{PLTS.ABA.AFW.composedOverBroadcastSpecification}\lean{PLTS.ABA.AFW.composedOverGatherSpecifications}\leanok
+  \uses{def:aba-round-over-bracha, def:aba-gbca-instance-by-abdy, def:aba-composed, def:idle-family, def:process-algebra, def:relabel}
+  Each system over the two-gather round, over the extended alphabet it speaks itself, gathered into the $\mathbb{N}$-indexed family with the corruption broadcast, and put through the composed system's pipeline beside its other three components: the three systems $\afw{\mathrm{composed}}(P)$, $\afw{\mathrm{composed}}_{\mathrm{BRB}\,\mathrm{spec}}(P)$ and $\afw{\mathrm{composed}}_{\mathrm{Gather}\,\mathrm{spec}}(P)$, of which the first reads the gather-based protocol as a composition --- \leandecl{PLTS.ABA.AFW.composed}.
+\end{definition}

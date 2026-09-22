@@ -28,14 +28,12 @@ trace distribution:
 * `safety_transfer` — trace-support safety transfers along
   `achievableTraceDists ⊆`.
 
-It also carries the label-side transport of a run: `AlterSeq.mapLabels g` rewrites
-the labels of a run in place, leaving its states — and therefore its
-termination, its `stateAt` and its `endState` — alone. A run of `sys` is a run
-of `sys'` once `g` turns every step of the one into a step of the other
-(`is_partial_exec_mapLabels`), and its trace is the original trace relabelled
-whenever `g` preserves and reflects the silent label (`System.trace_mapLabels`):
-both sides then drop exactly the same transitions.
--/
+It also carries the label transport of a run: `AlterSeq.mapLabels g` rewrites the labels of a run in
+place, leaving its states — and therefore its termination, its `stateAt` and its `endState` — alone.
+A run of `sys` is a run of `sys'` once `g` turns every step of the one into a step of the other
+(`is_partial_exec_mapLabels`), and its trace is the original trace relabelled whenever `g` preserves
+and reflects the silent label (`System.trace_mapLabels`): both systems then drop exactly the same
+transitions. -/
 
 open Stream'
 
@@ -97,8 +95,8 @@ end AlterSeq
 
 /-! ### Relabelling the transitions of a run -/
 
-/-- Relabel the transitions of an alternating sequence, leaving its states
-untouched — the label-side companion of `AlterSeq.map`. -/
+/-- Relabel the transitions of an alternating sequence, leaving its states untouched — the label
+companion of `AlterSeq.map`. -/
 def AlterSeq.mapLabels {S L L' : Type} (g : L → L') (e : AlterSeq S L) :
     AlterSeq S L' where
   init := e.init
@@ -158,9 +156,8 @@ theorem is_partial_exec_mapLabels {S L L' : Type} {sys : System S L} {sys' : Sys
     obtain ⟨sn, μ, hsn, hstep, hmem⟩ := hpe n l₀ x hq
     exact ⟨sn, μ, by rw [AlterSeq.stateAt_mapLabels]; exact hsn, hg sn l₀ μ hstep, hmem⟩
 
-/-- The trace of a relabelled execution is the relabelled trace, whenever the
-label map preserves and reflects the silent label: both sides drop exactly the
-same transitions. -/
+/-- The trace of a relabelled execution is the relabelled trace, whenever the label map preserves
+and reflects the silent label: both systems drop exactly the same transitions. -/
 theorem System.trace_mapLabels {S L L' : Type} [Silent L] [Silent L']
     (sys' : System S L') (sys : System S L) (g : L → L')
     (hgτ : ∀ x, g x = (Silent.τ : L') ↔ x = (Silent.τ : L))

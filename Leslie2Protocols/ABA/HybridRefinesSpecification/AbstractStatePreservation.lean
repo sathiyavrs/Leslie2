@@ -31,12 +31,11 @@ variable {P : Parameters}
 
 /-! ### Stage C: `AbstractState` preservation for the stutter rows
 
-Every one of `hybrid_step_tau`'s six disjuncts is answered by a stutter: the
-abstract state is untouched by every hidden row and only moves at the visible rows
-(`callABA`/`retABA`/`fail`), handled in `HybridRefinesSpecification/Simulation.lean`. All six lemmas
-below are instances of a single frame argument: `AbstractState` inspects only `F`, the
-per-process `input`/`returned` projections, and the `g`-side grade-2 lock
-certificate — and each row preserves all three. -/
+Every one of `hybrid_step_tau`'s six disjuncts is answered by a stutter: the abstract state is
+untouched by every hidden row and only moves at the visible rows (`callABA`/`retABA`/`fail`),
+handled in `HybridRefinesSpecification/Simulation.lean`. All six lemmas below are instances of a
+single frame argument: `AbstractState` inspects only `F`, the per-process `input`/`returned`
+projections, and the grade-2 lock on `g` certificate — and each row preserves all three. -/
 
 /-- `AbstractState` transfers along any frame that preserves `F`, the per-process
 `input`/`returned` projections, and the grade-2 certificate/holder-pin package. -/
@@ -193,8 +192,8 @@ theorem AbstractState.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n
   exact hA.unchangedBy hCFrame.1 (fun id' => (hCFrame.2 id').1) (fun id' => (hCFrame.2 id').2) hAF
 /-! ### Assembly: `Invariant` is preserved by every `hybrid` step -/
 
-/-- Reading a row where the ABA-side pair moves alone: the pair's own outcome,
-the coin oracle standing still. -/
+/-- Reading a row where the ABA component moves alone: its own outcome, the coin oracle standing
+still. -/
 theorem mem_support_abaRow {P : Parameters} {μc : PMF (ABAState P)}
     {o w' : ℕ → WCC.SpecState P.n} {C' : ∀ _ : Fin P.n,
       RoundLoopRecord P.n} {A' : ABANetworkState P.n}
@@ -206,7 +205,7 @@ theorem mem_support_abaRow {P : Parameters} {μc : PMF (ABAState P)}
   obtain ⟨rfl, rfl, rfl⟩ := heq
   exact ⟨hc, rfl⟩
 
-/-- Reading a row where the ABA-side pair and the coin oracle move together. -/
+/-- Reading a row where the ABA component and the coin oracle move together. -/
 theorem mem_support_coinRow {P : Parameters} {μc : PMF (ABAState P)}
     {μw' : PMF (WCC.SpecState P.n)} {o w' : ℕ → WCC.SpecState P.n} {r : ℕ}
     {C' : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A' : ABANetworkState P.n}

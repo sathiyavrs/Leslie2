@@ -48,13 +48,12 @@ achievable trace distributions coincide: `StateErasure.achievableTraceDists_eq`.
 
 ## Congruences
 
-An erasure survives parallel composition on either side, against a component whose step
-relation is saturated along `φ` (`System.LabelSaturated`); abstraction of a `φ`-saturated
-set of labels; and restriction along the left summand of an extended alphabet
-(`Framework/Relabel.lean`). Saturation itself is preserved by parallel composition,
-abstraction, the full-synchronisation product (`Framework/SynchronisedProduct.lean`) and the partial
-label pullback `System.mapIdle` (`Framework/LoopsAndInstanceFamilies.lean`).
--/
+An erasure survives parallel composition in either position, against a component whose step relation
+is saturated along `φ` (`System.LabelSaturated`); abstraction of a `φ`-saturated set of labels; and
+restriction along the left summand of an extended alphabet (`Framework/Relabel.lean`). Saturation
+itself is preserved by parallel composition, abstraction, the full-synchronisation product
+(`Framework/SynchronisedProduct.lean`) and the partial label pullback `System.mapIdle`
+(`Framework/LoopsAndInstanceFamilies.lean`). -/
 
 namespace PLTS
 
@@ -70,10 +69,10 @@ def SeparatesSilent (φ : L → L) : Prop :=
 /-- The identity separates the silent label: its fibres are singletons. -/
 theorem separatesSilent_id : SeparatesSilent (id : L → L) := fun _ h => h
 
-/-- A system is **saturated along `φ`** when its step relation is constant on the `φ`-fibres
-of the label: labels with the same `φ`-image have the same outgoing transitions. This is the
-hypothesis under which a system is a neighbour of an erasure in a composition — it accepts
-whichever representative of a fibre the erased side announces. -/
+/-- A system is **saturated along `φ`** when its step relation is constant on the `φ`-fibres of the
+label: labels with the same `φ`-image have the same outgoing transitions. This is the hypothesis
+under which a system is a neighbour of an erasure in a composition — it accepts whichever
+representative of a fibre the ghost-free system announces. -/
 def System.LabelSaturated (sys : System SC L) (φ : L → L) : Prop :=
   ∀ s l l' μ, φ l = φ l' → sys.step s l μ → sys.step s l' μ
 
@@ -145,11 +144,11 @@ private theorem map_prodPMF_left (f : SA → S0) (μ₁ : PMF SC) (μ₂ : PMF S
   rw [show (Prod.map (id : SC → SC) f) = (fun p : SC × SA => (id p.1, f p.2)) from rfl,
     prodPMF_map, PMF.map_id]
 
-/-- **Erasure is a congruence for parallel composition on the left factor.** The neighbour
-`sysC` is untouched by `π`, and on a synchronised step it has to accept whichever
-representative of the `φ`-fibre the erased side announces, which is what `hsat` grants. The
-clause `h.silent` is what keeps the two interleaving disjuncts apart from the synchronised
-one: a lift of an internal step is again internal. -/
+/-- **Erasure is a congruence for parallel composition on the left factor.** The neighbour `sysC` is
+untouched by `π`, and on a synchronised step it has to accept whichever representative of the
+`φ`-fibre the ghost-free system announces, which is what `hsat` grants. The clause `h.silent` is
+what keeps the two interleaving disjuncts apart from the synchronised one: a lift of an internal
+step is again internal. -/
 theorem parallel_right (h : StateErasure sysA sys0 π φ) (hsat : sysC.LabelSaturated φ) :
     StateErasure (sysA.parallel sysC) (sys0.parallel sysC) (Prod.map π id) φ where
   init := by

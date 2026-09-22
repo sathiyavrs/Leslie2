@@ -31,7 +31,7 @@ emulate the blueprint's sync-set composition `∥_S`:
   2. *global broadcast* (`glob l`, e.g. corruption `fail id`): every instance
      applies the deterministic transform `act l` simultaneously (a Dirac
      step). This is what keeps per-instance copies of shared bookkeeping (the
-     corrupted set) in lockstep — a single-coordinate step could not.
+     corrupted set) together — a single-coordinate step could not.
   3. *foreign* (unowned, non-global): a global idle self-loop.
 
   The broadcast disjunct applies `act` unconditionally (it is not required to

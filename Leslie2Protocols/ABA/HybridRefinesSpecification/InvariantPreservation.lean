@@ -14,20 +14,18 @@ Stages A and B of the proof that `hybridSpecificationStateRelation` is a simulat
 (`DESIGN-CoreSim.md`), on top of the relation and invariant of
 `HybridRefinesSpecification/Relation.lean`.
 
-* **Stage A** — step inversion for `hybrid`: one lemma per visible label
-  class (`callABA`, `retABA`, `fail`) and one for `τ`, each reading a composite
-  transition back into the component rows that produced it. `hybrid_step_tau`
-  is the six-way disjunction the τ-side of the simulation dispatches on; its
-  τ has more sources than the visible labels do, the whole rendezvous alphabet
-  being hidden, and each of those sources collapses into one of the six.
+* **Stage A** — step inversion for `hybrid`: one lemma per visible label class (`callABA`, `retABA`,
+  `fail`) and one for `τ`, each reading a composite transition back into the component rows that
+  produced it. `hybrid_step_tau` is the six-way disjunction the τ case of the simulation dispatches
+  on; its τ has more sources than the visible labels do, the whole rendezvous alphabet being hidden,
+  and each of those sources collapses into one of the six.
 * **Stage B** — preservation of `Invariant`: one `Invariant.step_*` lemma per row of Stage
   A's inversion, each carrying all forty invariant fields across that
   row.
 
 The assembly of the two into `Invariant.step` is in
-`HybridRefinesSpecification/AbstractStatePreservation.lean`, beside the `AbstractState`-side stutter
-lemmas it is stated with.
--/
+`HybridRefinesSpecification/AbstractStatePreservation.lean`, beside the `AbstractState` stutter
+lemmas it is stated with. -/
 
 namespace PLTS
 namespace ABA
@@ -38,17 +36,16 @@ variable {P : Parameters}
 
 /-! ### Stage A: step inversion for `hybrid`
 
-Each lemma reads a transition of the protocol-shaped specification back into
-the rows of its four components, delivering the ABA-side content in the view's own
-coordinates: the pair `(C, A)` of the round loops beside the ABA-side network,
-read through `ABAState`'s accessors.
+Each lemma reads a transition of the protocol-shaped specification back into the rows of its four
+components, delivering the ABA content in the view's own coordinates: the pair `(C, A)` of the round
+loops beside the ABA network, read through `ABAState`'s accessors.
 
-Three of the four take the invariant's I0 conjunct as a hypothesis. The
-honesty guard a round loop's row carries reads its own replacement flag, and
-the guard the ABA-side network's row carries reads the corrupted set; I0 is
-what identifies the two, so that the reading speaks of `F` alone (D23). -/
+Three of the four take the invariant's I0 conjunct as a hypothesis. The correctness guard a round
+loop's row carries reads its own replacement flag, and the guard the ABA network's row carries reads
+the corrupted set; I0 is what identifies the two, so that the statement speaks of `F` alone
+(D23). -/
 
-/-- The round loop's honesty guard read on the corrupted set: under I0 the
+/-- The round loop's correctness guard read on the corrupted set: under I0 the
 replacement flag is down exactly at the processes outside `F`. -/
 theorem corrupted_eq_false_iff {P : Parameters} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
     {A : ABANetworkState P.n}
@@ -58,13 +55,11 @@ theorem corrupted_eq_false_iff {P : Parameters} {C : ∀ _ : Fin P.n, RoundLoopR
   rw [ABAState.corrupted_apply] at h
   cases hb : (C id).corrupted <;> rw [hb] at h <;> simp_all
 
-/-- `hybrid` inversion, `callABA`: the round specifications and the coin
-oracle idle on a label outside their own API and the ABA-side network has no
-row of its own, so the whole transition is the addressed round loop's — the
-genuine input of a never-corrupted process, guarded by `input = ⊥`, or a
-self-loop, which is the input-enabledness row of a process whose program
-stands and holds an input, and the replaced program's own row otherwise
-(D23, D36). -/
+/-- `hybrid` inversion, `callABA`: the round specifications and the coin oracle idle on a label
+outside their own API and the ABA network has no row of its own, so the whole transition is the
+addressed round loop's — the genuine input of a never-corrupted process, guarded by `input = ⊥`, or
+a self-loop, which is the input-enabledness row of a process whose program stands and holds an
+input, and the replaced program's own row otherwise (D23, D36). -/
 theorem hybrid_step_callABA (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
     (C : ∀ _ : Fin P.n, RoundLoopRecord P.n) (A : ABANetworkState P.n)
     (o : ℕ → WCC.SpecState P.n) (id : Fin P.n) (b : Bool)
@@ -92,11 +87,11 @@ theorem hybrid_step_callABA (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
       rcases hg with ⟨habs, -⟩ | hpre
       · exact absurd habs (by simp)
       · obtain ⟨G', C', A', ω, hG, hall, hA, hW, rfl⟩ :=
-          hybridExtended_vis_inv P (by simp) hpre
+          hybridExtended_visible_inversion P (by simp) hpre
         obtain rfl : G = G' :=
-          (pure_inj (gbcaSpecificationFamily_idle_inv P hG (by simp) rfl not_false)).symm
+          (pure_inj (gbcaSpecificationFamily_idle_inversion P hG (by simp) rfl not_false)).symm
         obtain rfl : A = A' := (pure_inj (abaNetworkStep_callABA hA)).symm
-        obtain rfl : ω = PMF.pure o := wccFamily_idle_inv P (by simp) rfl (by simp [Label.isFail])
+        obtain rfl : ω = PMF.pure o := wccFamily_idle_inversion P (by simp) rfl (by simp [Label.isFail])
           ((System.mapIdle_step_some (coinLabelMap_inl (Label.callABA id b)) _).mp hW)
         rcases roundLoopStep_callABA_own (hall id) with ⟨hh, hin, hx0⟩ | ⟨hloop, hx0⟩
         · obtain rfl : C' = Function.update C id ((C id).setProcess { (C id).process with
@@ -120,7 +115,7 @@ theorem hybrid_step_callABA (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
     rw [hybridHidden_step_iff]
     refine Or.inr ?_
     rcases hdisj with ⟨hnF, hin, rfl⟩ | ⟨hloop, rfl⟩
-    · have h := hybridExtended_vis_step P (L := Sum.inl (Label.callABA id b)) (by simp)
+    · have h := hybridExtended_visible_step P (L := Sum.inl (Label.callABA id b)) (by simp)
         (gbcaSpecificationFamily_idle P G (by simp) rfl not_false)
         (roundLoopRecords_family id ((C id).setProcess { (C id).process with
             input := some b, estimate := some b, round := 0, phase := .toCallG })
@@ -129,7 +124,7 @@ theorem hybrid_step_callABA (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
         (ABANetworkStep.callABAIdle A id b) hWlift
       simp only [PMF.pure_map, prodPMF_pure_pure] at h ⊢
       exact h
-    · have h := hybridExtended_vis_step P (L := Sum.inl (Label.callABA id b)) (by simp)
+    · have h := hybridExtended_visible_step P (L := Sum.inl (Label.callABA id b)) (by simp)
         (gbcaSpecificationFamily_idle P G (by simp) rfl not_false)
         (fun i => by
           by_cases hi : i = id
@@ -177,12 +172,12 @@ theorem hybrid_step_retABA (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
       rcases hg with ⟨habs, -⟩ | hpre
       · exact absurd habs (by simp)
       · obtain ⟨G', C', A', ω, hG, hall, hA, hW, rfl⟩ :=
-          hybridExtended_vis_inv P (by simp) hpre
+          hybridExtended_visible_inversion P (by simp) hpre
         obtain rfl : G = G' :=
-          (pure_inj (gbcaSpecificationFamily_idle_inv P hG (by simp) rfl not_false)).symm
+          (pure_inj (gbcaSpecificationFamily_idle_inversion P hG (by simp) rfl not_false)).symm
         obtain ⟨hsent, hA'⟩ := abaNetworkStep_retABA hA
         obtain rfl : A = A' := (pure_inj hA').symm
-        obtain rfl : ω = PMF.pure o := wccFamily_idle_inv P (by simp) rfl (by simp [Label.isFail])
+        obtain rfl : ω = PMF.pure o := wccFamily_idle_inversion P (by simp) rfl (by simp [Label.isFail])
           ((System.mapIdle_step_some (coinLabelMap_inl (Label.retABA id b)) _).mp hW)
         rcases roundLoopStep_retABA_own (hall id) with ⟨hh, hcnt, hret, hx0⟩ | ⟨hh, hx0⟩
         · have hnF : id ∉ ABAState.F (C, A) := (corrupted_eq_false_iff hcorr id).mp hh
@@ -206,7 +201,7 @@ theorem hybrid_step_retABA (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
     rw [hybridHidden_step_iff]
     refine Or.inr ?_
     rcases hdisj with ⟨hnF, hcnt, hsent, hret, rfl⟩ | ⟨hF, rfl⟩
-    · have h := hybridExtended_vis_step P (L := Sum.inl (Label.retABA id b)) (by simp)
+    · have h := hybridExtended_visible_step P (L := Sum.inl (Label.retABA id b)) (by simp)
         (gbcaSpecificationFamily_idle P G (by simp) rfl not_false)
         (roundLoopRecords_family id ((C id).setProcess { (C id).process with returned := true })
           (RoundLoopStep.ret (C id) b ((corrupted_eq_false_iff hcorr id).mpr hnF) hcnt hret)
@@ -214,7 +209,7 @@ theorem hybrid_step_retABA (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
         (ABANetworkStep.retABA A id b hsent) hWlift
       simp only [PMF.pure_map, prodPMF_pure_pure] at h ⊢
       exact h
-    · have h := hybridExtended_vis_step P (L := Sum.inl (Label.retABA id b)) (by simp)
+    · have h := hybridExtended_visible_step P (L := Sum.inl (Label.retABA id b)) (by simp)
         (gbcaSpecificationFamily_idle P G (by simp) rfl not_false)
         (fun i => by
           by_cases hi : i = id
@@ -226,13 +221,11 @@ theorem hybrid_step_retABA (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
       simp only [PMF.pure_map, prodPMF_pure_pure] at h ⊢
       exact h
 
-/-- `hybrid` inversion, `fail`: a genuine synchronisation of all four
-components, under the two guards the ABA-side network's row carries — the
-named process is not corrupted yet and the budget has room. The round
-specifications and the coin oracle each corrupt their own copy of `F` and the
-ABA-side network corrupts the view's; the named round loop replaces its own
-program by writing the flag (D23), and every other round loop stands still
-(D1). -/
+/-- `hybrid` inversion, `fail`: a genuine synchronisation of all four components, under the two
+guards the ABA network's row carries — the named process is not corrupted yet and the budget has
+room. The round specifications and the coin oracle each corrupt their own copy of `F` and the ABA
+network corrupts the view's; the named round loop replaces its own program by writing the flag
+(D23), and every other round loop stands still (D1). -/
 theorem hybrid_step_fail (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
     (C : ∀ _ : Fin P.n, RoundLoopRecord P.n) (A : ABANetworkState P.n)
     (o : ℕ → WCC.SpecState P.n) (id : Fin P.n)
@@ -252,12 +245,12 @@ theorem hybrid_step_fail (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
       rcases hg with ⟨habs, -⟩ | hpre
       · exact absurd habs (by simp)
       · obtain ⟨G', C', A', ω, hG, hall, hA, hW, rfl⟩ :=
-          hybridExtended_vis_inv P (by simp) hpre
+          hybridExtended_visible_inversion P (by simp) hpre
         obtain rfl : G' = fun r => (G r).corrupt P id :=
-          pure_inj (gbcaSpecificationFamily_fail_inv P id hG)
+          pure_inj (gbcaSpecificationFamily_fail_inversion P id hG)
         obtain ⟨hnew, hbud, hA'⟩ := abaNetworkStep_fail hA
         obtain rfl : A' = ABANetworkState.corrupt P id A := pure_inj hA'
-        obtain rfl : ω = PMF.pure (fun r => (o r).corrupt P id) := wccFamily_fail_inv P id
+        obtain rfl : ω = PMF.pure (fun r => (o r).corrupt P id) := wccFamily_fail_inversion P id
           ((System.mapIdle_step_some (coinLabelMap_inl (Label.fail id)) _).mp hW)
         have hh : (C id).corrupted = false := (corrupted_eq_false_iff hcorr id).mpr hnew
         obtain rfl : C' = Function.update C id { C id with corrupted := true } := by
@@ -274,7 +267,7 @@ theorem hybrid_step_fail (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
     refine Or.inr ⟨by simp, ?_⟩
     rw [hybridHidden_step_iff]
     refine Or.inr ?_
-    have h := hybridExtended_vis_step P (L := Sum.inl (Label.fail id)) (by simp)
+    have h := hybridExtended_visible_step P (L := Sum.inl (Label.fail id)) (by simp)
       (gbcaSpecificationFamily_fail P G id)
       (roundLoopRecords_family id { C id with corrupted := true }
         (RoundLoopStep.failSelf (C id) ((corrupted_eq_false_iff hcorr id).mpr hnew))
@@ -363,10 +356,10 @@ theorem hybrid_step_tau (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
       | fail k => exact absurd hl' (by simp)
       | callG r id b =>
         obtain ⟨G', C', A', ω, hG, hall, hA, hW, rfl⟩ :=
-          hybridExtended_vis_inv P (by simp) hpre
+          hybridExtended_visible_inversion P (by simp) hpre
         obtain ⟨X, hstepG, rfl⟩ := gbcaSpecificationFamily_owned_step P rfl (by simp) rfl hG
         obtain rfl : A = A' := (pure_inj (abaNetworkStep_callG hA)).symm
-        obtain rfl : ω = PMF.pure o := wccFamily_idle_inv P (by simp) rfl (by simp [Label.isFail])
+        obtain rfl : ω = PMF.pure o := wccFamily_idle_inversion P (by simp) rfl (by simp [Label.isFail])
           ((System.mapIdle_step_some (coinLabelMap_inl (Label.callG r id b)) _).mp hW)
         obtain ⟨-, hph, hr, hest, hx0⟩ := roundLoopStep_callG_own (hall id)
         obtain rfl : C' = Function.update C id
@@ -380,10 +373,10 @@ theorem hybrid_step_tau (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
             simp only [PMF.pure_map, prodPMF_pure_pure]; rfl⟩))
       | retG r id out bnd =>
         obtain ⟨G', C', A', ω, hG, hall, hA, hW, rfl⟩ :=
-          hybridExtended_vis_inv P (by simp) hpre
+          hybridExtended_visible_inversion P (by simp) hpre
         obtain ⟨X, hstepG, rfl⟩ := gbcaSpecificationFamily_owned_step P rfl (by simp) rfl hG
         obtain rfl : A = A' := (pure_inj (abaNetworkStep_retG hA)).symm
-        obtain rfl : ω = PMF.pure o := wccFamily_idle_inv P (by simp) rfl (by simp [Label.isFail])
+        obtain rfl : ω = PMF.pure o := wccFamily_idle_inversion P (by simp) rfl (by simp [Label.isFail])
           ((System.mapIdle_step_some (coinLabelMap_inl (Label.retG r id out bnd)) _).mp hW)
         obtain ⟨-, hph, hr, hx0⟩ := roundLoopStep_retG_own (hall id)
         obtain rfl : C' = Function.update C id ((C id).setProcess
@@ -399,11 +392,11 @@ theorem hybrid_step_tau (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
             simp only [PMF.pure_map, prodPMF_pure_pure]; rfl⟩)))
       | callW r id =>
         obtain ⟨G', C', A', ω, hG, hall, hA, hW, rfl⟩ :=
-          hybridExtended_vis_inv P (by simp) hpre
+          hybridExtended_visible_inversion P (by simp) hpre
         obtain rfl : G = G' :=
-          (pure_inj (gbcaSpecificationFamily_idle_inv P hG (by simp) rfl not_false)).symm
+          (pure_inj (gbcaSpecificationFamily_idle_inversion P hG (by simp) rfl not_false)).symm
         obtain rfl : A = A' := (pure_inj (abaNetworkStep_callW hA)).symm
-        obtain ⟨μw', hstepW, rfl⟩ := wccFamily_owned_inv P (by simp) rfl
+        obtain ⟨μw', hstepW, rfl⟩ := wccFamily_owned_inversion P (by simp) rfl
           ((System.mapIdle_step_some (coinLabelMap_inl (Label.callW r id)) _).mp hW)
         rcases roundLoopStep_callW_own (hall id) with ⟨-, hph, hr, hx0⟩ | ⟨hh, hx0⟩
         · obtain rfl : C' = Function.update C id
@@ -423,11 +416,11 @@ theorem hybrid_step_tau (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
             by rw [PMF.pure_bind]⟩))))
       | retW r id c =>
         obtain ⟨G', C', A', ω, hG, hall, hA, hW, rfl⟩ :=
-          hybridExtended_vis_inv P (by simp) hpre
+          hybridExtended_visible_inversion P (by simp) hpre
         obtain rfl : G = G' :=
-          (pure_inj (gbcaSpecificationFamily_idle_inv P hG (by simp) rfl not_false)).symm
+          (pure_inj (gbcaSpecificationFamily_idle_inversion P hG (by simp) rfl not_false)).symm
         obtain rfl : A = A' := (pure_inj (abaNetworkStep_retW hA)).symm
-        obtain ⟨μw', hstepW, rfl⟩ := wccFamily_owned_inv P (by simp) rfl
+        obtain ⟨μw', hstepW, rfl⟩ := wccFamily_owned_inversion P (by simp) rfl
           ((System.mapIdle_step_some (coinLabelMap_inl (Label.retW r id c)) _).mp hW)
         rcases roundLoopStep_retW_own (hall id) with ⟨-, hph, hr, hgr, hx0⟩ | ⟨hh, hx0⟩
         · obtain rfl : C' = Function.update C id ((C id).stepRound c) :=
@@ -448,13 +441,13 @@ theorem hybrid_step_tau (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
     rcases hg with ⟨-, e, hpre⟩ | hpre
     · -- a rendezvous of the hidden alphabet
       obtain ⟨G', C', A', ω, hG, hall, hA, hW, rfl⟩ :=
-        hybridExtended_vis_inv P (by simp) hpre
+        hybridExtended_visible_inversion P (by simp) hpre
       cases e with
       | gbcaSend r j m => exact (abaNetworkStep_gbcaSend_noStep hA).elim
       | gbcaDeliver r i j m => exact (abaNetworkStep_gbcaDeliver_noStep hA).elim
       | decidedSend j b =>
         obtain rfl : G = G' :=
-          (pure_inj (gbcaSpecificationFamily_idle_inv P hG (by simp) rfl not_false)).symm
+          (pure_inj (gbcaSpecificationFamily_idle_inversion P hG (by simp) rfl not_false)).symm
         have hx0 : (PMF.pure (C' j) : PMF (RoundLoopRecord P.n)) = PMF.pure (C j) := by
           rcases roundLoopStep_decidedSend_self (hall j) with ⟨-, -, h⟩ | ⟨-, h⟩ <;> exact h
         obtain rfl : C = C' := (roundLoopRecords_id fun i => by
@@ -472,7 +465,7 @@ theorem hybrid_step_tau (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
         · exact Or.inr (Or.inr ⟨j, b, (hcorr j).mp hh, rfl⟩)
       | decidedDeliver i j b =>
         obtain rfl : G = G' :=
-          (pure_inj (gbcaSpecificationFamily_idle_inv P hG (by simp) rfl not_false)).symm
+          (pure_inj (gbcaSpecificationFamily_idle_inversion P hG (by simp) rfl not_false)).symm
         obtain ⟨-, hnr, hx0⟩ := roundLoopStep_decidedDeliver_self (hall i)
         obtain rfl : C' = Function.update C i ((C i).receiveDecided j b) :=
           roundLoopRecords_update hx0 (fun k hk => roundLoopStep_decidedDeliver_foreign (Ne.symm hk)
@@ -486,8 +479,8 @@ theorem hybrid_step_tau (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
             simp only [PMF.pure_map, prodPMF_pure_pure]; rfl⟩)
       | retWPublish r id c b =>
         obtain rfl : G = G' :=
-          (pure_inj (gbcaSpecificationFamily_idle_inv P hG (by simp) rfl not_false)).symm
-        obtain ⟨μw', hstepW, rfl⟩ := wccFamily_owned_inv P (by simp) rfl
+          (pure_inj (gbcaSpecificationFamily_idle_inversion P hG (by simp) rfl not_false)).symm
+        obtain ⟨μw', hstepW, rfl⟩ := wccFamily_owned_inversion P (by simp) rfl
           ((System.mapIdle_step_some (coinLabelMap_retWPublish r id c b) ω).mp hW)
         obtain ⟨-, hph, hr, hgA, hx0⟩ := roundLoopStep_retWPublish_self (hall id)
         obtain rfl : C' = Function.update C id ((C id).stepRound c) :=
@@ -548,29 +541,29 @@ theorem hybrid_step_tau (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
             simp only [PMF.pure_map, prodPMF_pure_pure]⟩)))
       | byzantineCallW r k =>
         obtain rfl : G = G' :=
-          (pure_inj (gbcaSpecificationFamily_idle_inv P hG (by simp) rfl not_false)).symm
+          (pure_inj (gbcaSpecificationFamily_idle_inversion P hG (by simp) rfl not_false)).symm
         obtain rfl : C = C' := (roundLoopRecords_id fun i => roundLoopStep_byzantineCallW (hall
           i)).symm
         obtain ⟨hF, hA'⟩ := abaNetworkStep_byzantineCallW hA
         obtain rfl : A = A' := (pure_inj hA').symm
-        obtain ⟨μw', hstepW, rfl⟩ := wccFamily_owned_inv P (by simp) rfl
+        obtain ⟨μw', hstepW, rfl⟩ := wccFamily_owned_inversion P (by simp) rfl
           ((System.mapIdle_step_some (coinLabelMap_byzantineCallW r k) ω).mp hW)
         exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨r, k, μw',
           PMF.pure (C, A), hstepW, Or.inr ⟨hF, rfl⟩, by rw [PMF.pure_bind]⟩))))
       | byzantineRetW r k b =>
         obtain rfl : G = G' :=
-          (pure_inj (gbcaSpecificationFamily_idle_inv P hG (by simp) rfl not_false)).symm
+          (pure_inj (gbcaSpecificationFamily_idle_inversion P hG (by simp) rfl not_false)).symm
         obtain rfl : C = C' := (roundLoopRecords_id fun i => roundLoopStep_byzantineRetW (hall
           i)).symm
         obtain ⟨hF, hA'⟩ := abaNetworkStep_byzantineRetW hA
         obtain rfl : A = A' := (pure_inj hA').symm
-        obtain ⟨μw', hstepW, rfl⟩ := wccFamily_owned_inv P (by simp) rfl
+        obtain ⟨μw', hstepW, rfl⟩ := wccFamily_owned_inversion P (by simp) rfl
           ((System.mapIdle_step_some (coinLabelMap_byzantineRetW r k b) ω).mp hW)
         exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr ⟨r, k, b, μw',
           PMF.pure (C, A), hstepW, Or.inr ⟨hF, rfl⟩, by rw [PMF.pure_bind]⟩))))
     · -- genuine `τ`: the binding exclusion or the network's Byzantine injection
-      rcases hybridExtended_tau_inv P hpre with ⟨G', hspec, rfl⟩ | ⟨A', hnet, rfl⟩
-      · obtain ⟨r, X, hstepG, hGeq⟩ := gbcaSpecificationFamily_tau_inv P hspec
+      rcases hybridExtended_tau_inversion P hpre with ⟨G', hspec, rfl⟩ | ⟨A', hnet, rfl⟩
+      · obtain ⟨r, X, hstepG, hGeq⟩ := gbcaSpecificationFamily_tau_inversion P hspec
         obtain rfl : G' = Function.update G r X := pure_inj hGeq
         rw [GBCA.ByABDY.specificationOverRoundAlphabet,
           System.mapIdle_step_some (GBCA.ByABDY.gbcaLabelMap_inl (Label.tau : Label P.n))] at hstepG
@@ -589,16 +582,16 @@ theorem WCC.corrupt_val {P : Parameters} (id : Fin P.n) (s : WCC.SpecState P.n) 
 theorem WCC.corrupt_called {P : Parameters} (id : Fin P.n) (s : WCC.SpecState P.n) :
     (s.corrupt P id).called = s.called := by unfold WCC.SpecState.corrupt; split <;> rfl
 
-/-- The GBCA corruption of a state agreeing with the core on `F` agrees with the core's
-corruption on `F` (keeps `F_gbca` in lockstep across a `fail` broadcast). -/
+/-- The GBCA corruption of a state agreeing with the core on `F` agrees with the core's corruption
+on `F` (keeps `F_gbca` together across a `fail` broadcast). -/
 theorem GBCA.corrupt_F_eq {P : Parameters} (id : Fin P.n) (s : GBCA.SpecState P.n)
     (c : ABAState P) (h : s.F = c.F) :
     (s.corrupt P id).F = (c.corrupt P id).F := by
   unfold GBCA.SpecState.corrupt
   rw [ABAState.corrupt_F, h]; split_ifs <;> simp [h]
 
-/-- The WCC corruption of a state agreeing with the core on `F` agrees with the core's
-corruption on `F` (keeps `F_wcc` in lockstep across a `fail` broadcast). -/
+/-- The WCC corruption of a state agreeing with the core on `F` agrees with the core's corruption on
+`F` (keeps `F_wcc` together across a `fail` broadcast). -/
 theorem WCC.corrupt_F_eq {P : Parameters} (id : Fin P.n) (s : WCC.SpecState P.n)
     (c : ABAState P) (h : s.F = c.F) :
     (s.corrupt P id).F = (c.corrupt P id).F := by
@@ -896,7 +889,7 @@ theorem Invariant.step_callABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
       · rw [hNe id' hid]; exact hI.wcc_callRound r id' (hF ▸ hmem) hcalled
     · -- `flip_grade2Lock`: `g` is untouched entirely; the only wrinkle is the `r = 0` dissent
       -- witness possibly naming `id` itself, ruled out by `hin : input = none` (the fresh
-      -- honest input can't have been the opposing dissenter).
+      -- the input of a correct process cannot have been the opposing dissenter).
       intro r h
       rcases hI.flip_grade2Lock r h with hg | hd
       · left; exact hg
@@ -928,11 +921,11 @@ theorem Invariant.step_callABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
   · rw [PMF.mem_support_pure_iff] at hc'; subst hc'
     exact ⟨hI, AbstractStateUnchanged.refl P g _⟩
 
-/-- `fail`: a genuine synchronised corruption of all three components, under the row's own
-guards — the named process is not corrupted yet and the budget has room. `F` only grows, and
-every other projection is untouched, so honesty hypotheses transfer via `F`-monotonicity. The
-two guards are what puts the replacement flag and the corrupted set in lockstep (I0, D23):
-the flag goes up at `id` and `F` gains exactly `id`. -/
+/-- `fail`: a genuine synchronised corruption of all three components, under the row's own guards —
+the named process is not corrupted yet and the budget has room. `F` only grows, and every other
+projection is untouched, so correctness hypotheses transfer via `F`-monotonicity. The two guards are
+what puts the replacement flag and the corrupted set together (I0, D23): the flag goes up at `id`
+and `F` gains exactly `id`. -/
 theorem Invariant.step_fail {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (id : Fin P.n)
     (hnew : id ∉ c.F) (hbud : c.F.card < P.f) :
@@ -1124,7 +1117,7 @@ theorem Invariant.step_fail {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
 exclusion set. `down_settled`'s round-`r` corner needs "a call at round `r` implies current
 round `≥ r`", a fact `Invariant` doesn't carry explicitly — handed off. The value-transport
 corners lean on the exclusion's own D15 guard: the spared bit `!b` keeps `f + 1` F-blind call
-support at round `r`, whose derived honest caller pins `!b` against every standing
+support at round `r`, whose derived correct caller pins `!b` against every standing
 commitment. -/
 theorem Invariant.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (r : ℕ)
@@ -1221,7 +1214,7 @@ theorem Invariant.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
       by_cases h2 : r' = r
       · subst h2; exact hClosedSelf
       · by_cases h1 : r' + 1 = r
-        · -- the fresh exclusion at `r' + 1` had an honest caller of the spared bit, whose
+        · -- the fresh exclusion at `r' + 1` had a correct caller of the spared bit, whose
           -- round progress closes `r'`
           obtain ⟨id0, hid0F, hcall0⟩ :=
             GBCA.exists_correct_caller _hw (by rw [hI.F_gbca r]; exact hI.F_card)
@@ -1356,7 +1349,7 @@ theorem Invariant.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
       · rw [h1, hExcludedSelf] at h
         rcases Finset.mem_insert.mp h with hnew | hold
         · -- the fresh exclusion: the spared bit `!b = v` was carried by the derived
-          -- honest caller, whose `call_provenance` provenance is the conclusion verbatim
+          -- correct caller, whose `call_provenance` provenance is the conclusion verbatim
           have hveq : v = !b := by
             revert hnew; cases v <;> cases b <;> simp
           have hcp := hI.call_provenance r' id0 (!b) hFid0 (by rw [h1]; exact hcall0)
@@ -1435,7 +1428,7 @@ theorem Invariant.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
         exact hcnt r' b' (hI.excluded_support r' b' hb')
 
 /-- Core `τ`: DECIDED delivery, echo, or byzantine injection. All three leave `processes`/`F`
-untouched, so only `received_sound`/`decided_source` need real work; the `echo` case's honest
+untouched, so only `received_sound`/`decided_source` need real work; the `echo` case's correct
 sender comes from an `f + 1`-vs-`≤ f` pigeonhole on the delivered senders. -/
 theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w)
@@ -1542,7 +1535,7 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
       rcases hI.wccCalled_witness r id' (hFeq ▸ hmem) hcalled with hg | hd
       · left; exact hg
       · right; exact DissentWitness.transport rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
-  · -- echo: an honest sender among the `f + 1` counted deliveries
+  · -- echo: a correct sender among the `f + 1` counted deliveries
     rw [PMF.mem_support_pure_iff] at hc'; subst hc'
     have hProcs : (c.sendDecided id b).processes = c.processes := ABAState.sendDecided_processes _ _
       _
@@ -1655,7 +1648,7 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
       rcases hI.wccCalled_witness r id' (hFeq ▸ hmem) hcalled with hg | hd
       · left; exact hg
       · right; exact DissentWitness.transport rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
-  · -- byzantine DECIDED injection: `id ∈ F`, so honest `decided_source` at `id` is vacuous
+  · -- byzantine DECIDED injection: `id ∈ F`, so correct `decided_source` at `id` is vacuous
     rw [PMF.mem_support_pure_iff] at hc'; subst hc'
     have hProcs : (c.sendDecided id b).processes = c.processes := ABAState.sendDecided_processes _ _
       _
@@ -1773,7 +1766,7 @@ at an unresolved `val`, and the drawn outcome is written to `val`. The clauses t
 `(w r).val` are re-established from the threshold, which supplies a never-corrupted caller of
 round `r` (`Invariant.exists_correct_wcaller`); that caller's `wcc_called`, `wcc_callRound` and
 `wccCalled_witness` carry `wcc_bound`, `wcc_order` and `flip_grade2Lock` respectively.
-`agree_locked`'s round-`r` corner is vacuous, since `round_flip` at an honest process past round `r`
+`agree_locked`'s round-`r` corner is vacuous, since `round_flip` at a correct process past round `r`
 contradicts `val = ⊥`. -/
 theorem Invariant.step_callW_resolve {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (r : ℕ)
@@ -1844,7 +1837,7 @@ theorem Invariant.step_callW_resolve {P : Parameters} {g : ℕ → GBCA.SpecStat
       · exact Or.inl hbv
       · rcases hw0 with hh | hh <;> rw [hv] at hh <;> simp at hh
     · rw [hValNe r' h2]; exact hep
-  · -- `wcc_order`: pass-through, except at round `r`'s predecessor, where the honest caller
+  · -- `wcc_order`: pass-through, except at round `r`'s predecessor, where the correct caller
     -- of round `r` has already passed round `r - 1`, so `round_flip` applies to it.
     intro r' h
     by_cases h2 : r' = r
@@ -1856,7 +1849,7 @@ theorem Invariant.step_callW_resolve {P : Parameters} {g : ℕ → GBCA.SpecStat
         exact hI.round_flip r' id0 hid0cF (by omega)
       · rw [hValNe (r' + 1) h1] at h; rw [hValNe r' h2]; exact hI.wcc_order r' h
   · intro r' id hmem hcalled; rw [hCalledEq] at hcalled; exact hI.wcc_callRound r' id hmem hcalled
-  · -- `flip_grade2Lock`'s establishment: round `r`'s honest caller feeds `wccCalled_witness`
+  · -- `flip_grade2Lock`'s establishment: round `r`'s correct caller feeds `wccCalled_witness`
     -- directly.
     intro r' h
     by_cases h2 : r' = r
@@ -2068,7 +2061,7 @@ theorem Invariant.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState 
     rcases hI.input_gbcaRound0_permanent id' b' h with hin | hf
     · left; rw [(hCprocs id').1]; exact hin
     · right; rw [hCF]; exact hf
-  · -- `wcc_callRound`'s establishment: an honest caller of `WCC_r` just finished `GBCA_r`
+  · -- `wcc_callRound`'s establishment: a correct caller of `WCC_r` just finished `GBCA_r`
     -- (`r ≤ round` from `hr : (c.processes id).round = r`, unaffected by `callW`).
     intro r' id' hmem hcalled
     by_cases h2 : r' = r
@@ -2146,7 +2139,7 @@ theorem Invariant.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState 
       · left; exact hg
       · right; exact DissentWitness.transport rfl rfl (fun h => h) (fun id' => (hCprocs id').1) hd
 
-/-- `callW`, assembled from the three rows of `WCC.step_callW_inv`. The loop and the
+/-- `callW`, assembled from the three rows of `WCC.step_callW_inversion`. The loop and the
 recording call leave `val` and `F` alone, so both are `Invariant.step_callW_dirac`. The resolving
 call records `id` by that same bookkeeping and then writes the drawn outcome to `val`
 (`Invariant.step_callW_resolve`); the two updates compose into one because `Function.update` is
@@ -2167,7 +2160,7 @@ theorem Invariant.step_callW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
     rcases hstepC with ⟨hph, hr, rfl⟩ | ⟨hF, rfl⟩
     · rw [PMF.mem_support_pure_iff] at hc'; exact Or.inl ⟨hph, hr, hc'⟩
     · rw [PMF.mem_support_pure_iff] at hc'; exact Or.inr ⟨hF, hc'⟩
-  rcases WCC.step_callW_inv hstepW with rfl | ⟨-, -, rfl⟩ | ⟨-, hv, ht, rfl⟩
+  rcases WCC.step_callW_inversion hstepW with rfl | ⟨-, -, rfl⟩ | ⟨-, hv, ht, rfl⟩
   · rw [PMF.mem_support_pure_iff] at hwr'; subst hwr'
     exact hI.step_callW_dirac r id rfl rfl (fun _ _ => rfl) hCstep
   · rw [PMF.mem_support_pure_iff] at hwr'; subst hwr'
@@ -2185,9 +2178,9 @@ theorem Invariant.step_callW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
     exact hres
 /-- `callG`: the GBCA instance only ever touches `.call` (never `.F`/`.excluded`/`.grade`), the
 core only ever touches `.phase` at `id` (never `.input`/`.estimate`/`.round`). `input_gbcaRound0`/
-`input_called`'s honest-fresh-call corner needs "`estimate = input` before any round-`0` return"
+`input_called`'s correct-fresh-call corner needs "`estimate = input` before any round-`0` return"
 (phase/input coherence, not an explicit `Invariant` conjunct) — handed off; `grade2Lock_commit`'s
-second conjunct is derived cleanly from its own third conjunct plus the honest call guard
+second conjunct is derived cleanly from its own third conjunct plus the correct call guard
 `estimate = b`. -/
 theorem Invariant.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (r : ℕ) (id : Fin P.n) (b : Bool)
@@ -2236,7 +2229,7 @@ theorem Invariant.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
       exact ⟨rfl, rfl, rfl, fun id' => ⟨rfl, rfl, rfl⟩⟩
   obtain ⟨hCF, hCDS, hCDR, hCprocs⟩ := hCframe
   -- The one fact needing case analysis: `gr'.call`, as an unconditional description
-  -- (`Or.inl`: a fresh honest/byzantine `call` at `id`; `Or.inr`: `callLoop`, unaffected).
+  -- (`Or.inl`: a fresh correct/byzantine `call` at `id`; `Or.inr`: `callLoop`, unaffected).
   have hGcall : (gr' = { g r with call := Function.update (g r).call id (some b) }) ∨
       gr' = g r := by
     cases hstepG with
@@ -2248,7 +2241,8 @@ theorem Invariant.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
     rcases hstepC with ⟨hph, hr, hest, rfl⟩ | ⟨hF, rfl⟩
     · rw [PMF.mem_support_pure_iff] at hc'; exact Or.inl ⟨hph, hr, hest, hc'⟩
     · rw [PMF.mem_support_pure_iff] at hc'; exact Or.inr ⟨hF, hc'⟩
-  -- Every honest fresh call, at any `id'` and any round `r'`, agrees with `estimate` at that id'.
+  -- Every fresh call of a correct process, at any `id'` and any round `r'`, agrees with
+  -- `estimate` at that `id'`.
   have hGcallval : ∀ id' b', gr'.call id' = some b' → id' ≠ id → (g r).call id' = some b' := by
     rcases hGcall with rfl | rfl
     · intro id' b' h hne; simpa [Function.update_of_ne hne] using h
@@ -2571,7 +2565,7 @@ theorem Invariant.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
     · rw [hc'eq] at hphase
       exact hI.estimate_previous_ne id' (hCF ▸ hmem) hround hphase
   · -- `input_gbcaRound0_permanent`: mirrors `input_gbcaRound0`'s establishment
-    -- above, with an `id' ∈ F` escape hatch replacing the honesty hypothesis.
+    -- above, with an `id' ∈ F` escape hatch replacing the correctness hypothesis.
     intro id' b' h
     by_cases hmem : id' ∈ c.F
     · right; rw [hCF]; exact hmem
@@ -2792,8 +2786,7 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
     · rw [PMF.mem_support_pure_iff] at hc'; exact Or.inl ⟨hph, hr, hc'⟩
     · rw [PMF.mem_support_pure_iff] at hc'; exact Or.inr ⟨hF, hc'⟩
   -- The return either hands out round `r`'s surviving bit (`retGrade2`/`retGrade1`, with its live
-  -- pair as fire-time guards) or hands out nothing and locks the round to the grade-0 side
-  -- (`retGrade0`).
+  -- pair as fire-time guards) or hands out nothing and locks the round at 0 (`retGrade0`).
   have hRetInfo : (∃ v, out.estimate = some v ∧ v ∉ (g r).excluded ∧ (!v) ∈ (g r).excluded) ∨
       (out.estimate = none ∧ gr'.grade = some false) := by
     cases hstepG with
@@ -2803,8 +2796,8 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
       rw [PMF.mem_support_pure_iff] at hgr'
       exact Or.inr ⟨rfl, by rw [hgr']⟩
   -- A round that is grade-0-locked after the return carries the `retGrade0` guards at `g r`: either
-  -- they were already there (`retGrade1` leaves the grade alone; `retGrade2` locks the
-  -- grade-2 side) or this very return supplied them.
+  -- they were already there (`retGrade1` leaves the grade alone; `retGrade2` locks grade 2) or this
+  -- very return supplied them.
   have hCsupp : gr'.grade = some false → ∀ b, P.f + 1 ≤ (Finset.univ.filter
       (fun id' => (g r).call id' = some b ∨ id' ∈ (g r).F)).card := by
     cases hstepG with
@@ -3549,7 +3542,7 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
         · exact Or.inl hvv.symm
         · exact Or.inr (by rw [hreq0]; exact hGradeTo r hgf)
       · exact Or.inl (Option.some_inj.mp (hev0.symm.trans hev1))
-  · -- I30 establishment: a fresh grade-2 return is compared against every standing honest
+  · -- I30 establishment: a fresh grade-2 return is compared against every standing correct
     -- holder's certificate through `hpinCert`.
     intro i0 j0 b0 b0' hm hm' h h'
     have hpin : ∀ b1, out = .grade2 b1 → ∀ j1 b1',

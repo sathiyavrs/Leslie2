@@ -18,20 +18,19 @@ We fix the small parameter set `fourProcesses` (`n = 4`, `f = 1`, `ε = 1/2`) an
 concrete **20-step run of `hybrid fourProcesses` that reaches a genuine `retABA`** — a
 complete decision — starting from its initial state:
 
-* `step_callABA₀/₁/₂` — three external input handshakes (`callABA`, *visible*:
-  the addressed round loop takes its `input` row, the other three idle, and the
-  round specifications, the ABA-side network and the coin oracle idle);
+* `step_callABA₀/₁/₂` — three external input handshakes (`callABA`, *visible*: the addressed round
+  loop takes its `input` row, the other three idle, and the round specifications, the ABA network
+  and the coin oracle idle);
 * `step_callG₀/₁/₂` — three graded-agreement calls (`callG 0`, *hidden* to `τ`:
   the caller's round loop hands over its estimate and the round-`0`
   specification takes its owned `call`);
 * `step_bindUnset` — the round-`0` specification's `bindUnset` internal
   transition excluding the bit `false` (a family `τ`, `n − f` quorum met at
   `n = 4, f = 1` by the three callers of `true`);
-* `step_retG₀/₁/₂` — the three graded-agreement grade-2 return handshakes
-  (`retG 0`, *hidden*), the first locking the round grade to the grade-2 side. Each
-  return announces the bound bit `true`. Its complement is the bit that
-  `step_bindUnset` excluded, which is exactly the return's guard, so the ghost
-  output leaves the run intact;
+* `step_retG₀/₁/₂` — the three graded-agreement grade-2 return handshakes (`retG 0`, *hidden*), the
+  first locking the round grade at 2. Each return announces the bound bit `true`. Its complement is
+  the bit that `step_bindUnset` excluded, which is exactly the return's guard, so the ghost output
+  leaves the run intact;
 * `step_callW₀` — process `0`'s coin call (`callW 0`, *hidden*), a recording
   call: a single caller does not carry the count past `f = 1`;
 * `step_callW₁` + `step_callW₁_mass` — process `1`'s coin call, the resolving
@@ -58,25 +57,20 @@ states discharges by `decide`/`rfl`; the Dirac successor distributions collapse
 through `prodPMF_pure_pure` and `PMF.pure_map`, and the resolving call's branch
 mass through `prodPMF_pure_left_apply` and `map_apply_inj`.
 
-The ABA-side components are named through the view of `ABA/Composition/ABAState.lean`: a
-state of the run is a triple — the round specifications, one `ABAState` holding
-the round loops beside the ABA-side network, and the coin oracle — assembled
-into the four-component state by `hybridStateOf`.
+The ABA components are named through the view of `ABA/Composition/ABAState.lean`: a state of the run
+is a triple — the round specifications, one `ABAState` holding the round loops beside the ABA
+network, and the coin oracle — assembled into the four-component state by `hybridStateOf`.
 
-Each component carries one name per state of the run and one name per update.
-The states are `abaInitial`, `gbcaSpecificationsInitial` and `coinInitial`, and
-then, on each side, the state the step named in the list above leaves behind:
-`abaAfterInput0`, `abaAfterCallG0`, `abaAfterRetG0`, `abaAfterCallW0`,
-`abaAfterRoundStep0`, `abaAfterDeliver0`, `abaAfterRetABA` and `abaAfterFail`;
-`gbcaSpecificationsAfterCall0`, `gbcaSpecificationsAfterBindUnset`,
-`gbcaSpecificationsAfterReturn0` and `gbcaSpecificationsAfterFail`; `coinAfterRecordingCall0`,
-`coinAfterResolvingCall`, `coinAfterReturn0` and
-`coinAfterFail`. The updates are `abaInput`, `abaCallG`, `abaRetG`, `abaCallW`
-on the ABA side, `gbcaSpecificationCall` and `gbcaSpecificationRetGrade2` on the
-round specifications, and `coinCall`, `coinResolve` and `coinReturn` on the coin
-oracle. Reading a state name gives the step it follows, and reading an update
-name gives the label it answers.
--/
+Each component carries one name per state of the run and one name per update. The states are
+`abaInitial`, `gbcaSpecificationsInitial` and `coinInitial`, and then, for each component, the state
+the step named in the list above leaves behind: `abaAfterInput0`, `abaAfterCallG0`, `abaAfterRetG0`,
+`abaAfterCallW0`, `abaAfterRoundStep0`, `abaAfterDeliver0`, `abaAfterRetABA` and `abaAfterFail`;
+`gbcaSpecificationsAfterCall0`, `gbcaSpecificationsAfterBindUnset`, `gbcaSpecificationsAfterReturn0`
+and `gbcaSpecificationsAfterFail`; `coinAfterRecordingCall0`, `coinAfterResolvingCall`,
+`coinAfterReturn0` and `coinAfterFail`. The updates are `abaInput`, `abaCallG`, `abaRetG`,
+`abaCallW` in the ABA component, `gbcaSpecificationCall` and `gbcaSpecificationRetGrade2` on the
+round specifications, and `coinCall`, `coinResolve` and `coinReturn` on the coin oracle. Reading a
+state name gives the step it follows, and reading an update name gives the label it answers. -/
 
 namespace PLTS
 namespace ABA
@@ -95,8 +89,8 @@ namespace NonVacuity
 
 /-! ### Assembling and moving the four components -/
 
-/-- A state of the protocol-shaped specification, assembled from the round
-specifications, the ABA-side pair and the coin oracle. -/
+/-- A state of the protocol-shaped specification, assembled from the round specifications, the ABA
+component and the coin oracle. -/
 def hybridStateOf (G : ℕ → GBCA.SpecState 4) (s : ABAState fourProcesses) (o : ℕ → WCC.SpecState 4)
   :
     HybridState fourProcesses := (G, s.1, s.2, o)
@@ -138,27 +132,26 @@ def gbcaSpecificationsInitial : ℕ → GBCA.SpecState 4 := fun _ => GBCA.SpecSt
 /-- The coin oracle: every round initial. -/
 def coinInitial : ℕ → WCC.SpecState 4 := fun _ => WCC.SpecState.initial 4
 
-/-- The ABA-side state: every round loop idle, nothing multicast, nobody
-corrupted. -/
+/-- The ABA state: every round loop idle, nothing multicast, nobody corrupted. -/
 noncomputable def abaInitial : ABAState fourProcesses := ABAState.initial fourProcesses
 
-/-- The ABA-side update of a `callABA id true` input: enter round `0`, ready to
-call the graded agreement. -/
+/-- The ABA update of a `callABA id true` input: enter round `0`, ready to call the graded
+agreement. -/
 noncomputable def abaInput (id : Fin 4) (s : ABAState fourProcesses) : ABAState fourProcesses :=
   s.setProcess id { s.processes id with
     input := some true, estimate := some true, round := 0, phase := .toCallG }
 
-/-- The ABA-side update of a `callG r id` emit: advance to `awaitG`. -/
+/-- The ABA update of a `callG r id` emit: advance to `awaitG`. -/
 noncomputable def abaCallG (id : Fin 4) (s : ABAState fourProcesses) : ABAState fourProcesses :=
   s.setProcess id { s.processes id with phase := .awaitG }
 
-/-- The ABA-side update of a round-`0` graded-agreement `A true` return: adopt
-the estimate, record the grade, head for the coin. -/
+/-- The ABA update of a round-`0` graded-agreement `A true` return: adopt the estimate, record the
+grade, head for the coin. -/
 noncomputable def abaRetG (id : Fin 4) (s : ABAState fourProcesses) : ABAState fourProcesses :=
   s.setProcess id { s.processes id with
     estimate := some true, lastGrade := some (.grade2 true), phase := .toCallW }
 
-/-- The ABA-side update of a `callW r id` emit: advance to `awaitW`. -/
+/-- The ABA update of a `callW r id` emit: advance to `awaitW`. -/
 noncomputable def abaCallW (id : Fin 4) (s : ABAState fourProcesses) : ABAState fourProcesses :=
   s.setProcess id { s.processes id with phase := .awaitW }
 
@@ -166,8 +159,8 @@ noncomputable def abaCallW (id : Fin 4) (s : ABAState fourProcesses) : ABAState 
 def gbcaSpecificationCall (id : Fin 4) (s : ℕ → GBCA.SpecState 4) : ℕ → GBCA.SpecState 4 :=
   Function.update s 0 { s 0 with call := Function.update (s 0).call id (some true) }
 
-/-- The round-`0` specification update of an `A true` return by `id`: lock the
-grade to the grade-2 side and record the return. -/
+/-- The round-`0` specification update of an `A true` return by `id`: lock the grade at 2 and record
+the return. -/
 def gbcaSpecificationRetGrade2 (id : Fin 4) (s : ℕ → GBCA.SpecState 4) : ℕ → GBCA.SpecState 4 :=
   Function.update s 0 { s 0 with grade := some true, ret := Function.update (s 0).ret id true }
 
@@ -185,7 +178,7 @@ def coinResolve (id : Fin 4) (v : CoinValue) (s : ℕ → WCC.SpecState 4) : ℕ
 def coinReturn (id : Fin 4) (s : ℕ → WCC.SpecState 4) : ℕ → WCC.SpecState 4 :=
   Function.update s 0 { s 0 with ret := Function.update (s 0).ret id true }
 
-/-- ABA-side states after the three inputs. -/
+/-- ABA states after the three inputs. -/
 noncomputable def abaAfterInput0 : ABAState fourProcesses := abaInput 0 abaInitial
 noncomputable def abaAfterInput1 : ABAState fourProcesses := abaInput 1 abaAfterInput0
 noncomputable def abaAfterInput2 : ABAState fourProcesses := abaInput 2 abaAfterInput1
@@ -198,7 +191,7 @@ def gbcaSpecificationsAfterCall1 : ℕ → GBCA.SpecState 4 := gbcaSpecification
 def gbcaSpecificationsAfterCall2 : ℕ → GBCA.SpecState 4 := gbcaSpecificationCall 2
   gbcaSpecificationsAfterCall1
 
-/-- ABA-side states after the three round-`0` calls. -/
+/-- ABA states after the three round-`0` calls. -/
 noncomputable def abaAfterCallG0 : ABAState fourProcesses := abaCallG 0 abaAfterInput2
 noncomputable def abaAfterCallG1 : ABAState fourProcesses := abaCallG 1 abaAfterCallG0
 noncomputable def abaAfterCallG2 : ABAState fourProcesses := abaCallG 2 abaAfterCallG1
@@ -216,12 +209,12 @@ def gbcaSpecificationsAfterReturn1 : ℕ → GBCA.SpecState 4 := gbcaSpecificati
 def gbcaSpecificationsAfterReturn2 : ℕ → GBCA.SpecState 4 := gbcaSpecificationRetGrade2 2
   gbcaSpecificationsAfterReturn1
 
-/-- ABA-side states after the three round-`0` graded-agreement returns. -/
+/-- ABA states after the three round-`0` graded-agreement returns. -/
 noncomputable def abaAfterRetG0 : ABAState fourProcesses := abaRetG 0 abaAfterCallG2
 noncomputable def abaAfterRetG1 : ABAState fourProcesses := abaRetG 1 abaAfterRetG0
 noncomputable def abaAfterRetG2 : ABAState fourProcesses := abaRetG 2 abaAfterRetG1
 
-/-- ABA-side states after all three processes call the coin. -/
+/-- ABA states after all three processes call the coin. -/
 noncomputable def abaAfterCallW0 : ABAState fourProcesses := abaCallW 0 abaAfterRetG2
 noncomputable def abaAfterCallW1 : ABAState fourProcesses := abaCallW 1 abaAfterCallW0
 noncomputable def abaAfterCallW2 : ABAState fourProcesses := abaCallW 2 abaAfterCallW1
@@ -243,15 +236,13 @@ def coinAfterReturn0 : ℕ → WCC.SpecState 4 := coinReturn 0 coinAfterRecordin
 def coinAfterReturn1 : ℕ → WCC.SpecState 4 := coinReturn 1 coinAfterReturn0
 def coinAfterReturn2 : ℕ → WCC.SpecState 4 := coinReturn 2 coinAfterReturn1
 
-/-- ABA-side states after the three coin returns; each is the fused round
-advance (deviation D10), which multicasts `⟨DECIDED, true⟩` on the `A true`
-grade the round carried. -/
+/-- ABA states after the three coin returns; each is the fused round advance (deviation D10), which
+multicasts `⟨DECIDED, true⟩` on the `A true` grade the round carried. -/
 noncomputable def abaAfterRoundStep0 : ABAState fourProcesses := abaAfterCallW2.stepRound 0 true
 noncomputable def abaAfterRoundStep1 : ABAState fourProcesses := abaAfterRoundStep0.stepRound 1 true
 noncomputable def abaAfterRoundStep2 : ABAState fourProcesses := abaAfterRoundStep1.stepRound 2 true
 
-/-- ABA-side states after the adversary delivers all three `⟨DECIDED, true⟩` to
-process `0`. -/
+/-- ABA states after the adversary delivers all three `⟨DECIDED, true⟩` to process `0`. -/
 noncomputable def abaAfterDeliver0 : ABAState fourProcesses := abaAfterRoundStep2.deliverDecided 0 0
   true
 noncomputable def abaAfterDeliver1 : ABAState fourProcesses := abaAfterDeliver0.deliverDecided 0 1
@@ -259,12 +250,12 @@ noncomputable def abaAfterDeliver1 : ABAState fourProcesses := abaAfterDeliver0.
 noncomputable def abaAfterDeliver2 : ABAState fourProcesses := abaAfterDeliver1.deliverDecided 0 2
   true
 
-/-- The ABA-side state after process `0` fires `retABA 0 true`. -/
+/-- The ABA state after process `0` fires `retABA 0 true`. -/
 noncomputable def abaAfterRetABA : ABAState fourProcesses := abaAfterDeliver2.setProcess 0 {
   abaAfterDeliver2.processes 0 with returned := true }
 
-/-- The four components after a synchronised `fail 0` broadcast; the ABA-side
-state carries the replacement flag of process `0` beside the corrupted set. -/
+/-- The four components after a synchronised `fail 0` broadcast; the ABA state carries the
+replacement flag of process `0` beside the corrupted set. -/
 noncomputable def gbcaSpecificationsAfterFail : ℕ → GBCA.SpecState 4 := fun r =>
   (gbcaSpecificationsInitial r).corrupt fourProcesses (0 : Fin 4)
 noncomputable def coinAfterFail : ℕ → WCC.SpecState 4 := fun r => (coinInitial r).corrupt
@@ -285,8 +276,8 @@ theorem step_callABA₀ :
     (hybrid fourProcesses).step (hybridStateOf gbcaSpecificationsInitial abaInitial coinInitial)
       (Label.callABA (0 : Fin 4) true)
       (PMF.pure (hybridStateOf gbcaSpecificationsInitial abaAfterInput0 coinInitial)) := by
-  refine hybrid_vis fourProcesses (by simp) ?_
-  have h := hybridExtended_vis_step fourProcesses (G := gbcaSpecificationsInitial) (C :=
+  refine hybrid_visible fourProcesses (by simp) ?_
+  have h := hybridExtended_visible_step fourProcesses (G := gbcaSpecificationsInitial) (C :=
     abaInitial.1) (A := abaInitial.2) (o := coinInitial)
     (L := Sum.inl (Label.callABA (0 : Fin 4) true)) (by simp)
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsInitial (by simp) rfl not_false)
@@ -303,8 +294,8 @@ theorem step_callABA₁ :
     (hybrid fourProcesses).step (hybridStateOf gbcaSpecificationsInitial abaAfterInput0 coinInitial)
       (Label.callABA (1 : Fin 4) true)
       (PMF.pure (hybridStateOf gbcaSpecificationsInitial abaAfterInput1 coinInitial)) := by
-  refine hybrid_vis fourProcesses (by simp) ?_
-  have h := hybridExtended_vis_step fourProcesses (G := gbcaSpecificationsInitial) (C :=
+  refine hybrid_visible fourProcesses (by simp) ?_
+  have h := hybridExtended_visible_step fourProcesses (G := gbcaSpecificationsInitial) (C :=
     abaAfterInput0.1) (A := abaAfterInput0.2) (o := coinInitial)
     (L := Sum.inl (Label.callABA (1 : Fin 4) true)) (by simp)
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsInitial (by simp) rfl not_false)
@@ -322,8 +313,8 @@ theorem step_callABA₂ :
     (hybrid fourProcesses).step (hybridStateOf gbcaSpecificationsInitial abaAfterInput1 coinInitial)
       (Label.callABA (2 : Fin 4) true)
       (PMF.pure (hybridStateOf gbcaSpecificationsInitial abaAfterInput2 coinInitial)) := by
-  refine hybrid_vis fourProcesses (by simp) ?_
-  have h := hybridExtended_vis_step fourProcesses (G := gbcaSpecificationsInitial) (C :=
+  refine hybrid_visible fourProcesses (by simp) ?_
+  have h := hybridExtended_visible_step fourProcesses (G := gbcaSpecificationsInitial) (C :=
     abaAfterInput1.1) (A := abaAfterInput1.2) (o := coinInitial)
     (L := Sum.inl (Label.callABA (2 : Fin 4) true)) (by simp)
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsInitial (by simp) rfl not_false)
@@ -345,7 +336,7 @@ theorem step_callG₀ :
       Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterCall0 abaAfterCallG0 coinInitial))
         := by
   refine hybrid_hidden fourProcesses (l := Label.callG 0 (0 : Fin 4) true) (by simp) ?_
-  have h := hybridExtended_vis_step fourProcesses (G := gbcaSpecificationsInitial) (C :=
+  have h := hybridExtended_visible_step fourProcesses (G := gbcaSpecificationsInitial) (C :=
     abaAfterInput2.1) (A := abaAfterInput2.2) (o := coinInitial)
     (L := Sum.inl (Label.callG 0 (0 : Fin 4) true)) (by simp)
     (gbcaSpecificationFamily_owned fourProcesses rfl rfl (GBCA.Step.call (P := fourProcesses) (r :=
@@ -366,7 +357,7 @@ theorem step_callG₁ :
       coinInitial) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterCall1 abaAfterCallG1
         coinInitial)) := by
   refine hybrid_hidden fourProcesses (l := Label.callG 0 (1 : Fin 4) true) (by simp) ?_
-  have h := hybridExtended_vis_step fourProcesses (G := gbcaSpecificationsAfterCall0) (C :=
+  have h := hybridExtended_visible_step fourProcesses (G := gbcaSpecificationsAfterCall0) (C :=
     abaAfterCallG0.1) (A := abaAfterCallG0.2) (o := coinInitial)
     (L := Sum.inl (Label.callG 0 (1 : Fin 4) true)) (by simp)
     (gbcaSpecificationFamily_owned fourProcesses rfl rfl (GBCA.Step.call (P := fourProcesses) (r :=
@@ -389,7 +380,7 @@ theorem step_callG₂ :
       coinInitial) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterCall2 abaAfterCallG2
         coinInitial)) := by
   refine hybrid_hidden fourProcesses (l := Label.callG 0 (2 : Fin 4) true) (by simp) ?_
-  have h := hybridExtended_vis_step fourProcesses (G := gbcaSpecificationsAfterCall1) (C :=
+  have h := hybridExtended_visible_step fourProcesses (G := gbcaSpecificationsAfterCall1) (C :=
     abaAfterCallG1.1) (A := abaAfterCallG1.2) (o := coinInitial)
     (L := Sum.inl (Label.callG 0 (2 : Fin 4) true)) (by simp)
     (gbcaSpecificationFamily_owned fourProcesses rfl rfl (GBCA.Step.call (P := fourProcesses) (r :=
@@ -408,15 +399,15 @@ theorem step_callG₂ :
 /-! ### Step 7: the `bindUnset` internal transition of the round-`0`
 specification (family `τ`, interleaved) -/
 
-/-- With three of four processes having called, the round-`0` quorum `n − f = 3`
-is met, so `bindUnset` excludes the bit `false` (the three callers of `true` supply
-the `f + 1` support for the surviving bit). This is a family `τ`, interleaved on
-the specification side while the other three components hold. -/
+/-- With three of four processes having called, the round-`0` quorum `n − f = 3` is met, so
+`bindUnset` excludes the bit `false` (the three callers of `true` supply the `f + 1` support for the
+surviving bit). This is a family `τ`, interleaved on the specification while the other three
+components hold. -/
 theorem step_bindUnset :
     (hybrid fourProcesses).step (hybridStateOf gbcaSpecificationsAfterCall2 abaAfterCallG2
       coinInitial) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterBindUnset
         abaAfterCallG2 coinInitial)) := by
-  refine hybrid_vis fourProcesses (by simp) ?_
+  refine hybrid_visible fourProcesses (by simp) ?_
   exact hybridExtended_tau_specification fourProcesses (gbcaSpecificationFamily_tau fourProcesses
     (GBCA.Step.bindUnset (P := fourProcesses) (r := 0) (gbcaSpecificationsAfterCall2 0) false
       (by unfold GBCA.SpecState.quorum; decide) (by decide) (by decide)))
@@ -432,7 +423,7 @@ theorem step_retG₀ :
         coinInitial)) := by
   refine hybrid_hidden fourProcesses (l := Label.retG 0 (0 : Fin 4) (.grade2 true) true)
     (by simp) ?_
-  have h := hybridExtended_vis_step fourProcesses (G := gbcaSpecificationsAfterBindUnset) (C :=
+  have h := hybridExtended_visible_step fourProcesses (G := gbcaSpecificationsAfterBindUnset) (C :=
     abaAfterCallG2.1) (A := abaAfterCallG2.2) (o := coinInitial)
     (L := Sum.inl (Label.retG 0 (0 : Fin 4) (.grade2 true) true)) (by simp)
     (gbcaSpecificationFamily_owned fourProcesses rfl rfl
@@ -457,7 +448,7 @@ theorem step_retG₁ :
         coinInitial)) := by
   refine hybrid_hidden fourProcesses (l := Label.retG 0 (1 : Fin 4) (.grade2 true) true)
     (by simp) ?_
-  have h := hybridExtended_vis_step fourProcesses (G := gbcaSpecificationsAfterReturn0) (C :=
+  have h := hybridExtended_visible_step fourProcesses (G := gbcaSpecificationsAfterReturn0) (C :=
     abaAfterRetG0.1) (A := abaAfterRetG0.2) (o := coinInitial)
     (L := Sum.inl (Label.retG 0 (1 : Fin 4) (.grade2 true) true)) (by simp)
     (gbcaSpecificationFamily_owned fourProcesses rfl rfl
@@ -482,7 +473,7 @@ theorem step_retG₂ :
         coinInitial)) := by
   refine hybrid_hidden fourProcesses (l := Label.retG 0 (2 : Fin 4) (.grade2 true) true)
     (by simp) ?_
-  have h := hybridExtended_vis_step fourProcesses (G := gbcaSpecificationsAfterReturn1) (C :=
+  have h := hybridExtended_visible_step fourProcesses (G := gbcaSpecificationsAfterReturn1) (C :=
     abaAfterRetG1.1) (A := abaAfterRetG1.2) (o := coinInitial)
     (L := Sum.inl (Label.retG 0 (2 : Fin 4) (.grade2 true) true)) (by simp)
     (gbcaSpecificationFamily_owned fourProcesses rfl rfl
@@ -510,7 +501,7 @@ theorem step_callW₀ :
       coinInitial) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterCallW0
         coinAfterRecordingCall0)) := by
   refine hybrid_hidden fourProcesses (l := Label.callW 0 (0 : Fin 4)) (by simp) ?_
-  have h := hybridExtended_vis_step fourProcesses (G := gbcaSpecificationsAfterReturn2) (C :=
+  have h := hybridExtended_visible_step fourProcesses (G := gbcaSpecificationsAfterReturn2) (C :=
     abaAfterRetG2.1) (A := abaAfterRetG2.2) (o := coinInitial)
     (L := Sum.inl (Label.callW 0 (0 : Fin 4))) (by simp)
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsAfterReturn2 (by simp) rfl
@@ -535,9 +526,8 @@ noncomputable def resolvedCoinDistribution : PMF (ℕ → WCC.SpecState 4) :=
       o.toCoinValue })).map
     (Function.update coinAfterRecordingCall0 0)
 
-/-- The successor distribution of process `1`'s coin call: the round
-specifications and the ABA-side network stand still, process `1`'s round loop
-advances to `awaitW`, and the coin oracle resolves. -/
+/-- The successor distribution of process `1`'s coin call: the round specifications and the ABA
+network stand still, process `1`'s round loop advances to `awaitW`, and the coin oracle resolves. -/
 noncomputable def resolvedHybridDistribution : PMF (HybridState fourProcesses) :=
   prodPMF (PMF.pure gbcaSpecificationsAfterReturn2) (prodPMF (PMF.pure abaAfterCallW1.1) (prodPMF
     (PMF.pure abaAfterCallW1.2) resolvedCoinDistribution))
@@ -549,7 +539,7 @@ theorem step_callW₁ :
     (hybrid fourProcesses).step (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterCallW0
       coinAfterRecordingCall0) Label.tau resolvedHybridDistribution := by
   refine hybrid_hidden fourProcesses (l := Label.callW 0 (1 : Fin 4)) (by simp) ?_
-  exact hybridExtended_vis_step fourProcesses (G := gbcaSpecificationsAfterReturn2) (C :=
+  exact hybridExtended_visible_step fourProcesses (G := gbcaSpecificationsAfterReturn2) (C :=
     abaAfterCallW0.1) (A := abaAfterCallW0.2) (o := coinAfterRecordingCall0)
     (L := Sum.inl (Label.callW 0 (1 : Fin 4))) (by simp)
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsAfterReturn2 (by simp) rfl
@@ -599,7 +589,7 @@ theorem step_callW₂ :
       coinAfterResolvingCall) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn2
         abaAfterCallW2 coinAfterRecordingCall2)) := by
   refine hybrid_hidden fourProcesses (l := Label.callW 0 (2 : Fin 4)) (by simp) ?_
-  have h := hybridExtended_vis_step fourProcesses (G := gbcaSpecificationsAfterReturn2) (C :=
+  have h := hybridExtended_visible_step fourProcesses (G := gbcaSpecificationsAfterReturn2) (C :=
     abaAfterCallW1.1) (A := abaAfterCallW1.2) (o := coinAfterResolvingCall)
     (L := Sum.inl (Label.callW 0 (2 : Fin 4))) (by simp)
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsAfterReturn2 (by simp) rfl
@@ -626,7 +616,7 @@ theorem step_retW₀ :
       coinAfterRecordingCall2) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn2
         abaAfterRoundStep0 coinAfterReturn0)) := by
   refine hybrid_rendezvous fourProcesses (e := .retWPublish 0 (0 : Fin 4) true true) ?_
-  have h := hybridExtended_vis_step fourProcesses (G := gbcaSpecificationsAfterReturn2) (C :=
+  have h := hybridExtended_visible_step fourProcesses (G := gbcaSpecificationsAfterReturn2) (C :=
     abaAfterCallW2.1) (A := abaAfterCallW2.2) (o := coinAfterRecordingCall2)
     (L := Sum.inr (.retWPublish 0 (0 : Fin 4) true true)) (by simp)
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsAfterReturn2 (by simp) rfl
@@ -651,7 +641,7 @@ theorem step_retW₁ :
       coinAfterReturn0) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn2
         abaAfterRoundStep1 coinAfterReturn1)) := by
   refine hybrid_rendezvous fourProcesses (e := .retWPublish 0 (1 : Fin 4) true true) ?_
-  have h := hybridExtended_vis_step fourProcesses (G := gbcaSpecificationsAfterReturn2) (C :=
+  have h := hybridExtended_visible_step fourProcesses (G := gbcaSpecificationsAfterReturn2) (C :=
     abaAfterRoundStep0.1) (A := abaAfterRoundStep0.2) (o := coinAfterReturn0)
     (L := Sum.inr (.retWPublish 0 (1 : Fin 4) true true)) (by simp)
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsAfterReturn2 (by simp) rfl
@@ -676,7 +666,7 @@ theorem step_retW₂ :
       coinAfterReturn1) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn2
         abaAfterRoundStep2 coinAfterReturn2)) := by
   refine hybrid_rendezvous fourProcesses (e := .retWPublish 0 (2 : Fin 4) true true) ?_
-  have h := hybridExtended_vis_step fourProcesses (G := gbcaSpecificationsAfterReturn2) (C :=
+  have h := hybridExtended_visible_step fourProcesses (G := gbcaSpecificationsAfterReturn2) (C :=
     abaAfterRoundStep1.1) (A := abaAfterRoundStep1.2) (o := coinAfterReturn1)
     (L := Sum.inr (.retWPublish 0 (2 : Fin 4) true true)) (by simp)
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsAfterReturn2 (by simp) rfl
@@ -704,7 +694,7 @@ theorem step_deliver₀ :
       coinAfterReturn2) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn2
         abaAfterDeliver0 coinAfterReturn2)) := by
   refine hybrid_rendezvous fourProcesses (e := .decidedDeliver (0 : Fin 4) (0 : Fin 4) true) ?_
-  have h := hybridExtended_vis_step fourProcesses (G := gbcaSpecificationsAfterReturn2) (C :=
+  have h := hybridExtended_visible_step fourProcesses (G := gbcaSpecificationsAfterReturn2) (C :=
     abaAfterRoundStep2.1) (A := abaAfterRoundStep2.2) (o := coinAfterReturn2)
     (L := Sum.inr (.decidedDeliver (0 : Fin 4) (0 : Fin 4) true)) (by simp)
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsAfterReturn2 (by simp) rfl
@@ -725,7 +715,7 @@ theorem step_deliver₁ :
       coinAfterReturn2) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn2
         abaAfterDeliver1 coinAfterReturn2)) := by
   refine hybrid_rendezvous fourProcesses (e := .decidedDeliver (0 : Fin 4) (1 : Fin 4) true) ?_
-  have h := hybridExtended_vis_step fourProcesses (G := gbcaSpecificationsAfterReturn2) (C :=
+  have h := hybridExtended_visible_step fourProcesses (G := gbcaSpecificationsAfterReturn2) (C :=
     abaAfterDeliver0.1) (A := abaAfterDeliver0.2) (o := coinAfterReturn2)
     (L := Sum.inr (.decidedDeliver (0 : Fin 4) (1 : Fin 4) true)) (by simp)
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsAfterReturn2 (by simp) rfl
@@ -748,7 +738,7 @@ theorem step_deliver₂ :
       coinAfterReturn2) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn2
         abaAfterDeliver2 coinAfterReturn2)) := by
   refine hybrid_rendezvous fourProcesses (e := .decidedDeliver (0 : Fin 4) (2 : Fin 4) true) ?_
-  have h := hybridExtended_vis_step fourProcesses (G := gbcaSpecificationsAfterReturn2) (C :=
+  have h := hybridExtended_visible_step fourProcesses (G := gbcaSpecificationsAfterReturn2) (C :=
     abaAfterDeliver1.1) (A := abaAfterDeliver1.2) (o := coinAfterReturn2)
     (L := Sum.inr (.decidedDeliver (0 : Fin 4) (2 : Fin 4) true)) (by simp)
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsAfterReturn2 (by simp) rfl
@@ -776,8 +766,8 @@ theorem step_retABA :
       coinAfterReturn2) (Label.retABA (0 : Fin 4) true)
       (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterRetABA coinAfterReturn2)) :=
         by
-  refine hybrid_vis fourProcesses (by simp) ?_
-  have h := hybridExtended_vis_step fourProcesses (G := gbcaSpecificationsAfterReturn2) (C :=
+  refine hybrid_visible fourProcesses (by simp) ?_
+  have h := hybridExtended_visible_step fourProcesses (G := gbcaSpecificationsAfterReturn2) (C :=
     abaAfterDeliver2.1) (A := abaAfterDeliver2.2) (o := coinAfterReturn2)
     (L := Sum.inl (Label.retABA (0 : Fin 4) true)) (by simp)
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsAfterReturn2 (by simp) rfl
@@ -793,17 +783,16 @@ theorem step_retABA :
 
 /-! ### A `fail` broadcast: all four components corrupt in sync -/
 
-/-- Corruption of process `0`: the visible `fail 0` synchronises every component —
-the round specifications and the coin oracle by global broadcast, the ABA-side
-network by its own `fail` row, which carries the guards, the named round loop
-by replacing its own program (deviation D23), and the other three round loops
-by standing still (deviation D1). -/
+/-- Corruption of process `0`: the visible `fail 0` synchronises every component — the round
+specifications and the coin oracle by global broadcast, the ABA network by its own `fail` row, which
+carries the guards, the named round loop by replacing its own program (deviation D23), and the other
+three round loops by standing still (deviation D1). -/
 theorem step_fail :
     (hybrid fourProcesses).step (hybridStateOf gbcaSpecificationsInitial abaInitial coinInitial)
       (Label.fail (0 : Fin 4))
       (PMF.pure (hybridStateOf gbcaSpecificationsAfterFail abaAfterFail coinAfterFail)) := by
-  refine hybrid_vis fourProcesses (by simp) ?_
-  have h := hybridExtended_vis_step fourProcesses (G := gbcaSpecificationsInitial) (C :=
+  refine hybrid_visible fourProcesses (by simp) ?_
+  have h := hybridExtended_visible_step fourProcesses (G := gbcaSpecificationsInitial) (C :=
     abaInitial.1) (A := abaInitial.2) (o := coinInitial)
     (L := Sum.inl (Label.fail (0 : Fin 4))) (by simp)
     (gbcaSpecificationFamily_fail fourProcesses gbcaSpecificationsInitial 0)

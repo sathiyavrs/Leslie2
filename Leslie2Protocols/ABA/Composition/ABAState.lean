@@ -7,9 +7,9 @@ Authors: Sathiya / Claude
 import Leslie2Protocols.ABA.Composition.Components
 
 /-!
-# The ABA-side state of the composed reading
+# The ABA state of the composed system
 
-The round-loop records beside the ABA-side network, read as one object.
+The round-loop records beside the ABA network, read as one object.
 
 `ABAState` is the pair `(∀ j, RoundLoopRecord) × ABANetworkState`. Its accessors gather the
 data the two components hold apart: `processes` reads each process's control
@@ -26,8 +26,7 @@ open Implementation Composition
 
 variable {P : Parameters}
 
-/-- **The ABA-side state**: the `n` round-loop records beside the ABA-side
-network. -/
+/-- **The ABA state**: the `n` round-loop records beside the ABA network. -/
 abbrev ABAState (P : Parameters) : Type :=
   (∀ _ : Fin P.n, RoundLoopRecord P.n) × ABANetworkState P.n
 
@@ -70,8 +69,7 @@ example (s : ABAState P) (j : Fin P.n) : s.processes j = (s.1 j).process := rfl
 
 /-! ### State update helpers -/
 
-/-- The initial ABA-side state: all round loops idle, nothing multicast,
-nobody corrupted. -/
+/-- The initial ABA state: all round loops idle, nothing multicast, nobody corrupted. -/
 def initial (P : Parameters) : ABAState P :=
   (fun _ => RoundLoopRecord.initial P.n, ABANetworkState.initial P.n)
 
@@ -372,7 +370,7 @@ theorem corrupt_corrupted_ne (s : ABAState P) (id : Fin P.n) {k : Fin P.n}
   simp [corrupt, corrupted, Function.update_of_ne h]
 
 /-- The corrupted set after a corruption. `F` is the one field corruption
-writes, and the budget guard sits in the network component, so the reading is
+writes, and the budget guard sits in the network component, so the statement is
 stated here rather than reached by unfolding. Not a simp lemma: it introduces
 an `ite`. -/
 theorem corrupt_F (P : Parameters) (id : Fin P.n) (s : ABAState P) :

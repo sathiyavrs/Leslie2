@@ -3,11 +3,11 @@
   \lean{PLTS.ForwardSimulation.mapIdle}\leanok
   \uses{def:idle-family, def:forwardsim}
   Let $\varphi : L' \to L \cup \{\bot\}$ be a partial label map with $\varphi(\tau') = \tau$ and $\varphi(l') \neq \tau$ for every $l' \neq \tau'$.
-  A forward simulation between two systems over $L$ is a forward simulation, along the same relation, between their read-backs over $L'$ along $\varphi$: a step on a delegating label is matched through the given simulation, and a step on an unmapped label --- an idle self-loop on both sides --- is matched by the abstract side's own self-loop.
+  A forward simulation between two systems over $L$ is a forward simulation, along the same relation, between their read-backs over $L'$ along $\varphi$: a step on a delegating label is matched through the given simulation, and a step on an unmapped label --- an idle self-loop in both systems --- is matched by the abstract system's own self-loop.
 \end{theorem}
 
 \begin{proof}\leanok
   \uses{def:idle-family, def:forwardsim}
-  The one obligation is transporting the abstract side's weak answers from $L$ to $L'$, and no section of $\varphi$ is required for it: the witness execution is relabelled per transition, its silent transitions to $\tau'$ and its single external transition --- when there is one --- to the delegating label, using that every non-silent label of a terminating run occurs in its trace.
+  The one obligation is transporting the abstract system's weak answers from $L$ to $L'$, and no section of $\varphi$ is required for it: the witness execution is relabelled per transition, its silent transitions to $\tau'$ and its single external transition --- when there is one --- to the delegating label, using that every non-silent label of a terminating run occurs in its trace.
   A silent answer relabels to a silent answer, and an idle self-loop is answered by the single external step the read-back adds.
 \end{proof}

@@ -26,13 +26,11 @@ abstract state's mode stays `ControlMode.flipEnabled`, so it never fires
 return arrives. A `fail` is answered by `SpecStep.fail`, whose two guards are
 the concrete row's own, read across `AbstractState.F_eq`.
 
-A corruption replaces the program of the process it names (D23), and the
-replacement is answered on both sides of the interface. The corrupted
-process's `retABA` is answered by `SpecStep.retByzantine`: neither the concrete
-state nor the abstract state moves. On every other label the replaced program
-self-loops, and the concrete row it contributes is the corrupted branch the
-inversion already carries.
--/
+A corruption replaces the program of the process it names (D23), and the replacement is answered in
+both systems of the interface. The corrupted process's `retABA` is answered by
+`SpecStep.retByzantine`: neither the concrete state nor the abstract state moves. On every other
+label the replaced program self-loops, and the concrete row it contributes is the corrupted branch
+the inversion already carries. -/
 
 namespace PLTS
 namespace ABA
@@ -84,10 +82,9 @@ theorem ABAState.corrupt_F_subset {P : Parameters} (c : ABAState P) (id : Fin P.
   · exact Finset.subset_insert _ _
   · exact Finset.Subset.refl _
 
-/-- The outcome of a visible row collapses to a single Dirac: the specification
-side stands, the ABA-side pair lands on one state and the coin oracle stands,
-so the four components' joint outcome is the point mass `dirac_step`
-expects. -/
+/-- The outcome of a visible row collapses to a single Dirac: the specification stands, the ABA
+component lands on one state and the coin oracle stands, so the four components' joint outcome is
+the point mass `dirac_step` expects. -/
 private theorem prodPMF_pure_abaRow {P : Parameters} (G : ℕ → GBCA.SpecState P.n)
     (c : ABAState P) (o : ℕ → WCC.SpecState P.n) :
     prodPMF (PMF.pure G) ((PMF.pure c).map fun x => (x.1, x.2, o))
@@ -284,7 +281,7 @@ theorem hybridRefinesSpecification (P : Parameters) :
           rw [PMF.mem_support_pure_iff]
         have hIAF := Invariant.step_retABA hI id b hstepC hc'mem
         have hIA' : Invariant P g c' w := hIAF.1
-        -- Honest DECIDED-sender pigeonhole: `n − f` distinct senders of `b` delivered to `id`,
+        -- Correct DECIDED-sender pigeonhole: `n − f` distinct senders of `b` delivered to `id`,
         -- only `f` corrupted — equivocating byzantine senders may count toward the tally, but
         -- at least one counted sender is never-corrupted (D12′).
         have hex : ∃ j, j ∉ ABAState.F (C, A) ∧ b ∈ ABAState.decidedReceived (C, A) id j := by
@@ -302,8 +299,8 @@ theorem hybridRefinesSpecification (P : Parameters) :
         obtain ⟨j, hjF, hjrecv⟩ := hex
         have hjsent : b ∈ ABAState.decidedSent (C, A) j := hI.received_sound id j b hjrecv
         obtain ⟨rA, hrA_certificate⟩ := hI.decided_source j b hjF hjsent
-        -- the abstract-side holder pin for `b`: every honest grade-2 decision holder
-        -- agrees with the derived sender's sent bit (I30)
+        -- the abstract holder pin for `b`: every correct grade-2 decision holder agrees with the
+        -- derived sender's sent bit (I30)
         have hpinb : ∀ j0 b0', j0 ∉ ABAState.F (C, A) → Grade2Holder P (C, A) j0 b0' → b0' = b :=
           fun j0 b0' hj0 hh0 => hI.grade2Lock_agree j0 j b0' b hj0 hjF hh0 (Or.inr hjsent)
         have hretfalse : a.ret id = false := by
@@ -350,7 +347,7 @@ theorem hybridRefinesSpecification (P : Parameters) :
           rw [hbid]
           exact weakStep_of_run_then_step hrun (SpecStep.ret a1 id b hval1 hretid)
         · -- phase 2: `b` agrees with the certified value through the abstract state's holder pin
-          -- (I30 pins the derived sender's sent `b` against every honest holder, and the
+          -- (I30 pins the derived sender's sent `b` against every correct holder, and the
           -- abstract state's pin names `v`; `SpecStep.ret` fires alone)
           have hD3 : v = b := (hpin j b hjF (Or.inr hjsent)).symm
           have hvalb : a.val = some b := by
@@ -372,7 +369,7 @@ theorem hybridRefinesSpecification (P : Parameters) :
           refine ⟨ω, hRel, Or.inr ⟨by simp, ?_⟩⟩
           rw [hbid]
           exact weakStep_strong (SpecStep.ret a id b hvalb hretfalse)
-      · -- a corrupted process's return (D23): neither side moves, and the abstract state answers
+      · -- a corrupted process's return (D23): neither system moves, and the abstract state answers
         -- with its own corrupted-return rule
         simp only [prodPMF_pure_abaRow]
         obtain ⟨ω, hRel, hbid⟩ := dirac_step (g, C, A, w) a ⟨hI, hAbs⟩

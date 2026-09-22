@@ -1,13 +1,13 @@
-\begin{definition}[The network of the graded-agreement layer]
+\begin{definition}[The round's network]
   \label{def:aba-gbca-net}
   \lean{PLTS.ABA.GBCA.ByAFW.NetworkStep}\lean{PLTS.ABA.GBCA.ByAFW.GBCANetwork}\leanok
   \uses{def:aba-gather-spec, def:aba-labels}
   The network component of a gather-based round.
-  It exchanges no messages: the two gathers carry every message of the round inside their own networks, and what is left at the layer is the round's bound bit, which is the whole state of this component.
+  It exchanges no messages: the two gathers carry every message of the round inside their own networks, and what is left at the round's programs is the round's bound bit, which is the whole state of this component.
   Three clauses give its rows.
   The first gather's return to a process writes the bit where the component holds none, as $\mathrm{boundOfCore}$ of the core that return carries, and leaves it alone where it holds one.
   A graded return fires only with the bit its label carries equal to the bit on record, and moves nothing; where no bit is on record the guard reads $\mathrm{boundOfCore}$ of the empty set.
-  Every other label leaves the component where it stands, corruption included: the corrupted set lives in the gather instances and in the ABA-side network, not here.
+  Every other label leaves the component where it stands, corruption included: the corrupted set lives in the gather instances and in the ABA network, not here.
   No program reads the bit and no row of a program is guarded by it, so it is auxiliary state in the sense of~\cite{AL91} (D29), and the round announces it on every graded return.
   Full construction: \leandecl{PLTS.ABA.GBCA.ByAFW.GBCANetwork}.
 \end{definition}

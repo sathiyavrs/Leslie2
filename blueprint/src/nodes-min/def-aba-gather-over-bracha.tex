@@ -1,0 +1,8 @@
+\begin{definition}[The gather implementation over Bracha instances]
+  \label{def:aba-gather-over-bracha}
+  \lean{PLTS.ABA.Gather.StateOverBracha}\lean{PLTS.ABA.Gather.StepOverBracha}\lean{PLTS.ABA.Gather.instanceOverBracha}\lean{PLTS.ABA.Gather.instanceOverBracha_step_iff_row}\leanok
+  \uses{def:aba-gather-composition, def:aba-gather-over-broadcast-specification, def:aba-brb-impl}
+  The gather instance of Definition~\ref{def:aba-gather-composition} whose broadcast tier is $2n$ Bracha instances of Definition~\ref{def:aba-brb-impl}: \leandecl{PLTS.ABA.Gather.instanceOverBracha}.
+  Its rows are those of Definition~\ref{def:aba-gather-over-broadcast-specification} with each broadcast row carrying a Bracha row in its place, and the internal rows of the $2n$ instances --- their deliveries, echoes, votes and injections --- are the silent rows of the composition: \leandecl{PLTS.ABA.Gather.StepOverBracha}, matched against the transitions of the composition by \leandecl{PLTS.ABA.Gather.instanceOverBracha_step_iff_row}.
+  The gather tier is the same at both tiers, so the stores, the guards that read them and the core are written here as they are one tier up (D29).
+\end{definition}

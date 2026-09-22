@@ -32,20 +32,18 @@ paper is named.) Per process, on external input `b`:
     upon ⟨DECIDED, b⟩ from n − f senders, having multicast ⟨DECIDED, b⟩:
       return b
 
-The file holds the algorithm alone: the handshake phase `Phase`, the estimate
-a graded outcome dictates (`GBCAOutput.estimate`), and the per-process control record
-`RoundLoopState`. The record carries no sub-protocol state — the
-`callG`/`retG`/`callW`/`retW` interactions are pure handshakes over the API
-labels, advancing the process's `phase` and recording the returned data, while
-the sub-protocol state itself lives in the round specifications and the coin
-oracle — and no network state: the DECIDED sets and the corrupted set belong
-to the network. The transitions themselves are `RoundLoopStep`
-(`ABA/Composition/Components.lean`), the rows of a round-loop record `RoundLoopRecord` over the
-extended alphabet, and `ABDY.ABAProgramStep` (`ABA/ImplementationByABDY/System.lean`), the rows of
-the protocol program that carries a round loop beside its stage-side record. This file realises the
-Core-side assumptions of `DESIGN-CoreSim.md`: the phase machine (invariant conjunct 4), the DECIDED
-diffusion state (conjunct 6), and input coherence (conjunct 5 — the honest
-`callG` guard ties the emitted bit to the current estimate).
+The file holds the algorithm alone: the handshake phase `Phase`, the estimate a graded outcome
+dictates (`GBCAOutput.estimate`), and the per-process control record `RoundLoopState`. The record
+carries no sub-protocol state — the `callG`/`retG`/`callW`/`retW` interactions are pure handshakes
+over the API labels, advancing the process's `phase` and recording the returned data, while the
+sub-protocol state itself lives in the round specifications and the coin oracle — and no network
+state: the DECIDED sets and the corrupted set belong to the network. The transitions themselves are
+`RoundLoopStep` (`ABA/Composition/Components.lean`), the rows of a round-loop record
+`RoundLoopRecord` over the extended alphabet, and `ABDY.ABAProgramStep`
+(`ABA/ImplementationByABDY/System.lean`), the rows of the protocol program that carries a round loop
+beside its round records. This file realises the assumptions of `DESIGN-CoreSim.md`: the
+phase machine (invariant conjunct 4), the DECIDED diffusion state (conjunct 6), and input coherence
+(conjunct 5 — the correct `callG` guard ties the emitted bit to the current estimate).
 
 ## Model and deviations (continuing the project's D1–D8)
 
@@ -58,29 +56,25 @@ diffusion state (conjunct 6), and input coherence (conjunct 5 — the honest
   clears `lastGrade` and advances to the next round, all in one Dirac
   transition. The joint step is the `retWPublish` rendezvous, whose round-loop
   half is the advance and whose network half is the sent insert.
-* **D11 (Byzantine handshake rows).** Corrupted processes may make their
-  sub-protocol handshakes arbitrarily: each of `callG`/`retG`/`callW`/`retW`
-  has a Byzantine handshake row, authorised by `k ∈ F` at the network and constrained
-  by no phase or estimate. The round loop contributes an idle row to every
-  such a row, so the family-side call/return rules for corrupted ids are never
-  blocked by it.
-* **D12′ (per-process DECIDED sets, equivocation-capable).** The DECIDED
-  multicast state is the network's per-process sent
-  `decidedSent : Fin n → Finset Bool`, read on the ABA side as `decidedSent`
-  (`ABA/Composition/ABAState.lean`) and mirroring graded agreement's D5 sent-set pattern.
-  Honest sends insert into the sent (the fused `retWPublish` publication and the
-  `f + 1` relay `decidedSend`; in reachable states DECIDED coherence keeps every
-  honest sent at card ≤ 1, so the insert is a first write or a no-op re-send
-  of the same bit). Byzantine injection (`byzantineDecided`, guarded only by `k ∈ F`) may
-  insert either or both bits at any time — a corrupted process may send
-  `DECIDED 0` to one receiver and `DECIDED 1` to another (delivery is
-  selective). The delivery rendezvous `decidedDeliver` moves one sent bit into the
-  receiver's own row `decidedReceived i j` at most once per (receiver, sender,
-  bit) triple, with soundness `b ∈ decidedSent j` on the network's half; the
-  `retABA` quorum guard counts distinct *senders* per bit (`decidedCount`).
-  The per-process sent sets (D12′) let a corrupted process equivocate in the
-  DECIDED sets; a single-entry model would bar that — an under-approximation
-  inconsistent with graded agreement.
+* **D11 (Byzantine handshake rows).** Corrupted processes may make their sub-protocol handshakes
+  arbitrarily: each of `callG`/`retG`/`callW`/`retW` has a Byzantine handshake row, authorised by `k
+  ∈ F` at the network and constrained by no phase or estimate. The round loop contributes an idle
+  row to every such row, so the family's call/return rules for corrupted ids are never blocked by
+  it.
+* **D12′ (per-process DECIDED sets, equivocation-capable).** The DECIDED multicast state is the
+  network's per-process sent `decidedSent : Fin n → Finset Bool`, read in the ABA component as
+  `decidedSent` (`ABA/Composition/ABAState.lean`) and mirroring graded agreement's D5 sent-set
+  pattern. Correct sends insert into the sent (the fused `retWPublish` publication and the `f + 1`
+  relay `decidedSend`; in reachable states DECIDED coherence keeps every correct sent at card ≤ 1,
+  so the insert is a first write or a no-op re-send of the same bit). Byzantine injection
+  (`byzantineDecided`, guarded only by `k ∈ F`) may insert either or both bits at any time — a
+  corrupted process may send `DECIDED 0` to one receiver and `DECIDED 1` to another (delivery is
+  selective). The delivery rendezvous `decidedDeliver` moves one sent bit into the receiver's own
+  row `decidedReceived i j` at most once per (receiver, sender, bit) triple, with soundness `b ∈
+  decidedSent j` on the network's half; the `retABA` quorum guard counts distinct *senders* per bit
+  (`decidedCount`). The per-process sent sets (D12′) let a corrupted process equivocate in the
+  DECIDED sets; a single-entry model would bar that — an under-approximation inconsistent with
+  graded agreement.
 * **D23 (the corrupted process's replaced program).** A corruption replaces the
   program of the process it names. `RoundLoopRecord.corrupted` carries the
   replacement: the process's own half of `fail` writes the flag, every row
@@ -90,9 +84,9 @@ diffusion state (conjunct 6), and input coherence (conjunct 5 — the honest
   its own sub-protocol messages. Those messages are the business of the Byzantine
   handshake rows (D11), which carry it with no round-loop row of the named process.
 
-Two further notes: the return rule has **no** honesty check — corrupted
-returns must pass the same `n − f` DECIDED count as honest ones, and the
-specification's return rule is likewise blind to honesty — and
+Two further notes: the return rule has **no** correctness check — corrupted
+returns must pass the same `n − f` DECIDED count as correct ones, and the
+specification's return rule is likewise blind to correctness — and
 `lastGrade` always refers to the *current* round's GBCA
 return (it is cleared by the round advance).
 -/
@@ -181,10 +175,9 @@ end RoundLoopState
 
 /-! ### The round-loop record
 
-A process's control record is not by itself what the composition moves: a
-round loop also holds the DECIDED payloads delivered to it. The record below
-pairs the two, and is one component of the ABA-side state the core simulation
-reads (`ABA/Composition/ABAState.lean`). -/
+A process's control record is not by itself what the composition moves: a round loop also holds the
+DECIDED payloads delivered to it. The record below pairs the two, and is one component of the ABA
+state the core simulation reads (`ABA/Composition/ABAState.lean`). -/
 
 /-- The round-loop record of one process: its own control record and the
 DECIDED payloads delivered to it, indexed by sender. There is no record of
@@ -195,7 +188,7 @@ structure RoundLoopRecord (n : ℕ) : Type where
   /-- The DECIDED payloads delivered to this process, indexed by sender. -/
   decidedDelivered : Fin n → Finset Bool
   /-- Whether this process's program has been replaced (D23). The process's own
-  half of `fail` writes the flag, and the guard of every honest row reads it.
+  half of `fail` writes the flag, and the guard of every correct row reads it.
   The record beneath the flag stands still from that point on. -/
   corrupted : Bool
   deriving DecidableEq

@@ -21,20 +21,17 @@ specification (`Gather.instanceOverBroadcastSpecification`), along
 related to its specification coordinate by the BRB refinement relation (`BRB.SpecificationRelation`,
 `ABA/ReliableBroadcast/BrachaRefinesSpecification.lean`).
 
-The proof is the congruence argument alone. The two instances are one
-expression over two broadcast tiers, so the BRB refinement (`BRB.brachaRefinesSpecification`)
-is carried through the operators that expression is built from:
-`ForwardSimulation.mapIdle` reads one coordinate over the composition's
-alphabet, `ForwardSimulation.synchronisedProduct` collects the coordinates of one
-family, `ForwardSimulation.parallel_right` and
-`ForwardSimulation.parallel_left` hold the other family and then the gather
-tier, and `ForwardSimulation.abstract` and `ForwardSimulation.relabel` hide the
-events and read the result back over the interface alphabet. The two families
-are replaced one after the other and the two steps are joined by
-`ForwardSimulation.trans`. `ForwardSimulation.congr` then reshapes the
-composite relation into `BroadcastSubstitutionRelation`: the intermediate state the composite
-quantifies over is the input coordinates of the abstract side beside the bind
-coordinates of the concrete side.
+The proof is the congruence argument alone. The two instances are one expression over two broadcast
+tiers, so the BRB refinement (`BRB.brachaRefinesSpecification`) is carried through the operators
+that expression is built from: `ForwardSimulation.mapIdle` reads one coordinate over the
+composition's alphabet, `ForwardSimulation.synchronisedProduct` collects the coordinates of one
+family, `ForwardSimulation.parallel_right` and `ForwardSimulation.parallel_left` hold the other
+family and then the gather tier, and `ForwardSimulation.abstract` and `ForwardSimulation.relabel`
+hide the events and read the result back over the interface alphabet. The two families are replaced
+one after the other and the two steps are joined by `ForwardSimulation.trans`.
+`ForwardSimulation.congr` then reshapes the composite relation into `BroadcastSubstitutionRelation`:
+the intermediate state the composite quantifies over is the input coordinates of the abstract system
+beside the bind coordinates of the concrete system.
 
 Both instances are LTS, so `instanceOverBracha_refines` reads the substitution as an
 inclusion of achievable trace distributions.

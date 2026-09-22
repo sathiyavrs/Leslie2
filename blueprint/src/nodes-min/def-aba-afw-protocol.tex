@@ -1,7 +1,7 @@
 \begin{definition}[The gather-based protocol]
   \label{def:aba-afw-protocol}
   \lean{PLTS.ABA.AFW.Message}\lean{PLTS.ABA.AFW.RoundRecord}\lean{PLTS.ABA.AFW.RoundStep}\lean{PLTS.ABA.AFW.gbcaCallPayload}\lean{PLTS.ABA.AFW.Ghost}\lean{PLTS.ABA.AFW.firstGatherOf}\lean{PLTS.ABA.AFW.secondGatherOf}\lean{PLTS.ABA.AFW.ghostStep}\lean{PLTS.ABA.AFW.ghostOut}\lean{PLTS.ABA.AFW.protocolExtended}\lean{PLTS.ABA.AFW.protocolHidden}\lean{PLTS.ABA.AFW.protocol}\leanok
-  \uses{def:aba-flat-reading, def:aba-gbca-gather-low, def:aba-gather-low, def:aba-gather-core}
-  The flat reading at the gather-based implementation: one tagged message type collapsing a round's $4n+2$ network states into one sent-set family, a process-major stage record holding each process's local state in every instance, and 23 stage-side rows --- the two gather instances, the $4n$ Bracha instances beneath them, the three fused rows and the delivery: \leandecl{PLTS.ABA.AFW.protocol}.
-  The adversary's record of a round is \leandecl{PLTS.ABA.AFW.Ghost}, the two gathers' cores and the round's bound bit, each written once: the link's broadcast of the candidate writes the first core and the bit, and a graded return writes the second (D29, D30).
+  \uses{def:aba-implementation, def:aba-round-over-bracha, def:aba-gather-over-bracha, def:aba-gather-core}
+  Definition~\ref{def:aba-implementation} at the gather-based implementation: one tagged message type collapsing a round's $4n+2$ network states into one sent-set family, a process-major round record holding each process's local state in every instance, and 23 round's rows --- the two gather instances, the $4n$ Bracha instances beneath them, the three fused rows and the delivery: \leandecl{PLTS.ABA.AFW.protocol}.
+  The adversary's record of a round is \leandecl{PLTS.ABA.AFW.Ghost}, the two gathers' cores and the round's bound bit, each written once: the return-then-call row's broadcast of the candidate writes the first core and the bit, and a graded return writes the second (D29, D30).
 \end{definition}

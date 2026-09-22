@@ -64,7 +64,7 @@ out-of-scope Unpredictability property), and `fail` is the determinised
   resolving.
 
 The instance only steps on its own round-`r` API labels and `fail`; it has no
-silent row (`WCC.step_tau_inv`), and the family combinator (`System.family`)
+silent row (`WCC.step_tau_inversion`), and the family combinator (`System.family`)
 supplies idle self-loops on every other label.
 -/
 
@@ -109,7 +109,7 @@ structure SpecState (n : ℕ) where
   ret : Fin n → Bool
   /-- The coin outcome (`⊥` until resolved). -/
   val : CoinValue
-  /-- The corrupted set (local copy, kept in lockstep by `fail` broadcast). -/
+  /-- The corrupted set (local copy, kept equal by `fail` broadcast). -/
   F : Finset (Fin n)
   deriving DecidableEq
 
@@ -187,7 +187,7 @@ inductive Step (P : Parameters) (r : ℕ) :
 
 /-- The three rows of the call label: the input-enabledness loop, the recording
 call, and the resolving call. -/
-theorem step_callW_inv {P : Parameters} {r : ℕ} {s : SpecState P.n} {id : Fin P.n}
+theorem step_callW_inversion {P : Parameters} {r : ℕ} {s : SpecState P.n} {id : Fin P.n}
     {μ : PMF (SpecState P.n)} (h : Step P r s (.callW r id) μ) :
     μ = PMF.pure s ∨
       (s.called id = false ∧ ¬ ((s.record id).threshold P ∧ s.val = .bot) ∧
@@ -200,7 +200,7 @@ theorem step_callW_inv {P : Parameters} {r : ℕ} {s : SpecState P.n} {id : Fin 
   | callLoop => exact Or.inl rfl
 
 /-- The instance has no silent row. -/
-theorem step_tau_inv {P : Parameters} {r : ℕ} {s : SpecState P.n}
+theorem step_tau_inversion {P : Parameters} {r : ℕ} {s : SpecState P.n}
     {μ : PMF (SpecState P.n)} : ¬ Step P r s .tau μ := by
   intro h; cases h
 
@@ -209,7 +209,7 @@ was taken at -- the input-enabledness loop -- or records the call. -/
 theorem step_callW_support {P : Parameters} {r : ℕ} {s : SpecState P.n} {id : Fin P.n}
     {μ : PMF (SpecState P.n)} (h : Step P r s (.callW r id) μ)
     {x : SpecState P.n} (hx : x ∈ μ.support) : x = s ∨ x.called id = true := by
-  rcases step_callW_inv h with rfl | ⟨-, -, rfl⟩ | ⟨-, -, -, rfl⟩
+  rcases step_callW_inversion h with rfl | ⟨-, -, rfl⟩ | ⟨-, -, -, rfl⟩
   · exact Or.inl (by simpa using hx)
   · simp only [PMF.support_pure, Set.mem_singleton_iff] at hx
     subst hx
@@ -245,11 +245,11 @@ noncomputable def specFamily (P : Parameters) :
 
 /-- The family has no silent row: its instances have none, and every remaining
 row of `System.family` carries a label other than `τ`. -/
-theorem specFamily_tau_inv (P : Parameters) {o : ℕ → SpecState P.n}
+theorem specFamily_tau_inversion (P : Parameters) {o : ℕ → SpecState P.n}
     {ω : PMF (ℕ → SpecState P.n)} : ¬ (specFamily P).step o Label.tau ω := by
   rw [specFamily, System.family_step_iff]
   rintro (⟨-, r, μr, hstep, -⟩ | ⟨r, hr, -⟩ | ⟨hτ, -⟩ | ⟨hτ, -⟩)
-  · exact step_tau_inv hstep
+  · exact step_tau_inversion hstep
   · exact absurd hr (by simp [Label.wccRound])
   · exact hτ rfl
   · exact hτ rfl

@@ -10,34 +10,31 @@ import Leslie2Protocols.Framework.SynchronisedProduct
 import Mathlib.Data.Finmap
 
 /-!
-# The flat reading of a protocol
+# The implementation of a protocol
 
-A flat reading presents the protocol as it runs: `n` programs, one per process,
+The implementation presents the protocol as it runs: `n` programs, one per process,
 beside one network adversary holding the message sets, the DECIDED sets and
 the corrupted set with its budget, beside the coin oracle. A program reads its
 own records, its own received sets and its own replacement flag, and nothing else
 about corruption: not the corrupted set, not the budget, not another process's
 status (D23).
 
-Everything of that shape which does not depend on the graded-agreement
-implementation is written here once. The parameters are the stage-side message
-type `M`, the per-process per-round stage record `S`, and the implementation's
-own rows, given as a relation `roundStep` embedded in one constructor of the
-program table. A reading supplies the three and inherits the round loop, the
-DECIDED sets, the coin handshake, corruption, the network adversary, the
-composition pipeline and the inversion lemmas.
+Everything of that shape which does not depend on the graded-agreement implementation is written
+here once. The parameters are the round message type `M`, the per-process per-round record `S`, and
+the implementation's own rows, given as a relation `roundStep` embedded in one constructor of the
+program table. An implementation supplies the three and inherits the round loop, the DECIDED sets,
+the coin handshake, corruption, the network adversary, the composition pipeline and the inversion
+lemmas.
 
 ## The division of rows
 
-A program's row is the implementation's business exactly when its label is one
-of `roundOwn j`: the graded-agreement call and return at `j`, `j`'s own stage
-multicast, a stage delivery addressed to `j`, and `j`'s own call against an
-already-called stage record. Every other label — the ABA interface, the coin
-handshake, the DECIDED relay and its delivery, the Byzantine handshake rows,
-corruption, and the same five label classes at another process — is answered
-by a row here. The side condition `roundOwn` is what the inversion lemmas
-consume: a program's row on a label outside `roundOwn j` is one of the rows
-below, whichever implementation is being read.
+A program's row is the implementation's business exactly when its label is one of `roundOwn j`: the
+graded-agreement call and return at `j`, `j`'s own round multicast, a round delivery addressed to
+`j`, and `j`'s own call against an already-called round record. Every other label — the ABA
+interface, the coin handshake, the DECIDED relay and its delivery, the Byzantine handshake rows,
+corruption, and the same five label classes at another process — is answered by a row here. The
+premise `roundOwn` is what the inversion lemmas consume: a program's row on a label outside
+`roundOwn j` is one of the rows below, whichever implementation is being read.
 
 ## The network adversary
 
@@ -50,7 +47,7 @@ ghost.
 ## The network's ghost
 
 The adversary holds one further record: for each round `r`, a ghost record
-`ghostRecord r` of a type `G` the reading fixes. It belongs to the network and to
+`ghostRecord r` of a type `G` the implementation fixes. It belongs to the network and to
 no program. No program's row reads it and no program's record holds it.
 
 Two parameters carry it. `ghostStep` writes it. On every row, the record of
@@ -62,14 +59,14 @@ announces: the network's state, the round, the process being answered, the
 graded outcome and the bit. It is read by the two graded-agreement return rows —
 `retG`, and `byzantineRetG` at a replaced program — each of which fires only with
 the bound bit its label carries standing in it. What the read decides is the bit
-announced and not whether the row fires: each reading below instantiates the
+announced and not whether the row fires: each implementation below instantiates the
 relation so that it admits a bit at every state (`ghostOut_total`,
-`ABA/GhostErasure/GhostFreeSystem.lean`). A reading that computes the
-announced bit instantiates the relation as an equation against it. A reading
-that leaves the announcement to the adversary instantiates it as the full
+`ABA/GhostErasure/GhostFreeSystem.lean`). An implementation that computes the
+announced bit instantiates the relation as an equation against it. An implementation
+that leaves the announcement to the network instantiates it as the full
 relation, and the bit is unconstrained.
 
-The content is the reading's own. ABDY22's reading and the gather-based one
+The content is the implementation's own. ABDY22's implementation and the gather-based one
 hold different records and write them at different rows, so `G`, `ghostStep`
 and `ghostOut` are parameters here, as `M`, `S`, `roundStep` and `callPayload`
 are. Each of the two writes the record at the first return of a round, from
@@ -84,11 +81,10 @@ namespace Implementation
 
 /-! ### The state of one process -/
 
-/-- The stage-side record of one process: the stage record of every round the
-process has touched, and whether it has terminated (D22). -/
+/-- The round records of one process: the round record of every round the process has touched, and
+whether it has terminated (D22). -/
 structure RoundRecordMap (S : Type) : Type where
-  /-- The finite map of stage records; a round off the map has the initial
-  record. -/
+  /-- The finite map of round records; a round off the map has the initial record. -/
   roundRecords : Finmap (fun _ : ℕ => S)
   /-- Whether this process has terminated (ABDY22 §3, Termination).
   `terminated` is not `returned`: the round-loop record's `returned` says the
@@ -99,22 +95,21 @@ namespace RoundRecordMap
 
 variable {n : ℕ} {M S : Type}
 
-/-- The initial stage-side record: no round touched, not terminated. -/
+/-- The initial round records: no round touched, not terminated. -/
 def initial (S : Type) : RoundRecordMap S where
   roundRecords := ∅
   terminated := false
 
-/-- Retain `p` as the stage record of round `r`. -/
+/-- Retain `p` as the round record of round `r`. -/
 def setRoundRecord (q : RoundRecordMap S) (r : ℕ) (p : S) : RoundRecordMap S :=
   { q with roundRecords := q.roundRecords.insert r p }
 
 end RoundRecordMap
 
-/-- What a flat reading's stage record supplies: the record of a round the
-process has not touched, and the filing of a delivered message under its
-sender's recv row. -/
+/-- What the implementation's round record supplies: the record of a round the process has not
+touched, and the filing of a delivered message under its sender's recv row. -/
 class IsRoundRecord (n : outParam ℕ) (M : outParam Type) (S : Type) where
-  /-- The stage record of a round the process has not touched. -/
+  /-- The round record of a round the process has not touched. -/
   initial : S
   /-- File a message under its sender's recv row. -/
   deliverTo : S → Fin n → M → S
@@ -123,13 +118,12 @@ namespace RoundRecordMap
 
 variable {n : ℕ} {M S : Type} [IsRoundRecord n M S]
 
-/-- The stage record of round `r`: the retained record if the process has
-touched round `r`, the initial record otherwise. -/
+/-- The round record of round `r`: the retained record if the process has touched round `r`, the
+initial record otherwise. -/
 def roundRecord (q : RoundRecordMap S) (r : ℕ) : S :=
   (q.roundRecords.lookup r).getD IsRoundRecord.initial
 
-/-- File `m` under the recv row of sender `k` in the stage record of round
-`r`. -/
+/-- File `m` under the recv row of sender `k` in the round record of round `r`. -/
 def deliverTo (q : RoundRecordMap S) (r : ℕ) (k : Fin n) (m : M) : RoundRecordMap S :=
   q.setRoundRecord r (IsRoundRecord.deliverTo (q.roundRecord r) k m)
 
@@ -155,8 +149,7 @@ def deliverTo (q : RoundRecordMap S) (r : ℕ) (k : Fin n) (m : M) : RoundRecord
 
 end RoundRecordMap
 
-/-- The state of one process: its round-loop record and its stage-side record
-(D22). -/
+/-- The state of one process: its round-loop record and its round records (D22). -/
 abbrev ProcessRecord (n : ℕ) (S : Type) : Type := RoundLoopRecord n × RoundRecordMap S
 
 /-! ### The round a label names -/
@@ -186,7 +179,7 @@ def roundOf {n : ℕ} {M : Type} : ExtendedLabel n M → Option ℕ
 DECIDED sets, the corrupted set with its budget, and the ghost record of every
 round. -/
 structure NetworkState (n : ℕ) (M : Type) (G : Type) : Type where
-  /-- `sent r j` — the stage-`r` messages process `j` has multicast (D5). -/
+  /-- `sent r j` — the round-`r` messages process `j` has multicast (D5). -/
   sent : ℕ → Fin n → Finset M
   /-- `decidedSent j` — the DECIDED payloads process `j` has multicast (D12′). -/
   decidedSent : Fin n → Finset Bool
@@ -208,7 +201,7 @@ def initial (n : ℕ) (M G : Type) [Inhabited G] : NetworkState n M G where
   F := ∅
   ghostRecord := fun _ => default
 
-/-- Sent `m` under sender `j` in stage `r` (D5). -/
+/-- Sent `m` under sender `j` in round `r` (D5). -/
 def recordGBCASend (s : NetworkState n M G) (r : ℕ) (j : Fin n) (m : M) : NetworkState n M G :=
   { s with
     sent :=
@@ -243,13 +236,12 @@ def forgetGhost (s : NetworkState n M G) : NetworkState n M Unit where
 
 end NetworkState
 
-/-! ### The labels a stage-side row carries -/
+/-! ### The labels a round row carries -/
 
-/-- The labels on which a program's row belongs to the graded-agreement
-implementation: process `j`'s own call and return at the interface, its own
-stage multicast, a stage delivery addressed to it, and its own call against an
-already-called stage record. Every other label is answered by a row of
-`ProgramStep`. -/
+/-- The labels on which a program's row belongs to the graded-agreement implementation: process
+`j`'s own call and return at the interface, its own round multicast, a round delivery addressed to
+it, and its own call against an already-called round record. Every other label is answered by a row
+of `ProgramStep`. -/
 def roundOwn {n : ℕ} {M : Type} (j : Fin n) : ExtendedLabel n M → Prop
   | Sum.inl (.callG _ id _) => id = j
   | Sum.inl (.retG _ id _ _) => id = j
@@ -258,8 +250,7 @@ def roundOwn {n : ℕ} {M : Type} (j : Fin n) : ExtendedLabel n M → Prop
   | Sum.inr (.gbcaCallLoop _ id _) => id = j
   | _ => False
 
-/-- A stage-side label is one the process acts on: the replaced program has no
-row on either (D23). -/
+/-- A round label is one the process acts on: the replaced program has no row on either (D23). -/
 theorem actsAt_of_roundOwn {n : ℕ} {M : Type} {j : Fin n} {L : ExtendedLabel n M}
     (h : roundOwn j L) : actsAt j L := by
   match L with
@@ -268,13 +259,12 @@ theorem actsAt_of_roundOwn {n : ℕ} {M : Type} {j : Fin n} {L : ExtendedLabel n
 
 /-! ### The rule table of one program
 
-Process `j`'s program. Every guard reads the process's own record and nothing
-else: none asks whether another process is honest, and none asks what this one
-has multicast. The DECIDED relay and the ABA return are participation-guarded
-(D8). The DECIDED rows carry no termination guard, so a terminated process
-keeps relaying the payloads it holds. The Byzantine stage rows have no row at
-the process they name (D11, D22). Every label of the extended alphabet outside
-`roundOwn j` has a row here: the participant's, or an idle one.
+Process `j`'s program. Every guard reads the process's own record and nothing else: none asks
+whether another process is correct, and none asks what this one has multicast. The DECIDED relay and
+the ABA return are participation-guarded (D8). The DECIDED rows carry no termination guard, so a
+terminated process keeps relaying the payloads it holds. The Byzantine round rows have no row at the
+process they name (D11, D22). Every label of the extended alphabet outside `roundOwn j` has a row
+here: the participant's, or an idle one.
 
 A corruption replaces the program of the process it names (D23). Every
 participant's row carries the health guard `c.corrupted = false`, so the record
@@ -283,8 +273,8 @@ freezes at the corruption; `failSelf` is the row that writes the flag, and
 other than `τ` and the labels of `actsAt j`, on which the replaced program has
 no row at all. -/
 
-/-- The step relation of the program of process `j`, over a graded-agreement
-implementation given by its message type, its stage record and its rows. -/
+/-- The step relation of the program of process `j`, over a graded-agreement implementation given by
+its message type, its round record and its rows. -/
 inductive ProgramStep (P : Parameters) (M S : Type)
     (roundStep : Fin P.n → ProcessRecord P.n S → ExtendedLabel P.n M →
       PMF (ProcessRecord P.n S) → Prop) (j : Fin P.n) :
@@ -352,9 +342,9 @@ inductive ProgramStep (P : Parameters) (M S : Type)
   | callWIdle (c : RoundLoopRecord P.n) (p : RoundRecordMap S)
       (r : ℕ) (id : Fin P.n) (hid : id ≠ j) :
       ProgramStep P M S roundStep j (c, p) (Sum.inl (.callW r id)) (PMF.pure (c, p))
-  /-- The coin return without a publication: the round advances and nothing is
-  multicast, the round's grade not being a grade-2 outcome (D10). The advance opens a new
-  round; the stage records the process holds are retained across it (D22). -/
+  /-- The coin return without a publication: the round advances and nothing is multicast, the
+  round's grade not being a grade-2 outcome (D10). The advance opens a new round; the round records
+  the process holds are retained across it (D22). -/
   | retW (c : RoundLoopRecord P.n) (p : RoundRecordMap S) (r : ℕ) (co : Bool)
       (hh : c.corrupted = false)
       (hph : c.process.phase = .awaitW) (hr : c.process.round = r)
@@ -378,11 +368,11 @@ inductive ProgramStep (P : Parameters) (M S : Type)
   | corruptedIdle (c : RoundLoopRecord P.n) (p : RoundRecordMap S) (L : ExtendedLabel P.n M)
       (hh : c.corrupted = true) (hτ : L ≠ Sum.inl Label.tau) (hown : ¬ actsAt j L) :
       ProgramStep P M S roundStep j (c, p) L (PMF.pure (c, p))
-  /-- A stage multicast by another process: not `j`'s business. -/
+  /-- A round multicast by another process: not `j`'s business. -/
   | gbcaSendIdle (c : RoundLoopRecord P.n) (p : RoundRecordMap S)
       (r : ℕ) (k : Fin P.n) (m : M) (hk : k ≠ j) :
       ProgramStep P M S roundStep j (c, p) (Sum.inr (.gbcaSend r k m)) (PMF.pure (c, p))
-  /-- A stage delivery to another process: not `j`'s business. -/
+  /-- A round delivery to another process: not `j`'s business. -/
   | gbcaDeliverIdle (c : RoundLoopRecord P.n) (p : RoundRecordMap S)
       (r : ℕ) (i k : Fin P.n) (m : M) (hi : i ≠ j) :
       ProgramStep P M S roundStep j (c, p) (Sum.inr (.gbcaDeliver r i k m)) (PMF.pure (c, p))
@@ -408,10 +398,9 @@ inductive ProgramStep (P : Parameters) (M S : Type)
   | decidedDeliverIdle (c : RoundLoopRecord P.n) (p : RoundRecordMap S)
       (i k : Fin P.n) (b : Bool) (hi : i ≠ j) :
       ProgramStep P M S roundStep j (c, p) (Sum.inr (.decidedDeliver i k b)) (PMF.pure (c, p))
-  /-- The coin return fused with the `⟨DECIDED, b⟩` publication (D10): the
-  round's outcome was `grade2 b`, so the round advance publishes `b`, the sent insert
-  being the network's half. The advance opens a new round; the stage records
-  the process holds are retained across it (D22). -/
+  /-- The coin return fused with the `⟨DECIDED, b⟩` publication (D10): the round's outcome was
+  `grade2 b`, so the round advance publishes `b`, the sent insert being the network's half. The
+  advance opens a new round; the round records the process holds are retained across it (D22). -/
   | retWPublish (c : RoundLoopRecord P.n) (p : RoundRecordMap S)
       (r : ℕ) (co : Bool) (b : Bool) (hh : c.corrupted = false)
       (hph : c.process.phase = .awaitW) (hr : c.process.round = r)
@@ -434,8 +423,8 @@ inductive ProgramStep (P : Parameters) (M S : Type)
       (r : ℕ) (k : Fin P.n) (b : Bool) (hk : k ≠ j) :
       ProgramStep P M S roundStep j (c, p) (Sum.inr (.byzantineCallG r k b))
         (PMF.pure (c, p))
-  /-- A Byzantine graded-agreement call against an already-called stage record
-  (D11): nothing moves anywhere. -/
+  /-- A Byzantine graded-agreement call against an already-called round record (D11): nothing moves
+  anywhere. -/
   | byzantineCallGLoopIdle (c : RoundLoopRecord P.n) (p : RoundRecordMap S)
       (r : ℕ) (k : Fin P.n) (b : Bool) :
       ProgramStep P M S roundStep j (c, p) (Sum.inr (.byzantineCallGLoop r k b))
@@ -478,13 +467,13 @@ inductive NetworkStep (P : Parameters) (M G : Type) [DecidableEq M]
     (ghostStep : ExtendedLabel P.n M → NetworkState P.n M G → G → G)
     (ghostOut : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop) :
     NetworkState P.n M G → ExtendedLabel P.n M → PMF (NetworkState P.n M G) → Prop
-  /-- The network's half of a stage multicast: sent the message under its
-  sender. Authenticity is the sender's joint participation (D5). -/
+  /-- The network's half of a round multicast: sent the message under its sender. Authenticity is
+  the sender's joint participation (D5). -/
   | gbcaSend (s : NetworkState P.n M G) (r : ℕ) (j : Fin P.n) (m : M) :
       NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inr (.gbcaSend r j m))
         (PMF.pure ((s.recordGBCASend r j m).writeGhost ghostStep (Sum.inr (.gbcaSend r j m))))
-  /-- The network's half of a stage delivery: the message must be sent under
-  the named sender. Delivery does not consume it (D5). -/
+  /-- The network's half of a round delivery: the message must be sent under the named sender.
+  Delivery does not consume it (D5). -/
   | gbcaDeliver (s : NetworkState P.n M G) (r : ℕ) (i j : Fin P.n) (m : M)
       (h : m ∈ s.sent r j) :
       NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inr (.gbcaDeliver r i j m))
@@ -504,8 +493,7 @@ inductive NetworkStep (P : Parameters) (M G : Type) [DecidableEq M]
   | retWPublish (s : NetworkState P.n M G) (r : ℕ) (id : Fin P.n) (c : Bool) (b : Bool) :
       NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inr (.retWPublish r id c b))
         (PMF.pure ((s.recordDecided id b).writeGhost ghostStep (Sum.inr (.retWPublish r id c b))))
-  /-- A graded-agreement call against an already-called stage record sends
-  nothing. -/
+  /-- A graded-agreement call against an already-called round record sends nothing. -/
   | gbcaCallLoop (s : NetworkState P.n M G) (r : ℕ) (id : Fin P.n) (b : Bool) :
       NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inr (.gbcaCallLoop r id b))
         (PMF.pure (s.writeGhost ghostStep (Sum.inr (.gbcaCallLoop r id b))))
@@ -515,8 +503,7 @@ inductive NetworkStep (P : Parameters) (M G : Type) [DecidableEq M]
       NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inr (.byzantineCallG r k b))
         (PMF.pure ((s.recordGBCASend r k (callPayload k b)).writeGhost ghostStep
           (Sum.inr (.byzantineCallG r k b))))
-  /-- A Byzantine graded-agreement call against an already-called stage record
-  (D11). -/
+  /-- A Byzantine graded-agreement call against an already-called round record (D11). -/
   | byzantineCallGLoop (s : NetworkState P.n M G) (r : ℕ) (k : Fin P.n) (b : Bool)
       (hF : k ∈ s.F) :
       NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inr (.byzantineCallGLoop r k b))
@@ -546,7 +533,7 @@ inductive NetworkStep (P : Parameters) (M G : Type) [DecidableEq M]
       NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inl (.retABA id b))
         (PMF.pure (s.writeGhost ghostStep (Sum.inl (.retABA id b))))
   /-- A corrupted process returns whatever it likes (D23): its program has been
-  replaced, so the DECIDED evidence the honest row asks for is not required of
+  replaced, so the DECIDED evidence the correct row asks for is not required of
   it. The authorisation is this component's `id ∈ F`, and the process's half is
   the replaced program's self-loop. -/
   | retByzantine (s : NetworkState P.n M G) (id : Fin P.n) (b : Bool) (hF : id ∈ s.F) :
@@ -578,8 +565,8 @@ inductive NetworkStep (P : Parameters) (M G : Type) [DecidableEq M]
       (hbud : s.F.card < P.f) :
       NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inl (.fail k))
         (PMF.pure ((s.corrupt P k).writeGhost ghostStep (Sum.inl (.fail k))))
-  /-- Byzantine stage injection (D5, D11): the network multicasts on behalf of
-  a corrupted sender. -/
+  /-- Byzantine round injection (D5, D11): the network multicasts on behalf of a corrupted
+  sender. -/
   | byzantineGBCA (s : NetworkState P.n M G) (r : ℕ) (k : Fin P.n) (m : M) (hF : k ∈ s.F) :
       NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inl .tau)
         (PMF.pure ((s.recordGBCASend r k m).writeGhost ghostStep (Sum.inl .tau)))
@@ -613,7 +600,7 @@ noncomputable def program (j : Fin P.n) : System (ProcessRecord P.n S) (Extended
 
 end Programs
 
-/-- The state of a flat reading: the process family, the network adversary and
+/-- The state of the implementation: the process family, the network adversary and
 the coin oracle. -/
 abbrev State (P : Parameters) (M S G : Type) : Type :=
   (∀ _ : Fin P.n, ProcessRecord P.n S) × (NetworkState P.n M G × (ℕ → WCC.SpecState P.n))
@@ -651,8 +638,8 @@ variable (P : Parameters) (M S G : Type) [DecidableEq M] [Inhabited G]
     (ghostStep : ExtendedLabel P.n M → NetworkState P.n M G → G → G)
     (ghostOut : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop)
 
-/-- The three components side by side, over the extended alphabet: the
-synchronised process group, the network adversary and the lifted oracle. -/
+/-- The three components in parallel, over the extended alphabet: the synchronised process group,
+the network adversary and the lifted oracle. -/
 noncomputable def systemExtended : System (State P M S G) (ExtendedLabel P.n M) :=
   (System.synchronisedProduct (program P M S roundStep)).parallel
     ((network P M G callPayload ghostStep ghostOut).parallel (coinOverExtendedAlphabet P M))
@@ -662,16 +649,16 @@ noncomputable def systemHidden : System (State P M S G) (Label P.n) :=
   ((systemExtended P M S G roundStep callPayload ghostStep ghostOut).abstract
     (networkEventLabels P.n)).relabel
 
-/-- **A flat reading**: the group with the sub-protocol API hidden. -/
+/-- **The implementation**: the group with the sub-protocol API hidden. -/
 noncomputable def system : System (State P M S G) (Label P.n) :=
   (systemHidden P M S G roundStep callPayload ghostStep ghostOut).abstract
     (Label.hiddenAPI P.n)
 
 end Pipe
 
-/-! ### What a reading must supply about its own rows -/
+/-! ### What an implementation must supply about its own rows -/
 
-/-- What a flat reading's graded-agreement rows must satisfy for the inversion
+/-- What the implementation's graded-agreement rows must satisfy for the inversion
 lemmas below to read the rest of the table off a label: a row of process `j`
 carries a label of `roundOwn j`, it fires only at a process whose program has
 not been replaced (D23), it is Dirac, and its return takes the announced bit
@@ -679,13 +666,13 @@ free (D29). -/
 class IsRoundRuleTable (P : Parameters) (M S : Type)
     (roundStep : Fin P.n → ProcessRecord P.n S → ExtendedLabel P.n M →
       PMF (ProcessRecord P.n S) → Prop) : Prop where
-  /-- A stage-side row carries a stage-side label. -/
+  /-- A round row carries a round label. -/
   own : ∀ {j : Fin P.n} {q : ProcessRecord P.n S} {L : ExtendedLabel P.n M}
     {μ : PMF (ProcessRecord P.n S)}, roundStep j q L μ → roundOwn j L
-  /-- A stage-side row fires only at an unreplaced program. -/
+  /-- A round row fires only at an unreplaced program. -/
   correct : ∀ {j : Fin P.n} {q : ProcessRecord P.n S} {L : ExtendedLabel P.n M}
     {μ : PMF (ProcessRecord P.n S)}, roundStep j q L μ → q.1.corrupted = false
-  /-- A stage-side row is Dirac. -/
+  /-- A round row is Dirac. -/
   dirac : ∀ {j : Fin P.n} {q : ProcessRecord P.n S} {L : ExtendedLabel P.n M}
     {μ : PMF (ProcessRecord P.n S)}, roundStep j q L μ → ∃ q', μ = PMF.pure q'
   /-- A program's return row takes the announced bit free (D29): the bit the
@@ -699,7 +686,7 @@ class IsRoundRuleTable (P : Parameters) (M S : Type)
 /-! ### Determinacy of the two rule tables
 
 The composite is not an LTS — the coin resolution is probabilistic — but both
-tables written here are Dirac, provided the reading's own rows are. -/
+tables written here are Dirac, provided the implementation's own rows are. -/
 
 section Inversion
 
@@ -709,7 +696,7 @@ variable {P : Parameters} {M S : Type}
     {j : Fin P.n} {q : ProcessRecord P.n S} {ν : PMF (ProcessRecord P.n S)}
 
 /-- Every process transition is Dirac: the rows here are, and so are the
-reading's own by `IsRoundRuleTable.dirac`. -/
+implementation's own by `IsRoundRuleTable.dirac`. -/
 theorem programStep_dirac [IsRoundRuleTable P M S roundStep]
     {l : ExtendedLabel P.n M} (h : ProgramStep P M S roundStep j q l ν) :
     ∃ q', ν = PMF.pure q' := by
@@ -722,7 +709,7 @@ variable [IsRoundRuleTable P M S roundStep]
 /-- The one `τ` row of a program's table is `terminate`: a silent step of a
 program is that program's own termination, taken on a fired return and DECIDED
 receipts from `2f + 1` distinct senders (D22). A replaced program has no silent
-row at all, so the reading carries `corrupted = false` (D23), and no
+row at all, so the implementation carries `corrupted = false` (D23), and no
 graded-agreement row is silent, `roundOwn` holding of no `τ`. -/
 theorem programStep_tau_terminate
     (h : ProgramStep P M S roundStep j q (Silent.τ : ExtendedLabel P.n M) ν) :
@@ -742,7 +729,7 @@ its guards together with the Dirac it produces, and the idle row of a
 non-participant as the identity. The state and the distribution are variables,
 so `cases` unifies against any record. A participant's row carries the health
 guard `corrupted = false`, and on a label outside `actsAt j` the replaced
-program's self-loop is a second reading of the same label (D23). -/
+program's self-loop is a second row on the same label (D23). -/
 
 theorem programStep_callABA_own {b : Bool}
     (h : ProgramStep P M S roundStep j q (Sum.inl (.callABA j b)) ν) :
@@ -872,9 +859,9 @@ theorem programStep_fail_foreign {k : Fin P.n} (hk : k ≠ j)
 
 /-! ### One program's rules on the rendezvous alphabet
 
-The Byzantine stage rows have no row at the process they name (D22, D23), so
-on `byzantineCallG`, `byzantineCallGLoop` and `byzantineRetG` every process idles and there is no
-participant's row to read. -/
+The Byzantine round rows have no row at the process they name (D22, D23), so on `byzantineCallG`,
+`byzantineCallGLoop` and `byzantineRetG` every process idles and there is no participant's row to
+read. -/
 
 theorem programStep_gbcaSend_foreign {r : ℕ} {k : Fin P.n} {m : M} (hk : k ≠ j)
     (h : ProgramStep P M S roundStep j q (Sum.inr (.gbcaSend r k m)) ν) :
@@ -1005,7 +992,7 @@ theorem programStep_byzantineRetG_noStep {r : ℕ} {out : GBCAOutput} {bnd : Boo
 
 /-- **The replaced program writes nothing** (D23). Whatever the label, a
 process whose flag is up leaves both halves of its record where they stand.
-Every row that writes carries the health guard, the reading's own rows by
+Every row that writes carries the health guard, the implementation's own rows by
 `IsRoundRuleTable.correct`, so no row of a replaced program survives except a
 self-loop. -/
 theorem programStep_noStep {L : ExtendedLabel P.n M} (hc : q.1.corrupted = true)
@@ -1168,10 +1155,9 @@ end NetInversion
 
 /-! ### The network's own field algebra
 
-Each of the network adversary's three writes on the message record — a stage
-multicast, a DECIDED multicast, and corruption — touches one field of the
-state and leaves the others alone, the ghost among them. The ghost write
-touches the ghost and nothing else. -/
+Each of the network adversary's three writes on the message record — a round multicast, a DECIDED
+multicast, and corruption — touches one field of the state and leaves the others alone, the ghost
+among them. The ghost write touches the ghost and nothing else. -/
 
 section Fields
 
@@ -1363,7 +1349,7 @@ variable {P : Parameters} {M S : Type}
 
 /-- A synchronised transition of the process group on a visible label: every
 process steps, and the joint distribution is Dirac. -/
-theorem programProduct_inv {u : ∀ _ : Fin P.n, ProcessRecord P.n S} {l : ExtendedLabel P.n M}
+theorem programProduct_inversion {u : ∀ _ : Fin P.n, ProcessRecord P.n S} {l : ExtendedLabel P.n M}
     {μ : PMF (∀ _ : Fin P.n, ProcessRecord P.n S)} (hl : l ≠ Silent.τ)
     (h : (System.synchronisedProduct (program P M S roundStep)).step u l μ) :
     ∃ x : ∀ _ : Fin P.n, ProcessRecord P.n S,
@@ -1380,7 +1366,7 @@ theorem programProduct_inv {u : ∀ _ : Fin P.n, ProcessRecord P.n S} {l : Exten
 
 /-- A silent transition of the process group: `τ` is interleaved, so exactly
 one program moves and the rest hold their state. -/
-theorem programProduct_tau_inv {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
+theorem programProduct_tau_inversion {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
     {μ : PMF (∀ _ : Fin P.n, ProcessRecord P.n S)}
     (h : (System.synchronisedProduct (program P M S roundStep)).step u
       (Silent.τ : ExtendedLabel P.n M) μ) :
@@ -1417,7 +1403,7 @@ theorem systemHidden_step_iff (q : State P M S G) (l : Label P.n)
     · exact Or.inr ⟨inl_notMem_networkEventLabels l, hstep⟩
 
 omit [IsRoundRuleTable P M S roundStep] in
-/-- The flat reading's step relation: a sub-protocol API label seen as `τ`, or
+/-- The implementation's step relation: a sub-protocol API label seen as `τ`, or
 a label that survives the hiding. -/
 theorem system_step_iff (q : State P M S G) (l : Label P.n)
     (μ : PMF (State P M S G)) :
@@ -1430,7 +1416,7 @@ theorem system_step_iff (q : State P M S G) (l : Label P.n)
 
 /-- A rendezvous transition: every process, the network and the lifted oracle
 move together, and only the oracle's successor can fail to be a Dirac. -/
-theorem systemExtended_event_inv {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
+theorem systemExtended_event_inversion {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
     {w : NetworkState P.n M G} {o : ℕ → WCC.SpecState P.n} {e : NetworkEvent P.n M}
     {μ : PMF (State P M S G)}
     (h : (systemExtended P M S G roundStep callPayload ghostStep ghostOut).step (u, w, o)
@@ -1443,7 +1429,7 @@ theorem systemExtended_event_inv {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
       μ = prodPMF (PMF.pure x) (prodPMF (PMF.pure w') μ₃) := by
   rw [systemExtended, System.parallel_step] at h
   rcases h with ⟨-, μ₁, μ₂₃, hS, hNW, rfl⟩ | ⟨habs, -⟩ | ⟨habs, -⟩
-  · obtain ⟨x, rfl, hall⟩ := programProduct_inv (by simp) hS
+  · obtain ⟨x, rfl, hall⟩ := programProduct_inversion (by simp) hS
     rw [System.parallel_step] at hNW
     rcases hNW with ⟨-, μ₂, μ₃, hN, hO, rfl⟩ | ⟨habs, -⟩ | ⟨habs, -⟩
     · obtain ⟨w', rfl⟩ := networkStep_dirac hN
@@ -1454,7 +1440,7 @@ theorem systemExtended_event_inv {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
   · simp [extendedLabel_tau] at habs
 
 /-- A visible shared-label transition. -/
-theorem systemExtended_label_inv {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
+theorem systemExtended_label_inversion {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
     {w : NetworkState P.n M G} {o : ℕ → WCC.SpecState P.n} {l : Label P.n}
     (hl : l ≠ Label.tau) {μ : PMF (State P M S G)}
     (h : (systemExtended P M S G roundStep callPayload ghostStep ghostOut).step (u, w, o)
@@ -1468,7 +1454,7 @@ theorem systemExtended_label_inv {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
   rw [systemExtended, System.parallel_step] at h
   rcases h with ⟨-, μ₁, μ₂₃, hS, hNW, rfl⟩ | ⟨habs, -⟩ | ⟨habs, -⟩
   · obtain ⟨x, rfl, hall⟩ :=
-      programProduct_inv (by rw [extendedLabel_tau]; exact fun hh => hl (Sum.inl_injective hh)) hS
+      programProduct_inversion (by rw [extendedLabel_tau]; exact fun hh => hl (Sum.inl_injective hh)) hS
     rw [System.parallel_step] at hNW
     rcases hNW with ⟨-, μ₂, μ₃, hN, hO, rfl⟩ | ⟨habs, -⟩ | ⟨habs, -⟩
     · obtain ⟨w', rfl⟩ := networkStep_dirac hN
@@ -1481,7 +1467,7 @@ theorem systemExtended_label_inv {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
 
 /-- A silent shared-label transition: one process terminating, or the network's
 own injection. The coin oracle has no silent row, so it contributes none. -/
-theorem systemExtended_tau_inv {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
+theorem systemExtended_tau_inversion {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
     {w : NetworkState P.n M G} {o : ℕ → WCC.SpecState P.n}
     {μ : PMF (State P M S G)}
     (h : (systemExtended P M S G roundStep callPayload ghostStep ghostOut).step (u, w, o)
@@ -1495,14 +1481,14 @@ theorem systemExtended_tau_inv {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
   rw [systemExtended, System.parallel_step] at h
   rcases h with ⟨habs, -⟩ | ⟨-, μ₁, hS, rfl⟩ | ⟨-, μ₂₃, hNW, rfl⟩
   · exact absurd rfl habs
-  · obtain ⟨i, y, hstep, rfl⟩ := programProduct_tau_inv hS
+  · obtain ⟨i, y, hstep, rfl⟩ := programProduct_tau_inversion hS
     exact Or.inl ⟨i, y, hstep, by rw [prodPMF_pure_pure]⟩
   · rw [System.parallel_step] at hNW
     rcases hNW with ⟨habs, -⟩ | ⟨-, μ₂, hN, rfl⟩ | ⟨-, μ₃, hO, rfl⟩
     · exact absurd rfl habs
     · obtain ⟨w', rfl⟩ := networkStep_dirac hN
       exact Or.inr ⟨w', hN, by rw [prodPMF_pure_pure, prodPMF_pure_pure]⟩
-    · exact (ABA.WCC.specFamily_tau_inv P
+    · exact (ABA.WCC.specFamily_tau_inversion P
         ((System.mapIdle_step_some (coinLabelMap_inl Label.tau) μ₃).mp hO)).elim
 
 /-! ### The bound bit on a return
@@ -1522,7 +1508,7 @@ theorem systemExtended_retG_bound {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
     ghostOut w r id out bnd := by
   have hne : (Label.retG r id out bnd : Label P.n) ≠ Label.tau := by
     simp
-  obtain ⟨x, w', ω, -, hN, -, -⟩ := systemExtended_label_inv hne h
+  obtain ⟨x, w', ω, -, hN, -, -⟩ := systemExtended_label_inversion hne h
   exact (networkStep_retG hN).1
 
 /-- A composite Byzantine graded-agreement return announces a bit the same
@@ -1534,7 +1520,7 @@ theorem systemExtended_byzantineRetG_bound {u : ∀ _ : Fin P.n, ProcessRecord P
     (h : (systemExtended P M S G roundStep callPayload ghostStep ghostOut).step (u, w, o)
       (Sum.inr (.byzantineRetG r k out bnd)) μ) :
     ghostOut w r k out bnd := by
-  obtain ⟨x, w', μ₃, -, hN, -, -⟩ := systemExtended_event_inv h
+  obtain ⟨x, w', μ₃, -, hN, -, -⟩ := systemExtended_event_inversion h
   exact (networkStep_byzantineRetG hN).2.1
 
 end WithNet

@@ -1,21 +1,22 @@
 % ABA specification, Transition System 1 rule graph (PLTS.ABA.SpecStep).
-% Four control states keyed on (mode, val). Rule 3 is drawn as a
+% Four control states keyed on (mode, val), each named by its mode. Rule 3 is drawn as a
 % probabilistic branch: the undirected stem carries the tau-step, and the
 % three outcome edges carry the flip masses. Five of the eight rules are
 % drawn; fail (D1) and the corrupted interface callByzantine/retByzantine (D23) are not,
 % none of them writing the mode. See the caption.
 \begin{tikzpicture}[
     ->, >={Stealth[round]}, auto, semithick, on grid,
-    every state/.style={draw, minimum size=1.15cm, align=center, font=\small},
+    every state/.style={draw, rectangle, rounded corners, minimum size=1.15cm,
+      align=center, font=\small, inner sep=4pt},
     branch/.style={circle, draw, fill, inner sep=1.6pt},
     lbl/.style={font=\footnotesize, align=center, fill=white, inner sep=1.5pt},
     plbl/.style={font=\footnotesize, align=center, fill=white, inner sep=1.5pt}]
 
-  \node[state, initial, initial text={}] (idl) at (0,0)      {idle\\$val{=}\bot$};
+  \node[state, initial, initial text={}] (idl) at (0,0)      {$flipEnabled$\\$val{=}\bot$};
   \node[branch]                          (br)  at (3.9,0)    {};
-  \node[state]                           (dea) at (7.4,2.0)  {terminal};
-  \node[state]                           (loc) at (7.4,-2.0) {locked};
-  \node[state, accepting]                (dec) at (3.9,-4.5) {decided\\$val$ set};
+  \node[state]                           (dea) at (7.4,2.0)  {$noRuleEnabled$};
+  \node[state]                           (loc) at (7.4,-2.0) {$decisionEnabled$};
+  \node[state, accepting]                (dec) at (3.9,-4.5) {$flipEnabled$\\$val$ set};
 
   % self-loops
   \path
@@ -27,10 +28,10 @@
   % the flip as a probabilistic branch
   \draw[-] (idl) -- node[lbl, above, pos=0.45]{3 \texttt{coinFlip}, $\tau$} (br);
   \path
-    (br) edge[bend right=14] node[plbl, left]{$\delta_{\mathrm f}$ (undelivered)} (dea)
-    (br) edge[bend left=14]  node[plbl, right]{$\varepsilon$ (lock)} (loc)
+    (br) edge[bend right=14] node[plbl, left]{$\delta_{\mathrm f}$} (dea)
+    (br) edge[bend left=14]  node[plbl, right]{$\varepsilon$} (loc)
     (br) edge[bend right=55, looseness=1.3]
-      node[plbl, above]{$1{-}\varepsilon{-}\delta_{\mathrm f}$ (release)} (idl);
+      node[plbl, above]{$1{-}\varepsilon{-}\delta_{\mathrm f}$} (idl);
 
   % the decisions
   \path

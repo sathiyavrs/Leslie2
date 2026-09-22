@@ -12,6 +12,6 @@
   For the announcements: monotonicity carries $1-bnd_1 \in excluded$ to the state of the later return, which also excludes $1-bnd_2$, and no state of an execution excludes two bits, so $bnd_1 = bnd_2$.
   For the two together: at the state of one value-bearing return the value guard excludes $1-v$ and the bound guard excludes $1-bnd$, and the same cardinality bound gives $v = bnd$.
   The grade-0 return clause is the same monotonicity applied to the witness its own guard produces.
-  For the grades: the field $grade$ is written by the grade-2 return alone to the grade-2 side and by the grade-0 return alone to the grade-0 side, each firing only from a state whose grade is unset or already on its own side, and no other rule touches it, so a written grade persists along the execution and the other side's return finds its guard refuted.\lean{PLTS.ABA.GBCA.Step.grade_mono}\lean{PLTS.ABA.GBCA.grade_stable}\leanok{}
+  For the grades: the field $grade$ is written by the grade-2 return alone to the grade-2 value and by the grade-0 return alone to the grade-0 value, each firing only from a state whose grade is unset or already at its own value, and no other rule touches it, so a written grade persists along the execution and the other return finds its guard refuted.\lean{PLTS.ABA.GBCA.Step.grade_mono}\lean{PLTS.ABA.GBCA.grade_stable}\leanok{}
   No invariant, no quorum arithmetic and no reachability hypothesis beyond membership in one execution enters (D19).
 \end{proof}

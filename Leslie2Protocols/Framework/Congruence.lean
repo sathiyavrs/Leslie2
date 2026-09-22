@@ -12,17 +12,14 @@ import Leslie2Protocols.Framework.Relabel
 # Forward simulation is a congruence for the composition operators
 
 A forward simulation between labelled transition systems (`ForwardSimulation`,
-`Simulation/ForwardLTS.lean`) survives each of the operators a composition is
-built from: binary parallel composition, on either side
-(`ForwardSimulation.parallel_right`, `ForwardSimulation.parallel_left`); the
-full-synchronisation product of a finite family
-(`ForwardSimulation.synchronisedProduct`); hiding a set of labels
-(`ForwardSimulation.abstract`); and restriction along the left summand of an
-extended alphabet (`ForwardSimulation.relabel`). Contextual refinement therefore
-extends to contexts built from those operators, synchronised-product contexts
-among them: a component of such a context may be replaced by a system that
-simulates it, and the whole composition is simulated by the composition over the
-replacement.
+`Simulation/ForwardLTS.lean`) survives each of the operators a composition is built from: binary
+parallel composition, in either position (`ForwardSimulation.parallel_right`,
+`ForwardSimulation.parallel_left`); the full-synchronisation product of a finite family
+(`ForwardSimulation.synchronisedProduct`); hiding a set of labels (`ForwardSimulation.abstract`);
+and restriction along the left summand of an extended alphabet (`ForwardSimulation.relabel`).
+Contextual refinement therefore extends to contexts built from those operators, synchronised-product
+contexts among them: a component of such a context may be replaced by a system that simulates it,
+and the whole composition is simulated by the composition over the replacement.
 
 The proofs share one decomposition. A weak transition `q =l=> q'` is a
 finite run whose trace is the single label `l`, so it splits into a silent run,
@@ -42,8 +39,8 @@ run of the abstract system, one transition at a time
 `ForwardSimulation.congr` transports a simulation along a pointwise `Iff` of
 relations.
 
-Chains of `LStep`s are the other reading of a weak run, and on a system all of
-whose transitions are Dirac (`System.IsLTS`) the two readings agree:
+Chains of `LStep`s are the other form of a weak run, and on a system all of
+whose transitions are Dirac (`System.IsLTS`) the two systems agree:
 `System.weakLSilent_chain` and `System.weakLStep_chains` invert a run into
 chains, where `System.weakLSilent_ofChain` and `System.weakLStep_tausThen`
 (`Framework/WeakTransitionsFromChains.lean`) build a run from chains.
@@ -467,10 +464,9 @@ section ParallelCongruence
 variable {SC SA SB Label : Type} [Silent Label]
   {sysC : System SC Label} {sysA : System SA Label} {R : SC → SA → Prop}
 
-/-- **Forward simulation is a congruence for `System.parallel`, the held
-component on the right.** The composite relation pairs the simulation on the
-first coordinate with equality on the second: the held component is the same
-system on both sides, so its state is matched by itself. -/
+/-- **Forward simulation is a congruence for `System.parallel`, the held component on the right.**
+The composite relation pairs the simulation on the first coordinate with equality on the second: the
+held component is the same system in both systems, so its state is matched by itself. -/
 theorem ForwardSimulation.parallel_right (sim : ForwardSimulation sysC sysA R)
     (sysB : System SB Label) :
     ForwardSimulation (sysC.parallel sysB) (sysA.parallel sysB)
@@ -675,11 +671,10 @@ theorem System.weakLSilent_abstract {sys : System S Label} (L : Set Label) {q q'
   System.weakLSilent_transport (f := id)
     (fun _ μ _ hs hx => ⟨μ, System.abstract_tau_step L hs, hx⟩) h
 
-/-- **Forward simulation is a congruence for `System.abstract`.** A transition
-on a hidden label is a `τ`-transition of the abstraction, so the abstract
-answer to it is the answer's silent prefix, its transition on the hidden label
-read as a `τ`-transition, and its silent suffix; a transition on a label
-outside `L` keeps its label on both sides. -/
+/-- **Forward simulation is a congruence for `System.abstract`.** A transition on a hidden label is
+a `τ`-transition of the abstraction, so the abstract answer to it is the answer's silent prefix, its
+transition on the hidden label read as a `τ`-transition, and its silent suffix; a transition on a
+label outside `L` keeps its label in both systems. -/
 theorem ForwardSimulation.abstract {R : S → T → Prop} (sim : ForwardSimulation sysC sysA R)
     (L : Set Label) : ForwardSimulation (sysC.abstract L) (sysA.abstract L) R := by
   constructor

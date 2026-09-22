@@ -17,7 +17,7 @@ reads: the two gathers' frozen cores and the round's bound bit, written by
 free to announce either bit on a return.
 
 `AFW.protocol_erasure` is the statement that the record costs nothing: the ghost never
-blocks a step and never adds one, so the two readings have the same achievable trace
+blocks a step and never adds one, so the two systems have the same achievable trace
 distributions. Every headline about the protocol therefore holds of the ghost-free
 protocol, and the rest of this file re-derives them: the composition inclusion into
 `AFW.composed`, trace-distribution refinement into the ABA specification, Validity and

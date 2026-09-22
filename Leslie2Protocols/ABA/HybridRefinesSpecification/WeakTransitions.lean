@@ -10,12 +10,11 @@ import Leslie2.Weak.WeakTransition
 /-!
 # Abstract-state run machinery
 
-Pure `ABA.spec`-side weak-τ lemmas, with no composed-side/`Invariant`/`AbstractState`
-reasoning: given an abstract `SpecState`, these package the internal
-`SpecStep` rules (`Specifications/ABA.lean`) into the `weakTau`/`weakStep` chains
-(`WeakTransition.lean`) that the simulation rows (`HybridRefinesSpecification/Simulation.lean`)
-consume. Every lemma here is standalone and never mentions `Invariant`/`AbstractState`/the concrete
-`(g, c, w)` state.
+Pure `ABA.spec` weak-τ lemmas, with no composed/`Invariant`/`AbstractState` reasoning: given an
+abstract `SpecState`, these package the internal `SpecStep` rules (`Specifications/ABA.lean`) into
+the `weakTau`/`weakStep` chains (`WeakTransition.lean`) that the simulation rows
+(`HybridRefinesSpecification/Simulation.lean`) consume. Every lemma here is standalone and never
+mentions `Invariant`/`AbstractState`/the concrete `(g, c, w)` state.
 
 * `decide_step`: `SpecStep.decide` as a one-step `weakTau` run, the τ-tail
   that leads the first visible return.

@@ -1,17 +1,17 @@
 \begin{theorem}[The common core on a trace]
   \label{thm:aba-gather-commoncore}
   \lean{PLTS.ABA.Gather.CoreTrace}\lean{PLTS.ABA.Gather.specInst_core}\lean{PLTS.ABA.Gather.instanceOverBroadcastSpecification_core}\lean{PLTS.ABA.Gather.instanceOverBracha_core}\leanok
-  \uses{def:aba-gather-spec, def:aba-gather-ideal, def:aba-gather-low, thm:gather-core, thm:gather-low-refines, thm:trace-support}
+  \uses{def:aba-gather-spec, def:aba-gather-over-broadcast-specification, def:aba-gather-over-bracha, thm:gather-core, thm:gather-broadcast-substitution, thm:trace-support}
   $\mathrm{CoreTrace}$ is the instance-level reading of the core, quantified over the labels of a run rather than over the states of one: every return label $\mathrm{ret}(id, g, C)$ of the trace carries the same payload set $C$, that set has at least $n - f$ entries, and $C \sqsubseteq g$.
   Every trace in the support of every achievable trace distribution of the gather specification instance satisfies it.\lean{PLTS.ABA.Gather.specInst_core}\leanok{} So does every such trace of the implementation over broadcast specifications and of the implementation over Bracha instances.\lean{PLTS.ABA.Gather.instanceOverBroadcastSpecification_core}\lean{PLTS.ABA.Gather.instanceOverBracha_core}\leanok{} This is Transition System~4's binding clause read on a trace.
 \end{theorem}
 
 \begin{proof}\leanok
-  \uses{def:aba-gather-spec, thm:gather-core, thm:gather-low-refines, thm:trace-support, thm:forward-sound}
+  \uses{def:aba-gather-spec, thm:gather-core, thm:gather-broadcast-substitution, thm:trace-support, thm:forward-sound}
   At the specification the three clauses come from the rules alone.
   \leandeclnamed{bindCore}{PLTS.ABA.Gather.Step.bindCore} is the only writer of $core$ and fires only from $core = \bot$, so the field keeps its value once written and every return reads the same set; the return rule requires $C \sqsubseteq g$ outright; and the size bound is that rule's own guard, carried forward as a state invariant by induction along the execution.
   Theorem~\ref{thm:trace-support} turns a positive-probability trace into a genuine execution whose return labels are steps of those rules, which is the trace form.
-  The two implementations inherit the predicate along the soundness of their refinements: the implementation over broadcast specifications along Theorem~\ref{thm:gather-core}, and the implementation over Bracha instances along Theorem~\ref{thm:gather-low-refines} composed with it.
+  The two implementations inherit the predicate along the soundness of their refinements: the implementation over broadcast specifications along Theorem~\ref{thm:gather-core}, and the implementation over Bracha instances along Theorem~\ref{thm:gather-broadcast-substitution} composed with it.
   What makes that transfer say anything is that the core is on the label.
   The implementations hold it in a field no process reads, the refinements match the labels that carry it, and a trace-support property transfers along an inclusion of achievable trace distributions with no hypothesis beyond positive probability.
 \end{proof}

@@ -11,30 +11,29 @@ import Leslie2Protocols.ABA.Vocabulary.Labels
 
 This module is the account of record for what the ABA development specifies.
 
-The state is the record `SpecState`: a ghost record `input` of genuine
-`callABA` events (D13), the flags `ret` of the processes that have returned,
-the corrupted set `F`, the decision value `val`, and a control mode
-`mode ∈ {idle, locked, terminal}` (D21). Eight rules act on it.
-`SpecStep.callSet` and `SpecStep.callLoop` carry the honest interface call,
-`SpecStep.coinFlip` is the mode loop, `SpecStep.decide` writes the decision
-value, `SpecStep.ret` carries the honest interface return, `SpecStep.fail` is
-corruption (D1), and `SpecStep.callByzantine` and `SpecStep.retByzantine` are the
-corrupted interface. Every transition is Dirac except `SpecStep.coinFlip`.
+The state is the record `SpecState`: a ghost record `input` of genuine `callABA` events (D13), the
+flags `ret` of the processes that have returned, the corrupted set `F`, the decision value `val`,
+and a control mode `mode ∈ {flipEnabled, decisionEnabled, noRuleEnabled}` (D21). Eight rules act on
+it. `SpecStep.callSet` and `SpecStep.callLoop` carry the interface call of a correct process,
+`SpecStep.coinFlip` is the mode loop, `SpecStep.decide` writes the decision value, `SpecStep.ret`
+carries the interface return of a correct process, `SpecStep.fail` is corruption (D1), and
+`SpecStep.callByzantine` and `SpecStep.retByzantine` are the corrupted interface. Every transition
+is Dirac except `SpecStep.coinFlip`.
 
 The interface is the full adversary's. A corrupted process's call records a
 bit unrelated to the one its label declares, and a corrupted process returns
-any value at any time without moving the state. The honest rules stay
+any value at any time without moving the state. The rules for correct processes stay
 available to a corrupted process, so the two corrupted rules add behaviour and
 remove none. The trace predicates of `Specifications/ABASafety.lean` therefore quantify over
 never-corrupted returners: a corrupted return carries an arbitrary bit, which
 no property of the system can constrain.
 
-The mode loop is the specification's liveness reading. From `ControlMode.flipEnabled` a
-flip locks with probability `ε`, fails to deliver with probability `δ`, and releases back
-to `ControlMode.flipEnabled` with the remaining mass. At `ControlMode.decisionEnabled` the decision
-is the only `τ`-rule the mode can enable, so a lock is never discarded; `ControlMode.noRuleEnabled`
-enables no `τ`-rule at all (D17). The flip names no coin bit. Reading `lock` as the coin
-agreeing with a round's reference value is an outcome coupling of a
+The mode loop is what the specification says about liveness. From `ControlMode.flipEnabled` a flip
+enables the decision with probability `ε`, fails to deliver with probability `δ`, and returns to
+`ControlMode.flipEnabled` with the remaining mass. At `ControlMode.decisionEnabled` the decision is
+the only `τ`-rule the mode can enable, so the enabled decision is never withdrawn;
+`ControlMode.noRuleEnabled` enables no `τ`-rule at all (D17). The flip names no coin bit. Reading
+`toDecisionEnabled` as the coin agreeing with a round's reference value is an outcome coupling of a
 refinement, not a component of this system.
 
 The flip is guarded by both bits carrying `f + 1` support, and each of the two
@@ -61,12 +60,12 @@ write is a first write.
 namespace PLTS
 namespace ABA
 
-/-- The control mode of the specification: waiting to flip, holding a lock, or
-frozen by a failed flip. -/
+/-- The control mode of the specification: waiting to flip, with the decision enabled, or frozen by
+a failed flip. -/
 inductive ControlMode : Type
-  /-- The flip is enabled and no lock is held. -/
+  /-- The flip is enabled and the decision is not. -/
   | flipEnabled
-  /-- A lock is held: the decision is the only enabled `τ`-rule. -/
+  /-- The decision is the only enabled `τ`-rule. -/
   | decisionEnabled
   /-- The flip failed to deliver (D17): no `τ`-rule is enabled. -/
   | noRuleEnabled
@@ -120,22 +119,22 @@ theorem InputSupport.mono {P : Parameters} {s s' : SpecState P.n} {v : Bool}
   rw [Finset.mem_filter] at hid ⊢
   exact ⟨hid.1, hid.2.imp (hin id) (fun hm => hF hm)⟩
 
-/-- The outcome of one flip: it locks, releases, or fails to deliver. No coin bit is
-named. -/
+/-- The outcome of one flip: it enables the decision, leaves the flip enabled, or fails to deliver.
+No coin bit is named. -/
 inductive FlipOutcome : Type
-  /-- The flip locks: the mode becomes `ControlMode.decisionEnabled`. -/
+  /-- The flip enables the decision: the mode becomes `ControlMode.decisionEnabled`. -/
   | toDecisionEnabled
-  /-- The flip releases: the mode stays `ControlMode.flipEnabled`. -/
+  /-- The flip leaves the mode at `ControlMode.flipEnabled`. -/
   | toFlipEnabled
   /-- The flip fails to deliver: the mode becomes `ControlMode.noRuleEnabled` (D17). -/
   | undelivered
   deriving DecidableEq, Repr
 
-/-- The flip distribution: mass `ε` on `lock`, `1 − ε − δ` on `release` and
-`δ` on `undelivered`. It is the image of the development's single coin distribution
-`Parameters.wccPMF` under a map that forgets the bit, one bit going to `lock` and
-the other, together with the adversarial outcome, to `release`. The three
-masses are all the rules read; no rule names a coin bit. -/
+/-- The flip distribution: mass `ε` on `toDecisionEnabled`, `1 − ε − δ` on `toFlipEnabled` and `δ`
+on `undelivered`. It is the image of the development's single coin distribution `Parameters.wccPMF`
+under a map that forgets the bit, one bit going to `toDecisionEnabled` and the other, together with
+the adversarial outcome, to `toFlipEnabled`. The three masses are all the rules read; no rule names
+a coin bit. -/
 noncomputable def flipPMF (P : Parameters) : PMF FlipOutcome :=
   P.wccPMF.map (fun o => match o with
     | .bit true => .toDecisionEnabled
@@ -166,7 +165,7 @@ inductive SpecStep (P : Parameters) :
   bit.
 
   The guard `hmix` is the mixedness guard: the flip fires only from a state
-  where both bits carry `f + 1` support. Under honest unanimity on one bit the
+  where both bits carry `f + 1` support. Under unanimity among the correct processes on one bit the
   other bit is never supported, so the guard fails at every state such a run
   reaches. The flip is then unreachable, and with it every probabilistic
   branch of the system, so the unanimous path is Dirac. This is the liveness
@@ -208,7 +207,7 @@ inductive SpecStep (P : Parameters) :
       SpecStep P s (.callABA id b)
         (PMF.pure { s with input := Function.update s.input id (some b') })
   /-- Rule 8 (corrupted return): a corrupted process returns anything at any
-  time. The state does not move, and the honest return rule `SpecStep.ret`
+  time. The state does not move, and the correct return rule `SpecStep.ret`
   remains available to it (D23). -/
   | retByzantine (s : SpecState P.n) (id : Fin P.n) (b : Bool) (hF : id ∈ s.F) :
       SpecStep P s (.retABA id b) (PMF.pure s)

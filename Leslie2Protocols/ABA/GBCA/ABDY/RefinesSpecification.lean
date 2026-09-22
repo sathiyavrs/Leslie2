@@ -22,45 +22,40 @@ soundness inclusion of that simulation carries it: `GBCA.ByABDY.implementation_r
 the inclusion and `GBCA.ByABDY.implementation_binding` is the specification's
 `GBCA.specInst_binding` at the implementation instance.
 
-The implementation state is the protocol's own data, so only `call`, `ret` and
-`F` are read off it directly (`SpecificationRelation.call_eq`, `ret_eq`, `F_eq`). The
-specification's `excluded` and `grade` are bookkeeping the protocol never stores; the relation
-carries receipt evidence for them instead:
+The implementation state is the protocol's own data, so only `call`, `ret` and `F` are read off it
+directly (`SpecificationRelation.call_eq`, `ret_eq`, `F_eq`). The specification's `excluded` and
+`grade` are bookkeeping the protocol records nothing; the relation carries receipt evidence for them
+instead:
 
 * `exclusion_certificate` — every excluded bit `b` is covered by a monotone *exclude certificate*
-  `ExclusionCertificate P s b`: either the opposite bit owns the unique `n − f` `ECHO`
-  receipt quorum (`EchoReceiptQuorum P s (!b)`, Case A), or an `n − f` wall of
-  processes is each corrupted or committed, write-once, to a `VOTE` payload
-  other than `some b` (`VoteQuorumAgainst P s b`, Case B). Both disjuncts make an
-  `n − f` `VOTE b` receipt quorum — the only source of any grade-≥1 evidence
-  for `b` — impossible forever: a `VOTE b` quorum against Case A yields an
-  honest double-`ECHO` sender (`echoReceiptQuorum_unique`, write-once `sentEcho`),
-  and against Case B meets the wall only inside `F`, contradicting
-  `2(n − f) > n + f` (`no_disjoint_quorums`). The relation bounds `excluded` from
-  above and never from below: which bits are actually excluded is recovered by
-  case analysis at the return rows, not stored.
+  `ExclusionCertificate P s b`: either the opposite bit owns the unique `n − f` `ECHO` receipt
+  quorum (`EchoReceiptQuorum P s (!b)`, Case A), or an `n − f` quorum of processes is each corrupted
+  or committed, write-once, to a `VOTE` payload other than `some b` (`VoteQuorumAgainst P s b`, Case
+  B). Both disjuncts make an `n − f` `VOTE b` receipt quorum — the only source of any grade-≥1
+  evidence for `b` — impossible forever: a `VOTE b` quorum against Case A yields a correct
+  double-`ECHO` sender (`echoReceiptQuorum_unique`, write-once `sentEcho`), and against Case B meets
+  the quorum only inside `F`, contradicting `2(n − f) > n + f` (`no_disjoint_quorums`). The relation
+  bounds `excluded` from above and never from below: which bits are actually excluded is recovered
+  by case analysis at the return rows, not recorded.
 * `grade2_evidence` / `grade0_evidence` — a grade-2 lock is backed by an `n − f`
   `ECHO5 v` receipt quorum, a grade-0 lock by an `n − f` `ECHO5 ⊥` quorum. Two
-  opposing quorums intersect in an honest process that would have multicast
+  opposing quorums intersect in a correct process that would have multicast
   two different `ECHO5` payloads, contradicting the write-once `echo5_once` —
   which is the grade-2 / grade-0 exclusivity the specification's grade guard demands
   (`grade_ne_false_of_echo5_quorum`, `grade_ne_true_of_echo5Bot_quorum`).
-* `bound_excluded` — the round's bound bit and the specification's `excluded`
-  determine each other: `excluded = excludedOf bound`, empty while the bit is
-  unwritten and the singleton of its complement once a return has written it.
-  This is the one clause that pins `excluded` from below, and it holds because
-  the exclusion fires with the round's first return. It supplies the guard
-  `(!bnd) ∈ excluded` of a return that announces a bit already on record, and
-  with `exclusion_certificate` it yields `SpecificationRelation.bound_certificate`: the bit on
-  record carries an exclude certificate for its complement. A value-bearing return then
-  announces its own value (`SpecificationRelation.retBound_eq`) — the return's `n − f`
-  `VOTE v` receipt quorum refutes a certificate for `v`
-  (`not_exclusionCertificate_of_voteQuorum`), so a bit on record is `v`, and a bit
-  computed here is `v` by `boundOf`. A grade-0 return announces
-  `boundOf`'s bit, whose complement is certified by `exclusionCertificate_boundOf_grade0`:
-  an honest bit-voter's `vote_confirmed` receipt quorum is Case A for the opposite
-  bit, and where there is no honest bit-voter the all-⊥ wall
-  (`exclusionCertificate_of_noCorrectVote`) certifies both bits at once.
+* `bound_excluded` — the round's bound bit and the specification's `excluded` determine each other:
+  `excluded = excludedOf bound`, empty while the bit is unwritten and the singleton of its
+  complement once a return has written it. This is the one clause that pins `excluded` from below,
+  and it holds because the exclusion fires with the round's first return. It supplies the guard
+  `(!bnd) ∈ excluded` of a return that announces a bit already on record, and with
+  `exclusion_certificate` it yields `SpecificationRelation.bound_certificate`: the bit on record
+  carries an exclude certificate for its complement. A value-bearing return then announces its own
+  value (`SpecificationRelation.retBound_eq`) — the return's `n − f` `VOTE v` receipt quorum refutes
+  a certificate for `v` (`not_exclusionCertificate_of_voteQuorum`), so a bit on record is `v`, and a
+  bit computed here is `v` by `boundOf`. A grade-0 return announces `boundOf`'s bit, whose
+  complement is certified by `exclusionCertificate_boundOf_grade0`: a correct bit-voter's
+  `vote_confirmed` receipt quorum is Case A for the opposite bit, and where there is no correct
+  bit-voter the all-⊥ quorum (`exclusionCertificate_of_noCorrectVote`) certifies both bits at once.
 
 The specification excludes a bit by the internal τ-transition `bindUnset`, so an
 implementation return that needs a not-yet-excluded bit excluded is answered by a
@@ -69,55 +64,54 @@ two-step weak run (`weakLStep_tauThen`; `excludeThenRetGrade2_run`,
 decidable case split on the specification's `excluded`, and the run fires
 whenever the exclusion is missing. Each return's own evidence derives the
 certificate: `retGrade2`'s `ECHO5 v` quorum and `retGrade1`'s `f + 1` `BIND v` receipts
-both route to an `n − f` `VOTE v` receipt quorum at an honest process
+both route to an `n − f` `VOTE v` receipt quorum at a correct process
 (`bind_receipts_of_echo5_quorum`, `voteQuorum_of_bind_receipts`), which excludes
 `!v` — the quorum itself is a `VoteQuorumAgainst` (`exclusionCertificate_of_voteQuorum`) — and
 certifies `v` alive (`not_exclusionCertificate_of_voteQuorum`, which is what discharges
 the guard pair `v ∉ excluded ∧ (!v) ∈ excluded` and with it value agreement between
 successive returns). The grade-0 return's `ECHO5 ⊥` quorum yields a certificate
-for *some* bit (`exclusionCertificate_of_echo5Bot_quorum`): if an honest bit-voter exists
-anywhere, its `vote_confirmed` receipt quorum is Case A for the opposite bit; otherwise the honest
+for *some* bit (`exclusionCertificate_of_echo5Bot_quorum`): if a correct bit-voter exists
+anywhere, its `vote_confirmed` receipt quorum is Case A for the opposite bit; otherwise the correct
 vote prefix is all-⊥ and the `VoteQuorumAgainst` holds for both
 bits at once.
 
-Both `bindUnset` guards come from one `ECHO` certificate (`bindUnset_guards`):
-refine it to an `n − f` `INPUT v` receipt quorum (`inputQuorum_of_echoReceiptQuorum`),
-whose honest senders hold an input (`input_called`, D8) — that is the quorum
-guard (`quorum_of_msg_quorum`) — and whose count feeds
-`Invariant.support_of_input_receipts` for the `f + 1` InputSupport count (D15). At the
-grade-0 return the guards read the returner's own `|Valid| > 1` evidence instead
-(`inputSupport_of_bothValid` closes both bits at once), so they are available whichever
-bit the certificate names. `SpecificationRelation.callSupport` transports the counts to the
-specification side along `call_eq`/`F_eq`.
+Both `bindUnset` guards come from one `ECHO` certificate (`bindUnset_guards`): refine it to an `n −
+f` `INPUT v` receipt quorum (`inputQuorum_of_echoReceiptQuorum`), whose correct senders hold an
+input (`input_called`, D8) — that is the quorum guard (`quorum_of_msg_quorum`) — and whose count
+feeds `Invariant.support_of_input_receipts` for the `f + 1` InputSupport count (D15). At the grade-0
+return the guards read the returner's own `|Valid| > 1` evidence instead
+(`inputSupport_of_bothValid` closes both bits at once), so they are available whichever bit the
+certificate names. `SpecificationRelation.callSupport` transports the counts to the specification
+along `call_eq`/`F_eq`.
 
 The invariant carries
 
 * the corruption budget (`F_card`) and delivery soundness (`received_subset_sent`); * protocol
-conformance of honest multicasts (`echo_confirmed`, `vote_input`,
+conformance of correct multicasts (`echo_confirmed`, `vote_input`,
   `vote_confirmed`, `bind_confirmed`, `bindBot_confirmed`, `echo5_input`, `echo5_confirmed`,
-  `echo5Bot_confirmed`): each honest `ECHO`/`VOTE`/`BIND`/`ECHO5` is backed by the
+  `echo5Bot_confirmed`): each correct `ECHO`/`VOTE`/`BIND`/`ECHO5` is backed by the
   receipt evidence that Algorithm 6 demands (receipts only grow, so the
   historical evidence persists in the current state);
-* write-once recording of honest multicasts (`echo_once`, `vote_once`,
-  `bind_once`, `echo5_once`): an honest payload is the one held in the
-  sender's write-once field, so an honest process speaks at most one payload
+* write-once recording of correct multicasts (`echo_once`, `vote_once`,
+  `bind_once`, `echo5_once`): a correct process's payload is the one held in the
+  sender's write-once field, so a correct process speaks at most one payload
   per level — `echo_once` carries Case A, `vote_once` the `VoteQuorumAgainst`
   counting, `echo5_once` the grade exclusivity;
-* participation (`input_called`, D8): an honest `INPUT` sender has been
+* participation (`input_called`, D8): a correct `INPUT` sender has been
   called;
 * the *budget-robust* input-origin clause (`input_origin`): for **every**
   potential corruption superset `G ⊇ F` within the budget, an `INPUT b`
   multicast by a sender outside `G` traces back to a process outside `G`
   whose own input is `b`. The quantification over `G` is what makes the
-  clause inductive: the classical "first honest sender of `INPUT b` is an
+  clause inductive: the classical "first correct sender of `INPUT b` is an
   originator" argument is temporal, but a relayer's `f + 1` receipt quorum
   always contains a sender outside `G`, so the pre-state clause — already
   quantified over the same `G` — supplies the witness, and corruption steps
   only shrink the range of `G`;
-* the first-relayer support clause (`input_support`, D15): an honest
+* the first-relayer support clause (`input_support`, D15): a correct
   `INPUT b` multicast is by a genuine holder of `b` or already certifies
   `f + 1` F-blind genuine-holder support (`InputSupport`) — inductive because
-  the first honest relayer's `f + 1` `INPUT b` receipt senders are each in
+  the first correct relayer's `f + 1` `INPUT b` receipt senders are each in
   `F` or genuine holders, and the count is monotone under every step.
 
 `Framework/FamilySimulation.lean` is imported for the downstream tree: the family
@@ -182,9 +176,9 @@ theorem ImplementationState.exists_bind_sender_notMem {P : Parameters} {s : Impl
 
 variable {P : Parameters}
 
-/-- `f + 1` F-blind genuine-holder support for `b` (D15): the impl-side
-counterpart of the spec guards' InputSupport counts — the spec-side count follows
-along `call_eq`/`F_eq` (`SpecificationRelation.callSupport`). -/
+/-- `f + 1` F-blind genuine-holder support for `b` (D15): the implementation counterpart of the spec
+guards' InputSupport counts — the specification count follows along `call_eq`/`F_eq`
+(`SpecificationRelation.callSupport`). -/
 def InputSupport (P : Parameters) (s : ImplementationState P.n) (b : Bool) : Prop :=
   P.f + 1 ≤ (Finset.univ.filter
     (fun id => (s.process id).input = some b ∨ id ∈ s.F)).card
@@ -206,42 +200,42 @@ structure Invariant (P : Parameters) (s : ImplementationState P.n) : Prop where
   F_card : s.F.card ≤ P.f
   /-- Delivery soundness: everything delivered was multicast. -/
   received_subset_sent : ∀ i j m, m ∈ s.received i j → m ∈ s.sent j
-  /-- Honest `ECHO b` is backed by an `n − f` `INPUT b` receipt quorum. -/
+  /-- Correct `ECHO b` is backed by an `n − f` `INPUT b` receipt quorum. -/
   echo_confirmed : ∀ j b, j ∉ s.F → Message.echo b ∈ s.sent j →
     P.n - P.f ≤ s.receivedCount j (.input b)
-  /-- Honest `ECHO` multicasts are recorded in the write-once `sentEcho`
-  field; in particular an honest process echoes at most one payload. -/
+  /-- Correct `ECHO` multicasts are recorded in the write-once `sentEcho`
+  field; in particular a correct process echoes at most one payload. -/
   echo_once : ∀ j b, j ∉ s.F → Message.echo b ∈ s.sent j →
     (s.process j).sentEcho = some b
-  /-- Honest voters hold an input (D8). -/
+  /-- Correct voters hold an input (D8). -/
   vote_input : ∀ j w, j ∉ s.F → Message.vote w ∈ s.sent j → (s.process j).input ≠ none
-  /-- Honest `VOTE b` is backed by an `n − f` `ECHO b` receipt quorum. -/
+  /-- Correct `VOTE b` is backed by an `n − f` `ECHO b` receipt quorum. -/
   vote_confirmed : ∀ j b, j ∉ s.F → Message.vote (some b) ∈ s.sent j →
     P.n - P.f ≤ s.receivedCount j (.echo b)
-  /-- Honest `VOTE` multicasts are recorded in the write-once `sentVote`
+  /-- Correct `VOTE` multicasts are recorded in the write-once `sentVote`
   field; this is the level the `VoteQuorumAgainst` certificate counts. -/
   vote_once : ∀ j w, j ∉ s.F → Message.vote w ∈ s.sent j →
     (s.process j).sentVote = some w
-  /-- Honest `BIND` multicasts are recorded in the write-once `sentBind`
-  field; in particular an honest process multicasts at most one payload. -/
+  /-- Correct `BIND` multicasts are recorded in the write-once `sentBind`
+  field; in particular a correct process multicasts at most one payload. -/
   bind_once : ∀ j w, j ∉ s.F → Message.bind w ∈ s.sent j →
     (s.process j).sentBind = some w
-  /-- Honest `BIND b` is backed by an `n − f` `VOTE b` receipt quorum. -/
+  /-- Correct `BIND b` is backed by an `n − f` `VOTE b` receipt quorum. -/
   bind_confirmed : ∀ j b, j ∉ s.F → Message.bind (some b) ∈ s.sent j →
     P.n - P.f ≤ s.receivedCount j (.vote (some b))
-  /-- Honest `BIND ⊥` is backed by `n − f` any-payload `VOTE` receipts. -/
+  /-- Correct `BIND ⊥` is backed by `n − f` any-payload `VOTE` receipts. -/
   bindBot_confirmed : ∀ j, j ∉ s.F → Message.bind none ∈ s.sent j →
     P.n - P.f ≤ s.voteCount j
-  /-- Honest `ECHO5` senders hold an input (D8, one level up). -/
+  /-- Correct `ECHO5` senders hold an input (D8, one level up). -/
   echo5_input : ∀ j w, j ∉ s.F → Message.echo5 w ∈ s.sent j → (s.process j).input ≠ none
-  /-- Honest `ECHO5` multicasts are recorded in the write-once `sentEcho5`
-  field; this is the level that carries the A/C grade exclusivity. -/
+  /-- Correct `ECHO5` multicasts are recorded in the write-once `sentEcho5` field; this is the level
+  that carries the grade-2/grade-0 exclusivity. -/
   echo5_once : ∀ j w, j ∉ s.F → Message.echo5 w ∈ s.sent j →
     (s.process j).sentEcho5 = some w
-  /-- Honest `ECHO5 b` is backed by an `n − f` `BIND b` receipt quorum. -/
+  /-- Correct `ECHO5 b` is backed by an `n − f` `BIND b` receipt quorum. -/
   echo5_confirmed : ∀ j b, j ∉ s.F → Message.echo5 (some b) ∈ s.sent j →
     P.n - P.f ≤ s.receivedCount j (.bind (some b))
-  /-- Honest `ECHO5 ⊥` is backed by `n − f` any-payload `BIND` receipts. -/
+  /-- Correct `ECHO5 ⊥` is backed by `n − f` any-payload `BIND` receipts. -/
   echo5Bot_confirmed : ∀ j, j ∉ s.F → Message.echo5 none ∈ s.sent j →
     P.n - P.f ≤ s.bindCount j
   /-- Budget-robust input origin: for every corruption superset `G` within
@@ -250,13 +244,13 @@ structure Invariant (P : Parameters) (s : ImplementationState P.n) : Prop where
   input_origin : ∀ (b : Bool) (G : Finset (Fin P.n)), s.F ⊆ G → G.card ≤ P.f →
     ∀ j, j ∉ G → Message.input b ∈ s.sent j →
     ∃ m, m ∉ G ∧ (s.process m).input = some b
-  /-- Relayer-inductivized first-relayer support (D15): an honest `INPUT b`
+  /-- Relayer-inductivized first-relayer support (D15): a correct `INPUT b`
   multicast is by a genuine holder of `b`, or certifies the `f + 1` F-blind
-  genuine-holder support outright — the first honest relayer's `f + 1`
+  genuine-holder support outright — the first correct relayer's `f + 1`
   `INPUT b` receipt senders are each in `F` or genuine holders. -/
   input_support : ∀ (b : Bool) (j : Fin P.n), j ∉ s.F → Message.input b ∈ s.sent j →
     (s.process j).input = some b ∨ InputSupport P s b
-  /-- Participation one level down (D8): an honest `INPUT` sender has been
+  /-- Participation one level down (D8): a correct `INPUT` sender has been
   called. -/
   input_called : ∀ j b, j ∉ s.F → Message.input b ∈ s.sent j →
     (s.process j).input ≠ none
@@ -282,7 +276,7 @@ theorem Invariant.initial (P : Parameters) : Invariant P (ImplementationState.in
   input_called := fun j b _ h => absurd h (by simp [ImplementationState.initial])
 
 /-- Derivation (D15): any `f + 1` `INPUT b` receipt count yields the F-blind
-genuine-holder support — some honest non-holder sender's `input_support` clause
+genuine-holder support — some correct non-holder sender's `input_support` clause
 closes, or else every sender is a holder-or-`F`-member and the senders
 themselves witness the count. -/
 theorem Invariant.support_of_input_receipts {s : ImplementationState P.n} (hI : Invariant P s)
@@ -309,7 +303,7 @@ private theorem process_send_ne {s : ImplementationState P.n} {j : Fin P.n} {p :
     ((s.setProcess j p).multicast j m).process k = s.process k := by
   rw [ImplementationState.multicast_process, ImplementationState.setProcess_process_ne _ _ _ hk]
 
-/-- **Invariant preservation, honest-send schema.** Process `j` updates its
+/-- **Invariant preservation, correct-send schema.** Process `j` updates its
 local state to `p` and multicasts `m`. The hypotheses collect, clause by
 clause, what the new message and the touched field must satisfy; every frame
 condition is discharged here once for all nine send rules (`call`, `relay`,
@@ -883,7 +877,7 @@ and under every implementation step, and at most one bit can carry it
 def EchoReceiptQuorum (P : Parameters) (s : ImplementationState P.n) (v : Bool) : Prop :=
   ∃ i, P.n - P.f ≤ s.receivedCount i (.echo v)
 
-/-- Derivation from `f + 1` `VOTE v` receipts: they contain an honest `VOTE v`
+/-- Derivation from `f + 1` `VOTE v` receipts: they contain a correct `VOTE v`
 sender, whose `vote_confirmed` receipt quorum is the certificate. -/
 theorem echoReceiptQuorum_of_vote_receipts {s : ImplementationState P.n} (hI : Invariant P s)
     {i : Fin P.n} {v : Bool} (h : P.f + 1 ≤ s.receivedCount i (.vote (some v))) :
@@ -907,7 +901,7 @@ theorem inputQuorum_of_echoReceiptQuorum {s : ImplementationState P.n} (hI : Inv
   exact ⟨m, hI.echo_confirmed m v hmF (hI.received_subset_sent i m _ hmr)⟩
 
 /-- At most one bit carries an `n − f` `ECHO` quorum: the two quorums
-intersect in an honest sender, and `sentEcho` is write-once. -/
+intersect in a correct sender, and `sentEcho` is write-once. -/
 theorem echoReceiptQuorum_unique {s : ImplementationState P.n} (hI : Invariant P s) {v v' : Bool}
     (h : EchoReceiptQuorum P s v) (h' : EchoReceiptQuorum P s v') : v = v' := by
   obtain ⟨i, hi⟩ := h
@@ -918,18 +912,16 @@ theorem echoReceiptQuorum_unique {s : ImplementationState P.n} (hI : Invariant P
   rw [e1] at e2
   exact Option.some.inj e2
 
-/-- Case B carrier: an `n − f` wall of processes each of which is corrupted
-or has committed its write-once `VOTE` field to a payload other than
-`some b`. -/
+/-- Case B carrier: an `n − f` quorum of processes each of which is corrupted or has committed its
+write-once `VOTE` field to a payload other than `some b`. -/
 def VoteQuorumAgainst (P : Parameters) (s : ImplementationState P.n) (b : Bool) : Prop :=
   P.n - P.f ≤ (Finset.univ.filter
     (fun j => j ∈ s.F ∨ ∃ w, (s.process j).sentVote = some w ∧ w ≠ some b)).card
 
-/-- The exclude certificate licensing `b ∈ excluded` on the specification side:
-either the opposite bit owns the (unique) `n − f` `ECHO` receipt quorum, or
-a `VoteQuorumAgainst` blocks `b` at the `VOTE` level. Both disjuncts make an `n − f`
-`VOTE b` receipt quorum — the only source of any grade-≥1 evidence for `b`
-— impossible forever. -/
+/-- The exclude certificate licensing `b ∈ excluded` on the specification: either the opposite bit
+owns the (unique) `n − f` `ECHO` receipt quorum, or a `VoteQuorumAgainst` blocks `b` at the `VOTE`
+level. Both disjuncts make an `n − f` `VOTE b` receipt quorum — the only source of any grade-≥1
+evidence for `b` — impossible forever. -/
 def ExclusionCertificate (P : Parameters) (s : ImplementationState P.n) (b : Bool) : Prop :=
   EchoReceiptQuorum P s (!b) ∨ VoteQuorumAgainst P s b
 
@@ -965,7 +957,7 @@ theorem ExclusionCertificate.mono {s s' : ImplementationState P.n} {b : Bool}
     · exact Or.inl (hF hkF)
     · exact Or.inr ⟨w, hvote k w hsv, hne⟩
 
-/-- `ExclusionCertificate` is stable under an honest send that respects the write-once
+/-- `ExclusionCertificate` is stable under a correct send that respects the write-once
 `sentVote` field. -/
 private theorem exclusionCertificate_send {s : ImplementationState P.n} {j : Fin P.n} {p :
   ProcessRecord}
@@ -1006,7 +998,7 @@ private theorem exclusionCertificate_setBound {s : ImplementationState P.n} {b �
 /-! ### The derivation chains -/
 
 /-- `f + 1` `BIND v` receipts exceed the corruption budget, so they contain
-an honest binder, whose `bind_confirmed` wait-condition is an honest `n − f`
+a correct binder, whose `bind_confirmed` wait-condition is a correct `n − f`
 `VOTE v` receipt quorum — the object the binding argument counts. -/
 theorem voteQuorum_of_bind_receipts {s : ImplementationState P.n} (hI : Invariant P s)
     {i : Fin P.n} {v : Bool} (h : P.f + 1 ≤ s.receivedCount i (.bind (some v))) :
@@ -1017,8 +1009,8 @@ theorem voteQuorum_of_bind_receipts {s : ImplementationState P.n} (hI : Invarian
   obtain ⟨k, hkF, hkr⟩ := ImplementationState.exists_sender_notMem s.F h'
   exact ⟨k, hkF, hI.bind_confirmed k v hkF (hI.received_subset_sent i k _ hkr)⟩
 
-/-- An `n − f` `ECHO5 v` receipt quorum contains an honest `ECHO5` sender, whose
-`echo5_confirmed` wait-condition is an honest `n − f` `BIND v` receipt quorum. -/
+/-- An `n − f` `ECHO5 v` receipt quorum contains a correct `ECHO5` sender, whose
+`echo5_confirmed` wait-condition is a correct `n − f` `BIND v` receipt quorum. -/
 theorem bind_receipts_of_echo5_quorum {s : ImplementationState P.n} (hI : Invariant P s)
     {i : Fin P.n} {v : Bool} (h : P.n - P.f ≤ s.receivedCount i (.echo5 (some v))) :
     ∃ k, k ∉ s.F ∧ P.n - P.f ≤ s.receivedCount k (.bind (some v)) := by
@@ -1029,9 +1021,9 @@ theorem bind_receipts_of_echo5_quorum {s : ImplementationState P.n} (hI : Invari
   obtain ⟨k, hkF, hkr⟩ := ImplementationState.exists_sender_notMem s.F h'
   exact ⟨k, hkF, hI.echo5_confirmed k v hkF (hI.received_subset_sent i k _ hkr)⟩
 
-/-- **Availability, exclude side**: any `n − f` `VOTE v` receipt quorum excludes
-the opposite bit — the quorum's members are each corrupted or committed
-(write-once) to `some v`, so the quorum itself is a `VoteQuorumAgainst` for `!v`. -/
+/-- **Availability, the excluded bit**: any `n − f` `VOTE v` receipt quorum excludes the opposite
+bit — the quorum's members are each corrupted or committed (write-once) to `some v`, so the quorum
+itself is a `VoteQuorumAgainst` for `!v`. -/
 theorem exclusionCertificate_of_voteQuorum {s : ImplementationState P.n} (hI : Invariant P s)
     {i : Fin P.n} {v : Bool} (h : P.n - P.f ≤ s.receivedCount i (.vote (some v))) :
     ExclusionCertificate P s (!v) := by
@@ -1045,10 +1037,9 @@ theorem exclusionCertificate_of_voteQuorum {s : ImplementationState P.n} (hI : I
     injection hc with hc
     cases v <;> simp at hc
 
-/-- **Availability, live side**: an `n − f` `VOTE v` receipt quorum refutes
-both certificate cases for `v` itself — against Case A the derived
-`ECHO v` quorum meets the `ECHO (!v)` quorum in an honest double-echoer, and
-against Case B the quorum meets the wall only inside `F`. -/
+/-- **Availability, the live bit**: an `n − f` `VOTE v` receipt quorum refutes both certificate
+cases for `v` itself — against Case A the derived `ECHO v` quorum meets the `ECHO (!v)` quorum in a
+correct double-echoer, and against Case B the quorum meets the quorum only inside `F`. -/
 theorem not_exclusionCertificate_of_voteQuorum {s : ImplementationState P.n} (hI : Invariant P s)
     {i : Fin P.n} {v : Bool} (h : P.n - P.f ≤ s.receivedCount i (.vote (some v))) :
     ¬ ExclusionCertificate P s v := by
@@ -1069,11 +1060,11 @@ theorem not_exclusionCertificate_of_voteQuorum {s : ImplementationState P.n} (hI
       exact hne (Option.some.inj hcommit)
 
 /-- **Availability at the grade-0 return**: an `n − f` `ECHO5 ⊥` receipt quorum
-certifies *some* excluded bit. Classical dichotomy on "an honest bit-voter
+certifies *some* excluded bit. Classical dichotomy on "a correct bit-voter
 exists somewhere": if yes, its `vote_confirmed` receipt quorum is Case A for the
-opposite bit; if no, the quorum's honest `ECHO5` sender holds `n − f` any-`BIND`
-receipts, its honest `BIND` sender can only have sent `BIND ⊥` (a bit `BIND`
-needs an honest bit-voter), and that sender's `bindBot_confirmed` receipts pin an
+opposite bit; if no, the quorum's correct `ECHO5` sender holds `n − f` any-`BIND`
+receipts, its correct `BIND` sender can only have sent `BIND ⊥` (a bit `BIND`
+needs a correct bit-voter), and that sender's `bindBot_confirmed` receipts pin an
 `n − f` set of processes each corrupted or committed to `VOTE ⊥` — a
 `VoteQuorumAgainst` for both bits at once. -/
 theorem exclusionCertificate_of_noCorrectVote {s : ImplementationState P.n} (hI : Invariant P s)
@@ -1117,11 +1108,10 @@ theorem exclusionCertificate_of_noCorrectVote {s : ImplementationState P.n} (hI 
       subst hnone
       exact Or.inr ⟨none, hI.vote_once q none hqF hqs, by simp⟩
 
-/-- **Availability at the grade-0 return**: an `n − f` `ECHO5 ⊥` receipt quorum
-certifies *some* excluded bit. Classical dichotomy on "an honest bit-voter
-exists somewhere": if yes, its `vote_confirmed` receipt quorum is Case A for the
-opposite bit; if no, the all-⊥ wall of `exclusionCertificate_of_noCorrectVote`
-answers. -/
+/-- **Availability at the grade-0 return**: an `n − f` `ECHO5 ⊥` receipt quorum certifies *some*
+excluded bit. Classical dichotomy on "a correct bit-voter exists somewhere": if yes, its
+`vote_confirmed` receipt quorum is Case A for the opposite bit; if no, the all-⊥ quorum of
+`exclusionCertificate_of_noCorrectVote` answers. -/
 theorem exclusionCertificate_of_echo5Bot_quorum {s : ImplementationState P.n} (hI : Invariant P s)
     {i : Fin P.n} (h : P.n - P.f ≤ s.receivedCount i (.echo5 none)) :
     ∃ b, ExclusionCertificate P s b := by
@@ -1133,11 +1123,10 @@ theorem exclusionCertificate_of_echo5Bot_quorum {s : ImplementationState P.n} (h
     exact ⟨k, hI.vote_confirmed k b hkF hks⟩
   · exact ⟨false, exclusionCertificate_of_noCorrectVote hI h hcase false⟩
 
-/-- **The grade-0 return's announced bit is certified.** At an `n − f` `ECHO5 ⊥`
-receipt quorum the complement of `boundOf … C` carries an exclude certificate.
-Where an honest bit-voter exists its `vote_confirmed` receipt quorum is Case A for
-the opposite bit, which is the bit `boundOf` names; where none exists the wall
-covers both bits at once. -/
+/-- **The grade-0 return's announced bit is certified.** At an `n − f` `ECHO5 ⊥` receipt quorum the
+complement of `boundOf … C` carries an exclude certificate. Where a correct bit-voter exists its
+`vote_confirmed` receipt quorum is Case A for the opposite bit, which is the bit `boundOf` names;
+where none exists the quorum covers both bits at once. -/
 theorem exclusionCertificate_boundOf_grade0 {s : ImplementationState P.n} (hI : Invariant P s)
     {i : Fin P.n} (h : P.n - P.f ≤ s.receivedCount i (.echo5 none)) :
     ExclusionCertificate P s (!(boundOf s.sent s.F .grade0)) := by
@@ -1256,8 +1245,8 @@ theorem inputSupport_of_bothValid {s : ImplementationState P.n} (hI : Invariant 
   exact hI.support_of_input_receipts
     (le_trans (by omega) (ImplementationState.bothValid_le hv b))
 
-/-- Transport an impl-side support count to the spec side along
-`call_eq`/`F_eq`: the spec guards' InputSupport counts (D15). -/
+/-- Transport an implementation support count to the specification along `call_eq`/`F_eq`: the spec
+guards' InputSupport counts (D15). -/
 theorem SpecificationRelation.callSupport {s : ImplementationState P.n} {t : SpecState P.n}
     (hR : SpecificationRelation P s t) {b : Bool} (h : InputSupport P s b) :
     P.f + 1 ≤ (Finset.univ.filter
@@ -1269,7 +1258,7 @@ theorem SpecificationRelation.callSupport {s : ImplementationState P.n} {t : Spe
   rw [hR.call_eq, hR.F_eq]
   exact hk.2
 
-/-- D8 quorum derivation: any `n − f` receipt quorum of a message whose honest
+/-- D8 quorum derivation: any `n − f` receipt quorum of a message whose correct
 senders must hold an input yields the spec's call quorum; corrupted senders
 are absorbed into the `∪ F`. -/
 theorem quorum_of_msg_quorum {s : ImplementationState P.n} {t : SpecState P.n}
@@ -1303,9 +1292,9 @@ theorem bindUnset_guards {s : ImplementationState P.n} {t : SpecState P.n}
     (fun j hj hm' => hR.invariant.input_called j v hj hm') hm, ?_⟩
   exact hR.callSupport (hR.invariant.support_of_input_receipts (le_trans (by omega) hm))
 
-/-- Grade exclusivity, grade-2 side: an `n − f` `ECHO5 v` receipt quorum rules out
-a grade-0 lock (the two `ECHO5` quorums would intersect in an honest
-process with two different `ECHO5` payloads, against `echo5_once`). -/
+/-- Grade exclusivity, grade 2: an `n − f` `ECHO5 v` receipt quorum rules out a grade-0 lock (the
+two `ECHO5` quorums would intersect in a correct process with two different `ECHO5` payloads,
+against `echo5_once`). -/
 theorem grade_ne_false_of_echo5_quorum {s : ImplementationState P.n} {t : SpecState P.n}
     (hR : SpecificationRelation P s t) {id : Fin P.n} {v : Bool}
     (hcnt : P.n - P.f ≤ s.receivedCount id (.echo5 (some v))) :
@@ -1319,8 +1308,7 @@ theorem grade_ne_false_of_echo5_quorum {s : ImplementationState P.n} {t : SpecSt
   rw [e1] at e2
   exact absurd (Option.some.inj e2) (by simp)
 
-/-- Grade exclusivity, grade-0 side: an `n − f` `ECHO5 ⊥` receipt quorum rules out
-a grade-2 lock. -/
+/-- Grade exclusivity, grade 0: an `n − f` `ECHO5 ⊥` receipt quorum rules out a grade-2 lock. -/
 theorem grade_ne_true_of_echo5Bot_quorum {s : ImplementationState P.n} {t : SpecState P.n}
     (hR : SpecificationRelation P s t) {id : Fin P.n}
     (hcnt : P.n - P.f ≤ s.receivedCount id (.echo5 none)) :
@@ -1439,8 +1427,8 @@ theorem excludeThenRetGrade0_run {r : ℕ} {t : SpecState P.n} {id : Fin P.n} {b
 
 /-! ### The refinement -/
 
-/-- The two `corrupt` functions stay in lockstep on aligned corrupted sets
-(a strong per-coordinate `fail` match, as required by the family lift). -/
+/-- The two `corrupt` functions stay equal on aligned corrupted sets (a strong per-coordinate `fail`
+match, as required by the family lift). -/
 private theorem implementationSpec_corrupt_F_eq {t : SpecState P.n} {s : ImplementationState P.n}
     (hF : t.F = s.F) (id : Fin P.n) :
     (t.corrupt P id).F = (s.corrupt P id).F := by
@@ -1973,19 +1961,17 @@ theorem refinesSpecification (P : Parameters) (r : ℕ) :
 
 /-! ### Broadcast compatibility of the simulation relation
 
-The round-indexed family lift of the refinement takes `fail` as a broadcast
-act, applied to every round at once. It needs the per-round relation to be
-preserved by that act. The spec-side corruption projections
-(`corrupt_call`/`corrupt_ret`/`corrupt_excluded`/`corrupt_grade`) come from
-`ABA/GBCA/Specification.lean`; the two `corrupt` functions stay in lockstep by
+The round-indexed family lift of the refinement takes `fail` as a broadcast act, applied to every
+round at once. It needs the per-round relation to be preserved by that act. The specification
+corruption projections (`corrupt_call`/`corrupt_ret`/`corrupt_excluded`/`corrupt_grade`) come from
+`ABA/GBCA/Specification.lean`; the two `corrupt` functions stay equal by
 `implementationSpec_corrupt_F_eq`. The statement is proved directly rather than through
-`refinesSpecification`, whose `fail` case only yields an existential match. Its
-consumer is the round instance's family lifting (`ABA/Composition/GBCAInstanceByABDY.lean`). -/
+`refinesSpecification`, whose `fail` case only yields an existential match. Its consumer is the
+round instance's family lifting (`ABA/Composition/GBCAInstanceByABDY.lean`). -/
 
-/-- **Broadcast compatibility**: `specificationRelation` is preserved by the synchronized
-corruption of both sides. The two `corrupt`s share the guard
-`id ∉ F ∧ |F| < f` and `specificationRelation` aligns the `F`s, so the `if`-conditions
-agree; every other field is untouched by corruption. -/
+/-- **Broadcast compatibility**: `specificationRelation` is preserved by the synchronized corruption
+of both systems. The two `corrupt`s share the guard `id ∉ F ∧ |F| < f` and `specificationRelation`
+aligns the `F`s, so the `if`-conditions agree; every other field is untouched by corruption. -/
 theorem specificationRelation_corrupt (P : Parameters) (r : ℕ) (id : Fin P.n)
     {x : ImplementationState P.n} {y : SpecState P.n} (h : specificationRelation P r x y) :
     specificationRelation P r (x.corrupt P id) (y.corrupt P id) := by

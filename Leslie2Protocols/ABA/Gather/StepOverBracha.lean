@@ -89,7 +89,7 @@ theorem brachaInstance_call_row {M : Type} [DecidableEq M] {P : Parameters} {ldr
   rcases (BRB.brachaInstance_step_iff P ldr (u, w) (Sum.inl (BRB.Label.call m)) _).mp h with ⟨hτ,
     -⟩ | hlab
   · exact absurd hτ (by simp)
-  · obtain ⟨x, w', hμ, hall, hn⟩ := BRB.brachaInstanceExtended_joint_inv (by simp) hlab
+  · obtain ⟨x, w', hμ, hall, hn⟩ := BRB.brachaInstanceExtended_joint_inversion (by simp) hlab
     obtain ⟨hinp, hx⟩ := BRB.programStep_call_leader (hall ldr)
     have hfor : ∀ i, i ≠ ldr → x i = u i :=
       fun i hi => PMF.pure_injective (BRB.programStep_call_foreign hi (hall i))
@@ -110,7 +110,7 @@ theorem brachaInstance_callLoop_row {M : Type} [DecidableEq M] {P : Parameters} 
   rcases (BRB.brachaInstance_step_iff P ldr (u, w) (Sum.inr (BRB.LoopLabel.callLoop m)) _).mp h with
     ⟨hτ, -⟩ | hlab
   · exact absurd hτ (by simp)
-  · obtain ⟨x, w', hμ, hall, hn⟩ := BRB.brachaInstanceExtended_joint_inv (by simp) hlab
+  · obtain ⟨x, w', hμ, hall, hn⟩ := BRB.brachaInstanceExtended_joint_inversion (by simp) hlab
     have hw : w' = w := PMF.pure_injective (BRB.networkStep_callLoop hn)
     subst hw
     have hidle : ∀ i, x i = u i := fun i => PMF.pure_injective (BRB.programStep_callLoop (hall i))
@@ -227,7 +227,7 @@ inductive StepOverBracha (P : Parameters) :
   | byzantine (s : StateOverBracha P.n X) (j : Fin P.n) (m : Message P.n X) (h : j ∈ (gatherTier
     s).F) :
       StepOverBracha P s .tau (PMF.pure (setGatherTier s ((gatherTier s).multicast j m)))
-  /-- An input instance returns to `j`, which files the value in its store. -/
+  /-- An input instance returns to `j`, which files the value it returned. -/
   | inputBroadcastRet (s : StateOverBracha P.n X) (k j : Fin P.n) (v : X) (c : BRB.BrachaState P.n
     X)
       (hb : BRB.BrachaStep P k (inputBroadcasts s k) (.ret j v) (PMF.pure c)) :
@@ -237,7 +237,7 @@ inductive StepOverBracha (P : Parameters) :
               inputBroadcastReturned := Function.update ((gatherTier s).process
                 j).inputBroadcastReturned k (some v) }))
           (Function.update (inputBroadcasts s) k c)))
-  /-- A bind instance returns to `j`, which files the payload in its store. -/
+  /-- A bind instance returns to `j`, which files the payload it returned. -/
   | bindRet (s : StateOverBracha P.n X) (q j : Fin P.n) (U : AcceptedPairs P.n X)
       (d : BRB.BrachaState P.n (AcceptedPairs P.n X))
       (hb : BRB.BrachaStep P q (bindBroadcasts s q) (.ret j U) (PMF.pure d)) :
@@ -264,8 +264,8 @@ inductive StepOverBracha (P : Parameters) :
         (PMF.pure (setCore (setGatherTier s ((gatherTier s).setProcess id
           { (gatherTier s).process id with returned := true }))
           (some ((core s).getD (coreOfNetwork P (gatherTier s).2)))))
-  /-- Corruption (deviation D1), in lockstep across the gather network state and
-  every broadcast coordinate. -/
+  /-- Corruption (deviation D1), together across the gather network state and every broadcast
+  coordinate. -/
   | fail (s : StateOverBracha P.n X) (id : Fin P.n) :
       StepOverBracha P s (.fail id)
         (PMF.pure (corruptAll P id (InstanceState.corrupt P id) (InstanceState.corrupt P id) s))
@@ -286,7 +286,7 @@ theorem instanceOverBracha_step_row (P : Parameters) :
       (fun q => BRB.brachaInstance P q (AcceptedPairs P.n X)) _ l μ).mp hstep with ⟨rfl, e,
         hev⟩ | hlab
   · obtain ⟨x, w', a', b', rfl, hproc, hnet, hin, hbind⟩ :=
-      instanceOverBroadcastsExtended_joint_inv hIn hBind (by simp) hev
+      instanceOverBroadcastsExtended_joint_inversion hIn hBind (by simp) hev
     refine ⟨Label.tau, rfl, ?_⟩
     cases e with
     | send j m =>
@@ -367,7 +367,7 @@ theorem instanceOverBracha_step_row (P : Parameters) :
   · by_cases hlτ : l = Sum.inl Label.tau
     · subst hlτ
       refine ⟨Label.tau, rfl, ?_⟩
-      rcases instanceOverBroadcastsExtended_tau_inv hIn hBind hlab with ⟨v, rfl, hn⟩ | ⟨k, c, rfl,
+      rcases instanceOverBroadcastsExtended_tau_inversion hIn hBind hlab with ⟨v, rfl, hn⟩ | ⟨k, c, rfl,
         hs⟩ | ⟨q, d, rfl, hs⟩
       · obtain ⟨jj, m, hF, hv⟩ := networkStep_tau hn
         have hv' : v = { w with network := w.network.recordSent jj m } := PMF.pure_injective hv
@@ -384,7 +384,7 @@ theorem instanceOverBracha_step_row (P : Parameters) :
         rw [stateOverBroadcasts_setBindBroadcasts]
         exact StepOverBracha.bindBroadcastTau _ q d himpl
     · obtain ⟨x, w', a', b', rfl, hproc, hnet, hin, hbind⟩ :=
-        instanceOverBroadcastsExtended_joint_inv hIn hBind (by simpa using hlτ) hlab
+        instanceOverBroadcastsExtended_joint_inversion hIn hBind (by simpa using hlτ) hlab
       cases l with
       | inl l₀ =>
         cases l₀ with

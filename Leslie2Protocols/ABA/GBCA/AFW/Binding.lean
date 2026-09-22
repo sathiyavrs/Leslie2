@@ -240,7 +240,7 @@ theorem roundOverBracha_refinesSpecification (P : Parameters) (r : ℕ) :
         (GBCA.ByABDY.specificationOverRoundAlphabet_isLTS P r)
         (specificationRelation_init P r) (refinesSpecification P r)))
 
-/-- The soundness inclusion of the round reading: every trace distribution
+/-- The soundness inclusion of the round: every trace distribution
 achievable by the round over the gather instances over Bracha's broadcast is
 achievable by the lifted specification. -/
 theorem roundOverBracha_specificationTraces (P : Parameters) (r : ℕ) :

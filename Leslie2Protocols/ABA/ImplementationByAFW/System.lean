@@ -12,13 +12,13 @@ import Leslie2Protocols.ABA.ReliableBroadcast.BrachaImplementation
 /-!
 # The gather-based protocol as it runs
 
-The gather-based graded agreement, read as a protocol rather than as a
-composition: `n` programs beside one network adversary and the coin oracle.
-This is the flat reading of `ABA/Implementation/System.lean` at the gather-based
-implementation, as `ABA/ImplementationByABDY/System.lean` is that reading at ABDY22's, and it
-supplies the same three things — a stage message type, a stage record, and the
-implementation's rows. It sits in the namespace `AFW`, after Attiya, Flam and
-Welch, and so `AFW.protocol` is what `ABDY.protocol` is at ABDY22's.
+The gather-based graded agreement, read as a protocol rather than as a composition: `n` programs
+beside one network adversary and the coin oracle. This is the implementation of
+`ABA/Implementation/System.lean` at the gather-based implementation, as
+`ABA/ImplementationByABDY/System.lean` is that implementation at ABDY22's, and it supplies the same
+three things — a round message type, a round record, and the implementation's rows. It sits in the
+namespace `AFW`, after Attiya, Flam and Welch, and so `AFW.protocol` is what `ABDY.protocol` is at
+ABDY22's.
 
 ## One sent for every network state
 
@@ -34,7 +34,7 @@ sent index stays the sender, so a threshold still counts distinct senders
 ## The record of one process
 
 A process's data is scattered across those instances: `j` holds its own local state in
-each of the `4n + 2` of them, and the composed reading indexes those local states by
+each of the `4n + 2` of them, and the composed system indexes those local states by
 instance and then by process. A program must hold its own data and no one
 else's, so `RoundRecord` holds them the other way round — `j`'s local state in each
 gather instance, and `j`'s local state in each of the `n` instances of each Bracha
@@ -45,47 +45,43 @@ loses nothing.
 
 ## The rows
 
-The stage-side rows are the rows of `Gather.StepOverBracha` and `GBCA.ByAFW.roundOverBracha`
-cut into their process half and their network half. A send writes the sender's
-own record and the network records the message; a delivery files the message in
-the receiver's own local state, dispatched on the tag. Three rows are fused
-(D28): the graded-agreement call broadcasts the input, the `BIND` send is a
-broadcast call, and the first gather's return to a process is that process's
-call of the second gather.
+The round rows are the rows of `Gather.StepOverBracha` and `GBCA.ByAFW.roundOverBracha` cut into
+their process half and their network half. A send writes the sender's own record and the network
+records the message; a delivery files the message in the receiver's own local state, dispatched on
+the tag. Three rows are fused (D28): the graded-agreement call broadcasts the input, the `BIND` send
+is a broadcast call, and the first gather's return to a process is that process's call of the second
+gather.
 
 The Bracha return is not a row here. A gather guard reads a `2f + 1` `VOTE`
 receipt quorum on the acting process's own local state in the instance —
 `firstGatherAcceptedInputs` and its three companions — so what an instance has returned to a
 process is a receipt count on that process's own record. A gather program of
-the composed reading holds the returned value in a store
+the composed system records it
 (`Gather.holdsInputBroadcastReturn`, `Gather.holdsBindBroadcastReturn`), and
-`AFW.broadcastReturnsFor` is the reading that identifies the two. The first gather's `ECHO` payload
-is the process's accepted pairs, `AFW.firstGatherAcceptedPairs`, which is that reading at each of
+`AFW.broadcastReturnsFor` is the function that identifies the two. The first gather's `ECHO` payload
+is the process's accepted pairs, `AFW.firstGatherAcceptedPairs`, which is that function at each of
 the `n` input-broadcast instances.
 
 ## The network adversary's ghost
 
-The record the adversary holds for round `r` is `AFW.Ghost`: the first
-gather's frozen core, the second gather's frozen core, and the round's bound
-bit, each written once. `AFW.ghostStep` writes it. The link's broadcast of the
-candidate — the label `gbcaSend r j (secondGatherInputBroadcasts j (init _))`, which no other row
-carries — freezes the first core at `Gather.coreOf` of the round's first
-gather network state and the bound bit at `GBCA.boundOfCore` of that core; a
-graded return freezes the second core the same way. Every other label leaves
-the record where it stands.
+The record the adversary holds for round `r` is `AFW.Ghost`: the first gather's frozen core, the
+second gather's frozen core, and the round's bound bit, each written once. `AFW.ghostStep` writes
+it. The return-then-call step's broadcast of the candidate — the label `gbcaSend r j
+(secondGatherInputBroadcasts j (init _))`, which no other row carries — freezes the first core at
+`Gather.coreOf` of the round's first gather network state and the bound bit at `GBCA.boundOfCore` of
+that core; a graded return freezes the second core the same way. Every other label leaves the record
+where it stands.
 
 The network state `Gather.coreOf` is read on is `AFW.firstGatherOf`, the first
-gather's messagesOf of the adversary's tagged sent sets beside its corrupted set,
+gather's messages out of the adversary's tagged sent sets beside its corrupted set,
 and `AFW.secondGatherOf` is the second's. `Gather.coreOf` reads the sent sets and the
 corrupted set alone (`Gather.coreOf_networkState_only`), which is what lets the
 adversary compute the core from its own state.
 
-`AFW.ghostOut` reads the bit back, and `AFW.announcedBound`, the guard of the
-two graded-agreement return rows, is the equation between the bit their label
-carries and it. `AFW.ghostOut` is total: where the ghost holds no bit it
-computes one from the first gather's core, and on a reachable state the
-returner's own link has already written the bit.
--/
+`AFW.ghostOut` reads the bit back, and `AFW.announcedBound`, the guard of the two graded-agreement
+return rows, is the equation between the bit their label carries and it. `AFW.ghostOut` is total:
+where the ghost holds no bit it computes one from the first gather's core, and on a reachable state
+the returner's own return-then-call step has already written the bit. -/
 
 namespace PLTS
 namespace ABA
@@ -117,7 +113,7 @@ inductive Message (n : ℕ) : Type
 
 /-- One process's data in one round, held by instance: its local state in each gather
 instance, and its local state in each of the `n` instances of each broadcast family.
-This is the composed reading's instance-major indexing transposed. -/
+This is the composed system's instance-major indexing transposed. -/
 structure RoundRecord (n : ℕ) : Type where
   /-- The process's local state in the first gather instance. -/
   firstGather : LocalState n (Gather.BaseProcessRecord n Bool) (Gather.Message n Bool)
@@ -184,7 +180,7 @@ def deliverTo (s : RoundRecord n) (k : Fin n) : Message n → RoundRecord n
 
 end RoundRecord
 
-/-- The gather-based stage record, as the flat reading consumes it. -/
+/-- The gather-based round record, as the implementation consumes it. -/
 instance instIsRoundRecord (n : ℕ) : IsRoundRecord n (Message n) (RoundRecord n) where
   initial := RoundRecord.initial n
   deliverTo s k m := s.deliverTo k m
@@ -195,12 +191,11 @@ instance instIsRoundRecord (n : ℕ) : IsRoundRecord n (Message n) (RoundRecord 
 @[simp] theorem roundRecord_deliverTo (n : ℕ) (s : RoundRecord n) (k : Fin n)
     (m : Message n) : (IsRoundRecord.deliverTo s k m : RoundRecord n) = s.deliverTo k m := rfl
 
-/-- The stage-side record of one process: the round records it holds, and
-whether it has terminated (D22). -/
+/-- The round records of one process: the round records it holds, and whether it has terminated
+(D22). -/
 abbrev RoundRecordMap (n : ℕ) : Type := Implementation.RoundRecordMap (RoundRecord n)
 
-/-- The state of one process: its round-loop record and its stage-side
-record. -/
+/-- The state of one process: its round-loop record and its round records. -/
 abbrev ProcessRecord (n : ℕ) : Type := Implementation.ProcessRecord n (RoundRecord n)
 
 /-! ### The network adversary's ghost -/
@@ -272,10 +267,9 @@ def secondGatherOf (P : Parameters) (w : NetworkState P.n) (r : ℕ) :
   (fun _ => LocalState.initial P.n _ (Gather.BaseProcessRecord.initial P.n (Option Bool)),
     ⟨messagesOf secondGatherMessageOf secondGatherMessageOf_inj (w.sent r), w.F⟩)
 
-/-- The ghost write: the link's broadcast of the candidate freezes the first
-gather's core and the round's bound bit, a graded return freezes the second
-gather's core, and every other label leaves the record where it stands. Each
-field is written once. -/
+/-- The ghost write: the return-then-call step's broadcast of the candidate freezes the first
+gather's core and the round's bound bit, a graded return freezes the second gather's core, and every
+other label leaves the record where it stands. Each field is written once. -/
 noncomputable def ghostStep (P : Parameters) :
     ExtendedLabel P.n (Message P.n) → NetworkState P.n → Ghost P.n → Ghost P.n
   | Sum.inr (.gbcaSend r _ (.secondGatherInputBroadcasts _ (.init _))), w, G =>
@@ -296,7 +290,7 @@ noncomputable def ghostOut (P : Parameters) (w : NetworkState P.n) (r : ℕ) (_i
     (GBCA.boundOfCore P ((w.ghostRecord r).1.getD (Gather.coreOf P (firstGatherOf P w r))))
 
 /-- The bit the network adversary announces on a return: `AFW.ghostOut` of the
-round, and no other. This is the relation the flat reading's `ghostOut`
+round, and no other. This is the relation the implementation's `ghostOut`
 parameter takes at this instantiation. It is reducible, so the guard of the two
 return rows is the equation itself. -/
 noncomputable abbrev announcedBound (P : Parameters) (w : NetworkState P.n) (r : ℕ)
@@ -305,10 +299,10 @@ noncomputable abbrev announcedBound (P : Parameters) (w : NetworkState P.n) (r :
 
 /-! ### The receipt predicates
 
-The flat reading has no broadcast return: a gather guard reads a `2f + 1` `VOTE`
-receipt quorum on the acting process's own local state in the instance, where a
-program of the composed round reads the store that instance's return wrote (D28).
-Each predicate below is a count on the acting process's own record. -/
+The implementation has no broadcast return: a gather guard reads a `2f + 1` `VOTE` receipt quorum on
+the acting process's own local state in the instance, where a program of the composed round reads
+the value that instance's return wrote (D28). Each predicate below is a count on the acting
+process's own record. -/
 
 variable {P : Parameters}
 
@@ -324,7 +318,7 @@ def firstGatherAcceptedBinds (P : Parameters) (s : RoundRecord P.n) (q : Fin P.n
   2 * P.f + 1 ≤ (s.firstGatherBindBroadcasts q).receivedCount (BRB.Message.vote U)
 
 /-- A payload set of the first gather is approved here: every pair is held. -/
-def approved1 (P : Parameters) (s : RoundRecord P.n) (A : AcceptedPairs P.n Bool) : Prop :=
+def firstGatherApproved (P : Parameters) (s : RoundRecord P.n) (A : AcceptedPairs P.n Bool) : Prop :=
   ∀ p ∈ A, firstGatherAcceptedInputs P s p.1 p.2
 
 /-- The process holds the pair `(k, v)` of the second gather. -/
@@ -338,14 +332,14 @@ def secondGatherAcceptedBinds (P : Parameters) (s : RoundRecord P.n) (q : Fin P.
   2 * P.f + 1 ≤ (s.secondGatherBindBroadcasts q).receivedCount (BRB.Message.vote U)
 
 /-- A payload set of the second gather is approved here. -/
-def approved2 (P : Parameters) (s : RoundRecord P.n) (A : AcceptedPairs P.n (Option Bool)) : Prop :=
+def secondGatherApproved (P : Parameters) (s : RoundRecord P.n) (A : AcceptedPairs P.n (Option Bool)) : Prop :=
   ∀ p ∈ A, secondGatherAcceptedInputs P s p.1 p.2
 
 /-! ### The accepted pairs
 
 The `ECHO` payload of a gather is the sender's accepted pairs, `AP_i` of
-AFW25's Algorithm 5, line 9. A gather program of the composed reading reads
-them off its input store. The flat reading keeps none, so `(k, v)` is accepted
+AFW25's Algorithm 5, line 9. A gather program of the composed system reads
+them off what its input instances returned. The implementation keeps none, so `(k, v)` is accepted
 here exactly when the instance broadcasting `k`'s input has returned `v` here.
 `broadcastReturnsFor` is that return as a function: the value on which the process's own
 local state in the instance holds a `2f + 1` `VOTE` receipt quorum, and `none`
@@ -420,10 +414,10 @@ theorem mem_secondGatherAcceptedPairs {P : Parameters} {s : RoundRecord P.n} {k 
     rw [h]
     simp
 
-/-! ### The stage-side rows -/
+/-! ### The round rows -/
 
-/-- The stage-side rows of process `j`: the two gather instances, the `4n`
-Bracha instances beneath them, the three fused rows, and the delivery. -/
+/-- The round rows of process `j`: the two gather instances, the `4n` Bracha instances beneath them,
+the three fused rows, and the delivery. -/
 inductive RoundStep (P : Parameters) (j : Fin P.n) :
     ProcessRecord P.n → ExtendedLabel P.n (Message P.n) → PMF (ProcessRecord P.n) → Prop
   /-- The graded-agreement call: the round loop hands its estimate to the
@@ -481,10 +475,10 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
       (hh : c.corrupted = false) (hterm : p.terminated = false)
       (hin : ((p.roundRecord r).firstGather.process).input ≠ none)
       (hech : ((p.roundRecord r).firstGather.process).sentEcho ≠ none)
-      (happ : approved1 P (p.roundRecord r) U)
+      (happ : firstGatherApproved P (p.roundRecord r) U)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ A, Gather.Message.echo A ∈ ((p.roundRecord r).firstGather.received q) ∧
-          approved1 P (p.roundRecord r) A ∧ A ⊆ U)
+          firstGatherApproved P (p.roundRecord r) A ∧ A ⊆ U)
       (hsend : ((p.roundRecord r).firstGather.process).sentVote = none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.firstGather (.vote U))))
         (PMF.pure (c, p.setRoundRecord r
@@ -504,10 +498,10 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
       (hvot : ((p.roundRecord r).firstGather.process).sentVote ≠ none)
       (hsnd : ((p.roundRecord r).firstGather.process).sentBind = none)
       (hbc : (((p.roundRecord r).firstGatherBindBroadcasts j).process).input = none)
-      (happ : approved1 P (p.roundRecord r) U)
+      (happ : firstGatherApproved P (p.roundRecord r) U)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ W, Gather.Message.vote W ∈ ((p.roundRecord r).firstGather.received q) ∧
-          approved1 P (p.roundRecord r) W ∧ W ⊆ U) :
+          firstGatherApproved P (p.roundRecord r) W ∧ W ⊆ U) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.firstGatherBindBroadcasts j (.init U))))
         (PMF.pure (c, p.setRoundRecord r
           { (p.roundRecord r) with
@@ -537,10 +531,10 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
       (hh : c.corrupted = false) (hterm : p.terminated = false)
       (hin : ((p.roundRecord r).secondGather.process).input ≠ none)
       (hech : ((p.roundRecord r).secondGather.process).sentEcho ≠ none)
-      (happ : approved2 P (p.roundRecord r) U)
+      (happ : secondGatherApproved P (p.roundRecord r) U)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ A, Gather.Message.echo A ∈ ((p.roundRecord r).secondGather.received q) ∧
-          approved2 P (p.roundRecord r) A ∧ A ⊆ U)
+          secondGatherApproved P (p.roundRecord r) A ∧ A ⊆ U)
       (hsend : ((p.roundRecord r).secondGather.process).sentVote = none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.secondGather (.vote U))))
         (PMF.pure (c, p.setRoundRecord r
@@ -555,10 +549,10 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
       (hvot : ((p.roundRecord r).secondGather.process).sentVote ≠ none)
       (hsnd : ((p.roundRecord r).secondGather.process).sentBind = none)
       (hbc : (((p.roundRecord r).secondGatherBindBroadcasts j).process).input = none)
-      (happ : approved2 P (p.roundRecord r) U)
+      (happ : secondGatherApproved P (p.roundRecord r) U)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ W, Gather.Message.vote W ∈ ((p.roundRecord r).secondGather.received q) ∧
-          approved2 P (p.roundRecord r) W ∧ W ⊆ U) :
+          secondGatherApproved P (p.roundRecord r) W ∧ W ⊆ U) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.secondGatherBindBroadcasts j (.init U))))
         (PMF.pure (c, p.setRoundRecord r
           { (p.roundRecord r) with
@@ -829,7 +823,7 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
       RoundStep P j (c, p) (Sum.inr (.gbcaDeliver r j k m))
         (PMF.pure (c, p.deliverTo r k m))
 
-/-- The rows above meet the flat reading's conditions: each carries a label of
+/-- The rows above meet the implementation's conditions: each carries a label of
 `roundOwn j`, each fires only at an unreplaced program, each is Dirac, and the
 return takes the announced bit free (D29). -/
 instance instIsRoundRuleTable (P : Parameters) :
@@ -844,10 +838,9 @@ instance instIsRoundRuleTable (P : Parameters) :
 
 /-! ### The transposed record writes one local state at a time
 
-A tagged delivery reaches exactly the local state its tag names and leaves every other
-local state of the record where it stands. These are the facts the substitution into
-the composed reading rests on, the composed side writing the same local state through
-its instance-major indexing. -/
+A tagged delivery reaches exactly the local state its tag names and leaves every other local state
+of the record where it stands. These are the facts the substitution into the composed system rests
+on, the composed system writing the same local state through its instance-major indexing. -/
 
 section Transposition
 
@@ -906,7 +899,7 @@ adversary and the coin oracle. -/
 abbrev ProtocolState (P : Parameters) : Type :=
   Implementation.State P (Message P.n) (RoundRecord P.n) (Ghost P.n)
 
-/-- The three components side by side, over the extended alphabet. -/
+/-- The three components in parallel, over the extended alphabet. -/
 noncomputable def protocolExtended (P : Parameters) :
     System (ProtocolState P) (Implementation.ExtendedLabel P.n (Message P.n)) :=
   Implementation.systemExtended P (Message P.n) (RoundRecord P.n) (Ghost P.n) (RoundStep P)

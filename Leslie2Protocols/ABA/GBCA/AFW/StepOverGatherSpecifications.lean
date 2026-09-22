@@ -11,7 +11,7 @@ import Leslie2Protocols.ABA.GBCA.AFW.Composition
 
 `GBCA.ByAFW.StepOverGatherSpecifications` is the rule table of
 `GBCA.ByAFW.roundOverGatherSpecifications` (`GBCA/AFW/Composition.lean`) — the `n` graded-agreement
-programs beside the layer's network, in parallel with two gather specifications — stated over the
+programs beside the round's network, in parallel with two gather specifications — stated over the
 round's state through the four views `programs`, `bound`, `firstGather`, `secondGather`. It is a
 relation on that state; the system is the composition.
 
@@ -149,17 +149,17 @@ inductive StepOverGatherSpecifications (P : Parameters) (r : ℕ) :
   /-- Program `id` calls the second gather with the candidate it holds. -/
   | secondGatherCall (s : RoundStateOverGatherSpecifications P.n) (id : Fin P.n) (x : Option Bool)
       (t2 : Gather.SpecState P.n (Option Bool)) (hc : (programs s id).candidate = some x)
-      (h2 : (programs s id).called2 = false)
+      (h2 : (programs s id).secondGatherCalled = false)
       (h : Gather.Step P (secondGather s) (.call id x) (PMF.pure t2)) :
       StepOverGatherSpecifications P r s .tau
         (PMF.pure (setSecondGather (setPrograms s (Function.update (programs s) id
-          { programs s id with called2 := true })) t2))
+          { programs s id with secondGatherCalled := true })) t2))
   /-- The second gather returns to `id`: program `id` records the grade. -/
   | secondGatherReturn (s : RoundStateOverGatherSpecifications P.n) (id : Fin P.n) (g : Fin P.n →
     Option (Option
     Bool))
       (C : Gather.AcceptedPairs P.n (Option Bool)) (t2 : Gather.SpecState P.n (Option Bool))
-      (h2 : (programs s id).called2 = true) (ho : (programs s id).output = none)
+      (h2 : (programs s id).secondGatherCalled = true) (ho : (programs s id).output = none)
       (h : Gather.Step P (secondGather s) (.ret id g C) (PMF.pure t2)) :
       StepOverGatherSpecifications P r s .tau
         (PMF.pure (setSecondGather (setPrograms s (Function.update (programs s) id
@@ -171,8 +171,8 @@ inductive StepOverGatherSpecifications (P : Parameters) (r : ℕ) :
       StepOverGatherSpecifications P r s (.retG r id out ((bound s).getD (boundOfCore P ∅)))
         (PMF.pure (setPrograms s (Function.update (programs s) id
           { programs s id with output := none, returned := true })))
-  /-- Corruption (deviation D1): the two gather instances corrupted in
-  lockstep, the programs and the round's bound bit untouched. -/
+  /-- Corruption (deviation D1): the two gather instances corrupted together, the programs and the
+  round's bound bit untouched. -/
   | fail (s : RoundStateOverGatherSpecifications P.n) (id : Fin P.n) :
       StepOverGatherSpecifications P r s (.fail id)
         (PMF.pure (corruptAll P id (Gather.SpecState.corrupt P)
@@ -195,7 +195,7 @@ theorem roundOverGatherSpecifications_step_row (P : Parameters) (r : ℕ) :
       (Gather.specificationOverInstanceAlphabet P (Option Bool)) _ l μ).mp hstep with ⟨rfl, e,
         hev⟩ | hlab
   · obtain ⟨x, v', c', d', rfl, hlayer, hga1, hga2⟩ :=
-      roundOverGathersExtended_joint_inv h1 h2 (by simp) hev
+      roundOverGathersExtended_joint_inversion h1 h2 (by simp) hev
     refine ⟨Label.tau, rfl, ?_⟩
     cases e with
     | firstGatherReturn id g C =>
@@ -245,7 +245,7 @@ theorem roundOverGatherSpecifications_step_row (P : Parameters) (r : ℕ) :
   · by_cases hlτ : l = Sum.inl Label.tau
     · subst hlτ
       refine ⟨Label.tau, rfl, ?_⟩
-      rcases roundOverGathersExtended_tau_inv h1 h2 hlab with ⟨c', rfl, hs⟩ | ⟨d', rfl, hs⟩
+      rcases roundOverGathersExtended_tau_inversion h1 h2 hlab with ⟨c', rfl, hs⟩ | ⟨d', rfl, hs⟩
       · exact StepOverGatherSpecifications.firstGatherTau _ c'
           (specificationOverInstanceAlphabet_tau_step
           hs)
@@ -253,15 +253,15 @@ theorem roundOverGatherSpecifications_step_row (P : Parameters) (r : ℕ) :
           (specificationOverInstanceAlphabet_tau_step
           hs)
     · obtain ⟨x, v', c', d', rfl, hlayer, hga1, hga2⟩ :=
-        roundOverGathersExtended_joint_inv h1 h2 (by simpa using hlτ) hlab
+        roundOverGathersExtended_joint_inversion h1 h2 (by simpa using hlτ) hlab
       cases l with
       | inl l₀ =>
         cases l₀ with
         | tau => exact absurd rfl hlτ
-        | callABA id b => exact (roundPrograms_outside_inv (by simp) hlayer).elim
-        | retABA id b => exact (roundPrograms_outside_inv (by simp) hlayer).elim
-        | callW r' id => exact (roundPrograms_outside_inv (by simp) hlayer).elim
-        | retW r' id b => exact (roundPrograms_outside_inv (by simp) hlayer).elim
+        | callABA id b => exact (roundPrograms_outside_inversion (by simp) hlayer).elim
+        | retABA id b => exact (roundPrograms_outside_inversion (by simp) hlayer).elim
+        | callW r' id => exact (roundPrograms_outside_inversion (by simp) hlayer).elim
+        | retW r' id b => exact (roundPrograms_outside_inversion (by simp) hlayer).elim
         | callG r' id b =>
           obtain ⟨hproc,
             hnet⟩ := roundPrograms_label_pure (lp := .callG r' id b) (by simp) (by simp) hlayer
@@ -302,13 +302,13 @@ theorem roundOverGatherSpecifications_step_row (P : Parameters) (r : ℕ) :
           exact ⟨_, rfl, StepOverGatherSpecifications.fail _ id⟩
       | inr ev =>
         cases ev with
-        | gbcaSend r' j m => exact (roundPrograms_outside_inv (by simp) hlayer).elim
-        | gbcaDeliver r' i j m => exact (roundPrograms_outside_inv (by simp) hlayer).elim
-        | decidedSend j b => exact (roundPrograms_outside_inv (by simp) hlayer).elim
-        | decidedDeliver i j b => exact (roundPrograms_outside_inv (by simp) hlayer).elim
-        | retWPublish r' id cc b => exact (roundPrograms_outside_inv (by simp) hlayer).elim
-        | byzantineCallW r' k => exact (roundPrograms_outside_inv (by simp) hlayer).elim
-        | byzantineRetW r' k b => exact (roundPrograms_outside_inv (by simp) hlayer).elim
+        | gbcaSend r' j m => exact (roundPrograms_outside_inversion (by simp) hlayer).elim
+        | gbcaDeliver r' i j m => exact (roundPrograms_outside_inversion (by simp) hlayer).elim
+        | decidedSend j b => exact (roundPrograms_outside_inversion (by simp) hlayer).elim
+        | decidedDeliver i j b => exact (roundPrograms_outside_inversion (by simp) hlayer).elim
+        | retWPublish r' id cc b => exact (roundPrograms_outside_inversion (by simp) hlayer).elim
+        | byzantineCallW r' k => exact (roundPrograms_outside_inversion (by simp) hlayer).elim
+        | byzantineRetW r' k b => exact (roundPrograms_outside_inversion (by simp) hlayer).elim
         | gbcaCallLoop r' id b =>
           obtain ⟨hproc, hnet⟩ :=
             roundPrograms_label_pure (lp := .callLoop r' id b) (by simp) (by simp) hlayer
@@ -428,7 +428,7 @@ theorem row_roundOverGatherSpecifications_step (P : Parameters) (r : ℕ) :
     exact ⟨Sum.inl Label.tau, rfl, roundOverGathers_event_step _ hlayer hg1 hg2⟩
   | secondGatherCall id y t2 hc h2 h =>
     have hlayer : (roundPrograms P r).step (u, v) (Sum.inr (RoundEvent.secondGatherCall id y))
-        (PMF.pure (Function.update u id { u id with called2 := true }, v)) :=
+        (PMF.pure (Function.update u id { u id with secondGatherCalled := true }, v)) :=
       roundPrograms_label_step (lp := .secondGatherCall id y) (by simp) (by simp)
         (programStep_update (ProgramStep.secondGatherCall (u id) y hc h2)
           (fun i hi => ProgramStep.secondGatherCallIdle (u i) id y (Ne.symm hi)))

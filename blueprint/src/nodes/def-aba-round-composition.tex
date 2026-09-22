@@ -1,9 +1,9 @@
 \begin{definition}[The graded-agreement round as a composition]
-  \label{def:aba-round-sub}
+  \label{def:aba-round-composition}
   \lean{PLTS.ABA.GBCA.ByAFW.ProcessRecord}\lean{PLTS.ABA.GBCA.ByAFW.RoundEvent}\lean{PLTS.ABA.GBCA.ByAFW.ProgramLabel}\lean{PLTS.ABA.GBCA.ByAFW.programLabelMap}\lean{PLTS.ABA.GBCA.ByAFW.firstGatherLabelMap}\lean{PLTS.ABA.GBCA.ByAFW.secondGatherLabelMap}\lean{PLTS.ABA.GBCA.ByAFW.roundPrograms}\lean{PLTS.ABA.GBCA.ByAFW.RoundStateOverGathers}\lean{PLTS.ABA.GBCA.ByAFW.roundOverGathers}\leanok
-  \uses{def:aba-gather-sub, def:aba-gbca-net, def:aba-labels, def:syncproduct, def:process-algebra, def:idle-family, def:relabel}
+  \uses{def:aba-gather-composition, def:aba-gbca-net, def:aba-labels, def:syncproduct, def:process-algebra, def:idle-family, def:relabel}
   The round-$r$ graded-agreement round over two gather instances, taken apart into the components that run it.
-  The graded-agreement layer is the $n$ programs under $\mathrm{synchronisedProduct}$ beside the network of Definition~\ref{def:aba-gbca-net}, and the layer runs in parallel with two gather instances of Definition~\ref{def:aba-gather-sub}, the first over payloads $\mathbb{B}$ and the second over payloads $\mathbb{B} \cup \{\bot\}$.
+  The round's programs are the $n$ programs under $\mathrm{synchronisedProduct}$ beside the network of Definition~\ref{def:aba-gbca-net}, and they run in parallel with two gather instances of Definition~\ref{def:aba-gather-composition}, the first over payloads $\mathbb{B}$ and the second over payloads $\mathbb{B} \cup \{\bot\}$.
   The round's own events are hidden and the result is read over the family alphabet: \leandecl{PLTS.ABA.GBCA.ByAFW.roundOverGathers}, which takes the two gather systems as arguments.
   A program holds one process's record of the round: its input, its candidate, whether it has called the second gather, its graded outcome and its return flag.
   Its guards read that record and nothing else.
@@ -12,8 +12,8 @@
   A program moves at each: the first records $\mathrm{candidate}$ of the returned entries, the second marks the call, the third records $\mathrm{gradeOf}$ of the returned entries, and the visible return marks the return.
   The round speaks $\mathrm{ExtendedLabel}(n)$ natively, as the round of the direct implementation does, so the graded-agreement call loop of the family alphabet is the round's loop label and the three Byzantine handshake rows of round $r$ are labels of its interface.
   A program is read along \leandecl{PLTS.ABA.GBCA.ByAFW.programLabelMap}, which sends a Byzantine call to a call, a Byzantine return to a return, and the family's two call loops to the loop.
-  A family label outside the round's interface --- the ABA interface, the coin ports and the rendezvous of the protocol's own networks --- has one image on which no program and no row of the layer's network fires, so the round has no transition on such a label and the family supplies the idle.
+  A family label outside the round's interface --- the ABA interface, the coin ports and the rendezvous of the protocol's own networks --- has one image on which no program and no row of the round's network fires, so the round has no transition on such a label and the family supplies the idle.
   The two gathers are read along \leandecl{PLTS.ABA.GBCA.ByAFW.firstGatherLabelMap} and \leandecl{PLTS.ABA.GBCA.ByAFW.secondGatherLabelMap}: the round's call is the first gather's call, the family's call loops are the first gather's loop, and the round's three events are the first gather's return and the second gather's call and return.
-  Corruption is a label of the interface on which the layer stands still and the two gather instances corrupt in lockstep (D1).
+  Corruption is a label of the interface on which the programs stand still and the two gather instances corrupt together (D1).
   Plugging Bracha-based gathers, broadcast-specification-based gathers or gather specifications into the two positions gives the three readings of the round used below.
 \end{definition}

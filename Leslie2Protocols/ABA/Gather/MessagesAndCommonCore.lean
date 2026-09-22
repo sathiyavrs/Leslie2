@@ -130,7 +130,7 @@ theorem coreOf_networkState_only {X : Type} {P : Parameters}
 `dominatedBy` is a relation between senders and processes outside `F`, read as
 an incidence: the row of `q` is `dominatedBy w q`, the column of `j` is
 `dominators w j`, and `sum_dominatedBy` is the identity between the two
-readings of its size. -/
+sums. -/
 
 section Incidence
 
@@ -160,7 +160,7 @@ theorem correct_filter_dominatedBy {q : Fin n} :
   tauto
 
 open scoped Classical in
-/-- The two readings of the incidence agree: summing the rows outside `F`
+/-- The two systems of the incidence agree: summing the rows outside `F`
 over the columns outside `F` is summing the columns over the rows. -/
 theorem sum_dominatedBy (w : InstanceState n (BaseProcessRecord n X) (Message n X)) :
     ∑ q ∈ correct w, ((correct w).filter (fun j => j ∈ dominatedBy w q)).card

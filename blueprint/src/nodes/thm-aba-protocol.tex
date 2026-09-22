@@ -1,7 +1,7 @@
 \begin{theorem}[Safety of the protocol]
   \label{thm:aba-protocol}
   \lean{PLTS.ABA.hybrid_spec}\lean{PLTS.ABA.ABDY.protocol_safe}\lean{PLTS.ABA.ABDY.protocol_traces}\lean{PLTS.ABA.ABDY.composed_safe}\leanok
-  \uses{def:aba-procnet, def:aba-protocol, thm:aba-protocol-composed, thm:aba-substitution, thm:aba-hybrid-spec, thm:aba-spec-safe, thm:trace-support, thm:forward-sound, def:achievable}
+  \uses{def:aba-programs, def:aba-protocol, thm:aba-protocol-composed, thm:aba-substitution, thm:aba-hybrid-spec, thm:aba-spec-safe, thm:trace-support, thm:forward-sound, def:achievable}
   Let $P$ be parameters.
   Then $\operatorname{ATD}(\abdy{\mathrm{protocol}}(P)) \subseteq \operatorname{ATD}(\mathrm{spec}(P))$, and every trace $t$ of positive probability under an achievable trace distribution of $\abdy{\mathrm{protocol}}(P)$ satisfies Validity and Agreement.
   Such a $t$ also has positive probability under an achievable trace distribution of $\mathrm{hybrid}(P)$. Every trace of positive probability under an achievable trace distribution of $\abdy{\mathrm{composed}}(P)$ satisfies Validity and Agreement as well.
@@ -14,5 +14,5 @@
   Theorem~\ref{thm:aba-protocol-composed} and Theorem~\ref{thm:aba-substitution} chain to $\operatorname{ATD}(\abdy{\mathrm{protocol}}(P)) \subseteq \operatorname{ATD}(\mathrm{hybrid}(P))$, which is the third conclusion.
   Theorem~\ref{thm:aba-hybrid-spec} carries that on to $\operatorname{ATD}(\mathrm{spec}(P))$, the three inclusions chained by transitivity of set inclusion, which is the first conclusion.
   The trace-support transfer (Theorem~\ref{thm:trace-support}) transfers safety of the specification's trace supports (Theorem~\ref{thm:aba-spec-safe}) along that inclusion, which is the second.
-  For the last, Theorems~\ref{thm:aba-substitution} and~\ref{thm:aba-hybrid-spec} chain to $\operatorname{ATD}(\abdy{\mathrm{composed}}(P)) \subseteq \operatorname{ATD}(\mathrm{spec}(P))$ without the first link, and the same transfer carries safety along that inclusion.
+  For the last, Theorems~\ref{thm:aba-substitution} and~\ref{thm:aba-hybrid-spec} chain to $\operatorname{ATD}(\abdy{\mathrm{composed}}(P)) \subseteq \operatorname{ATD}(\mathrm{spec}(P))$ without the first step, and the same transfer carries safety along that inclusion.
 \end{proof}

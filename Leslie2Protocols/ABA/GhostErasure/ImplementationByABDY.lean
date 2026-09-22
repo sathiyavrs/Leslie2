@@ -17,7 +17,7 @@ it runs with that record dropped and the adversary free to announce either bit o
 return.
 
 `ABDY.protocol_erasure` is the statement that the record costs nothing: the ghost never
-blocks a step and never adds one, so the two readings have the same achievable trace
+blocks a step and never adds one, so the two systems have the same achievable trace
 distributions. Every headline about the protocol therefore holds of the ghost-free
 protocol, and the rest of this file re-derives them.
 

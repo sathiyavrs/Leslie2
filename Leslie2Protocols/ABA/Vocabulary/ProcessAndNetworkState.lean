@@ -127,7 +127,7 @@ def deliverTo [DecidableEq M] (p : LocalState n Pr M) (k : Fin n) (m : M) : Loca
 
 /-- The number of distinct senders from which this local state holds `m`. A receipt
 threshold read at one process is a count on that process's local state alone, which is
-what lets a flat reading state it locally. -/
+what lets the implementation state it locally. -/
 def receivedCount [DecidableEq M] (p : LocalState n Pr M) (m : M) : ℕ :=
   (Finset.univ.filter (fun q => m ∈ p.received q)).card
 
@@ -153,7 +153,7 @@ def sent (s : InstanceState n Pr M) : Fin n → Finset M := s.2.sent
 /-- `received i j` — the messages from sender `j` delivered to receiver `i`. -/
 def received (s : InstanceState n Pr M) : Fin n → Fin n → Finset M := fun i => (s.1 i).received
 
-/-- The corrupted set (the network state's, kept in lockstep by `fail` broadcast). -/
+/-- The corrupted set (the network state's, kept equal by `fail` broadcast). -/
 def F (s : InstanceState n Pr M) : Finset (Fin n) := s.2.F
 
 @[simp] theorem process_apply (u : ∀ _ : Fin n, LocalState n Pr M) (w : NetworkState n M)
@@ -253,7 +253,7 @@ theorem exists_correct_of_card_lt {Q G : Finset (Fin n)} (h : G.card < Q.card) :
   by_contra hjF
   exact hc ⟨j, hj, hjF⟩
 
-/-- Two `n − f` quorums share an honest member:
+/-- Two `n − f` quorums share a correct member:
 `(n−f) + (n−f) − n = n − 2f > f ≥ |F|`. -/
 theorem exists_correct_inter {P : Parameters} {F Q Q' : Finset (Fin P.n)}
     (hF : F.card ≤ P.f) (hQ : P.n - P.f ≤ Q.card) (hQ' : P.n - P.f ≤ Q'.card) :
@@ -383,7 +383,7 @@ theorem exists_sender_notMem {P : Parameters} {s : InstanceState P.n Pr M}
   exact ⟨j, hjF, hjQ.2⟩
 
 /-- Two `n − f` receipt quorums (at possibly different receivers) share an
-honest sender: `(n−f) + (n−f) − n = n − 2f > f ≥ |F|`. -/
+correct sender: `(n−f) + (n−f) − n = n − 2f > f ≥ |F|`. -/
 theorem exists_correct_received₂ {P : Parameters} {s : InstanceState P.n Pr M} (hF : s.F.card ≤ P.f)
     {i i' : Fin P.n} {m m' : M}
     (h : P.n - P.f ≤ s.receivedCount i m) (h' : P.n - P.f ≤ s.receivedCount i' m') :
@@ -405,7 +405,7 @@ theorem exists_correct_received₂ {P : Parameters} {s : InstanceState P.n Pr M}
   exact ⟨j, hjF, hj.1.2, hj.2.2⟩
 
 /-- Two `echoReceiptQuorum` receipt quorums (at possibly different receivers) share an
-honest sender: `2 * echoReceiptQuorum − n > f ≥ |F|`. -/
+correct sender: `2 * echoReceiptQuorum − n > f ≥ |F|`. -/
 theorem exists_correct_received₂_echoReceiptQuorum {P : Parameters} {s : InstanceState P.n Pr M}
     (hF : s.F.card ≤ P.f) {i i' : Fin P.n} {m m' : M}
     (h : P.echoReceiptQuorum ≤ s.receivedCount i m) (h' : P.echoReceiptQuorum ≤ s.receivedCount i'

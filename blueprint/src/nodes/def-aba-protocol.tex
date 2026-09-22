@@ -1,7 +1,7 @@
 \begin{definition}[The protocol]
   \label{def:aba-protocol}
   \lean{PLTS.System.mapIdle}\lean{PLTS.ABA.Implementation.coinLabelMap}\lean{PLTS.ABA.Composition.coinOverRoundAlphabet}\lean{PLTS.ABA.ABDY.protocolExtended}\lean{PLTS.ABA.ABDY.protocolHidden}\lean{PLTS.ABA.ABDY.protocol}\leanok
-  \uses{def:aba-netadv, def:aba-procnet, def:aba-flat-reading, def:aba-wcc-spec, def:aba-labels, def:relabel, def:syncproduct, def:process-algebra}
+  \uses{def:aba-network, def:aba-programs, def:aba-implementation, def:aba-wcc-spec, def:aba-labels, def:relabel, def:syncproduct, def:process-algebra}
   The coin oracle $\mathrm{WCC.specFamily}(P)$ has the alphabet $\mathrm{Label}(n)$, so it is read over the extended alphabet by the construction $\mathrm{mapIdle}$ along the partial map $\mathrm{coinLabelMap}$, which sends the two coin handshake rows and the fused return $\mathrm{retWPublish}$ to the coin handshake they stand for and every other rendezvous label to none: a label with an image steps by that image's rows, and a label without one is a self-loop.
   The protocol is built in three stages,
   \[
@@ -18,7 +18,7 @@
     \abdy{\mathrm{protocol}}(P) \;=\; \mathrm{abstract}_H\bigl(\abdy{\mathrm{protocolHidden}}(P)\bigr),
   \]
   where $\mathrm{coinOverRoundAlphabet}(P)$ is the oracle read along $\mathrm{coinLabelMap}$ and $H$ is the sub-protocol API of Definition~\ref{def:aba-labels}.
-  This is the pipeline of Definition~\ref{def:aba-flat-reading} at ABDY22's implementation; the payload the call multicasts is $\langle \mathrm{INPUT}, b \rangle$.
+  This is the pipeline of Definition~\ref{def:aba-implementation} at ABDY22's implementation; the payload the call multicasts is $\langle \mathrm{INPUT}, b \rangle$.
   Hiding $\mathrm{networkEventLabels}$ discharges the extended alphabet, so the alphabet of $\abdy{\mathrm{protocolHidden}}(P)$ is exactly $\mathrm{Label}(n)$.
   Full construction: \leandecl{PLTS.ABA.ABDY.protocol}.
 \end{definition}

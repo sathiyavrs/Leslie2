@@ -14,36 +14,32 @@ import Leslie2.Results
 /-!
 # The two gather substitutions inside the round
 
-The round over the gather instances over Bracha's broadcast
-(`GBCA.ByAFW.roundOverBracha`) is forward simulated by the round over the gather instances
-over the broadcast specification (`GBCA.ByAFW.roundOverBroadcastSpecification`), and that one by the
-round over the gather specifications (`GBCA.ByAFW.roundOverGatherSpecifications`). The two relations
-are `GBCA.ByAFW.BroadcastSubstitutionRelation` and `GBCA.ByAFW.GatherSubstitutionRelation`: the
-layer held equal, and each of the two gather coordinates related by the substitution of that tier
+The round over the gather instances over Bracha's broadcast (`GBCA.ByAFW.roundOverBracha`) is
+forward simulated by the round over the gather instances over the broadcast specification
+(`GBCA.ByAFW.roundOverBroadcastSpecification`), and that one by the round over the gather
+specifications (`GBCA.ByAFW.roundOverGatherSpecifications`). The two relations are
+`GBCA.ByAFW.BroadcastSubstitutionRelation` and `GBCA.ByAFW.GatherSubstitutionRelation`: the round's
+programs held equal, and each of the two gather coordinates related by the substitution of that tier
 (`Gather.BroadcastSubstitutionRelation`, `Gather.SpecificationRelation`).
 
-Each proof is the congruence argument alone. The three rounds are one
-expression over three gather tiers, so the gather substitution is carried
-through the operators that expression is built from:
-`ForwardSimulation.mapIdle` reads one gather instance over the round-internal
-alphabet, `ForwardSimulation.parallel_right` and
-`ForwardSimulation.parallel_left` hold the other gather instance and then the
-layer, and `ForwardSimulation.abstract` and `ForwardSimulation.relabel` hide
-the round's events and read the result back over the family alphabet. The two
-gather instances are replaced one after the other and the two steps are joined
-by `ForwardSimulation.trans`. `ForwardSimulation.congr` then reshapes the
-composite relation: the intermediate state the composite quantifies over is the
-first coordinate of the abstract side beside the second coordinate of the
-concrete side.
+Each proof is the congruence argument alone. The three rounds are one expression over three gather
+tiers, so the gather substitution is carried through the operators that expression is built from:
+`ForwardSimulation.mapIdle` reads one gather instance over the round-internal alphabet,
+`ForwardSimulation.parallel_right` and `ForwardSimulation.parallel_left` hold the other gather
+instance and then the round's programs, and `ForwardSimulation.abstract` and
+`ForwardSimulation.relabel` hide the round's events and read the result back over the family
+alphabet. The two gather instances are replaced one after the other and the two steps are joined by
+`ForwardSimulation.trans`. `ForwardSimulation.congr` then reshapes the composite relation: the
+intermediate state the composite quantifies over is the first coordinate of the abstract system
+beside the second coordinate of the concrete system.
 
 All three rounds are LTS, so each substitution reads as an inclusion of
 achievable trace distributions.
 
 `Gather.broadcastSubstitutionRelation_corrupt`, `GBCA.ByAFW.broadcastSubstitutionRelation_corrupt`
 and `GBCA.ByAFW.gatherSubstitutionRelation_corrupt` state that each relation is preserved by
-corrupting both sides at once, in the shape the family congruence consumes
-(`ForwardSimulation.family`, `hglob`).
--/
+corrupting both systems at once, in the shape the family congruence consumes
+(`ForwardSimulation.family`, `hglob`). -/
 
 namespace PLTS
 namespace ABA
@@ -69,9 +65,8 @@ namespace GBCA.ByAFW
 
 /-! ### The broadcast substitution -/
 
-/-- The broadcast substitution relation of the round: the layer equal, and each
-gather coordinate related to its broadcast-specification coordinate by the
-gather substitution relation. -/
+/-- The broadcast substitution relation of the round: the round's programs equal, and each gather
+coordinate related to its broadcast-specification coordinate by the gather substitution relation. -/
 structure BroadcastSubstitutionRelation (P : Parameters) (s : RoundStateOverBracha P.n) (t :
   RoundStateOverBroadcastSpecification P.n) : Prop where
   /-- The programs and the round's bound bit are untouched by the
@@ -121,9 +116,8 @@ theorem broadcastSubstitution (P : Parameters) (r : ℕ) :
 
 /-! ### The gather substitution -/
 
-/-- The gather substitution relation of the round: the layer equal, and each
-gather coordinate related to its specification coordinate by the gather
-refinement relation. -/
+/-- The gather substitution relation of the round: the round's programs equal, and each gather
+coordinate related to its specification coordinate by the gather refinement relation. -/
 structure GatherSubstitutionRelation (P : Parameters) (s : RoundStateOverBroadcastSpecification P.n)
   (t :
   RoundStateOverGatherSpecifications P.n) : Prop where

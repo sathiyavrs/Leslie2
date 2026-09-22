@@ -451,7 +451,7 @@ unfold it once and for all, in both directions. -/
 
 /-- A synchronised transition of the program group on a visible label: every
 program steps, and the joint distribution is Dirac. -/
-theorem broadcastProgramProduct_inv {P : Parameters} {ldr : Fin P.n}
+theorem broadcastProgramProduct_inversion {P : Parameters} {ldr : Fin P.n}
     {u : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord M) (Message M)} {l : BroadcastLabel P.n M}
     {μ : PMF (∀ _ : Fin P.n, LocalState P.n (ProcessRecord M) (Message M))}
     (h : (System.synchronisedProduct (broadcastProgram P ldr (M := M))).step u l μ) :
@@ -572,7 +572,7 @@ theorem brachaInstance_tau_network (P : Parameters) (ldr : Fin P.n)
 /-- A visible transition of the programs beside the network: every program and
 the network step on the label, and the joint distribution is their Dirac
 product. -/
-theorem brachaInstanceExtended_joint_inv {P : Parameters} {ldr : Fin P.n}
+theorem brachaInstanceExtended_joint_inversion {P : Parameters} {ldr : Fin P.n}
     {u : ∀ _ : Fin P.n,
       LocalState P.n (ProcessRecord M) (Message M)} {w : NetworkState P.n (Message M)}
     {L : BroadcastLabel P.n M} {μ : PMF (BrachaState P.n M)} (hL : L ≠ (Silent.τ : BroadcastLabel
@@ -584,7 +584,7 @@ theorem brachaInstanceExtended_joint_inv {P : Parameters} {ldr : Fin P.n}
           ProgramStep P ldr i (u i) L (PMF.pure (x i))) ∧ NetworkStep P ldr w L (PMF.pure w') := by
   rw [brachaInstanceExtended, System.parallel_step] at h
   rcases h with ⟨-, μ₁, μ₂, hs, hn, rfl⟩ | ⟨hτ, -⟩ | ⟨hτ, -⟩
-  · obtain ⟨x, rfl, hall⟩ := broadcastProgramProduct_inv hs
+  · obtain ⟨x, rfl, hall⟩ := broadcastProgramProduct_inversion hs
     obtain ⟨w', rfl⟩ := networkStep_dirac hn
     exact ⟨x, w', prodPMF_pure_pure _ _, hall, hn⟩
   · exact absurd hτ hL
@@ -592,7 +592,7 @@ theorem brachaInstanceExtended_joint_inv {P : Parameters} {ldr : Fin P.n}
 
 /-- A silent transition of the programs beside the network is a network-local
 injection: no program has a `τ` row. -/
-theorem brachaInstanceExtended_tau_inv {P : Parameters} {ldr : Fin P.n}
+theorem brachaInstanceExtended_tau_inversion {P : Parameters} {ldr : Fin P.n}
     {u : ∀ _ : Fin P.n,
       LocalState P.n (ProcessRecord M) (Message M)} {w : NetworkState P.n (Message M)}
     {μ : PMF (BrachaState P.n M)}
@@ -831,8 +831,8 @@ anywhere:
 | `ret` | `BrachaStep.ret` |
 | `fail` | `BrachaStep.fail` |
 
-The two hidden rendezvous and the network's injection are silent on both sides,
-and `specificationLabelMap` takes `τ` to `τ`. -/
+The two hidden rendezvous and the network's injection are silent in both systems, and
+`specificationLabelMap` takes `τ` to `τ`. -/
 
 /-- **The projection.** -/
 theorem brachaInstance_step_row (P : Parameters) (ldr : Fin P.n) :
@@ -842,7 +842,7 @@ theorem brachaInstance_step_row (P : Parameters) (ldr : Fin P.n) :
   rintro ⟨u, w⟩ l μ hstep
   rcases (brachaInstance_step_iff P ldr (u, w) l μ).mp hstep with ⟨rfl, e, hev⟩ | hlab
   · -- a hidden rendezvous: an internal row
-    obtain ⟨x, w', rfl, hall, hn⟩ := brachaInstanceExtended_joint_inv (by simp) hev
+    obtain ⟨x, w', rfl, hall, hn⟩ := brachaInstanceExtended_joint_inversion (by simp) hev
     refine ⟨Label.tau, rfl, ?_⟩
     cases e with
     | send j m =>
@@ -873,14 +873,14 @@ theorem brachaInstance_step_row (P : Parameters) (ldr : Fin P.n) :
   · by_cases hlτ : l = Sum.inl Label.tau
     · -- the network's own injection
       subst hlτ
-      obtain ⟨w', rfl, hn⟩ := brachaInstanceExtended_tau_inv hlab
+      obtain ⟨w', rfl, hn⟩ := brachaInstanceExtended_tau_inversion hlab
       obtain ⟨j, m, hF, hw⟩ := networkStep_tau hn
       have hw' : w' = w.recordSent j m := PMF.pure_injective hw
       subst hw'
       refine ⟨Label.tau, rfl, ?_⟩
       rw [brachaInstance_recordSent]
       exact BrachaStep.byzantine _ j m hF
-    · obtain ⟨x, w', rfl, hall, hn⟩ := brachaInstanceExtended_joint_inv (by simpa using hlτ) hlab
+    · obtain ⟨x, w', rfl, hall, hn⟩ := brachaInstanceExtended_joint_inversion (by simpa using hlτ) hlab
       cases l with
       | inl l₀ =>
         cases l₀ with

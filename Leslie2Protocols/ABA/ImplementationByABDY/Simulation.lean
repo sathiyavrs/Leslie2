@@ -8,41 +8,37 @@ import Leslie2Protocols.ABA.ImplementationByABDY.System
 import Leslie2Protocols.ABA.Composition.HybridAndSubstitution
 
 /-!
-# The protocol under its composed reading
+# The protocol under its composed system
 
-The protocol reading of `ABA/ImplementationByABDY/System.lean` and the composed reading of
+The protocol of `ABA/ImplementationByABDY/System.lean` and the composed system of
 `ABA/Composition/HybridAndSubstitution.lean` present one protocol at two cuts. A process record of
-the protocol carries the round-loop record beside the stage record of every round
-the process has touched (D22). A composed state carries one graded-agreement
-instance per round, at every moment. The stage record of round `r` at a
-process is the entry of that process in the instance of round `r`, so the two
-cuts hold the same stage data indexed two ways: by process on one side, by
-round on the other.
+the protocol carries the round-loop record beside the round record of every round the process has
+touched (D22). A composed state carries one graded-agreement instance per round, at every moment.
+The round record of round `r` at a process is the entry of that process in the instance of round
+`r`, so the two cuts hold the same round data indexed two ways: by process in one, by round in
+the other.
 
 Everything here is read in the namespace `ABDY`, where each name is that of its
 counterpart in the gather-based chain's `AFW`, and the qualifier is dropped below.
 
 ## The relation
 
-`ProtocolRelation` pins every coordinate of a composed state, in five conjuncts and
-under no guard. Both returns of a round read the ghost record of that round for
-the bit they announce and write it back, so the two sides announce one bit and
-the fourth conjunct is restored by `rel_setBound`.
+`ProtocolRelation` pins every coordinate of a composed state, in five conjuncts and under no guard.
+Both returns of a round read the ghost record of that round for the bit they announce and write it
+back, so the two systems announce one bit and the fourth conjunct is restored by
+`relation_setBound`.
 
 * The round loops are the first components of the process records.
-* The coin oracle is the same component on both sides.
-* The ABA-side network is the protocol adversary's DECIDED sets beside its
-  corrupted set.
-* The network state of round `r` is the adversary's round-`r` message sets beside the
-  same corrupted set and the adversary's ghost record of round `r`. Corruption
-  is one broadcast on both sides, so every copy of the corrupted set is the
-  adversary's; the round's bound bit is the adversary's ghost record of that
-  round, which is the composed reading of the bit the instance's network state
-  holds.
-* The entry of process `j` in the instance of round `r` is the stage record of
-  round `r` that `j` holds. This is one equation for each pair `(j, r)`. A
-  round `j` has not touched reads as the initial stage record on the protocol
-  side, and the equation asks the composed entry to be initial there too.
+* The coin oracle is the same component in both systems.
+* The ABA network is the protocol adversary's DECIDED sets beside its corrupted set.
+* The network state of round `r` is the adversary's round-`r` message sets beside the same corrupted
+  set and the adversary's ghost record of round `r`. Corruption is one broadcast in both systems, so
+  every copy of the corrupted set is the adversary's; the round's bound bit is the adversary's ghost
+  record of that round, which is the composed system of the bit the instance's network state holds.
+* The entry of process `j` in the instance of round `r` is the round record of round `r` that `j`
+  holds. This is one equation for each pair `(j, r)`. A round `j` has not touched reads as the
+  initial round record in the protocol, and the equation asks the composed entry to be initial there
+  too.
 
 A composed state is therefore determined by any protocol state related to it.
 The determination is not injective: no composed state carries a termination
@@ -51,16 +47,14 @@ are related to the same composed state.
 
 ## What this file supplies
 
-`protocolSim`, a probabilistic forward simulation of `composed P` by
-`protocol P` along the Dirac lift of `ProtocolRelation P`, and the trace-distribution
-inclusion `protocol_composed` it yields. The inclusion is one-directional
-because the composed reading takes transitions the protocol declines. A round
-instance has a row for the Byzantine graded-agreement rows, and no protocol
-program has one (D11, D22); the instance's stage rules carry no termination
-guard, so the instance answers a send or a delivery at a process the protocol
-has terminated. In the other direction the protocol's `terminate` row writes a
-field the relation does not read, and the composed answer to it is a stutter.
--/
+`protocolSim`, a probabilistic forward simulation of `composed P` by `protocol P` along the Dirac
+lift of `ProtocolRelation P`, and the trace-distribution inclusion `protocol_composed` it yields.
+The inclusion is one-directional because the composed system takes transitions the protocol
+declines. A round instance has a row for the Byzantine graded-agreement rows, and no protocol
+program has one (D11, D22); the instance's round rules carry no termination guard, so the instance
+answers a send or a delivery at a process the protocol has terminated. In the other direction the
+protocol's `terminate` row writes a field the relation does not read, and the composed answer to it
+is a stutter. -/
 
 namespace PLTS
 namespace ABA
@@ -69,14 +63,13 @@ open Implementation Composition
 
 namespace ABDY
 
-/-- **The relation of the protocol presentation to the composed one.** Writing
-`u = (processes, w, o)` and `t = (G, C, A, o')`, the five conjuncts are: the round
-loops agree; the oracle is shared; the ABA-side network is the adversary's
-DECIDED sets beside its corrupted set; each round's network state is that round's
-messagesOf of the adversary's sent sets beside the same corrupted set and the
-adversary's ghost record of that round; and the entry of process `j` in the
-instance of round `r` is the stage record of round `r` that `j` holds (D22). No
-conjunct is guarded, so the composed state is determined. -/
+/-- **The relation of the protocol presentation to the composed one.** Writing `u = (processes, w,
+o)` and `t = (G, C, A, o')`, the five conjuncts are: the round loops agree; the oracle is shared;
+the ABA network is the adversary's DECIDED sets beside its corrupted set; each round's network state
+is that round's messages out of the adversary's sent sets beside the same corrupted set and the
+adversary's ghost record of that round; and the entry of process `j` in the instance of round `r` is
+the round record of round `r` that `j` holds (D22). No conjunct is guarded, so the composed state is
+determined. -/
 def ProtocolRelation (P : Parameters) (u : ProtocolState P) (t : ComposedState P) : Prop :=
   (∀ j, (u.1 j).1 = t.2.1 j) ∧
   u.2.2 = t.2.2.2 ∧
@@ -148,11 +141,11 @@ private theorem match_prod (P : Parameters) {x : ∀ _ : Fin P.n, ProcessRecord 
 
 /-! ### Updating one round
 
-A label owned by round `r` moves that round's instance and no other. The two
-lemmas below read the stage columns and the network states of the updated family. -/
+A label owned by round `r` moves that round's instance and no other. The two lemmas below read the
+round records and the network states of the updated family. -/
 
-/-- Updating round `r` by a state whose stage columns are the ones it already
-had leaves every stage column where it was. -/
+/-- Updating round `r` by a state whose round records are the ones it already had leaves every round
+record where it was. -/
 private theorem update_fst {P : Parameters} (G : ℕ → GBCA.ByABDY.ImplementationState P.n) (r : ℕ)
     {X : GBCA.ByABDY.ImplementationState P.n} (hX : X.1 = (G r).1) (r' : ℕ) :
     (Function.update G r X r').1 = (G r').1 := by
@@ -169,8 +162,8 @@ private theorem update_snd {P : Parameters} (G : ℕ → GBCA.ByABDY.Implementat
   · subst h; rw [Function.update_self]
   · rw [Function.update_of_ne h]
 
-/-- The network state conjunct after a stage multicast in round `r`. -/
-private theorem rel_recordGBCASend {P : Parameters} {G : ℕ → GBCA.ByABDY.ImplementationState P.n}
+/-- The network state conjunct after a round multicast in round `r`. -/
+private theorem relation_recordGBCASend {P : Parameters} {G : ℕ → GBCA.ByABDY.ImplementationState P.n}
     {w : NetworkState P.n} (hG : ∀ r, (G r).2 = ⟨w.sent r, w.F, w.ghostRecord r⟩)
     (r : ℕ) (k : Fin P.n) (m : GBCA.ByABDY.Message) (u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n)
     (r' : ℕ) :
@@ -200,7 +193,7 @@ private theorem ghostOut_getD {P : Parameters} {w : NetworkState P.n} {r : ℕ} 
 /-- The network state conjunct after a return of round `r`. The instance's bound
 bit and the adversary's ghost record of round `r` take the same bit, and every
 other round's record stands still. -/
-private theorem rel_setBound {P : Parameters} {G : ℕ → GBCA.ByABDY.ImplementationState P.n}
+private theorem relation_setBound {P : Parameters} {G : ℕ → GBCA.ByABDY.ImplementationState P.n}
     {w : NetworkState P.n} (hG : ∀ r', (G r').2 = ⟨w.sent r', w.F, w.ghostRecord r'⟩)
     (r : ℕ) (bnd : Bool) (u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n)
     (hfix : (w.ghostRecord r).getD bnd = bnd) {L : ExtendedLabel P.n}
@@ -228,7 +221,7 @@ private theorem corrupt_gbcaNetwork {P : Parameters} (w : NetworkState P.n) (k :
   by_cases hc : k ∉ w.F ∧ w.F.card < P.f <;>
     simp [GBCA.ByABDY.NetworkState.corrupt, Implementation.NetworkState.corrupt, hc]
 
-/-- The ABA-side network's corruption act and the adversary's agree. -/
+/-- The ABA network's corruption act and the adversary's agree. -/
 private theorem corrupt_abaNetwork {P : Parameters} (w : NetworkState P.n) (k : Fin P.n) :
     ABANetworkState.corrupt P k ⟨w.decidedSent, w.F⟩ =
       ⟨(NetworkState.corrupt P k w).decidedSent, (NetworkState.corrupt P k w).F⟩ := by
@@ -237,13 +230,12 @@ private theorem corrupt_abaNetwork {P : Parameters} (w : NetworkState P.n) (k : 
 
 /-! ### Transporting the columns conjunct
 
-The conjunct that speaks of the stage columns is read process by process.
-Under a transition at which one process writes and the composed family leaves
-every other column alone, it follows from the conjunct before the step and from
-the mover's own family of new-column equations. -/
+The conjunct that speaks of the round records is read process by process. Under a transition at
+which one process writes and the composed family leaves every other column alone, it follows from
+the conjunct before the step and from the mover's own family of new-column equations. -/
 
 /-- The columns conjunct under a write at one process. -/
-private theorem rel_roundRecord (P : Parameters) {processes x : ∀ _ : Fin P.n, ProcessRecord P.n}
+private theorem relation_roundRecord (P : Parameters) {processes x : ∀ _ : Fin P.n, ProcessRecord P.n}
     {G G' : ℕ → GBCA.ByABDY.ImplementationState P.n} (id : Fin P.n)
     (hst : ∀ j r, (G r).1 j = (processes j).2.roundRecord r)
     (hfor : ∀ i, i ≠ id → x i = processes i)
@@ -256,7 +248,7 @@ private theorem rel_roundRecord (P : Parameters) {processes x : ∀ _ : Fin P.n,
   · rw [hGfor j r h, hfor j h]; exact hst j r
 
 /-- The columns conjunct under a transition at which no process writes. -/
-private theorem rel_none (P : Parameters) {processes x : ∀ _ : Fin P.n, ProcessRecord P.n}
+private theorem relation_none (P : Parameters) {processes x : ∀ _ : Fin P.n, ProcessRecord P.n}
     {G G' : ℕ → GBCA.ByABDY.ImplementationState P.n}
     (hst : ∀ j r, (G r).1 j = (processes j).2.roundRecord r)
     (hfor : ∀ i, x i = processes i)
@@ -267,14 +259,13 @@ private theorem rel_none (P : Parameters) {processes x : ∀ _ : Fin P.n, Proces
 
 /-! ### Assembling a composed transition
 
-Two shapes of answer. A label the composed system takes on the nose is
-answered by the rows of its four components. A stage rendezvous has no row at
-three of them: it is internal to a round instance, and the family carries it
-as its own silent rule. -/
+Two shapes of answer. A label the composed system takes on the nose is answered by the rows of its
+four components. A round rendezvous has no row at three of them: it is internal to a round instance,
+and the family carries it as its own silent rule. -/
 
 /-- A visible label of the extended alphabet answered by the four composed
 rows, the oracle's successor carried across. -/
-private theorem match_vis (P : Parameters) {x : ∀ _ : Fin P.n, ProcessRecord P.n}
+private theorem match_visible (P : Parameters) {x : ∀ _ : Fin P.n, ProcessRecord P.n}
     {w' : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
     {ω : PMF (ℕ → WCC.SpecState P.n)}
     {G G' : ℕ → GBCA.ByABDY.ImplementationState P.n} {C C' : ∀ _ : Fin P.n, RoundLoopRecord P.n}
@@ -289,9 +280,9 @@ private theorem match_vis (P : Parameters) {x : ∀ _ : Fin P.n, ProcessRecord P
         (prodPMF (PMF.pure x) (prodPMF (PMF.pure w') ω)) Ω ∧
       (composedExtended P).step (G, C, A, o) L (Ω.bind id) := by
   obtain ⟨Ω, hr, hbind⟩ := match_prod P hrel
-  exact ⟨Ω, hr, hbind ▸ composedExtended_vis_step P hL hGs hCs hAs hWs⟩
+  exact ⟨Ω, hr, hbind ▸ composedExtended_visible_step P hL hGs hCs hAs hWs⟩
 
-/-- A rendezvous the composed reading answers inside one round: the
+/-- A rendezvous the composed system answers inside one round: the
 instance of round `r` takes it as its own silent rule. -/
 private theorem match_round (P : Parameters) {x : ∀ _ : Fin P.n, ProcessRecord P.n}
     {w' : NetworkState P.n} {o : ℕ → WCC.SpecState P.n} {ν : PMF (ℕ → WCC.SpecState P.n)}
@@ -322,13 +313,12 @@ either label. -/
 
 /-! ### The matching, by label class
 
-A transition of the protocol group is a hidden rendezvous, a visible shared
-label, or the silent label. Each is answered by a transition of the composed
-group on the same label, built from the rows of the four composed components.
-A corrupted process's replaced program is matched loop for loop: where the
-protocol program self-loops, the composed round loop takes `corruptedIdle`.
-The return that self-loop carries without DECIDED evidence is authorised on the
-composed side by the ABA-side network's Byzantine row (D23). -/
+A transition of the protocol group is a hidden rendezvous, a visible shared label, or the silent
+label. Each is answered by a transition of the composed group on the same label, built from the rows
+of the four composed components. A corrupted process's replaced program is matched loop for loop:
+where the protocol program self-loops, the composed round loop takes `corruptedIdle`. The return
+that self-loop carries without DECIDED evidence is authorised on the composed system by the ABA
+network's Byzantine row (D23). -/
 
 /-- The matching on the rendezvous alphabet. -/
 theorem match_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord P.n}
@@ -342,7 +332,7 @@ theorem match_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
       (composedHidden P).step (G, C, A, o) Label.tau (Ω.bind id) := by
   obtain ⟨hC, -, hA, hG, hst⟩ := (protocolRelation_mk P _ _ _ _ _ _ _).mp hR
   have hCeq : ∀ i, C i = (processes i).1 := fun i => (hC i).symm
-  obtain ⟨x, w', ν, hall, hn, hWs, rfl⟩ := protocolExtended_event_inv P h
+  obtain ⟨x, w', ν, hall, hn, hWs, rfl⟩ := protocolExtended_event_inversion P h
   have hLne : (Sum.inr e : ExtendedLabel P.n) ≠ Silent.τ := by
     simp
   have hvis : ∀ {G' : ℕ → GBCA.ByABDY.ImplementationState P.n} {A' : ABANetworkState P.n},
@@ -355,7 +345,7 @@ theorem match_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
           (prodPMF (PMF.pure x) (prodPMF (PMF.pure w') ν)) Ω ∧
         (composedHidden P).step (G, C, A, o) Label.tau (Ω.bind id) := by
     intro G' A' hrel hGs hCs hAs
-    obtain ⟨Ω, hr, hs⟩ := match_vis P hLne hrel hGs hCs hAs hWs
+    obtain ⟨Ω, hr, hs⟩ := match_visible P hLne hrel hGs hCs hAs hWs
     exact ⟨Ω, hr, composedHidden_of_event P e hs⟩
   cases e with
   | gbcaSend r j m =>
@@ -452,9 +442,9 @@ theorem match_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
       by_cases hi : i = j
       · subst hi; rw [hx]; exact hC i
       · rw [hfor i hi]; exact hC i
-    have h5 := rel_roundRecord P j hst hfor hGfor hown
+    have h5 := relation_roundRecord P j hst hfor hGfor hown
     exact match_round P rfl ((protocolRelation_mk P _ _ _ _ _ _ _).mpr
-      ⟨hxcore, rfl, by simpa using hA, rel_recordGBCASend hG r j m _, h5⟩)
+      ⟨hxcore, rfl, by simpa using hA, relation_recordGBCASend hG r j m _, h5⟩)
       (GBCA.ByABDY.composition_event_step P r (GBCA.ByABDY.GBCAEvent.send j m)
         (gprocs_family j nd hrow
           (fun i hi => GBCA.ByABDY.GBCAProgramStep.sendIdle _ j m (Ne.symm hi)))
@@ -494,7 +484,7 @@ theorem match_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
       by_cases hi' : i' = i
       · subst hi'; rw [hx]; exact hC i'
       · rw [hfor i' hi']; exact hC i'
-    have h5 := rel_roundRecord P i hst hfor hGfor hown
+    have h5 := relation_roundRecord P i hst hfor hGfor hown
     exact match_round P rfl ((protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨hxcore, rfl, hA, fun r' => by rw [update_snd G r _ r']; exact hG r', h5⟩)
       (GBCA.ByABDY.composition_event_step P r (GBCA.ByABDY.GBCAEvent.deliver i k m)
@@ -511,7 +501,7 @@ theorem match_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
         rcases programStep_decidedSend_self (hall i) with ⟨-, -, -, hdx⟩ | ⟨-, hdx⟩ <;>
           exact pure_inj hdx
       · exact pure_inj (programStep_decidedSend_foreign (Ne.symm hi) (hall i))
-    have h5 := rel_none P (G' := G) hst hx (fun _ _ => rfl)
+    have h5 := relation_none P (G' := G) hst hx (fun _ _ => rfl)
     refine hvis (A' := A.recordDecided j b) (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, by rw [hA]; simp [ABANetworkState.recordDecided,
         NetworkState.recordDecided], fun r => by rw [hG r]; simp [NetworkState.recordDecided], h5⟩)
@@ -533,7 +523,7 @@ theorem match_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
       pure_inj (programStep_decidedDeliver_foreign (Ne.symm hi') (hall i'))
     have hown : ∀ r, (G r).1 i = (x i).2.roundRecord r := by
       intro r; simp only [hx]; exact hst i r
-    have h5 := rel_roundRecord P i hst hfor (fun _ _ _ => rfl) hown
+    have h5 := relation_roundRecord P i hst hfor (fun _ _ _ => rfl) hown
     refine hvis (A' := A) (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, hA, hG, h5⟩)
       (gbcaInstanceFamily_idle P G hLne (by simp) not_false) (fun i' => ?_)
@@ -550,7 +540,7 @@ theorem match_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
       pure_inj (programStep_retWPublish_foreign (Ne.symm hi) (hall i))
     have hown : ∀ r, (G r).1 id = (x id).2.roundRecord r := by
       intro r; simp only [hx]; exact hst id r
-    have h5 := rel_roundRecord P id hst hfor (fun _ _ _ => rfl) hown
+    have h5 := relation_roundRecord P id hst hfor (fun _ _ _ => rfl) hown
     refine hvis (A' := A.recordDecided id b) (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, by rw [hA]; simp [ABANetworkState.recordDecided,
         NetworkState.recordDecided], fun r' => by rw [hG r']; simp [NetworkState.recordDecided],
@@ -572,7 +562,7 @@ theorem match_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
       pure_inj (programStep_gbcaCallLoop_foreign (Ne.symm hi) (hall i))
     have hown : ∀ r, (G r).1 id = (x id).2.roundRecord r := by
       intro r; simp only [hx]; exact hst id r
-    have h5 := rel_roundRecord P id hst hfor (fun _ _ _ => rfl) hown
+    have h5 := relation_roundRecord P id hst hfor (fun _ _ _ => rfl) hown
     refine hvis (A' := A) (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, hA, hG, h5⟩)
       (gbcaInstanceFamily_owned_id P G r (by simp)
@@ -591,7 +581,7 @@ theorem match_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
     obtain rfl : w' = w := by
       simpa using pure_inj hw
     have hx : ∀ i, x i = processes i := fun i => pure_inj (programStep_byzantineCallGLoop (hall i))
-    have h5 := rel_none P (G' := G) hst hx (fun _ _ => rfl)
+    have h5 := relation_none P (G' := G) hst hx (fun _ _ => rfl)
     refine hvis (A' := A) (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, hA, hG, h5⟩)
       (gbcaInstanceFamily_owned_id P G r (by simp)
@@ -605,7 +595,7 @@ theorem match_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
     obtain rfl : w' = w := by
       simpa using pure_inj hw
     have hx : ∀ i, x i = processes i := fun i => pure_inj (programStep_byzantineCallW (hall i))
-    have h5 := rel_none P (G' := G) hst hx (fun _ _ => rfl)
+    have h5 := relation_none P (G' := G) hst hx (fun _ _ => rfl)
     refine hvis (A' := A) (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, hA, hG, h5⟩)
       (gbcaInstanceFamily_idle P G hLne (by simp) not_false) (fun i => ?_)
@@ -616,7 +606,7 @@ theorem match_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
     obtain rfl : w' = w := by
       simpa using pure_inj hw
     have hx : ∀ i, x i = processes i := fun i => pure_inj (programStep_byzantineRetW (hall i))
-    have h5 := rel_none P (G' := G) hst hx (fun _ _ => rfl)
+    have h5 := relation_none P (G' := G) hst hx (fun _ _ => rfl)
     refine hvis (A' := A) (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, hA, hG, h5⟩)
       (gbcaInstanceFamily_idle P G hLne (by simp) not_false) (fun i => ?_)
@@ -635,7 +625,7 @@ theorem match_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
       (composedHidden P).step (G, C, A, o) l (Ω.bind id) := by
   obtain ⟨hC, -, hA, hG, hst⟩ := (protocolRelation_mk P _ _ _ _ _ _ _).mp hR
   have hCeq : ∀ i, C i = (processes i).1 := fun i => (hC i).symm
-  obtain ⟨x, w', ω, hall, hn, hOr, rfl⟩ := protocolExtended_label_inv P hl h
+  obtain ⟨x, w', ω, hall, hn, hOr, rfl⟩ := protocolExtended_label_inversion P hl h
   have hWl : (coinOverRoundAlphabet P).step o (Sum.inl l) ω :=
     (System.mapIdle_step_some (coinLabelMap_inl l) ω).mpr hOr
   have hLne : (Sum.inl l : ExtendedLabel P.n) ≠ Silent.τ := by
@@ -661,8 +651,8 @@ theorem match_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
           (processes id).2) := pure_inj hxid
       have hown : ∀ r, (G r).1 id = (x id).2.roundRecord r := by
         intro r; simp only [hx]; exact hst id r
-      have h5 := rel_roundRecord P id hst hfor (fun _ _ _ => rfl) hown
-      refine match_vis P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
+      have h5 := relation_roundRecord P id hst hfor (fun _ _ _ => rfl) hown
+      refine match_visible P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, hG, h5⟩) hGs (fun i => ?_)
         (ABANetworkStep.callABAIdle A id b) hWl
       by_cases hi : i = id
@@ -673,8 +663,8 @@ theorem match_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
         by_cases hi : i = id
         · subst hi; exact pure_inj hxid
         · exact hfor i hi
-      have h5 := rel_none P (G' := G) hst hx (fun _ _ => rfl)
-      refine match_vis P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
+      have h5 := relation_none P (G' := G) hst hx (fun _ _ => rfl)
+      refine match_visible P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, hG, h5⟩) hGs (fun i => ?_)
         (ABANetworkStep.callABAIdle A id b) hWl
       rw [hCeq i, hx i]
@@ -702,8 +692,8 @@ theorem match_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
             (processes id).2) := pure_inj hxid
       have hown : ∀ r, (G r).1 id = (x id).2.roundRecord r := by
         intro r; simp only [hx]; exact hst id r
-      have h5 := rel_roundRecord P id hst hfor (fun _ _ _ => rfl) hown
-      refine match_vis P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
+      have h5 := relation_roundRecord P id hst hfor (fun _ _ _ => rfl) hown
+      refine match_visible P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, hG, h5⟩) hGs (fun i => ?_) hAs hWl
       by_cases hi : i = id
       · subst hi; rw [hCeq i, hx]; exact RoundLoopStep.ret _ b hh hcnt hret
@@ -713,8 +703,8 @@ theorem match_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
         by_cases hi : i = id
         · subst hi; exact pure_inj hxid
         · exact hfor i hi
-      have h5 := rel_none P (G' := G) hst hx (fun _ _ => rfl)
-      refine match_vis P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
+      have h5 := relation_none P (G' := G) hst hx (fun _ _ => rfl)
+      refine match_visible P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, hG, h5⟩) hGs (fun i => ?_) hAs hWl
       rw [hCeq i, hx i]
       by_cases hi : i = id
@@ -733,8 +723,8 @@ theorem match_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
             (processes id).2) := pure_inj hxid
       have hown : ∀ r, (G r).1 id = (x id).2.roundRecord r := by
         intro r; simp only [hx]; exact hst id r
-      have h5 := rel_roundRecord P id hst hfor (fun _ _ _ => rfl) hown
-      refine match_vis P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
+      have h5 := relation_roundRecord P id hst hfor (fun _ _ _ => rfl) hown
+      refine match_visible P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, hG, h5⟩) hGs (fun i => ?_)
         (ABANetworkStep.callWIdle A r id) hWl
       by_cases hi : i = id
@@ -745,8 +735,8 @@ theorem match_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
         by_cases hi : i = id
         · subst hi; exact pure_inj hxid
         · exact hfor i hi
-      have h5 := rel_none P (G' := G) hst hx (fun _ _ => rfl)
-      refine match_vis P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
+      have h5 := relation_none P (G' := G) hst hx (fun _ _ => rfl)
+      refine match_visible P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, hG, h5⟩) hGs (fun i => ?_)
         (ABANetworkStep.callWIdle A r id) hWl
       rw [hCeq i, hx i]
@@ -764,8 +754,8 @@ theorem match_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
     · have hx : x id = ((processes id).1.stepRound co, (processes id).2) := pure_inj hxid
       have hown : ∀ r, (G r).1 id = (x id).2.roundRecord r := by
         intro r; simp only [hx]; exact hst id r
-      have h5 := rel_roundRecord P id hst hfor (fun _ _ _ => rfl) hown
-      refine match_vis P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
+      have h5 := relation_roundRecord P id hst hfor (fun _ _ _ => rfl) hown
+      refine match_visible P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, hG, h5⟩) hGs (fun i => ?_)
         (ABANetworkStep.retWIdle A r id co) hWl
       by_cases hi : i = id
@@ -776,8 +766,8 @@ theorem match_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
         by_cases hi : i = id
         · subst hi; exact pure_inj hxid
         · exact hfor i hi
-      have h5 := rel_none P (G' := G) hst hx (fun _ _ => rfl)
-      refine match_vis P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
+      have h5 := relation_none P (G' := G) hst hx (fun _ _ => rfl)
+      refine match_visible P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, hG, h5⟩) hGs (fun i => ?_)
         (ABANetworkStep.retWIdle A r id co) hWl
       rw [hCeq i, hx i]
@@ -791,7 +781,7 @@ theorem match_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
       pure_inj (programStep_fail_foreign (Ne.symm hi) (hall i))
     have hstg : (x k).2 = (processes k).2 := by
       rcases programStep_fail_own (hall k) with ⟨-, hxk⟩ | ⟨-, hxk⟩ <;> rw [pure_inj hxk]
-    have h5 := rel_roundRecord P k (G' := fun r =>
+    have h5 := relation_roundRecord P k (G' := fun r =>
       GBCA.ByABDY.corruptionAct P (Sum.inl (Label.fail k)) (G r)) hst hfor
       (fun _ _ _ => by simp only [corruptionAct_fail])
       (fun r => by simp only [corruptionAct_fail]; rw [hstg]; exact hst k r)
@@ -806,7 +796,7 @@ theorem match_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
         simp only [corruptionAct_fail]
         rw [hG r]
         exact corrupt_gbcaNetwork w k r
-    refine match_vis P hLne (fun o' _ => hrel o') (gbcaInstanceFamily_fail P G k) (fun i => ?_)
+    refine match_visible P hLne (fun o' _ => hrel o') (gbcaInstanceFamily_fail P G k) (fun i => ?_)
       (ABANetworkStep.fail A k (by rw [hA]; exact hnew) (by rw [hA]; exact hbud)) hWl
     by_cases hi : i = k
     · subst hi
@@ -863,9 +853,9 @@ theorem match_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
       · subst hr'; simp [hcol]
       · rw [Function.update_of_ne hr', RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr']
         exact hst id r'
-    have h5 := rel_roundRecord P id hst hfor hGfor hown
-    refine match_vis P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
-      ⟨fun _ => rfl, rfl, by simpa using hA, rel_recordGBCASend hG r id (.input b) _,
+    have h5 := relation_roundRecord P id hst hfor hGfor hown
+    refine match_visible P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
+      ⟨fun _ => rfl, rfl, by simpa using hA, relation_recordGBCASend hG r id (.input b) _,
         h5⟩) hGs (fun i => ?_) (ABANetworkStep.callGIdle A r id b) hWl
     by_cases hi : i = id
     · subst hi; rw [hCeq i, hx]; exact RoundLoopStep.callG _ r b hh hph hrr hest
@@ -944,10 +934,10 @@ theorem match_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord
       · subst hr'; simp [hcol]
       · rw [Function.update_of_ne hr', RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr']
         exact hst id r'
-    have h5 := rel_roundRecord P id hst hfor hGfor hown
-    refine match_vis P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
+    have h5 := relation_roundRecord P id hst hfor hGfor hown
+    refine match_visible P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, by simpa using hA,
-        rel_setBound hG r bnd _ hfix (by simp) (fun r' hr' =>
+        relation_setBound hG r bnd _ hfix (by simp) (fun r' hr' =>
           writeGhost_retG_ne P w r id out bnd hr'), h5⟩) hGs (fun i => ?_)
       (ABANetworkStep.retGIdle A r id out bnd) hWl
     by_cases hi : i = id
@@ -969,7 +959,7 @@ theorem match_tau (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord P
       ((composedHidden P).step (G, C, A, o) Label.tau (Ω.bind id) ∨
         Ω.bind id = PMF.pure (G, C, A, o)) := by
   obtain ⟨hC, -, hA, hG, hst⟩ := (protocolRelation_mk P _ _ _ _ _ _ _).mp hR
-  rcases protocolExtended_tau_inv P h with ⟨i, y, hy, rfl⟩ | ⟨w', hn, rfl⟩
+  rcases protocolExtended_tau_inversion P h with ⟨i, y, hy, rfl⟩ | ⟨w', hn, rfl⟩
   · obtain ⟨-, -, -, -, -, hyeq⟩ := programStep_tau_terminate hy
     obtain rfl : y = ((processes i).1, { (processes i).2 with terminated := true }) :=
       pure_inj hyeq
@@ -1029,10 +1019,9 @@ theorem match_tau (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord P
 
 /-! ### The simulation -/
 
-/-- The matching at the group level: the rendezvous alphabet is hidden on both
-sides, so a hidden protocol rendezvous is answered by a silent transition of
-the composed group. The second disjunct is the composed answer to `terminate`:
-the state stands still under a silent protocol label. -/
+/-- The matching at the group level: the rendezvous alphabet is hidden in both systems, so a hidden
+protocol rendezvous is answered by a silent transition of the composed group. The second disjunct is
+the composed answer to `terminate`: the state stands still under a silent protocol label. -/
 theorem match_hidden (P : Parameters) {u : ProtocolState P} {t : ComposedState P}
     (hR : ProtocolRelation P u t) {l : Label P.n} {μ : PMF (ProtocolState P)}
     (h : (protocolHidden P).step u l μ) :
@@ -1056,10 +1045,9 @@ theorem match_hidden (P : Parameters) {u : ProtocolState P} {t : ComposedState P
     · obtain ⟨Ω, hrel, hs⟩ := match_label P hR hl hstep
       exact ⟨Ω, hrel, Or.inl hs⟩
 
-/-- The matching at the system level: a hidden sub-protocol label is silent on
-both sides, and every other label is answered on the nose or by standing
-still. A hidden label is never `τ`, so the standing-still answer arises only
-under `τ`, where the reflexivity of `weakTau` discharges it. -/
+/-- The matching at the system level: a hidden sub-protocol label is silent in both systems, and
+every other label is answered on the nose or by standing still. A hidden label is never `τ`, so the
+standing-still answer arises only under `τ`, where the reflexivity of `weakTau` discharges it. -/
 theorem match_step (P : Parameters) {u : ProtocolState P} {t : ComposedState P}
     (hR : ProtocolRelation P u t) {l : Label P.n} {μ : PMF (ProtocolState P)}
     (h : (protocol P).step u l μ) :
@@ -1082,15 +1070,14 @@ theorem match_step (P : Parameters) {u : ProtocolState P} {t : ComposedState P}
       · exact ⟨Ω, hrel, Or.inr ⟨hτ, weakStep_strong hstep⟩⟩
     · exact ⟨Ω, hrel, Or.inl ⟨rfl, hpure ▸ weakTau_refl (composed P) (PMF.pure t)⟩⟩
 
-/-- The two initial states are related: everything is initial, so every column
-is the initial stage record, which is what an untouched round reads as on the
-protocol side. -/
+/-- The two initial states are related: everything is initial, so every column is the initial round
+record, which is what an untouched round reads as in the protocol. -/
 theorem protocolRelation_init (P : Parameters) :
     ProtocolRelation P (protocol P).init (composed P).init :=
   ⟨fun _ => rfl, rfl, rfl, fun _ => rfl,
     fun _ r => (RoundRecordMap.initial_roundRecord P.n r).symm⟩
 
-/-- **The protocol forward-simulates into its composed reading**
+/-- **The protocol forward-simulates into its composed system**
 along the Dirac lift of `ProtocolRelation`. -/
 theorem protocolSim (P : Parameters) :
     ProbabilisticForwardSimulation (protocol P) (composed P)
@@ -1103,7 +1090,7 @@ theorem protocolSim (P : Parameters) :
     exact match_step P hR hstep
 
 /-- **The composition inclusion**: every trace distribution the protocol
-achieves is achieved by its composed reading. -/
+achieves is achieved by its composed system. -/
 theorem protocol_composed (P : Parameters) :
     achievableTraceDists (protocol P) ⊆ achievableTraceDists (composed P) :=
   (protocolSim P).achievableTraceDists_subset

@@ -1,0 +1,11 @@
+\begin{theorem}[The two substitutions inside the round]
+  \label{thm:gbca-round-substitutions}
+  \lean{PLTS.ABA.GBCA.ByAFW.BroadcastSubstitutionRelation}\lean{PLTS.ABA.GBCA.ByAFW.broadcastSubstitution}\lean{PLTS.ABA.GBCA.ByAFW.GatherSubstitutionRelation}\lean{PLTS.ABA.GBCA.ByAFW.gatherSubstitution}\leanok
+  \uses{def:aba-round-over-bracha, def:aba-round-over-gather-specifications, thm:gather-broadcast-substitution, thm:gather-core, thm:forwardsim-congruence}
+  Each tier of the round is forward-simulated by the one above it, by congruence: the gather simulation of Theorem~\ref{thm:gather-broadcast-substitution}, respectively Theorem~\ref{thm:gather-core}, is read along the pullback naming each of the two gather slots and carried through the round's operators with the round's programs and network held, by Theorem~\ref{thm:forwardsim-congruence} --- \leandecl{PLTS.ABA.GBCA.ByAFW.broadcastSubstitution} along \leandecl{PLTS.ABA.GBCA.ByAFW.BroadcastSubstitutionRelation} and \leandecl{PLTS.ABA.GBCA.ByAFW.gatherSubstitution} along \leandecl{PLTS.ABA.GBCA.ByAFW.GatherSubstitutionRelation}, each the round's programs and network held equal beside the gather relation at both slots.
+\end{theorem}
+
+\begin{proof}\leanok
+  \uses{def:aba-round-over-bracha, def:aba-round-over-gather-specifications, thm:gather-broadcast-substitution, thm:gather-core, def:forwardsim}
+  See the Lean proofs of \leandecl{PLTS.ABA.GBCA.ByAFW.broadcastSubstitution} and \leandecl{PLTS.ABA.GBCA.ByAFW.gatherSubstitution}.
+\end{proof}

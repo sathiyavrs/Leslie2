@@ -1,7 +1,0 @@
-\begin{definition}[The gather-based GBCA implementation]
-  \label{def:aba-gbca-gather-low}
-  \lean{PLTS.ABA.GBCA.ByAFW.RoundStateOverBroadcastSpecification}\lean{PLTS.ABA.GBCA.ByAFW.roundOverBroadcastSpecification}\lean{PLTS.ABA.GBCA.ByAFW.RoundStateOverBracha}\lean{PLTS.ABA.GBCA.ByAFW.roundOverBracha}\leanok
-  \uses{def:aba-round-sub, def:aba-gbca-pair, def:aba-gather-ideal, def:aba-gather-low}
-  The round of Definition~\ref{def:aba-round-sub} at its two concrete tiers, by the gather system in its two gather slots: over gather instances of Definition~\ref{def:aba-gather-ideal}, and fully concrete over gather instances of Definition~\ref{def:aba-gather-low} --- the two gather instances and, beneath them, the $4n$ Bracha instances carrying the inputs and the $\mathrm{BIND}$ payloads.
-  The concrete tier \leandecl{PLTS.ABA.GBCA.ByAFW.roundOverBracha} is the gather-based GBCA implementation, the protocol as it runs; \leandecl{PLTS.ABA.GBCA.ByAFW.roundOverBroadcastSpecification} is the tier between the two substitutions.
-\end{definition}

@@ -10,13 +10,13 @@
       align=center, font=\footnotesize, inner sep=3pt},
     note/.style={font=\scriptsize, align=left},
     rel/.style={font=\scriptsize, align=center}]
-  \node[lvl] (low)   at (0,1.95)  {$\mathrm{roundOverBracha}$};
-  \node[lvl] (ideal) at (0,0.35)  {$\mathrm{roundOverBroadcastSpecification}$};
-  \node[lvl] (pair)  at (0,-1.25) {$\mathrm{roundOverGatherSpecifications}$};
+  \node[lvl] (overbracha) at (0,1.95)  {$\mathrm{roundOverBracha}$};
+  \node[lvl] (overbrb)    at (0,0.35)  {$\mathrm{roundOverBroadcastSpecification}$};
+  \node[lvl] (overgather) at (0,-1.25) {$\mathrm{roundOverGatherSpecifications}$};
   \node[lvl] (spec)  at (0,-2.85) {$\mathrm{GBCA.specInst}$};
-  \draw[->, thick] (low)   -- (ideal);
-  \draw[->, thick] (ideal) -- (pair);
-  \draw[->, thick] (pair)  -- (spec);
+  \draw[->, thick] (overbracha) -- (overbrb);
+  \draw[->, thick] (overbrb)    -- (overgather);
+  \draw[->, thick] (overgather) -- (spec);
   \node[conc] (r1) at (9.4,1.15)
     {every $\mathrm{ECHO}$, $\mathrm{VOTE}$, delivery\\ and return of a Bracha instance};
   \node[conc] (r2) at (9.4,-0.45)
@@ -27,10 +27,10 @@
   \draw[dashed, ->] (r2) -- (2.45,-0.45) node[rel, pos=0.5, above]{$\mathrm{GatherSubstitutionRelation}$};
   \draw[dashed, ->] (r3) -- (2.45,-2.05) node[rel, pos=0.5, above]{$\mathrm{SpecificationRelation}$};
   \node[note, anchor=west] at (12.3,1.15)  {a stutter or a return\\ of the BRB specification};
-  \node[note, anchor=west] at (12.3,-0.45) {a stutter; a broadcast\\ return writes a store};
+  \node[note, anchor=west] at (12.3,-0.45) {a stutter; a broadcast\\ return writes a record};
   \node[note, anchor=west] at (12.3,-2.05) {a run, or a single\\ graded return};
   \node[font=\footnotesize, align=center] at (7.2,-3.85)
-    {each stage idealises away one layer and holds the layers above it equal;\\
-     the two upper stages are congruence applications, the layer's network held equal,\\
+    {each stage idealises away one tier and holds the tiers above it equal;\\
+     the two upper stages are congruence applications, the round's network held equal,\\
      and $\mathrm{SpecificationRelation}$ pins $excluded$ to the complement of the bit it holds};
 \end{tikzpicture}

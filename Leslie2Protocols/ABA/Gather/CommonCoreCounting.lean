@@ -21,13 +21,13 @@ that read that state alone — `mem_correct`, `mem_dominatedBy`,
 `correct_filter_dominatedBy`, `sum_dominatedBy` — are the ones of
 `ABA/Gather/MessagesAndCommonCore.lean`, applied to `networkOf`.
 
-## The stores
+## What the broadcast instances returned
 
-A gather program reads what a broadcast instance returned to it out of its own
-record. The clauses `inputBroadcastReturned_val` and `bindBroadcastReturned_val` carry a store entry
-back to the commitment that wrote it: they are established at the `inputBroadcastRet` and
-`bindRet` rows, whose guards are the broadcast specification's `val = some v`,
-and they survive because a committed value is written once.
+A gather program reads what a broadcast instance returned to it out of its own record. The clauses
+`inputBroadcastReturned_val` and `bindBroadcastReturned_val` carry a returned value back to the
+commitment that wrote it: they are established at the `inputBroadcastRet` and `bindRet` rows, whose
+guards are the broadcast specification's `val = some v`, and they survive because a committed value
+is written once.
 
 ## The call records
 
@@ -67,54 +67,51 @@ theorem coreOf_networkOf (s : StateOverBroadcastSpecification P.n X) :
 
 /-! ### The conformance clauses -/
 
-/-- The conformance clauses. The `*_confirmed` clauses tie an honest sender's sent to
-its write-once field, the `*_backed` clauses tie the fields to the receipts that
-justified them, the store clauses tie a program's store to the commitment that
-wrote it, and the provenance clauses are the broadcast commit guards, recorded
-per instance. -/
+/-- The conformance clauses. The `*_confirmed` clauses tie a correct sender's sent to its write-once
+field, the `*_backed` clauses tie the fields to the receipts that justified them, the return clauses
+tie a program's returned value to the commitment that wrote it, and the provenance clauses are the
+broadcast commit guards, recorded per instance. -/
 structure Conformance (P : Parameters) (s : StateOverBroadcastSpecification P.n X) : Prop where
   /-- The corruption budget. -/
   F_card : (gatherTier s).F.card ≤ P.f
-  /-- The input instances' corrupted sets are in lockstep with the gather
-  network state's. -/
+  /-- The input instances' corrupted sets are equal to the gather network state's. -/
   F_inputBroadcast_eq : ∀ k, (inputBroadcasts s k).F = (gatherTier s).F
-  /-- The bind instances' corrupted sets are in lockstep with the gather
-  network state's. -/
+  /-- The bind instances' corrupted sets are equal to the gather network state's. -/
   F_bind_eq : ∀ k, (bindBroadcasts s k).F = (gatherTier s).F
   /-- Delivered messages were multicast. -/
   received_subset_sent : ∀ i k, (gatherTier s).received i k ⊆ (gatherTier s).sent k
-  /-- A value in a program's input store is the committed value of the instance
+  /-- A value in what a program's input instance returned is the committed value of the instance
   that returned it. -/
   inputBroadcastReturned_val : ∀ j k v,
     ((gatherTier s).process j).inputBroadcastReturned k = some v → (inputBroadcasts s k).val = some
       v
-  /-- A payload in a program's bind store is the committed payload of the
-  instance that returned it. -/
+  /-- A payload in what a program's bind instance returned is the committed payload of the instance
+  that returned it. -/
   bindBroadcastReturned_val : ∀ j q U, ((gatherTier s).process j).bindBroadcastReturned q = some U →
     (bindBroadcasts s q).val = some U
-  /-- A committed input entry of an honest process is the payload its input
+  /-- A committed input entry of a correct process is the payload its input
   instance recorded. -/
   inputBroadcastVal_provenance : ∀ k v, (inputBroadcasts s k).val = some v →
     k ∈ (gatherTier s).F ∨ (inputBroadcasts s k).input = some v
-  /-- A committed bind payload of an honest process is the payload its bind
+  /-- A committed bind payload of a correct process is the payload its bind
   instance recorded. -/
   bindBroadcastVal_provenance : ∀ k U, (bindBroadcasts s k).val = some U →
     k ∈ (gatherTier s).F ∨ (bindBroadcasts s k).input = some U
-  /-- An honest sender's sent `ECHO` matches its write-once field. -/
+  /-- A correct sender's sent `ECHO` matches its write-once field. -/
   echo_confirmed : ∀ j ∉ (gatherTier s).F, ∀ A, Message.echo A ∈ (gatherTier s).sent j →
     ((gatherTier s).process j).sentEcho = some A
-  /-- An honest echo payload has at least `n − f` entries. -/
+  /-- A correct echo payload has at least `n − f` entries. -/
   echo_card : ∀ j ∉ (gatherTier s).F, ∀ A, ((gatherTier s).process j).sentEcho = some A →
     P.n - P.f ≤ A.card
-  /-- An honest sender's sent `VOTE` matches its write-once field. -/
+  /-- A correct sender's sent `VOTE` matches its write-once field. -/
   vote_confirmed : ∀ j ∉ (gatherTier s).F, ∀ W, Message.vote W ∈ (gatherTier s).sent j →
     ((gatherTier s).process j).sentVote = some W
-  /-- An honest vote is backed by `n − f` senders' echo payloads, each contained
+  /-- A correct vote is backed by `n − f` senders' echo payloads, each contained
   in it. -/
   vote_backed : ∀ j ∉ (gatherTier s).F, ∀ W, ((gatherTier s).process j).sentVote = some W →
     ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
       ∀ q ∈ Q, ∃ A, Message.echo A ∈ (gatherTier s).received j q ∧ A ⊆ W
-  /-- An honest contributed bind payload is backed by `n − f` senders' vote
+  /-- A bind payload contributed by a correct process is backed by `n − f` senders' vote
   payloads, each contained in it. -/
   bind_backed : ∀ j ∉ (gatherTier s).F, ∀ U, (bindBroadcasts s j).input = some U →
     ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
@@ -1071,9 +1068,8 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
 /-! ### The approval of an echo field -/
 
 omit [DecidableEq X] in
-/-- A payload set approved by one program's input store is approved at the
-instance: each entry of the store is the committed value of the instance that
-returned it. -/
+/-- A payload set approved by what one program's input instances returned is approved at the
+instance: each returned value is the committed value of the instance that returned it. -/
 theorem approved_of_approvedBy {s : StateOverBroadcastSpecification P.n X} (hConf : Conformance P s)
     {j : Fin P.n} {A : AcceptedPairs P.n X} (h : approvedBy ((gatherTier s).process j) A) :
     approved s A :=
@@ -1134,8 +1130,8 @@ theorem echoApproved_initial :
   simp [gatherTier, InstanceState.process, ProcessRecord.initial, BaseProcessRecord.initial] at hA
 
 /-- **The approval of an `ECHO` field is inductive**: only `StepOverBroadcastSpecification.echo`
-writes the field, and the payload it writes is the entries of the writer's own
-store. -/
+writes the field, and the payload it writes is the entries of what the writer's own
+input instances returned. -/
 theorem echoApproved_step {s s' : StateOverBroadcastSpecification P.n X} {l : Label P.n X}
     {μ : PMF (StateOverBroadcastSpecification P.n X)} (hConf : Conformance P s)
     (hEA : ∀ (j : Fin P.n) (A : AcceptedPairs P.n X),
@@ -1239,9 +1235,9 @@ together with the approval of every `ECHO` field. -/
 structure Invariant (P : Parameters) (s : StateOverBroadcastSpecification P.n X) : Prop extends
   Conformance
   P s where
-  /-- The payload set in a process's `ECHO` field consists of committed input
-  entries. No honesty side condition: only `StepOverBroadcastSpecification.echo` writes the field,
-  and a corrupted sender's accepted pairs are entries of its store too. -/
+  /-- The payload set in a process's `ECHO` field consists of committed input entries. No
+  correctness premise: only `StepOverBroadcastSpecification.echo` writes the field, and a corrupted
+  sender's accepted pairs are entries of its returned value too. -/
   echo_approved : ∀ (j : Fin P.n) (A : AcceptedPairs P.n X),
     ((gatherTier s).process j).sentEcho = some A → approved s A
 

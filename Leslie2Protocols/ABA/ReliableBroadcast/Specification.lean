@@ -23,9 +23,9 @@ source couples them — its call transition writes the committed value directly,
 and a separate τ-rule lets a Byzantine leader overwrite it while no process
 has returned. The split states the same content without an overwrite: `commit`
 fires once, at any point, and its guard `ldr ∈ F ∨ input = some m` says a
-corrupted leader commits anything while an honest one commits only its input.
-Decoupling the commit from the call is not a strengthening but the honest
-reading of the source's overwrite window: a leader corrupted *after* an honest
+corrupted leader commits anything while a correct one commits only its input.
+Decoupling the commit from the call is not a strengthening but the correct
+account of the source's overwrite window: a leader corrupted *after* a correct
 call can still direct the delivered value anywhere until the first return, and
 a spec that pinned `val` at call time would refuse that execution.
 
@@ -68,7 +68,7 @@ structure SpecState (n : ℕ) (M : Type) : Type where
   val : Option M
   /-- Which processes have received their return. -/
   ret : Fin n → Bool
-  /-- The corrupted set (local copy, kept in lockstep by `fail` broadcast). -/
+  /-- The corrupted set (local copy, kept equal by `fail` broadcast). -/
   F : Finset (Fin n)
   deriving DecidableEq
 
