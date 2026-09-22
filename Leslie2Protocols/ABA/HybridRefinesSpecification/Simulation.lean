@@ -15,6 +15,8 @@ preservation in `HybridRefinesSpecification/InvariantPreservation.lean` and
 `HybridRefinesSpecification/AbstractStatePreservation.lean`, and the weak transitions of
 `HybridRefinesSpecification/WeakTransitions.lean` into `hybridRefinesSpecification`, the
 probabilistic forward simulation `hybrid P ⊑ spec P` along `hybridSpecificationRelation P`.
+`hybrid_spec` is the trace-distribution inclusion it yields, and both chains of the case study
+reach the ABA specification along it.
 
 The rows dispatch as follows. A visible `callABA` is answered by
 `SpecStep.callSet` at a never-corrupted process holding no input, by
@@ -422,6 +424,18 @@ theorem hybridRefinesSpecification (P : Parameters) :
       · rw [PMF.pure_bind]
         exact weakStep_strong (SpecStep.fail a id (hAbs.F_eq ▸ hnew)
           (by rw [hAbs.F_eq]; exact hbud))
+
+/-- **The protocol-shaped specification refines the ABA specification**: the
+soundness of the core simulation. -/
+theorem hybrid_spec (P : Parameters) :
+    achievableTraceDists (hybrid P) ⊆ achievableTraceDists (spec P) :=
+  (hybridRefinesSpecification P).achievableTraceDists_subset
+
+/-! ### Mechanical axiom check -/
+
+/-- info: 'PLTS.ABA.hybrid_spec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms hybrid_spec
 
 end ABA
 end PLTS

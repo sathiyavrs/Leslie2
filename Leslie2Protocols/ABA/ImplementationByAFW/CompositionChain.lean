@@ -7,7 +7,6 @@ Authors: Sathiya / Claude
 import Leslie2Protocols.ABA.GBCA.AFW.GatherSubstitutions
 import Leslie2Protocols.ABA.GBCA.AFW.RefinesSpecification
 import Leslie2Protocols.ABA.Composition.HybridAndSubstitution
-import Leslie2Protocols.ABA.Results
 import Leslie2Protocols.Framework.FamilySimulation
 import Leslie2.Results
 
@@ -37,9 +36,10 @@ gather instances (`GBCA/AFW/Composition.lean`).
 The three further components are the round loops, the ABA network and the lifted coin oracle, and
 the pipeline over them — the rendezvous alphabet hidden, the result read back over `Label n`, the
 sub-protocol API hidden — is the context term of `ABDY.composed` and `hybrid`, character for
-character. The third stage therefore lands on `hybrid P` itself, and the shared inclusions
-`hybrid_spec` and `hybridRefinesSpecification` carry the gather-based chain to the ABA specification
-from there.
+character. The third stage therefore lands on `hybrid P` itself, which is where the gather-based
+chain meets the chain of `ABDY.composed` and takes the shared simulation
+`hybridRefinesSpecification` (`HybridRefinesSpecification/Simulation.lean`) to the ABA
+specification.
 
 Each family carries a broadcast act, and the act of a round state corrupts the round's two gather
 instances at once while leaving the programs and the round's bound bit untouched (D1):
@@ -49,9 +49,8 @@ gather states, and `GBCA.ByABDY.specificationCorruptionAct` is the act of the sp
 three relations survive those acts — `broadcastSubstitution_failAct`, `gatherSubstitution_failAct`,
 `roundSpecificationSubstitution_failAct` — which is the premise `ForwardSimulation.family` consumes.
 
-`substitution` is the three-stage inclusion, `composed_refines` chains it with
-`hybrid_spec`, `composed_safe` reads off Validity and Agreement, and
-`chainSimulationOfComposed` composes the simulations themselves.
+`substitution` is the three-stage inclusion, and `ABA/Results.lean` chains it with the shared
+inclusion to state the headlines of the gather-based chain.
 -/
 
 namespace PLTS
@@ -371,53 +370,11 @@ theorem substitution (P : Parameters) :
     (Set.Subset.trans (gatherSubstitution P).achievableTraceDists_subset
       (roundSpecificationSubstitution P).achievableTraceDists_subset)
 
-/-! ## The headlines -/
-
-/-- **Trace-distribution refinement of the gather-based composed system**:
-every trace distribution achievable by it is achievable by the ABA
-specification. The substitution gives the first inclusion, the shared core
-simulation the second. -/
-theorem composed_refines (P : Parameters) :
-    achievableTraceDists (composed P) ⊆ achievableTraceDists (spec P) :=
-  Set.Subset.trans (substitution P) (hybrid_spec P)
-
-/-- **Safety of the gather-based implementation**: every positive-probability trace
-of every achievable trace distribution of the gather-based composed system
-satisfies Validity and Agreement. -/
-theorem composed_safe (P : Parameters) :
-    ∀ D ∈ achievableTraceDists (composed P), ∀ t, D t ≠ 0 →
-      ValidityTrace P t ∧ AgreementTrace P t :=
-  safety_transfer (composed_refines P) (spec_safe P)
-
-/-- **The composed gather-based simulation** `composed ⊑ ABA.spec`: the
-three-stage substitution joined with the shared core simulation by
-Result 2. -/
-noncomputable def chainSimulationOfComposed (P : Parameters) :
-    ProbabilisticForwardSimulation (composed P) (spec P)
-      (compRel
-        (compRel (parallelRel (diracRel (broadcastSubstitutionRelationFamily P)))
-          (compRel (parallelRel (diracRel (gatherSubstitutionRelationFamily P)))
-            (parallelRel (diracRel (roundSpecificationSubstitutionRelationFamily P)))))
-        (hybridSpecificationRelation P)) :=
-  (substitutionSimulation P).trans (hybridRefinesSpecification P)
-
 /-! ### Mechanical axiom check -/
 
 /-- info: 'PLTS.ABA.AFW.substitution' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms substitution
-
-/-- info: 'PLTS.ABA.AFW.composed_refines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in
-#print axioms composed_refines
-
-/-- info: 'PLTS.ABA.AFW.composed_safe' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in
-#print axioms composed_safe
-
-/-- info: 'PLTS.ABA.AFW.chainSimulationOfComposed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in
-#print axioms chainSimulationOfComposed
 
 end AFW
 

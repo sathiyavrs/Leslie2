@@ -41,8 +41,8 @@ ORDER = (
     "GBCA/AFW",
     "HybridRefinesSpecification",
     "ImplementationByABDY",
-    "Results.lean",
     "ImplementationByAFW",
+    "Results.lean",
     "GhostErasure",
 )
 RANK = {name: index for index, name in enumerate(ORDER)}

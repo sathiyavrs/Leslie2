@@ -6,6 +6,7 @@ Authors: Sathiya / Claude
 
 import Leslie2Protocols.ABA.GhostErasure.GhostFreeSystem
 import Leslie2Protocols.ABA.ImplementationByAFW.Simulation
+import Leslie2Protocols.ABA.Results
 
 /-!
 # The ghost-free gather-based protocol

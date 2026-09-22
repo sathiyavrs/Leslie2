@@ -430,9 +430,12 @@ the round loop and the ABA network while the family of rounds is unchanged, and 
 broadcast, the corrupted set the adversary holds being the corrupted set of every network under the
 same guard.
 
-`ABA/ImplementationByAFW/Simulation.lean` closes with the headlines mirroring
-`Results.lean`'s: `AFW.protocol_composed`, `AFW.refines`, `AFW.main` and `AFW.chainSimulation`,
-each behind a `#print axioms` check.
+`ABA/ImplementationByAFW/Simulation.lean` closes with `AFW.protocolSimulation` and
+`AFW.protocol_composed`, the composition inclusion it yields. `ABA/Results.lean` takes that
+inclusion to the headlines of the gather-based chain — `AFW.refines`, `AFW.main`,
+`AFW.chainSimulation` and the composed-level `AFW.composed_refines`, `AFW.composed_safe`,
+`AFW.chainSimulationOfComposed` — each behind a `#print axioms` check, beside the protocol
+chain's own.
 
 ## Boundaries
 

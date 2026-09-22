@@ -15,7 +15,8 @@ import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 P` reads the same protocol as a composition of components, down to the
 broadcast instances. This file carries the first into the second, which is
 where the gather-based chain passes from implementation to specification, as
-`ABA/ImplementationByABDY/Simulation.lean` does for ABDY22's.
+`ABA/ImplementationByABDY/Simulation.lean` does for ABDY22's. `ABA/Results.lean` takes the
+inclusion from here to the ABA specification.
 
 ## The relation is a function
 
@@ -2316,40 +2317,6 @@ theorem protocol_composed (P : Parameters) :
     achievableTraceDists (protocol P) ⊆ achievableTraceDists (composed P) :=
   (protocolSimulation P).achievableTraceDists_subset
 
-/-! ### The headlines
-
-The gather-based protocol reaches the ABA specification along the composed
-system it was cut into, and safety transfers to it. -/
-
-/-- **Trace-distribution refinement of the gather-based protocol**: every trace
-distribution achievable by the protocol as it runs is achievable by the ABA
-specification. The composition inclusion gives the first step, the substitution
-and the core simulation the rest. -/
-theorem refines (P : Parameters) :
-    achievableTraceDists (protocol P) ⊆ achievableTraceDists (spec P) :=
-  Set.Subset.trans (protocol_composed P) (composed_refines P)
-
-/-- **Correctness of the gather-based protocol**: every positive-probability trace of the protocol
-as it runs satisfies Validity and Agreement. No premise on the trace: the corruption budget is a
-guard of the network's own `fail` row, so every execution is in budget by construction. -/
-theorem main (P : Parameters) :
-    ∀ D ∈ achievableTraceDists (protocol P), ∀ t, D t ≠ 0 →
-      ValidityTrace P t ∧ AgreementTrace P t :=
-  safety_transfer (refines P) (spec_safe P)
-
-/-- **The composed gather-based simulation** `protocol ⊑ ABA.spec`: the
-composition simulation joined with the chain from the composed system by
-Result 2. -/
-noncomputable def chainSimulation (P : Parameters) :
-    ProbabilisticForwardSimulation (protocol P) (spec P)
-      (compRel (diracRel (ProtocolRelation P))
-        (compRel
-          (compRel (parallelRel (diracRel (broadcastSubstitutionRelationFamily P)))
-            (compRel (parallelRel (diracRel (gatherSubstitutionRelationFamily P)))
-              (parallelRel (diracRel (roundSpecificationSubstitutionRelationFamily P)))))
-          (hybridSpecificationRelation P))) :=
-  (protocolSimulation P).trans (chainSimulationOfComposed P)
-
 /-! ### Mechanical axiom check -/
 
 /-- info: 'PLTS.ABA.AFW.protocolSimulation' depends on axioms: [propext, Classical.choice, Quot.sound] -/
@@ -2359,18 +2326,6 @@ noncomputable def chainSimulation (P : Parameters) :
 /-- info: 'PLTS.ABA.AFW.protocol_composed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms protocol_composed
-
-/-- info: 'PLTS.ABA.AFW.refines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in
-#print axioms refines
-
-/-- info: 'PLTS.ABA.AFW.main' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in
-#print axioms main
-
-/-- info: 'PLTS.ABA.AFW.chainSimulation' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in
-#print axioms chainSimulation
 
 
 end AFW

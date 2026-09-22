@@ -1,13 +1,13 @@
 # The ABA case study — file guide
 
 Machine-checked safety (Validity ∧ Agreement) for randomized asynchronous binary agreement,
-following the "Verifying ABA with Leslie" blueprint. The headlines of the protocol chain are in
+following the "Verifying ABA with Leslie" blueprint. The headlines of both chains are in
 `Results.lean` — `ABDY.main`, `ABDY.refines`, `ABDY.chainSimulation`, `ABDY.protocol_safe`,
-`ABDY.protocol_traces`, `ABDY.composed_safe`, and the shared `hybrid_spec` — and those of the
-gather-based chain in `ImplementationByAFW/Simulation.lean` — `AFW.main`, `AFW.refines`,
-`AFW.chainSimulation`, `AFW.protocol_composed` — beside the composed-level `AFW.composed_refines`,
-`AFW.composed_safe`, `AFW.chainSimulationOfComposed` in `ImplementationByAFW/CompositionChain.lean` and
-`GBCA.roundOverBracha_specificationTraces` in `GBCA/AFW/Binding.lean`, all axiom-clean and guarded.
+`ABDY.protocol_traces`, `ABDY.composed_safe` for the protocol chain, and `AFW.main`,
+`AFW.refines`, `AFW.chainSimulation`, `AFW.composed_refines`, `AFW.composed_safe`,
+`AFW.chainSimulationOfComposed` for the gather-based one — beside the shared `hybrid_spec` in
+`HybridRefinesSpecification/Simulation.lean` and `GBCA.roundOverBracha_specificationTraces` in
+`GBCA/AFW/Binding.lean`, all axiom-clean and guarded.
 Each chain carries two headlines about its ghost-free system, in
 `GhostErasure/ImplementationByABDY.lean` and `GhostErasure/ImplementationByAFW.lean`:
 `protocol_erasure`, the equality of achievable trace distributions between the protocol and that
@@ -277,7 +277,7 @@ to replace it by the graded-agreement specification.
 | `HybridRefinesSpecification/InvariantPreservation.lean` | 3995 | Step inversion for `hybrid`, then preservation of `Invariant` across every row. The bulk of the proof text. |
 | `HybridRefinesSpecification/NonVacuity.lean` | 813 | A concrete 20-step run of `hybrid fourProcesses` to a `retABA` decision, so the simulation about it is not vacuous. |
 | `HybridRefinesSpecification/Relation.lean` | 691 | The core simulation's relation: the lazy abstract state `AbstractState` and the concrete invariant `Invariant`. |
-| `HybridRefinesSpecification/Simulation.lean` | 427 | **`hybridRefinesSpecification`**: the simulation proof itself, one row per concrete step class. |
+| `HybridRefinesSpecification/Simulation.lean` | 441 | **`hybridRefinesSpecification`**: the simulation proof itself, one row per concrete step class, and `hybrid_spec`, its soundness inclusion. One axiom check. |
 | `HybridRefinesSpecification/WeakTransitions.lean` | 52 | The abstract-state run lemmas: `SpecStep.decide` as a τ-run (`decide_step`), and a run closed by a visible step (`weakStep_of_run_then_step`). |
 
 **`ABA/ImplementationByABDY/`** — ABDY22's protocol as it runs, and its simulation into the composed
@@ -288,21 +288,21 @@ system.
 | `ImplementationByABDY/Simulation.lean` | 1107 | **`ABDY.protocolSimulation`**, **`ABDY.protocol_composed`**: the protocol carried into the composed system along `ABDY.ProtocolRelation`, whose five unguarded conjuncts determine the composed state. |
 | `ImplementationByABDY/System.lean` | 849 | **ABDY22's protocol as it runs**, and the subject of the protocol chain: the implementation at ABDY22's Algorithm 6 — its fourteen round rows, the payload the call multicasts, the adversary's bound-bit ghost, and the inversions they answer. |
 
-**`ABA/`** — the headlines.
-
-| file | lines | what it is |
-|---|---|---|
-| `Results.lean` | 215 | The deliverables of the protocol chain, gathered so every citable statement is in one file. Thirteen `#guard_msgs` axiom checks. |
-
 **`ABA/ImplementationByAFW/`** — the gather-based chain, and the protocol beneath it.
 
 | file | lines | what it is |
 |---|---|---|
-| `ImplementationByAFW/CompositionChain.lean` | 425 | **The gather-based chain**: the families `roundFamilyOverBracha`, `roundFamilyOverBroadcastSpecification` and `roundFamilyOverGatherSpecifications`, the three stages `AFW.composed ⊑ AFW.composedOverBroadcastSpecification ⊑ AFW.composedOverGatherSpecifications ⊑ hybrid`, and the composed-level headlines `AFW.composed_refines`, `AFW.composed_safe`, `AFW.chainSimulationOfComposed`. Four axiom checks. |
+| `ImplementationByAFW/CompositionChain.lean` | 382 | **The gather-based chain**: the families `roundFamilyOverBracha`, `roundFamilyOverBroadcastSpecification` and `roundFamilyOverGatherSpecifications`, and the three stages `AFW.composed ⊑ AFW.composedOverBroadcastSpecification ⊑ AFW.composedOverGatherSpecifications ⊑ hybrid`. One axiom check. |
 | `ImplementationByAFW/RoundProjection.lean` | 876 | `AFW.roundProjection`, the view that computes a composed state from the implementation, the relation `AFW.ProtocolRelation` it carries, and the builders that assemble a transition of the composed system. |
 | `ImplementationByAFW/RoundProjectionStep.lean` | 3613 | The view of the composed round after one implementation row: for each row of the implementation, the round's view after it is the view before it with the composed round's own effect applied. |
-| `ImplementationByAFW/Simulation.lean` | 2379 | **`AFW.protocolSimulation`**, **`AFW.main`**: the gather-based protocol carried into `AFW.composed` along a relation that computes the composed state from the implementation, the ghost record included, and the headlines `AFW.refines`, `AFW.main`, `AFW.chainSimulation` it yields. Five axiom checks. |
+| `ImplementationByAFW/Simulation.lean` | 2334 | **`AFW.protocolSimulation`**, **`AFW.protocol_composed`**: the gather-based protocol carried into `AFW.composed` along a relation that computes the composed state from the implementation, the ghost record included. Two axiom checks. |
 | `ImplementationByAFW/System.lean` | 921 | **The gather-based protocol as it runs**: the implementation at AFW25's two-gather construction — the tagged message type collapsing a round's `4n + 2` network states into one sent-set family, the process-major round record, the adversary's ghost record of the two cores and the bound bit, and the 23 round rows. |
+
+**`ABA/`** — the headlines.
+
+| file | lines | what it is |
+|---|---|---|
+| `Results.lean` | 318 | The deliverables of both chains, gathered so every citable statement is in one file. Seventeen `#guard_msgs` axiom checks. |
 
 **`ABA/GhostErasure/`** — the ghost-free system of each protocol, and the erasure that
 reaches it.
@@ -332,9 +332,10 @@ The gather-based files form their own stack over `Vocabulary/ProcessAndNetworkSt
 `Composition/GBCAInstanceByABDY/SpecificationOverRoundAlphabet.lean`, whose
 `GBCA.ByABDY.gbcaLabelMap` and `GBCA.ByABDY.specificationOverRoundAlphabet` read the
 graded-agreement specification over the family alphabet the round speaks, `ImplementationByAFW/System.lean` instantiates
-`Implementation/System.lean`, and `ImplementationByAFW/CompositionChain.lean` imports `Results.lean`
-for the shared inclusions from `hybrid` up. Nothing in the protocol chain imports a gather-based
-file, so either chain reads standalone.
+`Implementation/System.lean`, and `ImplementationByAFW/CompositionChain.lean` imports
+`Composition/HybridAndSubstitution.lean` for `hybrid`, the system its third stage lands on. No file
+of the protocol chain imports a gather-based one, and `Results.lean` is where the two chains meet,
+so either chain reads standalone below it.
 
 ## Suggested first read
 
@@ -343,7 +344,7 @@ file, so either chain reads standalone.
 `HybridRefinesSpecification/Relation.lean`'s module docstring →
 `ImplementationByABDY/System.lean`'s (the system the headlines are about) →
 `Composition/HybridAndSubstitution.lean`'s (the system the core simulation starts from) →
-`Results.lean`, whose docstring names the three steps of the chain and their files. Follow
+`Results.lean`, whose docstring names the steps of both chains and their files. Follow
 it into the statements along `ABDY.protocolSimulation` → `ABDY.substitutionSimulation` →
 `hybridRefinesSpecification`, with `Composition/ABAState.lean`'s `ABAState` beside the last. That is
 roughly 700 lines of reading and gives the full statement-level picture; descend into the GBCA and
