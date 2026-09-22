@@ -353,7 +353,7 @@ A sub-protocol may be exchanged for its specification where it is a component of
 The component boundary is where the chain passes from implementation to specification: $\abdy{\mathrm{protocol}}(P)$ is the system that runs, everything above it is specification, and the first step is accordingly an inclusion.
 The composed system holds one graded-agreement instance per round at every moment, and a round instance carries no termination flag, so it answers a send or a delivery at a process the protocol has terminated (D22).
 Graded agreement is a parallel component of the composed system, which is what the substitution congruence consumes.
-See \leanmodule{Leslie2Protocols/ABA/Composition/GBCAInstanceByABDY} and \leanmodule{Leslie2Protocols/ABA/Composition/HybridAndSubstitution}.
+See \leanmodule{Leslie2Protocols/ABA/Composition/GBCAInstanceByABDY/Instance}, \leanmodule{Leslie2Protocols/ABA/Composition/GBCAInstanceByABDY/SpecificationOverRoundAlphabet}, \leanmodule{Leslie2Protocols/ABA/Composition/GBCAInstanceByABDY/StepInversion}, \leanmodule{Leslie2Protocols/ABA/Composition/GBCAInstanceByABDY/ProjectsOntoImplementation}, \leanmodule{Leslie2Protocols/ABA/Composition/GBCAInstanceByABDY/Substitution}, \leanmodule{Leslie2Protocols/ABA/Composition/RoundFamilyOwnedLabels} and \leanmodule{Leslie2Protocols/ABA/Composition/HybridAndSubstitution}.
 
 \input{nodes-min/def-aba-gbca-instance-by-abdy}
 \input{nodes-min/def-aba-composed}

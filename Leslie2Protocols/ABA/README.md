@@ -237,8 +237,19 @@ system over them, and the hybrid.
 |---|---|---|
 | `Composition/ABAState.lean` | 384 | The ABA state as one object: the round-loop records beside the DECIDED network, with the accessors the invariant is stated in. |
 | `Composition/Components.lean` | 847 | The extended alphabet `ExtendedLabel n` at ABDY22's messages, the coin oracle read along its label pullback, the round loop of one process, and the ABA network — the pieces the two compositions are built from. |
-| `Composition/GBCAInstanceByABDY.lean` | 1670 | **The round's graded-agreement instance** and the licence to replace it, `instanceSubstitution`. |
-| `Composition/HybridAndSubstitution.lean` | 699 | **`ABDY.composed`**, **`ABDY.substitutionSimulation`**: the same protocol read as four components, one round instance per round retained at every moment, and that graded-agreement component then replaced by its specification under the four congruences. |
+| `Composition/HybridAndSubstitution.lean` | 700 | **`ABDY.composed`**, **`ABDY.substitutionSimulation`**: the same protocol read as four components, one round instance per round retained at every moment, and that graded-agreement component then replaced by its specification under the four congruences. |
+| `Composition/RoundFamilyOwnedLabels.lean` | 84 | The routing table of the round-indexed family, evaluated: `GBCA.ByABDY.roundOwnsLabel` and `GBCA.ByABDY.isFailLabel` at every label of the extended alphabet, which is what discharges the routing premises of the composed system by `simp`. |
+
+**`ABA/Composition/GBCAInstanceByABDY/`** — the round's graded-agreement instance, and the licence
+to replace it by the graded-agreement specification.
+
+| file | lines | what it is |
+|---|---|---|
+| `Composition/GBCAInstanceByABDY/Instance.lean` | 648 | **The round's graded-agreement instance**: `n` corruption-blind local programs beside the round's own network, the instance-internal alphabet that carries their two rendezvous, the round-indexed family `gbcaInstanceFamily`, and the readers and builders of one instance transition. |
+| `Composition/GBCAInstanceByABDY/ProjectsOntoImplementation.lean` | 245 | `composition_projects`: every transition of the round instance is a transition of the round's implementation at that same state, one step for one step, with no stuttering. One axiom check. |
+| `Composition/GBCAInstanceByABDY/SpecificationOverRoundAlphabet.lean` | 184 | `GBCA.ByABDY.specificationOverRoundAlphabet`: the graded-agreement specification read along `GBCA.ByABDY.gbcaLabelMap`, which identifies the three Byzantine handshake rows and the call loop with the specification labels they stand for, with the sections along which a weak run of the specification is read back over the round's interface. |
+| `Composition/GBCAInstanceByABDY/StepInversion.lean` | 522 | The transitions of the round instance read off their labels: one program's row and the network's row per label class, the round records beside the network state read as one implementation state, the two inversions of the composition, and the network's row off a round-tagged label. |
+| `Composition/GBCAInstanceByABDY/Substitution.lean` | 127 | **`instanceSubstitution`**: the licence to replace the round instance by the graded-agreement specification, with the broadcast corruption act at the round's alphabet and the two premises the family lift consumes. One axiom check. |
 
 **`ABA/GBCA/AFW/`** — the two-gather round and the three tiers that carry it.
 
@@ -298,11 +309,11 @@ reaches it.
 
 The pieces both compositions are built from are in `Composition/Components.lean`, over the
 alphabet of `Implementation/Alphabet.lean`. `ImplementationByABDY/System.lean` and
-`Composition/GBCAInstanceByABDY.lean` each import it and neither imports the other, so the
+`Composition/GBCAInstanceByABDY/Instance.lean` each import it and neither imports the other, so the
 two systems of the protocol are assembled independently over one set of components.
 `Implementation/System.lean` sits beside `Composition/Components.lean` over the same
 alphabet and imports no implementation, which is what lets both implementations instantiate
-it. The specification family — `Composition/GBCAInstanceByABDY.lean`,
+it. The specification family — `Composition/GBCAInstanceByABDY/`,
 `Composition/HybridAndSubstitution.lean` and the core simulation above them — never
 imports `ImplementationByABDY/System.lean`; the protocol enters only at
 `ImplementationByABDY/Simulation.lean`, which is where the two systems meet, and
@@ -311,9 +322,10 @@ imports `ImplementationByABDY/System.lean`; the protocol enters only at
 The gather-based files form their own stack over `Vocabulary/ProcessAndNetworkState.lean` and
 `GBCA/Specification.lean`, meeting the rest of the development in four places:
 `GBCA/AFW/Counting.lean` reads the shared round alphabet, `GBCA/AFW/Composition.lean` imports
-`Composition/GBCAInstanceByABDY.lean`, whose `GBCA.ByABDY.gbcaLabelMap` and
-`GBCA.ByABDY.specificationOverRoundAlphabet` read the graded-agreement specification over the family
-alphabet the round speaks, `ImplementationByAFW/System.lean` instantiates
+`Composition/GBCAInstanceByABDY/Instance.lean` and `GBCA/AFW/RefinesSpecification.lean` imports
+`Composition/GBCAInstanceByABDY/SpecificationOverRoundAlphabet.lean`, whose
+`GBCA.ByABDY.gbcaLabelMap` and `GBCA.ByABDY.specificationOverRoundAlphabet` read the
+graded-agreement specification over the family alphabet the round speaks, `ImplementationByAFW/System.lean` instantiates
 `Implementation/System.lean`, and `ImplementationByAFW/CompositionChain.lean` imports `Results.lean`
 for the shared inclusions from `hybrid` up. Nothing in the protocol chain imports a gather-based
 file, so either chain reads standalone.

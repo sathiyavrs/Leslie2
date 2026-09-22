@@ -6,7 +6,7 @@ Authors: Sathiya / Claude
 
 import Leslie2Protocols.ABA.Gather.CompositionStepInversion
 import Leslie2Protocols.ABA.GBCA.AFW.Counting
-import Leslie2Protocols.ABA.Composition.GBCAInstanceByABDY
+import Leslie2Protocols.ABA.Composition.GBCAInstanceByABDY.Instance
 import Leslie2Protocols.Framework.Relabel
 import Leslie2Protocols.Framework.SynchronisedProduct
 import Leslie2Protocols.Framework.LoopsAndInstanceFamilies

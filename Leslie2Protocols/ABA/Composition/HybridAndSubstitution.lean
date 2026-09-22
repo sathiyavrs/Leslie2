@@ -5,7 +5,8 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.Composition.Components
-import Leslie2Protocols.ABA.Composition.GBCAInstanceByABDY
+import Leslie2Protocols.ABA.Composition.GBCAInstanceByABDY.Substitution
+import Leslie2Protocols.ABA.Composition.RoundFamilyOwnedLabels
 import Leslie2.Results
 
 /-!
@@ -34,7 +35,7 @@ the network is the DECIDED sets beside the
 The four components speak the extended alphabet `Composition.ExtendedLabel n`, the rendezvous labels
 are hidden, and the result is read back over `Label n`. The round loops, the ABA network and the
 lifted oracle are defined in `ABA/Composition/Components.lean`, the round instances in
-`ABA/Composition/GBCAInstanceByABDY.lean`; the composition pipeline `ABDY.composedExtended` /
+`ABA/Composition/GBCAInstanceByABDY/Instance.lean`; the composition pipeline `ABDY.composedExtended` /
 `ABDY.composedHidden` / `ABDY.composed` is the first section below.
 
 The second inclusion is the substitution, which replaces each round's graded-agreement instance by
@@ -59,7 +60,7 @@ instance answers at every moment (D22).
 ## The authorisation relocation (D11)
 
 A round instance carries no `k ∈ F` guard on the handshake-row labels `byzantineCallG`,
-`byzantineCallGLoop` and `byzantineRetG` (`Composition/GBCAInstanceByABDY.lean`, D11). A
+`byzantineCallGLoop` and `byzantineRetG` (`Composition/GBCAInstanceByABDY/Instance.lean`, D11). A
 handshake-row label stays visible at the instance boundary and is authorised outside it. Here
 `ABANetwork` is that outside, and it carries the guard on its own copy of the corrupted set.
 The two copies are written by one broadcast: `fail` reaches every round's
@@ -78,7 +79,7 @@ its components (`composedExtended_visible_step`, `composedExtended_tau_gbca`,
 account also runs in the inverse direction, from a composite transition back into the rows its
 components contributed, and a labelled transition takes one of three routes through the two hiding
 frames. The per-component rows these consume and produce are the tables of
-`ABA/Composition/Components.lean` and `ABA/Composition/GBCAInstanceByABDY.lean`.
+`ABA/Composition/Components.lean` and `ABA/Composition/GBCAInstanceByABDY/Instance.lean`.
 
 The core simulation of `ABA/HybridRefinesSpecification/Simulation.lean` runs from `hybrid` on this
 vocabulary, and the non-vacuity witnesses of `ABA/HybridRefinesSpecification/NonVacuity.lean` are

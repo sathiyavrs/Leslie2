@@ -115,7 +115,8 @@ conformance of correct multicasts (`echo_confirmed`, `vote_input`,
   `F` or genuine holders, and the count is monotone under every step.
 
 `Framework/FamilySimulation.lean` is imported for the downstream tree: the family
-congruence `ForwardSimulation.family` reaches `ABA/Composition/GBCAInstanceByABDY.lean` and
+congruence `ForwardSimulation.family` reaches
+`ABA/Composition/GBCAInstanceByABDY/Substitution.lean` and
 `ABA/Composition/HybridAndSubstitution.lean` along this file, which also supplies the broadcast
 ingredient that congruence consumes (`specificationRelation_corrupt`).
 -/
@@ -1964,7 +1965,8 @@ corruption projections (`corrupt_call`/`corrupt_ret`/`corrupt_excluded`/`corrupt
 `ABA/GBCA/Specification.lean`; the two `corrupt` functions stay equal by
 `implementationSpecification_corrupt_F_eq`. The statement is proved directly rather than through
 `refinesSpecification`, whose `fail` case only yields an existential match. Its consumer is the
-round instance's family lifting (`ABA/Composition/GBCAInstanceByABDY.lean`). -/
+round instance's family lifting
+(`ABA/Composition/GBCAInstanceByABDY/Substitution.lean`). -/
 
 /-- **Broadcast compatibility**: `specificationRelation` is preserved by the synchronized corruption
 of both systems. The two `corrupt`s share the guard `id ∉ F ∧ |F| < f` and `specificationRelation`

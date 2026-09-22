@@ -59,7 +59,7 @@ def isNumbered (start : String) (s : String) : Bool :=
 def isAuxiliaryComponent (s : String) : Bool :=
   s == "_auxLemma" || s == "_cstage1" || s == "_cstage2" || s == "_sunfold" ||
     s == "_unsafe_rec" || isNumbered "proof_" s || isNumbered "match_" s ||
-    isNumbered "eq_" s || isNumbered "_eq_" s
+    isNumbered "eq_" s || isNumbered "_eq_" s || isNumbered "_sparseCasesOn_" s
 
 /-- Whether any component of `n` marks an auxiliary constant. -/
 def hasAuxiliaryComponent : Name → Bool

@@ -7,7 +7,7 @@ network, in parallel with `2n` broadcast instances read along pullbacks naming t
 (`Gather.instanceOverBroadcasts`, `ABA/Gather/Composition.lean`); a round is `n` graded-agreement
 programs beside the round's network, in parallel with two gathers (`GBCA.ByAFW.roundOverGathers`,
 `ABA/GBCA/AFW/Composition.lean`). The protocol chain's round, `GBCA.ByABDY.composition`
-(`ABA/Composition/GBCAInstanceByABDY.lean`), is the template every level copies: components
+(`ABA/Composition/GBCAInstanceByABDY/Instance.lean`), is the template every level copies: components
 synchronise on the instance's own events, the events are hidden, and the result is read back over
 the instance's interface. `DESIGN-GatherComposition.md` is the account of the stack;
 `DESIGN-Composition.md` is the account of what each component owns.

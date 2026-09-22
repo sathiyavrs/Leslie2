@@ -203,7 +203,7 @@ per-sender sent sets and the corrupted set. The instance's state below is their
 pair, so every field of the algorithm is a field of one local state or the other.
 
 The network state carries the name of the instance that composes it beside the
-programs (`ABA/Composition/GBCAInstanceByABDY.lean`). -/
+programs (`ABA/Composition/GBCAInstanceByABDY/Instance.lean`). -/
 
 /-- The round record of one process: its own local state and the messages delivered to it, indexed
 by sender. There is no record of what it has sent — the sender's sent lives in the network. -/

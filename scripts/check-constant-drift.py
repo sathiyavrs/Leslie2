@@ -51,6 +51,8 @@ def parse(text: str) -> dict[str, list[tuple[str, tuple[str, ...]]]]:
         if not line.strip():
             continue
         fields = line.split("\t")
+        if "._sparseCasesOn_" in fields[0]:
+            continue  # a match splitter, realized in whichever module first needs it
         if len(fields) != 2 + len(COLUMNS):
             raise SystemExit(f"error: a dump row has {len(fields)} fields: {line!r}")
         rows[fields[0]].append((fields[1], tuple(fields[2:])))
