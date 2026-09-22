@@ -182,13 +182,16 @@ coin the protocol calls.
 
 **`ABA/Implementation/`** — the shape of a protocol as it runs, written once and
 parametric in the graded-agreement implementation: the process programs, the network
-adversary, the adversary's ghost record, and the composition of the three beside the coin
-oracle.
+adversary, the adversary's ghost record, the composition of the three beside the coin
+oracle, and the lemmas that read a transition off its label.
 
 | file | lines | what it is |
 |---|---|---|
 | `Implementation/Alphabet.lean` | 206 | The rendezvous alphabet `ExtendedLabel n M` the implementation speaks, parametric in the round message type, with the label pullback the coin oracle is read along. |
-| `Implementation/System.lean` | 1518 | **The implementation of a protocol**, parametric in the graded-agreement implementation: the shared rows of a program and of the network, the adversary's per-round ghost record with its update and its output (D30), the pipeline that composes them beside the coin oracle, and the inversion lemmas that read a row off its label. |
+| `Implementation/CompositeTransitions.lean` | 228 | The transitions of the implementation, read off their labels: the pipeline `relabel ∘ abstract ∘ parallel ∘ parallel ∘ synchronisedProduct` unfolded to the rows of the process group, of the network and of the coin oracle, and the constraint a graded-agreement return places on the bound bit its label carries. |
+| `Implementation/NetworkStateWritesAndErasures.lean` | 217 | The field algebra of the network's four writes: a round multicast, a DECIDED multicast, corruption and the ghost write, each read down to the fields of the state it delivers. With them the two erasures, `NetworkState.forgetGhost` to the state over the trivial ghost `Unit` and `forgetBound` to the label with the announced bound bit fixed at `false`. |
+| `Implementation/StepInversion.lean` | 490 | The transitions of one program and of the network, read off their labels: the participant's row as its guards together with the Dirac it produces, the idle row of a non-participant as the identity, and the determinacy of both tables. |
+| `Implementation/System.lean` | 687 | **The implementation of a protocol**, parametric in the graded-agreement implementation: the shared rows of a program and of the network, the adversary's per-round ghost record with its update and its output (D30), the pipeline that composes them beside the coin oracle, and `IsRoundRuleTable`, what an implementation states about its own rows. |
 
 **`ABA/ReliableBroadcast/`** — the reliable-broadcast specification and Bracha's
 implementation of it.
@@ -294,8 +297,8 @@ system.
 |---|---|---|
 | `ImplementationByAFW/CompositionChain.lean` | 425 | **The gather-based chain**: the families `roundFamilyOverBracha`, `roundFamilyOverBroadcastSpecification` and `roundFamilyOverGatherSpecifications`, the three stages `AFW.composed ⊑ AFW.composedOverBroadcastSpecification ⊑ AFW.composedOverGatherSpecifications ⊑ hybrid`, and the composed-level headlines `AFW.composed_refines`, `AFW.composed_safe`, `AFW.chainSimulationOfComposed`. Four axiom checks. |
 | `ImplementationByAFW/RoundProjection.lean` | 876 | `AFW.roundProjection`, the view that computes a composed state from the implementation, the relation `AFW.ProtocolRelation` it carries, and the builders that assemble a transition of the composed system. |
-| `ImplementationByAFW/RoundProjectionStep.lean` | 3610 | The view of the composed round after one implementation row: for each row of the implementation, the round's view after it is the view before it with the composed round's own effect applied. |
-| `ImplementationByAFW/Simulation.lean` | 2378 | **`AFW.protocolSimulation`**, **`AFW.main`**: the gather-based protocol carried into `AFW.composed` along a relation that computes the composed state from the implementation, the ghost record included, and the headlines `AFW.refines`, `AFW.main`, `AFW.chainSimulation` it yields. Five axiom checks. |
+| `ImplementationByAFW/RoundProjectionStep.lean` | 3613 | The view of the composed round after one implementation row: for each row of the implementation, the round's view after it is the view before it with the composed round's own effect applied. |
+| `ImplementationByAFW/Simulation.lean` | 2379 | **`AFW.protocolSimulation`**, **`AFW.main`**: the gather-based protocol carried into `AFW.composed` along a relation that computes the composed state from the implementation, the ghost record included, and the headlines `AFW.refines`, `AFW.main`, `AFW.chainSimulation` it yields. Five axiom checks. |
 | `ImplementationByAFW/System.lean` | 921 | **The gather-based protocol as it runs**: the implementation at AFW25's two-gather construction — the tagged message type collapsing a round's `4n + 2` network states into one sent-set family, the process-major round record, the adversary's ghost record of the two cores and the bound bit, and the 23 round rows. |
 
 **`ABA/GhostErasure/`** — the ghost-free system of each protocol, and the erasure that

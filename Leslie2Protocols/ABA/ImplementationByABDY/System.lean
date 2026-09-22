@@ -5,7 +5,7 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.Composition.Components
-import Leslie2Protocols.ABA.Implementation.System
+import Leslie2Protocols.ABA.Implementation.CompositeTransitions
 
 /-!
 # The protocol as it runs

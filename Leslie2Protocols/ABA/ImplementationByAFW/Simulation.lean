@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
+import Leslie2Protocols.ABA.Implementation.CompositeTransitions
 import Leslie2Protocols.ABA.ImplementationByAFW.RoundProjectionStep
 import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 

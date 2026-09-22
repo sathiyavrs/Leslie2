@@ -35,8 +35,8 @@ the network is the DECIDED sets beside the
 The four components speak the extended alphabet `Composition.ExtendedLabel n`, the rendezvous labels
 are hidden, and the result is read back over `Label n`. The round loops, the ABA network and the
 lifted oracle are defined in `ABA/Composition/Components.lean`, the round instances in
-`ABA/Composition/GBCAInstanceByABDY/Instance.lean`; the composition pipeline `ABDY.composedExtended` /
-`ABDY.composedHidden` / `ABDY.composed` is the first section below.
+`ABA/Composition/GBCAInstanceByABDY/Instance.lean`; the composition pipeline
+`ABDY.composedExtended` / `ABDY.composedHidden` / `ABDY.composed` is the first section below.
 
 The second inclusion is the substitution, which replaces each round's graded-agreement instance by
 that round's specification. `hybrid` is the system that results, read at the protocol shape. The
