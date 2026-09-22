@@ -25,12 +25,8 @@ open Implementation Composition
 
 variable {P : Parameters}
 
-/-- `bindUnset` (the GBCA family's only genuine `τ`-step): excludes one bit of round `r`'s
-exclusion set. `down_settled`'s round-`r` corner needs "a call at round `r` implies current
-round `≥ r`", a fact `Invariant` doesn't carry explicitly — handed off. The value-transport
-corners lean on the exclusion's own D15 guard: the spared bit `!b` keeps `f + 1` F-blind call
-support at round `r`, whose derived correct caller determines `!b` at every standing
-commitment. -/
+/-- The graded-agreement `τ` rows: `Invariant` is preserved and the abstract state is unchanged
+at `bindUnset`. -/
 theorem Invariant.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (r : ℕ)
     {μr : PMF (GBCA.SpecState P.n)} (hstep : GBCA.Step P r (g r) .tau μr)

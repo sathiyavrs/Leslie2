@@ -25,11 +25,8 @@ open Implementation Composition
 
 variable {P : Parameters}
 
-/-- `fail`: a genuine synchronised corruption of all three components, under the row's own guards —
-the named process is not corrupted yet and the budget has room. `F` only grows, and every other
-projection is untouched, so correctness hypotheses transfer via `F`-monotonicity. The two guards are
-what puts the replacement flag and the corrupted set together (I0, D23): the flag goes up at `id`
-and `F` gains exactly `id`. -/
+/-- `fail`: `Invariant` is preserved and the abstract state is unchanged at a synchronised
+corruption of all three components. -/
 theorem Invariant.step_fail {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (id : Fin P.n)
     (hnew : id ∉ c.F) (hbud : c.F.card < P.f) :

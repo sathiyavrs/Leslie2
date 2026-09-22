@@ -23,9 +23,8 @@ open Implementation Composition
 
 variable {P : Parameters}
 
-/-- `callABA`: either a never-corrupted process's genuine external input (guarded by
-`input = none`, so `input_called` rules out the "already called GBCA" corner) or the idle
-self-loop. -/
+/-- `callABA`: `Invariant` is preserved and the abstract state is unchanged at a call of the ABA
+interface. -/
 theorem Invariant.step_callABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (id : Fin P.n) (b : Bool)
     {μc : PMF (ABAState P)}

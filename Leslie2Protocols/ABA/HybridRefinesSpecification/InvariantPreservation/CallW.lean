@@ -18,7 +18,9 @@ and neither inspected by `Invariant` (`Invariant.step_callW_dirac`). The resolvi
 (`Invariant.step_callW_resolve`), where the clauses reading `(w r).val` come back from the
 threshold: `Invariant.exists_correct_wccCaller` supplies a never-corrupted caller of round `r`,
 whose `wcc_called`, `wcc_callRound` and `wccCalled_witness` carry `wcc_bound`, `wcc_order` and
-`flip_grade2Lock`.
+`flip_grade2Lock`. `agree_locked`'s round-`r` corner is vacuous: `round_flip` at a never-corrupted
+process past round `r` contradicts `val = ⊥`. The record of `id` and the write to `val` compose
+into one update, `Function.update` being idempotent at the round it writes.
 -/
 
 namespace PLTS
@@ -45,13 +47,8 @@ theorem Invariant.exists_correct_wccCaller {P : Parameters} {g : ℕ → GBCA.Sp
   rw [WCC.SpecState.threshold] at hq
   omega
 
-/-- The coin resolution the resolving call carries: round `r`'s caller count has passed `f`
-at an unresolved `val`, and the drawn outcome is written to `val`. The clauses that read
-`(w r).val` are re-established from the threshold, which supplies a never-corrupted caller of
-round `r` (`Invariant.exists_correct_wccCaller`); that caller's `wcc_called`, `wcc_callRound` and
-`wccCalled_witness` carry `wcc_bound`, `wcc_order` and `flip_grade2Lock` respectively.
-`agree_locked`'s round-`r` corner is vacuous, since `round_flip` at a correct process past round `r`
-contradicts `val = ⊥`. -/
+/-- The resolving row of `callW`: `Invariant` is preserved when the drawn outcome is written to
+`val` at a round whose caller count has passed `f`. -/
 theorem Invariant.step_callW_resolve {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (r : ℕ)
     (hq : (w r).threshold P) (hv : (w r).val = .bot) (o : CoinOutcome) :
@@ -145,9 +142,8 @@ theorem Invariant.step_callW_resolve {P : Parameters} {g : ℕ → GBCA.SpecStat
   · intro r' id hmem hcalled
     rw [hCalledEq] at hcalled; exact hI.wccCalled_witness r' id hmem hcalled
 
-/-- The Dirac rows of `callW` — the input-enabledness loop and the recording call. The WCC
-instance touches only `.called`, and only at `id`; the core touches only `.phase`, and only at
-`id`. `Invariant` inspects neither, so this is pure bookkeeping. -/
+/-- The Dirac rows of `callW`, the input-enabledness loop and the recording call: `Invariant` is
+preserved and the abstract state is unchanged. -/
 theorem Invariant.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (r : ℕ) (id : Fin P.n)
     {wr' : WCC.SpecState P.n} (hWF : wr'.F = (w r).F) (hWval : wr'.val = (w r).val)
@@ -423,11 +419,8 @@ theorem Invariant.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState 
       · left; exact hg
       · right; exact DissentWitness.transport rfl rfl (fun h => h) (fun id' => (hCprocs id').1) hd
 
-/-- `callW`, assembled from the three rows of `WCC.step_callW_inversion`. The loop and the
-recording call leave `val` and `F` alone, so both are `Invariant.step_callW_dirac`. The resolving
-call records `id` by that same bookkeeping and then writes the drawn outcome to `val`
-(`Invariant.step_callW_resolve`); the two updates compose into one because `Function.update` is
-idempotent at the round it writes. -/
+/-- `callW`: `Invariant` is preserved and the abstract state is unchanged at a call of the
+coin. -/
 theorem Invariant.step_callW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (r : ℕ) (id : Fin P.n)
     {μw' : PMF (WCC.SpecState P.n)} (hstepW : WCC.Step P r (w r) (.callW r id) μw')

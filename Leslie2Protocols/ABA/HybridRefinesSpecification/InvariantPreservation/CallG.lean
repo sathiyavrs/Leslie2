@@ -26,12 +26,8 @@ open Implementation Composition
 
 variable {P : Parameters}
 
-/-- `callG`: the GBCA instance only ever touches `.call` (never `.F`/`.excluded`/`.grade`), the
-core only ever touches `.phase` at `id` (never `.input`/`.estimate`/`.round`). `input_gbcaRound0`/
-`input_called`'s correct-fresh-call corner needs "`estimate = input` before any round-`0` return"
-(phase/input coherence, not an explicit `Invariant` conjunct) — handed off; `grade2Lock_commit`'s
-second conjunct is derived cleanly from its own third conjunct plus the correct call guard
-`estimate = b`. -/
+/-- `callG`: `Invariant` is preserved and the abstract state is unchanged at a call of the
+graded-agreement specification. -/
 theorem Invariant.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (r : ℕ) (id : Fin P.n) (b : Bool)
     {μr : PMF (GBCA.SpecState P.n)} (hstepG : GBCA.Step P r (g r) (.callG r id b) μr)

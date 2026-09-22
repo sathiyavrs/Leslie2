@@ -11,7 +11,7 @@ import Leslie2Protocols.ABA.ImplementationByAFW.RoundProjectionStep.GatherAndBro
 import Leslie2Protocols.ABA.ImplementationByAFW.RoundProjectionStep.GatherSend
 import Leslie2Protocols.ABA.ImplementationByAFW.RoundProjectionStep.GradedAgreementCall
 import Leslie2Protocols.ABA.ImplementationByAFW.RoundProjectionStep.OtherRoundsUnchanged
-import Leslie2Protocols.ABA.ImplementationByAFW.RoundProjectionStep.ProtocolRelationClauses
+import Leslie2Protocols.ABA.ImplementationByAFW.RoundProjectionStep.ProtocolRelationConjuncts
 import Leslie2Protocols.ABA.ImplementationByAFW.RoundProjectionStep.ReturnThenCall
 import Leslie2Protocols.ABA.ImplementationByAFW.RoundProjectionStep.ViewAfterOneWrite
 
@@ -29,7 +29,7 @@ updaters `GBCA.ByAFW.setPrograms`, `GBCA.ByAFW.setBound`, `GBCA.ByAFW.setFirstGa
 `Gather.setBindBroadcasts` and `Gather.setCore` exactly as the composed rows write them. Three rows
 are answered by two events of the composed round, through a named intermediate state:
 `RoundProjectionStep/ReturnThenCall.lean` holds two of them and `RoundProjectionStep/Delivery.lean`
-the third. `RoundProjectionStep/ProtocolRelationClauses.lean` holds the two conjuncts of
+the third. `RoundProjectionStep/ProtocolRelationConjuncts.lean` holds the two conjuncts of
 `AFW.ProtocolRelation` that no frame lemma supplies.
 `ABA/ImplementationByAFW/SimulationRows.lean` answers each row of the implementation from these.
 -/

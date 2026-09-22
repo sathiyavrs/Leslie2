@@ -23,10 +23,8 @@ open Implementation Composition
 
 variable {P : Parameters}
 
-/-- `retABA`: a never-corrupted process's return only sets `returned`, a field `Invariant` never
-inspects, so `Invariant` transfers verbatim modulo the pointwise-unchanged projections of
-`processes`. A corrupted process's return is a state identity, and `Invariant` transfers outright.
--/
+/-- `retABA`: `Invariant` is preserved and the abstract state is unchanged at a return of the ABA
+interface. -/
 theorem Invariant.step_retABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
     {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (id : Fin P.n) (b : Bool)

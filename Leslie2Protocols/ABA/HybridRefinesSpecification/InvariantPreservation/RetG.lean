@@ -74,11 +74,8 @@ theorem Invariant.grade0Lock_chain_to_earlier_rounds {P : Parameters} {g : ℕ �
   | base => exact id
   | succ r' hrr' ih => intro h; exact ih (hI.grade0Lock_chain r' h)
 
-/-- `retG`: the GBCA instance only ever touches `.grade`/`.ret` (never `.F`/`.excluded`/`.call`;
-`.ret` isn't inspected by `Invariant`), the core only ever touches `.estimate`/`.lastGrade`/`.phase`
-at `id` (never `.round`/`.input`). The genuinely hard obligations — `grade2Lock_commit`'s *new*
-round-`r` commitment and `agree_locked`'s est-transfer at `id` — are handed off; they need
-GBCA's own Graded-Agreement safety property, not local bookkeeping. -/
+/-- `retG`: `Invariant` is preserved and the abstract state is unchanged at a return of the
+graded-agreement specification. -/
 theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (r : ℕ) (id : Fin P.n) (out : GBCAOutput)
     (bnd : Bool)

@@ -27,13 +27,8 @@ open Implementation Composition
 
 variable {P : Parameters}
 
-/-- `retW`: `g` is untouched entirely; the WCC instance only touches `.ret` (not inspected by
-`Invariant`); the core's `stepRound` touches `estimate`/`lastGrade`/`round`/`phase` at `id` and
-conditionally `decidedSent id` (on a grade-2). `round_bound`'s freshly-included round is
-covered by `wcc_bound` (the coin having resolved closes the round); the DECIDED-on-grade-2
-witness for `decided_source`, and the `grade2Lock_commit`/`agree_locked` extension to `id`'s new
-round, need the cross-round `lastGrade`-to-`(g r).grade/.excluded` correlation (GBCA Graded
-Agreement) that isn't a local `Invariant` consequence — handed off. -/
+/-- `retW`: `Invariant` is preserved and the abstract state is unchanged at a return of the
+coin. -/
 theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (r : ℕ) (id : Fin P.n) (b : Bool)
     {μw' : PMF (WCC.SpecState P.n)} (hstepW : WCC.Step P r (w r) (.retW r id b) μw')

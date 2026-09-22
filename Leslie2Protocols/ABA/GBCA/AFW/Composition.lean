@@ -4,13 +4,12 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.Gather.CompositionStepInversion
+import Leslie2Protocols.ABA.Gather.SpecificationOverInstanceAlphabet
 import Leslie2Protocols.ABA.GBCA.AFW.Counting
 import Leslie2Protocols.ABA.Composition.GBCAInstanceByABDY.Instance
 import Leslie2Protocols.Framework.Relabel
 import Leslie2Protocols.Framework.SynchronisedProduct
 import Leslie2Protocols.Framework.LoopsAndInstanceFamilies
-import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 
 /-!
 # The graded-agreement round, composed

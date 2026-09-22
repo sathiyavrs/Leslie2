@@ -4,10 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.ImplementationByAFW.RoundProjectionStep.ViewAfterOneWrite
+import Leslie2Protocols.ABA.ImplementationByAFW.RoundProjection
 
 /-!
-# The two clauses of the protocol relation that are not projections
+# The two conjuncts of the protocol relation that are not projections
 
 `BroadcastReturnsInvariant` and `BoundInvariant` are the conjuncts of `AFW.ProtocolRelation` that
 no frame lemma supplies. `broadcastReturnsInvariant_of` carries the first across a row from the
@@ -25,7 +25,7 @@ open Implementation Composition GBCA.ByABDY
 
 variable {P : Parameters}
 
-/-! ### The two clauses that are not projections
+/-! ### The two conjuncts that are not projections
 
 `BroadcastReturnsInvariant` and `BoundInvariant` are the conjuncts of `AFW.ProtocolRelation` that no
 frame lemma supplies. Each survives a row instance by instance: a broadcast instance either stands
