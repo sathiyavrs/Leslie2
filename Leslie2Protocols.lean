@@ -16,9 +16,11 @@ import Leslie2Protocols.ABA.Gather.BroadcastSubstitution
 import Leslie2Protocols.ABA.Gather.CommonCoreAtSpecification
 import Leslie2Protocols.ABA.Gather.CommonCoreCounting
 import Leslie2Protocols.ABA.Gather.Composition
+import Leslie2Protocols.ABA.Gather.CompositionStepInversion
 import Leslie2Protocols.ABA.Gather.MessagesAndCommonCore
 import Leslie2Protocols.ABA.Gather.RefinesSpecification
 import Leslie2Protocols.ABA.Gather.Specification
+import Leslie2Protocols.ABA.Gather.SpecificationOverInstanceAlphabet
 import Leslie2Protocols.ABA.Gather.StepOverBracha
 import Leslie2Protocols.ABA.Gather.StepOverBroadcastSpecification
 import Leslie2Protocols.ABA.GhostErasure.GhostFreeSystem

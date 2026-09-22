@@ -7,6 +7,8 @@ sub-protocol compositions (`ABA/Vocabulary/ProcessAndNetworkState.lean`,
 `ABA/ReliableBroadcast/BrachaComposition.lean`,
 `ABA/ReliableBroadcast/BrachaImplementation.lean`, `ABA/Gather/Specification.lean`,
 `ABA/Gather/MessagesAndCommonCore.lean`, `ABA/Gather/Composition.lean`,
+`ABA/Gather/SpecificationOverInstanceAlphabet.lean`,
+`ABA/Gather/CompositionStepInversion.lean`,
 `ABA/Gather/StepOverBroadcastSpecification.lean`, `ABA/Gather/StepOverBracha.lean`), their
 refinements (`ABA/ReliableBroadcast/BrachaRefinesSpecification.lean`,
 `ABA/Gather/RefinesSpecification.lean`, `ABA/Gather/BroadcastSubstitution.lean`), the
