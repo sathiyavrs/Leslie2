@@ -27,9 +27,9 @@ A state of `composed P` is computed from a state of `protocol P`. The round loop
 oracle are shared objects, the ABA network is the DECIDED sets beside the corrupted set, and the
 round-`r` state is assembled by `roundProjection`. Assembling it undoes the two rearrangements the
 implementation performs. The local states are transposed back: an instance's local state vector at
-round `r` is read off the round records the `n` processes hold. And the sent sets are sliced: an
-instance's network state carries the messages of one tag, recovered from the adversary's single
-tagged sent family by `AFW.messagesOf`.
+round `r` is read off the round records the `n` processes hold. And the sent sets are recovered one
+tag at a time: an instance's network state carries the messages of its own tag, read off the
+adversary's single tagged sent family by `AFW.messagesOf`.
 
 ## What the broadcast instances returned, and the return flags
 
@@ -233,8 +233,8 @@ variable {P : Parameters}
 
 /-- The round-`r` state of the first gather instance, read off the implementation's state:
 the local state vectors transposed out of the round records the processes hold,
-the network states sliced out of the adversary's tagged sent sets, and the
-instance's core the first field of the adversary's ghost record. -/
+the network states recovered tag by tag from the adversary's tagged sent sets,
+and the instance's core the first field of the adversary's ghost record. -/
 noncomputable def firstGatherProjection (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n)
     (w : NetworkState P.n) (r : ℕ) : Gather.StateOverBracha P.n Bool :=
   ((fun i => gatherLocalState P Bool ((u i).2.roundRecord r).firstGather ((u i).2.roundRecord
@@ -286,6 +286,8 @@ noncomputable def roundProjection (P : Parameters) (u : ∀ _ : Fin P.n, AFW.Pro
     (w : NetworkState P.n) (r : ℕ) : GBCA.ByAFW.RoundStateOverBracha P.n :=
   ((fun j => programProjection ((u j).2.roundRecord r), (w.ghostRecord r).2.2),
     (firstGatherProjection P u w r, secondGatherProjection P u w r))
+
+/-! ### Reading the composed round's state off the view -/
 
 section Readers
 
@@ -750,8 +752,7 @@ view reads becomes a one-point update of the old one. Each lemma below is that
 observation at one component, stated over the `ite` that reading a written
 record produces. -/
 
-section Locals
-
+section LocalStates
 variable {j : Fin n} (Y : Fin n → RoundRecord n) (sr : RoundRecord n)
 
 theorem locals_firstGather_if :
@@ -799,8 +800,7 @@ theorem locals_secondGatherBindBroadcasts_if (k : Fin n) :
   rw [Function.update_apply]
   by_cases hi : i = j <;> simp [hi]
 
-end Locals
-
+end LocalStates
 /-! ### Runs of the graded-agreement family
 
 Three rows of the implementation are answered by two transitions of the composed system: the

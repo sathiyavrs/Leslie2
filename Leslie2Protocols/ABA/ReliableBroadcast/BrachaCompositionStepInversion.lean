@@ -207,11 +207,10 @@ theorem brachaInstanceExtended_tau_inversion {P : Parameters} {ldr : Fin P.n}
 
 Each lemma reads a row of the table off its label: the participant's row as its
 guards together with the Dirac it produces, and the idle row of a
-non-participant as the identity. The record and the distribution are variables,
-so `cases` unifies against any local state. -/
+non-participant as the identity. The state and the distribution are variables,
+so `cases` unifies against any state of the program. -/
 
-section ProcInversion
-
+section ProgramStepInversion
 variable {P : Parameters} {ldr j : Fin P.n} {p : LocalState P.n (ProcessRecord M) (Message M)}
   {ν : PMF (LocalState P.n (ProcessRecord M) (Message M))}
 
@@ -294,12 +293,10 @@ theorem programStep_deliver_foreign {i k : Fin P.n} {m : Message M} (hi : i ≠ 
   case deliverReceive => exact absurd rfl hi
   case deliverIdle => rfl
 
-end ProcInversion
-
+end ProgramStepInversion
 /-! ### The network's rules, by label class -/
 
-section NetInversion
-
+section NetworkStepInversion
 variable {P : Parameters} {ldr : Fin P.n} {w : NetworkState P.n (Message M)}
   {μ : PMF (NetworkState P.n (Message M))}
 
@@ -332,19 +329,19 @@ theorem networkStep_tau (h : NetworkStep P ldr w (Sum.inl (Sum.inl .tau)) μ) :
   cases h
   case byzantine j m hF => exact ⟨j, m, hF, rfl⟩
 
-end NetInversion
-
-/-! ### One state, two presentations
+end NetworkStepInversion
+/-! ### The write a row makes on the composed state
 
 The local states and the network state are the two components of `BrachaState`
 (`ABA/ReliableBroadcast/BrachaImplementation.lean`), so the instance and the rule table `BrachaStep`
 run on the same state and every rule of the one is a rule of the other read in the
-instance state's accessors. What the joint steps deliver, though, is a program
-function given pointwise — its value at the acting process, and its agreement
-with the old one elsewhere — where `BrachaStep` writes with `InstanceState.setProcess`.
-The lemmas here close that gap. -/
+instance state's accessors. A joint step delivers a program function pointwise: its value at the
+acting process, and its agreement with the old one elsewhere. A row of `BrachaStep` writes with
+`InstanceState.setProcess`. The lemmas here identify the two. -/
 
-section Frame
+section Writes
+
+/-! ### The writes that leave the sent sets alone -/
 
 section
 
@@ -377,6 +374,8 @@ theorem brachaInstance_corrupt (k : Fin P.n) :
     ((u, w.corrupt P k) : BrachaState P.n M) = InstanceState.corrupt P k (u, w) := rfl
 
 end
+
+/-! ### The writes that record or deliver a message, and the program group's row -/
 
 section
 
@@ -418,8 +417,7 @@ theorem programStep_update {ldr j : Fin P.n} {q : LocalState P.n (ProcessRecord 
 
 end
 
-end Frame
-
+end Writes
 /-! ### The rows of the instance
 
 Every transition of the instance is one row of `BrachaStep` at the same state,

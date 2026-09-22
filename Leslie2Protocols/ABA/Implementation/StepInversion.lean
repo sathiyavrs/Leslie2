@@ -72,10 +72,10 @@ theorem programStep_tau_terminate
 
 /-! ### One program's rules, by label class
 
-Each lemma reads a row of the table off its label: the participant's row as
-its guards together with the Dirac it produces, and the idle row of a
+Each lemma reads a row of the table off its label: the participant's row as its
+guards together with the Dirac it produces, and the idle row of a
 non-participant as the identity. The state and the distribution are variables,
-so `cases` unifies against any record. A participant's row carries the health
+so `cases` unifies against any state of the program. A participant's row carries the health
 guard `corrupted = false`, and on a label outside `actsAt j` the replaced
 program's self-loop is a second row on the same label (D23). -/
 
@@ -351,8 +351,7 @@ end Inversion
 
 /-! ### The network's rules, by label class -/
 
-section NetInversion
-
+section NetworkStepInversion
 variable {P : Parameters} {M G : Type} [DecidableEq M]
     {callPayload : Fin P.n → Bool → M}
     {ghostStep : ExtendedLabel P.n M → NetworkState P.n M G → G → G}
@@ -483,8 +482,7 @@ theorem networkStep_tau
   case byzantineGBCA => exact Or.inl ⟨_, _, _, by assumption, rfl⟩
   case byzantineDecided => exact Or.inr ⟨_, _, by assumption, rfl⟩
 
-end NetInversion
-
+end NetworkStepInversion
 end Implementation
 end ABA
 end PLTS

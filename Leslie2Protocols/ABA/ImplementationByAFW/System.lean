@@ -214,8 +214,9 @@ instance instInhabitedGhost (n : ℕ) : Inhabited (Ghost n) := ⟨(none, none, n
 /-- The state of the network. -/
 abbrev NetworkState (n : ℕ) : Type := Implementation.NetworkState n (Message n) (Ghost n)
 
-section Slicing
+/-! ### The messages of one tag -/
 
+section TaggedMessages
 variable {n : ℕ} {β : Type}
 
 /-- The messages of one tag, recovered from a tagged sent family along a
@@ -251,8 +252,7 @@ theorem secondGatherMessageOf_inj : ∀ a a' (b : Gather.Message n (Option Bool)
   intro a a' b h h'
   cases a <;> cases a' <;> simp_all [secondGatherMessageOf]
 
-end Slicing
-
+end TaggedMessages
 /-- The first gather's instance state of round `r`, read off the adversary's
 tagged sent sets and its corrupted set. The local states are the initial
 ones: `Gather.coreOf` reads the network state alone

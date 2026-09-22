@@ -39,12 +39,12 @@ open Implementation Composition
 
 /-! ### One program's rules, by label class
 
-Each lemma reads a row of the table off its label: the participant's row as its guards together with
-the Dirac it produces, and the idle row of a non-participant as the identity. The record and the
-distribution are variables, so `cases` unifies against any round record. -/
+Each lemma reads a row of the table off its label: the participant's row as its
+guards together with the Dirac it produces, and the idle row of a
+non-participant as the identity. The state and the distribution are variables,
+so `cases` unifies against any state of the program. -/
 
-section ProcInversion
-
+section ProgramStepInversion
 variable {P : Parameters} {r : ℕ} {j : Fin P.n} {p : GBCA.ByABDY.RoundRecord P.n}
   {ν : PMF (GBCA.ByABDY.RoundRecord P.n)}
 
@@ -293,12 +293,10 @@ theorem gbcaProgramStep_deliver_foreign {i k : Fin P.n} {m : GBCA.ByABDY.Message
   case deliverReceive => exact absurd rfl hi
   case deliverIdle => rfl
 
-end ProcInversion
-
+end ProgramStepInversion
 /-! ### The network's rules, by label class -/
 
-section NetInversion
-
+section NetworkStepInversion
 variable {P : Parameters} {r : ℕ} {w : NetworkState P.n} {μ : PMF (NetworkState P.n)}
 
 theorem gbcaNetworkStep_send {j : Fin P.n} {m : GBCA.ByABDY.Message}
@@ -316,19 +314,17 @@ theorem gbcaNetworkStep_tau (h : GBCANetworkStep P r w (Sum.inl (Sum.inl .tau)) 
   cases h
   case byzantineGBCA k m hF => exact ⟨k, m, hF, rfl⟩
 
-end NetInversion
-
-/-! ### One state, two presentations
+end NetworkStepInversion
+/-! ### The write a row makes on the composed state
 
 The round records and the network state are the two components of `GBCA.ByABDY.ImplementationState`
 (`GBCA/ABDY/Implementation.lean`), so the round instance and the implementation instance run on the
 same state and every rule of the one is a rule of the other read in the implementation's accessors.
-What the joint steps deliver, though, is a program function given pointwise — its value at the
-acting process, and its agreement with the old one elsewhere — where the implementation's rules
-write with `Function.update`. The lemmas here close that gap. -/
+A joint step delivers a program function pointwise: its value at the acting process, and its
+agreement with the old one elsewhere. A row of the implementation writes with `Function.update`.
+The lemmas here identify the two. -/
 
-section Frame
-
+section Writes
 variable {P : Parameters} {u x : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n} {w : NetworkState P.n}
 
 /-- A program function fixed at `j` and unchanged elsewhere is the old one
@@ -390,8 +386,7 @@ theorem composition_corrupt (k : Fin P.n) :
     ((u, w.corrupt P k) : GBCA.ByABDY.ImplementationState P.n)
       = GBCA.ByABDY.ImplementationState.corrupt P k (u, w) := rfl
 
-end Frame
-
+end Writes
 /-! ### Reading an instance transition backwards
 
 Two inversions of the composition, the counterparts of `compositionExtended_event_step` /
@@ -438,8 +433,7 @@ The network has a row only for its own round: a handshake label of another round
 carries no transition of the instance at all. These readers therefore return
 the round equation together with the network's move. -/
 
-section NetRound
-
+section RoundTaggedNetworkStepInversion
 variable {P : Parameters} {r : ℕ} {w : NetworkState P.n} {μ : PMF (NetworkState P.n)}
 
 theorem gbcaNetworkStep_callG_round {r' : ℕ} {id : Fin P.n} {b : Bool}
@@ -515,8 +509,7 @@ theorem gbcaNetworkStep_byzantineCallW_noStep {r' : ℕ} {k : Fin P.n}
 theorem gbcaNetworkStep_byzantineRetW_noStep {r' : ℕ} {k : Fin P.n} {b : Bool}
     (h : GBCANetworkStep P r w (Sum.inl (Sum.inr (.byzantineRetW r' k b))) μ) : False := by cases h
 
-end NetRound
-
+end RoundTaggedNetworkStepInversion
 end GBCA.ByABDY
 end ABA
 end PLTS

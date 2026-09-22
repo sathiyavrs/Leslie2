@@ -67,8 +67,9 @@ def corrupt (P : Parameters) (id : Fin P.n) (w : NetworkState P.n M) : NetworkSt
     (w.corrupt P id).sent = w.sent := by
   unfold corrupt; split <;> rfl
 
-section Post
+/-! ### Recording a multicast on the network state -/
 
+section RecordSent
 variable [DecidableEq M]
 
 /-- Sent `m` under sender `j` (D5). -/
@@ -89,8 +90,7 @@ theorem mem_recordSent {w : NetworkState n M} {j : Fin n} {m : M} {k : Fin n} {m
   · rw [Function.update_of_ne hk]
     simp [hk]
 
-end Post
-
+end RecordSent
 end NetworkState
 
 /-! ### The local state of one process -/
@@ -283,6 +283,8 @@ theorem exists_mem_inter_of_quorum {P : Parameters} {K Q : Finset (Fin P.n)}
   obtain ⟨q, hq⟩ := Finset.card_pos.mp hlt
   rw [Finset.mem_inter] at hq
   exact ⟨q, hq.1, hq.2⟩
+
+/-! ### Receipt counts on an instance state -/
 
 section Counting
 

@@ -53,8 +53,7 @@ namespace Implementation
 
 /-! ### The ghost-free system -/
 
-section Free
-
+section GhostFreeSystem
 variable (P : Parameters) (M S : Type) [DecidableEq M]
     (roundStep : Fin P.n → ProcessRecord P.n S → ExtendedLabel P.n M → PMF (ProcessRecord P.n S) →
       Prop)
@@ -70,8 +69,7 @@ and announces any bit on a graded-agreement return. -/
 noncomputable def systemGhostFree : System (State P M S Unit) (Label P.n) :=
   system P M S Unit roundStep callPayload (fun _ _ _ => ()) (fun _ _ _ _ _ => True)
 
-end Free
-
+end GhostFreeSystem
 /-! ### The projection and the label identification -/
 
 section Labels
@@ -182,8 +180,7 @@ end Labels
 The network is the one component whose state carries the ghost, and the two
 graded-agreement returns are the one pair of rows that read it. -/
 
-section NetErasure
-
+section NetworkErasure
 variable {P : Parameters} {M G : Type} [DecidableEq M] [Inhabited G]
     {callPayload : Fin P.n → Bool → M}
     {ghostStep : ExtendedLabel P.n M → NetworkState P.n M G → G → G}
@@ -284,8 +281,7 @@ theorem network_erasure
     case byzantineDecided k b hF =>
       exact ⟨_, _, rfl, NetworkStep.byzantineDecided s k b hF, by simp [PMF.pure_map]⟩
 
-end NetErasure
-
+end NetworkErasure
 /-! ### The neighbours of the erasure
 
 The network sits in the composition beside the process group and the coin

@@ -179,6 +179,14 @@ theorem roundPrograms_label_step {lp : ProgramLabel P.n} (hlp : programLabelMap 
       (fun i => System.mapIdle_step_of_step hlp (hproc i)),
     System.mapIdle_step_of_step hlp hnet, (prodPMF_pure_pure _ _).symm⟩
 
+/-! ### The write a row makes on the composed state
+
+A joint step delivers a program function pointwise: its value at the acting
+process, and its agreement with the old one elsewhere. The lemma here
+identifies the two. -/
+
+section Writes
+
 /-- The participant's row beside the idle rows of every other program is the
 program group stepping into the updated function. -/
 theorem programStep_update {j : Fin P.n} {q : ProcessRecord P.n} {lp : ProgramLabel P.n}
@@ -190,6 +198,8 @@ theorem programStep_update {j : Fin P.n} {q : ProcessRecord P.n} {lp : ProgramLa
   · subst hi; rw [Function.update_self]; exact hj
   · rw [Function.update_of_ne hi]; exact hne i hi
 
+end Writes
+
 end RoundPrograms
 
 /-! ### The round's programs beside the two gather instances
@@ -198,8 +208,7 @@ A visible label moves all three factors, and the joint distribution is their Dir
 label moves exactly one of the two gather instances: the round's programs have no silent
 transition. -/
 
-section RoundPre
-
+section Factors
 variable {P : Parameters} {r : ℕ} {G₁ G₂ : Type}
   {firstGather : System G₁ (Gather.InstanceLabel P.n Bool)}
   {secondGather : System G₂ (Gather.InstanceLabel P.n (Option Bool))}
@@ -329,16 +338,15 @@ theorem roundOverGathers_tau_secondGather
   (roundOverGathers_step_iff P r firstGather secondGather _ _ _).mpr (Or.inr
     (roundOverGathersExtended_tau_secondGather h))
 
-end RoundPre
-
+end Factors
 /-! ### One program's rules, by label class
 
 Each lemma reads a row of the table off its label: the participant's row as its
 guards together with the Dirac it produces, and the idle row of a
-non-participant as the identity. -/
+non-participant as the identity. The state and the distribution are variables,
+so `cases` unifies against any state of the program. -/
 
-section ProcInversion
-
+section ProgramStepInversion
 variable {P : Parameters} {r : ℕ} {j : Fin P.n} {p : ProcessRecord P.n} {ν : PMF (ProcessRecord
   P.n)}
 
@@ -431,12 +439,10 @@ theorem programStep_retG_foreign {i : Fin P.n} {out : GBCAOutput} {bnd : Bool} (
   case retG => exact absurd rfl hi
   case retGIdle => rfl
 
-end ProcInversion
-
+end ProgramStepInversion
 /-! ### The rules of the round's network, by label class -/
 
-section NetInversion
-
+section NetworkStepInversion
 variable {P : Parameters} {r : ℕ} {w : Option Bool} {μ : PMF (Option Bool)}
 
 theorem networkStep_callG {id : Fin P.n} {b : Bool} (h : NetworkStep P r w (.callG r id b) μ) :
@@ -464,8 +470,7 @@ theorem networkStep_retG {id : Fin P.n} {out : GBCAOutput} {bnd : Bool}
     (h : NetworkStep P r w (.retG r id out bnd) μ) :
     bnd = w.getD (boundOfCore P ∅) ∧ μ = PMF.pure w := by cases h; exact ⟨rfl, rfl⟩
 
-end NetInversion
-
+end NetworkStepInversion
 end GBCA.ByAFW
 end ABA
 end PLTS

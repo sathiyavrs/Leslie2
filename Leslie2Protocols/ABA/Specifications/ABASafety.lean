@@ -317,7 +317,7 @@ theorem SpecificationInvariant.initial (P : Parameters) : SpecificationInvariant
     simp [SpecState.initial]
   val_support := fun _ h => absurd h (by simp [SpecState.initial])
 
-/-! Field stability of `corrupt`. -/
+/-! ### Field stability of `corrupt` -/
 
 section Corrupt
 

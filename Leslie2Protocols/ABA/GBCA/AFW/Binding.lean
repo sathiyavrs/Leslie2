@@ -204,7 +204,14 @@ theorem specificationOverRoundAlphabet_binding (P : Parameters) (r : ℕ) :
     obtain ⟨k, s, μ, hst, hstep⟩ := hret l id o β h_mem hpull
     exact specificationOverRoundAlphabet_retG_value_eq_bound h_exec hst hstep ho
 
-/-! ### Trace-distribution inclusion -/
+/-! ### Trace-distribution inclusion
+
+The lifted specification is reached by two independent routes.
+`roundOverGatherSpecifications_refines` and `roundOverBroadcastSpecification_specificationTraces`
+chain inclusions by `Set.Subset.trans`; `roundOverBracha_refinesSpecification` composes the three
+simulations themselves by `ProbabilisticForwardSimulation.trans`, and
+`roundOverBracha_specificationTraces` is the inclusion it yields. The chained inclusions never
+invoke transitivity of simulation. -/
 
 /-- Trace-distribution inclusion of the round over the gather specifications in
 the specification read over the round's interface, the soundness of

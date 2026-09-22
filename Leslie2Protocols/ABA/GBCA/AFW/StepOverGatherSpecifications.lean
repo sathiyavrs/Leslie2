@@ -47,8 +47,7 @@ open Implementation Composition
 
 /-! ### Reading a lifted gather specification through a pullback -/
 
-section SpecRows
-
+section GatherSpecificationAlongPullback
 variable {X : Type} [DecidableEq X] {P : Parameters} {c c' : Gather.SpecState P.n X}
   {L : RoundLabel P.n} {ψ : RoundLabel P.n → Option (Gather.InstanceLabel P.n X)}
 
@@ -104,8 +103,7 @@ theorem row_specificationOverInstanceAlphabet_tau_step
 theorem specStep_fail {id : Fin P.n} {μ : PMF (Gather.SpecState P.n X)}
     (h : Gather.Step P c (.fail id) μ) : μ = PMF.pure (c.corrupt P id) := by cases h; rfl
 
-end SpecRows
-
+end GatherSpecificationAlongPullback
 /-! ### The rows -/
 
 /-- The rows of the round over the gather specifications

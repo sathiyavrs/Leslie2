@@ -253,8 +253,9 @@ theorem AlterSeq.mapLabels_toBaseLabel_mapLabels_inl (e : AlterSeq State Label) 
   change (⟨e.init, e.trans.map _⟩ : AlterSeq State Label) = e
   rw [show (fun lq : Label × State => (id lq.1, lq.2)) = id from rfl, Stream'.Seq.map_id]
 
-section ProbTransport
+/-! ### The path probability of a run given by a list -/
 
+section PathProbability
 variable {S L : Type} [Silent L] {sy : System S L}
 
 omit [Silent L] in
@@ -267,8 +268,7 @@ theorem probOf_ofList_concat (pe : ProbabilisticExecution sy) (s₀ : S)
   unfold ProbabilisticExecution.probOf
   rw [Stream'.Seq.toList_ofList, List.reverseRecOn_concat, Stream'.Seq.toList_ofList]
 
-end ProbTransport
-
+end PathProbability
 variable {sys : System State (Label ⊕ Extra)}
 
 /-- The one-step kernel is the one `σ` has at the embedded prefix. -/

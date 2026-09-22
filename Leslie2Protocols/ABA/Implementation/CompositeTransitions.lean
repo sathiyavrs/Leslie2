@@ -72,8 +72,9 @@ theorem programProduct_tau_inversion {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
   · obtain ⟨y, rfl⟩ := programStep_dirac hstep
     exact ⟨i, y, hstep, by rw [piPMF_update_pure, PMF.pure_map]⟩
 
-section WithNet
+/-! ### The transitions of the implementation, read off their labels -/
 
+section SystemStepInversion
 variable {G : Type} [DecidableEq M] [Inhabited G]
     {callPayload : Fin P.n → Bool → M}
     {ghostStep : ExtendedLabel P.n M → NetworkState P.n M G → G → G}
@@ -219,8 +220,7 @@ theorem systemExtended_byzantineRetG_bound {u : ∀ _ : Fin P.n, ProcessRecord P
   obtain ⟨x, w', μ₃, -, hN, -, -⟩ := systemExtended_event_inversion h
   exact (networkStep_byzantineRetG hN).2.1
 
-end WithNet
-
+end SystemStepInversion
 end Composite
 
 end Implementation

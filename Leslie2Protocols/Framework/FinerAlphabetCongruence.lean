@@ -74,6 +74,8 @@ private theorem trace_mapLabels_const_tau [Silent L'] (sys' : System S L')
     simp
   rw [h2, Stream'.Seq.ofList_nil, Stream'.Seq.map_nil]
 
+/-! ### A weak run carried along a pullback of the alphabet -/
+
 section Transport
 
 variable [Silent L] [Silent L'] {sys : System S L} {φ : L' → Option L}

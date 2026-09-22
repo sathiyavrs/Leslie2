@@ -718,8 +718,7 @@ end RoundLoopInversion
 
 /-! ### The ABA network's rules, by label class -/
 
-section ANetInversion
-
+section ABANetworkStepInversion
 variable {P : Parameters} {a : ABANetworkState P.n} {μ : PMF (ABANetworkState P.n)}
 
 theorem abaNetworkStep_decidedSend {j : Fin P.n} {b : Bool}
@@ -812,8 +811,7 @@ theorem abaNetworkStep_gbcaSend_noStep {r : ℕ} {k : Fin P.n} {m : GBCA.ByABDY.
 theorem abaNetworkStep_gbcaDeliver_noStep {r : ℕ} {i k : Fin P.n} {m : GBCA.ByABDY.Message}
     (h : ABANetworkStep P a (Sum.inr (.gbcaDeliver r i k m)) μ) : False := by cases h
 
-end ANetInversion
-
+end ABANetworkStepInversion
 /-! ### Determining the round-loop tuple -/
 
 theorem roundLoopRecords_update {P : Parameters} {C y : ∀ _ : Fin P.n, RoundLoopRecord P.n}

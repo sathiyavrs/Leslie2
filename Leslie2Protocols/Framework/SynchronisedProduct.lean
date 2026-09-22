@@ -88,8 +88,9 @@ theorem map_apply_inj {α β : Type*} {f : α → β} (hf : Function.Injective f
   · rw [if_pos rfl]
   · intro a ha; rw [if_neg]; exact fun h => ha (hf h.symm)
 
-section PiPMFPure
+/-! ### The independent product of Diracs -/
 
+section ProductOfDiracs
 variable {ι : Type} [Fintype ι] {α : ι → Type}
 
 /-- The independent product of Diracs is the Dirac on the tuple of their points. -/
@@ -103,8 +104,7 @@ theorem piPMF_pure (x : ∀ i, α i) : piPMF (fun i => PMF.pure (x i)) = PMF.pur
     obtain ⟨i, hi⟩ := Function.ne_iff.mp hf
     exact Finset.prod_eq_zero (Finset.mem_univ i) (if_neg hi)
 
-end PiPMFPure
-
+end ProductOfDiracs
 /-! ### The full-synchronisation product -/
 
 section Family

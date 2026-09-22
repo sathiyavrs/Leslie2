@@ -24,8 +24,7 @@ open Implementation
 
 /-! ### Which labels the round-indexed family owns -/
 
-section GOwns
-
+section OwnedLabels
 variable {n : ℕ}
 
 @[simp] theorem roundOwnsLabel_callG (r : ℕ) (id : Fin n) (b : Bool) :
@@ -77,8 +76,7 @@ theorem corruptionAct_fail {P : Parameters} (k : Fin P.n)
   (s : GBCA.ByABDY.ImplementationState P.n) :
     GBCA.ByABDY.corruptionAct P (Sum.inl (Label.fail k)) s = (s.1, s.2.corrupt P k) := rfl
 
-end GOwns
-
+end OwnedLabels
 end Composition
 end ABA
 end PLTS

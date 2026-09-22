@@ -13,7 +13,7 @@ import Leslie2Protocols.ABA.ImplementationByAFW.RoundProjection
 A row of the implementation writes the acting process's round record and records at most one
 tagged message. `roundProjection_write` and `roundProjection_writeNoSent` do that write once,
 through `roundProjectionUpdate`: each local state vector of the view becomes a one-point update of
-the old one, and each network state is sliced out of the written sent family.
+the old one, and each network state is recovered from the written sent family by its own tag.
 `messagesOf_recordSent_some` and `messagesOf_recordSent_none` are the sent algebra a row still
 owes, and one simp lemma per coordinate reads the written view off `roundProjectionUpdate`.
 `broadcastReturnsFor_update_setProcess` and `broadcastReturnsFor_update_deliverTo` read the family
@@ -71,7 +71,7 @@ theorem roundStateOverGathers_ext {n : ℕ} {G₁ G₂ : Type}
   subst h1; subst h2; subst h3; subst h4
   rfl
 
-/-! ### Slicing a tagged sent -/
+/-! ### The messages of one tag under a recorded send -/
 
 variable {n : ℕ} {β : Type}
 
@@ -101,7 +101,7 @@ theorem messagesOf_recordSent_none (f : Message n → Option β)
       exact Or.inr ha
     · rwa [Function.update_of_ne hq]
 
-/-- A sent message of the tag being sliced arrives in that messagesOf. -/
+/-- A sent message of the tag being recovered arrives in that messagesOf. -/
 theorem messagesOf_recordSent_some [DecidableEq β] (f : Message n → Option β)
     (hf : ∀ a a' b, b ∈ f a → b ∈ f a' → a = a')
     (sent : Fin n → Finset (Message n)) (j : Fin n) (m : Message n) (b : β)
@@ -186,8 +186,7 @@ view reads becomes a one-point update of the old one. Each lemma below is that
 observation at one component of the view, stated over the `ite` that reading a
 written record produces. -/
 
-section Locals
-
+section LocalStates
 variable {j : Fin P.n} (Y : Fin P.n → RoundRecord P.n) (sr : RoundRecord P.n)
 
 theorem locals_programProjection_if :
@@ -255,24 +254,23 @@ theorem locals_secondGatherBindBroadcast_if (k : Fin P.n) :
   rw [Function.update_apply]
   by_cases hi : i = j <;> simp [hi]
 
-end Locals
-
+end LocalStates
 /-! ### The view after one write
 
 A row of the implementation writes one component of the acting process's round
 record and records at most one tagged message. The two lemmas below are that
 write read through the view: each local state vector becomes a one-point
-update, and each network state is sliced out of the written sent family. What
-every row still owes is then sent algebra alone. -/
+update, and each network state is recovered from the written sent family by its
+own tag. What every row still owes is then sent algebra alone. -/
 
-section Frame
-
+section Writes
 variable {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} {w : NetworkState P.n} {j : Fin P.n}
     {c : RoundLoopRecord P.n} {p : RoundRecordMap P.n}
 
 /-- The view after a write, with the one-point update pushed inside every
 coordinate: the acting process's local state replaced in each local state
-vector, and each network state sliced out of the written sent. The two cores
+vector, and each network state recovered from the written sent by its own tag.
+The two cores
 and the bound bit are the adversary's ghost record of the round, which a write
 leaves alone. -/
 noncomputable def roundProjectionUpdate (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n)
@@ -406,8 +404,7 @@ theorem roundProjection_writeNoSent (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n)
       roundProjectionUpdate, secondGatherProjection, roundRecord_update_self rfl,
         locals_secondGatherBindBroadcast_if]
 
-end Frame
-
+end Writes
 /-! ### The returned value under a local write
 
 `broadcastReturnsFor` counts `VOTE` receipts, so a write of a local record leaves it where
@@ -490,8 +487,7 @@ The written view is read coordinate by coordinate, so that a row's remaining
 obligations are stated over one local state vector or one network state at a
 time. -/
 
-section UpdReaders
-
+section WrittenViewReaders
 variable (v : ∀ _ : Fin P.n, AFW.ProcessRecord P.n) (w : NetworkState P.n) (r : ℕ) (j : Fin P.n)
     (sr : RoundRecord P.n) (sent : Fin P.n → Finset (Message P.n))
 
@@ -596,8 +592,7 @@ variable (v : ∀ _ : Fin P.n, AFW.ProcessRecord P.n) (w : NetworkState P.n) (r 
             ⟨messagesOf (secondGatherBindBroadcastMessageOf q)
               (secondGatherBindBroadcastMessageOf_inj q) sent, w.F⟩) := rfl
 
-end UpdReaders
-
+end WrittenViewReaders
 end AFW
 end ABA
 end PLTS

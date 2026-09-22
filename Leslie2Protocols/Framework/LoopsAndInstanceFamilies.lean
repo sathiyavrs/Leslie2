@@ -124,6 +124,8 @@ theorem System.mapIdle_isLTS {S L L' : Type} (φ : L' → Option L)
   · exact h s l μ hs
   · exact ⟨s, rfl⟩
 
+/-! ### A weak run carried along a pullback with a section -/
+
 section MapIdleWeak
 
 variable {S L L' : Type} [Silent L] [Silent L'] {sys : System S L}

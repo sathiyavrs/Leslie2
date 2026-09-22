@@ -73,8 +73,7 @@ many processes outside `F`. `Gather/CommonCoreCounting.lean` is the argument tha
 least `n − f` entries and lies below every committed `BIND` payload of a
 process outside `F`. -/
 
-section Core
-
+section CommonCore
 variable {n : ℕ} {X : Type} (w : InstanceState n (BaseProcessRecord n X) (Message n X))
 
 /-- The processes outside the corrupted set. -/
@@ -111,8 +110,7 @@ noncomputable def coreOf (P : Parameters)
   if h : ∃ j, j ∈ correct w ∧ P.f + 1 ≤ (dominators w j).card
   then echoOf w h.choose else ∅
 
-end Core
-
+end CommonCore
 /-- **The core is a function of the network state**: `coreOf` reads the sent
 sets and the corrupted set, so a network component holding those computes
 it. -/

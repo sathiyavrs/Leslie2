@@ -161,8 +161,9 @@ theorem writeGhost_abdy_id (P : Parameters) (w : NetworkState P.n) (L : Extended
   · next r _ => rw [h]; simp
   · rfl
 
-section GhostFrame
+/-! ### The ghost write of each row -/
 
+section GhostWrites
 variable (P : Parameters) (w : NetworkState P.n)
 
 @[simp] theorem writeGhost_tau :
@@ -245,8 +246,7 @@ theorem writeGhost_byzantineRetG_ne (r : ℕ) (k : Fin P.n) (out : GBCAOutput) (
       = w.ghostRecord r' :=
   writeGhost_ghostRecord_ne w rfl h
 
-end GhostFrame
-
+end GhostWrites
 /-! ### The rows of the graded-agreement implementation -/
 
 /-- The round rows of process `j`: the graded-agreement call, the eight multicasts of the five

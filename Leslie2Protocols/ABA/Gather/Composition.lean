@@ -562,7 +562,8 @@ state. -/
 def gatherTier (s : StateOverBroadcasts n X B B') : InstanceState n (ProcessRecord n X) (Message n
   X) := (s.1.1, s.1.2.network)
 
-/-- The input instances. -/
+/-- The input instances. One per process, carrying that process's input; these and the `n` bind
+instances are the `2n` reliable-broadcast instances of a gather instance. -/
 def inputBroadcasts (s : StateOverBroadcasts n X B B') : ∀ _ : Fin n, B := s.2.1
 
 /-- The bind instances. -/

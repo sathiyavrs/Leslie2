@@ -28,8 +28,7 @@ The `n` components, each read along its own pullback, under full
 synchronisation. A component whose pullback has no image at the label is
 unchanged, so a label naming one component moves that component alone. -/
 
-section SyncLift
-
+section SynchronisedProduct
 variable {n : ℕ} {B Lbl Λ : Type} [Silent Λ] {A : ∀ _ : Fin n, System B Lbl}
   {φ : Fin n → Λ → Option Lbl} {a a' : ∀ _ : Fin n, B} {L : Λ}
   {μ : PMF (∀ _ : Fin n, B)}
@@ -96,12 +95,10 @@ theorem synchronisedProductMapIdle_tau_step [Silent Lbl] {k : Fin n} {c : B}
   · rw [System.mapIdle_step_some hτ]; exact h
   · rw [piPMF_update_pure, PMF.pure_map]
 
-end SyncLift
-
+end SynchronisedProduct
 /-! ### One component's step, by the pullback's value -/
 
-section LiftRows
-
+section ComponentAlongPullback
 variable {S B Lbl Λ : Type} {A₀ : System S Lbl} {ψ : Λ → Option Lbl} {s s' : S} {L : Λ}
 
 /-- A component whose pullback has no image at the label is unchanged. -/
@@ -138,7 +135,6 @@ theorem mapIdle_step_all {l₀ : Fin n → Lbl} (hk : ∀ k, φ k L = some (l₀
     ∀ k, ((A k).mapIdle (φ k)).step (a k) L (PMF.pure (a' k)) :=
   fun k => (System.mapIdle_step_some (hk k) _).mpr (h k)
 
-end LiftRows
-
+end ComponentAlongPullback
 end System
 end PLTS

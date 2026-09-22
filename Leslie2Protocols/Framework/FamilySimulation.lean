@@ -177,6 +177,8 @@ theorem System.trace_map_state [Silent Label] (sys' : System State' Label)
     Stream'.Seq.filter_map, ← Stream'.Seq.map_comp]
   rfl
 
+/-! ### A run of one instance, embedded in the family -/
+
 section FamilyEmbedding
 
 variable [Silent Label]

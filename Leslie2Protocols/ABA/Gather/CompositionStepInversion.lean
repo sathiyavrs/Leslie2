@@ -68,8 +68,7 @@ theorem instanceOverBroadcasts_step_iff (P : Parameters) (X : Type) [DecidableEq
 
 /-! ### The synchronised group of gather programs -/
 
-section SyncGa
-
+section GatherPrograms
 variable [DecidableEq X] {P : Parameters}
   {u x : ∀ _ : Fin P.n,
     LocalState P.n (ProcessRecord P.n X) (Message P.n X)} {l : GatherLabel P.n X}
@@ -109,8 +108,7 @@ theorem gatherProgramProduct_no_tau
   · exact hτ rfl
   · exact programStep_no_tau hstep
 
-end SyncGa
-
+end GatherPrograms
 /-! ### The two tiers in parallel
 
 A visible label moves all four factors — the programs, the gather network, the
@@ -118,8 +116,7 @@ input instances and the bind instances — and the joint distribution is their
 Dirac product. A silent label moves exactly one of the gather network, one
 input instance or one bind instance. -/
 
-section PreAt
-
+section Factors
 variable [DecidableEq X] {P : Parameters} {B B' : Type}
   {BIn : ∀ _ : Fin P.n, System B (BRB.InstanceLabel P.n X)}
   {BBind : ∀ _ : Fin P.n, System B' (BRB.InstanceLabel P.n (AcceptedPairs P.n X))}
@@ -315,12 +312,10 @@ theorem instanceOverBroadcasts_tau_bind {q : Fin P.n} {d : B'}
   (instanceOverBroadcasts_step_iff P X BIn BBind _ _ _).mpr (Or.inr
     (instanceOverBroadcastsExtended_tau_bind h))
 
-end PreAt
-
+end Factors
 /-! ### The pullbacks, label by label -/
 
-section PullRows
-
+section Pullbacks
 variable {n : ℕ} (X : Type) (k q id j q' k' i : Fin n)
 
 @[simp] theorem inputBroadcastLabelMap_call (x : X) :
@@ -368,16 +363,15 @@ variable {n : ℕ} (X : Type) (k q id j q' k' i : Fin n)
     bindBroadcastLabelMap n X q (Sum.inr (.bindRet q' j U)) =
       if q = q' then some (Sum.inl (.ret j U)) else none := rfl
 
-end PullRows
-
+end Pullbacks
 /-! ### One gather program's rules, by label class
 
 Each lemma reads a row of the table off its label: the participant's row as its
 guards together with the Dirac it produces, and the idle row of a
-non-participant as the identity. -/
+non-participant as the identity. The state and the distribution are variables,
+so `cases` unifies against any state of the program. -/
 
-section ProcInversion
-
+section ProgramStepInversion
 variable [DecidableEq X] {P : Parameters} {j : Fin P.n}
   {p : LocalState P.n (ProcessRecord P.n X) (Message P.n X)}
   {ν : PMF (LocalState P.n (ProcessRecord P.n X) (Message P.n X))}
@@ -512,12 +506,10 @@ theorem programStep_bindRet_foreign {q i : Fin P.n} {U : AcceptedPairs P.n X} (h
   case bindRetReceive => exact absurd rfl hi
   case bindRetIdle => rfl
 
-end ProcInversion
-
+end ProgramStepInversion
 /-! ### The gather network's rules, by label class -/
 
-section NetInversion
-
+section NetworkStepInversion
 variable [DecidableEq X] {P : Parameters} {w : NetworkState P.n X} {μ : PMF (NetworkState P.n X)}
 
 theorem networkStep_call {id : Fin P.n} {x : X}
@@ -564,8 +556,7 @@ theorem networkStep_tau (h : NetworkStep P w (Sum.inl (Sum.inl .tau)) μ) :
   cases h
   case byzantine j m hF => exact ⟨j, m, hF, rfl⟩
 
-end NetInversion
-
+end NetworkStepInversion
 /-- A function fixed at `i` and unchanged elsewhere is the old one updated at
 `i`. -/
 theorem funUpdate {ι β : Type} [DecidableEq ι] {f g : ι → β} {i : ι} {y : β}
@@ -575,14 +566,16 @@ theorem funUpdate {ι β : Type} [DecidableEq ι] {f g : ι → β} {i : ι} {y 
   · subst h; rw [hi, Function.update_self]
   · rw [hne i' h, Function.update_of_ne h]
 
-/-! ### One state, four views
+/-! ### The write a row makes on the composed state
 
-What a joint step delivers is a program function given pointwise — its value
-at the acting process, and its agreement with the old one elsewhere — where a
-row writes with `setGatherTier` and `InstanceState.setProcess`. The lemmas here close that
-gap. -/
+A joint step delivers a program function pointwise: its value at the acting
+process, and its agreement with the old one elsewhere. A row writes with
+`setGatherTier` and `InstanceState.setProcess`. The lemmas here identify the
+two. -/
 
-section Frame
+section Writes
+
+/-! ### The writes that leave the sent sets alone -/
 
 section
 
@@ -642,6 +635,8 @@ theorem stateOverBroadcasts_setBindBroadcasts {q : Fin P.n} {d : B'} :
 
 end
 
+/-! ### The writes that record or deliver a message, and the program group's row -/
+
 section
 
 variable [DecidableEq X] {P : Parameters} {B B' : Type}
@@ -684,8 +679,7 @@ theorem stateOverBroadcasts_recordSent {k : Fin P.n} {m : Message P.n X} :
 
 end
 
-end Frame
-
+end Writes
 end Gather
 end ABA
 end PLTS

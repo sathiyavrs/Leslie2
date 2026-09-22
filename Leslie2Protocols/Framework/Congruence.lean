@@ -459,6 +459,8 @@ theorem System.weakLSilent_parallel_right (a : S₁) {b b' : S₂}
 
 end Parallel
 
+/-! ### Forward simulation is a congruence for parallel composition -/
+
 section ParallelCongruence
 
 variable {SC SA SB Label : Type} [Silent Label]
@@ -545,8 +547,7 @@ end ParallelCongruence
 
 /-! ### The full-synchronisation product of a finite family -/
 
-section SyncProduct
-
+section SynchronisedProduct
 variable {ι : Type} [Fintype ι] [DecidableEq ι] {SA : ι → Type} {Label : Type} [Silent Label]
 
 /-- A silent run at one coordinate embeds into the product, the other
@@ -593,8 +594,7 @@ theorem System.weakLSilent_synchronisedProduct {A : ∀ i, System (SA i) Label} 
       (fun j => if j ∈ S then u j else t j) i (h i)
     rwa [heq] at hrun
 
-end SyncProduct
-
+end SynchronisedProduct
 /-- **Forward simulation is a congruence for `System.synchronisedProduct`.** Per-component
 forward simulations lift to the pointwise relation on the product. A silent step
 moves one component, which the component's own silent answer matches with the

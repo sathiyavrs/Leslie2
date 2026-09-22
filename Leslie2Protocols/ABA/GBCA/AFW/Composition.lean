@@ -253,8 +253,7 @@ theorem secondGatherLabelMap_eq_tau {n : ℕ} {l : RoundLabel n}
 
 /-! ### The pullbacks, label by label -/
 
-section PullRows
-
+section Pullbacks
 variable {n : ℕ} (r : ℕ) (id k i j : Fin n) (b c bnd : Bool) (x : Option Bool)
   (out : GBCAOutput) (m : GBCA.ByABDY.Message) (g : Fin n → Option Bool)
   (h : Fin n → Option (Option Bool)) (C : Gather.AcceptedPairs n Bool)
@@ -405,8 +404,7 @@ variable {n : ℕ} (r : ℕ) (id k i j : Fin n) (b c bnd : Bool) (x : Option Boo
     secondGatherLabelMap n (Sum.inr (.secondGatherReturn id h D)) = some (Sum.inl (.ret id h D)) :=
       rfl
 
-end PullRows
-
+end Pullbacks
 /-! ### The graded-agreement program
 
 Process `j`'s program in this round. Every guard reads its own record. The

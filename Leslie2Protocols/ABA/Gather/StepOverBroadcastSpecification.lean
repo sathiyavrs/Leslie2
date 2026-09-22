@@ -68,8 +68,9 @@ theorem row_specificationOverInstanceAlphabet_step {M : Type} {P : Parameters} {
       l (PMF.pure s') :=
   (System.mapIdle_step_some hl _).mpr h
 
-section SpecInversion
+/-! ### The broadcast specification's rules, by label class -/
 
+section SpecificationStepInversion
 variable {M : Type} {P : Parameters} {ldr : Fin P.n} {s : BRB.SpecState P.n M}
   {μ : PMF (BRB.SpecState P.n M)}
 
@@ -98,8 +99,7 @@ theorem specStep_fail {id : Fin P.n} (h : BRB.Step P ldr s (.fail id) μ) :
     μ = PMF.pure (s.corrupt P id) := by
   cases h; rfl
 
-end SpecInversion
-
+end SpecificationStepInversion
 /-! ### The rows -/
 
 /-- The rows of the gather instance over the broadcast specification

@@ -604,6 +604,8 @@ the coin oracle. -/
 abbrev State (P : Parameters) (M S G : Type) : Type :=
   (∀ _ : Fin P.n, ProcessRecord P.n S) × (NetworkState P.n M G × (ℕ → WCC.SpecState P.n))
 
+/-! ### The network as a system -/
+
 section NetworkAdversary
 
 variable (P : Parameters) (M G : Type) [DecidableEq M] [Inhabited G]
@@ -628,8 +630,9 @@ noncomputable def network : System (NetworkState P.n M G) (ExtendedLabel P.n M) 
 
 end NetworkAdversary
 
-section Pipe
+/-! ### The three components composed -/
 
+section Composition
 variable (P : Parameters) (M S G : Type) [DecidableEq M] [Inhabited G]
     (roundStep : Fin P.n → ProcessRecord P.n S → ExtendedLabel P.n M → PMF (ProcessRecord P.n S) →
       Prop)
@@ -653,8 +656,7 @@ noncomputable def system : System (State P M S G) (Label P.n) :=
   (systemHidden P M S G roundStep callPayload ghostStep ghostOutput).abstract
     (Label.hiddenAPI P.n)
 
-end Pipe
-
+end Composition
 /-! ### What an implementation must supply about its own rows -/
 
 /-- What the implementation's graded-agreement rows must satisfy for the readers of
