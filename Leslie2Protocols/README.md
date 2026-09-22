@@ -19,7 +19,8 @@ guide, [`ABA/README.md`](ABA/README.md).
 
 The protocol-independent combinators the case study composes with. One of them —
 restriction along the left summand of an extended alphabet — is a fourth precongruence,
-beside the three in the core.
+beside the three in the core. Ten files, given in import order in its own file guide,
+[`Framework/README.md`](Framework/README.md).
 
 | file | lines | what it is |
 |---|---|---|
@@ -27,6 +28,7 @@ beside the three in the core.
 | [`LoopsAndInstanceFamilies.lean`](Framework/LoopsAndInstanceFamilies.lean) | 216 | Idle padding, partial label pullbacks, and ℕ-indexed instance families with a broadcast disjunct. |
 | [`FamilySimulation.lean`](Framework/FamilySimulation.lean) | 373 | Forward simulation is a congruence for `System.family`: per-instance refinement lifts to the family. |
 | [`SynchronisedProduct.lean`](Framework/SynchronisedProduct.lean) | 184 | Full-synchronisation product of a finite family — a visible label moves every component, τ moves one. |
+| [`SynchronisedProductAlongPullbacks.lean`](Framework/SynchronisedProductAlongPullbacks.lean) | 145 | A family of components each read along its own pullback, under the synchronised product: the label with no image, the visible step, the silent step. |
 | [`Relabel.lean`](Framework/Relabel.lean) | 472 | Extended alphabets and restriction along the left summand, with the precongruence for it. |
 | [`WeakTransitionsFromChains.lean`](Framework/WeakTransitionsFromChains.lean) | 196 | Weak runs from step chains: prepending a silent step, and the k-fold run — a chain of silent steps closed by one external step. |
 | [`FinerAlphabetCongruence.lean`](Framework/FinerAlphabetCongruence.lean) | 191 | Forward simulation is a congruence for reading both systems over a finer alphabet along a partial label map. |

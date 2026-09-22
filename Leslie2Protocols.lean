@@ -58,5 +58,6 @@ import Leslie2Protocols.Framework.FinerAlphabetCongruence
 import Leslie2Protocols.Framework.LoopsAndInstanceFamilies
 import Leslie2Protocols.Framework.Relabel
 import Leslie2Protocols.Framework.SynchronisedProduct
+import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 import Leslie2Protocols.Framework.TraceDistributionSupport
 import Leslie2Protocols.Framework.WeakTransitionsFromChains

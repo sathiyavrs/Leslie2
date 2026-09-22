@@ -10,6 +10,7 @@ import Leslie2Protocols.ABA.Composition.GBCAInstanceByABDY
 import Leslie2Protocols.Framework.Relabel
 import Leslie2Protocols.Framework.SynchronisedProduct
 import Leslie2Protocols.Framework.LoopsAndInstanceFamilies
+import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 
 /-!
 # The graded-agreement round, composed
@@ -893,7 +894,7 @@ theorem programsProduct_inversion (hL : L ≠ (Silent.τ : RoundLabel P.n))
       μ) :
     ∃ x : ∀ _ : Fin P.n, ProcessRecord P.n, μ = PMF.pure x ∧
       ∀ i, ((gbcaProgram P r i).mapIdle (programLabelMap P.n)).step (u i) L (PMF.pure (x i)) :=
-  Gather.synchronisedProductMapIdle_inversion (fun i => gbcaProgram_isLTS P r i) hL h
+  System.synchronisedProductMapIdle_inversion (fun i => gbcaProgram_isLTS P r i) hL h
 
 /-- **The round's programs remain unchanged** on a label with no image at a program. -/
 theorem roundPrograms_idle_inversion (hlp : programLabelMap P.n L = none)
@@ -903,7 +904,7 @@ theorem roundPrograms_idle_inversion (hlp : programLabelMap P.n L = none)
   rw [roundPrograms, System.parallel_step] at h
   rcases h with ⟨-, μ₁, μ₂, hs, hn, rfl⟩ | ⟨hτ, -⟩ | ⟨hτ, -⟩
   · obtain ⟨y, rfl, hall⟩ := programsProduct_inversion hL hs
-    have hy : y = u := funext fun i => Gather.lift_step_none hlp (hall i)
+    have hy : y = u := funext fun i => System.mapIdle_eq_of_step_none hlp (hall i)
     subst hy
     rw [(System.mapIdle_step_none hlp _).mp hn, prodPMF_pure_pure]
   · exact absurd hτ hL
@@ -923,7 +924,7 @@ theorem roundPrograms_label_inversion {lp : ProgramLabel P.n}
   · obtain ⟨y, rfl, hall⟩ := programsProduct_inversion hL hs
     have hnet : NetworkStep P r v lp μ₂ := (System.mapIdle_step_some hlp _).mp hn
     obtain ⟨v', rfl⟩ := networkStep_dirac hnet
-    exact ⟨y, v', prodPMF_pure_pure _ _, fun i => Gather.lift_step_some hlp (hall i), hnet⟩
+    exact ⟨y, v', prodPMF_pure_pure _ _, fun i => System.step_of_mapIdle_step hlp (hall i), hnet⟩
   · exact absurd hτ hL
   · exact absurd hτ hL
 
@@ -956,9 +957,9 @@ theorem roundPrograms_idle_step (hlp : programLabelMap P.n L = none) :
     (roundPrograms P r).step (u, v) L (PMF.pure (u, v)) := by
   rw [roundPrograms, System.parallel_step]
   exact Or.inl ⟨roundLabel_ne_tau_of_none hlp, PMF.pure u, PMF.pure v,
-    Gather.synchronisedProductMapIdle_pure (roundLabel_ne_tau_of_none hlp)
-      (fun i => Gather.lift_idle hlp),
-    Gather.lift_idle hlp, (prodPMF_pure_pure _ _).symm⟩
+    System.synchronisedProductMapIdle_pure (roundLabel_ne_tau_of_none hlp)
+      (fun i => System.mapIdle_unchanged hlp),
+    System.mapIdle_unchanged hlp, (prodPMF_pure_pure _ _).symm⟩
 
 /-- Build the joint transition of the round's programs from the programs' rows and the row of the
 round's network. -/
@@ -968,9 +969,9 @@ theorem roundPrograms_label_step {lp : ProgramLabel P.n} (hlp : programLabelMap 
     (roundPrograms P r).step (u, v) L (PMF.pure (x, v')) := by
   rw [roundPrograms, System.parallel_step]
   exact Or.inl ⟨roundLabel_ne_tau hlp hlpτ, PMF.pure x, PMF.pure v',
-    Gather.synchronisedProductMapIdle_pure (roundLabel_ne_tau hlp hlpτ)
-      (fun i => Gather.row_lift_step hlp (hproc i)),
-    Gather.row_lift_step hlp hnet, (prodPMF_pure_pure _ _).symm⟩
+    System.synchronisedProductMapIdle_pure (roundLabel_ne_tau hlp hlpτ)
+      (fun i => System.mapIdle_step_of_step hlp (hproc i)),
+    System.mapIdle_step_of_step hlp hnet, (prodPMF_pure_pure _ _).symm⟩
 
 /-- The participant's row beside the idle rows of every other program is the
 program group stepping into the updated function. -/

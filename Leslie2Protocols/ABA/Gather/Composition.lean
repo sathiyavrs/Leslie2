@@ -9,6 +9,7 @@ import Leslie2Protocols.ABA.Gather.MessagesAndCommonCore
 import Leslie2Protocols.Framework.Relabel
 import Leslie2Protocols.Framework.SynchronisedProduct
 import Leslie2Protocols.Framework.LoopsAndInstanceFamilies
+import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 
 /-!
 # The gather instance, composed
@@ -73,7 +74,7 @@ it off the network state, `coreOf_eq_coreOfNetwork` identifies the two systems, 
 the network's `ret` row writes the core and carries it on the label.
 -/
 
-set_option linter.style.longFile 1800
+set_option linter.style.longFile 1700
 
 namespace PLTS
 namespace ABA
@@ -896,82 +897,6 @@ theorem instanceOverBroadcasts_step_iff (P : Parameters) (X : Type) [DecidableEq
     · exact Or.inl ⟨rfl, _, inr_mem_gatherEvents e, hstep⟩
     · exact Or.inr ⟨inl_notMem_gatherEvents l, hstep⟩
 
-/-! ### The synchronised group of broadcast instances
-
-The `n` instances of one level, each read along its own pullback, under full
-synchronisation. An instance whose pullback has no image at the label stands
-still, so a label naming one instance moves that instance alone. -/
-
-section SyncLift
-
-variable {n : ℕ} {B Lbl Λ : Type} [Silent Λ] {A : ∀ _ : Fin n, System B Lbl}
-  {φ : Fin n → Λ → Option Lbl} {a a' : ∀ _ : Fin n, B} {L : Λ}
-  {μ : PMF (∀ _ : Fin n, B)}
-
-omit [Silent Λ] in
-/-- An instance whose pullback has no image at the label is unchanged. -/
-theorem lift_idle {A₀ : System B Lbl} {ψ : Λ → Option Lbl} {c : B} (hψ : ψ L = none) :
-    (A₀.mapIdle ψ).step c L (PMF.pure c) :=
-  (System.mapIdle_step_none hψ _).mpr rfl
-
-/-- A synchronised transition of the lifted family on a visible label: every
-instance steps, and the joint distribution is Dirac. -/
-theorem synchronisedProductMapIdle_inversion (hA : ∀ k, (A k).IsLTS) (hL : L ≠ Silent.τ)
-    (h : (System.synchronisedProduct (fun k => (A k).mapIdle (φ k))).step a L μ) :
-    ∃ a' : ∀ _ : Fin n, B, μ = PMF.pure a' ∧
-      ∀ k, ((A k).mapIdle (φ k)).step (a k) L (PMF.pure (a' k)) := by
-  rw [System.synchronisedProduct_step] at h
-  rcases h with ⟨-, μ_, hall, rfl⟩ | ⟨hτ, -⟩
-  · have hx : ∀ k, ∃ c, μ_ k = PMF.pure c :=
-      fun k => System.mapIdle_isLTS (φ k) (hA k) _ _ _ (hall k)
-    choose y hy using hx
-    refine ⟨y, ?_, fun k => ?_⟩
-    · rw [show μ_ = fun k => PMF.pure (y k) from funext hy]
-      exact piPMF_pure y
-    · rw [← hy k]; exact hall k
-  · exact absurd hτ hL
-
-/-- Build a synchronised transition of the lifted family from per-instance
-Dirac steps. -/
-theorem synchronisedProductMapIdle_pure (hL : L ≠ Silent.τ)
-    (h : ∀ k, ((A k).mapIdle (φ k)).step (a k) L (PMF.pure (a' k))) :
-    (System.synchronisedProduct (fun k => (A k).mapIdle (φ k))).step a L (PMF.pure a') := by
-  rw [System.synchronisedProduct_step]
-  exact Or.inl ⟨hL, fun k => PMF.pure (a' k), h, (piPMF_pure a').symm⟩
-
-/-- On a label no pullback has an image at, the lifted family is unchanged. -/
-theorem synchronisedProductMapIdle_none (hL : L ≠ Silent.τ) (hφ : ∀ k, φ k L = none) :
-    (System.synchronisedProduct (fun k => (A k).mapIdle (φ k))).step a L (PMF.pure a) :=
-  synchronisedProductMapIdle_pure hL fun k => lift_idle (hφ k)
-
-/-- A silent transition of the lifted family is a silent transition of exactly
-one instance. -/
-theorem synchronisedProductMapIdle_tau_inversion [Silent Lbl] (hA : ∀ k, (A k).IsLTS)
-    (hτ : ∀ k, φ k (Silent.τ : Λ) = some (Silent.τ : Lbl))
-    (h : (System.synchronisedProduct (fun k => (A k).mapIdle (φ k))).step a (Silent.τ : Λ) μ) :
-    ∃ (k : Fin n) (c : B), μ = PMF.pure (Function.update a k c) ∧
-      (A k).step (a k) (Silent.τ : Lbl) (PMF.pure c) := by
-  rw [System.synchronisedProduct_step] at h
-  rcases h with ⟨hne, -⟩ | ⟨-, k, μ_k, hstep, rfl⟩
-  · exact absurd rfl hne
-  · rw [System.mapIdle_step_some (hτ k)] at hstep
-    obtain ⟨c, rfl⟩ := hA k _ _ _ hstep
-    exact ⟨k, c, by rw [piPMF_update_pure, PMF.pure_map], hstep⟩
-
-/-- A silent transition of one instance is a silent transition of the lifted
-family. -/
-theorem synchronisedProductMapIdle_tau_step [Silent Lbl] {k : Fin n} {c : B}
-    (hτ : φ k (Silent.τ : Λ) = some (Silent.τ : Lbl))
-    (h : (A k).step (a k) (Silent.τ : Lbl) (PMF.pure c)) :
-    (System.synchronisedProduct (fun k => (A k).mapIdle (φ k))).step a (Silent.τ : Λ)
-      (PMF.pure (Function.update a k c)) := by
-  rw [System.synchronisedProduct_step]
-  refine Or.inr ⟨rfl, k, PMF.pure c, ?_, ?_⟩
-  · rw [System.mapIdle_step_some hτ]; exact h
-  · rw [piPMF_update_pure, PMF.pure_map]
-
-end SyncLift
-
 /-! ### The synchronised group of gather programs -/
 
 section SyncGa
@@ -1056,8 +981,8 @@ theorem instanceOverBroadcastsExtended_joint_inversion (hIn : ∀ k, (BIn k).IsL
       obtain ⟨v, rfl⟩ := networkStep_dirac hn
       rw [System.parallel_step] at hbr
       rcases hbr with ⟨-, ρ₁, ρ₂, hi, hb, rfl⟩ | ⟨hτ, -⟩ | ⟨hτ, -⟩
-      · obtain ⟨c, rfl, hic⟩ := synchronisedProductMapIdle_inversion hIn hL hi
-        obtain ⟨d, rfl, hbd⟩ := synchronisedProductMapIdle_inversion hBind hL hb
+      · obtain ⟨c, rfl, hic⟩ := System.synchronisedProductMapIdle_inversion hIn hL hi
+        obtain ⟨d, rfl, hbd⟩ := System.synchronisedProductMapIdle_inversion hBind hL hb
         exact ⟨y, v, c, d, by rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure],
           hall, hn, hic, hbd⟩
       · exact absurd hτ hL
@@ -1094,12 +1019,12 @@ theorem instanceOverBroadcastsExtended_tau_inversion (hIn : ∀ k, (BIn k).IsLTS
     rcases hbr with ⟨hτ, -⟩ | ⟨-, ρ₁, hi, rfl⟩ | ⟨-, ρ₂, hb, rfl⟩
     · exact absurd rfl hτ
     · obtain ⟨k, c, rfl, hstep⟩ :=
-        synchronisedProductMapIdle_tau_inversion hIn
+        System.synchronisedProductMapIdle_tau_inversion hIn
           (fun k => inputBroadcastLabelMap_tau P.n X k) hi
       exact Or.inr
         (Or.inl ⟨k, c, by rw [prodPMF_pure_pure, prodPMF_pure_pure], hstep⟩)
     · obtain ⟨q, d, rfl, hstep⟩ :=
-        synchronisedProductMapIdle_tau_inversion hBind
+        System.synchronisedProductMapIdle_tau_inversion hBind
           (fun q => bindBroadcastLabelMap_tau P.n X q) hb
       exact Or.inr
         (Or.inr ⟨q, d, by rw [prodPMF_pure_pure, prodPMF_pure_pure], hstep⟩)
@@ -1121,8 +1046,8 @@ theorem instanceOverBroadcastsExtended_label_step (hL : L ≠ (Silent.τ : Gathe
     exact Or.inl ⟨hL, PMF.pure x, PMF.pure w', gatherProgramProduct_pure hL hproc, hnet,
       (prodPMF_pure_pure _ _).symm⟩
   · rw [System.parallel_step]
-    exact Or.inl ⟨hL, PMF.pure a', PMF.pure b', synchronisedProductMapIdle_pure hL hin,
-      synchronisedProductMapIdle_pure hL hbind, (prodPMF_pure_pure _ _).symm⟩
+    exact Or.inl ⟨hL, PMF.pure a', PMF.pure b', System.synchronisedProductMapIdle_pure hL hin,
+      System.synchronisedProductMapIdle_pure hL hbind, (prodPMF_pure_pure _ _).symm⟩
 
 /-- Build a silent transition of the two tiers from an injection of the gather
 network. -/
@@ -1146,7 +1071,7 @@ theorem instanceOverBroadcastsExtended_tau_input {k : Fin P.n} {c : B}
     (prodPMF_pure_pure _ _).symm⟩)
   rw [System.parallel_step]
   exact Or.inr (Or.inl ⟨rfl, PMF.pure (Function.update a k c),
-    synchronisedProductMapIdle_tau_step (inputBroadcastLabelMap_tau P.n X k) h,
+    System.synchronisedProductMapIdle_tau_step (inputBroadcastLabelMap_tau P.n X k) h,
       (prodPMF_pure_pure _ _).symm⟩)
 
 /-- Build a silent transition of the two tiers from a silent step of one bind
@@ -1161,7 +1086,7 @@ theorem instanceOverBroadcastsExtended_tau_bind {q : Fin P.n} {d : B'}
     (prodPMF_pure_pure _ _).symm⟩)
   rw [System.parallel_step]
   exact Or.inr (Or.inr ⟨rfl, PMF.pure (Function.update b q d),
-    synchronisedProductMapIdle_tau_step (bindBroadcastLabelMap_tau P.n X q) h,
+    System.synchronisedProductMapIdle_tau_step (bindBroadcastLabelMap_tau P.n X q) h,
       (prodPMF_pure_pure _ _).symm⟩)
 
 /-- A hidden event is a silent transition of the instance. -/
@@ -1275,47 +1200,6 @@ variable {n : ℕ} (X : Type) (k q id j q' k' i : Fin n)
       if q = q' then some (Sum.inl (.ret j U)) else none := rfl
 
 end PullRows
-
-/-! ### One lifted instance's step, by the pullback's value -/
-
-section LiftRows
-
-variable {S B Lbl Λ : Type} {A₀ : System S Lbl} {ψ : Λ → Option Lbl} {s s' : S} {L : Λ}
-
-/-- An instance whose pullback has no image at the label has not moved. -/
-theorem lift_step_none (hψ : ψ L = none) (h : (A₀.mapIdle ψ).step s L (PMF.pure s')) : s' = s :=
-  PMF.pure_injective ((System.mapIdle_step_none hψ _).mp h)
-
-/-- An instance whose pullback has an image at the label steps on that
-image. -/
-theorem lift_step_some {l₀ : Lbl} (hψ : ψ L = some l₀)
-    (h : (A₀.mapIdle ψ).step s L (PMF.pure s')) : A₀.step s l₀ (PMF.pure s') :=
-  (System.mapIdle_step_some hψ _).mp h
-
-/-- A row of an instance is a transition read through the pullback. -/
-theorem row_lift_step {l₀ : Lbl} (hψ : ψ L = some l₀) (h : A₀.step s l₀ (PMF.pure s')) :
-    (A₀.mapIdle ψ).step s L (PMF.pure s') :=
-  (System.mapIdle_step_some hψ _).mpr h
-
-variable {n : ℕ} {A : ∀ _ : Fin n, System B Lbl} {φ : Fin n → Λ → Option Lbl}
-  {a a' : ∀ _ : Fin n, B} {k : Fin n}
-
-/-- A label naming one instance moves that instance alone. -/
-theorem lift_update {l₀ : Lbl} {c : B} (hk : φ k L = some l₀)
-    (hother : ∀ k', k' ≠ k → φ k' L = none) (h : (A k).step (a k) l₀ (PMF.pure c)) :
-    ∀ k', ((A k').mapIdle (φ k')).step (a k') L (PMF.pure (Function.update a k c k')) := by
-  intro k'
-  by_cases hkk : k' = k
-  · subst hkk; rw [Function.update_self, System.mapIdle_step_some hk]; exact h
-  · rw [Function.update_of_ne hkk]; exact lift_idle (hother k' hkk)
-
-/-- A label with an image at every instance moves them all. -/
-theorem lift_all {l₀ : Fin n → Lbl} (hk : ∀ k, φ k L = some (l₀ k))
-    (h : ∀ k, (A k).step (a k) (l₀ k) (PMF.pure (a' k))) :
-    ∀ k, ((A k).mapIdle (φ k)).step (a k) L (PMF.pure (a' k)) :=
-  fun k => (System.mapIdle_step_some (hk k) _).mpr (h k)
-
-end LiftRows
 
 /-! ### One gather program's rules, by label class
 

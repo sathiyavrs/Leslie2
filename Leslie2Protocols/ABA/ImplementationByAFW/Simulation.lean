@@ -5,6 +5,7 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.ImplementationByAFW.RoundProjectionStep
+import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 
 /-!
 # The gather-based protocol into its composed system
@@ -311,9 +312,9 @@ theorem row_instanceOverBracha_call (s : Gather.StateOverBracha P.n X) (id : Fin
     (Gather.programStep_update (Gather.ProgramStep.call (v id) x h)
       (fun i hi => Gather.ProgramStep.callIdle (v i) id x (Ne.symm hi)))
     (Gather.NetworkStep.call y id x)
-    (Gather.lift_update (by simp) (fun k hk => by simp [hk])
+    (System.mapIdle_step_update (by simp) (fun k hk => by simp [hk])
       (Gather.row_brachaInstance_call_step P id (a id) x hb))
-    (fun _ => Gather.lift_idle rfl)
+    (fun _ => System.mapIdle_unchanged rfl)
 
 /-- Build the instance's input-enabledness loop. -/
 theorem row_instanceOverBracha_callLoop (s : Gather.StateOverBracha P.n X) (id : Fin P.n) (x : X) :
@@ -322,14 +323,15 @@ theorem row_instanceOverBracha_callLoop (s : Gather.StateOverBracha P.n X) (id :
   obtain ⟨⟨v, y⟩, a, b⟩ := s
   refine Gather.instanceOverBroadcasts_label_step (x := v) (w' := y) (a' := a) (b' := b) (by simp)
     (fun i => ?_) (Gather.NetworkStep.callLoop y id x) (fun k => ?_)
-    (fun _ => Gather.lift_idle rfl)
+    (fun _ => System.mapIdle_unchanged rfl)
   · by_cases hi : i = id
     · subst hi; exact Gather.ProgramStep.callLoop (v i) x
     · exact Gather.ProgramStep.callLoopIdle (v i) id x (Ne.symm hi)
   · by_cases hk : k = id
     · subst hk
-      exact Gather.row_lift_step (by simp) (Gather.row_brachaInstance_callLoop_step P k (a k) x)
-    · exact Gather.lift_idle (by simp [hk])
+      exact System.mapIdle_step_of_step (by simp)
+        (Gather.row_brachaInstance_callLoop_step P k (a k) x)
+    · exact System.mapIdle_unchanged (by simp [hk])
 
 end GatherRows
 
@@ -384,8 +386,8 @@ theorem roundOverBracha_callG (s : GBCA.ByAFW.RoundStateOverBracha P.n) (id : Fi
       (GBCA.ByAFW.programStep_update (GBCA.ByAFW.ProgramStep.callG (v id) b h0)
         (fun i hi => GBCA.ByAFW.ProgramStep.callGIdle (v i) id b (Ne.symm hi)))
       (GBCA.ByAFW.NetworkStep.callG y id b))
-    (Gather.row_lift_step (by simp) (row_instanceOverBracha_call c id b hg hb))
-    (Gather.lift_idle (by simp))
+    (System.mapIdle_step_of_step (by simp) (row_instanceOverBracha_call c id b hg hb))
+    (System.mapIdle_unchanged (by simp))
 
 /-- **The round's call loop**: no program moves and the first gather takes its
 input-enabledness loop. -/
@@ -396,8 +398,8 @@ theorem roundOverBracha_callLoop (s : GBCA.ByAFW.RoundStateOverBracha P.n) (id :
   refine GBCA.ByAFW.roundOverGathers_label_step (by simp)
     (GBCA.ByAFW.roundPrograms_label_step (lp := .callLoop r id b) (by simp) (by simp) (fun i => ?_)
       (GBCA.ByAFW.NetworkStep.callLoop y id b))
-    (Gather.row_lift_step (by simp) (row_instanceOverBracha_callLoop c id b))
-    (Gather.lift_idle (by simp))
+    (System.mapIdle_step_of_step (by simp) (row_instanceOverBracha_callLoop c id b))
+    (System.mapIdle_unchanged (by simp))
   by_cases hi : i = id
   · subst hi; exact GBCA.ByAFW.ProgramStep.callLoop (v i) b
   · exact GBCA.ByAFW.ProgramStep.callLoopIdle (v i) id b (Ne.symm hi)
@@ -412,8 +414,8 @@ theorem roundOverBracha_byzantineCallLoop (s : GBCA.ByAFW.RoundStateOverBracha P
   refine GBCA.ByAFW.roundOverGathers_label_step (by simp)
     (GBCA.ByAFW.roundPrograms_label_step (lp := .callLoop r id b) (by simp) (by simp) (fun i => ?_)
       (GBCA.ByAFW.NetworkStep.callLoop y id b))
-    (Gather.row_lift_step (by simp) (row_instanceOverBracha_callLoop c id b))
-    (Gather.lift_idle (by simp))
+    (System.mapIdle_step_of_step (by simp) (row_instanceOverBracha_callLoop c id b))
+    (System.mapIdle_unchanged (by simp))
   by_cases hi : i = id
   · subst hi; exact GBCA.ByAFW.ProgramStep.callLoop (v i) b
   · exact GBCA.ByAFW.ProgramStep.callLoopIdle (v i) id b (Ne.symm hi)
@@ -440,8 +442,8 @@ theorem roundOverBracha_firstGatherReturn (s : GBCA.ByAFW.RoundStateOverBracha P
         hin hc)
         (fun i hi => GBCA.ByAFW.ProgramStep.firstGatherReturnIdle (v i) id g _ (Ne.symm hi)))
       (GBCA.ByAFW.NetworkStep.firstGatherReturn y id g _))
-    (Gather.row_lift_step (by simp) (row_instanceOverBracha_inl (by simp) h))
-    (Gather.lift_idle (by simp))
+    (System.mapIdle_step_of_step (by simp) (row_instanceOverBracha_inl (by simp) h))
+    (System.mapIdle_unchanged (by simp))
 
 /-- **The second gather's call**: the program marks the call and the second
 gather takes its call. -/
@@ -459,8 +461,8 @@ theorem roundOverBracha_secondGatherCall (s : GBCA.ByAFW.RoundStateOverBracha P.
       (GBCA.ByAFW.programStep_update (GBCA.ByAFW.ProgramStep.secondGatherCall (v id) x hc h2)
         (fun i hi => GBCA.ByAFW.ProgramStep.secondGatherCallIdle (v i) id x (Ne.symm hi)))
       (GBCA.ByAFW.NetworkStep.secondGatherCall y id x))
-    (Gather.lift_idle (by simp))
-    (Gather.row_lift_step (by simp) (row_instanceOverBracha_call d id x hg hb))
+    (System.mapIdle_unchanged (by simp))
+    (System.mapIdle_step_of_step (by simp) (row_instanceOverBracha_call d id x hg hb))
 
 /-- **The second gather's return**: the program records the grade and the
 second gather takes its return. -/
@@ -484,8 +486,8 @@ theorem roundOverBracha_secondGatherReturn (s : GBCA.ByAFW.RoundStateOverBracha 
         h2 ho)
         (fun i hi => GBCA.ByAFW.ProgramStep.secondGatherReturnIdle (v i) id g _ (Ne.symm hi)))
       (GBCA.ByAFW.NetworkStep.secondGatherReturn y id g _))
-    (Gather.lift_idle (by simp))
-    (Gather.row_lift_step (by simp) (row_instanceOverBracha_inl (by simp) h))
+    (System.mapIdle_unchanged (by simp))
+    (System.mapIdle_step_of_step (by simp) (row_instanceOverBracha_inl (by simp) h))
 
 /-- **The round's graded return**: the program announces the grade it holds and
 marks the record returned, and the bit the label carries is the one on
@@ -503,7 +505,7 @@ theorem roundOverBracha_retG (s : GBCA.ByAFW.RoundStateOverBracha P.n) (id : Fin
       (GBCA.ByAFW.programStep_update (GBCA.ByAFW.ProgramStep.retG (v id) out _ ho hr)
         (fun i hi => GBCA.ByAFW.ProgramStep.retGIdle (v i) id out _ (Ne.symm hi)))
       (GBCA.ByAFW.NetworkStep.retG y id out))
-    (Gather.lift_idle (by simp)) (Gather.lift_idle (by simp))
+    (System.mapIdle_unchanged (by simp)) (System.mapIdle_unchanged (by simp))
 
 /-! ### Runs of one round -/
 
