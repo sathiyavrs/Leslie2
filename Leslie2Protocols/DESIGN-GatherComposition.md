@@ -21,7 +21,7 @@ two-gather round and its three tiers (`ABA/GBCA/AFW/Counting.lean`,
 `ABA/GBCA/AFW/Binding.lean`), the assembly at the protocol shape
 (`ABA/ImplementationByAFW/CompositionChain.lean`), and the protocol beneath it
 (`ABA/ImplementationByAFW/System.lean`, `ABA/ImplementationByAFW/RoundProjection.lean`,
-`ABA/ImplementationByAFW/RoundProjectionStep.lean`,
+`ABA/ImplementationByAFW/RoundProjectionStep/`,
 `ABA/ImplementationByAFW/SimulationRows.lean`, `ABA/ImplementationByAFW/Simulation.lean`). The
 gather subsections of
 `blueprint/src/content.tex` are a condensation of this document; the deviations D24,
@@ -335,7 +335,7 @@ their two siblings, as `GBCA.ByABDY.gbcaInstanceFamily` is. The stages compose b
 invoke transitivity of simulation — the two routes of `Results.lean`, reproduced.
 
 ## The protocol beneath the composed system (`ImplementationByAFW/System.lean`,
-`ImplementationByAFW/RoundProjection.lean`, `ImplementationByAFW/RoundProjectionStep.lean`,
+`ImplementationByAFW/RoundProjection.lean`, `ImplementationByAFW/RoundProjectionStep/`,
 `ImplementationByAFW/SimulationRows.lean`, `ImplementationByAFW/Simulation.lean`)
 
 `AFW.composed P` is the gather-based protocol read as a composition of components. What runs is the
@@ -413,18 +413,21 @@ under the invariant two vote quorums at one process name one value (`BRB.echoCer
 re-established after every matched row by the instance's own preservation lemma, since every matched
 composed step is a genuine step of the instance.
 
-The proof is organised around that computation. `ABA/ImplementationByAFW/RoundProjectionStep.lean`
-states, for every implementation row, the view after the row as the composed round before the row
-with the corresponding composed effect applied, written through the round's updaters exactly as the
-row tables write it; the master lemma `roundProjection_write` pushes a one-point round write and a
-single sent-set insertion inside every coordinate, and each row then owes only projection algebra,
-discharged by `messagesOf_recordSent_some` and `messagesOf_recordSent_none`.
+The proof is organised around that computation. The files of
+`ABA/ImplementationByAFW/RoundProjectionStep/` state, for every implementation row, the view after
+the row as the composed round before the row with the corresponding composed effect applied,
+written through the round's updaters exactly as the row tables write it; the master lemma
+`roundProjection_write` of `ABA/ImplementationByAFW/RoundProjectionStep/ViewAfterOneWrite.lean`
+pushes a one-point round write and a single sent-set insertion inside every coordinate, and each
+row then owes only projection algebra, discharged by `messagesOf_recordSent_some` and
+`messagesOf_recordSent_none`.
 `ABA/ImplementationByAFW/SimulationRows.lean` matches each implementation row by a run of the
 composed group: a send and a delivery are hidden events of the round instance, answered by one of
 its silent steps, the adversary's authenticity conjunct becoming membership in the sent set
 projected onto the instance; the call is the instance's own. Three of the implementation's rows are
 answered by two composed steps, through the intermediate states
-`ABA/ImplementationByAFW/RoundProjectionStep.lean` names: the return-then-call step by
+`ABA/ImplementationByAFW/RoundProjectionStep/ReturnThenCall.lean` and
+`ABA/ImplementationByAFW/RoundProjectionStep/Delivery.lean` name: the return-then-call step by
 `firstGatherReturn` then `secondGatherCall`, the graded return by `secondGatherReturn` then the
 visible `retG`, and a
 delivery that completes a vote quorum by the instance's delivery then its return, which records the

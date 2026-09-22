@@ -314,10 +314,26 @@ system.
 |---|---|---|
 | `ImplementationByAFW/CompositionChain.lean` | 382 | **The gather-based chain**: the families `roundFamilyOverBracha`, `roundFamilyOverBroadcastSpecification` and `roundFamilyOverGatherSpecifications`, and the three stages `AFW.composed ⊑ AFW.composedOverBroadcastSpecification ⊑ AFW.composedOverGatherSpecifications ⊑ hybrid`. One axiom check. |
 | `ImplementationByAFW/RoundProjection.lean` | 876 | `AFW.roundProjection`, the view that computes a composed state from the implementation, the relation `AFW.ProtocolRelation` it carries, and the builders that assemble a transition of the composed system. |
-| `ImplementationByAFW/RoundProjectionStep.lean` | 3613 | The view of the composed round after one implementation row: for each row of the implementation, the round's view after it is the view before it with the composed round's own effect applied. |
+| `ImplementationByAFW/RoundProjectionStep.lean` | 35 | The module that imports the ten files of `RoundProjectionStep/`. |
 | `ImplementationByAFW/Simulation.lean` | 907 | **`AFW.protocolSimulation`**, **`AFW.protocol_composed`**: the matching label class by label class, and the gather-based protocol carried into `AFW.composed` along a relation that computes the composed state from the implementation, the ghost record included. Two axiom checks. |
 | `ImplementationByAFW/SimulationRows.lean` | 1462 | Each row of the gather-based implementation answered by a run of `AFW.composed`: the readers that identify a row off its label, the builders of a transition of one gather instance and of one round, the broadcast invariant across a row, and the returned value read against the implementation's `2f + 1` `VOTE` receipt quorum. |
 | `ImplementationByAFW/System.lean` | 921 | **The gather-based protocol as it runs**: the implementation at AFW25's two-gather construction — the tagged message type collapsing a round's `4n + 2` network states into one sent-set family, the process-major round record, the adversary's ghost record of the two cores and the bound bit, and the 23 round rows. |
+
+**`ABA/ImplementationByAFW/RoundProjectionStep/`** — the view of the composed round after one row
+of the gather-based implementation, one file per row class.
+
+| file | lines | what it is |
+|---|---|---|
+| `ImplementationByAFW/RoundProjectionStep/BroadcastSend.lean` | 498 | `roundProjection_firstGatherInputBroadcastSend` and its three companions: the view after a Bracha send in one broadcast instance of either gather, which leaves the returned value where it stands. |
+| `ImplementationByAFW/RoundProjectionStep/ByzantineInjection.lean` | 399 | `roundProjection_byzantineFirstGather` and its five companions: the view after the adversary multicasts on behalf of a corrupted sender, a row that moves no record. |
+| `ImplementationByAFW/RoundProjectionStep/Delivery.lean` | 842 | `roundProjection_deliverFirstGather` and its nine companions: the view after a delivery, a broadcast delivery that completes a `2f + 1` `VOTE` quorum at the receiver being answered by the instance's delivery and then its return. |
+| `ImplementationByAFW/RoundProjectionStep/GatherAndBroadcastRows.lean` | 587 | `roundProjection_firstGatherEcho` and its thirteen companions: the view after each `ECHO`, `VOTE` and `BIND` row of the two gathers and of their four broadcast families. |
+| `ImplementationByAFW/RoundProjectionStep/GatherSend.lean` | 208 | `roundProjection_firstGatherSend` and `roundProjection_secondGatherSend`: the view after a gather's `ECHO` or `VOTE`. |
+| `ImplementationByAFW/RoundProjectionStep/GradedAgreementCall.lean` | 165 | `roundProjection_callG` and `roundProjection_gbcaCallLoop`: the view after the fused graded-agreement call, and after a call against an already-called record. |
+| `ImplementationByAFW/RoundProjectionStep/OtherRoundsUnchanged.lean` | 120 | `roundProjection_otherRow` and its three companions: the rounds a row does not name read exactly as the row found them, and `toRoundFamily` and its two companions state that as a one-point update of the family of rounds. |
+| `ImplementationByAFW/RoundProjectionStep/ProtocolRelationClauses.lean` | 117 | `broadcastReturnsInvariant_of`, `broadcastReturnsInvariant_congr` and `boundInvariant_writeGhost`: the two conjuncts of `AFW.ProtocolRelation` that no frame lemma supplies. |
+| `ImplementationByAFW/RoundProjectionStep/ReturnThenCall.lean` | 350 | `roundProjection_firstGatherReturn_secondGatherCall` and `roundProjection_secondGatherReturn_retG`: the two rows that two events of the composed round answer, through a named intermediate state. |
+| `ImplementationByAFW/RoundProjectionStep/ViewAfterOneWrite.lean` | 603 | `roundProjection_write` and `roundProjection_writeNoSent`, the round-record write and the tagged send every row performs, read through the view, with the sent algebra and the readers of the written view the row classes run on. |
 
 **`ABA/`** — the headlines.
 

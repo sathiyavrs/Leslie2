@@ -40,7 +40,7 @@ implementation reads a `2f + 1` `VOTE` receipt quorum on the process's own local
 four broadcast families. A delivery moves the returned value in one way only:
 `AFW.broadcastReturnsFor_deliver_cases` says that it either leaves the returned value where it
 stands or fills an empty one, which is the dichotomy between the plain delivery lemmas of
-`ABA/ImplementationByAFW/RoundProjectionStep.lean` and their quorum companions.
+`ABA/ImplementationByAFW/RoundProjectionStep/Delivery.lean` and their quorum companions.
 
 ## The two clauses that are not projections
 
