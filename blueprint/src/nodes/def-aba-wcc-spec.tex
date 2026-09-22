@@ -1,11 +1,11 @@
 \begin{definition}[The coin specification]
   \label{def:aba-wcc-spec}
   \lean{PLTS.ABA.WCC.Step}\lean{PLTS.ABA.WCC.specFamily}\leanok
-  \uses{def:aba-labels, def:aba-params, def:idle-family}
+  \uses{def:aba-labels, def:aba-parameters, def:idle-family}
   Transition System 3, as a round-indexed instance and the $\mathbb{N}$-indexed family of Definition~\ref{def:idle-family} over it.
   The call label carries two rows under exclusive guards.
   \leandeclnamed{callRecord}{PLTS.ABA.WCC.Step.callRecord} records a caller that leaves the count at $f$ or below, or that arrives at a resolved $val$.
-  \leandeclnamed{callResolve}{PLTS.ABA.WCC.Step.callResolve} takes the caller whose access carries the count above $f$ at $val = \bot$, records it, and draws $val$ by the distribution of Definition~\ref{def:aba-params}, the one both coin resolutions of the development share.
+  \leandeclnamed{callResolve}{PLTS.ABA.WCC.Step.callResolve} takes the caller whose access carries the count above $f$ at $val = \bot$, records it, and draws $val$ by the distribution of Definition~\ref{def:aba-parameters}, the one both coin resolutions of the development share.
   The count is \leandeclnamed{threshold}{PLTS.ABA.WCC.SpecState.threshold}, read at the recorded state \leandeclnamed{record}{PLTS.ABA.WCC.SpecState.record} and taken over the callers alone (D31).
   A third row \leandeclnamed{callLoop}{PLTS.ABA.WCC.Step.callLoop} carries a call at every state and records no caller, which makes the call label input-enabled: the crossing access is therefore a recorded one, and the scheduler may defer the resolution past any number of calls.
   The resolving row is the only rule of this system that is not Dirac, and the system carries no silent rule.

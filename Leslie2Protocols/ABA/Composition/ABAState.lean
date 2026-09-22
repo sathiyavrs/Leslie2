@@ -80,8 +80,8 @@ def initial (P : Parameters) : ABAState P :=
     (RoundLoopRecord.initial n).process = RoundLoopState.initial n := rfl
 @[simp] theorem _root_.PLTS.ABA.RoundLoopRecord.initial_decidedDelivered (n : ℕ) (j : Fin n) :
     (RoundLoopRecord.initial n).decidedDelivered j = ∅ := rfl
-@[simp] theorem _root_.PLTS.ABA.Composition.ABANetworkState.initial_decidedSent (n : ℕ) (j : Fin n)
-  :
+@[simp] theorem _root_.PLTS.ABA.Composition.ABANetworkState.initial_decidedSent (n : ℕ)
+  (j : Fin n) :
     (ABANetworkState.initial n).decidedSent j = ∅ := rfl
 @[simp] theorem _root_.PLTS.ABA.Composition.ABANetworkState.initial_F (n : ℕ) :
     (ABANetworkState.initial n).F = ∅ := rfl
@@ -114,8 +114,8 @@ def setProcess (s : ABAState P) (id : Fin P.n) (p : RoundLoopState P.n) : ABASta
 @[simp] theorem setProcess_F (s : ABAState P) (id : Fin P.n) (p : RoundLoopState P.n) :
     (s.setProcess id p).F = s.F := rfl
 
-@[simp] theorem setProcess_decidedReceived (s : ABAState P) (id : Fin P.n) (p : RoundLoopState P.n)
-  :
+@[simp] theorem setProcess_decidedReceived (s : ABAState P) (id : Fin P.n)
+  (p : RoundLoopState P.n) :
     (s.setProcess id p).decidedReceived = s.decidedReceived := by
   funext i
   by_cases hi : i = id
@@ -307,7 +307,7 @@ theorem stepRound_decidedSent_of_not_grade2 (s : ABAState P) (id : Fin P.n) (c :
 
 /-- The round advance when the round carried no grade-2 outcome: the round loop's
 own advance, the network untouched. -/
-theorem stepRound_plain (C : ∀ _ : Fin P.n, RoundLoopRecord P.n) (A : ABANetworkState P.n)
+theorem stepRound_of_not_grade2 (C : ∀ _ : Fin P.n, RoundLoopRecord P.n) (A : ABANetworkState P.n)
     (id : Fin P.n) (co : Bool)
     (hg : ∀ v : Bool, (C id).process.lastGrade ≠ some (.grade2 v)) :
     stepRound (P := P) (C, A) id co

@@ -34,7 +34,7 @@ grade-2 return has happened no grade-0 return can, and vice versa.
 
 Both value-bearing returns carry the guard pair `v ∉ excluded ∧ (!v) ∈ excluded`: the
 bit handed out is alive, and the other bit is already excluded. That pair *is*
-graded agreement, with no supporting argument. A return of `v` pins `!v` into
+graded agreement, with no supporting argument. A return of `v` puts `!v` into
 `excluded`; monotonicity carries `!v ∈ excluded` to every later state of the run; a
 later return of `w` needs `w ∉ excluded`, so `w ≠ !v`, so `w = v`. Two returns in
 one execution therefore name the same bit whatever their grades, and a single

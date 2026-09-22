@@ -11,7 +11,7 @@ import Leslie2Protocols.ABA.Implementation.System
 # The protocol as it runs
 
 The subject of the whole chain: `n` programs, one per process, beside one
-network adversary and the coin oracle. A program reads its own records, its own
+network and the coin oracle. A program reads its own records, its own
 received sets and its own replacement flag, and nothing else about corruption: not
 the corrupted set, not the budget, not another process's status (D23). The
 adversary holds the round-tagged message sets, the DECIDED sets and the
@@ -20,7 +20,7 @@ labels. The coin oracle is held at specification level.
 
 The shape is the parametric implementation of `ABA/Implementation/System.lean`, which
 carries the round loop, the DECIDED sets, the coin handshake, corruption, the
-network adversary and the composition pipeline for any graded-agreement
+network and the composition pipeline for any graded-agreement
 implementation. This file supplies the things an implementation fixes and
 nothing else:
 
@@ -30,8 +30,8 @@ nothing else:
 * the rows of the implementation, `RoundStep`: the graded-agreement call, the eight round
   multicasts, the round delivery, the call against an already-called record, and the three graded
   returns;
-* the network adversary's ghost — the type `Option Bool` of a round's bound
-  bit, the write `abdyGhostStep`, the read `abdyGhostOut` and the guard
+* the network's ghost — the type `Option Bool` of a round's bound
+  bit, the write `abdyGhostStep`, the read `abdyGhostOutput` and the guard
   `abdyAnnouncedBound` the two return rows put on the announced bit.
 
 `ABDY.protocol P` is the implementation at those three, named for the authors of the implementation
@@ -91,9 +91,9 @@ end RoundRecordMap
 /-- The state of one process: its round-loop record and its round records (D22). -/
 abbrev ProcessRecord (n : ℕ) : Type := Implementation.ProcessRecord n (GBCA.ByABDY.RoundRecord n)
 
-/-! ### The network adversary's state at ABDY22's implementation -/
+/-! ### The network's state at ABDY22's implementation -/
 
-/-- The state of the network adversary: the round-tagged message sets, the
+/-- The state of the network: the round-tagged message sets, the
 DECIDED sets, the corrupted set with its budget, and the bound bit of every
 round. -/
 abbrev NetworkState (n : ℕ) : Type := Implementation.NetworkState n GBCA.ByABDY.Message (Option
@@ -109,7 +109,7 @@ abbrev NetworkState.corrupt (P : Parameters) (id : Fin P.n) (s : NetworkState P.
   P.n :=
   Implementation.NetworkState.corrupt P id s
 
-/-! ### The network adversary's ghost at ABDY22's implementation
+/-! ### The network's ghost at ABDY22's implementation
 
 The bound bit of a round is a ghost output: the specification announces it on
 every return label (`ABA/GBCA/Specification.lean`) and no program reads it. At this
@@ -121,12 +121,12 @@ the round has none on record and leaves the record alone otherwise, so the
 record is write-once and both returns of a round — the correct one and the
 Byzantine one — write it the same way. Every other row leaves it alone.
 
-`abdyGhostOut` reads it out: the bit on record if the round has one, and
+`abdyGhostOutput` reads it out: the bit on record if the round has one, and
 `GBCA.ByABDY.boundOf` of the round's sent sets, the corrupted set and the outcome
 otherwise. This is the account of the round's bound bit that
 `GBCA/ABDY/Implementation.lean` holds in its own network state, computed here from the
 network's sent sets instead. `abdyAnnouncedBound` is the guard of the two
-return rows: the bit a return announces is `abdyGhostOut` of the round. -/
+return rows: the bit a return announces is `abdyGhostOutput` of the round. -/
 
 /-- The ghost write of a row: a return records the bit its label announces
 where the round has none on record; every other row leaves the record alone. -/
@@ -138,17 +138,17 @@ def abdyGhostStep (P : Parameters) :
 
 /-- The ghost output of a return: the round's bound bit on record, and
 `GBCA.ByABDY.boundOf` of the round's messages where there is none. -/
-def abdyGhostOut (P : Parameters) (s : NetworkState P.n) (r : ℕ) (_id : Fin P.n)
+def abdyGhostOutput (P : Parameters) (s : NetworkState P.n) (r : ℕ) (_id : Fin P.n)
     (out : GBCAOutput) : Bool :=
   (s.ghostRecord r).getD (GBCA.ByABDY.boundOf (s.sent r) s.F out)
 
-/-- The bit the network adversary announces on a return: the round's ghost
-output, and no other. This is the relation the implementation's `ghostOut`
+/-- The bit the network announces on a return: the round's ghost
+output, and no other. This is the relation the implementation's `ghostOutput`
 parameter takes at this instantiation. It is reducible, so the guard of the two
 return rows is the equation itself. -/
 abbrev abdyAnnouncedBound (P : Parameters) (s : NetworkState P.n) (r : ℕ) (id : Fin P.n)
     (out : GBCAOutput) (bnd : Bool) : Prop :=
-  bnd = abdyGhostOut P s r id out
+  bnd = abdyGhostOutput P s r id out
 
 
 /-- A row whose ghost write is the identity leaves the adversary's whole state
@@ -469,7 +469,7 @@ abbrev ABAProgramStep (P : Parameters) (j : Fin P.n) :
 /-- The message the graded-agreement call multicasts: `⟨INPUT, b⟩`. -/
 def gbcaCallPayload (P : Parameters) : Fin P.n → Bool → GBCA.ByABDY.Message := fun _ b => .input b
 
-/-- The step relation of the network adversary. -/
+/-- The step relation of the network. -/
 abbrev NetworkStep (P : Parameters) : NetworkState P.n → ExtendedLabel P.n → PMF (NetworkState P.n)
   → Prop :=
   Implementation.NetworkStep P GBCA.ByABDY.Message (Option Bool) (gbcaCallPayload P)
@@ -481,19 +481,19 @@ noncomputable abbrev ABAProgram (P : Parameters) (j : Fin P.n) :
     System (ProcessRecord P.n) (ExtendedLabel P.n) :=
   program P GBCA.ByABDY.Message (GBCA.ByABDY.RoundRecord P.n) (RoundStep P) j
 
-/-- The network adversary. -/
+/-- The network. -/
 noncomputable abbrev network (P : Parameters) : System (NetworkState P.n) (ExtendedLabel P.n) :=
   Implementation.network P GBCA.ByABDY.Message (Option Bool) (gbcaCallPayload P) (abdyGhostStep P)
     (abdyAnnouncedBound P)
 
 
-/-- The state of the protocol: the process family, the network adversary and
+/-- The state of the protocol: the process family, the network and
 the coin oracle. -/
 abbrev ProtocolState (P : Parameters) : Type :=
   Implementation.State P GBCA.ByABDY.Message (GBCA.ByABDY.RoundRecord P.n) (Option Bool)
 
 /-- The three components in parallel, over the extended alphabet: the synchronised process group,
-the network adversary and the lifted oracle. -/
+the network and the lifted oracle. -/
 noncomputable def protocolExtended (P : Parameters) : System (ProtocolState P)
   (Composition.ExtendedLabel P.n) :=
   Implementation.systemExtended P GBCA.ByABDY.Message (GBCA.ByABDY.RoundRecord P.n) (Option Bool)

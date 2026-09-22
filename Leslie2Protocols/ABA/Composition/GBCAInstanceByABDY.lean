@@ -351,8 +351,8 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
       GBCAProgramStep P r j p (Sum.inr (.send j (.echo5 none)))
         (PMF.pure (p.setProcess { p.process with sentEcho5 := some none }))
   /-- A multicast by another process: not `j`'s business. -/
-  | sendIdle (p : GBCA.ByABDY.RoundRecord P.n) (k : Fin P.n) (m : GBCA.ByABDY.Message) (hk : k ≠ j)
-    :
+  | sendIdle (p : GBCA.ByABDY.RoundRecord P.n) (k : Fin P.n) (m : GBCA.ByABDY.Message)
+    (hk : k ≠ j) :
       GBCAProgramStep P r j p (Sum.inr (.send k m)) (PMF.pure p)
   /-- Delivery, receiver's half: file the message under the sender's recv row.
   Authenticity is the network's conjunct (`ImplementationStep.deliver`; D5). -/
@@ -555,12 +555,12 @@ below unfold it once and for all, in both directions. -/
 
 /-- A synchronised transition of the program group on a visible label: every
 program steps, and the joint distribution is Dirac. -/
-theorem gbcaProgramProduct_inversion {P : Parameters} {r : ℕ} {u : ∀ _ : Fin P.n,
-    GBCA.ByABDY.RoundRecord P.n} {l : GBCALabel P.n} {μ : PMF (∀ _ : Fin P.n,
-      GBCA.ByABDY.RoundRecord P.n)}
+theorem gbcaProgramProduct_inversion {P : Parameters} {r : ℕ}
+    {u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n} {l : GBCALabel P.n}
+    {μ : PMF (∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n)}
     (h : (System.synchronisedProduct (gbcaProgram P r)).step u l μ) :
-    ∃ x : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n,
-      μ = PMF.pure x ∧ ∀ i, GBCAProgramStep P r i (u i) l (PMF.pure (x i)) := by
+    ∃ x : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n, μ = PMF.pure x ∧ ∀ i, GBCAProgramStep P r i
+    (u i) l (PMF.pure (x i)) := by
   rw [System.synchronisedProduct_step] at h
   rcases h with ⟨-, μ_, hall, rfl⟩ | ⟨rfl, i, μ_i, hstep, -⟩
   · have hx : ∀ i, ∃ p', μ_ i = PMF.pure p' := fun i => gbcaProgramStep_dirac (hall i)
@@ -593,14 +593,11 @@ theorem gbcaProgramProduct_no_tau {P : Parameters} {r : ℕ}
 
 /-- The instance's step relation, unfolded to the hidden-rendezvous case and
 the shared-label case. -/
-theorem composition_step_iff (P : Parameters) (r : ℕ) (q : GBCA.ByABDY.ImplementationState P.n) (l :
-  ExtendedLabel
-  P.n)
-    (μ : PMF (GBCA.ByABDY.ImplementationState P.n)) :
+theorem composition_step_iff (P : Parameters) (r : ℕ) (q : GBCA.ByABDY.ImplementationState P.n)
+    (l : ExtendedLabel P.n) (μ : PMF (GBCA.ByABDY.ImplementationState P.n)) :
     (composition P r).step q l μ ↔
-      (l = Sum.inl Label.tau ∧ ∃ e : GBCAEvent P.n,
-        (compositionExtended P r).step q (Sum.inr e) μ) ∨
-      (compositionExtended P r).step q (Sum.inl l) μ := by
+    (l = Sum.inl Label.tau ∧ ∃ e : GBCAEvent P.n, (compositionExtended P r).step q (Sum.inr e) μ) ∨
+    (compositionExtended P r).step q (Sum.inl l) μ := by
   constructor
   · rintro (⟨hτ, l', ⟨e, rfl⟩, hstep⟩ | ⟨-, hstep⟩)
     · exact Or.inl ⟨Sum.inl_injective hτ, e, hstep⟩
@@ -812,9 +809,8 @@ theorem gbcaProgramStep_byzantineRetGGrade0_own {bnd : Bool}
       by assumption, by assumption, by assumption, rfl⟩
   case byzantineRetIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem gbcaProgramStep_byzantineRetG_foreign {k : Fin P.n} {out : GBCAOutput} {bnd : Bool} (hk : k
-  ≠ j)
-    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r k out bnd))) ν) :
+theorem gbcaProgramStep_byzantineRetG_foreign {k : Fin P.n} {out : GBCAOutput} {bnd : Bool}
+    (hk : k ≠ j) (h : GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r k out bnd))) ν) :
     ν = PMF.pure p := by
   cases h
   case byzantineRetIdle => rfl
@@ -822,10 +818,9 @@ theorem gbcaProgramStep_byzantineRetG_foreign {k : Fin P.n} {out : GBCAOutput} {
 
 theorem gbcaProgramStep_send_input_own {b : Bool}
     (h : GBCAProgramStep P r j p (Sum.inr (.send j (.input b))) ν) :
-    p.process.input ≠ none ∧ P.f + 1 ≤ p.receivedCount (.input b) ∧
-      p.process.sentInput b = false ∧
-      ν = PMF.pure (p.setProcess { p.process with
-        sentInput := Function.update p.process.sentInput b true }) := by
+    p.process.input ≠ none ∧ P.f + 1 ≤ p.receivedCount (.input b) ∧ p.process.sentInput b = false ∧
+    ν = PMF.pure
+    (p.setProcess { p.process with sentInput := Function.update p.process.sentInput b true }) := by
   cases h
   case sendRelay =>
     exact ⟨by assumption, by assumption, by assumption, rfl⟩
@@ -1039,8 +1034,7 @@ noncomputable def specificationOverRoundAlphabet (P : Parameters) (r : ℕ) :
 /-- The lifted specification is an LTS: the specification is, and reading it
 back adds only Dirac self-loops. -/
 theorem specificationOverRoundAlphabet_isLTS (P : Parameters) (r : ℕ) :
-  (specificationOverRoundAlphabet
-  P r).IsLTS :=
+    (specificationOverRoundAlphabet P r).IsLTS :=
   System.mapIdle_isLTS _ (GBCA.specInst_isLTS P r)
 
 /-! ### Weak runs of the lifted specification
@@ -1056,17 +1050,16 @@ specification label `l₀`. -/
 def labelSection {n : ℕ} (l₀ : Label n) (l : ExtendedLabel n) : Label n → ExtendedLabel n :=
   fun x => if x = l₀ then l else Sum.inl x
 
-theorem gbcaLabelMap_labelSection {n : ℕ} {l₀ : Label n} {l : ExtendedLabel n} (hl : gbcaLabelMap n
-  l = some l₀)
-    (x : Label n) : gbcaLabelMap n (labelSection l₀ l x) = some x := by
+theorem gbcaLabelMap_labelSection {n : ℕ} {l₀ : Label n} {l : ExtendedLabel n}
+    (hl : gbcaLabelMap n l = some l₀) (x : Label n) :
+    gbcaLabelMap n (labelSection l₀ l x) = some x := by
   unfold labelSection
   by_cases hx : x = l₀
   · rw [if_pos hx, hl, hx]
   · rw [if_neg hx, gbcaLabelMap_inl]
 
-theorem labelSection_tau {n : ℕ} {l₀ : Label n} {l : ExtendedLabel n} (hl : gbcaLabelMap n l = some
-  l₀)
-    (hl₀ : l₀ ≠ (Silent.τ : Label n)) (x : Label n) :
+theorem labelSection_tau {n : ℕ} {l₀ : Label n} {l : ExtendedLabel n}
+    (hl : gbcaLabelMap n l = some l₀) (hl₀ : l₀ ≠ (Silent.τ : Label n)) (x : Label n) :
     labelSection l₀ l x = (Silent.τ : ExtendedLabel n) ↔ x = (Silent.τ : Label n) := by
   unfold labelSection
   by_cases hx : x = l₀
@@ -1082,21 +1075,19 @@ theorem labelSection_tau {n : ℕ} {l₀ : Label n} {l : ExtendedLabel n} (hl : 
 
 /-- A silent weak run of the specification is a silent weak run of the lifted
 specification. -/
-theorem weakLSilent_specificationOverRoundAlphabet (P : Parameters) (r : ℕ) {s s' : GBCA.SpecState
-  P.n}
-    (h : (GBCA.specInst P r).weakLSilent s s') : (specificationOverRoundAlphabet P r).weakLSilent s
-      s' :=
+theorem weakLSilent_specificationOverRoundAlphabet (P : Parameters) (r : ℕ)
+    {s s' : GBCA.SpecState P.n} (h : (GBCA.specInst P r).weakLSilent s s') :
+    (specificationOverRoundAlphabet P r).weakLSilent s s' :=
   System.weakLSilent_mapIdle Sum.inl (fun _ => rfl) (fun _ => by simp) h
 
 /-- A labelled weak run of the specification is a weak run of the lifted
 specification at any interface label projecting to the same specification
 label. -/
-theorem weakLStep_specificationOverRoundAlphabet (P : Parameters) (r : ℕ) {s s' : GBCA.SpecState
-  P.n}
-    {l₀ : Label P.n} {l : ExtendedLabel P.n} (hl₀ : l₀ ≠ (Silent.τ : Label P.n))
-    (hl : gbcaLabelMap P.n l = some l₀)
-    (h : (GBCA.specInst P r).weakLStep s l₀ s') : (specificationOverRoundAlphabet P r).weakLStep s l
-      s' :=
+theorem weakLStep_specificationOverRoundAlphabet (P : Parameters) (r : ℕ)
+    {s s' : GBCA.SpecState P.n} {l₀ : Label P.n} {l : ExtendedLabel P.n}
+    (hl₀ : l₀ ≠ (Silent.τ : Label P.n)) (hl : gbcaLabelMap P.n l = some l₀)
+    (h : (GBCA.specInst P r).weakLStep s l₀ s') :
+    (specificationOverRoundAlphabet P r).weakLStep s l s' :=
   System.weakLStep_mapIdle (labelSection l₀ l) (gbcaLabelMap_labelSection hl) (labelSection_tau hl
     hl₀)
     (by simp [labelSection]) h
@@ -1106,7 +1097,7 @@ theorem weakLStep_specificationOverRoundAlphabet (P : Parameters) (r : ℕ) {s s
 The round records and the network state are the two components of `GBCA.ByABDY.ImplementationState`
 (`GBCA/ABDY/Implementation.lean`), so the round instance and the implementation instance run on the
 same state and every rule of the one is a rule of the other read in the implementation's accessors.
-What the joint steps deliver, though, is a program function pinned pointwise — its value at the
+What the joint steps deliver, though, is a program function given pointwise — its value at the
 acting process, and its agreement with the old one elsewhere — where the implementation's rules
 write with `Function.update`. The lemmas here close that gap. -/
 
@@ -1114,9 +1105,9 @@ section Frame
 
 variable {P : Parameters} {u x : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n} {w : NetworkState P.n}
 
-/-- A program function pinned at `j` and unchanged elsewhere is the old one
+/-- A program function fixed at `j` and unchanged elsewhere is the old one
 updated at `j`. -/
-theorem nodeFun_update {j : Fin P.n} {q : GBCA.ByABDY.RoundRecord P.n}
+theorem programFunction_update {j : Fin P.n} {q : GBCA.ByABDY.RoundRecord P.n}
     (hj : x j = q) (hne : ∀ i, i ≠ j → x i = u i) : x = Function.update u j q := by
   funext i
   by_cases hi : i = j
@@ -1126,19 +1117,18 @@ theorem nodeFun_update {j : Fin P.n} {q : GBCA.ByABDY.RoundRecord P.n}
 /-- A record write at one program, with the network state untouched. -/
 theorem composition_setProcess {j : Fin P.n} {pr : GBCA.ByABDY.ProcessRecord}
     (hj : x j = (u j).setProcess pr) (hne : ∀ i, i ≠ j → x i = u i) :
-    ((x, w) : GBCA.ByABDY.ImplementationState P.n) = GBCA.ByABDY.ImplementationState.setProcess (u,
-      w) j pr := by
-  rw [nodeFun_update hj hne]
+    ((x, w) : GBCA.ByABDY.ImplementationState P.n) = GBCA.ByABDY.ImplementationState.setProcess
+    (u, w) j pr := by
+  rw [programFunction_update hj hne]
   rfl
 
 /-- A record write at one program together with the network state recording the message
 that write multicasts. -/
-theorem composition_setProcess_recordGBCASend {j : Fin P.n} {pr : GBCA.ByABDY.ProcessRecord} {m :
-  GBCA.ByABDY.Message}
-    (hj : x j = (u j).setProcess pr) (hne : ∀ i, i ≠ j → x i = u i) :
-    ((x, w.recordGBCASend j m) : GBCA.ByABDY.ImplementationState P.n)
-      = (GBCA.ByABDY.ImplementationState.setProcess (u, w) j pr).multicast j m := by
-  rw [nodeFun_update hj hne]
+theorem composition_setProcess_recordGBCASend {j : Fin P.n} {pr : GBCA.ByABDY.ProcessRecord}
+    {m : GBCA.ByABDY.Message} (hj : x j = (u j).setProcess pr) (hne : ∀ i, i ≠ j → x i = u i) :
+    ((x, w.recordGBCASend j m) : GBCA.ByABDY.ImplementationState P.n) =
+    (GBCA.ByABDY.ImplementationState.setProcess (u, w) j pr).multicast j m := by
+  rw [programFunction_update hj hne]
   rfl
 
 /-- A record write at one program together with the network state's write of
@@ -1147,7 +1137,7 @@ theorem composition_setProcess_setBound {j : Fin P.n} {pr : GBCA.ByABDY.ProcessR
     (hj : x j = (u j).setProcess pr) (hne : ∀ i, i ≠ j → x i = u i) :
     ((x, w.setBound β) : GBCA.ByABDY.ImplementationState P.n)
       = (GBCA.ByABDY.ImplementationState.setProcess (u, w) j pr).setBound β := by
-  rw [nodeFun_update hj hne]
+  rw [programFunction_update hj hne]
   rfl
 
 /-- The programs stand still. -/
@@ -1158,10 +1148,9 @@ theorem composition_idle (hall : ∀ i, x i = u i) :
 /-- A delivery: the receiver files the message under its sender's row. -/
 theorem composition_deliver {i k : Fin P.n} {m : GBCA.ByABDY.Message}
     (hi : x i = (u i).deliverTo k m) (hne : ∀ i', i' ≠ i → x i' = u i') :
-    ((x,
-      w) : GBCA.ByABDY.ImplementationState P.n) = GBCA.ByABDY.ImplementationState.receiveMessage (u,
-        w) i k m := by
-  rw [nodeFun_update hi hne]
+    ((x, w) : GBCA.ByABDY.ImplementationState P.n) = GBCA.ByABDY.ImplementationState.receiveMessage
+    (u, w) i k m := by
+  rw [programFunction_update hi hne]
   rfl
 
 /-- A Byzantine injection: the network state records a message under a corrupted
@@ -1324,11 +1313,9 @@ takes `τ` to `τ`. -/
 
 /-- **The strong projection lemma.** -/
 theorem composition_projects (P : Parameters) (r : ℕ) :
-    ∀ (σ : GBCA.ByABDY.ImplementationState P.n) (l : ExtendedLabel P.n) (μ : PMF
-      (GBCA.ByABDY.ImplementationState P.n)),
-      (composition P r).step σ l μ →
-      ∃ l₀, gbcaLabelMap P.n l = some l₀ ∧
-        (GBCA.ByABDY.implementation P r).step σ l₀ μ := by
+    ∀ (σ : GBCA.ByABDY.ImplementationState P.n) (l : ExtendedLabel P.n)
+    (μ : PMF (GBCA.ByABDY.ImplementationState P.n)), (composition P r).step σ l μ → ∃ l₀,
+    gbcaLabelMap P.n l = some l₀ ∧ (GBCA.ByABDY.implementation P r).step σ l₀ μ := by
   rintro ⟨u, w⟩ l μ hstep
   rcases (composition_step_iff P r (u, w) l μ).mp hstep with ⟨rfl, e, hev⟩ | hlab
   · -- a hidden rendezvous: an internal step of the implementation
@@ -1524,17 +1511,15 @@ which is where a Byzantine handshake row is answered by the specification's own 
 /-- **The simulation relation of the round instance**: the relation
 `GBCA.ByABDY.specificationRelation` of the implementation, which the shared state lets it be
 verbatim. -/
-def substitutionRelation (P : Parameters) (r : ℕ) (σ : GBCA.ByABDY.ImplementationState P.n) (s :
-  GBCA.SpecState P.n)
-  : Prop :=
+def substitutionRelation (P : Parameters) (r : ℕ) (σ : GBCA.ByABDY.ImplementationState P.n)
+    (s : GBCA.SpecState P.n) : Prop :=
   GBCA.ByABDY.specificationRelation P r σ s
 
 /-- **The per-round instance simulation**: the round-`r` instance is forward
 simulated by the round-`r` graded agreement specification, read over the
-instance's interface. -/
-theorem instanceSubstitution (P : Parameters) (r : ℕ) :
-    ForwardSimulation (composition P r) (specificationOverRoundAlphabet P r) (substitutionRelation P
-      r) := by
+instance's interface. -/ theorem instanceSubstitution (P : Parameters) (r : ℕ) :
+    ForwardSimulation (composition P r) (specificationOverRoundAlphabet P r)
+    (substitutionRelation P r) := by
   constructor
   intro q₁ q₂ hR l μ hstep q₁' hq₁'
   obtain ⟨l₀, hpull, himpl⟩ := composition_projects P r q₁ l μ hstep
@@ -1672,8 +1657,8 @@ variable {n : ℕ}
 @[simp] theorem isFailLabel_fail (k : Fin n) :
     GBCA.ByABDY.isFailLabel (Sum.inl (Label.fail k) : ExtendedLabel n) := trivial
 
-theorem corruptionAct_fail {P : Parameters} (k : Fin P.n) (s : GBCA.ByABDY.ImplementationState P.n)
-  :
+theorem corruptionAct_fail {P : Parameters} (k : Fin P.n)
+  (s : GBCA.ByABDY.ImplementationState P.n) :
     GBCA.ByABDY.corruptionAct P (Sum.inl (Label.fail k)) s = (s.1, s.2.corrupt P k) := rfl
 
 end GOwns

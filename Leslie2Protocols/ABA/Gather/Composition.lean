@@ -158,8 +158,8 @@ def holdsInputBroadcastReturn {n : ℕ} {X : Type} (p : ProcessRecord n X) (k : 
 
 /-- `p` holds the payload `U` of the instance broadcasting `q`'s `BIND`
 payload. -/
-def holdsBindBroadcastReturn {n : ℕ} {X : Type} (p : ProcessRecord n X) (q : Fin n) (U :
-  AcceptedPairs n X) : Prop :=
+def holdsBindBroadcastReturn {n : ℕ} {X : Type} (p : ProcessRecord n X) (q : Fin n)
+    (U : AcceptedPairs n X) : Prop :=
   p.bindBroadcastReturned q = some U
 
 /-- A payload set is approved by `p` when `p` holds every one of its pairs. -/
@@ -213,9 +213,8 @@ def NetworkState.initial (n : ℕ) (X : Type) : NetworkState n X :=
 
 /-- The core read off a network state. The local records are not consulted
 (`coreOf_networkState_only`), so any record vector gives the same set. -/
-noncomputable def coreOfNetwork {X : Type} (P : Parameters) (w : ABA.NetworkState P.n (Message P.n
-  X)) :
-    AcceptedPairs P.n X :=
+noncomputable def coreOfNetwork {X : Type} (P : Parameters)
+    (w : ABA.NetworkState P.n (Message P.n X)) : AcceptedPairs P.n X :=
   coreOf P ((fun _ => LocalState.initial P.n (Message P.n X) (BaseProcessRecord.initial P.n X)), w)
 
 /-- The core of an instance state is the core of its network state. -/
@@ -473,9 +472,9 @@ noncomputable def gatherNetwork (P : Parameters) (X : Type) [DecidableEq X] :
 
 /-- The gather tier: the programs beside the gather network. -/
 noncomputable def gatherPrograms (P : Parameters) (X : Type) [DecidableEq X] :
-    System ((∀ _ : Fin P.n,
-      LocalState P.n (ProcessRecord P.n X) (Message P.n X)) × NetworkState P.n X) (GatherLabel P.n
-        X) :=
+    System
+    ((∀ _ : Fin P.n, LocalState P.n (ProcessRecord P.n X) (Message P.n X)) × NetworkState P.n X)
+    (GatherLabel P.n X) :=
   (System.synchronisedProduct (gatherProgram P (X := X))).parallel (gatherNetwork P X)
 
 /-- The state of the composition whose broadcast instances have state `B` for
@@ -486,9 +485,8 @@ abbrev StateOverBroadcasts (n : ℕ) (X B B' : Type) : Type :=
 
 /-- The gather tier beside the broadcast tier, over the instance-internal
 alphabet. -/
-noncomputable def instanceOverBroadcastsExtended (P : Parameters) (X : Type) [DecidableEq X] {B B' :
-  Type}
-    (BIn : ∀ _ : Fin P.n, System B (BRB.InstanceLabel P.n X))
+noncomputable def instanceOverBroadcastsExtended (P : Parameters) (X : Type) [DecidableEq X]
+    {B B' : Type} (BIn : ∀ _ : Fin P.n, System B (BRB.InstanceLabel P.n X))
     (BBind : ∀ _ : Fin P.n, System B' (BRB.InstanceLabel P.n (AcceptedPairs P.n X))) :
     System (StateOverBroadcasts P.n X B B') (GatherLabel P.n X) :=
   (gatherPrograms P X).parallel
@@ -678,10 +676,10 @@ Both rule tables written here are Dirac, so the composition is an LTS whenever
 the broadcast tier is. -/
 
 /-- Every gather program transition is Dirac. -/
-theorem programStep_dirac {P : Parameters} {j : Fin P.n} {p : LocalState P.n (ProcessRecord P.n X)
-  (Message P.n X)}
-    {l : GatherLabel P.n X} {ν : PMF (LocalState P.n (ProcessRecord P.n X) (Message P.n X))}
-    (h : ProgramStep P j p l ν) : ∃ p', ν = PMF.pure p' := by
+theorem programStep_dirac {P : Parameters} {j : Fin P.n}
+    {p : LocalState P.n (ProcessRecord P.n X) (Message P.n X)} {l : GatherLabel P.n X}
+    {ν : PMF (LocalState P.n (ProcessRecord P.n X) (Message P.n X))} (h : ProgramStep P j p l ν) :
+    ∃ p', ν = PMF.pure p' := by
   cases h <;> exact ⟨_, rfl⟩
 
 /-- Every gather network transition is Dirac. -/
@@ -699,9 +697,8 @@ theorem gatherNetwork_isLTS (P : Parameters) : (gatherNetwork P X).IsLTS := fun 
   h
 
 /-- The synchronised group of gather programs is an LTS. -/
-theorem gatherProgramProduct_isLTS (P : Parameters) : (System.synchronisedProduct (gatherProgram P
-  (X :=
-  X))).IsLTS :=
+theorem gatherProgramProduct_isLTS (P : Parameters) :
+    (System.synchronisedProduct (gatherProgram P (X := X))).IsLTS :=
   System.synchronisedProduct_isLTS (gatherProgram_isLTS P)
 
 /-- The gather tier is an LTS. -/
@@ -734,8 +731,7 @@ theorem instanceOverBracha_isLTS (P : Parameters) : (instanceOverBracha P X).IsL
 
 /-- The gather instance over the broadcast specification is an LTS. -/
 theorem instanceOverBroadcastSpecification_isLTS (P : Parameters) :
-  (instanceOverBroadcastSpecification
-  P X).IsLTS :=
+    (instanceOverBroadcastSpecification P X).IsLTS :=
   instanceOverBroadcasts_isLTS P (fun k => BRB.specificationOverInstanceAlphabet_isLTS P k) (fun q
     =>
     BRB.specificationOverInstanceAlphabet_isLTS P q)
@@ -777,9 +773,8 @@ def specificationLabelMap (n : ℕ) (X : Type) : InstanceLabel n X → Option (L
 
 /-- Only the silent label projects to the silent label: the call loop projects
 to the call. -/
-theorem specificationLabelMap_eq_tau {n : ℕ} {l : InstanceLabel n X} (h : specificationLabelMap n X
-  l = some Label.tau) :
-    l = Sum.inl Label.tau := by
+theorem specificationLabelMap_eq_tau {n : ℕ} {l : InstanceLabel n X}
+    (h : specificationLabelMap n X l = some Label.tau) : l = Sum.inl Label.tau := by
   cases l with
   | inl l₀ => rw [Option.some.inj h]
   | inr e => cases e; simp at h
@@ -828,8 +823,8 @@ noncomputable def sectionAt {n : ℕ} (l₀ : Label n X) (l : InstanceLabel n X)
 
 /-- The left injection reflects the silent label. -/
 theorem labelSection_eq_tau {n : ℕ} (x : Label n X) :
-    (labelSection x : InstanceLabel n X) = (Silent.τ : InstanceLabel n X) ↔ x = (Silent.τ : Label n
-      X) :=
+    (labelSection x : InstanceLabel n X) = (Silent.τ : InstanceLabel n X) ↔ x =
+    (Silent.τ : Label n X) :=
   inl_eq_tau_iff x
 
 theorem specificationLabelMap_sectionAt {n : ℕ} {l₀ : Label n X} {l : InstanceLabel n X}
@@ -840,10 +835,9 @@ theorem specificationLabelMap_sectionAt {n : ℕ} {l₀ : Label n X} {l : Instan
   · rw [if_pos hx, hl, hx]
   · rw [if_neg hx, specificationLabelMap_labelSection]
 
-theorem sectionAt_tau {n : ℕ} {l₀ : Label n X} {l : InstanceLabel n X} (hl : specificationLabelMap n
-  X l = some l₀)
-    (hl₀ : l₀ ≠ (Silent.τ : Label n X)) (x : Label n X) :
-    sectionAt l₀ l x = (Silent.τ : InstanceLabel n X) ↔ x = (Silent.τ : Label n X) := by
+theorem sectionAt_tau {n : ℕ} {l₀ : Label n X} {l : InstanceLabel n X}
+    (hl : specificationLabelMap n X l = some l₀) (hl₀ : l₀ ≠ (Silent.τ : Label n X)) (x : Label n X)
+    : sectionAt l₀ l x = (Silent.τ : InstanceLabel n X) ↔ x = (Silent.τ : Label n X) := by
   unfold sectionAt
   by_cases hx : x = l₀
   · rw [if_pos hx, hx]
@@ -858,21 +852,18 @@ theorem sectionAt_tau {n : ℕ} {l₀ : Label n X} {l : InstanceLabel n X} (hl :
 
 /-- A silent weak run of the specification is a silent weak run of the lifted
 specification. -/
-theorem weakLSilent_specificationOverInstanceAlphabet [DecidableEq X] (P : Parameters) {s s' :
-  SpecState
-  P.n X}
-    (h : (specInst P X).weakLSilent s s') : (specificationOverInstanceAlphabet P X).weakLSilent s s'
-      :=
+theorem weakLSilent_specificationOverInstanceAlphabet [DecidableEq X] (P : Parameters)
+    {s s' : SpecState P.n X} (h : (specInst P X).weakLSilent s s') :
+    (specificationOverInstanceAlphabet P X).weakLSilent s s' :=
   System.weakLSilent_mapIdle labelSection (fun _ => rfl) (fun x => labelSection_eq_tau x) h
 
 /-- A labelled weak run of the specification is a weak run of the lifted
 specification at any interface label projecting to the same specification
 label. -/
-theorem weakLStep_specificationOverInstanceAlphabet [DecidableEq X] (P : Parameters) {s s' :
-  SpecState
-  P.n X}
-    {l₀ : Label P.n X} {l : InstanceLabel P.n X} (hl₀ : l₀ ≠ (Silent.τ : Label P.n X))
-    (hl : specificationLabelMap P.n X l = some l₀) (h : (specInst P X).weakLStep s l₀ s') :
+theorem weakLStep_specificationOverInstanceAlphabet [DecidableEq X] (P : Parameters)
+    {s s' : SpecState P.n X} {l₀ : Label P.n X} {l : InstanceLabel P.n X}
+    (hl₀ : l₀ ≠ (Silent.τ : Label P.n X)) (hl : specificationLabelMap P.n X l = some l₀)
+    (h : (specInst P X).weakLStep s l₀ s') :
     (specificationOverInstanceAlphabet P X).weakLStep s l s' :=
   System.weakLStep_mapIdle (sectionAt l₀ l) (specificationLabelMap_sectionAt hl) (sectionAt_tau hl
     hl₀)
@@ -889,8 +880,8 @@ interface-label case. -/
 theorem instanceOverBroadcasts_step_iff (P : Parameters) (X : Type) [DecidableEq X] {B B' : Type}
     (BIn : ∀ _ : Fin P.n, System B (BRB.InstanceLabel P.n X))
     (BBind : ∀ _ : Fin P.n, System B' (BRB.InstanceLabel P.n (AcceptedPairs P.n X)))
-    (s : StateOverBroadcasts P.n X B B') (l : InstanceLabel P.n X) (μ : PMF (StateOverBroadcasts P.n
-      X B B')) :
+    (s : StateOverBroadcasts P.n X B B') (l : InstanceLabel P.n X)
+    (μ : PMF (StateOverBroadcasts P.n X B B')) :
     (instanceOverBroadcasts P X BIn BBind).step s l μ ↔
       (l = Sum.inl Label.tau ∧ ∃ e : GatherEvent P.n X,
         (instanceOverBroadcastsExtended P X BIn BBind).step s (Sum.inr e) μ) ∨
@@ -989,12 +980,11 @@ variable [DecidableEq X] {P : Parameters}
 
 /-- A synchronised transition of the gather programs on a visible label: every
 program steps, and the joint distribution is Dirac. -/
-theorem gatherProgramProduct_inversion {μ : PMF (∀ _ : Fin P.n,
-    LocalState P.n (ProcessRecord P.n X) (Message P.n X))} (h : (System.synchronisedProduct
-      (gatherProgram P
-      (X := X))).step u l μ) :
-    ∃ x : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord P.n X) (Message P.n X),
-      μ = PMF.pure x ∧ ∀ i, ProgramStep P i (u i) l (PMF.pure (x i)) := by
+theorem gatherProgramProduct_inversion
+    {μ : PMF (∀ _ : Fin P.n, LocalState P.n (ProcessRecord P.n X) (Message P.n X))}
+    (h : (System.synchronisedProduct (gatherProgram P (X := X))).step u l μ) :
+    ∃ x : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord P.n X) (Message P.n X), μ = PMF.pure x ∧ ∀ i,
+    ProgramStep P i (u i) l (PMF.pure (x i)) := by
   rw [System.synchronisedProduct_step] at h
   rcases h with ⟨-, μ_, hall, rfl⟩ | ⟨rfl, i, μ_i, hstep, -⟩
   · have hx : ∀ i, ∃ p', μ_ i = PMF.pure p' := fun i => programStep_dirac (hall i)
@@ -1007,19 +997,18 @@ theorem gatherProgramProduct_inversion {μ : PMF (∀ _ : Fin P.n,
 
 /-- Build a synchronised transition of the gather programs from per-process
 Dirac steps. -/
-theorem gatherProgramProduct_pure (hl : l ≠ Silent.τ) (h : ∀ i,
-    ProgramStep P i (u i) l (PMF.pure (x i))) : (System.synchronisedProduct (gatherProgram P (X :=
-      X))).step
-      u l (PMF.pure x) := by
+theorem gatherProgramProduct_pure (hl : l ≠ Silent.τ)
+    (h : ∀ i, ProgramStep P i (u i) l (PMF.pure (x i))) :
+    (System.synchronisedProduct (gatherProgram P (X := X))).step u l (PMF.pure x) := by
   rw [System.synchronisedProduct_step]
   exact Or.inl ⟨hl, fun i => PMF.pure (x i), h, (piPMF_pure x).symm⟩
 
 /-- The gather programs have no silent transition: no program has a `τ` row. -/
-theorem gatherProgramProduct_no_tau {μ : PMF (∀ _ : Fin P.n,
-    LocalState P.n (ProcessRecord P.n X) (Message P.n X))} (h : (System.synchronisedProduct
-      (gatherProgram P
-      (X := X))).step u (Silent.τ : GatherLabel P.n X) μ) :
-      False := by
+theorem gatherProgramProduct_no_tau
+    {μ : PMF (∀ _ : Fin P.n, LocalState P.n (ProcessRecord P.n X) (Message P.n X))}
+    (h : (System.synchronisedProduct (gatherProgram P (X := X))).step u
+      (Silent.τ : GatherLabel P.n X) μ)
+    : False := by
   rcases h with ⟨hτ, -⟩ | ⟨-, i, μ_i, hstep, -⟩
   · exact hτ rfl
   · exact programStep_no_tau hstep
@@ -1045,9 +1034,9 @@ variable [DecidableEq X] {P : Parameters} {B B' : Type}
 /-- **The joint inversion.** A visible transition of the two tiers: every
 factor steps on the label, and the joint distribution is their Dirac
 product. -/
-theorem instanceOverBroadcastsExtended_joint_inversion (hIn : ∀ k, (BIn k).IsLTS) (hBind : ∀ q,
-    (BBind q).IsLTS) {μ : PMF (StateOverBroadcasts P.n X B B')} (hL : L ≠ (Silent.τ : GatherLabel
-      P.n X))
+theorem instanceOverBroadcastsExtended_joint_inversion (hIn : ∀ k, (BIn k).IsLTS)
+    (hBind : ∀ q, (BBind q).IsLTS) {μ : PMF (StateOverBroadcasts P.n X B B')}
+    (hL : L ≠ (Silent.τ : GatherLabel P.n X))
     (h : (instanceOverBroadcastsExtended P X BIn BBind).step ((u, w), (a, b)) L μ) :
     ∃ (x : ∀ _ : Fin P.n,
       LocalState P.n (ProcessRecord P.n X) (Message P.n X)) (w' : NetworkState P.n X) (a' : ∀ _ :
@@ -1055,8 +1044,8 @@ theorem instanceOverBroadcastsExtended_joint_inversion (hIn : ∀ k, (BIn k).IsL
       μ = PMF.pure ((x, w'), (a', b')) ∧
       (∀ i, ProgramStep P i (u i) L (PMF.pure (x i))) ∧ NetworkStep P w L (PMF.pure w') ∧
       (∀ k, ((BIn k).mapIdle (inputBroadcastLabelMap P.n X k)).step (a k) L (PMF.pure (a' k))) ∧
-      (∀ q,
-        ((BBind q).mapIdle (bindBroadcastLabelMap P.n X q)).step (b q) L (PMF.pure (b' q))) := by
+      (∀ q, ((BBind q).mapIdle (bindBroadcastLabelMap P.n X q)).step (b q) L (PMF.pure (b' q))) :=
+    by
   rw [instanceOverBroadcastsExtended, System.parallel_step] at h
   rcases h with ⟨-, μ₁, μ₂, hga, hbr, rfl⟩ | ⟨hτ, -⟩ | ⟨hτ, -⟩
   · rw [gatherPrograms, System.parallel_step] at hga
@@ -1079,10 +1068,10 @@ theorem instanceOverBroadcastsExtended_joint_inversion (hIn : ∀ k, (BIn k).IsL
 /-- **The silent inversion.** A silent transition of the two tiers is an
 injection of the gather network, a silent step of one input instance, or a
 silent step of one bind instance: no gather program has a `τ` row. -/
-theorem instanceOverBroadcastsExtended_tau_inversion (hIn : ∀ k, (BIn k).IsLTS) (hBind : ∀ q,
-    (BBind q).IsLTS) {μ : PMF (StateOverBroadcasts P.n X B B')}
-    (h : (instanceOverBroadcastsExtended P X BIn BBind).step ((u, w), (a,
-      b)) (Silent.τ : GatherLabel P.n X) μ) :
+theorem instanceOverBroadcastsExtended_tau_inversion (hIn : ∀ k, (BIn k).IsLTS)
+    (hBind : ∀ q, (BBind q).IsLTS) {μ : PMF (StateOverBroadcasts P.n X B B')}
+    (h : (instanceOverBroadcastsExtended P X BIn BBind).step ((u, w), (a, b))
+      (Silent.τ : GatherLabel P.n X) μ) :
     (∃ v, μ = PMF.pure ((u, v), (a, b)) ∧
       NetworkStep P w (Silent.τ : GatherLabel P.n X) (PMF.pure v)) ∨
     (∃ (k : Fin P.n) (c : B), μ = PMF.pure ((u, w), (Function.update a k c, b)) ∧
@@ -1103,24 +1092,26 @@ theorem instanceOverBroadcastsExtended_tau_inversion (hIn : ∀ k, (BIn k).IsLTS
     rcases hbr with ⟨hτ, -⟩ | ⟨-, ρ₁, hi, rfl⟩ | ⟨-, ρ₂, hb, rfl⟩
     · exact absurd rfl hτ
     · obtain ⟨k, c, rfl, hstep⟩ :=
-        synchronisedProductMapIdle_tau_inversion hIn (fun k => inputBroadcastLabelMap_tau P.n X k) hi
+        synchronisedProductMapIdle_tau_inversion hIn
+          (fun k => inputBroadcastLabelMap_tau P.n X k) hi
       exact Or.inr
         (Or.inl ⟨k, c, by rw [prodPMF_pure_pure, prodPMF_pure_pure], hstep⟩)
     · obtain ⟨q, d, rfl, hstep⟩ :=
-        synchronisedProductMapIdle_tau_inversion hBind (fun q => bindBroadcastLabelMap_tau P.n X q) hb
+        synchronisedProductMapIdle_tau_inversion hBind
+          (fun q => bindBroadcastLabelMap_tau P.n X q) hb
       exact Or.inr
         (Or.inr ⟨q, d, by rw [prodPMF_pure_pure, prodPMF_pure_pure], hstep⟩)
 
 /-- Build a visible transition of the two tiers from the four factors' Dirac
 steps. -/
 theorem instanceOverBroadcastsExtended_label_step (hL : L ≠ (Silent.τ : GatherLabel P.n X))
-    (hproc : ∀ i, ProgramStep P i (u i) L (PMF.pure (x i)))
-    (hnet : NetworkStep P w L (PMF.pure w'))
+    (hproc : ∀ i, ProgramStep P i (u i) L (PMF.pure (x i))) (hnet : NetworkStep P w L (PMF.pure w'))
     (hin : ∀ k, ((BIn k).mapIdle (inputBroadcastLabelMap P.n X k)).step (a k) L (PMF.pure (a' k)))
-    (hbind : ∀ q,
-      ((BBind q).mapIdle (bindBroadcastLabelMap P.n X q)).step (b q) L (PMF.pure (b' q))) :
-    (instanceOverBroadcastsExtended P X BIn BBind).step ((u, w), (a, b)) L (PMF.pure ((x, w'), (a',
-      b'))) := by
+    (hbind : ∀ q, ((BBind q).mapIdle (bindBroadcastLabelMap P.n X q)).step (b q) L
+      (PMF.pure (b' q)))
+    :
+    (instanceOverBroadcastsExtended P X BIn BBind).step ((u, w), (a, b)) L
+    (PMF.pure ((x, w'), (a', b'))) := by
   rw [instanceOverBroadcastsExtended, System.parallel_step]
   refine Or.inl ⟨hL, PMF.pure (x, w'), PMF.pure (a', b'), ?_, ?_,
     (prodPMF_pure_pure _ _).symm⟩
@@ -1133,21 +1124,20 @@ theorem instanceOverBroadcastsExtended_label_step (hL : L ≠ (Silent.τ : Gathe
 
 /-- Build a silent transition of the two tiers from an injection of the gather
 network. -/
-theorem instanceOverBroadcastsExtended_tau_network (hn : NetworkStep P w (Silent.τ : GatherLabel P.n
-  X) (PMF.pure w')) :
-    (instanceOverBroadcastsExtended P X BIn BBind).step ((u, w), (a,
-      b)) (Silent.τ : GatherLabel P.n X) (PMF.pure ((u, w'), (a, b))) := by
+theorem instanceOverBroadcastsExtended_tau_network
+    (hn : NetworkStep P w (Silent.τ : GatherLabel P.n X) (PMF.pure w')) :
+    (instanceOverBroadcastsExtended P X BIn BBind).step ((u, w), (a, b))
+    (Silent.τ : GatherLabel P.n X) (PMF.pure ((u, w'), (a, b))) := by
   rw [instanceOverBroadcastsExtended, System.parallel_step]
   refine Or.inr (Or.inl ⟨rfl, PMF.pure (u, w'), ?_, (prodPMF_pure_pure _ _).symm⟩)
   rw [gatherPrograms, System.parallel_step]
   exact Or.inr (Or.inr ⟨rfl, PMF.pure w', hn, (prodPMF_pure_pure _ _).symm⟩)
 
 /-- Build a silent transition of the two tiers from a silent step of one input
-instance. -/
-theorem instanceOverBroadcastsExtended_tau_in {k : Fin P.n} {c : B}
+instance. -/ theorem instanceOverBroadcastsExtended_tau_in {k : Fin P.n} {c : B}
     (h : (BIn k).step (a k) (Silent.τ : BRB.InstanceLabel P.n X) (PMF.pure c)) :
-    (instanceOverBroadcastsExtended P X BIn BBind).step ((u, w), (a,
-      b)) (Silent.τ : GatherLabel P.n X) (PMF.pure ((u, w), (Function.update a k c, b))) := by
+    (instanceOverBroadcastsExtended P X BIn BBind).step ((u, w), (a, b))
+    (Silent.τ : GatherLabel P.n X) (PMF.pure ((u, w), (Function.update a k c, b))) := by
   rw [instanceOverBroadcastsExtended, System.parallel_step]
   refine Or.inr (Or.inr ⟨rfl, PMF.pure (Function.update a k c, b), ?_,
     (prodPMF_pure_pure _ _).symm⟩)
@@ -1157,12 +1147,11 @@ theorem instanceOverBroadcastsExtended_tau_in {k : Fin P.n} {c : B}
       (prodPMF_pure_pure _ _).symm⟩)
 
 /-- Build a silent transition of the two tiers from a silent step of one bind
-instance. -/
-theorem instanceOverBroadcastsExtended_tau_bind {q : Fin P.n} {d : B'}
+instance. -/ theorem instanceOverBroadcastsExtended_tau_bind {q : Fin P.n} {d : B'}
     (h : (BBind q).step (b q) (Silent.τ : BRB.InstanceLabel P.n (AcceptedPairs P.n X)) (PMF.pure d))
-      :
-    (instanceOverBroadcastsExtended P X BIn BBind).step ((u, w), (a,
-      b)) (Silent.τ : GatherLabel P.n X) (PMF.pure ((u, w), (a, Function.update b q d))) := by
+    :
+    (instanceOverBroadcastsExtended P X BIn BBind).step ((u, w), (a, b))
+    (Silent.τ : GatherLabel P.n X) (PMF.pure ((u, w), (a, Function.update b q d))) := by
   rw [instanceOverBroadcastsExtended, System.parallel_step]
   refine Or.inr (Or.inr ⟨rfl, PMF.pure (a, Function.update b q d), ?_,
     (prodPMF_pure_pure _ _).symm⟩)
@@ -1188,23 +1177,23 @@ theorem instanceOverBroadcasts_event_step (e : GatherEvent P.n X)
 theorem instanceOverBroadcasts_label_step {l : InstanceLabel P.n X} (hl : l ≠ Sum.inl Label.tau)
     (hproc : ∀ i, ProgramStep P i (u i) (Sum.inl l) (PMF.pure (x i)))
     (hnet : NetworkStep P w (Sum.inl l) (PMF.pure w'))
-    (hin : ∀ k,
-      ((BIn k).mapIdle (inputBroadcastLabelMap P.n X k)).step (a k) (Sum.inl l) (PMF.pure (a' k)))
+    (hin : ∀ k, ((BIn k).mapIdle (inputBroadcastLabelMap P.n X k)).step (a k) (Sum.inl l)
+      (PMF.pure (a' k)))
     (hbind : ∀ q, ((BBind q).mapIdle (bindBroadcastLabelMap P.n X q)).step (b q) (Sum.inl l)
-      (PMF.pure (b' q))) :
-    (instanceOverBroadcasts P X BIn BBind).step ((u, w), (a, b)) l (PMF.pure ((x, w'), (a',
-      b'))) := by
+      (PMF.pure (b' q)))
+    :
+    (instanceOverBroadcasts P X BIn BBind).step ((u, w), (a, b)) l (PMF.pure ((x, w'), (a', b'))) :=
+    by
   refine (instanceOverBroadcasts_step_iff P X BIn BBind _ _ _).mpr (Or.inr
     (instanceOverBroadcastsExtended_label_step ?_ hproc hnet hin hbind))
   rw [gatherLabel_tau]
   simpa using hl
 
 /-- An injection of the gather network is a silent transition of the
-instance. -/
-theorem instanceOverBroadcasts_tau_network (hn : NetworkStep P w (Silent.τ : GatherLabel P.n X)
-  (PMF.pure w')) :
+instance. -/ theorem instanceOverBroadcasts_tau_network
+    (hn : NetworkStep P w (Silent.τ : GatherLabel P.n X) (PMF.pure w')) :
     (instanceOverBroadcasts P X BIn BBind).step ((u, w), (a, b)) (Sum.inl Label.tau)
-      (PMF.pure ((u, w'), (a, b))) :=
+    (PMF.pure ((u, w'), (a, b))) :=
   (instanceOverBroadcasts_step_iff P X BIn BBind _ _ _).mpr (Or.inr
     (instanceOverBroadcastsExtended_tau_network hn))
 
@@ -1359,16 +1348,15 @@ theorem programStep_ret_own {g : Fin P.n → Option X} {C : AcceptedPairs P.n X}
       (∀ k x, g k = some x → holdsInputBroadcastReturn p.process k x) ∧
       (∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ U, holdsBindBroadcastReturn p.process q U ∧ AcceptedPairs.subMap U g) ∧
-      p.process.returned = false ∧ ν = PMF.pure (p.setProcess { p.process with returned := true })
-        := by
+      p.process.returned = false ∧ ν = PMF.pure
+        (p.setProcess { p.process with returned := true }) := by
   cases h
   case ret =>
     exact ⟨by assumption, by assumption, by assumption, by assumption, by assumption, rfl⟩
   case retIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem programStep_ret_foreign {i : Fin P.n} {g : Fin P.n → Option X} {C : AcceptedPairs P.n X} (hi
-  : i ≠ j)
-    (h : ProgramStep P j p (Sum.inl (Sum.inl (.ret i g C))) ν) : ν = PMF.pure p := by
+theorem programStep_ret_foreign {i : Fin P.n} {g : Fin P.n → Option X} {C : AcceptedPairs P.n X}
+    (hi : i ≠ j) (h : ProgramStep P j p (Sum.inl (Sum.inl (.ret i g C))) ν) : ν = PMF.pure p := by
   cases h
   case ret => exact absurd rfl hi
   case retIdle => rfl
@@ -1392,8 +1380,8 @@ theorem programStep_send_vote_own {U : AcceptedPairs P.n X}
     p.process.input ≠ none ∧ p.process.sentEcho ≠ none ∧ approvedBy p.process U ∧
       (∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ A, Message.echo A ∈ p.received q ∧ approvedBy p.process A ∧ A ⊆ U) ∧
-      p.process.sentVote = none ∧ ν = PMF.pure (p.setProcess { p.process with sentVote := some U })
-        := by
+      p.process.sentVote = none ∧ ν = PMF.pure
+        (p.setProcess { p.process with sentVote := some U }) := by
   cases h
   case sendVote =>
     exact ⟨by assumption, by assumption, by assumption, by assumption, by assumption, rfl⟩
@@ -1491,8 +1479,8 @@ theorem networkStep_fail {i : Fin P.n} (h : NetworkStep P w (Sum.inl (Sum.inl (.
     μ = PMF.pure { w with network := w.network.corrupt P i } := by
   cases h; rfl
 
-theorem networkStep_send {j : Fin P.n} {m : Message P.n X} (h : NetworkStep P w (Sum.inr (.send j
-  m)) μ) :
+theorem networkStep_send {j : Fin P.n} {m : Message P.n X}
+    (h : NetworkStep P w (Sum.inr (.send j m)) μ) :
     μ = PMF.pure { w with network := w.network.recordSent j m } := by
   cases h; rfl
 
@@ -1520,7 +1508,7 @@ theorem networkStep_tau (h : NetworkStep P w (Sum.inl (Sum.inl .tau)) μ) :
 
 end NetInversion
 
-/-- A function pinned at `i` and unchanged elsewhere is the old one updated at
+/-- A function fixed at `i` and unchanged elsewhere is the old one updated at
 `i`. -/
 theorem funUpdate {ι β : Type} [DecidableEq ι] {f g : ι → β} {i : ι} {y : β}
     (hi : g i = y) (hne : ∀ i', i' ≠ i → g i' = f i') : g = Function.update f i y := by
@@ -1531,7 +1519,7 @@ theorem funUpdate {ι β : Type} [DecidableEq ι] {f g : ι → β} {i : ι} {y 
 
 /-! ### One state, four views
 
-What a joint step delivers is a program function pinned pointwise — its value
+What a joint step delivers is a program function given pointwise — its value
 at the acting process, and its agreement with the old one elsewhere — where a
 row writes with `setGatherTier` and `InstanceState.setProcess`. The lemmas here close that
 gap. -/
@@ -1543,11 +1531,11 @@ variable [DecidableEq X] {P : Parameters} {B B' : Type}
   {w : NetworkState P.n X} {a : ∀ _ : Fin P.n, B} {b : ∀ _ : Fin P.n, B'}
 
 omit [DecidableEq X] in
-/-- A program function pinned at `j` and unchanged elsewhere is the old one
+/-- A program function fixed at `j` and unchanged elsewhere is the old one
 updated at `j`. -/
-theorem programFunction_update {j : Fin P.n} {r : LocalState P.n (ProcessRecord P.n X) (Message P.n
-  X)}
-    (hj : x j = r) (hne : ∀ i, i ≠ j → x i = u i) : x = Function.update u j r := by
+theorem programFunction_update {j : Fin P.n}
+    {r : LocalState P.n (ProcessRecord P.n X) (Message P.n X)} (hj : x j = r)
+    (hne : ∀ i, i ≠ j → x i = u i) : x = Function.update u j r := by
   funext i
   by_cases hi : i = j
   · subst hi; rw [hj, Function.update_self]
@@ -1568,19 +1556,17 @@ omit [DecidableEq X] in
 /-- A record write at one program, with the network state untouched. -/
 theorem stateOverBroadcasts_setProcess {j : Fin P.n} {pr : ProcessRecord P.n X}
     (hj : x j = (u j).setProcess pr) (hne : ∀ i, i ≠ j → x i = u i) :
-    (((x, w), (a, b)) : StateOverBroadcasts P.n X B B') =
-      setGatherTier ((u, w), (a, b)) (InstanceState.setProcess (gatherTier ((u, w), (a,
-        b))) j pr) := by
+    (((x, w), (a, b)) : StateOverBroadcasts P.n X B B') = setGatherTier ((u, w), (a, b))
+    (InstanceState.setProcess (gatherTier ((u, w), (a, b))) j pr) := by
   rw [programFunction_update hj hne]; rfl
 
 /-- A record write at one program together with the network state recording the
 message that write multicasts. -/
-theorem stateOverBroadcasts_setProcess_recordSent {j : Fin P.n} {pr : ProcessRecord P.n X} {m :
-  Message P.n X}
-    (hj : x j = (u j).setProcess pr) (hne : ∀ i, i ≠ j → x i = u i) :
-    (((x, { w with network := w.network.recordSent j m }), (a,
-      b)) : StateOverBroadcasts P.n X B B') = setGatherTier ((u, w), (a,
-        b)) ((InstanceState.setProcess (gatherTier ((u, w), (a, b))) j pr).multicast j m) := by
+theorem stateOverBroadcasts_setProcess_recordSent {j : Fin P.n} {pr : ProcessRecord P.n X}
+    {m : Message P.n X} (hj : x j = (u j).setProcess pr) (hne : ∀ i, i ≠ j → x i = u i) :
+    (((x, { w with network := w.network.recordSent j m }), (a, b)) : StateOverBroadcasts P.n X B B')
+    = setGatherTier ((u, w), (a, b))
+    ((InstanceState.setProcess (gatherTier ((u, w), (a, b))) j pr).multicast j m) := by
   rw [programFunction_update hj hne]; rfl
 
 omit [DecidableEq X] in
@@ -1592,9 +1578,8 @@ theorem stateOverBroadcasts_idle (hall : ∀ i, x i = u i) :
 /-- A delivery: the receiver files the message under its sender's row. -/
 theorem stateOverBroadcasts_deliver {i k : Fin P.n} {m : Message P.n X}
     (hi : x i = (u i).deliverTo k m) (hne : ∀ i', i' ≠ i → x i' = u i') :
-    (((x, w), (a, b)) : StateOverBroadcasts P.n X B B') =
-      setGatherTier ((u, w), (a, b)) (InstanceState.receiveMessage (gatherTier ((u, w), (a,
-        b))) i k m) := by
+    (((x, w), (a, b)) : StateOverBroadcasts P.n X B B') = setGatherTier ((u, w), (a, b))
+    (InstanceState.receiveMessage (gatherTier ((u, w), (a, b))) i k m) := by
   rw [programFunction_update hi hne]; rfl
 
 /-- A Byzantine injection: the network state records a message under a
@@ -1608,9 +1593,9 @@ omit [DecidableEq X] in
 /-- A return: the returner's flag and the instance's core. -/
 theorem stateOverBroadcasts_ret {id : Fin P.n} {pr : ProcessRecord P.n X} {C : AcceptedPairs P.n X}
     (hj : x id = (u id).setProcess pr) (hne : ∀ i, i ≠ id → x i = u i) :
-    (((x, { w with core := some C }), (a, b)) : StateOverBroadcasts P.n X B B') =
-      setCore (setGatherTier ((u, w), (a, b)) (InstanceState.setProcess (gatherTier ((u, w), (a,
-        b))) id pr)) (some C) := by
+    (((x, { w with core := some C }), (a, b)) : StateOverBroadcasts P.n X B B') = setCore
+    (setGatherTier ((u, w), (a, b)) (InstanceState.setProcess (gatherTier ((u, w), (a, b))) id pr))
+    (some C) := by
   rw [programFunction_update hj hne]; rfl
 
 omit [DecidableEq X] in

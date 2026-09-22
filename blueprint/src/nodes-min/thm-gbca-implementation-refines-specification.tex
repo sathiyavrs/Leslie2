@@ -1,11 +1,11 @@
 \begin{theorem}[GBCA instance refinement]
-  \label{thm:gbca-inst-refines}
+  \label{thm:gbca-implementation-refines-specification}
   \lean{PLTS.ABA.GBCA.ByABDY.refinesSpecification}\leanok
-  \uses{def:aba-gbca-impl, def:aba-gbca-spec}
+  \uses{def:aba-gbca-implementation, def:aba-gbca-spec}
   The GBCA implementation instance is forward-simulated by the GBCA specification instance, along a relation certifying the exclusion set and the grade by receipt patterns and firing an exclusion on demand: \leandecl{PLTS.ABA.GBCA.ByABDY.refinesSpecification}.
 \end{theorem}
 
 \begin{proof}\leanok
-  \uses{def:aba-gbca-impl, def:aba-gbca-spec, def:forwardsim}
+  \uses{def:aba-gbca-implementation, def:aba-gbca-spec, def:forwardsim}
   See the Lean proof of \leandecl{PLTS.ABA.GBCA.ByABDY.refinesSpecification}.
 \end{proof}

@@ -1,7 +1,7 @@
 % Gather specification instance (PLTS.ABA.Gather.Step). Automata style, two
 % bands separated by the dotted rule. Above, one process's entry: call records
 % the payload, commit writes val(k) once under k's own call or, once k is
-% corrupted, under any value (D26). Below, the instance: bindCore freezes the
+% corrupted, under any value (D26). Below, the instance: bindCore writes the
 % core once, no return is enabled before it, and every return label carries it
 % (D29). fail is omitted.
 \begin{tikzpicture}[

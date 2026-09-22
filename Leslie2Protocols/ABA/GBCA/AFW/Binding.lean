@@ -65,18 +65,17 @@ def BindingTraceExtended (P : Parameters) (r : ℕ) (t : Seq (Composition.Extend
 
 /-- A transition of the lifted specification on a label `GBCA.ByABDY.gbcaLabelMap` names is a
 transition of the specification at that label. -/
-theorem specificationOverRoundAlphabet_step_some {s : SpecState P.n} {l : Composition.ExtendedLabel
-  P.n} {l₀ : Label P.n}
-    {μ : PMF (SpecState P.n)} (hpull : GBCA.ByABDY.gbcaLabelMap P.n l = some l₀)
+theorem specificationOverRoundAlphabet_step_some {s : SpecState P.n}
+    {l : Composition.ExtendedLabel P.n} {l₀ : Label P.n} {μ : PMF (SpecState P.n)}
+    (hpull : GBCA.ByABDY.gbcaLabelMap P.n l = some l₀)
     (h : (GBCA.ByABDY.specificationOverRoundAlphabet P r).step s l μ) : Step P r s l₀ μ :=
   (System.mapIdle_step_some (sys := specInst P r) hpull μ).mp h
 
 /-- A transition of the lifted specification is a transition of the
 specification at the label `GBCA.ByABDY.gbcaLabelMap` names, or a self-loop. -/
-theorem specificationOverRoundAlphabet_step_cases {s s' : SpecState P.n} {l :
-  Composition.ExtendedLabel P.n}
-    {μ : PMF (SpecState P.n)} (h : (GBCA.ByABDY.specificationOverRoundAlphabet P r).step s l μ)
-    (hs' : s' ∈ μ.support) :
+theorem specificationOverRoundAlphabet_step_cases {s s' : SpecState P.n}
+    {l : Composition.ExtendedLabel P.n} {μ : PMF (SpecState P.n)}
+    (h : (GBCA.ByABDY.specificationOverRoundAlphabet P r).step s l μ) (hs' : s' ∈ μ.support) :
     (∃ l₀, GBCA.ByABDY.gbcaLabelMap P.n l = some l₀ ∧ Step P r s l₀ μ) ∨ s' = s := by
   rcases (System.mapIdle_step (GBCA.ByABDY.gbcaLabelMap P.n) (specInst P r) s l μ).mp h with
     ⟨l₀, hpull, hstep⟩ | ⟨-, rfl⟩
@@ -88,30 +87,29 @@ theorem specificationOverRoundAlphabet_step_cases {s s' : SpecState P.n} {l :
 /-- **The exclusion set never shrinks**, along a transition of the lifted
 specification: a named label takes a specification row, and an unnamed one
 leaves the state alone. -/
-theorem specificationOverRoundAlphabet_excluded_mono {s s' : SpecState P.n} {l :
-  Composition.ExtendedLabel P.n}
-    {μ : PMF (SpecState P.n)} (h : (GBCA.ByABDY.specificationOverRoundAlphabet P r).step s l μ)
-    (hs' : s' ∈ μ.support) : s.excluded ⊆ s'.excluded := by
+theorem specificationOverRoundAlphabet_excluded_mono {s s' : SpecState P.n}
+    {l : Composition.ExtendedLabel P.n} {μ : PMF (SpecState P.n)}
+    (h : (GBCA.ByABDY.specificationOverRoundAlphabet P r).step s l μ) (hs' : s' ∈ μ.support) :
+    s.excluded ⊆ s'.excluded := by
   rcases specificationOverRoundAlphabet_step_cases h hs' with ⟨_, -, hstep⟩ | rfl
   · exact Step.excluded_mono hstep hs'
   · exact Finset.Subset.refl _
 
 /-- **An excluded bit stays excluded along a run** of the lifted
 specification. -/
-theorem specificationOverRoundAlphabet_excluded_mem_stable {e : AlterSeq (SpecState P.n)
-  (Composition.ExtendedLabel P.n)}
+theorem specificationOverRoundAlphabet_excluded_mem_stable
+    {e : AlterSeq (SpecState P.n) (Composition.ExtendedLabel P.n)}
     (he : is_exec e (GBCA.ByABDY.specificationOverRoundAlphabet P r)) {k₁ k₂ : ℕ} (hk : k₁ ≤ k₂)
-    {s₁ s₂ : SpecState P.n} {b : Bool}
-    (hst₁ : e.stateAt k₁ = some s₁) (hst₂ : e.stateAt k₂ = some s₂)
-    (hb : b ∈ s₁.excluded) : b ∈ s₂.excluded :=
+    {s₁ s₂ : SpecState P.n} {b : Bool} (hst₁ : e.stateAt k₁ = some s₁)
+    (hst₂ : e.stateAt k₂ = some s₂) (hb : b ∈ s₁.excluded) : b ∈ s₂.excluded :=
   is_exec_stable (sys := GBCA.ByABDY.specificationOverRoundAlphabet P r) (fun s => b ∈ s.excluded)
     (fun _ _ _ _ hmem hstep hs' => specificationOverRoundAlphabet_excluded_mono hstep hs' hmem)
     he k₁ k₂ s₁ s₂ hk hst₁ hst₂ hb
 
 /-- **One exclude per instance**, at every state of an execution of the lifted
 specification. -/
-theorem specificationOverRoundAlphabet_excluded_card_le_one {e : AlterSeq (SpecState P.n)
-  (Composition.ExtendedLabel P.n)}
+theorem specificationOverRoundAlphabet_excluded_card_le_one
+    {e : AlterSeq (SpecState P.n) (Composition.ExtendedLabel P.n)}
     (he : is_exec e (GBCA.ByABDY.specificationOverRoundAlphabet P r)) {k : ℕ} {s : SpecState P.n}
     (hst : e.stateAt k = some s) : s.excluded.card ≤ 1 :=
   is_exec_stable (sys := GBCA.ByABDY.specificationOverRoundAlphabet P r) (fun s => s.excluded.card ≤
@@ -128,22 +126,21 @@ theorem specificationOverRoundAlphabet_excluded_card_le_one {e : AlterSeq (SpecS
 /-- Two bits excluded at one state of an execution of the lifted specification
 are equal: the exclusion set holds at most one bit. -/
 private theorem specificationOverRoundAlphabet_excluded_eq_of_mem
-    {e : AlterSeq (SpecState P.n) (Composition.ExtendedLabel P.n)} (he : is_exec e
-      (GBCA.ByABDY.specificationOverRoundAlphabet P r))
-    {k : ℕ} {s : SpecState P.n} {b₁ b₂ : Bool} (hst : e.stateAt k = some s)
-    (h₁ : b₁ ∈ s.excluded) (h₂ : b₂ ∈ s.excluded) : b₁ = b₂ :=
+    {e : AlterSeq (SpecState P.n) (Composition.ExtendedLabel P.n)}
+    (he : is_exec e (GBCA.ByABDY.specificationOverRoundAlphabet P r)) {k : ℕ} {s : SpecState P.n}
+    {b₁ b₂ : Bool} (hst : e.stateAt k = some s) (h₁ : b₁ ∈ s.excluded) (h₂ : b₂ ∈ s.excluded) :
+    b₁ = b₂ :=
   Finset.card_le_one.mp (specificationOverRoundAlphabet_excluded_card_le_one he hst) _ h₁ _ h₂
 
 /-- Two returns of one run of the lifted specification announce the same bit
 (`k₁ ≤ k₂` case). -/
 private theorem specificationOverRoundAlphabet_retG_bound_agree_le
-    {e : AlterSeq (SpecState P.n) (Composition.ExtendedLabel P.n)} (he : is_exec e
-      (GBCA.ByABDY.specificationOverRoundAlphabet P r))
-    {k₁ k₂ : ℕ} (hk : k₁ ≤ k₂) {s₁ s₂ : SpecState P.n} {id₁ id₂ : Fin P.n}
-    {o₁ o₂ : GBCAOutput} {β₁ β₂ : Bool} {μ₁ μ₂ : PMF (SpecState P.n)}
-    (hst₁ : e.stateAt k₁ = some s₁) (hst₂ : e.stateAt k₂ = some s₂)
-    (hstep₁ : Step P r s₁ (.retG r id₁ o₁ β₁) μ₁)
-    (hstep₂ : Step P r s₂ (.retG r id₂ o₂ β₂) μ₂) : β₁ = β₂ := by
+    {e : AlterSeq (SpecState P.n) (Composition.ExtendedLabel P.n)}
+    (he : is_exec e (GBCA.ByABDY.specificationOverRoundAlphabet P r)) {k₁ k₂ : ℕ} (hk : k₁ ≤ k₂)
+    {s₁ s₂ : SpecState P.n} {id₁ id₂ : Fin P.n} {o₁ o₂ : GBCAOutput} {β₁ β₂ : Bool}
+    {μ₁ μ₂ : PMF (SpecState P.n)} (hst₁ : e.stateAt k₁ = some s₁) (hst₂ : e.stateAt k₂ = some s₂)
+    (hstep₁ : Step P r s₁ (.retG r id₁ o₁ β₁) μ₁) (hstep₂ : Step P r s₂ (.retG r id₂ o₂ β₂) μ₂) :
+    β₁ = β₂ := by
   have hcarry : (!β₁) ∈ s₂.excluded :=
     specificationOverRoundAlphabet_excluded_mem_stable he hk hst₁ hst₂ (retG_bound_guard hstep₁)
   have h := specificationOverRoundAlphabet_excluded_eq_of_mem he hst₂ hcarry (retG_bound_guard
@@ -154,15 +151,13 @@ private theorem specificationOverRoundAlphabet_retG_bound_agree_le
 /-- **One bound bit per round**, along an execution of the lifted
 specification. Each return fires under `(!β) ∈ excluded`, the exclusion set
 only grows, and no state of an execution excludes two bits. -/
-theorem specificationOverRoundAlphabet_retG_bound_agree {e : AlterSeq (SpecState P.n)
-  (Composition.ExtendedLabel P.n)}
-    (he : is_exec e (GBCA.ByABDY.specificationOverRoundAlphabet P r)) {k₁ k₂ : ℕ} {s₁ s₂ : SpecState
-      P.n}
-    {id₁ id₂ : Fin P.n} {o₁ o₂ : GBCAOutput} {β₁ β₂ : Bool}
-    {μ₁ μ₂ : PMF (SpecState P.n)}
-    (hst₁ : e.stateAt k₁ = some s₁) (hst₂ : e.stateAt k₂ = some s₂)
-    (hstep₁ : Step P r s₁ (.retG r id₁ o₁ β₁) μ₁)
-    (hstep₂ : Step P r s₂ (.retG r id₂ o₂ β₂) μ₂) : β₁ = β₂ := by
+theorem specificationOverRoundAlphabet_retG_bound_agree
+    {e : AlterSeq (SpecState P.n) (Composition.ExtendedLabel P.n)}
+    (he : is_exec e (GBCA.ByABDY.specificationOverRoundAlphabet P r)) {k₁ k₂ : ℕ}
+    {s₁ s₂ : SpecState P.n} {id₁ id₂ : Fin P.n} {o₁ o₂ : GBCAOutput} {β₁ β₂ : Bool}
+    {μ₁ μ₂ : PMF (SpecState P.n)} (hst₁ : e.stateAt k₁ = some s₁) (hst₂ : e.stateAt k₂ = some s₂)
+    (hstep₁ : Step P r s₁ (.retG r id₁ o₁ β₁) μ₁) (hstep₂ : Step P r s₂ (.retG r id₂ o₂ β₂) μ₂) :
+    β₁ = β₂ := by
   rcases le_total k₁ k₂ with h | h
   · exact specificationOverRoundAlphabet_retG_bound_agree_le he h hst₁ hst₂ hstep₁ hstep₂
   · exact (specificationOverRoundAlphabet_retG_bound_agree_le he h hst₂ hst₁ hstep₂ hstep₁).symm
@@ -170,12 +165,12 @@ theorem specificationOverRoundAlphabet_retG_bound_agree {e : AlterSeq (SpecState
 /-- **A value-bearing return announces the bit it hands out**, along an
 execution of the lifted specification. The value guard excludes `!v`, the bound
 guard excludes `!β`, and a state of an execution excludes at most one bit. -/
-theorem specificationOverRoundAlphabet_retG_value_eq_bound {e : AlterSeq (SpecState P.n)
-  (Composition.ExtendedLabel P.n)}
+theorem specificationOverRoundAlphabet_retG_value_eq_bound
+    {e : AlterSeq (SpecState P.n) (Composition.ExtendedLabel P.n)}
     (he : is_exec e (GBCA.ByABDY.specificationOverRoundAlphabet P r)) {k : ℕ} {s : SpecState P.n}
     {id : Fin P.n} {o : GBCAOutput} {v β : Bool} {μ : PMF (SpecState P.n)}
-    (hst : e.stateAt k = some s) (hstep : Step P r s (.retG r id o β) μ)
-    (ho : outValue o = some v) : v = β := by
+    (hst : e.stateAt k = some s) (hstep : Step P r s (.retG r id o β) μ) (ho : outValue o = some v)
+    : v = β := by
   have h := specificationOverRoundAlphabet_excluded_eq_of_mem he hst (retG_value_guards hstep ho).2
     (retG_bound_guard hstep)
   revert h

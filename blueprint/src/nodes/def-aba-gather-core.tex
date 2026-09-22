@@ -1,7 +1,7 @@
 \begin{definition}[The core of a gather network state]
   \label{def:aba-gather-core}
   \lean{PLTS.ABA.Gather.correct}\lean{PLTS.ABA.Gather.dominatedBy}\lean{PLTS.ABA.Gather.dominators}\lean{PLTS.ABA.Gather.echoOf}\lean{PLTS.ABA.Gather.coreOf}\lean{PLTS.ABA.Gather.Invariant}\lean{PLTS.ABA.Gather.single_core}\lean{PLTS.ABA.Gather.single_core_approved}\lean{PLTS.ABA.Gather.bindAbove}\lean{PLTS.ABA.Gather.coreOf_recorded}\leanok
-  \uses{def:aba-gather-over-broadcast-specification, def:aba-params}
+  \uses{def:aba-gather-over-broadcast-specification, def:aba-parameters}
   The core of the instance of Definition~\ref{def:aba-gather-over-broadcast-specification} is a payload set read off one network state, and the size bound the core rule of Definition~\ref{def:aba-gather-spec} requires is a theorem about it.
   Write $w$ for a gather network state, that is, the per-sender sent sets beside the corrupted set.
   Let $\mathrm{correct}(w) = [n] \setminus F$, let

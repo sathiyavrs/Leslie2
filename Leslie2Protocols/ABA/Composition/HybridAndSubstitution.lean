@@ -16,7 +16,7 @@ introduce. The headlines that chain these inclusions with the earlier ones are i
 `ABA/Results.lean`.
 
 The first inclusion is the composed system. The protocol of `ABA/ImplementationByABDY/System.lean`
-presents the protocol as `n` programs beside one network adversary and the coin oracle. A program
+presents the protocol as `n` programs beside one network and the coin oracle. A program
 reads its own replacement flag and nothing else about corruption: not the corrupted set, not the
 budget, not another process's status (D23). Each program runs its round loop and a graded-agreement
 round at once, and the single adversary holds both kinds of message sent. The composed system reads
@@ -26,7 +26,7 @@ the same protocol as a composition of components:
   round-`r` instance is a parallel component in its own right: the graded-agreement programs of
   round `r` beside the network of round `r`, which that instance owns outright;
 * the round loops are `n` separate automata (`roundLoopProgram`), synchronised; * what is left of
-the network adversary is the DECIDED sets beside the
+the network is the DECIDED sets beside the
   corrupted set (`ABANetwork`);
 * the coin oracle enters through the same label pullback as in the protocol
   (`Composition.coinOverRoundAlphabet`).
@@ -114,9 +114,8 @@ end Composition
 namespace ABDY
 
 /-- The four components in parallel, over the extended alphabet. -/
-noncomputable def composedExtended (P : Parameters) : System (Composition.ComposedState P)
-  (ExtendedLabel
-  P.n) :=
+noncomputable def composedExtended (P : Parameters) :
+    System (Composition.ComposedState P) (ExtendedLabel P.n) :=
   (GBCA.ByABDY.gbcaInstanceFamily P).parallel
     ((System.synchronisedProduct (Composition.roundLoopProgram P)).parallel
       ((Composition.ABANetwork P).parallel (coinOverRoundAlphabet P)))
@@ -154,16 +153,15 @@ theorem composedHidden_step_iff (P : Parameters) (q : ComposedState P) (l : Labe
 
 /-- Build a joint transition of the four components on a visible label, the
 oracle's successor left arbitrary. -/
-theorem composedExtended_visible_step (P : Parameters) {G G' : ℕ → GBCA.ByABDY.ImplementationState P.n}
-    {C C' : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A A' : ABANetworkState P.n}
-    {o : ℕ → WCC.SpecState P.n} {ω : PMF (ℕ → WCC.SpecState P.n)} {L : ExtendedLabel P.n}
-    (hL : L ≠ Silent.τ)
+theorem composedExtended_visible_step (P : Parameters)
+    {G G' : ℕ → GBCA.ByABDY.ImplementationState P.n} {C C' : ∀ _ : Fin P.n, RoundLoopRecord P.n}
+    {A A' : ABANetworkState P.n} {o : ℕ → WCC.SpecState P.n} {ω : PMF (ℕ → WCC.SpecState P.n)}
+    {L : ExtendedLabel P.n} (hL : L ≠ Silent.τ)
     (hG : (GBCA.ByABDY.gbcaInstanceFamily P).step G L (PMF.pure G'))
     (hC : ∀ i, RoundLoopStep P i (C i) L (PMF.pure (C' i)))
-    (hA : ABANetworkStep P A L (PMF.pure A'))
-    (hW : (coinOverRoundAlphabet P).step o L ω) :
+    (hA : ABANetworkStep P A L (PMF.pure A')) (hW : (coinOverRoundAlphabet P).step o L ω) :
     (ABDY.composedExtended P).step (G, C, A, o) L
-      (prodPMF (PMF.pure G') (prodPMF (PMF.pure C') (prodPMF (PMF.pure A') ω))) := by
+    (prodPMF (PMF.pure G') (prodPMF (PMF.pure C') (prodPMF (PMF.pure A') ω))) := by
   rw [ABDY.composedExtended, System.parallel_step]
   refine Or.inl ⟨hL, PMF.pure G', prodPMF (PMF.pure C') (prodPMF (PMF.pure A') ω),
     hG, ?_, rfl⟩
@@ -183,10 +181,9 @@ theorem composedExtended_tau_gbca (P : Parameters) {G G' : ℕ → GBCA.ByABDY.I
   rw [prodPMF_pure_pure]
 
 /-- Build a silent transition of the four components from an ABA network injection. -/
-theorem composedExtended_tau_ABANetwork (P : Parameters) {G : ℕ → GBCA.ByABDY.ImplementationState
-  P.n}
-    {C : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A A' : ABANetworkState P.n}
-    {o : ℕ → WCC.SpecState P.n}
+theorem composedExtended_tau_ABANetwork (P : Parameters)
+    {G : ℕ → GBCA.ByABDY.ImplementationState P.n} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
+    {A A' : ABANetworkState P.n} {o : ℕ → WCC.SpecState P.n}
     (hA : ABANetworkStep P A (Sum.inl Label.tau) (PMF.pure A')) :
     (ABDY.composedExtended P).step (G, C, A, o) (Sum.inl Label.tau) (PMF.pure (G, C, A', o)) := by
   rw [ABDY.composedExtended, System.parallel_step]
@@ -204,10 +201,9 @@ The family routes a round-tagged label to its round, takes `τ` at any round,
 broadcasts `fail`, and idles on everything else. -/
 
 /-- The round-`r` instance moves on a label it owns. -/
-theorem gbcaInstanceFamily_owned (P : Parameters) (G : ℕ → GBCA.ByABDY.ImplementationState P.n) (r :
-  ℕ)
-    {L : ExtendedLabel P.n} (hL : GBCA.ByABDY.roundOwnsLabel L = some r) {X :
-      GBCA.ByABDY.ImplementationState P.n}
+theorem gbcaInstanceFamily_owned (P : Parameters) (G : ℕ → GBCA.ByABDY.ImplementationState P.n)
+    (r : ℕ) {L : ExtendedLabel P.n} (hL : GBCA.ByABDY.roundOwnsLabel L = some r)
+    {X : GBCA.ByABDY.ImplementationState P.n}
     (h : (GBCA.ByABDY.composition P r).step (G r) L (PMF.pure X)) :
     (GBCA.ByABDY.gbcaInstanceFamily P).step G L (PMF.pure (Function.update G r X)) := by
   rw [GBCA.ByABDY.gbcaInstanceFamily, System.family_step_iff]
@@ -223,30 +219,27 @@ theorem gbcaInstanceFamily_owned_id (P : Parameters) (G : ℕ → GBCA.ByABDY.Im
   rwa [Function.update_eq_self] at hstep
 
 /-- The round-`r` instance takes one of its own silent rules. -/
-theorem gbcaInstanceFamily_tau (P : Parameters) (G : ℕ → GBCA.ByABDY.ImplementationState P.n) (r :
-  ℕ)
-    {X : GBCA.ByABDY.ImplementationState P.n}
+theorem gbcaInstanceFamily_tau (P : Parameters) (G : ℕ → GBCA.ByABDY.ImplementationState P.n)
+    (r : ℕ) {X : GBCA.ByABDY.ImplementationState P.n}
     (h : (GBCA.ByABDY.composition P r).step (G r) (Sum.inl Label.tau) (PMF.pure X)) :
-    (GBCA.ByABDY.gbcaInstanceFamily P).step G (Sum.inl Label.tau) (PMF.pure (Function.update G r X))
-      := by
+    (GBCA.ByABDY.gbcaInstanceFamily P).step G (Sum.inl Label.tau)
+    (PMF.pure (Function.update G r X)) := by
   rw [GBCA.ByABDY.gbcaInstanceFamily, System.family_step_iff]
   exact Or.inl ⟨rfl, r, PMF.pure X, h, by rw [PMF.pure_map]⟩
 
 /-- A label no round owns and no broadcast: the family idles. -/
-theorem gbcaInstanceFamily_idle (P : Parameters) (G : ℕ → GBCA.ByABDY.ImplementationState P.n) {L :
-  ExtendedLabel
-  P.n}
-    (hτ : L ≠ Silent.τ) (hown : GBCA.ByABDY.roundOwnsLabel L = none) (hf : ¬ GBCA.ByABDY.isFailLabel
-      L) :
+theorem gbcaInstanceFamily_idle (P : Parameters) (G : ℕ → GBCA.ByABDY.ImplementationState P.n)
+    {L : ExtendedLabel P.n} (hτ : L ≠ Silent.τ) (hown : GBCA.ByABDY.roundOwnsLabel L = none)
+    (hf : ¬ GBCA.ByABDY.isFailLabel L) :
     (GBCA.ByABDY.gbcaInstanceFamily P).step G L (PMF.pure G) := by
   rw [GBCA.ByABDY.gbcaInstanceFamily, System.family_step_iff]
   exact Or.inr (Or.inr (Or.inr ⟨hτ, hown, hf, rfl⟩))
 
 /-- Corruption is broadcast to every round's network. -/
-theorem gbcaInstanceFamily_fail (P : Parameters) (G : ℕ → GBCA.ByABDY.ImplementationState P.n) (k :
-  Fin P.n) :
+theorem gbcaInstanceFamily_fail (P : Parameters) (G : ℕ → GBCA.ByABDY.ImplementationState P.n)
+    (k : Fin P.n) :
     (GBCA.ByABDY.gbcaInstanceFamily P).step G (Sum.inl (Label.fail k))
-      (PMF.pure (fun r => GBCA.ByABDY.corruptionAct P (Sum.inl (Label.fail k)) (G r))) := by
+    (PMF.pure (fun r => GBCA.ByABDY.corruptionAct P (Sum.inl (Label.fail k)) (G r))) := by
   rw [GBCA.ByABDY.gbcaInstanceFamily, System.family_step_iff]
   exact Or.inr (Or.inr (Or.inl ⟨by simp, rfl, trivial, rfl⟩))
 
@@ -390,19 +383,16 @@ broadcasts `fail`, and idles on everything else — `GBCA.ByABDY.gbcaInstanceFam
 the round instance replaced by its specification. -/
 
 /-- The specification family idles on a label no round owns and no broadcast. -/
-theorem gbcaSpecificationFamily_idle (P : Parameters) (G : ℕ → GBCA.SpecState P.n) {L :
-  ExtendedLabel
-  P.n}
-    (hτ : L ≠ Silent.τ) (hown : GBCA.ByABDY.roundOwnsLabel L = none) (hf : ¬ GBCA.ByABDY.isFailLabel
-      L) :
-    (gbcaSpecificationFamily P).step G L (PMF.pure G) := by
+theorem gbcaSpecificationFamily_idle (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
+    {L : ExtendedLabel P.n} (hτ : L ≠ Silent.τ) (hown : GBCA.ByABDY.roundOwnsLabel L = none)
+    (hf : ¬ GBCA.ByABDY.isFailLabel L) : (gbcaSpecificationFamily P).step G L (PMF.pure G) := by
   rw [gbcaSpecificationFamily, System.family_step_iff]
   exact Or.inr (Or.inr (Or.inr ⟨hτ, hown, hf, rfl⟩))
 
 /-- Corruption is broadcast to every round specification. -/
 theorem gbcaSpecificationFamily_fail (P : Parameters) (G : ℕ → GBCA.SpecState P.n) (k : Fin P.n) :
-    (gbcaSpecificationFamily P).step G (Sum.inl (Label.fail k)) (PMF.pure fun r => (G r).corrupt P
-      k) := by
+    (gbcaSpecificationFamily P).step G (Sum.inl (Label.fail k))
+    (PMF.pure fun r => (G r).corrupt P k) := by
   rw [gbcaSpecificationFamily, System.family_step_iff]
   exact Or.inr (Or.inr (Or.inl ⟨by simp, rfl, trivial, rfl⟩))
 
@@ -423,13 +413,10 @@ theorem gbcaSpecificationFamily_owned_inversion (P : Parameters) {G : ℕ → GB
 
 /-- A round's own row, read into the specification: the label the round owns is answered by that
 round, every other round standing still. -/
-theorem gbcaSpecificationFamily_owned (P : Parameters) {G : ℕ → GBCA.SpecState P.n} {L :
-  ExtendedLabel
-  P.n}
-    {l₀ : Label P.n} {r : ℕ} {X : GBCA.SpecState P.n}
-    (hown : GBCA.ByABDY.roundOwnsLabel L = some r) (hpull : GBCA.ByABDY.gbcaLabelMap P.n L = some
-      l₀)
-    (h : GBCA.Step P r (G r) l₀ (PMF.pure X)) :
+theorem gbcaSpecificationFamily_owned (P : Parameters) {G : ℕ → GBCA.SpecState P.n}
+    {L : ExtendedLabel P.n} {l₀ : Label P.n} {r : ℕ} {X : GBCA.SpecState P.n}
+    (hown : GBCA.ByABDY.roundOwnsLabel L = some r)
+    (hpull : GBCA.ByABDY.gbcaLabelMap P.n L = some l₀) (h : GBCA.Step P r (G r) l₀ (PMF.pure X)) :
     (gbcaSpecificationFamily P).step G L (PMF.pure (Function.update G r X)) := by
   rw [gbcaSpecificationFamily, System.family_step_iff]
   refine Or.inr (Or.inl ⟨r, hown, PMF.pure X, ?_, by rw [PMF.pure_map]⟩)
@@ -461,11 +448,10 @@ theorem gbcaSpecificationFamily_owned_step (P : Parameters) {G G' : ℕ → GBCA
 
 /-- Only the identity successor answers a label no round owns and no
 broadcast. -/
-theorem gbcaSpecificationFamily_idle_inversion (P : Parameters) {G : ℕ → GBCA.SpecState P.n} {L :
-  ExtendedLabel P.n}
-    {μ : PMF (ℕ → GBCA.SpecState P.n)} (h : (gbcaSpecificationFamily P).step G L μ)
-    (hτ : L ≠ Silent.τ) (hown : GBCA.ByABDY.roundOwnsLabel L = none) (hf : ¬ GBCA.ByABDY.isFailLabel
-      L) :
+theorem gbcaSpecificationFamily_idle_inversion (P : Parameters) {G : ℕ → GBCA.SpecState P.n}
+    {L : ExtendedLabel P.n} {μ : PMF (ℕ → GBCA.SpecState P.n)}
+    (h : (gbcaSpecificationFamily P).step G L μ) (hτ : L ≠ Silent.τ)
+    (hown : GBCA.ByABDY.roundOwnsLabel L = none) (hf : ¬ GBCA.ByABDY.isFailLabel L) :
     μ = PMF.pure G := by
   rw [gbcaSpecificationFamily, System.family_step_iff] at h
   rcases h with ⟨habs, -⟩ | ⟨r, hr, -⟩ | ⟨-, -, hglob, -⟩ | ⟨-, -, -, rfl⟩
@@ -475,8 +461,8 @@ theorem gbcaSpecificationFamily_idle_inversion (P : Parameters) {G : ℕ → GBC
   · rfl
 
 /-- Corruption is broadcast to every round. -/
-theorem gbcaSpecificationFamily_fail_inversion (P : Parameters) {G : ℕ → GBCA.SpecState P.n} (k : Fin P.n)
-    {μ : PMF (ℕ → GBCA.SpecState P.n)}
+theorem gbcaSpecificationFamily_fail_inversion (P : Parameters) {G : ℕ → GBCA.SpecState P.n}
+    (k : Fin P.n) {μ : PMF (ℕ → GBCA.SpecState P.n)}
     (h : (gbcaSpecificationFamily P).step G (Sum.inl (Label.fail k)) μ) :
     μ = PMF.pure (fun r => (G r).corrupt P k) := by
   rw [gbcaSpecificationFamily, System.family_step_iff] at h
@@ -623,13 +609,11 @@ theorem hybridExtended_tau_specification (P : Parameters) {G G' : ℕ → GBCA.S
 coin oracle, so it is the specification family's binding exclusion or the ABA network's own
 injection. -/
 theorem hybridExtended_tau_inversion (P : Parameters) {G : ℕ → GBCA.SpecState P.n}
-    {C : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A : ABANetworkState P.n}
-    {o : ℕ → WCC.SpecState P.n} {μ : PMF (HybridState P)}
-    (h : (hybridExtended P).step (G, C, A, o) (Sum.inl Label.tau) μ) :
+    {C : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A : ABANetworkState P.n} {o : ℕ → WCC.SpecState P.n}
+    {μ : PMF (HybridState P)} (h : (hybridExtended P).step (G, C, A, o) (Sum.inl Label.tau) μ) :
     (∃ G', (gbcaSpecificationFamily P).step G (Sum.inl Label.tau) (PMF.pure G') ∧
         μ = PMF.pure (G', C, A, o)) ∨
-    (∃ A', ABANetworkStep P A (Sum.inl Label.tau) (PMF.pure A') ∧
-        μ = PMF.pure (G, C, A', o)) := by
+    (∃ A', ABANetworkStep P A (Sum.inl Label.tau) (PMF.pure A') ∧ μ = PMF.pure (G, C, A', o)) := by
   rw [hybridExtended, System.parallel_step] at h
   rcases h with ⟨habs, -⟩ | ⟨-, μ₁, hG, rfl⟩ | ⟨-, μ₂, hrest, rfl⟩
   · exact absurd rfl habs

@@ -25,7 +25,7 @@ coordinates just carry the ambient joint state along:
   run; `weakLStep_tauThen` is the two-step run, a silent step followed by an
   external one;
 * `AlterSeq.stateAt_map`, `AlterSeq.endState_map`, `System.trace_map_state` —
-  `AlterSeq.map` glue: pointwise state maps commute with `stateAt`/`endState`
+  `AlterSeq.map` transport lemmas: pointwise state maps commute with `stateAt`/`endState`
   and leave the trace unchanged (the trace only reads labels);
 * `System.weakLSilent_family` / `System.weakLStep_family` — a weak run of the
   instance `inst r` embeds into the family, moving only coordinate `r`.
@@ -134,7 +134,7 @@ theorem weakLStep_tauThen {q q₁ q' : State} {l : Label}
 
 end SingleStep
 
-/-! ### `AlterSeq.map` transport glue -/
+/-! ### `AlterSeq.map` transport lemmas -/
 
 /-- `AlterSeq.map` commutes with `stateAt`. -/
 theorem AlterSeq.stateAt_map (f : State → State') (e : AlterSeq State Label) (n : ℕ) :

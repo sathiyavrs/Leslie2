@@ -48,10 +48,8 @@ variable {X : Type} [DecidableEq X] {P : Parameters}
 /-- The broadcast substitution relation: the gather tier equal, and each
 broadcast coordinate related to its specification coordinate by the BRB
 refinement relation. -/
-structure BroadcastSubstitutionRelation (P : Parameters) (s : StateOverBracha P.n X) (t :
-  StateOverBroadcastSpecification
-  P.n
-  X) : Prop where
+structure BroadcastSubstitutionRelation (P : Parameters) (s : StateOverBracha P.n X)
+    (t : StateOverBroadcastSpecification P.n X) : Prop where
   /-- The gather programs and the gather network state are untouched by the
   substitution. -/
   gatherTier_eq : s.1 = t.1
@@ -63,9 +61,9 @@ structure BroadcastSubstitutionRelation (P : Parameters) (s : StateOverBracha P.
     BRB.SpecificationRelation P q (bindBroadcasts s q) (bindBroadcasts t q)
 
 /-- The relation holds initially. -/
-theorem broadcastSubstitutionRelation_init : BroadcastSubstitutionRelation P (instanceOverBracha P
-  X).init (instanceOverBroadcastSpecification P
-  X).init :=
+theorem broadcastSubstitutionRelation_init :
+    BroadcastSubstitutionRelation P (instanceOverBracha P X).init
+    (instanceOverBroadcastSpecification P X).init :=
   ⟨rfl, fun _ => BRB.specificationRelation_init, fun _ => BRB.specificationRelation_init⟩
 
 /-! ### The substitution -/

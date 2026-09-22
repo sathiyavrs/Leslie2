@@ -23,9 +23,9 @@ of scope.
   transition `commit`, whose guard `k ∈ F ∨ call k = some v` says a corrupted
   process contributes anything and a correct one only its call. This is the
   same split of the source's call field that the BRB specification makes
-  (`ABA/ReliableBroadcast/Specification.lean`), one level up: entries travel by reliable broadcast,
-  so a process corrupted after a correct call can still direct its committed
-  entry until first use, and a specification that pinned the entry at call
+  (`ABA/ReliableBroadcast/Specification.lean`), one level up: entries are sent by reliable
+  broadcast, so a process corrupted after a correct call can still direct its committed
+  entry until first use, and a specification that fixed the entry at call
   time would refuse that execution. The source's Byzantine-call τ-rule is the
   corrupted half of `commit` (deviation D26).
 * `core` — the binding content: one payload set, written at most once, by
@@ -51,7 +51,7 @@ instance binds by reading its labels.
 
 Two guards of `bindCore` are what a return then delivers: `hval` makes the
 core's entries committed entries, `hcard` gives it at least `n − f` of them.
-Both are discharged at the freeze, from the prefix alone. `Gather/CommonCoreCounting.lean`
+Both are discharged at the core write, from the prefix alone. `Gather/CommonCoreCounting.lean`
 carries the argument for the gather implementation: the core is the `ECHO`
 payload of a sender whose payload lies below every `VOTE` of `n − f − |F|`
 processes outside `F`, and the size bound is that payload's own.
@@ -170,7 +170,7 @@ inductive Step (P : Parameters) [DecidableEq X] :
   | commit (s : SpecState P.n X) (k : Fin P.n) (v : X)
       (hv : s.val k = none) (hm : k ∈ s.F ∨ s.call k = some v) :
       Step P s .tau (PMF.pure { s with val := Function.update s.val k (some v) })
-  /-- Binding: freeze the core. Its entries are committed entries and it has
+  /-- Binding: write the core. Its entries are committed entries and it has
   at least `n − f` of them. Fires at most once per instance. -/
   | bindCore (s : SpecState P.n X) (S : AcceptedPairs P.n X)
       (h0 : s.core = none)

@@ -1,19 +1,19 @@
 \begin{theorem}[Binding of graded agreement, on a trace]
   \label{thm:aba-gbca-binding-trace}
   \lean{PLTS.ABA.GBCA.BoundTrace}\lean{PLTS.ABA.GBCA.BindingTrace}\lean{PLTS.ABA.GBCA.specInst_binding}\lean{PLTS.ABA.GBCA.BindingTrace.value_agree}\lean{PLTS.ABA.GBCA.ByABDY.implementation_binding}\lean{PLTS.ABA.GBCA.BindingTraceExtended}\lean{PLTS.ABA.GBCA.roundOverGatherSpecifications_binding}\lean{PLTS.ABA.GBCA.roundOverBroadcastSpecification_binding}\lean{PLTS.ABA.GBCA.roundOverBracha_binding}\leanok
-  \uses{def:aba-gbca-spec, thm:gbca-spec-binding, thm:trace-support, thm:forward-sound, thm:gbca-inst-refines, thm:gbca-round-refines-specification, thm:gbca-round-substitutions, thm:gbca-gather-refines}
+  \uses{def:aba-gbca-spec, thm:gbca-spec-binding, thm:trace-support, thm:forward-sound, thm:gbca-implementation-refines-specification, thm:gbca-round-refines-specification, thm:gbca-round-substitutions, thm:gbca-gather-refines}
   $\mathrm{BoundTrace}$ says that any two round-$r$ returns of a trace announce the same bit, and $\mathrm{BindingTrace}$ adds that every round-$r$ return of the trace which hands out a value hands out that bit.
   Every trace in the support of every achievable trace distribution of the round-$r$ GBCA specification instance satisfies $\mathrm{BindingTrace}$.\lean{PLTS.ABA.GBCA.specInst_binding}\leanok{} Graded agreement is then a consequence of the trace predicate alone: two returns of the trace that hand out bits each hand out the bit they announce, and the two announcements agree.\lean{PLTS.ABA.GBCA.BindingTrace.value_agree}\leanok{}
   The predicate is stated on the labels of a trace, so every inclusion of achievable trace distributions into the instance carries it, and four systems below Transition System~2 satisfy it for that reason.
   The three gather-based tiers speak the family alphabet, on which a round-$r$ return is named by the return label and by the Byzantine return row alike, so at those tiers the predicate is read through the family pullback, $\mathrm{BindingTraceExtended}$, and the specification read along that pullback satisfies it by the same argument on its own executions.
-  The direct implementation instance satisfies $\mathrm{BindingTrace}$ along the inclusion of Theorem~\ref{thm:gbca-inst-refines}.\lean{PLTS.ABA.GBCA.ByABDY.implementation_binding}\leanok{}
+  The direct implementation instance satisfies $\mathrm{BindingTrace}$ along the inclusion of Theorem~\ref{thm:gbca-implementation-refines-specification}.\lean{PLTS.ABA.GBCA.ByABDY.implementation_binding}\leanok{}
   The GBCA-over-gather tier satisfies it along the counting refinement of Theorem~\ref{thm:gbca-round-refines-specification}.\lean{PLTS.ABA.GBCA.roundOverGatherSpecifications_binding}\leanok{}
   The tier over the gather implementations satisfies it along the gather substitution of Theorem~\ref{thm:gbca-round-substitutions} chained with the counting refinement.\lean{PLTS.ABA.GBCA.roundOverBroadcastSpecification_binding}\leanok{}
   The gather-based implementation satisfies it along the three-tier inclusion of Theorem~\ref{thm:gbca-gather-refines}.\lean{PLTS.ABA.GBCA.roundOverBracha_binding}\leanok{}
 \end{theorem}
 
 \begin{proof}\leanok
-  \uses{def:aba-gbca-spec, thm:gbca-spec-binding, thm:trace-support, thm:forward-sound, thm:gbca-inst-refines, thm:gbca-round-refines-specification, thm:gbca-round-substitutions, thm:gbca-gather-refines}
+  \uses{def:aba-gbca-spec, thm:gbca-spec-binding, thm:trace-support, thm:forward-sound, thm:gbca-implementation-refines-specification, thm:gbca-round-refines-specification, thm:gbca-round-substitutions, thm:gbca-gather-refines}
   Theorem~\ref{thm:trace-support} turns a positive-probability trace into a genuine execution of the instance in which each round-$r$ return label of the trace is a step of a return rule at some state.
   The two clauses are then Theorem~\ref{thm:gbca-spec-binding} read at those steps: the announcements of any two of them agree, and a value-bearing one announces the value it hands out.
   Nothing beyond positive probability is required of the trace, and nothing beyond membership in one execution of the returns.

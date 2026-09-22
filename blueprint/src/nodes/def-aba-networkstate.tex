@@ -1,7 +1,7 @@
 \begin{definition}[The two-part instance vocabulary]
   \label{def:aba-networkstate}
   \lean{PLTS.ABA.NetworkState}\lean{PLTS.ABA.LocalState}\lean{PLTS.ABA.InstanceState}\lean{PLTS.ABA.InstanceState.corrupt}\lean{PLTS.ABA.InstanceState.multicast}\lean{PLTS.ABA.InstanceState.receiveMessage}\lean{PLTS.ABA.InstanceState.receivedCount}\leanok
-  \uses{def:aba-params}
+  \uses{def:aba-parameters}
   The state shape the broadcast and gather encodings share.
   The network state $\mathrm{NetworkState}(n, M)$ holds the per-sender sent sets $sent : [n] \to \mathcal{P}(M)$ and the corrupted set $F$ (D5, D1); a local state $\mathrm{LocalState}(n, Pr, M)$ holds one process's record of type $Pr$ beside its per-sender received sets.
   An instance state is the pair

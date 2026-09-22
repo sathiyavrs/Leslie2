@@ -5,7 +5,7 @@
 \end{theorem}
 
 \begin{proof}\leanok
-  \uses{def:probexec, def:traceprob, def:exec, def:achievable}
+  \uses{def:probabilistic-execution, def:traceprob, def:exec, def:achievable}
   Fix a Dirac-initialised probabilistic execution and a trace $t$ with positive trace probability.
   Positive trace probability forces a positive-mass path, and reading its labels off that path yields a genuine execution of the system whose trace is $t$; trace membership is then characterised by that execution's events.
   For the transfer, suppose $\operatorname{ATD}(sys_C) \subseteq \operatorname{ATD}(sys_A)$ and that every trace in the support of every achievable trace distribution of $sys_A$ is safe.

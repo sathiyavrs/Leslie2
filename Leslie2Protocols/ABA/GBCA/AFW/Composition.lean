@@ -225,9 +225,8 @@ def secondGatherLabelMap (n : ℕ) : RoundLabel n → Option (Gather.InstanceLab
       (Option Bool)) := rfl
 
 /-- Only the silent label reaches a program's silent label. -/
-theorem programLabelMap_eq_tau {n : ℕ} {l : RoundLabel n} (h : programLabelMap n l = some
-  ProgramLabel.tau) :
-    l = Sum.inl (Sum.inl Label.tau) := by
+theorem programLabelMap_eq_tau {n : ℕ} {l : RoundLabel n}
+    (h : programLabelMap n l = some ProgramLabel.tau) : l = Sum.inl (Sum.inl Label.tau) := by
   rcases l with (l₀ | e) | e
   · cases l₀ <;> simp_all [programLabelMap]
   · cases e <;> simp_all [programLabelMap]
@@ -352,11 +351,11 @@ variable {n : ℕ} (r : ℕ) (id k i j : Fin n) (b c bnd : Bool) (x : Option Boo
 @[simp] theorem firstGatherLabelMap_firstGatherReturn :
     firstGatherLabelMap n (Sum.inr (.firstGatherReturn id g C)) = some (Sum.inl (.ret id g C)) :=
       rfl
-@[simp] theorem firstGatherLabelMap_secondGatherCall : firstGatherLabelMap n (Sum.inr
-  (.secondGatherCall id x)) = none :=
+@[simp] theorem firstGatherLabelMap_secondGatherCall :
+    firstGatherLabelMap n (Sum.inr (.secondGatherCall id x)) = none :=
   rfl
-@[simp] theorem firstGatherLabelMap_secondGatherReturn : firstGatherLabelMap n (Sum.inr
-  (.secondGatherReturn id h D)) = none :=
+@[simp] theorem firstGatherLabelMap_secondGatherReturn :
+    firstGatherLabelMap n (Sum.inr (.secondGatherReturn id h D)) = none :=
   rfl
 
 @[simp] theorem secondGatherLabelMap_callG : secondGatherLabelMap n (Sum.inl (Sum.inl (.callG r id
@@ -451,7 +450,8 @@ inductive ProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
       ProgramStep P r j p (.secondGatherCall i x) (PMF.pure p)
   /-- The second gather returns here: record the grade of its entries. -/
   | secondGatherReturn (p : ProcessRecord P.n) (g : Fin P.n → Option (Option Bool))
-      (C : Gather.AcceptedPairs P.n (Option Bool)) (h2 : p.secondGatherCalled = true) (ho : p.output = none) :
+      (C : Gather.AcceptedPairs P.n (Option Bool)) (h2 : p.secondGatherCalled = true)
+      (ho : p.output = none) :
       ProgramStep P r j p (.secondGatherReturn j g C) (PMF.pure { p with output := some (gradeOf P
         g)
         })
@@ -472,7 +472,7 @@ inductive ProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
 
 /-! ### The round's network
 
-The network adversary of the round's programs. It exchanges no message and holds the round's bound
+The network of the round's programs. It exchanges no message and holds the round's bound
 bit alone; no program reads it. The `firstGatherReturn` row writes the bit from the core the first
 gather's return carries if it is unwritten, and the `retG` row determines the bit the label
 announces. No row fires on the silent label. -/
@@ -695,22 +695,28 @@ def setSecondGather (s : RoundStateOverGathers n G₁ G₂) (d : G₂) : RoundSt
 /-- Corruption (deviation D1): the two gather instances corrupted at `id`, the
 programs and the round's bound bit untouched. -/
 def corruptAll (P : Parameters) (id : Fin P.n) (corruptFirstGather : Fin P.n → G₁ → G₁)
-    (corruptSecondGather : Fin P.n → G₂ → G₂) (s : RoundStateOverGathers P.n G₁ G₂) : RoundStateOverGathers P.n G₁
-      G₂ :=
+    (corruptSecondGather : Fin P.n → G₂ → G₂) (s : RoundStateOverGathers P.n G₁ G₂) :
+    RoundStateOverGathers P.n G₁ G₂ :=
   (s.1, (corruptFirstGather id s.2.1, corruptSecondGather id s.2.2))
 
-@[simp] theorem programs_corruptAll (P : Parameters) (id : Fin P.n) (corruptFirstGather : Fin P.n → G₁ → G₁)
-    (corruptSecondGather : Fin P.n → G₂ → G₂) (s : RoundStateOverGathers P.n G₁ G₂) :
+@[simp] theorem programs_corruptAll (P : Parameters) (id : Fin P.n)
+    (corruptFirstGather : Fin P.n → G₁ → G₁) (corruptSecondGather : Fin P.n → G₂ → G₂)
+    (s : RoundStateOverGathers P.n G₁ G₂) :
     programs (corruptAll P id corruptFirstGather corruptSecondGather s) = programs s := rfl
-@[simp] theorem bound_corruptAll (P : Parameters) (id : Fin P.n) (corruptFirstGather : Fin P.n → G₁ → G₁)
-    (corruptSecondGather : Fin P.n → G₂ → G₂) (s : RoundStateOverGathers P.n G₁ G₂) :
+@[simp] theorem bound_corruptAll (P : Parameters) (id : Fin P.n)
+    (corruptFirstGather : Fin P.n → G₁ → G₁) (corruptSecondGather : Fin P.n → G₂ → G₂)
+    (s : RoundStateOverGathers P.n G₁ G₂) :
     bound (corruptAll P id corruptFirstGather corruptSecondGather s) = bound s := rfl
-@[simp] theorem firstGather_corruptAll (P : Parameters) (id : Fin P.n) (corruptFirstGather : Fin P.n → G₁ → G₁)
-    (corruptSecondGather : Fin P.n → G₂ → G₂) (s : RoundStateOverGathers P.n G₁ G₂) :
-    firstGather (corruptAll P id corruptFirstGather corruptSecondGather s) = corruptFirstGather id (firstGather s) := rfl
-@[simp] theorem secondGather_corruptAll (P : Parameters) (id : Fin P.n) (corruptFirstGather : Fin P.n → G₁ → G₁)
-    (corruptSecondGather : Fin P.n → G₂ → G₂) (s : RoundStateOverGathers P.n G₁ G₂) :
-    secondGather (corruptAll P id corruptFirstGather corruptSecondGather s) = corruptSecondGather id (secondGather s) := rfl
+@[simp] theorem firstGather_corruptAll (P : Parameters) (id : Fin P.n)
+    (corruptFirstGather : Fin P.n → G₁ → G₁) (corruptSecondGather : Fin P.n → G₂ → G₂)
+    (s : RoundStateOverGathers P.n G₁ G₂) :
+    firstGather (corruptAll P id corruptFirstGather corruptSecondGather s) =
+      corruptFirstGather id (firstGather s) := rfl
+@[simp] theorem secondGather_corruptAll (P : Parameters) (id : Fin P.n)
+    (corruptFirstGather : Fin P.n → G₁ → G₁) (corruptSecondGather : Fin P.n → G₂ → G₂)
+    (s : RoundStateOverGathers P.n G₁ G₂) :
+    secondGather (corruptAll P id corruptFirstGather corruptSecondGather s) =
+      corruptSecondGather id (secondGather s) := rfl
 
 end Views
 
@@ -755,18 +761,16 @@ theorem roundPrograms_isLTS (P : Parameters) (r : ℕ) : (roundPrograms P r).IsL
 /-- The round's programs beside the two gather instances is an LTS. -/
 theorem roundOverGathersExtended_isLTS (P : Parameters) (r : ℕ) {G₁ G₂ : Type}
     {firstGather : System G₁ (Gather.InstanceLabel P.n Bool)}
-    {secondGather : System G₂ (Gather.InstanceLabel P.n (Option Bool))}
-    (h1 : firstGather.IsLTS) (h2 : secondGather.IsLTS) : (roundOverGathersExtended P r firstGather
-      secondGather).IsLTS :=
+    {secondGather : System G₂ (Gather.InstanceLabel P.n (Option Bool))} (h1 : firstGather.IsLTS)
+    (h2 : secondGather.IsLTS) : (roundOverGathersExtended P r firstGather secondGather).IsLTS :=
   System.parallel_isLTS (roundPrograms_isLTS P r)
     (System.parallel_isLTS (System.mapIdle_isLTS _ h1) (System.mapIdle_isLTS _ h2))
 
 /-- The round is an LTS. -/
 theorem roundOverGathers_isLTS (P : Parameters) (r : ℕ) {G₁ G₂ : Type}
     {firstGather : System G₁ (Gather.InstanceLabel P.n Bool)}
-    {secondGather : System G₂ (Gather.InstanceLabel P.n (Option Bool))}
-    (h1 : firstGather.IsLTS) (h2 : secondGather.IsLTS) : (roundOverGathers P r firstGather
-      secondGather).IsLTS :=
+    {secondGather : System G₂ (Gather.InstanceLabel P.n (Option Bool))} (h1 : firstGather.IsLTS)
+    (h2 : secondGather.IsLTS) : (roundOverGathers P r firstGather secondGather).IsLTS :=
   System.relabel_isLTS (System.abstract_isLTS (roundOverGathersExtended_isLTS P r h1 h2) _)
 
 /-- The round over the gather instances over Bracha's broadcast is an LTS. -/
@@ -782,8 +786,7 @@ theorem roundOverBroadcastSpecification_isLTS (P : Parameters) (r : ℕ) :
 
 /-- The round over the gather specifications is an LTS. -/
 theorem roundOverGatherSpecifications_isLTS (P : Parameters) (r : ℕ) :
-  (roundOverGatherSpecifications P
-  r).IsLTS :=
+    (roundOverGatherSpecifications P r).IsLTS :=
   roundOverGathers_isLTS P r (Gather.specificationOverInstanceAlphabet_isLTS P)
     (Gather.specificationOverInstanceAlphabet_isLTS P)
 
@@ -840,8 +843,8 @@ family-label case. -/
 theorem roundOverGathers_step_iff (P : Parameters) (r : ℕ) {G₁ G₂ : Type}
     (firstGather : System G₁ (Gather.InstanceLabel P.n Bool))
     (secondGather : System G₂ (Gather.InstanceLabel P.n (Option Bool)))
-    (s : RoundStateOverGathers P.n G₁ G₂) (l : ExtendedLabel P.n) (μ : PMF (RoundStateOverGathers
-      P.n G₁ G₂)) :
+    (s : RoundStateOverGathers P.n G₁ G₂) (l : ExtendedLabel P.n)
+    (μ : PMF (RoundStateOverGathers P.n G₁ G₂)) :
     (roundOverGathers P r firstGather secondGather).step s l μ ↔
       (l = Sum.inl Label.tau ∧ ∃ e : RoundEvent P.n,
         (roundOverGathersExtended P r firstGather secondGather).step s (Sum.inr e) μ) ∨
@@ -908,13 +911,12 @@ theorem roundPrograms_idle_inversion (hlp : programLabelMap P.n L = none)
 
 /-- **The joint transition of the round's programs.** Every program takes its row at the label's
 image and the round's network takes its. -/
-theorem roundPrograms_label_inversion {lp : ProgramLabel P.n} (hlp : programLabelMap P.n L = some lp)
-  (hlpτ
-  : lp ≠ ProgramLabel.tau)
+theorem roundPrograms_label_inversion {lp : ProgramLabel P.n}
+    (hlp : programLabelMap P.n L = some lp) (hlpτ : lp ≠ ProgramLabel.tau)
     {μ : PMF ((∀ _ : Fin P.n, ProcessRecord P.n) × Option Bool)}
     (h : (roundPrograms P r).step (u, v) L μ) :
     ∃ (x : ∀ _ : Fin P.n, ProcessRecord P.n) (v' : Option Bool), μ = PMF.pure (x, v') ∧
-      (∀ i, ProgramStep P r i (u i) lp (PMF.pure (x i))) ∧ NetworkStep P r v lp (PMF.pure v') := by
+    (∀ i, ProgramStep P r i (u i) lp (PMF.pure (x i))) ∧ NetworkStep P r v lp (PMF.pure v') := by
   have hL := roundLabel_ne_tau hlp hlpτ
   rw [roundPrograms, System.parallel_step] at h
   rcases h with ⟨-, μ₁, μ₂, hs, hn, rfl⟩ | ⟨hτ, -⟩ | ⟨hτ, -⟩
@@ -941,9 +943,7 @@ theorem roundPrograms_idle_pure (hlp : programLabelMap P.n L = none)
 
 /-- The joint transition of the round's programs, read off a Dirac successor. -/
 theorem roundPrograms_label_pure {lp : ProgramLabel P.n} (hlp : programLabelMap P.n L = some lp)
-  (hlpτ
-  : lp ≠ ProgramLabel.tau)
-    (h : (roundPrograms P r).step (u, v) L (PMF.pure (x, v'))) :
+    (hlpτ : lp ≠ ProgramLabel.tau) (h : (roundPrograms P r).step (u, v) L (PMF.pure (x, v'))) :
     (∀ i, ProgramStep P r i (u i) lp (PMF.pure (x i))) ∧ NetworkStep P r v lp (PMF.pure v') := by
   obtain ⟨y, w, hμ, hproc, hnet⟩ := roundPrograms_label_inversion hlp hlpτ h
   have he := PMF.pure_injective hμ
@@ -963,9 +963,7 @@ theorem roundPrograms_idle_step (hlp : programLabelMap P.n L = none) :
 /-- Build the joint transition of the round's programs from the programs' rows and the row of the
 round's network. -/
 theorem roundPrograms_label_step {lp : ProgramLabel P.n} (hlp : programLabelMap P.n L = some lp)
-  (hlpτ
-  : lp ≠ ProgramLabel.tau)
-    (hproc : ∀ i, ProgramStep P r i (u i) lp (PMF.pure (x i)))
+    (hlpτ : lp ≠ ProgramLabel.tau) (hproc : ∀ i, ProgramStep P r i (u i) lp (PMF.pure (x i)))
     (hnet : NetworkStep P r v lp (PMF.pure v')) :
     (roundPrograms P r).step (u, v) L (PMF.pure (x, v')) := by
   rw [roundPrograms, System.parallel_step]
@@ -1050,24 +1048,23 @@ theorem roundOverGathersExtended_tau_inversion (h1 : firstGather.IsLTS) (h2 : se
 
 /-- Build a visible transition of the round's programs beside the two gather instances. -/
 theorem roundOverGathersExtended_label_step (hL : L ≠ (Silent.τ : RoundLabel P.n))
-    (hlayer : (roundPrograms P r).step (u, v) L (PMF.pure (x, v')))
+    (hRoundPrograms : (roundPrograms P r).step (u, v) L (PMF.pure (x, v')))
     (hga1 : (firstGather.mapIdle (firstGatherLabelMap P.n)).step c L (PMF.pure c'))
     (hga2 : (secondGather.mapIdle (secondGatherLabelMap P.n)).step d L (PMF.pure d')) :
-    (roundOverGathersExtended P r firstGather secondGather).step ((u, v), (c, d)) L (PMF.pure ((x,
-      v'), (c', d'))) := by
+    (roundOverGathersExtended P r firstGather secondGather).step ((u, v), (c, d)) L
+    (PMF.pure ((x, v'), (c', d'))) := by
   rw [roundOverGathersExtended, System.parallel_step]
-  refine Or.inl ⟨hL, PMF.pure (x, v'), PMF.pure (c', d'), hlayer, ?_,
+  refine Or.inl ⟨hL, PMF.pure (x, v'), PMF.pure (c', d'), hRoundPrograms, ?_,
     (prodPMF_pure_pure _ _).symm⟩
   rw [System.parallel_step]
   exact Or.inl ⟨hL, PMF.pure c', PMF.pure d', hga1, hga2, (prodPMF_pure_pure _ _).symm⟩
 
 /-- Build a silent transition of the round's programs beside the two gather instances from a silent
 step of the first gather. -/
-theorem roundOverGathersExtended_tau_firstGather (h : firstGather.step c (Silent.τ :
-  Gather.InstanceLabel P.n Bool) (PMF.pure
-  c')) :
-    (roundOverGathersExtended P r firstGather secondGather).step ((u, v), (c,
-      d)) (Silent.τ : RoundLabel P.n) (PMF.pure ((u, v), (c', d))) := by
+theorem roundOverGathersExtended_tau_firstGather
+    (h : firstGather.step c (Silent.τ : Gather.InstanceLabel P.n Bool) (PMF.pure c')) :
+    (roundOverGathersExtended P r firstGather secondGather).step ((u, v), (c, d))
+    (Silent.τ : RoundLabel P.n) (PMF.pure ((u, v), (c', d))) := by
   rw [roundOverGathersExtended, System.parallel_step]
   refine Or.inr (Or.inr ⟨rfl, PMF.pure (c', d), ?_, (prodPMF_pure_pure _ _).symm⟩)
   rw [System.parallel_step]
@@ -1078,8 +1075,8 @@ theorem roundOverGathersExtended_tau_firstGather (h : firstGather.step c (Silent
 step of the second gather. -/
 theorem roundOverGathersExtended_tau_secondGather
     (h : secondGather.step d (Silent.τ : Gather.InstanceLabel P.n (Option Bool)) (PMF.pure d')) :
-    (roundOverGathersExtended P r firstGather secondGather).step ((u, v), (c,
-      d)) (Silent.τ : RoundLabel P.n) (PMF.pure ((u, v), (c, d'))) := by
+    (roundOverGathersExtended P r firstGather secondGather).step ((u, v), (c, d))
+    (Silent.τ : RoundLabel P.n) (PMF.pure ((u, v), (c, d'))) := by
   rw [roundOverGathersExtended, System.parallel_step]
   refine Or.inr (Or.inr ⟨rfl, PMF.pure (c, d'), ?_, (prodPMF_pure_pure _ _).symm⟩)
   rw [System.parallel_step]
@@ -1089,31 +1086,31 @@ theorem roundOverGathersExtended_tau_secondGather
 
 /-- A hidden event is a silent transition of the round. -/
 theorem roundOverGathers_event_step (e : RoundEvent P.n)
-    (hlayer : (roundPrograms P r).step (u, v) (Sum.inr e) (PMF.pure (x, v')))
+    (hRoundPrograms : (roundPrograms P r).step (u, v) (Sum.inr e) (PMF.pure (x, v')))
     (hga1 : (firstGather.mapIdle (firstGatherLabelMap P.n)).step c (Sum.inr e) (PMF.pure c'))
     (hga2 : (secondGather.mapIdle (secondGatherLabelMap P.n)).step d (Sum.inr e) (PMF.pure d')) :
     (roundOverGathers P r firstGather secondGather).step ((u, v), (c, d)) (Sum.inl Label.tau)
       (PMF.pure ((x, v'), (c', d'))) :=
   (roundOverGathers_step_iff P r firstGather secondGather _ _ _).mpr
-    (Or.inl ⟨rfl, e, roundOverGathersExtended_label_step (by simp) hlayer hga1 hga2⟩)
+    (Or.inl ⟨rfl, e, roundOverGathersExtended_label_step (by simp) hRoundPrograms hga1 hga2⟩)
 
 /-- A visible family label is a transition of the round. -/
 theorem roundOverGathers_label_step {l : ExtendedLabel P.n} (hl : l ≠ Sum.inl Label.tau)
-    (hlayer : (roundPrograms P r).step (u, v) (Sum.inl l) (PMF.pure (x, v')))
+    (hRoundPrograms : (roundPrograms P r).step (u, v) (Sum.inl l) (PMF.pure (x, v')))
     (hga1 : (firstGather.mapIdle (firstGatherLabelMap P.n)).step c (Sum.inl l) (PMF.pure c'))
     (hga2 : (secondGather.mapIdle (secondGatherLabelMap P.n)).step d (Sum.inl l) (PMF.pure d')) :
-    (roundOverGathers P r firstGather secondGather).step ((u, v), (c, d)) l (PMF.pure ((x, v'),
-      (c', d'))) := by
+    (roundOverGathers P r firstGather secondGather).step ((u, v), (c, d)) l
+    (PMF.pure ((x, v'), (c', d'))) := by
   refine (roundOverGathers_step_iff P r firstGather secondGather _ _ _).mpr
-    (Or.inr (roundOverGathersExtended_label_step ?_ hlayer hga1 hga2))
+    (Or.inr (roundOverGathersExtended_label_step ?_ hRoundPrograms hga1 hga2))
   rw [roundLabel_tau]
   simpa using hl
 
 /-- A silent step of the first gather is a silent transition of the round. -/
-theorem roundOverGathers_tau_firstGather (h : firstGather.step c (Silent.τ : Gather.InstanceLabel
-  P.n Bool) (PMF.pure c')) :
+theorem roundOverGathers_tau_firstGather
+    (h : firstGather.step c (Silent.τ : Gather.InstanceLabel P.n Bool) (PMF.pure c')) :
     (roundOverGathers P r firstGather secondGather).step ((u, v), (c, d)) (Sum.inl Label.tau)
-      (PMF.pure ((u, v), (c', d))) :=
+    (PMF.pure ((u, v), (c', d))) :=
   (roundOverGathers_step_iff P r firstGather secondGather _ _ _).mpr (Or.inr
     (roundOverGathersExtended_tau_firstGather h))
 
@@ -1168,26 +1165,25 @@ theorem programStep_callLoop {i : Fin P.n} {b : Bool}
   case callLoop => rfl
   case callLoopIdle => rfl
 
-theorem programStep_firstGatherReturn_own {g : Fin P.n → Option Bool} {C : Gather.AcceptedPairs P.n
-  Bool}
-    (h : ProgramStep P r j p (.firstGatherReturn j g C) ν) :
-    p.input ≠ none ∧ p.candidate = none ∧ ν = PMF.pure { p with candidate := some (candidate P g) }
-      := by
+theorem programStep_firstGatherReturn_own {g : Fin P.n → Option Bool}
+    {C : Gather.AcceptedPairs P.n Bool} (h : ProgramStep P r j p (.firstGatherReturn j g C) ν) :
+    p.input ≠ none ∧ p.candidate = none ∧ ν = PMF.pure
+    { p with candidate := some (candidate P g) } := by
   cases h
   case firstGatherReturn => exact ⟨by assumption, by assumption, rfl⟩
   case firstGatherReturnIdle => exact absurd rfl ‹_ ≠ j›
 
 theorem programStep_firstGatherReturn_foreign {i : Fin P.n} {g : Fin P.n → Option Bool}
-    {C : Gather.AcceptedPairs P.n Bool} (hi : i ≠ j) (h : ProgramStep P r j p (.firstGatherReturn i
-      g C) ν) :
-    ν = PMF.pure p := by
+    {C : Gather.AcceptedPairs P.n Bool} (hi : i ≠ j)
+    (h : ProgramStep P r j p (.firstGatherReturn i g C) ν) : ν = PMF.pure p := by
   cases h
   case firstGatherReturn => exact absurd rfl hi
   case firstGatherReturnIdle => rfl
 
-theorem programStep_secondGatherCall_own {x : Option Bool} (h : ProgramStep P r j p
-  (.secondGatherCall j x) ν) :
-    p.candidate = some x ∧ p.secondGatherCalled = false ∧ ν = PMF.pure { p with secondGatherCalled := true } := by
+theorem programStep_secondGatherCall_own {x : Option Bool}
+    (h : ProgramStep P r j p (.secondGatherCall j x) ν) :
+    p.candidate = some x ∧ p.secondGatherCalled = false ∧ ν = PMF.pure
+    { p with secondGatherCalled := true } := by
   cases h
   case secondGatherCall => exact ⟨by assumption, by assumption, rfl⟩
   case secondGatherCallIdle => exact absurd rfl ‹_ ≠ j›
@@ -1199,17 +1195,17 @@ theorem programStep_secondGatherCall_foreign {i : Fin P.n} {x : Option Bool} (hi
   case secondGatherCallIdle => rfl
 
 theorem programStep_secondGatherReturn_own {g : Fin P.n → Option (Option Bool)}
-    {C : Gather.AcceptedPairs P.n (Option Bool)} (h : ProgramStep P r j p (.secondGatherReturn j g
-      C) ν) :
-    p.secondGatherCalled = true ∧ p.output = none ∧ ν = PMF.pure { p with output := some (gradeOf P g) } := by
+    {C : Gather.AcceptedPairs P.n (Option Bool)}
+    (h : ProgramStep P r j p (.secondGatherReturn j g C) ν) :
+    p.secondGatherCalled = true ∧ p.output = none ∧ ν = PMF.pure
+    { p with output := some (gradeOf P g) } := by
   cases h
   case secondGatherReturn => exact ⟨by assumption, by assumption, rfl⟩
   case secondGatherReturnIdle => exact absurd rfl ‹_ ≠ j›
 
 theorem programStep_secondGatherReturn_foreign {i : Fin P.n} {g : Fin P.n → Option (Option Bool)}
-    {C : Gather.AcceptedPairs P.n (Option Bool)} (hi : i ≠ j) (h : ProgramStep P r j p
-      (.secondGatherReturn i g C) ν) :
-    ν = PMF.pure p := by
+    {C : Gather.AcceptedPairs P.n (Option Bool)} (hi : i ≠ j)
+    (h : ProgramStep P r j p (.secondGatherReturn i g C) ν) : ν = PMF.pure p := by
   cases h
   case secondGatherReturn => exact absurd rfl hi
   case secondGatherReturnIdle => rfl
@@ -1239,8 +1235,8 @@ variable {P : Parameters} {r : ℕ} {w : Option Bool} {μ : PMF (Option Bool)}
 theorem networkStep_callG {id : Fin P.n} {b : Bool} (h : NetworkStep P r w (.callG r id b) μ) :
     μ = PMF.pure w := by cases h; rfl
 
-theorem networkStep_callLoop {id : Fin P.n} {b : Bool} (h : NetworkStep P r w (.callLoop r id b) μ)
-  :
+theorem networkStep_callLoop {id : Fin P.n} {b : Bool}
+  (h : NetworkStep P r w (.callLoop r id b) μ) :
     μ = PMF.pure w := by cases h; rfl
 
 theorem networkStep_firstGatherReturn {id : Fin P.n} {g : Fin P.n → Option Bool} {C :

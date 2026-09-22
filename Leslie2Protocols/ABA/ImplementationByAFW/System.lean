@@ -13,7 +13,7 @@ import Leslie2Protocols.ABA.ReliableBroadcast.BrachaImplementation
 # The gather-based protocol as it runs
 
 The gather-based graded agreement, read as a protocol rather than as a composition: `n` programs
-beside one network adversary and the coin oracle. This is the implementation of
+beside one network and the coin oracle. This is the implementation of
 `ABA/Implementation/System.lean` at the gather-based implementation, as
 `ABA/ImplementationByABDY/System.lean` is that implementation at ABDY22's, and it supplies the same
 three things — a round message type, a round record, and the implementation's rows. It sits in the
@@ -62,14 +62,14 @@ the composed system records it
 is the process's accepted pairs, `AFW.firstGatherAcceptedPairs`, which is that function at each of
 the `n` input-broadcast instances.
 
-## The network adversary's ghost
+## The network's ghost
 
-The record the adversary holds for round `r` is `AFW.Ghost`: the first gather's frozen core, the
-second gather's frozen core, and the round's bound bit, each written once. `AFW.ghostStep` writes
+The record the adversary holds for round `r` is `AFW.Ghost`: the first gather's recorded core, the
+second gather's recorded core, and the round's bound bit, each written once. `AFW.ghostStep` writes
 it. The return-then-call step's broadcast of the candidate — the label `gbcaSend r j
-(secondGatherInputBroadcasts j (init _))`, which no other row carries — freezes the first core at
+(secondGatherInputBroadcasts j (init _))`, which no other row carries — writes the first core at
 `Gather.coreOf` of the round's first gather network state and the bound bit at `GBCA.boundOfCore` of
-that core; a graded return freezes the second core the same way. Every other label leaves the record
+that core; a graded return writes the second core the same way. Every other label leaves the record
 where it stands.
 
 The network state `Gather.coreOf` is read on is `AFW.firstGatherOf`, the first
@@ -78,10 +78,11 @@ and `AFW.secondGatherOf` is the second's. `Gather.coreOf` reads the sent sets an
 corrupted set alone (`Gather.coreOf_networkState_only`), which is what lets the
 adversary compute the core from its own state.
 
-`AFW.ghostOut` reads the bit back, and `AFW.announcedBound`, the guard of the two graded-agreement
-return rows, is the equation between the bit their label carries and it. `AFW.ghostOut` is total:
-where the ghost holds no bit it computes one from the first gather's core, and on a reachable state
-the returner's own return-then-call step has already written the bit. -/
+`AFW.ghostOutput` reads the bit back, and `AFW.announcedBound`, the guard of the two
+graded-agreement return rows, is the equation between the bit their label carries and it.
+`AFW.ghostOutput` is total: where the ghost holds no bit it computes one from the first gather's
+core, and on a reachable state the returner's own return-then-call step has already written the
+bit. -/
 
 namespace PLTS
 namespace ABA
@@ -198,17 +199,17 @@ abbrev RoundRecordMap (n : ℕ) : Type := Implementation.RoundRecordMap (RoundRe
 /-- The state of one process: its round-loop record and its round records. -/
 abbrev ProcessRecord (n : ℕ) : Type := Implementation.ProcessRecord n (RoundRecord n)
 
-/-! ### The network adversary's ghost -/
+/-! ### The network's ghost -/
 
-/-- The adversary's record for one round: the first gather's frozen core, the
-second gather's frozen core, and the round's bound bit. No program reads
+/-- The adversary's record for one round: the first gather's recorded core, the
+second gather's recorded core, and the round's bound bit. No program reads
 it. -/
 abbrev Ghost (n : ℕ) : Type :=
   Option (AcceptedPairs n Bool) × Option (AcceptedPairs n (Option Bool)) × Option Bool
 
 instance instInhabitedGhost (n : ℕ) : Inhabited (Ghost n) := ⟨(none, none, none)⟩
 
-/-- The state of the network adversary. -/
+/-- The state of the network. -/
 abbrev NetworkState (n : ℕ) : Type := Implementation.NetworkState n (Message n) (Ghost n)
 
 section Slicing
@@ -262,13 +263,13 @@ def firstGatherOf (P : Parameters) (w : NetworkState P.n) (r : ℕ) :
 /-- The second gather's instance state of round `r`, read off the adversary's
 tagged sent sets and its corrupted set. -/
 def secondGatherOf (P : Parameters) (w : NetworkState P.n) (r : ℕ) :
-    InstanceState P.n (Gather.BaseProcessRecord P.n (Option Bool)) (Gather.Message P.n (Option
-      Bool)) :=
+    InstanceState P.n (Gather.BaseProcessRecord P.n (Option Bool))
+    (Gather.Message P.n (Option Bool)) :=
   (fun _ => LocalState.initial P.n _ (Gather.BaseProcessRecord.initial P.n (Option Bool)),
     ⟨messagesOf secondGatherMessageOf secondGatherMessageOf_inj (w.sent r), w.F⟩)
 
-/-- The ghost write: the return-then-call step's broadcast of the candidate freezes the first
-gather's core and the round's bound bit, a graded return freezes the second gather's core, and every
+/-- The ghost write: the return-then-call step's broadcast of the candidate writes the first
+gather's core and the round's bound bit, a graded return writes the second gather's core, and every
 other label leaves the record where it stands. Each field is written once. -/
 noncomputable def ghostStep (P : Parameters) :
     ExtendedLabel P.n (Message P.n) → NetworkState P.n → Ghost P.n → Ghost P.n
@@ -284,18 +285,18 @@ noncomputable def ghostStep (P : Parameters) :
 
 /-- The bound bit the round's graded returns announce: the one the ghost
 holds, and the bit of the first gather's core where it holds none. -/
-noncomputable def ghostOut (P : Parameters) (w : NetworkState P.n) (r : ℕ) (_id : Fin P.n)
+noncomputable def ghostOutput (P : Parameters) (w : NetworkState P.n) (r : ℕ) (_id : Fin P.n)
     (_out : GBCAOutput) : Bool :=
   ((w.ghostRecord r).2.2).getD
     (GBCA.boundOfCore P ((w.ghostRecord r).1.getD (Gather.coreOf P (firstGatherOf P w r))))
 
-/-- The bit the network adversary announces on a return: `AFW.ghostOut` of the
-round, and no other. This is the relation the implementation's `ghostOut`
+/-- The bit the network announces on a return: `AFW.ghostOutput` of the
+round, and no other. This is the relation the implementation's `ghostOutput`
 parameter takes at this instantiation. It is reducible, so the guard of the two
 return rows is the equation itself. -/
 noncomputable abbrev announcedBound (P : Parameters) (w : NetworkState P.n) (r : ℕ)
     (id : Fin P.n) (out : GBCAOutput) (bnd : Bool) : Prop :=
-  bnd = ghostOut P w r id out
+  bnd = ghostOutput P w r id out
 
 /-! ### The receipt predicates
 
@@ -313,17 +314,18 @@ def firstGatherAcceptedInputs (P : Parameters) (s : RoundRecord P.n) (k : Fin P.
   2 * P.f + 1 ≤ (s.firstGatherInputBroadcasts k).receivedCount (BRB.Message.vote v)
 
 /-- The process holds `q`'s bind payload of the first gather. -/
-def firstGatherAcceptedBinds (P : Parameters) (s : RoundRecord P.n) (q : Fin P.n) (U : AcceptedPairs
-  P.n Bool) : Prop :=
+def firstGatherAcceptedBinds (P : Parameters) (s : RoundRecord P.n) (q : Fin P.n)
+    (U : AcceptedPairs P.n Bool) : Prop :=
   2 * P.f + 1 ≤ (s.firstGatherBindBroadcasts q).receivedCount (BRB.Message.vote U)
 
 /-- A payload set of the first gather is approved here: every pair is held. -/
-def firstGatherApproved (P : Parameters) (s : RoundRecord P.n) (A : AcceptedPairs P.n Bool) : Prop :=
+def firstGatherApproved (P : Parameters) (s : RoundRecord P.n) (A : AcceptedPairs P.n Bool) :
+    Prop :=
   ∀ p ∈ A, firstGatherAcceptedInputs P s p.1 p.2
 
 /-- The process holds the pair `(k, v)` of the second gather. -/
-def secondGatherAcceptedInputs (P : Parameters) (s : RoundRecord P.n) (k : Fin P.n) (v : Option
-  Bool) : Prop :=
+def secondGatherAcceptedInputs (P : Parameters) (s : RoundRecord P.n) (k : Fin P.n)
+    (v : Option Bool) : Prop :=
   2 * P.f + 1 ≤ (s.secondGatherInputBroadcasts k).receivedCount (BRB.Message.vote v)
 
 /-- The process holds `q`'s bind payload of the second gather. -/
@@ -332,7 +334,8 @@ def secondGatherAcceptedBinds (P : Parameters) (s : RoundRecord P.n) (q : Fin P.
   2 * P.f + 1 ≤ (s.secondGatherBindBroadcasts q).receivedCount (BRB.Message.vote U)
 
 /-- A payload set of the second gather is approved here. -/
-def secondGatherApproved (P : Parameters) (s : RoundRecord P.n) (A : AcceptedPairs P.n (Option Bool)) : Prop :=
+def secondGatherApproved (P : Parameters) (s : RoundRecord P.n)
+    (A : AcceptedPairs P.n (Option Bool)) : Prop :=
   ∀ p ∈ A, secondGatherAcceptedInputs P s p.1 p.2
 
 /-! ### The accepted pairs
@@ -374,12 +377,10 @@ noncomputable def secondGatherAcceptedPairs (P : Parameters) (s : RoundRecord P.
     | none => ∅
 
 /-- A pair of the first gather is accepted exactly when its input-broadcast
-instance has returned its value here. -/
-theorem mem_firstGatherAcceptedPairs {P : Parameters} {s : RoundRecord P.n} {k : Fin P.n} {v : Bool}
-  :
-    (k,
-      v) ∈ firstGatherAcceptedPairs P s ↔ broadcastReturnsFor P (s.firstGatherInputBroadcasts k) =
-        some v := by
+instance has returned its value here. -/ theorem mem_firstGatherAcceptedPairs {P : Parameters}
+    {s : RoundRecord P.n} {k : Fin P.n} {v : Bool} :
+    (k, v) ∈ firstGatherAcceptedPairs P s ↔ broadcastReturnsFor P (s.firstGatherInputBroadcasts k) =
+    some v := by
   constructor
   · intro h
     obtain ⟨k', -, hk'⟩ := Finset.mem_biUnion.mp h
@@ -395,11 +396,10 @@ theorem mem_firstGatherAcceptedPairs {P : Parameters} {s : RoundRecord P.n} {k :
     simp
 
 /-- The same at the second gather. -/
-theorem mem_secondGatherAcceptedPairs {P : Parameters} {s : RoundRecord P.n} {k : Fin P.n} {v :
-  Option Bool} :
-    (k,
-      v) ∈ secondGatherAcceptedPairs P s ↔ broadcastReturnsFor P (s.secondGatherInputBroadcasts k) =
-        some v := by
+theorem mem_secondGatherAcceptedPairs {P : Parameters} {s : RoundRecord P.n} {k : Fin P.n}
+    {v : Option Bool} :
+    (k, v) ∈ secondGatherAcceptedPairs P s ↔ broadcastReturnsFor P (s.secondGatherInputBroadcasts k)
+    = some v := by
   constructor
   · intro h
     obtain ⟨k', -, hk'⟩ := Finset.mem_biUnion.mp h
@@ -888,7 +888,7 @@ abbrev ProgramStep (P : Parameters) (j : Fin P.n) :
     ProcessRecord P.n → ExtendedLabel P.n (Message P.n) → PMF (ProcessRecord P.n) → Prop :=
   Implementation.ProgramStep P (Message P.n) (RoundRecord P.n) (RoundStep P) j
 
-/-- The step relation of the network adversary. -/
+/-- The step relation of the network. -/
 abbrev NetworkStep (P : Parameters) :
     NetworkState P.n → ExtendedLabel P.n (Message P.n) → PMF (NetworkState P.n) → Prop :=
   Implementation.NetworkStep P (Message P.n) (Ghost P.n) (gbcaCallPayload P) (ghostStep P)

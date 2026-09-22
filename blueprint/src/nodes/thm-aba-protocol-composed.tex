@@ -1,21 +1,21 @@
 \begin{theorem}[The protocol under its composed system]
   \label{thm:aba-protocol-composed}
-  \lean{PLTS.ABA.ABDY.ProtocolState}\lean{PLTS.ABA.ABDY.ProtocolRelation}\lean{PLTS.ABA.ABDY.protocolRelation_mk}\lean{PLTS.ABA.ABDY.protocolRelation_init}\lean{PLTS.ABA.ABDY.protocolSim}\lean{PLTS.ABA.ABDY.protocol_composed}\leanok
-  \uses{def:aba-composed, def:aba-programs, def:aba-network, def:aba-protocol, def:forwardsim, def:pmfrel, def:achievable, thm:forward-sound}
+  \lean{PLTS.ABA.ABDY.ProtocolState}\lean{PLTS.ABA.ABDY.ProtocolRelation}\lean{PLTS.ABA.ABDY.protocolRelation_mk}\lean{PLTS.ABA.ABDY.protocolRelation_init}\lean{PLTS.ABA.ABDY.protocolSimulation}\lean{PLTS.ABA.ABDY.protocol_composed}\leanok
+  \uses{def:aba-composed, def:aba-programs, def:aba-network, def:aba-protocol, def:forwardsim, def:coupling, def:achievable, thm:forward-sound}
   For all parameters $P$, the protocol is forward-simulated by its composed system along the Dirac lift of the relation $\mathrm{ProtocolRelation}(P)$, and hence
   \[
     \operatorname{ATD}(\abdy{\mathrm{protocol}}(P)) \;\subseteq\;
     \operatorname{ATD}(\abdy{\mathrm{composed}}(P)).
   \]
   The two presentations hold the same round data indexed two ways, by process at the protocol and by round at the composed system.
-  $\mathrm{ProtocolRelation}(P)$ pins, of a composed state, everything a state of the protocol determines, in five unguarded conjuncts: the round loops agree, replacement flags included (D23); the coin oracle is the same component in both systems; the ABA network is the network adversary's DECIDED sets beside its corrupted set; the network state of round $r$ is that adversary's round-$r$ sent sets beside the same corrupted set and its ghost record of that round, the round's bound bit; and the entry of process $j$ in the instance of round $r$ is the round record of round $r$ that $j$ holds, a round $j$ has not touched reading as the initial round record in both systems.
+  $\mathrm{ProtocolRelation}(P)$ fixes every coordinate of a composed state that a state of the protocol determines, in five unguarded conjuncts: the round loops agree, replacement flags included (D23); the coin oracle is the same component in both systems; the ABA network is the network's DECIDED sets beside its corrupted set; the network state of round $r$ is the network's round-$r$ sent sets beside the same corrupted set and its ghost record of that round, the round's bound bit; and the entry of process $j$ in the instance of round $r$ is the round record of round $r$ that $j$ holds, a round $j$ has not touched reading as the initial round record in both systems.
   A composed state is therefore determined by any state of the protocol related to it.
   The determination is not injective: no composed state carries a termination flag, so two states of the protocol differing only in which processes have terminated are related to the same composed state (D22).
   Headline: \leandecl{PLTS.ABA.ABDY.protocol_composed}.
 \end{theorem}
 
 \begin{proof}\leanok
-  \uses{def:aba-composed, def:aba-programs, def:aba-network, def:aba-protocol, def:forwardsim, def:pmfrel, def:achievable, thm:forward-sound}
+  \uses{def:aba-composed, def:aba-programs, def:aba-network, def:aba-protocol, def:forwardsim, def:coupling, def:achievable, thm:forward-sound}
   The initial states are related, \leandecl{PLTS.ABA.ABDY.protocolRelation_init}: everything is initial, so each process's round's record is off the map at every round and $\mathrm{roundRecord}\,r$ is the initial round record there, which is the entry the composed initial state carries.
   For the step condition, take a state of the protocol, a composed state related to it, and a row out of that protocol state.
   Every transition of the protocol is a product of Dirac factors beside the coin oracle's successor distribution, and so is the composed transition that answers it.
@@ -24,5 +24,5 @@
   A round's row writes the round record of the round its label tags and no other, and the round instance of that round writes the entry of the acting process and no other, so the fifth conjunct is preserved entry by entry; the two graded-agreement return rows read the round's ghost record for the bit they announce and write it back, so the fourth conjunct is restored by $rel\_setBound$ with every other round's record standing still; and the rows that write a field no conjunct reads --- the round advance and $terminate$ --- are answered by a stutter.
   A corrupted process's replaced program is matched loop for loop (D23), and its visible return by the ABA network's Byzantine row, which requires $id \in F$ and no DECIDED evidence, as the protocol adversary's does.
   Two classes of composed row have no protocol counterpart, which is what makes the inclusion one-directional: the Byzantine graded-agreement call and return name a process whose program has no row for them (D11, D22) under a full synchronisation, and the round rules of a round instance carry no termination guard, so the instance answers a send or a delivery at a process the protocol has terminated.
-  Soundness (Theorem~\ref{thm:forward-sound}) turns the simulation \leandecl{PLTS.ABA.ABDY.protocolSim} into the stated inclusion.
+  Soundness (Theorem~\ref{thm:forward-sound}) turns the simulation \leandecl{PLTS.ABA.ABDY.protocolSimulation} into the stated inclusion.
 \end{proof}

@@ -127,7 +127,7 @@ quorum on that local state, chosen classically (`AFW.broadcastReturnsFor`).
 **What fails.** An implementation row hands its composed counterpart a specific value `x` with a
 quorum; the composed row needs `inputBroadcastReturned k = some x`; the instance returned the value
 the view chose. The two coincide only if two vote quorums at one process name one value. Without
-that fact the composed row's guard cannot be discharged and `AFW.protocolSim` is unprovable. A
+that fact the composed row's guard cannot be discharged and `AFW.protocolSimulation` is unprovable. A
 returned value defined by a relation rather than a function, filled inside the matching run, needs
 the same fact: an earlier fill with another value would leave the instance returned and the second
 value unreachable.

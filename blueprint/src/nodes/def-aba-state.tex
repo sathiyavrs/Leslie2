@@ -1,13 +1,13 @@
 \begin{definition}[The per-process records beside the ABA network]
-  \label{def:aba-core}
+  \label{def:aba-state}
   \lean{PLTS.ABA.ABAState}\lean{PLTS.ABA.ABAState.processes}\lean{PLTS.ABA.ABAState.decidedSent}\lean{PLTS.ABA.ABAState.decidedReceived}\lean{PLTS.ABA.ABAState.corrupted}\lean{PLTS.ABA.ABAState.F}\lean{PLTS.ABA.ABAState.decidedCount}\lean{PLTS.ABA.ABAState.setProcess}\lean{PLTS.ABA.ABAState.stepRound}\lean{PLTS.ABA.ABAState.sendDecided}\lean{PLTS.ABA.ABAState.deliverDecided}\lean{PLTS.ABA.ABAState.corrupt}\leanok
-  \uses{def:aba-labels, def:aba-core-vocab, def:aba-programs, def:aba-composed}
+  \uses{def:aba-labels, def:aba-round-loop-state, def:aba-programs, def:aba-composed}
   The round loop is carried by two components, and $\mathrm{ABAState}$ reads them as one object:
   \[
     \mathrm{ABAState}(P) \;=\;
       \bigl([n] \to \mathrm{RoundLoopRecord}(n)\bigr) \times \mathrm{ABANetworkState}(n),
   \]
-  the round-loop record of each process --- the control record of Definition~\ref{def:aba-core-vocab} together with its DECIDED receipt rows --- beside the ABA network of Definition~\ref{def:aba-composed}, which holds the DECIDED sets and the corrupted set with its budget.
+  the round-loop record of each process --- the control record of Definition~\ref{def:aba-round-loop-state} together with its DECIDED receipt rows --- beside the ABA network of Definition~\ref{def:aba-composed}, which holds the DECIDED sets and the corrupted set with its budget.
   Five accessors gather what the two components hold apart.
   $\mathrm{processes}$ reads a process's control record, $\mathrm{decidedReceived}$ its receipt rows and $\mathrm{corrupted}$ the flag saying whether its program has been replaced (D23), all three at that process's record; $\mathrm{decidedSent}$ reads the multicast sent sets and $F$ the corrupted set, both at the network.
   The flag and the corrupted set live in different components, and the two are written by the two halves of one $\mathrm{fail}$ row; that they name the same processes is the first conjunct of the core simulation's invariant and not a fact of the state shape.

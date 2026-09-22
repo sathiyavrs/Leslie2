@@ -28,18 +28,18 @@ occurring at least `|S| − f` times in `S`, `⊥` if
 
 ## The bound bit
 
-`boundOfCore P S` is the bit heavy in `S` — carried by at least `|S| − f` of
-its entries — and `true` when neither bit is. At the sizes the gather
-specification's `bindCore` allows (`|S| ≥ n − f > 2f`) at most one bit is
-heavy, so the definition is the heavy bit wherever one exists, and its
-complement is then light (`count_boundOfCore_belowThreshold`): a return handing out `v`
-announces `v`, and a return handing out nothing announces a bit whose
+`boundOfCore P S` is the bit carried by at least `|S| − f` of the entries of
+`S`, and `true` when neither bit is. At the sizes the gather specification's
+`bindCore` allows (`|S| ≥ n − f > 2f`) at most one bit is carried by that many,
+so the definition selects it wherever one exists, and its complement is then
+below the threshold (`count_boundOfCore_belowThreshold`): a return handing out
+`v` announces `v`, and a return handing out nothing announces a bit whose
 complement no return can hand out.
 
 ## The entry counts
 
 The per-process counts of a partial map (`valueCount`, `domainCount`) and of a payload set
-(`AcceptedPairs.count`), the transfer of a heavy value into a payload set below the map
+(`AcceptedPairs.count`), the transfer of an above-threshold value into a payload set below the map
 (`count_aboveThreshold_of_subMap`), and the `F`-blind committed-entry support count
 `firstGatherSupport`, read on a gather specification state.
 -/
@@ -227,12 +227,12 @@ theorem domainCount_bool_sum (g : Fin n → Option Bool) :
       injection h2
     exact absurd this (by simp)
 
-/-- **Heavy transfer into a dominated payload set.** A value carried by all
+/-- **Above-threshold transfer into a dominated payload set.** A value carried by all
 but `f` of a map's entries is carried by all but `f` of the entries of any
 payload set below that map. -/
-theorem count_aboveThreshold_of_subMap {P : Parameters} {U : AcceptedPairs P.n α} {g : Fin P.n →
-  Option α}
-    {x : α} (hg : U.subMap g) (hheavy : domainCount g - P.f ≤ valueCount g x) :
+theorem count_aboveThreshold_of_subMap {P : Parameters} {U : AcceptedPairs P.n α}
+    {g : Fin P.n → Option α} {x : α} (hg : U.subMap g)
+    (hAboveThreshold : domainCount g - P.f ≤ valueCount g x) :
     U.card - P.f ≤ AcceptedPairs.count U x := by
   have h1 := AcceptedPairs.card_sub_count_le hg x
   omega
@@ -312,15 +312,15 @@ theorem gradeOf_grade0 {P : Parameters} {g : Fin P.n → Option (Option Bool)}
   · exact Nat.lt_succ_iff.mp (lt_of_not_ge h3)
 
 /-- **The round's bound bit**, read off the first gather's core: the bit
-heavy in `S` — carried by at least `|S| − f` of its entries — and `true` when
-neither bit is. -/
+carried by at least `|S| − f` of the entries of `S`, and `true` when neither
+bit is. -/
 def boundOfCore (P : Parameters) (S : AcceptedPairs P.n Bool) : Bool :=
   if S.card - P.f ≤ AcceptedPairs.count S true then true
   else if S.card - P.f ≤ AcceptedPairs.count S false then false
   else true
 
-/-- A heavy bit is the bound bit. Two bits cannot both be heavy at
-`|S| ≥ n − f`, so the heavy bit is the one the definition selects. -/
+/-- A bit on at least `|S| − f` entries is the bound bit. Two bits cannot both
+be at `|S| ≥ n − f`, so it is the one the definition selects. -/
 theorem boundOfCore_of_aboveThreshold {P : Parameters} {S : AcceptedPairs P.n Bool} {v : Bool}
     (hcard : P.n - P.f ≤ S.card) (hv : S.card - P.f ≤ AcceptedPairs.count S v) :
     boundOfCore P S = v := by
@@ -340,7 +340,7 @@ theorem boundOfCore_of_aboveThreshold {P : Parameters} {S : AcceptedPairs P.n Bo
     rw [if_neg hT, if_pos hv]
   · rw [if_pos hv]
 
-/-- The complement of the bound bit is light: no return can hand it out. -/
+/-- The complement of the bound bit is below the threshold: no return can hand it out. -/
 theorem count_boundOfCore_belowThreshold {P : Parameters} {S : AcceptedPairs P.n Bool}
     (hcard : P.n - P.f ≤ S.card) :
     AcceptedPairs.count S (!boundOfCore P S) < S.card - P.f := by

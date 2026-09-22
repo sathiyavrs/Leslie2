@@ -464,8 +464,8 @@ def setProcess (s : ImplementationState n) (j : Fin n) (p : ProcessRecord) : Imp
   · subst hi; simp [setProcess, received, RoundRecord.setProcess]
   · simp [setProcess, received, Function.update_of_ne hi]
 
-@[simp] theorem setProcess_process_self (s : ImplementationState n) (j : Fin n) (p : ProcessRecord)
-  :
+@[simp] theorem setProcess_process_self (s : ImplementationState n) (j : Fin n)
+  (p : ProcessRecord) :
     (s.setProcess j p).process j = p := by
   simp [setProcess, process, RoundRecord.setProcess]
 
@@ -527,9 +527,8 @@ sets moves. -/
     (m : Message) (i : Fin P.n) : (s.multicast j m).bothValid P i ↔ s.bothValid P i := Iff.rfl
 
 /-- Membership in a sent set after a multicast. -/
-theorem mem_multicast_sent {s : ImplementationState n} {j : Fin n} {m : Message} {k : Fin n} {m' :
-  Message} :
-    m' ∈ (s.multicast j m).sent k ↔ (k = j ∧ m' = m) ∨ m' ∈ s.sent k := by
+theorem mem_multicast_sent {s : ImplementationState n} {j : Fin n} {m : Message} {k : Fin n}
+    {m' : Message} : m' ∈ (s.multicast j m).sent k ↔ (k = j ∧ m' = m) ∨ m' ∈ s.sent k := by
   change m' ∈ (s.2.recordGBCASend j m).sent k ↔ (k = j ∧ m' = m) ∨ m' ∈ s.2.sent k
   exact GBCA.ByABDY.NetworkState.mem_recordGBCASend
 
@@ -673,10 +672,9 @@ theorem exists_sender_notMem {P : Parameters} {s : ImplementationState P.n} (G :
 
 /-- Two `n − f` receipt quorums (at possibly different receivers) share an
 correct sender: `(n−f) + (n−f) − n = n − 2f > f ≥ |F|`. -/
-theorem exists_correct_received₂ {P : Parameters} {s : ImplementationState P.n} (hF : s.F.card ≤
-  P.f)
-    {i i' : Fin P.n} {m m' : Message}
-    (h : P.n - P.f ≤ s.receivedCount i m) (h' : P.n - P.f ≤ s.receivedCount i' m') :
+theorem exists_correct_received_of_two_quorums {P : Parameters} {s : ImplementationState P.n}
+    (hF : s.F.card ≤ P.f) {i i' : Fin P.n} {m m' : Message} (h : P.n - P.f ≤ s.receivedCount i m)
+    (h' : P.n - P.f ≤ s.receivedCount i' m') :
     ∃ j, j ∉ s.F ∧ m ∈ s.received i j ∧ m' ∈ s.received i' j := by
   unfold receivedCount at h h'
   have hcard := Finset.card_union_add_card_inter
@@ -865,8 +863,8 @@ inductive ImplementationStep (P : Parameters) (r : ℕ) :
       ImplementationStep P r s (.fail id) (PMF.pure (s.corrupt P id))
 
 /-- The round-`r` GBCA implementation instance. -/
-noncomputable def implementation (P : Parameters) (r : ℕ) : System (ImplementationState P.n) (Label
-  P.n) where
+noncomputable def implementation (P : Parameters) (r : ℕ) :
+    System (ImplementationState P.n) (Label P.n) where
   init := ImplementationState.initial P.n
   step := ImplementationStep P r
 

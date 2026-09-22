@@ -1,16 +1,16 @@
 \begin{definition}[The program of one process]
   \label{def:aba-programs}
   \lean{PLTS.ABA.GBCA.ByABDY.RoundRecord}\lean{PLTS.ABA.RoundLoopRecord}\lean{PLTS.ABA.ABDY.RoundRecordMap}\lean{PLTS.ABA.ABDY.ProcessRecord}\lean{PLTS.ABA.Composition.NetworkEvent}\lean{PLTS.ABA.Composition.ExtendedLabel}\lean{PLTS.ABA.Implementation.networkEventLabels}\lean{PLTS.ABA.ABDY.RoundStep}\lean{PLTS.ABA.ABDY.ABAProgramStep}\lean{PLTS.ABA.ABDY.ABAProgram}\leanok
-  \uses{def:aba-labels, def:aba-gbca-vocab, def:aba-core-vocab, def:aba-implementation, def:relabel, def:syncproduct}
-  Process $j$ runs Definition~\ref{def:aba-implementation} at ABDY22's implementation of Definition~\ref{def:aba-gbca-vocab}: the round message type is $\mathrm{GBCA.ByABDY.Message}$, the round record is $\mathrm{GBCA.ByABDY.RoundRecord}(n)$, and the round's rows are the fourteen of \leandecl{PLTS.ABA.ABDY.RoundStep} --- the eight multicasts of those levels, the delivery that files a received message, the call and its loop, and the three returns.
+  \uses{def:aba-labels, def:aba-round-messages, def:aba-round-loop-state, def:aba-implementation, def:relabel, def:synchronised-product}
+  Process $j$ runs Definition~\ref{def:aba-implementation} at ABDY22's implementation of Definition~\ref{def:aba-round-messages}: the round message type is $\mathrm{GBCA.ByABDY.Message}$, the round record is $\mathrm{GBCA.ByABDY.RoundRecord}(n)$, and the round's rows are the fourteen of \leandecl{PLTS.ABA.ABDY.RoundStep} --- the eight multicasts of those levels, the delivery that files a received message, the call and its loop, and the three returns.
   The twenty-nine rows around them are the shared ones.
   The state of process $j$ is
   \[
     \mathrm{ProcessRecord}(n) \;=\;
       \mathrm{RoundLoopRecord}(n) \times \mathrm{RoundRecordMap}(n),
   \]
-  its round-loop record --- the control record of Definition~\ref{def:aba-core-vocab} together with the DECIDED receipt rows $decidedDelivered(k)$ --- beside its round's record.
-  The round's record holds a finite map $roundRecords$ from rounds to round records of Definition~\ref{def:aba-gbca-vocab}, each with its received set rows $received(k)$, and a flag $terminated$ (D22).
+  its round-loop record --- the control record of Definition~\ref{def:aba-round-loop-state} together with the DECIDED receipt rows $decidedDelivered(k)$ --- beside its round's record.
+  The round's record holds a finite map $roundRecords$ from rounds to round records of Definition~\ref{def:aba-round-messages}, each with its received set rows $received(k)$, and a flag $terminated$ (D22).
   The round record of round $r$ is read $\mathrm{roundRecord}\,r$: the retained record where $j$ has touched round $r$, the initial round record elsewhere.
   The map is finite by its type, so $j$ holds finitely many round records at every point of a run, and the round advance resets none of them.
   Every round's row is accordingly round-indexed rather than round-guarded: it reads and writes the round record of the round its own label tags, whichever round the round loop is in, under the guards of that round record and $terminated = \mathrm{false}$.

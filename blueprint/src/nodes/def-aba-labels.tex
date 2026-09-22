@@ -1,7 +1,7 @@
 \begin{definition}[Shared alphabet]
   \label{def:aba-labels}
   \lean{PLTS.ABA.Label}\lean{PLTS.ABA.Label.hiddenAPI}\leanok
-  \uses{def:aba-params}
+  \uses{def:aba-parameters}
   All systems of the case study share one label type: the ABA API $\mathrm{callABA}(id,b)$ and $\mathrm{retABA}(id,b)$, the round-tagged GBCA API $\mathrm{callG}(r,id,b)$ and $\mathrm{retG}(r,id,out,bnd)$ with $out$ a graded outcome $(b,2)$, $(b,1)$ or $(\bot,0)$ and $bnd$ a bit, the round-tagged WCC API $\mathrm{callW}(r,id)$ and $\mathrm{retW}(r,id,b)$, the corruption broadcast $\mathrm{fail}(id)$, and $\tau$.
   The two sub-protocol APIs make up the hidden alphabet of every composed system.
   The graded outcome is program data: a round loop reads it and retains it.

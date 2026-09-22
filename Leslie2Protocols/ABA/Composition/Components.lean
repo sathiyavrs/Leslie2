@@ -17,7 +17,7 @@ import Leslie2Protocols.Framework.SynchronisedProduct
 # The extended alphabet and the components composed over it
 
 The protocol is composed twice in this development. The protocol
-(`ABA/ImplementationByABDY/System.lean`) puts `n` per-process programs beside a network adversary
+(`ABA/ImplementationByABDY/System.lean`) puts `n` per-process programs beside a network
 and the coin oracle. The composed system (`ABA/Composition/HybridAndSubstitution.lean`) cuts the
 same protocol into its components. Both compositions speak one alphabet, and some of what they
 compose is the same object in both systems. This file holds that alphabet and those components.
@@ -61,7 +61,7 @@ sub-protocol messages — so those messages enter only through the Byzantine han
 
 ## The ABA network
 
-`ABANetworkStep` is what the network adversary retains once the round networks have taken the round
+`ABANetworkStep` is what the network retains once the round networks have taken the round
 sent sets: the DECIDED sets `decidedSent j`, the corrupted set `F` with its budget, and the
 authorisation of every Byzantine handshake row. `ABANetwork` is that automaton. Its `fail` row
 carries the budget guard `k ∉ F ∧ |F| < f`, so a corruption fires exactly when it takes effect, and
@@ -77,7 +77,7 @@ both tables, and the inversion tables that read a row of each off its label
 (`roundLoopStep_*`, `abaNetworkStep_*`) — among them `roundLoopStep_noStep`, which reads every row
 of a replaced program as a self-loop. It also supplies the systems of the
 synchronised round-loop group in both directions (`roundLoopProduct_inversion`,
-`roundLoopProduct_pure`) and the lemmas that pin a round-loop tuple down from its
+`roundLoopProduct_pure`) and the lemmas that determine a round-loop tuple from its
 per-process rows (`roundLoopRecords_*`).
 -/
 
@@ -103,9 +103,8 @@ abbrev NetworkEvent (n : ℕ) : Type := Implementation.NetworkEvent n GBCA.ByABD
 abbrev ExtendedLabel (n : ℕ) : Type := Label n ⊕ NetworkEvent n
 
 /-- The coin oracle, read over this alphabet through the pullback. -/
-noncomputable def coinOverRoundAlphabet (P : Parameters) : System (ℕ → WCC.SpecState P.n)
-  (ExtendedLabel
-  P.n) :=
+noncomputable def coinOverRoundAlphabet (P : Parameters) :
+    System (ℕ → WCC.SpecState P.n) (ExtendedLabel P.n) :=
   coinOverExtendedAlphabet P GBCA.ByABDY.Message
 
 @[simp] theorem coinOverRoundAlphabet_init (P : Parameters) :
@@ -132,7 +131,7 @@ process's as a bystander.
 A corruption replaces the program of the process it names (D23). The
 replacement is carried by the flag `RoundLoopRecord.corrupted`, which `failSelf` writes
 on the process's own `fail`; every participant's row is guarded by
-`corrupted = false`, so the record freezes at the corruption. In place of those
+`corrupted = false`, so the record stays as it is at the corruption. In place of those
 rows the replaced program has the single row `corruptedIdle`: a self-loop on
 every label other than `τ` and the labels of `actsAt j`. On the latter the
 replaced program has no row at all, so those labels cannot fire; the corrupted
@@ -283,7 +282,7 @@ inductive RoundLoopStep (P : Parameters) (j : Fin P.n) :
 
 /-! ### The DECIDED sets and the corrupted set
 
-What is left of the network adversary once the round-tagged sent sets have gone to
+What is left of the network once the round-tagged sent sets have gone to
 the round networks: the DECIDED sets, the corrupted set with its budget, and
 the authorisation of every Byzantine handshake row. -/
 
@@ -446,11 +445,11 @@ theorem roundLoopStep_no_tau {P : Parameters} {j : Fin P.n} {c : RoundLoopRecord
 /-! ### Reading and building a transition of the round-loop group -/
 
 /-- A synchronised transition of the round-loop group on a visible label. -/
-theorem roundLoopProduct_inversion {P : Parameters} {C : ∀ _ : Fin P.n,
-    RoundLoopRecord P.n} {l : ExtendedLabel P.n} {μ : PMF (∀ _ : Fin P.n, RoundLoopRecord P.n)}
+theorem roundLoopProduct_inversion {P : Parameters} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
+    {l : ExtendedLabel P.n} {μ : PMF (∀ _ : Fin P.n, RoundLoopRecord P.n)}
     (h : (System.synchronisedProduct (roundLoopProgram P)).step C l μ) :
-    ∃ y : ∀ _ : Fin P.n, RoundLoopRecord P.n,
-      μ = PMF.pure y ∧ ∀ i, RoundLoopStep P i (C i) l (PMF.pure (y i)) := by
+    ∃ y : ∀ _ : Fin P.n, RoundLoopRecord P.n, μ = PMF.pure y ∧ ∀ i, RoundLoopStep P i (C i) l
+    (PMF.pure (y i)) := by
   rw [System.synchronisedProduct_step] at h
   rcases h with ⟨-, μ_, hall, rfl⟩ | ⟨rfl, i, μ_i, hstep, -⟩
   · have hy : ∀ i, ∃ c', μ_ i = PMF.pure c' := fun i => roundLoopStep_dirac (hall i)
@@ -815,7 +814,7 @@ theorem abaNetworkStep_gbcaDeliver_noStep {r : ℕ} {i k : Fin P.n} {m : GBCA.By
 
 end ANetInversion
 
-/-! ### Pinning the round-loop tuple -/
+/-! ### Determining the round-loop tuple -/
 
 theorem roundLoopRecords_update {P : Parameters} {C y : ∀ _ : Fin P.n, RoundLoopRecord P.n}
     {id : Fin P.n} {nd : RoundLoopRecord P.n}

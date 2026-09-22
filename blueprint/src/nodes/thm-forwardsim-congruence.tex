@@ -1,7 +1,7 @@
 \begin{theorem}[Forward simulation is a congruence for the composition operators]
   \label{thm:forwardsim-congruence}
   \lean{PLTS.ForwardSimulation.parallel_right}\lean{PLTS.ForwardSimulation.parallel_left}\lean{PLTS.ForwardSimulation.synchronisedProduct}\lean{PLTS.ForwardSimulation.abstract}\lean{PLTS.ForwardSimulation.relabel}\lean{PLTS.ForwardSimulation.trans}\leanok
-  \uses{def:forwardsim, def:process-algebra, def:relabel, def:syncproduct}
+  \uses{def:forwardsim, def:process-algebra, def:relabel, def:synchronised-product}
   Let $sys_C$ be forward-simulated by $sys_A$ along $R$, both over one label type.
   Then $sys_C \parallel sys_B$ is forward-simulated by $sys_A \parallel sys_B$, and $sys_B \parallel sys_C$ by $sys_B \parallel sys_A$, along $R$ paired with equality on the held component.
   A family of simulations, one per index of a finite type, gives a simulation between the two full-synchronisation products, along the pointwise relation.
@@ -11,7 +11,7 @@
 \end{theorem}
 
 \begin{proof}\leanok
-  \uses{def:forwardsim, def:process-algebra, def:syncproduct, def:weakstep}
+  \uses{def:forwardsim, def:process-algebra, def:synchronised-product, def:weakstep}
   The five congruences share one decomposition.
   A weak transition $q \overset{l}{\Longrightarrow} q'$ is a finite run whose trace is the single label $l$, so it splits into a silent run, one transition on $l$, and a second silent run, and the same three pieces reassemble a weak transition.
   A silent run transports along any map of states that carries silent steps to silent steps, which is what embeds the moving component's internal run into the composite with the other components held where they stand.

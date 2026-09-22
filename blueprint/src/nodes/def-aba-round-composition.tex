@@ -1,9 +1,9 @@
 \begin{definition}[The graded-agreement round as a composition]
   \label{def:aba-round-composition}
   \lean{PLTS.ABA.GBCA.ByAFW.ProcessRecord}\lean{PLTS.ABA.GBCA.ByAFW.RoundEvent}\lean{PLTS.ABA.GBCA.ByAFW.ProgramLabel}\lean{PLTS.ABA.GBCA.ByAFW.programLabelMap}\lean{PLTS.ABA.GBCA.ByAFW.firstGatherLabelMap}\lean{PLTS.ABA.GBCA.ByAFW.secondGatherLabelMap}\lean{PLTS.ABA.GBCA.ByAFW.roundPrograms}\lean{PLTS.ABA.GBCA.ByAFW.RoundStateOverGathers}\lean{PLTS.ABA.GBCA.ByAFW.roundOverGathers}\leanok
-  \uses{def:aba-gather-composition, def:aba-gbca-net, def:aba-labels, def:syncproduct, def:process-algebra, def:idle-family, def:relabel}
+  \uses{def:aba-gather-composition, def:aba-gbca-network, def:aba-labels, def:synchronised-product, def:process-algebra, def:idle-family, def:relabel}
   The round-$r$ graded-agreement round over two gather instances, taken apart into the components that run it.
-  The round's programs are the $n$ programs under $\mathrm{synchronisedProduct}$ beside the network of Definition~\ref{def:aba-gbca-net}, and they run in parallel with two gather instances of Definition~\ref{def:aba-gather-composition}, the first over payloads $\mathbb{B}$ and the second over payloads $\mathbb{B} \cup \{\bot\}$.
+  The round's programs are the $n$ programs under $\mathrm{synchronisedProduct}$ beside the network of Definition~\ref{def:aba-gbca-network}, and they run in parallel with two gather instances of Definition~\ref{def:aba-gather-composition}, the first over payloads $\mathbb{B}$ and the second over payloads $\mathbb{B} \cup \{\bot\}$.
   The round's own events are hidden and the result is read over the family alphabet: \leandecl{PLTS.ABA.GBCA.ByAFW.roundOverGathers}, which takes the two gather systems as arguments.
   A program holds one process's record of the round: its input, its candidate, whether it has called the second gather, its graded outcome and its return flag.
   Its guards read that record and nothing else.

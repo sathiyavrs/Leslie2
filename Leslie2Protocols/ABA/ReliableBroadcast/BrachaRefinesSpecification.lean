@@ -124,9 +124,8 @@ theorem Invariant.initial : Invariant P ldr (BrachaState.initial P.n M) := by
 /-- An `ECHO m` receipt quorum holds a correct echoer of `m`: the quorum
 exceeds the corruption budget (`f < echoReceiptQuorum`), and a correct sender's sent
 `ECHO` matches its write-once field. -/
-theorem Invariant.correct_echoer {s : BrachaState P.n M} (hInv : Invariant P ldr s) {i : Fin P.n} {m
-  : M}
-    (hcnt : P.echoReceiptQuorum ≤ s.receivedCount i (.echo m)) :
+theorem Invariant.correct_echoer {s : BrachaState P.n M} (hInv : Invariant P ldr s) {i : Fin P.n}
+    {m : M} (hcnt : P.echoReceiptQuorum ≤ s.receivedCount i (.echo m)) :
     ∃ k, k ∉ s.F ∧ (s.process k).sentEcho = some m := by
   have hlt : s.F.card < s.receivedCount i (.echo m) :=
     lt_of_le_of_lt hInv.F_card (lt_of_lt_of_le P.f_lt_echoReceiptQuorum hcnt)
@@ -136,9 +135,8 @@ theorem Invariant.correct_echoer {s : BrachaState P.n M} (hInv : Invariant P ldr
 /-- `f + 1` `VOTE m` receipts hold a correct voter for `m`: they exceed the
 corruption budget, and a correct sender's sent `VOTE` matches its write-once
 field. -/
-theorem Invariant.correct_voter {s : BrachaState P.n M} (hInv : Invariant P ldr s) {i : Fin P.n} {m
-  : M}
-    (hcnt : P.f + 1 ≤ s.receivedCount i (.vote m)) :
+theorem Invariant.correct_voter {s : BrachaState P.n M} (hInv : Invariant P ldr s) {i : Fin P.n}
+    {m : M} (hcnt : P.f + 1 ≤ s.receivedCount i (.vote m)) :
     ∃ k, k ∉ s.F ∧ (s.process k).sentVote = some m := by
   have hlt : s.F.card < s.receivedCount i (.vote m) :=
     lt_of_lt_of_le (Nat.lt_succ_of_le hInv.F_card) hcnt
@@ -605,7 +603,7 @@ theorem echoCertificate_unique {s : BrachaState P.n M} (hInv : Invariant P ldr s
   obtain ⟨i, hi⟩ := h
   obtain ⟨i', hi'⟩ := h'
   obtain ⟨k, hkF, hkm,
-    hkm'⟩ := InstanceState.exists_correct_received₂_echoReceiptQuorum hInv.F_card hi hi'
+    hkm'⟩ := InstanceState.exists_correct_received_of_two_echoQuorums hInv.F_card hi hi'
   have h1 := hInv.echo_confirmed k hkF m (hInv.received_subset_sent i k hkm)
   have h2 := hInv.echo_confirmed k hkF m' (hInv.received_subset_sent i' k hkm')
   rw [h1] at h2
@@ -878,8 +876,7 @@ instance's interface. A transition of the instance is one row of `BrachaStep`
 own loop row. -/
 theorem brachaRefinesSpecification (P : Parameters) (ldr : Fin P.n) :
     ForwardSimulation (brachaInstance P ldr M) (specificationOverInstanceAlphabet P ldr M)
-      (SpecificationRelation
-      P ldr) := by
+    (SpecificationRelation P ldr) := by
   constructor
   intro q₁ q₂ hR l μ hstep q₁' hq₁'
   obtain ⟨l₀, hpull, hrow⟩ := brachaInstance_step_row P ldr q₁ l μ hstep

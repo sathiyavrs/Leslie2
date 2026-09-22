@@ -21,8 +21,8 @@ components whose boundary the observer does not see. The extended alphabet
 The alphabet is parametric in the graded-agreement message type `M`. Every constructor but the two
 that carry a round message is independent of which graded-agreement implementation is being read,
 and so is everything defined over the alphabet here: the hidden-label set, the labels a process acts
-on (D23), the coin oracle's label pullback, and the lifted oracle itself. An implementation fixes `M`
-and inherits all of it.
+on (D23), the coin oracle's label pullback, and the lifted oracle itself. An implementation fixes
+`M` and inherits all of it.
 
 The graded-agreement return `retG` carries `GBCAOutput`, the interface's grade,
 which is the specification's own value type and is shared by every

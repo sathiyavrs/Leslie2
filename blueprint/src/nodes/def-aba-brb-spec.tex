@@ -1,7 +1,7 @@
 \begin{definition}[The BRB specification instance]
   \label{def:aba-brb-spec}
   \lean{PLTS.ABA.BRB.Label}\lean{PLTS.ABA.BRB.SpecState}\lean{PLTS.ABA.BRB.SpecState.corrupt}\lean{PLTS.ABA.BRB.Step}\lean{PLTS.ABA.BRB.specInst}\leanok
-  \uses{def:aba-params}
+  \uses{def:aba-parameters}
   Transition System~6, read safety-only over an instance-local alphabet.
   An instance is parametric in the payload type $M$ and names a leader; its alphabet is $\{\mathrm{call}(m), \mathrm{ret}(id, m), \mathrm{fail}(id), \tau\}$ and its state is the record $\{input, val, ret, F\}$, the leader's recorded input and the committed value held in separate fields (D27).
   Five rules: the call writes $input$ once, with its input-enabledness loop; the internal commit writes $val$ once, under the guard
@@ -10,7 +10,7 @@
   \]
   so a corrupted leader commits any value and a correct one commits its input; the return hands out $val$ at a process that has not returned; and $\mathrm{fail}$ is the total corruption transform (D1).
   The split of $input$ from $val$ is what a leader corrupted after its call requires: until the commit fires, such a leader may still direct the committed value, and the guard reads $F$ at the commit rather than at the call.
-  Agreement and Validity are structural --- $val$ has one writer and keeps its value, and at a never-corrupted leader the guard pins $val$ to $input$.
+  Agreement and Validity are structural --- $val$ has one writer and keeps its value, and at a never-corrupted leader the guard holds $val$ equal to $input$.
   Totality, a liveness property, is not encoded.
   Full construction: \leandecl{PLTS.ABA.BRB.specInst}.
 \end{definition}

@@ -5,7 +5,7 @@ Companion design document to the Lean proof in
 `ABA/HybridRefinesSpecification/InvariantPreservation.lean` (step inversion and invariant
 preservation), `ABA/HybridRefinesSpecification/AbstractStatePreservation.lean` (the
 stutter rows and the assembly), `ABA/HybridRefinesSpecification/WeakTransitions.lean`
-(abstract τ-run kit), and `ABA/HybridRefinesSpecification/Simulation.lean` (the per-row
+(the abstract τ-run lemmas), and `ABA/HybridRefinesSpecification/Simulation.lean` (the per-row
 simulation proof). It is the narrative account of that proof: what the relation is, why it
 has the shape it has, and how each class of concrete step is answered. Each Lean file's
 module docstring is the account of record for its own contents. The `hybridRefinesSpecification`
@@ -75,7 +75,7 @@ write happens at `SpecStep.callSet` alone and is a first write, matched with the
 commit, so `input_sync` is restored on the nose. In phase 1 the abstract state stays
 undecided and answers every hidden row with a stutter. The single `retABA` answer runs
 `SpecStep.decide` as the τ-tail leading the return (§ Row dispositions), landing the
-abstract state in phase 2. From there `a.val` pins the decided value for good, so every
+abstract state in phase 2. From there `a.val` fixes the decided value for good, so every
 later row is a stutter, one of the two `callABA` answers, or a direct `SpecStep.ret`.
 
 ### The frame lemma
@@ -148,7 +148,7 @@ obligation, and the certificate form needs no reachability argument of its own.
   relocate a certificate), and phase 2's holder universal survives given its certificate.
   `AbstractStateUnchanged.refl` covers every row that touches neither certificates nor holders. Each
   `Invariant.step_*` lemma returns `Invariant ∧ AbstractStateUnchanged`, and
-  `AbstractState.unchangedBy` consumes exactly that; the certificate is what pins a *fresh* holder
+  `AbstractState.unchangedBy` consumes exactly that; the certificate is what supplies a *fresh* holder
   in the corner where every original witness has been corrupted away.
 
 ## Row dispositions
@@ -172,7 +172,7 @@ one-line form of that translation.
 | `callABA id b`, `id ∉ F`, the concrete loop (`input ≠ none`) | `callABA id b` | `SpecStep.callLoop` (the filled ghost entry `input_sync` supplies; neither system moves) |
 | `callABA id b`, `id ∈ F` | `callABA id b` | `SpecStep.callByzantine` (D23): the ghost at a corrupted id is unconstrained |
 | `retABA id b`, `id ∉ F`, phase 1 | `retABA id b` | `decide_step` then `SpecStep.ret` (`weakStep_of_run_then_step`) — see below |
-| `retABA id b`, `id ∉ F`, phase 2 | `retABA id b` | `SpecStep.ret` directly (phase 2's holder universal, applied to the correct DECIDED sender it derives, pins `b = v`) |
+| `retABA id b`, `id ∉ F`, phase 2 | `retABA id b` | `SpecStep.ret` directly (phase 2's holder universal, applied to the correct DECIDED sender it derives, gives `b = v`) |
 | `retABA id b`, `id ∈ F` | `retABA id b` | `SpecStep.retByzantine` (D23): neither system moves, in either phase |
 | `fail id` | `fail id` | `SpecStep.fail` (same two guards via `F_eq`; robust in both phases) |
 
@@ -198,7 +198,7 @@ supplies is its three guards, each read off the concrete state at the round `rA`
 The step writes `val := some b` and returns the mode to `ControlMode.flipEnabled`, so
 `mode_flipEnabled`
 survives it and phase 2 is entered with the certificate at `rA` in hand. The trailing
-`SpecStep.ret` is glued on by `weakStep_of_run_then_step`: the run is the leading
+`SpecStep.ret` is joined on by `weakStep_of_run_then_step`: the run is the leading
 τ-closure and the visible `retABA` the middle hyper-step.
 
 ## The spec repairs as design
@@ -206,7 +206,7 @@ survives it and phase 2 is entered with the certificate at `rA` in hand. The tra
 Four spec-level repairs make the simulation possible; each is a permanent, `F`-blind provenance
 discipline. D13/D14 repair the abstract specs (TS 1 = `ABA.spec`, TS 2 = the `GBCA` specification)
 against the papers' Validity; D15 is the F-blind counting form of their support guards, discharged
-at the implementation by the derivation of `DESIGN-GBCASim.md`; D12′ closes a DECIDED-equivocation gap.
+at the implementation by the derivation of `DESIGN-GBCARefinesSpecification.md`; D12′ closes a DECIDED-equivocation gap.
 
 ### D13 — TS 1 Validity (ghost provenance)
 
@@ -297,7 +297,7 @@ the budget pigeonhole transfers verbatim: among `f + 1` supporters some member i
 `F`, hence a never-corrupted genuine caller. Corrupt supporters are paid for by the `F` budget
 itself, with no phantom-call bookkeeping and no specification fills.
 
-### D15 — the implementation derivation (`DESIGN-GBCASim.md`)
+### D15 — the implementation derivation (`DESIGN-GBCARefinesSpecification.md`)
 
 D14's superset counts must be discharged from `GBCA.ByABDY.implementation`. The connection is the `Invariant`
 conjunct `input_support`:
@@ -329,7 +329,7 @@ monotone throughout. The derivation splits by D14 site.
   `VOTE v` receipts. `bindUnset_guards` gets *both* `bindUnset` guards out of that one
   `n − f` `ECHO v` certificate: refine it to an `n − f` `INPUT v`
   receipt quorum (`inputQuorum_of_echoReceiptQuorum`), whose correct senders hold an input
-  (`input_called`, D8) — that is the quorum guard (`quorum_of_msg_quorum`) — and whose
+  (`input_called`, D8) — that is the quorum guard (`quorum_of_messageQuorum`) — and whose
   count feeds `Invariant.support_of_input_receipts` for the `f + 1` InputSupport count.
 - The `retGrade1`/`retGrade0` counts ride on the `|Valid| > 1` evidence the returner itself holds:
   it is an `n − f ≥ f + 1` `INPUT` receipt quorum for *each* bit, so `inputSupport_of_bothValid`
@@ -359,7 +359,7 @@ records that only grow. `sendDecided` inserts; delivery is the `decidedDeliver` 
 (receiver, sender, bit), with soundness `b ∈ decidedSent j` on the network's half and an
 at-most-once `b ∉ decidedReceived i j` guard on the receiver's; `byzantineDecided` is guarded *only*
 by
-`k ∈ F`. Correct sent sets stay at card ≤ 1 in reachable states (grade-2 certificates pin
+`k ∈ F`. Correct sent sets stay at card ≤ 1 in reachable states (grade-2 certificates fix
 one bit), but no card invariant is needed. The invariant rewiring
 (`HybridRefinesSpecification/Relation.lean`): `received_sound` becomes per-bit and
 *correctness-free* (`b ∈ decidedReceived i j → b ∈ decidedSent j`, preserved by pure monotonicity,
@@ -404,7 +404,7 @@ fields), grouped:
   `phase_input`, `estimate0`, `estimate_ret`, `estimate_previous`, `estimate_previous_ne`,
   `call_provenance`, `bind_succ` (a bit excluded at round `r + 1` was already excluded at round `r`,
   or round `r` closed grade-0-locked with round `r`'s coin at `.bit v` *or* `.top` — a `⊤` coin lets
-  the adopting return pick any matching bit, so the coin disjunct alone does not pin `v`; only the
+  the adopting return pick any matching bit, so the coin disjunct alone does not determine `v`; only the
   grade-0 lock does, and every downstream use reads just that half), `grade0Lock_chain`.
 - **Locks and DECIDED**: `grade2Lock_commit` (a grade-2-locked round whose surviving bit `b` is
   still alive yields `Grade2Commitment` for `b` — the live-pair form, hypothesis-guarded so that no
@@ -444,7 +444,7 @@ fields), grouped:
 Each row of `HybridRefinesSpecification/Simulation.lean` proves `Invariant`-preservation for its
 step class and then the `AbstractState`-level match above.
 
-## The run kit (`HybridRefinesSpecification/WeakTransitions.lean`)
+## The run lemmas (`HybridRefinesSpecification/WeakTransitions.lean`)
 
 Pure `ABA.spec` weak-τ lemmas, no `Invariant`/`AbstractState` reasoning and no mention of the
 concrete `(g, c, w)` state:
@@ -455,14 +455,14 @@ concrete `(g, c, w)` state:
   `weakStep`, with the run as the leading τ-closure, the step as the middle hyper-step
   (`hyperStep_pure_of_step`), and `weakTau_refl` as the trailing closure.
 
-That is the whole kit. The specification has two `τ`-rules, `SpecStep.coinFlip` and
+Those are all the run lemmas. The specification has two `τ`-rules, `SpecStep.coinFlip` and
 `SpecStep.decide`; the abstract state never fires the first and fires the second once, so no row
 needs a multi-step τ-chain and every guard discharge sits in the `Invariant` (§ Row dispositions).
 
 ## Why this shape
 
 Each of the following adversarial-timing traces excludes a natural simpler alternative;
-recording them is what pins the design.
+recording them is what fixes the design.
 
 1. **Eager functional abstraction fails.** If the abstract state is a total function of
    the concrete (`a = absMap (g,c,w)`) with `a.val` tied to the concrete `bindUnset` row,
@@ -494,7 +494,7 @@ positive mass the abstract state could no longer answer the `retABA` that arrive
    propagates `estimate := 1`, round-1 unanimity decides `1`, `fail 0`, `retABA 1 1` — yet
    every never-corrupted process input `0`. A single certifying witness is exactly the
    D13 loss one level down; hence the D14 InputSupport guards.
-6. **Fill-only designs cannot be value-pinned (the vote quorum).** One might try to discharge the
+6. **Fill-only designs cannot fix the value (the vote quorum).** One might try to discharge the
    D14 counts specification, filling empty `F`-entries at the *implementation* relation instead of
    counting them. This dies on a pre-corruption genuine call: at `n = 4, f = 1`, a genuine `callG 3
    0` forces the correct entry 3 to mirror `0`; after `fail 3` the adversary amplifies `INPUT 1` to

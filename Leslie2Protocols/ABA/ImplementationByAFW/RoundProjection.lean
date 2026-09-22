@@ -109,24 +109,22 @@ theorem firstGatherInputBroadcastMessageOf_inj (i : Fin n) : ∀ a a' (b : BRB.M
   intro a a' b h h'
   cases a <;> cases a' <;> simp_all [firstGatherInputBroadcastMessageOf]
 
-theorem firstGatherBindBroadcastMessageOf_inj (i : Fin n) : ∀ a a' (b : BRB.Message
-  (Gather.AcceptedPairs n Bool)),
-    b ∈ firstGatherBindBroadcastMessageOf i a → b ∈ firstGatherBindBroadcastMessageOf i a' → a = a'
-      := by
+theorem firstGatherBindBroadcastMessageOf_inj (i : Fin n) :
+    ∀ a a' (b : BRB.Message (Gather.AcceptedPairs n Bool)), b ∈ firstGatherBindBroadcastMessageOf i
+    a → b ∈ firstGatherBindBroadcastMessageOf i a' → a = a' := by
   intro a a' b h h'
   cases a <;> cases a' <;> simp_all [firstGatherBindBroadcastMessageOf]
 
-theorem secondGatherInputBroadcastMessageOf_inj (i : Fin n) : ∀ a a' (b : BRB.Message (Option
-  Bool)),
-    b ∈ secondGatherInputBroadcastMessageOf i a → b ∈ secondGatherInputBroadcastMessageOf i a' → a =
-      a' := by
+theorem secondGatherInputBroadcastMessageOf_inj (i : Fin n) :
+    ∀ a a' (b : BRB.Message (Option Bool)), b ∈ secondGatherInputBroadcastMessageOf i a → b ∈
+    secondGatherInputBroadcastMessageOf i a' → a = a' := by
   intro a a' b h h'
   cases a <;> cases a' <;> simp_all [secondGatherInputBroadcastMessageOf]
 
-theorem secondGatherBindBroadcastMessageOf_inj (i : Fin n) : ∀ a a' (b : BRB.Message
-  (Gather.AcceptedPairs n (Option Bool))),
-    b ∈ secondGatherBindBroadcastMessageOf i a → b ∈ secondGatherBindBroadcastMessageOf i a' → a =
-      a' := by
+theorem secondGatherBindBroadcastMessageOf_inj (i : Fin n) :
+    ∀ a a' (b : BRB.Message (Gather.AcceptedPairs n (Option Bool))), b ∈
+    secondGatherBindBroadcastMessageOf i a → b ∈ secondGatherBindBroadcastMessageOf i a' → a = a' :=
+    by
   intro a a' b h h'
   cases a <;> cases a' <;> simp_all [secondGatherBindBroadcastMessageOf]
 
@@ -145,8 +143,8 @@ theorem broadcastReturnsFor_isSome_iff (P : Parameters) [DecidableEq X]
 
 /-- The value returned has a receipt quorum. -/
 theorem broadcastReturnsFor_voteQuorum (P : Parameters) [DecidableEq X]
-    {p : LocalState P.n (BRB.ProcessRecord X) (BRB.Message X)} {x : X} (h : broadcastReturnsFor P p
-      = some x) :
+    {p : LocalState P.n (BRB.ProcessRecord X) (BRB.Message X)} {x : X}
+    (h : broadcastReturnsFor P p = some x) :
     2 * P.f + 1 ≤ p.receivedCount (BRB.Message.vote x) := by
   unfold broadcastReturnsFor at h
   by_cases hq : ∃ v, 2 * P.f + 1 ≤ p.receivedCount (BRB.Message.vote v)
@@ -214,7 +212,8 @@ at each of the `n` input-broadcast instances, and `AFW.firstGatherAcceptedPairs`
 that same condition. -/
 theorem firstGatherAcceptedPairs_gatherLocalState (P : Parameters) (s : RoundRecord P.n) :
     (gatherLocalState P Bool s.firstGather s.firstGatherInputBroadcasts
-      s.firstGatherBindBroadcasts).process.accepted = firstGatherAcceptedPairs P s := by
+      s.firstGatherBindBroadcasts).process.accepted
+    = firstGatherAcceptedPairs P s := by
   ext ⟨k, v⟩
   rw [Gather.ProcessRecord.mem_accepted, mem_firstGatherAcceptedPairs]
   exact Iff.rfl
@@ -409,9 +408,9 @@ theorem roundProjection_writeGhost (v : ∀ _ : Fin P.n, AFW.ProcessRecord P.n) 
   simp [roundProjection, firstGatherProjection, secondGatherProjection, Gather.setCore]
 
 /-- The ghost write leaves every other round's view where it stands. -/
-theorem roundProjection_writeGhost_ne (v : ∀ _ : Fin P.n,
-    AFW.ProcessRecord P.n) (w : NetworkState P.n) {L : ExtendedLabel P.n (Message P.n)} {r r' : ℕ}
-      (h : roundOf L = some r) (hr : r' ≠ r) :
+theorem roundProjection_writeGhost_ne (v : ∀ _ : Fin P.n, AFW.ProcessRecord P.n)
+    (w : NetworkState P.n) {L : ExtendedLabel P.n (Message P.n)} {r r' : ℕ} (h : roundOf L = some r)
+    (hr : r' ≠ r) :
     roundProjection P v (w.writeGhost (ghostStep P) L) r' = roundProjection P v w r' := by
   unfold Implementation.NetworkState.writeGhost
   rw [h]
@@ -450,8 +449,8 @@ theorem writeGhost_bound {w : NetworkState P.n} (L : ExtendedLabel P.n (Message 
 /-- A send, read through the view with its ghost write: the round's two cores
 and its bound bit are the record `AFW.ghostStep` writes, and every other
 coordinate is the send's own. -/
-theorem roundProjection_gbcaSendGhost (v : ∀ _ : Fin P.n,
-    AFW.ProcessRecord P.n) (w : NetworkState P.n) (r : ℕ) (j : Fin P.n) (m : Message P.n) :
+theorem roundProjection_gbcaSendGhost (v : ∀ _ : Fin P.n, AFW.ProcessRecord P.n)
+    (w : NetworkState P.n) (r : ℕ) (j : Fin P.n) (m : Message P.n) :
     roundProjection P v ((w.recordGBCASend r j m).writeGhost (ghostStep P) (Sum.inr (.gbcaSend r j
       m))) r
       = ((fun i => programProjection ((v i).2.roundRecord r),
@@ -497,8 +496,8 @@ theorem messagesOf_empty {β : Type} (f : Message n → Option β)
 /-- **Every round of the view is the composed round's initial state**: an untouched round reads as
 the initial record in the implementation, and the empty sent projects to the empty sent. -/
 theorem roundProjection_init (P : Parameters) (r : ℕ) :
-    roundProjection P (protocol P).init.1 (protocol P).init.2.1 r = (GBCA.ByAFW.roundOverBracha P
-      r).init :=
+    roundProjection P (protocol P).init.1 (protocol P).init.2.1 r =
+    (GBCA.ByAFW.roundOverBracha P r).init :=
       by
   have hproc : (protocol P).init.1
       = fun _ => (RoundLoopRecord.initial P.n,
@@ -622,49 +621,42 @@ theorem composed_eq (P : Parameters) :
 
 /-- The round-`r` state moves on a label it owns. -/
 theorem roundFamilyOverBracha_owned (P : Parameters) (G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n)
-  (r :
-  ℕ)
-    {L : ExtendedLabel P.n} (hL : roundOwnsLabel L = some r) {q : GBCA.ByAFW.RoundStateOverBracha
-      P.n}
+    (r : ℕ) {L : ExtendedLabel P.n} (hL : roundOwnsLabel L = some r)
+    {q : GBCA.ByAFW.RoundStateOverBracha P.n}
     (h : (GBCA.ByAFW.roundOverBracha P r).step (G r) L (PMF.pure q)) :
     (roundFamilyOverBracha P).step G L (PMF.pure (Function.update G r q)) := by
   rw [roundFamilyOverBracha, System.family_step_iff]
   exact Or.inr (Or.inl ⟨r, hL, PMF.pure q, h, by rw [PMF.pure_map]⟩)
 
 /-- An owned label whose round stands still. -/
-theorem roundFamilyOverBracha_owned_id (P : Parameters) (G : ℕ → GBCA.ByAFW.RoundStateOverBracha
-  P.n) (r
-  : ℕ)
-    {L : ExtendedLabel P.n} (hL : roundOwnsLabel L = some r)
+theorem roundFamilyOverBracha_owned_id (P : Parameters)
+    (G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n) (r : ℕ) {L : ExtendedLabel P.n}
+    (hL : roundOwnsLabel L = some r)
     (h : (GBCA.ByAFW.roundOverBracha P r).step (G r) L (PMF.pure (G r))) :
     (roundFamilyOverBracha P).step G L (PMF.pure G) := by
   have hstep := roundFamilyOverBracha_owned P G r hL h
   rwa [Function.update_eq_self] at hstep
 
 /-- The round-`r` state takes one of its own silent rules. -/
-theorem roundFamilyOverBracha_tau (P : Parameters) (G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n) (r
-  : ℕ)
-    {q : GBCA.ByAFW.RoundStateOverBracha P.n}
+theorem roundFamilyOverBracha_tau (P : Parameters) (G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n)
+    (r : ℕ) {q : GBCA.ByAFW.RoundStateOverBracha P.n}
     (h : (GBCA.ByAFW.roundOverBracha P r).step (G r) (Sum.inl Label.tau) (PMF.pure q)) :
     (roundFamilyOverBracha P).step G (Sum.inl Label.tau) (PMF.pure (Function.update G r q)) := by
   rw [roundFamilyOverBracha, System.family_step_iff]
   exact Or.inl ⟨rfl, r, PMF.pure q, h, by rw [PMF.pure_map]⟩
 
 /-- A label no round owns and no broadcast: the family idles. -/
-theorem roundFamilyOverBracha_idle (P : Parameters) (G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n) {L
-  :
-  ExtendedLabel P.n}
-    (hτ : L ≠ Silent.τ) (hown : roundOwnsLabel L = none) (hf : ¬ isFailLabel L) :
-    (roundFamilyOverBracha P).step G L (PMF.pure G) := by
+theorem roundFamilyOverBracha_idle (P : Parameters) (G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n)
+    {L : ExtendedLabel P.n} (hτ : L ≠ Silent.τ) (hown : roundOwnsLabel L = none)
+    (hf : ¬ isFailLabel L) : (roundFamilyOverBracha P).step G L (PMF.pure G) := by
   rw [roundFamilyOverBracha, System.family_step_iff]
   exact Or.inr (Or.inr (Or.inr ⟨hτ, hown, hf, rfl⟩))
 
 /-- Corruption is broadcast to every round's coordinate. -/
-theorem roundFamilyOverBracha_fail (P : Parameters) (G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n) (k
-  :
-  Fin P.n) :
+theorem roundFamilyOverBracha_fail (P : Parameters) (G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n)
+    (k : Fin P.n) :
     (roundFamilyOverBracha P).step G (Sum.inl (Label.fail k))
-      (PMF.pure (fun r => corruptionOverBracha P (Sum.inl (Label.fail k)) (G r))) := by
+    (PMF.pure (fun r => corruptionOverBracha P (Sum.inl (Label.fail k)) (G r))) := by
   rw [roundFamilyOverBracha, System.family_step_iff]
   exact Or.inr (Or.inr (Or.inl ⟨by simp, rfl, trivial, rfl⟩))
 
@@ -686,25 +678,23 @@ theorem contextStep (P : Parameters) {C C' : ∀ _ : Fin P.n, RoundLoopRecord P.
 
 /-- Build a joint transition of the four components on a visible label, the
 oracle's successor left free. -/
-theorem composedExtended_visible_step (P : Parameters) {G G' : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n}
-    {C C' : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A A' : ABANetworkState P.n}
-    {o : ℕ → WCC.SpecState P.n} {ν : PMF (ℕ → WCC.SpecState P.n)} {L : ExtendedLabel P.n}
-    (hL : L ≠ Silent.τ)
+theorem composedExtended_visible_step (P : Parameters)
+    {G G' : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n} {C C' : ∀ _ : Fin P.n, RoundLoopRecord P.n}
+    {A A' : ABANetworkState P.n} {o : ℕ → WCC.SpecState P.n} {ν : PMF (ℕ → WCC.SpecState P.n)}
+    {L : ExtendedLabel P.n} (hL : L ≠ Silent.τ)
     (hG : (roundFamilyOverBracha P).step G L (PMF.pure G'))
     (hC : ∀ i, RoundLoopStep P i (C i) L (PMF.pure (C' i)))
-    (hA : ABANetworkStep P A L (PMF.pure A'))
-    (hW : (coinOverRoundAlphabet P).step o L ν) :
+    (hA : ABANetworkStep P A L (PMF.pure A')) (hW : (coinOverRoundAlphabet P).step o L ν) :
     (composedExtended P).step (G, C, A, o) L
-      (prodPMF (PMF.pure G') (prodPMF (PMF.pure C') (prodPMF (PMF.pure A') ν))) := by
+    (prodPMF (PMF.pure G') (prodPMF (PMF.pure C') (prodPMF (PMF.pure A') ν))) := by
   rw [composedExtended, System.parallel_step]
   exact Or.inl ⟨hL, PMF.pure G', prodPMF (PMF.pure C') (prodPMF (PMF.pure A') ν),
     hG, contextStep P hL hC hA hW, rfl⟩
 
 /-- Build a silent transition of the four components from a round's own. -/
-theorem composedExtended_tau_overBracha (P : Parameters) {G G' : ℕ → GBCA.ByAFW.RoundStateOverBracha
-  P.n}
-    {C : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A : ABANetworkState P.n}
-    {o : ℕ → WCC.SpecState P.n}
+theorem composedExtended_tau_overBracha (P : Parameters)
+    {G G' : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
+    {A : ABANetworkState P.n} {o : ℕ → WCC.SpecState P.n}
     (hG : (roundFamilyOverBracha P).step G (Sum.inl Label.tau) (PMF.pure G')) :
     (composedExtended P).step (G, C, A, o) (Sum.inl Label.tau) (PMF.pure (G', C, A, o)) := by
   rw [composedExtended, System.parallel_step]
@@ -712,10 +702,9 @@ theorem composedExtended_tau_overBracha (P : Parameters) {G G' : ℕ → GBCA.By
   rw [prodPMF_pure_pure]
 
 /-- Build a silent transition of the four components from an ABA network injection. -/
-theorem composedExtended_tau_ABANetwork (P : Parameters) {G : ℕ → GBCA.ByAFW.RoundStateOverBracha
-  P.n}
-    {C : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A A' : ABANetworkState P.n}
-    {o : ℕ → WCC.SpecState P.n}
+theorem composedExtended_tau_ABANetwork (P : Parameters)
+    {G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
+    {A A' : ABANetworkState P.n} {o : ℕ → WCC.SpecState P.n}
     (hA : ABANetworkStep P A (Sum.inl Label.tau) (PMF.pure A')) :
     (composedExtended P).step (G, C, A, o) (Sum.inl Label.tau) (PMF.pure (G, C, A', o)) := by
   rw [composedExtended, System.parallel_step]
@@ -788,9 +777,8 @@ theorem locals_firstGatherInputBroadcasts_if (k : Fin n) :
   by_cases hi : i = j <;> simp [hi]
 
 theorem locals_firstGatherBindBroadcasts_if (k : Fin n) :
-    (fun i => (if i = j then sr else Y i).firstGatherBindBroadcasts k)
-      = Function.update (fun i => (Y i).firstGatherBindBroadcasts k) j (sr.firstGatherBindBroadcasts
-        k) := by
+    (fun i => (if i = j then sr else Y i).firstGatherBindBroadcasts k) = Function.update
+    (fun i => (Y i).firstGatherBindBroadcasts k) j (sr.firstGatherBindBroadcasts k) := by
   funext i
   rw [Function.update_apply]
   by_cases hi : i = j <;> simp [hi]
@@ -823,22 +811,18 @@ below carry a run of one round to the graded-agreement family, and a run of that
 composed group. -/
 
 /-- A silent run of one round is a silent run of the graded-agreement family at that coordinate. -/
-theorem roundFamilyOverBracha_silentRun (P : Parameters) {G : ℕ → GBCA.ByAFW.RoundStateOverBracha
-  P.n}
-  {r : ℕ}
-    {q : GBCA.ByAFW.RoundStateOverBracha P.n} (h : (GBCA.ByAFW.roundOverBracha P r).weakLSilent (G
-      r) q) :
+theorem roundFamilyOverBracha_silentRun (P : Parameters)
+    {G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n} {r : ℕ} {q : GBCA.ByAFW.RoundStateOverBracha P.n}
+    (h : (GBCA.ByAFW.roundOverBracha P r).weakLSilent (G r) q) :
     (roundFamilyOverBracha P).weakLSilent G (Function.update G r q) := by
   rw [roundFamilyOverBracha]
   exact System.weakLSilent_family roundOwnsLabel isFailLabel (corruptionOverBracha P) h
 
 /-- A run of one round on a label that round owns is a weak transition of the graded-agreement
 family at that coordinate. -/
-theorem roundFamilyOverBracha_weakStep (P : Parameters) {G : ℕ → GBCA.ByAFW.RoundStateOverBracha
-  P.n} {r
-  : ℕ}
-    {L : ExtendedLabel P.n} {q : GBCA.ByAFW.RoundStateOverBracha P.n} (hL : roundOwnsLabel L = some
-      r)
+theorem roundFamilyOverBracha_weakStep (P : Parameters)
+    {G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n} {r : ℕ} {L : ExtendedLabel P.n}
+    {q : GBCA.ByAFW.RoundStateOverBracha P.n} (hL : roundOwnsLabel L = some r)
     (h : (GBCA.ByAFW.roundOverBracha P r).weakLStep (G r) L q) :
     (roundFamilyOverBracha P).weakLStep G L (Function.update G r q) := by
   rw [roundFamilyOverBracha]

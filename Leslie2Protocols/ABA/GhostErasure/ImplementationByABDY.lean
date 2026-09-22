@@ -10,7 +10,7 @@ import Leslie2Protocols.ABA.Results
 /-!
 # The ghost-free ABDY22 protocol
 
-The network adversary of `ABDY.protocol` holds one bit per round that no program reads:
+The network of `ABDY.protocol` holds one bit per round that no program reads:
 the round's bound bit, written by `ABDY.abdyGhostStep` and announced on every
 graded-agreement return by `ABDY.abdyAnnouncedBound`. `ABDY.protocol₀` is the protocol as
 it runs with that record dropped and the adversary free to announce either bit on a
@@ -23,7 +23,7 @@ protocol, and the rest of this file re-derives them.
 
 The proof is the state erasure of `ABA/GhostErasure/GhostFreeSystem.lean` carried through the
 composition pipeline. Its hypothesis is that every round, process and graded outcome
-admits an announced bit, which here is the equation `bnd = ABDY.abdyGhostOut P s r id out`
+admits an announced bit, which here is the equation `bnd = ABDY.abdyGhostOutput P s r id out`
 read at its own right-hand side. The announced bit is silent at protocol level — a
 `retG` label lies in `Label.hiddenAPI` — which is why no label map appears in the
 statement.
@@ -36,16 +36,16 @@ namespace ABDY
 open Implementation
 
 /-- **The ghost-free ABDY22 protocol**: the `n` programs and the coin oracle of
-`ABDY.protocol` beside the network adversary over the trivial ghost, whose
+`ABDY.protocol` beside the network over the trivial ghost, whose
 graded-agreement returns announce any bit. -/
 noncomputable def protocol₀ (P : Parameters) :
-    System (Implementation.State P GBCA.ByABDY.Message (GBCA.ByABDY.RoundRecord P.n) Unit) (Label
-      P.n) :=
+    System (Implementation.State P GBCA.ByABDY.Message (GBCA.ByABDY.RoundRecord P.n) Unit)
+    (Label P.n) :=
   Implementation.systemGhostFree P GBCA.ByABDY.Message (GBCA.ByABDY.RoundRecord P.n) (ABDY.RoundStep
     P)
     (ABDY.gbcaCallPayload P)
 
-/-- **The ghost costs nothing.** The bound bit the network adversary records is written
+/-- **The ghost costs nothing.** The bound bit the network records is written
 by no guard and read by no program, and the label that announces it is hidden at protocol
 level, so the protocol and the ghost-free protocol achieve the same trace
 distributions. -/
@@ -54,7 +54,7 @@ theorem protocol_erasure (P : Parameters) :
   Implementation.system_erasure P GBCA.ByABDY.Message (GBCA.ByABDY.RoundRecord P.n) (Option Bool)
     (ABDY.RoundStep P)
     (ABDY.gbcaCallPayload P) (ABDY.abdyGhostStep P) (ABDY.abdyAnnouncedBound P)
-    (fun s r id out => ⟨ABDY.abdyGhostOut P s r id out, rfl⟩)
+    (fun s r id out => ⟨ABDY.abdyGhostOutput P s r id out, rfl⟩)
 
 /-! ### The headlines at the ghost-free protocol -/
 

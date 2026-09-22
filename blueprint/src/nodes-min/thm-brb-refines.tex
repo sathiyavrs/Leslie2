@@ -1,11 +1,11 @@
 \begin{theorem}[BRB instance refinement]
   \label{thm:brb-refines}
   \lean{PLTS.ABA.BRB.EchoCertificate}\lean{PLTS.ABA.BRB.Invariant}\lean{PLTS.ABA.BRB.SpecificationRelation}\lean{PLTS.ABA.BRB.specificationRelation_corrupt}\lean{PLTS.ABA.BRB.brachaRefinesSpecification}\leanok
-  \uses{def:aba-brb-impl, def:aba-brb-spec}
+  \uses{def:aba-bracha-implementation, def:aba-brb-spec}
   The Bracha instance is forward-simulated by Transition System~6, along a relation certifying the committed value by an $\mathrm{ECHO}$ receipt quorum of more than $(n+f)/2$ senders and firing the commit on demand under the first return; the relation survives the corruption broadcast: \leandecl{PLTS.ABA.BRB.brachaRefinesSpecification}, \leandecl{PLTS.ABA.BRB.specificationRelation_corrupt}.
 \end{theorem}
 
 \begin{proof}\leanok
-  \uses{def:aba-brb-impl, def:aba-brb-spec, def:forwardsim}
+  \uses{def:aba-bracha-implementation, def:aba-brb-spec, def:forwardsim}
   See the Lean proof of \leandecl{PLTS.ABA.BRB.brachaRefinesSpecification}.
 \end{proof}

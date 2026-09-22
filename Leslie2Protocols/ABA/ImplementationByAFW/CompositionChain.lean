@@ -51,7 +51,7 @@ three relations survive those acts — `broadcastSubstitution_failAct`, `gatherS
 
 `substitution` is the three-stage inclusion, `composed_refines` chains it with
 `hybrid_spec`, `composed_safe` reads off Validity and Agreement, and
-`chainSimComposed` composes the simulations themselves.
+`chainSimulationOfComposed` composes the simulations themselves.
 -/
 
 namespace PLTS
@@ -207,36 +207,35 @@ theorem roundFamilyOverGatherSpecifications_isLTS (P : Parameters) :
 /-! ### The family substitutions -/
 
 /-- The pointwise round relation of the broadcast substitution. -/
-def broadcastSubstitutionRelationFamily (P : Parameters) (s : ℕ → GBCA.ByAFW.RoundStateOverBracha
-  P.n)
+def broadcastSubstitutionRelationFamily (P : Parameters)
+    (s : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n)
     (t : ℕ → GBCA.ByAFW.RoundStateOverBroadcastSpecification P.n) : Prop :=
   ∀ r, GBCA.ByAFW.BroadcastSubstitutionRelation P (s r) (t r)
 
 /-- The pointwise round relation of the gather substitution. -/
-def gatherSubstitutionRelationFamily (P : Parameters) (s : ℕ →
-  GBCA.ByAFW.RoundStateOverBroadcastSpecification P.n)
+def gatherSubstitutionRelationFamily (P : Parameters)
+    (s : ℕ → GBCA.ByAFW.RoundStateOverBroadcastSpecification P.n)
     (t : ℕ → GBCA.ByAFW.RoundStateOverGatherSpecifications P.n) : Prop :=
   ∀ r, GBCA.ByAFW.GatherSubstitutionRelation P (s r) (t r)
 
 /-- The pointwise round relation of the counting simulation. -/
-def roundSpecificationSubstitutionRelationFamily (P : Parameters) (s : ℕ →
-  GBCA.ByAFW.RoundStateOverGatherSpecifications P.n)
-    (t : ℕ → GBCA.SpecState P.n) : Prop :=
+def roundSpecificationSubstitutionRelationFamily (P : Parameters)
+    (s : ℕ → GBCA.ByAFW.RoundStateOverGatherSpecifications P.n) (t : ℕ → GBCA.SpecState P.n) :
+    Prop :=
   ∀ r, GBCA.ByAFW.SpecificationRelation P (s r) (t r)
 
 /-- The family substitution of the first stage, round by round. -/
 theorem familyBroadcastSubstitution (P : Parameters) :
     ForwardSimulation (roundFamilyOverBracha P) (roundFamilyOverBroadcastSpecification P)
-      (broadcastSubstitutionRelationFamily
-      P) :=
+    (broadcastSubstitutionRelationFamily P) :=
   ForwardSimulation.family roundOwnsLabel isFailLabel (corruptionOverBracha P)
     (corruptionOverBroadcastSpecification P)
     (GBCA.ByAFW.broadcastSubstitution P) (broadcastSubstitution_failAct P)
 
 /-- The family substitution of the second stage. -/
 theorem familyGatherSubstitution (P : Parameters) :
-    ForwardSimulation (roundFamilyOverBroadcastSpecification P) (roundFamilyOverGatherSpecifications
-      P) (gatherSubstitutionRelationFamily P) :=
+    ForwardSimulation (roundFamilyOverBroadcastSpecification P)
+    (roundFamilyOverGatherSpecifications P) (gatherSubstitutionRelationFamily P) :=
   ForwardSimulation.family roundOwnsLabel isFailLabel (corruptionOverBroadcastSpecification P)
     (corruptionOverGatherSpecifications P)
     (GBCA.ByAFW.gatherSubstitution P) (gatherSubstitution_failAct P)
@@ -244,17 +243,15 @@ theorem familyGatherSubstitution (P : Parameters) :
 /-- The family substitution of the third stage, into the specification. -/
 theorem familyRoundSpecificationSubstitution (P : Parameters) :
     ForwardSimulation (roundFamilyOverGatherSpecifications P) (gbcaSpecificationFamily P)
-      (roundSpecificationSubstitutionRelationFamily
-      P) :=
+    (roundSpecificationSubstitutionRelationFamily P) :=
   ForwardSimulation.family roundOwnsLabel isFailLabel (corruptionOverGatherSpecifications P)
     (specificationCorruptionAct P)
     (GBCA.ByAFW.refinesSpecification P) (roundSpecificationSubstitution_failAct P)
 
 /-- The first family substitution, probabilistically. -/
 theorem familyBroadcastSubstitutionSimulation (P : Parameters) :
-    ProbabilisticForwardSimulation (roundFamilyOverBracha P) (roundFamilyOverBroadcastSpecification
-      P)
-      (diracRel (broadcastSubstitutionRelationFamily P)) :=
+    ProbabilisticForwardSimulation (roundFamilyOverBracha P)
+    (roundFamilyOverBroadcastSpecification P) (diracRel (broadcastSubstitutionRelationFamily P)) :=
   ForwardSimulation.toProbabilistic (roundFamilyOverBracha_isLTS P)
     (roundFamilyOverBroadcastSpecification_isLTS P)
     (fun r => GBCA.ByAFW.broadcastSubstitutionRelation_init P r) (familyBroadcastSubstitution P)
@@ -270,9 +267,8 @@ theorem familyGatherSubstitutionSimulation (P : Parameters) :
 
 /-- The third family substitution, probabilistically. -/
 theorem familyRoundSpecificationSubstitutionSimulation (P : Parameters) :
-    ProbabilisticForwardSimulation (roundFamilyOverGatherSpecifications P) (gbcaSpecificationFamily
-      P)
-      (diracRel (roundSpecificationSubstitutionRelationFamily P)) :=
+    ProbabilisticForwardSimulation (roundFamilyOverGatherSpecifications P)
+    (gbcaSpecificationFamily P) (diracRel (roundSpecificationSubstitutionRelationFamily P)) :=
   ForwardSimulation.toProbabilistic (roundFamilyOverGatherSpecifications_isLTS P)
     (gbcaSpecificationFamily_isLTS P)
     (fun r => GBCA.ByAFW.specificationRelation_init P r) (familyRoundSpecificationSubstitution P)
@@ -396,7 +392,7 @@ theorem composed_safe (P : Parameters) :
 /-- **The composed gather-based simulation** `composed ⊑ ABA.spec`: the
 three-stage substitution joined with the shared core simulation by
 Result 2. -/
-noncomputable def chainSimComposed (P : Parameters) :
+noncomputable def chainSimulationOfComposed (P : Parameters) :
     ProbabilisticForwardSimulation (composed P) (spec P)
       (compRel
         (compRel (parallelRel (diracRel (broadcastSubstitutionRelationFamily P)))
@@ -419,9 +415,9 @@ noncomputable def chainSimComposed (P : Parameters) :
 #guard_msgs in
 #print axioms composed_safe
 
-/-- info: 'PLTS.ABA.AFW.chainSimComposed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.AFW.chainSimulationOfComposed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms chainSimComposed
+#print axioms chainSimulationOfComposed
 
 end AFW
 

@@ -1,9 +1,9 @@
 \begin{definition}[The GBCA implementation instance]
-  \label{def:aba-gbca-impl}
+  \label{def:aba-gbca-implementation}
   \lean{PLTS.ABA.GBCA.ByABDY.boundOf}\lean{PLTS.ABA.GBCA.ByABDY.implementation}\leanok
-  \uses{def:aba-labels, def:aba-params, def:aba-gbca-vocab}
+  \uses{def:aba-labels, def:aba-parameters, def:aba-round-messages}
   Graded agreement read as one per-round PLTS over the pair of local states that hold a round's state, the analysis form of \algoref{alg:gbca-impl}{the GBCA implementation}, which is ABDY22's Algorithm~6 (D18).
-  Each process runs a five-level exchange over the message levels of Definition~\ref{def:aba-gbca-vocab}: it multicasts $\langle\mathrm{INPUT},b\rangle$ on a call and relays it on $f{+}1$ receipts, and each higher level is multicast into its own write-once field under an $n{-}f$ quorum at the level below and prior participation (D8), the levels from $\mathrm{BIND}$ down requiring in addition that the process's own send at the level below is already out.
+  Each process runs a five-level exchange over the message levels of Definition~\ref{def:aba-round-messages}: it multicasts $\langle\mathrm{INPUT},b\rangle$ on a call and relays it on $f{+}1$ receipts, and each higher level is multicast into its own write-once field under an $n{-}f$ quorum at the level below and prior participation (D8), the levels from $\mathrm{BIND}$ down requiring in addition that the process's own send at the level below is already out.
   The $\mathrm{VOTE}$ level requires no own send: the $\mathrm{ECHO}$ it reads is multicast by an \textbf{upon} handler and may still be pending.
   A process returns $(b,2)$, $(b,1)$ or $(\bot,0)$ by the three wait-until cases of the last block, read as the if/elif/else chain that block ends in: a return carries the denials of the cases above it beside the receipts its own case names, and requires that the process has been called and its own $\langle\mathrm{ECHO5},v\rangle$ is out (D8).
   The network is set-based and authenticated (D5): each sender owns one idempotent message set, the adversary schedules delivery, and a corrupted sender may inject an arbitrary message.

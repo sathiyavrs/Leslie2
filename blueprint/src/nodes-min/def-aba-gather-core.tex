@@ -1,7 +1,7 @@
 \begin{definition}[The core of a gather network state]
   \label{def:aba-gather-core}
   \lean{PLTS.ABA.Gather.correct}\lean{PLTS.ABA.Gather.dominatedBy}\lean{PLTS.ABA.Gather.dominators}\lean{PLTS.ABA.Gather.echoOf}\lean{PLTS.ABA.Gather.coreOf}\lean{PLTS.ABA.Gather.Invariant}\lean{PLTS.ABA.Gather.single_core}\lean{PLTS.ABA.Gather.single_core_approved}\lean{PLTS.ABA.Gather.bindAbove}\lean{PLTS.ABA.Gather.coreOf_recorded}\leanok
-  \uses{def:aba-gather-over-broadcast-specification, def:aba-params}
+  \uses{def:aba-gather-over-broadcast-specification, def:aba-parameters}
   A payload set read off the sent sets and the corrupted set of a gather network state: the $\mathrm{ECHO}$ payload of a sender whose payload lies below every $\mathrm{VOTE}$ of many processes outside $F$ (\leandecl{PLTS.ABA.Gather.coreOf}).
   Under the invariant \leandecl{PLTS.ABA.Gather.Invariant}, as soon as one process outside $F$ holds a committed $\mathrm{BIND}$ payload, that set has at least $n-f$ entries, its entries are committed input-broadcast entries, and it lies below the committed $\mathrm{BIND}$ payload of every process outside $F$: \leandecl{PLTS.ABA.Gather.single_core} and \leandecl{PLTS.ABA.Gather.single_core_approved}.
   The count of coordinates holding a committed $\mathrm{BIND}$ payload above it is $F$-blind and monotone, and an $n{-}f$ return quorum supplies $f{+}1$ of them: \leandecl{PLTS.ABA.Gather.bindAbove} and \leandecl{PLTS.ABA.Gather.coreOf_recorded}.

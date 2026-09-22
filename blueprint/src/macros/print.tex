@@ -21,8 +21,9 @@
 % Lean names and module paths are set through the url package, which hyperref
 % loads: it keeps underscores safe in text mode and, unlike a single \texttt
 % box, breaks a long name across lines. The xurl package allows the break after
-% any character, which a long camel-case segment needs.
-\usepackage{xurl}
+% any character, which a long camel-case segment needs; where it is not
+% installed, the break points are the listed characters.
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{\def\UrlBreaks{\do\.\do\_\do\/\do\-}}
 \urlstyle{tt}
 % A visible Lean declaration reference.
 % The two-argument form typesets its short display name alone.

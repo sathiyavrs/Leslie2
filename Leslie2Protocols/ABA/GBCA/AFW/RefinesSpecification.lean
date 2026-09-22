@@ -31,12 +31,12 @@ are in scope, and `secondGatherCall_candidate` transfers the candidate to the se
 call record at `secondGatherCall`. The graded outcome is recorded at `secondGatherReturn`, and
 `out_certificate` is what the second gather's return guards certify about it:
 
-* a `grade2 v` outcome is heavy at `some v` in the second gather's core and heavy
-  at `v` in the first gather's;
-* a `grade1 v` outcome is heavy at `v` in the first gather's core and carries
-  `f + 1` committed-entry support for `!v`;
-* a grade-0 outcome is light at both bits in the second gather's core and carries
-  `f + 1` committed-entry support for each bit.
+* a `grade2 v` outcome carries `some v` on at least `|S| − f` entries of the
+  second gather's core and `v` on at least `|S| − f` of the first gather's;
+* a `grade1 v` outcome carries `v` on at least `|S| − f` entries of the first
+  gather's core and `f + 1` committed-entry support for `!v`;
+* a grade-0 outcome carries each bit on at most `f` entries of the second
+  gather's core and `f + 1` committed-entry support for each bit.
 
 Both cores are write-once, so the certificate survives every later row.
 
@@ -62,7 +62,7 @@ open Gather
 
 variable {P : Parameters}
 
-/-! ### The counting kit
+/-! ### The counting lemmas
 
 The counts the refinement consumes, stated on a gather specification state and
 on the graded agreement specification's call record. -/
@@ -92,10 +92,9 @@ theorem exists_correct_filter {F : Finset (Fin P.n)} (hF : F.card ≤ P.f)
 correct process is its call, and the count is `F`-blind. -/
 theorem callSupport_of_firstGatherSupport {t1 : Gather.SpecState P.n Bool} {t : GBCA.SpecState P.n}
     (hcall : ∀ k, t.call k = t1.call k) (hF : t.F = t1.F)
-    (hprov : ∀ k v, t1.val k = some v → k ∈ t1.F ∨ t1.call k = some v)
-    {v : Bool} (h : P.f + 1 ≤ firstGatherSupport t1 v) :
-    P.f + 1 ≤ (Finset.univ.filter
-      (fun id' => t.call id' = some v ∨ id' ∈ t.F)).card := by
+    (hprov : ∀ k v, t1.val k = some v → k ∈ t1.F ∨ t1.call k = some v) {v : Bool}
+    (h : P.f + 1 ≤ firstGatherSupport t1 v) :
+    P.f + 1 ≤ (Finset.univ.filter (fun id' => t.call id' = some v ∨ id' ∈ t.F)).card := by
   refine le_trans h (Finset.card_le_card ?_)
   intro id hid
   rw [Finset.mem_filter] at hid ⊢
@@ -114,14 +113,12 @@ theorem count_le_firstGatherSupport {t1 : Gather.SpecState P.n Bool} {U : Accept
   rw [Finset.mem_filter] at hid ⊢
   exact ⟨hid.1, Or.inl hid.2⟩
 
-/-- Core-heavy support reads as call support on the specification. -/
+/-- A count of `f + 1` in the core reads as call support on the specification. -/
 theorem callSupport_of_core {t1 : Gather.SpecState P.n Bool} {t : GBCA.SpecState P.n}
     (hcall : ∀ k, t.call k = t1.call k) (hF : t.F = t1.F)
-    (hprov : ∀ k v, t1.val k = some v → k ∈ t1.F ∨ t1.call k = some v)
-    {U : AcceptedPairs P.n Bool} (hUval : U.subMap t1.val) {v : Bool}
-    (hcnt : P.f + 1 ≤ AcceptedPairs.count U v) :
-    P.f + 1 ≤ (Finset.univ.filter
-      (fun id' => t.call id' = some v ∨ id' ∈ t.F)).card :=
+    (hprov : ∀ k v, t1.val k = some v → k ∈ t1.F ∨ t1.call k = some v) {U : AcceptedPairs P.n Bool}
+    (hUval : U.subMap t1.val) {v : Bool} (hcnt : P.f + 1 ≤ AcceptedPairs.count U v) :
+    P.f + 1 ≤ (Finset.univ.filter (fun id' => t.call id' = some v ∨ id' ∈ t.F)).card :=
   callSupport_of_firstGatherSupport hcall hF hprov (le_trans hcnt (count_le_firstGatherSupport hUval
     v))
 
@@ -229,11 +226,12 @@ theorem firstGatherSupport_congr {t t' : Gather.SpecState P.n Bool} (hval : t'.v
 
 /-! ### The invariant -/
 
-/-- What a recorded graded outcome certifies. A `grade2 v` outcome is heavy at
-`some v` in the second gather's core and heavy at `v` in the first gather's; a
-`grade1 v` outcome is heavy at `v` in the first gather's core and carries `f + 1`
-committed-entry support for `!v`; a grade-0 outcome is light at both bits in the
-second gather's core and carries `f + 1` support for each bit. -/
+/-- What a recorded graded outcome certifies. A `grade2 v` outcome carries
+`some v` on at least `|S| − f` entries of the second gather's core and `v` on at
+least `|S| − f` of the first gather's; a `grade1 v` outcome carries `v` on at
+least `|S| − f` entries of the first gather's core and `f + 1` committed-entry
+support for `!v`; a grade-0 outcome carries each bit on at most `f` entries of
+the second gather's core and `f + 1` support for each bit. -/
 def OutputCertificate (P : Parameters) (s : RoundStateOverGatherSpecifications P.n) : GBCAOutput →
   Prop
   | .grade2 v =>
@@ -249,15 +247,11 @@ def OutputCertificate (P : Parameters) (s : RoundStateOverGatherSpecifications P
 /-- The certificate reads the two cores and the first gather's committed-entry
 support. A state holding the same cores and at least that support carries
 it. -/
-theorem OutputCertificate.mono {s s' : RoundStateOverGatherSpecifications P.n} (h1 : (firstGather
-  s').core =
-  (firstGather
-  s).core)
+theorem OutputCertificate.mono {s s' : RoundStateOverGatherSpecifications P.n}
+    (h1 : (firstGather s').core = (firstGather s).core)
     (h2 : (secondGather s').core = (secondGather s).core)
-    (hv : ∀ b,
-      firstGatherSupport (firstGather s) b ≤ firstGatherSupport (firstGather s') b) {out :
-        GBCAOutput}
-    (h : OutputCertificate P s out) : OutputCertificate P s' out := by
+    (hv : ∀ b, firstGatherSupport (firstGather s) b ≤ firstGatherSupport (firstGather s') b)
+    {out : GBCAOutput} (h : OutputCertificate P s out) : OutputCertificate P s' out := by
   cases out with
   | grade2 v =>
     obtain ⟨⟨S, hS, hh⟩, S', hS', hh'⟩ := h
@@ -276,7 +270,7 @@ that gather, and `secondGatherCall_candidate` carries the candidate into the sec
 call record; `candidate_bound` and `secondGatherCall_bound` say that the row writing the
 candidate writes the bound bit, and `bound_core` that the bit is read off the
 first gather's core; `out_certificate` records what the second gather's return
-certifies about the grade; the `core*` clauses re-state the freeze guards,
+certifies about the grade; the `core*` clauses re-state the core-write guards,
 which the write-once cores keep true. -/
 structure Invariant (P : Parameters) (s : RoundStateOverGatherSpecifications P.n) : Prop where
   /-- The corruption budget. -/
@@ -289,7 +283,8 @@ structure Invariant (P : Parameters) (s : RoundStateOverGatherSpecifications P.n
   /-- A committed second-gather entry of a correct process is its call. -/
   secondGatherVal_provenance : ∀ k c,
     (secondGather s).val k = some c → k ∈ (firstGather s).F ∨ (secondGather s).call k = some c
-  /-- A correct process's bit candidate is heavy in the first gather's core. -/
+  /-- A correct process's bit candidate is on at least `|S| − f` entries of the
+  first gather's core. -/
   candidate_aboveThreshold : ∀ k ∉ (firstGather s).F, ∀ v,
     (programs s k).candidate = some (some v) → ∃ S,
       (firstGather s).core = some S ∧ S.card - P.f ≤ AcceptedPairs.count S v
@@ -307,7 +302,7 @@ structure Invariant (P : Parameters) (s : RoundStateOverGatherSpecifications P.n
   /-- A second call certifies the bound bit is written: the bit is written at
   the first gather's return, before any second call. -/
   secondGatherCall_bound : ∀ k, (programs s k).secondGatherCalled = true → bound s ≠ none
-  /-- The bound bit is the bound bit of the first gather's frozen core. -/
+  /-- The bound bit is the bound bit of the first gather's recorded core. -/
   bound_core : ∀ β, bound s = some β → ∃ S, (firstGather s).core = some S ∧ β = boundOfCore P S
   /-- A recorded grade comes with the bound bit and its certificate. -/
   out_certificate : ∀ k out,
@@ -322,18 +317,17 @@ structure Invariant (P : Parameters) (s : RoundStateOverGatherSpecifications P.n
   secondGatherCore_card : ∀ S, (secondGather s).core = some S → P.n - P.f ≤ S.card
 
 /-- The invariant holds initially. -/
-theorem Invariant.initial (P : Parameters) (r : ℕ) : Invariant P ((roundOverGatherSpecifications P
-  r).init)
-  := by
+theorem Invariant.initial (P : Parameters) (r : ℕ) :
+    Invariant P ((roundOverGatherSpecifications P r).init) := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
     simp [roundOverGatherSpecifications_init, programs, bound, firstGather, secondGather,
       Gather.SpecState.initial, ProcessRecord.initial]
 
 /-- The invariant is preserved by every row. -/
 theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l : Label P.n}
-    {μ : PMF (RoundStateOverGatherSpecifications P.n)} (hInv : Invariant P s) (hstep :
-      StepOverGatherSpecifications P r s l μ)
-    {s' : RoundStateOverGatherSpecifications P.n} (hs' : s' ∈ μ.support) : Invariant P s' := by
+    {μ : PMF (RoundStateOverGatherSpecifications P.n)} (hInv : Invariant P s)
+    (hstep : StepOverGatherSpecifications P r s l μ) {s' : RoundStateOverGatherSpecifications P.n}
+    (hs' : s' ∈ μ.support) : Invariant P s' := by
   cases hstep with
   | callG id b t1 h0 h =>
     rw [PMF.mem_support_pure_iff] at hs'
@@ -776,7 +770,7 @@ theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l
         rcases hInv.secondGatherVal_provenance k c (hsubv k c hgc) with hF | hin
         · exact absurd hF hkF
         · exact hInv.secondGatherCall_candidate k hkF c hin
-      have hheavy1 : ∀ v : Bool, P.f + 1 ≤ valueCount g (some v) →
+      have hFirstGatherCoreAboveThreshold : ∀ v : Bool, P.f + 1 ≤ valueCount g (some v) →
           ∃ S, (firstGather s).core = some S ∧ S.card - P.f ≤ AcceptedPairs.count S v := by
         intro v hcnt
         obtain ⟨kh, hkhg, hkhF⟩ := exists_correct_filter hInv.F_card
@@ -809,12 +803,13 @@ theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l
       have hcert : OutputCertificate P s (gradeOf P g) := by
         cases hout : gradeOf P g with
         | grade2 v =>
-          refine ⟨⟨C, hC, count_aboveThreshold_of_subMap hmem (gradeOf_grade2 hout)⟩, hheavy1 v ?_⟩
+          refine ⟨⟨C, hC, count_aboveThreshold_of_subMap hmem (gradeOf_grade2 hout)⟩,
+            hFirstGatherCoreAboveThreshold v ?_⟩
           have := gradeOf_grade2 hout
           omega
         | grade1 v =>
           obtain ⟨hBcnt, hBnotA⟩ := gradeOf_grade1 hout
-          refine ⟨hheavy1 v hBcnt, hsupp (!v) ?_⟩
+          refine ⟨hFirstGatherCoreAboveThreshold v hBcnt, hsupp (!v) ?_⟩
           simp only [Bool.not_not]
           rw [card_ne_valueCount]
           have := hBnotA v
@@ -896,7 +891,8 @@ theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l
         have hlt := hcs.2
         omega
       · exact hInv.F_card
-    · rw [Gather.SpecState.corrupt_F, Gather.SpecState.corrupt_F, hInv.secondGatherF_eq_firstGatherF]
+    · rw [Gather.SpecState.corrupt_F, Gather.SpecState.corrupt_F,
+        hInv.secondGatherF_eq_firstGatherF]
     · intro k v hv
       rw [Gather.corrupt_val] at hv
       rw [Gather.corrupt_call]
@@ -951,16 +947,14 @@ theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l
 /-! ### The relation -/
 
 /-- The exclusion certificate: the first gather's core counts `b` below
-`|S| − f`, so no later candidate is `b`. Frozen — the core is write-once. -/
+`|S| − f`, so no later candidate is `b`. It stands — the core is write-once. -/
 def ExclusionEvidence (P : Parameters) (s : RoundStateOverGatherSpecifications P.n) (b : Bool) :
   Prop :=
   ∃ S, (firstGather s).core = some S ∧ AcceptedPairs.count S b < S.card - P.f
 
 /-- The refinement relation of the round over the gather specifications. -/
-structure SpecificationRelation (P : Parameters) (s : RoundStateOverGatherSpecifications P.n) (t :
-  GBCA.SpecState
-  P.n)
-  : Prop where
+structure SpecificationRelation (P : Parameters) (s : RoundStateOverGatherSpecifications P.n)
+    (t : GBCA.SpecState P.n) : Prop where
   /-- The invariant. -/
   invariant : Invariant P s
   /-- The call records agree. -/
@@ -976,12 +970,12 @@ structure SpecificationRelation (P : Parameters) (s : RoundStateOverGatherSpecif
   exclusion is written inside the first return's run, which announces that
   bit. -/
   excluded_bound : ∀ b ∈ t.excluded, ∃ β, bound s = some β ∧ b = !β
-  /-- The grade-2 guard is certified by a value heavy in the second gather's
-  core. -/
+  /-- The grade-2 guard is certified by a value on at least `|S| − f` entries
+  of the second gather's core. -/
   grade2_evidence : t.grade = some true → ∃ S v, (secondGather s).core = some S ∧
     S.card - P.f ≤ AcceptedPairs.count S (some v)
-  /-- The grade-0 guard is certified by the second gather's core being light
-  at both bits. -/
+  /-- The grade-0 guard is certified by the second gather's core carrying each
+  bit on at most `f` entries. -/
   grade0_evidence : t.grade = some false → ∃ S, (secondGather s).core = some S ∧
     ∀ v, AcceptedPairs.count S (some v) ≤ P.f
 
@@ -994,13 +988,11 @@ theorem specificationRelation_init (P : Parameters) (r : ℕ) :
       Gather.SpecState.initial, GBCA.SpecState.initial, ProcessRecord.initial]
 
 /-- **Broadcast compatibility**: the relation is preserved by corrupting both systems at once. -/
-theorem specificationRelation_corrupt {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {t :
-  GBCA.SpecState
-  P.n}
-    (hR : SpecificationRelation P s t) (id : Fin P.n) :
-    SpecificationRelation P (corruptAll P id (Gather.SpecState.corrupt P) (Gather.SpecState.corrupt
-      P) s)
-      (t.corrupt P id) := by
+theorem specificationRelation_corrupt {r : ℕ} {s : RoundStateOverGatherSpecifications P.n}
+    {t : GBCA.SpecState P.n} (hR : SpecificationRelation P s t) (id : Fin P.n) :
+    SpecificationRelation P
+    (corruptAll P id (Gather.SpecState.corrupt P) (Gather.SpecState.corrupt P) s)
+    (t.corrupt P id) := by
   refine ⟨hR.invariant.step (r := r) (StepOverGatherSpecifications.fail s id) (by rw
     [PMF.mem_support_pure_iff]),
     ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
@@ -1033,12 +1025,12 @@ theorem specificationRelation_corrupt {r : ℕ} {s : RoundStateOverGatherSpecifi
 
 /-- **The row-wise step**: every row of the round is answered by a weak run of the graded agreement
 specification, the relation restored. -/
-theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateOverGatherSpecifications
-  P.n)
-    (q₂ : GBCA.SpecState P.n) (hR : SpecificationRelation P q₁ q₂) (l₀ : Label P.n)
-    (μ : PMF (RoundStateOverGatherSpecifications P.n)) (hrow : StepOverGatherSpecifications P r q₁
-      l₀ μ)
-    (q₁' : RoundStateOverGatherSpecifications P.n) (hq₁' : q₁' ∈ μ.support) :
+theorem specificationRelation_row (P : Parameters) (r : ℕ)
+    (q₁ : RoundStateOverGatherSpecifications P.n) (q₂ : GBCA.SpecState P.n)
+    (hR : SpecificationRelation P q₁ q₂) (l₀ : Label P.n)
+    (μ : PMF (RoundStateOverGatherSpecifications P.n))
+    (hrow : StepOverGatherSpecifications P r q₁ l₀ μ) (q₁' : RoundStateOverGatherSpecifications P.n)
+    (hq₁' : q₁' ∈ μ.support) :
     ∃ q₂', ((l₀ = Silent.τ ∧ (GBCA.specInst P r).weakLSilent q₂ q₂') ∨
       (¬ l₀ = Silent.τ ∧ (GBCA.specInst P r).weakLStep q₂ l₀ q₂')) ∧
       SpecificationRelation P q₁' q₂' := by
@@ -1232,7 +1224,7 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateO
     obtain ⟨S, hS, hβS⟩ := hR.invariant.bound_core β hβ
     have hScard : P.n - P.f ≤ S.card := hR.invariant.firstGatherCore_card S hS
     have hSval := hR.invariant.firstGatherCore_val S hS
-    have hlight : ExclusionEvidence P q₁ (!β) :=
+    have hBelowThreshold : ExclusionEvidence P q₁ (!β) :=
       ⟨S, hS, by rw [hβS]; exact count_boundOfCore_belowThreshold hScard⟩
     have hexcl : ∀ b ∈ q₂.excluded, b = !β := by
       intro b hb
@@ -1256,13 +1248,13 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateO
     rw [hbndeq]
     cases out with
     | grade2 v =>
-      obtain ⟨⟨C₂, hC₂, hA_ev⟩, S', hS', hheavy⟩ := hcert
+      obtain ⟨⟨C₂, hC₂, hA_ev⟩, S', hS', hAboveThreshold⟩ := hcert
       obtain rfl : S = S' := by
         rw [hS] at hS'; exact Option.some.inj hS'
       have hC₂card : P.n - P.f ≤ C₂.card := hR.invariant.secondGatherCore_card C₂ hC₂
       have hβv : β = v := by
         rw [hβS]
-        exact boundOfCore_of_aboveThreshold hScard hheavy
+        exact boundOfCore_of_aboveThreshold hScard hAboveThreshold
       have hlive : v ∉ q₂.excluded := by
         intro hv
         have hb := hexcl v hv
@@ -1273,10 +1265,10 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateO
         · exact Or.inl rfl
         · cases b
           · exfalso
-            obtain ⟨S₂, hS₂, hlight₂⟩ := hR.grade0_evidence hgr
+            obtain ⟨S₂, hS₂, hCoreBelowThreshold⟩ := hR.grade0_evidence hgr
             rw [hC₂] at hS₂
             obtain rfl : C₂ = S₂ := Option.some.inj hS₂
-            have hlv := hlight₂ v
+            have hlv := hCoreBelowThreshold v
             omega
           · exact Or.inr rfl
       by_cases hbv : (!v) ∈ q₂.excluded
@@ -1321,7 +1313,7 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateO
           rw [hd0, Finset.mem_insert] at hb
           rcases hb with rfl | hb
           · rw [← hβv]
-            exact hlight
+            exact hBelowThreshold
           · simp at hb
         · intro b hb
           dsimp only at hb
@@ -1334,12 +1326,12 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateO
         · intro hgr
           exact absurd hgr (by simp)
     | grade1 v =>
-      obtain ⟨⟨S', hS', hheavy⟩, hw1⟩ := hcert
+      obtain ⟨⟨S', hS', hAboveThreshold⟩, hw1⟩ := hcert
       obtain rfl : S = S' := by
         rw [hS] at hS'; exact Option.some.inj hS'
       have hβv : β = v := by
         rw [hβS]
-        exact boundOfCore_of_aboveThreshold hScard hheavy
+        exact boundOfCore_of_aboveThreshold hScard hAboveThreshold
       have hlive : v ∉ q₂.excluded := by
         intro hv
         have hb := hexcl v hv
@@ -1387,7 +1379,7 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateO
           rw [hd0, Finset.mem_insert] at hb
           rcases hb with rfl | hb
           · rw [← hβv]
-            exact hlight
+            exact hBelowThreshold
           · simp at hb
         · intro b hb
           dsimp only at hb
@@ -1396,7 +1388,7 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateO
           · exact ⟨β, hβ, by rw [hβv]⟩
           · simp at hb
     | grade0 =>
-      obtain ⟨⟨C₂, hC₂, hClight⟩, hsupp1⟩ := hcert
+      obtain ⟨⟨C₂, hC₂, hCoreBelowThreshold⟩, hsupp1⟩ := hcert
       have hC₂card : P.n - P.f ≤ C₂.card := hR.invariant.secondGatherCore_card C₂ hC₂
       have hsupp : ∀ b : Bool, P.f + 1 ≤ (Finset.univ.filter
           (fun id' => q₂.call id' = some b ∨ id' ∈ q₂.F)).card := fun b =>
@@ -1411,7 +1403,7 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateO
             obtain ⟨S₂, v', hS₂, hh⟩ := hR.grade2_evidence hgr
             rw [hC₂] at hS₂
             obtain rfl : C₂ = S₂ := Option.some.inj hS₂
-            have hlv := hClight v'
+            have hlv := hCoreBelowThreshold v'
             omega
       by_cases hdne : q₂.excluded = ∅
       · have hexclude : (GBCA.specInst P r).LStep q₂ Silent.τ
@@ -1434,7 +1426,7 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateO
           dsimp only at hb
           rw [hdne, Finset.mem_insert] at hb
           rcases hb with rfl | hb
-          · exact hlight
+          · exact hBelowThreshold
           · simp at hb
         · intro b hb
           dsimp only at hb
@@ -1445,7 +1437,7 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateO
         · intro hgr
           exact absurd hgr (by simp)
         · intro _
-          exact ⟨C₂, hC₂, hClight⟩
+          exact ⟨C₂, hC₂, hCoreBelowThreshold⟩
       · obtain ⟨b, hb⟩ := Finset.nonempty_iff_ne_empty.mpr hdne
         have hbeq := hexcl b hb
         subst hbeq
@@ -1456,7 +1448,7 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q₁ : RoundStateO
         · intro hgr
           exact absurd hgr (by simp)
         · intro _
-          exact ⟨C₂, hC₂, hClight⟩
+          exact ⟨C₂, hC₂, hCoreBelowThreshold⟩
   | fail id =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'

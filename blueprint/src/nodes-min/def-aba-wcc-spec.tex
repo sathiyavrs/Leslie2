@@ -1,8 +1,8 @@
 \begin{definition}[The coin specification]
   \label{def:aba-wcc-spec}
   \lean{PLTS.ABA.WCC.Step}\lean{PLTS.ABA.WCC.specFamily}\leanok
-  \uses{def:aba-labels, def:aba-params, def:idle-family}
+  \uses{def:aba-labels, def:aba-parameters, def:idle-family}
   Transition System 3 as a round-indexed instance and as the $\mathbb{N}$-indexed family over it, its call carrying the two rows \leandeclnamed{callRecord}{PLTS.ABA.WCC.Step.callRecord} and \leandeclnamed{callResolve}{PLTS.ABA.WCC.Step.callResolve}: \leandecl{PLTS.ABA.WCC.specInst} and \leandecl{PLTS.ABA.WCC.specFamily}.
-  The resolving row is the recorded access at which the count \leandeclnamed{threshold}{PLTS.ABA.WCC.SpecState.threshold}, taken over the callers alone (D31), first passes $f$ at the recorded state \leandeclnamed{record}{PLTS.ABA.WCC.SpecState.record}, and it draws $val$ by the distribution of Definition~\ref{def:aba-params}.
+  The resolving row is the recorded access at which the count \leandeclnamed{threshold}{PLTS.ABA.WCC.SpecState.threshold}, taken over the callers alone (D31), first passes $f$ at the recorded state \leandeclnamed{record}{PLTS.ABA.WCC.SpecState.record}, and it draws $val$ by the distribution of Definition~\ref{def:aba-parameters}.
   An access need not be recorded: the loop row \leandeclnamed{callLoop}{PLTS.ABA.WCC.Step.callLoop} carries a call at every state and records no caller, so the scheduler may defer the resolution past any number of calls.
 \end{definition}

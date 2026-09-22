@@ -530,7 +530,7 @@ theorem firstCall_getElem? {n : ℕ} :
 
 /-- A first `callABA id _` inside a prefix is a first `callABA id _` of the
 whole list, at a position below the prefix length. -/
-theorem firstCall_take_pullback {n : ℕ} {L : List (Label n)} {m : ℕ} {id : Fin n}
+theorem firstCall_of_take {n : ℕ} {L : List (Label n)} {m : ℕ} {id : Fin n}
     {b : Bool} (h : firstCall (L.take m) id = some b) :
     ∃ k : ℕ, k < m ∧ L[k]? = some (Label.callABA id b) ∧
       ∀ k' < k, ∀ b', L[k']? ≠ some (Label.callABA id b') := by
@@ -830,7 +830,7 @@ private theorem exists_retSite (P : Parameters) {pe : ProbabilisticExecution (sp
   have h_firstf : firstCall ((labs.filter p).take m) id' = some b' := by
     rw [← h_take, firstCall_filter hpcall]
     exact h_first
-  obtain ⟨k, hk_lt, hk, hmin⟩ := firstCall_take_pullback h_firstf
+  obtain ⟨k, hk_lt, hk, hmin⟩ := firstCall_of_take h_firstf
   refine ⟨k, hk_lt, ?_, ?_⟩
   · rw [← h_t, Seq.ofList_get?]
     exact hk

@@ -11,7 +11,7 @@ import Leslie2Protocols.ABA.Composition.HybridAndSubstitution
 # The core-simulation invariant: step inversion and preservation
 
 Stages A and B of the proof that `hybridSpecificationStateRelation` is a simulation relation
-(`DESIGN-CoreSim.md`), on top of the relation and invariant of
+(`DESIGN-HybridRefinesSpecification.md`), on top of the relation and invariant of
 `HybridRefinesSpecification/Relation.lean`.
 
 * **Stage A** — step inversion for `hybrid`: one lemma per visible label class (`callABA`, `retABA`,
@@ -91,8 +91,9 @@ theorem hybrid_step_callABA (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
         obtain rfl : G = G' :=
           (pure_inj (gbcaSpecificationFamily_idle_inversion P hG (by simp) rfl not_false)).symm
         obtain rfl : A = A' := (pure_inj (abaNetworkStep_callABA hA)).symm
-        obtain rfl : ω = PMF.pure o := wccFamily_idle_inversion P (by simp) rfl (by simp [Label.isFail])
-          ((System.mapIdle_step_some (coinLabelMap_inl (Label.callABA id b)) _).mp hW)
+        obtain rfl : ω = PMF.pure o :=
+          wccFamily_idle_inversion P (by simp) rfl (by simp [Label.isFail])
+            ((System.mapIdle_step_some (coinLabelMap_inl (Label.callABA id b)) _).mp hW)
         rcases roundLoopStep_callABA_own (hall id) with ⟨hh, hin, hx0⟩ | ⟨hloop, hx0⟩
         · obtain rfl : C' = Function.update C id ((C id).setProcess { (C id).process with
               input := some b, estimate := some b, round := 0, phase := .toCallG }) :=
@@ -177,8 +178,9 @@ theorem hybrid_step_retABA (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
           (pure_inj (gbcaSpecificationFamily_idle_inversion P hG (by simp) rfl not_false)).symm
         obtain ⟨hsent, hA'⟩ := abaNetworkStep_retABA hA
         obtain rfl : A = A' := (pure_inj hA').symm
-        obtain rfl : ω = PMF.pure o := wccFamily_idle_inversion P (by simp) rfl (by simp [Label.isFail])
-          ((System.mapIdle_step_some (coinLabelMap_inl (Label.retABA id b)) _).mp hW)
+        obtain rfl : ω = PMF.pure o :=
+          wccFamily_idle_inversion P (by simp) rfl (by simp [Label.isFail])
+            ((System.mapIdle_step_some (coinLabelMap_inl (Label.retABA id b)) _).mp hW)
         rcases roundLoopStep_retABA_own (hall id) with ⟨hh, hcnt, hret, hx0⟩ | ⟨hh, hx0⟩
         · have hnF : id ∉ ABAState.F (C, A) := (corrupted_eq_false_iff hcorr id).mp hh
           obtain rfl : C' = Function.update C id
@@ -227,9 +229,8 @@ room. The round specifications and the coin oracle each corrupt their own copy o
 network corrupts the view's; the named round loop replaces its own program by writing the flag
 (D23), and every other round loop stands still (D1). -/
 theorem hybrid_step_fail (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
-    (C : ∀ _ : Fin P.n, RoundLoopRecord P.n) (A : ABANetworkState P.n)
-    (o : ℕ → WCC.SpecState P.n) (id : Fin P.n)
-    (hcorr : ∀ k, ABAState.corrupted (C, A) k = true ↔ k ∈ ABAState.F (C, A))
+    (C : ∀ _ : Fin P.n, RoundLoopRecord P.n) (A : ABANetworkState P.n) (o : ℕ → WCC.SpecState P.n)
+    (id : Fin P.n) (hcorr : ∀ k, ABAState.corrupted (C, A) k = true ↔ k ∈ ABAState.F (C, A))
     (μ : PMF (HybridState P)) :
     (hybrid P).step (G, C, A, o) (.fail id) μ ↔
       id ∉ ABAState.F (C, A) ∧ (ABAState.F (C, A)).card < P.f ∧
@@ -359,8 +360,9 @@ theorem hybrid_step_tau (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
           hybridExtended_visible_inversion P (by simp) hpre
         obtain ⟨X, hstepG, rfl⟩ := gbcaSpecificationFamily_owned_step P rfl (by simp) rfl hG
         obtain rfl : A = A' := (pure_inj (abaNetworkStep_callG hA)).symm
-        obtain rfl : ω = PMF.pure o := wccFamily_idle_inversion P (by simp) rfl (by simp [Label.isFail])
-          ((System.mapIdle_step_some (coinLabelMap_inl (Label.callG r id b)) _).mp hW)
+        obtain rfl : ω = PMF.pure o :=
+          wccFamily_idle_inversion P (by simp) rfl (by simp [Label.isFail])
+            ((System.mapIdle_step_some (coinLabelMap_inl (Label.callG r id b)) _).mp hW)
         obtain ⟨-, hph, hr, hest, hx0⟩ := roundLoopStep_callG_own (hall id)
         obtain rfl : C' = Function.update C id
             ((C id).setProcess { (C id).process with phase := .awaitG }) :=
@@ -376,8 +378,9 @@ theorem hybrid_step_tau (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
           hybridExtended_visible_inversion P (by simp) hpre
         obtain ⟨X, hstepG, rfl⟩ := gbcaSpecificationFamily_owned_step P rfl (by simp) rfl hG
         obtain rfl : A = A' := (pure_inj (abaNetworkStep_retG hA)).symm
-        obtain rfl : ω = PMF.pure o := wccFamily_idle_inversion P (by simp) rfl (by simp [Label.isFail])
-          ((System.mapIdle_step_some (coinLabelMap_inl (Label.retG r id out bnd)) _).mp hW)
+        obtain rfl : ω = PMF.pure o :=
+          wccFamily_idle_inversion P (by simp) rfl (by simp [Label.isFail])
+            ((System.mapIdle_step_some (coinLabelMap_inl (Label.retG r id out bnd)) _).mp hW)
         obtain ⟨-, hph, hr, hx0⟩ := roundLoopStep_retG_own (hall id)
         obtain rfl : C' = Function.update C id ((C id).setProcess
             { (C id).process with
@@ -429,7 +432,7 @@ theorem hybrid_step_tau (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
           refine Or.inr (Or.inr (Or.inr (Or.inr (Or.inr ⟨r, id, c, μw',
             PMF.pure (ABAState.stepRound (C, A) id c), hstepW,
             Or.inl ⟨hph, hr, rfl⟩, ?_⟩))))
-          rw [PMF.pure_bind, ABAState.stepRound_plain C A id c hgr]
+          rw [PMF.pure_bind, ABAState.stepRound_of_not_grade2 C A id c hgr]
         · obtain rfl : C = C' := (roundLoopRecords_id fun i => by
             by_cases hi : i = id
             · subst hi; exact hx0
@@ -1117,7 +1120,7 @@ theorem Invariant.step_fail {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
 exclusion set. `down_settled`'s round-`r` corner needs "a call at round `r` implies current
 round `≥ r`", a fact `Invariant` doesn't carry explicitly — handed off. The value-transport
 corners lean on the exclusion's own D15 guard: the spared bit `!b` keeps `f + 1` F-blind call
-support at round `r`, whose derived correct caller pins `!b` against every standing
+support at round `r`, whose derived correct caller determines `!b` at every standing
 commitment. -/
 theorem Invariant.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (r : ℕ)
@@ -1273,7 +1276,7 @@ theorem Invariant.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
             rw [← hExcludedNe (r' + 1) h1]; exact hlast.2
           by_cases hexcluded0 : (g r').excluded = ∅
           · -- round `r'` was fresh before this exclusion, hence already grade-0-blocked upward;
-            -- `estimate_previous` pins `id`'s estimate to the agreeing coin's bit.
+            -- `estimate_previous` fixes `id`'s estimate at the agreeing coin's bit.
             have hnoC : (g (r' + 1)).grade ≠ some false :=
               fun hh => hI.no_grade0Lock_succ r' v hcoin (by rw [hexcluded0]; simp) hh
             have hround1 : (c.processes id).round = r' + 1 := by
@@ -1304,7 +1307,7 @@ theorem Invariant.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
               · rcases hw0 with hh | hh
                 · rw [hcoin] at hh; simp only [CoinValue.bit.injEq] at hh; rw [hh]
                 · rw [hcoin] at hh; simp at hh
-          · -- round `r'` already had an excluded bit, which the live pair pins to `!v`:
+          · -- round `r'` already had an excluded bit, which the live pair fixes at `!v`:
             -- the pre-exclude pair holds and the old `agree_locked` applies
             have hpairold : (!v) ∈ (g r').excluded ∧ v ∉ (g r').excluded := by
               rw [hExcludedSelf'] at hbr
@@ -2689,9 +2692,8 @@ theorem Invariant.commit_up {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
         exact absurd hbb (by cases b <;> simp)
 
 /-- Grade-0 locks propagate downward to every earlier round, by iterating `grade0Lock_chain`. -/
-theorem Invariant.grade0Lock_chain_down {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState
-  P}
-    {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) :
+theorem Invariant.grade0Lock_chain_down {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
+    {c : ABAState P} {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) :
     ∀ r r', r ≤ r' → (g r').grade = some false → (g r).grade = some false := by
   intro r r' hrr'
   induction r', hrr' using Nat.le_induction with

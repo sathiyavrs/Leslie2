@@ -1,5 +1,5 @@
 \begin{definition}[Probabilistic execution and its path measure]
-  \label{def:probexec}
+  \label{def:probabilistic-execution}
   \lean{PLTS.ProbabilisticExecution}\leanok
   \uses{def:system, def:exec}
   A \emph{probabilistic execution} of $sys$ is an initial distribution $initState : \operatorname{PMF} State$ together with a \emph{scheduler} that, at each finite history, returns a sub-distribution over the next $(l, \mu)$ move (or halts).

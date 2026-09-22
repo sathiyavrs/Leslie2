@@ -13,7 +13,7 @@ import Mathlib.Data.Finmap
 # The implementation of a protocol
 
 The implementation presents the protocol as it runs: `n` programs, one per process,
-beside one network adversary holding the message sets, the DECIDED sets and
+beside one network holding the message sets, the DECIDED sets and
 the corrupted set with its budget, beside the coin oracle. A program reads its
 own records, its own received sets and its own replacement flag, and nothing else
 about corruption: not the corrupted set, not the budget, not another process's
@@ -23,7 +23,7 @@ Everything of that shape which does not depend on the graded-agreement implement
 here once. The parameters are the round message type `M`, the per-process per-round record `S`, and
 the implementation's own rows, given as a relation `roundStep` embedded in one constructor of the
 program table. An implementation supplies the three and inherits the round loop, the DECIDED sets,
-the coin handshake, corruption, the network adversary, the composition pipeline and the inversion
+the coin handshake, corruption, the network, the composition pipeline and the inversion
 lemmas.
 
 ## The division of rows
@@ -36,7 +36,7 @@ corruption, and the same five label classes at another process — is answered b
 premise `roundOwn` is what the inversion lemmas consume: a program's row on a label outside
 `roundOwn j` is one of the rows below, whichever implementation is being read.
 
-## The network adversary
+## The network
 
 The adversary's table is independent of the implementation except in two
 places. The graded-agreement call and its Byzantine handshake row sent the
@@ -54,13 +54,13 @@ Two parameters carry it. `ghostStep` writes it. On every row, the record of
 the round the label names is replaced by `ghostStep` of that label, the
 network's state and the record standing there, and the records of the other
 rounds are left where they stand; a label naming no round leaves the whole
-ghost alone. `ghostOut` reads it out. It is a relation on the bit a return
+ghost alone. `ghostOutput` reads it out. It is a relation on the bit a return
 announces: the network's state, the round, the process being answered, the
 graded outcome and the bit. It is read by the two graded-agreement return rows —
 `retG`, and `byzantineRetG` at a replaced program — each of which fires only with
 the bound bit its label carries standing in it. What the read decides is the bit
 announced and not whether the row fires: each implementation below instantiates the
-relation so that it admits a bit at every state (`ghostOut_total`,
+relation so that it admits a bit at every state (`ghostOutput_total`,
 `ABA/GhostErasure/GhostFreeSystem.lean`). An implementation that computes the
 announced bit instantiates the relation as an equation against it. An implementation
 that leaves the announcement to the network instantiates it as the full
@@ -68,10 +68,10 @@ relation, and the bit is unconstrained.
 
 The content is the implementation's own. ABDY22's implementation and the gather-based one
 hold different records and write them at different rows, so `G`, `ghostStep`
-and `ghostOut` are parameters here, as `M`, `S`, `roundStep` and `callPayload`
+and `ghostOutput` are parameters here, as `M`, `S`, `roundStep` and `callPayload`
 are. Each of the two writes the record at the first return of a round, from
 the sent sets and the corrupted set, and reads the same record back at every
-later return of that round. Each instantiates `ghostOut` as the equation
+later return of that round. Each instantiates `ghostOutput` as the equation
 between the announced bit and that record.
 -/
 
@@ -173,9 +173,9 @@ def roundOf {n : ℕ} {M : Type} : ExtendedLabel n M → Option ℕ
   | Sum.inr (.byzantineCallW r _) => some r
   | Sum.inr (.byzantineRetW r _ _) => some r
 
-/-! ### The network adversary's state -/
+/-! ### The network's state -/
 
-/-- The state of the network adversary: the round-tagged message sets, the
+/-- The state of the network: the round-tagged message sets, the
 DECIDED sets, the corrupted set with its budget, and the ghost record of every
 round. -/
 structure NetworkState (n : ℕ) (M : Type) (G : Type) : Type where
@@ -268,7 +268,7 @@ here: the participant's, or an idle one.
 
 A corruption replaces the program of the process it names (D23). Every
 participant's row carries the health guard `c.corrupted = false`, so the record
-freezes at the corruption; `failSelf` is the row that writes the flag, and
+stays as it is at the corruption; `failSelf` is the row that writes the flag, and
 `corruptedIdle` is the replaced program. That self-loop is taken on every label
 other than `τ` and the labels of `actsAt j`, on which the replaced program has
 no row at all. -/
@@ -446,7 +446,7 @@ inductive ProgramStep (P : Parameters) (M S : Type)
       (r : ℕ) (k : Fin P.n) (b : Bool) :
       ProgramStep P M S roundStep j (c, p) (Sum.inr (.byzantineRetW r k b)) (PMF.pure (c, p))
 
-/-! ### The network adversary
+/-! ### The network
 
 The one local state that holds what no process may see: the sent sets, the corrupted set
 and the budget. It participates in every send and every delivery — a send by
@@ -454,126 +454,126 @@ recording the message, a delivery by checking that the message is sent — and
 it is the sole authority on the Byzantine labels, where its `k ∈ F` guard is
 the whole authorisation. -/
 
-/-- The step relation of the network adversary. All transitions are Dirac.
+/-- The step relation of the network. All transitions are Dirac.
 `callPayload id b` is the message the graded-agreement call of `id` at `b`
 multicasts. The successor of every row is that row's effect on the sent sets,
 the DECIDED sets and the corrupted set, with the ghost record of the round the
 label names written by `ghostStep`. The two graded-agreement returns fire only
-with the bound bit their label carries standing in `ghostOut` at the state
+with the bound bit their label carries standing in `ghostOutput` at the state
 before the row, the round, the process being answered and the graded
 outcome. -/
 inductive NetworkStep (P : Parameters) (M G : Type) [DecidableEq M]
     (callPayload : Fin P.n → Bool → M)
     (ghostStep : ExtendedLabel P.n M → NetworkState P.n M G → G → G)
-    (ghostOut : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop) :
+    (ghostOutput : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop) :
     NetworkState P.n M G → ExtendedLabel P.n M → PMF (NetworkState P.n M G) → Prop
   /-- The network's half of a round multicast: sent the message under its sender. Authenticity is
   the sender's joint participation (D5). -/
   | gbcaSend (s : NetworkState P.n M G) (r : ℕ) (j : Fin P.n) (m : M) :
-      NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inr (.gbcaSend r j m))
+      NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inr (.gbcaSend r j m))
         (PMF.pure ((s.recordGBCASend r j m).writeGhost ghostStep (Sum.inr (.gbcaSend r j m))))
   /-- The network's half of a round delivery: the message must be sent under the named sender.
   Delivery does not consume it (D5). -/
   | gbcaDeliver (s : NetworkState P.n M G) (r : ℕ) (i j : Fin P.n) (m : M)
       (h : m ∈ s.sent r j) :
-      NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inr (.gbcaDeliver r i j m))
+      NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inr (.gbcaDeliver r i j m))
         (PMF.pure (s.writeGhost ghostStep (Sum.inr (.gbcaDeliver r i j m))))
   /-- The network's half of a DECIDED relay: the payload must not be sent
   yet (D12′). -/
   | decidedSend (s : NetworkState P.n M G) (j : Fin P.n) (b : Bool) (h : b ∉ s.decidedSent j) :
-      NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inr (.decidedSend j b))
+      NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inr (.decidedSend j b))
         (PMF.pure ((s.recordDecided j b).writeGhost ghostStep (Sum.inr (.decidedSend j b))))
   /-- The network's half of a DECIDED delivery: the payload must be sent
   under the named sender (D12′). -/
   | decidedDeliver (s : NetworkState P.n M G) (i j : Fin P.n) (b : Bool) (h : b ∈ s.decidedSent j) :
-      NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inr (.decidedDeliver i j b))
+      NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inr (.decidedDeliver i j b))
         (PMF.pure (s.writeGhost ghostStep (Sum.inr (.decidedDeliver i j b))))
   /-- The network's half of the fused coin return: sent the published payload
   (D10, D12′). -/
   | retWPublish (s : NetworkState P.n M G) (r : ℕ) (id : Fin P.n) (c : Bool) (b : Bool) :
-      NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inr (.retWPublish r id c b))
+      NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inr (.retWPublish r id c b))
         (PMF.pure ((s.recordDecided id b).writeGhost ghostStep (Sum.inr (.retWPublish r id c b))))
   /-- A graded-agreement call against an already-called round record sends nothing. -/
   | gbcaCallLoop (s : NetworkState P.n M G) (r : ℕ) (id : Fin P.n) (b : Bool) :
-      NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inr (.gbcaCallLoop r id b))
+      NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inr (.gbcaCallLoop r id b))
         (PMF.pure (s.writeGhost ghostStep (Sum.inr (.gbcaCallLoop r id b))))
   /-- A Byzantine graded-agreement call (D11): authorised here, and the
   message its call multicasts sent here. -/
   | byzantineCallG (s : NetworkState P.n M G) (r : ℕ) (k : Fin P.n) (b : Bool) (hF : k ∈ s.F) :
-      NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inr (.byzantineCallG r k b))
+      NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inr (.byzantineCallG r k b))
         (PMF.pure ((s.recordGBCASend r k (callPayload k b)).writeGhost ghostStep
           (Sum.inr (.byzantineCallG r k b))))
   /-- A Byzantine graded-agreement call against an already-called round record (D11). -/
   | byzantineCallGLoop (s : NetworkState P.n M G) (r : ℕ) (k : Fin P.n) (b : Bool)
       (hF : k ∈ s.F) :
-      NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inr (.byzantineCallGLoop r k b))
+      NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inr (.byzantineCallGLoop r k b))
         (PMF.pure (s.writeGhost ghostStep (Sum.inr (.byzantineCallGLoop r k b))))
   /-- A Byzantine graded-agreement return (D11). The bound bit stands in the
   ghost relation of the round, as at a return to an unreplaced program: a
   replaced program is answered, and the announcement is the network's. -/
   | byzantineRetG (s : NetworkState P.n M G) (r : ℕ) (k : Fin P.n) (out : GBCAOutput) (bnd : Bool)
-      (hF : k ∈ s.F) (hbnd : ghostOut s r k out bnd) :
-      NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inr (.byzantineRetG r k out bnd))
+      (hF : k ∈ s.F) (hbnd : ghostOutput s r k out bnd) :
+      NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inr (.byzantineRetG r k out bnd))
         (PMF.pure (s.writeGhost ghostStep (Sum.inr (.byzantineRetG r k out bnd))))
   /-- A Byzantine coin call (D11). -/
   | byzantineCallW (s : NetworkState P.n M G) (r : ℕ) (k : Fin P.n) (hF : k ∈ s.F) :
-      NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inr (.byzantineCallW r k))
+      NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inr (.byzantineCallW r k))
         (PMF.pure (s.writeGhost ghostStep (Sum.inr (.byzantineCallW r k))))
   /-- A Byzantine coin return (D11). -/
   | byzantineRetW (s : NetworkState P.n M G) (r : ℕ) (k : Fin P.n) (b : Bool) (hF : k ∈ s.F) :
-      NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inr (.byzantineRetW r k b))
+      NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inr (.byzantineRetW r k b))
         (PMF.pure (s.writeGhost ghostStep (Sum.inr (.byzantineRetW r k b))))
   /-- An external input is not the network's business. -/
   | callABAIdle (s : NetworkState P.n M G) (id : Fin P.n) (b : Bool) :
-      NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inl (.callABA id b))
+      NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inl (.callABA id b))
         (PMF.pure (s.writeGhost ghostStep (Sum.inl (.callABA id b))))
   /-- A return requires the returning process to have multicast the payload —
   a condition on its sent (D12′). -/
   | retABA (s : NetworkState P.n M G) (id : Fin P.n) (b : Bool) (h : b ∈ s.decidedSent id) :
-      NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inl (.retABA id b))
+      NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inl (.retABA id b))
         (PMF.pure (s.writeGhost ghostStep (Sum.inl (.retABA id b))))
   /-- A corrupted process returns whatever it likes (D23): its program has been
   replaced, so the DECIDED evidence the correct row asks for is not required of
   it. The authorisation is this component's `id ∈ F`, and the process's half is
   the replaced program's self-loop. -/
   | retByzantine (s : NetworkState P.n M G) (id : Fin P.n) (b : Bool) (hF : id ∈ s.F) :
-      NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inl (.retABA id b))
+      NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inl (.retABA id b))
         (PMF.pure (s.writeGhost ghostStep (Sum.inl (.retABA id b))))
   /-- The graded-agreement call multicasts: the network records the message. -/
   | callG (s : NetworkState P.n M G) (r : ℕ) (id : Fin P.n) (b : Bool) :
-      NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inl (.callG r id b))
+      NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inl (.callG r id b))
         (PMF.pure ((s.recordGBCASend r id (callPayload id b)).writeGhost ghostStep
           (Sum.inl (.callG r id b))))
   /-- A graded-agreement return sends nothing, and announces the round's bound
   bit: the label's `bnd` stands in the ghost relation of the round at this
   state. This is the one row of the development that reads the ghost. -/
   | retG (s : NetworkState P.n M G) (r : ℕ) (id : Fin P.n) (out : GBCAOutput) (bnd : Bool)
-      (hbnd : ghostOut s r id out bnd) :
-      NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inl (.retG r id out bnd))
+      (hbnd : ghostOutput s r id out bnd) :
+      NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inl (.retG r id out bnd))
         (PMF.pure (s.writeGhost ghostStep (Sum.inl (.retG r id out bnd))))
   /-- A coin call sends nothing. -/
   | callWIdle (s : NetworkState P.n M G) (r : ℕ) (id : Fin P.n) :
-      NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inl (.callW r id))
+      NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inl (.callW r id))
         (PMF.pure (s.writeGhost ghostStep (Sum.inl (.callW r id))))
   /-- An unfused coin return sends nothing. -/
   | retWIdle (s : NetworkState P.n M G) (r : ℕ) (id : Fin P.n) (c : Bool) :
-      NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inl (.retW r id c))
+      NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inl (.retW r id c))
         (PMF.pure (s.writeGhost ghostStep (Sum.inl (.retW r id c))))
   /-- Corruption (deviation D1): total, Dirac, budget-guarded; no process
   record keeps a copy. -/
   | fail (s : NetworkState P.n M G) (k : Fin P.n) (hnew : k ∉ s.F)
       (hbud : s.F.card < P.f) :
-      NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inl (.fail k))
+      NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inl (.fail k))
         (PMF.pure ((s.corrupt P k).writeGhost ghostStep (Sum.inl (.fail k))))
   /-- Byzantine round injection (D5, D11): the network multicasts on behalf of a corrupted
   sender. -/
   | byzantineGBCA (s : NetworkState P.n M G) (r : ℕ) (k : Fin P.n) (m : M) (hF : k ∈ s.F) :
-      NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inl .tau)
+      NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inl .tau)
         (PMF.pure ((s.recordGBCASend r k m).writeGhost ghostStep (Sum.inl .tau)))
   /-- Byzantine DECIDED injection (D12′): either or both bits, at any time, so
   a corrupted process may equivocate. -/
   | byzantineDecided (s : NetworkState P.n M G) (k : Fin P.n) (b : Bool) (hF : k ∈ s.F) :
-      NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inl .tau)
+      NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inl .tau)
         (PMF.pure ((s.recordDecided k b).writeGhost ghostStep (Sum.inl .tau)))
 
 /-! ### The automata and the composition pipeline -/
@@ -600,7 +600,7 @@ noncomputable def program (j : Fin P.n) : System (ProcessRecord P.n S) (Extended
 
 end Programs
 
-/-- The state of the implementation: the process family, the network adversary and
+/-- The state of the implementation: the process family, the network and
 the coin oracle. -/
 abbrev State (P : Parameters) (M S G : Type) : Type :=
   (∀ _ : Fin P.n, ProcessRecord P.n S) × (NetworkState P.n M G × (ℕ → WCC.SpecState P.n))
@@ -610,21 +610,21 @@ section NetworkAdversary
 variable (P : Parameters) (M G : Type) [DecidableEq M] [Inhabited G]
     (callPayload : Fin P.n → Bool → M)
     (ghostStep : ExtendedLabel P.n M → NetworkState P.n M G → G → G)
-    (ghostOut : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop)
+    (ghostOutput : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop)
 
-/-- The network adversary. -/
+/-- The network. -/
 noncomputable def network : System (NetworkState P.n M G) (ExtendedLabel P.n M) where
   init := NetworkState.initial P.n M G
-  step := NetworkStep P M G callPayload ghostStep ghostOut
+  step := NetworkStep P M G callPayload ghostStep ghostOutput
 
 @[simp] theorem network_init :
-    (network P M G callPayload ghostStep ghostOut).init
+    (network P M G callPayload ghostStep ghostOutput).init
       = NetworkState.initial P.n M G := rfl
 
 @[simp] theorem network_step (s : NetworkState P.n M G) (l : ExtendedLabel P.n M)
     (μ : PMF (NetworkState P.n M G)) :
-    (network P M G callPayload ghostStep ghostOut).step s l μ ↔
-      NetworkStep P M G callPayload ghostStep ghostOut s l μ :=
+    (network P M G callPayload ghostStep ghostOutput).step s l μ ↔
+      NetworkStep P M G callPayload ghostStep ghostOutput s l μ :=
   Iff.rfl
 
 end NetworkAdversary
@@ -636,22 +636,22 @@ variable (P : Parameters) (M S G : Type) [DecidableEq M] [Inhabited G]
       Prop)
     (callPayload : Fin P.n → Bool → M)
     (ghostStep : ExtendedLabel P.n M → NetworkState P.n M G → G → G)
-    (ghostOut : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop)
+    (ghostOutput : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop)
 
 /-- The three components in parallel, over the extended alphabet: the synchronised process group,
-the network adversary and the lifted oracle. -/
+the network and the lifted oracle. -/
 noncomputable def systemExtended : System (State P M S G) (ExtendedLabel P.n M) :=
   (System.synchronisedProduct (program P M S roundStep)).parallel
-    ((network P M G callPayload ghostStep ghostOut).parallel (coinOverExtendedAlphabet P M))
+    ((network P M G callPayload ghostStep ghostOutput).parallel (coinOverExtendedAlphabet P M))
 
 /-- The rendezvous alphabet hidden, the result read back over `Label n`. -/
 noncomputable def systemHidden : System (State P M S G) (Label P.n) :=
-  ((systemExtended P M S G roundStep callPayload ghostStep ghostOut).abstract
+  ((systemExtended P M S G roundStep callPayload ghostStep ghostOutput).abstract
     (networkEventLabels P.n)).relabel
 
 /-- **The implementation**: the group with the sub-protocol API hidden. -/
 noncomputable def system : System (State P M S G) (Label P.n) :=
-  (systemHidden P M S G roundStep callPayload ghostStep ghostOut).abstract
+  (systemHidden P M S G roundStep callPayload ghostStep ghostOutput).abstract
     (Label.hiddenAPI P.n)
 
 end Pipe
@@ -837,10 +837,8 @@ theorem programStep_retW_foreign {r : ℕ} {id : Fin P.n} {co : Bool} (hid : id 
 
 /-- The process's own corruption (D23): the flag goes up on a program not yet
 replaced, and a replaced program stands still. -/
-theorem programStep_fail_own
-    (h : ProgramStep P M S roundStep j q (Sum.inl (.fail j)) ν) :
-    (q.1.corrupted = false ∧
-      ν = PMF.pure ({ q.1 with corrupted := true }, q.2)) ∨
+theorem programStep_fail_own (h : ProgramStep P M S roundStep j q (Sum.inl (.fail j)) ν) :
+    (q.1.corrupted = false ∧ ν = PMF.pure ({ q.1 with corrupted := true }, q.2)) ∨
     (q.1.corrupted = true ∧ ν = PMF.pure q) := by
   cases h
   case roundRow h' => exact (IsRoundRuleTable.own h').elim
@@ -1003,83 +1001,74 @@ theorem programStep_noStep {L : ExtendedLabel P.n M} (hc : q.1.corrupted = true)
 
 end Inversion
 
-/-! ### The network adversary's rules, by label class -/
+/-! ### The network's rules, by label class -/
 
 section NetInversion
 
 variable {P : Parameters} {M G : Type} [DecidableEq M]
     {callPayload : Fin P.n → Bool → M}
     {ghostStep : ExtendedLabel P.n M → NetworkState P.n M G → G → G}
-    {ghostOut : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop}
+    {ghostOutput : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop}
     {s : NetworkState P.n M G} {μ : PMF (NetworkState P.n M G)}
 
 /-- Every network transition is Dirac. -/
 theorem networkStep_dirac {l : ExtendedLabel P.n M}
-    (h : NetworkStep P M G callPayload ghostStep ghostOut s l μ) :
+    (h : NetworkStep P M G callPayload ghostStep ghostOutput s l μ) :
     ∃ s', μ = PMF.pure s' := by
   cases h <;> exact ⟨_, rfl⟩
 
 theorem networkStep_gbcaSend {r : ℕ} {j : Fin P.n} {m : M}
-    (h : NetworkStep P M G callPayload ghostStep ghostOut s
-      (Sum.inr (.gbcaSend r j m)) μ) :
+    (h : NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inr (.gbcaSend r j m)) μ) :
     μ = PMF.pure ((s.recordGBCASend r j m).writeGhost ghostStep (Sum.inr (.gbcaSend r j m))) := by
   cases h; rfl
 
 theorem networkStep_gbcaDeliver {r : ℕ} {i j : Fin P.n} {m : M}
-    (h : NetworkStep P M G callPayload ghostStep ghostOut s
-      (Sum.inr (.gbcaDeliver r i j m)) μ) :
-    m ∈ s.sent r j ∧
-      μ = PMF.pure (s.writeGhost ghostStep (Sum.inr (.gbcaDeliver r i j m))) := by
+    (h : NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inr (.gbcaDeliver r i j m)) μ) :
+    m ∈ s.sent r j ∧ μ = PMF.pure (s.writeGhost ghostStep (Sum.inr (.gbcaDeliver r i j m))) := by
   cases h; exact ⟨by assumption, rfl⟩
 
 theorem networkStep_decidedSend {j : Fin P.n} {b : Bool}
-    (h : NetworkStep P M G callPayload ghostStep ghostOut s
-      (Sum.inr (.decidedSend j b)) μ) :
+    (h : NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inr (.decidedSend j b)) μ) :
     b ∉ s.decidedSent j ∧ μ = PMF.pure (s.recordDecided j b) := by
   cases h; exact ⟨by assumption, rfl⟩
 
 theorem networkStep_decidedDeliver {i j : Fin P.n} {b : Bool}
-    (h : NetworkStep P M G callPayload ghostStep ghostOut s
-      (Sum.inr (.decidedDeliver i j b)) μ) :
-    b ∈ s.decidedSent j ∧ μ = PMF.pure s := by
+    (h : NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inr (.decidedDeliver i j b)) μ)
+    : b ∈ s.decidedSent j ∧ μ = PMF.pure s := by
   cases h; exact ⟨by assumption, rfl⟩
 
 theorem networkStep_retWPublish {r : ℕ} {id : Fin P.n} {c b : Bool}
-    (h : NetworkStep P M G callPayload ghostStep ghostOut s
-      (Sum.inr (.retWPublish r id c b)) μ) :
-    μ = PMF.pure ((s.recordDecided id b).writeGhost ghostStep
-      (Sum.inr (.retWPublish r id c b))) := by
+    (h : NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inr (.retWPublish r id c b)) μ)
+    :
+    μ = PMF.pure ((s.recordDecided id b).writeGhost ghostStep (Sum.inr (.retWPublish r id c b))) :=
+    by
   cases h; rfl
 
 theorem networkStep_gbcaCallLoop {r : ℕ} {id : Fin P.n} {b : Bool}
-    (h : NetworkStep P M G callPayload ghostStep ghostOut s
-      (Sum.inr (.gbcaCallLoop r id b)) μ) :
+    (h : NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inr (.gbcaCallLoop r id b)) μ) :
     μ = PMF.pure (s.writeGhost ghostStep (Sum.inr (.gbcaCallLoop r id b))) := by
   cases h; rfl
 
 theorem networkStep_byzantineCallGLoop {r : ℕ} {k : Fin P.n} {b : Bool}
-    (h : NetworkStep P M G callPayload ghostStep ghostOut s
+    (h : NetworkStep P M G callPayload ghostStep ghostOutput s
       (Sum.inr (.byzantineCallGLoop r k b)) μ) :
     k ∈ s.F ∧
       μ = PMF.pure (s.writeGhost ghostStep (Sum.inr (.byzantineCallGLoop r k b))) := by
   cases h; exact ⟨by assumption, rfl⟩
 
 theorem networkStep_byzantineCallW {r : ℕ} {k : Fin P.n}
-    (h : NetworkStep P M G callPayload ghostStep ghostOut s
-      (Sum.inr (.byzantineCallW r k)) μ) :
+    (h : NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inr (.byzantineCallW r k)) μ) :
     k ∈ s.F ∧ μ = PMF.pure (s.writeGhost ghostStep (Sum.inr (.byzantineCallW r k))) := by
   cases h; exact ⟨by assumption, rfl⟩
 
 theorem networkStep_byzantineRetW {r : ℕ} {k : Fin P.n} {b : Bool}
-    (h : NetworkStep P M G callPayload ghostStep ghostOut s
-      (Sum.inr (.byzantineRetW r k b)) μ) :
-    k ∈ s.F ∧
-      μ = PMF.pure (s.writeGhost ghostStep (Sum.inr (.byzantineRetW r k b))) := by
+    (h : NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inr (.byzantineRetW r k b)) μ) :
+    k ∈ s.F ∧ μ = PMF.pure (s.writeGhost ghostStep (Sum.inr (.byzantineRetW r k b))) := by
   cases h; exact ⟨by assumption, rfl⟩
 
 theorem networkStep_byzantineCallG {r : ℕ} {k : Fin P.n} {b : Bool}
-    (h : NetworkStep P M G callPayload ghostStep ghostOut s
-      (Sum.inr (.byzantineCallG r k b)) μ) :
+    (h : NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inr (.byzantineCallG r k b)) μ)
+    :
     k ∈ s.F ∧ μ = PMF.pure ((s.recordGBCASend r k (callPayload k b)).writeGhost ghostStep
       (Sum.inr (.byzantineCallG r k b))) := by
   cases h; exact ⟨by assumption, rfl⟩
@@ -1087,15 +1076,14 @@ theorem networkStep_byzantineCallG {r : ℕ} {k : Fin P.n} {b : Bool}
 /-- A Byzantine graded-agreement return is authorised by the corrupted set, and
 the bound bit on its label stands in the round's ghost relation (D11). -/
 theorem networkStep_byzantineRetG {r : ℕ} {k : Fin P.n} {out : GBCAOutput} {bnd : Bool}
-    (h : NetworkStep P M G callPayload ghostStep ghostOut s
+    (h : NetworkStep P M G callPayload ghostStep ghostOutput s
       (Sum.inr (.byzantineRetG r k out bnd)) μ) :
-    k ∈ s.F ∧ ghostOut s r k out bnd ∧
+    k ∈ s.F ∧ ghostOutput s r k out bnd ∧
       μ = PMF.pure (s.writeGhost ghostStep (Sum.inr (.byzantineRetG r k out bnd))) := by
   cases h; exact ⟨by assumption, by assumption, rfl⟩
 
 theorem networkStep_callABA {id : Fin P.n} {b : Bool}
-    (h : NetworkStep P M G callPayload ghostStep ghostOut s
-      (Sum.inl (.callABA id b)) μ) :
+    (h : NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inl (.callABA id b)) μ) :
     μ = PMF.pure s := by
   cases h; rfl
 
@@ -1103,48 +1091,44 @@ theorem networkStep_callABA {id : Fin P.n} {b : Bool}
 or by its corruption (D23); the two rows share the label and the identity
 successor. -/
 theorem networkStep_retABA {id : Fin P.n} {b : Bool}
-    (h : NetworkStep P M G callPayload ghostStep ghostOut s
-      (Sum.inl (.retABA id b)) μ) :
+    (h : NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inl (.retABA id b)) μ) :
     (b ∈ s.decidedSent id ∨ id ∈ s.F) ∧ μ = PMF.pure s := by
   cases h
   case retABA => exact ⟨Or.inl (by assumption), rfl⟩
   case retByzantine => exact ⟨Or.inr (by assumption), rfl⟩
 
 theorem networkStep_callG {r : ℕ} {id : Fin P.n} {b : Bool}
-    (h : NetworkStep P M G callPayload ghostStep ghostOut s
-      (Sum.inl (.callG r id b)) μ) :
-    μ = PMF.pure ((s.recordGBCASend r id (callPayload id b)).writeGhost ghostStep
-      (Sum.inl (.callG r id b))) := by
+    (h : NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inl (.callG r id b)) μ) :
+    μ = PMF.pure
+    ((s.recordGBCASend r id (callPayload id b)).writeGhost ghostStep (Sum.inl (.callG r id b))) :=
+    by
   cases h; rfl
 
 /-- A graded-agreement return announces the round's ghost output: the bound bit
-on the label stands in `ghostOut` at the state the row starts from. -/
+on the label stands in `ghostOutput` at the state the row starts from. -/
 theorem networkStep_retG {r : ℕ} {id : Fin P.n} {out : GBCAOutput} {bnd : Bool}
-    (h : NetworkStep P M G callPayload ghostStep ghostOut s
-      (Sum.inl (.retG r id out bnd)) μ) :
-    ghostOut s r id out bnd ∧
-      μ = PMF.pure (s.writeGhost ghostStep (Sum.inl (.retG r id out bnd))) := by
+    (h : NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inl (.retG r id out bnd)) μ) :
+    ghostOutput s r id out bnd ∧ μ = PMF.pure
+    (s.writeGhost ghostStep (Sum.inl (.retG r id out bnd))) := by
   cases h; exact ⟨by assumption, rfl⟩
 
 theorem networkStep_callW {r : ℕ} {id : Fin P.n}
-    (h : NetworkStep P M G callPayload ghostStep ghostOut s
-      (Sum.inl (.callW r id)) μ) :
+    (h : NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inl (.callW r id)) μ) :
     μ = PMF.pure s := by
   cases h; rfl
 
 theorem networkStep_retW {r : ℕ} {id : Fin P.n} {c : Bool}
-    (h : NetworkStep P M G callPayload ghostStep ghostOut s
-      (Sum.inl (.retW r id c)) μ) :
+    (h : NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inl (.retW r id c)) μ) :
     μ = PMF.pure s := by
   cases h; rfl
 
 theorem networkStep_fail {k : Fin P.n}
-    (h : NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inl (.fail k)) μ) :
+    (h : NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inl (.fail k)) μ) :
     k ∉ s.F ∧ s.F.card < P.f ∧ μ = PMF.pure (s.corrupt P k) := by
   cases h; exact ⟨by assumption, by assumption, rfl⟩
 
 theorem networkStep_tau
-    (h : NetworkStep P M G callPayload ghostStep ghostOut s (Sum.inl .tau) μ) :
+    (h : NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inl .tau) μ) :
     (∃ (r : ℕ) (k : Fin P.n) (m : M), k ∈ s.F ∧ μ = PMF.pure (s.recordGBCASend r k m)) ∨
     (∃ (k : Fin P.n) (b : Bool), k ∈ s.F ∧ μ = PMF.pure (s.recordDecided k b)) := by
   cases h
@@ -1155,7 +1139,7 @@ end NetInversion
 
 /-! ### The network's own field algebra
 
-Each of the network adversary's three writes on the message record — a round multicast, a DECIDED
+Each of the network's three writes on the message record — a round multicast, a DECIDED
 multicast, and corruption — touches one field of the state and leaves the others alone, the ghost
 among them. The ghost write touches the ghost and nothing else. -/
 
@@ -1383,17 +1367,18 @@ section WithNet
 variable {G : Type} [DecidableEq M] [Inhabited G]
     {callPayload : Fin P.n → Bool → M}
     {ghostStep : ExtendedLabel P.n M → NetworkState P.n M G → G → G}
-    {ghostOut : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop}
+    {ghostOutput : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop}
 
 omit [IsRoundRuleTable P M S roundStep] in
 /-- The composite step relation of the group, unfolded to the hidden
 rendezvous case and the shared-label case. -/
 theorem systemHidden_step_iff (q : State P M S G) (l : Label P.n)
     (μ : PMF (State P M S G)) :
-    (systemHidden P M S G roundStep callPayload ghostStep ghostOut).step q l μ ↔
+    (systemHidden P M S G roundStep callPayload ghostStep ghostOutput).step q l μ ↔
       (l = .tau ∧ ∃ e : NetworkEvent P.n M,
-        (systemExtended P M S G roundStep callPayload ghostStep ghostOut).step q (Sum.inr e) μ) ∨
-      (systemExtended P M S G roundStep callPayload ghostStep ghostOut).step q (Sum.inl l) μ := by
+        (systemExtended P M S G roundStep callPayload ghostStep ghostOutput).step q (Sum.inr e) μ) ∨
+      (systemExtended P M S G roundStep callPayload ghostStep ghostOutput).step q
+        (Sum.inl l) μ := by
   constructor
   · rintro (⟨hτ, l', ⟨e, rfl⟩, hstep⟩ | ⟨-, hstep⟩)
     · exact Or.inl ⟨Sum.inl_injective hτ, e, hstep⟩
@@ -1407,11 +1392,11 @@ omit [IsRoundRuleTable P M S roundStep] in
 a label that survives the hiding. -/
 theorem system_step_iff (q : State P M S G) (l : Label P.n)
     (μ : PMF (State P M S G)) :
-    (system P M S G roundStep callPayload ghostStep ghostOut).step q l μ ↔
+    (system P M S G roundStep callPayload ghostStep ghostOutput).step q l μ ↔
       (l = .tau ∧ ∃ l' ∈ Label.hiddenAPI P.n,
-        (systemHidden P M S G roundStep callPayload ghostStep ghostOut).step q l' μ) ∨
+        (systemHidden P M S G roundStep callPayload ghostStep ghostOutput).step q l' μ) ∨
       (l ∉ Label.hiddenAPI P.n ∧
-        (systemHidden P M S G roundStep callPayload ghostStep ghostOut).step q l μ) :=
+        (systemHidden P M S G roundStep callPayload ghostStep ghostOutput).step q l μ) :=
   System.abstract_step _ _ _ _ _
 
 /-- A rendezvous transition: every process, the network and the lifted oracle
@@ -1419,12 +1404,12 @@ move together, and only the oracle's successor can fail to be a Dirac. -/
 theorem systemExtended_event_inversion {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
     {w : NetworkState P.n M G} {o : ℕ → WCC.SpecState P.n} {e : NetworkEvent P.n M}
     {μ : PMF (State P M S G)}
-    (h : (systemExtended P M S G roundStep callPayload ghostStep ghostOut).step (u, w, o)
+    (h : (systemExtended P M S G roundStep callPayload ghostStep ghostOutput).step (u, w, o)
       (Sum.inr e) μ) :
     ∃ (x : ∀ _ : Fin P.n, ProcessRecord P.n S) (w' : NetworkState P.n M G)
       (μ₃ : PMF (ℕ → WCC.SpecState P.n)),
       (∀ i, ProgramStep P M S roundStep i (u i) (Sum.inr e) (PMF.pure (x i))) ∧
-      NetworkStep P M G callPayload ghostStep ghostOut w (Sum.inr e) (PMF.pure w') ∧
+      NetworkStep P M G callPayload ghostStep ghostOutput w (Sum.inr e) (PMF.pure w') ∧
       (coinOverExtendedAlphabet P M).step o (Sum.inr e) μ₃ ∧
       μ = prodPMF (PMF.pure x) (prodPMF (PMF.pure w') μ₃) := by
   rw [systemExtended, System.parallel_step] at h
@@ -1443,18 +1428,19 @@ theorem systemExtended_event_inversion {u : ∀ _ : Fin P.n, ProcessRecord P.n S
 theorem systemExtended_label_inversion {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
     {w : NetworkState P.n M G} {o : ℕ → WCC.SpecState P.n} {l : Label P.n}
     (hl : l ≠ Label.tau) {μ : PMF (State P M S G)}
-    (h : (systemExtended P M S G roundStep callPayload ghostStep ghostOut).step (u, w, o)
+    (h : (systemExtended P M S G roundStep callPayload ghostStep ghostOutput).step (u, w, o)
       (Sum.inl l) μ) :
     ∃ (x : ∀ _ : Fin P.n, ProcessRecord P.n S) (w' : NetworkState P.n M G)
       (ω : PMF (ℕ → WCC.SpecState P.n)),
       (∀ i, ProgramStep P M S roundStep i (u i) (Sum.inl l) (PMF.pure (x i))) ∧
-      NetworkStep P M G callPayload ghostStep ghostOut w (Sum.inl l) (PMF.pure w') ∧
+      NetworkStep P M G callPayload ghostStep ghostOutput w (Sum.inl l) (PMF.pure w') ∧
       (WCC.specFamily P).step o l ω ∧
       μ = prodPMF (PMF.pure x) (prodPMF (PMF.pure w') ω) := by
   rw [systemExtended, System.parallel_step] at h
   rcases h with ⟨-, μ₁, μ₂₃, hS, hNW, rfl⟩ | ⟨habs, -⟩ | ⟨habs, -⟩
   · obtain ⟨x, rfl, hall⟩ :=
-      programProduct_inversion (by rw [extendedLabel_tau]; exact fun hh => hl (Sum.inl_injective hh)) hS
+      programProduct_inversion
+        (by rw [extendedLabel_tau]; exact fun hh => hl (Sum.inl_injective hh)) hS
     rw [System.parallel_step] at hNW
     rcases hNW with ⟨-, μ₂, μ₃, hN, hO, rfl⟩ | ⟨habs, -⟩ | ⟨habs, -⟩
     · obtain ⟨w', rfl⟩ := networkStep_dirac hN
@@ -1470,12 +1456,12 @@ own injection. The coin oracle has no silent row, so it contributes none. -/
 theorem systemExtended_tau_inversion {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
     {w : NetworkState P.n M G} {o : ℕ → WCC.SpecState P.n}
     {μ : PMF (State P M S G)}
-    (h : (systemExtended P M S G roundStep callPayload ghostStep ghostOut).step (u, w, o)
+    (h : (systemExtended P M S G roundStep callPayload ghostStep ghostOutput).step (u, w, o)
       (Sum.inl Label.tau) μ) :
     (∃ (i : Fin P.n) (y : ProcessRecord P.n S),
       ProgramStep P M S roundStep i (u i) (Sum.inl Label.tau) (PMF.pure y) ∧
       μ = PMF.pure (Function.update u i y, w, o)) ∨
-    (∃ w', NetworkStep P M G callPayload ghostStep ghostOut w (Sum.inl .tau)
+    (∃ w', NetworkStep P M G callPayload ghostStep ghostOutput w (Sum.inl .tau)
         (PMF.pure w') ∧
       μ = PMF.pure (u, w', o)) := by
   rw [systemExtended, System.parallel_step] at h
@@ -1494,7 +1480,7 @@ theorem systemExtended_tau_inversion {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
 /-! ### The bound bit on a return
 
 The two graded-agreement returns are the only rows that read the ghost, and
-what they read is the relation `ghostOut` at the network's state. A composite
+what they read is the relation `ghostOutput` at the network's state. A composite
 transition on either therefore constrains the bound bit its label carries. -/
 
 /-- A composite graded-agreement return announces a bit the network's ghost
@@ -1503,9 +1489,9 @@ theorem systemExtended_retG_bound {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
     {w : NetworkState P.n M G} {o : ℕ → WCC.SpecState P.n}
     {r : ℕ} {id : Fin P.n} {out : GBCAOutput} {bnd : Bool}
     {μ : PMF (State P M S G)}
-    (h : (systemExtended P M S G roundStep callPayload ghostStep ghostOut).step (u, w, o)
+    (h : (systemExtended P M S G roundStep callPayload ghostStep ghostOutput).step (u, w, o)
       (Sum.inl (.retG r id out bnd)) μ) :
-    ghostOut w r id out bnd := by
+    ghostOutput w r id out bnd := by
   have hne : (Label.retG r id out bnd : Label P.n) ≠ Label.tau := by
     simp
   obtain ⟨x, w', ω, -, hN, -, -⟩ := systemExtended_label_inversion hne h
@@ -1517,9 +1503,9 @@ theorem systemExtended_byzantineRetG_bound {u : ∀ _ : Fin P.n, ProcessRecord P
     {w : NetworkState P.n M G} {o : ℕ → WCC.SpecState P.n}
     {r : ℕ} {k : Fin P.n} {out : GBCAOutput} {bnd : Bool}
     {μ : PMF (State P M S G)}
-    (h : (systemExtended P M S G roundStep callPayload ghostStep ghostOut).step (u, w, o)
+    (h : (systemExtended P M S G roundStep callPayload ghostStep ghostOutput).step (u, w, o)
       (Sum.inr (.byzantineRetG r k out bnd)) μ) :
-    ghostOut w r k out bnd := by
+    ghostOutput w r k out bnd := by
   obtain ⟨x, w', μ₃, -, hN, -, -⟩ := systemExtended_event_inversion h
   exact (networkStep_byzantineRetG hN).2.1
 

@@ -153,8 +153,8 @@ theorem Step.excluded_card_le_one {s s' : SpecState P.n} {l : Label P.n}
 
 /-- **One exclude per instance.** Every state of every execution of the round-`r`
 instance has `excluded.card ≤ 1`: the field starts empty and the single writer
-fires only from `∅`. Together with `Step.excluded_mono` this pins the reachable
-shape to `excluded ∈ {∅, {b}}` — the excluded-bit form of the source blueprint's
+fires only from `∅`. Together with `Step.excluded_mono` this fixes the reachable
+shape at `excluded ∈ {∅, {b}}` — the excluded-bit form of the source blueprint's
 bound value (D19). -/
 theorem excluded_card_le_one {e : AlterSeq (SpecState P.n) (Label P.n)}
     (he : is_exec e (specInst P r)) {k : ℕ} {s : SpecState P.n}
@@ -224,14 +224,14 @@ def outValue : GBCAOutput → Option Bool
 
 @[simp] theorem outValue_grade0 : outValue .grade0 = none := rfl
 
-/-- A grade-2 return pins its bit alive and the other bit excluded. -/
+/-- A grade-2 return holds its bit alive and the other bit excluded. -/
 private theorem retGrade2_inversion {s : SpecState P.n} {id : Fin P.n} {v β : Bool}
     {μ : PMF (SpecState P.n)} (hstep : Step P r s (.retG r id (.grade2 v) β) μ) :
     v ∉ s.excluded ∧ (!v) ∈ s.excluded :=
   match hstep with
   | .retGrade2 _ _ _ _ hlive hexcluded _ _ _ => ⟨hlive, hexcluded⟩
 
-/-- A grade-1 return pins its bit alive and the other bit excluded. -/
+/-- A grade-1 return holds its bit alive and the other bit excluded. -/
 private theorem retGrade1_inversion {s : SpecState P.n} {id : Fin P.n} {v β : Bool}
     {μ : PMF (SpecState P.n)} (hstep : Step P r s (.retG r id (.grade1 v) β) μ) :
     v ∉ s.excluded ∧ (!v) ∈ s.excluded :=
@@ -345,7 +345,7 @@ private theorem retG_value_agree_le {e : AlterSeq (SpecState P.n) (Label P.n)}
 /-- **Binding / graded agreement.** Any two value-bearing returns occurring
 along one execution of the round-`r` specification instance hand out the same
 bit, whatever their grades and whichever processes they answer. The whole
-argument is the guard pair plus monotonicity: the first return pins `!v₁` into
+argument is the guard pair plus monotonicity: the first return puts `!v₁` into
 `excluded`, `excluded` only grows, and the second return refuses an excluded bit. -/
 theorem retG_value_agree {e : AlterSeq (SpecState P.n) (Label P.n)}
     (he : is_exec e (specInst P r)) {k₁ k₂ : ℕ}
@@ -758,15 +758,13 @@ execution for that trace, from a state whose pending inputs are `callG` events
 of the trace, whose corrupted set is the trace-level fold at some stage, and at
 which `v` is still alive. These are exactly the hypotheses the state-level
 refutations take. -/
-private theorem return_state_of_unanimous {v : Bool}
-    {D : Seq (Label P.n) → ENNReal} (hD : D ∈ achievableTraceDists (specInst P r))
-    {t : Seq (Label P.n)} (h_ne : D t ≠ 0) (hun : UnanimousInput P r v t)
-    {id : Fin P.n} {o : GBCAOutput} {β : Bool} (h_mem : Label.retG r id o β ∈ t) :
+private theorem return_state_of_unanimous {v : Bool} {D : Seq (Label P.n) → ENNReal}
+    (hD : D ∈ achievableTraceDists (specInst P r)) {t : Seq (Label P.n)} (h_ne : D t ≠ 0)
+    (hun : UnanimousInput P r v t) {id : Fin P.n} {o : GBCAOutput} {β : Bool}
+    (h_mem : Label.retG r id o β ∈ t) :
     ∃ (s : SpecState P.n) (μ : PMF (SpecState P.n)),
-      (∀ (id' : Fin P.n) (b : Bool),
-          s.call id' = some b → Label.callG r id' b ∈ t) ∧
-        (∃ j, s.F = failSet P t j) ∧ v ∉ s.excluded ∧
-        Step P r s (.retG r id o β) μ := by
+    (∀ (id' : Fin P.n) (b : Bool), s.call id' = some b → Label.callG r id' b ∈ t) ∧
+    (∃ j, s.F = failSet P t j) ∧ v ∉ s.excluded ∧ Step P r s (.retG r id o β) μ := by
   obtain ⟨pe, h_init, h_D⟩ := hD
   rw [← h_D t] at h_ne
   obtain ⟨e, labs, h_exec, h_map, h_t⟩ :=

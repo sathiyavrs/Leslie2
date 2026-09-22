@@ -98,7 +98,7 @@ AFW.protocol ⊑ AFW.composed ⊑ AFW.composedOverBroadcastSpecification ⊑ AFW
 
 Beneath `AFW.composed` is `AFW.protocol`, the gather-based protocol as it runs
 (`ABA/ImplementationByAFW/System.lean`), carried into the composed system by
-`AFW.protocolSim` (`ABA/ImplementationByAFW/Simulation.lean`). Everything from `hybrid` up
+`AFW.protocolSimulation` (`ABA/ImplementationByAFW/Simulation.lean`). Everything from `hybrid` up
 — the core simulation, `spec_safe`, the safety transfer — is shared with the protocol
 chain.
 
@@ -182,33 +182,33 @@ Every `ECHO` field holds entries of what the sender's input instance returned, a
 is a committed value, so the core's entries are committed entries (`single_core_approved`), which is
 `bindCore`'s other guard.
 
-**The freeze certificate.** `coreOf_recorded` packages the three facts with the count the simulation
+**The certificate that the core is written once.** `coreOf_recorded` packages the three facts with the count the simulation
 carries along the run: at least `f + 1` coordinates hold a committed `BIND` payload above the core
 (`Gather.bindAbove`). That count is blind to `F` and monotone under every rule (`bindAbove_mono`),
 so it survives every later corruption, and it is what holds the returns after the first to the set
-the first one froze. A returner's quorum of `n − f` returned payloads is a quorum of committed
+the first one wrote. A returner's quorum of `n − f` returned payloads is a quorum of committed
 payloads, it meets the `f + 1` certified coordinates, and BRB values are functional, so the returned
-map lies above the frozen core.
+map lies above the recorded core.
 
-**Why the counting closes here.** `BIND` payloads travel by reliable broadcast
+**Why the counting closes here.** `BIND` payloads are sent by reliable broadcast
 rather than on the gather network, so a committed payload is write-once
-whatever happens to its sender afterwards, where a multicast payload is pinned
-only by its sender's correctness and D1 withdraws that at any moment. A gather
+whatever happens to its sender afterwards, where a multicast payload stands
+only on its sender's correctness and D1 withdraws that at any moment. A gather
 instance holds one bind-broadcast instance per process, and the `BIND` send is
 that instance's call, a hidden event of the composition (D32), which is what
 makes the objects the certificate counts stable.
 
 ## The commit splits (D26, D27)
 
-The same dynamic-corruption reading, one level down. TS 6 pins the delivered
+The same dynamic-corruption reading, one level down. TS 6 fixes the delivered
 value at a correct `call`; Bracha's rounds with the leader corrupted after
 its `INIT` can deliver a different value until some correct process holds an
-ECHO quorum of more than `(n+f)/2` senders, so the pinned specification
+ECHO quorum of more than `(n+f)/2` senders, so the specification that fixes it
 excludes its own implementation
 (`NOTES-Fidelity.md` §5). `BRB.SpecState` therefore splits `input` (the
 call's record) from `val` (the committed value), with the commit τ-rule
 guarded `ldr ∈ F ∨ input = some m`: the corrupted leader's power is a commit
-of any value, the correct leader's value is pinned, and the window closes at
+of any value, the correct leader's value is fixed, and the window closes at
 the commit. `Gather.SpecState` carries the per-entry form: `call` and `val`
 split, `Gather.Step.commit` guarded `k ∈ F ∨ call k = some v`.
 
@@ -231,34 +231,34 @@ specification's `commit` guard is dischargeable against the instance's.
 `roundOverGatherSpecifications` is AFW25's Algorithm 4 at `R = 2`, its two-gather branch
 (D24): candidate at `|dom g| − f` occurrences after the first gather, grade at
 `|dom h| − f` / `f + 1` after the second. The refinement into TS 2 certifies
-the specification's `excluded` and `grade` on the two instances' frozen cores.
+the specification's `excluded` and `grade` on the two instances' recorded cores.
 One transfer lemma carries a count from a returned map down to a core below
-it: `count_aboveThreshold_of_subMap` (AFW25 Lemma 13) says that a map heavy at `x` — all
-but `f` of its entries — makes such a core heavy at `x` too, the core sitting
-below the map and losing at most `f` entries to it.
+it: `count_aboveThreshold_of_subMap` (AFW25 Lemma 13) says that a map carrying `x` on all
+but `f` of its entries makes such a core carry `x` on at least `|S| − f` of its
+own, the core sitting below the map and losing at most `f` entries to it.
 
-A core has at least `n − f > 2f` entries, so at most one value is heavy in it,
+A core has at least `n − f > 2f` entries, so at most one value is on at least `|S| − f` of them,
 and the three certificates are readings of that:
 
-- the round's bound bit is `GBCA.boundOfCore` of the first instance's core — its heavy bit where one
-  exists (`boundOfCore_of_aboveThreshold`), the complement being light
-  (`count_boundOfCore_belowThreshold`); the round's network writes it at the first gather's return,
+- the round's bound bit is `GBCA.boundOfCore` of the first instance's core — the bit on at least
+  `|S| − f` of its entries where one exists (`boundOfCore_of_aboveThreshold`), the complement being
+  on fewer (`count_boundOfCore_belowThreshold`); the round's network writes it at the first gather's return,
   from the core that return carries;
 - the exclusion certificate is `ExclusionEvidence b = ∃ S, core₁ = some S ∧ count S b < |S| − f`.
-  The core is write-once, so the certificate is frozen the moment it holds — monotonicity for free,
+  The core is write-once, so the certificate stands from the moment it holds — monotonicity for free,
   where the direct implementation's refinement maintains monotone receipt quorums;
-- the grade-2/grade-0 exclusivity is the second instance's core being heavy at `some v` for grade 2
-  and light at both bits for grade 0.
+- the grade-2/grade-0 exclusivity is the second instance's core carrying `some v` on at least
+  `|S| − f` entries for grade 2 and each bit on at most `f` for grade 0.
 
 The return-then-call step and the return place the certificates in the invariant
-(`GBCA.ByAFW.Invariant`). A candidate is heavy in the first core (`candidate_aboveThreshold`) or, at
+(`GBCA.ByAFW.Invariant`). A candidate is on at least `|S| − f` entries of the first core (`candidate_aboveThreshold`) or, at
 `⊥`, certifies `f + 1` for both bits (`candidate_bot`); both are established at `firstGatherReturn`,
 where the first gather's return carries the core, and consumed at `secondGatherCall`, where the
 second gather's call record takes the candidate (`secondGatherCall_candidate`). The bound bit is on
 record from the first `firstGatherReturn` on (`candidate_bound`, `secondGatherCall_bound`). The
 graded outcome's certificate, `OutputCertificate`, is established at `secondGatherReturn` from the
 second gather's return and consumed at `retG`, which sees the outcome alone (`out_certificate`). The
-return rows then mirror `GBCASim.refinesSpecification` shape for shape: a grade-2 or grade-1 return
+return rows then mirror `GBCA.ByABDY.refinesSpecification` shape for shape: a grade-2 or grade-1 return
 hands out the bound bit and certifies `ExclusionEvidence` of its complement, and the grade-0 return
 announces the bit the first return wrote. The D15 support counts come off the first core through the
 committed-entry provenance — a core entry is a committed entry, a committed entry of a correct
@@ -340,7 +340,7 @@ handshake, corruption, the adversary's table and the composition pipeline are fi
 interface and the specification — so `ABA/Implementation/System.lean` writes it once, parametric in
 the round message type `M`, the per-process per-round record `S`, the round rows, supplied as a
 relation embedded in one constructor of the program table, and the adversary's per-round ghost
-record `G` with its update `ghostStep` and its output `ghostOut` (D30).
+record `G` with its update `ghostStep` and its output `ghostOutput` (D30).
 `ABA/ImplementationByABDY/System.lean` instantiates it at ABDY22's implementation;
 `ABA/ImplementationByAFW/System.lean` instantiates it here.
 
@@ -389,10 +389,10 @@ conjuncts are that computation, so there is nothing to choose in the witness.
 The ghost is part of that computation. The composed round holds three values no guard of it reads —
 the core of each of its two gather networks and the round's network's bound bit — and the adversary
 holds the same three as the round's ghost record `AFW.Ghost`, which `AFW.roundProjection` reads them
-off. Two rows write the record. The return-then-call step's broadcast of the candidate freezes the
+off. Two rows write the record. The return-then-call step's broadcast of the candidate writes the
 first gather's core at `Gather.coreOf` of that gather's projection of the tagged sent sets, and the
-bound bit at `GBCA.boundOfCore` of that core; a graded return freezes the second core the same way.
-The composed `firstGatherReturn` and `secondGatherReturn` freeze the same two values off the core
+bound bit at `GBCA.boundOfCore` of that core; a graded return writes the second core the same way.
+The composed `firstGatherReturn` and `secondGatherReturn` write the same two values off the core
 their gather's return carries, and the values agree because each is `Gather.coreOfNetwork` of one
 network's state (`coreOfNetwork_firstGatherProjection`, `coreOfNetwork_secondGatherProjection`).
 
@@ -429,7 +429,7 @@ broadcast, the corrupted set the adversary holds being the corrupted set of ever
 same guard.
 
 `ABA/ImplementationByAFW/Simulation.lean` closes with the headlines mirroring
-`Results.lean`'s: `AFW.protocol_composed`, `AFW.refines`, `AFW.main` and `AFW.chainSim`,
+`Results.lean`'s: `AFW.protocol_composed`, `AFW.refines`, `AFW.main` and `AFW.chainSimulation`,
 each behind a `#print axioms` check.
 
 ## Boundaries

@@ -19,7 +19,7 @@ target       : ForwardSimulation (implementation P r) (specInst P r) (specificat
 
 Both systems are Dirac-transition LTSs. The instance refinement reaches the ℕ-indexed
 families through the round instance (`ABA/Composition/GBCAInstanceByABDY.lean`), whose
-family lifting takes its broadcast ingredient from `GBCASim.specificationRelation_corrupt`.
+family lifting takes its broadcast ingredient from `GBCA.ByABDY.specificationRelation_corrupt`.
 
 ### The implementation (D18): the five message levels
 
@@ -146,7 +146,7 @@ yet to return.
 
 `excluded` is monotone (only `bindUnset` writes it, by `insert`), so the graded
 binding property is structural: an excluded bit is never handed out (`v ∉ excluded`
-guards both value-bearing returns), every grade-2 or grade-1 return pins `(!v) ∈ excluded`
+guards both value-bearing returns), every grade-2 or grade-1 return establishes `(!v) ∈ excluded`
 whence any two value-bearing returns agree on the surviving bit, and a
 grade-0 return forces `excluded ≠ ∅` permanently — from that moment at most one bit is
 ever alive, which is the paper's Binding. Provenance (D14/D15) is carried by
@@ -180,7 +180,7 @@ protocol records nothing, so the relation carries a receipt-pattern *exclude cer
 excluded bit. Note the direction — the clause bounds `excluded` from above (`excluded ⊆ {b |
 ExclusionCertificate P s b}`) and never from below.
 
-`bound_excluded` is the one clause that pins `excluded` from below, through the
+`bound_excluded` is the one clause that bounds `excluded` from below, through the
 implementation's ghost field: `excludedOf` is `∅` at `bound = none` and
 `{!β}` at `bound = some β`, and the equation holds because the exclusion fires
 inside the round's first return, which is also the row that writes the bit. Two
@@ -216,14 +216,14 @@ sole source to any grade-≥1 evidence for `b` — impossible forever:
 * **Case A** (`EchoReceiptQuorum P s (!b)`). Any `VOTE b` quorum contains a correct
   `VOTE b` sender (`n − f > f ≥ |F|`), whose `vote_confirmed` receipt quorum is an
   `n − f` `ECHO b` quorum; two same-level `n − f` quorums for different bits
-  share a correct sender (`exists_correct_received₂`, `(n−f)+(n−f)−n > f`) that
+  share a correct sender (`exists_correct_received_of_two_quorums`, `(n−f)+(n−f)−n > f`) that
   multicast two `ECHO` payloads, contradicting the write-once `echo_once`.
   This is `echoReceiptQuorum_unique`.
 * **Case B** (`VoteQuorumAgainst P s b`). Any later `n − f` `VOTE b` quorum `Q` has all its non-`F`
   members committed to `sentVote = some (some b)` (`received_subset_sent` + `vote_once`), so `Q`
   meets the quorum `D` only inside `F`: `|Q| + |D| ≤ n + |Q ∩ D| ≤ n + f`, i.e. `2(n − f) ≤ n + f`,
   i.e. `n ≤ 3f` — against `P.hResilience`. The quorum is the state-predicate form of the paper's
-  Lemma 4.9 pinning count ("`n − f` receipts pin `≥ n − f − |F|` correct committed voters, leaving
+  Lemma 4.9 counting argument ("`n − f` receipts give `≥ n − f − |F|` correct committed voters, leaving
   `≤ f < n − 2f` free correct votes").
 
 The three certificate obligations:
@@ -312,14 +312,14 @@ theorem bindUnset_guards (hR : SpecificationRelation P s t) {v} (hq : EchoReceip
 
 — refine the `ECHO v` quorum to an `n − f` `INPUT v` receipt quorum
 (`inputQuorum_of_echoReceiptQuorum`), whose correct senders hold an input
-(`input_called`, D8): that is the quorum guard (`quorum_of_msg_quorum`), and
+(`input_called`, D8): that is the quorum guard (`quorum_of_messageQuorum`), and
 its count feeds `Invariant.support_of_input_receipts` → `SpecificationRelation.callSupport` for the
 InputSupport count. The `EchoReceiptQuorum v` input is supplied by
 `echoReceiptQuorum_of_vote_receipts` off the derived `VOTE v` quorum
 (`n − f ≥ f + 1`). At the grade-0 return (excluding an arbitrary certified `b*`,
 support bit `!b*`), both guards come instead from the returner's own
 `bothValid`: the per-bit `n − f` `INPUT` receipt quorum gives the quorum guard
-through `quorum_of_msg_quorum`/`input_called`, and `inputSupport_of_bothValid` gives the
+through `quorum_of_messageQuorum`/`input_called`, and `inputSupport_of_bothValid` gives the
 `f + 1` count for **either** bit — so the guard is available no matter which
 bit the certificate names.
 
@@ -465,7 +465,7 @@ then
 `grade_ne_true_of_echo5Bot_quorum` (`ECHO5 ⊥` quorum against `grade2_evidence`'s
 `ECHO5 v` quorum, correct double `ECHO5` sender, `echo5_once`), the run's `b*` and its
 certificate from `exclusionCertificate_of_echo5Bot_quorum`, the `bindUnset` quorum guard
-from `quorum_of_msg_quorum` on `bothValid`'s `INPUT` quorum; restore
+from `quorum_of_messageQuorum` on `bothValid`'s `INPUT` quorum; restore
 `grade0_evidence := ⟨id, hcnt⟩` and `exclusion_certificate` as above with `ExclusionCertificate b*`
 for the new member.
 
@@ -488,19 +488,19 @@ a ghost output and answers no process.
 
 ### Shared machinery
 
-The kit the proof draws on, most of it common to the instance refinements of
+The lemmas the proof draws on, most of them common to the instance refinements of
 the development; the `ECHO5`-level τ-rows (`echo5Bit`/`echo5Bot`) are frame cases
 identical in shape to `bindBit`/`bindBot` and need nothing beyond it:
 
-* the weak-transition kit of `Framework/FamilySimulation.lean`:
+* the weak-transition lemmas of `Framework/FamilySimulation.lean`:
   `System.weakLStep_of_step` and `weakLStep_tauThen`;
 * network plumbing: `received_subset_sent`, `receivedCount_le_receiveMessage`, `mem_multicast_sent`,
-  `mem_receiveMessage_received`, `exists_sender_notMem`, `exists_correct_received₂`,
+  `mem_receiveMessage_received`, `exists_sender_notMem`, `exists_correct_received_of_two_quorums`,
   `corrupt_*` frame lemmas, `corrupt_F_eq`;
 * the corruption budget `F_card` and the D15 input machinery: `InputSupport`,
   `InputSupport.mono`, `input_origin`, `input_support`, `input_called`,
   `Invariant.support_of_input_receipts`, `inputSupport_of_bothValid`,
-  `SpecificationRelation.callSupport`, `quorum_of_msg_quorum`, `inputQuorum_of_echoReceiptQuorum`;
+  `SpecificationRelation.callSupport`, `quorum_of_messageQuorum`, `inputQuorum_of_echoReceiptQuorum`;
 * the `ECHO`-level certificate: `EchoReceiptQuorum`, `echoReceiptQuorum_unique`,
   `echoReceiptQuorum_of_vote_receipts`, and `bindUnset_guards` (quorum + InputSupport count
   out of one `EchoReceiptQuorum`);
@@ -600,7 +600,7 @@ theorem no_disjoint_quorums {P : Parameters} {Q D F : Finset (Fin P.n)}
 ```
 
 (`|Q| + |D| = |Q ∪ D| + |Q ∩ D| ≤ n + f`, against `2(n − f) > n + f` from
-`P.hResilience` — the same arithmetic as `exists_correct_received₂`, exposed as a set
+`P.hResilience` — the same arithmetic as `exists_correct_received_of_two_quorums`, exposed as a set
 statement because `VoteQuorumAgainst` is a set of *processes*, not a receipt row).
 
 ## Why this shape: the compression attack dies at `n = 4, f = 1`
@@ -608,7 +608,7 @@ statement because `VoteQuorumAgainst` is a set of *processes*, not a receipt row
 A one-level-shallower reading of the grade-1 evidence — `f + 1` `VOTE v`
 receipts in place of `f + 1` `BIND v` receipts, with the `ECHO5` level elided
 and the returns reading `BIND` quorums — admits the following binding
-violation, which pins both D18 and the certificate design. Prefix: `p1`, `p2`,
+violation, which fixes both D18 and the certificate design. Prefix: `p1`, `p2`,
 `p3` are called and echo `0`, `1`, `0` respectively; with both bits `Valid`
 everywhere, all three vote ⊥, bind ⊥ (and echo5 ⊥), and `p1` grade-0 returns off the
 three ⊥-receipts while `p4` is held unscheduled before its `ECHO`. Extension
@@ -622,13 +622,13 @@ any binding-faithful spec exists.
 Against the D18 evidence level the attack dies: in extension A, `p3`'s
 `retGrade1 0` needs `f + 1 = 2` `BIND 0` receipts, hence a correct `BIND 0` sender
 (`2 > |F| = 1`), hence an `n − f = 3`-strong `VOTE 0` receipt quorum at that
-sender. But the prefix pinned the write-once votes of `p1`, `p2`, `p3` at ⊥,
+sender. But the prefix fixed the write-once votes of `p1`, `p2`, `p3` at ⊥,
 and `p2` is the corrupted process position, so the `VOTE 0` senders available in any
 extension are at most `{p4} ∪ F = {p4, p2}` — `2 < 3`, no quorum, no correct
 `BIND 0`, no `retGrade1 0` (and a fortiori no `retGrade2 0`: a correct `ECHO5 0` needs
 three `BIND 0` senders). Symmetrically for bit `1` in extension B. In
 certificate terms: at `p1`'s grade-0 return the correct `BIND ⊥` senders' vote
-quorums pin `{p1, p2, p3}` as committed-⊥-or-`F`, which is `VoteQuorumAgainst` at
+quorums identify `{p1, p2, p3}` as committed-⊥-or-`F`, which is `VoteQuorumAgainst` at
 `n − f = 3` for **both** bits — exactly the `∃ b, ExclusionCertificate` the `retGrade0` run
 consumes, and exactly why no later receipt pattern can contradict the exclusion.
 
@@ -640,7 +640,7 @@ phrase the round skeleton over `excluded`: `IsLastBound g r` is `(g r).excluded 
 1)).excluded = ∅`, `RoundSettled g r` is `(g r).excluded ≠ ∅ ∨ (g r).grade = some false`, and
 `grade2Lock_commit`, `grade2_needs_bind`, `bind_support` and the grade-2 lock certificates are keyed
 on the guard pair `(!b) ∈ excluded ∧ b ∉ excluded` — the D19 rendering of `bind = some b`, with
-`bind ≠ none` rendered as `excluded ≠ ∅`. `GBCASim.specificationRelation_corrupt` carries the
+`bind ≠ none` rendered as `excluded ≠ ∅`. `GBCA.ByABDY.specificationRelation_corrupt` carries the
 `exclusion_certificate` row through `ExclusionCertificate.mono`, whose three hypotheses it
 discharges by `corrupt_received`, `corrupt_process` and `corrupt_F_subset`.
 `ImplementationByABDY/System.lean`'s rendering carries the same levels inside one process: the round

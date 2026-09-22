@@ -34,10 +34,9 @@ variable {S L L' : Type}
 /-- Transport a partial execution along a label map that turns each of the
 run's own transitions into a transition of `sys'` — the per-run refinement of
 `is_partial_exec_mapLabels` (`Framework/TraceDistributionSupport.lean`). -/
-private theorem is_partial_exec_mapLabels_on {sys : System S L} {sys' : System S L'}
-    (g : L → L') {e : AlterSeq S L} (hpe : is_partial_exec e sys)
-    (hg : ∀ n lq, e.trans.get? n = some lq →
-      ∀ sn μ, sys.step sn lq.1 μ → sys'.step sn (g lq.1) μ) :
+private theorem is_partial_exec_mapLabels_on {sys : System S L} {sys' : System S L'} (g : L → L')
+    {e : AlterSeq S L} (hpe : is_partial_exec e sys)
+    (hg : ∀ n lq, e.trans.get? n = some lq → ∀ sn μ, sys.step sn lq.1 μ → sys'.step sn (g lq.1) μ) :
     is_partial_exec (e.mapLabels g) sys' := by
   intro n l s' hn
   rw [show (e.mapLabels g).trans = e.trans.map (fun lq : L × S => (g lq.1, lq.2)) from rfl,

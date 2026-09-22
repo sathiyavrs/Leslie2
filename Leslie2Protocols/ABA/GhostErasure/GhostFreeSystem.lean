@@ -10,14 +10,14 @@ import Leslie2Protocols.Framework.Erasure
 /-!
 # Erasing the implementation's ghost
 
-The network adversary of the implementation holds one record no program reads: the ghost
+The network of the implementation holds one record no program reads: the ghost
 record `NetworkState.ghostRecord` of every round, written by `ghostStep` and read out by
-`ghostOut` at the two graded-agreement returns. That read decides the bit a return
-announces and not whether the return fires: the hypothesis `ghostOut_total` below asks it
+`ghostOutput` at the two graded-agreement returns. That read decides the bit a return
+announces and not whether the return fires: the hypothesis `ghostOutput_total` below asks it
 to admit a bit at every state. This file erases it.
 
 The system it is erased to is `systemGhostFree`, the implementation over the trivial ghost
-`Unit` whose `ghostOut` is the full relation: the same programs, the same network rows, and a
+`Unit` whose `ghostOutput` is the full relation: the same programs, the same network rows, and a
 graded-agreement return free to announce either bit. The erasure is a `StateErasure`
 (`Framework/Erasure.lean`) along the projection
 
@@ -32,9 +32,9 @@ adversary is a row of the ghost-free adversary at the erased state, on the same 
 because the ghost write leaves the erasure where it stands
 (`NetworkState.forgetGhost_writeGhost`) and over `Unit` it is the identity
 (`NetworkState.writeGhost_unit`). The lift is exact up to `φ`: a ghost-free return
-announcing `bnd` is answered by the return announcing a bit the relation `ghostOut`
-admits, which is what the hypothesis `ghostOut_total` supplies. Both algorithms satisfy
-it, their `ghostOut` being an equation.
+announcing `bnd` is answered by the return announcing a bit the relation `ghostOutput`
+admits, which is what the hypothesis `ghostOutput_total` supplies. Both algorithms satisfy
+it, their `ghostOutput` being an equation.
 
 The pipeline of `Implementation/System.lean` carries the erasure from the adversary to the
 system. The three congruences of `Framework/Erasure.lean` ask the neighbours to be
@@ -179,7 +179,7 @@ end Labels
 
 /-! ### The adversary's erasure
 
-The network adversary is the one component whose state carries the ghost, and the two
+The network is the one component whose state carries the ghost, and the two
 graded-agreement returns are the one pair of rows that read it. -/
 
 section NetErasure
@@ -187,7 +187,7 @@ section NetErasure
 variable {P : Parameters} {M G : Type} [DecidableEq M] [Inhabited G]
     {callPayload : Fin P.n → Bool → M}
     {ghostStep : ExtendedLabel P.n M → NetworkState P.n M G → G → G}
-    {ghostOut : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop}
+    {ghostOutput : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop}
 
 /-- Over the trivial ghost a row's successor is the state its write starts from, so a
 row written with its ghost write is a row written without it. -/
@@ -209,13 +209,13 @@ it stands; and the two returns lose their guard, the ghost-free relation being t
 one.
 
 The lift answers a ghost-free row by the row of the same name at the unerased state. On
-a graded-agreement return the announced bit is replaced by one the relation `ghostOut`
-admits, which `ghostOut_total` supplies, and the two bits agree under
+a graded-agreement return the announced bit is replaced by one the relation `ghostOutput`
+admits, which `ghostOutput_total` supplies, and the two bits agree under
 `forgetBoundExtended`. -/
 theorem network_erasure
-    (ghostOut_total : ∀ (s : NetworkState P.n M G) (r : ℕ) (id : Fin P.n) (out : GBCAOutput),
-      ∃ bnd, ghostOut s r id out bnd) :
-    StateErasure (network P M G callPayload ghostStep ghostOut)
+    (ghostOutput_total : ∀ (s : NetworkState P.n M G) (r : ℕ) (id : Fin P.n) (out : GBCAOutput),
+      ∃ bnd, ghostOutput s r id out bnd) :
+    StateErasure (network P M G callPayload ghostStep ghostOutput)
       (networkGhostFree P M callPayload) NetworkState.forgetGhost forgetBoundExtended where
   init := rfl
   silent := separatesSilent_forgetBoundExtended
@@ -254,7 +254,7 @@ theorem network_erasure
     case byzantineCallGLoop r k b hF =>
       exact ⟨_, _, rfl, NetworkStep.byzantineCallGLoop s r k b hF, by simp [PMF.pure_map]⟩
     case byzantineRetG r k out bnd hF _ =>
-      obtain ⟨b, hb⟩ := ghostOut_total s r k out
+      obtain ⟨b, hb⟩ := ghostOutput_total s r k out
       exact ⟨Sum.inr (.byzantineRetG r k out b), _, rfl,
         NetworkStep.byzantineRetG s r k out b hF hb, by simp [PMF.pure_map]⟩
     case byzantineCallW r k hF =>
@@ -270,7 +270,7 @@ theorem network_erasure
     case callG r id b =>
       exact ⟨_, _, rfl, NetworkStep.callG s r id b, by simp [PMF.pure_map]⟩
     case retG r id out bnd _ =>
-      obtain ⟨b, hb⟩ := ghostOut_total s r id out
+      obtain ⟨b, hb⟩ := ghostOutput_total s r id out
       exact ⟨Sum.inl (.retG r id out b), _, rfl,
         NetworkStep.retG s r id out b hb, by simp [PMF.pure_map]⟩
     case callWIdle r id =>
@@ -288,7 +288,7 @@ end NetErasure
 
 /-! ### The neighbours of the erasure
 
-The network adversary sits in the composition beside the process group and the coin
+The network sits in the composition beside the process group and the coin
 oracle, and each has to accept whichever representative of a `forgetBoundExtended`-fibre the
 adversary announces. -/
 
@@ -369,7 +369,7 @@ variable (P : Parameters) (M S G : Type) [DecidableEq M] [Inhabited G]
     [IsRoundRuleTable P M S roundStep]
     (callPayload : Fin P.n → Bool → M)
     (ghostStep : ExtendedLabel P.n M → NetworkState P.n M G → G → G)
-    (ghostOut : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop)
+    (ghostOutput : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop)
 
 /-- **The implementation's ghost is erasable.** The adversary's erasure is carried through
 the composition pipeline by four congruences: parallel composition against the coin
@@ -378,12 +378,12 @@ alphabet, and restriction along the shared alphabet. Hiding `Label.hiddenAPI` th
 collapses the label identification to the identity, every label the identification moves
 being a graded-agreement return. -/
 theorem system_stateErasure
-    (ghostOut_total : ∀ (s : NetworkState P.n M G) (r : ℕ) (id : Fin P.n) (out : GBCAOutput),
-      ∃ bnd, ghostOut s r id out bnd) :
-    StateErasure (system P M S G roundStep callPayload ghostStep ghostOut)
+    (ghostOutput_total : ∀ (s : NetworkState P.n M G) (r : ℕ) (id : Fin P.n) (out : GBCAOutput),
+      ∃ bnd, ghostOutput s r id out bnd) :
+    StateErasure (system P M S G roundStep callPayload ghostStep ghostOutput)
       (systemGhostFree P M S roundStep callPayload) forgetGhostState id := by
   have hnet := network_erasure (callPayload := callPayload) (ghostStep := ghostStep)
-    ghostOut_total
+    ghostOutput_total
   have hpre := (hnet.parallel_right (coinOverExtendedAlphabet_labelSaturated P M)).parallel_left
     (programSyncProduct_labelSaturated P M S roundStep)
   have hgroup := (hpre.abstract (networkEventLabels P.n)
@@ -395,12 +395,12 @@ theorem system_stateErasure
 read admitting a bit at every state, and the bit it announces is hidden at protocol level,
 so the implementation and the ghost-free system achieve the same trace distributions. -/
 theorem system_erasure
-    (ghostOut_total : ∀ (s : NetworkState P.n M G) (r : ℕ) (id : Fin P.n) (out : GBCAOutput),
-      ∃ bnd, ghostOut s r id out bnd) :
-    achievableTraceDists (system P M S G roundStep callPayload ghostStep ghostOut) =
+    (ghostOutput_total : ∀ (s : NetworkState P.n M G) (r : ℕ) (id : Fin P.n) (out : GBCAOutput),
+      ∃ bnd, ghostOutput s r id out bnd) :
+    achievableTraceDists (system P M S G roundStep callPayload ghostStep ghostOutput) =
       achievableTraceDists (systemGhostFree P M S roundStep callPayload) :=
-  (system_stateErasure P M S G roundStep callPayload ghostStep ghostOut
-    ghostOut_total).achievableTraceDists_eq
+  (system_stateErasure P M S G roundStep callPayload ghostStep ghostOutput
+    ghostOutput_total).achievableTraceDists_eq
 
 end SystemErasure
 

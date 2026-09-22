@@ -12,7 +12,7 @@ import Leslie2Protocols.ABA.Composition.HybridAndSubstitution
 # The main theorems of the ABA case study
 
 The subject is the protocol `ABDY.protocol P`: `n` programs, one per process, beside two components
-that are not processes — the network adversary, which owns the message sets, the DECIDED sets and
+that are not processes — the network, which owns the message sets, the DECIDED sets and
 the corrupted set with its budget, and the common-coin oracle, the only component whose transitions
 are not Dirac. A program reads its own records, its own recv and its own replacement flag, and
 nothing else about corruption: not the corrupted set, not the budget, not another process's status.
@@ -29,9 +29,9 @@ whose traces satisfy Validity and Agreement (`spec_safe`, `Specifications/ABASaf
 Three probabilistic forward simulations carry the protocol to the
 specification:
 
-1. `ABDY.protocolSim` (`ImplementationByABDY/Simulation.lean`) — the protocol into the composed
-   system, along the Dirac lift of `ABDY.ProtocolRelation`. The relation pins every
-   composed coordinate against the protocol state; the inclusion is
+1. `ABDY.protocolSimulation` (`ImplementationByABDY/Simulation.lean`) — the protocol into the
+   composed system, along the Dirac lift of `ABDY.ProtocolRelation`. The relation determines every
+   composed coordinate from the protocol state; the inclusion is
    one-directional because a round instance also answers the Byzantine handshake rows
    (D11) and the processes the protocol has terminated (D22).
 2. `ABDY.substitutionSimulation` (`Composition/HybridAndSubstitution.lean`) — replace each round's
@@ -45,14 +45,14 @@ coordinates: the round specifications, the `n` round loops, the ABA network and 
 each still a component of the state the relation is defined on.
 
 `ABDY.refines` chains the soundness inclusions of the three (Result 1) by
-`Set.Subset.trans`; `ABDY.chainSim` composes the three simulations themselves by
+`Set.Subset.trans`; `ABDY.chainSimulation` composes the three simulations themselves by
 `ProbabilisticForwardSimulation.trans` (Result 2). The two routes are
 independent — the inclusion never invokes transitivity of simulation.
 
 ## Scope of the headline
 
 Graded agreement is carried to implementation level: each round is a group of graded-agreement
-programs beside that round's own network, moved by the same network adversary. Each round's graded
+programs beside that round's own network, and one network moves them all. Each round's graded
 return announces that round's bound bit (D29), a ghost output that rides the `retG` label and that
 no component's state records. `GBCA.BindingTrace` (`GBCA/SpecificationSafety.lean`) is the property
 it carries. The **common coin is held at specification level** — the ε-coin is `Parameters.wccPMF`,
@@ -69,7 +69,7 @@ positive-probability trace. Termination, liveness, unpredictability and
 fairness are not claimed.
 
 The `#guard_msgs`/`#print axioms` blocks below are the mechanical check:
-the headlines, and the framework results the chain rests on, are pinned to the
+the headlines, and the framework results the chain rests on, are checked against the
 clean axiom list `[propext, Classical.choice, Quot.sound]`.
 -/
 
@@ -97,7 +97,7 @@ namespace ABDY
 /-- **Safety of the protocol**: every positive-probability trace of
 every achievable trace distribution of the `n` programs beside the network
 adversary and the coin oracle satisfies Validity and Agreement. The corruption
-budget is a guard of the network adversary's own `fail` row, so every protocol
+budget is a guard of the network's own `fail` row, so every protocol
 execution is in budget by construction and nothing is assumed of the
 traces. -/
 theorem protocol_safe (P : Parameters) :
@@ -138,7 +138,7 @@ theorem refines (P : Parameters) :
 
 /-- **Correctness of ABA** (blueprint `thm:aba-main`, safety fragment): every positive-probability
 trace of the protocol satisfies Validity and Agreement. No extra hypothesis on the traces: the
-corruption budget is a guard of the network adversary's own `fail` row, so every protocol execution
+corruption budget is a guard of the network's own `fail` row, so every protocol execution
 is in budget by construction. -/
 theorem main (P : Parameters) :
     ∀ D ∈ achievableTraceDists (protocol P), ∀ t, D t ≠ 0 →
@@ -149,12 +149,12 @@ theorem main (P : Parameters) :
 the chain joined by Result 2 (`ProbabilisticForwardSimulation.trans`), along
 the composite of their three relations — the Dirac lift of the composition
 relation, the pointwise round substitution, and the core relation. -/
-noncomputable def chainSim (P : Parameters) :
+noncomputable def chainSimulation (P : Parameters) :
     ProbabilisticForwardSimulation (protocol P) (spec P)
       (compRel (diracRel (ProtocolRelation P))
         (compRel (parallelRel (diracRel (substitutionRelationFamily P)))
           (hybridSpecificationRelation P))) :=
-  (protocolSim P).trans ((substitutionSimulation P).trans (hybridRefinesSpecification P))
+  (protocolSimulation P).trans ((substitutionSimulation P).trans (hybridRefinesSpecification P))
 
 /-! ### Mechanical axiom check
 
@@ -193,9 +193,9 @@ a `sorryAx` dependence. -/
 #guard_msgs in
 #print axioms refines
 
-/-- info: 'PLTS.ABA.ABDY.chainSim' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.ABDY.chainSimulation' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms chainSim
+#print axioms chainSimulation
 
 /-- info: 'PLTS.ProbabilisticForwardSimulation.trans' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in

@@ -10,8 +10,8 @@ import Leslie2Protocols.ABA.ImplementationByAFW.Simulation
 /-!
 # The ghost-free gather-based protocol
 
-The network adversary of `AFW.protocol` holds one record per round that no program
-reads: the two gathers' frozen cores and the round's bound bit, written by
+The network of `AFW.protocol` holds one record per round that no program
+reads: the two gathers' recorded cores and the round's bound bit, written by
 `AFW.ghostStep` and announced on every graded-agreement return by `AFW.announcedBound`.
 `AFW.protocol₀` is the protocol as it runs with that record dropped and the adversary
 free to announce either bit on a return.
@@ -26,7 +26,7 @@ protocol-shaped specification `hybrid`.
 
 The proof is the state erasure of `ABA/GhostErasure/GhostFreeSystem.lean` carried through the
 composition pipeline. Its hypothesis is that every round, process and graded outcome
-admits an announced bit, which here is the equation `bnd = AFW.ghostOut P w r id out`
+admits an announced bit, which here is the equation `bnd = AFW.ghostOutput P w r id out`
 read at its own right-hand side. The announced bit is silent at protocol level — a
 `retG` label lies in `Label.hiddenAPI` — which is why no label map appears in the
 statement.
@@ -39,13 +39,13 @@ namespace AFW
 open Implementation
 
 /-- **The ghost-free gather-based protocol**: the `n` programs and the coin oracle of
-`AFW.protocol` beside the network adversary over the trivial ghost, whose
+`AFW.protocol` beside the network over the trivial ghost, whose
 graded-agreement returns announce any bit. -/
 noncomputable def protocol₀ (P : Parameters) :
     System (Implementation.State P (Message P.n) (RoundRecord P.n) Unit) (Label P.n) :=
   Implementation.systemGhostFree P (Message P.n) (RoundRecord P.n) (RoundStep P) (gbcaCallPayload P)
 
-/-- **The ghost costs nothing.** The record the network adversary keeps for each round is
+/-- **The ghost costs nothing.** The record the network keeps for each round is
 written by no guard and read by no program, and the label that announces its bit is
 hidden at protocol level, so the protocol and the ghost-free protocol achieve the same
 trace distributions. -/
@@ -53,7 +53,7 @@ theorem protocol_erasure (P : Parameters) :
     achievableTraceDists (protocol P) = achievableTraceDists (protocol₀ P) :=
   Implementation.system_erasure P (Message P.n) (RoundRecord P.n) (Ghost P.n) (RoundStep P)
     (gbcaCallPayload P) (ghostStep P) (announcedBound P)
-    (fun w r id out => ⟨ghostOut P w r id out, rfl⟩)
+    (fun w r id out => ⟨ghostOutput P w r id out, rfl⟩)
 
 /-! ### The headlines at the ghost-free protocol -/
 

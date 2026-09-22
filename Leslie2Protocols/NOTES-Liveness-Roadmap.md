@@ -28,7 +28,7 @@ the `δ_f` failure mass and a decision: a resolution matches the round's survivi
 probability `ε` and fails to deliver with probability `δ_f`, and how those compound over the round
 sequence depends on the fairness constraint chosen and on the round structure the proof exposes.
 
-The specification pins the target the race is measured against. `ABA.spec` runs that race at one
+The specification fixes the target the race is measured against. `ABA.spec` runs that race at one
 point, in the mode loop of §5: from `ControlMode.flipEnabled`, and only where both bits carry `f +
 1` support, a flip enables the decision with probability `ε` and fails to deliver with probability
 `δ_f`, the remaining mass `1 − ε − δ_f` returns to `ControlMode.flipEnabled`, and an enabled
@@ -59,7 +59,7 @@ resolution matching it decides. That precondition is structural here rather than
 liveness proof would have to carry. At the specification, GBCA's exclusion set `excluded` only grows
 — its single writer inserts and corruption does not touch it — and both value-bearing returns demand
 `v ∉ excluded ∧ !v ∈ excluded`, so any two graded returns of one round hand out the same bit and a
-grade-0 return pins a bit that no extension of the run hands out at grade ≥ 1: `retG_value_agree`,
+grade-0 return determines a bit that no extension of the run hands out at grade ≥ 1: `retG_value_agree`,
 `specInst_binding`, `retGrade0_excluded_nonempty` (`ABA/GBCA/SpecificationSafety.lean`), each from
 monotonicity alone, no invariant. The precondition is on the trace, not only on the state: every
 return of a round announces the round's bound bit on its label (D29), so `specInst_binding` reads it
@@ -164,7 +164,7 @@ Ordered by expected value-for-effort:
    would push the spec-level mass bound down the chain to `ABDY.protocol`, which is where a
    fair-scheduling statement about this protocol belongs. All three steps are inclusions in the same
    direction, `protocol ⊑ composed ⊑ hybrid ⊑ ABA.spec`, so a mass bound established at `ABA.spec`
-   has to be transported down all three, the composition inclusion (`ABDY.protocolSim`,
+   has to be transported down all three, the composition inclusion (`ABDY.protocolSimulation`,
    `ABA/ImplementationByABDY/Simulation.lean`) included. That inclusion imposes no constraint on the
    amplification axis. Under D22 a process retains the round record of every round it has touched
    and answers that round's messages under an instance-local guard, whichever round its loop is in,
@@ -320,8 +320,8 @@ the sub-protocol position.
   (D23): `ABA/ImplementationByABDY/System.lean` (`ABDY.protocol`, `network`), with the composition
   of components in `ABA/Composition/HybridAndSubstitution.lean` (`ABDY.composed`) and the inclusion
   into it in `ABA/ImplementationByABDY/Simulation.lean` (`ABDY.ProtocolRelation`,
-  `ABDY.protocolSim`, `ABDY.protocol_composed`) — the presentation to state fair termination over if
-  it is to be stated of the protocol: the `fail` row belongs to the network adversary and is guarded
+  `ABDY.protocolSimulation`, `ABDY.protocol_composed`) — the presentation to state fair termination over if
+  it is to be stated of the protocol: the `fail` row belongs to the network and is guarded
   by `k ∉ F ∧ |F| < f`, so `fail` is enabled exactly while budget remains and the marking of `fail`
   is read off that component's own state.
 - Paper validation of fair AST for this protocol family: `Papers/consensus-src` (Ben-Or +

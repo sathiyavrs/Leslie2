@@ -397,8 +397,8 @@ theorem instanceOverBroadcastSpecification_step_row (P : Parameters) :
   · by_cases hlτ : l = Sum.inl Label.tau
     · subst hlτ
       refine ⟨Label.tau, rfl, ?_⟩
-      rcases instanceOverBroadcastsExtended_tau_inversion hIn hBind hlab with ⟨v, rfl, hn⟩ | ⟨k, c, rfl,
-        hs⟩ | ⟨q, d, rfl, hs⟩
+      rcases instanceOverBroadcastsExtended_tau_inversion hIn hBind hlab with
+        ⟨v, rfl, hn⟩ | ⟨k, c, rfl, hs⟩ | ⟨q, d, rfl, hs⟩
       · obtain ⟨jj, m, hF, hv⟩ := networkStep_tau hn
         have hv' : v = { w with network := w.network.recordSent jj m } := PMF.pure_injective hv
         subst hv'
@@ -648,12 +648,12 @@ theorem row_instanceOverBroadcastSpecification_step (P : Parameters) :
 transitions of the instance over the labels `specificationLabelMap` sends to `l₀` are exactly
 the `l₀`-rows of `StepOverBroadcastSpecification`, on the same state and with the same
 distribution. -/
-theorem instanceOverBroadcastSpecification_step_iff_row (P : Parameters) (s :
-  StateOverBroadcastSpecification P.n X) (l₀ : Label P.n X)
+theorem instanceOverBroadcastSpecification_step_iff_row (P : Parameters)
+    (s : StateOverBroadcastSpecification P.n X) (l₀ : Label P.n X)
     (μ : PMF (StateOverBroadcastSpecification P.n X)) :
-    (∃ l,
-      specificationLabelMap P.n X l = some l₀ ∧ (instanceOverBroadcastSpecification P X).step s l μ)
-        ↔ StepOverBroadcastSpecification P s l₀ μ := by
+    (∃ l, specificationLabelMap P.n X l = some l₀ ∧ (instanceOverBroadcastSpecification P X).step s
+      l μ)
+    ↔ StepOverBroadcastSpecification P s l₀ μ := by
   constructor
   · rintro ⟨l, hl, hstep⟩
     obtain ⟨l₁, hl₁, hrow⟩ := instanceOverBroadcastSpecification_step_row P s l μ hstep

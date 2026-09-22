@@ -1,5 +1,5 @@
 % The protocol (PLTS.ABA.ABDY.ABAProgram, PLTS.ABA.ABDY.network, PLTS.ABA.ABDY.protocol):
-% n programs, the network adversary, the coin oracle.
+% n programs, the network, the coin oracle.
 \begin{tikzpicture}[
     >={Stealth[round]}, semithick,
     prog/.style={draw, rounded corners, align=center, font=\footnotesize,
@@ -35,7 +35,7 @@
   \draw[thick] (-0.7,-0.35) -- (10.1,-0.35);
   \foreach \x in {0.6,4.9,8.9} \draw[<->] (\x,0.32) -- (\x,-0.35);
   \node[ann, anchor=west] at (-0.65,-0.68) {hidden to $\tau$};
-  % the network adversary
+  % the network
   \node[comp] (adv) at (2.2,-2.45)
     {$\mathrm{network}(P)$\\ sent sets, corrupted set $F$\\ ghost record $ghostRecord(r)$};
   \draw[<->] (2.2,-0.35) -- (2.2,-1.80);

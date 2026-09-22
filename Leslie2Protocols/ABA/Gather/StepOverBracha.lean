@@ -52,8 +52,8 @@ label `BRB.specificationLabelMap` projects to. -/
 theorem brachaInstance_step_at {M : Type} [DecidableEq M] {P : Parameters} {ldr : Fin P.n}
     {s s' : BRB.BrachaState P.n M} {l : BRB.InstanceLabel P.n M} {l₀ : BRB.Label P.n M}
     (hl : BRB.specificationLabelMap P.n M l = some l₀)
-    (h : (BRB.brachaInstance P ldr M).step s l (PMF.pure s')) : BRB.BrachaStep P ldr s l₀ (PMF.pure
-      s') := by
+    (h : (BRB.brachaInstance P ldr M).step s l (PMF.pure s')) :
+    BRB.BrachaStep P ldr s l₀ (PMF.pure s') := by
   obtain ⟨l₁, hl₁, hrow⟩ := BRB.brachaInstance_step_row P ldr s l _ h
   rwa [Option.some.inj (hl₁.symm.trans hl)] at hrow
 
@@ -367,8 +367,8 @@ theorem instanceOverBracha_step_row (P : Parameters) :
   · by_cases hlτ : l = Sum.inl Label.tau
     · subst hlτ
       refine ⟨Label.tau, rfl, ?_⟩
-      rcases instanceOverBroadcastsExtended_tau_inversion hIn hBind hlab with ⟨v, rfl, hn⟩ | ⟨k, c, rfl,
-        hs⟩ | ⟨q, d, rfl, hs⟩
+      rcases instanceOverBroadcastsExtended_tau_inversion hIn hBind hlab with
+        ⟨v, rfl, hn⟩ | ⟨k, c, rfl, hs⟩ | ⟨q, d, rfl, hs⟩
       · obtain ⟨jj, m, hF, hv⟩ := networkStep_tau hn
         have hv' : v = { w with network := w.network.recordSent jj m } := PMF.pure_injective hv
         subst hv'
@@ -558,12 +558,10 @@ theorem row_instanceOverBracha_step (P : Parameters) :
 /-- **The row characterisation.** At a specification label `l₀`, the transitions
 of the instance over the labels `specificationLabelMap` sends to `l₀` are exactly the
 `l₀`-rows of `StepOverBracha`, on the same state and with the same distribution. -/
-theorem instanceOverBracha_step_iff_row (P : Parameters) (s : StateOverBracha P.n X) (l₀ : Label P.n
-  X)
-    (μ : PMF (StateOverBracha P.n X)) :
-    (∃ l,
-      specificationLabelMap P.n X l = some l₀ ∧ (instanceOverBracha P X).step s l μ) ↔
-        StepOverBracha P s l₀ μ := by
+theorem instanceOverBracha_step_iff_row (P : Parameters) (s : StateOverBracha P.n X)
+    (l₀ : Label P.n X) (μ : PMF (StateOverBracha P.n X)) :
+    (∃ l, specificationLabelMap P.n X l = some l₀ ∧ (instanceOverBracha P X).step s l μ) ↔
+    StepOverBracha P s l₀ μ := by
   constructor
   · rintro ⟨l, hl, hstep⟩
     obtain ⟨l₁, hl₁, hrow⟩ := instanceOverBracha_step_row P s l μ hstep

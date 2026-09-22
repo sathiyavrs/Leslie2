@@ -301,8 +301,8 @@ theorem hybridRefinesSpecification (P : Parameters) :
         obtain ⟨j, hjF, hjrecv⟩ := hex
         have hjsent : b ∈ ABAState.decidedSent (C, A) j := hI.received_sound id j b hjrecv
         obtain ⟨rA, hrA_certificate⟩ := hI.decided_source j b hjF hjsent
-        -- the abstract holder pin for `b`: every correct grade-2 decision holder agrees with the
-        -- derived sender's sent bit (I30)
+        -- the abstract holder universal for `b`: every correct grade-2 decision holder agrees
+        -- with the derived sender's sent bit (I30)
         have hpinb : ∀ j0 b0', j0 ∉ ABAState.F (C, A) → Grade2Holder P (C, A) j0 b0' → b0' = b :=
           fun j0 b0' hj0 hh0 => hI.grade2Lock_agree j0 j b0' b hj0 hjF hh0 (Or.inr hjsent)
         have hretfalse : a.ret id = false := by
@@ -348,9 +348,10 @@ theorem hybridRefinesSpecification (P : Parameters) :
           refine ⟨ω, hRel, Or.inr ⟨by simp, ?_⟩⟩
           rw [hbid]
           exact weakStep_of_run_then_step hrun (SpecStep.ret a1 id b hval1 hretid)
-        · -- phase 2: `b` agrees with the certified value through the abstract state's holder pin
-          -- (I30 pins the derived sender's sent `b` against every correct holder, and the
-          -- abstract state's pin names `v`; `SpecStep.ret` fires alone)
+        · -- phase 2: `b` agrees with the certified value through the abstract state's holder
+          -- universal
+          -- (I30 holds the derived sender's sent `b` equal at every correct holder, and the
+          -- abstract state's universal names `v`; `SpecStep.ret` fires alone)
           have hD3 : v = b := (hpin j b hjF (Or.inr hjsent)).symm
           have hvalb : a.val = some b := by
             rw [hv2, hD3]

@@ -1,7 +1,7 @@
 \begin{definition}[The BRB specification instance]
   \label{def:aba-brb-spec}
   \lean{PLTS.ABA.BRB.Label}\lean{PLTS.ABA.BRB.SpecState}\lean{PLTS.ABA.BRB.SpecState.corrupt}\lean{PLTS.ABA.BRB.Step}\lean{PLTS.ABA.BRB.specInst}\leanok
-  \uses{def:aba-params}
+  \uses{def:aba-parameters}
   Transition System~6, read safety-only over an instance-local alphabet, with the leader's recorded input and the committed value held in separate fields (D27): an internal commit writes the value once --- any value under a corrupted leader, the input otherwise --- and every return hands out the committed value.
   Totality, a liveness property, is not encoded: \leandecl{PLTS.ABA.BRB.specInst}.
 \end{definition}

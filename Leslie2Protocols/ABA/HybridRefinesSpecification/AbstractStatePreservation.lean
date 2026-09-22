@@ -38,15 +38,13 @@ single frame argument: `AbstractState` inspects only `F`, the per-process `input
 projections, and the grade-2 lock on `g` certificate — and each row preserves all three. -/
 
 /-- `AbstractState` transfers along any frame that preserves `F`, the per-process
-`input`/`returned` projections, and the grade-2 certificate/holder-pin package. -/
-theorem AbstractState.unchangedBy {P : Parameters} {g g' : ℕ → GBCA.SpecState P.n} {c c' : ABAState
-  P}
-    {w w' : ℕ → WCC.SpecState P.n} {a : SpecState P.n} (hA : AbstractState P g c w a)
-    (hF : c'.F = c.F)
+`input`/`returned` projections, and the grade-2 certificate and holder universal. -/
+theorem AbstractState.unchangedBy {P : Parameters} {g g' : ℕ → GBCA.SpecState P.n}
+    {c c' : ABAState P} {w w' : ℕ → WCC.SpecState P.n} {a : SpecState P.n}
+    (hA : AbstractState P g c w a) (hF : c'.F = c.F)
     (hin : ∀ id, (c'.processes id).input = (c.processes id).input)
     (hret : ∀ id, (c'.processes id).returned = (c.processes id).returned)
-    (hAF : AbstractStateUnchanged P g g' c c') :
-    AbstractState P g' c' w' a := by
+    (hAF : AbstractStateUnchanged P g g' c c') : AbstractState P g' c' w' a := by
   refine ⟨hA.F_eq.trans hF.symm, fun id => (hA.ret_eq id).trans (hret id).symm,
     hA.mode_flipEnabled,
     fun id hid => (hA.input_sync id (by rw [← hF]; exact hid)).trans (hin id).symm, ?_⟩
@@ -64,19 +62,15 @@ theorem AbstractState.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState 
   hA.unchangedBy rfl (fun _ => rfl) (fun _ => rfl) (Invariant.step_gbcaTau hI r hstep hgr').2
 
 /-- Core `τ` (DECIDED delivery/echo/byzantine injection): stutters; `F`/`processes` untouched. -/
-theorem AbstractState.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState
-  P}
-    {w : ℕ → WCC.SpecState P.n} {a : SpecState P.n} (hA : AbstractState P g c w a)
-    (hI : Invariant P g c w)
-    {μc : PMF (ABAState P)}
+theorem AbstractState.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
+    {c : ABAState P} {w : ℕ → WCC.SpecState P.n} {a : SpecState P.n} (hA : AbstractState P g c w a)
+    (hI : Invariant P g c w) {μc : PMF (ABAState P)}
     (hstep :
-      (∃ i j b, b ∈ c.decidedSent j ∧ b ∉ c.decidedReceived i j ∧
-          μc = PMF.pure (c.deliverDecided i j b)) ∨
-        (∃ id b, P.f + 1 ≤ c.decidedCount id b ∧ b ∉ c.decidedSent id ∧
-          μc = PMF.pure (c.sendDecided id b)) ∨
-        (∃ id b, id ∈ c.F ∧ μc = PMF.pure (c.sendDecided id b)))
-    {c' : ABAState P} (hc' : c' ∈ μc.support) :
-    AbstractState P g c' w a := by
+      (∃ i j b, b ∈ c.decidedSent j ∧ b ∉ c.decidedReceived i j ∧ μc = PMF.pure (c.deliverDecided i
+      j b)) ∨
+      (∃ id b, P.f + 1 ≤ c.decidedCount id b ∧ b ∉ c.decidedSent id ∧ μc = PMF.pure (c.sendDecided
+      id b)) ∨ (∃ id b, id ∈ c.F ∧ μc = PMF.pure (c.sendDecided id b)))
+    {c' : ABAState P} (hc' : c' ∈ μc.support) : AbstractState P g c' w a := by
   have hAF := (Invariant.step_roundLoopTau hI hstep hc').2
   have hCFrame : c'.F = c.F ∧ c'.processes = c.processes := by
     rcases hstep with ⟨i, j, b, hs, hr, rfl⟩ | ⟨id, b, hcnt, hs, rfl⟩ | ⟨id, b, hF, rfl⟩ <;>
@@ -113,7 +107,8 @@ theorem AbstractState.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.
     · exact ⟨rfl, fun id' => ⟨rfl, rfl⟩⟩
   exact hA.unchangedBy hCFrame.1 (fun id' => (hCFrame.2 id').1) (fun id' => (hCFrame.2 id').2) hAF
 
-/-- `retG`: stutters; certificates and the holder pin ride the row's `AbstractStateUnchanged`. -/
+/-- `retG`: stutters; certificates and the holder universal ride the row's
+`AbstractStateUnchanged`. -/
 theorem AbstractState.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} {a : SpecState P.n}
     (hA : AbstractState P g c w a) (hI : Invariant P g c w) (r : ℕ) (id : Fin P.n) (out :
@@ -194,9 +189,8 @@ theorem AbstractState.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n
 
 /-- Reading a row where the ABA component moves alone: its own outcome, the coin oracle standing
 still. -/
-theorem mem_support_abaRow {P : Parameters} {μc : PMF (ABAState P)}
-    {o w' : ℕ → WCC.SpecState P.n} {C' : ∀ _ : Fin P.n,
-      RoundLoopRecord P.n} {A' : ABANetworkState P.n}
+theorem mem_support_abaRow {P : Parameters} {μc : PMF (ABAState P)} {o w' : ℕ → WCC.SpecState P.n}
+    {C' : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A' : ABANetworkState P.n}
     (h : (C', A', w') ∈ (μc.map fun c => (c.1, c.2, o)).support) :
     (C', A') ∈ μc.support ∧ w' = o := by
   rw [PMF.mem_support_map_iff] at h
@@ -222,14 +216,11 @@ theorem mem_support_coinRow {P : Parameters} {μc : PMF (ABAState P)}
 `hybrid_step_retABA`/`hybrid_step_fail` (Stage A1) and `hybrid_step_tau` (Stage A2), calling
 the matching `Invariant.step_*` helper (Stage B) in each case. -/
 theorem Invariant.step {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
-    {C : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A : ABANetworkState P.n}
-    {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g (C,
-      A) w) {l : Label P.n} {μ : PMF (HybridState P)}
-    (hstep : (hybrid P).step (g, C, A, w) l μ)
-    {g' : ℕ → GBCA.SpecState P.n} {C' : ∀ _ : Fin P.n,
-      RoundLoopRecord P.n} {A' : ABANetworkState P.n}
-    {w' : ℕ → WCC.SpecState P.n}
-    (hmem : (g', C', A', w') ∈ μ.support) :
+    {C : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A : ABANetworkState P.n} {w : ℕ → WCC.SpecState P.n}
+    (hI : Invariant P g (C, A) w) {l : Label P.n} {μ : PMF (HybridState P)}
+    (hstep : (hybrid P).step (g, C, A, w) l μ) {g' : ℕ → GBCA.SpecState P.n}
+    {C' : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A' : ABANetworkState P.n}
+    {w' : ℕ → WCC.SpecState P.n} (hmem : (g', C', A', w') ∈ μ.support) :
     Invariant P g' (C', A') w' := by
   cases l with
   | tau =>

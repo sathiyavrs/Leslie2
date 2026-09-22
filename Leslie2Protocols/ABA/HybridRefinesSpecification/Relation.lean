@@ -247,9 +247,9 @@ theorem Grade2Certificate.of_unchanged {P : Parameters} {g g' : ℕ → GBCA.Spe
     Grade2Commitment.of_unchanged hexcluded hcall hF hround hest hcarr h.2.2⟩
 
 /-- The `AbstractState` transport a step row hands to `AbstractState.unchangedBy`: grade-2
-  certificates survive the step, and any holder-pinning universal survives given its certificate
-  (the certificate is what pins a *fresh* grade-2 holder when every old holder has been corrupted
-  away). -/
+  certificates survive the step, and any holder universal survives given its certificate
+  (the certificate is what supplies a *fresh* grade-2 holder when every old holder has been
+  corrupted away). -/
 def AbstractStateUnchanged (P : Parameters) (g g' : ℕ → GBCA.SpecState P.n) (c c' : ABAState P) :
   Prop :=
   (∀ r0 b0, Grade2Certificate P g c r0 b0 → ∃ r1, Grade2Certificate P g' c' r1 b0) ∧
@@ -354,9 +354,9 @@ structure Invariant (P : Parameters) (g : ℕ → GBCA.SpecState P.n) (c : ABASt
     (∀ b, (c.processes id).estimate = some b → (!b) ∈ (g r).excluded)
   /-- I14 : `excluded` is monotone and write-once per bit, so a freshly-bound round
   `r + 1`'s surviving value was already carried at round `r`: either round `r` had already
-  bound to it, or round `r` just closed with a grade-0 lock and the coin pins the adopted value
+  bound to it, or round `r` just closed with a grade-0 lock and the coin fixes the adopted value
   (the `⊤` disjunct: an unresolved-to-a-bit coin lets the adopting return pick an arbitrary
-  matching bit, so the coin fact alone doesn't pin `v`, only the grade-0 lock does — every
+  matching bit, so the coin fact alone doesn't determine `v`, only the grade-0 lock does — every
   downstream use only needs the `grade = some false` half). -/
   bind_succ : ∀ r v, (!v) ∈ (g (r + 1)).excluded →
     (!v) ∈ (g r).excluded ∨
@@ -448,13 +448,13 @@ structure Invariant (P : Parameters) (g : ℕ → GBCA.SpecState P.n) (c : ABASt
   keeps `f + 1` F-blind call support at that round (`call` and `F` only grow).
   Established at the `bindUnset` row verbatim from its guard; deriving it
   (`GBCA.exists_correct_caller`) recovers a correct caller of the spared bit
-  from any residue, which is what pins values past a burn. -/
+  from any residue, which is what holds values past a burn. -/
   excluded_support : ∀ r b, b ∈ (g r).excluded →
     P.f + 1 ≤ (Finset.univ.filter
       (fun id => (g r).call id = some (!b) ∨ id ∈ (g r).F)).card
   /-- I29 : correct holders of round `r`'s outcome agree, unless the round is
   grade-0-locked. This is the state residue of the order argument "two opposite
-  value-bearing returns cannot both fire" — the first pins the rival bit excluded,
+  value-bearing returns cannot both fire" — the first excludes the rival bit,
   the second's liveness guard then fails — which the exclusion set alone
   forgets once the round burns. -/
   outcomeHolder_agree : ∀ r id id' v v', id ∉ c.F → id' ∉ c.F →
@@ -547,8 +547,9 @@ of the very same statement. Serves both the `bindUnset` (`b` = the surviving bit
 (`b` = either bit) establishment sites. -/
 theorem Invariant.support_of_call_count {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
     {c : ABAState P} {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) :
-    ∀ r (b : Bool), P.f + 1 ≤ (Finset.univ.filter
-      (fun id => (g r).call id = some b ∨ id ∈ (g r).F)).card → RoundLoopInputSupport P c b := by
+    ∀ r (b : Bool), P.f + 1 ≤
+    (Finset.univ.filter (fun id => (g r).call id = some b ∨ id ∈ (g r).F)).card →
+    RoundLoopInputSupport P c b := by
   intro r
   induction r using Nat.strong_induction_on with
   | _ r ih =>
@@ -591,8 +592,8 @@ theorem Invariant.grade0Lock_chain_of_both_supports {P : Parameters} {g : ℕ �
   · exact h
 
 /-- **An agreeing coin blocks the next round's grade-0 lock.** Once round `r`'s coin has resolved
-to `.bit v` and `!v` is not round `r`'s surviving bit, `call_provenance` pins every correct
-round-`(r + 1)` caller to `v`: both provenance disjuncts name `v`. So `f + 1` F-blind support
+to `.bit v` and `!v` is not round `r`'s surviving bit, `call_provenance` fixes every correct
+round-`(r + 1)` caller at `v`: both provenance disjuncts name `v`. So `f + 1` F-blind support
 for `!v` at round `r + 1` — which a grade-0 return there requires — cannot exist. -/
 theorem Invariant.no_grade0Lock_succ_of_support {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
     {c : ABAState P} {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (r : ℕ) (v : Bool)

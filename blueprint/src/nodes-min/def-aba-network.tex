@@ -1,7 +1,7 @@
-\begin{definition}[The network adversary]
+\begin{definition}[The network]
   \label{def:aba-network}
-  \lean{PLTS.ABA.ABDY.NetworkState}\lean{PLTS.ABA.ABDY.NetworkState.corrupt}\lean{PLTS.ABA.ABDY.abdyGhostStep}\lean{PLTS.ABA.ABDY.abdyGhostOut}\lean{PLTS.ABA.ABDY.NetworkStep}\lean{PLTS.ABA.ABDY.network}\leanok
-  \uses{def:aba-programs, def:aba-labels, def:aba-params}
+  \lean{PLTS.ABA.ABDY.NetworkState}\lean{PLTS.ABA.ABDY.NetworkState.corrupt}\lean{PLTS.ABA.ABDY.abdyGhostStep}\lean{PLTS.ABA.ABDY.abdyGhostOutput}\lean{PLTS.ABA.ABDY.NetworkStep}\lean{PLTS.ABA.ABDY.network}\leanok
+  \uses{def:aba-programs, def:aba-labels, def:aba-parameters}
   The one local state holding what no process may see: the per-sender sent sets of the round messages and of the DECIDED payloads, and the corrupted set with its budget, which guards its $\mathrm{fail}$ row (D1) and authorises the five Byzantine handshake rows (D11), the two injections and the Byzantine return $\mathrm{retByzantine}$ (D23): \leandecl{PLTS.ABA.ABDY.network}.
-  Its ghost record of a round is one bit, the round's bound bit: a return records the bit its own label announces where the round has none on record, and the two return rows fire only with that bit equal to \leandecl{PLTS.ABA.ABDY.abdyGhostOut}, which is the bit on record or \leandecl{PLTS.ABA.GBCA.ByABDY.boundOf} of the round's messages (D29, D30).
+  Its ghost record of a round is one bit, the round's bound bit: a return records the bit its own label announces where the round has none on record, and the two return rows fire only with that bit equal to \leandecl{PLTS.ABA.ABDY.abdyGhostOutput}, which is the bit on record or \leandecl{PLTS.ABA.GBCA.ByABDY.boundOf} of the round's messages (D29, D30).
 \end{definition}

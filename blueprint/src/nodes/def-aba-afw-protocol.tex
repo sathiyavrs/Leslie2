@@ -1,6 +1,6 @@
 \begin{definition}[The gather-based protocol]
   \label{def:aba-afw-protocol}
-  \lean{PLTS.ABA.AFW.Message}\lean{PLTS.ABA.AFW.RoundRecord}\lean{PLTS.ABA.AFW.RoundStep}\lean{PLTS.ABA.AFW.gbcaCallPayload}\lean{PLTS.ABA.AFW.Ghost}\lean{PLTS.ABA.AFW.firstGatherOf}\lean{PLTS.ABA.AFW.secondGatherOf}\lean{PLTS.ABA.AFW.ghostStep}\lean{PLTS.ABA.AFW.ghostOut}\lean{PLTS.ABA.AFW.protocolExtended}\lean{PLTS.ABA.AFW.protocolHidden}\lean{PLTS.ABA.AFW.protocol}\leanok
+  \lean{PLTS.ABA.AFW.Message}\lean{PLTS.ABA.AFW.RoundRecord}\lean{PLTS.ABA.AFW.RoundStep}\lean{PLTS.ABA.AFW.gbcaCallPayload}\lean{PLTS.ABA.AFW.Ghost}\lean{PLTS.ABA.AFW.firstGatherOf}\lean{PLTS.ABA.AFW.secondGatherOf}\lean{PLTS.ABA.AFW.ghostStep}\lean{PLTS.ABA.AFW.ghostOutput}\lean{PLTS.ABA.AFW.protocolExtended}\lean{PLTS.ABA.AFW.protocolHidden}\lean{PLTS.ABA.AFW.protocol}\leanok
   \uses{def:aba-implementation, def:aba-round-over-bracha, def:aba-gather-over-bracha, def:aba-gather-core}
   The implementation of Definition~\ref{def:aba-implementation} at the gather-based implementation, supplying the four things it requires.
   The message type is tagged: a round of that implementation carries $4n+2$ network states --- one for each gather instance and one for each of the $4n$ Bracha instances --- and the tag names the network state a message belongs to, and for a Bracha message the instance, whose index is its leader.
@@ -16,7 +16,7 @@
   The return-then-call row's broadcast of the candidate --- the round multicast of an initial input-broadcast message of the second gather, which no other row carries --- writes the first core at $\mathrm{coreOf}$ of the round's first gather network state and the bound bit at $\mathrm{boundOfCore}$ of that core; a graded return writes the second core the same way; every other label leaves the record where it stands.
   The network state $\mathrm{coreOf}$ is read on is $\mathrm{firstGatherOf}$, the projection of the adversary's tagged sent sets onto the first gather beside its corrupted set, and $\mathrm{secondGatherOf}$ is the second's.
   $\mathrm{coreOf}$ reads the sent sets and the corrupted set alone, which is what lets the adversary compute a core from its own state.
-  $\mathrm{ghostOut}$ reads the bit back, and the two graded-agreement return rows fire only with the bit their label carries equal to it.
+  $\mathrm{ghostOutput}$ reads the bit back, and the two graded-agreement return rows fire only with the bit their label carries equal to it.
   It is total: where the record holds no bit it computes one from the first gather's core, and on a reachable state the returner's own return-then-call row has already written the bit.
   The adversary needs no new rows at all --- recording a multicast, checking a delivery and authorising a handshake row are already independent of the payload.
   Full construction: \leandecl{PLTS.ABA.AFW.protocol}.

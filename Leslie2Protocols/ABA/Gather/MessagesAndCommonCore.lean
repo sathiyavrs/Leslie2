@@ -14,7 +14,7 @@ The records a gather instance is written over and the core of its network
 state.
 
 A gather instance's plain-multicast messages are the `ECHO` and `VOTE` payload
-sets (`Message`); the `BIND` payloads travel by reliable broadcast and are not
+sets (`Message`); the `BIND` payloads are sent by reliable broadcast and are not
 messages of the network. `BaseProcessRecord` is the local record of one process: its input,
 the `ECHO` and the `VOTE` payload it has multicast, the `BIND` payload it has
 handed to its own bind broadcast, and its return flag.
@@ -30,7 +30,7 @@ namespace ABA
 namespace Gather
 
 /-- The plain-multicast messages of one gather instance: the `ECHO` and
-`VOTE` payload sets. The `BIND` payloads travel by reliable broadcast and are
+`VOTE` payload sets. The `BIND` payloads are sent by reliable broadcast and are
 not messages of the network. -/
 inductive Message (n : ℕ) (X : Type) : Type
   /-- `⟨ECHO, A⟩`. -/
@@ -106,9 +106,8 @@ open scoped Classical in
 /-- **The core of a gather network state**: the `ECHO` payload of a sender
 outside the corrupted set with at least `f + 1` dominators, and `∅` if there
 is no such sender. -/
-noncomputable def coreOf (P : Parameters) (w : InstanceState P.n (BaseProcessRecord P.n X) (Message
-  P.n X)) :
-    AcceptedPairs P.n X :=
+noncomputable def coreOf (P : Parameters)
+    (w : InstanceState P.n (BaseProcessRecord P.n X) (Message P.n X)) : AcceptedPairs P.n X :=
   if h : ∃ j, j ∈ correct w ∧ P.f + 1 ≤ (dominators w j).card
   then echoOf w h.choose else ∅
 

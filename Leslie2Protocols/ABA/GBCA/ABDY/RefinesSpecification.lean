@@ -45,7 +45,7 @@ instead:
   (`grade_ne_false_of_echo5_quorum`, `grade_ne_true_of_echo5Bot_quorum`).
 * `bound_excluded` — the round's bound bit and the specification's `excluded` determine each other:
   `excluded = excludedOf bound`, empty while the bit is unwritten and the singleton of its
-  complement once a return has written it. This is the one clause that pins `excluded` from below,
+  complement once a return has written it. This is the one clause that bounds `excluded` from below,
   and it holds because the exclusion fires with the round's first return. It supplies the guard
   `(!bnd) ∈ excluded` of a return that announces a bit already on record, and with
   `exclusion_certificate` it yields `SpecificationRelation.bound_certificate`: the bit on record
@@ -77,7 +77,7 @@ bits at once.
 
 Both `bindUnset` guards come from one `ECHO` certificate (`bindUnset_guards`): refine it to an `n −
 f` `INPUT v` receipt quorum (`inputQuorum_of_echoReceiptQuorum`), whose correct senders hold an
-input (`input_called`, D8) — that is the quorum guard (`quorum_of_msg_quorum`) — and whose count
+input (`input_called`, D8) — that is the quorum guard (`quorum_of_messageQuorum`) — and whose count
 feeds `Invariant.support_of_input_receipts` for the `f + 1` InputSupport count (D15). At the grade-0
 return the guards read the returner's own `|Valid| > 1` evidence instead
 (`inputSupport_of_bothValid` closes both bits at once), so they are available whichever bit the
@@ -126,21 +126,21 @@ namespace PLTS
 namespace ABA
 namespace GBCA.ByABDY
 
-/-! ### Counting kit: any-payload monotonicity and derivation variants -/
+/-! ### The counting lemmas: any-payload monotonicity and derivation variants -/
 
 /-- Deliveries only grow the any-payload `VOTE` count. -/
-theorem ImplementationState.voteCount_le_receiveMessage {n : ℕ} (s : ImplementationState n) (i j :
-  Fin n)
-    (m : Message) (i' : Fin n) : s.voteCount i' ≤ (s.receiveMessage i j m).voteCount i' := by
+theorem ImplementationState.voteCount_le_receiveMessage {n : ℕ} (s : ImplementationState n)
+    (i j : Fin n) (m : Message) (i' : Fin n) :
+    s.voteCount i' ≤ (s.receiveMessage i j m).voteCount i' := by
   refine Finset.card_le_card fun k hk => ?_
   rw [Finset.mem_filter] at hk ⊢
   obtain ⟨v, hv⟩ := hk.2
   exact ⟨hk.1, v, ImplementationState.mem_receiveMessage_received.mpr (Or.inr hv)⟩
 
 /-- Deliveries only grow the any-payload `BIND` count. -/
-theorem ImplementationState.bindCount_le_receiveMessage {n : ℕ} (s : ImplementationState n) (i j :
-  Fin n)
-    (m : Message) (i' : Fin n) : s.bindCount i' ≤ (s.receiveMessage i j m).bindCount i' := by
+theorem ImplementationState.bindCount_le_receiveMessage {n : ℕ} (s : ImplementationState n)
+    (i j : Fin n) (m : Message) (i' : Fin n) :
+    s.bindCount i' ≤ (s.receiveMessage i j m).bindCount i' := by
   refine Finset.card_le_card fun k hk => ?_
   rw [Finset.mem_filter] at hk ⊢
   obtain ⟨v, hv⟩ := hk.2
@@ -906,7 +906,8 @@ theorem echoReceiptQuorum_unique {s : ImplementationState P.n} (hI : Invariant P
     (h : EchoReceiptQuorum P s v) (h' : EchoReceiptQuorum P s v') : v = v' := by
   obtain ⟨i, hi⟩ := h
   obtain ⟨i', hi'⟩ := h'
-  obtain ⟨j, hjF, hj1, hj2⟩ := ImplementationState.exists_correct_received₂ hI.F_card hi hi'
+  obtain ⟨j, hjF, hj1, hj2⟩ :=
+    ImplementationState.exists_correct_received_of_two_quorums hI.F_card hi hi'
   have e1 := hI.echo_once j v hjF (hI.received_subset_sent i j _ hj1)
   have e2 := hI.echo_once j v' hjF (hI.received_subset_sent i' j _ hj2)
   rw [e1] at e2
@@ -927,7 +928,7 @@ def ExclusionCertificate (P : Parameters) (s : ImplementationState P.n) (b : Boo
 
 /-- The counting core: two `n − f`-sized subsets of `Fin n` meeting only
 inside `F` contradict `|F| ≤ f` and `3f < n` (`2(n − f) > n + f`). The same
-arithmetic as `exists_correct_received₂`, exposed as a set statement because
+arithmetic as `exists_correct_received_of_two_quorums`, exposed as a set statement because
 `VoteQuorumAgainst` is a set of processes, not a receipt row. -/
 theorem no_disjoint_quorums {Q D F : Finset (Fin P.n)}
     (hQ : P.n - P.f ≤ Q.card) (hD : P.n - P.f ≤ D.card)
@@ -959,10 +960,10 @@ theorem ExclusionCertificate.mono {s s' : ImplementationState P.n} {b : Bool}
 
 /-- `ExclusionCertificate` is stable under a correct send that respects the write-once
 `sentVote` field. -/
-private theorem exclusionCertificate_send {s : ImplementationState P.n} {j : Fin P.n} {p :
-  ProcessRecord}
-    {m : Message} (hvote : ∀ w, (s.process j).sentVote = some w → p.sentVote = some w)
-    {b : Bool} (h : ExclusionCertificate P s b) :
+private theorem exclusionCertificate_send {s : ImplementationState P.n} {j : Fin P.n}
+    {p : ProcessRecord} {m : Message}
+    (hvote : ∀ w, (s.process j).sentVote = some w → p.sentVote = some w) {b : Bool}
+    (h : ExclusionCertificate P s b) :
     ExclusionCertificate P ((s.setProcess j p).multicast j m) b :=
   ExclusionCertificate.mono (s := s) (fun _ _ _ hm => by simpa using hm)
     (fun k w hk => by
@@ -1064,7 +1065,7 @@ certifies *some* excluded bit. Classical dichotomy on "a correct bit-voter
 exists somewhere": if yes, its `vote_confirmed` receipt quorum is Case A for the
 opposite bit; if no, the quorum's correct `ECHO5` sender holds `n − f` any-`BIND`
 receipts, its correct `BIND` sender can only have sent `BIND ⊥` (a bit `BIND`
-needs a correct bit-voter), and that sender's `bindBot_confirmed` receipts pin an
+needs a correct bit-voter), and that sender's `bindBot_confirmed` receipts identify an
 `n − f` set of processes each corrupted or committed to `VOTE ⊥` — a
 `VoteQuorumAgainst` for both bits at once. -/
 theorem exclusionCertificate_of_noCorrectVote {s : ImplementationState P.n} (hI : Invariant P s)
@@ -1188,8 +1189,8 @@ structure SpecificationRelation (P : Parameters) (s : ImplementationState P.n) (
 
 /-- The simulation relation of the round-`r` instance (the round index is
 phantom: every round runs the same protocol). -/
-def specificationRelation (P : Parameters) (_r : ℕ) (s : ImplementationState P.n) (t : SpecState
-  P.n) : Prop :=
+def specificationRelation (P : Parameters) (_r : ℕ) (s : ImplementationState P.n)
+    (t : SpecState P.n) : Prop :=
   SpecificationRelation P s t
 
 /-- The initial states are related. -/
@@ -1249,8 +1250,7 @@ theorem inputSupport_of_bothValid {s : ImplementationState P.n} (hI : Invariant 
 guards' InputSupport counts (D15). -/
 theorem SpecificationRelation.callSupport {s : ImplementationState P.n} {t : SpecState P.n}
     (hR : SpecificationRelation P s t) {b : Bool} (h : InputSupport P s b) :
-    P.f + 1 ≤ (Finset.univ.filter
-      (fun id => t.call id = some b ∨ id ∈ t.F)).card := by
+    P.f + 1 ≤ (Finset.univ.filter (fun id => t.call id = some b ∨ id ∈ t.F)).card := by
   unfold InputSupport at h
   refine le_trans h (Finset.card_le_card fun k hk => ?_)
   rw [Finset.mem_filter] at hk ⊢
@@ -1261,7 +1261,7 @@ theorem SpecificationRelation.callSupport {s : ImplementationState P.n} {t : Spe
 /-- D8 quorum derivation: any `n − f` receipt quorum of a message whose correct
 senders must hold an input yields the spec's call quorum; corrupted senders
 are absorbed into the `∪ F`. -/
-theorem quorum_of_msg_quorum {s : ImplementationState P.n} {t : SpecState P.n}
+theorem quorum_of_messageQuorum {s : ImplementationState P.n} {t : SpecState P.n}
     (hR : SpecificationRelation P s t) {i : Fin P.n} {m : Message}
     (hpart : ∀ j, j ∉ s.F → m ∈ s.sent j → (s.process j).input ≠ none)
     (h : P.n - P.f ≤ s.receivedCount i m) : t.quorum P := by
@@ -1284,11 +1284,10 @@ theorem quorum_of_msg_quorum {s : ImplementationState P.n} {t : SpecState P.n}
 /-- **Both `bindUnset` guards from the single certificate.** -/
 theorem bindUnset_guards {s : ImplementationState P.n} {t : SpecState P.n}
     (hR : SpecificationRelation P s t) {v : Bool} (hq : EchoReceiptQuorum P s v) :
-    t.quorum P ∧ P.f + 1 ≤ (Finset.univ.filter
-      (fun id => t.call id = some v ∨ id ∈ t.F)).card := by
+    t.quorum P ∧ P.f + 1 ≤ (Finset.univ.filter (fun id => t.call id = some v ∨ id ∈ t.F)).card := by
   obtain ⟨m, hm⟩ := inputQuorum_of_echoReceiptQuorum hR.invariant hq
   have hfn := P.f_lt_n_sub_f
-  refine ⟨quorum_of_msg_quorum hR
+  refine ⟨quorum_of_messageQuorum hR
     (fun j hj hm' => hR.invariant.input_called j v hj hm') hm, ?_⟩
   exact hR.callSupport (hR.invariant.support_of_input_receipts (le_trans (by omega) hm))
 
@@ -1302,7 +1301,7 @@ theorem grade_ne_false_of_echo5_quorum {s : ImplementationState P.n} {t : SpecSt
   intro hg
   obtain ⟨i', hc⟩ := hR.grade0_evidence hg
   obtain ⟨j, hjF, hj1,
-    hj2⟩ := ImplementationState.exists_correct_received₂ hR.invariant.F_card hcnt hc
+    hj2⟩ := ImplementationState.exists_correct_received_of_two_quorums hR.invariant.F_card hcnt hc
   have e1 := hR.invariant.echo5_once j (some v) hjF (hR.invariant.received_subset_sent id j _ hj1)
   have e2 := hR.invariant.echo5_once j none hjF (hR.invariant.received_subset_sent i' j _ hj2)
   rw [e1] at e2
@@ -1316,7 +1315,7 @@ theorem grade_ne_true_of_echo5Bot_quorum {s : ImplementationState P.n} {t : Spec
   intro hg
   obtain ⟨v', i', hc⟩ := hR.grade2_evidence hg
   obtain ⟨j, hjF, hj1,
-    hj2⟩ := ImplementationState.exists_correct_received₂ hR.invariant.F_card hc hcnt
+    hj2⟩ := ImplementationState.exists_correct_received_of_two_quorums hR.invariant.F_card hc hcnt
   have e1 := hR.invariant.echo5_once j (some v') hjF (hR.invariant.received_subset_sent i' j _ hj1)
   have e2 := hR.invariant.echo5_once j none hjF (hR.invariant.received_subset_sent id j _ hj2)
   rw [e1] at e2
@@ -1369,16 +1368,12 @@ theorem excludeThenRetGrade2_run {r : ℕ} {t : SpecState P.n} {id : Fin P.n} {v
 place of the grade guard. -/
 theorem excludeThenRetGrade1_run {r : ℕ} {t : SpecState P.n} {id : Fin P.n} {v : Bool}
     (hq : t.quorum P)
-    (hw : P.f + 1 ≤ (Finset.univ.filter
-      (fun k => t.call k = some v ∨ k ∈ t.F)).card)
+    (hw : P.f + 1 ≤ (Finset.univ.filter (fun k => t.call k = some v ∨ k ∈ t.F)).card)
     (hlive : v ∉ t.excluded) (hd0 : t.excluded = ∅)
-    (hd : P.f + 1 ≤ (Finset.univ.filter
-      (fun k => t.call k = some (!v) ∨ k ∈ t.F)).card)
+    (hd : P.f + 1 ≤ (Finset.univ.filter (fun k => t.call k = some (!v) ∨ k ∈ t.F)).card)
     (hr : t.ret id = false) :
     (specInst P r).weakLStep t (.retG r id (.grade1 v) v)
-      { t with
-        excluded := insert (!v) t.excluded,
-               ret := Function.update t.ret id true } := by
+    { t with excluded := insert (!v) t.excluded, ret := Function.update t.ret id true } := by
   have h1 : (specInst P r).LStep t Silent.τ { t with excluded := insert (!v) t.excluded } :=
     Step.bindUnset t (!v) hq (by simpa only [Bool.not_not] using hw) hd0
   have h2 : (specInst P r).LStep { t with excluded := insert (!v) t.excluded }
@@ -1857,7 +1852,7 @@ theorem refinesSpecification (P : Parameters) (r : ℕ) :
         rw [hbnd, hb]; rfl
       have hcert : ExclusionCertificate P q1 (!bnd) := by
         rw [hbv]; exact exclusionCertificate_boundOf_grade0 hRR.invariant hcnt
-      have hq : q2.quorum P := quorum_of_msg_quorum hRR
+      have hq : q2.quorum P := quorum_of_messageQuorum hRR
         (fun j hj hm' => hRR.invariant.input_called j true hj hm')
         (ImplementationState.bothValid_le hval true)
       have hw : P.f + 1 ≤ (Finset.univ.filter

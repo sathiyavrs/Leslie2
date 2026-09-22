@@ -819,7 +819,7 @@ end Composition
 
 /-! ### Axiom check
 
-The five congruences and the composition of two simulations are pinned to the
+The five congruences and the composition of two simulations are checked against the
 clean axiom list `[propext, Classical.choice, Quot.sound]`. -/
 
 /-- info: 'PLTS.ForwardSimulation.parallel_right' depends on axioms: [propext, Classical.choice, Quot.sound] -/

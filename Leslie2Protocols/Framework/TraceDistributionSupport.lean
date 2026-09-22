@@ -41,7 +41,7 @@ namespace PLTS
 
 variable {State Label : Type}
 
-/-! ### Prefix-execution glue for `ofList` executions -/
+/-! ### Prefix-execution lemmas for `ofList` executions -/
 
 namespace AlterSeq
 
@@ -280,7 +280,7 @@ theorem is_exec_of_probOf_ne_zero
     have := is_partial_exec_of_probOf_ofList_ne_zero pe s₀ (tr.toList hFin) h_ne
     rwa [show (⟨s₀, Seq.ofList (tr.toList hFin)⟩ : AlterSeq State Label)
         = ⟨s₀, tr⟩ from by rw [h_ofList]] at this
-  · -- initial-state component: positive mass under a Dirac init pins the start.
+  · -- initial-state component: positive mass under a Dirac init fixes the start.
     have h_init_ne : pe.init s₀ ≠ 0 := by
       intro h0
       exact h (le_antisymm (h0 ▸ pe.probOf_le_init ⟨s₀, tr⟩ hFin) bot_le)
@@ -523,10 +523,8 @@ omit [Silent Label] in
 /-- **Label-history-aware invariant induction.** An invariant over (seen
 labels, current state) holding initially and preserved by every step holds,
 at every position `n`, of the labels seen so far and the state reached. -/
-theorem is_exec_induction_labels (I : List Label → State → Prop)
-    (hinit : I [] sys.init)
-    (hstep : ∀ pre s l μ s', I pre s → sys.step s l μ → s' ∈ μ.support →
-      I (pre ++ [l]) s')
+theorem is_exec_induction_labels (I : List Label → State → Prop) (hinit : I [] sys.init)
+    (hstep : ∀ pre s l μ s', I pre s → sys.step s l μ → s' ∈ μ.support → I (pre ++ [l]) s')
     {e : AlterSeq State Label} (he : is_exec e sys) :
     ∀ n s, e.stateAt n = some s → I (e.labelsUpTo n) s := by
   intro n

@@ -1,7 +1,7 @@
 \begin{definition}[The composed system]
   \label{def:aba-composed}
   \lean{PLTS.ABA.Composition.RoundLoopStep}\lean{PLTS.ABA.Composition.roundLoopProgram}\lean{PLTS.ABA.Composition.ABANetworkState}\lean{PLTS.ABA.Composition.ABANetworkState.corrupt}\lean{PLTS.ABA.Composition.ABANetworkStep}\lean{PLTS.ABA.Composition.ABANetwork}\lean{PLTS.ABA.Composition.ComposedState}\lean{PLTS.ABA.ABDY.composedExtended}\lean{PLTS.ABA.ABDY.composedHidden}\lean{PLTS.ABA.ABDY.composed}\leanok
-  \uses{def:aba-gbca-instance-by-abdy, def:aba-programs, def:aba-network, def:aba-protocol, def:aba-core-vocab, def:relabel, def:syncproduct, def:process-algebra}
+  \uses{def:aba-gbca-instance-by-abdy, def:aba-programs, def:aba-network, def:aba-protocol, def:aba-round-loop-state, def:relabel, def:synchronised-product, def:process-algebra}
   The protocol read as a composition of four components over the extended alphabet $\mathrm{ExtendedLabel}(n)$: the family $\mathrm{gbcaInstanceFamily}(P)$ of round instances, the round loop $\mathrm{roundLoopProgram}(P,j)$ of each process, the ABA network $\mathrm{ABANetwork}(P)$ holding the DECIDED sets (D12$'$) and the corrupted set with its budget, and the coin oracle joined through $\mathrm{coinLabelMap}$.
   \[
     \abdy{\mathrm{composedExtended}}(P) \;=\;

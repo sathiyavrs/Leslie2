@@ -250,8 +250,8 @@ noncomputable def broadcastNetwork (P : Parameters) (ldr : Fin P.n) (M : Type) [
     (broadcastNetwork P ldr M).step w l μ ↔ NetworkStep P ldr w l μ := Iff.rfl
 
 /-- The programs beside the network, over the instance-internal alphabet. -/
-noncomputable def brachaInstanceExtended (P : Parameters) (ldr : Fin P.n) (M : Type) [DecidableEq M]
-  :
+noncomputable def brachaInstanceExtended (P : Parameters) (ldr : Fin P.n) (M : Type)
+  [DecidableEq M] :
     System (BrachaState P.n M) (BroadcastLabel P.n M) :=
   (System.synchronisedProduct (broadcastProgram P ldr (M := M))).parallel (broadcastNetwork P ldr M)
 
@@ -289,9 +289,8 @@ def specificationLabelMap (n : ℕ) (M : Type) : InstanceLabel n M → Option (L
 
 /-- Only the silent label projects to the silent label: the call loop projects
 to the call. -/
-theorem specificationLabelMap_eq_tau {n : ℕ} {M : Type} {l : InstanceLabel n M} (h :
-  specificationLabelMap n M l = some Label.tau) :
-    l = Sum.inl Label.tau := by
+theorem specificationLabelMap_eq_tau {n : ℕ} {M : Type} {l : InstanceLabel n M}
+    (h : specificationLabelMap n M l = some Label.tau) : l = Sum.inl Label.tau := by
   cases l with
   | inl l₀ => rw [Option.some.inj h]
   | inr e => cases e; simp at h
@@ -317,22 +316,21 @@ noncomputable def specificationOverInstanceAlphabet (P : Parameters) (ldr : Fin 
 Both rule tables written here are Dirac, so the instance is an LTS. -/
 
 /-- Every program transition is Dirac. -/
-theorem programStep_dirac {P : Parameters} {ldr j : Fin P.n} {p : LocalState P.n (ProcessRecord M)
-  (Message M)}
-    {l : BroadcastLabel P.n M} {ν : PMF (LocalState P.n (ProcessRecord M) (Message M))}
-    (h : ProgramStep P ldr j p l ν) : ∃ p', ν = PMF.pure p' := by
+theorem programStep_dirac {P : Parameters} {ldr j : Fin P.n}
+    {p : LocalState P.n (ProcessRecord M) (Message M)} {l : BroadcastLabel P.n M}
+    {ν : PMF (LocalState P.n (ProcessRecord M) (Message M))} (h : ProgramStep P ldr j p l ν) :
+    ∃ p', ν = PMF.pure p' := by
   cases h <;> exact ⟨_, rfl⟩
 
 /-- Every network transition is Dirac. -/
 theorem networkStep_dirac {P : Parameters} {ldr : Fin P.n} {w : NetworkState P.n (Message M)}
-    {l : BroadcastLabel P.n M} {μ : PMF (NetworkState P.n (Message M))} (h : NetworkStep P ldr w l
-      μ) :
-    ∃ w', μ = PMF.pure w' := by
+    {l : BroadcastLabel P.n M} {μ : PMF (NetworkState P.n (Message M))}
+    (h : NetworkStep P ldr w l μ) : ∃ w', μ = PMF.pure w' := by
   cases h <;> exact ⟨_, rfl⟩
 
 /-- A program is an LTS. -/
-theorem broadcastProgram_isLTS (P : Parameters) (ldr j : Fin P.n) : (broadcastProgram P ldr j (M :=
-  M)).IsLTS :=
+theorem broadcastProgram_isLTS (P : Parameters) (ldr j : Fin P.n) :
+    (broadcastProgram P ldr j (M := M)).IsLTS :=
   fun _ _ _ h => programStep_dirac h
 
 /-- The network is an LTS. -/
@@ -346,9 +344,8 @@ theorem broadcastProgramProduct_isLTS (P : Parameters) (ldr : Fin P.n) :
   System.synchronisedProduct_isLTS (broadcastProgram_isLTS P ldr)
 
 /-- The programs beside the network form an LTS. -/
-theorem brachaInstanceExtended_isLTS (P : Parameters) (ldr : Fin P.n) : (brachaInstanceExtended P
-  ldr
-  M).IsLTS :=
+theorem brachaInstanceExtended_isLTS (P : Parameters) (ldr : Fin P.n) :
+    (brachaInstanceExtended P ldr M).IsLTS :=
   System.parallel_isLTS (broadcastProgramProduct_isLTS P ldr) (broadcastNetwork_isLTS P ldr)
 
 /-- The instance is an LTS. -/
@@ -364,8 +361,8 @@ theorem specificationOverInstanceAlphabet_isLTS {M : Type} (P : Parameters) (ldr
 /-- No program rule fires on `τ`: a program only ever moves in a rendezvous or
 on one of the instance's interface labels. The instance's silent transitions
 are therefore exactly the network's injections and the hidden rendezvous. -/
-theorem programStep_no_tau {P : Parameters} {ldr j : Fin P.n} {p : LocalState P.n (ProcessRecord M)
-  (Message M)}
+theorem programStep_no_tau {P : Parameters} {ldr j : Fin P.n}
+    {p : LocalState P.n (ProcessRecord M) (Message M)}
     {ν : PMF (LocalState P.n (ProcessRecord M) (Message M))}
     (h : ProgramStep P ldr j p (Silent.τ : BroadcastLabel P.n M) ν) : False := by
   rw [broadcastLabel_tau] at h; cases h
@@ -393,8 +390,8 @@ noncomputable def sectionAt {n : ℕ} {M : Type} (l₀ : Label n M) (l : Instanc
 
 /-- The left injection reflects the silent label. -/
 theorem labelSection_eq_tau {n : ℕ} {M : Type} (x : Label n M) :
-    (labelSection x : InstanceLabel n M) = (Silent.τ : InstanceLabel n M) ↔ x = (Silent.τ : Label n
-      M) :=
+    (labelSection x : InstanceLabel n M) = (Silent.τ : InstanceLabel n M) ↔ x =
+    (Silent.τ : Label n M) :=
   inl_eq_tau_iff x
 
 theorem specificationLabelMap_sectionAt {n : ℕ} {M : Type} {l₀ : Label n M} {l : InstanceLabel n M}
@@ -423,23 +420,19 @@ theorem sectionAt_tau {n : ℕ} {M : Type} {l₀ : Label n M} {l : InstanceLabel
 
 /-- A silent weak run of the specification is a silent weak run of the lifted
 specification. -/
-theorem weakLSilent_specificationOverInstanceAlphabet {M : Type} (P : Parameters) (ldr : Fin P.n) {s
-  s'
-  : SpecState P.n M}
-    (h : (specInst P ldr M).weakLSilent s s') : (specificationOverInstanceAlphabet P ldr
-      M).weakLSilent s s' :=
+theorem weakLSilent_specificationOverInstanceAlphabet {M : Type} (P : Parameters) (ldr : Fin P.n)
+    {s s' : SpecState P.n M} (h : (specInst P ldr M).weakLSilent s s') :
+    (specificationOverInstanceAlphabet P ldr M).weakLSilent s s' :=
   System.weakLSilent_mapIdle labelSection (fun _ => rfl) (fun x => labelSection_eq_tau x) h
 
 /-- A labelled weak run of the specification is a weak run of the lifted
 specification at any interface label projecting to the same specification
 label. -/
-theorem weakLStep_specificationOverInstanceAlphabet {M : Type} (P : Parameters) (ldr : Fin P.n) {s
-  s' :
-  SpecState P.n M}
-    {l₀ : Label P.n M} {l : InstanceLabel P.n M} (hl₀ : l₀ ≠ (Silent.τ : Label P.n M))
-    (hl : specificationLabelMap P.n M l = some l₀)
-    (h : (specInst P ldr M).weakLStep s l₀ s') : (specificationOverInstanceAlphabet P ldr
-      M).weakLStep s l s' :=
+theorem weakLStep_specificationOverInstanceAlphabet {M : Type} (P : Parameters) (ldr : Fin P.n)
+    {s s' : SpecState P.n M} {l₀ : Label P.n M} {l : InstanceLabel P.n M}
+    (hl₀ : l₀ ≠ (Silent.τ : Label P.n M)) (hl : specificationLabelMap P.n M l = some l₀)
+    (h : (specInst P ldr M).weakLStep s l₀ s') :
+    (specificationOverInstanceAlphabet P ldr M).weakLStep s l s' :=
   System.weakLStep_mapIdle (sectionAt l₀ l) (specificationLabelMap_sectionAt hl) (sectionAt_tau hl
     hl₀)
     (by simp [sectionAt]) h
@@ -490,9 +483,8 @@ theorem broadcastProgramProduct_no_tau {P : Parameters} {ldr : Fin P.n}
 
 /-- The instance's step relation, unfolded to the hidden-rendezvous case and
 the interface-label case. -/
-theorem brachaInstance_step_iff (P : Parameters) (ldr : Fin P.n) (q : BrachaState P.n M) (l :
-  InstanceLabel P.n M)
-    (μ : PMF (BrachaState P.n M)) :
+theorem brachaInstance_step_iff (P : Parameters) (ldr : Fin P.n) (q : BrachaState P.n M)
+    (l : InstanceLabel P.n M) (μ : PMF (BrachaState P.n M)) :
     (brachaInstance P ldr M).step q l μ ↔
       (l = Sum.inl Label.tau ∧ ∃ e : BroadcastEvent P.n M,
         (brachaInstanceExtended P ldr M).step q (Sum.inr e) μ) ∨
@@ -573,15 +565,13 @@ theorem brachaInstance_tau_network (P : Parameters) (ldr : Fin P.n)
 the network step on the label, and the joint distribution is their Dirac
 product. -/
 theorem brachaInstanceExtended_joint_inversion {P : Parameters} {ldr : Fin P.n}
-    {u : ∀ _ : Fin P.n,
-      LocalState P.n (ProcessRecord M) (Message M)} {w : NetworkState P.n (Message M)}
-    {L : BroadcastLabel P.n M} {μ : PMF (BrachaState P.n M)} (hL : L ≠ (Silent.τ : BroadcastLabel
-      P.n M))
+    {u : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord M) (Message M)}
+    {w : NetworkState P.n (Message M)} {L : BroadcastLabel P.n M} {μ : PMF (BrachaState P.n M)}
+    (hL : L ≠ (Silent.τ : BroadcastLabel P.n M))
     (h : (brachaInstanceExtended P ldr M).step (u, w) L μ) :
-    ∃ (x : ∀ _ : Fin P.n,
-      LocalState P.n (ProcessRecord M) (Message M)) (w' : NetworkState P.n (Message M)),
-        μ = PMF.pure (x, w') ∧ (∀ i,
-          ProgramStep P ldr i (u i) L (PMF.pure (x i))) ∧ NetworkStep P ldr w L (PMF.pure w') := by
+    ∃ (x : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord M) (Message M))
+    (w' : NetworkState P.n (Message M)), μ = PMF.pure (x, w') ∧
+    (∀ i, ProgramStep P ldr i (u i) L (PMF.pure (x i))) ∧ NetworkStep P ldr w L (PMF.pure w') := by
   rw [brachaInstanceExtended, System.parallel_step] at h
   rcases h with ⟨-, μ₁, μ₂, hs, hn, rfl⟩ | ⟨hτ, -⟩ | ⟨hτ, -⟩
   · obtain ⟨x, rfl, hall⟩ := broadcastProgramProduct_inversion hs
@@ -593,12 +583,11 @@ theorem brachaInstanceExtended_joint_inversion {P : Parameters} {ldr : Fin P.n}
 /-- A silent transition of the programs beside the network is a network-local
 injection: no program has a `τ` row. -/
 theorem brachaInstanceExtended_tau_inversion {P : Parameters} {ldr : Fin P.n}
-    {u : ∀ _ : Fin P.n,
-      LocalState P.n (ProcessRecord M) (Message M)} {w : NetworkState P.n (Message M)}
-    {μ : PMF (BrachaState P.n M)}
+    {u : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord M) (Message M)}
+    {w : NetworkState P.n (Message M)} {μ : PMF (BrachaState P.n M)}
     (h : (brachaInstanceExtended P ldr M).step (u, w) (Sum.inl (Sum.inl Label.tau)) μ) :
-    ∃ w' : NetworkState P.n (Message M), μ = PMF.pure (u, w') ∧
-      NetworkStep P ldr w (Sum.inl (Sum.inl Label.tau)) (PMF.pure w') := by
+    ∃ w' : NetworkState P.n (Message M), μ = PMF.pure (u, w') ∧ NetworkStep P ldr w
+    (Sum.inl (Sum.inl Label.tau)) (PMF.pure w') := by
   rw [brachaInstanceExtended, System.parallel_step] at h
   rcases h with ⟨hτ, -⟩ | ⟨-, μ₁, hs, rfl⟩ | ⟨-, μ₂, hn, rfl⟩
   · exact absurd rfl hτ
@@ -743,7 +732,7 @@ The local states and the network state are the two components of `BrachaState`
 (`ABA/ReliableBroadcast/BrachaImplementation.lean`), so the instance and the rule table `BrachaStep`
 run on the same state and every rule of the one is a rule of the other read in the
 instance state's accessors. What the joint steps deliver, though, is a program
-function pinned pointwise — its value at the acting process, and its agreement
+function given pointwise — its value at the acting process, and its agreement
 with the old one elsewhere — where `BrachaStep` writes with `InstanceState.setProcess`.
 The lemmas here close that gap. -/
 
@@ -753,7 +742,7 @@ variable {P : Parameters} {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord 
   {w : NetworkState P.n (Message M)}
 
 omit [DecidableEq M] in
-/-- A program function pinned at `j` and unchanged elsewhere is the old one
+/-- A program function fixed at `j` and unchanged elsewhere is the old one
 updated at `j`. -/
 theorem programFunction_update {j : Fin P.n} {q : LocalState P.n (ProcessRecord M) (Message M)}
     (hj : x j = q) (hne : ∀ i, i ≠ j → x i = u i) : x = Function.update u j q := by
@@ -774,8 +763,8 @@ theorem brachaInstance_setProcess {j : Fin P.n} {pr : ProcessRecord M}
 message that write multicasts. -/
 theorem brachaInstance_setProcess_recordSent {j : Fin P.n} {pr : ProcessRecord M} {m : Message M}
     (hj : x j = (u j).setProcess pr) (hne : ∀ i, i ≠ j → x i = u i) :
-    ((x, w.recordSent j m) : BrachaState P.n M) = (InstanceState.setProcess (u,
-      w) j pr).multicast j m := by
+    ((x, w.recordSent j m) : BrachaState P.n M) = (InstanceState.setProcess (u, w) j pr).multicast j
+    m := by
   rw [programFunction_update hj hne]
   rfl
 
@@ -880,7 +869,8 @@ theorem brachaInstance_step_row (P : Parameters) (ldr : Fin P.n) :
       refine ⟨Label.tau, rfl, ?_⟩
       rw [brachaInstance_recordSent]
       exact BrachaStep.byzantine _ j m hF
-    · obtain ⟨x, w', rfl, hall, hn⟩ := brachaInstanceExtended_joint_inversion (by simpa using hlτ) hlab
+    · obtain ⟨x, w', rfl, hall, hn⟩ :=
+        brachaInstanceExtended_joint_inversion (by simpa using hlτ) hlab
       cases l with
       | inl l₀ =>
         cases l₀ with
@@ -974,9 +964,8 @@ the two labels `specificationLabelMap` sends to it; every other specification la
 single interface label over it. -/
 theorem brachaInstance_step_iff_row (P : Parameters) (ldr : Fin P.n) (s : BrachaState P.n M)
     (l₀ : Label P.n M) (μ : PMF (BrachaState P.n M)) :
-    (∃ l,
-      specificationLabelMap P.n M l = some l₀ ∧ (brachaInstance P ldr M).step s l μ) ↔ BrachaStep P
-        ldr s l₀ μ := by
+    (∃ l, specificationLabelMap P.n M l = some l₀ ∧ (brachaInstance P ldr M).step s l μ) ↔
+    BrachaStep P ldr s l₀ μ := by
   constructor
   · rintro ⟨l, hl, hstep⟩
     obtain ⟨l₁, hl₁, hrow⟩ := brachaInstance_step_row P ldr s l μ hstep

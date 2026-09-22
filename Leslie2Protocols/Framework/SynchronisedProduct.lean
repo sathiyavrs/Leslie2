@@ -134,8 +134,8 @@ def synchronisedProduct (sys : ∀ i, System (State i) Label) :
 @[simp] theorem synchronisedProduct_init (sys : ∀ i, System (State i) Label) :
     (synchronisedProduct sys).init = fun i => (sys i).init := rfl
 
-@[simp] theorem synchronisedProduct_step (sys : ∀ i, System (State i) Label)
-    (s : ∀ i, State i) (l : Label) (μ : PMF (∀ i, State i)) :
+@[simp] theorem synchronisedProduct_step (sys : ∀ i, System (State i) Label) (s : ∀ i, State i)
+    (l : Label) (μ : PMF (∀ i, State i)) :
     (synchronisedProduct sys).step s l μ ↔
       (l ≠ Silent.τ ∧ ∃ μ_ : ∀ i, PMF (State i),
         (∀ i, (sys i).step (s i) l (μ_ i)) ∧ μ = piPMF μ_) ∨

@@ -1,8 +1,8 @@
 \begin{theorem}[Safety of the gather-based protocol]
   \label{thm:aba-afw-main}
-  \lean{PLTS.ABA.AFW.composed_refines}\lean{PLTS.ABA.AFW.composed_safe}\lean{PLTS.ABA.AFW.refines}\lean{PLTS.ABA.AFW.main}\lean{PLTS.ABA.AFW.chainSim}\leanok
+  \lean{PLTS.ABA.AFW.composed_refines}\lean{PLTS.ABA.AFW.composed_safe}\lean{PLTS.ABA.AFW.refines}\lean{PLTS.ABA.AFW.main}\lean{PLTS.ABA.AFW.chainSimulation}\leanok
   \uses{thm:aba-afw-protocol-composed, thm:aba-afw-substitution, thm:aba-hybrid-spec, thm:aba-spec-safe, thm:trace-support, thm:forward-trans}
-  Every trace distribution achievable by the gather-based protocol as it runs is achievable by the ABA specification, and every positive-probability trace of it satisfies Validity and Agreement: \leandecl{PLTS.ABA.AFW.refines}, \leandecl{PLTS.ABA.AFW.main}; the composed simulation is \leandecl{PLTS.ABA.AFW.chainSim}.
+  Every trace distribution achievable by the gather-based protocol as it runs is achievable by the ABA specification, and every positive-probability trace of it satisfies Validity and Agreement: \leandecl{PLTS.ABA.AFW.refines}, \leandecl{PLTS.ABA.AFW.main}; the composed simulation is \leandecl{PLTS.ABA.AFW.chainSimulation}.
   The same holds of the composed system alone: \leandecl{PLTS.ABA.AFW.composed_refines}, \leandecl{PLTS.ABA.AFW.composed_safe}.
 \end{theorem}
 

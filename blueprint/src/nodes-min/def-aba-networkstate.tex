@@ -1,7 +1,7 @@
 \begin{definition}[The two-part instance vocabulary]
   \label{def:aba-networkstate}
   \lean{PLTS.ABA.NetworkState}\lean{PLTS.ABA.LocalState}\lean{PLTS.ABA.InstanceState}\lean{PLTS.ABA.InstanceState.corrupt}\lean{PLTS.ABA.InstanceState.multicast}\lean{PLTS.ABA.InstanceState.receiveMessage}\lean{PLTS.ABA.InstanceState.receivedCount}\leanok
-  \uses{def:aba-params}
+  \uses{def:aba-parameters}
   The state shape the broadcast and gather encodings share: a network state holding the per-sender sent sets and the corrupted set (D5, D1) beside $n$ process-local states, each holding one local record and its per-sender received sets.
   Multicast, delivery, corruption and the receipt counts are operations on the pair, and the quorum-intersection lemmas are stated once over it: \leandecl{PLTS.ABA.InstanceState}.
 \end{definition}

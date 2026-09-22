@@ -48,13 +48,12 @@ namespace Gather
 
 /-- **Broadcast compatibility at the gather instance**: the broadcast
 substitution relation is preserved by corrupting both instances at once. -/
-theorem broadcastSubstitutionRelation_corrupt {X : Type} [DecidableEq X] {P : Parameters} {s :
-  StateOverBracha P.n X}
-    {t : StateOverBroadcastSpecification P.n X} (hR : BroadcastSubstitutionRelation P s t) (id : Fin
-      P.n) :
-    BroadcastSubstitutionRelation P (corruptAll P id (InstanceState.corrupt P id)
-      (InstanceState.corrupt P id) s)
-      (corruptAll P id (BRB.SpecState.corrupt P id) (BRB.SpecState.corrupt P id) t) :=
+theorem broadcastSubstitutionRelation_corrupt {X : Type} [DecidableEq X] {P : Parameters}
+    {s : StateOverBracha P.n X} {t : StateOverBroadcastSpecification P.n X}
+    (hR : BroadcastSubstitutionRelation P s t) (id : Fin P.n) :
+    BroadcastSubstitutionRelation P
+    (corruptAll P id (InstanceState.corrupt P id) (InstanceState.corrupt P id) s)
+    (corruptAll P id (BRB.SpecState.corrupt P id) (BRB.SpecState.corrupt P id) t) :=
   ⟨congrArg (fun x => (x.1, { x.2 with network := x.2.network.corrupt P id })) hR.gatherTier_eq,
     fun k => BRB.specificationRelation_corrupt (hR.inputBroadcastRelation k) id,
     fun q => BRB.specificationRelation_corrupt (hR.bindBroadcastRelation q) id⟩
@@ -67,8 +66,8 @@ namespace GBCA.ByAFW
 
 /-- The broadcast substitution relation of the round: the round's programs equal, and each gather
 coordinate related to its broadcast-specification coordinate by the gather substitution relation. -/
-structure BroadcastSubstitutionRelation (P : Parameters) (s : RoundStateOverBracha P.n) (t :
-  RoundStateOverBroadcastSpecification P.n) : Prop where
+structure BroadcastSubstitutionRelation (P : Parameters) (s : RoundStateOverBracha P.n)
+    (t : RoundStateOverBroadcastSpecification P.n) : Prop where
   /-- The programs and the round's bound bit are untouched by the
   substitution. -/
   roundPrograms_eq : s.1 = t.1
@@ -79,8 +78,8 @@ structure BroadcastSubstitutionRelation (P : Parameters) (s : RoundStateOverBrac
 
 /-- The relation holds initially. -/
 theorem broadcastSubstitutionRelation_init (P : Parameters) (r : ℕ) :
-    BroadcastSubstitutionRelation P (roundOverBracha P r).init (roundOverBroadcastSpecification P
-      r).init :=
+    BroadcastSubstitutionRelation P (roundOverBracha P r).init
+    (roundOverBroadcastSpecification P r).init :=
   ⟨rfl, Gather.broadcastSubstitutionRelation_init, Gather.broadcastSubstitutionRelation_init⟩
 
 /-- **The broadcast substitution inside the round.** The round over the gather
@@ -109,18 +108,17 @@ theorem broadcastSubstitution (P : Parameters) (r : ℕ) :
   have hRound := ((hGa.parallel_left (roundPrograms P r)).abstract (roundEvents P.n)).relabel
   refine ForwardSimulation.congr (fun s t => ?_) hRound
   constructor
-  · rintro ⟨hlayer, ⟨c₁, c₂⟩, ⟨h1', rfl⟩, rfl, h2'⟩
-    exact ⟨hlayer, h1', h2'⟩
-  · rintro ⟨hlayer, h1', h2'⟩
-    exact ⟨hlayer, (t.2.1, s.2.2), ⟨h1', rfl⟩, rfl, h2'⟩
+  · rintro ⟨hRoundPrograms, ⟨c₁, c₂⟩, ⟨h1', rfl⟩, rfl, h2'⟩
+    exact ⟨hRoundPrograms, h1', h2'⟩
+  · rintro ⟨hRoundPrograms, h1', h2'⟩
+    exact ⟨hRoundPrograms, (t.2.1, s.2.2), ⟨h1', rfl⟩, rfl, h2'⟩
 
 /-! ### The gather substitution -/
 
 /-- The gather substitution relation of the round: the round's programs equal, and each gather
 coordinate related to its specification coordinate by the gather refinement relation. -/
 structure GatherSubstitutionRelation (P : Parameters) (s : RoundStateOverBroadcastSpecification P.n)
-  (t :
-  RoundStateOverGatherSpecifications P.n) : Prop where
+    (t : RoundStateOverGatherSpecifications P.n) : Prop where
   /-- The programs and the round's bound bit are untouched by the
   substitution. -/
   roundPrograms_eq : s.1 = t.1
@@ -161,10 +159,10 @@ theorem gatherSubstitution (P : Parameters) (r : ℕ) :
   have hRound := ((hGa.parallel_left (roundPrograms P r)).abstract (roundEvents P.n)).relabel
   refine ForwardSimulation.congr (fun s t => ?_) hRound
   constructor
-  · rintro ⟨hlayer, ⟨c₁, c₂⟩, ⟨h1', rfl⟩, rfl, h2'⟩
-    exact ⟨hlayer, h1', h2'⟩
-  · rintro ⟨hlayer, h1', h2'⟩
-    exact ⟨hlayer, (t.2.1, s.2.2), ⟨h1', rfl⟩, rfl, h2'⟩
+  · rintro ⟨hRoundPrograms, ⟨c₁, c₂⟩, ⟨h1', rfl⟩, rfl, h2'⟩
+    exact ⟨hRoundPrograms, h1', h2'⟩
+  · rintro ⟨hRoundPrograms, h1', h2'⟩
+    exact ⟨hRoundPrograms, (t.2.1, s.2.2), ⟨h1', rfl⟩, rfl, h2'⟩
 
 /-! ### Trace-distribution inclusion -/
 
@@ -192,9 +190,9 @@ theorem roundOverBroadcastSpecification_refines (P : Parameters) (r : ℕ) :
 
 /-- **Broadcast compatibility of the broadcast substitution**: the relation is
 preserved by corrupting both rounds at once. -/
-theorem broadcastSubstitutionRelation_corrupt {P : Parameters} {s : RoundStateOverBracha P.n} {t :
-  RoundStateOverBroadcastSpecification P.n}
-    (hR : BroadcastSubstitutionRelation P s t) (id : Fin P.n) :
+theorem broadcastSubstitutionRelation_corrupt {P : Parameters} {s : RoundStateOverBracha P.n}
+    {t : RoundStateOverBroadcastSpecification P.n} (hR : BroadcastSubstitutionRelation P s t)
+    (id : Fin P.n) :
     BroadcastSubstitutionRelation P
       (corruptAll P id
         (fun i => Gather.corruptAll P i (InstanceState.corrupt P i) (InstanceState.corrupt P i))
@@ -208,9 +206,8 @@ theorem broadcastSubstitutionRelation_corrupt {P : Parameters} {s : RoundStateOv
 
 /-- **Broadcast compatibility of the gather substitution**: the relation is
 preserved by corrupting both rounds at once. -/
-theorem gatherSubstitutionRelation_corrupt {P : Parameters} {s :
-  RoundStateOverBroadcastSpecification P.n} {t :
-  RoundStateOverGatherSpecifications P.n}
+theorem gatherSubstitutionRelation_corrupt {P : Parameters}
+    {s : RoundStateOverBroadcastSpecification P.n} {t : RoundStateOverGatherSpecifications P.n}
     (hR : GatherSubstitutionRelation P s t) (id : Fin P.n) :
     GatherSubstitutionRelation P
       (corruptAll P id

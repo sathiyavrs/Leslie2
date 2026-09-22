@@ -27,7 +27,7 @@ corrupted leader commits anything while a correct one commits only its input.
 Decoupling the commit from the call is not a strengthening but the correct
 account of the source's overwrite window: a leader corrupted *after* a correct
 call can still direct the delivered value anywhere until the first return, and
-a spec that pinned `val` at call time would refuse that execution.
+a spec that fixed `val` at call time would refuse that execution.
 
 Both properties are then linear. Agreement: `ret` hands out `val`, and `val`
 is written once. Validity: if the leader is never corrupted then `commit`'s

@@ -91,8 +91,8 @@ namespace NonVacuity
 
 /-- A state of the protocol-shaped specification, assembled from the round specifications, the ABA
 component and the coin oracle. -/
-def hybridStateOf (G : ℕ → GBCA.SpecState 4) (s : ABAState fourProcesses) (o : ℕ → WCC.SpecState 4)
-  :
+def hybridStateOf (G : ℕ → GBCA.SpecState 4) (s : ABAState fourProcesses)
+  (o : ℕ → WCC.SpecState 4) :
     HybridState fourProcesses := (G, s.1, s.2, o)
 
 /-- The round loops on a label one of them owns: the addressed loop takes its
@@ -333,8 +333,8 @@ theorem step_callABA₂ :
 estimate and the round-`0` specification takes its owned `call`. -/
 theorem step_callG₀ :
     (hybrid fourProcesses).step (hybridStateOf gbcaSpecificationsInitial abaAfterInput2 coinInitial)
-      Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterCall0 abaAfterCallG0 coinInitial))
-        := by
+      Label.tau
+        (PMF.pure (hybridStateOf gbcaSpecificationsAfterCall0 abaAfterCallG0 coinInitial)) := by
   refine hybrid_hidden fourProcesses (l := Label.callG 0 (0 : Fin 4) true) (by simp) ?_
   have h := hybridExtended_visible_step fourProcesses (G := gbcaSpecificationsInitial) (C :=
     abaAfterInput2.1) (A := abaAfterInput2.2) (o := coinInitial)
@@ -353,9 +353,9 @@ theorem step_callG₀ :
 
 /-- Second graded-agreement call: process `1`. -/
 theorem step_callG₁ :
-    (hybrid fourProcesses).step (hybridStateOf gbcaSpecificationsAfterCall0 abaAfterCallG0
-      coinInitial) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterCall1 abaAfterCallG1
-        coinInitial)) := by
+    (hybrid fourProcesses).step
+    (hybridStateOf gbcaSpecificationsAfterCall0 abaAfterCallG0 coinInitial) Label.tau
+    (PMF.pure (hybridStateOf gbcaSpecificationsAfterCall1 abaAfterCallG1 coinInitial)) := by
   refine hybrid_hidden fourProcesses (l := Label.callG 0 (1 : Fin 4) true) (by simp) ?_
   have h := hybridExtended_visible_step fourProcesses (G := gbcaSpecificationsAfterCall0) (C :=
     abaAfterCallG0.1) (A := abaAfterCallG0.2) (o := coinInitial)
@@ -376,9 +376,9 @@ theorem step_callG₁ :
 /-- Third graded-agreement call: process `2`. The round-`0` specification now
 holds three inputs. -/
 theorem step_callG₂ :
-    (hybrid fourProcesses).step (hybridStateOf gbcaSpecificationsAfterCall1 abaAfterCallG1
-      coinInitial) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterCall2 abaAfterCallG2
-        coinInitial)) := by
+    (hybrid fourProcesses).step
+    (hybridStateOf gbcaSpecificationsAfterCall1 abaAfterCallG1 coinInitial) Label.tau
+    (PMF.pure (hybridStateOf gbcaSpecificationsAfterCall2 abaAfterCallG2 coinInitial)) := by
   refine hybrid_hidden fourProcesses (l := Label.callG 0 (2 : Fin 4) true) (by simp) ?_
   have h := hybridExtended_visible_step fourProcesses (G := gbcaSpecificationsAfterCall1) (C :=
     abaAfterCallG1.1) (A := abaAfterCallG1.2) (o := coinInitial)
@@ -404,9 +404,9 @@ specification (family `τ`, interleaved) -/
 surviving bit). This is a family `τ`, interleaved on the specification while the other three
 components hold. -/
 theorem step_bindUnset :
-    (hybrid fourProcesses).step (hybridStateOf gbcaSpecificationsAfterCall2 abaAfterCallG2
-      coinInitial) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterBindUnset
-        abaAfterCallG2 coinInitial)) := by
+    (hybrid fourProcesses).step
+    (hybridStateOf gbcaSpecificationsAfterCall2 abaAfterCallG2 coinInitial) Label.tau
+    (PMF.pure (hybridStateOf gbcaSpecificationsAfterBindUnset abaAfterCallG2 coinInitial)) := by
   refine hybrid_visible fourProcesses (by simp) ?_
   exact hybridExtended_tau_specification fourProcesses (gbcaSpecificationFamily_tau fourProcesses
     (GBCA.Step.bindUnset (P := fourProcesses) (r := 0) (gbcaSpecificationsAfterCall2 0) false
@@ -418,9 +418,9 @@ theorem step_bindUnset :
 specification locks the grade and records the return, the round loop adopts the
 estimate and heads for the coin. -/
 theorem step_retG₀ :
-    (hybrid fourProcesses).step (hybridStateOf gbcaSpecificationsAfterBindUnset abaAfterCallG2
-      coinInitial) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn0 abaAfterRetG0
-        coinInitial)) := by
+    (hybrid fourProcesses).step
+    (hybridStateOf gbcaSpecificationsAfterBindUnset abaAfterCallG2 coinInitial) Label.tau
+    (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn0 abaAfterRetG0 coinInitial)) := by
   refine hybrid_hidden fourProcesses (l := Label.retG 0 (0 : Fin 4) (.grade2 true) true)
     (by simp) ?_
   have h := hybridExtended_visible_step fourProcesses (G := gbcaSpecificationsAfterBindUnset) (C :=
@@ -443,9 +443,9 @@ theorem step_retG₀ :
 
 /-- Process `1`'s round-`0` grade-2 return. -/
 theorem step_retG₁ :
-    (hybrid fourProcesses).step (hybridStateOf gbcaSpecificationsAfterReturn0 abaAfterRetG0
-      coinInitial) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn1 abaAfterRetG1
-        coinInitial)) := by
+    (hybrid fourProcesses).step
+    (hybridStateOf gbcaSpecificationsAfterReturn0 abaAfterRetG0 coinInitial) Label.tau
+    (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn1 abaAfterRetG1 coinInitial)) := by
   refine hybrid_hidden fourProcesses (l := Label.retG 0 (1 : Fin 4) (.grade2 true) true)
     (by simp) ?_
   have h := hybridExtended_visible_step fourProcesses (G := gbcaSpecificationsAfterReturn0) (C :=
@@ -468,9 +468,9 @@ theorem step_retG₁ :
 
 /-- Process `2`'s round-`0` grade-2 return. -/
 theorem step_retG₂ :
-    (hybrid fourProcesses).step (hybridStateOf gbcaSpecificationsAfterReturn1 abaAfterRetG1
-      coinInitial) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterRetG2
-        coinInitial)) := by
+    (hybrid fourProcesses).step
+    (hybridStateOf gbcaSpecificationsAfterReturn1 abaAfterRetG1 coinInitial) Label.tau
+    (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterRetG2 coinInitial)) := by
   refine hybrid_hidden fourProcesses (l := Label.retG 0 (2 : Fin 4) (.grade2 true) true)
     (by simp) ?_
   have h := hybridExtended_visible_step fourProcesses (G := gbcaSpecificationsAfterReturn1) (C :=
@@ -536,8 +536,9 @@ noncomputable def resolvedHybridDistribution : PMF (HybridState fourProcesses) :
 `2 > f` at `val = ⊥`, so the call records the caller and draws `val` from
 `wccPMF`: the run's single probabilistic step. -/
 theorem step_callW₁ :
-    (hybrid fourProcesses).step (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterCallW0
-      coinAfterRecordingCall0) Label.tau resolvedHybridDistribution := by
+    (hybrid fourProcesses).step
+    (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterCallW0 coinAfterRecordingCall0) Label.tau
+    resolvedHybridDistribution := by
   refine hybrid_hidden fourProcesses (l := Label.callW 0 (1 : Fin 4)) (by simp) ?_
   exact hybridExtended_visible_step fourProcesses (G := gbcaSpecificationsAfterReturn2) (C :=
     abaAfterCallW0.1) (A := abaAfterCallW0.2) (o := coinAfterRecordingCall0)
@@ -558,8 +559,10 @@ theorem step_callW₁ :
 bound value — with mass exactly `ε = 1/2 > 0`. This is the run's single
 `ε` factor; every other step is Dirac, so the whole path has positive
 probability. -/
-theorem step_callW₁_mass : resolvedHybridDistribution (hybridStateOf gbcaSpecificationsAfterReturn2
-  abaAfterCallW1 coinAfterResolvingCall) = fourProcesses.ε := by
+theorem step_callW₁_mass :
+    resolvedHybridDistribution
+    (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterCallW1 coinAfterResolvingCall) =
+    fourProcesses.ε := by
   have hup : Function.Injective (Function.update coinAfterRecordingCall0 0) := by
     intro a b h; have h0 := congrFun h 0; simpa using h0
   have hg : Function.Injective

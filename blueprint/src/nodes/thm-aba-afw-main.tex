@@ -1,13 +1,13 @@
 \begin{theorem}[Safety of the gather-based protocol]
   \label{thm:aba-afw-main}
-  \lean{PLTS.ABA.AFW.composed_refines}\lean{PLTS.ABA.AFW.composed_safe}\lean{PLTS.ABA.AFW.refines}\lean{PLTS.ABA.AFW.main}\lean{PLTS.ABA.AFW.chainSim}\leanok
+  \lean{PLTS.ABA.AFW.composed_refines}\lean{PLTS.ABA.AFW.composed_safe}\lean{PLTS.ABA.AFW.refines}\lean{PLTS.ABA.AFW.main}\lean{PLTS.ABA.AFW.chainSimulation}\leanok
   \uses{thm:aba-afw-protocol-composed, thm:aba-afw-substitution, thm:aba-hybrid-spec, thm:aba-spec-safe, thm:trace-support, thm:forward-trans}
   Every trace distribution achievable by the gather-based protocol as it runs is achievable by the ABA specification,
   \[
     \operatorname{ATD}(\afw{\mathrm{protocol}}(P)) \;\subseteq\; \operatorname{ATD}(\mathrm{spec}(P)),
   \]
   and every positive-probability trace of every such distribution satisfies Validity and Agreement.
-  No further condition on the trace: the corruption budget is a guard of the network adversary's own $\mathrm{fail}$ row, so every execution is in budget by construction.
+  No further condition on the trace: the corruption budget is a guard of the network's own $\mathrm{fail}$ row, so every execution is in budget by construction.
   The composed system inherits the same two statements, and the composed simulation $\afw{\mathrm{protocol}}(P) \sqsubseteq \mathrm{spec}(P)$ is the whole chain joined by Result~2.
 \end{theorem}
 

@@ -60,8 +60,8 @@ write is a first write.
 namespace PLTS
 namespace ABA
 
-/-- The control mode of the specification: waiting to flip, with the decision enabled, or frozen by
-a failed flip. -/
+/-- The control mode of the specification: waiting to flip, with the decision enabled, or left
+with no rule enabled by a failed flip. -/
 inductive ControlMode : Type
   /-- The flip is enabled and the decision is not. -/
   | flipEnabled

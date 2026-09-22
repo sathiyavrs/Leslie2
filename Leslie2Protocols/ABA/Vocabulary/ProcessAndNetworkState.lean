@@ -23,9 +23,9 @@ types, so the shape is stated here once, generically:
 * `ABA.InstanceState n Pr M` — the instance state, the pair of the local state vector and
   the network state, with the multicast / delivery / corruption updates
   (`multicast`, `receiveMessage`, `corrupt`), the receipt counts (`receivedCount`), the
-  frame lemmas each update leaves behind, and the quorum-counting kit
-  (`exists_sender_notMem`, `exists_correct_received₂`,
-  `exists_correct_received₂_echoReceiptQuorum`).
+  frame lemmas each update leaves behind, and the quorum-counting lemmas
+  (`exists_sender_notMem`, `exists_correct_received_of_two_quorums`,
+  `exists_correct_received_of_two_echoQuorums`).
 
 The model conventions are the development's D1 (corruption is the total Dirac
 budget-guarded transform of the network state, the local states are corruption-blind) and
@@ -384,9 +384,9 @@ theorem exists_sender_notMem {P : Parameters} {s : InstanceState P.n Pr M}
 
 /-- Two `n − f` receipt quorums (at possibly different receivers) share an
 correct sender: `(n−f) + (n−f) − n = n − 2f > f ≥ |F|`. -/
-theorem exists_correct_received₂ {P : Parameters} {s : InstanceState P.n Pr M} (hF : s.F.card ≤ P.f)
-    {i i' : Fin P.n} {m m' : M}
-    (h : P.n - P.f ≤ s.receivedCount i m) (h' : P.n - P.f ≤ s.receivedCount i' m') :
+theorem exists_correct_received_of_two_quorums {P : Parameters} {s : InstanceState P.n Pr M}
+    (hF : s.F.card ≤ P.f) {i i' : Fin P.n} {m m' : M} (h : P.n - P.f ≤ s.receivedCount i m)
+    (h' : P.n - P.f ≤ s.receivedCount i' m') :
     ∃ j, j ∉ s.F ∧ m ∈ s.received i j ∧ m' ∈ s.received i' j := by
   unfold receivedCount at h h'
   have hcard := Finset.card_union_add_card_inter
@@ -406,10 +406,10 @@ theorem exists_correct_received₂ {P : Parameters} {s : InstanceState P.n Pr M}
 
 /-- Two `echoReceiptQuorum` receipt quorums (at possibly different receivers) share an
 correct sender: `2 * echoReceiptQuorum − n > f ≥ |F|`. -/
-theorem exists_correct_received₂_echoReceiptQuorum {P : Parameters} {s : InstanceState P.n Pr M}
+theorem exists_correct_received_of_two_echoQuorums {P : Parameters} {s : InstanceState P.n Pr M}
     (hF : s.F.card ≤ P.f) {i i' : Fin P.n} {m m' : M}
-    (h : P.echoReceiptQuorum ≤ s.receivedCount i m) (h' : P.echoReceiptQuorum ≤ s.receivedCount i'
-      m') :
+    (h : P.echoReceiptQuorum ≤ s.receivedCount i m)
+    (h' : P.echoReceiptQuorum ≤ s.receivedCount i' m') :
     ∃ j, j ∉ s.F ∧ m ∈ s.received i j ∧ m' ∈ s.received i' j := by
   unfold receivedCount at h h'
   have hcard := Finset.card_union_add_card_inter

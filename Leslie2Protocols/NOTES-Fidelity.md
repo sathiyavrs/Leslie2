@@ -52,7 +52,7 @@ process held before its `ECHO` through a grade-0 decision can afterwards direct 
 write-once echo at either bit, and one corruption completes the `f + 1` `VOTE v` count
 for the bit of the adversary's choice, so two extensions of a single grade-0 return hand out
 two different bits and no binding-faithful specification simulates the compression. The
-concrete violation at `n = 4, f = 1` is written out in `DESIGN-GBCASim.md`. At the D18
+concrete violation at `n = 4, f = 1` is written out in `DESIGN-GBCARefinesSpecification.md`. At the D18
 evidence level the same attack dies: `f + 1 > |F|` `BIND v` receipts put a correct
 `BIND v` sender behind every grade-≥1 output, hence an `n − f` `VOTE v` receipt quorum
 over the write-once `VOTE` level — and that quorum is the object the paper's binding
@@ -212,7 +212,7 @@ either, and the announcement is what makes binding a property of a single trace
 refinement (`GBCA.ByABDY.implementation_binding`, `GBCA.roundOverBracha_binding`;
 `Gather.instanceOverBroadcastSpecification_core`, `Gather.instanceOverBracha_core`). The rows that
 do read a ghost — the implementation's two graded-agreement returns — read it for the value they
-announce and not for whether they fire, the read admitting a bit at every state (`ghostOut_total`).
+announce and not for whether they fire, the read admitting a bit at every state (`ghostOutput_total`).
 For the bound bit at the implementation that inertness is a theorem: `ABDY.protocol_erasure` and
 `AFW.protocol_erasure` equate the achievable trace distributions of each protocol with those of the
 same protocol over a one-element ghost record whose returns announce any bit.
@@ -293,7 +293,7 @@ repaired at the rule; the seventh entry is a cross-reference.
   requires a send at the level below, denies a higher case, or guards a return on a call.
   The specification abstracts the receipt patterns into `excluded` and `grade` (D19), and its
   return guards are that pair; supplying them from the receipts is exactly the work of
-  `GBCASim.refinesSpecification`.
+  `GBCA.ByABDY.refinesSpecification`.
 - **`WCC.Step.ret` without `called` (forced).** `WCC.SpecState` carries a `called` field
   and the return rule does not read it. The Byzantine coin row `byzantineRetW` has no row at
   the process it names — `RoundLoopStep.byzantineRetWIdle` stands idle at every process — and
@@ -320,7 +320,7 @@ repaired at the rule; the seventh entry is a cross-reference.
   repeated or over-budget corruption has no transition there. Every other specification of the chain
   keeps the same test inside `corrupt` and leaves the rule total: `GBCA.Step.fail`, `WCC.Step.fail`,
   `Gather.Step.fail` and `BRB.Step.fail` accept every `fail` label and let the transform decide what
-  the state does. The network adversary's `fail` row carries the two guards `SpecStep.fail` carries,
+  the state does. The network's `fail` row carries the two guards `SpecStep.fail` carries,
   so the two systems enable the same labels and no refinement is affected. The guard itself is D1;
   the loop TS 1 carries beside it is what this entry records. TS 1's other input-enabledness loop,
   the one on `callABA`, is guarded here as well: `SpecStep.callLoop` fires at a filled record entry
@@ -360,7 +360,7 @@ repaired at the rule; the seventh entry is a cross-reference.
 - **TS 1's `Initial` clause names an undeclared field** `out` (source p. 18), absent from
   the same system's `State` line. It is omitted: `PLTS.ABA.SpecState` declares `input`,
   `ret`, `F`, `val` and `mode`, and nothing else.
-- **TS 6 pins the delivered value at the call, which Bracha's rounds do not.** Under TS 6
+- **TS 6 fixes the delivered value at the call, which Bracha's rounds do not.** Under TS 6
   a correct `call(m)` sets the single `call` field to `m`, every return hands out `call`,
   and the corrupted-leader rule can only spoil the field (`call = ⊤`, no returns) before
   the first return. Bracha's rounds with the leader corrupted *after* its `INIT` multicast
@@ -370,7 +370,7 @@ repaired at the rule; the seventh entry is a cross-reference.
   excludes its own implementation under D1's dynamic corruption. `BRB.SpecState` splits
   the recorded `input` from the committed `val` and guards the commit by
   `ldr ∈ F ∨ input = some m` (D27), which is the window the implementation actually leaves
-  open: at a never-corrupted leader the commit is pinned to the input, and Validity
+  open: at a never-corrupted leader the commit is fixed at the input, and Validity
   survives in the form the property states it.
 - **TS 4's bound core is what a reachable state determines.** The core is a correct
   sender's `ECHO` payload heard by `f + 1` correct rows, and the counting of
@@ -447,7 +447,7 @@ for Unpredictability, inexpressible once the guess is dropped.
   local count on the second gather's return (D24), which drops a communication step. Line
   5 takes the returned bit from the `f + 1` test and line 6 the grade from the `|T| − f`
   test, and grade `2` ties both to the latter — sound because `|T| − f ≥ n − 2f ≥ f + 1`
-  carries the heavy bit past the `f + 1` bar, where AFW25's Lemma 18 makes it unique.
+  carries the bit on at least `|T| − f` entries past the `f + 1` bar, where AFW25's Lemma 18 makes it unique.
 - **SRSD and AVSS (TS 5 and TS 7).** Not encoded, nor is the source's Algorithm 3, the
   coin implementation over gather and SRSD that they serve. In the source, gather serves
   the coin construction through SRSD; here the coin stays at specification level — its
@@ -464,7 +464,7 @@ for Unpredictability, inexpressible once the guess is dropped.
   `ABAProgramStep.retWPublish`, resets nothing. A process therefore answers prior-round messages and
   files deliveries of any round. `ABAProgramStep.terminate` is the terminating step. It fires when
   the process's own return has fired and DECIDED receipts from `2f + 1` distinct senders are on
-  record, and it writes `terminated` alone, so the round records freeze where they stand. Three
+  record, and it writes `terminated` alone, so the round records stay as they are. Three
   residues remain.
     - The amplification rule `ABAProgramStep.gbcaSendRelay` is guarded by the process holding an
       input in that round's round record (`hin : (p.roundRecord r).process.input ≠ none`, D8, and

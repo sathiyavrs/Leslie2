@@ -46,9 +46,8 @@ variable {X : Type} [DecidableEq X] {P : Parameters}
 /-- The gather network state of the composition, read as an instance state over
 the gather record. The core and the incidence read the sent sets and the
 corrupted set, and no local record. -/
-def networkOf {n : ℕ} (s : StateOverBroadcastSpecification n X) : InstanceState n (BaseProcessRecord
-  n
-  X) (Message n X) :=
+def networkOf {n : ℕ} (s : StateOverBroadcastSpecification n X) :
+    InstanceState n (BaseProcessRecord n X) (Message n X) :=
   ((fun _ => LocalState.initial n (Message n X) (BaseProcessRecord.initial n X)), (gatherTier s).2)
 
 omit [DecidableEq X] in
@@ -191,9 +190,9 @@ theorem Conformance.setSentBind {s : StateOverBroadcastSpecification P.n X} (hCo
 
 /-- The conformance clauses are preserved by every step. -/
 theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.n X}
-    {μ : PMF (StateOverBroadcastSpecification P.n X)} (hInv : Conformance P s) (hstep :
-      StepOverBroadcastSpecification P s l μ)
-    {s' : StateOverBroadcastSpecification P.n X} (hs' : s' ∈ μ.support) : Conformance P s' := by
+    {μ : PMF (StateOverBroadcastSpecification P.n X)} (hInv : Conformance P s)
+    (hstep : StepOverBroadcastSpecification P s l μ) {s' : StateOverBroadcastSpecification P.n X}
+    (hs' : s' ∈ μ.support) : Conformance P s' := by
   cases hstep with
   | call id x h hb =>
     rw [PMF.mem_support_pure_iff] at hs'
@@ -1078,9 +1077,9 @@ theorem approved_of_approvedBy {s : StateOverBroadcastSpecification P.n X} (hCon
 /-- Committed input entries are write-once, so `approved` is monotone along
 every rule. -/
 theorem approved_mono {s s' : StateOverBroadcastSpecification P.n X} {l : Label P.n X}
-    {μ : PMF (StateOverBroadcastSpecification P.n X)} (hstep : StepOverBroadcastSpecification P s l
-      μ)
-    (hs' : s' ∈ μ.support) {A : AcceptedPairs P.n X} (h : approved s A) : approved s' A := by
+    {μ : PMF (StateOverBroadcastSpecification P.n X)}
+    (hstep : StepOverBroadcastSpecification P s l μ) (hs' : s' ∈ μ.support)
+    {A : AcceptedPairs P.n X} (h : approved s A) : approved s' A := by
   have key : ∀ t : StateOverBroadcastSpecification P.n X,
       (∀ k v,
         (inputBroadcasts s k).val = some v → (inputBroadcasts t k).val = some v) → approved t A :=
@@ -1247,9 +1246,9 @@ theorem Invariant.initial : Invariant P ((instanceOverBroadcastSpecification P X
 
 /-- The invariant is preserved by every step. -/
 theorem Invariant.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.n X}
-    {μ : PMF (StateOverBroadcastSpecification P.n X)} (hInv : Invariant P s) (hstep :
-      StepOverBroadcastSpecification P s l μ)
-    {s' : StateOverBroadcastSpecification P.n X} (hs' : s' ∈ μ.support) : Invariant P s' :=
+    {μ : PMF (StateOverBroadcastSpecification P.n X)} (hInv : Invariant P s)
+    (hstep : StepOverBroadcastSpecification P s l μ) {s' : StateOverBroadcastSpecification P.n X}
+    (hs' : s' ∈ μ.support) : Invariant P s' :=
   ⟨hInv.toConformance.step hstep hs',
     echoApproved_step hInv.toConformance hInv.echo_approved hstep hs'⟩
 
@@ -1265,9 +1264,8 @@ omit [DecidableEq X] in
 /-- The `ECHO` payload of a process outside `F` is the one its `sentEcho` field
 holds. -/
 theorem echoOf_eq {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s) {j : Fin P.n}
-    (hj : j ∉ (gatherTier s).F) {A : AcceptedPairs P.n X} (hA : Message.echo A ∈ (gatherTier s).sent
-      j) :
-    echoOf (networkOf s) j = A := by
+    (hj : j ∉ (gatherTier s).F) {A : AcceptedPairs P.n X}
+    (hA : Message.echo A ∈ (gatherTier s).sent j) : echoOf (networkOf s) j = A := by
   classical
   have hex : ∃ A : AcceptedPairs P.n X, Message.echo A ∈ (networkOf s).sent j := ⟨A, hA⟩
   rw [echoOf, dif_pos hex]
@@ -1281,9 +1279,8 @@ omit [DecidableEq X] in
 senders. Its `VOTE` payload, if it has one, is backed by `n − f` `ECHO`
 receipts; if it has none the condition is vacuous and the row is
 everything. -/
-theorem dominatedBy_card {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s) {q : Fin
-  P.n}
-    (hq : q ∉ (gatherTier s).F) : P.n - P.f ≤ (dominatedBy (networkOf s) q).card := by
+theorem dominatedBy_card {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s)
+    {q : Fin P.n} (hq : q ∉ (gatherTier s).F) : P.n - P.f ≤ (dominatedBy (networkOf s) q).card := by
   classical
   by_cases hv : ∃ W : AcceptedPairs P.n X, Message.vote W ∈ (gatherTier s).sent q
   · obtain ⟨W, hW⟩ := hv
@@ -1429,7 +1426,7 @@ theorem single_core_approved {s : StateOverBroadcastSpecification P.n X} (hInv :
   obtain ⟨j₁, -, -, -, hslot⟩ := core_witness hInv hk₀ hU₀
   exact hInv.echo_approved j₁ _ hslot
 
-/-! ### The freeze certificate -/
+/-! ### The certificate that the core is written once -/
 
 open scoped Classical in
 /-- The coordinates holding a committed `BIND` payload above `C`. The condition
@@ -1439,17 +1436,16 @@ noncomputable def bindAbove (s : StateOverBroadcastSpecification P.n X) (C : Acc
   Finset.univ.filter (fun q => ∃ U, (bindBroadcasts s q).val = some U ∧ C ⊆ U)
 
 open scoped Classical in
-theorem mem_bindAbove {s : StateOverBroadcastSpecification P.n X} {C : AcceptedPairs P.n X} {q : Fin
-  P.n} :
-    q ∈ bindAbove s C ↔ ∃ U, (bindBroadcasts s q).val = some U ∧ C ⊆ U := by
+theorem mem_bindAbove {s : StateOverBroadcastSpecification P.n X} {C : AcceptedPairs P.n X}
+    {q : Fin P.n} : q ∈ bindAbove s C ↔ ∃ U, (bindBroadcasts s q).val = some U ∧ C ⊆ U := by
   rw [bindAbove, Finset.mem_filter]
   exact ⟨fun h => h.2, fun h => ⟨Finset.mem_univ _, h⟩⟩
 
 /-- A committed `BIND` payload is never rewritten. -/
 theorem bindVal_mono {s s' : StateOverBroadcastSpecification P.n X} {l : Label P.n X}
-    {μ : PMF (StateOverBroadcastSpecification P.n X)} (hstep : StepOverBroadcastSpecification P s l
-      μ) (hs' : s' ∈ μ.support)
-    {q : Fin P.n} {U : AcceptedPairs P.n X} (h : (bindBroadcasts s q).val = some U) :
+    {μ : PMF (StateOverBroadcastSpecification P.n X)}
+    (hstep : StepOverBroadcastSpecification P s l μ) (hs' : s' ∈ μ.support) {q : Fin P.n}
+    {U : AcceptedPairs P.n X} (h : (bindBroadcasts s q).val = some U) :
     (bindBroadcasts s' q).val = some U := by
   cases hstep with
   | commitBindEntry q' U' hv hm =>
@@ -1479,15 +1475,15 @@ theorem bindVal_mono {s s' : StateOverBroadcastSpecification P.n X} {l : Label P
 /-- **The certificate is monotone.** The coordinates holding a committed `BIND`
 payload above `C` only accumulate, under every rule and every corruption. -/
 theorem bindAbove_mono {s s' : StateOverBroadcastSpecification P.n X} {l : Label P.n X}
-    {μ : PMF (StateOverBroadcastSpecification P.n X)} (hstep : StepOverBroadcastSpecification P s l
-      μ) (hs' : s' ∈ μ.support)
+    {μ : PMF (StateOverBroadcastSpecification P.n X)}
+    (hstep : StepOverBroadcastSpecification P s l μ) (hs' : s' ∈ μ.support)
     (C : AcceptedPairs P.n X) : bindAbove s C ⊆ bindAbove s' C := by
   intro q hq
   rw [mem_bindAbove] at hq ⊢
   obtain ⟨U, hU, hCU⟩ := hq
   exact ⟨U, bindVal_mono hstep hs' hU, hCU⟩
 
-/-- **The freeze.** At a state where an `n − f` quorum of coordinates holds
+/-- **The core write.** At a state where an `n − f` quorum of coordinates holds
 committed `BIND` payloads, the core has at least `n − f` entries, its entries
 are committed input entries, and at least `f + 1` coordinates hold a committed
 `BIND` payload above it. The last is the certificate that holds the returns
@@ -1496,9 +1492,9 @@ after the first to this core: it is blind to `F` and monotone
 theorem coreOf_recorded {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s)
     {Q : Finset (Fin P.n)} (hQc : P.n - P.f ≤ Q.card)
     (hQm : ∀ q ∈ Q, ∃ U : AcceptedPairs P.n X, (bindBroadcasts s q).val = some U) :
-    P.n - P.f ≤ (coreOfNetwork P (gatherTier s).2).card ∧ approved s (coreOfNetwork P (gatherTier
-      s).2) ∧
-      P.f + 1 ≤ (bindAbove s (coreOfNetwork P (gatherTier s).2)).card := by
+    P.n - P.f ≤ (coreOfNetwork P (gatherTier s).2).card ∧ approved s
+    (coreOfNetwork P (gatherTier s).2) ∧ P.f + 1 ≤
+    (bindAbove s (coreOfNetwork P (gatherTier s).2)).card := by
   classical
   have hF := hInv.F_card
   have hf := P.hResilience
