@@ -40,7 +40,7 @@ sub-protocol state itself lives in the round specifications and the coin oracle 
 state: the DECIDED sets and the corrupted set belong to the network. The transitions themselves are
 `RoundLoopStep` (`ABA/Composition/Components.lean`), the rows of a round-loop record
 `RoundLoopRecord` over the extended alphabet, and `ABDY.ABAProgramStep`
-(`ABA/ImplementationByABDY/System.lean`), the rows of the protocol program that carries a round loop
+(`ABA/Implementation/ABDY/System.lean`), the rows of the protocol program that carries a round loop
 beside its round records. This file realises the assumptions of
 `DESIGN-HybridRefinesSpecification.md`: the phase machine (invariant conjunct 4), the DECIDED
 diffusion state (conjunct 6), and input coherence

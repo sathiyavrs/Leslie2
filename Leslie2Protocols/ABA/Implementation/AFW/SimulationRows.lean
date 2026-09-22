@@ -5,7 +5,7 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.Implementation.CompositeTransitions
-import Leslie2Protocols.ABA.ImplementationByAFW.RoundProjectionStep
+import Leslie2Protocols.ABA.Implementation.AFW.RoundProjectionStep
 import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 
 /-!
@@ -18,7 +18,7 @@ implementation is answered here by a run of the composed system from the state t
 transition of one gather instance and of one round, the broadcast invariant across a row,
 corruption read through the view, and the answers on a send, on a delivery, on the call and the
 graded return, and on a Byzantine injection.
-`ABA/ImplementationByAFW/Simulation.lean` assembles these answers into the matching.
+`ABA/Implementation/AFW/Simulation.lean` assembles these answers into the matching.
 
 ## Three of the implementation's rows against two composed events
 
@@ -40,7 +40,7 @@ implementation reads a `2f + 1` `VOTE` receipt quorum on the process's own local
 four broadcast families. A delivery moves the returned value in one way only:
 `AFW.broadcastReturnsFor_deliver_cases` says that it either leaves the returned value where it
 stands or fills an empty one, which is the dichotomy between the plain delivery lemmas of
-`ABA/ImplementationByAFW/RoundProjectionStep/Delivery.lean` and their quorum companions.
+`ABA/Implementation/AFW/RoundProjectionStep/Delivery.lean` and their quorum companions.
 
 ## The two clauses that are not projections
 

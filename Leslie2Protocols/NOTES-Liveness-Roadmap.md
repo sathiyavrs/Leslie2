@@ -165,7 +165,7 @@ Ordered by expected value-for-effort:
    fair-scheduling statement about this protocol belongs. All three steps are inclusions in the same
    direction, `protocol ⊑ composed ⊑ hybrid ⊑ ABA.spec`, so a mass bound established at `ABA.spec`
    has to be transported down all three, the composition inclusion (`ABDY.protocolSimulation`,
-   `ABA/ImplementationByABDY/Simulation.lean`) included. That inclusion imposes no constraint on the
+   `ABA/Implementation/ABDY/Simulation.lean`) included. That inclusion imposes no constraint on the
    amplification axis. Under D22 a process retains the round record of every round it has touched
    and answers that round's messages under an instance-local guard, whichever round its loop is in,
    which is the behaviour ABDY22's Lemmas 4.6 and E.5 are stated under; and
@@ -317,9 +317,9 @@ the sub-protocol position.
 - Certificates: `Leslie/Prob/Liveness.lean` (`FairASTCertificate`, `sound` at :1719)
 - This repo's fairness line: `Leslie2Extra/Fairness/Simulation/{Defs,Soundness}.lean`
 - The protocol, whose programs read their own replacement flag and nothing else about corruption
-  (D23): `ABA/ImplementationByABDY/System.lean` (`ABDY.protocol`, `network`), with the composition
+  (D23): `ABA/Implementation/ABDY/System.lean` (`ABDY.protocol`, `network`), with the composition
   of components in `ABA/Composition/HybridAndSubstitution.lean` (`ABDY.composed`) and the inclusion
-  into it in `ABA/ImplementationByABDY/Simulation.lean` (`ABDY.ProtocolRelation`,
+  into it in `ABA/Implementation/ABDY/Simulation.lean` (`ABDY.ProtocolRelation`,
   `ABDY.protocolSimulation`, `ABDY.protocol_composed`) — the presentation to state fair termination over if
   it is to be stated of the protocol: the `fail` row belongs to the network and is guarded
   by `k ∉ F ∧ |F| < f`, so `fail` is enabled exactly while budget remains and the marking of `fail`

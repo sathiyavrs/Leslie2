@@ -16,7 +16,7 @@ Two steps of the refinement chain, and the row-by-row inversion lemmas of the sy
 introduce. The headlines that chain these inclusions with the earlier ones are in
 `ABA/Results.lean`.
 
-The first inclusion is the composed system. The protocol of `ABA/ImplementationByABDY/System.lean`
+The first inclusion is the composed system. The protocol of `ABA/Implementation/ABDY/System.lean`
 presents the protocol as `n` programs beside one network and the coin oracle. A program
 reads its own replacement flag and nothing else about corruption: not the corrupted set, not the
 budget, not another process's status (D23). Each program runs its round loop and a graded-agreement

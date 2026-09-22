@@ -451,7 +451,7 @@ See \leanmodule{Leslie2Protocols/ABA/HybridRefinesSpecification/NonVacuity}.
 
 Transition System~2 has a second verified implementation.
 Attiya, Flam and Welch~\cite{AFW25} build graded agreement from two calls to a \emph{gather} sub-protocol and local counting, and the source blueprint carries the matching material: a gather specification (Transition System~4), a gather implementation over reliable broadcast (its Algorithm~4, the binding form of Algorithm~5 of~\cite{AFW25}), and Bracha's reliable broadcast (Transition System~6 and its Algorithm~6, from~\cite{Bra87}).
-The Lean files are \leanmodule{Leslie2Protocols/ABA/Vocabulary/ProcessAndNetworkState} through \leanmodule{Leslie2Protocols/ABA/ImplementationByAFW/CompositionChain}, mapped file by file in the ABA library's own guide.
+The Lean files are \leanmodule{Leslie2Protocols/ABA/Vocabulary/ProcessAndNetworkState} through \leanmodule{Leslie2Protocols/ABA/Implementation/AFW/CompositionChain}, mapped file by file in the ABA library's own guide.
 
 \subsection{Reliable broadcast}
 
@@ -545,8 +545,8 @@ Assembling the composed state from the implementation's undoes all three, which 
 The adversary's ghost record of a round is the third thing this instantiation supplies (D30): the two gathers' cores beside the round's bound bit, each written once.
 The return-then-call row's broadcast of the candidate writes the first core, off the projection of the tagged sent sets onto the first gather, and the bound bit as the bit that core carries on at least $|S| - f$ entries; a graded return writes the second core the same way and announces the bit.
 The composed round holds those three in its network components, so the relation reads them off the ghost record and a row's ghost write is the round's write of them.
-See \leanmodule{Leslie2Protocols/ABA/ImplementationByAFW/System}, \leanmodule{Leslie2Protocols/ABA/ImplementationByAFW/RoundProjection}, \leanmodule{Leslie2Protocols/ABA/ImplementationByAFW/RoundProjectionStep}, \leanmodule{Leslie2Protocols/ABA/ImplementationByAFW/SimulationRows} and \leanmodule{Leslie2Protocols/ABA/ImplementationByAFW/Simulation}.
-\leanmodule{Leslie2Protocols/ABA/ImplementationByAFW/RoundProjectionStep} holds \leanmodule{Leslie2Protocols/ABA/ImplementationByAFW/RoundProjectionStep/ViewAfterOneWrite}, \leanmodule{Leslie2Protocols/ABA/ImplementationByAFW/RoundProjectionStep/GatherSend}, \leanmodule{Leslie2Protocols/ABA/ImplementationByAFW/RoundProjectionStep/BroadcastSend}, \leanmodule{Leslie2Protocols/ABA/ImplementationByAFW/RoundProjectionStep/GatherAndBroadcastRows}, \leanmodule{Leslie2Protocols/ABA/ImplementationByAFW/RoundProjectionStep/GradedAgreementCall}, \leanmodule{Leslie2Protocols/ABA/ImplementationByAFW/RoundProjectionStep/ReturnThenCall}, \leanmodule{Leslie2Protocols/ABA/ImplementationByAFW/RoundProjectionStep/Delivery}, \leanmodule{Leslie2Protocols/ABA/ImplementationByAFW/RoundProjectionStep/ByzantineInjection}, \leanmodule{Leslie2Protocols/ABA/ImplementationByAFW/RoundProjectionStep/OtherRoundsUnchanged} and \leanmodule{Leslie2Protocols/ABA/ImplementationByAFW/RoundProjectionStep/ProtocolRelationConjuncts}.
+See \leanmodule{Leslie2Protocols/ABA/Implementation/AFW/System}, \leanmodule{Leslie2Protocols/ABA/Implementation/AFW/RoundProjection}, \leanmodule{Leslie2Protocols/ABA/Implementation/AFW/RoundProjectionStep}, \leanmodule{Leslie2Protocols/ABA/Implementation/AFW/SimulationRows} and \leanmodule{Leslie2Protocols/ABA/Implementation/AFW/Simulation}.
+\leanmodule{Leslie2Protocols/ABA/Implementation/AFW/RoundProjectionStep} holds \leanmodule{Leslie2Protocols/ABA/Implementation/AFW/RoundProjectionStep/ViewAfterOneWrite}, \leanmodule{Leslie2Protocols/ABA/Implementation/AFW/RoundProjectionStep/GatherSend}, \leanmodule{Leslie2Protocols/ABA/Implementation/AFW/RoundProjectionStep/BroadcastSend}, \leanmodule{Leslie2Protocols/ABA/Implementation/AFW/RoundProjectionStep/GatherAndBroadcastRows}, \leanmodule{Leslie2Protocols/ABA/Implementation/AFW/RoundProjectionStep/GradedAgreementCall}, \leanmodule{Leslie2Protocols/ABA/Implementation/AFW/RoundProjectionStep/ReturnThenCall}, \leanmodule{Leslie2Protocols/ABA/Implementation/AFW/RoundProjectionStep/Delivery}, \leanmodule{Leslie2Protocols/ABA/Implementation/AFW/RoundProjectionStep/ByzantineInjection}, \leanmodule{Leslie2Protocols/ABA/Implementation/AFW/RoundProjectionStep/OtherRoundsUnchanged} and \leanmodule{Leslie2Protocols/ABA/Implementation/AFW/RoundProjectionStep/ProtocolRelationConjuncts}.
 
 \input{nodes-min/def-aba-afw-protocol}
 
@@ -559,7 +559,7 @@ Assembling the composed state from the implementation's undoes both rearrangemen
 
 At the protocol shape, the gather-based rounds occupy the same refinable position the direct rounds do: each round speaks the extended alphabet itself, is gathered into the round-indexed family, and is put through the composed system's pipeline.
 The three substitutions inside the round become three stages between protocol-shaped systems, the third landing on $\mathrm{hybrid}(P)$ itself, and from there the chain is the shared one: Theorem~\ref{thm:aba-hybrid-spec} and the safety transfer.
-See \leanmodule{Leslie2Protocols/ABA/ImplementationByAFW/CompositionChain}.
+See \leanmodule{Leslie2Protocols/ABA/Implementation/AFW/CompositionChain}.
 
 \input{nodes-min/def-aba-afw-round-families}
 

@@ -19,10 +19,10 @@ two-gather round and its three tiers (`ABA/GBCA/AFW/Counting.lean`,
 `ABA/GBCA/AFW/StepOverGatherSpecifications.lean`,
 `ABA/GBCA/AFW/RefinesSpecification.lean`, `ABA/GBCA/AFW/GatherSubstitutions.lean`,
 `ABA/GBCA/AFW/Binding.lean`), the assembly at the protocol shape
-(`ABA/ImplementationByAFW/CompositionChain.lean`), and the protocol beneath it
-(`ABA/ImplementationByAFW/System.lean`, `ABA/ImplementationByAFW/RoundProjection.lean`,
-`ABA/ImplementationByAFW/RoundProjectionStep/`,
-`ABA/ImplementationByAFW/SimulationRows.lean`, `ABA/ImplementationByAFW/Simulation.lean`). The
+(`ABA/Implementation/AFW/CompositionChain.lean`), and the protocol beneath it
+(`ABA/Implementation/AFW/System.lean`, `ABA/Implementation/AFW/RoundProjection.lean`,
+`ABA/Implementation/AFW/RoundProjectionStep/`,
+`ABA/Implementation/AFW/SimulationRows.lean`, `ABA/Implementation/AFW/Simulation.lean`). The
 gather subsections of
 `blueprint/src/content.tex` are a condensation of this document; the deviations D24,
 D26–D30, D32 and D33 it realises are glossed in that file's registry, and the
@@ -93,7 +93,7 @@ alphabet `ExtendedLabel P.n` natively, as the protocol chain's round
 `GBCA.ByABDY.composition` does, so the family's call loops are its loop labels and
 `GBCA.ByABDY.gbcaLabelMap` reads its specification.
 
-At the protocol shape (`ImplementationByAFW/CompositionChain.lean`), each round tier is
+At the protocol shape (`Implementation/AFW/CompositionChain.lean`), each round tier is
 gathered into the ℕ-indexed family under the corruption broadcast and put through the
 composed system's pipeline; the three substitutions become three stages whose last lands
 on `hybrid P`:
@@ -103,8 +103,8 @@ AFW.protocol ⊑ AFW.composed ⊑ AFW.composedOverBroadcastSpecification ⊑ AFW
 ```
 
 Beneath `AFW.composed` is `AFW.protocol`, the gather-based protocol as it runs
-(`ABA/ImplementationByAFW/System.lean`), carried into the composed system by
-`AFW.protocolSimulation` (`ABA/ImplementationByAFW/Simulation.lean`). Everything from `hybrid` up
+(`ABA/Implementation/AFW/System.lean`), carried into the composed system by
+`AFW.protocolSimulation` (`ABA/Implementation/AFW/Simulation.lean`). Everything from `hybrid` up
 — the core simulation, `spec_safe`, the safety transfer — is shared with the protocol
 chain.
 
@@ -313,7 +313,7 @@ a round's interface blocks the round rather than letting it idle
 (`GBCA.ByAFW.ProgramLabel.outside`), exactly as `GBCA.ByABDY.composition` blocks, which is what
 makes that tier's characterisation exact at the specification's labels.
 
-## The assembly at the protocol shape (`ImplementationByAFW/CompositionChain.lean`)
+## The assembly at the protocol shape (`Implementation/AFW/CompositionChain.lean`)
 
 Two ingredients, both shared with the protocol chain:
 
@@ -334,9 +334,9 @@ their two siblings, as `GBCA.ByABDY.gbcaInstanceFamily` is. The stages compose b
 `ProbabilisticForwardSimulation.trans`; the inclusions compose by `Set.Subset.trans` and never
 invoke transitivity of simulation — the two routes of `Results.lean`, reproduced.
 
-## The protocol beneath the composed system (`ImplementationByAFW/System.lean`,
-`ImplementationByAFW/RoundProjection.lean`, `ImplementationByAFW/RoundProjectionStep/`,
-`ImplementationByAFW/SimulationRows.lean`, `ImplementationByAFW/Simulation.lean`)
+## The protocol beneath the composed system (`Implementation/AFW/System.lean`,
+`Implementation/AFW/RoundProjection.lean`, `Implementation/AFW/RoundProjectionStep/`,
+`Implementation/AFW/SimulationRows.lean`, `Implementation/AFW/Simulation.lean`)
 
 `AFW.composed P` is the gather-based protocol read as a composition of components. What runs is the
 implementation: `n` programs, each reading its own records and nothing else, beside one network
@@ -347,8 +347,8 @@ interface and the specification — so `ABA/Implementation/System.lean` writes i
 the round message type `M`, the per-process per-round record `S`, the round rows, supplied as a
 relation embedded in one constructor of the program table, and the adversary's per-round ghost
 record `G` with its update `ghostStep` and its output `ghostOutput` (D30).
-`ABA/ImplementationByABDY/System.lean` instantiates it at ABDY22's implementation;
-`ABA/ImplementationByAFW/System.lean` instantiates it here.
+`ABA/Implementation/ABDY/System.lean` instantiates it at ABDY22's implementation;
+`ABA/Implementation/AFW/System.lean` instantiates it here.
 
 The division of labour is by label. `Implementation.roundOwn j` is the set of label classes an
 implementation owns at process `j`: the graded-agreement call and return, `j`'s own round multicast,
@@ -414,20 +414,20 @@ re-established after every matched row by the instance's own preservation lemma,
 composed step is a genuine step of the instance.
 
 The proof is organised around that computation. The files of
-`ABA/ImplementationByAFW/RoundProjectionStep/` state, for every implementation row, the view after
+`ABA/Implementation/AFW/RoundProjectionStep/` state, for every implementation row, the view after
 the row as the composed round before the row with the corresponding composed effect applied,
 written through the round's updaters exactly as the row tables write it; the master lemma
-`roundProjection_write` of `ABA/ImplementationByAFW/RoundProjectionStep/ViewAfterOneWrite.lean`
+`roundProjection_write` of `ABA/Implementation/AFW/RoundProjectionStep/ViewAfterOneWrite.lean`
 pushes a one-point round write and a single sent-set insertion inside every coordinate, and each
 row then owes only projection algebra, discharged by `messagesOf_recordSent_some` and
 `messagesOf_recordSent_none`.
-`ABA/ImplementationByAFW/SimulationRows.lean` matches each implementation row by a run of the
+`ABA/Implementation/AFW/SimulationRows.lean` matches each implementation row by a run of the
 composed group: a send and a delivery are hidden events of the round instance, answered by one of
 its silent steps, the adversary's authenticity conjunct becoming membership in the sent set
 projected onto the instance; the call is the instance's own. Three of the implementation's rows are
 answered by two composed steps, through the intermediate states
-`ABA/ImplementationByAFW/RoundProjectionStep/ReturnThenCall.lean` and
-`ABA/ImplementationByAFW/RoundProjectionStep/Delivery.lean` name: the return-then-call step by
+`ABA/Implementation/AFW/RoundProjectionStep/ReturnThenCall.lean` and
+`ABA/Implementation/AFW/RoundProjectionStep/Delivery.lean` name: the return-then-call step by
 `firstGatherReturn` then `secondGatherCall`, the graded return by `secondGatherReturn` then the
 visible `retG`, and a
 delivery that completes a vote quorum by the instance's delivery then its return, which records the
@@ -437,7 +437,7 @@ the round loop and the ABA network while the family of rounds is unchanged, and 
 broadcast, the corrupted set the adversary holds being the corrupted set of every network under the
 same guard.
 
-`ABA/ImplementationByAFW/Simulation.lean` closes with `AFW.protocolSimulation` and
+`ABA/Implementation/AFW/Simulation.lean` closes with `AFW.protocolSimulation` and
 `AFW.protocol_composed`, the composition inclusion it yields. `ABA/Results.lean` takes that
 inclusion to the headlines of the gather-based chain — `AFW.refines`, `AFW.main`,
 `AFW.chainSimulation` and the composed-level `AFW.composed_refines`, `AFW.composed_safe`,

@@ -4,8 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.ImplementationByAFW.System
-import Leslie2Protocols.ABA.ImplementationByAFW.CompositionChain
+import Leslie2Protocols.ABA.Implementation.AFW.System
+import Leslie2Protocols.ABA.Implementation.AFW.CompositionChain
 import Leslie2Protocols.ABA.Gather.StepOverBracha
 import Leslie2Protocols.ABA.ReliableBroadcast.BrachaRefinesSpecification
 import Leslie2Protocols.Framework.FamilySimulation
@@ -36,7 +36,7 @@ adversary's single tagged sent family by `AFW.messagesOf`.
 A gather program of the composed system holds two records of what each broadcast instance has
 returned to it. The implementation keeps no returned value: it reads a receipt quorum on the
 process's own local state in that instance (`AFW.firstGatherAcceptedInputs` and its three
-companions). `AFW.broadcastReturnsFor` (`ABA/ImplementationByAFW/System.lean`) is that condition as
+companions). `AFW.broadcastReturnsFor` (`ABA/Implementation/AFW/System.lean`) is that condition as
 a function: the value on which the local state holds a `2f + 1` `VOTE` receipt quorum, and `none`
 where there is no such value. Under the broadcast invariant `BRB.Invariant` at most one value
 carries a quorum (`broadcastReturnsFor_eq_of_quorum`), so the function agrees with the
@@ -76,7 +76,7 @@ open Implementation Composition GBCA.ByABDY
 /-! ### The four broadcast untaggings
 
 The two gather untaggings and their injectivity are `AFW.firstGatherMessageOf` and
-`AFW.secondGatherMessageOf` of `ABA/ImplementationByAFW/System.lean`, where the adversary's ghost
+`AFW.secondGatherMessageOf` of `ABA/Implementation/AFW/System.lean`, where the adversary's ghost
 write reads them. -/
 
 variable {n : ℕ}

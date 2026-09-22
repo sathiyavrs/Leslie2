@@ -54,8 +54,8 @@ sets, the coin handshake, corruption, the network and the composition pipeline �
 settled by the round interface and the specification, so `Implementation/System.lean` writes it
 once, parametric in the round message type, the per-process per-round record, the round rows, and a
 per-round ghost record of the network, updated on every row and read as the guard of the
-two graded-agreement return rows (D30). `ImplementationByABDY/System.lean` supplies ABDY22's;
-`ImplementationByAFW/System.lean` supplies the gather-based one.
+two graded-agreement return rows (D30). `Implementation/ABDY/System.lean` supplies ABDY22's;
+`Implementation/AFW/System.lean` supplies the gather-based one.
 
 - `ABDY.protocol` — ABDY22's protocol as it runs: `n` programs beside the network, which
   owns the message sets and the corrupted set, and the coin oracle, the only component whose
@@ -157,6 +157,7 @@ Each file's module docstring is the account of record for it. The table gives on
 file: what it holds, and the declarations a reader looks for. The folders are given in import
 order, and no folder imports one below it:
 `Vocabulary/` is written over by everything, `GhostErasure/` writes over everything.
+A sub-folder listed on its own holds a position of its own in that order.
 Within a folder the files are alphabetical. Each file holds one object or one result together
 with the lemmas that exist only to prove it, and Mathlib's `linter.style.longFile` caps a file
 at 1500 lines, a file over the cap carrying an explicit `set_option linter.style.longFile`
@@ -301,40 +302,40 @@ preservation of `Invariant` across the rows of each label class.
 | `HybridRefinesSpecification/InvariantPreservation/SpecificationStateCorruption.lean` | 51 | The four readings of corruption at a graded-agreement or coin specification state that the `fail` row consumes. |
 | `HybridRefinesSpecification/InvariantPreservation/StepInversion.lean` | 564 | `hybrid_step_callABA`, `hybrid_step_retABA`, `hybrid_step_fail` and `hybrid_step_tau`: a transition of `hybrid` read back into the rows of its four components, with `corrupted_eq_false_iff`, the reading of a round loop's replacement flag on the corrupted set. |
 
-**`ABA/ImplementationByABDY/`** — ABDY22's protocol as it runs, and its simulation into the composed
+**`ABA/Implementation/ABDY/`** — ABDY22's protocol as it runs, and its simulation into the composed
 system.
 
 | file | lines | what it is |
 |---|---|---|
-| `ImplementationByABDY/Simulation.lean` | 1069 | **`ABDY.protocolSimulation`**, **`ABDY.protocol_composed`**: the protocol carried into the composed system along `ABDY.ProtocolRelation`, whose five unguarded conjuncts determine the composed state. |
-| `ImplementationByABDY/System.lean` | 849 | **ABDY22's protocol as it runs**, and the subject of the protocol chain: the implementation at ABDY22's Algorithm 6 — its fourteen round rows, the payload the call multicasts, the adversary's bound-bit ghost, and the inversions they answer. |
+| `Implementation/ABDY/Simulation.lean` | 1069 | **`ABDY.protocolSimulation`**, **`ABDY.protocol_composed`**: the protocol carried into the composed system along `ABDY.ProtocolRelation`, whose five unguarded conjuncts determine the composed state. |
+| `Implementation/ABDY/System.lean` | 849 | **ABDY22's protocol as it runs**, and the subject of the protocol chain: the implementation at ABDY22's Algorithm 6 — its fourteen round rows, the payload the call multicasts, the adversary's bound-bit ghost, and the inversions they answer. |
 
-**`ABA/ImplementationByAFW/`** — the gather-based chain, and the protocol beneath it.
+**`ABA/Implementation/AFW/`** — the gather-based chain, and the protocol beneath it.
 
 | file | lines | what it is |
 |---|---|---|
-| `ImplementationByAFW/CompositionChain.lean` | 382 | **The gather-based chain**: the families `roundFamilyOverBracha`, `roundFamilyOverBroadcastSpecification` and `roundFamilyOverGatherSpecifications`, and the three stages `AFW.composed ⊑ AFW.composedOverBroadcastSpecification ⊑ AFW.composedOverGatherSpecifications ⊑ hybrid`. One axiom check. |
-| `ImplementationByAFW/RoundProjection.lean` | 876 | `AFW.roundProjection`, the view that computes a composed state from the implementation, the relation `AFW.ProtocolRelation` it carries, and the builders that assemble a transition of the composed system. |
-| `ImplementationByAFW/RoundProjectionStep.lean` | 35 | The module that imports the ten files of `RoundProjectionStep/`. |
-| `ImplementationByAFW/Simulation.lean` | 867 | **`AFW.protocolSimulation`**, **`AFW.protocol_composed`**: the matching label class by label class, and the gather-based protocol carried into `AFW.composed` along a relation that computes the composed state from the implementation, the ghost record included. Two axiom checks. |
-| `ImplementationByAFW/SimulationRows.lean` | 1462 | Each row of the gather-based implementation answered by a run of `AFW.composed`: the readers that identify a row off its label, the builders of a transition of one gather instance and of one round, the broadcast invariant across a row, and the returned value read against the implementation's `2f + 1` `VOTE` receipt quorum. |
-| `ImplementationByAFW/System.lean` | 923 | **The gather-based protocol as it runs**: the implementation at AFW25's two-gather construction — the tagged message type collapsing a round's `4n + 2` network states into one sent-set family, the process-major round record, the adversary's ghost record of the two cores and the bound bit, and the 23 round rows. |
+| `Implementation/AFW/CompositionChain.lean` | 382 | **The gather-based chain**: the families `roundFamilyOverBracha`, `roundFamilyOverBroadcastSpecification` and `roundFamilyOverGatherSpecifications`, and the three stages `AFW.composed ⊑ AFW.composedOverBroadcastSpecification ⊑ AFW.composedOverGatherSpecifications ⊑ hybrid`. One axiom check. |
+| `Implementation/AFW/RoundProjection.lean` | 876 | `AFW.roundProjection`, the view that computes a composed state from the implementation, the relation `AFW.ProtocolRelation` it carries, and the builders that assemble a transition of the composed system. |
+| `Implementation/AFW/RoundProjectionStep.lean` | 35 | The module that imports the ten files of `RoundProjectionStep/`. |
+| `Implementation/AFW/Simulation.lean` | 867 | **`AFW.protocolSimulation`**, **`AFW.protocol_composed`**: the matching label class by label class, and the gather-based protocol carried into `AFW.composed` along a relation that computes the composed state from the implementation, the ghost record included. Two axiom checks. |
+| `Implementation/AFW/SimulationRows.lean` | 1462 | Each row of the gather-based implementation answered by a run of `AFW.composed`: the readers that identify a row off its label, the builders of a transition of one gather instance and of one round, the broadcast invariant across a row, and the returned value read against the implementation's `2f + 1` `VOTE` receipt quorum. |
+| `Implementation/AFW/System.lean` | 923 | **The gather-based protocol as it runs**: the implementation at AFW25's two-gather construction — the tagged message type collapsing a round's `4n + 2` network states into one sent-set family, the process-major round record, the adversary's ghost record of the two cores and the bound bit, and the 23 round rows. |
 
-**`ABA/ImplementationByAFW/RoundProjectionStep/`** — the view of the composed round after one row
+**`ABA/Implementation/AFW/RoundProjectionStep/`** — the view of the composed round after one row
 of the gather-based implementation, one file per row class.
 
 | file | lines | what it is |
 |---|---|---|
-| `ImplementationByAFW/RoundProjectionStep/BroadcastSend.lean` | 498 | `roundProjection_firstGatherInputBroadcastSend` and its three companions: the view after a Bracha send in one broadcast instance of either gather, which leaves the returned value where it stands. |
-| `ImplementationByAFW/RoundProjectionStep/ByzantineInjection.lean` | 399 | `roundProjection_byzantineFirstGather` and its five companions: the view after the adversary multicasts on behalf of a corrupted sender, a row that moves no record. |
-| `ImplementationByAFW/RoundProjectionStep/Delivery.lean` | 842 | `roundProjection_deliverFirstGather` and its nine companions: the view after a delivery, a broadcast delivery that completes a `2f + 1` `VOTE` quorum at the receiver being answered by the instance's delivery and then its return. |
-| `ImplementationByAFW/RoundProjectionStep/GatherAndBroadcastRows.lean` | 587 | `roundProjection_firstGatherEcho` and its thirteen companions: the view after each `ECHO`, `VOTE` and `BIND` row of the two gathers and of their four broadcast families. |
-| `ImplementationByAFW/RoundProjectionStep/GatherSend.lean` | 208 | `roundProjection_firstGatherSend` and `roundProjection_secondGatherSend`: the view after a gather's `ECHO` or `VOTE`. |
-| `ImplementationByAFW/RoundProjectionStep/GradedAgreementCall.lean` | 165 | `roundProjection_callG` and `roundProjection_gbcaCallLoop`: the view after the fused graded-agreement call, and after a call against an already-called record. |
-| `ImplementationByAFW/RoundProjectionStep/OtherRoundsUnchanged.lean` | 120 | `roundProjection_otherRow` and its three companions: the rounds a row does not name read exactly as the row found them, and `toRoundFamily` and its two companions state that as a one-point update of the family of rounds. |
-| `ImplementationByAFW/RoundProjectionStep/ProtocolRelationConjuncts.lean` | 117 | `broadcastReturnsInvariant_of`, `broadcastReturnsInvariant_congr` and `boundInvariant_writeGhost`: the two conjuncts of `AFW.ProtocolRelation` that no frame lemma supplies. |
-| `ImplementationByAFW/RoundProjectionStep/ReturnThenCall.lean` | 350 | `roundProjection_firstGatherReturn_secondGatherCall` and `roundProjection_secondGatherReturn_retG`: the two rows that two events of the composed round answer, through a named intermediate state. |
-| `ImplementationByAFW/RoundProjectionStep/ViewAfterOneWrite.lean` | 598 | `roundProjection_write` and `roundProjection_writeNoSent`, the round-record write and the tagged send every row performs, read through the view, with the sent algebra and the readers of the written view the row classes run on. |
+| `Implementation/AFW/RoundProjectionStep/BroadcastSend.lean` | 498 | `roundProjection_firstGatherInputBroadcastSend` and its three companions: the view after a Bracha send in one broadcast instance of either gather, which leaves the returned value where it stands. |
+| `Implementation/AFW/RoundProjectionStep/ByzantineInjection.lean` | 399 | `roundProjection_byzantineFirstGather` and its five companions: the view after the adversary multicasts on behalf of a corrupted sender, a row that moves no record. |
+| `Implementation/AFW/RoundProjectionStep/Delivery.lean` | 842 | `roundProjection_deliverFirstGather` and its nine companions: the view after a delivery, a broadcast delivery that completes a `2f + 1` `VOTE` quorum at the receiver being answered by the instance's delivery and then its return. |
+| `Implementation/AFW/RoundProjectionStep/GatherAndBroadcastRows.lean` | 587 | `roundProjection_firstGatherEcho` and its thirteen companions: the view after each `ECHO`, `VOTE` and `BIND` row of the two gathers and of their four broadcast families. |
+| `Implementation/AFW/RoundProjectionStep/GatherSend.lean` | 208 | `roundProjection_firstGatherSend` and `roundProjection_secondGatherSend`: the view after a gather's `ECHO` or `VOTE`. |
+| `Implementation/AFW/RoundProjectionStep/GradedAgreementCall.lean` | 165 | `roundProjection_callG` and `roundProjection_gbcaCallLoop`: the view after the fused graded-agreement call, and after a call against an already-called record. |
+| `Implementation/AFW/RoundProjectionStep/OtherRoundsUnchanged.lean` | 120 | `roundProjection_otherRow` and its three companions: the rounds a row does not name read exactly as the row found them, and `toRoundFamily` and its two companions state that as a one-point update of the family of rounds. |
+| `Implementation/AFW/RoundProjectionStep/ProtocolRelationConjuncts.lean` | 117 | `broadcastReturnsInvariant_of`, `broadcastReturnsInvariant_congr` and `boundInvariant_writeGhost`: the two conjuncts of `AFW.ProtocolRelation` that no frame lemma supplies. |
+| `Implementation/AFW/RoundProjectionStep/ReturnThenCall.lean` | 350 | `roundProjection_firstGatherReturn_secondGatherCall` and `roundProjection_secondGatherReturn_retG`: the two rows that two events of the composed round answer, through a named intermediate state. |
+| `Implementation/AFW/RoundProjectionStep/ViewAfterOneWrite.lean` | 598 | `roundProjection_write` and `roundProjection_writeNoSent`, the round-record write and the tagged send every row performs, read through the view, with the sent algebra and the readers of the written view the row classes run on. |
 
 **`ABA/`** — the headlines.
 
@@ -352,15 +353,15 @@ reaches it.
 | `GhostErasure/ImplementationByAFW.lean` | 112 | **`AFW.ghostFreeProtocol`** and **`AFW.protocol_erasure`**: the gather-based protocol with the adversary's record of the two cores and the bound bit dropped, and the headlines re-derived at it — `ghostFreeProtocol_composed`, `ghostFreeProtocol_refines`, `ghostFreeProtocol_safe`, `ghostFreeProtocol_traces`. Five axiom checks. |
 
 The pieces both compositions are built from are in `Composition/Components.lean`, over the
-alphabet of `Implementation/Alphabet.lean`. `ImplementationByABDY/System.lean` and
+alphabet of `Implementation/Alphabet.lean`. `Implementation/ABDY/System.lean` and
 `Composition/GBCAInstanceByABDY/Instance.lean` each import it and neither imports the other, so the
 two systems of the protocol are assembled independently over one set of components.
 `Implementation/System.lean` sits beside `Composition/Components.lean` over the same
 alphabet and imports no implementation, which is what lets both implementations instantiate
 it. The specification family — `Composition/GBCAInstanceByABDY/`,
 `Composition/HybridAndSubstitution.lean` and the core simulation above them — never
-imports `ImplementationByABDY/System.lean`; the protocol enters only at
-`ImplementationByABDY/Simulation.lean`, which is where the two systems meet, and
+imports `Implementation/ABDY/System.lean`; the protocol enters only at
+`Implementation/ABDY/Simulation.lean`, which is where the two systems meet, and
 `Results.lean` reaches it through that file.
 
 The gather-based files form their own stack over `Vocabulary/ProcessAndNetworkState.lean` and
@@ -369,8 +370,8 @@ The gather-based files form their own stack over `Vocabulary/ProcessAndNetworkSt
 `Composition/GBCAInstanceByABDY/Instance.lean` and `GBCA/AFW/RefinesSpecification.lean` imports
 `Composition/GBCAInstanceByABDY/SpecificationOverRoundAlphabet.lean`, whose
 `GBCA.ByABDY.gbcaLabelMap` and `GBCA.ByABDY.specificationOverRoundAlphabet` read the
-graded-agreement specification over the family alphabet the round speaks, `ImplementationByAFW/System.lean` instantiates
-`Implementation/System.lean`, and `ImplementationByAFW/CompositionChain.lean` imports
+graded-agreement specification over the family alphabet the round speaks, `Implementation/AFW/System.lean` instantiates
+`Implementation/System.lean`, and `Implementation/AFW/CompositionChain.lean` imports
 `Composition/HybridAndSubstitution.lean` for `hybrid`, the system its third stage lands on. No file
 of the protocol chain imports a gather-based one, and `Results.lean` is where the two chains meet,
 so either chain reads standalone below it.
@@ -380,7 +381,7 @@ so either chain reads standalone below it.
 `Vocabulary/Parameters.lean` → `Vocabulary/Labels.lean` → `Specifications/ABA.lean` → skim
 `Specifications/ABASafety.lean`'s two trace predicates →
 `HybridRefinesSpecification/Relation.lean`'s module docstring →
-`ImplementationByABDY/System.lean`'s (the system the headlines are about) →
+`Implementation/ABDY/System.lean`'s (the system the headlines are about) →
 `Composition/HybridAndSubstitution.lean`'s (the system the core simulation starts from) →
 `Results.lean`, whose docstring names the steps of both chains and their files. Follow
 it into the statements along `ABDY.protocolSimulation` → `ABDY.substitutionSimulation` →
@@ -397,12 +398,12 @@ For the gather-based chain, by module docstring: `ReliableBroadcast/BrachaCompos
 `ReliableBroadcast/BrachaCompositionStepInversion.lean` → `Gather/Composition.lean` →
 `Gather/CompositionStepInversion.lean` → `GBCA/AFW/Composition.lean` →
 `GBCA/AFW/CompositionStepInversion.lean` → `GBCA/AFW/StepOverGatherSpecifications.lean` →
-`ImplementationByAFW/CompositionChain.lean` → `ImplementationByAFW/Simulation.lean`. The first six
+`Implementation/AFW/CompositionChain.lean` → `Implementation/AFW/Simulation.lean`. The first six
 give the components of one level each, the alphabet they speak and the row characterisation that
 reads a transition of the composition off its label; `GBCA/AFW/StepOverGatherSpecifications.lean` is the row table the counting refinement runs
-on; `ImplementationByAFW/CompositionChain.lean` is the assembly at the protocol shape and
-`ImplementationByAFW/Simulation.lean` the simulation into `ImplementationByAFW/System.lean`, the
-system that runs, over the row answers of `ImplementationByAFW/SimulationRows.lean`. The two
+on; `Implementation/AFW/CompositionChain.lean` is the assembly at the protocol shape and
+`Implementation/AFW/Simulation.lean` the simulation into `Implementation/AFW/System.lean`, the
+system that runs, over the row answers of `Implementation/AFW/SimulationRows.lean`. The two
 counting arguments are `Gather/CommonCoreCounting.lean`, read against `Gather/Specification.lean`
 alone, and `GBCA/AFW/Counting.lean`. Each refinement rests on the row
 characterisation of the composition it is about, so it is readable against the file that states
@@ -430,7 +431,7 @@ pseudocode and the proof bodies).
 - **Budget as an assumption throughout** (not pursued): the alternative shape is an
   unguarded `fail` in every system, `|F| ≤ f` relativized out of the invariants, and every
   headline conditional on a trace-level budget predicate. It is unnecessary here: in
-  `ImplementationByABDY/System.lean` the budget is a component guard on the one local
+  `Implementation/ABDY/System.lean` the budget is a component guard on the one local
   state that owns the corrupted set, so `ABDY.protocol_safe` and `ABDY.protocol_traces`
   need no hypothesis on the trace.
 - **By-type finiteness of the environment coordinates** (not pursued): the process types enforce

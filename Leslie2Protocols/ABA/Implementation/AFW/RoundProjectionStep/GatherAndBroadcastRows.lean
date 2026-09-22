@@ -4,9 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.ImplementationByAFW.RoundProjectionStep.BroadcastSend
-import Leslie2Protocols.ABA.ImplementationByAFW.RoundProjectionStep.GatherSend
-import Leslie2Protocols.ABA.ImplementationByAFW.RoundProjectionStep.ViewAfterOneWrite
+import Leslie2Protocols.ABA.Implementation.AFW.RoundProjectionStep.BroadcastSend
+import Leslie2Protocols.ABA.Implementation.AFW.RoundProjectionStep.GatherSend
+import Leslie2Protocols.ABA.Implementation.AFW.RoundProjectionStep.ViewAfterOneWrite
 
 /-!
 # The rows of the two gathers and of the broadcast instances

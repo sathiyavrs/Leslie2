@@ -5,7 +5,7 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.GhostErasure.GhostFreeSystem
-import Leslie2Protocols.ABA.ImplementationByAFW.Simulation
+import Leslie2Protocols.ABA.Implementation.AFW.Simulation
 import Leslie2Protocols.ABA.Results
 
 /-!

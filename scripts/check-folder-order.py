@@ -9,9 +9,10 @@ reach upwards through a chain the guides forbid and the build stays green.
 
 The order is the rank table below. ``Results.lean`` is a file at the ABA root
 and carries a rank of its own. ``GBCA/ABDY/`` and ``GBCA/AFW/`` are sub-folders
-with ranks of their own, and they straddle ``Composition/``; any other
-sub-folder carries its parent folder's rank. An import is a violation when the
-rank of the imported module exceeds the rank of the importing file. Imports of
+with ranks of their own, and they straddle ``Composition/``; ``Implementation/ABDY/``
+and ``Implementation/AFW/`` are sub-folders with ranks of their own as well. Any
+other sub-folder carries its parent folder's rank. An import is a violation when
+the rank of the imported module exceeds the rank of the importing file. Imports of
 ``Leslie2Protocols.Framework``, of the core library and of Mathlib sit below
 every ABA folder and are ignored.
 
@@ -40,8 +41,8 @@ ORDER = (
     "Composition",
     "GBCA/AFW",
     "HybridRefinesSpecification",
-    "ImplementationByABDY",
-    "ImplementationByAFW",
+    "Implementation/ABDY",
+    "Implementation/AFW",
     "Results.lean",
     "GhostErasure",
 )

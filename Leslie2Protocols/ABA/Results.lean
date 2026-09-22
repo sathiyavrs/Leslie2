@@ -5,8 +5,8 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.HybridRefinesSpecification.Simulation
-import Leslie2Protocols.ABA.ImplementationByABDY.Simulation
-import Leslie2Protocols.ABA.ImplementationByAFW.Simulation
+import Leslie2Protocols.ABA.Implementation.ABDY.Simulation
+import Leslie2Protocols.ABA.Implementation.AFW.Simulation
 import Leslie2Protocols.ABA.Composition.HybridAndSubstitution
 
 /-!
@@ -32,7 +32,7 @@ whose traces satisfy Validity and Agreement (`spec_safe`, `Specifications/ABASaf
 Three probabilistic forward simulations carry `ABDY.protocol` to the
 specification:
 
-1. `ABDY.protocolSimulation` (`ImplementationByABDY/Simulation.lean`) — the protocol into the
+1. `ABDY.protocolSimulation` (`Implementation/ABDY/Simulation.lean`) — the protocol into the
    composed system, along the Dirac lift of `ABDY.ProtocolRelation`. The relation determines every
    composed coordinate from the protocol state; the inclusion is
    one-directional because a round instance also answers the Byzantine handshake rows
@@ -49,10 +49,10 @@ each still a component of the state the relation is defined on.
 
 Five carry `AFW.protocol`, along `AFW.protocol ⊑ AFW.composed ⊑
 AFW.composedOverBroadcastSpecification ⊑ AFW.composedOverGatherSpecifications ⊑ hybrid`.
-`AFW.protocolSimulation` (`ImplementationByAFW/Simulation.lean`) is the first, the protocol as it
+`AFW.protocolSimulation` (`Implementation/AFW/Simulation.lean`) is the first, the protocol as it
 runs into its composed system along the Dirac lift of `AFW.ProtocolRelation`. The next three are
 `AFW.broadcastSubstitution`, `AFW.gatherSubstitution` and `AFW.roundSpecificationSubstitution`
-(`ImplementationByAFW/CompositionChain.lean`), family substitutions replacing one tier of the round
+(`Implementation/AFW/CompositionChain.lean`), family substitutions replacing one tier of the round
 by the tier above it: Bracha's broadcast by the broadcast specification, the gather instances by
 the gather specifications, the round over the gather specifications by the graded-agreement
 specification. The third of them lands on `hybrid P` itself, so the fifth is

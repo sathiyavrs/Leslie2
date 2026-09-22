@@ -5,7 +5,7 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.Implementation.NetworkStateWritesAndErasures
-import Leslie2Protocols.ABA.ImplementationByAFW.RoundProjection
+import Leslie2Protocols.ABA.Implementation.AFW.RoundProjection
 
 /-!
 # The view of the composed round after one write
@@ -21,7 +21,7 @@ owes, and one simp lemma per coordinate reads the written view off `roundProject
 of returned values under a local write and under a delivery. `networkState_ext`,
 `stateOverBroadcasts_ext` and `roundStateOverGathers_ext` identify a network state, a
 gather-over-Bracha state and a round state with their components. Every row class of
-`ImplementationByAFW/RoundProjectionStep/` rests on this file.
+`Implementation/AFW/RoundProjectionStep/` rests on this file.
 -/
 
 namespace PLTS

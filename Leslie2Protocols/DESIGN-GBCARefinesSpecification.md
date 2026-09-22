@@ -647,7 +647,7 @@ on the guard pair `(!b) ∈ excluded ∧ b ∉ excluded` — the D19 rendering o
 `bind ≠ none` rendered as `excluded ≠ ∅`. `GBCA.ByABDY.specificationRelation_corrupt` carries the
 `exclusion_certificate` row through `ExclusionCertificate.mono`, whose three hypotheses it
 discharges by `corrupt_received`, `corrupt_process` and `corrupt_F_subset`.
-`ImplementationByABDY/System.lean`'s rendering carries the same levels inside one process: the round
+`Implementation/ABDY/System.lean`'s rendering carries the same levels inside one process: the round
 record `GBCA.ByABDY.RoundRecord` keeps the write-once `sentEcho5` field in its `process` record and
 carries its own `echo5Count` over its received set rows, the rendezvous rows
 `gbcaSendEcho5Bit`/`gbcaSendEcho5Bot` are the echo5 multicasts read off that record, and the three

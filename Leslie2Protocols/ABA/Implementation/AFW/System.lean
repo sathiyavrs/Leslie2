@@ -15,7 +15,7 @@ import Leslie2Protocols.ABA.ReliableBroadcast.BrachaImplementation
 The gather-based graded agreement, read as a protocol rather than as a composition: `n` programs
 beside one network and the coin oracle. This is the implementation of
 `ABA/Implementation/System.lean` at the gather-based implementation, as
-`ABA/ImplementationByABDY/System.lean` is that implementation at ABDY22's, and it supplies the same
+`ABA/Implementation/ABDY/System.lean` is that implementation at ABDY22's, and it supplies the same
 three things — a round message type, a round record, and the implementation's rows. It sits in the
 namespace `AFW`, after Attiya, Flam and Welch, and so `AFW.protocol` is what `ABDY.protocol` is at
 ABDY22's.

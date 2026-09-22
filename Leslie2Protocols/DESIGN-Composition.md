@@ -20,12 +20,12 @@ ABDY22's Algorithm 6 (D18), which calls no sub-protocol, so one substitution tak
 so the recursion continues two levels further and its chain carries three.
 
 This note records why the cut is placed where it is, what it buys, and what the model already
-weakens. The systems themselves are in `ABA/ImplementationByABDY/System.lean`,
-`ABA/ImplementationByAFW/System.lean` and `ABA/Specifications/ABA.lean`;
+weakens. The systems themselves are in `ABA/Implementation/ABDY/System.lean`,
+`ABA/Implementation/AFW/System.lean` and `ABA/Specifications/ABA.lean`;
 `ABA/Composition/HybridAndSubstitution.lean` carries `ABDY.composed` and `hybrid` over the
-components of `ABA/Composition/Components.lean`, and `ABA/ImplementationByAFW/CompositionChain.lean`
+components of `ABA/Composition/Components.lean`, and `ABA/Implementation/AFW/CompositionChain.lean`
 carries the three gather-based stages. The first inclusions are
-`ABA/ImplementationByABDY/Simulation.lean` and `ABA/ImplementationByAFW/Simulation.lean`. The file
+`ABA/Implementation/ABDY/Simulation.lean` and `ABA/Implementation/AFW/Simulation.lean`. The file
 guide is `ABA/README.md`, and the gather stack's own proofs are `DESIGN-GatherComposition.md`.
 
 ## The first inclusion
@@ -38,8 +38,8 @@ The two protocols are one construction. What the protocol fixes — the round lo
 sets, the coin handshake, corruption, the network and the composition pipeline — is
 settled by the round interface and the specification, so `ABA/Implementation/System.lean` writes it
 once, parametric in the round message type, the per-process per-round record, the round rows and the
-adversary's per-round ghost record (D30). `ABA/ImplementationByABDY/System.lean` and
-`ABA/ImplementationByAFW/System.lean` supply the two instances.
+adversary's per-round ghost record (D30). `ABA/Implementation/ABDY/System.lean` and
+`ABA/Implementation/AFW/System.lean` supply the two instances.
 
 A process record of a protocol carries the round-loop record beside the round record of every round
 the process has touched, and a flag saying whether the process has terminated (D22). A composed
@@ -254,8 +254,8 @@ the ABDY22 chain, and `Gather.StateOverBracha`, `Gather.StateOverBroadcastSpecif
 `GBCA.ByAFW.RoundStateOverGatherSpecifications` and `AFW.RoundRecord` for the gather-based one.
 
 One record holds two kinds of message set at once, and it is the right one to. `ABDY.NetworkState`
-(`ABA/ImplementationByABDY/System.lean`) and `AFW.NetworkState`
-(`ABA/ImplementationByAFW/System.lean`) carry the round sent sets, the DECIDED sets and the
+(`ABA/Implementation/ABDY/System.lean`) and `AFW.NetworkState`
+(`ABA/Implementation/AFW/System.lean`) carry the round sent sets, the DECIDED sets and the
 corrupted set together, because each is the network of a protocol — the subject of a
 chain, not a vehicle for proving anything about it. Each carries one ghost record per round beside
 them (D30), for the same reason: the value a graded return announces is determined by the round's
