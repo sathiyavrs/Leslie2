@@ -19,7 +19,8 @@ two-gather round and its three tiers (`ABA/GBCA/AFW/Counting.lean`,
 (`ABA/ImplementationByAFW/CompositionChain.lean`), and the protocol beneath it
 (`ABA/ImplementationByAFW/System.lean`, `ABA/ImplementationByAFW/RoundProjection.lean`,
 `ABA/ImplementationByAFW/RoundProjectionStep.lean`,
-`ABA/ImplementationByAFW/Simulation.lean`). The gather subsections of
+`ABA/ImplementationByAFW/SimulationRows.lean`, `ABA/ImplementationByAFW/Simulation.lean`). The
+gather subsections of
 `blueprint/src/content.tex` are a condensation of this document; the deviations D24,
 D26–D30, D32 and D33 it realises are glossed in that file's registry, and the
 source-fidelity items it rests on are §§2, 5 and 6 of `NOTES-Fidelity.md`.
@@ -332,7 +333,7 @@ invoke transitivity of simulation — the two routes of `Results.lean`, reproduc
 
 ## The protocol beneath the composed system (`ImplementationByAFW/System.lean`,
 `ImplementationByAFW/RoundProjection.lean`, `ImplementationByAFW/RoundProjectionStep.lean`,
-`ImplementationByAFW/Simulation.lean`)
+`ImplementationByAFW/SimulationRows.lean`, `ImplementationByAFW/Simulation.lean`)
 
 `AFW.composed P` is the gather-based protocol read as a composition of components. What runs is the
 implementation: `n` programs, each reading its own records and nothing else, beside one network
@@ -415,11 +416,11 @@ with the corresponding composed effect applied, written through the round's upda
 row tables write it; the master lemma `roundProjection_write` pushes a one-point round write and a
 single sent-set insertion inside every coordinate, and each row then owes only projection algebra,
 discharged by `messagesOf_recordSent_some` and `messagesOf_recordSent_none`.
-`ABA/ImplementationByAFW/Simulation.lean` matches each implementation row by a run of the composed
-group: a send and a delivery are hidden events of the round instance, answered by one of its silent
-steps, the adversary's authenticity conjunct becoming membership in the sent set projected onto
-the instance; the call is the instance's own. Three of the implementation's rows are answered by
-two composed steps, through the intermediate states
+`ABA/ImplementationByAFW/SimulationRows.lean` matches each implementation row by a run of the
+composed group: a send and a delivery are hidden events of the round instance, answered by one of
+its silent steps, the adversary's authenticity conjunct becoming membership in the sent set
+projected onto the instance; the call is the instance's own. Three of the implementation's rows are
+answered by two composed steps, through the intermediate states
 `ABA/ImplementationByAFW/RoundProjectionStep.lean` names: the return-then-call step by
 `firstGatherReturn` then `secondGatherCall`, the graded return by `secondGatherReturn` then the
 visible `retG`, and a

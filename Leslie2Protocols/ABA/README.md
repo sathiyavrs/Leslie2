@@ -295,7 +295,8 @@ system.
 | `ImplementationByAFW/CompositionChain.lean` | 382 | **The gather-based chain**: the families `roundFamilyOverBracha`, `roundFamilyOverBroadcastSpecification` and `roundFamilyOverGatherSpecifications`, and the three stages `AFW.composed ⊑ AFW.composedOverBroadcastSpecification ⊑ AFW.composedOverGatherSpecifications ⊑ hybrid`. One axiom check. |
 | `ImplementationByAFW/RoundProjection.lean` | 876 | `AFW.roundProjection`, the view that computes a composed state from the implementation, the relation `AFW.ProtocolRelation` it carries, and the builders that assemble a transition of the composed system. |
 | `ImplementationByAFW/RoundProjectionStep.lean` | 3613 | The view of the composed round after one implementation row: for each row of the implementation, the round's view after it is the view before it with the composed round's own effect applied. |
-| `ImplementationByAFW/Simulation.lean` | 2334 | **`AFW.protocolSimulation`**, **`AFW.protocol_composed`**: the gather-based protocol carried into `AFW.composed` along a relation that computes the composed state from the implementation, the ghost record included. Two axiom checks. |
+| `ImplementationByAFW/Simulation.lean` | 907 | **`AFW.protocolSimulation`**, **`AFW.protocol_composed`**: the matching label class by label class, and the gather-based protocol carried into `AFW.composed` along a relation that computes the composed state from the implementation, the ghost record included. Two axiom checks. |
+| `ImplementationByAFW/SimulationRows.lean` | 1462 | Each row of the gather-based implementation answered by a run of `AFW.composed`: the readers that identify a row off its label, the builders of a transition of one gather instance and of one round, the broadcast invariant across a row, and the returned value read against the implementation's `2f + 1` `VOTE` receipt quorum. |
 | `ImplementationByAFW/System.lean` | 921 | **The gather-based protocol as it runs**: the implementation at AFW25's two-gather construction — the tagged message type collapsing a round's `4n + 2` network states into one sent-set family, the process-major round record, the adversary's ghost record of the two cores and the bound bit, and the 23 round rows. |
 
 **`ABA/`** — the headlines.
@@ -363,8 +364,9 @@ alphabet they speak and the row characterisation that reads a transition of the 
 label; `GBCA/AFW/StepOverGatherSpecifications.lean` is the row table the counting refinement runs
 on; `ImplementationByAFW/CompositionChain.lean` is the assembly at the protocol shape and
 `ImplementationByAFW/Simulation.lean` the simulation into `ImplementationByAFW/System.lean`, the
-system that runs. The two counting arguments are `Gather/CommonCoreCounting.lean`, read against
-`Gather/Specification.lean` alone, and `GBCA/AFW/Counting.lean`. Each refinement rests on the row
+system that runs, over the row answers of `ImplementationByAFW/SimulationRows.lean`. The two
+counting arguments are `Gather/CommonCoreCounting.lean`, read against `Gather/Specification.lean`
+alone, and `GBCA/AFW/Counting.lean`. Each refinement rests on the row
 characterisation of the composition it is about, so it is readable against the file that states
 those rows.
 
