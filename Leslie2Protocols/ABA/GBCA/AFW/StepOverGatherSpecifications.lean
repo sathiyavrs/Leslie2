@@ -207,7 +207,7 @@ theorem roundOverGatherSpecifications_step_row (P : Parameters) (r : ℕ) :
       have hfor : ∀ i, i ≠ id → x i = u i :=
         fun i hi => PMF.pure_injective (programStep_firstGatherReturn_foreign (Ne.symm hi) (hproc
           i))
-      have hx := Gather.funUpdate (PMF.pure_injective hxid) hfor
+      have hx := Function.eq_update_iff.mpr ⟨PMF.pure_injective hxid, hfor⟩
       have hv : v' = some (v.getD (boundOfCore P C)) := PMF.pure_injective
         (networkStep_firstGatherReturn hnet)
       have hg1 : Gather.Step P c (.ret id g C) (PMF.pure c') :=
@@ -221,7 +221,7 @@ theorem roundOverGatherSpecifications_step_row (P : Parameters) (r : ℕ) :
       obtain ⟨hc, h2', hxid⟩ := programStep_secondGatherCall_own (hproc id)
       have hfor : ∀ i, i ≠ id → x i = u i :=
         fun i hi => PMF.pure_injective (programStep_secondGatherCall_foreign (Ne.symm hi) (hproc i))
-      have hx := Gather.funUpdate (PMF.pure_injective hxid) hfor
+      have hx := Function.eq_update_iff.mpr ⟨PMF.pure_injective hxid, hfor⟩
       have hv : v' = v := PMF.pure_injective (networkStep_secondGatherCall hnet)
       have hc1 : c' = c := System.mapIdle_eq_of_step_none (by simp) hga1
       have hg2 : Gather.Step P d (.call id y) (PMF.pure d') :=
@@ -236,7 +236,7 @@ theorem roundOverGatherSpecifications_step_row (P : Parameters) (r : ℕ) :
       have hfor : ∀ i, i ≠ id → x i = u i :=
         fun i hi => PMF.pure_injective (programStep_secondGatherReturn_foreign (Ne.symm hi) (hproc
           i))
-      have hx := Gather.funUpdate (PMF.pure_injective hxid) hfor
+      have hx := Function.eq_update_iff.mpr ⟨PMF.pure_injective hxid, hfor⟩
       have hv : v' = v := PMF.pure_injective (networkStep_secondGatherReturn hnet)
       have hc1 : c' = c := System.mapIdle_eq_of_step_none (by simp) hga1
       have hg2 : Gather.Step P d (.ret id g C) (PMF.pure d') :=
@@ -270,7 +270,7 @@ theorem roundOverGatherSpecifications_step_row (P : Parameters) (r : ℕ) :
           obtain ⟨h0, hxid⟩ := programStep_callG_own (hproc id)
           have hfor : ∀ i, i ≠ id → x i = u i :=
             fun i hi => PMF.pure_injective (programStep_callG_foreign (Ne.symm hi) (hproc i))
-          have hx := Gather.funUpdate (PMF.pure_injective hxid) hfor
+          have hx := Function.eq_update_iff.mpr ⟨PMF.pure_injective hxid, hfor⟩
           have hv : v' = v := PMF.pure_injective (networkStep_callG hnet)
           have hg1 : Gather.Step P c (.call id b) (PMF.pure c') :=
             specificationOverInstanceAlphabet_step (by simp) hga1
@@ -285,7 +285,7 @@ theorem roundOverGatherSpecifications_step_row (P : Parameters) (r : ℕ) :
           obtain ⟨rfl, hv⟩ := networkStep_retG hnet
           have hfor : ∀ i, i ≠ id → x i = u i :=
             fun i hi => PMF.pure_injective (programStep_retG_foreign (Ne.symm hi) (hproc i))
-          have hx := Gather.funUpdate (PMF.pure_injective hxid) hfor
+          have hx := Function.eq_update_iff.mpr ⟨PMF.pure_injective hxid, hfor⟩
           have hv' : v' = v := PMF.pure_injective hv
           have hc1 : c' = c := System.mapIdle_eq_of_step_none (by simp) hga1
           have hd : d' = d := System.mapIdle_eq_of_step_none (by simp) hga2
@@ -333,7 +333,7 @@ theorem roundOverGatherSpecifications_step_row (P : Parameters) (r : ℕ) :
           obtain ⟨h0, hxid⟩ := programStep_callG_own (hproc k)
           have hfor : ∀ i, i ≠ k → x i = u i :=
             fun i hi => PMF.pure_injective (programStep_callG_foreign (Ne.symm hi) (hproc i))
-          have hx := Gather.funUpdate (PMF.pure_injective hxid) hfor
+          have hx := Function.eq_update_iff.mpr ⟨PMF.pure_injective hxid, hfor⟩
           have hv : v' = v := PMF.pure_injective (networkStep_callG hnet)
           have hg1 : Gather.Step P c (.call k b) (PMF.pure c') :=
             specificationOverInstanceAlphabet_step (by simp) hga1
@@ -359,7 +359,7 @@ theorem roundOverGatherSpecifications_step_row (P : Parameters) (r : ℕ) :
           obtain ⟨rfl, hv⟩ := networkStep_retG hnet
           have hfor : ∀ i, i ≠ k → x i = u i :=
             fun i hi => PMF.pure_injective (programStep_retG_foreign (Ne.symm hi) (hproc i))
-          have hx := Gather.funUpdate (PMF.pure_injective hxid) hfor
+          have hx := Function.eq_update_iff.mpr ⟨PMF.pure_injective hxid, hfor⟩
           have hv' : v' = v := PMF.pure_injective hv
           have hc1 : c' = c := System.mapIdle_eq_of_step_none (by simp) hga1
           have hd : d' = d := System.mapIdle_eq_of_step_none (by simp) hga2
@@ -378,7 +378,7 @@ theorem row_roundOverGatherSpecifications_step (P : Parameters) (r : ℕ) :
     have hRoundPrograms : (roundPrograms P r).step (u, v) (Sum.inl (Sum.inl (Label.callG r id b)))
         (PMF.pure (Function.update u id { u id with input := some b }, v)) :=
       roundPrograms_label_step (lp := .callG r id b) (by simp) (by simp)
-        (programStep_update (ProgramStep.callG (u id) b h0)
+        (dirac_steps_update (ProgramStep.callG (u id) b h0)
           (fun i hi => ProgramStep.callGIdle (u i) id b (Ne.symm hi)))
         (NetworkStep.callG v id b)
     have hg1 : ((Gather.specificationOverInstanceAlphabet P Bool).mapIdle (firstGatherLabelMap
@@ -421,7 +421,7 @@ theorem row_roundOverGatherSpecifications_step (P : Parameters) (r : ℕ) :
         (PMF.pure (Function.update u id { u id with candidate := some (candidate P g) },
           some (v.getD (boundOfCore P C)))) :=
       roundPrograms_label_step (lp := .firstGatherReturn id g C) (by simp) (by simp)
-        (programStep_update (ProgramStep.firstGatherReturn (u id) g C hin hc)
+        (dirac_steps_update (ProgramStep.firstGatherReturn (u id) g C hin hc)
           (fun i hi => ProgramStep.firstGatherReturnIdle (u i) id g C (Ne.symm hi)))
         (NetworkStep.firstGatherReturn v id g C)
     have hg1 : ((Gather.specificationOverInstanceAlphabet P Bool).mapIdle (firstGatherLabelMap
@@ -438,7 +438,7 @@ theorem row_roundOverGatherSpecifications_step (P : Parameters) (r : ℕ) :
         (roundPrograms P r).step (u, v) (Sum.inr (RoundEvent.secondGatherCall id y))
         (PMF.pure (Function.update u id { u id with secondGatherCalled := true }, v)) :=
       roundPrograms_label_step (lp := .secondGatherCall id y) (by simp) (by simp)
-        (programStep_update (ProgramStep.secondGatherCall (u id) y hc h2)
+        (dirac_steps_update (ProgramStep.secondGatherCall (u id) y hc h2)
           (fun i hi => ProgramStep.secondGatherCallIdle (u i) id y (Ne.symm hi)))
         (NetworkStep.secondGatherCall v id y)
     have hg1 : ((Gather.specificationOverInstanceAlphabet P Bool).mapIdle (firstGatherLabelMap
@@ -455,7 +455,7 @@ theorem row_roundOverGatherSpecifications_step (P : Parameters) (r : ℕ) :
         (roundPrograms P r).step (u, v) (Sum.inr (RoundEvent.secondGatherReturn id g C))
         (PMF.pure (Function.update u id { u id with output := some (gradeOf P g) }, v)) :=
       roundPrograms_label_step (lp := .secondGatherReturn id g C) (by simp) (by simp)
-        (programStep_update (ProgramStep.secondGatherReturn (u id) g C h2 ho)
+        (dirac_steps_update (ProgramStep.secondGatherReturn (u id) g C h2 ho)
           (fun i hi => ProgramStep.secondGatherReturnIdle (u i) id g C (Ne.symm hi)))
         (NetworkStep.secondGatherReturn v id g C)
     have hg1 : ((Gather.specificationOverInstanceAlphabet P Bool).mapIdle (firstGatherLabelMap
@@ -472,7 +472,7 @@ theorem row_roundOverGatherSpecifications_step (P : Parameters) (r : ℕ) :
         (Sum.inl (Sum.inl (Label.retG r id out (v.getD (boundOfCore P ∅)))))
         (PMF.pure (Function.update u id { u id with output := none, returned := true }, v)) :=
       roundPrograms_label_step (lp := .retG r id out (v.getD (boundOfCore P ∅))) (by simp) (by simp)
-        (programStep_update (ProgramStep.retG (u id) out _ ho hr)
+        (dirac_steps_update (ProgramStep.retG (u id) out _ ho hr)
           (fun i hi => ProgramStep.retGIdle (u i) id out _ (Ne.symm hi)))
         (NetworkStep.retG v id out)
     have hg1 : ((Gather.specificationOverInstanceAlphabet P Bool).mapIdle (firstGatherLabelMap

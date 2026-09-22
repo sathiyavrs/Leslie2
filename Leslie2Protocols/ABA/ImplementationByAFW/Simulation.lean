@@ -5,6 +5,7 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.ImplementationByAFW.SimulationRows
+import Leslie2Protocols.Framework.DiracRelationCoupling
 
 /-!
 # The gather-based protocol into its composed system
@@ -21,8 +22,8 @@ inclusion from here to the ABA specification.
 `AFW.ProtocolRelation` (`ABA/ImplementationByAFW/RoundProjection.lean`) determines the composed
 state from the implementation: the round loops and the coin oracle are shared, the ABA network is
 the DECIDED sets beside the corrupted set, and every round is the view `AFW.roundProjection`.
-`AFW.match_pure` and `AFW.match_prod` are the two couplings that answer a Dirac outcome and an
-outcome whose only free coordinate is the oracle's.
+`PLTS.coupling_pure` and `PLTS.coupling_map` (`Framework/DiracRelationCoupling.lean`) are the two
+couplings that answer a Dirac outcome and an outcome whose only free coordinate is the oracle's.
 
 ## The matching, label class by label class
 
@@ -40,54 +41,6 @@ namespace ABA
 namespace AFW
 
 open Implementation Composition GBCA.ByABDY
-
-/-! ### The coupling
-
-The relation is a function, so a Dirac outcome of the implementation is matched
-by the single composed state it is read as, and an outcome whose only free
-coordinate is the oracle's is matched outcome by outcome. -/
-
-/-- A Dirac outcome matched by the single composed state it is read as. -/
-private theorem match_pure (P : Parameters) {s : ProtocolState P} {t : ComposedState P}
-    (h : ProtocolRelation P s t) :
-    ∃ Ω : PMF (PMF (ComposedState P)),
-      PMFRel (diracRel (ProtocolRelation P)) (PMF.pure s) Ω ∧ Ω.bind id = PMF.pure t := by
-  refine ⟨PMF.pure (PMF.pure t), ⟨PMF.pure (s, PMF.pure t), ?_, ?_, ?_⟩, ?_⟩
-  · rw [PMF.pure_map]
-  · rw [PMF.pure_map]
-  · intro q hq
-    rw [PMF.mem_support_pure_iff] at hq
-    subst hq
-    exact ⟨t, rfl, h⟩
-  · rw [PMF.pure_bind]
-    rfl
-
-/-- An outcome whose only free coordinate is the oracle's, matched outcome by
-outcome. -/
-private theorem match_prod (P : Parameters) {x : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
-    {w : NetworkState P.n} {G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n}
-    {C : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A : ABANetworkState P.n}
-    {ν : PMF (ℕ → WCC.SpecState P.n)}
-    (h : ∀ o ∈ ν.support, ProtocolRelation P (x, w, o) (G, C, A, o)) :
-    ∃ Ω : PMF (PMF (ComposedState P)),
-      PMFRel (diracRel (ProtocolRelation P))
-        (prodPMF (PMF.pure x) (prodPMF (PMF.pure w) ν)) Ω ∧
-      Ω.bind id =
-        prodPMF (PMF.pure G) (prodPMF (PMF.pure C) (prodPMF (PMF.pure A) ν)) := by
-  refine ⟨ν.map (fun o => PMF.pure ((G, C, A, o) : ComposedState P)),
-    ⟨ν.map (fun o => (((x, w, o) : ProtocolState P),
-      PMF.pure ((G, C, A, o) : ComposedState P))), ?_, ?_, ?_⟩, ?_⟩
-  · rw [PMF.map_comp, prodPMF_two_pure_factors]
-    rfl
-  · rw [PMF.map_comp]
-    rfl
-  · intro q hq
-    rw [PMF.mem_support_map_iff] at hq
-    obtain ⟨o, ho, rfl⟩ := hq
-    exact ⟨(G, C, A, o), rfl, h o ho⟩
-  · rw [PMF.bind_map, prodPMF_three_pure_factors]
-    rfl
-
 
 /-! ### Assembling a matched run
 
@@ -113,7 +66,10 @@ private theorem match_visible (P : Parameters) {x : ∀ _ : Fin P.n, AFW.Process
         (prodPMF (PMF.pure x) (prodPMF (PMF.pure w') ν)) Ω ∧
       weakStep (composedHidden P) (PMF.pure ((G, C, A, o) : ComposedState P)) l
         (Ω.bind id) := by
-  obtain ⟨Ω, hr, hb⟩ := match_prod P hrel
+  obtain ⟨Ω, hr, hb⟩ := coupling_map ν (fun o' => ((x, w', o') : ProtocolState P))
+    (fun o' => ((G', C', A', o') : ComposedState P)) hrel
+  rw [← prodPMF_two_pure_factors] at hr
+  rw [← prodPMF_three_pure_factors] at hb
   exact ⟨Ω, hr, hb ▸ composedHidden_weakStep P hl hG hC hA hW⟩
 
 /-- A hidden rendezvous: the four components move together and the composed
@@ -133,7 +89,10 @@ private theorem match_hiddenRendezvous (P : Parameters) {x : ∀ _ : Fin P.n, AF
       PMFRel (diracRel (ProtocolRelation P))
         (prodPMF (PMF.pure x) (prodPMF (PMF.pure w') ν)) Ω ∧
       weakTau (composedHidden P) (PMF.pure ((G, C, A, o) : ComposedState P)) (Ω.bind id) := by
-  obtain ⟨Ω, hr, hb⟩ := match_prod P hrel
+  obtain ⟨Ω, hr, hb⟩ := coupling_map ν (fun o' => ((x, w', o') : ProtocolState P))
+    (fun o' => ((G', C', A', o') : ComposedState P)) hrel
+  rw [← prodPMF_two_pure_factors] at hr
+  rw [← prodPMF_three_pure_factors] at hb
   refine ⟨Ω, hr, ?_⟩
   rw [hb]
   exact weakTau_of_step rfl
@@ -150,7 +109,7 @@ private theorem match_run (P : Parameters) {x : ∀ _ : Fin P.n, AFW.ProcessReco
     ∃ Ω : PMF (PMF (ComposedState P)),
       PMFRel (diracRel (ProtocolRelation P)) (PMF.pure ((x, w', o) : ProtocolState P)) Ω ∧
       weakTau (composedHidden P) (PMF.pure ((G, C, A, o) : ComposedState P)) (Ω.bind id) := by
-  obtain ⟨Ω, hr, hb⟩ := match_pure P hrel
+  obtain ⟨Ω, hr, hb⟩ := coupling_pure hrel
   exact ⟨Ω, hr, hb ▸ composedHidden_weakTau P C A o hG⟩
 
 /-- A composed state that is unchanged. -/
@@ -159,7 +118,7 @@ private theorem match_unchanged (P : Parameters) {s : ProtocolState P} {t : Comp
     ∃ Ω : PMF (PMF (ComposedState P)),
       PMFRel (diracRel (ProtocolRelation P)) (PMF.pure s) Ω ∧
       weakTau (composedHidden P) (PMF.pure t) (Ω.bind id) := by
-  obtain ⟨Ω, hr, hb⟩ := match_pure P h
+  obtain ⟨Ω, hr, hb⟩ := coupling_pure h
   exact ⟨Ω, hr, hb ▸ weakTau_refl (composedHidden P) (PMF.pure t)⟩
 
 /-! ### The matching on the silent label
@@ -219,7 +178,7 @@ theorem match_tau (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
           by rw [hGv]; funext r; rfl,
           boundInvariant_of hB (fun _ _ => rfl) (fun _ hb => hb),
           broadcastReturnsInvariant_congr hI (fun _ => rfl)⟩
-      obtain ⟨Ω, hr, hb⟩ := match_pure P hrel
+      obtain ⟨Ω, hr, hb⟩ := coupling_pure hrel
       refine ⟨Ω, hr, ?_⟩
       rw [hb]
       refine weakTau_of_step rfl (composedHidden_of_tau P (composedExtended_tau_ABANetwork P ?_))

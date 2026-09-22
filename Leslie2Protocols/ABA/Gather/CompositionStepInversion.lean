@@ -29,7 +29,7 @@ guards together with the Dirac it produces, and the idle row of a non-participan
 identity. `networkStep_*` does the same for the gather network.
 
 A joint step delivers a program function given pointwise, by its value at the acting process
-and its agreement with the old function elsewhere. `programFunction_update` identifies that
+and its agreement with the old function elsewhere. `Function.eq_update_iff` identifies that
 function with the old one updated at the acting process, and the `stateOverBroadcasts_*`
 lemmas identify the state a row writes with `setGatherTier`, `setCore`, `setInputBroadcasts`,
 `setBindBroadcasts` or `corruptAll` applied to the old state.
@@ -557,21 +557,13 @@ theorem networkStep_tau (h : NetworkStep P w (Sum.inl (Sum.inl .tau)) μ) :
   case byzantine j m hF => exact ⟨j, m, hF, rfl⟩
 
 end NetworkStepInversion
-/-- A function fixed at `i` and unchanged elsewhere is the old one updated at
-`i`. -/
-theorem funUpdate {ι β : Type} [DecidableEq ι] {f g : ι → β} {i : ι} {y : β}
-    (hi : g i = y) (hne : ∀ i', i' ≠ i → g i' = f i') : g = Function.update f i y := by
-  funext i'
-  by_cases h : i' = i
-  · subst h; rw [hi, Function.update_self]
-  · rw [hne i' h, Function.update_of_ne h]
-
 /-! ### The write a row makes on the composed state
 
 A joint step delivers a program function pointwise: its value at the acting
-process, and its agreement with the old one elsewhere. A row writes with
-`setGatherTier` and `InstanceState.setProcess`. The lemmas here identify the
-two. -/
+process, and its agreement with the old one elsewhere. `Function.eq_update_iff`
+reads that function as the old one updated at the acting process, and the
+lemmas here identify the state a row writes with `setGatherTier` and
+`InstanceState.setProcess`. -/
 
 section Writes
 
@@ -583,22 +575,12 @@ variable {P : Parameters} {B B' : Type}
   {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord P.n X) (Message P.n X)}
   {w : NetworkState P.n X} {a : ∀ _ : Fin P.n, B} {b : ∀ _ : Fin P.n, B'}
 
-/-- A program function fixed at `j` and unchanged elsewhere is the old one
-updated at `j`. -/
-theorem programFunction_update {j : Fin P.n}
-    {r : LocalState P.n (ProcessRecord P.n X) (Message P.n X)} (hj : x j = r)
-    (hne : ∀ i, i ≠ j → x i = u i) : x = Function.update u j r := by
-  funext i
-  by_cases hi : i = j
-  · subst hi; rw [hj, Function.update_self]
-  · rw [hne i hi, Function.update_of_ne hi]
-
 /-- A record write at one program, with the network state untouched. -/
 theorem stateOverBroadcasts_setProcess {j : Fin P.n} {pr : ProcessRecord P.n X}
     (hj : x j = (u j).setProcess pr) (hne : ∀ i, i ≠ j → x i = u i) :
     (((x, w), (a, b)) : StateOverBroadcasts P.n X B B') = setGatherTier ((u, w), (a, b))
     (InstanceState.setProcess (gatherTier ((u, w), (a, b))) j pr) := by
-  rw [programFunction_update hj hne]; rfl
+  rw [Function.eq_update_iff.mpr ⟨hj, hne⟩]; rfl
 
 /-- The programs remain unchanged and the network state is untouched. -/
 theorem stateOverBroadcasts_idle (hall : ∀ i, x i = u i) :
@@ -611,7 +593,7 @@ theorem stateOverBroadcasts_ret {id : Fin P.n} {pr : ProcessRecord P.n X} {C : A
     (((x, { w with core := some C }), (a, b)) : StateOverBroadcasts P.n X B B') = setCore
     (setGatherTier ((u, w), (a, b)) (InstanceState.setProcess (gatherTier ((u, w), (a, b))) id pr))
     (some C) := by
-  rw [programFunction_update hj hne]; rfl
+  rw [Function.eq_update_iff.mpr ⟨hj, hne⟩]; rfl
 
 /-- Corruption is the network state's own write beside the broadcast
 coordinates' (D1). -/
@@ -635,24 +617,13 @@ theorem stateOverBroadcasts_setBindBroadcasts {q : Fin P.n} {d : B'} :
 
 end
 
-/-! ### The writes that record or deliver a message, and the program group's row -/
+/-! ### The writes that record or deliver a message -/
 
 section
 
 variable [DecidableEq X] {P : Parameters} {B B' : Type}
   {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord P.n X) (Message P.n X)}
   {w : NetworkState P.n X} {a : ∀ _ : Fin P.n, B} {b : ∀ _ : Fin P.n, B'}
-
-/-- The participant's row beside the idle rows of every other program is the
-program group stepping into the updated function. -/
-theorem programStep_update {j : Fin P.n} {r : LocalState P.n (ProcessRecord P.n X) (Message P.n X)}
-    {l : GatherLabel P.n X} (hj : ProgramStep P j (u j) l (PMF.pure r))
-    (hne : ∀ i, i ≠ j → ProgramStep P i (u i) l (PMF.pure (u i))) :
-    ∀ i, ProgramStep P i (u i) l (PMF.pure (Function.update u j r i)) := by
-  intro i
-  by_cases hi : i = j
-  · subst hi; rw [Function.update_self]; exact hj
-  · rw [Function.update_of_ne hi]; exact hne i hi
 
 /-- A record write at one program together with the network state recording the
 message that write multicasts. -/
@@ -661,14 +632,14 @@ theorem stateOverBroadcasts_setProcess_recordSent {j : Fin P.n} {pr : ProcessRec
     (((x, { w with network := w.network.recordSent j m }), (a, b)) : StateOverBroadcasts P.n X B B')
     = setGatherTier ((u, w), (a, b))
     ((InstanceState.setProcess (gatherTier ((u, w), (a, b))) j pr).multicast j m) := by
-  rw [programFunction_update hj hne]; rfl
+  rw [Function.eq_update_iff.mpr ⟨hj, hne⟩]; rfl
 
 /-- A delivery: the receiver files the message under its sender's row. -/
 theorem stateOverBroadcasts_deliver {i k : Fin P.n} {m : Message P.n X}
     (hi : x i = (u i).deliverTo k m) (hne : ∀ i', i' ≠ i → x i' = u i') :
     (((x, w), (a, b)) : StateOverBroadcasts P.n X B B') = setGatherTier ((u, w), (a, b))
     (InstanceState.receiveMessage (gatherTier ((u, w), (a, b))) i k m) := by
-  rw [programFunction_update hi hne]; rfl
+  rw [Function.eq_update_iff.mpr ⟨hi, hne⟩]; rfl
 
 /-- A Byzantine injection: the network state records a message under a
 corrupted sender. -/

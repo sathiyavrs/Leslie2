@@ -18,7 +18,7 @@ The round records and the network state are the two components of `GBCA.ByABDY.I
 (`GBCA/ABDY/Implementation.lean`), so the round instance and the implementation instance run on the
 same state. What a joint step delivers is a program function given pointwise, by its value at the
 acting process and its agreement with the old function elsewhere, where the implementation's rules
-write with `Function.update`. `programFunction_update` identifies the two, and the `composition_*`
+write with `Function.update`. `Function.eq_update_iff` identifies the two, and the `composition_*`
 lemmas identify the state a row writes with `setProcess`, `recordGBCASend`, `setBound`, `deliverTo`
 or `corrupt` applied to the old state.
 
@@ -321,27 +321,19 @@ The round records and the network state are the two components of `GBCA.ByABDY.I
 (`GBCA/ABDY/Implementation.lean`), so the round instance and the implementation instance run on the
 same state and every rule of the one is a rule of the other read in the implementation's accessors.
 A joint step delivers a program function pointwise: its value at the acting process, and its
-agreement with the old one elsewhere. A row of the implementation writes with `Function.update`.
-The lemmas here identify the two. -/
+agreement with the old one elsewhere. `Function.eq_update_iff` reads that function as the old one
+updated at the acting process, and the lemmas here identify the state a row of the implementation
+writes with `Function.update`. -/
 
 section Writes
 variable {P : Parameters} {u x : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n} {w : NetworkState P.n}
-
-/-- A program function fixed at `j` and unchanged elsewhere is the old one
-updated at `j`. -/
-theorem programFunction_update {j : Fin P.n} {q : GBCA.ByABDY.RoundRecord P.n}
-    (hj : x j = q) (hne : ∀ i, i ≠ j → x i = u i) : x = Function.update u j q := by
-  funext i
-  by_cases hi : i = j
-  · subst hi; rw [hj, Function.update_self]
-  · rw [hne i hi, Function.update_of_ne hi]
 
 /-- A record write at one program, with the network state untouched. -/
 theorem composition_setProcess {j : Fin P.n} {pr : GBCA.ByABDY.ProcessRecord}
     (hj : x j = (u j).setProcess pr) (hne : ∀ i, i ≠ j → x i = u i) :
     ((x, w) : GBCA.ByABDY.ImplementationState P.n) = GBCA.ByABDY.ImplementationState.setProcess
     (u, w) j pr := by
-  rw [programFunction_update hj hne]
+  rw [Function.eq_update_iff.mpr ⟨hj, hne⟩]
   rfl
 
 /-- A record write at one program together with the network state recording the message
@@ -350,7 +342,7 @@ theorem composition_setProcess_recordGBCASend {j : Fin P.n} {pr : GBCA.ByABDY.Pr
     {m : GBCA.ByABDY.Message} (hj : x j = (u j).setProcess pr) (hne : ∀ i, i ≠ j → x i = u i) :
     ((x, w.recordGBCASend j m) : GBCA.ByABDY.ImplementationState P.n) =
     (GBCA.ByABDY.ImplementationState.setProcess (u, w) j pr).multicast j m := by
-  rw [programFunction_update hj hne]
+  rw [Function.eq_update_iff.mpr ⟨hj, hne⟩]
   rfl
 
 /-- A record write at one program together with the network state's write of
@@ -359,7 +351,7 @@ theorem composition_setProcess_setBound {j : Fin P.n} {pr : GBCA.ByABDY.ProcessR
     (hj : x j = (u j).setProcess pr) (hne : ∀ i, i ≠ j → x i = u i) :
     ((x, w.setBound β) : GBCA.ByABDY.ImplementationState P.n)
       = (GBCA.ByABDY.ImplementationState.setProcess (u, w) j pr).setBound β := by
-  rw [programFunction_update hj hne]
+  rw [Function.eq_update_iff.mpr ⟨hj, hne⟩]
   rfl
 
 /-- The programs remain unchanged. -/
@@ -372,7 +364,7 @@ theorem composition_deliver {i k : Fin P.n} {m : GBCA.ByABDY.Message}
     (hi : x i = (u i).deliverTo k m) (hne : ∀ i', i' ≠ i → x i' = u i') :
     ((x, w) : GBCA.ByABDY.ImplementationState P.n) = GBCA.ByABDY.ImplementationState.receiveMessage
     (u, w) i k m := by
-  rw [programFunction_update hi hne]
+  rw [Function.eq_update_iff.mpr ⟨hi, hne⟩]
   rfl
 
 /-- A Byzantine injection: the network state records a message under a corrupted

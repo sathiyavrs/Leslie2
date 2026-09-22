@@ -6,6 +6,7 @@ Authors: Sathiya / Claude
 
 import Leslie2Protocols.ABA.ReliableBroadcast.BrachaSpecificationOverInstanceAlphabet
 import Leslie2Protocols.Framework.SynchronisedProduct
+import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 
 /-!
 # The transitions of the reliable-broadcast composition, read off their labels
@@ -25,7 +26,7 @@ together with the Dirac it produces, and the idle row of a non-participant as th
 `networkStep_*` does the same for the instance's network.
 
 A joint step delivers a program function given pointwise, by its value at the acting process
-and its agreement with the old function elsewhere. `programFunction_update` identifies that
+and its agreement with the old function elsewhere. `Function.eq_update_iff` identifies that
 function with the old one updated at the acting process, and the `brachaInstance_*` lemmas
 identify the state a row writes with `InstanceState.setProcess`, `InstanceState.multicast`,
 `InstanceState.receiveMessage` or `InstanceState.corrupt` applied to the old state.
@@ -336,8 +337,9 @@ The local states and the network state are the two components of `BrachaState`
 (`ABA/ReliableBroadcast/BrachaImplementation.lean`), so the instance and the rule table `BrachaStep`
 run on the same state and every rule of the one is a rule of the other read in the
 instance state's accessors. A joint step delivers a program function pointwise: its value at the
-acting process, and its agreement with the old one elsewhere. A row of `BrachaStep` writes with
-`InstanceState.setProcess`. The lemmas here identify the two. -/
+acting process, and its agreement with the old one elsewhere. `Function.eq_update_iff` reads that
+function as the old one updated at the acting process, and the lemmas here identify the state a
+row of `BrachaStep` writes with `InstanceState.setProcess`. -/
 
 section Writes
 
@@ -349,20 +351,11 @@ variable {M : Type} {P : Parameters}
   {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord M) (Message M)}
   {w : NetworkState P.n (Message M)}
 
-/-- A program function fixed at `j` and unchanged elsewhere is the old one
-updated at `j`. -/
-theorem programFunction_update {j : Fin P.n} {q : LocalState P.n (ProcessRecord M) (Message M)}
-    (hj : x j = q) (hne : ∀ i, i ≠ j → x i = u i) : x = Function.update u j q := by
-  funext i
-  by_cases hi : i = j
-  · subst hi; rw [hj, Function.update_self]
-  · rw [hne i hi, Function.update_of_ne hi]
-
 /-- A record write at one program, with the network state untouched. -/
 theorem brachaInstance_setProcess {j : Fin P.n} {pr : ProcessRecord M}
     (hj : x j = (u j).setProcess pr) (hne : ∀ i, i ≠ j → x i = u i) :
     ((x, w) : BrachaState P.n M) = InstanceState.setProcess (u, w) j pr := by
-  rw [programFunction_update hj hne]
+  rw [Function.eq_update_iff.mpr ⟨hj, hne⟩]
   rfl
 
 /-- The programs remain unchanged. -/
@@ -375,7 +368,7 @@ theorem brachaInstance_corrupt (k : Fin P.n) :
 
 end
 
-/-! ### The writes that record or deliver a message, and the program group's row -/
+/-! ### The writes that record or deliver a message -/
 
 section
 
@@ -389,31 +382,20 @@ theorem brachaInstance_setProcess_recordSent {j : Fin P.n} {pr : ProcessRecord M
     (hj : x j = (u j).setProcess pr) (hne : ∀ i, i ≠ j → x i = u i) :
     ((x, w.recordSent j m) : BrachaState P.n M) = (InstanceState.setProcess (u, w) j pr).multicast j
     m := by
-  rw [programFunction_update hj hne]
+  rw [Function.eq_update_iff.mpr ⟨hj, hne⟩]
   rfl
 
 /-- A delivery: the receiver files the message under its sender's row. -/
 theorem brachaInstance_deliver {i k : Fin P.n} {m : Message M}
     (hi : x i = (u i).deliverTo k m) (hne : ∀ i', i' ≠ i → x i' = u i') :
     ((x, w) : BrachaState P.n M) = InstanceState.receiveMessage (u, w) i k m := by
-  rw [programFunction_update hi hne]
+  rw [Function.eq_update_iff.mpr ⟨hi, hne⟩]
   rfl
 
 /-- A Byzantine injection: the network state records a message under a
 corrupted sender. -/
 theorem brachaInstance_recordSent {k : Fin P.n} {m : Message M} :
     ((u, w.recordSent k m) : BrachaState P.n M) = InstanceState.multicast (u, w) k m := rfl
-
-/-- The participant's row beside the idle rows of every other program is the
-program group stepping into the updated function. -/
-theorem programStep_update {ldr j : Fin P.n} {q : LocalState P.n (ProcessRecord M) (Message M)}
-    {l : BroadcastLabel P.n M} (hj : ProgramStep P ldr j (u j) l (PMF.pure q))
-    (hne : ∀ i, i ≠ j → ProgramStep P ldr i (u i) l (PMF.pure (u i))) :
-    ∀ i, ProgramStep P ldr i (u i) l (PMF.pure (Function.update u j q i)) := by
-  intro i
-  by_cases hi : i = j
-  · subst hi; rw [Function.update_self]; exact hj
-  · rw [Function.update_of_ne hi]; exact hne i hi
 
 end
 
@@ -534,7 +516,7 @@ theorem row_brachaInstance_step (P : Parameters) (ldr : Fin P.n) :
   cases hrow with
   | call m h =>
     exact ⟨Sum.inl (.call m), rfl, brachaInstance_label_step P ldr (by simp)
-      (programStep_update (ProgramStep.call (u ldr) m rfl h)
+      (dirac_steps_update (ProgramStep.call (u ldr) m rfl h)
         (fun i hi => ProgramStep.callIdle (u i) m hi))
       (NetworkStep.call w m)⟩
   | callLoop m =>
@@ -542,29 +524,29 @@ theorem row_brachaInstance_step (P : Parameters) (ldr : Fin P.n) :
       (fun i => ProgramStep.callLoop (u i) m) (NetworkStep.callLoop w m)⟩
   | deliver i j m h =>
     exact ⟨Sum.inl Label.tau, rfl, brachaInstance_event_step P ldr (BroadcastEvent.deliver i j m)
-      (programStep_update (ProgramStep.deliverReceive (u i) j m)
+      (dirac_steps_update (ProgramStep.deliverReceive (u i) j m)
         (fun i' hi' => ProgramStep.deliverIdle (u i') i j m (Ne.symm hi')))
       (NetworkStep.deliver w i j m h)⟩
   | echo j m hrecv hsend =>
     exact ⟨Sum.inl Label.tau, rfl, brachaInstance_event_step P ldr (BroadcastEvent.send j (.echo m))
-      (programStep_update (ProgramStep.sendEcho (u j) m hrecv hsend)
+      (dirac_steps_update (ProgramStep.sendEcho (u j) m hrecv hsend)
         (fun i hi => ProgramStep.sendIdle (u i) j (.echo m) (Ne.symm hi)))
       (NetworkStep.send w j (.echo m))⟩
   | voteQuorum j m hcnt hsend =>
     exact ⟨Sum.inl Label.tau, rfl, brachaInstance_event_step P ldr (BroadcastEvent.send j (.vote m))
-      (programStep_update (ProgramStep.sendVoteQuorum (u j) m hcnt hsend)
+      (dirac_steps_update (ProgramStep.sendVoteQuorum (u j) m hcnt hsend)
         (fun i hi => ProgramStep.sendIdle (u i) j (.vote m) (Ne.symm hi)))
       (NetworkStep.send w j (.vote m))⟩
   | voteAmplification j m hcnt hsend =>
     exact ⟨Sum.inl Label.tau, rfl, brachaInstance_event_step P ldr (BroadcastEvent.send j (.vote m))
-      (programStep_update (ProgramStep.sendVoteAmplification (u j) m hcnt hsend)
+      (dirac_steps_update (ProgramStep.sendVoteAmplification (u j) m hcnt hsend)
         (fun i hi => ProgramStep.sendIdle (u i) j (.vote m) (Ne.symm hi)))
       (NetworkStep.send w j (.vote m))⟩
   | byzantine j m h =>
     exact ⟨Sum.inl Label.tau, rfl, brachaInstance_tau_network P ldr (NetworkStep.byzantine w j m h)⟩
   | ret id m hcnt hr =>
     exact ⟨Sum.inl (.ret id m), rfl, brachaInstance_label_step P ldr (by simp)
-      (programStep_update (ProgramStep.ret (u id) m hcnt hr)
+      (dirac_steps_update (ProgramStep.ret (u id) m hcnt hr)
         (fun i hi => ProgramStep.retIdle (u i) id m (Ne.symm hi)))
       (NetworkStep.retIdle w id m)⟩
   | fail id =>

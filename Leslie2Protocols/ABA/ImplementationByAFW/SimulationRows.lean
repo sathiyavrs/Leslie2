@@ -252,7 +252,7 @@ theorem row_instanceOverBracha_call (s : Gather.StateOverBracha P.n X) (id : Fin
               x))))) := by
   obtain ⟨⟨v, y⟩, a, b⟩ := s
   exact Gather.instanceOverBroadcasts_label_step (b' := b) (by simp)
-    (Gather.programStep_update (Gather.ProgramStep.call (v id) x h)
+    (dirac_steps_update (Gather.ProgramStep.call (v id) x h)
       (fun i hi => Gather.ProgramStep.callIdle (v i) id x (Ne.symm hi)))
     (Gather.NetworkStep.call y id x)
     (System.mapIdle_step_update (by simp) (fun k hk => by simp [hk])
@@ -326,7 +326,7 @@ theorem roundOverBracha_callG (s : GBCA.ByAFW.RoundStateOverBracha P.n) (id : Fi
   obtain ⟨⟨v, y⟩, c, d⟩ := s
   exact GBCA.ByAFW.roundOverGathers_label_step (by simp)
     (GBCA.ByAFW.roundPrograms_label_step (lp := .callG r id b) (by simp) (by simp)
-      (GBCA.ByAFW.programStep_update (GBCA.ByAFW.ProgramStep.callG (v id) b h0)
+      (dirac_steps_update (GBCA.ByAFW.ProgramStep.callG (v id) b h0)
         (fun i hi => GBCA.ByAFW.ProgramStep.callGIdle (v i) id b (Ne.symm hi)))
       (GBCA.ByAFW.NetworkStep.callG y id b))
     (System.mapIdle_step_of_step (by simp) (row_instanceOverBracha_call c id b hg hb))
@@ -380,7 +380,7 @@ theorem roundOverBracha_firstGatherReturn (s : GBCA.ByAFW.RoundStateOverBracha P
     (firstGatherReturnCore P ((v, y), c, d)))
     (GBCA.ByAFW.roundPrograms_label_step (lp := .firstGatherReturn id g (firstGatherReturnCore P
       ((v, y), c,
-      d))) (by simp) (by simp) (GBCA.ByAFW.programStep_update
+      d))) (by simp) (by simp) (dirac_steps_update
         (GBCA.ByAFW.ProgramStep.firstGatherReturn (v id) g _
         hin hc)
         (fun i hi => GBCA.ByAFW.ProgramStep.firstGatherReturnIdle (v i) id g _ (Ne.symm hi)))
@@ -401,7 +401,7 @@ theorem roundOverBracha_secondGatherCall (s : GBCA.ByAFW.RoundStateOverBracha P.
   obtain ⟨⟨v, y⟩, c, d⟩ := s
   exact GBCA.ByAFW.roundOverGathers_event_step (GBCA.ByAFW.RoundEvent.secondGatherCall id x)
     (GBCA.ByAFW.roundPrograms_label_step (lp := .secondGatherCall id x) (by simp) (by simp)
-      (GBCA.ByAFW.programStep_update (GBCA.ByAFW.ProgramStep.secondGatherCall (v id) x hc h2)
+      (dirac_steps_update (GBCA.ByAFW.ProgramStep.secondGatherCall (v id) x hc h2)
         (fun i hi => GBCA.ByAFW.ProgramStep.secondGatherCallIdle (v i) id x (Ne.symm hi)))
       (GBCA.ByAFW.NetworkStep.secondGatherCall y id x))
     (System.mapIdle_unchanged (by simp))
@@ -424,7 +424,7 @@ theorem roundOverBracha_secondGatherReturn (s : GBCA.ByAFW.RoundStateOverBracha 
     (secondGatherReturnCore P ((v, y), c, d)))
     (GBCA.ByAFW.roundPrograms_label_step (lp := .secondGatherReturn id g (secondGatherReturnCore P
       ((v, y), c,
-      d))) (by simp) (by simp) (GBCA.ByAFW.programStep_update
+      d))) (by simp) (by simp) (dirac_steps_update
         (GBCA.ByAFW.ProgramStep.secondGatherReturn (v id) g _
         h2 ho)
         (fun i hi => GBCA.ByAFW.ProgramStep.secondGatherReturnIdle (v i) id g _ (Ne.symm hi)))
@@ -445,7 +445,7 @@ theorem roundOverBracha_retG (s : GBCA.ByAFW.RoundStateOverBracha P.n) (id : Fin
   exact GBCA.ByAFW.roundOverGathers_label_step (by simp)
     (GBCA.ByAFW.roundPrograms_label_step (lp := .retG r id out (y.getD (GBCA.boundOfCore P ∅)))
       (by simp) (by simp)
-      (GBCA.ByAFW.programStep_update (GBCA.ByAFW.ProgramStep.retG (v id) out _ ho hr)
+      (dirac_steps_update (GBCA.ByAFW.ProgramStep.retG (v id) out _ ho hr)
         (fun i hi => GBCA.ByAFW.ProgramStep.retGIdle (v i) id out _ (Ne.symm hi)))
       (GBCA.ByAFW.NetworkStep.retG y id out))
     (System.mapIdle_unchanged (by simp)) (System.mapIdle_unchanged (by simp))

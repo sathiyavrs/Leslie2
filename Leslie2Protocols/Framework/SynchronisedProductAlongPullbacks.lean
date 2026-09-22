@@ -17,6 +17,9 @@ naming one component moves that component alone. On a visible label every
 component steps, and the joint distribution is the Dirac of the family of the
 components' targets. A silent transition of the product is a silent transition
 of exactly one component, on the label its pullback carries `τ` to.
+
+`dirac_steps_update` is the pointwise reading of such a family of Dirac steps:
+one component's step beside every other component's stutter.
 -/
 
 namespace PLTS
@@ -137,4 +140,22 @@ theorem mapIdle_step_all {l₀ : Fin n → Lbl} (hk : ∀ k, φ k L = some (l₀
 
 end ComponentAlongPullback
 end System
+
+/-! ### The family of Dirac steps at an update of one component -/
+
+section DiracStepsAtUpdate
+variable {ι S L : Type} [DecidableEq ι] {Step : ι → S → L → PMF S → Prop}
+  {u : ι → S} {j : ι} {s : S} {l : L}
+
+/-- One component's Dirac step beside the Dirac stutter of every other
+component: every component steps into the family updated at the acting one. -/
+theorem dirac_steps_update (hj : Step j (u j) l (PMF.pure s))
+    (hother : ∀ i, i ≠ j → Step i (u i) l (PMF.pure (u i))) :
+    ∀ i, Step i (u i) l (PMF.pure (Function.update u j s i)) := by
+  intro i
+  by_cases hi : i = j
+  · subst hi; rw [Function.update_self]; exact hj
+  · rw [Function.update_of_ne hi]; exact hother i hi
+
+end DiracStepsAtUpdate
 end PLTS

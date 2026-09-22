@@ -20,8 +20,8 @@ label. `roundPrograms_idle_inversion` and `roundPrograms_label_inversion` read t
 programs beside the round's network: on a family label with no image at a program they remain
 unchanged, and on a label with an image every program takes its row at that image and the
 round's network takes its. The `_pure` and `_step` lemmas build such a transition from the
-factors' rows, and `programStep_update` identifies the program function a joint step delivers
-pointwise with the old one updated at the acting process.
+factors' rows, and `PLTS.dirac_steps_update` identifies the program function a joint step
+delivers pointwise with the old one updated at the acting process.
 
 `roundOverGathersExtended_joint_inversion` reads a visible transition of the three factors as
 their rows and a Dirac product. `roundOverGathersExtended_tau_inversion` reads a silent one as
@@ -178,27 +178,6 @@ theorem roundPrograms_label_step {lp : ProgramLabel P.n} (hlp : programLabelMap 
     System.synchronisedProductMapIdle_pure (roundLabel_ne_tau hlp hlpτ)
       (fun i => System.mapIdle_step_of_step hlp (hproc i)),
     System.mapIdle_step_of_step hlp hnet, (prodPMF_pure_pure _ _).symm⟩
-
-/-! ### The write a row makes on the composed state
-
-A joint step delivers a program function pointwise: its value at the acting
-process, and its agreement with the old one elsewhere. The lemma here
-identifies the two. -/
-
-section Writes
-
-/-- The participant's row beside the idle rows of every other program is the
-program group stepping into the updated function. -/
-theorem programStep_update {j : Fin P.n} {q : ProcessRecord P.n} {lp : ProgramLabel P.n}
-    (hj : ProgramStep P r j (u j) lp (PMF.pure q))
-    (hne : ∀ i, i ≠ j → ProgramStep P r i (u i) lp (PMF.pure (u i))) :
-    ∀ i, ProgramStep P r i (u i) lp (PMF.pure (Function.update u j q i)) := by
-  intro i
-  by_cases hi : i = j
-  · subst hi; rw [Function.update_self]; exact hj
-  · rw [Function.update_of_ne hi]; exact hne i hi
-
-end Writes
 
 end RoundPrograms
 

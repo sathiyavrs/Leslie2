@@ -90,6 +90,7 @@ import Leslie2Protocols.ABA.Vocabulary.Parameters
 import Leslie2Protocols.ABA.Vocabulary.ProcessAndNetworkState
 import Leslie2Protocols.ABA.Vocabulary.RoundLoop
 import Leslie2Protocols.Framework.Congruence
+import Leslie2Protocols.Framework.DiracRelationCoupling
 import Leslie2Protocols.Framework.Erasure
 import Leslie2Protocols.Framework.FamilySimulation
 import Leslie2Protocols.Framework.FinerAlphabetCongruence

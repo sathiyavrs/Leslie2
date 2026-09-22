@@ -6,6 +6,7 @@ Authors: Sathiya / Claude
 
 import Leslie2Protocols.ABA.ImplementationByABDY.System
 import Leslie2Protocols.ABA.Composition.HybridAndSubstitution
+import Leslie2Protocols.Framework.DiracRelationCoupling
 
 /-!
 # The protocol under its composed system
@@ -45,6 +46,11 @@ A composed state is therefore determined by any protocol state related to it.
 The determination is not injective: no composed state carries a termination
 flag, so two protocol states differing only in which processes have terminated
 are related to the same composed state.
+
+`PLTS.coupling_pure` and `PLTS.coupling_map` (`Framework/DiracRelationCoupling.lean`) are the two
+couplings this determination supplies: a Dirac protocol outcome is matched by the single composed
+state it determines, and an outcome whose only free coordinate is the oracle's is matched outcome
+by outcome.
 
 ## What this file supplies
 
@@ -92,54 +98,6 @@ theorem protocolRelation_mk (P : Parameters) (processes : ∀ _ : Fin P.n,
       (∀ r, (G r).2 = ⟨w.sent r, w.F, w.ghostRecord r⟩) ∧
       (∀ j r, (G r).1 j = (processes j).2.roundRecord r) :=
   Iff.rfl
-
-/-! ### Couplings
-
-Every protocol transition is a product of Dirac factors beside the oracle's
-successor distribution, and so is the composed transition that answers it. The
-coupling is functional in the oracle coordinate: the two presentations carry the
-same oracle, so a protocol outcome and the composed outcome that matches it
-differ in no coordinate the relation constrains. -/
-
-/-- A Dirac protocol outcome matched by a single related composed state. -/
-private theorem match_pure (P : Parameters) {s : ProtocolState P} {t : ComposedState P}
-    (h : ProtocolRelation P s t) :
-    ∃ Ω : PMF (PMF (ComposedState P)),
-      PMFRel (diracRel (ProtocolRelation P)) (PMF.pure s) Ω ∧ Ω.bind id = PMF.pure t := by
-  refine ⟨PMF.pure (PMF.pure t), ⟨PMF.pure (s, PMF.pure t), ?_, ?_, ?_⟩, ?_⟩
-  · rw [PMF.pure_map]
-  · rw [PMF.pure_map]
-  · intro p hp
-    rw [PMF.mem_support_pure_iff] at hp
-    subst hp
-    exact ⟨t, rfl, h⟩
-  · rw [PMF.pure_bind]
-    rfl
-
-/-- A protocol outcome whose only free coordinate is the oracle's, matched
-outcome by outcome. -/
-private theorem match_prod (P : Parameters) {x : ∀ _ : Fin P.n, ProcessRecord P.n}
-    {w : NetworkState P.n} {G : ℕ → GBCA.ByABDY.ImplementationState P.n}
-    {C : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A : ABANetworkState P.n}
-    {ν : PMF (ℕ → WCC.SpecState P.n)}
-    (h : ∀ o ∈ ν.support, ProtocolRelation P (x, w, o) (G, C, A, o)) :
-    ∃ Ω : PMF (PMF (ComposedState P)),
-      PMFRel (diracRel (ProtocolRelation P)) (prodPMF (PMF.pure x) (prodPMF (PMF.pure w) ν)) Ω ∧
-      Ω.bind id =
-        prodPMF (PMF.pure G) (prodPMF (PMF.pure C) (prodPMF (PMF.pure A) ν)) := by
-  refine ⟨ν.map (fun o => PMF.pure ((G, C, A, o) : ComposedState P)),
-    ⟨ν.map (fun o => (((x, w, o) : ProtocolState P),
-      PMF.pure ((G, C, A, o) : ComposedState P))), ?_, ?_, ?_⟩, ?_⟩
-  · rw [PMF.map_comp, prodPMF_two_pure_factors]
-    rfl
-  · rw [PMF.map_comp]
-    rfl
-  · intro p hp
-    rw [PMF.mem_support_map_iff] at hp
-    obtain ⟨o, ho, rfl⟩ := hp
-    exact ⟨(G, C, A, o), rfl, h o ho⟩
-  · rw [PMF.bind_map, prodPMF_three_pure_factors]
-    rfl
 
 /-! ### Updating one round
 
@@ -282,7 +240,10 @@ private theorem match_visible (P : Parameters) {x : ∀ _ : Fin P.n, ProcessReco
       PMFRel (diracRel (ProtocolRelation P))
         (prodPMF (PMF.pure x) (prodPMF (PMF.pure w') ω)) Ω ∧
       (composedExtended P).step (G, C, A, o) L (Ω.bind id) := by
-  obtain ⟨Ω, hr, hbind⟩ := match_prod P hrel
+  obtain ⟨Ω, hr, hbind⟩ := coupling_map ω (fun o' => ((x, w', o') : ProtocolState P))
+    (fun o' => ((G', C', A', o') : ComposedState P)) hrel
+  rw [← prodPMF_two_pure_factors] at hr
+  rw [← prodPMF_three_pure_factors] at hbind
   exact ⟨Ω, hr, hbind ▸ composedExtended_visible_step P hL hGs hCs hAs hWs⟩
 
 /-- A rendezvous the composed system answers inside one round: the
@@ -298,7 +259,7 @@ private theorem match_round
     (prodPMF (PMF.pure x) (prodPMF (PMF.pure w') ν)) Ω ∧ (composedHidden P).step (G, C, A, o)
     Label.tau (Ω.bind id) := by
   subst hν
-  obtain ⟨Ω, hr, hbind⟩ := match_pure P hrel
+  obtain ⟨Ω, hr, hbind⟩ := coupling_pure hrel
   refine ⟨Ω, ?_, ?_⟩
   · rw [prodPMF_pure_pure, prodPMF_pure_pure]; exact hr
   · rw [hbind]
@@ -974,7 +935,7 @@ theorem match_tau (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord P
       · by_cases hj : j = i
         · subst hj; rw [Function.update_self]; exact hst j r
         · rw [Function.update_of_ne hj]; exact hst j r
-    obtain ⟨Ω, hrel, hbind⟩ := match_pure P hrel'
+    obtain ⟨Ω, hrel, hbind⟩ := coupling_pure hrel'
     exact ⟨Ω, hrel, Or.inr hbind⟩
   · rcases networkStep_tau hn with ⟨r, k, m, hF, hw⟩ | ⟨k, b, hF, hw⟩
     · obtain rfl : w' = w.recordGBCASend r k m := pure_inj hw
@@ -996,7 +957,7 @@ theorem match_tau (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord P
           · rw [Function.update_of_ne hr, hG r', recordGBCASend_sent_ne w r k m hr]
             simp
         · intro j r'; rw [hfst]; exact hst j r'
-      obtain ⟨Ω, hrel, hbind⟩ := match_pure P hrel'
+      obtain ⟨Ω, hrel, hbind⟩ := coupling_pure hrel'
       refine ⟨Ω, hrel, Or.inl ?_⟩
       rw [hbind]
       exact composedHidden_of_tau P (composedExtended_tau_gbca P (gbcaInstanceFamily_tau P G r
@@ -1010,7 +971,7 @@ theorem match_tau (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord P
         refine (protocolRelation_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, ?_, ?_, hst⟩
         · rw [hA]; simp [ABANetworkState.recordDecided, NetworkState.recordDecided]
         · intro r; rw [hG r]; simp [NetworkState.recordDecided]
-      obtain ⟨Ω, hrel, hbind⟩ := match_pure P hrel'
+      obtain ⟨Ω, hrel, hbind⟩ := coupling_pure hrel'
       refine ⟨Ω, hrel, Or.inl ?_⟩
       rw [hbind]
       exact composedHidden_of_tau P (composedExtended_tau_ABANetwork P

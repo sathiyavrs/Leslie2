@@ -348,13 +348,13 @@ theorem instanceOverBroadcastSpecification_step_row (P : Parameters) :
       have haf : ∀ k', k' ≠ k → a' k' = a k' :=
         fun k' hk' => System.mapIdle_eq_of_step_none (by simp [hk']) (hin k')
       have ha : a' = Function.update a k { a k with ret := Function.update (a k).ret j true } :=
-        funUpdate (PMF.pure_injective hak) haf
+        Function.eq_update_iff.mpr ⟨PMF.pure_injective hak, haf⟩
       have hfor : ∀ i, i ≠ j → x i = u i :=
         fun i hi => PMF.pure_injective (programStep_inputBroadcastRet_foreign (Ne.symm hi) (hproc
           i))
       have hxj := PMF.pure_injective (programStep_inputBroadcastRet_own (hproc j))
       subst ha
-      rw [programFunction_update hxj hfor]
+      rw [Function.eq_update_iff.mpr ⟨hxj, hfor⟩]
       exact StepOverBroadcastSpecification.inputBroadcastRet _ k j v hval hret
     | bindCall j U =>
       have hw : w' = w := PMF.pure_injective (networkStep_bindCall hnet)
@@ -368,9 +368,9 @@ theorem instanceOverBroadcastSpecification_step_row (P : Parameters) :
       rcases specStep_call (liftSpecification_row (lb := Sum.inl (BRB.Label.call U)) (by simp) rfl
           (hbind j)) with ⟨hbin, hbq⟩ | hbq
       · have hb : b' = Function.update b j { b j with input := some U } :=
-          funUpdate (PMF.pure_injective hbq) hbf
+          Function.eq_update_iff.mpr ⟨PMF.pure_injective hbq, hbf⟩
         subst hb
-        rw [programFunction_update (PMF.pure_injective hxj) hfor]
+        rw [Function.eq_update_iff.mpr ⟨PMF.pure_injective hxj, hfor⟩]
         exact StepOverBroadcastSpecification.bindCall _ j U hinp hvot hsnd happ hQ hbin
       · have hb : b' = b := funext fun q => by
           by_cases hq : q = j
@@ -388,12 +388,12 @@ theorem instanceOverBroadcastSpecification_step_row (P : Parameters) :
       have hbf : ∀ q', q' ≠ q → b' q' = b q' :=
         fun q' hq' => System.mapIdle_eq_of_step_none (by simp [hq']) (hbind q')
       have hb : b' = Function.update b q { b q with ret := Function.update (b q).ret j true } :=
-        funUpdate (PMF.pure_injective hbq) hbf
+        Function.eq_update_iff.mpr ⟨PMF.pure_injective hbq, hbf⟩
       have hfor : ∀ i, i ≠ j → x i = u i :=
         fun i hi => PMF.pure_injective (programStep_bindRet_foreign (Ne.symm hi) (hproc i))
       have hxj := PMF.pure_injective (programStep_bindRet_own (hproc j))
       subst hb
-      rw [programFunction_update hxj hfor]
+      rw [Function.eq_update_iff.mpr ⟨hxj, hfor⟩]
       exact StepOverBroadcastSpecification.bindRet _ q j U hval hret
   · by_cases hlτ : l = Sum.inl Label.tau
     · subst hlτ
@@ -434,9 +434,9 @@ theorem instanceOverBroadcastSpecification_step_row (P : Parameters) :
           rcases specStep_call (liftSpecification_row (lb := Sum.inl (BRB.Label.call y)) (by simp) rfl
               (hin id)) with ⟨hbin, haq⟩ | haq
           · have ha : a' = Function.update a id { a id with input := some y } :=
-              funUpdate (PMF.pure_injective haq) haf
+              Function.eq_update_iff.mpr ⟨PMF.pure_injective haq, haf⟩
             subst ha
-            rw [programFunction_update (PMF.pure_injective hxj) hfor]
+            rw [Function.eq_update_iff.mpr ⟨PMF.pure_injective hxj, hfor⟩]
             exact StepOverBroadcastSpecification.call _ id y hinp hbin
           · have ha : a' = a := funext fun k => by
               by_cases hk : k = id
@@ -488,7 +488,7 @@ theorem instanceOverBroadcastSpecification_step_row (P : Parameters) :
             rfl
               (hin id)) with ⟨hbin, haq⟩ | haq
           · have ha : a' = Function.update a id { a id with input := some y } :=
-              funUpdate (PMF.pure_injective haq) haf
+              Function.eq_update_iff.mpr ⟨PMF.pure_injective haq, haf⟩
             subst ha
             rw [stateOverBroadcasts_idle hxall, stateOverBroadcasts_setInputBroadcasts]
             exact StepOverBroadcastSpecification.callProgramLoop _ id y hbin
@@ -512,7 +512,7 @@ theorem row_instanceOverBroadcastSpecification_step (P : Parameters) :
   cases hrow with
   | call id x h hb =>
     exact ⟨Sum.inl (.call id x), rfl, instanceOverBroadcasts_label_step (by simp)
-      (programStep_update (ProgramStep.call (u id) x h)
+      (dirac_steps_update (ProgramStep.call (u id) x h)
         (fun i hi => ProgramStep.callIdle (u i) id x (Ne.symm hi)))
       (NetworkStep.call w id x)
       (System.mapIdle_step_update (by simp) (fun k hk => by simp [hk])
@@ -521,7 +521,7 @@ theorem row_instanceOverBroadcastSpecification_step (P : Parameters) :
       (fun q => System.mapIdle_unchanged rfl)⟩
   | callSpecificationLoop id x h =>
     refine ⟨Sum.inl (.call id x), rfl,
-      instanceOverBroadcasts_label_step (a' := a) (b' := b) (by simp) (programStep_update
+      instanceOverBroadcasts_label_step (a' := a) (b' := b) (by simp) (dirac_steps_update
         (ProgramStep.call (u id) x h)
         (fun i hi => ProgramStep.callIdle (u i) id x (Ne.symm hi)))
       (NetworkStep.call w id x) (fun k => ?_) (fun q => System.mapIdle_unchanged rfl)⟩
@@ -569,21 +569,21 @@ theorem row_instanceOverBroadcastSpecification_step (P : Parameters) :
   | deliver i j m h =>
     exact ⟨Sum.inl Label.tau, rfl,
       instanceOverBroadcasts_event_step (a' := a) (b' := b) (GatherEvent.deliver i j m)
-        (programStep_update (ProgramStep.deliverReceive (u i) j m)
+        (dirac_steps_update (ProgramStep.deliverReceive (u i) j m)
         (fun i' hi' => ProgramStep.deliverIdle (u i') i j m (Ne.symm hi')))
       (NetworkStep.deliver w i j m h) (fun k => System.mapIdle_unchanged rfl)
       (fun q => System.mapIdle_unchanged rfl)⟩
   | echo j hin hcard hsend =>
     exact ⟨Sum.inl Label.tau, rfl, instanceOverBroadcasts_event_step (a' := a) (b' := b)
       (GatherEvent.send j (.echo (u j).process.accepted))
-      (programStep_update (ProgramStep.sendEcho (u j) hin hcard hsend)
+      (dirac_steps_update (ProgramStep.sendEcho (u j) hin hcard hsend)
         (fun i hi => ProgramStep.sendIdle (u i) j (.echo (u j).process.accepted) (Ne.symm hi)))
       (NetworkStep.send w j (.echo (u j).process.accepted)) (fun k => System.mapIdle_unchanged rfl)
       (fun q => System.mapIdle_unchanged rfl)⟩
   | vote j U hin hech happ hQ hsend =>
     exact ⟨Sum.inl Label.tau, rfl,
       instanceOverBroadcasts_event_step (a' := a) (b' := b) (GatherEvent.send j (.vote U))
-        (programStep_update
+        (dirac_steps_update
         (ProgramStep.sendVote (u j) U hin hech happ hQ hsend)
         (fun i hi => ProgramStep.sendIdle (u i) j (.vote U) (Ne.symm hi)))
       (NetworkStep.send w j (.vote U)) (fun k => System.mapIdle_unchanged rfl)
@@ -591,7 +591,7 @@ theorem row_instanceOverBroadcastSpecification_step (P : Parameters) :
   | bindCall j U hin hvot hsnd happ hQ hb =>
     exact ⟨Sum.inl Label.tau, rfl,
       instanceOverBroadcasts_event_step (w' := w) (a' := a) (GatherEvent.bindCall j U)
-        (programStep_update (ProgramStep.bindCall (u j) U hin hvot hsnd happ hQ)
+        (dirac_steps_update (ProgramStep.bindCall (u j) U hin hvot hsnd happ hQ)
           (fun i hi => ProgramStep.bindCallIdle (u i) j U (Ne.symm hi)))
         (NetworkStep.bindCallIdle w j U) (fun k => System.mapIdle_unchanged rfl)
         (System.mapIdle_step_update (by simp) (fun q hq => by simp [hq])
@@ -600,7 +600,7 @@ theorem row_instanceOverBroadcastSpecification_step (P : Parameters) :
   | bindCallSpecificationLoop j U hin hvot hsnd happ hQ =>
     refine ⟨Sum.inl Label.tau, rfl,
       instanceOverBroadcasts_event_step (w' := w) (a' := a) (b' := b) (GatherEvent.bindCall j U)
-        (programStep_update (ProgramStep.bindCall (u j) U hin hvot hsnd happ hQ)
+        (dirac_steps_update (ProgramStep.bindCall (u j) U hin hvot hsnd happ hQ)
           (fun i hi => ProgramStep.bindCallIdle (u i) j U (Ne.symm hi)))
         (NetworkStep.bindCallIdle w j U) (fun k => System.mapIdle_unchanged rfl) (fun q => ?_)⟩
     · by_cases hq : q = j
@@ -615,7 +615,7 @@ theorem row_instanceOverBroadcastSpecification_step (P : Parameters) :
   | inputBroadcastRet k j v hv hr =>
     exact ⟨Sum.inl Label.tau, rfl,
       instanceOverBroadcasts_event_step (w' := w) (b' := b) (GatherEvent.inputBroadcastRet k j v)
-        (programStep_update (ProgramStep.inputBroadcastRetReceive (u j) k v)
+        (dirac_steps_update (ProgramStep.inputBroadcastRetReceive (u j) k v)
         (fun i hi => ProgramStep.inputBroadcastRetIdle (u i) k j v (Ne.symm hi)))
       (NetworkStep.inputBroadcastRetIdle w k j v)
       (System.mapIdle_step_update (by simp) (fun k' hk' => by simp [hk'])
@@ -625,7 +625,7 @@ theorem row_instanceOverBroadcastSpecification_step (P : Parameters) :
   | bindRet q j U hv hr =>
     exact ⟨Sum.inl Label.tau, rfl,
       instanceOverBroadcasts_event_step (w' := w) (a' := a) (GatherEvent.bindRet q j U)
-        (programStep_update (ProgramStep.bindRetReceive (u j) q U)
+        (dirac_steps_update (ProgramStep.bindRetReceive (u j) q U)
         (fun i hi => ProgramStep.bindRetIdle (u i) q j U (Ne.symm hi)))
       (NetworkStep.bindRetIdle w q j U) (fun k => System.mapIdle_unchanged rfl)
       (System.mapIdle_step_update (by simp) (fun q' hq' => by simp [hq'])
@@ -634,7 +634,7 @@ theorem row_instanceOverBroadcastSpecification_step (P : Parameters) :
   | ret id g hin hbind hsub hQ hr =>
     exact ⟨Sum.inl (.ret id g (w.core.getD (coreOfNetwork P w.network))), rfl,
       instanceOverBroadcasts_label_step (a' := a) (b' := b) (by simp)
-        (programStep_update (ProgramStep.ret (u id) g _ hin hbind hsub hQ hr)
+        (dirac_steps_update (ProgramStep.ret (u id) g _ hin hbind hsub hQ hr)
           (fun i hi => ProgramStep.retIdle (u i) id g _ (Ne.symm hi)))
         (NetworkStep.ret w id g) (fun k => System.mapIdle_unchanged rfl)
         (fun q => System.mapIdle_unchanged rfl)⟩
