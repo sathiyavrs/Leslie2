@@ -168,7 +168,7 @@ raise.
 |---|---|---|
 | `Vocabulary/Labels.lean` | 147 | The shared label alphabet `Label n`: the visible API, the hidden sub-protocol handshakes, `τ`. |
 | `Vocabulary/Parameters.lean` | 144 | The parameters `P` — `n`, `f` with `n > 3f`, the reliable broadcast's `ECHO` quorum `echoReceiptQuorum`, and the coin distribution `wccPMF` with its ε/δ bounds. |
-| `Vocabulary/ProcessAndNetworkState.lean` | 435 | The two-part vocabulary of the gather-based development: network state (D5) beside `n` process local states, with the multicast/delivery/corrupt operations and the quorum-intersection lemmas, stated once and shared by the three sub-protocol encodings. |
+| `Vocabulary/ProcessAndNetworkState.lean` | 437 | The two-part vocabulary of the gather-based development: network state (D5) beside `n` process local states, with the multicast/delivery/corrupt operations and the quorum-intersection lemmas, stated once and shared by the three sub-protocol encodings. |
 | `Vocabulary/RoundLoop.lean` | 248 | **The ABA round loop**, per process and nothing else: the phase machine, the control record, the round-loop record. |
 
 **`ABA/Specifications/`** — the specification all safety is measured against, and the
@@ -190,8 +190,8 @@ oracle, and the lemmas that read a transition off its label.
 | `Implementation/Alphabet.lean` | 206 | The rendezvous alphabet `ExtendedLabel n M` the implementation speaks, parametric in the round message type, with the label pullback the coin oracle is read along. |
 | `Implementation/CompositeTransitions.lean` | 228 | The transitions of the implementation, read off their labels: the pipeline `relabel ∘ abstract ∘ parallel ∘ parallel ∘ synchronisedProduct` unfolded to the rows of the process group, of the network and of the coin oracle, and the constraint a graded-agreement return places on the bound bit its label carries. |
 | `Implementation/NetworkStateWritesAndErasures.lean` | 217 | The field algebra of the network's four writes: a round multicast, a DECIDED multicast, corruption and the ghost write, each read down to the fields of the state it delivers. With them the two erasures, `NetworkState.forgetGhost` to the state over the trivial ghost `Unit` and `forgetBound` to the label with the announced bound bit fixed at `false`. |
-| `Implementation/StepInversion.lean` | 490 | The transitions of one program and of the network, read off their labels: the participant's row as its guards together with the Dirac it produces, the idle row of a non-participant as the identity, and the determinacy of both tables. |
-| `Implementation/System.lean` | 687 | **The implementation of a protocol**, parametric in the graded-agreement implementation: the shared rows of a program and of the network, the adversary's per-round ghost record with its update and its output (D30), the pipeline that composes them beside the coin oracle, and `IsRoundRuleTable`, what an implementation states about its own rows. |
+| `Implementation/StepInversion.lean` | 488 | The transitions of one program and of the network, read off their labels: the participant's row as its guards together with the Dirac it produces, the idle row of a non-participant as the identity, and the determinacy of both tables. |
+| `Implementation/System.lean` | 689 | **The implementation of a protocol**, parametric in the graded-agreement implementation: the shared rows of a program and of the network, the adversary's per-round ghost record with its update and its output (D30), the pipeline that composes them beside the coin oracle, and `IsRoundRuleTable`, what an implementation states about its own rows. |
 
 **`ABA/ReliableBroadcast/`** — the reliable-broadcast specification and Bracha's
 implementation of it.
@@ -211,10 +211,10 @@ implementation of it.
 |---|---|---|
 | `Gather/BroadcastSubstitution.lean` | 150 | `broadcastSubstitution`: the broadcast substitution inside gather, per coordinate, carried through the composition by the congruences. |
 | `Gather/CommonCoreAtSpecification.lean` | 148 | `CoreTrace`, the common core read off a trace, and `specInst_core` at the specification. |
-| `Gather/CommonCoreCounting.lean` | 1520 | The invariant of the gather-over-BRB instance and the counting argument for its core: `coreOf` has `n − f` committed entries and lies below the committed `BIND` payload of every process outside `F`, with the `f + 1` certificate the specification's bind guard consumes. |
-| `Gather/Composition.lean` | 753 | **The gather instance, composed**: `n` gather programs beside the gather network, in parallel with `2n` composed broadcast instances — `Gather.instanceOverBroadcastSpecification` over the broadcast specifications and `Gather.instanceOverBracha` over Bracha's — read back over the gather alphabet extended by the call loop. |
+| `Gather/CommonCoreCounting.lean` | 1522 | The invariant of the gather-over-BRB instance and the counting argument for its core: `coreOf` has `n − f` committed entries and lies below the committed `BIND` payload of every process outside `F`, with the `f + 1` certificate the specification's bind guard consumes. |
+| `Gather/Composition.lean` | 754 | **The gather instance, composed**: `n` gather programs beside the gather network, in parallel with `2n` composed broadcast instances — `Gather.instanceOverBroadcastSpecification` over the broadcast specifications and `Gather.instanceOverBracha` over Bracha's — read back over the gather alphabet extended by the call loop. |
 | `Gather/CompositionStepInversion.lean` | 656 | The transitions of `Gather.instanceOverBroadcasts` read off their labels: a step of the instance split into a hidden gather event and an interface label, a joint step read as the rows of the four factors, the pullbacks computed label by label, one gather program's row and the gather network's row per label class, and the write each row makes on the composed state. |
-| `Gather/MessagesAndCommonCore.lean` | 174 | The records a gather instance is written over — the `ECHO`/`VOTE` messages and the per-process record — and the core `coreOf` of a gather network state, with the incidence lemmas the counting argument sums. |
+| `Gather/MessagesAndCommonCore.lean` | 172 | The records a gather instance is written over — the `ECHO`/`VOTE` messages and the per-process record — and the core `coreOf` of a gather network state, with the incidence lemmas the counting argument sums. |
 | `Gather/RefinesSpecification.lean` | 1018 | `refinesSpecification`: the gather-over-BRB instance refines TS 4. The return run commits the entries it reads, writes the core at `coreOf` of the network state, and returns, in one weak transition. |
 | `Gather/Specification.lean` | 215 | The gather specification (blueprint TS 4): call/commit split (D26) and the write-once core the return labels announce (D29). |
 | `Gather/SpecificationOverInstanceAlphabet.lean` | 157 | `Gather.specificationOverInstanceAlphabet`: the gather specification read along `Gather.specificationLabelMap`, which sends the call loop to the call it stands for, with the sections along which a weak run of the specification is read back over the instance's interface. |
@@ -244,9 +244,9 @@ system over them, and the hybrid.
 | file | lines | what it is |
 |---|---|---|
 | `Composition/ABAState.lean` | 384 | The ABA state as one object: the round-loop records beside the DECIDED network, with the accessors the invariant is stated in. |
-| `Composition/Components.lean` | 847 | The extended alphabet `ExtendedLabel n` at ABDY22's messages, the coin oracle read along its label pullback, the round loop of one process, and the ABA network — the pieces the two compositions are built from. |
+| `Composition/Components.lean` | 845 | The extended alphabet `ExtendedLabel n` at ABDY22's messages, the coin oracle read along its label pullback, the round loop of one process, and the ABA network — the pieces the two compositions are built from. |
 | `Composition/HybridAndSubstitution.lean` | 700 | **`ABDY.composed`**, **`ABDY.substitutionSimulation`**: the same protocol read as four components, one round instance per round retained at every moment, and that graded-agreement component then replaced by its specification under the four congruences. |
-| `Composition/RoundFamilyOwnedLabels.lean` | 84 | The routing table of the round-indexed family, evaluated: `GBCA.ByABDY.roundOwnsLabel` and `GBCA.ByABDY.isFailLabel` at every label of the extended alphabet, which is what discharges the routing premises of the composed system by `simp`. |
+| `Composition/RoundFamilyOwnedLabels.lean` | 82 | The routing table of the round-indexed family, evaluated: `GBCA.ByABDY.roundOwnsLabel` and `GBCA.ByABDY.isFailLabel` at every label of the extended alphabet, which is what discharges the routing premises of the composed system by `simp`. |
 
 **`ABA/Composition/GBCAInstanceByABDY/`** — the round's graded-agreement instance, and the licence
 to replace it by the graded-agreement specification.
@@ -263,8 +263,8 @@ to replace it by the graded-agreement specification.
 
 | file | lines | what it is |
 |---|---|---|
-| `GBCA/AFW/Binding.lean` | 317 | Binding of the round over the family alphabet: `BindingTraceExtended` and `specificationOverRoundAlphabet_binding`, the round composite `roundOverBracha_refinesSpecification` and `roundOverBracha_specificationTraces`, and the binding each tier carries — `GBCA.roundOverGatherSpecifications_binding`, `GBCA.roundOverBroadcastSpecification_binding`, `GBCA.roundOverBracha_binding`. Six axiom checks. |
-| `GBCA/AFW/Composition.lean` | 838 | **The graded-agreement round, composed**: `n` round programs beside the round's network, in parallel with two gather instances — `GBCA.ByAFW.roundOverGatherSpecifications` over the gather specifications, `GBCA.ByAFW.roundOverBroadcastSpecification` over gather-over-BRB, and **`GBCA.ByAFW.roundOverBracha`, the gather-based GBCA implementation**, over gather-over-Bracha — read over the family alphabet `ExtendedLabel n`. |
+| `GBCA/AFW/Binding.lean` | 324 | Binding of the round over the family alphabet: `BindingTraceExtended` and `specificationOverRoundAlphabet_binding`, the round composite `roundOverBracha_refinesSpecification` and `roundOverBracha_specificationTraces`, and the binding each tier carries — `GBCA.roundOverGatherSpecifications_binding`, `GBCA.roundOverBroadcastSpecification_binding`, `GBCA.roundOverBracha_binding`. Six axiom checks. |
+| `GBCA/AFW/Composition.lean` | 836 | **The graded-agreement round, composed**: `n` round programs beside the round's network, in parallel with two gather instances — `GBCA.ByAFW.roundOverGatherSpecifications` over the gather specifications, `GBCA.ByAFW.roundOverBroadcastSpecification` over gather-over-BRB, and **`GBCA.ByAFW.roundOverBracha`, the gather-based GBCA implementation**, over gather-over-Bracha — read over the family alphabet `ExtendedLabel n`. |
 | `GBCA/AFW/CompositionStepInversion.lean` | 455 | The transitions of `GBCA.ByAFW.roundOverGathers` read off their labels: a step of the round split into a hidden event and a family label, a joint step read as the rows of the round's programs, the round's network and the two gather instances, and one graded-agreement program's row and the round's network's row per label class. |
 | `GBCA/AFW/Counting.lean` | 368 | **The counting of the two-gather round** (AFW25 Algorithm 4 at R = 2, its approximate-agreement subroutine replaced by a local count, D24): the candidate and the grade, `candidate` and `gradeOf`, the bound bit `boundOfCore` read off the first gather's core (D29), and the entry counts the refinement consumes. |
 | `GBCA/AFW/GatherSubstitutions.lean` | 242 | `broadcastSubstitution` and `gatherSubstitution`: the two gather substitutions inside the round, componentwise. |
@@ -305,7 +305,7 @@ system.
 
 | file | lines | what it is |
 |---|---|---|
-| `ImplementationByABDY/Simulation.lean` | 1068 | **`ABDY.protocolSimulation`**, **`ABDY.protocol_composed`**: the protocol carried into the composed system along `ABDY.ProtocolRelation`, whose five unguarded conjuncts determine the composed state. |
+| `ImplementationByABDY/Simulation.lean` | 1069 | **`ABDY.protocolSimulation`**, **`ABDY.protocol_composed`**: the protocol carried into the composed system along `ABDY.ProtocolRelation`, whose five unguarded conjuncts determine the composed state. |
 | `ImplementationByABDY/System.lean` | 849 | **ABDY22's protocol as it runs**, and the subject of the protocol chain: the implementation at ABDY22's Algorithm 6 — its fourteen round rows, the payload the call multicasts, the adversary's bound-bit ghost, and the inversions they answer. |
 
 **`ABA/ImplementationByAFW/`** — the gather-based chain, and the protocol beneath it.
@@ -315,9 +315,9 @@ system.
 | `ImplementationByAFW/CompositionChain.lean` | 382 | **The gather-based chain**: the families `roundFamilyOverBracha`, `roundFamilyOverBroadcastSpecification` and `roundFamilyOverGatherSpecifications`, and the three stages `AFW.composed ⊑ AFW.composedOverBroadcastSpecification ⊑ AFW.composedOverGatherSpecifications ⊑ hybrid`. One axiom check. |
 | `ImplementationByAFW/RoundProjection.lean` | 876 | `AFW.roundProjection`, the view that computes a composed state from the implementation, the relation `AFW.ProtocolRelation` it carries, and the builders that assemble a transition of the composed system. |
 | `ImplementationByAFW/RoundProjectionStep.lean` | 35 | The module that imports the ten files of `RoundProjectionStep/`. |
-| `ImplementationByAFW/Simulation.lean` | 866 | **`AFW.protocolSimulation`**, **`AFW.protocol_composed`**: the matching label class by label class, and the gather-based protocol carried into `AFW.composed` along a relation that computes the composed state from the implementation, the ghost record included. Two axiom checks. |
+| `ImplementationByAFW/Simulation.lean` | 867 | **`AFW.protocolSimulation`**, **`AFW.protocol_composed`**: the matching label class by label class, and the gather-based protocol carried into `AFW.composed` along a relation that computes the composed state from the implementation, the ghost record included. Two axiom checks. |
 | `ImplementationByAFW/SimulationRows.lean` | 1462 | Each row of the gather-based implementation answered by a run of `AFW.composed`: the readers that identify a row off its label, the builders of a transition of one gather instance and of one round, the broadcast invariant across a row, and the returned value read against the implementation's `2f + 1` `VOTE` receipt quorum. |
-| `ImplementationByAFW/System.lean` | 921 | **The gather-based protocol as it runs**: the implementation at AFW25's two-gather construction — the tagged message type collapsing a round's `4n + 2` network states into one sent-set family, the process-major round record, the adversary's ghost record of the two cores and the bound bit, and the 23 round rows. |
+| `ImplementationByAFW/System.lean` | 923 | **The gather-based protocol as it runs**: the implementation at AFW25's two-gather construction — the tagged message type collapsing a round's `4n + 2` network states into one sent-set family, the process-major round record, the adversary's ghost record of the two cores and the bound bit, and the 23 round rows. |
 
 **`ABA/ImplementationByAFW/RoundProjectionStep/`** — the view of the composed round after one row
 of the gather-based implementation, one file per row class.
@@ -333,22 +333,22 @@ of the gather-based implementation, one file per row class.
 | `ImplementationByAFW/RoundProjectionStep/OtherRoundsUnchanged.lean` | 120 | `roundProjection_otherRow` and its three companions: the rounds a row does not name read exactly as the row found them, and `toRoundFamily` and its two companions state that as a one-point update of the family of rounds. |
 | `ImplementationByAFW/RoundProjectionStep/ProtocolRelationClauses.lean` | 117 | `broadcastReturnsInvariant_of`, `broadcastReturnsInvariant_congr` and `boundInvariant_writeGhost`: the two conjuncts of `AFW.ProtocolRelation` that no frame lemma supplies. |
 | `ImplementationByAFW/RoundProjectionStep/ReturnThenCall.lean` | 350 | `roundProjection_firstGatherReturn_secondGatherCall` and `roundProjection_secondGatherReturn_retG`: the two rows that two events of the composed round answer, through a named intermediate state. |
-| `ImplementationByAFW/RoundProjectionStep/ViewAfterOneWrite.lean` | 603 | `roundProjection_write` and `roundProjection_writeNoSent`, the round-record write and the tagged send every row performs, read through the view, with the sent algebra and the readers of the written view the row classes run on. |
+| `ImplementationByAFW/RoundProjectionStep/ViewAfterOneWrite.lean` | 598 | `roundProjection_write` and `roundProjection_writeNoSent`, the round-record write and the tagged send every row performs, read through the view, with the sent algebra and the readers of the written view the row classes run on. |
 
 **`ABA/`** — the headlines.
 
 | file | lines | what it is |
 |---|---|---|
-| `Results.lean` | 318 | The deliverables of both chains, gathered so every citable statement is in one file. Seventeen `#guard_msgs` axiom checks. |
+| `Results.lean` | 319 | The deliverables of both chains, gathered so every citable statement is in one file. Seventeen `#guard_msgs` axiom checks. |
 
 **`ABA/GhostErasure/`** — the ghost-free system of each protocol, and the erasure that
 reaches it.
 
 | file | lines | what it is |
 |---|---|---|
-| `GhostErasure/GhostFreeSystem.lean` | 415 | **The ghost-free system** `Implementation.systemGhostFree`: `Implementation/System.lean` over a one-element ghost record, with its returns free to announce any bit, and `Implementation.system_erasure`, the two systems' equality of achievable trace distributions, by a state erasure of the network carried through the pipeline. |
+| `GhostErasure/GhostFreeSystem.lean` | 411 | **The ghost-free system** `Implementation.systemGhostFree`: `Implementation/System.lean` over a one-element ghost record, with its returns free to announce any bit, and `Implementation.system_erasure`, the two systems' equality of achievable trace distributions, by a state erasure of the network carried through the pipeline. |
 | `GhostErasure/ImplementationByABDY.lean` | 104 | **`ABDY.ghostFreeProtocol`** and **`ABDY.protocol_erasure`**: the protocol with the adversary's bound-bit record dropped, and the headlines re-derived at it — `ghostFreeProtocol_composed`, `ghostFreeProtocol_refines`, `ghostFreeProtocol_safe`, `ghostFreeProtocol_traces`. Three axiom checks. |
-| `GhostErasure/ImplementationByAFW.lean` | 111 | **`AFW.ghostFreeProtocol`** and **`AFW.protocol_erasure`**: the gather-based protocol with the adversary's record of the two cores and the bound bit dropped, and the headlines re-derived at it — `ghostFreeProtocol_composed`, `ghostFreeProtocol_refines`, `ghostFreeProtocol_safe`, `ghostFreeProtocol_traces`. Five axiom checks. |
+| `GhostErasure/ImplementationByAFW.lean` | 112 | **`AFW.ghostFreeProtocol`** and **`AFW.protocol_erasure`**: the gather-based protocol with the adversary's record of the two cores and the bound bit dropped, and the headlines re-derived at it — `ghostFreeProtocol_composed`, `ghostFreeProtocol_refines`, `ghostFreeProtocol_safe`, `ghostFreeProtocol_traces`. Five axiom checks. |
 
 The pieces both compositions are built from are in `Composition/Components.lean`, over the
 alphabet of `Implementation/Alphabet.lean`. `ImplementationByABDY/System.lean` and
