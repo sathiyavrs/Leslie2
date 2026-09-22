@@ -37,6 +37,8 @@ gather record is unchanged. The provenance of a commitment therefore reads the
 input instance's own call record, which is what `inputBroadcastVal_provenance` states.
 -/
 
+set_option linter.style.longFile 1700
+
 namespace PLTS
 namespace ABA
 namespace Gather

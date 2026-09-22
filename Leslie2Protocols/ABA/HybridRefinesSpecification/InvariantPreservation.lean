@@ -27,6 +27,8 @@ The assembly of the two into `Invariant.step` is in
 `HybridRefinesSpecification/AbstractStatePreservation.lean`, beside the `AbstractState` stutter
 lemmas it is stated with. -/
 
+set_option linter.style.longFile 4100
+
 namespace PLTS
 namespace ABA
 

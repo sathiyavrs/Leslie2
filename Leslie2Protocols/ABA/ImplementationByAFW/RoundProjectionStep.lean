@@ -60,6 +60,8 @@ moves of the round's `4n` broadcast instances, each an application of
 view where it stands. `boundInvariant_writeGhost` carries the second.
 -/
 
+set_option linter.style.longFile 3800
+
 namespace PLTS
 namespace ABA
 namespace AFW

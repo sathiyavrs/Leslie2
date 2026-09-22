@@ -73,6 +73,8 @@ it off the network state, `coreOf_eq_coreOfNetwork` identifies the two systems, 
 the network's `ret` row writes the core and carries it on the label.
 -/
 
+set_option linter.style.longFile 1800
+
 namespace PLTS
 namespace ABA
 namespace Gather

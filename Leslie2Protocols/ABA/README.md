@@ -156,7 +156,10 @@ registry.
 Each file's module docstring is the account of record for it; the table says only what
 the file is. The folders are given in import order, and no folder imports one below it:
 `Vocabulary/` is written over by everything, `GhostErasure/` writes over everything.
-Within a folder the files are alphabetical.
+Within a folder the files are alphabetical. Each file holds one object or one result together
+with the lemmas that exist only to prove it, and Mathlib's `linter.style.longFile` caps a file
+at 1500 lines, a file over the cap carrying an explicit `set_option linter.style.longFile`
+raise.
 
 
 **`ABA/Vocabulary/`** — the records and alphabets every implementation is written over.

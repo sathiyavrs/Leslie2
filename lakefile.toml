@@ -40,5 +40,9 @@ name = "Leslie2Extra"
 # with Leslie" blueprint). Builds on top of the core, and is a default target
 # so that `lake build` covers it and the docs build documents the declarations
 # the blueprint links to.
+# Each file holds one object or one result, so the library caps its files at
+# 1500 lines. A file over the cap carries an explicit
+# `set_option linter.style.longFile` raise.
 [[lean_lib]]
 name = "Leslie2Protocols"
+leanOptions = { weak.linter.style.longFile = 1500 }

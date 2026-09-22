@@ -110,6 +110,8 @@ row (D11). The lifted specification `specificationOverRoundAlphabet` — the spe
 along `gbcaLabelMap` — is the system that replaces the instance, and `specificationCorruptionAct` is
 the broadcast corruption act it carries at that alphabet. -/
 
+set_option linter.style.longFile 1800
+
 namespace PLTS
 namespace ABA
 

@@ -60,6 +60,8 @@ row of a gather instance moves each of its `2n` broadcast instances by `AFW.Inva
 the return-then-call step: there the ghost write puts the round's bound bit on record, which is
 `AFW.roundRecord_gbcaSend_secondGather`. -/
 
+set_option linter.style.longFile 2500
+
 namespace PLTS
 namespace ABA
 namespace AFW

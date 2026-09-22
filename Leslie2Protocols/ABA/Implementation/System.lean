@@ -75,6 +75,8 @@ later return of that round. Each instantiates `ghostOutput` as the equation
 between the announced bit and that record.
 -/
 
+set_option linter.style.longFile 1700
+
 namespace PLTS
 namespace ABA
 namespace Implementation

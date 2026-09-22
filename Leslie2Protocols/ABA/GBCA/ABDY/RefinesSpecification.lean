@@ -120,6 +120,8 @@ congruence `ForwardSimulation.family` reaches `ABA/Composition/GBCAInstanceByABD
 ingredient that congruence consumes (`specificationRelation_corrupt`).
 -/
 
+set_option linter.style.longFile 2200
+
 open Stream'
 
 namespace PLTS
