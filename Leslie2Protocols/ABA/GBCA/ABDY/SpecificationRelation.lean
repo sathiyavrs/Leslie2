@@ -9,19 +9,22 @@ import Leslie2Protocols.ABA.GBCA.ABDY.ExclusionCertificate
 /-!
 # The simulation relation
 
-`SpecificationRelation P s t` relates a state of the round-`r` implementation instance
-(`GBCA.ByABDY.implementation`, D18) to a state of the round-`r` specification instance
-(`GBCA.specInst`, the exclusion-set specification, D19). `specificationRelation P r` is the family
-form, and `specificationRelation_init` holds it at the two initial states.
+`SpecificationRelation P s t` relates a state of the round's composition
+(`GBCA.ByABDY.composition`, ABDY22's Algorithm 6 over all five message levels, D18) to a state of
+the round-`r` specification instance (`GBCA.specInst`, the exclusion-set specification, D19).
+`specificationRelation P r` is the family form, `specificationRelation_init` holds it at the two
+initial states, and `specificationRelation_corrupt` carries it across a corruption of both systems
+at once, which is the shape the family lifting consumes.
 
-The implementation state is the protocol's own data, so only `call`, `ret` and `F` are read off it
+The composed state is the protocol's own data, so only `call`, `ret` and `F` are read off it
 directly (`SpecificationRelation.call_eq`, `ret_eq`, `F_eq`). The specification's `excluded` and
 `grade` are bookkeeping the protocol records nothing; the relation carries receipt evidence for them
 instead:
 
 * `exclusion_certificate` — every excluded bit `b` is covered by an exclude certificate
   `ExclusionCertificate P s b`. The relation bounds `excluded` from above and never from below:
-  which bits are actually excluded is recovered by case analysis at the return rows, not recorded.
+  which bits are actually excluded is recovered by case analysis at the return transitions, not
+  recorded.
 * `grade2_evidence` / `grade0_evidence` — a grade-2 lock is backed by an `n − f`
   `ECHO5 v` receipt quorum, a grade-0 lock by an `n − f` `ECHO5 ⊥` quorum. Two
   opposing quorums intersect in a correct process that would have multicast
@@ -49,8 +52,8 @@ return the guards read the returner's own `|Valid| > 1` evidence instead
 certificate names. `SpecificationRelation.callSupport` transports the counts to the specification
 along `call_eq`/`F_eq`.
 
-The specification excludes a bit by the internal τ-transition `bindUnset`, so an
-implementation return that needs a not-yet-excluded bit excluded is answered by a
+The specification excludes a bit by the internal τ-transition `bindUnset`, so a return of the
+algorithm that needs a not-yet-excluded bit excluded is answered by a
 two-step weak run (`weakLStep_tauThen`; `excludeThenRetGrade2_run`,
 `excludeThenRetGrade1_run`, `excludeThenRetGrade0_run`).
 -/
@@ -112,9 +115,9 @@ def specificationRelation (P : Parameters) (_r : ℕ) (s : ImplementationState P
     (t : SpecState P.n) : Prop :=
   SpecificationRelation P s t
 
-/-- The initial states are related. -/
+/-- The initial states of the composition and of its specification are related. -/
 theorem specificationRelation_init (P : Parameters) (r : ℕ) :
-    specificationRelation P r (implementation P r).init (specInst P r).init where
+    specificationRelation P r (composition P r).init (specInst P r).init where
   invariant := Invariant.initial P
   call_eq := fun _ => rfl
   ret_eq := fun _ => rfl
@@ -123,6 +126,66 @@ theorem specificationRelation_init (P : Parameters) (r : ℕ) :
   grade2_evidence := fun h => absurd h (by simp [SpecState.initial])
   grade0_evidence := fun h => absurd h (by simp [SpecState.initial])
   bound_excluded := rfl
+
+/-! ### Broadcast compatibility of the relation
+
+The round-indexed family lift of the refinement takes `fail` as a broadcast act, applied to every
+round at once. It needs the per-round relation to be preserved by that act. The specification
+corruption projections (`corrupt_call`/`corrupt_ret`/`corrupt_excluded`/`corrupt_grade`) come from
+`ABA/GBCA/Specification.lean`; the two `corrupt` functions stay equal by
+`implementationSpecification_corrupt_F_eq`. The statement is proved directly rather than read off
+the `fail` case of the matching `specificationRelation_row`
+(`ABA/GBCA/ABDY/RefinesSpecification.lean`), which only yields an existential match. Its consumers
+are that matching and the family lifting of `ABA/Implementation/ABDY/CompositionChain.lean`. -/
+
+/-- The two `corrupt` functions stay equal on aligned corrupted sets (a strong per-coordinate `fail`
+match, as required by the family lift). -/
+theorem implementationSpecification_corrupt_F_eq {t : SpecState P.n} {s : ImplementationState P.n}
+    (hF : t.F = s.F) (id : Fin P.n) :
+    (t.corrupt P id).F = (s.corrupt P id).F := by
+  rw [ImplementationState.corrupt_F]
+  unfold SpecState.corrupt
+  by_cases hc : id ∉ s.F ∧ s.F.card < P.f
+  · rw [if_pos (by rw [hF]; exact hc), if_pos hc]
+    simp [hF]
+  · rw [if_neg (by rw [hF]; exact hc), if_neg hc]
+    exact hF
+
+/-- **Broadcast compatibility**: `specificationRelation` is preserved by the synchronized corruption
+of both systems. The two `corrupt`s share the guard `id ∉ F ∧ |F| < f` and `specificationRelation`
+aligns the `F`s, so the `if`-conditions agree; every other field is untouched by corruption. -/
+theorem specificationRelation_corrupt (P : Parameters) (r : ℕ) (id : Fin P.n)
+    {x : ImplementationState P.n} {y : SpecState P.n} (h : specificationRelation P r x y) :
+    specificationRelation P r (x.corrupt P id) (y.corrupt P id) := by
+  have hR : SpecificationRelation P x y := h
+  exact
+    { invariant := hR.invariant.step (ImplementationStep.fail (r := r) x id)
+        (by rw [PMF.mem_support_pure_iff])
+      call_eq := fun k => by
+        rw [corrupt_call, ImplementationState.corrupt_process]
+        exact hR.call_eq k
+      ret_eq := fun k => by
+        rw [corrupt_ret, ImplementationState.corrupt_process]
+        exact hR.ret_eq k
+      F_eq := implementationSpecification_corrupt_F_eq hR.F_eq id
+      exclusion_certificate := fun b hb => by
+        rw [corrupt_excluded] at hb
+        exact ExclusionCertificate.mono
+          (fun i j m hm => by rw [ImplementationState.corrupt_received]; exact hm)
+          (fun j w hw => by rw [ImplementationState.corrupt_process]; exact hw)
+          (ImplementationState.corrupt_F_subset x id)
+          (hR.exclusion_certificate b hb)
+      grade2_evidence := fun hg => by
+        rw [corrupt_grade] at hg
+        obtain ⟨v, i, hi⟩ := hR.grade2_evidence hg
+        exact ⟨v, i, by rw [ImplementationState.corrupt_receivedCount]; exact hi⟩
+      grade0_evidence := fun hg => by
+        rw [corrupt_grade] at hg
+        obtain ⟨i, hi⟩ := hR.grade0_evidence hg
+        exact ⟨i, by rw [ImplementationState.corrupt_receivedCount]; exact hi⟩
+      bound_excluded := by
+        rw [corrupt_excluded, ImplementationState.corrupt_bound]
+        exact hR.bound_excluded }
 
 /-- The bound bit on record carries an exclude certificate for its complement:
 the specification has excluded that complement, and every excluded bit is

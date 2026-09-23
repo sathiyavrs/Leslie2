@@ -5,7 +5,7 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.Composition.Components
-import Leslie2Protocols.ABA.GBCA.ABDY.RefinesSpecification
+import Leslie2Protocols.ABA.GBCA.ABDY.MessagesAndRecords
 import Leslie2Protocols.Framework.FamilySimulation
 import Leslie2Protocols.Framework.LoopsAndInstanceFamilies
 
@@ -74,8 +74,8 @@ interface — no component offers them, so they carry no transition of the insta
 
 ## The interface
 
-Every transition mirrors the round-visible half of one transition of the implementation instance
-(`GBCA/ABDY/Implementation.lean`), split between the program that owns the record and the network
+Every transition mirrors the round-visible half of one transition of the algorithm
+(`GBCA/ABDY/Algorithm.lean`), split between the program that owns the record and the network
 that owns the sent sets. The round loop's phase, estimate and grade appear nowhere here: they are
 held by another component of the protocol system. -/
 

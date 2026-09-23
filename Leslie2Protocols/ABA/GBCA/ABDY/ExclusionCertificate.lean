@@ -19,7 +19,7 @@ double-`ECHO` sender (`echoReceiptQuorum_unique`, write-once `sentEcho`), and ag
 the quorum only inside `F`, contradicting `2(n − f) > n + f` (`no_disjoint_quorums`).
 
 A certificate is `F`-blind and receipt-monotone (`ExclusionCertificate.mono`), so it survives every
-row of the implementation: a multicast (`exclusionCertificate_send`), a return
+transition of the algorithm: a multicast (`exclusionCertificate_send`), a return
 (`exclusionCertificate_ret`), and a write of the round's bound bit
 (`exclusionCertificate_setBound`).
 
@@ -52,7 +52,7 @@ variable {P : Parameters}
 
 /-- Case A carrier: some process holds an `n − f` `ECHO v` receipt quorum.
 The certificate is `F`-blind and receipt-monotone, hence stable under `fail`
-and under every implementation step, and at most one bit can carry it
+and under every transition of the algorithm, and at most one bit can carry it
 (`echoReceiptQuorum_unique`). -/
 def EchoReceiptQuorum (P : Parameters) (s : ImplementationState P.n) (v : Bool) : Prop :=
   ∃ i, P.n - P.f ≤ s.receivedCount i (.echo v)

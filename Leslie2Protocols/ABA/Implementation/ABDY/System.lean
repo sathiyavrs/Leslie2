@@ -25,7 +25,7 @@ implementation. This file supplies the things an implementation fixes and
 nothing else:
 
 * the round message type, `GBCA.ByABDY.Message` — the five message levels of
-  `GBCA/ABDY/Implementation.lean` (D18);
+  `GBCA/ABDY/Algorithm.lean` (D18);
 * the per-process per-round record, `GBCA.ByABDY.RoundRecord`, held by round in a finite map (D22);
 * the rows of the implementation, `RoundStep`: the graded-agreement call, the eight round
   multicasts, the round delivery, the call against an already-called record, and the three graded

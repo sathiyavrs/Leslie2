@@ -314,7 +314,7 @@ algorithm at that label (`Gather.AlgorithmOverBroadcastSpecification`,
 distribution. A refinement is then a case analysis over the rows, and the specification's
 answer, a run of `specInst`, is lifted to the specification read along the pullback by a
 section of it (`Gather.weakLStep_specificationOverInstanceAlphabet`,
-`GBCA.ByABDY.weakLStep_specificationOverRoundAlphabet`), as `GBCA.ByABDY.instanceSubstitution` does
+`GBCA.ByABDY.weakLStep_specificationOverRoundAlphabet`), as `GBCA.ByABDY.refinesSpecification` does
 for the protocol chain's round.
 
 Two facts of the characterisations are worth reading. A specification answers its call label on two
@@ -332,7 +332,7 @@ Two ingredients, both shared with the protocol chain:
 - **The family congruence** (`ForwardSimulation.family`): per-round simulations lift to the
   ℕ-indexed families; the broadcast hypothesis is each relation's simultaneous-corruption statement
   (`broadcastSubstitutionRelation_corrupt`, `gatherSubstitutionRelation_corrupt`,
-  `specificationRelation_corrupt`), exactly as `instanceSubstitution_failAct` discharges it for the
+  `specificationRelation_corrupt`), exactly as `refinesSpecification_failAct` discharges it for the
   protocol chain. The family's act corrupts the two gathers of every round and leaves the programs
   and the round's network alone.
 - **The four congruences** (`parallel_right`, `abstract`, `relabel`, `abstract`): each

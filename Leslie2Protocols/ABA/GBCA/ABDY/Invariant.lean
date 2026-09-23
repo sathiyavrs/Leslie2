@@ -4,19 +4,20 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.GBCA.ABDY.Implementation
+import Leslie2Protocols.ABA.GBCA.ABDY.Algorithm
 import Leslie2Protocols.ABA.GBCA.SpecificationSafety
 import Leslie2Protocols.Framework.FamilySimulation
 import Leslie2.Results
 
 /-!
-# The inductive invariant of the GBCA implementation instance
+# The inductive invariant of the round's graded-agreement composition
 
-`Invariant P s` is the inductive invariant of the round-`r` implementation instance
-(`GBCA.ByABDY.implementation`, ABDY22 Algorithm 6 — all five message levels, D18).
-`Invariant.initial` holds it at the initial state, and `Invariant.step` carries it along every row
-of that instance. `InputSupport P s b` is the `f + 1` F-blind genuine-holder support for `b` (D15);
-it is monotone under every step that preserves genuine holders and grows `F`. The counting lemmas
+`Invariant P s` is the inductive invariant of the composed state a round of the protocol runs on
+(`GBCA.ByABDY.ImplementationState`). `Invariant.initial` holds it at the initial state, and
+`Invariant.step` carries it along every transition of the algorithm (`ImplementationStep`, ABDY22
+Algorithm 6 over all five message levels, D18). `InputSupport P s b` is the `f + 1` F-blind
+genuine-holder support for `b` (D15); it is monotone under every step that preserves genuine
+holders and grows `F`. The counting lemmas
 at the head of the file state that the any-payload `VOTE` and `BIND` counts grow under delivery and
 that a corruption leaves them alone.
 
@@ -108,8 +109,8 @@ theorem ImplementationState.exists_bind_sender_notMem {P : Parameters} {s : Impl
 
 variable {P : Parameters}
 
-/-- `f + 1` F-blind genuine-holder support for `b` (D15): the implementation counterpart of the spec
-guards' InputSupport counts — the simulation relation of
+/-- `f + 1` F-blind genuine-holder support for `b` (D15): the composed state's counterpart of the
+spec guards' InputSupport counts — the simulation relation of
 `GBCA/ABDY/SpecificationRelation.lean` transports the count to the specification along
 `call_eq`/`F_eq`. -/
 def InputSupport (P : Parameters) (s : ImplementationState P.n) (b : Bool) : Prop :=
@@ -126,7 +127,7 @@ theorem InputSupport.mono {s s' : ImplementationState P.n} {b : Bool}
   rw [Finset.mem_filter] at hid ⊢
   exact ⟨hid.1, hid.2.imp (hproc id) (fun hm => hF hm)⟩
 
-/-- The inductive invariant of the GBCA implementation instance. See the
+/-- The inductive invariant of the composed state a round runs on. See the
 module docstring for the role of each clause. -/
 structure Invariant (P : Parameters) (s : ImplementationState P.n) : Prop where
   /-- Corruption budget. -/
@@ -528,8 +529,8 @@ state's own field alone, and no clause of `Invariant` reads it. -/
 private theorem Invariant.setBound {s : ImplementationState P.n} (hI : Invariant P s) (β : Bool) :
     Invariant P (s.setBound β) := { hI with }
 
-/-- **Invariant preservation.** `Invariant` is preserved by every implementation
-step. -/
+/-- **Invariant preservation.** `Invariant` is preserved by every transition of the
+algorithm. -/
 theorem Invariant.step {r : ℕ} {s : ImplementationState P.n} {l : Label P.n}
     {μ : PMF (ImplementationState P.n)} {s' : ImplementationState P.n} (hI : Invariant P s)
     (hstep : ImplementationStep P r s l μ) (hs' : s' ∈ μ.support) : Invariant P s' := by

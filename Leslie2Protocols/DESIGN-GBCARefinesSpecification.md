@@ -1,12 +1,12 @@
-# Design — the per-instance GBCA refinement `GBCA.ByABDY.implementation ⊑ GBCA.specInst`
+# Design — the GBCA refinement `GBCA.ByABDY.composition ⊑ GBCA.specificationOverRoundAlphabet`
 (`refinesSpecification`)
 
 Companion design document to the Lean proof in `ABA/GBCA/ABDY/Invariant.lean` (the inductive
 invariant), `ABA/GBCA/ABDY/ExclusionCertificate.lean` (the exclude certificates),
 `ABA/GBCA/ABDY/SpecificationRelation.lean` (the relation, the specification guards and the run
-lemmas) and `ABA/GBCA/ABDY/RefinesSpecification.lean` (the per-row simulation), against the
-implementation shape in
-`ABA/GBCA/ABDY/Implementation.lean` (deviation D18: all five message levels of ABDY22's Algorithm 6)
+lemmas) and `ABA/GBCA/ABDY/RefinesSpecification.lean` (the matching and the simulation), against the
+algorithm in
+`ABA/GBCA/ABDY/Algorithm.lean` (deviation D18: all five message levels of ABDY22's Algorithm 6)
 and the specification shape in `ABA/GBCA/Specification.lean` (deviation D19: the exclusion set
 `excluded : Finset Bool` as the state shape, with the bound value announced on the return labels,
 D29). The refinement paragraphs of `blueprint/src/content.tex` — the exclusion certificate, the
@@ -15,18 +15,18 @@ D29). The refinement paragraphs of `blueprint/src/content.tex` — the exclusion
 ## Systems
 
 ```
-implementation P r : System (ImplementationState P.n) (Label P.n)     -- ABDY22 Algorithm 6, D1/D5/D8/D18
-specInst P r : System (SpecState P.n) (Label P.n)     -- graded-binding spec, D1/D14/D15/D19
-target       : ForwardSimulation (implementation P r) (specInst P r) (specificationRelation P r)
+composition P r : System (ImplementationState P.n) (ExtendedLabel P.n)     -- ABDY22 Algorithm 6, D1/D5/D8/D18
+specificationOverRoundAlphabet P r : System (SpecState P.n) (ExtendedLabel P.n)     -- graded-binding spec, D1/D14/D15/D19
+target : ForwardSimulation (composition P r) (specificationOverRoundAlphabet P r) (specificationRelation P r)
 ```
 
-Both systems are Dirac-transition LTSs. The instance refinement reaches the ℕ-indexed
-families through the round instance (`ABA/GBCA/ABDY/Substitution.lean`),
-whose family lifting takes its broadcast ingredient from `GBCA.ByABDY.specificationRelation_corrupt`.
+Both systems are Dirac-transition LTSs. The refinement reaches the ℕ-indexed families through
+`ForwardSimulation.family` (`ABA/Implementation/ABDY/CompositionChain.lean`), whose family lifting
+takes its broadcast ingredient from `GBCA.ByABDY.specificationRelation_corrupt`.
 
-### The implementation (D18): the five message levels
+### The algorithm (D18): the five message levels
 
-The implementation transcribes ABDY22's Algorithm 6. The message type is
+The algorithm transcribes ABDY22's Algorithm 6. The message type is
 
 ```lean
 inductive Message : Type
@@ -655,13 +655,12 @@ carries its own `echo5Count` over its received set rows, the rendezvous rows
 needed to the global view: the round-`r` `ImplementationState` *is* the round instance's own state —
 the round records with their received set rows beside the round's network state, which holds the
 per-sender sent sets and the corrupted set — and `ImplementationState.echo5Count` reads the
-receiving program's received set rows directly. So `GBCA.ByABDY.instanceSubstitution` consumes
-`refinesSpecification` as it stands: the projection `composition_projects`
-(`ABA/GBCA/ABDY/ProjectsOntoImplementation.lean`) matches every
-round-instance transition with the
-implementation instance's at that same state, one step for one step, and this file's refinement
-answers it, its weak answer read back at the round instance's interface — which is what licenses
-replacing a round's instance by the graded agreement specification.
+receiving program's received set rows directly. So `refinesSpecification` runs in two halves: the
+characterisation `composition_projects` (`ABA/GBCA/ABDY/Algorithm.lean`) matches every transition of
+the round's composition with the algorithm's at that same state, one step for one step, and the
+matching `specificationRelation_row` answers it, its weak answer read back at the round instance's
+interface — which is what licenses replacing a round's instance by the graded agreement
+specification.
 
 ## Risks and open points
 

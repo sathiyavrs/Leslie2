@@ -299,7 +299,8 @@ itself, with no phantom-call bookkeeping and no specification fills.
 
 ### D15 — the implementation derivation (`DESIGN-GBCARefinesSpecification.md`)
 
-D14's superset counts must be discharged from `GBCA.ByABDY.implementation`. The connection is the `Invariant`
+D14's superset counts must be discharged from the algorithm `GBCA.ByABDY.ImplementationStep`. The
+connection is the `Invariant`
 conjunct `input_support`:
 
 ```

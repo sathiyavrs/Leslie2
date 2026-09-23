@@ -15,12 +15,11 @@ together with the Dirac it produces, and the idle row of a non-participant as th
 label.
 
 The round records and the network state are the two components of `GBCA.ByABDY.ImplementationState`
-(`GBCA/ABDY/MessagesAndRecords.lean`), so the round instance and the implementation instance run on
-the
-same state. What a joint step delivers is a program function given pointwise, by its value at the
-acting process and its agreement with the old function elsewhere, where the implementation's rules
-write with `Function.update`. `Function.eq_update_iff` identifies the two, and the `composition_*`
-lemmas identify the state a row writes with `setProcess`, `recordGBCASend`, `setBound`, `deliverTo`
+(`GBCA/ABDY/MessagesAndRecords.lean`), the composed state the round instance runs on. What a joint
+step delivers is a program function given pointwise, by its value at the acting process and its
+agreement with the old function elsewhere, where the algorithm of `GBCA/ABDY/Algorithm.lean` writes
+with `Function.update`. `Function.eq_update_iff` identifies the two, and the `composition_*` lemmas
+identify the state a transition writes with `setProcess`, `recordGBCASend`, `setBound`, `deliverTo`
 or `corrupt` applied to the old state.
 
 `compositionExtended_joint_inversion` and `compositionExtended_tau_inversion` read a transition of
@@ -319,13 +318,11 @@ end NetworkStepInversion
 /-! ### The write a row makes on the composed state
 
 The round records and the network state are the two components of `GBCA.ByABDY.ImplementationState`
-(`GBCA/ABDY/MessagesAndRecords.lean`), so the round instance and the implementation instance run on
-the
-same state and every rule of the one is a rule of the other read in the implementation's accessors.
-A joint step delivers a program function pointwise: its value at the acting process, and its
-agreement with the old one elsewhere. `Function.eq_update_iff` reads that function as the old one
-updated at the acting process, and the lemmas here identify the state a row of the implementation
-writes with `Function.update`. -/
+(`GBCA/ABDY/MessagesAndRecords.lean`), the composed state the round instance runs on, and the four
+accessors of that pair are the ones the algorithm reads. A joint step delivers a program function
+pointwise: its value at the acting process, and its agreement with the old one elsewhere.
+`Function.eq_update_iff` reads that function as the old one updated at the acting process, and the
+lemmas here identify the state the algorithm writes with `Function.update`. -/
 
 section Writes
 variable {P : Parameters} {u x : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n} {w : NetworkState P.n}
@@ -375,7 +372,7 @@ theorem composition_recordGBCASend {k : Fin P.n} {m : GBCA.ByABDY.Message} :
     ((u, w.recordGBCASend k m) : GBCA.ByABDY.ImplementationState P.n)
       = GBCA.ByABDY.ImplementationState.multicast (u, w) k m := rfl
 
-/-- Corruption is the network state's own write, which is the implementation's (D1). -/
+/-- Corruption is the network state's own write, which is the composed state's (D1). -/
 theorem composition_corrupt (k : Fin P.n) :
     ((u, w.corrupt P k) : GBCA.ByABDY.ImplementationState P.n)
       = GBCA.ByABDY.ImplementationState.corrupt P k (u, w) := rfl

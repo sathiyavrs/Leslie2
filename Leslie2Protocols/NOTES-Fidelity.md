@@ -58,7 +58,7 @@ evidence level the same attack dies: `f + 1 > |F|` `BIND v` receipts put a corre
 over the write-once `VOTE` level — and that quorum is the object the paper's binding
 argument counts (Lemmas 4.8/4.9 through E.9).
 
-Annotation lives in `GBCA/ABDY/Implementation.lean`'s module docstring, in the blueprint
+Annotation lives in `GBCA/ABDY/Algorithm.lean`'s module docstring, in the blueprint
 chapter's caption for the algorithm and its D18 registry entry, and in the source
 blueprint's own TeX (`Leslie/blueprint/src/sections/Algorithm.tex`, a red note at
 Algorithm 2's decide conditions); the source's PDF caption reads "Implementation of GBCA
@@ -209,7 +209,7 @@ determines such a set. At the implementation both values are held as ghost state
 the round's network state, the core by the gather instance's network state — so no program reads
 either, and the announcement is what makes binding a property of a single trace
 (`GBCA.specInst_binding`, `Gather.specInst_core`), transported to each implementation by its own
-refinement (`GBCA.ByABDY.implementation_binding`, `GBCA.roundOverBracha_binding`;
+refinement (`GBCA.ByABDY.composition_binding`, `GBCA.roundOverBracha_binding`;
 `Gather.instanceOverBroadcastSpecification_core`, `Gather.instanceOverBracha_core`). The rows that
 do read a ghost — the implementation's two graded-agreement returns — read it for the value they
 announce and not for whether they fire, the read admitting a bit at every state (`ghostOutput_total`).
@@ -244,7 +244,7 @@ is harmless; what is worth having in one place is whether each guard falls in th
 in the specification, and whether that placement was chosen or forced.
 
 **Carried by the implementation's transitions** — `GBCA.ByABDY.ImplementationStep`
-(`ABA/GBCA/ABDY/Implementation.lean`), mirrored transition for transition at
+(`ABA/GBCA/ABDY/Algorithm.lean`), mirrored transition for transition at
 `GBCA.GBCAProgramStep` (`ABA/GBCA/ABDY/Components.lean`), Byzantine handshake transitions
 included, and at
 `ABDY.ABAProgramStep` (`ABA/Implementation/ABDY/System.lean`) with the reads taken through

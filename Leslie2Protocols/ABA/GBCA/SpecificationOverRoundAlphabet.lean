@@ -20,7 +20,7 @@ network's rendezvous and the coin handshake are off the specification's interfac
 
 `specificationOverRoundAlphabet` is the specification read back along `specificationLabelMap`. It
 is the system a round is replaced by, and both graded-agreement implementations reach it:
-ABDY22's round through `GBCA/ABDY/Substitution.lean` and the two-gather round through
+ABDY22's round through `GBCA/ABDY/RefinesSpecification.lean` and the two-gather round through
 `GBCA/AFW/RefinesSpecification.lean`. The handshake labels stay visible at this boundary, and their
 authorisation is the surrounding network's business.
 

@@ -271,18 +271,18 @@ pipeline carry that simulation to `hybrid`. -/
 that round's specification state. -/
 def substitutionRelationFamily (P : Parameters) (s : ℕ → GBCA.ByABDY.ImplementationState P.n)
     (t : ℕ → GBCA.SpecState P.n) : Prop :=
-  ∀ r, GBCA.ByABDY.substitutionRelation P r (s r) (t r)
+  ∀ r, GBCA.ByABDY.specificationRelation P r (s r) (t r)
 
 /-- **The family substitution**: the graded-agreement family of the protocol is forward simulated by
-the specification, round by round. The per-round simulation is `GBCA.ByABDY.instanceSubstitution`;
-the broadcast compatibility is `GBCA.ByABDY.instanceSubstitution_failAct`. -/
+the specification, round by round. The per-round simulation is `GBCA.ByABDY.refinesSpecification`;
+the broadcast compatibility is `GBCA.ByABDY.refinesSpecification_failAct`. -/
 theorem familySubstitution (P : Parameters) :
     ForwardSimulation (GBCA.ByABDY.gbcaInstanceFamily P) (gbcaSpecificationFamily P)
       (substitutionRelationFamily P) :=
   ForwardSimulation.family GBCA.ByABDY.roundOwnsLabel GBCA.ByABDY.isFailLabel
     (GBCA.ByABDY.corruptionAct P)
     (GBCA.ByABDY.specificationCorruptionAct P)
-    (GBCA.ByABDY.instanceSubstitution P) (GBCA.ByABDY.instanceSubstitution_failAct P)
+    (GBCA.ByABDY.refinesSpecification P) (GBCA.ByABDY.refinesSpecification_failAct P)
 
 /-- The family substitution as a probabilistic forward simulation: both systems are LTS, and the
 relation holds at the initial states. -/
@@ -291,7 +291,7 @@ theorem familySubstitutionSimulation (P : Parameters) :
       (diracRel (substitutionRelationFamily P)) :=
   ForwardSimulation.toProbabilistic (GBCA.ByABDY.gbcaInstanceFamily_isLTS P)
     (gbcaSpecificationFamily_isLTS P)
-    (fun r => GBCA.ByABDY.instanceSubstitution_init P r) (familySubstitution P)
+    (fun r => GBCA.ByABDY.specificationRelation_init P r) (familySubstitution P)
 
 namespace ABDY
 

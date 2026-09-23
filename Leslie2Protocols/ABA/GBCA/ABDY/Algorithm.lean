@@ -4,15 +4,24 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.GBCA.ABDY.MessagesAndRecords
+import Leslie2Protocols.ABA.GBCA.ABDY.CompositionStepInversion
+import Leslie2Protocols.ABA.GBCA.SpecificationOverRoundAlphabet
 
 /-!
-# The GBCA implementation instance (ABDY22 Algorithm 6)
+# The algorithm of the round's graded-agreement composition (ABDY22 Algorithm 6)
 
-The round-`r` instance of the Graded Binding Crusader Agreement protocol, as an LTS over the
-shared alphabet `ABA.Label n`: the algorithm `ImplementationStep`, one transition per line of
-ABDY22's Algorithm 6, and the system `implementation` it is the step relation of. The messages it
-exchanges and the state it runs on are in `GBCA/ABDY/MessagesAndRecords.lean`.
+`ImplementationStep` is the algorithm of the round-`r` composition (`GBCA.ByABDY.composition`,
+`GBCA/ABDY/Composition.lean`): a relation on the composed state
+`GBCA.ByABDY.ImplementationState`, one transition per line of ABDY22's Algorithm 6, over the shared
+alphabet `ABA.Label n`. The messages the round exchanges and the state it runs on are in
+`GBCA/ABDY/MessagesAndRecords.lean`.
+
+`composition_projects` is the characterisation: at a label of the round's interface, every
+transition of the composition is the algorithm's transition at the specification label the
+interface label projects to, one step for one step. The composition assembles `n` programs beside
+the round's network, and the composed state is the pair of the round records and the network
+state, which are exactly the local states it puts together; the algorithm reads that same pair
+through its own accessors.
 
 *Attribution.* The file transcribes ABDY22's Algorithm 6 — the 6-round Graded Binding Crusader
 Agreement for Byzantine faults — directly, under the level mapping
@@ -100,8 +109,10 @@ namespace PLTS
 namespace ABA
 namespace GBCA.ByABDY
 
-/-- The step relation of the round-`r` GBCA implementation instance
-(ABDY22 Algorithm 6, all five message levels). All transitions are Dirac. -/
+open Implementation Composition
+
+/-- The algorithm of the round-`r` composition: ABDY22's Algorithm 6 over all five message
+levels, one transition per line, on the composed state. All transitions are Dirac. -/
 inductive ImplementationStep (P : Parameters) (r : ℕ) :
     ImplementationState P.n → Label P.n → PMF (ImplementationState P.n) → Prop
   /-- The environment call arrives: record the input and multicast
@@ -247,7 +258,7 @@ inductive ImplementationStep (P : Parameters) (r : ℕ) :
   case holds: `hnotGrade2` denies case (1) at either bit, and `hnotGrade1` denies
   case (2). The denial of case (2) is carried in reduced form. Case (2) asks
   for four things at a bit `v`: an `n − f` any-`ECHO5` quorum, a received
-  `ECHO5 v`, `f + 1` `BIND v` receipts, and `|Valid| > 1`. This row's own
+  `ECHO5 v`, `f + 1` `BIND v` receipts, and `|Valid| > 1`. This transition's own
   `hcnt` and `hval` already supply the first and the last, an `n − f`
   `ECHO5 ⊥` quorum being in particular an `n − f` any-`ECHO5` quorum. What is
   left to deny is the pair of the received `ECHO5 v` and the `f + 1` `BIND v`
@@ -268,24 +279,220 @@ inductive ImplementationStep (P : Parameters) (r : ℕ) :
   | fail (s : ImplementationState P.n) (id : Fin P.n) :
       ImplementationStep P r s (.fail id) (PMF.pure (s.corrupt P id))
 
-/-- The round-`r` GBCA implementation instance. -/
-noncomputable def implementation (P : Parameters) (r : ℕ) :
-    System (ImplementationState P.n) (Label P.n) where
-  init := ImplementationState.initial P.n
-  step := ImplementationStep P r
+/-! ### The composition's transitions are the algorithm's
 
-@[simp] theorem implementation_init (P : Parameters) (r : ℕ) :
-    (implementation P r).init = ImplementationState.initial P.n := rfl
+Every transition of the round's composition is one transition of the algorithm at the same state,
+and the correspondence is strong — one step answers one step, at the specification label the
+interface label projects to, with no stuttering anywhere:
 
-@[simp] theorem implementation_step (P : Parameters) (r : ℕ) (s : ImplementationState P.n)
-    (l : Label P.n) (μ : PMF (ImplementationState P.n)) :
-    (implementation P r).step s l μ ↔ ImplementationStep P r s l μ := Iff.rfl
+| the composition | the algorithm |
+| --- | --- |
+| `callG` (caller writes, network records) | `ImplementationStep.call` |
+| `gbcaCallLoop`, `byzantineCallGLoop` | `ImplementationStep.callLoop` |
+| `byzantineCallG` (D11) | `ImplementationStep.call` |
+| `retG` / `byzantineRetG`, by grade | `ImplementationStep.retGrade2` / `retGrade1` / `retGrade0` |
+| hidden `send` rendezvous, by level | the eight silent send transitions |
+| hidden `deliver` rendezvous | `ImplementationStep.deliver` |
+| network-local injection | `ImplementationStep.byzantine` |
 
-/-- Every transition of the implementation instance is Dirac: the instance is
-an LTS. -/
-theorem implementation_isLTS (P : Parameters) (r : ℕ) : (implementation P r).IsLTS := by
-  rintro s l μ hstep
-  cases hstep <;> exact ⟨_, rfl⟩
+The two hidden rendezvous and the network's injection are silent in the composition and in the
+algorithm alike, and `specificationLabelMap` takes `τ` to `τ`. -/
+
+/-- **The algorithm of the composition.** At a label of the round's interface, every transition of
+the composition is the algorithm's transition at the specification label the interface label
+projects to. -/
+theorem composition_projects (P : Parameters) (r : ℕ) :
+    ∀ (σ : GBCA.ByABDY.ImplementationState P.n) (l : ExtendedLabel P.n)
+    (μ : PMF (GBCA.ByABDY.ImplementationState P.n)), (composition P r).step σ l μ → ∃ l₀,
+    specificationLabelMap P.n l = some l₀ ∧ ImplementationStep P r σ l₀ μ := by
+  rintro ⟨u, w⟩ l μ hstep
+  rcases (composition_step_iff P r (u, w) l μ).mp hstep with ⟨rfl, e, hev⟩ | hlab
+  · -- a hidden rendezvous: a silent transition of the algorithm
+    obtain ⟨x, w', rfl, hall, hn⟩ := compositionExtended_joint_inversion (by simp) hev
+    refine ⟨Label.tau, rfl, ?_⟩
+    cases e with
+    | send j m =>
+      have hfor : ∀ i, i ≠ j → x i = u i :=
+        fun i hi => PMF.pure_injective (gbcaProgramStep_send_foreign (Ne.symm hi) (hall i))
+      have hw : w' = w.recordGBCASend j m := PMF.pure_injective (gbcaNetworkStep_send hn)
+      subst hw
+      cases m with
+      | input b =>
+        obtain ⟨hin, hcnt, hsend, hx⟩ := gbcaProgramStep_send_input_own (hall j)
+        rw [composition_setProcess_recordGBCASend (PMF.pure_injective hx) hfor]
+        exact ImplementationStep.relay _ j b hin hcnt hsend
+      | echo b =>
+        obtain ⟨hin, hcnt, hsend, hx⟩ := gbcaProgramStep_send_echo_own (hall j)
+        rw [composition_setProcess_recordGBCASend (PMF.pure_injective hx) hfor]
+        exact ImplementationStep.echo _ j b hin hcnt hsend
+      | vote v =>
+        cases v with
+        | some b =>
+          obtain ⟨hin, hcnt, hsend, hx⟩ := gbcaProgramStep_send_voteBit_own (hall j)
+          rw [composition_setProcess_recordGBCASend (PMF.pure_injective hx) hfor]
+          exact ImplementationStep.voteBit _ j b hin hcnt hsend
+        | none =>
+          obtain ⟨hin, hnot, hcnt, hval, hsend, hx⟩ :=
+            gbcaProgramStep_send_voteBot_own (hall j)
+          rw [composition_setProcess_recordGBCASend (PMF.pure_injective hx) hfor]
+          exact ImplementationStep.voteBot _ j hin hnot hcnt hval hsend
+      | bind v =>
+        cases v with
+        | some b =>
+          obtain ⟨hin, hlv, hcnt, hsend, hx⟩ := gbcaProgramStep_send_bindBit_own (hall j)
+          rw [composition_setProcess_recordGBCASend (PMF.pure_injective hx) hfor]
+          exact ImplementationStep.bindBit _ j b hin hlv hcnt hsend
+        | none =>
+          obtain ⟨hin, hlv, hnot, hcnt, hval, hsend, hx⟩ :=
+            gbcaProgramStep_send_bindBot_own (hall j)
+          rw [composition_setProcess_recordGBCASend (PMF.pure_injective hx) hfor]
+          exact ImplementationStep.bindBot _ j hin hlv hnot hcnt hval hsend
+      | «echo5» v =>
+        cases v with
+        | some b =>
+          obtain ⟨hin, hlv, hcnt, hsend, hx⟩ := gbcaProgramStep_send_echo5Bit_own (hall j)
+          rw [composition_setProcess_recordGBCASend (PMF.pure_injective hx) hfor]
+          exact ImplementationStep.echo5Bit _ j b hin hlv hcnt hsend
+        | none =>
+          obtain ⟨hin, hlv, hnot, hcnt, hval, hsend, hx⟩ :=
+            gbcaProgramStep_send_echo5Bot_own (hall j)
+          rw [composition_setProcess_recordGBCASend (PMF.pure_injective hx) hfor]
+          exact ImplementationStep.echo5Bot _ j hin hlv hnot hcnt hval hsend
+    | deliver i j m =>
+      obtain ⟨hmem, hw⟩ := gbcaNetworkStep_deliver hn
+      have hw' : w' = w := PMF.pure_injective hw
+      subst hw'
+      have hfor : ∀ i', i' ≠ i → x i' = u i' :=
+        fun i' hi' => PMF.pure_injective (gbcaProgramStep_deliver_foreign (Ne.symm hi') (hall i'))
+      rw [composition_deliver (PMF.pure_injective (gbcaProgramStep_deliver_own (hall i))) hfor]
+      exact ImplementationStep.deliver _ i j m hmem
+  · by_cases hlτ : l = Sum.inl Label.tau
+    · -- the network's own injection
+      subst hlτ
+      obtain ⟨w', rfl, hn⟩ := compositionExtended_tau_inversion hlab
+      obtain ⟨k, m, hF, hw⟩ := gbcaNetworkStep_tau hn
+      have hw' : w' = w.recordGBCASend k m := PMF.pure_injective hw
+      subst hw'
+      refine ⟨Label.tau, rfl, ?_⟩
+      rw [composition_recordGBCASend]
+      exact ImplementationStep.byzantine _ k m hF
+    · obtain ⟨x, w', rfl, hall, hn⟩ := compositionExtended_joint_inversion (by simpa using hlτ) hlab
+      cases l with
+      | inl l₀ =>
+        cases l₀ with
+        | tau => exact absurd rfl hlτ
+        | callABA id b => exact (gbcaNetworkStep_callABA_noStep hn).elim
+        | retABA id b => exact (gbcaNetworkStep_retABA_noStep hn).elim
+        | callW r' id => exact (gbcaNetworkStep_callW_noStep hn).elim
+        | retW r' id b => exact (gbcaNetworkStep_retW_noStep hn).elim
+        | fail k => exact (gbcaNetworkStep_fail_noStep hn).elim
+        | callG r' id b =>
+          obtain ⟨rfl, hw⟩ := gbcaNetworkStep_callG_round hn
+          have hw' : w' = w.recordGBCASend id (.input b) := PMF.pure_injective hw
+          subst hw'
+          obtain ⟨hin, hx⟩ := gbcaProgramStep_callG_own (hall id)
+          have hfor : ∀ i, i ≠ id → x i = u i :=
+            fun i hi => PMF.pure_injective (gbcaProgramStep_callG_foreign (Ne.symm hi) (hall i))
+          refine ⟨_, rfl, ?_⟩
+          rw [composition_setProcess_recordGBCASend (PMF.pure_injective hx) hfor]
+          exact ImplementationStep.call _ id b hin
+        | retG r' id out bnd =>
+          obtain ⟨rfl, hbnd, hw⟩ := gbcaNetworkStep_retG_round hn
+          have hw' : w' = w.setBound bnd := PMF.pure_injective hw
+          subst hw'
+          have hfor : ∀ i, i ≠ id → x i = u i :=
+            fun i hi => PMF.pure_injective (gbcaProgramStep_retG_foreign (Ne.symm hi) (hall i))
+          refine ⟨_, rfl, ?_⟩
+          cases out with
+          | grade2 v =>
+            obtain ⟨hin, hlv, hcnt, hret, hx⟩ := gbcaProgramStep_retGGrade2_own (hall id)
+            rw [composition_setProcess_setBound (PMF.pure_injective hx) hfor]
+            exact ImplementationStep.retGrade2 _ id v bnd hin hlv hcnt hret hbnd
+          | grade1 v =>
+            obtain ⟨hin, hlv, hnotGrade2, hcnt, honce, hbind, hval, hret, hx⟩ :=
+              gbcaProgramStep_retGGrade1_own (hall id)
+            rw [composition_setProcess_setBound (PMF.pure_injective hx) hfor]
+            exact ImplementationStep.retGrade1 _ id v bnd hin hlv hnotGrade2 hcnt honce
+              hbind hval
+              hret hbnd
+          | grade0 =>
+            obtain ⟨hin, hlv, hnotGrade2, hnotGrade1, hcnt, hval, hret, hx⟩ :=
+              gbcaProgramStep_retGGrade0_own (hall id)
+            rw [composition_setProcess_setBound (PMF.pure_injective hx) hfor]
+            exact ImplementationStep.retGrade0 _ id bnd hin hlv hnotGrade2 hnotGrade1
+              hcnt hval hret
+              hbnd
+      | inr ev =>
+        cases ev with
+        | gbcaSend r' j m => exact (gbcaNetworkStep_gbcaSend_noStep hn).elim
+        | gbcaDeliver r' i j m => exact (gbcaNetworkStep_gbcaDeliver_noStep hn).elim
+        | decidedSend j b => exact (gbcaNetworkStep_decidedSend_noStep hn).elim
+        | decidedDeliver i j b => exact (gbcaNetworkStep_decidedDeliver_noStep hn).elim
+        | retWPublish r' id c b => exact (gbcaNetworkStep_retWPublish_noStep hn).elim
+        | byzantineCallW r' k => exact (gbcaNetworkStep_byzantineCallW_noStep hn).elim
+        | byzantineRetW r' k b => exact (gbcaNetworkStep_byzantineRetW_noStep hn).elim
+        | gbcaCallLoop r' id b =>
+          obtain ⟨rfl, hw⟩ := gbcaNetworkStep_gbcaCallLoop_round hn
+          have hw' : w' = w := PMF.pure_injective hw
+          subst hw'
+          have hidle : ∀ i,
+            x i = u i := fun i => PMF.pure_injective (gbcaProgramStep_gbcaCallLoop (hall i))
+          refine ⟨_, rfl, ?_⟩
+          rw [composition_idle hidle]
+          exact ImplementationStep.callLoop _ id b
+        | byzantineCallG r' k b =>
+          obtain ⟨rfl, hw⟩ := gbcaNetworkStep_byzantineCallG_round hn
+          have hw' : w' = w.recordGBCASend k (.input b) := PMF.pure_injective hw
+          subst hw'
+          obtain ⟨hin, hx⟩ := gbcaProgramStep_byzantineCallG_own (hall k)
+          have hfor : ∀ i, i ≠ k → x i = u i :=
+            fun i hi => PMF.pure_injective (gbcaProgramStep_byzantineCallG_foreign (Ne.symm hi)
+              (hall i))
+          refine ⟨_, rfl, ?_⟩
+          rw [composition_setProcess_recordGBCASend (PMF.pure_injective hx) hfor]
+          exact ImplementationStep.call _ k b hin
+        | byzantineCallGLoop r' k b =>
+          obtain ⟨rfl, hw⟩ := gbcaNetworkStep_byzantineCallGLoop_round hn
+          have hw' : w' = w := PMF.pure_injective hw
+          subst hw'
+          have hidle : ∀ i, x i = u i :=
+            fun i => PMF.pure_injective (gbcaProgramStep_byzantineCallGLoop (hall i))
+          refine ⟨_, rfl, ?_⟩
+          rw [composition_idle hidle]
+          exact ImplementationStep.callLoop _ k b
+        | byzantineRetG r' k out bnd =>
+          obtain ⟨rfl, hbnd, hw⟩ := gbcaNetworkStep_byzantineRetG_round hn
+          have hw' : w' = w.setBound bnd := PMF.pure_injective hw
+          subst hw'
+          have hfor : ∀ i, i ≠ k → x i = u i :=
+            fun i hi => PMF.pure_injective (gbcaProgramStep_byzantineRetG_foreign (Ne.symm hi) (hall
+              i))
+          refine ⟨_, rfl, ?_⟩
+          cases out with
+          | grade2 v =>
+            obtain ⟨hin, hlv, hcnt, hret, hx⟩ := gbcaProgramStep_byzantineRetGGrade2_own (hall k)
+            rw [composition_setProcess_setBound (PMF.pure_injective hx) hfor]
+            exact ImplementationStep.retGrade2 _ k v bnd hin hlv hcnt hret hbnd
+          | grade1 v =>
+            obtain ⟨hin, hlv, hnotGrade2, hcnt, honce, hbind, hval, hret, hx⟩ :=
+              gbcaProgramStep_byzantineRetGGrade1_own (hall k)
+            rw [composition_setProcess_setBound (PMF.pure_injective hx) hfor]
+            exact ImplementationStep.retGrade1 _ k v bnd hin hlv hnotGrade2 hcnt honce
+              hbind hval
+              hret hbnd
+          | grade0 =>
+            obtain ⟨hin, hlv, hnotGrade2, hnotGrade1, hcnt, hval, hret, hx⟩ :=
+              gbcaProgramStep_byzantineRetGGrade0_own (hall k)
+            rw [composition_setProcess_setBound (PMF.pure_injective hx) hfor]
+            exact ImplementationStep.retGrade0 _ k bnd hin hlv hnotGrade2 hnotGrade1
+              hcnt hval hret
+              hbnd
+
+/-! ### Mechanical axiom check -/
+
+/-- info: 'PLTS.ABA.GBCA.ByABDY.composition_projects' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms composition_projects
 
 end GBCA.ByABDY
 end ABA

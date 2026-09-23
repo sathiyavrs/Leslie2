@@ -49,11 +49,11 @@ possibly different receivers share a correct sender.
 ## The round's bound bit
 
 `NetworkState.bound` is the bit the round announces on its return labels (D29). It is auxiliary
-state: no program reads it, and the three return transitions of `GBCA/ABDY/Implementation.lean`
-are the only transitions that touch it. `boundOf` computes the bit from the round's sent sets,
-the corrupted set and the outcome; a return announces the bit already on record if the round has
-returned before, and `boundOf`'s otherwise, and writes it back, so one round announces one bit on
-all of its returns.
+state: no program reads it, and the three return transitions of the algorithm
+(`GBCA/ABDY/Algorithm.lean`) are the only transitions that touch it. `boundOf` computes the bit
+from the round's sent sets, the corrupted set and the outcome; a return announces the bit already
+on record if the round has returned before, and `boundOf`'s otherwise, and writes it back, so one
+round announces one bit on all of its returns.
 
 ## Model and deviations
 
@@ -286,7 +286,7 @@ theorem mem_recordGBCASend {w : NetworkState n} {j : Fin n} {m : GBCA.ByABDY.Mes
 end NetworkState
 
 
-/-- **The state of one GBCA implementation instance**: the `n` round records beside the round's
+/-- **The composed state of one graded-agreement round**: the `n` round records beside the round's
 network state. -/
 abbrev ImplementationState (n : ℕ) : Type := (∀ _ : Fin n,
   RoundRecord n) × GBCA.ByABDY.NetworkState n
@@ -342,11 +342,11 @@ other projection of the round passes through it. -/
 @[simp] theorem setBound_bound (s : ImplementationState n) (β : Bool) :
     (s.setBound β).bound = some β := rfl
 
-/-- Dot notation resolves against `ImplementationState`, so the rule table and the
+/-- Dot notation resolves against `ImplementationState`, so the algorithm and the
 refinement read the pair in the four names the algorithm uses. -/
 example (s : ImplementationState n) (i j : Fin n) : s.received i j = (s.1 i).received j := rfl
 
-/-- The initial implementation state. -/
+/-- The initial composed state. -/
 def initial (n : ℕ) : ImplementationState n :=
   (fun _ => RoundRecord.initial n, GBCA.ByABDY.NetworkState.initial n)
 

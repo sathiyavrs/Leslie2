@@ -352,17 +352,17 @@ The first of the two implementations of graded agreement, and the protocol built
 
 The first implementation of graded agreement calls no sub-protocol: it is ABDY22's Algorithm~6 transcribed in full, over five message levels.
 The depth of those levels is what the grade-$1$ evidence buys (D18): $f{+}1$ $\mathrm{BIND}\,v$ receipts exceed the corruption budget, so a correct sender stands behind every grade-$1$ output, and that sender's own wait condition is the $n{-}f$ $\mathrm{VOTE}\,v$ quorum the binding argument of~\cite{ABDY22} counts.
-The round record holds one process's state in the graded-agreement round, and the definition below reads the round as one per-round PLTS, which is the form Theorem~\ref{thm:gbca-implementation-refines-specification} is proved against.
+The round record holds one process's state in the graded-agreement round, and the definition below gives the algorithm that round runs, which is the form Theorem~\ref{thm:aba-gbca-composition-by-abdy-refines-specification} is proved against.
 Its state is the pair of the $n$ round records and the round's own network state, and its guards read that pair through four accessors.
 Beside the message sets and the corrupted set that network state holds the round's bound bit, written at the round's first return and announced on every return of the round (D29).
 It is computed from the round's sent sets, the corrupted set and the graded outcome, and it enters no guard of the algorithm.
 Definitions~\ref{def:aba-programs} and~\ref{def:aba-network} below are where each of those guards is written against one process record.
-The round record and the round's network state are in \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/MessagesAndRecords}, and the round itself is in \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Implementation}.
+The round record and the round's network state are in \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/MessagesAndRecords}, and the algorithm is in \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Algorithm}.
 
 \input{nodes-min/def-aba-round-messages}
-\input{nodes-min/def-aba-gbca-implementation}
+\input{nodes-min/def-aba-gbca-algorithm-by-abdy}
 
-\blueprintfig{fig-gbca-impl}{The GBCA implementation instance \leandecl{PLTS.ABA.GBCA.ByABDY.implementation}, ABDY22's Algorithm~6 (D18): the per-process round automaton and, framed, the authenticated set-based network of D5.
+\blueprintfig{fig-gbca-impl}{The round's graded-agreement composition \leandecl{PLTS.ABA.GBCA.ByABDY.composition}, running ABDY22's Algorithm~6 (D18): the per-process round automaton and, framed, the authenticated set-based network of D5.
 Each return box carries the bit its label announces: the grade-2 and grade-1 returns the bit they hand out, the grade-0 return the bit read off the sent sets.
 The network holds that bit for the round as a ghost, written at the first return and announced at every return, and no program's record holds it (D29).}
 
@@ -384,7 +384,7 @@ A sub-protocol may be exchanged for its specification where it is a component of
 The component boundary is where the chain passes from implementation to specification: $\abdy{\mathrm{protocol}}(P)$ is the system that runs, everything above it is specification, and the first step is accordingly an inclusion.
 The composed system holds one graded-agreement instance per round at every moment, and a round instance carries no termination flag, so it answers a send or a delivery at a process the protocol has terminated (D22).
 Graded agreement is a parallel component of the composed system, which is what the substitution congruence consumes.
-See \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Components}, \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Composition}, \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/CompositionStepInversion}, \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/ProjectsOntoImplementation}, \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/RoundFamilyOwnedLabels}, \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Substitution}, \leanmodule{Leslie2Protocols/ABA/Composition/Hybrid} and \leanmodule{Leslie2Protocols/ABA/Implementation/ABDY/CompositionChain}.
+See \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Components}, \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Composition}, \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/CompositionStepInversion}, \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Algorithm}, \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/RoundFamilyOwnedLabels}, \leanmodule{Leslie2Protocols/ABA/Composition/Hybrid} and \leanmodule{Leslie2Protocols/ABA/Implementation/ABDY/CompositionChain}.
 
 \input{nodes-min/def-aba-gbca-instance-by-abdy}
 \input{nodes-min/def-aba-composed}
@@ -411,17 +411,16 @@ The \texttt{inputLoop} self-loop absorbs $\mathrm{callABA}$ at a process whose i
 \subsection{The refinements}
 
 The work that carries this implementation into Transition System~2 is done once, on one round instance.
-The relation reads the specification's call entries, returns and corrupted set straight off the implementation state, and certifies the two fields the protocol does not hold, $excluded$ and $grade$, by \emph{receipt patterns}: $F$-blind counts on the delivered sets, monotone along every execution, that witness the value of such a field; an exclusion is fired on demand, as a two-step weak run under a return that needs it, which is why the obligation is discharged by a weak transition rather than by a single step.
+The relation reads the specification's call entries, returns and corrupted set straight off the composed state, and certifies the two fields the protocol does not hold, $excluded$ and $grade$, by \emph{receipt patterns}: $F$-blind counts on the delivered sets, monotone along every execution, that witness the value of such a field; an exclusion is fired on demand, as a two-step weak run under a return that needs it, which is why the obligation is discharged by a weak transition rather than by a single step.
 The exclusion set is also an equation on the round's bound bit: it is empty while the bit is unwritten and the singleton of the bit's complement once a return has written it.
 See \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Invariant}, \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/ExclusionCertificate}, \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/SpecificationRelation} and \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/RefinesSpecification}.
 
-\input{nodes-min/thm-gbca-implementation-refines-specification}
+\input{nodes-min/thm-aba-gbca-composition-by-abdy-refines-specification}
 
-\blueprintfig{fig-gbca-sim}{The GBCA instance forward simulation \leandecl{PLTS.ABA.GBCA.ByABDY.refinesSpecification}, along the relation \leandecl{PLTS.ABA.GBCA.ByABDY.specificationRelation}: implementation rows above, specification-instance states below, dashed verticals the relation.
+\blueprintfig{fig-gbca-sim}{The forward simulation \leandecl{PLTS.ABA.GBCA.ByABDY.refinesSpecification} of the round's composition, along the relation \leandecl{PLTS.ABA.GBCA.ByABDY.specificationRelation}: the algorithm's transitions above, specification-instance states below, dashed verticals the relation.
 A return whose bit the specification has not yet excluded is answered by a weak run, mapping to the weak step $\mathrm{bindUnset};\mathrm{ret}$ whose excluded bit is supplied by the return's own exclusion certificate; a return whose exclusion has already happened maps to a single graded specification return.
 The relation also reads $excluded$ off the network state's bound bit: empty while the bit is unwritten, and the singleton of the bit's complement once a return has written it.}
 
-\input{nodes-min/thm-aba-gbca-instance-refines-specification}
 \input{nodes-min/thm-aba-protocol-composed}
 
 \section{The hybrid and the ABDY chain}

@@ -1005,7 +1005,7 @@ Each is one automaton read on the pair of components that hold its own state.
 The graded-agreement inventory is read on the $n$ round records beside the
 round's network state, which is the state one round instance runs on, and
 that is how the refinement proved of it transports
-(Theorem~\ref{thm:aba-gbca-instance-refines-specification}).
+(Theorem~\ref{thm:aba-gbca-composition-by-abdy-refines-specification}).
 The round-loop inventory is read on the round-loop records beside the DECIDED
 network, which is the state the core simulation's relation is defined on
 (Theorem~\ref{thm:aba-hybrid-spec}).
@@ -1092,13 +1092,13 @@ below.
 
 The first implementation of graded agreement calls no sub-protocol: it is
 ABDY22's Algorithm~6 transcribed in full, over five message levels.
-The round record of one process is its state, and the round is read as one
-per-round PLTS, which is the form Theorem~\ref{thm:gbca-implementation-refines-specification} is proved
-against.
+The round record of one process is its state, and the round is given by the algorithm that runs
+over the $n$ records beside the round's network state, which is the form
+Theorem~\ref{thm:aba-gbca-composition-by-abdy-refines-specification} is proved against.
 
 The round record and the round's network state are in
-\leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/MessagesAndRecords}, and the round itself is in
-\leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Implementation}.
+\leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/MessagesAndRecords}, and the algorithm is in
+\leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Algorithm}.
 
 \input{nodes/def-aba-round-messages}
 
@@ -1163,17 +1163,17 @@ The round record and the round's network state are in
 \end{algorithm}
 
 
-\input{nodes/def-aba-gbca-implementation}
+\input{nodes/def-aba-gbca-algorithm-by-abdy}
 
-\blueprintfig{fig-gbca-impl}{The GBCA implementation instance \leandecl{PLTS.ABA.GBCA.ByABDY.implementation} (Algorithm~\ref{alg:gbca-impl}, D18): the per-process round automaton and, framed, the authenticated set-based network.
+\blueprintfig{fig-gbca-impl}{The round's graded-agreement composition \leandecl{PLTS.ABA.GBCA.ByABDY.composition}, running Algorithm~\ref{alg:gbca-impl} (D18): the per-process round automaton and, framed, the authenticated set-based network.
 On a call a process multicasts $\langle\mathrm{INPUT},b\rangle$ and relays it after $f{+}1$ receipts; an $n{-}f$ quorum at each level produces the next multicast $\langle\mathrm{ECHO},b\rangle$, $\langle\mathrm{VOTE},v\rangle$, $\langle\mathrm{BIND},v\rangle$, then $\langle\mathrm{ECHO5},v\rangle$, the levels from $\mathrm{BIND}$ down requiring the process's own send at the level below.
 The returns are $(b,2)$ on an $n{-}f$ ECHO5-$b$ quorum, $(b,1)$ on an $n{-}f$ any-ECHO5 quorum with $f{+}1$ BIND-$b$ and $|\mathrm{Valid}|>1$, and $(\bot,0)$ on an $n{-}f$ ECHO5-$\bot$ quorum with $|\mathrm{Valid}|>1$: the three cases of the last wait-until block of Algorithm~\ref{alg:gbca-impl}, taken as the if/elif/else chain that block writes, so a return denies the cases above it and requires the process's own ECHO5.
 Each return box also carries the bit its label announces: the grade-2 and grade-1 returns the bit they hand out, the grade-0 return the bit read off the sent sets.
 The dashed local state is the D5 network: per-sender sent and received message sets, adversary $\mathrm{deliver}$, Byzantine injection for $j\in F$, and the round's bound bit, a ghost written at the first return and announced at every return (D29).}
 
-The Lean encoding of Algorithm~\ref{alg:gbca-impl} is the round-$r$ instance
-$\mathrm{GBCA.ByABDY.implementation}$, an LTS over the shared label alphabet of the
-development.
+The Lean encoding of Algorithm~\ref{alg:gbca-impl} is the algorithm
+$\mathrm{ImplementationStep}$, a relation on the state the round-$r$ composition runs on, over the
+shared label alphabet of the development.
 Fix the parameters $n$ and $f$ with $3f < n$.
 Write $[n]$ for the process identifiers and $F \subseteq [n]$ for the corrupted
 set.
@@ -1371,7 +1371,7 @@ Case (c) returns no bit.
 The depth is what the grade-$1$ evidence buys (D18): $f{+}1$ $\mathrm{BIND}\,v$ receipts exceed the corruption budget, so they put a correct $\mathrm{BIND}\,v$ sender behind every grade-$1$ output, and that sender's own wait condition is an $n{-}f$ $\mathrm{VOTE}\,v$ quorum over the write-once $\mathrm{VOTE}$ level --- the object the binding argument of~\cite{ABDY22} counts.
 The prose preceding Algorithm~6 in~\cite{ABDY22} says ``upon receiving $\mathrm{echo4}$ messages from $2t+1$ parties'' where its own pseudocode says $n - t$.
 The two coincide only at $n = 3t+1$, and the encoding follows the pseudocode, $n - f$.
-The $excluded$ and $grade$ fields of Transition System~2 are abstractions of these receipt patterns and belong to the specification alone; Theorem~\ref{thm:gbca-implementation-refines-specification} supplies them from the receipts.
+The $excluded$ and $grade$ fields of Transition System~2 are abstractions of these receipt patterns and belong to the specification alone; Theorem~\ref{thm:aba-gbca-composition-by-abdy-refines-specification} supplies them from the receipts.
 
 The inventory above is one rule table, and the composition of Definition~\ref{def:aba-gbca-instance-by-abdy} is $n$ programs beside a network.
 They are two presentations of the same round on the same state, and each rule of the table is a rule of the composition with its participants named.
@@ -1452,9 +1452,8 @@ The instance of Definition~\ref{def:aba-gbca-instance-by-abdy} is drawn to own i
 See \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Components},
 \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Composition},
 \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/CompositionStepInversion},
-\leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/ProjectsOntoImplementation},
+\leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Algorithm},
 \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/RoundFamilyOwnedLabels},
-\leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Substitution},
 \leanmodule{Leslie2Protocols/ABA/Composition/Hybrid} and
 \leanmodule{Leslie2Protocols/ABA/Implementation/ABDY/CompositionChain}.
 
@@ -1721,16 +1720,14 @@ Graded agreement is carried to implementation level, and the work that carries t
 Everything after it transports that single result: first to the round instance of the protocol, then to the family of rounds, and then into the composed system.
 The gather-based implementation is carried by the refinements of Section~\ref{sec:aba-gather}, transported the same way.
 
-\input{nodes/thm-gbca-implementation-refines-specification}
+\input{nodes/thm-aba-gbca-composition-by-abdy-refines-specification}
 
-\blueprintfig{fig-gbca-sim}{The GBCA instance forward simulation \leandecl{PLTS.ABA.GBCA.ByABDY.refinesSpecification}, along the relation \leandecl{PLTS.ABA.GBCA.ByABDY.specificationRelation}: implementation rows above, specification-instance states below, dashed verticals the relation.
-The implementation call, the network deliveries (including Byzantine injection), and the graded returns align to the specification's $\mathrm{call}$, its stutter, and its graded returns, with $F$ aligned in both systems.
-Every delivery, relay, echo, vote, bind and echo5 row maps to a specification stutter, and the implementation call maps to the specification call.
+\blueprintfig{fig-gbca-sim}{The forward simulation \leandecl{PLTS.ABA.GBCA.ByABDY.refinesSpecification} of the round's composition, along the relation \leandecl{PLTS.ABA.GBCA.ByABDY.specificationRelation}: the algorithm's transitions above, specification-instance states below, dashed verticals the relation.
+The call, the network deliveries (including Byzantine injection), and the graded returns align to the specification's $\mathrm{call}$, its stutter, and its graded returns, with $F$ aligned in both systems.
+Every delivery, relay, echo, vote, bind and echo5 transition maps to a specification stutter, and the call maps to the specification call.
 A return whose bit the specification has not yet excluded is answered by a weak run: it maps to the weak step $\mathrm{bindUnset};\mathrm{ret}$, whose $f{+}1$ support is supplied by the $input\_support$ invariant and whose excluded bit is supplied by the return's own exclusion certificate.
-Every return row does the same case split on $excluded$, grade-0 returns included, however many returns preceded it; a return whose exclusion has already happened maps to a single graded specification return.
+Every return does the same case split on $excluded$, grade-0 returns included, however many returns preceded it; a return whose exclusion has already happened maps to a single graded specification return.
 The relation also reads $excluded$ off the network state's bound bit: empty while the bit is unwritten, and the singleton of the bit's complement once a return has written it.}
-
-\input{nodes/thm-aba-gbca-instance-refines-specification}
 
 \input{nodes/thm-aba-protocol-composed}
 

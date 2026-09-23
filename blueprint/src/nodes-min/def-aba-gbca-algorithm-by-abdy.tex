@@ -1,0 +1,8 @@
+\begin{definition}[The algorithm of the round's graded-agreement composition]
+  \label{def:aba-gbca-algorithm-by-abdy}
+  \lean{PLTS.ABA.GBCA.ByABDY.boundOf}\lean{PLTS.ABA.GBCA.ByABDY.ImplementationStep}\lean{PLTS.ABA.GBCA.ByABDY.composition_projects}\leanok
+  \uses{def:aba-labels, def:aba-parameters, def:aba-round-messages}
+  The algorithm one graded-agreement round runs, as a relation on the pair of local states that hold a round's state --- the $n$ round records beside the round's network state --- transcribing ABDY22's Algorithm~6 over the five message levels, one transition per line (D18): \leandecl{PLTS.ABA.GBCA.ByABDY.ImplementationStep}.
+  At a label of the round's interface, every transition of the round's composition is the algorithm's transition at the specification label that interface label projects to, one step for one step: \leandecl{PLTS.ABA.GBCA.ByABDY.composition_projects}.
+  The network state holds one field more, the round's bound bit: the three return transitions announce \leandecl{PLTS.ABA.GBCA.ByABDY.boundOf} of the round's sent sets, the corrupted set and the outcome where the round has no bit on record, and the bit on record otherwise, and write it back (D29).
+\end{definition}

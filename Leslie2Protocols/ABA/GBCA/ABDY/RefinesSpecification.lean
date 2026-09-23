@@ -7,30 +7,36 @@ Authors: Sathiya / Claude
 import Leslie2Protocols.ABA.GBCA.ABDY.SpecificationRelation
 
 /-!
-# The per-instance GBCA refinement
+# The refinement of the round's graded-agreement composition
 
-The round-`r` implementation instance (`GBCA.ByABDY.implementation`, ABDY22 Algorithm 6 —
-all five message levels, D18) forward-simulates the round-`r` specification
-instance (`GBCA.specInst`, the exclusion-set specification, D19):
-`GBCA.ByABDY.refinesSpecification`, along `specificationRelation`.
+`GBCA.ByABDY.refinesSpecification`: the round-`r` composition (`GBCA.ByABDY.composition`,
+`ABA/GBCA/ABDY/Composition.lean`) forward-simulates the graded agreement specification read over
+the round's interface (`GBCA.specificationOverRoundAlphabet`), along `specificationRelation`
+(`ABA/GBCA/ABDY/SpecificationRelation.lean`).
 
-Every return row does the same decidable case split on the specification's `excluded`. Where the
-exclusion is missing, the row is answered by the two-step weak run of
+A transition of the composition is one transition of `ImplementationStep`
+(`GBCA.ByABDY.composition_projects`), that transition is answered by a weak run of the
+specification (`specificationRelation_row`), and the run is lifted to the round's interface along a
+section of `specificationLabelMap` — which is where a Byzantine handshake transition is answered by
+the specification's own call or return (D11). `composition_specificationTraces` is the
+trace-distribution inclusion the simulation yields.
+
+Every return of the algorithm does the same decidable case split on the specification's `excluded`.
+Where the exclusion is missing, the return is answered by the two-step weak run of
 `GBCA/ABDY/SpecificationRelation.lean`, whose excluded bit comes from the return's own exclude
-certificate; where the exclusion is on record, the row is answered by a single graded specification
-return. A `fail` is answered by the specification's corruption, and
+certificate; where the exclusion is on record, the return is answered by a single graded
+specification return. A `fail` is answered by the specification's corruption, and
 `implementationSpecification_corrupt_F_eq` keeps the two `corrupt` functions equal on aligned
 corrupted sets.
 
-Binding is stated on the labels of a trace (`GBCA.BindingTrace`), so the
-soundness inclusion of that simulation carries it: `GBCA.ByABDY.implementation_refines` is
-the inclusion and `GBCA.ByABDY.implementation_binding` is the specification's
-`GBCA.specInst_binding` at the implementation instance.
+`specificationCorruptionAct` is the broadcast corruption act the lifted specification carries at
+the extended alphabet. `specificationRelation_init` and `refinesSpecification_failAct` are the two
+premises `ForwardSimulation.family` (`Framework/FamilySimulation.lean`) asks of the round-indexed
+family: the relation holds at the initial states, and it survives the broadcast corruption. The
+family lifting that consumes them is `ABA/Implementation/ABDY/CompositionChain.lean`.
 
-The family congruence `ForwardSimulation.family` (`Framework/FamilySimulation.lean`) reaches
-`ABA/GBCA/ABDY/Substitution.lean` and
-`ABA/Implementation/ABDY/CompositionChain.lean` along this file, which also supplies the broadcast
-ingredient that congruence consumes (`specificationRelation_corrupt`).
+Binding is stated on the labels of a trace (`GBCA.BindingTraceExtended`), so the inclusion carries
+it; `ABA/GBCA/ABDY/Binding.lean` takes that step.
 -/
 
 open Stream'
@@ -39,30 +45,24 @@ namespace PLTS
 namespace ABA
 namespace GBCA.ByABDY
 
+open Implementation Composition
+
 variable {P : Parameters}
 
-/-! ### The refinement -/
+/-! ### The relation across one transition -/
 
-/-- The two `corrupt` functions stay equal on aligned corrupted sets (a strong per-coordinate `fail`
-match, as required by the family lift). -/
-private theorem implementationSpecification_corrupt_F_eq {t : SpecState P.n} {s : ImplementationState P.n}
-    (hF : t.F = s.F) (id : Fin P.n) :
-    (t.corrupt P id).F = (s.corrupt P id).F := by
-  rw [ImplementationState.corrupt_F]
-  unfold SpecState.corrupt
-  by_cases hc : id ∉ s.F ∧ s.F.card < P.f
-  · rw [if_pos (by rw [hF]; exact hc), if_pos hc]
-    simp [hF]
-  · rw [if_neg (by rw [hF]; exact hc), if_neg hc]
-    exact hF
-
-/-- **The per-instance GBCA refinement**: the round-`r` implementation
-instance refines the round-`r` specification instance — a forward simulation
-of the implementation by the specification along `specificationRelation`. -/
-theorem refinesSpecification (P : Parameters) (r : ℕ) :
-    ForwardSimulation (implementation P r) (specInst P r) (specificationRelation P r) := by
-  constructor
-  intro q1 q2 hR l μ1 hstep q1' hq1'
+/-- **The relation across one transition**: every transition of `ImplementationStep` at a related
+pair is answered by a weak run of the graded agreement specification, and the answer is again
+related. The internal transitions stutter; the call, the call loop and `fail` are answered by the
+specification's own transitions; a return is answered by a graded specification return, preceded by
+`bindUnset` where the bit that return needs excluded is not excluded yet. -/
+theorem specificationRelation_row (P : Parameters) (r : ℕ) (q1 : ImplementationState P.n)
+    (q2 : SpecState P.n) (hR : specificationRelation P r q1 q2) (l : Label P.n)
+    (μ1 : PMF (ImplementationState P.n)) (hstep : ImplementationStep P r q1 l μ1)
+    (q1' : ImplementationState P.n) (hq1' : q1' ∈ μ1.support) :
+    ∃ q2', ((l = Silent.τ ∧ (specInst P r).weakLSilent q2 q2') ∨
+      (¬ l = Silent.τ ∧ (specInst P r).weakLStep q2 l q2')) ∧
+      specificationRelation P r q1' q2' := by
   have hRR : SpecificationRelation P q1 q2 := hR
   have hI' : Invariant P q1' := hRR.invariant.step hstep hq1'
   cases hstep with
@@ -575,86 +575,93 @@ theorem refinesSpecification (P : Parameters) (r : ℕ) :
     · rw [corrupt_excluded, ImplementationState.corrupt_bound]
       exact hRR.bound_excluded
 
-/-! ### Broadcast compatibility of the simulation relation
+/-! ### The refinement
 
-The round-indexed family lift of the refinement takes `fail` as a broadcast act, applied to every
-round at once. It needs the per-round relation to be preserved by that act. The specification
-corruption projections (`corrupt_call`/`corrupt_ret`/`corrupt_excluded`/`corrupt_grade`) come from
-`ABA/GBCA/Specification.lean`; the two `corrupt` functions stay equal by
-`implementationSpecification_corrupt_F_eq`. The statement is proved directly rather than through
-`refinesSpecification`, whose `fail` case only yields an existential match. Its consumer is the
-round instance's family lifting
-(`ABA/GBCA/ABDY/Substitution.lean`). -/
+The composition's answer to a transition is the algorithm's answer, read through
+`specificationRelation_row`: the projection `composition_projects` is strong and functional, so one
+step of the composition costs one step of the algorithm and nothing of the matching is reproved
+here. The specification's weak answer is finally lifted to the round's interface along a section of
+`specificationLabelMap`. This is where a Byzantine handshake transition is answered by the
+specification's own call or return (D11). -/
 
-/-- **Broadcast compatibility**: `specificationRelation` is preserved by the synchronized corruption
-of both systems. The two `corrupt`s share the guard `id ∉ F ∧ |F| < f` and `specificationRelation`
-aligns the `F`s, so the `if`-conditions agree; every other field is untouched by corruption. -/
-theorem specificationRelation_corrupt (P : Parameters) (r : ℕ) (id : Fin P.n)
-    {x : ImplementationState P.n} {y : SpecState P.n} (h : specificationRelation P r x y) :
-    specificationRelation P r (x.corrupt P id) (y.corrupt P id) := by
-  have hR : SpecificationRelation P x y := h
-  exact
-    { invariant := hR.invariant.step (ImplementationStep.fail (r := r) x id)
-        (by rw [PMF.mem_support_pure_iff])
-      call_eq := fun k => by
-        rw [corrupt_call, ImplementationState.corrupt_process]
-        exact hR.call_eq k
-      ret_eq := fun k => by
-        rw [corrupt_ret, ImplementationState.corrupt_process]
-        exact hR.ret_eq k
-      F_eq := implementationSpecification_corrupt_F_eq hR.F_eq id
-      exclusion_certificate := fun b hb => by
-        rw [corrupt_excluded] at hb
-        exact ExclusionCertificate.mono
-          (fun i j m hm => by rw [ImplementationState.corrupt_received]; exact hm)
-          (fun j w hw => by rw [ImplementationState.corrupt_process]; exact hw)
-          (ImplementationState.corrupt_F_subset x id)
-          (hR.exclusion_certificate b hb)
-      grade2_evidence := fun hg => by
-        rw [corrupt_grade] at hg
-        obtain ⟨v, i, hi⟩ := hR.grade2_evidence hg
-        exact ⟨v, i, by rw [ImplementationState.corrupt_receivedCount]; exact hi⟩
-      grade0_evidence := fun hg => by
-        rw [corrupt_grade] at hg
-        obtain ⟨i, hi⟩ := hR.grade0_evidence hg
-        exact ⟨i, by rw [ImplementationState.corrupt_receivedCount]; exact hi⟩
-      bound_excluded := by
-        rw [corrupt_excluded, ImplementationState.corrupt_bound]
-        exact hR.bound_excluded }
+/-- **The refinement of the round's graded-agreement composition**: the round-`r` composition is
+forward simulated by the graded agreement specification, read over the round's interface. -/
+theorem refinesSpecification (P : Parameters) (r : ℕ) :
+    ForwardSimulation (composition P r) (specificationOverRoundAlphabet P r)
+    (specificationRelation P r) := by
+  constructor
+  intro q₁ q₂ hR l μ hstep q₁' hq₁'
+  obtain ⟨l₀, hpull, halg⟩ := composition_projects P r q₁ l μ hstep
+  obtain ⟨s', hdis, hrel⟩ := specificationRelation_row P r q₁ q₂ hR l₀ μ halg q₁' hq₁'
+  refine ⟨s', ?_, hrel⟩
+  rcases hdis with ⟨hτ, hweak⟩ | ⟨hτ, hweak⟩
+  · exact Or.inl ⟨specificationLabelMap_eq_tau (by rw [hpull, hτ]; rfl),
+      weakLSilent_specificationOverRoundAlphabet P r hweak⟩
+  · refine Or.inr ⟨?_, weakLStep_specificationOverRoundAlphabet P r hτ hpull hweak⟩
+    intro hl
+    refine hτ ?_
+    have h2 : specificationLabelMap P.n (Silent.τ : ExtendedLabel P.n) = some l₀ := by
+      rw [← hl]; exact hpull
+    rw [specificationLabelMap_tau] at h2
+    exact (Option.some.inj h2).symm
 
-/-! ### Binding at the implementation instance
-
-Binding is stated on the labels of a trace (`BindingTrace`, `ABA/GBCA/SpecificationSafety.lean`),
-so a trace-distribution inclusion carries it. The inclusion is the soundness of
-`refinesSpecification`, and `safety_transfer` moves the property across it. -/
-
-/-- The soundness inclusion of the per-instance refinement: every trace
-distribution achievable by the round-`r` implementation instance is achievable
-by the round-`r` specification instance. -/
-theorem implementation_refines (P : Parameters) (r : ℕ) :
-    achievableTraceDists (implementation P r) ⊆ achievableTraceDists (specInst P r) :=
-  (ForwardSimulation.toProbabilistic (implementation_isLTS P r) (specInst_isLTS P r)
+/-- The soundness inclusion of the refinement: every trace distribution achievable by the round-`r`
+composition is achievable by the specification read over the round's interface. -/
+theorem composition_specificationTraces (P : Parameters) (r : ℕ) :
+    achievableTraceDists (composition P r) ⊆ achievableTraceDists
+      (specificationOverRoundAlphabet P r) :=
+  (ForwardSimulation.toProbabilistic (composition_isLTS P r)
+    (specificationOverRoundAlphabet_isLTS P r)
     (specificationRelation_init P r) (refinesSpecification P r)).achievableTraceDists_subset
 
-/-- **Binding of the implementation instance, on a trace.** Every
-positive-probability trace of the round-`r` implementation instance is bound to
-one bit: all its round-`r` returns announce that bit, and every one of them that
-hands out a value hands out it. The specification has the property
-(`specInst_binding`) and `implementation_refines` includes the trace distributions. -/
-theorem implementation_binding (P : Parameters) (r : ℕ) :
-    ∀ D ∈ achievableTraceDists (implementation P r), ∀ t, D t ≠ 0 →
-      BindingTrace P r t :=
-  safety_transfer (implementation_refines P r) (specInst_binding P r)
+/-! ### What the family lift will need
+
+The two premises of `ForwardSimulation.family` for the round-indexed family: the relation holds at
+the initial states (`specificationRelation_init`, `GBCA/ABDY/SpecificationRelation.lean`), and it
+survives the broadcast corruption. -/
+
+/-- The broadcast corruption act on a specification state, over the extended
+alphabet: `GBCA.failAct` taken on the extended `fail` label. -/
+def specificationCorruptionAct (P : Parameters) : ExtendedLabel P.n → GBCA.SpecState P.n →
+  GBCA.SpecState P.n
+  | Sum.inl (.fail k), s => s.corrupt P k
+  | _, s => s
+
+/-- **Broadcast compatibility**: corruption preserves the relation. The network state's corrupted
+set is the one the algorithm reads, so the two guards `k ∉ F ∧ |F| < f` agree and
+`GBCA.ByABDY.specificationRelation_corrupt` applies verbatim (D1). -/
+theorem refinesSpecification_failAct (P : Parameters) :
+    ∀ l : ExtendedLabel P.n, isFailLabel l → ∀ (r : ℕ) (σ : GBCA.ByABDY.ImplementationState P.n)
+      (s : GBCA.SpecState P.n), specificationRelation P r σ s →
+      specificationRelation P r (corruptionAct P l σ) (specificationCorruptionAct P l s) := by
+  rintro l hl r ⟨u, w⟩ s hR
+  cases l with
+  | inr e => cases e <;> exact hl.elim
+  | inl l₀ =>
+    cases l₀ with
+    | fail k =>
+      have hs : corruptionAct P (Sum.inl (Label.fail k)) (u, w)
+          = GBCA.ByABDY.ImplementationState.corrupt P k (u, w) := composition_corrupt k
+      have hc := GBCA.ByABDY.specificationRelation_corrupt P r k hR
+      rw [← hs] at hc
+      exact hc
+    | tau => exact hl.elim
+    | callABA id b => exact hl.elim
+    | retABA id b => exact hl.elim
+    | callG r' id b => exact hl.elim
+    | retG r' id out => exact hl.elim
+    | callW r' id => exact hl.elim
+    | retW r' id b => exact hl.elim
 
 /-! ### Mechanical axiom check -/
 
-/-- info: 'PLTS.ABA.GBCA.ByABDY.implementation_refines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.GBCA.ByABDY.refinesSpecification' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms implementation_refines
+#print axioms refinesSpecification
 
-/-- info: 'PLTS.ABA.GBCA.ByABDY.implementation_binding' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.GBCA.ByABDY.composition_specificationTraces' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms implementation_binding
+#print axioms composition_specificationTraces
 
 end GBCA.ByABDY
 end ABA
