@@ -28,9 +28,9 @@
   The visible return is the exception: the network's own $\mathrm{retByzantine}$ transition requires $j \in F$ and no DECIDED evidence, and the self-loop is its other half.
   It runs over the extended alphabet $\mathrm{ExtendedLabel}(n) = \mathrm{Label}(n) \oplus \mathrm{NetworkEvent}(n)$, where $\mathrm{NetworkEvent}$ names the rendezvous the shared alphabet cannot: the round multicast $\mathrm{gbcaSend}(r,j,m)$ and the round delivery $\mathrm{gbcaDeliver}(r,i,j,m)$; the DECIDED relay $\mathrm{decidedSend}(j,b)$ and the DECIDED delivery $\mathrm{decidedDeliver}(i,j,b)$; the fused coin return $\mathrm{retWPublish}(r,id,c,b)$, which carries beside the coin the payload to be published (D10); the graded-agreement call $\mathrm{gbcaCallLoop}(r,id,b)$ against an already-opened round record; and the five Byzantine handshake transitions $\mathrm{byzantineCallG}$, $\mathrm{byzantineCallGLoop}$, $\mathrm{byzantineRetG}$, $\mathrm{byzantineCallW}$ and $\mathrm{byzantineRetW}$ (D11).
   The set $\mathrm{networkEventLabels}(n)$ of these labels is what the composition hides, the silent label of $\mathrm{ExtendedLabel}(n)$ being that of $\mathrm{Label}(n)$.
-  Every transition is Dirac, and $terminate$ is the one transition of the inventory that fires on $\tau$.
+  Every transition is Dirac, and $terminate$ is the one transition of the list that fires on $\tau$.
   While $j$'s program stands unreplaced, every label of either alphabet has a transition of process $j$, the participant's or an idle self-loop, with two exceptions: $\mathrm{byzantineCallG}(r,k,b)$ and $\mathrm{byzantineRetG}(r,k,out,bnd)$ have no transition at the process $k$ they name (D11, D22), and a corrupted process's round messages enter through the network's own $\mathrm{byzantineGBCA}$ injection instead.
   Once the program is replaced the labels of $\mathrm{actsAt}\,j$ join those two (D23).
   Full synchronisation therefore lets a label's owner move while every other program stands.
-  Full transition inventory, forty-three transitions --- twenty-nine shared, fourteen of ABDY22's: \leandecl{PLTS.ABA.ABDY.ABAProgram}.
+  The full list of transitions, forty-three of them --- twenty-nine shared, fourteen of ABDY22's: \leandecl{PLTS.ABA.ABDY.ABAProgram}.
 \end{definition}

@@ -26,7 +26,7 @@ Where the exclusion is missing, the return is answered by the two-step weak run 
 `GBCA/ABDY/SpecificationRelation.lean`, whose excluded bit comes from the return's own exclude
 certificate; where the exclusion is on record, the return is answered by a single graded
 specification return. A `fail` is answered by the specification's corruption, and
-`implementationSpecification_corrupt_F_eq` keeps the two `corrupt` functions equal on aligned
+`specificationRelation_corrupt_F_eq` keeps the two `corrupt` functions equal on aligned
 corrupted sets.
 
 `specificationCorruptionAct` is the broadcast corruption act the lifted specification carries at
@@ -549,7 +549,7 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundS
     subst hq1'
     refine ⟨q2.corrupt P id,
       Or.inr ⟨by simp, System.weakLStep_of_step (by simp) (Step.fail q2 id)⟩,
-      hI', ?_, ?_, implementationSpecification_corrupt_F_eq hRR.F_eq id, ?_, ?_, ?_, ?_⟩
+      hI', ?_, ?_, specificationRelation_corrupt_F_eq hRR.F_eq id, ?_, ?_, ?_, ?_⟩
     · intro k
       rw [corrupt_call, RoundState.corrupt_process]
       exact hRR.call_eq k

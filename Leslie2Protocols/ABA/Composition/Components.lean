@@ -44,7 +44,7 @@ at this alphabet. It is a component of both compositions, unchanged.
 
 ## The round loop of one process
 
-`RoundLoopStep` is the algorithm of one process's round loop: the API transitions `callABA` and
+`RoundLoopStep` is the step relation of one process's round loop: the API transitions `callABA` and
 `retABA`, the graded-agreement and coin handshakes, the DECIDED relay and its delivery, and an idle
 transition for every label the process does not act on. It writes no round record. The composed
 system runs `n` of these automata (`roundLoopProgram`) under a full-synchronisation product. The

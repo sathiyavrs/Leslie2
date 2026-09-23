@@ -629,6 +629,7 @@ Transition Systems~2 and~3 are the specifications of the two sub-protocols, give
 Both graded-agreement implementations meet Transition System~2 read over the alphabet a round speaks, along the projection that identifies the Byzantine handshake labels with the specification labels they stand for.
 Binding holds of that reading, so every inclusion into it carries binding.
 See \leanmodule{Leslie2Protocols/ABA/GBCA/Specification},
+\leanmodule{Leslie2Protocols/ABA/GBCA/SpecificationSafety},
 \leanmodule{Leslie2Protocols/ABA/GBCA/SpecificationOverRoundAlphabet} and
 \leanmodule{Leslie2Protocols/ABA/GBCA/BindingOverRoundAlphabet}.
 
@@ -998,19 +999,19 @@ section gives them in the form they run in: the automaton of one process, every
 guard of which reads that process's own record, beside the adversary that holds
 the rest.
 Section~\ref{sec:aba-abdy} gives the same two again at ABDY22's implementation, as
-pseudocode and then as transition inventories in which a guard is read against the
+pseudocode and then as the full lists of transitions in which a guard is read against the
 line of pseudocode it transcribes.
-Each inventory enters the argument at a named point.
+Each list enters the argument at a named point.
 Each is one automaton read on the pair of components that hold its own state.
-The graded-agreement inventory is read on the $n$ round records beside the
+The graded-agreement round's list of transitions is read on the $n$ round records beside the
 round's network state, which is the state one round instance runs on, and
 that is how the refinement proved of it transports
 (Theorem~\ref{thm:aba-gbca-composition-by-abdy-refines-specification}).
-The round-loop inventory is read on the round-loop records beside the DECIDED
+The round loop's list of transitions is read on the round-loop records beside the DECIDED
 network, which is the state the core simulation's relation is defined on
 (Theorem~\ref{thm:aba-hybrid-spec}).
 In both cases the network is a component of the state and not a field of a record,
-so a transition of the inventory and a transition of the composition are written against the
+so a transition of the list and a transition of the composition are written against the
 same object.
 
 The ghost record is written by every transition and read by the two graded-agreement return transitions alone, so the one thing it can affect is the bit such a return announces.
@@ -1372,8 +1373,8 @@ The prose preceding Algorithm~6 in~\cite{ABDY22} says ``upon receiving $\mathrm{
 The two coincide only at $n = 3t+1$, and the encoding follows the pseudocode, $n - f$.
 The $excluded$ and $grade$ fields of Transition System~2 are abstractions of these receipt patterns and belong to the specification alone; Theorem~\ref{thm:aba-gbca-composition-by-abdy-refines-specification} supplies them from the receipts.
 
-The inventory above is one relation on the round's state, and the composition of Definition~\ref{def:aba-gbca-instance-by-abdy} is $n$ programs beside a network.
-They are two presentations of the same round on the same state, and each transition of the inventory is a transition of the composition with its participants named.
+The list above is one relation on the round's state, and the composition of Definition~\ref{def:aba-gbca-instance-by-abdy} is $n$ programs beside a network.
+They are two presentations of the same round on the same state, and each transition of the list is a transition of the composition with its participants named.
 A transition that touches both halves is a rendezvous:
 \leandeclnamed{deliver}{PLTS.ABA.GBCA.ByABDY.Algorithm.deliver} reads the network state's sent set
 in its guard and writes the receiver's received set, so it splits into the two halves of a $\mathrm{gbcaDeliver}$ rendezvous, the network supplying the guard $m \in \mathit{sent}(j)$ and the receiver performing the write.
@@ -1453,8 +1454,11 @@ See \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Components},
 \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/CompositionStepInversion},
 \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Algorithm},
 \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/RoundFamilyOwnedLabels},
-\leanmodule{Leslie2Protocols/ABA/Composition/Hybrid} and
-\leanmodule{Leslie2Protocols/ABA/ABDY/Composition}.
+\leanmodule{Leslie2Protocols/ABA/Composition/Hybrid},
+\leanmodule{Leslie2Protocols/ABA/ABDY/System},
+\leanmodule{Leslie2Protocols/ABA/ABDY/Composition},
+\leanmodule{Leslie2Protocols/ABA/ABDY/Simulation} and
+\leanmodule{Leslie2Protocols/ABA/ABDY/Substitution}.
 
 
 \input{nodes/def-aba-gbca-instance-by-abdy}
@@ -1540,7 +1544,7 @@ The per-process record $\mathrm{RoundLoopState}$, \leandecl{PLTS.ABA.RoundLoopSt
   \item $\mathit{returned}$ --- whether $\mathrm{retABA}$ has fired at this
     process.
 \end{itemize}
-The state a transition of the inventory moves is $\mathrm{ABAState}(P)$,
+The state a transition of the list moves is $\mathrm{ABAState}(P)$,
 \leandecl{PLTS.ABA.ABAState}, read by the four accessors
 \begin{itemize}
   \item $\mathit{processes} : [n] \to \mathrm{RoundLoopState}$ --- the control records,
@@ -1707,7 +1711,7 @@ the GBCA family rules that pair out; the round loop alone guarantees only that
 each process returns at most once, by the flag its return transition sets.
 }
 
-The round-loop inventory is read on a pair of components, as the one above is, and every guard in the table is read at one component: the counts of
+The round loop's list of transitions is read on a pair of components, as the one above is, and every guard in the table is read at one component: the counts of
 \leandeclnamed{decidedSendRelay}{PLTS.ABA.Composition.RoundLoopStep.decidedSendRelay} and \leandeclnamed{ret}{PLTS.ABA.Composition.RoundLoopStep.ret} range over one receiver's own received sets, and the
 soundness guard $b \in decidedSent(j)$ that licenses a delivery is the network's, split from the freshness guard $b \notin decidedDelivered(i)$ and the write at the receiver.
 Definitions~\ref{def:aba-programs} and~\ref{def:aba-network} write the same transitions at the finer cut, where the round loop shares a record with the round records and the DECIDED sets share a component with the round's sent sets.
@@ -1718,6 +1722,11 @@ Definitions~\ref{def:aba-programs} and~\ref{def:aba-network} write the same tran
 Graded agreement is carried to implementation level, and the work that carries the direct implementation is done once, on one round instance.
 Everything after it transports that single result: first to the round instance of the protocol, then to the family of rounds, and then into the composed system.
 The gather-based implementation is carried by the refinements of Section~\ref{sec:aba-gather}, transported the same way.
+See \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Invariant},
+\leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/ExclusionCertificate},
+\leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/SpecificationRelation},
+\leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/RefinesSpecification} and
+\leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Binding}.
 
 \input{nodes/thm-aba-gbca-composition-by-abdy-refines-specification}
 

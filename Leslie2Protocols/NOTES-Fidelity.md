@@ -239,7 +239,7 @@ condition.
 
 ## 4. Guards the specifications do not carry
 
-Algorithm 6's control flow sits in the implementation tables and not in the systems they refine. A
+Algorithm 6's control flow sits in the implementations' transitions and not in the systems they refine. A
 refinement asks only that the implementation move no more freely than its specification, so the gap
 is harmless; what is worth having in one place is whether each guard falls in the implementation or
 in the specification, and whether that placement was chosen or forced.

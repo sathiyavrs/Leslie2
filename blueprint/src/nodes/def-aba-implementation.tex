@@ -4,8 +4,8 @@
   \uses{def:aba-labels, def:aba-parameters, def:aba-round-loop-state, def:relabel, def:synchronised-product, def:process-algebra, def:idle-family}
   A protocol as it runs: $n$ programs, one per process, beside one network and the coin oracle.
   A program reads its own records, its own received sets and its own replacement flag, and nothing else about corruption --- not the corrupted set, not the budget, not another process's status (D23) --- while the adversary holds the round-tagged message sets, the DECIDED sets and the corrupted set with its budget, and it alone has transitions on the Byzantine labels.
-  The system is parametric in three things a graded-agreement implementation supplies: its round message type $M$, its per-process per-round round record $S$, and its transitions, given as a relation embedded in one constructor of the program table.
-  What does not depend on them is written once --- the round loop, the DECIDED relay and its delivery, the coin handshake, corruption, the adversary's table, the composition pipeline
+  The system is parametric in three things a graded-agreement implementation supplies: its round message type $M$, its per-process per-round round record $S$, and its transitions, given as a relation embedded in one constructor of the program's transitions.
+  What does not depend on them is written once --- the round loop, the DECIDED relay and its delivery, the coin handshake, corruption, the adversary's transitions, the composition pipeline
   \[
     \mathrm{system} \;=\;
       \mathrm{abstract}_{\mathrm{hiddenAPI}}\Bigl(

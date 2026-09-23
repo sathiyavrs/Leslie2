@@ -10,7 +10,7 @@
 
 \begin{proof}\leanok
   \uses{def:aba-gbca-instance-by-abdy, def:aba-gbca-algorithm-by-abdy, def:aba-gbca-spec, def:forwardsim, def:weakstep}
-  The route has two halves, and neither needs a coordinate change.
+  The route has two halves.
   The first half reads a transition of the composition as a transition of the algorithm of Definition~\ref{def:aba-gbca-algorithm-by-abdy}.
   The composed state is the pair of the $n$ round records and the round's network state, which are exactly the components the composition puts together, so every transition of the composition is the algorithm's transition at that same state, one step for one step.
   Its label is carried by the partial map $\mathrm{specificationLabelMap}$, which identifies the handshake transitions and the call loop of round $r$ with the specification labels they stand for, and along which the specification instance is read back by the construction $\mathrm{mapIdle}$ of Definition~\ref{def:aba-protocol}.

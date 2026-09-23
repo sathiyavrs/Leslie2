@@ -300,7 +300,7 @@ Transition Systems~2 and~3 are the specifications of the two sub-protocols, give
 The trace form of binding, and its transfer to both implementations, is Theorem~\ref{thm:aba-gbca-binding-trace}.
 Both graded-agreement implementations meet Transition System~2 read over the alphabet a round speaks, along the projection that identifies the Byzantine handshake labels with the specification labels they stand for.
 Binding holds of that reading, so every inclusion into it carries binding.
-See \leanmodule{Leslie2Protocols/ABA/GBCA/Specification}, \leanmodule{Leslie2Protocols/ABA/GBCA/SpecificationOverRoundAlphabet} and \leanmodule{Leslie2Protocols/ABA/GBCA/BindingOverRoundAlphabet}.
+See \leanmodule{Leslie2Protocols/ABA/GBCA/Specification}, \leanmodule{Leslie2Protocols/ABA/GBCA/SpecificationSafety}, \leanmodule{Leslie2Protocols/ABA/GBCA/SpecificationOverRoundAlphabet} and \leanmodule{Leslie2Protocols/ABA/GBCA/BindingOverRoundAlphabet}.
 
 \input{nodes-min/def-aba-gbca-spec}
 
@@ -413,7 +413,7 @@ The \texttt{inputLoop} self-loop absorbs $\mathrm{callABA}$ at a process whose i
 The work that carries this implementation into Transition System~2 is done once, on one round instance.
 The relation reads the specification's call entries, returns and corrupted set straight off the composed state, and certifies the two fields the protocol does not hold, $excluded$ and $grade$, by \emph{receipt patterns}: $F$-blind counts on the delivered sets, monotone along every execution, that witness the value of such a field; an exclusion is fired on demand, as a two-step weak run under a return that needs it, which is why the obligation is discharged by a weak transition rather than by a single step.
 The exclusion set is also an equation on the round's bound bit: it is empty while the bit is unwritten and the singleton of the bit's complement once a return has written it.
-See \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Invariant}, \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/ExclusionCertificate}, \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/SpecificationRelation} and \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/RefinesSpecification}.
+See \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Invariant}, \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/ExclusionCertificate}, \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/SpecificationRelation}, \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/RefinesSpecification} and \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Binding}.
 
 \input{nodes-min/thm-aba-gbca-composition-by-abdy-refines-specification}
 

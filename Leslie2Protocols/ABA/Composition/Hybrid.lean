@@ -40,11 +40,12 @@ both hidden to `τ`, and every remaining label survives both hidings.
 
 `hybrid` is where the two chains of `ABA/Results.lean` meet.
 `ABA/ABDY/Substitution.lean` carries the composed system of ABDY22's protocol
-to it in one stage, and `ABA/AFW/Substitution.lean` the gather-based
-implementation in three. The simulation of `ABA/HybridRefinesSpecification/Simulation.lean` runs
-from `hybrid` on this vocabulary, the non-vacuity witnesses of
-`ABA/HybridRefinesSpecification/NonVacuity.lean` are built with it, and `ABA/Results.lean` reads
-off the protocols' Validity and Agreement guarantee through `safety_transfer`.
+to it in one stage, and `ABA/AFW/Substitution.lean` carries `AFW.composed`, the composed
+system of the gather-based protocol, in three stages. The simulation of
+`ABA/HybridRefinesSpecification/Simulation.lean` runs from `hybrid` on this vocabulary, the
+non-vacuity witnesses of `ABA/HybridRefinesSpecification/NonVacuity.lean` are built with it, and
+`ABA/Results.lean` reads off the protocols' Validity and Agreement guarantee through
+`safety_transfer`.
 -/
 
 namespace PLTS

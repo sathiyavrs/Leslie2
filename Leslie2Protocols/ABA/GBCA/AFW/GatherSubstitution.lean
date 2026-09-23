@@ -35,7 +35,7 @@ Both rounds are LTS, so the substitution reads as an inclusion of achievable tra
 `roundOverBroadcastSpecification_refines`. `gatherSubstitutionRelation_corrupt` states that the
 relation is preserved by corrupting both rounds at once, in the shape the family congruence
 consumes (`ForwardSimulation.family`, `hglob`); the gather instance's own compatibility lemma,
-`Gather.specificationRelation_corrupt`, is in `ABA/Gather/RefinesSpecification.lean`.
+`Gather.specificationRelation_corrupt`, is in `ABA/Gather/SpecificationRelation.lean`.
 -/
 
 namespace PLTS

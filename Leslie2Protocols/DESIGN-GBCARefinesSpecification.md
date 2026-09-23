@@ -487,7 +487,7 @@ that all-⊥ run no bit is ever handed out, and the bit the grade-0 returns anno
 one — `boundOf` reads `true` there, and the run excludes `false` — which is sound because the bit is
 a ghost output and answers no process.
 
-## Invariant inventory
+## The full list of invariants
 
 ### Shared machinery
 

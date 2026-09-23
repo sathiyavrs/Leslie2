@@ -355,7 +355,7 @@ invoke transitivity of simulation — the two routes of `Results.lean`, reproduc
 implementation: `n` programs, each reading its own records and nothing else, beside one network
 adversary holding every sent set and the corrupted set, beside the coin oracle. That shape is the
 same for either implementation of graded agreement — the round loop, the DECIDED sets, the coin
-handshake, corruption, the adversary's table and the composition pipeline are fixed by the round
+handshake, corruption, the adversary's transitions and the composition pipeline are fixed by the round
 interface and the specification — so `ABA/Implementation/System.lean` writes it once, parametric in
 the round message type `M`, the per-process per-round record `S`, the round's transitions, supplied
 as a relation embedded in one constructor of the program's step relation, and the adversary's

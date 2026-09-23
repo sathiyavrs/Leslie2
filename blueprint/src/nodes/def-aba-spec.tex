@@ -10,5 +10,5 @@
   The flip carries the mixedness guard, firing only where each of the two bits carries $f{+}1$ support, so under correct unanimity it is unreachable and the whole run is Dirac.
   The Validity provenance apparatus (D13) is the ghost record, written by \leandeclnamed{callSet}{PLTS.ABA.SpecStep.callSet} alone, at an empty entry, together with the $f{+}1$ $F$-blind support guard \leandecl{PLTS.ABA.InputSupport} on \leandeclnamed{decide}{PLTS.ABA.SpecStep.decide}, the sole writer of $val$.
   The input-enabledness loop \leandeclnamed{callLoop}{PLTS.ABA.SpecStep.callLoop} carries the call label at a filled entry and writes nothing, so the record holds each never-corrupted process's first genuine call (D36).
-  Full transition inventory: \leandecl{PLTS.ABA.spec}.
+  The full list of transitions: \leandecl{PLTS.ABA.spec}.
 \end{definition}

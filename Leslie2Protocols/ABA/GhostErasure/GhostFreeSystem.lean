@@ -59,7 +59,7 @@ variable (P : Parameters) (M S : Type) [DecidableEq M]
       Prop)
     (callPayload : Fin P.n → Bool → M)
 
-/-- The adversary of the ghost-free system: the network's table over the trivial ghost,
+/-- The adversary of the ghost-free system: the network's transitions over the trivial ghost,
 its two graded-agreement returns free to announce either bit. -/
 noncomputable def networkGhostFree : System (NetworkState P.n M Unit) (ExtendedLabel P.n M) :=
   network P M Unit callPayload (fun _ _ _ => ()) (fun _ _ _ _ _ => True)
