@@ -23,9 +23,12 @@ refinements (`ABA/ReliableBroadcast/Bracha/EchoCertificate.lean`,
 `ABA/Gather/SpecificationRelation.lean`, `ABA/Gather/RefinesSpecification.lean`,
 `ABA/Gather/BroadcastSubstitution.lean`, `ABA/Gather/CommonCore.lean`), the
 two-gather round and its three tiers (`ABA/GBCA/AFW/Counting.lean`,
-`ABA/GBCA/AFW/Composition.lean`, `ABA/GBCA/AFW/CompositionStepInversion.lean`,
-`ABA/GBCA/AFW/StepOverGatherSpecifications.lean`,
-`ABA/GBCA/AFW/RefinesSpecification.lean`, `ABA/GBCA/AFW/GatherSubstitutions.lean`,
+`ABA/GBCA/AFW/Components.lean`, `ABA/GBCA/AFW/Composition.lean`,
+`ABA/GBCA/AFW/CompositionStepInversion.lean`,
+`ABA/GBCA/AFW/AlgorithmOverGatherSpecifications.lean`,
+`ABA/GBCA/AFW/OutputCertificate.lean`, `ABA/GBCA/AFW/Invariant.lean`,
+`ABA/GBCA/AFW/SpecificationRelation.lean`, `ABA/GBCA/AFW/RefinesSpecification.lean`,
+`ABA/GBCA/AFW/BroadcastSubstitution.lean`, `ABA/GBCA/AFW/GatherSubstitution.lean`,
 `ABA/GBCA/AFW/Binding.lean`), the assembly at the protocol shape
 (`ABA/Implementation/AFW/CompositionChain.lean`), and the protocol beneath it
 (`ABA/Implementation/AFW/System.lean`, `ABA/Implementation/AFW/RoundProjection.lean`,
@@ -297,16 +300,17 @@ stack is proved that way and nothing else:
 - `GBCA.ByAFW.broadcastSubstitution` and `GBCA.ByAFW.gatherSubstitution` lift
   `Gather.broadcastSubstitution` and `Gather.refinesSpecification` at each of the two gather
   coordinates the same way, with the round's programs held
-  (`ABA/GBCA/AFW/GatherSubstitutions.lean`); their relations hold the round's programs equal beside
+  (`ABA/GBCA/AFW/BroadcastSubstitution.lean`, `ABA/GBCA/AFW/GatherSubstitution.lean`); their
+  relations hold the round's programs equal beside
   the gather relation at each gather.
 
 The two refinements into a specification, `Gather.refinesSpecification` and
 `GBCA.ByAFW.refinesSpecification`, are proved on the compositions themselves. Each composition
 carries a row characterisation — `Gather.instanceOverBroadcastSpecification_step_iff_row`,
 `GBCA.ByAFW.roundOverGatherSpecifications_step_iff_row` — stating that its transitions over
-the labels the pullback sends to one specification label are exactly the rows of a rule table
-at that label (`Gather.AlgorithmOverBroadcastSpecification`,
-`GBCA.ByAFW.StepOverGatherSpecifications`), on the same state and with the same
+the labels the pullback sends to one specification label are exactly the transitions of an
+algorithm at that label (`Gather.AlgorithmOverBroadcastSpecification`,
+`GBCA.ByAFW.AlgorithmOverGatherSpecifications`), on the same state and with the same
 distribution. A refinement is then a case analysis over the rows, and the specification's
 answer, a run of `specInst`, is lifted to the specification read along the pullback by a
 section of it (`Gather.weakLStep_specificationOverInstanceAlphabet`,

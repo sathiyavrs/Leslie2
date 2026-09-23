@@ -287,13 +287,18 @@ family owns, and the licence to replace it by the graded-agreement specification
 
 | file | lines | what it is |
 |---|---|---|
-| `GBCA/AFW/Binding.lean` | 155 | The three tiers of the round reach the specification over the round's alphabet: the inclusions `roundOverGatherSpecifications_refines`, `roundOverBroadcastSpecification_specificationTraces` and `roundOverBracha_specificationTraces`, the round composite `roundOverBracha_refinesSpecification`, and the binding each tier carries — `GBCA.roundOverGatherSpecifications_binding`, `GBCA.roundOverBroadcastSpecification_binding`, `GBCA.roundOverBracha_binding`. Six axiom checks. |
-| `GBCA/AFW/Composition.lean` | 835 | **The graded-agreement round, composed**: `n` round programs beside the round's network, in parallel with two gather instances — `GBCA.ByAFW.roundOverGatherSpecifications` over the gather specifications, `GBCA.ByAFW.roundOverBroadcastSpecification` over gather-over-BRB, and **`GBCA.ByAFW.roundOverBracha`, the gather-based GBCA implementation**, over gather-over-Bracha — read over the family alphabet `ExtendedLabel n`. |
-| `GBCA/AFW/CompositionStepInversion.lean` | 455 | The transitions of `GBCA.ByAFW.roundOverGathers` read off their labels: a step of the round split into a hidden event and a family label, a joint step read as the rows of the round's programs, the round's network and the two gather instances, and one graded-agreement program's row and the round's network's row per label class. |
 | `GBCA/AFW/Counting.lean` | 368 | **The counting of the two-gather round** (AFW25 Algorithm 4 at R = 2, its approximate-agreement subroutine replaced by a local count, D24): the candidate and the grade, `candidate` and `gradeOf`, the bound bit `boundOfCore` read off the first gather's core (D29), and the entry counts the refinement consumes. |
-| `GBCA/AFW/GatherSubstitutions.lean` | 226 | `broadcastSubstitution` and `gatherSubstitution`: the two gather substitutions inside the round, componentwise. |
-| `GBCA/AFW/RefinesSpecification.lean` | 1498 | `refinesSpecification`: the two-gather round refines the GBCA specification. Exclusion and grade certified on the two recorded cores, the surviving bit fixed by the bound bit; exclude-on-demand. |
-| `GBCA/AFW/StepOverGatherSpecifications.lean` | 530 | `GBCA.ByAFW.StepOverGatherSpecifications`, the rows of `GBCA.ByAFW.roundOverGatherSpecifications` stated over the round's state, one per case of `roundOverGatherSpecifications_step_iff_row`. A relation on that state; the system is the composition of `GBCA/AFW/Composition.lean`. |
+| `GBCA/AFW/Components.lean` | 543 | The components of the graded-agreement round: the round-internal alphabet and a program's alphabet, the program's record `ProcessRecord`, the three pullbacks along which the programs and the two gather instances join the round, the step relations `ProgramStep` and `NetworkStep` of one graded-agreement program and of the round's network, and `roundPrograms`, the `n` programs beside that network. |
+| `GBCA/AFW/Composition.lean` | 349 | **The graded-agreement round, composed**: the round's programs in parallel with two gather instances — `GBCA.ByAFW.roundOverGatherSpecifications` over the gather specifications, `GBCA.ByAFW.roundOverBroadcastSpecification` over gather-over-BRB, and **`GBCA.ByAFW.roundOverBracha`, the gather-based GBCA implementation**, over gather-over-Bracha — read over the family alphabet `ExtendedLabel n`, with the four views of the round's state and the determinacy the LTS instances rest on. |
+| `GBCA/AFW/CompositionStepInversion.lean` | 455 | The transitions of `GBCA.ByAFW.roundOverGathers` read off their labels: a step of the round split into a hidden event and a family label, a joint step read as the rows of the round's programs, the round's network and the two gather instances, and one graded-agreement program's row and the round's network's row per label class. |
+| `GBCA/AFW/AlgorithmOverGatherSpecifications.lean` | 532 | `GBCA.ByAFW.AlgorithmOverGatherSpecifications`, the transitions of `GBCA.ByAFW.roundOverGatherSpecifications` stated over the round's state, one constructor per case of `roundOverGatherSpecifications_step_iff_row`. A relation on that state; the system is the composition of `GBCA/AFW/Composition.lean`. |
+| `GBCA/AFW/OutputCertificate.lean` | 257 | The counts the counting refinement consumes, and the two certificates it carries: `OutputCertificate`, what a recorded graded outcome certifies about the two cores, and `ExclusionEvidence`, the first gather's core counting a bit below `|S| − f`. Both survive every later transition, the cores being written once. |
+| `GBCA/AFW/Invariant.lean` | 739 | `GBCA.ByAFW.Invariant`, what the round over the gather specifications maintains: the corruption budget, the provenance of a committed entry per gather, what a candidate and a recorded grade certify, the transfer of the candidate to the second gather's call, the bound bit read off the first gather's core (D29), and the core-write guards. |
+| `GBCA/AFW/SpecificationRelation.lean` | 124 | `GBCA.ByAFW.SpecificationRelation`, which the counting refinement runs along: the invariant holds, the call records, the return flags and the corrupted sets agree, an excluded bit carries an exclusion certificate and is the complement of the round's bound bit, and each grade guard is certified on the second gather's core. Broadcast compatibility and one axiom check. |
+| `GBCA/AFW/RefinesSpecification.lean` | 507 | `refinesSpecification`: the two-gather round refines the GBCA specification. Every case of the algorithm is answered by a weak run of the specification, at most two steps long, and the run is lifted to the round's interface. One axiom check. |
+| `GBCA/AFW/BroadcastSubstitution.lean` | 139 | `broadcastSubstitution`: Bracha's broadcast replaced by the broadcast specification at each of the two gather coordinates, carried through the round by the congruences, with its trace-distribution inclusion and its broadcast compatibility. Two axiom checks. |
+| `GBCA/AFW/GatherSubstitution.lean` | 136 | `gatherSubstitution`: each gather instance replaced by the gather specification, carried through the round the same way, with its trace-distribution inclusion and its broadcast compatibility. Two axiom checks. |
+| `GBCA/AFW/Binding.lean` | 157 | The three tiers of the round reach the specification over the round's alphabet: the inclusions `roundOverGatherSpecifications_refines`, `roundOverBroadcastSpecification_specificationTraces` and `roundOverBracha_specificationTraces`, the round composite `roundOverBracha_refinesSpecification`, and the binding each tier carries — `GBCA.roundOverGatherSpecifications_binding`, `GBCA.roundOverBroadcastSpecification_binding`, `GBCA.roundOverBracha_binding`. Six axiom checks. |
 
 **`ABA/HybridRefinesSpecification/`** — the core simulation of the blueprint's §3,
 `hybrid ⊑ ABA.spec`, and its witnesses.
@@ -390,8 +395,8 @@ above both, and carries the composed system and the substitution to `hybrid`.
 
 The gather-based files form their own stack over `Vocabulary/ProcessAndNetworkState.lean` and
 `GBCA/Specification.lean`, meeting the rest of the development in four places:
-`GBCA/AFW/Counting.lean` reads the shared round alphabet, `GBCA/AFW/Composition.lean` imports
-`GBCA/ABDY/Composition/Instance.lean` and `GBCA/AFW/RefinesSpecification.lean` imports
+`GBCA/AFW/Counting.lean` reads the shared round alphabet, `GBCA/AFW/Components.lean` imports
+`GBCA/ABDY/Composition/Instance.lean` and `GBCA/AFW/AlgorithmOverGatherSpecifications.lean` imports
 `GBCA/SpecificationOverRoundAlphabet.lean`, whose
 `GBCA.specificationLabelMap` and `GBCA.specificationOverRoundAlphabet` read the
 graded-agreement specification over the family alphabet the round speaks, `Implementation/AFW/System.lean` instantiates
@@ -421,12 +426,14 @@ carries: `GBCA/Specification.lean` with `GBCA/SpecificationSafety.lean`'s
 For the gather-based chain, by module docstring: `ReliableBroadcast/Bracha/Components.lean` →
 `ReliableBroadcast/Bracha/Composition.lean` → `ReliableBroadcast/Bracha/Algorithm.lean` →
 `Gather/Components.lean` → `Gather/Composition.lean` →
-`Gather/CompositionStepInversion.lean` → `GBCA/AFW/Composition.lean` →
-`GBCA/AFW/CompositionStepInversion.lean` → `GBCA/AFW/StepOverGatherSpecifications.lean` →
-`Implementation/AFW/CompositionChain.lean` → `Implementation/AFW/Simulation.lean`. The first eight
+`Gather/CompositionStepInversion.lean` → `GBCA/AFW/Components.lean` →
+`GBCA/AFW/Composition.lean` → `GBCA/AFW/CompositionStepInversion.lean` →
+`GBCA/AFW/AlgorithmOverGatherSpecifications.lean` →
+`Implementation/AFW/CompositionChain.lean` → `Implementation/AFW/Simulation.lean`. The first ten
 give the components of one level each, the alphabet they speak and the row characterisation that
-reads a transition of the composition off its label; `GBCA/AFW/StepOverGatherSpecifications.lean` is the row table the counting refinement runs
-on; `Implementation/AFW/CompositionChain.lean` is the assembly at the protocol shape and
+reads a transition of the composition off its label;
+`GBCA/AFW/AlgorithmOverGatherSpecifications.lean` is the algorithm the counting refinement runs on;
+`Implementation/AFW/CompositionChain.lean` is the assembly at the protocol shape and
 `Implementation/AFW/Simulation.lean` the simulation into `Implementation/AFW/System.lean`, the
 system that runs, over the row answers of `Implementation/AFW/SimulationRows.lean`. The two
 counting arguments are `Gather/CommonCoreCounting.lean`, read against `Gather/Invariant.lean` and

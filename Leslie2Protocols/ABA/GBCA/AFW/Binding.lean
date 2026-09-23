@@ -5,7 +5,8 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.GBCA.AFW.RefinesSpecification
-import Leslie2Protocols.ABA.GBCA.AFW.GatherSubstitutions
+import Leslie2Protocols.ABA.GBCA.AFW.BroadcastSubstitution
+import Leslie2Protocols.ABA.GBCA.AFW.GatherSubstitution
 import Leslie2Protocols.ABA.GBCA.BindingOverRoundAlphabet
 import Leslie2.Results
 
@@ -14,7 +15,8 @@ import Leslie2.Results
 
 The three tiers of the two-gather round reach `GBCA.specificationOverRoundAlphabet`, the graded
 agreement specification read over the family alphabet, through `GBCA.ByAFW.refinesSpecification`
-and the two substitutions of `GBCA/AFW/GatherSubstitutions.lean`.
+and the substitutions of
+`GBCA/AFW/BroadcastSubstitution.lean` and `GBCA/AFW/GatherSubstitution.lean`.
 `roundOverGatherSpecifications_refines`, `roundOverBroadcastSpecification_specificationTraces` and
 `roundOverBracha_specificationTraces` are the trace-distribution inclusions of the three, and
 `roundOverBracha_refinesSpecification` is the composite simulation the lowest one rests on.

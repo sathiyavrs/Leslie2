@@ -143,7 +143,8 @@ The first two are applied inside the round by congruence. `GBCA.ByAFW.broadcastS
 `Gather.broadcastSubstitution` and `GBCA.ByAFW.gatherSubstitution` carries
 `Gather.refinesSpecification` through the operators a round is built from — `mapIdle` at the gather
 coordinate, `parallel_left` and `parallel_right` to hold the round's programs and the other gather,
-then `abstract` and `relabel` (`ABA/GBCA/AFW/GatherSubstitutions.lean`, over
+then `abstract` and `relabel` (`ABA/GBCA/AFW/BroadcastSubstitution.lean` and
+`ABA/GBCA/AFW/GatherSubstitution.lean`, over
 `Framework/Congruence.lean`), and `Gather.broadcastSubstitution` itself carries
 `BRB.brachaRefinesSpecification` through the operators a gather instance is built from,
 `synchronisedProduct` among them. `Gather.refinesSpecification` and

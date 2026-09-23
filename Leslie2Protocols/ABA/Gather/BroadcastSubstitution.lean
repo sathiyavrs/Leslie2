@@ -36,7 +36,7 @@ beside the bind coordinates of the concrete system.
 Both instances are LTS, so `instanceOverBracha_refines` reads the substitution as an
 inclusion of achievable trace distributions. `broadcastSubstitutionRelation_corrupt` states that
 the relation is preserved by corrupting both instances at once, in the shape the family congruence
-of `ABA/GBCA/AFW/GatherSubstitutions.lean` consumes (`ForwardSimulation.family`, `hglob`).
+of `ABA/GBCA/AFW/BroadcastSubstitution.lean` consumes (`ForwardSimulation.family`, `hglob`).
 -/
 
 namespace PLTS

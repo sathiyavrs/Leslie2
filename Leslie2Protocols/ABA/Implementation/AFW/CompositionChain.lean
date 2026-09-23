@@ -4,7 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.GBCA.AFW.GatherSubstitutions
+import Leslie2Protocols.ABA.GBCA.AFW.BroadcastSubstitution
+import Leslie2Protocols.ABA.GBCA.AFW.GatherSubstitution
 import Leslie2Protocols.ABA.GBCA.AFW.RefinesSpecification
 import Leslie2Protocols.ABA.Composition.Hybrid
 import Leslie2Protocols.Framework.FamilySimulation

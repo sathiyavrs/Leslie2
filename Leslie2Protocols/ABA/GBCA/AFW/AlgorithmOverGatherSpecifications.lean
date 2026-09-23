@@ -9,34 +9,35 @@ import Leslie2Protocols.ABA.GBCA.SpecificationOverRoundAlphabet
 import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 
 /-!
-# The rows of the round over the gather specifications
+# The algorithm of the round over the gather specifications
 
-`GBCA.ByAFW.StepOverGatherSpecifications` is the rule table of
-`GBCA.ByAFW.roundOverGatherSpecifications` (`GBCA/AFW/Composition.lean`) — the `n` graded-agreement
-programs beside the round's network, in parallel with two gather specifications — stated over the
-round's state through the four views `programs`, `bound`, `firstGather`, `secondGather`. It is a
+`GBCA.ByAFW.AlgorithmOverGatherSpecifications` states the transitions of
+`GBCA.ByAFW.roundOverGatherSpecifications` (`GBCA/AFW/Composition.lean`) — the `n`
+graded-agreement programs beside the round's network, in parallel with two gather specifications —
+over the round's state, through the four views `programs`, `bound`, `firstGather` and
+`secondGather`, one constructor per case of `roundOverGatherSpecifications_step_iff_row`. It is a
 relation on that state; the system is the composition.
 
-`roundOverGatherSpecifications_step_iff_row` is the row characterisation: at a shared label `l₀`,
-the transitions of the round over the labels `GBCA.specificationLabelMap` sends to `l₀` are exactly
-the `l₀`-rows of `StepOverGatherSpecifications`, on the same state and with the same
+`roundOverGatherSpecifications_step_iff_row` is the characterisation: at a shared label `l₀`, the
+transitions of the round over the labels `GBCA.specificationLabelMap` sends to `l₀` are exactly the
+`l₀`-transitions of `AlgorithmOverGatherSpecifications`, on the same state and with the same
 distribution.
 
 ## The gather tier
 
-A gather instance's own rows are `Gather.Step` (`ABA/Gather/Specification.lean`), and a
-row carries them as the hypothesis `Gather.Step P (firstGather s) l₀ (PMF.pure t1)`, as
-`GBCA.ByAFW.StepOverGatherSpecifications` does. The specification answers `call id x` on two rows,
-the call and the input-enabledness loop, and both sit at the one label
-`Gather.Label.call id x` of the lifted specification: the round's `callG` row and
-its `callLoop` row therefore carry the same hypothesis, and which of the two
-specification rows fires is the gather's own business.
+A gather instance's own transitions are `Gather.Step` (`ABA/Gather/Specification.lean`), and a
+transition of the round carries them as the hypothesis
+`Gather.Step P (firstGather s) l₀ (PMF.pure t1)`. The specification answers `call id x` on two
+transitions, the call and the input-enabledness loop, and both sit at the one label
+`Gather.Label.call id x` of the lifted specification: the round's `callG` and its `callLoop`
+therefore carry the same hypothesis, and which of the two the gather takes is the gather's own
+business.
 
 ## Corruption
 
-The `fail` row corrupts the two gather instances and leaves the programs and
-the round's bound bit untouched. The label is in the round's alphabet, and in
-the family of rounds it is the broadcast act that answers it.
+The `fail` transition corrupts the two gather instances and leaves the programs and the round's
+bound bit untouched. The label is in the round's alphabet, and in the family of rounds it is the
+broadcast act that answers it.
 -/
 
 namespace PLTS
@@ -110,7 +111,7 @@ end GatherSpecificationAlongPullback
   (`GBCA.ByAFW.roundOverGatherSpecifications`),
 stated over the round's state: one constructor per case of
 `GBCA.ByAFW.roundOverGatherSpecifications_step_iff_row`. All transitions are Dirac. -/
-inductive StepOverGatherSpecifications (P : Parameters) (r : ℕ) :
+inductive AlgorithmOverGatherSpecifications (P : Parameters) (r : ℕ) :
     RoundStateOverGatherSpecifications P.n → Label P.n → PMF (RoundStateOverGatherSpecifications
       P.n) → Prop
   /-- The call arrives: program `id` records the input and the first gather
@@ -118,23 +119,23 @@ inductive StepOverGatherSpecifications (P : Parameters) (r : ℕ) :
   | callG (s : RoundStateOverGatherSpecifications P.n) (id : Fin P.n) (b : Bool)
       (t1 : Gather.SpecState P.n Bool) (h0 : (programs s id).input = none)
       (h : Gather.Step P (firstGather s) (.call id b) (PMF.pure t1)) :
-      StepOverGatherSpecifications P r s (.callG r id b)
+      AlgorithmOverGatherSpecifications P r s (.callG r id b)
         (PMF.pure (setFirstGather (setPrograms s (Function.update (programs s) id
           { programs s id with input := some b })) t1))
   /-- The call loop: no program moves and the first gather takes the call. -/
   | callLoop (s : RoundStateOverGatherSpecifications P.n) (id : Fin P.n) (b : Bool)
       (t1 : Gather.SpecState P.n Bool)
       (h : Gather.Step P (firstGather s) (.call id b) (PMF.pure t1)) :
-      StepOverGatherSpecifications P r s (.callG r id b) (PMF.pure (setFirstGather s t1))
+      AlgorithmOverGatherSpecifications P r s (.callG r id b) (PMF.pure (setFirstGather s t1))
   /-- An internal step of the first gather. -/
   | firstGatherTau (s : RoundStateOverGatherSpecifications P.n) (t1 : Gather.SpecState P.n Bool)
       (h : Gather.Step P (firstGather s) Gather.Label.tau (PMF.pure t1)) :
-      StepOverGatherSpecifications P r s .tau (PMF.pure (setFirstGather s t1))
+      AlgorithmOverGatherSpecifications P r s .tau (PMF.pure (setFirstGather s t1))
   /-- An internal step of the second gather. -/
   | secondGatherTau (s : RoundStateOverGatherSpecifications P.n) (t2 : Gather.SpecState P.n (Option
     Bool))
       (h : Gather.Step P (secondGather s) Gather.Label.tau (PMF.pure t2)) :
-      StepOverGatherSpecifications P r s .tau (PMF.pure (setSecondGather s t2))
+      AlgorithmOverGatherSpecifications P r s .tau (PMF.pure (setSecondGather s t2))
   /-- The first gather returns to `id`: program `id` records the candidate, and
   the round's bound bit is written from the core the return carries if it is
   unwritten. -/
@@ -143,7 +144,7 @@ inductive StepOverGatherSpecifications (P : Parameters) (r : ℕ) :
       (C : Gather.AcceptedPairs P.n Bool) (t1 : Gather.SpecState P.n Bool)
       (hin : (programs s id).input ≠ none) (hc : (programs s id).candidate = none)
       (h : Gather.Step P (firstGather s) (.ret id g C) (PMF.pure t1)) :
-      StepOverGatherSpecifications P r s .tau
+      AlgorithmOverGatherSpecifications P r s .tau
         (PMF.pure (setBound (setFirstGather (setPrograms s (Function.update (programs s) id
             { programs s id with candidate := some (candidate P g) })) t1)
           (some ((bound s).getD (boundOfCore P C)))))
@@ -152,7 +153,7 @@ inductive StepOverGatherSpecifications (P : Parameters) (r : ℕ) :
       (t2 : Gather.SpecState P.n (Option Bool)) (hc : (programs s id).candidate = some x)
       (h2 : (programs s id).secondGatherCalled = false)
       (h : Gather.Step P (secondGather s) (.call id x) (PMF.pure t2)) :
-      StepOverGatherSpecifications P r s .tau
+      AlgorithmOverGatherSpecifications P r s .tau
         (PMF.pure (setSecondGather (setPrograms s (Function.update (programs s) id
           { programs s id with secondGatherCalled := true })) t2))
   /-- The second gather returns to `id`: program `id` records the grade. -/
@@ -162,20 +163,20 @@ inductive StepOverGatherSpecifications (P : Parameters) (r : ℕ) :
       (C : Gather.AcceptedPairs P.n (Option Bool)) (t2 : Gather.SpecState P.n (Option Bool))
       (h2 : (programs s id).secondGatherCalled = true) (ho : (programs s id).output = none)
       (h : Gather.Step P (secondGather s) (.ret id g C) (PMF.pure t2)) :
-      StepOverGatherSpecifications P r s .tau
+      AlgorithmOverGatherSpecifications P r s .tau
         (PMF.pure (setSecondGather (setPrograms s (Function.update (programs s) id
           { programs s id with output := some (gradeOf P g) })) t2))
   /-- The round returns the grade program `id` holds, announcing the round's
   bound bit. The return announces the grade and the record drops it. -/
   | retG (s : RoundStateOverGatherSpecifications P.n) (id : Fin P.n) (out : GBCAOutput)
       (ho : (programs s id).output = some out) (hr : (programs s id).returned = false) :
-      StepOverGatherSpecifications P r s (.retG r id out ((bound s).getD (boundOfCore P ∅)))
+      AlgorithmOverGatherSpecifications P r s (.retG r id out ((bound s).getD (boundOfCore P ∅)))
         (PMF.pure (setPrograms s (Function.update (programs s) id
           { programs s id with output := none, returned := true })))
   /-- Corruption (deviation D1): the two gather instances corrupted together, the programs and the
   round's bound bit untouched. -/
   | fail (s : RoundStateOverGatherSpecifications P.n) (id : Fin P.n) :
-      StepOverGatherSpecifications P r s (.fail id)
+      AlgorithmOverGatherSpecifications P r s (.fail id)
         (PMF.pure (corruptAll P id (Gather.SpecState.corrupt P)
           (Gather.SpecState.corrupt P) s))
 
@@ -187,7 +188,7 @@ theorem roundOverGatherSpecifications_step_row (P : Parameters) (r : ℕ) :
       (RoundStateOverGatherSpecifications P.n)),
       (roundOverGatherSpecifications P r).step s l μ →
       ∃ l₀, GBCA.specificationLabelMap P.n l = some l₀ ∧
-        StepOverGatherSpecifications P r s l₀ μ := by
+        AlgorithmOverGatherSpecifications P r s l₀ μ := by
   have h1 : (Gather.specificationOverInstanceAlphabet P Bool).IsLTS :=
     Gather.specificationOverInstanceAlphabet_isLTS P
   have h2 : (Gather.specificationOverInstanceAlphabet P (Option Bool)).IsLTS :=
@@ -215,7 +216,7 @@ theorem roundOverGatherSpecifications_step_row (P : Parameters) (r : ℕ) :
         specificationOverInstanceAlphabet_step (by simp) hga1
       have hd : d' = d := System.mapIdle_eq_of_step_none (by simp) hga2
       subst hx; subst hv; subst hd
-      exact StepOverGatherSpecifications.firstGatherReturn _ id g C c' hin hc hg1
+      exact AlgorithmOverGatherSpecifications.firstGatherReturn _ id g C c' hin hc hg1
     | secondGatherCall id y =>
       obtain ⟨hproc, hnet⟩ :=
         roundPrograms_label_pure (lp := .secondGatherCall id y) (by simp) (by simp) hRoundPrograms
@@ -228,7 +229,7 @@ theorem roundOverGatherSpecifications_step_row (P : Parameters) (r : ℕ) :
       have hg2 : Gather.Step P d (.call id y) (PMF.pure d') :=
         specificationOverInstanceAlphabet_step (by simp) hga2
       subst hx; subst hv; subst hc1
-      exact StepOverGatherSpecifications.secondGatherCall _ id y d' hc h2' hg2
+      exact AlgorithmOverGatherSpecifications.secondGatherCall _ id y d' hc h2' hg2
     | secondGatherReturn id g C =>
       obtain ⟨hproc,
         hnet⟩ := roundPrograms_label_pure (lp := .secondGatherReturn id g C) (by simp) (by simp)
@@ -243,15 +244,15 @@ theorem roundOverGatherSpecifications_step_row (P : Parameters) (r : ℕ) :
       have hg2 : Gather.Step P d (.ret id g C) (PMF.pure d') :=
         specificationOverInstanceAlphabet_step (by simp) hga2
       subst hx; subst hv; subst hc1
-      exact StepOverGatherSpecifications.secondGatherReturn _ id g C d' h2' ho hg2
+      exact AlgorithmOverGatherSpecifications.secondGatherReturn _ id g C d' h2' ho hg2
   · by_cases hlτ : l = Sum.inl Label.tau
     · subst hlτ
       refine ⟨Label.tau, rfl, ?_⟩
       rcases roundOverGathersExtended_tau_inversion h1 h2 hlab with ⟨c', rfl, hs⟩ | ⟨d', rfl, hs⟩
-      · exact StepOverGatherSpecifications.firstGatherTau _ c'
+      · exact AlgorithmOverGatherSpecifications.firstGatherTau _ c'
           (specificationOverInstanceAlphabet_tau_step
           hs)
-      · exact StepOverGatherSpecifications.secondGatherTau _ d'
+      · exact AlgorithmOverGatherSpecifications.secondGatherTau _ d'
           (specificationOverInstanceAlphabet_tau_step
           hs)
     · obtain ⟨x, v', c', d', rfl, hRoundPrograms, hga1, hga2⟩ :=
@@ -277,7 +278,7 @@ theorem roundOverGatherSpecifications_step_row (P : Parameters) (r : ℕ) :
             specificationOverInstanceAlphabet_step (by simp) hga1
           have hd : d' = d := System.mapIdle_eq_of_step_none (by simp) hga2
           subst hx; subst hv; subst hd
-          exact ⟨_, rfl, StepOverGatherSpecifications.callG _ id b c' h0 hg1⟩
+          exact ⟨_, rfl, AlgorithmOverGatherSpecifications.callG _ id b c' h0 hg1⟩
         | retG r' id out bnd =>
           obtain ⟨hproc, hnet⟩ :=
             roundPrograms_label_pure (lp := .retG r' id out bnd) (by simp) (by simp) hRoundPrograms
@@ -291,7 +292,7 @@ theorem roundOverGatherSpecifications_step_row (P : Parameters) (r : ℕ) :
           have hc1 : c' = c := System.mapIdle_eq_of_step_none (by simp) hga1
           have hd : d' = d := System.mapIdle_eq_of_step_none (by simp) hga2
           subst hx; subst hv'; subst hc1; subst hd
-          exact ⟨_, rfl, StepOverGatherSpecifications.retG _ id out ho hr⟩
+          exact ⟨_, rfl, AlgorithmOverGatherSpecifications.retG _ id out ho hr⟩
         | fail id =>
           obtain ⟨hx, hv⟩ := roundPrograms_idle_pure (by simp) hRoundPrograms
           have hg1 : Gather.Step P c (.fail id) (PMF.pure c') :=
@@ -301,7 +302,7 @@ theorem roundOverGatherSpecifications_step_row (P : Parameters) (r : ℕ) :
           have hc1 : c' = c.corrupt P id := PMF.pure_injective (specStep_fail hg1)
           have hd1 : d' = d.corrupt P id := PMF.pure_injective (specStep_fail hg2)
           subst hx; subst hv; subst hc1; subst hd1
-          exact ⟨_, rfl, StepOverGatherSpecifications.fail _ id⟩
+          exact ⟨_, rfl, AlgorithmOverGatherSpecifications.fail _ id⟩
       | inr ev =>
         cases ev with
         | gbcaSend r' j m => exact (roundPrograms_outside_inversion (by simp) hRoundPrograms).elim
@@ -326,7 +327,7 @@ theorem roundOverGatherSpecifications_step_row (P : Parameters) (r : ℕ) :
             specificationOverInstanceAlphabet_loop_step (by simp) hga1
           have hd : d' = d := System.mapIdle_eq_of_step_none (by simp) hga2
           subst hx; subst hv; subst hd
-          exact ⟨_, rfl, StepOverGatherSpecifications.callLoop _ id b c' hg1⟩
+          exact ⟨_, rfl, AlgorithmOverGatherSpecifications.callLoop _ id b c' hg1⟩
         | byzantineCallG r' k b =>
           obtain ⟨hproc, hnet⟩ :=
             roundPrograms_label_pure (lp := .callG r' k b) (by simp) (by simp) hRoundPrograms
@@ -340,7 +341,7 @@ theorem roundOverGatherSpecifications_step_row (P : Parameters) (r : ℕ) :
             specificationOverInstanceAlphabet_step (by simp) hga1
           have hd : d' = d := System.mapIdle_eq_of_step_none (by simp) hga2
           subst hx; subst hv; subst hd
-          exact ⟨_, rfl, StepOverGatherSpecifications.callG _ k b c' h0 hg1⟩
+          exact ⟨_, rfl, AlgorithmOverGatherSpecifications.callG _ k b c' h0 hg1⟩
         | byzantineCallGLoop r' k b =>
           obtain ⟨hproc, hnet⟩ :=
             roundPrograms_label_pure (lp := .callLoop r' k b) (by simp) (by simp) hRoundPrograms
@@ -351,7 +352,7 @@ theorem roundOverGatherSpecifications_step_row (P : Parameters) (r : ℕ) :
             specificationOverInstanceAlphabet_loop_step (by simp) hga1
           have hd : d' = d := System.mapIdle_eq_of_step_none (by simp) hga2
           subst hx; subst hv; subst hd
-          exact ⟨_, rfl, StepOverGatherSpecifications.callLoop _ k b c' hg1⟩
+          exact ⟨_, rfl, AlgorithmOverGatherSpecifications.callLoop _ k b c' hg1⟩
         | byzantineRetG r' k out bnd =>
           obtain ⟨hproc, hnet⟩ :=
             roundPrograms_label_pure (lp := .retG r' k out bnd) (by simp) (by simp) hRoundPrograms
@@ -365,13 +366,14 @@ theorem roundOverGatherSpecifications_step_row (P : Parameters) (r : ℕ) :
           have hc1 : c' = c := System.mapIdle_eq_of_step_none (by simp) hga1
           have hd : d' = d := System.mapIdle_eq_of_step_none (by simp) hga2
           subst hx; subst hv'; subst hc1; subst hd
-          exact ⟨_, rfl, StepOverGatherSpecifications.retG _ k out ho hr⟩
+          exact ⟨_, rfl, AlgorithmOverGatherSpecifications.retG _ k out ho hr⟩
 
 /-- **The embedding.** -/
 theorem row_roundOverGatherSpecifications_step (P : Parameters) (r : ℕ) :
     ∀ (s : RoundStateOverGatherSpecifications P.n) (l₀ : Label P.n)
-    (μ : PMF (RoundStateOverGatherSpecifications P.n)), StepOverGatherSpecifications P r s l₀ μ → ∃
-    l, GBCA.specificationLabelMap P.n l = some l₀ ∧
+    (μ : PMF (RoundStateOverGatherSpecifications P.n)),
+    AlgorithmOverGatherSpecifications P r s l₀ μ →
+    ∃ l, GBCA.specificationLabelMap P.n l = some l₀ ∧
       (roundOverGatherSpecifications P r).step s l μ :=
           by
   rintro ⟨⟨u, v⟩, c, d⟩ l₀ μ hrow
@@ -502,13 +504,13 @@ theorem row_roundOverGatherSpecifications_step (P : Parameters) (r : ℕ) :
 
 /-- **The row characterisation.** At a shared label `l₀`, the transitions of
 the round over the labels `GBCA.specificationLabelMap` sends to `l₀` are exactly the `l₀`-rows
-of `StepOverGatherSpecifications`, on the same state and with the same distribution. -/
+of `AlgorithmOverGatherSpecifications`, on the same state and with the same distribution. -/
 theorem roundOverGatherSpecifications_step_iff_row (P : Parameters) (r : ℕ)
     (s : RoundStateOverGatherSpecifications P.n) (l₀ : Label P.n)
     (μ : PMF (RoundStateOverGatherSpecifications P.n)) :
     (∃ l, GBCA.specificationLabelMap P.n l = some l₀ ∧
       (roundOverGatherSpecifications P r).step s l μ)
-    ↔ StepOverGatherSpecifications P r s l₀ μ := by
+    ↔ AlgorithmOverGatherSpecifications P r s l₀ μ := by
   constructor
   · rintro ⟨l, hl, hstep⟩
     obtain ⟨l₁, hl₁, hrow⟩ := roundOverGatherSpecifications_step_row P r s l μ hstep
