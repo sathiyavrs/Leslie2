@@ -9,26 +9,25 @@ import Leslie2Protocols.Framework.TraceDistributionSupport
 import Leslie2.Results
 
 /-!
-# The binding of a gather instance, read off its traces
+# Safety of the gather specification instance
 
-`CoreTrace` is the instance-level statement of the core. Every return label of
-the trace carries the same payload set `C`, that set has at least `n − f`
-entries, and the returned map has every entry of it. This is the source's
-Transition System 4 binding clause, quantified over the labels of a run
-rather than over the states of one.
+The common core is what a gather instance promises about the sets its returns announce.
+`CoreTrace` states it over the labels of a run: every return label of the trace carries the same
+payload set `C`, that set has at least `n − f` entries, and the returned map has every entry of it.
+This is the source's Transition System 4 core clause, quantified over the labels of a run rather
+than over the states of one. `specInst_core` is `CoreTrace` at the gather specification
+`Gather.specInst` (`ABA/Gather/Specification.lean`).
 
-At the specification the three clauses come from the rules alone. `bindCore`
-is the only writer of the `core` field and fires only from `core = none`, so
-the field, once written, keeps its value (`core_stable`) and every return
-reads the same set. `ret` demands `C.subMap g` outright. The size bound is
-the guard `hcard` of `bindCore`, carried forward as the state invariant
-`core_card`.
+At the specification the three clauses come from the transitions alone. `bindCore` is the only
+writer of the `core` field and fires only from `core = none`, so the field, once written, keeps its
+value (`core_stable`) and every return reads the same set. `ret` demands `C.subMap g` outright. The
+size bound is the guard `hcard` of `bindCore`, carried forward as the state invariant `core_card`.
 
 An implementation inherits the predicate along the soundness of its refinement
-(`PLTS.safety_transfer`, `Framework/TraceDistributionSupport.lean`). What makes that
-transfer say anything is that the core is on the label: an implementation holds
-it in a field no process reads, and its refinement matches the labels that
-carry it.
+(`PLTS.safety_transfer`, `Framework/TraceDistributionSupport.lean`), and the two gather
+implementations carry it in `ABA/Gather/CommonCore.lean`. What makes that transfer say anything is
+that the core is on the label (D29): an implementation holds it in a field no process reads, and
+its refinements match the labels that carry it.
 -/
 
 open Stream'

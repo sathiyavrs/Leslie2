@@ -70,7 +70,7 @@ noncomputable def secondGatherReturnCore (P : Parameters)
 
 /-- **The round after the first gather's return to `j` over `g`**: the program
 records the candidate, the round's bound bit is written from the core the
-return carries, and the first gather takes `Gather.StepOverBracha.ret`. -/
+return carries, and the first gather takes `Gather.AlgorithmOverBracha.ret`. -/
 noncomputable def afterFirstGatherReturn (P : Parameters) (s : GBCA.ByAFW.RoundStateOverBracha P.n)
   (j : Fin P.n)
     (g : Fin P.n → Option Bool) : GBCA.ByAFW.RoundStateOverBracha P.n :=
@@ -86,7 +86,7 @@ noncomputable def afterFirstGatherReturn (P : Parameters) (s : GBCA.ByAFW.RoundS
       (some (firstGatherReturnCore P s)))
 
 /-- **The round after `j`'s call of the second gather with `x`**: the program
-marks the call and the second gather takes `Gather.StepOverBracha.call`. -/
+marks the call and the second gather takes `Gather.AlgorithmOverBracha.call`. -/
 noncomputable def afterSecondGatherCall (P : Parameters) (s : GBCA.ByAFW.RoundStateOverBracha P.n)
   (j : Fin P.n)
     (x : Option Bool) : GBCA.ByAFW.RoundStateOverBracha P.n :=
@@ -104,7 +104,7 @@ noncomputable def afterSecondGatherCall (P : Parameters) (s : GBCA.ByAFW.RoundSt
           j (.init x))))
 
 /-- **The round after the second gather's return to `j` over `g`**: the program
-records the grade and the second gather takes `Gather.StepOverBracha.ret`. -/
+records the grade and the second gather takes `Gather.AlgorithmOverBracha.ret`. -/
 noncomputable def afterSecondGatherReturn (P : Parameters) (s : GBCA.ByAFW.RoundStateOverBracha P.n)
   (j : Fin P.n)
     (g : Fin P.n → Option (Option Bool)) : GBCA.ByAFW.RoundStateOverBracha P.n :=

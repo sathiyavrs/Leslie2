@@ -13,8 +13,8 @@ import Leslie2Protocols.ABA.Implementation.AFW.RoundProjectionStep.ViewAfterOneW
 call of graded agreement. The call is fused (D28): the round's first gather records the input and
 the caller's own input-broadcast instance of that gather is called with it, and the composed round
 answers on one label whose program row records the input and whose first gather takes
-`Gather.StepOverBracha.call`. A call against an already-called record moves the round loop alone,
-which the view does not read.
+`Gather.AlgorithmOverBracha.call`. A call against an already-called record moves the round loop
+alone, which the view does not read.
 -/
 
 namespace PLTS
@@ -35,7 +35,7 @@ variable {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} {w : NetworkState P.n} {j 
 The call is fused (D28): the round's first gather records the input and the
 caller's own input-broadcast instance of that gather is called with it. The
 composed round answers on one label, whose program row records the input and
-whose first gather takes `Gather.StepOverBracha.call`. The call against an
+whose first gather takes `Gather.AlgorithmOverBracha.call`. The call against an
 already-called record moves the round loop alone, which the view does not
 read. -/
 

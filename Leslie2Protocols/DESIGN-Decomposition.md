@@ -57,7 +57,7 @@ At the tier over broadcast specifications, the input broadcast of process `k`
 is `BRB.specificationOverInstanceAlphabet` read along `inputBroadcastLabelMap k`, and a
 specification answers the gather's call and the gather's loop on either of its two rows. Over one
 specification label the composition therefore has four call rows
-(`Gather.StepOverBroadcastSpecification.call`, `callSpecificationLoop`, `callProgramLoop`, `callLoop`): both
+(`Gather.AlgorithmOverBroadcastSpecification.call`, `callSpecificationLoop`, `callProgramLoop`, `callLoop`): both
 record, the program alone, the instance alone, neither.
 
 **What fails.** A clause tying the gather program's input to the instance's

@@ -36,30 +36,14 @@ beside the second coordinate of the concrete system.
 All three rounds are LTS, so each substitution reads as an inclusion of
 achievable trace distributions.
 
-`Gather.broadcastSubstitutionRelation_corrupt`, `GBCA.ByAFW.broadcastSubstitutionRelation_corrupt`
-and `GBCA.ByAFW.gatherSubstitutionRelation_corrupt` state that each relation is preserved by
-corrupting both systems at once, in the shape the family congruence consumes
-(`ForwardSimulation.family`, `hglob`). -/
+`GBCA.ByAFW.broadcastSubstitutionRelation_corrupt` and
+`GBCA.ByAFW.gatherSubstitutionRelation_corrupt` state that each relation is preserved by corrupting
+both rounds at once, in the shape the family congruence consumes (`ForwardSimulation.family`,
+`hglob`). The gather instance's own compatibility lemma,
+`Gather.broadcastSubstitutionRelation_corrupt`, is in `ABA/Gather/BroadcastSubstitution.lean`. -/
 
 namespace PLTS
 namespace ABA
-
-namespace Gather
-
-/-- **Broadcast compatibility at the gather instance**: the broadcast
-substitution relation is preserved by corrupting both instances at once. -/
-theorem broadcastSubstitutionRelation_corrupt {X : Type} [DecidableEq X] {P : Parameters}
-    {s : StateOverBracha P.n X} {t : StateOverBroadcastSpecification P.n X}
-    (hR : BroadcastSubstitutionRelation P s t) (id : Fin P.n) :
-    BroadcastSubstitutionRelation P
-    (corruptAll P id (InstanceState.corrupt P id) (InstanceState.corrupt P id) s)
-    (corruptAll P id (BRB.SpecState.corrupt P id) (BRB.SpecState.corrupt P id) t) :=
-  ⟨congrArg (fun x => (x.1, { x.2 with network := x.2.network.corrupt P id })) hR.gatherTier_eq,
-    fun k => BRB.specificationRelation_corrupt (hR.inputBroadcastRelation k) id,
-    fun q => BRB.specificationRelation_corrupt (hR.bindBroadcastRelation q) id⟩
-
-end Gather
-
 namespace GBCA.ByAFW
 
 /-! ### The broadcast substitution -/

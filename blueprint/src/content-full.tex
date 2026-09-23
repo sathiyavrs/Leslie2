@@ -1981,14 +1981,20 @@ The implementation is verified in two substitutions.
 The gather-over-broadcast tier places the $2n$ broadcast specifications in the broadcast slots and is carried to Transition System~4 by the core refinement, whose returns are answered by one weak run --- the abstract commits, the write of the core where the specification holds none, the return --- with the core read off the gather network's own state.
 The fully concrete tier places a Bracha instance in each slot and is carried to the previous one by congruence, the broadcast refinement lifted along the pullback naming each instance and through the operators the instance is built from.
 See \leanmodule{Leslie2Protocols/ABA/Gather/Specification},
+\leanmodule{Leslie2Protocols/ABA/Gather/SpecificationSafety},
 \leanmodule{Leslie2Protocols/ABA/Gather/MessagesAndCommonCore},
+\leanmodule{Leslie2Protocols/ABA/Gather/Components},
 \leanmodule{Leslie2Protocols/ABA/Gather/Composition},
 \leanmodule{Leslie2Protocols/ABA/Gather/SpecificationOverInstanceAlphabet},
 \leanmodule{Leslie2Protocols/ABA/Gather/CompositionStepInversion},
-\leanmodule{Leslie2Protocols/ABA/Gather/StepOverBroadcastSpecification},
+\leanmodule{Leslie2Protocols/ABA/Gather/AlgorithmOverBracha},
+\leanmodule{Leslie2Protocols/ABA/Gather/AlgorithmOverBroadcastSpecification},
+\leanmodule{Leslie2Protocols/ABA/Gather/Invariant},
+\leanmodule{Leslie2Protocols/ABA/Gather/CommonCoreCounting},
+\leanmodule{Leslie2Protocols/ABA/Gather/SpecificationRelation},
 \leanmodule{Leslie2Protocols/ABA/Gather/RefinesSpecification},
-\leanmodule{Leslie2Protocols/ABA/Gather/StepOverBracha} and
-\leanmodule{Leslie2Protocols/ABA/Gather/BroadcastSubstitution}.
+\leanmodule{Leslie2Protocols/ABA/Gather/BroadcastSubstitution} and
+\leanmodule{Leslie2Protocols/ABA/Gather/CommonCore}.
 
 \input{nodes/def-aba-gather-spec}
 

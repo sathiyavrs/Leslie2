@@ -4,9 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.Gather.CommonCoreCounting
-import Leslie2Protocols.ABA.Gather.CommonCoreAtSpecification
-import Leslie2Protocols.Framework.FamilySimulation
+import Leslie2Protocols.ABA.Gather.SpecificationRelation
 import Leslie2Protocols.Framework.WeakTransitionsFromChains
 
 /-!
@@ -14,13 +12,15 @@ import Leslie2Protocols.Framework.WeakTransitionsFromChains
 
 `Gather.refinesSpecification`: the composed gather instance over broadcast
 specifications (`ABA/Gather/Composition.lean`) forward-simulates the gather
-specification read over the instance's interface, along `Gather.SpecificationRelation`.
+specification read over the instance's interface, along `Gather.SpecificationRelation`
+(`ABA/Gather/SpecificationRelation.lean`).
 
-A transition of the instance is one row of `StepOverBroadcastSpecification`
-(`Gather.instanceOverBroadcastSpecification_step_row`), the row is answered by a weak run of the
-gather specification (`specificationRelation_row`), and that run is lifted to the interface along a
-section of `specificationLabelMap` -- which is where the call loop is answered by the
-specification's own loop row.
+A transition of the instance is one transition of `AlgorithmOverBroadcastSpecification`
+(`Gather.instanceOverBroadcastSpecification_step_row`), the transition is answered by a weak run of
+the gather specification (`specificationRelation_row`), and that run is lifted to the interface
+along a section of `specificationLabelMap` -- which is where the call loop is answered by the
+specification's own loop. `instanceOverBroadcastSpecification_refines` is the trace-distribution
+inclusion the simulation yields.
 
 The specification's abstract content is committed lazily, in the
 exclude-on-demand style: the committed entries (`val`) and the core (`core`) are
@@ -31,7 +31,7 @@ is
 commit*  ;  bindCore?  ;  ret
 ```
 
-built by recursion with `weakLStep_tauCons` — one `commit` per entry of the
+built by recursion with `weakLStep_tauCons` -- one `commit` per entry of the
 returned map not yet committed, the core write if the instance has no core yet, then
 the return.
 
@@ -43,96 +43,28 @@ the return.
   quorum of `n − f` committed bind payloads supplies.
 * Every return, the first included, is matched through the count
   `SpecificationRelation.core_certificate`: at least `f + 1` bind instances hold a committed payload
-  above the recorded core. The count is blind to `F` and monotone — committed
-  payloads are written once (`Gather.bindAbove_mono`) — so it survives every
-  rule and every corruption. The returner's quorum of `n − f` meets it in a
+  above the recorded core. The returner's quorum of `n − f` meets it in a
   coordinate whose committed payload lies above the core and below the returned
   map.
+
+The step-level transports beside the refinement export the relation across one transition, for the
+systems that replay the gather instance's transitions inside a larger algorithm:
+`specificationRelation_call` for the fused effects of a call and `specificationRelation_tau` for an
+internal transition under a stuttering specification.
 
 ## The call records
 
 The call loop is an interface label of its own, and both the specification and
-an input instance answer it on either of their two call rows. The two records
+an input instance answer it on either of their two call transitions. The two records
 therefore move on exactly the same labels under the same write-once guard, and
 the relation identifies them.
-
-## The safety headline
-
-`toSpecificationLabel` sends an interface label to the specification label it stands for.
-An execution of `specificationOverInstanceAlphabet` has the states of a `specInst` execution and
-labels that `toSpecificationLabel` sends to its labels, so `specificationOverInstanceAlphabet_core`
-reads `CoreTrace` off the relabelled trace, and `instanceOverBroadcastSpecification_core` transfers
-it along the refinement.
 -/
-
 
 namespace PLTS
 namespace ABA
 namespace Gather
 
 variable {X : Type} [DecidableEq X] {P : Parameters}
-
-/-! ### The relation -/
-
-/-- The refinement relation of the composed gather instance. `val_certificate` bounds
-the specification's committed entries by the input instances' commitments; `core_certificate` is the
-count, blind to `F` and monotone, holding the recorded core
-below committed bind payloads. -/
-structure SpecificationRelation (P : Parameters) (s : StateOverBroadcastSpecification P.n X)
-    (t : SpecState P.n X) : Prop where
-  /-- The instance invariant. -/
-  invariant : Invariant P s
-  /-- The call records agree with the input instances'. -/
-  call_eq : ∀ k, t.call k = (inputBroadcasts s k).input
-  /-- The return flags agree. -/
-  ret_eq : ∀ id, t.ret id = ((gatherTier s).process id).returned
-  /-- The corrupted sets agree. -/
-  F_eq : t.F = (gatherTier s).F
-  /-- A committed specification entry is a committed input entry. -/
-  val_certificate : ∀ k v, t.val k = some v → (inputBroadcasts s k).val = some v
-  /-- The two systems hold the same core. -/
-  core_eq : t.core = core s
-  /-- At least `f + 1` bind instances hold a committed payload above the recorded
-  core. -/
-  core_certificate : ∀ C, core s = some C → P.f + 1 ≤ (bindAbove s C).card
-
-/-- The relation holds initially. -/
-theorem specificationRelation_init :
-    SpecificationRelation P ((instanceOverBroadcastSpecification P X).init)
-    ((specificationOverInstanceAlphabet P X).init) := by
-  refine ⟨Invariant.initial, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
-    simp [gatherTier, inputBroadcasts, core, SpecState.initial, BRB.SpecState.initial,
-      ProcessRecord.initial, BaseProcessRecord.initial, NetworkState.initial,
-        InstanceState.process, InstanceState.F]
-
-/-- **Broadcast compatibility**: the relation is preserved by corrupting both systems at once. -/
-theorem specificationRelation_corrupt {s : StateOverBroadcastSpecification P.n X}
-    {t : SpecState P.n X} (hR : SpecificationRelation P s t) (id : Fin P.n) :
-    SpecificationRelation P
-    (corruptAll P id (BRB.SpecState.corrupt P id) (BRB.SpecState.corrupt P id) s)
-    (t.corrupt P id) := by
-  refine ⟨hR.invariant.step (StepOverBroadcastSpecification.fail s id) (by rw
-    [PMF.mem_support_pure_iff]),
-    ?_, ?_, ?_, ?_, ?_, ?_⟩
-  all_goals dsimp only [gatherTier_corruptAll, inputBroadcasts_corruptAll,
-    bindBroadcasts_corruptAll, core_corruptAll]
-  · intro k
-    rw [corrupt_call, BRB.corrupt_input]
-    exact hR.call_eq k
-  · intro k
-    rw [corrupt_ret, InstanceState.corrupt_process]
-    exact hR.ret_eq k
-  · rw [SpecState.corrupt_F, InstanceState.corrupt_F, hR.F_eq]
-  · intro k v hv
-    rw [corrupt_val] at hv
-    rw [BRB.corrupt_val]
-    exact hR.val_certificate k v hv
-  · rw [corrupt_core]
-    exact hR.core_eq
-  · intro C hC
-    exact le_trans (hR.core_certificate C hC) (Finset.card_le_card
-      (bindAbove_mono (StepOverBroadcastSpecification.fail s id) (by rw [PMF.mem_support_pure_iff])
-        C))
 
 /-! ### The return run
 
@@ -428,7 +360,8 @@ theorem retRun {s : StateOverBroadcastSpecification P.n X} {t : SpecState P.n X}
           (some ((core s).getD (coreOfNetwork P (gatherTier s).2))))
         { ts.getLastD t with ret := Function.update (ts.getLastD t).ret id true } := by classical
   set C : AcceptedPairs P.n X := (core s).getD (coreOfNetwork P (gatherTier s).2) with hC_def
-  have hInv' := hR.invariant.step (StepOverBroadcastSpecification.ret s id g hin hbind hsub hQ hr)
+  have hInv' := hR.invariant.step
+    (AlgorithmOverBroadcastSpecification.ret s id g hin hbind hsub hQ hr)
     (by rw [PMF.mem_support_pure_iff])
   have hsubv : ∀ k x, g k = some x → (inputBroadcasts s k).val = some x :=
     fun k x hx => hR.invariant.inputBroadcastReturned_val id k x (hsub k x hx)
@@ -579,7 +512,7 @@ theorem specificationRelation_call {s : StateOverBroadcastSpecification P.n X} {
         with input := some x }))
         (Function.update (inputBroadcasts s) id { inputBroadcasts s id with input := some x }))
       { t with call := Function.update t.call id (some x) } := by
-  refine ⟨hR.invariant.step (StepOverBroadcastSpecification.call s id x h hb) (by rw
+  refine ⟨hR.invariant.step (AlgorithmOverBroadcastSpecification.call s id x h hb) (by rw
     [PMF.mem_support_pure_iff]),
     ?_, ?_, ?_, ?_, ?_, ?_⟩
   all_goals dsimp only [gatherTier_setInputBroadcasts, gatherTier_setGatherTier,
@@ -611,7 +544,7 @@ theorem specificationRelation_call {s : StateOverBroadcastSpecification P.n X} {
 /-- The relation across any internal row, the specification stuttering. -/
 theorem specificationRelation_tau {s s' : StateOverBroadcastSpecification P.n X}
     {t : SpecState P.n X} (hR : SpecificationRelation P s t)
-    (hstep : StepOverBroadcastSpecification P s Gather.Label.tau (PMF.pure s')) :
+    (hstep : AlgorithmOverBroadcastSpecification P s Gather.Label.tau (PMF.pure s')) :
     SpecificationRelation P s' t := by
   have hInv' := hR.invariant.step hstep (by rw [PMF.mem_support_pure_iff])
   generalize hμ : (PMF.pure s' : PMF (StateOverBroadcastSpecification P.n X)) = μ at hstep
@@ -636,7 +569,7 @@ theorem specificationRelation_tau {s s' : StateOverBroadcastSpecification P.n X}
     refine ⟨hInv', hR.call_eq, hR.ret_eq, hR.F_eq, hR.val_certificate, hR.core_eq, ?_⟩
     intro C hC
     exact le_trans (hR.core_certificate C hC) (Finset.card_le_card
-      (bindAbove_mono (StepOverBroadcastSpecification.commitBindEntry s q U hv hm)
+      (bindAbove_mono (AlgorithmOverBroadcastSpecification.commitBindEntry s q U hv hm)
         (by rw [PMF.mem_support_pure_iff]) C))
   | deliver i j m h =>
     have hs' := PMF.pure_injective hμ
@@ -684,7 +617,8 @@ theorem specificationRelation_tau {s s' : StateOverBroadcastSpecification P.n X}
         exact hR.ret_eq k
     · intro C hC
       exact le_trans (hR.core_certificate C hC) (Finset.card_le_card
-        (bindAbove_mono (StepOverBroadcastSpecification.bindCall s j U hin hvot hsnd happ hQ hb)
+        (bindAbove_mono
+          (AlgorithmOverBroadcastSpecification.bindCall s j U hin hvot hsnd happ hQ hb)
           (by rw [PMF.mem_support_pure_iff]) C))
   | bindCallSpecificationLoop j U hin hvot hsnd happ hQ =>
     have hs' := PMF.pure_injective hμ
@@ -735,13 +669,13 @@ theorem specificationRelation_tau {s s' : StateOverBroadcastSpecification P.n X}
       · rw [InstanceState.setProcess_process_ne _ _ _ hj]; exact hR.ret_eq id'
     · intro C hC
       exact le_trans (hR.core_certificate C hC) (Finset.card_le_card
-        (bindAbove_mono (StepOverBroadcastSpecification.bindRet s q j U hv hr)
+        (bindAbove_mono (AlgorithmOverBroadcastSpecification.bindRet s q j U hv hr)
           (by rw [PMF.mem_support_pure_iff]) C))
 
 
 /-! ### The relation across one row -/
 
-/-- **The relation across one row**: every row of `StepOverBroadcastSpecification` at a related
+/-- **The relation across one row**: every row of `AlgorithmOverBroadcastSpecification` at a related
 pair is answered by a weak run of the gather specification, and the answer is
 again related. Internal rows stutter; the four call rows and `fail` are answered
 by the specification's own rows; a return is answered by the run
@@ -750,8 +684,8 @@ theorem specificationRelation_row (P : Parameters) (X : Type) [DecidableEq X]
     (q₁ : StateOverBroadcastSpecification P.n X) (q₂ : SpecState P.n X)
     (hR : SpecificationRelation P q₁ q₂) (l₀ : Label P.n X)
     (μ : PMF (StateOverBroadcastSpecification P.n X))
-    (hrow : StepOverBroadcastSpecification P q₁ l₀ μ) (q₁' : StateOverBroadcastSpecification P.n X)
-    (hq₁' : q₁' ∈ μ.support) :
+    (hrow : AlgorithmOverBroadcastSpecification P q₁ l₀ μ)
+    (q₁' : StateOverBroadcastSpecification P.n X) (hq₁' : q₁' ∈ μ.support) :
     ∃ q₂', ((l₀ = Silent.τ ∧ (specInst P X).weakLSilent q₂ q₂') ∨
       (¬ l₀ = Silent.τ ∧ (specInst P X).weakLStep q₂ l₀ q₂')) ∧
       SpecificationRelation P q₁' q₂' := by
@@ -768,7 +702,7 @@ theorem specificationRelation_row (P : Parameters) (X : Type) [DecidableEq X]
     subst hq₁'
     refine ⟨q₂, Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
       (Step.callLoop q₂ id x)⟩, ?_⟩
-    refine ⟨hR.invariant.step (StepOverBroadcastSpecification.callSpecificationLoop q₁ id x h)
+    refine ⟨hR.invariant.step (AlgorithmOverBroadcastSpecification.callSpecificationLoop q₁ id x h)
       (by rw [PMF.mem_support_pure_iff]),
       hR.call_eq, ?_, hR.F_eq, hR.val_certificate, hR.core_eq, hR.core_certificate⟩
     dsimp only [gatherTier_setGatherTier]
@@ -785,7 +719,7 @@ theorem specificationRelation_row (P : Parameters) (X : Type) [DecidableEq X]
     refine ⟨{ q₂ with call := Function.update q₂.call id (some x) },
       Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
         (Step.call q₂ id x (by rw [hR.call_eq id]; exact hb))⟩, ?_⟩
-    refine ⟨hR.invariant.step (StepOverBroadcastSpecification.callProgramLoop q₁ id x hb)
+    refine ⟨hR.invariant.step (AlgorithmOverBroadcastSpecification.callProgramLoop q₁ id x hb)
       (by rw [PMF.mem_support_pure_iff]),
       ?_, hR.ret_eq, hR.F_eq, ?_, hR.core_eq, hR.core_certificate⟩
     all_goals dsimp only [inputBroadcasts_setInputBroadcasts]
@@ -811,56 +745,59 @@ theorem specificationRelation_row (P : Parameters) (X : Type) [DecidableEq X]
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
-      specificationRelation_tau hR (StepOverBroadcastSpecification.commitInputEntry q₁ k v hv hm)⟩
+      specificationRelation_tau hR
+        (AlgorithmOverBroadcastSpecification.commitInputEntry q₁ k v hv hm)⟩
   | commitBindEntry q U hv hm =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
-      specificationRelation_tau hR (StepOverBroadcastSpecification.commitBindEntry q₁ q U hv hm)⟩
+      specificationRelation_tau hR
+        (AlgorithmOverBroadcastSpecification.commitBindEntry q₁ q U hv hm)⟩
   | deliver i j m h =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
-      specificationRelation_tau hR (StepOverBroadcastSpecification.deliver q₁ i j m h)⟩
+      specificationRelation_tau hR (AlgorithmOverBroadcastSpecification.deliver q₁ i j m h)⟩
   | echo j hin hcard hsend =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
-      specificationRelation_tau hR (StepOverBroadcastSpecification.echo q₁ j hin hcard hsend)⟩
+      specificationRelation_tau hR (AlgorithmOverBroadcastSpecification.echo q₁ j hin hcard hsend)⟩
   | vote j U hin hech happ hQ hsend =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
-      specificationRelation_tau hR (StepOverBroadcastSpecification.vote q₁ j U hin hech happ hQ
+      specificationRelation_tau hR (AlgorithmOverBroadcastSpecification.vote q₁ j U hin hech happ hQ
         hsend)⟩
   | bindCall j U hin hvot hsnd happ hQ hb =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
-      specificationRelation_tau hR (StepOverBroadcastSpecification.bindCall q₁ j U hin hvot hsnd
-        happ hQ hb)⟩
+      specificationRelation_tau hR
+        (AlgorithmOverBroadcastSpecification.bindCall q₁ j U hin hvot hsnd happ hQ hb)⟩
   | bindCallSpecificationLoop j U hin hvot hsnd happ hQ =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
-      specificationRelation_tau hR (StepOverBroadcastSpecification.bindCallSpecificationLoop q₁ j U hin hvot
-        hsnd happ hQ)⟩
+      specificationRelation_tau hR
+        (AlgorithmOverBroadcastSpecification.bindCallSpecificationLoop q₁ j U hin hvot hsnd happ
+          hQ)⟩
   | byzantine j m h =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
-      specificationRelation_tau hR (StepOverBroadcastSpecification.byzantine q₁ j m h)⟩
+      specificationRelation_tau hR (AlgorithmOverBroadcastSpecification.byzantine q₁ j m h)⟩
   | inputBroadcastRet k j v hv hr =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
-      specificationRelation_tau hR (StepOverBroadcastSpecification.inputBroadcastRet q₁ k j v hv
-        hr)⟩
+      specificationRelation_tau hR
+        (AlgorithmOverBroadcastSpecification.inputBroadcastRet q₁ k j v hv hr)⟩
   | bindRet q j U hv hr =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
-      specificationRelation_tau hR (StepOverBroadcastSpecification.bindRet q₁ q j U hv hr)⟩
+      specificationRelation_tau hR (AlgorithmOverBroadcastSpecification.bindRet q₁ q j U hv hr)⟩
   | ret id g hin hbind hsub hQ hr =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
@@ -883,10 +820,10 @@ theorem specificationRelation_row (P : Parameters) (X : Type) [DecidableEq X]
 
 /-- **The refinement of the composed gather instance**: the instance over
 broadcast specifications forward-simulates the gather specification read over
-the instance's interface. A transition of the instance is one row of
-`StepOverBroadcastSpecification` (`Gather.instanceOverBroadcastSpecification_step_row`), the row is
-answered by a weak run of the specification (`specificationRelation_row`), and that run is lifted to
-the interface along a section of `specificationLabelMap`. -/
+the instance's interface. A transition of the instance is one transition of
+`AlgorithmOverBroadcastSpecification` (`Gather.instanceOverBroadcastSpecification_step_row`), that
+transition is answered by a weak run of the specification (`specificationRelation_row`), and that
+run is lifted to the interface along a section of `specificationLabelMap`. -/
 theorem refinesSpecification (P : Parameters) (X : Type) [DecidableEq X] :
     ForwardSimulation (instanceOverBroadcastSpecification P X)
     (specificationOverInstanceAlphabet P X) (SpecificationRelation P) := by
@@ -906,77 +843,6 @@ theorem refinesSpecification (P : Parameters) (X : Type) [DecidableEq X] :
     rw [specificationLabelMap_tau] at h2
     exact (Option.some.inj h2).symm
 
-
-/-! ### The safety headline at the composition -/
-
-/-- The specification label an interface label stands for: the call loop stands
-for the call it loops on. -/
-def toSpecificationLabel {n : ℕ} : InstanceLabel n X → Label n X
-  | Sum.inl l => l
-  | Sum.inr (.callLoop id x) => .call id x
-
-omit [DecidableEq X] in
-/-- The specification's alphabet read off an interface label is `toSpecificationLabel`. -/
-theorem specificationLabelMap_eq_toSpecificationLabel {n : ℕ} (l : InstanceLabel n X) :
-    specificationLabelMap n X l = some (toSpecificationLabel l) := by
-  cases l with
-  | inl l₀ => rfl
-  | inr e => cases e; rfl
-
-/-- A transition of the lifted specification is a transition of the
-specification at the label `toSpecificationLabel` names. -/
-theorem specificationOverInstanceAlphabet_step_toSpecification (P : Parameters)
-    {s : SpecState P.n X} {l : InstanceLabel P.n X} {μ : PMF (SpecState P.n X)}
-    (h : (specificationOverInstanceAlphabet P X).step s l μ) :
-    (specInst P X).step s (toSpecificationLabel l) μ :=
-  (System.mapIdle_step_some (specificationLabelMap_eq_toSpecificationLabel l) μ).mp h
-
-/-- **The lifted specification binds one core.** An execution of `specificationOverInstanceAlphabet`
-has the states of a `specInst` execution and labels that `toSpecificationLabel` sends to its
-labels, so the guards of a return are read off the specification's own rows. -/
-theorem specificationOverInstanceAlphabet_core (P : Parameters) (X : Type) [DecidableEq X] :
-    ∀ D ∈ achievableTraceDists (specificationOverInstanceAlphabet P X), ∀ t, D t ≠ 0 →
-      CoreTrace P (t.map toSpecificationLabel) := by
-  rintro D ⟨pe, h_init, h_D⟩ t h_ne
-  rw [← h_D t] at h_ne
-  obtain ⟨e, h_exec, h_char⟩ := exists_exec_of_traceProb_ne_zero pe h_init t h_ne
-  have h_exec' : is_exec (e.mapLabels toSpecificationLabel) (specInst P X) :=
-    ⟨is_partial_exec_mapLabels toSpecificationLabel (fun _ _ _ h =>
-      specificationOverInstanceAlphabet_step_toSpecification P h)
-      h_exec.1,
-      h_exec.2⟩
-  have hret : ∀ (id : Fin P.n) (g : Fin P.n → Option X) (C : AcceptedPairs P.n X),
-      Label.ret id g C ∈ t.map toSpecificationLabel →
-      ∃ (k : ℕ) (s : SpecState P.n X), (e.mapLabels toSpecificationLabel).stateAt k = some s ∧
-        s.core = some C ∧ AcceptedPairs.subMap C g := by
-    intro id g C h₁
-    obtain ⟨l, hl, hdown⟩ := Stream'.Seq.exists_of_mem_map h₁
-    obtain ⟨-, k, s', hg⟩ := (h_char l).mp hl
-    obtain ⟨s, μ, hst, hstep, -⟩ := h_exec.1 k _ _ hg
-    have hstep' : Step P s (Label.ret id g C) μ := by
-      have h2 := specificationOverInstanceAlphabet_step_toSpecification P hstep
-      rwa [hdown] at h2
-    obtain ⟨hC, hmem⟩ := ret_guards hstep'
-    exact ⟨k, s, by rw [AlterSeq.stateAt_mapLabels]; exact hst, hC, hmem⟩
-  refine ⟨?_, ?_⟩
-  · intro id g C h₁
-    obtain ⟨k, s, hst, hC, hmem⟩ := hret id g C h₁
-    exact ⟨core_card h_exec' k s hst C hC, hmem⟩
-  · intro id₁ id₂ g₁ g₂ C₁ C₂ h₁ h₂
-    obtain ⟨k₁, s₁, hst₁, hC₁, -⟩ := hret id₁ g₁ C₁ h₁
-    obtain ⟨k₂, s₂, hst₂, hC₂, -⟩ := hret id₂ g₂ C₂ h₂
-    rcases le_total k₁ k₂ with hk | hk
-    · have hcarry := is_exec_stable (sys := specInst P X)
-        (fun s => s.core = some C₁) (fun s l μ s' => core_stable s l μ s')
-        h_exec' k₁ k₂ s₁ s₂ hk hst₁ hst₂ hC₁
-      rw [hcarry] at hC₂
-      exact Option.some.inj hC₂
-    · have hcarry := is_exec_stable (sys := specInst P X)
-        (fun s => s.core = some C₂) (fun s l μ s' => core_stable s l μ s')
-        h_exec' k₂ k₁ s₂ s₁ hk hst₂ hst₁ hC₂
-      rw [hcarry] at hC₁
-      exact (Option.some.inj hC₁).symm
-
 /-- Trace-distribution inclusion of the composed gather instance in the gather
 specification read over the instance's interface, the soundness of
 `refinesSpecification`. -/
@@ -987,13 +853,6 @@ theorem instanceOverBroadcastSpecification_refines (P : Parameters) (X : Type) [
     (specificationOverInstanceAlphabet_isLTS P)
     specificationRelation_init (refinesSpecification P X)).achievableTraceDists_subset
 
-/-- **The composed gather instance binds one core.** -/
-theorem instanceOverBroadcastSpecification_core (P : Parameters) (X : Type) [DecidableEq X] :
-    ∀ D ∈ achievableTraceDists (instanceOverBroadcastSpecification P X), ∀ t, D t ≠ 0 →
-      CoreTrace P (t.map toSpecificationLabel) :=
-  safety_transfer (instanceOverBroadcastSpecification_refines P X)
-    (specificationOverInstanceAlphabet_core P X)
-
 /-! ### Mechanical axiom check -/
 
 /-- info: 'PLTS.ABA.Gather.refinesSpecification' depends on axioms: [propext, Classical.choice, Quot.sound] -/
@@ -1003,15 +862,6 @@ theorem instanceOverBroadcastSpecification_core (P : Parameters) (X : Type) [Dec
 /-- info: 'PLTS.ABA.Gather.single_core' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms single_core
-
-/-- info: 'PLTS.ABA.Gather.specificationOverInstanceAlphabet_core' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in
-#print axioms specificationOverInstanceAlphabet_core
-
-/-- info: 'PLTS.ABA.Gather.instanceOverBroadcastSpecification_core' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in
-#print axioms instanceOverBroadcastSpecification_core
-
 
 end Gather
 end ABA

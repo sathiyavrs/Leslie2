@@ -335,8 +335,8 @@ theorem coupling_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
       intro r
       rw [hview r]
       exact roundInvariant_both (roundInvariant_of_broadcastReturnsInvariant hI r)
-        (Gather.StepOverBracha.fail _ k)
-        (Gather.StepOverBracha.fail _ k)
+        (Gather.AlgorithmOverBracha.fail _ k)
+        (Gather.AlgorithmOverBracha.fail _ k)
     refine coupling_visible P hl (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, ?_, ?_,
           boundInvariant_of hB (fun i r => by rw [hsame i]) (fun _ hb => by simpa using hb),

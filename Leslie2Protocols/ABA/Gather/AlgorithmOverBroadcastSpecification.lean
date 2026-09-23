@@ -8,35 +8,38 @@ import Leslie2Protocols.ABA.Gather.CompositionStepInversion
 import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 
 /-!
-# The rows of the gather instance over the broadcast specification
+# The algorithm of the gather instance over the broadcast specification
 
-`StepOverBroadcastSpecification` is the rule table of `Gather.instanceOverBroadcastSpecification`
-(`ABA/Gather/Composition.lean`) — the `n` gather programs beside the gather network, in parallel
-with `2n` lifted broadcast specifications — stated over the composition's state through the four
-views `gatherTier`, `inputBroadcasts`, `bindBroadcasts`, `core`. It is a relation on that state; the
-system is the composition.
+`AlgorithmOverBroadcastSpecification` states the transitions of
+`Gather.instanceOverBroadcastSpecification` (`ABA/Gather/Composition.lean`) -- the `n` gather
+programs beside the gather network, in parallel with `2n` lifted broadcast specifications -- over
+the composition's state, through the four views `gatherTier`, `inputBroadcasts`, `bindBroadcasts`
+and `core`, one constructor per case of `instanceOverBroadcastSpecification_step_iff_row`. It is a
+relation on that state; the system is the composition. The algorithm is blueprint Algorithm 4, the
+binding form of AFW25's Algorithm 5.
 
-`instanceOverBroadcastSpecification_step_iff_row` is the row characterisation: at a specification
+`instanceOverBroadcastSpecification_step_iff_row` is the characterisation: at a specification
 label `l₀`, the transitions of the composition over the labels `specificationLabelMap` sends to
-`l₀` are exactly the `l₀`-rows of `StepOverBroadcastSpecification`, on the same state and with the
-same distribution.
+`l₀` are exactly the `l₀`-transitions of `AlgorithmOverBroadcastSpecification`, on the same
+composed state and with the same distribution.
 
-## The four rows of a call
+## The four transitions of a call
 
-A broadcast specification answers `call x` on two rows, the call and the
+A broadcast specification answers `call x` on two transitions, the call and the
 input-enabledness loop, and the composition reads it along `inputBroadcastLabelMap id`, which
-puts both rows under the gather label `call id x` and both under the gather call
+puts both under the gather label `call id x` and both under the gather call
 loop. The gather program writes its record on the first label and is unchanged
-on the second. The four combinations are four rows: `call` (both record),
+on the second. The four combinations are four transitions: `call` (both record),
 `callSpecificationLoop` (the program records, the instance loops), `callProgramLoop` (the
 instance records, the program loops) and `callLoop` (neither moves). The same
-split reaches the bind call, whose two rows are `bindCall` and
+split reaches the bind call, whose two transitions are `bindCall` and
 `bindCallSpecificationLoop`.
 
 ## The corrupted set
 
 Each broadcast specification carries its own corrupted set, kept equal to the gather network's by
-the `fail` row. A commit guard therefore reads the corrupted set of the instance it commits in. -/
+the `fail` transition. A commit guard therefore reads the corrupted set of the instance it commits
+in. -/
 
 namespace PLTS
 namespace ABA
@@ -105,14 +108,14 @@ end SpecificationStepInversion
 /-- The rows of the gather instance over the broadcast specification
 (`Gather.instanceOverBroadcastSpecification`), stated over the composition's state: one constructor
 per case of `Gather.instanceOverBroadcastSpecification_step_iff_row`. All transitions are Dirac. -/
-inductive StepOverBroadcastSpecification (P : Parameters) :
+inductive AlgorithmOverBroadcastSpecification (P : Parameters) :
     StateOverBroadcastSpecification P.n X → Label P.n X → PMF (StateOverBroadcastSpecification P.n
       X) → Prop
   /-- The call arrives: the gather record and the input instance both record
   the payload. -/
   | call (s : StateOverBroadcastSpecification P.n X) (id : Fin P.n) (x : X)
       (h : ((gatherTier s).process id).input = none) (hb : (inputBroadcasts s id).input = none) :
-      StepOverBroadcastSpecification P s (.call id x)
+      AlgorithmOverBroadcastSpecification P s (.call id x)
         (PMF.pure (setInputBroadcasts (setGatherTier s ((gatherTier s).setProcess id { (gatherTier
           s).process id with input := some x }))
           (Function.update (inputBroadcasts s) id { inputBroadcasts s id with input := some x })))
@@ -120,25 +123,25 @@ inductive StepOverBroadcastSpecification (P : Parameters) :
   gather record alone moves. -/
   | callSpecificationLoop (s : StateOverBroadcastSpecification P.n X) (id : Fin P.n) (x : X)
       (h : ((gatherTier s).process id).input = none) :
-      StepOverBroadcastSpecification P s (.call id x)
+      AlgorithmOverBroadcastSpecification P s (.call id x)
         (PMF.pure (setGatherTier s ((gatherTier s).setProcess id { (gatherTier s).process id with
           input := some x })))
   /-- The gather program answers on its loop row and the input instance records
   the payload: the input instance alone moves. -/
   | callProgramLoop (s : StateOverBroadcastSpecification P.n X) (id : Fin P.n) (x : X)
       (hb : (inputBroadcasts s id).input = none) :
-      StepOverBroadcastSpecification P s (.call id x)
+      AlgorithmOverBroadcastSpecification P s (.call id x)
         (PMF.pure (setInputBroadcasts s (Function.update (inputBroadcasts s) id
           { inputBroadcasts s id with input := some x })))
   /-- Input-enabledness loop for `call`: nothing moves. -/
   | callLoop (s : StateOverBroadcastSpecification P.n X) (id : Fin P.n) (x : X) :
-      StepOverBroadcastSpecification P s (.call id x) (PMF.pure s)
+      AlgorithmOverBroadcastSpecification P s (.call id x) (PMF.pure s)
   /-- An input instance commits: anything under a corrupted leader, the
   leader's input otherwise. -/
   | commitInputEntry (s : StateOverBroadcastSpecification P.n X) (k : Fin P.n) (v : X)
       (hv : (inputBroadcasts s k).val = none) (hm : k ∈ (inputBroadcasts s k).F ∨ (inputBroadcasts s
         k).input = some v) :
-      StepOverBroadcastSpecification P s .tau
+      AlgorithmOverBroadcastSpecification P s .tau
         (PMF.pure (setInputBroadcasts s (Function.update (inputBroadcasts s) k { inputBroadcasts s k
           with val := some v })))
   /-- A bind instance commits. -/
@@ -146,13 +149,13 @@ inductive StepOverBroadcastSpecification (P : Parameters) :
     X)
       (hv : (bindBroadcasts s q).val = none)
       (hm : q ∈ (bindBroadcasts s q).F ∨ (bindBroadcasts s q).input = some U) :
-      StepOverBroadcastSpecification P s .tau
+      AlgorithmOverBroadcastSpecification P s .tau
         (PMF.pure (setBindBroadcasts s (Function.update (bindBroadcasts s) q
           { bindBroadcasts s q with val := some U })))
   /-- Asynchronous delivery on the gather network. -/
   | deliver (s : StateOverBroadcastSpecification P.n X) (i j : Fin P.n) (m : Message P.n X)
       (h : m ∈ (gatherTier s).sent j) :
-      StepOverBroadcastSpecification P s .tau (PMF.pure (setGatherTier s ((gatherTier
+      AlgorithmOverBroadcastSpecification P s .tau (PMF.pure (setGatherTier s ((gatherTier
         s).receiveMessage i j m)))
   /-- `ECHO`: the process is called and its accepted pairs number at least
   `n − f`, the source blueprint's `|AP| ≥ n − f`. The payload is those pairs,
@@ -161,7 +164,7 @@ inductive StepOverBroadcastSpecification (P : Parameters) :
       (hin : ((gatherTier s).process j).input ≠ none)
       (hcard : P.n - P.f ≤ ((gatherTier s).process j).accepted.card)
       (hsend : ((gatherTier s).process j).sentEcho = none) :
-      StepOverBroadcastSpecification P s .tau
+      AlgorithmOverBroadcastSpecification P s .tau
         (PMF.pure (setGatherTier s (((gatherTier s).setProcess j
           { (gatherTier s).process j with sentEcho := some ((gatherTier s).process j).accepted
             }).multicast j
@@ -178,7 +181,7 @@ inductive StepOverBroadcastSpecification (P : Parameters) :
           Message.echo A ∈ (gatherTier s).received j q ∧ approvedBy ((gatherTier s).process j) A ∧ A
             ⊆ U)
       (hsend : ((gatherTier s).process j).sentVote = none) :
-      StepOverBroadcastSpecification P s .tau
+      AlgorithmOverBroadcastSpecification P s .tau
         (PMF.pure (setGatherTier s (((gatherTier s).setProcess j
           { (gatherTier s).process j with sentVote := some U }).multicast j (.vote U))))
   /-- `BIND`: `n − f` senders' approved `VOTE` payloads, each contained in the
@@ -197,15 +200,15 @@ inductive StepOverBroadcastSpecification (P : Parameters) :
           Message.vote W ∈ (gatherTier s).received j q ∧ approvedBy ((gatherTier s).process j) W ∧ W
             ⊆ U)
       (hb : (bindBroadcasts s j).input = none) :
-      StepOverBroadcastSpecification P s .tau
+      AlgorithmOverBroadcastSpecification P s .tau
         (PMF.pure (setBindBroadcasts (setGatherTier s ((gatherTier s).setProcess j
             { (gatherTier s).process j with sentBind := some U }))
           (Function.update (bindBroadcasts s) j { bindBroadcasts s j with input := some U })))
   /-- `BIND` with the bind instance answering on its loop row: the payload handed
   to the broadcast is written to the gather record alone. The process has
   multicast its own `VOTE` and has not called its own bind broadcast. -/
-  | bindCallSpecificationLoop (s : StateOverBroadcastSpecification P.n X) (j : Fin P.n) (U : AcceptedPairs
-    P.n X)
+  | bindCallSpecificationLoop (s : StateOverBroadcastSpecification P.n X) (j : Fin P.n)
+      (U : AcceptedPairs P.n X)
       (hin : ((gatherTier s).process j).input ≠ none)
       (hvot : ((gatherTier s).process j).sentVote ≠ none)
       (hsnd : ((gatherTier s).process j).sentBind = none)
@@ -214,18 +217,18 @@ inductive StepOverBroadcastSpecification (P : Parameters) :
         ∀ q ∈ Q, ∃ W,
           Message.vote W ∈ (gatherTier s).received j q ∧ approvedBy ((gatherTier s).process j) W ∧ W
             ⊆ U) :
-      StepOverBroadcastSpecification P s .tau
+      AlgorithmOverBroadcastSpecification P s .tau
         (PMF.pure (setGatherTier s ((gatherTier s).setProcess j
           { (gatherTier s).process j with sentBind := some U })))
   /-- Byzantine injection on the gather network. -/
   | byzantine (s : StateOverBroadcastSpecification P.n X) (j : Fin P.n) (m : Message P.n X) (h : j ∈
     (gatherTier s).F) :
-      StepOverBroadcastSpecification P s .tau (PMF.pure (setGatherTier s ((gatherTier s).multicast j
-        m)))
+      AlgorithmOverBroadcastSpecification P s .tau
+        (PMF.pure (setGatherTier s ((gatherTier s).multicast j m)))
   /-- An input instance returns its committed value to `j`, which files it as its returned value. -/
   | inputBroadcastRet (s : StateOverBroadcastSpecification P.n X) (k j : Fin P.n) (v : X)
       (hv : (inputBroadcasts s k).val = some v) (hr : (inputBroadcasts s k).ret j = false) :
-      StepOverBroadcastSpecification P s .tau
+      AlgorithmOverBroadcastSpecification P s .tau
         (PMF.pure (setInputBroadcasts (setGatherTier s ((gatherTier s).setProcess j
             { (gatherTier s).process j with
               inputBroadcastReturned := Function.update ((gatherTier s).process
@@ -235,7 +238,7 @@ inductive StepOverBroadcastSpecification (P : Parameters) :
   /-- A bind instance returns its committed payload to `j`, which files it as its returned value. -/
   | bindRet (s : StateOverBroadcastSpecification P.n X) (q j : Fin P.n) (U : AcceptedPairs P.n X)
       (hv : (bindBroadcasts s q).val = some U) (hr : (bindBroadcasts s q).ret j = false) :
-      StepOverBroadcastSpecification P s .tau
+      AlgorithmOverBroadcastSpecification P s .tau
         (PMF.pure (setBindBroadcasts (setGatherTier s ((gatherTier s).setProcess j
             { (gatherTier s).process j with
               bindBroadcastReturned := Function.update ((gatherTier s).process
@@ -255,7 +258,7 @@ inductive StepOverBroadcastSpecification (P : Parameters) :
         ∀ q ∈ Q, ∃ U,
           holdsBindBroadcastReturn ((gatherTier s).process id) q U ∧ AcceptedPairs.subMap U g)
       (hr : ((gatherTier s).process id).returned = false) :
-      StepOverBroadcastSpecification P s (.ret id g ((core s).getD (coreOfNetwork P (gatherTier
+      AlgorithmOverBroadcastSpecification P s (.ret id g ((core s).getD (coreOfNetwork P (gatherTier
         s).2)))
         (PMF.pure (setCore (setGatherTier s ((gatherTier s).setProcess id
           { (gatherTier s).process id with returned := true }))
@@ -263,7 +266,7 @@ inductive StepOverBroadcastSpecification (P : Parameters) :
   /-- Corruption (deviation D1), together across the gather network state and every broadcast
   coordinate. -/
   | fail (s : StateOverBroadcastSpecification P.n X) (id : Fin P.n) :
-      StepOverBroadcastSpecification P s (.fail id)
+      AlgorithmOverBroadcastSpecification P s (.fail id)
         (PMF.pure (corruptAll P id (BRB.SpecState.corrupt P id)
           (BRB.SpecState.corrupt P id) s))
 
@@ -296,7 +299,8 @@ theorem instanceOverBroadcastSpecification_step_row (P : Parameters) :
     ∀ (s : StateOverBroadcastSpecification P.n X) (l : InstanceLabel P.n X) (μ : PMF
       (StateOverBroadcastSpecification P.n X)),
       (instanceOverBroadcastSpecification P X).step s l μ →
-      ∃ l₀, specificationLabelMap P.n X l = some l₀ ∧ StepOverBroadcastSpecification P s l₀ μ := by
+      ∃ l₀, specificationLabelMap P.n X l = some l₀ ∧
+        AlgorithmOverBroadcastSpecification P s l₀ μ := by
   have hIn : ∀ k : Fin P.n,
     (BRB.specificationOverInstanceAlphabet P k X).IsLTS := fun k =>
       BRB.specificationOverInstanceAlphabet_isLTS P k
@@ -324,11 +328,11 @@ theorem instanceOverBroadcastSpecification_step_row (P : Parameters) :
       | echo A =>
         obtain ⟨rfl, hinp, hcard, hsend, hx⟩ := programStep_send_echo_own (hproc j)
         rw [stateOverBroadcasts_setProcess_recordSent (PMF.pure_injective hx) hfor]
-        exact StepOverBroadcastSpecification.echo _ j hinp hcard hsend
+        exact AlgorithmOverBroadcastSpecification.echo _ j hinp hcard hsend
       | vote U =>
         obtain ⟨hinp, hech, happ, hQ, hsend, hx⟩ := programStep_send_vote_own (hproc j)
         rw [stateOverBroadcasts_setProcess_recordSent (PMF.pure_injective hx) hfor]
-        exact StepOverBroadcastSpecification.vote _ j U hinp hech happ hQ hsend
+        exact AlgorithmOverBroadcastSpecification.vote _ j U hinp hech happ hQ hsend
     | deliver i j m =>
       obtain ⟨hmem, hw⟩ := networkStep_deliver hnet
       have hw' : w' = w := PMF.pure_injective hw
@@ -338,13 +342,14 @@ theorem instanceOverBroadcastSpecification_step_row (P : Parameters) :
       have hfor : ∀ i', i' ≠ i → x i' = u i' :=
         fun i' hi' => PMF.pure_injective (programStep_deliver_foreign (Ne.symm hi') (hproc i'))
       rw [stateOverBroadcasts_deliver (PMF.pure_injective (programStep_deliver_own (hproc i))) hfor]
-      exact StepOverBroadcastSpecification.deliver _ i j m hmem
+      exact AlgorithmOverBroadcastSpecification.deliver _ i j m hmem
     | inputBroadcastRet k j v =>
       have hw : w' = w := PMF.pure_injective (networkStep_inputBroadcastRet hnet)
       have hb : b' = b := funext fun q => System.mapIdle_eq_of_step_none rfl (hbind q)
       subst hw; subst hb
       obtain ⟨hval, hret, hak⟩ :=
-        specStep_ret (liftSpecification_row (lb := Sum.inl (BRB.Label.ret j v)) (by simp) rfl (hin k))
+        specStep_ret
+          (liftSpecification_row (lb := Sum.inl (BRB.Label.ret j v)) (by simp) rfl (hin k))
       have haf : ∀ k', k' ≠ k → a' k' = a k' :=
         fun k' hk' => System.mapIdle_eq_of_step_none (by simp [hk']) (hin k')
       have ha : a' = Function.update a k { a k with ret := Function.update (a k).ret j true } :=
@@ -355,7 +360,7 @@ theorem instanceOverBroadcastSpecification_step_row (P : Parameters) :
       have hxj := PMF.pure_injective (programStep_inputBroadcastRet_own (hproc j))
       subst ha
       rw [Function.eq_update_iff.mpr ⟨hxj, hfor⟩]
-      exact StepOverBroadcastSpecification.inputBroadcastRet _ k j v hval hret
+      exact AlgorithmOverBroadcastSpecification.inputBroadcastRet _ k j v hval hret
     | bindCall j U =>
       have hw : w' = w := PMF.pure_injective (networkStep_bindCall hnet)
       have ha : a' = a := funext fun k => System.mapIdle_eq_of_step_none rfl (hin k)
@@ -371,20 +376,22 @@ theorem instanceOverBroadcastSpecification_step_row (P : Parameters) :
           Function.eq_update_iff.mpr ⟨PMF.pure_injective hbq, hbf⟩
         subst hb
         rw [Function.eq_update_iff.mpr ⟨PMF.pure_injective hxj, hfor⟩]
-        exact StepOverBroadcastSpecification.bindCall _ j U hinp hvot hsnd happ hQ hbin
+        exact AlgorithmOverBroadcastSpecification.bindCall _ j U hinp hvot hsnd happ hQ hbin
       · have hb : b' = b := funext fun q => by
           by_cases hq : q = j
           · subst hq; exact PMF.pure_injective hbq
           · exact hbf q hq
         subst hb
         rw [stateOverBroadcasts_setProcess (PMF.pure_injective hxj) hfor]
-        exact StepOverBroadcastSpecification.bindCallSpecificationLoop _ j U hinp hvot hsnd happ hQ
+        exact AlgorithmOverBroadcastSpecification.bindCallSpecificationLoop _ j U hinp hvot hsnd
+          happ hQ
     | bindRet q j U =>
       have hw : w' = w := PMF.pure_injective (networkStep_bindRet hnet)
       have ha : a' = a := funext fun k => System.mapIdle_eq_of_step_none rfl (hin k)
       subst hw; subst ha
       obtain ⟨hval, hret, hbq⟩ :=
-        specStep_ret (liftSpecification_row (lb := Sum.inl (BRB.Label.ret j U)) (by simp) rfl (hbind q))
+        specStep_ret
+          (liftSpecification_row (lb := Sum.inl (BRB.Label.ret j U)) (by simp) rfl (hbind q))
       have hbf : ∀ q', q' ≠ q → b' q' = b q' :=
         fun q' hq' => System.mapIdle_eq_of_step_none (by simp [hq']) (hbind q')
       have hb : b' = Function.update b q { b q with ret := Function.update (b q).ret j true } :=
@@ -394,7 +401,7 @@ theorem instanceOverBroadcastSpecification_step_row (P : Parameters) :
       have hxj := PMF.pure_injective (programStep_bindRet_own (hproc j))
       subst hb
       rw [Function.eq_update_iff.mpr ⟨hxj, hfor⟩]
-      exact StepOverBroadcastSpecification.bindRet _ q j U hval hret
+      exact AlgorithmOverBroadcastSpecification.bindRet _ q j U hval hret
   · by_cases hlτ : l = Sum.inl Label.tau
     · subst hlτ
       refine ⟨Label.tau, rfl, ?_⟩
@@ -404,17 +411,17 @@ theorem instanceOverBroadcastSpecification_step_row (P : Parameters) :
         have hv' : v = { w with network := w.network.recordSent jj m } := PMF.pure_injective hv
         subst hv'
         rw [stateOverBroadcasts_recordSent]
-        exact StepOverBroadcastSpecification.byzantine _ jj m hF
+        exact AlgorithmOverBroadcastSpecification.byzantine _ jj m hF
       · obtain ⟨v, hval, hm, hc⟩ := specStep_tau (specificationOverInstanceAlphabet_step_row rfl hs)
         have hc' : c = { a k with val := some v } := PMF.pure_injective hc
         subst hc'
         rw [stateOverBroadcasts_setInputBroadcasts]
-        exact StepOverBroadcastSpecification.commitInputEntry _ k v hval hm
+        exact AlgorithmOverBroadcastSpecification.commitInputEntry _ k v hval hm
       · obtain ⟨U, hval, hm, hd⟩ := specStep_tau (specificationOverInstanceAlphabet_step_row rfl hs)
         have hd' : d = { b q with val := some U } := PMF.pure_injective hd
         subst hd'
         rw [stateOverBroadcasts_setBindBroadcasts]
-        exact StepOverBroadcastSpecification.commitBindEntry _ q U hval hm
+        exact AlgorithmOverBroadcastSpecification.commitBindEntry _ q U hval hm
     · obtain ⟨x, w', a', b', rfl, hproc, hnet, hin, hbind⟩ :=
         instanceOverBroadcastsExtended_joint_inversion hIn hBind (by simpa using hlτ) hlab
       cases l with
@@ -431,20 +438,20 @@ theorem instanceOverBroadcastSpecification_step_row (P : Parameters) :
           have haf : ∀ k, k ≠ id → a' k = a k :=
             fun k hk => System.mapIdle_eq_of_step_none (by simp [hk]) (hin k)
           refine ⟨Label.call id y, rfl, ?_⟩
-          rcases specStep_call (liftSpecification_row (lb := Sum.inl (BRB.Label.call y)) (by simp) rfl
-              (hin id)) with ⟨hbin, haq⟩ | haq
+          rcases specStep_call (liftSpecification_row (lb := Sum.inl (BRB.Label.call y)) (by simp)
+              rfl (hin id)) with ⟨hbin, haq⟩ | haq
           · have ha : a' = Function.update a id { a id with input := some y } :=
               Function.eq_update_iff.mpr ⟨PMF.pure_injective haq, haf⟩
             subst ha
             rw [Function.eq_update_iff.mpr ⟨PMF.pure_injective hxj, hfor⟩]
-            exact StepOverBroadcastSpecification.call _ id y hinp hbin
+            exact AlgorithmOverBroadcastSpecification.call _ id y hinp hbin
           · have ha : a' = a := funext fun k => by
               by_cases hk : k = id
               · subst hk; exact PMF.pure_injective haq
               · exact haf k hk
             subst ha
             rw [stateOverBroadcasts_setProcess (PMF.pure_injective hxj) hfor]
-            exact StepOverBroadcastSpecification.callSpecificationLoop _ id y hinp
+            exact AlgorithmOverBroadcastSpecification.callSpecificationLoop _ id y hinp
         | ret id g C =>
           obtain ⟨hC, hw⟩ := networkStep_ret hnet
           subst hC
@@ -458,7 +465,7 @@ theorem instanceOverBroadcastSpecification_step_row (P : Parameters) :
             fun i hi => PMF.pure_injective (programStep_ret_foreign (Ne.symm hi) (hproc i))
           refine ⟨_, rfl, ?_⟩
           rw [stateOverBroadcasts_ret (PMF.pure_injective hxj) hfor]
-          exact StepOverBroadcastSpecification.ret _ id g hinp hbnd hsub hQ hr
+          exact AlgorithmOverBroadcastSpecification.ret _ id g hinp hbnd hsub hQ hr
         | fail id =>
           have hw : w' = { w with network := w.network.corrupt P id } :=
             PMF.pure_injective (networkStep_fail hnet)
@@ -472,7 +479,7 @@ theorem instanceOverBroadcastSpecification_step_row (P : Parameters) :
           subst hw
           refine ⟨_, rfl, ?_⟩
           rw [funext ha, funext hb, stateOverBroadcasts_corrupt hxall]
-          exact StepOverBroadcastSpecification.fail _ id
+          exact AlgorithmOverBroadcastSpecification.fail _ id
       | inr ev =>
         cases ev with
         | callLoop id y =>
@@ -484,27 +491,26 @@ theorem instanceOverBroadcastSpecification_step_row (P : Parameters) :
           have haf : ∀ k, k ≠ id → a' k = a k :=
             fun k hk => System.mapIdle_eq_of_step_none (by simp [hk]) (hin k)
           refine ⟨Label.call id y, rfl, ?_⟩
-          rcases specStep_call (liftSpecification_row (lb := Sum.inr (BRB.LoopLabel.callLoop y)) (by simp)
-            rfl
-              (hin id)) with ⟨hbin, haq⟩ | haq
+          rcases specStep_call (liftSpecification_row (lb := Sum.inr (BRB.LoopLabel.callLoop y))
+              (by simp) rfl (hin id)) with ⟨hbin, haq⟩ | haq
           · have ha : a' = Function.update a id { a id with input := some y } :=
               Function.eq_update_iff.mpr ⟨PMF.pure_injective haq, haf⟩
             subst ha
             rw [stateOverBroadcasts_idle hxall, stateOverBroadcasts_setInputBroadcasts]
-            exact StepOverBroadcastSpecification.callProgramLoop _ id y hbin
+            exact AlgorithmOverBroadcastSpecification.callProgramLoop _ id y hbin
           · have ha : a' = a := funext fun k => by
               by_cases hk : k = id
               · subst hk; exact PMF.pure_injective haq
               · exact haf k hk
             subst ha
             rw [stateOverBroadcasts_idle hxall]
-            exact StepOverBroadcastSpecification.callLoop _ id y
+            exact AlgorithmOverBroadcastSpecification.callLoop _ id y
 
 /-- **The embedding.** -/
 theorem row_instanceOverBroadcastSpecification_step (P : Parameters) :
     ∀ (s : StateOverBroadcastSpecification P.n X) (l₀ : Label P.n X) (μ : PMF
       (StateOverBroadcastSpecification P.n X)),
-      StepOverBroadcastSpecification P s l₀ μ →
+      AlgorithmOverBroadcastSpecification P s l₀ μ →
       ∃ l,
         specificationLabelMap P.n X l = some l₀ ∧ (instanceOverBroadcastSpecification P X).step s l
           μ := by
@@ -650,14 +656,14 @@ theorem row_instanceOverBroadcastSpecification_step (P : Parameters) :
 
 /-- **The row characterisation.** At a specification label `l₀`, the
 transitions of the instance over the labels `specificationLabelMap` sends to `l₀` are exactly
-the `l₀`-rows of `StepOverBroadcastSpecification`, on the same state and with the same
+the `l₀`-rows of `AlgorithmOverBroadcastSpecification`, on the same state and with the same
 distribution. -/
 theorem instanceOverBroadcastSpecification_step_iff_row (P : Parameters)
     (s : StateOverBroadcastSpecification P.n X) (l₀ : Label P.n X)
     (μ : PMF (StateOverBroadcastSpecification P.n X)) :
     (∃ l, specificationLabelMap P.n X l = some l₀ ∧ (instanceOverBroadcastSpecification P X).step s
       l μ)
-    ↔ StepOverBroadcastSpecification P s l₀ μ := by
+    ↔ AlgorithmOverBroadcastSpecification P s l₀ μ := by
   constructor
   · rintro ⟨l, hl, hstep⟩
     obtain ⟨l₁, hl₁, hrow⟩ := instanceOverBroadcastSpecification_step_row P s l μ hstep

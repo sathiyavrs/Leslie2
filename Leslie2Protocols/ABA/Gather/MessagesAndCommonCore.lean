@@ -41,7 +41,7 @@ inductive Message (n : ℕ) (X : Type) : Type
 
 /-- The local record of one process in one gather instance. The payload handed
 to the process's own bind broadcast is a field here; the payloads a bind
-broadcast has returned here are fields of `ProcessRecord` (`ABA/Gather/Composition.lean`). -/
+broadcast has returned here are fields of `ProcessRecord` (`ABA/Gather/Components.lean`). -/
 structure BaseProcessRecord (n : ℕ) (X : Type) : Type where
   /-- The payload received via `call` (`none` before the call). -/
   input : Option X

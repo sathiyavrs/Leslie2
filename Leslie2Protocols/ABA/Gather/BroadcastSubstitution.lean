@@ -34,7 +34,9 @@ the intermediate state the composite quantifies over is the input coordinates of
 beside the bind coordinates of the concrete system.
 
 Both instances are LTS, so `instanceOverBracha_refines` reads the substitution as an
-inclusion of achievable trace distributions.
+inclusion of achievable trace distributions. `broadcastSubstitutionRelation_corrupt` states that
+the relation is preserved by corrupting both instances at once, in the shape the family congruence
+of `ABA/GBCA/AFW/GatherSubstitutions.lean` consumes (`ForwardSimulation.family`, `hglob`).
 -/
 
 namespace PLTS
@@ -120,16 +122,19 @@ theorem instanceOverBracha_refines (P : Parameters) (X : Type) [DecidableEq X] :
     (instanceOverBroadcastSpecification_isLTS P)
     broadcastSubstitutionRelation_init (broadcastSubstitution P X)).achievableTraceDists_subset
 
-/-- **The common core at the gather instance over Bracha's broadcasts**: every
-return of a positive-probability trace names a set of at least `n − f` entries
-below the returned map, and every return names the same set. The two
-substitutions carry it down from the specification. -/
-theorem instanceOverBracha_core (P : Parameters) (X : Type) [DecidableEq X] :
-    ∀ D ∈ achievableTraceDists (instanceOverBracha P X), ∀ t, D t ≠ 0 →
-      CoreTrace P (t.map toSpecificationLabel) :=
-  safety_transfer (Set.Subset.trans (instanceOverBracha_refines P X)
-    (instanceOverBroadcastSpecification_refines P X))
-    (specificationOverInstanceAlphabet_core P X)
+/-! ### Broadcast compatibility -/
+
+/-- **Broadcast compatibility at the gather instance**: the broadcast
+substitution relation is preserved by corrupting both instances at once. -/
+theorem broadcastSubstitutionRelation_corrupt {X : Type} [DecidableEq X] {P : Parameters}
+    {s : StateOverBracha P.n X} {t : StateOverBroadcastSpecification P.n X}
+    (hR : BroadcastSubstitutionRelation P s t) (id : Fin P.n) :
+    BroadcastSubstitutionRelation P
+    (corruptAll P id (InstanceState.corrupt P id) (InstanceState.corrupt P id) s)
+    (corruptAll P id (BRB.SpecState.corrupt P id) (BRB.SpecState.corrupt P id) t) :=
+  ⟨congrArg (fun x => (x.1, { x.2 with network := x.2.network.corrupt P id })) hR.gatherTier_eq,
+    fun k => BRB.specificationRelation_corrupt (hR.inputBroadcastRelation k) id,
+    fun q => BRB.specificationRelation_corrupt (hR.bindBroadcastRelation q) id⟩
 
 /-! ### Mechanical axiom check -/
 
@@ -140,10 +145,6 @@ theorem instanceOverBracha_core (P : Parameters) (X : Type) [DecidableEq X] :
 /-- info: 'PLTS.ABA.Gather.instanceOverBracha_refines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms instanceOverBracha_refines
-
-/-- info: 'PLTS.ABA.Gather.instanceOverBracha_core' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in
-#print axioms instanceOverBracha_core
 
 end Gather
 end ABA

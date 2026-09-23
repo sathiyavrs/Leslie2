@@ -132,8 +132,8 @@ bind it and leave it unused, discharging the grade-1 return's specification guar
 
 **Unions read as bounds.** Algorithm 4's sends are unions: on `n − f` approved echoes a
 process sends `⟨vote, ⋃ AP_id⟩`, and likewise at the BIND and return steps. The gather
-rows (`Gather.StepOverBroadcastSpecification.vote`, `bindCall`, `ret`, and their
-`StepOverBracha` counterparts) read each union as a bound instead: any approved set
+rows (`Gather.AlgorithmOverBroadcastSpecification.vote`, `bindCall`, `ret`, and their
+`AlgorithmOverBracha` counterparts) read each union as a bound instead: any approved set
 containing the `n − f` collected payloads may be sent, and any map dominating the `n − f`
 committed BIND payloads and contained in the committed inputs may be returned. The union is
 one such choice, so the reading widens the implementation's nondeterminism; every guard the

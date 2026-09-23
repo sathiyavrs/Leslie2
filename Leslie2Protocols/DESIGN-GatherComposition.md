@@ -10,15 +10,18 @@ sub-protocol compositions (`ABA/Vocabulary/ProcessAndNetworkState.lean`,
 `ABA/ReliableBroadcast/Bracha/SpecificationOverInstanceAlphabet.lean`,
 `ABA/ReliableBroadcast/Bracha/CompositionStepInversion.lean`,
 `ABA/ReliableBroadcast/Bracha/Algorithm.lean`, `ABA/Gather/Specification.lean`,
-`ABA/Gather/MessagesAndCommonCore.lean`, `ABA/Gather/Composition.lean`,
+`ABA/Gather/MessagesAndCommonCore.lean`, `ABA/Gather/Components.lean`,
+`ABA/Gather/Composition.lean`,
 `ABA/Gather/SpecificationOverInstanceAlphabet.lean`,
 `ABA/Gather/CompositionStepInversion.lean`,
-`ABA/Gather/StepOverBroadcastSpecification.lean`, `ABA/Gather/StepOverBracha.lean`), their
+`ABA/Gather/AlgorithmOverBroadcastSpecification.lean`, `ABA/Gather/AlgorithmOverBracha.lean`), their
 refinements (`ABA/ReliableBroadcast/Bracha/EchoCertificate.lean`,
 `ABA/ReliableBroadcast/Bracha/Invariant.lean`,
 `ABA/ReliableBroadcast/Bracha/SpecificationRelation.lean`,
 `ABA/ReliableBroadcast/Bracha/RefinesSpecification.lean`,
-`ABA/Gather/RefinesSpecification.lean`, `ABA/Gather/BroadcastSubstitution.lean`), the
+`ABA/Gather/Invariant.lean`, `ABA/Gather/CommonCoreCounting.lean`,
+`ABA/Gather/SpecificationRelation.lean`, `ABA/Gather/RefinesSpecification.lean`,
+`ABA/Gather/BroadcastSubstitution.lean`, `ABA/Gather/CommonCore.lean`), the
 two-gather round and its three tiers (`ABA/GBCA/AFW/Counting.lean`,
 `ABA/GBCA/AFW/Composition.lean`, `ABA/GBCA/AFW/CompositionStepInversion.lean`,
 `ABA/GBCA/AFW/StepOverGatherSpecifications.lean`,
@@ -302,7 +305,7 @@ The two refinements into a specification, `Gather.refinesSpecification` and
 carries a row characterisation — `Gather.instanceOverBroadcastSpecification_step_iff_row`,
 `GBCA.ByAFW.roundOverGatherSpecifications_step_iff_row` — stating that its transitions over
 the labels the pullback sends to one specification label are exactly the rows of a rule table
-at that label (`Gather.StepOverBroadcastSpecification`,
+at that label (`Gather.AlgorithmOverBroadcastSpecification`,
 `GBCA.ByAFW.StepOverGatherSpecifications`), on the same state and with the same
 distribution. A refinement is then a case analysis over the rows, and the specification's
 answer, a run of `specInst`, is lifted to the specification read along the pullback by a

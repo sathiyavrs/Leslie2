@@ -32,7 +32,7 @@ variable {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} {w : NetworkState P.n} {j 
 
 A gather's `ECHO` and `VOTE` write the sender's gather record and record on the
 gather's network state. Each is the gather's `send` event, which
-`Gather.StepOverBracha.echo` and `Gather.StepOverBracha.vote` write through
+`Gather.AlgorithmOverBracha.echo` and `Gather.AlgorithmOverBracha.vote` write through
 `Gather.setGatherTier`. -/
 
 /-- A send of the first gather, read through the view. -/
