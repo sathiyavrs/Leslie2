@@ -306,7 +306,7 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
             returned := true })))
   /-- Return with outcome `grade0`: an `n − f` `ECHO5 ⊥` quorum and `|Valid| > 1`. The round record
   has been called, its own `ECHO5` is out, `hnotGrade2` denies case (1) at either bit, and
-  `hnotGrade1` denies case (2) in the reduced form `GBCA.ByABDY.ImplementationStep.retGrade0`
+  `hnotGrade1` denies case (2) in the reduced form `GBCA.ByABDY.Algorithm.retGrade0`
   states. -/
   | retGGrade0 (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (bnd : Bool)
       (hh : c.corrupted = false)

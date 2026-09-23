@@ -10,10 +10,10 @@ import Leslie2Protocols.ABA.GBCA.SpecificationOverRoundAlphabet
 /-!
 # The algorithm of the round's graded-agreement composition (ABDY22 Algorithm 6)
 
-`ImplementationStep` is the algorithm of the round-`r` composition (`GBCA.ByABDY.composition`,
-`GBCA/ABDY/Composition.lean`): a relation on the composed state
-`GBCA.ByABDY.ImplementationState`, one transition per line of ABDY22's Algorithm 6, over the shared
-alphabet `ABA.Label n`. The messages the round exchanges and the state it runs on are in
+`Algorithm` is ABDY22's Algorithm 6 as a relation on `GBCA.ByABDY.RoundState`, the composed state
+of one graded-agreement round: one transition per line, over the shared alphabet `ABA.Label n`.
+It is the algorithm of the round-`r` composition (`GBCA.ByABDY.composition`,
+`GBCA/ABDY/Composition.lean`). The messages the round exchanges and the state it runs on are in
 `GBCA/ABDY/MessagesAndRecords.lean`.
 
 `composition_projects` is the characterisation: at a label of the round's interface, every
@@ -83,7 +83,7 @@ pseudocode (`n − f`).
   send at the level below. The `VOTE` transitions ask for no own send, the `ECHO`
   they read being sent by an `upon` handler that may still be pending. The
   return transitions carry the negations that the algorithm's if/else chain implies.
-* **D1 (determinised `fail`).** The `fail` transition is `ImplementationState.corrupt`, the total
+* **D1 (determinised `fail`).** The `fail` transition is `RoundState.corrupt`, the total
   Dirac function of `GBCA/ABDY/MessagesAndRecords.lean`.
 * **D5 (set-based network).** `deliver` moves a message from a sender's sent set into a
   receiver's delivered set and does not consume it, and `byzantine` lets a corrupted sender
@@ -113,40 +113,40 @@ open Implementation Composition
 
 /-- The algorithm of the round-`r` composition: ABDY22's Algorithm 6 over all five message
 levels, one transition per line, on the composed state. All transitions are Dirac. -/
-inductive ImplementationStep (P : Parameters) (r : ℕ) :
-    ImplementationState P.n → Label P.n → PMF (ImplementationState P.n) → Prop
+inductive Algorithm (P : Parameters) (r : ℕ) :
+    RoundState P.n → Label P.n → PMF (RoundState P.n) → Prop
   /-- The environment call arrives: record the input and multicast
   `⟨INPUT, b⟩`. -/
-  | call (s : ImplementationState P.n) (id : Fin P.n) (b : Bool)
+  | call (s : RoundState P.n) (id : Fin P.n) (b : Bool)
       (h : (s.process id).input = none) :
-      ImplementationStep P r s (.callG r id b)
+      Algorithm P r s (.callG r id b)
         (PMF.pure ((s.setProcess id { s.process id with
             input := some b,
             sentInput := Function.update (s.process id).sentInput b true }).multicast
           id (.input b)))
   /-- Input-enabledness loop for `call`. -/
-  | callLoop (s : ImplementationState P.n) (id : Fin P.n) (b : Bool) :
-      ImplementationStep P r s (.callG r id b) (PMF.pure s)
+  | callLoop (s : RoundState P.n) (id : Fin P.n) (b : Bool) :
+      Algorithm P r s (.callG r id b) (PMF.pure s)
   /-- Asynchronous delivery: the adversary moves a multicast message into a
   receiver's delivered set. -/
-  | deliver (s : ImplementationState P.n) (i j : Fin P.n) (m : Message) (h : m ∈ s.sent j) :
-      ImplementationStep P r s .tau (PMF.pure (s.receiveMessage i j m))
+  | deliver (s : RoundState P.n) (i j : Fin P.n) (m : Message) (h : m ∈ s.sent j) :
+      Algorithm P r s .tau (PMF.pure (s.receiveMessage i j m))
   /-- `INPUT` relay: `f + 1` receipts of `⟨INPUT, b⟩`, not yet multicast. -/
-  | relay (s : ImplementationState P.n) (j : Fin P.n) (b : Bool)
+  | relay (s : RoundState P.n) (j : Fin P.n) (b : Bool)
       (hin : (s.process j).input ≠ none)
       (hcnt : P.f + 1 ≤ s.receivedCount j (.input b))
       (hsend : (s.process j).sentInput b = false) :
-      ImplementationStep P r s .tau
+      Algorithm P r s .tau
         (PMF.pure ((s.setProcess j { s.process j with
             sentInput := Function.update (s.process j).sentInput b true }).multicast
           j (.input b)))
   /-- `ECHO`: an `n − f` `INPUT b` quorum puts `b` into `Valid` and, if no
   `ECHO` was sent yet, multicasts `⟨ECHO, b⟩`. -/
-  | echo (s : ImplementationState P.n) (j : Fin P.n) (b : Bool)
+  | echo (s : RoundState P.n) (j : Fin P.n) (b : Bool)
       (hin : (s.process j).input ≠ none)
       (hcnt : P.n - P.f ≤ s.receivedCount j (.input b))
       (hsend : (s.process j).sentEcho = none) :
-      ImplementationStep P r s .tau
+      Algorithm P r s .tau
         (PMF.pure ((s.setProcess j { s.process j with sentEcho := some b }).multicast
           j (.echo b)))
   /-- `VOTE b` (wait case (a)): an `n − f` `ECHO b` quorum. The vote reads the
@@ -154,11 +154,11 @@ inductive ImplementationStep (P : Parameters) (r : ℕ) :
   algorithm's `upon` handlers and may still be pending, so no own-send
   condition applies here. The wait-until order is carried from the `BIND` level
   down. -/
-  | voteBit (s : ImplementationState P.n) (j : Fin P.n) (b : Bool)
+  | voteBit (s : RoundState P.n) (j : Fin P.n) (b : Bool)
       (hin : (s.process j).input ≠ none)
       (hcnt : P.n - P.f ≤ s.receivedCount j (.echo b))
       (hsend : (s.process j).sentVote = none) :
-      ImplementationStep P r s .tau
+      Algorithm P r s .tau
         (PMF.pure ((s.setProcess j { s.process j with sentVote := some (some b) }).multicast
           j (.vote (some b))))
   /-- `VOTE ⊥` (wait case (b)): `n − f` `ECHO`s of any payload and
@@ -167,81 +167,81 @@ inductive ImplementationStep (P : Parameters) (r : ℕ) :
   algorithm's `upon` handlers and may still be pending, so no own-send
   condition applies here. The wait-until order is carried from the `BIND` level
   down. -/
-  | voteBot (s : ImplementationState P.n) (j : Fin P.n)
+  | voteBot (s : RoundState P.n) (j : Fin P.n)
       (hin : (s.process j).input ≠ none)
       (hnot : ∀ b, s.receivedCount j (.echo b) < P.n - P.f)
       (hcnt : P.n - P.f ≤ s.echoCount j)
       (hval : s.bothValid P j)
       (hsend : (s.process j).sentVote = none) :
-      ImplementationStep P r s .tau
+      Algorithm P r s .tau
         (PMF.pure ((s.setProcess j { s.process j with sentVote := some none }).multicast
           j (.vote none)))
   /-- `BIND b` (wait case (a)): an `n − f` `VOTE b` quorum, the process's own
   `VOTE` already out. -/
-  | bindBit (s : ImplementationState P.n) (j : Fin P.n) (b : Bool)
+  | bindBit (s : RoundState P.n) (j : Fin P.n) (b : Bool)
       (hin : (s.process j).input ≠ none)
       (hlv : (s.process j).sentVote ≠ none)
       (hcnt : P.n - P.f ≤ s.receivedCount j (.vote (some b)))
       (hsend : (s.process j).sentBind = none) :
-      ImplementationStep P r s .tau
+      Algorithm P r s .tau
         (PMF.pure ((s.setProcess j { s.process j with sentBind := some (some b) }).multicast
           j (.bind (some b))))
   /-- `BIND ⊥` (wait case (b)): `n − f` `VOTE`s of any payload and
   `|Valid| > 1`, the process's own `VOTE` already out, and no single-bit
   `VOTE` quorum is on record. -/
-  | bindBot (s : ImplementationState P.n) (j : Fin P.n)
+  | bindBot (s : RoundState P.n) (j : Fin P.n)
       (hin : (s.process j).input ≠ none)
       (hlv : (s.process j).sentVote ≠ none)
       (hnot : ∀ b, s.receivedCount j (.vote (some b)) < P.n - P.f)
       (hcnt : P.n - P.f ≤ s.voteCount j)
       (hval : s.bothValid P j)
       (hsend : (s.process j).sentBind = none) :
-      ImplementationStep P r s .tau
+      Algorithm P r s .tau
         (PMF.pure ((s.setProcess j { s.process j with sentBind := some none }).multicast
           j (.bind none)))
   /-- `ECHO5 b` (wait case (a)): an `n − f` `BIND b` quorum, the process's own
   `BIND` already out. -/
-  | echo5Bit (s : ImplementationState P.n) (j : Fin P.n) (b : Bool)
+  | echo5Bit (s : RoundState P.n) (j : Fin P.n) (b : Bool)
       (hin : (s.process j).input ≠ none)
       (hlv : (s.process j).sentBind ≠ none)
       (hcnt : P.n - P.f ≤ s.receivedCount j (.bind (some b)))
       (hsend : (s.process j).sentEcho5 = none) :
-      ImplementationStep P r s .tau
+      Algorithm P r s .tau
         (PMF.pure ((s.setProcess j { s.process j with sentEcho5 := some (some b) }).multicast
           j (.echo5 (some b))))
   /-- `ECHO5 ⊥` (wait case (b)): `n − f` `BIND`s of any payload and
   `|Valid| > 1`, the process's own `BIND` already out, and no single-bit
   `BIND` quorum is on record. -/
-  | echo5Bot (s : ImplementationState P.n) (j : Fin P.n)
+  | echo5Bot (s : RoundState P.n) (j : Fin P.n)
       (hin : (s.process j).input ≠ none)
       (hlv : (s.process j).sentBind ≠ none)
       (hnot : ∀ b, s.receivedCount j (.bind (some b)) < P.n - P.f)
       (hcnt : P.n - P.f ≤ s.bindCount j)
       (hval : s.bothValid P j)
       (hsend : (s.process j).sentEcho5 = none) :
-      ImplementationStep P r s .tau
+      Algorithm P r s .tau
         (PMF.pure ((s.setProcess j { s.process j with sentEcho5 := some none }).multicast
           j (.echo5 none)))
   /-- Byzantine injection: a corrupted sender multicasts anything. -/
-  | byzantine (s : ImplementationState P.n) (j : Fin P.n) (m : Message) (h : j ∈ s.F) :
-      ImplementationStep P r s .tau (PMF.pure (s.multicast j m))
+  | byzantine (s : RoundState P.n) (j : Fin P.n) (m : Message) (h : j ∈ s.F) :
+      Algorithm P r s .tau (PMF.pure (s.multicast j m))
   /-- Grade-2 return (decide case (1)): an `n − f` `ECHO5 v` quorum. The process
   has called and its own `ECHO5` is out. Case (1) heads the chain, so there is
   no higher case to deny. -/
-  | retGrade2 (s : ImplementationState P.n) (id : Fin P.n) (v : Bool) (bnd : Bool)
+  | retGrade2 (s : RoundState P.n) (id : Fin P.n) (v : Bool) (bnd : Bool)
       (hin : (s.process id).input ≠ none)
       (hlv : (s.process id).sentEcho5 ≠ none)
       (hcnt : P.n - P.f ≤ s.receivedCount id (.echo5 (some v)))
       (hr : (s.process id).returned = false)
       (hbnd : bnd = s.bound.getD (boundOf s.sent s.F (.grade2 v))) :
-      ImplementationStep P r s (.retG r id (.grade2 v) bnd)
+      Algorithm P r s (.retG r id (.grade2 v) bnd)
         (PMF.pure ((s.setProcess id { s.process id with returned := true }).setBound bnd))
   /-- Grade-1 return (decide case (2)): an `n − f` any-`ECHO5` quorum containing
   `ECHO5 v`, `f + 1` `BIND v`s and `|Valid| > 1`. The `f + 1` `BIND v` receipts
   put a correct `BIND v` sender — hence an `n − f` `VOTE v` receipt quorum —
   behind every grade-1 output. The process has called, its own `ECHO5` is out,
   and no higher case holds: `hnotGrade2` denies case (1) at either bit. -/
-  | retGrade1 (s : ImplementationState P.n) (id : Fin P.n) (v : Bool) (bnd : Bool)
+  | retGrade1 (s : RoundState P.n) (id : Fin P.n) (v : Bool) (bnd : Bool)
       (hin : (s.process id).input ≠ none)
       (hlv : (s.process id).sentEcho5 ≠ none)
       (hnotGrade2 : ∀ v, s.receivedCount id (.echo5 (some v)) < P.n - P.f)
@@ -251,7 +251,7 @@ inductive ImplementationStep (P : Parameters) (r : ℕ) :
       (hval : s.bothValid P id)
       (hr : (s.process id).returned = false)
       (hbnd : bnd = s.bound.getD (boundOf s.sent s.F (.grade1 v))) :
-      ImplementationStep P r s (.retG r id (.grade1 v) bnd)
+      Algorithm P r s (.retG r id (.grade1 v) bnd)
         (PMF.pure ((s.setProcess id { s.process id with returned := true }).setBound bnd))
   /-- Grade-0 return (decide case (3)): an `n − f` `ECHO5 ⊥` quorum and
   `|Valid| > 1`. The process has called, its own `ECHO5` is out, and no higher
@@ -263,7 +263,7 @@ inductive ImplementationStep (P : Parameters) (r : ℕ) :
   `ECHO5 ⊥` quorum being in particular an `n − f` any-`ECHO5` quorum. What is
   left to deny is the pair of the received `ECHO5 v` and the `f + 1` `BIND v`
   receipts, which is what `hnotGrade1` states. -/
-  | retGrade0 (s : ImplementationState P.n) (id : Fin P.n) (bnd : Bool)
+  | retGrade0 (s : RoundState P.n) (id : Fin P.n) (bnd : Bool)
       (hin : (s.process id).input ≠ none)
       (hlv : (s.process id).sentEcho5 ≠ none)
       (hnotGrade2 : ∀ v, s.receivedCount id (.echo5 (some v)) < P.n - P.f)
@@ -273,11 +273,11 @@ inductive ImplementationStep (P : Parameters) (r : ℕ) :
       (hval : s.bothValid P id)
       (hr : (s.process id).returned = false)
       (hbnd : bnd = s.bound.getD (boundOf s.sent s.F .grade0)) :
-      ImplementationStep P r s (.retG r id .grade0 bnd)
+      Algorithm P r s (.retG r id .grade0 bnd)
         (PMF.pure ((s.setProcess id { s.process id with returned := true }).setBound bnd))
   /-- Corruption (deviation D1). -/
-  | fail (s : ImplementationState P.n) (id : Fin P.n) :
-      ImplementationStep P r s (.fail id) (PMF.pure (s.corrupt P id))
+  | fail (s : RoundState P.n) (id : Fin P.n) :
+      Algorithm P r s (.fail id) (PMF.pure (s.corrupt P id))
 
 /-! ### The composition's transitions are the algorithm's
 
@@ -287,13 +287,13 @@ interface label projects to, with no stuttering anywhere:
 
 | the composition | the algorithm |
 | --- | --- |
-| `callG` (caller writes, network records) | `ImplementationStep.call` |
-| `gbcaCallLoop`, `byzantineCallGLoop` | `ImplementationStep.callLoop` |
-| `byzantineCallG` (D11) | `ImplementationStep.call` |
-| `retG` / `byzantineRetG`, by grade | `ImplementationStep.retGrade2` / `retGrade1` / `retGrade0` |
+| `callG` (caller writes, network records) | `Algorithm.call` |
+| `gbcaCallLoop`, `byzantineCallGLoop` | `Algorithm.callLoop` |
+| `byzantineCallG` (D11) | `Algorithm.call` |
+| `retG` / `byzantineRetG`, by grade | `Algorithm.retGrade2` / `retGrade1` / `retGrade0` |
 | hidden `send` rendezvous, by level | the eight silent send transitions |
-| hidden `deliver` rendezvous | `ImplementationStep.deliver` |
-| network-local injection | `ImplementationStep.byzantine` |
+| hidden `deliver` rendezvous | `Algorithm.deliver` |
+| network-local injection | `Algorithm.byzantine` |
 
 The two hidden rendezvous and the network's injection are silent in the composition and in the
 algorithm alike, and `specificationLabelMap` takes `τ` to `τ`. -/
@@ -302,9 +302,9 @@ algorithm alike, and `specificationLabelMap` takes `τ` to `τ`. -/
 the composition is the algorithm's transition at the specification label the interface label
 projects to. -/
 theorem composition_projects (P : Parameters) (r : ℕ) :
-    ∀ (σ : GBCA.ByABDY.ImplementationState P.n) (l : ExtendedLabel P.n)
-    (μ : PMF (GBCA.ByABDY.ImplementationState P.n)), (composition P r).step σ l μ → ∃ l₀,
-    specificationLabelMap P.n l = some l₀ ∧ ImplementationStep P r σ l₀ μ := by
+    ∀ (σ : GBCA.ByABDY.RoundState P.n) (l : ExtendedLabel P.n)
+    (μ : PMF (GBCA.ByABDY.RoundState P.n)), (composition P r).step σ l μ → ∃ l₀,
+    specificationLabelMap P.n l = some l₀ ∧ Algorithm P r σ l₀ μ := by
   rintro ⟨u, w⟩ l μ hstep
   rcases (composition_step_iff P r (u, w) l μ).mp hstep with ⟨rfl, e, hev⟩ | hlab
   · -- a hidden rendezvous: a silent transition of the algorithm
@@ -320,44 +320,44 @@ theorem composition_projects (P : Parameters) (r : ℕ) :
       | input b =>
         obtain ⟨hin, hcnt, hsend, hx⟩ := gbcaProgramStep_send_input_own (hall j)
         rw [composition_setProcess_recordGBCASend (PMF.pure_injective hx) hfor]
-        exact ImplementationStep.relay _ j b hin hcnt hsend
+        exact Algorithm.relay _ j b hin hcnt hsend
       | echo b =>
         obtain ⟨hin, hcnt, hsend, hx⟩ := gbcaProgramStep_send_echo_own (hall j)
         rw [composition_setProcess_recordGBCASend (PMF.pure_injective hx) hfor]
-        exact ImplementationStep.echo _ j b hin hcnt hsend
+        exact Algorithm.echo _ j b hin hcnt hsend
       | vote v =>
         cases v with
         | some b =>
           obtain ⟨hin, hcnt, hsend, hx⟩ := gbcaProgramStep_send_voteBit_own (hall j)
           rw [composition_setProcess_recordGBCASend (PMF.pure_injective hx) hfor]
-          exact ImplementationStep.voteBit _ j b hin hcnt hsend
+          exact Algorithm.voteBit _ j b hin hcnt hsend
         | none =>
           obtain ⟨hin, hnot, hcnt, hval, hsend, hx⟩ :=
             gbcaProgramStep_send_voteBot_own (hall j)
           rw [composition_setProcess_recordGBCASend (PMF.pure_injective hx) hfor]
-          exact ImplementationStep.voteBot _ j hin hnot hcnt hval hsend
+          exact Algorithm.voteBot _ j hin hnot hcnt hval hsend
       | bind v =>
         cases v with
         | some b =>
           obtain ⟨hin, hlv, hcnt, hsend, hx⟩ := gbcaProgramStep_send_bindBit_own (hall j)
           rw [composition_setProcess_recordGBCASend (PMF.pure_injective hx) hfor]
-          exact ImplementationStep.bindBit _ j b hin hlv hcnt hsend
+          exact Algorithm.bindBit _ j b hin hlv hcnt hsend
         | none =>
           obtain ⟨hin, hlv, hnot, hcnt, hval, hsend, hx⟩ :=
             gbcaProgramStep_send_bindBot_own (hall j)
           rw [composition_setProcess_recordGBCASend (PMF.pure_injective hx) hfor]
-          exact ImplementationStep.bindBot _ j hin hlv hnot hcnt hval hsend
+          exact Algorithm.bindBot _ j hin hlv hnot hcnt hval hsend
       | «echo5» v =>
         cases v with
         | some b =>
           obtain ⟨hin, hlv, hcnt, hsend, hx⟩ := gbcaProgramStep_send_echo5Bit_own (hall j)
           rw [composition_setProcess_recordGBCASend (PMF.pure_injective hx) hfor]
-          exact ImplementationStep.echo5Bit _ j b hin hlv hcnt hsend
+          exact Algorithm.echo5Bit _ j b hin hlv hcnt hsend
         | none =>
           obtain ⟨hin, hlv, hnot, hcnt, hval, hsend, hx⟩ :=
             gbcaProgramStep_send_echo5Bot_own (hall j)
           rw [composition_setProcess_recordGBCASend (PMF.pure_injective hx) hfor]
-          exact ImplementationStep.echo5Bot _ j hin hlv hnot hcnt hval hsend
+          exact Algorithm.echo5Bot _ j hin hlv hnot hcnt hval hsend
     | deliver i j m =>
       obtain ⟨hmem, hw⟩ := gbcaNetworkStep_deliver hn
       have hw' : w' = w := PMF.pure_injective hw
@@ -365,7 +365,7 @@ theorem composition_projects (P : Parameters) (r : ℕ) :
       have hfor : ∀ i', i' ≠ i → x i' = u i' :=
         fun i' hi' => PMF.pure_injective (gbcaProgramStep_deliver_foreign (Ne.symm hi') (hall i'))
       rw [composition_deliver (PMF.pure_injective (gbcaProgramStep_deliver_own (hall i))) hfor]
-      exact ImplementationStep.deliver _ i j m hmem
+      exact Algorithm.deliver _ i j m hmem
   · by_cases hlτ : l = Sum.inl Label.tau
     · -- the network's own injection
       subst hlτ
@@ -375,7 +375,7 @@ theorem composition_projects (P : Parameters) (r : ℕ) :
       subst hw'
       refine ⟨Label.tau, rfl, ?_⟩
       rw [composition_recordGBCASend]
-      exact ImplementationStep.byzantine _ k m hF
+      exact Algorithm.byzantine _ k m hF
     · obtain ⟨x, w', rfl, hall, hn⟩ := compositionExtended_joint_inversion (by simpa using hlτ) hlab
       cases l with
       | inl l₀ =>
@@ -395,7 +395,7 @@ theorem composition_projects (P : Parameters) (r : ℕ) :
             fun i hi => PMF.pure_injective (gbcaProgramStep_callG_foreign (Ne.symm hi) (hall i))
           refine ⟨_, rfl, ?_⟩
           rw [composition_setProcess_recordGBCASend (PMF.pure_injective hx) hfor]
-          exact ImplementationStep.call _ id b hin
+          exact Algorithm.call _ id b hin
         | retG r' id out bnd =>
           obtain ⟨rfl, hbnd, hw⟩ := gbcaNetworkStep_retG_round hn
           have hw' : w' = w.setBound bnd := PMF.pure_injective hw
@@ -407,19 +407,19 @@ theorem composition_projects (P : Parameters) (r : ℕ) :
           | grade2 v =>
             obtain ⟨hin, hlv, hcnt, hret, hx⟩ := gbcaProgramStep_retGGrade2_own (hall id)
             rw [composition_setProcess_setBound (PMF.pure_injective hx) hfor]
-            exact ImplementationStep.retGrade2 _ id v bnd hin hlv hcnt hret hbnd
+            exact Algorithm.retGrade2 _ id v bnd hin hlv hcnt hret hbnd
           | grade1 v =>
             obtain ⟨hin, hlv, hnotGrade2, hcnt, honce, hbind, hval, hret, hx⟩ :=
               gbcaProgramStep_retGGrade1_own (hall id)
             rw [composition_setProcess_setBound (PMF.pure_injective hx) hfor]
-            exact ImplementationStep.retGrade1 _ id v bnd hin hlv hnotGrade2 hcnt honce
+            exact Algorithm.retGrade1 _ id v bnd hin hlv hnotGrade2 hcnt honce
               hbind hval
               hret hbnd
           | grade0 =>
             obtain ⟨hin, hlv, hnotGrade2, hnotGrade1, hcnt, hval, hret, hx⟩ :=
               gbcaProgramStep_retGGrade0_own (hall id)
             rw [composition_setProcess_setBound (PMF.pure_injective hx) hfor]
-            exact ImplementationStep.retGrade0 _ id bnd hin hlv hnotGrade2 hnotGrade1
+            exact Algorithm.retGrade0 _ id bnd hin hlv hnotGrade2 hnotGrade1
               hcnt hval hret
               hbnd
       | inr ev =>
@@ -439,7 +439,7 @@ theorem composition_projects (P : Parameters) (r : ℕ) :
             x i = u i := fun i => PMF.pure_injective (gbcaProgramStep_gbcaCallLoop (hall i))
           refine ⟨_, rfl, ?_⟩
           rw [composition_idle hidle]
-          exact ImplementationStep.callLoop _ id b
+          exact Algorithm.callLoop _ id b
         | byzantineCallG r' k b =>
           obtain ⟨rfl, hw⟩ := gbcaNetworkStep_byzantineCallG_round hn
           have hw' : w' = w.recordGBCASend k (.input b) := PMF.pure_injective hw
@@ -450,7 +450,7 @@ theorem composition_projects (P : Parameters) (r : ℕ) :
               (hall i))
           refine ⟨_, rfl, ?_⟩
           rw [composition_setProcess_recordGBCASend (PMF.pure_injective hx) hfor]
-          exact ImplementationStep.call _ k b hin
+          exact Algorithm.call _ k b hin
         | byzantineCallGLoop r' k b =>
           obtain ⟨rfl, hw⟩ := gbcaNetworkStep_byzantineCallGLoop_round hn
           have hw' : w' = w := PMF.pure_injective hw
@@ -459,7 +459,7 @@ theorem composition_projects (P : Parameters) (r : ℕ) :
             fun i => PMF.pure_injective (gbcaProgramStep_byzantineCallGLoop (hall i))
           refine ⟨_, rfl, ?_⟩
           rw [composition_idle hidle]
-          exact ImplementationStep.callLoop _ k b
+          exact Algorithm.callLoop _ k b
         | byzantineRetG r' k out bnd =>
           obtain ⟨rfl, hbnd, hw⟩ := gbcaNetworkStep_byzantineRetG_round hn
           have hw' : w' = w.setBound bnd := PMF.pure_injective hw
@@ -472,19 +472,19 @@ theorem composition_projects (P : Parameters) (r : ℕ) :
           | grade2 v =>
             obtain ⟨hin, hlv, hcnt, hret, hx⟩ := gbcaProgramStep_byzantineRetGGrade2_own (hall k)
             rw [composition_setProcess_setBound (PMF.pure_injective hx) hfor]
-            exact ImplementationStep.retGrade2 _ k v bnd hin hlv hcnt hret hbnd
+            exact Algorithm.retGrade2 _ k v bnd hin hlv hcnt hret hbnd
           | grade1 v =>
             obtain ⟨hin, hlv, hnotGrade2, hcnt, honce, hbind, hval, hret, hx⟩ :=
               gbcaProgramStep_byzantineRetGGrade1_own (hall k)
             rw [composition_setProcess_setBound (PMF.pure_injective hx) hfor]
-            exact ImplementationStep.retGrade1 _ k v bnd hin hlv hnotGrade2 hcnt honce
+            exact Algorithm.retGrade1 _ k v bnd hin hlv hnotGrade2 hcnt honce
               hbind hval
               hret hbnd
           | grade0 =>
             obtain ⟨hin, hlv, hnotGrade2, hnotGrade1, hcnt, hval, hret, hx⟩ :=
               gbcaProgramStep_byzantineRetGGrade0_own (hall k)
             rw [composition_setProcess_setBound (PMF.pure_injective hx) hfor]
-            exact ImplementationStep.retGrade0 _ k bnd hin hlv hnotGrade2 hnotGrade1
+            exact Algorithm.retGrade0 _ k bnd hin hlv hnotGrade2 hnotGrade1
               hcnt hval hret
               hbnd
 

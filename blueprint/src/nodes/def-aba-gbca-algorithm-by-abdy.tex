@@ -1,6 +1,6 @@
 \begin{definition}[The algorithm of the round's graded-agreement composition]
   \label{def:aba-gbca-algorithm-by-abdy}
-  \lean{PLTS.ABA.GBCA.ByABDY.boundOf}\lean{PLTS.ABA.GBCA.ByABDY.ImplementationStep}\lean{PLTS.ABA.GBCA.ByABDY.composition_projects}\leanok
+  \lean{PLTS.ABA.GBCA.ByABDY.boundOf}\lean{PLTS.ABA.GBCA.ByABDY.Algorithm}\lean{PLTS.ABA.GBCA.ByABDY.composition_projects}\leanok
   \uses{def:aba-labels, def:aba-parameters, def:aba-round-messages}
   The algorithm one graded-agreement round runs, as a relation on the state that round is composed over, with one transition per line of \algoref{alg:gbca-impl}{the GBCA implementation}, which is ABDY22's Algorithm~6 (D18).
   That state is the pair of the $n$ round records of Definition~\ref{def:aba-programs} and the round's network state of Definition~\ref{def:aba-gbca-instance-by-abdy}: the network is a component of the state rather than a field of it, and the four names $process$, $sent$, $received$ and $F$ used below are accessors on that pair.
@@ -14,5 +14,5 @@
   A return of outcome $out$ announces the bit already on record if the round has returned before and $\mathrm{boundOf}$'s bit otherwise, and writes it back, so a round announces one bit on all of its returns.
   The announced bit enters no guard of the algorithm and no field a program holds.
   The characterisation ties the algorithm to the composition of Definition~\ref{def:aba-gbca-instance-by-abdy}: at a label of the round's interface, every transition of the composition is the algorithm's transition at the specification label that interface label projects to, one step for one step.
-  Full transition inventory: \leandecl{PLTS.ABA.GBCA.ByABDY.ImplementationStep}; the characterisation: \leandecl{PLTS.ABA.GBCA.ByABDY.composition_projects}.
+  Full transition inventory: \leandecl{PLTS.ABA.GBCA.ByABDY.Algorithm}; the characterisation: \leandecl{PLTS.ABA.GBCA.ByABDY.composition_projects}.
 \end{definition}

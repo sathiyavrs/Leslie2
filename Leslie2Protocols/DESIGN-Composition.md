@@ -206,7 +206,7 @@ system of both chains and the second component of `ABAState`, the state
 Below that the two chains own different things. ABDY22's carries one further network, the
 round's network `GBCA.ByABDY.GBCANetwork`, a component of `ABDY.composed` and of `hybrid`, which
 disappears at the substitution inside the component that is exchanged. It is also the
-second component of `GBCA.ByABDY.ImplementationState`, the state the round refinement is defined on.
+second component of `GBCA.ByABDY.RoundState`, the state the round refinement is defined on.
 It carries one field that is not a message set: the round's bound bit, the value the
 round's graded returns announce on their labels (D29). The field is a ghost — no program
 reads it, and the three return rows are the only rows that touch it — and it belongs to
@@ -221,7 +221,7 @@ round by `GBCA.ByAFW.broadcastSubstitution`, and the gather networks at
 being exchanged.
 
 Every invariant therefore reads its network through accessors on a pair — the
-`GBCA.ByABDY.ImplementationState` accessors in `ABA/GBCA/ABDY/MessagesAndRecords.lean`, the `ABAState`
+`GBCA.ByABDY.RoundState` accessors in `ABA/GBCA/ABDY/MessagesAndRecords.lean`, the `ABAState`
 accessors in `ABA/Composition/ABAState.lean`, the `ABA.InstanceState` accessors in
 `ABA/Vocabulary/ProcessAndNetworkState.lean` — and names the network's own sent sets
 rather than a copy of them held inside a record. Weakening any one of them is a change to
@@ -251,7 +251,7 @@ round loop, `GBCA.ByABDY.ProcessRecord` and `GBCA.ByABDY.RoundRecord` for a grad
 the network state of any other sub-protocol instance, `Composition.ABANetworkState` for the DECIDED
 network, and one `SpecState` for each of the five specifications. Each composite state is an
 explicit product of those: `ABDY.ProcessRecord`, `AFW.ProcessRecord`, `ABA.InstanceState`,
-`GBCA.ByABDY.ImplementationState`, `ABAState`, `Composition.ComposedState` and `HybridState` for
+`GBCA.ByABDY.RoundState`, `ABAState`, `Composition.ComposedState` and `HybridState` for
 the ABDY22 chain, and `Gather.StateOverBracha`, `Gather.StateOverBroadcastSpecification`,
 `GBCA.ByAFW.RoundStateOverBracha`, `GBCA.ByAFW.RoundStateOverBroadcastSpecification`,
 `GBCA.ByAFW.RoundStateOverGatherSpecifications` and `AFW.RoundRecord` for the gather-based one.

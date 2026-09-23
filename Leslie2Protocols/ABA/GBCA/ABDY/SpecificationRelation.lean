@@ -83,7 +83,7 @@ the fields the protocol itself holds (spec `call` = concrete input, spec
 `ret` = concrete return flags, spec `F` = concrete `F`), and receipt evidence
 for the two fields it does not. `exclusion_certificate` bounds `excluded` from above — an exclusion
 certificate for every excluded bit — and never from below. -/
-structure SpecificationRelation (P : Parameters) (s : ImplementationState P.n) (t : SpecState P.n) :
+structure SpecificationRelation (P : Parameters) (s : RoundState P.n) (t : SpecState P.n) :
   Prop where
   /-- The concrete inductive invariant. -/
   invariant : Invariant P s
@@ -111,7 +111,7 @@ structure SpecificationRelation (P : Parameters) (s : ImplementationState P.n) (
 
 /-- The simulation relation of the round-`r` instance (the round index is
 phantom: every round runs the same protocol). -/
-def specificationRelation (P : Parameters) (_r : ℕ) (s : ImplementationState P.n)
+def specificationRelation (P : Parameters) (_r : ℕ) (s : RoundState P.n)
     (t : SpecState P.n) : Prop :=
   SpecificationRelation P s t
 
@@ -140,10 +140,10 @@ are that matching and the family lifting of `ABA/Implementation/ABDY/Composition
 
 /-- The two `corrupt` functions stay equal on aligned corrupted sets (a strong per-coordinate `fail`
 match, as required by the family lift). -/
-theorem implementationSpecification_corrupt_F_eq {t : SpecState P.n} {s : ImplementationState P.n}
+theorem implementationSpecification_corrupt_F_eq {t : SpecState P.n} {s : RoundState P.n}
     (hF : t.F = s.F) (id : Fin P.n) :
     (t.corrupt P id).F = (s.corrupt P id).F := by
-  rw [ImplementationState.corrupt_F]
+  rw [RoundState.corrupt_F]
   unfold SpecState.corrupt
   by_cases hc : id ∉ s.F ∧ s.F.card < P.f
   · rw [if_pos (by rw [hF]; exact hc), if_pos hc]
@@ -155,42 +155,42 @@ theorem implementationSpecification_corrupt_F_eq {t : SpecState P.n} {s : Implem
 of both systems. The two `corrupt`s share the guard `id ∉ F ∧ |F| < f` and `specificationRelation`
 aligns the `F`s, so the `if`-conditions agree; every other field is untouched by corruption. -/
 theorem specificationRelation_corrupt (P : Parameters) (r : ℕ) (id : Fin P.n)
-    {x : ImplementationState P.n} {y : SpecState P.n} (h : specificationRelation P r x y) :
+    {x : RoundState P.n} {y : SpecState P.n} (h : specificationRelation P r x y) :
     specificationRelation P r (x.corrupt P id) (y.corrupt P id) := by
   have hR : SpecificationRelation P x y := h
   exact
-    { invariant := hR.invariant.step (ImplementationStep.fail (r := r) x id)
+    { invariant := hR.invariant.step (Algorithm.fail (r := r) x id)
         (by rw [PMF.mem_support_pure_iff])
       call_eq := fun k => by
-        rw [corrupt_call, ImplementationState.corrupt_process]
+        rw [corrupt_call, RoundState.corrupt_process]
         exact hR.call_eq k
       ret_eq := fun k => by
-        rw [corrupt_ret, ImplementationState.corrupt_process]
+        rw [corrupt_ret, RoundState.corrupt_process]
         exact hR.ret_eq k
       F_eq := implementationSpecification_corrupt_F_eq hR.F_eq id
       exclusion_certificate := fun b hb => by
         rw [corrupt_excluded] at hb
         exact ExclusionCertificate.mono
-          (fun i j m hm => by rw [ImplementationState.corrupt_received]; exact hm)
-          (fun j w hw => by rw [ImplementationState.corrupt_process]; exact hw)
-          (ImplementationState.corrupt_F_subset x id)
+          (fun i j m hm => by rw [RoundState.corrupt_received]; exact hm)
+          (fun j w hw => by rw [RoundState.corrupt_process]; exact hw)
+          (RoundState.corrupt_F_subset x id)
           (hR.exclusion_certificate b hb)
       grade2_evidence := fun hg => by
         rw [corrupt_grade] at hg
         obtain ⟨v, i, hi⟩ := hR.grade2_evidence hg
-        exact ⟨v, i, by rw [ImplementationState.corrupt_receivedCount]; exact hi⟩
+        exact ⟨v, i, by rw [RoundState.corrupt_receivedCount]; exact hi⟩
       grade0_evidence := fun hg => by
         rw [corrupt_grade] at hg
         obtain ⟨i, hi⟩ := hR.grade0_evidence hg
-        exact ⟨i, by rw [ImplementationState.corrupt_receivedCount]; exact hi⟩
+        exact ⟨i, by rw [RoundState.corrupt_receivedCount]; exact hi⟩
       bound_excluded := by
-        rw [corrupt_excluded, ImplementationState.corrupt_bound]
+        rw [corrupt_excluded, RoundState.corrupt_bound]
         exact hR.bound_excluded }
 
 /-- The bound bit on record carries an exclude certificate for its complement:
 the specification has excluded that complement, and every excluded bit is
 certified. -/
-theorem SpecificationRelation.bound_certificate {s : ImplementationState P.n} {t : SpecState P.n}
+theorem SpecificationRelation.bound_certificate {s : RoundState P.n} {t : SpecState P.n}
     (hR : SpecificationRelation P s t) (β : Bool) (hb : s.bound = some β) :
     ExclusionCertificate P s (!β) := by
   refine hR.exclusion_certificate (!β) ?_
@@ -201,7 +201,7 @@ theorem SpecificationRelation.bound_certificate {s : ImplementationState P.n} {t
 `n − f` `VOTE v` receipt quorum, which refutes an exclude certificate for `v`; so a bound bit
 already on record, whose complement is certified, is `v` itself,
 and one computed here is `v` by `boundOf`. -/
-theorem SpecificationRelation.retBound_eq {s : ImplementationState P.n} {t : SpecState P.n}
+theorem SpecificationRelation.retBound_eq {s : RoundState P.n} {t : SpecState P.n}
     (hR : SpecificationRelation P s t) {i : Fin P.n} {v : Bool} {out : GBCAOutput}
     (hvq : P.n - P.f ≤ s.receivedCount i (.vote (some v)))
     (hout : boundOf s.sent s.F out = v) :
@@ -222,15 +222,15 @@ theorem SpecificationRelation.retBound_eq {s : ImplementationState P.n} {t : Spe
 /-- D15 derivation at `retGrade1`/`retGrade0`: `|Valid| > 1` evidence yields the
 `f + 1` F-blind genuine-holder support for either bit — its `n − f ≥ f + 1`
 `INPUT` receipt quorum for that bit sits at the returner itself. -/
-theorem inputSupport_of_bothValid {s : ImplementationState P.n} (hI : Invariant P s)
+theorem inputSupport_of_bothValid {s : RoundState P.n} (hI : Invariant P s)
     {i : Fin P.n} (hv : s.bothValid P i) (b : Bool) : InputSupport P s b := by
   have hfn := P.f_lt_n_sub_f
   exact hI.support_of_input_receipts
-    (le_trans (by omega) (ImplementationState.bothValid_le hv b))
+    (le_trans (by omega) (RoundState.bothValid_le hv b))
 
 /-- Transport an implementation support count to the specification along `call_eq`/`F_eq`: the spec
 guards' InputSupport counts (D15). -/
-theorem SpecificationRelation.callSupport {s : ImplementationState P.n} {t : SpecState P.n}
+theorem SpecificationRelation.callSupport {s : RoundState P.n} {t : SpecState P.n}
     (hR : SpecificationRelation P s t) {b : Bool} (h : InputSupport P s b) :
     P.f + 1 ≤ (Finset.univ.filter (fun id => t.call id = some b ∨ id ∈ t.F)).card := by
   unfold InputSupport at h
@@ -243,12 +243,12 @@ theorem SpecificationRelation.callSupport {s : ImplementationState P.n} {t : Spe
 /-- D8 quorum derivation: any `n − f` receipt quorum of a message whose correct
 senders must hold an input yields the spec's call quorum; corrupted senders
 are absorbed into the `∪ F`. -/
-theorem quorum_of_messageQuorum {s : ImplementationState P.n} {t : SpecState P.n}
+theorem quorum_of_messageQuorum {s : RoundState P.n} {t : SpecState P.n}
     (hR : SpecificationRelation P s t) {i : Fin P.n} {m : Message}
     (hpart : ∀ j, j ∉ s.F → m ∈ s.sent j → (s.process j).input ≠ none)
     (h : P.n - P.f ≤ s.receivedCount i m) : t.quorum P := by
   unfold SpecState.quorum
-  unfold ImplementationState.receivedCount at h
+  unfold RoundState.receivedCount at h
   refine le_trans h (Finset.card_le_card ?_)
   intro k hk
   rw [Finset.mem_filter] at hk
@@ -264,7 +264,7 @@ theorem quorum_of_messageQuorum {s : ImplementationState P.n} {t : SpecState P.n
     exact hpart k hkF' (hR.invariant.received_subset_sent i k _ hk.2)
 
 /-- **Both `bindUnset` guards from the single certificate.** -/
-theorem bindUnset_guards {s : ImplementationState P.n} {t : SpecState P.n}
+theorem bindUnset_guards {s : RoundState P.n} {t : SpecState P.n}
     (hR : SpecificationRelation P s t) {v : Bool} (hq : EchoReceiptQuorum P s v) :
     t.quorum P ∧ P.f + 1 ≤ (Finset.univ.filter (fun id => t.call id = some v ∨ id ∈ t.F)).card := by
   obtain ⟨m, hm⟩ := inputQuorum_of_echoReceiptQuorum hR.invariant hq
@@ -276,28 +276,28 @@ theorem bindUnset_guards {s : ImplementationState P.n} {t : SpecState P.n}
 /-- Grade exclusivity, grade 2: an `n − f` `ECHO5 v` receipt quorum rules out a grade-0 lock (the
 two `ECHO5` quorums would intersect in a correct process with two different `ECHO5` payloads,
 against `echo5_once`). -/
-theorem grade_ne_false_of_echo5_quorum {s : ImplementationState P.n} {t : SpecState P.n}
+theorem grade_ne_false_of_echo5_quorum {s : RoundState P.n} {t : SpecState P.n}
     (hR : SpecificationRelation P s t) {id : Fin P.n} {v : Bool}
     (hcnt : P.n - P.f ≤ s.receivedCount id (.echo5 (some v))) :
     t.grade ≠ some false := by
   intro hg
   obtain ⟨i', hc⟩ := hR.grade0_evidence hg
   obtain ⟨j, hjF, hj1,
-    hj2⟩ := ImplementationState.exists_correct_received_of_two_quorums hR.invariant.F_card hcnt hc
+    hj2⟩ := RoundState.exists_correct_received_of_two_quorums hR.invariant.F_card hcnt hc
   have e1 := hR.invariant.echo5_once j (some v) hjF (hR.invariant.received_subset_sent id j _ hj1)
   have e2 := hR.invariant.echo5_once j none hjF (hR.invariant.received_subset_sent i' j _ hj2)
   rw [e1] at e2
   exact absurd (Option.some.inj e2) (by simp)
 
 /-- Grade exclusivity, grade 0: an `n − f` `ECHO5 ⊥` receipt quorum rules out a grade-2 lock. -/
-theorem grade_ne_true_of_echo5Bot_quorum {s : ImplementationState P.n} {t : SpecState P.n}
+theorem grade_ne_true_of_echo5Bot_quorum {s : RoundState P.n} {t : SpecState P.n}
     (hR : SpecificationRelation P s t) {id : Fin P.n}
     (hcnt : P.n - P.f ≤ s.receivedCount id (.echo5 none)) :
     t.grade ≠ some true := by
   intro hg
   obtain ⟨v', i', hc⟩ := hR.grade2_evidence hg
   obtain ⟨j, hjF, hj1,
-    hj2⟩ := ImplementationState.exists_correct_received_of_two_quorums hR.invariant.F_card hc hcnt
+    hj2⟩ := RoundState.exists_correct_received_of_two_quorums hR.invariant.F_card hc hcnt
   have e1 := hR.invariant.echo5_once j (some v') hjF (hR.invariant.received_subset_sent i' j _ hj1)
   have e2 := hR.invariant.echo5_once j none hjF (hR.invariant.received_subset_sent id j _ hj2)
   rw [e1] at e2

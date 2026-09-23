@@ -53,7 +53,7 @@ open Implementation Composition
 
 /-- The programs beside the network, over the instance-internal alphabet. -/
 noncomputable def compositionExtended (P : Parameters) (r : ℕ) :
-    System (GBCA.ByABDY.ImplementationState P.n) (GBCALabel P.n) :=
+    System (GBCA.ByABDY.RoundState P.n) (GBCALabel P.n) :=
   (System.synchronisedProduct (gbcaProgram P r)).parallel (GBCANetwork P r)
 
 /-- **The round-`r` instance**: the programs beside the network, the two
@@ -61,7 +61,7 @@ rendezvous hidden, the result read back over the shared extended alphabet. Its
 interface is the round's ports — `callG r`, `retG r`, `gbcaCallLoop r` and the
 three graded-agreement rows of round `r`. -/
 noncomputable def composition (P : Parameters) (r : ℕ) :
-    System (GBCA.ByABDY.ImplementationState P.n) (ExtendedLabel P.n) :=
+    System (GBCA.ByABDY.RoundState P.n) (ExtendedLabel P.n) :=
   ((compositionExtended P r).abstract (gbcaEvents P.n)).relabel
 
 /-- The round a label of the instance interface belongs to. Every other label of the shared extended
@@ -88,8 +88,8 @@ instance {n : ℕ} : DecidablePred (isFailLabel (n := n)) := fun l => by
 
 /-- The broadcast corruption act on an instance state: the round's network state records it, the
 round records do not (D1). -/
-def corruptionAct (P : Parameters) : ExtendedLabel P.n → GBCA.ByABDY.ImplementationState P.n →
-  GBCA.ByABDY.ImplementationState P.n
+def corruptionAct (P : Parameters) : ExtendedLabel P.n → GBCA.ByABDY.RoundState P.n →
+  GBCA.ByABDY.RoundState P.n
   | Sum.inl (.fail k), (u, w) => (u, w.corrupt P k)
   | _, s => s
 
@@ -97,7 +97,7 @@ def corruptionAct (P : Parameters) : ExtendedLabel P.n → GBCA.ByABDY.Implement
 round-tagged label moves its round alone, `τ` moves one round, and `fail` is the broadcast that
 keeps every round's copy of the corrupted set together. -/
 noncomputable def gbcaInstanceFamily (P : Parameters) :
-    System (ℕ → GBCA.ByABDY.ImplementationState P.n) (ExtendedLabel P.n) :=
+    System (ℕ → GBCA.ByABDY.RoundState P.n) (ExtendedLabel P.n) :=
   System.family (composition P) roundOwnsLabel isFailLabel (corruptionAct P)
 
 /-! ### Determinacy
@@ -198,8 +198,8 @@ theorem gbcaProgramProduct_no_tau {P : Parameters} {r : ℕ}
 
 /-- The instance's step relation, unfolded to the hidden-rendezvous case and
 the shared-label case. -/
-theorem composition_step_iff (P : Parameters) (r : ℕ) (q : GBCA.ByABDY.ImplementationState P.n)
-    (l : ExtendedLabel P.n) (μ : PMF (GBCA.ByABDY.ImplementationState P.n)) :
+theorem composition_step_iff (P : Parameters) (r : ℕ) (q : GBCA.ByABDY.RoundState P.n)
+    (l : ExtendedLabel P.n) (μ : PMF (GBCA.ByABDY.RoundState P.n)) :
     (composition P r).step q l μ ↔
     (l = Sum.inl Label.tau ∧ ∃ e : GBCAEvent P.n, (compositionExtended P r).step q (Sum.inr e) μ) ∨
     (compositionExtended P r).step q (Sum.inl l) μ := by

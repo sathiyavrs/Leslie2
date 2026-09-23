@@ -61,7 +61,7 @@ interface — no component offers them, so they carry no transition of the insta
 * **The round's bound bit (D29).** The ghost field `NetworkState.bound` belongs to the network, so
   the two return transitions that write it are the network's (`GBCANetworkStep.retGIdle`,
   `GBCANetworkStep.byzantineRetG`), and a program's return takes the announced bit free. The write
-  is the one in `ImplementationStep.retGrade2`/`retGrade1`/`retGrade0`, which is what keeps
+  is the one in `Algorithm.retGrade2`/`retGrade1`/`retGrade0`, which is what keeps
   `composition_projects` an equality.
 * **D18 (the five message levels).** The send transitions are the five levels
   `INPUT / ECHO / VOTE / BIND / ECHO5` and the three graded returns of the cited algorithm, not the
@@ -70,7 +70,7 @@ interface — no component offers them, so they carry no transition of the insta
   transitions ask for no own send, the `ECHO` they read being sent by an `upon` handler that may
   still be pending. The `⊥` transitions and the returns carry the negations that the algorithm's
   if/else chain implies, the returns in the reduced form
-  `GBCA.ByABDY.ImplementationStep.retGrade0` states.
+  `GBCA.ByABDY.Algorithm.retGrade0` states.
 
 ## The interface
 
@@ -133,7 +133,7 @@ round `r`. -/
 inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
     GBCA.ByABDY.RoundRecord P.n → GBCALabel P.n → PMF (GBCA.ByABDY.RoundRecord P.n) → Prop
   /-- The call arrives: record the input and mark `⟨INPUT, b⟩` as multicast.
-  The recording of that message is the network's half (`ImplementationStep.call`). -/
+  The recording of that message is the network's half (`Algorithm.call`). -/
   | call (p : GBCA.ByABDY.RoundRecord P.n) (b : Bool) (h : p.process.input = none) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inl (.callG r j b)))
         (PMF.pure (p.setProcess { p.process with
@@ -143,11 +143,11 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
   | callIdle (p : GBCA.ByABDY.RoundRecord P.n) (id : Fin P.n) (b : Bool) (hid : id ≠ j) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inl (.callG r id b))) (PMF.pure p)
   /-- A call against an already-called round record: the record does not move
-  (`ImplementationStep.callLoop`). -/
+  (`Algorithm.callLoop`). -/
   | callLoop (p : GBCA.ByABDY.RoundRecord P.n) (id : Fin P.n) (b : Bool) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inr (.gbcaCallLoop r id b))) (PMF.pure p)
   /-- Return with outcome `grade2 v`: an `n − f` `ECHO5 v` quorum, the record called
-  and its own `ECHO5` out (`ImplementationStep.retGrade2`). -/
+  and its own `ECHO5` out (`Algorithm.retGrade2`). -/
   | retGrade2 (p : GBCA.ByABDY.RoundRecord P.n) (v : Bool) (bnd : Bool)
       (hin : p.process.input ≠ none)
       (hlv : p.process.sentEcho5 ≠ none)
@@ -157,7 +157,7 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
         (PMF.pure (p.setProcess { p.process with returned := true }))
   /-- Return with outcome `grade1 v`: an `n − f` any-`ECHO5` quorum containing
   `ECHO5 v`, `f + 1` `BIND v`s and `|Valid| > 1`, the record called, its own
-  `ECHO5` out and case (1) denied at either bit (`ImplementationStep.retGrade1`). -/
+  `ECHO5` out and case (1) denied at either bit (`Algorithm.retGrade1`). -/
   | retGrade1 (p : GBCA.ByABDY.RoundRecord P.n) (v : Bool) (bnd : Bool)
       (hin : p.process.input ≠ none)
       (hlv : p.process.sentEcho5 ≠ none)
@@ -171,7 +171,7 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
         (PMF.pure (p.setProcess { p.process with returned := true }))
   /-- Return with outcome `grade0`: an `n − f` `ECHO5 ⊥` quorum and `|Valid| > 1`, the
   record called, its own `ECHO5` out, case (1) denied at either bit and case (2)
-  denied in the reduced form `ImplementationStep.retGrade0` states. -/
+  denied in the reduced form `Algorithm.retGrade0` states. -/
   | retGrade0 (p : GBCA.ByABDY.RoundRecord P.n) (bnd : Bool)
       (hin : p.process.input ≠ none)
       (hlv : p.process.sentEcho5 ≠ none)
@@ -188,7 +188,7 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
       (hid : id ≠ j) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r id out bnd))) (PMF.pure p)
   /-- A Byzantine call (D11): the round record opens on the named bit, exactly as a correct call
-  opens it (`ImplementationStep.call`). -/
+  opens it (`Algorithm.call`). -/
   | byzantineCall (p : GBCA.ByABDY.RoundRecord P.n) (b : Bool) (h : p.process.input = none) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineCallG r j b)))
         (PMF.pure (p.setProcess { p.process with
@@ -198,11 +198,11 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
   | byzantineCallIdle (p : GBCA.ByABDY.RoundRecord P.n) (k : Fin P.n) (b : Bool) (hk : k ≠ j) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineCallG r k b))) (PMF.pure p)
   /-- A Byzantine call against an already-called round record (D11): the record does not move
-  (`ImplementationStep.callLoop`). -/
+  (`Algorithm.callLoop`). -/
   | byzantineCallLoop (p : GBCA.ByABDY.RoundRecord P.n) (k : Fin P.n) (b : Bool) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineCallGLoop r k b))) (PMF.pure p)
   /-- A Byzantine grade-2 return (D11): the correct row's evidence and guard, and
-  the same record write (`ImplementationStep.retGrade2`). -/
+  the same record write (`Algorithm.retGrade2`). -/
   | byzantineRetGrade2 (p : GBCA.ByABDY.RoundRecord P.n) (v : Bool) (bnd : Bool)
       (hin : p.process.input ≠ none)
       (hlv : p.process.sentEcho5 ≠ none)
@@ -211,7 +211,7 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r j (.grade2 v) bnd)))
         (PMF.pure (p.setProcess { p.process with returned := true }))
   /-- A Byzantine grade-1 return (D11): the correct row's evidence, denial and
-  guard, and the same record write (`ImplementationStep.retGrade1`). -/
+  guard, and the same record write (`Algorithm.retGrade1`). -/
   | byzantineRetGrade1 (p : GBCA.ByABDY.RoundRecord P.n) (v : Bool) (bnd : Bool)
       (hin : p.process.input ≠ none)
       (hlv : p.process.sentEcho5 ≠ none)
@@ -224,7 +224,7 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r j (.grade1 v) bnd)))
         (PMF.pure (p.setProcess { p.process with returned := true }))
   /-- A Byzantine grade-0 return (D11): the correct row's evidence, denials and
-  guard, and the same record write (`ImplementationStep.retGrade0`). -/
+  guard, and the same record write (`Algorithm.retGrade0`). -/
   | byzantineRetGrade0 (p : GBCA.ByABDY.RoundRecord P.n) (bnd : Bool)
       (hin : p.process.input ≠ none)
       (hlv : p.process.sentEcho5 ≠ none)
@@ -241,7 +241,7 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
       (hk : k ≠ j) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r k out bnd))) (PMF.pure p)
   /-- `INPUT` relay: `f + 1` receipts of `⟨INPUT, b⟩`, not yet multicast
-  (`ImplementationStep.relay`; D8, D18). -/
+  (`Algorithm.relay`; D8, D18). -/
   | sendRelay (p : GBCA.ByABDY.RoundRecord P.n) (b : Bool)
       (hin : p.process.input ≠ none)
       (hcnt : P.f + 1 ≤ p.receivedCount (.input b))
@@ -249,7 +249,7 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
       GBCAProgramStep P r j p (Sum.inr (.send j (.input b)))
         (PMF.pure (p.setProcess { p.process with
           sentInput := Function.update p.process.sentInput b true }))
-  /-- `ECHO b`: an `n − f` `INPUT b` quorum (`ImplementationStep.echo`; D18). -/
+  /-- `ECHO b`: an `n − f` `INPUT b` quorum (`Algorithm.echo`; D18). -/
   | sendEcho (p : GBCA.ByABDY.RoundRecord P.n) (b : Bool)
       (hin : p.process.input ≠ none)
       (hcnt : P.n - P.f ≤ p.receivedCount (.input b))
@@ -258,7 +258,7 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
         (PMF.pure (p.setProcess { p.process with sentEcho := some b }))
   /-- `VOTE b`: an `n − f` `ECHO b` quorum. The record's own `ECHO` is sent by
   one of the algorithm's `upon` handlers and may still be pending, so no
-  own-send condition applies here (`ImplementationStep.voteBit`; D18). -/
+  own-send condition applies here (`Algorithm.voteBit`; D18). -/
   | sendVoteBit (p : GBCA.ByABDY.RoundRecord P.n) (b : Bool)
       (hin : p.process.input ≠ none)
       (hcnt : P.n - P.f ≤ p.receivedCount (.echo b))
@@ -268,7 +268,7 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
   /-- `VOTE ⊥`: `n − f` `ECHO`s of any payload and `|Valid| > 1`, and no
   single-bit `ECHO` quorum on record. The record's own `ECHO` is sent by one of
   the algorithm's `upon` handlers and may still be pending, so no own-send
-  condition applies here (`ImplementationStep.voteBot`; D18). -/
+  condition applies here (`Algorithm.voteBot`; D18). -/
   | sendVoteBot (p : GBCA.ByABDY.RoundRecord P.n)
       (hin : p.process.input ≠ none)
       (hnot : ∀ b, p.receivedCount (.echo b) < P.n - P.f)
@@ -278,7 +278,7 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
       GBCAProgramStep P r j p (Sum.inr (.send j (.vote none)))
         (PMF.pure (p.setProcess { p.process with sentVote := some none }))
   /-- `BIND b`: an `n − f` `VOTE b` quorum, the record's own `VOTE` already
-  out (`ImplementationStep.bindBit`; D18). -/
+  out (`Algorithm.bindBit`; D18). -/
   | sendBindBit (p : GBCA.ByABDY.RoundRecord P.n) (b : Bool)
       (hin : p.process.input ≠ none)
       (hlv : p.process.sentVote ≠ none)
@@ -288,7 +288,7 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
         (PMF.pure (p.setProcess { p.process with sentBind := some (some b) }))
   /-- `BIND ⊥`: `n − f` `VOTE`s of any payload and `|Valid| > 1`, the record's
   own `VOTE` already out, and no single-bit `VOTE` quorum on record
-  (`ImplementationStep.bindBot`; D18). -/
+  (`Algorithm.bindBot`; D18). -/
   | sendBindBot (p : GBCA.ByABDY.RoundRecord P.n)
       (hin : p.process.input ≠ none)
       (hlv : p.process.sentVote ≠ none)
@@ -299,7 +299,7 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
       GBCAProgramStep P r j p (Sum.inr (.send j (.bind none)))
         (PMF.pure (p.setProcess { p.process with sentBind := some none }))
   /-- `ECHO5 b`: an `n − f` `BIND b` quorum, the record's own `BIND` already
-  out (`ImplementationStep.echo5Bit`; D18). -/
+  out (`Algorithm.echo5Bit`; D18). -/
   | sendEcho5Bit (p : GBCA.ByABDY.RoundRecord P.n) (b : Bool)
       (hin : p.process.input ≠ none)
       (hlv : p.process.sentBind ≠ none)
@@ -309,7 +309,7 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
         (PMF.pure (p.setProcess { p.process with sentEcho5 := some (some b) }))
   /-- `ECHO5 ⊥`: `n − f` `BIND`s of any payload and `|Valid| > 1`, the record's
   own `BIND` already out, and no single-bit `BIND` quorum on record
-  (`ImplementationStep.echo5Bot`; D18). -/
+  (`Algorithm.echo5Bot`; D18). -/
   | sendEcho5Bot (p : GBCA.ByABDY.RoundRecord P.n)
       (hin : p.process.input ≠ none)
       (hlv : p.process.sentBind ≠ none)
@@ -324,7 +324,7 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
     (hk : k ≠ j) :
       GBCAProgramStep P r j p (Sum.inr (.send k m)) (PMF.pure p)
   /-- Delivery, receiver's half: file the message under the sender's recv row.
-  Authenticity is the network's conjunct (`ImplementationStep.deliver`; D5). -/
+  Authenticity is the network's conjunct (`Algorithm.deliver`; D5). -/
   | deliverReceive (p : GBCA.ByABDY.RoundRecord P.n) (k : Fin P.n) (m : GBCA.ByABDY.Message) :
       GBCAProgramStep P r j p (Sum.inr (.deliver j k m)) (PMF.pure (p.deliverTo k m))
   /-- A delivery to another process: not `j`'s business. -/
@@ -350,27 +350,27 @@ inductive GBCANetworkStep (P : Parameters) (r : ℕ) :
   | send (w : NetworkState P.n) (j : Fin P.n) (m : GBCA.ByABDY.Message) :
       GBCANetworkStep P r w (Sum.inr (.send j m)) (PMF.pure (w.recordGBCASend j m))
   /-- The network's half of a delivery: the message must be sent under the
-  named sender, and delivery does not consume it (`ImplementationStep.deliver`; D5). -/
+  named sender, and delivery does not consume it (`Algorithm.deliver`; D5). -/
   | deliver (w : NetworkState P.n) (i j : Fin P.n) (m : GBCA.ByABDY.Message) (h : m ∈ w.sent j) :
       GBCANetworkStep P r w (Sum.inr (.deliver i j m)) (PMF.pure w)
   /-- Byzantine injection: a corrupted sender multicasts anything, at any time
-  (`ImplementationStep.byzantine`; D5, D11). -/
+  (`Algorithm.byzantine`; D5, D11). -/
   | byzantineGBCA (w : NetworkState P.n) (k : Fin P.n) (m : GBCA.ByABDY.Message) (hF : k ∈ w.F) :
       GBCANetworkStep P r w (Sum.inl (Sum.inl .tau)) (PMF.pure (w.recordGBCASend k m))
   /-- The network's half of the call: sent the caller's `⟨INPUT, b⟩`
-  (`ImplementationStep.call`). -/
+  (`Algorithm.call`). -/
   | callG (w : NetworkState P.n) (id : Fin P.n) (b : Bool) :
       GBCANetworkStep P r w (Sum.inl (Sum.inl (.callG r id b)))
         (PMF.pure (w.recordGBCASend id (.input b)))
   /-- A return sends nothing, and writes the round's bound bit: the label's
   `bnd` is the bit on record if there is one and `boundOf`'s otherwise, and it
-  goes on record (`ImplementationStep.retGrade2`/`retGrade1`/`retGrade0`). -/
+  goes on record (`Algorithm.retGrade2`/`retGrade1`/`retGrade0`). -/
   | retGIdle (w : NetworkState P.n) (id : Fin P.n) (out : GBCAOutput) (bnd : Bool)
       (hbnd : bnd = w.bound.getD (GBCA.ByABDY.boundOf w.sent w.F out)) :
       GBCANetworkStep P r w (Sum.inl (Sum.inl (.retG r id out bnd)))
         (PMF.pure (w.setBound bnd))
   /-- A call against an already-called round record sends nothing
-  (`ImplementationStep.callLoop`). -/
+  (`Algorithm.callLoop`). -/
   | gbcaCallLoop (w : NetworkState P.n) (id : Fin P.n) (b : Bool) :
       GBCANetworkStep P r w (Sum.inl (Sum.inr (.gbcaCallLoop r id b))) (PMF.pure w)
   /-- A Byzantine call (D11): its `⟨INPUT, b⟩` is sent here, and there is no

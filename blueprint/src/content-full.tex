@@ -1171,9 +1171,8 @@ The returns are $(b,2)$ on an $n{-}f$ ECHO5-$b$ quorum, $(b,1)$ on an $n{-}f$ an
 Each return box also carries the bit its label announces: the grade-2 and grade-1 returns the bit they hand out, the grade-0 return the bit read off the sent sets.
 The dashed local state is the D5 network: per-sender sent and received message sets, adversary $\mathrm{deliver}$, Byzantine injection for $j\in F$, and the round's bound bit, a ghost written at the first return and announced at every return (D29).}
 
-The Lean encoding of Algorithm~\ref{alg:gbca-impl} is the algorithm
-$\mathrm{ImplementationStep}$, a relation on the state the round-$r$ composition runs on, over the
-shared label alphabet of the development.
+The Lean encoding of Algorithm~\ref{alg:gbca-impl} is $\mathrm{Algorithm}$, a relation on the
+state the round-$r$ composition runs on, over the shared label alphabet of the development.
 Fix the parameters $n$ and $f$ with $3f < n$.
 Write $[n]$ for the process identifiers and $F \subseteq [n]$ for the corrupted
 set.
@@ -1210,10 +1209,10 @@ The local state of one process is the record $\mathrm{ProcessRecord}$, \leandecl
 The state of the instance is not a record of its own.
 It is the pair
 \[
-  \mathrm{ImplementationState}(n) \;=\;
+  \mathrm{RoundState}(n) \;=\;
     \bigl([n] \to \mathrm{RoundRecord}(n)\bigr) \times \mathrm{NetworkState}(n),
 \]
-\leandecl{PLTS.ABA.GBCA.ByABDY.ImplementationState}: the $n$ round records of
+\leandecl{PLTS.ABA.GBCA.ByABDY.RoundState}: the $n$ round records of
 Definition~\ref{def:aba-programs}, each holding one process's $\mathrm{ProcessRecord}$ beside the messages delivered to it, and the round's network state of Definition~\ref{def:aba-gbca-instance-by-abdy}, holding the per-sender sent sets, the corrupted set and the round's bound bit.
 The rules below are written in five accessors on that pair.
 \begin{itemize}
@@ -1256,73 +1255,73 @@ The two $\mathrm{VOTE}$ rows ask for no own send, the $\mathrm{ECHO}$ they read 
 \hline
 Rule & Label & Guard & Effect \\
 \hline
-\leandeclnamed{call}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.call} & $\mathrm{callG}(r,i,b)$ & $\mathit{input}_i$ unset
+\leandeclnamed{call}{PLTS.ABA.GBCA.ByABDY.Algorithm.call} & $\mathrm{callG}(r,i,b)$ & $\mathit{input}_i$ unset
   & $\mathit{input}_i \gets b$; \\
  & & & $\mathit{sentInput}_i(b) \gets$ true; \\
  & & & multicast $\mathrm{IN}\,b$ \\
 \hline
-\leandeclnamed{callLoop}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.callLoop} & $\mathrm{callG}(r,i,b)$ & ---
+\leandeclnamed{callLoop}{PLTS.ABA.GBCA.ByABDY.Algorithm.callLoop} & $\mathrm{callG}(r,i,b)$ & ---
   & identity (self-loop) \\
 \hline
-\leandeclnamed{deliver}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.deliver} & $\tau$ & $m \in \mathit{sent}(j)$
+\leandeclnamed{deliver}{PLTS.ABA.GBCA.ByABDY.Algorithm.deliver} & $\tau$ & $m \in \mathit{sent}(j)$
   & add $m$ to $\mathit{received}(i,j)$ (D5) \\
 \hline
-\leandeclnamed{relay}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.relay} & $\tau$
+\leandeclnamed{relay}{PLTS.ABA.GBCA.ByABDY.Algorithm.relay} & $\tau$
   & $\mathit{input}_j$ set, $\#_j(\mathrm{IN}\,b) \ge f{+}1$,
   & $\mathit{sentInput}_j(b) \gets$ true; \\
  & & $\mathit{sentInput}_j(b)$ false & multicast $\mathrm{IN}\,b$ (D8) \\
 \hline
-\leandeclnamed{echo}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.echo} & $\tau$
+\leandeclnamed{echo}{PLTS.ABA.GBCA.ByABDY.Algorithm.echo} & $\tau$
   & $\mathit{input}_j$ set, $\mathit{sentEcho}_j$ unset,
   & $\mathit{sentEcho}_j \gets b$; \\
  & & $\#_j(\mathrm{IN}\,b) \ge n{-}f$ & multicast $\mathrm{EC}\,b$ (D8) \\
 \hline
-\leandeclnamed{voteBit}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.voteBit} & $\tau$
+\leandeclnamed{voteBit}{PLTS.ABA.GBCA.ByABDY.Algorithm.voteBit} & $\tau$
   & $\mathit{input}_j$ set, $\mathit{sentVote}_j$ unset,
   & $\mathit{sentVote}_j \gets b$; \\
  & & $\#_j(\mathrm{EC}\,b) \ge n{-}f$ & multicast $\mathrm{VT}\,b$ (D8) \\
 \hline
-\leandeclnamed{voteBot}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.voteBot} & $\tau$
+\leandeclnamed{voteBot}{PLTS.ABA.GBCA.ByABDY.Algorithm.voteBot} & $\tau$
   & $\mathit{input}_j$ set, $\mathit{sentVote}_j$ unset,
   & $\mathit{sentVote}_j \gets \bot$; \\
  & & $\#_j(\mathrm{EC}) \ge n{-}f$, $\mathit{Val}_j = \{0,1\}$,
   & multicast $\mathrm{VT}\,\bot$ (D8) \\
  & & $\#_j(\mathrm{EC}\,b) < n{-}f$ for both $b$ & \\
 \hline
-\leandeclnamed{bindBit}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.bindBit} & $\tau$
+\leandeclnamed{bindBit}{PLTS.ABA.GBCA.ByABDY.Algorithm.bindBit} & $\tau$
   & $\mathit{input}_j$, $\mathit{sentVote}_j$ set, $\mathit{sentBind}_j$ unset,
   & $\mathit{sentBind}_j \gets b$; \\
  & & $\#_j(\mathrm{VT}\,b) \ge n{-}f$ & multicast $\mathrm{BD}\,b$ (D8) \\
 \hline
-\leandeclnamed{bindBot}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.bindBot} & $\tau$
+\leandeclnamed{bindBot}{PLTS.ABA.GBCA.ByABDY.Algorithm.bindBot} & $\tau$
   & $\mathit{input}_j$, $\mathit{sentVote}_j$ set, $\mathit{sentBind}_j$ unset,
   & $\mathit{sentBind}_j \gets \bot$; \\
  & & $\#_j(\mathrm{VT}) \ge n{-}f$, $\mathit{Val}_j = \{0,1\}$,
   & multicast $\mathrm{BD}\,\bot$ (D8) \\
  & & $\#_j(\mathrm{VT}\,b) < n{-}f$ for both $b$ & \\
 \hline
-\leandeclnamed{echo5Bit}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.echo5Bit} & $\tau$
+\leandeclnamed{echo5Bit}{PLTS.ABA.GBCA.ByABDY.Algorithm.echo5Bit} & $\tau$
   & $\mathit{input}_j$, $\mathit{sentBind}_j$ set, $\mathit{sentEcho5}_j$ unset,
   & $\mathit{sentEcho5}_j \gets b$; \\
  & & $\#_j(\mathrm{BD}\,b) \ge n{-}f$ & multicast $\mathrm{SL}\,b$ (D8) \\
 \hline
-\leandeclnamed{echo5Bot}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.echo5Bot} & $\tau$
+\leandeclnamed{echo5Bot}{PLTS.ABA.GBCA.ByABDY.Algorithm.echo5Bot} & $\tau$
   & $\mathit{input}_j$, $\mathit{sentBind}_j$ set, $\mathit{sentEcho5}_j$ unset,
   & $\mathit{sentEcho5}_j \gets \bot$; \\
  & & $\#_j(\mathrm{BD}) \ge n{-}f$, $\mathit{Val}_j = \{0,1\}$,
   & multicast $\mathrm{SL}\,\bot$ (D8) \\
  & & $\#_j(\mathrm{BD}\,b) < n{-}f$ for both $b$ & \\
 \hline
-\leandeclnamed{byzantine}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.byzantine} & $\tau$ & $j \in F$ & multicast $m$ at $j$ (D5) \\
+\leandeclnamed{byzantine}{PLTS.ABA.GBCA.ByABDY.Algorithm.byzantine} & $\tau$ & $j \in F$ & multicast $m$ at $j$ (D5) \\
 \hline
-\leandeclnamed{retGrade2}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.retGrade2} & $\mathrm{retG}(r,i,(v,2),bnd)$
+\leandeclnamed{retGrade2}{PLTS.ABA.GBCA.ByABDY.Algorithm.retGrade2} & $\mathrm{retG}(r,i,(v,2),bnd)$
   & $\mathit{input}_i$, $\mathit{sentEcho5}_i$ set,
   & mark $i$ returned; \\
  & & $\#_i(\mathrm{SL}\,v) \ge n{-}f$, & $\mathit{bound} \gets bnd$ (D29) \\
  & & $bnd$ the round's bound bit (D29), & \\
  & & $\mathit{returned}_i$ false & \\
 \hline
-\leandeclnamed{retGrade1}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.retGrade1} & $\mathrm{retG}(r,i,(v,1),bnd)$
+\leandeclnamed{retGrade1}{PLTS.ABA.GBCA.ByABDY.Algorithm.retGrade1} & $\mathrm{retG}(r,i,(v,1),bnd)$
   & $\mathit{input}_i$, $\mathit{sentEcho5}_i$ set,
   & mark $i$ returned; \\
  & & $\#_i(\mathrm{SL}) \ge n{-}f$, $\mathit{Val}_i = \{0,1\}$, & $\mathit{bound} \gets bnd$ (D29) \\
@@ -1332,7 +1331,7 @@ Rule & Label & Guard & Effect \\
  & & $bnd$ the round's bound bit (D29), & \\
  & & $\mathit{returned}_i$ false & \\
 \hline
-\leandeclnamed{retGrade0}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.retGrade0} & $\mathrm{retG}(r,i,(\bot,0),bnd)$
+\leandeclnamed{retGrade0}{PLTS.ABA.GBCA.ByABDY.Algorithm.retGrade0} & $\mathrm{retG}(r,i,(\bot,0),bnd)$
   & $\mathit{input}_i$, $\mathit{sentEcho5}_i$ set,
   & mark $i$ returned; \\
  & & $\#_i(\mathrm{SL}\,\bot) \ge n{-}f$, $\mathit{Val}_i = \{0,1\}$, & $\mathit{bound} \gets bnd$ (D29) \\
@@ -1342,17 +1341,17 @@ Rule & Label & Guard & Effect \\
  & & $bnd$ the round's bound bit (D29), & \\
  & & $\mathit{returned}_i$ false & \\
 \hline
-\leandeclnamed{fail}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.fail} & $\mathrm{fail}(i)$ & ---
+\leandeclnamed{fail}{PLTS.ABA.GBCA.ByABDY.Algorithm.fail} & $\mathrm{fail}(i)$ & ---
   & $F \gets F \cup \{i\}$ if $i \notin F$ \\
  & & & and $|F| < f$; else identity \\
 \hline
 \end{tabular}
 \end{center}
 
-The four \textbf{wait until} blocks of Algorithm~\ref{alg:gbca-impl} are the guards of \leandeclnamed{voteBit}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.voteBit}/\allowbreak\leandeclnamed{voteBot}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.voteBot},
-\leandeclnamed{bindBit}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.bindBit}/\allowbreak\leandeclnamed{bindBot}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.bindBot},
-\leandeclnamed{echo5Bit}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.echo5Bit}/\allowbreak\leandeclnamed{echo5Bot}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.echo5Bot} and
-\leandeclnamed{retGrade2}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.retGrade2}/\allowbreak\leandeclnamed{retGrade1}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.retGrade1}/\allowbreak\leandeclnamed{retGrade0}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.retGrade0}; the write-once fields
+The four \textbf{wait until} blocks of Algorithm~\ref{alg:gbca-impl} are the guards of \leandeclnamed{voteBit}{PLTS.ABA.GBCA.ByABDY.Algorithm.voteBit}/\allowbreak\leandeclnamed{voteBot}{PLTS.ABA.GBCA.ByABDY.Algorithm.voteBot},
+\leandeclnamed{bindBit}{PLTS.ABA.GBCA.ByABDY.Algorithm.bindBit}/\allowbreak\leandeclnamed{bindBot}{PLTS.ABA.GBCA.ByABDY.Algorithm.bindBot},
+\leandeclnamed{echo5Bit}{PLTS.ABA.GBCA.ByABDY.Algorithm.echo5Bit}/\allowbreak\leandeclnamed{echo5Bot}{PLTS.ABA.GBCA.ByABDY.Algorithm.echo5Bot} and
+\leandeclnamed{retGrade2}{PLTS.ABA.GBCA.ByABDY.Algorithm.retGrade2}/\allowbreak\leandeclnamed{retGrade1}{PLTS.ABA.GBCA.ByABDY.Algorithm.retGrade1}/\allowbreak\leandeclnamed{retGrade0}{PLTS.ABA.GBCA.ByABDY.Algorithm.retGrade0}; the write-once fields
 $\mathit{sentEcho}$, $\mathit{sentVote}$, $\mathit{sentBind}$, $\mathit{sentEcho5}$ carry the ``not sent yet'' conditions.
 The blocks are taken in the order Algorithm~\ref{alg:gbca-impl} writes them.
 A process reaches a block only after executing the send the block above it ends with, and that is the guard $\mathit{sentVote}_j$ set on the two $\mathrm{BIND}$ rules, $\mathit{sentBind}_j$ set on the two $\mathrm{ECHO5}$ rules, and $\mathit{sentEcho5}_i$ set on the three return rules.
@@ -1360,11 +1359,11 @@ The two $\mathrm{VOTE}$ rules carry no such guard.
 What precedes the first \textbf{wait until} block is not a block a process must execute to the end but the \textbf{upon} handler that multicasts $\mathrm{ECHO}$, so a process may reach that block with its own $\mathrm{ECHO}$ still pending.
 In each of the three return blocks the two rules are exclusive: the $\bot$ rule denies its block's case (a) at either bit, which is the \textbf{else} of that block's last line.
 The three return rules are the three wait-until cases of the last block: case (a) is an $n{-}f$ $\mathrm{ECHO5}\,v$ quorum, case (b) an $n{-}f$ any-$\mathrm{ECHO5}$ quorum containing $\mathrm{ECHO5}\,v$ together with $f{+}1$ $\mathrm{BIND}\,v$ receipts and $|\mathit{Valid}| > 1$, and case (c) an $n{-}f$ $\mathrm{ECHO5}\,\bot$ quorum with $|\mathit{Valid}| > 1$.
-That block ends in an \textbf{if}/\textbf{elif}/\textbf{else}, so each rule carries the denials of the cases above it beside the receipts its own case names: \leandeclnamed{retGrade1}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.retGrade1} denies case (a) at either bit, and \leandeclnamed{retGrade0}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.retGrade0} denies case (a) at either bit and case (b).
+That block ends in an \textbf{if}/\textbf{elif}/\textbf{else}, so each rule carries the denials of the cases above it beside the receipts its own case names: \leandeclnamed{retGrade1}{PLTS.ABA.GBCA.ByABDY.Algorithm.retGrade1} denies case (a) at either bit, and \leandeclnamed{retGrade0}{PLTS.ABA.GBCA.ByABDY.Algorithm.retGrade0} denies case (a) at either bit and case (b).
 The denial of case (b) is carried in reduced form.
 Case (b) requires at a bit $v$ four things: an $n{-}f$ any-$\mathrm{ECHO5}$ quorum, a received $\mathrm{ECHO5}\,v$, $f{+}1$ $\mathrm{BIND}\,v$ receipts and $|\mathit{Valid}| > 1$.
 The first and the last are supplied by
-\leandeclnamed{retGrade0}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.retGrade0}'s own guard, an $n{-}f$
+\leandeclnamed{retGrade0}{PLTS.ABA.GBCA.ByABDY.Algorithm.retGrade0}'s own guard, an $n{-}f$
 $\mathrm{ECHO5}\,\bot$ quorum being in particular an $n{-}f$ any-$\mathrm{ECHO5}$ quorum, so what is left to deny is the pair of the received $\mathrm{ECHO5}\,v$ and the $f{+}1$ $\mathrm{BIND}\,v$ receipts.
 All three rules ask further that the returning process has been called, the D8 guard carried from the sends over to the returns.
 Case (c) returns no bit.
@@ -1376,7 +1375,7 @@ The $excluded$ and $grade$ fields of Transition System~2 are abstractions of the
 The inventory above is one rule table, and the composition of Definition~\ref{def:aba-gbca-instance-by-abdy} is $n$ programs beside a network.
 They are two presentations of the same round on the same state, and each rule of the table is a rule of the composition with its participants named.
 A rule that touches both halves is a rendezvous:
-\leandeclnamed{deliver}{PLTS.ABA.GBCA.ByABDY.ImplementationStep.deliver} reads the network state's sent set
+\leandeclnamed{deliver}{PLTS.ABA.GBCA.ByABDY.Algorithm.deliver} reads the network state's sent set
 in its guard and writes the receiver's row, so it splits into the two halves of a $\mathrm{gbcaDeliver}$ rendezvous, the network supplying the guard $m \in \mathit{sent}(j)$ and the receiver performing the row update.
 No rule reads a second process, and Definitions~\ref{def:aba-programs} and~\ref{def:aba-network} are where each guard is written against one process record.
 

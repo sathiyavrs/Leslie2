@@ -88,7 +88,7 @@ def ProtocolRelation (P : Parameters) (u : ProtocolState P) (t : ComposedState P
 /-- The relation, read at an explicit pair of states. -/
 theorem protocolRelation_mk (P : Parameters) (processes : ∀ _ : Fin P.n,
     ProcessRecord P.n) (w : NetworkState P.n) (o : ℕ → WCC.SpecState P.n) (G : ℕ →
-      GBCA.ByABDY.ImplementationState P.n)
+      GBCA.ByABDY.RoundState P.n)
     (C : ∀ _ : Fin P.n, RoundLoopRecord P.n) (A : ABANetworkState P.n)
     (o' : ℕ → WCC.SpecState P.n) :
     ProtocolRelation P (processes, w, o) (G, C, A, o') ↔
@@ -106,8 +106,8 @@ round records and the network states of the updated family. -/
 
 /-- Updating round `r` by a state whose round records are the ones it already had leaves every round
 record where it was. -/
-private theorem update_fst {P : Parameters} (G : ℕ → GBCA.ByABDY.ImplementationState P.n) (r : ℕ)
-    {X : GBCA.ByABDY.ImplementationState P.n} (hX : X.1 = (G r).1) (r' : ℕ) :
+private theorem update_fst {P : Parameters} (G : ℕ → GBCA.ByABDY.RoundState P.n) (r : ℕ)
+    {X : GBCA.ByABDY.RoundState P.n} (hX : X.1 = (G r).1) (r' : ℕ) :
     (Function.update G r X r').1 = (G r').1 := by
   by_cases h : r' = r
   · subst h; rw [Function.update_self, hX]
@@ -115,7 +115,7 @@ private theorem update_fst {P : Parameters} (G : ℕ → GBCA.ByABDY.Implementat
 
 /-- Updating round `r` by a state whose network state is the one it already had leaves
 every network state where it was. -/
-private theorem update_snd {P : Parameters} (G : ℕ → GBCA.ByABDY.ImplementationState P.n) (r : ℕ)
+private theorem update_snd {P : Parameters} (G : ℕ → GBCA.ByABDY.RoundState P.n) (r : ℕ)
     (u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n) (r' : ℕ) :
     (Function.update G r (u, (G r).2) r').2 = (G r').2 := by
   by_cases h : r' = r
@@ -124,7 +124,7 @@ private theorem update_snd {P : Parameters} (G : ℕ → GBCA.ByABDY.Implementat
 
 /-- The network state conjunct after a round multicast in round `r`. -/
 private theorem relation_recordGBCASend {P : Parameters}
-    {G : ℕ → GBCA.ByABDY.ImplementationState P.n} {w : NetworkState P.n}
+    {G : ℕ → GBCA.ByABDY.RoundState P.n} {w : NetworkState P.n}
     (hG : ∀ r, (G r).2 = ⟨w.sent r, w.F, w.ghostRecord r⟩)
     (r : ℕ) (k : Fin P.n) (m : GBCA.ByABDY.Message) (u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n)
     (r' : ℕ) :
@@ -154,7 +154,7 @@ private theorem ghostOutput_getD {P : Parameters} {w : NetworkState P.n} {r : �
 /-- The network state conjunct after a return of round `r`. The instance's bound
 bit and the adversary's ghost record of round `r` take the same bit, and every
 other round's record is unchanged. -/
-private theorem relation_setBound {P : Parameters} {G : ℕ → GBCA.ByABDY.ImplementationState P.n}
+private theorem relation_setBound {P : Parameters} {G : ℕ → GBCA.ByABDY.RoundState P.n}
     {w : NetworkState P.n} (hG : ∀ r', (G r').2 = ⟨w.sent r', w.F, w.ghostRecord r'⟩)
     (r : ℕ) (bnd : Bool) (u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n)
     (hfix : (w.ghostRecord r).getD bnd = bnd) {L : ExtendedLabel P.n}
@@ -198,7 +198,7 @@ the conjunct before the step and from the mover's own family of new-column equat
 /-- The columns conjunct under a write at one process. -/
 private theorem relation_roundRecord (P : Parameters)
     {processes x : ∀ _ : Fin P.n, ProcessRecord P.n}
-    {G G' : ℕ → GBCA.ByABDY.ImplementationState P.n} (id : Fin P.n)
+    {G G' : ℕ → GBCA.ByABDY.RoundState P.n} (id : Fin P.n)
     (hst : ∀ j r, (G r).1 j = (processes j).2.roundRecord r)
     (hfor : ∀ i, i ≠ id → x i = processes i) (hGfor : ∀ j r, j ≠ id → (G' r).1 j = (G r).1 j)
     (hown : ∀ r, (G' r).1 id = (x id).2.roundRecord r) :
@@ -210,7 +210,7 @@ private theorem relation_roundRecord (P : Parameters)
 
 /-- The columns conjunct under a transition at which no process writes. -/
 private theorem relation_none (P : Parameters) {processes x : ∀ _ : Fin P.n, ProcessRecord P.n}
-    {G G' : ℕ → GBCA.ByABDY.ImplementationState P.n}
+    {G G' : ℕ → GBCA.ByABDY.RoundState P.n}
     (hst : ∀ j r, (G r).1 j = (processes j).2.roundRecord r)
     (hfor : ∀ i, x i = processes i)
     (hGfor : ∀ j r, (G' r).1 j = (G r).1 j) :
@@ -229,7 +229,7 @@ rows, the oracle's successor carried across. -/
 private theorem coupling_visible (P : Parameters) {x : ∀ _ : Fin P.n, ProcessRecord P.n}
     {w' : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
     {ω : PMF (ℕ → WCC.SpecState P.n)}
-    {G G' : ℕ → GBCA.ByABDY.ImplementationState P.n} {C C' : ∀ _ : Fin P.n, RoundLoopRecord P.n}
+    {G G' : ℕ → GBCA.ByABDY.RoundState P.n} {C C' : ∀ _ : Fin P.n, RoundLoopRecord P.n}
     {A A' : ABANetworkState P.n} {L : ExtendedLabel P.n} (hL : L ≠ Silent.τ)
     (hrel : ∀ o' ∈ ω.support, ProtocolRelation P (x, w', o') (G', C', A', o'))
     (hGs : (GBCA.ByABDY.gbcaInstanceFamily P).step G L (PMF.pure G'))
@@ -251,8 +251,8 @@ instance of round `r` takes it as its own silent rule. -/
 private theorem coupling_round
     (P : Parameters) {x : ∀ _ : Fin P.n, ProcessRecord P.n} {w' : NetworkState P.n}
     {o : ℕ → WCC.SpecState P.n} {ν : PMF (ℕ → WCC.SpecState P.n)}
-    {G : ℕ → GBCA.ByABDY.ImplementationState P.n} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
-    {A : ABANetworkState P.n} {r : ℕ} {X : GBCA.ByABDY.ImplementationState P.n}
+    {G : ℕ → GBCA.ByABDY.RoundState P.n} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
+    {A : ABANetworkState P.n} {r : ℕ} {X : GBCA.ByABDY.RoundState P.n}
     (hν : ν = PMF.pure o) (hrel : ProtocolRelation P (x, w', o) (Function.update G r X, C, A, o))
     (hsub : (GBCA.ByABDY.composition P r).step (G r) (Sum.inl Label.tau) (PMF.pure X)) :
     ∃ Ω : PMF (PMF (ComposedState P)), PMFRel (diracRel (ProtocolRelation P))
@@ -286,7 +286,7 @@ network's Byzantine row (D23). -/
 /-- The matching on the rendezvous alphabet. -/
 theorem coupling_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord P.n}
     {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
-    {G : ℕ → GBCA.ByABDY.ImplementationState P.n} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
+    {G : ℕ → GBCA.ByABDY.RoundState P.n} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
     {A : ABANetworkState P.n} (hR : ProtocolRelation P (processes, w, o) (G, C, A, o))
     (e : NetworkEvent P.n) {μ : PMF (ProtocolState P)}
     (h : (protocolExtended P).step (processes, w, o) (Sum.inr e) μ) :
@@ -298,7 +298,7 @@ theorem coupling_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
   obtain ⟨x, w', ν, hall, hn, hWs, rfl⟩ := protocolExtended_event_inversion P h
   have hLne : (Sum.inr e : ExtendedLabel P.n) ≠ Silent.τ := by
     simp
-  have hvis : ∀ {G' : ℕ → GBCA.ByABDY.ImplementationState P.n} {A' : ABANetworkState P.n},
+  have hvis : ∀ {G' : ℕ → GBCA.ByABDY.RoundState P.n} {A' : ABANetworkState P.n},
       (∀ o' ∈ ν.support, ProtocolRelation P (x, w', o') (G', fun i => (x i).1, A', o')) →
       (GBCA.ByABDY.gbcaInstanceFamily P).step G (Sum.inr e) (PMF.pure G') →
       (∀ i, RoundLoopStep P i (C i) (Sum.inr e) (PMF.pure ((x i).1))) →
@@ -579,7 +579,7 @@ theorem coupling_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
 /-- The matching on a visible shared label. -/
 theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord P.n}
     {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
-    {G : ℕ → GBCA.ByABDY.ImplementationState P.n} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
+    {G : ℕ → GBCA.ByABDY.RoundState P.n} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
     {A : ABANetworkState P.n} (hR : ProtocolRelation P (processes, w, o) (G, C, A, o))
     {l : Label P.n} (hl : l ≠ Label.tau) {μ : PMF (ProtocolState P)}
     (h : (protocolExtended P).step (processes, w, o) (Sum.inl l) μ) :
@@ -913,7 +913,7 @@ theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
 no coordinate the relation reads, so the composed answer to it is to stand
 still; the adversary's two injections are answered by a transition. -/
 theorem coupling_tau (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord P.n}
-    {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n} {G : ℕ → GBCA.ByABDY.ImplementationState P.n}
+    {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n} {G : ℕ → GBCA.ByABDY.RoundState P.n}
     {C : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A : ABANetworkState P.n}
     (hR : ProtocolRelation P (processes, w, o) (G, C, A, o)) {μ : PMF (ProtocolState P)}
     (h : (protocolExtended P).step (processes, w, o) (Sum.inl Label.tau) μ) :

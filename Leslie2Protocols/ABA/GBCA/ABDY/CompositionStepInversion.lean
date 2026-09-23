@@ -14,7 +14,7 @@ together with the Dirac it produces, and the idle row of a non-participant as th
 `gbcaNetworkStep_*` does the same for the round's network on the two rendezvous and on the silent
 label.
 
-The round records and the network state are the two components of `GBCA.ByABDY.ImplementationState`
+The round records and the network state are the two components of `GBCA.ByABDY.RoundState`
 (`GBCA/ABDY/MessagesAndRecords.lean`), the composed state the round instance runs on. What a joint
 step delivers is a program function given pointwise, by its value at the acting process and its
 agreement with the old function elsewhere, where the algorithm of `GBCA/ABDY/Algorithm.lean` writes
@@ -317,7 +317,7 @@ theorem gbcaNetworkStep_tau (h : GBCANetworkStep P r w (Sum.inl (Sum.inl .tau)) 
 end NetworkStepInversion
 /-! ### The write a row makes on the composed state
 
-The round records and the network state are the two components of `GBCA.ByABDY.ImplementationState`
+The round records and the network state are the two components of `GBCA.ByABDY.RoundState`
 (`GBCA/ABDY/MessagesAndRecords.lean`), the composed state the round instance runs on, and the four
 accessors of that pair are the ones the algorithm reads. A joint step delivers a program function
 pointwise: its value at the acting process, and its agreement with the old one elsewhere.
@@ -330,7 +330,7 @@ variable {P : Parameters} {u x : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n} {
 /-- A record write at one program, with the network state untouched. -/
 theorem composition_setProcess {j : Fin P.n} {pr : GBCA.ByABDY.ProcessRecord}
     (hj : x j = (u j).setProcess pr) (hne : ∀ i, i ≠ j → x i = u i) :
-    ((x, w) : GBCA.ByABDY.ImplementationState P.n) = GBCA.ByABDY.ImplementationState.setProcess
+    ((x, w) : GBCA.ByABDY.RoundState P.n) = GBCA.ByABDY.RoundState.setProcess
     (u, w) j pr := by
   rw [Function.eq_update_iff.mpr ⟨hj, hne⟩]
   rfl
@@ -339,8 +339,8 @@ theorem composition_setProcess {j : Fin P.n} {pr : GBCA.ByABDY.ProcessRecord}
 that write multicasts. -/
 theorem composition_setProcess_recordGBCASend {j : Fin P.n} {pr : GBCA.ByABDY.ProcessRecord}
     {m : GBCA.ByABDY.Message} (hj : x j = (u j).setProcess pr) (hne : ∀ i, i ≠ j → x i = u i) :
-    ((x, w.recordGBCASend j m) : GBCA.ByABDY.ImplementationState P.n) =
-    (GBCA.ByABDY.ImplementationState.setProcess (u, w) j pr).multicast j m := by
+    ((x, w.recordGBCASend j m) : GBCA.ByABDY.RoundState P.n) =
+    (GBCA.ByABDY.RoundState.setProcess (u, w) j pr).multicast j m := by
   rw [Function.eq_update_iff.mpr ⟨hj, hne⟩]
   rfl
 
@@ -348,20 +348,20 @@ theorem composition_setProcess_recordGBCASend {j : Fin P.n} {pr : GBCA.ByABDY.Pr
 the round's bound bit. -/
 theorem composition_setProcess_setBound {j : Fin P.n} {pr : GBCA.ByABDY.ProcessRecord} {β : Bool}
     (hj : x j = (u j).setProcess pr) (hne : ∀ i, i ≠ j → x i = u i) :
-    ((x, w.setBound β) : GBCA.ByABDY.ImplementationState P.n)
-      = (GBCA.ByABDY.ImplementationState.setProcess (u, w) j pr).setBound β := by
+    ((x, w.setBound β) : GBCA.ByABDY.RoundState P.n)
+      = (GBCA.ByABDY.RoundState.setProcess (u, w) j pr).setBound β := by
   rw [Function.eq_update_iff.mpr ⟨hj, hne⟩]
   rfl
 
 /-- The programs remain unchanged. -/
 theorem composition_idle (hall : ∀ i, x i = u i) :
-    ((x, w) : GBCA.ByABDY.ImplementationState P.n) = (u, w) := by
+    ((x, w) : GBCA.ByABDY.RoundState P.n) = (u, w) := by
   rw [funext hall]
 
 /-- A delivery: the receiver files the message under its sender's row. -/
 theorem composition_deliver {i k : Fin P.n} {m : GBCA.ByABDY.Message}
     (hi : x i = (u i).deliverTo k m) (hne : ∀ i', i' ≠ i → x i' = u i') :
-    ((x, w) : GBCA.ByABDY.ImplementationState P.n) = GBCA.ByABDY.ImplementationState.receiveMessage
+    ((x, w) : GBCA.ByABDY.RoundState P.n) = GBCA.ByABDY.RoundState.receiveMessage
     (u, w) i k m := by
   rw [Function.eq_update_iff.mpr ⟨hi, hne⟩]
   rfl
@@ -369,13 +369,13 @@ theorem composition_deliver {i k : Fin P.n} {m : GBCA.ByABDY.Message}
 /-- A Byzantine injection: the network state records a message under a corrupted
 sender. -/
 theorem composition_recordGBCASend {k : Fin P.n} {m : GBCA.ByABDY.Message} :
-    ((u, w.recordGBCASend k m) : GBCA.ByABDY.ImplementationState P.n)
-      = GBCA.ByABDY.ImplementationState.multicast (u, w) k m := rfl
+    ((u, w.recordGBCASend k m) : GBCA.ByABDY.RoundState P.n)
+      = GBCA.ByABDY.RoundState.multicast (u, w) k m := rfl
 
 /-- Corruption is the network state's own write, which is the composed state's (D1). -/
 theorem composition_corrupt (k : Fin P.n) :
-    ((u, w.corrupt P k) : GBCA.ByABDY.ImplementationState P.n)
-      = GBCA.ByABDY.ImplementationState.corrupt P k (u, w) := rfl
+    ((u, w.corrupt P k) : GBCA.ByABDY.RoundState P.n)
+      = GBCA.ByABDY.RoundState.corrupt P k (u, w) := rfl
 
 end Writes
 /-! ### Reading an instance transition backwards
@@ -390,7 +390,7 @@ the network step on the label, and the joint distribution is their Dirac
 product. -/
 theorem compositionExtended_joint_inversion {P : Parameters} {r : ℕ}
     {u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n} {w : NetworkState P.n} {L : GBCALabel P.n}
-    {μ : PMF (GBCA.ByABDY.ImplementationState P.n)} (hL : L ≠ (Silent.τ : GBCALabel P.n))
+    {μ : PMF (GBCA.ByABDY.RoundState P.n)} (hL : L ≠ (Silent.τ : GBCALabel P.n))
     (h : (compositionExtended P r).step (u, w) L μ) :
     ∃ (x : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n) (w' : NetworkState P.n),
       μ = PMF.pure (x, w') ∧ (∀ i, GBCAProgramStep P r i (u i) L (PMF.pure (x i))) ∧
@@ -407,7 +407,7 @@ theorem compositionExtended_joint_inversion {P : Parameters} {r : ℕ}
 injection: no program has a `τ` row. -/
 theorem compositionExtended_tau_inversion {P : Parameters} {r : ℕ}
     {u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n} {w : NetworkState P.n}
-    {μ : PMF (GBCA.ByABDY.ImplementationState P.n)}
+    {μ : PMF (GBCA.ByABDY.RoundState P.n)}
     (h : (compositionExtended P r).step (u, w) (Sum.inl (Sum.inl Label.tau)) μ) :
     ∃ w' : NetworkState P.n, μ = PMF.pure (u, w') ∧
       GBCANetworkStep P r w (Sum.inl (Sum.inl Label.tau)) (PMF.pure w') := by

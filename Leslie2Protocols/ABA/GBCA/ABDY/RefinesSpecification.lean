@@ -14,7 +14,7 @@ import Leslie2Protocols.ABA.GBCA.ABDY.SpecificationRelation
 the round's interface (`GBCA.specificationOverRoundAlphabet`), along `specificationRelation`
 (`ABA/GBCA/ABDY/SpecificationRelation.lean`).
 
-A transition of the composition is one transition of `ImplementationStep`
+A transition of the composition is one transition of `Algorithm`
 (`GBCA.ByABDY.composition_projects`), that transition is answered by a weak run of the
 specification (`specificationRelation_row`), and the run is lifted to the round's interface along a
 section of `specificationLabelMap` — which is where a Byzantine handshake transition is answered by
@@ -51,15 +51,15 @@ variable {P : Parameters}
 
 /-! ### The relation across one transition -/
 
-/-- **The relation across one transition**: every transition of `ImplementationStep` at a related
+/-- **The relation across one transition**: every transition of `Algorithm` at a related
 pair is answered by a weak run of the graded agreement specification, and the answer is again
 related. The internal transitions stutter; the call, the call loop and `fail` are answered by the
 specification's own transitions; a return is answered by a graded specification return, preceded by
 `bindUnset` where the bit that return needs excluded is not excluded yet. -/
-theorem specificationRelation_row (P : Parameters) (r : ℕ) (q1 : ImplementationState P.n)
+theorem specificationRelation_row (P : Parameters) (r : ℕ) (q1 : RoundState P.n)
     (q2 : SpecState P.n) (hR : specificationRelation P r q1 q2) (l : Label P.n)
-    (μ1 : PMF (ImplementationState P.n)) (hstep : ImplementationStep P r q1 l μ1)
-    (q1' : ImplementationState P.n) (hq1' : q1' ∈ μ1.support) :
+    (μ1 : PMF (RoundState P.n)) (hstep : Algorithm P r q1 l μ1)
+    (q1' : RoundState P.n) (hq1' : q1' ∈ μ1.support) :
     ∃ q2', ((l = Silent.τ ∧ (specInst P r).weakLSilent q2 q2') ∨
       (¬ l = Silent.τ ∧ (specInst P r).weakLStep q2 l q2')) ∧
       specificationRelation P r q1' q2' := by
@@ -104,15 +104,15 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q1 : Implementatio
       hRR.bound_excluded⟩
     · intro b hb
       exact ExclusionCertificate.mono (s := q1)
-        (fun i' j' m' hm' => ImplementationState.mem_receiveMessage_received.mpr (Or.inr hm'))
+        (fun i' j' m' hm' => RoundState.mem_receiveMessage_received.mpr (Or.inr hm'))
         (fun k w hk => by simpa using hk) (Finset.Subset.refl _) (hRR.exclusion_certificate b hb)
     · intro hg
       obtain ⟨v0, i0, hi0⟩ := hRR.grade2_evidence hg
       exact ⟨v0, i0,
-        le_trans hi0 (ImplementationState.receivedCount_le_receiveMessage q1 i j m i0 _)⟩
+        le_trans hi0 (RoundState.receivedCount_le_receiveMessage q1 i j m i0 _)⟩
     · intro hg
       obtain ⟨i0, hi0⟩ := hRR.grade0_evidence hg
-      exact ⟨i0, le_trans hi0 (ImplementationState.receivedCount_le_receiveMessage q1 i j m i0 _)⟩
+      exact ⟨i0, le_trans hi0 (RoundState.receivedCount_le_receiveMessage q1 i j m i0 _)⟩
   | relay j b hin hcnt hsend =>
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'
@@ -327,8 +327,8 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q1 : Implementatio
         by_cases hk : k' = id
         · subst hk
           simpa using hRR.call_eq k'
-        · rw [ImplementationState.setBound_process,
-          ImplementationState.setProcess_process_ne _ _ _ hk]
+        · rw [RoundState.setBound_process,
+          RoundState.setProcess_process_ne _ _ _ hk]
           exact hRR.call_eq k'
       · intro k'
         change Function.update q2.ret id true k' = _
@@ -336,8 +336,8 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q1 : Implementatio
         · subst hk
           rw [Function.update_self]
           simp
-        · rw [Function.update_of_ne hk, ImplementationState.setBound_process,
-            ImplementationState.setProcess_process_ne _ _ _ hk]
+        · rw [Function.update_of_ne hk, RoundState.setBound_process,
+            RoundState.setProcess_process_ne _ _ _ hk]
           exact hRR.ret_eq k'
     · have hd0 : q2.excluded = ∅ := excluded_empty_of_both hlive hexcluded
       obtain ⟨hq, hw⟩ := bindUnset_guards hRR
@@ -354,8 +354,8 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q1 : Implementatio
         by_cases hk : k' = id
         · subst hk
           simpa using hRR.call_eq k'
-        · rw [ImplementationState.setBound_process,
-          ImplementationState.setProcess_process_ne _ _ _ hk]
+        · rw [RoundState.setBound_process,
+          RoundState.setProcess_process_ne _ _ _ hk]
           exact hRR.call_eq k'
       · intro k'
         change Function.update q2.ret id true k' = _
@@ -363,8 +363,8 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q1 : Implementatio
         · subst hk
           rw [Function.update_self]
           simp
-        · rw [Function.update_of_ne hk, ImplementationState.setBound_process,
-            ImplementationState.setProcess_process_ne _ _ _ hk]
+        · rw [Function.update_of_ne hk, RoundState.setBound_process,
+            RoundState.setProcess_process_ne _ _ _ hk]
           exact hRR.ret_eq k'
       · intro b hb
         rw [Finset.mem_insert] at hb
@@ -401,8 +401,8 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q1 : Implementatio
         by_cases hk : k' = id
         · subst hk
           simpa using hRR.call_eq k'
-        · rw [ImplementationState.setBound_process,
-          ImplementationState.setProcess_process_ne _ _ _ hk]
+        · rw [RoundState.setBound_process,
+          RoundState.setProcess_process_ne _ _ _ hk]
           exact hRR.call_eq k'
       · intro k'
         change Function.update q2.ret id true k' = _
@@ -410,8 +410,8 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q1 : Implementatio
         · subst hk
           rw [Function.update_self]
           simp
-        · rw [Function.update_of_ne hk, ImplementationState.setBound_process,
-            ImplementationState.setProcess_process_ne _ _ _ hk]
+        · rw [Function.update_of_ne hk, RoundState.setBound_process,
+            RoundState.setProcess_process_ne _ _ _ hk]
           exact hRR.ret_eq k'
     · have hd0 : q2.excluded = ∅ := excluded_empty_of_both hlive hexcluded
       obtain ⟨hq, hw⟩ := bindUnset_guards hRR
@@ -426,8 +426,8 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q1 : Implementatio
         by_cases hk : k' = id
         · subst hk
           simpa using hRR.call_eq k'
-        · rw [ImplementationState.setBound_process,
-          ImplementationState.setProcess_process_ne _ _ _ hk]
+        · rw [RoundState.setBound_process,
+          RoundState.setProcess_process_ne _ _ _ hk]
           exact hRR.call_eq k'
       · intro k'
         change Function.update q2.ret id true k' = _
@@ -435,8 +435,8 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q1 : Implementatio
         · subst hk
           rw [Function.update_self]
           simp
-        · rw [Function.update_of_ne hk, ImplementationState.setBound_process,
-            ImplementationState.setProcess_process_ne _ _ _ hk]
+        · rw [Function.update_of_ne hk, RoundState.setBound_process,
+            RoundState.setProcess_process_ne _ _ _ hk]
           exact hRR.ret_eq k'
       · intro b hb
         rw [Finset.mem_insert] at hb
@@ -475,7 +475,7 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q1 : Implementatio
         rw [hbv]; exact exclusionCertificate_boundOf_grade0 hRR.invariant hcnt
       have hq : q2.quorum P := quorum_of_messageQuorum hRR
         (fun j hj hm' => hRR.invariant.input_called j true hj hm')
-        (ImplementationState.bothValid_le hval true)
+        (RoundState.bothValid_le hval true)
       have hw : P.f + 1 ≤ (Finset.univ.filter
           (fun k' => q2.call k' = some bnd ∨ k' ∈ q2.F)).card :=
         hRR.callSupport (inputSupport_of_bothValid hRR.invariant hval bnd)
@@ -491,8 +491,8 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q1 : Implementatio
         by_cases hk : k' = id
         · subst hk
           simpa using hRR.call_eq k'
-        · rw [ImplementationState.setBound_process,
-          ImplementationState.setProcess_process_ne _ _ _ hk]
+        · rw [RoundState.setBound_process,
+          RoundState.setProcess_process_ne _ _ _ hk]
           exact hRR.call_eq k'
       · intro k'
         change Function.update q2.ret id true k' = _
@@ -500,8 +500,8 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q1 : Implementatio
         · subst hk
           rw [Function.update_self]
           simp
-        · rw [Function.update_of_ne hk, ImplementationState.setBound_process,
-            ImplementationState.setProcess_process_ne _ _ _ hk]
+        · rw [Function.update_of_ne hk, RoundState.setBound_process,
+            RoundState.setProcess_process_ne _ _ _ hk]
           exact hRR.ret_eq k'
       · intro b' hb'
         rw [Finset.mem_insert] at hb'
@@ -532,8 +532,8 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q1 : Implementatio
         by_cases hk : k' = id
         · subst hk
           simpa using hRR.call_eq k'
-        · rw [ImplementationState.setBound_process,
-          ImplementationState.setProcess_process_ne _ _ _ hk]
+        · rw [RoundState.setBound_process,
+          RoundState.setProcess_process_ne _ _ _ hk]
           exact hRR.call_eq k'
       · intro k'
         change Function.update q2.ret id true k' = _
@@ -541,8 +541,8 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q1 : Implementatio
         · subst hk
           rw [Function.update_self]
           simp
-        · rw [Function.update_of_ne hk, ImplementationState.setBound_process,
-            ImplementationState.setProcess_process_ne _ _ _ hk]
+        · rw [Function.update_of_ne hk, RoundState.setBound_process,
+            RoundState.setProcess_process_ne _ _ _ hk]
           exact hRR.ret_eq k'
   | fail id =>
     rw [PMF.mem_support_pure_iff] at hq1'
@@ -551,28 +551,28 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q1 : Implementatio
       Or.inr ⟨by simp, System.weakLStep_of_step (by simp) (Step.fail q2 id)⟩,
       hI', ?_, ?_, implementationSpecification_corrupt_F_eq hRR.F_eq id, ?_, ?_, ?_, ?_⟩
     · intro k
-      rw [corrupt_call, ImplementationState.corrupt_process]
+      rw [corrupt_call, RoundState.corrupt_process]
       exact hRR.call_eq k
     · intro k
-      rw [corrupt_ret, ImplementationState.corrupt_process]
+      rw [corrupt_ret, RoundState.corrupt_process]
       exact hRR.ret_eq k
     · intro b hb
       rw [corrupt_excluded] at hb
       refine ExclusionCertificate.mono (s := q1) (fun i' j' m' hm' => ?_) (fun k w hk => ?_)
-        (ImplementationState.corrupt_F_subset q1 id) (hRR.exclusion_certificate b hb)
-      · rw [ImplementationState.corrupt_received]
+        (RoundState.corrupt_F_subset q1 id) (hRR.exclusion_certificate b hb)
+      · rw [RoundState.corrupt_received]
         exact hm'
-      · rw [ImplementationState.corrupt_process]
+      · rw [RoundState.corrupt_process]
         exact hk
     · intro hg
       rw [corrupt_grade] at hg
       obtain ⟨v0, i0, hi0⟩ := hRR.grade2_evidence hg
-      exact ⟨v0, i0, by rw [ImplementationState.corrupt_receivedCount]; exact hi0⟩
+      exact ⟨v0, i0, by rw [RoundState.corrupt_receivedCount]; exact hi0⟩
     · intro hg
       rw [corrupt_grade] at hg
       obtain ⟨i0, hi0⟩ := hRR.grade0_evidence hg
-      exact ⟨i0, by rw [ImplementationState.corrupt_receivedCount]; exact hi0⟩
-    · rw [corrupt_excluded, ImplementationState.corrupt_bound]
+      exact ⟨i0, by rw [RoundState.corrupt_receivedCount]; exact hi0⟩
+    · rw [corrupt_excluded, RoundState.corrupt_bound]
       exact hRR.bound_excluded
 
 /-! ### The refinement
@@ -631,7 +631,7 @@ def specificationCorruptionAct (P : Parameters) : ExtendedLabel P.n → GBCA.Spe
 set is the one the algorithm reads, so the two guards `k ∉ F ∧ |F| < f` agree and
 `GBCA.ByABDY.specificationRelation_corrupt` applies verbatim (D1). -/
 theorem refinesSpecification_failAct (P : Parameters) :
-    ∀ l : ExtendedLabel P.n, isFailLabel l → ∀ (r : ℕ) (σ : GBCA.ByABDY.ImplementationState P.n)
+    ∀ l : ExtendedLabel P.n, isFailLabel l → ∀ (r : ℕ) (σ : GBCA.ByABDY.RoundState P.n)
       (s : GBCA.SpecState P.n), specificationRelation P r σ s →
       specificationRelation P r (corruptionAct P l σ) (specificationCorruptionAct P l s) := by
   rintro l hl r ⟨u, w⟩ s hR
@@ -641,7 +641,7 @@ theorem refinesSpecification_failAct (P : Parameters) :
     cases l₀ with
     | fail k =>
       have hs : corruptionAct P (Sum.inl (Label.fail k)) (u, w)
-          = GBCA.ByABDY.ImplementationState.corrupt P k (u, w) := composition_corrupt k
+          = GBCA.ByABDY.RoundState.corrupt P k (u, w) := composition_corrupt k
       have hc := GBCA.ByABDY.specificationRelation_corrupt P r k hR
       rw [← hs] at hc
       exact hc

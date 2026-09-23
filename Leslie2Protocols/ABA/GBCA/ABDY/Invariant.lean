@@ -13,8 +13,8 @@ import Leslie2.Results
 # The inductive invariant of the round's graded-agreement composition
 
 `Invariant P s` is the inductive invariant of the composed state a round of the protocol runs on
-(`GBCA.ByABDY.ImplementationState`). `Invariant.initial` holds it at the initial state, and
-`Invariant.step` carries it along every transition of the algorithm (`ImplementationStep`, ABDY22
+(`GBCA.ByABDY.RoundState`). `Invariant.initial` holds it at the initial state, and
+`Invariant.step` carries it along every transition of the algorithm (`Algorithm`, ABDY22
 Algorithm 6 over all five message levels, D18). `InputSupport P s b` is the `f + 1` F-blind
 genuine-holder support for `b` (D15); it is monotone under every step that preserves genuine
 holders and grows `F`. The counting lemmas
@@ -62,45 +62,45 @@ namespace GBCA.ByABDY
 /-! ### The counting lemmas: any-payload monotonicity and derivation variants -/
 
 /-- Deliveries only grow the any-payload `VOTE` count. -/
-theorem ImplementationState.voteCount_le_receiveMessage {n : ℕ} (s : ImplementationState n)
+theorem RoundState.voteCount_le_receiveMessage {n : ℕ} (s : RoundState n)
     (i j : Fin n) (m : Message) (i' : Fin n) :
     s.voteCount i' ≤ (s.receiveMessage i j m).voteCount i' := by
   refine Finset.card_le_card fun k hk => ?_
   rw [Finset.mem_filter] at hk ⊢
   obtain ⟨v, hv⟩ := hk.2
-  exact ⟨hk.1, v, ImplementationState.mem_receiveMessage_received.mpr (Or.inr hv)⟩
+  exact ⟨hk.1, v, RoundState.mem_receiveMessage_received.mpr (Or.inr hv)⟩
 
 /-- Deliveries only grow the any-payload `BIND` count. -/
-theorem ImplementationState.bindCount_le_receiveMessage {n : ℕ} (s : ImplementationState n)
+theorem RoundState.bindCount_le_receiveMessage {n : ℕ} (s : RoundState n)
     (i j : Fin n) (m : Message) (i' : Fin n) :
     s.bindCount i' ≤ (s.receiveMessage i j m).bindCount i' := by
   refine Finset.card_le_card fun k hk => ?_
   rw [Finset.mem_filter] at hk ⊢
   obtain ⟨v, hv⟩ := hk.2
-  exact ⟨hk.1, v, ImplementationState.mem_receiveMessage_received.mpr (Or.inr hv)⟩
+  exact ⟨hk.1, v, RoundState.mem_receiveMessage_received.mpr (Or.inr hv)⟩
 
 /-- Corruption is blind to the any-payload `VOTE` count. -/
-theorem ImplementationState.corrupt_voteCount {P : Parameters} (s : ImplementationState P.n)
+theorem RoundState.corrupt_voteCount {P : Parameters} (s : RoundState P.n)
     (id : Fin P.n) (i : Fin P.n) :
     (s.corrupt P id).voteCount i = s.voteCount i := by
-  unfold ImplementationState.voteCount
-  rw [ImplementationState.corrupt_received]
+  unfold RoundState.voteCount
+  rw [RoundState.corrupt_received]
 
 /-- Corruption is blind to the any-payload `BIND` count. -/
-theorem ImplementationState.corrupt_bindCount {P : Parameters} (s : ImplementationState P.n)
+theorem RoundState.corrupt_bindCount {P : Parameters} (s : RoundState P.n)
     (id : Fin P.n) (i : Fin P.n) :
     (s.corrupt P id).bindCount i = s.bindCount i := by
-  unfold ImplementationState.bindCount
-  rw [ImplementationState.corrupt_received]
+  unfold RoundState.bindCount
+  rw [RoundState.corrupt_received]
 
 /-- Any-payload analogue of `exists_sender_notMem` at the `BIND` level: a
 `bindCount` exceeding `|G|` yields a sender outside `G` together with its
 payload. -/
-theorem ImplementationState.exists_bind_sender_notMem {P : Parameters} {s : ImplementationState P.n}
+theorem RoundState.exists_bind_sender_notMem {P : Parameters} {s : RoundState P.n}
     (G : Finset (Fin P.n)) {i : Fin P.n} (h : G.card < s.bindCount i) :
     ∃ j w, j ∉ G ∧ Message.bind w ∈ s.received i j := by
-  unfold ImplementationState.bindCount at h
-  obtain ⟨j, hjQ, hjG⟩ := ImplementationState.exists_correct_of_card_lt h
+  unfold RoundState.bindCount at h
+  obtain ⟨j, hjQ, hjG⟩ := RoundState.exists_correct_of_card_lt h
   rw [Finset.mem_filter] at hjQ
   obtain ⟨w, hw⟩ := hjQ.2
   exact ⟨j, w, hjG, hw⟩
@@ -113,13 +113,13 @@ variable {P : Parameters}
 spec guards' InputSupport counts — the simulation relation of
 `GBCA/ABDY/SpecificationRelation.lean` transports the count to the specification along
 `call_eq`/`F_eq`. -/
-def InputSupport (P : Parameters) (s : ImplementationState P.n) (b : Bool) : Prop :=
+def InputSupport (P : Parameters) (s : RoundState P.n) (b : Bool) : Prop :=
   P.f + 1 ≤ (Finset.univ.filter
     (fun id => (s.process id).input = some b ∨ id ∈ s.F)).card
 
 /-- The support count is monotone: it survives any step that preserves
 genuine holders and grows `F`. -/
-theorem InputSupport.mono {s s' : ImplementationState P.n} {b : Bool}
+theorem InputSupport.mono {s s' : RoundState P.n} {b : Bool}
     (hproc : ∀ id, (s.process id).input = some b → (s'.process id).input = some b)
     (hF : s.F ⊆ s'.F) (h : InputSupport P s b) : InputSupport P s' b := by
   unfold InputSupport at h ⊢
@@ -129,7 +129,7 @@ theorem InputSupport.mono {s s' : ImplementationState P.n} {b : Bool}
 
 /-- The inductive invariant of the composed state a round runs on. See the
 module docstring for the role of each clause. -/
-structure Invariant (P : Parameters) (s : ImplementationState P.n) : Prop where
+structure Invariant (P : Parameters) (s : RoundState P.n) : Prop where
   /-- Corruption budget. -/
   F_card : s.F.card ≤ P.f
   /-- Delivery soundness: everything delivered was multicast. -/
@@ -190,31 +190,31 @@ structure Invariant (P : Parameters) (s : ImplementationState P.n) : Prop where
   input_called : ∀ j b, j ∉ s.F → Message.input b ∈ s.sent j →
     (s.process j).input ≠ none
 
-theorem Invariant.initial (P : Parameters) : Invariant P (ImplementationState.initial P.n) where
+theorem Invariant.initial (P : Parameters) : Invariant P (RoundState.initial P.n) where
   F_card := by
-    simp [ImplementationState.initial]
-  received_subset_sent := fun i j m h => absurd h (by simp [ImplementationState.initial])
-  echo_confirmed := fun j b _ h => absurd h (by simp [ImplementationState.initial])
-  echo_once := fun j b _ h => absurd h (by simp [ImplementationState.initial])
-  vote_input := fun j w _ h => absurd h (by simp [ImplementationState.initial])
-  vote_confirmed := fun j b _ h => absurd h (by simp [ImplementationState.initial])
-  vote_once := fun j w _ h => absurd h (by simp [ImplementationState.initial])
-  bind_once := fun j w _ h => absurd h (by simp [ImplementationState.initial])
-  bind_confirmed := fun j b _ h => absurd h (by simp [ImplementationState.initial])
-  bindBot_confirmed := fun j _ h => absurd h (by simp [ImplementationState.initial])
-  echo5_input := fun j w _ h => absurd h (by simp [ImplementationState.initial])
-  echo5_once := fun j w _ h => absurd h (by simp [ImplementationState.initial])
-  echo5_confirmed := fun j b _ h => absurd h (by simp [ImplementationState.initial])
-  echo5Bot_confirmed := fun j _ h => absurd h (by simp [ImplementationState.initial])
-  input_origin := fun b G _ _ j _ h => absurd h (by simp [ImplementationState.initial])
-  input_support := fun b j _ h => absurd h (by simp [ImplementationState.initial])
-  input_called := fun j b _ h => absurd h (by simp [ImplementationState.initial])
+    simp [RoundState.initial]
+  received_subset_sent := fun i j m h => absurd h (by simp [RoundState.initial])
+  echo_confirmed := fun j b _ h => absurd h (by simp [RoundState.initial])
+  echo_once := fun j b _ h => absurd h (by simp [RoundState.initial])
+  vote_input := fun j w _ h => absurd h (by simp [RoundState.initial])
+  vote_confirmed := fun j b _ h => absurd h (by simp [RoundState.initial])
+  vote_once := fun j w _ h => absurd h (by simp [RoundState.initial])
+  bind_once := fun j w _ h => absurd h (by simp [RoundState.initial])
+  bind_confirmed := fun j b _ h => absurd h (by simp [RoundState.initial])
+  bindBot_confirmed := fun j _ h => absurd h (by simp [RoundState.initial])
+  echo5_input := fun j w _ h => absurd h (by simp [RoundState.initial])
+  echo5_once := fun j w _ h => absurd h (by simp [RoundState.initial])
+  echo5_confirmed := fun j b _ h => absurd h (by simp [RoundState.initial])
+  echo5Bot_confirmed := fun j _ h => absurd h (by simp [RoundState.initial])
+  input_origin := fun b G _ _ j _ h => absurd h (by simp [RoundState.initial])
+  input_support := fun b j _ h => absurd h (by simp [RoundState.initial])
+  input_called := fun j b _ h => absurd h (by simp [RoundState.initial])
 
 /-- Derivation (D15): any `f + 1` `INPUT b` receipt count yields the F-blind
 genuine-holder support — some correct non-holder sender's `input_support` clause
 closes, or else every sender is a holder-or-`F`-member and the senders
 themselves witness the count. -/
-theorem Invariant.support_of_input_receipts {s : ImplementationState P.n} (hI : Invariant P s)
+theorem Invariant.support_of_input_receipts {s : RoundState P.n} (hI : Invariant P s)
     {i : Fin P.n} {b : Bool} (h : P.f + 1 ≤ s.receivedCount i (.input b)) :
     InputSupport P s b := by
   by_cases hc : ∃ k, Message.input b ∈ s.received i k ∧ k ∉ s.F ∧ (s.process k).input ≠ some b
@@ -223,7 +223,7 @@ theorem Invariant.support_of_input_receipts {s : ImplementationState P.n} (hI : 
     · exact absurd h' hkin
     · exact h'
   · push Not at hc
-    unfold ImplementationState.receivedCount at h
+    unfold RoundState.receivedCount at h
     unfold InputSupport
     refine le_trans h (Finset.card_le_card fun k hk => ?_)
     rw [Finset.mem_filter] at hk ⊢
@@ -233,17 +233,17 @@ theorem Invariant.support_of_input_receipts {s : ImplementationState P.n} (hI : 
     · exact Or.inl (hc k hk.2 hkF)
 
 /-- The sender's `setProcess` in a send step does not affect other processes. -/
-theorem process_send_ne {s : ImplementationState P.n} {j : Fin P.n} {p : ProcessRecord}
+theorem process_send_ne {s : RoundState P.n} {j : Fin P.n} {p : ProcessRecord}
     {m : Message} {k : Fin P.n} (hk : k ≠ j) :
     ((s.setProcess j p).multicast j m).process k = s.process k := by
-  rw [ImplementationState.multicast_process, ImplementationState.setProcess_process_ne _ _ _ hk]
+  rw [RoundState.multicast_process, RoundState.setProcess_process_ne _ _ _ hk]
 
 /-- **Invariant preservation, correct-send schema.** Process `j` updates its
 local state to `p` and multicasts `m`. The hypotheses collect, clause by
 clause, what the new message and the touched field must satisfy; every frame
 condition is discharged here once for all nine send rules (`call`, `relay`,
 `echo`, `voteBit`, `voteBot`, `bindBit`, `bindBot`, `echo5Bit`, `echo5Bot`). -/
-private theorem Invariant.send {s : ImplementationState P.n} (hI : Invariant P s) {j : Fin P.n}
+private theorem Invariant.send {s : RoundState P.n} (hI : Invariant P s) {j : Fin P.n}
     {p : ProcessRecord} {m : Message}
     (hpne : p.input ≠ none)
     (hpmono : ∀ b, (s.process j).input = some b → p.input = some b)
@@ -271,7 +271,7 @@ private theorem Invariant.send {s : ImplementationState P.n} (hI : Invariant P s
     intro b k hk
     by_cases hkj : k = j
     · subst hkj
-      rw [ImplementationState.multicast_process, ImplementationState.setProcess_process_self]
+      rw [RoundState.multicast_process, RoundState.setProcess_process_self]
       exact hpmono b hk
     · rw [process_send_ne hkj]
       exact hk
@@ -279,17 +279,17 @@ private theorem Invariant.send {s : ImplementationState P.n} (hI : Invariant P s
     ?_, ?_⟩
   · -- received_subset_sent
     intro i' j' m' hm'
-    rw [ImplementationState.multicast_received, ImplementationState.setProcess_received] at hm'
-    exact ImplementationState.sent_subset_multicast _ _ _ _ (hI.received_subset_sent i' j' m' hm')
+    rw [RoundState.multicast_received, RoundState.setProcess_received] at hm'
+    exact RoundState.sent_subset_multicast _ _ _ _ (hI.received_subset_sent i' j' m' hm')
   · -- echo_conf
     intro j' b hF hm'
-    rcases ImplementationState.mem_multicast_sent.mp hm' with ⟨rfl, heq⟩ | hold
+    rcases RoundState.mem_multicast_sent.mp hm' with ⟨rfl, heq⟩ | hold
     · simpa using hEchoC b heq.symm
     · simpa using hI.echo_confirmed j' b hF hold
   · -- echo_once
     intro j' b hF hm'
-    rcases ImplementationState.mem_multicast_sent.mp hm' with ⟨rfl, heq⟩ | hold
-    · rw [ImplementationState.multicast_process, ImplementationState.setProcess_process_self]
+    rcases RoundState.mem_multicast_sent.mp hm' with ⟨rfl, heq⟩ | hold
+    · rw [RoundState.multicast_process, RoundState.setProcess_process_self]
       rcases hEchoO with ⟨hne, _⟩ | ⟨b₀, hm0, hpe, _⟩
       · exact absurd heq.symm (hne b)
       · rw [hm0] at heq
@@ -297,7 +297,7 @@ private theorem Invariant.send {s : ImplementationState P.n} (hI : Invariant P s
         rw [hpe, hb]
     · by_cases hkj : j' = j
       · subst hkj
-        rw [ImplementationState.multicast_process, ImplementationState.setProcess_process_self]
+        rw [RoundState.multicast_process, RoundState.setProcess_process_self]
         have hbase := hI.echo_once j' b hF hold
         rcases hEchoO with ⟨_, hpe⟩ | ⟨b₀, _, _, hnone⟩
         · rw [hpe]; exact hbase
@@ -306,24 +306,24 @@ private theorem Invariant.send {s : ImplementationState P.n} (hI : Invariant P s
         exact hI.echo_once j' b hF hold
   · -- vote_input
     intro j' w hF hm'
-    rcases ImplementationState.mem_multicast_sent.mp hm' with ⟨rfl, _⟩ | hold
-    · rw [ImplementationState.multicast_process, ImplementationState.setProcess_process_self]
+    rcases RoundState.mem_multicast_sent.mp hm' with ⟨rfl, _⟩ | hold
+    · rw [RoundState.multicast_process, RoundState.setProcess_process_self]
       exact hpne
     · by_cases hkj : j' = j
       · subst hkj
-        rw [ImplementationState.multicast_process, ImplementationState.setProcess_process_self]
+        rw [RoundState.multicast_process, RoundState.setProcess_process_self]
         exact hpne
       · rw [process_send_ne hkj]
         exact hI.vote_input j' w hF hold
   · -- vote_conf
     intro j' b hF hm'
-    rcases ImplementationState.mem_multicast_sent.mp hm' with ⟨rfl, heq⟩ | hold
+    rcases RoundState.mem_multicast_sent.mp hm' with ⟨rfl, heq⟩ | hold
     · simpa using hVoteC b heq.symm
     · simpa using hI.vote_confirmed j' b hF hold
   · -- vote_once
     intro j' w hF hm'
-    rcases ImplementationState.mem_multicast_sent.mp hm' with ⟨rfl, heq⟩ | hold
-    · rw [ImplementationState.multicast_process, ImplementationState.setProcess_process_self]
+    rcases RoundState.mem_multicast_sent.mp hm' with ⟨rfl, heq⟩ | hold
+    · rw [RoundState.multicast_process, RoundState.setProcess_process_self]
       rcases hVoteO with ⟨hne, _⟩ | ⟨w₀, hm0, hpe, _⟩
       · exact absurd heq.symm (hne w)
       · rw [hm0] at heq
@@ -331,7 +331,7 @@ private theorem Invariant.send {s : ImplementationState P.n} (hI : Invariant P s
         rw [hpe, hw]
     · by_cases hkj : j' = j
       · subst hkj
-        rw [ImplementationState.multicast_process, ImplementationState.setProcess_process_self]
+        rw [RoundState.multicast_process, RoundState.setProcess_process_self]
         have hbase := hI.vote_once j' w hF hold
         rcases hVoteO with ⟨_, hpe⟩ | ⟨w₀, _, _, hnone⟩
         · rw [hpe]; exact hbase
@@ -340,8 +340,8 @@ private theorem Invariant.send {s : ImplementationState P.n} (hI : Invariant P s
         exact hI.vote_once j' w hF hold
   · -- bind_once
     intro j' w hF hm'
-    rcases ImplementationState.mem_multicast_sent.mp hm' with ⟨rfl, heq⟩ | hold
-    · rw [ImplementationState.multicast_process, ImplementationState.setProcess_process_self]
+    rcases RoundState.mem_multicast_sent.mp hm' with ⟨rfl, heq⟩ | hold
+    · rw [RoundState.multicast_process, RoundState.setProcess_process_self]
       rcases hBindO with ⟨hne, _⟩ | ⟨w₀, hm0, hpe, _⟩
       · exact absurd heq.symm (hne w)
       · rw [hm0] at heq
@@ -349,7 +349,7 @@ private theorem Invariant.send {s : ImplementationState P.n} (hI : Invariant P s
         rw [hpe, hw]
     · by_cases hkj : j' = j
       · subst hkj
-        rw [ImplementationState.multicast_process, ImplementationState.setProcess_process_self]
+        rw [RoundState.multicast_process, RoundState.setProcess_process_self]
         have hbase := hI.bind_once j' w hF hold
         rcases hBindO with ⟨_, hpe⟩ | ⟨w₀, _, _, hnone⟩
         · rw [hpe]; exact hbase
@@ -358,29 +358,29 @@ private theorem Invariant.send {s : ImplementationState P.n} (hI : Invariant P s
         exact hI.bind_once j' w hF hold
   · -- bind_conf
     intro j' b hF hm'
-    rcases ImplementationState.mem_multicast_sent.mp hm' with ⟨rfl, heq⟩ | hold
+    rcases RoundState.mem_multicast_sent.mp hm' with ⟨rfl, heq⟩ | hold
     · simpa using hBindC b heq.symm
     · simpa using hI.bind_confirmed j' b hF hold
   · -- bindBot_conf
     intro j' hF hm'
-    rcases ImplementationState.mem_multicast_sent.mp hm' with ⟨rfl, heq⟩ | hold
+    rcases RoundState.mem_multicast_sent.mp hm' with ⟨rfl, heq⟩ | hold
     · simpa using hBindBotC heq.symm
     · simpa using hI.bindBot_confirmed j' hF hold
   · -- echo5_input
     intro j' w hF hm'
-    rcases ImplementationState.mem_multicast_sent.mp hm' with ⟨rfl, _⟩ | hold
-    · rw [ImplementationState.multicast_process, ImplementationState.setProcess_process_self]
+    rcases RoundState.mem_multicast_sent.mp hm' with ⟨rfl, _⟩ | hold
+    · rw [RoundState.multicast_process, RoundState.setProcess_process_self]
       exact hpne
     · by_cases hkj : j' = j
       · subst hkj
-        rw [ImplementationState.multicast_process, ImplementationState.setProcess_process_self]
+        rw [RoundState.multicast_process, RoundState.setProcess_process_self]
         exact hpne
       · rw [process_send_ne hkj]
         exact hI.echo5_input j' w hF hold
   · -- echo5_once
     intro j' w hF hm'
-    rcases ImplementationState.mem_multicast_sent.mp hm' with ⟨rfl, heq⟩ | hold
-    · rw [ImplementationState.multicast_process, ImplementationState.setProcess_process_self]
+    rcases RoundState.mem_multicast_sent.mp hm' with ⟨rfl, heq⟩ | hold
+    · rw [RoundState.multicast_process, RoundState.setProcess_process_self]
       rcases hEcho5O with ⟨hne, _⟩ | ⟨w₀, hm0, hpe, _⟩
       · exact absurd heq.symm (hne w)
       · rw [hm0] at heq
@@ -388,7 +388,7 @@ private theorem Invariant.send {s : ImplementationState P.n} (hI : Invariant P s
         rw [hpe, hw]
     · by_cases hkj : j' = j
       · subst hkj
-        rw [ImplementationState.multicast_process, ImplementationState.setProcess_process_self]
+        rw [RoundState.multicast_process, RoundState.setProcess_process_self]
         have hbase := hI.echo5_once j' w hF hold
         rcases hEcho5O with ⟨_, hpe⟩ | ⟨w₀, _, _, hnone⟩
         · rw [hpe]; exact hbase
@@ -397,23 +397,23 @@ private theorem Invariant.send {s : ImplementationState P.n} (hI : Invariant P s
         exact hI.echo5_once j' w hF hold
   · -- echo5_conf
     intro j' b hF hm'
-    rcases ImplementationState.mem_multicast_sent.mp hm' with ⟨rfl, heq⟩ | hold
+    rcases RoundState.mem_multicast_sent.mp hm' with ⟨rfl, heq⟩ | hold
     · simpa using hEcho5C b heq.symm
     · simpa using hI.echo5_confirmed j' b hF hold
   · -- echo5Bot_conf
     intro j' hF hm'
-    rcases ImplementationState.mem_multicast_sent.mp hm' with ⟨rfl, heq⟩ | hold
+    rcases RoundState.mem_multicast_sent.mp hm' with ⟨rfl, heq⟩ | hold
     · simpa using hEcho5BotC heq.symm
     · simpa using hI.echo5Bot_confirmed j' hF hold
   · -- input_origin
     intro b G hFG hGc j' hjG hm'
-    rcases ImplementationState.mem_multicast_sent.mp hm' with ⟨rfl, heq⟩ | hold
+    rcases RoundState.mem_multicast_sent.mp hm' with ⟨rfl, heq⟩ | hold
     · rcases hInp b heq.symm with hp | hcnt
       · refine ⟨j', hjG, ?_⟩
-        rw [ImplementationState.multicast_process, ImplementationState.setProcess_process_self]
+        rw [RoundState.multicast_process, RoundState.setProcess_process_self]
         exact hp
       · have hcnt' : G.card < s.receivedCount j' (Message.input b) := by omega
-        obtain ⟨k, hkG, hkr⟩ := ImplementationState.exists_sender_notMem G hcnt'
+        obtain ⟨k, hkG, hkr⟩ := RoundState.exists_sender_notMem G hcnt'
         obtain ⟨m0, hmG, hmi⟩ :=
           hI.input_origin b G hFG hGc k hkG (hI.received_subset_sent j' k _ hkr)
         exact ⟨m0, hmG, htrans b m0 hmi⟩
@@ -421,10 +421,10 @@ private theorem Invariant.send {s : ImplementationState P.n} (hI : Invariant P s
       exact ⟨m0, hmG, htrans b m0 hmi⟩
   · -- input_supp
     intro b j' hF hm'
-    rcases ImplementationState.mem_multicast_sent.mp hm' with ⟨rfl, heq⟩ | hold
+    rcases RoundState.mem_multicast_sent.mp hm' with ⟨rfl, heq⟩ | hold
     · rcases hInp b heq.symm with hp | hcnt
       · left
-        rw [ImplementationState.multicast_process, ImplementationState.setProcess_process_self]
+        rw [RoundState.multicast_process, RoundState.setProcess_process_self]
         exact hp
       · right
         exact InputSupport.mono (fun k hk => htrans b k hk) (fun _ hh => hh)
@@ -433,7 +433,7 @@ private theorem Invariant.send {s : ImplementationState P.n} (hI : Invariant P s
       · left
         by_cases hkj : j' = j
         · subst hkj
-          rw [ImplementationState.multicast_process, ImplementationState.setProcess_process_self]
+          rw [RoundState.multicast_process, RoundState.setProcess_process_self]
           exact hpmono b hin
         · rw [process_send_ne hkj]
           exact hin
@@ -441,12 +441,12 @@ private theorem Invariant.send {s : ImplementationState P.n} (hI : Invariant P s
         exact InputSupport.mono (fun k hk => htrans b k hk) (fun _ hh => hh) hsupp
   · -- input_called
     intro j' b hF hm'
-    rcases ImplementationState.mem_multicast_sent.mp hm' with ⟨rfl, _⟩ | hold
-    · rw [ImplementationState.multicast_process, ImplementationState.setProcess_process_self]
+    rcases RoundState.mem_multicast_sent.mp hm' with ⟨rfl, _⟩ | hold
+    · rw [RoundState.multicast_process, RoundState.setProcess_process_self]
       exact hpne
     · by_cases hkj : j' = j
       · subst hkj
-        rw [ImplementationState.multicast_process, ImplementationState.setProcess_process_self]
+        rw [RoundState.multicast_process, RoundState.setProcess_process_self]
         exact hpne
       · rw [process_send_ne hkj]
         exact hI.input_called j' b hF hold
@@ -454,7 +454,7 @@ private theorem Invariant.send {s : ImplementationState P.n} (hI : Invariant P s
 /-- **Invariant preservation, local-frame schema.** A `setProcess` that keeps
 the input and all four write-once fields (the return rules, which flip only
 `returned`) preserves every clause. -/
-private theorem Invariant.setProcess_unchanged {s : ImplementationState P.n} (hI : Invariant P s)
+private theorem Invariant.setProcess_unchanged {s : RoundState P.n} (hI : Invariant P s)
     {id : Fin P.n} {p : ProcessRecord}
     (h1 : p.input = (s.process id).input)
     (h2 : p.sentEcho = (s.process id).sentEcho)
@@ -465,28 +465,28 @@ private theorem Invariant.setProcess_unchanged {s : ImplementationState P.n} (hI
   have hin : ∀ k, ((s.setProcess id p).process k).input = (s.process k).input := by
     intro k
     by_cases hk : k = id
-    · subst hk; rw [ImplementationState.setProcess_process_self, h1]
-    · rw [ImplementationState.setProcess_process_ne _ _ _ hk]
+    · subst hk; rw [RoundState.setProcess_process_self, h1]
+    · rw [RoundState.setProcess_process_ne _ _ _ hk]
   have hech : ∀ k, ((s.setProcess id p).process k).sentEcho = (s.process k).sentEcho := by
     intro k
     by_cases hk : k = id
-    · subst hk; rw [ImplementationState.setProcess_process_self, h2]
-    · rw [ImplementationState.setProcess_process_ne _ _ _ hk]
+    · subst hk; rw [RoundState.setProcess_process_self, h2]
+    · rw [RoundState.setProcess_process_ne _ _ _ hk]
   have hvot : ∀ k, ((s.setProcess id p).process k).sentVote = (s.process k).sentVote := by
     intro k
     by_cases hk : k = id
-    · subst hk; rw [ImplementationState.setProcess_process_self, h3]
-    · rw [ImplementationState.setProcess_process_ne _ _ _ hk]
+    · subst hk; rw [RoundState.setProcess_process_self, h3]
+    · rw [RoundState.setProcess_process_ne _ _ _ hk]
   have hbin : ∀ k, ((s.setProcess id p).process k).sentBind = (s.process k).sentBind := by
     intro k
     by_cases hk : k = id
-    · subst hk; rw [ImplementationState.setProcess_process_self, h4]
-    · rw [ImplementationState.setProcess_process_ne _ _ _ hk]
+    · subst hk; rw [RoundState.setProcess_process_self, h4]
+    · rw [RoundState.setProcess_process_ne _ _ _ hk]
   have hsea : ∀ k, ((s.setProcess id p).process k).sentEcho5 = (s.process k).sentEcho5 := by
     intro k
     by_cases hk : k = id
-    · subst hk; rw [ImplementationState.setProcess_process_self, h5]
-    · rw [ImplementationState.setProcess_process_ne _ _ _ hk]
+    · subst hk; rw [RoundState.setProcess_process_self, h5]
+    · rw [RoundState.setProcess_process_ne _ _ _ hk]
   refine ⟨hI.F_card, by simpa using hI.received_subset_sent, by simpa using hI.echo_confirmed, ?_,
     ?_, by simpa using hI.vote_confirmed, ?_, ?_, by simpa using hI.bind_confirmed,
     by simpa using hI.bindBot_confirmed, ?_, ?_, by simpa using hI.echo5_confirmed,
@@ -526,14 +526,14 @@ private theorem Invariant.setProcess_unchanged {s : ImplementationState P.n} (hI
 
 /-- **Frame lemma for the bound bit.** The ghost write touches the network
 state's own field alone, and no clause of `Invariant` reads it. -/
-private theorem Invariant.setBound {s : ImplementationState P.n} (hI : Invariant P s) (β : Bool) :
+private theorem Invariant.setBound {s : RoundState P.n} (hI : Invariant P s) (β : Bool) :
     Invariant P (s.setBound β) := { hI with }
 
 /-- **Invariant preservation.** `Invariant` is preserved by every transition of the
 algorithm. -/
-theorem Invariant.step {r : ℕ} {s : ImplementationState P.n} {l : Label P.n}
-    {μ : PMF (ImplementationState P.n)} {s' : ImplementationState P.n} (hI : Invariant P s)
-    (hstep : ImplementationStep P r s l μ) (hs' : s' ∈ μ.support) : Invariant P s' := by
+theorem Invariant.step {r : ℕ} {s : RoundState P.n} {l : Label P.n}
+    {μ : PMF (RoundState P.n)} {s' : RoundState P.n} (hI : Invariant P s)
+    (hstep : Algorithm P r s l μ) (hs' : s' ∈ μ.support) : Invariant P s' := by
   cases hstep with
   | call id b h =>
     rw [PMF.mem_support_pure_iff] at hs'
@@ -560,27 +560,27 @@ theorem Invariant.step {r : ℕ} {s : ImplementationState P.n} {l : Label P.n}
       by simpa using hI.echo5_once, ?_, ?_, by simpa using hI.input_origin,
       by simpa [InputSupport] using hI.input_support, by simpa using hI.input_called⟩
     · intro i' j' m' hm'
-      rcases ImplementationState.mem_receiveMessage_received.mp hm' with ⟨rfl, rfl, rfl⟩ | hold
+      rcases RoundState.mem_receiveMessage_received.mp hm' with ⟨rfl, rfl, rfl⟩ | hold
       · exact hsent
       · exact hI.received_subset_sent i' j' m' hold
     · intro j' b hF hm'
       exact le_trans (hI.echo_confirmed j' b hF hm')
-        (ImplementationState.receivedCount_le_receiveMessage s i j m j' _)
+        (RoundState.receivedCount_le_receiveMessage s i j m j' _)
     · intro j' b hF hm'
       exact le_trans (hI.vote_confirmed j' b hF hm')
-        (ImplementationState.receivedCount_le_receiveMessage s i j m j' _)
+        (RoundState.receivedCount_le_receiveMessage s i j m j' _)
     · intro j' b hF hm'
       exact le_trans (hI.bind_confirmed j' b hF hm')
-        (ImplementationState.receivedCount_le_receiveMessage s i j m j' _)
+        (RoundState.receivedCount_le_receiveMessage s i j m j' _)
     · intro j' hF hm'
       exact le_trans (hI.bindBot_confirmed j' hF hm')
-        (ImplementationState.voteCount_le_receiveMessage s i j m j')
+        (RoundState.voteCount_le_receiveMessage s i j m j')
     · intro j' b hF hm'
       exact le_trans (hI.echo5_confirmed j' b hF hm')
-        (ImplementationState.receivedCount_le_receiveMessage s i j m j' _)
+        (RoundState.receivedCount_le_receiveMessage s i j m j' _)
     · intro j' hF hm'
       exact le_trans (hI.echo5Bot_confirmed j' hF hm')
-        (ImplementationState.bindCount_le_receiveMessage s i j m j')
+        (RoundState.bindCount_le_receiveMessage s i j m j')
   | relay j b hin hcnt hsend =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
@@ -683,7 +683,7 @@ theorem Invariant.step {r : ℕ} {s : ImplementationState P.n} {l : Label P.n}
     have hsentG : ∀ (G : Finset (Fin P.n)), s.F ⊆ G → ∀ j' m', j' ∉ G →
         m' ∈ (s.multicast j m).sent j' → m' ∈ s.sent j' := by
       intro G hFG j' m' hjG hm'
-      rcases ImplementationState.mem_multicast_sent.mp hm' with ⟨rfl, _⟩ | hold
+      rcases RoundState.mem_multicast_sent.mp hm' with ⟨rfl, _⟩ | hold
       · exact absurd (hFG hjF) hjG
       · exact hold
     have hs := fun j' m' (hF : j' ∉ s.F) =>
@@ -691,7 +691,7 @@ theorem Invariant.step {r : ℕ} {s : ImplementationState P.n} {l : Label P.n}
     refine ⟨hI.F_card, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
       ?_, ?_, ?_⟩
     · intro i' j' m' hm'
-      exact ImplementationState.sent_subset_multicast _ _ _ _ (hI.received_subset_sent i' j' m' hm')
+      exact RoundState.sent_subset_multicast _ _ _ _ (hI.received_subset_sent i' j' m' hm')
     · exact fun j' b hF hm' => hI.echo_confirmed j' b hF (hs j' _ hF hm')
     · exact fun j' b hF hm' => hI.echo_once j' b hF (hs j' _ hF hm')
     · exact fun j' w hF hm' => hI.vote_input j' w hF (hs j' _ hF hm')
@@ -726,81 +726,81 @@ theorem Invariant.step {r : ℕ} {s : ImplementationState P.n} {l : Label P.n}
   | fail id =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    have hsub := ImplementationState.corrupt_F_subset s id
+    have hsub := RoundState.corrupt_F_subset s id
     have hFtr : ∀ j' : Fin P.n, j' ∉ (s.corrupt P id).F → j' ∉ s.F :=
       fun j' hF hj => hF (hsub hj)
-    refine ⟨ImplementationState.corrupt_card_le s id hI.F_card, ?_, ?_, ?_, ?_, ?_, ?_,
+    refine ⟨RoundState.corrupt_card_le s id hI.F_card, ?_, ?_, ?_, ?_, ?_, ?_,
       ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · intro i' j' m' hm'
-      rw [ImplementationState.corrupt_received] at hm'
-      rw [ImplementationState.corrupt_sent]
+      rw [RoundState.corrupt_received] at hm'
+      rw [RoundState.corrupt_sent]
       exact hI.received_subset_sent i' j' m' hm'
     · intro j' b hF hm'
-      rw [ImplementationState.corrupt_sent] at hm'
-      rw [ImplementationState.corrupt_receivedCount]
+      rw [RoundState.corrupt_sent] at hm'
+      rw [RoundState.corrupt_receivedCount]
       exact hI.echo_confirmed j' b (hFtr j' hF) hm'
     · intro j' b hF hm'
-      rw [ImplementationState.corrupt_sent] at hm'
-      rw [ImplementationState.corrupt_process]
+      rw [RoundState.corrupt_sent] at hm'
+      rw [RoundState.corrupt_process]
       exact hI.echo_once j' b (hFtr j' hF) hm'
     · intro j' w hF hm'
-      rw [ImplementationState.corrupt_sent] at hm'
-      rw [ImplementationState.corrupt_process]
+      rw [RoundState.corrupt_sent] at hm'
+      rw [RoundState.corrupt_process]
       exact hI.vote_input j' w (hFtr j' hF) hm'
     · intro j' b hF hm'
-      rw [ImplementationState.corrupt_sent] at hm'
-      rw [ImplementationState.corrupt_receivedCount]
+      rw [RoundState.corrupt_sent] at hm'
+      rw [RoundState.corrupt_receivedCount]
       exact hI.vote_confirmed j' b (hFtr j' hF) hm'
     · intro j' w hF hm'
-      rw [ImplementationState.corrupt_sent] at hm'
-      rw [ImplementationState.corrupt_process]
+      rw [RoundState.corrupt_sent] at hm'
+      rw [RoundState.corrupt_process]
       exact hI.vote_once j' w (hFtr j' hF) hm'
     · intro j' w hF hm'
-      rw [ImplementationState.corrupt_sent] at hm'
-      rw [ImplementationState.corrupt_process]
+      rw [RoundState.corrupt_sent] at hm'
+      rw [RoundState.corrupt_process]
       exact hI.bind_once j' w (hFtr j' hF) hm'
     · intro j' b hF hm'
-      rw [ImplementationState.corrupt_sent] at hm'
-      rw [ImplementationState.corrupt_receivedCount]
+      rw [RoundState.corrupt_sent] at hm'
+      rw [RoundState.corrupt_receivedCount]
       exact hI.bind_confirmed j' b (hFtr j' hF) hm'
     · intro j' hF hm'
-      rw [ImplementationState.corrupt_sent] at hm'
-      rw [ImplementationState.corrupt_voteCount]
+      rw [RoundState.corrupt_sent] at hm'
+      rw [RoundState.corrupt_voteCount]
       exact hI.bindBot_confirmed j' (hFtr j' hF) hm'
     · intro j' w hF hm'
-      rw [ImplementationState.corrupt_sent] at hm'
-      rw [ImplementationState.corrupt_process]
+      rw [RoundState.corrupt_sent] at hm'
+      rw [RoundState.corrupt_process]
       exact hI.echo5_input j' w (hFtr j' hF) hm'
     · intro j' w hF hm'
-      rw [ImplementationState.corrupt_sent] at hm'
-      rw [ImplementationState.corrupt_process]
+      rw [RoundState.corrupt_sent] at hm'
+      rw [RoundState.corrupt_process]
       exact hI.echo5_once j' w (hFtr j' hF) hm'
     · intro j' b hF hm'
-      rw [ImplementationState.corrupt_sent] at hm'
-      rw [ImplementationState.corrupt_receivedCount]
+      rw [RoundState.corrupt_sent] at hm'
+      rw [RoundState.corrupt_receivedCount]
       exact hI.echo5_confirmed j' b (hFtr j' hF) hm'
     · intro j' hF hm'
-      rw [ImplementationState.corrupt_sent] at hm'
-      rw [ImplementationState.corrupt_bindCount]
+      rw [RoundState.corrupt_sent] at hm'
+      rw [RoundState.corrupt_bindCount]
       exact hI.echo5Bot_confirmed j' (hFtr j' hF) hm'
     · intro b G hFG hGc j' hjG hm'
-      rw [ImplementationState.corrupt_sent] at hm'
+      rw [RoundState.corrupt_sent] at hm'
       obtain ⟨m0, hmG, hmi⟩ :=
         hI.input_origin b G (Finset.Subset.trans hsub hFG) hGc j' hjG hm'
-      exact ⟨m0, hmG, by rw [ImplementationState.corrupt_process]; exact hmi⟩
+      exact ⟨m0, hmG, by rw [RoundState.corrupt_process]; exact hmi⟩
     · intro b j' hF' hm'
-      rw [ImplementationState.corrupt_sent] at hm'
+      rw [RoundState.corrupt_sent] at hm'
       rcases hI.input_support b j' (hFtr j' hF') hm' with hin | hsupp
       · left
-        rw [ImplementationState.corrupt_process]
+        rw [RoundState.corrupt_process]
         exact hin
       · right
         refine InputSupport.mono (s := s) (fun k hk => ?_) hsub hsupp
-        rw [ImplementationState.corrupt_process]
+        rw [RoundState.corrupt_process]
         exact hk
     · intro j' b hF hm'
-      rw [ImplementationState.corrupt_sent] at hm'
-      rw [ImplementationState.corrupt_process]
+      rw [RoundState.corrupt_sent] at hm'
+      rw [RoundState.corrupt_process]
       exact hI.input_called j' b (hFtr j' hF) hm'
 
 end GBCA.ByABDY

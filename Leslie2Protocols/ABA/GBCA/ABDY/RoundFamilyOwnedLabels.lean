@@ -73,7 +73,7 @@ variable {n : ℕ}
     GBCA.ByABDY.isFailLabel (Sum.inl (Label.fail k) : ExtendedLabel n) := trivial
 
 theorem corruptionAct_fail {P : Parameters} (k : Fin P.n)
-  (s : GBCA.ByABDY.ImplementationState P.n) :
+  (s : GBCA.ByABDY.RoundState P.n) :
     GBCA.ByABDY.corruptionAct P (Sum.inl (Label.fail k)) s = (s.1, s.2.corrupt P k) := rfl
 
 end OwnedLabels

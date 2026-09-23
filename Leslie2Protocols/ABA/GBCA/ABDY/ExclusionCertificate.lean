@@ -54,22 +54,22 @@ variable {P : Parameters}
 The certificate is `F`-blind and receipt-monotone, hence stable under `fail`
 and under every transition of the algorithm, and at most one bit can carry it
 (`echoReceiptQuorum_unique`). -/
-def EchoReceiptQuorum (P : Parameters) (s : ImplementationState P.n) (v : Bool) : Prop :=
+def EchoReceiptQuorum (P : Parameters) (s : RoundState P.n) (v : Bool) : Prop :=
   ∃ i, P.n - P.f ≤ s.receivedCount i (.echo v)
 
 /-- Derivation from `f + 1` `VOTE v` receipts: they contain a correct `VOTE v`
 sender, whose `vote_confirmed` receipt quorum is the certificate. -/
-theorem echoReceiptQuorum_of_vote_receipts {s : ImplementationState P.n} (hI : Invariant P s)
+theorem echoReceiptQuorum_of_vote_receipts {s : RoundState P.n} (hI : Invariant P s)
     {i : Fin P.n} {v : Bool} (h : P.f + 1 ≤ s.receivedCount i (.vote (some v))) :
     EchoReceiptQuorum P s v := by
   have hFc := hI.F_card
   have h' : s.F.card < s.receivedCount i (Message.vote (some v)) := by
     omega
-  obtain ⟨k, hkF, hkr⟩ := ImplementationState.exists_sender_notMem s.F h'
+  obtain ⟨k, hkF, hkr⟩ := RoundState.exists_sender_notMem s.F h'
   exact ⟨k, hI.vote_confirmed k v hkF (hI.received_subset_sent i k _ hkr)⟩
 
 /-- The certificate refines to an `n − f` `INPUT v` receipt quorum. -/
-theorem inputQuorum_of_echoReceiptQuorum {s : ImplementationState P.n} (hI : Invariant P s)
+theorem inputQuorum_of_echoReceiptQuorum {s : RoundState P.n} (hI : Invariant P s)
     {v : Bool} (h : EchoReceiptQuorum P s v) :
     ∃ m, P.n - P.f ≤ s.receivedCount m (.input v) := by
   obtain ⟨i, hi⟩ := h
@@ -77,17 +77,17 @@ theorem inputQuorum_of_echoReceiptQuorum {s : ImplementationState P.n} (hI : Inv
   have hfn := P.f_lt_n_sub_f
   have h' : s.F.card < s.receivedCount i (Message.echo v) := by
     omega
-  obtain ⟨m, hmF, hmr⟩ := ImplementationState.exists_sender_notMem s.F h'
+  obtain ⟨m, hmF, hmr⟩ := RoundState.exists_sender_notMem s.F h'
   exact ⟨m, hI.echo_confirmed m v hmF (hI.received_subset_sent i m _ hmr)⟩
 
 /-- At most one bit carries an `n − f` `ECHO` quorum: the two quorums
 intersect in a correct sender, and `sentEcho` is write-once. -/
-theorem echoReceiptQuorum_unique {s : ImplementationState P.n} (hI : Invariant P s) {v v' : Bool}
+theorem echoReceiptQuorum_unique {s : RoundState P.n} (hI : Invariant P s) {v v' : Bool}
     (h : EchoReceiptQuorum P s v) (h' : EchoReceiptQuorum P s v') : v = v' := by
   obtain ⟨i, hi⟩ := h
   obtain ⟨i', hi'⟩ := h'
   obtain ⟨j, hjF, hj1, hj2⟩ :=
-    ImplementationState.exists_correct_received_of_two_quorums hI.F_card hi hi'
+    RoundState.exists_correct_received_of_two_quorums hI.F_card hi hi'
   have e1 := hI.echo_once j v hjF (hI.received_subset_sent i j _ hj1)
   have e2 := hI.echo_once j v' hjF (hI.received_subset_sent i' j _ hj2)
   rw [e1] at e2
@@ -95,7 +95,7 @@ theorem echoReceiptQuorum_unique {s : ImplementationState P.n} (hI : Invariant P
 
 /-- Case B carrier: an `n − f` quorum of processes each of which is corrupted or has committed its
 write-once `VOTE` field to a payload other than `some b`. -/
-def VoteQuorumAgainst (P : Parameters) (s : ImplementationState P.n) (b : Bool) : Prop :=
+def VoteQuorumAgainst (P : Parameters) (s : RoundState P.n) (b : Bool) : Prop :=
   P.n - P.f ≤ (Finset.univ.filter
     (fun j => j ∈ s.F ∨ ∃ w, (s.process j).sentVote = some w ∧ w ≠ some b)).card
 
@@ -103,7 +103,7 @@ def VoteQuorumAgainst (P : Parameters) (s : ImplementationState P.n) (b : Bool) 
 owns the (unique) `n − f` `ECHO` receipt quorum, or a `VoteQuorumAgainst` blocks `b` at the `VOTE`
 level. Both disjuncts make an `n − f` `VOTE b` receipt quorum — the only source of any grade-≥1
 evidence for `b` — impossible forever. -/
-def ExclusionCertificate (P : Parameters) (s : ImplementationState P.n) (b : Bool) : Prop :=
+def ExclusionCertificate (P : Parameters) (s : RoundState P.n) (b : Bool) : Prop :=
   EchoReceiptQuorum P s (!b) ∨ VoteQuorumAgainst P s b
 
 /-- The counting core: two `n − f`-sized subsets of `Fin n` meeting only
@@ -123,7 +123,7 @@ theorem no_disjoint_quorums {Q D F : Finset (Fin P.n)}
 
 /-- **Certificate monotonicity**: receipts only grow, `sentVote` is
 write-once, `F` only grows — so an exclusion certificate never expires. -/
-theorem ExclusionCertificate.mono {s s' : ImplementationState P.n} {b : Bool}
+theorem ExclusionCertificate.mono {s s' : RoundState P.n} {b : Bool}
     (hrecv : ∀ i j m, m ∈ s.received i j → m ∈ s'.received i j)
     (hvote : ∀ j w, (s.process j).sentVote = some w → (s'.process j).sentVote = some w)
     (hF : s.F ⊆ s'.F) : ExclusionCertificate P s b → ExclusionCertificate P s' b := by
@@ -140,7 +140,7 @@ theorem ExclusionCertificate.mono {s s' : ImplementationState P.n} {b : Bool}
 
 /-- `ExclusionCertificate` is stable under a correct send that respects the write-once
 `sentVote` field. -/
-theorem exclusionCertificate_send {s : ImplementationState P.n} {j : Fin P.n}
+theorem exclusionCertificate_send {s : RoundState P.n} {j : Fin P.n}
     {p : ProcessRecord} {m : Message}
     (hvote : ∀ w, (s.process j).sentVote = some w → p.sentVote = some w) {b : Bool}
     (h : ExclusionCertificate P s b) :
@@ -149,29 +149,29 @@ theorem exclusionCertificate_send {s : ImplementationState P.n} {j : Fin P.n}
     (fun k w hk => by
       by_cases hkj : k = j
       · subst hkj
-        rw [ImplementationState.multicast_process, ImplementationState.setProcess_process_self]
+        rw [RoundState.multicast_process, RoundState.setProcess_process_self]
         exact hvote w hk
       · rw [process_send_ne hkj]
         exact hk)
     (Finset.Subset.refl _) h
 
 /-- `ExclusionCertificate` is stable under a return (only `returned` flips). -/
-theorem exclusionCertificate_ret {s : ImplementationState P.n} {id : Fin P.n} {b : Bool}
+theorem exclusionCertificate_ret {s : RoundState P.n} {id : Fin P.n} {b : Bool}
     (h : ExclusionCertificate P s b) :
     ExclusionCertificate P (s.setProcess id { s.process id with returned := true }) b :=
   ExclusionCertificate.mono (s := s) (fun _ _ _ hm => by simpa using hm)
     (fun k w hk => by
       by_cases hkj : k = id
       · subst hkj
-        rw [ImplementationState.setProcess_process_self]
+        rw [RoundState.setProcess_process_self]
         exact hk
-      · rw [ImplementationState.setProcess_process_ne _ _ _ hkj]
+      · rw [RoundState.setProcess_process_ne _ _ _ hkj]
         exact hk)
     (Finset.Subset.refl _) h
 
 /-- `ExclusionCertificate` is stable under the ghost write (no clause reads the bound
 bit). -/
-theorem exclusionCertificate_setBound {s : ImplementationState P.n} {b β : Bool}
+theorem exclusionCertificate_setBound {s : RoundState P.n} {b β : Bool}
     (h : ExclusionCertificate P s b) : ExclusionCertificate P (s.setBound β) b :=
   ExclusionCertificate.mono (s := s) (fun _ _ _ hm => hm) (fun _ _ hk => hk)
     (Finset.Subset.refl _) h
@@ -181,31 +181,31 @@ theorem exclusionCertificate_setBound {s : ImplementationState P.n} {b β : Bool
 /-- `f + 1` `BIND v` receipts exceed the corruption budget, so they contain
 a correct binder, whose `bind_confirmed` wait-condition is a correct `n − f`
 `VOTE v` receipt quorum — the object the binding argument counts. -/
-theorem voteQuorum_of_bind_receipts {s : ImplementationState P.n} (hI : Invariant P s)
+theorem voteQuorum_of_bind_receipts {s : RoundState P.n} (hI : Invariant P s)
     {i : Fin P.n} {v : Bool} (h : P.f + 1 ≤ s.receivedCount i (.bind (some v))) :
     ∃ k, k ∉ s.F ∧ P.n - P.f ≤ s.receivedCount k (.vote (some v)) := by
   have hFc := hI.F_card
   have h' : s.F.card < s.receivedCount i (Message.bind (some v)) := by
     omega
-  obtain ⟨k, hkF, hkr⟩ := ImplementationState.exists_sender_notMem s.F h'
+  obtain ⟨k, hkF, hkr⟩ := RoundState.exists_sender_notMem s.F h'
   exact ⟨k, hkF, hI.bind_confirmed k v hkF (hI.received_subset_sent i k _ hkr)⟩
 
 /-- An `n − f` `ECHO5 v` receipt quorum contains a correct `ECHO5` sender, whose
 `echo5_confirmed` wait-condition is a correct `n − f` `BIND v` receipt quorum. -/
-theorem bind_receipts_of_echo5_quorum {s : ImplementationState P.n} (hI : Invariant P s)
+theorem bind_receipts_of_echo5_quorum {s : RoundState P.n} (hI : Invariant P s)
     {i : Fin P.n} {v : Bool} (h : P.n - P.f ≤ s.receivedCount i (.echo5 (some v))) :
     ∃ k, k ∉ s.F ∧ P.n - P.f ≤ s.receivedCount k (.bind (some v)) := by
   have hFc := hI.F_card
   have hfn := P.f_lt_n_sub_f
   have h' : s.F.card < s.receivedCount i (Message.echo5 (some v)) := by
     omega
-  obtain ⟨k, hkF, hkr⟩ := ImplementationState.exists_sender_notMem s.F h'
+  obtain ⟨k, hkF, hkr⟩ := RoundState.exists_sender_notMem s.F h'
   exact ⟨k, hkF, hI.echo5_confirmed k v hkF (hI.received_subset_sent i k _ hkr)⟩
 
 /-- **Availability, the excluded bit**: any `n − f` `VOTE v` receipt quorum excludes the opposite
 bit — the quorum's members are each corrupted or committed (write-once) to `some v`, so the quorum
 itself is a `VoteQuorumAgainst` for `!v`. -/
-theorem exclusionCertificate_of_voteQuorum {s : ImplementationState P.n} (hI : Invariant P s)
+theorem exclusionCertificate_of_voteQuorum {s : RoundState P.n} (hI : Invariant P s)
     {i : Fin P.n} {v : Bool} (h : P.n - P.f ≤ s.receivedCount i (.vote (some v))) :
     ExclusionCertificate P s (!v) := by
   refine Or.inr (le_trans h (Finset.card_le_card fun k hk => ?_))
@@ -221,7 +221,7 @@ theorem exclusionCertificate_of_voteQuorum {s : ImplementationState P.n} (hI : I
 /-- **Availability, the live bit**: an `n − f` `VOTE v` receipt quorum refutes both certificate
 cases for `v` itself — against Case A the derived `ECHO v` quorum meets the `ECHO (!v)` quorum in a
 correct double-echoer, and against Case B the quorum meets the quorum only inside `F`. -/
-theorem not_exclusionCertificate_of_voteQuorum {s : ImplementationState P.n} (hI : Invariant P s)
+theorem not_exclusionCertificate_of_voteQuorum {s : RoundState P.n} (hI : Invariant P s)
     {i : Fin P.n} {v : Bool} (h : P.n - P.f ≤ s.receivedCount i (.vote (some v))) :
     ¬ ExclusionCertificate P s v := by
   have hfn := P.f_lt_n_sub_f
@@ -248,7 +248,7 @@ receipts, its correct `BIND` sender can only have sent `BIND ⊥` (a bit `BIND`
 needs a correct bit-voter), and that sender's `bindBot_confirmed` receipts identify an
 `n − f` set of processes each corrupted or committed to `VOTE ⊥` — a
 `VoteQuorumAgainst` for both bits at once. -/
-theorem exclusionCertificate_of_noCorrectVote {s : ImplementationState P.n} (hI : Invariant P s)
+theorem exclusionCertificate_of_noCorrectVote {s : RoundState P.n} (hI : Invariant P s)
     {i : Fin P.n} (h : P.n - P.f ≤ s.receivedCount i (.echo5 none))
     (hcase : ¬ ∃ (k : Fin P.n) (b : Bool), k ∉ s.F ∧ Message.vote (some b) ∈ s.sent k)
     (b : Bool) : ExclusionCertificate P s b := by
@@ -256,12 +256,12 @@ theorem exclusionCertificate_of_noCorrectVote {s : ImplementationState P.n} (hI 
   have hFc := hI.F_card
   have hfn := P.f_lt_n_sub_f
   · have h1 : s.F.card < s.receivedCount i (Message.echo5 none) := by omega
-    obtain ⟨p, hpF, hpr⟩ := ImplementationState.exists_sender_notMem s.F h1
+    obtain ⟨p, hpF, hpr⟩ := RoundState.exists_sender_notMem s.F h1
     have hbc : P.n - P.f ≤ s.bindCount p :=
       hI.echo5Bot_confirmed p hpF (hI.received_subset_sent i p _ hpr)
     have h2 : s.F.card < s.bindCount p := by
       omega
-    obtain ⟨k, w, hkF, hkr⟩ := ImplementationState.exists_bind_sender_notMem s.F h2
+    obtain ⟨k, w, hkF, hkr⟩ := RoundState.exists_bind_sender_notMem s.F h2
     have hksent := hI.received_subset_sent p k _ hkr
     have hw : w = none := by
       cases w with
@@ -271,7 +271,7 @@ theorem exclusionCertificate_of_noCorrectVote {s : ImplementationState P.n} (hI 
         have hvq := hI.bind_confirmed k v' hkF hksent
         have h3 : s.F.card < s.receivedCount k (Message.vote (some v')) := by
           omega
-        obtain ⟨m', hmF, hmr⟩ := ImplementationState.exists_sender_notMem s.F h3
+        obtain ⟨m', hmF, hmr⟩ := RoundState.exists_sender_notMem s.F h3
         exact hcase ⟨m', v', hmF, hI.received_subset_sent k m' _ hmr⟩
     subst hw
     have hvc : P.n - P.f ≤ s.voteCount k := hI.bindBot_confirmed k hkF hksent
@@ -293,7 +293,7 @@ theorem exclusionCertificate_of_noCorrectVote {s : ImplementationState P.n} (hI 
 excluded bit. Classical dichotomy on "a correct bit-voter exists somewhere": if yes, its
 `vote_confirmed` receipt quorum is Case A for the opposite bit; if no, the all-⊥ quorum of
 `exclusionCertificate_of_noCorrectVote` answers. -/
-theorem exclusionCertificate_of_echo5Bot_quorum {s : ImplementationState P.n} (hI : Invariant P s)
+theorem exclusionCertificate_of_echo5Bot_quorum {s : RoundState P.n} (hI : Invariant P s)
     {i : Fin P.n} (h : P.n - P.f ≤ s.receivedCount i (.echo5 none)) :
     ∃ b, ExclusionCertificate P s b := by
   classical
@@ -308,7 +308,7 @@ theorem exclusionCertificate_of_echo5Bot_quorum {s : ImplementationState P.n} (h
 complement of `boundOf … C` carries an exclude certificate. Where a correct bit-voter exists its
 `vote_confirmed` receipt quorum is Case A for the opposite bit, which is the bit `boundOf` names;
 where none exists the quorum covers both bits at once. -/
-theorem exclusionCertificate_boundOf_grade0 {s : ImplementationState P.n} (hI : Invariant P s)
+theorem exclusionCertificate_boundOf_grade0 {s : RoundState P.n} (hI : Invariant P s)
     {i : Fin P.n} (h : P.n - P.f ≤ s.receivedCount i (.echo5 none)) :
     ExclusionCertificate P s (!(boundOf s.sent s.F .grade0)) := by
   classical
