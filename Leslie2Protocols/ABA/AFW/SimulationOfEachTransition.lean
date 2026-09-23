@@ -5,25 +5,25 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.Implementation.CompositeTransitions
-import Leslie2Protocols.ABA.Implementation.AFW.RoundProjectionStep
+import Leslie2Protocols.ABA.AFW.RoundProjectionStep
 import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 
 /-!
-# The implementation's rows answered by runs of the composed system
+# Each transition of the implementation answered by a run of the composed system
 
 `AFW.protocol P` is the gather-based protocol as it runs and `AFW.composed P` reads the same
-protocol as a composition of components, down to the broadcast instances. Every row of the
+protocol as a composition of components, down to the broadcast instances. Every transition of the
 implementation is answered here by a run of the composed system from the state the view
-`AFW.roundProjection` reads: the readers that identify a row off its label, the builders of a
-transition of one gather instance and of one round, the broadcast invariant across a row,
+`AFW.roundProjection` reads: the readers that identify a transition off its label, the builders of
+a transition of one gather instance and of one round, the broadcast invariant across a transition,
 corruption read through the view, and the answers on a send, on a delivery, on the call and the
 graded return, and on a Byzantine injection.
-`ABA/Implementation/AFW/Simulation.lean` assembles these answers into the matching.
+`ABA/AFW/Simulation.lean` assembles these answers into the matching.
 
-## Three of the implementation's rows against two composed events
+## Three of the implementation's transitions against two composed events
 
-The composed round is a composition, so an implementation row that fuses two of its events
-is answered by a run of two transitions and not by one. There are three:
+The composed round is a composition, so a transition of the implementation that fuses two of its
+events is answered by a run of two transitions and not by one. There are three:
 
 * the return-then-call step, answered by the hidden events `firstGatherReturn` and
   `secondGatherCall` of round `r`;
@@ -40,15 +40,16 @@ implementation reads a `2f + 1` `VOTE` receipt quorum on the process's own local
 four broadcast families. A delivery moves the returned value in one way only:
 `AFW.broadcastReturnsFor_deliver_cases` says that it either leaves the returned value where it
 stands or fills an empty one, which is the dichotomy between the plain delivery lemmas of
-`ABA/Implementation/AFW/RoundProjectionStep/Delivery.lean` and their quorum companions.
+`ABA/AFW/RoundProjectionStep/Delivery.lean` and their quorum companions.
 
 ## The two clauses that are not projections
 
 `AFW.RoundInvariant` is `AFW.BroadcastReturnsInvariant` at one round, and
-`AFW.broadcastReturnsInvariant_update` carries it across a row from the round the row names. Every
-row of a gather instance moves each of its `2n` broadcast instances by `AFW.InvariantStep`
-(`AFW.algorithmOverBracha_invariantStep`), so `AFW.roundInvariant_firstGather` and
-`AFW.roundInvariant_secondGather` re-establish the invariant from the rows the answer fires.
+`AFW.broadcastReturnsInvariant_update` carries it across a transition from the round that
+transition names. Every transition of a gather instance moves each of its `2n` broadcast instances
+by `AFW.InvariantStep` (`AFW.algorithmOverBracha_invariantStep`), so
+`AFW.roundInvariant_firstGather` and `AFW.roundInvariant_secondGather` re-establish the invariant
+from the transitions the answer fires.
 `AFW.boundInvariant_of` and `AFW.writeGhost_bound` carry the bound invariant, whose one open case is
 the return-then-call step: there the ghost write puts the round's bound bit on record, which is
 `AFW.roundRecord_gbcaSend_secondGather`. -/

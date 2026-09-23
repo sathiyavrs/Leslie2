@@ -4,18 +4,18 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.Implementation.AFW.RoundProjectionStep.BroadcastSend
-import Leslie2Protocols.ABA.Implementation.AFW.RoundProjectionStep.GatherSend
-import Leslie2Protocols.ABA.Implementation.AFW.RoundProjectionStep.ViewAfterOneWrite
+import Leslie2Protocols.ABA.AFW.RoundProjectionStep.BroadcastSend
+import Leslie2Protocols.ABA.AFW.RoundProjectionStep.GatherSend
+import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ViewAfterOneWrite
 
 /-!
-# The rows of the two gathers and of the broadcast instances
+# The transitions of the two gathers and of the broadcast instances
 
 `roundProjection_firstGatherEcho` and its thirteen companions: the view of the composed round after
-each `ECHO`, `VOTE` and `BIND` row of the two gathers and of their four broadcast families. Each is
-the send of `RoundProjectionStep/GatherSend.lean` or `RoundProjectionStep/BroadcastSend.lean` read
-at the label the implementation row carries, over the effect the composed round's own row
-writes.
+each `ECHO`, `VOTE` and `BIND` transition of the two gathers and of their four broadcast families.
+Each is the send of `RoundProjectionStep/GatherSend.lean` or
+`RoundProjectionStep/BroadcastSend.lean` read at the label the implementation's transition carries,
+over the effect the composed round's own transition writes.
 -/
 
 namespace PLTS

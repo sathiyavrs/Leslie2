@@ -40,7 +40,7 @@ through the two hiding frames: a rendezvous label and a sub-protocol API label a
 
 `hybrid` is where the two chains of `ABA/Results.lean` meet.
 `ABA/ABDY/Substitution.lean` carries the composed system of ABDY22's protocol
-to it in one stage, and `ABA/Implementation/AFW/CompositionChain.lean` the gather-based
+to it in one stage, and `ABA/AFW/Substitution.lean` the gather-based
 implementation in three. The simulation of `ABA/HybridRefinesSpecification/Simulation.lean` runs
 from `hybrid` on this vocabulary, the non-vacuity witnesses of
 `ABA/HybridRefinesSpecification/NonVacuity.lean` are built with it, and `ABA/Results.lean` reads

@@ -6,9 +6,10 @@ Authors: Sathiya / Claude
 
 import Leslie2Protocols.ABA.HybridRefinesSpecification.Simulation
 import Leslie2Protocols.ABA.ABDY.Simulation
-import Leslie2Protocols.ABA.Implementation.AFW.Simulation
+import Leslie2Protocols.ABA.AFW.Simulation
 import Leslie2Protocols.ABA.Composition.Hybrid
 import Leslie2Protocols.ABA.ABDY.Substitution
+import Leslie2Protocols.ABA.AFW.Substitution
 
 /-!
 # The main theorems of the ABA case study
@@ -49,10 +50,10 @@ each still a component of the state the relation is defined on.
 
 Five carry `AFW.protocol`, along `AFW.protocol ⊑ AFW.composed ⊑
 AFW.composedOverBroadcastSpecification ⊑ AFW.composedOverGatherSpecifications ⊑ hybrid`.
-`AFW.protocolSimulation` (`Implementation/AFW/Simulation.lean`) is the first, the protocol as it
+`AFW.protocolSimulation` (`AFW/Simulation.lean`) is the first, the protocol as it
 runs into its composed system along the Dirac lift of `AFW.ProtocolRelation`. The next three are
 `AFW.broadcastSubstitution`, `AFW.gatherSubstitution` and `AFW.roundSpecificationSubstitution`
-(`Implementation/AFW/CompositionChain.lean`), family substitutions replacing one tier of the round
+(`AFW/Substitution.lean`), family substitutions replacing one tier of the round
 by the tier above it: Bracha's broadcast by the broadcast specification, the gather instances by
 the gather specifications, the round over the gather specifications by the graded-agreement
 specification. The third of them lands on `hybrid P` itself, so the fifth is

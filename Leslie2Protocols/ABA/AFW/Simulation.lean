@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.Implementation.AFW.SimulationRows
+import Leslie2Protocols.ABA.AFW.SimulationOfEachTransition
 import Leslie2Protocols.Framework.DiracRelationCoupling
 
 /-!
@@ -19,7 +19,7 @@ inclusion from here to the ABA specification.
 
 ## The relation is a function
 
-`AFW.ProtocolRelation` (`ABA/Implementation/AFW/RoundProjection.lean`) determines the composed
+`AFW.ProtocolRelation` (`ABA/AFW/RoundProjection.lean`) determines the composed
 state from the implementation: the round loops and the coin oracle are shared, the ABA network is
 the DECIDED sets beside the corrupted set, and every round is the view `AFW.roundProjection`.
 `PLTS.coupling_pure` and `PLTS.coupling_map` (`Framework/DiracRelationCoupling.lean`) are the two
@@ -29,10 +29,10 @@ couplings that answer a Dirac outcome and an outcome whose only free coordinate 
 
 `AFW.coupling_tau`, `AFW.coupling_label` and `AFW.coupling_event` answer the silent label, a
 visible shared label and a rendezvous of the implementation, each from the runs of
-`ABA/Implementation/AFW/SimulationRows.lean`. An implementation row that fuses two events of the
-composed round is answered by a run of two transitions, so `AFW.coupling_hidden` concludes in a weak
-run of the composed group, and `AFW.coupling_step` carries that run through the sub-protocol hiding
-with `weakTau_abstract`, `weakTau_of_weakStep_mem` and `weakStep_abstract`.
+`ABA/AFW/SimulationOfEachTransition.lean`. A transition of the implementation that fuses two events
+of the composed round is answered by a run of two transitions, so `AFW.coupling_hidden` concludes in
+a weak run of the composed group, and `AFW.coupling_step` carries that run through the sub-protocol
+hiding with `weakTau_abstract`, `weakTau_of_weakStep_mem` and `weakStep_abstract`.
 `AFW.protocolSimulation` is the forward simulation these matchings assemble, and
 `AFW.protocol_composed` the trace inclusion it yields. -/
 
