@@ -202,7 +202,7 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
     An abstract state that decides when a round excludes a bit can be contradicted afterwards: a late caller of the other bit enables a grade-0 return at that round, the next round spares the opposite bit and locks it at grade~2, and the decision falls against the committed value.
     The abstract state therefore commits as late as a forward simulation permits.
   \item D17: a fourth outcome $\dagger$, of mass $\failmass$, on the single distribution both coin resolutions follow, where the source's two range over $\{0,1,\top\}$.
-    At Transition System~3 it delivers to no process, and at Transition System~1 it puts the system into the mode $noRuleEnabled$, which enables no $\tau$-rule.
+    At Transition System~3 it delivers to no process, and at Transition System~1 it puts the system into the mode $noTransitionEnabled$, which enables no silent transition.
     The implementation the coin specification stands for reconstructs the coin from an $\varepsilon$-correct verifiable secret sharing whose delivery holds only up to a failure probability, and the specification carries that failure as an outcome of its own rather than as a side condition.
   \item D18: the GBCA implementation transcribes ABDY22's Algorithm~6 in full, over the message levels INPUT, ECHO, VOTE, BIND and ECHO5, in place of the source's compression of it.
     That compression elides the ECHO5 level and takes $f{+}1$ $\mathrm{VOTE}\,v$ receipts as the grade-$1$ witness where Algorithm~6 takes $f{+}1$ $\mathrm{BIND}\,v$ receipts, which violates Binding.
@@ -286,8 +286,8 @@ See \leanmodule{Leslie2Protocols/ABA/Specifications/ABA} and \leanmodule{Leslie2
 
 \input{nodes-min/def-aba-spec}
 
-\blueprintfig{fig-ts1-rules}{Transition System 1, the ABA specification \leandecl{PLTS.ABA.spec}: the four control states, keyed on the mode and the decision value, and the flip branch of \leandeclnamed{coinFlip}{PLTS.ABA.SpecStep.coinFlip}, whose $\tau$-step is drawn with an undirected stem and one edge per outcome — the decision enabled, the flip left enabled, and failure to deliver, naming no coin bit.
-The mode $noRuleEnabled$ enables no $\tau$-rule.
+\blueprintfig{fig-ts1-transitions}{Transition System 1, the ABA specification \leandecl{PLTS.ABA.spec}: the four control states, keyed on the mode and the decision value, and the flip branch of \leandeclnamed{coinFlip}{PLTS.ABA.SpecStep.coinFlip}, whose $\tau$-step is drawn with an undirected stem and one edge per outcome — the decision enabled, the flip left enabled, and failure to deliver, naming no coin bit.
+The mode $noTransitionEnabled$ enables no silent transition.
 Rules 1 and 2 are drawn on $flipEnabled$ alone.
 Rule 1 is enabled at a process whose record entry is empty and rule 2 at a process whose entry is filled, so the call label is enabled in every state (D36).
 Three of the eight rules are not drawn: the guarded corruption rule \leandeclnamed{fail}{PLTS.ABA.SpecStep.fail} (D1) and the two corrupted interface rules \leandeclnamed{callByzantine}{PLTS.ABA.SpecStep.callByzantine} and \leandeclnamed{retByzantine}{PLTS.ABA.SpecStep.retByzantine} (D23), each of which is enabled in every state at a corrupted process and none of which changes the mode.}

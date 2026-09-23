@@ -476,8 +476,8 @@ recording them is what fixes the design.
 coin row with `SpecStep.coinFlip` rather than a stutter. Two things break. `coinFlip` is the
 system's one non-Dirac rule, and `hybridSpecificationRelation` is a `diracRel`, so the abstract
 system must stay a point mass at every reachable pair. And `flipPMF` puts mass `δ` on `exclude`:
-that branch reaches `ControlMode.noRuleEnabled`, where `SpecStep.decide` is disabled forever, so on
-positive mass the abstract state could no longer answer the `retABA` that arrives later. Hence
+that branch reaches `ControlMode.noTransitionEnabled`, where `SpecStep.decide` is disabled forever,
+so on positive mass the abstract state could no longer answer the `retABA` that arrives later. Hence
 `mode_flipEnabled`: the abstract state stutters at every flip and keeps `SpecStep.decide` enabled.
 3. **Unconditional correct-unanimity fails.** Requiring pairwise agreement of correct
    inputs whenever the abstract state is undecided is too strong: two opposite fresh inputs with

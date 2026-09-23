@@ -362,7 +362,7 @@ theorem coupling_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
     have hfor : ∀ i, i ≠ id → x i = u i := fun i hi =>
       pure_inj (programStep_callG_foreign (Ne.symm hi) (hall i))
     obtain ⟨y, hy, hh, hph, hrr, hest, hx1, hoff, hga2, hlow, hinv⟩ :=
-      roundRecord_answer_callG P w (u := u) (j := id) rfl hI (roundRow_of_own rfl (hall id))
+      roundRecord_answer_callG P w (u := u) (j := id) rfl hI (roundTransition_of_own rfl (hall id))
     obtain rfl : x id = y := pure_inj hy
     have hxc : ∀ (i : Fin P.n) (r' : ℕ), (x i).2.roundRecord r'
         = ((Function.update u id (x id)) i).2.roundRecord r' := by
@@ -413,7 +413,7 @@ theorem coupling_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
       pure_inj (programStep_retG_foreign (Ne.symm hi) (hall i))
     obtain ⟨y, hy, hh, hph, hrr, hx1, hoff, hga2, hlow, hinv⟩ :=
       roundRecord_answer_retG P w (u := u) (j := id) rfl hI hbnd (hB r)
-        (roundRow_of_own rfl (hall id))
+        (roundTransition_of_own rfl (hall id))
     obtain rfl : x id = y := pure_inj hy
     have hxc : ∀ (i : Fin P.n) (r' : ℕ), (x i).2.roundRecord r'
         = ((Function.update u id (x id)) i).2.roundRecord r' := by
@@ -497,7 +497,7 @@ theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
     have hfor : ∀ i, i ≠ j → x i = u i := fun i hi =>
       pure_inj (programStep_gbcaSend_foreign (Ne.symm hi) (hall i))
     obtain ⟨y, hy, hcore, hoff, hlow, hinv⟩ :=
-      roundRecord_answer_gbcaSend P w (u := u) (j := j) rfl hI (roundRow_of_own rfl (hall j))
+      roundRecord_answer_gbcaSend P w (u := u) (j := j) rfl hI (roundTransition_of_own rfl (hall j))
     obtain rfl : x j = y := pure_inj hy
     have hxc : ∀ (i : Fin P.n) (r' : ℕ), (x i).2.roundRecord r'
         = ((Function.update u j (x j)) i).2.roundRecord r' := by
@@ -524,7 +524,7 @@ theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
           · rw [hfor i hi])).trans (roundProjection_otherSent u w hr' j m rfl)
     have hbI : BoundInvariant P x
         ((w.recordGBCASend r j m).writeGhost (ghostStep P) (Sum.inr (.gbcaSend r j m))) := by
-      rcases roundRecord_gbcaSend_secondGather P (roundRow_of_own rfl (hall j)) with
+      rcases roundRecord_gbcaSend_secondGather P (roundTransition_of_own rfl (hall j)) with
         hkeep | ⟨q, y, rfl⟩
       · refine boundInvariant_of hB (fun i r'' => ?_)
           (fun _ hb => writeGhost_bound _ (by simpa using hb))
@@ -560,7 +560,7 @@ theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
       pure_inj (programStep_gbcaDeliver_foreign (Ne.symm hi) (hall i'))
     obtain ⟨y, hy, hcore, hoff, hga2, hlow, hinv⟩ :=
       roundRecord_answer_gbcaDeliver P w (u := u) (j := i) rfl hI hsent
-        (roundRow_of_own rfl (hall i))
+        (roundTransition_of_own rfl (hall i))
     obtain rfl : x i = y := pure_inj hy
     have hxc : ∀ (i' : Fin P.n) (r' : ℕ), (x i').2.roundRecord r'
         = ((Function.update u i (x i)) i').2.roundRecord r' := by
@@ -688,7 +688,7 @@ theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
       pure_inj (programStep_gbcaCallLoop_foreign (Ne.symm hi) (hall i))
     obtain ⟨y, hy, hy2, hh, hph, hrr, hest, hx1, hlow⟩ :=
       roundRecord_answer_gbcaCallLoop P w (u := u) (j := id) rfl
-        (roundRow_of_own rfl (hall id))
+        (roundTransition_of_own rfl (hall id))
     obtain rfl : x id = y := pure_inj hy
     have hsame : ∀ i, (x i).2 = (u i).2 := by
       intro i

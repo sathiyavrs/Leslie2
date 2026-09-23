@@ -1,6 +1,6 @@
 \begin{theorem}[The round's graded-agreement composition refines its specification]
   \label{thm:aba-gbca-composition-by-abdy-refines-specification}
-  \lean{PLTS.ABA.GBCA.ByABDY.refinesSpecification}\lean{PLTS.ABA.GBCA.ByABDY.specificationRelation_row}\lean{PLTS.ABA.GBCA.ByABDY.composition_projects}\lean{PLTS.ABA.GBCA.specificationLabelMap}\lean{PLTS.ABA.GBCA.specificationOverRoundAlphabet}\lean{PLTS.ABA.GBCA.ByABDY.specificationRelation_init}\lean{PLTS.ABA.GBCA.ByABDY.refinesSpecification_failAct}\lean{PLTS.ABA.GBCA.ByABDY.specificationCorruptionAct}\leanok
+  \lean{PLTS.ABA.GBCA.ByABDY.refinesSpecification}\lean{PLTS.ABA.GBCA.ByABDY.specificationRelation_transition}\lean{PLTS.ABA.GBCA.ByABDY.composition_projects}\lean{PLTS.ABA.GBCA.specificationLabelMap}\lean{PLTS.ABA.GBCA.specificationOverRoundAlphabet}\lean{PLTS.ABA.GBCA.ByABDY.specificationRelation_init}\lean{PLTS.ABA.GBCA.ByABDY.refinesSpecification_failAct}\lean{PLTS.ABA.GBCA.ByABDY.specificationCorruptionAct}\leanok
   \uses{def:aba-gbca-instance-by-abdy, def:aba-gbca-algorithm-by-abdy, def:aba-gbca-spec, def:forwardsim}
   For all parameters $P$ and every round $r$, the round-$r$ composition $\mathrm{composition}(P,r)$ is forward-simulated by the round-$r$ GBCA specification instance, read over the round's interface.
   The relation reads the specification's $call$, $ret$ and $F$ off the composed state and certifies its $excluded$ and $grade$ by receipt patterns: an \emph{exclude certificate} for every member of $excluded$, and an $n{-}f$ ECHO5 quorum for each half of the grade guard.

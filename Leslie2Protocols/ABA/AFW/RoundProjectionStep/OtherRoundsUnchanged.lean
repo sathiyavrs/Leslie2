@@ -9,9 +9,10 @@ import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ViewAfterOneWrite
 /-!
 # Every other round is unchanged
 
-`roundProjection_otherRow` and its three companions: the rounds a row does not name read exactly as
-the row found them. The acting process's other round records are untouched, the adversary's sent
-family is written at one round only, and so is its ghost record. `toRoundFamily`,
+`roundProjection_otherTransition` and its three companions: the rounds a transition does not name
+read exactly as the transition found them. The acting process's other round records are untouched,
+the adversary's sent family is written at one round only, and so is its ghost record.
+`toRoundFamily`,
 `toRoundFamilyNoSent` and `toRoundFamilySent` state a row's effect on the whole family of rounds as
 a one-point update.
 -/
@@ -24,7 +25,7 @@ open Implementation Composition GBCA.ByABDY
 
 variable {P : Parameters}
 
-section Rows
+section Transitions
 
 variable {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} {w : NetworkState P.n} {j : Fin P.n}
     {c : RoundLoopRecord P.n} {p : RoundRecordMap P.n}
@@ -36,7 +37,8 @@ the acting process's other round records are untouched, the adversary's sent
 family is written at one round only, and so is its ghost record. -/
 
 /-- The view of a round the row does not name. -/
-theorem roundProjection_otherRow (hu : (u j).2 = p) {r r' : ℕ} (hr : r' ≠ r) (sr : RoundRecord P.n)
+theorem roundProjection_otherTransition (hu : (u j).2 = p) {r r' : ℕ} (hr : r' ≠ r) (sr :
+  RoundRecord P.n)
     (v : NetworkState P.n) (hsent : v.sent r' = w.sent r') (hF : v.F = w.F)
     (hghost : v.ghostRecord r' = w.ghostRecord r') :
     roundProjection P (Function.update u j (c, p.setRoundRecord r sr)) v r' = roundProjection P u w
@@ -50,7 +52,7 @@ theorem roundProjection_other (hu : (u j).2 = p) {r r' : ℕ} (hr : r' ≠ r) (s
     roundProjection P (Function.update u j (c, p.setRoundRecord r sr))
         ((w.recordGBCASend r j m).writeGhost (ghostStep P) L) r' = roundProjection P u w r' := by
   rw [roundProjection_writeGhost_ne _ _ hL hr]
-  exact roundProjection_otherRow hu hr sr _ (recordGBCASend_sent_ne w r j m hr) rfl rfl
+  exact roundProjection_otherTransition hu hr sr _ (recordGBCASend_sent_ne w r j m hr) rfl rfl
 
 /-- A row of round `r` that records nothing, read at another round. -/
 theorem roundProjection_otherNoSent (hu : (u j).2 = p) {r r' : ℕ} (hr : r' ≠ r)
@@ -58,7 +60,7 @@ theorem roundProjection_otherNoSent (hu : (u j).2 = p) {r r' : ℕ} (hr : r' ≠
     roundProjection P (Function.update u j (c, p.setRoundRecord r sr))
         (w.writeGhost (ghostStep P) L) r' = roundProjection P u w r' := by
   rw [roundProjection_writeGhost_ne _ _ hL hr]
-  exact roundProjection_otherRow hu hr sr w rfl rfl rfl
+  exact roundProjection_otherTransition hu hr sr w rfl rfl rfl
 
 /-- A Byzantine injection of round `r`, read at another round. -/
 theorem roundProjection_otherSent (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n) (w : NetworkState P.n)
@@ -113,7 +115,7 @@ theorem toRoundFamilySent (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n) (w : Netw
   · subst hr; rw [Function.update_self, hX]
   · rw [Function.update_of_ne hr, roundProjection_otherSent u w hr k m hL]
 
-end Rows
+end Transitions
 
 end AFW
 end ABA

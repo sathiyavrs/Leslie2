@@ -89,7 +89,7 @@ theorem ABAState.corrupt_F_subset {P : Parameters} (c : ABAState P) (id : Fin P.
 /-- The outcome of a visible row collapses to a single Dirac: the specification stands, the ABA
 component lands on one state and the coin oracle stands, so the four components' joint outcome is
 the point mass `dirac_step` expects. -/
-private theorem prodPMF_pure_abaRow {P : Parameters} (G : ℕ → GBCA.SpecState P.n)
+private theorem prodPMF_pure_abaTransition {P : Parameters} (G : ℕ → GBCA.SpecState P.n)
     (c : ABAState P) (o : ℕ → WCC.SpecState P.n) :
     prodPMF (PMF.pure G) ((PMF.pure c).map fun x => (x.1, x.2, o))
       = PMF.pure (G, c.1, c.2, o) := by
@@ -154,7 +154,7 @@ theorem hybridRefinesSpecification (P : Parameters) :
           have hI' := hI.step hstep hs'
           simp only [mem_support_prodPMF, PMF.mem_support_pure_iff] at hs'
           obtain ⟨rfl, hs2⟩ := hs'
-          obtain ⟨hc2, rfl⟩ := mem_support_abaRow hs2
+          obtain ⟨hc2, rfl⟩ := mem_support_abaTransition hs2
           exact ⟨hI', hAbs.step_roundLoopTau hI hstepC hc2⟩)
         exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
       · -- row: callG handshake
@@ -165,7 +165,7 @@ theorem hybridRefinesSpecification (P : Parameters) :
           obtain ⟨h1, h2⟩ := hs'
           rw [PMF.mem_support_map_iff] at h1
           obtain ⟨gr', hgr', heq⟩ := h1
-          obtain ⟨hc2, rfl⟩ := mem_support_abaRow h2
+          obtain ⟨hc2, rfl⟩ := mem_support_abaTransition h2
           exact ⟨hI', by rw [← heq]; exact hAbs.step_callG hI r id b hstepG hstepC hgr' hc2⟩)
         exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
       · -- row: retG handshake
@@ -176,7 +176,7 @@ theorem hybridRefinesSpecification (P : Parameters) :
           obtain ⟨h1, h2⟩ := hs'
           rw [PMF.mem_support_map_iff] at h1
           obtain ⟨gr', hgr', heq⟩ := h1
-          obtain ⟨hc2, rfl⟩ := mem_support_abaRow h2
+          obtain ⟨hc2, rfl⟩ := mem_support_abaTransition h2
           exact ⟨hI', by
             rw [← heq]; exact hAbs.step_retG hI r id out bnd hstepG hstepC hgr' hc2⟩)
         exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
@@ -186,7 +186,7 @@ theorem hybridRefinesSpecification (P : Parameters) :
           have hI' := hI.step hstep hs'
           simp only [mem_support_prodPMF, PMF.mem_support_pure_iff] at hs'
           obtain ⟨rfl, h2⟩ := hs'
-          obtain ⟨hc2, wr', hwr', rfl⟩ := mem_support_coinRow h2
+          obtain ⟨hc2, wr', hwr', rfl⟩ := mem_support_coinTransition h2
           exact ⟨hI', hAbs.step_callW hI r id hstepW hstepC hwr' hc2⟩)
         exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
       · -- row: retW handshake
@@ -195,7 +195,7 @@ theorem hybridRefinesSpecification (P : Parameters) :
           have hI' := hI.step hstep hs'
           simp only [mem_support_prodPMF, PMF.mem_support_pure_iff] at hs'
           obtain ⟨rfl, h2⟩ := hs'
-          obtain ⟨hc2, wr', hwr', rfl⟩ := mem_support_coinRow h2
+          obtain ⟨hc2, wr', hwr', rfl⟩ := mem_support_coinTransition h2
           exact ⟨hI', hAbs.step_retW hI r id b hstepW hstepC hwr' hc2⟩)
         exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
     | callABA id b =>
@@ -237,7 +237,7 @@ theorem hybridRefinesSpecification (P : Parameters) :
           · rcases hAbs.phase with hv | ⟨v, hv2, ⟨r0, hcv0⟩, hpin⟩
             · exact Or.inl hv
             · exact Or.inr ⟨v, hv2, hIAF.2.1 r0 v hcv0, hIAF.2.2 v ⟨r0, hcv0⟩ hpin⟩
-        simp only [prodPMF_pure_abaRow]
+        simp only [prodPMF_pure_abaTransition]
         obtain ⟨ω, hRel, hbid⟩ := dirac_step (g, c'.1, c'.2, w) a' ⟨hIA', hAbs'⟩
         refine ⟨ω, hRel, Or.inr ⟨by simp, ?_⟩⟩
         rw [hbid]
@@ -254,7 +254,7 @@ theorem hybridRefinesSpecification (P : Parameters) :
             show Function.update a.input id (some b) id' = (ABAState.processes (C, A) id').input
             rw [Function.update_of_ne hne]
             exact hAbs.input_sync id' hid'
-          simp only [prodPMF_pure_abaRow]
+          simp only [prodPMF_pure_abaTransition]
           obtain ⟨ω, hRel, hbid⟩ := dirac_step (g, C, A, w) a' ⟨hI, hAbs'⟩
           refine ⟨ω, hRel, Or.inr ⟨by simp, ?_⟩⟩
           rw [hbid]
@@ -268,7 +268,7 @@ theorem hybridRefinesSpecification (P : Parameters) :
           have hfilled : a.input id ≠ none := by
             rw [hAbs.input_sync id hidF]
             exact hloop.resolve_left (by rw [hcorr]; simp)
-          simp only [prodPMF_pure_abaRow]
+          simp only [prodPMF_pure_abaTransition]
           obtain ⟨ω, hRel, hbid⟩ := dirac_step (g, C, A, w) a ⟨hI, hAbs⟩
           refine ⟨ω, hRel, Or.inr ⟨by simp, ?_⟩⟩
           rw [hbid]
@@ -326,7 +326,7 @@ theorem hybridRefinesSpecification (P : Parameters) :
           have hsup : InputSupport P a b :=
             inputSupport_of_roundLoopInputSupport hAbs.F_eq hAbs.input_sync (hI.bind_support rA b
               hrA_certificate.2.1)
-          have hmode : a.mode ≠ .noRuleEnabled := by
+          have hmode : a.mode ≠ .noTransitionEnabled := by
             rw [hAbs.mode_flipEnabled]; exact fun h => by cases h
           set a1 : SpecState P.n := { a with val := some b, mode := .flipEnabled } with ha1def
           have hrun : weakTau (spec P) (PMF.pure a) (PMF.pure a1) :=
@@ -345,7 +345,7 @@ theorem hybridRefinesSpecification (P : Parameters) :
               · rw [h, Function.update_self, hc'def, ABAState.setProcess_processes_self]
               · rw [Function.update_of_ne h, hc'def, ABAState.setProcess_processes_ne _ _ _ h]
                 exact hAbs.ret_eq id'
-          simp only [prodPMF_pure_abaRow]
+          simp only [prodPMF_pure_abaTransition]
           obtain ⟨ω, hRel, hbid⟩ := dirac_step (g, c'.1, c'.2, w) a'' ⟨hIA', hAbs''⟩
           refine ⟨ω, hRel, Or.inr ⟨by simp, ?_⟩⟩
           rw [hbid]
@@ -369,14 +369,14 @@ theorem hybridRefinesSpecification (P : Parameters) :
               · rw [h, Function.update_self, hc'def, ABAState.setProcess_processes_self]
               · rw [Function.update_of_ne h, hc'def, ABAState.setProcess_processes_ne _ _ _ h]
                 exact hAbs.ret_eq id'
-          simp only [prodPMF_pure_abaRow]
+          simp only [prodPMF_pure_abaTransition]
           obtain ⟨ω, hRel, hbid⟩ := dirac_step (g, c'.1, c'.2, w) a'' ⟨hIA', hAbs''⟩
           refine ⟨ω, hRel, Or.inr ⟨by simp, ?_⟩⟩
           rw [hbid]
           exact weakStep_strong (SpecStep.ret a id b hvalb hretfalse)
       · -- a corrupted process's return (D23): neither system moves, and the abstract state answers
         -- with its own corrupted-return rule
-        simp only [prodPMF_pure_abaRow]
+        simp only [prodPMF_pure_abaTransition]
         obtain ⟨ω, hRel, hbid⟩ := dirac_step (g, C, A, w) a ⟨hI, hAbs⟩
         refine ⟨ω, hRel, Or.inr ⟨by simp, ?_⟩⟩
         rw [hbid]
@@ -389,7 +389,7 @@ theorem hybridRefinesSpecification (P : Parameters) :
       rw [hybrid_step_fail P g C A w id hI.corrupted_F] at hstep
       obtain ⟨hnew, hbud, rfl⟩ := hstep
       set c' : ABAState P := ABAState.corrupt P id (C, A) with hc'def
-      simp only [prodPMF_pure_abaRow]
+      simp only [prodPMF_pure_abaTransition]
       have hFsub := ABAState.corrupt_F_subset (C, A) id
       have hAbs' : AbstractState P (fun r => (g r).corrupt P id) c'
           (fun r => (w r).corrupt P id) (a.corrupt P id) := by

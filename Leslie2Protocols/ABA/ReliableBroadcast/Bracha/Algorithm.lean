@@ -11,8 +11,8 @@ import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.CompositionStepInversion
 
 `BRB.BrachaAlgorithm` states the transitions of the reliable-broadcast instance
 `BRB.brachaInstance` (`ABA/ReliableBroadcast/Bracha/Composition.lean`) over the composed state
-`BrachaState n M`, one constructor per case of `BRB.brachaInstance_step_iff_row`. It is a relation
-on that state; the system is the composition.
+`BrachaState n M`, one constructor per case of `BRB.brachaInstance_step_iff_algorithm`. It is a
+relation on that state; the system is the composition.
 
 The message pattern, per process:
 
@@ -30,10 +30,11 @@ unconditionally, Bracha's protocol having no per-process input. The write-once `
 `voteAmplification` and `voteQuorum` write the same field, so a process votes at most once
 whichever of the two fires first.
 
-`brachaInstance_step_row` is the projection and `row_brachaInstance_step` the embedding.
-Together they give `brachaInstance_step_iff_row`: at a specification label `l₀`, the transitions
-of the composition over the labels `BRB.specificationLabelMap` sends to `l₀` are exactly the
-`l₀`-transitions of `BrachaAlgorithm`, on the same composed state and with the same distribution.
+`brachaInstance_step_algorithm` is the projection and `algorithm_brachaInstance_step` the embedding.
+Together they give `brachaInstance_step_iff_algorithm`: at a specification label `l₀`, the
+transitions of the composition over the labels `BRB.specificationLabelMap` sends to `l₀` are exactly
+the `l₀`-transitions of `BrachaAlgorithm`, on the same composed state and with the same
+distribution.
 
 ## Model and deviations
 
@@ -52,9 +53,9 @@ variable {M : Type} [DecidableEq M]
 
 /-- The transitions of the reliable-broadcast instance with leader `ldr`
 (`BRB.brachaInstance`, `ABA/ReliableBroadcast/Bracha/Composition.lean`), stated over the composed
-state: one constructor per case of `BRB.brachaInstance_step_iff_row`. The call and the call loop
-are the two transitions of `call m`, which the instance takes at two labels. Every transition is
-Dirac. -/
+state: one constructor per case of `BRB.brachaInstance_step_iff_algorithm`. The call and the call
+loop are the two transitions of `call m`, which the instance takes at two labels. Every transition
+is Dirac. -/
 inductive BrachaAlgorithm (P : Parameters) (ldr : Fin P.n) :
     BrachaState P.n M → Label P.n M → PMF (BrachaState P.n M) → Prop
   /-- The environment call arrives at the leader: record the payload and
@@ -130,7 +131,7 @@ The two hidden rendezvous and the network's injection are silent in both systems
 `specificationLabelMap` takes `τ` to `τ`. -/
 
 /-- **The projection.** -/
-theorem brachaInstance_step_row (P : Parameters) (ldr : Fin P.n) :
+theorem brachaInstance_step_algorithm (P : Parameters) (ldr : Fin P.n) :
     ∀ (s : BrachaState P.n M) (l : InstanceLabel P.n M) (μ : PMF (BrachaState P.n M)),
       (brachaInstance P ldr M).step s l μ →
       ∃ l₀, specificationLabelMap P.n M l = some l₀ ∧ BrachaAlgorithm P ldr s l₀ μ := by
@@ -217,12 +218,12 @@ theorem brachaInstance_step_row (P : Parameters) (ldr : Fin P.n) :
           exact BrachaAlgorithm.callLoop _ m
 
 /-- **The embedding.** -/
-theorem row_brachaInstance_step (P : Parameters) (ldr : Fin P.n) :
+theorem algorithm_brachaInstance_step (P : Parameters) (ldr : Fin P.n) :
     ∀ (s : BrachaState P.n M) (l₀ : Label P.n M) (μ : PMF (BrachaState P.n M)),
       BrachaAlgorithm P ldr s l₀ μ →
       ∃ l, specificationLabelMap P.n M l = some l₀ ∧ (brachaInstance P ldr M).step s l μ := by
-  rintro ⟨u, w⟩ l₀ μ hrow
-  cases hrow with
+  rintro ⟨u, w⟩ l₀ μ htransition
+  cases htransition with
   | call m h =>
     exact ⟨Sum.inl (.call m), rfl, brachaInstance_label_step P ldr (by simp)
       (dirac_steps_update (ProgramStep.call (u ldr) m rfl h)
@@ -267,22 +268,22 @@ over the labels `specificationLabelMap` sends to `l₀` are exactly the `l₀`-t
 `BrachaAlgorithm`, on the same state and with the same distribution. The call and the call loop
 are the two transitions of `call m`, taken at the two labels `specificationLabelMap` sends to it;
 every other specification label has a single interface label over it. -/
-theorem brachaInstance_step_iff_row (P : Parameters) (ldr : Fin P.n) (s : BrachaState P.n M)
+theorem brachaInstance_step_iff_algorithm (P : Parameters) (ldr : Fin P.n) (s : BrachaState P.n M)
     (l₀ : Label P.n M) (μ : PMF (BrachaState P.n M)) :
     (∃ l, specificationLabelMap P.n M l = some l₀ ∧ (brachaInstance P ldr M).step s l μ) ↔
     BrachaAlgorithm P ldr s l₀ μ := by
   constructor
   · rintro ⟨l, hl, hstep⟩
-    obtain ⟨l₁, hl₁, hrow⟩ := brachaInstance_step_row P ldr s l μ hstep
+    obtain ⟨l₁, hl₁, htransition⟩ := brachaInstance_step_algorithm P ldr s l μ hstep
     have hll : l₁ = l₀ := Option.some.inj (show (some l₁ : Option (Label P.n M)) = some l₀ by
       rw [← hl₁, hl])
     subst hll
-    exact hrow
-  · exact row_brachaInstance_step P ldr s l₀ μ
+    exact htransition
+  · exact algorithm_brachaInstance_step P ldr s l₀ μ
 
-/-- info: 'PLTS.ABA.BRB.brachaInstance_step_iff_row' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.BRB.brachaInstance_step_iff_algorithm' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms brachaInstance_step_iff_row
+#print axioms brachaInstance_step_iff_algorithm
 
 end BRB
 end ABA

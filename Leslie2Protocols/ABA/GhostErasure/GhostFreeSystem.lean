@@ -38,8 +38,8 @@ it, their `ghostOutput` being an equation.
 
 The pipeline of `Implementation/System.lean` carries the erasure from the adversary to the
 system. The three congruences of `Framework/Erasure.lean` ask the neighbours to be
-saturated along `φ`: the process group is, because a program's return row takes the
-announced bit free (`IsRoundRuleTable.boundBitFree`), and the coin oracle is, because a
+saturated along `φ`: the process group is, because a program's return transition takes
+the announced bit free (`IsRoundStep.boundBitFree`), and the coin oracle is, because a
 graded-agreement return is foreign to every coin round. Hiding `Label.hiddenAPI` collapses
 the erasure to the identity on labels, since every label `φ` identifies with a different
 one is a graded-agreement return, and those are hidden. The conclusion `system_erasure` is
@@ -295,10 +295,10 @@ variable (P : Parameters) (M S : Type)
       Prop)
 
 /-- **A program is saturated along the erasure.** The announced bound bit is the
-network's business: a program's return row takes it free (`IsRoundRuleTable.boundBitFree`), the
-idle row of a non-participant carries it as a bound variable, and the replaced program's
+network's business: a program's return transition takes it free (`IsRoundStep.boundBitFree`), the
+idle transition of a non-participant carries it as a bound variable, and the replaced program's
 self-loop reads no label at all. -/
-theorem program_labelSaturated [IsRoundRuleTable P M S roundStep] (j : Fin P.n) :
+theorem program_labelSaturated [IsRoundStep P M S roundStep] (j : Fin P.n) :
     (program P M S roundStep j).LabelSaturated (forgetBoundExtended (M := M)) := by
   intro q l l' μ hlab hstep
   simp only [program_step] at hstep ⊢
@@ -306,17 +306,17 @@ theorem program_labelSaturated [IsRoundRuleTable P M S roundStep] (j : Fin P.n) 
     rfl | ⟨r, id, out, b, b', rfl, rfl⟩ | ⟨r, k, out, b, b', rfl, rfl⟩
   · exact hstep
   · cases hstep with
-    | roundRow _ _ _ h => exact .roundRow _ _ _ (IsRoundRuleTable.boundBitFree h)
+    | roundTransition _ _ _ h => exact .roundTransition _ _ _ (IsRoundStep.boundBitFree h)
     | retGIdle c p _ _ _ _ hid => exact .retGIdle c p r id out b' hid
     | corruptedIdle c p _ hh _ hown => exact .corruptedIdle c p _ hh (by simp) hown
   · cases hstep with
-    | roundRow _ _ _ h => exact (IsRoundRuleTable.own h).elim
+    | roundTransition _ _ _ h => exact (IsRoundStep.own h).elim
     | byzantineRetGIdle c p _ _ _ _ hk => exact .byzantineRetGIdle c p r k out b' hk
     | corruptedIdle c p _ hh _ hown => exact .corruptedIdle c p _ hh (by simp) hown
 
 /-- **The process group is saturated along the erasure**: full synchronisation carries
 the saturation of every program. -/
-theorem programSynchronisedProduct_labelSaturated [IsRoundRuleTable P M S roundStep] :
+theorem programSynchronisedProduct_labelSaturated [IsRoundStep P M S roundStep] :
     (System.synchronisedProduct (program P M S roundStep)).LabelSaturated
       (forgetBoundExtended (M := M)) :=
   System.LabelSaturated.synchronisedProduct (program_labelSaturated P M S roundStep)
@@ -362,7 +362,7 @@ section SystemErasure
 variable (P : Parameters) (M S G : Type) [DecidableEq M] [Inhabited G]
     (roundStep : Fin P.n → ProcessRecord P.n S → ExtendedLabel P.n M → PMF (ProcessRecord P.n S) →
       Prop)
-    [IsRoundRuleTable P M S roundStep]
+    [IsRoundStep P M S roundStep]
     (callPayload : Fin P.n → Bool → M)
     (ghostStep : ExtendedLabel P.n M → NetworkState P.n M G → G → G)
     (ghostOutput : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop)

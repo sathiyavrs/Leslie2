@@ -16,10 +16,10 @@ specification instance with the same leader, read over the instance's interface
 
 The refinement runs in two steps. The first is strong and functional: a transition of the instance
 is one transition of `BRB.BrachaAlgorithm` at the same state, at the specification label the
-interface label projects to (`BRB.brachaInstance_step_row`). The second is the matching
-`BRB.specificationRelation_row`, whose answer is a weak run of the specification over `BRB.Label`;
-it is lifted to the interface along a section of `BRB.specificationLabelMap`, which is where the
-call loop is answered by the specification's own loop.
+interface label projects to (`BRB.brachaInstance_step_algorithm`). The second is the matching
+`BRB.specificationRelation_transition`, whose answer is a weak run of the specification over
+`BRB.Label`; it is lifted to the interface along a section of `BRB.specificationLabelMap`, which is
+where the call loop is answered by the specification's own loop.
 
 The matching is stated here, one transition of `BRB.BrachaAlgorithm` at a time, along
 `BRB.SpecificationRelation` (`ABA/ReliableBroadcast/Bracha/SpecificationRelation.lean`). The
@@ -54,7 +54,7 @@ pair is answered by a weak run of the specification instance, and the answer is 
 internal transitions stutter; `call` and `fail` are answered by the specification's own
 transitions; `ret id m` is answered by `ret` alone when `val` is already committed, and by the
 two-step run `commit ; ret` when it is not. -/
-theorem specificationRelation_row (P : Parameters) (ldr : Fin P.n) (q₁ : BrachaState P.n M)
+theorem specificationRelation_transition (P : Parameters) (ldr : Fin P.n) (q₁ : BrachaState P.n M)
     (q₂ : SpecState P.n M) (hR : SpecificationRelation P ldr q₁ q₂) (l : Label P.n M)
     (μ : PMF (BrachaState P.n M)) (hstep : BrachaAlgorithm P ldr q₁ l μ)
     (q₁' : BrachaState P.n M) (hq₁' : q₁' ∈ μ.support) :
@@ -251,17 +251,18 @@ theorem specificationRelation_row (P : Parameters) (ldr : Fin P.n) (q₁ : Brach
 /-- **The reliable-broadcast refinement**: the reliable-broadcast instance is forward simulated
 by the specification instance with the same leader, read over the instance's interface. A
 transition of the instance is one transition of `BrachaAlgorithm`
-(`BRB.brachaInstance_step_row`), that transition is answered by a weak run of the specification
-(`specificationRelation_row`), and the run is lifted to the interface along a section of
-`specificationLabelMap`, which is where the call loop is answered by the specification's own
-loop. -/
+(`BRB.brachaInstance_step_algorithm`), that transition is answered by a weak run of the
+specification (`specificationRelation_transition`), and the run is lifted to the interface along a
+section of `specificationLabelMap`, which is where the call loop is answered by the specification's
+own loop. -/
 theorem brachaRefinesSpecification (P : Parameters) (ldr : Fin P.n) :
     ForwardSimulation (brachaInstance P ldr M) (specificationOverInstanceAlphabet P ldr M)
     (SpecificationRelation P ldr) := by
   constructor
   intro q₁ q₂ hR l μ hstep q₁' hq₁'
-  obtain ⟨l₀, hpull, hrow⟩ := brachaInstance_step_row P ldr q₁ l μ hstep
-  obtain ⟨s', hdis, hrel⟩ := specificationRelation_row P ldr q₁ q₂ hR l₀ μ hrow q₁' hq₁'
+  obtain ⟨l₀, hpull, htransition⟩ := brachaInstance_step_algorithm P ldr q₁ l μ hstep
+  obtain ⟨s', hdis, hrel⟩ := specificationRelation_transition P ldr q₁ q₂ hR l₀ μ htransition q₁'
+    hq₁'
   refine ⟨s', ?_, hrel⟩
   rcases hdis with ⟨hτ, hweak⟩ | ⟨hτ, hweak⟩
   · exact Or.inl ⟨specificationLabelMap_eq_tau (by rw [hpull, hτ]; rfl),

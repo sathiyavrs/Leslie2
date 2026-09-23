@@ -18,7 +18,7 @@ specification's committed value by `BRB.EchoCertificate`.
 `specificationRelation_init` holds the relation at the two initial states, and
 `specificationRelation_corrupt` carries it across a corruption of both systems at once, which is
 the shape the family lifting consumes. The matching of the instance's transitions against runs of
-the specification is `BRB.specificationRelation_row`
+the specification is `BRB.specificationRelation_transition`
 (`ABA/ReliableBroadcast/Bracha/RefinesSpecification.lean`).
 -/
 

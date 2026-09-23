@@ -32,8 +32,8 @@ graded-agreement call and return at `j`, `j`'s own round multicast, a round deli
 `j`, and `j`'s own call against an already-called round record. Every other label — the ABA
 interface, the coin handshake, the DECIDED relay and its delivery, the Byzantine handshake rows,
 corruption, and the same five label classes at another process — is answered by a row here.
-`IsRoundRuleTable` states that division: a program's row on a label outside `roundOwn j` is
-one of the rows here, whichever implementation is being read.
+`IsRoundStep` states that division: a program's transition on a label outside `roundOwn j` is one
+of the transitions here, whichever implementation is being read.
 
 ## The network
 
@@ -279,7 +279,8 @@ inductive ProgramStep (P : Parameters) (M S : Type)
       PMF (ProcessRecord P.n S) → Prop) (j : Fin P.n) :
     ProcessRecord P.n S → ExtendedLabel P.n M → PMF (ProcessRecord P.n S) → Prop
   /-- A row of the graded-agreement implementation. -/
-  | roundRow (q : ProcessRecord P.n S) (L : ExtendedLabel P.n M) (μ : PMF (ProcessRecord P.n S))
+  | roundTransition (q : ProcessRecord P.n S) (L : ExtendedLabel P.n M) (μ : PMF (ProcessRecord P.n
+      S))
       (h : roundStep j q L μ) : ProgramStep P M S roundStep j q L μ
   /-- `upon ABA(b)`: record input and estimate, open round `0`. -/
   | input (c : RoundLoopRecord P.n) (p : RoundRecordMap S) (b : Bool)
@@ -664,7 +665,7 @@ end Composition
 carries a label of `roundOwn j`, it fires only at a process whose program has
 not been replaced (D23), it is Dirac, and its return takes the announced bit
 free (D29). -/
-class IsRoundRuleTable (P : Parameters) (M S : Type)
+class IsRoundStep (P : Parameters) (M S : Type)
     (roundStep : Fin P.n → ProcessRecord P.n S → ExtendedLabel P.n M →
       PMF (ProcessRecord P.n S) → Prop) : Prop where
   /-- A round row carries a round label. -/

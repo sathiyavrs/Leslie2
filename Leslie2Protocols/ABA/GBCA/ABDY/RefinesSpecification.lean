@@ -16,9 +16,9 @@ the round's interface (`GBCA.specificationOverRoundAlphabet`), along `specificat
 
 A transition of the composition is one transition of `Algorithm`
 (`GBCA.ByABDY.composition_projects`), that transition is answered by a weak run of the
-specification (`specificationRelation_row`), and the run is lifted to the round's interface along a
-section of `specificationLabelMap` — which is where a Byzantine handshake transition is answered by
-the specification's own call or return (D11). `composition_specificationTraces` is the
+specification (`specificationRelation_transition`), and the run is lifted to the round's interface
+along a section of `specificationLabelMap` — which is where a Byzantine handshake transition is
+answered by the specification's own call or return (D11). `composition_specificationTraces` is the
 trace-distribution inclusion the simulation yields.
 
 Every return of the algorithm does the same decidable case split on the specification's `excluded`.
@@ -56,7 +56,7 @@ pair is answered by a weak run of the graded agreement specification, and the an
 related. The internal transitions stutter; the call, the call loop and `fail` are answered by the
 specification's own transitions; a return is answered by a graded specification return, preceded by
 `bindUnset` where the bit that return needs excluded is not excluded yet. -/
-theorem specificationRelation_row (P : Parameters) (r : ℕ) (q1 : RoundState P.n)
+theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundState P.n)
     (q2 : SpecState P.n) (hR : specificationRelation P r q1 q2) (l : Label P.n)
     (μ1 : PMF (RoundState P.n)) (hstep : Algorithm P r q1 l μ1)
     (q1' : RoundState P.n) (hq1' : q1' ∈ μ1.support) :
@@ -578,11 +578,11 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ) (q1 : RoundState P.
 /-! ### The refinement
 
 The composition's answer to a transition is the algorithm's answer, read through
-`specificationRelation_row`: the projection `composition_projects` is strong and functional, so one
-step of the composition costs one step of the algorithm and nothing of the matching is reproved
-here. The specification's weak answer is finally lifted to the round's interface along a section of
-`specificationLabelMap`. This is where a Byzantine handshake transition is answered by the
-specification's own call or return (D11). -/
+`specificationRelation_transition`: the projection `composition_projects` is strong and functional,
+so one step of the composition costs one step of the algorithm and nothing of the matching is
+reproved here. The specification's weak answer is finally lifted to the round's interface along a
+section of `specificationLabelMap`. This is where a Byzantine handshake transition is answered by
+the specification's own call or return (D11). -/
 
 /-- **The refinement of the round's graded-agreement composition**: the round-`r` composition is
 forward simulated by the graded agreement specification, read over the round's interface. -/
@@ -592,7 +592,7 @@ theorem refinesSpecification (P : Parameters) (r : ℕ) :
   constructor
   intro q₁ q₂ hR l μ hstep q₁' hq₁'
   obtain ⟨l₀, hpull, halg⟩ := composition_projects P r q₁ l μ hstep
-  obtain ⟨s', hdis, hrel⟩ := specificationRelation_row P r q₁ q₂ hR l₀ μ halg q₁' hq₁'
+  obtain ⟨s', hdis, hrel⟩ := specificationRelation_transition P r q₁ q₂ hR l₀ μ halg q₁' hq₁'
   refine ⟨s', ?_, hrel⟩
   rcases hdis with ⟨hτ, hweak⟩ | ⟨hτ, hweak⟩
   · exact Or.inl ⟨specificationLabelMap_eq_tau (by rw [hpull, hτ]; rfl),

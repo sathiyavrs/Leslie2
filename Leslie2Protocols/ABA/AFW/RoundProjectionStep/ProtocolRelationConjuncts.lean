@@ -45,7 +45,7 @@ theorem InvariantStep.unchanged {M : Type} [DecidableEq M] (P : Parameters) (ldr
     (s : BRB.BrachaState P.n M) : InvariantStep P ldr s s := Or.inl rfl
 
 /-- An instance that takes a row. -/
-theorem InvariantStep.row {M : Type} [DecidableEq M] {P : Parameters} {ldr : Fin P.n}
+theorem InvariantStep.transition {M : Type} [DecidableEq M] {P : Parameters} {ldr : Fin P.n}
     {s s' : BRB.BrachaState P.n M} {l : BRB.Label P.n M}
     (h : BRB.BrachaAlgorithm P ldr s l (PMF.pure s')) : InvariantStep P ldr s s' := Or.inr ⟨l, h⟩
 
@@ -64,7 +64,7 @@ theorem invariantStep_update {M : Type} [DecidableEq M] {P : Parameters}
     {l : BRB.Label P.n M} (h : BRB.BrachaAlgorithm P i (b i) l (PMF.pure s')) (k : Fin P.n) :
     InvariantStep P k (b k) (Function.update b i s' k) := by
   by_cases hk : k = i
-  · subst hk; rw [Function.update_self]; exact InvariantStep.row h
+  · subst hk; rw [Function.update_self]; exact InvariantStep.transition h
   · rw [Function.update_of_ne hk]; exact InvariantStep.unchanged P k (b k)
 
 variable {u x : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} {w v : NetworkState P.n}

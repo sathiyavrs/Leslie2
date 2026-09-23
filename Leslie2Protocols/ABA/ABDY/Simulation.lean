@@ -381,7 +381,7 @@ theorem coupling_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
             (by rw [hcol]; exact hcnt) (by rw [hcol]; exact hval)
             (by rw [hcol]; exact hsend),
             by rw [hcol]; exact pure_inj hxid⟩
-    obtain ⟨nd, hrow, hx⟩ := hstage
+    obtain ⟨nd, htransition, hx⟩ := hstage
     have hfor : ∀ i, i ≠ j → x i = processes i := fun i hi =>
       pure_inj (programStep_gbcaSend_foreign (Ne.symm hi) (hall i))
     have hGfor : ∀ i r', i ≠ j →
@@ -410,7 +410,7 @@ theorem coupling_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
     exact coupling_round P rfl ((protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨hxcore, rfl, by simpa using hA, relation_recordGBCASend hG r j m _, h5⟩)
       (GBCA.ByABDY.composition_event_step P r (GBCA.ByABDY.GBCAEvent.send j m)
-        (gbcaProgramStep_family j nd hrow
+        (gbcaProgramStep_family j nd htransition
           (fun i hi => GBCA.ByABDY.GBCAProgramStep.sendIdle _ j m (Ne.symm hi)))
         (GBCA.ByABDY.GBCANetworkStep.send _ j m))
   | gbcaDeliver r i k m =>
@@ -869,7 +869,7 @@ theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
           (by rw [hcol]; exact hnotGrade1) (by rw [hcol]; exact hcnt)
           (by rw [hcol]; exact hval) (by rw [hcol]; exact hret),
           pure_inj hxid⟩
-    obtain ⟨hph, hrr, hh, hrow, hx⟩ := hstage
+    obtain ⟨hph, hrr, hh, htransition, hx⟩ := hstage
     have hGs : (GBCA.ByABDY.gbcaInstanceFamily P).step G (Sum.inl (Label.retG r id out bnd))
         (PMF.pure (Function.update G r
           (Function.update ((G r).1) id
@@ -877,7 +877,7 @@ theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
           ((G r).2).setBound bnd))) :=
       gbcaInstanceFamily_owned P G r (by simp)
         (GBCA.ByABDY.composition_label_step P r (by simp)
-          (gbcaProgramStep_family id _ hrow
+          (gbcaProgramStep_family id _ htransition
             (fun i hi => GBCA.ByABDY.GBCAProgramStep.retIdle _ id out bnd (Ne.symm hi)))
           (GBCA.ByABDY.GBCANetworkStep.retGIdle _ id out bnd hbnd'))
     have hGfor : ∀ j r', j ≠ id →

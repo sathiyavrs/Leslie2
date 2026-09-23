@@ -280,7 +280,7 @@ theorem bindBroadcastLabelMap_eq_tau {n : ℕ} {X : Type} {q : Fin n} {l : Gathe
   · cases e; simp_all [bindBroadcastLabelMap]
   · cases e <;> simp_all [bindBroadcastLabelMap]
 
-section Rules
+section Transitions
 
 variable [DecidableEq X]
 
@@ -479,7 +479,7 @@ noncomputable def gatherPrograms (P : Parameters) (X : Type) [DecidableEq X] :
     (GatherLabel P.n X) :=
   (System.synchronisedProduct (gatherProgram P (X := X))).parallel (gatherNetwork P X)
 
-end Rules
+end Transitions
 
 end Gather
 end ABA

@@ -51,7 +51,7 @@ namespace Gather
 
 variable {X : Type}
 
-section Rules
+section Transitions
 
 variable [DecidableEq X]
 
@@ -125,7 +125,7 @@ noncomputable def instanceOverBroadcastSpecification (P : Parameters) (X : Type)
         ((fun _ => BRB.SpecState.initial P.n X),
           (fun _ => BRB.SpecState.initial P.n (AcceptedPairs P.n X)))) := rfl
 
-end Rules
+end Transitions
 
 /-! ### Views of the instance state
 

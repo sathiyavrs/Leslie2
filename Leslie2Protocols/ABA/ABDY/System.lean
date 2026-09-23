@@ -448,8 +448,8 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
 /-- The rows above meet the implementation's conditions: each carries a label of
 `roundOwn j`, each fires only at an unreplaced program, each is Dirac, and each
 of the three returns takes the announced bit free (D29). -/
-instance instIsRoundRuleTable (P : Parameters) :
-    IsRoundRuleTable P GBCA.ByABDY.Message (GBCA.ByABDY.RoundRecord P.n) (RoundStep P) where
+instance instIsRoundStep (P : Parameters) :
+    IsRoundStep P GBCA.ByABDY.Message (GBCA.ByABDY.RoundRecord P.n) (RoundStep P) where
   own h := by
     cases h <;> rfl
   correct h := by
@@ -593,7 +593,7 @@ theorem programStep_callG_own {r : ℕ} {b : Bool}
           input := some b,
           sentInput := Function.update (q.2.roundRecord r).process.sentInput b true })) := by
   cases h
-  case roundRow h' =>
+  case roundTransition h' =>
     cases h'
     exact ⟨by assumption, by assumption, by assumption, by assumption,
       by assumption, by assumption, rfl⟩
@@ -614,7 +614,7 @@ theorem programStep_retGGrade2_own {r : ℕ} {v bnd : Bool}
           ((q.2.roundRecord r).setProcess { (q.2.roundRecord r).process with returned := true })) :=
             by
   cases h
-  case roundRow h' =>
+  case roundTransition h' =>
     cases h'
     exact ⟨by assumption, by assumption, by assumption, by assumption,
       by assumption, by assumption, by assumption, by assumption, rfl⟩
@@ -639,7 +639,7 @@ theorem programStep_retGGrade1_own {r : ℕ} {v bnd : Bool}
           ((q.2.roundRecord r).setProcess { (q.2.roundRecord r).process with returned := true })) :=
             by
   cases h
-  case roundRow h' =>
+  case roundTransition h' =>
     cases h'
     exact ⟨by assumption, by assumption, by assumption, by assumption, by assumption,
       by assumption, by assumption, by assumption, by assumption, by assumption,
@@ -664,7 +664,7 @@ theorem programStep_retGGrade0_own {r : ℕ} {bnd : Bool}
           ((q.2.roundRecord r).setProcess { (q.2.roundRecord r).process with returned := true })) :=
             by
   cases h
-  case roundRow h' =>
+  case roundTransition h' =>
     cases h'
     exact ⟨by assumption, by assumption, by assumption, by assumption, by assumption,
       by assumption, by assumption, by assumption, by assumption, by assumption,
@@ -682,7 +682,7 @@ theorem programStep_gbcaSend_input_self {r : ℕ} {b : Bool}
         q.2.setRoundRecord r ((q.2.roundRecord r).setProcess { (q.2.roundRecord r).process with
           sentInput := Function.update (q.2.roundRecord r).process.sentInput b true })) := by
   cases h
-  case roundRow h' =>
+  case roundTransition h' =>
     cases h'
     exact ⟨by assumption, by assumption, by assumption, by assumption,
       by assumption, rfl⟩
@@ -699,7 +699,7 @@ theorem programStep_gbcaSend_echo_self {r : ℕ} {b : Bool}
         ((q.2.roundRecord r).setProcess { (q.2.roundRecord r).process with sentEcho := some b })) :=
           by
   cases h
-  case roundRow h' =>
+  case roundTransition h' =>
     cases h'
     exact ⟨by assumption, by assumption, by assumption, by assumption,
       by assumption, rfl⟩
@@ -716,7 +716,7 @@ theorem programStep_gbcaSend_voteBit_self {r : ℕ} {b : Bool}
         ((q.2.roundRecord r).setProcess { (q.2.roundRecord r).process with sentVote := some (some b)
           })) := by
   cases h
-  case roundRow h' =>
+  case roundTransition h' =>
     cases h'
     exact ⟨by assumption, by assumption, by assumption, by assumption,
       by assumption, rfl⟩
@@ -734,7 +734,7 @@ theorem programStep_gbcaSend_voteBot_self {r : ℕ}
         ((q.2.roundRecord r).setProcess { (q.2.roundRecord r).process with sentVote := some none }))
           := by
   cases h
-  case roundRow h' =>
+  case roundTransition h' =>
     cases h'
     exact ⟨by assumption, by assumption, by assumption, by assumption,
       by assumption, by assumption, by assumption, rfl⟩
@@ -752,7 +752,7 @@ theorem programStep_gbcaSend_bindBit_self {r : ℕ} {b : Bool}
         ((q.2.roundRecord r).setProcess { (q.2.roundRecord r).process with sentBind := some (some b)
           })) := by
   cases h
-  case roundRow h' =>
+  case roundTransition h' =>
     cases h'
     exact ⟨by assumption, by assumption, by assumption, by assumption,
       by assumption, by assumption, rfl⟩
@@ -771,7 +771,7 @@ theorem programStep_gbcaSend_bindBot_self {r : ℕ}
         ((q.2.roundRecord r).setProcess { (q.2.roundRecord r).process with sentBind := some none }))
           := by
   cases h
-  case roundRow h' =>
+  case roundTransition h' =>
     cases h'
     exact ⟨by assumption, by assumption, by assumption, by assumption,
       by assumption, by assumption, by assumption, by assumption, rfl⟩
@@ -790,7 +790,7 @@ theorem programStep_gbcaSend_echo5Bit_self {r : ℕ} {b : Bool}
           sentEcho5 :=
             some (some b) })) := by
   cases h
-  case roundRow h' =>
+  case roundTransition h' =>
     cases h'
     exact ⟨by assumption, by assumption, by assumption, by assumption,
       by assumption, by assumption, rfl⟩
@@ -809,7 +809,7 @@ theorem programStep_gbcaSend_echo5Bot_self {r : ℕ}
         ((q.2.roundRecord r).setProcess { (q.2.roundRecord r).process with sentEcho5 := some none
           })) := by
   cases h
-  case roundRow h' =>
+  case roundTransition h' =>
     cases h'
     exact ⟨by assumption, by assumption, by assumption, by assumption,
       by assumption, by assumption, by assumption, by assumption, rfl⟩
@@ -821,7 +821,7 @@ theorem programStep_gbcaDeliver_self {r : ℕ} {k : Fin P.n} {m : GBCA.ByABDY.Me
     q.1.corrupted = false ∧ q.2.terminated = false ∧
       ν = PMF.pure (q.1, q.2.deliverTo r k m) := by
   cases h
-  case roundRow h' =>
+  case roundTransition h' =>
     cases h'
     exact ⟨by assumption, by assumption, rfl⟩
   case gbcaDeliverIdle => exact absurd rfl ‹_ ≠ j›
@@ -834,7 +834,7 @@ theorem programStep_gbcaCallLoop_self {r : ℕ} {b : Bool}
       (q.2.roundRecord r).process.input ≠ none ∧
       ν = PMF.pure (q.1.setProcess { q.1.process with phase := .awaitG }, q.2) := by
   cases h
-  case roundRow h' =>
+  case roundTransition h' =>
     cases h'
     exact ⟨by assumption, by assumption, by assumption, by assumption,
       by assumption, rfl⟩

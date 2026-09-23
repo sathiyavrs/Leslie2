@@ -39,7 +39,7 @@ section Composite
 variable {P : Parameters} {M S : Type}
     {roundStep : Fin P.n → ProcessRecord P.n S → ExtendedLabel P.n M → PMF (ProcessRecord P.n S) →
       Prop}
-    [IsRoundRuleTable P M S roundStep]
+    [IsRoundStep P M S roundStep]
 
 /-- A synchronised transition of the process group on a visible label: every
 process steps, and the joint distribution is Dirac. -/
@@ -80,7 +80,7 @@ variable {G : Type} [DecidableEq M] [Inhabited G]
     {ghostStep : ExtendedLabel P.n M → NetworkState P.n M G → G → G}
     {ghostOutput : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop}
 
-omit [IsRoundRuleTable P M S roundStep] in
+omit [IsRoundStep P M S roundStep] in
 /-- The composite step relation of the group, unfolded to the hidden
 rendezvous case and the shared-label case. -/
 theorem systemHidden_step_iff (q : State P M S G) (l : Label P.n)
@@ -98,7 +98,7 @@ theorem systemHidden_step_iff (q : State P M S G) (l : Label P.n)
     · exact Or.inl ⟨rfl, _, inr_mem_networkEventLabels e, hstep⟩
     · exact Or.inr ⟨inl_notMem_networkEventLabels l, hstep⟩
 
-omit [IsRoundRuleTable P M S roundStep] in
+omit [IsRoundStep P M S roundStep] in
 /-- The implementation's step relation: a sub-protocol API label seen as `τ`, or
 a label that survives the hiding. -/
 theorem system_step_iff (q : State P M S G) (l : Label P.n)

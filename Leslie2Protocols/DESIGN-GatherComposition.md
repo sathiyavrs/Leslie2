@@ -306,8 +306,9 @@ stack is proved that way and nothing else:
 
 The two refinements into a specification, `Gather.refinesSpecification` and
 `GBCA.ByAFW.refinesSpecification`, are proved on the compositions themselves. Each composition
-carries a row characterisation — `Gather.instanceOverBroadcastSpecification_step_iff_row`,
-`GBCA.ByAFW.roundOverGatherSpecifications_step_iff_row` — stating that its transitions over
+carries a characterisation by an algorithm —
+`Gather.instanceOverBroadcastSpecification_step_iff_algorithm`,
+`GBCA.ByAFW.roundOverGatherSpecifications_step_iff_algorithm` — stating that its transitions over
 the labels the pullback sends to one specification label are exactly the transitions of an
 algorithm at that label (`Gather.AlgorithmOverBroadcastSpecification`,
 `GBCA.ByAFW.AlgorithmOverGatherSpecifications`), on the same state and with the same
@@ -365,10 +366,12 @@ record `G` with its update `ghostStep` and its output `ghostOutput` (D30).
 The division of labour is by label. `Implementation.roundOwn j` is the set of label classes an
 implementation owns at process `j`: the graded-agreement call and return, `j`'s own round multicast,
 a delivery addressed to `j`, and `j`'s call against an already-opened record. An instantiation
-supplies `Implementation.IsRoundRuleTable` — its rows carry such a label, fire only at an unreplaced
+supplies `Implementation.IsRoundStep` — its transitions carry such a label, fire only at an
+unreplaced
 program, and are Dirac — and the shared inversion lemmas consume exactly those three facts.
-`AFW.roundRow_of_own` runs the argument the other way: a program's step on a label of `roundOwn j`
-is a step of the implementation, which is what lets each case of the simulation rule the others out.
+`AFW.roundTransition_of_own` runs the argument the other way: a program's step on a label of
+`roundOwn j` is a step of the implementation, which is what lets each case of the simulation rule
+the others out.
 
 Three things separate the implementation's round from the composed system's, and all
 three are forced by the shape of the implementation.

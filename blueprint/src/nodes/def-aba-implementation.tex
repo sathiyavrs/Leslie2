@@ -1,6 +1,6 @@
 \begin{definition}[The implementation of a protocol]
   \label{def:aba-implementation}
-  \lean{PLTS.ABA.Implementation.NetworkEvent}\lean{PLTS.ABA.Implementation.actsAt}\lean{PLTS.ABA.Implementation.coinLabelMap}\lean{PLTS.ABA.Implementation.RoundRecordMap}\lean{PLTS.ABA.Implementation.IsRoundRecord}\lean{PLTS.ABA.Implementation.NetworkState}\lean{PLTS.ABA.Implementation.roundOf}\lean{PLTS.ABA.Implementation.NetworkState.writeGhost}\lean{PLTS.ABA.Implementation.roundOwn}\lean{PLTS.ABA.Implementation.ProgramStep}\lean{PLTS.ABA.Implementation.NetworkStep}\lean{PLTS.ABA.Implementation.IsRoundRuleTable}\lean{PLTS.ABA.Implementation.system}\leanok
+  \lean{PLTS.ABA.Implementation.NetworkEvent}\lean{PLTS.ABA.Implementation.actsAt}\lean{PLTS.ABA.Implementation.coinLabelMap}\lean{PLTS.ABA.Implementation.RoundRecordMap}\lean{PLTS.ABA.Implementation.IsRoundRecord}\lean{PLTS.ABA.Implementation.NetworkState}\lean{PLTS.ABA.Implementation.roundOf}\lean{PLTS.ABA.Implementation.NetworkState.writeGhost}\lean{PLTS.ABA.Implementation.roundOwn}\lean{PLTS.ABA.Implementation.ProgramStep}\lean{PLTS.ABA.Implementation.NetworkStep}\lean{PLTS.ABA.Implementation.IsRoundStep}\lean{PLTS.ABA.Implementation.system}\leanok
   \uses{def:aba-labels, def:aba-parameters, def:aba-round-loop-state, def:relabel, def:synchronised-product, def:process-algebra, def:idle-family}
   A protocol as it runs: $n$ programs, one per process, beside one network and the coin oracle.
   A program reads its own records, its own received sets and its own replacement flag, and nothing else about corruption --- not the corrupted set, not the budget, not another process's status (D23) --- while the adversary holds the round-tagged message sets, the DECIDED sets and the corrupted set with its budget, and it alone has rows on the Byzantine labels.
@@ -15,7 +15,7 @@
   and the lemmas that read a row off its label.
   Which rows belong to the implementation is settled by the label: a program's row is the implementation's business exactly when its label is one of $\mathrm{roundOwn}(j)$ --- the graded-agreement call and return at $j$, $j$'s own round multicast, a delivery addressed to $j$, and $j$'s own call against an already-called record.
   An implementation must supply four things about its rows: that they carry such a label, that they fire only at an unreplaced program, that they are Dirac, and that a return row takes the announced bit free, firing at every other bit with the same successor (D29).
-  That is \leandecl{PLTS.ABA.Implementation.IsRoundRuleTable}; the lemmas that read a row off its label consume the first three, and Theorem~\ref{thm:aba-erasure} the fourth.
+  That is \leandecl{PLTS.ABA.Implementation.IsRoundStep}; the lemmas that read a transition off its label consume the first three, and Theorem~\ref{thm:aba-erasure} the fourth.
   The rendezvous alphabet is parametric in $M$ in its two round constructors and fixed in every other, and is hidden before it leaves the composition, so two instantiations at the same protocol need not agree on it.
   The adversary holds one further record, and an implementation supplies it too (D30).
   For each round $r$ its state carries a ghost record $ghostRecord(r)$ of a type $G$ the implementation fixes.

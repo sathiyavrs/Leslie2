@@ -26,7 +26,7 @@ open Implementation Composition GBCA.ByABDY
 
 variable {P : Parameters}
 
-section Rows
+section Transitions
 
 variable {u : âˆ€ _ : Fin P.n, AFW.ProcessRecord P.n} {w : NetworkState P.n} {j : Fin P.n}
     {c : RoundLoopRecord P.n} {p : RoundRecordMap P.n}
@@ -580,7 +580,7 @@ theorem roundProjection_secondGatherBindBroadcastVote (hu : (u j).2 = p) (r : â„
     (fun _ _ => rfl)]
   exact roundProjection_secondGatherBindBroadcastSend rfl r i _ (.vote m)
 
-end Rows
+end Transitions
 
 end AFW
 end ABA

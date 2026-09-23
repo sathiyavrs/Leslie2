@@ -25,7 +25,7 @@ open Implementation Composition GBCA.ByABDY
 
 variable {P : Parameters}
 
-section Rows
+section Transitions
 
 variable {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} {w : NetworkState P.n} {j : Fin P.n}
     {c : RoundLoopRecord P.n} {p : RoundRecordMap P.n}
@@ -343,7 +343,7 @@ theorem roundProjection_secondGatherReturn_retG (hu : (u j).2 = p) (r : ℕ)
     · simp only [Gather.core_setCore, secondGatherReturnCore, secondGather_roundProjection,
         core_secondGatherProjection, coreOfNetwork_secondGatherProjection]
 
-end Rows
+end Transitions
 
 end AFW
 end ABA

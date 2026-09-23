@@ -150,9 +150,10 @@ then `abstract` and `relabel` (`ABA/GBCA/AFW/BroadcastSubstitution.lean` and
 `Framework/Congruence.lean`), and `Gather.broadcastSubstitution` itself carries
 `BRB.brachaRefinesSpecification` through the operators a gather instance is built from,
 `synchronisedProduct` among them. `Gather.refinesSpecification` and
-`GBCA.ByAFW.refinesSpecification` are proved on the compositions themselves, through the row
-characterisations `Gather.instanceOverBroadcastSpecification_step_iff_row` and
-`GBCA.ByAFW.roundOverGatherSpecifications_step_iff_row`.
+`GBCA.ByAFW.refinesSpecification` are proved on the compositions themselves, through the
+characterisations by their algorithms
+`Gather.instanceOverBroadcastSpecification_step_iff_algorithm` and
+`GBCA.ByAFW.roundOverGatherSpecifications_step_iff_algorithm`.
 
 The round's bound bit is the whole state of the round's network, a component that carries no
 messages and is the gather counterpart of `GBCA.ByABDY.NetworkState.bound`. It is written at the

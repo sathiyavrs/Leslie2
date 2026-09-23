@@ -826,8 +826,8 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
 /-- The rows above meet the implementation's conditions: each carries a label of
 `roundOwn j`, each fires only at an unreplaced program, each is Dirac, and the
 return takes the announced bit free (D29). -/
-instance instIsRoundRuleTable (P : Parameters) :
-    IsRoundRuleTable P (Message P.n) (RoundRecord P.n) (RoundStep P) where
+instance instIsRoundStep (P : Parameters) :
+    IsRoundStep P (Message P.n) (RoundRecord P.n) (RoundStep P) where
   own h := by
     cases h <;> rfl
   correct h := by

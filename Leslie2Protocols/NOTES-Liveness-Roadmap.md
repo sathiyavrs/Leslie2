@@ -33,7 +33,7 @@ point, in the mode loop of §5: from `ControlMode.flipEnabled`, and only where b
 1` support, a flip enables the decision with probability `ε` and fails to deliver with probability
 `δ_f`, the remaining mass `1 − ε − δ_f` returns to `ControlMode.flipEnabled`, and an enabled
 decision is never withdrawn. A flip-only scheduler from such a state therefore reaches the terminal
-mode `ControlMode.noRuleEnabled` with probability `δ_f / (ε + δ_f)`, and that is the
+mode `ControlMode.noTransitionEnabled` with probability `δ_f / (ε + δ_f)`, and that is the
 specification-level bound a transfer would carry:
 
 ```
@@ -201,13 +201,13 @@ so an instance resolves once — every later call takes `WCC.Step.callRecord` (D
 `WCC.Step.ret`'s guard `s.val = .top ∨ s.val = .bit b` is positive, so a resolution at
 `CoinValue.undelivered` enables no return in any extension.
 
-In TS 1 the same mass puts the control mode at `ControlMode.noRuleEnabled`, which is globally
+In TS 1 the same mass puts the control mode at `ControlMode.noTransitionEnabled`, which is globally
 absorbing
 (D17). `PLTS.ABA.SpecStep.coinFlip` is one-shot: its guard `hm : s.mode = .idle` admits it
 only at `ControlMode.flipEnabled`, and its `undelivered` outcome — mass `δ_f` under
 `PLTS.ABA.flipPMF` — leaves
-the state at `ControlMode.noRuleEnabled`. The only other `τ`-rule is `PLTS.ABA.SpecStep.decide`,
-whose
+the state at `ControlMode.noTransitionEnabled`. The only other `τ`-rule is
+`PLTS.ABA.SpecStep.decide`, whose
 guard `hm : s.mode ≠ .terminal` rules out exactly that mode. A terminal-mode specification therefore
 decides nothing and returns nothing, in any extension, under any scheduler, which is what
 the absorbed TS 3 instance does one level down. The two encodings agree on what a fair
@@ -284,8 +284,8 @@ The `excluded = ∅` guard removes those states rather than the obligation. Ever
 has `excluded ∈ {∅, {b}}` (`GBCASafety.excluded_card_le_one`), the surviving bit stays alive, and
 the grade-2 guard still admits grade-2 and grade-1 returns. The resolution is structural, so no
 marking has anything to decide here. The same holds of TS 1's flip (§5), where the one-shot guard
-and the absorbing `ControlMode.noRuleEnabled` settle the question in the step relation rather than
-in a marking.
+and the absorbing `ControlMode.noTransitionEnabled` settle the question in the step relation rather
+than in a marking.
 
 **Termination proof sketch for the specification as encoded.** Assume the `n − f` correct
 processes have called, so the quorum guard holds and holds forever (the count is monotone

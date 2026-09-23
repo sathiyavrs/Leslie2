@@ -110,8 +110,8 @@ theorem specificationOverRoundAlphabet_excluded_card_le_one
   is_exec_stable (sys := specificationOverRoundAlphabet P r) (fun s => s.excluded.card ≤
     1)
     (fun _ _ _ _ hcard hstep hs' => by
-      rcases specificationOverRoundAlphabet_step_cases hstep hs' with ⟨_, -, hrow⟩ | rfl
-      · exact Step.excluded_card_le_one hrow hs' hcard
+      rcases specificationOverRoundAlphabet_step_cases hstep hs' with ⟨_, -, htransition⟩ | rfl
+      · exact Step.excluded_card_le_one htransition hs' hcard
       · exact hcard)
     he 0 k e.init s (Nat.zero_le k) rfl hst
     (by rw [← he.2]; simp [SpecState.initial])

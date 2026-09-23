@@ -14,11 +14,11 @@ import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 `Gather.instanceOverBroadcastSpecification` (`ABA/Gather/Composition.lean`) -- the `n` gather
 programs beside the gather network, in parallel with `2n` lifted broadcast specifications -- over
 the composition's state, through the four views `gatherTier`, `inputBroadcasts`, `bindBroadcasts`
-and `core`, one constructor per case of `instanceOverBroadcastSpecification_step_iff_row`. It is a
-relation on that state; the system is the composition. The algorithm is blueprint Algorithm 4, the
-binding form of AFW25's Algorithm 5.
+and `core`, one constructor per case of `instanceOverBroadcastSpecification_step_iff_algorithm`. It
+is a relation on that state; the system is the composition. The algorithm is blueprint Algorithm 4,
+the binding form of AFW25's Algorithm 5.
 
-`instanceOverBroadcastSpecification_step_iff_row` is the characterisation: at a specification
+`instanceOverBroadcastSpecification_step_iff_algorithm` is the characterisation: at a specification
 label `l₀`, the transitions of the composition over the labels `specificationLabelMap` sends to
 `l₀` are exactly the `l₀`-transitions of `AlgorithmOverBroadcastSpecification`, on the same
 composed state and with the same distribution.
@@ -55,7 +55,8 @@ transitions and the specification's rows. -/
 
 /-- A transition of a lifted broadcast specification is a specification row at
 the label `BRB.specificationLabelMap` projects to. -/
-theorem specificationOverInstanceAlphabet_step_row {M : Type} {P : Parameters} {ldr : Fin P.n}
+theorem specificationOverInstanceAlphabet_step_transition {M : Type} {P : Parameters} {ldr : Fin
+  P.n}
     {s s' : BRB.SpecState P.n M} {l : BRB.InstanceLabel P.n M} {l₀ : BRB.Label P.n M}
     (hl : BRB.specificationLabelMap P.n M l = some l₀)
     (h : (BRB.specificationOverInstanceAlphabet P ldr M).step s l (PMF.pure s')) : BRB.Step P ldr s
@@ -64,7 +65,8 @@ theorem specificationOverInstanceAlphabet_step_row {M : Type} {P : Parameters} {
 
 /-- A specification row is a transition of the lifted specification at any
 label `BRB.specificationLabelMap` projects to it. -/
-theorem row_specificationOverInstanceAlphabet_step {M : Type} {P : Parameters} {ldr : Fin P.n}
+theorem transition_specificationOverInstanceAlphabet_step {M : Type} {P : Parameters} {ldr : Fin
+  P.n}
     {s s' : BRB.SpecState P.n M} {l : BRB.InstanceLabel P.n M} {l₀ : BRB.Label P.n M}
     (hl : BRB.specificationLabelMap P.n M l = some l₀)
     (h : BRB.Step P ldr s l₀ (PMF.pure s')) : (BRB.specificationOverInstanceAlphabet P ldr M).step s
@@ -105,9 +107,10 @@ theorem specStep_fail {id : Fin P.n} (h : BRB.Step P ldr s (.fail id) μ) :
 end SpecificationStepInversion
 /-! ### The rows -/
 
-/-- The rows of the gather instance over the broadcast specification
+/-- The transitions of the gather instance over the broadcast specification
 (`Gather.instanceOverBroadcastSpecification`), stated over the composition's state: one constructor
-per case of `Gather.instanceOverBroadcastSpecification_step_iff_row`. All transitions are Dirac. -/
+per case of `Gather.instanceOverBroadcastSpecification_step_iff_algorithm`. All transitions are
+Dirac. -/
 inductive AlgorithmOverBroadcastSpecification (P : Parameters) :
     StateOverBroadcastSpecification P.n X → Label P.n X → PMF (StateOverBroadcastSpecification P.n
       X) → Prop
@@ -273,29 +276,29 @@ inductive AlgorithmOverBroadcastSpecification (P : Parameters) :
 
 omit [DecidableEq X] in
 /-- A specification row read through the composition's pullback. -/
-theorem liftSpecification_row {M : Type} {P : Parameters} {ldr : Fin P.n}
+theorem liftSpecification_transition {M : Type} {P : Parameters} {ldr : Fin P.n}
     {ψ : GatherLabel P.n X → Option (BRB.InstanceLabel P.n M)} {L : GatherLabel P.n X}
     {lb : BRB.InstanceLabel P.n M} {l₀ : BRB.Label P.n M} {s s' : BRB.SpecState P.n M}
     (hφ : ψ L = some lb) (hl : BRB.specificationLabelMap P.n M lb = some l₀)
     (h : ((BRB.specificationOverInstanceAlphabet P ldr M).mapIdle ψ).step s L (PMF.pure s')) :
     BRB.Step P ldr s l₀ (PMF.pure s') :=
-  specificationOverInstanceAlphabet_step_row hl ((System.mapIdle_step_some hφ _).mp h)
+  specificationOverInstanceAlphabet_step_transition hl ((System.mapIdle_step_some hφ _).mp h)
 
 omit [DecidableEq X] in
 /-- A specification row is a transition of the instance read through the
 composition's pullback. -/
-theorem row_liftSpecification {M : Type} {P : Parameters} {ldr : Fin P.n}
+theorem transition_liftSpecification {M : Type} {P : Parameters} {ldr : Fin P.n}
     {ψ : GatherLabel P.n X → Option (BRB.InstanceLabel P.n M)} {L : GatherLabel P.n X}
     {lb : BRB.InstanceLabel P.n M} {l₀ : BRB.Label P.n M} {s s' : BRB.SpecState P.n M}
     (hφ : ψ L = some lb) (hl : BRB.specificationLabelMap P.n M lb = some l₀)
     (h : BRB.Step P ldr s l₀ (PMF.pure s')) :
     ((BRB.specificationOverInstanceAlphabet P ldr M).mapIdle ψ).step s L (PMF.pure s') :=
-  (System.mapIdle_step_some hφ _).mpr (row_specificationOverInstanceAlphabet_step hl h)
+  (System.mapIdle_step_some hφ _).mpr (transition_specificationOverInstanceAlphabet_step hl h)
 
 /-! ### The row characterisation -/
 
 /-- **The projection.** -/
-theorem instanceOverBroadcastSpecification_step_row (P : Parameters) :
+theorem instanceOverBroadcastSpecification_step_algorithm (P : Parameters) :
     ∀ (s : StateOverBroadcastSpecification P.n X) (l : InstanceLabel P.n X) (μ : PMF
       (StateOverBroadcastSpecification P.n X)),
       (instanceOverBroadcastSpecification P X).step s l μ →
@@ -349,7 +352,7 @@ theorem instanceOverBroadcastSpecification_step_row (P : Parameters) :
       subst hw; subst hb
       obtain ⟨hval, hret, hak⟩ :=
         specStep_ret
-          (liftSpecification_row (lb := Sum.inl (BRB.Label.ret j v)) (by simp) rfl (hin k))
+          (liftSpecification_transition (lb := Sum.inl (BRB.Label.ret j v)) (by simp) rfl (hin k))
       have haf : ∀ k', k' ≠ k → a' k' = a k' :=
         fun k' hk' => System.mapIdle_eq_of_step_none (by simp [hk']) (hin k')
       have ha : a' = Function.update a k { a k with ret := Function.update (a k).ret j true } :=
@@ -370,7 +373,8 @@ theorem instanceOverBroadcastSpecification_step_row (P : Parameters) :
         fun i hi => PMF.pure_injective (programStep_bindCall_foreign (Ne.symm hi) (hproc i))
       have hbf : ∀ q, q ≠ j → b' q = b q :=
         fun q hq => System.mapIdle_eq_of_step_none (by simp [hq]) (hbind q)
-      rcases specStep_call (liftSpecification_row (lb := Sum.inl (BRB.Label.call U)) (by simp) rfl
+      rcases specStep_call (liftSpecification_transition (lb := Sum.inl (BRB.Label.call U)) (by
+        simp) rfl
           (hbind j)) with ⟨hbin, hbq⟩ | hbq
       · have hb : b' = Function.update b j { b j with input := some U } :=
           Function.eq_update_iff.mpr ⟨PMF.pure_injective hbq, hbf⟩
@@ -391,7 +395,7 @@ theorem instanceOverBroadcastSpecification_step_row (P : Parameters) :
       subst hw; subst ha
       obtain ⟨hval, hret, hbq⟩ :=
         specStep_ret
-          (liftSpecification_row (lb := Sum.inl (BRB.Label.ret j U)) (by simp) rfl (hbind q))
+          (liftSpecification_transition (lb := Sum.inl (BRB.Label.ret j U)) (by simp) rfl (hbind q))
       have hbf : ∀ q', q' ≠ q → b' q' = b q' :=
         fun q' hq' => System.mapIdle_eq_of_step_none (by simp [hq']) (hbind q')
       have hb : b' = Function.update b q { b q with ret := Function.update (b q).ret j true } :=
@@ -412,12 +416,14 @@ theorem instanceOverBroadcastSpecification_step_row (P : Parameters) :
         subst hv'
         rw [stateOverBroadcasts_recordSent]
         exact AlgorithmOverBroadcastSpecification.byzantine _ jj m hF
-      · obtain ⟨v, hval, hm, hc⟩ := specStep_tau (specificationOverInstanceAlphabet_step_row rfl hs)
+      · obtain ⟨v, hval, hm, hc⟩ := specStep_tau (specificationOverInstanceAlphabet_step_transition
+          rfl hs)
         have hc' : c = { a k with val := some v } := PMF.pure_injective hc
         subst hc'
         rw [stateOverBroadcasts_setInputBroadcasts]
         exact AlgorithmOverBroadcastSpecification.commitInputEntry _ k v hval hm
-      · obtain ⟨U, hval, hm, hd⟩ := specStep_tau (specificationOverInstanceAlphabet_step_row rfl hs)
+      · obtain ⟨U, hval, hm, hd⟩ := specStep_tau (specificationOverInstanceAlphabet_step_transition
+          rfl hs)
         have hd' : d = { b q with val := some U } := PMF.pure_injective hd
         subst hd'
         rw [stateOverBroadcasts_setBindBroadcasts]
@@ -438,7 +444,8 @@ theorem instanceOverBroadcastSpecification_step_row (P : Parameters) :
           have haf : ∀ k, k ≠ id → a' k = a k :=
             fun k hk => System.mapIdle_eq_of_step_none (by simp [hk]) (hin k)
           refine ⟨Label.call id y, rfl, ?_⟩
-          rcases specStep_call (liftSpecification_row (lb := Sum.inl (BRB.Label.call y)) (by simp)
+          rcases specStep_call (liftSpecification_transition (lb := Sum.inl (BRB.Label.call y)) (by
+            simp)
               rfl (hin id)) with ⟨hbin, haq⟩ | haq
           · have ha : a' = Function.update a id { a id with input := some y } :=
               Function.eq_update_iff.mpr ⟨PMF.pure_injective haq, haf⟩
@@ -472,10 +479,12 @@ theorem instanceOverBroadcastSpecification_step_row (P : Parameters) :
           have hxall : ∀ i, x i = u i := fun i => PMF.pure_injective (programStep_fail (hproc i))
           have ha : ∀ k, a' k = (a k).corrupt P id := fun k =>
             PMF.pure_injective (specStep_fail
-              (liftSpecification_row (lb := Sum.inl (BRB.Label.fail id)) (by simp) rfl (hin k)))
+              (liftSpecification_transition (lb := Sum.inl (BRB.Label.fail id)) (by simp) rfl (hin
+                k)))
           have hb : ∀ q, b' q = (b q).corrupt P id := fun q =>
             PMF.pure_injective (specStep_fail
-              (liftSpecification_row (lb := Sum.inl (BRB.Label.fail id)) (by simp) rfl (hbind q)))
+              (liftSpecification_transition (lb := Sum.inl (BRB.Label.fail id)) (by simp) rfl (hbind
+                q)))
           subst hw
           refine ⟨_, rfl, ?_⟩
           rw [funext ha, funext hb, stateOverBroadcasts_corrupt hxall]
@@ -491,7 +500,8 @@ theorem instanceOverBroadcastSpecification_step_row (P : Parameters) :
           have haf : ∀ k, k ≠ id → a' k = a k :=
             fun k hk => System.mapIdle_eq_of_step_none (by simp [hk]) (hin k)
           refine ⟨Label.call id y, rfl, ?_⟩
-          rcases specStep_call (liftSpecification_row (lb := Sum.inr (BRB.LoopLabel.callLoop y))
+          rcases specStep_call (liftSpecification_transition (lb := Sum.inr (BRB.LoopLabel.callLoop
+            y))
               (by simp) rfl (hin id)) with ⟨hbin, haq⟩ | haq
           · have ha : a' = Function.update a id { a id with input := some y } :=
               Function.eq_update_iff.mpr ⟨PMF.pure_injective haq, haf⟩
@@ -507,22 +517,22 @@ theorem instanceOverBroadcastSpecification_step_row (P : Parameters) :
             exact AlgorithmOverBroadcastSpecification.callLoop _ id y
 
 /-- **The embedding.** -/
-theorem row_instanceOverBroadcastSpecification_step (P : Parameters) :
+theorem algorithm_instanceOverBroadcastSpecification_step (P : Parameters) :
     ∀ (s : StateOverBroadcastSpecification P.n X) (l₀ : Label P.n X) (μ : PMF
       (StateOverBroadcastSpecification P.n X)),
       AlgorithmOverBroadcastSpecification P s l₀ μ →
       ∃ l,
         specificationLabelMap P.n X l = some l₀ ∧ (instanceOverBroadcastSpecification P X).step s l
           μ := by
-  rintro ⟨⟨u, w⟩, a, b⟩ l₀ μ hrow
-  cases hrow with
+  rintro ⟨⟨u, w⟩, a, b⟩ l₀ μ htransition
+  cases htransition with
   | call id x h hb =>
     exact ⟨Sum.inl (.call id x), rfl, instanceOverBroadcasts_label_step (by simp)
       (dirac_steps_update (ProgramStep.call (u id) x h)
         (fun i hi => ProgramStep.callIdle (u i) id x (Ne.symm hi)))
       (NetworkStep.call w id x)
       (System.mapIdle_step_update (by simp) (fun k hk => by simp [hk])
-        (row_specificationOverInstanceAlphabet_step (l := Sum.inl (BRB.Label.call x)) rfl
+        (transition_specificationOverInstanceAlphabet_step (l := Sum.inl (BRB.Label.call x)) rfl
           (BRB.Step.call (a id) x hb)))
       (fun q => System.mapIdle_unchanged rfl)⟩
   | callSpecificationLoop id x h =>
@@ -534,7 +544,7 @@ theorem row_instanceOverBroadcastSpecification_step (P : Parameters) :
     by_cases hk : k = id
     · subst hk
       exact System.mapIdle_step_of_step (by simp)
-        (row_specificationOverInstanceAlphabet_step (l := Sum.inl (BRB.Label.call x)) rfl
+        (transition_specificationOverInstanceAlphabet_step (l := Sum.inl (BRB.Label.call x)) rfl
           (BRB.Step.callLoop (a k) x))
     · exact System.mapIdle_unchanged (by simp [hk])
   | callProgramLoop id x hb =>
@@ -542,7 +552,8 @@ theorem row_instanceOverBroadcastSpecification_step (P : Parameters) :
       instanceOverBroadcasts_label_step (x := u) (w' := w) (b' := b) (by simp) (fun i => ?_)
         (NetworkStep.callLoop w id x)
         (System.mapIdle_step_update (by simp) (fun k hk => by simp [hk])
-          (row_specificationOverInstanceAlphabet_step (l := Sum.inr (BRB.LoopLabel.callLoop x)) rfl
+          (transition_specificationOverInstanceAlphabet_step (l := Sum.inr (BRB.LoopLabel.callLoop
+            x)) rfl
             (BRB.Step.call (a id) x hb)))
         (fun q => System.mapIdle_unchanged rfl)⟩
     by_cases hi : i = id
@@ -559,16 +570,18 @@ theorem row_instanceOverBroadcastSpecification_step (P : Parameters) :
     · by_cases hk : k = id
       · subst hk
         exact System.mapIdle_step_of_step (by simp)
-          (row_specificationOverInstanceAlphabet_step (l := Sum.inr (BRB.LoopLabel.callLoop x)) rfl
+          (transition_specificationOverInstanceAlphabet_step (l := Sum.inr (BRB.LoopLabel.callLoop
+            x)) rfl
             (BRB.Step.callLoop (a k) x))
       · exact System.mapIdle_unchanged (by simp [hk])
   | commitInputEntry k v hv hm =>
     exact ⟨Sum.inl Label.tau, rfl, instanceOverBroadcasts_tau_input
-      (row_specificationOverInstanceAlphabet_step (l := (Silent.τ : BRB.InstanceLabel P.n X)) rfl
+      (transition_specificationOverInstanceAlphabet_step (l := (Silent.τ : BRB.InstanceLabel P.n X))
+        rfl
         (BRB.Step.commit (a k) v hv hm))⟩
   | commitBindEntry q U hv hm =>
     exact ⟨Sum.inl Label.tau, rfl, instanceOverBroadcasts_tau_bind
-      (row_specificationOverInstanceAlphabet_step (l := (Silent.τ : BRB.InstanceLabel P.n
+      (transition_specificationOverInstanceAlphabet_step (l := (Silent.τ : BRB.InstanceLabel P.n
         (AcceptedPairs P.n
         X))) rfl
         (BRB.Step.commit (b q) U hv hm))⟩
@@ -601,7 +614,7 @@ theorem row_instanceOverBroadcastSpecification_step (P : Parameters) :
           (fun i hi => ProgramStep.bindCallIdle (u i) j U (Ne.symm hi)))
         (NetworkStep.bindCallIdle w j U) (fun k => System.mapIdle_unchanged rfl)
         (System.mapIdle_step_update (by simp) (fun q hq => by simp [hq])
-          (row_specificationOverInstanceAlphabet_step (l := Sum.inl (BRB.Label.call U)) rfl
+          (transition_specificationOverInstanceAlphabet_step (l := Sum.inl (BRB.Label.call U)) rfl
             (BRB.Step.call (b j) U hb)))⟩
   | bindCallSpecificationLoop j U hin hvot hsnd happ hQ =>
     refine ⟨Sum.inl Label.tau, rfl,
@@ -612,7 +625,7 @@ theorem row_instanceOverBroadcastSpecification_step (P : Parameters) :
     · by_cases hq : q = j
       · subst hq
         exact System.mapIdle_step_of_step (by simp)
-          (row_specificationOverInstanceAlphabet_step (l := Sum.inl (BRB.Label.call U)) rfl
+          (transition_specificationOverInstanceAlphabet_step (l := Sum.inl (BRB.Label.call U)) rfl
             (BRB.Step.callLoop (b q) U))
       · exact System.mapIdle_unchanged (by simp [hq])
   | byzantine j m h =>
@@ -625,7 +638,7 @@ theorem row_instanceOverBroadcastSpecification_step (P : Parameters) :
         (fun i hi => ProgramStep.inputBroadcastRetIdle (u i) k j v (Ne.symm hi)))
       (NetworkStep.inputBroadcastRetIdle w k j v)
       (System.mapIdle_step_update (by simp) (fun k' hk' => by simp [hk'])
-        (row_specificationOverInstanceAlphabet_step (l := Sum.inl (BRB.Label.ret j v)) rfl
+        (transition_specificationOverInstanceAlphabet_step (l := Sum.inl (BRB.Label.ret j v)) rfl
           (BRB.Step.ret (a k) j v hv hr)))
       (fun q => System.mapIdle_unchanged rfl)⟩
   | bindRet q j U hv hr =>
@@ -635,7 +648,7 @@ theorem row_instanceOverBroadcastSpecification_step (P : Parameters) :
         (fun i hi => ProgramStep.bindRetIdle (u i) q j U (Ne.symm hi)))
       (NetworkStep.bindRetIdle w q j U) (fun k => System.mapIdle_unchanged rfl)
       (System.mapIdle_step_update (by simp) (fun q' hq' => by simp [hq'])
-        (row_specificationOverInstanceAlphabet_step (l := Sum.inl (BRB.Label.ret j U)) rfl
+        (transition_specificationOverInstanceAlphabet_step (l := Sum.inl (BRB.Label.ret j U)) rfl
           (BRB.Step.ret (b q) j U hv hr)))⟩
   | ret id g hin hbind hsub hQ hr =>
     exact ⟨Sum.inl (.ret id g (w.core.getD (coreOfNetwork P w.network))), rfl,
@@ -648,17 +661,19 @@ theorem row_instanceOverBroadcastSpecification_step (P : Parameters) :
     exact ⟨Sum.inl (.fail id), rfl, instanceOverBroadcasts_label_step (x := u) (by simp)
       (fun i => ProgramStep.failIdle (u i) id) (NetworkStep.fail w id)
       (System.mapIdle_step_all (l₀ := fun _ => Sum.inl (BRB.Label.fail id)) (fun k => rfl)
-        (fun k => row_specificationOverInstanceAlphabet_step (l := Sum.inl (BRB.Label.fail id)) rfl
+        (fun k => transition_specificationOverInstanceAlphabet_step (l := Sum.inl (BRB.Label.fail
+          id)) rfl
           (BRB.Step.fail (a k) id)))
       (System.mapIdle_step_all (l₀ := fun _ => Sum.inl (BRB.Label.fail id)) (fun q => rfl)
-        (fun q => row_specificationOverInstanceAlphabet_step (l := Sum.inl (BRB.Label.fail id)) rfl
+        (fun q => transition_specificationOverInstanceAlphabet_step (l := Sum.inl (BRB.Label.fail
+          id)) rfl
           (BRB.Step.fail (b q) id)))⟩
 
 /-- **The row characterisation.** At a specification label `l₀`, the
 transitions of the instance over the labels `specificationLabelMap` sends to `l₀` are exactly
 the `l₀`-rows of `AlgorithmOverBroadcastSpecification`, on the same state and with the same
 distribution. -/
-theorem instanceOverBroadcastSpecification_step_iff_row (P : Parameters)
+theorem instanceOverBroadcastSpecification_step_iff_algorithm (P : Parameters)
     (s : StateOverBroadcastSpecification P.n X) (l₀ : Label P.n X)
     (μ : PMF (StateOverBroadcastSpecification P.n X)) :
     (∃ l, specificationLabelMap P.n X l = some l₀ ∧ (instanceOverBroadcastSpecification P X).step s
@@ -666,19 +681,19 @@ theorem instanceOverBroadcastSpecification_step_iff_row (P : Parameters)
     ↔ AlgorithmOverBroadcastSpecification P s l₀ μ := by
   constructor
   · rintro ⟨l, hl, hstep⟩
-    obtain ⟨l₁, hl₁, hrow⟩ := instanceOverBroadcastSpecification_step_row P s l μ hstep
+    obtain ⟨l₁, hl₁, htransition⟩ := instanceOverBroadcastSpecification_step_algorithm P s l μ hstep
     have hll : l₁ = l₀ := Option.some.inj (show (some l₁ : Option (Label P.n X)) = some l₀ by
       rw [← hl₁, hl])
     subst hll
-    exact hrow
-  · exact row_instanceOverBroadcastSpecification_step P s l₀ μ
+    exact htransition
+  · exact algorithm_instanceOverBroadcastSpecification_step P s l₀ μ
 
-/-- info: 'PLTS.ABA.Gather.instanceOverBroadcastSpecification_step_iff_row' depends on axioms: [propext,
+/-- info: 'PLTS.ABA.Gather.instanceOverBroadcastSpecification_step_iff_algorithm' depends on axioms: [propext,
  Classical.choice,
  Quot.sound]
 -/
 #guard_msgs in
-#print axioms instanceOverBroadcastSpecification_step_iff_row
+#print axioms instanceOverBroadcastSpecification_step_iff_algorithm
 
 end Gather
 end ABA

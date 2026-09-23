@@ -16,10 +16,10 @@ specification read over the instance's interface, along `Gather.SpecificationRel
 (`ABA/Gather/SpecificationRelation.lean`).
 
 A transition of the instance is one transition of `AlgorithmOverBroadcastSpecification`
-(`Gather.instanceOverBroadcastSpecification_step_row`), the transition is answered by a weak run of
-the gather specification (`specificationRelation_row`), and that run is lifted to the interface
-along a section of `specificationLabelMap` -- which is where the call loop is answered by the
-specification's own loop. `instanceOverBroadcastSpecification_refines` is the trace-distribution
+(`Gather.instanceOverBroadcastSpecification_step_algorithm`), the transition is answered by a weak
+run of the gather specification (`specificationRelation_transition`), and that run is lifted to the
+interface along a section of `specificationLabelMap` -- which is where the call loop is answered by
+the specification's own loop. `instanceOverBroadcastSpecification_refines` is the trace-distribution
 inclusion the simulation yields.
 
 The specification's abstract content is committed lazily, in the
@@ -680,16 +680,16 @@ pair is answered by a weak run of the gather specification, and the answer is
 again related. Internal rows stutter; the four call rows and `fail` are answered
 by the specification's own rows; a return is answered by the run
 `commit* ; bindCore? ; ret`. -/
-theorem specificationRelation_row (P : Parameters) (X : Type) [DecidableEq X]
+theorem specificationRelation_transition (P : Parameters) (X : Type) [DecidableEq X]
     (q₁ : StateOverBroadcastSpecification P.n X) (q₂ : SpecState P.n X)
     (hR : SpecificationRelation P q₁ q₂) (l₀ : Label P.n X)
     (μ : PMF (StateOverBroadcastSpecification P.n X))
-    (hrow : AlgorithmOverBroadcastSpecification P q₁ l₀ μ)
+    (htransition : AlgorithmOverBroadcastSpecification P q₁ l₀ μ)
     (q₁' : StateOverBroadcastSpecification P.n X) (hq₁' : q₁' ∈ μ.support) :
     ∃ q₂', ((l₀ = Silent.τ ∧ (specInst P X).weakLSilent q₂ q₂') ∨
       (¬ l₀ = Silent.τ ∧ (specInst P X).weakLStep q₂ l₀ q₂')) ∧
       SpecificationRelation P q₁' q₂' := by
-  cases hrow with
+  cases htransition with
   | call id x h hb =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
@@ -821,16 +821,17 @@ theorem specificationRelation_row (P : Parameters) (X : Type) [DecidableEq X]
 /-- **The refinement of the composed gather instance**: the instance over
 broadcast specifications forward-simulates the gather specification read over
 the instance's interface. A transition of the instance is one transition of
-`AlgorithmOverBroadcastSpecification` (`Gather.instanceOverBroadcastSpecification_step_row`), that
-transition is answered by a weak run of the specification (`specificationRelation_row`), and that
-run is lifted to the interface along a section of `specificationLabelMap`. -/
+`AlgorithmOverBroadcastSpecification` (`Gather.instanceOverBroadcastSpecification_step_algorithm`),
+that transition is answered by a weak run of the specification (`specificationRelation_transition`),
+and that run is lifted to the interface along a section of `specificationLabelMap`. -/
 theorem refinesSpecification (P : Parameters) (X : Type) [DecidableEq X] :
     ForwardSimulation (instanceOverBroadcastSpecification P X)
     (specificationOverInstanceAlphabet P X) (SpecificationRelation P) := by
   constructor
   intro q₁ q₂ hR l μ hstep q₁' hq₁'
-  obtain ⟨l₀, hpull, hrow⟩ := instanceOverBroadcastSpecification_step_row P q₁ l μ hstep
-  obtain ⟨t', hdis, hrel⟩ := specificationRelation_row P X q₁ q₂ hR l₀ μ hrow q₁' hq₁'
+  obtain ⟨l₀, hpull, htransition⟩ := instanceOverBroadcastSpecification_step_algorithm P q₁ l μ
+    hstep
+  obtain ⟨t', hdis, hrel⟩ := specificationRelation_transition P X q₁ q₂ hR l₀ μ htransition q₁' hq₁'
   refine ⟨t', ?_, hrel⟩
   rcases hdis with ⟨hτ, hweak⟩ | ⟨hτ, hweak⟩
   · exact Or.inl ⟨specificationLabelMap_eq_tau (by rw [hpull, hτ]; rfl),

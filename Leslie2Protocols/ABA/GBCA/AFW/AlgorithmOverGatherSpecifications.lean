@@ -15,12 +15,12 @@ import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 `GBCA.ByAFW.roundOverGatherSpecifications` (`GBCA/AFW/Composition.lean`) — the `n`
 graded-agreement programs beside the round's network, in parallel with two gather specifications —
 over the round's state, through the four views `programs`, `bound`, `firstGather` and
-`secondGather`, one constructor per case of `roundOverGatherSpecifications_step_iff_row`. It is a
-relation on that state; the system is the composition.
+`secondGather`, one constructor per case of `roundOverGatherSpecifications_step_iff_algorithm`. It
+is a relation on that state; the system is the composition.
 
-`roundOverGatherSpecifications_step_iff_row` is the characterisation: at a shared label `l₀`, the
-transitions of the round over the labels `GBCA.specificationLabelMap` sends to `l₀` are exactly the
-`l₀`-transitions of `AlgorithmOverGatherSpecifications`, on the same state and with the same
+`roundOverGatherSpecifications_step_iff_algorithm` is the characterisation: at a shared label `l₀`,
+the transitions of the round over the labels `GBCA.specificationLabelMap` sends to `l₀` are exactly
+the `l₀`-transitions of `AlgorithmOverGatherSpecifications`, on the same state and with the same
 distribution.
 
 ## The gather tier
@@ -79,14 +79,14 @@ theorem specificationOverInstanceAlphabet_tau_step
 
 /-- Build a lifted gather specification's step at an interface label on the
 left. -/
-theorem row_specificationOverInstanceAlphabet_step {l₀ : Gather.Label P.n X}
+theorem transition_specificationOverInstanceAlphabet_step {l₀ : Gather.Label P.n X}
     (hψ : ψ L = some (Sum.inl l₀)) (h : Gather.Step P c l₀ (PMF.pure c')) :
     ((Gather.specificationOverInstanceAlphabet P X).mapIdle ψ).step c L (PMF.pure c') :=
   System.mapIdle_step_of_step hψ
     ((System.mapIdle_step_some (Gather.specificationLabelMap_inl l₀) _).mpr h)
 
 /-- Build a lifted gather specification's step at the call-loop label. -/
-theorem row_specificationOverInstanceAlphabet_loop_step {id : Fin P.n} {x : X}
+theorem transition_specificationOverInstanceAlphabet_loop_step {id : Fin P.n} {x : X}
     (hψ : ψ L = some (Sum.inr (Gather.LoopLabel.callLoop id x)))
     (h : Gather.Step P c (.call id x) (PMF.pure c')) :
     ((Gather.specificationOverInstanceAlphabet P X).mapIdle ψ).step c L (PMF.pure c') :=
@@ -94,7 +94,7 @@ theorem row_specificationOverInstanceAlphabet_loop_step {id : Fin P.n} {x : X}
     ((System.mapIdle_step_some (Gather.specificationLabelMap_callLoop id x) _).mpr h)
 
 /-- Build a lifted gather specification's silent step. -/
-theorem row_specificationOverInstanceAlphabet_tau_step
+theorem transition_specificationOverInstanceAlphabet_tau_step
     (h : Gather.Step P c Gather.Label.tau (PMF.pure c')) :
     (Gather.specificationOverInstanceAlphabet P X).step c (Silent.τ : Gather.InstanceLabel P.n X)
     (PMF.pure c') :=
@@ -107,10 +107,10 @@ theorem specStep_fail {id : Fin P.n} {μ : PMF (Gather.SpecState P.n X)}
 end GatherSpecificationAlongPullback
 /-! ### The rows -/
 
-/-- The rows of the round over the gather specifications
-  (`GBCA.ByAFW.roundOverGatherSpecifications`),
+/-- The transitions of the round over the gather specifications
+(`GBCA.ByAFW.roundOverGatherSpecifications`),
 stated over the round's state: one constructor per case of
-`GBCA.ByAFW.roundOverGatherSpecifications_step_iff_row`. All transitions are Dirac. -/
+`GBCA.ByAFW.roundOverGatherSpecifications_step_iff_algorithm`. All transitions are Dirac. -/
 inductive AlgorithmOverGatherSpecifications (P : Parameters) (r : ℕ) :
     RoundStateOverGatherSpecifications P.n → Label P.n → PMF (RoundStateOverGatherSpecifications
       P.n) → Prop
@@ -183,7 +183,7 @@ inductive AlgorithmOverGatherSpecifications (P : Parameters) (r : ℕ) :
 /-! ### The row characterisation -/
 
 /-- **The projection.** -/
-theorem roundOverGatherSpecifications_step_row (P : Parameters) (r : ℕ) :
+theorem roundOverGatherSpecifications_step_algorithm (P : Parameters) (r : ℕ) :
     ∀ (s : RoundStateOverGatherSpecifications P.n) (l : ExtendedLabel P.n) (μ : PMF
       (RoundStateOverGatherSpecifications P.n)),
       (roundOverGatherSpecifications P r).step s l μ →
@@ -369,15 +369,15 @@ theorem roundOverGatherSpecifications_step_row (P : Parameters) (r : ℕ) :
           exact ⟨_, rfl, AlgorithmOverGatherSpecifications.retG _ k out ho hr⟩
 
 /-- **The embedding.** -/
-theorem row_roundOverGatherSpecifications_step (P : Parameters) (r : ℕ) :
+theorem algorithm_roundOverGatherSpecifications_step (P : Parameters) (r : ℕ) :
     ∀ (s : RoundStateOverGatherSpecifications P.n) (l₀ : Label P.n)
     (μ : PMF (RoundStateOverGatherSpecifications P.n)),
     AlgorithmOverGatherSpecifications P r s l₀ μ →
     ∃ l, GBCA.specificationLabelMap P.n l = some l₀ ∧
       (roundOverGatherSpecifications P r).step s l μ :=
           by
-  rintro ⟨⟨u, v⟩, c, d⟩ l₀ μ hrow
-  cases hrow with
+  rintro ⟨⟨u, v⟩, c, d⟩ l₀ μ htransition
+  cases htransition with
   | callG id b t1 h0 h =>
     have hRoundPrograms : (roundPrograms P r).step (u, v) (Sum.inl (Sum.inl (Label.callG r id b)))
         (PMF.pure (Function.update u id { u id with input := some b }, v)) :=
@@ -388,7 +388,7 @@ theorem row_roundOverGatherSpecifications_step (P : Parameters) (r : ℕ) :
     have hg1 : ((Gather.specificationOverInstanceAlphabet P Bool).mapIdle (firstGatherLabelMap
       P.n)).step c
         (Sum.inl (Sum.inl (Label.callG r id b))) (PMF.pure t1) :=
-      row_specificationOverInstanceAlphabet_step (by simp) h
+      transition_specificationOverInstanceAlphabet_step (by simp) h
     have hg2 : ((Gather.specificationOverInstanceAlphabet P (Option Bool)).mapIdle
       (secondGatherLabelMap P.n)).step d
         (Sum.inl (Sum.inl (Label.callG r id b))) (PMF.pure d) := System.mapIdle_unchanged (by simp)
@@ -406,7 +406,7 @@ theorem row_roundOverGatherSpecifications_step (P : Parameters) (r : ℕ) :
     have hg1 : ((Gather.specificationOverInstanceAlphabet P Bool).mapIdle (firstGatherLabelMap
       P.n)).step c
         (Sum.inl (Sum.inr (Implementation.NetworkEvent.gbcaCallLoop r id b))) (PMF.pure t1) :=
-      row_specificationOverInstanceAlphabet_loop_step (by simp) h
+      transition_specificationOverInstanceAlphabet_loop_step (by simp) h
     have hg2 : ((Gather.specificationOverInstanceAlphabet P (Option Bool)).mapIdle
       (secondGatherLabelMap P.n)).step d
         (Sum.inl (Sum.inr (Implementation.NetworkEvent.gbcaCallLoop r id b))) (PMF.pure d) :=
@@ -415,10 +415,10 @@ theorem row_roundOverGatherSpecifications_step (P : Parameters) (r : ℕ) :
       roundOverGathers_label_step (by simp) hRoundPrograms hg1 hg2⟩
   | firstGatherTau t1 h =>
     exact ⟨Sum.inl Label.tau, rfl,
-      roundOverGathers_tau_firstGather (row_specificationOverInstanceAlphabet_tau_step h)⟩
+      roundOverGathers_tau_firstGather (transition_specificationOverInstanceAlphabet_tau_step h)⟩
   | secondGatherTau t2 h =>
     exact ⟨Sum.inl Label.tau, rfl,
-      roundOverGathers_tau_secondGather (row_specificationOverInstanceAlphabet_tau_step h)⟩
+      roundOverGathers_tau_secondGather (transition_specificationOverInstanceAlphabet_tau_step h)⟩
   | firstGatherReturn id g C t1 hin hc h =>
     have hRoundPrograms :
         (roundPrograms P r).step (u, v) (Sum.inr (RoundEvent.firstGatherReturn id g C))
@@ -431,7 +431,7 @@ theorem row_roundOverGatherSpecifications_step (P : Parameters) (r : ℕ) :
     have hg1 : ((Gather.specificationOverInstanceAlphabet P Bool).mapIdle (firstGatherLabelMap
       P.n)).step c
         (Sum.inr (RoundEvent.firstGatherReturn id g C)) (PMF.pure t1) :=
-          row_specificationOverInstanceAlphabet_step (by simp) h
+          transition_specificationOverInstanceAlphabet_step (by simp) h
     have hg2 : ((Gather.specificationOverInstanceAlphabet P (Option Bool)).mapIdle
       (secondGatherLabelMap P.n)).step d
         (Sum.inr (RoundEvent.firstGatherReturn id g C)) (PMF.pure d) :=
@@ -452,7 +452,7 @@ theorem row_roundOverGatherSpecifications_step (P : Parameters) (r : ℕ) :
     have hg2 : ((Gather.specificationOverInstanceAlphabet P (Option Bool)).mapIdle
       (secondGatherLabelMap P.n)).step d
         (Sum.inr (RoundEvent.secondGatherCall id y)) (PMF.pure t2) :=
-          row_specificationOverInstanceAlphabet_step (by simp) h
+          transition_specificationOverInstanceAlphabet_step (by simp) h
     exact ⟨Sum.inl Label.tau, rfl, roundOverGathers_event_step _ hRoundPrograms hg1 hg2⟩
   | secondGatherReturn id g C t2 h2 ho h =>
     have hRoundPrograms :
@@ -469,7 +469,7 @@ theorem row_roundOverGatherSpecifications_step (P : Parameters) (r : ℕ) :
     have hg2 : ((Gather.specificationOverInstanceAlphabet P (Option Bool)).mapIdle
       (secondGatherLabelMap P.n)).step d
         (Sum.inr (RoundEvent.secondGatherReturn id g C)) (PMF.pure t2) :=
-          row_specificationOverInstanceAlphabet_step (by simp) h
+          transition_specificationOverInstanceAlphabet_step (by simp) h
     exact ⟨Sum.inl Label.tau, rfl, roundOverGathers_event_step _ hRoundPrograms hg1 hg2⟩
   | retG id out ho hr =>
     have hRoundPrograms : (roundPrograms P r).step (u, v)
@@ -495,17 +495,17 @@ theorem row_roundOverGatherSpecifications_step (P : Parameters) (r : ℕ) :
     have hg1 : ((Gather.specificationOverInstanceAlphabet P Bool).mapIdle (firstGatherLabelMap
       P.n)).step c
         (Sum.inl (Sum.inl (Label.fail id))) (PMF.pure (c.corrupt P id)) :=
-      row_specificationOverInstanceAlphabet_step (by simp) (Gather.Step.fail c id)
+      transition_specificationOverInstanceAlphabet_step (by simp) (Gather.Step.fail c id)
     have hg2 : ((Gather.specificationOverInstanceAlphabet P (Option Bool)).mapIdle
       (secondGatherLabelMap P.n)).step d
         (Sum.inl (Sum.inl (Label.fail id))) (PMF.pure (d.corrupt P id)) :=
-      row_specificationOverInstanceAlphabet_step (by simp) (Gather.Step.fail d id)
+      transition_specificationOverInstanceAlphabet_step (by simp) (Gather.Step.fail d id)
     exact ⟨Sum.inl (.fail id), rfl, roundOverGathers_label_step (by simp) hRoundPrograms hg1 hg2⟩
 
 /-- **The row characterisation.** At a shared label `l₀`, the transitions of
 the round over the labels `GBCA.specificationLabelMap` sends to `l₀` are exactly the `l₀`-rows
 of `AlgorithmOverGatherSpecifications`, on the same state and with the same distribution. -/
-theorem roundOverGatherSpecifications_step_iff_row (P : Parameters) (r : ℕ)
+theorem roundOverGatherSpecifications_step_iff_algorithm (P : Parameters) (r : ℕ)
     (s : RoundStateOverGatherSpecifications P.n) (l₀ : Label P.n)
     (μ : PMF (RoundStateOverGatherSpecifications P.n)) :
     (∃ l, GBCA.specificationLabelMap P.n l = some l₀ ∧
@@ -513,19 +513,19 @@ theorem roundOverGatherSpecifications_step_iff_row (P : Parameters) (r : ℕ)
     ↔ AlgorithmOverGatherSpecifications P r s l₀ μ := by
   constructor
   · rintro ⟨l, hl, hstep⟩
-    obtain ⟨l₁, hl₁, hrow⟩ := roundOverGatherSpecifications_step_row P r s l μ hstep
+    obtain ⟨l₁, hl₁, htransition⟩ := roundOverGatherSpecifications_step_algorithm P r s l μ hstep
     have hll : l₁ = l₀ := Option.some.inj (show (some l₁ : Option (Label P.n)) = some l₀ by
       rw [← hl₁, hl])
     subst hll
-    exact hrow
-  · exact row_roundOverGatherSpecifications_step P r s l₀ μ
+    exact htransition
+  · exact algorithm_roundOverGatherSpecifications_step P r s l₀ μ
 
-/-- info: 'PLTS.ABA.GBCA.ByAFW.roundOverGatherSpecifications_step_iff_row' depends on axioms: [propext,
+/-- info: 'PLTS.ABA.GBCA.ByAFW.roundOverGatherSpecifications_step_iff_algorithm' depends on axioms: [propext,
  Classical.choice,
  Quot.sound]
 -/
 #guard_msgs in
-#print axioms roundOverGatherSpecifications_step_iff_row
+#print axioms roundOverGatherSpecifications_step_iff_algorithm
 
 end GBCA.ByAFW
 end ABA

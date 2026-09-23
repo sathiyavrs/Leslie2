@@ -134,7 +134,7 @@ round at once. It needs the per-round relation to be preserved by that act. The 
 corruption projections (`corrupt_call`/`corrupt_ret`/`corrupt_excluded`/`corrupt_grade`) come from
 `ABA/GBCA/Specification.lean`; the two `corrupt` functions stay equal by
 `implementationSpecification_corrupt_F_eq`. The statement is proved directly rather than read off
-the `fail` case of the matching `specificationRelation_row`
+the `fail` case of the matching `specificationRelation_transition`
 (`ABA/GBCA/ABDY/RefinesSpecification.lean`), which only yields an existential match. Its consumers
 are that matching and the family lifting of `ABA/ABDY/Substitution.lean`. -/
 

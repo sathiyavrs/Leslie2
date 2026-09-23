@@ -16,8 +16,8 @@ participant's row carries the health guard `corrupted = false`, and on a label o
 the replaced program's self-loop is a second row on the same label (D23).
 
 The readers hold for every implementation, because a label outside `roundOwn j` is answered by a
-row of the table written for all of them and `IsRoundRuleTable` confines the implementation's own
-rows to `roundOwn j`. The Byzantine round rows have no row at the process they name (D22, D23), so
+transition written for all of them and `IsRoundStep` confines the implementation's own transitions
+to `roundOwn j`. The Byzantine round rows have no row at the process they name (D22, D23), so
 on `byzantineCallG`, `byzantineCallGLoop` and `byzantineRetG` every process idles and there is no
 participant's row to read.
 
@@ -43,16 +43,16 @@ variable {P : Parameters} {M S : Type}
       Prop}
     {j : Fin P.n} {q : ProcessRecord P.n S} {ν : PMF (ProcessRecord P.n S)}
 
-/-- Every process transition is Dirac: the rows here are, and so are the
-implementation's own by `IsRoundRuleTable.dirac`. -/
-theorem programStep_dirac [IsRoundRuleTable P M S roundStep]
+/-- Every process transition is Dirac: the transitions here are, and so are the
+implementation's own by `IsRoundStep.dirac`. -/
+theorem programStep_dirac [IsRoundStep P M S roundStep]
     {l : ExtendedLabel P.n M} (h : ProgramStep P M S roundStep j q l ν) :
     ∃ q', ν = PMF.pure q' := by
   cases h
-  case roundRow h' => exact IsRoundRuleTable.dirac h'
+  case roundTransition h' => exact IsRoundStep.dirac h'
   all_goals exact ⟨_, rfl⟩
 
-variable [IsRoundRuleTable P M S roundStep]
+variable [IsRoundStep P M S roundStep]
 
 /-- The one `τ` row of a program's table is `terminate`: a silent step of a
 program is that program's own termination, taken on a fired return and DECIDED
@@ -66,7 +66,7 @@ theorem programStep_tau_terminate
       ν = PMF.pure (q.1, { q.2 with terminated := true }) := by
   rw [extendedLabel_tau] at h
   cases h
-  case roundRow h' => exact (IsRoundRuleTable.own h').elim
+  case roundTransition h' => exact (IsRoundStep.own h').elim
   case terminate b hh hret hcnt hterm => exact ⟨b, hh, hret, hcnt, hterm, rfl⟩
   case corruptedIdle hh hτ hown => exact absurd rfl hτ
 
@@ -86,7 +86,7 @@ theorem programStep_callABA_own {b : Bool}
         input := some b, estimate := some b, round := 0, phase := .toCallG }, q.2)) ∨
     ((q.1.corrupted = true ∨ q.1.process.input ≠ none) ∧ ν = PMF.pure q) := by
   cases h
-  case roundRow h' => exact (IsRoundRuleTable.own h').elim
+  case roundTransition h' => exact (IsRoundStep.own h').elim
   case input => exact Or.inl ⟨by assumption, by assumption, rfl⟩
   case inputLoop => exact Or.inr ⟨Or.inr (by assumption), rfl⟩
   case callABAIdle => exact absurd rfl ‹_ ≠ j›
@@ -96,7 +96,7 @@ theorem programStep_callABA_foreign {id : Fin P.n} {b : Bool} (hid : id ≠ j)
     (h : ProgramStep P M S roundStep j q (Sum.inl (.callABA id b)) ν) :
     ν = PMF.pure q := by
   cases h
-  case roundRow h' => exact (IsRoundRuleTable.own h').elim
+  case roundTransition h' => exact (IsRoundStep.own h').elim
   case input => exact absurd rfl hid
   case inputLoop => exact absurd rfl hid
   case callABAIdle => rfl
@@ -109,7 +109,7 @@ theorem programStep_retABA_own {b : Bool}
       ν = PMF.pure (q.1.setProcess { q.1.process with returned := true }, q.2)) ∨
     (q.1.corrupted = true ∧ ν = PMF.pure q) := by
   cases h
-  case roundRow h' => exact (IsRoundRuleTable.own h').elim
+  case roundTransition h' => exact (IsRoundStep.own h').elim
   case ret =>
     exact Or.inl ⟨by assumption, by assumption, by assumption, by assumption, rfl⟩
   case retABAIdle => exact absurd rfl ‹_ ≠ j›
@@ -119,7 +119,7 @@ theorem programStep_retABA_foreign {id : Fin P.n} {b : Bool} (hid : id ≠ j)
     (h : ProgramStep P M S roundStep j q (Sum.inl (.retABA id b)) ν) :
     ν = PMF.pure q := by
   cases h
-  case roundRow h' => exact (IsRoundRuleTable.own h').elim
+  case roundTransition h' => exact (IsRoundStep.own h').elim
   case ret => exact absurd rfl hid
   case retABAIdle => rfl
   case corruptedIdle => rfl
@@ -128,7 +128,7 @@ theorem programStep_callG_foreign {r : ℕ} {id : Fin P.n} {b : Bool} (hid : id 
     (h : ProgramStep P M S roundStep j q (Sum.inl (.callG r id b)) ν) :
     ν = PMF.pure q := by
   cases h
-  case roundRow h' => exact absurd (IsRoundRuleTable.own h') hid
+  case roundTransition h' => exact absurd (IsRoundStep.own h') hid
   case callGIdle => rfl
   case corruptedIdle => rfl
 
@@ -137,7 +137,7 @@ theorem programStep_retG_foreign {r : ℕ} {id : Fin P.n} {out : GBCAOutput} {bn
     (h : ProgramStep P M S roundStep j q (Sum.inl (.retG r id out bnd)) ν) :
     ν = PMF.pure q := by
   cases h
-  case roundRow h' => exact absurd (IsRoundRuleTable.own h') hid
+  case roundTransition h' => exact absurd (IsRoundStep.own h') hid
   case retGIdle => rfl
   case corruptedIdle => rfl
 
@@ -147,7 +147,7 @@ theorem programStep_callW_own {r : ℕ}
       ν = PMF.pure (q.1.setProcess { q.1.process with phase := .awaitW }, q.2)) ∨
     (q.1.corrupted = true ∧ ν = PMF.pure q) := by
   cases h
-  case roundRow h' => exact (IsRoundRuleTable.own h').elim
+  case roundTransition h' => exact (IsRoundStep.own h').elim
   case callW => exact Or.inl ⟨by assumption, by assumption, by assumption, rfl⟩
   case callWIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => exact Or.inr ⟨by assumption, rfl⟩
@@ -156,7 +156,7 @@ theorem programStep_callW_foreign {r : ℕ} {id : Fin P.n} (hid : id ≠ j)
     (h : ProgramStep P M S roundStep j q (Sum.inl (.callW r id)) ν) :
     ν = PMF.pure q := by
   cases h
-  case roundRow h' => exact (IsRoundRuleTable.own h').elim
+  case roundTransition h' => exact (IsRoundStep.own h').elim
   case callW => exact absurd rfl hid
   case callWIdle => rfl
   case corruptedIdle => rfl
@@ -168,7 +168,7 @@ theorem programStep_retW_own {r : ℕ} {co : Bool}
       ν = PMF.pure (q.1.stepRound co, q.2)) ∨
     (q.1.corrupted = true ∧ ν = PMF.pure q) := by
   cases h
-  case roundRow h' => exact (IsRoundRuleTable.own h').elim
+  case roundTransition h' => exact (IsRoundStep.own h').elim
   case retW =>
     exact Or.inl ⟨by assumption, by assumption, by assumption, by assumption, rfl⟩
   case retWIdle => exact absurd rfl ‹_ ≠ j›
@@ -178,7 +178,7 @@ theorem programStep_retW_foreign {r : ℕ} {id : Fin P.n} {co : Bool} (hid : id 
     (h : ProgramStep P M S roundStep j q (Sum.inl (.retW r id co)) ν) :
     ν = PMF.pure q := by
   cases h
-  case roundRow h' => exact (IsRoundRuleTable.own h').elim
+  case roundTransition h' => exact (IsRoundStep.own h').elim
   case retW => exact absurd rfl hid
   case retWIdle => rfl
   case corruptedIdle => rfl
@@ -189,7 +189,7 @@ theorem programStep_fail_own (h : ProgramStep P M S roundStep j q (Sum.inl (.fai
     (q.1.corrupted = false ∧ ν = PMF.pure ({ q.1 with corrupted := true }, q.2)) ∨
     (q.1.corrupted = true ∧ ν = PMF.pure q) := by
   cases h
-  case roundRow h' => exact (IsRoundRuleTable.own h').elim
+  case roundTransition h' => exact (IsRoundStep.own h').elim
   case failSelf => exact Or.inl ⟨by assumption, rfl⟩
   case failIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => exact Or.inr ⟨by assumption, rfl⟩
@@ -198,7 +198,7 @@ theorem programStep_fail_foreign {k : Fin P.n} (hk : k ≠ j)
     (h : ProgramStep P M S roundStep j q (Sum.inl (.fail k)) ν) :
     ν = PMF.pure q := by
   cases h
-  case roundRow h' => exact (IsRoundRuleTable.own h').elim
+  case roundTransition h' => exact (IsRoundStep.own h').elim
   case failSelf => exact absurd rfl hk
   case failIdle => rfl
   case corruptedIdle => rfl
@@ -213,7 +213,7 @@ theorem programStep_gbcaSend_foreign {r : ℕ} {k : Fin P.n} {m : M} (hk : k ≠
     (h : ProgramStep P M S roundStep j q (Sum.inr (.gbcaSend r k m)) ν) :
     ν = PMF.pure q := by
   cases h
-  case roundRow h' => exact absurd (IsRoundRuleTable.own h') hk
+  case roundTransition h' => exact absurd (IsRoundStep.own h') hk
   case gbcaSendIdle => rfl
   case corruptedIdle => rfl
 
@@ -221,7 +221,7 @@ theorem programStep_gbcaDeliver_foreign {r : ℕ} {i k : Fin P.n} {m : M} (hi : 
     (h : ProgramStep P M S roundStep j q (Sum.inr (.gbcaDeliver r i k m)) ν) :
     ν = PMF.pure q := by
   cases h
-  case roundRow h' => exact absurd (IsRoundRuleTable.own h') hi
+  case roundTransition h' => exact absurd (IsRoundStep.own h') hi
   case gbcaDeliverIdle => rfl
   case corruptedIdle => rfl
 
@@ -231,7 +231,7 @@ theorem programStep_decidedSend_self {b : Bool}
       P.f + 1 ≤ q.1.decidedCount b ∧ ν = PMF.pure q) ∨
     (q.1.corrupted = true ∧ ν = PMF.pure q) := by
   cases h
-  case roundRow h' => exact (IsRoundRuleTable.own h').elim
+  case roundTransition h' => exact (IsRoundStep.own h').elim
   case decidedSendRelay =>
     exact Or.inl ⟨by assumption, by assumption, by assumption, rfl⟩
   case decidedSendIdle => exact absurd rfl ‹_ ≠ j›
@@ -241,7 +241,7 @@ theorem programStep_decidedSend_foreign {k : Fin P.n} {b : Bool} (hk : k ≠ j)
     (h : ProgramStep P M S roundStep j q (Sum.inr (.decidedSend k b)) ν) :
     ν = PMF.pure q := by
   cases h
-  case roundRow h' => exact (IsRoundRuleTable.own h').elim
+  case roundTransition h' => exact (IsRoundStep.own h').elim
   case decidedSendRelay => exact absurd rfl hk
   case decidedSendIdle => rfl
   case corruptedIdle => rfl
@@ -251,7 +251,7 @@ theorem programStep_decidedDeliver_self {k : Fin P.n} {b : Bool}
     q.1.corrupted = false ∧ b ∉ q.1.decidedDelivered k ∧
       ν = PMF.pure (q.1.receiveDecided k b, q.2) := by
   cases h
-  case roundRow h' => exact (IsRoundRuleTable.own h').elim
+  case roundTransition h' => exact (IsRoundStep.own h').elim
   case decidedDeliverReceive => exact ⟨by assumption, by assumption, rfl⟩
   case decidedDeliverIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
@@ -260,7 +260,7 @@ theorem programStep_decidedDeliver_foreign {i k : Fin P.n} {b : Bool} (hi : i �
     (h : ProgramStep P M S roundStep j q (Sum.inr (.decidedDeliver i k b)) ν) :
     ν = PMF.pure q := by
   cases h
-  case roundRow h' => exact (IsRoundRuleTable.own h').elim
+  case roundTransition h' => exact (IsRoundStep.own h').elim
   case decidedDeliverReceive => exact absurd rfl hi
   case decidedDeliverIdle => rfl
   case corruptedIdle => rfl
@@ -272,7 +272,7 @@ theorem programStep_retWPublish_self {r : ℕ} {co b : Bool}
       q.1.process.lastGrade = some (.grade2 b) ∧
       ν = PMF.pure (q.1.stepRound co, q.2) := by
   cases h
-  case roundRow h' => exact (IsRoundRuleTable.own h').elim
+  case roundTransition h' => exact (IsRoundStep.own h').elim
   case retWPublish =>
     exact ⟨by assumption, by assumption, by assumption, by assumption, rfl⟩
   case retWPublishIdle => exact absurd rfl ‹_ ≠ j›
@@ -282,7 +282,7 @@ theorem programStep_retWPublish_foreign {r : ℕ} {id : Fin P.n} {co b : Bool} (
     (h : ProgramStep P M S roundStep j q (Sum.inr (.retWPublish r id co b)) ν) :
     ν = PMF.pure q := by
   cases h
-  case roundRow h' => exact (IsRoundRuleTable.own h').elim
+  case roundTransition h' => exact (IsRoundStep.own h').elim
   case retWPublish => exact absurd rfl hid
   case retWPublishIdle => rfl
   case corruptedIdle => rfl
@@ -291,7 +291,7 @@ theorem programStep_gbcaCallLoop_foreign {r : ℕ} {id : Fin P.n} {b : Bool} (hi
     (h : ProgramStep P M S roundStep j q (Sum.inr (.gbcaCallLoop r id b)) ν) :
     ν = PMF.pure q := by
   cases h
-  case roundRow h' => exact absurd (IsRoundRuleTable.own h') hid
+  case roundTransition h' => exact absurd (IsRoundStep.own h') hid
   case gbcaCallLoopIdle => rfl
   case corruptedIdle => rfl
 
@@ -299,21 +299,21 @@ theorem programStep_byzantineCallGLoop {r : ℕ} {k : Fin P.n} {b : Bool}
     (h : ProgramStep P M S roundStep j q (Sum.inr (.byzantineCallGLoop r k b)) ν) :
     ν = PMF.pure q := by
   cases h
-  case roundRow h' => exact (IsRoundRuleTable.own h').elim
+  case roundTransition h' => exact (IsRoundStep.own h').elim
   all_goals rfl
 
 theorem programStep_byzantineCallW {r : ℕ} {k : Fin P.n}
     (h : ProgramStep P M S roundStep j q (Sum.inr (.byzantineCallW r k)) ν) :
     ν = PMF.pure q := by
   cases h
-  case roundRow h' => exact (IsRoundRuleTable.own h').elim
+  case roundTransition h' => exact (IsRoundStep.own h').elim
   all_goals rfl
 
 theorem programStep_byzantineRetW {r : ℕ} {k : Fin P.n} {b : Bool}
     (h : ProgramStep P M S roundStep j q (Sum.inr (.byzantineRetW r k b)) ν) :
     ν = PMF.pure q := by
   cases h
-  case roundRow h' => exact (IsRoundRuleTable.own h').elim
+  case roundTransition h' => exact (IsRoundStep.own h').elim
   all_goals rfl
 
 /-- The Byzantine graded-agreement call has no row at the process it names
@@ -322,7 +322,7 @@ replaced program has no row on a label it acts on. -/
 theorem programStep_byzantineCallG_noStep {r : ℕ} {b : Bool}
     (h : ProgramStep P M S roundStep j q (Sum.inr (.byzantineCallG r j b)) ν) : False := by
   cases h with
-  | roundRow _ _ _ h' => exact (IsRoundRuleTable.own h').elim
+  | roundTransition _ _ _ h' => exact (IsRoundStep.own h').elim
   | byzantineCallGIdle _ _ _ _ _ hk => exact hk rfl
   | corruptedIdle _ _ _ _ _ hown => exact hown rfl
 
@@ -332,19 +332,19 @@ theorem programStep_byzantineRetG_noStep {r : ℕ} {out : GBCAOutput} {bnd : Boo
     (h : ProgramStep P M S roundStep j q (Sum.inr (.byzantineRetG r j out bnd)) ν) :
     False := by
   cases h with
-  | roundRow _ _ _ h' => exact (IsRoundRuleTable.own h').elim
+  | roundTransition _ _ _ h' => exact (IsRoundStep.own h').elim
   | byzantineRetGIdle _ _ _ _ _ _ hk => exact hk rfl
   | corruptedIdle _ _ _ _ _ hown => exact hown rfl
 
 /-- **The replaced program writes nothing** (D23). Whatever the label, a
 process whose flag is up leaves both halves of its record where they stand.
-Every row that writes carries the health guard, the implementation's own rows by
-`IsRoundRuleTable.correct`, so no row of a replaced program survives except a
-self-loop. -/
+Every transition that writes carries the health guard, the implementation's own
+transitions by `IsRoundStep.correct`, so no transition of a replaced program
+survives except a self-loop. -/
 theorem programStep_noStep {L : ExtendedLabel P.n M} (hc : q.1.corrupted = true)
     (h : ProgramStep P M S roundStep j q L ν) : ν = PMF.pure q := by
   cases h
-  case roundRow h' => rw [IsRoundRuleTable.correct h'] at hc; exact absurd hc (by simp)
+  case roundTransition h' => rw [IsRoundStep.correct h'] at hc; exact absurd hc (by simp)
   all_goals simp_all
 
 end Inversion

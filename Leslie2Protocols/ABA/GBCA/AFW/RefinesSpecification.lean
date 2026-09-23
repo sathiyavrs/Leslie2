@@ -17,9 +17,9 @@ graded agreement specification read over the round's interface
 (`ABA/GBCA/AFW/SpecificationRelation.lean`).
 
 A transition of the round is one case of `GBCA.ByAFW.AlgorithmOverGatherSpecifications`
-(`GBCA.ByAFW.roundOverGatherSpecifications_step_row`), `specificationRelation_row` answers that
-case by a weak run of the graded agreement specification with the relation restored, and
-`refinesSpecification` lifts the run to the interface along a section of
+(`GBCA.ByAFW.roundOverGatherSpecifications_step_algorithm`), `specificationRelation_transition`
+answers that case by a weak run of the graded agreement specification with the relation restored,
+and `refinesSpecification` lifts the run to the interface along a section of
 `GBCA.specificationLabelMap`.
 
 The runs are at most two steps — `bindUnset ; ret` through `weakLStep_tauThen`. The long commit
@@ -38,18 +38,18 @@ variable {P : Parameters}
 
 /-- **The row-wise step**: every row of the round is answered by a weak run of the graded agreement
 specification, the relation restored. -/
-theorem specificationRelation_row (P : Parameters) (r : ℕ)
+theorem specificationRelation_transition (P : Parameters) (r : ℕ)
     (q₁ : RoundStateOverGatherSpecifications P.n) (q₂ : GBCA.SpecState P.n)
     (hR : SpecificationRelation P q₁ q₂) (l₀ : Label P.n)
     (μ : PMF (RoundStateOverGatherSpecifications P.n))
-    (hrow : AlgorithmOverGatherSpecifications P r q₁ l₀ μ)
+    (htransition : AlgorithmOverGatherSpecifications P r q₁ l₀ μ)
     (q₁' : RoundStateOverGatherSpecifications P.n)
     (hq₁' : q₁' ∈ μ.support) :
     ∃ q₂', ((l₀ = Silent.τ ∧ (GBCA.specInst P r).weakLSilent q₂ q₂') ∨
       (¬ l₀ = Silent.τ ∧ (GBCA.specInst P r).weakLStep q₂ l₀ q₂')) ∧
       SpecificationRelation P q₁' q₂' := by
-  have hInv' := hR.invariant.step hrow hq₁'
-  cases hrow with
+  have hInv' := hR.invariant.step htransition hq₁'
+  cases htransition with
   | callG id b t1 h0 h =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
@@ -474,16 +474,16 @@ theorem specificationRelation_row (P : Parameters) (r : ℕ)
 /-- **The refinement of the round over the gather specifications**: the round
 forward-simulates the graded agreement specification read over the round's
 interface. A transition of the round is one case of `GBCA.ByAFW.AlgorithmOverGatherSpecifications`
-(`GBCA.ByAFW.roundOverGatherSpecifications_step_row`), the row is answered by a weak run of the
-specification (`specificationRelation_row`), and that run is lifted to the interface along a
-section of `GBCA.specificationLabelMap`. -/
+(`GBCA.ByAFW.roundOverGatherSpecifications_step_algorithm`), that transition is answered by a weak
+run of the specification (`specificationRelation_transition`), and that run is lifted to the
+interface along a section of `GBCA.specificationLabelMap`. -/
 theorem refinesSpecification (P : Parameters) (r : ℕ) :
     ForwardSimulation (roundOverGatherSpecifications P r)
       (GBCA.specificationOverRoundAlphabet P r) (SpecificationRelation P) := by
   constructor
   intro q₁ q₂ hR l μ hstep q₁' hq₁'
-  obtain ⟨l₀, hpull, hrow⟩ := roundOverGatherSpecifications_step_row P r q₁ l μ hstep
-  obtain ⟨t', hdis, hrel⟩ := specificationRelation_row P r q₁ q₂ hR l₀ μ hrow q₁' hq₁'
+  obtain ⟨l₀, hpull, htransition⟩ := roundOverGatherSpecifications_step_algorithm P r q₁ l μ hstep
+  obtain ⟨t', hdis, hrel⟩ := specificationRelation_transition P r q₁ q₂ hR l₀ μ htransition q₁' hq₁'
   refine ⟨t', ?_, hrel⟩
   rcases hdis with ⟨hτ, hweak⟩ | ⟨hτ, hweak⟩
   · exact Or.inl ⟨GBCA.specificationLabelMap_eq_tau (by rw [hpull, hτ]; rfl),

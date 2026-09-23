@@ -15,9 +15,10 @@ import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 (`ABA/Gather/Composition.lean`) -- the `n` gather programs beside the gather network, in parallel
 with `2n` composed reliable-broadcast instances -- over the composition's state, through the four
 views `gatherTier`, `inputBroadcasts`, `bindBroadcasts` and `core`, one constructor per case of
-`instanceOverBracha_step_iff_row`. It is a relation on that state; the system is the composition.
+`instanceOverBracha_step_iff_algorithm`. It is a relation on that state; the system is the
+composition.
 
-`instanceOverBracha_step_iff_row` is the characterisation: at a specification label `l₀`, the
+`instanceOverBracha_step_iff_algorithm` is the characterisation: at a specification label `l₀`, the
 transitions of the composition over the labels `specificationLabelMap` sends to `l₀` are exactly
 the `l₀`-transitions of `AlgorithmOverBracha`, on the same composed state and with the same
 distribution.
@@ -25,7 +26,7 @@ distribution.
 ## The broadcast tier
 
 A broadcast instance's own transitions are `BRB.BrachaAlgorithm`
-(`ABA/ReliableBroadcast/Bracha/Algorithm.lean`), and `BRB.brachaInstance_step_iff_row` matches
+(`ABA/ReliableBroadcast/Bracha/Algorithm.lean`), and `BRB.brachaInstance_step_iff_algorithm` matches
 them against the instance's transitions. Each label of the composition reaches an instance at one
 label of its interface alphabet, and the transitions there carry over: a silent step, a return and
 a corruption are the hypotheses `BRB.BrachaAlgorithm P k (inputBroadcasts s k) l₀ (PMF.pure c)` of
@@ -56,17 +57,18 @@ theorem brachaInstance_step_at {M : Type} [DecidableEq M] {P : Parameters} {ldr 
     (hl : BRB.specificationLabelMap P.n M l = some l₀)
     (h : (BRB.brachaInstance P ldr M).step s l (PMF.pure s')) :
     BRB.BrachaAlgorithm P ldr s l₀ (PMF.pure s') := by
-  obtain ⟨l₁, hl₁, hrow⟩ := BRB.brachaInstance_step_row P ldr s l _ h
-  rwa [Option.some.inj (hl₁.symm.trans hl)] at hrow
+  obtain ⟨l₁, hl₁, htransition⟩ := BRB.brachaInstance_step_algorithm P ldr s l _ h
+  rwa [Option.some.inj (hl₁.symm.trans hl)] at htransition
 
 omit [DecidableEq X] in
 /-- A `BRB.BrachaAlgorithm` row at a label other than a call is a transition of the
 instance at the interface label over it. -/
-theorem row_brachaInstance_step_inl {M : Type} [DecidableEq M] {P : Parameters} {ldr : Fin P.n}
+theorem transition_brachaInstance_step_inl {M : Type} [DecidableEq M] {P : Parameters} {ldr : Fin
+  P.n}
     {s s' : BRB.BrachaState P.n M} {l₀ : BRB.Label P.n M} (h0 : ∀ m : M, l₀ ≠ BRB.Label.call m)
     (h : BRB.BrachaAlgorithm P ldr s l₀ (PMF.pure s')) :
     (BRB.brachaInstance P ldr M).step s (Sum.inl l₀) (PMF.pure s') := by
-  obtain ⟨l, hl, hstep⟩ := BRB.row_brachaInstance_step P ldr s l₀ _ h
+  obtain ⟨l, hl, hstep⟩ := BRB.algorithm_brachaInstance_step P ldr s l₀ _ h
   cases l with
   | inl y => rwa [Option.some.inj hl] at hstep
   | inr e => cases e with
@@ -82,7 +84,7 @@ theorem brachaAlgorithm_fail {M : Type} [DecidableEq M] {P : Parameters} {ldr : 
 omit [DecidableEq X] in
 /-- At the call label the instance broadcasts: the leader records the payload
 and the network records `⟨INIT, m⟩`. -/
-theorem brachaInstance_call_row {M : Type} [DecidableEq M] {P : Parameters} {ldr : Fin P.n}
+theorem brachaInstance_call_transition {M : Type} [DecidableEq M] {P : Parameters} {ldr : Fin P.n}
     {s s' : BRB.BrachaState P.n M} {m : M}
     (h : (BRB.brachaInstance P ldr M).step s (Sum.inl (BRB.Label.call m)) (PMF.pure s')) :
     (s.process ldr).input = none ∧
@@ -104,7 +106,8 @@ theorem brachaInstance_call_row {M : Type} [DecidableEq M] {P : Parameters} {ldr
 
 omit [DecidableEq X] in
 /-- At the call-loop label the instance is unchanged. -/
-theorem brachaInstance_callLoop_row {M : Type} [DecidableEq M] {P : Parameters} {ldr : Fin P.n}
+theorem brachaInstance_callLoop_transition {M : Type} [DecidableEq M] {P : Parameters} {ldr : Fin
+  P.n}
     {s s' : BRB.BrachaState P.n M} {m : M}
     (h : (BRB.brachaInstance P ldr M).step s (Sum.inr (BRB.LoopLabel.callLoop m)) (PMF.pure s')) :
       s' = s := by
@@ -120,7 +123,8 @@ theorem brachaInstance_callLoop_row {M : Type} [DecidableEq M] {P : Parameters} 
 
 omit [DecidableEq X] in
 /-- Build the instance's broadcast at the call label. -/
-theorem row_brachaInstance_call_step {M : Type} [DecidableEq M] (P : Parameters) (ldr : Fin P.n)
+theorem transition_brachaInstance_call_step {M : Type} [DecidableEq M] (P : Parameters) (ldr : Fin
+  P.n)
     (s : BRB.BrachaState P.n M) (m : M) (h : (s.process ldr).input = none) :
     (BRB.brachaInstance P ldr M).step s (Sum.inl (BRB.Label.call m))
       (PMF.pure ((s.setProcess ldr { s.process ldr with input := some m }).multicast ldr (.init m)))
@@ -133,7 +137,8 @@ theorem row_brachaInstance_call_step {M : Type} [DecidableEq M] (P : Parameters)
 
 omit [DecidableEq X] in
 /-- Build the instance's stutter at the call-loop label. -/
-theorem row_brachaInstance_callLoop_step {M : Type} [DecidableEq M] (P : Parameters) (ldr : Fin P.n)
+theorem transition_brachaInstance_callLoop_step {M : Type} [DecidableEq M] (P : Parameters) (ldr :
+  Fin P.n)
     (s : BRB.BrachaState P.n M) (m : M) :
     (BRB.brachaInstance P ldr M).step s (Sum.inr (BRB.LoopLabel.callLoop m)) (PMF.pure s) := by
   obtain ⟨u, w⟩ := s
@@ -142,9 +147,10 @@ theorem row_brachaInstance_callLoop_step {M : Type} [DecidableEq M] (P : Paramet
 
 /-! ### The rows -/
 
-/-- The rows of the gather instance over Bracha's broadcast (`Gather.instanceOverBracha`),
+/-- The transitions of the gather instance over Bracha's broadcast
+(`Gather.instanceOverBracha`),
 stated over the composition's state: one constructor per case of
-`Gather.instanceOverBracha_step_iff_row`. All transitions are Dirac. -/
+`Gather.instanceOverBracha_step_iff_algorithm`. All transitions are Dirac. -/
 inductive AlgorithmOverBracha (P : Parameters) :
     StateOverBracha P.n X → Label P.n X → PMF (StateOverBracha P.n X) → Prop
   /-- The call arrives: the gather record records the payload and the input
@@ -276,7 +282,7 @@ inductive AlgorithmOverBracha (P : Parameters) :
 /-! ### The row characterisation -/
 
 /-- **The projection.** -/
-theorem instanceOverBracha_step_row (P : Parameters) :
+theorem instanceOverBracha_step_algorithm (P : Parameters) :
     ∀ (s : StateOverBracha P.n X) (l : InstanceLabel P.n X) (μ : PMF (StateOverBracha P.n X)),
       (instanceOverBracha P X).step s l μ →
       ∃ l₀, specificationLabelMap P.n X l = some l₀ ∧ AlgorithmOverBracha P s l₀ μ := by
@@ -342,7 +348,7 @@ theorem instanceOverBracha_step_row (P : Parameters) :
       obtain ⟨hinp, hvot, hsnd, happ, hQ, hxj⟩ := programStep_bindCall_own (hproc j)
       have hfor : ∀ i, i ≠ j → x i = u i :=
         fun i hi => PMF.pure_injective (programStep_bindCall_foreign (Ne.symm hi) (hproc i))
-      obtain ⟨hbc, hbj⟩ := brachaInstance_call_row
+      obtain ⟨hbc, hbj⟩ := brachaInstance_call_transition
         (System.step_of_mapIdle_step (l₀ := Sum.inl (BRB.Label.call U)) (by simp) (hbind j))
       have hbf : ∀ q, q ≠ j → b' q = b q :=
         fun q hq => System.mapIdle_eq_of_step_none (by simp [hq]) (hbind q)
@@ -399,7 +405,7 @@ theorem instanceOverBracha_step_row (P : Parameters) :
           obtain ⟨hinp, hxj⟩ := programStep_call_own (hproc id)
           have hfor : ∀ i, i ≠ id → x i = u i :=
             fun i hi => PMF.pure_injective (programStep_call_foreign (Ne.symm hi) (hproc i))
-          obtain ⟨hbin, haid⟩ := brachaInstance_call_row
+          obtain ⟨hbin, haid⟩ := brachaInstance_call_transition
             (System.step_of_mapIdle_step (l₀ := Sum.inl (BRB.Label.call y)) (by simp) (hin id))
           have haf : ∀ k, k ≠ id → a' k = a k :=
             fun k hk => System.mapIdle_eq_of_step_none (by simp [hk]) (hin k)
@@ -451,7 +457,7 @@ theorem instanceOverBracha_step_row (P : Parameters) :
           subst hw; subst hb
           have hxall : ∀ i,
             x i = u i := fun i => PMF.pure_injective (programStep_callLoop (hproc i))
-          have haid : a' id = a id := brachaInstance_callLoop_row
+          have haid : a' id = a id := brachaInstance_callLoop_transition
             (System.step_of_mapIdle_step (l₀ := Sum.inr (BRB.LoopLabel.callLoop y))
               (by simp) (hin id))
           have haf : ∀ k, k ≠ id → a' k = a k :=
@@ -466,19 +472,19 @@ theorem instanceOverBracha_step_row (P : Parameters) :
           exact AlgorithmOverBracha.callLoop _ id y
 
 /-- **The embedding.** -/
-theorem row_instanceOverBracha_step (P : Parameters) :
+theorem algorithm_instanceOverBracha_step (P : Parameters) :
     ∀ (s : StateOverBracha P.n X) (l₀ : Label P.n X) (μ : PMF (StateOverBracha P.n X)),
       AlgorithmOverBracha P s l₀ μ →
       ∃ l, specificationLabelMap P.n X l = some l₀ ∧ (instanceOverBracha P X).step s l μ := by
-  rintro ⟨⟨u, w⟩, a, b⟩ l₀ μ hrow
-  cases hrow with
+  rintro ⟨⟨u, w⟩, a, b⟩ l₀ μ htransition
+  cases htransition with
   | call id x h hb =>
     exact ⟨Sum.inl (.call id x), rfl, instanceOverBroadcasts_label_step (b' := b) (by simp)
       (dirac_steps_update (ProgramStep.call (u id) x h)
         (fun i hi => ProgramStep.callIdle (u i) id x (Ne.symm hi)))
       (NetworkStep.call w id x)
       (System.mapIdle_step_update (by simp) (fun k hk => by simp [hk])
-        (row_brachaInstance_call_step P id (a id) x hb))
+        (transition_brachaInstance_call_step P id (a id) x hb))
       (fun q => System.mapIdle_unchanged rfl)⟩
   | callLoop id x =>
     refine ⟨Sum.inr (.callLoop id x), rfl,
@@ -490,14 +496,15 @@ theorem row_instanceOverBracha_step (P : Parameters) :
       · exact ProgramStep.callLoopIdle (u i) id x (Ne.symm hi)
     · by_cases hk : k = id
       · subst hk
-        exact System.mapIdle_step_of_step (by simp) (row_brachaInstance_callLoop_step P k (a k) x)
+        exact System.mapIdle_step_of_step (by simp) (transition_brachaInstance_callLoop_step P k (a
+          k) x)
       · exact System.mapIdle_unchanged (by simp [hk])
   | inputBroadcastTau k c hb =>
     exact ⟨Sum.inl Label.tau, rfl,
-      instanceOverBroadcasts_tau_input (row_brachaInstance_step_inl (by simp) hb)⟩
+      instanceOverBroadcasts_tau_input (transition_brachaInstance_step_inl (by simp) hb)⟩
   | bindBroadcastTau q d hb =>
     exact ⟨Sum.inl Label.tau, rfl,
-      instanceOverBroadcasts_tau_bind (row_brachaInstance_step_inl (by simp) hb)⟩
+      instanceOverBroadcasts_tau_bind (transition_brachaInstance_step_inl (by simp) hb)⟩
   | deliver i j m h =>
     exact ⟨Sum.inl Label.tau, rfl,
       instanceOverBroadcasts_event_step (a' := a) (b' := b) (GatherEvent.deliver i j m)
@@ -527,7 +534,7 @@ theorem row_instanceOverBracha_step (P : Parameters) :
           (fun i hi => ProgramStep.bindCallIdle (u i) j U (Ne.symm hi)))
         (NetworkStep.bindCallIdle w j U) (fun k => System.mapIdle_unchanged rfl)
         (System.mapIdle_step_update (by simp) (fun q hq => by simp [hq])
-          (row_brachaInstance_call_step P j (b j) U hbc))⟩
+          (transition_brachaInstance_call_step P j (b j) U hbc))⟩
   | byzantine j m h =>
     exact ⟨Sum.inl Label.tau, rfl,
       instanceOverBroadcasts_tau_network (NetworkStep.byzantine w j m h)⟩
@@ -538,7 +545,7 @@ theorem row_instanceOverBracha_step (P : Parameters) :
         (fun i hi => ProgramStep.inputBroadcastRetIdle (u i) k j v (Ne.symm hi)))
       (NetworkStep.inputBroadcastRetIdle w k j v)
       (System.mapIdle_step_update (by simp) (fun k' hk' => by simp [hk'])
-        (row_brachaInstance_step_inl (by simp)
+        (transition_brachaInstance_step_inl (by simp)
         hb))
       (fun q => System.mapIdle_unchanged rfl)⟩
   | bindRet q j U d hb =>
@@ -548,7 +555,7 @@ theorem row_instanceOverBracha_step (P : Parameters) :
         (fun i hi => ProgramStep.bindRetIdle (u i) q j U (Ne.symm hi)))
       (NetworkStep.bindRetIdle w q j U) (fun k => System.mapIdle_unchanged rfl)
       (System.mapIdle_step_update (by simp) (fun q' hq' => by simp [hq'])
-        (row_brachaInstance_step_inl (by simp)
+        (transition_brachaInstance_step_inl (by simp)
         hb))⟩
   | ret id g hin hbind hsub hQ hr =>
     exact ⟨Sum.inl (.ret id g (w.core.getD (coreOfNetwork P w.network))), rfl,
@@ -561,29 +568,30 @@ theorem row_instanceOverBracha_step (P : Parameters) :
     exact ⟨Sum.inl (.fail id), rfl, instanceOverBroadcasts_label_step (x := u) (by simp)
       (fun i => ProgramStep.failIdle (u i) id) (NetworkStep.fail w id)
       (System.mapIdle_step_all (l₀ := fun _ => Sum.inl (BRB.Label.fail id)) (fun k => rfl)
-        (fun k => row_brachaInstance_step_inl (by simp) (BRB.BrachaAlgorithm.fail (a k) id)))
+        (fun k => transition_brachaInstance_step_inl (by simp) (BRB.BrachaAlgorithm.fail (a k) id)))
       (System.mapIdle_step_all (l₀ := fun _ => Sum.inl (BRB.Label.fail id)) (fun q => rfl)
-        (fun q => row_brachaInstance_step_inl (by simp) (BRB.BrachaAlgorithm.fail (b q) id)))⟩
+        (fun q => transition_brachaInstance_step_inl (by simp) (BRB.BrachaAlgorithm.fail (b q)
+          id)))⟩
 
 /-- **The row characterisation.** At a specification label `l₀`, the transitions
 of the instance over the labels `specificationLabelMap` sends to `l₀` are exactly the
 `l₀`-rows of `AlgorithmOverBracha`, on the same state and with the same distribution. -/
-theorem instanceOverBracha_step_iff_row (P : Parameters) (s : StateOverBracha P.n X)
+theorem instanceOverBracha_step_iff_algorithm (P : Parameters) (s : StateOverBracha P.n X)
     (l₀ : Label P.n X) (μ : PMF (StateOverBracha P.n X)) :
     (∃ l, specificationLabelMap P.n X l = some l₀ ∧ (instanceOverBracha P X).step s l μ) ↔
     AlgorithmOverBracha P s l₀ μ := by
   constructor
   · rintro ⟨l, hl, hstep⟩
-    obtain ⟨l₁, hl₁, hrow⟩ := instanceOverBracha_step_row P s l μ hstep
+    obtain ⟨l₁, hl₁, htransition⟩ := instanceOverBracha_step_algorithm P s l μ hstep
     have hll : l₁ = l₀ := Option.some.inj (show (some l₁ : Option (Label P.n X)) = some l₀ by
       rw [← hl₁, hl])
     subst hll
-    exact hrow
-  · exact row_instanceOverBracha_step P s l₀ μ
+    exact htransition
+  · exact algorithm_instanceOverBracha_step P s l₀ μ
 
-/-- info: 'PLTS.ABA.Gather.instanceOverBracha_step_iff_row' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.Gather.instanceOverBracha_step_iff_algorithm' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms instanceOverBracha_step_iff_row
+#print axioms instanceOverBracha_step_iff_algorithm
 
 end Gather
 end ABA

@@ -333,7 +333,7 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
     It never fires the flip either, whose $\delta$-branch reaches the mode enabling no rule, where a return arriving later could not be answered.
     An eager abstract state is refuted by that trace; deciding at the round would need a backward simulation or a prophecy variable, neither of which the framework carries.
   \item D17: a fourth outcome $\dagger$, of mass $\failmass$, on the single distribution both coin resolutions follow, where the source's two range over $\{0,1,\top\}$.
-    At Transition System~3 it delivers to no process, and at Transition System~1 it puts the system into the mode $noRuleEnabled$, which enables no $\tau$-rule.
+    At Transition System~3 it delivers to no process, and at Transition System~1 it puts the system into the mode $noTransitionEnabled$, which enables no silent transition.
     The implementation the coin specification stands for reconstructs the coin from an $\varepsilon$-correct verifiable secret sharing whose delivery holds only up to a failure probability, and the specification carries that failure as an outcome of its own rather than as a side condition.
     The source's three outcomes are the instance $\failmass = 0$ of the same distribution, so following the source is a choice of parameter and not of rule.
   \item D18: the GBCA implementation transcribes ABDY22's Algorithm~6 in full, over the message levels INPUT, ECHO, VOTE, BIND and ECHO5, in place of the source's compression of it.
@@ -345,7 +345,7 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
     With the exclusion set, Graded Agreement is the guard pair $v \notin excluded \wedge 1-v \in excluded$ and Binding is the guard on the announced bit, both consequences of the set's monotonicity alone, with no auxiliary invariant and no quorum arithmetic, and the once-only guard on the exclusion is what keeps a round completable after a grade-2 return.
     The bound value is the same state under the embedding, so following the source's field is a rewrite of the guards of the specification, of its safety file and of the two refinements, with no new argument.
   \item D21: Transition System~1 is eight rules over the record $\{input, ret, F, val, mode\}$, in place of the source's per-process call row and its four-valued $coin \in \{0,1,\bot,\top\}$.
-    The mode $mode \in \{flipEnabled, decisionEnabled, noRuleEnabled\}$ the flip writes is the round structure the source spreads over a call row, a bound value and a coin field.
+    The mode $mode \in \{flipEnabled, decisionEnabled, noTransitionEnabled\}$ the flip writes is the round structure the source spreads over a call transition, a bound value and a coin field.
     Transition System~1's re-proposal rule fires with $val$ already written, so its unanimity rule can overwrite the decision between two returns, which violates Agreement; with \leandeclnamed{decide}{PLTS.ABA.SpecStep.decide} the sole writer of $val$ under $val = \bot$, the decision is written once by the shape of the system.
     The flip names no bit because a bit entering through the one probabilistic rule would re-admit a Validity-breaking decision at probability $\varepsilon$; the identification of the flip's outcome with the coin agreeing with a round's value belongs to a refinement's outcome coupling.
     Transition System~1's shape with its re-proposal guarded on $val = \bot$ would still carry the free bind that the D13 counterexample runs through, and the core simulation is stated on the mode; the source carries annotations at both rules.
@@ -445,20 +445,20 @@ A specification adversary with more freedom therefore weakens neither obligation
 
 \input{nodes/def-aba-spec}
 
-The specification has four control states, keyed on the mode and on whether a value is decided: $mode = flipEnabled$ with $val = \bot$, $mode = decisionEnabled$, $mode = noRuleEnabled$, and $mode = flipEnabled$ with $val \neq \bot$.
+The specification has four control states, keyed on the mode and on whether a value is decided: $mode = flipEnabled$ with $val = \bot$, $mode = decisionEnabled$, $mode = noTransitionEnabled$, and $mode = flipEnabled$ with $val \neq \bot$.
 Rule 3 (\leandeclnamed{coinFlip}{PLTS.ABA.SpecStep.coinFlip}) is the branch out of $flipEnabled$ at an undecided value, and it is the only probabilistic transition of the system.
 Its three outcomes carry $\varepsilon$, $1-\varepsilon-\failmass$ and $\failmass$: the flip enables the decision, leaves the state unchanged, or fails to deliver (D17).
 Rule 4 (\leandeclnamed{decide}{PLTS.ABA.SpecStep.decide}) is the sole writer of $val$, and it is the only $\tau$-rule that $decisionEnabled$ can enable.
 Enabledness is wider than the control graph shows.
 Rule 1 fires wherever $input[id] = \bot$ and rule 2 wherever $input[id] \neq \bot$; rule 6 fires wherever the identifier it names is uncorrupted and the budget has room, and rules 7 and 8 wherever the identifier it names is corrupted.
 Rule 3 requires the mixedness guard beside $mode = flipEnabled$ and $val = \bot$: both bits must carry $f{+}1$ support, so an execution on which one bit is never supported never flips.
-Rule 4 is enabled at every state with $val = \bot$, $mode \neq noRuleEnabled$ and some bit carrying $f{+}1$ support, hence at $flipEnabled$ as well as at $decisionEnabled$.
-At a decided value the enabled rules are 1, 2, 5, 6, 7 and 8, and at $noRuleEnabled$ they are 1, 2, 6, 7 and 8; neither state enables a $\tau$-rule.
+Transition 4 is enabled at every state with $val = \bot$, $mode \neq noTransitionEnabled$ and some bit carrying $f{+}1$ support, hence at $flipEnabled$ as well as at $decisionEnabled$.
+At a decided value the enabled transitions are 1, 2, 5, 6, 7 and 8, and at $noTransitionEnabled$ they are 1, 2, 6, 7 and 8; neither state enables a silent transition.
 The guards on rule 4 are the entire constraint on the value decided (D13).
 
-\blueprintfig{fig-ts1-rules}{Transition System 1, the ABA specification \leandecl{PLTS.ABA.spec}: the four control states, keyed on the mode and the decision value, and the flip branch of rule 3, whose $\tau$-step is drawn with an undirected stem and one edge per outcome — the decision enabled, the flip left enabled, and failure to deliver, naming no coin bit.
+\blueprintfig{fig-ts1-transitions}{Transition System 1, the ABA specification \leandecl{PLTS.ABA.spec}: the four control states, keyed on the mode and the decision value, and the flip branch of transition 3, whose $\tau$-step is drawn with an undirected stem and one edge per outcome — the decision enabled, the flip left enabled, and failure to deliver, naming no coin bit.
 A flip that enables the decision cannot be discarded: at $decisionEnabled$ the decision is the only $\tau$-rule the mode can enable.
-The undelivered branch of mass $\failmass$ (D17) is absorbing: $noRuleEnabled$ enables no $\tau$-rule.
+The undelivered branch of mass $\failmass$ (D17) is absorbing: $noTransitionEnabled$ enables no silent transition.
 The flip carries the mixedness guard, so the branch is reachable only from a state where both bits carry $f{+}1$ support.
 Rules 1 and 2 are drawn on $flipEnabled$ alone.
 Rule 1 is enabled at a process whose record entry is empty and rule 2 at a process whose entry is filled, so the call label is enabled in every state (D36).
@@ -472,7 +472,7 @@ Three of the eight rules are not drawn: rule 6 (\leandeclnamed{fail}{PLTS.ABA.Sp
   \item $ret : [n] \to \mathbb{B}$, which processes have returned.
   \item $F \subseteq [n]$, the corrupted set.
   \item $val : \{0,1,\bot\}$, the decision value; once it is a bit, every return carries it.
-  \item $mode \in \{flipEnabled, decisionEnabled, noRuleEnabled\}$, the control mode, \leandecl{PLTS.ABA.ControlMode} (D21).
+  \item $mode \in \{flipEnabled, decisionEnabled, noTransitionEnabled\}$, the control mode, \leandecl{PLTS.ABA.ControlMode} (D21).
 \end{itemize}
 \noindent Here $\mathbb{B}$ is the two-element type, written $0,1$ for protocol bits and $\mathrm{false},\mathrm{true}$ for flags.
 The record carries no per-process call row, no bound value and no coin field: the mode is what the three of them are replaced by (D21).
@@ -508,13 +508,13 @@ Guard $mode = flipEnabled$, $val = \bot$ and $InputSupport(s,b)$ for each of the
      s \xrightarrow{\;\tau\;}\ \
      &\varepsilon\cdot\delta\bigl(s[\,mode := decisionEnabled\,]\bigr)
      + (1-\varepsilon-\failmass)\cdot\delta(s)\\
-     &{}+ \failmass\cdot\delta\bigl(s[\,mode := noRuleEnabled\,]\bigr)
+     &{}+ \failmass\cdot\delta\bigl(s[\,mode := noTransitionEnabled\,]\bigr)
    \end{aligned} \]
 The three masses are the image of the coin distribution of Definition~\ref{def:aba-parameters} under the map that drops the bit, \leandecl{PLTS.ABA.flipPMF}: one bit goes to $toDecisionEnabled$, the other bit and the adversarial outcome to $toFlipEnabled$, and $\dagger$ to $undelivered$.
 No rule of the system reads a coin bit.
 
 \noindent\textbf{4.} \leandeclnamed{decide}{PLTS.ABA.SpecStep.decide} (D13).
-Guard $val = \bot$, $InputSupport(s,b)$ and $mode \neq noRuleEnabled$.
+Guard $val = \bot$, $InputSupport(s,b)$ and $mode \neq noTransitionEnabled$.
 \[ s \xrightarrow{\;\tau\;}
    \delta\bigl(s[\,val := b,\ mode := flipEnabled\,]\bigr) \]
 
@@ -549,7 +549,7 @@ With it, rule~4 being the sole writer of $val$, the decision value is write-once
 Without $InputSupport(s,b)$ the specification violates Validity.
 Take $n = 4$, $f = 1$, the recorded inputs $1,0,0,0$ and the sole holder of $1$ corrupted.
 A decision of $1$ there has every never-corrupted process inputting $0$, and the guard, demanding $f + 1 = 2$ recorded-or-corrupt supporters of $1$, is what rules that trace out.
-The third guard, $mode \neq noRuleEnabled$, carries no safety weight.
+The third guard, $mode \neq noTransitionEnabled$, carries no safety weight.
 It is the D17 outcome: an undelivered flip takes the decision away with every other $\tau$-rule.
 
 \noindent The mixedness guard on rule~3 carries no safety weight either.
@@ -587,23 +587,23 @@ The sum therefore never decreases.
 At the flip it stands at $2f{+}2$ or above, hence at every later state one of
 the two counts is $f{+}1$ or above and the decision is enabled at $decisionEnabled$.
 A flip that enables the decision is therefore never wasted.
-An undelivered flip sets $mode := noRuleEnabled$, which enables no $\tau$-rule at all (D17), so an
-undelivered flip leaves the system with no decision and no return.
+An undelivered flip sets $mode := noTransitionEnabled$, which enables no silent transition at
+all (D17), so an undelivered flip leaves the system with no decision and no return.
 
 The three masses read as a liveness statement, which is stated here and not
 proved in Lean.
 Each firing enables the decision with probability $\varepsilon$ and fails to
 deliver with probability $\failmass$.
-An execution that keeps flipping therefore reaches $decisionEnabled$ or $noRuleEnabled$ almost surely, and under a
-scheduler that fires nothing but the flip it reaches $decisionEnabled$ with
+An execution that keeps flipping therefore reaches $decisionEnabled$ or $noTransitionEnabled$
+almost surely, and under a scheduler that fires nothing but the flip it reaches $decisionEnabled$ with
 probability $\varepsilon/(\varepsilon+\failmass)$.
 No safety argument uses either mass.
 The reading is conditional on the guard: an execution on which one bit is never
 supported never flips at all, and every state it reaches has a Dirac successor
 distribution.
 That is the unanimous case, and it is the liveness half of Validity: under
-correct unanimity on $v$ the execution cannot flip, cannot enable the decision, cannot reach $noRuleEnabled$, and rule~4
-can write only $v$.
+correct unanimity on $v$ the execution cannot flip, cannot enable the decision, cannot reach
+$noTransitionEnabled$, and transition~4 can write only $v$.
 The decision is \emph{enabled}, never forced, and the scheduler may decline it
 forever, so the claim that the protocol decides with probability $1$ under fair
 scheduling is a separate statement, not proved here.

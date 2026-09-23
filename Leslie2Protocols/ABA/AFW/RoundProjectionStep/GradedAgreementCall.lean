@@ -25,7 +25,7 @@ open Implementation Composition GBCA.ByABDY
 
 variable {P : Parameters}
 
-section Rows
+section Transitions
 
 variable {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} {w : NetworkState P.n} {j : Fin P.n}
     {c : RoundLoopRecord P.n} {p : RoundRecordMap P.n}
@@ -158,7 +158,7 @@ theorem roundProjection_gbcaCallLoop (hu : (u j).2 = p) (r r' : ℕ) (b : Bool)
   · subst hi; rw [Function.update_self, ← hu]
   · rw [Function.update_of_ne hi]
 
-end Rows
+end Transitions
 
 end AFW
 end ABA

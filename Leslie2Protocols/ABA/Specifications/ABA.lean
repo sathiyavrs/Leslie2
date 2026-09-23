@@ -13,8 +13,9 @@ This module is the account of record for what the ABA development specifies.
 
 The state is the record `SpecState`: a ghost record `input` of genuine `callABA` events (D13), the
 flags `ret` of the processes that have returned, the corrupted set `F`, the decision value `val`,
-and a control mode `mode ∈ {flipEnabled, decisionEnabled, noRuleEnabled}` (D21). Eight rules act on
-it. `SpecStep.callSet` and `SpecStep.callLoop` carry the interface call of a correct process,
+and a control mode `mode ∈ {flipEnabled, decisionEnabled, noTransitionEnabled}` (D21). Eight
+transitions act on it. `SpecStep.callSet` and `SpecStep.callLoop` carry the interface call of a
+correct process,
 `SpecStep.coinFlip` is the mode loop, `SpecStep.decide` writes the decision value, `SpecStep.ret`
 carries the interface return of a correct process, `SpecStep.fail` is corruption (D1), and
 `SpecStep.callByzantine` and `SpecStep.retByzantine` are the corrupted interface. Every transition
@@ -31,10 +32,11 @@ no property of the system can constrain.
 The mode loop is what the specification says about liveness. From `ControlMode.flipEnabled` a flip
 enables the decision with probability `ε`, fails to deliver with probability `δ`, and returns to
 `ControlMode.flipEnabled` with the remaining mass. At `ControlMode.decisionEnabled` the decision is
-the only `τ`-rule the mode can enable, so the enabled decision is never withdrawn;
-`ControlMode.noRuleEnabled` enables no `τ`-rule at all (D17). The flip names no coin bit. Reading
-`toDecisionEnabled` as the coin agreeing with a round's reference value is an outcome coupling of a
-refinement, not a component of this system.
+the only silent transition the mode can enable, so the enabled decision is never withdrawn;
+`ControlMode.noTransitionEnabled` enables no silent transition at all (D17). The flip names no coin
+bit.
+Reading `toDecisionEnabled` as the coin agreeing with a round's reference value is an outcome
+coupling of a refinement, not a component of this system.
 
 The flip is guarded by both bits carrying `f + 1` support, and each of the two
 support counts is monotone on its own: every ghost write is a first write, a
@@ -47,9 +49,9 @@ decision stays enabled at `ControlMode.decisionEnabled`; the Lean lemma is defer
 
 Provenance rests on the ghost record and the support guard `InputSupport` (D13).
 `SpecStep.decide` is the sole writer of `val`. Its guards are `val = ⊥`,
-`InputSupport b` and `mode ≠ noRuleEnabled`, and the support guard is the entire constraint
-on the value decided. The rule is therefore enabled whenever some bit carries
-`f + 1` recorded-or-corrupt supporters and the mode is not `ControlMode.noRuleEnabled`; no
+`InputSupport b` and `mode ≠ noTransitionEnabled`, and the support guard is the entire constraint
+on the value decided. The transition is therefore enabled whenever some bit carries
+`f + 1` recorded-or-corrupt supporters and the mode is not `ControlMode.noTransitionEnabled`; no
 count of participating processes is read anywhere in the system.
 The record holds each process's first genuine call (D16). `SpecStep.callSet`
 writes at an empty entry and `SpecStep.callLoop`, the input-enabledness loop,
@@ -67,8 +69,8 @@ inductive ControlMode : Type
   | flipEnabled
   /-- The decision is the only enabled `τ`-rule. -/
   | decisionEnabled
-  /-- The flip failed to deliver (D17): no `τ`-rule is enabled. -/
-  | noRuleEnabled
+  /-- The flip failed to deliver (D17): no silent transition is enabled. -/
+  | noTransitionEnabled
   deriving DecidableEq, Repr
 
 /-- The state of the ABA specification (Transition System 1). -/
@@ -126,7 +128,7 @@ inductive FlipOutcome : Type
   | toDecisionEnabled
   /-- The flip leaves the mode at `ControlMode.flipEnabled`. -/
   | toFlipEnabled
-  /-- The flip fails to deliver: the mode becomes `ControlMode.noRuleEnabled` (D17). -/
+  /-- The flip fails to deliver: the mode becomes `ControlMode.noTransitionEnabled` (D17). -/
   | undelivered
   deriving DecidableEq, Repr
 
@@ -160,9 +162,8 @@ inductive SpecStep (P : Parameters) :
   /-- Rule 3 (the flip): the only non-Dirac rule of the system. From
   `ControlMode.flipEnabled`, with nothing decided, one flip resolves by `flipPMF` into
   `ControlMode.decisionEnabled` with probability `ε`, back into `ControlMode.flipEnabled` with
-  probability `1 − ε − δ`, and into `ControlMode.noRuleEnabled` with probability `δ` (D17). It is
-  one-shot: the three outcomes are the three modes, and the rule names no coin
-  bit.
+  probability `1 − ε − δ`, and into `ControlMode.noTransitionEnabled` with probability `δ` (D17). It
+  is one-shot: the three outcomes are the three modes, and the rule names no coin bit.
 
   The guard `hmix` is the mixedness guard: the flip fires only from a state
   where both bits carry `f + 1` support. Under unanimity among the correct processes on one bit the
@@ -176,15 +177,15 @@ inductive SpecStep (P : Parameters) :
         ((flipPMF P).map (fun o => match o with
           | .toDecisionEnabled => { s with mode := .decisionEnabled }
           | .toFlipEnabled => s
-          | .undelivered => { s with mode := .noRuleEnabled }))
+          | .undelivered => { s with mode := .noTransitionEnabled }))
   /-- Rule 4 (decide): the sole writer of `val`. Its guards are `val = ⊥`
-  (`hv`), `InputSupport b` (`hs`) and `mode ≠ noRuleEnabled` (`hm`), and the support guard is
+  (`hv`), `InputSupport b` (`hs`) and `mode ≠ noTransitionEnabled` (`hm`), and the support guard is
   the entire constraint on the decided value: the bit `b` carries `f + 1`
   recorded-or-corrupt supporters (D13). An undelivered flip disables the rule (D17); at
   `ControlMode.decisionEnabled` it is the only enabled `τ`-rule, and it is enabled there
   whenever some bit carries `f + 1` support. The mode returns to `ControlMode.flipEnabled`. -/
   | decide (s : SpecState P.n) (b : Bool) (hv : s.val = none) (hs : InputSupport P s b)
-      (hm : s.mode ≠ .noRuleEnabled) :
+      (hm : s.mode ≠ .noTransitionEnabled) :
       SpecStep P s .tau
         (PMF.pure { s with val := some b, mode := .flipEnabled })
   /-- Rule 5 (return): a process returns the decision value. -/

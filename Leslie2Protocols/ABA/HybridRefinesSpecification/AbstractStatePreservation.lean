@@ -188,7 +188,8 @@ theorem AbstractState.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n
 
 /-- Reading a row where the ABA component moves alone: its own outcome, the coin oracle standing
 still. -/
-theorem mem_support_abaRow {P : Parameters} {μc : PMF (ABAState P)} {o w' : ℕ → WCC.SpecState P.n}
+theorem mem_support_abaTransition {P : Parameters} {μc : PMF (ABAState P)} {o w' : ℕ → WCC.SpecState
+  P.n}
     {C' : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A' : ABANetworkState P.n}
     (h : (C', A', w') ∈ (μc.map fun c => (c.1, c.2, o)).support) :
     (C', A') ∈ μc.support ∧ w' = o := by
@@ -199,7 +200,7 @@ theorem mem_support_abaRow {P : Parameters} {μc : PMF (ABAState P)} {o w' : ℕ
   exact ⟨hc, rfl⟩
 
 /-- Reading a row where the ABA component and the coin oracle move together. -/
-theorem mem_support_coinRow {P : Parameters} {μc : PMF (ABAState P)}
+theorem mem_support_coinTransition {P : Parameters} {μc : PMF (ABAState P)}
     {μw' : PMF (WCC.SpecState P.n)} {o w' : ℕ → WCC.SpecState P.n} {r : ℕ}
     {C' : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A' : ABANetworkState P.n}
     (h : (C', A', w') ∈ (μc.bind fun c => prodPMF (PMF.pure c.1)
@@ -241,33 +242,33 @@ theorem Invariant.step {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
     · simp only [mem_support_prodPMF] at hmem
       obtain ⟨h1, h2⟩ := hmem
       rw [PMF.mem_support_pure_iff] at h1
-      obtain ⟨hc2, rfl⟩ := mem_support_abaRow h2
+      obtain ⟨hc2, rfl⟩ := mem_support_abaTransition h2
       rw [h1]
       exact (Invariant.step_roundLoopTau hI hstepC hc2).1
     · simp only [mem_support_prodPMF] at hmem
       obtain ⟨h1, h2⟩ := hmem
       rw [PMF.mem_support_map_iff] at h1
       obtain ⟨gr', hgr', heq⟩ := h1
-      obtain ⟨hc2, rfl⟩ := mem_support_abaRow h2
+      obtain ⟨hc2, rfl⟩ := mem_support_abaTransition h2
       rw [← heq]
       exact (Invariant.step_callG hI r id b hstepG hstepC hgr' hc2).1
     · simp only [mem_support_prodPMF] at hmem
       obtain ⟨h1, h2⟩ := hmem
       rw [PMF.mem_support_map_iff] at h1
       obtain ⟨gr', hgr', heq⟩ := h1
-      obtain ⟨hc2, rfl⟩ := mem_support_abaRow h2
+      obtain ⟨hc2, rfl⟩ := mem_support_abaTransition h2
       rw [← heq]
       exact (Invariant.step_retG hI r id out bnd hstepG hstepC hgr' hc2).1
     · simp only [mem_support_prodPMF] at hmem
       obtain ⟨h1, h2⟩ := hmem
       rw [PMF.mem_support_pure_iff] at h1
-      obtain ⟨hc2, wr', hwr', rfl⟩ := mem_support_coinRow h2
+      obtain ⟨hc2, wr', hwr', rfl⟩ := mem_support_coinTransition h2
       rw [h1]
       exact (Invariant.step_callW hI r id hstepW hstepC hwr' hc2).1
     · simp only [mem_support_prodPMF] at hmem
       obtain ⟨h1, h2⟩ := hmem
       rw [PMF.mem_support_pure_iff] at h1
-      obtain ⟨hc2, wr', hwr', rfl⟩ := mem_support_coinRow h2
+      obtain ⟨hc2, wr', hwr', rfl⟩ := mem_support_coinTransition h2
       rw [h1]
       exact (Invariant.step_retW hI r id b hstepW hstepC hwr' hc2).1
   | callABA id b =>
@@ -276,7 +277,7 @@ theorem Invariant.step {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
     simp only [mem_support_prodPMF] at hmem
     obtain ⟨h1, h2⟩ := hmem
     rw [PMF.mem_support_pure_iff] at h1
-    obtain ⟨hc2, rfl⟩ := mem_support_abaRow h2
+    obtain ⟨hc2, rfl⟩ := mem_support_abaTransition h2
     rw [h1]
     exact (Invariant.step_callABA hI id b hstepC hc2).1
   | retABA id b =>
@@ -285,7 +286,7 @@ theorem Invariant.step {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
     simp only [mem_support_prodPMF] at hmem
     obtain ⟨h1, h2⟩ := hmem
     rw [PMF.mem_support_pure_iff] at h1
-    obtain ⟨hc2, rfl⟩ := mem_support_abaRow h2
+    obtain ⟨hc2, rfl⟩ := mem_support_abaTransition h2
     rw [h1]
     exact (Invariant.step_retABA hI id b hstepC hc2).1
   | fail id =>
@@ -294,7 +295,7 @@ theorem Invariant.step {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
     simp only [mem_support_prodPMF] at hmem
     obtain ⟨h1, h2⟩ := hmem
     rw [PMF.mem_support_pure_iff] at h1
-    obtain ⟨hc2, rfl⟩ := mem_support_abaRow h2
+    obtain ⟨hc2, rfl⟩ := mem_support_abaTransition h2
     rw [PMF.mem_support_pure_iff] at hc2
     rw [h1, hc2]
     exact (Invariant.step_fail hI id hnew hbud).1

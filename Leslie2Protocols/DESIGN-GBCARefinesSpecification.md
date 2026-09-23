@@ -658,8 +658,8 @@ per-sender sent sets and the corrupted set — and `RoundState.echo5Count` reads
 receiving program's received set rows directly. So `refinesSpecification` runs in two halves: the
 characterisation `composition_projects` (`ABA/GBCA/ABDY/Algorithm.lean`) matches every transition of
 the round's composition with the algorithm's at that same state, one step for one step, and the
-matching `specificationRelation_row` answers it, its weak answer read back at the round instance's
-interface — which is what licenses replacing a round's instance by the graded agreement
+matching `specificationRelation_transition` answers it, its weak answer read back at the round
+instance's interface — which is what licenses replacing a round's instance by the graded agreement
 specification.
 
 ## Risks and open points

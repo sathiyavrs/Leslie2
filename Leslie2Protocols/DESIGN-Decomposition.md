@@ -44,12 +44,13 @@ The specification is read along a pullback that sends the loop to the call
 (`BRB.specificationLabelMap`, `Gather.specificationLabelMap`, `GBCA.specificationLabelMap`),
 so its own loop row answers the loop label. The level above pulls the composition's alphabet
 back from its own (`Gather.inputBroadcastLabelMap`, `Gather.bindBroadcastLabelMap`,
-`GBCA.ByAFW.firstGatherLabelMap`, `GBCA.ByAFW.secondGatherLabelMap`). The row
-characterisation is then exact in the form quantified over the interface labels: `(∃ l,
+`GBCA.ByAFW.firstGatherLabelMap`, `GBCA.ByAFW.secondGatherLabelMap`). The characterisation by the
+algorithm is then exact in the form quantified over the interface labels: `(∃ l,
 specificationLabelMap l = some l₀ ∧ brachaInstance.step s l μ) ↔ BrachaAlgorithm s l₀ μ`
-(`BRB.brachaInstance_step_iff_row`,
-`Gather.instanceOverBroadcastSpecification_step_iff_row`,
-`Gather.instanceOverBracha_step_iff_row`, `GBCA.ByAFW.roundOverGatherSpecifications_step_iff_row`).
+(`BRB.brachaInstance_step_iff_algorithm`,
+`Gather.instanceOverBroadcastSpecification_step_iff_algorithm`,
+`Gather.instanceOverBracha_step_iff_algorithm`,
+`GBCA.ByAFW.roundOverGatherSpecifications_step_iff_algorithm`).
 
 ## 2. The gather specification's call record follows the input instance
 
@@ -71,8 +72,9 @@ specification's commit guard `k ∈ F ∨ call k = some x`. If the specification
 
 **The constraint.** `Gather.SpecificationRelation.call_eq : ∀ k, t.call k = (inputBroadcasts s
 k).input`. The specification's call record and an input instance's record move on the same interface
-labels under the same write-once guard, so `specificationRelation_row` answers `callProgramLoop`
-with `Gather.Step.call` and `callSpecificationLoop` with `Gather.Step.callLoop`. `Gather.Conformance` carries
+labels under the same write-once guard, so `specificationRelation_transition` answers
+`callProgramLoop` with `Gather.Step.call` and `callSpecificationLoop` with `Gather.Step.callLoop`.
+`Gather.Conformance` carries
 no clause on the two records; `specificationRelation_call` takes both guards. The permissiveness
 sits at a specification tier: the concrete gather over Bracha has one row per label.
 
@@ -103,9 +105,9 @@ rendezvous — must not be answered by every factor unchanged.
 
 **What fails.** If every pullback returned `none` on such a label, the round
 would self-loop on it. The rendezvous have no specification label under
-`GBCA.specificationLabelMap`, so `GBCA.ByAFW.roundOverGatherSpecifications_step_row` is false
-there. The ABA and coin labels have one, and `GBCA.Step` has no row at it, so
-`GBCA.ByAFW.roundOverGatherSpecifications_step_iff_row` is false there and
+`GBCA.specificationLabelMap`, so `GBCA.ByAFW.roundOverGatherSpecifications_step_algorithm` is false
+there. The ABA and coin labels have one, and `GBCA.Step` has no transition at it, so
+`GBCA.ByAFW.roundOverGatherSpecifications_step_iff_algorithm` is false there and
 `GBCA.ByAFW.refinesSpecification` is unprovable: `GBCA.specificationOverRoundAlphabet` has no
 transition at those labels, and neither has `GBCA.ByABDY.composition`.
 
