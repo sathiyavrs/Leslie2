@@ -14,7 +14,7 @@ import Leslie2Protocols.Framework.DiracRelationCoupling
 P` reads the same protocol as a composition of components, down to the
 broadcast instances. This file carries the first into the second, which is
 where the gather-based chain passes from implementation to specification, as
-`ABA/Implementation/ABDY/Simulation.lean` does for ABDY22's. `ABA/Results.lean` takes the
+`ABA/ABDY/Simulation.lean` does for ABDY22's. `ABA/Results.lean` takes the
 inclusion from here to the ABA specification.
 
 ## The relation is a function

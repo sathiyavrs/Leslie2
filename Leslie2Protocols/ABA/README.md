@@ -53,7 +53,7 @@ sets, the coin handshake, corruption, the network and the composition pipeline �
 settled by the round interface and the specification, so `Implementation/System.lean` writes it
 once, parametric in the round message type, the per-process per-round record, the round rows, and a
 per-round ghost record of the network, updated on every row and read as the guard of the
-two graded-agreement return rows (D30). `Implementation/ABDY/System.lean` supplies ABDY22's;
+two graded-agreement return rows (D30). `ABDY/System.lean` supplies ABDY22's;
 `Implementation/AFW/System.lean` supplies the gather-based one.
 
 - `ABDY.protocol` — ABDY22's protocol as it runs: `n` programs beside the network, which
@@ -158,7 +158,7 @@ order, and no folder imports one below it:
 `Vocabulary/` is written over by everything, `GhostErasure/` writes over everything.
 The sub-folders and files with positions of their own in that order are the ones
 `scripts/check-folder-order.py` names: `ReliableBroadcast/Bracha/`, `GBCA/ABDY/`,
-`GBCA/AFW/`, `Implementation/ABDY/`, `Implementation/AFW/`, `Results.lean`,
+`GBCA/AFW/`, `ABDY/`, `Implementation/AFW/`, `Results.lean`,
 `GBCA/ABDY/MessagesAndRecords.lean`, which holds the messages the components of `Composition/`
 are written over and so sits below that folder, `GBCA/SpecificationOverRoundAlphabet.lean` and
 `GBCA/BindingOverRoundAlphabet.lean`, which read the extended alphabet of `Composition/` and so
@@ -328,14 +328,15 @@ preservation of `Invariant` across the rows of each label class.
 | `HybridRefinesSpecification/InvariantPreservation/SpecificationStateCorruption.lean` | 51 | The four readings of corruption at a graded-agreement or coin specification state that the `fail` row consumes. |
 | `HybridRefinesSpecification/InvariantPreservation/StepInversion.lean` | 565 | `hybrid_step_callABA`, `hybrid_step_retABA`, `hybrid_step_fail` and `hybrid_step_tau`: a transition of `hybrid` read back into the rows of its four components, with `corrupted_eq_false_iff`, the reading of a round loop's replacement flag on the corrupted set. |
 
-**`ABA/Implementation/ABDY/`** — ABDY22's protocol as it runs, and its simulation into the composed
-system.
+**`ABA/ABDY/`** — ABDY22's protocol as it runs, its composed system, the substitution to
+`hybrid`, and the simulation into the composition.
 
 | file | lines | what it is |
 |---|---|---|
-| `Implementation/ABDY/CompositionChain.lean` | 321 | **`ABDY.composed`**, **`ABDY.substitutionSimulation`**, **`ABDY.substitution`**: the protocol read as four components, one round instance per round retained at every moment, and the one stage that carries it to `hybrid` — the family substitution under the four congruences. The mirror of `Implementation/AFW/CompositionChain.lean`, which takes three stages. |
-| `Implementation/ABDY/Simulation.lean` | 1069 | **`ABDY.protocolSimulation`**, **`ABDY.protocol_composed`**: the protocol carried into the composed system along `ABDY.ProtocolRelation`, whose five unguarded conjuncts determine the composed state. |
-| `Implementation/ABDY/System.lean` | 849 | **ABDY22's protocol as it runs**, and the subject of the protocol chain: the implementation at ABDY22's Algorithm 6 — its fourteen round rows, the payload the call multicasts, the adversary's bound-bit ghost, and the inversions they answer. |
+| `ABDY/System.lean` | 849 | **ABDY22's protocol as it runs**, and the subject of the protocol chain: the implementation at ABDY22's Algorithm 6 — its fourteen round transitions, the payload the call multicasts, the adversary's bound-bit ghost, and the inversions they answer. |
+| `ABDY/Composition.lean` | 257 | **`ABDY.composed`**: the same protocol read as four components, one round instance per round retained at every moment, with the lemmas that read a transition of the composite off its label and the builders that assemble one out of transitions of the components. |
+| `ABDY/Simulation.lean` | 1070 | **`ABDY.protocolSimulation`**, **`ABDY.protocol_composed`**: the protocol carried into the composed system along `ABDY.ProtocolRelation`, whose five unguarded conjuncts determine the composed state. |
+| `ABDY/Substitution.lean` | 90 | **`ABDY.substitutionSimulation`**, **`ABDY.substitution`**: the one stage that carries the composed system to `hybrid` — each round's graded-agreement instance replaced by that round's specification, the family substitution under the four congruences. The mirror of `Implementation/AFW/CompositionChain.lean`, which takes three stages. |
 
 **`ABA/Implementation/AFW/`** — the gather-based chain, and the protocol beneath it.
 
@@ -380,17 +381,18 @@ reaches it.
 | `GhostErasure/ImplementationByAFW.lean` | 112 | **`AFW.ghostFreeProtocol`** and **`AFW.protocol_erasure`**: the gather-based protocol with the adversary's record of the two cores and the bound bit dropped, and the headlines re-derived at it — `ghostFreeProtocol_composed`, `ghostFreeProtocol_refines`, `ghostFreeProtocol_safe`, `ghostFreeProtocol_traces`. Five axiom checks. |
 
 The pieces both compositions are built from are in `Composition/Components.lean`, over the
-alphabet of `Implementation/Alphabet.lean`. `Implementation/ABDY/System.lean` and
+alphabet of `Implementation/Alphabet.lean`. `ABDY/System.lean` and
 `GBCA/ABDY/Components.lean` each import it and neither imports the other, so the
 two systems of the protocol are assembled independently over one set of components.
 `Implementation/System.lean` sits beside `Composition/Components.lean` over the same
 alphabet and imports no implementation, which is what lets both implementations instantiate
 it. The specification family — `GBCA/ABDY/`,
 `Composition/Hybrid.lean` and the core simulation above them — never
-imports `Implementation/ABDY/System.lean`; the protocol enters only at
-`Implementation/ABDY/Simulation.lean`, which is where the two systems meet, and
-`Results.lean` reaches it through that file. `Implementation/ABDY/CompositionChain.lean` sits
-above both, and carries the composed system and the substitution to `hybrid`.
+imports `ABDY/System.lean`; the protocol enters only at
+`ABDY/Simulation.lean`, which is where the two systems meet, and
+`Results.lean` reaches it through that file. `ABDY/Composition.lean` sits above the
+specification family and carries the composed system; `ABDY/Substitution.lean` sits above that
+and carries the substitution to `hybrid`.
 
 The gather-based files form their own stack over `Vocabulary/ProcessAndNetworkState.lean` and
 `GBCA/Specification.lean`, meeting the rest of the development in four places:
@@ -411,7 +413,7 @@ so either chain reads standalone below it.
 `Vocabulary/Parameters.lean` → `Vocabulary/Labels.lean` → `Specifications/ABA.lean` → skim
 `Specifications/ABASafety.lean`'s two trace predicates →
 `HybridRefinesSpecification/Relation.lean`'s module docstring →
-`Implementation/ABDY/System.lean`'s (the system the headlines are about) →
+`ABDY/System.lean`'s (the system the headlines are about) →
 `Composition/Hybrid.lean`'s (the system the core simulation starts from) →
 `Results.lean`, whose docstring names the steps of both chains and their files. Follow
 it into the statements along `ABDY.protocolSimulation` → `ABDY.substitutionSimulation` →
@@ -464,7 +466,7 @@ pseudocode and the proof bodies).
 - **Budget as an assumption throughout** (not pursued): the alternative shape is an
   unguarded `fail` in every system, `|F| ≤ f` relativized out of the invariants, and every
   headline conditional on a trace-level budget predicate. It is unnecessary here: in
-  `Implementation/ABDY/System.lean` the budget is a component guard on the one local
+  `ABDY/System.lean` the budget is a component guard on the one local
   state that owns the corrupted set, so `ABDY.protocol_safe` and `ABDY.protocol_traces`
   need no hypothesis on the trace.
 - **By-type finiteness of the environment coordinates** (not pursued): the process types enforce

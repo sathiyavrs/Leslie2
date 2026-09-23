@@ -337,7 +337,7 @@ Two ingredients, both shared with the protocol chain:
   and the round's network alone.
 - **The four congruences** (`parallel_right`, `abstract`, `relabel`, `abstract`): each
   family substitution runs under the composed system's own context, the same term
-  `Implementation/ABDY/CompositionChain.lean`'s `ABDY.substitutionSimulation` uses, so the third
+  `ABDY/Substitution.lean`'s `ABDY.substitutionSimulation` uses, so the third
   stage's target is definitionally `hybrid P`.
 
 The round speaks the family alphabet natively, so no lift precedes the family; the families are
@@ -359,7 +359,7 @@ interface and the specification — so `ABA/Implementation/System.lean` writes i
 the round message type `M`, the per-process per-round record `S`, the round rows, supplied as a
 relation embedded in one constructor of the program table, and the adversary's per-round ghost
 record `G` with its update `ghostStep` and its output `ghostOutput` (D30).
-`ABA/Implementation/ABDY/System.lean` instantiates it at ABDY22's implementation;
+`ABA/ABDY/System.lean` instantiates it at ABDY22's implementation;
 `ABA/Implementation/AFW/System.lean` instantiates it here.
 
 The division of labour is by label. `Implementation.roundOwn j` is the set of label classes an

@@ -247,7 +247,7 @@ in the specification, and whether that placement was chosen or forced.
 (`ABA/GBCA/ABDY/Algorithm.lean`), mirrored transition for transition at
 `GBCA.GBCAProgramStep` (`ABA/GBCA/ABDY/Components.lean`), Byzantine handshake transitions
 included, and at
-`ABDY.ABAProgramStep` (`ABA/Implementation/ABDY/System.lean`) with the reads taken through
+`ABDY.ABAProgramStep` (`ABA/ABDY/System.lean`) with the reads taken through
 `p.roundRecord r`.
 
 - **The wait-until order.** The order is carried from the `BIND` level down: each of

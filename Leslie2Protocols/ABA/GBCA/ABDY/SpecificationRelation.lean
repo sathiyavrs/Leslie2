@@ -136,7 +136,7 @@ corruption projections (`corrupt_call`/`corrupt_ret`/`corrupt_excluded`/`corrupt
 `implementationSpecification_corrupt_F_eq`. The statement is proved directly rather than read off
 the `fail` case of the matching `specificationRelation_row`
 (`ABA/GBCA/ABDY/RefinesSpecification.lean`), which only yields an existential match. Its consumers
-are that matching and the family lifting of `ABA/Implementation/ABDY/CompositionChain.lean`. -/
+are that matching and the family lifting of `ABA/ABDY/Substitution.lean`. -/
 
 /-- The two `corrupt` functions stay equal on aligned corrupted sets (a strong per-coordinate `fail`
 match, as required by the family lift). -/

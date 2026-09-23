@@ -1,3 +1,7 @@
+import Leslie2Protocols.ABA.ABDY.Composition
+import Leslie2Protocols.ABA.ABDY.Simulation
+import Leslie2Protocols.ABA.ABDY.Substitution
+import Leslie2Protocols.ABA.ABDY.System
 import Leslie2Protocols.ABA.Composition.ABAState
 import Leslie2Protocols.ABA.Composition.Components
 import Leslie2Protocols.ABA.Composition.Hybrid
@@ -63,9 +67,6 @@ import Leslie2Protocols.ABA.HybridRefinesSpecification.NonVacuity
 import Leslie2Protocols.ABA.HybridRefinesSpecification.Relation
 import Leslie2Protocols.ABA.HybridRefinesSpecification.Simulation
 import Leslie2Protocols.ABA.HybridRefinesSpecification.WeakTransitions
-import Leslie2Protocols.ABA.Implementation.ABDY.CompositionChain
-import Leslie2Protocols.ABA.Implementation.ABDY.Simulation
-import Leslie2Protocols.ABA.Implementation.ABDY.System
 import Leslie2Protocols.ABA.Implementation.AFW.CompositionChain
 import Leslie2Protocols.ABA.Implementation.AFW.RoundProjection
 import Leslie2Protocols.ABA.Implementation.AFW.RoundProjectionStep

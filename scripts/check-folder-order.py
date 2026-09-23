@@ -7,11 +7,12 @@ ABA development in import order and state that no folder imports one below it:
 everything. Lean enforces only that the import graph is acyclic, so a file may
 reach upwards through a chain the guides forbid and the build stays green.
 
-The order is the rank table below. The sub-folders with ranks of their own are
-``ReliableBroadcast/Bracha/``, ``GBCA/ABDY/``, ``GBCA/AFW/``,
-``Implementation/ABDY/`` and ``Implementation/AFW/``; ``GBCA/ABDY/`` and
-``GBCA/AFW/`` sit above ``Composition/``. Any other sub-folder carries its
-parent folder's rank. Five files carry ranks of their own.
+The order is the rank table below. ``ABDY/`` is a folder of the ABA root and
+carries a rank there. The sub-folders with ranks of their own are
+``ReliableBroadcast/Bracha/``, ``GBCA/ABDY/``, ``GBCA/AFW/`` and
+``Implementation/AFW/``; ``GBCA/ABDY/`` and ``GBCA/AFW/`` sit above
+``Composition/``. Any other sub-folder carries its parent folder's rank. Five
+files carry ranks of their own.
 ``GBCA/ABDY/MessagesAndRecords.lean`` sits below ``Composition/``, whose
 components read the messages a graded-agreement round exchanges, and above
 ``GBCA/``. ``GBCA/SpecificationOverRoundAlphabet.lean`` and
@@ -54,7 +55,7 @@ ORDER = (
     "Composition/Hybrid.lean",
     "GBCA/AFW",
     "HybridRefinesSpecification",
-    "Implementation/ABDY",
+    "ABDY",
     "Implementation/AFW",
     "Results.lean",
     "GhostErasure",

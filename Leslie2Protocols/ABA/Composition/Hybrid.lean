@@ -39,7 +39,7 @@ through the two hiding frames: a rendezvous label and a sub-protocol API label a
 `τ`, and every remaining label survives both hidings.
 
 `hybrid` is where the two chains of `ABA/Results.lean` meet.
-`ABA/Implementation/ABDY/CompositionChain.lean` carries the composed system of ABDY22's protocol
+`ABA/ABDY/Substitution.lean` carries the composed system of ABDY22's protocol
 to it in one stage, and `ABA/Implementation/AFW/CompositionChain.lean` the gather-based
 implementation in three. The simulation of `ABA/HybridRefinesSpecification/Simulation.lean` runs
 from `hybrid` on this vocabulary, the non-vacuity witnesses of
@@ -56,7 +56,7 @@ open Implementation Composition
 
 `gbcaSpecificationFamily` is the graded-agreement component: the family of round specifications,
 read over the protocol alphabet. It stands where the composed system of
-`ABA/Implementation/ABDY/CompositionChain.lean` carries the family of round instances, and the
+`ABA/ABDY/Composition.lean` carries the family of round instances, and the
 other three components are the same in both systems. -/
 
 /-- **The specification family of the protocol**: the ℕ-indexed family of round specifications, read
@@ -83,7 +83,7 @@ abbrev HybridState (P : Parameters) : Type :=
     ((∀ _ : Fin P.n, RoundLoopRecord P.n) × (ABANetworkState P.n × (ℕ → WCC.SpecState P.n)))
 
 /-- The four components in parallel, over the extended alphabet: the context term of
-`ABDY.composedExtended` (`ABA/Implementation/ABDY/CompositionChain.lean`) over the
+`ABDY.composedExtended` (`ABA/ABDY/Composition.lean`) over the
 specification family. -/
 noncomputable def hybridExtended (P : Parameters) : System (HybridState P) (ExtendedLabel P.n) :=
   (gbcaSpecificationFamily P).parallel
@@ -92,7 +92,7 @@ noncomputable def hybridExtended (P : Parameters) : System (HybridState P) (Exte
 
 /-- **The protocol-shaped specification**: the rendezvous alphabet hidden,
 the result read back over `Label n`, the sub-protocol API hidden. The pipeline is that of
-`ABDY.composed` (`ABA/Implementation/ABDY/CompositionChain.lean`), component for component. -/
+`ABDY.composed` (`ABA/ABDY/Composition.lean`), component for component. -/
 noncomputable def hybrid (P : Parameters) : System (HybridState P) (Label P.n) :=
   (((hybridExtended P).abstract (networkEventLabels P.n)).relabel).abstract (Label.hiddenAPI P.n)
 

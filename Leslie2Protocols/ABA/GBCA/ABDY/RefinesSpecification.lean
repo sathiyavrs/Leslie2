@@ -33,7 +33,7 @@ corrupted sets.
 the extended alphabet. `specificationRelation_init` and `refinesSpecification_failAct` are the two
 premises `ForwardSimulation.family` (`Framework/FamilySimulation.lean`) asks of the round-indexed
 family: the relation holds at the initial states, and it survives the broadcast corruption. The
-family lifting that consumes them is `ABA/Implementation/ABDY/CompositionChain.lean`.
+family lifting that consumes them is `ABA/ABDY/Substitution.lean`.
 
 Binding is stated on the labels of a trace (`GBCA.BindingTraceExtended`), so the inclusion carries
 it; `ABA/GBCA/ABDY/Binding.lean` takes that step.

@@ -4,16 +4,17 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.Composition.Hybrid
+import Leslie2Protocols.ABA.Composition.Components
+import Leslie2Protocols.ABA.GBCA.ABDY.RoundFamilyOwnedLabels
 
 /-!
-# The composed chain at the protocol shape
+# The composed system of ABDY22's protocol
 
-The protocol of `ABA/Implementation/ABDY/System.lean` is `n` programs beside one network and the
-coin oracle. A program reads its own replacement flag and nothing else about corruption: not the
-corrupted set, not the budget, not another process's status (D23). Each program runs its round
-loop and a graded-agreement round at once, and the single adversary holds both kinds of message
-sent. `ABDY.composed` reads that same protocol as a composition of four components:
+The protocol of `ABA/ABDY/System.lean` is `n` programs beside one network and the coin oracle. A
+program reads its own replacement flag and nothing else about corruption: not the corrupted set,
+not the budget, not another process's status (D23). Each program runs its round loop and a
+graded-agreement round at once, and the single adversary holds both kinds of message sent.
+`ABDY.composed` reads that same protocol as a composition of four components:
 
 * the graded-agreement family is the round-indexed family `GBCA.ByABDY.gbcaInstanceFamily`. Its
   round-`r` instance is a parallel component in its own right: the graded-agreement programs of
@@ -27,51 +28,41 @@ sent. `ABDY.composed` reads that same protocol as a composition of four componen
 The four components speak `Composition.ExtendedLabel n`, the rendezvous labels are hidden, and the
 result is read back over `Label n`. The round loops, the ABA network and the lifted oracle are
 defined in `ABA/Composition/Components.lean`. The pipeline `ABDY.composedExtended` /
-`ABDY.composedHidden` / `ABDY.composed` is the first section below, and it is the context term of
-`hybrid` (`ABA/Composition/Hybrid.lean`), character for character.
-
-`ABDY.composed` is carried to `hybrid` in one stage. `familySubstitution` replaces each round's
-graded-agreement instance by that round's specification, round by round, and
-`ABDY.substitutionSimulation` applies the four congruences of the pipeline to it:
-`ProbabilisticForwardSimulation.parallel_right` for the three untouched components, `abstract` for
-the rendezvous alphabet, `relabel` for the read-back to `Label n` (`Framework/Relabel.lean`), and
-`abstract` again for the sub-protocol API. `ABDY.substitution` is the inclusion of the composed
-system's achievable trace distributions in the protocol-shaped specification's, and
-`ABA/Results.lean` chains it with the earlier and later inclusions to state the headlines.
+`ABDY.composedHidden` / `ABDY.composed` is the context term of `hybrid`
+(`ABA/Composition/Hybrid.lean`), character for character.
 
 ## Per-round memory
 
 A round instance is a component of the composite from the start, not an object created by the
 round's first call, and it keeps its round records and its network state for the whole run. The
-graded-agreement coordinate of a composed state is therefore `ℕ → GBCA.ByABDY.RoundState
-n`: every round is present at every moment, whichever round each process is in. Those retained
-round records are specification state in one respect only: a process record of the protocol holds
-its own round records in a finite map and, once it terminates, answers nothing further, where the
-round instance answers at every moment (D22).
+graded-agreement coordinate of a composed state is therefore `ℕ → GBCA.ByABDY.RoundState n`:
+every round is present at every moment, whichever round each process is in. Those retained round
+records are specification state in one respect only: a process record of the protocol holds its own
+round records in a finite map and, once it terminates, answers nothing further, where the round
+instance answers at every moment (D22).
 
 ## The authorisation relocation (D11)
 
 A round instance carries no `k ∈ F` guard on the handshake labels `byzantineCallG`,
-`byzantineCallGLoop` and `byzantineRetG` (`GBCA/ABDY/Components.lean`, D11). A
-handshake label stays visible at the instance boundary and is authorised outside it. Here
-`ABANetwork` is that outside, and it carries the guard on its own copy of the corrupted set. The
-two copies are written by one broadcast: `fail` reaches every round's network through the family
-(`gbcaInstanceFamily_fail`) and `ABANetwork` on its own `fail` row, and
+`byzantineCallGLoop` and `byzantineRetG` (`GBCA/ABDY/Components.lean`, D11). A handshake label
+stays visible at the instance boundary and is authorised outside it. Here `ABANetwork` is that
+outside, and it carries the guard on its own copy of the corrupted set. The two copies are written
+by one broadcast: `fail` reaches every round's network through the family
+(`gbcaInstanceFamily_fail`) and `ABANetwork` through its own `fail` transition, and
 `GBCA.ByABDY.NetworkState.corrupt` and `ABANetworkState.corrupt` are the same budget-guarded
 insertion.
 
 ## What this file supplies
 
-The composed system with its rows, and the substitution that carries it to `hybrid`. The builders
-assemble a transition of the composite out of transitions of its components
+The composed system, and the lemmas that read and build its transitions. The builders assemble a
+transition of the composite out of transitions of its components
 (`composedExtended_visible_step`, `composedExtended_tau_gbca`, `composedExtended_tau_ABANetwork`,
 `gbcaInstanceFamily_owned`, `gbcaInstanceFamily_idle`, `gbcaInstanceFamily_tau`,
 `gbcaInstanceFamily_fail`, `composedHidden_of_event`, `composedHidden_of_tau`). The per-component
 transitions these consume and produce are those of `ABA/Composition/Components.lean` and
-`GBCA/ABDY/Components.lean`. The protocol meets the composed system in
-`ABA/Implementation/ABDY/Simulation.lean`.
+`GBCA/ABDY/Components.lean`. The protocol meets the composed system in `ABA/ABDY/Simulation.lean`,
+and `ABA/ABDY/Substitution.lean` carries the composed system to `hybrid`.
 -/
-
 namespace PLTS
 namespace ABA
 
@@ -260,61 +251,6 @@ theorem composedHidden_of_tau (P : Parameters) {q : ComposedState P} {μ : PMF (
   (composedHidden_step_iff P _ _ _).mpr (Or.inr h)
 
 end Composition
-
-/-! ## The substitution
-
-The graded-agreement family of the protocol is forward simulated by the family
-of round specifications, round by round, and the four congruences of the
-pipeline carry that simulation to `hybrid`. -/
-
-/-- The pointwise round relation: every round's instance state is related to
-that round's specification state. -/
-def substitutionRelationFamily (P : Parameters) (s : ℕ → GBCA.ByABDY.RoundState P.n)
-    (t : ℕ → GBCA.SpecState P.n) : Prop :=
-  ∀ r, GBCA.ByABDY.specificationRelation P r (s r) (t r)
-
-/-- **The family substitution**: the graded-agreement family of the protocol is forward simulated by
-the specification, round by round. The per-round simulation is `GBCA.ByABDY.refinesSpecification`;
-the broadcast compatibility is `GBCA.ByABDY.refinesSpecification_failAct`. -/
-theorem familySubstitution (P : Parameters) :
-    ForwardSimulation (GBCA.ByABDY.gbcaInstanceFamily P) (gbcaSpecificationFamily P)
-      (substitutionRelationFamily P) :=
-  ForwardSimulation.family GBCA.ByABDY.roundOwnsLabel GBCA.ByABDY.isFailLabel
-    (GBCA.ByABDY.corruptionAct P)
-    (GBCA.ByABDY.specificationCorruptionAct P)
-    (GBCA.ByABDY.refinesSpecification P) (GBCA.ByABDY.refinesSpecification_failAct P)
-
-/-- The family substitution as a probabilistic forward simulation: both systems are LTS, and the
-relation holds at the initial states. -/
-theorem familySubstitutionSimulation (P : Parameters) :
-    ProbabilisticForwardSimulation (GBCA.ByABDY.gbcaInstanceFamily P) (gbcaSpecificationFamily P)
-      (diracRel (substitutionRelationFamily P)) :=
-  ForwardSimulation.toProbabilistic (GBCA.ByABDY.gbcaInstanceFamily_isLTS P)
-    (gbcaSpecificationFamily_isLTS P)
-    (fun r => GBCA.ByABDY.specificationRelation_init P r) (familySubstitution P)
-
-namespace ABDY
-
-/-- **The substitution simulation at the protocol shape**: the four
-congruences applied to the family substitution under the composed system's own
-context — `parallel_right` for the three untouched components, `abstract` for the
-rendezvous alphabet, `relabel` for the read-back over `Label n`, and `abstract`
-for the sub-protocol API. -/
-noncomputable def substitutionSimulation (P : Parameters) :
-    ProbabilisticForwardSimulation (composed P) (hybrid P)
-      (parallelRel (diracRel (substitutionRelationFamily P))) :=
-  ((((familySubstitutionSimulation P).parallel_right
-    ((System.synchronisedProduct (roundLoopProgram P)).parallel
-      ((ABANetwork P).parallel (coinOverRoundAlphabet P)))).abstract
-        (networkEventLabels P.n)).relabel).abstract (Label.hiddenAPI P.n)
-
-/-- **The substitution inclusion**: every trace distribution achievable by the
-composed system is achievable by the protocol-shaped specification. -/
-theorem substitution (P : Parameters) :
-    achievableTraceDists (composed P) ⊆ achievableTraceDists (hybrid P) :=
-  (substitutionSimulation P).achievableTraceDists_subset
-
-end ABDY
 
 end ABA
 

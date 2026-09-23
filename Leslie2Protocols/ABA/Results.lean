@@ -5,10 +5,10 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.HybridRefinesSpecification.Simulation
-import Leslie2Protocols.ABA.Implementation.ABDY.Simulation
+import Leslie2Protocols.ABA.ABDY.Simulation
 import Leslie2Protocols.ABA.Implementation.AFW.Simulation
 import Leslie2Protocols.ABA.Composition.Hybrid
-import Leslie2Protocols.ABA.Implementation.ABDY.CompositionChain
+import Leslie2Protocols.ABA.ABDY.Substitution
 
 /-!
 # The main theorems of the ABA case study
@@ -33,12 +33,12 @@ whose traces satisfy Validity and Agreement (`spec_safe`, `Specifications/ABASaf
 Three probabilistic forward simulations carry `ABDY.protocol` to the
 specification:
 
-1. `ABDY.protocolSimulation` (`Implementation/ABDY/Simulation.lean`) — the protocol into the
+1. `ABDY.protocolSimulation` (`ABDY/Simulation.lean`) — the protocol into the
    composed system, along the Dirac lift of `ABDY.ProtocolRelation`. The relation determines every
    composed coordinate from the protocol state; the inclusion is
    one-directional because a round instance also answers the Byzantine handshake rows
    (D11) and the processes the protocol has terminated (D22).
-2. `ABDY.substitutionSimulation` (`Implementation/ABDY/CompositionChain.lean`) — replace each
+2. `ABDY.substitutionSimulation` (`ABDY/Substitution.lean`) — replace each
    round's graded-agreement instance by its specification, the other three components untouched:
    the family substitution carried by four congruences (`parallel_right`, `abstract`, `relabel`,
    `abstract`).

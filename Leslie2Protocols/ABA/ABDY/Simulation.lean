@@ -4,15 +4,16 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.Implementation.ABDY.System
-import Leslie2Protocols.ABA.Implementation.ABDY.CompositionChain
+import Leslie2Protocols.ABA.ABDY.Composition
+import Leslie2Protocols.ABA.ABDY.System
 import Leslie2Protocols.Framework.DiracRelationCoupling
+import Leslie2.Results
 
 /-!
 # The protocol under its composed system
 
-The protocol of `ABA/Implementation/ABDY/System.lean` and the composed system of
-`ABA/Implementation/ABDY/CompositionChain.lean` present one protocol at two cuts. A process record
+The protocol of `ABA/ABDY/System.lean` and the composed system of
+`ABA/ABDY/Composition.lean` present one protocol at two cuts. A process record
 of the protocol carries the round-loop record beside the round record of every round the process
 has touched (D22). A composed state carries one graded-agreement instance per round, at every
 moment. The round record of round `r` at a process is the entry of that process in the instance
