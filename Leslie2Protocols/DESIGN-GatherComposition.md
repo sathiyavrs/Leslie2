@@ -4,15 +4,20 @@ and its chain
 Companion design document to the gather-based implementation of graded agreement: the
 sub-protocol compositions (`ABA/Vocabulary/ProcessAndNetworkState.lean`,
 `ABA/ReliableBroadcast/Specification.lean`,
+`ABA/ReliableBroadcast/Bracha/MessagesAndRecords.lean`,
+`ABA/ReliableBroadcast/Bracha/Components.lean`,
 `ABA/ReliableBroadcast/Bracha/Composition.lean`,
 `ABA/ReliableBroadcast/Bracha/SpecificationOverInstanceAlphabet.lean`,
 `ABA/ReliableBroadcast/Bracha/CompositionStepInversion.lean`,
-`ABA/ReliableBroadcast/Bracha/Implementation.lean`, `ABA/Gather/Specification.lean`,
+`ABA/ReliableBroadcast/Bracha/Algorithm.lean`, `ABA/Gather/Specification.lean`,
 `ABA/Gather/MessagesAndCommonCore.lean`, `ABA/Gather/Composition.lean`,
 `ABA/Gather/SpecificationOverInstanceAlphabet.lean`,
 `ABA/Gather/CompositionStepInversion.lean`,
 `ABA/Gather/StepOverBroadcastSpecification.lean`, `ABA/Gather/StepOverBracha.lean`), their
-refinements (`ABA/ReliableBroadcast/Bracha/RefinesSpecification.lean`,
+refinements (`ABA/ReliableBroadcast/Bracha/EchoCertificate.lean`,
+`ABA/ReliableBroadcast/Bracha/Invariant.lean`,
+`ABA/ReliableBroadcast/Bracha/SpecificationRelation.lean`,
+`ABA/ReliableBroadcast/Bracha/RefinesSpecification.lean`,
 `ABA/Gather/RefinesSpecification.lean`, `ABA/Gather/BroadcastSubstitution.lean`), the
 two-gather round and its three tiers (`ABA/GBCA/AFW/Counting.lean`,
 `ABA/GBCA/AFW/Composition.lean`, `ABA/GBCA/AFW/CompositionStepInversion.lean`,

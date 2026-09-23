@@ -85,7 +85,7 @@ receiving `echo4` messages from `2t + 1` parties" where the pseudocode's lines 1
 from the leader, on more than `(n+f)/2` `ECHO m` receipts, or on `f + 1` `VOTE m`
 receipts; the vote step fires on more than `(n+f)/2` `ECHO m` receipts or on `f + 1`
 `VOTE m` receipts; and the return takes `2f + 1` `VOTE m` receipts
-(`BRB.BrachaStep.echo`, `voteQuorum`, `voteAmplification`, `ret`). Algorithm 6 of the source
+(`BRB.BrachaAlgorithm.echo`, `voteQuorum`, `voteAmplification`, `ret`). Algorithm 6 of the source
 blueprint fires the echo step on an `INIT` receipt alone and puts `n − f` at every
 quorum. That is deviation **D34**, and the quorum is `Parameters.echoReceiptQuorum`, which is
 `(n + f) / 2 + 1`; `BRB.EchoCertificate` is at that size, and the invariant clause `echo_provenance`

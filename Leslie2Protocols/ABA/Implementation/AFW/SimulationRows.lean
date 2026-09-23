@@ -158,13 +158,13 @@ theorem broadcastLocalState_returned (p : LocalState P.n (BRB.ProcessRecord X) (
 
 /-- **A delivery that supplies a first returned value licenses the instance's return to the
 receiver.** -/
-theorem brachaStep_ret_of_broadcastReturn {i j k : Fin P.n} {s : BRB.BrachaState P.n X}
+theorem brachaAlgorithm_ret_of_broadcastReturn {i j k : Fin P.n} {s : BRB.BrachaState P.n X}
     {m : BRB.Message X} {v : X} (hr : (s.process j).returned = false)
     (hst : broadcastReturnsFor P ((s.1 j).deliverTo k m) = some v) :
-    BRB.BrachaStep P i (s.receiveMessage j k m) (.ret j v)
+    BRB.BrachaAlgorithm P i (s.receiveMessage j k m) (.ret j v)
       (PMF.pure ((s.receiveMessage j k m).setProcess j
         { (s.receiveMessage j k m).process j with returned := true })) := by
-  refine BRB.BrachaStep.ret _ j v ?_ ?_
+  refine BRB.BrachaAlgorithm.ret _ j v ?_ ?_
   · rw [InstanceState.receivedCount_eq_localState, receiveMessage_self]
     exact broadcastReturnsFor_voteQuorum P hst
   · rw [InstanceState.receiveMessage_process]
@@ -514,8 +514,8 @@ theorem stepOverBracha_invariantStep {X : Type} [DecidableEq X] {s : Gather.Stat
   | call id x hin hb =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    exact ⟨invariantStep_update _ id _ (BRB.BrachaStep.call (Gather.inputBroadcasts s id) x hb) k,
-      InvariantStep.unchanged P k _⟩
+    exact ⟨invariantStep_update _ id _ (BRB.BrachaAlgorithm.call (Gather.inputBroadcasts s id) x hb)
+      k, InvariantStep.unchanged P k _⟩
   | callLoop id x =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
@@ -544,7 +544,7 @@ theorem stepOverBracha_invariantStep {X : Type} [DecidableEq X] {s : Gather.Stat
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     exact ⟨InvariantStep.unchanged P k _,
-      invariantStep_update _ q _ (BRB.BrachaStep.call (Gather.bindBroadcasts s q) U hbc) k⟩
+      invariantStep_update _ q _ (BRB.BrachaAlgorithm.call (Gather.bindBroadcasts s q) U hbc) k⟩
   | byzantine q m hF =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
@@ -564,8 +564,8 @@ theorem stepOverBracha_invariantStep {X : Type} [DecidableEq X] {s : Gather.Stat
   | fail id =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    exact ⟨InvariantStep.row (BRB.BrachaStep.fail (Gather.inputBroadcasts s k) id),
-      InvariantStep.row (BRB.BrachaStep.fail (Gather.bindBroadcasts s k) id)⟩
+    exact ⟨InvariantStep.row (BRB.BrachaAlgorithm.fail (Gather.inputBroadcasts s k) id),
+      InvariantStep.row (BRB.BrachaAlgorithm.fail (Gather.bindBroadcasts s k) id)⟩
 
 variable {s t : GBCA.ByAFW.RoundStateOverBracha P.n}
 
@@ -875,8 +875,8 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
       exact roundInvariant_secondGather hR1 rfl hrow2
   | firstGatherInputBroadcastEcho _ _ _ i mm hh hterm hrecv hsend =>
     have hrow := Gather.StepOverBracha.inputBroadcastTau (firstGatherProjection P u w r) i _
-      (BRB.BrachaStep.echo (Gather.inputBroadcasts (firstGatherProjection P u w r) i) j mm hrecv
-        hsend)
+      (BRB.BrachaAlgorithm.echo (Gather.inputBroadcasts (firstGatherProjection P u w r) i) j mm
+        hrecv hsend)
     refine ⟨_, rfl, rfl,
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr', ?_,
         ?_⟩ <;> rw [roundProjection_firstGatherInputBroadcastEcho rfl]
@@ -884,8 +884,8 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
     · exact roundInvariant_firstGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow
   | firstGatherInputBroadcastVoteQuorum _ _ _ i mm hh hterm hcnt hsend =>
     have hrow := Gather.StepOverBracha.inputBroadcastTau (firstGatherProjection P u w r) i _
-      (BRB.BrachaStep.voteQuorum (Gather.inputBroadcasts (firstGatherProjection P u w r) i) j mm
-        hcnt hsend)
+      (BRB.BrachaAlgorithm.voteQuorum (Gather.inputBroadcasts (firstGatherProjection P u w r) i) j
+        mm hcnt hsend)
     refine ⟨_, rfl, rfl,
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr', ?_,
         ?_⟩ <;> rw [roundProjection_firstGatherInputBroadcastVote rfl]
@@ -893,8 +893,8 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
     · exact roundInvariant_firstGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow
   | firstGatherInputBroadcastVoteAmplification _ _ _ i mm hh hterm hcnt hsend =>
     have hrow := Gather.StepOverBracha.inputBroadcastTau (firstGatherProjection P u w r) i _
-      (BRB.BrachaStep.voteAmplification (Gather.inputBroadcasts (firstGatherProjection P u w r) i) j
-        mm hcnt hsend)
+      (BRB.BrachaAlgorithm.voteAmplification (Gather.inputBroadcasts (firstGatherProjection P u w r)
+        i) j mm hcnt hsend)
     refine ⟨_, rfl, rfl,
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr', ?_,
         ?_⟩ <;> rw [roundProjection_firstGatherInputBroadcastVote rfl]
@@ -902,7 +902,7 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
     · exact roundInvariant_firstGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow
   | firstGatherBindBroadcastEcho _ _ _ i mm hh hterm hrecv hsend =>
     have hrow := Gather.StepOverBracha.bindBroadcastTau (firstGatherProjection P u w r) i _
-      (BRB.BrachaStep.echo (Gather.bindBroadcasts (firstGatherProjection P u w r) i) j mm hrecv
+      (BRB.BrachaAlgorithm.echo (Gather.bindBroadcasts (firstGatherProjection P u w r) i) j mm hrecv
         hsend)
     refine ⟨_, rfl, rfl,
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr', ?_,
@@ -911,8 +911,8 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
     · exact roundInvariant_firstGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow
   | firstGatherBindBroadcastVoteQuorum _ _ _ i mm hh hterm hcnt hsend =>
     have hrow := Gather.StepOverBracha.bindBroadcastTau (firstGatherProjection P u w r) i _
-      (BRB.BrachaStep.voteQuorum (Gather.bindBroadcasts (firstGatherProjection P u w r) i) j mm hcnt
-        hsend)
+      (BRB.BrachaAlgorithm.voteQuorum (Gather.bindBroadcasts (firstGatherProjection P u w r) i) j mm
+        hcnt hsend)
     refine ⟨_, rfl, rfl,
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr', ?_,
         ?_⟩ <;> rw [roundProjection_firstGatherBindBroadcastVote rfl]
@@ -920,8 +920,8 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
     · exact roundInvariant_firstGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow
   | firstGatherBindBroadcastVoteAmplification _ _ _ i mm hh hterm hcnt hsend =>
     have hrow := Gather.StepOverBracha.bindBroadcastTau (firstGatherProjection P u w r) i _
-      (BRB.BrachaStep.voteAmplification (Gather.bindBroadcasts (firstGatherProjection P u w r) i) j
-        mm hcnt hsend)
+      (BRB.BrachaAlgorithm.voteAmplification (Gather.bindBroadcasts (firstGatherProjection P u w r)
+        i) j mm hcnt hsend)
     refine ⟨_, rfl, rfl,
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr', ?_,
         ?_⟩ <;> rw [roundProjection_firstGatherBindBroadcastVote rfl]
@@ -929,8 +929,8 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
     · exact roundInvariant_firstGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow
   | secondGatherInputBroadcastEcho _ _ _ i mm hh hterm hrecv hsend =>
     have hrow := Gather.StepOverBracha.inputBroadcastTau (secondGatherProjection P u w r) i _
-      (BRB.BrachaStep.echo (Gather.inputBroadcasts (secondGatherProjection P u w r) i) j mm hrecv
-        hsend)
+      (BRB.BrachaAlgorithm.echo (Gather.inputBroadcasts (secondGatherProjection P u w r) i) j mm
+        hrecv hsend)
     refine ⟨_, rfl, rfl,
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr', ?_,
         ?_⟩ <;> rw [roundProjection_secondGatherInputBroadcastEcho rfl]
@@ -938,8 +938,8 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
     · exact roundInvariant_secondGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow
   | secondGatherInputBroadcastVoteQuorum _ _ _ i mm hh hterm hcnt hsend =>
     have hrow := Gather.StepOverBracha.inputBroadcastTau (secondGatherProjection P u w r) i _
-      (BRB.BrachaStep.voteQuorum (Gather.inputBroadcasts (secondGatherProjection P u w r) i) j mm
-        hcnt hsend)
+      (BRB.BrachaAlgorithm.voteQuorum (Gather.inputBroadcasts (secondGatherProjection P u w r) i) j
+        mm hcnt hsend)
     refine ⟨_, rfl, rfl,
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr', ?_,
         ?_⟩ <;> rw [roundProjection_secondGatherInputBroadcastVote rfl]
@@ -947,8 +947,8 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
     · exact roundInvariant_secondGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow
   | secondGatherInputBroadcastVoteAmplification _ _ _ i mm hh hterm hcnt hsend =>
     have hrow := Gather.StepOverBracha.inputBroadcastTau (secondGatherProjection P u w r) i _
-      (BRB.BrachaStep.voteAmplification (Gather.inputBroadcasts (secondGatherProjection P u w r) i)
-        j mm hcnt hsend)
+      (BRB.BrachaAlgorithm.voteAmplification (Gather.inputBroadcasts (secondGatherProjection P u w
+        r) i) j mm hcnt hsend)
     refine ⟨_, rfl, rfl,
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr', ?_,
         ?_⟩ <;> rw [roundProjection_secondGatherInputBroadcastVote rfl]
@@ -956,8 +956,8 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
     · exact roundInvariant_secondGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow
   | secondGatherBindBroadcastEcho _ _ _ i mm hh hterm hrecv hsend =>
     have hrow := Gather.StepOverBracha.bindBroadcastTau (secondGatherProjection P u w r) i _
-      (BRB.BrachaStep.echo (Gather.bindBroadcasts (secondGatherProjection P u w r) i) j mm hrecv
-        hsend)
+      (BRB.BrachaAlgorithm.echo (Gather.bindBroadcasts (secondGatherProjection P u w r) i) j mm
+        hrecv hsend)
     refine ⟨_, rfl, rfl,
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr', ?_,
         ?_⟩ <;> rw [roundProjection_secondGatherBindBroadcastEcho rfl]
@@ -965,8 +965,8 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
     · exact roundInvariant_secondGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow
   | secondGatherBindBroadcastVoteQuorum _ _ _ i mm hh hterm hcnt hsend =>
     have hrow := Gather.StepOverBracha.bindBroadcastTau (secondGatherProjection P u w r) i _
-      (BRB.BrachaStep.voteQuorum (Gather.bindBroadcasts (secondGatherProjection P u w r) i) j mm
-        hcnt hsend)
+      (BRB.BrachaAlgorithm.voteQuorum (Gather.bindBroadcasts (secondGatherProjection P u w r) i) j
+        mm hcnt hsend)
     refine ⟨_, rfl, rfl,
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr', ?_,
         ?_⟩ <;> rw [roundProjection_secondGatherBindBroadcastVote rfl]
@@ -974,8 +974,8 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
     · exact roundInvariant_secondGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow
   | secondGatherBindBroadcastVoteAmplification _ _ _ i mm hh hterm hcnt hsend =>
     have hrow := Gather.StepOverBracha.bindBroadcastTau (secondGatherProjection P u w r) i _
-      (BRB.BrachaStep.voteAmplification (Gather.bindBroadcasts (secondGatherProjection P u w r) i) j
-        mm hcnt hsend)
+      (BRB.BrachaAlgorithm.voteAmplification (Gather.bindBroadcasts (secondGatherProjection P u w r)
+        i) j mm hcnt hsend)
     refine ⟨_, rfl, rfl,
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr', ?_,
         ?_⟩ <;> rw [roundProjection_secondGatherBindBroadcastVote rfl]
@@ -1003,10 +1003,11 @@ theorem answer_deliverFirstGatherInputBroadcast (P : Parameters)
       RoundInvariant P (roundProjection P (Function.update u j (c,
         (u j).2.deliverTo r k (.firstGatherInputBroadcasts i mm))) (w.writeGhost (ghostStep P)
           (Sum.inr (.gbcaDeliver r j k (.firstGatherInputBroadcasts i mm)))) r) := by
-  have hdlv : BRB.BrachaStep P i (Gather.inputBroadcasts (firstGatherProjection P u w r) i) .tau
+  have hdlv : BRB.BrachaAlgorithm P i (Gather.inputBroadcasts (firstGatherProjection P u w r) i)
+      .tau
       (PMF.pure ((Gather.inputBroadcasts (firstGatherProjection P u w r) i).receiveMessage j k mm))
         :=
-    BRB.BrachaStep.deliver _ j k mm
+    BRB.BrachaAlgorithm.deliver _ j k mm
       ((mem_messagesOf (hf := firstGatherInputBroadcastMessageOf_inj i)).mpr ⟨_, hsent,
         by simp [firstGatherInputBroadcastMessageOf]⟩)
   have hrow₁ := Gather.StepOverBracha.inputBroadcastTau (firstGatherProjection P u w r) i _ hdlv
@@ -1040,7 +1041,7 @@ theorem answer_deliverFirstGatherInputBroadcast (P : Parameters)
             by
       refine Gather.StepOverBracha.inputBroadcastRet _ i j v _ ?_
       rw [hbi]
-      exact brachaStep_ret_of_broadcastReturn hr₀ hst
+      exact brachaAlgorithm_ret_of_broadcastReturn hr₀ hst
     rw [roundProjection_deliverFirstGatherInputBroadcast_ret rfl r i k mm v hst]
     exact ⟨roundOverBracha_run_two (roundOverBracha_firstGatherTau (roundProjection P u w r) hrow₁)
         (roundOverBracha_firstGatherTau (afterFirstGatherInputBroadcastDeliver P (roundProjection P
@@ -1060,10 +1061,10 @@ theorem answer_deliverFirstGatherBindBroadcast (P : Parameters)
       RoundInvariant P (roundProjection P (Function.update u j (c,
         (u j).2.deliverTo r k (.firstGatherBindBroadcasts i mm))) (w.writeGhost (ghostStep P)
           (Sum.inr (.gbcaDeliver r j k (.firstGatherBindBroadcasts i mm)))) r) := by
-  have hdlv : BRB.BrachaStep P i (Gather.bindBroadcasts (firstGatherProjection P u w r) i) .tau
+  have hdlv : BRB.BrachaAlgorithm P i (Gather.bindBroadcasts (firstGatherProjection P u w r) i) .tau
       (PMF.pure ((Gather.bindBroadcasts (firstGatherProjection P u w r) i).receiveMessage j k mm))
         :=
-    BRB.BrachaStep.deliver _ j k mm
+    BRB.BrachaAlgorithm.deliver _ j k mm
       ((mem_messagesOf (hf := firstGatherBindBroadcastMessageOf_inj i)).mpr ⟨_, hsent,
         by simp [firstGatherBindBroadcastMessageOf]⟩)
   have hrow₁ := Gather.StepOverBracha.bindBroadcastTau (firstGatherProjection P u w r) i _ hdlv
@@ -1097,7 +1098,7 @@ theorem answer_deliverFirstGatherBindBroadcast (P : Parameters)
           (afterFirstGatherBindBroadcastDeliver P (roundProjection P u w r) i j k mm) i j v))) := by
       refine Gather.StepOverBracha.bindRet _ i j v _ ?_
       rw [hbi]
-      exact brachaStep_ret_of_broadcastReturn hr₀ hst
+      exact brachaAlgorithm_ret_of_broadcastReturn hr₀ hst
     rw [roundProjection_deliverFirstGatherBindBroadcast_ret rfl r i k mm v hst]
     exact ⟨roundOverBracha_run_two (roundOverBracha_firstGatherTau (roundProjection P u w r) hrow₁)
         (roundOverBracha_firstGatherTau (afterFirstGatherBindBroadcastDeliver P (roundProjection P u
@@ -1117,10 +1118,11 @@ theorem answer_deliverSecondGatherInputBroadcast (P : Parameters)
       RoundInvariant P (roundProjection P (Function.update u j (c,
         (u j).2.deliverTo r k (.secondGatherInputBroadcasts i mm))) (w.writeGhost (ghostStep P)
           (Sum.inr (.gbcaDeliver r j k (.secondGatherInputBroadcasts i mm)))) r) := by
-  have hdlv : BRB.BrachaStep P i (Gather.inputBroadcasts (secondGatherProjection P u w r) i) .tau
+  have hdlv : BRB.BrachaAlgorithm P i (Gather.inputBroadcasts (secondGatherProjection P u w r) i)
+      .tau
       (PMF.pure ((Gather.inputBroadcasts (secondGatherProjection P u w r) i).receiveMessage j k mm))
         :=
-    BRB.BrachaStep.deliver _ j k mm
+    BRB.BrachaAlgorithm.deliver _ j k mm
       ((mem_messagesOf (hf := secondGatherInputBroadcastMessageOf_inj i)).mpr ⟨_, hsent,
         by simp [secondGatherInputBroadcastMessageOf]⟩)
   have hrow₁ := Gather.StepOverBracha.inputBroadcastTau (secondGatherProjection P u w r) i _ hdlv
@@ -1154,7 +1156,7 @@ theorem answer_deliverSecondGatherInputBroadcast (P : Parameters)
             by
       refine Gather.StepOverBracha.inputBroadcastRet _ i j v _ ?_
       rw [hbi]
-      exact brachaStep_ret_of_broadcastReturn hr₀ hst
+      exact brachaAlgorithm_ret_of_broadcastReturn hr₀ hst
     rw [roundProjection_deliverSecondGatherInputBroadcast_ret rfl r i k mm v hst]
     exact ⟨roundOverBracha_run_two (roundOverBracha_secondGatherTau (roundProjection P u w r) hrow₁)
         (roundOverBracha_secondGatherTau (afterSecondGatherInputBroadcastDeliver P (roundProjection
@@ -1174,10 +1176,11 @@ theorem answer_deliverSecondGatherBindBroadcast (P : Parameters)
       RoundInvariant P (roundProjection P (Function.update u j (c,
         (u j).2.deliverTo r k (.secondGatherBindBroadcasts i mm))) (w.writeGhost (ghostStep P)
           (Sum.inr (.gbcaDeliver r j k (.secondGatherBindBroadcasts i mm)))) r) := by
-  have hdlv : BRB.BrachaStep P i (Gather.bindBroadcasts (secondGatherProjection P u w r) i) .tau
+  have hdlv : BRB.BrachaAlgorithm P i (Gather.bindBroadcasts (secondGatherProjection P u w r) i)
+      .tau
       (PMF.pure ((Gather.bindBroadcasts (secondGatherProjection P u w r) i).receiveMessage j k mm))
         :=
-    BRB.BrachaStep.deliver _ j k mm
+    BRB.BrachaAlgorithm.deliver _ j k mm
       ((mem_messagesOf (hf := secondGatherBindBroadcastMessageOf_inj i)).mpr ⟨_, hsent,
         by simp [secondGatherBindBroadcastMessageOf]⟩)
   have hrow₁ := Gather.StepOverBracha.bindBroadcastTau (secondGatherProjection P u w r) i _ hdlv
@@ -1211,7 +1214,7 @@ theorem answer_deliverSecondGatherBindBroadcast (P : Parameters)
             by
       refine Gather.StepOverBracha.bindRet _ i j v _ ?_
       rw [hbi]
-      exact brachaStep_ret_of_broadcastReturn hr₀ hst
+      exact brachaAlgorithm_ret_of_broadcastReturn hr₀ hst
     rw [roundProjection_deliverSecondGatherBindBroadcast_ret rfl r i k mm v hst]
     exact ⟨roundOverBracha_run_two (roundOverBracha_secondGatherTau (roundProjection P u w r) hrow₁)
         (roundOverBracha_secondGatherTau (afterSecondGatherBindBroadcastDeliver P (roundProjection P
@@ -1433,25 +1436,29 @@ theorem byzantine_answer (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessRecor
       roundInvariant_secondGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow⟩
   | firstGatherInputBroadcasts i mm =>
     have hrow := Gather.StepOverBracha.inputBroadcastTau (firstGatherProjection P u w r) i _
-      (BRB.BrachaStep.byzantine (Gather.inputBroadcasts (firstGatherProjection P u w r) i) k mm hF)
+      (BRB.BrachaAlgorithm.byzantine (Gather.inputBroadcasts (firstGatherProjection P u w r) i) k mm
+        hF)
     rw [roundProjection_byzantineFirstGatherInputBroadcast]
     exact ⟨roundOverBracha_firstGatherTau (roundProjection P u w r) hrow,
       roundInvariant_firstGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow⟩
   | firstGatherBindBroadcasts i mm =>
     have hrow := Gather.StepOverBracha.bindBroadcastTau (firstGatherProjection P u w r) i _
-      (BRB.BrachaStep.byzantine (Gather.bindBroadcasts (firstGatherProjection P u w r) i) k mm hF)
+      (BRB.BrachaAlgorithm.byzantine (Gather.bindBroadcasts (firstGatherProjection P u w r) i) k mm
+        hF)
     rw [roundProjection_byzantineFirstGatherBindBroadcast]
     exact ⟨roundOverBracha_firstGatherTau (roundProjection P u w r) hrow,
       roundInvariant_firstGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow⟩
   | secondGatherInputBroadcasts i mm =>
     have hrow := Gather.StepOverBracha.inputBroadcastTau (secondGatherProjection P u w r) i _
-      (BRB.BrachaStep.byzantine (Gather.inputBroadcasts (secondGatherProjection P u w r) i) k mm hF)
+      (BRB.BrachaAlgorithm.byzantine (Gather.inputBroadcasts (secondGatherProjection P u w r) i) k
+        mm hF)
     rw [roundProjection_byzantineSecondGatherInputBroadcast]
     exact ⟨roundOverBracha_secondGatherTau (roundProjection P u w r) hrow,
       roundInvariant_secondGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow⟩
   | secondGatherBindBroadcasts i mm =>
     have hrow := Gather.StepOverBracha.bindBroadcastTau (secondGatherProjection P u w r) i _
-      (BRB.BrachaStep.byzantine (Gather.bindBroadcasts (secondGatherProjection P u w r) i) k mm hF)
+      (BRB.BrachaAlgorithm.byzantine (Gather.bindBroadcasts (secondGatherProjection P u w r) i) k mm
+        hF)
     rw [roundProjection_byzantineSecondGatherBindBroadcast]
     exact ⟨roundOverBracha_secondGatherTau (roundProjection P u w r) hrow,
       roundInvariant_secondGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl hrow⟩

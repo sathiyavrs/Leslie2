@@ -25,11 +25,11 @@ the network into components, and on one shared label each takes either row.
 Two of the four combinations are behaviours of no row table: the leader loops
 while the network posts `⟨INIT, m⟩`, and the leader records while the network
 posts nothing. The first reaches a state whose network holds the message and
-whose leader holds no input, which only `BRB.BrachaStep.byzantine` produces and only
+whose leader holds no input, which only `BRB.BrachaAlgorithm.byzantine` produces and only
 under `ldr ∈ F`.
 
 **What fails.** The row characterisation stated label by label, `brachaInstance.step s l μ ↔ ∃ l₀,
-specificationLabelMap l = some l₀ ∧ BrachaStep s l₀ μ`, is false: at the call label the right-hand
+specificationLabelMap l = some l₀ ∧ BrachaAlgorithm s l₀ μ`, is false: at the call label the right-hand
 side admits the loop and the left-hand side offers the call alone, and at the loop label the
 reverse. The refinement into the specification fails with it, since a second call with another
 payload would let the specification record and commit a value the instance never broadcast.
@@ -46,7 +46,7 @@ so its own loop row answers the loop label. The level above pulls the compositio
 back from its own (`Gather.inputBroadcastLabelMap`, `Gather.bindBroadcastLabelMap`,
 `GBCA.ByAFW.firstGatherLabelMap`, `GBCA.ByAFW.secondGatherLabelMap`). The row
 characterisation is then exact in the form quantified over the interface labels: `(∃ l,
-specificationLabelMap l = some l₀ ∧ brachaInstance.step s l μ) ↔ BrachaStep s l₀ μ`
+specificationLabelMap l = some l₀ ∧ brachaInstance.step s l μ) ↔ BrachaAlgorithm s l₀ μ`
 (`BRB.brachaInstance_step_iff_row`,
 `Gather.instanceOverBroadcastSpecification_step_iff_row`,
 `Gather.instanceOverBracha_step_iff_row`, `GBCA.ByAFW.roundOverGatherSpecifications_step_iff_row`).

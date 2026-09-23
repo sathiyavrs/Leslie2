@@ -32,10 +32,10 @@ variable {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} {w : NetworkState P.n} {j 
 /-! ### A send in a broadcast instance
 
 A Bracha row writes the sender's local state in one broadcast instance and records on that
-instance's network state. Each is the instance's `send` event, which `BRB.BrachaStep.echo`,
-`BRB.BrachaStep.voteQuorum` and `BRB.BrachaStep.voteAmplification` write, and the composed round
-reaches it through `Gather.setInputBroadcasts` or `Gather.setBindBroadcasts`. The return flag the
-view supplies is the returned value's, which a local write does not move. -/
+instance's network state. Each is the instance's `send` event, which `BRB.BrachaAlgorithm.echo`,
+`BRB.BrachaAlgorithm.voteQuorum` and `BRB.BrachaAlgorithm.voteAmplification` write, and the
+composed round reaches it through `Gather.setInputBroadcasts` or `Gather.setBindBroadcasts`. The
+return flag the view supplies is the returned value's, which a local write does not move. -/
 
 /-- A send in an input-broadcast instance of the first gather, read through the
 view. -/

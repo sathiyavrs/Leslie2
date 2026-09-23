@@ -402,7 +402,7 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
     The binding form makes it a history variable, determined by the prefix, and a binding gather is a non-binding gather with one phase more, so every execution of the round is an execution of Algorithm~4 of~\cite{AFW25}.
     A non-binding second gather needs a prophecy variable or a backward simulation, neither of which the framework carries.
   \item D34: Bracha's rounds follow Algorithm~1 of~\cite{AFW25}, where Algorithm~6 of the source blueprint fires the echo step on an $\mathrm{INIT}$ receipt alone and puts $n-f$ at every quorum.
-    The echo step fires on an $\mathrm{INIT}$ receipt from the leader, on $\mathrm{ECHO}\,m$ receipts from more than $(n+f)/2$ senders, or on $f{+}1$ $\mathrm{VOTE}\,m$ receipts, which are the three cases of the guard of \leandeclnamed{echo}{PLTS.ABA.BRB.BrachaStep.echo}.
+    The echo step fires on an $\mathrm{INIT}$ receipt from the leader, on $\mathrm{ECHO}\,m$ receipts from more than $(n+f)/2$ senders, or on $f{+}1$ $\mathrm{VOTE}\,m$ receipts, which are the three cases of the guard of \leandeclnamed{echo}{PLTS.ABA.BRB.BrachaAlgorithm.echo}.
     The vote step fires on that $\mathrm{ECHO}$ quorum or on $f{+}1$ $\mathrm{VOTE}\,m$ receipts, and the return takes $2f{+}1$ $\mathrm{VOTE}\,m$ receipts.
     The quorum is \leandecl{PLTS.ABA.Parameters.echoReceiptQuorum}, which is $(n+f)/2 + 1$, and the third message level is named $\mathrm{VOTE}$ here and in the source blueprint where both~\cite{ABDY22} and~\cite{AFW25} write $\mathrm{READY}$.
     The certificate the refinement carries is an $\mathrm{ECHO}$ receipt quorum at that size, and a correct echo of $m$ carries the leader's input unless the leader is corrupted.
@@ -1934,10 +1934,15 @@ The encoding therefore splits the recorded input from the committed value and gu
 The refinement certifies the committed value by an $\mathrm{ECHO}$ receipt quorum of more than $(n+f)/2$ senders --- $F$-blind, monotone, unique by quorum intersection over the write-once echoes --- and fires the abstract commit on demand, as a two-step weak run under the first return.
 See \leanmodule{Leslie2Protocols/ABA/Vocabulary/ProcessAndNetworkState},
 \leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/Specification},
-\leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/Bracha/Implementation},
+\leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/Bracha/MessagesAndRecords},
+\leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/Bracha/Components},
 \leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/Bracha/Composition},
 \leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/Bracha/SpecificationOverInstanceAlphabet},
-\leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/Bracha/CompositionStepInversion} and
+\leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/Bracha/CompositionStepInversion},
+\leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/Bracha/Algorithm},
+\leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/Bracha/EchoCertificate},
+\leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/Bracha/Invariant},
+\leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/Bracha/SpecificationRelation} and
 \leanmodule{Leslie2Protocols/ABA/ReliableBroadcast/Bracha/RefinesSpecification}.
 
 \input{nodes/def-aba-networkstate}
