@@ -16,7 +16,7 @@ import Leslie2Protocols.Framework.LoopsAndInstanceFamilies
 One gather instance over an arbitrary payload type `X`, taken apart into the
 pieces that run it. The gather tier is `n` per-process programs beside the
 gather network. The broadcast tier is `2n` reliable-broadcast instances, one
-per process for the inputs and one per process for the `BIND` payloads, each
+per process for the inputs and one per process for the `BIND` payloads (D32), each
 lifted along a pullback that names it. The two tiers run in parallel, the
 instance's own events are hidden, and the result is read back over the gather
 alphabet extended by the call loop.

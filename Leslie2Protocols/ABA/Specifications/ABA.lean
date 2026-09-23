@@ -47,7 +47,7 @@ decision stays enabled at `ControlMode.decisionEnabled`; the Lean lemma is defer
 
 Provenance rests on the ghost record and the support guard `InputSupport` (D13).
 `SpecStep.decide` is the sole writer of `val`. Its guards are `val = ⊥`,
-`InputSupport b` and `mode ≠ terminal`, and the support guard is the entire constraint
+`InputSupport b` and `mode ≠ noRuleEnabled`, and the support guard is the entire constraint
 on the value decided. The rule is therefore enabled whenever some bit carries
 `f + 1` recorded-or-corrupt supporters and the mode is not `ControlMode.noRuleEnabled`; no
 count of participating processes is read anywhere in the system.
@@ -178,7 +178,7 @@ inductive SpecStep (P : Parameters) :
           | .toFlipEnabled => s
           | .undelivered => { s with mode := .noRuleEnabled }))
   /-- Rule 4 (decide): the sole writer of `val`. Its guards are `val = ⊥`
-  (`hv`), `InputSupport b` (`hs`) and `mode ≠ terminal` (`hm`), and the support guard is
+  (`hv`), `InputSupport b` (`hs`) and `mode ≠ noRuleEnabled` (`hm`), and the support guard is
   the entire constraint on the decided value: the bit `b` carries `f + 1`
   recorded-or-corrupt supporters (D13). An undelivered flip disables the rule (D17); at
   `ControlMode.decisionEnabled` it is the only enabled `τ`-rule, and it is enabled there

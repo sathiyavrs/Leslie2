@@ -11,7 +11,7 @@ import Leslie2Protocols.ABA.ReliableBroadcast.Specification
 
 The state of one Byzantine Reliable Broadcast instance with designated leader
 `ldr` over an arbitrary payload type `M`, and its rows. The rows transcribe
-Bracha's algorithm (Bracha 1987) in the form of AFW25's Algorithm 1. The
+Bracha's algorithm (Bracha 1987) in the form of AFW25's Algorithm 1 (D34). The
 message pattern, per process:
 
 * the leader, on being called with `m`, multicasts `⟨INIT, m⟩`; * `⟨ECHO, m⟩` — multicast on receipt

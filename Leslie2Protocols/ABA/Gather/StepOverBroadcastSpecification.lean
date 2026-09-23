@@ -168,7 +168,7 @@ inductive StepOverBroadcastSpecification (P : Parameters) :
             (.echo ((gatherTier s).process j).accepted))))
   /-- `VOTE`: `n − f` senders' approved `ECHO` payloads, each contained in the
   vote payload, are delivered here, and the process has multicast its own
-  `ECHO`. The main thread of AFW25's Algorithm 5 sends `ECHO` before `VOTE`. -/
+  `ECHO`. The main thread of AFW25's Algorithm 5 sends `ECHO` before `VOTE` (D35). -/
   | vote (s : StateOverBroadcastSpecification P.n X) (j : Fin P.n) (U : AcceptedPairs P.n X)
       (hin : ((gatherTier s).process j).input ≠ none)
       (hech : ((gatherTier s).process j).sentEcho ≠ none)

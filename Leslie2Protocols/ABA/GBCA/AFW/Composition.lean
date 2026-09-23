@@ -16,8 +16,8 @@ import Leslie2Protocols.Framework.LoopsAndInstanceFamilies
 
 The round-`r` graded-agreement round over two gather instances, taken apart into the pieces that run
 it: `n` graded-agreement programs beside the round's network, in parallel with the two gather
-instances, each read along a pullback that names it. The round's own events are hidden, and the
-result is read over the family alphabet `ExtendedLabel n`.
+instances, both in the binding form (D33), each read along a pullback that names it. The round's
+own events are hidden, and the result is read over the family alphabet `ExtendedLabel n`.
 
 A program holds one process's record of the round — its input, its candidate,
 whether it has called the second gather, its graded outcome and its return flag

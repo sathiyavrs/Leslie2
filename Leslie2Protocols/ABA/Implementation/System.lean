@@ -47,7 +47,7 @@ ghost.
 
 The adversary holds one further record: for each round `r`, a ghost record
 `ghostRecord r` of a type `G` the implementation fixes. It belongs to the network and to
-no program. No program's row reads it and no program's record holds it.
+no program (D30). No program's row reads it and no program's record holds it.
 
 Two parameters carry it. `ghostStep` writes it. On every row, the record of
 the round the label names is replaced by `ghostStep` of that label, the

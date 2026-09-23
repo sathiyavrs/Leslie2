@@ -24,7 +24,7 @@ follows the source blueprint; where the source blueprint departs from a paper th
 encoding inherits the departure, except at the items of §1.
 
 **The D-registry is elsewhere.** The catalogued deviations — D1, D4, D5, D8–D19, D21–D24,
-D26–D35, with D12 refined to D12′ — are cited at the point of use in the ABA module
+D26–D36, with D12 refined to D12′ — are cited at the point of use in the ABA module
 docstrings and glossed one by one in the blueprint chapter (the Deviations paragraph of
 `blueprint/src/content.tex`), which is the registry of record.
 
