@@ -302,22 +302,22 @@ theorem roundOverGatherSpecifications_isLTS (P : Parameters) (r : ℕ) :
   roundOverGathers_isLTS P r (Gather.specificationOverInstanceAlphabet_isLTS P)
     (Gather.specificationOverInstanceAlphabet_isLTS P)
 
-/-- No program rule fires on the silent label: a program only ever moves on one
+/-- No program transition fires on the silent label: a program only ever moves on one
 of the round's ports or one of its events. -/
 theorem programStep_no_tau {j : Fin P.n} {p : ProcessRecord P.n} {ν : PMF (ProcessRecord P.n)}
     (h : ProgramStep P r j p (Silent.τ : ProgramLabel P.n) ν) : False := by
   rw [programLabel_tau] at h; cases h
 
-/-- No rule of the round's network fires on the silent label. -/
+/-- No transition of the round's network fires on the silent label. -/
 theorem networkStep_no_tau {w : Option Bool} {μ : PMF (Option Bool)}
     (h : NetworkStep P r w (Silent.τ : ProgramLabel P.n) μ) : False := by
   rw [programLabel_tau] at h; cases h
 
-/-- No program rule fires on a family label outside the round's interface. -/
+/-- No program transition fires on a family label outside the round's interface. -/
 theorem programStep_outside {j : Fin P.n} {p : ProcessRecord P.n} {ν : PMF (ProcessRecord P.n)}
     (h : ProgramStep P r j p ProgramLabel.outside ν) : False := by cases h
 
-/-- No rule of the round's network fires on a family label outside the round's interface. -/
+/-- No transition of the round's network fires on a family label outside the round's interface. -/
 theorem networkStep_outside {w : Option Bool} {μ : PMF (Option Bool)}
     (h : NetworkStep P r w ProgramLabel.outside μ) : False := by cases h
 

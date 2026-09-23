@@ -241,7 +241,7 @@ theorem process_send_ne {s : RoundState P.n} {j : Fin P.n} {p : ProcessRecord}
 /-- **Invariant preservation, correct-send schema.** Process `j` updates its
 local state to `p` and multicasts `m`. The hypotheses collect, clause by
 clause, what the new message and the touched field must satisfy; every frame
-condition is discharged here once for all nine send rules (`call`, `relay`,
+condition is discharged here once for all nine send transitions (`call`, `relay`,
 `echo`, `voteBit`, `voteBot`, `bindBit`, `bindBot`, `echo5Bit`, `echo5Bot`). -/
 private theorem Invariant.send {s : RoundState P.n} (hI : Invariant P s) {j : Fin P.n}
     {p : ProcessRecord} {m : Message}
@@ -452,7 +452,7 @@ private theorem Invariant.send {s : RoundState P.n} (hI : Invariant P s) {j : Fi
         exact hI.input_called j' b hF hold
 
 /-- **Invariant preservation, local-frame schema.** A `setProcess` that keeps
-the input and all four write-once fields (the return rules, which flip only
+the input and all four write-once fields (the return transitions, which flip only
 `returned`) preserves every clause. -/
 private theorem Invariant.setProcess_unchanged {s : RoundState P.n} (hI : Invariant P s)
     {id : Fin P.n} {p : ProcessRecord}

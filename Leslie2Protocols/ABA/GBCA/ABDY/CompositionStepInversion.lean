@@ -9,10 +9,10 @@ import Leslie2Protocols.ABA.GBCA.ABDY.Composition
 /-!
 # The transitions of the round instance, read off their labels
 
-`gbcaProgramStep_*` reads one program's row off its label: the participant's row as its guards
-together with the Dirac it produces, and the idle row of a non-participant as the identity.
-`gbcaNetworkStep_*` does the same for the round's network on the two rendezvous and on the silent
-label.
+`gbcaProgramStep_*` reads one program's transition off its label: the participant's transition as
+its guards together with the Dirac it produces, and the idle transition of a non-participant as the
+identity. `gbcaNetworkStep_*` does the same for the round's network on the two rendezvous and on the
+silent label.
 
 The round records and the network state are the two components of `GBCA.ByABDY.RoundState`
 (`GBCA/ABDY/MessagesAndRecords.lean`), the composed state the round instance runs on. What a joint
@@ -26,9 +26,9 @@ or `corrupt` applied to the old state.
 the programs beside the network backwards: on a visible label of the internal alphabet every
 program and the network step together, and on the silent label only the network moves.
 
-`gbcaNetworkStep_*_round` reads the network's row off a round-tagged label. The network has a row
-only for its own round, so these readers return the round equation together with the network's
-move, and a handshake label of another round carries no transition of the instance at all.
+`gbcaNetworkStep_*_round` reads the network's transition off a round-tagged label. The network has
+a transition only for its own round, so these readers return the round equation together with the
+network's move, and a handshake label of another round carries no transition of the instance at all.
 -/
 
 namespace PLTS
@@ -37,12 +37,12 @@ namespace GBCA.ByABDY
 
 open Implementation Composition
 
-/-! ### One program's rules, by label class
+/-! ### One program's transitions, by label class
 
-Each lemma reads a row of the table off its label: the participant's row as its
-guards together with the Dirac it produces, and the idle row of a
-non-participant as the identity. The state and the distribution are variables,
-so `cases` unifies against any state of the program. -/
+Each lemma reads a transition of the program off its label: the participant's
+transition as its guards together with the Dirac it produces, and the idle
+transition of a non-participant as the identity. The state and the distribution
+are variables, so `cases` unifies against any state of the program. -/
 
 section ProgramStepInversion
 variable {P : Parameters} {r : ℕ} {j : Fin P.n} {p : GBCA.ByABDY.RoundRecord P.n}
@@ -294,7 +294,7 @@ theorem gbcaProgramStep_deliver_foreign {i k : Fin P.n} {m : GBCA.ByABDY.Message
   case deliverIdle => rfl
 
 end ProgramStepInversion
-/-! ### The network's rules, by label class -/
+/-! ### The network's transitions, by label class -/
 
 section NetworkStepInversion
 variable {P : Parameters} {r : ℕ} {w : NetworkState P.n} {μ : PMF (NetworkState P.n)}
@@ -315,7 +315,7 @@ theorem gbcaNetworkStep_tau (h : GBCANetworkStep P r w (Sum.inl (Sum.inl .tau)) 
   case byzantineGBCA k m hF => exact ⟨k, m, hF, rfl⟩
 
 end NetworkStepInversion
-/-! ### The write a row makes on the composed state
+/-! ### The write a transition makes on the composed state
 
 The round records and the network state are the two components of `GBCA.ByABDY.RoundState`
 (`GBCA/ABDY/MessagesAndRecords.lean`), the composed state the round instance runs on, and the four
@@ -358,7 +358,7 @@ theorem composition_idle (hall : ∀ i, x i = u i) :
     ((x, w) : GBCA.ByABDY.RoundState P.n) = (u, w) := by
   rw [funext hall]
 
-/-- A delivery: the receiver files the message under its sender's row. -/
+/-- A delivery: the receiver files the message under the sender it came from. -/
 theorem composition_deliver {i k : Fin P.n} {m : GBCA.ByABDY.Message}
     (hi : x i = (u i).deliverTo k m) (hne : ∀ i', i' ≠ i → x i' = u i') :
     ((x, w) : GBCA.ByABDY.RoundState P.n) = GBCA.ByABDY.RoundState.receiveMessage
@@ -404,7 +404,7 @@ theorem compositionExtended_joint_inversion {P : Parameters} {r : ℕ}
   · exact absurd hτ hL
 
 /-- A silent transition of the programs beside the network is a network-local
-injection: no program has a `τ` row. -/
+injection: no program has a `τ` transition. -/
 theorem compositionExtended_tau_inversion {P : Parameters} {r : ℕ}
     {u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n} {w : NetworkState P.n}
     {μ : PMF (GBCA.ByABDY.RoundState P.n)}
@@ -418,9 +418,9 @@ theorem compositionExtended_tau_inversion {P : Parameters} {r : ℕ}
   · obtain ⟨w', rfl⟩ := gbcaNetworkStep_dirac hn
     exact ⟨w', prodPMF_pure_pure _ _, hn⟩
 
-/-! ### The network's rules read off a round-tagged label
+/-! ### The network's transitions read off a round-tagged label
 
-The network has a row only for its own round: a handshake label of another round
+The network has a transition only for its own round: a handshake label of another round
 carries no transition of the instance at all. These readers therefore return
 the round equation together with the network's move. -/
 

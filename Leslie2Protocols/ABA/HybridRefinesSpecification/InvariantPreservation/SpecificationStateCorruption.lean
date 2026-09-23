@@ -11,10 +11,10 @@ import Leslie2Protocols.ABA.Composition.Hybrid
 # Corruption at a specification state
 
 The four readings of corruption at a graded-agreement or coin specification state that the `fail`
-row of `hybrid` consumes. A coin corruption leaves `val` and `called` alone (`WCC.corrupt_val`,
-`WCC.corrupt_called`). A GBCA or WCC state that agrees with the ABA state on `F` agrees with it
-again once both are corrupted at the same process (`GBCA.corrupt_F_eq`, `WCC.corrupt_F_eq`), which
-is what keeps `F_gbca` and `F_wcc` together across a `fail` broadcast.
+transition of `hybrid` consumes. A coin corruption leaves `val` and `called` alone
+(`WCC.corrupt_val`, `WCC.corrupt_called`). A GBCA or WCC state that agrees with the ABA state on `F`
+agrees with it again once both are corrupted at the same process (`GBCA.corrupt_F_eq`,
+`WCC.corrupt_F_eq`), which is what keeps `F_gbca` and `F_wcc` together across a `fail` broadcast.
 -/
 
 namespace PLTS

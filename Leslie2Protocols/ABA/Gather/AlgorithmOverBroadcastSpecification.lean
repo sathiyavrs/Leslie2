@@ -51,10 +51,10 @@ variable {X : Type} [DecidableEq X]
 
 A lifted broadcast specification is the specification read along `BRB.specificationLabelMap`
 and then along the composition's pullback. The lemmas below pass between its
-transitions and the specification's rows. -/
+transitions and the specification's transitions. -/
 
-/-- A transition of a lifted broadcast specification is a specification row at
-the label `BRB.specificationLabelMap` projects to. -/
+/-- A transition of a lifted broadcast specification is a transition of the
+specification at the label `BRB.specificationLabelMap` projects to. -/
 theorem specificationOverInstanceAlphabet_step_transition {M : Type} {P : Parameters} {ldr : Fin
   P.n}
     {s s' : BRB.SpecState P.n M} {l : BRB.InstanceLabel P.n M} {l₀ : BRB.Label P.n M}
@@ -63,8 +63,8 @@ theorem specificationOverInstanceAlphabet_step_transition {M : Type} {P : Parame
       l₀ (PMF.pure s') :=
   (System.mapIdle_step_some hl _).mp h
 
-/-- A specification row is a transition of the lifted specification at any
-label `BRB.specificationLabelMap` projects to it. -/
+/-- A transition of the specification is a transition of the lifted
+specification at any label `BRB.specificationLabelMap` projects to it. -/
 theorem transition_specificationOverInstanceAlphabet_step {M : Type} {P : Parameters} {ldr : Fin
   P.n}
     {s s' : BRB.SpecState P.n M} {l : BRB.InstanceLabel P.n M} {l₀ : BRB.Label P.n M}
@@ -73,39 +73,39 @@ theorem transition_specificationOverInstanceAlphabet_step {M : Type} {P : Parame
       l (PMF.pure s') :=
   (System.mapIdle_step_some hl _).mpr h
 
-/-! ### The broadcast specification's rules, by label class -/
+/-! ### The broadcast specification's transitions, by label class -/
 
 section SpecificationStepInversion
 variable {M : Type} {P : Parameters} {ldr : Fin P.n} {s : BRB.SpecState P.n M}
   {μ : PMF (BRB.SpecState P.n M)}
 
-/-- The two rows of a call: the record write and the loop. -/
+/-- The two transitions of a call: the record write and the loop. -/
 theorem specStep_call {m : M} (h : BRB.Step P ldr s (.call m) μ) :
     (s.input = none ∧ μ = PMF.pure { s with input := some m }) ∨ μ = PMF.pure s := by
   cases h
   case call => exact Or.inl ⟨by assumption, rfl⟩
   case callLoop => exact Or.inr rfl
 
-/-- The one silent row: the commit. -/
+/-- The one silent transition: the commit. -/
 theorem specStep_tau (h : BRB.Step P ldr s .tau μ) :
     ∃ m : M, s.val = none ∧ (ldr ∈ s.F ∨ s.input = some m) ∧
       μ = PMF.pure { s with val := some m } := by
   cases h
   case commit m hv hm => exact ⟨m, hv, hm, rfl⟩
 
-/-- The one return row. -/
+/-- The one return transition. -/
 theorem specStep_ret {id : Fin P.n} {m : M} (h : BRB.Step P ldr s (.ret id m) μ) :
     s.val = some m ∧ s.ret id = false ∧
       μ = PMF.pure { s with ret := Function.update s.ret id true } := by
   cases h; exact ⟨by assumption, by assumption, rfl⟩
 
-/-- The one corruption row. -/
+/-- The one corruption transition. -/
 theorem specStep_fail {id : Fin P.n} (h : BRB.Step P ldr s (.fail id) μ) :
     μ = PMF.pure (s.corrupt P id) := by
   cases h; rfl
 
 end SpecificationStepInversion
-/-! ### The rows -/
+/-! ### The algorithm -/
 
 /-- The transitions of the gather instance over the broadcast specification
 (`Gather.instanceOverBroadcastSpecification`), stated over the composition's state: one constructor
@@ -122,15 +122,15 @@ inductive AlgorithmOverBroadcastSpecification (P : Parameters) :
         (PMF.pure (setInputBroadcasts (setGatherTier s ((gatherTier s).setProcess id { (gatherTier
           s).process id with input := some x }))
           (Function.update (inputBroadcasts s) id { inputBroadcasts s id with input := some x })))
-  /-- The call arrives and the input instance answers on its loop row: the
-  gather record alone moves. -/
+  /-- The call arrives and the input instance answers on its loop transition:
+  the gather record alone moves. -/
   | callSpecificationLoop (s : StateOverBroadcastSpecification P.n X) (id : Fin P.n) (x : X)
       (h : ((gatherTier s).process id).input = none) :
       AlgorithmOverBroadcastSpecification P s (.call id x)
         (PMF.pure (setGatherTier s ((gatherTier s).setProcess id { (gatherTier s).process id with
           input := some x })))
-  /-- The gather program answers on its loop row and the input instance records
-  the payload: the input instance alone moves. -/
+  /-- The gather program answers on its loop transition and the input instance
+  records the payload: the input instance alone moves. -/
   | callProgramLoop (s : StateOverBroadcastSpecification P.n X) (id : Fin P.n) (x : X)
       (hb : (inputBroadcasts s id).input = none) :
       AlgorithmOverBroadcastSpecification P s (.call id x)
@@ -207,7 +207,7 @@ inductive AlgorithmOverBroadcastSpecification (P : Parameters) :
         (PMF.pure (setBindBroadcasts (setGatherTier s ((gatherTier s).setProcess j
             { (gatherTier s).process j with sentBind := some U }))
           (Function.update (bindBroadcasts s) j { bindBroadcasts s j with input := some U })))
-  /-- `BIND` with the bind instance answering on its loop row: the payload handed
+  /-- `BIND` with the bind instance answering on its loop transition: the payload handed
   to the broadcast is written to the gather record alone. The process has
   multicast its own `VOTE` and has not called its own bind broadcast. -/
   | bindCallSpecificationLoop (s : StateOverBroadcastSpecification P.n X) (j : Fin P.n)
@@ -251,8 +251,8 @@ inductive AlgorithmOverBroadcastSpecification (P : Parameters) :
   /-- Return: the output's entries are held here, `n − f` bind payloads held
   here are sub-maps of it, and the returner has called its own bind broadcast.
   The `BIND` broadcast of AFW25's Algorithm 5, line 17, precedes the wait of line
-  18. The label carries the instance's core, which this row writes if it is
-  unwritten. -/
+  18. The label carries the instance's core, which this transition writes if it
+  is unwritten. -/
   | ret (s : StateOverBroadcastSpecification P.n X) (id : Fin P.n) (g : Fin P.n → Option X)
       (hin : ((gatherTier s).process id).input ≠ none)
       (hbind : ((gatherTier s).process id).sentBind ≠ none)
@@ -275,7 +275,7 @@ inductive AlgorithmOverBroadcastSpecification (P : Parameters) :
 
 
 omit [DecidableEq X] in
-/-- A specification row read through the composition's pullback. -/
+/-- A transition of the specification read through the composition's pullback. -/
 theorem liftSpecification_transition {M : Type} {P : Parameters} {ldr : Fin P.n}
     {ψ : GatherLabel P.n X → Option (BRB.InstanceLabel P.n M)} {L : GatherLabel P.n X}
     {lb : BRB.InstanceLabel P.n M} {l₀ : BRB.Label P.n M} {s s' : BRB.SpecState P.n M}
@@ -285,8 +285,8 @@ theorem liftSpecification_transition {M : Type} {P : Parameters} {ldr : Fin P.n}
   specificationOverInstanceAlphabet_step_transition hl ((System.mapIdle_step_some hφ _).mp h)
 
 omit [DecidableEq X] in
-/-- A specification row is a transition of the instance read through the
-composition's pullback. -/
+/-- A transition of the specification is a transition of the instance read
+through the composition's pullback. -/
 theorem transition_liftSpecification {M : Type} {P : Parameters} {ldr : Fin P.n}
     {ψ : GatherLabel P.n X → Option (BRB.InstanceLabel P.n M)} {L : GatherLabel P.n X}
     {lb : BRB.InstanceLabel P.n M} {l₀ : BRB.Label P.n M} {s s' : BRB.SpecState P.n M}
@@ -295,7 +295,7 @@ theorem transition_liftSpecification {M : Type} {P : Parameters} {ldr : Fin P.n}
     ((BRB.specificationOverInstanceAlphabet P ldr M).mapIdle ψ).step s L (PMF.pure s') :=
   (System.mapIdle_step_some hφ _).mpr (transition_specificationOverInstanceAlphabet_step hl h)
 
-/-! ### The row characterisation -/
+/-! ### The characterisation by the algorithm -/
 
 /-- **The projection.** -/
 theorem instanceOverBroadcastSpecification_step_algorithm (P : Parameters) :
@@ -669,10 +669,10 @@ theorem algorithm_instanceOverBroadcastSpecification_step (P : Parameters) :
           id)) rfl
           (BRB.Step.fail (b q) id)))⟩
 
-/-- **The row characterisation.** At a specification label `l₀`, the
+/-- **The characterisation by the algorithm.** At a specification label `l₀`, the
 transitions of the instance over the labels `specificationLabelMap` sends to `l₀` are exactly
-the `l₀`-rows of `AlgorithmOverBroadcastSpecification`, on the same state and with the same
-distribution. -/
+the `l₀` transitions of `AlgorithmOverBroadcastSpecification`, on the same state and with the
+same distribution. -/
 theorem instanceOverBroadcastSpecification_step_iff_algorithm (P : Parameters)
     (s : StateOverBroadcastSpecification P.n X) (l₀ : Label P.n X)
     (μ : PMF (StateOverBroadcastSpecification P.n X)) :

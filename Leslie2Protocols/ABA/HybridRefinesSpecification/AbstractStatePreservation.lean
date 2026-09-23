@@ -7,13 +7,13 @@ Authors: Sathiya / Claude
 import Leslie2Protocols.ABA.HybridRefinesSpecification.InvariantPreservation
 
 /-!
-# The core simulation's stutter rows: `AbstractState` preservation, and the assembly
+# The core simulation's stutter transitions: `AbstractState` preservation, and the assembly
 
 Stage C of the proof that `hybridSpecificationStateRelation` is a simulation relation, and the
 assembly of Stages A–C.
 
-* **Stage C** — `AbstractState` preservation for the stutter rows. The abstract state is
-  untouched by every hidden row and moves only at the visible ones
+* **Stage C** — `AbstractState` preservation for the stutter transitions. The abstract state is
+  untouched by every hidden transition and moves only at the visible ones
   (`callABA`/`retABA`/`fail`, handled in `HybridRefinesSpecification/Simulation.lean`). All six
   lemmas are instances of one frame argument, `AbstractState.unchangedBy`.
 * **Assembly** — `Invariant.step`: `Invariant` is preserved by every `hybrid` step,
@@ -29,13 +29,14 @@ open Implementation Composition
 
 variable {P : Parameters}
 
-/-! ### Stage C: `AbstractState` preservation for the stutter rows
+/-! ### Stage C: `AbstractState` preservation for the stutter transitions
 
 Every one of `hybrid_step_tau`'s six disjuncts is answered by a stutter: the abstract state is
-untouched by every hidden row and only moves at the visible rows (`callABA`/`retABA`/`fail`),
-handled in `HybridRefinesSpecification/Simulation.lean`. All six lemmas below are instances of a
-single frame argument: `AbstractState` inspects only `F`, the per-process `input`/`returned`
-projections, and the grade-2 lock on `g` certificate — and each row preserves all three. -/
+untouched by every hidden transition and only moves at the visible ones
+(`callABA`/`retABA`/`fail`), handled in `HybridRefinesSpecification/Simulation.lean`. All six
+lemmas below are instances of a single frame argument: `AbstractState` inspects only `F`, the
+per-process `input`/`returned` projections, and the grade-2 lock on `g` certificate — and each
+transition preserves all three. -/
 
 /-- `AbstractState` transfers along any frame that preserves `F`, the per-process
 `input`/`returned` projections, and the grade-2 certificate and holder universal. -/
@@ -52,7 +53,8 @@ theorem AbstractState.unchangedBy {P : Parameters} {g g' : ℕ → GBCA.SpecStat
   · exact Or.inl hv
   · exact Or.inr ⟨v, hv, hAF.1 r v hcv, hAF.2 v ⟨r, hcv⟩ hpin⟩
 
-/-- `bindUnset`: stutters; the row's `AbstractStateUnchanged` package carries the certificates. -/
+/-- `bindUnset`: stutters; the transition's `AbstractStateUnchanged` package carries the
+certificates. -/
 theorem AbstractState.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} {a : SpecState P.n} (hA : AbstractState P g c w a)
     (hI : Invariant P g c w) (r : ℕ)
@@ -81,7 +83,7 @@ theorem AbstractState.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecS
   exact hA.unchangedBy hCFrame.1 (fun id => by rw [hCFrame.2]) (fun id => by rw [hCFrame.2]) hAF
 
 /-- `callG`: stutters; `AbstractState` reads none of the touched fields, certificates ride the
-row's `AbstractStateUnchanged`. -/
+transition's `AbstractStateUnchanged`. -/
 theorem AbstractState.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} {a : SpecState P.n}
     (hA : AbstractState P g c w a) (hI : Invariant P g c w) (r : ℕ) (id : Fin P.n) (b : Bool)
@@ -107,7 +109,7 @@ theorem AbstractState.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.
     · exact ⟨rfl, fun id' => ⟨rfl, rfl⟩⟩
   exact hA.unchangedBy hCFrame.1 (fun id' => (hCFrame.2 id').1) (fun id' => (hCFrame.2 id').2) hAF
 
-/-- `retG`: stutters; certificates and the holder universal ride the row's
+/-- `retG`: stutters; certificates and the holder universal ride the transition's
 `AbstractStateUnchanged`. -/
 theorem AbstractState.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} {a : SpecState P.n}
@@ -186,8 +188,8 @@ theorem AbstractState.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n
   exact hA.unchangedBy hCFrame.1 (fun id' => (hCFrame.2 id').1) (fun id' => (hCFrame.2 id').2) hAF
 /-! ### Assembly: `Invariant` is preserved by every `hybrid` step -/
 
-/-- Reading a row where the ABA component moves alone: its own outcome, the coin oracle standing
-still. -/
+/-- Reading a transition where the ABA component moves alone: its own outcome, the coin oracle
+standing still. -/
 theorem mem_support_abaTransition {P : Parameters} {μc : PMF (ABAState P)} {o w' : ℕ → WCC.SpecState
   P.n}
     {C' : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A' : ABANetworkState P.n}
@@ -199,7 +201,7 @@ theorem mem_support_abaTransition {P : Parameters} {μc : PMF (ABAState P)} {o w
   obtain ⟨rfl, rfl, rfl⟩ := heq
   exact ⟨hc, rfl⟩
 
-/-- Reading a row where the ABA component and the coin oracle move together. -/
+/-- Reading a transition where the ABA component and the coin oracle move together. -/
 theorem mem_support_coinTransition {P : Parameters} {μc : PMF (ABAState P)}
     {μw' : PMF (WCC.SpecState P.n)} {o w' : ℕ → WCC.SpecState P.n} {r : ℕ}
     {C' : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A' : ABANetworkState P.n}

@@ -130,7 +130,7 @@ end Transitions
 /-! ### Views of the instance state
 
 The four components of the instance state, and the four writes that reach one
-of them. A row of either tier is stated through these, so that a guard reads
+of them. A transition of either tier is stated through these, so that a guard reads
 `gatherTier s` where the implementation reads the gather instance state. -/
 
 section Views
@@ -317,7 +317,7 @@ theorem instanceOverBroadcastSpecification_isLTS (P : Parameters) :
     =>
     BRB.specificationOverInstanceAlphabet_isLTS P q)
 
-/-- No gather program rule fires on `τ`: a program only ever moves in an event
+/-- No gather program transition fires on `τ`: a program only ever moves in an event
 or on one of the interface labels. The composition's silent transitions are
 therefore the gather network's injections, the hidden events and the broadcast
 tier's own silent steps. -/

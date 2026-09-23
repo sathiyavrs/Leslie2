@@ -49,7 +49,7 @@ theorem ret_guards {s : SpecState P.n X} {id : Fin P.n} {g : Fin P.n → Option 
   | ret id' g' C' hC hmem _ _ => exact ⟨hC, hmem⟩
 
 /-- **The core is written once.** `bindCore` is its only writer and fires
-only from `core = none`, so the value survives every later rule and every
+only from `core = none`, so the value survives every later transition and every
 corruption. -/
 theorem core_stable {C : AcceptedPairs P.n X} :
     ∀ (s : SpecState P.n X) (l : Label P.n X) (μ : PMF (SpecState P.n X))

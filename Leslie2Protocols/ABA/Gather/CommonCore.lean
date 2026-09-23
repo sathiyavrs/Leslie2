@@ -61,7 +61,7 @@ theorem specificationOverInstanceAlphabet_step_toSpecification (P : Parameters)
 
 /-- **The lifted specification binds one core.** An execution of `specificationOverInstanceAlphabet`
 has the states of a `specInst` execution and labels that `toSpecificationLabel` sends to its
-labels, so the guards of a return are read off the specification's own rows. -/
+labels, so the guards of a return are read off the specification's own transitions. -/
 theorem specificationOverInstanceAlphabet_core (P : Parameters) (X : Type) [DecidableEq X] :
     ∀ D ∈ achievableTraceDists (specificationOverInstanceAlphabet P X), ∀ t, D t ≠ 0 →
       CoreTrace P (t.map toSpecificationLabel) := by

@@ -25,61 +25,58 @@ compose is the same object in both systems. This file holds that alphabet and th
 ## The extended alphabet
 
 `Label n` is the shared alphabet of the protocol and of its specification. It cannot name the two
-message networks, the Byzantine handshake rows, or the branches of a handshake that it does not
-distinguish. The rendezvous alphabet `NetworkEvent n M` names them, over a graded-agreement message
-type `M` (`ABA/Implementation/Alphabet.lean`); `NetworkEvent n` is that alphabet at the round
-messages of `GBCA/ABDY/MessagesAndRecords.lean`, and `ExtendedLabel n = Label n ⊕ NetworkEvent n`
-is the alphabet every component here speaks. Its silent label is `Sum.inl τ`, so every `Sum.inr`
-label is observable, and `networkEventLabels n` — the set of all of them — is what both
-compositions hide before reading the result back over `Label n`.
+message networks, the Byzantine handshake transitions, or the branches of a handshake that it does
+not distinguish. The rendezvous alphabet `NetworkEvent n M` names them, over a graded-agreement
+message type `M` (`ABA/Implementation/Alphabet.lean`); `NetworkEvent n` is that alphabet at the
+round messages of `GBCA/ABDY/MessagesAndRecords.lean`, and
+`ExtendedLabel n = Label n ⊕ NetworkEvent n` is the alphabet every component here speaks. Its
+silent label is `Sum.inl τ`, so every `Sum.inr` label is observable, and `networkEventLabels n` —
+the set of all of them — is what both compositions hide before reading the result back over
+`Label n`.
 
 ## The coin oracle
 
-The coin oracle `WCC.specFamily` speaks `Label n`, so it is joined to the
-extended alphabet through the label pullback `coinLabelMap`, which sends a shared
-label to itself, the Byzantine handshake rows and the fused coin return to
-the oracle's own handshake rows, and every other rendezvous label out of the
-domain. `coinOverRoundAlphabet` is the oracle read along that pullback at this alphabet. It
-is a component of both compositions, unchanged.
+The coin oracle `WCC.specFamily` speaks `Label n`, so it is joined to the extended alphabet through
+the label pullback `coinLabelMap`, which sends a shared label to itself, the Byzantine handshake
+transitions and the fused coin return to the oracle's own handshake transitions, and every other
+rendezvous label out of the domain. `coinOverRoundAlphabet` is the oracle read along that pullback
+at this alphabet. It is a component of both compositions, unchanged.
 
 ## The round loop of one process
 
-`RoundLoopStep` is the rule table of one process's round loop: the API rows `callABA` and `retABA`,
-the graded-agreement and coin handshakes, the DECIDED relay and its delivery, and an idle row for
-every label the process does not act on. It writes no round record. The composed system runs `n` of
-these automata (`roundLoopProgram`) under a full-synchronisation product. The protocol composition
-fuses each round loop with the round records into one program (`ABDY.ABAProgramStep`), whose record
-is the pair.
+`RoundLoopStep` is the algorithm of one process's round loop: the API transitions `callABA` and
+`retABA`, the graded-agreement and coin handshakes, the DECIDED relay and its delivery, and an idle
+transition for every label the process does not act on. It writes no round record. The composed
+system runs `n` of these automata (`roundLoopProgram`) under a full-synchronisation product. The
+protocol composition fuses each round loop with the round records into one program
+(`ABDY.ABAProgramStep`), whose record is the pair.
 
 A corruption replaces the program of the process it names (D23). The flag
-`RoundLoopRecord.corrupted` goes up on the process's own half of `fail`, every
-participant's row is guarded by `corrupted = false`, and the replaced program
-is the single self-loop `corruptedIdle`. The replaced program has no row on the
-labels of `actsAt j` — the labels on which the process would act on its own
-sub-protocol messages — so those messages enter only through the Byzantine handshake rows
-(D11).
+`RoundLoopRecord.corrupted` goes up on the process's own half of `fail`, every participant's
+transition is guarded by `corrupted = false`, and the replaced program is the single self-loop
+`corruptedIdle`. The replaced program has no transition on the labels of `actsAt j` — the labels on
+which the process would act on its own sub-protocol messages — so those messages enter only through
+the Byzantine handshake transitions (D11).
 
 ## The ABA network
 
 `ABANetworkStep` is what the network retains once the round networks have taken the round
 sent sets: the DECIDED sets `decidedSent j`, the corrupted set `F` with its budget, and the
-authorisation of every Byzantine handshake row. `ABANetwork` is that automaton. Its `fail` row
-carries the budget guard `k ∉ F ∧ |F| < f`, so a corruption fires exactly when it takes effect, and
-its `retByzantine` row lets a corrupted process return without DECIDED evidence, pairing with the
-replaced program's self-loop on `retABA` (D23). It holds no ghost record: the bound bit a
-graded-agreement return announces belongs to the round, so the round's instance carries it and both
-rows here idle on it.
+authorisation of every Byzantine handshake transition. `ABANetwork` is that automaton. Its `fail`
+transition carries the budget guard `k ∉ F ∧ |F| < f`, so a corruption fires exactly when it takes
+effect, and its `retByzantine` transition lets a corrupted process return without DECIDED evidence,
+pairing with the replaced program's self-loop on `retABA` (D23). It holds no ghost record: the bound
+bit a graded-agreement return announces belongs to the round, so the round's instance carries it and
+both transitions here idle on it.
 
 ## What this file supplies
 
-The two rule tables above, the two automata they carry, the determinacy of
-both tables, and the inversion tables that read a row of each off its label
-(`roundLoopStep_*`, `abaNetworkStep_*`) — among them `roundLoopStep_noStep`, which reads every row
-of a replaced program as a self-loop. It also supplies the systems of the
-synchronised round-loop group in both directions (`roundLoopProduct_inversion`,
-`roundLoopProduct_pure`) and the lemmas that determine a round-loop tuple from its
-per-process rows (`roundLoopRecords_*`).
--/
+The two step relations above, the two automata they carry, the determinacy of both, and the lemmas
+that read a transition of each off its label (`roundLoopStep_*`, `abaNetworkStep_*`) — among them
+`roundLoopStep_noStep`, which reads every transition of a replaced program as a self-loop. It also
+supplies the systems of the synchronised round-loop group in both directions
+(`roundLoopProduct_inversion`, `roundLoopProduct_pure`) and the lemmas that determine a round-loop
+tuple from its per-process transitions (`roundLoopRecords_*`). -/
 
 namespace PLTS
 namespace ABA
@@ -119,24 +116,22 @@ that `PLTS.ABA` itself carries only what the chain cites. -/
 
 The automaton that calls a round's graded-agreement instance and the coin, and decides. It writes no
 round record: the five multicast levels and the round delivery are internal to a round instance, so
-they leave no row here, and the three Byzantine graded-agreement rows change no round-loop data,
-which is why they appear below only as idle rows.
+they leave no transition here, and the three Byzantine graded-agreement transitions change no
+round-loop data, which is why they appear below only as idle transitions.
 
-The programs sit under a full-synchronisation product, so every label that can
-fire in the composite has a row: the participant's, or an idle one. Unlike the
-round-indexed families, these programs are not round-filtered. A round loop
-must answer every round's `callG`, its own as a participant and every other
-process's as a bystander.
+The programs sit under a full-synchronisation product, so every label that can fire in the composite
+has a transition: the participant's, or an idle one. Unlike the round-indexed families, these
+programs are not round-filtered. A round loop must answer every round's `callG`, its own as a
+participant and every other process's as a bystander.
 
-A corruption replaces the program of the process it names (D23). The
-replacement is carried by the flag `RoundLoopRecord.corrupted`, which `failSelf` writes
-on the process's own `fail`; every participant's row is guarded by
-`corrupted = false`, so the record stays as it is at the corruption. In place of those
-rows the replaced program has the single row `corruptedIdle`: a self-loop on
-every label other than `τ` and the labels of `actsAt j`. On the latter the
-replaced program has no row at all, so those labels cannot fire; the corrupted
-process's graded-agreement messages enters through the Byzantine handshake rows (D11)
-and its DECIDED messages through `byzantineDecided`. -/
+A corruption replaces the program of the process it names (D23). The replacement is carried by the
+flag `RoundLoopRecord.corrupted`, which `failSelf` writes on the process's own `fail`; every
+participant's transition is guarded by `corrupted = false`, so the record stays as it is at the
+corruption. In place of those transitions the replaced program has the single transition
+`corruptedIdle`: a self-loop on every label other than `τ` and the labels of `actsAt j`. On the
+latter the replaced program has no transition at all, so those labels cannot fire; the corrupted
+process's graded-agreement messages enter through the Byzantine handshake transitions (D11) and
+its DECIDED messages through `byzantineDecided`. -/
 
 /-- The step relation of the round-loop program of process `j`. -/
 inductive RoundLoopStep (P : Parameters) (j : Fin P.n) :
@@ -148,9 +143,9 @@ inductive RoundLoopStep (P : Parameters) (j : Fin P.n) :
         (PMF.pure (c.setProcess { c.process with
           input := some b, estimate := some b, round := 0, phase := .toCallG }))
   /-- Input-enabledness loop on `j`'s own `callABA`: the loop absorbs a call at
-  a process holding an input. The `input` row carries the label at a process
-  holding none, so the label is enabled in every state and a first call at a
-  process whose program stands commits (D36). -/
+  a process holding an input. The `input` transition carries the label at a
+  process holding none, so the label is enabled in every state and a first call
+  at a process whose program stands commits (D36). -/
   | inputLoop (c : RoundLoopRecord P.n) (b : Bool) (hh : c.corrupted = false)
       (hin : c.process.input ≠ none) :
       RoundLoopStep P j c (Sum.inl (.callABA j b)) (PMF.pure c)
@@ -208,7 +203,7 @@ inductive RoundLoopStep (P : Parameters) (j : Fin P.n) :
   | retWIdle (c : RoundLoopRecord P.n) (r : ℕ) (id : Fin P.n) (co : Bool) (hid : id ≠ j) :
       RoundLoopStep P j c (Sum.inl (.retW r id co)) (PMF.pure c)
   /-- The process's own corruption: the program is replaced, and the flag that
-  carries the replacement is the one write of the row (D23). -/
+  carries the replacement is the one write of the transition (D23). -/
   | failSelf (c : RoundLoopRecord P.n) (hh : c.corrupted = false) :
       RoundLoopStep P j c (Sum.inl (.fail j))
         (PMF.pure { c with corrupted := true })
@@ -216,7 +211,7 @@ inductive RoundLoopStep (P : Parameters) (j : Fin P.n) :
   | failIdle (c : RoundLoopRecord P.n) (k : Fin P.n) (hk : k ≠ j) :
       RoundLoopStep P j c (Sum.inl (.fail k)) (PMF.pure c)
   /-- The replaced program (D23): a self-loop on every label other than `τ` and
-  the labels of `actsAt j`, on which the process has no row at all. -/
+  the labels of `actsAt j`, on which the process has no transition at all. -/
   | corruptedIdle (c : RoundLoopRecord P.n) (L : ExtendedLabel P.n) (hh : c.corrupted = true)
       (hτ : L ≠ Sum.inl Label.tau) (hown : ¬ actsAt j L) :
       RoundLoopStep P j c L (PMF.pure c)
@@ -250,7 +245,7 @@ inductive RoundLoopStep (P : Parameters) (j : Fin P.n) :
       (hid : id ≠ j) :
       RoundLoopStep P j c (Sum.inr (.retWPublish r id co b)) (PMF.pure c)
   /-- The graded-agreement call against an already-called round record: the round loop moves and
-  nothing else does — the whole row is core content. -/
+  nothing else does — the whole transition is core content. -/
   | gbcaCallLoop (c : RoundLoopRecord P.n) (r : ℕ) (b : Bool) (hh : c.corrupted = false)
       (hph : c.process.phase = .toCallG) (hr : c.process.round = r)
       (hest : c.process.estimate = some b) :
@@ -284,7 +279,7 @@ inductive RoundLoopStep (P : Parameters) (j : Fin P.n) :
 
 What is left of the network once the round-tagged sent sets have gone to
 the round networks: the DECIDED sets, the corrupted set with its budget, and
-the authorisation of every Byzantine handshake row. -/
+the authorisation of every Byzantine handshake transition. -/
 
 /-- The state of the ABA network: the DECIDED sets and the corrupted set. -/
 structure ABANetworkState (n : ℕ) : Type where
@@ -361,9 +356,9 @@ inductive ABANetworkStep (P : Parameters) :
   | retABA (a : ABANetworkState P.n) (id : Fin P.n) (b : Bool) (h : b ∈ a.decidedSent id) :
       ABANetworkStep P a (Sum.inl (.retABA id b)) (PMF.pure a)
   /-- A corrupted process returns whatever it likes (D23): its program has been
-  replaced, so the DECIDED evidence the correct row asks for is not required of
-  it. The authorisation is this component's `id ∈ F`, and the round loop's half
-  is the replaced program's self-loop. -/
+  replaced, so the DECIDED evidence the correct transition asks for is not
+  required of it. The authorisation is this component's `id ∈ F`, and the round
+  loop's half is the replaced program's self-loop. -/
   | retByzantine (a : ABANetworkState P.n) (id : Fin P.n) (b : Bool) (hF : id ∈ a.F) :
       ABANetworkStep P a (Sum.inl (.retABA id b)) (PMF.pure a)
   /-- The graded-agreement call's `⟨INPUT, b⟩` is sent in the round's network,
@@ -382,9 +377,9 @@ inductive ABANetworkStep (P : Parameters) :
   | retWIdle (a : ABANetworkState P.n) (r : ℕ) (id : Fin P.n) (c : Bool) :
       ABANetworkStep P a (Sum.inl (.retW r id c)) (PMF.pure a)
   /-- Corruption (deviations D1, D23): Dirac, and guarded by the budget. The
-  guard sits on the row rather than inside `ABANetworkState.corrupt` alone, so that a
-  corruption fires exactly when it takes effect and the round loop's half may
-  write the replacement flag outright. -/
+  guard sits on the transition rather than inside `ABANetworkState.corrupt`
+  alone, so that a corruption fires exactly when it takes effect and the round
+  loop's half may write the replacement flag outright. -/
   | fail (a : ABANetworkState P.n) (k : Fin P.n) (hnew : k ∉ a.F) (hbud : a.F.card < P.f) :
       ABANetworkStep P a (Sum.inl (.fail k)) (PMF.pure (ABANetworkState.corrupt P k a))
   /-- Byzantine DECIDED injection (D12′): either or both bits, at any time, so
@@ -419,7 +414,7 @@ noncomputable def ABANetwork (P : Parameters) : System (ABANetworkState P.n) (Ex
 @[simp] theorem ABANetwork_step (P : Parameters) (a : ABANetworkState P.n) (l : ExtendedLabel P.n)
     (μ : PMF (ABANetworkState P.n)) : (ABANetwork P).step a l μ ↔ ABANetworkStep P a l μ := Iff.rfl
 
-/-! ### Determinacy of the two rule tables -/
+/-! ### Determinacy of the two step relations -/
 
 /-- Every round-loop transition is Dirac. -/
 theorem roundLoopStep_dirac {P : Parameters} {j : Fin P.n} {c : RoundLoopRecord P.n}
@@ -432,7 +427,7 @@ theorem abaNetworkStep_dirac {P : Parameters} {a : ABANetworkState P.n} {l : Ext
     {μ : PMF (ABANetworkState P.n)} (h : ABANetworkStep P a l μ) : ∃ a', μ = PMF.pure a' := by
   cases h <;> exact ⟨_, rfl⟩
 
-/-- No round-loop rule fires on `τ`: a round loop only ever moves in a
+/-- No round-loop transition fires on `τ`: a round loop only ever moves in a
 rendezvous or on a shared API label. -/
 theorem roundLoopStep_no_tau {P : Parameters} {j : Fin P.n} {c : RoundLoopRecord P.n}
     {ν : PMF (RoundLoopRecord P.n)} (h : RoundLoopStep P j c (Silent.τ : ExtendedLabel P.n) ν) :
@@ -479,13 +474,13 @@ theorem roundLoopProduct_no_tau {P : Parameters} {C : ∀ _ : Fin P.n, RoundLoop
   · exact hτ rfl
   · exact roundLoopStep_no_tau hstep
 
-/-! ### One round loop's rules, by label class
+/-! ### One round loop's transitions, by label class
 
-Each lemma reads a row of `RoundLoopStep` off its label: the participant's row
-as its guards together with the Dirac it produces, and the idle row of a
-non-participant as the identity. A participant's row carries the health guard
-`corrupted = false`, and on a label outside `actsAt j` the replaced program's
-self-loop is a second row on the same label (D23). -/
+Each lemma reads a transition of `RoundLoopStep` off its label: the participant's transition as its
+guards together with the Dirac it produces, and the idle transition of a non-participant as the
+identity. A participant's transition carries the health guard `corrupted = false`, and on a label
+outside `actsAt j` the replaced program's self-loop is a second transition on the same label
+(D23). -/
 
 section RoundLoopInversion
 
@@ -708,15 +703,15 @@ theorem roundLoopStep_byzantineRetW {r : ℕ} {k : Fin P.n} {b : Bool}
 
 /-- **The replaced program writes nothing** (D23). Whatever the label, a round
 loop whose flag is up leaves its record where it stands. The proof is by cases
-on the table: every row that writes carries the health guard, so no row of a
-replaced program survives except a self-loop. -/
+on the algorithm: every transition that writes carries the health guard, so no
+transition of a replaced program survives except a self-loop. -/
 theorem roundLoopStep_noStep {L : ExtendedLabel P.n} (hc : c.corrupted = true)
     (h : RoundLoopStep P j c L ν) : ν = PMF.pure c := by
   cases h <;> simp_all
 
 end RoundLoopInversion
 
-/-! ### The ABA network's rules, by label class -/
+/-! ### The ABA network's transitions, by label class -/
 
 section ABANetworkStepInversion
 variable {P : Parameters} {a : ABANetworkState P.n} {μ : PMF (ABANetworkState P.n)}
@@ -770,8 +765,8 @@ theorem abaNetworkStep_callABA {id : Fin P.n} {b : Bool}
   cases h; rfl
 
 /-- A return is authorised either by the DECIDED sent of the returning process
-or by its corruption (D23); the two rows share the label and the identity
-successor. -/
+or by its corruption (D23); the two transitions share the label and the
+identity successor. -/
 theorem abaNetworkStep_retABA {id : Fin P.n} {b : Bool}
     (h : ABANetworkStep P a (Sum.inl (.retABA id b)) μ) :
     (b ∈ a.decidedSent id ∨ id ∈ a.F) ∧ μ = PMF.pure a := by

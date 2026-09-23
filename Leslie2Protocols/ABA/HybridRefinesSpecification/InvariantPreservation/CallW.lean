@@ -8,12 +8,12 @@ import Leslie2Protocols.ABA.HybridRefinesSpecification.Relation
 import Leslie2Protocols.ABA.Composition.Hybrid
 
 /-!
-# `Invariant` across the `callW` rows of `hybrid`
+# `Invariant` across the `callW` transitions of `hybrid`
 
 `Invariant.step_callW`, preservation of `Invariant` at a call of the coin, assembled from the three
-rows of `WCC.step_callW_inversion`. The input-enabledness loop and the recording call leave `val`
-and `F` alone, the coin instance touching only `.called` and the core only `.phase`, both at `id`
-and neither inspected by `Invariant` (`Invariant.step_callW_dirac`). The resolving call records
+transitions of `WCC.step_callW_inversion`. The input-enabledness loop and the recording call leave
+`val` and `F` alone, the coin instance touching only `.called` and the core only `.phase`, both at
+`id` and neither inspected by `Invariant` (`Invariant.step_callW_dirac`). The resolving call records
 `id` by that same bookkeeping and writes the drawn outcome to `val`
 (`Invariant.step_callW_resolve`), where the clauses reading `(w r).val` come back from the
 threshold: `Invariant.exists_correct_wccCaller` supplies a never-corrupted caller of round `r`,
@@ -47,7 +47,8 @@ theorem Invariant.exists_correct_wccCaller {P : Parameters} {g : ℕ → GBCA.Sp
   rw [WCC.SpecState.threshold] at hq
   omega
 
-/-- The resolving row of `callW`: `Invariant` is preserved when the drawn outcome is written to
+/-- The resolving transition of `callW`: `Invariant` is preserved when the drawn outcome is written
+to
 `val` at a round whose caller count has passed `f`. -/
 theorem Invariant.step_callW_resolve {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (r : ℕ)
@@ -142,7 +143,8 @@ theorem Invariant.step_callW_resolve {P : Parameters} {g : ℕ → GBCA.SpecStat
   · intro r' id hmem hcalled
     rw [hCalledEq] at hcalled; exact hI.wccCalled_witness r' id hmem hcalled
 
-/-- The Dirac rows of `callW`, the input-enabledness loop and the recording call: `Invariant` is
+/-- The Dirac transitions of `callW`, the input-enabledness loop and the recording call:
+`Invariant` is
 preserved and the abstract state is unchanged. -/
 theorem Invariant.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (r : ℕ) (id : Fin P.n)

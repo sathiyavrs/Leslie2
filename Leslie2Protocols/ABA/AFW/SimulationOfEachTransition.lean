@@ -62,12 +62,13 @@ namespace AFW
 
 open Implementation Composition GBCA.ByABDY
 
-/-! ### Reading a row off a label the process owns
+/-! ### Reading a transition off a label the process owns
 
-A program's row on a label of `roundOwn j` is a row of the implementation:
-every other row of the implementation either carries a label of another class,
-or carries one of these at another process, or is the replaced program's
-self-loop, which has no row on a label the process acts on. -/
+A program's transition on a label of `roundOwn j` is a transition of the
+implementation: every other transition of the implementation either carries a
+label of another class, or carries one of these at another process, or is the
+replaced program's self-loop, which has no transition on a label the process
+acts on. -/
 
 theorem roundTransition_of_own {P : Parameters} {j : Fin P.n} {q : AFW.ProcessRecord P.n}
     {L : ExtendedLabel P.n (Message P.n)} {y : AFW.ProcessRecord P.n} (hown : roundOwn j L)
@@ -219,16 +220,16 @@ end BroadcastReturns
 
 /-! ### Building a transition of one gather instance
 
-A row of `Gather.AlgorithmOverBracha` is a transition of the instance at the interface
+A transition of `Gather.AlgorithmOverBracha` is a transition of the instance at the interface
 label over its own. The call is the exception: the instance answers `call id x`
-on two rows, and the two sit at the two labels of the interface. -/
+with two transitions, and the two sit at the two labels of the interface. -/
 
 section GatherTransitions
 
 variable {P : Parameters} {X : Type} [DecidableEq X]
 
-/-- A row at a label other than a call is a transition of the instance at the
-interface label over it. -/
+/-- A transition at a label other than a call is a transition of the instance
+at the interface label over it. -/
 theorem transition_instanceOverBracha_inl {s : Gather.StateOverBracha P.n X} {l₀ : Gather.Label P.n
   X}
     {μ : PMF (Gather.StateOverBracha P.n X)}
@@ -285,16 +286,16 @@ end GatherTransitions
 
 /-! ### Building a transition of one round
 
-One row of the round's programs beside one row of a gather instance, at the label the round takes
-them on. The three hidden events `firstGatherReturn`, `secondGatherCall` and `secondGatherReturn`
-are silent transitions of the round; the call, the call loop and the graded return are transitions
-on labels of the family alphabet. -/
+One transition of the round's programs beside one transition of a gather instance, at the label
+the round takes them on. The three hidden events `firstGatherReturn`, `secondGatherCall` and
+`secondGatherReturn` are silent transitions of the round; the call, the call loop and the graded
+return are transitions on labels of the family alphabet. -/
 
 section RoundTransitions
 
 variable {P : Parameters} {r : ℕ}
 
-/-- A silent row of the first gather is a silent transition of the round. -/
+/-- A silent transition of the first gather is a silent transition of the round. -/
 theorem roundOverBracha_firstGatherTau (s : GBCA.ByAFW.RoundStateOverBracha P.n)
     {c : Gather.StateOverBracha P.n Bool}
     (h : Gather.AlgorithmOverBracha P (GBCA.ByAFW.firstGather s) Gather.Label.tau (PMF.pure c)) :
@@ -302,7 +303,7 @@ theorem roundOverBracha_firstGatherTau (s : GBCA.ByAFW.RoundStateOverBracha P.n)
     (PMF.pure (GBCA.ByAFW.setFirstGather s c)) :=
   GBCA.ByAFW.roundOverGathers_tau_firstGather (transition_instanceOverBracha_inl (by simp) h)
 
-/-- A silent row of the second gather is a silent transition of the round. -/
+/-- A silent transition of the second gather is a silent transition of the round. -/
 theorem roundOverBracha_secondGatherTau (s : GBCA.ByAFW.RoundStateOverBracha P.n)
     {d : Gather.StateOverBracha P.n (Option Bool)}
     (h : Gather.AlgorithmOverBracha P (GBCA.ByAFW.secondGather s) Gather.Label.tau (PMF.pure d)) :
@@ -485,12 +486,13 @@ theorem roundOverBracha_weakStep_two {L : ExtendedLabel P.n}
 
 end RoundTransitions
 
-/-! ### The broadcast invariant across a row
+/-! ### The broadcast invariant across a transition
 
 `BroadcastReturnsInvariant` is the broadcast invariant at the `4n` instances of every round.
-`RoundInvariant` is that clause at one round, `broadcastReturnsInvariant_update` carries it across a
-row from the round the row names, and `roundInvariant_firstGather`, `roundInvariant_secondGather`
-and `roundInvariant_of_unchanged` re-establish it from the rows the composed answer fires. -/
+`RoundInvariant` is that clause at one round, `broadcastReturnsInvariant_update` carries it across
+a transition from the round that transition names, and `roundInvariant_firstGather`,
+`roundInvariant_secondGather` and `roundInvariant_of_unchanged` re-establish it from the
+transitions the composed answer fires. -/
 
 section Invariant
 
@@ -508,8 +510,8 @@ theorem broadcastReturnsInvariant_iff_roundInvariant (u : ∀ _ : Fin P.n,
     AFW.ProcessRecord P.n) (w : NetworkState P.n) : BroadcastReturnsInvariant P u w ↔ ∀ r,
       RoundInvariant P (roundProjection P u w r) := Iff.rfl
 
-/-- **Every row of a gather instance moves each of its `2n` broadcast instances
-by one row or not at all.** -/
+/-- **Every transition of a gather instance moves each of its `2n` broadcast
+instances by one transition or not at all.** -/
 theorem algorithmOverBracha_invariantStep {X : Type} [DecidableEq X]
     {s : Gather.StateOverBracha P.n X}
     {l₀ : Gather.Label P.n X} {μ : PMF (Gather.StateOverBracha P.n X)}
@@ -576,7 +578,7 @@ theorem algorithmOverBracha_invariantStep {X : Type} [DecidableEq X]
 
 variable {s t : GBCA.ByAFW.RoundStateOverBracha P.n}
 
-/-- A row that leaves both gather instances where they stand keeps the
+/-- A transition that leaves both gather instances where they stand keeps the
 invariant. -/
 theorem roundInvariant_of_unchanged (hR : RoundInvariant P s)
     (h1 : GBCA.ByAFW.firstGather t = GBCA.ByAFW.firstGather s)
@@ -585,7 +587,7 @@ theorem roundInvariant_of_unchanged (hR : RoundInvariant P s)
   rw [h1, h2]
   exact hR k
 
-/-- A row of the first gather keeps the invariant. -/
+/-- A transition of the first gather keeps the invariant. -/
 theorem roundInvariant_firstGather {l₀ : Gather.Label P.n Bool} (hR : RoundInvariant P s)
     (h2 : GBCA.ByAFW.secondGather t = GBCA.ByAFW.secondGather s)
     (h : Gather.AlgorithmOverBracha P (GBCA.ByAFW.firstGather s) l₀
@@ -597,7 +599,7 @@ theorem roundInvariant_firstGather {l₀ : Gather.Label P.n Bool} (hR : RoundInv
   rw [h2]
   exact ⟨h1'.invariant (hR k).1, h2'.invariant (hR k).2.1, (hR k).2.2.1, (hR k).2.2.2⟩
 
-/-- A row of the second gather keeps the invariant. -/
+/-- A transition of the second gather keeps the invariant. -/
 theorem roundInvariant_secondGather {l₀ : Gather.Label P.n (Option Bool)} (hR : RoundInvariant P s)
     (h1 : GBCA.ByAFW.firstGather t = GBCA.ByAFW.firstGather s)
     (h : Gather.AlgorithmOverBracha P (GBCA.ByAFW.secondGather s) l₀
@@ -609,7 +611,7 @@ theorem roundInvariant_secondGather {l₀ : Gather.Label P.n (Option Bool)} (hR 
   rw [h1]
   exact ⟨(hR k).1, (hR k).2.1, h1'.invariant (hR k).2.2.1, h2'.invariant (hR k).2.2.2⟩
 
-/-- A row that moves both gather instances keeps the invariant. -/
+/-- A transition that moves both gather instances keeps the invariant. -/
 theorem roundInvariant_both {l₁ : Gather.Label P.n Bool} {l₂ : Gather.Label P.n (Option Bool)}
     (hR : RoundInvariant P s)
     (h₁ : Gather.AlgorithmOverBracha P (GBCA.ByAFW.firstGather s) l₁
@@ -631,8 +633,8 @@ theorem roundInvariant_of_broadcastReturnsInvariant {u : ∀ _ : Fin P.n, AFW.Pr
     RoundInvariant P (roundProjection P u w r) :=
       hI r
 
-/-- **The broadcast invariant across a row**: the round the row names carries
-it, and every other round is unchanged. -/
+/-- **The broadcast invariant across a transition**: the round that transition
+names carries it, and every other round is unchanged. -/
 theorem broadcastReturnsInvariant_update {u x : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     {w v : NetworkState P.n} {r : ℕ} {Z : GBCA.ByAFW.RoundStateOverBracha P.n}
     (hI : BroadcastReturnsInvariant P u w)
@@ -726,8 +728,8 @@ theorem roundProjectionFamily_byzantine {P : Parameters} (u : ∀ _ : Fin P.n, A
     simp only [roundProjection, firstGatherProjection, secondGatherProjection,
       recordGBCASend_sent_ne w r k m hr, recordGBCASend_F, recordGBCASend_ghostRecord]
 
-/-- A row that leaves every round record where it stands leaves the whole
-family of rounds where it stands. -/
+/-- A transition that leaves every round record where it stands leaves the
+whole family of rounds where it stands. -/
 theorem roundProjection_unchanged {P : Parameters} {x u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     (h : ∀ i, (x i).2 = (u i).2) (w : NetworkState P.n) :
     (fun r => roundProjection P u w r) = fun r => roundProjection P x w r := by
@@ -737,8 +739,8 @@ theorem roundProjection_unchanged {P : Parameters} {x u : ∀ _ : Fin P.n, AFW.P
 /-! ### Answering a send
 
 A send of the implementation is a silent run of the round: the sender writes its own record, the
-network records the message, and the round the label tags moves as its own rules move it. The
-return-then-call step is the one send answered by two events. -/
+network records the message, and the round the label tags moves as its own transitions move it.
+The return-then-call step is the one send answered by two events. -/
 
 theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     (w : NetworkState P.n) {j : Fin P.n} {c : RoundLoopRecord P.n} {p : RoundRecordMap P.n}

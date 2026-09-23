@@ -8,7 +8,7 @@ import Leslie2Protocols.ABA.HybridRefinesSpecification.Relation
 import Leslie2Protocols.ABA.Composition.Hybrid
 
 /-!
-# `Invariant` across the graded-agreement `τ` rows of `hybrid`
+# `Invariant` across the graded-agreement `τ` transitions of `hybrid`
 
 `Invariant.step_gbcaTau`, preservation of `Invariant` at `bindUnset`, the GBCA family's only
 genuine `τ`-step, which excludes one bit of round `r`'s exclusion set. The value-transport corners
@@ -25,8 +25,8 @@ open Implementation Composition
 
 variable {P : Parameters}
 
-/-- The graded-agreement `τ` rows: `Invariant` is preserved and the abstract state is unchanged
-at `bindUnset`. -/
+/-- The graded-agreement `τ` transitions: `Invariant` is preserved and the abstract state is
+unchanged at `bindUnset`. -/
 theorem Invariant.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (r : ℕ)
     {μr : PMF (GBCA.SpecState P.n)} (hstep : GBCA.Step P r (g r) .tau μr)

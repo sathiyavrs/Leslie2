@@ -16,9 +16,9 @@ The gather-based graded agreement, read as a protocol rather than as a compositi
 beside one network and the coin oracle. This is the implementation of
 `ABA/Implementation/System.lean` at the gather-based implementation, as
 `ABA/ABDY/System.lean` is that implementation at ABDY22's, and it supplies the same
-three things — a round message type, a round record, and the implementation's rows. It sits in the
-namespace `AFW`, after Attiya, Flam and Welch, and so `AFW.protocol` is what `ABDY.protocol` is at
-ABDY22's.
+three things — a round message type, a round record, and the implementation's transitions. It sits
+in the namespace `AFW`, after Attiya, Flam and Welch, and so `AFW.protocol` is what `ABDY.protocol`
+is at ABDY22's.
 
 ## One sent for every network state
 
@@ -39,22 +39,23 @@ instance and then by process. A program must hold its own data and no one
 else's, so `RoundRecord` holds them the other way round — `j`'s local state in each
 gather instance, and `j`'s local state in each of the `n` instances of each Bracha
 family. Every guard of the gather-based implementation reads the acting
-process's own local states and the network states, and the two rows that read a network state are
-the adversary's delivery and its Byzantine injection, so the transposition
+process's own local states and the network states, and the two transitions that read a network
+state are the adversary's delivery and its Byzantine injection, so the transposition
 loses nothing.
 
-## The rows
+## The transitions
 
-The round rows are the rows of the programs of `GBCA.ByAFW.roundOverBracha`, written over the
-tagged message type: the rows of its graded-agreement programs (`GBCA.ByAFW.ProgramStep`), of its
-gather programs (`Gather.ProgramStep`) and of the Bracha programs beneath them (`BRB.ProgramStep`).
-Each is the process's half of a step whose network half is a row of the adversary. A send writes
-the sender's own record and the network records the message; a delivery files the message in the
-receiver's own local state, dispatched on the tag. Three rows are fused (D28): the
-graded-agreement call broadcasts the input, the `BIND` send is a broadcast call, and the first
-gather's return to a process is that process's call of the second gather.
+The round's transitions are the transitions of the programs of `GBCA.ByAFW.roundOverBracha`,
+written over the tagged message type: the transitions of its graded-agreement programs
+(`GBCA.ByAFW.ProgramStep`), of its gather programs (`Gather.ProgramStep`) and of the Bracha
+programs beneath them (`BRB.ProgramStep`). Each is the process's half of a step whose network half
+is a transition of the adversary. A send writes the sender's own record and the network records the
+message; a delivery files the message in the receiver's own local state, dispatched on the tag.
+Three transitions are fused (D28): the graded-agreement call broadcasts the input, the `BIND` send
+is a broadcast call, and the first gather's return to a process is that process's call of the
+second gather.
 
-The Bracha return is not a row here. A gather guard reads a `2f + 1` `VOTE`
+The Bracha return is not a transition here. A gather guard reads a `2f + 1` `VOTE`
 receipt quorum on the acting process's own local state in the instance —
 `firstGatherAcceptedInputs` and its three companions — so what an instance has returned to a
 process is a receipt count on that process's own record. A gather program of
@@ -69,10 +70,10 @@ the `n` input-broadcast instances.
 The record the adversary holds for round `r` is `AFW.Ghost`: the first gather's recorded core, the
 second gather's recorded core, and the round's bound bit, each written once. `AFW.ghostStep` writes
 it. The return-then-call step's broadcast of the candidate — the label `gbcaSend r j
-(secondGatherInputBroadcasts j (init _))`, which no other row carries — writes the first core at
-`Gather.coreOf` of the round's first gather network state and the bound bit at `GBCA.boundOfCore` of
-that core; a graded return writes the second core the same way. Every other label leaves the record
-where it stands.
+(secondGatherInputBroadcasts j (init _))`, which no other transition carries — writes the first
+core at `Gather.coreOf` of the round's first gather network state and the bound bit at
+`GBCA.boundOfCore` of that core; a graded return writes the second core the same way. Every other
+label leaves the record where it stands.
 
 The network state `Gather.coreOf` is read on is `AFW.firstGatherOf`, the first
 gather's messages out of the adversary's tagged sent sets beside its corrupted set,
@@ -81,7 +82,7 @@ corrupted set alone (`Gather.coreOf_networkState_only`), which is what lets the
 adversary compute the core from its own state.
 
 `AFW.ghostOutput` reads the bit back, and `AFW.announcedBound`, the guard of the two
-graded-agreement return rows, is the equation between the bit their label carries and it.
+graded-agreement return transitions, is the equation between the bit their label carries and it.
 `AFW.ghostOutput` is total: where the ghost holds no bit it computes one from the first gather's
 core, and on a reachable state the returner's own return-then-call step has already written the
 bit. -/
@@ -295,7 +296,7 @@ noncomputable def ghostOutput (P : Parameters) (w : NetworkState P.n) (r : ℕ) 
 /-- The bit the network announces on a return: `AFW.ghostOutput` of the
 round, and no other. This is the relation the implementation's `ghostOutput`
 parameter takes at this instantiation. It is reducible, so the guard of the two
-return rows is the equation itself. -/
+return transitions is the equation itself. -/
 noncomputable abbrev announcedBound (P : Parameters) (w : NetworkState P.n) (r : ℕ)
     (id : Fin P.n) (out : GBCAOutput) (bnd : Bool) : Prop :=
   bnd = ghostOutput P w r id out
@@ -417,10 +418,10 @@ theorem mem_secondGatherAcceptedPairs {P : Parameters} {s : RoundRecord P.n} {k 
     rw [h]
     simp
 
-/-! ### The round rows -/
+/-! ### The round's transitions -/
 
-/-- The round rows of process `j`: the two gather instances, the `4n` Bracha instances beneath them,
-the three fused rows, and the delivery. -/
+/-- The transitions of process `j` in the round: the two gather instances, the `4n` Bracha
+instances beneath them, the three fused transitions, and the delivery. -/
 inductive RoundStep (P : Parameters) (j : Fin P.n) :
     ProcessRecord P.n → ExtendedLabel P.n (Message P.n) → PMF (ProcessRecord P.n) → Prop
   /-- The graded-agreement call: the round loop hands its estimate to the
@@ -823,7 +824,7 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
       RoundStep P j (c, p) (Sum.inr (.gbcaDeliver r j k m))
         (PMF.pure (c, p.deliverTo r k m))
 
-/-- The rows above meet the implementation's conditions: each carries a label of
+/-- The transitions above meet the implementation's conditions: each carries a label of
 `roundOwn j`, each fires only at an unreplaced program, each is Dirac, and the
 return takes the announced bit free (D29). -/
 instance instIsRoundStep (P : Parameters) :

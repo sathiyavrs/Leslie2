@@ -10,9 +10,9 @@ import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ViewAfterOneWrite
 # A send in a broadcast instance
 
 `roundProjection_firstGatherInputBroadcastSend` and its three companions: the view of the composed
-round after a Bracha send in one broadcast instance of either gather. The row writes the sender's
-local state in that instance and records on the instance's network state, and the composed round
-reaches the instance through `Gather.setInputBroadcasts` or `Gather.setBindBroadcasts`. The
+round after a Bracha send in one broadcast instance of either gather. The transition writes the
+sender's local state in that instance and records on the instance's network state, and the composed
+round reaches the instance through `Gather.setInputBroadcasts` or `Gather.setBindBroadcasts`. The
 returned value does not move, so the return flag the view supplies stands.
 -/
 
@@ -31,10 +31,10 @@ variable {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} {w : NetworkState P.n} {j 
 
 /-! ### A send in a broadcast instance
 
-A Bracha row writes the sender's local state in one broadcast instance and records on that
+A Bracha transition writes the sender's local state in one broadcast instance and records on that
 instance's network state. Each is the instance's `send` event, which `BRB.BrachaAlgorithm.echo`,
-`BRB.BrachaAlgorithm.voteQuorum` and `BRB.BrachaAlgorithm.voteAmplification` write, and the
-composed round reaches it through `Gather.setInputBroadcasts` or `Gather.setBindBroadcasts`. The
+`BRB.BrachaAlgorithm.voteQuorum` and `BRB.BrachaAlgorithm.voteAmplification` write, and the composed
+round reaches it through `Gather.setInputBroadcasts` or `Gather.setBindBroadcasts`. The
 return flag the view supplies is the returned value's, which a local write does not move. -/
 
 /-- A send in an input-broadcast instance of the first gather, read through the

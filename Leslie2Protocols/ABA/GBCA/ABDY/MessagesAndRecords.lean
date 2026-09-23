@@ -97,8 +97,8 @@ state the two bit branches are exclusive and the order in which they are read
 is immaterial. Where neither branch applies no bit is ever handed out, and the
 announced bit is the surviving one of a round that hands out nothing.
 
-The bit is a ghost output: no program reads it, and the three return rows are
-the only rows that read it. -/
+The bit is a ghost output: no program reads it, and the three return transitions
+are the only transitions that read it. -/
 def boundOf {n : ℕ} (sent : Fin n → Finset Message) (F : Finset (Fin n)) :
     GBCAOutput → Bool
   | .grade2 v => v
@@ -206,7 +206,7 @@ def bothValid (P : Parameters) (p : RoundRecord P.n) : Prop :=
 /-- Overwrite the local record. -/
 def setProcess (p : RoundRecord n) (pr : ProcessRecord) : RoundRecord n := { p with process := pr }
 
-/-- File `m` under the recv row of sender `k`. -/
+/-- File `m` under the received set of sender `k`. -/
 def deliverTo (p : RoundRecord n) (k : Fin n) (m : Message) : RoundRecord n :=
   { p with received := Function.update p.received k (insert m (p.received k)) }
 
@@ -240,8 +240,8 @@ def initial (n : ℕ) : NetworkState n where
 def recordGBCASend (w : NetworkState n) (j : Fin n) (m : GBCA.ByABDY.Message) : NetworkState n :=
   { w with sent := Function.update w.sent j (insert m (w.sent j)) }
 
-/-- Corruption (deviation D1): total, Dirac, budget-guarded. It is not a row
-of any rule table — the family applies it to every round's network at once. -/
+/-- Corruption (deviation D1): total, Dirac, budget-guarded. It is not a transition
+of any algorithm — the family applies it to every round's network at once. -/
 def corrupt (P : Parameters) (id : Fin P.n) (w : NetworkState P.n) : NetworkState P.n :=
   if id ∉ w.F ∧ w.F.card < P.f then { w with F := insert id w.F } else w
 
@@ -308,8 +308,8 @@ def received (s : RoundState n) : Fin n → Fin n → Finset Message := fun i =>
 /-- The corrupted set (the network state's, kept equal by `fail` broadcast). -/
 def F (s : RoundState n) : Finset (Fin n) := s.2.F
 
-/-- The round's bound bit (the network state's). A ghost: no rule but the three
-returns reads it, and no program holds it. -/
+/-- The round's bound bit (the network state's). A ghost: no transition but the
+three returns reads it, and no program holds it. -/
 def bound (s : RoundState n) : Option Bool := s.2.bound
 
 /-- The round's bound bit is written: the network state records `β`. -/
@@ -492,7 +492,7 @@ theorem sent_subset_multicast (s : RoundState n) (j : Fin n) (m : Message) (k : 
   fun _ h => mem_multicast_sent.mpr (Or.inr h)
 
 /-- The adversary delivers `m` from sender `j` to receiver `i`: the receiver's round record files it
-under `j`'s row. -/
+under `j`'s received set. -/
 def receiveMessage (s : RoundState n) (i j : Fin n) (m : Message) : RoundState n
   :=
   (Function.update s.1 i ((s.1 i).deliverTo j m), s.2)
@@ -537,8 +537,8 @@ theorem receivedCount_le_receiveMessage (s : RoundState n) (i j : Fin n) (m : Me
   rw [Finset.mem_filter] at hk ⊢
   exact ⟨hk.1, mem_receiveMessage_received.mpr (Or.inr hk.2)⟩
 
-/-- Corruption (deviation D1): total, Dirac, equal to the spec's, and the network state's own row —
-the round records are corruption-blind. -/
+/-- Corruption (deviation D1): total, Dirac, equal to the spec's, and a write of the network state
+alone — the round records are corruption-blind. -/
 def corrupt (P : Parameters) (id : Fin P.n) (s : RoundState P.n) : RoundState P.n
   :=
   (s.1, GBCA.ByABDY.NetworkState.corrupt P id s.2)
@@ -578,7 +578,7 @@ theorem corrupt_F {P : Parameters} (s : RoundState P.n) (id : Fin P.n) :
 @[simp] theorem setBound_bothValid {P : Parameters} (s : RoundState P.n) (β : Bool)
     (i : Fin P.n) : (s.setBound β).bothValid P i ↔ s.bothValid P i := Iff.rfl
 
-/-! The bound bit is written by no rule but the three returns. -/
+/-! The bound bit is written by no transition but the three returns. -/
 
 @[simp] theorem setProcess_bound (s : RoundState n) (j : Fin n) (p : ProcessRecord) :
     (s.setProcess j p).bound = s.bound := rfl

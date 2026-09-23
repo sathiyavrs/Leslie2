@@ -8,7 +8,7 @@ import Leslie2Protocols.ABA.HybridRefinesSpecification.Relation
 import Leslie2Protocols.ABA.Composition.Hybrid
 
 /-!
-# `Invariant` across the `retW` rows of `hybrid`
+# `Invariant` across the `retW` transitions of `hybrid`
 
 `Invariant.step_retW`, preservation of `Invariant` at a return of the coin. `g` is untouched
 entirely, the coin instance touches only `.ret`, a field `Invariant` does not inspect, and the

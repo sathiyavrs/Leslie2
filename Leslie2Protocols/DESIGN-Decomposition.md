@@ -18,18 +18,19 @@ tell a constraint from a convention.
 
 ## 1. The call loop is a label of its own
 
-A specification answers its call label on two rows, the call and the
+A specification answers its call label on two transitions, the call and the
 input-enabledness loop (`BRB.Step.call`, `BRB.Step.callLoop`;
 `Gather.Step.call`, `Gather.Step.callLoop`). A composition splits the caller and
-the network into components, and on one shared label each takes either row.
-Two of the four combinations are behaviours of no row table: the leader loops
+the network into components, and on one shared label each takes either transition.
+Two of the four combinations are behaviours of no algorithm: the leader loops
 while the network posts `⟨INIT, m⟩`, and the leader records while the network
 posts nothing. The first reaches a state whose network holds the message and
 whose leader holds no input, which only `BRB.BrachaAlgorithm.byzantine` produces and only
 under `ldr ∈ F`.
 
-**What fails.** The row characterisation stated label by label, `brachaInstance.step s l μ ↔ ∃ l₀,
-specificationLabelMap l = some l₀ ∧ BrachaAlgorithm s l₀ μ`, is false: at the call label the right-hand
+**What fails.** The characterisation by the algorithm stated label by label,
+`brachaInstance.step s l μ ↔ ∃ l₀, specificationLabelMap l = some l₀ ∧ BrachaAlgorithm s l₀ μ`,
+is false: at the call label the right-hand
 side admits the loop and the left-hand side offers the call alone, and at the loop label the
 reverse. The refinement into the specification fails with it, since a second call with another
 payload would let the specification record and commit a value the instance never broadcast.
@@ -39,10 +40,10 @@ label: `BRB.InstanceLabel = Label ⊕ LoopLabel` with `LoopLabel.callLoop m`,
 `Gather.InstanceLabel = Label ⊕ LoopLabel`
 with `LoopLabel.callLoop id x`, and the round speaks `ExtendedLabel` natively, whose
 `NetworkEvent.gbcaCallLoop` and `byzantineCallGLoop` are its loop labels. On the call label the
-caller has one row and the network posts; on the loop label every component is unchanged.
+caller has one transition and the network posts; on the loop label every component is unchanged.
 The specification is read along a pullback that sends the loop to the call
 (`BRB.specificationLabelMap`, `Gather.specificationLabelMap`, `GBCA.specificationLabelMap`),
-so its own loop row answers the loop label. The level above pulls the composition's alphabet
+so its own loop transition answers the loop label. The level above pulls the composition's alphabet
 back from its own (`Gather.inputBroadcastLabelMap`, `Gather.bindBroadcastLabelMap`,
 `GBCA.ByAFW.firstGatherLabelMap`, `GBCA.ByAFW.secondGatherLabelMap`). The characterisation by the
 algorithm is then exact in the form quantified over the interface labels: `(∃ l,
@@ -56,8 +57,8 @@ specificationLabelMap l = some l₀ ∧ brachaInstance.step s l μ) ↔ BrachaAl
 
 At the tier over broadcast specifications, the input broadcast of process `k`
 is `BRB.specificationOverInstanceAlphabet` read along `inputBroadcastLabelMap k`, and a
-specification answers the gather's call and the gather's loop on either of its two rows. Over one
-specification label the composition therefore has four call rows
+specification answers the gather's call and the gather's loop on either of its two transitions.
+Over one specification label the composition therefore has four call transitions
 (`Gather.AlgorithmOverBroadcastSpecification.call`, `callSpecificationLoop`, `callProgramLoop`, `callLoop`): both
 record, the program alone, the instance alone, neither.
 
@@ -76,7 +77,7 @@ labels under the same write-once guard, so `specificationRelation_transition` an
 `callProgramLoop` with `Gather.Step.call` and `callSpecificationLoop` with `Gather.Step.callLoop`.
 `Gather.Conformance` carries
 no clause on the two records; `specificationRelation_call` takes both guards. The permissiveness
-sits at a specification tier: the concrete gather over Bracha has one row per label.
+sits at a specification tier: the concrete gather over Bracha has one transition per label.
 
 ## 3. The composed program drops its grade on the graded return
 
@@ -89,7 +90,7 @@ process's grade in its round-loop record alone, overwritten every round. A round
 return is not recoverable from the implementation's state. If the program's record kept the grade,
 `AFW.programProjection` could not be a function, `AFW.ProtocolRelation` would lose the conjunct `t.1
 = fun r => roundProjection P u w r`, and the frame lemmas of
-`ABA/AFW/RoundProjectionStep/`, which state the view after a row as that
+`ABA/AFW/RoundProjectionStep/`, which state the view after a transition as that
 function applied, would have no statement.
 
 **The constraint.** The grade is held only between `secondGatherReturn` and `retG`, inside a run
@@ -113,8 +114,9 @@ transition at those labels, and neither has `GBCA.ByABDY.composition`.
 
 **The constraint.** `GBCA.ByAFW.programLabelMap` sends every off-interface family label to
 `ProgramLabel.outside`, on which neither `GBCA.ByAFW.ProgramStep` nor `GBCA.ByAFW.NetworkStep` has a
-row, so the round blocks exactly where `GBCA.ByABDY.composition` blocks. `fail` alone maps to
-`none`: the round's programs remain unchanged on the round's own `fail` row, the gathers corrupt, and in
+transition, so the round blocks exactly where `GBCA.ByABDY.composition` blocks. `fail` alone maps to
+`none`: the round's programs remain unchanged on the round's own `fail` transition, the gathers
+corrupt, and in
 the family the label is answered by the broadcast act (`AFW.corruptionOverBracha`) and not by the
 instance.
 
@@ -126,10 +128,10 @@ companions). A composed gather program reads what the instances returned, writte
 return event, whose guard is the same count. The view defines the returned value as the value with a
 quorum on that local state, chosen classically (`AFW.broadcastReturnsFor`).
 
-**What fails.** An implementation row hands its composed counterpart a specific value `x` with a
-quorum; the composed row needs `inputBroadcastReturned k = some x`; the instance returned the value
+**What fails.** An implementation transition hands its composed counterpart a specific value `x`
+with a quorum; the composed transition needs `inputBroadcastReturned k = some x`; the instance returned the value
 the view chose. The two coincide only if two vote quorums at one process name one value. Without
-that fact the composed row's guard cannot be discharged and `AFW.protocolSimulation` is unprovable. A
+that fact the composed transition's guard cannot be discharged and `AFW.protocolSimulation` is unprovable. A
 returned value defined by a relation rather than a function, filled inside the matching run, needs
 the same fact: an earlier fill with another value would leave the instance returned and the second
 value unreachable.
@@ -138,8 +140,8 @@ value unreachable.
 `BRB.Invariant` at every broadcast instance of the view, and
 `AFW.broadcastReturnsFor_eq_of_quorum` reads the uniqueness off it through
 `BRB.echoCertificate_of_vote_quorum` and `BRB.echoCertificate_unique`. The invariant holds
-initially by `BRB.Invariant.initial`, and after each matched row the view's instances
-have moved by their own rows or stood still (`AFW.InvariantStep`), so `BRB.Invariant.step`
+initially by `BRB.Invariant.initial`, and after each matched transition the view's instances
+have moved by their own transitions or stood still (`AFW.InvariantStep`), so `BRB.Invariant.step`
 re-establishes it. No invariant over the implementation's network's sent sets is written.
 `broadcastReturnsFor` carries `[DecidableEq X]` explicitly, so its count is syntactically
 the count `BRB.Invariant` is stated on.

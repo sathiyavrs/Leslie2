@@ -13,10 +13,10 @@ The broadcast specification speaks `Label n M`. The reliable-broadcast instance 
 `InstanceLabel n M`, in which the call loop is a label of its own. `specificationLabelMap`
 sends the call loop to the call it stands for and every other interface label to its own
 copy. `specificationOverInstanceAlphabet` is the specification read along that map: the
-specification's own rows at the labels the map carries, and a Dirac self-loop at the rest.
+specification's own transitions at the labels the map carries, and a Dirac self-loop at the rest.
 
-Every program rule and every network rule is Dirac, so the programs, the network, the
-instance and the lifted specification are each an LTS. No program rule fires on the silent
+Every program transition and every network transition is Dirac, so the programs, the network, the
+instance and the lifted specification are each an LTS. No program transition fires on the silent
 label, so the instance's silent transitions are the network's injections and the hidden
 rendezvous.
 
@@ -45,7 +45,7 @@ variable {M : Type} [DecidableEq M]
 The specification speaks `Label n M`; the instance speaks `InstanceLabel n M`, in which
 the call loop is a label of its own. `specificationLabelMap` is the projection that
 identifies the loop with the specification label it stands for, so that the
-specification's own loop row answers it. -/
+specification's own loop transition answers it. -/
 
 /-- The projection of the interface alphabet onto the specification's
 alphabet. -/
@@ -89,7 +89,7 @@ noncomputable def specificationOverInstanceAlphabet (P : Parameters) (ldr : Fin 
 
 /-! ### Determinacy
 
-Every program rule and every network rule is Dirac, so the instance is an LTS. -/
+Every program transition and every network transition is Dirac, so the instance is an LTS. -/
 
 /-- Every program transition is Dirac. -/
 theorem programStep_dirac {P : Parameters} {ldr j : Fin P.n}
@@ -134,7 +134,7 @@ theorem specificationOverInstanceAlphabet_isLTS {M : Type} (P : Parameters) (ldr
   (specificationOverInstanceAlphabet P ldr M).IsLTS :=
   System.mapIdle_isLTS _ (specInst_isLTS P ldr)
 
-/-- No program rule fires on `τ`: a program only ever moves in a rendezvous or
+/-- No program transition fires on `τ`: a program only ever moves in a rendezvous or
 on one of the instance's interface labels. The instance's silent transitions
 are therefore exactly the network's injections and the hidden rendezvous. -/
 theorem programStep_no_tau {P : Parameters} {ldr j : Fin P.n}

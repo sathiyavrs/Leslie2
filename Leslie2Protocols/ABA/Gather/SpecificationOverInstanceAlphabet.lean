@@ -13,8 +13,8 @@ The gather specification speaks `Label n X`. The gather instance speaks
 `InstanceLabel n X`, in which the call loop is a label of its own.
 `specificationLabelMap` sends the call loop to the call it stands for and every
 other interface label to its own copy. `specificationOverInstanceAlphabet` is the
-specification read along that map: the specification's own rows at the labels the
-map carries, and a Dirac self-loop at the rest. It is an LTS.
+specification read along that map: the specification's own transitions at the labels
+the map carries, and a Dirac self-loop at the rest. It is an LTS.
 
 A weak run of the specification is read back over the interface along a section of
 `specificationLabelMap`. `labelSection` is the left injection, the interface label a
@@ -35,7 +35,7 @@ variable {X : Type}
 
 The specification speaks `Label n X`; the instance speaks `InstanceLabel n X`, in which
 the call loop is a label of its own. `specificationLabelMap` identifies the loop with the
-specification label it stands for, so that the specification's own loop row
+specification label it stands for, so that the specification's own loop transition
 answers it. -/
 
 /-- The projection of the interface alphabet onto the specification's

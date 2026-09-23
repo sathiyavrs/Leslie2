@@ -2,8 +2,8 @@
   \label{thm:aba-protocol-composed}
   \lean{PLTS.ABA.ABDY.ProtocolState}\lean{PLTS.ABA.ABDY.ProtocolRelation}\lean{PLTS.ABA.ABDY.protocolRelation_mk}\lean{PLTS.ABA.ABDY.protocolRelation_init}\lean{PLTS.ABA.ABDY.protocolSimulation}\lean{PLTS.ABA.ABDY.protocol_composed}\leanok
   \uses{def:aba-composed, def:aba-programs, def:aba-network, def:aba-protocol, def:forwardsim, def:coupling, def:achievable, thm:forward-sound}
-  The protocol is forward-simulated by its composed system along the Dirac lift of $\mathrm{ProtocolRelation}(P)$, the relation that fixes every coordinate of a composed state that a state of the protocol determines, in five unguarded conjuncts, and hence $\operatorname{ATD}(\abdy{\mathrm{protocol}}(P)) \subseteq \operatorname{ATD}(\abdy{\mathrm{composed}}(P))$; the inclusion is one-directional because a round instance answers the Byzantine graded-agreement rows, for which no program has a row (D11), and answers a send or a delivery at a process the protocol has terminated (D22): \leandecl{PLTS.ABA.ABDY.protocolSimulation}, \leandecl{PLTS.ABA.ABDY.protocol_composed}.
-  A corrupted process's replaced program is matched loop for loop, and its corrupted return by the ABA network's Byzantine row (D23).
+  The protocol is forward-simulated by its composed system along the Dirac lift of $\mathrm{ProtocolRelation}(P)$, the relation that fixes every coordinate of a composed state that a state of the protocol determines, in five unguarded conjuncts, and hence $\operatorname{ATD}(\abdy{\mathrm{protocol}}(P)) \subseteq \operatorname{ATD}(\abdy{\mathrm{composed}}(P))$; the inclusion is one-directional because a round instance answers the Byzantine graded-agreement transitions, for which no program has a transition (D11), and answers a send or a delivery at a process the protocol has terminated (D22): \leandecl{PLTS.ABA.ABDY.protocolSimulation}, \leandecl{PLTS.ABA.ABDY.protocol_composed}.
+  A corrupted process's replaced program is matched loop for loop, and its corrupted return by the ABA network's Byzantine transition (D23).
 \end{theorem}
 
 \begin{proof}\leanok

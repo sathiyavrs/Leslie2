@@ -26,8 +26,8 @@ of scope.
   (`ABA/ReliableBroadcast/Specification.lean`), one level up: entries are sent by reliable
   broadcast, so a process corrupted after a correct call can still direct its committed
   entry until first use, and a specification that fixed the entry at call
-  time would refuse that execution. The source's Byzantine-call τ-rule is the
-  corrupted half of `commit` (deviation D26).
+  time would refuse that execution. The source's Byzantine-call silent transition
+  is the corrupted half of `commit` (deviation D26).
 * `core` — the binding content: one payload set, written at most once, by
   the internal transition `bindCore`. Its entries are committed entries, it
   has at least `n − f` of them, and every return carries it.

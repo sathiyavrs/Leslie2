@@ -17,10 +17,10 @@ visible label: every process steps, and the joint distribution is their Dirac pr
 `systemHidden_step_iff` and `system_step_iff` split a composite transition into a hidden event and
 a label that survives the hiding. `systemExtended_event_inversion`,
 `systemExtended_label_inversion` and `systemExtended_tau_inversion` read a joint step of the three
-components backwards, to the rows of the group, of the network and of the oracle.
+components backwards, to the transitions of the group, of the network and of the oracle.
 
-The two graded-agreement returns are the only rows that read the ghost, and what they read is the
-relation `ghostOutput` at the network's state. `systemExtended_retG_bound` and
+The two graded-agreement returns are the only transitions that read the ghost, and what they read
+is the relation `ghostOutput` at the network's state. `systemExtended_retG_bound` and
 `systemExtended_byzantineRetG_bound` state what a composite transition on either therefore
 requires of the bound bit its label carries.
 -/
@@ -163,7 +163,7 @@ theorem systemExtended_label_inversion {u : ∀ _ : Fin P.n, ProcessRecord P.n S
   · rw [extendedLabel_tau] at habs; exact absurd (Sum.inl_injective habs) hl
 
 /-- A silent shared-label transition: one process terminating, or the network's
-own injection. The coin oracle has no silent row, so it contributes none. -/
+own injection. The coin oracle has no silent transition, so it contributes none. -/
 theorem systemExtended_tau_inversion {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
     {w : NetworkState P.n M G} {o : ℕ → WCC.SpecState P.n}
     {μ : PMF (State P M S G)}
@@ -190,8 +190,8 @@ theorem systemExtended_tau_inversion {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
 
 /-! ### The bound bit on a return
 
-The two graded-agreement returns are the only rows that read the ghost, and
-what they read is the relation `ghostOutput` at the network's state. A composite
+The two graded-agreement returns are the only transitions that read the ghost,
+and what they read is the relation `ghostOutput` at the network's state. A composite
 transition on either therefore constrains the bound bit its label carries. -/
 
 /-- A composite graded-agreement return announces a bit the network's ghost

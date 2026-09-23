@@ -59,11 +59,11 @@ by outcome.
 the Dirac lift of `ProtocolRelation P`, and the trace-distribution inclusion `protocol_composed`
 it yields.
 The inclusion is one-directional because the composed system takes transitions the protocol
-declines. A round instance has a row for the Byzantine graded-agreement rows, and no protocol
-program has one (D11, D22); the instance's round rules carry no termination guard, so the instance
-answers a send or a delivery at a process the protocol has terminated. In the other direction the
-protocol's `terminate` row writes a field the relation does not read, and the composed answer to it
-is a stutter. -/
+declines. A round instance has a transition on the Byzantine graded-agreement labels, and no
+protocol program has one (D11, D22); the instance's round transitions carry no termination guard, so
+the instance answers a send or a delivery at a process the protocol has terminated. In the other
+direction the protocol's `terminate` transition writes a field the relation does not read, and the
+composed answer to it is a stutter. -/
 
 namespace PLTS
 namespace ABA
@@ -221,12 +221,12 @@ private theorem relation_none (P : Parameters) {processes x : ∀ _ : Fin P.n, P
 
 /-! ### Assembling a composed transition
 
-Two shapes of answer. A label the composed system takes on the nose is answered by the rows of its
-four components. A round rendezvous has no row at three of them: it is internal to a round instance,
-and the family carries it as its own silent rule. -/
+Two shapes of answer. A label the composed system takes on the nose is answered by the transitions
+of its four components. A round rendezvous has no transition at three of them: it is internal to a
+round instance, and the family carries it as its own silent transition. -/
 
 /-- A visible label of the extended alphabet answered by the four composed
-rows, the oracle's successor carried across. -/
+transitions, the oracle's successor carried across. -/
 private theorem coupling_visible (P : Parameters) {x : ∀ _ : Fin P.n, ProcessRecord P.n}
     {w' : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
     {ω : PMF (ℕ → WCC.SpecState P.n)}
@@ -248,7 +248,7 @@ private theorem coupling_visible (P : Parameters) {x : ∀ _ : Fin P.n, ProcessR
   exact ⟨Ω, hr, hbind ▸ composedExtended_visible_step P hL hGs hCs hAs hWs⟩
 
 /-- A rendezvous the composed system answers inside one round: the
-instance of round `r` takes it as its own silent rule. -/
+instance of round `r` takes it as its own silent transition. -/
 private theorem coupling_round
     (P : Parameters) {x : ∀ _ : Fin P.n, ProcessRecord P.n} {w' : NetworkState P.n}
     {o : ℕ → WCC.SpecState P.n} {ν : PMF (ℕ → WCC.SpecState P.n)}
@@ -266,23 +266,22 @@ private theorem coupling_round
   · rw [hbind]
     exact composedHidden_of_tau P (composedExtended_tau_gbca P (gbcaInstanceFamily_tau P G r hsub))
 
-/-! ### The handshake rows the protocol process group cannot take
+/-! ### The handshake transitions the protocol process group cannot take
 
-A Byzantine graded-agreement call or return names a process, and the protocol
-program of that process has no row for it (D11, D22). Neither has the replaced
-program of a corrupted process, those labels lying in `actsAt` (D23). The
-process group is a full synchronisation, so no protocol transition carries
-either label. -/
+A Byzantine graded-agreement call or return names a process, and the protocol program of that
+process has no transition for it (D11, D22). Neither has the replaced program of a corrupted
+process, those labels lying in `actsAt` (D23). The process group is a full synchronisation, so no
+protocol transition carries either label. -/
 
 
 /-! ### The matching, by label class
 
 A transition of the protocol group is a hidden rendezvous, a visible shared label, or the silent
-label. Each is answered by a transition of the composed group on the same label, built from the rows
-of the four composed components. A corrupted process's replaced program is matched loop for loop:
-where the protocol program self-loops, the composed round loop takes `corruptedIdle`. The return
-that self-loop carries without DECIDED evidence is authorised on the composed system by the ABA
-network's Byzantine row (D23). -/
+label. Each is answered by a transition of the composed group on the same label, built from the
+transitions of the four composed components. A corrupted process's replaced program is matched loop
+for loop: where the protocol program self-loops, the composed round loop takes `corruptedIdle`. The
+return that self-loop carries without DECIDED evidence is authorised on the composed system by the
+ABA network's Byzantine transition (D23). -/
 
 /-- The matching on the rendezvous alphabet. -/
 theorem coupling_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord P.n}
@@ -910,7 +909,7 @@ theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
     · rw [hCeq i, hfor i hi]
       exact RoundLoopStep.retGIdle _ r id out bnd (Ne.symm hi)
 
-/-- The matching on the silent label. The protocol's own `terminate` row writes
+/-- The matching on the silent label. The protocol's own `terminate` transition writes
 no coordinate the relation reads, so the composed answer to it is to stand
 still; the adversary's two injections are answered by a transition. -/
 theorem coupling_tau (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord P.n}

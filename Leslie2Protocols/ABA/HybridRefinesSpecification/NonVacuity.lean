@@ -19,8 +19,8 @@ concrete **20-step run of `hybrid fourProcesses` that reaches a genuine `retABA`
 complete decision — starting from its initial state:
 
 * `step_callABA₀/₁/₂` — three external input handshakes (`callABA`, *visible*: the addressed round
-  loop takes its `input` row, the other three idle, and the round specifications, the ABA network
-  and the coin oracle idle);
+  loop takes its `input` transition, the other three idle, and the round specifications, the ABA
+  network and the coin oracle idle);
 * `step_callG₀/₁/₂` — three graded-agreement calls (`callG 0`, *hidden* to `τ`:
   the caller's round loop hands over its estimate and the round-`0`
   specification takes its owned `call`);
@@ -39,7 +39,7 @@ complete decision — starting from its initial state:
   draws `val` from `wccPMF`. The successor lands on the `bit true` branch — the
   outcome agreeing with the bound value — with mass exactly `ε = 1/2 > 0`;
 * `step_callW₂` — process `2`'s coin call, recording again: `val` is resolved,
-  so the resolving row's guard is closed;
+  so the resolving transition's guard is closed;
 * `step_retW₀/₁/₂` — the three coin returns, each a rendezvous on `retWPublish`
   (*hidden*): the round loop's fused round advance (deviation D10) joined with
   the network's publication of `⟨DECIDED, true⟩`, giving three distinct
@@ -96,7 +96,7 @@ def hybridStateOf (G : ℕ → GBCA.SpecState 4) (s : ABAState fourProcesses)
     HybridState fourProcesses := (G, s.1, s.2, o)
 
 /-- The round loops on a label one of them owns: the addressed loop takes its
-row, the others remain unchanged, and the group's successor is the pointwise
+transition, the others remain unchanged, and the group's successor is the pointwise
 update. -/
 theorem roundLoops_at {C : ∀ _ : Fin 4, RoundLoopRecord 4} (id : Fin 4) {L : ExtendedLabel 4}
     {c' : RoundLoopRecord 4} (hown : RoundLoopStep fourProcesses id (C id) L (PMF.pure c'))
@@ -106,7 +106,7 @@ theorem roundLoops_at {C : ∀ _ : Fin 4, RoundLoopRecord 4} (id : Fin 4) {L : E
   · subst h; rw [Function.update_self]; exact hown
   · rw [Function.update_of_ne h]; exact hidle i h
 
-/-- The coin oracle on a label one of its rounds owns, at a row whose successor
+/-- The coin oracle on a label one of its rounds owns, at a transition whose successor
 need not be a point mass: the family's successor is the round's, pushed forward
 along the update at that round. -/
 theorem wccFamilyStep (o : ℕ → WCC.SpecState 4) {l : Label 4} {r : ℕ}
@@ -116,7 +116,7 @@ theorem wccFamilyStep (o : ℕ → WCC.SpecState 4) {l : Label 4} {r : ℕ}
   rw [WCC.specFamily, System.family_step_iff]
   exact Or.inr (Or.inl ⟨r, hr, μ, h, rfl⟩)
 
-/-- The coin oracle's idle row on a shared label that is neither `τ`, nor one
+/-- The coin oracle's idle transition on a shared label that is neither `τ`, nor one
 of its own handshakes, nor `fail`. -/
 theorem wccIdle (o : ℕ → WCC.SpecState 4) {l : Label 4} (hl : l ≠ Label.tau)
     (hr : Label.wccRound l = none) (hf : ¬ Label.isFail l) :
@@ -586,7 +586,7 @@ theorem step_callW₁_mass :
     map_apply_inj hg, Parameters.wccPMF_apply_bit]
 
 /-- Process `2` calls the round-`0` coin. `val` is resolved, so the resolving
-row's guard is closed and this call only records. -/
+transition's guard is closed and this call only records. -/
 theorem step_callW₂ :
     (hybrid fourProcesses).step (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterCallW1
       coinAfterResolvingCall) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn2
@@ -787,9 +787,9 @@ theorem step_retABA :
 /-! ### A `fail` broadcast: all four components corrupt in sync -/
 
 /-- Corruption of process `0`: the visible `fail 0` synchronises every component — the round
-specifications and the coin oracle by global broadcast, the ABA network by its own `fail` row, which
-carries the guards, the named round loop by replacing its own program (deviation D23), and the other
-three round loops by unchanged (deviation D1). -/
+specifications and the coin oracle by global broadcast, the ABA network by its own `fail`
+transition, which carries the guards, the named round loop by replacing its own program
+(deviation D23), and the other three round loops by unchanged (deviation D1). -/
 theorem step_fail :
     (hybrid fourProcesses).step (hybridStateOf gbcaSpecificationsInitial abaInitial coinInitial)
       (Label.fail (0 : Fin 4))

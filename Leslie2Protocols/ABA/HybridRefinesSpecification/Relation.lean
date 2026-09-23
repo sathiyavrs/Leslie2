@@ -12,10 +12,10 @@ import Leslie2Protocols.ABA.GBCA.SpecificationSafety
 # The core-simulation relation
 
 The relation and invariant for `hybridRefinesSpecification : hybrid ⊑ ABA.spec`. The abstract
-abstract state never fires `SpecStep.coinFlip`: it answers every hidden row, the
+abstract state never fires `SpecStep.coinFlip`: it answers every hidden transition, the
 concrete coin included, by stuttering under a constant coupling, and its mode
 is `ControlMode.flipEnabled` throughout. It decides once, in the `SpecStep.decide` τ-step
-that leads the first `retABA` row.
+that leads the first `retABA` transition.
 
 * `AbstractState` — the abstract-state constraints (C1 `F_eq`, C2 `ret_eq`, `mode_flipEnabled`,
   `input_sync`, and C3/C7 `phase`).
@@ -32,7 +32,7 @@ This file holds the two predicates, their frame and reader lemmas, and the
 initial states. The proof that `hybridSpecificationStateRelation` is a simulation relation runs in
 the two files above it: step inversion for `hybrid` and preservation of `Invariant` in
 `HybridRefinesSpecification/InvariantPreservation/`, `AbstractState` preservation for the
-stutter rows and the assembly in `HybridRefinesSpecification/AbstractStatePreservation.lean`.
+stutter transitions and the assembly in `HybridRefinesSpecification/AbstractStatePreservation.lean`.
 -/
 
 open Stream'
@@ -103,9 +103,9 @@ def Grade2Holder (P : Parameters) (c : ABAState P) (id : Fin P.n) (b : Bool) : P
 never fires `SpecStep.coinFlip`: its mode is `ControlMode.flipEnabled` throughout, so
 `SpecStep.decide` stays enabled at every state it reaches. It lives in one of
 two phases keyed on `a.val`. In **phase 1**, before the first visible return,
-nothing is decided and every hidden row is answered by a stutter. In **phase
-2**, entered by the `SpecStep.decide` step that answers the first `retABA`
-row, `a.val = some v` and `v` is certified by a concrete grade-2 lock.
+nothing is decided and every hidden transition is answered by a stutter. In
+**phase 2**, entered by the `SpecStep.decide` step that answers the first
+`retABA` transition, `a.val = some v` and `v` is certified by a concrete grade-2 lock.
 
 The ghost record `a.input` agrees with the committed concrete input at every correct process, in
 both phases. A `callABA` at a process holding no input commits the bit in both systems, and at a
@@ -148,8 +148,8 @@ def DissentWitness (P : Parameters) (g : ℕ → GBCA.SpecState P.n) (c : ABASta
 
 /-- `DissentWitness` transports along any frame that agrees on `g`'s exclusion set at
 `r`/`r - 1`, `g`'s grade at `r - 1`, and every input of a correct process (the shape every
-`Invariant.step_*` row's frame facts already provide for their own row; the `r = 0` branch only
-needs the input equality, the `r ≥ 1` branch only the exclusion-set/grade ones). -/
+`Invariant.step_*` transition's frame facts already provide for their own transition; the `r = 0`
+branch only needs the input equality, the `r ≥ 1` branch only the exclusion-set/grade ones). -/
 theorem DissentWitness.transport {P : Parameters} {g₀ g : ℕ → GBCA.SpecState P.n}
     {c₀ c : ABAState P} {r : ℕ}
     (hexcluded : (g r).excluded = (g₀ r).excluded)
@@ -246,7 +246,7 @@ theorem Grade2Certificate.of_unchanged {P : Parameters} {g g' : ℕ → GBCA.Spe
   ⟨hgrade.trans h.1, by rw [hexcluded r]; exact h.2.1,
     Grade2Commitment.of_unchanged hexcluded hcall hF hround hest hcarr h.2.2⟩
 
-/-- The `AbstractState` transport a step row hands to `AbstractState.unchangedBy`: grade-2
+/-- The `AbstractState` transport a step transition hands to `AbstractState.unchangedBy`: grade-2
   certificates survive the step, and any holder universal survives given its certificate
   (the certificate is what supplies a *fresh* grade-2 holder when every old holder has been
   corrupted away). -/
@@ -258,7 +258,7 @@ def AbstractStateUnchanged (P : Parameters) (g g' : ℕ → GBCA.SpecState P.n) 
     ∀ j b', j ∉ c'.F → Grade2Holder P c' j b' → b' = v)
 
 /-- The identity `AbstractStateUnchanged`,
-  for rows that touch neither `g`-certificates nor holders. -/
+  for transitions that touch neither `g`-certificates nor holders. -/
 theorem AbstractStateUnchanged.refl (P : Parameters) (g : ℕ → GBCA.SpecState P.n) (c : ABAState P) :
     AbstractStateUnchanged P g g c c :=
   ⟨fun r0 _ hc => ⟨r0, hc⟩, fun _ _ hpin => hpin⟩
@@ -270,8 +270,8 @@ about the concrete `(g, c, w)` only. -/
 structure Invariant (P : Parameters) (g : ℕ → GBCA.SpecState P.n) (c : ABAState P)
     (w : ℕ → WCC.SpecState P.n) : Prop where
   /-- I0 (D23): the replacement flag and the corrupted set name the same processes. The two are
-  written by the two halves of one `fail` row, whose network guard `id ∉ F` and round-loop guard
-  `corrupted = false` are the two systems of this equivalence. -/
+  written by the two halves of one `fail` transition, whose network guard `id ∉ F` and round-loop
+  guard `corrupted = false` are the two systems of this equivalence. -/
   corrupted_F : ∀ id, c.corrupted id = true ↔ id ∈ c.F
   /-- I1: `F` equality across every component copy. -/
   F_gbca : ∀ r, (g r).F = c.F
@@ -299,7 +299,7 @@ structure Invariant (P : Parameters) (g : ℕ → GBCA.SpecState P.n) (c : ABASt
   /-- I4: DECIDEDs from correct processes come from a grade-2-locked bound round — per sent bit
   (D12′). Equivocation-robust form: a corrupted sender may sent both bits (and
   its receipts count toward either tally), but any `n − f`-sender tally for `b`
-  contains a never-corrupted sender of `b` (pigeonhole, at the `retABA` row),
+  contains a never-corrupted sender of `b` (pigeonhole, at the `retABA` transition),
   and *that* sender's sent `b` carries the grade-2 lock certificate. -/
   decided_source : ∀ id b, id ∉ c.F → b ∈ c.decidedSent id → ∃ r, Grade2Certificate P g c r b
   /-- I3b: a grade-2-locked round whose surviving bit is still alive commits
@@ -313,8 +313,8 @@ structure Invariant (P : Parameters) (g : ℕ → GBCA.SpecState P.n) (c : ABASt
   round_bound : ∀ id, id ∉ c.F → ∀ r, r < (c.processes id).round →
     RoundSettled g r
   /-- I3a: when the frontier coin agrees with the frontier surviving bit, correct
-  estimates of processes beyond the frontier are that bit (the
-  rule-6-only-filler corner: the concrete cannot rebind differently). -/
+  estimates of processes beyond the frontier are that bit (the concrete
+  cannot rebind to the other bit). -/
   agree_locked : ∀ r v, IsLastBound g r → (!v) ∈ (g r).excluded ∧ v ∉ (g r).excluded →
     (w r).val = .bit v →
     ∀ id, id ∉ c.F → r < (c.processes id).round → (c.processes id).estimate = some v
@@ -337,8 +337,8 @@ structure Invariant (P : Parameters) (g : ℕ → GBCA.SpecState P.n) (c : ABASt
   the round loop's `RoundLoopStep.retG` records the outcome carried on the shared `retG`
   label, so it is the outcome the round specification's return guards
   (`retGrade2`/`retGrade1`/`retGrade0`) licensed, regardless of `id`'s corruption; this is needed
-  corruption-free in `step_retW`'s `received_sound`/`decided_source` rows, which have no correctness
-  hypothesis. -/
+  corruption-free in `step_retW`'s proofs of `received_sound` and `decided_source`, which have no
+  correctness hypothesis. -/
   grade2_source : ∀ id b, (c.processes id).lastGrade = some (.grade2 b) →
     ∃ r, Grade2Certificate P g c r b
   /-- I13 : post-`retG` est provenance — correct processes between `retG r` and
@@ -388,14 +388,14 @@ structure Invariant (P : Parameters) (g : ℕ → GBCA.SpecState P.n) (c : ABASt
   on `w (r + 1)` yields a never-corrupted caller, the callers outnumbering `F`, and that
   caller has by `round_flip` already resolved round `r`'s coin. -/
   wcc_order : ∀ r, (w (r + 1)).val ≠ .bot → (w r).val ≠ .bot
-  /-- I20 : `F`-free residue of round-`0` `GBCA` call provenance — either the input
-  is genuinely committed (write-once, permanent) or the caller was already corrupted (`F` only
-  grows, so this disjunct is permanent too). Established at the `callG` round-`0` row (correct:
-  `estimate0`; byzantine: the corruption ctor). -/
+  /-- I20 : `F`-free residue of round-`0` `GBCA` call provenance — either the input is genuinely
+  committed (write-once, permanent) or the caller was already corrupted (`F` only grows, so this
+  disjunct is permanent too). Established at the `callG` round-`0` transition (correct: `estimate0`;
+  byzantine: the corruption ctor). -/
   input_gbcaRound0_permanent : ∀ id b,
     (g 0).call id = some b → (c.processes id).input = some b ∨ id ∈ c.F
   /-- I21' : the `WCC` analogue of `call_round` (I8) — a correct `WCC_r` caller has reached round
-  `r`. Established at the `callW` row exactly like `call_round` is at `callG`; feeds
+  `r`. Established at the `callW` transition exactly like `call_round` is at `callG`; feeds
   `wcc_order`/`flip_grade2Lock`'s establishment at the resolving call (a never-corrupted caller of
   the round being resolved has already resolved every earlier round's coin via `round_flip`). -/
   wcc_callRound : ∀ r id, id ∉ c.F → (w r).called id = true → r ≤ (c.processes id).round
@@ -406,14 +406,15 @@ structure Invariant (P : Parameters) (g : ℕ → GBCA.SpecState P.n) (c : ABASt
   /-- I22 : a correct process that has never received its external input has never
   called any `WCC` instance (the sole idle-exit, `callABA`'s correct `input` ctor, is what first
   makes a `callW` handshake reachable; `input` is write-once, so this is preserved trivially
-  once `input ≠ none`). Feeds `wcc_callRound`'s self-corner at the fresh `callABA` row. -/
+  once `input ≠ none`). Feeds `wcc_callRound`'s self-corner at the fresh `callABA` transition. -/
   idle_no_wccCall : ∀ id, id ∉ c.F → (c.processes id).input = none → ∀ r, (w r).called id = false
   /-- I23 : a `GBCA_r` residue analogous to `flip_grade2Lock` (I21), but keyed on a correct
   process's own round-`r` progress rather than round `r`'s coin: once a correct process has reached
   (or passed) the "done with `GBCA_r`" point, round `r` is either already graded or a
-  `DissentWitness` certifies why not. Established at the `retG` row (the genuine GBCA return guards
-  `retGrade2`/`retGrade1`/`retGrade0`); preserved elsewhere because the conclusion is permanent and
-  the hypothesis's round/phase progression only ever moves forward into the `r < round` disjunct. -/
+  `DissentWitness` certifies why not. Established at the `retG` transition (the genuine GBCA return
+  guards `retGrade2`/`retGrade1`/`retGrade0`); preserved elsewhere because the conclusion is
+  permanent and the hypothesis's round/phase progression only ever moves forward into the
+  `r < round` disjunct. -/
   retG_witness : ∀ r id, id ∉ c.F →
     (((c.processes id).round = r ∧
         ((c.processes id).phase = .toCallW ∨ (c.processes id).phase = .awaitW)) ∨
@@ -421,8 +422,8 @@ structure Invariant (P : Parameters) (g : ℕ → GBCA.SpecState P.n) (c : ABASt
     (g r).grade ≠ none ∨ DissentWitness P g c r
   /-- I24 : a correct `WCC_r` caller inherits `retG_witness`'s conclusion outright
   (it called `GBCA_r` and reached `toCallW`/`awaitW` in the same handshake). Established at the
-  `callW` row from `retG_witness`; preserved trivially (conclusion permanent, `fail` shrinks the
-  quantifier). Feeds `flip_grade2Lock`'s establishment at the resolving call, through the
+  `callW` transition from `retG_witness`; preserved trivially (conclusion permanent, `fail` shrinks
+  the quantifier). Feeds `flip_grade2Lock`'s establishment at the resolving call, through the
   threshold's never-corrupted caller. -/
   wccCalled_witness : ∀ r id, id ∉ c.F → (w r).called id = true →
     (g r).grade ≠ none ∨ DissentWitness P g c r
@@ -431,13 +432,13 @@ structure Invariant (P : Parameters) (g : ℕ → GBCA.SpecState P.n) (c : ABASt
   bound_quorum : ∀ r, (g r).excluded ≠ ∅ → (g r).quorum P
   /-- I26 (D13) : every bound round's surviving value carries a permanent `f + 1`
   input-or-`F` support sent — the concrete mirror of TS 1's V-P1 `InputSupport`.
-  Established at the `bindUnset` row from the D15 count guard (round 0
+  Established at the `bindUnset` transition from the D15 count guard (round 0
   wholesale via `input_gbcaRound0_permanent`; `r ≥ 1` through `call_provenance` and the previous
   round's sent sets); preserved everywhere by monotonicity. -/
   bind_support : ∀ r v, (!v) ∈ (g r).excluded → RoundLoopInputSupport P c v
   /-- I27 (D13) : a grade-0-locked round retains the `retGrade0` guards themselves — `f + 1`
   F-blind support for *each* bit, in `InputSupport` shape. Both `call` and `F` only grow, so
-  the counts are permanent. Established at the `retGrade0` row; preserved everywhere by
+  the counts are permanent. Established at the `retGrade0` transition; preserved everywhere by
   monotonicity. `support_of_call_count` reads them back as input sent sets, and they are what
   keeps a grade-0 lock incompatible with a grade-2 lock below it or with an agreeing coin
   underneath it. -/
@@ -446,7 +447,7 @@ structure Invariant (P : Parameters) (g : ℕ → GBCA.SpecState P.n) (c : ABASt
       (fun id => (g r).call id = some b ∨ id ∈ (g r).F)).card
   /-- I28 : every exclusion's D15 guard is permanent — an excluded bit's spared rival
   keeps `f + 1` F-blind call support at that round (`call` and `F` only grow).
-  Established at the `bindUnset` row verbatim from its guard; deriving it
+  Established at the `bindUnset` transition verbatim from its guard; deriving it
   (`GBCA.exists_correct_caller`) recovers a correct caller of the spared bit
   from any residue, which is what holds values past a burn. -/
   excluded_support : ∀ r b, b ∈ (g r).excluded →
@@ -462,7 +463,7 @@ structure Invariant (P : Parameters) (g : ℕ → GBCA.SpecState P.n) (c : ABASt
     v = v' ∨ (g r).grade = some false
   /-- I30 : correct grade-2 decision holders agree globally, across rounds. The
   pairwise residue of Graded Agreement plus grade-2 lock commitment; each new holder
-  is compared at its `retG` row, where the fresh return's live pair meets the
+  is compared at its `retG` transition, where the fresh return's live pair meets the
   existing holder's certificate. -/
   grade2Lock_agree : ∀ i j b b', i ∉ c.F → j ∉ c.F →
     Grade2Holder P c i b → Grade2Holder P c j b' → b = b'

@@ -9,10 +9,11 @@ import Leslie2Protocols.ABA.Composition.Hybrid
 import Leslie2Protocols.ABA.HybridRefinesSpecification.InvariantPreservation.SpecificationStateCorruption
 
 /-!
-# `Invariant` across the `fail` rows of `hybrid`
+# `Invariant` across the `fail` transitions of `hybrid`
 
 `Invariant.step_fail`, preservation of `Invariant` at a synchronised corruption of all three
-components, under the row's own guards: the named process is not corrupted yet and the budget has
+components, under the transition's own guards: the named process is not corrupted yet and the
+budget has
 room. `F` only grows and every other projection is untouched, so the correctness hypotheses
 transfer by `F`-monotonicity. The two guards are what puts the replacement flag and the corrupted
 set together (I0, D23), the flag going up at `id` and `F` gaining exactly `id`.

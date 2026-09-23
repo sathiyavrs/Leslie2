@@ -21,18 +21,18 @@ instances — and the joint distribution is their Dirac product. A silent label 
 one of the gather network, one input instance or one bind instance.
 `instanceOverBroadcastsExtended_joint_inversion` and
 `instanceOverBroadcastsExtended_tau_inversion` read a joint step that way, and the `_step`
-lemmas build one from the factors' rows. The pullbacks `inputBroadcastLabelMap` and
+lemmas build one from the factors' transitions. The pullbacks `inputBroadcastLabelMap` and
 `bindBroadcastLabelMap` are computed label by label.
 
-`programStep_*` reads one gather program's row off its label: the participant's row as its
-guards together with the Dirac it produces, and the idle row of a non-participant as the
-identity. `networkStep_*` does the same for the gather network.
+`programStep_*` reads one gather program's transition off its label: the participant's transition
+as its guards together with the Dirac it produces, and the idle transition of a non-participant as
+the identity. `networkStep_*` does the same for the gather network.
 
-A joint step delivers a program function given pointwise, by its value at the acting process
-and its agreement with the old function elsewhere. `Function.eq_update_iff` identifies that
-function with the old one updated at the acting process, and the `stateOverBroadcasts_*`
-lemmas identify the state a row writes with `setGatherTier`, `setCore`, `setInputBroadcasts`,
-`setBindBroadcasts` or `corruptAll` applied to the old state.
+A joint step delivers a program function given pointwise, by its value at the acting process and its
+agreement with the old function elsewhere. `Function.eq_update_iff` identifies that function with
+the old one updated at the acting process, and the `stateOverBroadcasts_*` lemmas identify the state
+a transition writes with `setGatherTier`, `setCore`, `setInputBroadcasts`, `setBindBroadcasts` or
+`corruptAll` applied to the old state.
 -/
 
 namespace PLTS
@@ -98,7 +98,7 @@ theorem gatherProgramProduct_pure (hl : l ≠ Silent.τ)
   rw [System.synchronisedProduct_step]
   exact Or.inl ⟨hl, fun i => PMF.pure (x i), h, (piPMF_pure x).symm⟩
 
-/-- The gather programs have no silent transition: no program has a `τ` row. -/
+/-- The gather programs have no silent transition: no program has a `τ` transition. -/
 theorem gatherProgramProduct_no_tau
     {μ : PMF (∀ _ : Fin P.n, LocalState P.n (ProcessRecord P.n X) (Message P.n X))}
     (h : (System.synchronisedProduct (gatherProgram P (X := X))).step u
@@ -160,7 +160,7 @@ theorem instanceOverBroadcastsExtended_joint_inversion (hIn : ∀ k, (BIn k).IsL
 
 /-- **The silent inversion.** A silent transition of the two tiers is an
 injection of the gather network, a silent step of one input instance, or a
-silent step of one bind instance: no gather program has a `τ` row. -/
+silent step of one bind instance: no gather program has a `τ` transition. -/
 theorem instanceOverBroadcastsExtended_tau_inversion (hIn : ∀ k, (BIn k).IsLTS)
     (hBind : ∀ q, (BBind q).IsLTS) {μ : PMF (StateOverBroadcasts P.n X B B')}
     (h : (instanceOverBroadcastsExtended P X BIn BBind).step ((u, w), (a, b))
@@ -364,12 +364,13 @@ variable {n : ℕ} (X : Type) (k q id j q' k' i : Fin n)
       if q = q' then some (Sum.inl (.ret j U)) else none := rfl
 
 end Pullbacks
-/-! ### One gather program's rules, by label class
+/-! ### One gather program's transitions, by label class
 
-Each lemma reads a row of the table off its label: the participant's row as its
-guards together with the Dirac it produces, and the idle row of a
-non-participant as the identity. The state and the distribution are variables,
-so `cases` unifies against any state of the program. -/
+Each lemma reads a transition of the gather program off its label: the
+participant's transition as its guards together with the Dirac it produces, and
+the idle transition of a non-participant as the identity. The state and the
+distribution are variables, so `cases` unifies against any state of the
+program. -/
 
 section ProgramStepInversion
 variable [DecidableEq X] {P : Parameters} {j : Fin P.n}
@@ -507,7 +508,7 @@ theorem programStep_bindRet_foreign {q i : Fin P.n} {U : AcceptedPairs P.n X} (h
   case bindRetIdle => rfl
 
 end ProgramStepInversion
-/-! ### The gather network's rules, by label class -/
+/-! ### The gather network's transitions, by label class -/
 
 section NetworkStepInversion
 variable [DecidableEq X] {P : Parameters} {w : NetworkState P.n X} {μ : PMF (NetworkState P.n X)}
@@ -557,12 +558,12 @@ theorem networkStep_tau (h : NetworkStep P w (Sum.inl (Sum.inl .tau)) μ) :
   case byzantine j m hF => exact ⟨j, m, hF, rfl⟩
 
 end NetworkStepInversion
-/-! ### The write a row makes on the composed state
+/-! ### The write a transition makes on the composed state
 
 A joint step delivers a program function pointwise: its value at the acting
 process, and its agreement with the old one elsewhere. `Function.eq_update_iff`
 reads that function as the old one updated at the acting process, and the
-lemmas here identify the state a row writes with `setGatherTier` and
+lemmas here identify the state a transition writes with `setGatherTier` and
 `InstanceState.setProcess`. -/
 
 section Writes
@@ -634,7 +635,7 @@ theorem stateOverBroadcasts_setProcess_recordSent {j : Fin P.n} {pr : ProcessRec
     ((InstanceState.setProcess (gatherTier ((u, w), (a, b))) j pr).multicast j m) := by
   rw [Function.eq_update_iff.mpr ⟨hj, hne⟩]; rfl
 
-/-- A delivery: the receiver files the message under its sender's row. -/
+/-- A delivery: the receiver files the message under the sender it came from. -/
 theorem stateOverBroadcasts_deliver {i k : Fin P.n} {m : Message P.n X}
     (hi : x i = (u i).deliverTo k m) (hne : ∀ i', i' ≠ i → x i' = u i') :
     (((x, w), (a, b)) : StateOverBroadcasts P.n X B B') = setGatherTier ((u, w), (a, b))

@@ -48,7 +48,7 @@ leanblueprint serve      # serve blueprint/web/ at http://0.0.0.0:8000/
 
 #### Full edition
 
-`blueprint/src/content-full.tex` is a second, much longer edition of the same blueprint: it carries the rule inventories, the pseudocode floats and the full proof bodies (`src/nodes/`), where the default edition gives one-sentence statements pointing at the Lean (`src/nodes-min/`). The two editions share the figures (`src/figures/`) and the macros. The full edition has its own roots, `src/web-full.tex` and `src/print-full.tex`, with its own plasTeX config `src/plastex-full.cfg`. Build it with
+`blueprint/src/content-full.tex` is a second, much longer edition of the same blueprint: it carries the transition inventories, the pseudocode floats and the full proof bodies (`src/nodes/`), where the default edition gives one-sentence statements pointing at the Lean (`src/nodes-min/`). The two editions share the figures (`src/figures/`) and the macros. The full edition has its own roots, `src/web-full.tex` and `src/print-full.tex`, with its own plasTeX config `src/plastex-full.cfg`. Build it with
 
 ```bash
 bash blueprint/build-full.sh   # both versions of the full blueprint

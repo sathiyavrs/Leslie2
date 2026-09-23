@@ -14,7 +14,7 @@ import Leslie2Protocols.Framework.Relabel
 
 The shared alphabet `Label n` names what an observer of the protocol sees: the
 ABA interface, the two sub-protocol interfaces, and corruption. It cannot name
-a multicast, a delivery, or a Byzantine handshake row, because those are joint steps of
+a multicast, a delivery, or a Byzantine handshake transition, because those are joint steps of
 components whose boundary the observer does not see. The extended alphabet
 `ExtendedLabel n M` adds them, and the composition hides them again.
 
@@ -27,7 +27,7 @@ on (D23), the coin oracle's label pullback, and the lifted oracle itself. An imp
 The graded-agreement return `retG` carries `GBCAOutput`, the interface's grade,
 which is the specification's own value type and is shared by every
 implementation. It carries the round's bound bit beside it, and so does the
-Byzantine return row `byzantineRetG`: both returns of a round announce the same
+Byzantine return transition `byzantineRetG`: both returns of a round announce the same
 ghost output, whichever process they answer.
 -/
 
@@ -37,9 +37,9 @@ namespace Implementation
 
 /-! ### The rendezvous alphabet -/
 
-/-- The rendezvous alphabet: the two networks, the Byzantine handshake rows, and the handshake
-branches the shared alphabet does not distinguish. The round multicast and the round delivery carry
-a message of the graded-agreement implementation being read. -/
+/-- The rendezvous alphabet: the two networks, the Byzantine handshake transitions, and the
+handshake branches the shared alphabet does not distinguish. The round multicast and the round
+delivery carry a message of the graded-agreement implementation being read. -/
 inductive NetworkEvent (n : ℕ) (M : Type) : Type
   /-- Round-`r` multicast: sender `j` writes its record and the network sent sets
   `m` under `j`. -/
@@ -92,13 +92,13 @@ def networkEventLabels (n : ℕ) {M : Type} : Set (ExtendedLabel n M) :=
 A corruption replaces the program of the process it names (D23). The replaced
 program is unchanged on every label it can take at all, and it can take every
 label except the ones below: those on which the process would act on its own
-sub-protocol messages. Those messages are the business of the Byzantine handshake rows
-(D11), which carry it with no row at the process they name. -/
+sub-protocol messages. Those messages are the business of the Byzantine handshake
+transitions (D11), which carry it with no transition at the process they name. -/
 
 /-- The labels on which process `j` acts on its own sub-protocol messages: its own graded-agreement
 call and return, its own round multicast, the round and DECIDED deliveries addressed to it, its own
 call against an already-called round record, its own fused coin return, and the graded-agreement
-rows that name it. -/
+transitions that name it. -/
 def actsAt {n : ℕ} {M : Type} (j : Fin n) : ExtendedLabel n M → Prop
   | Sum.inl (.callG _ id _) => id = j
   | Sum.inl (.retG _ id _ _) => id = j
@@ -121,7 +121,7 @@ instance {n : ℕ} {M : Type} (j : Fin n) :
 /-! ### The label pullback of the coin oracle -/
 
 /-- The pullback along which the coin oracle is read over the extended
-alphabet: a shared label is its own, the Byzantine handshake rows and the
+alphabet: a shared label is its own, the Byzantine handshake transitions and the
 fused coin return are the oracle's own handshakes, and every other rendezvous
 label leaves the oracle idle. -/
 def coinLabelMap (n : ℕ) {M : Type} : ExtendedLabel n M → Option (Label n)
@@ -178,11 +178,11 @@ noncomputable def coinOverExtendedAlphabet (P : Parameters) (M : Type) :
 @[simp] theorem coinOverExtendedAlphabet_init (P : Parameters) (M : Type) :
     (coinOverExtendedAlphabet P M).init = (WCC.specFamily P).init := rfl
 
-/-! ### The coin oracle's idle row over the shared alphabet -/
+/-! ### The coin oracle's idle transition over the shared alphabet -/
 
 /-- The coin oracle idles on a shared label that is neither `τ`, nor a
 handshake of one of its own rounds, nor `fail`. Read through the pullback
-`coinLabelMap`, this is the oracle's row in every joint transition — of a protocol
+`coinLabelMap`, this is the oracle's transition in every joint step — of a protocol
 system, of its composed system, and of the protocol-shaped specification
 (`ABA/Composition/Hybrid.lean`) — that leaves the coin unchanged. -/
 theorem wccFamily_idle (P : Parameters) (o : ℕ → WCC.SpecState P.n) {l : Label P.n}

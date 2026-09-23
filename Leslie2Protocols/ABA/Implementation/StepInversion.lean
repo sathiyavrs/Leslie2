@@ -9,32 +9,34 @@ import Leslie2Protocols.ABA.Implementation.System
 /-!
 # The transitions of one program and of the network, read off their labels
 
-`programStep_*` reads a row of one program's table off its label: the participant's row as its
-guards together with the Dirac it produces, and the idle row of a non-participant as the identity.
-The record and the distribution are variables, so `cases` unifies against any round record. A
-participant's row carries the health guard `corrupted = false`, and on a label outside `actsAt j`
-the replaced program's self-loop is a second row on the same label (D23).
+`programStep_*` reads one program's transition off its label: the participant's transition as its
+guards together with the Dirac it produces, and the idle transition of a non-participant as the
+identity. The record and the distribution are variables, so `cases` unifies against any round
+record. A participant's transition carries the health guard `corrupted = false`, and on a label
+outside `actsAt j` the replaced program's self-loop is a second transition on the same label
+(D23).
 
 The readers hold for every implementation, because a label outside `roundOwn j` is answered by a
 transition written for all of them and `IsRoundStep` confines the implementation's own transitions
-to `roundOwn j`. The Byzantine round rows have no row at the process they name (D22, D23), so
-on `byzantineCallG`, `byzantineCallGLoop` and `byzantineRetG` every process idles and there is no
-participant's row to read.
+to `roundOwn j`. The Byzantine round transitions have no transition at the process they name
+(D22, D23), so on `byzantineCallG`, `byzantineCallGLoop` and `byzantineRetG` every process idles
+and there is no participant's transition to read.
 
 `networkStep_*` does the same for the network, on the interface labels, on the rendezvous alphabet
-and on the silent label. `programStep_dirac` and `networkStep_dirac` state that both tables are
-Dirac, provided the implementation's own rows are; the composite carries the probabilistic coin
-resolution and is not.
+and on the silent label. `programStep_dirac` and `networkStep_dirac` state that both step
+relations are Dirac, provided the implementation's own transitions are; the composite carries the
+probabilistic coin resolution and is not.
 -/
 
 namespace PLTS
 namespace ABA
 namespace Implementation
 
-/-! ### Determinacy of the two rule tables
+/-! ### Determinacy of the two step relations
 
 The composite is not an LTS — the coin resolution is probabilistic — but both
-tables written here are Dirac, provided the implementation's own rows are. -/
+step relations written here are Dirac, provided the implementation's own
+transitions are. -/
 
 section Inversion
 
@@ -54,11 +56,11 @@ theorem programStep_dirac [IsRoundStep P M S roundStep]
 
 variable [IsRoundStep P M S roundStep]
 
-/-- The one `τ` row of a program's table is `terminate`: a silent step of a
+/-- The one `τ` transition of a program is `terminate`: a silent step of a
 program is that program's own termination, taken on a fired return and DECIDED
 receipts from `2f + 1` distinct senders (D22). A replaced program has no silent
-row at all, so the implementation carries `corrupted = false` (D23), and no
-graded-agreement row is silent, `roundOwn` holding of no `τ`. -/
+transition at all, so the implementation carries `corrupted = false` (D23), and
+no graded-agreement transition is silent, `roundOwn` holding of no `τ`. -/
 theorem programStep_tau_terminate
     (h : ProgramStep P M S roundStep j q (Silent.τ : ExtendedLabel P.n M) ν) :
     ∃ b : Bool, q.1.corrupted = false ∧ q.1.process.returned = true ∧
@@ -70,14 +72,14 @@ theorem programStep_tau_terminate
   case terminate b hh hret hcnt hterm => exact ⟨b, hh, hret, hcnt, hterm, rfl⟩
   case corruptedIdle hh hτ hown => exact absurd rfl hτ
 
-/-! ### One program's rules, by label class
+/-! ### One program's transitions, by label class
 
-Each lemma reads a row of the table off its label: the participant's row as its
-guards together with the Dirac it produces, and the idle row of a
+Each lemma reads one transition off its label: the participant's transition as
+its guards together with the Dirac it produces, and the idle transition of a
 non-participant as the identity. The state and the distribution are variables,
-so `cases` unifies against any state of the program. A participant's row carries the health
-guard `corrupted = false`, and on a label outside `actsAt j` the replaced
-program's self-loop is a second row on the same label (D23). -/
+so `cases` unifies against any state of the program. A participant's transition
+carries the health guard `corrupted = false`, and on a label outside `actsAt j`
+the replaced program's self-loop is a second transition on the same label (D23). -/
 
 theorem programStep_callABA_own {b : Bool}
     (h : ProgramStep P M S roundStep j q (Sum.inl (.callABA j b)) ν) :
@@ -203,11 +205,11 @@ theorem programStep_fail_foreign {k : Fin P.n} (hk : k ≠ j)
   case failIdle => rfl
   case corruptedIdle => rfl
 
-/-! ### One program's rules on the rendezvous alphabet
+/-! ### One program's transitions on the rendezvous alphabet
 
-The Byzantine round rows have no row at the process they name (D22, D23), so on `byzantineCallG`,
-`byzantineCallGLoop` and `byzantineRetG` every process idles and there is no participant's row to
-read. -/
+The Byzantine round transitions have no transition at the process they name (D22, D23), so on
+`byzantineCallG`, `byzantineCallGLoop` and `byzantineRetG` every process idles and there is no
+participant's transition to read. -/
 
 theorem programStep_gbcaSend_foreign {r : ℕ} {k : Fin P.n} {m : M} (hk : k ≠ j)
     (h : ProgramStep P M S roundStep j q (Sum.inr (.gbcaSend r k m)) ν) :
@@ -316,9 +318,9 @@ theorem programStep_byzantineRetW {r : ℕ} {k : Fin P.n} {b : Bool}
   case roundTransition h' => exact (IsRoundStep.own h').elim
   all_goals rfl
 
-/-- The Byzantine graded-agreement call has no row at the process it names
-(D11, D22, D23): the row carries its effect outside the program, and the
-replaced program has no row on a label it acts on. -/
+/-- The Byzantine graded-agreement call has no transition at the process it
+names (D11, D22, D23): the transition carries its effect outside the program,
+and the replaced program has no transition on a label it acts on. -/
 theorem programStep_byzantineCallG_noStep {r : ℕ} {b : Bool}
     (h : ProgramStep P M S roundStep j q (Sum.inr (.byzantineCallG r j b)) ν) : False := by
   cases h with
@@ -326,7 +328,7 @@ theorem programStep_byzantineCallG_noStep {r : ℕ} {b : Bool}
   | byzantineCallGIdle _ _ _ _ _ hk => exact hk rfl
   | corruptedIdle _ _ _ _ _ hown => exact hown rfl
 
-/-- The Byzantine graded-agreement return has no row at the process it names
+/-- The Byzantine graded-agreement return has no transition at the process it names
 (D11, D22, D23). -/
 theorem programStep_byzantineRetG_noStep {r : ℕ} {out : GBCAOutput} {bnd : Bool}
     (h : ProgramStep P M S roundStep j q (Sum.inr (.byzantineRetG r j out bnd)) ν) :
@@ -349,7 +351,7 @@ theorem programStep_noStep {L : ExtendedLabel P.n M} (hc : q.1.corrupted = true)
 
 end Inversion
 
-/-! ### The network's rules, by label class -/
+/-! ### The network's transitions, by label class -/
 
 section NetworkStepInversion
 variable {P : Parameters} {M G : Type} [DecidableEq M]
@@ -435,8 +437,8 @@ theorem networkStep_callABA {id : Fin P.n} {b : Bool}
   cases h; rfl
 
 /-- A return is authorised either by the DECIDED sent of the returning process
-or by its corruption (D23); the two rows share the label and the identity
-successor. -/
+or by its corruption (D23); the two transitions share the label and the
+identity successor. -/
 theorem networkStep_retABA {id : Fin P.n} {b : Bool}
     (h : NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inl (.retABA id b)) μ) :
     (b ∈ s.decidedSent id ∨ id ∈ s.F) ∧ μ = PMF.pure s := by
@@ -452,7 +454,7 @@ theorem networkStep_callG {r : ℕ} {id : Fin P.n} {b : Bool}
   cases h; rfl
 
 /-- A graded-agreement return announces the round's ghost output: the bound bit
-on the label stands in `ghostOutput` at the state the row starts from. -/
+on the label stands in `ghostOutput` at the state the transition starts from. -/
 theorem networkStep_retG {r : ℕ} {id : Fin P.n} {out : GBCAOutput} {bnd : Bool}
     (h : NetworkStep P M G callPayload ghostStep ghostOutput s (Sum.inl (.retG r id out bnd)) μ) :
     ghostOutput s r id out bnd ∧ μ = PMF.pure

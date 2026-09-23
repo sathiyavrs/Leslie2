@@ -183,9 +183,9 @@ noncomputable def composedOverGatherSpecifications (P : Parameters) : System
 
 /-! ## Building a transition of the composed system
 
-The composed system's pipeline, read once so that every row of the simulation can be assembled from
-its components' rows: the family of rounds beside the round loops, the ABA network and the lifted
-oracle. -/
+The composed system's pipeline, read once so that every transition of the simulation can be
+assembled from its components' transitions: the family of rounds beside the round loops, the ABA
+network and the lifted oracle. -/
 
 /-- The four components of the gather-based composed system, in parallel. -/
 noncomputable def composedExtended (P : Parameters) :
@@ -221,7 +221,7 @@ theorem roundFamilyOverBracha_owned_id (P : Parameters)
   have hstep := roundFamilyOverBracha_owned P G r hL h
   rwa [Function.update_eq_self] at hstep
 
-/-- The round-`r` state takes one of its own silent rules. -/
+/-- The round-`r` state takes one of its own silent transitions. -/
 theorem roundFamilyOverBracha_tau (P : Parameters) (G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n)
     (r : ℕ) {q : GBCA.ByAFW.RoundStateOverBracha P.n}
     (h : (GBCA.ByAFW.roundOverBracha P r).step (G r) (Sum.inl Label.tau) (PMF.pure q)) :
@@ -329,7 +329,7 @@ theorem composedHidden_of_tau (P : Parameters) {q : ComposedState P}
 
 /-! ## Runs of the graded-agreement family
 
-Three rows of the implementation are answered by two transitions of the composed system: the
+Three transitions of the implementation are answered by two transitions of the composed system: the
 return-then-call step by the hidden events `firstGatherReturn` and `secondGatherCall`, the graded
 return by the hidden event `secondGatherReturn` and the visible `retG`, and a delivery completing a
 receipt quorum by the hidden events `deliver` and `inputBroadcastRet` (or `bindRet`). The builders

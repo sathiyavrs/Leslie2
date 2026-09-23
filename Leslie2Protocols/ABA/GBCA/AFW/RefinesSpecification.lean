@@ -34,10 +34,10 @@ open Gather
 
 variable {P : Parameters}
 
-/-! ### The row-wise step -/
+/-! ### The step, transition by transition -/
 
-/-- **The row-wise step**: every row of the round is answered by a weak run of the graded agreement
-specification, the relation restored. -/
+/-- **The step, transition by transition**: every transition of the round is answered by a weak run
+of the graded-agreement specification, the relation restored. -/
 theorem specificationRelation_transition (P : Parameters) (r : ℕ)
     (q₁ : RoundStateOverGatherSpecifications P.n) (q₂ : GBCA.SpecState P.n)
     (hR : SpecificationRelation P q₁ q₂) (l₀ : Label P.n)

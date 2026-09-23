@@ -31,10 +31,10 @@ section Transitions
 variable {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} {w : NetworkState P.n} {j : Fin P.n}
     {c : RoundLoopRecord P.n} {p : RoundRecordMap P.n}
 
-/-! ### The rows of the two gathers and of the broadcast instances
+/-! ### The transitions of the two gathers and of the broadcast instances
 
-Each row below is one implementation row, read through the view over the effect the
-composed round's own row writes. -/
+Each lemma below reads one transition of the implementation through the view, over the effect
+the composed round's own transition writes. -/
 
 /-- The first gather's `ECHO`, read through the view. -/
 theorem roundProjection_firstGatherEcho (hu : (u j).2 = p) (r : ℕ)
@@ -408,7 +408,7 @@ theorem roundProjection_firstGatherInputBroadcastEcho (hu : (u j).2 = p) (r : �
   exact roundProjection_firstGatherInputBroadcastSend rfl r i _ (.echo m)
 
 /-- `VOTE` in an input-broadcast instance of the first gather, read through the
-view. The quorum row and the amplification row write this record. -/
+view. The quorum transition and the amplification transition write this record. -/
 theorem roundProjection_firstGatherInputBroadcastVote (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
     (m : Bool) :
     roundProjection P (Function.update u j (c, p.setRoundRecord r
@@ -457,7 +457,7 @@ theorem roundProjection_firstGatherBindBroadcastEcho (hu : (u j).2 = p) (r : ℕ
   exact roundProjection_firstGatherBindBroadcastSend rfl r i _ (.echo m)
 
 /-- `VOTE` in a bind-broadcast instance of the first gather, read through the
-view. The quorum row and the amplification row write this record. -/
+view. The quorum transition and the amplification transition write this record. -/
 theorem roundProjection_firstGatherBindBroadcastVote (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
     (m : Gather.AcceptedPairs P.n Bool) :
     roundProjection P (Function.update u j (c, p.setRoundRecord r
@@ -506,7 +506,7 @@ theorem roundProjection_secondGatherInputBroadcastEcho (hu : (u j).2 = p) (r : �
   exact roundProjection_secondGatherInputBroadcastSend rfl r i _ (.echo m)
 
 /-- `VOTE` in an input-broadcast instance of the second gather, read through
-the view. The quorum row and the amplification row write this record. -/
+the view. The quorum transition and the amplification transition write this record. -/
 theorem roundProjection_secondGatherInputBroadcastVote (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
     (m : Option Bool) :
     roundProjection P (Function.update u j (c, p.setRoundRecord r
@@ -556,7 +556,7 @@ theorem roundProjection_secondGatherBindBroadcastEcho (hu : (u j).2 = p) (r : �
   exact roundProjection_secondGatherBindBroadcastSend rfl r i _ (.echo m)
 
 /-- `VOTE` in a bind-broadcast instance of the second gather, read through the
-view. The quorum row and the amplification row write this record. -/
+view. The quorum transition and the amplification transition write this record. -/
 theorem roundProjection_secondGatherBindBroadcastVote (hu : (u j).2 = p) (r : ℕ) (i : Fin P.n)
     (m : Gather.AcceptedPairs P.n (Option Bool)) :
     roundProjection P (Function.update u j (c, p.setRoundRecord r

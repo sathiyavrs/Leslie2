@@ -50,8 +50,8 @@ variable {X : Type} [DecidableEq X]
 /-! ### Reading a composed broadcast instance -/
 
 omit [DecidableEq X] in
-/-- A transition of a composed broadcast instance is a `BRB.BrachaAlgorithm` row at the
-label `BRB.specificationLabelMap` projects to. -/
+/-- A transition of a composed broadcast instance is a transition of `BRB.BrachaAlgorithm` at
+the label `BRB.specificationLabelMap` projects to. -/
 theorem brachaInstance_step_at {M : Type} [DecidableEq M] {P : Parameters} {ldr : Fin P.n}
     {s s' : BRB.BrachaState P.n M} {l : BRB.InstanceLabel P.n M} {l₀ : BRB.Label P.n M}
     (hl : BRB.specificationLabelMap P.n M l = some l₀)
@@ -61,7 +61,7 @@ theorem brachaInstance_step_at {M : Type} [DecidableEq M] {P : Parameters} {ldr 
   rwa [Option.some.inj (hl₁.symm.trans hl)] at htransition
 
 omit [DecidableEq X] in
-/-- A `BRB.BrachaAlgorithm` row at a label other than a call is a transition of the
+/-- A transition of `BRB.BrachaAlgorithm` at a label other than a call is a transition of the
 instance at the interface label over it. -/
 theorem transition_brachaInstance_step_inl {M : Type} [DecidableEq M] {P : Parameters} {ldr : Fin
   P.n}
@@ -75,7 +75,7 @@ theorem transition_brachaInstance_step_inl {M : Type} [DecidableEq M] {P : Param
     | callLoop m => exact absurd (Option.some.inj hl).symm (h0 m)
 
 omit [DecidableEq X] in
-/-- The one corruption row. -/
+/-- The one corruption transition. -/
 theorem brachaAlgorithm_fail {M : Type} [DecidableEq M] {P : Parameters} {ldr : Fin P.n}
     {s : BRB.BrachaState P.n M} {id : Fin P.n} {μ : PMF (BRB.BrachaState P.n M)}
     (h : BRB.BrachaAlgorithm P ldr s (.fail id) μ) : μ = PMF.pure (s.corrupt P id) := by
@@ -145,7 +145,7 @@ theorem transition_brachaInstance_callLoop_step {M : Type} [DecidableEq M] (P : 
   exact BRB.brachaInstance_label_step P ldr (by simp) (fun i => BRB.ProgramStep.callLoop (u i) m)
     (BRB.NetworkStep.callLoop w m)
 
-/-! ### The rows -/
+/-! ### The algorithm -/
 
 /-- The transitions of the gather instance over Bracha's broadcast
 (`Gather.instanceOverBracha`),
@@ -259,8 +259,8 @@ inductive AlgorithmOverBracha (P : Parameters) :
   /-- Return: the output's entries are held here, `n − f` bind payloads held
   here are sub-maps of it, and the returner has called its own bind broadcast.
   The `BIND` broadcast of AFW25's Algorithm 5, line 17, precedes the wait of line
-  18. The label carries the instance's core, which this row writes if it is
-  unwritten. -/
+  18. The label carries the instance's core, which this transition writes if it
+  is unwritten. -/
   | ret (s : StateOverBracha P.n X) (id : Fin P.n) (g : Fin P.n → Option X)
       (hin : ((gatherTier s).process id).input ≠ none)
       (hbind : ((gatherTier s).process id).sentBind ≠ none)
@@ -279,7 +279,7 @@ inductive AlgorithmOverBracha (P : Parameters) :
       AlgorithmOverBracha P s (.fail id)
         (PMF.pure (corruptAll P id (InstanceState.corrupt P id) (InstanceState.corrupt P id) s))
 
-/-! ### The row characterisation -/
+/-! ### The characterisation by the algorithm -/
 
 /-- **The projection.** -/
 theorem instanceOverBracha_step_algorithm (P : Parameters) :
@@ -573,9 +573,9 @@ theorem algorithm_instanceOverBracha_step (P : Parameters) :
         (fun q => transition_brachaInstance_step_inl (by simp) (BRB.BrachaAlgorithm.fail (b q)
           id)))⟩
 
-/-- **The row characterisation.** At a specification label `l₀`, the transitions
-of the instance over the labels `specificationLabelMap` sends to `l₀` are exactly the
-`l₀`-rows of `AlgorithmOverBracha`, on the same state and with the same distribution. -/
+/-- **The characterisation by the algorithm.** At a specification label `l₀`, the transitions
+of the instance over the labels `specificationLabelMap` sends to `l₀` are exactly the `l₀`
+transitions of `AlgorithmOverBracha`, on the same state and with the same distribution. -/
 theorem instanceOverBracha_step_iff_algorithm (P : Parameters) (s : StateOverBracha P.n X)
     (l₀ : Label P.n X) (μ : PMF (StateOverBracha P.n X)) :
     (∃ l, specificationLabelMap P.n X l = some l₀ ∧ (instanceOverBracha P X).step s l μ) ↔

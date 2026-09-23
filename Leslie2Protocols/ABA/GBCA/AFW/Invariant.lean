@@ -56,7 +56,7 @@ variable {P : Parameters}
 clauses are the gather commit guards, per gather; `candidate_aboveThreshold` and `candidate_bot`
 record what the candidate the first gather's return determines certifies about
 that gather, and `secondGatherCall_candidate` carries the candidate into the second gather's
-call record; `candidate_bound` and `secondGatherCall_bound` say that the row writing the
+call record; `candidate_bound` and `secondGatherCall_bound` say that the transition writing the
 candidate writes the bound bit, and `bound_core` that the bit is read off the
 first gather's core; `out_certificate` records what the second gather's return
 certifies about the grade; the `core*` clauses re-state the core-write guards,
@@ -112,7 +112,7 @@ theorem Invariant.initial (P : Parameters) (r : ℕ) :
     simp [roundOverGatherSpecifications_init, programs, bound, firstGather, secondGather,
       Gather.SpecState.initial, ProcessRecord.initial]
 
-/-- The invariant is preserved by every row. -/
+/-- The invariant is preserved by every transition. -/
 theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l : Label P.n}
     {μ : PMF (RoundStateOverGatherSpecifications P.n)} (hInv : Invariant P s)
     (hstep : AlgorithmOverGatherSpecifications P r s l μ)

@@ -41,8 +41,8 @@ inclusions, `ABDY.protocol_composed` and `AFW.protocol_composed`, and not equali
 The two protocols are one construction. What the protocol fixes — the round loop, the DECIDED
 sets, the coin handshake, corruption, the network and the composition pipeline — is
 settled by the round interface and the specification, so `ABA/Implementation/System.lean` writes it
-once, parametric in the round message type, the per-process per-round record, the round rows and the
-adversary's per-round ghost record (D30). `ABA/ABDY/System.lean` and
+once, parametric in the round message type, the per-process per-round record, the round's
+transitions and the adversary's per-round ghost record (D30). `ABA/ABDY/System.lean` and
 `ABA/AFW/System.lean` supply the two instances.
 
 A process record of a protocol carries the round-loop record beside the round record of every round
@@ -57,9 +57,9 @@ a round whose second gather has been called has its bound bit on record, which i
 return's announced bit rests on.
 
 What makes each inclusion one-directional is on the composed system, and it is the same on both. A
-round instance has a row for the Byzantine graded-agreement rows and no program of a protocol has
-one (D11), and the instance's round rules carry no termination guard, so the instance answers a send
-or a delivery at a process the protocol has terminated.
+round instance has transitions for the Byzantine graded-agreement handshake and no program of a
+protocol has one (D11), and the instance's round transitions carry no termination guard, so the
+instance answers a send or a delivery at a process the protocol has terminated.
 
 ## What the composition buys
 
@@ -77,8 +77,8 @@ is that same move at that same place, which is what the second chain is.
 
 Idealizing the round also exposes an asymmetry worth naming. The round's sent sets, its delivery
 guards and its injections die with the graded-agreement idealization. The DECIDED sets, the
-corruption budget and the authorisation `k ∈ F` of every Byzantine handshake row survive it, at the
-ABA network. What a component owns is what disappears with it.
+corruption budget and the authorisation `k ∈ F` of every Byzantine handshake transition survive it,
+at the ABA network. What a component owns is what disappears with it.
 
 ## The gather-based chain
 
@@ -122,9 +122,9 @@ GBCA.ByAFW.RoundStateOverGathers n G₁ G₂  = ((Fin n → GBCA.ByAFW.ProcessRe
 A program reads no neighbouring coordinate, so what a sub-protocol has returned to a process is
 written into that process's own record. A gather program's record of what the broadcast instances
 returned (`Gather.ProcessRecord.inputBroadcastReturned`, `bindBroadcastReturned`) are written on the
-return event of a broadcast instance and read by the four rows that read what has been returned. A
-round program's record (`GBCA.ByAFW.ProcessRecord`) holds the candidate between the first gather's
-return and the second gather's call, and the graded outcome between the second gather's return and
+return event of a broadcast instance and read by the four transitions that read what has been
+returned. A round program's record (`GBCA.ByAFW.ProcessRecord`) holds the candidate between the
+first gather's return and the second gather's call, and the graded outcome between the second gather's return and
 the round's own return: each of those two is a pair of events, and the record is what carries the
 round across them.
 
@@ -212,8 +212,8 @@ disappears at the substitution inside the component that is exchanged. It is als
 second component of `GBCA.ByABDY.RoundState`, the state the round refinement is defined on.
 It carries one field that is not a message set: the round's bound bit, the value the
 round's graded returns announce on their labels (D29). The field is a ghost — no program
-reads it, and the three return rows are the only rows that touch it — and it belongs to
-the round for the same reason the sent sets do, so it disappears with the round at the
+reads it, and the three return transitions are the only transitions that touch it — and it belongs
+to the round for the same reason the sent sets do, so it disappears with the round at the
 substitution.
 
 The gather-based chain carries `4n + 2` of them per round: one for each gather instance,
@@ -232,7 +232,7 @@ that one component.
 
 The ghost field of the network is removable, and `ABA/GhostErasure/GhostFreeSystem.lean`
 removes it. The ghost-free system `Implementation.systemGhostFree` is the implementation over a
-one-element ghost record, its two graded-agreement return rows free to announce either
+one-element ghost record, its two graded-agreement return transitions free to announce either
 bit; the map that drops the record is a state erasure of the adversary onto it
 (`Framework/Erasure.lean`), and the congruences of that file carry the erasure through the
 same pipeline the composition is built by — the coin oracle, the process group, the
@@ -267,10 +267,10 @@ chain, not a vehicle for proving anything about it. Each carries one ghost recor
 them (D30), for the same reason: the value a graded return announces is determined by the round's
 messages and the corrupted set, which this record holds. The implementation of
 `ABA/Implementation/System.lean` is parametric in that record's type, its update `ghostStep`,
-applied on every row to the round the label names, and its output `ghostOutput`, which the two
-graded-agreement return rows read. What a row reads there is the value its label announces, not
-whether it fires: the read admits a bit at every state (`ghostOutput_total`), which is what makes the
-record erasable. `ABDY.protocol_composed` and `AFW.protocol_composed` carry those systems into ones
+applied on every transition to the round the label names, and its output `ghostOutput`, which the
+two graded-agreement return transitions read. What a transition reads there is the value its label
+announces, not whether it fires: the read admits a bit at every state (`ghostOutput_total`), which
+is what makes the record erasable. `ABDY.protocol_composed` and `AFW.protocol_composed` carry those systems into ones
 where each round owns its network states beside `Composition.ABANetworkState`, and every step above
 the first inclusion runs there. A round's ghost record is the composed system of the values the
 round's own state holds, which is one conjunct of each protocol relation.
@@ -289,8 +289,8 @@ under
 `b ∉ decidedDelivered k` rather than taking a step that would change no state. Duplication is
 immaterial here, not assumed away.
 
-No rule forces a delivery, so any subset of the multicasts may be lost. `byzantineDecided` injects
-either bit for any `k ∈ F`, so a corrupted process may equivocate in the DECIDED sets.
+No transition forces a delivery, so any subset of the multicasts may be lost. `byzantineDecided`
+injects either bit for any `k ∈ F`, so a corrupted process may equivocate in the DECIDED sets.
 `Composition.ABANetworkStep.retByzantine` lets a corrupted process return either bit at any time
 with
 no DECIDED evidence at all, its round-loop half being the self-loop of the replaced
@@ -298,4 +298,4 @@ program (D23), so the DECIDED quorum is a condition on correct returns alone.
 
 What remains assumed is unforgeability of a correct process's DECIDED multicast. The
 delivery guard `b ∈ decidedSent j` attributes every receipt to a genuine send by the named
-sender, and no rule lets one process record a send under another's name.
+sender, and no transition lets one process record a send under another's name.

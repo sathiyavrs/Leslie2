@@ -157,7 +157,7 @@ inductive ProgramLabel (n : ℕ) : Type
   /-- The round's return to `id` of the graded outcome `out`, announcing the
   round's bound bit `bnd`. -/
   | retG (r : ℕ) (id : Fin n) (out : GBCAOutput) (bnd : Bool)
-  /-- The image of every family label outside the round's interface. No row
+  /-- The image of every family label outside the round's interface. No transition
   fires on it. -/
   | outside
 
@@ -175,7 +175,7 @@ leaves that component unchanged. -/
 reads a Byzantine call as a call, a Byzantine return as a return, and the two
 call loops as the loop. Corruption has no image and leaves a program standing
 still; every other family label outside the round's interface has the image
-`ProgramLabel.outside`, on which no row fires. -/
+`ProgramLabel.outside`, on which no transition fires. -/
 def programLabelMap (n : ℕ) : RoundLabel n → Option (ProgramLabel n)
   | Sum.inl (Sum.inl .tau) => some .tau
   | Sum.inl (Sum.inl (.callG r id b)) => some (.callG r id b)
@@ -410,10 +410,10 @@ end Pullbacks
 /-! ### The graded-agreement program
 
 Process `j`'s program in this round. Every guard reads its own record. The
-round's four moves are one row each: the call records the input, the first
+round's four moves are one transition each: the call records the input, the first
 gather's return records the candidate, the second gather's call marks itself,
 the second gather's return records the grade, and the round's return marks the
-record returned. No row fires on the silent label. -/
+record returned. No transition fires on the silent label. -/
 
 /-- The step relation of the graded-agreement program of process `j` in round
 `r`. All transitions are Dirac. -/
@@ -474,9 +474,9 @@ inductive ProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
 /-! ### The round's network
 
 The network of the round's programs. It exchanges no message and holds the round's bound
-bit alone; no program reads it. The `firstGatherReturn` row writes the bit from the core the first
-gather's return carries if it is unwritten, and the `retG` row determines the bit the label
-announces. No row fires on the silent label. -/
+bit alone; no program reads it. The `firstGatherReturn` transition writes the bit from the core the
+first gather's return carries if it is unwritten, and the `retG` transition determines the bit the
+label announces. No transition fires on the silent label. -/
 
 /-- The step relation of the round's network. All transitions are Dirac. -/
 inductive NetworkStep (P : Parameters) (r : ℕ) :

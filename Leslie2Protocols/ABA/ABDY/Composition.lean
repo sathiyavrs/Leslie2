@@ -72,8 +72,8 @@ open Implementation Composition
 
 The protocol cut into its components: the graded-agreement family as a round-indexed family of
 instances, the round loops as `n` synchronised automata, the DECIDED sets beside the corrupted set,
-and the lifted coin oracle. This section composes the four components and reads the rows of the
-composite. -/
+and the lifted coin oracle. This section composes the four components and reads the transitions of
+the composite. -/
 
 namespace Composition
 
@@ -171,7 +171,7 @@ theorem composedExtended_tau_ABANetwork (P : Parameters)
     exact Or.inr (Or.inl ⟨rfl, PMF.pure A', hA, rfl⟩)
   · rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure]
 
-/-! ### The graded-agreement family's rows
+/-! ### The graded-agreement family's transitions
 
 The family routes a round-tagged label to its round, takes `τ` at any round,
 broadcasts `fail`, and idles on everything else. -/
@@ -194,7 +194,7 @@ theorem gbcaInstanceFamily_owned_id (P : Parameters) (G : ℕ → GBCA.ByABDY.Ro
   have hstep := gbcaInstanceFamily_owned P G r hL h
   rwa [Function.update_eq_self] at hstep
 
-/-- The round-`r` instance takes one of its own silent rules. -/
+/-- The round-`r` instance takes one of its own silent transitions. -/
 theorem gbcaInstanceFamily_tau (P : Parameters) (G : ℕ → GBCA.ByABDY.RoundState P.n)
     (r : ℕ) {X : GBCA.ByABDY.RoundState P.n}
     (h : (GBCA.ByABDY.composition P r).step (G r) (Sum.inl Label.tau) (PMF.pure X)) :

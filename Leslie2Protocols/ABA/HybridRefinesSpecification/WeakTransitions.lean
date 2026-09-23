@@ -11,10 +11,10 @@ import Leslie2.Weak.WeakTransition
 # Abstract-state run machinery
 
 Pure `ABA.spec` weak-τ lemmas, with no composed/`Invariant`/`AbstractState` reasoning: given an
-abstract `SpecState`, these package the internal `SpecStep` rules (`Specifications/ABA.lean`) into
-the `weakTau`/`weakStep` chains (`WeakTransition.lean`) that the simulation rows
-(`HybridRefinesSpecification/Simulation.lean`) consume. Every lemma here is standalone and never
-mentions `Invariant`/`AbstractState`/the concrete `(g, c, w)` state.
+abstract `SpecState`, these package the internal `SpecStep` transitions (`Specifications/ABA.lean`)
+into the `weakTau`/`weakStep` chains (`WeakTransition.lean`) that the simulation
+(`HybridRefinesSpecification/Simulation.lean`) consumes transition by transition. Every lemma here
+is standalone and never mentions `Invariant`/`AbstractState`/the concrete `(g, c, w)` state.
 
 * `decide_step`: `SpecStep.decide` as a one-step `weakTau` run, the τ-tail
   that leads the first visible return.
@@ -29,7 +29,7 @@ variable {P : Parameters}
 
 /-! ### The decide run -/
 
-/-- `SpecStep.decide` as a `weakTau` run. The rule is Dirac, so the run is
+/-- `SpecStep.decide` as a `weakTau` run. The transition is Dirac, so the run is
 a single step: `val` takes `b` and the mode returns to `ControlMode.flipEnabled`. -/
 theorem decide_step {a : SpecState P.n} {b : Bool} (hv : a.val = none)
     (hs : InputSupport P a b) (hm : a.mode ≠ .noTransitionEnabled) :

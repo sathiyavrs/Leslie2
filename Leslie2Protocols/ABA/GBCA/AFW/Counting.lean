@@ -242,7 +242,7 @@ end Counting
 /-! ### The candidate, the grade and the bound bit -/
 
 /-- The candidate after the first gather: the bit carried by all but `f` of
-the returned entries, `⊥` if neither is. At the domains the return rules
+the returned entries, `⊥` if neither is. At the domains the return transitions
 allow (`≥ n − f > 2f` entries) at most one bit can be. -/
 def candidate (P : Parameters) (g : Fin P.n → Option Bool) : Option Bool :=
   if domainCount g - P.f ≤ valueCount g true then some true

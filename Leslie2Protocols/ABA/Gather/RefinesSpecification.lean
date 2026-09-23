@@ -337,7 +337,7 @@ end Run
 The whole return answer of the refinement, packaged as a τ-chain of
 specification steps with the return guards at its end and the relation restored
 across the pair of return effects — the shape a larger system that embeds the
-gather specification's rows can replay without re-proving the run. -/
+gather specification's transitions can replay without re-proving the run. -/
 
 theorem retRun {s : StateOverBroadcastSpecification P.n X} {t : SpecState P.n X}
     (hR : SpecificationRelation P s t) {id : Fin P.n} {g : Fin P.n → Option X}
@@ -499,8 +499,8 @@ theorem retRun {s : StateOverBroadcastSpecification P.n X} {t : SpecState P.n X}
 
 /-! ### Step-level relation transports
 
-The relation across one embedded row, exported for systems that replay the
-gather rows inside a larger rule table. -/
+The relation across one embedded transition, exported for systems that replay
+the gather transitions inside a larger algorithm. -/
 
 /-- The relation across the fused call: the gather record, the input instance
 and the specification all record the payload. -/
@@ -541,7 +541,7 @@ theorem specificationRelation_call {s : StateOverBroadcastSpecification P.n X} {
   · exact hR.core_eq
   · exact hR.core_certificate
 
-/-- The relation across any internal row, the specification stuttering. -/
+/-- The relation across any internal transition, the specification stuttering. -/
 theorem specificationRelation_tau {s s' : StateOverBroadcastSpecification P.n X}
     {t : SpecState P.n X} (hR : SpecificationRelation P s t)
     (hstep : AlgorithmOverBroadcastSpecification P s Gather.Label.tau (PMF.pure s')) :
@@ -673,13 +673,13 @@ theorem specificationRelation_tau {s s' : StateOverBroadcastSpecification P.n X}
           (by rw [PMF.mem_support_pure_iff]) C))
 
 
-/-! ### The relation across one row -/
+/-! ### The relation across one transition -/
 
-/-- **The relation across one row**: every row of `AlgorithmOverBroadcastSpecification` at a related
-pair is answered by a weak run of the gather specification, and the answer is
-again related. Internal rows stutter; the four call rows and `fail` are answered
-by the specification's own rows; a return is answered by the run
-`commit* ; bindCore? ; ret`. -/
+/-- **The relation across one transition**: every transition of
+`AlgorithmOverBroadcastSpecification` at a related pair is answered by a weak run of the gather
+specification, and the answer is again related. Internal transitions stutter; the four call
+transitions and `fail` are answered by the specification's own transitions; a return is answered by
+the run `commit* ; bindCore? ; ret`. -/
 theorem specificationRelation_transition (P : Parameters) (X : Type) [DecidableEq X]
     (q₁ : StateOverBroadcastSpecification P.n X) (q₂ : SpecState P.n X)
     (hR : SpecificationRelation P q₁ q₂) (l₀ : Label P.n X)

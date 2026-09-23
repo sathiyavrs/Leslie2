@@ -19,8 +19,8 @@ coordinates holding a committed `BIND` payload.
 
 The argument runs on one incidence on the gather network state: `j` is dominated by `q` when `q`'s
 committed `BIND` payload contains `j`'s `ECHO` payload. The invariant of
-`ABA/Gather/Invariant.lean` makes every row of that incidence wide -- a process outside `F` is
-dominated by at least `n − f` coordinates (`dominatedBy_card`) -- and the pigeonhole
+`ABA/Gather/Invariant.lean` makes every `dominatedBy` set large -- a process outside `F` dominates
+at least `n − f` senders (`dominatedBy_card`) -- and the pigeonhole
 (`exists_dominators`) then gives a sender outside `F` with at least `f + 1` dominators, whose
 write-once `ECHO` payload is the core (`transfer`, `core_witness`).
 
@@ -62,10 +62,10 @@ theorem coreOf_networkOf (s : StateOverBroadcastSpecification P.n X) :
 
 /-! ### The incidence on the gather network state
 
-The rows of the incidence read the sent sets and the corrupted set, so
+The incidence reads the sent sets and the corrupted set, so
 `mem_correct`, `card_correct`, `mem_dominatedBy`, `correct_filter_dominatedBy` and
 `sum_dominatedBy` apply to `networkOf` as they stand. What the invariant supplies is
-the width of a row. -/
+the size of each `dominatedBy` set. -/
 
 omit [DecidableEq X] in
 /-- The `ECHO` payload of a process outside `F` is the one its `sentEcho` field
@@ -82,9 +82,9 @@ theorem echoOf_eq {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant 
   exact Option.some.inj h2
 
 omit [DecidableEq X] in
-/-- **Every row is wide**: a process outside `F` dominates at least `n − f`
-senders. Its `VOTE` payload, if it has one, is backed by `n − f` `ECHO`
-receipts; if it has none the condition is vacuous and the row is
+/-- **Every `dominatedBy` set is large**: a process outside `F` dominates at
+least `n − f` senders. Its `VOTE` payload, if it has one, is backed by `n − f`
+`ECHO` receipts; if it has none the condition is vacuous and the set is
 everything. -/
 theorem dominatedBy_card {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s)
     {q : Fin P.n} (hq : q ∉ (gatherTier s).F) : P.n - P.f ≤ (dominatedBy (networkOf s) q).card := by
@@ -111,8 +111,8 @@ theorem dominatedBy_card {s : StateOverBroadcastSpecification P.n X} (hInv : Inv
 
 open scoped Classical in
 omit [DecidableEq X] in
-/-- A row of a process outside `F` meets the processes outside `F` in at least
-`n − f − |F|` of them. -/
+/-- The `dominatedBy` set of a process outside `F` meets the processes outside
+`F` in at least `n − f − |F|` of them. -/
 theorem dominatedBy_correct_card {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s)
     {q : Fin P.n} (hq : q ∉ (gatherTier s).F) :
     P.n - P.f - (gatherTier s).F.card ≤
@@ -280,7 +280,7 @@ theorem bindVal_mono {s s' : StateOverBroadcastSpecification P.n X} {l : Label P
   | _ => rw [PMF.mem_support_pure_iff] at hs'; subst hs'; exact h
 
 /-- **The certificate is monotone.** The coordinates holding a committed `BIND`
-payload above `C` only accumulate, under every rule and every corruption. -/
+payload above `C` only accumulate, under every transition and every corruption. -/
 theorem bindAbove_mono {s s' : StateOverBroadcastSpecification P.n X} {l : Label P.n X}
     {μ : PMF (StateOverBroadcastSpecification P.n X)}
     (hstep : AlgorithmOverBroadcastSpecification P s l μ) (hs' : s' ∈ μ.support)

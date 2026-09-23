@@ -109,7 +109,7 @@ def ExclusionCertificate (P : Parameters) (s : RoundState P.n) (b : Bool) : Prop
 /-- The counting core: two `n − f`-sized subsets of `Fin n` meeting only
 inside `F` contradict `|F| ≤ f` and `3f < n` (`2(n − f) > n + f`). The same
 arithmetic as `exists_correct_received_of_two_quorums`, exposed as a set statement because
-`VoteQuorumAgainst` is a set of processes, not a receipt row. -/
+`VoteQuorumAgainst` is a set of processes, not a set of receipts. -/
 theorem no_disjoint_quorums {Q D F : Finset (Fin P.n)}
     (hQ : P.n - P.f ≤ Q.card) (hD : P.n - P.f ≤ D.card)
     (hQD : Q ∩ D ⊆ F) (hF : F.card ≤ P.f) : False := by

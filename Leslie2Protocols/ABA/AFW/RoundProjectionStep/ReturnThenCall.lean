@@ -10,7 +10,7 @@ import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ViewAfterOneWrite
 # The return-then-call step and the graded return
 
 `roundProjection_firstGatherReturn_secondGatherCall` and `roundProjection_secondGatherReturn_retG`:
-the view of the composed round after each of the two rows that two events answer. The
+the view of the composed round after each of the two transitions that two events answer. The
 return-then-call step is `firstGatherReturn` and then `secondGatherCall`; the graded return is
 `secondGatherReturn` and then `retG`. Each is stated as one equation with the two effects composed,
 and the state between them is named (`afterFirstGatherReturn`, `afterSecondGatherCall`,

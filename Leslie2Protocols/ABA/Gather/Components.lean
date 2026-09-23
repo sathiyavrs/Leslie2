@@ -286,9 +286,10 @@ variable [DecidableEq X]
 
 /-! ### The gather program
 
-Process `j`'s program. Every guard reads its own record and its own delivered sets. An event row
-carries the program's half of a joint step: on a multicast the record write, on a delivery the write
-of the delivered set, on a broadcast instance's return the recording of the returned value. -/
+Process `j`'s program. Every guard reads its own record and its own delivered sets. An event
+transition carries the program's half of a joint step: on a multicast the record write, on a
+delivery the write of the delivered set, on a broadcast instance's return the recording of the
+returned value. -/
 
 /-- The step relation of the gather program of process `j`. All transitions are
 Dirac. -/
@@ -330,7 +331,7 @@ inductive ProgramStep (P : Parameters) (j : Fin P.n) :
   /-- A multicast by another process is not `j`'s business. -/
   | sendIdle (p) (i : Fin P.n) (m : Message P.n X) (hi : i ≠ j) :
       ProgramStep P j p (Sum.inr (.send i m)) (PMF.pure p)
-  /-- Delivery, receiver's half: file the message under the sender's row. -/
+  /-- Delivery, receiver's half: file the message under the sender it came from. -/
   | deliverReceive (p) (i : Fin P.n) (m : Message P.n X) :
       ProgramStep P j p (Sum.inr (.deliver j i m)) (PMF.pure (p.deliverTo i m))
   /-- A delivery to another process is not `j`'s business. -/
@@ -430,7 +431,7 @@ inductive NetworkStep (P : Parameters) :
   /-- A bind instance's return sends nothing. -/
   | bindRetIdle (w) (q j : Fin P.n) (U : AcceptedPairs P.n X) :
       NetworkStep P w (Sum.inr (.bindRet q j U)) (PMF.pure w)
-  /-- Return: the label carries the core, which this row writes if it is
+  /-- Return: the label carries the core, which this transition writes if it is
   unwritten. -/
   | ret (w) (id : Fin P.n) (g : Fin P.n → Option X) :
       NetworkStep P w (Sum.inl (Sum.inl (.ret id g (w.core.getD (coreOfNetwork P w.network)))))

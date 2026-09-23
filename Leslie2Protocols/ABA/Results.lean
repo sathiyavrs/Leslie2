@@ -37,7 +37,7 @@ specification:
 1. `ABDY.protocolSimulation` (`ABDY/Simulation.lean`) — the protocol into the
    composed system, along the Dirac lift of `ABDY.ProtocolRelation`. The relation determines every
    composed coordinate from the protocol state; the inclusion is
-   one-directional because a round instance also answers the Byzantine handshake rows
+   one-directional because a round instance also answers the Byzantine handshake transitions
    (D11) and the processes the protocol has terminated (D22).
 2. `ABDY.substitutionSimulation` (`ABDY/Substitution.lean`) — replace each
    round's graded-agreement instance by its specification, the other three components untouched:
@@ -111,7 +111,7 @@ names. -/
 /-- **Safety of the protocol**: every positive-probability trace of
 every achievable trace distribution of the `n` programs beside the network
 adversary and the coin oracle satisfies Validity and Agreement. The corruption
-budget is a guard of the network's own `fail` row, so every protocol
+budget is a guard of the network's own `fail` transition, so every protocol
 execution is in budget by construction and nothing is assumed of the
 traces. -/
 theorem protocol_safe (P : Parameters) :
@@ -152,7 +152,7 @@ theorem refines (P : Parameters) :
 
 /-- **Correctness of ABA** (blueprint `thm:aba-main`, safety fragment): every positive-probability
 trace of the protocol satisfies Validity and Agreement. No extra hypothesis on the traces: the
-corruption budget is a guard of the network's own `fail` row, so every protocol execution
+corruption budget is a guard of the network's own `fail` transition, so every protocol execution
 is in budget by construction. -/
 theorem main (P : Parameters) :
     ∀ D ∈ achievableTraceDists (protocol P), ∀ t, D t ≠ 0 →
@@ -269,7 +269,7 @@ theorem refines (P : Parameters) :
 
 /-- **Correctness of the gather-based protocol**: every positive-probability trace of the protocol
 as it runs satisfies Validity and Agreement. No premise on the trace: the corruption budget is a
-guard of the network's own `fail` row, so every execution is in budget by construction. -/
+guard of the network's own `fail` transition, so every execution is in budget by construction. -/
 theorem main (P : Parameters) :
     ∀ D ∈ achievableTraceDists (protocol P), ∀ t, D t ≠ 0 →
       ValidityTrace P t ∧ AgreementTrace P t :=

@@ -17,8 +17,8 @@ announces and not whether the return fires: the hypothesis `ghostOutput_total` b
 to admit a bit at every state. This file erases it.
 
 The system it is erased to is `systemGhostFree`, the implementation over the trivial ghost
-`Unit` whose `ghostOutput` is the full relation: the same programs, the same network rows, and a
-graded-agreement return free to announce either bit. The erasure is a `StateErasure`
+`Unit` whose `ghostOutput` is the full relation: the same programs, the same network transitions,
+and a graded-agreement return free to announce either bit. The erasure is a `StateErasure`
 (`Framework/Erasure.lean`) along the projection
 
   `π = Prod.map id (Prod.map NetworkState.forgetGhost id)`
@@ -27,8 +27,8 @@ and the label identification `φ = Sum.map forgetBound id`, which sends a
 graded-agreement return to the return of the same round, process and graded outcome with
 the announced bit fixed at `false` and is the identity on every other label.
 
-Two clauses carry the content. The projection is exact on labels: every row of the
-adversary is a row of the ghost-free adversary at the erased state, on the same label,
+Two clauses carry the content. The projection is exact on labels: every transition of the
+adversary is a transition of the ghost-free adversary at the erased state, on the same label,
 because the ghost write leaves the erasure where it stands
 (`NetworkState.forgetGhost_writeGhost`) and over `Unit` it is the identity
 (`NetworkState.writeGhost_unit`). The lift is exact up to `φ`: a ghost-free return
@@ -178,7 +178,7 @@ end Labels
 /-! ### The adversary's erasure
 
 The network is the one component whose state carries the ghost, and the two
-graded-agreement returns are the one pair of rows that read it. -/
+graded-agreement returns are the one pair of transitions that read it. -/
 
 section NetworkErasure
 variable {P : Parameters} {M G : Type} [DecidableEq M] [Inhabited G]
@@ -186,8 +186,8 @@ variable {P : Parameters} {M G : Type} [DecidableEq M] [Inhabited G]
     {ghostStep : ExtendedLabel P.n M → NetworkState P.n M G → G → G}
     {ghostOutput : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop}
 
-/-- Over the trivial ghost a row's successor is the state its write starts from, so a
-row written with its ghost write is a row written without it. -/
+/-- Over the trivial ghost a transition's successor is the state its write starts from, so a
+transition written with its ghost write is a transition written without it. -/
 private theorem networkStepGhostFree_drop {s t : NetworkState P.n M Unit} {L : ExtendedLabel P.n M}
     (h : NetworkStep P M Unit callPayload (fun _ _ _ => ()) (fun _ _ _ _ _ => True) s L
       (PMF.pure (t.writeGhost (fun _ _ _ => ()) L))) :
@@ -199,14 +199,14 @@ private theorem networkStepGhostFree_drop {s t : NetworkState P.n M Unit} {L : E
 outcome admits an announced bit: `NetworkState.forgetGhost` is a state erasure of the
 adversary onto the ghost-free adversary along `forgetBoundExtended`.
 
-The projection is exact on labels. Every row keeps its guards under the erasure, its
+The projection is exact on labels. Every transition keeps its guards under the erasure, its
 guards reading the message record, the DECIDED sets and the corrupted set alone; its
 successor is the erasure of its own successor, the ghost write leaving the erasure where
 it stands; and the two returns lose their guard, the ghost-free relation being the full
 one.
 
-The lift answers a ghost-free row by the row of the same name at the unerased state. On
-a graded-agreement return the announced bit is replaced by one the relation `ghostOutput`
+The lift answers a ghost-free transition by the transition of the same name at the unerased
+state. On a graded-agreement return the announced bit is replaced by one the relation `ghostOutput`
 admits, which `ghostOutput_total` supplies, and the two bits agree under
 `forgetBoundExtended`. -/
 theorem network_erasure
@@ -387,7 +387,7 @@ theorem system_stateErasure
   exact hgroup.abstract_collapse (Label.hiddenAPI P.n) hiddenAPI_forgetBound
     hiddenAPI_of_forgetBound_ne
 
-/-- **The ghost changes no trace distribution.** The ghost decides no row's firing, the
+/-- **The ghost changes no trace distribution.** The ghost decides no transition's firing, the
 read admitting a bit at every state, and the bit it announces is hidden at protocol level,
 so the implementation and the ghost-free system achieve the same trace distributions. -/
 theorem system_erasure

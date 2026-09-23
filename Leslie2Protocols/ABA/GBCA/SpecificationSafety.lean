@@ -22,7 +22,7 @@ promise on the trace.
 
 Binding and the value clause of graded agreement rest on one fact: `excluded`
 only grows. The single writer is the internal `bindUnset`, which inserts, and
-`corrupt` does not touch the field — so `Step.excluded_mono` holds rule by rule,
+`corrupt` does not touch the field — so `Step.excluded_mono` holds transition by transition,
 and `is_exec_stable` lifts it to whole executions (`excluded_mem_stable`). Binding is
 therefore structural: a bit excluded at any point of a run is excluded at every
 later point, and a guard reading `∉ excluded` can never be re-enabled. That writer
@@ -40,9 +40,10 @@ commits the round, and the surviving bit stays available to every later return.
 * `retG_grade_exclusive` — **graded agreement, grade-2/grade-0 clause**. The second clause of
   Definition 3.2: no execution carries both a grade-2 return and a grade-0 return. The `grade` field
   is the lock. `retGrade2` writes `some true` and `retGrade0` writes `some false`, each firing only
-  from a state whose grade is unset or already at the value it writes, and no other rule touches the
-  field, so `Step.grade_mono` holds rule by rule and `grade_stable` carries the written value to
-  every later state. `specInst_grade_agree` is the same statement read off the trace.
+  from a state whose grade is unset or already at the value it writes, and no other transition
+  touches the field, so `Step.grade_mono` holds transition by transition and `grade_stable` carries
+  the written value to every later state. `specInst_grade_agree` is the same statement read off the
+  trace.
 * `retG_bound_agree` — **one bound bit per round**. Any two returns of one
   execution announce the same bit. Each return excludes the complement of the bit
   it announces, the run carries that exclusion forward, and no state excludes two
@@ -129,7 +130,7 @@ theorem excluded_mem_stable {e : AlterSeq (SpecState P.n) (Label P.n)}
 /-! ### The exclusion set holds at most one bit -/
 
 /-- **One exclude per instance, step level.** `bindUnset` is the only writer and
-it fires only from `excluded = ∅`, so it leaves a singleton; every other rule
+it fires only from `excluded = ∅`, so it leaves a singleton; every other transition
 leaves the field alone. -/
 theorem Step.excluded_card_le_one {s s' : SpecState P.n} {l : Label P.n}
     {μ : PMF (SpecState P.n)} (hstep : Step P r s l μ) (hs' : s' ∈ μ.support)
@@ -168,7 +169,7 @@ theorem excluded_card_le_one {e : AlterSeq (SpecState P.n) (Label P.n)}
 
 /-- **The grade lock never changes once set.** `retGrade2` writes `some true` and `retGrade0` writes
 `some false`, each from a state whose grade is unset or already at the value it writes; no other
-rule touches the field, `corrupt` included. -/
+transition touches the field, `corrupt` included. -/
 theorem Step.grade_mono {s s' : SpecState P.n} {l : Label P.n} {g : Bool}
     {μ : PMF (SpecState P.n)} (hstep : Step P r s l μ) (hs' : s' ∈ μ.support)
     (hg : s.grade = some g) : s'.grade = some g := by
@@ -209,7 +210,7 @@ theorem grade_stable {e : AlterSeq (SpecState P.n) (Label P.n)}
     (fun _ _ _ _ hmem hstep hs' => Step.grade_mono hstep hs' hmem)
     he k₁ k₂ s₁ s₂ hk hst₁ hst₂ hg
 
-/-! ### Inverting the return rows -/
+/-! ### Inverting the return transitions -/
 
 /-- The bit a graded outcome hands out, if any: `grade2 b` and `grade1 b` hand out `b`,
 grade `0` hands out nothing. -/
@@ -238,7 +239,7 @@ private theorem retGrade1_inversion {s : SpecState P.n} {id : Fin P.n} {v β : B
   match hstep with
   | .retGrade1 _ _ _ _ hlive hexcluded _ _ _ => ⟨hlive, hexcluded⟩
 
-/-- **The guard of the announced bit.** Every return rule, whatever its grade,
+/-- **The guard of the announced bit.** Every return transition, whatever its grade,
 fires from a state where the complement of the announced bit `β` is excluded. -/
 theorem retG_bound_guard {s : SpecState P.n} {id : Fin P.n} {o : GBCAOutput}
     {β : Bool} {μ : PMF (SpecState P.n)}
@@ -524,8 +525,8 @@ theorem corrupt_F (s : SpecState P.n) (id : Fin P.n) :
 
 /-- The history-aware bookkeeping invariant: every pending input is attributed
 to a `callG` event of the label history, and the corrupted set is exactly the
-fold of D1-`corrupt` over that history. Both conjuncts are read off the rules:
-`call` is written only by the `callG`-labelled rule, `F` only by `fail`. -/
+fold of D1-`corrupt` over that history. Both conjuncts are read off the transitions:
+`call` is written only by the `callG`-labelled transition, `F` only by `fail`. -/
 structure CallInvariant (P : Parameters) (r : ℕ) (pre : List (Label P.n))
     (s : SpecState P.n) : Prop where
   /-- Every pending input has a `callG` event behind it. -/
@@ -634,9 +635,9 @@ theorem trace_transfer {e : AlterSeq (SpecState P.n) (Label P.n)}
 /-! ### The surviving bit stays alive -/
 
 /-- **Under unanimous input `v`, the bit `v` is alive at every state.** The
-only rule that could exclude it is `bindUnset v`, whose D15 guard counts `f + 1`
+only transition that could exclude it is `bindUnset v`, whose D15 guard counts `f + 1`
 supporters of `!v` — refuted by `support_le_of_unanimous` at the very state where
-the rule would fire. -/
+the transition would fire. -/
 theorem excluded_notMem_of_unanimous {e : AlterSeq (SpecState P.n) (Label P.n)}
     {t : Seq (Label P.n)} {v : Bool} (he : is_exec e (specInst P r))
     (hbr : ∀ (k : ℕ) (s : SpecState P.n), e.stateAt k = some s →

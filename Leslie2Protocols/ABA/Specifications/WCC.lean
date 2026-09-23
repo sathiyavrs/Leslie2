@@ -19,7 +19,7 @@ delivery happens and each process's returned bit is left to the adversary.
 That call is the only probabilistic transition of the instance, and the only
 one of the whole development besides `ABA.spec`'s.
 
-The call label therefore carries two rows. The recording call takes a caller
+The call label therefore carries two transitions. The recording call takes a caller
 that does not cross the threshold, or one at an already resolved `val`, and
 records it. The resolving call takes the crossing caller at `val = ⊥`, and
 records it while drawing `val`. Their guards are exclusive.
@@ -35,7 +35,7 @@ process reaches the instance as a caller, since `coinLabelMap` sends its
 `byzantineCallW r k` to `callW r k`, so `called` already counts it. Were `F` added
 to the count, a corruption would be able to carry the count across the
 threshold; the family combinator broadcasts `fail` by a deterministic
-transform, so that resolution would have to be drawn on a Dirac row.
+transform, so that resolution would have to be drawn on a Dirac transition.
 
 Deviations: the `guess` label is omitted (D4 -- it exists solely for the
 out-of-scope Unpredictability property), and `fail` is the determinised
@@ -46,7 +46,7 @@ out-of-scope Unpredictability property), and `fail` is the determinised
   guarantee holds only up to a failure probability `δ`; the specification
   inherits that failure as an outcome of its own. `wccPMF` therefore carries a
   fourth outcome `undelivered` of mass `δ`, pushed into `val := CoinValue.undelivered`. An
-  `undelivered` round enables no `ret`: the return rule's guard is positive
+  `undelivered` round enables no `ret`: the return transition's guard is positive
   (`val = ⊤ ∨ val = bit b`), so a failed resolution silently delivers nothing
   and the round's callers wait forever. This is distinct from `⊤`, where
   delivery does happen and the adversary merely picks each process's returned
@@ -56,7 +56,7 @@ out-of-scope Unpredictability property), and `fail` is the determinised
   the access that crosses the threshold, and the threshold counts accesses
   alone, following Fig. 7 of *Asynchronous Randomized Consensus with Ghost
   Variables* (working draft, 2026). Transition System 3 resolves
-  by a separately scheduled rule and counts the corrupted set alongside the
+  by a separately scheduled transition and counts the corrupted set alongside the
   callers. The crossing access is a recorded one: `WCC.Step.callLoop` carries
   the call label at every state and records no caller, so a call may be
   answered there, and the scheduler may defer the resolution past any number
@@ -64,7 +64,7 @@ out-of-scope Unpredictability property), and `fail` is the determinised
   resolving.
 
 The instance only steps on its own round-`r` API labels and `fail`; it has no
-silent row (`WCC.step_tau_inversion`), and the family combinator (`System.family`)
+silent transition (`WCC.step_tau_inversion`), and the family combinator (`System.family`)
 supplies idle self-loops on every other label.
 -/
 
@@ -124,7 +124,7 @@ def initial (n : ℕ) : SpecState n where
   val := .bot
   F := ∅
 
-/-- The state with `id`'s access recorded. Both call rows produce their
+/-- The state with `id`'s access recorded. Both call transitions produce their
 successor from it, and the resolution threshold is read at it. -/
 def record (s : SpecState n) (id : Fin n) : SpecState n :=
   { s with called := Function.update s.called id true }
@@ -164,7 +164,7 @@ inductive Step (P : Parameters) (r : ℕ) :
       Step P r s (.callW r id) (PMF.pure (s.record id))
   /-- A process calls the coin, its access carries the caller count above `f`,
   and `val` is unresolved: the call records the caller and draws `val` from
-  `wccPMF`. This is the instance's only probabilistic row. Outcome
+  `wccPMF`. This is the instance's only probabilistic transition. Outcome
   `undelivered` (mass `δ`, deviation D17) resolves the coin without
   delivering. -/
   | callResolve (s : SpecState P.n) (id : Fin P.n) (h : s.called id = false)
@@ -185,7 +185,7 @@ inductive Step (P : Parameters) (r : ℕ) :
   | fail (s : SpecState P.n) (id : Fin P.n) :
       Step P r s (.fail id) (PMF.pure (s.corrupt P id))
 
-/-- The three rows of the call label: the input-enabledness loop, the recording
+/-- The three transitions of the call label: the input-enabledness loop, the recording
 call, and the resolving call. -/
 theorem step_callW_inversion {P : Parameters} {r : ℕ} {s : SpecState P.n} {id : Fin P.n}
     {μ : PMF (SpecState P.n)} (h : Step P r s (.callW r id) μ) :
@@ -199,7 +199,7 @@ theorem step_callW_inversion {P : Parameters} {r : ℕ} {s : SpecState P.n} {id 
   | callResolve _ h hv ht => exact Or.inr (Or.inr ⟨h, hv, ht, rfl⟩)
   | callLoop => exact Or.inl rfl
 
-/-- The instance has no silent row. -/
+/-- The instance has no silent transition. -/
 theorem step_tau_inversion {P : Parameters} {r : ℕ} {s : SpecState P.n}
     {μ : PMF (SpecState P.n)} : ¬ Step P r s .tau μ := by
   intro h; cases h
@@ -243,8 +243,8 @@ noncomputable def specFamily (P : Parameters) :
     System (ℕ → SpecState P.n) (Label P.n) :=
   System.family (specInst P) Label.wccRound Label.isFail (failAct P)
 
-/-- The family has no silent row: its instances have none, and every remaining
-row of `System.family` carries a label other than `τ`. -/
+/-- The family has no silent transition: its instances have none, and every other
+transition of `System.family` carries a label other than `τ`. -/
 theorem specFamily_tau_inversion (P : Parameters) {o : ℕ → SpecState P.n}
     {ω : PMF (ℕ → SpecState P.n)} : ¬ (specFamily P).step o Label.tau ω := by
   rw [specFamily, System.family_step_iff]

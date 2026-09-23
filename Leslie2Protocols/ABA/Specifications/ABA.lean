@@ -23,8 +23,8 @@ is Dirac except `SpecStep.coinFlip`.
 
 The interface is the full adversary's. A corrupted process's call records a
 bit unrelated to the one its label declares, and a corrupted process returns
-any value at any time without moving the state. The rules for correct processes stay
-available to a corrupted process, so the two corrupted rules add behaviour and
+any value at any time without moving the state. The transitions for correct processes stay
+available to a corrupted process, so the two corrupted transitions add behaviour and
 remove none. The trace predicates of `Specifications/ABASafety.lean` therefore quantify over
 never-corrupted returners: a corrupted return carries an arbitrary bit, which
 no property of the system can constrain.
@@ -63,11 +63,11 @@ namespace PLTS
 namespace ABA
 
 /-- The control mode of the specification: waiting to flip, with the decision enabled, or left
-with no rule enabled by a failed flip. -/
+with no silent transition enabled by a failed flip. -/
 inductive ControlMode : Type
   /-- The flip is enabled and the decision is not. -/
   | flipEnabled
-  /-- The decision is the only enabled `τ`-rule. -/
+  /-- The decision is the only enabled silent transition. -/
   | decisionEnabled
   /-- The flip failed to deliver (D17): no silent transition is enabled. -/
   | noTransitionEnabled
@@ -135,8 +135,8 @@ inductive FlipOutcome : Type
 /-- The flip distribution: mass `ε` on `toDecisionEnabled`, `1 − ε − δ` on `toFlipEnabled` and `δ`
 on `undelivered`. It is the image of the development's single coin distribution `Parameters.wccPMF`
 under a map that forgets the bit, one bit going to `toDecisionEnabled` and the other, together with
-the adversarial outcome, to `toFlipEnabled`. The three masses are all the rules read; no rule names
-a coin bit. -/
+the adversarial outcome, to `toFlipEnabled`. The three masses are all that the transitions read; no
+transition names a coin bit. -/
 noncomputable def flipPMF (P : Parameters) : PMF FlipOutcome :=
   P.wccPMF.map (fun o => match o with
     | .bit true => .toDecisionEnabled
@@ -147,23 +147,23 @@ noncomputable def flipPMF (P : Parameters) : PMF FlipOutcome :=
 /-- The step relation of the ABA specification. -/
 inductive SpecStep (P : Parameters) :
     SpecState P.n → Label P.n → PMF (SpecState P.n) → Prop
-  /-- Rule 1: an environment call records its bit in the ghost record. The
+  /-- `SpecStep.callSet`: an environment call records its bit in the ghost record. The
   guard `h` is the empty entry, so the write is a first write and the record
   holds the bit of the process's first genuine call (D13, D16). -/
   | callSet (s : SpecState P.n) (id : Fin P.n) (b : Bool) (h : s.input id = none) :
       SpecStep P s (.callABA id b)
         (PMF.pure { s with input := Function.update s.input id (some b) })
-  /-- Rule 2: the input-enabledness loop for `callABA`, at a process whose
-  entry is filled. Rule 1 carries the label at an empty entry and this rule
-  carries it at a filled one, so the label is enabled in every state; the loop
-  writes nothing (D13). -/
+  /-- `SpecStep.callLoop`: the input-enabledness loop for `callABA`, at a
+  process whose entry is filled. `SpecStep.callSet` carries the label at an
+  empty entry and this transition carries it at a filled one, so the label is
+  enabled in every state; the loop writes nothing (D13). -/
   | callLoop (s : SpecState P.n) (id : Fin P.n) (b : Bool) (h : s.input id ≠ none) :
       SpecStep P s (.callABA id b) (PMF.pure s)
-  /-- Rule 3 (the flip): the only non-Dirac rule of the system. From
+  /-- `SpecStep.coinFlip` (the flip): the only non-Dirac transition of the system. From
   `ControlMode.flipEnabled`, with nothing decided, one flip resolves by `flipPMF` into
   `ControlMode.decisionEnabled` with probability `ε`, back into `ControlMode.flipEnabled` with
   probability `1 − ε − δ`, and into `ControlMode.noTransitionEnabled` with probability `δ` (D17). It
-  is one-shot: the three outcomes are the three modes, and the rule names no coin bit.
+  is one-shot: the three outcomes are the three modes, and the transition names no coin bit.
 
   The guard `hmix` is the mixedness guard: the flip fires only from a state
   where both bits carry `f + 1` support. Under unanimity among the correct processes on one bit the
@@ -178,37 +178,37 @@ inductive SpecStep (P : Parameters) :
           | .toDecisionEnabled => { s with mode := .decisionEnabled }
           | .toFlipEnabled => s
           | .undelivered => { s with mode := .noTransitionEnabled }))
-  /-- Rule 4 (decide): the sole writer of `val`. Its guards are `val = ⊥`
+  /-- `SpecStep.decide`: the sole writer of `val`. Its guards are `val = ⊥`
   (`hv`), `InputSupport b` (`hs`) and `mode ≠ noTransitionEnabled` (`hm`), and the support guard is
   the entire constraint on the decided value: the bit `b` carries `f + 1`
-  recorded-or-corrupt supporters (D13). An undelivered flip disables the rule (D17); at
-  `ControlMode.decisionEnabled` it is the only enabled `τ`-rule, and it is enabled there
+  recorded-or-corrupt supporters (D13). An undelivered flip disables the transition (D17); at
+  `ControlMode.decisionEnabled` it is the only enabled silent transition, and it is enabled there
   whenever some bit carries `f + 1` support. The mode returns to `ControlMode.flipEnabled`. -/
   | decide (s : SpecState P.n) (b : Bool) (hv : s.val = none) (hs : InputSupport P s b)
       (hm : s.mode ≠ .noTransitionEnabled) :
       SpecStep P s .tau
         (PMF.pure { s with val := some b, mode := .flipEnabled })
-  /-- Rule 5 (return): a process returns the decision value. -/
+  /-- `SpecStep.ret`: a process returns the decision value. -/
   | ret (s : SpecState P.n) (id : Fin P.n) (b : Bool)
       (h₁ : s.val = some b) (h₂ : s.ret id = false) :
       SpecStep P s (.retABA id b)
         (PMF.pure { s with ret := Function.update s.ret id true })
-  /-- Rule 6 (corruption, deviation D1): a guarded deterministic transform.
-  The guards `hnew` and `hbud` are the Failure rule's own: `id` is not already
-  corrupted, and the budget has room. They are exactly the condition tested by
-  the `if` inside `SpecState.corrupt`, so the effect is unchanged and only the
-  enabledness moves into the rule. -/
+  /-- `SpecStep.fail` (corruption, deviation D1): a guarded deterministic
+  transform. The guards `hnew` and `hbud` are the corruption's own: `id` is not
+  already corrupted, and the budget has room. They are exactly the condition
+  tested by the `if` inside `SpecState.corrupt`, so the effect is the same and
+  only the enabledness sits on the transition. -/
   | fail (s : SpecState P.n) (id : Fin P.n) (hnew : id ∉ s.F)
       (hbud : s.F.card < P.f) :
       SpecStep P s (.fail id) (PMF.pure (s.corrupt P id))
-  /-- Rule 7 (corrupted call): the recorded bit is independent of the label's.
-  A corrupted caller's declared input need not be what is recorded, so the rule
-  writes an arbitrary `b'` under the sole guard `id ∈ s.F` (D23). -/
+  /-- `SpecStep.callByzantine`: the recorded bit is independent of the label's.
+  A corrupted caller's declared input need not be what is recorded, so the
+  transition writes an arbitrary `b'` under the sole guard `id ∈ s.F` (D23). -/
   | callByzantine (s : SpecState P.n) (id : Fin P.n) (b b' : Bool) (hF : id ∈ s.F) :
       SpecStep P s (.callABA id b)
         (PMF.pure { s with input := Function.update s.input id (some b') })
-  /-- Rule 8 (corrupted return): a corrupted process returns anything at any
-  time. The state does not move, and the correct return rule `SpecStep.ret`
+  /-- `SpecStep.retByzantine`: a corrupted process returns anything at any
+  time. The state does not move, and the correct return transition `SpecStep.ret`
   remains available to it (D23). -/
   | retByzantine (s : SpecState P.n) (id : Fin P.n) (b : Bool) (hF : id ∈ s.F) :
       SpecStep P s (.retABA id b) (PMF.pure s)
@@ -225,7 +225,7 @@ example :
   decide
 
 /-- **First-write check (D16).** A call at an uncorrupted process holding no
-input is answered by rule 1 alone: rule 2 asks for a filled entry and
+input is answered by `SpecStep.callSet` alone: `SpecStep.callLoop` asks for a filled entry and
 `SpecStep.callByzantine` for a corrupted caller, so the bit reaches the ghost
 record. -/
 example (P : Parameters) (s : SpecState P.n) (id : Fin P.n) (b : Bool)

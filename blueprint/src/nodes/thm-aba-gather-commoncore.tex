@@ -8,9 +8,9 @@
 
 \begin{proof}\leanok
   \uses{def:aba-gather-spec, thm:gather-core, thm:gather-broadcast-substitution, thm:trace-support, thm:forward-sound}
-  At the specification the three clauses come from the rules alone.
-  \leandeclnamed{bindCore}{PLTS.ABA.Gather.Step.bindCore} is the only writer of $core$ and fires only from $core = \bot$, so the field keeps its value once written and every return reads the same set; the return rule requires $C \sqsubseteq g$ outright; and the size bound is that rule's own guard, carried forward as a state invariant by induction along the execution.
-  Theorem~\ref{thm:trace-support} turns a positive-probability trace into a genuine execution whose return labels are steps of those rules, which is the trace form.
+  At the specification the three clauses come from the transitions alone.
+  \leandeclnamed{bindCore}{PLTS.ABA.Gather.Step.bindCore} is the only writer of $core$ and fires only from $core = \bot$, so the field keeps its value once written and every return reads the same set; the return transition requires $C \sqsubseteq g$ outright; and the size bound is that transition's own guard, carried forward as a state invariant by induction along the execution.
+  Theorem~\ref{thm:trace-support} turns a positive-probability trace into a genuine execution whose return labels are steps of those transitions, which is the trace form.
   The two implementations inherit the predicate along the soundness of their refinements: the implementation over broadcast specifications along Theorem~\ref{thm:gather-core}, and the implementation over Bracha instances along Theorem~\ref{thm:gather-broadcast-substitution} composed with it.
   What makes that transfer say anything is that the core is on the label.
   The implementations hold it in a field no process reads, the refinements match the labels that carry it, and a trace-support property transfers along an inclusion of achievable trace distributions with no hypothesis beyond positive probability.

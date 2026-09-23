@@ -38,9 +38,9 @@ carries no sub-protocol state — the `callG`/`retG`/`callW`/`retW` interactions
 over the API labels, advancing the process's `phase` and recording the returned data, while the
 sub-protocol state itself lives in the round specifications and the coin oracle — and no network
 state: the DECIDED sets and the corrupted set belong to the network. The transitions themselves are
-`RoundLoopStep` (`ABA/Composition/Components.lean`), the rows of a round-loop record
+`RoundLoopStep` (`ABA/Composition/Components.lean`), the transitions of a round-loop record
 `RoundLoopRecord` over the extended alphabet, and `ABDY.ABAProgramStep`
-(`ABA/ABDY/System.lean`), the rows of the protocol program that carries a round loop
+(`ABA/ABDY/System.lean`), the transitions of the protocol program that carries a round loop
 beside its round records. This file realises the assumptions of
 `DESIGN-HybridRefinesSpecification.md`: the phase machine (invariant conjunct 4), the DECIDED
 diffusion state (conjunct 6), and input coherence
@@ -57,11 +57,11 @@ diffusion state (conjunct 6), and input coherence
   clears `lastGrade` and advances to the next round, all in one Dirac
   transition. The joint step is the `retWPublish` rendezvous, whose round-loop
   half is the advance and whose network half is the sent insert.
-* **D11 (Byzantine handshake rows).** Corrupted processes may make their sub-protocol handshakes
-  arbitrarily: each of `callG`/`retG`/`callW`/`retW` has a Byzantine handshake row, authorised by `k
-  ∈ F` at the network and constrained by no phase or estimate. The round loop contributes an idle
-  row to every such row, so the family's call/return rules for corrupted ids are never blocked by
-  it.
+* **D11 (Byzantine handshake transitions).** Corrupted processes may make their sub-protocol
+  handshakes arbitrarily: each of `callG`/`retG`/`callW`/`retW` has a Byzantine handshake
+  transition, authorised by `k ∈ F` at the network and constrained by no phase or estimate. The
+  round loop contributes an idle transition to each of them, so the family's calls and returns for
+  corrupted ids are never blocked by it.
 * **D12′ (per-process DECIDED sets, equivocation-capable).** The DECIDED multicast state is the
   network's per-process sent `decidedSent : Fin n → Finset Bool`, read in the ABA component as
   `decidedSent` (`ABA/Composition/ABAState.lean`) and mirroring graded agreement's D5 sent-set
@@ -71,23 +71,24 @@ diffusion state (conjunct 6), and input coherence
   (`byzantineDecided`, guarded only by `k ∈ F`) may insert either or both bits at any time — a
   corrupted process may send `DECIDED 0` to one receiver and `DECIDED 1` to another (delivery is
   selective). The delivery rendezvous `decidedDeliver` moves one sent bit into the receiver's own
-  row `decidedReceived i j` at most once per (receiver, sender, bit) triple, with soundness `b ∈
+  set `decidedReceived i j` at most once per (receiver, sender, bit) triple, with soundness `b ∈
   decidedSent j` on the network's half; the `retABA` quorum guard counts distinct *senders* per bit
   (`decidedCount`). The per-process sent sets (D12′) let a corrupted process equivocate in the
   DECIDED sets; a single-entry model would bar that — an under-approximation inconsistent with
   graded agreement.
 * **D23 (the corrupted process's replaced program).** A corruption replaces the
   program of the process it names. `RoundLoopRecord.corrupted` carries the
-  replacement: the process's own half of `fail` writes the flag, every row
-  that reads or writes the process's own record is guarded by
+  replacement: the process's own half of `fail` writes the flag, every
+  transition that reads or writes the process's own record is guarded by
   `corrupted = false`, and the replaced program self-loops on every label of
   the alphabet other than `τ` and the labels on which the process would act on
   its own sub-protocol messages. Those messages are the business of the Byzantine
-  handshake rows (D11), which carry it with no round-loop row of the named process.
+  handshake transitions (D11), which carry it with no round-loop transition of the named
+  process.
 
-Two further notes: the return rule has **no** correctness check — corrupted
+Two further notes: the return transition has **no** correctness check — corrupted
 returns must pass the same `n − f` DECIDED count as correct ones, and the
-specification's return rule is likewise blind to correctness — and
+specification's return transition is likewise blind to correctness — and
 `lastGrade` always refers to the *current* round's GBCA
 return (it is cleared by the round advance).
 -/
@@ -189,7 +190,7 @@ structure RoundLoopRecord (n : ℕ) : Type where
   /-- The DECIDED payloads delivered to this process, indexed by sender. -/
   decidedDelivered : Fin n → Finset Bool
   /-- Whether this process's program has been replaced (D23). The process's own
-  half of `fail` writes the flag, and the guard of every correct row reads it.
+  half of `fail` writes the flag, and the guard of every correct transition reads it.
   The record beneath the flag is unchanged from that point on. -/
   corrupted : Bool
   deriving DecidableEq
@@ -230,7 +231,7 @@ def receiveDecided (q : RoundLoopRecord n) (k : Fin n) (b : Bool) : RoundLoopRec
 /-- The round advance on receiving the coin `c`: adopt the coin if the
 estimate is `⊥`, clear the grade, open the next round. The `⟨DECIDED, b⟩`
 publication the advance carries on a grade-2 outcome (D10) is the network's half of
-the joint step, so no row of it appears here. -/
+the joint step, so no transition of it appears here. -/
 def stepRound (q : RoundLoopRecord n) (c : Bool) : RoundLoopRecord n :=
   q.setProcess
     { q.process with

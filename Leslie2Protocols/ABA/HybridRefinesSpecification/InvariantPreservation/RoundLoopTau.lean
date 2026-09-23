@@ -8,7 +8,7 @@ import Leslie2Protocols.ABA.HybridRefinesSpecification.Relation
 import Leslie2Protocols.ABA.Composition.Hybrid
 
 /-!
-# `Invariant` across the round loops' `τ` rows of `hybrid`
+# `Invariant` across the round loops' `τ` transitions of `hybrid`
 
 `Invariant.step_roundLoopTau`, preservation of `Invariant` at a core `τ`: DECIDED delivery, echo,
 or byzantine injection. All three leave `processes` and `F` untouched, so only `received_sound` and
@@ -23,7 +23,8 @@ open Implementation Composition
 
 variable {P : Parameters}
 
-/-- The round loops' `τ` rows: `Invariant` is preserved and the abstract state is unchanged at a
+/-- The round loops' `τ` transitions: `Invariant` is preserved and the abstract state is unchanged
+at a
 DECIDED delivery, an echo or a byzantine injection. -/
 theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w)

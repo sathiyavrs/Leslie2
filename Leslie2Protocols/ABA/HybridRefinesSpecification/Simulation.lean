@@ -18,23 +18,23 @@ probabilistic forward simulation `hybrid P ⊑ spec P` along `hybridSpecificatio
 `hybrid_spec` is the trace-distribution inclusion it yields, and both chains of the case study
 reach the ABA specification along it.
 
-The rows dispatch as follows. A visible `callABA` is answered by
+The transitions dispatch as follows. A visible `callABA` is answered by
 `SpecStep.callSet` at a never-corrupted process holding no input, by
 `SpecStep.callLoop` at a never-corrupted process holding one, and by
 `SpecStep.callByzantine` at a corrupted process. A never-corrupted process's visible
 `retABA` is answered by `SpecStep.decide` followed by `SpecStep.ret` on the
-first such row, and by `SpecStep.ret` alone on every later one. Every hidden
-row, the coin's resolving call included, is answered by a stutter: the
-abstract state's mode stays `ControlMode.flipEnabled`, so it never fires
+first such transition, and by `SpecStep.ret` alone on every later one. Every
+hidden transition, the coin's resolving call included, is answered by a
+stutter: the abstract state's mode stays `ControlMode.flipEnabled`, so it never fires
 `SpecStep.coinFlip` and `SpecStep.decide` remains enabled when the first
 return arrives. A `fail` is answered by `SpecStep.fail`, whose two guards are
-the concrete row's own, read across `AbstractState.F_eq`.
+the concrete transition's own, read across `AbstractState.F_eq`.
 
 A corruption replaces the program of the process it names (D23), and the replacement is answered in
 both systems of the interface. The corrupted process's `retABA` is answered by
 `SpecStep.retByzantine`: neither the concrete state nor the abstract state moves. On every other
-label the replaced program self-loops, and the concrete row it contributes is the corrupted branch
-the inversion already carries. -/
+label the replaced program self-loops, and the concrete transition it contributes is the corrupted
+branch the inversion already carries. -/
 
 namespace PLTS
 namespace ABA
@@ -48,12 +48,12 @@ mass on its (unique) abstract state. -/
 def hybridSpecificationRelation (P : Parameters) : HybridState P → PMF (SpecState P.n) → Prop :=
   diracRel (hybridSpecificationStateRelation P)
 
-/-- **Stutter-row packaging.** If every post-state `s'` in the support of a concrete τ-step's
+/-- **Stutter-transition packaging.** If every post-state `s'` in the support of a concrete τ-step's
 outcome `μ_C` relates to the *same* abstract state `a` (via `hybridSpecificationStateRelation`), the
 abstract state can answer with the trivial `weakTau_refl` stutter: the coupling `Ω := μ_C.map (fun
 s' => (s', pure a))` has first marginal `μ_C` and second marginal the constant `pure (pure a)`
 (`PMF.map_const`), so `ω := pure (pure a)` and `ω.bind id = pure a` (`PMF.pure_bind`). Reused by
-every hidden row, the coin's resolving call included. -/
+every hidden transition, the coin's resolving call included. -/
 private theorem stutter_step {P : Parameters} (μ_C : PMF (HybridState P)) (a : SpecState P.n)
     (hA : ∀ s' ∈ μ_C.support, hybridSpecificationStateRelation P s' a) :
     ∃ ω : PMF (PMF (SpecState P.n)),
@@ -86,16 +86,16 @@ theorem ABAState.corrupt_F_subset {P : Parameters} (c : ABAState P) (id : Fin P.
   · exact Finset.subset_insert _ _
   · exact Finset.Subset.refl _
 
-/-- The outcome of a visible row collapses to a single Dirac: the specification stands, the ABA
-component lands on one state and the coin oracle stands, so the four components' joint outcome is
-the point mass `dirac_step` expects. -/
+/-- The outcome of a visible transition collapses to a single Dirac: the specification stands, the
+ABA component lands on one state and the coin oracle stands, so the four components' joint outcome
+is the point mass `dirac_step` expects. -/
 private theorem prodPMF_pure_abaTransition {P : Parameters} (G : ℕ → GBCA.SpecState P.n)
     (c : ABAState P) (o : ℕ → WCC.SpecState P.n) :
     prodPMF (PMF.pure G) ((PMF.pure c).map fun x => (x.1, x.2, o))
       = PMF.pure (G, c.1, c.2, o) := by
   rw [PMF.pure_map, prodPMF_pure_pure]
 
-/-- **Visible-row packaging.** A single concrete Dirac outcome `s_C'` matched by a single
+/-- **Visible-transition packaging.** A single concrete Dirac outcome `s_C'` matched by a single
 abstract state `a'` (`hybridSpecificationStateRelation`-related) closes the `weakStep` disjunct of
 the simulation clause: the coupling is the Dirac-of-Dirac `ω := pure (pure a')`, whose `bind id`
 collapses back to `pure a'` (`PMF.pure_bind`), so any `weakStep (spec P) (pure a) l (pure a')`
@@ -139,7 +139,7 @@ theorem hybridRefinesSpecification (P : Parameters) :
         ⟨r, id, b, μr, μc, hstepG, hstepC, rfl⟩ |
         ⟨r, id, out, bnd, μr, μc, hstepG, hstepC, rfl⟩ |
         ⟨r, id, μw', μc, hstepW, hstepC, rfl⟩ | ⟨r, id, b, μw', μc, hstepW, hstepC, rfl⟩
-      · -- row 3: the round's own `GBCA.Step.bindUnset` — the abstract state stutters
+      · -- the round's own `GBCA.Step.bindUnset` — the abstract state stutters
         obtain ⟨ω, hRel, hWeak⟩ := stutter_step _ a (fun s' hs' => by
           obtain ⟨g', C', A', w'⟩ := s'
           have hI' := hI.step hstep hs'
@@ -148,7 +148,7 @@ theorem hybridRefinesSpecification (P : Parameters) :
           obtain ⟨⟨gr', hgr', heq⟩, rfl, rfl, rfl⟩ := hs'
           exact ⟨hI', by rw [← heq]; exact hAbs.step_gbcaTau hI r hstepG hgr'⟩)
         exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
-      · -- rows 2/8: the view's own τ (DECIDED delivery/echo/byzantine)
+      · -- the view's own τ (DECIDED delivery/echo/byzantine)
         obtain ⟨ω, hRel, hWeak⟩ := stutter_step _ a (fun s' hs' => by
           obtain ⟨g', C', A', w'⟩ := s'
           have hI' := hI.step hstep hs'
@@ -157,7 +157,7 @@ theorem hybridRefinesSpecification (P : Parameters) :
           obtain ⟨hc2, rfl⟩ := mem_support_abaTransition hs2
           exact ⟨hI', hAbs.step_roundLoopTau hI hstepC hc2⟩)
         exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
-      · -- row: callG handshake
+      · -- the callG handshake
         obtain ⟨ω, hRel, hWeak⟩ := stutter_step _ a (fun s' hs' => by
           obtain ⟨g', C', A', w'⟩ := s'
           have hI' := hI.step hstep hs'
@@ -168,7 +168,7 @@ theorem hybridRefinesSpecification (P : Parameters) :
           obtain ⟨hc2, rfl⟩ := mem_support_abaTransition h2
           exact ⟨hI', by rw [← heq]; exact hAbs.step_callG hI r id b hstepG hstepC hgr' hc2⟩)
         exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
-      · -- row: retG handshake
+      · -- the retG handshake
         obtain ⟨ω, hRel, hWeak⟩ := stutter_step _ a (fun s' hs' => by
           obtain ⟨g', C', A', w'⟩ := s'
           have hI' := hI.step hstep hs'
@@ -180,7 +180,7 @@ theorem hybridRefinesSpecification (P : Parameters) :
           exact ⟨hI', by
             rw [← heq]; exact hAbs.step_retG hI r id out bnd hstepG hstepC hgr' hc2⟩)
         exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
-      · -- row: callW handshake
+      · -- the callW handshake
         obtain ⟨ω, hRel, hWeak⟩ := stutter_step _ a (fun s' hs' => by
           obtain ⟨g', C', A', w'⟩ := s'
           have hI' := hI.step hstep hs'
@@ -189,7 +189,7 @@ theorem hybridRefinesSpecification (P : Parameters) :
           obtain ⟨hc2, wr', hwr', rfl⟩ := mem_support_coinTransition h2
           exact ⟨hI', hAbs.step_callW hI r id hstepW hstepC hwr' hc2⟩)
         exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
-      · -- row: retW handshake
+      · -- the retW handshake
         obtain ⟨ω, hRel, hWeak⟩ := stutter_step _ a (fun s' hs' => by
           obtain ⟨g', C', A', w'⟩ := s'
           have hI' := hI.step hstep hs'
@@ -203,7 +203,7 @@ theorem hybridRefinesSpecification (P : Parameters) :
       obtain ⟨μc, hstepC, rfl⟩ := hstep
       have hdisj := hstepC
       rcases hdisj with ⟨hidF, hin, rfl⟩ | ⟨hloop, rfl⟩
-      · -- the commit row at a never-corrupted process holding no input: `SpecStep.callSet`,
+      · -- the commit transition at a never-corrupted process holding no input: `SpecStep.callSet`,
         -- whose empty-entry guard is `input_sync` read at `id`
         set c' := ABAState.setProcess (C, A) id { ABAState.processes (C, A) id with
           input := some b, estimate := some b, round := 0, phase := .toCallG } with hc'def
@@ -375,7 +375,7 @@ theorem hybridRefinesSpecification (P : Parameters) :
           rw [hbid]
           exact weakStep_strong (SpecStep.ret a id b hvalb hretfalse)
       · -- a corrupted process's return (D23): neither system moves, and the abstract state answers
-        -- with its own corrupted-return rule
+        -- with `SpecStep.retByzantine`
         simp only [prodPMF_pure_abaTransition]
         obtain ⟨ω, hRel, hbid⟩ := dirac_step (g, C, A, w) a ⟨hI, hAbs⟩
         refine ⟨ω, hRel, Or.inr ⟨by simp, ?_⟩⟩

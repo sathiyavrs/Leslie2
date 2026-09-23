@@ -121,7 +121,7 @@ def initial (n : ℕ) (M : Type) (p₀ : Pr) : LocalState n Pr M where
 /-- Overwrite the local record. -/
 def setProcess (p : LocalState n Pr M) (pr : Pr) : LocalState n Pr M := { p with process := pr }
 
-/-- File `m` under the recv row of sender `k`. -/
+/-- File `m` under sender `k` in the record's received sets. -/
 def deliverTo [DecidableEq M] (p : LocalState n Pr M) (k : Fin n) (m : M) : LocalState n Pr M :=
   { p with received := Function.update p.received k (insert m (p.received k)) }
 
@@ -208,8 +208,8 @@ theorem process_setProcess (s : InstanceState n Pr M) (j : Fin n) (p : Pr) (k : 
   · subst hk; simp
   · simp [setProcess_process_ne _ _ _ hk, hk]
 
-/-- Corruption (deviation D1): total, Dirac, the network state's own row — the local states
-are corruption-blind. -/
+/-- Corruption (deviation D1): total, Dirac, and a write on the network state alone — the local
+states are corruption-blind. -/
 def corrupt (P : Parameters) (id : Fin P.n) (s : InstanceState P.n Pr M) : InstanceState P.n Pr M :=
   (s.1, s.2.corrupt P id)
 
@@ -331,7 +331,7 @@ theorem sent_subset_multicast (s : InstanceState n Pr M) (j : Fin n) (m : M) (k 
   fun _ h => mem_multicast_sent.mpr (Or.inr h)
 
 /-- The adversary delivers `m` from sender `j` to receiver `i`: the receiver's
-local state files it under `j`'s row. -/
+local state files it under sender `j`. -/
 def receiveMessage (s : InstanceState n Pr M) (i j : Fin n) (m : M) : InstanceState n Pr M :=
   (Function.update s.1 i ((s.1 i).deliverTo j m), s.2)
 

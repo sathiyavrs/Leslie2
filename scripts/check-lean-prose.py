@@ -27,7 +27,7 @@ NOTATION = {
     # names; READY is what both papers call the level the encoding writes VOTE
     "INPUT", "ECHO", "VOTE", "READY", "BIND", "ECHO5", "DECIDED", "echo4", "echo5",
     # Bracha's first message level, and the gather instances of the two-gather
-    # pseudocode, each naming a line of an algorithm rather than a rule
+    # pseudocode, each naming a line of an algorithm rather than a declaration
     "INIT", "G",
     # booleans, positions and generic mathematical words
     "true", "false", "id", "inl", "inr", "pre", "post", "idle", "map", "swap",
@@ -37,7 +37,7 @@ NOTATION = {
     # nothing in Lean by design
     "guess",
     # pseudocode for a sub-protocol return, as in BRB_k.return(m'), which the
-    # encoding reads as a receipt quorum rather than as a rule
+    # encoding reads as a receipt quorum and not as a declaration of its own
     "return",
 }
 

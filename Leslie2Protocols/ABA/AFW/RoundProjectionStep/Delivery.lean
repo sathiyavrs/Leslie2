@@ -10,15 +10,15 @@ import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ViewAfterOneWrite
 # A delivery
 
 `roundProjection_deliverFirstGather` and its nine companions: the view of the composed round after
-a delivery. The row files the message in the receiver's own local state of the network state the
-message's tag names. A gather message moves the gather instance alone. A broadcast message moves
-the broadcast instance, and, where it completes a `2f + 1` `VOTE` quorum at the receiver, the
-instance returns to the receiver as well: the return flag goes on and what the receiver's gather
-instance returned records the value. The quorum lemmas carry the hypothesis that the returned value
-holds the delivered value after the delivery, and the plain lemmas the hypothesis that the returned
-value does not move; `AFW.broadcastReturnsFor_eq_of_quorum` supplies the first under
-`AFW.BroadcastReturnsInvariant`. `afterFirstGatherInputBroadcastDeliver` and its seven companions
-name the states between the two events.
+a delivery. The transition files the message in the receiver's own local state of the network
+state the message's tag names. A gather message moves the gather instance alone. A broadcast
+message moves the broadcast instance, and, where it completes a `2f + 1` `VOTE` quorum at the
+receiver, the instance returns to the receiver as well: the return flag goes on and what the
+receiver's gather instance returned records the value. The quorum lemmas carry the hypothesis that
+the returned value holds the delivered value after the delivery, and the plain lemmas the hypothesis
+that the returned value does not move; `AFW.broadcastReturnsFor_eq_of_quorum` supplies the first
+under `AFW.BroadcastReturnsInvariant`. `afterFirstGatherInputBroadcastDeliver` and its seven
+companions name the states between the two events.
 -/
 
 namespace PLTS

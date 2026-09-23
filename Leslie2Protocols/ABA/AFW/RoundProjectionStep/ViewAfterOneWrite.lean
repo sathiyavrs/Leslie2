@@ -10,17 +10,17 @@ import Leslie2Protocols.ABA.AFW.RoundProjection
 /-!
 # The view of the composed round after one write
 
-A row of the implementation writes the acting process's round record and records at most one
-tagged message. `roundProjection_write` and `roundProjection_writeNoSent` do that write once,
+A transition of the implementation writes the acting process's round record and records at most
+one tagged message. `roundProjection_write` and `roundProjection_writeNoSent` do that write once,
 through `roundProjectionUpdate`: each local state vector of the view becomes a one-point update of
 the old one, and each network state is recovered from the written sent family by its own tag
 (`messagesOf`).
-`messagesOf_recordSent_some` and `messagesOf_recordSent_none` are the sent algebra a row still
-owes, and one simp lemma per coordinate reads the written view off `roundProjectionUpdate`.
+`messagesOf_recordSent_some` and `messagesOf_recordSent_none` are the sent algebra a transition
+still owes, and one simp lemma per coordinate reads the written view off `roundProjectionUpdate`.
 `broadcastReturnsFor_update_setProcess` and `broadcastReturnsFor_update_deliverTo` read the family
 of returned values under a local write and under a delivery. `networkState_ext`,
 `stateOverBroadcasts_ext` and `roundStateOverGathers_ext` identify a network state, a
-gather-over-Bracha state and a round state with their components. Every row class of
+gather-over-Bracha state and a round state with their components. Every class of transitions in
 `AFW/RoundProjectionStep/` rests on this file.
 -/
 
@@ -182,8 +182,8 @@ theorem roundProjection_congr {x u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} {w 
 
 /-! ### Transposing one written record
 
-A row writes the acting process's round record, so each local state vector the
-view reads becomes a one-point update of the old one. Each lemma below is that
+A transition writes the acting process's round record, so each local state vector
+the view reads becomes a one-point update of the old one. Each lemma below is that
 observation at one component of the view, stated over the `ite` that reading a
 written record produces. -/
 
@@ -258,11 +258,11 @@ theorem locals_secondGatherBindBroadcast_if (k : Fin P.n) :
 end LocalStates
 /-! ### The view after one write
 
-A row of the implementation writes one component of the acting process's round
-record and records at most one tagged message. The two lemmas below are that
+A transition of the implementation writes one component of the acting process's
+round record and records at most one tagged message. The two lemmas below are that
 write read through the view: each local state vector becomes a one-point
 update, and each network state is recovered from the written sent family by its
-own tag. What every row still owes is then sent algebra alone. -/
+own tag. What every transition still owes is then sent algebra alone. -/
 
 section Writes
 variable {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} {w : NetworkState P.n} {j : Fin P.n}
@@ -316,8 +316,8 @@ noncomputable def roundProjectionUpdate (P : Parameters) (u : ∀ _ : Fin P.n, A
           ⟨messagesOf (secondGatherBindBroadcastMessageOf q) (secondGatherBindBroadcastMessageOf_inj
             q) sent, w.F⟩))))
 
-/-- **A write, read through the view.** A row writes the acting process's round
-record and records one tagged message; the round it names then reads as the
+/-- **A write, read through the view.** A transition writes the acting process's
+round record and records one tagged message; the round it names then reads as the
 one-point update of every coordinate. -/
 theorem roundProjection_write (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n) (w : NetworkState P.n)
     (j : Fin P.n) (c : RoundLoopRecord P.n) (r : ℕ) (sr : RoundRecord P.n) (m : Message P.n) :
@@ -409,7 +409,7 @@ end Writes
 /-! ### The returned value under a local write
 
 `broadcastReturnsFor` counts `VOTE` receipts, so a write of a local record leaves it where
-it stands and a delivery is the only row that moves it. -/
+it stands and a delivery is the only transition that moves it. -/
 
 section BroadcastReturns
 
@@ -484,9 +484,9 @@ end BroadcastReturns
 
 /-! ### Reading the written view
 
-The written view is read coordinate by coordinate, so that a row's remaining
-obligations are stated over one local state vector or one network state at a
-time. -/
+The written view is read coordinate by coordinate, so that a transition's
+remaining obligations are stated over one local state vector or one network
+state at a time. -/
 
 section WrittenViewReaders
 variable (v : ∀ _ : Fin P.n, AFW.ProcessRecord P.n) (w : NetworkState P.n) (r : ℕ) (j : Fin P.n)

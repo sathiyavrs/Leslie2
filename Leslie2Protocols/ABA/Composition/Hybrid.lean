@@ -28,15 +28,15 @@ idles.
 
 ## What this file supplies
 
-`hybrid` and its rows. The builders assemble a transition of the composite out of transitions of
-its components (`gbcaSpecificationFamily_owned`, `gbcaSpecificationFamily_idle`,
+`hybrid` and its transitions. The builders assemble a transition of the composite out of
+transitions of its components (`gbcaSpecificationFamily_owned`, `gbcaSpecificationFamily_idle`,
 `gbcaSpecificationFamily_tau`, `gbcaSpecificationFamily_fail`, `hybridExtended_visible_step`,
 `hybridExtended_tau_specification`, `hybrid_rendezvous`, `hybrid_hidden`, `hybrid_visible`). The
-coin oracle's own rows over the round alphabet are `wccFamily_owned` and `wccFamily_fail`. The
-account also runs in the inverse direction, from a composite transition back into the rows its
-four components contributed. A labelled transition reaches `hybrid` along one of three routes
-through the two hiding frames: a rendezvous label and a sub-protocol API label are both hidden to
-`τ`, and every remaining label survives both hidings.
+coin oracle's own transitions over the round alphabet are `wccFamily_owned` and `wccFamily_fail`.
+The account also runs in the inverse direction, from a composite transition back into the
+transitions its four components contributed. A labelled transition reaches `hybrid` along one of
+three routes through the two hiding frames: a rendezvous label and a sub-protocol API label are
+both hidden to `τ`, and every remaining label survives both hidings.
 
 `hybrid` is where the two chains of `ABA/Results.lean` meet.
 `ABA/ABDY/Substitution.lean` carries the composed system of ABDY22's protocol
@@ -96,11 +96,11 @@ the result read back over `Label n`, the sub-protocol API hidden. The pipeline i
 noncomputable def hybrid (P : Parameters) : System (HybridState P) (Label P.n) :=
   (((hybridExtended P).abstract (networkEventLabels P.n)).relabel).abstract (Label.hiddenAPI P.n)
 
-/-! ### The specification family's rows
+/-! ### The specification family's transitions
 
 The family routes a round-tagged label to its round, takes `τ` at any round,
-broadcasts `fail`, and idles on everything else — `GBCA.ByABDY.gbcaInstanceFamily`'s rows with
-the round instance replaced by its specification. -/
+broadcasts `fail`, and idles on everything else — `GBCA.ByABDY.gbcaInstanceFamily`'s transitions
+with the round instance replaced by its specification. -/
 
 /-- The specification family idles on a label no round owns and no broadcast. -/
 theorem gbcaSpecificationFamily_idle (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
@@ -131,8 +131,8 @@ theorem gbcaSpecificationFamily_owned_inversion (P : Parameters) {G : ℕ → GB
   · rw [hL] at hown; exact absurd hown (by simp)
   · rw [hL] at hown; exact absurd hown (by simp)
 
-/-- A round's own row, read into the specification: the label the round owns is answered by that
-round, every other round unchanged. -/
+/-- A round's own transition, read into the specification: the label the round owns is answered by
+that round, every other round unchanged. -/
 theorem gbcaSpecificationFamily_owned (P : Parameters) {G : ℕ → GBCA.SpecState P.n}
     {L : ExtendedLabel P.n} {l₀ : Label P.n} {r : ℕ} {X : GBCA.SpecState P.n}
     (hown : GBCA.ByABDY.roundOwnsLabel L = some r)
@@ -143,7 +143,7 @@ theorem gbcaSpecificationFamily_owned (P : Parameters) {G : ℕ → GBCA.SpecSta
   rw [GBCA.specificationOverRoundAlphabet, System.mapIdle_step_some hpull]
   exact h
 
-/-- A round's own silent rule — the specification's binding exclusion — read into the
+/-- A round's own silent transition — the specification's binding exclusion — read into the
 specification. -/
 theorem gbcaSpecificationFamily_tau (P : Parameters) {G : ℕ → GBCA.SpecState P.n} {r : ℕ}
     {X : GBCA.SpecState P.n} (h : GBCA.Step P r (G r) Label.tau (PMF.pure X)) :
@@ -192,7 +192,7 @@ theorem gbcaSpecificationFamily_fail_inversion (P : Parameters) {G : ℕ → GBC
   · rfl
   · exact absurd trivial hglob
 
-/-- A silent transition of the family is one round's own silent rule — the
+/-- A silent transition of the family is one round's own silent transition — the
 specification's binding exclusion. -/
 theorem gbcaSpecificationFamily_tau_inversion (P : Parameters) {G : ℕ → GBCA.SpecState P.n}
     {μ : PMF (ℕ → GBCA.SpecState P.n)}
@@ -208,7 +208,7 @@ theorem gbcaSpecificationFamily_tau_inversion (P : Parameters) {G : ℕ → GBCA
   · exact absurd rfl habs
   · exact absurd rfl habs
 
-/-! ### The coin oracle's rows
+/-! ### The coin oracle's transitions
 
 The oracle is a family over the same shape: a round-tagged label moves its
 round, `fail` is broadcast, and everything else leaves it put. -/
@@ -325,9 +325,9 @@ theorem hybridExtended_tau_specification (P : Parameters) {G G' : ℕ → GBCA.S
   refine Or.inr (Or.inl ⟨rfl, PMF.pure G', hG, ?_⟩)
   rw [prodPMF_pure_pure]
 
-/-- A silent transition of the four components: no round loop has a `τ` row, and neither has the
-coin oracle, so it is the specification family's binding exclusion or the ABA network's own
-injection. -/
+/-- A silent transition of the four components: no round loop has a `τ` transition, and neither
+has the coin oracle, so it is the specification family's binding exclusion or the ABA network's
+own injection. -/
 theorem hybridExtended_tau_inversion (P : Parameters) {G : ℕ → GBCA.SpecState P.n}
     {C : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A : ABANetworkState P.n} {o : ℕ → WCC.SpecState P.n}
     {μ : PMF (HybridState P)} (h : (hybridExtended P).step (G, C, A, o) (Sum.inl Label.tau) μ) :
@@ -355,8 +355,8 @@ theorem hybridExtended_tau_inversion (P : Parameters) {G : ℕ → GBCA.SpecStat
 /-! ### The two hiding frames -/
 
 /-- **The protocol-shaped group**: the rendezvous alphabet hidden, the result
-read back over `Label n`. Scaffolding for the row-by-row account below; nothing
-outside this file names it. -/
+read back over `Label n`. Scaffolding for the account below, transition by
+transition; nothing outside this file names it. -/
 private noncomputable def hybridHidden (P : Parameters) : System (HybridState P) (Label P.n) :=
   ((hybridExtended P).abstract (networkEventLabels P.n)).relabel
 

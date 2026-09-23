@@ -8,7 +8,7 @@ import Leslie2Protocols.ABA.HybridRefinesSpecification.Relation
 import Leslie2Protocols.ABA.Composition.Hybrid
 
 /-!
-# `Invariant` across the `callG` rows of `hybrid`
+# `Invariant` across the `callG` transitions of `hybrid`
 
 `Invariant.step_callG`, preservation of `Invariant` at a call of the graded-agreement
 specification. The GBCA instance only ever touches `.call`, never `.F`, `.excluded` or `.grade`,

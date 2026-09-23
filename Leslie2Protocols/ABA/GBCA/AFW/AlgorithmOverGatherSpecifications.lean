@@ -100,12 +100,12 @@ theorem transition_specificationOverInstanceAlphabet_tau_step
     (PMF.pure c') :=
   (System.mapIdle_step_some (Gather.specificationLabelMap_tau P.n X) _).mpr h
 
-/-- The one corruption row of the gather specification. -/
+/-- The one corruption transition of the gather specification. -/
 theorem specStep_fail {id : Fin P.n} {μ : PMF (Gather.SpecState P.n X)}
     (h : Gather.Step P c (.fail id) μ) : μ = PMF.pure (c.corrupt P id) := by cases h; rfl
 
 end GatherSpecificationAlongPullback
-/-! ### The rows -/
+/-! ### The algorithm -/
 
 /-- The transitions of the round over the gather specifications
 (`GBCA.ByAFW.roundOverGatherSpecifications`),
@@ -180,7 +180,7 @@ inductive AlgorithmOverGatherSpecifications (P : Parameters) (r : ℕ) :
         (PMF.pure (corruptAll P id (Gather.SpecState.corrupt P)
           (Gather.SpecState.corrupt P) s))
 
-/-! ### The row characterisation -/
+/-! ### The characterisation by the algorithm -/
 
 /-- **The projection.** -/
 theorem roundOverGatherSpecifications_step_algorithm (P : Parameters) (r : ℕ) :
@@ -502,9 +502,10 @@ theorem algorithm_roundOverGatherSpecifications_step (P : Parameters) (r : ℕ) 
       transition_specificationOverInstanceAlphabet_step (by simp) (Gather.Step.fail d id)
     exact ⟨Sum.inl (.fail id), rfl, roundOverGathers_label_step (by simp) hRoundPrograms hg1 hg2⟩
 
-/-- **The row characterisation.** At a shared label `l₀`, the transitions of
-the round over the labels `GBCA.specificationLabelMap` sends to `l₀` are exactly the `l₀`-rows
-of `AlgorithmOverGatherSpecifications`, on the same state and with the same distribution. -/
+/-- **The characterisation by the algorithm.** At a shared label `l₀`, the transitions of
+the round over the labels `GBCA.specificationLabelMap` sends to `l₀` are exactly the `l₀`
+transitions of `AlgorithmOverGatherSpecifications`, on the same state and with the same
+distribution. -/
 theorem roundOverGatherSpecifications_step_iff_algorithm (P : Parameters) (r : ℕ)
     (s : RoundStateOverGatherSpecifications P.n) (l₀ : Label P.n)
     (μ : PMF (RoundStateOverGatherSpecifications P.n)) :

@@ -55,7 +55,7 @@ exactly when the instance has returned a value.
 The round carries three fields no guard of it reads: the core of each of its
 two gather instances, and the round's bound bit. In the implementation the network
 holds those three as the ghost record of the round (`AFW.Ghost`), so the view
-reads them off it, and a row's ghost write is the round's write of them
+reads them off it, and a transition's ghost write is the round's write of them
 (`roundProjection_writeGhost`, `roundProjection_writeGhost_ne`, `roundProjection_ghostId`). The two
 projections of a gather's core agree because each is `Gather.coreOf` of the same
 network state (`coreOfNetwork_firstGatherProjection`, `coreOfNetwork_secondGatherProjection`).
@@ -390,10 +390,10 @@ end Readers
 /-! ### The ghost write, read through the view
 
 The adversary's ghost record of round `r` is the round's two gather cores
-beside its bound bit, so a row's ghost write is the round's write of those
-three fields. The lemmas below are that write at the round the row's label
-names, at every other round, and at a row whose write returns the record it
-found. -/
+beside its bound bit, so a transition's ghost write is the round's write of
+those three fields. The lemmas below are that write at the round the
+transition's label names, at every other round, and at a transition whose write
+returns the record it found. -/
 
 /-- **The ghost write at the round its label names**, read through the view:
 the two cores and the bound bit are the written record, every other coordinate
@@ -419,8 +419,8 @@ theorem roundProjection_writeGhost_ne (v : ∀ _ : Fin P.n, AFW.ProcessRecord P.
   rw [h]
   simp [roundProjection, firstGatherProjection, secondGatherProjection, Function.update_of_ne hr]
 
-/-- A row whose ghost write returns the record it found leaves every round's
-view where it stands. -/
+/-- A transition whose ghost write returns the record it found leaves every
+round's view where it stands. -/
 theorem roundProjection_ghostId (L : ExtendedLabel P.n (Message P.n))
     (h : ∀ (v : NetworkState P.n) (G : Ghost P.n), ghostStep P L v G = G)
     (x : ∀ _ : Fin P.n, AFW.ProcessRecord P.n) (w : NetworkState P.n) (r' : ℕ) :
@@ -437,7 +437,7 @@ theorem ghostStep_bound (L : ExtendedLabel P.n (Message P.n)) (v : NetworkState 
   unfold ghostStep
   split <;> simp_all
 
-/-- The bound bit of a round on record stays on record across any row. -/
+/-- The bound bit of a round on record stays on record across any transition. -/
 theorem writeGhost_bound {w : NetworkState P.n} (L : ExtendedLabel P.n (Message P.n)) {r : ℕ}
     (h : (w.ghostRecord r).2.2 ≠ none) :
     ((w.writeGhost (ghostStep P) L).ghostRecord r).2.2 ≠ none := by
@@ -567,7 +567,7 @@ theorem protocolRelation_mk (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessRe
         (G = fun r => roundProjection P u w r) ∧ BoundInvariant P u w ∧ BroadcastReturnsInvariant P
           u w) := Iff.rfl
 
-/-- The bound invariant survives a row that leaves every process's
+/-- The bound invariant survives a transition that leaves every process's
 second-gather local input where it stands and keeps on record every bound bit
 already there. -/
 theorem boundInvariant_of {u x : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} {w v : NetworkState P.n}
@@ -601,7 +601,7 @@ theorem protocolRelation_init (P : Parameters) :
 
 /-! ### Transposing one written record
 
-A row writes the acting process's round record, so the local state vector the
+A transition writes the acting process's round record, so the local state vector the
 view reads becomes a one-point update of the old one. Each lemma below is that
 observation at one component, stated over the `ite` that reading a written
 record produces. -/

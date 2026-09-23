@@ -99,8 +99,8 @@ private theorem coupling_hiddenRendezvous (P : Parameters)
   exact weakTau_of_step rfl
     (composedHidden_of_event P e (composedExtended_visible_step P (by simp) hG hC hA hW))
 
-/-- A row internal to the graded-agreement family: the family takes a silent run and nothing else
-moves. -/
+/-- A transition internal to the graded-agreement family: the family takes a silent run and nothing
+else moves. -/
 private theorem coupling_run (P : Parameters) {x : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     {w' : NetworkState P.n} {G' G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n}
     {C : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A : ABANetworkState P.n}
@@ -124,7 +124,7 @@ private theorem coupling_unchanged (P : Parameters) {s : ProtocolState P} {t : C
 
 /-! ### The matching on the silent label
 
-The implementation's own `terminate` row writes no coordinate the relation reads,
+The implementation's own `terminate` transition writes no coordinate the relation reads,
 so the composed answer to it is to remain unchanged; the adversary's two injections
 are answered by a transition. -/
 
@@ -460,8 +460,8 @@ theorem coupling_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
 /-! ### The matching on a rendezvous of the implementation
 
 A send and a delivery are internal to the round, so the composed system answers them with a silent
-run of the graded-agreement family; the DECIDED rows, the fused coin return and the handshake rows
-are answered by the same rendezvous. -/
+run of the graded-agreement family. The DECIDED transitions, the fused coin return and the
+handshake transitions are answered by the same rendezvous. -/
 
 theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}

@@ -34,7 +34,7 @@ The proof is invariant reasoning along genuine executions (via
 * `SpecificationInvariant` — the state invariant, in two clauses: the corrupted set respects
   the budget (`F_le`), and the decision value carries `f + 1` F-blind
   supporters (`val_support`). The second clause is `SpecStep.decide`'s own guard
-  at the one rule that writes `val`. Every rule that only grows the ghost
+  at the one transition that writes `val`. Every transition that only grows the ghost
   record carries it by `InputSupport.mono`; `SpecStep.callByzantine`, whose write may
   replace a recorded bit, carries it by `InputSupport.callByzantine` instead, the writer
   being counted through the `F` disjunct.
@@ -47,7 +47,7 @@ The proof is invariant reasoning along genuine executions (via
   has `b` recorded (`source_input`). The two record clauses carry each other at
   `SpecStep.callSet`, whose guard is the empty entry: by `source_input` such an
   entry says no earlier `callABA` of that process was recorded, so the label
-  the rule carries is the first. `SpecStep.callByzantine` takes `input_source`'s
+  the transition carries is the first. `SpecStep.callByzantine` takes `input_source`'s
   corruption disjunct.
 
 Both branches run off one locator, `exists_retSite`: a `retABA` at trace
@@ -706,7 +706,7 @@ theorem ValidityInvariant.step {pre : List (Label P.n)} {s : SpecState P.n} {l :
       rw [Function.update_of_ne h_eq]
       exact hI.source_input id' b'' (hnc hmem) hf
   | retByzantine id b hF =>
-    -- the rule is a no-op, so the invariant only has to absorb the new label
+    -- the transition is a no-op, so the invariant only has to absorb the new label
     rw [PMF.mem_support_pure_iff] at hs'
     rw [hs'] at h_inv' ⊢
     refine ⟨h_inv', fun id' b' h_in => mono (hI.input_source id' b' h_in), ?_, ?_⟩
@@ -721,7 +721,7 @@ theorem ValidityInvariant.step {pre : List (Label P.n)} {s : SpecState P.n} {l :
 
 /-- Inverting a `retABA` event: either the pre-state's decision value is the
 returned bit, or the returning process is corrupted in the pre-state. The two
-disjuncts are the two rules that carry the label, `SpecStep.ret` and
+disjuncts are the two transitions that carry the label, `SpecStep.ret` and
 `SpecStep.retByzantine`. -/
 private theorem retABA_inversion {s : SpecState P.n} {id : Fin P.n} {b : Bool}
     {μ : PMF (SpecState P.n)} (hstep : SpecStep P s (.retABA id b) μ) :
@@ -849,7 +849,7 @@ theorem spec_safe (P : Parameters) :
   rw [← h_D t] at h_ne
   obtain ⟨e, h_exec, hloc⟩ := exists_retSite P h_init t h_ne
   -- a never-corrupted returner is outside the fold at `m`, so `retABA_inversion`'s
-  -- second disjunct is impossible and the rule for a correct process read `val`
+  -- second disjunct is impossible and the transition for a correct process read `val`
   have h_correct : ∀ m id b, t.get? m = some (Label.retABA id b) →
       NeverCorrupted P t id →
       ∃ (j : ℕ) (s : SpecState P.n) (pre : List (Label P.n)),

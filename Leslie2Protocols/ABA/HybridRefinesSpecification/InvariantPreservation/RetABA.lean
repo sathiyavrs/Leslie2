@@ -8,7 +8,7 @@ import Leslie2Protocols.ABA.HybridRefinesSpecification.Relation
 import Leslie2Protocols.ABA.Composition.Hybrid
 
 /-!
-# `Invariant` across the `retABA` rows of `hybrid`
+# `Invariant` across the `retABA` transitions of `hybrid`
 
 `Invariant.step_retABA`, preservation of `Invariant` at a return of the ABA interface. A
 never-corrupted process's return only sets `returned`, a field `Invariant` never inspects, so

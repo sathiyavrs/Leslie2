@@ -16,13 +16,13 @@ Binding is *negative* information. The state field `excluded : Finset Bool` is t
 set of bits the instance can no longer hand out; it starts empty. The internal
 τ-transition `bindUnset b` excludes one bit — `excluded := insert b excluded` — once a
 quorum has spoken and `f + 1` F-blind supporters back the *surviving* bit `!b`.
-No rule removes a bit and `bindUnset` requires `excluded = ∅`, so `excluded` is written
+No transition removes a bit and `bindUnset` requires `excluded = ∅`, so `excluded` is written
 at most once per instance — the exclusion commits the round — and is monotone along
 every execution; `corrupt` leaves it alone. The once-only guard is what makes
 every fair round completable: a second exclusion after a grade-2 return would strand
 the processes yet to return, the value-bearing returns needing a live bit and
 `retGrade0` being blocked by the grade-2 guard. Every property below is a consequence of
-that monotonicity plus the membership guards on the return rules, with no
+that monotonicity plus the membership guards on the return transitions, with no
 auxiliary invariant.
 
 Grades: `grade2 b` (decide `b`), `grade1 b` (adopt `b`), `grade0` (no output; adopt the coin).
@@ -43,7 +43,7 @@ bit any extension can ever hand out.
 
 ## The bound bit on the label
 
-Every return rule takes a bit `bnd` under the guard `(!bnd) ∈ excluded` and
+Every return transition takes a bit `bnd` under the guard `(!bnd) ∈ excluded` and
 announces it on the label `.retG r id out bnd`. The bit is a ghost output: it is
 the value the specification holds as state, and no program reads it. On a
 reachable state `excluded` holds at most one bit, so the guard determines `bnd`

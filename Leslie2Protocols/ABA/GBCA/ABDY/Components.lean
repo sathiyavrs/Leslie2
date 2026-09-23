@@ -124,9 +124,9 @@ def gbcaEvents (n : ℕ) : Set (GBCALabel n) := {l | ∃ e : GBCAEvent n, l = Su
 /-! ### The local graded-agreement program
 
 Process `j`'s program in this round. Every guard reads the round record and the recv and nothing
-else. A rendezvous row carries the program's half of a joint step with the network — on a send the
-record write, on a delivery the recv write. The rows are exactly the labels that reach the round's
-instance: the round's own handshake ports and the two rendezvous. -/
+else. A rendezvous transition carries the program's half of a joint step with the network — on a
+send the record write, on a delivery the recv write. The transitions are exactly the labels that
+reach the round's instance: the round's own handshake ports and the two rendezvous. -/
 
 /-- The step relation of the local graded-agreement program of process `j` in
 round `r`. -/
@@ -201,7 +201,7 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
   (`Algorithm.callLoop`). -/
   | byzantineCallLoop (p : GBCA.ByABDY.RoundRecord P.n) (k : Fin P.n) (b : Bool) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineCallGLoop r k b))) (PMF.pure p)
-  /-- A Byzantine grade-2 return (D11): the correct row's evidence and guard, and
+  /-- A Byzantine grade-2 return (D11): the correct transition's evidence and guard, and
   the same record write (`Algorithm.retGrade2`). -/
   | byzantineRetGrade2 (p : GBCA.ByABDY.RoundRecord P.n) (v : Bool) (bnd : Bool)
       (hin : p.process.input ≠ none)
@@ -210,7 +210,7 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
       (hret : p.process.returned = false) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r j (.grade2 v) bnd)))
         (PMF.pure (p.setProcess { p.process with returned := true }))
-  /-- A Byzantine grade-1 return (D11): the correct row's evidence, denial and
+  /-- A Byzantine grade-1 return (D11): the correct transition's evidence, denial and
   guard, and the same record write (`Algorithm.retGrade1`). -/
   | byzantineRetGrade1 (p : GBCA.ByABDY.RoundRecord P.n) (v : Bool) (bnd : Bool)
       (hin : p.process.input ≠ none)
@@ -223,7 +223,7 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
       (hret : p.process.returned = false) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r j (.grade1 v) bnd)))
         (PMF.pure (p.setProcess { p.process with returned := true }))
-  /-- A Byzantine grade-0 return (D11): the correct row's evidence, denials and
+  /-- A Byzantine grade-0 return (D11): the correct transition's evidence, denials and
   guard, and the same record write (`Algorithm.retGrade0`). -/
   | byzantineRetGrade0 (p : GBCA.ByABDY.RoundRecord P.n) (bnd : Bool)
       (hin : p.process.input ≠ none)
@@ -323,7 +323,7 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
   | sendIdle (p : GBCA.ByABDY.RoundRecord P.n) (k : Fin P.n) (m : GBCA.ByABDY.Message)
     (hk : k ≠ j) :
       GBCAProgramStep P r j p (Sum.inr (.send k m)) (PMF.pure p)
-  /-- Delivery, receiver's half: file the message under the sender's recv row.
+  /-- Delivery, receiver's half: file the message under the sender's received set.
   Authenticity is the network's conjunct (`Algorithm.deliver`; D5). -/
   | deliverReceive (p : GBCA.ByABDY.RoundRecord P.n) (k : Fin P.n) (m : GBCA.ByABDY.Message) :
       GBCAProgramStep P r j p (Sum.inr (.deliver j k m)) (PMF.pure (p.deliverTo k m))
@@ -374,8 +374,8 @@ inductive GBCANetworkStep (P : Parameters) (r : ℕ) :
   | gbcaCallLoop (w : NetworkState P.n) (id : Fin P.n) (b : Bool) :
       GBCANetworkStep P r w (Sum.inl (Sum.inr (.gbcaCallLoop r id b))) (PMF.pure w)
   /-- A Byzantine call (D11): its `⟨INPUT, b⟩` is sent here, and there is no
-  `k ∈ F` guard on this row — the authorisation of that row belongs to the
-  network outside the instance, where the handshake-row label stays visible. -/
+  `k ∈ F` guard on this transition — the authorisation belongs to the network
+  outside the instance, where the handshake label stays visible. -/
   | byzantineCallG (w : NetworkState P.n) (k : Fin P.n) (b : Bool) :
       GBCANetworkStep P r w (Sum.inl (Sum.inr (.byzantineCallG r k b)))
         (PMF.pure (w.recordGBCASend k (.input b)))

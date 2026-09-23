@@ -18,19 +18,19 @@ directions.
 `roundOverGathers_step_iff` splits a transition of the round into a hidden event and a family
 label. `roundPrograms_idle_inversion` and `roundPrograms_label_inversion` read the round's
 programs beside the round's network: on a family label with no image at a program they remain
-unchanged, and on a label with an image every program takes its row at that image and the
+unchanged, and on a label with an image every program takes its transition at that image and the
 round's network takes its. The `_pure` and `_step` lemmas build such a transition from the
-factors' rows, and `PLTS.dirac_steps_update` identifies the program function a joint step
+factors' transitions, and `PLTS.dirac_steps_update` identifies the program function a joint step
 delivers pointwise with the old one updated at the acting process.
 
 `roundOverGathersExtended_joint_inversion` reads a visible transition of the three factors as
-their rows and a Dirac product. `roundOverGathersExtended_tau_inversion` reads a silent one as
-a step of exactly one gather instance. The `roundOverGathers_*` lemmas carry both across the
+their transitions and a Dirac product. `roundOverGathersExtended_tau_inversion` reads a silent one
+as a step of exactly one gather instance. The `roundOverGathers_*` lemmas carry both across the
 hiding and the relabelling.
 
-`programStep_*` reads one graded-agreement program's row off its label: the participant's row
-as its guards together with the Dirac it produces, and the idle row of a non-participant as
-the identity. `networkStep_*` does the same for the round's network.
+`programStep_*` reads one graded-agreement program's transition off its label: the participant's
+transition as its guards together with the Dirac it produces, and the idle transition of a
+non-participant as the identity. `networkStep_*` does the same for the round's network.
 -/
 
 namespace PLTS
@@ -66,8 +66,8 @@ theorem roundOverGathers_step_iff (P : Parameters) (r : ℕ) {G₁ G₂ : Type}
 
 /-! ### The transitions of the round's programs
 
-On a label with no image at a program the round's programs remain unchanged. On a label with an image
-every program takes its row at that image and the round's network takes its. -/
+On a label with no image at a program the round's programs remain unchanged. On a label with an
+image every program takes its transition at that image and the round's network takes its. -/
 
 section RoundPrograms
 
@@ -116,8 +116,8 @@ theorem roundPrograms_idle_inversion (hlp : programLabelMap P.n L = none)
   · exact absurd hτ hL
   · exact absurd hτ hL
 
-/-- **The joint transition of the round's programs.** Every program takes its row at the label's
-image and the round's network takes its. -/
+/-- **The joint transition of the round's programs.** Every program takes its transition at the
+label's image and the round's network takes its. -/
 theorem roundPrograms_label_inversion {lp : ProgramLabel P.n}
     (hlp : programLabelMap P.n L = some lp) (hlpτ : lp ≠ ProgramLabel.tau)
     {μ : PMF ((∀ _ : Fin P.n, ProcessRecord P.n) × Option Bool)}
@@ -167,8 +167,8 @@ theorem roundPrograms_idle_step (hlp : programLabelMap P.n L = none) :
       (fun i => System.mapIdle_unchanged hlp),
     System.mapIdle_unchanged hlp, (prodPMF_pure_pure _ _).symm⟩
 
-/-- Build the joint transition of the round's programs from the programs' rows and the row of the
-round's network. -/
+/-- Build the joint transition of the round's programs from the programs' transitions and the
+transition of the round's network. -/
 theorem roundPrograms_label_step {lp : ProgramLabel P.n} (hlp : programLabelMap P.n L = some lp)
     (hlpτ : lp ≠ ProgramLabel.tau) (hproc : ∀ i, ProgramStep P r i (u i) lp (PMF.pure (x i)))
     (hnet : NetworkStep P r v lp (PMF.pure v')) :
@@ -318,10 +318,10 @@ theorem roundOverGathers_tau_secondGather
     (roundOverGathersExtended_tau_secondGather h))
 
 end Factors
-/-! ### One program's rules, by label class
+/-! ### One program's transitions, by label class
 
-Each lemma reads a row of the table off its label: the participant's row as its
-guards together with the Dirac it produces, and the idle row of a
+Each lemma reads one transition off its label: the participant's transition as
+its guards together with the Dirac it produces, and the idle transition of a
 non-participant as the identity. The state and the distribution are variables,
 so `cases` unifies against any state of the program. -/
 
@@ -329,15 +329,15 @@ section ProgramStepInversion
 variable {P : Parameters} {r : ℕ} {j : Fin P.n} {p : ProcessRecord P.n} {ν : PMF (ProcessRecord
   P.n)}
 
-/-- A call row names the program's own round. -/
+/-- A call transition names the program's own round. -/
 theorem programStep_callG_round {r' : ℕ} {i : Fin P.n} {b : Bool}
     (h : ProgramStep P r j p (.callG r' i b) ν) : r' = r := by cases h <;> rfl
 
-/-- A call-loop row names the program's own round. -/
+/-- A call-loop transition names the program's own round. -/
 theorem programStep_callLoop_round {r' : ℕ} {i : Fin P.n} {b : Bool}
     (h : ProgramStep P r j p (.callLoop r' i b) ν) : r' = r := by cases h <;> rfl
 
-/-- A return row names the program's own round. -/
+/-- A return transition names the program's own round. -/
 theorem programStep_retG_round {r' : ℕ} {i : Fin P.n} {out : GBCAOutput} {bnd : Bool}
     (h : ProgramStep P r j p (.retG r' i out bnd) ν) : r' = r := by cases h <;> rfl
 
@@ -419,7 +419,7 @@ theorem programStep_retG_foreign {i : Fin P.n} {out : GBCAOutput} {bnd : Bool} (
   case retGIdle => rfl
 
 end ProgramStepInversion
-/-! ### The rules of the round's network, by label class -/
+/-! ### The transitions of the round's network, by label class -/
 
 section NetworkStepInversion
 variable {P : Parameters} {r : ℕ} {w : Option Bool} {μ : PMF (Option Bool)}

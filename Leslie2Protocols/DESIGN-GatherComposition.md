@@ -97,7 +97,7 @@ Gather.instanceOverBroadcastSpecification P X ⊑ Gather.specInst P X       (ref
 Each composition speaks an alphabet of its own, in which the call's
 input-enabledness loop is a label of its own, and its specification is read
 along a pullback that sends the loop to the call (`BRB.specificationLabelMap`,
-`Gather.specificationLabelMap`): the specification answers its call label on two rows, and a
+`Gather.specificationLabelMap`): the specification answers its call label on two transitions, and a
 composition whose caller and network are different components could otherwise
 combine the caller's loop with the network's post. The round speaks the family
 alphabet `ExtendedLabel P.n` natively, as the protocol chain's round
@@ -135,9 +135,9 @@ A gather program's record (`Gather.ProcessRecord`) extends the local record with
 values: `inputBroadcastReturned k`, the value the input-broadcast instance `k` has returned here,
 and `bindBroadcastReturned q`, the payload the bind-broadcast instance `q` has returned here. The
 return of an instance is a hidden event of the gather composition
-(`Gather.GatherEvent.inputBroadcastRet`, `bindRet`), on which that instance takes its own return row
-and the receiving program records the returned value. The four rows that read what has been returned
-— `sendEcho`, `sendVote`, `bindCall` and `ret` — read the returned values through
+(`Gather.GatherEvent.inputBroadcastRet`, `bindRet`), on which that instance takes its own return
+transition and the receiving program records the returned value. The four transitions that read what
+has been returned — `sendEcho`, `sendVote`, `bindCall` and `ret` — read the returned values through
 `Gather.ProcessRecord.accepted`, `holdsInputBroadcastReturn`, `holdsBindBroadcastReturn` and
 `approvedBy`, in the same shape at both gather tiers. The tie between a returned value and the
 instance it records is an invariant clause of `Gather.Conformance` (`inputBroadcastReturned_val`,
@@ -157,7 +157,7 @@ holds no round's grade after its return.
 The classical binding property of gather says: once the first correct process
 returns, there is a set of at least `n − f` entries on which every future
 correct return is defined. TS 4 states this with a single set, and
-`Gather.SpecState.core : Option (AcceptedPairs n X)` carries it. The internal rule
+`Gather.SpecState.core : Option (AcceptedPairs n X)` carries it. The internal transition
 `Gather.Step.bindCore` is its only writer and fires only from `core = none`,
 under two guards: the set's entries are committed entries (`hval`), and it has
 at least `n − f` of them (`hcard`). `Gather.Step.ret` demands that the returned
@@ -201,7 +201,7 @@ is a committed value, so the core's entries are committed entries (`single_core_
 
 **The certificate that the core is written once.** `coreOf_recorded` packages the three facts with the count the simulation
 carries along the run: at least `f + 1` coordinates hold a committed `BIND` payload above the core
-(`Gather.bindAbove`). That count is blind to `F` and monotone under every rule (`bindAbove_mono`),
+(`Gather.bindAbove`). That count is blind to `F` and monotone under every transition (`bindAbove_mono`),
 so it survives every later corruption, and it is what holds the returns after the first to the set
 the first one wrote. A returner's quorum of `n − f` returned payloads is a quorum of committed
 payloads, it meets the `f + 1` certified coordinates, and BRB values are functional, so the returned
@@ -223,15 +223,15 @@ its `INIT` can deliver a different value until some correct process holds an
 ECHO quorum of more than `(n+f)/2` senders, so the specification that fixes it
 excludes its own implementation
 (`NOTES-Fidelity.md` §5). `BRB.SpecState` therefore splits `input` (the
-call's record) from `val` (the committed value), with the commit τ-rule
+call's record) from `val` (the committed value), with the silent commit transition
 guarded `ldr ∈ F ∨ input = some m`: the corrupted leader's power is a commit
 of any value, the correct leader's value is fixed, and the window closes at
 the commit. `Gather.SpecState` carries the per-entry form: `call` and `val`
 split, `Gather.Step.commit` guarded `k ∈ F ∨ call k = some v`.
 
 The refinement counterpart is *commit-on-demand*: the abstract commit is a
-τ-rule with no implementation event to synchronise with, so the simulations
-fire it inside the weak answer of the first row that reads it —
+silent transition with no implementation event to synchronise with, so the simulations
+fire it inside the weak answer of the first transition that reads it —
 `BRB.commitReach` under a return, the `commitOne/commitList` chains of
 `ABA/Gather/RefinesSpecification.lean` under a return.
 
@@ -239,7 +239,7 @@ The gather specification's call record follows the input instance's record
 rather than the gather program's (`Gather.SpecificationRelation.call_eq`). The specification's
 call record and an input instance's call record move on the same interface
 labels, the call and the call loop, under the same write-once guard, and a
-broadcast specification answers either label on either of its two rows; the
+broadcast specification answers either label on either of its two transitions; the
 gather program's record and the instance's record can therefore differ, and the
 specification's `commit` guard is dischargeable against the instance's.
 
@@ -275,7 +275,7 @@ second gather's call record takes the candidate (`secondGatherCall_candidate`). 
 record from the first `firstGatherReturn` on (`candidate_bound`, `secondGatherCall_bound`). The
 graded outcome's certificate, `OutputCertificate`, is established at `secondGatherReturn` from the
 second gather's return and consumed at `retG`, which sees the outcome alone (`out_certificate`). The
-return rows then mirror `GBCA.ByABDY.refinesSpecification` shape for shape: a grade-2 or grade-1 return
+return transitions then mirror `GBCA.ByABDY.refinesSpecification` shape for shape: a grade-2 or grade-1 return
 hands out the bound bit and certifies `ExclusionEvidence` of its complement, and the grade-0 return
 announces the bit the first return wrote. The D15 support counts come off the first core through the
 committed-entry provenance — a core entry is a committed entry, a committed entry of a correct
@@ -312,15 +312,15 @@ carries a characterisation by an algorithm —
 the labels the pullback sends to one specification label are exactly the transitions of an
 algorithm at that label (`Gather.AlgorithmOverBroadcastSpecification`,
 `GBCA.ByAFW.AlgorithmOverGatherSpecifications`), on the same state and with the same
-distribution. A refinement is then a case analysis over the rows, and the specification's
+distribution. A refinement is then a case analysis over the transitions, and the specification's
 answer, a run of `specInst`, is lifted to the specification read along the pullback by a
 section of it (`Gather.weakLStep_specificationOverInstanceAlphabet`,
 `GBCA.ByABDY.weakLStep_specificationOverRoundAlphabet`), as `GBCA.ByABDY.refinesSpecification` does
 for the protocol chain's round.
 
 Two facts of the characterisations are worth reading. A specification answers its call label on two
-rows, so where a specification is a component the composition offers both rows under either
-interface label, and the rule table lists the combinations: four call rows at the
+transitions, so where a specification is a component the composition offers both under either
+interface label, and the algorithm lists the combinations: four call transitions at the
 gather-over-specification tier, two at the round over the gather specifications. And a label outside
 a round's interface blocks the round rather than letting it idle
 (`GBCA.ByAFW.ProgramLabel.outside`), exactly as `GBCA.ByABDY.composition` blocks, which is what
@@ -357,9 +357,9 @@ adversary holding every sent set and the corrupted set, beside the coin oracle. 
 same for either implementation of graded agreement — the round loop, the DECIDED sets, the coin
 handshake, corruption, the adversary's table and the composition pipeline are fixed by the round
 interface and the specification — so `ABA/Implementation/System.lean` writes it once, parametric in
-the round message type `M`, the per-process per-round record `S`, the round rows, supplied as a
-relation embedded in one constructor of the program table, and the adversary's per-round ghost
-record `G` with its update `ghostStep` and its output `ghostOutput` (D30).
+the round message type `M`, the per-process per-round record `S`, the round's transitions, supplied
+as a relation embedded in one constructor of the program's step relation, and the adversary's
+per-round ghost record `G` with its update `ghostStep` and its output `ghostOutput` (D30).
 `ABA/ABDY/System.lean` instantiates it at ABDY22's implementation;
 `ABA/AFW/System.lean` instantiates it here.
 
@@ -380,17 +380,17 @@ three are forced by the shape of the implementation.
   gather instance, one per Bracha instance. The implementation's network carries one sent-set family
   per round, so `AFW.Message n` tags each message with the network it belongs to, and for a Bracha
   message with the instance, whose index is its leader. The sender index stays the sender, so a
-  threshold still counts distinct senders (D5). No new adversary rows are needed: recording a
-  multicast, checking a delivery and authorising a handshake row are already payload-blind.
+  threshold still counts distinct senders (D5). No new adversary transitions are needed: recording
+  a multicast, checking a delivery and authorising a handshake transition are already payload-blind.
 - **The transposition.** The composed system indexes local states by instance
   and then by process. A program must hold its own data and no one else's, so
   `AFW.RoundRecord n` is process-major: process `j`'s local state in each gather
   instance, and its local state in each of the `n` instances of each broadcast family.
   Nothing is lost, because every guard of the gather-based implementation
-  reads the acting process's own local states and the networks, and the two rows that
+  reads the acting process's own local states and the networks, and the two transitions that
   read a network — the adversary's delivery and its Byzantine injection —
   belong to the adversary either way.
-- **The fused rows.** An implementation program takes one row per thing it does, so the
+- **The fused transitions.** An implementation program takes one transition per thing it does, so the
   graded-agreement call broadcasts the input, the `BIND` send is a broadcast call, and the first
   gather's return to a process is that process's call of the second gather (D28). The implementation
   has no broadcast return either: a gather guard reads a `2f + 1` `VOTE` receipt quorum on the
@@ -410,7 +410,7 @@ conjuncts are that computation, so there is nothing to choose in the witness.
 The ghost is part of that computation. The composed round holds three values no guard of it reads —
 the core of each of its two gather networks and the round's network's bound bit — and the adversary
 holds the same three as the round's ghost record `AFW.Ghost`, which `AFW.roundProjection` reads them
-off. Two rows write the record. The return-then-call step's broadcast of the candidate writes the
+off. Two transitions write the record. The return-then-call step's broadcast of the candidate writes the
 first gather's core at `Gather.coreOf` of that gather's projection of the tagged sent sets, and the
 bound bit at `GBCA.boundOfCore` of that core; a graded return writes the second core the same way.
 The composed `firstGatherReturn` and `secondGatherReturn` write the same two values off the core
@@ -421,26 +421,26 @@ The fifth conjunct, `AFW.BoundInvariant`, is what makes the announced bits agree
 round-`r` second-gather local state carries an input has passed that round's return-then-call step,
 so the round's bound bit is on record. The sixth, `AFW.BroadcastReturnsInvariant`, is the broadcast
 invariant `BRB.Invariant` at every broadcast instance of the view. It is what identifies the
-returned value with the value an implementation guard names: an implementation row hands its composed
+returned value with the value an implementation guard names: an implementation transition hands its composed
 counterpart a specific value with a vote quorum, the instance returned the value the view chose, and
 under the invariant two vote quorums at one process name one value (`BRB.echoCertificate_unique`,
 `AFW.broadcastReturnsFor_eq_of_quorum`). The invariant is carried on the composed system and
-re-established after every matched row by the instance's own preservation lemma, since every matched
+re-established after every matched transition by the instance's own preservation lemma, since every matched
 composed step is a genuine step of the instance.
 
 The proof is organised around that computation. The files of
-`ABA/AFW/RoundProjectionStep/` state, for every implementation row, the view after
-the row as the composed round before the row with the corresponding composed effect applied,
-written through the round's updaters exactly as the row tables write it; the master lemma
+`ABA/AFW/RoundProjectionStep/` state, for every implementation transition, the view after
+the transition as the composed round before it with the corresponding composed effect applied,
+written through the round's updaters exactly as the algorithms write it; the master lemma
 `roundProjection_write` of `ABA/AFW/RoundProjectionStep/ViewAfterOneWrite.lean`
 pushes a one-point round write and a single sent-set insertion inside every coordinate, and each
-row then owes only projection algebra, discharged by `messagesOf_recordSent_some` and
+transition then owes only projection algebra, discharged by `messagesOf_recordSent_some` and
 `messagesOf_recordSent_none`.
-`ABA/AFW/SimulationOfEachTransition.lean` matches each implementation row by a run of the
+`ABA/AFW/SimulationOfEachTransition.lean` matches each implementation transition by a run of the
 composed group: a send and a delivery are hidden events of the round instance, answered by one of
 its silent steps, the adversary's authenticity conjunct becoming membership in the sent set
-projected onto the instance; the call is the instance's own. Three of the implementation's rows are
-answered by two composed steps, through the intermediate states
+projected onto the instance; the call is the instance's own. Three of the implementation's
+transitions are answered by two composed steps, through the intermediate states
 `ABA/AFW/RoundProjectionStep/ReturnThenCall.lean` and
 `ABA/AFW/RoundProjectionStep/Delivery.lean` name: the return-then-call step by
 `firstGatherReturn` then `secondGatherCall`, the graded return by `secondGatherReturn` then the

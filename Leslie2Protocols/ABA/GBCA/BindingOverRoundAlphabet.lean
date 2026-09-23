@@ -44,8 +44,8 @@ variable {P : Parameters} {r : ℕ}
 one bit on the trace: all labels the trace carries that name a round-`r` return
 announce the same bit, and every one of them that hands out a value hands out
 that bit. A return is named by `Sum.inl (Label.retG r id out bnd)` and by the
-Byzantine row `Sum.inr (.byzantineRetG r id out bnd)` alike, `specificationLabelMap` sending
-both to the specification's return. -/
+Byzantine transition `Sum.inr (.byzantineRetG r id out bnd)` alike,
+`specificationLabelMap` sending both to the specification's return. -/
 def BindingTraceExtended (P : Parameters) (r : ℕ) (t : Seq (Composition.ExtendedLabel P.n)) : Prop
   :=
   (∀ (l₁ l₂ : Composition.ExtendedLabel P.n) (id₁ id₂ : Fin P.n) (o₁ o₂ : GBCAOutput)
@@ -80,7 +80,7 @@ theorem specificationOverRoundAlphabet_step_cases {s s' : SpecState P.n}
 /-! ### The exclusion set along an execution of the lifted specification -/
 
 /-- **The exclusion set never shrinks**, along a transition of the lifted
-specification: a named label takes a specification row, and an unnamed one
+specification: a named label takes a specification transition, and an unnamed one
 leaves the state alone. -/
 theorem specificationOverRoundAlphabet_excluded_mono {s s' : SpecState P.n}
     {l : Composition.ExtendedLabel P.n} {μ : PMF (SpecState P.n)}

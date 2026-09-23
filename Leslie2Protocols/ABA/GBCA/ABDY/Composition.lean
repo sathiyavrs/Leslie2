@@ -59,7 +59,7 @@ noncomputable def compositionExtended (P : Parameters) (r : ℕ) :
 /-- **The round-`r` instance**: the programs beside the network, the two
 rendezvous hidden, the result read back over the shared extended alphabet. Its
 interface is the round's ports — `callG r`, `retG r`, `gbcaCallLoop r` and the
-three graded-agreement rows of round `r`. -/
+three Byzantine graded-agreement labels of round `r`. -/
 noncomputable def composition (P : Parameters) (r : ℕ) :
     System (GBCA.ByABDY.RoundState P.n) (ExtendedLabel P.n) :=
   ((compositionExtended P r).abstract (gbcaEvents P.n)).relabel
@@ -145,7 +145,7 @@ theorem composition_isLTS (P : Parameters) (r : ℕ) : (composition P r).IsLTS :
 theorem gbcaInstanceFamily_isLTS (P : Parameters) : (gbcaInstanceFamily P).IsLTS :=
   System.family_isLTS (composition_isLTS P) roundOwnsLabel isFailLabel (corruptionAct P)
 
-/-- No program rule fires on `τ`: a program only ever moves in a rendezvous or
+/-- No program transition fires on `τ`: a program only ever moves in a rendezvous or
 on one of the round's ports. The instance's silent transitions are therefore
 exactly the network's injections and the hidden rendezvous. -/
 theorem gbcaProgramStep_no_tau {P : Parameters} {r : ℕ} {j : Fin P.n}
@@ -186,7 +186,7 @@ theorem gbcaProgramProduct_pure {P : Parameters} {r : ℕ}
   rw [System.synchronisedProduct_step]
   exact Or.inl ⟨hl, fun i => PMF.pure (x i), h, (piPMF_pure x).symm⟩
 
-/-- The program group has no silent transition: no program has a `τ` row. -/
+/-- The program group has no silent transition: no program has a `τ` transition. -/
 theorem gbcaProgramProduct_no_tau {P : Parameters} {r : ℕ}
     {u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n}
     {μ : PMF (∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n)}

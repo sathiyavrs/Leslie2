@@ -27,29 +27,30 @@ nothing else:
 * the round message type, `GBCA.ByABDY.Message` — the five message levels of
   `GBCA/ABDY/Algorithm.lean` (D18);
 * the per-process per-round record, `GBCA.ByABDY.RoundRecord`, held by round in a finite map (D22);
-* the rows of the implementation, `RoundStep`: the graded-agreement call, the eight round
+* the transitions of the implementation, `RoundStep`: the graded-agreement call, the eight round
   multicasts, the round delivery, the call against an already-called record, and the three graded
   returns;
 * the network's ghost — the type `Option Bool` of a round's bound
   bit, the write `abdyGhostStep`, the read `abdyGhostOutput` and the guard
-  `abdyAnnouncedBound` the two return rows put on the announced bit.
+  `abdyAnnouncedBound` the two return transitions put on the announced bit.
 
 `ABDY.protocol P` is the implementation at those three, named for the authors of the implementation
 it runs, as `AFW.protocol P` is named for the authors of the gather-based one. Its per-process
 record is a round-loop record beside a round records, and the round records a process holds are
 retained across the round advance, a round never touched reads as the initial record (D22).
 
-## The round rows
+## The round transitions
 
-Every guard reads the process's own record. A round row reads and writes the round record of the
-round its label tags, whichever round the round loop is in, and is guarded by `p.terminated = false`
-(D22). The rows are taken in the wait-until order of ABDY22's Algorithm 6 from the `BIND` level
-down, each of those levels requiring the process's own send at the level below; the `VOTE` rows ask
-for no own send, the `ECHO` they read being sent by an `upon` handler that may still be pending. A
-rendezvous row carries the process's half of a joint step with the network: on a send the record
-write, on a delivery the recv write. The Byzantine round rows have no row at the process they name
-(D11, D22). The three return rows take the bit their label announces free: the bit is the network's
-ghost output and the program neither guards on it nor records it. -/
+Every guard reads the process's own record. A round transition reads and writes the round record of
+the round its label tags, whichever round the round loop is in, and is guarded by
+`p.terminated = false` (D22). The transitions are taken in the wait-until order of ABDY22's
+Algorithm 6 from the `BIND` level down, each of those levels requiring the process's own send at the
+level below; the `VOTE` transitions ask for no own send, the `ECHO` they read being sent by an
+`upon` handler that may still be pending. A rendezvous transition carries the process's half of a
+joint step with the network: on a send the record write, on a delivery the recv write. The Byzantine
+round transitions have no transition at the process they name (D11, D22). The three return
+transitions take the bit their label announces free: the bit is the network's ghost output and the
+program neither guards on it nor records it. -/
 
 namespace PLTS
 namespace ABA
@@ -119,17 +120,18 @@ implementation the network holds it, one bit per round, in the ghost record
 `abdyGhostStep` writes it. A return records the bit its own label announces if
 the round has none on record and leaves the record alone otherwise, so the
 record is write-once and both returns of a round — the correct one and the
-Byzantine one — write it the same way. Every other row leaves it alone.
+Byzantine one — write it the same way. Every other transition leaves it alone.
 
 `abdyGhostOutput` reads it out: the bit on record if the round has one, and
 `GBCA.ByABDY.boundOf` of the round's sent sets, the corrupted set and the outcome
 otherwise. This is the account of the round's bound bit that
 `GBCA/ABDY/MessagesAndRecords.lean` holds in its own network state, computed here from the
 network's sent sets instead. `abdyAnnouncedBound` is the guard of the two
-return rows: the bit a return announces is `abdyGhostOutput` of the round. -/
+return transitions: the bit a return announces is `abdyGhostOutput` of the round. -/
 
-/-- The ghost write of a row: a return records the bit its label announces
-where the round has none on record; every other row leaves the record alone. -/
+/-- The ghost write of a transition: a return records the bit its label
+announces where the round has none on record; every other transition leaves the
+record alone. -/
 def abdyGhostStep (P : Parameters) :
     ExtendedLabel P.n → NetworkState P.n → Option Bool → Option Bool
   | Sum.inl (.retG _ _ _ bnd), _, g => some (g.getD bnd)
@@ -145,14 +147,15 @@ def abdyGhostOutput (P : Parameters) (s : NetworkState P.n) (r : ℕ) (_id : Fin
 /-- The bit the network announces on a return: the round's ghost
 output, and no other. This is the relation the implementation's `ghostOutput`
 parameter takes at this instantiation. It is reducible, so the guard of the two
-return rows is the equation itself. -/
+return transitions is the equation itself. -/
 abbrev abdyAnnouncedBound (P : Parameters) (s : NetworkState P.n) (r : ℕ) (id : Fin P.n)
     (out : GBCAOutput) (bnd : Bool) : Prop :=
   bnd = abdyGhostOutput P s r id out
 
 
-/-- A row whose ghost write is the identity leaves the adversary's whole state
-where it stands. Every row but the two returns is such a row. -/
+/-- A transition whose ghost write is the identity leaves the adversary's whole
+state where it stands. Every transition but the two returns is such a
+transition. -/
 theorem writeGhost_abdy_id (P : Parameters) (w : NetworkState P.n) (L : ExtendedLabel P.n)
     (h : ∀ g, abdyGhostStep P L w g = g) :
     w.writeGhost (abdyGhostStep P) L = w := by
@@ -161,7 +164,7 @@ theorem writeGhost_abdy_id (P : Parameters) (w : NetworkState P.n) (L : Extended
   · next r _ => rw [h]; simp
   · rfl
 
-/-! ### The ghost write of each row -/
+/-! ### The ghost write of each transition -/
 
 section GhostWrites
 variable (P : Parameters) (w : NetworkState P.n)
@@ -218,7 +221,7 @@ variable (P : Parameters) (w : NetworkState P.n)
     w.writeGhost (abdyGhostStep P) (Sum.inr (.byzantineRetW r k b)) = w :=
   writeGhost_abdy_id P w _ fun _ => rfl
 
-/-! The two return rows, which do write. The ghost record of the round the
+/-! The two return transitions, which do write. The ghost record of the round the
 label names holds the announced bit after the write, and every other round's
 record is unchanged. -/
 
@@ -247,11 +250,11 @@ theorem writeGhost_byzantineRetG_ne (r : ℕ) (k : Fin P.n) (out : GBCAOutput) (
   writeGhost_ghostRecord_ne w rfl h
 
 end GhostWrites
-/-! ### The rows of the graded-agreement implementation -/
+/-! ### The transitions of the graded-agreement implementation -/
 
-/-- The round rows of process `j`: the graded-agreement call, the eight multicasts of the five
-message levels, the round delivery, the call against an already-called record, and the three graded
-returns. -/
+/-- The round transitions of process `j`: the graded-agreement call, the eight multicasts of the
+five message levels, the round delivery, the call against an already-called record, and the three
+graded returns. -/
 inductive RoundStep (P : Parameters) (j : Fin P.n) :
     ProcessRecord P.n → ExtendedLabel P.n → PMF (ProcessRecord P.n) → Prop
   /-- The graded-agreement call: the round loop hands its estimate to the round record of round `r`,
@@ -425,18 +428,18 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.echo5 none)))
         (PMF.pure (c, p.setRoundRecord r
           ((p.roundRecord r).setProcess { (p.roundRecord r).process with sentEcho5 := some none })))
-  /-- Round delivery, receiver's half: file the message under the sender's recv row in the round
-  record of round `r`, whichever round the round loop is in. Authenticity is the network's conjunct
-  (D22). -/
+  /-- Round delivery, receiver's half: file the message under `received k`, the messages from the
+  sender, in the round record of round `r`, whichever round the round loop is in. Authenticity is
+  the network's conjunct (D22). -/
   | gbcaDeliverReceive (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n)
       (r : ℕ) (k : Fin P.n) (m : GBCA.ByABDY.Message) (hh : c.corrupted = false)
       (hterm : p.terminated = false) :
       RoundStep P j (c, p) (Sum.inr (.gbcaDeliver r j k m))
         (PMF.pure (c, p.deliverTo r k m))
   /-- The graded-agreement call against an already-called round record: the round loop moves, the
-  round record does not. The row carries no termination guard, so a terminated process in `toCallG`
-  whose round record of round `r` is uncalled has no row on either call label, a gap this
-  implementation accepts. -/
+  round record does not. The transition carries no termination guard, so a terminated process in
+  `toCallG` whose round record of round `r` is uncalled has no transition on either call label, a
+  gap this implementation accepts. -/
   | gbcaCallLoop (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (b : Bool)
       (hh : c.corrupted = false)
       (hph : c.process.phase = .toCallG) (hr : c.process.round = r)
@@ -445,7 +448,7 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
       RoundStep P j (c, p) (Sum.inr (.gbcaCallLoop r j b))
         (PMF.pure (c.setProcess { c.process with phase := .awaitG }, p))
 
-/-- The rows above meet the implementation's conditions: each carries a label of
+/-- The transitions above meet the implementation's conditions: each carries a label of
 `roundOwn j`, each fires only at an unreplaced program, each is Dirac, and each
 of the three returns takes the announced bit free (D29). -/
 instance instIsRoundStep (P : Parameters) :
@@ -458,10 +461,10 @@ instance instIsRoundStep (P : Parameters) :
     cases h <;> exact ⟨_, rfl⟩
   boundBitFree h := by cases h <;> constructor <;> assumption
 
-/-! ### The tables, the automata and the pipeline -/
+/-! ### The step relations, the automata and the pipeline -/
 
-/-- The step relation of the program of process `j`: the implementation's rows beside ABDY22's own
-round rows. -/
+/-- The step relation of the program of process `j`: the implementation's transitions beside
+ABDY22's own round transitions. -/
 abbrev ABAProgramStep (P : Parameters) (j : Fin P.n) :
     ProcessRecord P.n → ExtendedLabel P.n → PMF (ProcessRecord P.n) → Prop :=
   ProgramStep P GBCA.ByABDY.Message (GBCA.ByABDY.RoundRecord P.n) (RoundStep P) j
@@ -561,7 +564,7 @@ theorem protocolExtended_label_inversion (P : Parameters) {u : ∀ _ : Fin P.n, 
   systemExtended_label_inversion hl h
 
 /-- A silent shared-label transition: one process terminating, or the network's
-own injection. The coin oracle has no silent row, so it contributes none. -/
+own injection. The coin oracle has no silent transition, so it contributes none. -/
 theorem protocolExtended_tau_inversion (P : Parameters) {u : ∀ _ : Fin P.n, ProcessRecord P.n}
     {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
     {μ : PMF (ABDY.ProtocolState P)}
@@ -572,12 +575,12 @@ theorem protocolExtended_tau_inversion (P : Parameters) {u : ∀ _ : Fin P.n, Pr
     (∃ w', NetworkStep P w (Sum.inl .tau) (PMF.pure w') ∧ μ = PMF.pure (u, w', o)) :=
   systemExtended_tau_inversion h
 
-/-! ### ABDY22's own rows, by label class
+/-! ### ABDY22's own transitions, by label class
 
-Each lemma reads a round row off its label: the participant's row as its guards together with the
-Dirac it produces. The idle row of a non-participant and the replaced program's self-loop are read
-by the implementation's own lemmas; here the label names the acting process, so those two systems
-are the ones ruled out. -/
+Each lemma reads a round transition off its label: the participant's transition as its guards
+together with the Dirac it produces. The idle transition of a non-participant and the replaced
+program's self-loop are read by the implementation's own lemmas; here the label names the acting
+process, so those two systems are the ones ruled out. -/
 
 section RoundStepInversion
 

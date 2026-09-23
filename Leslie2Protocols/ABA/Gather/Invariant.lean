@@ -1062,7 +1062,7 @@ theorem approved_of_approvedBy {s : StateOverBroadcastSpecification P.n X} (hCon
   fun p hp => hConf.inputBroadcastReturned_val j p.1 p.2 (h p hp)
 
 /-- Committed input entries are write-once, so `approved` is monotone along
-every rule. -/
+every transition. -/
 theorem approved_mono {s s' : StateOverBroadcastSpecification P.n X} {l : Label P.n X}
     {μ : PMF (StateOverBroadcastSpecification P.n X)}
     (hstep : AlgorithmOverBroadcastSpecification P s l μ) (hs' : s' ∈ μ.support)

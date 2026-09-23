@@ -10,8 +10,8 @@ import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ViewAfterOneWrite
 # A send of a gather instance
 
 `roundProjection_firstGatherSend` and `roundProjection_secondGatherSend`: the view of the composed
-round after a gather's `ECHO` or `VOTE`. The row writes the sender's gather record and records on
-the gather's network state, and the composed round writes the same through
+round after a gather's `ECHO` or `VOTE`. The transition writes the sender's gather record and
+records on the gather's network state, and the composed round writes the same through
 `Gather.setGatherTier`.
 -/
 

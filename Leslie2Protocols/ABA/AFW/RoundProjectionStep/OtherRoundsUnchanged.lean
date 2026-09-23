@@ -13,8 +13,8 @@ import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ViewAfterOneWrite
 read exactly as the transition found them. The acting process's other round records are untouched,
 the adversary's sent family is written at one round only, and so is its ghost record.
 `toRoundFamily`,
-`toRoundFamilyNoSent` and `toRoundFamilySent` state a row's effect on the whole family of rounds as
-a one-point update.
+`toRoundFamilyNoSent` and `toRoundFamilySent` state a transition's effect on the whole family of
+rounds as a one-point update.
 -/
 
 namespace PLTS
@@ -32,11 +32,11 @@ variable {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} {w : NetworkState P.n} {j 
 
 /-! ### Every other round is unchanged
 
-A row names one round. The rounds it does not name read exactly as they did:
+A transition names one round. The rounds it does not name read exactly as they did:
 the acting process's other round records are untouched, the adversary's sent
 family is written at one round only, and so is its ghost record. -/
 
-/-- The view of a round the row does not name. -/
+/-- The view of a round the transition does not name. -/
 theorem roundProjection_otherTransition (hu : (u j).2 = p) {r r' : ℕ} (hr : r' ≠ r) (sr :
   RoundRecord P.n)
     (v : NetworkState P.n) (hsent : v.sent r' = w.sent r') (hF : v.F = w.F)
@@ -54,7 +54,7 @@ theorem roundProjection_other (hu : (u j).2 = p) {r r' : ℕ} (hr : r' ≠ r) (s
   rw [roundProjection_writeGhost_ne _ _ hL hr]
   exact roundProjection_otherTransition hu hr sr _ (recordGBCASend_sent_ne w r j m hr) rfl rfl
 
-/-- A row of round `r` that records nothing, read at another round. -/
+/-- A transition of round `r` that records nothing, read at another round. -/
 theorem roundProjection_otherNoSent (hu : (u j).2 = p) {r r' : ℕ} (hr : r' ≠ r)
     (sr : RoundRecord P.n) {L : ExtendedLabel P.n (Message P.n)} (hL : roundOf L = some r) :
     roundProjection P (Function.update u j (c, p.setRoundRecord r sr))
@@ -72,7 +72,7 @@ theorem roundProjection_otherSent (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n) (
   simp only [roundProjection, firstGatherProjection, secondGatherProjection,
     recordGBCASend_sent_ne w r k m hr, recordGBCASend_F, recordGBCASend_ghostRecord]
 
-/-- **The whole family of rounds after a send**: the round the row names moves,
+/-- **The whole family of rounds after a send**: the round the transition names moves,
 the rest remain unchanged. -/
 theorem toRoundFamily (hu : (u j).2 = p) (r : ℕ) (sr : RoundRecord P.n) (m : Message P.n)
     {L : ExtendedLabel P.n (Message P.n)} (hL : roundOf L = some r)
@@ -88,7 +88,7 @@ theorem toRoundFamily (hu : (u j).2 = p) (r : ℕ) (sr : RoundRecord P.n) (m : M
   · subst hr; rw [Function.update_self, hX]
   · rw [Function.update_of_ne hr, roundProjection_other hu hr sr m hL]
 
-/-- The same, for a row that records nothing. -/
+/-- The same, for a transition that records nothing. -/
 theorem toRoundFamilyNoSent (hu : (u j).2 = p) (r : ℕ) (sr : RoundRecord P.n)
     {L : ExtendedLabel P.n (Message P.n)} (hL : roundOf L = some r)
     (X : GBCA.ByAFW.RoundStateOverBracha P.n)

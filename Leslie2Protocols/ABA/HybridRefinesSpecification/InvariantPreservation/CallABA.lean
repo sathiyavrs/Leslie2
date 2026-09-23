@@ -8,12 +8,12 @@ import Leslie2Protocols.ABA.HybridRefinesSpecification.Relation
 import Leslie2Protocols.ABA.Composition.Hybrid
 
 /-!
-# `Invariant` across the `callABA` rows of `hybrid`
+# `Invariant` across the `callABA` transitions of `hybrid`
 
-`Invariant.step_callABA`, preservation of `Invariant` at a call of the ABA interface. The row is
-either a never-corrupted process's genuine external input, guarded by `input = none`, so that
-`input_called` rules out the corner where the graded-agreement call has already been made, or the
-idle self-loop.
+`Invariant.step_callABA`, preservation of `Invariant` at a call of the ABA interface. The
+transition is either a never-corrupted process's genuine external input, guarded by
+`input = none`, so that `input_called` rules out the corner where the graded-agreement call has
+already been made, or the idle self-loop.
 -/
 
 namespace PLTS

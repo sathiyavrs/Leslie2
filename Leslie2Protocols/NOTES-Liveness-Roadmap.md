@@ -124,7 +124,7 @@ The two repos are complementary halves of one program: Leslie has liveness witho
 
 *Right design*: it handles precisely what `Leslie2Extra/Fairness` does not — stuttering.
 The ABA chain's simulations are weak (the core simulation's lazy abstract state stutters on almost
-every row), so any fairness-preservation for ABA must discipline stutters exactly the way
+every transition), so any fairness-preservation for ABA must discipline stutters exactly the way
 `WeakDivPreserving` does (rank must decrease when the abstract answers a fair concrete
 step with silence).
 
@@ -152,7 +152,7 @@ Ordered by expected value-for-effort:
    port the fairness/WF1/leads-to toolkit to PLTS traces, state the decide-mass property
    over fair schedulers, and discharge it with a supermartingale/variant certificate —
    either by bridging `Leslie/Prob`'s proven-conditional `FairASTCertificate.sound` to the
-   PLTS model, or by re-deriving the rule on Leslie2's model (the `Leslie2Extra/Measure`
+   PLTS model, or by re-deriving Rule 3.2 on Leslie2's model (the `Leslie2Extra/Measure`
    Ionescu–Tulcea line supplies the trajectory measure). consensus-src's GBCA/Ben-Or
    certificates show what the variant functions look like. Deliverable: "under fair
    scheduling, `ABA.spec` decides with probability at least `1 − g(ε, δ_f)`", the
@@ -206,7 +206,7 @@ absorbing
 (D17). `PLTS.ABA.SpecStep.coinFlip` is one-shot: its guard `hm : s.mode = .idle` admits it
 only at `ControlMode.flipEnabled`, and its `undelivered` outcome — mass `δ_f` under
 `PLTS.ABA.flipPMF` — leaves
-the state at `ControlMode.noTransitionEnabled`. The only other `τ`-rule is
+the state at `ControlMode.noTransitionEnabled`. The only other silent transition is
 `PLTS.ABA.SpecStep.decide`, whose
 guard `hm : s.mode ≠ .terminal` rules out exactly that mode. A terminal-mode specification therefore
 decides nothing and returns nothing, in any extension, under any scheduler, which is what
@@ -215,7 +215,7 @@ scheduler can be obliged to do, and no marking has anything to reconcile between
 
 The enabled decision is the symmetric half. `flipPMF` puts mass `ε` on `toDecisionEnabled`, whose
 post-state is `ControlMode.decisionEnabled`; there the flip demands `ControlMode.flipEnabled`, so
-`SpecStep.decide` is the only `τ`-rule that can be enabled at all. It is enabled exactly when some
+`SpecStep.decide` is the only silent transition that can be enabled at all. It is enabled exactly when some
 bit carries `f + 1` support, and a state that has passed the flip's own guard leaves some bit
 supported ever after. The forcing runs on the *sum* of the two support counts. Neither count is
 monotone by itself: `SpecStep.callSet`'s overwrite takes its writer out of one of the two supporter
@@ -254,7 +254,7 @@ caveat and is recorded here rather than repaired.
 **The transfer hook.** The specification names no coin bit. `flipPMF` is `Parameters.wccPMF` pushed
 forward along a map that forgets which bit was delivered: one bit to `toDecisionEnabled`, the other
 bit and the adversarial outcome to `toFlipEnabled`, the failure outcome to `undelivered`. The three
-masses are all the rules read. Reading `toDecisionEnabled` as "the coin agreed with the round's
+masses are all the transitions read. Reading `toDecisionEnabled` as "the coin agreed with the round's
 surviving bit" is accordingly not a component of TS 1 — it is what a liveness refinement would
 supply, as an outcome coupling between the coin's resolving call and `flipPMF`: the agree-outcome,
 of mass `ε`, coupled to `toDecisionEnabled`; the disagree- and adversarial outcomes to
@@ -291,7 +291,7 @@ than in a marking.
 processes have called, so the quorum guard holds and holds forever (the count is monotone
 in `call` and `F`). The quorum's `n − f ≥ 2f + 1` callers-or-corrupted fall on two bits, so
 some bit `v` carries `f + 1` of them by pigeonhole — the `InputSupport(v)` count, itself monotone.
-All three guards of `bindUnset (!v)` therefore hold, and they persist until the rule is
+All three guards of `bindUnset (!v)` therefore hold, and they persist until the transition is
 taken, so weak fairness fires it; `excluded = {!v}` from then on, and `v` is alive at every
 later state.
 
@@ -322,7 +322,7 @@ the sub-protocol position.
   in `ABA/ABDY/Substitution.lean`, and the
   inclusion into it in `ABA/ABDY/Simulation.lean` (`ABDY.ProtocolRelation`,
   `ABDY.protocolSimulation`, `ABDY.protocol_composed`) — the presentation to state fair termination over if
-  it is to be stated of the protocol: the `fail` row belongs to the network and is guarded
+  it is to be stated of the protocol: the `fail` transition belongs to the network and is guarded
   by `k ∉ F ∧ |F| < f`, so `fail` is enabled exactly while budget remains and the marking of `fail`
   is read off that component's own state.
 - Paper validation of fair AST for this protocol family: `Papers/consensus-src` (Ben-Or +

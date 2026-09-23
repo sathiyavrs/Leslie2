@@ -20,8 +20,8 @@ The state splits the source's single `call` field in two. `input` records the
 environment's call to the leader; `val` is the value the instance is committed
 to deliver, written at most once by the internal transition `commit`. The
 source couples them — its call transition writes the committed value directly,
-and a separate τ-rule lets a Byzantine leader overwrite it while no process
-has returned. The split states the same content without an overwrite: `commit`
+and a separate silent transition lets a Byzantine leader overwrite it while no
+process has returned. The split states the same content without an overwrite: `commit`
 fires once, at any point, and its guard `ldr ∈ F ∨ input = some m` says a
 corrupted leader commits anything while a correct one commits only its input.
 Decoupling the commit from the call is not a strengthening but the correct
@@ -124,7 +124,7 @@ inductive Step (P : Parameters) (ldr : Fin P.n) :
       Step P ldr s (.call m) (PMF.pure s)
   /-- The instance commits its delivered value: anything under a corrupted
   leader, the leader's input otherwise. Fires at most once — the guard is
-  `val = none` — and no rule unwrites `val`. -/
+  `val = none` — and no transition unwrites `val`. -/
   | commit (s : SpecState P.n M) (m : M)
       (hv : s.val = none) (hm : ldr ∈ s.F ∨ s.input = some m) :
       Step P ldr s .tau (PMF.pure { s with val := some m })

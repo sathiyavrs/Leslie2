@@ -11,15 +11,15 @@ import Leslie2Protocols.ABA.Composition.Hybrid
 # Step inversion for `hybrid`
 
 One lemma per visible label class (`callABA`, `retABA`, `fail`) and one for `τ`, each reading a
-transition of the protocol-shaped specification back into the rows of its four components, in the
-view's own coordinates: the pair `(C, A)` of the round loops beside the ABA network, read through
-`ABAState`'s accessors. `hybrid_step_tau` is the six-way disjunction the τ case of the simulation
-dispatches on; its τ has more sources than the visible labels do, the whole rendezvous alphabet
-being hidden, and each of those sources collapses into one of the six. Three of the four lemmas
-take the invariant's I0 conjunct as a hypothesis: a round loop's row is guarded by its own
-replacement flag and the ABA network's row by the corrupted set, and I0 identifies the two, so that
-the statement speaks of `F` alone (D23). `corrupted_eq_false_iff` is the one-line form of that
-translation.
+transition of the protocol-shaped specification back into the transitions of its four components, in
+the view's own coordinates: the pair `(C, A)` of the round loops beside the ABA network, read
+through `ABAState`'s accessors. `hybrid_step_tau` is the six-way disjunction the τ case of the
+simulation dispatches on; its τ has more sources than the visible labels do, the whole rendezvous
+alphabet being hidden, and each of those sources collapses into one of the six. Three of the four
+lemmas take the invariant's I0 conjunct as a hypothesis: a round loop's transition is guarded by its
+own replacement flag and the ABA network's transition by the corrupted set, and I0 identifies the
+two, so that the statement speaks of `F` alone (D23). `corrupted_eq_false_iff` is the one-line form
+of that translation.
 -/
 
 namespace PLTS
@@ -40,10 +40,10 @@ theorem corrupted_eq_false_iff {P : Parameters} {C : ∀ _ : Fin P.n, RoundLoopR
   cases hb : (C id).corrupted <;> rw [hb] at h <;> simp_all
 
 /-- `hybrid` inversion, `callABA`: the round specifications and the coin oracle idle on a label
-outside their own API and the ABA network has no row of its own, so the whole transition is the
-addressed round loop's — the genuine input of a never-corrupted process, guarded by `input = ⊥`, or
-a self-loop, which is the input-enabledness row of a process whose program stands and holds an
-input, and the replaced program's own row otherwise (D23, D36). -/
+outside their own API and the ABA network has no transition of its own, so the whole transition is
+the addressed round loop's — the genuine input of a never-corrupted process, guarded by `input = ⊥`,
+or a self-loop, which is the input-enabledness transition of a process whose program stands and
+holds an input, and the replaced program's own transition otherwise (D23, D36). -/
 theorem hybrid_step_callABA (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
     (C : ∀ _ : Fin P.n, RoundLoopRecord P.n) (A : ABANetworkState P.n)
     (o : ℕ → WCC.SpecState P.n) (id : Fin P.n) (b : Bool)
@@ -128,7 +128,7 @@ theorem hybrid_step_callABA (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
 two guards split across two components — the `n − f` quorum is the round
 loop's, having multicast `⟨DECIDED, b⟩` oneself is the network's — and they
 rejoin on `ABAState`. A corrupted process returns any bit at any time and the
-state does not move: the network's visible-return row asks for nothing beyond
+state does not move: the network's visible-return transition asks for nothing beyond
 `id ∈ F`, and the replaced program's half is its self-loop (D23). -/
 theorem hybrid_step_retABA (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
     (C : ∀ _ : Fin P.n, RoundLoopRecord P.n) (A : ABANetworkState P.n)
@@ -208,9 +208,9 @@ theorem hybrid_step_retABA (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
       exact h
 
 /-- `hybrid` inversion, `fail`: a genuine synchronisation of all four components, under the two
-guards the ABA network's row carries — the named process is not corrupted yet and the budget has
-room. The round specifications and the coin oracle each corrupt their own copy of `F` and the ABA
-network corrupts the view's; the named round loop replaces its own program by writing the flag
+guards the ABA network's transition carries — the named process is not corrupted yet and the budget
+has room. The round specifications and the coin oracle each corrupt their own copy of `F` and the
+ABA network corrupts the view's; the named round loop replaces its own program by writing the flag
 (D23), and every other round loop is unchanged (D1). -/
 theorem hybrid_step_fail (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
     (C : ∀ _ : Fin P.n, RoundLoopRecord P.n) (A : ABANetworkState P.n) (o : ℕ → WCC.SpecState P.n)
@@ -268,12 +268,11 @@ the specification family's binding exclusion, the view's own DECIDED messages
 (delivery, echo, Byzantine injection), and the four handshakes — `callG`/`retG`
 against a round specification, `callW`/`retW` against the coin oracle — each
 reached either by the shared label under the sub-protocol hiding or by the
-rendezvous that stands for it (`gbcaCallLoop`, the Byzantine handshake rows, and
-the fused coin return `retWPublish`). The coin resolves inside the `callW`
-handshake (D31), so the coin oracle's draw arrives under that handshake's
-source. A replaced program contributes no source of its own: its self-loop on `callG`, `retG`,
-`callW`, `retW` and `decidedSend` reads as the corrupted branch already present at those rows,
-`id ∈ F` being supplied by I0 (D23). -/
+rendezvous that stands for it (`gbcaCallLoop`, the Byzantine handshake transitions, and the fused
+coin return `retWPublish`). The coin resolves inside the `callW` handshake (D31), so the coin
+oracle's draw arrives under that handshake's source. A replaced program contributes no source of its
+own: its self-loop on `callG`, `retG`, `callW`, `retW` and `decidedSend` reads as the corrupted
+branch already present at those transitions, `id ∈ F` being supplied by I0 (D23). -/
 theorem hybrid_step_tau (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
     (C : ∀ _ : Fin P.n, RoundLoopRecord P.n) (A : ABANetworkState P.n)
     (o : ℕ → WCC.SpecState P.n)
