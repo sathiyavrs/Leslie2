@@ -318,8 +318,8 @@ the sub-protocol position.
 - This repo's fairness line: `Leslie2Extra/Fairness/Simulation/{Defs,Soundness}.lean`
 - The protocol, whose programs read their own replacement flag and nothing else about corruption
   (D23): `ABA/Implementation/ABDY/System.lean` (`ABDY.protocol`, `network`), with the composition
-  of components in `ABA/Composition/HybridAndSubstitution.lean` (`ABDY.composed`) and the inclusion
-  into it in `ABA/Implementation/ABDY/Simulation.lean` (`ABDY.ProtocolRelation`,
+  of components in `ABA/Implementation/ABDY/CompositionChain.lean` (`ABDY.composed`) and the
+  inclusion into it in `ABA/Implementation/ABDY/Simulation.lean` (`ABDY.ProtocolRelation`,
   `ABDY.protocolSimulation`, `ABDY.protocol_composed`) — the presentation to state fair termination over if
   it is to be stated of the protocol: the `fail` row belongs to the network and is guarded
   by `k ∉ F ∧ |F| < f`, so `fail` is enabled exactly while budget remains and the marking of `fail`

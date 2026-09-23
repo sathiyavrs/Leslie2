@@ -22,10 +22,12 @@ so the recursion continues two levels further and its chain carries three.
 This note records why the cut is placed where it is, what it buys, and what the model already
 weakens. The systems themselves are in `ABA/Implementation/ABDY/System.lean`,
 `ABA/Implementation/AFW/System.lean` and `ABA/Specifications/ABA.lean`;
-`ABA/Composition/HybridAndSubstitution.lean` carries `ABDY.composed` and `hybrid` over the
-components of `ABA/Composition/Components.lean`, and `ABA/Implementation/AFW/CompositionChain.lean`
-carries the three gather-based stages. The first inclusions are
-`ABA/Implementation/ABDY/Simulation.lean` and `ABA/Implementation/AFW/Simulation.lean`. The file
+`ABA/Composition/Hybrid.lean` carries `hybrid` over the components of
+`ABA/Composition/Components.lean`, `ABA/Implementation/ABDY/CompositionChain.lean` carries
+`ABDY.composed` over the same components and the one stage above it, and
+`ABA/Implementation/AFW/CompositionChain.lean` carries the three gather-based stages. The first
+inclusions are `ABA/Implementation/ABDY/Simulation.lean` and
+`ABA/Implementation/AFW/Simulation.lean`. The file
 guide is `ABA/README.md`, and the gather stack's own proofs are `DESIGN-GatherComposition.md`.
 
 ## The first inclusion

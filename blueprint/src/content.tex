@@ -354,7 +354,7 @@ A sub-protocol may be exchanged for its specification where it is a component of
 The component boundary is where the chain passes from implementation to specification: $\abdy{\mathrm{protocol}}(P)$ is the system that runs, everything above it is specification, and the first step is accordingly an inclusion.
 The composed system holds one graded-agreement instance per round at every moment, and a round instance carries no termination flag, so it answers a send or a delivery at a process the protocol has terminated (D22).
 Graded agreement is a parallel component of the composed system, which is what the substitution congruence consumes.
-See \leanmodule{Leslie2Protocols/ABA/Composition/GBCAInstanceByABDY/Instance}, \leanmodule{Leslie2Protocols/ABA/Composition/GBCAInstanceByABDY/SpecificationOverRoundAlphabet}, \leanmodule{Leslie2Protocols/ABA/Composition/GBCAInstanceByABDY/StepInversion}, \leanmodule{Leslie2Protocols/ABA/Composition/GBCAInstanceByABDY/ProjectsOntoImplementation}, \leanmodule{Leslie2Protocols/ABA/Composition/GBCAInstanceByABDY/Substitution}, \leanmodule{Leslie2Protocols/ABA/Composition/RoundFamilyOwnedLabels} and \leanmodule{Leslie2Protocols/ABA/Composition/HybridAndSubstitution}.
+See \leanmodule{Leslie2Protocols/ABA/Composition/GBCAInstanceByABDY/Instance}, \leanmodule{Leslie2Protocols/ABA/Composition/GBCAInstanceByABDY/SpecificationOverRoundAlphabet}, \leanmodule{Leslie2Protocols/ABA/Composition/GBCAInstanceByABDY/StepInversion}, \leanmodule{Leslie2Protocols/ABA/Composition/GBCAInstanceByABDY/ProjectsOntoImplementation}, \leanmodule{Leslie2Protocols/ABA/Composition/GBCAInstanceByABDY/Substitution}, \leanmodule{Leslie2Protocols/ABA/Composition/RoundFamilyOwnedLabels}, \leanmodule{Leslie2Protocols/ABA/Composition/Hybrid} and \leanmodule{Leslie2Protocols/ABA/Implementation/ABDY/CompositionChain}.
 
 \input{nodes-min/def-aba-gbca-instance-by-abdy}
 \input{nodes-min/def-aba-composed}
@@ -403,7 +403,7 @@ Replacing the graded-agreement family by its specification leaves $\mathrm{hybri
 The graded-agreement family occupies the refinable position of the composed system, so exchanging it for its specification is one family congruence followed by the precongruences of the pipeline.
 What the idealisation removes is the round's network and every Byzantine power over it; the DECIDED sets, the corrupted set with the budget $|F| < f$ as the guard on the $\mathrm{fail}$ row, and the authorisation of every Byzantine handshake row are outside the exchanged component and survive unchanged.
 The system that results, $\mathrm{hybrid}(P)$, is where the two implementations meet: both reach it, and every step above it is proved once and shared.
-See \leanmodule{Leslie2Protocols/Framework/FamilySimulation} and \leanmodule{Leslie2Protocols/ABA/Composition/HybridAndSubstitution}.
+See \leanmodule{Leslie2Protocols/Framework/FamilySimulation}, \leanmodule{Leslie2Protocols/ABA/Composition/Hybrid} and \leanmodule{Leslie2Protocols/ABA/Implementation/ABDY/CompositionChain}.
 
 \input{nodes-min/thm-gbca-family-refines}
 \input{nodes-min/def-aba-hybrid}

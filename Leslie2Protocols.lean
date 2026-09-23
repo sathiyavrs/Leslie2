@@ -5,7 +5,7 @@ import Leslie2Protocols.ABA.Composition.GBCAInstanceByABDY.ProjectsOntoImplement
 import Leslie2Protocols.ABA.Composition.GBCAInstanceByABDY.SpecificationOverRoundAlphabet
 import Leslie2Protocols.ABA.Composition.GBCAInstanceByABDY.StepInversion
 import Leslie2Protocols.ABA.Composition.GBCAInstanceByABDY.Substitution
-import Leslie2Protocols.ABA.Composition.HybridAndSubstitution
+import Leslie2Protocols.ABA.Composition.Hybrid
 import Leslie2Protocols.ABA.Composition.RoundFamilyOwnedLabels
 import Leslie2Protocols.ABA.GBCA.ABDY.ExclusionCertificate
 import Leslie2Protocols.ABA.GBCA.ABDY.Implementation
@@ -52,6 +52,7 @@ import Leslie2Protocols.ABA.HybridRefinesSpecification.NonVacuity
 import Leslie2Protocols.ABA.HybridRefinesSpecification.Relation
 import Leslie2Protocols.ABA.HybridRefinesSpecification.Simulation
 import Leslie2Protocols.ABA.HybridRefinesSpecification.WeakTransitions
+import Leslie2Protocols.ABA.Implementation.ABDY.CompositionChain
 import Leslie2Protocols.ABA.Implementation.ABDY.Simulation
 import Leslie2Protocols.ABA.Implementation.ABDY.System
 import Leslie2Protocols.ABA.Implementation.AFW.CompositionChain

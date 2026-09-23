@@ -29,7 +29,7 @@ the inclusion and `GBCA.ByABDY.implementation_binding` is the specification's
 
 The family congruence `ForwardSimulation.family` (`Framework/FamilySimulation.lean`) reaches
 `ABA/Composition/GBCAInstanceByABDY/Substitution.lean` and
-`ABA/Composition/HybridAndSubstitution.lean` along this file, which also supplies the broadcast
+`ABA/Implementation/ABDY/CompositionChain.lean` along this file, which also supplies the broadcast
 ingredient that congruence consumes (`specificationRelation_corrupt`).
 -/
 

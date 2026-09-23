@@ -7,7 +7,8 @@ Authors: Sathiya / Claude
 import Leslie2Protocols.ABA.HybridRefinesSpecification.Simulation
 import Leslie2Protocols.ABA.Implementation.ABDY.Simulation
 import Leslie2Protocols.ABA.Implementation.AFW.Simulation
-import Leslie2Protocols.ABA.Composition.HybridAndSubstitution
+import Leslie2Protocols.ABA.Composition.Hybrid
+import Leslie2Protocols.ABA.Implementation.ABDY.CompositionChain
 
 /-!
 # The main theorems of the ABA case study
@@ -37,11 +38,10 @@ specification:
    composed coordinate from the protocol state; the inclusion is
    one-directional because a round instance also answers the Byzantine handshake rows
    (D11) and the processes the protocol has terminated (D22).
-2. `ABDY.substitutionSimulation` (`Composition/HybridAndSubstitution.lean`) — replace each round's
-graded-agreement
-   instance by its specification, the other three components untouched: the
-   family substitution carried by four congruences (`parallel_right`,
-   `abstract`, `relabel`, `abstract`).
+2. `ABDY.substitutionSimulation` (`Implementation/ABDY/CompositionChain.lean`) — replace each
+   round's graded-agreement instance by its specification, the other three components untouched:
+   the family substitution carried by four congruences (`parallel_right`, `abstract`, `relabel`,
+   `abstract`).
 3. `hybridRefinesSpecification` (`HybridRefinesSpecification/Simulation.lean`) — the hand-built
 simulation of the protocol-shaped specification against the ABA specification, read in the composed
 coordinates: the round specifications, the `n` round loops, the ABA network and the coin oracle,

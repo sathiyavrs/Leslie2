@@ -184,7 +184,7 @@ noncomputable def coinOverExtendedAlphabet (P : Parameters) (M : Type) :
 handshake of one of its own rounds, nor `fail`. Read through the pullback
 `coinLabelMap`, this is the oracle's row in every joint transition — of a protocol
 system, of its composed system, and of the protocol-shaped specification
-(`ABA/Composition/HybridAndSubstitution.lean`) — that leaves the coin unchanged. -/
+(`ABA/Composition/Hybrid.lean`) — that leaves the coin unchanged. -/
 theorem wccFamily_idle (P : Parameters) (o : ℕ → WCC.SpecState P.n) {l : Label P.n}
     (hl : l ≠ Label.tau) (hr : Label.wccRound l = none) (hf : ¬ Label.isFail l) :
     (WCC.specFamily P).step o l (PMF.pure o) := by

@@ -5,7 +5,7 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.HybridRefinesSpecification.Relation
-import Leslie2Protocols.ABA.Composition.HybridAndSubstitution
+import Leslie2Protocols.ABA.Composition.Hybrid
 import Leslie2Protocols.ABA.HybridRefinesSpecification.InvariantPreservation.SpecificationStateCorruption
 
 /-!

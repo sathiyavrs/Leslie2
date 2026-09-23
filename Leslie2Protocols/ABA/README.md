@@ -246,14 +246,14 @@ refinement.
 | `GBCA/ABDY/RefinesSpecification.lean` | 661 | The per-instance refinement `refinesSpecification`, by exclude-on-demand; its soundness inclusion `implementation_refines` with the binding it carries, `implementation_binding`; and the broadcast compatibility of the relation with the `fail` act (`specificationRelation_corrupt`), which the family lifting consumes. Two axiom checks. |
 | `GBCA/ABDY/SpecificationRelation.lean` | 344 | The simulation relation `specificationRelation`: the specification's `call`, `ret` and `F` read off the implementation state, `excluded` and `grade` carried as receipt-pattern certificates, and the round's bound bit tied to `excluded`. The specification's guards and the two-step exclusion-then-return runs are derived from it. |
 
-**`ABA/Composition/`** — the components the composed systems are built from, the composed
-system over them, and the hybrid.
+**`ABA/Composition/`** — the components the composed systems are built from, the ABA state
+and the protocol-shaped specification.
 
 | file | lines | what it is |
 |---|---|---|
 | `Composition/ABAState.lean` | 384 | The ABA state as one object: the round-loop records beside the DECIDED network, with the accessors the invariant is stated in. |
 | `Composition/Components.lean` | 845 | The extended alphabet `ExtendedLabel n` at ABDY22's messages, the coin oracle read along its label pullback, the round loop of one process, and the ABA network — the pieces the two compositions are built from. |
-| `Composition/HybridAndSubstitution.lean` | 700 | **`ABDY.composed`**, **`ABDY.substitutionSimulation`**: the same protocol read as four components, one round instance per round retained at every moment, and that graded-agreement component then replaced by its specification under the four congruences. |
+| `Composition/Hybrid.lean` | 416 | **`hybrid`**: the protocol-shaped specification — the family of round specifications beside the round loops, the ABA network and the coin oracle, under the pipeline that hides the rendezvous alphabet, reads the result back over `Label n` and hides the sub-protocol API — with the rows of its four components and the three routes a labelled transition takes through the two hiding frames. |
 | `Composition/RoundFamilyOwnedLabels.lean` | 82 | The routing table of the round-indexed family, evaluated: `GBCA.ByABDY.roundOwnsLabel` and `GBCA.ByABDY.isFailLabel` at every label of the extended alphabet, which is what discharges the routing premises of the composed system by `simp`. |
 
 **`ABA/Composition/GBCAInstanceByABDY/`** — the round's graded-agreement instance, and the licence
@@ -313,6 +313,7 @@ system.
 
 | file | lines | what it is |
 |---|---|---|
+| `Implementation/ABDY/CompositionChain.lean` | 321 | **`ABDY.composed`**, **`ABDY.substitutionSimulation`**, **`ABDY.substitution`**: the protocol read as four components, one round instance per round retained at every moment, and the one stage that carries it to `hybrid` — the family substitution under the four congruences. The mirror of `Implementation/AFW/CompositionChain.lean`, which takes three stages. |
 | `Implementation/ABDY/Simulation.lean` | 1069 | **`ABDY.protocolSimulation`**, **`ABDY.protocol_composed`**: the protocol carried into the composed system along `ABDY.ProtocolRelation`, whose five unguarded conjuncts determine the composed state. |
 | `Implementation/ABDY/System.lean` | 849 | **ABDY22's protocol as it runs**, and the subject of the protocol chain: the implementation at ABDY22's Algorithm 6 — its fourteen round rows, the payload the call multicasts, the adversary's bound-bit ghost, and the inversions they answer. |
 
@@ -365,10 +366,11 @@ two systems of the protocol are assembled independently over one set of componen
 `Implementation/System.lean` sits beside `Composition/Components.lean` over the same
 alphabet and imports no implementation, which is what lets both implementations instantiate
 it. The specification family — `Composition/GBCAInstanceByABDY/`,
-`Composition/HybridAndSubstitution.lean` and the core simulation above them — never
+`Composition/Hybrid.lean` and the core simulation above them — never
 imports `Implementation/ABDY/System.lean`; the protocol enters only at
 `Implementation/ABDY/Simulation.lean`, which is where the two systems meet, and
-`Results.lean` reaches it through that file.
+`Results.lean` reaches it through that file. `Implementation/ABDY/CompositionChain.lean` sits
+above both, and carries the composed system and the substitution to `hybrid`.
 
 The gather-based files form their own stack over `Vocabulary/ProcessAndNetworkState.lean` and
 `GBCA/Specification.lean`, meeting the rest of the development in four places:
@@ -378,7 +380,7 @@ The gather-based files form their own stack over `Vocabulary/ProcessAndNetworkSt
 `GBCA.ByABDY.gbcaLabelMap` and `GBCA.ByABDY.specificationOverRoundAlphabet` read the
 graded-agreement specification over the family alphabet the round speaks, `Implementation/AFW/System.lean` instantiates
 `Implementation/System.lean`, and `Implementation/AFW/CompositionChain.lean` imports
-`Composition/HybridAndSubstitution.lean` for `hybrid`, the system its third stage lands on. No file
+`Composition/Hybrid.lean` for `hybrid`, the system its third stage lands on. No file
 of the protocol chain imports a gather-based one, and `Results.lean` is where the two chains meet,
 so either chain reads standalone below it.
 
@@ -388,7 +390,7 @@ so either chain reads standalone below it.
 `Specifications/ABASafety.lean`'s two trace predicates →
 `HybridRefinesSpecification/Relation.lean`'s module docstring →
 `Implementation/ABDY/System.lean`'s (the system the headlines are about) →
-`Composition/HybridAndSubstitution.lean`'s (the system the core simulation starts from) →
+`Composition/Hybrid.lean`'s (the system the core simulation starts from) →
 `Results.lean`, whose docstring names the steps of both chains and their files. Follow
 it into the statements along `ABDY.protocolSimulation` → `ABDY.substitutionSimulation` →
 `hybridRefinesSpecification`, with `Composition/ABAState.lean`'s `ABAState` beside the last. That is

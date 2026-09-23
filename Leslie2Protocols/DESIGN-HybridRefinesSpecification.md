@@ -24,7 +24,7 @@ target    : ProbabilisticForwardSimulation hybrid (ABA.spec P) hybridSpecificati
 The four components are the round specifications, the `n` round loops, the ABA network and the coin
 oracle, and they speak the extended alphabet of the protocol; the rendezvous labels are hidden, the
 result is read back over `Label n`, and the sub-protocol API is hidden in turn
-(`Composition/HybridAndSubstitution.lean`). Corrupted-process handshakes are covered by the
+(`Composition/Hybrid.lean`). Corrupted-process handshakes are covered by the
 Byzantine handshake rows, authorised by `k ∈ F` at `ABANetwork` (D11). See
 `Vocabulary/RoundLoop.lean`'s module docstring for the per-process algorithm and deviations D9–D12′
 (0-based rounds, the fused DECIDED-send in `retWPublish`/`stepRound`, per-process DECIDED sets — see

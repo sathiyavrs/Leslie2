@@ -18,8 +18,8 @@ import Leslie2Protocols.Framework.SynchronisedProduct
 
 The protocol is composed twice in this development. The protocol
 (`ABA/Implementation/ABDY/System.lean`) puts `n` per-process programs beside a network
-and the coin oracle. The composed system (`ABA/Composition/HybridAndSubstitution.lean`) cuts the
-same protocol into its components. Both compositions speak one alphabet, and some of what they
+and the coin oracle. The composed system (`ABA/Implementation/ABDY/CompositionChain.lean`) cuts
+the same protocol into its components. Both compositions speak one alphabet, and some of what they
 compose is the same object in both systems. This file holds that alphabet and those components.
 
 ## The extended alphabet

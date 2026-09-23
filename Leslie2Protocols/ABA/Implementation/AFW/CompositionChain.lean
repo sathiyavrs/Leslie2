@@ -6,7 +6,7 @@ Authors: Sathiya / Claude
 
 import Leslie2Protocols.ABA.GBCA.AFW.GatherSubstitutions
 import Leslie2Protocols.ABA.GBCA.AFW.RefinesSpecification
-import Leslie2Protocols.ABA.Composition.HybridAndSubstitution
+import Leslie2Protocols.ABA.Composition.Hybrid
 import Leslie2Protocols.Framework.FamilySimulation
 import Leslie2.Results
 

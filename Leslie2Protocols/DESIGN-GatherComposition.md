@@ -325,7 +325,7 @@ Two ingredients, both shared with the protocol chain:
   and the round's network alone.
 - **The four congruences** (`parallel_right`, `abstract`, `relabel`, `abstract`): each
   family substitution runs under the composed system's own context, the same term
-  `Composition/HybridAndSubstitution.lean`'s `ABDY.substitutionSimulation` uses, so the third
+  `Implementation/ABDY/CompositionChain.lean`'s `ABDY.substitutionSimulation` uses, so the third
   stage's target is definitionally `hybrid P`.
 
 The round speaks the family alphabet natively, so no lift precedes the family; the families are
