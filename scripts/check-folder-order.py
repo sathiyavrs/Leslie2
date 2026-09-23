@@ -12,9 +12,11 @@ The order is the rank table below. The sub-folders with ranks of their own are
 ``GBCA/AFW/``, ``Implementation/ABDY/`` and ``Implementation/AFW/``;
 ``GBCA/ABDY/Composition/`` and ``GBCA/AFW/`` sit above ``Composition/``, and
 ``GBCA/ABDY/`` below it. Any other sub-folder carries its parent folder's rank.
-Two files carry ranks of their own: ``Results.lean`` at the ABA root, and
-``Composition/Hybrid.lean``, which sits above ``GBCA/ABDY/Composition/`` while
-the rest of ``Composition/`` sits below it. An import is a violation when
+Four files carry ranks of their own. ``Results.lean`` sits at the ABA root, and
+``Composition/Hybrid.lean`` sits above ``GBCA/ABDY/Composition/`` while the rest
+of ``Composition/`` sits below it. ``GBCA/SpecificationOverRoundAlphabet.lean``
+and ``GBCA/BindingOverRoundAlphabet.lean`` sit above ``Composition/``, whose
+extended alphabet they read, and below every folder that reads a round. An import is a violation when
 the rank of the imported module exceeds the rank of the importing file. Imports of
 ``Leslie2Protocols.Framework``, of the core library and of Mathlib sit below
 every ABA folder and are ignored.
@@ -43,6 +45,8 @@ ORDER = (
     "GBCA",
     "GBCA/ABDY",
     "Composition",
+    "GBCA/SpecificationOverRoundAlphabet.lean",
+    "GBCA/BindingOverRoundAlphabet.lean",
     "GBCA/ABDY/Composition",
     "Composition/Hybrid.lean",
     "GBCA/AFW",

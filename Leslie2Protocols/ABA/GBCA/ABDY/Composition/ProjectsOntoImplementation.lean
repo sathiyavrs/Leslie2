@@ -5,6 +5,7 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.GBCA.ABDY.Composition.StepInversion
+import Leslie2Protocols.ABA.GBCA.SpecificationOverRoundAlphabet
 
 /-!
 # The round instance projects onto the implementation
@@ -43,14 +44,14 @@ anywhere:
 | hidden `deliver` rendezvous | `ImplementationStep.deliver` |
 | network-local injection | `ImplementationStep.byzantine` |
 
-The two hidden rendezvous and the network's injection are silent in both systems, and `gbcaLabelMap`
-takes `τ` to `τ`. -/
+The two hidden rendezvous and the network's injection are silent in both systems, and
+`specificationLabelMap` takes `τ` to `τ`. -/
 
 /-- **The strong projection lemma.** -/
 theorem composition_projects (P : Parameters) (r : ℕ) :
     ∀ (σ : GBCA.ByABDY.ImplementationState P.n) (l : ExtendedLabel P.n)
     (μ : PMF (GBCA.ByABDY.ImplementationState P.n)), (composition P r).step σ l μ → ∃ l₀,
-    gbcaLabelMap P.n l = some l₀ ∧ (GBCA.ByABDY.implementation P r).step σ l₀ μ := by
+    specificationLabelMap P.n l = some l₀ ∧ (GBCA.ByABDY.implementation P r).step σ l₀ μ := by
   rintro ⟨u, w⟩ l μ hstep
   rcases (composition_step_iff P r (u, w) l μ).mp hstep with ⟨rfl, e, hev⟩ | hlab
   · -- a hidden rendezvous: an internal step of the implementation

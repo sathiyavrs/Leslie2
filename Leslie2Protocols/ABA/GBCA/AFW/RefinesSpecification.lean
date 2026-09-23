@@ -5,7 +5,7 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.GBCA.AFW.StepOverGatherSpecifications
-import Leslie2Protocols.ABA.GBCA.ABDY.Composition.SpecificationOverRoundAlphabet
+import Leslie2Protocols.ABA.GBCA.SpecificationOverRoundAlphabet
 
 /-!
 # The refinement of the round over the gather specifications
@@ -13,12 +13,12 @@ import Leslie2Protocols.ABA.GBCA.ABDY.Composition.SpecificationOverRoundAlphabet
 `GBCA.ByAFW.refinesSpecification`: the round over the gather specifications
 (`GBCA.ByAFW.roundOverGatherSpecifications`, `GBCA/AFW/Composition.lean`) forward-simulates the
 graded agreement specification read over the round's interface
-(`GBCA.ByABDY.specificationOverRoundAlphabet`), along `GBCA.ByAFW.SpecificationRelation`.
+(`GBCA.specificationOverRoundAlphabet`), along `GBCA.ByAFW.SpecificationRelation`.
 
 A transition of the round is one row of `GBCA.ByAFW.StepOverGatherSpecifications`
 (`GBCA.ByAFW.roundOverGatherSpecifications_step_row`), the row is answered by a weak run of the
 specification (`specificationRelation_row`), and that run is lifted to the interface along a
-section of `GBCA.ByABDY.gbcaLabelMap`.
+section of `GBCA.specificationLabelMap`.
 
 ## What the program's record carries
 
@@ -982,7 +982,7 @@ structure SpecificationRelation (P : Parameters) (s : RoundStateOverGatherSpecif
 /-- The relation holds initially. -/
 theorem specificationRelation_init (P : Parameters) (r : ℕ) :
     SpecificationRelation P ((roundOverGatherSpecifications P r).init)
-      ((GBCA.ByABDY.specificationOverRoundAlphabet P r).init) := by
+      ((GBCA.specificationOverRoundAlphabet P r).init) := by
   refine ⟨Invariant.initial P r, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
     simp [roundOverGatherSpecifications_init, programs, bound, firstGather, secondGather,
       Gather.SpecState.initial, GBCA.SpecState.initial, ProcessRecord.initial]
@@ -1462,25 +1462,25 @@ forward-simulates the graded agreement specification read over the round's
 interface. A transition of the round is one row of `GBCA.ByAFW.StepOverGatherSpecifications`
 (`GBCA.ByAFW.roundOverGatherSpecifications_step_row`), the row is answered by a weak run of the
 specification (`specificationRelation_row`), and that run is lifted to the interface along a
-section of `GBCA.ByABDY.gbcaLabelMap`. -/
+section of `GBCA.specificationLabelMap`. -/
 theorem refinesSpecification (P : Parameters) (r : ℕ) :
     ForwardSimulation (roundOverGatherSpecifications P r)
-      (GBCA.ByABDY.specificationOverRoundAlphabet P r) (SpecificationRelation P) := by
+      (GBCA.specificationOverRoundAlphabet P r) (SpecificationRelation P) := by
   constructor
   intro q₁ q₂ hR l μ hstep q₁' hq₁'
   obtain ⟨l₀, hpull, hrow⟩ := roundOverGatherSpecifications_step_row P r q₁ l μ hstep
   obtain ⟨t', hdis, hrel⟩ := specificationRelation_row P r q₁ q₂ hR l₀ μ hrow q₁' hq₁'
   refine ⟨t', ?_, hrel⟩
   rcases hdis with ⟨hτ, hweak⟩ | ⟨hτ, hweak⟩
-  · exact Or.inl ⟨GBCA.ByABDY.gbcaLabelMap_eq_tau (by rw [hpull, hτ]; rfl),
-      GBCA.ByABDY.weakLSilent_specificationOverRoundAlphabet P r hweak⟩
-  · refine Or.inr ⟨?_, GBCA.ByABDY.weakLStep_specificationOverRoundAlphabet P r hτ hpull hweak⟩
+  · exact Or.inl ⟨GBCA.specificationLabelMap_eq_tau (by rw [hpull, hτ]; rfl),
+      GBCA.weakLSilent_specificationOverRoundAlphabet P r hweak⟩
+  · refine Or.inr ⟨?_, GBCA.weakLStep_specificationOverRoundAlphabet P r hτ hpull hweak⟩
     intro hl
     refine hτ ?_
-    have h2 : GBCA.ByABDY.gbcaLabelMap P.n (Silent.τ : Composition.ExtendedLabel P.n) = some l₀ :=
+    have h2 : GBCA.specificationLabelMap P.n (Silent.τ : Composition.ExtendedLabel P.n) = some l₀ :=
       by
       rw [← hl]; exact hpull
-    rw [GBCA.ByABDY.gbcaLabelMap_tau] at h2
+    rw [GBCA.specificationLabelMap_tau] at h2
     exact (Option.some.inj h2).symm
 
 /-! ### Mechanical axiom check -/

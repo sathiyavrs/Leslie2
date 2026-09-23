@@ -69,9 +69,9 @@ roundOverBroadcastSpecification P r   -- two gather-over-BRB.Spec instances
 roundOverGatherSpecifications P r     -- two gather specifications + the round's network
   ⊑ refinesSpecification                       (core counting into TS 2, on the composition)
 GBCA.specInst P r                     -- GBCA/Specification.lean, D19/D29, read along
-                                      -- GBCA.ByABDY.gbcaLabelMap
+                                      -- GBCA.specificationLabelMap
 
-roundOverBracha_refinesSpecification P r : roundOverBracha ⊑ GBCA.ByABDY.specificationOverRoundAlphabet   (probabilistic, trans ×2)
+roundOverBracha_refinesSpecification P r : roundOverBracha ⊑ GBCA.specificationOverRoundAlphabet   (probabilistic, trans ×2)
 ```
 
 Beneath the round, the two gather tiers and the broadcast tier, citable on their
@@ -91,7 +91,7 @@ composition whose caller and network are different components could otherwise
 combine the caller's loop with the network's post. The round speaks the family
 alphabet `ExtendedLabel P.n` natively, as the protocol chain's round
 `GBCA.ByABDY.composition` does, so the family's call loops are its loop labels and
-`GBCA.ByABDY.gbcaLabelMap` reads its specification.
+`GBCA.specificationLabelMap` reads its specification.
 
 At the protocol shape (`Implementation/AFW/CompositionChain.lean`), each round tier is
 gathered into the ℕ-indexed family under the corruption broadcast and put through the

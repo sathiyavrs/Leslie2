@@ -14,8 +14,8 @@ It runs through the implementation instance of `GBCA/ABDY/Implementation.lean` i
 first is `composition_projects`, which is strong and functional. The second is the per-instance
 refinement `GBCA.ByABDY.refinesSpecification` (`GBCA/ABDY/RefinesSpecification.lean`), used as it
 stands: its answer is a weak run of the specification over the shared alphabet `Label n`, lifted to
-the round instance's interface along a section of `gbcaLabelMap`, which is where a Byzantine
-handshake row is answered by the specification's own call or return row (D11).
+the round instance's interface along a section of `specificationLabelMap`, which is where a
+Byzantine handshake transition is answered by the specification's own call or return (D11).
 `substitutionRelation` is the relation the simulation runs on, the implementation's
 `GBCA.ByABDY.specificationRelation`, which the shared state lets it be verbatim.
 
@@ -36,9 +36,9 @@ open Implementation Composition
 The round instance's answer to a step is the implementation's answer, read through the per-instance
 refinement (`GBCA.ByABDY.refinesSpecification`, `GBCA/ABDY/RefinesSpecification.lean`): the first
 step is strong and functional, so nothing of that refinement is reproved here. The specification's
-weak answer is finally lifted to the round instance's interface along a section of `gbcaLabelMap` —
-which is where a Byzantine handshake row is answered by the specification's own call or return row
-(D11). -/
+weak answer is finally lifted to the round instance's interface along a section of
+`specificationLabelMap`. This is where a Byzantine handshake transition is answered by the
+specification's own call or return (D11). -/
 
 /-- **The simulation relation of the round instance**: the relation
 `GBCA.ByABDY.specificationRelation` of the implementation, which the shared state lets it be
@@ -60,14 +60,14 @@ theorem instanceSubstitution (P : Parameters) (r : ℕ) :
     hrel⟩ := (GBCA.ByABDY.refinesSpecification P r).step q₁ q₂ hR l₀ μ himpl q₁' hq₁'
   refine ⟨s', ?_, hrel⟩
   rcases hdis with ⟨hτ, hweak⟩ | ⟨hτ, hweak⟩
-  · exact Or.inl ⟨gbcaLabelMap_eq_tau (by rw [hpull, hτ]; rfl),
+  · exact Or.inl ⟨specificationLabelMap_eq_tau (by rw [hpull, hτ]; rfl),
       weakLSilent_specificationOverRoundAlphabet P r hweak⟩
   · refine Or.inr ⟨?_, weakLStep_specificationOverRoundAlphabet P r hτ hpull hweak⟩
     intro hl
     refine hτ ?_
-    have h2 : gbcaLabelMap P.n (Silent.τ : ExtendedLabel P.n) = some l₀ := by
+    have h2 : specificationLabelMap P.n (Silent.τ : ExtendedLabel P.n) = some l₀ := by
       rw [← hl]; exact hpull
-    rw [gbcaLabelMap_tau] at h2
+    rw [specificationLabelMap_tau] at h2
     exact (Option.some.inj h2).symm
 
 /-! ### What the family lift will need

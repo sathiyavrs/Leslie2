@@ -14,8 +14,14 @@ different module is counted as moved and reported in the summary line.
 
 A split may also rename a declaration, add one, or remove one. Each is declared
 rather than inferred: ``--map`` takes a two-column file of ``old<TAB>new``
-names, applied to the reference; ``--removed`` and ``--added`` take one name per
-line, struck from the reference and from the current dump respectively.
+names; ``--removed`` and ``--added`` take one name per line, struck from the
+reference and from the current dump respectively.
+
+The rename map is read twice. It renames the reference's own names, and it goes
+to the dump, which writes every renamed constant back to its old name inside a
+type and inside a value before hashing them. A type names the constants it
+mentions, so without the second reading a rename would move the fingerprint of
+every declaration that mentions the renamed one.
 
 Run from the repository root::
 
@@ -59,10 +65,13 @@ def parse(text: str) -> dict[str, list[tuple[str, tuple[str, ...]]]]:
     return rows
 
 
-def dump_current() -> str:
-    """The fingerprint of the tree as it stands."""
+def dump_current(renames: Path | None) -> str:
+    """The fingerprint of the tree as it stands, in the reference's names."""
+    command = ["lake", "env", "lean", "--run", str(DUMP.relative_to(REPO))]
+    if renames is not None:
+        command.append(str(renames.resolve()))
     result = subprocess.run(
-        ["lake", "env", "lean", "--run", str(DUMP.relative_to(REPO))],
+        command,
         cwd=REPO,
         capture_output=True,
         text=True,
@@ -193,7 +202,7 @@ def main() -> int:
         raise SystemExit(f"error: the reference dump {args.reference} does not exist")
     reference = parse(args.reference.read_text(encoding="utf-8"))
     if args.current is None:
-        current = parse(dump_current())
+        current = parse(dump_current(args.map))
     else:
         current = parse(args.current.read_text(encoding="utf-8"))
 

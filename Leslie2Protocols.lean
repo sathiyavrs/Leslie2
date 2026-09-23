@@ -4,7 +4,6 @@ import Leslie2Protocols.ABA.Composition.Hybrid
 import Leslie2Protocols.ABA.GBCA.ABDY.Composition.Instance
 import Leslie2Protocols.ABA.GBCA.ABDY.Composition.ProjectsOntoImplementation
 import Leslie2Protocols.ABA.GBCA.ABDY.Composition.RoundFamilyOwnedLabels
-import Leslie2Protocols.ABA.GBCA.ABDY.Composition.SpecificationOverRoundAlphabet
 import Leslie2Protocols.ABA.GBCA.ABDY.Composition.StepInversion
 import Leslie2Protocols.ABA.GBCA.ABDY.Composition.Substitution
 import Leslie2Protocols.ABA.GBCA.ABDY.ExclusionCertificate
@@ -19,7 +18,9 @@ import Leslie2Protocols.ABA.GBCA.AFW.Counting
 import Leslie2Protocols.ABA.GBCA.AFW.GatherSubstitutions
 import Leslie2Protocols.ABA.GBCA.AFW.RefinesSpecification
 import Leslie2Protocols.ABA.GBCA.AFW.StepOverGatherSpecifications
+import Leslie2Protocols.ABA.GBCA.BindingOverRoundAlphabet
 import Leslie2Protocols.ABA.GBCA.Specification
+import Leslie2Protocols.ABA.GBCA.SpecificationOverRoundAlphabet
 import Leslie2Protocols.ABA.GBCA.SpecificationSafety
 import Leslie2Protocols.ABA.Gather.BroadcastSubstitution
 import Leslie2Protocols.ABA.Gather.CommonCoreAtSpecification

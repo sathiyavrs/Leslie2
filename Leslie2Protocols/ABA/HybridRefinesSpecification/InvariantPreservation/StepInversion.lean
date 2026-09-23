@@ -552,8 +552,9 @@ theorem hybrid_step_tau (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
       rcases hybridExtended_tau_inversion P hpre with ⟨G', hspec, rfl⟩ | ⟨A', hnet, rfl⟩
       · obtain ⟨r, X, hstepG, hGeq⟩ := gbcaSpecificationFamily_tau_inversion P hspec
         obtain rfl : G' = Function.update G r X := pure_inj hGeq
-        rw [GBCA.ByABDY.specificationOverRoundAlphabet,
-          System.mapIdle_step_some (GBCA.ByABDY.gbcaLabelMap_inl (Label.tau : Label P.n))] at hstepG
+        rw [GBCA.specificationOverRoundAlphabet,
+          System.mapIdle_step_some
+            (GBCA.specificationLabelMap_inl (Label.tau : Label P.n))] at hstepG
         exact Or.inl ⟨r, PMF.pure X, hstepG, by rw [PMF.pure_map, prodPMF_pure_pure]⟩
       · obtain ⟨k, b, hF, hA'⟩ := abaNetworkStep_tau hnet
         obtain rfl : A' = A.recordDecided k b := pure_inj hA'

@@ -301,7 +301,7 @@ repaired at the rule; the seventh entry is a cross-reference.
   guard there would leave the row unanswerable. This is a consequence of the
   authorisation placement, not a preference.
 - **`ImplementationStep.callLoop` and `GBCAProgramStep.callLoop` (forced).** Both are unguarded
-  self-loops. `gbcaLabelMap` maps `byzantineCallGLoop` onto `callG`,
+  self-loops. `specificationLabelMap` maps `byzantineCallGLoop` onto `callG`,
   `GBCANetworkStep.byzantineCallGLoop` carries no `k ∈ F`, and the named process's row is
   idle, so the call loop must accept every call label whatever the record holds.
 - **`RoundLoopStep`'s DECIDED rows (chosen).** `RoundLoopStep.ret` and
@@ -512,8 +512,8 @@ trace, the event that carries the caller's input.
 
 One level down the interface binds corrupted returners too. At the composed system
 `GBCAProgramStep.byzantineRetGrade2`, `byzantineRetGrade1` and `byzantineRetGrade0` repeat the
-guards of the rules for correct processes, and `GBCA.ByABDY.gbcaLabelMap` sends the Byzantine return
-onto `GBCA.Step.retGrade2`, `retGrade1` and `retGrade0`, which carry no exemption for correct
+guards of the rules for correct processes, and `GBCA.specificationLabelMap` sends the Byzantine
+return onto `GBCA.Step.retGrade2`, `retGrade1` and `retGrade0`, which carry no exemption for correct
 processes. `GBCA.specInst_binding`, `retG_value_agree` and `specInst_validity` therefore quantify
 over every returner of a round, where ABDY22's Definition 3.2 quantifies over the non-faulty
 parties. A corrupted process's graded return is held to the guards a correct one's is held to, so

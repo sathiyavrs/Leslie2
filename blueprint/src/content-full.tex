@@ -626,6 +626,11 @@ System~1.
 \subsection{The sub-protocol specifications}
 
 Transition Systems~2 and~3 are the specifications of the two sub-protocols, given as round-indexed instances together with the $\mathbb{N}$-indexed families the round loop calls.
+Both graded-agreement implementations meet Transition System~2 read over the alphabet a round speaks, along the projection that identifies the Byzantine handshake labels with the specification labels they stand for.
+Binding holds of that reading, so every inclusion into it carries binding.
+See \leanmodule{Leslie2Protocols/ABA/GBCA/Specification},
+\leanmodule{Leslie2Protocols/ABA/GBCA/SpecificationOverRoundAlphabet} and
+\leanmodule{Leslie2Protocols/ABA/GBCA/BindingOverRoundAlphabet}.
 
 \input{nodes/def-aba-gbca-spec}
 

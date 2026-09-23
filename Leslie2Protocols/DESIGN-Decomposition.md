@@ -41,7 +41,7 @@ with `LoopLabel.callLoop id x`, and the round speaks `ExtendedLabel` natively, w
 `NetworkEvent.gbcaCallLoop` and `byzantineCallGLoop` are its loop labels. On the call label the
 caller has one row and the network posts; on the loop label every component is unchanged.
 The specification is read along a pullback that sends the loop to the call
-(`BRB.specificationLabelMap`, `Gather.specificationLabelMap`, `GBCA.ByABDY.gbcaLabelMap`),
+(`BRB.specificationLabelMap`, `Gather.specificationLabelMap`, `GBCA.specificationLabelMap`),
 so its own loop row answers the loop label. The level above pulls the composition's alphabet
 back from its own (`Gather.inputBroadcastLabelMap`, `Gather.bindBroadcastLabelMap`,
 `GBCA.ByAFW.firstGatherLabelMap`, `GBCA.ByAFW.secondGatherLabelMap`). The row
@@ -103,10 +103,10 @@ rendezvous — must not be answered by every factor unchanged.
 
 **What fails.** If every pullback returned `none` on such a label, the round
 would self-loop on it. The rendezvous have no specification label under
-`GBCA.ByABDY.gbcaLabelMap`, so `GBCA.ByAFW.roundOverGatherSpecifications_step_row` is false
+`GBCA.specificationLabelMap`, so `GBCA.ByAFW.roundOverGatherSpecifications_step_row` is false
 there. The ABA and coin labels have one, and `GBCA.Step` has no row at it, so
 `GBCA.ByAFW.roundOverGatherSpecifications_step_iff_row` is false there and
-`GBCA.ByAFW.refinesSpecification` is unprovable: `GBCA.ByABDY.specificationOverRoundAlphabet` has no
+`GBCA.ByAFW.refinesSpecification` is unprovable: `GBCA.specificationOverRoundAlphabet` has no
 transition at those labels, and neither has `GBCA.ByABDY.composition`.
 
 **The constraint.** `GBCA.ByAFW.programLabelMap` sends every off-interface family label to

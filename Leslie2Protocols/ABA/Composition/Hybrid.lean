@@ -20,11 +20,11 @@ sub-protocol API is hidden. The last three components and the alphabet are
 `ABA/Composition/Components.lean`.
 
 The round-`r` member of `gbcaSpecificationFamily` is that round's graded-agreement specification
-read over the protocol extended alphabet along `GBCA.ByABDY.gbcaLabelMap`
-(`GBCA/ABDY/Composition/SpecificationOverRoundAlphabet.lean`). A round-tagged label —
-including a Byzantine handshake row of that round — moves its round alone, `τ` moves one round,
-`fail` is the broadcast that keeps every round's copy of the corrupted set together, and every
-other label idles.
+read over the protocol extended alphabet along `GBCA.specificationLabelMap`
+(`GBCA/SpecificationOverRoundAlphabet.lean`). A round-tagged label — including a Byzantine
+handshake transition of that round — moves its round alone, `τ` moves one round, `fail` is the
+broadcast that keeps every round's copy of the corrupted set together, and every other label
+idles.
 
 ## What this file supplies
 
@@ -60,12 +60,12 @@ read over the protocol alphabet. It stands where the composed system of
 other three components are the same in both systems. -/
 
 /-- **The specification family of the protocol**: the ℕ-indexed family of round specifications, read
-over the protocol extended alphabet along `GBCA.ByABDY.gbcaLabelMap`. A round-tagged label —
-including a Byzantine handshake row of that round — moves its round alone, `τ` moves one round, and
-`fail` is the broadcast that keeps every round's copy of the corrupted set together. -/
+over the protocol extended alphabet along `GBCA.specificationLabelMap`. A round-tagged label —
+including a Byzantine handshake transition of that round — moves its round alone, `τ` moves one
+round, and `fail` is the broadcast that keeps every round's copy of the corrupted set together. -/
 noncomputable def gbcaSpecificationFamily (P : Parameters) :
     System (ℕ → GBCA.SpecState P.n) (ExtendedLabel P.n) :=
-  System.family (GBCA.ByABDY.specificationOverRoundAlphabet P) GBCA.ByABDY.roundOwnsLabel
+  System.family (GBCA.specificationOverRoundAlphabet P) GBCA.ByABDY.roundOwnsLabel
     GBCA.ByABDY.isFailLabel
     (GBCA.ByABDY.specificationCorruptionAct P)
 
@@ -74,7 +74,7 @@ noncomputable def gbcaSpecificationFamily (P : Parameters) :
 
 /-- The specification family is an LTS: every round's specification is. -/
 theorem gbcaSpecificationFamily_isLTS (P : Parameters) : (gbcaSpecificationFamily P).IsLTS :=
-  System.family_isLTS (GBCA.ByABDY.specificationOverRoundAlphabet_isLTS P) _ _ _
+  System.family_isLTS (GBCA.specificationOverRoundAlphabet_isLTS P) _ _ _
 
 /-- The state of the protocol-shaped specification: the round
 specifications beside the round loops, the ABA network and the coin oracle. -/
@@ -120,13 +120,13 @@ theorem gbcaSpecificationFamily_fail (P : Parameters) (G : ℕ → GBCA.SpecStat
 theorem gbcaSpecificationFamily_owned_inversion (P : Parameters) {G : ℕ → GBCA.SpecState P.n}
     {L : ExtendedLabel P.n} {r : ℕ} (hL : GBCA.ByABDY.roundOwnsLabel L = some r) (hτ : L ≠ Silent.τ)
     {μ : PMF (ℕ → GBCA.SpecState P.n)} (h : (gbcaSpecificationFamily P).step G L μ) :
-    ∃ X, (GBCA.ByABDY.specificationOverRoundAlphabet P r).step (G r) L (PMF.pure X) ∧
+    ∃ X, (GBCA.specificationOverRoundAlphabet P r).step (G r) L (PMF.pure X) ∧
       μ = PMF.pure (Function.update G r X) := by
   rw [gbcaSpecificationFamily, System.family_step_iff] at h
   rcases h with ⟨habs, -⟩ | ⟨r', hown, μr, hstep, rfl⟩ | ⟨-, hown, -, -⟩ | ⟨-, hown, -, -⟩
   · exact absurd habs hτ
   · obtain rfl : r' = r := by rw [hL] at hown; exact (Option.some.inj hown).symm
-    obtain ⟨X, rfl⟩ := GBCA.ByABDY.specificationOverRoundAlphabet_isLTS P r' _ _ _ hstep
+    obtain ⟨X, rfl⟩ := GBCA.specificationOverRoundAlphabet_isLTS P r' _ _ _ hstep
     exact ⟨X, hstep, by rw [PMF.pure_map]⟩
   · rw [hL] at hown; exact absurd hown (by simp)
   · rw [hL] at hown; exact absurd hown (by simp)
@@ -136,11 +136,11 @@ round, every other round unchanged. -/
 theorem gbcaSpecificationFamily_owned (P : Parameters) {G : ℕ → GBCA.SpecState P.n}
     {L : ExtendedLabel P.n} {l₀ : Label P.n} {r : ℕ} {X : GBCA.SpecState P.n}
     (hown : GBCA.ByABDY.roundOwnsLabel L = some r)
-    (hpull : GBCA.ByABDY.gbcaLabelMap P.n L = some l₀) (h : GBCA.Step P r (G r) l₀ (PMF.pure X)) :
+    (hpull : GBCA.specificationLabelMap P.n L = some l₀) (h : GBCA.Step P r (G r) l₀ (PMF.pure X)) :
     (gbcaSpecificationFamily P).step G L (PMF.pure (Function.update G r X)) := by
   rw [gbcaSpecificationFamily, System.family_step_iff]
   refine Or.inr (Or.inl ⟨r, hown, PMF.pure X, ?_, by rw [PMF.pure_map]⟩)
-  rw [GBCA.ByABDY.specificationOverRoundAlphabet, System.mapIdle_step_some hpull]
+  rw [GBCA.specificationOverRoundAlphabet, System.mapIdle_step_some hpull]
   exact h
 
 /-- A round's own silent rule — the specification's binding exclusion — read into the
@@ -150,8 +150,8 @@ theorem gbcaSpecificationFamily_tau (P : Parameters) {G : ℕ → GBCA.SpecState
     (gbcaSpecificationFamily P).step G (Sum.inl Label.tau) (PMF.pure (Function.update G r X)) := by
   rw [gbcaSpecificationFamily, System.family_step_iff]
   refine Or.inl ⟨rfl, r, PMF.pure X, ?_, by rw [PMF.pure_map]⟩
-  rw [GBCA.ByABDY.specificationOverRoundAlphabet,
-    System.mapIdle_step_some (GBCA.ByABDY.gbcaLabelMap_inl (Label.tau : Label P.n))]
+  rw [GBCA.specificationOverRoundAlphabet,
+    System.mapIdle_step_some (GBCA.specificationLabelMap_inl (Label.tau : Label P.n))]
   exact h
 
 /-- A label a round specification owns is answered by that round alone, read
@@ -159,11 +159,11 @@ back over the specification's own alphabet. -/
 theorem gbcaSpecificationFamily_owned_step (P : Parameters) {G G' : ℕ → GBCA.SpecState P.n}
     {L : ExtendedLabel P.n} {l₀ : Label P.n} {r : ℕ}
     (hown : GBCA.ByABDY.roundOwnsLabel L = some r) (hτ : L ≠ Silent.τ)
-    (hpull : GBCA.ByABDY.gbcaLabelMap P.n L = some l₀)
+    (hpull : GBCA.specificationLabelMap P.n L = some l₀)
     (h : (gbcaSpecificationFamily P).step G L (PMF.pure G')) :
     ∃ X, GBCA.Step P r (G r) l₀ (PMF.pure X) ∧ G' = Function.update G r X := by
   obtain ⟨X, hstep, heq⟩ := gbcaSpecificationFamily_owned_inversion P hown hτ h
-  rw [GBCA.ByABDY.specificationOverRoundAlphabet, System.mapIdle_step_some hpull] at hstep
+  rw [GBCA.specificationOverRoundAlphabet, System.mapIdle_step_some hpull] at hstep
   exact ⟨X, hstep, pure_inj heq⟩
 
 /-- Only the identity successor answers a label no round owns and no
@@ -198,11 +198,11 @@ theorem gbcaSpecificationFamily_tau_inversion (P : Parameters) {G : ℕ → GBCA
     {μ : PMF (ℕ → GBCA.SpecState P.n)}
     (h : (gbcaSpecificationFamily P).step G (Sum.inl Label.tau) μ) :
     ∃ (r : ℕ) (X : GBCA.SpecState P.n),
-      (GBCA.ByABDY.specificationOverRoundAlphabet P r).step (G r) (Sum.inl Label.tau) (PMF.pure X) ∧
+      (GBCA.specificationOverRoundAlphabet P r).step (G r) (Sum.inl Label.tau) (PMF.pure X) ∧
       μ = PMF.pure (Function.update G r X) := by
   rw [gbcaSpecificationFamily, System.family_step_iff] at h
   rcases h with ⟨-, r, μr, hstep, rfl⟩ | ⟨r, hr, -⟩ | ⟨habs, -, -, -⟩ | ⟨habs, -, -, -⟩
-  · obtain ⟨X, rfl⟩ := GBCA.ByABDY.specificationOverRoundAlphabet_isLTS P r _ _ _ hstep
+  · obtain ⟨X, rfl⟩ := GBCA.specificationOverRoundAlphabet_isLTS P r _ _ _ hstep
     exact ⟨r, X, hstep, by rw [PMF.pure_map]⟩
   · exact absurd hr (by simp)
   · exact absurd rfl habs

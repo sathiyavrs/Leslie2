@@ -5,7 +5,7 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.GBCA.AFW.CompositionStepInversion
-import Leslie2Protocols.ABA.GBCA.ABDY.Composition.SpecificationOverRoundAlphabet
+import Leslie2Protocols.ABA.GBCA.SpecificationOverRoundAlphabet
 import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 
 /-!
@@ -18,7 +18,7 @@ round's state through the four views `programs`, `bound`, `firstGather`, `second
 relation on that state; the system is the composition.
 
 `roundOverGatherSpecifications_step_iff_row` is the row characterisation: at a shared label `l₀`,
-the transitions of the round over the labels `GBCA.ByABDY.gbcaLabelMap` sends to `l₀` are exactly
+the transitions of the round over the labels `GBCA.specificationLabelMap` sends to `l₀` are exactly
 the `l₀`-rows of `StepOverGatherSpecifications`, on the same state and with the same
 distribution.
 
@@ -186,7 +186,8 @@ theorem roundOverGatherSpecifications_step_row (P : Parameters) (r : ℕ) :
     ∀ (s : RoundStateOverGatherSpecifications P.n) (l : ExtendedLabel P.n) (μ : PMF
       (RoundStateOverGatherSpecifications P.n)),
       (roundOverGatherSpecifications P r).step s l μ →
-      ∃ l₀, GBCA.ByABDY.gbcaLabelMap P.n l = some l₀ ∧ StepOverGatherSpecifications P r s l₀ μ := by
+      ∃ l₀, GBCA.specificationLabelMap P.n l = some l₀ ∧
+        StepOverGatherSpecifications P r s l₀ μ := by
   have h1 : (Gather.specificationOverInstanceAlphabet P Bool).IsLTS :=
     Gather.specificationOverInstanceAlphabet_isLTS P
   have h2 : (Gather.specificationOverInstanceAlphabet P (Option Bool)).IsLTS :=
@@ -370,7 +371,8 @@ theorem roundOverGatherSpecifications_step_row (P : Parameters) (r : ℕ) :
 theorem row_roundOverGatherSpecifications_step (P : Parameters) (r : ℕ) :
     ∀ (s : RoundStateOverGatherSpecifications P.n) (l₀ : Label P.n)
     (μ : PMF (RoundStateOverGatherSpecifications P.n)), StepOverGatherSpecifications P r s l₀ μ → ∃
-    l, GBCA.ByABDY.gbcaLabelMap P.n l = some l₀ ∧ (roundOverGatherSpecifications P r).step s l μ :=
+    l, GBCA.specificationLabelMap P.n l = some l₀ ∧
+      (roundOverGatherSpecifications P r).step s l μ :=
           by
   rintro ⟨⟨u, v⟩, c, d⟩ l₀ μ hrow
   cases hrow with
@@ -499,12 +501,13 @@ theorem row_roundOverGatherSpecifications_step (P : Parameters) (r : ℕ) :
     exact ⟨Sum.inl (.fail id), rfl, roundOverGathers_label_step (by simp) hRoundPrograms hg1 hg2⟩
 
 /-- **The row characterisation.** At a shared label `l₀`, the transitions of
-the round over the labels `GBCA.ByABDY.gbcaLabelMap` sends to `l₀` are exactly the `l₀`-rows
+the round over the labels `GBCA.specificationLabelMap` sends to `l₀` are exactly the `l₀`-rows
 of `StepOverGatherSpecifications`, on the same state and with the same distribution. -/
 theorem roundOverGatherSpecifications_step_iff_row (P : Parameters) (r : ℕ)
     (s : RoundStateOverGatherSpecifications P.n) (l₀ : Label P.n)
     (μ : PMF (RoundStateOverGatherSpecifications P.n)) :
-    (∃ l, GBCA.ByABDY.gbcaLabelMap P.n l = some l₀ ∧ (roundOverGatherSpecifications P r).step s l μ)
+    (∃ l, GBCA.specificationLabelMap P.n l = some l₀ ∧
+      (roundOverGatherSpecifications P r).step s l μ)
     ↔ StepOverGatherSpecifications P r s l₀ μ := by
   constructor
   · rintro ⟨l, hl, hstep⟩
