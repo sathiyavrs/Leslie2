@@ -357,7 +357,7 @@ Its state is the pair of the $n$ round records and the round's own network state
 Beside the message sets and the corrupted set that network state holds the round's bound bit, written at the round's first return and announced on every return of the round (D29).
 It is computed from the round's sent sets, the corrupted set and the graded outcome, and it enters no guard of the algorithm.
 Definitions~\ref{def:aba-programs} and~\ref{def:aba-network} below are where each of those guards is written against one process record.
-The round record itself is in \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Implementation}.
+The round record and the round's network state are in \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/MessagesAndRecords}, and the round itself is in \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Implementation}.
 
 \input{nodes-min/def-aba-round-messages}
 \input{nodes-min/def-aba-gbca-implementation}
@@ -384,7 +384,7 @@ A sub-protocol may be exchanged for its specification where it is a component of
 The component boundary is where the chain passes from implementation to specification: $\abdy{\mathrm{protocol}}(P)$ is the system that runs, everything above it is specification, and the first step is accordingly an inclusion.
 The composed system holds one graded-agreement instance per round at every moment, and a round instance carries no termination flag, so it answers a send or a delivery at a process the protocol has terminated (D22).
 Graded agreement is a parallel component of the composed system, which is what the substitution congruence consumes.
-See \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Composition/Instance}, \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Composition/StepInversion}, \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Composition/ProjectsOntoImplementation}, \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Composition/Substitution}, \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Composition/RoundFamilyOwnedLabels}, \leanmodule{Leslie2Protocols/ABA/Composition/Hybrid} and \leanmodule{Leslie2Protocols/ABA/Implementation/ABDY/CompositionChain}.
+See \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Components}, \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Composition}, \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/CompositionStepInversion}, \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/ProjectsOntoImplementation}, \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/RoundFamilyOwnedLabels}, \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Substitution}, \leanmodule{Leslie2Protocols/ABA/Composition/Hybrid} and \leanmodule{Leslie2Protocols/ABA/Implementation/ABDY/CompositionChain}.
 
 \input{nodes-min/def-aba-gbca-instance-by-abdy}
 \input{nodes-min/def-aba-composed}

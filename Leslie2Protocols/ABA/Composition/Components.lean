@@ -6,7 +6,7 @@ Authors: Sathiya / Claude
 
 import Leslie2Protocols.ABA.Vocabulary.RoundLoop
 import Leslie2Protocols.ABA.Implementation.Alphabet
-import Leslie2Protocols.ABA.GBCA.ABDY.Implementation
+import Leslie2Protocols.ABA.GBCA.ABDY.MessagesAndRecords
 import Leslie2Protocols.ABA.Specifications.ABASafety
 import Leslie2Protocols.ABA.Specifications.WCC
 import Leslie2Protocols.Framework.LoopsAndInstanceFamilies
@@ -28,10 +28,10 @@ compose is the same object in both systems. This file holds that alphabet and th
 message networks, the Byzantine handshake rows, or the branches of a handshake that it does not
 distinguish. The rendezvous alphabet `NetworkEvent n M` names them, over a graded-agreement message
 type `M` (`ABA/Implementation/Alphabet.lean`); `NetworkEvent n` is that alphabet at the round
-messages of `GBCA/ABDY/Implementation.lean`, and `ExtendedLabel n = Label n ⊕ NetworkEvent n` is the
-alphabet every component here speaks. Its silent label is `Sum.inl τ`, so every `Sum.inr` label is
-observable, and `networkEventLabels n` — the set of all of them — is what both compositions hide
-before reading the result back over `Label n`.
+messages of `GBCA/ABDY/MessagesAndRecords.lean`, and `ExtendedLabel n = Label n ⊕ NetworkEvent n`
+is the alphabet every component here speaks. Its silent label is `Sum.inl τ`, so every `Sum.inr`
+label is observable, and `networkEventLabels n` — the set of all of them — is what both
+compositions hide before reading the result back over `Label n`.
 
 ## The coin oracle
 
@@ -93,9 +93,9 @@ open Implementation
 The rendezvous alphabet, the hidden-label set, the labels a process acts on, the coin oracle's label
 pullback and the lifted oracle are parametric in the graded-agreement message type
 (`ABA/Implementation/Alphabet.lean`). This file fixes that type to the round messages of
-`GBCA/ABDY/Implementation.lean`. -/
+`GBCA/ABDY/MessagesAndRecords.lean`. -/
 
-/-- The rendezvous alphabet at the round messages of `GBCA/ABDY/Implementation.lean`. -/
+/-- The rendezvous alphabet at the round messages of `GBCA/ABDY/MessagesAndRecords.lean`. -/
 abbrev NetworkEvent (n : ℕ) : Type := Implementation.NetworkEvent n GBCA.ByABDY.Message
 
 /-- The extended alphabet. Its silent label is `Sum.inl τ`, so every

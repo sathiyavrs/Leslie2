@@ -6,7 +6,8 @@ Authors: Sathiya / Claude
 
 import Leslie2Protocols.ABA.Gather.SpecificationOverInstanceAlphabet
 import Leslie2Protocols.ABA.GBCA.AFW.Counting
-import Leslie2Protocols.ABA.GBCA.ABDY.Composition.Instance
+import Leslie2Protocols.ABA.Composition.Components
+import Leslie2Protocols.ABA.GBCA.ABDY.MessagesAndRecords
 import Leslie2Protocols.Framework.SynchronisedProduct
 import Leslie2Protocols.Framework.LoopsAndInstanceFamilies
 

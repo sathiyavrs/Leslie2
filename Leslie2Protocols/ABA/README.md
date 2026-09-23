@@ -158,10 +158,11 @@ order, and no folder imports one below it:
 `Vocabulary/` is written over by everything, `GhostErasure/` writes over everything.
 The sub-folders and files with positions of their own in that order are the ones
 `scripts/check-folder-order.py` names: `ReliableBroadcast/Bracha/`, `GBCA/ABDY/`,
-`GBCA/ABDY/Composition/`, `GBCA/AFW/`, `Implementation/ABDY/`, `Implementation/AFW/`,
-`Results.lean`, `GBCA/SpecificationOverRoundAlphabet.lean` and
+`GBCA/AFW/`, `Implementation/ABDY/`, `Implementation/AFW/`, `Results.lean`,
+`GBCA/ABDY/MessagesAndRecords.lean`, which holds the messages the components of `Composition/`
+are written over and so sits below that folder, `GBCA/SpecificationOverRoundAlphabet.lean` and
 `GBCA/BindingOverRoundAlphabet.lean`, which read the extended alphabet of `Composition/` and so
-sit above it, and `Composition/Hybrid.lean`, which sits above `GBCA/ABDY/Composition/` while
+sit above it, and `Composition/Hybrid.lean`, which sits above `GBCA/ABDY/` while
 the rest of `Composition/` sits below it. Every other sub-folder holds its parent's position.
 Within a folder the files are alphabetical. Each file holds one object or one result together
 with the lemmas that exist only to prove it, and Mathlib's `linter.style.longFile` caps a file
@@ -253,16 +254,6 @@ make, the algorithm that composition realises, and the simulation into the speci
 | `GBCA/SpecificationOverRoundAlphabet.lean` | 175 | `GBCA.specificationOverRoundAlphabet`: the graded-agreement specification read along `GBCA.specificationLabelMap`, which identifies the three Byzantine handshake transitions and the call loop with the specification labels they stand for, with the sections along which a weak run of the specification is read back over a round's interface (D11). |
 | `GBCA/SpecificationSafety.lean` | 874 | Binding, graded agreement and Validity's safety half for the GBCA specification instance. `specInst_binding` reads binding off a trace. |
 
-**`ABA/GBCA/ABDY/`** — ABDY22's implementation of that specification, and its refinement.
-
-| file | lines | what it is |
-|---|---|---|
-| `GBCA/ABDY/ExclusionCertificate.lean` | 329 | The exclude certificates `EchoReceiptQuorum` (Case A), `VoteQuorumAgainst` (Case B) and their disjunction `ExclusionCertificate`: monotone receipt evidence that a bit can never gain grade-≥1 support. The derivation chains read a certificate off a return's own receipts. |
-| `GBCA/ABDY/Implementation.lean` | 886 | **The GBCA implementation**, ABDY22's Algorithm 6 in full (D18). Its state is the round records beside the round's network state, which holds the round's bound bit (D29). |
-| `GBCA/ABDY/Invariant.lean` | 807 | The inductive invariant `Invariant` of the implementation instance: the corruption budget, delivery soundness, protocol conformance and write-once recording of correct multicasts, participation, budget-robust input origin, and the `f + 1` genuine-holder support `InputSupport` (D15). `Invariant.initial` and `Invariant.step` hold it at the initial state and along every row. |
-| `GBCA/ABDY/RefinesSpecification.lean` | 661 | The per-instance refinement `refinesSpecification`, by exclude-on-demand; its soundness inclusion `implementation_refines` with the binding it carries, `implementation_binding`; and the broadcast compatibility of the relation with the `fail` act (`specificationRelation_corrupt`), which the family lifting consumes. Two axiom checks. |
-| `GBCA/ABDY/SpecificationRelation.lean` | 344 | The simulation relation `specificationRelation`: the specification's `call`, `ret` and `F` read off the implementation state, `excluded` and `grade` carried as receipt-pattern certificates, and the round's bound bit tied to `excluded`. The specification's guards and the two-step exclusion-then-return runs are derived from it. |
-
 **`ABA/Composition/`** — the components the composed systems are built from, the ABA state
 and the protocol-shaped specification.
 
@@ -272,16 +263,24 @@ and the protocol-shaped specification.
 | `Composition/Components.lean` | 845 | The extended alphabet `ExtendedLabel n` at ABDY22's messages, the coin oracle read along its label pullback, the round loop of one process, and the ABA network — the pieces the two compositions are built from. |
 | `Composition/Hybrid.lean` | 419 | **`hybrid`**: the protocol-shaped specification — the family of round specifications beside the round loops, the ABA network and the coin oracle, under the pipeline that hides the rendezvous alphabet, reads the result back over `Label n` and hides the sub-protocol API — with the rows of its four components and the three routes a labelled transition takes through the two hiding frames. |
 
-**`ABA/GBCA/ABDY/Composition/`** — the round's graded-agreement instance, the labels its
-family owns, and the licence to replace it by the graded-agreement specification.
+**`ABA/GBCA/ABDY/`** — ABDY22's implementation of that specification, its refinement, the round's
+graded-agreement instance, the labels its family owns, and the licence to replace it by the
+graded-agreement specification. The files are given in import order.
 
 | file | lines | what it is |
 |---|---|---|
-| `GBCA/ABDY/Composition/Instance.lean` | 648 | **The round's graded-agreement instance**: `n` corruption-blind local programs beside the round's own network, the instance-internal alphabet that carries their two rendezvous, the round-indexed family `gbcaInstanceFamily`, and the readers and builders of one instance transition. |
-| `GBCA/ABDY/Composition/ProjectsOntoImplementation.lean` | 246 | `composition_projects`: every transition of the round instance is a transition of the round's implementation at that same state, one step for one step, with no stuttering. One axiom check. |
-| `GBCA/ABDY/Composition/RoundFamilyOwnedLabels.lean` | 82 | The labels the round-indexed family owns, evaluated: `GBCA.ByABDY.roundOwnsLabel` and `GBCA.ByABDY.isFailLabel` at every label of the extended alphabet, which is what discharges the routing premises of the composed system by `simp`. |
-| `GBCA/ABDY/Composition/StepInversion.lean` | 507 | The transitions of the round instance read off their labels: one program's row and the network's row per label class, the round records beside the network state read as one implementation state, the two inversions of the composition, and the network's row off a round-tagged label. |
-| `GBCA/ABDY/Composition/Substitution.lean` | 127 | **`instanceSubstitution`**: the licence to replace the round instance by the graded-agreement specification, with the broadcast corruption act at the round's alphabet and the two premises the family lift consumes. One axiom check. |
+| `GBCA/ABDY/MessagesAndRecords.lean` | 654 | The messages a graded-agreement round exchanges and the state it runs on: the five message levels of Algorithm 6, the round's bound bit `boundOf` (D29), the round record of one process beside the round's network state `NetworkState`, their pair `ImplementationState` with the projections and writes of each component, the counting the algorithm's guards read, and the two quorum lemmas (D1, D5). |
+| `GBCA/ABDY/Implementation.lean` | 292 | **The GBCA implementation**, ABDY22's Algorithm 6 in full (D18): the transitions `ImplementationStep`, one per line of the algorithm, and the round-`r` system `implementation` they are the step relation of (D8). |
+| `GBCA/ABDY/Invariant.lean` | 807 | The inductive invariant `Invariant` of the implementation instance: the corruption budget, delivery soundness, protocol conformance and write-once recording of correct multicasts, participation, budget-robust input origin, and the `f + 1` genuine-holder support `InputSupport` (D15). `Invariant.initial` and `Invariant.step` hold it at the initial state and along every row. |
+| `GBCA/ABDY/ExclusionCertificate.lean` | 329 | The exclude certificates `EchoReceiptQuorum` (Case A), `VoteQuorumAgainst` (Case B) and their disjunction `ExclusionCertificate`: monotone receipt evidence that a bit can never gain grade-≥1 support. The derivation chains read a certificate off a return's own receipts. |
+| `GBCA/ABDY/SpecificationRelation.lean` | 344 | The simulation relation `specificationRelation`: the specification's `call`, `ret` and `F` read off the implementation state, `excluded` and `grade` carried as receipt-pattern certificates, and the round's bound bit tied to `excluded`. The specification's guards and the two-step exclusion-then-return runs are derived from it. |
+| `GBCA/ABDY/RefinesSpecification.lean` | 661 | The per-instance refinement `refinesSpecification`, by exclude-on-demand; its soundness inclusion `implementation_refines` with the binding it carries, `implementation_binding`; and the broadcast compatibility of the relation with the `fail` act (`specificationRelation_corrupt`), which the family lifting consumes. Two axiom checks. |
+| `GBCA/ABDY/Components.lean` | 422 | The components of the round's graded-agreement instance: the instance-internal alphabet that carries the multicast and the delivery, the step relation `GBCAProgramStep` of one corruption-blind local program and `GBCANetworkStep` of the round's network, and the two systems `gbcaProgram` and `GBCANetwork` they carry (D11). |
+| `GBCA/ABDY/Composition.lean` | 277 | **The round's graded-agreement instance**: `GBCA.ByABDY.composition`, the programs beside the round's network with their two rendezvous hidden and the result read back over the extended alphabet, the round-indexed family `gbcaInstanceFamily` with the three functions it is built from, the determinacy the LTS instances rest on, and the readers and builders of one instance transition. |
+| `GBCA/ABDY/CompositionStepInversion.lean` | 509 | The transitions of the round instance read off their labels: one program's row and the network's row per label class, the round records beside the network state read as one implementation state, the two inversions of the composition, and the network's row off a round-tagged label. |
+| `GBCA/ABDY/ProjectsOntoImplementation.lean` | 246 | `composition_projects`: every transition of the round instance is a transition of the round's implementation at that same state, one step for one step, with no stuttering. One axiom check. |
+| `GBCA/ABDY/RoundFamilyOwnedLabels.lean` | 82 | The labels the round-indexed family owns, evaluated: `GBCA.ByABDY.roundOwnsLabel` and `GBCA.ByABDY.isFailLabel` at every label of the extended alphabet, which is what discharges the premises of the composed system by `simp`. |
+| `GBCA/ABDY/Substitution.lean` | 127 | **`instanceSubstitution`**: the licence to replace the round instance by the graded-agreement specification, with the broadcast corruption act at the round's alphabet and the two premises the family lift consumes. One axiom check. |
 
 **`ABA/GBCA/AFW/`** — the two-gather round and the three tiers that carry it.
 
@@ -382,11 +381,11 @@ reaches it.
 
 The pieces both compositions are built from are in `Composition/Components.lean`, over the
 alphabet of `Implementation/Alphabet.lean`. `Implementation/ABDY/System.lean` and
-`GBCA/ABDY/Composition/Instance.lean` each import it and neither imports the other, so the
+`GBCA/ABDY/Components.lean` each import it and neither imports the other, so the
 two systems of the protocol are assembled independently over one set of components.
 `Implementation/System.lean` sits beside `Composition/Components.lean` over the same
 alphabet and imports no implementation, which is what lets both implementations instantiate
-it. The specification family — `GBCA/ABDY/Composition/`,
+it. The specification family — `GBCA/ABDY/`,
 `Composition/Hybrid.lean` and the core simulation above them — never
 imports `Implementation/ABDY/System.lean`; the protocol enters only at
 `Implementation/ABDY/Simulation.lean`, which is where the two systems meet, and
@@ -396,7 +395,9 @@ above both, and carries the composed system and the substitution to `hybrid`.
 The gather-based files form their own stack over `Vocabulary/ProcessAndNetworkState.lean` and
 `GBCA/Specification.lean`, meeting the rest of the development in four places:
 `GBCA/AFW/Counting.lean` reads the shared round alphabet, `GBCA/AFW/Components.lean` imports
-`GBCA/ABDY/Composition/Instance.lean` and `GBCA/AFW/AlgorithmOverGatherSpecifications.lean` imports
+`Composition/Components.lean` for the extended alphabet and
+`GBCA/ABDY/MessagesAndRecords.lean` for the round messages that alphabet is written over, and
+`GBCA/AFW/AlgorithmOverGatherSpecifications.lean` imports
 `GBCA/SpecificationOverRoundAlphabet.lean`, whose
 `GBCA.specificationLabelMap` and `GBCA.specificationOverRoundAlphabet` read the
 graded-agreement specification over the family alphabet the round speaks, `Implementation/AFW/System.lean` instantiates

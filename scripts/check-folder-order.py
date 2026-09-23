@@ -8,15 +8,18 @@ everything. Lean enforces only that the import graph is acyclic, so a file may
 reach upwards through a chain the guides forbid and the build stays green.
 
 The order is the rank table below. The sub-folders with ranks of their own are
-``ReliableBroadcast/Bracha/``, ``GBCA/ABDY/``, ``GBCA/ABDY/Composition/``,
-``GBCA/AFW/``, ``Implementation/ABDY/`` and ``Implementation/AFW/``;
-``GBCA/ABDY/Composition/`` and ``GBCA/AFW/`` sit above ``Composition/``, and
-``GBCA/ABDY/`` below it. Any other sub-folder carries its parent folder's rank.
-Four files carry ranks of their own. ``Results.lean`` sits at the ABA root, and
-``Composition/Hybrid.lean`` sits above ``GBCA/ABDY/Composition/`` while the rest
-of ``Composition/`` sits below it. ``GBCA/SpecificationOverRoundAlphabet.lean``
-and ``GBCA/BindingOverRoundAlphabet.lean`` sit above ``Composition/``, whose
-extended alphabet they read, and below every folder that reads a round. An import is a violation when
+``ReliableBroadcast/Bracha/``, ``GBCA/ABDY/``, ``GBCA/AFW/``,
+``Implementation/ABDY/`` and ``Implementation/AFW/``; ``GBCA/ABDY/`` and
+``GBCA/AFW/`` sit above ``Composition/``. Any other sub-folder carries its
+parent folder's rank. Five files carry ranks of their own.
+``GBCA/ABDY/MessagesAndRecords.lean`` sits below ``Composition/``, whose
+components read the messages a graded-agreement round exchanges, and above
+``GBCA/``. ``GBCA/SpecificationOverRoundAlphabet.lean`` and
+``GBCA/BindingOverRoundAlphabet.lean`` sit above ``Composition/``, whose
+extended alphabet they read, and below every folder that reads a round.
+``Composition/Hybrid.lean`` sits above ``GBCA/ABDY/`` while the rest of
+``Composition/`` sits below it, and ``Results.lean`` sits at the ABA root. An
+import is a violation when
 the rank of the imported module exceeds the rank of the importing file. Imports of
 ``Leslie2Protocols.Framework``, of the core library and of Mathlib sit below
 every ABA folder and are ignored.
@@ -43,11 +46,11 @@ ORDER = (
     "ReliableBroadcast/Bracha",
     "Gather",
     "GBCA",
-    "GBCA/ABDY",
+    "GBCA/ABDY/MessagesAndRecords.lean",
     "Composition",
     "GBCA/SpecificationOverRoundAlphabet.lean",
     "GBCA/BindingOverRoundAlphabet.lean",
-    "GBCA/ABDY/Composition",
+    "GBCA/ABDY",
     "Composition/Hybrid.lean",
     "GBCA/AFW",
     "HybridRefinesSpecification",

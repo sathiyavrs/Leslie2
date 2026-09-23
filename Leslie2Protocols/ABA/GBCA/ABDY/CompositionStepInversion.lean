@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.GBCA.ABDY.Composition.Instance
+import Leslie2Protocols.ABA.GBCA.ABDY.Composition
 
 /-!
 # The transitions of the round instance, read off their labels
@@ -15,7 +15,8 @@ together with the Dirac it produces, and the idle row of a non-participant as th
 label.
 
 The round records and the network state are the two components of `GBCA.ByABDY.ImplementationState`
-(`GBCA/ABDY/Implementation.lean`), so the round instance and the implementation instance run on the
+(`GBCA/ABDY/MessagesAndRecords.lean`), so the round instance and the implementation instance run on
+the
 same state. What a joint step delivers is a program function given pointwise, by its value at the
 acting process and its agreement with the old function elsewhere, where the implementation's rules
 write with `Function.update`. `Function.eq_update_iff` identifies the two, and the `composition_*`
@@ -318,7 +319,8 @@ end NetworkStepInversion
 /-! ### The write a row makes on the composed state
 
 The round records and the network state are the two components of `GBCA.ByABDY.ImplementationState`
-(`GBCA/ABDY/Implementation.lean`), so the round instance and the implementation instance run on the
+(`GBCA/ABDY/MessagesAndRecords.lean`), so the round instance and the implementation instance run on
+the
 same state and every rule of the one is a rule of the other read in the implementation's accessors.
 A joint step delivers a program function pointwise: its value at the acting process, and its
 agreement with the old one elsewhere. `Function.eq_update_iff` reads that function as the old one

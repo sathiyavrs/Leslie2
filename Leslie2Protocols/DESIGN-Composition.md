@@ -221,7 +221,7 @@ round by `GBCA.ByAFW.broadcastSubstitution`, and the gather networks at
 being exchanged.
 
 Every invariant therefore reads its network through accessors on a pair — the
-`GBCA.ByABDY.ImplementationState` accessors in `ABA/GBCA/ABDY/Implementation.lean`, the `ABAState`
+`GBCA.ByABDY.ImplementationState` accessors in `ABA/GBCA/ABDY/MessagesAndRecords.lean`, the `ABAState`
 accessors in `ABA/Composition/ABAState.lean`, the `ABA.InstanceState` accessors in
 `ABA/Vocabulary/ProcessAndNetworkState.lean` — and names the network's own sent sets
 rather than a copy of them held inside a record. Weakening any one of them is a change to

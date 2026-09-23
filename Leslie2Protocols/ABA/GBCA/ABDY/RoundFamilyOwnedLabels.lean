@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.GBCA.ABDY.Composition.Instance
+import Leslie2Protocols.ABA.GBCA.ABDY.Composition
 
 /-!
 # The labels the round-indexed family owns, evaluated

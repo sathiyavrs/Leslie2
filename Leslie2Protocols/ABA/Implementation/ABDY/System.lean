@@ -124,7 +124,7 @@ Byzantine one — write it the same way. Every other row leaves it alone.
 `abdyGhostOutput` reads it out: the bit on record if the round has one, and
 `GBCA.ByABDY.boundOf` of the round's sent sets, the corrupted set and the outcome
 otherwise. This is the account of the round's bound bit that
-`GBCA/ABDY/Implementation.lean` holds in its own network state, computed here from the
+`GBCA/ABDY/MessagesAndRecords.lean` holds in its own network state, computed here from the
 network's sent sets instead. `abdyAnnouncedBound` is the guard of the two
 return rows: the bit a return announces is `abdyGhostOutput` of the round. -/
 

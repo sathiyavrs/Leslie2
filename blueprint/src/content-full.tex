@@ -1096,6 +1096,10 @@ The round record of one process is its state, and the round is read as one
 per-round PLTS, which is the form Theorem~\ref{thm:gbca-implementation-refines-specification} is proved
 against.
 
+The round record and the round's network state are in
+\leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/MessagesAndRecords}, and the round itself is in
+\leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Implementation}.
+
 \input{nodes/def-aba-round-messages}
 
 \begin{algorithm}
@@ -1444,6 +1448,15 @@ Graded agreement is a parallel component of the composed system, and that is wha
 The cut is decided by one question: which network does a component own?
 A round of graded agreement is a replaceable component exactly when the round's network belongs to that component --- the records its round messages sit in, the guard that lets one be delivered, and the injections a corrupted sender makes into it.
 The instance of Definition~\ref{def:aba-gbca-instance-by-abdy} is drawn to own it.
+
+See \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Components},
+\leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Composition},
+\leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/CompositionStepInversion},
+\leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/ProjectsOntoImplementation},
+\leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/RoundFamilyOwnedLabels},
+\leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Substitution},
+\leanmodule{Leslie2Protocols/ABA/Composition/Hybrid} and
+\leanmodule{Leslie2Protocols/ABA/Implementation/ABDY/CompositionChain}.
 
 
 \input{nodes/def-aba-gbca-instance-by-abdy}

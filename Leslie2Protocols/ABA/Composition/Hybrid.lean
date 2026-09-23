@@ -5,8 +5,8 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.Composition.Components
-import Leslie2Protocols.ABA.GBCA.ABDY.Composition.Substitution
-import Leslie2Protocols.ABA.GBCA.ABDY.Composition.RoundFamilyOwnedLabels
+import Leslie2Protocols.ABA.GBCA.ABDY.Substitution
+import Leslie2Protocols.ABA.GBCA.ABDY.RoundFamilyOwnedLabels
 import Leslie2.Results
 
 /-!

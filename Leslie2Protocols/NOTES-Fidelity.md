@@ -243,9 +243,10 @@ refinement asks only that the implementation move no more freely than its specif
 is harmless; what is worth having in one place is whether each guard falls in the implementation or
 in the specification, and whether that placement was chosen or forced.
 
-**Carried by the implementation tables** — `GBCA.ByABDY.ImplementationStep`
-(`ABA/GBCA/ABDY/Implementation.lean`), mirrored row for row at `GBCA.GBCAProgramStep`
-(`ABA/GBCA/ABDY/Composition/Instance.lean`), Byzantine handshake rows included, and at
+**Carried by the implementation's transitions** — `GBCA.ByABDY.ImplementationStep`
+(`ABA/GBCA/ABDY/Implementation.lean`), mirrored transition for transition at
+`GBCA.GBCAProgramStep` (`ABA/GBCA/ABDY/Components.lean`), Byzantine handshake transitions
+included, and at
 `ABDY.ABAProgramStep` (`ABA/Implementation/ABDY/System.lean`) with the reads taken through
 `p.roundRecord r`.
 

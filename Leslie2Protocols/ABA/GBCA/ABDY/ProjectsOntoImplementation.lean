@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.GBCA.ABDY.Composition.StepInversion
+import Leslie2Protocols.ABA.GBCA.ABDY.CompositionStepInversion
 import Leslie2Protocols.ABA.GBCA.SpecificationOverRoundAlphabet
 
 /-!

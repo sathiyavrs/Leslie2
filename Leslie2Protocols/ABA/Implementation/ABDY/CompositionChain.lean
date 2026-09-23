@@ -18,7 +18,7 @@ sent. `ABDY.composed` reads that same protocol as a composition of four componen
 * the graded-agreement family is the round-indexed family `GBCA.ByABDY.gbcaInstanceFamily`. Its
   round-`r` instance is a parallel component in its own right: the graded-agreement programs of
   round `r` beside the network of round `r`, which that instance owns outright
-  (`GBCA/ABDY/Composition/Instance.lean`);
+  (`GBCA/ABDY/Composition.lean`);
 * the round loops are `n` separate automata (`roundLoopProgram`), synchronised;
 * what is left of the network is the DECIDED sets beside the corrupted set (`ABANetwork`);
 * the coin oracle enters through the same label pullback as in the protocol
@@ -51,9 +51,9 @@ round instance answers at every moment (D22).
 
 ## The authorisation relocation (D11)
 
-A round instance carries no `k ∈ F` guard on the handshake-row labels `byzantineCallG`,
-`byzantineCallGLoop` and `byzantineRetG` (`GBCA/ABDY/Composition/Instance.lean`, D11). A
-handshake-row label stays visible at the instance boundary and is authorised outside it. Here
+A round instance carries no `k ∈ F` guard on the handshake labels `byzantineCallG`,
+`byzantineCallGLoop` and `byzantineRetG` (`GBCA/ABDY/Components.lean`, D11). A
+handshake label stays visible at the instance boundary and is authorised outside it. Here
 `ABANetwork` is that outside, and it carries the guard on its own copy of the corrupted set. The
 two copies are written by one broadcast: `fail` reaches every round's network through the family
 (`gbcaInstanceFamily_fail`) and `ABANetwork` on its own `fail` row, and
@@ -67,8 +67,8 @@ assemble a transition of the composite out of transitions of its components
 (`composedExtended_visible_step`, `composedExtended_tau_gbca`, `composedExtended_tau_ABANetwork`,
 `gbcaInstanceFamily_owned`, `gbcaInstanceFamily_idle`, `gbcaInstanceFamily_tau`,
 `gbcaInstanceFamily_fail`, `composedHidden_of_event`, `composedHidden_of_tau`). The per-component
-rows these consume and produce are the tables of `ABA/Composition/Components.lean` and
-`GBCA/ABDY/Composition/Instance.lean`. The protocol meets the composed system in
+transitions these consume and produce are those of `ABA/Composition/Components.lean` and
+`GBCA/ABDY/Components.lean`. The protocol meets the composed system in
 `ABA/Implementation/ABDY/Simulation.lean`.
 -/
 
