@@ -11,9 +11,9 @@ from the protocol as it runs down to a small specification, by probabilistic for
 simulation, with two verified implementations of its graded-agreement sub-protocol —
 one direct, one built over gather and reliable broadcast. Each is carried from the
 protocol as it runs, through one implementation shape written parametrically in the
-graded-agreement implementation and instantiated twice. 53 files, `ABA/Results.lean`
-beside thirteen content-themed sub-folders, given in import order in its own file
-guide, [`ABA/README.md`](ABA/README.md).
+graded-agreement implementation and instantiated twice. 110 files, `ABA/Results.lean`
+beside eleven content-themed sub-folders, given in import order in its own file guide,
+[`ABA/README.md`](ABA/README.md).
 
 ## `Framework/`
 
