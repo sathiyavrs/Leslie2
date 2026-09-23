@@ -28,7 +28,7 @@ the inclusion and `GBCA.ByABDY.implementation_binding` is the specification's
 `GBCA.specInst_binding` at the implementation instance.
 
 The family congruence `ForwardSimulation.family` (`Framework/FamilySimulation.lean`) reaches
-`ABA/Composition/GBCAInstanceByABDY/Substitution.lean` and
+`ABA/GBCA/ABDY/Composition/Substitution.lean` and
 `ABA/Implementation/ABDY/CompositionChain.lean` along this file, which also supplies the broadcast
 ingredient that congruence consumes (`specificationRelation_corrupt`).
 -/
@@ -584,7 +584,7 @@ corruption projections (`corrupt_call`/`corrupt_ret`/`corrupt_excluded`/`corrupt
 `implementationSpecification_corrupt_F_eq`. The statement is proved directly rather than through
 `refinesSpecification`, whose `fail` case only yields an existential match. Its consumer is the
 round instance's family lifting
-(`ABA/Composition/GBCAInstanceByABDY/Substitution.lean`). -/
+(`ABA/GBCA/ABDY/Composition/Substitution.lean`). -/
 
 /-- **Broadcast compatibility**: `specificationRelation` is preserved by the synchronized corruption
 of both systems. The two `corrupt`s share the guard `id ∉ F ∧ |F| < f` and `specificationRelation`

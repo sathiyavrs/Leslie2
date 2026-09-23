@@ -746,8 +746,8 @@ theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
       rcases programStep_fail_own (hall k) with ⟨-, hxk⟩ | ⟨-, hxk⟩ <;> rw [pure_inj hxk]
     have h5 := relation_roundRecord P k (G' := fun r =>
       GBCA.ByABDY.corruptionAct P (Sum.inl (Label.fail k)) (G r)) hst hfor
-      (fun _ _ _ => by simp only [corruptionAct_fail])
-      (fun r => by simp only [corruptionAct_fail]; rw [hstg]; exact hst k r)
+      (fun _ _ _ => by simp only [GBCA.ByABDY.corruptionAct_fail])
+      (fun r => by simp only [GBCA.ByABDY.corruptionAct_fail]; rw [hstg]; exact hst k r)
     have hrel : ∀ o' : ℕ → WCC.SpecState P.n,
         ProtocolRelation P ((x, NetworkState.corrupt P k w, o') : ProtocolState P)
           (((fun r => GBCA.ByABDY.corruptionAct P (Sum.inl (Label.fail k)) (G r)),
@@ -756,7 +756,7 @@ theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
       refine (protocolRelation_mk P _ _ _ _ _ _ _).mpr ⟨fun _ => rfl, rfl, ?_, ?_, h5⟩
       · rw [hA]; exact corrupt_abaNetwork w k
       · intro r
-        simp only [corruptionAct_fail]
+        simp only [GBCA.ByABDY.corruptionAct_fail]
         rw [hG r]
         exact corrupt_gbcaNetwork w k r
     refine coupling_visible P hLne (fun o' _ => hrel o') (gbcaInstanceFamily_fail P G k)

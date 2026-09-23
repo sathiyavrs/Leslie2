@@ -245,7 +245,7 @@ in the specification, and whether that placement was chosen or forced.
 
 **Carried by the implementation tables** — `GBCA.ByABDY.ImplementationStep`
 (`ABA/GBCA/ABDY/Implementation.lean`), mirrored row for row at `GBCA.GBCAProgramStep`
-(`ABA/Composition/GBCAInstanceByABDY/Instance.lean`), Byzantine handshake rows included, and at
+(`ABA/GBCA/ABDY/Composition/Instance.lean`), Byzantine handshake rows included, and at
 `ABDY.ABAProgramStep` (`ABA/Implementation/ABDY/System.lean`) with the reads taken through
 `p.roundRecord r`.
 

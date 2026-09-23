@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.Composition.GBCAInstanceByABDY.ProjectsOntoImplementation
+import Leslie2Protocols.ABA.GBCA.ABDY.Composition.ProjectsOntoImplementation
 
 /-!
 # The round instance is replaced by the graded agreement specification

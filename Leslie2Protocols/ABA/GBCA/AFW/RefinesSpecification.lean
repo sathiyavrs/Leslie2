@@ -5,7 +5,7 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.GBCA.AFW.StepOverGatherSpecifications
-import Leslie2Protocols.ABA.Composition.GBCAInstanceByABDY.SpecificationOverRoundAlphabet
+import Leslie2Protocols.ABA.GBCA.ABDY.Composition.SpecificationOverRoundAlphabet
 
 /-!
 # The refinement of the round over the gather specifications

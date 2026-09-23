@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.Composition.GBCAInstanceByABDY.StepInversion
+import Leslie2Protocols.ABA.GBCA.ABDY.Composition.StepInversion
 
 /-!
 # The round instance projects onto the implementation

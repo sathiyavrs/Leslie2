@@ -5,7 +5,7 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.GBCA.AFW.CompositionStepInversion
-import Leslie2Protocols.ABA.Composition.GBCAInstanceByABDY.SpecificationOverRoundAlphabet
+import Leslie2Protocols.ABA.GBCA.ABDY.Composition.SpecificationOverRoundAlphabet
 import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 
 /-!

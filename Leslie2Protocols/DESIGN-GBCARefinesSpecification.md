@@ -21,7 +21,7 @@ target       : ForwardSimulation (implementation P r) (specInst P r) (specificat
 ```
 
 Both systems are Dirac-transition LTSs. The instance refinement reaches the ℕ-indexed
-families through the round instance (`ABA/Composition/GBCAInstanceByABDY/Substitution.lean`),
+families through the round instance (`ABA/GBCA/ABDY/Composition/Substitution.lean`),
 whose family lifting takes its broadcast ingredient from `GBCA.ByABDY.specificationRelation_corrupt`.
 
 ### The implementation (D18): the five message levels
@@ -657,7 +657,7 @@ the round records with their received set rows beside the round's network state,
 per-sender sent sets and the corrupted set — and `ImplementationState.echo5Count` reads the
 receiving program's received set rows directly. So `GBCA.ByABDY.instanceSubstitution` consumes
 `refinesSpecification` as it stands: the projection `composition_projects`
-(`ABA/Composition/GBCAInstanceByABDY/ProjectsOntoImplementation.lean`) matches every
+(`ABA/GBCA/ABDY/Composition/ProjectsOntoImplementation.lean`) matches every
 round-instance transition with the
 implementation instance's at that same state, one step for one step, and this file's refinement
 answers it, its weak answer read back at the round instance's interface — which is what licenses

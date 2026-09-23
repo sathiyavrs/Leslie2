@@ -7,11 +7,14 @@ ABA development in import order and state that no folder imports one below it:
 everything. Lean enforces only that the import graph is acyclic, so a file may
 reach upwards through a chain the guides forbid and the build stays green.
 
-The order is the rank table below. ``Results.lean`` is a file at the ABA root
-and carries a rank of its own. ``GBCA/ABDY/`` and ``GBCA/AFW/`` are sub-folders
-with ranks of their own, and they straddle ``Composition/``; ``Implementation/ABDY/``
-and ``Implementation/AFW/`` are sub-folders with ranks of their own as well. Any
-other sub-folder carries its parent folder's rank. An import is a violation when
+The order is the rank table below. The sub-folders with ranks of their own are
+``ReliableBroadcast/Bracha/``, ``GBCA/ABDY/``, ``GBCA/ABDY/Composition/``,
+``GBCA/AFW/``, ``Implementation/ABDY/`` and ``Implementation/AFW/``;
+``GBCA/ABDY/Composition/`` and ``GBCA/AFW/`` sit above ``Composition/``, and
+``GBCA/ABDY/`` below it. Any other sub-folder carries its parent folder's rank.
+Two files carry ranks of their own: ``Results.lean`` at the ABA root, and
+``Composition/Hybrid.lean``, which sits above ``GBCA/ABDY/Composition/`` while
+the rest of ``Composition/`` sits below it. An import is a violation when
 the rank of the imported module exceeds the rank of the importing file. Imports of
 ``Leslie2Protocols.Framework``, of the core library and of Mathlib sit below
 every ABA folder and are ignored.
@@ -29,7 +32,7 @@ from pathlib import Path
 LIBRARY = "Leslie2Protocols"
 DEVELOPMENT = "ABA"
 # The folders in import order. A name with a slash is a sub-folder that carries
-# a rank of its own; `Results.lean` is a file at the development's root.
+# a rank of its own; a name ending in `.lean` is a file that carries one.
 ORDER = (
     "Vocabulary",
     "Specifications",
@@ -40,6 +43,8 @@ ORDER = (
     "GBCA",
     "GBCA/ABDY",
     "Composition",
+    "GBCA/ABDY/Composition",
+    "Composition/Hybrid.lean",
     "GBCA/AFW",
     "HybridRefinesSpecification",
     "Implementation/ABDY",
@@ -55,13 +60,16 @@ def rank_of(parts: tuple[str, ...]) -> int | None:
     """The rank of a module, given its path components below ``ABA/``.
 
     The components are directory names followed by the file's own name, as
-    ``("GBCA", "ABDY", "RefinesSpecification")`` or ``("Results",)``. The
-    longest prefix that the table names carries the rank, so a sub-folder the
-    table omits takes its parent folder's rank.
+    ``("GBCA", "ABDY", "RefinesSpecification")`` or ``("Results",)``. A file the
+    table names carries the rank the table gives it. Otherwise the table is read
+    at prefixes of three, two and one component, and the longest prefix it names
+    carries the rank, so a sub-folder the table omits takes its parent folder's
+    rank.
     """
-    if len(parts) == 1:
-        return RANK.get(f"{parts[0]}.lean")
-    for length in (2, 1):
+    named = RANK.get("/".join(parts) + ".lean")
+    if named is not None:
+        return named
+    for length in (3, 2, 1):
         if len(parts) > length:
             name = "/".join(parts[:length])
             if name in RANK:

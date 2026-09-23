@@ -5,8 +5,8 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.Composition.Components
-import Leslie2Protocols.ABA.Composition.GBCAInstanceByABDY.Substitution
-import Leslie2Protocols.ABA.Composition.RoundFamilyOwnedLabels
+import Leslie2Protocols.ABA.GBCA.ABDY.Composition.Substitution
+import Leslie2Protocols.ABA.GBCA.ABDY.Composition.RoundFamilyOwnedLabels
 import Leslie2.Results
 
 /-!
@@ -21,7 +21,7 @@ sub-protocol API is hidden. The last three components and the alphabet are
 
 The round-`r` member of `gbcaSpecificationFamily` is that round's graded-agreement specification
 read over the protocol extended alphabet along `GBCA.ByABDY.gbcaLabelMap`
-(`Composition/GBCAInstanceByABDY/SpecificationOverRoundAlphabet.lean`). A round-tagged label —
+(`GBCA/ABDY/Composition/SpecificationOverRoundAlphabet.lean`). A round-tagged label —
 including a Byzantine handshake row of that round — moves its round alone, `τ` moves one round,
 `fail` is the broadcast that keeps every round's copy of the corrupted set together, and every
 other label idles.

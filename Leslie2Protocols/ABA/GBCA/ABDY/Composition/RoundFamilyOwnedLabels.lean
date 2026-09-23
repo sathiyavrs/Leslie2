@@ -4,23 +4,23 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.Composition.GBCAInstanceByABDY.Instance
+import Leslie2Protocols.ABA.GBCA.ABDY.Composition.Instance
 
 /-!
-# The routing table of the round-indexed family, evaluated
+# The labels the round-indexed family owns, evaluated
 
 `GBCA.ByABDY.roundOwnsLabel` and `GBCA.ByABDY.isFailLabel` are decided by a `rfl` at every label of
 the extended alphabet. The composed system composes `GBCA.ByABDY.gbcaInstanceFamily` with local
-states that speak that alphabet, so it discharges the routing premises by `simp`; the table here is
-what `simp` uses, and it lives under `PLTS.ABA.Composition` with the rest of the components'
-vocabulary. `corruptionAct_fail` evaluates the family's corruption act on a `fail` label.
+states that speak that alphabet, so it discharges the premises on `roundOwnsLabel` and
+`isFailLabel` by `simp`; the table here is what `simp` uses, and it sits beside the instance it
+evaluates. `corruptionAct_fail` evaluates the family's corruption act on a `fail` label.
 -/
 
 namespace PLTS
 namespace ABA
-namespace Composition
+namespace GBCA.ByABDY
 
-open Implementation
+open Implementation Composition
 
 /-! ### Which labels the round-indexed family owns -/
 
@@ -77,6 +77,6 @@ theorem corruptionAct_fail {P : Parameters} (k : Fin P.n)
     GBCA.ByABDY.corruptionAct P (Sum.inl (Label.fail k)) s = (s.1, s.2.corrupt P k) := rfl
 
 end OwnedLabels
-end Composition
+end GBCA.ByABDY
 end ABA
 end PLTS
