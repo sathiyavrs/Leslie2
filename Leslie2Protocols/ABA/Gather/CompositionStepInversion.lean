@@ -319,20 +319,21 @@ section Pullbacks
 variable {n : ℕ} (X : Type) (k q id j q' k' i : Fin n)
 
 @[simp] theorem inputBroadcastLabelMap_call (x : X) :
-    inputBroadcastLabelMap n X k (Sum.inl (Sum.inl (.call id x))) =
-      if k = id then some (Sum.inl (.call x)) else none := rfl
+    inputBroadcastLabelMap n X k (Sum.inl (Sum.inl (.call id x))) = none := rfl
 @[simp] theorem inputBroadcastLabelMap_fail :
     inputBroadcastLabelMap n X k (Sum.inl (Sum.inl (Label.fail (X := X) id))) = some (Sum.inl (.fail
       id)) := rfl
 @[simp] theorem inputBroadcastLabelMap_ret (g : Fin n → Option X) (C : AcceptedPairs n X) :
     inputBroadcastLabelMap n X k (Sum.inl (Sum.inl (.ret id g C))) = none := rfl
 @[simp] theorem inputBroadcastLabelMap_callLoop (x : X) :
-    inputBroadcastLabelMap n X k (Sum.inl (Sum.inr (.callLoop id x))) =
-      if k = id then some (Sum.inr (.callLoop x)) else none := rfl
+    inputBroadcastLabelMap n X k (Sum.inl (Sum.inr (.callLoop id x))) = none := rfl
 @[simp] theorem inputBroadcastLabelMap_send (m : Message n X) :
     inputBroadcastLabelMap n X k (Sum.inr (.send j m)) = none := rfl
 @[simp] theorem inputBroadcastLabelMap_deliver (m : Message n X) :
     inputBroadcastLabelMap n X k (Sum.inr (.deliver i j m)) = none := rfl
+@[simp] theorem inputBroadcastLabelMap_inputBroadcastCall (x : X) :
+    inputBroadcastLabelMap n X k (Sum.inr (.inputBroadcastCall j x)) =
+      if k = j then some (Sum.inl (.call x)) else none := rfl
 @[simp] theorem inputBroadcastLabelMap_inputBroadcastRet (v : X) :
     inputBroadcastLabelMap n X k (Sum.inr (.inputBroadcastRet k' j v)) =
       if k = k' then some (Sum.inl (.ret j v)) else none := rfl
@@ -354,6 +355,8 @@ variable {n : ℕ} (X : Type) (k q id j q' k' i : Fin n)
     bindBroadcastLabelMap n X q (Sum.inr (.send j m)) = none := rfl
 @[simp] theorem bindBroadcastLabelMap_deliver (m : Message n X) :
     bindBroadcastLabelMap n X q (Sum.inr (.deliver i j m)) = none := rfl
+@[simp] theorem bindBroadcastLabelMap_inputBroadcastCall (x : X) :
+    bindBroadcastLabelMap n X q (Sum.inr (.inputBroadcastCall j x)) = none := rfl
 @[simp] theorem bindBroadcastLabelMap_inputBroadcastRet (v : X) :
     bindBroadcastLabelMap n X q (Sum.inr (.inputBroadcastRet k' j v)) = none := rfl
 @[simp] theorem bindBroadcastLabelMap_bindCall (U : AcceptedPairs n X) :
@@ -458,6 +461,19 @@ theorem programStep_deliver_foreign {i k : Fin P.n} {m : Message P.n X} (hi : i 
   case deliverReceive => exact absurd rfl hi
   case deliverIdle => rfl
 
+theorem programStep_inputBroadcastCall_own {x : X}
+    (h : ProgramStep P j p (Sum.inr (.inputBroadcastCall j x)) ν) :
+    p.process.input = some x ∧ ν = PMF.pure p := by
+  cases h
+  case inputBroadcastCall => exact ⟨by assumption, rfl⟩
+  case inputBroadcastCallIdle => exact absurd rfl ‹_ ≠ j›
+
+theorem programStep_inputBroadcastCall_foreign {i : Fin P.n} {x : X} (hi : i ≠ j)
+    (h : ProgramStep P j p (Sum.inr (.inputBroadcastCall i x)) ν) : ν = PMF.pure p := by
+  cases h
+  case inputBroadcastCall => exact absurd rfl hi
+  case inputBroadcastCallIdle => rfl
+
 theorem programStep_inputBroadcastRet_own {k : Fin P.n} {v : X}
     (h : ProgramStep P j p (Sum.inr (.inputBroadcastRet k j v)) ν) :
     ν = PMF.pure (p.setProcess { p.process with
@@ -538,6 +554,10 @@ theorem networkStep_send {j : Fin P.n} {m : Message P.n X}
 theorem networkStep_deliver {i j : Fin P.n} {m : Message P.n X}
     (h : NetworkStep P w (Sum.inr (.deliver i j m)) μ) : m ∈ w.network.sent j ∧ μ = PMF.pure w := by
   cases h; exact ⟨by assumption, rfl⟩
+
+theorem networkStep_inputBroadcastCall {j : Fin P.n} {x : X}
+    (h : NetworkStep P w (Sum.inr (.inputBroadcastCall j x)) μ) : μ = PMF.pure w := by
+  cases h; rfl
 
 theorem networkStep_inputBroadcastRet {k j : Fin P.n} {v : X}
     (h : NetworkStep P w (Sum.inr (.inputBroadcastRet k j v)) μ) : μ = PMF.pure w := by

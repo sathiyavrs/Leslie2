@@ -35,9 +35,11 @@ built by recursion with `weakLStep_tauCons` -- one `commit` per entry of the
 returned map not yet committed, the core write if the instance has no core yet, then
 the return.
 
-* Entry commits are licensed by the invariant's provenance clause: a committed
-  input entry of a correct process is that input instance's call record, which
-  the relation identifies with the specification's call record.
+* Entry commits are licensed by two clauses of the invariant: a committed input entry of a correct
+  process is that input instance's call record (`inputBroadcastVal_provenance`), and that call
+  record is the payload the process's own gather record holds
+  (`inputBroadcastCall_backed`), which the relation identifies with the specification's call
+  record.
 * The core written is `coreOfNetwork` of the instance's gather network state, and the
   two guards of `bindCore` are `Gather.coreOf_recorded`, which the returner's
   quorum of `n − f` committed bind payloads supplies.
@@ -47,17 +49,18 @@ the return.
   coordinate whose committed payload lies above the core and below the returned
   map.
 
-Two lemmas beside the refinement hold the relation across one transition:
-`specificationRelation_call` for the fused effects of a call and `specificationRelation_tau` for an
-internal transition under a stuttering specification. `specificationRelation_transition` is
-assembled from the two.
+Three lemmas beside the refinement hold the relation across one transition:
+`specificationRelation_call` for the call, `specificationRelation_inputBroadcastCall` for the call
+of an input instance, and `specificationRelation_tau` for an internal transition under a stuttering
+specification. `specificationRelation_transition` is assembled from the three.
 
 ## The call records
 
-The call loop is an interface label of its own, and both the specification and
-an input instance answer it on either of their two call transitions. The two records
-therefore move on exactly the same labels under the same write-once guard, and
-the relation identifies them.
+The call and the call loop are two interface labels, the gather record moves on the first and
+stands on the second, and the specification answers each on the transition of the same name. The
+two records therefore move on exactly the same label under the same write-once guard, and the
+relation identifies them. The call of an input instance is an event of the instance's own
+alphabet, at which the specification stands.
 -/
 
 namespace PLTS
@@ -374,13 +377,15 @@ theorem retRun {s : StateOverBroadcastSpecification P.n X} {t : SpecState P.n X}
   have hguard : ∀ k ∈ l, ∀ x, g k = some x → t.val k = none →
       k ∈ t.F ∨ t.call k = some x := by
     intro k _ x hx _
-    rcases hR.invariant.inputBroadcastVal_provenance k x (hsubv k x hx) with hF | hin'
+    by_cases hF : k ∈ (gatherTier s).F
     · left
       rw [hR.F_eq]
       exact hF
     · right
-      rw [hR.call_eq k]
-      exact hin'
+      rcases hR.invariant.inputBroadcastVal_provenance k x (hsubv k x hx) with hF' | hin'
+      · exact absurd hF' hF
+      · rw [hR.call_eq k]
+        exact hR.invariant.inputBroadcastCall_backed k hF x hin'
   have hpre : ∀ k y x, g k = some x → t.val k = some y → y = x := by
     intro k y x hx hy
     have h1 := hR.val_certificate k y hy
@@ -434,7 +439,12 @@ theorem retRun {s : StateOverBroadcastSpecification P.n X} {t : SpecState P.n X}
       inputBroadcasts_setGatherTier, core_setCore]
     · intro k
       rw [hcall, commitList_call]
-      exact hR.call_eq k
+      by_cases hk : k = id
+      · subst hk
+        rw [InstanceState.setProcess_process_self]
+        exact hR.call_eq k
+      · rw [InstanceState.setProcess_process_ne _ _ _ hk]
+        exact hR.call_eq k
     · intro k
       by_cases hk : k = id
       · subst hk
@@ -501,26 +511,24 @@ theorem retRun {s : StateOverBroadcastSpecification P.n X} {t : SpecState P.n X}
 
 The two lemmas `specificationRelation_transition` is assembled from. -/
 
-/-- The relation across the fused call: the gather record, the input instance
-and the specification all record the payload. -/
+/-- The relation across the call: the gather record and the specification both record the
+payload. -/
 theorem specificationRelation_call {s : StateOverBroadcastSpecification P.n X} {t : SpecState P.n X}
     (hR : SpecificationRelation P s t) {id : Fin P.n} {x : X}
-    (h : ((gatherTier s).process id).input = none) (hb : (inputBroadcasts s id).input = none) :
+    (h : ((gatherTier s).process id).input = none) :
     SpecificationRelation P
-      (setInputBroadcasts (setGatherTier s ((gatherTier s).setProcess id { (gatherTier s).process id
+      (setGatherTier s ((gatherTier s).setProcess id { (gatherTier s).process id
         with input := some x }))
-        (Function.update (inputBroadcasts s) id { inputBroadcasts s id with input := some x }))
       { t with call := Function.update t.call id (some x) } := by
-  refine ⟨hR.invariant.step (AlgorithmOverBroadcastSpecification.call s id x h hb) (by rw
+  refine ⟨hR.invariant.step (AlgorithmOverBroadcastSpecification.call s id x h) (by rw
     [PMF.mem_support_pure_iff]),
     ?_, ?_, ?_, ?_, ?_, ?_⟩
-  all_goals dsimp only [gatherTier_setInputBroadcasts, gatherTier_setGatherTier,
-    inputBroadcasts_setInputBroadcasts]
+  all_goals dsimp only [gatherTier_setGatherTier, inputBroadcasts_setGatherTier]
   · intro k
     by_cases hk : k = id
     · subst hk
-      rw [Function.update_self, Function.update_self]
-    · rw [Function.update_of_ne hk, Function.update_of_ne hk]
+      rw [Function.update_self, InstanceState.setProcess_process_self]
+    · rw [Function.update_of_ne hk, InstanceState.setProcess_process_ne _ _ _ hk]
       exact hR.call_eq k
   · intro k
     by_cases hk : k = id
@@ -530,15 +538,34 @@ theorem specificationRelation_call {s : StateOverBroadcastSpecification P.n X} {
     · rw [InstanceState.setProcess_process_ne _ _ _ hk]
       exact hR.ret_eq k
   · exact hR.F_eq
+  · exact hR.val_certificate
+  · exact hR.core_eq
+  · exact hR.core_certificate
+
+/-- The relation across the call of an input instance: the instance records the payload and the
+specification stands. -/
+theorem specificationRelation_inputBroadcastCall {s : StateOverBroadcastSpecification P.n X}
+    {t : SpecState P.n X} (hR : SpecificationRelation P s t) {j : Fin P.n} {x : X}
+    (hin : ((gatherTier s).process j).input = some x) (hb : (inputBroadcasts s j).input = none) :
+    SpecificationRelation P
+      (setInputBroadcasts s
+        (Function.update (inputBroadcasts s) j
+          { inputBroadcasts s j with input := some x })) t := by
+  refine ⟨hR.invariant.step (AlgorithmOverBroadcastSpecification.inputBroadcastCall s j x hin hb)
+    (by rw [PMF.mem_support_pure_iff]),
+    hR.call_eq, hR.ret_eq, hR.F_eq, ?_, hR.core_eq, ?_⟩
   · intro k v hv
-    by_cases hk : k = id
+    dsimp only [inputBroadcasts_setInputBroadcasts]
+    by_cases hk : k = j
     · subst hk
       rw [Function.update_self]
       exact hR.val_certificate k v hv
     · rw [Function.update_of_ne hk]
       exact hR.val_certificate k v hv
-  · exact hR.core_eq
-  · exact hR.core_certificate
+  · intro C hC
+    exact le_trans (hR.core_certificate C hC) (Finset.card_le_card
+      (bindAbove_mono (AlgorithmOverBroadcastSpecification.inputBroadcastCall s j x hin hb)
+        (by rw [PMF.mem_support_pure_iff]) C))
 
 /-- The relation across any internal transition, the specification stuttering. -/
 theorem specificationRelation_tau {s s' : StateOverBroadcastSpecification P.n X}
@@ -548,15 +575,19 @@ theorem specificationRelation_tau {s s' : StateOverBroadcastSpecification P.n X}
   have hInv' := hR.invariant.step hstep (by rw [PMF.mem_support_pure_iff])
   generalize hμ : (PMF.pure s' : PMF (StateOverBroadcastSpecification P.n X)) = μ at hstep
   cases hstep with
+  | inputBroadcastCall j x hin hb =>
+    have hs' := PMF.pure_injective hμ
+    subst hs'
+    exact specificationRelation_inputBroadcastCall hR hin hb
+  | inputBroadcastCallSpecificationLoop j x hin =>
+    have hs' := PMF.pure_injective hμ
+    subst hs'
+    exact hR
   | commitInputEntry k v hv hm =>
     have hs' := PMF.pure_injective hμ
     subst hs'
-    refine ⟨hInv', ?_, hR.ret_eq, hR.F_eq, ?_, hR.core_eq, hR.core_certificate⟩
+    refine ⟨hInv', hR.call_eq, hR.ret_eq, hR.F_eq, ?_, hR.core_eq, hR.core_certificate⟩
     all_goals dsimp only [inputBroadcasts_setInputBroadcasts]
-    · intro k'
-      by_cases hk : k' = k
-      · subst hk; rw [Function.update_self]; exact hR.call_eq k'
-      · rw [Function.update_of_ne hk]; exact hR.call_eq k'
     · intro k' v' hv'
       have hold := hR.val_certificate k' v' hv'
       by_cases hk : k' = k
@@ -573,39 +604,64 @@ theorem specificationRelation_tau {s s' : StateOverBroadcastSpecification P.n X}
   | deliver i j m h =>
     have hs' := PMF.pure_injective hμ
     subst hs'
-    refine ⟨hInv', hR.call_eq, ?_, hR.F_eq, hR.val_certificate, hR.core_eq, hR.core_certificate⟩
-    dsimp only [gatherTier_setGatherTier]
-    intro k
-    rw [InstanceState.receiveMessage_process]
-    exact hR.ret_eq k
+    refine ⟨hInv', ?_, ?_, hR.F_eq, hR.val_certificate, hR.core_eq, hR.core_certificate⟩
+    all_goals dsimp only [gatherTier_setGatherTier]
+    · intro k
+      rw [InstanceState.receiveMessage_process]
+      exact hR.call_eq k
+    · intro k
+      rw [InstanceState.receiveMessage_process]
+      exact hR.ret_eq k
   | echo j hin hcard hsend =>
     have hs' := PMF.pure_injective hμ
     subst hs'
-    refine ⟨hInv', hR.call_eq, ?_, hR.F_eq, hR.val_certificate, hR.core_eq, hR.core_certificate⟩
-    dsimp only [gatherTier_setGatherTier]
-    intro k
-    by_cases hk : k = j
-    · subst hk
-      rw [InstanceState.multicast_process, InstanceState.setProcess_process_self]
-      exact hR.ret_eq k
-    · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hk]
-      exact hR.ret_eq k
+    refine ⟨hInv', ?_, ?_, hR.F_eq, hR.val_certificate, hR.core_eq, hR.core_certificate⟩
+    all_goals dsimp only [gatherTier_setGatherTier]
+    · intro k
+      by_cases hk : k = j
+      · subst hk
+        rw [InstanceState.multicast_process, InstanceState.setProcess_process_self]
+        exact hR.call_eq k
+      · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hk]
+        exact hR.call_eq k
+    · intro k
+      by_cases hk : k = j
+      · subst hk
+        rw [InstanceState.multicast_process, InstanceState.setProcess_process_self]
+        exact hR.ret_eq k
+      · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hk]
+        exact hR.ret_eq k
   | vote j U hin hech happ hQ hsend =>
     have hs' := PMF.pure_injective hμ
     subst hs'
-    refine ⟨hInv', hR.call_eq, ?_, hR.F_eq, hR.val_certificate, hR.core_eq, hR.core_certificate⟩
-    dsimp only [gatherTier_setGatherTier]
-    intro k
-    by_cases hk : k = j
-    · subst hk
-      rw [InstanceState.multicast_process, InstanceState.setProcess_process_self]
-      exact hR.ret_eq k
-    · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hk]
-      exact hR.ret_eq k
+    refine ⟨hInv', ?_, ?_, hR.F_eq, hR.val_certificate, hR.core_eq, hR.core_certificate⟩
+    all_goals dsimp only [gatherTier_setGatherTier]
+    · intro k
+      by_cases hk : k = j
+      · subst hk
+        rw [InstanceState.multicast_process, InstanceState.setProcess_process_self]
+        exact hR.call_eq k
+      · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hk]
+        exact hR.call_eq k
+    · intro k
+      by_cases hk : k = j
+      · subst hk
+        rw [InstanceState.multicast_process, InstanceState.setProcess_process_self]
+        exact hR.ret_eq k
+      · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hk]
+        exact hR.ret_eq k
   | bindCall j U hin hvot hsnd happ hQ hb =>
     have hs' := PMF.pure_injective hμ
     subst hs'
-    refine ⟨hInv', hR.call_eq, ?_, hR.F_eq, hR.val_certificate, hR.core_eq, ?_⟩
+    refine ⟨hInv', ?_, ?_, hR.F_eq, hR.val_certificate, hR.core_eq, ?_⟩
+    · dsimp only [gatherTier_setBindBroadcasts, gatherTier_setGatherTier]
+      intro k
+      by_cases hk : k = j
+      · subst hk
+        rw [InstanceState.setProcess_process_self]
+        exact hR.call_eq k
+      · rw [InstanceState.setProcess_process_ne _ _ _ hk]
+        exact hR.call_eq k
     · dsimp only [gatherTier_setBindBroadcasts, gatherTier_setGatherTier]
       intro k
       by_cases hk : k = j
@@ -622,33 +678,43 @@ theorem specificationRelation_tau {s s' : StateOverBroadcastSpecification P.n X}
   | bindCallSpecificationLoop j U hin hvot hsnd happ hQ =>
     have hs' := PMF.pure_injective hμ
     subst hs'
-    refine ⟨hInv', hR.call_eq, ?_, hR.F_eq, hR.val_certificate, hR.core_eq, hR.core_certificate⟩
-    dsimp only [gatherTier_setGatherTier]
-    intro k
-    by_cases hk : k = j
-    · subst hk
-      rw [InstanceState.setProcess_process_self]
-      exact hR.ret_eq k
-    · rw [InstanceState.setProcess_process_ne _ _ _ hk]
-      exact hR.ret_eq k
+    refine ⟨hInv', ?_, ?_, hR.F_eq, hR.val_certificate, hR.core_eq, hR.core_certificate⟩
+    all_goals dsimp only [gatherTier_setGatherTier]
+    · intro k
+      by_cases hk : k = j
+      · subst hk
+        rw [InstanceState.setProcess_process_self]
+        exact hR.call_eq k
+      · rw [InstanceState.setProcess_process_ne _ _ _ hk]
+        exact hR.call_eq k
+    · intro k
+      by_cases hk : k = j
+      · subst hk
+        rw [InstanceState.setProcess_process_self]
+        exact hR.ret_eq k
+      · rw [InstanceState.setProcess_process_ne _ _ _ hk]
+        exact hR.ret_eq k
   | byzantine j m hmem =>
     have hs' := PMF.pure_injective hμ
     subst hs'
-    refine ⟨hInv', hR.call_eq, ?_, hR.F_eq, hR.val_certificate, hR.core_eq, hR.core_certificate⟩
-    dsimp only [gatherTier_setGatherTier]
-    intro k
-    rw [InstanceState.multicast_process]
-    exact hR.ret_eq k
+    refine ⟨hInv', ?_, ?_, hR.F_eq, hR.val_certificate, hR.core_eq, hR.core_certificate⟩
+    all_goals dsimp only [gatherTier_setGatherTier]
+    · intro k
+      rw [InstanceState.multicast_process]
+      exact hR.call_eq k
+    · intro k
+      rw [InstanceState.multicast_process]
+      exact hR.ret_eq k
   | inputBroadcastRet k j v hv hr =>
     have hs' := PMF.pure_injective hμ
     subst hs'
     refine ⟨hInv', ?_, ?_, hR.F_eq, ?_, hR.core_eq, hR.core_certificate⟩
     all_goals dsimp only [gatherTier_setInputBroadcasts, gatherTier_setGatherTier,
       inputBroadcasts_setInputBroadcasts]
-    · intro k'
-      by_cases hk : k' = k
-      · subst hk; rw [Function.update_self]; exact hR.call_eq k'
-      · rw [Function.update_of_ne hk]; exact hR.call_eq k'
+    · intro id'
+      by_cases hj : id' = j
+      · subst hj; rw [InstanceState.setProcess_process_self]; exact hR.call_eq id'
+      · rw [InstanceState.setProcess_process_ne _ _ _ hj]; exact hR.call_eq id'
     · intro id'
       by_cases hj : id' = j
       · subst hj; rw [InstanceState.setProcess_process_self]; exact hR.ret_eq id'
@@ -660,7 +726,12 @@ theorem specificationRelation_tau {s s' : StateOverBroadcastSpecification P.n X}
   | bindRet q j U hv hr =>
     have hs' := PMF.pure_injective hμ
     subst hs'
-    refine ⟨hInv', hR.call_eq, ?_, hR.F_eq, hR.val_certificate, hR.core_eq, ?_⟩
+    refine ⟨hInv', ?_, ?_, hR.F_eq, hR.val_certificate, hR.core_eq, ?_⟩
+    · dsimp only [gatherTier_setBindBroadcasts, gatherTier_setGatherTier]
+      intro id'
+      by_cases hj : id' = j
+      · subst hj; rw [InstanceState.setProcess_process_self]; exact hR.call_eq id'
+      · rw [InstanceState.setProcess_process_ne _ _ _ hj]; exact hR.call_eq id'
     · dsimp only [gatherTier_setBindBroadcasts, gatherTier_setGatherTier]
       intro id'
       by_cases hj : id' = j
@@ -676,9 +747,9 @@ theorem specificationRelation_tau {s s' : StateOverBroadcastSpecification P.n X}
 
 /-- **The relation across one transition**: every transition of
 `AlgorithmOverBroadcastSpecification` at a related pair is matched by a weak run of the gather
-specification, ending at a related state. Internal transitions stutter; the four call
-transitions and `fail` are matched by the specification's own transitions; a return is matched by
-the run `commit* ; bindCore? ; ret`. -/
+specification, ending at a related state. Internal transitions stutter, the call of an input
+instance among them; the call, the call loop and `fail` are matched by the specification's own
+transitions; a return is matched by the run `commit* ; bindCore? ; ret`. -/
 theorem specificationRelation_transition (P : Parameters) (X : Type) [DecidableEq X]
     (q₁ : StateOverBroadcastSpecification P.n X) (q₂ : SpecState P.n X)
     (hR : SpecificationRelation P q₁ q₂) (l₀ : Label P.n X)
@@ -689,57 +760,27 @@ theorem specificationRelation_transition (P : Parameters) (X : Type) [DecidableE
       (¬ l₀ = Silent.τ ∧ (specInst P X).weakLStep q₂ l₀ q₂')) ∧
       SpecificationRelation P q₁' q₂' := by
   cases htransition with
-  | call id x h hb =>
+  | call id x h =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     exact ⟨{ q₂ with call := Function.update q₂.call id (some x) },
       Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
-        (Step.call q₂ id x (by rw [hR.call_eq id]; exact hb))⟩,
-      specificationRelation_call hR h hb⟩
-  | callSpecificationLoop id x h =>
-    rw [PMF.mem_support_pure_iff] at hq₁'
-    subst hq₁'
-    refine ⟨q₂, Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
-      (Step.callLoop q₂ id x)⟩, ?_⟩
-    refine ⟨hR.invariant.step (AlgorithmOverBroadcastSpecification.callSpecificationLoop q₁ id x h)
-      (by rw [PMF.mem_support_pure_iff]),
-      hR.call_eq, ?_, hR.F_eq, hR.val_certificate, hR.core_eq, hR.core_certificate⟩
-    dsimp only [gatherTier_setGatherTier]
-    intro k
-    by_cases hk : k = id
-    · subst hk
-      rw [InstanceState.setProcess_process_self]
-      exact hR.ret_eq k
-    · rw [InstanceState.setProcess_process_ne _ _ _ hk]
-      exact hR.ret_eq k
-  | callProgramLoop id x hb =>
-    rw [PMF.mem_support_pure_iff] at hq₁'
-    subst hq₁'
-    refine ⟨{ q₂ with call := Function.update q₂.call id (some x) },
-      Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
-        (Step.call q₂ id x (by rw [hR.call_eq id]; exact hb))⟩, ?_⟩
-    refine ⟨hR.invariant.step (AlgorithmOverBroadcastSpecification.callProgramLoop q₁ id x hb)
-      (by rw [PMF.mem_support_pure_iff]),
-      ?_, hR.ret_eq, hR.F_eq, ?_, hR.core_eq, hR.core_certificate⟩
-    all_goals dsimp only [inputBroadcasts_setInputBroadcasts]
-    · intro k
-      by_cases hk : k = id
-      · subst hk
-        rw [Function.update_self, Function.update_self]
-      · rw [Function.update_of_ne hk, Function.update_of_ne hk]
-        exact hR.call_eq k
-    · intro k v hv
-      by_cases hk : k = id
-      · subst hk
-        rw [Function.update_self]
-        exact hR.val_certificate k v hv
-      · rw [Function.update_of_ne hk]
-        exact hR.val_certificate k v hv
+        (Step.call q₂ id x (by rw [hR.call_eq id]; exact h))⟩,
+      specificationRelation_call hR h⟩
   | callLoop id x =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     exact ⟨q₂, Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
       (Step.callLoop q₂ id x)⟩, hR⟩
+  | inputBroadcastCall j x hin hb =>
+    rw [PMF.mem_support_pure_iff] at hq₁'
+    subst hq₁'
+    exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
+      specificationRelation_inputBroadcastCall hR hin hb⟩
+  | inputBroadcastCallSpecificationLoop j x hin =>
+    rw [PMF.mem_support_pure_iff] at hq₁'
+    subst hq₁'
+    exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩, hR⟩
   | commitInputEntry k v hv hm =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'

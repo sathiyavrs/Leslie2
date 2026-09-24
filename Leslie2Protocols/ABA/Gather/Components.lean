@@ -36,8 +36,8 @@ pairs. The loop therefore has a label of its own, `LoopLabel.callLoop id x`. The
 is `InstanceLabel n X = Label n X ⊕ LoopLabel n X`.
 
 The instance-internal alphabet is `GatherLabel n X = InstanceLabel n X ⊕ GatherEvent n X`. Its
-five events are the gather multicast and delivery, the return of an input instance, the call of a
-bind instance and the return of a bind instance. They are hidden before anything outside sees the
+six events are the gather multicast and delivery, the call and the return of an input instance,
+and the call and the return of a bind instance. They are hidden before anything outside sees the
 instance, and `gatherEvents` collects the labels hidden there.
 
 A broadcast instance speaks its own interface alphabet and joins the composition along a pullback
@@ -94,13 +94,17 @@ inductive LoopLabel (n : ℕ) (X : Type) : Type
 call loop beside it. -/
 abbrev InstanceLabel (n : ℕ) (X : Type) : Type := Label n X ⊕ LoopLabel n X
 
-/-- The instance's own events: the gather multicast and delivery, the return of
-an input instance, and the call and return of a bind instance. -/
+/-- The instance's own events: the gather multicast and delivery, the call and the return of an
+input instance, and the call and return of a bind instance. -/
 inductive GatherEvent (n : ℕ) (X : Type) : Type
   /-- Process `j` hands `m` to the gather network. -/
   | send (j : Fin n) (m : Message n X)
   /-- The gather network delivers `j`'s `m` to `i`. -/
   | deliver (i j : Fin n) (m : Message n X)
+  /-- Process `j` calls the instance broadcasting its input `x`, the
+  `r-broadcast(⟨1, x_i⟩, p_i)` of AFW25's Algorithm 5, line 6, and the `BRB_id.call(m)` of
+  LeslieBP's Algorithm 4. -/
+  | inputBroadcastCall (j : Fin n) (x : X)
   /-- The instance broadcasting `k`'s input returns `v` to `j`. -/
   | inputBroadcastRet (k j : Fin n) (v : X)
   /-- Process `j` calls the instance broadcasting its `BIND` payload `U`. -/
@@ -108,7 +112,7 @@ inductive GatherEvent (n : ℕ) (X : Type) : Type
   /-- The instance broadcasting `q`'s `BIND` payload returns `U` to `j`. -/
   | bindRet (q j : Fin n) (U : AcceptedPairs n X)
 
-/-- The instance-internal alphabet: the interface alphabet plus the five
+/-- The instance-internal alphabet: the interface alphabet plus the six
 events. Its silent label is `Sum.inl (Sum.inl tau)`, so every `Sum.inr` label is
 observable and hence hideable. -/
 abbrev GatherLabel (n : ℕ) (X : Type) : Type := InstanceLabel n X ⊕ GatherEvent n X
@@ -231,13 +235,14 @@ A broadcast instance speaks its own interface alphabet `BRB.InstanceLabel`. It j
 the composition along a pullback that names it: a label carrying another
 instance's index has no image and leaves that instance idle. -/
 
-/-- The pullback along which the instance broadcasting `k`'s input is read. -/
+/-- The pullback along which the instance broadcasting `k`'s input is read. The gather's own
+`call` and its call loop have no image here: the call of the instance is the event
+`inputBroadcastCall`. -/
 def inputBroadcastLabelMap (n : ℕ) (X : Type) (k : Fin n) : GatherLabel n X → Option
   (BRB.InstanceLabel n X)
   | Sum.inl (Sum.inl .tau) => some (Sum.inl .tau)
-  | Sum.inl (Sum.inl (.call id x)) => if k = id then some (Sum.inl (.call x)) else none
   | Sum.inl (Sum.inl (.fail id)) => some (Sum.inl (.fail id))
-  | Sum.inl (Sum.inr (.callLoop id x)) => if k = id then some (Sum.inr (.callLoop x)) else none
+  | Sum.inr (.inputBroadcastCall j x) => if k = j then some (Sum.inl (.call x)) else none
   | Sum.inr (.inputBroadcastRet k' j v) => if k = k' then some (Sum.inl (.ret j v)) else none
   | _ => none
 
@@ -346,6 +351,14 @@ inductive ProgramStep (P : Parameters) (j : Fin P.n) :
   /-- An input instance's return to another process is not `j`'s business. -/
   | inputBroadcastRetIdle (p) (k i : Fin P.n) (v : X) (hi : i ≠ j) :
       ProgramStep P j p (Sum.inr (.inputBroadcastRet k i v)) (PMF.pure p)
+  /-- `j` calls the instance broadcasting its input: the payload is the one its gather record
+  holds, and the record does not move. The instance's own guard decides whether the call lands.
+  AFW25's Algorithm 5, line 6. -/
+  | inputBroadcastCall (p) (x : X) (hin : p.process.input = some x) :
+      ProgramStep P j p (Sum.inr (.inputBroadcastCall j x)) (PMF.pure p)
+  /-- Another process's input-broadcast call is not `j`'s business. -/
+  | inputBroadcastCallIdle (p) (i : Fin P.n) (x : X) (hi : i ≠ j) :
+      ProgramStep P j p (Sum.inr (.inputBroadcastCall i x)) (PMF.pure p)
   /-- `BIND U`: `n − f` senders' approved `VOTE` payloads, each contained in
   `U`, are delivered here, `j` has multicast its own `VOTE`, and `j` has not
   called its own bind broadcast. The main thread of AFW25's Algorithm 5 sends
@@ -425,6 +438,9 @@ inductive NetworkStep (P : Parameters) :
   /-- An input instance's return sends nothing. -/
   | inputBroadcastRetIdle (w) (k j : Fin P.n) (v : X) :
       NetworkStep P w (Sum.inr (.inputBroadcastRet k j v)) (PMF.pure w)
+  /-- An input-broadcast call sends nothing. -/
+  | inputBroadcastCallIdle (w) (j : Fin P.n) (x : X) :
+      NetworkStep P w (Sum.inr (.inputBroadcastCall j x)) (PMF.pure w)
   /-- A bind call sends nothing. -/
   | bindCallIdle (w) (j : Fin P.n) (U : AcceptedPairs P.n X) :
       NetworkStep P w (Sum.inr (.bindCall j U)) (PMF.pure w)

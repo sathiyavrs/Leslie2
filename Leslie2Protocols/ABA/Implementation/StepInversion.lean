@@ -365,7 +365,7 @@ end Inversion
 
 section NetworkStepInversion
 variable {P : Parameters} {M E G : Type} [DecidableEq M]
-    {callPayload : Fin P.n → Bool → M}
+    {callPayload : Fin P.n → Bool → Option M}
     {ghostStep : ExtendedLabel P.n M E → NetworkState P.n M G → G → G}
     {ghostOutput : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop}
     {s : NetworkState P.n M G} {μ : PMF (NetworkState P.n M G)}
@@ -443,7 +443,7 @@ theorem networkStep_byzantineCallG {r : ℕ} {k : Fin P.n} {b : Bool}
     (h : NetworkStep P M E G callPayload ghostStep ghostOutput s
       (Sum.inr (.byzantineCallG r k b)) μ)
     :
-    k ∈ s.F ∧ μ = PMF.pure ((s.recordGBCASend r k (callPayload k b)).writeGhost ghostStep
+    k ∈ s.F ∧ μ = PMF.pure ((s.recordGBCACall r k (callPayload k b)).writeGhost ghostStep
       (Sum.inr (.byzantineCallG r k b))) := by
   cases h; exact ⟨by assumption, rfl⟩
 
@@ -474,7 +474,7 @@ theorem networkStep_retABA {id : Fin P.n} {b : Bool}
 theorem networkStep_callG {r : ℕ} {id : Fin P.n} {b : Bool}
     (h : NetworkStep P M E G callPayload ghostStep ghostOutput s (Sum.inl (.callG r id b)) μ) :
     μ = PMF.pure
-    ((s.recordGBCASend r id (callPayload id b)).writeGhost ghostStep (Sum.inl (.callG r id b))) :=
+    ((s.recordGBCACall r id (callPayload id b)).writeGhost ghostStep (Sum.inl (.callG r id b))) :=
     by
   cases h; rfl
 

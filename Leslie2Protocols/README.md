@@ -40,7 +40,7 @@ given in import order in its own file guide, [`Framework/README.md`](Framework/R
 
 | file | what it is for |
 |---|---|
-| [`DESIGN-Decomposition.md`](DESIGN-Decomposition.md) | The five constraints the decomposition proofs impose on the gather-based chain's compositions — the loop label, the call record on the input instance, the grade dropped on return, the blocking of off-interface labels, a broadcast instance's return as a transition of the implementation — each with the statement that fails without it. |
+| [`DESIGN-Decomposition.md`](DESIGN-Decomposition.md) | The five constraints the decomposition proofs impose on the gather-based chain's compositions — the loop label, the call record on the gather record, the grade dropped on return, the blocking of off-interface labels, a broadcast instance's return as a transition of the implementation — each with the statement that fails without it. |
 | [`DESIGN-Composition.md`](DESIGN-Composition.md) | Why the chains are cut where they are: what the composition buys, what each component owns and where it disappears, and what the DECIDED model already weakens. |
 | [`DESIGN-HybridRefinesSpecification.md`](DESIGN-HybridRefinesSpecification.md) | The narrative account of the core simulation `hybrid ⊑ ABA.spec` — the abstract state, the invariant, and the certificates decided values ride on. |
 | [`DESIGN-GBCARefinesSpecification.md`](DESIGN-GBCARefinesSpecification.md) | The narrative account of the per-instance GBCA refinement — exclude-on-demand, the receipt-pattern certificates, and the run structure. |

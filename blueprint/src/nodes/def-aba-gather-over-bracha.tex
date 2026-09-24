@@ -5,8 +5,8 @@
   The fully concrete gather instance: the composition of Definition~\ref{def:aba-gather-composition} with each broadcast coordinate a Bracha instance of Definition~\ref{def:aba-bracha-implementation}.
   The state is the gather programs and the gather network beside $2n$ Bracha states, and \leandecl{PLTS.ABA.Gather.AlgorithmOverBracha} lists the composition's transitions over it at the specification's labels, one transition per case; it is a relation on that state, and the system is the composition.
   A transition that reaches a broadcast instance carries that instance's own transition as a hypothesis, through the characterisation of Definition~\ref{def:aba-bracha-implementation}: a silent step, a return and a corruption enter the transitions that way.
-  The call is the one place the two levels of alphabet meet.
-  A Bracha instance answers its call on the broadcast of $\langle\mathrm{INIT}, x\rangle$ and on its own loop transition, and those sit at the two labels of its interface, so the gather call carries the broadcast and the gather call loop moves nothing.
+  The gather call records the payload on the gather record, and the gather call loop moves nothing; neither reaches a Bracha instance.
+  A Bracha instance broadcasts $\langle\mathrm{INIT}, x\rangle$ at the event $\mathrm{inputBroadcastCall}$, which the calling process takes with the payload its gather record holds.
   The internal transitions of the $2n$ instances --- their deliveries, their echoes, their votes and the adversary's injections --- are the silent transitions of the composition, and a return of an instance is one of the composition's hidden events, which writes the returned value onto the record of the process it reaches.
   The gather tier is the same at both tiers, so the stores, the guards that read them, the $\mathrm{ECHO}$/$\mathrm{VOTE}$ exchange and the return are written here exactly as they are in Definition~\ref{def:aba-gather-over-broadcast-specification}.
   Corruption is one broadcast across the gather network and every Bracha coordinate (D1), and the gather network writes the core at the first return and carries it on every return label (D29).

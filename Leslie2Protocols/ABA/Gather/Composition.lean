@@ -18,7 +18,7 @@ from the gather tier of `ABA/Gather/Components.lean` -- the `n` gather programs 
 network -- and a broadcast tier of `2n` reliable-broadcast instances, one per process for the
 inputs and one per process for the `BIND` payloads (D32), each lifted along the pullback that names
 it. `instanceOverBroadcastsExtended` is the two tiers in parallel over the instance-internal
-alphabet; `instanceOverBroadcasts` hides the instance's five events there and reads the result back
+alphabet; `instanceOverBroadcasts` hides the instance's six events there and reads the result back
 over the interface alphabet `InstanceLabel n X`, the gather alphabet extended by the call loop.
 
 The composition is generic in the broadcast tier: `instanceOverBroadcasts` takes the `2n` instances

@@ -472,8 +472,9 @@ abbrev ABAProgramStep (P : Parameters) (j : Fin P.n) :
     ProcessRecord P.n → ExtendedLabel P.n GBCA.ByABDY.Message → PMF (ProcessRecord P.n) → Prop :=
   ProgramStep P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundRecord P.n) (RoundStep P) j
 
-/-- The message the graded-agreement call multicasts: `⟨INPUT, b⟩`. -/
-def gbcaCallPayload (P : Parameters) : Fin P.n → Bool → GBCA.ByABDY.Message := fun _ b => .input b
+/-- The payload the graded-agreement call multicasts: `⟨INPUT, b⟩`. -/
+def gbcaCallPayload (P : Parameters) : Fin P.n → Bool → Option GBCA.ByABDY.Message :=
+  fun _ b => some (.input b)
 
 /-- The step relation of the network. -/
 abbrev NetworkStep (P : Parameters) :

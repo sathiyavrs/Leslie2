@@ -9,12 +9,11 @@ import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ViewAfterOneWrite
 /-!
 # The graded-agreement call and its loop
 
-`roundProjection_callG` and `roundProjection_gbcaCallLoop`: the view of the composed round after a
-call of graded agreement. The call is fused (D28): the round's first gather records the input and
-the caller's own input-broadcast instance of that gather is called with it, and the composed round
-answers on one label whose program transition records the input and whose first gather takes
-`Gather.AlgorithmOverBracha.call`. A call against an already-called record moves the round loop
-alone, which the view does not read.
+`roundProjection_callG` and `roundProjection_gbcaCallLoop`: the projection of the composed round
+after a call of graded agreement. The call records the input on the round's first gather and sends
+nothing, which is what the composed round's `callG` writes, its program recording the input and
+its first gather taking `Gather.AlgorithmOverBracha.call`. A call against an already-called record
+moves the round loop alone, which the projection does not read.
 -/
 
 namespace PLTS
@@ -32,39 +31,29 @@ variable {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} {w : NetworkState P.n} {j 
 
 /-! ### The graded-agreement call and its loop
 
-The call is fused (D28): the round's first gather records the input and the
-caller's own input-broadcast instance of that gather is called with it. The
+The call records the input on the round's first gather and sends nothing. The
 composed round answers on one label, whose program transition records the input and
 whose first gather takes `Gather.AlgorithmOverBracha.call`. The call against an
-already-called record moves the round loop alone, which the view does not
+already-called record moves the round loop alone, which the projection does not
 read. -/
 
-/-- The graded-agreement call, read through the view. -/
+/-- The graded-agreement call, read through the projection. -/
 theorem roundProjection_callG (hu : (u j).2 = p) (r : ℕ) (b : Bool) :
     roundProjection P (Function.update u j (c, p.setRoundRecord r
         { p.roundRecord r with
           firstGather := (p.roundRecord r).firstGather.setProcess
-            { ((p.roundRecord r).firstGather.process) with input := some b }
-          firstGatherInputBroadcasts := Function.update (p.roundRecord r).firstGatherInputBroadcasts
-            j
-            (((p.roundRecord r).firstGatherInputBroadcasts j).setProcess
-              { (((p.roundRecord r).firstGatherInputBroadcasts j).process) with input := some b })
-                }))
-      ((w.recordGBCASend r j (.firstGatherInputBroadcasts j (.init b))).writeGhost (ghostStep P)
-        (Sum.inl (.callG r j b))) r
+            { ((p.roundRecord r).firstGather.process) with input := some b } }))
+      (w.writeGhost (ghostStep P) (Sum.inl (.callG r j b))) r
       = GBCA.ByAFW.setFirstGather (GBCA.ByAFW.setPrograms (roundProjection P u w r)
             (Function.update (GBCA.ByAFW.programs (roundProjection P u w r)) j
               { GBCA.ByAFW.programs (roundProjection P u w r) j with input := some b }))
-          (Gather.setInputBroadcasts (Gather.setGatherTier (firstGatherProjection P u w r)
-              ((Gather.gatherTier (firstGatherProjection P u w r)).setProcess j
-                { (Gather.gatherTier (firstGatherProjection P u w r)).process j with input := some b
-                  }))
-            (Function.update (Gather.inputBroadcasts (firstGatherProjection P u w r)) j
-              (((Gather.inputBroadcasts (firstGatherProjection P u w r) j).setProcess j
-                  { (Gather.inputBroadcasts (firstGatherProjection P u w r) j).process j with
-                    input := some b }).multicast j (.init b)))) := by
+          (Gather.setGatherTier (firstGatherProjection P u w r)
+            ((Gather.gatherTier (firstGatherProjection P u w r)).setProcess j
+              { (Gather.gatherTier (firstGatherProjection P u w r)).process j with
+                input := some b })) := by
   subst hu
-  rw [roundProjection_ghostId (Sum.inl (.callG r j b)) (fun _ _ => rfl), roundProjection_write]
+  rw [roundProjection_ghostId (Sum.inl (.callG r j b)) (fun _ _ => rfl),
+    roundProjection_writeNoSent]
   refine roundStateOverGathers_ext ?_ ?_ (stateOverBroadcasts_ext ?_ ?_ ?_ ?_)
     (stateOverBroadcasts_ext ?_ ?_ ?_ ?_)
   · simp only [programs_roundProjectionUpdate, GBCA.ByAFW.programs_setFirstGather,
@@ -73,75 +62,40 @@ theorem roundProjection_callG (hu : (u j).2 = p) (r : ℕ) (b : Bool) :
     simp only [programProjection, LocalState.setProcess]
   · simp
   · simp only [gatherTier_firstGather_roundProjectionUpdate, GBCA.ByAFW.firstGather_setFirstGather,
-    Gather.gatherTier_setInputBroadcasts,
       Gather.gatherTier_setGatherTier]
-    refine Prod.ext ?_ (networkState_ext ?_ rfl)
-    · simp only [InstanceState.setProcess]
-      refine congrArg (Function.update
-        (fun i => ((u i).2.roundRecord r).firstGather) j) ?_
-      rfl
-    · exact messagesOf_recordSent_none firstGatherMessageOf firstGatherMessageOf_inj (w.sent r) j
-        (.firstGatherInputBroadcasts j (.init b)) rfl
+    refine Prod.ext ?_ (networkState_ext rfl rfl)
+    simp only [InstanceState.setProcess]
+    refine congrArg (Function.update (fun i => ((u i).2.roundRecord r).firstGather) j) ?_
+    rfl
   · funext k
     simp only [inputBroadcasts_firstGather_roundProjectionUpdate,
-      GBCA.ByAFW.firstGather_setFirstGather, Gather.inputBroadcasts_setInputBroadcasts,
+      GBCA.ByAFW.firstGather_setFirstGather, Gather.inputBroadcasts_setGatherTier,
         inputBroadcasts_firstGatherProjection]
-    by_cases hk : k = j
-    · subst hk
-      rw [Function.update_self, Function.update_self]
-      refine Prod.ext ?_ (networkState_ext ?_ rfl)
-      · simp only [InstanceState.multicast, InstanceState.setProcess]
-        refine congrArg (Function.update
-          (fun i => (((u i).2.roundRecord r).firstGatherInputBroadcasts k)) k)
-            ?_
-        rfl
-      · simp only [InstanceState.multicast, ABA.NetworkState.recordSent]
-        exact messagesOf_recordSent_some (firstGatherInputBroadcastMessageOf k)
-          (firstGatherInputBroadcastMessageOf_inj k) (w.sent r) k
-          (.firstGatherInputBroadcasts k (.init b)) (.init b) (by simp
-            [firstGatherInputBroadcastMessageOf])
-    · rw [Function.update_of_ne hk, Function.update_of_ne hk]
-      refine Prod.ext (Function.update_eq_self _ _) (networkState_ext ?_ rfl)
-      exact messagesOf_recordSent_none (firstGatherInputBroadcastMessageOf k)
-        (firstGatherInputBroadcastMessageOf_inj k) (w.sent r) j (.firstGatherInputBroadcasts j
-          (.init b))
-        (by simp [firstGatherInputBroadcastMessageOf, Ne.symm hk])
+    exact Prod.ext (Function.update_eq_self _ _) rfl
   · funext q
     simp only [bindBroadcasts_firstGather_roundProjectionUpdate,
-      GBCA.ByAFW.firstGather_setFirstGather, Gather.bindBroadcasts_setInputBroadcasts,
-        Gather.bindBroadcasts_setGatherTier, bindBroadcasts_firstGatherProjection]
-    refine Prod.ext (Function.update_eq_self _ _) (networkState_ext ?_ rfl)
-    exact messagesOf_recordSent_none (firstGatherBindBroadcastMessageOf q)
-      (firstGatherBindBroadcastMessageOf_inj q) (w.sent r) j (.firstGatherInputBroadcasts j (.init
-        b)) rfl
+      GBCA.ByAFW.firstGather_setFirstGather, Gather.bindBroadcasts_setGatherTier,
+        bindBroadcasts_firstGatherProjection]
+    exact Prod.ext (Function.update_eq_self _ _) rfl
   · simp
   · simp only [gatherTier_secondGather_roundProjectionUpdate,
-    GBCA.ByAFW.secondGather_setFirstGather, GBCA.ByAFW.secondGather_setPrograms,
-      secondGather_roundProjection]
-    refine Prod.ext (Function.update_eq_self _ _) (networkState_ext
-        ?_ rfl)
-    exact messagesOf_recordSent_none secondGatherMessageOf secondGatherMessageOf_inj (w.sent r) j
-      (.firstGatherInputBroadcasts j (.init b)) rfl
+      GBCA.ByAFW.secondGather_setFirstGather, GBCA.ByAFW.secondGather_setPrograms,
+        secondGather_roundProjection]
+    exact Prod.ext (Function.update_eq_self _ _) rfl
   · funext k
     simp only [inputBroadcasts_secondGather_roundProjectionUpdate,
       GBCA.ByAFW.secondGather_setFirstGather, GBCA.ByAFW.secondGather_setPrograms,
         secondGather_roundProjection, inputBroadcasts_secondGatherProjection]
-    refine Prod.ext (Function.update_eq_self _ _) (networkState_ext ?_ rfl)
-    exact messagesOf_recordSent_none (secondGatherInputBroadcastMessageOf k)
-      (secondGatherInputBroadcastMessageOf_inj k) (w.sent r) j (.firstGatherInputBroadcasts j (.init
-        b)) rfl
+    exact Prod.ext (Function.update_eq_self _ _) rfl
   · funext q
     simp only [bindBroadcasts_secondGather_roundProjectionUpdate,
       GBCA.ByAFW.secondGather_setFirstGather, GBCA.ByAFW.secondGather_setPrograms,
         secondGather_roundProjection, bindBroadcasts_secondGatherProjection]
-    refine Prod.ext (Function.update_eq_self _ _) (networkState_ext ?_ rfl)
-    exact messagesOf_recordSent_none (secondGatherBindBroadcastMessageOf q)
-      (secondGatherBindBroadcastMessageOf_inj q) (w.sent r) j (.firstGatherInputBroadcasts j (.init
-        b)) rfl
+    exact Prod.ext (Function.update_eq_self _ _) rfl
   · simp
 
 /-- The graded-agreement call against an already-called record, read through
-the view: the round loop moves and the view is unchanged. -/
+the projection: the round loop moves and the projection is unchanged. -/
 theorem roundProjection_gbcaCallLoop (hu : (u j).2 = p) (r r' : ℕ) (b : Bool)
     (c' : RoundLoopRecord P.n) :
     roundProjection P (Function.update u j (c', p))

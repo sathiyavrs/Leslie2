@@ -349,7 +349,7 @@ theorem coupling_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
           exact RoundLoopStep.corruptedIdle _ _ hh (by simp) not_false
       · rw [hCeq i, hfor i hi]; exact RoundLoopStep.failIdle _ k (Ne.symm hi)
   | callG r id b =>
-    obtain rfl : w' = (w.recordGBCASend r id (gbcaCallPayload P id b)).writeGhost (ghostStep P)
+    obtain rfl : w' = (w.recordGBCACall r id (gbcaCallPayload P id b)).writeGhost (ghostStep P)
         (Sum.inl (Label.callG r id b)) := pure_inj (networkStep_callG hn)
     have hfor : ∀ i, i ≠ id → x i = u i := fun i hi =>
       pure_inj (programStep_callG_foreign (Ne.symm hi) (hall i))
@@ -381,22 +381,24 @@ theorem coupling_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
       · subst hi; exact hgo r''
       · rw [hfor i hi]
     have hfam : (fun r' => roundProjection P x
-          ((w.recordGBCASend r id (gbcaCallPayload P id b)).writeGhost (ghostStep P)
+          ((w.recordGBCACall r id (gbcaCallPayload P id b)).writeGhost (ghostStep P)
             (Sum.inl (Label.callG r id b))) r')
         = Function.update (fun r' => roundProjection P u w r') r
           (roundProjection P (Function.update u id (x id))
-            ((w.recordGBCASend r id (gbcaCallPayload P id b)).writeGhost (ghostStep P)
+            ((w.recordGBCACall r id (gbcaCallPayload P id b)).writeGhost (ghostStep P)
               (Sum.inl (Label.callG r id b))) r) := by
       funext r'
       by_cases hr' : r' = r
       · subst hr'
         rw [Function.update_self]
         exact roundProjection_congr (fun i => hxc i r')
-      · rw [Function.update_of_ne hr']
-        exact (roundProjection_congr (fun i => by
+      · rw [Function.update_of_ne hr',
+          show w.recordGBCACall r id (gbcaCallPayload P id b) = w from rfl,
+          roundProjection_writeGhost_ne (L := Sum.inl (Label.callG r id b)) _ _ rfl hr']
+        exact roundProjection_congr (fun i => by
           by_cases hi : i = id
           · subst hi; exact hoff r' hr'
-          · rw [hfor i hi])).trans (roundProjection_otherSent u w hr' id _ rfl)
+          · rw [hfor i hi])
     refine coupling_visible P hl (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, by rw [hA]; simp, hfam.symm,
           boundInvariant_of hB hxcand hxg hxout
@@ -522,12 +524,15 @@ theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
       by_cases hi : i = j
       · subst hi; rw [Function.update_self]
       · rw [Function.update_of_ne hi, hfor i hi]
-    have hxg : ∀ (i : Fin P.n) (r'' : ℕ), (((x i).2.roundRecord r'').secondGather.process).input
-        = (((u i).2.roundRecord r'').secondGather.process).input := by
+    have hxg : ∀ (i : Fin P.n) (r'' : ℕ),
+        (((x i).2.roundRecord r'').secondGather.process).input
+            = (((u i).2.roundRecord r'').secondGather.process).input ∨
+          ((((x i).2.roundRecord r'').secondGather.process).input ≠ none ∧
+            ((u i).2.roundRecord r'').candidate ≠ none) := by
       intro i r''
       by_cases hi : i = j
       · subst hi; exact hga2 r''
-      · rw [hfor i hi]
+      · exact Or.inl (by rw [hfor i hi])
     have hfam : (fun r' => roundProjection P x
           (w.writeGhost (ghostStep P) (Sum.inr (NetworkEvent.gbcaRoundEvent r j ev))) r')
         = Function.update (fun r' => roundProjection P u w r') r
@@ -560,7 +565,7 @@ theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
       · rw [hfor i hi]; exact hne
     have hbI : BoundInvariant P x
         (w.writeGhost (ghostStep P) (Sum.inr (.gbcaRoundEvent r j ev))) := by
-      refine ⟨fun r'' i hne => ?_, fun r'' i => ⟨fun ho => ?_, fun hs => hcandAt i r'' ?_⟩⟩
+      refine ⟨fun r'' i hne => ?_, fun r'' i => ?_⟩
       · by_cases hi : i = j
         · subst hi
           by_cases hr'' : r'' = r
@@ -573,19 +578,22 @@ theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
             exact hB.1 r'' i (by rw [← hoff r'' hr'']; exact hne)
         · rw [hfor i hi] at hne
           exact writeGhost_bound _ (hB.1 r'' i hne)
-      · rw [hxg i r'']
-        by_cases hi : i = j
-        · subst hi
-          by_cases hr'' : r'' = r
-          · subst hr''
-            rcases roundRecord_output_gbcaRoundEvent P
-              (roundTransition_of_own rfl (hall i)) with hkeep | hin
-            · exact (hB.2 r'' i).1 (by rw [← hkeep _ rfl]; exact ho)
-            · exact hin
-          · exact (hB.2 r'' i).1 (by rw [← hoff r'' hr'']; exact ho)
-        · rw [hfor i hi] at ho
-          exact (hB.2 r'' i).1 ho
-      · exact (hB.2 r'' i).2 (by rw [← hxg i r'']; exact hs)
+      · rcases hxg i r'' with heq | ⟨hne, hc⟩
+        · refine ⟨fun ho => ?_, fun hs => hcandAt i r'' ((hB.2 r'' i).2 ?_)⟩
+          · rw [heq]
+            by_cases hi : i = j
+            · subst hi
+              by_cases hr'' : r'' = r
+              · subst hr''
+                rcases roundRecord_output_gbcaRoundEvent P
+                  (roundTransition_of_own rfl (hall i)) with hkeep | hin
+                · exact (hB.2 r'' i).1 (by rw [← hkeep _ rfl]; exact ho)
+                · exact hin
+              · exact (hB.2 r'' i).1 (by rw [← hoff r'' hr'']; exact ho)
+            · rw [hfor i hi] at ho
+              exact (hB.2 r'' i).1 ho
+          · rw [← heq]; exact hs
+        · exact ⟨fun _ => hne, fun _ => hcandAt i r'' hc⟩
     refine hrun rfl ((protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨fun i => by
         rw [hCeq i]

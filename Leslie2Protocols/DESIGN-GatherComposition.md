@@ -322,8 +322,8 @@ section of it (`Gather.weakLStep_specificationOverInstanceAlphabet`,
 for the protocol chain's round.
 
 Two facts of the characterisations are worth reading. A specification answers its call label on two
-transitions, so where a specification is a component the composition offers both under either
-interface label, and the algorithm lists the combinations: four call transitions at the
+transitions, so where a specification is a component the composition offers both under the label
+that reaches it, and the algorithm lists them: two transitions at each call of an instance of the
 gather-over-specification tier, two at the round over the gather specifications. And a label outside
 a round's interface blocks the round rather than letting it idle
 (`GBCA.ByAFW.ProgramLabel.outside`), exactly as `GBCA.ByABDY.composition` blocks, which is what
@@ -394,14 +394,14 @@ three are forced by the shape of the implementation.
   read a network — the adversary's delivery and its Byzantine injection —
   belong to the adversary either way.
 - **The calls and returns of the sub-protocols.** An implementation program takes one transition per
-  statement of the pseudocode, so nine transitions are the round's own calls and returns: the first
-  gather's return, the second gather's call, the second gather's return, the round's own return, and
-  the return of each of the four broadcast families. Each carries a
-  `gbcaRoundEvent` label, a rendezvous the network moves on and the protocol reads as `τ`, except
-  the round's own return, which is the visible `retG`, and the second gather's call, which carries
-  the `⟨INIT, ·⟩` of the instance broadcasting the candidate. That one fusion is D28: a gather's call is the call of the instance broadcasting the caller's input, at the
-  graded-agreement call for the first gather and at `secondGatherCall` for the second, and the
-  composed gather fuses the two the same way.
+  statement of the pseudocode, so eleven transitions are the calls and the returns of the round's
+  sub-protocols: the graded-agreement call, the first gather's return, the second gather's call, the
+  second gather's return, the round's own return, the call of the process's own input-broadcast
+  instance in each of the two gathers, and the return of each of the four broadcast families. Seven
+  of them carry a `gbcaRoundEvent` label, a synchronisation the network moves on and the protocol
+  reads as `τ`; the graded-agreement call and the round's own return are the visible `callG` and `retG`,
+  and neither sends a message; and the two input-broadcast calls carry the `⟨INIT, ·⟩` of the
+  instance they call, on a `gbcaSend` of their own.
 
 `AFW.ProtocolRelation` has five conjuncts. The round loop, the coin oracle and the ABA network are
 shared objects, and the round family is *computed* from the implementation's state by

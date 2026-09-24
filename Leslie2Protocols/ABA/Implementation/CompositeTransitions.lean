@@ -77,7 +77,7 @@ theorem programProduct_tau_inversion {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
 
 section SystemStepInversion
 variable {G : Type} [DecidableEq M] [Inhabited G]
-    {callPayload : Fin P.n → Bool → M}
+    {callPayload : Fin P.n → Bool → Option M}
     {ghostStep : ExtendedLabel P.n M E → NetworkState P.n M G → G → G}
     {ghostOutput : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop}
 

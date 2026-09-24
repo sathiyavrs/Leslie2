@@ -35,10 +35,10 @@ a corruption are the hypotheses `BRB.BrachaAlgorithm P k (inputBroadcasts s k) l
 The call is the exception. `BRB.BrachaAlgorithm` answers `call x` on two transitions, the
 broadcast of `⟨INIT, x⟩` and the input-enabledness loop, and the two sit at the
 two labels of the instance's interface -- the broadcast under `call x`, the loop
-under `LoopLabel.callLoop x`. The composition puts the gather call over the first
-and the gather call loop over the second, so the gather call carries the
-broadcast and the gather call loop moves nothing. The transitions `call` and
-`callLoop` state that directly, as does `bindCall`.
+under `LoopLabel.callLoop x`. Neither is reached by the gather's own call or by its call loop, which
+leave every input instance where it stands. The broadcast of an input instance is reached by the
+event `inputBroadcastCall`, which is where `inputBroadcastCall` and `bindCall` carry the
+`⟨INIT, x⟩` of the instance they call.
 -/
 
 namespace PLTS
@@ -105,23 +105,6 @@ theorem brachaInstance_call_transition {M : Type} [DecidableEq M] {P : Parameter
     rfl
 
 omit [DecidableEq X] in
-/-- At the call-loop label the instance is unchanged. -/
-theorem brachaInstance_callLoop_transition {M : Type} [DecidableEq M] {P : Parameters} {ldr : Fin
-  P.n}
-    {s s' : BRB.BrachaState P.n M} {m : M}
-    (h : (BRB.brachaInstance P ldr M).step s (Sum.inr (BRB.LoopLabel.callLoop m)) (PMF.pure s')) :
-      s' = s := by
-  obtain ⟨u, w⟩ := s
-  rcases (BRB.brachaInstance_step_iff P ldr (u, w) (Sum.inr (BRB.LoopLabel.callLoop m)) _).mp h with
-    ⟨hτ, -⟩ | hlab
-  · exact absurd hτ (by simp)
-  · obtain ⟨x, w', hμ, hall, hn⟩ := BRB.brachaInstanceExtended_joint_inversion (by simp) hlab
-    have hw : w' = w := PMF.pure_injective (BRB.networkStep_callLoop hn)
-    subst hw
-    have hidle : ∀ i, x i = u i := fun i => PMF.pure_injective (BRB.programStep_callLoop (hall i))
-    rw [PMF.pure_injective hμ, BRB.brachaInstance_idle hidle]
-
-omit [DecidableEq X] in
 /-- Build the instance's broadcast at the call label. -/
 theorem transition_brachaInstance_call_step {M : Type} [DecidableEq M] (P : Parameters) (ldr : Fin
   P.n)
@@ -135,16 +118,6 @@ theorem transition_brachaInstance_call_step {M : Type} [DecidableEq M] (P : Para
       (fun i hi => BRB.ProgramStep.callIdle (u i) m hi))
     (BRB.NetworkStep.call w m)
 
-omit [DecidableEq X] in
-/-- Build the instance's stutter at the call-loop label. -/
-theorem transition_brachaInstance_callLoop_step {M : Type} [DecidableEq M] (P : Parameters) (ldr :
-  Fin P.n)
-    (s : BRB.BrachaState P.n M) (m : M) :
-    (BRB.brachaInstance P ldr M).step s (Sum.inr (BRB.LoopLabel.callLoop m)) (PMF.pure s) := by
-  obtain ⟨u, w⟩ := s
-  exact BRB.brachaInstance_label_step P ldr (by simp) (fun i => BRB.ProgramStep.callLoop (u i) m)
-    (BRB.NetworkStep.callLoop w m)
-
 /-! ### The algorithm -/
 
 /-- The transitions of the gather instance over Bracha's broadcast
@@ -153,17 +126,12 @@ stated over the composition's state: one constructor per case of
 `Gather.instanceOverBracha_step_iff_algorithm`. All transitions are Dirac. -/
 inductive AlgorithmOverBracha (P : Parameters) :
     StateOverBracha P.n X → Label P.n X → PMF (StateOverBracha P.n X) → Prop
-  /-- The call arrives: the gather record records the payload and the input
-  instance broadcasts it. -/
+  /-- The call arrives: the gather record records the payload. -/
   | call (s : StateOverBracha P.n X) (id : Fin P.n) (x : X)
-      (h : ((gatherTier s).process id).input = none) (hb : ((inputBroadcasts s id).process id).input
-        = none) :
+      (h : ((gatherTier s).process id).input = none) :
       AlgorithmOverBracha P s (.call id x)
-        (PMF.pure (setInputBroadcasts (setGatherTier s ((gatherTier s).setProcess id { (gatherTier
-          s).process id with input := some x }))
-          (Function.update (inputBroadcasts s) id
-            (((inputBroadcasts s id).setProcess id
-              { (inputBroadcasts s id).process id with input := some x }).multicast id (.init x)))))
+        (PMF.pure (setGatherTier s ((gatherTier s).setProcess id
+          { (gatherTier s).process id with input := some x })))
   /-- Input-enabledness loop for `call`: nothing moves. -/
   | callLoop (s : StateOverBracha P.n X) (id : Fin P.n) (x : X) :
       AlgorithmOverBracha P s (.call id x) (PMF.pure s)
@@ -210,6 +178,17 @@ inductive AlgorithmOverBracha (P : Parameters) :
       AlgorithmOverBracha P s .tau
         (PMF.pure (setGatherTier s (((gatherTier s).setProcess j
           { (gatherTier s).process j with sentVote := some U }).multicast j (.vote U))))
+  /-- The process calls the instance broadcasting its input, and that instance broadcasts the
+  payload its gather record holds. AFW25's Algorithm 5, line 6, and LeslieBP's Algorithm 4,
+  `BRB_id.call(m)`. -/
+  | inputBroadcastCall (s : StateOverBracha P.n X) (j : Fin P.n) (x : X)
+      (hin : ((gatherTier s).process j).input = some x)
+      (hb : ((inputBroadcasts s j).process j).input = none) :
+      AlgorithmOverBracha P s .tau
+        (PMF.pure (setInputBroadcasts s
+          (Function.update (inputBroadcasts s) j
+            (((inputBroadcasts s j).setProcess j
+              { (inputBroadcasts s j).process j with input := some x }).multicast j (.init x)))))
   /-- `BIND`: `n − f` senders' approved `VOTE` payloads, each contained in the
   bind payload, are delivered here, and the bind instance broadcasts the payload.
   The process has multicast its own `VOTE` and has not called its own bind
@@ -341,6 +320,26 @@ theorem instanceOverBracha_step_algorithm (P : Parameters) :
       have hxj := PMF.pure_injective (programStep_inputBroadcastRet_own (hproc j))
       rw [Function.eq_update_iff.mpr ⟨hxj, hfor⟩, ha]
       exact AlgorithmOverBracha.inputBroadcastRet _ k j v (a' k) himpl
+    | inputBroadcastCall j y =>
+      have hw : w' = w := PMF.pure_injective (networkStep_inputBroadcastCall hnet)
+      have hb : b' = b := funext fun q => System.mapIdle_eq_of_step_none rfl (hbind q)
+      subst hw; subst hb
+      obtain ⟨hinp, hxj⟩ := programStep_inputBroadcastCall_own (hproc j)
+      have hxall : ∀ i, x i = u i := fun i => by
+        by_cases hi : i = j
+        · subst hi; exact PMF.pure_injective hxj
+        · exact PMF.pure_injective
+            (programStep_inputBroadcastCall_foreign (Ne.symm hi) (hproc i))
+      obtain ⟨hbin, haj⟩ := brachaInstance_call_transition
+        (System.step_of_mapIdle_step (l₀ := Sum.inl (BRB.Label.call y)) (by simp) (hin j))
+      have haf : ∀ k, k ≠ j → a' k = a k :=
+        fun k hk => System.mapIdle_eq_of_step_none (by simp [hk]) (hin k)
+      have ha : a' = Function.update a j
+          (((a j).setProcess j { (a j).process j with input := some y }).multicast j (.init y)) :=
+        Function.eq_update_iff.mpr ⟨haj, haf⟩
+      subst ha
+      rw [stateOverBroadcasts_idle hxall, stateOverBroadcasts_setInputBroadcasts]
+      exact AlgorithmOverBracha.inputBroadcastCall _ j y hinp hbin
     | bindCall j U =>
       have hw : w' = w := PMF.pure_injective (networkStep_bindCall hnet)
       have ha : a' = a := funext fun k => System.mapIdle_eq_of_step_none rfl (hin k)
@@ -400,23 +399,15 @@ theorem instanceOverBracha_step_algorithm (P : Parameters) :
         | tau => exact absurd rfl hlτ
         | call id y =>
           have hw : w' = w := PMF.pure_injective (networkStep_call hnet)
+          have ha : a' = a := funext fun k => System.mapIdle_eq_of_step_none rfl (hin k)
           have hb : b' = b := funext fun q => System.mapIdle_eq_of_step_none rfl (hbind q)
-          subst hw; subst hb
+          subst hw; subst ha; subst hb
           obtain ⟨hinp, hxj⟩ := programStep_call_own (hproc id)
           have hfor : ∀ i, i ≠ id → x i = u i :=
             fun i hi => PMF.pure_injective (programStep_call_foreign (Ne.symm hi) (hproc i))
-          obtain ⟨hbin, haid⟩ := brachaInstance_call_transition
-            (System.step_of_mapIdle_step (l₀ := Sum.inl (BRB.Label.call y)) (by simp) (hin id))
-          have haf : ∀ k, k ≠ id → a' k = a k :=
-            fun k hk => System.mapIdle_eq_of_step_none (by simp [hk]) (hin k)
-          have ha : a' = Function.update a id
-              (((a id).setProcess id { (a id).process id with input := some y }).multicast id (.init
-                y)) :=
-            Function.eq_update_iff.mpr ⟨haid, haf⟩
-          subst ha
           refine ⟨Label.call id y, rfl, ?_⟩
-          rw [Function.eq_update_iff.mpr ⟨PMF.pure_injective hxj, hfor⟩]
-          exact AlgorithmOverBracha.call _ id y hinp hbin
+          rw [stateOverBroadcasts_setProcess (PMF.pure_injective hxj) hfor]
+          exact AlgorithmOverBracha.call _ id y hinp
         | ret id g C =>
           obtain ⟨hC, hw⟩ := networkStep_ret hnet
           subst hC
@@ -453,20 +444,11 @@ theorem instanceOverBracha_step_algorithm (P : Parameters) :
         cases ev with
         | callLoop id y =>
           have hw : w' = w := PMF.pure_injective (networkStep_callLoop hnet)
+          have ha : a' = a := funext fun k => System.mapIdle_eq_of_step_none rfl (hin k)
           have hb : b' = b := funext fun q => System.mapIdle_eq_of_step_none rfl (hbind q)
-          subst hw; subst hb
+          subst hw; subst ha; subst hb
           have hxall : ∀ i,
             x i = u i := fun i => PMF.pure_injective (programStep_callLoop (hproc i))
-          have haid : a' id = a id := brachaInstance_callLoop_transition
-            (System.step_of_mapIdle_step (l₀ := Sum.inr (BRB.LoopLabel.callLoop y))
-              (by simp) (hin id))
-          have haf : ∀ k, k ≠ id → a' k = a k :=
-            fun k hk => System.mapIdle_eq_of_step_none (by simp [hk]) (hin k)
-          have ha : a' = a := funext fun k => by
-            by_cases hk : k = id
-            · subst hk; exact haid
-            · exact haf k hk
-          subst ha
           refine ⟨Label.call id y, rfl, ?_⟩
           rw [stateOverBroadcasts_idle hxall]
           exact AlgorithmOverBracha.callLoop _ id y
@@ -478,13 +460,13 @@ theorem algorithm_instanceOverBracha_step (P : Parameters) :
       ∃ l, specificationLabelMap P.n X l = some l₀ ∧ (instanceOverBracha P X).step s l μ := by
   rintro ⟨⟨u, w⟩, a, b⟩ l₀ μ htransition
   cases htransition with
-  | call id x h hb =>
-    exact ⟨Sum.inl (.call id x), rfl, instanceOverBroadcasts_label_step (b' := b) (by simp)
+  | call id x h =>
+    exact ⟨Sum.inl (.call id x), rfl,
+      instanceOverBroadcasts_label_step (a' := a) (b' := b) (by simp)
       (dirac_steps_update (ProgramStep.call (u id) x h)
         (fun i hi => ProgramStep.callIdle (u i) id x (Ne.symm hi)))
       (NetworkStep.call w id x)
-      (System.mapIdle_step_update (by simp) (fun k hk => by simp [hk])
-        (transition_brachaInstance_call_step P id (a id) x hb))
+      (fun k => System.mapIdle_unchanged rfl)
       (fun q => System.mapIdle_unchanged rfl)⟩
   | callLoop id x =>
     refine ⟨Sum.inr (.callLoop id x), rfl,
@@ -494,11 +476,7 @@ theorem algorithm_instanceOverBracha_step (P : Parameters) :
     · by_cases hi : i = id
       · subst hi; exact ProgramStep.callLoop (u i) x
       · exact ProgramStep.callLoopIdle (u i) id x (Ne.symm hi)
-    · by_cases hk : k = id
-      · subst hk
-        exact System.mapIdle_step_of_step (by simp) (transition_brachaInstance_callLoop_step P k (a
-          k) x)
-      · exact System.mapIdle_unchanged (by simp [hk])
+    · exact System.mapIdle_unchanged rfl
   | inputBroadcastTau k c hb =>
     exact ⟨Sum.inl Label.tau, rfl,
       instanceOverBroadcasts_tau_input (transition_brachaInstance_step_inl (by simp) hb)⟩
@@ -527,6 +505,18 @@ theorem algorithm_instanceOverBracha_step (P : Parameters) :
         (fun i hi => ProgramStep.sendIdle (u i) j (.vote U) (Ne.symm hi)))
       (NetworkStep.send w j (.vote U)) (fun k => System.mapIdle_unchanged rfl)
       (fun q => System.mapIdle_unchanged rfl)⟩
+  | inputBroadcastCall j x hin hb =>
+    exact ⟨Sum.inl Label.tau, rfl,
+      instanceOverBroadcasts_event_step (x := u) (w' := w) (b' := b)
+        (GatherEvent.inputBroadcastCall j x)
+        (fun i => by
+          by_cases hi : i = j
+          · subst hi; exact ProgramStep.inputBroadcastCall (u i) x hin
+          · exact ProgramStep.inputBroadcastCallIdle (u i) j x (Ne.symm hi))
+        (NetworkStep.inputBroadcastCallIdle w j x)
+        (System.mapIdle_step_update (by simp) (fun k hk => by simp [hk])
+          (transition_brachaInstance_call_step P j (a j) x hb))
+        (fun q => System.mapIdle_unchanged rfl)⟩
   | bindCall j U hin hvot hsnd happ hQ hbc =>
     exact ⟨Sum.inl Label.tau, rfl,
       instanceOverBroadcasts_event_step (w' := w) (a' := a) (GatherEvent.bindCall j U)

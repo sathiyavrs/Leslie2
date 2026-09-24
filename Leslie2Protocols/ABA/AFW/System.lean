@@ -51,19 +51,17 @@ written over the tagged message type: the transitions of its graded-agreement pr
 programs beneath them (`BRB.ProgramStep`). Each is the process's half of a step whose network half
 is a transition of the adversary. A send writes the sender's own record and the network records the
 message; a delivery files the message in the receiver's own local state, dispatched on the tag.
-One transition is fused (D28): a gather's call broadcasts the caller's input through that
-gather's own input-broadcast instance, at the graded-agreement call for the first gather and at
-`secondGatherCall` for the second.
-
-Every call and every return of a sub-protocol is a transition of its own. The first gather's
-return, the second gather's call, the second gather's return, the round's own return and the return
-of each of the `4n` broadcast instances are separate transitions, and a return writes what it
-returned in the caller's record. The round record therefore holds the two gather local states over
-`Gather.ProcessRecord`, which carries what each instance returned, and the two intermediate phases
-`candidate` and `output`. A gather guard reads that record, as the guard of the composed gather
-program does: `Gather.ProcessRecord.accepted` is the `ECHO` payload `AP_i` of AFW25's Algorithm 5,
-line 9, and `Gather.approvedBy`, `Gather.holdsInputBroadcastReturn` and
-`Gather.holdsBindBroadcastReturn` are the remaining guards.
+Every call and every return of a sub-protocol is a transition of its own. The graded-agreement
+call, the call of the process's own input-broadcast instance in each of the two gathers, the first
+gather's return, the second gather's call, the second gather's return, the round's own return and
+the return of each of the `4n` broadcast instances are separate transitions. A call of an
+input-broadcast instance reads the payload its gather record holds and carries that instance's
+`⟨INIT, ·⟩`; a return writes what it returned in the caller's record. The round record therefore
+holds the two gather local states over `Gather.ProcessRecord`, which carries what each instance
+returned, and the two intermediate phases `candidate` and `output`. A gather guard reads that
+record, as the guard of the composed gather program does: `Gather.ProcessRecord.accepted` is the
+`ECHO` payload `AP_i` of AFW25's Algorithm 5, line 9, and `Gather.approvedBy`,
+`Gather.holdsInputBroadcastReturn` and `Gather.holdsBindBroadcastReturn` are the remaining guards.
 
 ## The network's ghost
 
@@ -346,27 +344,20 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
     ProcessRecord P.n → ExtendedLabel P.n (Message P.n) (RoundEvent P.n) →
       PMF (ProcessRecord P.n) → Prop
   /-- The graded-agreement call: the round loop hands its estimate to the
-  round's first gather, which records it and broadcasts it through the
-  process's own input-broadcast instance. The `⟨INIT, b⟩` multicast is the
-  network's half. -/
+  round's first gather, which records it (AFW25's Algorithm 5, line 5). The call sends no
+  message. -/
   | callG (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (b : Bool)
       (hh : c.corrupted = false)
       (hph : c.process.phase = .toCallG) (hr : c.process.round = r)
       (hterm : p.terminated = false)
       (hest : c.process.estimate = some b)
-      (hin : ((p.roundRecord r).firstGather.process).input = none)
-      (hbin : (((p.roundRecord r).firstGatherInputBroadcasts j).process).input = none) :
+      (hin : ((p.roundRecord r).firstGather.process).input = none) :
       RoundStep P j (c, p) (Sum.inl (.callG r j b))
         (PMF.pure (c.setProcess { c.process with phase := .awaitG },
           p.setRoundRecord r
             { (p.roundRecord r) with
               firstGather := (p.roundRecord r).firstGather.setProcess
-                { ((p.roundRecord r).firstGather.process) with input := some b }
-              firstGatherInputBroadcasts := Function.update (p.roundRecord
-                r).firstGatherInputBroadcasts j
-                (((p.roundRecord r).firstGatherInputBroadcasts j).setProcess
-                  { (((p.roundRecord r).firstGatherInputBroadcasts j).process) with input := some b
-                    }) }))
+                { ((p.roundRecord r).firstGather.process) with input := some b } }))
   /-- The graded-agreement call against an already-called record: the round
   loop moves, the round record does not. -/
   | gbcaCallLoop (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (b : Bool)
@@ -376,6 +367,22 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
       (hin : ((p.roundRecord r).firstGather.process).input ≠ none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaCallLoop r j b))
         (PMF.pure (c.setProcess { c.process with phase := .awaitG }, p))
+  /-- The process calls the input-broadcast instance of the first gather with the payload its
+  gather record holds, and that instance multicasts `⟨INIT, b⟩` (AFW25's Algorithm 5, line 6;
+  LeslieBP's Algorithm 4, `BRB_id.call(m)`). The multicast is the network's half. -/
+  | firstGatherInputBroadcastCall (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ)
+      (b : Bool)
+      (hh : c.corrupted = false) (hterm : p.terminated = false)
+      (hin : ((p.roundRecord r).firstGather.process).input = some b)
+      (hbin : (((p.roundRecord r).firstGatherInputBroadcasts j).process).input = none) :
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.firstGatherInputBroadcasts j (.init b))))
+        (PMF.pure (c, p.setRoundRecord r
+          { (p.roundRecord r) with
+            firstGatherInputBroadcasts := Function.update (p.roundRecord
+              r).firstGatherInputBroadcasts j
+              (((p.roundRecord r).firstGatherInputBroadcasts j).setProcess
+                { (((p.roundRecord r).firstGatherInputBroadcasts j).process) with
+                  input := some b }) }))
   /-- The first gather's `ECHO`: the process is called and its accepted pairs
   number at least `n − f`, the source blueprint's `|AP| ≥ n − f`. The payload is
   those pairs, `T_i ← AP_i` of AFW25's Algorithm 5, line 9. -/
@@ -513,20 +520,30 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
             candidate := some (GBCA.candidate P g)
             firstGather := (p.roundRecord r).firstGather.setProcess
               { ((p.roundRecord r).firstGather.process) with returned := true } }))
-  /-- The process calls the second gather with the candidate on record, broadcasting it through its
-  own input-broadcast instance of that gather (AFW25's Algorithm 4, line 4; D28). The `⟨INIT, x⟩`
-  multicast is the network's half. -/
+  /-- The process calls the second gather with the candidate on record, which that gather records
+  (AFW25's Algorithm 4, line 4). The call sends no message. -/
   | secondGatherCall (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (x : Option Bool)
       (hh : c.corrupted = false) (hterm : p.terminated = false)
       (hcand : (p.roundRecord r).candidate = some x)
-      (hin2 : ((p.roundRecord r).secondGather.process).input = none)
+      (hin2 : ((p.roundRecord r).secondGather.process).input = none) :
+      RoundStep P j (c, p)
+        (Sum.inr (.gbcaRoundEvent r j (.secondGatherCall x)))
+        (PMF.pure (c, p.setRoundRecord r
+          { (p.roundRecord r) with
+            secondGather := (p.roundRecord r).secondGather.setProcess
+              { ((p.roundRecord r).secondGather.process) with input := some x } }))
+  /-- The process calls the input-broadcast instance of the second gather with the payload that
+  gather's record holds, and that instance multicasts `⟨INIT, x⟩` (AFW25's Algorithm 5, line 6;
+  LeslieBP's Algorithm 4, `BRB_id.call(m)`). The multicast is the network's half. -/
+  | secondGatherInputBroadcastCall (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ)
+      (x : Option Bool)
+      (hh : c.corrupted = false) (hterm : p.terminated = false)
+      (hin2 : ((p.roundRecord r).secondGather.process).input = some x)
       (hbin2 : (((p.roundRecord r).secondGatherInputBroadcasts j).process).input = none) :
       RoundStep P j (c, p)
         (Sum.inr (.gbcaSend r j (.secondGatherInputBroadcasts j (.init x))))
         (PMF.pure (c, p.setRoundRecord r
           { (p.roundRecord r) with
-            secondGather := (p.roundRecord r).secondGather.setProcess
-              { ((p.roundRecord r).secondGather.process) with input := some x }
             secondGatherInputBroadcasts := Function.update (p.roundRecord
               r).secondGatherInputBroadcasts j
               (((p.roundRecord r).secondGatherInputBroadcasts j).setProcess
@@ -911,11 +928,9 @@ end Transposition
 
 /-! ### The protocol -/
 
-/-- The message the graded-agreement call multicasts: the caller's input,
-broadcast through the caller's own input-broadcast instance of the first
-gather. -/
-def gbcaCallPayload (P : Parameters) : Fin P.n → Bool → Message P.n := fun id b =>
-  .firstGatherInputBroadcasts id (.init b)
+/-- The graded-agreement call multicasts nothing: the caller's input reaches the network at the
+call of its own input-broadcast instance of the first gather, a transition of its own. -/
+def gbcaCallPayload (P : Parameters) : Fin P.n → Bool → Option (Message P.n) := fun _ _ => none
 
 /-- The step relation of the program of process `j`. -/
 abbrev ProgramStep (P : Parameters) (j : Fin P.n) :

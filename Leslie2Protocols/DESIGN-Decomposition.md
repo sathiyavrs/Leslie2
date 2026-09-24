@@ -53,31 +53,32 @@ specificationLabelMap l = some l₀ ∧ brachaInstance.step s l μ) ↔ BrachaAl
 `Gather.instanceOverBracha_step_iff_algorithm`,
 `GBCA.ByAFW.roundOverGatherSpecifications_step_iff_algorithm`).
 
-## 2. The gather specification's call record follows the input instance
+## 2. The gather specification's call record follows the gather record
 
-At the tier over broadcast specifications, the input broadcast of process `k`
-is `BRB.specificationOverInstanceAlphabet` read along `inputBroadcastLabelMap k`, and a
-specification answers the gather's call and the gather's loop on either of its two transitions.
-Over one specification label the composition therefore has four call transitions
-(`Gather.AlgorithmOverBroadcastSpecification.call`, `callSpecificationLoop`, `callProgramLoop`, `callLoop`): both
-record, the program alone, the instance alone, neither.
+At the tier over broadcast specifications, the input broadcast of process `k` is
+`BRB.specificationOverInstanceAlphabet` read along `inputBroadcastLabelMap k`, which sends the
+event `inputBroadcastCall k x` to that instance's call and the gather's own `call` and call loop to
+no image. The instance answers that event on either of its two call transitions
+(`Gather.AlgorithmOverBroadcastSpecification.inputBroadcastCall`,
+`inputBroadcastCallSpecificationLoop`): it records the payload, or it loops and nothing moves.
 
-**What fails.** A clause tying the gather program's input to the instance's
-record is inductive in neither direction, since `callSpecificationLoop` writes the one
-and `callProgramLoop` the other. With `callProgramLoop k x` followed by the
-instance's commit of `x`, the state has `(inputBroadcasts k).val = some x`, no input at
-`k`'s program and `k ∉ F`, and the return run must discharge the gather
-specification's commit guard `k ∈ F ∨ call k = some x`. If the specification's
-`call` tracked the program's input, that guard is false there, and
+**What fails.** A clause tying the specification's call record to an input instance's record is
+not inductive: `Gather.AlgorithmOverBroadcastSpecification.call` moves the gather record and the
+specification's call record on the one interface label and leaves every instance where it stands,
+so right after a call the program holds `some x` and the instance holds `none`. A relation that
+read the specification's call record off the instance would be false there, and
 `Gather.refinesSpecification` is unprovable.
 
-**The constraint.** `Gather.SpecificationRelation.call_eq : ∀ k, t.call k = (inputBroadcasts s
-k).input`. The specification's call record and an input instance's record move on the same interface
-labels under the same write-once guard, so `specificationRelation_transition` matches
-`callProgramLoop` with `Gather.Step.call` and `callSpecificationLoop` with `Gather.Step.callLoop`.
-`Gather.Conformance` carries
-no clause on the two records; `specificationRelation_call` takes both guards. The permissiveness
-sits at a specification tier: the concrete gather over Bracha has one transition per label.
+**The constraint.** `Gather.SpecificationRelation.call_eq : ∀ k, t.call k = ((gatherTier s).process
+k).input`. The specification's call record and the gather record move on the one interface label
+under the one write-once guard, and `specificationRelation_call` takes that guard alone;
+`specificationRelation_inputBroadcastCall` is matched by a stutter of the specification.
+`Gather.Invariant.inputBroadcastCall_backed` carries the instance's record back: the payload an
+input instance of a correct process was called with is the payload that process's gather record
+holds. A return then discharges the gather specification's commit guard `k ∈ F ∨ call k = some x`
+through `val_certificate`, which bounds a committed specification entry by the instance's
+commitment, `inputBroadcastVal_provenance`, which reads that commitment back to the instance's call
+record, and that clause, which reads the call record back to the gather record.
 
 ## 3. The composed program drops its grade on the graded return
 

@@ -19,11 +19,12 @@ The invariant has two parts. `Conformance` collects what the composition records
 budget, the corrupted set of each of the `2n` broadcast instances, delivery soundness, the returned
 values a program holds, the provenance of a committed entry, and the message pattern of a process
 outside `F` -- a `*_confirmed` clause ties its sent message to its write-once field, a `*_backed`
-clause ties that field to the `n − f` receipts that justified it, and `echo_card` gives a correct
-echo payload its `n − f` entries. `echo_approved` is the second part: the payload set in a
-process's `ECHO` field consists of committed input entries (`Gather.approved`). It carries no
-correctness premise, because only `AlgorithmOverBroadcastSpecification.echo` writes the field and a
-corrupted sender's accepted pairs are entries of its returned value too.
+clause ties that field to what justified it -- the `n − f` received messages of a vote or a bind
+payload, the caller's own gather record for the payload of an input instance -- and `echo_card`
+gives a correct echo payload its `n − f` entries. `echo_approved` is the second part: the payload
+set in a process's `ECHO` field consists of committed input entries (`Gather.approved`). It carries
+no correctness premise, because only `AlgorithmOverBroadcastSpecification.echo` writes the field and
+a corrupted sender's accepted pairs are entries of its returned value too.
 
 Committed entries are written once, so `approved` is monotone along every transition
 (`approved_mono`), which is what makes `echo_approved` inductive. The counting argument of
@@ -39,10 +40,10 @@ because a committed value is written once.
 
 ## The call records
 
-The composition answers `call id x` on four transitions and the call loop is a label of its own, so
-an input instance may record a payload on a label at which the gather record is unchanged. The
-provenance of a commitment therefore reads the input instance's own call record, which is what
-`inputBroadcastVal_provenance` states.
+A process calls the instance broadcasting its input on an event of its own, so the payload an
+input instance records is the payload the caller's gather record holds
+(`inputBroadcastCall_backed`), and the provenance of a commitment reads the input instance's own
+call record (`inputBroadcastVal_provenance`).
 -/
 
 namespace PLTS
@@ -102,10 +103,14 @@ structure Conformance (P : Parameters) (s : StateOverBroadcastSpecification P.n 
   bind_backed : ∀ j ∉ (gatherTier s).F, ∀ U, (bindBroadcasts s j).input = some U →
     ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
       ∀ q ∈ Q, ∃ W, Message.vote W ∈ (gatherTier s).received j q ∧ W ⊆ U
+  /-- The payload an input instance was called with is the payload its own process's gather
+  record holds. -/
+  inputBroadcastCall_backed : ∀ k ∉ (gatherTier s).F, ∀ x,
+    (inputBroadcasts s k).input = some x → ((gatherTier s).process k).input = some x
 
 /-- The conformance clauses hold initially. -/
 theorem Conformance.initial : Conformance P ((instanceOverBroadcastSpecification P X).init) := by
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
     simp [gatherTier, inputBroadcasts, bindBroadcasts, ProcessRecord.initial,
       BaseProcessRecord.initial, BRB.SpecState.initial, NetworkState.initial,
         InstanceState.process, InstanceState.sent, InstanceState.received, InstanceState.F]
@@ -119,7 +124,7 @@ theorem Conformance.setSentBind {s : StateOverBroadcastSpecification P.n X} (hCo
     (U : AcceptedPairs P.n X) :
     Conformance P (setGatherTier s ((gatherTier s).setProcess j { (gatherTier s).process j with
       sentBind := some U })) := by
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   all_goals dsimp only [gatherTier_setGatherTier, inputBroadcasts_setGatherTier,
     bindBroadcasts_setGatherTier, InstanceState.setProcess_F, InstanceState.setProcess_sent]
   · exact hConf.F_card
@@ -174,6 +179,14 @@ theorem Conformance.setSentBind {s : StateOverBroadcastSpecification P.n X} (hCo
       exact hConf.vote_backed j' hj W hW
   · simp only [InstanceState.setProcess_received]
     exact hConf.bind_backed
+  · intro k hk y hy
+    have h0 := hConf.inputBroadcastCall_backed k hk y hy
+    by_cases hkj : k = j
+    · subst hkj
+      rw [InstanceState.setProcess_process_self]
+      exact h0
+    · rw [InstanceState.setProcess_process_ne _ _ _ hkj]
+      exact h0
 
 /-- The conformance clauses are preserved by every step. -/
 theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.n X}
@@ -181,98 +194,10 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
     (hstep : AlgorithmOverBroadcastSpecification P s l μ)
     {s' : StateOverBroadcastSpecification P.n X} (hs' : s' ∈ μ.support) : Conformance P s' := by
   cases hstep with
-  | call id x h hb =>
+  | call id x h =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-    all_goals dsimp only [gatherTier_setInputBroadcasts, gatherTier_setGatherTier,
-      inputBroadcasts_setInputBroadcasts, bindBroadcasts_setInputBroadcasts,
-        bindBroadcasts_setGatherTier]
-    · exact hInv.F_card
-    · intro k
-      by_cases hk : k = id
-      · subst hk
-        rw [Function.update_self]
-        exact hInv.F_inputBroadcast_eq k
-      · rw [Function.update_of_ne hk]
-        exact hInv.F_inputBroadcast_eq k
-    · exact hInv.F_bind_eq
-    · intro i k m hm
-      rw [InstanceState.setProcess_received] at hm
-      rw [InstanceState.setProcess_sent]
-      exact hInv.received_subset_sent i k hm
-    · intro j k v hv
-      have hv0 : ((gatherTier s).process j).inputBroadcastReturned k = some v := by
-        by_cases hj : j = id
-        · subst hj
-          rw [InstanceState.setProcess_process_self] at hv
-          exact hv
-        · rw [InstanceState.setProcess_process_ne _ _ _ hj] at hv
-          exact hv
-      by_cases hk : k = id
-      · subst hk
-        rw [Function.update_self]
-        exact hInv.inputBroadcastReturned_val j k v hv0
-      · rw [Function.update_of_ne hk]
-        exact hInv.inputBroadcastReturned_val j k v hv0
-    · intro j q U hU
-      by_cases hj : j = id
-      · subst hj
-        rw [InstanceState.setProcess_process_self] at hU
-        exact hInv.bindBroadcastReturned_val j q U hU
-      · rw [InstanceState.setProcess_process_ne _ _ _ hj] at hU
-        exact hInv.bindBroadcastReturned_val j q U hU
-    · intro k v hv
-      by_cases hk : k = id
-      · subst hk
-        rw [Function.update_self] at hv ⊢
-        rcases hInv.inputBroadcastVal_provenance k v hv with hF | hin
-        · exact Or.inl hF
-        · rw [hb] at hin
-          exact absurd hin (by simp)
-      · rw [Function.update_of_ne hk] at hv ⊢
-        exact hInv.inputBroadcastVal_provenance k v hv
-    · exact hInv.bindBroadcastVal_provenance
-    · intro j hj A hA
-      rw [InstanceState.setProcess_sent] at hA
-      have hpre := hInv.echo_confirmed j hj A hA
-      by_cases hk : j = id
-      · subst hk
-        rw [InstanceState.setProcess_process_self]
-        exact hpre
-      · rw [InstanceState.setProcess_process_ne _ _ _ hk]
-        exact hpre
-    · intro j hj A hA
-      by_cases hk : j = id
-      · subst hk
-        rw [InstanceState.setProcess_process_self] at hA
-        exact hInv.echo_card j hj A hA
-      · rw [InstanceState.setProcess_process_ne _ _ _ hk] at hA
-        exact hInv.echo_card j hj A hA
-    · intro j hj W hW
-      rw [InstanceState.setProcess_sent] at hW
-      have hpre := hInv.vote_confirmed j hj W hW
-      by_cases hk : j = id
-      · subst hk
-        rw [InstanceState.setProcess_process_self]
-        exact hpre
-      · rw [InstanceState.setProcess_process_ne _ _ _ hk]
-        exact hpre
-    · intro j hj W hW
-      rw [InstanceState.setProcess_received]
-      by_cases hk : j = id
-      · subst hk
-        rw [InstanceState.setProcess_process_self] at hW
-        exact hInv.vote_backed j hj W hW
-      · rw [InstanceState.setProcess_process_ne _ _ _ hk] at hW
-        exact hInv.vote_backed j hj W hW
-    · intro j hj U hU
-      rw [InstanceState.setProcess_received]
-      exact hInv.bind_backed j hj U hU
-  | callSpecificationLoop id x h =>
-    rw [PMF.mem_support_pure_iff] at hs'
-    subst hs'
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     all_goals dsimp only [gatherTier_setGatherTier, inputBroadcasts_setGatherTier,
       bindBroadcasts_setGatherTier]
     · exact hInv.F_card
@@ -334,39 +259,59 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
     · intro j hj U hU
       rw [InstanceState.setProcess_received]
       exact hInv.bind_backed j hj U hU
-  | callProgramLoop id x hb =>
+    · intro k hk y hy
+      have h0 := hInv.inputBroadcastCall_backed k hk y hy
+      by_cases hkid : k = id
+      · subst hkid
+        rw [h] at h0
+        exact absurd h0 (by simp)
+      · rw [InstanceState.setProcess_process_ne _ _ _ hkid]
+        exact h0
+  | callLoop id x =>
+    rw [PMF.mem_support_pure_iff] at hs'
+    subst hs'
+    exact hInv
+  | inputBroadcastCall j x hin hb =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     refine ⟨hInv.F_card, ?_, hInv.F_bind_eq, hInv.received_subset_sent, ?_,
       hInv.bindBroadcastReturned_val, ?_, hInv.bindBroadcastVal_provenance, hInv.echo_confirmed,
-        hInv.echo_card, hInv.vote_confirmed,
-      hInv.vote_backed, hInv.bind_backed⟩
+        hInv.echo_card, hInv.vote_confirmed, hInv.vote_backed, hInv.bind_backed, ?_⟩
     all_goals dsimp only [gatherTier_setInputBroadcasts, inputBroadcasts_setInputBroadcasts]
     · intro k
-      by_cases hk : k = id
+      by_cases hk : k = j
       · subst hk
         rw [Function.update_self]
         exact hInv.F_inputBroadcast_eq k
       · rw [Function.update_of_ne hk]
         exact hInv.F_inputBroadcast_eq k
-    · intro j k v hv
-      by_cases hk : k = id
+    · intro j' k v hv
+      by_cases hk : k = j
       · subst hk
         rw [Function.update_self]
-        exact hInv.inputBroadcastReturned_val j k v hv
+        exact hInv.inputBroadcastReturned_val j' k v hv
       · rw [Function.update_of_ne hk]
-        exact hInv.inputBroadcastReturned_val j k v hv
+        exact hInv.inputBroadcastReturned_val j' k v hv
     · intro k v hv
-      by_cases hk : k = id
+      by_cases hk : k = j
       · subst hk
         rw [Function.update_self] at hv ⊢
-        rcases hInv.inputBroadcastVal_provenance k v hv with hF | hin
+        rcases hInv.inputBroadcastVal_provenance k v hv with hF | hin'
         · exact Or.inl hF
-        · rw [hb] at hin
-          exact absurd hin (by simp)
+        · rw [hb] at hin'
+          exact absurd hin' (by simp)
       · rw [Function.update_of_ne hk] at hv ⊢
         exact hInv.inputBroadcastVal_provenance k v hv
-  | callLoop id x =>
+    · intro k hk y hy
+      by_cases hkj : k = j
+      · subst hkj
+        rw [Function.update_self] at hy
+        have hxy : some x = some y := hy
+        obtain rfl : x = y := by injection hxy
+        exact hin
+      · rw [Function.update_of_ne hkj] at hy
+        exact hInv.inputBroadcastCall_backed k hk y hy
+  | inputBroadcastCallSpecificationLoop j x hin =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     exact hInv
@@ -376,7 +321,7 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
     refine ⟨hInv.F_card, ?_, hInv.F_bind_eq, hInv.received_subset_sent, ?_,
       hInv.bindBroadcastReturned_val, ?_, hInv.bindBroadcastVal_provenance, hInv.echo_confirmed,
         hInv.echo_card, hInv.vote_confirmed,
-      hInv.vote_backed, hInv.bind_backed⟩
+      hInv.vote_backed, hInv.bind_backed, ?_⟩
     all_goals dsimp only [gatherTier_setInputBroadcasts, inputBroadcasts_setInputBroadcasts]
     · intro k'
       by_cases hk : k' = k
@@ -405,13 +350,20 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
         · exact Or.inr hin
       · rw [Function.update_of_ne hk] at hv' ⊢
         exact hInv.inputBroadcastVal_provenance k' v' hv'
+    · intro k' hk' y hy
+      by_cases hkk : k' = k
+      · subst hkk
+        rw [Function.update_self] at hy
+        exact hInv.inputBroadcastCall_backed k' hk' y hy
+      · rw [Function.update_of_ne hkk] at hy
+        exact hInv.inputBroadcastCall_backed k' hk' y hy
   | commitBindEntry q U hv hm =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     refine ⟨hInv.F_card, hInv.F_inputBroadcast_eq, ?_, hInv.received_subset_sent,
       hInv.inputBroadcastReturned_val, ?_, hInv.inputBroadcastVal_provenance, ?_,
         hInv.echo_confirmed, hInv.echo_card, hInv.vote_confirmed,
-      hInv.vote_backed, ?_⟩
+      hInv.vote_backed, ?_, hInv.inputBroadcastCall_backed⟩
     all_goals dsimp only [gatherTier_setBindBroadcasts, bindBroadcasts_setBindBroadcasts]
     · intro q'
       by_cases hq : q' = q
@@ -450,7 +402,7 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
   | deliver i j m h =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     all_goals dsimp only [gatherTier_setGatherTier, inputBroadcasts_setGatherTier,
       bindBroadcasts_setGatherTier]
     · exact hInv.F_card
@@ -492,10 +444,13 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
       exact ⟨Q, hQc, fun q hq => by
         obtain ⟨W, hW, hWU⟩ := hQ q hq
         exact ⟨W, InstanceState.mem_receiveMessage_received.mpr (Or.inr hW), hWU⟩⟩
+    · intro k hk y hy
+      rw [InstanceState.receiveMessage_process]
+      exact hInv.inputBroadcastCall_backed k hk y hy
   | echo j hin hcard hsend =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     all_goals dsimp only [gatherTier_setGatherTier, inputBroadcasts_setGatherTier,
       bindBroadcasts_setGatherTier]
     · exact hInv.F_card
@@ -566,10 +521,19 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
     · intro j' hj U hU
       simp only [InstanceState.multicast_received, InstanceState.setProcess_received]
       exact hInv.bind_backed j' hj U hU
+    · intro k hk y hy
+      rw [InstanceState.multicast_process]
+      have h0 := hInv.inputBroadcastCall_backed k hk y hy
+      by_cases hkj : k = j
+      · subst hkj
+        rw [InstanceState.setProcess_process_self]
+        exact h0
+      · rw [InstanceState.setProcess_process_ne _ _ _ hkj]
+        exact h0
   | vote j U hin hech happ hQ hsend =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     all_goals dsimp only [gatherTier_setGatherTier, inputBroadcasts_setGatherTier,
       bindBroadcasts_setGatherTier]
     · exact hInv.F_card
@@ -643,6 +607,15 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
     · intro j' hj U' hU'
       simp only [InstanceState.multicast_received, InstanceState.setProcess_received]
       exact hInv.bind_backed j' hj U' hU'
+    · intro k hk y hy
+      rw [InstanceState.multicast_process]
+      have h0 := hInv.inputBroadcastCall_backed k hk y hy
+      by_cases hkj : k = j
+      · subst hkj
+        rw [InstanceState.setProcess_process_self]
+        exact h0
+      · rw [InstanceState.setProcess_process_ne _ _ _ hkj]
+        exact h0
   | bindCall j U hin hvot hsnd happ hQ hb =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
@@ -651,7 +624,7 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
     refine ⟨hInv.F_card, hInv.F_inputBroadcast_eq, ?_, hInv.received_subset_sent,
       hInv.inputBroadcastReturned_val, ?_, hInv.inputBroadcastVal_provenance, ?_,
         hInv.echo_confirmed, hInv.echo_card, hInv.vote_confirmed,
-      hInv.vote_backed, ?_⟩
+      hInv.vote_backed, ?_, hInv.inputBroadcastCall_backed⟩
     all_goals dsimp only [gatherTier_setBindBroadcasts, bindBroadcasts_setBindBroadcasts]
     · intro q
       by_cases hq : q = j
@@ -697,7 +670,7 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
   | byzantine j m h =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     all_goals dsimp only [gatherTier_setGatherTier, inputBroadcasts_setGatherTier,
       bindBroadcasts_setGatherTier]
     · exact hInv.F_card
@@ -737,10 +710,13 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
     · intro j' hj U hU
       rw [InstanceState.multicast_received]
       exact hInv.bind_backed j' hj U hU
+    · intro k hk y hy
+      rw [InstanceState.multicast_process]
+      exact hInv.inputBroadcastCall_backed k hk y hy
   | inputBroadcastRet k j v hv hr =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     all_goals dsimp only [gatherTier_setInputBroadcasts, gatherTier_setGatherTier,
       inputBroadcasts_setInputBroadcasts, bindBroadcasts_setInputBroadcasts,
         bindBroadcasts_setGatherTier]
@@ -830,10 +806,25 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
     · intro j' hj U hU
       rw [InstanceState.setProcess_received]
       exact hInv.bind_backed j' hj U hU
+    · intro k' hk' y hy
+      have h0 : (inputBroadcasts s k').input = some y := by
+        by_cases hkk : k' = k
+        · subst hkk
+          rw [Function.update_self] at hy
+          exact hy
+        · rw [Function.update_of_ne hkk] at hy
+          exact hy
+      have h1 := hInv.inputBroadcastCall_backed k' hk' y h0
+      by_cases hkj : k' = j
+      · subst hkj
+        rw [InstanceState.setProcess_process_self]
+        exact h1
+      · rw [InstanceState.setProcess_process_ne _ _ _ hkj]
+        exact h1
   | bindRet q j U hv hr =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     all_goals dsimp only [gatherTier_setBindBroadcasts, gatherTier_setGatherTier,
       bindBroadcasts_setBindBroadcasts, inputBroadcasts_setBindBroadcasts,
         inputBroadcasts_setGatherTier]
@@ -928,10 +919,18 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
         exact hInv.bind_backed j' hj U' hU'
       · rw [Function.update_of_ne hq] at hU'
         exact hInv.bind_backed j' hj U' hU'
+    · intro k hk y hy
+      have h0 := hInv.inputBroadcastCall_backed k hk y hy
+      by_cases hkj : k = j
+      · subst hkj
+        rw [InstanceState.setProcess_process_self]
+        exact h0
+      · rw [InstanceState.setProcess_process_ne _ _ _ hkj]
+        exact h0
   | ret id g hin hbind hsub hQ hr =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     all_goals dsimp only [gatherTier_setCore, gatherTier_setGatherTier, inputBroadcasts_setCore,
       inputBroadcasts_setGatherTier, bindBroadcasts_setCore, bindBroadcasts_setGatherTier]
     · exact hInv.F_card
@@ -993,12 +992,20 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
     · intro j hj U hU
       rw [InstanceState.setProcess_received]
       exact hInv.bind_backed j hj U hU
+    · intro k hk y hy
+      have h0 := hInv.inputBroadcastCall_backed k hk y hy
+      by_cases hkid : k = id
+      · subst hkid
+        rw [InstanceState.setProcess_process_self]
+        exact h0
+      · rw [InstanceState.setProcess_process_ne _ _ _ hkid]
+        exact h0
   | fail id =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     have hF : ∀ k, k ∉ (InstanceState.corrupt P id (gatherTier s)).F → k ∉ (gatherTier s).F :=
       fun k hk hkF => hk (InstanceState.corrupt_F_subset (gatherTier s) id hkF)
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     all_goals dsimp only [gatherTier_corruptAll, inputBroadcasts_corruptAll,
       bindBroadcasts_corruptAll]
     · exact InstanceState.corrupt_card_le (gatherTier s) id hInv.F_card
@@ -1049,6 +1056,10 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
       rw [BRB.corrupt_input] at hU
       rw [InstanceState.corrupt_received]
       exact hInv.bind_backed j (hF j hj) U hU
+    · intro k hk y hy
+      rw [InstanceState.corrupt_process]
+      rw [BRB.corrupt_input] at hy
+      exact hInv.inputBroadcastCall_backed k (hF k hk) y hy
 
 
 /-! ### The approval of an echo field -/
@@ -1072,18 +1083,11 @@ theorem approved_mono {s s' : StateOverBroadcastSpecification P.n X} {l : Label 
         (inputBroadcasts s k).val = some v → (inputBroadcasts t k).val = some v) → approved t A :=
     fun t ht p hp => ht p.1 p.2 (h p hp)
   cases hstep with
-  | call id x hc hb =>
+  | inputBroadcastCall j x hin hb =>
       rw [PMF.mem_support_pure_iff] at hs'; subst hs'
       refine key _ (fun k v hv => ?_)
       dsimp only [inputBroadcasts_setInputBroadcasts]
-      by_cases hk : k = id
-      · subst hk; rw [Function.update_self]; exact hv
-      · rw [Function.update_of_ne hk]; exact hv
-  | callProgramLoop id x hb =>
-      rw [PMF.mem_support_pure_iff] at hs'; subst hs'
-      refine key _ (fun k v hv => ?_)
-      dsimp only [inputBroadcasts_setInputBroadcasts]
-      by_cases hk : k = id
+      by_cases hk : k = j
       · subst hk; rw [Function.update_self]; exact hv
       · rw [Function.update_of_ne hk]; exact hv
   | commitInputEntry k v hv hm =>
@@ -1128,14 +1132,7 @@ theorem echoApproved_step {s s' : StateOverBroadcastSpecification P.n X} {l : La
   intro j A hA
   refine approved_mono hstep hs' ?_
   cases hstep with
-  | call id x hc hb =>
-      rw [PMF.mem_support_pure_iff] at hs'; subst hs'
-      refine hEA j A ?_
-      dsimp only [gatherTier_setInputBroadcasts, gatherTier_setGatherTier] at hA
-      by_cases hk : j = id
-      · subst hk; rw [InstanceState.setProcess_process_self] at hA; exact hA
-      · rw [InstanceState.setProcess_process_ne _ _ _ hk] at hA; exact hA
-  | callSpecificationLoop id x hc =>
+  | call id x hc =>
       rw [PMF.mem_support_pure_iff] at hs'; subst hs'
       refine hEA j A ?_
       dsimp only [gatherTier_setGatherTier] at hA

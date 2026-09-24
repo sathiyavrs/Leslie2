@@ -57,7 +57,7 @@ section GhostFreeSystem
 variable (P : Parameters) (M E S : Type) [DecidableEq M]
     (roundStep : Fin P.n → ProcessRecord P.n S → ExtendedLabel P.n M E → PMF (ProcessRecord P.n S) →
       Prop)
-    (callPayload : Fin P.n → Bool → M)
+    (callPayload : Fin P.n → Bool → Option M)
 
 /-- The adversary of the ghost-free system: the network's transitions over the trivial ghost,
 its two graded-agreement returns free to announce either bit. -/
@@ -181,7 +181,7 @@ graded-agreement returns are the one pair of transitions that read it. -/
 
 section NetworkErasure
 variable {P : Parameters} {M E G : Type} [DecidableEq M] [Inhabited G]
-    {callPayload : Fin P.n → Bool → M}
+    {callPayload : Fin P.n → Bool → Option M}
     {ghostStep : ExtendedLabel P.n M E → NetworkState P.n M G → G → G}
     {ghostOutput : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop}
 
@@ -222,7 +222,7 @@ theorem network_erasure
     simp only [networkGhostFree, network_step]
     cases h <;>
       simp only [PMF.pure_map, forgetGhost_writeGhost, forgetGhost_recordGBCASend,
-        forgetGhost_recordDecided, forgetGhost_corrupt] <;>
+        forgetGhost_recordGBCACall, forgetGhost_recordDecided, forgetGhost_corrupt] <;>
       apply networkStepGhostFree_drop <;>
       first
         | exact NetworkStep.retByzantine _ _ _ (by assumption)
@@ -365,7 +365,7 @@ variable (P : Parameters) (M E S G : Type) [DecidableEq M] [Inhabited G]
     (roundStep : Fin P.n → ProcessRecord P.n S → ExtendedLabel P.n M E → PMF (ProcessRecord P.n S) →
       Prop)
     [IsRoundStep P M E S roundStep]
-    (callPayload : Fin P.n → Bool → M)
+    (callPayload : Fin P.n → Bool → Option M)
     (ghostStep : ExtendedLabel P.n M E → NetworkState P.n M G → G → G)
     (ghostOutput : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop)
 

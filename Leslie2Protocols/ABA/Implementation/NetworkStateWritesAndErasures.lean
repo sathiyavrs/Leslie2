@@ -34,7 +34,8 @@ namespace Implementation
 
 Each of the network's three writes on the message record — a round multicast, a DECIDED
 multicast, and corruption — touches one field of the state and leaves the others alone, the ghost
-among them. The ghost write touches the ghost and nothing else. -/
+among them. A graded-agreement call's write is a round multicast where the call carries a payload
+and the identity where it carries none. The ghost write touches the ghost and nothing else. -/
 
 section Fields
 
@@ -58,6 +59,24 @@ theorem recordGBCASend_sent_ne [DecidableEq M] (s : NetworkState n M G)
 
 @[simp] theorem recordGBCASend_ghostRecord [DecidableEq M] (s : NetworkState n M G)
     (r : ℕ) (j : Fin n) (m : M) : (s.recordGBCASend r j m).ghostRecord = s.ghostRecord := rfl
+
+@[simp] theorem recordGBCACall_none [DecidableEq M] (s : NetworkState n M G)
+    (r : ℕ) (j : Fin n) : s.recordGBCACall r j none = s := rfl
+
+@[simp] theorem recordGBCACall_some [DecidableEq M] (s : NetworkState n M G)
+    (r : ℕ) (j : Fin n) (m : M) :
+    s.recordGBCACall r j (some m) = s.recordGBCASend r j m := rfl
+
+@[simp] theorem recordGBCACall_decidedSent [DecidableEq M] (s : NetworkState n M G)
+    (r : ℕ) (j : Fin n) (m : Option M) :
+    (s.recordGBCACall r j m).decidedSent = s.decidedSent := by cases m <;> rfl
+
+@[simp] theorem recordGBCACall_F [DecidableEq M] (s : NetworkState n M G)
+    (r : ℕ) (j : Fin n) (m : Option M) : (s.recordGBCACall r j m).F = s.F := by cases m <;> rfl
+
+@[simp] theorem recordGBCACall_ghostRecord [DecidableEq M] (s : NetworkState n M G)
+    (r : ℕ) (j : Fin n) (m : Option M) :
+    (s.recordGBCACall r j m).ghostRecord = s.ghostRecord := by cases m <;> rfl
 
 @[simp] theorem recordDecided_sent (s : NetworkState n M G)
     (j : Fin n) (b : Bool) : (s.recordDecided j b).sent = s.sent := rfl
@@ -157,6 +176,11 @@ variable {n : ℕ} {M E G : Type}
 @[simp] theorem forgetGhost_recordGBCASend [DecidableEq M] (s : NetworkState n M G)
     (r : ℕ) (j : Fin n) (m : M) :
     (s.recordGBCASend r j m).forgetGhost = s.forgetGhost.recordGBCASend r j m := rfl
+
+@[simp] theorem forgetGhost_recordGBCACall [DecidableEq M] (s : NetworkState n M G)
+    (r : ℕ) (j : Fin n) (m : Option M) :
+    (s.recordGBCACall r j m).forgetGhost = s.forgetGhost.recordGBCACall r j m := by
+  cases m <;> rfl
 
 @[simp] theorem forgetGhost_recordDecided (s : NetworkState n M G) (j : Fin n) (b : Bool) :
     (s.recordDecided j b).forgetGhost = s.forgetGhost.recordDecided j b := rfl

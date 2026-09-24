@@ -13,7 +13,7 @@ import Leslie2Protocols.ABA.Gather.SpecificationSafety
 `Gather.SpecificationRelation P s t` relates a state of the gather instance over the broadcast
 specifications (`Gather.instanceOverBroadcastSpecification`, `ABA/Gather/Composition.lean`) to a
 state of the gather specification (`Gather.specInst`, blueprint TS 4). The return flags and the
-corrupted sets agree, the call records agree with the input instances', the two systems hold the
+corrupted sets agree, the call records agree with the gather records', the two systems hold the
 same core, and the instance invariant of `ABA/Gather/Invariant.lean` holds at `s`.
 
 The specification's abstract content is bounded from above by receipt evidence the instance
@@ -43,8 +43,8 @@ structure SpecificationRelation (P : Parameters) (s : StateOverBroadcastSpecific
     (t : SpecState P.n X) : Prop where
   /-- The instance invariant. -/
   invariant : Invariant P s
-  /-- The call records agree with the input instances'. -/
-  call_eq : ∀ k, t.call k = (inputBroadcasts s k).input
+  /-- The call records agree with the gather records'. -/
+  call_eq : ∀ k, t.call k = ((gatherTier s).process k).input
   /-- The return flags agree. -/
   ret_eq : ∀ id, t.ret id = ((gatherTier s).process id).returned
   /-- The corrupted sets agree. -/
@@ -78,7 +78,7 @@ theorem specificationRelation_corrupt {s : StateOverBroadcastSpecification P.n X
   all_goals dsimp only [gatherTier_corruptAll, inputBroadcasts_corruptAll,
     bindBroadcasts_corruptAll, core_corruptAll]
   · intro k
-    rw [corrupt_call, BRB.corrupt_input]
+    rw [corrupt_call, InstanceState.corrupt_process]
     exact hR.call_eq k
   · intro k
     rw [corrupt_ret, InstanceState.corrupt_process]

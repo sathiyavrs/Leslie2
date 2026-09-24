@@ -24,7 +24,8 @@ follows the source blueprint; where the source blueprint departs from a paper th
 encoding inherits the departure, except at the items of §1.
 
 **The D-registry is elsewhere.** The catalogued deviations — D1, D4, D5, D8–D19, D21–D24,
-D26–D36, with D12 refined to D12′ — are cited at the point of use in the ABA module
+D26, D27, D29–D36, with D12 refined to D12′ and D28 retired, a retired number not being
+reused — are cited at the point of use in the ABA module
 docstrings and glossed one by one in the blueprint chapter (the Deviations paragraph of
 `blueprint/src/content.tex`), which is the registry of record.
 
@@ -177,8 +178,9 @@ parameter and multicasts `⟨INPUT, x⟩` at line 2, its first statement.
 no state of the implementation holds a called process whose `INPUT` has not been sent. The
 sent sets are read by `Algorithm.deliver` alone, so a send the adversary would delay is a
 delivery it delays instead, and the same receipt patterns are reachable under either
-rendering. D28 is the fusion of a gather's call with the call of the instance broadcasting the
-caller's input, and does not cover this one.
+rendering. The registry catalogues no fusion at the gather-based implementation, where the
+call of a gather and the call of the instance broadcasting the caller's input are two
+transitions.
 
 **Terminating `return` as state.** The pseudocode's `return` ends the process; the
 encoding renders that as a fire-once flag — `ProcessRecord.returned`, guarded by the `hr`

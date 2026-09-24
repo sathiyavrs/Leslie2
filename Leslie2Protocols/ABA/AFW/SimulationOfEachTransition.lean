@@ -84,6 +84,17 @@ theorem roundRecord_setRoundRecord_secondGatherInput {P : Parameters} {p : Round
   · subst hr'; rw [Implementation.RoundRecordMap.roundRecord_setRoundRecord_self]; exact h
   · rw [Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr']
 
+/-- The same, read as the disjunction the round events carry: the second gather's input stands. -/
+theorem roundRecord_setRoundRecord_secondGatherInput_or {P : Parameters} {p : RoundRecordMap P.n}
+    {r : ℕ} {sr : RoundRecord P.n}
+    (h : (sr.secondGather.process).input = ((p.roundRecord r).secondGather.process).input)
+    (r' : ℕ) :
+    ((((p.setRoundRecord r sr).roundRecord r').secondGather.process).input
+        = (((p.roundRecord r').secondGather.process)).input) ∨
+      (((((p.setRoundRecord r sr).roundRecord r').secondGather.process).input ≠ none) ∧
+        ((p.roundRecord r').candidate ≠ none)) :=
+  Or.inl (roundRecord_setRoundRecord_secondGatherInput h r')
+
 /-- **The candidate is written at the first gather's return alone**: a round-internal call or
 return either leaves the round's candidate where it stands, or is the first gather's return, whose
 label carries the candidate it records. -/
@@ -149,21 +160,37 @@ theorem transition_instanceOverBracha_inl {s : Gather.StateOverBracha P.n X} {l�
 /-- Build the instance's call: the gather record records the payload and the
 caller's own input instance broadcasts it. -/
 theorem transition_instanceOverBracha_call (s : Gather.StateOverBracha P.n X) (id : Fin P.n) (x : X)
-    (h : ((Gather.gatherTier s).process id).input = none)
-    (hb : ((Gather.inputBroadcasts s id).process id).input = none) :
+    (h : ((Gather.gatherTier s).process id).input = none) :
     (Gather.instanceOverBracha P X).step s (Sum.inl (Gather.Label.call id x))
-      (PMF.pure (Gather.setInputBroadcasts
-        (Gather.setGatherTier s ((Gather.gatherTier s).setProcess id
-          { (Gather.gatherTier s).process id with input := some x }))
+      (PMF.pure (Gather.setGatherTier s ((Gather.gatherTier s).setProcess id
+        { (Gather.gatherTier s).process id with input := some x }))) := by
+  obtain ⟨⟨v, y⟩, a, b⟩ := s
+  exact Gather.instanceOverBroadcasts_label_step (a' := a) (b' := b) (by simp)
+    (dirac_steps_update (Gather.ProgramStep.call (v id) x h)
+      (fun i hi => Gather.ProgramStep.callIdle (v i) id x (Ne.symm hi)))
+    (Gather.NetworkStep.call y id x)
+    (fun _ => System.mapIdle_unchanged rfl)
+    (fun _ => System.mapIdle_unchanged rfl)
+
+/-- Build the call of the instance broadcasting the caller's input: that instance records the
+payload the gather record holds and multicasts its `⟨INIT, x⟩`. -/
+theorem transition_instanceOverBracha_inputBroadcastCall (s : Gather.StateOverBracha P.n X)
+    (id : Fin P.n) (x : X) (hin : ((Gather.gatherTier s).process id).input = some x)
+    (hb : ((Gather.inputBroadcasts s id).process id).input = none) :
+    (Gather.instanceOverBracha P X).step s (Sum.inl Gather.Label.tau)
+      (PMF.pure (Gather.setInputBroadcasts s
         (Function.update (Gather.inputBroadcasts s) id
           (((Gather.inputBroadcasts s id).setProcess id
             { (Gather.inputBroadcasts s id).process id with input := some x }).multicast id (.init
               x))))) := by
   obtain ⟨⟨v, y⟩, a, b⟩ := s
-  exact Gather.instanceOverBroadcasts_label_step (b' := b) (by simp)
-    (dirac_steps_update (Gather.ProgramStep.call (v id) x h)
-      (fun i hi => Gather.ProgramStep.callIdle (v i) id x (Ne.symm hi)))
-    (Gather.NetworkStep.call y id x)
+  exact Gather.instanceOverBroadcasts_event_step (x := v) (w' := y) (b' := b)
+    (Gather.GatherEvent.inputBroadcastCall id x)
+    (fun i => by
+      by_cases hi : i = id
+      · subst hi; exact Gather.ProgramStep.inputBroadcastCall (v i) x hin
+      · exact Gather.ProgramStep.inputBroadcastCallIdle (v i) id x (Ne.symm hi))
+    (Gather.NetworkStep.inputBroadcastCallIdle y id x)
     (System.mapIdle_step_update (by simp) (fun k hk => by simp [hk])
       (Gather.transition_brachaInstance_call_step P id (a id) x hb))
     (fun _ => System.mapIdle_unchanged rfl)
@@ -180,11 +207,7 @@ theorem transition_instanceOverBracha_callLoop (s : Gather.StateOverBracha P.n X
   · by_cases hi : i = id
     · subst hi; exact Gather.ProgramStep.callLoop (v i) x
     · exact Gather.ProgramStep.callLoopIdle (v i) id x (Ne.symm hi)
-  · by_cases hk : k = id
-    · subst hk
-      exact System.mapIdle_step_of_step (by simp)
-        (Gather.transition_brachaInstance_callLoop_step P k (a k) x)
-    · exact System.mapIdle_unchanged (by simp [hk])
+  · exact System.mapIdle_unchanged rfl
 
 end GatherTransitions
 
@@ -219,27 +242,22 @@ theorem roundOverBracha_secondGatherTau (s : GBCA.ByAFW.RoundStateOverBracha P.n
 takes its call. -/
 theorem roundOverBracha_callG (s : GBCA.ByAFW.RoundStateOverBracha P.n) (id : Fin P.n) (b : Bool)
     (h0 : (GBCA.ByAFW.programs s id).input = none)
-    (hg : ((Gather.gatherTier (GBCA.ByAFW.firstGather s)).process id).input = none)
-    (hb : ((Gather.inputBroadcasts (GBCA.ByAFW.firstGather s) id).process id).input = none) :
+    (hg : ((Gather.gatherTier (GBCA.ByAFW.firstGather s)).process id).input = none) :
     (GBCA.ByAFW.roundOverBracha P r).step s (Sum.inl (Label.callG r id b))
       (PMF.pure (GBCA.ByAFW.setFirstGather
         (GBCA.ByAFW.setPrograms s (Function.update (GBCA.ByAFW.programs s) id
           { GBCA.ByAFW.programs s id with input := some b }))
-        (Gather.setInputBroadcasts
-          (Gather.setGatherTier (GBCA.ByAFW.firstGather s) ((Gather.gatherTier
-            (GBCA.ByAFW.firstGather s)).setProcess id
-            { (Gather.gatherTier (GBCA.ByAFW.firstGather s)).process id with input := some b }))
-          (Function.update (Gather.inputBroadcasts (GBCA.ByAFW.firstGather s)) id
-            (((Gather.inputBroadcasts (GBCA.ByAFW.firstGather s) id).setProcess id
-              { (Gather.inputBroadcasts (GBCA.ByAFW.firstGather s) id).process id with
-                input := some b }).multicast id (.init b)))))) := by
+        (Gather.setGatherTier (GBCA.ByAFW.firstGather s) ((Gather.gatherTier
+          (GBCA.ByAFW.firstGather s)).setProcess id
+          { (Gather.gatherTier (GBCA.ByAFW.firstGather s)).process id with
+            input := some b })))) := by
   obtain ⟨⟨v, y⟩, c, d⟩ := s
   exact GBCA.ByAFW.roundOverGathers_label_step (by simp)
     (GBCA.ByAFW.roundPrograms_label_step (lp := .callG r id b) (by simp) (by simp)
       (dirac_steps_update (GBCA.ByAFW.ProgramStep.callG (v id) b h0)
         (fun i hi => GBCA.ByAFW.ProgramStep.callGIdle (v i) id b (Ne.symm hi)))
       (GBCA.ByAFW.NetworkStep.callG y id b))
-    (System.mapIdle_step_of_step (by simp) (transition_instanceOverBracha_call c id b hg hb))
+    (System.mapIdle_step_of_step (by simp) (transition_instanceOverBracha_call c id b hg))
     (System.mapIdle_unchanged (by simp))
 
 /-- **The round's call loop**: no program moves and the first gather takes its
@@ -304,8 +322,7 @@ gather takes its call. -/
 theorem roundOverBracha_secondGatherCall (s : GBCA.ByAFW.RoundStateOverBracha P.n) (id : Fin P.n)
     (x : Option Bool) (hc : (GBCA.ByAFW.programs s id).candidate = some x)
     (h2 : (GBCA.ByAFW.programs s id).secondGatherCalled = false)
-    (hg : ((Gather.gatherTier (GBCA.ByAFW.secondGather s)).process id).input = none)
-    (hb : ((Gather.inputBroadcasts (GBCA.ByAFW.secondGather s) id).process id).input = none) :
+    (hg : ((Gather.gatherTier (GBCA.ByAFW.secondGather s)).process id).input = none) :
     (GBCA.ByAFW.roundOverBracha P r).step s (Sum.inl Label.tau)
     (PMF.pure (afterSecondGatherCall P s id x)) :=
       by
@@ -316,7 +333,7 @@ theorem roundOverBracha_secondGatherCall (s : GBCA.ByAFW.RoundStateOverBracha P.
         (fun i hi => GBCA.ByAFW.ProgramStep.secondGatherCallIdle (v i) id x (Ne.symm hi)))
       (GBCA.ByAFW.NetworkStep.secondGatherCall y id x))
     (System.mapIdle_unchanged (by simp))
-    (System.mapIdle_step_of_step (by simp) (transition_instanceOverBracha_call d id x hg hb))
+    (System.mapIdle_step_of_step (by simp) (transition_instanceOverBracha_call d id x hg))
 
 /-- **The second gather's return**: the program records the grade and the
 second gather takes its return. -/
@@ -545,21 +562,26 @@ theorem roundRecord_match_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.Pr
     rw [roundProjection_secondGatherBind rfl]
     exact roundOverBracha_run_one (roundOverBracha_secondGatherTau (roundProjection P u w r)
         htransition)
-  | secondGatherCall _ _ _ x hh hterm hcand hin2 hbin2 =>
-    have htransition : Gather.AlgorithmOverBracha P (GBCA.ByAFW.secondGather
-        (roundProjection P u w r)) (.call j x)
-        (PMF.pure (GBCA.ByAFW.secondGather (afterSecondGatherCall P (roundProjection P u w r) j
-          x))) :=
-      Gather.AlgorithmOverBracha.call _ j x hin2 hbin2
+  | firstGatherInputBroadcastCall _ _ _ b hh hterm hin hbin =>
+    have htransition :=
+      Gather.AlgorithmOverBracha.inputBroadcastCall (firstGatherProjection P u w r) j b hin hbin
     refine ⟨_, rfl, rfl,
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr',
         roundRecord_setRoundRecord_candidate rfl, roundRecord_setRoundRecord_output rfl,
-        Or.inr ⟨by simp [Implementation.RoundRecordMap.roundRecord_setRoundRecord_self,
-          LocalState.setProcess], by rw [hcand]; simp⟩, ?_⟩
-    rw [roundProjection_secondGatherCall rfl]
-    exact roundOverBracha_run_one
-      (roundOverBracha_secondGatherCall (roundProjection P u w r) j x hcand
-        (by simp [programProjection, hin2]) hin2 hbin2)
+        Or.inl (by simp [Implementation.RoundRecordMap.roundRecord_setRoundRecord_self]), ?_⟩
+    rw [roundProjection_firstGatherInputBroadcastCall rfl]
+    exact roundOverBracha_run_one (roundOverBracha_firstGatherTau (roundProjection P u w r)
+        htransition)
+  | secondGatherInputBroadcastCall _ _ _ x hh hterm hin2 hbin2 =>
+    have htransition :=
+      Gather.AlgorithmOverBracha.inputBroadcastCall (secondGatherProjection P u w r) j x hin2 hbin2
+    refine ⟨_, rfl, rfl,
+      fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr',
+        roundRecord_setRoundRecord_candidate rfl, roundRecord_setRoundRecord_output rfl,
+        Or.inl (by simp [Implementation.RoundRecordMap.roundRecord_setRoundRecord_self]), ?_⟩
+    rw [roundProjection_secondGatherInputBroadcastCall rfl]
+    exact roundOverBracha_run_one (roundOverBracha_secondGatherTau (roundProjection P u w r)
+        htransition)
   | firstGatherInputBroadcastEcho _ _ _ i mm hh hterm hrecv hsend =>
     have htransition := Gather.AlgorithmOverBracha.inputBroadcastTau (firstGatherProjection P u w r)
       i _
@@ -856,7 +878,9 @@ theorem roundRecord_match_gbcaRoundEvent (P : Parameters)
       (∀ r', r' ≠ r → x.2.roundRecord r' = p.roundRecord r') ∧
       (∀ r',
         ((x.2.roundRecord r').secondGather.process).input = ((p.roundRecord
-          r').secondGather.process).input) ∧
+            r').secondGather.process).input ∨
+          (((x.2.roundRecord r').secondGather.process).input ≠ none ∧
+            (p.roundRecord r').candidate ≠ none)) ∧
       (GBCA.ByAFW.roundOverBracha P r).weakLSilent (roundProjection P u w r)
         (roundProjection P (Function.update u j x)
           (w.writeGhost (ghostStep P) (Sum.inr (.gbcaRoundEvent r j e))) r) := by
@@ -865,15 +889,29 @@ theorem roundRecord_match_gbcaRoundEvent (P : Parameters)
   | firstGatherReturn _ _ _ g hh hterm hin hbind hsubap hQ hr1 hcand =>
     refine ⟨_, rfl, rfl,
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr',
-        roundRecord_setRoundRecord_secondGatherInput rfl, ?_⟩
+        roundRecord_setRoundRecord_secondGatherInput_or rfl, ?_⟩
     rw [roundProjection_firstGatherReturn rfl r g]
     exact roundOverBracha_run_one
       (roundOverBracha_firstGatherReturn (roundProjection P u w r) j g hin hcand
         (Gather.AlgorithmOverBracha.ret _ j g hin hbind hsubap hQ hr1))
+  | secondGatherCall _ _ _ x hh hterm hcand hin2 =>
+    refine ⟨_, rfl, rfl,
+      fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr',
+        fun r' => ?_, ?_⟩
+    · by_cases hr' : r' = r
+      · subst hr'
+        exact Or.inr ⟨by simp [Implementation.RoundRecordMap.roundRecord_setRoundRecord_self,
+          LocalState.setProcess], by rw [hcand]; simp⟩
+      · exact Or.inl (by
+          rw [Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr'])
+    · rw [roundProjection_secondGatherCall rfl]
+      exact roundOverBracha_run_one
+        (roundOverBracha_secondGatherCall (roundProjection P u w r) j x hcand
+          (by simp [programProjection, hin2]) hin2)
   | secondGatherReturn _ _ _ g hh hterm hin hbind hsubap hQ hr2 hout =>
     refine ⟨_, rfl, rfl,
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr',
-        roundRecord_setRoundRecord_secondGatherInput rfl, ?_⟩
+        roundRecord_setRoundRecord_secondGatherInput_or rfl, ?_⟩
     rw [roundProjection_secondGatherReturn rfl r g hr2]
     refine roundOverBracha_run_one
       (roundOverBracha_secondGatherReturn (roundProjection P u w r) j g ?_ hout
@@ -883,7 +921,7 @@ theorem roundRecord_match_gbcaRoundEvent (P : Parameters)
   | firstGatherInputBroadcastReturn _ _ _ i v hh hterm hcnt hret =>
     refine ⟨_, rfl, rfl,
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr',
-        fun r' => ?_, ?_⟩
+        fun r' => Or.inl ?_, ?_⟩
     · by_cases hr' : r' = r
       · subst hr'; simp [LocalState.setProcess]
       · rw [Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr']
@@ -896,7 +934,7 @@ theorem roundRecord_match_gbcaRoundEvent (P : Parameters)
   | firstGatherBindBroadcastReturn _ _ _ q U hh hterm hcnt hret =>
     refine ⟨_, rfl, rfl,
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr',
-        fun r' => ?_, ?_⟩
+        fun r' => Or.inl ?_, ?_⟩
     · by_cases hr' : r' = r
       · subst hr'; simp [LocalState.setProcess]
       · rw [Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr']
@@ -909,7 +947,7 @@ theorem roundRecord_match_gbcaRoundEvent (P : Parameters)
   | secondGatherInputBroadcastReturn _ _ _ i v hh hterm hcnt hret =>
     refine ⟨_, rfl, rfl,
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr',
-        fun r' => ?_, ?_⟩
+        fun r' => Or.inl ?_, ?_⟩
     · by_cases hr' : r' = r
       · subst hr'; simp [LocalState.setProcess]
       · rw [Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr']
@@ -922,7 +960,7 @@ theorem roundRecord_match_gbcaRoundEvent (P : Parameters)
   | secondGatherBindBroadcastReturn _ _ _ q U hh hterm hcnt hret =>
     refine ⟨_, rfl, rfl,
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr',
-        fun r' => ?_, ?_⟩
+        fun r' => Or.inl ?_, ?_⟩
     · by_cases hr' : r' = r
       · subst hr'; simp [LocalState.setProcess]
       · rw [Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr']
@@ -953,19 +991,19 @@ theorem roundRecord_match_callG (P : Parameters) {u : ∀ _ : Fin P.n, AFW.Proce
       (∀ r', (x.2.roundRecord r').output = (p.roundRecord r').output) ∧
       (GBCA.ByAFW.roundOverBracha P r).weakLStep (roundProjection P u w r) (Sum.inl (.callG r j b))
         (roundProjection P (Function.update u j x)
-          ((w.recordGBCASend r j (gbcaCallPayload P j b)).writeGhost (ghostStep P)
+          ((w.recordGBCACall r j (gbcaCallPayload P j b)).writeGhost (ghostStep P)
             (Sum.inl (.callG r j b))) r) := by
   subst hu
   cases h with
-  | callG _ _ _ _ hh hph hr hterm hest hin hbin =>
-    have htransition := Gather.AlgorithmOverBracha.call (firstGatherProjection P u w r) j b hin hbin
+  | callG _ _ _ _ hh hph hr hterm hest hin =>
+    have htransition := Gather.AlgorithmOverBracha.call (firstGatherProjection P u w r) j b hin
     refine ⟨_, rfl, hh, hph, hr, hest, rfl,
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr',
         roundRecord_setRoundRecord_secondGatherInput rfl,
         roundRecord_setRoundRecord_candidate rfl, roundRecord_setRoundRecord_output rfl, ?_⟩
-    · rw [gbcaCallPayload, roundProjection_callG rfl]
+    · rw [show w.recordGBCACall r j (gbcaCallPayload P j b) = w from rfl, roundProjection_callG rfl]
       exact System.weakLStep_of_step (by simp)
-        (roundOverBracha_callG (roundProjection P u w r) j b hin hin hbin)
+        (roundOverBracha_callG (roundProjection P u w r) j b hin hin)
 
 /-- The graded-agreement return of the implementation is the round's own return, the graded
 outcome read off the record the second gather's return left there. -/

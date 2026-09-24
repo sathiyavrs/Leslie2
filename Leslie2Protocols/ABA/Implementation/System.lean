@@ -40,10 +40,10 @@ of the transitions here, whichever implementation is being read.
 ## The network
 
 The adversary's transitions are independent of the implementation except in
-two places. The graded-agreement call and its Byzantine handshake transition
-sent the message the call multicasts, and which message that is belongs to the
-implementation; it enters as the parameter `callPayload`. The other is the
-ghost.
+two places. The graded-agreement call and its Byzantine transition send the payload that call
+carries, and what that payload is belongs to the implementation; it enters as the parameter
+`callPayload`, whose value is `none` for an implementation whose call multicasts nothing. The
+other is the ghost.
 
 ## The network's ghost
 
@@ -208,6 +208,12 @@ def recordGBCASend (s : NetworkState n M G) (r : ℕ) (j : Fin n) (m : M) : Netw
   { s with
     sent :=
       Function.update s.sent r (Function.update (s.sent r) j (insert m (s.sent r j))) }
+
+/-- Sent the payload a graded-agreement call multicasts, where the call carries one. An
+implementation whose call sends no message of its own leaves the sent sets standing. -/
+def recordGBCACall (s : NetworkState n M G) (r : ℕ) (j : Fin n) (m : Option M) :
+    NetworkState n M G :=
+  m.elim s (fun m => s.recordGBCASend r j m)
 
 /-- Sent `⟨DECIDED, b⟩` under sender `j` (D12′). -/
 def recordDecided (s : NetworkState n M G) (j : Fin n) (b : Bool) : NetworkState n M G :=
@@ -465,15 +471,16 @@ it is the sole authority on the Byzantine labels, where its `k ∈ F` guard is
 the whole authorisation. -/
 
 /-- The step relation of the network. All transitions are Dirac.
-`callPayload id b` is the message the graded-agreement call of `id` at `b`
-multicasts. The successor of every transition is that transition's effect on the
-sent sets, the DECIDED sets and the corrupted set, with the ghost record of the
-round the label names written by `ghostStep`. The two graded-agreement returns
+`callPayload id b` is the payload the graded-agreement call of `id` at `b`
+multicasts, and it is `none` where that call multicasts nothing. The successor of
+every transition is that transition's effect on the sent sets, the DECIDED sets
+and the corrupted set, with the ghost record of the round the label names written
+by `ghostStep`. The two graded-agreement returns
 fire only with the bound bit their label carries standing in `ghostOutput` at the
 state before the transition, the round, the process being answered and the graded
 outcome. -/
 inductive NetworkStep (P : Parameters) (M E G : Type) [DecidableEq M]
-    (callPayload : Fin P.n → Bool → M)
+    (callPayload : Fin P.n → Bool → Option M)
     (ghostStep : ExtendedLabel P.n M E → NetworkState P.n M G → G → G)
     (ghostOutput : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop) :
     NetworkState P.n M G → ExtendedLabel P.n M E → PMF (NetworkState P.n M G) → Prop
@@ -513,11 +520,11 @@ inductive NetworkStep (P : Parameters) (M E G : Type) [DecidableEq M]
   | gbcaRoundEvent (s : NetworkState P.n M G) (r : ℕ) (j : Fin P.n) (e : E) :
       NetworkStep P M E G callPayload ghostStep ghostOutput s (Sum.inr (.gbcaRoundEvent r j e))
         (PMF.pure (s.writeGhost ghostStep (Sum.inr (.gbcaRoundEvent r j e))))
-  /-- A Byzantine graded-agreement call (D11): authorised here, and the
-  message its call multicasts sent here. -/
+  /-- A Byzantine graded-agreement call (D11): authorised here, and the payload its call
+  carries sent here. -/
   | byzantineCallG (s : NetworkState P.n M G) (r : ℕ) (k : Fin P.n) (b : Bool) (hF : k ∈ s.F) :
       NetworkStep P M E G callPayload ghostStep ghostOutput s (Sum.inr (.byzantineCallG r k b))
-        (PMF.pure ((s.recordGBCASend r k (callPayload k b)).writeGhost ghostStep
+        (PMF.pure ((s.recordGBCACall r k (callPayload k b)).writeGhost ghostStep
           (Sum.inr (.byzantineCallG r k b))))
   /-- A Byzantine graded-agreement call against an already-called round record (D11). -/
   | byzantineCallGLoop (s : NetworkState P.n M G) (r : ℕ) (k : Fin P.n) (b : Bool)
@@ -555,10 +562,11 @@ inductive NetworkStep (P : Parameters) (M E G : Type) [DecidableEq M]
   | retByzantine (s : NetworkState P.n M G) (id : Fin P.n) (b : Bool) (hF : id ∈ s.F) :
       NetworkStep P M E G callPayload ghostStep ghostOutput s (Sum.inl (.retABA id b))
         (PMF.pure (s.writeGhost ghostStep (Sum.inl (.retABA id b))))
-  /-- The graded-agreement call multicasts: the network records the message. -/
+  /-- The graded-agreement call sends the payload the implementation's call carries, and nothing
+  where it carries none. -/
   | callG (s : NetworkState P.n M G) (r : ℕ) (id : Fin P.n) (b : Bool) :
       NetworkStep P M E G callPayload ghostStep ghostOutput s (Sum.inl (.callG r id b))
-        (PMF.pure ((s.recordGBCASend r id (callPayload id b)).writeGhost ghostStep
+        (PMF.pure ((s.recordGBCACall r id (callPayload id b)).writeGhost ghostStep
           (Sum.inl (.callG r id b))))
   /-- A graded-agreement return sends nothing, and announces the round's bound
   bit: the label's `bnd` stands in the ghost relation of the round at this
@@ -626,7 +634,7 @@ abbrev State (P : Parameters) (M S G : Type) : Type :=
 section NetworkAdversary
 
 variable (P : Parameters) (M E G : Type) [DecidableEq M] [Inhabited G]
-    (callPayload : Fin P.n → Bool → M)
+    (callPayload : Fin P.n → Bool → Option M)
     (ghostStep : ExtendedLabel P.n M E → NetworkState P.n M G → G → G)
     (ghostOutput : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop)
 
@@ -653,7 +661,7 @@ section Composition
 variable (P : Parameters) (M E S G : Type) [DecidableEq M] [Inhabited G]
     (roundStep : Fin P.n → ProcessRecord P.n S → ExtendedLabel P.n M E → PMF (ProcessRecord P.n S) →
       Prop)
-    (callPayload : Fin P.n → Bool → M)
+    (callPayload : Fin P.n → Bool → Option M)
     (ghostStep : ExtendedLabel P.n M E → NetworkState P.n M G → G → G)
     (ghostOutput : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop)
 
