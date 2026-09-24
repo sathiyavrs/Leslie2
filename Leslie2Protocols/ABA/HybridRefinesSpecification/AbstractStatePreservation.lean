@@ -29,6 +29,11 @@ open Implementation Composition
 
 variable {P : Parameters}
 
+/-! `M` is the type of the messages a graded-agreement round exchanges. -/
+
+variable {M : Type} [DecidableEq M]
+
+
 /-! ### Stage C: `AbstractState` preservation for the stutter transitions
 
 Every one of `hybrid_step_tau`'s six disjuncts is matched by a stutter: the abstract state is
@@ -220,7 +225,7 @@ the matching `Invariant.step_*` helper (Stage B) in each case. -/
 theorem Invariant.step {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
     {C : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A : ABANetworkState P.n} {w : ℕ → WCC.SpecState P.n}
     (hI : Invariant P g (C, A) w) {l : Label P.n} {μ : PMF (HybridState P)}
-    (hstep : (hybrid P).step (g, C, A, w) l μ) {g' : ℕ → GBCA.SpecState P.n}
+    (hstep : (hybrid P M).step (g, C, A, w) l μ) {g' : ℕ → GBCA.SpecState P.n}
     {C' : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A' : ABANetworkState P.n}
     {w' : ℕ → WCC.SpecState P.n} (hmem : (g', C', A', w') ∈ μ.support) :
     Invariant P g' (C', A') w' := by

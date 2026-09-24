@@ -81,7 +81,7 @@ trace has positive probability under an achievable trace distribution of the
 protocol-shaped specification. -/
 theorem ghostFreeProtocol_traces (P : Parameters) :
     ∀ D ∈ achievableTraceDists (ghostFreeProtocol P), ∀ t, D t ≠ 0 →
-      ∃ D' ∈ achievableTraceDists (hybrid P), D' t ≠ 0 :=
+      ∃ D' ∈ achievableTraceDists (hybrid P GBCA.ByABDY.Message), D' t ≠ 0 :=
   fun D hD _ ht =>
     ⟨D, Set.Subset.trans (ghostFreeProtocol_composed P) (substitution P) hD, ht⟩
 

@@ -5,6 +5,7 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.Composition.Components
+import Leslie2Protocols.ABA.GBCA.ABDY.MessagesAndRecords
 import Leslie2Protocols.ABA.Implementation.CompositeTransitions
 
 /-!
@@ -56,7 +57,8 @@ namespace PLTS
 namespace ABA
 namespace ABDY
 
-open Implementation Composition
+open Implementation hiding NetworkEvent ExtendedLabel
+open Composition
 
 /-! ### The round vocabulary at ABDY22's implementation -/
 
@@ -133,7 +135,7 @@ return transitions: the bit a return announces is `abdyGhostOutput` of the round
 announces where the round has none on record; every other transition leaves the
 record alone. -/
 def abdyGhostStep (P : Parameters) :
-    ExtendedLabel P.n → NetworkState P.n → Option Bool → Option Bool
+    ExtendedLabel P.n GBCA.ByABDY.Message → NetworkState P.n → Option Bool → Option Bool
   | Sum.inl (.retG _ _ _ bnd), _, g => some (g.getD bnd)
   | Sum.inr (.byzantineRetG _ _ _ bnd), _, g => some (g.getD bnd)
   | _, _, g => g
@@ -156,7 +158,8 @@ abbrev abdyAnnouncedBound (P : Parameters) (s : NetworkState P.n) (r : ℕ) (id 
 /-- A transition whose ghost write is the identity leaves the adversary's whole
 state where it stands. Every transition but the two returns is such a
 transition. -/
-theorem writeGhost_abdy_id (P : Parameters) (w : NetworkState P.n) (L : ExtendedLabel P.n)
+theorem writeGhost_abdy_id (P : Parameters) (w : NetworkState P.n)
+    (L : ExtendedLabel P.n GBCA.ByABDY.Message)
     (h : ∀ g, abdyGhostStep P L w g = g) :
     w.writeGhost (abdyGhostStep P) L = w := by
   unfold Implementation.NetworkState.writeGhost
@@ -256,7 +259,7 @@ end GhostWrites
 five message levels, the round delivery, the call against an already-called record, and the three
 graded returns. -/
 inductive RoundStep (P : Parameters) (j : Fin P.n) :
-    ProcessRecord P.n → ExtendedLabel P.n → PMF (ProcessRecord P.n) → Prop
+    ProcessRecord P.n → ExtendedLabel P.n GBCA.ByABDY.Message → PMF (ProcessRecord P.n) → Prop
   /-- The graded-agreement call: the round loop hands its estimate to the round record of round `r`,
   which opens. The `⟨INPUT, b⟩` multicast is the network's half. -/
   | callG_call (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (b : Bool)
@@ -466,14 +469,15 @@ instance instIsRoundStep (P : Parameters) :
 /-- The step relation of the program of process `j`: the implementation's transitions beside
 ABDY22's own round transitions. -/
 abbrev ABAProgramStep (P : Parameters) (j : Fin P.n) :
-    ProcessRecord P.n → ExtendedLabel P.n → PMF (ProcessRecord P.n) → Prop :=
+    ProcessRecord P.n → ExtendedLabel P.n GBCA.ByABDY.Message → PMF (ProcessRecord P.n) → Prop :=
   ProgramStep P GBCA.ByABDY.Message (GBCA.ByABDY.RoundRecord P.n) (RoundStep P) j
 
 /-- The message the graded-agreement call multicasts: `⟨INPUT, b⟩`. -/
 def gbcaCallPayload (P : Parameters) : Fin P.n → Bool → GBCA.ByABDY.Message := fun _ b => .input b
 
 /-- The step relation of the network. -/
-abbrev NetworkStep (P : Parameters) : NetworkState P.n → ExtendedLabel P.n → PMF (NetworkState P.n)
+abbrev NetworkStep (P : Parameters) :
+    NetworkState P.n → ExtendedLabel P.n GBCA.ByABDY.Message → PMF (NetworkState P.n)
   → Prop :=
   Implementation.NetworkStep P GBCA.ByABDY.Message (Option Bool) (gbcaCallPayload P)
     (abdyGhostStep P)
@@ -481,11 +485,12 @@ abbrev NetworkStep (P : Parameters) : NetworkState P.n → ExtendedLabel P.n →
 
 /-- The program of process `j`. -/
 noncomputable abbrev ABAProgram (P : Parameters) (j : Fin P.n) :
-    System (ProcessRecord P.n) (ExtendedLabel P.n) :=
+    System (ProcessRecord P.n) (ExtendedLabel P.n GBCA.ByABDY.Message) :=
   program P GBCA.ByABDY.Message (GBCA.ByABDY.RoundRecord P.n) (RoundStep P) j
 
 /-- The network. -/
-noncomputable abbrev network (P : Parameters) : System (NetworkState P.n) (ExtendedLabel P.n) :=
+noncomputable abbrev network (P : Parameters) :
+    System (NetworkState P.n) (ExtendedLabel P.n GBCA.ByABDY.Message) :=
   Implementation.network P GBCA.ByABDY.Message (Option Bool) (gbcaCallPayload P) (abdyGhostStep P)
     (abdyAnnouncedBound P)
 
@@ -498,7 +503,7 @@ abbrev ProtocolState (P : Parameters) : Type :=
 /-- The three components in parallel, over the extended alphabet: the synchronised process group,
 the network and the lifted oracle. -/
 noncomputable def protocolExtended (P : Parameters) : System (ProtocolState P)
-  (Composition.ExtendedLabel P.n) :=
+  (Composition.ExtendedLabel P.n GBCA.ByABDY.Message) :=
   Implementation.systemExtended P GBCA.ByABDY.Message (GBCA.ByABDY.RoundRecord P.n) (Option Bool)
     (ABDY.RoundStep P)
     (ABDY.gbcaCallPayload P) (ABDY.abdyGhostStep P) (ABDY.abdyAnnouncedBound P)
@@ -525,7 +530,8 @@ The implementation's own lemmas, named at this instantiation. -/
 theorem protocolHidden_step_iff (P : Parameters) (q : ABDY.ProtocolState P) (l : Label P.n)
     (μ : PMF (ABDY.ProtocolState P)) :
     (ABDY.protocolHidden P).step q l μ ↔
-      (l = .tau ∧ ∃ e : NetworkEvent P.n, (ABDY.protocolExtended P).step q (Sum.inr e) μ) ∨
+      (l = .tau ∧ ∃ e : NetworkEvent P.n GBCA.ByABDY.Message,
+        (ABDY.protocolExtended P).step q (Sum.inr e) μ) ∨
       (ABDY.protocolExtended P).step q (Sum.inl l) μ :=
   systemHidden_step_iff q l μ
 
@@ -539,14 +545,14 @@ theorem protocol_step_iff (P : Parameters) (q : ABDY.ProtocolState P) (l : Label
 /-- A rendezvous transition: every process, the network and the lifted oracle
 move together, and only the oracle's successor can fail to be a Dirac. -/
 theorem protocolExtended_event_inversion (P : Parameters) {u : ∀ _ : Fin P.n, ProcessRecord P.n}
-    {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n} {e : NetworkEvent P.n}
+    {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n} {e : NetworkEvent P.n GBCA.ByABDY.Message}
     {μ : PMF (ABDY.ProtocolState P)}
     (h : (ABDY.protocolExtended P).step (u, w, o) (Sum.inr e) μ) :
     ∃ (x : ∀ _ : Fin P.n, ProcessRecord P.n) (w' : NetworkState P.n)
       (μ₃ : PMF (ℕ → WCC.SpecState P.n)),
       (∀ i, ABAProgramStep P i (u i) (Sum.inr e) (PMF.pure (x i))) ∧
       NetworkStep P w (Sum.inr e) (PMF.pure w') ∧
-      (coinOverRoundAlphabet P).step o (Sum.inr e) μ₃ ∧
+      (coinOverRoundAlphabet P GBCA.ByABDY.Message).step o (Sum.inr e) μ₃ ∧
       μ = prodPMF (PMF.pure x) (prodPMF (PMF.pure w') μ₃) :=
   systemExtended_event_inversion h
 

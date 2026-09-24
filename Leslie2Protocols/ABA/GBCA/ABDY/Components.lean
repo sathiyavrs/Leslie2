@@ -31,10 +31,12 @@ the receiver, which files it under that sender's delivered set.
 ## The instance-internal alphabet
 
 The two rendezvous — the multicast and the delivery — are the constructors of `GBCAEvent`, and
-they are labels of the instance-internal alphabet `GBCALabel n = ExtendedLabel n ⊕ GBCAEvent n`.
+they are labels of the instance-internal alphabet
+`GBCALabel n = ExtendedLabel n Message ⊕ GBCAEvent n`.
 They are untagged: the round is the identity of the instance they belong to, and they are hidden
 before the family sees the instance at all (`gbcaEvents` is the set hidden there). What stays
-visible is the round's interface in the shared extended alphabet `ExtendedLabel n`: `callG r`,
+visible is the round's interface in the shared extended alphabet `ExtendedLabel n Message`:
+`callG r`,
 `retG r`, `gbcaCallLoop r` and the three Byzantine graded-agreement labels of round `r`. The
 round-multicast and round-delivery constructors of `NetworkEvent` are therefore not part of that
 interface — no component offers them, so they carry no transition of the instance.
@@ -87,7 +89,8 @@ instance, read as a sub-protocol of ABA. -/
 
 namespace GBCA.ByABDY
 
-open Implementation Composition
+open Implementation hiding NetworkEvent ExtendedLabel
+open Composition
 
 /-! ### The instance-internal alphabet
 
@@ -106,12 +109,12 @@ inductive GBCAEvent (n : ℕ) : Type
 /-- The instance-internal alphabet: the shared extended alphabet plus the two
 rendezvous. Its silent label is `Sum.inl τ`, so every `Sum.inr` label is
 observable and hence hideable. -/
-abbrev GBCALabel (n : ℕ) : Type := ExtendedLabel n ⊕ GBCAEvent n
+abbrev GBCALabel (n : ℕ) : Type := ExtendedLabel n Message ⊕ GBCAEvent n
 
 /-- The rendezvous labels, hidden by the instance. -/
 def gbcaEvents (n : ℕ) : Set (GBCALabel n) := {l | ∃ e : GBCAEvent n, l = Sum.inr e}
 
-@[simp] theorem inl_notMem_gbcaEvents {n : ℕ} (l : ExtendedLabel n) :
+@[simp] theorem inl_notMem_gbcaEvents {n : ℕ} (l : ExtendedLabel n Message) :
     Sum.inl l ∉ gbcaEvents n := by
   simp [gbcaEvents]
 

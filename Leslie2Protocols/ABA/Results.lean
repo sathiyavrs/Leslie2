@@ -119,7 +119,7 @@ theorem protocol_safe (P : Parameters) :
       ValidityTrace P t ∧ AgreementTrace P t :=
   safety_transfer
     (Set.Subset.trans (protocol_composed P)
-      (Set.Subset.trans (substitution P) (hybrid_spec P)))
+      (Set.Subset.trans (substitution P) (hybrid_spec P GBCA.ByABDY.Message)))
     (spec_safe P)
 
 /-- **Trace conservativity of the protocol**: every
@@ -128,7 +128,7 @@ under an achievable trace distribution of the protocol-shaped
 specification. -/
 theorem protocol_traces (P : Parameters) :
     ∀ D ∈ achievableTraceDists (protocol P), ∀ t, D t ≠ 0 →
-      ∃ D' ∈ achievableTraceDists (hybrid P), D' t ≠ 0 :=
+      ∃ D' ∈ achievableTraceDists (hybrid P GBCA.ByABDY.Message), D' t ≠ 0 :=
   fun D hD _ ht => ⟨D, Set.Subset.trans (protocol_composed P) (substitution P) hD, ht⟩
 
 /-- **Safety of the composed system**: the substitution and the core
@@ -137,7 +137,8 @@ same guarantee. -/
 theorem composed_safe (P : Parameters) :
     ∀ D ∈ achievableTraceDists (composed P), ∀ t, D t ≠ 0 →
       ValidityTrace P t ∧ AgreementTrace P t :=
-  safety_transfer (Set.Subset.trans (substitution P) (hybrid_spec P)) (spec_safe P)
+  safety_transfer (Set.Subset.trans (substitution P) (hybrid_spec P GBCA.ByABDY.Message))
+    (spec_safe P)
 
 /-! ### The two routes -/
 
@@ -148,7 +149,7 @@ the first inclusion, the core simulation the second. -/
 theorem refines (P : Parameters) :
     achievableTraceDists (protocol P) ⊆ achievableTraceDists (spec P) :=
   Set.Subset.trans (protocol_composed P)
-    (Set.Subset.trans (substitution P) (hybrid_spec P))
+    (Set.Subset.trans (substitution P) (hybrid_spec P GBCA.ByABDY.Message))
 
 /-- **Correctness of ABA** (blueprint `thm:aba-main`, safety fragment): every positive-probability
 trace of the protocol satisfies Validity and Agreement. No extra hypothesis on the traces: the
@@ -168,7 +169,8 @@ noncomputable def chainSimulation (P : Parameters) :
       (compRel (diracRel (ProtocolRelation P))
         (compRel (parallelRel (diracRel (substitutionRelationFamily P)))
           (hybridSpecificationRelation P))) :=
-  (protocolSimulation P).trans ((substitutionSimulation P).trans (hybridRefinesSpecification P))
+  (protocolSimulation P).trans
+    ((substitutionSimulation P).trans (hybridRefinesSpecification P GBCA.ByABDY.Message))
 
 /-! ### Mechanical axiom check
 
@@ -237,7 +239,7 @@ specification. The substitution gives the first inclusion, the shared core
 simulation the second. -/
 theorem composed_refines (P : Parameters) :
     achievableTraceDists (composed P) ⊆ achievableTraceDists (spec P) :=
-  Set.Subset.trans (substitution P) (hybrid_spec P)
+  Set.Subset.trans (substitution P) (hybrid_spec P Empty)
 
 /-- **Safety of the gather-based implementation**: every positive-probability trace
 of every achievable trace distribution of the gather-based composed system
@@ -257,7 +259,7 @@ noncomputable def chainSimulationOfComposed (P : Parameters) :
           (compRel (parallelRel (diracRel (gatherSubstitutionRelationFamily P)))
             (parallelRel (diracRel (roundSpecificationSubstitutionRelationFamily P)))))
         (hybridSpecificationRelation P)) :=
-  (substitutionSimulation P).trans (hybridRefinesSpecification P)
+  (substitutionSimulation P).trans (hybridRefinesSpecification P Empty)
 
 /-- **Trace-distribution refinement of the gather-based protocol**: every trace
 distribution achievable by the protocol as it runs is achievable by the ABA

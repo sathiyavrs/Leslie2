@@ -11,7 +11,8 @@ import Leslie2Protocols.ABA.GBCA.Specification
 # The graded agreement specification over the round's alphabet
 
 The graded agreement specification speaks the shared alphabet `Label n`. A graded-agreement round
-speaks the extended alphabet `Composition.ExtendedLabel n`, in which the three Byzantine handshake
+speaks the extended alphabet `Composition.ExtendedLabel n M`, over the type `M` of the messages the
+round exchanges, in which the three Byzantine handshake
 transitions and the call loop of round `r` are separate labels. `specificationLabelMap` is the
 projection that identifies them with the specification labels they stand for: a Byzantine call is a
 call, a Byzantine return is a return, and the two call loops are calls, which the specification
@@ -36,13 +37,14 @@ namespace PLTS
 namespace ABA
 namespace GBCA
 
-open Implementation Composition
+open Implementation hiding NetworkEvent ExtendedLabel
+open Composition
 
 /-! ### The specification read over the round's interface -/
 
-/-- The projection of the extended alphabet onto the specification's alphabet.
--/
-def specificationLabelMap (n : ℕ) : ExtendedLabel n → Option (Label n)
+/-- The projection of the extended alphabet onto the specification's alphabet. `M` is the type of
+the messages a graded-agreement round exchanges. -/
+def specificationLabelMap (n : ℕ) {M : Type} : ExtendedLabel n M → Option (Label n)
   | Sum.inl l => some l
   | Sum.inr (.gbcaCallLoop r id b) => some (.callG r id b)
   | Sum.inr (.byzantineCallG r k b) => some (.callG r k b)
@@ -50,52 +52,58 @@ def specificationLabelMap (n : ℕ) : ExtendedLabel n → Option (Label n)
   | Sum.inr (.byzantineRetG r k out bnd) => some (.retG r k out bnd)
   | Sum.inr _ => none
 
-@[simp] theorem specificationLabelMap_inl {n : ℕ} (l : Label n) :
-    specificationLabelMap n (Sum.inl l) = some l := rfl
+@[simp] theorem specificationLabelMap_inl {n : ℕ} {M : Type} (l : Label n) :
+    specificationLabelMap (M := M) n (Sum.inl l) = some l := rfl
 
-@[simp] theorem specificationLabelMap_gbcaCallLoop {n : ℕ} (r : ℕ) (id : Fin n) (b : Bool) :
-    specificationLabelMap n (Sum.inr (.gbcaCallLoop r id b)) = some (.callG r id b) := rfl
+@[simp] theorem specificationLabelMap_gbcaCallLoop {n : ℕ} {M : Type} (r : ℕ) (id : Fin n)
+    (b : Bool) :
+    specificationLabelMap (M := M) n (Sum.inr (.gbcaCallLoop r id b)) = some (.callG r id b) := rfl
 
-@[simp] theorem specificationLabelMap_byzantineCallG {n : ℕ} (r : ℕ) (k : Fin n) (b : Bool) :
-    specificationLabelMap n (Sum.inr (.byzantineCallG r k b)) = some (.callG r k b) := rfl
+@[simp] theorem specificationLabelMap_byzantineCallG {n : ℕ} {M : Type} (r : ℕ) (k : Fin n)
+    (b : Bool) :
+    specificationLabelMap (M := M) n (Sum.inr (.byzantineCallG r k b)) = some (.callG r k b) := rfl
 
-@[simp] theorem specificationLabelMap_byzantineCallGLoop {n : ℕ} (r : ℕ) (k : Fin n) (b : Bool) :
-    specificationLabelMap n (Sum.inr (.byzantineCallGLoop r k b)) = some (.callG r k b) := rfl
+@[simp] theorem specificationLabelMap_byzantineCallGLoop {n : ℕ} {M : Type} (r : ℕ) (k : Fin n)
+    (b : Bool) :
+    specificationLabelMap (M := M) n (Sum.inr (.byzantineCallGLoop r k b))
+      = some (.callG r k b) := rfl
 
-@[simp] theorem specificationLabelMap_byzantineRetG {n : ℕ} (r : ℕ) (k : Fin n) (out : GBCAOutput)
-    (bnd : Bool) :
-    specificationLabelMap n (Sum.inr (.byzantineRetG r k out bnd)) = some (.retG r k out bnd) := rfl
+@[simp] theorem specificationLabelMap_byzantineRetG {n : ℕ} {M : Type} (r : ℕ) (k : Fin n)
+    (out : GBCAOutput) (bnd : Bool) :
+    specificationLabelMap (M := M) n (Sum.inr (.byzantineRetG r k out bnd))
+      = some (.retG r k out bnd) := rfl
 
-@[simp] theorem specificationLabelMap_gbcaSend {n : ℕ} (r : ℕ) (j : Fin n)
-    (m : GBCA.ByABDY.Message) :
+@[simp] theorem specificationLabelMap_gbcaSend {n : ℕ} {M : Type} (r : ℕ) (j : Fin n) (m : M) :
     specificationLabelMap n (Sum.inr (.gbcaSend r j m)) = none := rfl
 
-@[simp] theorem specificationLabelMap_gbcaDeliver {n : ℕ} (r : ℕ) (i j : Fin n)
-    (m : GBCA.ByABDY.Message) :
+@[simp] theorem specificationLabelMap_gbcaDeliver {n : ℕ} {M : Type} (r : ℕ) (i j : Fin n)
+    (m : M) :
     specificationLabelMap n (Sum.inr (.gbcaDeliver r i j m)) = none := rfl
 
-@[simp] theorem specificationLabelMap_decidedSend {n : ℕ} (j : Fin n) (b : Bool) :
-    specificationLabelMap n (Sum.inr (.decidedSend j b)) = none := rfl
+@[simp] theorem specificationLabelMap_decidedSend {n : ℕ} {M : Type} (j : Fin n) (b : Bool) :
+    specificationLabelMap (M := M) n (Sum.inr (.decidedSend j b)) = none := rfl
 
-@[simp] theorem specificationLabelMap_decidedDeliver {n : ℕ} (i j : Fin n) (b : Bool) :
-    specificationLabelMap n (Sum.inr (.decidedDeliver i j b)) = none := rfl
+@[simp] theorem specificationLabelMap_decidedDeliver {n : ℕ} {M : Type} (i j : Fin n) (b : Bool) :
+    specificationLabelMap (M := M) n (Sum.inr (.decidedDeliver i j b)) = none := rfl
 
-@[simp] theorem specificationLabelMap_retWPublish {n : ℕ} (r : ℕ) (id : Fin n) (c b : Bool) :
-    specificationLabelMap n (Sum.inr (.retWPublish r id c b)) = none := rfl
+@[simp] theorem specificationLabelMap_retWPublish {n : ℕ} {M : Type} (r : ℕ) (id : Fin n)
+    (c b : Bool) :
+    specificationLabelMap (M := M) n (Sum.inr (.retWPublish r id c b)) = none := rfl
 
-@[simp] theorem specificationLabelMap_byzantineCallW {n : ℕ} (r : ℕ) (k : Fin n) :
-    specificationLabelMap n (Sum.inr (.byzantineCallW r k)) = none := rfl
+@[simp] theorem specificationLabelMap_byzantineCallW {n : ℕ} {M : Type} (r : ℕ) (k : Fin n) :
+    specificationLabelMap (M := M) n (Sum.inr (.byzantineCallW r k)) = none := rfl
 
-@[simp] theorem specificationLabelMap_byzantineRetW {n : ℕ} (r : ℕ) (k : Fin n) (b : Bool) :
-    specificationLabelMap n (Sum.inr (.byzantineRetW r k b)) = none := rfl
+@[simp] theorem specificationLabelMap_byzantineRetW {n : ℕ} {M : Type} (r : ℕ) (k : Fin n)
+    (b : Bool) :
+    specificationLabelMap (M := M) n (Sum.inr (.byzantineRetW r k b)) = none := rfl
 
 /-- The silent label projects to the silent label. -/
-@[simp] theorem specificationLabelMap_tau (n : ℕ) :
-    specificationLabelMap n (Silent.τ : ExtendedLabel n) = some (Silent.τ : Label n) := rfl
+@[simp] theorem specificationLabelMap_tau (n : ℕ) {M : Type} :
+    specificationLabelMap n (Silent.τ : ExtendedLabel n M) = some (Silent.τ : Label n) := rfl
 
 /-- Only the silent label projects to the silent label: a handshake transition projects to a
 handshake port, and every other extended label idles. -/
-theorem specificationLabelMap_eq_tau {n : ℕ} {l : ExtendedLabel n}
+theorem specificationLabelMap_eq_tau {n : ℕ} {M : Type} {l : ExtendedLabel n M}
     (h : specificationLabelMap n l = some Label.tau) :
     l = Sum.inl Label.tau := by
   cases l with
@@ -104,17 +112,17 @@ theorem specificationLabelMap_eq_tau {n : ℕ} {l : ExtendedLabel n}
 
 /-- **The specification over the round's alphabet**: the round-`r` graded agreement specification
 read over the round's interface. -/
-noncomputable def specificationOverRoundAlphabet (P : Parameters) (r : ℕ) :
-    System (GBCA.SpecState P.n) (ExtendedLabel P.n) :=
+noncomputable def specificationOverRoundAlphabet (P : Parameters) (M : Type) [DecidableEq M]
+    (r : ℕ) : System (GBCA.SpecState P.n) (ExtendedLabel P.n M) :=
   (GBCA.specInst P r).mapIdle (specificationLabelMap P.n)
 
-@[simp] theorem specificationOverRoundAlphabet_init (P : Parameters) (r : ℕ) :
-    (specificationOverRoundAlphabet P r).init = GBCA.SpecState.initial P.n := rfl
+@[simp] theorem specificationOverRoundAlphabet_init (P : Parameters) (M : Type) [DecidableEq M]
+    (r : ℕ) : (specificationOverRoundAlphabet P M r).init = GBCA.SpecState.initial P.n := rfl
 
 /-- The specification over the round's alphabet is an LTS: the specification is, and reading it
 back adds only Dirac self-loops. -/
-theorem specificationOverRoundAlphabet_isLTS (P : Parameters) (r : ℕ) :
-    (specificationOverRoundAlphabet P r).IsLTS :=
+theorem specificationOverRoundAlphabet_isLTS (P : Parameters) (M : Type) [DecidableEq M] (r : ℕ) :
+    (specificationOverRoundAlphabet P M r).IsLTS :=
   System.mapIdle_isLTS _ (GBCA.specInst_isLTS P r)
 
 /-! ### Weak runs of the specification over the round's alphabet
@@ -126,10 +134,12 @@ specification `callG` run into the matching run for a Byzantine call. -/
 
 /-- The section of `specificationLabelMap` that answers the interface label `l` over the
 specification label `l₀`. -/
-def labelSection {n : ℕ} (l₀ : Label n) (l : ExtendedLabel n) : Label n → ExtendedLabel n :=
+def labelSection {n : ℕ} {M : Type} (l₀ : Label n) (l : ExtendedLabel n M) :
+    Label n → ExtendedLabel n M :=
   fun x => if x = l₀ then l else Sum.inl x
 
-theorem specificationLabelMap_labelSection {n : ℕ} {l₀ : Label n} {l : ExtendedLabel n}
+theorem specificationLabelMap_labelSection {n : ℕ} {M : Type} {l₀ : Label n}
+    {l : ExtendedLabel n M}
     (hl : specificationLabelMap n l = some l₀) (x : Label n) :
     specificationLabelMap n (labelSection l₀ l x) = some x := by
   unfold labelSection
@@ -137,9 +147,9 @@ theorem specificationLabelMap_labelSection {n : ℕ} {l₀ : Label n} {l : Exten
   · rw [if_pos hx, hl, hx]
   · rw [if_neg hx, specificationLabelMap_inl]
 
-theorem labelSection_tau {n : ℕ} {l₀ : Label n} {l : ExtendedLabel n}
+theorem labelSection_tau {n : ℕ} {M : Type} {l₀ : Label n} {l : ExtendedLabel n M}
     (hl : specificationLabelMap n l = some l₀) (hl₀ : l₀ ≠ (Silent.τ : Label n)) (x : Label n) :
-    labelSection l₀ l x = (Silent.τ : ExtendedLabel n) ↔ x = (Silent.τ : Label n) := by
+    labelSection l₀ l x = (Silent.τ : ExtendedLabel n M) ↔ x = (Silent.τ : Label n) := by
   unfold labelSection
   by_cases hx : x = l₀
   · rw [if_pos hx, hx]
@@ -154,18 +164,18 @@ theorem labelSection_tau {n : ℕ} {l₀ : Label n} {l : ExtendedLabel n}
 
 /-- A silent weak run of the specification is a silent weak run of the specification over the
 round's alphabet. -/
-theorem weakLSilent_specificationOverRoundAlphabet (P : Parameters) (r : ℕ)
-    {s s' : GBCA.SpecState P.n} (h : (GBCA.specInst P r).weakLSilent s s') :
-    (specificationOverRoundAlphabet P r).weakLSilent s s' :=
+theorem weakLSilent_specificationOverRoundAlphabet (P : Parameters) (M : Type) [DecidableEq M]
+    (r : ℕ) {s s' : GBCA.SpecState P.n} (h : (GBCA.specInst P r).weakLSilent s s') :
+    (specificationOverRoundAlphabet P M r).weakLSilent s s' :=
   System.weakLSilent_mapIdle Sum.inl (fun _ => rfl) (fun _ => by simp) h
 
 /-- A labelled weak run of the specification is a weak run of the specification over the round's
 alphabet at any interface label projecting to the same specification label. -/
-theorem weakLStep_specificationOverRoundAlphabet (P : Parameters) (r : ℕ)
-    {s s' : GBCA.SpecState P.n} {l₀ : Label P.n} {l : ExtendedLabel P.n}
+theorem weakLStep_specificationOverRoundAlphabet (P : Parameters) (M : Type) [DecidableEq M]
+    (r : ℕ) {s s' : GBCA.SpecState P.n} {l₀ : Label P.n} {l : ExtendedLabel P.n M}
     (hl₀ : l₀ ≠ (Silent.τ : Label P.n)) (hl : specificationLabelMap P.n l = some l₀)
     (h : (GBCA.specInst P r).weakLStep s l₀ s') :
-    (specificationOverRoundAlphabet P r).weakLStep s l s' :=
+    (specificationOverRoundAlphabet P M r).weakLStep s l s' :=
   System.weakLStep_mapIdle (labelSection l₀ l) (specificationLabelMap_labelSection hl)
     (labelSection_tau hl hl₀)
     (by simp [labelSection]) h

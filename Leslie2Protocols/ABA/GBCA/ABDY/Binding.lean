@@ -38,7 +38,7 @@ theorem composition_binding (P : Parameters) (r : ℕ) :
     ∀ D ∈ achievableTraceDists (composition P r), ∀ t, D t ≠ 0 →
       GBCA.BindingTraceExtended P r t :=
   safety_transfer (composition_specificationTraces P r)
-    (GBCA.specificationOverRoundAlphabet_binding P r)
+    (GBCA.specificationOverRoundAlphabet_binding P Message r)
 
 /-! ### Mechanical axiom check -/
 

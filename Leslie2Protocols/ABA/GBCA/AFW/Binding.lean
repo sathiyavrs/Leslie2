@@ -51,9 +51,9 @@ the specification read over the round's interface, the soundness of
 `refinesSpecification`. -/
 theorem roundOverGatherSpecifications_refines (P : Parameters) (r : ℕ) :
     achievableTraceDists (roundOverGatherSpecifications P r) ⊆ achievableTraceDists
-      (specificationOverRoundAlphabet P r) :=
+      (specificationOverRoundAlphabet P Empty r) :=
   (ForwardSimulation.toProbabilistic (roundOverGatherSpecifications_isLTS P r)
-    (specificationOverRoundAlphabet_isLTS P r)
+    (specificationOverRoundAlphabet_isLTS P Empty r)
     (specificationRelation_init P r) (refinesSpecification P r)).achievableTraceDists_subset
 
 /-- **The round over the gather instances over Bracha's broadcast refines the
@@ -61,8 +61,8 @@ specification**: the two substitutions and the counting simulation, each taken
 probabilistically, joined by Result 2
 (`ProbabilisticForwardSimulation.trans`). -/
 theorem roundOverBracha_refinesSpecification (P : Parameters) (r : ℕ) :
-    ProbabilisticForwardSimulation (roundOverBracha P r) (specificationOverRoundAlphabet
-      P r)
+    ProbabilisticForwardSimulation (roundOverBracha P r)
+      (specificationOverRoundAlphabet P Empty r)
       (compRel (diracRel (BroadcastSubstitutionRelation P))
         (compRel (diracRel (GatherSubstitutionRelation P)) (diracRel (SpecificationRelation P)))) :=
   (ForwardSimulation.toProbabilistic (roundOverBracha_isLTS P r)
@@ -72,7 +72,7 @@ theorem roundOverBracha_refinesSpecification (P : Parameters) (r : ℕ) :
       (roundOverGatherSpecifications_isLTS P r)
         (gatherSubstitutionRelation_init P r) (gatherSubstitution P r)).trans
       (ForwardSimulation.toProbabilistic (roundOverGatherSpecifications_isLTS P r)
-        (specificationOverRoundAlphabet_isLTS P r)
+        (specificationOverRoundAlphabet_isLTS P Empty r)
         (specificationRelation_init P r) (refinesSpecification P r)))
 
 /-- The soundness inclusion of the round: every trace distribution
@@ -80,7 +80,7 @@ achievable by the round over the gather instances over Bracha's broadcast is
 achievable by the lifted specification. -/
 theorem roundOverBracha_specificationTraces (P : Parameters) (r : ℕ) :
     achievableTraceDists (roundOverBracha P r) ⊆ achievableTraceDists
-      (specificationOverRoundAlphabet P r) :=
+      (specificationOverRoundAlphabet P Empty r) :=
   (roundOverBracha_refinesSpecification P r).achievableTraceDists_subset
 
 /-- The soundness inclusion of the gather substitution above the counting
@@ -89,7 +89,7 @@ instances over the broadcast specification is achievable by the lifted
 specification. -/
 theorem roundOverBroadcastSpecification_specificationTraces (P : Parameters) (r : ℕ) :
     achievableTraceDists (roundOverBroadcastSpecification P r) ⊆ achievableTraceDists
-      (specificationOverRoundAlphabet P r) :=
+      (specificationOverRoundAlphabet P Empty r) :=
   Set.Subset.trans (roundOverBroadcastSpecification_refines P r)
     (roundOverGatherSpecifications_refines P r)
 
@@ -105,7 +105,7 @@ theorem roundOverGatherSpecifications_binding (P : Parameters) (r : ℕ) :
     ∀ D ∈ achievableTraceDists (roundOverGatherSpecifications P r), ∀ t, D t ≠ 0 →
       BindingTraceExtended P r t :=
   safety_transfer (roundOverGatherSpecifications_refines P r)
-    (specificationOverRoundAlphabet_binding P r)
+    (specificationOverRoundAlphabet_binding P Empty r)
 
 /-- **Binding of the round over the gather instances over the broadcast
 specification, on a trace**, along the inclusion
@@ -114,15 +114,15 @@ theorem roundOverBroadcastSpecification_binding (P : Parameters) (r : ℕ) :
     ∀ D ∈ achievableTraceDists (roundOverBroadcastSpecification P r), ∀ t, D t ≠ 0 →
       BindingTraceExtended P r t :=
   safety_transfer (roundOverBroadcastSpecification_specificationTraces P r)
-    (specificationOverRoundAlphabet_binding P r)
+    (specificationOverRoundAlphabet_binding P Empty r)
 
 /-- **Binding of the round over the gather instances over Bracha's broadcast,
 on a trace**, along the three-tier inclusion `roundOverBracha_specificationTraces`. -/
 theorem roundOverBracha_binding (P : Parameters) (r : ℕ) :
     ∀ D ∈ achievableTraceDists (roundOverBracha P r), ∀ t, D t ≠ 0 →
       BindingTraceExtended P r t :=
-  safety_transfer (roundOverBracha_specificationTraces P r) (specificationOverRoundAlphabet_binding
-    P r)
+  safety_transfer (roundOverBracha_specificationTraces P r)
+    (specificationOverRoundAlphabet_binding P Empty r)
 
 /-! ### Mechanical axiom check
 

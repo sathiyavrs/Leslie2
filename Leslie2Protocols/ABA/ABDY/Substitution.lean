@@ -46,7 +46,8 @@ def substitutionRelationFamily (P : Parameters) (s : ℕ → GBCA.ByABDY.RoundSt
 the specification, round by round. The per-round simulation is `GBCA.ByABDY.refinesSpecification`;
 the broadcast compatibility is `GBCA.ByABDY.refinesSpecification_failAct`. -/
 theorem familySubstitution (P : Parameters) :
-    ForwardSimulation (GBCA.ByABDY.gbcaInstanceFamily P) (gbcaSpecificationFamily P)
+    ForwardSimulation (GBCA.ByABDY.gbcaInstanceFamily P)
+      (gbcaSpecificationFamily P GBCA.ByABDY.Message)
       (substitutionRelationFamily P) :=
   ForwardSimulation.family GBCA.ByABDY.roundOwnsLabel GBCA.ByABDY.isFailLabel
     (GBCA.ByABDY.corruptionAct P)
@@ -56,10 +57,11 @@ theorem familySubstitution (P : Parameters) :
 /-- The family substitution as a probabilistic forward simulation: both systems are LTS, and the
 relation holds at the initial states. -/
 theorem familySubstitutionSimulation (P : Parameters) :
-    ProbabilisticForwardSimulation (GBCA.ByABDY.gbcaInstanceFamily P) (gbcaSpecificationFamily P)
+    ProbabilisticForwardSimulation (GBCA.ByABDY.gbcaInstanceFamily P)
+      (gbcaSpecificationFamily P GBCA.ByABDY.Message)
       (diracRel (substitutionRelationFamily P)) :=
   ForwardSimulation.toProbabilistic (GBCA.ByABDY.gbcaInstanceFamily_isLTS P)
-    (gbcaSpecificationFamily_isLTS P)
+    (gbcaSpecificationFamily_isLTS P GBCA.ByABDY.Message)
     (fun r => GBCA.ByABDY.specificationRelation_init P r) (familySubstitution P)
 
 namespace ABDY
@@ -70,17 +72,18 @@ context — `parallel_right` for the three untouched components, `abstract` for 
 rendezvous alphabet, `relabel` for the read-back over `Label n`, and `abstract`
 for the sub-protocol API. -/
 noncomputable def substitutionSimulation (P : Parameters) :
-    ProbabilisticForwardSimulation (composed P) (hybrid P)
+    ProbabilisticForwardSimulation (composed P) (hybrid P GBCA.ByABDY.Message)
       (parallelRel (diracRel (substitutionRelationFamily P))) :=
   ((((familySubstitutionSimulation P).parallel_right
-    ((System.synchronisedProduct (roundLoopProgram P)).parallel
-      ((ABANetwork P).parallel (coinOverRoundAlphabet P)))).abstract
+    ((System.synchronisedProduct (roundLoopProgram P GBCA.ByABDY.Message)).parallel
+      ((ABANetwork P GBCA.ByABDY.Message).parallel
+        (coinOverRoundAlphabet P GBCA.ByABDY.Message)))).abstract
         (networkEventLabels P.n)).relabel).abstract (Label.hiddenAPI P.n)
 
 /-- **The substitution inclusion**: every trace distribution achievable by the
 composed system is achievable by the protocol-shaped specification. -/
 theorem substitution (P : Parameters) :
-    achievableTraceDists (composed P) ⊆ achievableTraceDists (hybrid P) :=
+    achievableTraceDists (composed P) ⊆ achievableTraceDists (hybrid P GBCA.ByABDY.Message) :=
   (substitutionSimulation P).achievableTraceDists_subset
 
 end ABDY

@@ -21,7 +21,8 @@ namespace PLTS
 namespace ABA
 namespace AFW
 
-open Implementation Composition GBCA.ByABDY
+open Implementation hiding NetworkEvent ExtendedLabel
+open Composition GBCA.ByABDY
 
 variable {P : Parameters}
 

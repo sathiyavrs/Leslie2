@@ -58,7 +58,8 @@ frames. `roundFamilyOverBracha_silentRun`, `roundFamilyOverBracha_weakStep`,
 namespace PLTS
 namespace ABA
 
-open Implementation Composition GBCA.ByABDY
+open Implementation hiding NetworkEvent ExtendedLabel
+open Composition GBCA.ByABDY
 
 namespace AFW
 
@@ -71,7 +72,8 @@ it holds; the round's programs and its bound bit are untouched (D1). -/
 /-- The broadcast corruption act on a round over the gather instances over
 Bracha's broadcast. -/
 def corruptionOverBracha (P : Parameters) :
-    ExtendedLabel P.n → GBCA.ByAFW.RoundStateOverBracha P.n → GBCA.ByAFW.RoundStateOverBracha P.n
+    ExtendedLabel P.n Empty → GBCA.ByAFW.RoundStateOverBracha P.n →
+      GBCA.ByAFW.RoundStateOverBracha P.n
   | Sum.inl (.fail k), s =>
     GBCA.ByAFW.corruptAll P k
       (fun i => Gather.corruptAll P i (InstanceState.corrupt P i) (InstanceState.corrupt P i))
@@ -81,7 +83,7 @@ def corruptionOverBracha (P : Parameters) :
 /-- The broadcast corruption act on a round over the gather instances over the
 broadcast specification. -/
 def corruptionOverBroadcastSpecification (P : Parameters) :
-    ExtendedLabel P.n → GBCA.ByAFW.RoundStateOverBroadcastSpecification P.n →
+    ExtendedLabel P.n Empty → GBCA.ByAFW.RoundStateOverBroadcastSpecification P.n →
       GBCA.ByAFW.RoundStateOverBroadcastSpecification P.n
   | Sum.inl (.fail k), s =>
     GBCA.ByAFW.corruptAll P k
@@ -91,7 +93,7 @@ def corruptionOverBroadcastSpecification (P : Parameters) :
 
 /-- The broadcast corruption act on a round over the gather specifications. -/
 def corruptionOverGatherSpecifications (P : Parameters) :
-    ExtendedLabel P.n → GBCA.ByAFW.RoundStateOverGatherSpecifications P.n →
+    ExtendedLabel P.n Empty → GBCA.ByAFW.RoundStateOverGatherSpecifications P.n →
       GBCA.ByAFW.RoundStateOverGatherSpecifications P.n
   | Sum.inl (.fail k), s =>
     GBCA.ByAFW.corruptAll P k (Gather.SpecState.corrupt P) (Gather.SpecState.corrupt P) s
@@ -106,7 +108,7 @@ together, and everything else idles. -/
 /-- The gather-based graded-agreement family: the family of rounds over the gather instances over
 Bracha's broadcast. -/
 noncomputable def roundFamilyOverBracha (P : Parameters) :
-    System (ℕ → GBCA.ByAFW.RoundStateOverBracha P.n) (ExtendedLabel P.n) :=
+    System (ℕ → GBCA.ByAFW.RoundStateOverBracha P.n) (ExtendedLabel P.n Empty) :=
   System.family (GBCA.ByAFW.roundOverBracha P) roundOwnsLabel isFailLabel (corruptionOverBracha P)
 
 /-- The family is an LTS: every round is. -/
@@ -115,7 +117,7 @@ theorem roundFamilyOverBracha_isLTS (P : Parameters) : (roundFamilyOverBracha P)
 
 /-- The family over the gather instances over the broadcast specification. -/
 noncomputable def roundFamilyOverBroadcastSpecification (P : Parameters) :
-    System (ℕ → GBCA.ByAFW.RoundStateOverBroadcastSpecification P.n) (ExtendedLabel P.n) :=
+    System (ℕ → GBCA.ByAFW.RoundStateOverBroadcastSpecification P.n) (ExtendedLabel P.n Empty) :=
   System.family (GBCA.ByAFW.roundOverBroadcastSpecification P) roundOwnsLabel isFailLabel
     (corruptionOverBroadcastSpecification
     P)
@@ -127,7 +129,7 @@ theorem roundFamilyOverBroadcastSpecification_isLTS (P : Parameters) :
 
 /-- The family over the gather specifications. -/
 noncomputable def roundFamilyOverGatherSpecifications (P : Parameters) :
-    System (ℕ → GBCA.ByAFW.RoundStateOverGatherSpecifications P.n) (ExtendedLabel P.n) :=
+    System (ℕ → GBCA.ByAFW.RoundStateOverGatherSpecifications P.n) (ExtendedLabel P.n Empty) :=
   System.family (GBCA.ByAFW.roundOverGatherSpecifications P) roundOwnsLabel isFailLabel
     (corruptionOverGatherSpecifications P)
 
@@ -161,24 +163,24 @@ abbrev ComposedOverGatherSpecificationsState (P : Parameters) : Type :=
 composed system's other three components, through the two hiding frames. -/
 noncomputable def composed (P : Parameters) : System (ComposedState P) (Label P.n) :=
   ((((roundFamilyOverBracha P).parallel
-    ((System.synchronisedProduct (roundLoopProgram P)).parallel
-      ((ABANetwork P).parallel (coinOverRoundAlphabet P)))).abstract
+    ((System.synchronisedProduct (roundLoopProgram P Empty)).parallel
+      ((ABANetwork P Empty).parallel (coinOverRoundAlphabet P Empty)))).abstract
         (networkEventLabels P.n)).relabel).abstract (Label.hiddenAPI P.n)
 
 /-- The middle tier at the protocol shape. -/
 noncomputable def composedOverBroadcastSpecification (P : Parameters) : System
   (ComposedOverBroadcastSpecificationState P) (Label P.n) :=
   ((((roundFamilyOverBroadcastSpecification P).parallel
-    ((System.synchronisedProduct (roundLoopProgram P)).parallel
-      ((ABANetwork P).parallel (coinOverRoundAlphabet P)))).abstract
+    ((System.synchronisedProduct (roundLoopProgram P Empty)).parallel
+      ((ABANetwork P Empty).parallel (coinOverRoundAlphabet P Empty)))).abstract
         (networkEventLabels P.n)).relabel).abstract (Label.hiddenAPI P.n)
 
 /-- The upper tier at the protocol shape. -/
 noncomputable def composedOverGatherSpecifications (P : Parameters) : System
   (ComposedOverGatherSpecificationsState P) (Label P.n) :=
   ((((roundFamilyOverGatherSpecifications P).parallel
-    ((System.synchronisedProduct (roundLoopProgram P)).parallel
-      ((ABANetwork P).parallel (coinOverRoundAlphabet P)))).abstract
+    ((System.synchronisedProduct (roundLoopProgram P Empty)).parallel
+      ((ABANetwork P Empty).parallel (coinOverRoundAlphabet P Empty)))).abstract
         (networkEventLabels P.n)).relabel).abstract (Label.hiddenAPI P.n)
 
 /-! ## Building a transition of the composed system
@@ -189,10 +191,10 @@ network and the lifted oracle. -/
 
 /-- The four components of the gather-based composed system, in parallel. -/
 noncomputable def composedExtended (P : Parameters) :
-    System (ComposedState P) (ExtendedLabel P.n) :=
+    System (ComposedState P) (ExtendedLabel P.n Empty) :=
   (roundFamilyOverBracha P).parallel
-    ((System.synchronisedProduct (roundLoopProgram P)).parallel
-      ((ABANetwork P).parallel (coinOverRoundAlphabet P)))
+    ((System.synchronisedProduct (roundLoopProgram P Empty)).parallel
+      ((ABANetwork P Empty).parallel (coinOverRoundAlphabet P Empty)))
 
 /-- The composed group: the rendezvous alphabet hidden, read back over
 `Label n`. -/
@@ -205,7 +207,7 @@ theorem composed_eq (P : Parameters) :
 
 /-- The round-`r` state moves on a label it owns. -/
 theorem roundFamilyOverBracha_owned (P : Parameters) (G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n)
-    (r : ℕ) {L : ExtendedLabel P.n} (hL : roundOwnsLabel L = some r)
+    (r : ℕ) {L : ExtendedLabel P.n Empty} (hL : roundOwnsLabel L = some r)
     {q : GBCA.ByAFW.RoundStateOverBracha P.n}
     (h : (GBCA.ByAFW.roundOverBracha P r).step (G r) L (PMF.pure q)) :
     (roundFamilyOverBracha P).step G L (PMF.pure (Function.update G r q)) := by
@@ -214,7 +216,7 @@ theorem roundFamilyOverBracha_owned (P : Parameters) (G : ℕ → GBCA.ByAFW.Rou
 
 /-- An owned label whose round is unchanged. -/
 theorem roundFamilyOverBracha_owned_id (P : Parameters)
-    (G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n) (r : ℕ) {L : ExtendedLabel P.n}
+    (G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n) (r : ℕ) {L : ExtendedLabel P.n Empty}
     (hL : roundOwnsLabel L = some r)
     (h : (GBCA.ByAFW.roundOverBracha P r).step (G r) L (PMF.pure (G r))) :
     (roundFamilyOverBracha P).step G L (PMF.pure G) := by
@@ -231,7 +233,7 @@ theorem roundFamilyOverBracha_tau (P : Parameters) (G : ℕ → GBCA.ByAFW.Round
 
 /-- A label no round owns and no broadcast: the family idles. -/
 theorem roundFamilyOverBracha_idle (P : Parameters) (G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n)
-    {L : ExtendedLabel P.n} (hτ : L ≠ Silent.τ) (hown : roundOwnsLabel L = none)
+    {L : ExtendedLabel P.n Empty} (hτ : L ≠ Silent.τ) (hown : roundOwnsLabel L = none)
     (hf : ¬ isFailLabel L) : (roundFamilyOverBracha P).step G L (PMF.pure G) := by
   rw [roundFamilyOverBracha, System.family_step_iff]
   exact Or.inr (Or.inr (Or.inr ⟨hτ, hown, hf, rfl⟩))
@@ -248,12 +250,12 @@ theorem roundFamilyOverBracha_fail (P : Parameters) (G : ℕ → GBCA.ByAFW.Roun
 oracle's successor left free. -/
 theorem contextStep (P : Parameters) {C C' : ∀ _ : Fin P.n, RoundLoopRecord P.n}
     {A A' : ABANetworkState P.n} {o : ℕ → WCC.SpecState P.n}
-    {ν : PMF (ℕ → WCC.SpecState P.n)} {L : ExtendedLabel P.n} (hL : L ≠ Silent.τ)
+    {ν : PMF (ℕ → WCC.SpecState P.n)} {L : ExtendedLabel P.n Empty} (hL : L ≠ Silent.τ)
     (hC : ∀ i, RoundLoopStep P i (C i) L (PMF.pure (C' i)))
     (hA : ABANetworkStep P A L (PMF.pure A'))
-    (hW : (coinOverRoundAlphabet P).step o L ν) :
-    ((System.synchronisedProduct (roundLoopProgram P)).parallel ((ABANetwork P).parallel
-      (coinOverRoundAlphabet P))).step
+    (hW : (coinOverRoundAlphabet P Empty).step o L ν) :
+    ((System.synchronisedProduct (roundLoopProgram P Empty)).parallel ((ABANetwork P Empty).parallel
+      (coinOverRoundAlphabet P Empty))).step
       (C, A, o) L (prodPMF (PMF.pure C') (prodPMF (PMF.pure A') ν)) := by
   rw [System.parallel_step]
   refine Or.inl ⟨hL, PMF.pure C', prodPMF (PMF.pure A') ν, roundLoopProduct_pure hL hC, ?_, rfl⟩
@@ -265,10 +267,10 @@ oracle's successor left free. -/
 theorem composedExtended_visible_step (P : Parameters)
     {G G' : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n} {C C' : ∀ _ : Fin P.n, RoundLoopRecord P.n}
     {A A' : ABANetworkState P.n} {o : ℕ → WCC.SpecState P.n} {ν : PMF (ℕ → WCC.SpecState P.n)}
-    {L : ExtendedLabel P.n} (hL : L ≠ Silent.τ)
+    {L : ExtendedLabel P.n Empty} (hL : L ≠ Silent.τ)
     (hG : (roundFamilyOverBracha P).step G L (PMF.pure G'))
     (hC : ∀ i, RoundLoopStep P i (C i) L (PMF.pure (C' i)))
-    (hA : ABANetworkStep P A L (PMF.pure A')) (hW : (coinOverRoundAlphabet P).step o L ν) :
+    (hA : ABANetworkStep P A L (PMF.pure A')) (hW : (coinOverRoundAlphabet P Empty).step o L ν) :
     (composedExtended P).step (G, C, A, o) L
     (prodPMF (PMF.pure G') (prodPMF (PMF.pure C') (prodPMF (PMF.pure A') ν))) := by
   rw [composedExtended, System.parallel_step]
@@ -289,7 +291,7 @@ theorem composedExtended_tau_overBracha (P : Parameters)
 theorem composedExtended_tau_ABANetwork (P : Parameters)
     {G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
     {A A' : ABANetworkState P.n} {o : ℕ → WCC.SpecState P.n}
-    (hA : ABANetworkStep P A (Sum.inl Label.tau) (PMF.pure A')) :
+    (hA : ABANetworkStep P A (Sum.inl Label.tau : ExtendedLabel P.n Empty) (PMF.pure A')) :
     (composedExtended P).step (G, C, A, o) (Sum.inl Label.tau) (PMF.pure (G, C, A', o)) := by
   rw [composedExtended, System.parallel_step]
   refine Or.inr (Or.inr ⟨rfl,
@@ -305,7 +307,7 @@ theorem composedExtended_tau_ABANetwork (P : Parameters)
 theorem composedHidden_step_iff (P : Parameters) (q : ComposedState P) (l : Label P.n)
     (μ : PMF (ComposedState P)) :
     (composedHidden P).step q l μ ↔
-      (l = .tau ∧ ∃ e : NetworkEvent P.n, (composedExtended P).step q (Sum.inr e) μ) ∨
+      (l = .tau ∧ ∃ e : NetworkEvent P.n Empty, (composedExtended P).step q (Sum.inr e) μ) ∨
       (composedExtended P).step q (Sum.inl l) μ := by
   constructor
   · rintro (⟨hτ, l', ⟨e, rfl⟩, hstep⟩ | ⟨-, hstep⟩)
@@ -316,7 +318,7 @@ theorem composedHidden_step_iff (P : Parameters) (q : ComposedState P) (l : Labe
     · exact Or.inr ⟨inl_notMem_networkEventLabels l, hstep⟩
 
 theorem composedHidden_of_event (P : Parameters) {q : ComposedState P}
-    (e : NetworkEvent P.n) {μ : PMF (ComposedState P)}
+    (e : NetworkEvent P.n Empty) {μ : PMF (ComposedState P)}
     (h : (composedExtended P).step q (Sum.inr e) μ) :
     (composedHidden P).step q Label.tau μ :=
   (composedHidden_step_iff P _ _ _).mpr (Or.inl ⟨rfl, e, h⟩)
@@ -347,7 +349,7 @@ theorem roundFamilyOverBracha_silentRun (P : Parameters)
 /-- A run of one round on a label that round owns is a weak transition of the graded-agreement
 family at that coordinate. -/
 theorem roundFamilyOverBracha_weakStep (P : Parameters)
-    {G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n} {r : ℕ} {L : ExtendedLabel P.n}
+    {G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n} {r : ℕ} {L : ExtendedLabel P.n Empty}
     {q : GBCA.ByAFW.RoundStateOverBracha P.n} (hL : roundOwnsLabel L = some r)
     (h : (GBCA.ByAFW.roundOverBracha P r).weakLStep (G r) L q) :
     (roundFamilyOverBracha P).weakLStep G L (Function.update G r q) := by
@@ -364,8 +366,8 @@ theorem composedHidden_weakTau (P : Parameters) {G G' : ℕ → GBCA.ByAFW.Round
   have h1 : weakTau (roundFamilyOverBracha P) (PMF.pure G) (PMF.pure G') :=
     weakTau_of_weakLSilent (roundFamilyOverBracha P) (roundFamilyOverBracha_isLTS P) h
   have h2 := weakTau_parallel_left (roundFamilyOverBracha P)
-    ((System.synchronisedProduct (roundLoopProgram P)).parallel ((ABANetwork P).parallel
-      (coinOverRoundAlphabet P)))
+    ((System.synchronisedProduct (roundLoopProgram P Empty)).parallel ((ABANetwork P Empty).parallel
+      (coinOverRoundAlphabet P Empty)))
     ((C, A, o)) h1
   rw [prodPMF_pure_pure, prodPMF_pure_pure] at h2
   exact weakTau_relabel (weakTau_abstract (composedExtended P) (networkEventLabels P.n) h2)
@@ -379,19 +381,19 @@ theorem composedHidden_weakStep (P : Parameters) {G G' : ℕ → GBCA.ByAFW.Roun
     {o : ℕ → WCC.SpecState P.n} {ν : PMF (ℕ → WCC.SpecState P.n)} {l : Label P.n}
     (hl : l ≠ Label.tau)
     (hG : (roundFamilyOverBracha P).weakLStep G (Sum.inl l) G')
-    (hC : ∀ i, RoundLoopStep P i (C i) (Sum.inl l) (PMF.pure (C' i)))
-    (hA : ABANetworkStep P A (Sum.inl l) (PMF.pure A'))
-    (hW : (coinOverRoundAlphabet P).step o (Sum.inl l) ν) :
+    (hC : ∀ i, RoundLoopStep P i (C i) (Sum.inl l : ExtendedLabel P.n Empty) (PMF.pure (C' i)))
+    (hA : ABANetworkStep P A (Sum.inl l : ExtendedLabel P.n Empty) (PMF.pure A'))
+    (hW : (coinOverRoundAlphabet P Empty).step o (Sum.inl l) ν) :
     weakStep (composedHidden P) (PMF.pure ((G, C, A, o) : ComposedState P)) l
       (prodPMF (PMF.pure G') (prodPMF (PMF.pure C') (prodPMF (PMF.pure A') ν))) := by
-  have hL : (Sum.inl l : ExtendedLabel P.n) ≠ Silent.τ := by
+  have hL : (Sum.inl l : ExtendedLabel P.n Empty) ≠ Silent.τ := by
     rw [extendedLabel_tau]
     simpa using hl
   have h1 : weakStep (roundFamilyOverBracha P) (PMF.pure G) (Sum.inl l) (PMF.pure G') :=
     weakStep_of_weakLStep (roundFamilyOverBracha P) (roundFamilyOverBracha_isLTS P) hL hG
   have h2 := weakStep_parallel_sync (roundFamilyOverBracha P)
-    ((System.synchronisedProduct (roundLoopProgram P)).parallel ((ABANetwork P).parallel
-      (coinOverRoundAlphabet P)))
+    ((System.synchronisedProduct (roundLoopProgram P Empty)).parallel ((ABANetwork P Empty).parallel
+      (coinOverRoundAlphabet P Empty)))
     hL h1 (contextStep P hL hC hA hW)
   rw [prodPMF_pure_pure] at h2
   exact weakStep_relabel

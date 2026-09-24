@@ -14,9 +14,11 @@ Assembles the relation and invariant of `HybridRefinesSpecification/Relation.lea
 preservation in `HybridRefinesSpecification/InvariantPreservation/` and
 `HybridRefinesSpecification/AbstractStatePreservation.lean`, and the weak transitions of
 `HybridRefinesSpecification/WeakTransitions.lean` into `hybridRefinesSpecification`, the
-probabilistic forward simulation `hybrid P ⊑ spec P` along `hybridSpecificationRelation P`.
+probabilistic forward simulation `hybrid P M ⊑ spec P` along `hybridSpecificationRelation P`.
+It holds for every type `M` of round messages: no step of the simulation reads a round message.
 `hybrid_spec` is the trace-distribution inclusion it yields, and both chains of the case study
-reach the ABA specification along it.
+reach the ABA specification along it, ABDY22's at `GBCA.ByABDY.Message` and the gather-based one
+at `Empty`.
 
 The transitions dispatch as follows. A visible `callABA` is matched by
 `SpecStep.callSet` at a never-corrupted process holding no input, by
@@ -42,6 +44,10 @@ namespace ABA
 open Implementation Composition
 
 variable {P : Parameters}
+
+/-! `M` is the type of the messages a graded-agreement round exchanges. -/
+
+variable {M : Type} [DecidableEq M]
 
 /-- The core simulation relation, `Dirac`-lifted: every concrete state relates to the point
 mass on its (unique) abstract state. -/
@@ -115,7 +121,7 @@ private theorem dirac_step {P : Parameters} (s_C' : HybridState P)
 to `τ` by the outer hiding), so any purported `hybrid`-step carrying one is vacuous. -/
 private theorem hidden_label_impossible {P : Parameters} {s_C : HybridState P} {l : Label P.n}
     {μ_C : PMF (HybridState P)} (hmem : l ∈ Label.hiddenAPI P.n) (hne : l ≠ Silent.τ)
-    (hstep : (hybrid P).step s_C l μ_C) : False := by
+    (hstep : (hybrid P M).step s_C l μ_C) : False := by
   rw [hybrid_step_iff] at hstep
   rcases hstep with ⟨h, -⟩ | ⟨h, -⟩
   · exact hne h
@@ -123,8 +129,8 @@ private theorem hidden_label_impossible {P : Parameters} {s_C : HybridState P} {
 
 /-- **The core simulation.** `hybrid P` is a probabilistic forward simulation of `spec P`
 along `hybridSpecificationRelation P` (the never-flipping abstract state). -/
-theorem hybridRefinesSpecification (P : Parameters) :
-    ProbabilisticForwardSimulation (hybrid P) (spec P) (hybridSpecificationRelation P) := by
+theorem hybridRefinesSpecification (P : Parameters) (M : Type) [DecidableEq M] :
+    ProbabilisticForwardSimulation (hybrid P M) (spec P) (hybridSpecificationRelation P) := by
   refine ⟨⟨PMF.pure (SpecState.initial P.n), ?_, SpecState.initial P.n, rfl, Invariant.initial P,
     AbstractState.initial P⟩, ?_⟩
   · intro s_A hs_A; rw [PMF.mem_support_pure_iff] at hs_A; exact hs_A
@@ -427,9 +433,9 @@ theorem hybridRefinesSpecification (P : Parameters) :
 
 /-- **The protocol-shaped specification refines the ABA specification**: the
 soundness of the core simulation. -/
-theorem hybrid_spec (P : Parameters) :
-    achievableTraceDists (hybrid P) ⊆ achievableTraceDists (spec P) :=
-  (hybridRefinesSpecification P).achievableTraceDists_subset
+theorem hybrid_spec (P : Parameters) (M : Type) [DecidableEq M] :
+    achievableTraceDists (hybrid P M) ⊆ achievableTraceDists (spec P) :=
+  (hybridRefinesSpecification P M).achievableTraceDists_subset
 
 /-! ### Mechanical axiom check -/
 

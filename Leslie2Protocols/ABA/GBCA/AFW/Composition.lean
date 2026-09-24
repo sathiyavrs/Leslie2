@@ -17,7 +17,7 @@ assembled from the round's programs of `ABA/GBCA/AFW/Components.lean` — the `n
 programs beside the round's network — and two gather instances, both in the binding form (D33),
 each lifted along the pullback that names it. `roundOverGathersExtended` is the three factors in
 parallel over the round-internal alphabet; `roundOverGathers` hides the round's three events there
-and reads the result back over the family alphabet `ExtendedLabel n`.
+and reads the result back over the family alphabet `ExtendedLabel n Empty`.
 
 The composition is generic in the two gather instances: `roundOverGathers` takes them as arguments,
 `roundOverBracha` supplies the gather instances over Bracha's broadcast,
@@ -47,7 +47,8 @@ namespace PLTS
 namespace ABA
 namespace GBCA.ByAFW
 
-open Implementation Composition
+open Implementation hiding NetworkEvent ExtendedLabel
+open Composition
 
 /-- The state of the round whose gather instances have states `G₁` and `G₂`. -/
 abbrev RoundStateOverGathers (n : ℕ) (G₁ G₂ : Type) : Type :=
@@ -68,7 +69,7 @@ read over the family alphabet. -/
 noncomputable def roundOverGathers (P : Parameters) (r : ℕ) {G₁ G₂ : Type}
     (firstGather : System G₁ (Gather.InstanceLabel P.n Bool))
     (secondGather : System G₂ (Gather.InstanceLabel P.n (Option Bool))) :
-    System (RoundStateOverGathers P.n G₁ G₂) (ExtendedLabel P.n) :=
+    System (RoundStateOverGathers P.n G₁ G₂) (ExtendedLabel P.n Empty) :=
   ((roundOverGathersExtended P r firstGather secondGather).abstract (roundEvents P.n)).relabel
 
 @[simp] theorem roundOverGathers_init (P : Parameters) (r : ℕ) {G₁ G₂ : Type}
@@ -94,20 +95,20 @@ abbrev RoundStateOverGatherSpecifications (n : ℕ) : Type :=
 
 /-- **The round over the gather instances over Bracha's broadcast.** -/
 noncomputable def roundOverBracha (P : Parameters) (r : ℕ) :
-    System (RoundStateOverBracha P.n) (ExtendedLabel P.n) :=
+    System (RoundStateOverBracha P.n) (ExtendedLabel P.n Empty) :=
   roundOverGathers P r (Gather.instanceOverBracha P Bool) (Gather.instanceOverBracha P (Option
     Bool))
 
 /-- **The round over the gather instances over the broadcast
 specification.** -/
 noncomputable def roundOverBroadcastSpecification (P : Parameters) (r : ℕ) :
-    System (RoundStateOverBroadcastSpecification P.n) (ExtendedLabel P.n) :=
+    System (RoundStateOverBroadcastSpecification P.n) (ExtendedLabel P.n Empty) :=
   roundOverGathers P r (Gather.instanceOverBroadcastSpecification P Bool)
     (Gather.instanceOverBroadcastSpecification P (Option Bool))
 
 /-- **The round over the gather specifications.** -/
 noncomputable def roundOverGatherSpecifications (P : Parameters) (r : ℕ) :
-    System (RoundStateOverGatherSpecifications P.n) (ExtendedLabel P.n) :=
+    System (RoundStateOverGatherSpecifications P.n) (ExtendedLabel P.n Empty) :=
   roundOverGathers P r (Gather.specificationOverInstanceAlphabet P Bool)
     (Gather.specificationOverInstanceAlphabet P (Option Bool))
 

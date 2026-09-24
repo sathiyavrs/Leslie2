@@ -37,7 +37,8 @@ namespace PLTS
 namespace ABA
 namespace GBCA.ByAFW
 
-open Implementation Composition
+open Implementation hiding NetworkEvent ExtendedLabel
+open Composition
 
 /-! ### Reading and building the round's transitions
 
@@ -50,7 +51,7 @@ family-label case. -/
 theorem roundOverGathers_step_iff (P : Parameters) (r : ℕ) {G₁ G₂ : Type}
     (firstGather : System G₁ (Gather.InstanceLabel P.n Bool))
     (secondGather : System G₂ (Gather.InstanceLabel P.n (Option Bool)))
-    (s : RoundStateOverGathers P.n G₁ G₂) (l : ExtendedLabel P.n)
+    (s : RoundStateOverGathers P.n G₁ G₂) (l : ExtendedLabel P.n Empty)
     (μ : PMF (RoundStateOverGathers P.n G₁ G₂)) :
     (roundOverGathers P r firstGather secondGather).step s l μ ↔
       (l = Sum.inl Label.tau ∧ ∃ e : RoundEvent P.n,
@@ -290,7 +291,7 @@ theorem roundOverGathers_event_step (e : RoundEvent P.n)
     (Or.inl ⟨rfl, e, roundOverGathersExtended_label_step (by simp) hRoundPrograms hga1 hga2⟩)
 
 /-- A visible family label is a transition of the round. -/
-theorem roundOverGathers_label_step {l : ExtendedLabel P.n} (hl : l ≠ Sum.inl Label.tau)
+theorem roundOverGathers_label_step {l : ExtendedLabel P.n Empty} (hl : l ≠ Sum.inl Label.tau)
     (hRoundPrograms : (roundPrograms P r).step (u, v) (Sum.inl l) (PMF.pure (x, v')))
     (hga1 : (firstGather.mapIdle (firstGatherLabelMap P.n)).step c (Sum.inl l) (PMF.pure c'))
     (hga2 : (secondGather.mapIdle (secondGatherLabelMap P.n)).step d (Sum.inl l) (PMF.pure d')) :

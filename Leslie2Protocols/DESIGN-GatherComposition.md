@@ -100,9 +100,12 @@ along a pullback that sends the loop to the call (`BRB.specificationLabelMap`,
 `Gather.specificationLabelMap`): the specification answers its call label on two transitions, and a
 composition whose caller and network are different components could otherwise
 combine the caller's loop with the network's post. The round speaks the family
-alphabet `ExtendedLabel P.n` natively, as the protocol chain's round
-`GBCA.ByABDY.composition` does, so the family's call loops are its loop labels and
-`GBCA.specificationLabelMap` reads its specification.
+alphabet `ExtendedLabel P.n Empty` natively, as the protocol chain's round
+`GBCA.ByABDY.composition` speaks `ExtendedLabel P.n GBCA.ByABDY.Message`, so the family's call
+loops are its loop labels and `GBCA.specificationLabelMap` reads its specification. The family
+alphabet is parametric in the type of the messages a graded-agreement round exchanges; the round
+takes the empty type for it, so the round multicast and the round delivery name no label in
+this chain.
 
 At the protocol shape (`AFW/Composition.lean` and `AFW/Substitution.lean`), each round tier is
 gathered into the ℕ-indexed family under the corruption broadcast and put through the

@@ -74,7 +74,7 @@ structure SpecificationRelation (P : Parameters) (s : RoundStateOverGatherSpecif
 /-- The relation holds initially. -/
 theorem specificationRelation_init (P : Parameters) (r : ℕ) :
     SpecificationRelation P ((roundOverGatherSpecifications P r).init)
-      ((GBCA.specificationOverRoundAlphabet P r).init) := by
+      ((GBCA.specificationOverRoundAlphabet P Empty r).init) := by
   refine ⟨Invariant.initial P r, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
     simp [roundOverGatherSpecifications_init, programs, bound, firstGather, secondGather,
       Gather.SpecState.initial, GBCA.SpecState.initial, ProcessRecord.initial]

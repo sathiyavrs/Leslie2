@@ -109,7 +109,8 @@ namespace PLTS
 namespace ABA
 namespace GBCA.ByABDY
 
-open Implementation Composition
+open Implementation hiding NetworkEvent ExtendedLabel
+open Composition
 
 /-- The algorithm of the round-`r` composition: ABDY22's Algorithm 6 over all five message
 levels, one transition per line, on the composed state. All transitions are Dirac. -/
@@ -302,7 +303,7 @@ algorithm alike, and `specificationLabelMap` takes `τ` to `τ`. -/
 the composition is the algorithm's transition at the specification label the interface label
 projects to. -/
 theorem composition_projects (P : Parameters) (r : ℕ) :
-    ∀ (σ : GBCA.ByABDY.RoundState P.n) (l : ExtendedLabel P.n)
+    ∀ (σ : GBCA.ByABDY.RoundState P.n) (l : ExtendedLabel P.n Message)
     (μ : PMF (GBCA.ByABDY.RoundState P.n)), (composition P r).step σ l μ → ∃ l₀,
     specificationLabelMap P.n l = some l₀ ∧ Algorithm P r σ l₀ μ := by
   rintro ⟨u, w⟩ l μ hstep

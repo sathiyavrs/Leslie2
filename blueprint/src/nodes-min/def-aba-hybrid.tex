@@ -3,4 +3,5 @@
   \lean{PLTS.ABA.HybridState}\lean{PLTS.ABA.hybridExtended}\lean{PLTS.ABA.hybrid}\leanok
   \uses{def:aba-composed, def:aba-gbca-instance-by-abdy, def:aba-gbca-spec, def:idle-family, def:relabel, def:process-algebra}
   The composed system with its graded-agreement component replaced by the family of round specifications, the other three components and the whole pipeline unchanged: \leandecl{PLTS.ABA.hybrid}.
+  It is a system $\mathrm{hybrid}(P, M)$ for every type $M$ of the messages a graded-agreement round exchanges: the ABDY chain takes $\mathrm{GBCA.ByABDY.Message}$ for it, the gather-based chain the empty type.
 \end{definition}

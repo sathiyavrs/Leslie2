@@ -29,6 +29,11 @@ open Implementation Composition
 
 variable {P : Parameters}
 
+/-! `M` is the type of the messages a graded-agreement round exchanges. -/
+
+variable {M : Type} [DecidableEq M]
+
+
 /-- The round loop's correctness guard read on the corrupted set: under I0 the
 replacement flag is down exactly at the processes outside `F`. -/
 theorem corrupted_eq_false_iff {P : Parameters} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
@@ -49,7 +54,7 @@ theorem hybrid_step_callABA (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
     (o : ℕ → WCC.SpecState P.n) (id : Fin P.n) (b : Bool)
     (hcorr : ∀ k, ABAState.corrupted (C, A) k = true ↔ k ∈ ABAState.F (C, A))
     (μ : PMF (HybridState P)) :
-    (hybrid P).step (G, C, A, o) (.callABA id b) μ ↔
+    (hybrid P M).step (G, C, A, o) (.callABA id b) μ ↔
       ∃ μc : PMF (ABAState P),
         ((id ∉ ABAState.F (C, A) ∧ (ABAState.processes (C, A) id).input = none ∧
             μc = PMF.pure (ABAState.setProcess (C, A) id
@@ -59,7 +64,7 @@ theorem hybrid_step_callABA (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
               (ABAState.processes (C, A) id).input ≠ none) ∧
             μc = PMF.pure (C, A))) ∧
         μ = prodPMF (PMF.pure G) (μc.map fun c => (c.1, c.2, o)) := by
-  have hWlift : (coinOverRoundAlphabet P).step o (Sum.inl (Label.callABA id b)) (PMF.pure o) :=
+  have hWlift : (coinOverRoundAlphabet P M).step o (Sum.inl (Label.callABA id b)) (PMF.pure o) :=
     (System.mapIdle_step_some (coinLabelMap_inl (Label.callABA id b)) (PMF.pure o)).mpr
       (wccFamily_idle P o (by simp) rfl (by simp [Label.isFail]))
   constructor
@@ -100,7 +105,7 @@ theorem hybrid_step_callABA (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
     rw [hybridHidden_step_iff]
     refine Or.inr ?_
     rcases hdisj with ⟨hnF, hin, rfl⟩ | ⟨hloop, rfl⟩
-    · have h := hybridExtended_visible_step P (L := Sum.inl (Label.callABA id b)) (by simp)
+    · have h := hybridExtended_visible_step (M := M) P (L := Sum.inl (Label.callABA id b)) (by simp)
         (gbcaSpecificationFamily_idle P G (by simp) rfl not_false)
         (roundLoopRecords_family id ((C id).setProcess { (C id).process with
             input := some b, estimate := some b, round := 0, phase := .toCallG })
@@ -109,7 +114,7 @@ theorem hybrid_step_callABA (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
         (ABANetworkStep.callABAIdle A id b) hWlift
       simp only [PMF.pure_map, prodPMF_pure_pure] at h ⊢
       exact h
-    · have h := hybridExtended_visible_step P (L := Sum.inl (Label.callABA id b)) (by simp)
+    · have h := hybridExtended_visible_step (M := M) P (L := Sum.inl (Label.callABA id b)) (by simp)
         (gbcaSpecificationFamily_idle P G (by simp) rfl not_false)
         (fun i => by
           by_cases hi : i = id
@@ -135,7 +140,7 @@ theorem hybrid_step_retABA (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
     (o : ℕ → WCC.SpecState P.n) (id : Fin P.n) (b : Bool)
     (hcorr : ∀ k, ABAState.corrupted (C, A) k = true ↔ k ∈ ABAState.F (C, A))
     (μ : PMF (HybridState P)) :
-    (hybrid P).step (G, C, A, o) (.retABA id b) μ ↔
+    (hybrid P M).step (G, C, A, o) (.retABA id b) μ ↔
       ∃ μc : PMF (ABAState P),
         ((id ∉ ABAState.F (C, A) ∧
             P.n - P.f ≤ ABAState.decidedCount (C, A) id b ∧
@@ -145,7 +150,7 @@ theorem hybrid_step_retABA (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
               { ABAState.processes (C, A) id with returned := true })) ∨
           (id ∈ ABAState.F (C, A) ∧ μc = PMF.pure (C, A))) ∧
         μ = prodPMF (PMF.pure G) (μc.map fun c => (c.1, c.2, o)) := by
-  have hWlift : (coinOverRoundAlphabet P).step o (Sum.inl (Label.retABA id b)) (PMF.pure o) :=
+  have hWlift : (coinOverRoundAlphabet P M).step o (Sum.inl (Label.retABA id b)) (PMF.pure o) :=
     (System.mapIdle_step_some (coinLabelMap_inl (Label.retABA id b)) (PMF.pure o)).mpr
       (wccFamily_idle P o (by simp) rfl (by simp [Label.isFail]))
   constructor
@@ -187,7 +192,7 @@ theorem hybrid_step_retABA (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
     rw [hybridHidden_step_iff]
     refine Or.inr ?_
     rcases hdisj with ⟨hnF, hcnt, hsent, hret, rfl⟩ | ⟨hF, rfl⟩
-    · have h := hybridExtended_visible_step P (L := Sum.inl (Label.retABA id b)) (by simp)
+    · have h := hybridExtended_visible_step (M := M) P (L := Sum.inl (Label.retABA id b)) (by simp)
         (gbcaSpecificationFamily_idle P G (by simp) rfl not_false)
         (roundLoopRecords_family id ((C id).setProcess { (C id).process with returned := true })
           (RoundLoopStep.ret (C id) b ((corrupted_eq_false_iff hcorr id).mpr hnF) hcnt hret)
@@ -195,7 +200,7 @@ theorem hybrid_step_retABA (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
         (ABANetworkStep.retABA A id b hsent) hWlift
       simp only [PMF.pure_map, prodPMF_pure_pure] at h ⊢
       exact h
-    · have h := hybridExtended_visible_step P (L := Sum.inl (Label.retABA id b)) (by simp)
+    · have h := hybridExtended_visible_step (M := M) P (L := Sum.inl (Label.retABA id b)) (by simp)
         (gbcaSpecificationFamily_idle P G (by simp) rfl not_false)
         (fun i => by
           by_cases hi : i = id
@@ -216,7 +221,7 @@ theorem hybrid_step_fail (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
     (C : ∀ _ : Fin P.n, RoundLoopRecord P.n) (A : ABANetworkState P.n) (o : ℕ → WCC.SpecState P.n)
     (id : Fin P.n) (hcorr : ∀ k, ABAState.corrupted (C, A) k = true ↔ k ∈ ABAState.F (C, A))
     (μ : PMF (HybridState P)) :
-    (hybrid P).step (G, C, A, o) (.fail id) μ ↔
+    (hybrid P M).step (G, C, A, o) (.fail id) μ ↔
       id ∉ ABAState.F (C, A) ∧ (ABAState.F (C, A)).card < P.f ∧
       μ = prodPMF (PMF.pure fun r => (G r).corrupt P id)
         ((PMF.pure (ABAState.corrupt P id (C, A))).map
@@ -252,7 +257,7 @@ theorem hybrid_step_fail (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
     refine Or.inr ⟨by simp, ?_⟩
     rw [hybridHidden_step_iff]
     refine Or.inr ?_
-    have h := hybridExtended_visible_step P (L := Sum.inl (Label.fail id)) (by simp)
+    have h := hybridExtended_visible_step (M := M) P (L := Sum.inl (Label.fail id)) (by simp)
       (gbcaSpecificationFamily_fail P G id)
       (roundLoopRecords_family id { C id with corrupted := true }
         (RoundLoopStep.failSelf (C id) ((corrupted_eq_false_iff hcorr id).mpr hnew))
@@ -278,7 +283,7 @@ theorem hybrid_step_tau (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
     (o : ℕ → WCC.SpecState P.n)
     (hcorr : ∀ k, ABAState.corrupted (C, A) k = true ↔ k ∈ ABAState.F (C, A))
     (μ : PMF (HybridState P))
-    (hstep : (hybrid P).step (G, C, A, o) .tau μ) :
+    (hstep : (hybrid P M).step (G, C, A, o) .tau μ) :
     (∃ r μr, GBCA.Step P r (G r) .tau μr ∧
         μ = prodPMF (μr.map (Function.update G r)) (PMF.pure (C, A, o))) ∨
       (∃ μc : PMF (ABAState P),

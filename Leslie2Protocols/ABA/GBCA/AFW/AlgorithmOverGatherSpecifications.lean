@@ -44,7 +44,8 @@ namespace PLTS
 namespace ABA
 namespace GBCA.ByAFW
 
-open Implementation Composition
+open Implementation hiding NetworkEvent ExtendedLabel
+open Composition
 
 /-! ### Reading a lifted gather specification through a pullback -/
 
@@ -184,7 +185,7 @@ inductive AlgorithmOverGatherSpecifications (P : Parameters) (r : ℕ) :
 
 /-- **The projection.** -/
 theorem roundOverGatherSpecifications_step_algorithm (P : Parameters) (r : ℕ) :
-    ∀ (s : RoundStateOverGatherSpecifications P.n) (l : ExtendedLabel P.n) (μ : PMF
+    ∀ (s : RoundStateOverGatherSpecifications P.n) (l : ExtendedLabel P.n Empty) (μ : PMF
       (RoundStateOverGatherSpecifications P.n)),
       (roundOverGatherSpecifications P r).step s l μ →
       ∃ l₀, GBCA.specificationLabelMap P.n l = some l₀ ∧
@@ -305,9 +306,8 @@ theorem roundOverGatherSpecifications_step_algorithm (P : Parameters) (r : ℕ) 
           exact ⟨_, rfl, AlgorithmOverGatherSpecifications.fail _ id⟩
       | inr ev =>
         cases ev with
-        | gbcaSend r' j m => exact (roundPrograms_outside_inversion (by simp) hRoundPrograms).elim
-        | gbcaDeliver r' i j m =>
-          exact (roundPrograms_outside_inversion (by simp) hRoundPrograms).elim
+        | gbcaSend r' j m => exact m.elim
+        | gbcaDeliver r' i j m => exact m.elim
         | decidedSend j b => exact (roundPrograms_outside_inversion (by simp) hRoundPrograms).elim
         | decidedDeliver i j b =>
           exact (roundPrograms_outside_inversion (by simp) hRoundPrograms).elim

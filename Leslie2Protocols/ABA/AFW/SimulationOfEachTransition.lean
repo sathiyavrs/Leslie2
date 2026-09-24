@@ -60,7 +60,8 @@ namespace PLTS
 namespace ABA
 namespace AFW
 
-open Implementation Composition GBCA.ByABDY
+open Implementation hiding NetworkEvent ExtendedLabel
+open Composition GBCA.ByABDY
 
 /-! ### Reading a transition off a label the process owns
 
@@ -476,7 +477,7 @@ theorem roundOverBracha_run_two {q q₁ q' : GBCA.ByAFW.RoundStateOverBracha P.n
 
 /-- A silent transition followed by a visible one is a weak transition of the
 round on that label. -/
-theorem roundOverBracha_weakStep_two {L : ExtendedLabel P.n}
+theorem roundOverBracha_weakStep_two {L : ExtendedLabel P.n Empty}
     {q q₁ q' : GBCA.ByAFW.RoundStateOverBracha P.n} (hL : L ≠ Silent.τ)
     (h₁ : (GBCA.ByAFW.roundOverBracha P r).step q (Sum.inl Label.tau) (PMF.pure q₁))
     (h₂ : (GBCA.ByAFW.roundOverBracha P r).step q₁ L (PMF.pure q')) :

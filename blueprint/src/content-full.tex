@@ -1064,6 +1064,14 @@ Section~\ref{sec:aba-gather} instantiates it a second time.
 The rendezvous alphabet is parametric in the message type, and is hidden before
 it leaves the composition, so two instantiations need not agree
 on it.
+The extended alphabet the two compositions are written over carries that
+parameter too, so the components above a round --- the round loops, the ABA
+network, the coin oracle, the family of round specifications and the hybrid ---
+are written for every round message type.
+The implementation of Algorithm~\ref{alg:gbca-impl} supplies its own messages,
+and the gather-based implementation of Section~\ref{sec:aba-gather} supplies
+the empty type, so the round multicast and the round delivery name no label
+there.
 
 A system below the meeting point of the two chains therefore belongs to one
 implementation or the other, and carries a superscript naming its source:
@@ -1517,7 +1525,7 @@ The exit \texttt{retABA}\,$id\,b$ fires once $n-f$ distinct senders of $b$ have 
 Every edge drawn carries the guard that the process's own program is unreplaced, so a corruption leaves the machine at the phase it has reached and the phase field is unchanged from there (D23).
 The \texttt{inputLoop} self-loop absorbs $\mathrm{callABA}$ at a process whose input is set (D36), so it stands at every phase the \texttt{input} edge leads to and is drawn at $\mathrm{toCallG}$ alone.}
 
-The Lean encoding of Algorithm~\ref{alg:aba-core} is the round-loop program $\mathrm{roundLoopProgram}(P,j)$ of each process together with the ABA network $\mathrm{ABANetwork}(P)$, both read over the extended alphabet $\mathrm{ExtendedLabel}(n)$ of Definition~\ref{def:aba-programs}.
+The Lean encoding of Algorithm~\ref{alg:aba-core} is the round-loop program $\mathrm{roundLoopProgram}(P,j)$ of each process together with the ABA network $\mathrm{ABANetwork}(P)$, both read over the extended alphabet $\mathrm{ExtendedLabel}(n, M)$ of Definition~\ref{def:aba-programs}.
 It is the round-loop control only.
 The two sub-protocols are separate systems, and the $\mathrm{callG}$, $\mathrm{retG}$, $\mathrm{callW}$, $\mathrm{retW}$ steps of the round loop are pure handshakes on the API labels.
 Every transition is Dirac, so again the table needs no distribution column.

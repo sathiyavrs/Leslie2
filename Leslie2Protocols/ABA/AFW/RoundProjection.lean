@@ -72,7 +72,8 @@ namespace PLTS
 namespace ABA
 namespace AFW
 
-open Implementation Composition GBCA.ByABDY
+open Implementation hiding NetworkEvent ExtendedLabel
+open Composition GBCA.ByABDY
 
 /-! ### The four broadcast untaggings
 

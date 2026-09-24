@@ -40,7 +40,8 @@ namespace PLTS
 namespace ABA
 namespace AFW
 
-open Implementation Composition GBCA.ByABDY
+open Implementation hiding NetworkEvent ExtendedLabel
+open Composition GBCA.ByABDY
 
 /-! ### Assembling a matched run
 
@@ -58,9 +59,9 @@ private theorem coupling_visible (P : Parameters) {x : ∀ _ : Fin P.n, AFW.Proc
     {o : ℕ → WCC.SpecState P.n} {l : Label P.n} (hl : l ≠ Label.tau)
     (hrel : ∀ o' ∈ ν.support, ProtocolRelation P (x, w', o') (G', C', A', o'))
     (hG : (roundFamilyOverBracha P).weakLStep G (Sum.inl l) G')
-    (hC : ∀ i, RoundLoopStep P i (C i) (Sum.inl l) (PMF.pure (C' i)))
-    (hA : ABANetworkStep P A (Sum.inl l) (PMF.pure A'))
-    (hW : (coinOverRoundAlphabet P).step o (Sum.inl l) ν) :
+    (hC : ∀ i, RoundLoopStep P i (C i) (Sum.inl l : ExtendedLabel P.n Empty) (PMF.pure (C' i)))
+    (hA : ABANetworkStep P A (Sum.inl l : ExtendedLabel P.n Empty) (PMF.pure A'))
+    (hW : (coinOverRoundAlphabet P Empty).step o (Sum.inl l) ν) :
     ∃ Ω : PMF (PMF (ComposedState P)),
       PMFRel (diracRel (ProtocolRelation P))
         (prodPMF (PMF.pure x) (prodPMF (PMF.pure w') ν)) Ω ∧
@@ -80,12 +81,12 @@ private theorem coupling_hiddenRendezvous (P : Parameters)
     {C' : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A' : ABANetworkState P.n}
     {ν : PMF (ℕ → WCC.SpecState P.n)} {G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n}
     {C : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A : ABANetworkState P.n}
-    {o : ℕ → WCC.SpecState P.n} (e : NetworkEvent P.n)
+    {o : ℕ → WCC.SpecState P.n} (e : NetworkEvent P.n Empty)
     (hrel : ∀ o' ∈ ν.support, ProtocolRelation P (x, w', o') (G', C', A', o'))
     (hG : (roundFamilyOverBracha P).step G (Sum.inr e) (PMF.pure G'))
     (hC : ∀ i, RoundLoopStep P i (C i) (Sum.inr e) (PMF.pure (C' i)))
     (hA : ABANetworkStep P A (Sum.inr e) (PMF.pure A'))
-    (hW : (coinOverRoundAlphabet P).step o (Sum.inr e) ν) :
+    (hW : (coinOverRoundAlphabet P Empty).step o (Sum.inr e) ν) :
     ∃ Ω : PMF (PMF (ComposedState P)),
       PMFRel (diracRel (ProtocolRelation P))
         (prodPMF (PMF.pure x) (prodPMF (PMF.pure w') ν)) Ω ∧
@@ -201,9 +202,9 @@ theorem coupling_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
         (Ω.bind id) := by
   obtain ⟨hC, -, hA, hGv, hB, hI⟩ := (protocolRelation_mk P _ _ _ _ _ _ _).mp hR
   obtain ⟨x, w', ω, hall, hn, hOr, rfl⟩ := systemExtended_label_inversion hl h
-  have hWl : (coinOverRoundAlphabet P).step o (Sum.inl l) ω :=
+  have hWl : (coinOverRoundAlphabet P Empty).step o (Sum.inl l) ω :=
     (System.mapIdle_step_some (coinLabelMap_inl l) ω).mpr hOr
-  have hLne : (Sum.inl l : ExtendedLabel P.n) ≠ Silent.τ := by
+  have hLne : (Sum.inl l : ExtendedLabel P.n Empty) ≠ Silent.τ := by
     simpa using hl
   have hCeq : ∀ i, C i = (u i).1 := fun i => (hC i).symm
   cases l with
@@ -247,7 +248,8 @@ theorem coupling_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
         rcases programStep_retABA_own (hall i) with ⟨-, -, -, -, hx⟩ | ⟨-, hx⟩ <;>
           rw [pure_inj hx]
       · rw [hfor i hi]
-    have hAn : ABANetworkStep P A (Sum.inl (Label.retABA id b)) (PMF.pure A) := by
+    have hAn : ABANetworkStep P A (Sum.inl (Label.retABA id b) : ExtendedLabel P.n Empty)
+        (PMF.pure A) := by
       rw [hA]
       rcases hdp with hd | hf
       · exact ABANetworkStep.retABA ⟨w'.decidedSent, w'.F⟩ id b hd

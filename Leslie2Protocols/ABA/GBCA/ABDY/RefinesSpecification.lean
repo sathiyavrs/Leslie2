@@ -45,7 +45,8 @@ namespace PLTS
 namespace ABA
 namespace GBCA.ByABDY
 
-open Implementation Composition
+open Implementation hiding NetworkEvent ExtendedLabel
+open Composition
 
 variable {P : Parameters}
 
@@ -587,7 +588,7 @@ answered by the specification's own call or return (D11). -/
 /-- **The refinement of the round's graded-agreement composition**: the round-`r` composition is
 forward simulated by the graded agreement specification, read over the round's interface. -/
 theorem refinesSpecification (P : Parameters) (r : ℕ) :
-    ForwardSimulation (composition P r) (specificationOverRoundAlphabet P r)
+    ForwardSimulation (composition P r) (specificationOverRoundAlphabet P Message r)
     (specificationRelation P r) := by
   constructor
   intro q₁ q₂ hR l μ hstep q₁' hq₁'
@@ -596,11 +597,11 @@ theorem refinesSpecification (P : Parameters) (r : ℕ) :
   refine ⟨s', ?_, hrel⟩
   rcases hdis with ⟨hτ, hweak⟩ | ⟨hτ, hweak⟩
   · exact Or.inl ⟨specificationLabelMap_eq_tau (by rw [hpull, hτ]; rfl),
-      weakLSilent_specificationOverRoundAlphabet P r hweak⟩
-  · refine Or.inr ⟨?_, weakLStep_specificationOverRoundAlphabet P r hτ hpull hweak⟩
+      weakLSilent_specificationOverRoundAlphabet P Message r hweak⟩
+  · refine Or.inr ⟨?_, weakLStep_specificationOverRoundAlphabet P Message r hτ hpull hweak⟩
     intro hl
     refine hτ ?_
-    have h2 : specificationLabelMap P.n (Silent.τ : ExtendedLabel P.n) = some l₀ := by
+    have h2 : specificationLabelMap P.n (Silent.τ : ExtendedLabel P.n Message) = some l₀ := by
       rw [← hl]; exact hpull
     rw [specificationLabelMap_tau] at h2
     exact (Option.some.inj h2).symm
@@ -609,9 +610,9 @@ theorem refinesSpecification (P : Parameters) (r : ℕ) :
 composition is achievable by the specification read over the round's interface. -/
 theorem composition_specificationTraces (P : Parameters) (r : ℕ) :
     achievableTraceDists (composition P r) ⊆ achievableTraceDists
-      (specificationOverRoundAlphabet P r) :=
+      (specificationOverRoundAlphabet P Message r) :=
   (ForwardSimulation.toProbabilistic (composition_isLTS P r)
-    (specificationOverRoundAlphabet_isLTS P r)
+    (specificationOverRoundAlphabet_isLTS P Message r)
     (specificationRelation_init P r) (refinesSpecification P r)).achievableTraceDists_subset
 
 /-! ### What the family lift will need
@@ -622,8 +623,8 @@ survives the broadcast corruption. -/
 
 /-- The broadcast corruption act on a specification state, over the extended
 alphabet: `GBCA.failAct` taken on the extended `fail` label. -/
-def specificationCorruptionAct (P : Parameters) : ExtendedLabel P.n → GBCA.SpecState P.n →
-  GBCA.SpecState P.n
+def specificationCorruptionAct (P : Parameters) {M : Type} :
+    ExtendedLabel P.n M → GBCA.SpecState P.n → GBCA.SpecState P.n
   | Sum.inl (.fail k), s => s.corrupt P k
   | _, s => s
 
@@ -631,7 +632,7 @@ def specificationCorruptionAct (P : Parameters) : ExtendedLabel P.n → GBCA.Spe
 set is the one the algorithm reads, so the two guards `k ∉ F ∧ |F| < f` agree and
 `GBCA.ByABDY.specificationRelation_corrupt` applies verbatim (D1). -/
 theorem refinesSpecification_failAct (P : Parameters) :
-    ∀ l : ExtendedLabel P.n, isFailLabel l → ∀ (r : ℕ) (σ : GBCA.ByABDY.RoundState P.n)
+    ∀ l : ExtendedLabel P.n Message, isFailLabel l → ∀ (r : ℕ) (σ : GBCA.ByABDY.RoundState P.n)
       (s : GBCA.SpecState P.n), specificationRelation P r σ s →
       specificationRelation P r (corruptionAct P l σ) (specificationCorruptionAct P l s) := by
   rintro l hl r ⟨u, w⟩ s hR

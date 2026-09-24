@@ -66,7 +66,8 @@ and `ABA/ABDY/Substitution.lean` carries the composed system to `hybrid`.
 namespace PLTS
 namespace ABA
 
-open Implementation Composition
+open Implementation hiding NetworkEvent ExtendedLabel
+open Composition
 
 /-! ## The composed system
 
@@ -91,10 +92,11 @@ namespace ABDY
 
 /-- The four components in parallel, over the extended alphabet. -/
 noncomputable def composedExtended (P : Parameters) :
-    System (Composition.ComposedState P) (ExtendedLabel P.n) :=
+    System (Composition.ComposedState P) (ExtendedLabel P.n GBCA.ByABDY.Message) :=
   (GBCA.ByABDY.gbcaInstanceFamily P).parallel
-    ((System.synchronisedProduct (Composition.roundLoopProgram P)).parallel
-      ((Composition.ABANetwork P).parallel (coinOverRoundAlphabet P)))
+    ((System.synchronisedProduct (Composition.roundLoopProgram P GBCA.ByABDY.Message)).parallel
+      ((Composition.ABANetwork P GBCA.ByABDY.Message).parallel
+        (coinOverRoundAlphabet P GBCA.ByABDY.Message)))
 
 /-- **The composed group**: the rendezvous alphabet hidden, the result read
 back over `Label n`. -/
@@ -117,7 +119,8 @@ and the shared-label case. -/
 theorem composedHidden_step_iff (P : Parameters) (q : ComposedState P) (l : Label P.n)
     (μ : PMF (ComposedState P)) :
     (ABDY.composedHidden P).step q l μ ↔
-      (l = .tau ∧ ∃ e : NetworkEvent P.n, (ABDY.composedExtended P).step q (Sum.inr e) μ) ∨
+      (l = .tau ∧ ∃ e : NetworkEvent P.n GBCA.ByABDY.Message,
+        (ABDY.composedExtended P).step q (Sum.inr e) μ) ∨
       (ABDY.composedExtended P).step q (Sum.inl l) μ := by
   constructor
   · rintro (⟨hτ, l', ⟨e, rfl⟩, hstep⟩ | ⟨-, hstep⟩)
@@ -132,10 +135,11 @@ oracle's successor left arbitrary. -/
 theorem composedExtended_visible_step (P : Parameters)
     {G G' : ℕ → GBCA.ByABDY.RoundState P.n} {C C' : ∀ _ : Fin P.n, RoundLoopRecord P.n}
     {A A' : ABANetworkState P.n} {o : ℕ → WCC.SpecState P.n} {ω : PMF (ℕ → WCC.SpecState P.n)}
-    {L : ExtendedLabel P.n} (hL : L ≠ Silent.τ)
+    {L : ExtendedLabel P.n GBCA.ByABDY.Message} (hL : L ≠ Silent.τ)
     (hG : (GBCA.ByABDY.gbcaInstanceFamily P).step G L (PMF.pure G'))
     (hC : ∀ i, RoundLoopStep P i (C i) L (PMF.pure (C' i)))
-    (hA : ABANetworkStep P A L (PMF.pure A')) (hW : (coinOverRoundAlphabet P).step o L ω) :
+    (hA : ABANetworkStep P A L (PMF.pure A'))
+    (hW : (coinOverRoundAlphabet P GBCA.ByABDY.Message).step o L ω) :
     (ABDY.composedExtended P).step (G, C, A, o) L
     (prodPMF (PMF.pure G') (prodPMF (PMF.pure C') (prodPMF (PMF.pure A') ω))) := by
   rw [ABDY.composedExtended, System.parallel_step]
@@ -160,7 +164,8 @@ theorem composedExtended_tau_gbca (P : Parameters) {G G' : ℕ → GBCA.ByABDY.R
 theorem composedExtended_tau_ABANetwork (P : Parameters)
     {G : ℕ → GBCA.ByABDY.RoundState P.n} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
     {A A' : ABANetworkState P.n} {o : ℕ → WCC.SpecState P.n}
-    (hA : ABANetworkStep P A (Sum.inl Label.tau) (PMF.pure A')) :
+    (hA : ABANetworkStep P A (Sum.inl Label.tau : ExtendedLabel P.n GBCA.ByABDY.Message)
+      (PMF.pure A')) :
     (ABDY.composedExtended P).step (G, C, A, o) (Sum.inl Label.tau) (PMF.pure (G, C, A', o)) := by
   rw [ABDY.composedExtended, System.parallel_step]
   refine Or.inr (Or.inr ⟨rfl,
@@ -178,7 +183,7 @@ broadcasts `fail`, and idles on everything else. -/
 
 /-- The round-`r` instance moves on a label it owns. -/
 theorem gbcaInstanceFamily_owned (P : Parameters) (G : ℕ → GBCA.ByABDY.RoundState P.n)
-    (r : ℕ) {L : ExtendedLabel P.n} (hL : GBCA.ByABDY.roundOwnsLabel L = some r)
+    (r : ℕ) {L : ExtendedLabel P.n GBCA.ByABDY.Message} (hL : GBCA.ByABDY.roundOwnsLabel L = some r)
     {X : GBCA.ByABDY.RoundState P.n}
     (h : (GBCA.ByABDY.composition P r).step (G r) L (PMF.pure X)) :
     (GBCA.ByABDY.gbcaInstanceFamily P).step G L (PMF.pure (Function.update G r X)) := by
@@ -188,7 +193,7 @@ theorem gbcaInstanceFamily_owned (P : Parameters) (G : ℕ → GBCA.ByABDY.Round
 /-- An owned label whose instance is unchanged. -/
 theorem gbcaInstanceFamily_owned_id (P : Parameters) (G : ℕ → GBCA.ByABDY.RoundState P.n)
   (r : ℕ)
-    {L : ExtendedLabel P.n} (hL : GBCA.ByABDY.roundOwnsLabel L = some r)
+    {L : ExtendedLabel P.n GBCA.ByABDY.Message} (hL : GBCA.ByABDY.roundOwnsLabel L = some r)
     (h : (GBCA.ByABDY.composition P r).step (G r) L (PMF.pure (G r))) :
     (GBCA.ByABDY.gbcaInstanceFamily P).step G L (PMF.pure G) := by
   have hstep := gbcaInstanceFamily_owned P G r hL h
@@ -205,7 +210,8 @@ theorem gbcaInstanceFamily_tau (P : Parameters) (G : ℕ → GBCA.ByABDY.RoundSt
 
 /-- A label no round owns and no broadcast: the family idles. -/
 theorem gbcaInstanceFamily_idle (P : Parameters) (G : ℕ → GBCA.ByABDY.RoundState P.n)
-    {L : ExtendedLabel P.n} (hτ : L ≠ Silent.τ) (hown : GBCA.ByABDY.roundOwnsLabel L = none)
+    {L : ExtendedLabel P.n GBCA.ByABDY.Message} (hτ : L ≠ Silent.τ)
+    (hown : GBCA.ByABDY.roundOwnsLabel L = none)
     (hf : ¬ GBCA.ByABDY.isFailLabel L) :
     (GBCA.ByABDY.gbcaInstanceFamily P).step G L (PMF.pure G) := by
   rw [GBCA.ByABDY.gbcaInstanceFamily, System.family_step_iff]
@@ -240,7 +246,8 @@ label is a silent transition of `ABDY.composedHidden`, as is one on `τ`. The tw
 never reach this point. They are internal to a round instance, hidden inside
 `GBCA.ByABDY.composition`, and reach the composite as the family's own `τ`. -/
 
-theorem composedHidden_of_event (P : Parameters) {q : ComposedState P} (e : NetworkEvent P.n)
+theorem composedHidden_of_event (P : Parameters) {q : ComposedState P}
+    (e : NetworkEvent P.n GBCA.ByABDY.Message)
     {μ : PMF (ComposedState P)} (h : (ABDY.composedExtended P).step q (Sum.inr e) μ) :
     (ABDY.composedHidden P).step q Label.tau μ :=
   (composedHidden_step_iff P _ _ _).mpr (Or.inl ⟨rfl, e, h⟩)

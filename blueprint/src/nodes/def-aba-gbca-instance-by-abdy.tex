@@ -11,7 +11,7 @@
         \bigl(\mathrm{synchronisedProduct}_{j \in [n]}\ \mathrm{gbcaProgram}(P,r,j)\bigr)
           \parallel \mathrm{GBCANetwork}(P,r)\bigr)\Bigr)
   \]
-  is read over $\mathrm{GBCALabel}(n) = \mathrm{ExtendedLabel}(n) \oplus \mathrm{GBCAEvent}(n)$ and then over $\mathrm{ExtendedLabel}(n)$, where $\mathrm{GBCAEvent}(n)$ is the alphabet of the two rendezvous of one round, the multicast and the delivery.
+  is read over $\mathrm{GBCALabel}(n) = \mathrm{ExtendedLabel}(n, \mathrm{Message}) \oplus \mathrm{GBCAEvent}(n)$ and then over $\mathrm{ExtendedLabel}(n, \mathrm{Message})$, where $\mathrm{GBCAEvent}(n)$ is the alphabet of the two rendezvous of one round, the multicast and the delivery.
   They carry no round tag, the round being the identity of the instance they belong to, and they are hidden before they leave the instance, so its interface is the round's ports alone: $\mathrm{callG}(r,\cdot,\cdot)$, $\mathrm{retG}(r,\cdot,\cdot,\cdot)$, $\mathrm{gbcaCallLoop}(r,\cdot,\cdot)$ and the three Byzantine graded-agreement transitions of round $r$, whose effect the instance carries and whose authorisation $k \in F$ is read outside it (D11).
   The graded-agreement component of the protocol is the $\mathbb{N}$-indexed family $\mathrm{gbcaInstanceFamily}(P)$ over $\mathrm{composition}(P,\cdot)$, in which the ownership map $\mathrm{roundOwnsLabel}$ sends each interface label class to its round tag, a round-tagged label moves its round alone, and $\mathrm{fail}(k)$ is the broadcast that keeps every round's copy of the corrupted set equal (D1).
   Full construction: \leandecl{PLTS.ABA.GBCA.ByABDY.composition} and \leandecl{PLTS.ABA.GBCA.ByABDY.gbcaInstanceFamily}.

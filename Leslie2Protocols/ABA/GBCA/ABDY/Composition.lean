@@ -15,7 +15,8 @@ import Leslie2Protocols.Framework.LoopsAndInstanceFamilies
 `ABA/GBCA/ABDY/Components.lean` — the `n` corruption-blind local programs beside the round's own
 network. `compositionExtended` is the programs synchronised and put in parallel with the network
 over the instance-internal alphabet; `composition` hides the two rendezvous there and reads the
-result back over the shared extended alphabet `ExtendedLabel n`. The instance is the unit the
+result back over the shared extended alphabet `ExtendedLabel n Message`. The instance is the unit
+the
 analysis replaces by the graded-agreement specification, so its interface is exactly what that
 replacement may see: the round's handshake ports `callG r`, `retG r`, `gbcaCallLoop r` and the
 three Byzantine graded-agreement labels of round `r`, and nothing else.
@@ -49,7 +50,8 @@ namespace PLTS
 namespace ABA
 namespace GBCA.ByABDY
 
-open Implementation Composition
+open Implementation hiding NetworkEvent ExtendedLabel
+open Composition
 
 /-- The programs beside the network, over the instance-internal alphabet. -/
 noncomputable def compositionExtended (P : Parameters) (r : ℕ) :
@@ -61,13 +63,13 @@ rendezvous hidden, the result read back over the shared extended alphabet. Its
 interface is the round's ports — `callG r`, `retG r`, `gbcaCallLoop r` and the
 three Byzantine graded-agreement labels of round `r`. -/
 noncomputable def composition (P : Parameters) (r : ℕ) :
-    System (GBCA.ByABDY.RoundState P.n) (ExtendedLabel P.n) :=
+    System (GBCA.ByABDY.RoundState P.n) (ExtendedLabel P.n Message) :=
   ((compositionExtended P r).abstract (gbcaEvents P.n)).relabel
 
 /-- The round a label of the instance interface belongs to. Every other label of the shared extended
 alphabet — the ABA API, the coin ports, `fail`, the DECIDED sets, and the round rendezvous of the
 protocol network — is owned by no round. -/
-def roundOwnsLabel {n : ℕ} : ExtendedLabel n → Option ℕ
+def roundOwnsLabel {n : ℕ} {M : Type} : ExtendedLabel n M → Option ℕ
   | Sum.inl (.callG r _ _) => some r
   | Sum.inl (.retG r _ _ _) => some r
   | Sum.inr (.gbcaCallLoop r _ _) => some r
@@ -77,18 +79,18 @@ def roundOwnsLabel {n : ℕ} : ExtendedLabel n → Option ℕ
   | _ => none
 
 /-- Corruption is the one label every round takes at once. -/
-def isFailLabel {n : ℕ} : ExtendedLabel n → Prop
+def isFailLabel {n : ℕ} {M : Type} : ExtendedLabel n M → Prop
   | Sum.inl (.fail _) => True
   | _ => False
 
-instance {n : ℕ} : DecidablePred (isFailLabel (n := n)) := fun l => by
+instance {n : ℕ} {M : Type} : DecidablePred (isFailLabel (n := n) (M := M)) := fun l => by
   cases l with
   | inl l => cases l <;> simp only [isFailLabel] <;> infer_instance
   | inr e => cases e <;> simp only [isFailLabel] <;> infer_instance
 
 /-- The broadcast corruption act on an instance state: the round's network state records it, the
 round records do not (D1). -/
-def corruptionAct (P : Parameters) : ExtendedLabel P.n → GBCA.ByABDY.RoundState P.n →
+def corruptionAct (P : Parameters) : ExtendedLabel P.n Message → GBCA.ByABDY.RoundState P.n →
   GBCA.ByABDY.RoundState P.n
   | Sum.inl (.fail k), (u, w) => (u, w.corrupt P k)
   | _, s => s
@@ -97,7 +99,7 @@ def corruptionAct (P : Parameters) : ExtendedLabel P.n → GBCA.ByABDY.RoundStat
 round-tagged label moves its round alone, `τ` moves one round, and `fail` is the broadcast that
 keeps every round's copy of the corrupted set together. -/
 noncomputable def gbcaInstanceFamily (P : Parameters) :
-    System (ℕ → GBCA.ByABDY.RoundState P.n) (ExtendedLabel P.n) :=
+    System (ℕ → GBCA.ByABDY.RoundState P.n) (ExtendedLabel P.n Message) :=
   System.family (composition P) roundOwnsLabel isFailLabel (corruptionAct P)
 
 /-! ### Determinacy
@@ -199,7 +201,7 @@ theorem gbcaProgramProduct_no_tau {P : Parameters} {r : ℕ}
 /-- The instance's step relation, unfolded to the hidden-rendezvous case and
 the shared-label case. -/
 theorem composition_step_iff (P : Parameters) (r : ℕ) (q : GBCA.ByABDY.RoundState P.n)
-    (l : ExtendedLabel P.n) (μ : PMF (GBCA.ByABDY.RoundState P.n)) :
+    (l : ExtendedLabel P.n Message) (μ : PMF (GBCA.ByABDY.RoundState P.n)) :
     (composition P r).step q l μ ↔
     (l = Sum.inl Label.tau ∧ ∃ e : GBCAEvent P.n, (compositionExtended P r).step q (Sum.inr e) μ) ∨
     (compositionExtended P r).step q (Sum.inl l) μ := by
@@ -227,7 +229,7 @@ theorem compositionExtended_event_step (P : Parameters) (r : ℕ)
 shared label. -/
 theorem compositionExtended_label_step (P : Parameters) (r : ℕ)
     {u x : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n} {w w' : NetworkState P.n}
-    {l : ExtendedLabel P.n} (hl : l ≠ Sum.inl Label.tau)
+    {l : ExtendedLabel P.n Message} (hl : l ≠ Sum.inl Label.tau)
     (hall : ∀ i, GBCAProgramStep P r i (u i) (Sum.inl l) (PMF.pure (x i)))
     (hn : GBCANetworkStep P r w (Sum.inl l) (PMF.pure w')) :
     (compositionExtended P r).step (u, w) (Sum.inl l) (PMF.pure (x, w')) := by
@@ -259,7 +261,7 @@ theorem composition_event_step (P : Parameters) (r : ℕ)
 /-- A visible shared label is a transition of the instance. -/
 theorem composition_label_step (P : Parameters) (r : ℕ)
     {u x : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n} {w w' : NetworkState P.n}
-    {l : ExtendedLabel P.n} (hl : l ≠ Sum.inl Label.tau)
+    {l : ExtendedLabel P.n Message} (hl : l ≠ Sum.inl Label.tau)
     (hall : ∀ i, GBCAProgramStep P r i (u i) (Sum.inl l) (PMF.pure (x i)))
     (hn : GBCANetworkStep P r w (Sum.inl l) (PMF.pure w')) :
     (composition P r).step (u, w) l (PMF.pure (x, w')) :=

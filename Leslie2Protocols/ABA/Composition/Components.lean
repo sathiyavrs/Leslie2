@@ -6,7 +6,6 @@ Authors: Sathiya / Claude
 
 import Leslie2Protocols.ABA.Vocabulary.RoundLoop
 import Leslie2Protocols.ABA.Implementation.Alphabet
-import Leslie2Protocols.ABA.GBCA.ABDY.MessagesAndRecords
 import Leslie2Protocols.ABA.Specifications.ABASafety
 import Leslie2Protocols.ABA.Specifications.WCC
 import Leslie2Protocols.Framework.LoopsAndInstanceFamilies
@@ -26,10 +25,9 @@ compose is the same object in both systems. This file holds that alphabet and th
 
 `Label n` is the shared alphabet of the protocol and of its specification. It cannot name the two
 message networks, the Byzantine handshake transitions, or the branches of a handshake that it does
-not distinguish. The rendezvous alphabet `NetworkEvent n M` names them, over a graded-agreement
-message type `M` (`ABA/Implementation/Alphabet.lean`); `NetworkEvent n` is that alphabet at the
-round messages of `GBCA/ABDY/MessagesAndRecords.lean`, and
-`ExtendedLabel n = Label n ⊕ NetworkEvent n` is the alphabet every component here speaks. Its
+not distinguish. The rendezvous alphabet `NetworkEvent n M` names them, over the type `M` of the
+messages a graded-agreement round exchanges (`ABA/Implementation/Alphabet.lean`), and
+`ExtendedLabel n M = Label n ⊕ NetworkEvent n M` is the alphabet every component here speaks. Its
 silent label is `Sum.inl τ`, so every `Sum.inr` label is observable, and `networkEventLabels n` —
 the set of all of them — is what both compositions hide before reading the result back over
 `Label n`.
@@ -88,24 +86,27 @@ open Implementation
 /-! ### The auxiliary alphabet
 
 The rendezvous alphabet, the hidden-label set, the labels a process acts on, the coin oracle's label
-pullback and the lifted oracle are parametric in the graded-agreement message type
-(`ABA/Implementation/Alphabet.lean`). This file fixes that type to the round messages of
-`GBCA/ABDY/MessagesAndRecords.lean`. -/
+pullback and the lifted oracle are parametric in the type of the messages a graded-agreement round
+exchanges (`ABA/Implementation/Alphabet.lean`). The components below are stated over that alphabet
+for every such type `M`. ABDY22's chain takes the messages of
+`GBCA/ABDY/MessagesAndRecords.lean` for `M`; the gather-based chain takes `Empty`, and the round
+multicast and the round delivery then name no label there. -/
 
-/-- The rendezvous alphabet at the round messages of `GBCA/ABDY/MessagesAndRecords.lean`. -/
-abbrev NetworkEvent (n : ℕ) : Type := Implementation.NetworkEvent n GBCA.ByABDY.Message
+/-- The rendezvous alphabet, over the type `M` of the messages a graded-agreement round
+exchanges. -/
+abbrev NetworkEvent (n : ℕ) (M : Type) : Type := Implementation.NetworkEvent n M
 
 /-- The extended alphabet. Its silent label is `Sum.inl τ`, so every
 `Sum.inr` label is observable and hence hideable. -/
-abbrev ExtendedLabel (n : ℕ) : Type := Label n ⊕ NetworkEvent n
+abbrev ExtendedLabel (n : ℕ) (M : Type) : Type := Label n ⊕ NetworkEvent n M
 
 /-- The coin oracle, read over this alphabet through the pullback. -/
-noncomputable def coinOverRoundAlphabet (P : Parameters) :
-    System (ℕ → WCC.SpecState P.n) (ExtendedLabel P.n) :=
-  coinOverExtendedAlphabet P GBCA.ByABDY.Message
+noncomputable def coinOverRoundAlphabet (P : Parameters) (M : Type) [DecidableEq M] :
+    System (ℕ → WCC.SpecState P.n) (ExtendedLabel P.n M) :=
+  coinOverExtendedAlphabet P M
 
-@[simp] theorem coinOverRoundAlphabet_init (P : Parameters) :
-    (coinOverRoundAlphabet P).init = (WCC.specFamily P).init := rfl
+@[simp] theorem coinOverRoundAlphabet_init (P : Parameters) (M : Type) [DecidableEq M] :
+    (coinOverRoundAlphabet P M).init = (WCC.specFamily P).init := rfl
 
 /-! ## The component vocabulary
 
@@ -134,8 +135,8 @@ process's graded-agreement messages enter through the Byzantine handshake transi
 its DECIDED messages through `byzantineDecided`. -/
 
 /-- The step relation of the round-loop program of process `j`. -/
-inductive RoundLoopStep (P : Parameters) (j : Fin P.n) :
-    RoundLoopRecord P.n → ExtendedLabel P.n → PMF (RoundLoopRecord P.n) → Prop
+inductive RoundLoopStep (P : Parameters) {M : Type} [DecidableEq M] (j : Fin P.n) :
+    RoundLoopRecord P.n → ExtendedLabel P.n M → PMF (RoundLoopRecord P.n) → Prop
   /-- `upon ABA(b)`: record input and estimate, open round `0`. -/
   | input (c : RoundLoopRecord P.n) (b : Bool) (hh : c.corrupted = false)
       (h : c.process.input = none) :
@@ -212,7 +213,7 @@ inductive RoundLoopStep (P : Parameters) (j : Fin P.n) :
       RoundLoopStep P j c (Sum.inl (.fail k)) (PMF.pure c)
   /-- The replaced program (D23): a self-loop on every label other than `τ` and
   the labels of `actsAt j`, on which the process has no transition at all. -/
-  | corruptedIdle (c : RoundLoopRecord P.n) (L : ExtendedLabel P.n) (hh : c.corrupted = true)
+  | corruptedIdle (c : RoundLoopRecord P.n) (L : ExtendedLabel P.n M) (hh : c.corrupted = true)
       (hτ : L ≠ Sum.inl Label.tau) (hown : ¬ actsAt j L) :
       RoundLoopStep P j c L (PMF.pure c)
   /-- The DECIDED relay on an `f + 1` quorum (D12′): the quorum is a condition
@@ -315,8 +316,8 @@ def corrupt (P : Parameters) (id : Fin P.n) (a : ABANetworkState P.n) : ABANetwo
 end ABANetworkState
 
 /-- The step relation of the ABA network. All transitions are Dirac. -/
-inductive ABANetworkStep (P : Parameters) :
-    ABANetworkState P.n → ExtendedLabel P.n → PMF (ABANetworkState P.n) → Prop
+inductive ABANetworkStep (P : Parameters) {M : Type} [DecidableEq M] :
+    ABANetworkState P.n → ExtendedLabel P.n M → PMF (ABANetworkState P.n) → Prop
   /-- The DECIDED relay's half: the payload must not be sent yet (D12′). -/
   | decidedSend (a : ABANetworkState P.n) (j : Fin P.n) (b : Bool) (h : b ∉ a.decidedSent j) :
       ABANetworkStep P a (Sum.inr (.decidedSend j b)) (PMF.pure (a.recordDecided j b))
@@ -390,47 +391,51 @@ inductive ABANetworkStep (P : Parameters) :
 /-! ### The two automata -/
 
 /-- The round-loop program of process `j`. -/
-noncomputable def roundLoopProgram (P : Parameters) (j : Fin P.n) :
-    System (RoundLoopRecord P.n) (ExtendedLabel P.n) where
+noncomputable def roundLoopProgram (P : Parameters) (M : Type) [DecidableEq M] (j : Fin P.n) :
+    System (RoundLoopRecord P.n) (ExtendedLabel P.n M) where
   init := RoundLoopRecord.initial P.n
   step := RoundLoopStep P j
 
-@[simp] theorem roundLoopProgram_init (P : Parameters) (j : Fin P.n) :
-    (roundLoopProgram P j).init = RoundLoopRecord.initial P.n := rfl
+@[simp] theorem roundLoopProgram_init (P : Parameters) (M : Type) [DecidableEq M] (j : Fin P.n) :
+    (roundLoopProgram P M j).init = RoundLoopRecord.initial P.n := rfl
 
-@[simp] theorem roundLoopProgram_step (P : Parameters) (j : Fin P.n) (c : RoundLoopRecord P.n)
-    (l : ExtendedLabel P.n) (ν : PMF (RoundLoopRecord P.n)) :
-    (roundLoopProgram P j).step c l ν ↔ RoundLoopStep P j c l ν := Iff.rfl
+@[simp] theorem roundLoopProgram_step (P : Parameters) (M : Type) [DecidableEq M] (j : Fin P.n)
+    (c : RoundLoopRecord P.n) (l : ExtendedLabel P.n M) (ν : PMF (RoundLoopRecord P.n)) :
+    (roundLoopProgram P M j).step c l ν ↔ RoundLoopStep P j c l ν := Iff.rfl
 
 /-- The ABA network. -/
-noncomputable def ABANetwork (P : Parameters) : System (ABANetworkState P.n) (ExtendedLabel P.n)
-  where
+noncomputable def ABANetwork (P : Parameters) (M : Type) [DecidableEq M] :
+    System (ABANetworkState P.n) (ExtendedLabel P.n M) where
   init := ABANetworkState.initial P.n
   step := ABANetworkStep P
 
-@[simp] theorem ABANetwork_init (P : Parameters) : (ABANetwork P).init = ABANetworkState.initial P.n
-  := rfl
+@[simp] theorem ABANetwork_init (P : Parameters) (M : Type) [DecidableEq M] :
+    (ABANetwork P M).init = ABANetworkState.initial P.n := rfl
 
-@[simp] theorem ABANetwork_step (P : Parameters) (a : ABANetworkState P.n) (l : ExtendedLabel P.n)
-    (μ : PMF (ABANetworkState P.n)) : (ABANetwork P).step a l μ ↔ ABANetworkStep P a l μ := Iff.rfl
+@[simp] theorem ABANetwork_step (P : Parameters) (M : Type) [DecidableEq M]
+    (a : ABANetworkState P.n) (l : ExtendedLabel P.n M) (μ : PMF (ABANetworkState P.n)) :
+    (ABANetwork P M).step a l μ ↔ ABANetworkStep P a l μ := Iff.rfl
 
 /-! ### Determinacy of the two step relations -/
 
 /-- Every round-loop transition is Dirac. -/
-theorem roundLoopStep_dirac {P : Parameters} {j : Fin P.n} {c : RoundLoopRecord P.n}
-    {l : ExtendedLabel P.n} {ν : PMF (RoundLoopRecord P.n)} (h : RoundLoopStep P j c l ν) :
+theorem roundLoopStep_dirac {P : Parameters} {M : Type} [DecidableEq M] {j : Fin P.n}
+    {c : RoundLoopRecord P.n}
+    {l : ExtendedLabel P.n M} {ν : PMF (RoundLoopRecord P.n)} (h : RoundLoopStep P j c l ν) :
     ∃ c', ν = PMF.pure c' := by
   cases h <;> exact ⟨_, rfl⟩
 
 /-- Every ABA network transition is Dirac. -/
-theorem abaNetworkStep_dirac {P : Parameters} {a : ABANetworkState P.n} {l : ExtendedLabel P.n}
+theorem abaNetworkStep_dirac {P : Parameters} {M : Type} [DecidableEq M]
+    {a : ABANetworkState P.n} {l : ExtendedLabel P.n M}
     {μ : PMF (ABANetworkState P.n)} (h : ABANetworkStep P a l μ) : ∃ a', μ = PMF.pure a' := by
   cases h <;> exact ⟨_, rfl⟩
 
 /-- No round-loop transition fires on `τ`: a round loop only ever moves in a
 rendezvous or on a shared API label. -/
-theorem roundLoopStep_no_tau {P : Parameters} {j : Fin P.n} {c : RoundLoopRecord P.n}
-    {ν : PMF (RoundLoopRecord P.n)} (h : RoundLoopStep P j c (Silent.τ : ExtendedLabel P.n) ν) :
+theorem roundLoopStep_no_tau {P : Parameters} {M : Type} [DecidableEq M] {j : Fin P.n}
+    {c : RoundLoopRecord P.n}
+    {ν : PMF (RoundLoopRecord P.n)} (h : RoundLoopStep P j c (Silent.τ : ExtendedLabel P.n M) ν) :
     False := by
   rw [extendedLabel_tau] at h
   cases h
@@ -440,9 +445,10 @@ theorem roundLoopStep_no_tau {P : Parameters} {j : Fin P.n} {c : RoundLoopRecord
 /-! ### Reading and building a transition of the round-loop group -/
 
 /-- A synchronised transition of the round-loop group on a visible label. -/
-theorem roundLoopProduct_inversion {P : Parameters} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
-    {l : ExtendedLabel P.n} {μ : PMF (∀ _ : Fin P.n, RoundLoopRecord P.n)}
-    (h : (System.synchronisedProduct (roundLoopProgram P)).step C l μ) :
+theorem roundLoopProduct_inversion {P : Parameters} {M : Type} [DecidableEq M]
+    {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
+    {l : ExtendedLabel P.n M} {μ : PMF (∀ _ : Fin P.n, RoundLoopRecord P.n)}
+    (h : (System.synchronisedProduct (roundLoopProgram P M)).step C l μ) :
     ∃ y : ∀ _ : Fin P.n, RoundLoopRecord P.n, μ = PMF.pure y ∧ ∀ i, RoundLoopStep P i (C i) l
     (PMF.pure (y i)) := by
   rw [System.synchronisedProduct_step] at h
@@ -457,18 +463,19 @@ theorem roundLoopProduct_inversion {P : Parameters} {C : ∀ _ : Fin P.n, RoundL
 
 /-- Build a synchronised transition of the round-loop group from per-process
 Dirac steps. -/
-theorem roundLoopProduct_pure {P : Parameters} {C y : ∀ _ : Fin P.n, RoundLoopRecord P.n}
-    {l : ExtendedLabel P.n} (hl : l ≠ Silent.τ)
+theorem roundLoopProduct_pure {P : Parameters} {M : Type} [DecidableEq M]
+    {C y : ∀ _ : Fin P.n, RoundLoopRecord P.n}
+    {l : ExtendedLabel P.n M} (hl : l ≠ Silent.τ)
     (h : ∀ i, RoundLoopStep P i (C i) l (PMF.pure (y i))) :
-    (System.synchronisedProduct (roundLoopProgram P)).step C l (PMF.pure y) := by
+    (System.synchronisedProduct (roundLoopProgram P M)).step C l (PMF.pure y) := by
   rw [System.synchronisedProduct_step]
   exact Or.inl ⟨hl, fun i => PMF.pure (y i), h, (piPMF_pure y).symm⟩
 
 /-- The round-loop group has no silent transition. -/
-theorem roundLoopProduct_no_tau {P : Parameters} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
-    {μ : PMF (∀ _ : Fin P.n, RoundLoopRecord P.n)}
-    (h : (System.synchronisedProduct (roundLoopProgram P)).step C (Silent.τ : ExtendedLabel P.n) μ)
-      :
+theorem roundLoopProduct_no_tau {P : Parameters} {M : Type} [DecidableEq M]
+    {C : ∀ _ : Fin P.n, RoundLoopRecord P.n} {μ : PMF (∀ _ : Fin P.n, RoundLoopRecord P.n)}
+    (h : (System.synchronisedProduct (roundLoopProgram P M)).step C
+      (Silent.τ : ExtendedLabel P.n M) μ) :
     False := by
   rcases h with ⟨hτ, -⟩ | ⟨-, i, μ_i, hstep, -⟩
   · exact hτ rfl
@@ -484,10 +491,11 @@ outside `actsAt j` the replaced program's self-loop is a second transition on th
 
 section RoundLoopInversion
 
-variable {P : Parameters} {j : Fin P.n} {c : RoundLoopRecord P.n} {ν : PMF (RoundLoopRecord P.n)}
+variable {P : Parameters} {M : Type} [DecidableEq M] {j : Fin P.n} {c : RoundLoopRecord P.n}
+  {ν : PMF (RoundLoopRecord P.n)}
 
 theorem roundLoopStep_callABA_own {b : Bool}
-    (h : RoundLoopStep P j c (Sum.inl (.callABA j b)) ν) :
+    (h : RoundLoopStep P j c (Sum.inl (.callABA j b) : ExtendedLabel P.n M) ν) :
     (c.corrupted = false ∧ c.process.input = none ∧
       ν = PMF.pure (c.setProcess { c.process with
         input := some b, estimate := some b, round := 0, phase := .toCallG })) ∨
@@ -499,7 +507,8 @@ theorem roundLoopStep_callABA_own {b : Bool}
   case corruptedIdle => exact Or.inr ⟨Or.inl (by assumption), rfl⟩
 
 theorem roundLoopStep_callABA_foreign {id : Fin P.n} {b : Bool} (hid : id ≠ j)
-    (h : RoundLoopStep P j c (Sum.inl (.callABA id b)) ν) : ν = PMF.pure c := by
+(h : RoundLoopStep P j c (Sum.inl (.callABA id b) : ExtendedLabel P.n M) ν) :
+    ν = PMF.pure c := by
   cases h
   case input => exact absurd rfl hid
   case inputLoop => exact absurd rfl hid
@@ -507,7 +516,7 @@ theorem roundLoopStep_callABA_foreign {id : Fin P.n} {b : Bool} (hid : id ≠ j)
   case corruptedIdle => rfl
 
 theorem roundLoopStep_retABA_own {b : Bool}
-    (h : RoundLoopStep P j c (Sum.inl (.retABA j b)) ν) :
+    (h : RoundLoopStep P j c (Sum.inl (.retABA j b) : ExtendedLabel P.n M) ν) :
     (c.corrupted = false ∧ P.n - P.f ≤ c.decidedCount b ∧
       c.process.returned = false ∧
       ν = PMF.pure (c.setProcess { c.process with returned := true })) ∨
@@ -518,14 +527,15 @@ theorem roundLoopStep_retABA_own {b : Bool}
   case corruptedIdle => exact Or.inr ⟨by assumption, rfl⟩
 
 theorem roundLoopStep_retABA_foreign {id : Fin P.n} {b : Bool} (hid : id ≠ j)
-    (h : RoundLoopStep P j c (Sum.inl (.retABA id b)) ν) : ν = PMF.pure c := by
+(h : RoundLoopStep P j c (Sum.inl (.retABA id b) : ExtendedLabel P.n M) ν) :
+    ν = PMF.pure c := by
   cases h
   case ret => exact absurd rfl hid
   case retABAIdle => rfl
   case corruptedIdle => rfl
 
 theorem roundLoopStep_callG_own {r : ℕ} {b : Bool}
-    (h : RoundLoopStep P j c (Sum.inl (.callG r j b)) ν) :
+    (h : RoundLoopStep P j c (Sum.inl (.callG r j b) : ExtendedLabel P.n M) ν) :
     c.corrupted = false ∧ c.process.phase = .toCallG ∧ c.process.round = r ∧
       c.process.estimate = some b ∧
       ν = PMF.pure (c.setProcess { c.process with phase := .awaitG }) := by
@@ -536,14 +546,15 @@ theorem roundLoopStep_callG_own {r : ℕ} {b : Bool}
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
 theorem roundLoopStep_callG_foreign {r : ℕ} {id : Fin P.n} {b : Bool} (hid : id ≠ j)
-    (h : RoundLoopStep P j c (Sum.inl (.callG r id b)) ν) : ν = PMF.pure c := by
+(h : RoundLoopStep P j c (Sum.inl (.callG r id b) : ExtendedLabel P.n M) ν) :
+    ν = PMF.pure c := by
   cases h
   case callG => exact absurd rfl hid
   case callGIdle => rfl
   case corruptedIdle => rfl
 
 theorem roundLoopStep_retG_own {r : ℕ} {out : GBCAOutput} {bnd : Bool}
-    (h : RoundLoopStep P j c (Sum.inl (.retG r j out bnd)) ν) :
+    (h : RoundLoopStep P j c (Sum.inl (.retG r j out bnd) : ExtendedLabel P.n M) ν) :
     c.corrupted = false ∧ c.process.phase = .awaitG ∧ c.process.round = r ∧
       ν = PMF.pure (c.setProcess { c.process with
         estimate := out.estimate, lastGrade := some out, phase := .toCallW }) := by
@@ -554,7 +565,7 @@ theorem roundLoopStep_retG_own {r : ℕ} {out : GBCAOutput} {bnd : Bool}
 
 theorem roundLoopStep_retG_foreign {r : ℕ} {id : Fin P.n} {out : GBCAOutput} {bnd : Bool}
     (hid : id ≠ j)
-    (h : RoundLoopStep P j c (Sum.inl (.retG r id out bnd)) ν) :
+    (h : RoundLoopStep P j c (Sum.inl (.retG r id out bnd) : ExtendedLabel P.n M) ν) :
     ν = PMF.pure c := by
   cases h
   case retG => exact absurd rfl hid
@@ -562,7 +573,7 @@ theorem roundLoopStep_retG_foreign {r : ℕ} {id : Fin P.n} {out : GBCAOutput} {
   case corruptedIdle => rfl
 
 theorem roundLoopStep_callW_own {r : ℕ}
-    (h : RoundLoopStep P j c (Sum.inl (.callW r j)) ν) :
+    (h : RoundLoopStep P j c (Sum.inl (.callW r j) : ExtendedLabel P.n M) ν) :
     (c.corrupted = false ∧ c.process.phase = .toCallW ∧ c.process.round = r ∧
       ν = PMF.pure (c.setProcess { c.process with phase := .awaitW })) ∨
     (c.corrupted = true ∧ ν = PMF.pure c) := by
@@ -572,14 +583,14 @@ theorem roundLoopStep_callW_own {r : ℕ}
   case corruptedIdle => exact Or.inr ⟨by assumption, rfl⟩
 
 theorem roundLoopStep_callW_foreign {r : ℕ} {id : Fin P.n} (hid : id ≠ j)
-    (h : RoundLoopStep P j c (Sum.inl (.callW r id)) ν) : ν = PMF.pure c := by
+    (h : RoundLoopStep P j c (Sum.inl (.callW r id) : ExtendedLabel P.n M) ν) : ν = PMF.pure c := by
   cases h
   case callW => exact absurd rfl hid
   case callWIdle => rfl
   case corruptedIdle => rfl
 
 theorem roundLoopStep_retW_own {r : ℕ} {co : Bool}
-    (h : RoundLoopStep P j c (Sum.inl (.retW r j co)) ν) :
+    (h : RoundLoopStep P j c (Sum.inl (.retW r j co) : ExtendedLabel P.n M) ν) :
     (c.corrupted = false ∧ c.process.phase = .awaitW ∧ c.process.round = r ∧
       (∀ v : Bool, c.process.lastGrade ≠ some (.grade2 v)) ∧
       ν = PMF.pure (c.stepRound co)) ∨
@@ -591,7 +602,8 @@ theorem roundLoopStep_retW_own {r : ℕ} {co : Bool}
   case corruptedIdle => exact Or.inr ⟨by assumption, rfl⟩
 
 theorem roundLoopStep_retW_foreign {r : ℕ} {id : Fin P.n} {co : Bool} (hid : id ≠ j)
-    (h : RoundLoopStep P j c (Sum.inl (.retW r id co)) ν) : ν = PMF.pure c := by
+(h : RoundLoopStep P j c (Sum.inl (.retW r id co) : ExtendedLabel P.n M) ν) :
+    ν = PMF.pure c := by
   cases h
   case retW => exact absurd rfl hid
   case retWIdle => rfl
@@ -599,7 +611,8 @@ theorem roundLoopStep_retW_foreign {r : ℕ} {id : Fin P.n} {co : Bool} (hid : i
 
 /-- The process's own corruption (D23): the flag goes up on a program not yet
 replaced, and a replaced program is unchanged. -/
-theorem roundLoopStep_fail_own (h : RoundLoopStep P j c (Sum.inl (.fail j)) ν) :
+theorem roundLoopStep_fail_own (h : RoundLoopStep P j c (Sum.inl (.fail j) :
+    ExtendedLabel P.n M) ν) :
     (c.corrupted = false ∧ ν = PMF.pure { c with corrupted := true }) ∨
     (c.corrupted = true ∧ ν = PMF.pure c) := by
   cases h
@@ -608,14 +621,14 @@ theorem roundLoopStep_fail_own (h : RoundLoopStep P j c (Sum.inl (.fail j)) ν) 
   case corruptedIdle => exact Or.inr ⟨by assumption, rfl⟩
 
 theorem roundLoopStep_fail_foreign {k : Fin P.n} (hk : k ≠ j)
-    (h : RoundLoopStep P j c (Sum.inl (.fail k)) ν) : ν = PMF.pure c := by
+    (h : RoundLoopStep P j c (Sum.inl (.fail k) : ExtendedLabel P.n M) ν) : ν = PMF.pure c := by
   cases h
   case failSelf => exact absurd rfl hk
   case failIdle => rfl
   case corruptedIdle => rfl
 
 theorem roundLoopStep_decidedSend_self {b : Bool}
-    (h : RoundLoopStep P j c (Sum.inr (.decidedSend j b)) ν) :
+    (h : RoundLoopStep P j c (Sum.inr (.decidedSend j b) : ExtendedLabel P.n M) ν) :
     (c.corrupted = false ∧ P.f + 1 ≤ c.decidedCount b ∧ ν = PMF.pure c) ∨
     (c.corrupted = true ∧ ν = PMF.pure c) := by
   cases h
@@ -624,14 +637,15 @@ theorem roundLoopStep_decidedSend_self {b : Bool}
   case corruptedIdle => exact Or.inr ⟨by assumption, rfl⟩
 
 theorem roundLoopStep_decidedSend_foreign {k : Fin P.n} {b : Bool} (hk : k ≠ j)
-    (h : RoundLoopStep P j c (Sum.inr (.decidedSend k b)) ν) : ν = PMF.pure c := by
+(h : RoundLoopStep P j c (Sum.inr (.decidedSend k b) : ExtendedLabel P.n M) ν) :
+    ν = PMF.pure c := by
   cases h
   case decidedSendRelay => exact absurd rfl hk
   case decidedSendIdle => rfl
   case corruptedIdle => rfl
 
 theorem roundLoopStep_decidedDeliver_self {k : Fin P.n} {b : Bool}
-    (h : RoundLoopStep P j c (Sum.inr (.decidedDeliver j k b)) ν) :
+    (h : RoundLoopStep P j c (Sum.inr (.decidedDeliver j k b) : ExtendedLabel P.n M) ν) :
     c.corrupted = false ∧ b ∉ c.decidedDelivered k ∧ ν = PMF.pure (c.receiveDecided k b) := by
   cases h
   case decidedDeliverReceive => exact ⟨by assumption, by assumption, rfl⟩
@@ -639,14 +653,15 @@ theorem roundLoopStep_decidedDeliver_self {k : Fin P.n} {b : Bool}
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
 theorem roundLoopStep_decidedDeliver_foreign {i k : Fin P.n} {b : Bool} (hi : i ≠ j)
-    (h : RoundLoopStep P j c (Sum.inr (.decidedDeliver i k b)) ν) : ν = PMF.pure c := by
+(h : RoundLoopStep P j c (Sum.inr (.decidedDeliver i k b) : ExtendedLabel P.n M) ν) :
+    ν = PMF.pure c := by
   cases h
   case decidedDeliverReceive => exact absurd rfl hi
   case decidedDeliverIdle => rfl
   case corruptedIdle => rfl
 
 theorem roundLoopStep_retWPublish_self {r : ℕ} {co b : Bool}
-    (h : RoundLoopStep P j c (Sum.inr (.retWPublish r j co b)) ν) :
+    (h : RoundLoopStep P j c (Sum.inr (.retWPublish r j co b) : ExtendedLabel P.n M) ν) :
     c.corrupted = false ∧ c.process.phase = .awaitW ∧ c.process.round = r ∧
       c.process.lastGrade = some (.grade2 b) ∧ ν = PMF.pure (c.stepRound co) := by
   cases h
@@ -656,14 +671,15 @@ theorem roundLoopStep_retWPublish_self {r : ℕ} {co b : Bool}
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
 theorem roundLoopStep_retWPublish_foreign {r : ℕ} {id : Fin P.n} {co b : Bool} (hid : id ≠ j)
-    (h : RoundLoopStep P j c (Sum.inr (.retWPublish r id co b)) ν) : ν = PMF.pure c := by
+(h : RoundLoopStep P j c (Sum.inr (.retWPublish r id co b) : ExtendedLabel P.n M) ν) :
+    ν = PMF.pure c := by
   cases h
   case retWPublish => exact absurd rfl hid
   case retWPublishIdle => rfl
   case corruptedIdle => rfl
 
 theorem roundLoopStep_gbcaCallLoop_self {r : ℕ} {b : Bool}
-    (h : RoundLoopStep P j c (Sum.inr (.gbcaCallLoop r j b)) ν) :
+    (h : RoundLoopStep P j c (Sum.inr (.gbcaCallLoop r j b) : ExtendedLabel P.n M) ν) :
     c.corrupted = false ∧ c.process.phase = .toCallG ∧ c.process.round = r ∧
       c.process.estimate = some b ∧
       ν = PMF.pure (c.setProcess { c.process with phase := .awaitG }) := by
@@ -674,38 +690,43 @@ theorem roundLoopStep_gbcaCallLoop_self {r : ℕ} {b : Bool}
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
 theorem roundLoopStep_gbcaCallLoop_foreign {r : ℕ} {id : Fin P.n} {b : Bool} (hid : id ≠ j)
-    (h : RoundLoopStep P j c (Sum.inr (.gbcaCallLoop r id b)) ν) : ν = PMF.pure c := by
+(h : RoundLoopStep P j c (Sum.inr (.gbcaCallLoop r id b) : ExtendedLabel P.n M) ν) :
+    ν = PMF.pure c := by
   cases h
   case gbcaCallLoop => exact absurd rfl hid
   case gbcaCallLoopIdle => rfl
   case corruptedIdle => rfl
 
 theorem roundLoopStep_byzantineCallG {r : ℕ} {k : Fin P.n} {b : Bool}
-    (h : RoundLoopStep P j c (Sum.inr (.byzantineCallG r k b)) ν) : ν = PMF.pure c := by
+(h : RoundLoopStep P j c (Sum.inr (.byzantineCallG r k b) : ExtendedLabel P.n M) ν) :
+    ν = PMF.pure c := by
   cases h <;> rfl
 
 theorem roundLoopStep_byzantineCallGLoop {r : ℕ} {k : Fin P.n} {b : Bool}
-    (h : RoundLoopStep P j c (Sum.inr (.byzantineCallGLoop r k b)) ν) : ν = PMF.pure c := by
+(h : RoundLoopStep P j c (Sum.inr (.byzantineCallGLoop r k b) : ExtendedLabel P.n M) ν) :
+    ν = PMF.pure c := by
   cases h <;> rfl
 
 theorem roundLoopStep_byzantineRetG {r : ℕ} {k : Fin P.n} {out : GBCAOutput} {bnd : Bool}
-    (h : RoundLoopStep P j c (Sum.inr (.byzantineRetG r k out bnd)) ν) :
+    (h : RoundLoopStep P j c (Sum.inr (.byzantineRetG r k out bnd) : ExtendedLabel P.n M) ν) :
     ν = PMF.pure c := by
   cases h <;> rfl
 
 theorem roundLoopStep_byzantineCallW {r : ℕ} {k : Fin P.n}
-    (h : RoundLoopStep P j c (Sum.inr (.byzantineCallW r k)) ν) : ν = PMF.pure c := by
+(h : RoundLoopStep P j c (Sum.inr (.byzantineCallW r k) : ExtendedLabel P.n M) ν) :
+    ν = PMF.pure c := by
   cases h <;> rfl
 
 theorem roundLoopStep_byzantineRetW {r : ℕ} {k : Fin P.n} {b : Bool}
-    (h : RoundLoopStep P j c (Sum.inr (.byzantineRetW r k b)) ν) : ν = PMF.pure c := by
+(h : RoundLoopStep P j c (Sum.inr (.byzantineRetW r k b) : ExtendedLabel P.n M) ν) :
+    ν = PMF.pure c := by
   cases h <;> rfl
 
 /-- **The replaced program writes nothing** (D23). Whatever the label, a round
 loop whose flag is up leaves its record where it stands. The proof is by cases
 on the algorithm: every transition that writes carries the health guard, so no
 transition of a replaced program survives except a self-loop. -/
-theorem roundLoopStep_noStep {L : ExtendedLabel P.n} (hc : c.corrupted = true)
+theorem roundLoopStep_noStep {L : ExtendedLabel P.n M} (hc : c.corrupted = true)
     (h : RoundLoopStep P j c L ν) : ν = PMF.pure c := by
   cases h <;> simp_all
 
@@ -714,97 +735,104 @@ end RoundLoopInversion
 /-! ### The ABA network's transitions, by label class -/
 
 section ABANetworkStepInversion
-variable {P : Parameters} {a : ABANetworkState P.n} {μ : PMF (ABANetworkState P.n)}
+variable {P : Parameters} {M : Type} [DecidableEq M] {a : ABANetworkState P.n}
+  {μ : PMF (ABANetworkState P.n)}
 
 theorem abaNetworkStep_decidedSend {j : Fin P.n} {b : Bool}
-    (h : ABANetworkStep P a (Sum.inr (.decidedSend j b)) μ) :
+    (h : ABANetworkStep P a (Sum.inr (.decidedSend j b) : ExtendedLabel P.n M) μ) :
     b ∉ a.decidedSent j ∧ μ = PMF.pure (a.recordDecided j b) := by
   cases h; exact ⟨by assumption, rfl⟩
 
 theorem abaNetworkStep_decidedDeliver {i j : Fin P.n} {b : Bool}
-    (h : ABANetworkStep P a (Sum.inr (.decidedDeliver i j b)) μ) :
+    (h : ABANetworkStep P a (Sum.inr (.decidedDeliver i j b) : ExtendedLabel P.n M) μ) :
     b ∈ a.decidedSent j ∧ μ = PMF.pure a := by
   cases h; exact ⟨by assumption, rfl⟩
 
 theorem abaNetworkStep_retWPublish {r : ℕ} {id : Fin P.n} {c b : Bool}
-    (h : ABANetworkStep P a (Sum.inr (.retWPublish r id c b)) μ) :
+    (h : ABANetworkStep P a (Sum.inr (.retWPublish r id c b) : ExtendedLabel P.n M) μ) :
     μ = PMF.pure (a.recordDecided id b) := by
   cases h; rfl
 
 theorem abaNetworkStep_gbcaCallLoop {r : ℕ} {id : Fin P.n} {b : Bool}
-    (h : ABANetworkStep P a (Sum.inr (.gbcaCallLoop r id b)) μ) : μ = PMF.pure a := by
+(h : ABANetworkStep P a (Sum.inr (.gbcaCallLoop r id b) : ExtendedLabel P.n M) μ) :
+    μ = PMF.pure a := by
   cases h; rfl
 
 theorem abaNetworkStep_byzantineCallG {r : ℕ} {k : Fin P.n} {b : Bool}
-    (h : ABANetworkStep P a (Sum.inr (.byzantineCallG r k b)) μ) :
+    (h : ABANetworkStep P a (Sum.inr (.byzantineCallG r k b) : ExtendedLabel P.n M) μ) :
     k ∈ a.F ∧ μ = PMF.pure a := by
   cases h; exact ⟨by assumption, rfl⟩
 
 theorem abaNetworkStep_byzantineCallGLoop {r : ℕ} {k : Fin P.n} {b : Bool}
-    (h : ABANetworkStep P a (Sum.inr (.byzantineCallGLoop r k b)) μ) :
+    (h : ABANetworkStep P a (Sum.inr (.byzantineCallGLoop r k b) : ExtendedLabel P.n M) μ) :
     k ∈ a.F ∧ μ = PMF.pure a := by
   cases h; exact ⟨by assumption, rfl⟩
 
 theorem abaNetworkStep_byzantineRetG {r : ℕ} {k : Fin P.n} {out : GBCAOutput} {bnd : Bool}
-    (h : ABANetworkStep P a (Sum.inr (.byzantineRetG r k out bnd)) μ) :
+    (h : ABANetworkStep P a (Sum.inr (.byzantineRetG r k out bnd) : ExtendedLabel P.n M) μ) :
     k ∈ a.F ∧ μ = PMF.pure a := by
   cases h; exact ⟨by assumption, rfl⟩
 
 theorem abaNetworkStep_byzantineCallW {r : ℕ} {k : Fin P.n}
-    (h : ABANetworkStep P a (Sum.inr (.byzantineCallW r k)) μ) :
+    (h : ABANetworkStep P a (Sum.inr (.byzantineCallW r k) : ExtendedLabel P.n M) μ) :
     k ∈ a.F ∧ μ = PMF.pure a := by
   cases h; exact ⟨by assumption, rfl⟩
 
 theorem abaNetworkStep_byzantineRetW {r : ℕ} {k : Fin P.n} {b : Bool}
-    (h : ABANetworkStep P a (Sum.inr (.byzantineRetW r k b)) μ) :
+    (h : ABANetworkStep P a (Sum.inr (.byzantineRetW r k b) : ExtendedLabel P.n M) μ) :
     k ∈ a.F ∧ μ = PMF.pure a := by
   cases h; exact ⟨by assumption, rfl⟩
 
 theorem abaNetworkStep_callABA {id : Fin P.n} {b : Bool}
-    (h : ABANetworkStep P a (Sum.inl (.callABA id b)) μ) : μ = PMF.pure a := by
+(h : ABANetworkStep P a (Sum.inl (.callABA id b) : ExtendedLabel P.n M) μ) :
+    μ = PMF.pure a := by
   cases h; rfl
 
 /-- A return is authorised either by the DECIDED sent of the returning process
 or by its corruption (D23); the two transitions share the label and the
 identity successor. -/
 theorem abaNetworkStep_retABA {id : Fin P.n} {b : Bool}
-    (h : ABANetworkStep P a (Sum.inl (.retABA id b)) μ) :
+    (h : ABANetworkStep P a (Sum.inl (.retABA id b) : ExtendedLabel P.n M) μ) :
     (b ∈ a.decidedSent id ∨ id ∈ a.F) ∧ μ = PMF.pure a := by
   cases h
   case retABA => exact ⟨Or.inl (by assumption), rfl⟩
   case retByzantine => exact ⟨Or.inr (by assumption), rfl⟩
 
 theorem abaNetworkStep_callG {r : ℕ} {id : Fin P.n} {b : Bool}
-    (h : ABANetworkStep P a (Sum.inl (.callG r id b)) μ) : μ = PMF.pure a := by
+(h : ABANetworkStep P a (Sum.inl (.callG r id b) : ExtendedLabel P.n M) μ) :
+    μ = PMF.pure a := by
   cases h; rfl
 
 theorem abaNetworkStep_retG {r : ℕ} {id : Fin P.n} {out : GBCAOutput} {bnd : Bool}
-    (h : ABANetworkStep P a (Sum.inl (.retG r id out bnd)) μ) : μ = PMF.pure a := by
+(h : ABANetworkStep P a (Sum.inl (.retG r id out bnd) : ExtendedLabel P.n M) μ) :
+    μ = PMF.pure a := by
   cases h; rfl
 
 theorem abaNetworkStep_callW {r : ℕ} {id : Fin P.n}
-    (h : ABANetworkStep P a (Sum.inl (.callW r id)) μ) : μ = PMF.pure a := by
+    (h : ABANetworkStep P a (Sum.inl (.callW r id) : ExtendedLabel P.n M) μ) : μ = PMF.pure a := by
   cases h; rfl
 
 theorem abaNetworkStep_retW {r : ℕ} {id : Fin P.n} {c : Bool}
-    (h : ABANetworkStep P a (Sum.inl (.retW r id c)) μ) : μ = PMF.pure a := by
+    (h : ABANetworkStep P a (Sum.inl (.retW r id c) : ExtendedLabel P.n M) μ) : μ = PMF.pure a := by
   cases h; rfl
 
 theorem abaNetworkStep_fail {k : Fin P.n}
-    (h : ABANetworkStep P a (Sum.inl (.fail k)) μ) :
+    (h : ABANetworkStep P a (Sum.inl (.fail k) : ExtendedLabel P.n M) μ) :
     k ∉ a.F ∧ a.F.card < P.f ∧ μ = PMF.pure (ABANetworkState.corrupt P k a) := by
   cases h; exact ⟨by assumption, by assumption, rfl⟩
 
-theorem abaNetworkStep_tau (h : ABANetworkStep P a (Sum.inl .tau) μ) :
+theorem abaNetworkStep_tau (h : ABANetworkStep P a (Sum.inl .tau : ExtendedLabel P.n M) μ) :
     ∃ (k : Fin P.n) (b : Bool), k ∈ a.F ∧ μ = PMF.pure (a.recordDecided k b) := by
   cases h
   case byzantineDecided => exact ⟨_, _, by assumption, rfl⟩
 
-theorem abaNetworkStep_gbcaSend_noStep {r : ℕ} {k : Fin P.n} {m : GBCA.ByABDY.Message}
-    (h : ABANetworkStep P a (Sum.inr (.gbcaSend r k m)) μ) : False := by cases h
+theorem abaNetworkStep_gbcaSend_noStep {r : ℕ} {k : Fin P.n} {m : M}
+(h : ABANetworkStep P a (Sum.inr (.gbcaSend r k m) : ExtendedLabel P.n M) μ) :
+    False := by cases h
 
-theorem abaNetworkStep_gbcaDeliver_noStep {r : ℕ} {i k : Fin P.n} {m : GBCA.ByABDY.Message}
-    (h : ABANetworkStep P a (Sum.inr (.gbcaDeliver r i k m)) μ) : False := by cases h
+theorem abaNetworkStep_gbcaDeliver_noStep {r : ℕ} {i k : Fin P.n} {m : M}
+(h : ABANetworkStep P a (Sum.inr (.gbcaDeliver r i k m) : ExtendedLabel P.n M) μ) :
+    False := by cases h
 
 end ABANetworkStepInversion
 /-! ### Determining the round-loop tuple -/
@@ -824,8 +852,9 @@ theorem roundLoopRecords_id {P : Parameters} {C y : ∀ _ : Fin P.n, RoundLoopRe
   funext fun i => pure_inj (hall i)
 
 /-- One round loop moves and every other idles. -/
-theorem roundLoopRecords_family {P : Parameters} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
-    {L : ExtendedLabel P.n} (id : Fin P.n) (nd : RoundLoopRecord P.n)
+theorem roundLoopRecords_family {P : Parameters} {M : Type} [DecidableEq M]
+    {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
+    {L : ExtendedLabel P.n M} (id : Fin P.n) (nd : RoundLoopRecord P.n)
     (hown : RoundLoopStep P id (C id) L (PMF.pure nd))
     (hfor : ∀ i, i ≠ id → RoundLoopStep P i (C i) L (PMF.pure (C i))) :
     ∀ i, RoundLoopStep P i (C i) L (PMF.pure (Function.update C id nd i)) := by

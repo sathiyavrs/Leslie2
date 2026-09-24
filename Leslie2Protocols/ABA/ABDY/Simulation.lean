@@ -68,7 +68,8 @@ composed system matches it by a stutter. -/
 namespace PLTS
 namespace ABA
 
-open Implementation Composition
+open Implementation hiding NetworkEvent ExtendedLabel
+open Composition
 
 namespace ABDY
 
@@ -158,7 +159,7 @@ other round's record is unchanged. -/
 private theorem relation_setBound {P : Parameters} {G : ℕ → GBCA.ByABDY.RoundState P.n}
     {w : NetworkState P.n} (hG : ∀ r', (G r').2 = ⟨w.sent r', w.F, w.ghostRecord r'⟩)
     (r : ℕ) (bnd : Bool) (u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n)
-    (hfix : (w.ghostRecord r).getD bnd = bnd) {L : ExtendedLabel P.n}
+    (hfix : (w.ghostRecord r).getD bnd = bnd) {L : ExtendedLabel P.n GBCA.ByABDY.Message}
     (hself : (w.writeGhost (abdyGhostStep P) L).ghostRecord r
       = some ((w.ghostRecord r).getD bnd))
     (hne : ∀ r', r' ≠ r →
@@ -231,12 +232,12 @@ private theorem coupling_visible (P : Parameters) {x : ∀ _ : Fin P.n, ProcessR
     {w' : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
     {ω : PMF (ℕ → WCC.SpecState P.n)}
     {G G' : ℕ → GBCA.ByABDY.RoundState P.n} {C C' : ∀ _ : Fin P.n, RoundLoopRecord P.n}
-    {A A' : ABANetworkState P.n} {L : ExtendedLabel P.n} (hL : L ≠ Silent.τ)
+    {A A' : ABANetworkState P.n} {L : ExtendedLabel P.n GBCA.ByABDY.Message} (hL : L ≠ Silent.τ)
     (hrel : ∀ o' ∈ ω.support, ProtocolRelation P (x, w', o') (G', C', A', o'))
     (hGs : (GBCA.ByABDY.gbcaInstanceFamily P).step G L (PMF.pure G'))
     (hCs : ∀ i, RoundLoopStep P i (C i) L (PMF.pure (C' i)))
     (hAs : ABANetworkStep P A L (PMF.pure A'))
-    (hWs : (coinOverRoundAlphabet P).step o L ω) :
+    (hWs : (coinOverRoundAlphabet P GBCA.ByABDY.Message).step o L ω) :
     ∃ Ω : PMF (PMF (ComposedState P)),
       PMFRel (diracRel (ProtocolRelation P))
         (prodPMF (PMF.pure x) (prodPMF (PMF.pure w') ω)) Ω ∧
@@ -288,7 +289,7 @@ theorem coupling_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
     {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
     {G : ℕ → GBCA.ByABDY.RoundState P.n} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
     {A : ABANetworkState P.n} (hR : ProtocolRelation P (processes, w, o) (G, C, A, o))
-    (e : NetworkEvent P.n) {μ : PMF (ProtocolState P)}
+    (e : NetworkEvent P.n GBCA.ByABDY.Message) {μ : PMF (ProtocolState P)}
     (h : (protocolExtended P).step (processes, w, o) (Sum.inr e) μ) :
     ∃ Ω : PMF (PMF (ComposedState P)),
       PMFRel (diracRel (ProtocolRelation P)) μ Ω ∧
@@ -296,7 +297,7 @@ theorem coupling_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
   obtain ⟨hC, -, hA, hG, hst⟩ := (protocolRelation_mk P _ _ _ _ _ _ _).mp hR
   have hCeq : ∀ i, C i = (processes i).1 := fun i => (hC i).symm
   obtain ⟨x, w', ν, hall, hn, hWs, rfl⟩ := protocolExtended_event_inversion P h
-  have hLne : (Sum.inr e : ExtendedLabel P.n) ≠ Silent.τ := by
+  have hLne : (Sum.inr e : ExtendedLabel P.n GBCA.ByABDY.Message) ≠ Silent.τ := by
     simp
   have hvis : ∀ {G' : ℕ → GBCA.ByABDY.RoundState P.n} {A' : ABANetworkState P.n},
       (∀ o' ∈ ν.support, ProtocolRelation P (x, w', o') (G', fun i => (x i).1, A', o')) →
@@ -589,9 +590,9 @@ theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
   obtain ⟨hC, -, hA, hG, hst⟩ := (protocolRelation_mk P _ _ _ _ _ _ _).mp hR
   have hCeq : ∀ i, C i = (processes i).1 := fun i => (hC i).symm
   obtain ⟨x, w', ω, hall, hn, hOr, rfl⟩ := protocolExtended_label_inversion P hl h
-  have hWl : (coinOverRoundAlphabet P).step o (Sum.inl l) ω :=
+  have hWl : (coinOverRoundAlphabet P GBCA.ByABDY.Message).step o (Sum.inl l) ω :=
     (System.mapIdle_step_some (coinLabelMap_inl l) ω).mpr hOr
-  have hLne : (Sum.inl l : ExtendedLabel P.n) ≠ Silent.τ := by
+  have hLne : (Sum.inl l : ExtendedLabel P.n GBCA.ByABDY.Message) ≠ Silent.τ := by
     simpa using hl
   suffices hsuf : ∃ Ω : PMF (PMF (ComposedState P)),
       PMFRel (diracRel (ProtocolRelation P))
@@ -645,7 +646,8 @@ theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
     have hGs : (GBCA.ByABDY.gbcaInstanceFamily P).step G (Sum.inl (Label.retABA id b))
       (PMF.pure G) :=
       gbcaInstanceFamily_idle P G hLne (by simp) not_false
-    have hAs : ABANetworkStep P A (Sum.inl (Label.retABA id b)) (PMF.pure A) := by
+    have hAs : ABANetworkStep P A
+        (Sum.inl (Label.retABA id b) : ExtendedLabel P.n GBCA.ByABDY.Message) (PMF.pure A) := by
       rcases hdp with hd | hF
       · exact ABANetworkStep.retABA A id b (by rw [hA]; exact hd)
       · exact ABANetworkStep.retByzantine A id b (by rw [hA]; exact hF)

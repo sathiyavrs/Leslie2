@@ -479,7 +479,7 @@ run of the specification (`specificationRelation_transition`), and that run is l
 interface along a section of `GBCA.specificationLabelMap`. -/
 theorem refinesSpecification (P : Parameters) (r : ℕ) :
     ForwardSimulation (roundOverGatherSpecifications P r)
-      (GBCA.specificationOverRoundAlphabet P r) (SpecificationRelation P) := by
+      (GBCA.specificationOverRoundAlphabet P Empty r) (SpecificationRelation P) := by
   constructor
   intro q₁ q₂ hR l μ hstep q₁' hq₁'
   obtain ⟨l₀, hpull, htransition⟩ := roundOverGatherSpecifications_step_algorithm P r q₁ l μ hstep
@@ -487,12 +487,12 @@ theorem refinesSpecification (P : Parameters) (r : ℕ) :
   refine ⟨t', ?_, hrel⟩
   rcases hdis with ⟨hτ, hweak⟩ | ⟨hτ, hweak⟩
   · exact Or.inl ⟨GBCA.specificationLabelMap_eq_tau (by rw [hpull, hτ]; rfl),
-      GBCA.weakLSilent_specificationOverRoundAlphabet P r hweak⟩
-  · refine Or.inr ⟨?_, GBCA.weakLStep_specificationOverRoundAlphabet P r hτ hpull hweak⟩
+      GBCA.weakLSilent_specificationOverRoundAlphabet P Empty r hweak⟩
+  · refine Or.inr ⟨?_, GBCA.weakLStep_specificationOverRoundAlphabet P Empty r hτ hpull hweak⟩
     intro hl
     refine hτ ?_
-    have h2 : GBCA.specificationLabelMap P.n (Silent.τ : Composition.ExtendedLabel P.n) = some l₀ :=
-      by
+    have h2 : GBCA.specificationLabelMap P.n
+        (Silent.τ : Composition.ExtendedLabel P.n Empty) = some l₀ := by
       rw [← hl]; exact hpull
     rw [GBCA.specificationLabelMap_tau] at h2
     exact (Option.some.inj h2).symm

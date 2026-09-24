@@ -7,7 +7,6 @@ Authors: Sathiya / Claude
 import Leslie2Protocols.ABA.Gather.SpecificationOverInstanceAlphabet
 import Leslie2Protocols.ABA.GBCA.AFW.Counting
 import Leslie2Protocols.ABA.Composition.Components
-import Leslie2Protocols.ABA.GBCA.ABDY.MessagesAndRecords
 import Leslie2Protocols.Framework.SynchronisedProduct
 import Leslie2Protocols.Framework.LoopsAndInstanceFamilies
 
@@ -40,7 +39,10 @@ the round from one event to the next is the program's record.
 
 ## The alphabet
 
-The round speaks `ExtendedLabel n` natively, as `GBCA.ByABDY.composition` does. The call loop of
+The round speaks `ExtendedLabel n Empty` natively, as `GBCA.ByABDY.composition` speaks
+`ExtendedLabel n GBCA.ByABDY.Message`. The round exchanges its messages inside its two gather
+instances, so it takes the empty type for the family alphabet's round message type: the round
+multicast `gbcaSend` and the round delivery `gbcaDeliver` name no label here. The call loop of
 the family alphabet, `gbcaCallLoop r id b`, is the round's loop label, and the three Byzantine
 handshake labels of round `r` are labels of the interface. A program is read along
 `programLabelMap`, the projection that sends a Byzantine call to a call, a Byzantine return to a
@@ -58,9 +60,9 @@ the round's network moves. The round has no transition on such a label, and the 
 idle. Corruption is the exception: it has no image at all, so the round's programs remain unchanged
 on it while the two gather instances move.
 
-The round-internal alphabet is `RoundLabel n = ExtendedLabel n ⊕ RoundEvent n`, and `roundEvents`
-collects the three events of `RoundEvent n`. They are hidden by the composition of
-`ABA/GBCA/AFW/Composition.lean`, which speaks `ExtendedLabel n`.
+The round-internal alphabet is `RoundLabel n = ExtendedLabel n Empty ⊕ RoundEvent n`, and
+`roundEvents` collects the three events of `RoundEvent n`. They are hidden by the composition of
+`ABA/GBCA/AFW/Composition.lean`, which speaks `ExtendedLabel n Empty`.
 
 ## Corruption
 
@@ -75,7 +77,8 @@ namespace PLTS
 namespace ABA
 namespace GBCA.ByAFW
 
-open Implementation Composition
+open Implementation hiding NetworkEvent ExtendedLabel
+open Composition
 
 /-! ### The program's record -/
 
@@ -120,12 +123,13 @@ inductive RoundEvent (n : ℕ) : Type
 /-- The round-internal alphabet: the family alphabet plus the three events. Its
 silent label is `Sum.inl (Sum.inl τ)`, so every `Sum.inr` label is observable
 and hence hideable. -/
-abbrev RoundLabel (n : ℕ) : Type := ExtendedLabel n ⊕ RoundEvent n
+abbrev RoundLabel (n : ℕ) : Type := ExtendedLabel n Empty ⊕ RoundEvent n
 
 /-- The event labels, hidden by the round. -/
 def roundEvents (n : ℕ) : Set (RoundLabel n) := {l | ∃ e : RoundEvent n, l = Sum.inr e}
 
-@[simp] theorem inl_notMem_roundEvents {n : ℕ} (l : ExtendedLabel n) : Sum.inl l ∉ roundEvents n :=
+@[simp] theorem inl_notMem_roundEvents {n : ℕ} (l : ExtendedLabel n Empty) :
+    Sum.inl l ∉ roundEvents n :=
   by
   simp [roundEvents]
 
@@ -257,7 +261,7 @@ theorem secondGatherLabelMap_eq_tau {n : ℕ} {l : RoundLabel n}
 
 section Pullbacks
 variable {n : ℕ} (r : ℕ) (id k i j : Fin n) (b c bnd : Bool) (x : Option Bool)
-  (out : GBCAOutput) (m : GBCA.ByABDY.Message) (g : Fin n → Option Bool)
+  (out : GBCAOutput) (g : Fin n → Option Bool)
   (h : Fin n → Option (Option Bool)) (C : Gather.AcceptedPairs n Bool)
   (D : Gather.AcceptedPairs n (Option Bool))
 
@@ -285,10 +289,6 @@ variable {n : ℕ} (r : ℕ) (id k i j : Fin n) (b c bnd : Bool) (x : Option Boo
 @[simp] theorem programLabelMap_byzantineRetG :
     programLabelMap n (Sum.inl (Sum.inr (.byzantineRetG r k out bnd))) = some (.retG r k out bnd) :=
       rfl
-@[simp] theorem programLabelMap_gbcaSend :
-    programLabelMap n (Sum.inl (Sum.inr (.gbcaSend r j m))) = some .outside := rfl
-@[simp] theorem programLabelMap_gbcaDeliver :
-    programLabelMap n (Sum.inl (Sum.inr (.gbcaDeliver r i j m))) = some .outside := rfl
 @[simp] theorem programLabelMap_decidedSend : programLabelMap n (Sum.inl (Sum.inr (.decidedSend j
   b))) = some .outside := rfl
 @[simp] theorem programLabelMap_decidedDeliver : programLabelMap n (Sum.inl (Sum.inr
@@ -335,10 +335,6 @@ variable {n : ℕ} (r : ℕ) (id k i j : Fin n) (b c bnd : Bool) (x : Option Boo
       k b)) := rfl
 @[simp] theorem firstGatherLabelMap_byzantineRetG :
     firstGatherLabelMap n (Sum.inl (Sum.inr (.byzantineRetG r k out bnd))) = none := rfl
-@[simp] theorem firstGatherLabelMap_gbcaSend : firstGatherLabelMap n (Sum.inl (Sum.inr (.gbcaSend r
-  j m))) = none := rfl
-@[simp] theorem firstGatherLabelMap_gbcaDeliver : firstGatherLabelMap n (Sum.inl (Sum.inr
-  (.gbcaDeliver r i j m))) = none := rfl
 @[simp] theorem firstGatherLabelMap_decidedSend : firstGatherLabelMap n (Sum.inl (Sum.inr
   (.decidedSend j b))) = none := rfl
 @[simp] theorem firstGatherLabelMap_decidedDeliver : firstGatherLabelMap n (Sum.inl (Sum.inr
@@ -382,10 +378,6 @@ variable {n : ℕ} (r : ℕ) (id k i j : Fin n) (b c bnd : Bool) (x : Option Boo
     secondGatherLabelMap n (Sum.inl (Sum.inr (.byzantineCallGLoop r k b))) = none := rfl
 @[simp] theorem secondGatherLabelMap_byzantineRetG :
     secondGatherLabelMap n (Sum.inl (Sum.inr (.byzantineRetG r k out bnd))) = none := rfl
-@[simp] theorem secondGatherLabelMap_gbcaSend : secondGatherLabelMap n (Sum.inl (Sum.inr (.gbcaSend
-  r j m))) = none := rfl
-@[simp] theorem secondGatherLabelMap_gbcaDeliver : secondGatherLabelMap n (Sum.inl (Sum.inr
-  (.gbcaDeliver r i j m))) = none := rfl
 @[simp] theorem secondGatherLabelMap_decidedSend : secondGatherLabelMap n (Sum.inl (Sum.inr
   (.decidedSend j b))) = none := rfl
 @[simp] theorem secondGatherLabelMap_decidedDeliver : secondGatherLabelMap n (Sum.inl (Sum.inr
