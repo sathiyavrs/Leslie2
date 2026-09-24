@@ -149,7 +149,7 @@ A weak run of the specification is read back along a section of `specificationLa
 section sends every label to its own copy on the left, except the one label the
 instance's step projects from, which is sent to the interface label the
 instance actually took — this is what turns a specification `call` run into the
-answer to the call loop. -/
+matching run for the call loop. -/
 
 /-- The left injection: the interface label a specification label sits at. -/
 def labelSection {n : ℕ} {M : Type} : Label n M → InstanceLabel n M := Sum.inl

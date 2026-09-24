@@ -209,7 +209,7 @@ all (§5); the encoding's `Gather.Step.bindCore` carries the size as a guard, an
 determines such a set. At the implementation both values are held as ghost state — the bound bit by
 the round's network state, the core by the gather instance's network state — so no program reads
 either, and the announcement is what makes binding a property of a single trace
-(`GBCA.specInst_binding`, `Gather.specInst_core`), transported to each implementation by its own
+(`GBCA.specInst_binding`, `Gather.specInst_core`), carried to each implementation by its own
 refinement (`GBCA.ByABDY.composition_binding`, `GBCA.roundOverBracha_binding`;
 `Gather.instanceOverBroadcastSpecification_core`, `Gather.instanceOverBracha_core`). The transitions that
 do read a ghost — the implementation's two graded-agreement returns — read it for the value they

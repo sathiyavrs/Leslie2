@@ -122,7 +122,7 @@ theorem specificationOverRoundAlphabet_isLTS (P : Parameters) (r : ℕ) :
 A weak run of the specification is read back along a section of `specificationLabelMap`. The
 section sends every label to its own copy on the left, except the one label the round's step
 projects from, which it sends to the interface label the round took. This is what turns a
-specification `callG` run into the answer to a Byzantine call. -/
+specification `callG` run into the matching run for a Byzantine call. -/
 
 /-- The section of `specificationLabelMap` that answers the interface label `l` over the
 specification label `l₀`. -/

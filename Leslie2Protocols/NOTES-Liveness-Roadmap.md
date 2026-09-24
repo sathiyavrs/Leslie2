@@ -97,7 +97,7 @@ port, *started*:
   operators, `[ltl| …]` DSL), fair-divergence notions — all **sorry-free**.
 - The ranked witness `ForwardSim.WeakDivPreserving` (`Simulation.lean:1339`): decorates the
   weak/stuttering `ForwardSim`; well-founded rank on concrete states; obligations keyed on
-  fair-vs-unfair concrete steps and on the abstract answer being empty / non-`AllFair`;
+  fair-vs-unfair concrete steps and on the matching abstract run being empty / non-`AllFair`;
   fair-deadlock clause. Transfer theorems **proven**: `preserves_fair_weak_divergence`
   (:1506), `transfers_satisfaction` (:2110), `transfers_leads_to` (:2246). This formalizes
   the possibilistic fair version of Gaspard's CONCUR 2026 material (§6.2 + §6.4 per
@@ -125,7 +125,7 @@ The two repos are complementary halves of one program: Leslie has liveness witho
 *Right design*: it handles precisely what `Leslie2Extra/Fairness` does not — stuttering.
 The ABA chain's simulations are weak (the core simulation's lazy abstract state stutters on almost
 every transition), so any fairness-preservation for ABA must discipline stutters exactly the way
-`WeakDivPreserving` does (rank must decrease when the abstract answers a fair concrete
+`WeakDivPreserving` does (rank must decrease when the abstract matches a fair concrete
 step with silence).
 
 *Wrong model*: it is qualitative; ABA's property is a mass bound over fair schedulers
@@ -164,7 +164,7 @@ Ordered by expected value-for-effort:
    would push the spec-level mass bound down the chain to `ABDY.protocol`, which is where a
    fair-scheduling statement about this protocol belongs. All three steps are inclusions in the same
    direction, `protocol ⊑ composed ⊑ hybrid ⊑ ABA.spec`, so a mass bound established at `ABA.spec`
-   has to be transported down all three, the composition inclusion (`ABDY.protocolSimulation`,
+   has to be carried down all three, the composition inclusion (`ABDY.protocolSimulation`,
    `ABA/ABDY/Simulation.lean`) included. That inclusion imposes no constraint on the
    amplification axis. Under D22 a process retains the round record of every round it has touched
    and answers that round's messages under an instance-local guard, whichever round its loop is in,

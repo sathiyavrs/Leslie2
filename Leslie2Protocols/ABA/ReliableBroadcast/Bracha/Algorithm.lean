@@ -114,7 +114,7 @@ inductive BrachaAlgorithm (P : Parameters) (ldr : Fin P.n) :
 /-! ### The transitions of the instance against the algorithm
 
 Every transition of the instance is one transition of `BrachaAlgorithm` at the same state, and the
-correspondence is strong: one step answers one step, at the specification label the interface
+correspondence is strong: one step matches one step, at the specification label the interface
 label projects to, with no stuttering anywhere.
 
 | instance | algorithm |

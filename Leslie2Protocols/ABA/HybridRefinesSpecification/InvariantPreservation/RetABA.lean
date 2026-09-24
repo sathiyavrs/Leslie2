@@ -132,17 +132,17 @@ theorem Invariant.step_retABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
     · intro r h
       rcases hI.flip_grade2Lock r h with hg | hd
       · left; exact hg
-      · right; exact DissentWitness.transport rfl rfl (fun hh => hh) (fun id' => hInput id') hd
+      · right; exact DissentWitness.preserved rfl rfl (fun hh => hh) (fun id' => hInput id') hd
     · intro id' hmem hin r'; rw [hInput] at hin; exact hI.idle_no_wccCall id' (hF ▸ hmem) hin r'
     · intro r id' hmem h
       rw [hRound] at h; rw [hPhase] at h
       rcases hI.retG_witness r id' (hF ▸ hmem) h with hg | hd
       · left; exact hg
-      · right; exact DissentWitness.transport rfl rfl (fun hh => hh) (fun id'' => hInput id'') hd
+      · right; exact DissentWitness.preserved rfl rfl (fun hh => hh) (fun id'' => hInput id'') hd
     · intro r id' hmem hcalled
       rcases hI.wccCalled_witness r id' (hF ▸ hmem) hcalled with hg | hd
       · left; exact hg
-      · right; exact DissentWitness.transport rfl rfl (fun hh => hh) (fun id'' => hInput id'') hd
+      · right; exact DissentWitness.preserved rfl rfl (fun hh => hh) (fun id'' => hInput id'') hd
   · rw [PMF.mem_support_pure_iff] at hc'
     subst hc'
     exact ⟨hI, AbstractStateUnchanged.refl P g _⟩

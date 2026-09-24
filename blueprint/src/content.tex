@@ -39,7 +39,7 @@ The weak transitions are in \leanmodule{Leslie2/Weak/WeakTransition} and \leanmo
 \section{Probabilistic simulations}
 
 A simulation of a concrete system by an abstract one is carried by a relation together with a step-matching condition, phrased through a coupling of the two successor distributions.
-The two notions of this section differ only in what the abstract system may answer a concrete step with: a single step for strong simulation, and a weak transition out of a belief distribution over abstract states for forward simulation.
+The two notions of this section differ only in what the abstract system may match a concrete step with: a single step for strong simulation, and a weak transition out of a belief distribution over abstract states for forward simulation.
 Every refinement of the case study is proved in the second of them, whose belief distribution is where an abstract commitment is deferred to.
 See \leanmodule{Leslie2/Simulation/SimDefs}.
 
@@ -49,7 +49,7 @@ See \leanmodule{Leslie2/Simulation/SimDefs}.
 
 \section{Building blocks: functional simulation and the constructions}
 
-Functional simulation is the one lemma the soundness proof is built on: a label-preserving map on states whose pushforward answers every step, and which is therefore checkable with no coupling exhibited.
+Functional simulation is the one lemma the soundness proof is built on: a label-preserving map on states whose pushforward matches every step, and which is therefore checkable with no coupling exhibited.
 See \leanmodule{Leslie2/Simulation/TraceMap}, \leanmodule{Leslie2/Simulation/StrongSoundness}, \leanmodule{Leslie2/WeakClosure/TraceProb} and \leanmodule{Leslie2/DistMonad/DistTrace}.
 
 \input{nodes-min/lem-map}
@@ -89,7 +89,7 @@ The synchronised product of the components is in \leanmodule{Leslie2Protocols/Fr
 The product of a family of components each read along its own pullback is in \leanmodule{Leslie2Protocols/Framework/SynchronisedProductAlongPullbacks}.
 The two couplings a Dirac lift admits --- a Dirac source matched by a related target, and a source pushed forward along a map matched outcome by outcome --- are in \leanmodule{Leslie2Protocols/Framework/DiracRelationCoupling}.
 The restriction along the left embedding and the precongruence it enjoys are both in \leanmodule{Leslie2Protocols/Framework/Relabel}.
-The read-back congruence, in \leanmodule{Leslie2Protocols/Framework/FinerAlphabetCongruence}, transports a simulation over a finer alphabet, and \leanmodule{Leslie2Protocols/Framework/WeakTransitionsFromChains} supplies the weak runs of unbounded length --- a chain of silent steps, closed or not by one external step --- that the simulations of the case study answer multi-step obligations with.
+The read-back congruence, in \leanmodule{Leslie2Protocols/Framework/FinerAlphabetCongruence}, carries a simulation over to a finer alphabet, and \leanmodule{Leslie2Protocols/Framework/WeakTransitionsFromChains} supplies the weak runs of unbounded length --- a chain of silent steps, closed or not by one external step --- that the simulations of the case study give as matching runs.
 The last statement of the list is the same congruence property at the level of labelled transition systems, for every operator at once, which is what a substitution inside a composition of components rests on; it is in \leanmodule{Leslie2Protocols/Framework/Congruence}.
 
 \input{nodes-min/thm-trace-support}
@@ -226,7 +226,7 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
   \item D27: the BRB specification splits the leader's recorded input from the committed value, an internal commit writing the value once under $\mathit{ldr} \in F \vee input = m$, in place of Transition System~6's single call field and its corrupted-leader transition, which only bars the instance from returning.
     Under Transition System~6 a correct call fixes every return, where Bracha's rounds with the leader corrupted after its $\mathrm{INIT}$ can deliver another value until some correct process holds an $\mathrm{ECHO}$ quorum, so that specification would exclude its own implementation under D1; the split closes the window at the commit, a leader corrupted after its call may commit any value, and Validity holds at a never-corrupted leader, as the property states it.
   \item D28: an implementation fuses a sub-protocol's call and return into the transitions of the caller, where~\cite{LeslieBP} carries each of them as a transition of its own.
-    Three transitions of the gather-based implementation fuse that way, and the composed system answers each by a run of two events: the return-then-call transition is the first gather's return and the second gather's call, the graded return is the second gather's return and the round's own, and a delivery completing a receipt quorum is a broadcast instance's delivery and its return.
+    Three transitions of the gather-based implementation fuse that way, and the composed system matches each by a run of two events: the return-then-call transition is the first gather's return and the second gather's call, the graded return is the second gather's return and the round's own, and a delivery completing a receipt quorum is a broadcast instance's delivery and its return.
     A program of the implementation takes one transition per statement of the pseudocode, and the statement that returns from one instance and calls the next is one statement, where the composed system takes one event per component.
   \item D29: ghost outputs, the round's bound bit and a gather instance's common core, which Transition Systems~2 and~4 announce on their return labels already, carried down to the implementations as auxiliary variables in the sense of~\cite{AL91}.
     A network component holds each of them and no program reads one.
@@ -418,7 +418,7 @@ See \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Invariant}, \leanmodule{Leslie2Pr
 \input{nodes-min/thm-aba-gbca-composition-by-abdy-refines-specification}
 
 \blueprintfig{fig-gbca-sim}{The forward simulation \leandecl{PLTS.ABA.GBCA.ByABDY.refinesSpecification} of the round's composition, along the relation \leandecl{PLTS.ABA.GBCA.ByABDY.specificationRelation}: the algorithm's transitions above, specification-instance states below, dashed verticals the relation.
-A return whose bit the specification has not yet excluded is answered by a weak run, mapping to the weak step $\mathrm{bindUnset};\mathrm{ret}$ whose excluded bit is supplied by the return's own exclusion certificate; a return whose exclusion has already happened maps to a single graded specification return.
+A return whose bit the specification has not yet excluded is matched by a weak run, mapping to the weak step $\mathrm{bindUnset};\mathrm{ret}$ whose excluded bit is supplied by the return's own exclusion certificate; a return whose exclusion has already happened maps to a single graded specification return.
 The relation also reads $excluded$ off the network state's bound bit: empty while the bit is unwritten, and the singleton of the bit's complement once a return has written it.}
 
 \input{nodes-min/thm-aba-protocol-composed}
@@ -447,7 +447,7 @@ See \leanmodule{Leslie2Protocols/ABA/Composition/ABAState} and \leanmodule{Lesli
 
 \input{nodes-min/thm-aba-hybrid-spec}
 
-\blueprintfig{fig-coresim}{The simulation of Theorem~\ref{thm:aba-hybrid-spec}, \leandecl{PLTS.ABA.hybridRefinesSpecification}: the two-phase abstract state, its stutter answering every concrete transition --- the coin's resolving call, the one probabilistic transition among them, included --- under a constant coupling, and the single \leandeclnamed{decide}{PLTS.ABA.SpecStep.decide} step that leads the first $\mathrm{retABA}$, the two together forming one weak step.}
+\blueprintfig{fig-coresim}{The simulation of Theorem~\ref{thm:aba-hybrid-spec}, \leandecl{PLTS.ABA.hybridRefinesSpecification}: the two-phase abstract state, its stutter matching every concrete transition --- the coin's resolving call, the one probabilistic transition among them, included --- under a constant coupling, and the single \leandeclnamed{decide}{PLTS.ABA.SpecStep.decide} step that leads the first $\mathrm{retABA}$, the two together forming one weak step.}
 
 \subsection{The main theorems}
 
@@ -554,9 +554,9 @@ Each is a plain forward simulation, so the three compose.}
 
 \blueprintfig{fig-gather-sim}{The three tier simulations of one round, with the concrete transitions on the right and the relation dashed.
 Each stage idealises away one tier and holds the tiers above it equal.
-Under \leandecl{PLTS.ABA.GBCA.ByAFW.BroadcastSubstitutionRelation} every $\mathrm{ECHO}$, $\mathrm{VOTE}$ and delivery of a Bracha instance is answered by a stutter of the specification coordinate that replaces it.
-Under \leandecl{PLTS.ABA.GBCA.ByAFW.GatherSubstitutionRelation} gather's own transitions stutter in the same way, and a broadcast return, which writes a program's record, is answered by the specification's return.
-Under \leandecl{PLTS.ABA.GBCA.ByAFW.SpecificationRelation} the return transitions carry the refinement: a return whose bit the specification has not yet excluded is answered by the weak run $\mathrm{bindUnset};\mathrm{ret}$, and a return whose exclusion has already happened is a single graded return.
+Under \leandecl{PLTS.ABA.GBCA.ByAFW.BroadcastSubstitutionRelation} every $\mathrm{ECHO}$, $\mathrm{VOTE}$ and delivery of a Bracha instance is matched by a stutter of the specification coordinate that replaces it.
+Under \leandecl{PLTS.ABA.GBCA.ByAFW.GatherSubstitutionRelation} gather's own transitions stutter in the same way, and a broadcast return, which writes a program's record, is matched by the specification's return.
+Under \leandecl{PLTS.ABA.GBCA.ByAFW.SpecificationRelation} the return transitions carry the refinement: a return whose bit the specification has not yet excluded is matched by the weak run $\mathrm{bindUnset};\mathrm{ret}$, and a return whose exclusion has already happened is a single graded return.
 The round's own network is held equal by the two substitutions, and \leandecl{PLTS.ABA.GBCA.ByAFW.SpecificationRelation} holds $excluded$ equal to the complement of the bit standing there.}
 \input{nodes-min/thm-gbca-gather-refines}
 

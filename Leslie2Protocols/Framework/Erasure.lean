@@ -35,7 +35,7 @@ The two clauses are not symmetric. A label of `sysA` may announce the value of
 the erased component, and from a state `s` only the announcement `s` carries is available,
 whereas `sys0` has nothing to announce from and offers every label of the `φ`-fibre. So the
 projection is exact on labels and only the lift is taken up to `φ`. A third clause,
-`silent`, keeps `τ` alone in its `φ`-fibre (`SeparatesSilent`), so a lift never answers an
+`silent`, keeps `τ` alone in its `φ`-fibre (`SeparatesSilent`), so a lift never matches an
 internal step with an external one or the reverse.
 
 `project` is a functional label-preserving simulation, hence the inclusion
@@ -307,7 +307,7 @@ section Saturation
 variable {S1 S2 : Type} {φ : L → L}
 
 /-- Saturation is preserved by parallel composition. `hτ` is what keeps the synchronised
-disjunct from being asked to answer with the silent label. -/
+disjunct from being asked for a step at the silent label. -/
 theorem System.LabelSaturated.parallel {sys₁ : System S1 L} {sys₂ : System S2 L}
     (h₁ : sys₁.LabelSaturated φ) (h₂ : sys₂.LabelSaturated φ) (hτ : SeparatesSilent φ) :
     (sys₁.parallel sys₂).LabelSaturated φ := by

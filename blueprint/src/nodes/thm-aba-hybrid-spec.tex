@@ -20,8 +20,8 @@
   $\mathrm{AbstractState}$ fixes the corrupted set, the returns and $mode = flipEnabled$, so the abstract state never fires \leandeclnamed{coinFlip}{PLTS.ABA.SpecStep.coinFlip}, and it is two-phase on the abstract state's $val$ (D16).
   Outside that disjunction it fixes the ghost record as well: it agrees with the committed input at every correct process, in both phases.
   There are three cases.
-  First, a hidden transition: the abstract state answers by a stutter in the $\mathrm{AbstractState}$ frame, the coin's resolving call under the constant coupling that sends every outcome to the one unchanged abstract state.
-  Second, the first $\mathrm{retABA}$ of the run: the abstract state answers by a single weak step that binds, fills, decides and returns, its bind licensed by the $f{+}1$ input support carried in the invariant and its grade-2 certificate obtained by a pigeonhole on the $n-f$ DECIDED tally behind the return.
-  Third, a $\mathrm{fail}$ transition: the abstract state answers by the corruption broadcast.
+  First, a hidden transition: the abstract state matches it by a stutter in the $\mathrm{AbstractState}$ frame, the coin's resolving call under the constant coupling that sends every outcome to the one unchanged abstract state.
+  Second, the first $\mathrm{retABA}$ of the run: the abstract state matches it by a single weak step that binds, fills, decides and returns, its bind licensed by the $f{+}1$ input support carried in the invariant and its grade-2 certificate obtained by a pigeonhole on the $n-f$ DECIDED tally behind the return.
+  Third, a $\mathrm{fail}$ transition: the abstract state matches it by the corruption broadcast.
   Either way the relation is restored, so $\mathrm{hybridSpecificationRelation}$ is a probabilistic forward simulation, and soundness (Theorem~\ref{thm:forward-sound}) turns it into the stated inclusion, \leandecl{PLTS.ABA.hybrid_spec}.
 \end{proof}

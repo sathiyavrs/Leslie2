@@ -17,23 +17,23 @@ specification instance with the same leader, read over the instance's interface
 The refinement runs in two steps. The first is strong and functional: a transition of the instance
 is one transition of `BRB.BrachaAlgorithm` at the same state, at the specification label the
 interface label projects to (`BRB.brachaInstance_step_algorithm`). The second is the matching
-`BRB.specificationRelation_transition`, whose answer is a weak run of the specification over
+`BRB.specificationRelation_transition`, whose matching run is a weak run of the specification over
 `BRB.Label`; it is lifted to the interface along a section of `BRB.specificationLabelMap`, which is
 where the call loop is answered by the specification's own loop.
 
 The matching is stated here, one transition of `BRB.BrachaAlgorithm` at a time, along
 `BRB.SpecificationRelation` (`ABA/ReliableBroadcast/Bracha/SpecificationRelation.lean`). The
-internal transitions stutter. The call and corruption are answered by the specification's own
-transitions. A return is answered by `ret` alone when `val` is already committed, the certificates
+internal transitions stutter. The call and corruption are matched by the specification's own
+transitions. A return is matched by `ret` alone when `val` is already committed, the certificates
 identifying the two values, and by the two-step run `commit ; ret` when it is not, with `commit`'s
 guard discharged by `input_of_echoCertificate` under a correct leader and by membership in the
 corrupted set otherwise.
 
-The step-level transports beside the refinement export the relation across one transition, for the
-systems that replay Bracha's transitions inside a larger algorithm: `specificationRelation_tau` for
-an internal transition under a stuttering specification, `brachaAlgorithm_tau_F` for the corrupted
-set across one, `specificationRelation_call` for the fused effects of a call, and `commitReach` for
-the on-demand commit that a derived delivery licenses.
+Four lemmas beside the refinement hold the relation across one transition:
+`specificationRelation_tau` for an internal transition under a stuttering specification,
+`brachaAlgorithm_tau_F` for the corrupted set across one, `specificationRelation_call` for the
+fused effects of a call, and `commitReach` for the on-demand commit that a derived delivery
+licenses.
 
 ## Model and deviations
 
@@ -50,9 +50,9 @@ variable {M : Type} [DecidableEq M] {P : Parameters} {ldr : Fin P.n}
 /-! ### The relation across one transition -/
 
 /-- **The relation across one transition**: every transition of `BrachaAlgorithm` at a related
-pair is answered by a weak run of the specification instance, and the answer is again related. The
-internal transitions stutter; `call` and `fail` are answered by the specification's own
-transitions; `ret id m` is answered by `ret` alone when `val` is already committed, and by the
+pair is matched by a weak run of the specification instance, ending at a related state. The
+internal transitions stutter; `call` and `fail` are matched by the specification's own
+transitions; `ret id m` is matched by `ret` alone when `val` is already committed, and by the
 two-step run `commit ; ret` when it is not. -/
 theorem specificationRelation_transition (P : Parameters) (ldr : Fin P.n) (q₁ : BrachaState P.n M)
     (q₂ : SpecState P.n M) (hR : SpecificationRelation P ldr q₁ q₂) (l : Label P.n M)
@@ -251,7 +251,7 @@ theorem specificationRelation_transition (P : Parameters) (ldr : Fin P.n) (q₁ 
 /-- **The reliable-broadcast refinement**: the reliable-broadcast instance is forward simulated
 by the specification instance with the same leader, read over the instance's interface. A
 transition of the instance is one transition of `BrachaAlgorithm`
-(`BRB.brachaInstance_step_algorithm`), that transition is answered by a weak run of the
+(`BRB.brachaInstance_step_algorithm`), that transition is matched by a weak run of the
 specification (`specificationRelation_transition`), and the run is lifted to the interface along a
 section of `specificationLabelMap`, which is where the call loop is answered by the specification's
 own loop. -/
@@ -275,11 +275,11 @@ theorem brachaRefinesSpecification (P : Parameters) (ldr : Fin P.n) :
     rw [specificationLabelMap_tau] at h2
     exact (Option.some.inj h2).symm
 
-/-! ### Step-level relation transports
+/-! ### The relation across the internal and the call transitions
 
-The relation across one transition, exported for the systems that replay Bracha's transitions
-inside a larger algorithm: an internal transition under a stuttering specification, the call
-across the fused effects, and the on-demand commit that a derived delivery licenses. -/
+An internal transition under a stuttering specification, the corrupted set across an internal
+transition, the fused effects of a call, and the on-demand commit that a derived delivery
+licenses. -/
 
 /-- The relation across any internal transition, the specification stuttering. -/
 theorem specificationRelation_tau {P : Parameters} {ldr : Fin P.n} {s s' : BrachaState P.n M}

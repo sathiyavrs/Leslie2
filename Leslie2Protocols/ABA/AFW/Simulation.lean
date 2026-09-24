@@ -23,14 +23,14 @@ inclusion from here to the ABA specification.
 state from the implementation: the round loops and the coin oracle are shared, the ABA network is
 the DECIDED sets beside the corrupted set, and every round is the view `AFW.roundProjection`.
 `PLTS.coupling_pure` and `PLTS.coupling_map` (`Framework/DiracRelationCoupling.lean`) are the two
-couplings that answer a Dirac outcome and an outcome whose only free coordinate is the oracle's.
+couplings for a Dirac outcome and for an outcome whose only free coordinate is the oracle's.
 
 ## The matching, label class by label class
 
-`AFW.coupling_tau`, `AFW.coupling_label` and `AFW.coupling_event` answer the silent label, a
+`AFW.coupling_tau`, `AFW.coupling_label` and `AFW.coupling_event` match the silent label, a
 visible shared label and a rendezvous of the implementation, each from the runs of
 `ABA/AFW/SimulationOfEachTransition.lean`. A transition of the implementation that fuses two events
-of the composed round is answered by a run of two transitions, so `AFW.coupling_hidden` concludes in
+of the composed round is matched by a run of two transitions, so `AFW.coupling_hidden` concludes in
 a weak run of the composed group, and `AFW.coupling_step` carries that run through the sub-protocol
 hiding with `weakTau_abstract`, `weakTau_of_weakStep_mem` and `weakStep_abstract`.
 `AFW.protocolSimulation` is the forward simulation these matchings assemble, and
@@ -44,8 +44,8 @@ open Implementation Composition GBCA.ByABDY
 
 /-! ### Assembling a matched run
 
-Three shapes of answer: a visible shared label the four components answer with one transition each,
-a hidden rendezvous they answer the same way, and a silent run of the graded-agreement family
+Three shapes of matching run: a visible shared label the four components take with one transition
+each, a hidden rendezvous they take the same way, and a silent run of the graded-agreement family
 alone. -/
 
 /-- A visible shared label: the four components move together, the oracle's
@@ -125,8 +125,8 @@ private theorem coupling_unchanged (P : Parameters) {s : ProtocolState P} {t : C
 /-! ### The matching on the silent label
 
 The implementation's own `terminate` transition writes no coordinate the relation reads,
-so the composed answer to it is to remain unchanged; the adversary's two injections
-are answered by a transition. -/
+so the composed system matches it by remaining unchanged; the adversary's two injections
+are matched by a transition. -/
 
 theorem coupling_tau (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
@@ -163,7 +163,7 @@ theorem coupling_tau (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.
       exact (hview r).symm
   · rcases networkStep_tau hn with ⟨r, k, m, hF, hw⟩ | ⟨k, b, hF, hw⟩
     · obtain rfl : w' = w.recordGBCASend r k m := pure_inj hw
-      obtain ⟨hstep, hinv⟩ := byzantine_answer P u w hI r m hF
+      obtain ⟨hstep, hinv⟩ := byzantine_match P u w hI r m hF
       have hfam := roundProjectionFamily_byzantine u w r k m
       refine coupling_run P ((protocolRelation_mk P _ _ _ _ _ _ _).mpr
           ⟨hC, rfl, by simpa using hA, hfam.symm,
@@ -362,7 +362,7 @@ theorem coupling_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
     have hfor : ∀ i, i ≠ id → x i = u i := fun i hi =>
       pure_inj (programStep_callG_foreign (Ne.symm hi) (hall i))
     obtain ⟨y, hy, hh, hph, hrr, hest, hx1, hoff, hga2, hlow, hinv⟩ :=
-      roundRecord_answer_callG P w (u := u) (j := id) rfl hI (roundTransition_of_own rfl (hall id))
+      roundRecord_match_callG P w (u := u) (j := id) rfl hI (roundTransition_of_own rfl (hall id))
     obtain rfl : x id = y := pure_inj hy
     have hxc : ∀ (i : Fin P.n) (r' : ℕ), (x i).2.roundRecord r'
         = ((Function.update u id (x id)) i).2.roundRecord r' := by
@@ -412,7 +412,7 @@ theorem coupling_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
     have hfor : ∀ i, i ≠ id → x i = u i := fun i hi =>
       pure_inj (programStep_retG_foreign (Ne.symm hi) (hall i))
     obtain ⟨y, hy, hh, hph, hrr, hx1, hoff, hga2, hlow, hinv⟩ :=
-      roundRecord_answer_retG P w (u := u) (j := id) rfl hI hbnd (hB r)
+      roundRecord_match_retG P w (u := u) (j := id) rfl hI hbnd (hB r)
         (roundTransition_of_own rfl (hall id))
     obtain rfl : x id = y := pure_inj hy
     have hxc : ∀ (i : Fin P.n) (r' : ℕ), (x i).2.roundRecord r'
@@ -459,9 +459,9 @@ theorem coupling_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
 
 /-! ### The matching on a rendezvous of the implementation
 
-A send and a delivery are internal to the round, so the composed system answers them with a silent
+A send and a delivery are internal to the round, so the composed system matches them with a silent
 run of the graded-agreement family. The DECIDED transitions, the fused coin return and the
-handshake transitions are answered by the same rendezvous. -/
+handshake transitions are matched by the same rendezvous. -/
 
 theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
@@ -497,7 +497,7 @@ theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
     have hfor : ∀ i, i ≠ j → x i = u i := fun i hi =>
       pure_inj (programStep_gbcaSend_foreign (Ne.symm hi) (hall i))
     obtain ⟨y, hy, hcore, hoff, hlow, hinv⟩ :=
-      roundRecord_answer_gbcaSend P w (u := u) (j := j) rfl hI (roundTransition_of_own rfl (hall j))
+      roundRecord_match_gbcaSend P w (u := u) (j := j) rfl hI (roundTransition_of_own rfl (hall j))
     obtain rfl : x j = y := pure_inj hy
     have hxc : ∀ (i : Fin P.n) (r' : ℕ), (x i).2.roundRecord r'
         = ((Function.update u j (x j)) i).2.roundRecord r' := by
@@ -559,7 +559,7 @@ theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
     have hfor : ∀ i', i' ≠ i → x i' = u i' := fun i' hi =>
       pure_inj (programStep_gbcaDeliver_foreign (Ne.symm hi) (hall i'))
     obtain ⟨y, hy, hcore, hoff, hga2, hlow, hinv⟩ :=
-      roundRecord_answer_gbcaDeliver P w (u := u) (j := i) rfl hI hsent
+      roundRecord_match_gbcaDeliver P w (u := u) (j := i) rfl hI hsent
         (roundTransition_of_own rfl (hall i))
     obtain rfl : x i = y := pure_inj hy
     have hxc : ∀ (i' : Fin P.n) (r' : ℕ), (x i').2.roundRecord r'
@@ -687,7 +687,7 @@ theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
     have hfor : ∀ i, i ≠ id → x i = u i := fun i hi =>
       pure_inj (programStep_gbcaCallLoop_foreign (Ne.symm hi) (hall i))
     obtain ⟨y, hy, hy2, hh, hph, hrr, hest, hx1, hlow⟩ :=
-      roundRecord_answer_gbcaCallLoop P w (u := u) (j := id) rfl
+      roundRecord_match_gbcaCallLoop P w (u := u) (j := id) rfl
         (roundTransition_of_own rfl (hall id))
     obtain rfl : x id = y := pure_inj hy
     have hsame : ∀ i, (x i).2 = (u i).2 := by
@@ -786,7 +786,7 @@ theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
 /-! ### The matching at the group and at the system -/
 
 /-- **The matching at the group level**: the rendezvous alphabet is hidden in both systems, so a
-hidden rendezvous of the implementation is answered by a silent run of the composed group. -/
+hidden rendezvous of the implementation is matched by a silent run of the composed group. -/
 theorem coupling_hidden (P : Parameters) {s : ProtocolState P} {t : ComposedState P}
     (hR : ProtocolRelation P s t) {l : Label P.n} {μ : PMF (ProtocolState P)}
     (h : (protocolHidden P).step s l μ) :
@@ -811,7 +811,7 @@ theorem coupling_hidden (P : Parameters) {s : ProtocolState P} {t : ComposedStat
       exact ⟨Ω, hrel, Or.inr ⟨hl, hs⟩⟩
 
 /-- **The matching at the system level**: a hidden sub-protocol label is silent in both systems, and
-every other label is answered on the nose or by a run. -/
+every other label is matched on the nose or by a run. -/
 theorem coupling_step (P : Parameters) {s : ProtocolState P} {t : ComposedState P}
     (hR : ProtocolRelation P s t) {l : Label P.n} {μ : PMF (ProtocolState P)}
     (h : (protocol P).step s l μ) :

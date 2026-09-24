@@ -362,7 +362,7 @@ theorem Invariant.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState 
     rw [hValeq] at h
     rcases hI.flip_grade2Lock r' h with hg | hd
     · left; exact hg
-    · right; exact DissentWitness.transport rfl rfl (fun h => h) (fun id' => (hCprocs id').1) hd
+    · right; exact DissentWitness.preserved rfl rfl (fun h => h) (fun id' => (hCprocs id').1) hd
   · intro id' hmem hin r'
     by_cases h2 : r' = r
     · rw [h2, Function.update_self]
@@ -398,7 +398,7 @@ theorem Invariant.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState 
       · exact Or.inr hlt
     rcases hI.retG_witness r' id' (hCF ▸ hmem) hp' with hg | hd
     · left; exact hg
-    · right; exact DissentWitness.transport rfl rfl (fun h => h) (fun id' => (hCprocs id').1) hd
+    · right; exact DissentWitness.preserved rfl rfl (fun h => h) (fun id' => (hCprocs id').1) hd
   · intro r' id' hmem hcalled
     by_cases h2 : r' = r
     · rw [h2] at hcalled ⊢
@@ -409,17 +409,17 @@ theorem Invariant.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState 
         · rcases hI.retG_witness r id (hCF ▸ hmem) (Or.inl ⟨hr, Or.inl hph⟩) with hg | hd
           · left; exact hg
           · right
-            exact DissentWitness.transport rfl rfl (fun h => h) (fun id' => (hCprocs id').1) hd
+            exact DissentWitness.preserved rfl rfl (fun h => h) (fun id' => (hCprocs id').1) hd
         · exact absurd (hCF ▸ hmem) (not_not.mpr hF)
       · rw [hWcalled id' hid] at hcalled
         rcases hI.wccCalled_witness r id' (hCF ▸ hmem) hcalled with hg | hd
         · left; exact hg
         · right
-          exact DissentWitness.transport rfl rfl (fun h => h) (fun id' => (hCprocs id').1) hd
+          exact DissentWitness.preserved rfl rfl (fun h => h) (fun id' => (hCprocs id').1) hd
     · rw [hWNe r' h2] at hcalled
       rcases hI.wccCalled_witness r' id' (hCF ▸ hmem) hcalled with hg | hd
       · left; exact hg
-      · right; exact DissentWitness.transport rfl rfl (fun h => h) (fun id' => (hCprocs id').1) hd
+      · right; exact DissentWitness.preserved rfl rfl (fun h => h) (fun id' => (hCprocs id').1) hd
 
 /-- `callW`: `Invariant` is preserved and the abstract state is unchanged at a call of the
 coin. -/

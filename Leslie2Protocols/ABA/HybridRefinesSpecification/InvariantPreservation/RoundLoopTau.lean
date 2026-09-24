@@ -120,17 +120,17 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
     · intro r h
       rcases hI.flip_grade2Lock r h with hg | hd
       · left; exact hg
-      · right; exact DissentWitness.transport rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
+      · right; exact DissentWitness.preserved rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
     · intro id' hmem hin r; rw [hProcs] at hin; exact hI.idle_no_wccCall id' (hFeq ▸ hmem) hin r
     · intro r id' hmem hp
       rw [hProcs] at hp
       rcases hI.retG_witness r id' (hFeq ▸ hmem) hp with hg | hd
       · left; exact hg
-      · right; exact DissentWitness.transport rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
+      · right; exact DissentWitness.preserved rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
     · intro r id' hmem hcalled
       rcases hI.wccCalled_witness r id' (hFeq ▸ hmem) hcalled with hg | hd
       · left; exact hg
-      · right; exact DissentWitness.transport rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
+      · right; exact DissentWitness.preserved rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
   · -- echo: a correct sender among the `f + 1` counted deliveries
     rw [PMF.mem_support_pure_iff] at hc'; subst hc'
     have hProcs : (c.sendDecided id b).processes = c.processes := ABAState.sendDecided_processes _ _
@@ -233,17 +233,17 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
     · intro r h
       rcases hI.flip_grade2Lock r h with hg | hd
       · left; exact hg
-      · right; exact DissentWitness.transport rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
+      · right; exact DissentWitness.preserved rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
     · intro id' hmem hin r; rw [hProcs] at hin; exact hI.idle_no_wccCall id' (hFeq ▸ hmem) hin r
     · intro r id' hmem hp
       rw [hProcs] at hp
       rcases hI.retG_witness r id' (hFeq ▸ hmem) hp with hg | hd
       · left; exact hg
-      · right; exact DissentWitness.transport rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
+      · right; exact DissentWitness.preserved rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
     · intro r id' hmem hcalled
       rcases hI.wccCalled_witness r id' (hFeq ▸ hmem) hcalled with hg | hd
       · left; exact hg
-      · right; exact DissentWitness.transport rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
+      · right; exact DissentWitness.preserved rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
   · -- byzantine DECIDED injection: `id ∈ F`, so correct `decided_source` at `id` is vacuous
     rw [PMF.mem_support_pure_iff] at hc'; subst hc'
     have hProcs : (c.sendDecided id b).processes = c.processes := ABAState.sendDecided_processes _ _
@@ -328,17 +328,17 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
     · intro r h
       rcases hI.flip_grade2Lock r h with hg | hd
       · left; exact hg
-      · right; exact DissentWitness.transport rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
+      · right; exact DissentWitness.preserved rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
     · intro id' hmem hin r; rw [hProcs] at hin; exact hI.idle_no_wccCall id' (hFeq ▸ hmem) hin r
     · intro r id' hmem hp
       rw [hProcs] at hp
       rcases hI.retG_witness r id' (hFeq ▸ hmem) hp with hg | hd
       · left; exact hg
-      · right; exact DissentWitness.transport rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
+      · right; exact DissentWitness.preserved rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
     · intro r id' hmem hcalled
       rcases hI.wccCalled_witness r id' (hFeq ▸ hmem) hcalled with hg | hd
       · left; exact hg
-      · right; exact DissentWitness.transport rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
+      · right; exact DissentWitness.preserved rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
 
 end ABA
 end PLTS

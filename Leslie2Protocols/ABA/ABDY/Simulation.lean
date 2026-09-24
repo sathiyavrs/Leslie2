@@ -63,7 +63,7 @@ declines. A round instance has a transition on the Byzantine graded-agreement la
 protocol program has one (D11, D22); the instance's round transitions carry no termination guard, so
 the instance answers a send or a delivery at a process the protocol has terminated. In the other
 direction the protocol's `terminate` transition writes a field the relation does not read, and the
-composed answer to it is a stutter. -/
+composed system matches it by a stutter. -/
 
 namespace PLTS
 namespace ABA
@@ -190,7 +190,7 @@ private theorem corrupt_abaNetwork {P : Parameters} (w : NetworkState P.n) (k : 
   by_cases hc : k ∉ w.F ∧ w.F.card < P.f <;>
     simp [ABANetworkState.corrupt, Implementation.NetworkState.corrupt, hc]
 
-/-! ### Transporting the columns conjunct
+/-! ### The columns conjunct across a write
 
 The conjunct that speaks of the round records is read process by process. Under a transition at
 which one process writes and the composed family leaves every other column alone, it follows from
@@ -221,11 +221,11 @@ private theorem relation_none (P : Parameters) {processes x : ∀ _ : Fin P.n, P
 
 /-! ### Assembling a composed transition
 
-Two shapes of answer. A label the composed system takes on the nose is answered by the transitions
-of its four components. A round rendezvous has no transition at three of them: it is internal to a
-round instance, and the family carries it as its own silent transition. -/
+Two shapes of matching run. A label the composed system takes on the nose is matched by the
+transitions of its four components. A round rendezvous has no transition at three of them: it is
+internal to a round instance, and the family carries it as its own silent transition. -/
 
-/-- A visible label of the extended alphabet answered by the four composed
+/-- A visible label of the extended alphabet matched by the four composed
 transitions, the oracle's successor carried across. -/
 private theorem coupling_visible (P : Parameters) {x : ∀ _ : Fin P.n, ProcessRecord P.n}
     {w' : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
@@ -247,7 +247,7 @@ private theorem coupling_visible (P : Parameters) {x : ∀ _ : Fin P.n, ProcessR
   rw [← prodPMF_three_pure_factors] at hbind
   exact ⟨Ω, hr, hbind ▸ composedExtended_visible_step P hL hGs hCs hAs hWs⟩
 
-/-- A rendezvous the composed system answers inside one round: the
+/-- A rendezvous the composed system matches inside one round: the
 instance of round `r` takes it as its own silent transition. -/
 private theorem coupling_round
     (P : Parameters) {x : ∀ _ : Fin P.n, ProcessRecord P.n} {w' : NetworkState P.n}
@@ -277,7 +277,7 @@ protocol transition carries either label. -/
 /-! ### The matching, by label class
 
 A transition of the protocol group is a hidden rendezvous, a visible shared label, or the silent
-label. Each is answered by a transition of the composed group on the same label, built from the
+label. Each is matched by a transition of the composed group on the same label, built from the
 transitions of the four composed components. A corrupted process's replaced program is matched loop
 for loop: where the protocol program self-loops, the composed round loop takes `corruptedIdle`. The
 return that self-loop carries without DECIDED evidence is authorised on the composed system by the
@@ -910,8 +910,8 @@ theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
       exact RoundLoopStep.retGIdle _ r id out bnd (Ne.symm hi)
 
 /-- The matching on the silent label. The protocol's own `terminate` transition writes
-no coordinate the relation reads, so the composed answer to it is to stand
-still; the adversary's two injections are answered by a transition. -/
+no coordinate the relation reads, so the composed system matches it by standing
+still; the adversary's two injections are matched by a transition. -/
 theorem coupling_tau (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord P.n}
     {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n} {G : ℕ → GBCA.ByABDY.RoundState P.n}
     {C : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A : ABANetworkState P.n}
@@ -982,8 +982,8 @@ theorem coupling_tau (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecor
 /-! ### The simulation -/
 
 /-- The matching at the group level: the rendezvous alphabet is hidden in both systems, so a hidden
-protocol rendezvous is answered by a silent transition of the composed group. The second disjunct is
-the composed answer to `terminate`: the state is unchanged under a silent protocol label. -/
+protocol rendezvous is matched by a silent transition of the composed group. The second disjunct is
+the matching run for `terminate`: the state is unchanged under a silent protocol label. -/
 theorem coupling_hidden (P : Parameters) {u : ProtocolState P} {t : ComposedState P}
     (hR : ProtocolRelation P u t) {l : Label P.n} {μ : PMF (ProtocolState P)}
     (h : (protocolHidden P).step u l μ) :
@@ -1006,8 +1006,8 @@ theorem coupling_hidden (P : Parameters) {u : ProtocolState P} {t : ComposedStat
       exact ⟨Ω, hrel, Or.inl hs⟩
 
 /-- The matching at the system level: a hidden sub-protocol label is silent in both systems, and
-every other label is answered on the nose or by unchanged. A hidden label is never `τ`, so the
-standing-still answer arises only under `τ`, where the reflexivity of `weakTau` discharges it. -/
+every other label is matched on the nose or by unchanged. A hidden label is never `τ`, so the
+standing-still case arises only under `τ`, where the reflexivity of `weakTau` discharges it. -/
 theorem coupling_step (P : Parameters) {u : ProtocolState P} {t : ComposedState P}
     (hR : ProtocolRelation P u t) {l : Label P.n} {μ : PMF (ProtocolState P)}
     (h : (protocol P).step u l μ) :

@@ -450,7 +450,7 @@ theorem Invariant.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
     rcases hI.flip_grade2Lock r' h with hg | hd
     · left; rw [hGradeeq]; exact hg
     · right
-      exact DissentWitness.transport (hBindeq r') (hBindeq (r' - 1))
+      exact DissentWitness.preserved (hBindeq r') (hBindeq (r' - 1))
         (fun h => (hGradeeq (r' - 1)) ▸ h) (fun id' => (hCprocs id').1) hd
   · intro id' hmem hin r'
     rw [(hCprocs id').1] at hin; exact hI.idle_no_wccCall id' (hCF ▸ hmem) hin r'
@@ -474,13 +474,13 @@ theorem Invariant.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
     rw [hGradeeq]
     rcases hI.retG_witness r' id' (hCF ▸ hmem) hp' with hg | hd
     · left; exact hg
-    · right; exact DissentWitness.transport (hBindeq r') (hBindeq (r' - 1))
+    · right; exact DissentWitness.preserved (hBindeq r') (hBindeq (r' - 1))
         (fun h => (hGradeeq (r' - 1)) ▸ h) (fun id' => (hCprocs id').1) hd
   · intro r' id' hmem hcalled
     rcases hI.wccCalled_witness r' id' (hCF ▸ hmem) hcalled with hg | hd
     · left; rw [hGradeeq]; exact hg
     · right
-      exact DissentWitness.transport (hBindeq r') (hBindeq (r' - 1))
+      exact DissentWitness.preserved (hBindeq r') (hBindeq (r' - 1))
         (fun h => (hGradeeq (r' - 1)) ▸ h) (fun id' => (hCprocs id').1) hd
   · intro r' h
     rw [hBindeq] at h

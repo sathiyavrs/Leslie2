@@ -329,7 +329,7 @@ theorem composedHidden_of_tau (P : Parameters) {q : ComposedState P}
 
 /-! ## Runs of the graded-agreement family
 
-Three transitions of the implementation are answered by two transitions of the composed system: the
+Three transitions of the implementation are matched by two transitions of the composed system: the
 return-then-call step by the hidden events `firstGatherReturn` and `secondGatherCall`, the graded
 return by the hidden event `secondGatherReturn` and the visible `retG`, and a delivery completing a
 receipt quorum by the hidden events `deliver` and `inputBroadcastRet` (or `bindRet`). The builders
@@ -372,7 +372,8 @@ theorem composedHidden_weakTau (P : Parameters) {G G' : ℕ → GBCA.ByAFW.Round
 
 /-- **A visible label the graded-agreement family answers by a run** and the three other components
 by one transition each is a weak transition of the composed group. The oracle's successor is left
-free, so the resulting distribution has the shape a probabilistic answer consumes. -/
+free, so the resulting distribution has the shape the matching clause of a probabilistic
+forward simulation consumes. -/
 theorem composedHidden_weakStep (P : Parameters) {G G' : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n}
     {C C' : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A A' : ABANetworkState P.n}
     {o : ℕ → WCC.SpecState P.n} {ν : PMF (ℕ → WCC.SpecState P.n)} {l : Label P.n}

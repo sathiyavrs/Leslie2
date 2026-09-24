@@ -282,7 +282,7 @@ inductive Algorithm (P : Parameters) (r : ℕ) :
 /-! ### The composition's transitions are the algorithm's
 
 Every transition of the round's composition is one transition of the algorithm at the same state,
-and the correspondence is strong — one step answers one step, at the specification label the
+and the correspondence is strong — one step matches one step, at the specification label the
 interface label projects to, with no stuttering anywhere:
 
 | the composition | the algorithm |

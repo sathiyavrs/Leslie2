@@ -27,11 +27,11 @@ the view after the transition as the view before it with the composed round's ow
 written through the updaters `GBCA.ByAFW.setPrograms`, `GBCA.ByAFW.setBound`,
 `GBCA.ByAFW.setFirstGather`, `GBCA.ByAFW.setSecondGather`, `Gather.setGatherTier`,
 `Gather.setInputBroadcasts`, `Gather.setBindBroadcasts` and `Gather.setCore` exactly as the
-composed transitions write them. Three transitions are answered by two events of the composed
+composed transitions write them. Three transitions are matched by two events of the composed
 round, through a named intermediate state: `RoundProjectionStep/ReturnThenCall.lean` holds two of
 them and `RoundProjectionStep/Delivery.lean` the third.
 `RoundProjectionStep/ProtocolRelationConjuncts.lean` holds the two conjuncts of
 `AFW.ProtocolRelation` that no frame lemma supplies.
-`ABA/AFW/SimulationOfEachTransition.lean` answers each transition of the implementation from
+`ABA/AFW/SimulationOfEachTransition.lean` matches each transition of the implementation from
 these.
 -/

@@ -11,8 +11,9 @@ import Leslie2Protocols.ABA.Composition.Hybrid
 # `Invariant` across the graded-agreement `τ` transitions of `hybrid`
 
 `Invariant.step_gbcaTau`, preservation of `Invariant` at `bindUnset`, the GBCA family's only
-genuine `τ`-step, which excludes one bit of round `r`'s exclusion set. The value-transport corners
-lean on the exclusion's own D15 guard: the spared bit `!b` keeps `f + 1` F-blind call support at
+genuine `τ`-step, which excludes one bit of round `r`'s exclusion set. The corners that carry a
+value across lean on the exclusion's own D15 guard: the spared bit `!b` keeps `f + 1` F-blind
+call support at
 round `r`, whose derived correct caller determines `!b` at every standing commitment.
 `down_settled`'s round-`r` corner needs "a call at round `r` implies current round `≥ r`", a fact
 `Invariant` does not carry explicitly, and is handed off.
@@ -285,7 +286,7 @@ theorem Invariant.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
       rw [hGradeeq] at h ⊢
       exact hI.grade0Lock_chain r' h
     · intro id b' h; rw [hCalleq] at h; exact hI.input_gbcaRound0_permanent id b' h
-    · -- `flip_grade2Lock`: `grade` and every residue component are monotone-transported
+    · -- `flip_grade2Lock`: `grade` and every residue component are preserved monotonically
       intro r' h
       rcases hI.flip_grade2Lock r' h with hg | hd
       · left; rw [hGradeeq]; exact hg

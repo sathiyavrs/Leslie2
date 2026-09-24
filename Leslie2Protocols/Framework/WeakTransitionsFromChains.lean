@@ -12,7 +12,7 @@ import Leslie2Protocols.Framework.FamilySimulation
 `Framework/FamilySimulation.lean` builds the two smallest weak runs by hand: the
 single external step (`System.weakLStep_of_step`) and the two-step run
 (`weakLStep_tauThen`). Simulations whose abstract system must fire several
-internal transitions before answering — a chain of Byzantine call registrations, a
+internal transitions before the matching step — a chain of Byzantine call registrations, a
 core bind, then the return — need runs of unbounded length. This file
 supplies them:
 

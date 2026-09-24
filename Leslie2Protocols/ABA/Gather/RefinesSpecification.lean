@@ -16,7 +16,7 @@ specification read over the instance's interface, along `Gather.SpecificationRel
 (`ABA/Gather/SpecificationRelation.lean`).
 
 A transition of the instance is one transition of `AlgorithmOverBroadcastSpecification`
-(`Gather.instanceOverBroadcastSpecification_step_algorithm`), the transition is answered by a weak
+(`Gather.instanceOverBroadcastSpecification_step_algorithm`), the transition is matched by a weak
 run of the gather specification (`specificationRelation_transition`), and that run is lifted to the
 interface along a section of `specificationLabelMap` -- which is where the call loop is answered by
 the specification's own loop. `instanceOverBroadcastSpecification_refines` is the trace-distribution
@@ -47,10 +47,10 @@ the return.
   coordinate whose committed payload lies above the core and below the returned
   map.
 
-The step-level transports beside the refinement export the relation across one transition, for the
-systems that replay the gather instance's transitions inside a larger algorithm:
+Two lemmas beside the refinement hold the relation across one transition:
 `specificationRelation_call` for the fused effects of a call and `specificationRelation_tau` for an
-internal transition under a stuttering specification.
+internal transition under a stuttering specification. `specificationRelation_transition` is
+assembled from the two.
 
 ## The call records
 
@@ -71,7 +71,7 @@ variable {X : Type} [DecidableEq X] {P : Parameters}
 The specification's committed entries are written one at a time, by a chain of
 `commit` steps folded over a list of processes; `commitOne` commits one entry of
 the returned map if it is not committed yet, and `commitList` folds it. The
-chain is prepended to the answering weak step by recursion with
+chain is prepended to the matching weak step by recursion with
 `weakLStep_tauCons`. -/
 
 section Run
@@ -244,7 +244,7 @@ private theorem commitList_covers :
     · exact commitList_val_mono g l _ (commitOne_covers g hx (fun y hy => hpre k y x hx hy))
     · exact commitList_covers l (commitOne g k₀ t) hpre' k hk' x hx
 
-/-- Prepend the commit chain to an answering weak step. -/
+/-- Prepend the commit chain to a matching weak step. -/
 private theorem weakLStep_after_commits {l₀ : Label P.n X} {t' : SpecState P.n X} :
     ∀ (l : List (Fin P.n)) (t : SpecState P.n X),
       (∀ k ∈ l, ∀ x, g k = some x → t.val k = none → k ∈ t.F ∨ t.call k = some x) →
@@ -334,7 +334,7 @@ end Run
 
 /-! ### The return run, as data
 
-The whole return answer of the refinement, packaged as a τ-chain of
+The whole matching run of a return, packaged as a τ-chain of
 specification steps with the return guards at its end and the relation restored
 across the pair of return effects — the shape a larger system that embeds the
 gather specification's transitions can replay without re-proving the run. -/
@@ -497,10 +497,9 @@ theorem retRun {s : StateOverBroadcastSpecification P.n X} {t : SpecState P.n X}
       exact hrel _ rfl rfl rfl (fun _ _ h => h) hlastcore hcnt
 
 
-/-! ### Step-level relation transports
+/-! ### The relation across the internal and the call transitions
 
-The relation across one embedded transition, exported for systems that replay
-the gather transitions inside a larger algorithm. -/
+The two lemmas `specificationRelation_transition` is assembled from. -/
 
 /-- The relation across the fused call: the gather record, the input instance
 and the specification all record the payload. -/
@@ -676,9 +675,9 @@ theorem specificationRelation_tau {s s' : StateOverBroadcastSpecification P.n X}
 /-! ### The relation across one transition -/
 
 /-- **The relation across one transition**: every transition of
-`AlgorithmOverBroadcastSpecification` at a related pair is answered by a weak run of the gather
-specification, and the answer is again related. Internal transitions stutter; the four call
-transitions and `fail` are answered by the specification's own transitions; a return is answered by
+`AlgorithmOverBroadcastSpecification` at a related pair is matched by a weak run of the gather
+specification, ending at a related state. Internal transitions stutter; the four call
+transitions and `fail` are matched by the specification's own transitions; a return is matched by
 the run `commit* ; bindCore? ; ret`. -/
 theorem specificationRelation_transition (P : Parameters) (X : Type) [DecidableEq X]
     (q₁ : StateOverBroadcastSpecification P.n X) (q₂ : SpecState P.n X)
@@ -822,7 +821,7 @@ theorem specificationRelation_transition (P : Parameters) (X : Type) [DecidableE
 broadcast specifications forward-simulates the gather specification read over
 the instance's interface. A transition of the instance is one transition of
 `AlgorithmOverBroadcastSpecification` (`Gather.instanceOverBroadcastSpecification_step_algorithm`),
-that transition is answered by a weak run of the specification (`specificationRelation_transition`),
+that transition is matched by a weak run of the specification (`specificationRelation_transition`),
 and that run is lifted to the interface along a section of `specificationLabelMap`. -/
 theorem refinesSpecification (P : Parameters) (X : Type) [DecidableEq X] :
     ForwardSimulation (instanceOverBroadcastSpecification P X)

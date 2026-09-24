@@ -8,6 +8,6 @@
 
 \begin{proof}\leanok
   \uses{def:idle-family, def:forwardsim}
-  The one obligation is transporting the abstract system's weak answers from $L$ to $L'$, and no section of $\varphi$ is required for it: the witness execution is relabelled per transition, its silent transitions to $\tau'$ and its single external transition --- when there is one --- to the delegating label, using that every non-silent label of a terminating run occurs in its trace.
-  A silent answer relabels to a silent answer, and an idle self-loop is answered by the single external step the read-back adds.
+  The one obligation is reading the abstract system's matching weak transitions from $L$ over $L'$, and no section of $\varphi$ is required for it: the witness execution is relabelled per transition, its silent transitions to $\tau'$ and its single external transition --- when there is one --- to the delegating label, using that every non-silent label of a terminating run occurs in its trace.
+  A silent matching run relabels to a silent matching run, and an idle self-loop is matched by the single external step the read-back adds.
 \end{proof}

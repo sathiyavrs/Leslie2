@@ -191,8 +191,8 @@ things follow. It discharges the guard `(!bnd) ∈ excluded` of a return that
 announces a bit already on record, and with `exclusion_certificate` it gives
 `SpecificationRelation.bound_certificate`: the bit on record carries an exclude certificate for its
 complement. Each return transition therefore splits on `bound`: with a bit on record
-the guard is discharged and the transition answers with `ret` alone, and with the field
-unwritten `excluded` is empty and the transition answers with the two-step run.
+the guard is discharged and the transition is matched by `ret` alone, and with the field
+unwritten `excluded` is empty and the transition is matched by the two-step run.
 
 ## The exclude certificates
 
@@ -347,7 +347,7 @@ carriers:
 ## Exclusion scheduling and run shapes
 
 The specification excludes by an internal τ-transition, so an implementation
-return that needs a not-yet-excluded bit excluded is answered by a two-step weak
+return that needs a not-yet-excluded bit excluded is matched by a two-step weak
 run through `weakLStep_tauThen`. **Every** return transition does the same decidable
 case split on the specification's `excluded`, and the run is enabled whenever
 the exclusion is missing, whatever returns came before. Every run carries
@@ -406,12 +406,12 @@ theorem excluded_empty_of_both {d : Finset Bool} {v : Bool}
 so the call sites read `excludeThenRetGrade2_run hq hw hlive (excluded_empty_of_both
 hlive hexcluded) hgr hret`, and likewise for `retGrade1`. The `retGrade0` transition splits on
 `Finset.eq_empty_or_nonempty t.excluded` outright, so its empty branch *is* `hd0`
-and its nonempty branch answers with a single `Step.retGrade0`.
+and its nonempty branch is matched by a single `Step.retGrade0`.
 
 ### Which bit the grade-0 return excludes
 
 `retGrade0` fires the run only from `t.excluded = ∅` (otherwise `1 ≤ t.excluded.card` already holds
-and a single `Step.retGrade0` answers). The excluded bit is `b* := Classical.choose
+and a single `Step.retGrade0` is the matching step). The excluded bit is `b* := Classical.choose
 (exclusionCertificate_of_echo5Bot_quorum …)` — the certified bit its evidence names: the opposite of
 the unique bit voted by a correct process when one exists (Case A branch), and canonically `false`
 in the neither-bit-decidable case (Case B branch, where both bits are certified and the choice is
@@ -423,7 +423,7 @@ certified, hence never picked.
 
 ### The matching table
 
-| implementation transition | label | spec answer | relation obligations beyond `Invariant.step` |
+| implementation transition | label | matching specification run | relation obligations beyond `Invariant.step` |
 |---|---|---|---|
 | `call` | `callG r id b` | `Step.call` (guard via `call_eq`) | `call_eq`/`ret_eq` re-pointwise; `exclusion_certificate` by `ExclusionCertificate.mono` (input write only); grade evs untouched |
 | `callLoop` | `callG r id b` | `Step.callLoop` | all fields unchanged |
@@ -658,7 +658,7 @@ per-sender sent sets and the corrupted set — and `RoundState.echo5Count` reads
 receiving program's received sets directly. So `refinesSpecification` runs in two halves: the
 characterisation `composition_projects` (`ABA/GBCA/ABDY/Algorithm.lean`) matches every transition of
 the round's composition with the algorithm's at that same state, one step for one step, and the
-matching `specificationRelation_transition` answers it, its weak answer read back at the round
+matching `specificationRelation_transition` gives the weak run of the specification, read back at the round
 instance's interface — which is what licenses replacing a round's instance by the graded agreement
 specification.
 

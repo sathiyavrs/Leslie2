@@ -111,7 +111,7 @@ variable {P : Parameters}
 
 /-- `f + 1` F-blind genuine-holder support for `b` (D15): the composed state's counterpart of the
 spec guards' InputSupport counts — the simulation relation of
-`GBCA/ABDY/SpecificationRelation.lean` transports the count to the specification along
+`GBCA/ABDY/SpecificationRelation.lean` reads the count at the specification along
 `call_eq`/`F_eq`. -/
 def InputSupport (P : Parameters) (s : RoundState P.n) (b : Bool) : Prop :=
   P.f + 1 ≤ (Finset.univ.filter

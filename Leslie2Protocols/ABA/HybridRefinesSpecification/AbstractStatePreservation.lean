@@ -31,7 +31,7 @@ variable {P : Parameters}
 
 /-! ### Stage C: `AbstractState` preservation for the stutter transitions
 
-Every one of `hybrid_step_tau`'s six disjuncts is answered by a stutter: the abstract state is
+Every one of `hybrid_step_tau`'s six disjuncts is matched by a stutter: the abstract state is
 untouched by every hidden transition and only moves at the visible ones
 (`callABA`/`retABA`/`fail`), handled in `HybridRefinesSpecification/Simulation.lean`. All six
 lemmas below are instances of a single frame argument: `AbstractState` inspects only `F`, the

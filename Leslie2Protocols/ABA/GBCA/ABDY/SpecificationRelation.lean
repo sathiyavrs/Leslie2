@@ -49,11 +49,11 @@ input (`input_called`, D8) — that is the quorum guard (`quorum_of_messageQuoru
 feeds `Invariant.support_of_input_receipts` for the `f + 1` InputSupport count (D15). At the grade-0
 return the guards read the returner's own `|Valid| > 1` evidence instead
 (`inputSupport_of_bothValid` closes both bits at once), so they are available whichever bit the
-certificate names. `SpecificationRelation.callSupport` transports the counts to the specification
+certificate names. `SpecificationRelation.callSupport` reads the counts at the specification
 along `call_eq`/`F_eq`.
 
 The specification excludes a bit by the internal τ-transition `bindUnset`, so a return of the
-algorithm that needs a not-yet-excluded bit excluded is answered by a
+algorithm that needs a not-yet-excluded bit excluded is matched by a
 two-step weak run (`weakLStep_tauThen`; `excludeThenRetGrade2_run`,
 `excludeThenRetGrade1_run`, `excludeThenRetGrade0_run`).
 -/
@@ -228,7 +228,7 @@ theorem inputSupport_of_bothValid {s : RoundState P.n} (hI : Invariant P s)
   exact hI.support_of_input_receipts
     (le_trans (by omega) (RoundState.bothValid_le hv b))
 
-/-- Transport an implementation support count to the specification along `call_eq`/`F_eq`: the spec
+/-- An implementation support count, read at the specification along `call_eq`/`F_eq`: the spec
 guards' InputSupport counts (D15). -/
 theorem SpecificationRelation.callSupport {s : RoundState P.n} {t : SpecState P.n}
     (hR : SpecificationRelation P s t) {b : Bool} (h : InputSupport P s b) :
@@ -303,7 +303,7 @@ theorem grade_ne_true_of_echo5Bot_quorum {s : RoundState P.n} {t : SpecState P.n
   rw [e1] at e2
   exact absurd (Option.some.inj e2) (by simp)
 
-/-! ### Answering a return by an exclusion run -/
+/-! ### Matching a return by an exclusion run -/
 
 /-- A `Finset Bool` that omits both `v` and `!v` omits everything. -/
 theorem excluded_empty_of_both {d : Finset Bool} {v : Bool}

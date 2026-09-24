@@ -15,17 +15,17 @@ the round's interface (`GBCA.specificationOverRoundAlphabet`), along `specificat
 (`ABA/GBCA/ABDY/SpecificationRelation.lean`).
 
 A transition of the composition is one transition of `Algorithm`
-(`GBCA.ByABDY.composition_projects`), that transition is answered by a weak run of the
+(`GBCA.ByABDY.composition_projects`), that transition is matched by a weak run of the
 specification (`specificationRelation_transition`), and the run is lifted to the round's interface
 along a section of `specificationLabelMap` — which is where a Byzantine handshake transition is
 answered by the specification's own call or return (D11). `composition_specificationTraces` is the
 trace-distribution inclusion the simulation yields.
 
 Every return of the algorithm does the same decidable case split on the specification's `excluded`.
-Where the exclusion is missing, the return is answered by the two-step weak run of
+Where the exclusion is missing, the return is matched by the two-step weak run of
 `GBCA/ABDY/SpecificationRelation.lean`, whose excluded bit comes from the return's own exclude
-certificate; where the exclusion is on record, the return is answered by a single graded
-specification return. A `fail` is answered by the specification's corruption, and
+certificate; where the exclusion is on record, the return is matched by a single graded
+specification return. A `fail` is matched by the specification's corruption, and
 `specificationRelation_corrupt_F_eq` keeps the two `corrupt` functions equal on aligned
 corrupted sets.
 
@@ -52,9 +52,9 @@ variable {P : Parameters}
 /-! ### The relation across one transition -/
 
 /-- **The relation across one transition**: every transition of `Algorithm` at a related
-pair is answered by a weak run of the graded agreement specification, and the answer is again
-related. The internal transitions stutter; the call, the call loop and `fail` are answered by the
-specification's own transitions; a return is answered by a graded specification return, preceded by
+pair is matched by a weak run of the graded agreement specification, ending at a related
+state. The internal transitions stutter; the call, the call loop and `fail` are matched by the
+specification's own transitions; a return is matched by a graded specification return, preceded by
 `bindUnset` where the bit that return needs excluded is not excluded yet. -/
 theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundState P.n)
     (q2 : SpecState P.n) (hR : specificationRelation P r q1 q2) (l : Label P.n)
@@ -577,12 +577,12 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundS
 
 /-! ### The refinement
 
-The composition's answer to a transition is the algorithm's answer, read through
+The matching run for a transition of the composition is the algorithm's own, read through
 `specificationRelation_transition`: the projection `composition_projects` is strong and functional,
 so one step of the composition costs one step of the algorithm and nothing of the matching is
-reproved here. The specification's weak answer is finally lifted to the round's interface along a
-section of `specificationLabelMap`. This is where a Byzantine handshake transition is answered by
-the specification's own call or return (D11). -/
+reproved here. The specification's matching weak run is finally lifted to the round's interface
+along a section of `specificationLabelMap`. This is where a Byzantine handshake transition is
+answered by the specification's own call or return (D11). -/
 
 /-- **The refinement of the round's graded-agreement composition**: the round-`r` composition is
 forward simulated by the graded agreement specification, read over the round's interface. -/

@@ -28,7 +28,7 @@ trace distribution:
 * `safety_transfer` — trace-support safety transfers along
   `achievableTraceDists ⊆`.
 
-It also carries the label transport of a run: `AlterSeq.mapLabels g` rewrites the labels of a run in
+It also carries the relabelling of a run: `AlterSeq.mapLabels g` rewrites the labels of a run in
 place, leaving its states — and therefore its termination, its `stateAt` and its `endState` — alone.
 A run of `sys` is a run of `sys'` once `g` turns every step of the one into a step of the other
 (`is_partial_exec_mapLabels`), and its trace is the original trace relabelled whenever `g` preserves
@@ -137,8 +137,8 @@ theorem AlterSeq.endState_mapLabels {S L L' : Type} (g : L → L') (e : AlterSeq
   rw [hfind, AlterSeq.stateAt_mapLabels, AlterSeq.stateAt_find_eq_endState e h] at h1
   exact (Option.some.inj h1).symm
 
-/-- Transport a partial execution along a label map that turns every step of
-`sys` into a step of `sys'`. -/
+/-- The image of a partial execution under a label map that turns every step of
+`sys` into a step of `sys'` is a partial execution of `sys'`. -/
 theorem is_partial_exec_mapLabels {S L L' : Type} {sys : System S L} {sys' : System S L'}
     (g : L → L') (hg : ∀ s l μ, sys.step s l μ → sys'.step s (g l) μ)
     {e : AlterSeq S L} (hpe : is_partial_exec e sys) :
@@ -271,7 +271,7 @@ theorem is_exec_of_probOf_ne_zero
   obtain ⟨s₀, tr⟩ := e
   have h_ofList : Seq.ofList (tr.toList hFin) = tr := Seq.ofList_toList tr hFin
   constructor
-  · -- partial-execution component, transported from the `ofList` form
+  · -- partial-execution component, read off the `ofList` form
     have h_ne : pe.probOf ⟨s₀, Seq.ofList (tr.toList hFin)⟩
         (Seq.terminates_ofList _) ≠ 0 := by
       rw [pe.probOf_congr ⟨s₀, Seq.ofList (tr.toList hFin)⟩ ⟨s₀, tr⟩

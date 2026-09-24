@@ -167,7 +167,7 @@ It is in \leanmodule{Leslie2Protocols/Framework/Congruence}.
 A system is often written with a state component that no transition's firing depends on, carried so that an invariant can be stated over it, and read at most to decide a value a step announces.
 A component of that kind is an auxiliary variable in the sense of Abadi and Lamport~\cite{AL91}, and erasing it must leave the observable behaviour untouched.
 The definition below states that for systems whose steps are distributions.
-One clause projects every step of the system carrying the component onto a step of the system without it, on the same label; a second answers every step of the system without the component by a step of the system carrying it that projects back onto it.
+One clause projects every step of the system carrying the component onto a step of the system without it, on the same label; a second matches every step of the system without the component by a step of the system carrying it that projects back onto it.
 The two together give equality of achievable trace distributions, where a simulation alone gives an inclusion.
 The clauses are the functional matching of Lemma~\ref{def:strongfunctional} and its converse, so the equality rests on Theorem~\ref{thm:forward-sound} and on nothing further.
 Congruences carry an erasure through parallel composition, abstraction and restriction, so it composes as a simulation does, and the case study uses it in exactly that way.
@@ -372,7 +372,7 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
     Under Transition System~6 a correct call fixes every return, where Bracha's rounds with the leader corrupted after its $\mathrm{INIT}$ can deliver another value until some correct process holds an $\mathrm{ECHO}$ quorum, so that specification would exclude its own implementation under D1; the split closes the window at the commit, a leader corrupted after its call may commit any value, and Validity holds at a never-corrupted leader, as the property states it.
     Following Transition System~6 would exclude executions of Bracha's rounds.
   \item D28: an implementation fuses a sub-protocol's call and return into the transitions of the caller, where~\cite{LeslieBP} carries each of them as a transition of its own.
-    Three transitions of the gather-based implementation fuse that way, and the composed system answers each by a run of two events: the return-then-call transition is the first gather's return and the second gather's call, the graded return is the second gather's return and the round's own, and a delivery completing a receipt quorum is a broadcast instance's delivery and its return.
+    Three transitions of the gather-based implementation fuse that way, and the composed system matches each by a run of two events: the return-then-call transition is the first gather's return and the second gather's call, the graded return is the second gather's return and the round's own, and a delivery completing a receipt quorum is a broadcast instance's delivery and its return.
     A fused transition is one transition of the implementation and two of the composed system, which is why the simulation between them concludes in a run rather than in a step.
     A program of the implementation takes one transition per statement of the pseudocode, and the statement that returns from one instance and calls the next is one statement, where the composed system takes one event per component.
     Separating each fused transition into two transitions of the program adds an intermediate phase to the program's record and a view lemma per new transition, and turns the two-event runs of the simulation into steps.
@@ -781,7 +781,7 @@ Binding is a claim about the extensions of an execution, and an inclusion of tra
 distributions carries claims about labels; with the bit on the label the claim
 reads on a single trace --- the round-$r$ returns of the trace name one bit, and
 each of them that hands out a value hands out that bit --- and every step of a
-refinement chain then transports it with no further argument.
+refinement chain then carries it with no further argument.
 The announcement adds no power to the scheduler.
 The bit is a ghost output: no program reads it and no transition's firing turns on it,
 and a round that hands out no value ends with grade-0 returns alone which name
@@ -1005,7 +1005,7 @@ Each list enters the argument at a named point.
 Each is one automaton read on the pair of components that hold its own state.
 The graded-agreement round's list of transitions is read on the $n$ round records beside the
 round's network state, which is the state one round instance runs on, and
-that is how the refinement proved of it transports
+that is how the refinement proved of it is carried up
 (Theorem~\ref{thm:aba-gbca-composition-by-abdy-refines-specification}).
 The round loop's list of transitions is read on the round-loop records beside the DECIDED
 network, which is the state the core simulation's relation is defined on
@@ -1720,8 +1720,8 @@ Definitions~\ref{def:aba-programs} and~\ref{def:aba-network} write the same tran
 \subsection{The refinements}
 
 Graded agreement is carried to implementation level, and the work that carries the direct implementation is done once, on one round instance.
-Everything after it transports that single result: first to the round instance of the protocol, then to the family of rounds, and then into the composed system.
-The gather-based implementation is carried by the refinements of Section~\ref{sec:aba-gather}, transported the same way.
+Everything after it carries that single result: first to the round instance of the protocol, then to the family of rounds, and then into the composed system.
+The gather-based implementation is carried by the refinements of Section~\ref{sec:aba-gather}, the same way.
 See \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Invariant},
 \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/ExclusionCertificate},
 \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/SpecificationRelation},
@@ -1733,7 +1733,7 @@ See \leanmodule{Leslie2Protocols/ABA/GBCA/ABDY/Invariant},
 \blueprintfig{fig-gbca-sim}{The forward simulation \leandecl{PLTS.ABA.GBCA.ByABDY.refinesSpecification} of the round's composition, along the relation \leandecl{PLTS.ABA.GBCA.ByABDY.specificationRelation}: the algorithm's transitions above, specification-instance states below, dashed verticals the relation.
 The call, the network deliveries (including Byzantine injection), and the graded returns align to the specification's $\mathrm{call}$, its stutter, and its graded returns, with $F$ aligned in both systems.
 Every delivery, relay, echo, vote, bind and echo5 transition maps to a specification stutter, and the call maps to the specification call.
-A return whose bit the specification has not yet excluded is answered by a weak run: it maps to the weak step $\mathrm{bindUnset};\mathrm{ret}$, whose $f{+}1$ support is supplied by the $input\_support$ invariant and whose excluded bit is supplied by the return's own exclusion certificate.
+A return whose bit the specification has not yet excluded is matched by a weak run: it maps to the weak step $\mathrm{bindUnset};\mathrm{ret}$, whose $f{+}1$ support is supplied by the $input\_support$ invariant and whose excluded bit is supplied by the return's own exclusion certificate.
 Every return does the same case split on $excluded$, grade-0 returns included, however many returns preceded it; a return whose exclusion has already happened maps to a single graded specification return.
 The relation also reads $excluded$ off the network state's bound bit: empty while the bit is unwritten, and the singleton of the bit's complement once a return has written it.}
 
@@ -1789,14 +1789,14 @@ Its relation is defined on the state of $\mathrm{hybrid}(P)$ itself, where the r
 
 \input{nodes/thm-aba-hybrid-spec}
 
-\blueprintfig{fig-coresim}{The simulation of Theorem~\ref{thm:aba-hybrid-spec}, \leandecl{PLTS.ABA.hybridRefinesSpecification}: the two-phase abstract state, its stutter answering every concrete transition --- the coin's resolving call, the one probabilistic transition among them, included --- under a constant coupling, and the single \leandeclnamed{decide}{PLTS.ABA.SpecStep.decide} step that leads the first $\mathrm{retABA}$, the two together forming one weak step.}
+\blueprintfig{fig-coresim}{The simulation of Theorem~\ref{thm:aba-hybrid-spec}, \leandecl{PLTS.ABA.hybridRefinesSpecification}: the two-phase abstract state, its stutter matching every concrete transition --- the coin's resolving call, the one probabilistic transition among them, included --- under a constant coupling, and the single \leandeclnamed{decide}{PLTS.ABA.SpecStep.decide} step that leads the first $\mathrm{retABA}$, the two together forming one weak step.}
 
 \dynamics{What the simulation buys}{%
 The abstract state of a state of the hybrid is lazy.
-Every hidden transition is answered by a stutter: the handshakes, the internal steps
+Every hidden transition is matched by a stutter: the handshakes, the internal steps
 of the sub-protocol specifications, and the delivery and echo of DECIDED all
 leave the abstract state where it was.
-The coin's resolving call is answered the same way, under the constant
+The coin's resolving call is matched the same way, under the constant
 coupling that sends every outcome of the draw to the one unchanged abstract state, so the
 abstract state never fires its own coin transition.
 The entire decision is deferred to the first visible return, where a single
@@ -1996,7 +1996,7 @@ The commit split of D26 is the per-entry form of the same reading.
 The implementation is a composition: $n$ gather programs beside the gather network, which holds the core, in parallel with $2n$ reliable-broadcast instances read along pullbacks naming them, the instance's own events hidden.
 A program keeps its own record of what the broadcast instances have returned to it, written on the return events, and its guards read that record and nothing of any other component.
 The implementation is verified in two substitutions.
-The gather-over-broadcast tier places the $2n$ broadcast specifications in the broadcast slots and is carried to Transition System~4 by the core refinement, whose returns are answered by one weak run --- the abstract commits, the write of the core where the specification holds none, the return --- with the core read off the gather network's own state.
+The gather-over-broadcast tier places the $2n$ broadcast specifications in the broadcast slots and is carried to Transition System~4 by the core refinement, whose returns are matched by one weak run --- the abstract commits, the write of the core where the specification holds none, the return --- with the core read off the gather network's own state.
 The fully concrete tier places a Bracha instance in each slot and is carried to the previous one by congruence, the broadcast refinement lifted along the pullback naming each instance and through the operators the instance is built from.
 See \leanmodule{Leslie2Protocols/ABA/Gather/Specification},
 \leanmodule{Leslie2Protocols/ABA/Gather/SpecificationSafety},
@@ -2040,7 +2040,7 @@ Both gathers are the binding form (D33).
 The refinement into Transition System~2 is counting on the two cores, each written once.
 A returned map carrying a value on all but $f$ entries makes the core the return carries do the same; a core carrying one value on at least $|S| - f$ entries leaves every other value at most $f$ entries on it, its $\ge n - f \ge 2f + 1$ entries admitting one value on all but $2f$, which is at once the uniqueness of the grade-1 bit and the grade-2 / grade-0 exclusivity of the grade guard.
 The round's bound bit is the bit the first core carries on at least $|S| - f$ entries, written by the round's own network at the first gather's first return and announced by every graded return (D29).
-The exclusion certificate --- the first core carrying the excluded bit on fewer than $|S| - f$ entries --- stands from the moment the core is written, so the specification's monotone $excluded$ is certified with no relay machinery, and the exclusion-on-demand discipline of the direct implementation's refinement carries over unchanged: a return needing an exclusion the specification does not yet hold is answered by the run $\mathrm{bindUnset}; \mathrm{ret}$, whose excluded bit is the complement of the bit the return announces.
+The exclusion certificate --- the first core carrying the excluded bit on fewer than $|S| - f$ entries --- stands from the moment the core is written, so the specification's monotone $excluded$ is certified with no relay machinery, and the exclusion-on-demand discipline of the direct implementation's refinement carries over unchanged: a return needing an exclusion the specification does not yet hold is matched by the run $\mathrm{bindUnset}; \mathrm{ret}$, whose excluded bit is the complement of the bit the return announces.
 See \leanmodule{Leslie2Protocols/ABA/GBCA/AFW/Counting},
 \leanmodule{Leslie2Protocols/ABA/GBCA/AFW/Components},
 \leanmodule{Leslie2Protocols/ABA/GBCA/AFW/Composition},
@@ -2070,9 +2070,9 @@ Each is a plain forward simulation, so the three compose.}
 
 \blueprintfig{fig-gather-sim}{The three tier simulations of one round, with the concrete transitions on the right and the relation dashed.
 Each stage idealises away one tier and holds the tiers above it equal.
-Under \leandecl{PLTS.ABA.GBCA.ByAFW.BroadcastSubstitutionRelation} every $\mathrm{ECHO}$, $\mathrm{VOTE}$ and delivery of a Bracha instance is answered by a stutter of the specification coordinate that replaces it.
-Under \leandecl{PLTS.ABA.GBCA.ByAFW.GatherSubstitutionRelation} gather's own transitions stutter in the same way, and a broadcast return, which writes a program's record, is answered by the specification's return.
-Under \leandecl{PLTS.ABA.GBCA.ByAFW.SpecificationRelation} the return transitions carry the refinement: a return whose bit the specification has not yet excluded is answered by the weak run $\mathrm{bindUnset};\mathrm{ret}$, and a return whose exclusion has already happened is a single graded return.
+Under \leandecl{PLTS.ABA.GBCA.ByAFW.BroadcastSubstitutionRelation} every $\mathrm{ECHO}$, $\mathrm{VOTE}$ and delivery of a Bracha instance is matched by a stutter of the specification coordinate that replaces it.
+Under \leandecl{PLTS.ABA.GBCA.ByAFW.GatherSubstitutionRelation} gather's own transitions stutter in the same way, and a broadcast return, which writes a program's record, is matched by the specification's return.
+Under \leandecl{PLTS.ABA.GBCA.ByAFW.SpecificationRelation} the return transitions carry the refinement: a return whose bit the specification has not yet excluded is matched by the weak run $\mathrm{bindUnset};\mathrm{ret}$, and a return whose exclusion has already happened is a single graded return.
 The round's own network is held equal by the two substitutions, and \leandecl{PLTS.ABA.GBCA.ByAFW.SpecificationRelation} holds $excluded$ equal to the complement of the bit standing there.}
 \input{nodes/thm-gbca-gather-refines}
 
@@ -2094,7 +2094,7 @@ And the composed system indexes the local states by instance and then by process
 And a program of the implementation takes one transition per thing it does, so the graded-agreement call broadcasts the input, the $\mathrm{BIND}$ send is a broadcast call, and the first gather's return to a process is that process's call of the second gather (D28), where the composed round takes two events for each; the implementation has no broadcast return either, a gather guard reading a $2f{+}1$ $\mathrm{VOTE}$ receipt quorum on the process's own local state in the instance where a composed program reads what the instance returned.
 None of the three loses anything, because every guard of the gather-based implementation reads the acting process's own local states and the networks, and the two transitions that read a network --- the adversary's delivery and its Byzantine injection --- belong to the adversary in either system.
 Assembling the composed state from the implementation's undoes all three: the local states are transposed back, each network's sent set is projected out of the tagged sent-set family, and what each instance returned to a program is read off its own local states in the broadcast instances as the values with a vote quorum there.
-That assembly is the simulation relation of Theorem~\ref{thm:aba-afw-protocol-composed}, which is a function rather than a correspondence --- the composed state is computed from the implementation's --- and the proof obligation of a transition is which of the six projections takes the message it sends; a fused transition is answered by a run of two events of the composed round, through a named intermediate state.
+That assembly is the simulation relation of Theorem~\ref{thm:aba-afw-protocol-composed}, which is a function rather than a correspondence --- the composed state is computed from the implementation's --- and the proof obligation of a transition is which of the six projections takes the message it sends; a fused transition is matched by a run of two events of the composed round, through a named intermediate state.
 The relation carries the broadcast invariant at every instance of the view, which identifies a returned value with the value a guard of the implementation names: two vote quorums at one process name one value.
 The adversary's ghost record is the third thing this instantiation supplies (D30): for each round, the two gathers' cores beside the round's bound bit, each written once.
 The return-then-call transition's broadcast of the candidate writes the first core, read off the projection of the tagged sent sets onto the first gather, and the bound bit as the bit that core carries on at least $|S| - f$ entries; a graded return writes the second core the same way and fires only with the bit its label carries equal to the one on record.

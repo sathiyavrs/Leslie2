@@ -73,7 +73,7 @@ specification's commit guard `k ∈ F ∨ call k = some x`. If the specification
 
 **The constraint.** `Gather.SpecificationRelation.call_eq : ∀ k, t.call k = (inputBroadcasts s
 k).input`. The specification's call record and an input instance's record move on the same interface
-labels under the same write-once guard, so `specificationRelation_transition` answers
+labels under the same write-once guard, so `specificationRelation_transition` matches
 `callProgramLoop` with `Gather.Step.call` and `callSpecificationLoop` with `Gather.Step.callLoop`.
 `Gather.Conformance` carries
 no clause on the two records; `specificationRelation_call` takes both guards. The permissiveness

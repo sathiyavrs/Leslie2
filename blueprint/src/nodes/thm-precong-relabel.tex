@@ -8,7 +8,7 @@
 \begin{proof}\leanok
   \uses{def:relabel, def:weakstep, def:weaktau}
   The initial condition is unchanged, restriction not touching initial states.
-  A transition of $\mathrm{relabel}(sys_C)$ on $l$ is a transition of $sys_C$ on $\mathrm{inl}\,l$, which $R$ answers by a weak transition of $sys_A$; what has to be transported is the witness of that weak transition, a scheduler whose emissions are typed by the label type that has changed.
-  Ask the witness about the prefix read on the extended alphabet and read its answer back along the map sending $\mathrm{inl}\,l$ to $l$ and every auxiliary label to $\tau$: the transported scheduler is valid, emits $\tau$ alone, and carries the original's mass on each emission and the original's halting mass, the auxiliary preimages of a base label all carrying mass $0$.
-  The two weak transitions therefore have the same source and the same target distribution, the coupling is the one $R$ provides, and the case split between a silent and a visible answer transports as it stands, $\mathrm{inl}\,\tau$ being the silent label of the extended alphabet.
+  A transition of $\mathrm{relabel}(sys_C)$ on $l$ is a transition of $sys_C$ on $\mathrm{inl}\,l$, which $R$ matches by a weak transition of $sys_A$; what has to be relabelled is the witness of that weak transition, a scheduler whose emissions are typed by the label type that has changed.
+  Ask the witness about the prefix read on the extended alphabet and read its answer back along the map sending $\mathrm{inl}\,l$ to $l$ and every auxiliary label to $\tau$: the relabelled scheduler is valid, emits $\tau$ alone, and carries the original's mass on each emission and the original's halting mass, the auxiliary preimages of a base label all carrying mass $0$.
+  The two weak transitions therefore have the same source and the same target distribution, the coupling is the one $R$ provides, and the case split between a silent and a visible matching transition carries over as it stands, $\mathrm{inl}\,\tau$ being the silent label of the extended alphabet.
 \end{proof}

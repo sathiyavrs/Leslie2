@@ -118,7 +118,7 @@ round-`r` return of a trace of `GBCA.specInst` names one bit, and every one of t
 value hands out that bit (`GBCA.BindingTrace`, `GBCA.specInst_binding`). Every return of a trace of
 `Gather.specInst` names one payload set, of at least `n − f` entries and below the returned map
 (`Gather.CoreTrace`, `Gather.specInst_core`). Both predicates are read off labels alone, so a
-trace-distribution inclusion transports them. `GBCA.ByABDY.composition_binding`,
+trace-distribution inclusion carries them. `GBCA.ByABDY.composition_binding`,
 `GBCA.roundOverGatherSpecifications_binding`, `GBCA.roundOverBroadcastSpecification_binding` and
 `GBCA.roundOverBracha_binding` are binding at the two verified graded-agreement implementations and
 at the two tiers between them, along their own refinements, and
@@ -226,7 +226,7 @@ make, the algorithm that composition realises, and the simulation into the speci
 | `ReliableBroadcast/Bracha/EchoCertificate.lean` | 59 | `BRB.EchoCertificate`: some process holds an `ECHO m` receipt quorum, more than `(n + f) / 2` senders. It is blind to the corrupted set and monotone, so it survives every transition of the instance and every corruption. |
 | `ReliableBroadcast/Bracha/Invariant.lean` | 585 | `BRB.Invariant`, what the instance maintains: a correct sender's sent message matches its write-once field, a correct echo carries a correct leader's input, and a correct vote is backed by an echo certificate. With it the three consequences the refinement needs — at most one value is ever certified, every return guard yields a certificate, and under a correct leader a certificate identifies the leader's input. |
 | `ReliableBroadcast/Bracha/SpecificationRelation.lean` | 74 | `BRB.SpecificationRelation`, which the gather substitution lifts: the call records, the return flags and the corrupted sets agree, the invariant holds, and a committed value is echo-certified. With it at the two initial states and across a corruption of both systems at once. |
-| `ReliableBroadcast/Bracha/RefinesSpecification.lean` | 464 | `brachaRefinesSpecification`: the Bracha instance refines TS 6 (D27), read over the instance's interface and along `BRB.SpecificationRelation`. `specificationRelation_transition` answers every transition of `BRB.BrachaAlgorithm` by a weak run of the specification, the commit fired on demand at the first return that needs it, and the step-level transports beside it are what the simulation of the implementation into its composed system replays. |
+| `ReliableBroadcast/Bracha/RefinesSpecification.lean` | 464 | `brachaRefinesSpecification`: the Bracha instance refines TS 6 (D27), read over the instance's interface and along `BRB.SpecificationRelation`. `specificationRelation_transition` matches every transition of `BRB.BrachaAlgorithm` by a weak run of the specification, the commit fired on demand at the first return that needs it, and four lemmas beside it hold the relation across one transition. |
 
 **`ABA/Gather/`** — gather over reliable broadcast.
 
@@ -297,7 +297,7 @@ order.
 | `GBCA/AFW/OutputCertificate.lean` | 257 | The counts the counting refinement consumes, and the two certificates it carries: `OutputCertificate`, what a recorded graded outcome certifies about the two cores, and `ExclusionEvidence`, the first gather's core counting a bit below `|S| − f`. Both survive every later transition, the cores being written once. |
 | `GBCA/AFW/Invariant.lean` | 739 | `GBCA.ByAFW.Invariant`, what the round over the gather specifications maintains: the corruption budget, the provenance of a committed entry per gather, what a candidate and a recorded grade certify, the transfer of the candidate to the second gather's call, the bound bit read off the first gather's core (D29), and the core-write guards. |
 | `GBCA/AFW/SpecificationRelation.lean` | 124 | `GBCA.ByAFW.SpecificationRelation`, which the counting refinement runs along: the invariant holds, the call records, the return flags and the corrupted sets agree, an excluded bit carries an exclusion certificate and is the complement of the round's bound bit, and each grade guard is certified on the second gather's core. Broadcast compatibility and one axiom check. |
-| `GBCA/AFW/RefinesSpecification.lean` | 508 | `refinesSpecification`: the two-gather round refines the GBCA specification. Every case of the algorithm is answered by a weak run of the specification, at most two steps long, and the run is lifted to the round's interface. One axiom check. |
+| `GBCA/AFW/RefinesSpecification.lean` | 508 | `refinesSpecification`: the two-gather round refines the GBCA specification. Every case of the algorithm is matched by a weak run of the specification, at most two steps long, and the run is lifted to the round's interface. One axiom check. |
 | `GBCA/AFW/BroadcastSubstitution.lean` | 139 | `broadcastSubstitution`: Bracha's broadcast replaced by the broadcast specification at each of the two gather coordinates, carried through the round by the congruences, with its trace-distribution inclusion and its broadcast compatibility. Two axiom checks. |
 | `GBCA/AFW/GatherSubstitution.lean` | 136 | `gatherSubstitution`: each gather instance replaced by the gather specification, carried through the round the same way, with its trace-distribution inclusion and its broadcast compatibility. Two axiom checks. |
 | `GBCA/AFW/Binding.lean` | 157 | The three tiers of the round reach the specification over the round's alphabet: the inclusions `roundOverGatherSpecifications_refines`, `roundOverBroadcastSpecification_specificationTraces` and `roundOverBracha_specificationTraces`, the round composite `roundOverBracha_refinesSpecification`, and the binding each tier carries — `GBCA.roundOverGatherSpecifications_binding`, `GBCA.roundOverBroadcastSpecification_binding`, `GBCA.roundOverBracha_binding`. Six axiom checks. |
@@ -336,7 +336,7 @@ preservation of `Invariant` across the transitions of each label class.
 
 | file | lines | what it is |
 |---|---|---|
-| `ABDY/System.lean` | 852 | **ABDY22's protocol as it runs**, and the subject of the protocol chain: the implementation at ABDY22's Algorithm 6 — its fourteen round transitions, the payload the call multicasts, the adversary's bound-bit ghost, and the inversions they answer. |
+| `ABDY/System.lean` | 852 | **ABDY22's protocol as it runs**, and the subject of the protocol chain: the implementation at ABDY22's Algorithm 6 — its fourteen round transitions, the payload the call multicasts, the adversary's bound-bit ghost, and the inversions that read them. |
 | `ABDY/Composition.lean` | 257 | **`ABDY.composed`**: the same protocol read as four components, one round instance per round retained at every moment, with the lemmas that read a transition of the composite off its label and the builders that assemble one out of transitions of the components. |
 | `ABDY/Simulation.lean` | 1069 | **`ABDY.protocolSimulation`**, **`ABDY.protocol_composed`**: the protocol carried into the composed system along `ABDY.ProtocolRelation`, whose five unguarded conjuncts determine the composed state. |
 | `ABDY/Substitution.lean` | 90 | **`ABDY.substitutionSimulation`**, **`ABDY.substitution`**: the one stage that carries the composed system to `hybrid` — each round's graded-agreement instance replaced by that round's specification, the family substitution under the four congruences. The mirror of `AFW/Substitution.lean`, which takes three stages. |
@@ -350,7 +350,7 @@ preservation of `Invariant` across the transitions of each label class.
 | `AFW/Composition.lean` | 402 | **`AFW.composed`** and the two systems above it, `AFW.composedOverBroadcastSpecification` and `AFW.composedOverGatherSpecifications`: the three round families `roundFamilyOverBracha`, `roundFamilyOverBroadcastSpecification` and `roundFamilyOverGatherSpecifications` under the composed system's pipeline, with the lemmas that read a transition of the composite off its label and the builders that assemble one out of transitions of the components. |
 | `AFW/RoundProjection.lean` | 662 | `AFW.roundProjection`, the view that computes a composed state from the implementation, and the relation `AFW.ProtocolRelation` it carries. |
 | `AFW/RoundProjectionStep.lean` | 37 | The module that imports the ten files of `RoundProjectionStep/`. |
-| `AFW/SimulationOfEachTransition.lean` | 1564 | Each transition of the gather-based implementation answered by a run of `AFW.composed`: the readers that identify a transition off its label, the builders of a transition of one gather instance and of one round, the broadcast invariant across a transition, and the returned value read against the implementation's `2f + 1` `VOTE` receipt quorum. |
+| `AFW/SimulationOfEachTransition.lean` | 1564 | Each transition of the gather-based implementation matched by a run of `AFW.composed`: the readers that identify a transition off its label, the builders of a transition of one gather instance and of one round, the broadcast invariant across a transition, and the returned value read against the implementation's `2f + 1` `VOTE` receipt quorum. |
 | `AFW/Simulation.lean` | 867 | **`AFW.protocolSimulation`**, **`AFW.protocol_composed`**: the matching label class by label class, and the gather-based protocol carried into `AFW.composed` along a relation that computes the composed state from the implementation, the ghost record included. Two axiom checks. |
 | `AFW/Substitution.lean` | 254 | **`AFW.substitutionSimulation`**, **`AFW.substitution`**: the three stages `AFW.composed ⊑ AFW.composedOverBroadcastSpecification ⊑ AFW.composedOverGatherSpecifications ⊑ hybrid`, each one family substitution under the four congruences, replacing Bracha's broadcast by the broadcast specification, then the gather instances by the gather specifications, then the rounds by the round specifications. One axiom check. |
 
@@ -363,12 +363,12 @@ of the gather-based implementation, one file per class of transitions.
 | `AFW/RoundProjectionStep/ViewAfterOneWrite.lean` | 599 | `roundProjection_write` and `roundProjection_writeNoSent`, the round-record write and the tagged send every transition performs, read through the view, with the sent algebra and the readers of the written view the transition classes run on. |
 | `AFW/RoundProjectionStep/BroadcastSend.lean` | 498 | `roundProjection_firstGatherInputBroadcastSend` and its three companions: the view after a Bracha send in one broadcast instance of either gather, which leaves the returned value where it stands. |
 | `AFW/RoundProjectionStep/ByzantineInjection.lean` | 399 | `roundProjection_byzantineFirstGather` and its five companions: the view after the adversary multicasts on behalf of a corrupted sender, a transition that moves no record. |
-| `AFW/RoundProjectionStep/Delivery.lean` | 842 | `roundProjection_deliverFirstGather` and its nine companions: the view after a delivery, a broadcast delivery that completes a `2f + 1` `VOTE` quorum at the receiver being answered by the instance's delivery and then its return. |
+| `AFW/RoundProjectionStep/Delivery.lean` | 842 | `roundProjection_deliverFirstGather` and its nine companions: the view after a delivery, a broadcast delivery that completes a `2f + 1` `VOTE` quorum at the receiver being matched by the instance's delivery and then its return. |
 | `AFW/RoundProjectionStep/GatherSend.lean` | 208 | `roundProjection_firstGatherSend` and `roundProjection_secondGatherSend`: the view after a gather's `ECHO` or `VOTE`. |
 | `AFW/RoundProjectionStep/GatherAndBroadcastTransitions.lean` | 587 | `roundProjection_firstGatherEcho` and its thirteen companions: the view after each `ECHO`, `VOTE` and `BIND` transition of the two gathers and of their four broadcast families. |
 | `AFW/RoundProjectionStep/GradedAgreementCall.lean` | 165 | `roundProjection_callG` and `roundProjection_gbcaCallLoop`: the view after the fused graded-agreement call, and after a call against an already-called record. |
 | `AFW/RoundProjectionStep/OtherRoundsUnchanged.lean` | 122 | `roundProjection_otherTransition` and its three companions: the rounds a transition does not name read exactly as the transition found them, and `toRoundFamily` and its two companions state that as a one-point update of the family of rounds. |
-| `AFW/RoundProjectionStep/ReturnThenCall.lean` | 350 | `roundProjection_firstGatherReturn_secondGatherCall` and `roundProjection_secondGatherReturn_retG`: the two transitions that two events of the composed round answer, through a named intermediate state. |
+| `AFW/RoundProjectionStep/ReturnThenCall.lean` | 350 | `roundProjection_firstGatherReturn_secondGatherCall` and `roundProjection_secondGatherReturn_retG`: the two transitions that two events of the composed round match, through a named intermediate state. |
 
 **`ABA/`** — the headlines.
 
@@ -447,7 +447,7 @@ off its label; `GBCA/AFW/AlgorithmOverGatherSpecifications.lean` is the algorith
 refinement runs on;
 `AFW/Composition.lean` holds the three systems at the protocol shape and `AFW/Substitution.lean`
 the three stages between them; `AFW/Simulation.lean` is the simulation into `AFW/System.lean`, the
-system that runs, over the answers of `AFW/SimulationOfEachTransition.lean`, one per transition of
+system that runs, over the matching runs of `AFW/SimulationOfEachTransition.lean`, one per transition of
 the implementation. The two
 counting arguments are `Gather/CommonCoreCounting.lean`, read against `Gather/Invariant.lean` and
 `Gather/Specification.lean` alone, and `GBCA/AFW/Counting.lean`. Each refinement rests on the

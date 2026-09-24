@@ -191,7 +191,7 @@ theorem Invariant.step_fail {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
     rcases hI.flip_grade2Lock r h with hg | hd
     · left; rw [hgrade]; exact hg
     · right
-      exact DissentWitness.transport (hbind r) (hbind (r - 1)) (fun hh => (hgrade (r - 1)) ▸ hh)
+      exact DissentWitness.preserved (hbind r) (hbind (r - 1)) (fun hh => (hgrade (r - 1)) ▸ hh)
         (fun id' => by rw [hprocs]) hd
   · intro id' hmem hin r
     rw [hprocs] at hin; rw [hcalled r]
@@ -201,14 +201,14 @@ theorem Invariant.step_fail {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
     rcases hI.retG_witness r id' (fun h => hmem (hFsub h)) hp with hg | hd
     · left; rw [hgrade]; exact hg
     · right
-      exact DissentWitness.transport (hbind r) (hbind (r - 1)) (fun hh => (hgrade (r - 1)) ▸ hh)
+      exact DissentWitness.preserved (hbind r) (hbind (r - 1)) (fun hh => (hgrade (r - 1)) ▸ hh)
         (fun id' => by rw [hprocs]) hd
   · intro r id' hmem hcalled0
     rw [hcalled r] at hcalled0
     rcases hI.wccCalled_witness r id' (fun h => hmem (hFsub h)) hcalled0 with hg | hd
     · left; rw [hgrade]; exact hg
     · right
-      exact DissentWitness.transport (hbind r) (hbind (r - 1)) (fun hh => (hgrade (r - 1)) ▸ hh)
+      exact DissentWitness.preserved (hbind r) (hbind (r - 1)) (fun hh => (hgrade (r - 1)) ▸ hh)
         (fun id' => by rw [hprocs]) hd
   · intro r h
     rw [hbind r] at h

@@ -25,19 +25,19 @@ The proofs share one decomposition. A weak transition `q =l=> q'` is a
 finite run whose trace is the single label `l`, so it splits into a silent run,
 one transition on `l`, and a second silent run (`System.weakLStep_split`);
 `System.weakLStep_ofSplit` assembles a weak transition from those three pieces.
-A silent run transports along any state map carrying silent steps to silent
-steps (`System.weakLSilent_transport`), which embeds the moving component's
-internal run into the composite with the other components held. The transition
+The image of a silent run under a state map carrying silent steps to silent
+steps is again a silent run (`System.weakLSilent_map`), which embeds the moving
+component's internal run into the composite with the other components held. The transition
 on `l` is then matched in one step by the composite itself: a synchronised step
 of the product, a `τ`-step of the abstraction when `l` is hidden, or an
 `l`-step of the restricted system.
 
 Two simulations compose (`ForwardSimulation.trans`). A step of the concrete
-system is answered by a run of the middle system, and that run is answered by a
+system is matched by a run of the middle system, and that run is matched by a
 run of the abstract system, one transition at a time
-(`ForwardSimulation.weakLSilent_answer`, `ForwardSimulation.weakLStep_answer`).
-`ForwardSimulation.congr` transports a simulation along a pointwise `Iff` of
-relations.
+(`ForwardSimulation.weakLSilent_match`, `ForwardSimulation.weakLStep_match`).
+A pointwise `Iff` of relations turns a simulation along one of them into a
+simulation along the other (`ForwardSimulation.congr`).
 
 Chains of `LStep`s are the other form of a weak run, and on a system all of
 whose transitions are Dirac (`System.IsLTS`) the two systems agree:
@@ -367,12 +367,12 @@ theorem System.weakLStep_silentSnoc {q q₁ q' : State} {l : Label}
 
 end WeakRuns
 
-/-! ### Transporting a silent run -/
+/-! ### The image of a silent run under a state map -/
 
-/-- **A silent run transports along a state map** that carries every silent
-transition to a silent transition, outcome by outcome. The two systems may
-range over different state spaces and different alphabets. -/
-theorem System.weakLSilent_transport {S S' L L' : Type} [Silent L] [Silent L']
+/-- **The image of a silent run under a state map is a silent run**, when the
+map carries every silent transition to a silent transition, outcome by outcome.
+The two systems may range over different state spaces and different alphabets. -/
+theorem System.weakLSilent_map {S S' L L' : Type} [Silent L] [Silent L']
     {sys : System S L} {sys' : System S' L'} (f : S → S')
     (hf : ∀ s μ x, sys.step s (Silent.τ : L) μ → x ∈ μ.support →
       ∃ ν, sys'.step (f s) (Silent.τ : L') ν ∧ f x ∈ ν.support)
@@ -439,7 +439,7 @@ variable {S₁ S₂ Label : Type} [Silent Label] {sys₁ : System S₁ Label} {s
 component held. -/
 theorem System.weakLSilent_parallel_left (b : S₂) {a a' : S₁}
     (h : sys₁.weakLSilent a a') : (sys₁.parallel sys₂).weakLSilent (a, b) (a', b) := by
-  refine System.weakLSilent_transport (f := fun x => (x, b)) ?_ h
+  refine System.weakLSilent_map (f := fun x => (x, b)) ?_ h
   intro s μ x hs hx
   refine ⟨prodPMF μ (PMF.pure b),
     (System.parallel_step sys₁ sys₂ (s, b) Silent.τ _).mpr (Or.inr (Or.inl ⟨rfl, μ, hs, rfl⟩)),
@@ -450,7 +450,7 @@ theorem System.weakLSilent_parallel_left (b : S₂) {a a' : S₁}
 component held. -/
 theorem System.weakLSilent_parallel_right (a : S₁) {b b' : S₂}
     (h : sys₂.weakLSilent b b') : (sys₁.parallel sys₂).weakLSilent (a, b) (a, b') := by
-  refine System.weakLSilent_transport (f := fun y => (a, y)) ?_ h
+  refine System.weakLSilent_map (f := fun y => (a, y)) ?_ h
   intro s μ x hs hx
   refine ⟨prodPMF (PMF.pure a) μ,
     (System.parallel_step sys₁ sys₂ (a, s) Silent.τ _).mpr (Or.inr (Or.inr ⟨rfl, μ, hs, rfl⟩)),
@@ -555,7 +555,7 @@ coordinates held. -/
 theorem System.weakLSilent_synchronisedProduct_update {A : ∀ i, System (SA i) Label}
     (t : ∀ i, SA i) (i : ι) {x y : SA i} (h : (A i).weakLSilent x y) :
     (System.synchronisedProduct A).weakLSilent (Function.update t i x) (Function.update t i y) := by
-  refine System.weakLSilent_transport (f := fun z => Function.update t i z) ?_ h
+  refine System.weakLSilent_map (f := fun z => Function.update t i z) ?_ h
   intro u μ z hu hz
   refine ⟨piPMF (Function.update (fun j => PMF.pure (Function.update t i u j)) i μ),
     (System.synchronisedProduct_step A (Function.update t i u) Silent.τ _).mpr
@@ -597,10 +597,10 @@ theorem System.weakLSilent_synchronisedProduct {A : ∀ i, System (SA i) Label} 
 end SynchronisedProduct
 /-- **Forward simulation is a congruence for `System.synchronisedProduct`.** Per-component
 forward simulations lift to the pointwise relation on the product. A silent step
-moves one component, which the component's own silent answer matches with the
-others held; a visible step moves every component at once, and the product of
-the components' answers is a silent run of the product, one synchronised
-transition on the label, and a second silent run. -/
+moves one component, and the component's own matching silent run moves it with
+the others held; a visible step moves every component at once, and the product
+of the components' matching runs is a silent run of the product, one
+synchronised transition on the label, and a second silent run. -/
 theorem ForwardSimulation.synchronisedProduct {ι : Type} [Fintype ι] [DecidableEq ι]
     {SC SA : ι → Type} {Label : Type} [Silent Label]
     {C : ∀ i, System (SC i) Label} {A : ∀ i, System (SA i) Label}
@@ -668,13 +668,13 @@ theorem System.abstract_tau_step {sys : System S Label} (L : Set Label) {s : S} 
 /-- A silent run survives hiding. -/
 theorem System.weakLSilent_abstract {sys : System S Label} (L : Set Label) {q q' : S}
     (h : sys.weakLSilent q q') : (sys.abstract L).weakLSilent q q' :=
-  System.weakLSilent_transport (f := id)
+  System.weakLSilent_map (f := id)
     (fun _ μ _ hs hx => ⟨μ, System.abstract_tau_step L hs, hx⟩) h
 
 /-- **Forward simulation is a congruence for `System.abstract`.** A transition on a hidden label is
-a `τ`-transition of the abstraction, so the abstract answer to it is the answer's silent prefix, its
-transition on the hidden label read as a `τ`-transition, and its silent suffix; a transition on a
-label outside `L` keeps its label in both systems. -/
+a `τ`-transition of the abstraction, so the matching run of the abstraction is that run's silent
+prefix, its transition on the hidden label read as a `τ`-transition, and its silent suffix; a
+transition on a label outside `L` keeps its label in both systems. -/
 theorem ForwardSimulation.abstract {R : S → T → Prop} (sim : ForwardSimulation sysC sysA R)
     (L : Set Label) : ForwardSimulation (sysC.abstract L) (sysA.abstract L) R := by
   constructor
@@ -713,14 +713,14 @@ variable {S T Label Extra : Type} [Silent Label]
 alphabet is the silent label of the base alphabet, injected on the left. -/
 theorem System.weakLSilent_relabel {sys : System S (Label ⊕ Extra)} {q q' : S}
     (h : sys.weakLSilent q q') : sys.relabel.weakLSilent q q' :=
-  System.weakLSilent_transport (sys := sys) (sys' := sys.relabel) (f := id)
+  System.weakLSilent_map (sys := sys) (sys' := sys.relabel) (f := id)
     (fun _ μ _ hs hx => ⟨μ, hs, hx⟩) h
 
 /-- **Forward simulation is a congruence for `System.relabel`.** Both systems
 are read over the base alphabet along the same left embedding: a transition of
-the restricted system on `l` is a transition on `Sum.inl l`, and the abstract
-answer to it is built from its silent prefix, its transition on `Sum.inl l`
-read as a transition on `l`, and its silent suffix. -/
+the restricted system on `l` is a transition on `Sum.inl l`, and the matching run
+of the abstract system is built from its silent prefix, its transition on
+`Sum.inl l` read as a transition on `l`, and its silent suffix. -/
 theorem ForwardSimulation.relabel {R : S → T → Prop} (sim : ForwardSimulation sysC sysA R) :
     ForwardSimulation sysC.relabel sysA.relabel R := by
   constructor
@@ -758,10 +758,10 @@ section Composition
 variable {SC SB SA Label : Type} [Silent Label]
   {sysC : System SC Label} {sysB : System SB Label} {sysA : System SA Label}
 
-/-- **A silent run is answered by a silent run.** The induction is along the run
-(`System.weakLSilent_induction`): each of its transitions is answered by the
-simulation, and the answers compose. -/
-theorem ForwardSimulation.weakLSilent_answer {R : SB → SA → Prop}
+/-- **A silent run is matched by a silent run.** The induction is along the run
+(`System.weakLSilent_induction`): the simulation gives a matching step for each
+of its transitions, and the matching runs compose. -/
+theorem ForwardSimulation.weakLSilent_match {R : SB → SA → Prop}
     (sim : ForwardSimulation sysB sysA R) {b b' : SB} {a : SA} (hR : R b a)
     (h : sysB.weakLSilent b b') : ∃ a', sysA.weakLSilent a a' ∧ R b' a' := by
   refine System.weakLSilent_induction
@@ -774,27 +774,27 @@ theorem ForwardSimulation.weakLSilent_answer {R : SB → SA → Prop}
     exact ⟨a', System.weakLSilent_trans hsil hrun, hRa⟩
   · exact absurd rfl hnτ
 
-/-- **A weak transition is answered by a weak transition on the same label.**
+/-- **A weak transition is matched by a weak transition on the same label.**
 The run splits into a silent run, one transition on `l` and a second silent run
-(`System.weakLStep_split`); the two silent runs are answered by
-`ForwardSimulation.weakLSilent_answer`, the transition by the simulation, and
-the three answers reassemble. -/
-theorem ForwardSimulation.weakLStep_answer {R : SB → SA → Prop}
+(`System.weakLStep_split`); the two silent runs are matched by
+`ForwardSimulation.weakLSilent_match`, the transition by the simulation, and
+the three matching runs reassemble. -/
+theorem ForwardSimulation.weakLStep_match {R : SB → SA → Prop}
     (sim : ForwardSimulation sysB sysA R) {b b' : SB} {a : SA} {l : Label} (hR : R b a)
     (h : sysB.weakLStep b l b') : ∃ a', sysA.weakLStep a l a' ∧ R b' a' := by
   obtain ⟨hl, b₁, b₂, μ, hpre, hstep, hmem, hpost⟩ := System.weakLStep_split h
-  obtain ⟨a₁, hrun₁, hR₁⟩ := sim.weakLSilent_answer hR hpre
+  obtain ⟨a₁, hrun₁, hR₁⟩ := sim.weakLSilent_match hR hpre
   obtain ⟨a₂, hdisj, hR₂⟩ := sim.step b₁ a₁ hR₁ l μ hstep b₂ hmem
   rcases hdisj with ⟨hτ, -⟩ | ⟨-, hlab⟩
   · exact absurd hτ hl
-  · obtain ⟨a', hrun₂, hRa⟩ := sim.weakLSilent_answer hR₂ hpost
+  · obtain ⟨a', hrun₂, hRa⟩ := sim.weakLSilent_match hR₂ hpost
     exact ⟨a', System.weakLStep_silentCons hrun₁ (System.weakLStep_silentSnoc hlab hrun₂), hRa⟩
 
 /-- **Forward simulations compose**, along the composite of the two relations
-and without either system being an LTS. A step of `sysC` is answered by a run of
-`sysB`, and that run is answered by a run of `sysA`
-(`ForwardSimulation.weakLSilent_answer`, `ForwardSimulation.weakLStep_answer`),
-which is the answer of `sysA` to the step. -/
+and without either system being an LTS. A step of `sysC` is matched by a run of
+`sysB`, and that run is matched by a run of `sysA`
+(`ForwardSimulation.weakLSilent_match`, `ForwardSimulation.weakLStep_match`),
+which is the run of `sysA` matching the step. -/
 theorem ForwardSimulation.trans {R₁ : SC → SB → Prop} {R₂ : SB → SA → Prop}
     (sim₁ : ForwardSimulation sysC sysB R₁) (sim₂ : ForwardSimulation sysB sysA R₂) :
     ForwardSimulation sysC sysA (fun c a => ∃ b, R₁ c b ∧ R₂ b a) := by
@@ -802,12 +802,13 @@ theorem ForwardSimulation.trans {R₁ : SC → SB → Prop} {R₂ : SB → SA �
   rintro c a ⟨b, hR₁, hR₂⟩ l μ hstep c' hc'
   obtain ⟨b', hdisj, hR₁'⟩ := sim₁.step c b hR₁ l μ hstep c' hc'
   rcases hdisj with ⟨hτ, hsil⟩ | ⟨hnτ, hlab⟩
-  · obtain ⟨a', hrun, hRa⟩ := sim₂.weakLSilent_answer hR₂ hsil
+  · obtain ⟨a', hrun, hRa⟩ := sim₂.weakLSilent_match hR₂ hsil
     exact ⟨a', Or.inl ⟨hτ, hrun⟩, b', hR₁', hRa⟩
-  · obtain ⟨a', hrun, hRa⟩ := sim₂.weakLStep_answer hR₂ hlab
+  · obtain ⟨a', hrun, hRa⟩ := sim₂.weakLStep_match hR₂ hlab
     exact ⟨a', Or.inr ⟨hnτ, hrun⟩, b', hR₁', hRa⟩
 
-/-- Transport a forward simulation along a pointwise `Iff` of relations. -/
+/-- A forward simulation along a relation is a forward simulation along any
+relation pointwise equivalent to it. -/
 theorem ForwardSimulation.congr {R R' : SC → SA → Prop} (h : ∀ c a, R c a ↔ R' c a)
     (sim : ForwardSimulation sysC sysA R) : ForwardSimulation sysC sysA R' := by
   constructor

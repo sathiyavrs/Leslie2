@@ -17,7 +17,7 @@ unmapped labels — idle self-loops in both systems — are matched by idling
 
 The only hypotheses are a τ round-trip for `φ`: the silent label of `L'`
 delegates to the silent label of `L` (`hτ'`), and nothing else does (`hφτ`).
-No section of `φ` is required: the weak-run transports
+No section of `φ` is required: the two weak-run lemmas
 (`System.weakLSilent_mapIdle_of`, `System.weakLStep_mapIdle_of`) relabel the
 witness execution per transition — silent transitions to `τ'`, the single
 external one to the delegating label `l'` — using that a terminating run's
@@ -31,9 +31,10 @@ namespace PLTS
 
 variable {S L L' : Type}
 
-/-- Transport a partial execution along a label map that turns each of the
-run's own transitions into a transition of `sys'` — the per-run refinement of
-`is_partial_exec_mapLabels` (`Framework/TraceDistributionSupport.lean`). -/
+/-- The image of a partial execution under a label map that turns each of the
+run's own transitions into a transition of `sys'` is a partial execution of
+`sys'` — the per-run refinement of `is_partial_exec_mapLabels`
+(`Framework/TraceDistributionSupport.lean`). -/
 private theorem is_partial_exec_mapLabels_on {sys : System S L} {sys' : System S L'} (g : L → L')
     {e : AlterSeq S L} (hpe : is_partial_exec e sys)
     (hg : ∀ n lq, e.trans.get? n = some lq → ∀ sn μ, sys.step sn lq.1 μ → sys'.step sn (g lq.1) μ) :
@@ -76,13 +77,13 @@ private theorem trace_mapLabels_const_tau [Silent L'] (sys' : System S L')
 
 /-! ### A weak run carried along a pullback of the alphabet -/
 
-section Transport
+section WeakRuns
 
 variable [Silent L] [Silent L'] {sys : System S L} {φ : L' → Option L}
 
 /-- **A silent weak run survives the read-back**, whenever the silent label of
 `L'` delegates to the silent label of `L`: the witness execution is silent
-throughout, so relabelling every transition to `τ'` transports it. -/
+throughout, so relabelling every transition to `τ'` gives a witness over `L'`. -/
 theorem System.weakLSilent_mapIdle_of {q q' : S}
     (hτ' : φ (Silent.τ : L') = some (Silent.τ : L))
     (h : sys.weakLSilent q q') : (sys.mapIdle φ).weakLSilent q q' := by
@@ -151,7 +152,7 @@ theorem System.weakLStep_mapIdle_of {q q' : S} {l : L} {l' : L'}
   · rw [System.trace_mapLabels _ sys g hgτ e, htr, Stream'.Seq.map_cons,
       Stream'.Seq.map_nil, hgl]
 
-end Transport
+end WeakRuns
 
 /-! ### The congruence -/
 

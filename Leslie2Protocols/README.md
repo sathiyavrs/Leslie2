@@ -25,7 +25,7 @@ given in import order in its own file guide, [`Framework/README.md`](Framework/R
 | file | lines | what it is |
 |---|---|---|
 | [`DiracRelationCoupling.lean`](Framework/DiracRelationCoupling.lean) | 57 | The couplings a Dirac-lifted relation admits: a Dirac source matched by a related target, and a source pushed forward along a map matched outcome by outcome. |
-| [`TraceDistributionSupport.lean`](Framework/TraceDistributionSupport.lean) | 569 | From trace-distribution support to genuine executions: the safety transfer, the invariant inductions, and the label transport of a run. |
+| [`TraceDistributionSupport.lean`](Framework/TraceDistributionSupport.lean) | 569 | From trace-distribution support to genuine executions: the safety transfer, the invariant inductions, and the relabelling of a run. |
 | [`LoopsAndInstanceFamilies.lean`](Framework/LoopsAndInstanceFamilies.lean) | 218 | Idle padding, partial label pullbacks, and ℕ-indexed instance families with a broadcast disjunct. |
 | [`FamilySimulation.lean`](Framework/FamilySimulation.lean) | 375 | Forward simulation is a congruence for `System.family`: per-instance refinement lifts to the family. |
 | [`SynchronisedProduct.lean`](Framework/SynchronisedProduct.lean) | 184 | Full-synchronisation product of a finite family — a visible label moves every component, τ moves one. |
@@ -33,7 +33,7 @@ given in import order in its own file guide, [`Framework/README.md`](Framework/R
 | [`Relabel.lean`](Framework/Relabel.lean) | 472 | Extended alphabets and restriction along the left summand, with the precongruence for it. |
 | [`WeakTransitionsFromChains.lean`](Framework/WeakTransitionsFromChains.lean) | 196 | Weak runs from step chains: prepending a silent step, and the k-fold run — a chain of silent steps closed by one external step. |
 | [`FinerAlphabetCongruence.lean`](Framework/FinerAlphabetCongruence.lean) | 193 | Forward simulation is a congruence for reading both systems over a finer alphabet along a partial label map. |
-| [`Congruence.lean`](Framework/Congruence.lean) | 849 | Forward simulation is a congruence for the operators a composition is built from — binary parallel in either position, the full-synchronisation product of a finite family, hiding and restriction — with the weak-run splitting and transport lemmas the four proofs share. |
+| [`Congruence.lean`](Framework/Congruence.lean) | 849 | Forward simulation is a congruence for the operators a composition is built from — binary parallel in either position, the full-synchronisation product of a finite family, hiding and restriction — with the weak-run splitting and mapping lemmas the four proofs share. |
 | [`Erasure.lean`](Framework/Erasure.lean) | 375 | Erasure of a state component no transition's firing depends on: the projection and lift clauses, the equality of achievable trace distributions they give, and the congruences that carry an erasure through composition, hiding and restriction. |
 
 ## Notes

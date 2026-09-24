@@ -43,10 +43,10 @@ again an LTS and the `ForwardLTS` correspondence applies at family level.
 
 Both weak transitions of a system are carried along `mapIdle` by any *section*
 `g` of `φ` that respects the silent label. A section is what makes the
-transport trivial on transitions: `φ (g x) = some x` turns every `x`-step into
+relabelling trivial on transitions: `φ (g x) = some x` turns every `x`-step into
 a `g x`-step of the read-back system, with no condition on which labels occur
 in the witness execution. The second hypothesis, `g x = τ ↔ x = τ`, is what
-makes it trivial on traces: the transported execution hides exactly the
+makes it trivial on traces: the relabelled execution hides exactly the
 transitions the original hid, so its trace is the original trace relabelled by
 `g` (`System.trace_mapLabels`, in `Framework/TraceDistributionSupport.lean`).
 -/

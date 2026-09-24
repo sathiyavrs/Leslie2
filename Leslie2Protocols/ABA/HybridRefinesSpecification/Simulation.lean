@@ -18,20 +18,20 @@ probabilistic forward simulation `hybrid P ⊑ spec P` along `hybridSpecificatio
 `hybrid_spec` is the trace-distribution inclusion it yields, and both chains of the case study
 reach the ABA specification along it.
 
-The transitions dispatch as follows. A visible `callABA` is answered by
+The transitions dispatch as follows. A visible `callABA` is matched by
 `SpecStep.callSet` at a never-corrupted process holding no input, by
 `SpecStep.callLoop` at a never-corrupted process holding one, and by
 `SpecStep.callByzantine` at a corrupted process. A never-corrupted process's visible
-`retABA` is answered by `SpecStep.decide` followed by `SpecStep.ret` on the
+`retABA` is matched by `SpecStep.decide` followed by `SpecStep.ret` on the
 first such transition, and by `SpecStep.ret` alone on every later one. Every
-hidden transition, the coin's resolving call included, is answered by a
+hidden transition, the coin's resolving call included, is matched by a
 stutter: the abstract state's mode stays `ControlMode.flipEnabled`, so it never fires
 `SpecStep.coinFlip` and `SpecStep.decide` remains enabled when the first
-return arrives. A `fail` is answered by `SpecStep.fail`, whose two guards are
+return arrives. A `fail` is matched by `SpecStep.fail`, whose two guards are
 the concrete transition's own, read across `AbstractState.F_eq`.
 
-A corruption replaces the program of the process it names (D23), and the replacement is answered in
-both systems of the interface. The corrupted process's `retABA` is answered by
+A corruption replaces the program of the process it names (D23), and both systems of the
+interface carry the replacement. The corrupted process's `retABA` is matched by
 `SpecStep.retByzantine`: neither the concrete state nor the abstract state moves. On every other
 label the replaced program self-loops, and the concrete transition it contributes is the corrupted
 branch the inversion already carries. -/
@@ -50,7 +50,7 @@ def hybridSpecificationRelation (P : Parameters) : HybridState P → PMF (SpecSt
 
 /-- **Stutter-transition packaging.** If every post-state `s'` in the support of a concrete τ-step's
 outcome `μ_C` relates to the *same* abstract state `a` (via `hybridSpecificationStateRelation`), the
-abstract state can answer with the trivial `weakTau_refl` stutter: the coupling `Ω := μ_C.map (fun
+abstract state matches it by the trivial `weakTau_refl` stutter: the coupling `Ω := μ_C.map (fun
 s' => (s', pure a))` has first marginal `μ_C` and second marginal the constant `pure (pure a)`
 (`PMF.map_const`), so `ω := pure (pure a)` and `ω.bind id = pure a` (`PMF.pure_bind`). Reused by
 every hidden transition, the coin's resolving call included. -/
@@ -374,8 +374,8 @@ theorem hybridRefinesSpecification (P : Parameters) :
           refine ⟨ω, hRel, Or.inr ⟨by simp, ?_⟩⟩
           rw [hbid]
           exact weakStep_strong (SpecStep.ret a id b hvalb hretfalse)
-      · -- a corrupted process's return (D23): neither system moves, and the abstract state answers
-        -- with `SpecStep.retByzantine`
+      · -- a corrupted process's return (D23): neither system moves, and the abstract state matches
+        -- it with `SpecStep.retByzantine`
         simp only [prodPMF_pure_abaTransition]
         obtain ⟨ω, hRel, hbid⟩ := dirac_step (g, C, A, w) a ⟨hI, hAbs⟩
         refine ⟨ω, hRel, Or.inr ⟨by simp, ?_⟩⟩

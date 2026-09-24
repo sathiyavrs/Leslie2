@@ -231,7 +231,7 @@ split, `Gather.Step.commit` guarded `k ∈ F ∨ call k = some v`.
 
 The refinement counterpart is *commit-on-demand*: the abstract commit is a
 silent transition with no implementation event to synchronise with, so the simulations
-fire it inside the weak answer of the first transition that reads it —
+fire it inside the matching weak run of the first transition that reads it —
 `BRB.commitReach` under a return, the `commitOne/commitList` chains of
 `ABA/Gather/RefinesSpecification.lean` under a return.
 
@@ -313,7 +313,7 @@ the labels the pullback sends to one specification label are exactly the transit
 algorithm at that label (`Gather.AlgorithmOverBroadcastSpecification`,
 `GBCA.ByAFW.AlgorithmOverGatherSpecifications`), on the same state and with the same
 distribution. A refinement is then a case analysis over the transitions, and the specification's
-answer, a run of `specInst`, is lifted to the specification read along the pullback by a
+matching run, a run of `specInst`, is lifted to the specification read along the pullback by a
 section of it (`Gather.weakLStep_specificationOverInstanceAlphabet`,
 `GBCA.ByABDY.weakLStep_specificationOverRoundAlphabet`), as `GBCA.ByABDY.refinesSpecification` does
 for the protocol chain's round.
@@ -437,10 +437,10 @@ pushes a one-point round write and a single sent-set insertion inside every coor
 transition then owes only projection algebra, discharged by `messagesOf_recordSent_some` and
 `messagesOf_recordSent_none`.
 `ABA/AFW/SimulationOfEachTransition.lean` matches each implementation transition by a run of the
-composed group: a send and a delivery are hidden events of the round instance, answered by one of
+composed group: a send and a delivery are hidden events of the round instance, matched by one of
 its silent steps, the adversary's authenticity conjunct becoming membership in the sent set
 projected onto the instance; the call is the instance's own. Three of the implementation's
-transitions are answered by two composed steps, through the intermediate states
+transitions are matched by two composed steps, through the intermediate states
 `ABA/AFW/RoundProjectionStep/ReturnThenCall.lean` and
 `ABA/AFW/RoundProjectionStep/Delivery.lean` name: the return-then-call step by
 `firstGatherReturn` then `secondGatherCall`, the graded return by `secondGatherReturn` then the

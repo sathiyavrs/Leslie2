@@ -18,7 +18,7 @@ graded agreement specification read over the round's interface
 
 A transition of the round is one case of `GBCA.ByAFW.AlgorithmOverGatherSpecifications`
 (`GBCA.ByAFW.roundOverGatherSpecifications_step_algorithm`), `specificationRelation_transition`
-answers that case by a weak run of the graded agreement specification with the relation restored,
+matches that case by a weak run of the graded agreement specification with the relation restored,
 and `refinesSpecification` lifts the run to the interface along a section of
 `GBCA.specificationLabelMap`.
 
@@ -36,7 +36,7 @@ variable {P : Parameters}
 
 /-! ### The step, transition by transition -/
 
-/-- **The step, transition by transition**: every transition of the round is answered by a weak run
+/-- **The step, transition by transition**: every transition of the round is matched by a weak run
 of the graded-agreement specification, the relation restored. -/
 theorem specificationRelation_transition (P : Parameters) (r : ℕ)
     (q₁ : RoundStateOverGatherSpecifications P.n) (q₂ : GBCA.SpecState P.n)
@@ -474,7 +474,7 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ)
 /-- **The refinement of the round over the gather specifications**: the round
 forward-simulates the graded agreement specification read over the round's
 interface. A transition of the round is one case of `GBCA.ByAFW.AlgorithmOverGatherSpecifications`
-(`GBCA.ByAFW.roundOverGatherSpecifications_step_algorithm`), that transition is answered by a weak
+(`GBCA.ByAFW.roundOverGatherSpecifications_step_algorithm`), that transition is matched by a weak
 run of the specification (`specificationRelation_transition`), and that run is lifted to the
 interface along a section of `GBCA.specificationLabelMap`. -/
 theorem refinesSpecification (P : Parameters) (r : ℕ) :

@@ -18,7 +18,7 @@ point mass on an `R`-image of the state. Two kinds of source admit a coupling by
 `coupling_map` takes a source pushed forward along `f` to the same distribution
 pushed forward along `g`, whenever `R (f o) (g o)` holds at every `o` in the
 support. Each produces the mixture `Ω` a probabilistic forward simulation asks
-for, together with the flattening `Ω.bind id` the answering transition ends in.
+for, together with the flattening `Ω.bind id` the matching transition ends in.
 -/
 
 namespace PLTS

@@ -195,7 +195,7 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
     cases b' with
     | true => rw [hGgradeTrue hb'] at hcontra; simp at hcontra
     | false => rw [hGgradeFalse hb'] at hcontra; simp at hcontra
-  have hTransport : ∀ r', (g r').grade ≠ none ∨ DissentWitness P g c r' →
+  have hGradedOrDissent : ∀ r', (g r').grade ≠ none ∨ DissentWitness P g c r' →
       (Function.update g r gr' r').grade ≠ none ∨
         DissentWitness P (Function.update g r gr') c' r' := by
     intro r' hres
@@ -206,10 +206,10 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
       · rwa [hGeq r' h2]
     · right
       by_cases hrr1 : r' - 1 = r
-      · refine DissentWitness.transport (hBindeq r') (hBindeq (r' - 1)) (fun hgf => ?_)
+      · refine DissentWitness.preserved (hBindeq r') (hBindeq (r' - 1)) (fun hgf => ?_)
           (fun id' => (hCprocs id').1) hd
         rw [hrr1, Function.update_self]; exact hGgradeFalse (hrr1 ▸ hgf)
-      · exact DissentWitness.transport (hBindeq r') (hBindeq (r' - 1))
+      · exact DissentWitness.preserved (hBindeq r') (hBindeq (r' - 1))
           (fun hgf => by rwa [hGeq (r' - 1) hrr1]) (fun id' => (hCprocs id').1) hd
   -- A grade-0-locking return at round `r` pulls a grade-0 lock below every
   -- grade-2-locked round under `r` (its own both-bit supports via
@@ -765,10 +765,10 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
       · rwa [hGeq r' hrr]
     · right
       by_cases hrr1 : r' - 1 = r
-      · refine DissentWitness.transport (hBindeq r') (hBindeq (r' - 1)) (fun hgf => ?_)
+      · refine DissentWitness.preserved (hBindeq r') (hBindeq (r' - 1)) (fun hgf => ?_)
           (fun id' => (hCprocs id').1) hd
         rw [hrr1, Function.update_self]; exact hGgradeFalse (hrr1 ▸ hgf)
-      · exact DissentWitness.transport (hBindeq r') (hBindeq (r' - 1))
+      · exact DissentWitness.preserved (hBindeq r') (hBindeq (r' - 1))
           (fun hgf => by rwa [hGeq (r' - 1) hrr1]) (fun id' => (hCprocs id').1) hd
   · intro id' hmem hin r'
     rw [(hCprocs id').1] at hin
@@ -778,7 +778,7 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
     -- (`retGrade2`/`retGrade0` grade the round outright; `retGrade1`'s dissent converts
     -- to `DissentWitness` via `input_gbcaRound0`/`call_provenance`, mirroring
     -- `DissentWitness`'s own provenance argument);
-    -- everywhere else is `hTransport`-routed pass-through of the pre-state fact.
+    -- everywhere else is `hGradedOrDissent`-routed pass-through of the pre-state fact.
     intro r' id' hmem hp
     rcases hp with ⟨hround, hphase⟩ | hlt
     · rcases hCstepG with ⟨hph, hr, hc'eq⟩ | ⟨hF, hc'eq⟩
@@ -816,14 +816,14 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
             · left; rw [hgr']; exact hgn
         · rw [(hCprocs id').2] at hround
           rw [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid] at hphase
-          exact hTransport r' (hI.retG_witness r' id' (hCF ▸ hmem) (Or.inl ⟨hround, hphase⟩))
+          exact hGradedOrDissent r' (hI.retG_witness r' id' (hCF ▸ hmem) (Or.inl ⟨hround, hphase⟩))
       · rw [(hCprocs id').2] at hround
         rw [hc'eq] at hphase
-        exact hTransport r' (hI.retG_witness r' id' (hCF ▸ hmem) (Or.inl ⟨hround, hphase⟩))
+        exact hGradedOrDissent r' (hI.retG_witness r' id' (hCF ▸ hmem) (Or.inl ⟨hround, hphase⟩))
     · rw [(hCprocs id').2] at hlt
-      exact hTransport r' (hI.retG_witness r' id' (hCF ▸ hmem) (Or.inr hlt))
+      exact hGradedOrDissent r' (hI.retG_witness r' id' (hCF ▸ hmem) (Or.inr hlt))
   · intro r' id' hmem hcalled
-    exact hTransport r' (hI.wccCalled_witness r' id' (hCF ▸ hmem) hcalled)
+    exact hGradedOrDissent r' (hI.wccCalled_witness r' id' (hCF ▸ hmem) hcalled)
   · intro r' h
     rw [hBindeq] at h
     exact GBCA.SpecState.quorum_of_eq (hFgeq r') (hCalleq r') (hI.bound_quorum r' h)

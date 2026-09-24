@@ -11,9 +11,9 @@ import Leslie2Protocols.ABA.GBCA.SpecificationSafety
 /-!
 # The core-simulation relation
 
-The relation and invariant for `hybridRefinesSpecification : hybrid ⊑ ABA.spec`. The abstract
-abstract state never fires `SpecStep.coinFlip`: it answers every hidden transition, the
-concrete coin included, by stuttering under a constant coupling, and its mode
+The relation and invariant for `hybridRefinesSpecification : hybrid ⊑ ABA.spec`. The
+abstract state never fires `SpecStep.coinFlip`: it matches every hidden transition, the
+concrete coin included, by a stutter under a constant coupling, and its mode
 is `ControlMode.flipEnabled` throughout. It decides once, in the `SpecStep.decide` τ-step
 that leads the first `retABA` transition.
 
@@ -103,8 +103,8 @@ def Grade2Holder (P : Parameters) (c : ABAState P) (id : Fin P.n) (b : Bool) : P
 never fires `SpecStep.coinFlip`: its mode is `ControlMode.flipEnabled` throughout, so
 `SpecStep.decide` stays enabled at every state it reaches. It lives in one of
 two phases keyed on `a.val`. In **phase 1**, before the first visible return,
-nothing is decided and every hidden transition is answered by a stutter. In
-**phase 2**, entered by the `SpecStep.decide` step that answers the first
+nothing is decided and every hidden transition is matched by a stutter. In
+**phase 2**, entered by the `SpecStep.decide` step that matches the first
 `retABA` transition, `a.val = some v` and `v` is certified by a concrete grade-2 lock.
 
 The ghost record `a.input` agrees with the committed concrete input at every correct process, in
@@ -146,11 +146,11 @@ def DissentWitness (P : Parameters) (g : ℕ → GBCA.SpecState P.n) (c : ABASta
     (if r = 0 then ∃ id', (c.processes id').input = some (!v)
      else v ∈ (g (r - 1)).excluded ∨ (g (r - 1)).grade = some false)
 
-/-- `DissentWitness` transports along any frame that agrees on `g`'s exclusion set at
+/-- `DissentWitness` is preserved by any frame that agrees on `g`'s exclusion set at
 `r`/`r - 1`, `g`'s grade at `r - 1`, and every input of a correct process (the shape every
 `Invariant.step_*` transition's frame facts already provide for their own transition; the `r = 0`
 branch only needs the input equality, the `r ≥ 1` branch only the exclusion-set/grade ones). -/
-theorem DissentWitness.transport {P : Parameters} {g₀ g : ℕ → GBCA.SpecState P.n}
+theorem DissentWitness.preserved {P : Parameters} {g₀ g : ℕ → GBCA.SpecState P.n}
     {c₀ c : ABAState P} {r : ℕ}
     (hexcluded : (g r).excluded = (g₀ r).excluded)
     (hexcluded1 : (g (r - 1)).excluded = (g₀ (r - 1)).excluded)
@@ -201,16 +201,15 @@ theorem RoundSettled.congr {g g' : ℕ → GBCA.SpecState P.n} {r : ℕ}
     RoundSettled g' r ↔ RoundSettled g r := by
   unfold RoundSettled; rw [hexcluded, hgrade]
 
-/-- `RoundSettled` transports along any frame that keeps round `r`'s `excluded` and only ever adds
-  the
-grade-0 lock. -/
+/-- `RoundSettled` is preserved by any frame that keeps round `r`'s `excluded` and only ever
+adds the grade-0 lock. -/
 theorem RoundSettled.of_unchanged {g g' : ℕ → GBCA.SpecState P.n} {r : ℕ}
     (hexcluded : (g' r).excluded = (g r).excluded)
     (hgrade : (g r).grade = some false → (g' r).grade = some false)
     (h : RoundSettled g r) : RoundSettled g' r :=
   h.imp (fun hb hc => hb (by rw [← hexcluded]; exact hc)) hgrade
 
-/-- `Grade2Commitment` transports along any frame that keeps `excluded` and `call`
+/-- `Grade2Commitment` is preserved by any frame that keeps `excluded` and `call`
 pointwise, keeps correct `round`/`estimate` projections, reflects carriers, and only
 ever grows `F`. -/
 theorem Grade2Commitment.of_unchanged {P : Parameters} {g g' : ℕ → GBCA.SpecState P.n}
@@ -231,7 +230,7 @@ theorem Grade2Commitment.of_unchanged {P : Parameters} {g g' : ℕ → GBCA.Spec
   rw [hest id]
   exact h3 id (fun hh => hmem (hF hh)) (by rw [← hround id]; exact hround')
 
-/-- `Grade2Certificate` transports along the same frames as `Grade2Commitment`, given the round's
+/-- `Grade2Certificate` is preserved by the same frames as `Grade2Commitment`, given the round's
 grade is kept. -/
 theorem Grade2Certificate.of_unchanged {P : Parameters} {g g' : ℕ → GBCA.SpecState P.n}
     {c c' : ABAState P} {r : ℕ} {b : Bool}
@@ -246,7 +245,7 @@ theorem Grade2Certificate.of_unchanged {P : Parameters} {g g' : ℕ → GBCA.Spe
   ⟨hgrade.trans h.1, by rw [hexcluded r]; exact h.2.1,
     Grade2Commitment.of_unchanged hexcluded hcall hF hround hest hcarr h.2.2⟩
 
-/-- The `AbstractState` transport a step transition hands to `AbstractState.unchangedBy`: grade-2
+/-- What a step transition hands to `AbstractState.unchangedBy`: grade-2
   certificates survive the step, and any holder universal survives given its certificate
   (the certificate is what supplies a *fresh* grade-2 holder when every old holder has been
   corrupted away). -/

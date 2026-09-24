@@ -96,7 +96,7 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
           heq⟩))
     have hDR2 : ∀ r', DissentWitness P g c r' → DissentWitness P g (c.stepRound id b) r' := by
       intro r' hd
-      refine DissentWitness.transport rfl rfl (fun hh => hh) (fun id2 => ?_) hd
+      refine DissentWitness.preserved rfl rfl (fun hh => hh) (fun id2 => ?_) hd
       by_cases hid2 : id2 = id
       · rw [hid2]; exact hInputEq
       · rw [hProcNe id2 hid2]
@@ -381,7 +381,7 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
       rcases hI.flip_grade2Lock r' h with hg | hd
       · left; exact hg
       · right
-        refine DissentWitness.transport rfl rfl (fun hh => hh) (fun id2 => ?_) hd
+        refine DissentWitness.preserved rfl rfl (fun hh => hh) (fun id2 => ?_) hd
         by_cases hid2 : id2 = id
         · rw [hid2]; exact hInputEq
         · rw [hProcNe id2 hid2]

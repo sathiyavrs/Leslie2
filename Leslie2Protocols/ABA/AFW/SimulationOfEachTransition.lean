@@ -9,27 +9,27 @@ import Leslie2Protocols.ABA.AFW.RoundProjectionStep
 import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 
 /-!
-# Each transition of the implementation answered by a run of the composed system
+# Each transition of the implementation matched by a run of the composed system
 
 `AFW.protocol P` is the gather-based protocol as it runs and `AFW.composed P` reads the same
 protocol as a composition of components, down to the broadcast instances. Every transition of the
-implementation is answered here by a run of the composed system from the state the view
+implementation is matched here by a run of the composed system from the state the view
 `AFW.roundProjection` reads: the readers that identify a transition off its label, the builders of
 a transition of one gather instance and of one round, the broadcast invariant across a transition,
-corruption read through the view, and the answers on a send, on a delivery, on the call and the
-graded return, and on a Byzantine injection.
-`ABA/AFW/Simulation.lean` assembles these answers into the matching.
+corruption read through the view, and the matching runs for a send, for a delivery, for the call
+and the graded return, and for a Byzantine injection.
+`ABA/AFW/Simulation.lean` assembles these runs into the matching.
 
 ## Three of the implementation's transitions against two composed events
 
 The composed round is a composition, so a transition of the implementation that fuses two of its
-events is answered by a run of two transitions and not by one. There are three:
+events is matched by a run of two transitions and not by one. There are three:
 
-* the return-then-call step, answered by the hidden events `firstGatherReturn` and
+* the return-then-call step, matched by the hidden events `firstGatherReturn` and
   `secondGatherCall` of round `r`;
-* the graded return, answered by the hidden event `secondGatherReturn` and then the visible `retG`;
+* the graded return, matched by the hidden event `secondGatherReturn` and then the visible `retG`;
 * a broadcast delivery that completes a `2f + 1` `VOTE` receipt quorum,
-  answered by the instance's delivery and then its return.
+  matched by the instance's delivery and then its return.
 
 ## The returned value against the implementation's receipt quorum
 
@@ -49,7 +49,7 @@ stands or fills an empty one, which is the dichotomy between the plain delivery 
 transition names. Every transition of a gather instance moves each of its `2n` broadcast instances
 by `AFW.InvariantStep` (`AFW.algorithmOverBracha_invariantStep`), so
 `AFW.roundInvariant_firstGather` and `AFW.roundInvariant_secondGather` re-establish the invariant
-from the transitions the answer fires.
+from the transitions the matching run fires.
 `AFW.boundInvariant_of` and `AFW.writeGhost_bound` carry the bound invariant, whose one open case is
 the return-then-call step: there the ghost write puts the round's bound bit on record, which is
 `AFW.roundRecord_gbcaSend_secondGather`. -/
@@ -221,8 +221,8 @@ end BroadcastReturns
 /-! ### Building a transition of one gather instance
 
 A transition of `Gather.AlgorithmOverBracha` is a transition of the instance at the interface
-label over its own. The call is the exception: the instance answers `call id x`
-with two transitions, and the two sit at the two labels of the interface. -/
+label over its own. The call is the exception: the instance takes `call id x`
+on two transitions, and the two sit at the two labels of the interface. -/
 
 section GatherTransitions
 
@@ -492,7 +492,7 @@ end RoundTransitions
 `RoundInvariant` is that clause at one round, `broadcastReturnsInvariant_update` carries it across
 a transition from the round that transition names, and `roundInvariant_firstGather`,
 `roundInvariant_secondGather` and `roundInvariant_of_unchanged` re-establish it from the
-transitions the composed answer fires. -/
+transitions the matching run fires. -/
 
 section Invariant
 
@@ -736,13 +736,13 @@ theorem roundProjection_unchanged {P : Parameters} {x u : ∀ _ : Fin P.n, AFW.P
   funext r
   exact (roundProjection_congr (fun i => by rw [h i])).symm
 
-/-! ### Answering a send
+/-! ### Matching a send
 
 A send of the implementation is a silent run of the round: the sender writes its own record, the
 network records the message, and the round the label tags moves as its own transitions move it.
-The return-then-call step is the one send answered by two events. -/
+The return-then-call step is the one send matched by two events. -/
 
-theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
+theorem roundRecord_match_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     (w : NetworkState P.n) {j : Fin P.n} {c : RoundLoopRecord P.n} {p : RoundRecordMap P.n}
     (hu : (u j).2 = p) (hI : BroadcastReturnsInvariant P u w) {r : ℕ} {m : Message P.n}
     {μ : PMF (AFW.ProcessRecord P.n)}
@@ -1050,7 +1050,7 @@ theorem roundRecord_answer_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.P
         htransition
 
 
-/-! ### Answering a delivery
+/-! ### Matching a delivery
 
 A delivery of the implementation files the message in the receiver's own local
 state of the network state the message's tag names. A gather message moves the
@@ -1058,8 +1058,9 @@ gather instance alone. A broadcast message moves the broadcast instance, and,
 where it completes the receiver's `2f + 1` `VOTE` quorum, the instance returns
 to the receiver as well, which is a second transition of the round. -/
 
-/-- A delivery in an input-broadcast instance of the first gather, answered -/
-theorem answer_deliverFirstGatherInputBroadcast (P : Parameters)
+/-- A delivery in an input-broadcast instance of the first gather, matched by a silent run of
+the round, the round invariant restored. -/
+theorem match_deliverFirstGatherInputBroadcast (P : Parameters)
     {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} (w : NetworkState P.n) {j : Fin P.n}
     {c : RoundLoopRecord P.n} (hI : BroadcastReturnsInvariant P u w) (r : ℕ) (i k : Fin P.n)
     (mm : BRB.Message Bool) (hsent : Message.firstGatherInputBroadcasts i mm ∈ w.sent r k) :
@@ -1118,8 +1119,9 @@ theorem answer_deliverFirstGatherInputBroadcast (P : Parameters)
           u w r) i j k mm) htransition₂),
       roundInvariant_firstGather hR₁ rfl htransition₂⟩
 
-/-- A delivery in a bind-broadcast instance of the first gather, answered -/
-theorem answer_deliverFirstGatherBindBroadcast (P : Parameters)
+/-- A delivery in a bind-broadcast instance of the first gather, matched by a silent run of
+the round, the round invariant restored. -/
+theorem match_deliverFirstGatherBindBroadcast (P : Parameters)
     {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} (w : NetworkState P.n) {j : Fin P.n}
     {c : RoundLoopRecord P.n} (hI : BroadcastReturnsInvariant P u w) (r : ℕ) (i k : Fin P.n)
     (mm : BRB.Message (Gather.AcceptedPairs P.n Bool))
@@ -1179,8 +1181,9 @@ theorem answer_deliverFirstGatherBindBroadcast (P : Parameters)
           w r) i j k mm) htransition₂),
       roundInvariant_firstGather hR₁ rfl htransition₂⟩
 
-/-- A delivery in an input-broadcast instance of the second gather, answered -/
-theorem answer_deliverSecondGatherInputBroadcast (P : Parameters)
+/-- A delivery in an input-broadcast instance of the second gather, matched by a silent run of
+the round, the round invariant restored. -/
+theorem match_deliverSecondGatherInputBroadcast (P : Parameters)
     {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} (w : NetworkState P.n) {j : Fin P.n}
     {c : RoundLoopRecord P.n} (hI : BroadcastReturnsInvariant P u w) (r : ℕ) (i k : Fin P.n)
     (mm : BRB.Message (Option Bool))
@@ -1240,8 +1243,9 @@ theorem answer_deliverSecondGatherInputBroadcast (P : Parameters)
           P u w r) i j k mm) htransition₂),
       roundInvariant_secondGather hR₁ rfl htransition₂⟩
 
-/-- A delivery in a bind-broadcast instance of the second gather, answered -/
-theorem answer_deliverSecondGatherBindBroadcast (P : Parameters)
+/-- A delivery in a bind-broadcast instance of the second gather, matched by a silent run of
+the round, the round invariant restored. -/
+theorem match_deliverSecondGatherBindBroadcast (P : Parameters)
     {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} (w : NetworkState P.n) {j : Fin P.n}
     {c : RoundLoopRecord P.n} (hI : BroadcastReturnsInvariant P u w) (r : ℕ) (i k : Fin P.n)
     (mm : BRB.Message (Gather.AcceptedPairs P.n (Option Bool)))
@@ -1301,7 +1305,7 @@ theorem answer_deliverSecondGatherBindBroadcast (P : Parameters)
           u w r) i j k mm) htransition₂),
       roundInvariant_secondGather hR₁ rfl htransition₂⟩
 
-theorem roundRecord_answer_gbcaDeliver (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
+theorem roundRecord_match_gbcaDeliver (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     (w : NetworkState P.n) {j : Fin P.n} {c : RoundLoopRecord P.n} {p : RoundRecordMap P.n}
     (hu : (u j).2 = p) (hI : BroadcastReturnsInvariant P u w) {r : ℕ} {k : Fin P.n}
     {m : Message P.n} {μ : PMF (AFW.ProcessRecord P.n)} (hsent : m ∈ w.sent r k)
@@ -1355,22 +1359,22 @@ theorem roundRecord_answer_gbcaDeliver (P : Parameters) {u : ∀ _ : Fin P.n, AF
           roundInvariant_secondGather (roundInvariant_of_broadcastReturnsInvariant hI r) rfl
             htransition⟩
       | firstGatherInputBroadcasts i mm =>
-        exact answer_deliverFirstGatherInputBroadcast P w hI r i k mm hsent
+        exact match_deliverFirstGatherInputBroadcast P w hI r i k mm hsent
       | firstGatherBindBroadcasts i mm =>
-        exact answer_deliverFirstGatherBindBroadcast P w hI r i k mm hsent
+        exact match_deliverFirstGatherBindBroadcast P w hI r i k mm hsent
       | secondGatherInputBroadcasts i mm =>
-        exact answer_deliverSecondGatherInputBroadcast P w hI r i k mm hsent
+        exact match_deliverSecondGatherInputBroadcast P w hI r i k mm hsent
       | secondGatherBindBroadcasts i mm =>
-        exact answer_deliverSecondGatherBindBroadcast P w hI r i k mm hsent
+        exact match_deliverSecondGatherBindBroadcast P w hI r i k mm hsent
     exact ⟨_, rfl, rfl,
       fun r' hr' => Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr', hga2,
         hrun, hinv⟩
 
 
-/-! ### Answering the call, the graded return and the call loop -/
+/-! ### Matching the call, the graded return and the call loop -/
 
 /-- The graded-agreement call of the implementation is the round's own call. -/
-theorem roundRecord_answer_callG (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
+theorem roundRecord_match_callG (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     (w : NetworkState P.n) {j : Fin P.n} {c : RoundLoopRecord P.n} {p : RoundRecordMap P.n}
     (hu : (u j).2 = p) (hI : BroadcastReturnsInvariant P u w) {r : ℕ} {b : Bool}
     {μ : PMF (AFW.ProcessRecord P.n)}
@@ -1410,7 +1414,7 @@ theorem roundRecord_answer_callG (P : Parameters) {u : ∀ _ : Fin P.n, AFW.Proc
 /-- The graded-agreement return of the implementation is the second gather's
 return followed by the round's own return, the grade read off the second
 gather's output. -/
-theorem roundRecord_answer_retG (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
+theorem roundRecord_match_retG (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     (w : NetworkState P.n) {j : Fin P.n} {c : RoundLoopRecord P.n} {p : RoundRecordMap P.n}
     (hu : (u j).2 = p) (hI : BroadcastReturnsInvariant P u w) {r : ℕ} {out : GBCAOutput}
     {bnd : Bool} {μ : PMF (AFW.ProcessRecord P.n)} (hbnd : bnd = ghostOutput P w r j out)
@@ -1482,7 +1486,7 @@ theorem roundRecord_answer_retG (P : Parameters) {u : ∀ _ : Fin P.n, AFW.Proce
 
 /-- The call against an already-called record: the round loop moves, the round
 takes its input-enabledness loop and the view is unchanged. -/
-theorem roundRecord_answer_gbcaCallLoop (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
+theorem roundRecord_match_gbcaCallLoop (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
     (w : NetworkState P.n) {j : Fin P.n} {c : RoundLoopRecord P.n} {p : RoundRecordMap P.n}
     (hu : (u j).2 = p) {r : ℕ} {b : Bool} {μ : PMF (AFW.ProcessRecord P.n)}
     (h : RoundStep P j (c, p) (Sum.inr (.gbcaCallLoop r j b)) μ) :
@@ -1499,12 +1503,12 @@ theorem roundRecord_answer_gbcaCallLoop (P : Parameters) {u : ∀ _ : Fin P.n, A
     exact ⟨_, rfl, rfl, hh, hph, hr, hest, rfl,
       roundOverBracha_callLoop (roundProjection P u w r) j b⟩
 
-/-! ### Answering a Byzantine injection
+/-! ### Matching a Byzantine injection
 
 The adversary multicasts on behalf of a corrupted sender. The message reaches
 the network state its tag names and no record moves. -/
 
-theorem byzantine_answer (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n)
+theorem byzantine_match (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n)
     (w : NetworkState P.n) (hI : BroadcastReturnsInvariant P u w) (r : ℕ) {k : Fin P.n}
     (m : Message P.n) (hF : k ∈ w.F) :
     (GBCA.ByAFW.roundOverBracha P r).step (roundProjection P u w r) (Sum.inl Label.tau)

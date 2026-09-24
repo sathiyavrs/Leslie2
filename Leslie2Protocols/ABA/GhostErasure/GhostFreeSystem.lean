@@ -32,7 +32,7 @@ adversary is a transition of the ghost-free adversary at the erased state, on th
 because the ghost write leaves the erasure where it stands
 (`NetworkState.forgetGhost_writeGhost`) and over `Unit` it is the identity
 (`NetworkState.writeGhost_unit`). The lift is exact up to `φ`: a ghost-free return
-announcing `bnd` is answered by the return announcing a bit the relation `ghostOutput`
+announcing `bnd` is matched by the return announcing a bit the relation `ghostOutput`
 admits, which is what the hypothesis `ghostOutput_total` supplies. Both algorithms satisfy
 it, their `ghostOutput` being an equation.
 
@@ -205,7 +205,7 @@ successor is the erasure of its own successor, the ghost write leaving the erasu
 it stands; and the two returns lose their guard, the ghost-free relation being the full
 one.
 
-The lift answers a ghost-free transition by the transition of the same name at the unerased
+The lift matches a ghost-free transition by the transition of the same name at the unerased
 state. On a graded-agreement return the announced bit is replaced by one the relation `ghostOutput`
 admits, which `ghostOutput_total` supplies, and the two bits agree under
 `forgetBoundExtended`. -/

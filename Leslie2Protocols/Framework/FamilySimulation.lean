@@ -17,15 +17,15 @@ compatible with `R` (`hglob`), then the concrete family forward-simulates the
 abstract family along the pointwise relation `fun s t => ∀ r, R r (s r) (t r)`
 (`ForwardSimulation.family`).
 
-The proof transports the abstract instance's weak-transition witness execution
-into the family via `AlterSeq.map (Function.update t r)` — the non-moving
+The proof maps the abstract instance's weak-transition witness execution
+into the family along `AlterSeq.map (Function.update t r)` — the non-moving
 coordinates just carry the ambient joint state along:
 
 * `System.weakLStep_of_step` — a single Dirac step is a (one-transition) weak
   run; `weakLStep_tauThen` is the two-step run, a silent step followed by an
   external one;
 * `AlterSeq.stateAt_map`, `AlterSeq.endState_map`, `System.trace_map_state` —
-  `AlterSeq.map` transport lemmas: pointwise state maps commute with `stateAt`/`endState`
+  the `AlterSeq.map` lemmas: pointwise state maps commute with `stateAt`/`endState`
   and leave the trace unchanged (the trace only reads labels);
 * `System.weakLSilent_family` / `System.weakLStep_family` — a weak run of the
   instance `inst r` embeds into the family, moving only coordinate `r`.
@@ -134,7 +134,7 @@ theorem weakLStep_tauThen {q q₁ q' : State} {l : Label}
 
 end SingleStep
 
-/-! ### `AlterSeq.map` transport lemmas -/
+/-! ### What `AlterSeq.map` leaves alone -/
 
 /-- `AlterSeq.map` commutes with `stateAt`. -/
 theorem AlterSeq.stateAt_map (f : State → State') (e : AlterSeq State Label) (n : ℕ) :
@@ -206,9 +206,9 @@ theorem mem_trace_of_external {sys : System State Label}
     List.mem_filter.mpr ⟨List.mem_of_getElem? hLn, ?_⟩, rfl⟩
   simpa using hl
 
-/-- Transport a partial execution of the instance `inst r` into the family via
-`Function.update t r`, provided every transition label is silent or owned by
-round `r`. -/
+/-- The image of a partial execution of the instance `inst r` under
+`Function.update t r` is a partial execution of the family, provided every
+transition label is silent or owned by round `r`. -/
 private theorem is_partial_exec_map_family {inst : ℕ → System σ Label}
     {owns : Label → Option ℕ} {glob : Label → Prop} {act : Label → σ → σ}
     {r : ℕ} (t : ℕ → σ) {e : AlterSeq σ Label}

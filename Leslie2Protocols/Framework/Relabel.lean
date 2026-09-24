@@ -18,7 +18,7 @@ which the composite is not meant to expose. The idiom is to build the components
 over the **extended alphabet** `Label ⊕ Extra`, where `Label` is the alphabet the
 composite shares with everything else and `Extra` carries the auxiliary labels; `System.abstract`
 (in `ProcessAlgebra/Composition.lean`) then hides the `Sum.inr`
-labels as `τ`, and `System.relabel` transports the result back to `Label`:
+labels as `τ`, and `System.relabel` restricts the result back to `Label`:
 
 * `System.relabel sys : System State Label` keeps the state space of
   `sys : System State (Label ⊕ Extra)` and retains exactly its `Sum.inl`-labelled
@@ -41,13 +41,13 @@ A probabilistic forward simulation survives the restriction
 The restriction changes the *label type*, and a weak transition
 (`weakTau` / `weakStep`) is witnessed by a `WeakScheduler`, whose `next`
 function is typed by that label type. The witness therefore has to be
-transported rather than reused, which is what `WeakScheduler.relabel` does:
+relabelled rather than reused, which is what `WeakScheduler.relabel` does:
 the emissions of `σ` are read along `toBaseLabel` (an auxiliary label would go to
 `τ`, but a weak scheduler emits none), and the prefix it is asked about is
 read back along `Sum.inl`.
 
 Everything else follows the emission identities `relabel_next_none` and
-`relabel_next_some`, which say that the transported scheduler puts exactly the
+`relabel_next_some`, which say that the relabelled scheduler puts exactly the
 mass `σ` puts on the corresponding extended emission: the auxiliary preimages
 of a base label all carry mass `0`, since a weak scheduler emits `τ` alone.
 -/
@@ -134,12 +134,12 @@ theorem mapLabels_ofList (s₀ : State) (L : List (Label × State)) :
   change (⟨s₀, (Stream'.Seq.ofList L).map _⟩ : AlterSeq State (Label ⊕ Extra)) = _
   rw [Stream'.Seq.map_ofList_pub]
 
-/-! ### Transporting a weak scheduler -/
+/-! ### Relabelling a weak scheduler -/
 
 variable {sys : System State (Label ⊕ Extra)}
 
 open Classical in
-/-- **The transported weak scheduler.** `σ` is asked about the prefix read on
+/-- **The relabelled weak scheduler.** `σ` is asked about the prefix read on
 the extended alphabet, and its answer is read back along `toBaseLabel`. -/
 noncomputable def WeakScheduler.relabel (σ : WeakScheduler sys) :
     WeakScheduler sys.relabel where
@@ -177,7 +177,7 @@ noncomputable def WeakScheduler.relabel (σ : WeakScheduler sys) :
       rw [← hm, hmτ]
       rfl
 
-/-- The transported scheduler halts with exactly the mass `σ` halts with. -/
+/-- The relabelled scheduler halts with exactly the mass `σ` halts with. -/
 theorem WeakScheduler.relabel_next_none (σ : WeakScheduler sys)
     (e : AlterSeq State Label) :
     σ.relabel.next e none = σ.next (e.mapLabels Sum.inl) none := by
@@ -192,7 +192,7 @@ theorem WeakScheduler.relabel_next_none (σ : WeakScheduler sys)
   | none => exact absurd rfl ho
   | some p => simp
 
-/-- The transported scheduler emits `(l, μ)` with exactly the mass `σ` emits
+/-- The relabelled scheduler emits `(l, μ)` with exactly the mass `σ` emits
 `(Sum.inl l, μ)` with: every auxiliary preimage of `l` carries mass `0`,
 because a weak scheduler emits `τ` alone. -/
 theorem WeakScheduler.relabel_next_some (σ : WeakScheduler sys)
@@ -220,7 +220,7 @@ theorem WeakScheduler.relabel_next_some (σ : WeakScheduler sys)
       exact ho (by rw [hmτ, hm]; rfl)
   · exact if_neg hmatch
 
-/-! ### Path probabilities under the transported scheduler -/
+/-! ### Path probabilities under the relabelled scheduler -/
 
 omit [Silent Label] in
 /-- `mapLabels` composes. -/
@@ -279,7 +279,7 @@ theorem kernel_relabel (σ : WeakScheduler sys) (μ0 : PMF State)
           (e.mapLabels Sum.inl) (toExtendedTransition p) :=
   tsum_congr fun ν => by rw [σ.relabel_next_some]; rfl
 
-/-- **Path probabilities are preserved**: the transported scheduler gives a
+/-- **Path probabilities are preserved**: the relabelled scheduler gives a
 run over `Label` exactly the probability `σ` gives its embedding. -/
 theorem probOf_relabel (σ : WeakScheduler sys) (μ0 : PMF State) (s₀ : State)
     (L : List (Label × State)) :
@@ -452,8 +452,8 @@ theorem weakStep_relabel {μ ν : PMF State} {l : Label}
 /-- **Precongruence for restriction along the left summand.** A probabilistic
 forward simulation over the extended alphabet `Label ⊕ Extra` restricts to one
 over `Label`: the `Sum.inl`-transitions are the transitions of the restriction,
-and the two silent labels name the same thing, so the weak answers transport
-along `WeakScheduler.relabel`. -/
+and the two silent labels name the same thing, so every matching weak transition
+of the abstract system is read over `Label` along `WeakScheduler.relabel`. -/
 theorem ProbabilisticForwardSimulation.relabel {State_C State_A : Type}
     {sysC : System State_C (Label ⊕ Extra)} {sysA : System State_A (Label ⊕ Extra)}
     {R : State_C → PMF State_A → Prop}
