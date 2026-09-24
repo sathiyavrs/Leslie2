@@ -41,8 +41,8 @@ graded-agreement returns announce any bit. -/
 noncomputable def ghostFreeProtocol (P : Parameters) :
     System (Implementation.State P GBCA.ByABDY.Message (GBCA.ByABDY.RoundRecord P.n) Unit)
     (Label P.n) :=
-  Implementation.systemGhostFree P GBCA.ByABDY.Message (GBCA.ByABDY.RoundRecord P.n) (ABDY.RoundStep
-    P)
+  Implementation.systemGhostFree P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundRecord P.n)
+    (ABDY.RoundStep P)
     (ABDY.gbcaCallPayload P)
 
 /-- **The ghost costs nothing.** The bound bit the network records is written
@@ -51,8 +51,8 @@ level, so the protocol and the ghost-free protocol achieve the same trace
 distributions. -/
 theorem protocol_erasure (P : Parameters) :
     achievableTraceDists (protocol P) = achievableTraceDists (ghostFreeProtocol P) :=
-  Implementation.system_erasure P GBCA.ByABDY.Message (GBCA.ByABDY.RoundRecord P.n) (Option Bool)
-    (ABDY.RoundStep P)
+  Implementation.system_erasure P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundRecord P.n)
+    (Option Bool) (ABDY.RoundStep P)
     (ABDY.gbcaCallPayload P) (ABDY.abdyGhostStep P) (ABDY.abdyAnnouncedBound P)
     (fun s r id out => ⟨ABDY.abdyGhostOutput P s r id out, rfl⟩)
 

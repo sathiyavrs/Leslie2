@@ -54,27 +54,27 @@ namespace Implementation
 /-! ### The ghost-free system -/
 
 section GhostFreeSystem
-variable (P : Parameters) (M S : Type) [DecidableEq M]
-    (roundStep : Fin P.n → ProcessRecord P.n S → ExtendedLabel P.n M → PMF (ProcessRecord P.n S) →
+variable (P : Parameters) (M E S : Type) [DecidableEq M]
+    (roundStep : Fin P.n → ProcessRecord P.n S → ExtendedLabel P.n M E → PMF (ProcessRecord P.n S) →
       Prop)
     (callPayload : Fin P.n → Bool → M)
 
 /-- The adversary of the ghost-free system: the network's transitions over the trivial ghost,
 its two graded-agreement returns free to announce either bit. -/
-noncomputable def networkGhostFree : System (NetworkState P.n M Unit) (ExtendedLabel P.n M) :=
-  network P M Unit callPayload (fun _ _ _ => ()) (fun _ _ _ _ _ => True)
+noncomputable def networkGhostFree : System (NetworkState P.n M Unit) (ExtendedLabel P.n M E) :=
+  network P M E Unit callPayload (fun _ _ _ => ()) (fun _ _ _ _ _ => True)
 
 /-- **The ghost-free system**: the implementation whose adversary holds no ghost record
 and announces any bit on a graded-agreement return. -/
 noncomputable def systemGhostFree : System (State P M S Unit) (Label P.n) :=
-  system P M S Unit roundStep callPayload (fun _ _ _ => ()) (fun _ _ _ _ _ => True)
+  system P M E S Unit roundStep callPayload (fun _ _ _ => ()) (fun _ _ _ _ _ => True)
 
 end GhostFreeSystem
 /-! ### The projection and the label identification -/
 
 section Labels
 
-variable {n : ℕ} {M : Type}
+variable {n : ℕ} {M E : Type}
 
 /-- The projection of the implementation's state: the process family and the coin oracle
 stand, and the adversary's ghost record is dropped. -/
@@ -85,19 +85,18 @@ def forgetGhostState {P : Parameters} {S G : Type} :
 /-- The label with the announced bound bit dropped on the rendezvous alphabet: a
 Byzantine graded-agreement return keeps its round, the process it answers and its graded
 outcome, and every other rendezvous label stands. -/
-def forgetBoundEvent : NetworkEvent n M → NetworkEvent n M
+def forgetBoundEvent : NetworkEvent n M E → NetworkEvent n M E
   | .byzantineRetG r k out _ => .byzantineRetG r k out false
   | e => e
 
 @[simp] theorem forgetBoundEvent_byzantineRetG (r : ℕ) (k : Fin n) (out : GBCAOutput)
     (bnd : Bool) :
-    forgetBoundEvent (NetworkEvent.byzantineRetG (M := M) r k out bnd) = .byzantineRetG r k out
-      false
-      := rfl
+    forgetBoundEvent (NetworkEvent.byzantineRetG (M := M) (E := E) r k out bnd)
+      = .byzantineRetG r k out false := rfl
 
 /-- Two rendezvous labels agree under the erasure exactly when they are equal, or are
 Byzantine graded-agreement returns of the same round, process and graded outcome. -/
-theorem forgetBoundEvent_eq_iff (e e' : NetworkEvent n M) :
+theorem forgetBoundEvent_eq_iff (e e' : NetworkEvent n M E) :
     forgetBoundEvent e = forgetBoundEvent e' ↔
       e = e' ∨ ∃ (r : ℕ) (k : Fin n) (out : GBCAOutput) (b b' : Bool),
         e = .byzantineRetG r k out b ∧ e' = .byzantineRetG r k out b' := by
@@ -108,13 +107,13 @@ theorem forgetBoundEvent_eq_iff (e e' : NetworkEvent n M) :
 
 /-- The label identification of the erasure: the announced bound bit dropped on both
 graded-agreement returns, every other label untouched. -/
-abbrev forgetBoundExtended : ExtendedLabel n M → ExtendedLabel n M := Sum.map forgetBound
+abbrev forgetBoundExtended : ExtendedLabel n M E → ExtendedLabel n M E := Sum.map forgetBound
   forgetBoundEvent
 
 /-- Two labels of the extended alphabet agree under the erasure exactly when they are
 equal, or are graded-agreement returns — correct or Byzantine — of the same round,
 process and graded outcome. -/
-theorem forgetBoundExtended_eq_iff (l l' : ExtendedLabel n M) :
+theorem forgetBoundExtended_eq_iff (l l' : ExtendedLabel n M E) :
     forgetBoundExtended l = forgetBoundExtended l' ↔
       l = l' ∨
       (∃ (r : ℕ) (id : Fin n) (out : GBCAOutput) (b b' : Bool),
@@ -142,9 +141,9 @@ theorem forgetBoundExtended_eq_iff (l l' : ExtendedLabel n M) :
 /-- The erasure separates the silent label: `τ` is a graded-agreement return of no
 round. -/
 theorem separatesSilent_forgetBoundExtended :
-    SeparatesSilent (forgetBoundExtended (n := n) (M := M)) := by
+    SeparatesSilent (forgetBoundExtended (n := n) (M := M) (E := E)) := by
   intro l hl
-  rcases (forgetBoundExtended_eq_iff l (Silent.τ : ExtendedLabel n M)).mp hl with
+  rcases (forgetBoundExtended_eq_iff l (Silent.τ : ExtendedLabel n M E)).mp hl with
     rfl | ⟨r, id, out, b, b', -, hτ⟩ | ⟨r, k, out, b, b', -, hτ⟩
   · rfl
   · exact absurd hτ (by simp)
@@ -152,9 +151,9 @@ theorem separatesSilent_forgetBoundExtended :
 
 /-- The rendezvous alphabet is saturated along the erasure: the identification keeps a
 label in its summand. -/
-theorem networkEventLabels_forgetBoundExtended (l l' : ExtendedLabel n M)
+theorem networkEventLabels_forgetBoundExtended (l l' : ExtendedLabel n M E)
     (h : forgetBoundExtended l = forgetBoundExtended l') :
-    l ∈ networkEventLabels (M := M) n ↔ l' ∈ networkEventLabels (M := M) n := by
+    l ∈ networkEventLabels (M := M) (E := E) n ↔ l' ∈ networkEventLabels (M := M) (E := E) n := by
   match l, l' with
   | Sum.inl a, Sum.inl a' => simp
   | Sum.inl a, Sum.inr e => exact absurd h (by simp)
@@ -181,17 +180,18 @@ The network is the one component whose state carries the ghost, and the two
 graded-agreement returns are the one pair of transitions that read it. -/
 
 section NetworkErasure
-variable {P : Parameters} {M G : Type} [DecidableEq M] [Inhabited G]
+variable {P : Parameters} {M E G : Type} [DecidableEq M] [Inhabited G]
     {callPayload : Fin P.n → Bool → M}
-    {ghostStep : ExtendedLabel P.n M → NetworkState P.n M G → G → G}
+    {ghostStep : ExtendedLabel P.n M E → NetworkState P.n M G → G → G}
     {ghostOutput : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop}
 
 /-- Over the trivial ghost a transition's successor is the state its write starts from, so a
 transition written with its ghost write is a transition written without it. -/
-private theorem networkStepGhostFree_drop {s t : NetworkState P.n M Unit} {L : ExtendedLabel P.n M}
-    (h : NetworkStep P M Unit callPayload (fun _ _ _ => ()) (fun _ _ _ _ _ => True) s L
+private theorem networkStepGhostFree_drop {s t : NetworkState P.n M Unit}
+    {L : ExtendedLabel P.n M E}
+    (h : NetworkStep P M E Unit callPayload (fun _ _ _ => ()) (fun _ _ _ _ _ => True) s L
       (PMF.pure (t.writeGhost (fun _ _ _ => ()) L))) :
-    NetworkStep P M Unit callPayload (fun _ _ _ => ()) (fun _ _ _ _ _ => True) s L
+    NetworkStep P M E Unit callPayload (fun _ _ _ => ()) (fun _ _ _ _ _ => True) s L
       (PMF.pure t) := by
   rwa [writeGhost_unit] at h
 
@@ -212,8 +212,8 @@ admits, which `ghostOutput_total` supplies, and the two bits agree under
 theorem network_erasure
     (ghostOutput_total : ∀ (s : NetworkState P.n M G) (r : ℕ) (id : Fin P.n) (out : GBCAOutput),
       ∃ bnd, ghostOutput s r id out bnd) :
-    StateErasure (network P M G callPayload ghostStep ghostOutput)
-      (networkGhostFree P M callPayload) NetworkState.forgetGhost forgetBoundExtended where
+    StateErasure (network P M E G callPayload ghostStep ghostOutput)
+      (networkGhostFree P M E callPayload) NetworkState.forgetGhost forgetBoundExtended where
   init := rfl
   silent := separatesSilent_forgetBoundExtended
   project := by
@@ -242,6 +242,8 @@ theorem network_erasure
       exact ⟨_, _, rfl, NetworkStep.decidedSend s j b hb, by simp [PMF.pure_map]⟩
     case decidedDeliver i j b hb =>
       exact ⟨_, _, rfl, NetworkStep.decidedDeliver s i j b hb, by simp [PMF.pure_map]⟩
+    case gbcaRoundEvent r j e =>
+      exact ⟨_, _, rfl, NetworkStep.gbcaRoundEvent s r j e, by simp [PMF.pure_map]⟩
     case retWPublish r id c b =>
       exact ⟨_, _, rfl, NetworkStep.retWPublish s r id c b, by simp [PMF.pure_map]⟩
     case gbcaCallLoop r id b =>
@@ -290,16 +292,16 @@ adversary announces. -/
 
 section Saturation
 
-variable (P : Parameters) (M S : Type)
-    (roundStep : Fin P.n → ProcessRecord P.n S → ExtendedLabel P.n M → PMF (ProcessRecord P.n S) →
+variable (P : Parameters) (M E S : Type)
+    (roundStep : Fin P.n → ProcessRecord P.n S → ExtendedLabel P.n M E → PMF (ProcessRecord P.n S) →
       Prop)
 
 /-- **A program is saturated along the erasure.** The announced bound bit is the
 network's business: a program's return transition takes it free (`IsRoundStep.boundBitFree`), the
 idle transition of a non-participant carries it as a bound variable, and the replaced program's
 self-loop reads no label at all. -/
-theorem program_labelSaturated [IsRoundStep P M S roundStep] (j : Fin P.n) :
-    (program P M S roundStep j).LabelSaturated (forgetBoundExtended (M := M)) := by
+theorem program_labelSaturated [IsRoundStep P M E S roundStep] (j : Fin P.n) :
+    (program P M E S roundStep j).LabelSaturated (forgetBoundExtended (M := M) (E := E)) := by
   intro q l l' μ hlab hstep
   simp only [program_step] at hstep ⊢
   rcases (forgetBoundExtended_eq_iff l l').mp hlab with
@@ -316,10 +318,10 @@ theorem program_labelSaturated [IsRoundStep P M S roundStep] (j : Fin P.n) :
 
 /-- **The process group is saturated along the erasure**: full synchronisation carries
 the saturation of every program. -/
-theorem programSynchronisedProduct_labelSaturated [IsRoundStep P M S roundStep] :
-    (System.synchronisedProduct (program P M S roundStep)).LabelSaturated
-      (forgetBoundExtended (M := M)) :=
-  System.LabelSaturated.synchronisedProduct (program_labelSaturated P M S roundStep)
+theorem programSynchronisedProduct_labelSaturated [IsRoundStep P M E S roundStep] :
+    (System.synchronisedProduct (program P M E S roundStep)).LabelSaturated
+      (forgetBoundExtended (M := M) (E := E)) :=
+  System.LabelSaturated.synchronisedProduct (program_labelSaturated P M E S roundStep)
     separatesSilent_forgetBoundExtended
 
 /-- **The coin family is saturated along the erasure of the announced bound bit.** A
@@ -341,8 +343,8 @@ theorem wccSpecFamily_labelSaturated :
 /-- **The lifted coin oracle is saturated along the erasure.** Two labels the erasure
 identifies are both outside the pullback's image, or delegate to two labels the coin
 family cannot tell apart. -/
-theorem coinOverExtendedAlphabet_labelSaturated : (coinOverExtendedAlphabet P M).LabelSaturated
-  (forgetBoundExtended (M := M)) := by
+theorem coinOverExtendedAlphabet_labelSaturated :
+    (coinOverExtendedAlphabet P M E).LabelSaturated (forgetBoundExtended (M := M) (E := E)) := by
   refine System.LabelSaturated.mapIdle (wccSpecFamily_labelSaturated P) ?_
   intro l₁ l₂ hlab
   rcases (forgetBoundExtended_eq_iff l₁ l₂).mp hlab with
@@ -359,12 +361,12 @@ end Saturation
 
 section SystemErasure
 
-variable (P : Parameters) (M S G : Type) [DecidableEq M] [Inhabited G]
-    (roundStep : Fin P.n → ProcessRecord P.n S → ExtendedLabel P.n M → PMF (ProcessRecord P.n S) →
+variable (P : Parameters) (M E S G : Type) [DecidableEq M] [Inhabited G]
+    (roundStep : Fin P.n → ProcessRecord P.n S → ExtendedLabel P.n M E → PMF (ProcessRecord P.n S) →
       Prop)
-    [IsRoundStep P M S roundStep]
+    [IsRoundStep P M E S roundStep]
     (callPayload : Fin P.n → Bool → M)
-    (ghostStep : ExtendedLabel P.n M → NetworkState P.n M G → G → G)
+    (ghostStep : ExtendedLabel P.n M E → NetworkState P.n M G → G → G)
     (ghostOutput : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop)
 
 /-- **The implementation's ghost is erasable.** The adversary's erasure is carried through
@@ -376,12 +378,12 @@ being a graded-agreement return. -/
 theorem system_stateErasure
     (ghostOutput_total : ∀ (s : NetworkState P.n M G) (r : ℕ) (id : Fin P.n) (out : GBCAOutput),
       ∃ bnd, ghostOutput s r id out bnd) :
-    StateErasure (system P M S G roundStep callPayload ghostStep ghostOutput)
-      (systemGhostFree P M S roundStep callPayload) forgetGhostState id := by
+    StateErasure (system P M E S G roundStep callPayload ghostStep ghostOutput)
+      (systemGhostFree P M E S roundStep callPayload) forgetGhostState id := by
   have hnet := network_erasure (callPayload := callPayload) (ghostStep := ghostStep)
     ghostOutput_total
-  have hpre := (hnet.parallel_right (coinOverExtendedAlphabet_labelSaturated P M)).parallel_left
-    (programSynchronisedProduct_labelSaturated P M S roundStep)
+  have hpre := (hnet.parallel_right (coinOverExtendedAlphabet_labelSaturated P M E)).parallel_left
+    (programSynchronisedProduct_labelSaturated P M E S roundStep)
   have hgroup := (hpre.abstract (networkEventLabels P.n)
     networkEventLabels_forgetBoundExtended).relabel
   exact hgroup.abstract_collapse (Label.hiddenAPI P.n) hiddenAPI_forgetBound
@@ -393,9 +395,9 @@ so the implementation and the ghost-free system achieve the same trace distribut
 theorem system_erasure
     (ghostOutput_total : ∀ (s : NetworkState P.n M G) (r : ℕ) (id : Fin P.n) (out : GBCAOutput),
       ∃ bnd, ghostOutput s r id out bnd) :
-    achievableTraceDists (system P M S G roundStep callPayload ghostStep ghostOutput) =
-      achievableTraceDists (systemGhostFree P M S roundStep callPayload) :=
-  (system_stateErasure P M S G roundStep callPayload ghostStep ghostOutput
+    achievableTraceDists (system P M E S G roundStep callPayload ghostStep ghostOutput) =
+      achievableTraceDists (systemGhostFree P M E S roundStep callPayload) :=
+  (system_stateErasure P M E S G roundStep callPayload ghostStep ghostOutput
     ghostOutput_total).achievableTraceDists_eq
 
 end SystemErasure

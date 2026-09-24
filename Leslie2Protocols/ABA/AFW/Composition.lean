@@ -331,12 +331,9 @@ theorem composedHidden_of_tau (P : Parameters) {q : ComposedState P}
 
 /-! ## Runs of the graded-agreement family
 
-Three transitions of the implementation are matched by two transitions of the composed system: the
-return-then-call step by the hidden events `firstGatherReturn` and `secondGatherCall`, the graded
-return by the hidden event `secondGatherReturn` and the visible `retG`, and a delivery completing a
-receipt quorum by the hidden events `deliver` and `inputBroadcastRet` (or `bindRet`). The builders
-below carry a run of one round to the graded-agreement family, and a run of that family to the
-composed group. -/
+Each transition of the implementation is matched by one transition of the composed system, silent
+except at the round's graded return. The builders below carry a run of one round to the
+graded-agreement family, and a run of that family to the composed group. -/
 
 /-- A silent run of one round is a silent run of the graded-agreement family at that coordinate. -/
 theorem roundFamilyOverBracha_silentRun (P : Parameters)

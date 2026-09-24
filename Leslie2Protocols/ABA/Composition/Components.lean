@@ -93,8 +93,9 @@ for every such type `M`. ABDY22's chain takes the messages of
 multicast and the round delivery then name no label there. -/
 
 /-- The rendezvous alphabet, over the type `M` of the messages a graded-agreement round
-exchanges. -/
-abbrev NetworkEvent (n : ℕ) (M : Type) : Type := Implementation.NetworkEvent n M
+exchanges. A round of the composed system takes no call or return of its own, so the type of those
+events is empty here. -/
+abbrev NetworkEvent (n : ℕ) (M : Type) : Type := Implementation.NetworkEvent n M Empty
 
 /-- The extended alphabet. Its silent label is `Sum.inl τ`, so every
 `Sum.inr` label is observable and hence hideable. -/
@@ -103,7 +104,7 @@ abbrev ExtendedLabel (n : ℕ) (M : Type) : Type := Label n ⊕ NetworkEvent n M
 /-- The coin oracle, read over this alphabet through the pullback. -/
 noncomputable def coinOverRoundAlphabet (P : Parameters) (M : Type) [DecidableEq M] :
     System (ℕ → WCC.SpecState P.n) (ExtendedLabel P.n M) :=
-  coinOverExtendedAlphabet P M
+  coinOverExtendedAlphabet P M Empty
 
 @[simp] theorem coinOverRoundAlphabet_init (P : Parameters) (M : Type) [DecidableEq M] :
     (coinOverRoundAlphabet P M).init = (WCC.specFamily P).init := rfl

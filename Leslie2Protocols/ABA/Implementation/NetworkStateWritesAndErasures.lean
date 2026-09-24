@@ -38,7 +38,7 @@ among them. The ghost write touches the ghost and nothing else. -/
 
 section Fields
 
-variable {n : ℕ} {M G : Type}
+variable {n : ℕ} {M E G : Type}
 
 @[simp] theorem recordGBCASend_sent_self [DecidableEq M]
     (s : NetworkState n M G) (r : ℕ) (j : Fin n) (m : M) :
@@ -79,12 +79,14 @@ end Fields
     (k : Fin P.n) : (NetworkState.corrupt P k s).sent = s.sent := by
   unfold NetworkState.corrupt; split <;> rfl
 
-@[simp] theorem networkCorrupt_decidedSent {P : Parameters} {M G : Type} (s : NetworkState P.n M G)
+@[simp] theorem networkCorrupt_decidedSent {P : Parameters} {M G : Type}
+    (s : NetworkState P.n M G)
     (k : Fin P.n) : (NetworkState.corrupt P k s).decidedSent = s.decidedSent := by
   unfold NetworkState.corrupt; split <;> rfl
 
 /-- Corruption leaves the ghost where it stands. -/
-@[simp] theorem networkCorrupt_ghostRecord {P : Parameters} {M G : Type} (s : NetworkState P.n M G)
+@[simp] theorem networkCorrupt_ghostRecord {P : Parameters} {M G : Type}
+    (s : NetworkState P.n M G)
     (k : Fin P.n) : (NetworkState.corrupt P k s).ghostRecord = s.ghostRecord := by
   unfold NetworkState.corrupt; split <;> rfl
 
@@ -95,34 +97,34 @@ too on a label naming no round. -/
 
 section Ghost
 
-variable {n : ℕ} {M G : Type}
-    {ghostStep : ExtendedLabel n M → NetworkState n M G → G → G}
+variable {n : ℕ} {M E G : Type}
+    {ghostStep : ExtendedLabel n M E → NetworkState n M G → G → G}
 
-@[simp] theorem writeGhost_sent (s : NetworkState n M G) (L : ExtendedLabel n M) :
+@[simp] theorem writeGhost_sent (s : NetworkState n M G) (L : ExtendedLabel n M E) :
     (s.writeGhost ghostStep L).sent = s.sent := by
   unfold NetworkState.writeGhost; split <;> rfl
 
-@[simp] theorem writeGhost_decidedSent (s : NetworkState n M G) (L : ExtendedLabel n M) :
+@[simp] theorem writeGhost_decidedSent (s : NetworkState n M G) (L : ExtendedLabel n M E) :
     (s.writeGhost ghostStep L).decidedSent = s.decidedSent := by
   unfold NetworkState.writeGhost; split <;> rfl
 
-@[simp] theorem writeGhost_F (s : NetworkState n M G) (L : ExtendedLabel n M) :
+@[simp] theorem writeGhost_F (s : NetworkState n M G) (L : ExtendedLabel n M E) :
     (s.writeGhost ghostStep L).F = s.F := by
   unfold NetworkState.writeGhost; split <;> rfl
 
 /-- A label naming no round leaves the whole state where it stands. -/
-theorem writeGhost_of_round_none (s : NetworkState n M G) {L : ExtendedLabel n M}
+theorem writeGhost_of_round_none (s : NetworkState n M G) {L : ExtendedLabel n M E}
     (h : roundOf L = none) : s.writeGhost ghostStep L = s := by
   unfold NetworkState.writeGhost; rw [h]
 
 /-- The ghost record of the round the label names, after the write. -/
-theorem writeGhost_ghostRecord_self (s : NetworkState n M G) {L : ExtendedLabel n M} {r : ℕ}
+theorem writeGhost_ghostRecord_self (s : NetworkState n M G) {L : ExtendedLabel n M E} {r : ℕ}
     (h : roundOf L = some r) :
     (s.writeGhost ghostStep L).ghostRecord r = ghostStep L s (s.ghostRecord r) := by
   unfold NetworkState.writeGhost; rw [h]; simp
 
 /-- The ghost record of any other round is untouched. -/
-theorem writeGhost_ghostRecord_ne (s : NetworkState n M G) {L : ExtendedLabel n M} {r r' : ℕ}
+theorem writeGhost_ghostRecord_ne (s : NetworkState n M G) {L : ExtendedLabel n M E} {r r' : ℕ}
     (h : roundOf L = some r) (hne : r' ≠ r) :
     (s.writeGhost ghostStep L).ghostRecord r' = s.ghostRecord r' := by
   unfold NetworkState.writeGhost; rw [h]; simp [Function.update_of_ne hne]
@@ -142,7 +144,7 @@ graded outcome. -/
 
 section Forget
 
-variable {n : ℕ} {M G : Type}
+variable {n : ℕ} {M E G : Type}
 
 @[simp] theorem forgetGhost_sent (s : NetworkState n M G) :
     s.forgetGhost.sent = s.sent := rfl
@@ -168,13 +170,13 @@ variable {n : ℕ} {M G : Type}
 
 /-- The ghost write leaves the erasure where it stands. -/
 @[simp] theorem forgetGhost_writeGhost (s : NetworkState n M G)
-    (ghostStep : ExtendedLabel n M → NetworkState n M G → G → G) (L : ExtendedLabel n M) :
+    (ghostStep : ExtendedLabel n M E → NetworkState n M G → G → G) (L : ExtendedLabel n M E) :
     (s.writeGhost ghostStep L).forgetGhost = s.forgetGhost := by
   unfold NetworkState.writeGhost
   split <;> rfl
 
 /-- Over the trivial ghost the ghost write is the identity. -/
-@[simp] theorem writeGhost_unit (s : NetworkState n M Unit) (L : ExtendedLabel n M) :
+@[simp] theorem writeGhost_unit (s : NetworkState n M Unit) (L : ExtendedLabel n M E) :
     s.writeGhost (fun _ _ _ => ()) L = s := by
   obtain ⟨sent, decidedSent, F, g⟩ := s
   unfold NetworkState.writeGhost

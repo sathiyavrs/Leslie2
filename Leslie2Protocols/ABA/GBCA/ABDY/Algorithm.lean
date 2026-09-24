@@ -425,6 +425,7 @@ theorem composition_projects (P : Parameters) (r : ℕ) :
               hbnd
       | inr ev =>
         cases ev with
+        | gbcaRoundEvent r' j e => exact e.elim
         | gbcaSend r' j m => exact (gbcaNetworkStep_gbcaSend_noStep hn).elim
         | gbcaDeliver r' i j m => exact (gbcaNetworkStep_gbcaDeliver_noStep hn).elim
         | decidedSend j b => exact (gbcaNetworkStep_decidedSend_noStep hn).elim

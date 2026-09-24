@@ -393,43 +393,40 @@ three are forced by the shape of the implementation.
   reads the acting process's own local states and the networks, and the two transitions that
   read a network — the adversary's delivery and its Byzantine injection —
   belong to the adversary either way.
-- **The fused transitions.** An implementation program takes one transition per thing it does, so the
-  graded-agreement call broadcasts the input, the `BIND` send is a broadcast call, and the first
-  gather's return to a process is that process's call of the second gather (D28). The implementation
-  has no broadcast return either: a gather guard reads a `2f + 1` `VOTE` receipt quorum on the
-  acting process's own local state in the instance (`firstGatherAcceptedInputs` and its companions),
-  where a composed gather program reads what the instances returned.
+- **The calls and returns of the sub-protocols.** An implementation program takes one transition per
+  statement of the pseudocode, so nine transitions are the round's own calls and returns: the first
+  gather's return, the second gather's call, the second gather's return, the round's own return, and
+  the return of each of the four broadcast families. Each carries a
+  `gbcaRoundEvent` label, a rendezvous the network moves on and the protocol reads as `τ`, except
+  the round's own return, which is the visible `retG`, and the second gather's call, which carries
+  the `⟨INIT, ·⟩` of the instance broadcasting the candidate. That one fusion is D28: a gather's call is the call of the instance broadcasting the caller's input, at the
+  graded-agreement call for the first gather and at `secondGatherCall` for the second, and the
+  composed gather fuses the two the same way.
 
-`AFW.ProtocolRelation` has six conjuncts. The round loop, the coin oracle and the ABA network are
+`AFW.ProtocolRelation` has five conjuncts. The round loop, the coin oracle and the ABA network are
 shared objects, and the round family is *computed* from the implementation's state by
-`AFW.roundProjection`, which undoes the three separations: it transposes the local states back,
-projects each network's sent set out of the tagged family by `Finset.filterMap`, and reads each
-returned value off the process's own local state in the instance as the value with a vote quorum
-there (`AFW.broadcastReturnsFor`), the composed broadcast program's return flag being whether the
-instance has returned a value. A round program's record is read off the process's two gather inputs
-and its second-gather return flag, its recorded outcome being `none` outside a run. Four of the six
-conjuncts are that computation, so there is nothing to choose in the witness.
+`AFW.roundProjection`, which undoes the two separations: it transposes the local states back and
+projects each network's sent set out of the tagged family by `Finset.filterMap`. The round record
+holds each gather local state over `Gather.ProcessRecord`, so what an instance returned is there
+already and the view is the identity on it. A round program's record is read off the process's
+first-gather input, its candidate, its second-gather input, its graded outcome and its
+second-gather return flag. Four of the five conjuncts are that computation, so there is nothing to
+choose in the witness.
 
 The ghost is part of that computation. The composed round holds three values no guard of it reads —
 the core of each of its two gather networks and the round's network's bound bit — and the adversary
 holds the same three as the round's ghost record `AFW.Ghost`, which `AFW.roundProjection` reads them
-off. Two transitions write the record. The return-then-call step's broadcast of the candidate writes the
-first gather's core at `Gather.coreOf` of that gather's projection of the tagged sent sets, and the
-bound bit at `GBCA.boundOfCore` of that core; a graded return writes the second core the same way.
+off. Two transitions write the record. The first gather's return writes that gather's core at
+`Gather.coreOf` of that gather's projection of the tagged sent sets, and the bound bit at
+`GBCA.boundOfCore` of that core; the second gather's return writes the second core the same way.
 The composed `firstGatherReturn` and `secondGatherReturn` write the same two values off the core
 their gather's return carries, and the values agree because each is `Gather.coreOfNetwork` of one
 network's state (`coreOfNetwork_firstGatherProjection`, `coreOfNetwork_secondGatherProjection`).
 
-The fifth conjunct, `AFW.BoundInvariant`, is what makes the announced bits agree: a process whose
-round-`r` second-gather local state carries an input has passed that round's return-then-call step,
-so the round's bound bit is on record. The sixth, `AFW.BroadcastReturnsInvariant`, is the broadcast
-invariant `BRB.Invariant` at every broadcast instance of the view. It is what identifies the
-returned value with the value an implementation guard names: an implementation transition hands its composed
-counterpart a specific value with a vote quorum, the instance returned the value the view chose, and
-under the invariant two vote quorums at one process name one value (`BRB.echoCertificate_unique`,
-`AFW.broadcastReturnsFor_eq_of_quorum`). The invariant is carried on the composed system and
-re-established after every matched transition by the instance's own preservation lemma, since every matched
-composed step is a genuine step of the instance.
+The fifth conjunct, `AFW.BoundInvariant`, is what makes the announced bits agree: a process holding
+a round-`r` candidate has passed that round's first gather return, so the round's bound bit is on
+record, and a graded outcome on record reaches a candidate on record through the two fields between
+them.
 
 The proof is organised around that computation. The files of
 `ABA/AFW/RoundProjectionStep/` state, for every implementation transition, the view after
@@ -439,18 +436,16 @@ written through the round's updaters exactly as the algorithms write it; the mas
 pushes a one-point round write and a single sent-set insertion inside every coordinate, and each
 transition then owes only projection algebra, discharged by `messagesOf_recordSent_some` and
 `messagesOf_recordSent_none`.
-`ABA/AFW/SimulationOfEachTransition.lean` matches each implementation transition by a run of the
+`ABA/AFW/SimulationOfEachTransition.lean` matches each implementation transition by one step of the
 composed group: a send and a delivery are hidden events of the round instance, matched by one of
 its silent steps, the adversary's authenticity conjunct becoming membership in the sent set
-projected onto the instance; the call is the instance's own. Three of the implementation's
-transitions are matched by two composed steps, through the intermediate states
-`ABA/AFW/RoundProjectionStep/ReturnThenCall.lean` and
-`ABA/AFW/RoundProjectionStep/Delivery.lean` name: the return-then-call step by
-`firstGatherReturn` then `secondGatherCall`, the graded return by `secondGatherReturn` then the
-visible `retG`, and a
-delivery that completes a vote quorum by the instance's delivery then its return, which records the
-returned value (`roundProjection_firstGatherReturn_secondGatherCall`,
-`roundProjection_secondGatherReturn_retG`, the `_ret` delivery lemmas). The remaining labels move
+projected onto the instance; the call is the instance's own. A call or a return of a sub-protocol
+is a transition of its own on either side, and the states it reaches are named by
+`ABA/AFW/RoundProjectionStep/FirstGatherReturn.lean`,
+`ABA/AFW/RoundProjectionStep/SecondGatherCall.lean`,
+`ABA/AFW/RoundProjectionStep/SecondGatherReturn.lean`,
+`ABA/AFW/RoundProjectionStep/GradedReturn.lean` and
+`ABA/AFW/RoundProjectionStep/BroadcastReturn.lean`. The remaining labels move
 the round loop and the ABA network while the family of rounds is unchanged, and corruption is one
 broadcast, the corrupted set the adversary holds being the corrupted set of every network under the
 same guard.

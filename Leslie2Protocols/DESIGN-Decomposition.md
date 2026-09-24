@@ -120,31 +120,27 @@ corrupt, and in
 the family the label is answered by the broadcast act (`AFW.corruptionOverBracha`) and not by the
 instance.
 
-## 5. The simulation into the composed system carries the broadcast invariant there
+## 5. A broadcast instance's return is a transition of the implementation
 
-The implementation has no broadcast return: a gather guard reads an `n − f` `VOTE` receipt quorum on
-the acting process's own local state in the instance (`AFW.firstGatherAcceptedInputs` and its
-companions). A composed gather program reads what the instances returned, written on the instance's
-return event, whose guard is the same count. The view defines the returned value as the value with a
-quorum on that local state, chosen classically (`AFW.broadcastReturnsFor`).
+A composed gather program reads what each of its instances returned, written on the instance's
+return event under a `2f + 1` `VOTE` quorum at the receiver. The implementation holds the same
+record: its round record carries each gather local state over `Gather.ProcessRecord`, and
+`AFW.RoundStep.firstGatherInputBroadcastReturn` and its three companions write it under that same
+quorum. A gather guard of the implementation then reads the record
+(`Gather.ProcessRecord.accepted`, `Gather.approvedBy`, `Gather.holdsInputBroadcastReturn`,
+`Gather.holdsBindBroadcastReturn`), exactly as the guard of the composed gather program does.
 
-**What fails.** An implementation transition hands its composed counterpart a specific value `x`
-with a quorum; the composed transition needs `inputBroadcastReturned k = some x`; the instance returned the value
-the view chose. The two coincide only if two vote quorums at one process name one value. Without
-that fact the composed transition's guard cannot be discharged and `AFW.protocolSimulation` is unprovable. A
-returned value defined by a relation rather than a function, filled inside the matching run, needs
-the same fact: an earlier fill with another value would leave the instance returned and the second
-value unreachable.
+**What fails without it.** Let the implementation keep no returned value and read a quorum on the
+acting process's own local state in the instance instead. An implementation transition then hands
+its composed counterpart a specific value `x` with a quorum, while the composed transition needs
+`inputBroadcastReturned k = some x` for the value the instance returned. The two coincide only if
+two vote quorums at one process name one value, so the relation has to carry `BRB.Invariant` at
+each of a round's `4n` instances and re-establish it after every matched transition, and a
+delivery completing a quorum is matched by the instance's delivery and then its return, a run of
+two events. Every one of those obligations follows from not recording the return.
 
-**The constraint.** `AFW.ProtocolRelation` carries `AFW.BroadcastReturnsInvariant`, the invariant
-`BRB.Invariant` at every broadcast instance of the view, and
-`AFW.broadcastReturnsFor_eq_of_quorum` reads the uniqueness off it through
-`BRB.echoCertificate_of_vote_quorum` and `BRB.echoCertificate_unique`. The invariant holds
-initially by `BRB.Invariant.initial`, and after each matched transition the view's instances
-have moved by their own transitions or stood still (`AFW.InvariantStep`), so `BRB.Invariant.step`
-re-establishes it. No invariant over the implementation's network's sent sets is written.
-`broadcastReturnsFor` carries `[DecidableEq X]` explicitly, so its count is syntactically
-the count `BRB.Invariant` is stated on.
+**The constraint.** The return is a transition, so the two guards are the one guard, the relation
+carries no broadcast invariant, and each delivery is matched by one event.
 
 ## Two consequences for the theory
 

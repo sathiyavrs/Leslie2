@@ -455,7 +455,7 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
 `roundOwn j`, each fires only at an unreplaced program, each is Dirac, and each
 of the three returns takes the announced bit free (D29). -/
 instance instIsRoundStep (P : Parameters) :
-    IsRoundStep P GBCA.ByABDY.Message (GBCA.ByABDY.RoundRecord P.n) (RoundStep P) where
+    IsRoundStep P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundRecord P.n) (RoundStep P) where
   own h := by
     cases h <;> rfl
   correct h := by
@@ -470,7 +470,7 @@ instance instIsRoundStep (P : Parameters) :
 ABDY22's own round transitions. -/
 abbrev ABAProgramStep (P : Parameters) (j : Fin P.n) :
     ProcessRecord P.n → ExtendedLabel P.n GBCA.ByABDY.Message → PMF (ProcessRecord P.n) → Prop :=
-  ProgramStep P GBCA.ByABDY.Message (GBCA.ByABDY.RoundRecord P.n) (RoundStep P) j
+  ProgramStep P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundRecord P.n) (RoundStep P) j
 
 /-- The message the graded-agreement call multicasts: `⟨INPUT, b⟩`. -/
 def gbcaCallPayload (P : Parameters) : Fin P.n → Bool → GBCA.ByABDY.Message := fun _ b => .input b
@@ -479,19 +479,20 @@ def gbcaCallPayload (P : Parameters) : Fin P.n → Bool → GBCA.ByABDY.Message 
 abbrev NetworkStep (P : Parameters) :
     NetworkState P.n → ExtendedLabel P.n GBCA.ByABDY.Message → PMF (NetworkState P.n)
   → Prop :=
-  Implementation.NetworkStep P GBCA.ByABDY.Message (Option Bool) (gbcaCallPayload P)
+  Implementation.NetworkStep P GBCA.ByABDY.Message Empty (Option Bool) (gbcaCallPayload P)
     (abdyGhostStep P)
     (abdyAnnouncedBound P)
 
 /-- The program of process `j`. -/
 noncomputable abbrev ABAProgram (P : Parameters) (j : Fin P.n) :
     System (ProcessRecord P.n) (ExtendedLabel P.n GBCA.ByABDY.Message) :=
-  program P GBCA.ByABDY.Message (GBCA.ByABDY.RoundRecord P.n) (RoundStep P) j
+  program P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundRecord P.n) (RoundStep P) j
 
 /-- The network. -/
 noncomputable abbrev network (P : Parameters) :
     System (NetworkState P.n) (ExtendedLabel P.n GBCA.ByABDY.Message) :=
-  Implementation.network P GBCA.ByABDY.Message (Option Bool) (gbcaCallPayload P) (abdyGhostStep P)
+  Implementation.network P GBCA.ByABDY.Message Empty (Option Bool) (gbcaCallPayload P)
+    (abdyGhostStep P)
     (abdyAnnouncedBound P)
 
 
@@ -504,20 +505,23 @@ abbrev ProtocolState (P : Parameters) : Type :=
 the network and the lifted oracle. -/
 noncomputable def protocolExtended (P : Parameters) : System (ProtocolState P)
   (Composition.ExtendedLabel P.n GBCA.ByABDY.Message) :=
-  Implementation.systemExtended P GBCA.ByABDY.Message (GBCA.ByABDY.RoundRecord P.n) (Option Bool)
+  Implementation.systemExtended P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundRecord P.n)
+    (Option Bool)
     (ABDY.RoundStep P)
     (ABDY.gbcaCallPayload P) (ABDY.abdyGhostStep P) (ABDY.abdyAnnouncedBound P)
 
 /-- **The protocol group**: the rendezvous alphabet hidden, the result read
 back over `Label n`. -/
 noncomputable def protocolHidden (P : Parameters) : System (ProtocolState P) (Label P.n) :=
-  Implementation.systemHidden P GBCA.ByABDY.Message (GBCA.ByABDY.RoundRecord P.n) (Option Bool)
+  Implementation.systemHidden P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundRecord P.n)
+    (Option Bool)
     (ABDY.RoundStep P)
     (ABDY.gbcaCallPayload P) (ABDY.abdyGhostStep P) (ABDY.abdyAnnouncedBound P)
 
 /-- **The protocol system**: the group with the sub-protocol API hidden. -/
 noncomputable def protocol (P : Parameters) : System (ProtocolState P) (Label P.n) :=
-  Implementation.system P GBCA.ByABDY.Message (GBCA.ByABDY.RoundRecord P.n) (Option Bool)
+  Implementation.system P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundRecord P.n)
+    (Option Bool)
     (ABDY.RoundStep
     P)
     (ABDY.gbcaCallPayload P) (ABDY.abdyGhostStep P) (ABDY.abdyAnnouncedBound P)

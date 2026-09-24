@@ -108,7 +108,10 @@ theorem specificationLabelMap_eq_tau {n : ℕ} {M : Type} {l : ExtendedLabel n M
     l = Sum.inl Label.tau := by
   cases l with
   | inl l₀ => rw [Option.some.inj h]
-  | inr e => cases e <;> simp at h
+  | inr e =>
+    cases e
+    case gbcaRoundEvent _ _ e => exact e.elim
+    all_goals simp at h
 
 /-- **The specification over the round's alphabet**: the round-`r` graded agreement specification
 read over the round's interface. -/

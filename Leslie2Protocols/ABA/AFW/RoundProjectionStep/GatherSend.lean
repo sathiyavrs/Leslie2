@@ -37,7 +37,7 @@ gather's network state. Each is the gather's `send` event, which
 
 /-- A send of the first gather, read through the view. -/
 theorem roundProjection_firstGatherSend (hu : (u j).2 = p) (r : ℕ)
-    (pr : Gather.BaseProcessRecord P.n Bool) (m : Gather.Message P.n Bool)
+    (pr : Gather.ProcessRecord P.n Bool) (m : Gather.Message P.n Bool)
     (hin : pr.input = ((p.roundRecord r).firstGather.process).input) :
     roundProjection P (Function.update u j (c, p.setRoundRecord r
         { p.roundRecord r with firstGather := (p.roundRecord r).firstGather.setProcess pr }))
@@ -45,11 +45,7 @@ theorem roundProjection_firstGatherSend (hu : (u j).2 = p) (r : ℕ)
       = GBCA.ByAFW.setFirstGather (roundProjection P u w r)
           (Gather.setGatherTier (firstGatherProjection P u w r)
             (((Gather.gatherTier (firstGatherProjection P u w r)).setProcess j
-                { pr with
-                  inputBroadcastReturned := fun k => broadcastReturnsFor P ((p.roundRecord
-                    r).firstGatherInputBroadcasts k)
-                  bindBroadcastReturned := fun q => broadcastReturnsFor P ((p.roundRecord
-                    r).firstGatherBindBroadcasts q) }).multicast j m)) := by
+                pr).multicast j m)) := by
   rw [← hu] at hin ⊢
   rw [roundProjection_write]
   refine roundStateOverGathers_ext ?_ rfl (stateOverBroadcasts_ext ?_ ?_ ?_ rfl)
@@ -60,7 +56,7 @@ theorem roundProjection_firstGatherSend (hu : (u j).2 = p) (r : ℕ)
   · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [Gather.gatherTier, Gather.setGatherTier, GBCA.ByAFW.firstGather,
       GBCA.ByAFW.setFirstGather, roundProjection, roundProjectionUpdate, firstGatherProjection,
-        gatherLocalState, InstanceState.multicast, InstanceState.setProcess, LocalState.setProcess]
+        InstanceState.multicast, InstanceState.setProcess, LocalState.setProcess]
     · simp only [Gather.gatherTier, Gather.setGatherTier, GBCA.ByAFW.firstGather,
       GBCA.ByAFW.setFirstGather, roundProjection, roundProjectionUpdate, firstGatherProjection,
         InstanceState.multicast, ABA.NetworkState.recordSent]
@@ -120,7 +116,7 @@ theorem roundProjection_firstGatherSend (hu : (u j).2 = p) (r : ℕ)
 
 /-- A send of the second gather, read through the view. -/
 theorem roundProjection_secondGatherSend (hu : (u j).2 = p) (r : ℕ)
-    (pr : Gather.BaseProcessRecord P.n (Option Bool)) (m : Gather.Message P.n (Option Bool))
+    (pr : Gather.ProcessRecord P.n (Option Bool)) (m : Gather.Message P.n (Option Bool))
     (hin : pr.input = ((p.roundRecord r).secondGather.process).input)
     (hret : pr.returned = ((p.roundRecord r).secondGather.process).returned) :
     roundProjection P (Function.update u j (c, p.setRoundRecord r
@@ -129,11 +125,7 @@ theorem roundProjection_secondGatherSend (hu : (u j).2 = p) (r : ℕ)
       = GBCA.ByAFW.setSecondGather (roundProjection P u w r)
           (Gather.setGatherTier (secondGatherProjection P u w r)
             (((Gather.gatherTier (secondGatherProjection P u w r)).setProcess j
-                { pr with
-                  inputBroadcastReturned := fun k => broadcastReturnsFor P ((p.roundRecord
-                    r).secondGatherInputBroadcasts k)
-                  bindBroadcastReturned := fun q => broadcastReturnsFor P ((p.roundRecord
-                    r).secondGatherBindBroadcasts q) }).multicast j m)) := by
+                pr).multicast j m)) := by
   rw [← hu] at hin hret ⊢
   rw [roundProjection_write]
   refine roundStateOverGathers_ext ?_ rfl (stateOverBroadcasts_ext ?_ ?_ ?_ rfl)
@@ -176,7 +168,7 @@ theorem roundProjection_secondGatherSend (hu : (u j).2 = p) (r : ℕ)
   · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [Gather.gatherTier, Gather.setGatherTier, GBCA.ByAFW.secondGather,
       GBCA.ByAFW.setSecondGather, roundProjection, roundProjectionUpdate, secondGatherProjection,
-        gatherLocalState, InstanceState.multicast, InstanceState.setProcess, LocalState.setProcess]
+        InstanceState.multicast, InstanceState.setProcess, LocalState.setProcess]
     · simp only [Gather.gatherTier, Gather.setGatherTier, GBCA.ByAFW.secondGather,
       GBCA.ByAFW.setSecondGather, roundProjection, roundProjectionUpdate, secondGatherProjection,
         InstanceState.multicast, ABA.NetworkState.recordSent]

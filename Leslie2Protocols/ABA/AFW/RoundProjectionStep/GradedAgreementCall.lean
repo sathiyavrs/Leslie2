@@ -78,13 +78,8 @@ theorem roundProjection_callG (hu : (u j).2 = p) (r : ℕ) (b : Bool) :
     refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [InstanceState.setProcess]
       refine congrArg (Function.update
-        (fun i => gatherLocalState P Bool ((u i).2.roundRecord r).firstGather ((u i).2.roundRecord
-          r).firstGatherInputBroadcasts
-          ((u i).2.roundRecord r).firstGatherBindBroadcasts) j) ?_
-      simp only [gatherLocalState, broadcastReturnsFor_update_setProcess, InstanceState.process,
-        gatherTier_firstGatherProjection_process, localState_setProcess_process,
-          localState_setProcess_received]
-      simp only [LocalState.setProcess]
+        (fun i => ((u i).2.roundRecord r).firstGather) j) ?_
+      rfl
     · exact messagesOf_recordSent_none firstGatherMessageOf firstGatherMessageOf_inj (w.sent r) j
         (.firstGatherInputBroadcasts j (.init b)) rfl
   · funext k
@@ -97,10 +92,9 @@ theorem roundProjection_callG (hu : (u j).2 = p) (r : ℕ) (b : Bool) :
       refine Prod.ext ?_ (networkState_ext ?_ rfl)
       · simp only [InstanceState.multicast, InstanceState.setProcess]
         refine congrArg (Function.update
-          (fun i => broadcastLocalState P (((u i).2.roundRecord r).firstGatherInputBroadcasts k)) k)
+          (fun i => (((u i).2.roundRecord r).firstGatherInputBroadcasts k)) k)
             ?_
-        simp only [InstanceState.process, broadcastLocalState, LocalState.setProcess,
-          broadcastReturnsFor_mk_eq]
+        rfl
       · simp only [InstanceState.multicast, ABA.NetworkState.recordSent]
         exact messagesOf_recordSent_some (firstGatherInputBroadcastMessageOf k)
           (firstGatherInputBroadcastMessageOf_inj k) (w.sent r) k

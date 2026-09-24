@@ -434,6 +434,7 @@ theorem hybrid_step_tau (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
       obtain ⟨G', C', A', ω, hG, hall, hA, hW, rfl⟩ :=
         hybridExtended_visible_inversion P (by simp) hpre
       cases e with
+      | gbcaRoundEvent r j ev => exact ev.elim
       | gbcaSend r j m => exact (abaNetworkStep_gbcaSend_noStep hA).elim
       | gbcaDeliver r i j m => exact (abaNetworkStep_gbcaDeliver_noStep hA).elim
       | decidedSend j b =>

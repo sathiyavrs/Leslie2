@@ -44,7 +44,8 @@ open Implementation
 graded-agreement returns announce any bit. -/
 noncomputable def ghostFreeProtocol (P : Parameters) :
     System (Implementation.State P (Message P.n) (RoundRecord P.n) Unit) (Label P.n) :=
-  Implementation.systemGhostFree P (Message P.n) (RoundRecord P.n) (RoundStep P) (gbcaCallPayload P)
+  Implementation.systemGhostFree P (Message P.n) (RoundEvent P.n) (RoundRecord P.n) (RoundStep P)
+    (gbcaCallPayload P)
 
 /-- **The ghost costs nothing.** The record the network keeps for each round is
 written by no guard and read by no program, and the label that announces its bit is
@@ -52,7 +53,8 @@ hidden at protocol level, so the protocol and the ghost-free protocol achieve th
 trace distributions. -/
 theorem protocol_erasure (P : Parameters) :
     achievableTraceDists (protocol P) = achievableTraceDists (ghostFreeProtocol P) :=
-  Implementation.system_erasure P (Message P.n) (RoundRecord P.n) (Ghost P.n) (RoundStep P)
+  Implementation.system_erasure P (Message P.n) (RoundEvent P.n) (RoundRecord P.n) (Ghost P.n)
+    (RoundStep P)
     (gbcaCallPayload P) (ghostStep P) (announcedBound P)
     (fun w r id out => ⟨ghostOutput P w r id out, rfl⟩)
 

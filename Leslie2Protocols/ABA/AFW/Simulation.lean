@@ -29,10 +29,9 @@ couplings for a Dirac outcome and for an outcome whose only free coordinate is t
 
 `AFW.coupling_tau`, `AFW.coupling_label` and `AFW.coupling_event` match the silent label, a
 visible shared label and a rendezvous of the implementation, each from the runs of
-`ABA/AFW/SimulationOfEachTransition.lean`. A transition of the implementation that fuses two events
-of the composed round is matched by a run of two transitions, so `AFW.coupling_hidden` concludes in
-a weak run of the composed group, and `AFW.coupling_step` carries that run through the sub-protocol
-hiding with `weakTau_abstract`, `weakTau_of_weakStep_mem` and `weakStep_abstract`.
+`ABA/AFW/SimulationOfEachTransition.lean`. `AFW.coupling_hidden` concludes in a weak run of the
+composed group, and `AFW.coupling_step` carries that run through the sub-protocol hiding with
+`weakTau_abstract`, `weakTau_of_weakStep_mem` and `weakStep_abstract`.
 `AFW.protocolSimulation` is the forward simulation these matchings assemble, and
 `AFW.protocol_composed` the trace inclusion it yields. -/
 
@@ -138,7 +137,7 @@ theorem coupling_tau (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.
     ∃ Ω : PMF (PMF (ComposedState P)),
       PMFRel (diracRel (ProtocolRelation P)) μ Ω ∧
       weakTau (composedHidden P) (PMF.pure ((G, C, A, o) : ComposedState P)) (Ω.bind id) := by
-  obtain ⟨hC, -, hA, hGv, hB, hI⟩ := (protocolRelation_mk P _ _ _ _ _ _ _).mp hR
+  obtain ⟨hC, -, hA, hGv, hB⟩ := (protocolRelation_mk P _ _ _ _ _ _ _).mp hR
   rcases systemExtended_tau_inversion h with ⟨i, y, hstep, rfl⟩ | ⟨w', hn, rfl⟩
   · obtain ⟨b, hh, hret, hcnt, hterm, hy⟩ := programStep_tau_terminate hstep
     obtain rfl : y = ((u i).1, { (u i).2 with terminated := true }) := pure_inj hy
@@ -154,8 +153,8 @@ theorem coupling_tau (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.
       fun r => roundProjection_congr (fun j => hst j r)
     refine coupling_unchanged P ((protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨fun j => ?_, rfl, hA, ?_,
-        boundInvariant_of hB (fun j r => by rw [hst j r]) (fun _ hb => hb),
-        broadcastReturnsInvariant_congr hI hview⟩)
+        boundInvariant_of hB (fun j r => by rw [hst j r])
+            (fun j r => by rw [hst j r]) (fun j r => by rw [hst j r]) (fun _ hb => hb)⟩)
     · by_cases hj : j = i
       · subst hj; rw [Function.update_self]; exact hC j
       · rw [Function.update_of_ne hj]; exact hC j
@@ -164,12 +163,12 @@ theorem coupling_tau (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.
       exact (hview r).symm
   · rcases networkStep_tau hn with ⟨r, k, m, hF, hw⟩ | ⟨k, b, hF, hw⟩
     · obtain rfl : w' = w.recordGBCASend r k m := pure_inj hw
-      obtain ⟨hstep, hinv⟩ := byzantine_match P u w hI r m hF
+      have hstep := byzantine_match P u w r m hF
       have hfam := roundProjectionFamily_byzantine u w r k m
       refine coupling_run P ((protocolRelation_mk P _ _ _ _ _ _ _).mpr
           ⟨hC, rfl, by simpa using hA, hfam.symm,
-            boundInvariant_of hB (fun _ _ => rfl) (fun _ hb => hb),
-            broadcastReturnsInvariant_update hI hfam hinv⟩) ?_
+            boundInvariant_of hB (fun _ _ => rfl)
+            (fun _ _ => rfl) (fun _ _ => rfl) (fun _ hb => hb)⟩) ?_
       rw [hGv]
       exact System.weakLSilent_family roundOwnsLabel isFailLabel (corruptionOverBracha P)
         (roundOverBracha_run_one hstep)
@@ -178,8 +177,8 @@ theorem coupling_tau (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.
           (G, C, ⟨(w.recordDecided k b).decidedSent, (w.recordDecided k b).F⟩, o) :=
         (protocolRelation_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, rfl,
           by rw [hGv]; funext r; rfl,
-          boundInvariant_of hB (fun _ _ => rfl) (fun _ hb => hb),
-          broadcastReturnsInvariant_congr hI (fun _ => rfl)⟩
+          boundInvariant_of hB (fun _ _ => rfl)
+            (fun _ _ => rfl) (fun _ _ => rfl) (fun _ hb => hb)⟩
       obtain ⟨Ω, hr, hb⟩ := coupling_pure hrel
       refine ⟨Ω, hr, ?_⟩
       rw [hb]
@@ -200,7 +199,7 @@ theorem coupling_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
       PMFRel (diracRel (ProtocolRelation P)) μ Ω ∧
       weakStep (composedHidden P) (PMF.pure ((G, C, A, o) : ComposedState P)) l
         (Ω.bind id) := by
-  obtain ⟨hC, -, hA, hGv, hB, hI⟩ := (protocolRelation_mk P _ _ _ _ _ _ _).mp hR
+  obtain ⟨hC, -, hA, hGv, hB⟩ := (protocolRelation_mk P _ _ _ _ _ _ _).mp hR
   obtain ⟨x, w', ω, hall, hn, hOr, rfl⟩ := systemExtended_label_inversion hl h
   have hWl : (coinOverRoundAlphabet P Empty).step o (Sum.inl l) ω :=
     (System.mapIdle_step_some (coinLabelMap_inl l) ω).mpr hOr
@@ -221,9 +220,8 @@ theorem coupling_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
       · rw [hfor i hi]
     refine coupling_visible P hl (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact roundProjection_unchanged hsame w',
-          boundInvariant_of hB (fun i r => by rw [hsame i]) (fun _ hb => hb),
-          broadcastReturnsInvariant_congr hI (fun r => roundProjection_congr (fun i => by rw [hsame
-            i]))⟩)
+          boundInvariant_of hB (fun i r => by rw [hsame i])
+            (fun i r => by rw [hsame i]) (fun i r => by rw [hsame i]) (fun _ hb => hb)⟩)
       (System.weakLStep_of_step hLne (roundFamilyOverBracha_idle P G hLne (by simp) not_false))
       (fun i => ?_) (ABANetworkStep.callABAIdle A id b) hWl
     rw [hCeq i]
@@ -256,9 +254,8 @@ theorem coupling_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
       · exact ABANetworkStep.retByzantine ⟨w'.decidedSent, w'.F⟩ id b hf
     refine coupling_visible P hl (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact roundProjection_unchanged hsame w',
-          boundInvariant_of hB (fun i r => by rw [hsame i]) (fun _ hb => hb),
-          broadcastReturnsInvariant_congr hI (fun r => roundProjection_congr (fun i => by rw [hsame
-            i]))⟩)
+          boundInvariant_of hB (fun i r => by rw [hsame i])
+            (fun i r => by rw [hsame i]) (fun i r => by rw [hsame i]) (fun _ hb => hb)⟩)
       (System.weakLStep_of_step hLne (roundFamilyOverBracha_idle P G hLne (by simp) not_false))
       (fun i => ?_) hAn hWl
     rw [hCeq i]
@@ -281,9 +278,8 @@ theorem coupling_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
       · rw [hfor i hi]
     refine coupling_visible P hl (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact roundProjection_unchanged hsame w',
-          boundInvariant_of hB (fun i r => by rw [hsame i]) (fun _ hb => hb),
-          broadcastReturnsInvariant_congr hI (fun r => roundProjection_congr (fun i => by rw [hsame
-            i]))⟩)
+          boundInvariant_of hB (fun i r => by rw [hsame i])
+            (fun i r => by rw [hsame i]) (fun i r => by rw [hsame i]) (fun _ hb => hb)⟩)
       (System.weakLStep_of_step hLne (roundFamilyOverBracha_idle P G hLne (by simp) not_false))
       (fun i => ?_) (ABANetworkStep.callWIdle A r id) hWl
     rw [hCeq i]
@@ -306,9 +302,8 @@ theorem coupling_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
       · rw [hfor i hi]
     refine coupling_visible P hl (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact roundProjection_unchanged hsame w',
-          boundInvariant_of hB (fun i r => by rw [hsame i]) (fun _ hb => hb),
-          broadcastReturnsInvariant_congr hI (fun r => roundProjection_congr (fun i => by rw [hsame
-            i]))⟩)
+          boundInvariant_of hB (fun i r => by rw [hsame i])
+            (fun i r => by rw [hsame i]) (fun i r => by rw [hsame i]) (fun _ hb => hb)⟩)
       (System.weakLStep_of_step hLne (roundFamilyOverBracha_idle P G hLne (by simp) not_false))
       (fun i => ?_) (ABANetworkStep.retWIdle A r id co) hWl
     rw [hCeq i]
@@ -333,16 +328,11 @@ theorem coupling_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
     have hview : ∀ r, roundProjection P x (Implementation.NetworkState.corrupt P k w) r
         = corruptionOverBracha P (Sum.inl (Label.fail k)) (roundProjection P u w r) := fun r =>
       (roundProjection_congr (fun i => by rw [hsame i])).trans (roundProjection_fail u w r k)
-    have hSI : BroadcastReturnsInvariant P x (Implementation.NetworkState.corrupt P k w) := by
-      intro r
-      rw [hview r]
-      exact roundInvariant_both (roundInvariant_of_broadcastReturnsInvariant hI r)
-        (Gather.AlgorithmOverBracha.fail _ k)
-        (Gather.AlgorithmOverBracha.fail _ k)
     refine coupling_visible P hl (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, ?_, ?_,
-          boundInvariant_of hB (fun i r => by rw [hsame i]) (fun _ hb => by simpa using hb),
-          hSI⟩)
+          boundInvariant_of hB (fun i r => by rw [hsame i])
+            (fun i r => by rw [hsame i]) (fun i r => by rw [hsame i])
+            (fun _ hb => by simpa using hb)⟩)
       (System.weakLStep_of_step hLne (roundFamilyOverBracha_fail P G k)) (fun i => ?_)
       (ABANetworkStep.fail A k (by rw [hA]; exact hnew) (by rw [hA]; exact hbud)) hWl
     · rw [hA]
@@ -363,8 +353,8 @@ theorem coupling_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
         (Sum.inl (Label.callG r id b)) := pure_inj (networkStep_callG hn)
     have hfor : ∀ i, i ≠ id → x i = u i := fun i hi =>
       pure_inj (programStep_callG_foreign (Ne.symm hi) (hall i))
-    obtain ⟨y, hy, hh, hph, hrr, hest, hx1, hoff, hga2, hlow, hinv⟩ :=
-      roundRecord_match_callG P w (u := u) (j := id) rfl hI (roundTransition_of_own rfl (hall id))
+    obtain ⟨y, hy, hh, hph, hrr, hest, hx1, hoff, hga2, hgc, hgo, hlow⟩ :=
+      roundRecord_match_callG P w (u := u) (j := id) rfl (roundTransition_of_own rfl (hall id))
     obtain rfl : x id = y := pure_inj hy
     have hxc : ∀ (i : Fin P.n) (r' : ℕ), (x i).2.roundRecord r'
         = ((Function.update u id (x id)) i).2.roundRecord r' := by
@@ -377,6 +367,18 @@ theorem coupling_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
       intro i r''
       by_cases hi : i = id
       · subst hi; exact hga2 r''
+      · rw [hfor i hi]
+    have hxcand : ∀ (i : Fin P.n) (r'' : ℕ), ((x i).2.roundRecord r'').candidate
+        = ((u i).2.roundRecord r'').candidate := by
+      intro i r''
+      by_cases hi : i = id
+      · subst hi; exact hgc r''
+      · rw [hfor i hi]
+    have hxout : ∀ (i : Fin P.n) (r'' : ℕ), ((x i).2.roundRecord r'').output
+        = ((u i).2.roundRecord r'').output := by
+      intro i r''
+      by_cases hi : i = id
+      · subst hi; exact hgo r''
       · rw [hfor i hi]
     have hfam : (fun r' => roundProjection P x
           ((w.recordGBCASend r id (gbcaCallPayload P id b)).writeGhost (ghostStep P)
@@ -397,8 +399,8 @@ theorem coupling_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
           · rw [hfor i hi])).trans (roundProjection_otherSent u w hr' id _ rfl)
     refine coupling_visible P hl (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, by rw [hA]; simp, hfam.symm,
-          boundInvariant_of hB hxg (fun _ hb => writeGhost_bound _ (by simpa using hb)),
-          broadcastReturnsInvariant_update hI hfam hinv⟩)
+          boundInvariant_of hB hxcand hxg hxout
+            (fun _ hb => writeGhost_bound _ (by simpa using hb))⟩)
       (by rw [hGv]; exact roundFamilyOverBracha_weakStep P (by simp) hlow)
       (fun i => ?_) (ABANetworkStep.callGIdle A r id b) hWl
     rw [hCeq i]
@@ -413,9 +415,9 @@ theorem coupling_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
         (Sum.inl (Label.retG r id out bnd)) := pure_inj hw
     have hfor : ∀ i, i ≠ id → x i = u i := fun i hi =>
       pure_inj (programStep_retG_foreign (Ne.symm hi) (hall i))
-    obtain ⟨y, hy, hh, hph, hrr, hx1, hoff, hga2, hlow, hinv⟩ :=
-      roundRecord_match_retG P w (u := u) (j := id) rfl hI hbnd (hB r)
-        (roundTransition_of_own rfl (hall id))
+    obtain ⟨y, hy, hh, hph, hrr, hx1, hoff, hga2, hgc, hgo, hlow⟩ :=
+      roundRecord_match_retG P w (u := u) (j := id) rfl hbnd (hB.1 r)
+        (fun i h => (hB.2 r i).2 ((hB.2 r i).1 h)) (roundTransition_of_own rfl (hall id))
     obtain rfl : x id = y := pure_inj hy
     have hxc : ∀ (i : Fin P.n) (r' : ℕ), (x i).2.roundRecord r'
         = ((Function.update u id (x id)) i).2.roundRecord r' := by
@@ -429,6 +431,18 @@ theorem coupling_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
       by_cases hi : i = id
       · subst hi; exact hga2 r''
       · rw [hfor i hi]
+    have hxcand : ∀ (i : Fin P.n) (r'' : ℕ), ((x i).2.roundRecord r'').candidate
+        = ((u i).2.roundRecord r'').candidate := by
+      intro i r''
+      by_cases hi : i = id
+      · subst hi; exact hgc r''
+      · rw [hfor i hi]
+    have hxout : ∀ (i : Fin P.n) (r'' : ℕ), ((x i).2.roundRecord r'').output ≠ none →
+        ((u i).2.roundRecord r'').output ≠ none := by
+      intro i r''
+      by_cases hi : i = id
+      · subst hi; exact hgo r''
+      · rw [hfor i hi]; exact fun h => h
     have hfam : (fun r' => roundProjection P x
           (w.writeGhost (ghostStep P) (Sum.inl (Label.retG r id out bnd))) r')
         = Function.update (fun r' => roundProjection P u w r') r
@@ -447,8 +461,8 @@ theorem coupling_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
           · rw [hfor i hi])
     refine coupling_visible P hl (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, by rw [hA]; simp, hfam.symm,
-          boundInvariant_of hB hxg (fun _ hb => writeGhost_bound _ hb),
-          broadcastReturnsInvariant_update hI hfam hinv⟩)
+          boundInvariant_ofOutputCleared hB hxcand hxg hxout
+            (fun _ hb => writeGhost_bound _ hb)⟩)
       (by rw [hGv]; exact roundFamilyOverBracha_weakStep P (by simp) hlow)
       (fun i => ?_) (ABANetworkStep.retGIdle A r id out bnd) hWl
     rw [hCeq i]
@@ -469,12 +483,12 @@ theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
     {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
     {G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
     {A : ABANetworkState P.n} (hR : ProtocolRelation P (u, w, o) (G, C, A, o))
-    (e : NetworkEvent P.n (Message P.n)) {μ : PMF (ProtocolState P)}
+    (e : Implementation.NetworkEvent P.n (Message P.n) (RoundEvent P.n)) {μ : PMF (ProtocolState P)}
     (h : (protocolExtended P).step (u, w, o) (Sum.inr e) μ) :
     ∃ Ω : PMF (PMF (ComposedState P)),
       PMFRel (diracRel (ProtocolRelation P)) μ Ω ∧
       weakTau (composedHidden P) (PMF.pure ((G, C, A, o) : ComposedState P)) (Ω.bind id) := by
-  obtain ⟨hC, -, hA, hGv, hB, hI⟩ := (protocolRelation_mk P _ _ _ _ _ _ _).mp hR
+  obtain ⟨hC, -, hA, hGv, hB⟩ := (protocolRelation_mk P _ _ _ _ _ _ _).mp hR
   have hCeq : ∀ i, C i = (u i).1 := fun i => (hC i).symm
   obtain ⟨x, w', ν, hall, hn, hWs, rfl⟩ := systemExtended_event_inversion h
   have hrun : ∀ {G' : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n}, ν = PMF.pure o →
@@ -491,6 +505,95 @@ theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
     refine ⟨Ω, ?_, hs⟩
     rwa [prodPMF_pure_pure, prodPMF_pure_pure]
   cases e with
+  | gbcaRoundEvent r j ev =>
+    obtain rfl : ν = PMF.pure o :=
+      (System.mapIdle_step_none (coinLabelMap_gbcaRoundEvent r j ev) ν).mp hWs
+    obtain rfl : w' = w.writeGhost (ghostStep P) (Sum.inr (NetworkEvent.gbcaRoundEvent r j ev)) :=
+      pure_inj (networkStep_gbcaRoundEvent hn)
+    have hfor : ∀ i, i ≠ j → x i = u i := fun i hi =>
+      pure_inj (programStep_gbcaRoundEvent_notOwn (Ne.symm hi) (hall i))
+    obtain ⟨y, hy, hcore, hoff, hga2, hlow⟩ :=
+      roundRecord_match_gbcaRoundEvent P w (u := u) (j := j) rfl
+        (roundTransition_of_own rfl (hall j))
+    obtain rfl : x j = y := pure_inj hy
+    have hxc : ∀ (i : Fin P.n) (r' : ℕ), (x i).2.roundRecord r'
+        = ((Function.update u j (x j)) i).2.roundRecord r' := by
+      intro i r'
+      by_cases hi : i = j
+      · subst hi; rw [Function.update_self]
+      · rw [Function.update_of_ne hi, hfor i hi]
+    have hxg : ∀ (i : Fin P.n) (r'' : ℕ), (((x i).2.roundRecord r'').secondGather.process).input
+        = (((u i).2.roundRecord r'').secondGather.process).input := by
+      intro i r''
+      by_cases hi : i = j
+      · subst hi; exact hga2 r''
+      · rw [hfor i hi]
+    have hfam : (fun r' => roundProjection P x
+          (w.writeGhost (ghostStep P) (Sum.inr (NetworkEvent.gbcaRoundEvent r j ev))) r')
+        = Function.update (fun r' => roundProjection P u w r') r
+          (roundProjection P (Function.update u j (x j))
+            (w.writeGhost (ghostStep P) (Sum.inr (NetworkEvent.gbcaRoundEvent r j ev))) r) := by
+      funext r'
+      by_cases hr' : r' = r
+      · subst hr'
+        rw [Function.update_self]
+        exact roundProjection_congr (fun i => hxc i r')
+      · rw [Function.update_of_ne hr',
+          roundProjection_writeGhost_ne
+            (L := Sum.inr (NetworkEvent.gbcaRoundEvent r j ev)) _ _ rfl hr']
+        exact roundProjection_congr (fun i => by
+          by_cases hi : i = j
+          · subst hi; exact hoff r' hr'
+          · rw [hfor i hi])
+    have hcandAt : ∀ (i : Fin P.n) (r'' : ℕ), ((u i).2.roundRecord r'').candidate ≠ none →
+        ((x i).2.roundRecord r'').candidate ≠ none := by
+      intro i r'' hne
+      by_cases hi : i = j
+      · subst hi
+        by_cases hr'' : r'' = r
+        · subst hr''
+          rcases roundRecord_candidate_gbcaRoundEvent P
+            (roundTransition_of_own rfl (hall i)) with hkeep | ⟨hsome, -⟩
+          · rw [hkeep _ rfl]; exact hne
+          · exact hsome _ rfl
+        · rw [hoff r'' hr'']; exact hne
+      · rw [hfor i hi]; exact hne
+    have hbI : BoundInvariant P x
+        (w.writeGhost (ghostStep P) (Sum.inr (.gbcaRoundEvent r j ev))) := by
+      refine ⟨fun r'' i hne => ?_, fun r'' i => ⟨fun ho => ?_, fun hs => hcandAt i r'' ?_⟩⟩
+      · by_cases hi : i = j
+        · subst hi
+          by_cases hr'' : r'' = r
+          · subst hr''
+            rcases roundRecord_candidate_gbcaRoundEvent P
+              (roundTransition_of_own rfl (hall i)) with hkeep | ⟨-, y, rfl⟩
+            · exact writeGhost_bound _ (hB.1 r'' i (by rw [← hkeep _ rfl]; exact hne))
+            · rw [writeGhost_ghostRecord_self _ rfl]; simp [ghostStep]
+          · rw [writeGhost_ghostRecord_ne _ rfl hr'']
+            exact hB.1 r'' i (by rw [← hoff r'' hr'']; exact hne)
+        · rw [hfor i hi] at hne
+          exact writeGhost_bound _ (hB.1 r'' i hne)
+      · rw [hxg i r'']
+        by_cases hi : i = j
+        · subst hi
+          by_cases hr'' : r'' = r
+          · subst hr''
+            rcases roundRecord_output_gbcaRoundEvent P
+              (roundTransition_of_own rfl (hall i)) with hkeep | hin
+            · exact (hB.2 r'' i).1 (by rw [← hkeep _ rfl]; exact ho)
+            · exact hin
+          · exact (hB.2 r'' i).1 (by rw [← hoff r'' hr'']; exact ho)
+        · rw [hfor i hi] at ho
+          exact (hB.2 r'' i).1 ho
+      · exact (hB.2 r'' i).2 (by rw [← hxg i r'']; exact hs)
+    refine hrun rfl ((protocolRelation_mk P _ _ _ _ _ _ _).mpr
+      ⟨fun i => by
+        rw [hCeq i]
+        by_cases hi : i = j
+        · subst hi; rw [hcore]
+        · rw [hfor i hi], rfl, by rw [hA]; simp, hfam.symm, hbI⟩) ?_
+    rw [hGv]
+    exact System.weakLSilent_family roundOwnsLabel isFailLabel (corruptionOverBracha P) hlow
   | gbcaSend r j m =>
     obtain rfl : ν = PMF.pure o :=
       (System.mapIdle_step_none (coinLabelMap_gbcaSend r j m) ν).mp hWs
@@ -498,8 +601,8 @@ theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
         (Sum.inr (NetworkEvent.gbcaSend r j m)) := pure_inj (networkStep_gbcaSend hn)
     have hfor : ∀ i, i ≠ j → x i = u i := fun i hi =>
       pure_inj (programStep_gbcaSend_foreign (Ne.symm hi) (hall i))
-    obtain ⟨y, hy, hcore, hoff, hlow, hinv⟩ :=
-      roundRecord_match_gbcaSend P w (u := u) (j := j) rfl hI (roundTransition_of_own rfl (hall j))
+    obtain ⟨y, hy, hcore, hoff, hgc, hgo, hgi, hlow⟩ :=
+      roundRecord_match_gbcaSend P w (u := u) (j := j) rfl (roundTransition_of_own rfl (hall j))
     obtain rfl : x j = y := pure_inj hy
     have hxc : ∀ (i : Fin P.n) (r' : ℕ), (x i).2.roundRecord r'
         = ((Function.update u j (x j)) i).2.roundRecord r' := by
@@ -526,30 +629,26 @@ theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
           · rw [hfor i hi])).trans (roundProjection_otherSent u w hr' j m rfl)
     have hbI : BoundInvariant P x
         ((w.recordGBCASend r j m).writeGhost (ghostStep P) (Sum.inr (.gbcaSend r j m))) := by
-      rcases roundRecord_gbcaSend_secondGather P (roundTransition_of_own rfl (hall j)) with
-        hkeep | ⟨q, y, rfl⟩
-      · refine boundInvariant_of hB (fun i r'' => ?_)
-          (fun _ hb => writeGhost_bound _ (by simpa using hb))
-        by_cases hi : i = j
-        · subst hi; exact hkeep _ rfl r''
+      refine boundInvariant_ofSecondGatherCall hB (fun i r'' => ?_) (fun i r'' => ?_)
+        (fun i r'' => ?_) (fun _ hb => writeGhost_bound _ (by simpa using hb))
+      · by_cases hi : i = j
+        · subst hi; exact hgc r''
         · rw [hfor i hi]
-      · intro r'' i hne
-        by_cases hr'' : r'' = r
-        · subst hr''
-          rw [writeGhost_ghostRecord_self _ rfl]
-          simp [ghostStep]
-        · rw [writeGhost_ghostRecord_ne _ rfl hr'']
-          refine hB r'' i ?_
-          by_cases hi : i = j
-          · subst hi; rwa [hoff r'' hr''] at hne
-          · rwa [hfor i hi] at hne
+      · by_cases hi : i = j
+        · subst hi; exact hgo r''
+        · rw [hfor i hi]
+      · by_cases hi : i = j
+        · subst hi
+          by_cases hr'' : r'' = r
+          · subst hr''; exact hgi
+          · exact Or.inl (by rw [hoff r'' hr''])
+        · exact Or.inl (by rw [hfor i hi])
     refine hrun rfl ((protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨fun i => by
         rw [hCeq i]
         by_cases hi : i = j
         · subst hi; rw [hcore]
-        · rw [hfor i hi], rfl, by rw [hA]; simp, hfam.symm, hbI,
-        broadcastReturnsInvariant_update hI hfam hinv⟩) ?_
+        · rw [hfor i hi], rfl, by rw [hA]; simp, hfam.symm, hbI⟩) ?_
     rw [hGv]
     exact System.weakLSilent_family roundOwnsLabel isFailLabel (corruptionOverBracha P) hlow
   | gbcaDeliver r i k m =>
@@ -560,8 +659,8 @@ theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
       pure_inj hw
     have hfor : ∀ i', i' ≠ i → x i' = u i' := fun i' hi =>
       pure_inj (programStep_gbcaDeliver_foreign (Ne.symm hi) (hall i'))
-    obtain ⟨y, hy, hcore, hoff, hga2, hlow, hinv⟩ :=
-      roundRecord_match_gbcaDeliver P w (u := u) (j := i) rfl hI hsent
+    obtain ⟨y, hy, hcore, hoff, hga2, hgc, hgo, hlow⟩ :=
+      roundRecord_match_gbcaDeliver P w (u := u) (j := i) rfl hsent
         (roundTransition_of_own rfl (hall i))
     obtain rfl : x i = y := pure_inj hy
     have hxc : ∀ (i' : Fin P.n) (r' : ℕ), (x i').2.roundRecord r'
@@ -575,6 +674,18 @@ theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
       intro i' r''
       by_cases hi : i' = i
       · subst hi; exact hga2 r''
+      · rw [hfor i' hi]
+    have hxcand : ∀ (i' : Fin P.n) (r'' : ℕ), ((x i').2.roundRecord r'').candidate
+        = ((u i').2.roundRecord r'').candidate := by
+      intro i' r''
+      by_cases hi : i' = i
+      · subst hi; exact hgc r''
+      · rw [hfor i' hi]
+    have hxout : ∀ (i' : Fin P.n) (r'' : ℕ), ((x i').2.roundRecord r'').output
+        = ((u i').2.roundRecord r'').output := by
+      intro i' r''
+      by_cases hi : i' = i
+      · subst hi; exact hgo r''
       · rw [hfor i' hi]
     have hfam : (fun r' => roundProjection P x
           (w.writeGhost (ghostStep P) (Sum.inr (NetworkEvent.gbcaDeliver r i k m))) r')
@@ -599,8 +710,7 @@ theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
         by_cases hi : i' = i
         · subst hi; rw [hcore]
         · rw [hfor i' hi], rfl, by rw [hA]; simp, hfam.symm,
-        boundInvariant_of hB hxg (fun _ hb => writeGhost_bound _ hb),
-        broadcastReturnsInvariant_update hI hfam hinv⟩) ?_
+        boundInvariant_of hB hxcand hxg hxout (fun _ hb => writeGhost_bound _ hb)⟩) ?_
     rw [hGv]
     exact System.weakLSilent_family roundOwnsLabel isFailLabel (corruptionOverBracha P) hlow
   | decidedSend j b =>
@@ -617,9 +727,8 @@ theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
       (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun i => by rw [hx i], rfl, by rw [hA]; rfl, by
           rw [hGv]; funext r; exact (roundProjection_congr (fun i => by rw [hx i])).symm,
-          boundInvariant_of hB (fun i r => by rw [hx i]) (fun _ hb => hb),
-          broadcastReturnsInvariant_congr hI (fun r => roundProjection_congr (fun i => by rw [hx
-            i]))⟩)
+          boundInvariant_of hB (fun i r => by rw [hx i])
+            (fun i r => by rw [hx i]) (fun i r => by rw [hx i]) (fun _ hb => hb)⟩)
       (roundFamilyOverBracha_idle P G (by simp) (by simp) not_false) (fun i => ?_)
       (hA ▸ ABANetworkStep.decidedSend ⟨w.decidedSent, w.F⟩ j b hd) hWs
     rw [hCeq i]
@@ -643,9 +752,8 @@ theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
     refine coupling_hiddenRendezvous P (.decidedDeliver i k b) (fun o' _ =>
       (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact roundProjection_unchanged hsame w',
-          boundInvariant_of hB (fun i' r => by rw [hsame i']) (fun _ hb => hb),
-          broadcastReturnsInvariant_congr hI (fun r => roundProjection_congr (fun i' => by rw [hsame
-            i']))⟩)
+          boundInvariant_of hB (fun i' r => by rw [hsame i'])
+            (fun i' r => by rw [hsame i']) (fun i' r => by rw [hsame i']) (fun _ hb => hb)⟩)
       (roundFamilyOverBracha_idle P G (by simp) (by simp) not_false) (fun i' => ?_)
       (hA ▸ ABANetworkStep.decidedDeliver ⟨w'.decidedSent, w'.F⟩ i k b hd) hWs
     rw [hCeq i']
@@ -672,8 +780,8 @@ theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
       (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, by rw [hA]; rfl, by rw [hGv]; funext r'; exact (hview r').symm,
           boundInvariant_of hB (fun i r' => by rw [hsame i])
-            (fun _ hb => writeGhost_bound _ hb),
-          broadcastReturnsInvariant_congr hI hview⟩)
+            (fun i r' => by rw [hsame i]) (fun i r' => by rw [hsame i])
+            (fun _ hb => writeGhost_bound _ hb)⟩)
       (roundFamilyOverBracha_idle P G (by simp) (by simp) not_false) (fun i => ?_)
       (hA ▸ ABANetworkStep.retWPublish ⟨w.decidedSent, w.F⟩ r id cc b) hWs
     rw [hCeq i]
@@ -707,8 +815,8 @@ theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
       (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, by rw [hA]; simp, by rw [hGv]; funext r'; exact (hview r').symm,
           boundInvariant_of hB (fun i r' => by rw [hsame i])
-            (fun _ hb => writeGhost_bound _ hb),
-          broadcastReturnsInvariant_congr hI hview⟩)
+            (fun i r' => by rw [hsame i]) (fun i r' => by rw [hsame i])
+            (fun _ hb => writeGhost_bound _ hb)⟩)
       (roundFamilyOverBracha_owned_id P G r (by simp) (by rw [hGv]; exact hlow))
       (fun i => ?_) (ABANetworkStep.gbcaCallLoop A r id b) hWs
     rw [hCeq i]
@@ -732,8 +840,8 @@ theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
       (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun i => by rw [hx i], rfl, hA, by rw [hGv]; funext r'; exact (hview r').symm,
           boundInvariant_of hB (fun i r' => by rw [hx i])
-            (fun _ hb => writeGhost_bound _ hb),
-          broadcastReturnsInvariant_congr hI hview⟩)
+            (fun i r' => by rw [hx i]) (fun i r' => by rw [hx i])
+            (fun _ hb => writeGhost_bound _ hb)⟩)
       (roundFamilyOverBracha_owned_id P G r (by simp)
         (by rw [hGv]; exact roundOverBracha_byzantineCallLoop (roundProjection P u w r) k b))
       (fun i => ?_) (hA ▸ ABANetworkStep.byzantineCallGLoop ⟨w.decidedSent, w.F⟩ r k b hF) hWs
@@ -754,8 +862,8 @@ theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
       (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun i => by rw [hx i], rfl, hA, by rw [hGv]; funext r'; exact (hview r').symm,
           boundInvariant_of hB (fun i r' => by rw [hx i])
-            (fun _ hb => writeGhost_bound _ hb),
-          broadcastReturnsInvariant_congr hI hview⟩)
+            (fun i r' => by rw [hx i]) (fun i r' => by rw [hx i])
+            (fun _ hb => writeGhost_bound _ hb)⟩)
       (roundFamilyOverBracha_idle P G (by simp) (by simp) not_false) (fun i => ?_)
       (hA ▸ ABANetworkStep.byzantineCallW ⟨w.decidedSent, w.F⟩ r k hF) hWs
     rw [hCeq i]
@@ -775,8 +883,8 @@ theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessRecord 
       (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun i => by rw [hx i], rfl, hA, by rw [hGv]; funext r'; exact (hview r').symm,
           boundInvariant_of hB (fun i r' => by rw [hx i])
-            (fun _ hb => writeGhost_bound _ hb),
-          broadcastReturnsInvariant_congr hI hview⟩)
+            (fun i r' => by rw [hx i]) (fun i r' => by rw [hx i])
+            (fun _ hb => writeGhost_bound _ hb)⟩)
       (roundFamilyOverBracha_idle P G (by simp) (by simp) not_false) (fun i => ?_)
       (hA ▸ ABANetworkStep.byzantineRetW ⟨w.decidedSent, w.F⟩ r k b hF) hWs
     rw [hCeq i]
@@ -798,10 +906,10 @@ theorem coupling_hidden (P : Parameters) {s : ProtocolState P} {t : ComposedStat
           (l ≠ Label.tau ∧ weakStep (composedHidden P) (PMF.pure t) l (Ω.bind id))) := by
   obtain ⟨u, w, o⟩ := s
   obtain ⟨G, C, A, o'⟩ := t
-  obtain ⟨hC, ho, hA, hGv, hB, hI⟩ := (protocolRelation_mk P _ _ _ _ _ _ _).mp hR
+  obtain ⟨hC, ho, hA, hGv, hB⟩ := (protocolRelation_mk P _ _ _ _ _ _ _).mp hR
   subst ho
   have hR' : ProtocolRelation P (u, w, o) (G, C, A, o) :=
-    (protocolRelation_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, hA, hGv, hB, hI⟩
+    (protocolRelation_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, hA, hGv, hB⟩
   rcases (systemHidden_step_iff _ _ _).mp h with ⟨rfl, e, hstep⟩ | hstep
   · obtain ⟨Ω, hrel, hs⟩ := coupling_event P hR' e hstep
     exact ⟨Ω, hrel, Or.inl ⟨rfl, hs⟩⟩

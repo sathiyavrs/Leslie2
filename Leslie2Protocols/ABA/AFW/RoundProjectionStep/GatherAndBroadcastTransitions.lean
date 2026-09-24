@@ -156,7 +156,7 @@ theorem roundProjection_firstGatherBind (hu : (u j).2 = p) (r : ℕ) (U : Gather
   · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [Gather.gatherTier, Gather.setBindBroadcasts, Gather.setGatherTier,
       GBCA.ByAFW.firstGather, GBCA.ByAFW.setFirstGather, roundProjection, roundProjectionUpdate,
-        firstGatherProjection, gatherLocalState, broadcastReturnsFor_update_setProcess]
+        firstGatherProjection, ]
       simp only [InstanceState.setProcess, InstanceState.process, LocalState.setProcess]
     · simp only [Gather.gatherTier, Gather.setBindBroadcasts, Gather.setGatherTier,
       GBCA.ByAFW.firstGather, GBCA.ByAFW.setFirstGather, roundProjection, roundProjectionUpdate,
@@ -183,8 +183,8 @@ theorem roundProjection_firstGatherBind (hu : (u j).2 = p) (r : ℕ) (U : Gather
         GBCA.ByAFW.firstGather, GBCA.ByAFW.setFirstGather, roundProjection, roundProjectionUpdate,
           firstGatherProjection, Function.update_self, InstanceState.multicast,
             InstanceState.setProcess,
-        InstanceState.process, broadcastLocalState, LocalState.setProcess,
-          broadcastReturnsFor_mk_eq]
+        InstanceState.process,  LocalState.setProcess,
+          ]
       · simp only [Gather.bindBroadcasts, Gather.setBindBroadcasts, Gather.setGatherTier,
         GBCA.ByAFW.firstGather, GBCA.ByAFW.setFirstGather, roundProjection, roundProjectionUpdate,
           firstGatherProjection, Function.update_self, InstanceState.multicast,
@@ -324,7 +324,7 @@ theorem roundProjection_secondGatherBind (hu : (u j).2 = p) (r : ℕ) (U : Gathe
   · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [Gather.gatherTier, Gather.setBindBroadcasts, Gather.setGatherTier,
       GBCA.ByAFW.secondGather, GBCA.ByAFW.setSecondGather, roundProjection, roundProjectionUpdate,
-        secondGatherProjection, gatherLocalState, broadcastReturnsFor_update_setProcess]
+        secondGatherProjection, ]
       simp only [InstanceState.setProcess, InstanceState.process, LocalState.setProcess]
     · simp only [Gather.gatherTier, Gather.setBindBroadcasts, Gather.setGatherTier,
       GBCA.ByAFW.secondGather, GBCA.ByAFW.setSecondGather, roundProjection, roundProjectionUpdate,
@@ -351,8 +351,8 @@ theorem roundProjection_secondGatherBind (hu : (u j).2 = p) (r : ℕ) (U : Gathe
         GBCA.ByAFW.secondGather, GBCA.ByAFW.setSecondGather, roundProjection,
           roundProjectionUpdate, secondGatherProjection, Function.update_self,
             InstanceState.multicast, InstanceState.setProcess,
-        InstanceState.process, broadcastLocalState, LocalState.setProcess,
-          broadcastReturnsFor_mk_eq]
+        InstanceState.process,  LocalState.setProcess,
+          ]
       · simp only [Gather.bindBroadcasts, Gather.setBindBroadcasts, Gather.setGatherTier,
         GBCA.ByAFW.secondGather, GBCA.ByAFW.setSecondGather, roundProjection,
           roundProjectionUpdate, secondGatherProjection, Function.update_self,

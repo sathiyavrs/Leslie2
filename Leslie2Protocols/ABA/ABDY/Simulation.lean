@@ -312,6 +312,7 @@ theorem coupling_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
     obtain ⟨Ω, hr, hs⟩ := coupling_visible P hLne hrel hGs hCs hAs hWs
     exact ⟨Ω, hr, composedHidden_of_event P e hs⟩
   cases e with
+  | gbcaRoundEvent r j ev => exact ev.elim
   | gbcaSend r j m =>
     obtain rfl : ν = PMF.pure o :=
       (System.mapIdle_step_none (coinLabelMap_gbcaSend r j m) ν).mp hWs

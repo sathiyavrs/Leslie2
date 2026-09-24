@@ -49,7 +49,8 @@ theorem roundProjection_otherTransition (hu : (u j).2 = p) {r r' : ℕ} (hr : r'
 
 /-- A send of round `r`, read at another round. -/
 theorem roundProjection_other (hu : (u j).2 = p) {r r' : ℕ} (hr : r' ≠ r) (sr : RoundRecord P.n)
-    (m : Message P.n) {L : ExtendedLabel P.n (Message P.n)} (hL : roundOf L = some r) :
+    (m : Message P.n) {L : Implementation.ExtendedLabel P.n (Message P.n) (RoundEvent P.n)}
+    (hL : roundOf L = some r) :
     roundProjection P (Function.update u j (c, p.setRoundRecord r sr))
         ((w.recordGBCASend r j m).writeGhost (ghostStep P) L) r' = roundProjection P u w r' := by
   rw [roundProjection_writeGhost_ne _ _ hL hr]
@@ -57,7 +58,8 @@ theorem roundProjection_other (hu : (u j).2 = p) {r r' : ℕ} (hr : r' ≠ r) (s
 
 /-- A transition of round `r` that records nothing, read at another round. -/
 theorem roundProjection_otherNoSent (hu : (u j).2 = p) {r r' : ℕ} (hr : r' ≠ r)
-    (sr : RoundRecord P.n) {L : ExtendedLabel P.n (Message P.n)} (hL : roundOf L = some r) :
+    (sr : RoundRecord P.n) {L : Implementation.ExtendedLabel P.n (Message P.n) (RoundEvent P.n)}
+    (hL : roundOf L = some r) :
     roundProjection P (Function.update u j (c, p.setRoundRecord r sr))
         (w.writeGhost (ghostStep P) L) r' = roundProjection P u w r' := by
   rw [roundProjection_writeGhost_ne _ _ hL hr]
@@ -66,7 +68,8 @@ theorem roundProjection_otherNoSent (hu : (u j).2 = p) {r r' : ℕ} (hr : r' ≠
 /-- A Byzantine injection of round `r`, read at another round. -/
 theorem roundProjection_otherSent (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n) (w : NetworkState P.n)
     {r r' : ℕ} (hr : r' ≠ r) (k : Fin P.n) (m : Message P.n)
-    {L : ExtendedLabel P.n (Message P.n)} (hL : roundOf L = some r) :
+    {L : Implementation.ExtendedLabel P.n (Message P.n) (RoundEvent P.n)}
+    (hL : roundOf L = some r) :
     roundProjection P u ((w.recordGBCASend r k m).writeGhost (ghostStep P) L) r' = roundProjection P
       u w r' := by
   rw [roundProjection_writeGhost_ne _ _ hL hr]
@@ -76,7 +79,7 @@ theorem roundProjection_otherSent (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n) (
 /-- **The whole family of rounds after a send**: the round the transition names moves,
 the rest remain unchanged. -/
 theorem toRoundFamily (hu : (u j).2 = p) (r : ℕ) (sr : RoundRecord P.n) (m : Message P.n)
-    {L : ExtendedLabel P.n (Message P.n)} (hL : roundOf L = some r)
+    {L : Implementation.ExtendedLabel P.n (Message P.n) (RoundEvent P.n)} (hL : roundOf L = some r)
     (X : GBCA.ByAFW.RoundStateOverBracha P.n)
     (hX : roundProjection P (Function.update u j (c, p.setRoundRecord r sr))
       ((w.recordGBCASend r j m).writeGhost (ghostStep P) L) r = X)
@@ -91,7 +94,7 @@ theorem toRoundFamily (hu : (u j).2 = p) (r : ℕ) (sr : RoundRecord P.n) (m : M
 
 /-- The same, for a transition that records nothing. -/
 theorem toRoundFamilyNoSent (hu : (u j).2 = p) (r : ℕ) (sr : RoundRecord P.n)
-    {L : ExtendedLabel P.n (Message P.n)} (hL : roundOf L = some r)
+    {L : Implementation.ExtendedLabel P.n (Message P.n) (RoundEvent P.n)} (hL : roundOf L = some r)
     (X : GBCA.ByAFW.RoundStateOverBracha P.n)
     (hX : roundProjection P (Function.update u j (c, p.setRoundRecord r sr))
       (w.writeGhost (ghostStep P) L) r = X)
@@ -106,7 +109,9 @@ theorem toRoundFamilyNoSent (hu : (u j).2 = p) (r : ℕ) (sr : RoundRecord P.n)
 
 /-- The same, for a Byzantine injection. -/
 theorem toRoundFamilySent (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n) (w : NetworkState P.n) (r : ℕ)
-    (k : Fin P.n) (m : Message P.n) {L : ExtendedLabel P.n (Message P.n)} (hL : roundOf L = some r)
+    (k : Fin P.n) (m : Message P.n)
+    {L : Implementation.ExtendedLabel P.n (Message P.n) (RoundEvent P.n)}
+    (hL : roundOf L = some r)
     (X : GBCA.ByAFW.RoundStateOverBracha P.n)
     (hX : roundProjection P u ((w.recordGBCASend r k m).writeGhost (ghostStep P) L) r = X) :
     (fun r' => roundProjection P u ((w.recordGBCASend r k m).writeGhost (ghostStep P) L) r')

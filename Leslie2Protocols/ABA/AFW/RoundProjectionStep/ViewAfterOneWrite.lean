@@ -17,8 +17,7 @@ the old one, and each network state is recovered from the written sent family by
 (`messagesOf`).
 `messagesOf_recordSent_some` and `messagesOf_recordSent_none` are the sent algebra a transition
 still owes, and one simp lemma per coordinate reads the written view off `roundProjectionUpdate`.
-`broadcastReturnsFor_update_setProcess` and `broadcastReturnsFor_update_deliverTo` read the family
-of returned values under a local write and under a delivery. `networkState_ext`,
+`networkState_ext`,
 `stateOverBroadcasts_ext` and `roundStateOverGathers_ext` identify a network state, a
 gather-over-Bracha state and a round state with their components. Every class of transitions in
 `AFW/RoundProjectionStep/` rests on this file.
@@ -198,59 +197,51 @@ theorem locals_programProjection_if :
   by_cases hi : i = j <;> simp [hi]
 
 theorem locals_firstGatherLocalState_if :
-    (fun i => gatherLocalState P Bool (if i = j then sr else Y i).firstGather
-        (if i = j then sr else Y i).firstGatherInputBroadcasts (if i = j then sr else Y
-          i).firstGatherBindBroadcasts)
+    (fun i => (if i = j then sr else Y i).firstGather)
       = Function.update
-          (fun i => gatherLocalState P Bool (Y i).firstGather (Y i).firstGatherInputBroadcasts (Y
-            i).firstGatherBindBroadcasts) j
-          (gatherLocalState P Bool sr.firstGather sr.firstGatherInputBroadcasts
-            sr.firstGatherBindBroadcasts) := by
+          (fun i => (Y i).firstGather) j
+          (sr.firstGather) := by
   funext i
   rw [Function.update_apply]
   by_cases hi : i = j <;> simp [hi]
 
 theorem locals_secondGatherLocalState_if :
-    (fun i => gatherLocalState P (Option Bool) (if i = j then sr else Y i).secondGather
-        (if i = j then sr else Y i).secondGatherInputBroadcasts (if i = j then sr else Y
-          i).secondGatherBindBroadcasts)
+    (fun i => (if i = j then sr else Y i).secondGather)
       = Function.update
-          (fun i => gatherLocalState P (Option Bool) (Y i).secondGather (Y
-            i).secondGatherInputBroadcasts (Y i).secondGatherBindBroadcasts) j
-          (gatherLocalState P (Option Bool) sr.secondGather sr.secondGatherInputBroadcasts
-            sr.secondGatherBindBroadcasts) := by
+          (fun i => (Y i).secondGather) j
+          (sr.secondGather) := by
   funext i
   rw [Function.update_apply]
   by_cases hi : i = j <;> simp [hi]
 
 theorem locals_firstGatherInputBroadcast_if (k : Fin P.n) :
-    (fun i => broadcastLocalState P ((if i = j then sr else Y i).firstGatherInputBroadcasts k))
-      = Function.update (fun i => broadcastLocalState P ((Y i).firstGatherInputBroadcasts k)) j
-          (broadcastLocalState P (sr.firstGatherInputBroadcasts k)) := by
+    (fun i => ((if i = j then sr else Y i).firstGatherInputBroadcasts k))
+      = Function.update (fun i => ((Y i).firstGatherInputBroadcasts k)) j
+          ((sr.firstGatherInputBroadcasts k)) := by
   funext i
   rw [Function.update_apply]
   by_cases hi : i = j <;> simp [hi]
 
 theorem locals_firstGatherBindBroadcast_if (k : Fin P.n) :
-    (fun i => broadcastLocalState P ((if i = j then sr else Y i).firstGatherBindBroadcasts k))
-      = Function.update (fun i => broadcastLocalState P ((Y i).firstGatherBindBroadcasts k)) j
-          (broadcastLocalState P (sr.firstGatherBindBroadcasts k)) := by
+    (fun i => ((if i = j then sr else Y i).firstGatherBindBroadcasts k))
+      = Function.update (fun i => ((Y i).firstGatherBindBroadcasts k)) j
+          ((sr.firstGatherBindBroadcasts k)) := by
   funext i
   rw [Function.update_apply]
   by_cases hi : i = j <;> simp [hi]
 
 theorem locals_secondGatherInputBroadcast_if (k : Fin P.n) :
-    (fun i => broadcastLocalState P ((if i = j then sr else Y i).secondGatherInputBroadcasts k))
-      = Function.update (fun i => broadcastLocalState P ((Y i).secondGatherInputBroadcasts k)) j
-          (broadcastLocalState P (sr.secondGatherInputBroadcasts k)) := by
+    (fun i => ((if i = j then sr else Y i).secondGatherInputBroadcasts k))
+      = Function.update (fun i => ((Y i).secondGatherInputBroadcasts k)) j
+          ((sr.secondGatherInputBroadcasts k)) := by
   funext i
   rw [Function.update_apply]
   by_cases hi : i = j <;> simp [hi]
 
 theorem locals_secondGatherBindBroadcast_if (k : Fin P.n) :
-    (fun i => broadcastLocalState P ((if i = j then sr else Y i).secondGatherBindBroadcasts k))
-      = Function.update (fun i => broadcastLocalState P ((Y i).secondGatherBindBroadcasts k)) j
-          (broadcastLocalState P (sr.secondGatherBindBroadcasts k)) := by
+    (fun i => ((if i = j then sr else Y i).secondGatherBindBroadcasts k))
+      = Function.update (fun i => ((Y i).secondGatherBindBroadcasts k)) j
+          ((sr.secondGatherBindBroadcasts k)) := by
   funext i
   rw [Function.update_apply]
   by_cases hi : i = j <;> simp [hi]
@@ -280,39 +271,33 @@ noncomputable def roundProjectionUpdate (P : Parameters) (u : ∀ _ : Fin P.n, A
   ((Function.update (fun i => programProjection ((u i).2.roundRecord r)) j (programProjection sr),
       (w.ghostRecord r).2.2),
     (((Function.update
-            (fun i => gatherLocalState P Bool ((u i).2.roundRecord r).firstGather ((u
-              i).2.roundRecord r).firstGatherInputBroadcasts
-              ((u i).2.roundRecord r).firstGatherBindBroadcasts) j
-            (gatherLocalState P Bool sr.firstGather sr.firstGatherInputBroadcasts
-              sr.firstGatherBindBroadcasts),
+            (fun i => ((u i).2.roundRecord r).firstGather) j
+            (sr.firstGather),
           ⟨⟨messagesOf firstGatherMessageOf firstGatherMessageOf_inj sent, w.F⟩,
             (w.ghostRecord r).1⟩),
-        fun k => (Function.update (fun i => broadcastLocalState P (((u i).2.roundRecord
+        fun k => (Function.update (fun i => (((u i).2.roundRecord
           r).firstGatherInputBroadcasts k)) j
-            (broadcastLocalState P (sr.firstGatherInputBroadcasts k)),
+            ((sr.firstGatherInputBroadcasts k)),
           ⟨messagesOf (firstGatherInputBroadcastMessageOf k) (firstGatherInputBroadcastMessageOf_inj
             k) sent, w.F⟩),
-        fun q => (Function.update (fun i => broadcastLocalState P (((u i).2.roundRecord
+        fun q => (Function.update (fun i => (((u i).2.roundRecord
           r).firstGatherBindBroadcasts q)) j
-            (broadcastLocalState P (sr.firstGatherBindBroadcasts q)),
+            ((sr.firstGatherBindBroadcasts q)),
           ⟨messagesOf (firstGatherBindBroadcastMessageOf q) (firstGatherBindBroadcastMessageOf_inj
             q) sent, w.F⟩)),
       ((Function.update
-            (fun i => gatherLocalState P (Option Bool) ((u i).2.roundRecord r).secondGather
-              ((u i).2.roundRecord r).secondGatherInputBroadcasts ((u i).2.roundRecord
-                r).secondGatherBindBroadcasts) j
-            (gatherLocalState P (Option Bool) sr.secondGather sr.secondGatherInputBroadcasts
-              sr.secondGatherBindBroadcasts),
+            (fun i => ((u i).2.roundRecord r).secondGather) j
+            (sr.secondGather),
           ⟨⟨messagesOf secondGatherMessageOf secondGatherMessageOf_inj sent, w.F⟩,
             (w.ghostRecord r).2.1⟩),
-        fun k => (Function.update (fun i => broadcastLocalState P (((u i).2.roundRecord
+        fun k => (Function.update (fun i => (((u i).2.roundRecord
           r).secondGatherInputBroadcasts k)) j
-            (broadcastLocalState P (sr.secondGatherInputBroadcasts k)),
+            ((sr.secondGatherInputBroadcasts k)),
           ⟨messagesOf (secondGatherInputBroadcastMessageOf k)
             (secondGatherInputBroadcastMessageOf_inj k) sent, w.F⟩),
-        fun q => (Function.update (fun i => broadcastLocalState P (((u i).2.roundRecord
+        fun q => (Function.update (fun i => (((u i).2.roundRecord
           r).secondGatherBindBroadcasts q)) j
-            (broadcastLocalState P (sr.secondGatherBindBroadcasts q)),
+            ((sr.secondGatherBindBroadcasts q)),
           ⟨messagesOf (secondGatherBindBroadcastMessageOf q) (secondGatherBindBroadcastMessageOf_inj
             q) sent, w.F⟩))))
 
@@ -406,82 +391,6 @@ theorem roundProjection_writeNoSent (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n)
         locals_secondGatherBindBroadcast_if]
 
 end Writes
-/-! ### The returned value under a local write
-
-`broadcastReturnsFor` counts `VOTE` receipts, so a write of a local record leaves it where
-it stands and a delivery is the only transition that moves it. -/
-
-section BroadcastReturns
-
-variable {X : Type} [DecidableEq X]
-
-/-- A local record write leaves the returned value where it stands. -/
-theorem broadcastReturnsFor_setProcess (q : LocalState P.n (BRB.ProcessRecord X) (BRB.Message X))
-    (pr : BRB.ProcessRecord X) : broadcastReturnsFor P (q.setProcess pr) = broadcastReturnsFor P q
-      := rfl
-
-/-- The local record of a written local state. -/
-theorem localState_setProcess_process {Pr M : Type} (q : LocalState P.n Pr M) (pr : Pr) :
-    (q.setProcess pr).process = pr := rfl
-
-/-- The delivered sets of a written local state. -/
-theorem localState_setProcess_received {Pr M : Type} (q : LocalState P.n Pr M) (pr : Pr) :
-    (q.setProcess pr).received = q.received := rfl
-
-/-- The returned value reads the delivered sets alone. -/
-theorem broadcastReturnsFor_mk_eq (pr : BRB.ProcessRecord X)
-    (q : LocalState P.n (BRB.ProcessRecord X) (BRB.Message X)) :
-    broadcastReturnsFor P ({ process := pr, received := q.received } :
-      LocalState P.n (BRB.ProcessRecord X) (BRB.Message X)) =
-        broadcastReturnsFor P q := rfl
-
-/-- A local record write in one instance leaves the whole family of returned values where it
-stands. -/
-theorem broadcastReturnsFor_update_setProcess
-    (b : Fin P.n → LocalState P.n (BRB.ProcessRecord X) (BRB.Message X)) (i : Fin P.n)
-    (pr : BRB.ProcessRecord X) :
-    (fun k => broadcastReturnsFor P (Function.update b i ((b i).setProcess pr) k)) = fun k =>
-    broadcastReturnsFor P (b k) := by
-  funext k
-  by_cases hk : k = i
-  · subst hk; rw [Function.update_self, broadcastReturnsFor_setProcess]
-  · rw [Function.update_of_ne hk]
-
-/-- A delivery in one instance, read through the family of returned values. -/
-theorem broadcastReturnsFor_update_deliverTo
-    (b : Fin P.n → LocalState P.n (BRB.ProcessRecord X) (BRB.Message X)) (i k : Fin P.n)
-    (m : BRB.Message X) :
-    (fun k' => broadcastReturnsFor P (Function.update b i ((b i).deliverTo k m) k')) =
-    Function.update (fun k' => broadcastReturnsFor P (b k')) i
-    (broadcastReturnsFor P ((b i).deliverTo k m)) := by
-  funext k'
-  by_cases hk : k' = i
-  · subst hk; rw [Function.update_self, Function.update_self]
-  · rw [Function.update_of_ne hk, Function.update_of_ne hk]
-
-/-- A delivery that leaves the returned value where it stands, read through the return flag. -/
-theorem broadcastLocalState_deliverTo (q : LocalState P.n (BRB.ProcessRecord X) (BRB.Message X))
-    (k : Fin P.n) (m : BRB.Message X)
-    (h : broadcastReturnsFor P (q.deliverTo k m) = broadcastReturnsFor P q) :
-    broadcastLocalState P (q.deliverTo k m) = (broadcastLocalState P q).deliverTo k m := by
-  unfold broadcastLocalState
-  rw [h]
-  rfl
-
-/-- A delivery that completes a receipt quorum, read through the return flag:
-the flag goes on. -/
-theorem broadcastLocalState_deliverTo_ret (q : LocalState P.n (BRB.ProcessRecord X) (BRB.Message X))
-    (k : Fin P.n) (m : BRB.Message X) {v : X}
-      (h : broadcastReturnsFor P (q.deliverTo k m) = some v) :
-    broadcastLocalState P (q.deliverTo k m)
-      = ((broadcastLocalState P q).deliverTo k m).setProcess
-          { ((broadcastLocalState P q).deliverTo k m).process with returned := true } := by
-  unfold broadcastLocalState LocalState.setProcess
-  rw [h]
-  rfl
-
-end BroadcastReturns
-
 /-! ### Reading the written view
 
 The written view is read coordinate by coordinate, so that a transition's
@@ -512,15 +421,11 @@ variable (v : ∀ _ : Fin P.n, AFW.ProcessRecord P.n) (w : NetworkState P.n) (r 
 
 @[simp] theorem gatherTier_firstGatherProjection_fst :
     (Gather.gatherTier (firstGatherProjection P v w r)).1
-      = fun i => gatherLocalState P Bool ((v i).2.roundRecord r).firstGather ((v i).2.roundRecord
-        r).firstGatherInputBroadcasts
-          ((v i).2.roundRecord r).firstGatherBindBroadcasts := rfl
+      = fun i => ((v i).2.roundRecord r).firstGather := rfl
 
 @[simp] theorem gatherTier_secondGatherProjection_fst :
     (Gather.gatherTier (secondGatherProjection P v w r)).1
-      = fun i => gatherLocalState P (Option Bool) ((v i).2.roundRecord r).secondGather ((v
-        i).2.roundRecord r).secondGatherInputBroadcasts
-          ((v i).2.roundRecord r).secondGatherBindBroadcasts := rfl
+      = fun i => ((v i).2.roundRecord r).secondGather := rfl
 
 @[simp] theorem programs_roundProjection_eq :
     GBCA.ByAFW.programs (roundProjection P v w r) = fun i => programProjection ((v i).2.roundRecord
@@ -544,52 +449,46 @@ variable (v : ∀ _ : Fin P.n, AFW.ProcessRecord P.n) (w : NetworkState P.n) (r 
 
 @[simp] theorem gatherTier_firstGather_roundProjectionUpdate :
     Gather.gatherTier (GBCA.ByAFW.firstGather (roundProjectionUpdate P v w r j sr sent))
-      = (Function.update (fun i => gatherLocalState P Bool ((v i).2.roundRecord r).firstGather
-            ((v i).2.roundRecord r).firstGatherInputBroadcasts ((v i).2.roundRecord
-              r).firstGatherBindBroadcasts) j
-          (gatherLocalState P Bool sr.firstGather sr.firstGatherInputBroadcasts
-            sr.firstGatherBindBroadcasts),
+      = (Function.update (fun i => ((v i).2.roundRecord r).firstGather) j
+          (sr.firstGather),
         ⟨messagesOf firstGatherMessageOf firstGatherMessageOf_inj sent, w.F⟩) := rfl
 
 @[simp] theorem gatherTier_secondGather_roundProjectionUpdate :
     Gather.gatherTier (GBCA.ByAFW.secondGather (roundProjectionUpdate P v w r j sr sent))
-      = (Function.update (fun i => gatherLocalState P (Option Bool) ((v i).2.roundRecord
-        r).secondGather
-            ((v i).2.roundRecord r).secondGatherInputBroadcasts ((v i).2.roundRecord
-              r).secondGatherBindBroadcasts) j
-          (gatherLocalState P (Option Bool) sr.secondGather sr.secondGatherInputBroadcasts
-            sr.secondGatherBindBroadcasts),
+      = (Function.update (fun i => ((v i).2.roundRecord
+        r).secondGather) j
+          (sr.secondGather),
         ⟨messagesOf secondGatherMessageOf secondGatherMessageOf_inj sent, w.F⟩) := rfl
 
 @[simp] theorem inputBroadcasts_firstGather_roundProjectionUpdate (k : Fin P.n) :
     Gather.inputBroadcasts (GBCA.ByAFW.firstGather (roundProjectionUpdate P v w r j sr sent)) k
-      = (Function.update (fun i => broadcastLocalState P (((v i).2.roundRecord
+      = (Function.update (fun i => (((v i).2.roundRecord
         r).firstGatherInputBroadcasts k)) j
-          (broadcastLocalState P (sr.firstGatherInputBroadcasts k)),
+          ((sr.firstGatherInputBroadcasts k)),
             ⟨messagesOf (firstGatherInputBroadcastMessageOf k)
               (firstGatherInputBroadcastMessageOf_inj k) sent, w.F⟩) := rfl
 
 @[simp] theorem bindBroadcasts_firstGather_roundProjectionUpdate (q : Fin P.n) :
     Gather.bindBroadcasts (GBCA.ByAFW.firstGather (roundProjectionUpdate P v w r j sr sent)) q
-      = (Function.update (fun i => broadcastLocalState P (((v i).2.roundRecord
+      = (Function.update (fun i => (((v i).2.roundRecord
         r).firstGatherBindBroadcasts q)) j
-          (broadcastLocalState P (sr.firstGatherBindBroadcasts q)),
+          ((sr.firstGatherBindBroadcasts q)),
             ⟨messagesOf (firstGatherBindBroadcastMessageOf q) (firstGatherBindBroadcastMessageOf_inj
               q) sent, w.F⟩) := rfl
 
 @[simp] theorem inputBroadcasts_secondGather_roundProjectionUpdate (k : Fin P.n) :
     Gather.inputBroadcasts (GBCA.ByAFW.secondGather (roundProjectionUpdate P v w r j sr sent)) k
-      = (Function.update (fun i => broadcastLocalState P (((v i).2.roundRecord
+      = (Function.update (fun i => (((v i).2.roundRecord
         r).secondGatherInputBroadcasts k)) j
-          (broadcastLocalState P (sr.secondGatherInputBroadcasts k)),
+          ((sr.secondGatherInputBroadcasts k)),
             ⟨messagesOf (secondGatherInputBroadcastMessageOf k)
               (secondGatherInputBroadcastMessageOf_inj k) sent, w.F⟩) := rfl
 
 @[simp] theorem bindBroadcasts_secondGather_roundProjectionUpdate (q : Fin P.n) :
     Gather.bindBroadcasts (GBCA.ByAFW.secondGather (roundProjectionUpdate P v w r j sr sent)) q
-      = (Function.update (fun i => broadcastLocalState P (((v i).2.roundRecord
+      = (Function.update (fun i => (((v i).2.roundRecord
         r).secondGatherBindBroadcasts q)) j
-          (broadcastLocalState P (sr.secondGatherBindBroadcasts q)),
+          ((sr.secondGatherBindBroadcasts q)),
             ⟨messagesOf (secondGatherBindBroadcastMessageOf q)
               (secondGatherBindBroadcastMessageOf_inj q) sent, w.F⟩) := rfl
 

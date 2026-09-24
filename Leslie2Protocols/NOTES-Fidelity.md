@@ -177,8 +177,8 @@ parameter and multicasts `⟨INPUT, x⟩` at line 2, its first statement.
 no state of the implementation holds a called process whose `INPUT` has not been sent. The
 sent sets are read by `Algorithm.deliver` alone, so a send the adversary would delay is a
 delivery it delays instead, and the same receipt patterns are reachable under either
-rendering. D28 is the fusion of a sub-protocol's call and return into a caller's transition, and
-does not cover this one.
+rendering. D28 is the fusion of a gather's call with the call of the instance broadcasting the
+caller's input, and does not cover this one.
 
 **Terminating `return` as state.** The pseudocode's `return` ends the process; the
 encoding renders that as a fire-once flag — `ProcessRecord.returned`, guarded by the `hr`

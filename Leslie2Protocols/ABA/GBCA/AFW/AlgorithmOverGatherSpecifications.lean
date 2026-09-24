@@ -306,6 +306,7 @@ theorem roundOverGatherSpecifications_step_algorithm (P : Parameters) (r : ℕ) 
           exact ⟨_, rfl, AlgorithmOverGatherSpecifications.fail _ id⟩
       | inr ev =>
         cases ev with
+        | gbcaRoundEvent r' j e => exact e.elim
         | gbcaSend r' j m => exact m.elim
         | gbcaDeliver r' i j m => exact m.elim
         | decidedSend j b => exact (roundPrograms_outside_inversion (by simp) hRoundPrograms).elim

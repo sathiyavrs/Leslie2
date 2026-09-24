@@ -371,11 +371,10 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
   \item D27: the BRB specification splits the leader's recorded input from the committed value, an internal commit writing the value once under $\mathit{ldr} \in F \vee input = m$, in place of Transition System~6's single call field and its corrupted-leader transition, which only bars the instance from returning.
     Under Transition System~6 a correct call fixes every return, where Bracha's rounds with the leader corrupted after its $\mathrm{INIT}$ can deliver another value until some correct process holds an $\mathrm{ECHO}$ quorum, so that specification would exclude its own implementation under D1; the split closes the window at the commit, a leader corrupted after its call may commit any value, and Validity holds at a never-corrupted leader, as the property states it.
     Following Transition System~6 would exclude executions of Bracha's rounds.
-  \item D28: an implementation fuses a sub-protocol's call and return into the transitions of the caller, where~\cite{LeslieBP} carries each of them as a transition of its own.
-    Three transitions of the gather-based implementation fuse that way, and the composed system matches each by a run of two events: the return-then-call transition is the first gather's return and the second gather's call, the graded return is the second gather's return and the round's own, and a delivery completing a receipt quorum is a broadcast instance's delivery and its return.
-    A fused transition is one transition of the implementation and two of the composed system, which is why the simulation between them concludes in a run rather than in a step.
-    A program of the implementation takes one transition per statement of the pseudocode, and the statement that returns from one instance and calls the next is one statement, where the composed system takes one event per component.
-    Separating each fused transition into two transitions of the program adds an intermediate phase to the program's record and a view lemma per new transition, and turns the two-event runs of the simulation into steps.
+  \item D28: a gather's call and the call of the instance broadcasting the caller's input are one transition of the gather-based implementation, where~\cite{LeslieBP} carries each of them as a transition of its own.
+    The composed gather fuses the two the same way, at its $call$ transition and at its $\mathrm{BIND}$ transition, so each is matched by one event and the simulation between them concludes in a step.
+    A program of the implementation takes one transition per statement of the pseudocode, and the statement that hands a value to a gather is the statement that broadcasts it.
+    Separating the two adds an event of the instance's own alphabet to the composed gather, a call transition to each of its two implementations, a clause to its invariant carrying the instance's recorded call back to the gather record, and a matching for the new event in its refinement of the gather specification.
   \item D29: ghost outputs, the round's bound bit and a gather instance's common core, which Transition Systems~2 and~4 announce on their return labels already, carried down to the implementations as auxiliary variables in the sense of~\cite{AL91}.
     A network component holds each of them and no program reads one.
     A gather instance's core is the field $core$ of the gather network, beside the per-sender sent sets and the corrupted set; the bound bit of a round of the direct implementation is a field of that round's network, and the bound bit of a gather-based round is the whole state of that round's own network, which exchanges no messages; an implementation holds both in the ghost record of D30.
@@ -2099,15 +2098,14 @@ Three things separate that component from the composed system's, and all three a
 A round of the composed system carries $4n+2$ networks, one per sub-protocol instance, while the adversary of the implementation carries one sent-set family per round; a round message therefore carries a tag naming the network it belongs to, and for a broadcast message the instance, whose index is its leader.
 The sender index stays the sender, so a threshold still counts distinct senders (D5).
 And the composed system indexes the local states by instance and then by process, while a program must hold its own data and no one else's; the round record is therefore transposed, holding one process's local state in every instance.
-And a program of the implementation takes one transition per thing it does, so the graded-agreement call broadcasts the input, the $\mathrm{BIND}$ send is a broadcast call, and the first gather's return to a process is that process's call of the second gather (D28), where the composed round takes two events for each; the implementation has no broadcast return either, a gather guard reading a $2f{+}1$ $\mathrm{VOTE}$ receipt quorum on the process's own local state in the instance where a composed program reads what the instance returned.
+And a program of the implementation takes one transition per statement of the pseudocode: the graded-agreement call records the round's input, the call of a process's own input broadcast is a transition of its own, a gather's return and the call that follows it are two, and a broadcast instance's return is the transition that writes what it returned.
 None of the three loses anything, because every guard of the gather-based implementation reads the acting process's own local states and the networks, and the two transitions that read a network --- the adversary's delivery and its Byzantine injection --- belong to the adversary in either system.
-Assembling the composed state from the implementation's undoes all three: the local states are transposed back, each network's sent set is projected out of the tagged sent-set family, and what each instance returned to a program is read off its own local states in the broadcast instances as the values with a vote quorum there.
-That assembly is the simulation relation of Theorem~\ref{thm:aba-afw-protocol-composed}, which is a function rather than a correspondence --- the composed state is computed from the implementation's --- and the proof obligation of a transition is which of the six projections takes the message it sends; a fused transition is matched by a run of two events of the composed round, through a named intermediate state.
-The relation carries the broadcast invariant at every instance of the view, which identifies a returned value with the value a guard of the implementation names: two vote quorums at one process name one value.
+Assembling the composed state from the implementation's undoes all three: the local states are transposed back and each network's sent set is projected out of the tagged sent-set family.
+That assembly is the simulation relation of Theorem~\ref{thm:aba-afw-protocol-composed}, which is a function rather than a correspondence --- the composed state is computed from the implementation's --- and the proof obligation of a transition is which of the six projections takes the message it sends.
 The adversary's ghost record is the third thing this instantiation supplies (D30): for each round, the two gathers' cores beside the round's bound bit, each written once.
-The return-then-call transition's broadcast of the candidate writes the first core, read off the projection of the tagged sent sets onto the first gather, and the bound bit as the bit that core carries on at least $|S| - f$ entries; a graded return writes the second core the same way and fires only with the bit its label carries equal to the one on record.
+The first gather's return writes the first core, read off the projection of the tagged sent sets onto the first gather, and the bound bit as the bit that core carries on at least $|S| - f$ entries; the second gather's return writes the second core the same way, and a graded return fires only with the bit its label carries equal to the one on record.
 The composed round holds those three in its network components, which no program reads, so the relation reads them off the ghost record and a transition's ghost write is the round's write of them.
-One clause of the relation is not read off the implementation's state: a process whose round-$r$ second-gather local state carries an input has passed the round's return-then-call transition, so the round's bound bit is on record, and that is what the announced bit of a graded return rests on.
+One clause of the relation is not read off the implementation's state: a process holding a round-$r$ candidate has passed that round's first gather return, so the round's bound bit is on record, and that is what the announced bit of a graded return rests on.
 See \leanmodule{Leslie2Protocols/ABA/AFW/System},
 \leanmodule{Leslie2Protocols/ABA/AFW/RoundProjection},
 \leanmodule{Leslie2Protocols/ABA/AFW/RoundProjectionStep},
@@ -2117,9 +2115,13 @@ See \leanmodule{Leslie2Protocols/ABA/AFW/System},
 \leanmodule{Leslie2Protocols/ABA/AFW/RoundProjectionStep/ViewAfterOneWrite},
 \leanmodule{Leslie2Protocols/ABA/AFW/RoundProjectionStep/GatherSend},
 \leanmodule{Leslie2Protocols/ABA/AFW/RoundProjectionStep/BroadcastSend},
+\leanmodule{Leslie2Protocols/ABA/AFW/RoundProjectionStep/BroadcastReturn},
 \leanmodule{Leslie2Protocols/ABA/AFW/RoundProjectionStep/GatherAndBroadcastTransitions},
 \leanmodule{Leslie2Protocols/ABA/AFW/RoundProjectionStep/GradedAgreementCall},
-\leanmodule{Leslie2Protocols/ABA/AFW/RoundProjectionStep/ReturnThenCall},
+\leanmodule{Leslie2Protocols/ABA/AFW/RoundProjectionStep/FirstGatherReturn},
+\leanmodule{Leslie2Protocols/ABA/AFW/RoundProjectionStep/SecondGatherCall},
+\leanmodule{Leslie2Protocols/ABA/AFW/RoundProjectionStep/SecondGatherReturn},
+\leanmodule{Leslie2Protocols/ABA/AFW/RoundProjectionStep/GradedReturn},
 \leanmodule{Leslie2Protocols/ABA/AFW/RoundProjectionStep/Delivery},
 \leanmodule{Leslie2Protocols/ABA/AFW/RoundProjectionStep/ByzantineInjection},
 \leanmodule{Leslie2Protocols/ABA/AFW/RoundProjectionStep/OtherRoundsUnchanged} and

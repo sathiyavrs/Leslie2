@@ -7,14 +7,11 @@ Authors: Sathiya / Claude
 import Leslie2Protocols.ABA.AFW.RoundProjection
 
 /-!
-# The two conjuncts of the protocol relation that are not projections
+# The conjunct of the protocol relation that is not a projection
 
-`BroadcastReturnsInvariant` and `BoundInvariant` are the conjuncts of `AFW.ProtocolRelation` that
-no frame lemma supplies. `broadcastReturnsInvariant_of` carries the first across a transition from
-the moves of the round's `4n` broadcast instances, each an `InvariantStep` and so an application of
-`BRB.Invariant.step`, and `broadcastReturnsInvariant_congr` covers a transition that leaves every
-round's view where it stands. `boundInvariant_writeGhost` carries the second, a process's
-second-gather local input being written at the return-then-call step alone.
+`BoundInvariant` is the conjunct of `AFW.ProtocolRelation` that no frame lemma supplies.
+`boundInvariant_writeGhost` carries it across a transition that leaves the candidate, the second
+gather's input and the graded outcome where they stand and writes the ghost.
 -/
 
 namespace PLTS
@@ -26,90 +23,29 @@ open Composition GBCA.ByABDY
 
 variable {P : Parameters}
 
-/-! ### The two conjuncts that are not projections
+/-! ### The conjunct that is not a projection
 
-`BroadcastReturnsInvariant` and `BoundInvariant` are the conjuncts of `AFW.ProtocolRelation` that no
-frame lemma supplies. Each survives a transition instance by instance: a broadcast instance either
-stands still or takes a transition of `BRB.BrachaAlgorithm`, which `BRB.Invariant.step` carries,
-and a process's second-gather local input is written at the return-then-call step alone. -/
+`BoundInvariant` is the conjunct of `AFW.ProtocolRelation` that no frame lemma supplies. It reads
+the candidate, the second gather's input and the graded outcome, so a transition that leaves the
+three where they stand and writes the ghost keeps the conjunct. -/
 
 section Invariants
 
-/-- One broadcast instance's move across a transition: it is unchanged, or it
-takes a transition of `BRB.BrachaAlgorithm`. -/
-def InvariantStep (P : Parameters) {M : Type} [DecidableEq M] (ldr : Fin P.n)
-    (s s' : BRB.BrachaState P.n M) : Prop :=
-  s' = s ∨ ∃ l, BRB.BrachaAlgorithm P ldr s l (PMF.pure s')
-
-/-- An instance that is unchanged. -/
-theorem InvariantStep.unchanged {M : Type} [DecidableEq M] (P : Parameters) (ldr : Fin P.n)
-    (s : BRB.BrachaState P.n M) : InvariantStep P ldr s s := Or.inl rfl
-
-/-- An instance that takes a transition. -/
-theorem InvariantStep.transition {M : Type} [DecidableEq M] {P : Parameters} {ldr : Fin P.n}
-    {s s' : BRB.BrachaState P.n M} {l : BRB.Label P.n M}
-    (h : BRB.BrachaAlgorithm P ldr s l (PMF.pure s')) : InvariantStep P ldr s s' := Or.inr ⟨l, h⟩
-
-/-- **The broadcast invariant survives one instance's move.** -/
-theorem InvariantStep.invariant {M : Type} [DecidableEq M] {P : Parameters} {ldr : Fin P.n}
-    {s s' : BRB.BrachaState P.n M} (h : InvariantStep P ldr s s') (hInv : BRB.Invariant P ldr s) :
-    BRB.Invariant P ldr s' := by
-  rcases h with rfl | ⟨l, hl⟩
-  · exact hInv
-  · exact hInv.step hl (by simp)
-
-/-- A transition that moves one instance of a family: that instance takes its
-transition and every other instance is unchanged. -/
-theorem invariantStep_update {M : Type} [DecidableEq M] {P : Parameters}
-    (b : Fin P.n → BRB.BrachaState P.n M) (i : Fin P.n) (s' : BRB.BrachaState P.n M)
-    {l : BRB.Label P.n M} (h : BRB.BrachaAlgorithm P i (b i) l (PMF.pure s')) (k : Fin P.n) :
-    InvariantStep P k (b k) (Function.update b i s' k) := by
-  by_cases hk : k = i
-  · subst hk; rw [Function.update_self]; exact InvariantStep.transition h
-  · rw [Function.update_of_ne hk]; exact InvariantStep.unchanged P k (b k)
-
 variable {u x : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} {w v : NetworkState P.n}
 
-/-- **The broadcast invariant survives a transition**: at each of a round's `4n`
-instances the state after the transition is the state before it or a
-`BRB.BrachaAlgorithm` successor of it. -/
-theorem broadcastReturnsInvariant_of (hI : BroadcastReturnsInvariant P u w)
-    (h1 : ∀ r k,
-      InvariantStep P k (Gather.inputBroadcasts (GBCA.ByAFW.firstGather (roundProjection P u w r))
-        k)
-        (Gather.inputBroadcasts (GBCA.ByAFW.firstGather (roundProjection P x v r)) k))
-    (h2 : ∀ r k,
-      InvariantStep P k (Gather.bindBroadcasts (GBCA.ByAFW.firstGather (roundProjection P u w r)) k)
-        (Gather.bindBroadcasts (GBCA.ByAFW.firstGather (roundProjection P x v r)) k))
-    (h3 : ∀ r k,
-      InvariantStep P k (Gather.inputBroadcasts (GBCA.ByAFW.secondGather (roundProjection P u w r))
-        k)
-        (Gather.inputBroadcasts (GBCA.ByAFW.secondGather (roundProjection P x v r)) k))
-    (h4 : ∀ r k,
-      InvariantStep P k (Gather.bindBroadcasts (GBCA.ByAFW.secondGather (roundProjection P u w r))
-        k)
-        (Gather.bindBroadcasts (GBCA.ByAFW.secondGather (roundProjection P x v r)) k)) :
-    BroadcastReturnsInvariant P x v :=
-  fun r k => ⟨(h1 r k).invariant (hI r k).1, (h2 r k).invariant (hI r k).2.1,
-    (h3 r k).invariant (hI r k).2.2.1, (h4 r k).invariant (hI r k).2.2.2⟩
-
-/-- A transition that leaves every round's view where it stands keeps the
-broadcast invariant. -/
-theorem broadcastReturnsInvariant_congr (hI : BroadcastReturnsInvariant P u w)
-    (h : ∀ r, roundProjection P x v r = roundProjection P u w r) :
-    BroadcastReturnsInvariant P x v :=
-  fun r k => by rw [h r]; exact hI r k
-
-/-- The bound invariant survives a transition that leaves every process's
-second-gather local input where it stands and writes the ghost through
-`AFW.ghostStep`. -/
+/-- The bound invariant survives a transition that leaves the three fields it reads where they
+stand and writes the ghost through `AFW.ghostStep`. -/
 theorem boundInvariant_writeGhost (hI : BoundInvariant P u w)
-    (hx : ∀ i r,
+    (hcand : ∀ i r, ((x i).2.roundRecord r).candidate = ((u i).2.roundRecord r).candidate)
+    (hinput : ∀ i r,
       (((x i).2.roundRecord r).secondGather.process).input = (((u i).2.roundRecord
         r).secondGather.process).input)
-    (hv : ∀ r, v.ghostRecord r = w.ghostRecord r) (L : ExtendedLabel P.n (Message P.n)) :
+    (hout : ∀ i r, ((x i).2.roundRecord r).output = ((u i).2.roundRecord r).output)
+    (hv : ∀ r, v.ghostRecord r = w.ghostRecord r)
+    (L : Implementation.ExtendedLabel P.n (Message P.n) (RoundEvent P.n)) :
     BoundInvariant P x (v.writeGhost (ghostStep P) L) :=
-  boundInvariant_of hI hx (fun r h => writeGhost_bound L (by rw [hv r]; exact h))
+  boundInvariant_of hI hcand hinput hout
+    (fun r h => writeGhost_bound L (by rw [hv r]; exact h))
 
 end Invariants
 
