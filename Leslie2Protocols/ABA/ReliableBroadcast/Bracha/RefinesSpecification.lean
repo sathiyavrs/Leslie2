@@ -32,8 +32,11 @@ corrupted set otherwise.
 Four lemmas beside the refinement hold the relation across one transition:
 `specificationRelation_tau` for an internal transition under a stuttering specification,
 `brachaAlgorithm_tau_F` for the corrupted set across one, `specificationRelation_call` for the
-fused effects of a call, and `commitReach` for the on-demand commit that a derived delivery
-licenses.
+Four lemmas beside the refinement hold the relation across one transition:
+`specificationRelation_tau` for an internal transition under a stuttering specification,
+`brachaAlgorithm_tau_F` for the corrupted set across one, `specificationRelation_call` for the two
+effects of a call, the write of the leader's input and the `INIT` multicast, and `commitReach` for
+the on-demand commit that a derived delivery licenses.
 
 ## Model and deviations
 
@@ -293,8 +296,9 @@ theorem brachaRefinesSpecification (P : Parameters) (ldr : Fin P.n) :
 /-! ### The relation across the internal and the call transitions
 
 An internal transition under a stuttering specification, the corrupted set across an internal
-transition, the fused effects of a call, and the on-demand commit that a derived delivery
-licenses. -/
+An internal transition under a stuttering specification, the corrupted set across an internal
+transition, the two effects of a call, the write of the leader's input and the `INIT` multicast, and
+the on-demand commit that a derived delivery licenses. -/
 
 /-- The relation across any internal transition, the specification stuttering. -/
 theorem specificationRelation_tau {P : Parameters} {ldr : Fin P.n} {s s' : BrachaState P.n M}

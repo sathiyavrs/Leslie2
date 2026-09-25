@@ -11,7 +11,7 @@ from the protocol as it runs down to a small specification, by probabilistic for
 simulation, with two verified implementations of its graded-agreement sub-protocol —
 one direct, one built over gather and reliable broadcast. Each is carried from the
 protocol as it runs, through one implementation shape written parametrically in the
-graded-agreement implementation and instantiated twice. 110 files, `ABA/Results.lean`
+graded-agreement implementation and instantiated twice. 115 files, `ABA/Results.lean`
 beside eleven content-themed sub-folders, given in import order in its own file guide,
 [`ABA/README.md`](ABA/README.md).
 
@@ -28,11 +28,11 @@ given in import order in its own file guide, [`Framework/README.md`](Framework/R
 | [`TraceDistributionSupport.lean`](Framework/TraceDistributionSupport.lean) | 569 | From trace-distribution support to genuine executions: the safety transfer, the invariant inductions, and the relabelling of a run. |
 | [`LoopsAndInstanceFamilies.lean`](Framework/LoopsAndInstanceFamilies.lean) | 218 | Idle padding, partial label pullbacks, and ℕ-indexed instance families with a broadcast disjunct. |
 | [`FamilySimulation.lean`](Framework/FamilySimulation.lean) | 375 | Forward simulation is a congruence for `System.family`: per-instance refinement lifts to the family. |
-| [`SynchronisedProduct.lean`](Framework/SynchronisedProduct.lean) | 184 | Full-synchronisation product of a finite family — a visible label moves every component, τ moves one. |
+| [`SynchronisedProduct.lean`](Framework/SynchronisedProduct.lean) | 185 | Full-synchronisation product of a finite family — a visible label moves every component, τ moves one. |
 | [`SynchronisedProductAlongPullbacks.lean`](Framework/SynchronisedProductAlongPullbacks.lean) | 161 | A family of components each read along its own pullback, under the synchronised product: the label with no image, the visible step, the silent step, and the family of Dirac steps at an update of one component. |
 | [`Relabel.lean`](Framework/Relabel.lean) | 472 | Extended alphabets and restriction along the left summand, with the precongruence for it. |
 | [`WeakTransitionsFromChains.lean`](Framework/WeakTransitionsFromChains.lean) | 196 | Weak runs from step chains: prepending a silent step, and the k-fold run — a chain of silent steps closed by one external step. |
-| [`FinerAlphabetCongruence.lean`](Framework/FinerAlphabetCongruence.lean) | 193 | Forward simulation is a congruence for reading both systems over a finer alphabet along a partial label map. |
+| [`FinerAlphabetCongruence.lean`](Framework/FinerAlphabetCongruence.lean) | 194 | Forward simulation is a congruence for reading both systems over a finer alphabet along a partial label map. |
 | [`Congruence.lean`](Framework/Congruence.lean) | 850 | Forward simulation is a congruence for the operators a composition is built from — binary parallel in either position, the full-synchronisation product of a finite family, hiding and restriction — with the weak-run splitting and mapping lemmas the four proofs share. |
 | [`AuxiliaryVariableRemoval.lean`](Framework/AuxiliaryVariableRemoval.lean) | 380 | Removal of a state component no transition's firing depends on: the projection and lift clauses, the equality of achievable trace distributions they give, and the congruences that carry a removal through composition, hiding and restriction. |
 

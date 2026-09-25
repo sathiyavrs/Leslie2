@@ -12,9 +12,9 @@ import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ProjectionAfterOneWrite
 `roundProjection_firstGatherInputBroadcastReturn` and its three companions: the projection of the
 implementation's state onto the composed round after a broadcast instance of either gather returns
 to the acting process. The transition writes that instance's return flag at the process and files
-the returned value in the process's gather record, which is what
+the returned value in the process's variables in the gather, which is what
 `Gather.AlgorithmOverBracha.inputBroadcastRet` and `Gather.AlgorithmOverBracha.bindRet` write. The
-transition sends nothing, and `AFW.ghostStep` leaves the round's ghost record where it stands.
+transition sends nothing, and `AFW.ghostStep` leaves the round's ghost where it stands.
 `afterFirstGatherInputBroadcastReturn` and its three companions name the state the return reaches.
 -/
 
@@ -34,7 +34,7 @@ variable {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} {w : NetworkState P.n} 
 /-! ### The return of a broadcast instance
 
 A broadcast instance's return to the acting process writes that instance's return flag at the
-process and files the returned value in the process's gather record. -/
+process and files the returned value in the process's variables in the gather. -/
 
 /-- **The round after an input-broadcast instance of the first gather returns
 `v` to `j`**: the instance's return flag goes on at `j` and `j`'s variables

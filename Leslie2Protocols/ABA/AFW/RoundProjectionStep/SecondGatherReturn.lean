@@ -11,8 +11,6 @@ import Leslie2Protocols.ABA.AFW.RoundProjectionStep.FirstGatherReturn
 
 `roundProjection_secondGatherReturn`: the projection of the composed round after the second gather
 returns to the acting process. The transition records the graded outcome the returned entries
-`roundProjection_secondGatherReturn`: the projection of the composed round after the second gather
-returns to the acting process. The transition records the graded outcome the returned entries
 determine and marks its variables in the gather returned, and its ghost write is the second gather's
 core, which is what the composed round's `secondGatherReturn` event writes.
 `afterSecondGatherReturn` names the state the return reaches, and `secondGatherReturnCore` is the

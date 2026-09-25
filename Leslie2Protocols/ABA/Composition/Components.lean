@@ -46,7 +46,7 @@ pullback at this alphabet. It is a component of both compositions, unchanged.
 `retABA`, the graded-agreement and coin calls and returns, the DECIDED relay and its delivery, and
 an idle transition for every label the process does not act on. It writes no round variables. The
 composed system runs `n` of these automata (`roundLoopProgram`) under a full-synchronisation
-product. The protocol composition fuses each round loop with the round variables into one program
+product. The protocol composition pairs each round loop with the round variables into one program
 (`ABDY.ABAProgramStep`), whose variables are the pair.
 
 A corruption replaces the program of the process it names (D23). The flag

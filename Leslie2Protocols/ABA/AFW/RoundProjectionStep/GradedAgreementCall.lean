@@ -99,7 +99,7 @@ theorem roundProjection_callG (hu : (u j).2 = p) (r : ℕ) (b : Bool) :
     exact Prod.ext (Function.update_eq_self _ _) rfl
   · simp
 
-/-- The graded-agreement call against an already-called record, read through
+/-- The graded-agreement call against variables already called, read through
 the projection: the round loop moves and the projection is unchanged. -/
 theorem roundProjection_gbcaCallLoop (hu : (u j).2 = p) (r r' : ℕ) (b : Bool)
     (c' : RoundLoopVariables P.n) :

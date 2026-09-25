@@ -308,7 +308,7 @@ theorem hybridRefinesSpecification (P : Parameters) (M : Type) [DecidableEq M] :
           omega
         obtain ⟨j, hjF, hjrecv⟩ := hex
         have hjsent : b ∈ ABAState.decidedSent (C, A) j := hI.received_sound id j b hjrecv
-        obtain ⟨rA, hrA_certificate⟩ := hI.decided_source j b hjF hjsent
+        obtain ⟨rA, hrA_witness⟩ := hI.decided_source j b hjF hjsent
         -- the abstract holder universal for `b`: every correct grade-2 decision holder agrees
         -- with the derived sender's sent bit (I30)
         have hpinb : ∀ j0 b0', j0 ∉ ABAState.F (C, A) → Grade2Holder P (C, A) j0 b0' → b0' = b :=
@@ -331,7 +331,7 @@ theorem hybridRefinesSpecification (P : Parameters) (M : Type) [DecidableEq M] :
         · -- phase 1: the `decide` τ-step, then `SpecStep.ret`
           have hsup : InputSupport P a b :=
             inputSupport_of_roundLoopInputSupport hAbs.F_eq hAbs.input_sync (hI.bind_support rA b
-              hrA_certificate.2.1)
+              hrA_witness.2.1)
           have hmode : a.mode ≠ .noTransitionEnabled := by
             rw [hAbs.mode_flipEnabled]; exact fun h => by cases h
           set a1 : SpecState P.n := { a with val := some b, mode := .flipEnabled } with ha1def
@@ -341,8 +341,8 @@ theorem hybridRefinesSpecification (P : Parameters) (M : Type) [DecidableEq M] :
           have hretid : a1.ret id = false := hretfalse
           set a'' : SpecState P.n := { a1 with ret := Function.update a1.ret id true } with ha''def
           have hAbs'' : AbstractState P g c' w a'' := by
-            refine ⟨?_, ?_, rfl, hSync, Or.inr ⟨b, rfl, hIAF.2.1 rA b hrA_certificate,
-              hIAF.2.2 b ⟨rA, hrA_certificate⟩ hpinb⟩⟩
+            refine ⟨?_, ?_, rfl, hSync, Or.inr ⟨b, rfl, hIAF.2.1 rA b hrA_witness,
+              hIAF.2.2 b ⟨rA, hrA_witness⟩ hpinb⟩⟩
             · show a.F = c'.F
               rw [hAbs.F_eq, hCF]
             · intro id'

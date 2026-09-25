@@ -30,7 +30,7 @@ variable {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} {w : NetworkState P.n} 
 
 /-! ### A send of a gather instance
 
-A gather's `ECHO` and `VOTE` write the sender's gather record and record on the
+A gather's `ECHO` and `VOTE` write the sender's variables in the gather and record on the
 gather's network state. Each is the gather's `send` event, which
 `Gather.AlgorithmOverBracha.echo` and `Gather.AlgorithmOverBracha.vote` write through
 `Gather.setGatherProgramsAndNetwork`. -/

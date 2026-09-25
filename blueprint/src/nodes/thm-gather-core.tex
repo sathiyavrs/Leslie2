@@ -3,7 +3,7 @@
   \lean{PLTS.ABA.Gather.Invariant}\lean{PLTS.ABA.Gather.SpecificationRelation}\lean{PLTS.ABA.Gather.refinesSpecification}\leanok
   \uses{def:aba-gather-over-broadcast-specification, def:aba-gather-spec, def:aba-gather-core}
   The gather implementation over broadcast specifications is forward-simulated by Transition System~4.
-  The relation reads the specification's $call$ off the input instances' states, $ret$ and $F$ off the gather programs and the gather network, witnesses each committed abstract entry by the corresponding input-broadcast commitment, holds the two sides' cores equal, and witnesses a written core by the count
+  The relation reads the specification's $call$ off the gather programs' variables, $ret$ and $F$ off the gather programs and the gather network, witnesses each committed abstract entry by the corresponding input-broadcast commitment, holds the two sides' cores equal, and witnesses a written core by the count
   \[
     f + 1 \le |\{\, q \;:\; \exists\, U,\ \mathit{bindBroadcasts}(q).val = U \ \text{and}\ core \subseteq U \,\}|,
   \]
@@ -15,7 +15,8 @@
 \begin{proof}\leanok
   \uses{def:aba-gather-over-broadcast-specification, def:aba-gather-spec, def:aba-gather-core, def:forwardsim}
   The invariant ties what each program holds of the broadcasts' returns to the instances that wrote them --- a returned value is that instance's committed value --- ties a correct bind input to the $\mathrm{BIND}$ transition's quorum guard, and carries approval-backing for the write-once $\mathrm{ECHO}$ and $\mathrm{VOTE}$ fields.
-  The specification's $call$ follows the input instances' states rather than the gather programs' variables: the two move on the same interface labels under the same write-once guard, and a broadcast specification answers either label on either of its two call transitions, so a gather program's variables and its instance's state may differ, and the specification's commit guard is dischargeable against the instance's.
+  The specification's $call$ follows the gather programs' variables, which the interface's call label writes under the write-once guard.
+  The call of an input instance is an event of the instance's own alphabet, matched by a stutter of the specification, and the invariant carries the instance's recorded call back to the gather program's variables, which is what discharges the specification's commit guard.
   The core written is the core of Definition~\ref{def:aba-gather-core}, read off the instance's network state, and the two guards of that write are its size bound and its approval, both supplied by the returner's own quorum of $n - f$ committed bind payloads.
   The same quorum supplies the $f{+}1$ coordinates whose committed payloads lie above the core, which is the count the relation carries.
   Every return after the first is matched through that count: it is $F$-blind and monotone, so it survives every later transition and every corruption, and the return's own $n{-}f$ quorum meets it in a coordinate whose committed payload lies above the core and below the returned map, which is what the return's $C \sqsubseteq g$ guard requires.

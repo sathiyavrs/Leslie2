@@ -46,7 +46,7 @@ noncomputable def ghostFreeProtocol (P : Parameters) :
   Implementation.systemGhostFree P (Message P.n) (RoundEvent P.n) (RoundVariables P.n) (RoundStep P)
     (gbcaCallPayload P)
 
-/-- **The ghost costs nothing.** The record the network keeps for each round is
+/-- **The ghost costs nothing.** The ghost the network keeps for each round is
 written by no guard and read by no program, and the label that announces its bit is
 hidden at protocol level, so the protocol and the ghost-free protocol achieve the same
 trace distributions. -/

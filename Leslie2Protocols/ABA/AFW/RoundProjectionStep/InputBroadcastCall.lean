@@ -11,11 +11,13 @@ import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ProjectionAfterOneWrite
 
 `roundProjection_firstGatherInputBroadcastCall` and its companion at the second gather: the
 projection of the composed round after the acting process calls the instance broadcasting its
-input. The transition writes that instance's record and records its `⟨INIT, x⟩` on the network,
-which is what the gather's own `inputBroadcastCall` event writes. The gather record and the round's
+input. The transition writes that instance's variables and records its `⟨INIT, x⟩` on the network,
+`roundProjection_firstGatherInputBroadcastCall` and its companion at the second gather: the
+projection of the composed round after the acting process calls the instance broadcasting its input.
+The transition writes that instance's variables and records its `⟨INIT, x⟩` on the network, which is
+what the gather's own `inputBroadcastCall` event writes. The gather's variables and the round's
 program stand. `firstGatherProjection_write` and its companion at the second gather read a write
-that records one message through the projection of one gather instance.
--/
+that records one message through the projection of one gather instance. -/
 
 namespace PLTS
 namespace ABA
@@ -59,7 +61,7 @@ theorem secondGatherProjection_write (u : ∀ _ : Fin P.n, AFW.ProcessVariables 
   congrArg GBCA.ByAFW.secondGather (roundProjection_write u w j c r sr m)
 
 /-- **The call of the first gather's input-broadcast instance, read through the projection.** The
-instance records the payload the gather record holds and multicasts its `⟨INIT, b⟩`. -/
+instance records the payload the gather's variables hold and multicasts its `⟨INIT, b⟩`. -/
 theorem roundProjection_firstGatherInputBroadcastCall (hu : (u j).2 = p) (r : ℕ) (b : Bool) :
     roundProjection P (Function.update u j (c, p.setRoundVariables r
         { p.roundVariables r with
