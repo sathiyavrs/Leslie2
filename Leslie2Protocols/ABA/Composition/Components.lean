@@ -50,7 +50,7 @@ protocol composition fuses each round loop with the round records into one progr
 (`ABDY.ABAProgramStep`), whose record is the pair.
 
 A corruption replaces the program of the process it names (D23). The flag
-`RoundLoopRecord.corrupted` goes up on the process's own half of `fail`, every participant's
+`RoundLoopVariables.corrupted` goes up on the process's own half of `fail`, every participant's
 transition is guarded by `corrupted = false`, and the replaced program is the single self-loop
 `corruptedIdle`. The replaced program has no transition on the labels of `actsAt j` — the labels on
 which the process would act on its own sub-protocol messages — so those messages enter only through
@@ -73,8 +73,8 @@ The two step relations above, the two automata they carry, the determinacy of bo
 that read a transition of each off its label (`roundLoopStep_*`, `abaNetworkStep_*`) — among them
 `roundLoopStep_noStep`, which reads every transition of a replaced program as a self-loop. It also
 supplies the systems of the synchronised round-loop group in both directions
-(`roundLoopProduct_inversion`, `roundLoopProduct_pure`) and the lemmas that determine a round-loop
-tuple from its per-process transitions (`roundLoopRecords_*`). -/
+(`roundLoopProduct_cases`, `roundLoopProduct_pure`) and the lemmas that determine a round-loop
+tuple from its per-process transitions (`roundLoopVariables_*`). -/
 
 namespace PLTS
 namespace ABA
@@ -89,7 +89,7 @@ The rendezvous alphabet, the hidden-label set, the labels a process acts on, the
 pullback and the lifted oracle are parametric in the type of the messages a graded-agreement round
 exchanges (`ABA/Implementation/Alphabet.lean`). The components below are stated over that alphabet
 for every such type `M`. ABDY22's chain takes the messages of
-`GBCA/ABDY/MessagesAndRecords.lean` for `M`; the gather-based chain takes `Empty`, and the round
+`GBCA/ABDY/MessagesAndVariables.lean` for `M`; the gather-based chain takes `Empty`, and the round
 multicast and the round delivery then name no label there. -/
 
 /-- The rendezvous alphabet, over the type `M` of the messages a graded-agreement round
@@ -127,7 +127,7 @@ programs are not round-filtered. A round loop must answer every round's `callG`,
 participant and every other process's as a bystander.
 
 A corruption replaces the program of the process it names (D23). The replacement is carried by the
-flag `RoundLoopRecord.corrupted`, which `failSelf` writes on the process's own `fail`; every
+flag `RoundLoopVariables.corrupted`, which `failSelf` writes on the process's own `fail`; every
 participant's transition is guarded by `corrupted = false`, so the record stays as it is at the
 corruption. In place of those transitions the replaced program has the single transition
 `corruptedIdle`: a self-loop on every label other than `τ` and the labels of `actsAt j`. On the
@@ -137,144 +137,144 @@ its DECIDED messages through `byzantineDecided`. -/
 
 /-- The step relation of the round-loop program of process `j`. -/
 inductive RoundLoopStep (P : Parameters) {M : Type} [DecidableEq M] (j : Fin P.n) :
-    RoundLoopRecord P.n → ExtendedLabel P.n M → PMF (RoundLoopRecord P.n) → Prop
+    RoundLoopVariables P.n → ExtendedLabel P.n M → PMF (RoundLoopVariables P.n) → Prop
   /-- `upon ABA(b)`: record input and estimate, open round `0`. -/
-  | input (c : RoundLoopRecord P.n) (b : Bool) (hh : c.corrupted = false)
-      (h : c.process.input = none) :
+  | input (c : RoundLoopVariables P.n) (b : Bool) (hh : c.corrupted = false)
+      (h : c.processVariables.input = none) :
       RoundLoopStep P j c (Sum.inl (.callABA j b))
-        (PMF.pure (c.setProcess { c.process with
+        (PMF.pure (c.setProcessVariables { c.processVariables with
           input := some b, estimate := some b, round := 0, phase := .toCallG }))
   /-- Input-enabledness loop on `j`'s own `callABA`: the loop absorbs a call at
   a process holding an input. The `input` transition carries the label at a
   process holding none, so the label is enabled in every state and a first call
   at a process whose program stands commits (D36). -/
-  | inputLoop (c : RoundLoopRecord P.n) (b : Bool) (hh : c.corrupted = false)
-      (hin : c.process.input ≠ none) :
+  | inputLoop (c : RoundLoopVariables P.n) (b : Bool) (hh : c.corrupted = false)
+      (hin : c.processVariables.input ≠ none) :
       RoundLoopStep P j c (Sum.inl (.callABA j b)) (PMF.pure c)
   /-- An input addressed elsewhere: not `j`'s business. -/
-  | callABAIdle (c : RoundLoopRecord P.n) (id : Fin P.n) (b : Bool) (hid : id ≠ j) :
+  | callABAIdle (c : RoundLoopVariables P.n) (id : Fin P.n) (b : Bool) (hid : id ≠ j) :
       RoundLoopStep P j c (Sum.inl (.callABA id b)) (PMF.pure c)
   /-- Return `b` on an `n − f` DECIDED quorum. Having multicast `b` oneself is
   a condition on the DECIDED sets, hence `ABANetwork`'s conjunct. -/
-  | ret (c : RoundLoopRecord P.n) (b : Bool) (hh : c.corrupted = false)
-      (hcnt : P.n - P.f ≤ c.decidedCount b) (hret : c.process.returned = false) :
+  | ret (c : RoundLoopVariables P.n) (b : Bool) (hh : c.corrupted = false)
+      (hcnt : P.n - P.f ≤ c.decidedCount b) (hret : c.processVariables.returned = false) :
       RoundLoopStep P j c (Sum.inl (.retABA j b))
-        (PMF.pure (c.setProcess { c.process with returned := true }))
+        (PMF.pure (c.setProcessVariables { c.processVariables with returned := true }))
   /-- A return by another process: not `j`'s business. -/
-  | retABAIdle (c : RoundLoopRecord P.n) (id : Fin P.n) (b : Bool) (hid : id ≠ j) :
+  | retABAIdle (c : RoundLoopVariables P.n) (id : Fin P.n) (b : Bool) (hid : id ≠ j) :
       RoundLoopStep P j c (Sum.inl (.retABA id b)) (PMF.pure c)
   /-- The graded-agreement call, round-loop half: hand the estimate over and wait. Opening the round
   record is the round instance's half. -/
-  | callG (c : RoundLoopRecord P.n) (r : ℕ) (b : Bool) (hh : c.corrupted = false)
-      (hph : c.process.phase = .toCallG) (hr : c.process.round = r)
-      (hest : c.process.estimate = some b) :
+  | callG (c : RoundLoopVariables P.n) (r : ℕ) (b : Bool) (hh : c.corrupted = false)
+      (hph : c.processVariables.phase = .toCallG) (hr : c.processVariables.round = r)
+      (hest : c.processVariables.estimate = some b) :
       RoundLoopStep P j c (Sum.inl (.callG r j b))
-        (PMF.pure (c.setProcess { c.process with phase := .awaitG }))
+        (PMF.pure (c.setProcessVariables { c.processVariables with phase := .awaitG }))
   /-- A graded-agreement call by another process: not `j`'s business. -/
-  | callGIdle (c : RoundLoopRecord P.n) (r : ℕ) (id : Fin P.n) (b : Bool) (hid : id ≠ j) :
+  | callGIdle (c : RoundLoopVariables P.n) (r : ℕ) (id : Fin P.n) (b : Bool) (hid : id ≠ j) :
       RoundLoopStep P j c (Sum.inl (.callG r id b)) (PMF.pure c)
   /-- The graded-agreement return, round-loop half: record the grade and head
   for the coin. The evidence for the grade is the round instance's conjunct.
   The round's bound bit is announced beside the grade and written nowhere: the
   round loop is one of the programs that do not read it. -/
-  | retG (c : RoundLoopRecord P.n) (r : ℕ) (out : GBCAOutput) (bnd : Bool)
+  | retG (c : RoundLoopVariables P.n) (r : ℕ) (out : GBCAOutput) (bnd : Bool)
       (hh : c.corrupted = false)
-      (hph : c.process.phase = .awaitG) (hr : c.process.round = r) :
+      (hph : c.processVariables.phase = .awaitG) (hr : c.processVariables.round = r) :
       RoundLoopStep P j c (Sum.inl (.retG r j out bnd))
-        (PMF.pure (c.setProcess { c.process with
+        (PMF.pure (c.setProcessVariables { c.processVariables with
           estimate := out.estimate, lastGrade := some out, phase := .toCallW }))
   /-- A graded-agreement return to another process: not `j`'s business. -/
-  | retGIdle (c : RoundLoopRecord P.n) (r : ℕ) (id : Fin P.n) (out : GBCAOutput) (bnd : Bool)
+  | retGIdle (c : RoundLoopVariables P.n) (r : ℕ) (id : Fin P.n) (out : GBCAOutput) (bnd : Bool)
       (hid : id ≠ j) :
       RoundLoopStep P j c (Sum.inl (.retG r id out bnd)) (PMF.pure c)
   /-- `c ← WCC_r()`, the call half. -/
-  | callW (c : RoundLoopRecord P.n) (r : ℕ) (hh : c.corrupted = false)
-      (hph : c.process.phase = .toCallW) (hr : c.process.round = r) :
+  | callW (c : RoundLoopVariables P.n) (r : ℕ) (hh : c.corrupted = false)
+      (hph : c.processVariables.phase = .toCallW) (hr : c.processVariables.round = r) :
       RoundLoopStep P j c (Sum.inl (.callW r j))
-        (PMF.pure (c.setProcess { c.process with phase := .awaitW }))
+        (PMF.pure (c.setProcessVariables { c.processVariables with phase := .awaitW }))
   /-- A coin call by another process: not `j`'s business. -/
-  | callWIdle (c : RoundLoopRecord P.n) (r : ℕ) (id : Fin P.n) (hid : id ≠ j) :
+  | callWIdle (c : RoundLoopVariables P.n) (r : ℕ) (id : Fin P.n) (hid : id ≠ j) :
       RoundLoopStep P j c (Sum.inl (.callW r id)) (PMF.pure c)
   /-- The coin return without a publication: the round advances and nothing is
   multicast, the round's grade not being a grade-2 outcome (D10). -/
-  | retW (c : RoundLoopRecord P.n) (r : ℕ) (co : Bool) (hh : c.corrupted = false)
-      (hph : c.process.phase = .awaitW) (hr : c.process.round = r)
-      (hgr : ∀ v : Bool, c.process.lastGrade ≠ some (.grade2 v)) :
+  | retW (c : RoundLoopVariables P.n) (r : ℕ) (co : Bool) (hh : c.corrupted = false)
+      (hph : c.processVariables.phase = .awaitW) (hr : c.processVariables.round = r)
+      (hgr : ∀ v : Bool, c.processVariables.lastGrade ≠ some (.grade2 v)) :
       RoundLoopStep P j c (Sum.inl (.retW r j co)) (PMF.pure (c.stepRound co))
   /-- A coin return to another process: not `j`'s business. -/
-  | retWIdle (c : RoundLoopRecord P.n) (r : ℕ) (id : Fin P.n) (co : Bool) (hid : id ≠ j) :
+  | retWIdle (c : RoundLoopVariables P.n) (r : ℕ) (id : Fin P.n) (co : Bool) (hid : id ≠ j) :
       RoundLoopStep P j c (Sum.inl (.retW r id co)) (PMF.pure c)
   /-- The process's own corruption: the program is replaced, and the flag that
   carries the replacement is the one write of the transition (D23). -/
-  | failSelf (c : RoundLoopRecord P.n) (hh : c.corrupted = false) :
+  | failSelf (c : RoundLoopVariables P.n) (hh : c.corrupted = false) :
       RoundLoopStep P j c (Sum.inl (.fail j))
         (PMF.pure { c with corrupted := true })
   /-- Another process's corruption is not the round loop's business (D1). -/
-  | failIdle (c : RoundLoopRecord P.n) (k : Fin P.n) (hk : k ≠ j) :
+  | failIdle (c : RoundLoopVariables P.n) (k : Fin P.n) (hk : k ≠ j) :
       RoundLoopStep P j c (Sum.inl (.fail k)) (PMF.pure c)
   /-- The replaced program (D23): a self-loop on every label other than `τ` and
   the labels of `actsAt j`, on which the process has no transition at all. -/
-  | corruptedIdle (c : RoundLoopRecord P.n) (L : ExtendedLabel P.n M) (hh : c.corrupted = true)
+  | corruptedIdle (c : RoundLoopVariables P.n) (L : ExtendedLabel P.n M) (hh : c.corrupted = true)
       (hτ : L ≠ Sum.inl Label.tau) (hown : ¬ actsAt j L) :
       RoundLoopStep P j c L (PMF.pure c)
   /-- The DECIDED relay on an `f + 1` quorum (D12′): the quorum is a condition
   on the record, the write-once condition and the sent insert are `ABANetwork`'s. -/
-  | decidedSendRelay (c : RoundLoopRecord P.n) (b : Bool) (hh : c.corrupted = false)
+  | decidedSendRelay (c : RoundLoopVariables P.n) (b : Bool) (hh : c.corrupted = false)
       (hcnt : P.f + 1 ≤ c.decidedCount b) :
       RoundLoopStep P j c (Sum.inr (.decidedSend j b)) (PMF.pure c)
   /-- A DECIDED relay by another process: not `j`'s business. -/
-  | decidedSendIdle (c : RoundLoopRecord P.n) (k : Fin P.n) (b : Bool) (hk : k ≠ j) :
+  | decidedSendIdle (c : RoundLoopVariables P.n) (k : Fin P.n) (b : Bool) (hk : k ≠ j) :
       RoundLoopStep P j c (Sum.inr (.decidedSend k b)) (PMF.pure c)
   /-- DECIDED delivery, receiver's half: at most one receipt per (sender, bit)
   (D12′). Authenticity is `ABANetwork`'s conjunct. -/
-  | decidedDeliverReceive (c : RoundLoopRecord P.n) (k : Fin P.n) (b : Bool) (hh : c.corrupted =
+  | decidedDeliverReceive (c : RoundLoopVariables P.n) (k : Fin P.n) (b : Bool) (hh : c.corrupted =
     false)
       (hr : b ∉ c.decidedDelivered k) :
       RoundLoopStep P j c (Sum.inr (.decidedDeliver j k b)) (PMF.pure (c.receiveDecided k b))
   /-- A DECIDED delivery to another process: not `j`'s business. -/
-  | decidedDeliverIdle (c : RoundLoopRecord P.n) (i k : Fin P.n) (b : Bool) (hi : i ≠ j) :
+  | decidedDeliverIdle (c : RoundLoopVariables P.n) (i k : Fin P.n) (b : Bool) (hi : i ≠ j) :
       RoundLoopStep P j c (Sum.inr (.decidedDeliver i k b)) (PMF.pure c)
   /-- The coin return fused with the `⟨DECIDED, b⟩` publication (D10): the
   round's outcome was `grade2 b`, so the round advance publishes `b`, the sent insert
   being `ABANetwork`'s half. -/
-  | retWPublish (c : RoundLoopRecord P.n) (r : ℕ) (co : Bool) (b : Bool)
+  | retWPublish (c : RoundLoopVariables P.n) (r : ℕ) (co : Bool) (b : Bool)
       (hh : c.corrupted = false)
-      (hph : c.process.phase = .awaitW) (hr : c.process.round = r)
-      (hgr : c.process.lastGrade = some (.grade2 b)) :
+      (hph : c.processVariables.phase = .awaitW) (hr : c.processVariables.round = r)
+      (hgr : c.processVariables.lastGrade = some (.grade2 b)) :
       RoundLoopStep P j c (Sum.inr (.retWPublish r j co b)) (PMF.pure (c.stepRound co))
   /-- A fused coin return at another process: not `j`'s business. -/
-  | retWPublishIdle (c : RoundLoopRecord P.n) (r : ℕ) (id : Fin P.n) (co : Bool) (b : Bool)
+  | retWPublishIdle (c : RoundLoopVariables P.n) (r : ℕ) (id : Fin P.n) (co : Bool) (b : Bool)
       (hid : id ≠ j) :
       RoundLoopStep P j c (Sum.inr (.retWPublish r id co b)) (PMF.pure c)
   /-- The graded-agreement call against an already-called round record: the round loop moves and
   nothing else does — the whole transition is core content. -/
-  | gbcaCallLoop (c : RoundLoopRecord P.n) (r : ℕ) (b : Bool) (hh : c.corrupted = false)
-      (hph : c.process.phase = .toCallG) (hr : c.process.round = r)
-      (hest : c.process.estimate = some b) :
+  | gbcaCallLoop (c : RoundLoopVariables P.n) (r : ℕ) (b : Bool) (hh : c.corrupted = false)
+      (hph : c.processVariables.phase = .toCallG) (hr : c.processVariables.round = r)
+      (hest : c.processVariables.estimate = some b) :
       RoundLoopStep P j c (Sum.inr (.gbcaCallLoop r j b))
-        (PMF.pure (c.setProcess { c.process with phase := .awaitG }))
+        (PMF.pure (c.setProcessVariables { c.processVariables with phase := .awaitG }))
   /-- Such a call at another process: not `j`'s business. -/
-  | gbcaCallLoopIdle (c : RoundLoopRecord P.n) (r : ℕ) (id : Fin P.n) (b : Bool)
+  | gbcaCallLoopIdle (c : RoundLoopVariables P.n) (r : ℕ) (id : Fin P.n) (b : Bool)
       (hid : id ≠ j) :
       RoundLoopStep P j c (Sum.inr (.gbcaCallLoop r id b)) (PMF.pure c)
   /-- A Byzantine graded-agreement call (D11) writes a round record and no round-loop data: every
   round loop, the named one included, is unchanged. -/
-  | byzantineCallGIdle (c : RoundLoopRecord P.n) (r : ℕ) (k : Fin P.n) (b : Bool) :
+  | byzantineCallGIdle (c : RoundLoopVariables P.n) (r : ℕ) (k : Fin P.n) (b : Bool) :
       RoundLoopStep P j c (Sum.inr (.byzantineCallG r k b)) (PMF.pure c)
   /-- A Byzantine graded-agreement call against an already-called round record (D11): nothing moves
   anywhere. -/
-  | byzantineCallGLoopIdle (c : RoundLoopRecord P.n) (r : ℕ) (k : Fin P.n) (b : Bool) :
+  | byzantineCallGLoopIdle (c : RoundLoopVariables P.n) (r : ℕ) (k : Fin P.n) (b : Bool) :
       RoundLoopStep P j c (Sum.inr (.byzantineCallGLoop r k b)) (PMF.pure c)
   /-- A Byzantine graded-agreement return (D11): round content only. -/
-  | byzantineRetGIdle (c : RoundLoopRecord P.n) (r : ℕ) (k : Fin P.n) (out : GBCAOutput)
+  | byzantineRetGIdle (c : RoundLoopVariables P.n) (r : ℕ) (k : Fin P.n) (out : GBCAOutput)
       (bnd : Bool) :
       RoundLoopStep P j c (Sum.inr (.byzantineRetG r k out bnd)) (PMF.pure c)
   /-- A Byzantine coin call (D11): the coin oracle reacts through the pullback. -/
-  | byzantineCallWIdle (c : RoundLoopRecord P.n) (r : ℕ) (k : Fin P.n) :
+  | byzantineCallWIdle (c : RoundLoopVariables P.n) (r : ℕ) (k : Fin P.n) :
       RoundLoopStep P j c (Sum.inr (.byzantineCallW r k)) (PMF.pure c)
   /-- A Byzantine coin return (D11): the coin oracle reacts through the
   pullback. -/
-  | byzantineRetWIdle (c : RoundLoopRecord P.n) (r : ℕ) (k : Fin P.n) (b : Bool) :
+  | byzantineRetWIdle (c : RoundLoopVariables P.n) (r : ℕ) (k : Fin P.n) (b : Bool) :
       RoundLoopStep P j c (Sum.inr (.byzantineRetW r k b)) (PMF.pure c)
 
 /-! ### The DECIDED sets and the corrupted set
@@ -393,15 +393,15 @@ inductive ABANetworkStep (P : Parameters) {M : Type} [DecidableEq M] :
 
 /-- The round-loop program of process `j`. -/
 noncomputable def roundLoopProgram (P : Parameters) (M : Type) [DecidableEq M] (j : Fin P.n) :
-    System (RoundLoopRecord P.n) (ExtendedLabel P.n M) where
-  init := RoundLoopRecord.initial P.n
+    System (RoundLoopVariables P.n) (ExtendedLabel P.n M) where
+  init := RoundLoopVariables.initial P.n
   step := RoundLoopStep P j
 
 @[simp] theorem roundLoopProgram_init (P : Parameters) (M : Type) [DecidableEq M] (j : Fin P.n) :
-    (roundLoopProgram P M j).init = RoundLoopRecord.initial P.n := rfl
+    (roundLoopProgram P M j).init = RoundLoopVariables.initial P.n := rfl
 
 @[simp] theorem roundLoopProgram_step (P : Parameters) (M : Type) [DecidableEq M] (j : Fin P.n)
-    (c : RoundLoopRecord P.n) (l : ExtendedLabel P.n M) (ν : PMF (RoundLoopRecord P.n)) :
+    (c : RoundLoopVariables P.n) (l : ExtendedLabel P.n M) (ν : PMF (RoundLoopVariables P.n)) :
     (roundLoopProgram P M j).step c l ν ↔ RoundLoopStep P j c l ν := Iff.rfl
 
 /-- The ABA network. -/
@@ -421,8 +421,8 @@ noncomputable def ABANetwork (P : Parameters) (M : Type) [DecidableEq M] :
 
 /-- Every round-loop transition is Dirac. -/
 theorem roundLoopStep_dirac {P : Parameters} {M : Type} [DecidableEq M] {j : Fin P.n}
-    {c : RoundLoopRecord P.n}
-    {l : ExtendedLabel P.n M} {ν : PMF (RoundLoopRecord P.n)} (h : RoundLoopStep P j c l ν) :
+    {c : RoundLoopVariables P.n}
+    {l : ExtendedLabel P.n M} {ν : PMF (RoundLoopVariables P.n)} (h : RoundLoopStep P j c l ν) :
     ∃ c', ν = PMF.pure c' := by
   cases h <;> exact ⟨_, rfl⟩
 
@@ -435,8 +435,9 @@ theorem abaNetworkStep_dirac {P : Parameters} {M : Type} [DecidableEq M]
 /-- No round-loop transition fires on `τ`: a round loop only ever moves in a
 rendezvous or on a shared API label. -/
 theorem roundLoopStep_no_tau {P : Parameters} {M : Type} [DecidableEq M] {j : Fin P.n}
-    {c : RoundLoopRecord P.n}
-    {ν : PMF (RoundLoopRecord P.n)} (h : RoundLoopStep P j c (Silent.τ : ExtendedLabel P.n M) ν) :
+    {c : RoundLoopVariables P.n}
+    {ν : PMF (RoundLoopVariables P.n)} (h : RoundLoopStep P j c (Silent.τ : ExtendedLabel P.n M) ν)
+      :
     False := by
   rw [extendedLabel_tau] at h
   cases h
@@ -446,11 +447,11 @@ theorem roundLoopStep_no_tau {P : Parameters} {M : Type} [DecidableEq M] {j : Fi
 /-! ### Reading and building a transition of the round-loop group -/
 
 /-- A synchronised transition of the round-loop group on a visible label. -/
-theorem roundLoopProduct_inversion {P : Parameters} {M : Type} [DecidableEq M]
-    {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
-    {l : ExtendedLabel P.n M} {μ : PMF (∀ _ : Fin P.n, RoundLoopRecord P.n)}
+theorem roundLoopProduct_cases {P : Parameters} {M : Type} [DecidableEq M]
+    {C : ∀ _ : Fin P.n, RoundLoopVariables P.n}
+    {l : ExtendedLabel P.n M} {μ : PMF (∀ _ : Fin P.n, RoundLoopVariables P.n)}
     (h : (System.synchronisedProduct (roundLoopProgram P M)).step C l μ) :
-    ∃ y : ∀ _ : Fin P.n, RoundLoopRecord P.n, μ = PMF.pure y ∧ ∀ i, RoundLoopStep P i (C i) l
+    ∃ y : ∀ _ : Fin P.n, RoundLoopVariables P.n, μ = PMF.pure y ∧ ∀ i, RoundLoopStep P i (C i) l
     (PMF.pure (y i)) := by
   rw [System.synchronisedProduct_step] at h
   rcases h with ⟨-, μ_, hall, rfl⟩ | ⟨rfl, i, μ_i, hstep, -⟩
@@ -465,7 +466,7 @@ theorem roundLoopProduct_inversion {P : Parameters} {M : Type} [DecidableEq M]
 /-- Build a synchronised transition of the round-loop group from per-process
 Dirac steps. -/
 theorem roundLoopProduct_pure {P : Parameters} {M : Type} [DecidableEq M]
-    {C y : ∀ _ : Fin P.n, RoundLoopRecord P.n}
+    {C y : ∀ _ : Fin P.n, RoundLoopVariables P.n}
     {l : ExtendedLabel P.n M} (hl : l ≠ Silent.τ)
     (h : ∀ i, RoundLoopStep P i (C i) l (PMF.pure (y i))) :
     (System.synchronisedProduct (roundLoopProgram P M)).step C l (PMF.pure y) := by
@@ -474,7 +475,7 @@ theorem roundLoopProduct_pure {P : Parameters} {M : Type} [DecidableEq M]
 
 /-- The round-loop group has no silent transition. -/
 theorem roundLoopProduct_no_tau {P : Parameters} {M : Type} [DecidableEq M]
-    {C : ∀ _ : Fin P.n, RoundLoopRecord P.n} {μ : PMF (∀ _ : Fin P.n, RoundLoopRecord P.n)}
+    {C : ∀ _ : Fin P.n, RoundLoopVariables P.n} {μ : PMF (∀ _ : Fin P.n, RoundLoopVariables P.n)}
     (h : (System.synchronisedProduct (roundLoopProgram P M)).step C
       (Silent.τ : ExtendedLabel P.n M) μ) :
     False := by
@@ -490,24 +491,24 @@ identity. A participant's transition carries the health guard `corrupted = false
 outside `actsAt j` the replaced program's self-loop is a second transition on the same label
 (D23). -/
 
-section RoundLoopInversion
+section RoundLoopCases
 
-variable {P : Parameters} {M : Type} [DecidableEq M] {j : Fin P.n} {c : RoundLoopRecord P.n}
-  {ν : PMF (RoundLoopRecord P.n)}
+variable {P : Parameters} {M : Type} [DecidableEq M] {j : Fin P.n} {c : RoundLoopVariables P.n}
+  {ν : PMF (RoundLoopVariables P.n)}
 
 theorem roundLoopStep_callABA_own {b : Bool}
     (h : RoundLoopStep P j c (Sum.inl (.callABA j b) : ExtendedLabel P.n M) ν) :
-    (c.corrupted = false ∧ c.process.input = none ∧
-      ν = PMF.pure (c.setProcess { c.process with
+    (c.corrupted = false ∧ c.processVariables.input = none ∧
+      ν = PMF.pure (c.setProcessVariables { c.processVariables with
         input := some b, estimate := some b, round := 0, phase := .toCallG })) ∨
-    ((c.corrupted = true ∨ c.process.input ≠ none) ∧ ν = PMF.pure c) := by
+    ((c.corrupted = true ∨ c.processVariables.input ≠ none) ∧ ν = PMF.pure c) := by
   cases h
   case input => exact Or.inl ⟨by assumption, by assumption, rfl⟩
   case inputLoop => exact Or.inr ⟨Or.inr (by assumption), rfl⟩
   case callABAIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => exact Or.inr ⟨Or.inl (by assumption), rfl⟩
 
-theorem roundLoopStep_callABA_foreign {id : Fin P.n} {b : Bool} (hid : id ≠ j)
+theorem roundLoopStep_callABA_notOwn {id : Fin P.n} {b : Bool} (hid : id ≠ j)
 (h : RoundLoopStep P j c (Sum.inl (.callABA id b) : ExtendedLabel P.n M) ν) :
     ν = PMF.pure c := by
   cases h
@@ -519,15 +520,15 @@ theorem roundLoopStep_callABA_foreign {id : Fin P.n} {b : Bool} (hid : id ≠ j)
 theorem roundLoopStep_retABA_own {b : Bool}
     (h : RoundLoopStep P j c (Sum.inl (.retABA j b) : ExtendedLabel P.n M) ν) :
     (c.corrupted = false ∧ P.n - P.f ≤ c.decidedCount b ∧
-      c.process.returned = false ∧
-      ν = PMF.pure (c.setProcess { c.process with returned := true })) ∨
+      c.processVariables.returned = false ∧
+      ν = PMF.pure (c.setProcessVariables { c.processVariables with returned := true })) ∨
     (c.corrupted = true ∧ ν = PMF.pure c) := by
   cases h
   case ret => exact Or.inl ⟨by assumption, by assumption, by assumption, rfl⟩
   case retABAIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => exact Or.inr ⟨by assumption, rfl⟩
 
-theorem roundLoopStep_retABA_foreign {id : Fin P.n} {b : Bool} (hid : id ≠ j)
+theorem roundLoopStep_retABA_notOwn {id : Fin P.n} {b : Bool} (hid : id ≠ j)
 (h : RoundLoopStep P j c (Sum.inl (.retABA id b) : ExtendedLabel P.n M) ν) :
     ν = PMF.pure c := by
   cases h
@@ -537,16 +538,16 @@ theorem roundLoopStep_retABA_foreign {id : Fin P.n} {b : Bool} (hid : id ≠ j)
 
 theorem roundLoopStep_callG_own {r : ℕ} {b : Bool}
     (h : RoundLoopStep P j c (Sum.inl (.callG r j b) : ExtendedLabel P.n M) ν) :
-    c.corrupted = false ∧ c.process.phase = .toCallG ∧ c.process.round = r ∧
-      c.process.estimate = some b ∧
-      ν = PMF.pure (c.setProcess { c.process with phase := .awaitG }) := by
+    c.corrupted = false ∧ c.processVariables.phase = .toCallG ∧ c.processVariables.round = r ∧
+      c.processVariables.estimate = some b ∧
+      ν = PMF.pure (c.setProcessVariables { c.processVariables with phase := .awaitG }) := by
   cases h
   case callG =>
     exact ⟨by assumption, by assumption, by assumption, by assumption, rfl⟩
   case callGIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
-theorem roundLoopStep_callG_foreign {r : ℕ} {id : Fin P.n} {b : Bool} (hid : id ≠ j)
+theorem roundLoopStep_callG_notOwn {r : ℕ} {id : Fin P.n} {b : Bool} (hid : id ≠ j)
 (h : RoundLoopStep P j c (Sum.inl (.callG r id b) : ExtendedLabel P.n M) ν) :
     ν = PMF.pure c := by
   cases h
@@ -556,15 +557,15 @@ theorem roundLoopStep_callG_foreign {r : ℕ} {id : Fin P.n} {b : Bool} (hid : i
 
 theorem roundLoopStep_retG_own {r : ℕ} {out : GBCAOutput} {bnd : Bool}
     (h : RoundLoopStep P j c (Sum.inl (.retG r j out bnd) : ExtendedLabel P.n M) ν) :
-    c.corrupted = false ∧ c.process.phase = .awaitG ∧ c.process.round = r ∧
-      ν = PMF.pure (c.setProcess { c.process with
+    c.corrupted = false ∧ c.processVariables.phase = .awaitG ∧ c.processVariables.round = r ∧
+      ν = PMF.pure (c.setProcessVariables { c.processVariables with
         estimate := out.estimate, lastGrade := some out, phase := .toCallW }) := by
   cases h
   case retG => exact ⟨by assumption, by assumption, by assumption, rfl⟩
   case retGIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
-theorem roundLoopStep_retG_foreign {r : ℕ} {id : Fin P.n} {out : GBCAOutput} {bnd : Bool}
+theorem roundLoopStep_retG_notOwn {r : ℕ} {id : Fin P.n} {out : GBCAOutput} {bnd : Bool}
     (hid : id ≠ j)
     (h : RoundLoopStep P j c (Sum.inl (.retG r id out bnd) : ExtendedLabel P.n M) ν) :
     ν = PMF.pure c := by
@@ -575,15 +576,15 @@ theorem roundLoopStep_retG_foreign {r : ℕ} {id : Fin P.n} {out : GBCAOutput} {
 
 theorem roundLoopStep_callW_own {r : ℕ}
     (h : RoundLoopStep P j c (Sum.inl (.callW r j) : ExtendedLabel P.n M) ν) :
-    (c.corrupted = false ∧ c.process.phase = .toCallW ∧ c.process.round = r ∧
-      ν = PMF.pure (c.setProcess { c.process with phase := .awaitW })) ∨
+    (c.corrupted = false ∧ c.processVariables.phase = .toCallW ∧ c.processVariables.round = r ∧
+      ν = PMF.pure (c.setProcessVariables { c.processVariables with phase := .awaitW })) ∨
     (c.corrupted = true ∧ ν = PMF.pure c) := by
   cases h
   case callW => exact Or.inl ⟨by assumption, by assumption, by assumption, rfl⟩
   case callWIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => exact Or.inr ⟨by assumption, rfl⟩
 
-theorem roundLoopStep_callW_foreign {r : ℕ} {id : Fin P.n} (hid : id ≠ j)
+theorem roundLoopStep_callW_notOwn {r : ℕ} {id : Fin P.n} (hid : id ≠ j)
     (h : RoundLoopStep P j c (Sum.inl (.callW r id) : ExtendedLabel P.n M) ν) : ν = PMF.pure c := by
   cases h
   case callW => exact absurd rfl hid
@@ -592,8 +593,8 @@ theorem roundLoopStep_callW_foreign {r : ℕ} {id : Fin P.n} (hid : id ≠ j)
 
 theorem roundLoopStep_retW_own {r : ℕ} {co : Bool}
     (h : RoundLoopStep P j c (Sum.inl (.retW r j co) : ExtendedLabel P.n M) ν) :
-    (c.corrupted = false ∧ c.process.phase = .awaitW ∧ c.process.round = r ∧
-      (∀ v : Bool, c.process.lastGrade ≠ some (.grade2 v)) ∧
+    (c.corrupted = false ∧ c.processVariables.phase = .awaitW ∧ c.processVariables.round = r ∧
+      (∀ v : Bool, c.processVariables.lastGrade ≠ some (.grade2 v)) ∧
       ν = PMF.pure (c.stepRound co)) ∨
     (c.corrupted = true ∧ ν = PMF.pure c) := by
   cases h
@@ -602,7 +603,7 @@ theorem roundLoopStep_retW_own {r : ℕ} {co : Bool}
   case retWIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => exact Or.inr ⟨by assumption, rfl⟩
 
-theorem roundLoopStep_retW_foreign {r : ℕ} {id : Fin P.n} {co : Bool} (hid : id ≠ j)
+theorem roundLoopStep_retW_notOwn {r : ℕ} {id : Fin P.n} {co : Bool} (hid : id ≠ j)
 (h : RoundLoopStep P j c (Sum.inl (.retW r id co) : ExtendedLabel P.n M) ν) :
     ν = PMF.pure c := by
   cases h
@@ -621,7 +622,7 @@ theorem roundLoopStep_fail_own (h : RoundLoopStep P j c (Sum.inl (.fail j) :
   case failIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => exact Or.inr ⟨by assumption, rfl⟩
 
-theorem roundLoopStep_fail_foreign {k : Fin P.n} (hk : k ≠ j)
+theorem roundLoopStep_fail_notOwn {k : Fin P.n} (hk : k ≠ j)
     (h : RoundLoopStep P j c (Sum.inl (.fail k) : ExtendedLabel P.n M) ν) : ν = PMF.pure c := by
   cases h
   case failSelf => exact absurd rfl hk
@@ -637,7 +638,7 @@ theorem roundLoopStep_decidedSend_self {b : Bool}
   case decidedSendIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => exact Or.inr ⟨by assumption, rfl⟩
 
-theorem roundLoopStep_decidedSend_foreign {k : Fin P.n} {b : Bool} (hk : k ≠ j)
+theorem roundLoopStep_decidedSend_notOwn {k : Fin P.n} {b : Bool} (hk : k ≠ j)
 (h : RoundLoopStep P j c (Sum.inr (.decidedSend k b) : ExtendedLabel P.n M) ν) :
     ν = PMF.pure c := by
   cases h
@@ -653,7 +654,7 @@ theorem roundLoopStep_decidedDeliver_self {k : Fin P.n} {b : Bool}
   case decidedDeliverIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
-theorem roundLoopStep_decidedDeliver_foreign {i k : Fin P.n} {b : Bool} (hi : i ≠ j)
+theorem roundLoopStep_decidedDeliver_notOwn {i k : Fin P.n} {b : Bool} (hi : i ≠ j)
 (h : RoundLoopStep P j c (Sum.inr (.decidedDeliver i k b) : ExtendedLabel P.n M) ν) :
     ν = PMF.pure c := by
   cases h
@@ -663,15 +664,15 @@ theorem roundLoopStep_decidedDeliver_foreign {i k : Fin P.n} {b : Bool} (hi : i 
 
 theorem roundLoopStep_retWPublish_self {r : ℕ} {co b : Bool}
     (h : RoundLoopStep P j c (Sum.inr (.retWPublish r j co b) : ExtendedLabel P.n M) ν) :
-    c.corrupted = false ∧ c.process.phase = .awaitW ∧ c.process.round = r ∧
-      c.process.lastGrade = some (.grade2 b) ∧ ν = PMF.pure (c.stepRound co) := by
+    c.corrupted = false ∧ c.processVariables.phase = .awaitW ∧ c.processVariables.round = r ∧
+      c.processVariables.lastGrade = some (.grade2 b) ∧ ν = PMF.pure (c.stepRound co) := by
   cases h
   case retWPublish =>
     exact ⟨by assumption, by assumption, by assumption, by assumption, rfl⟩
   case retWPublishIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
-theorem roundLoopStep_retWPublish_foreign {r : ℕ} {id : Fin P.n} {co b : Bool} (hid : id ≠ j)
+theorem roundLoopStep_retWPublish_notOwn {r : ℕ} {id : Fin P.n} {co b : Bool} (hid : id ≠ j)
 (h : RoundLoopStep P j c (Sum.inr (.retWPublish r id co b) : ExtendedLabel P.n M) ν) :
     ν = PMF.pure c := by
   cases h
@@ -681,16 +682,16 @@ theorem roundLoopStep_retWPublish_foreign {r : ℕ} {id : Fin P.n} {co b : Bool}
 
 theorem roundLoopStep_gbcaCallLoop_self {r : ℕ} {b : Bool}
     (h : RoundLoopStep P j c (Sum.inr (.gbcaCallLoop r j b) : ExtendedLabel P.n M) ν) :
-    c.corrupted = false ∧ c.process.phase = .toCallG ∧ c.process.round = r ∧
-      c.process.estimate = some b ∧
-      ν = PMF.pure (c.setProcess { c.process with phase := .awaitG }) := by
+    c.corrupted = false ∧ c.processVariables.phase = .toCallG ∧ c.processVariables.round = r ∧
+      c.processVariables.estimate = some b ∧
+      ν = PMF.pure (c.setProcessVariables { c.processVariables with phase := .awaitG }) := by
   cases h
   case gbcaCallLoop =>
     exact ⟨by assumption, by assumption, by assumption, by assumption, rfl⟩
   case gbcaCallLoopIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
-theorem roundLoopStep_gbcaCallLoop_foreign {r : ℕ} {id : Fin P.n} {b : Bool} (hid : id ≠ j)
+theorem roundLoopStep_gbcaCallLoop_notOwn {r : ℕ} {id : Fin P.n} {b : Bool} (hid : id ≠ j)
 (h : RoundLoopStep P j c (Sum.inr (.gbcaCallLoop r id b) : ExtendedLabel P.n M) ν) :
     ν = PMF.pure c := by
   cases h
@@ -731,11 +732,11 @@ theorem roundLoopStep_noStep {L : ExtendedLabel P.n M} (hc : c.corrupted = true)
     (h : RoundLoopStep P j c L ν) : ν = PMF.pure c := by
   cases h <;> simp_all
 
-end RoundLoopInversion
+end RoundLoopCases
 
 /-! ### The ABA network's transitions, by label class -/
 
-section ABANetworkStepInversion
+section ABANetworkStepCases
 variable {P : Parameters} {M : Type} [DecidableEq M] {a : ABANetworkState P.n}
   {μ : PMF (ABANetworkState P.n)}
 
@@ -835,27 +836,27 @@ theorem abaNetworkStep_gbcaDeliver_noStep {r : ℕ} {i k : Fin P.n} {m : M}
 (h : ABANetworkStep P a (Sum.inr (.gbcaDeliver r i k m) : ExtendedLabel P.n M) μ) :
     False := by cases h
 
-end ABANetworkStepInversion
+end ABANetworkStepCases
 /-! ### Determining the round-loop tuple -/
 
-theorem roundLoopRecords_update {P : Parameters} {C y : ∀ _ : Fin P.n, RoundLoopRecord P.n}
-    {id : Fin P.n} {nd : RoundLoopRecord P.n}
-    (hown : (PMF.pure (y id) : PMF (RoundLoopRecord P.n)) = PMF.pure nd)
-    (hfor : ∀ i, i ≠ id → (PMF.pure (y i) : PMF (RoundLoopRecord P.n)) = PMF.pure (C i)) :
+theorem roundLoopVariables_update {P : Parameters} {C y : ∀ _ : Fin P.n, RoundLoopVariables P.n}
+    {id : Fin P.n} {nd : RoundLoopVariables P.n}
+    (hown : (PMF.pure (y id) : PMF (RoundLoopVariables P.n)) = PMF.pure nd)
+    (hfor : ∀ i, i ≠ id → (PMF.pure (y i) : PMF (RoundLoopVariables P.n)) = PMF.pure (C i)) :
     y = Function.update C id nd := by
   funext i
   by_cases hi : i = id
   · subst hi; rw [Function.update_self]; exact pure_inj hown
   · rw [Function.update_of_ne hi]; exact pure_inj (hfor i hi)
 
-theorem roundLoopRecords_id {P : Parameters} {C y : ∀ _ : Fin P.n, RoundLoopRecord P.n}
-    (hall : ∀ i, (PMF.pure (y i) : PMF (RoundLoopRecord P.n)) = PMF.pure (C i)) : y = C :=
+theorem roundLoopVariables_id {P : Parameters} {C y : ∀ _ : Fin P.n, RoundLoopVariables P.n}
+    (hall : ∀ i, (PMF.pure (y i) : PMF (RoundLoopVariables P.n)) = PMF.pure (C i)) : y = C :=
   funext fun i => pure_inj (hall i)
 
 /-- One round loop moves and every other idles. -/
-theorem roundLoopRecords_family {P : Parameters} {M : Type} [DecidableEq M]
-    {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
-    {L : ExtendedLabel P.n M} (id : Fin P.n) (nd : RoundLoopRecord P.n)
+theorem roundLoopVariables_family {P : Parameters} {M : Type} [DecidableEq M]
+    {C : ∀ _ : Fin P.n, RoundLoopVariables P.n}
+    {L : ExtendedLabel P.n M} (id : Fin P.n) (nd : RoundLoopVariables P.n)
     (hown : RoundLoopStep P id (C id) L (PMF.pure nd))
     (hfor : ∀ i, i ≠ id → RoundLoopStep P i (C i) L (PMF.pure (C i))) :
     ∀ i, RoundLoopStep P i (C i) L (PMF.pure (Function.update C id nd i)) := by

@@ -36,7 +36,7 @@ adversary's single tagged sent family by `AFW.messagesOf`.
 
 A gather program of the composed system holds two records of what each broadcast instance has
 returned to it, and so does the implementation: the round record's two gather local states are
-over `Gather.ProcessRecord`, which the instance's return writes. The projection is then the
+over `Gather.ProcessVariables`, which the instance's return writes. The projection is then the
 identity on each local state, and the transposition and the untagging of the sent sets are all it
 performs.
 
@@ -128,32 +128,34 @@ variable {P : Parameters}
 the local state vectors transposed out of the round records the processes hold,
 the network states recovered tag by tag from the adversary's tagged sent sets,
 and the instance's core the first field of the adversary's ghost record. -/
-noncomputable def firstGatherProjection (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n)
+noncomputable def firstGatherProjection (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessVariables
+  P.n)
     (w : NetworkState P.n) (r : ℕ) : Gather.StateOverBracha P.n Bool :=
-  ((fun i => ((u i).2.roundRecord r).firstGather,
+  ((fun i => ((u i).2.roundVariables r).firstGather,
       ⟨⟨messagesOf firstGatherMessageOf firstGatherMessageOf_inj (w.sent r), w.F⟩,
-        (w.ghostRecord r).1⟩),
-    (fun k => (fun i => (((u i).2.roundRecord r).firstGatherInputBroadcasts
+        (w.ghost r).1⟩),
+    (fun k => (fun i => (((u i).2.roundVariables r).firstGatherInputBroadcasts
       k),
         ⟨messagesOf (firstGatherInputBroadcastMessageOf k) (firstGatherInputBroadcastMessageOf_inj
           k) (w.sent r), w.F⟩),
-      fun q => (fun i => (((u i).2.roundRecord r).firstGatherBindBroadcasts
+      fun q => (fun i => (((u i).2.roundVariables r).firstGatherBindBroadcasts
         q),
         ⟨messagesOf (firstGatherBindBroadcastMessageOf q) (firstGatherBindBroadcastMessageOf_inj q)
           (w.sent r), w.F⟩)))
 
 /-- The round-`r` state of the second gather instance, read off the implementation's state,
 its core the second field of the adversary's ghost record. -/
-noncomputable def secondGatherProjection (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n)
+noncomputable def secondGatherProjection (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessVariables
+  P.n)
     (w : NetworkState P.n) (r : ℕ) : Gather.StateOverBracha P.n (Option Bool) :=
-  ((fun i => ((u i).2.roundRecord r).secondGather,
+  ((fun i => ((u i).2.roundVariables r).secondGather,
       ⟨⟨messagesOf secondGatherMessageOf secondGatherMessageOf_inj (w.sent r), w.F⟩,
-        (w.ghostRecord r).2.1⟩),
-    (fun k => (fun i => (((u i).2.roundRecord r).secondGatherInputBroadcasts
+        (w.ghost r).2.1⟩),
+    (fun k => (fun i => (((u i).2.roundVariables r).secondGatherInputBroadcasts
       k),
         ⟨messagesOf (secondGatherInputBroadcastMessageOf k) (secondGatherInputBroadcastMessageOf_inj
           k) (w.sent r), w.F⟩),
-      fun q => (fun i => (((u i).2.roundRecord r).secondGatherBindBroadcasts
+      fun q => (fun i => (((u i).2.roundVariables r).secondGatherBindBroadcasts
         q),
         ⟨messagesOf (secondGatherBindBroadcastMessageOf q) (secondGatherBindBroadcastMessageOf_inj
           q) (w.sent r), w.F⟩)))
@@ -163,31 +165,32 @@ gather's input is the round's input, the candidate and the graded outcome are th
 record holds, the second gather's input marks the second call, and the round has returned exactly
 when its second gather has returned and the record holds no graded outcome, which is the state the
 round's own return leaves. -/
-def programProjection {n : ℕ} (st : RoundRecord n) : GBCA.ByAFW.ProcessRecord n where
-  input := st.firstGather.process.input
+def programProjection {n : ℕ} (st : RoundVariables n) : GBCA.ByAFW.ProcessVariables n where
+  input := st.firstGather.processVariables.input
   candidate := st.candidate
-  secondGatherCalled := st.secondGather.process.input.isSome
+  secondGatherCalled := st.secondGather.processVariables.input.isSome
   output := st.output
-  returned := st.secondGather.process.returned && st.output.isNone
+  returned := st.secondGather.processVariables.returned && st.output.isNone
 
 /-- The round-`r` state of the composed system, read off the implementation's state: the
 process records beside the round's bound bit, and the two gather instances. -/
-noncomputable def roundProjection (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n)
+noncomputable def roundProjection (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n)
     (w : NetworkState P.n) (r : ℕ) : GBCA.ByAFW.RoundStateOverBracha P.n :=
-  ((fun j => programProjection ((u j).2.roundRecord r), (w.ghostRecord r).2.2),
+  ((fun j => programProjection ((u j).2.roundVariables r), (w.ghost r).2.2),
     (firstGatherProjection P u w r, secondGatherProjection P u w r))
 
 /-! ### Reading the composed round's state off the view -/
 
 section Readers
 
-variable (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n) (w : NetworkState P.n) (r : ℕ)
+variable (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n) (w : NetworkState P.n) (r : ℕ)
 
 @[simp] theorem programs_roundProjection (j : Fin P.n) :
-    GBCA.ByAFW.programs (roundProjection P u w r) j = programProjection ((u j).2.roundRecord r) :=
+    GBCA.ByAFW.programs (roundProjection P u w r) j = programProjection ((u j).2.roundVariables r)
+      :=
       rfl
 
-@[simp] theorem bound_roundProjection : GBCA.ByAFW.bound (roundProjection P u w r) = (w.ghostRecord
+@[simp] theorem bound_roundProjection : GBCA.ByAFW.bound (roundProjection P u w r) = (w.ghost
   r).2.2 := rfl
 
 @[simp] theorem firstGather_roundProjection : GBCA.ByAFW.firstGather (roundProjection P u w r) =
@@ -197,48 +200,50 @@ variable (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n) (w : NetworkState P.n) (r 
   secondGatherProjection P u w r := rfl
 
 @[simp] theorem core_firstGatherProjection : Gather.core (firstGatherProjection P u w r) =
-  (w.ghostRecord r).1 := rfl
+  (w.ghost r).1 := rfl
 
 @[simp] theorem core_secondGatherProjection : Gather.core (secondGatherProjection P u w r) =
-  (w.ghostRecord r).2.1 := rfl
+  (w.ghost r).2.1 := rfl
 
-@[simp] theorem gatherTier_firstGatherProjection_process (i : Fin P.n) :
-    (Gather.gatherTier (firstGatherProjection P u w r)).1 i
-      = ((u i).2.roundRecord r).firstGather := rfl
+@[simp] theorem gatherProgramsAndNetwork_firstGatherProjection_processVariables (i : Fin P.n) :
+    (Gather.gatherProgramsAndNetwork (firstGatherProjection P u w r)).1 i
+      = ((u i).2.roundVariables r).firstGather := rfl
 
-@[simp] theorem gatherTier_secondGatherProjection_process (i : Fin P.n) :
-    (Gather.gatherTier (secondGatherProjection P u w r)).1 i
-      = ((u i).2.roundRecord r).secondGather := rfl
+@[simp] theorem gatherProgramsAndNetwork_secondGatherProjection_processVariables (i : Fin P.n) :
+    (Gather.gatherProgramsAndNetwork (secondGatherProjection P u w r)).1 i
+      = ((u i).2.roundVariables r).secondGather := rfl
 
-@[simp] theorem gatherTier_firstGatherProjection_network :
-    (Gather.gatherTier (firstGatherProjection P u w r)).2 = ⟨messagesOf firstGatherMessageOf
+@[simp] theorem gatherProgramsAndNetwork_firstGatherProjection_network :
+    (Gather.gatherProgramsAndNetwork (firstGatherProjection P u w r)).2 = ⟨messagesOf
+      firstGatherMessageOf
       firstGatherMessageOf_inj (w.sent r), w.F⟩ := rfl
 
-@[simp] theorem gatherTier_secondGatherProjection_network :
-    (Gather.gatherTier (secondGatherProjection P u w r)).2 = ⟨messagesOf secondGatherMessageOf
+@[simp] theorem gatherProgramsAndNetwork_secondGatherProjection_network :
+    (Gather.gatherProgramsAndNetwork (secondGatherProjection P u w r)).2 = ⟨messagesOf
+      secondGatherMessageOf
       secondGatherMessageOf_inj (w.sent r), w.F⟩ := rfl
 
 @[simp] theorem inputBroadcasts_firstGatherProjection (k : Fin P.n) :
     Gather.inputBroadcasts (firstGatherProjection P u w r) k
-      = ((fun i => (((u i).2.roundRecord r).firstGatherInputBroadcasts k)),
+      = ((fun i => (((u i).2.roundVariables r).firstGatherInputBroadcasts k)),
           ⟨messagesOf (firstGatherInputBroadcastMessageOf k) (firstGatherInputBroadcastMessageOf_inj
             k) (w.sent r), w.F⟩) := rfl
 
 @[simp] theorem bindBroadcasts_firstGatherProjection (q : Fin P.n) :
     Gather.bindBroadcasts (firstGatherProjection P u w r) q
-      = ((fun i => (((u i).2.roundRecord r).firstGatherBindBroadcasts q)),
+      = ((fun i => (((u i).2.roundVariables r).firstGatherBindBroadcasts q)),
           ⟨messagesOf (firstGatherBindBroadcastMessageOf q) (firstGatherBindBroadcastMessageOf_inj
             q) (w.sent r), w.F⟩) := rfl
 
 @[simp] theorem inputBroadcasts_secondGatherProjection (k : Fin P.n) :
     Gather.inputBroadcasts (secondGatherProjection P u w r) k
-      = ((fun i => (((u i).2.roundRecord r).secondGatherInputBroadcasts k)),
+      = ((fun i => (((u i).2.roundVariables r).secondGatherInputBroadcasts k)),
           ⟨messagesOf (secondGatherInputBroadcastMessageOf k)
             (secondGatherInputBroadcastMessageOf_inj k) (w.sent r), w.F⟩) := rfl
 
 @[simp] theorem bindBroadcasts_secondGatherProjection (q : Fin P.n) :
     Gather.bindBroadcasts (secondGatherProjection P u w r) q
-      = ((fun i => (((u i).2.roundRecord r).secondGatherBindBroadcasts q)),
+      = ((fun i => (((u i).2.roundVariables r).secondGatherBindBroadcasts q)),
           ⟨messagesOf (secondGatherBindBroadcastMessageOf q) (secondGatherBindBroadcastMessageOf_inj
             q) (w.sent r), w.F⟩) := rfl
 
@@ -246,13 +251,15 @@ variable (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n) (w : NetworkState P.n) (r 
 is read off its network state alone, and that network state is the one
 `AFW.firstGatherOf` hands the adversary. -/
 theorem coreOfNetwork_firstGatherProjection :
-    Gather.coreOfNetwork P (Gather.gatherTier (firstGatherProjection P u w r)).2 = Gather.coreOf P
+    Gather.coreOfNetwork P (Gather.gatherProgramsAndNetwork (firstGatherProjection P u w r)).2 =
+      Gather.coreOf P
       (firstGatherOf P w r) :=
   (Gather.coreOf_eq_coreOfNetwork P (firstGatherOf P w r)).symm
 
 /-- The same for the second gather's core. -/
 theorem coreOfNetwork_secondGatherProjection :
-    Gather.coreOfNetwork P (Gather.gatherTier (secondGatherProjection P u w r)).2 = Gather.coreOf P
+    Gather.coreOfNetwork P (Gather.gatherProgramsAndNetwork (secondGatherProjection P u w r)).2 =
+      Gather.coreOf P
       (secondGatherOf P w r) :=
   (Gather.coreOf_eq_coreOfNetwork P (secondGatherOf P w r)).symm
 
@@ -269,21 +276,22 @@ returns the record it found. -/
 /-- **The ghost write at the round its label names**, read through the view:
 the two cores and the bound bit are the written record, every other coordinate
 the view before the write. -/
-theorem roundProjection_writeGhost (v : ∀ _ : Fin P.n, AFW.ProcessRecord P.n) (w : NetworkState P.n)
+theorem roundProjection_writeGhost (v : ∀ _ : Fin P.n, AFW.ProcessVariables P.n) (w : NetworkState
+  P.n)
     {L : Implementation.ExtendedLabel P.n (Message P.n) (RoundEvent P.n)} {r : ℕ}
     (h : roundOf L = some r) :
     roundProjection P v (w.writeGhost (ghostStep P) L) r
-      = ((fun j => programProjection ((v j).2.roundRecord r),
-         (ghostStep P L w (w.ghostRecord r)).2.2),
-          (Gather.setCore (firstGatherProjection P v w r) (ghostStep P L w (w.ghostRecord r)).1,
-            Gather.setCore (secondGatherProjection P v w r) (ghostStep P L w (w.ghostRecord
+      = ((fun j => programProjection ((v j).2.roundVariables r),
+         (ghostStep P L w (w.ghost r)).2.2),
+          (Gather.setCore (firstGatherProjection P v w r) (ghostStep P L w (w.ghost r)).1,
+            Gather.setCore (secondGatherProjection P v w r) (ghostStep P L w (w.ghost
               r)).2.1)) := by
   unfold Implementation.NetworkState.writeGhost
   rw [h]
   simp [roundProjection, firstGatherProjection, secondGatherProjection, Gather.setCore]
 
 /-- The ghost write leaves every other round's view where it stands. -/
-theorem roundProjection_writeGhost_ne (v : ∀ _ : Fin P.n, AFW.ProcessRecord P.n)
+theorem roundProjection_writeGhost_ne (v : ∀ _ : Fin P.n, AFW.ProcessVariables P.n)
     (w : NetworkState P.n)
     {L : Implementation.ExtendedLabel P.n (Message P.n) (RoundEvent P.n)} {r r' : ℕ}
     (h : roundOf L = some r)
@@ -298,7 +306,7 @@ round's view where it stands. -/
 theorem roundProjection_ghostId
     (L : Implementation.ExtendedLabel P.n (Message P.n) (RoundEvent P.n))
     (h : ∀ (v : NetworkState P.n) (G : Ghost P.n), ghostStep P L v G = G)
-    (x : ∀ _ : Fin P.n, AFW.ProcessRecord P.n) (w : NetworkState P.n) (r' : ℕ) :
+    (x : ∀ _ : Fin P.n, AFW.ProcessVariables P.n) (w : NetworkState P.n) (r' : ℕ) :
     roundProjection P x (w.writeGhost (ghostStep P) L) r' = roundProjection P x w r' := by
   unfold Implementation.NetworkState.writeGhost
   cases hL : roundOf L with
@@ -316,8 +324,8 @@ theorem ghostStep_bound (L : Implementation.ExtendedLabel P.n (Message P.n) (Rou
 /-- The bound bit of a round on record stays on record across any transition. -/
 theorem writeGhost_bound {w : NetworkState P.n}
     (L : Implementation.ExtendedLabel P.n (Message P.n) (RoundEvent P.n)) {r : ℕ}
-    (h : (w.ghostRecord r).2.2 ≠ none) :
-    ((w.writeGhost (ghostStep P) L).ghostRecord r).2.2 ≠ none := by
+    (h : (w.ghost r).2.2 ≠ none) :
+    ((w.writeGhost (ghostStep P) L).ghost r).2.2 ≠ none := by
   unfold Implementation.NetworkState.writeGhost
   cases hL : roundOf L with
   | none => exact h
@@ -329,17 +337,17 @@ theorem writeGhost_bound {w : NetworkState P.n}
 /-- A send, read through the view with its ghost write: the round's two cores
 and its bound bit are the record `AFW.ghostStep` writes, and every other
 coordinate is the send's own. -/
-theorem roundProjection_gbcaSendGhost (v : ∀ _ : Fin P.n, AFW.ProcessRecord P.n)
+theorem roundProjection_gbcaSendGhost (v : ∀ _ : Fin P.n, AFW.ProcessVariables P.n)
     (w : NetworkState P.n) (r : ℕ) (j : Fin P.n) (m : Message P.n) :
     roundProjection P v ((w.recordGBCASend r j m).writeGhost (ghostStep P) (Sum.inr (.gbcaSend r j
       m))) r
-      = ((fun i => programProjection ((v i).2.roundRecord r),
-            (ghostStep P (Sum.inr (.gbcaSend r j m)) (w.recordGBCASend r j m) (w.ghostRecord
+      = ((fun i => programProjection ((v i).2.roundVariables r),
+            (ghostStep P (Sum.inr (.gbcaSend r j m)) (w.recordGBCASend r j m) (w.ghost
               r)).2.2),
          (Gather.setCore (firstGatherProjection P v (w.recordGBCASend r j m) r)
-            (ghostStep P (Sum.inr (.gbcaSend r j m)) (w.recordGBCASend r j m) (w.ghostRecord r)).1,
+            (ghostStep P (Sum.inr (.gbcaSend r j m)) (w.recordGBCASend r j m) (w.ghost r)).1,
           Gather.setCore (secondGatherProjection P v (w.recordGBCASend r j m) r)
-            (ghostStep P (Sum.inr (.gbcaSend r j m)) (w.recordGBCASend r j m) (w.ghostRecord
+            (ghostStep P (Sum.inr (.gbcaSend r j m)) (w.recordGBCASend r j m) (w.ghost
               r)).2.1)) :=
   roundProjection_writeGhost v _ rfl
 
@@ -359,16 +367,16 @@ theorem roundProjection_init (P : Parameters) (r : ℕ) :
     (GBCA.ByAFW.roundOverBracha P r).init :=
       by
   have hproc : (protocol P).init.1
-      = fun _ => (RoundLoopRecord.initial P.n,
-        Implementation.RoundRecordMap.initial (RoundRecord P.n)) := rfl
+      = fun _ => (RoundLoopVariables.initial P.n,
+        Implementation.RoundVariablesMap.initial (RoundVariables P.n)) := rfl
   have hsent : ((protocol P).init.2.1).sent = fun _ _ => (∅ : Finset (Message P.n)) := rfl
   have hF : ((protocol P).init.2.1).F = (∅ : Finset (Fin P.n)) := rfl
-  have hghost : ((protocol P).init.2.1).ghostRecord
+  have hghost : ((protocol P).init.2.1).ghost
       = fun _ => ((none, none, none) : Ghost P.n) := rfl
   rw [GBCA.ByAFW.roundOverBracha_init, roundProjection, firstGatherProjection,
     secondGatherProjection, hproc, hsent, hF, hghost]
-  simp [Gather.instanceOverBracha_init, GBCA.ByAFW.ProcessRecord.initial, programProjection,
-    RoundRecord.initial, Gather.NetworkState.initial, ABA.NetworkState.initial,
+  simp [Gather.instanceOverBracha_init, GBCA.ByAFW.ProcessVariables.initial, programProjection,
+    RoundVariables.initial, Gather.NetworkState.initial, ABA.NetworkState.initial,
       BRB.BrachaState.initial,
     InstanceState.initial, messagesOf_empty]
   rfl
@@ -381,15 +389,15 @@ bit. The second conjunct carries a graded outcome on record back to a candidate 
 the two record facts that are the guards of the transitions writing the fields between them. This
 is what the graded return's announced bit rests on, and it is the one clause of the relation that
 is not a projection of the implementation's state. -/
-def BoundInvariant (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n)
+def BoundInvariant (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n)
     (w : NetworkState P.n) : Prop :=
-  (∀ (r : ℕ) (i : Fin P.n), ((u i).2.roundRecord r).candidate ≠ none →
-      (w.ghostRecord r).2.2 ≠ none) ∧
+  (∀ (r : ℕ) (i : Fin P.n), ((u i).2.roundVariables r).candidate ≠ none →
+      (w.ghost r).2.2 ≠ none) ∧
     ∀ (r : ℕ) (i : Fin P.n),
-      (((u i).2.roundRecord r).output ≠ none →
-          (((u i).2.roundRecord r).secondGather.process).input ≠ none) ∧
-        ((((u i).2.roundRecord r).secondGather.process).input ≠ none →
-          ((u i).2.roundRecord r).candidate ≠ none)
+      (((u i).2.roundVariables r).output ≠ none →
+          (((u i).2.roundVariables r).secondGather.processVariables).input ≠ none) ∧
+        ((((u i).2.roundVariables r).secondGather.processVariables).input ≠ none →
+          ((u i).2.roundVariables r).candidate ≠ none)
 
 /-- **The composition relation**: the round loops and the coin oracle are shared, the ABA network is
 the DECIDED sets beside the corrupted set, every round's state is the view `roundProjection` of the
@@ -402,9 +410,9 @@ def ProtocolRelation (P : Parameters) (s : ProtocolState P) (t : ComposedState P
     t.1 = (fun r => roundProjection P s.1 s.2.1 r) ∧
     BoundInvariant P s.1 s.2.1
 
-theorem protocolRelation_mk (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n)
+theorem protocolRelation_mk (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n)
     (w : NetworkState P.n) (o : ℕ → WCC.SpecState P.n) (G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n)
-    (C : ∀ _ : Fin P.n, RoundLoopRecord P.n) (A : ABANetworkState P.n)
+    (C : ∀ _ : Fin P.n, RoundLoopVariables P.n) (A : ABANetworkState P.n)
     (o' : ℕ → WCC.SpecState P.n) :
     ProtocolRelation P (u, w, o) (G, C, A, o') ↔
       ((∀ j, (u j).1 = C j) ∧ o = o' ∧ A = ⟨w.decidedSent, w.F⟩ ∧
@@ -412,13 +420,13 @@ theorem protocolRelation_mk (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessRe
 
 /-- The bound invariant survives a transition that leaves the three fields it reads where they
 stand and keeps on record every bound bit already there. -/
-theorem boundInvariant_of {u x : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} {w v : NetworkState P.n}
+theorem boundInvariant_of {u x : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} {w v : NetworkState P.n}
     (hI : BoundInvariant P u w)
-    (hcand : ∀ i r, ((x i).2.roundRecord r).candidate = ((u i).2.roundRecord r).candidate)
-    (hinput : ∀ i r, (((x i).2.roundRecord r).secondGather.process).input
-      = (((u i).2.roundRecord r).secondGather.process).input)
-    (hout : ∀ i r, ((x i).2.roundRecord r).output = ((u i).2.roundRecord r).output)
-    (hv : ∀ r, (w.ghostRecord r).2.2 ≠ none → (v.ghostRecord r).2.2 ≠ none) :
+    (hcand : ∀ i r, ((x i).2.roundVariables r).candidate = ((u i).2.roundVariables r).candidate)
+    (hinput : ∀ i r, (((x i).2.roundVariables r).secondGather.processVariables).input
+      = (((u i).2.roundVariables r).secondGather.processVariables).input)
+    (hout : ∀ i r, ((x i).2.roundVariables r).output = ((u i).2.roundVariables r).output)
+    (hv : ∀ r, (w.ghost r).2.2 ≠ none → (v.ghost r).2.2 ≠ none) :
     BoundInvariant P x v :=
   ⟨fun r i hne => hv r (hI.1 r i (by rw [← hcand i r]; exact hne)),
     fun r i => ⟨fun ho => by
@@ -427,13 +435,14 @@ theorem boundInvariant_of {u x : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} {w v : 
 
 /-- The bound invariant survives a transition that clears the graded outcome of a round, the
 candidate and the second gather's input standing. -/
-theorem boundInvariant_ofOutputCleared {u x : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
+theorem boundInvariant_ofOutputCleared {u x : ∀ _ : Fin P.n, AFW.ProcessVariables P.n}
     {w v : NetworkState P.n} (hI : BoundInvariant P u w)
-    (hcand : ∀ i r, ((x i).2.roundRecord r).candidate = ((u i).2.roundRecord r).candidate)
-    (hinput : ∀ i r, (((x i).2.roundRecord r).secondGather.process).input
-      = (((u i).2.roundRecord r).secondGather.process).input)
-    (hout : ∀ i r, ((x i).2.roundRecord r).output ≠ none → ((u i).2.roundRecord r).output ≠ none)
-    (hv : ∀ r, (w.ghostRecord r).2.2 ≠ none → (v.ghostRecord r).2.2 ≠ none) :
+    (hcand : ∀ i r, ((x i).2.roundVariables r).candidate = ((u i).2.roundVariables r).candidate)
+    (hinput : ∀ i r, (((x i).2.roundVariables r).secondGather.processVariables).input
+      = (((u i).2.roundVariables r).secondGather.processVariables).input)
+    (hout : ∀ i r, ((x i).2.roundVariables r).output ≠ none → ((u i).2.roundVariables r).output ≠
+      none)
+    (hv : ∀ r, (w.ghost r).2.2 ≠ none → (v.ghost r).2.2 ≠ none) :
     BoundInvariant P x v :=
   ⟨fun r i hne => hv r (hI.1 r i (by rw [← hcand i r]; exact hne)),
     fun r i => ⟨fun ho => by
@@ -443,15 +452,15 @@ theorem boundInvariant_ofOutputCleared {u x : ∀ _ : Fin P.n, AFW.ProcessRecord
 /-- The bound invariant survives the second gather's call: the candidate and the graded outcome
 stand, and at every round the second gather's input either stands or is written at a record whose
 candidate is on record. -/
-theorem boundInvariant_ofSecondGatherCall {u x : ∀ _ : Fin P.n, AFW.ProcessRecord P.n}
+theorem boundInvariant_ofSecondGatherCall {u x : ∀ _ : Fin P.n, AFW.ProcessVariables P.n}
     {w v : NetworkState P.n} (hI : BoundInvariant P u w)
-    (hcand : ∀ i r, ((x i).2.roundRecord r).candidate = ((u i).2.roundRecord r).candidate)
-    (hout : ∀ i r, ((x i).2.roundRecord r).output = ((u i).2.roundRecord r).output)
-    (hinput : ∀ i r, (((x i).2.roundRecord r).secondGather.process).input
-        = (((u i).2.roundRecord r).secondGather.process).input ∨
-      ((((x i).2.roundRecord r).secondGather.process).input ≠ none ∧
-        ((u i).2.roundRecord r).candidate ≠ none))
-    (hv : ∀ r, (w.ghostRecord r).2.2 ≠ none → (v.ghostRecord r).2.2 ≠ none) :
+    (hcand : ∀ i r, ((x i).2.roundVariables r).candidate = ((u i).2.roundVariables r).candidate)
+    (hout : ∀ i r, ((x i).2.roundVariables r).output = ((u i).2.roundVariables r).output)
+    (hinput : ∀ i r, (((x i).2.roundVariables r).secondGather.processVariables).input
+        = (((u i).2.roundVariables r).secondGather.processVariables).input ∨
+      ((((x i).2.roundVariables r).secondGather.processVariables).input ≠ none ∧
+        ((u i).2.roundVariables r).candidate ≠ none))
+    (hv : ∀ r, (w.ghost r).2.2 ≠ none → (v.ghost r).2.2 ≠ none) :
     BoundInvariant P x v := by
   refine ⟨fun r i hne => hv r (hI.1 r i (by rw [← hcand i r]; exact hne)), fun r i => ?_⟩
   rcases hinput i r with heq | ⟨hne, hc⟩
@@ -476,7 +485,7 @@ observation at one component, stated over the `ite` that reading a written
 record produces. -/
 
 section LocalStates
-variable {j : Fin n} (Y : Fin n → RoundRecord n) (sr : RoundRecord n)
+variable {j : Fin n} (Y : Fin n → RoundVariables n) (sr : RoundVariables n)
 
 theorem locals_firstGather_if :
     (fun i => (if i = j then sr else Y i).firstGather)

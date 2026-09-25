@@ -113,17 +113,17 @@ The state of each is the product of its components, and every tier of a level is
 same expression at a different component:
 
 ```
-BRB.BrachaState  n M       = (Fin n → LocalState n (ProcessRecord M) (Message M)) × NetworkState n (Message M)
-Gather.StateOverBroadcasts n X B B' = ((Fin n → LocalState n (ProcessRecord n X) (Message n X)) × NetworkState n X)
+BRB.BrachaState  n M       = (Fin n → LocalState n (ProcessVariables M) (Message M)) × NetworkState n (Message M)
+Gather.StateOverBroadcasts n X B B' = ((Fin n → LocalState n (ProcessVariables n X) (Message n X)) × NetworkState n X)
                              × ((Fin n → B) × (Fin n → B'))
-GBCA.ByAFW.RoundStateOverGathers n G₁ G₂  = ((Fin n → GBCA.ByAFW.ProcessRecord n) × Option Bool) × (G₁ × G₂)
+GBCA.ByAFW.RoundStateOverGathers n G₁ G₂  = ((Fin n → GBCA.ByAFW.ProcessVariables n) × Option Bool) × (G₁ × G₂)
 ```
 
 A program reads no neighbouring coordinate, so what a sub-protocol has returned to a process is
 written into that process's own record. A gather program's record of what the broadcast instances
-returned (`Gather.ProcessRecord.inputBroadcastReturned`, `bindBroadcastReturned`) are written on the
+returned (`Gather.ProcessVariables.inputBroadcastReturned`, `bindBroadcastReturned`) are written on the
 return event of a broadcast instance and read by the four transitions that read what has been
-returned. A round program's record (`GBCA.ByAFW.ProcessRecord`) holds the candidate between the
+returned. A round program's record (`GBCA.ByAFW.ProcessVariables`) holds the candidate between the
 first gather's return and the second gather's call, and the graded outcome between the second gather's return and
 the round's own return: each of those two is a pair of events, and the record is what carries the
 round across them.
@@ -194,7 +194,7 @@ Beneath `AFW.composed` the protocol collapses the round's `4n + 2` network state
 sent-set family the adversary holds, tagging each message with the instance it belongs to:
 `AFW.Message` carries a constructor per component, `firstGather`, `secondGather`,
 `firstGatherInputBroadcasts`, `firstGatherBindBroadcasts`, `secondGatherInputBroadcasts` and
-`secondGatherBindBroadcasts`. `AFW.RoundRecord` is the composed system's instance-major indexing
+`secondGatherBindBroadcasts`. `AFW.RoundVariables` is the composed system's instance-major indexing
 transposed, one process's local state in each of those instances, and `AFW.Ghost` is the adversary's
 record for one round, the two recorded cores beside the bound bit.
 
@@ -224,21 +224,21 @@ round by `GBCA.ByAFW.broadcastSubstitution`, and the gather networks at
 being exchanged.
 
 Every invariant therefore reads its network through accessors on a pair — the
-`GBCA.ByABDY.RoundState` accessors in `ABA/GBCA/ABDY/MessagesAndRecords.lean`, the `ABAState`
+`GBCA.ByABDY.RoundState` accessors in `ABA/GBCA/ABDY/MessagesAndVariables.lean`, the `ABAState`
 accessors in `ABA/Composition/ABAState.lean`, the `ABA.InstanceState` accessors in
 `ABA/Vocabulary/ProcessAndNetworkState.lean` — and names the network's own sent sets
 rather than a copy of them held inside a record. Weakening any one of them is a change to
 that one component.
 
-The ghost field of the network is removable, and `ABA/GhostErasure/GhostFreeSystem.lean`
+The ghost field of the network is removable, and `ABA/GhostRemoval/GhostFreeSystem.lean`
 removes it. The ghost-free system `Implementation.systemGhostFree` is the implementation over a
 one-element ghost record, its two graded-agreement return transitions free to announce either
 bit; the map that drops the record is a state erasure of the adversary onto it
-(`Framework/Erasure.lean`), and the congruences of that file carry the erasure through the
+(`Framework/AuxiliaryVariableRemoval.lean`), and the congruences of that file carry the erasure through the
 same pipeline the composition is built by — the coin oracle, the process group, the
 rendezvous hiding and the restriction. Hiding `Label.hiddenAPI` collapses the label
 identification the erasure runs on, since every label it moves is a `retG`, so
-`ABDY.protocol_erasure` and `AFW.protocol_erasure` are equalities of achievable trace
+`ABDY.protocol_ghostRemoval` and `AFW.protocol_ghostRemoval` are equalities of achievable trace
 distributions with no map on labels in them. The bound bit is therefore a field the chain
 may keep or drop, and the choice to keep it is a choice about what the invariants read,
 not about what the protocol does.
@@ -247,17 +247,17 @@ not about what the protocol does.
 
 The property holds across the development, and a reader should not have to re-derive it.
 
-Each leaf record holds exactly one local state's data: `RoundLoopState` and `RoundLoopRecord` for a
-round loop, `GBCA.ByABDY.ProcessRecord` and `GBCA.ByABDY.RoundRecord` for a graded-agreement round,
-`ABDY.RoundRecordMap` and `AFW.RoundRecordMap` for the round records of one process,
+Each leaf record holds exactly one local state's data: `RoundLoopState` and `RoundLoopVariables` for a
+round loop, `GBCA.ByABDY.ProcessVariables` and `GBCA.ByABDY.RoundVariables` for a graded-agreement round,
+`ABDY.RoundVariablesMap` and `AFW.RoundVariablesMap` for the round records of one process,
 `GBCA.ByABDY.NetworkState` for a round's network state beside its bound bit, `ABA.NetworkState` for
 the network state of any other sub-protocol instance, `Composition.ABANetworkState` for the DECIDED
 network, and one `SpecState` for each of the five specifications. Each composite state is an
-explicit product of those: `ABDY.ProcessRecord`, `AFW.ProcessRecord`, `ABA.InstanceState`,
+explicit product of those: `ABDY.ProcessVariables`, `AFW.ProcessVariables`, `ABA.InstanceState`,
 `GBCA.ByABDY.RoundState`, `ABAState`, `Composition.ComposedState` and `HybridState` for
 the ABDY22 chain, and `Gather.StateOverBracha`, `Gather.StateOverBroadcastSpecification`,
 `GBCA.ByAFW.RoundStateOverBracha`, `GBCA.ByAFW.RoundStateOverBroadcastSpecification`,
-`GBCA.ByAFW.RoundStateOverGatherSpecifications` and `AFW.RoundRecord` for the gather-based one.
+`GBCA.ByAFW.RoundStateOverGatherSpecifications` and `AFW.RoundVariables` for the gather-based one.
 
 One record holds two kinds of message set at once, and it is the right one to. `ABDY.NetworkState`
 (`ABA/ABDY/System.lean`) and `AFW.NetworkState`
@@ -281,7 +281,7 @@ The ABA network is the one neither chain idealizes, so what it assumes is what t
 assumes. Much of the weakening one might ask for is already in it.
 
 `decidedSent` is a `Finset`, so there is no delivery order to disturb. Receipts are sets too and
-`RoundLoopRecord.receiveDecided` files by insertion, so a repeated delivery of one (receiver,
+`RoundLoopVariables.receiveDecided` files by insertion, so a repeated delivery of one (receiver,
 sender,
 bit) triple carries no information: `Composition.ABANetworkStep.decidedDeliver` consumes
 nothing, and the receiver's `Composition.RoundLoopStep.decidedDeliverReceive` declines the repeat

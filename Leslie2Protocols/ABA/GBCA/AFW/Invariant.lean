@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.GBCA.AFW.OutputCertificate
+import Leslie2Protocols.ABA.GBCA.AFW.OutputWitness
 
 /-!
 # The inductive invariant of the round over the gather specifications
@@ -18,15 +18,15 @@ The invariant carries
 
 * the corruption budget (`F_card`) and the agreement of the two corrupted sets
   (`secondGatherF_eq_firstGatherF`);
-* the provenance of a committed entry, per gather (`firstGatherVal_provenance`,
-  `secondGatherVal_provenance`): a committed entry of a correct process is that process's call;
+* the provenance of a committed entry, per gather (`firstGatherVal_of_call`,
+  `secondGatherVal_of_call`): a committed entry of a correct process is that process's call;
 * what a correct process's candidate certifies about the first gather's core
   (`candidate_aboveThreshold`, `candidate_bot`), and its transfer to the second gather's call
   record (`secondGatherCall_candidate`);
 * the round's bound bit (D29): a candidate or a second call certifies that the bit is written
   (`candidate_bound`, `secondGatherCall_bound`), and the bit is `GBCA.boundOfCore` of the first
   gather's recorded core (`bound_core`);
-* what a recorded grade certifies (`out_certificate`, through `OutputCertificate`);
+* what a recorded grade certifies (`out_witness`, through `OutputWitness`);
 * the core-write guards, which the write-once cores keep true (`firstGatherCore_val`,
   `firstGatherCore_card`, `secondGatherCore_val`, `secondGatherCore_card`).
 
@@ -38,7 +38,7 @@ invariant therefore states the first gather's certificates on the program's cand
 `candidate_aboveThreshold` and `candidate_bot` are established at `firstGatherReturn`, where the
 first gather's return guards are in scope, and `secondGatherCall_candidate` transfers the candidate
 to the second gather's call record at `secondGatherCall`. The graded outcome is recorded at
-`secondGatherReturn`, and `out_certificate` is what the second gather's return guards certify about
+`secondGatherReturn`, and `out_witness` is what the second gather's return guards certify about
 it. Both cores are write-once, so a certificate survives every later transition.
 -/
 
@@ -58,7 +58,7 @@ record what the candidate the first gather's return determines certifies about
 that gather, and `secondGatherCall_candidate` carries the candidate into the second gather's
 call record; `candidate_bound` and `secondGatherCall_bound` say that the transition writing the
 candidate writes the bound bit, and `bound_core` that the bit is read off the
-first gather's core; `out_certificate` records what the second gather's return
+first gather's core; `out_witness` records what the second gather's return
 certifies about the grade; the `core*` clauses re-state the core-write guards,
 which the write-once cores keep true. -/
 structure Invariant (P : Parameters) (s : RoundStateOverGatherSpecifications P.n) : Prop where
@@ -67,10 +67,10 @@ structure Invariant (P : Parameters) (s : RoundStateOverGatherSpecifications P.n
   /-- The two corrupted sets are equal. -/
   secondGatherF_eq_firstGatherF : (secondGather s).F = (firstGather s).F
   /-- A committed first-gather entry of a correct process is its call. -/
-  firstGatherVal_provenance : ∀ k v,
+  firstGatherVal_of_call : ∀ k v,
     (firstGather s).val k = some v → k ∈ (firstGather s).F ∨ (firstGather s).call k = some v
   /-- A committed second-gather entry of a correct process is its call. -/
-  secondGatherVal_provenance : ∀ k c,
+  secondGatherVal_of_call : ∀ k c,
     (secondGather s).val k = some c → k ∈ (firstGather s).F ∨ (secondGather s).call k = some c
   /-- A correct process's bit candidate is on at least `|S| − f` entries of the
   first gather's core. -/
@@ -94,8 +94,8 @@ structure Invariant (P : Parameters) (s : RoundStateOverGatherSpecifications P.n
   /-- The bound bit is the bound bit of the first gather's recorded core. -/
   bound_core : ∀ β, bound s = some β → ∃ S, (firstGather s).core = some S ∧ β = boundOfCore P S
   /-- A recorded grade comes with the bound bit and its certificate. -/
-  out_certificate : ∀ k out,
-    (programs s k).output = some out → bound s ≠ none ∧ OutputCertificate P s out
+  out_witness : ∀ k out,
+    (programs s k).output = some out → bound s ≠ none ∧ OutputWitness P s out
   /-- The first gather's core is committed entries. -/
   firstGatherCore_val : ∀ S, (firstGather s).core = some S → S.subMap (firstGather s).val
   /-- The first gather's core has `n − f` entries. -/
@@ -110,7 +110,7 @@ theorem Invariant.initial (P : Parameters) (r : ℕ) :
     Invariant P ((roundOverGatherSpecifications P r).init) := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
     simp [roundOverGatherSpecifications_init, programs, bound, firstGather, secondGather,
-      Gather.SpecState.initial, ProcessRecord.initial]
+      Gather.SpecState.initial, ProcessVariables.initial]
 
 /-- The invariant is preserved by every transition. -/
 theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l : Label P.n}
@@ -131,10 +131,10 @@ theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l
     · rw [hF]; exact hInv.secondGatherF_eq_firstGatherF
     · rw [hval, hF]
       intro k v hv
-      rcases hInv.firstGatherVal_provenance k v hv with hf' | hc'
+      rcases hInv.firstGatherVal_of_call k v hv with hf' | hc'
       · exact Or.inl hf'
       · exact Or.inr (call_mono h k v hc')
-    · rw [hF]; exact hInv.secondGatherVal_provenance
+    · rw [hF]; exact hInv.secondGatherVal_of_call
     · rw [hF, hcore]
       intro k hk v hcd
       refine hInv.candidate_aboveThreshold k hk v ?_
@@ -169,8 +169,8 @@ theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l
         by_cases hkid : k = id
         · subst hkid; rwa [Function.update_self] at hk
         · rwa [Function.update_of_ne hkid] at hk
-      refine ⟨(hInv.out_certificate k out hk').1,
-        OutputCertificate.mono (s := s) ?_ ?_ ?_ (hInv.out_certificate k out hk').2⟩
+      refine ⟨(hInv.out_witness k out hk').1,
+        OutputWitness.mono (s := s) ?_ ?_ ?_ (hInv.out_witness k out hk').2⟩
       · exact hcore
       · rfl
       · exact fun b => le_of_eq (firstGatherSupport_congr hval hF b).symm
@@ -189,10 +189,10 @@ theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l
     · rw [hF]; exact hInv.secondGatherF_eq_firstGatherF
     · rw [hval, hF]
       intro k v hv
-      rcases hInv.firstGatherVal_provenance k v hv with hf' | hc'
+      rcases hInv.firstGatherVal_of_call k v hv with hf' | hc'
       · exact Or.inl hf'
       · exact Or.inr (call_mono h k v hc')
-    · rw [hF]; exact hInv.secondGatherVal_provenance
+    · rw [hF]; exact hInv.secondGatherVal_of_call
     · rw [hF, hcore]; exact hInv.candidate_aboveThreshold
     · rw [hF, firstGatherSupport_congr hval hF true,
         firstGatherSupport_congr hval hF false]; exact hInv.candidate_bot
@@ -201,8 +201,8 @@ theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l
     · exact hInv.secondGatherCall_bound
     · rw [hcore]; exact hInv.bound_core
     · intro k out hk
-      refine ⟨(hInv.out_certificate k out hk).1,
-        OutputCertificate.mono (s := s) ?_ ?_ ?_ (hInv.out_certificate k out hk).2⟩
+      refine ⟨(hInv.out_witness k out hk).1,
+        OutputWitness.mono (s := s) ?_ ?_ ?_ (hInv.out_witness k out hk).2⟩
       · exact hcore
       · rfl
       · exact fun b => le_of_eq (firstGatherSupport_congr hval hF b).symm
@@ -227,7 +227,7 @@ theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l
           exact absurd hv' (by simp)
         · rw [Function.update_of_ne hk]
           exact hv'
-      refine ⟨hInv.F_card, hInv.secondGatherF_eq_firstGatherF, ?_, hInv.secondGatherVal_provenance,
+      refine ⟨hInv.F_card, hInv.secondGatherF_eq_firstGatherF, ?_, hInv.secondGatherVal_of_call,
         hInv.candidate_aboveThreshold, ?_, hInv.secondGatherCall_candidate, hInv.candidate_bound,
           hInv.secondGatherCall_bound, hInv.bound_core, ?_,
         ?_, hInv.firstGatherCore_card, hInv.secondGatherCore_val, hInv.secondGatherCore_card⟩
@@ -241,13 +241,13 @@ theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l
           subst hveq
           exact hm
         · rw [Function.update_of_ne hk] at hv'
-          exact hInv.firstGatherVal_provenance k' v' hv'
+          exact hInv.firstGatherVal_of_call k' v' hv'
       · intro k' hk' hc
         obtain ⟨h1, h2⟩ := hInv.candidate_bot k' hk' hc
         constructor <;> exact le_trans (by assumption) (firstGatherSupport_mono hvmono (by rfl) _)
       · intro k' out hk'
-        refine ⟨(hInv.out_certificate k' out hk').1,
-          OutputCertificate.mono (s := s) ?_ ?_ ?_ (hInv.out_certificate k' out hk').2⟩
+        refine ⟨(hInv.out_witness k' out hk').1,
+          OutputWitness.mono (s := s) ?_ ?_ ?_ (hInv.out_witness k' out hk').2⟩
         · rfl
         · rfl
         · exact fun b => firstGatherSupport_mono hvmono (by rfl) b
@@ -258,8 +258,8 @@ theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l
     | bindCore S h0 hval hcard =>
       have ht1 := PMF.pure_injective hμ
       subst ht1
-      refine ⟨hInv.F_card, hInv.secondGatherF_eq_firstGatherF, hInv.firstGatherVal_provenance,
-        hInv.secondGatherVal_provenance, ?_, hInv.candidate_bot, hInv.secondGatherCall_candidate,
+      refine ⟨hInv.F_card, hInv.secondGatherF_eq_firstGatherF, hInv.firstGatherVal_of_call,
+        hInv.secondGatherVal_of_call, ?_, hInv.candidate_bot, hInv.secondGatherCall_candidate,
           hInv.candidate_bound, hInv.secondGatherCall_bound, ?_, ?_,
         ?_, ?_, hInv.secondGatherCore_val, hInv.secondGatherCore_card⟩
       · intro k hk v hc
@@ -271,8 +271,8 @@ theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l
         rw [h0] at hS'
         exact absurd hS' (by simp)
       · intro k out hk
-        refine ⟨(hInv.out_certificate k out hk).1, ?_⟩
-        have hc := (hInv.out_certificate k out hk).2
+        refine ⟨(hInv.out_witness k out hk).1, ?_⟩
+        have hc := (hInv.out_witness k out hk).2
         cases out with
         | grade2 v =>
           obtain ⟨-, S', hS', -⟩ := hc
@@ -301,10 +301,10 @@ theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l
     | commit k c hv hm =>
       have ht2 := PMF.pure_injective hμ
       subst ht2
-      refine ⟨hInv.F_card, hInv.secondGatherF_eq_firstGatherF, hInv.firstGatherVal_provenance, ?_,
+      refine ⟨hInv.F_card, hInv.secondGatherF_eq_firstGatherF, hInv.firstGatherVal_of_call, ?_,
         hInv.candidate_aboveThreshold, hInv.candidate_bot, hInv.secondGatherCall_candidate,
           hInv.candidate_bound, hInv.secondGatherCall_bound,
-        hInv.bound_core, hInv.out_certificate, hInv.firstGatherCore_val, hInv.firstGatherCore_card,
+        hInv.bound_core, hInv.out_witness, hInv.firstGatherCore_val, hInv.firstGatherCore_card,
           ?_,
         hInv.secondGatherCore_card⟩
       · intro k' c' hc'
@@ -319,7 +319,7 @@ theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l
           · exact Or.inl (by rw [← hInv.secondGatherF_eq_firstGatherF]; exact hF)
           · exact Or.inr hin
         · rw [Function.update_of_ne hk] at hc'
-          exact hInv.secondGatherVal_provenance k' c' hc'
+          exact hInv.secondGatherVal_of_call k' c' hc'
       · intro S hS
         have hpre := hInv.secondGatherCore_val S hS
         intro p hp
@@ -335,15 +335,15 @@ theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l
     | bindCore S h0 hval hcard =>
       have ht2 := PMF.pure_injective hμ
       subst ht2
-      refine ⟨hInv.F_card, hInv.secondGatherF_eq_firstGatherF, hInv.firstGatherVal_provenance,
-        hInv.secondGatherVal_provenance, hInv.candidate_aboveThreshold, hInv.candidate_bot,
+      refine ⟨hInv.F_card, hInv.secondGatherF_eq_firstGatherF, hInv.firstGatherVal_of_call,
+        hInv.secondGatherVal_of_call, hInv.candidate_aboveThreshold, hInv.candidate_bot,
           hInv.secondGatherCall_candidate, hInv.candidate_bound,
         hInv.secondGatherCall_bound, hInv.bound_core, ?_, hInv.firstGatherCore_val,
           hInv.firstGatherCore_card,
         ?_, ?_⟩
       · intro k out hk
-        refine ⟨(hInv.out_certificate k out hk).1, ?_⟩
-        have hc := (hInv.out_certificate k out hk).2
+        refine ⟨(hInv.out_witness k out hk).1, ?_⟩
+        have hc := (hInv.out_witness k out hk).2
         cases out with
         | grade2 v =>
           obtain ⟨⟨S', hS', -⟩, -⟩ := hc
@@ -375,8 +375,8 @@ theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l
       have hCcard : P.n - P.f ≤ C.card := hInv.firstGatherCore_card C hC
       have hgdom : P.n - P.f ≤ domainCount g := le_trans hCcard (AcceptedPairs.card_le_domainCount
         hmem)
-      refine ⟨hInv.F_card, hInv.secondGatherF_eq_firstGatherF, hInv.firstGatherVal_provenance,
-        hInv.secondGatherVal_provenance, ?_, ?_, ?_, ?_, ?_, ?_, ?_, hInv.firstGatherCore_val,
+      refine ⟨hInv.F_card, hInv.secondGatherF_eq_firstGatherF, hInv.firstGatherVal_of_call,
+        hInv.secondGatherVal_of_call, ?_, ?_, ?_, ?_, ?_, ?_, ?_, hInv.firstGatherCore_val,
           hInv.firstGatherCore_card, hInv.secondGatherCore_val,
         hInv.secondGatherCore_card⟩
       · intro k hk v hcd
@@ -439,7 +439,7 @@ theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l
       · intro k out hk
         dsimp only [programs_setBound, programs_setFirstGather, programs_setPrograms] at hk
         refine ⟨by dsimp only [bound_setBound]; exact Option.some_ne_none _,
-          OutputCertificate.mono rfl rfl (fun _ => le_refl _) (hInv.out_certificate k out ?_).2⟩
+          OutputWitness.mono rfl rfl (fun _ => le_refl _) (hInv.out_witness k out ?_).2⟩
         by_cases hkid : k = id
         · subst hkid; rwa [Function.update_self] at hk
         · rwa [Function.update_of_ne hkid] at hk
@@ -453,10 +453,10 @@ theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l
           bound_setSecondGather, bound_setPrograms]
     · exact hInv.F_card
     · rw [hF2]; exact hInv.secondGatherF_eq_firstGatherF
-    · exact hInv.firstGatherVal_provenance
+    · exact hInv.firstGatherVal_of_call
     · rw [hval2]
       intro k c hv
-      rcases hInv.secondGatherVal_provenance k c hv with hf' | hc'
+      rcases hInv.secondGatherVal_of_call k c hv with hf' | hc'
       · exact Or.inl hf'
       · exact Or.inr (call_mono h k c hc')
     · intro k hk v hcd
@@ -494,8 +494,8 @@ theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l
         by_cases hkid : k = id
         · subst hkid; rwa [Function.update_self] at hk
         · rwa [Function.update_of_ne hkid] at hk
-      refine ⟨(hInv.out_certificate k out hk').1,
-        OutputCertificate.mono (s := s) ?_ ?_ ?_ (hInv.out_certificate k out hk').2⟩
+      refine ⟨(hInv.out_witness k out hk').1,
+        OutputWitness.mono (s := s) ?_ ?_ ?_ (hInv.out_witness k out hk').2⟩
       · rfl
       · exact hcore2
       · exact fun _ => le_refl _
@@ -506,8 +506,8 @@ theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l
   | retG id out ho hr =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    refine ⟨hInv.F_card, hInv.secondGatherF_eq_firstGatherF, hInv.firstGatherVal_provenance,
-      hInv.secondGatherVal_provenance, ?_, ?_, ?_, ?_, ?_, hInv.bound_core, ?_,
+    refine ⟨hInv.F_card, hInv.secondGatherF_eq_firstGatherF, hInv.firstGatherVal_of_call,
+      hInv.secondGatherVal_of_call, ?_, ?_, ?_, ?_, ?_, hInv.bound_core, ?_,
         hInv.firstGatherCore_val, hInv.firstGatherCore_card,
       hInv.secondGatherCore_val, hInv.secondGatherCore_card⟩ <;> dsimp only [programs_setPrograms]
     · intro k hk v hcd
@@ -540,7 +540,7 @@ theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l
         by_cases hkid : k = id
         · subst hkid; rw [Function.update_self] at hk; exact absurd hk (by simp)
         · rwa [Function.update_of_ne hkid] at hk
-      exact hInv.out_certificate k out' hk'
+      exact hInv.out_witness k out' hk'
   | secondGatherReturn id g C t2 h2 ho h =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
@@ -557,7 +557,7 @@ theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l
       have hchain : ∀ k, k ∉ (firstGather s).F → ∀ c,
         g k = some c → (programs s k).candidate = some c:= by
         intro k hkF c hgc
-        rcases hInv.secondGatherVal_provenance k c (hsubv k c hgc) with hF | hin
+        rcases hInv.secondGatherVal_of_call k c (hsubv k c hgc) with hF | hin
         · exact absurd hF hkF
         · exact hInv.secondGatherCall_candidate k hkF c hin
       have hFirstGatherCoreAboveThreshold : ∀ v : Bool, P.f + 1 ≤ valueCount g (some v) →
@@ -590,7 +590,7 @@ theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l
           have hScard := hInv.firstGatherCore_card S hS
           exact le_trans (by omega : P.f + 1 ≤ AcceptedPairs.count S wt)
             (count_le_firstGatherSupport (hInv.firstGatherCore_val S hS) wt)
-      have hcert : OutputCertificate P s (gradeOf P g) := by
+      have hcert : OutputWitness P s (gradeOf P g) := by
         cases hout : gradeOf P g with
         | grade2 v =>
           refine ⟨⟨C, hC, count_aboveThreshold_of_subMap hmem (gradeOf_grade2 hout)⟩,
@@ -612,8 +612,8 @@ theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l
           rw [card_ne_valueCount]
           have := hCgrade (!b)
           omega
-      refine ⟨hInv.F_card, hInv.secondGatherF_eq_firstGatherF, hInv.firstGatherVal_provenance,
-        hInv.secondGatherVal_provenance, ?_, ?_, ?_, ?_, ?_, hInv.bound_core, ?_,
+      refine ⟨hInv.F_card, hInv.secondGatherF_eq_firstGatherF, hInv.firstGatherVal_of_call,
+        hInv.secondGatherVal_of_call, ?_, ?_, ?_, ?_, ?_, hInv.bound_core, ?_,
           hInv.firstGatherCore_val, hInv.firstGatherCore_card,
         hInv.secondGatherCore_val, hInv.secondGatherCore_card⟩
       · intro k hk v hcd
@@ -653,10 +653,10 @@ theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l
           rw [Function.update_self] at hk
           obtain rfl : gradeOf P g = out := by
             injection hk
-          exact ⟨hbnd, OutputCertificate.mono rfl rfl (fun _ => le_refl _) hcert⟩
+          exact ⟨hbnd, OutputWitness.mono rfl rfl (fun _ => le_refl _) hcert⟩
         · rw [Function.update_of_ne hkid] at hk
-          obtain ⟨hb, hc⟩ := hInv.out_certificate k out hk
-          exact ⟨hb, OutputCertificate.mono rfl rfl (fun _ => le_refl _) hc⟩
+          obtain ⟨hb, hc⟩ := hInv.out_witness k out hk
+          exact ⟨hb, OutputWitness.mono rfl rfl (fun _ => le_refl _) hc⟩
   | fail id =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
@@ -686,13 +686,13 @@ theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l
     · intro k v hv
       rw [Gather.corrupt_val] at hv
       rw [Gather.corrupt_call]
-      rcases hInv.firstGatherVal_provenance k v hv with hF | hcl
+      rcases hInv.firstGatherVal_of_call k v hv with hF | hcl
       · exact Or.inl (hFsub hF)
       · exact Or.inr hcl
     · intro k c hcv
       rw [Gather.corrupt_val] at hcv
       rw [Gather.corrupt_call]
-      rcases hInv.secondGatherVal_provenance k c hcv with hF | hin
+      rcases hInv.secondGatherVal_of_call k c hcv with hF | hin
       · exact Or.inl (hFsub hF)
       · exact Or.inr hin
     · intro k hk v hcd
@@ -710,8 +710,8 @@ theorem Invariant.step {r : ℕ} {s : RoundStateOverGatherSpecifications P.n} {l
       obtain ⟨S, hS, hh⟩ := hInv.bound_core β hβ
       exact ⟨S, by rw [Gather.corrupt_core]; exact hS, hh⟩
     · intro k out hk
-      refine ⟨(hInv.out_certificate k out hk).1,
-        OutputCertificate.mono (s := s) ?_ ?_ ?_ (hInv.out_certificate k out hk).2⟩
+      refine ⟨(hInv.out_witness k out hk).1,
+        OutputWitness.mono (s := s) ?_ ?_ ?_ (hInv.out_witness k out hk).2⟩
       · rw [firstGather_corruptAll, Gather.corrupt_core]
       · rw [secondGather_corruptAll, Gather.corrupt_core]
       · exact fun b => by rw [firstGather_corruptAll]; exact hsmono b

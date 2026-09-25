@@ -26,7 +26,7 @@ The matching is stated here, one transition of `BRB.BrachaAlgorithm` at a time, 
 internal transitions stutter. The call and corruption are matched by the specification's own
 transitions. A return is matched by `ret` alone when `val` is already committed, the certificates
 identifying the two values, and by the two-step run `commit ; ret` when it is not, with `commit`'s
-guard discharged by `input_of_echoCertificate` under a correct leader and by membership in the
+guard discharged by `input_of_echoWitness` under a correct leader and by membership in the
 corrupted set otherwise.
 
 Four lemmas beside the refinement hold the relation across one transition:
@@ -73,14 +73,16 @@ theorem specificationRelation_transition (P : Parameters) (ldr : Fin P.n) (q₁ 
     · intro k
       by_cases hkl : k = ldr
       · subst hkl
-        rw [InstanceState.multicast_process, InstanceState.setProcess_process_self]
+        rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_self]
         exact hR.ret_eq k
-      · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hkl]
+      · rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_ne _ _ _ hkl]
         exact hR.ret_eq k
     · simpa using hR.F_eq
     · intro m' hm'
-      rw [echoCertificate_multicast, echoCertificate_setProcess]
-      exact hR.val_certificate m' hm'
+      rw [echoWitness_multicast, echoWitness_setProcessVariables]
+      exact hR.val_witness m' hm'
   | callLoop m =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
@@ -91,125 +93,138 @@ theorem specificationRelation_transition (P : Parameters) (ldr : Fin P.n) (q₁ 
     subst hq₁'
     refine ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
       hInv', ?_, ?_, ?_, ?_⟩
-    · rw [InstanceState.receiveMessage_process]
+    · rw [InstanceState.receiveMessage_processVariables]
       exact hR.input_eq
     · intro k
-      rw [InstanceState.receiveMessage_process]
+      rw [InstanceState.receiveMessage_processVariables]
       exact hR.ret_eq k
     · simpa using hR.F_eq
     · intro m' hm'
-      exact (hR.val_certificate m' hm').receiveMessage i j m
+      exact (hR.val_witness m' hm').receiveMessage i j m
   | echo j m hrecv hsend =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     refine ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
       hInv', ?_, ?_, ?_, ?_⟩
     · by_cases hkl : ldr = j
-      · rw [InstanceState.multicast_process, hkl, InstanceState.setProcess_process_self]
+      · rw [InstanceState.multicast_processVariables, hkl,
+          InstanceState.setProcessVariables_processVariables_self]
         rw [hR.input_eq, hkl]
-      · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hkl]
+      · rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_ne _ _ _ hkl]
         exact hR.input_eq
     · intro k
       by_cases hkl : k = j
       · subst hkl
-        rw [InstanceState.multicast_process, InstanceState.setProcess_process_self]
+        rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_self]
         exact hR.ret_eq k
-      · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hkl]
+      · rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_ne _ _ _ hkl]
         exact hR.ret_eq k
     · simpa using hR.F_eq
     · intro m' hm'
-      rw [echoCertificate_multicast, echoCertificate_setProcess]
-      exact hR.val_certificate m' hm'
+      rw [echoWitness_multicast, echoWitness_setProcessVariables]
+      exact hR.val_witness m' hm'
   | voteQuorum j m hcnt hsend =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     refine ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
       hInv', ?_, ?_, ?_, ?_⟩
     · by_cases hkl : ldr = j
-      · rw [InstanceState.multicast_process, hkl, InstanceState.setProcess_process_self]
+      · rw [InstanceState.multicast_processVariables, hkl,
+          InstanceState.setProcessVariables_processVariables_self]
         rw [hR.input_eq, hkl]
-      · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hkl]
+      · rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_ne _ _ _ hkl]
         exact hR.input_eq
     · intro k
       by_cases hkl : k = j
       · subst hkl
-        rw [InstanceState.multicast_process, InstanceState.setProcess_process_self]
+        rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_self]
         exact hR.ret_eq k
-      · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hkl]
+      · rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_ne _ _ _ hkl]
         exact hR.ret_eq k
     · simpa using hR.F_eq
     · intro m' hm'
-      rw [echoCertificate_multicast, echoCertificate_setProcess]
-      exact hR.val_certificate m' hm'
+      rw [echoWitness_multicast, echoWitness_setProcessVariables]
+      exact hR.val_witness m' hm'
   | voteAmplification j m hcnt hsend =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     refine ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
       hInv', ?_, ?_, ?_, ?_⟩
     · by_cases hkl : ldr = j
-      · rw [InstanceState.multicast_process, hkl, InstanceState.setProcess_process_self]
+      · rw [InstanceState.multicast_processVariables, hkl,
+          InstanceState.setProcessVariables_processVariables_self]
         rw [hR.input_eq, hkl]
-      · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hkl]
+      · rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_ne _ _ _ hkl]
         exact hR.input_eq
     · intro k
       by_cases hkl : k = j
       · subst hkl
-        rw [InstanceState.multicast_process, InstanceState.setProcess_process_self]
+        rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_self]
         exact hR.ret_eq k
-      · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hkl]
+      · rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_ne _ _ _ hkl]
         exact hR.ret_eq k
     · simpa using hR.F_eq
     · intro m' hm'
-      rw [echoCertificate_multicast, echoCertificate_setProcess]
-      exact hR.val_certificate m' hm'
+      rw [echoWitness_multicast, echoWitness_setProcessVariables]
+      exact hR.val_witness m' hm'
   | byzantine j m hj =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     refine ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
       hInv', ?_, ?_, ?_, ?_⟩
-    · rw [InstanceState.multicast_process]
+    · rw [InstanceState.multicast_processVariables]
       exact hR.input_eq
     · intro k
-      rw [InstanceState.multicast_process]
+      rw [InstanceState.multicast_processVariables]
       exact hR.ret_eq k
     · simpa using hR.F_eq
     · intro m' hm'
-      rw [echoCertificate_multicast]
-      exact hR.val_certificate m' hm'
+      rw [echoWitness_multicast]
+      exact hR.val_witness m' hm'
   | ret id m hcnt hr =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
-    have hcert : EchoCertificate P q₁ m := echoCertificate_of_vote_quorum hR.invariant hcnt
+    have hcert : EchoWitness P q₁ m := echoWitness_of_vote_quorum hR.invariant hcnt
     have hretQ : q₂.ret id = false := by
       rw [hR.ret_eq id]; exact hr
     have hRel : ∀ t' : SpecState P.n M, t'.val = some m →
         t'.input = q₂.input → t'.F = q₂.F →
         t'.ret = q₂.ret →
-        SpecificationRelation P ldr (q₁.setProcess id { q₁.process id with returned := true })
+        SpecificationRelation P ldr (q₁.setProcessVariables id { q₁.processVariables id with
+          returned := true })
           { t' with ret := Function.update t'.ret id true } := by
       intro t' hval hinput hF hret
       refine ⟨hInv', ?_, ?_, ?_, ?_⟩
       · rw [hinput]
         by_cases hkl : ldr = id
-        · rw [hkl, InstanceState.setProcess_process_self]
+        · rw [hkl, InstanceState.setProcessVariables_processVariables_self]
           rw [hR.input_eq, hkl]
-        · rw [InstanceState.setProcess_process_ne _ _ _ hkl]
+        · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hkl]
           exact hR.input_eq
       · intro k
         by_cases hkl : k = id
         · subst hkl
-          rw [InstanceState.setProcess_process_self]
+          rw [InstanceState.setProcessVariables_processVariables_self]
           change Function.update t'.ret k true k = true
           rw [Function.update_self]
-        · rw [InstanceState.setProcess_process_ne _ _ _ hkl]
+        · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hkl]
           change Function.update t'.ret id true k = _
           rw [Function.update_of_ne hkl, hret]
           exact hR.ret_eq k
-      · rw [InstanceState.setProcess_F]
+      · rw [InstanceState.setProcessVariables_F]
         rw [hF]
         exact hR.F_eq
       · intro m' hm'
-        rw [echoCertificate_setProcess]
+        rw [echoWitness_setProcessVariables]
         obtain rfl : m = m' := by
           have := hval
           rw [show ({ t' with ret := Function.update t'.ret id true } :
@@ -220,7 +235,7 @@ theorem specificationRelation_transition (P : Parameters) (ldr : Fin P.n) (q₁ 
     cases hval : q₂.val with
     | some m' =>
       obtain rfl : m = m' :=
-        echoCertificate_unique hR.invariant hcert (hR.val_certificate m' hval)
+        echoWitness_unique hR.invariant hcert (hR.val_witness m' hval)
       refine ⟨{ q₂ with ret := Function.update q₂.ret id true },
         Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
           (Step.ret q₂ id m hval hretQ)⟩, ?_⟩
@@ -233,7 +248,7 @@ theorem specificationRelation_transition (P : Parameters) (ldr : Fin P.n) (q₁ 
         · exact Or.inl (by rw [hR.F_eq]; exact hldr)
         · exact Or.inr (by
             rw [hR.input_eq]
-            exact input_of_echoCertificate hR.invariant hldr hcert)
+            exact input_of_echoWitness hR.invariant hldr hcert)
       have hret : (specInst P ldr M).LStep { q₂ with val := some m }
           (.ret id m)
           { q₂ with val := some m, ret := Function.update q₂.ret id true } :=
@@ -293,87 +308,99 @@ theorem specificationRelation_tau {P : Parameters} {ldr : Fin P.n} {s s' : Brach
     have hs' := PMF.pure_injective hμ
     subst hs'
     refine ⟨hInv', ?_, ?_, ?_, ?_⟩
-    · rw [InstanceState.receiveMessage_process]
+    · rw [InstanceState.receiveMessage_processVariables]
       exact hR.input_eq
     · intro k
-      rw [InstanceState.receiveMessage_process]
+      rw [InstanceState.receiveMessage_processVariables]
       exact hR.ret_eq k
     · simpa using hR.F_eq
     · intro m' hm'
-      exact (hR.val_certificate m' hm').receiveMessage i j m
+      exact (hR.val_witness m' hm').receiveMessage i j m
   | echo j m hrecv hsend =>
     have hs' := PMF.pure_injective hμ
     subst hs'
     refine ⟨hInv', ?_, ?_, ?_, ?_⟩
     · by_cases hkl : ldr = j
-      · rw [InstanceState.multicast_process, hkl, InstanceState.setProcess_process_self]
+      · rw [InstanceState.multicast_processVariables, hkl,
+          InstanceState.setProcessVariables_processVariables_self]
         rw [hR.input_eq, hkl]
-      · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hkl]
+      · rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_ne _ _ _ hkl]
         exact hR.input_eq
     · intro k
       by_cases hkl : k = j
       · subst hkl
-        rw [InstanceState.multicast_process, InstanceState.setProcess_process_self]
+        rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_self]
         exact hR.ret_eq k
-      · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hkl]
+      · rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_ne _ _ _ hkl]
         exact hR.ret_eq k
     · simpa using hR.F_eq
     · intro m' hm'
-      rw [echoCertificate_multicast, echoCertificate_setProcess]
-      exact hR.val_certificate m' hm'
+      rw [echoWitness_multicast, echoWitness_setProcessVariables]
+      exact hR.val_witness m' hm'
   | voteQuorum j m hcnt hsend =>
     have hs' := PMF.pure_injective hμ
     subst hs'
     refine ⟨hInv', ?_, ?_, ?_, ?_⟩
     · by_cases hkl : ldr = j
-      · rw [InstanceState.multicast_process, hkl, InstanceState.setProcess_process_self]
+      · rw [InstanceState.multicast_processVariables, hkl,
+          InstanceState.setProcessVariables_processVariables_self]
         rw [hR.input_eq, hkl]
-      · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hkl]
+      · rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_ne _ _ _ hkl]
         exact hR.input_eq
     · intro k
       by_cases hkl : k = j
       · subst hkl
-        rw [InstanceState.multicast_process, InstanceState.setProcess_process_self]
+        rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_self]
         exact hR.ret_eq k
-      · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hkl]
+      · rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_ne _ _ _ hkl]
         exact hR.ret_eq k
     · simpa using hR.F_eq
     · intro m' hm'
-      rw [echoCertificate_multicast, echoCertificate_setProcess]
-      exact hR.val_certificate m' hm'
+      rw [echoWitness_multicast, echoWitness_setProcessVariables]
+      exact hR.val_witness m' hm'
   | voteAmplification j m hcnt hsend =>
     have hs' := PMF.pure_injective hμ
     subst hs'
     refine ⟨hInv', ?_, ?_, ?_, ?_⟩
     · by_cases hkl : ldr = j
-      · rw [InstanceState.multicast_process, hkl, InstanceState.setProcess_process_self]
+      · rw [InstanceState.multicast_processVariables, hkl,
+          InstanceState.setProcessVariables_processVariables_self]
         rw [hR.input_eq, hkl]
-      · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hkl]
+      · rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_ne _ _ _ hkl]
         exact hR.input_eq
     · intro k
       by_cases hkl : k = j
       · subst hkl
-        rw [InstanceState.multicast_process, InstanceState.setProcess_process_self]
+        rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_self]
         exact hR.ret_eq k
-      · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hkl]
+      · rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_ne _ _ _ hkl]
         exact hR.ret_eq k
     · simpa using hR.F_eq
     · intro m' hm'
-      rw [echoCertificate_multicast, echoCertificate_setProcess]
-      exact hR.val_certificate m' hm'
+      rw [echoWitness_multicast, echoWitness_setProcessVariables]
+      exact hR.val_witness m' hm'
   | byzantine j m hj =>
     have hs' := PMF.pure_injective hμ
     subst hs'
     refine ⟨hInv', ?_, ?_, ?_, ?_⟩
-    · rw [InstanceState.multicast_process]
+    · rw [InstanceState.multicast_processVariables]
       exact hR.input_eq
     · intro k
-      rw [InstanceState.multicast_process]
+      rw [InstanceState.multicast_processVariables]
       exact hR.ret_eq k
     · simpa using hR.F_eq
     · intro m' hm'
-      rw [echoCertificate_multicast]
-      exact hR.val_certificate m' hm'
+      rw [echoWitness_multicast]
+      exact hR.val_witness m' hm'
 
 /-- An internal transition leaves the corrupted set alone. -/
 theorem brachaAlgorithm_tau_F {P : Parameters} {ldr : Fin P.n} {s s' : BrachaState P.n M}
@@ -404,25 +431,29 @@ theorem brachaAlgorithm_tau_F {P : Parameters} {ldr : Fin P.n} {s s' : BrachaSta
 /-- The relation across the leader's call, the specification calling too. -/
 theorem specificationRelation_call {P : Parameters} {ldr : Fin P.n} {s : BrachaState P.n M}
     {t : SpecState P.n M} (hR : SpecificationRelation P ldr s t) {m : M}
-    (h : (s.process ldr).input = none) :
+    (h : (s.processVariables ldr).input = none) :
     SpecificationRelation P ldr
-      ((s.setProcess ldr { s.process ldr with input := some m }).multicast ldr (.init m))
+      ((s.setProcessVariables ldr { s.processVariables ldr with input := some m }).multicast ldr
+        (.init m))
       { t with input := some m } := by
   refine ⟨hR.invariant.step (BrachaAlgorithm.call s m h) (by rw [PMF.mem_support_pure_iff]),
     ?_, ?_, ?_, ?_⟩
   · dsimp only
-    rw [InstanceState.multicast_process, InstanceState.setProcess_process_self]
+    rw [InstanceState.multicast_processVariables,
+      InstanceState.setProcessVariables_processVariables_self]
   · intro k
     by_cases hkl : k = ldr
     · subst hkl
-      rw [InstanceState.multicast_process, InstanceState.setProcess_process_self]
+      rw [InstanceState.multicast_processVariables,
+        InstanceState.setProcessVariables_processVariables_self]
       exact hR.ret_eq k
-    · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hkl]
+    · rw [InstanceState.multicast_processVariables,
+        InstanceState.setProcessVariables_processVariables_ne _ _ _ hkl]
       exact hR.ret_eq k
   · simpa using hR.F_eq
   · intro m' hm'
-    rw [echoCertificate_multicast, echoCertificate_setProcess]
-    exact hR.val_certificate m' hm'
+    rw [echoWitness_multicast, echoWitness_setProcessVariables]
+    exact hR.val_witness m' hm'
 
 /-- **The on-demand commit.** A `VOTE` receipt quorum licenses the
 specification's committed value: either it is already this value, or the
@@ -433,7 +464,7 @@ theorem commitReach {P : Parameters} {ldr : Fin P.n} {s : BrachaState P.n M}
     (t.val = some m ∧ SpecificationRelation P ldr s t) ∨
     (t.val = none ∧ (ldr ∈ t.F ∨ t.input = some m) ∧
       SpecificationRelation P ldr s { t with val := some m }) := by
-  have hcert : EchoCertificate P s m := echoCertificate_of_vote_quorum hR.invariant hcnt
+  have hcert : EchoWitness P s m := echoWitness_of_vote_quorum hR.invariant hcnt
   rcases hval : t.val with _ | m'
   · right
     have hcommit : ldr ∈ t.F ∨ t.input = some m := by
@@ -441,7 +472,7 @@ theorem commitReach {P : Parameters} {ldr : Fin P.n} {s : BrachaState P.n M}
       · exact Or.inl (by rw [hR.F_eq]; exact hldr)
       · exact Or.inr (by
           rw [hR.input_eq]
-          exact input_of_echoCertificate hR.invariant hldr hcert)
+          exact input_of_echoWitness hR.invariant hldr hcert)
     refine ⟨rfl, hcommit, hR.invariant, ?_, hR.ret_eq, hR.F_eq, ?_⟩
     · dsimp only
       exact hR.input_eq
@@ -452,7 +483,7 @@ theorem commitReach {P : Parameters} {ldr : Fin P.n} {s : BrachaState P.n M}
       exact hcert
   · left
     obtain rfl : m' = m :=
-      echoCertificate_unique hR.invariant (hR.val_certificate m' hval) hcert
+      echoWitness_unique hR.invariant (hR.val_witness m' hval) hcert
     exact ⟨rfl, hR⟩
 
 /-- info: 'PLTS.ABA.BRB.brachaRefinesSpecification' depends on axioms: [propext, Classical.choice, Quot.sound] -/

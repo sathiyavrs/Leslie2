@@ -79,13 +79,14 @@ theorem AbstractState.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecS
       id b)) ∨ (∃ id b, id ∈ c.F ∧ μc = PMF.pure (c.sendDecided id b)))
     {c' : ABAState P} (hc' : c' ∈ μc.support) : AbstractState P g c' w a := by
   have hAF := (Invariant.step_roundLoopTau hI hstep hc').2
-  have hCFrame : c'.F = c.F ∧ c'.processes = c.processes := by
+  have hCUnchanged : c'.F = c.F ∧ c'.processes = c.processes := by
     rcases hstep with ⟨i, j, b, hs, hr, rfl⟩ | ⟨id, b, hcnt, hs, rfl⟩ | ⟨id, b, hF, rfl⟩ <;>
       rw [PMF.mem_support_pure_iff] at hc' <;> subst hc'
     · exact ⟨ABAState.deliverDecided_F _ _ _ _, ABAState.deliverDecided_processes _ _ _ _⟩
     · exact ⟨ABAState.sendDecided_F _ _ _, ABAState.sendDecided_processes _ _ _⟩
     · exact ⟨ABAState.sendDecided_F _ _ _, ABAState.sendDecided_processes _ _ _⟩
-  exact hA.unchangedBy hCFrame.1 (fun id => by rw [hCFrame.2]) (fun id => by rw [hCFrame.2]) hAF
+  exact hA.unchangedBy hCUnchanged.1 (fun id => by rw [hCUnchanged.2]) (fun id => by rw
+    [hCUnchanged.2]) hAF
 
 /-- `callG`: stutters; `AbstractState` reads none of the touched fields, certificates ride the
 transition's `AbstractStateUnchanged`. -/
@@ -97,22 +98,23 @@ theorem AbstractState.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.
     (hstepC :
       ((c.processes id).phase = .toCallG ∧ (c.processes id).round = r ∧
           (c.processes id).estimate = some b ∧
-          μc = PMF.pure (c.setProcess id { c.processes id with phase := .awaitG })) ∨
+          μc = PMF.pure (c.setProcessVariables id { c.processes id with phase := .awaitG })) ∨
         (id ∈ c.F ∧ μc = PMF.pure c))
     {gr' : GBCA.SpecState P.n} (hgr' : gr' ∈ μr.support)
     {c' : ABAState P} (hc' : c' ∈ μc.support) :
     AbstractState P (Function.update g r gr') c' w a := by
   have hAF := (Invariant.step_callG hI r id b hstepG hstepC hgr' hc').2
-  have hCFrame : c'.F = c.F ∧ ∀ id', (c'.processes id').input = (c.processes id').input ∧
+  have hCUnchanged : c'.F = c.F ∧ ∀ id', (c'.processes id').input = (c.processes id').input ∧
       (c'.processes id').returned = (c.processes id').returned := by
     rcases hstepC with ⟨hph, hr, hest, rfl⟩ | ⟨hF, rfl⟩ <;>
       rw [PMF.mem_support_pure_iff] at hc' <;> subst hc'
-    · refine ⟨ABAState.setProcess_F _ _ _, fun id' => ?_⟩
+    · refine ⟨ABAState.setProcessVariables_F _ _ _, fun id' => ?_⟩
       by_cases h : id' = id
-      · subst h; rw [ABAState.setProcess_processes_self]; exact ⟨rfl, rfl⟩
-      · rw [ABAState.setProcess_processes_ne _ _ _ h]; exact ⟨rfl, rfl⟩
+      · subst h; rw [ABAState.setProcessVariables_processes_self]; exact ⟨rfl, rfl⟩
+      · rw [ABAState.setProcessVariables_processes_ne _ _ _ h]; exact ⟨rfl, rfl⟩
     · exact ⟨rfl, fun id' => ⟨rfl, rfl⟩⟩
-  exact hA.unchangedBy hCFrame.1 (fun id' => (hCFrame.2 id').1) (fun id' => (hCFrame.2 id').2) hAF
+  exact hA.unchangedBy hCUnchanged.1 (fun id' => (hCUnchanged.2 id').1) (fun id' => (hCUnchanged.2
+    id').2) hAF
 
 /-- `retG`: stutters; certificates and the holder universal ride the transition's
 `AbstractStateUnchanged`. -/
@@ -124,23 +126,24 @@ theorem AbstractState.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n
     {μc : PMF (ABAState P)}
     (hstepC :
       ((c.processes id).phase = .awaitG ∧ (c.processes id).round = r ∧
-          μc = PMF.pure (c.setProcess id { c.processes id with
+          μc = PMF.pure (c.setProcessVariables id { c.processes id with
             estimate := out.estimate, lastGrade := some out, phase := .toCallW })) ∨
         (id ∈ c.F ∧ μc = PMF.pure c))
     {gr' : GBCA.SpecState P.n} (hgr' : gr' ∈ μr.support)
     {c' : ABAState P} (hc' : c' ∈ μc.support) :
     AbstractState P (Function.update g r gr') c' w a := by
   have hAF := (Invariant.step_retG hI r id out bnd hstepG hstepC hgr' hc').2
-  have hCFrame : c'.F = c.F ∧ ∀ id', (c'.processes id').input = (c.processes id').input ∧
+  have hCUnchanged : c'.F = c.F ∧ ∀ id', (c'.processes id').input = (c.processes id').input ∧
       (c'.processes id').returned = (c.processes id').returned := by
     rcases hstepC with ⟨hph, hr, rfl⟩ | ⟨hF, rfl⟩ <;>
       rw [PMF.mem_support_pure_iff] at hc' <;> subst hc'
-    · refine ⟨ABAState.setProcess_F _ _ _, fun id' => ?_⟩
+    · refine ⟨ABAState.setProcessVariables_F _ _ _, fun id' => ?_⟩
       by_cases h : id' = id
-      · subst h; rw [ABAState.setProcess_processes_self]; exact ⟨rfl, rfl⟩
-      · rw [ABAState.setProcess_processes_ne _ _ _ h]; exact ⟨rfl, rfl⟩
+      · subst h; rw [ABAState.setProcessVariables_processes_self]; exact ⟨rfl, rfl⟩
+      · rw [ABAState.setProcessVariables_processes_ne _ _ _ h]; exact ⟨rfl, rfl⟩
     · exact ⟨rfl, fun id' => ⟨rfl, rfl⟩⟩
-  exact hA.unchangedBy hCFrame.1 (fun id' => (hCFrame.2 id').1) (fun id' => (hCFrame.2 id').2) hAF
+  exact hA.unchangedBy hCUnchanged.1 (fun id' => (hCUnchanged.2 id').1) (fun id' => (hCUnchanged.2
+    id').2) hAF
 
 /-- `callW`: stutters. -/
 theorem AbstractState.step_callW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
@@ -150,22 +153,23 @@ theorem AbstractState.step_callW {P : Parameters} {g : ℕ → GBCA.SpecState P.
     {μc : PMF (ABAState P)}
     (hstepC :
       ((c.processes id).phase = .toCallW ∧ (c.processes id).round = r ∧
-          μc = PMF.pure (c.setProcess id { c.processes id with phase := .awaitW })) ∨
+          μc = PMF.pure (c.setProcessVariables id { c.processes id with phase := .awaitW })) ∨
         (id ∈ c.F ∧ μc = PMF.pure c))
     {wr' : WCC.SpecState P.n} (hwr' : wr' ∈ μw'.support)
     {c' : ABAState P} (hc' : c' ∈ μc.support) :
     AbstractState P g c' (Function.update w r wr') a := by
   have hAF := (Invariant.step_callW hI r id hstepW hstepC hwr' hc').2
-  have hCFrame : c'.F = c.F ∧ ∀ id', (c'.processes id').input = (c.processes id').input ∧
+  have hCUnchanged : c'.F = c.F ∧ ∀ id', (c'.processes id').input = (c.processes id').input ∧
       (c'.processes id').returned = (c.processes id').returned := by
     rcases hstepC with ⟨hph, hr, rfl⟩ | ⟨hF, rfl⟩ <;>
       rw [PMF.mem_support_pure_iff] at hc' <;> subst hc'
-    · refine ⟨ABAState.setProcess_F _ _ _, fun id' => ?_⟩
+    · refine ⟨ABAState.setProcessVariables_F _ _ _, fun id' => ?_⟩
       by_cases h : id' = id
-      · subst h; rw [ABAState.setProcess_processes_self]; exact ⟨rfl, rfl⟩
-      · rw [ABAState.setProcess_processes_ne _ _ _ h]; exact ⟨rfl, rfl⟩
+      · subst h; rw [ABAState.setProcessVariables_processes_self]; exact ⟨rfl, rfl⟩
+      · rw [ABAState.setProcessVariables_processes_ne _ _ _ h]; exact ⟨rfl, rfl⟩
     · exact ⟨rfl, fun id' => ⟨rfl, rfl⟩⟩
-  exact hA.unchangedBy hCFrame.1 (fun id' => (hCFrame.2 id').1) (fun id' => (hCFrame.2 id').2) hAF
+  exact hA.unchangedBy hCUnchanged.1 (fun id' => (hCUnchanged.2 id').1) (fun id' => (hCUnchanged.2
+    id').2) hAF
 
 /-- `retW`: stutters. -/
 theorem AbstractState.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
@@ -181,7 +185,7 @@ theorem AbstractState.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n
     {c' : ABAState P} (hc' : c' ∈ μc.support) :
     AbstractState P g c' (Function.update w r wr') a := by
   have hAF := (Invariant.step_retW hI r id b hstepW hstepC hwr' hc').2
-  have hCFrame : c'.F = c.F ∧ ∀ id', (c'.processes id').input = (c.processes id').input ∧
+  have hCUnchanged : c'.F = c.F ∧ ∀ id', (c'.processes id').input = (c.processes id').input ∧
       (c'.processes id').returned = (c.processes id').returned := by
     rcases hstepC with ⟨hph, hr, rfl⟩ | ⟨hF, rfl⟩ <;>
       rw [PMF.mem_support_pure_iff] at hc' <;> subst hc'
@@ -190,14 +194,15 @@ theorem AbstractState.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n
       · subst h; rw [ABAState.stepRound_processes_self _ _ _]; exact ⟨rfl, rfl⟩
       · rw [ABAState.stepRound_processes_ne _ _ _ h]; exact ⟨rfl, rfl⟩
     · exact ⟨rfl, fun id' => ⟨rfl, rfl⟩⟩
-  exact hA.unchangedBy hCFrame.1 (fun id' => (hCFrame.2 id').1) (fun id' => (hCFrame.2 id').2) hAF
+  exact hA.unchangedBy hCUnchanged.1 (fun id' => (hCUnchanged.2 id').1) (fun id' => (hCUnchanged.2
+    id').2) hAF
 /-! ### Assembly: `Invariant` is preserved by every `hybrid` step -/
 
 /-- Reading a transition where the ABA component moves alone: its own outcome, the coin oracle
 standing still. -/
 theorem mem_support_abaTransition {P : Parameters} {μc : PMF (ABAState P)} {o w' : ℕ → WCC.SpecState
   P.n}
-    {C' : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A' : ABANetworkState P.n}
+    {C' : ∀ _ : Fin P.n, RoundLoopVariables P.n} {A' : ABANetworkState P.n}
     (h : (C', A', w') ∈ (μc.map fun c => (c.1, c.2, o)).support) :
     (C', A') ∈ μc.support ∧ w' = o := by
   rw [PMF.mem_support_map_iff] at h
@@ -209,7 +214,7 @@ theorem mem_support_abaTransition {P : Parameters} {μc : PMF (ABAState P)} {o w
 /-- Reading a transition where the ABA component and the coin oracle move together. -/
 theorem mem_support_coinTransition {P : Parameters} {μc : PMF (ABAState P)}
     {μw' : PMF (WCC.SpecState P.n)} {o w' : ℕ → WCC.SpecState P.n} {r : ℕ}
-    {C' : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A' : ABANetworkState P.n}
+    {C' : ∀ _ : Fin P.n, RoundLoopVariables P.n} {A' : ABANetworkState P.n}
     (h : (C', A', w') ∈ (μc.bind fun c => prodPMF (PMF.pure c.1)
       (prodPMF (PMF.pure c.2) (μw'.map (Function.update o r)))).support) :
     (C', A') ∈ μc.support ∧ ∃ wr' ∈ μw'.support, w' = Function.update o r wr' := by
@@ -223,10 +228,11 @@ theorem mem_support_coinTransition {P : Parameters} {μc : PMF (ABAState P)}
 `hybrid_step_retABA`/`hybrid_step_fail` (Stage A1) and `hybrid_step_tau` (Stage A2), calling
 the matching `Invariant.step_*` helper (Stage B) in each case. -/
 theorem Invariant.step {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
-    {C : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A : ABANetworkState P.n} {w : ℕ → WCC.SpecState P.n}
+    {C : ∀ _ : Fin P.n, RoundLoopVariables P.n} {A : ABANetworkState P.n} {w : ℕ → WCC.SpecState
+      P.n}
     (hI : Invariant P g (C, A) w) {l : Label P.n} {μ : PMF (HybridState P)}
     (hstep : (hybrid P M).step (g, C, A, w) l μ) {g' : ℕ → GBCA.SpecState P.n}
-    {C' : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A' : ABANetworkState P.n}
+    {C' : ∀ _ : Fin P.n, RoundLoopVariables P.n} {A' : ABANetworkState P.n}
     {w' : ℕ → WCC.SpecState P.n} (hmem : (g', C', A', w') ∈ μ.support) :
     Invariant P g' (C', A') w' := by
   cases l with

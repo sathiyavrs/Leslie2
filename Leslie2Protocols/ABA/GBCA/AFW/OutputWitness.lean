@@ -21,20 +21,20 @@ entry of a correct process reads as call support on the specification
 specification's quorum guard from the first gather's core: the core's `n − f` distinct processes
 each carry a committed entry, hence a call or a corruption.
 
-`OutputCertificate P s out` is what a recorded graded outcome certifies. A `grade2 v` outcome
+`OutputWitness P s out` is what a recorded graded outcome certifies. A `grade2 v` outcome
 carries `some v` on at least `|S| − f` entries of the second gather's core and `v` on at least
 `|S| − f` of the first gather's; a `grade1 v` outcome carries `v` on at least `|S| − f` entries of
 the first gather's core and `f + 1` committed-entry support for `!v`; a grade-0 outcome carries
 each bit on at most `f` entries of the second gather's core and `f + 1` support for each bit. The
 invariant of `ABA/GBCA/AFW/Invariant.lean` states it of every grade a program holds.
 
-`ExclusionEvidence P s b` is the exclusion certificate: the first gather's core counts `b` below
+`ExclusionWitness P s b` is the exclusion certificate: the first gather's core counts `b` below
 `|S| − f`, so no later candidate is `b`. The relation of `ABA/GBCA/AFW/SpecificationRelation.lean`
 states it of every bit the specification excludes.
 
 Both certificates read the two cores and the first gather's committed-entry support. The cores are
 written once and the support only grows, so each survives every later transition
-(`OutputCertificate.mono`).
+(`OutputWitness.mono`).
 -/
 
 namespace PLTS
@@ -215,7 +215,7 @@ least `|S| − f` of the first gather's; a `grade1 v` outcome carries `v` on at
 least `|S| − f` entries of the first gather's core and `f + 1` committed-entry
 support for `!v`; a grade-0 outcome carries each bit on at most `f` entries of
 the second gather's core and `f + 1` support for each bit. -/
-def OutputCertificate (P : Parameters) (s : RoundStateOverGatherSpecifications P.n) : GBCAOutput →
+def OutputWitness (P : Parameters) (s : RoundStateOverGatherSpecifications P.n) : GBCAOutput →
   Prop
   | .grade2 v =>
       (∃ S, (secondGather s).core = some S ∧ S.card - P.f ≤ AcceptedPairs.count S (some v)) ∧
@@ -230,11 +230,11 @@ def OutputCertificate (P : Parameters) (s : RoundStateOverGatherSpecifications P
 /-- The certificate reads the two cores and the first gather's committed-entry
 support. A state holding the same cores and at least that support carries
 it. -/
-theorem OutputCertificate.mono {s s' : RoundStateOverGatherSpecifications P.n}
+theorem OutputWitness.mono {s s' : RoundStateOverGatherSpecifications P.n}
     (h1 : (firstGather s').core = (firstGather s).core)
     (h2 : (secondGather s').core = (secondGather s).core)
     (hv : ∀ b, firstGatherSupport (firstGather s) b ≤ firstGatherSupport (firstGather s') b)
-    {out : GBCAOutput} (h : OutputCertificate P s out) : OutputCertificate P s' out := by
+    {out : GBCAOutput} (h : OutputWitness P s out) : OutputWitness P s' out := by
   cases out with
   | grade2 v =>
     obtain ⟨⟨S, hS, hh⟩, S', hS', hh'⟩ := h
@@ -248,7 +248,7 @@ theorem OutputCertificate.mono {s s' : RoundStateOverGatherSpecifications P.n}
 
 /-- The exclusion certificate: the first gather's core counts `b` below
 `|S| − f`, so no later candidate is `b`. It survives every later step: the core is written once. -/
-def ExclusionEvidence (P : Parameters) (s : RoundStateOverGatherSpecifications P.n) (b : Bool) :
+def ExclusionWitness (P : Parameters) (s : RoundStateOverGatherSpecifications P.n) (b : Bool) :
   Prop :=
   ∃ S, (firstGather s).core = some S ∧ AcceptedPairs.count S b < S.card - P.f
 

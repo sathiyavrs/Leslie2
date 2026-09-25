@@ -59,10 +59,10 @@ as well.
 Agreement rests on `SpecificationInvariant.val_stable`: `SpecStep.decide` is the sole writer
 of `val` and fires only from `val = ⊥`, so the decision value never changes
 once written. A never-corrupted returner is outside the fold at `m`, hence
-outside the pre-state's corrupted set, so `retABA_inversion`'s second disjunct is
+outside the pre-state's corrupted set, so `retABA_cases`'s second disjunct is
 impossible and both returns read that one value.
 
-Validity is a budget pigeonhole at the return. `retABA_inversion` reads the returned
+Validity is a budget pigeonhole at the return. `retABA_cases` reads the returned
 bit off the pre-state's decision value and `SpecificationInvariant.val_support` yields `f + 1`
 supporters of that bit. Every supporter is either ghost-recorded or
 ever-corrupted, and at most `f` ids are ever corrupted (`failSet` never
@@ -723,7 +723,7 @@ theorem ValidityInvariant.step {pre : List (Label P.n)} {s : SpecState P.n} {l :
 returned bit, or the returning process is corrupted in the pre-state. The two
 disjuncts are the two transitions that carry the label, `SpecStep.ret` and
 `SpecStep.retByzantine`. -/
-private theorem retABA_inversion {s : SpecState P.n} {id : Fin P.n} {b : Bool}
+private theorem retABA_cases {s : SpecState P.n} {id : Fin P.n} {b : Bool}
     {μ : PMF (SpecState P.n)} (hstep : SpecStep P s (.retABA id b) μ) :
     s.val = some b ∨ id ∈ s.F :=
   match hstep with
@@ -848,7 +848,7 @@ theorem spec_safe (P : Parameters) :
   rintro D ⟨pe, h_init, h_D⟩ t h_ne
   rw [← h_D t] at h_ne
   obtain ⟨e, h_exec, hloc⟩ := exists_retSite P h_init t h_ne
-  -- a never-corrupted returner is outside the fold at `m`, so `retABA_inversion`'s
+  -- a never-corrupted returner is outside the fold at `m`, so `retABA_cases`'s
   -- second disjunct is impossible and the transition for a correct process read `val`
   have h_correct : ∀ m id b, t.get? m = some (Label.retABA id b) →
       NeverCorrupted P t id →
@@ -861,7 +861,7 @@ theorem spec_safe (P : Parameters) :
     intro m id b h_ret h_nc
     obtain ⟨j, s, μ, pre, h_state, h_step, h_VI, h_transfer, h_push⟩ := hloc m id b h_ret
     refine ⟨j, s, pre, h_state, h_VI, ?_, h_transfer, h_push⟩
-    rcases retABA_inversion h_step with hv | hmem
+    rcases retABA_cases h_step with hv | hmem
     · exact hv
     · refine absurd ?_ (h_nc m)
       rw [← h_transfer]

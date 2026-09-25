@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.Gather.CompositionStepInversion
+import Leslie2Protocols.ABA.Gather.CompositionStepCases
 import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.Algorithm
 import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 
@@ -14,7 +14,8 @@ import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 `AlgorithmOverBracha` states the transitions of `Gather.instanceOverBracha`
 (`ABA/Gather/Composition.lean`) -- the `n` gather programs beside the gather network, in parallel
 with `2n` composed reliable-broadcast instances -- over the composition's state, through the four
-views `gatherTier`, `inputBroadcasts`, `bindBroadcasts` and `core`, one constructor per case of
+views `gatherProgramsAndNetwork`, `inputBroadcasts`, `bindBroadcasts` and `core`, one constructor
+per case of
 `instanceOverBracha_step_iff_algorithm`. It is a relation on that state; the system is the
 composition.
 
@@ -87,30 +88,32 @@ and the network records `⟨INIT, m⟩`. -/
 theorem brachaInstance_call_transition {M : Type} [DecidableEq M] {P : Parameters} {ldr : Fin P.n}
     {s s' : BRB.BrachaState P.n M} {m : M}
     (h : (BRB.brachaInstance P ldr M).step s (Sum.inl (BRB.Label.call m)) (PMF.pure s')) :
-    (s.process ldr).input = none ∧
-      s' = (s.setProcess ldr { s.process ldr with input := some m }).multicast ldr (.init m) := by
+    (s.processVariables ldr).input = none ∧
+      s' = (s.setProcessVariables ldr { s.processVariables ldr with input := some m }).multicast ldr
+        (.init m) := by
   obtain ⟨u, w⟩ := s
   rcases (BRB.brachaInstance_step_iff P ldr (u, w) (Sum.inl (BRB.Label.call m)) _).mp h with ⟨hτ,
     -⟩ | hlab
   · exact absurd hτ (by simp)
-  · obtain ⟨x, w', hμ, hall, hn⟩ := BRB.brachaInstanceExtended_joint_inversion (by simp) hlab
+  · obtain ⟨x, w', hμ, hall, hn⟩ := BRB.brachaInstanceExtended_synchronised_cases (by simp) hlab
     obtain ⟨hinp, hx⟩ := BRB.programStep_call_leader (hall ldr)
     have hfor : ∀ i, i ≠ ldr → x i = u i :=
-      fun i hi => PMF.pure_injective (BRB.programStep_call_foreign hi (hall i))
+      fun i hi => PMF.pure_injective (BRB.programStep_call_notOwn hi (hall i))
     have hw : w' = w.recordSent ldr (.init m) := PMF.pure_injective (BRB.networkStep_call hn)
     subst hw
     refine ⟨hinp, ?_⟩
     rw [PMF.pure_injective hμ,
-      BRB.brachaInstance_setProcess_recordSent (PMF.pure_injective hx) hfor]
+      BRB.brachaInstance_setProcessVariables_recordSent (PMF.pure_injective hx) hfor]
     rfl
 
 omit [DecidableEq X] in
 /-- Build the instance's broadcast at the call label. -/
 theorem transition_brachaInstance_call_step {M : Type} [DecidableEq M] (P : Parameters) (ldr : Fin
   P.n)
-    (s : BRB.BrachaState P.n M) (m : M) (h : (s.process ldr).input = none) :
+    (s : BRB.BrachaState P.n M) (m : M) (h : (s.processVariables ldr).input = none) :
     (BRB.brachaInstance P ldr M).step s (Sum.inl (BRB.Label.call m))
-      (PMF.pure ((s.setProcess ldr { s.process ldr with input := some m }).multicast ldr (.init m)))
+      (PMF.pure ((s.setProcessVariables ldr
+        { s.processVariables ldr with input := some m }).multicast ldr (.init m)))
         := by
   obtain ⟨u, w⟩ := s
   exact BRB.brachaInstance_label_step P ldr (by simp)
@@ -128,10 +131,11 @@ inductive AlgorithmOverBracha (P : Parameters) :
     StateOverBracha P.n X → Label P.n X → PMF (StateOverBracha P.n X) → Prop
   /-- The call arrives: the gather record records the payload. -/
   | call (s : StateOverBracha P.n X) (id : Fin P.n) (x : X)
-      (h : ((gatherTier s).process id).input = none) :
+      (h : ((gatherProgramsAndNetwork s).processVariables id).input = none) :
       AlgorithmOverBracha P s (.call id x)
-        (PMF.pure (setGatherTier s ((gatherTier s).setProcess id
-          { (gatherTier s).process id with input := some x })))
+        (PMF.pure (setGatherProgramsAndNetwork s ((gatherProgramsAndNetwork s).setProcessVariables
+          id
+          { (gatherProgramsAndNetwork s).processVariables id with input := some x })))
   /-- Input-enabledness loop for `call`: nothing moves. -/
   | callLoop (s : StateOverBracha P.n X) (id : Fin P.n) (x : X) :
       AlgorithmOverBracha P s (.call id x) (PMF.pure s)
@@ -148,47 +152,56 @@ inductive AlgorithmOverBracha (P : Parameters) :
         (PMF.pure (setBindBroadcasts s (Function.update (bindBroadcasts s) q d)))
   /-- Asynchronous delivery on the gather network. -/
   | deliver (s : StateOverBracha P.n X) (i j : Fin P.n) (m : Message P.n X)
-      (h : m ∈ (gatherTier s).sent j) :
+      (h : m ∈ (gatherProgramsAndNetwork s).sent j) :
       AlgorithmOverBracha P s .tau
-        (PMF.pure (setGatherTier s ((gatherTier s).receiveMessage i j m)))
+        (PMF.pure (setGatherProgramsAndNetwork s ((gatherProgramsAndNetwork s).receiveMessage i j
+          m)))
   /-- `ECHO`: the process is called and its accepted pairs number at least
   `n − f`, the source blueprint's `|AP| ≥ n − f`. The payload is those pairs,
   `T_i ← AP_i` of AFW25's Algorithm 5, line 9. -/
   | echo (s : StateOverBracha P.n X) (j : Fin P.n)
-      (hin : ((gatherTier s).process j).input ≠ none)
-      (hcard : P.n - P.f ≤ ((gatherTier s).process j).accepted.card)
-      (hsend : ((gatherTier s).process j).sentEcho = none) :
+      (hin : ((gatherProgramsAndNetwork s).processVariables j).input ≠ none)
+      (hcard : P.n - P.f ≤ ((gatherProgramsAndNetwork s).processVariables j).accepted.card)
+      (hsend : ((gatherProgramsAndNetwork s).processVariables j).sentEcho = none) :
       AlgorithmOverBracha P s .tau
-        (PMF.pure (setGatherTier s (((gatherTier s).setProcess j
-          { (gatherTier s).process j with sentEcho := some ((gatherTier s).process j).accepted
+        (PMF.pure (setGatherProgramsAndNetwork s (((gatherProgramsAndNetwork s).setProcessVariables
+          j
+          { (gatherProgramsAndNetwork s).processVariables j with
+            sentEcho := some ((gatherProgramsAndNetwork s).processVariables
+            j).accepted
             }).multicast j
-            (.echo ((gatherTier s).process j).accepted))))
+            (.echo ((gatherProgramsAndNetwork s).processVariables j).accepted))))
   /-- `VOTE`: `n − f` senders' approved `ECHO` payloads, each contained in the
   vote payload, are delivered here, and the process has multicast its own
   `ECHO`. The main thread of AFW25's Algorithm 5 sends `ECHO` before `VOTE`. -/
   | vote (s : StateOverBracha P.n X) (j : Fin P.n) (U : AcceptedPairs P.n X)
-      (hin : ((gatherTier s).process j).input ≠ none)
-      (hech : ((gatherTier s).process j).sentEcho ≠ none)
-      (happ : approvedBy ((gatherTier s).process j) U)
+      (hin : ((gatherProgramsAndNetwork s).processVariables j).input ≠ none)
+      (hech : ((gatherProgramsAndNetwork s).processVariables j).sentEcho ≠ none)
+      (happ : approvedBy ((gatherProgramsAndNetwork s).processVariables j) U)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ A,
-          Message.echo A ∈ (gatherTier s).received j q ∧ approvedBy ((gatherTier s).process j) A ∧ A
+          Message.echo A ∈ (gatherProgramsAndNetwork s).received j q ∧ approvedBy
+            ((gatherProgramsAndNetwork s).processVariables
+            j) A ∧ A
             ⊆ U)
-      (hsend : ((gatherTier s).process j).sentVote = none) :
+      (hsend : ((gatherProgramsAndNetwork s).processVariables j).sentVote = none) :
       AlgorithmOverBracha P s .tau
-        (PMF.pure (setGatherTier s (((gatherTier s).setProcess j
-          { (gatherTier s).process j with sentVote := some U }).multicast j (.vote U))))
+        (PMF.pure (setGatherProgramsAndNetwork s (((gatherProgramsAndNetwork s).setProcessVariables
+          j
+          { (gatherProgramsAndNetwork s).processVariables j with sentVote := some U }).multicast j
+            (.vote U))))
   /-- The process calls the instance broadcasting its input, and that instance broadcasts the
   payload its gather record holds. AFW25's Algorithm 5, line 6, and LeslieBP's Algorithm 4,
   `BRB_id.call(m)`. -/
   | inputBroadcastCall (s : StateOverBracha P.n X) (j : Fin P.n) (x : X)
-      (hin : ((gatherTier s).process j).input = some x)
-      (hb : ((inputBroadcasts s j).process j).input = none) :
+      (hin : ((gatherProgramsAndNetwork s).processVariables j).input = some x)
+      (hb : ((inputBroadcasts s j).processVariables j).input = none) :
       AlgorithmOverBracha P s .tau
         (PMF.pure (setInputBroadcasts s
           (Function.update (inputBroadcasts s) j
-            (((inputBroadcasts s j).setProcess j
-              { (inputBroadcasts s j).process j with input := some x }).multicast j (.init x)))))
+            (((inputBroadcasts s j).setProcessVariables j
+              { (inputBroadcasts s j).processVariables j with input := some x }).multicast j (.init
+                x)))))
   /-- `BIND`: `n − f` senders' approved `VOTE` payloads, each contained in the
   bind payload, are delivered here, and the bind instance broadcasts the payload.
   The process has multicast its own `VOTE` and has not called its own bind
@@ -196,33 +209,41 @@ inductive AlgorithmOverBracha (P : Parameters) :
   and sends `BIND` once, at line 17. The payload handed to the broadcast is
   written to the gather record. -/
   | bindCall (s : StateOverBracha P.n X) (j : Fin P.n) (U : AcceptedPairs P.n X)
-      (hin : ((gatherTier s).process j).input ≠ none)
-      (hvot : ((gatherTier s).process j).sentVote ≠ none)
-      (hsnd : ((gatherTier s).process j).sentBind = none)
-      (happ : approvedBy ((gatherTier s).process j) U)
+      (hin : ((gatherProgramsAndNetwork s).processVariables j).input ≠ none)
+      (hvot : ((gatherProgramsAndNetwork s).processVariables j).sentVote ≠ none)
+      (hsnd : ((gatherProgramsAndNetwork s).processVariables j).sentBind = none)
+      (happ : approvedBy ((gatherProgramsAndNetwork s).processVariables j) U)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ W,
-          Message.vote W ∈ (gatherTier s).received j q ∧ approvedBy ((gatherTier s).process j) W ∧ W
+          Message.vote W ∈ (gatherProgramsAndNetwork s).received j q ∧ approvedBy
+            ((gatherProgramsAndNetwork s).processVariables
+            j) W ∧ W
             ⊆ U)
-      (hbc : ((bindBroadcasts s j).process j).input = none) :
+      (hbc : ((bindBroadcasts s j).processVariables j).input = none) :
       AlgorithmOverBracha P s .tau
-        (PMF.pure (setBindBroadcasts (setGatherTier s ((gatherTier s).setProcess j
-            { (gatherTier s).process j with sentBind := some U }))
+        (PMF.pure (setBindBroadcasts (setGatherProgramsAndNetwork s ((gatherProgramsAndNetwork
+          s).setProcessVariables j
+            { (gatherProgramsAndNetwork s).processVariables j with sentBind := some U }))
           (Function.update (bindBroadcasts s) j
-            (((bindBroadcasts s j).setProcess j
-              { (bindBroadcasts s j).process j with input := some U }).multicast j (.init U)))))
+            (((bindBroadcasts s j).setProcessVariables j
+              { (bindBroadcasts s j).processVariables j with input := some U }).multicast j (.init
+                U)))))
   /-- Byzantine injection on the gather network. -/
-  | byzantine (s : StateOverBracha P.n X) (j : Fin P.n) (m : Message P.n X) (h : j ∈ (gatherTier
+  | byzantine (s : StateOverBracha P.n X) (j : Fin P.n) (m : Message P.n X) (h : j ∈
+      (gatherProgramsAndNetwork
     s).F) :
-      AlgorithmOverBracha P s .tau (PMF.pure (setGatherTier s ((gatherTier s).multicast j m)))
+      AlgorithmOverBracha P s .tau (PMF.pure (setGatherProgramsAndNetwork s
+        ((gatherProgramsAndNetwork s).multicast j m)))
   /-- An input instance returns to `j`, which files the value it returned. -/
   | inputBroadcastRet (s : StateOverBracha P.n X) (k j : Fin P.n) (v : X) (c : BRB.BrachaState P.n
     X)
       (hb : BRB.BrachaAlgorithm P k (inputBroadcasts s k) (.ret j v) (PMF.pure c)) :
       AlgorithmOverBracha P s .tau
-        (PMF.pure (setInputBroadcasts (setGatherTier s ((gatherTier s).setProcess j
-            { (gatherTier s).process j with
-              inputBroadcastReturned := Function.update ((gatherTier s).process
+        (PMF.pure (setInputBroadcasts (setGatherProgramsAndNetwork s ((gatherProgramsAndNetwork
+          s).setProcessVariables j
+            { (gatherProgramsAndNetwork s).processVariables j with
+              inputBroadcastReturned := Function.update ((gatherProgramsAndNetwork
+                s).processVariables
                 j).inputBroadcastReturned k (some v) }))
           (Function.update (inputBroadcasts s) k c)))
   /-- A bind instance returns to `j`, which files the payload it returned. -/
@@ -230,9 +251,11 @@ inductive AlgorithmOverBracha (P : Parameters) :
       (d : BRB.BrachaState P.n (AcceptedPairs P.n X))
       (hb : BRB.BrachaAlgorithm P q (bindBroadcasts s q) (.ret j U) (PMF.pure d)) :
       AlgorithmOverBracha P s .tau
-        (PMF.pure (setBindBroadcasts (setGatherTier s ((gatherTier s).setProcess j
-            { (gatherTier s).process j with
-              bindBroadcastReturned := Function.update ((gatherTier s).process
+        (PMF.pure (setBindBroadcasts (setGatherProgramsAndNetwork s ((gatherProgramsAndNetwork
+          s).setProcessVariables j
+            { (gatherProgramsAndNetwork s).processVariables j with
+              bindBroadcastReturned := Function.update ((gatherProgramsAndNetwork
+                s).processVariables
                 j).bindBroadcastReturned q (some U) }))
           (Function.update (bindBroadcasts s) q d)))
   /-- Return: the output's entries are held here, `n − f` bind payloads held
@@ -241,17 +264,23 @@ inductive AlgorithmOverBracha (P : Parameters) :
   18. The label carries the instance's core, which this transition writes if it
   is unwritten. -/
   | ret (s : StateOverBracha P.n X) (id : Fin P.n) (g : Fin P.n → Option X)
-      (hin : ((gatherTier s).process id).input ≠ none)
-      (hbind : ((gatherTier s).process id).sentBind ≠ none)
-      (hsub : ∀ k x, g k = some x → holdsInputBroadcastReturn ((gatherTier s).process id) k x)
+      (hin : ((gatherProgramsAndNetwork s).processVariables id).input ≠ none)
+      (hbind : ((gatherProgramsAndNetwork s).processVariables id).sentBind ≠ none)
+      (hsub : ∀ k x, g k = some x → holdsInputBroadcastReturn ((gatherProgramsAndNetwork
+        s).processVariables id) k
+        x)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ U,
-          holdsBindBroadcastReturn ((gatherTier s).process id) q U ∧ AcceptedPairs.subMap U g)
-      (hr : ((gatherTier s).process id).returned = false) :
-      AlgorithmOverBracha P s (.ret id g ((core s).getD (coreOfNetwork P (gatherTier s).2)))
-        (PMF.pure (setCore (setGatherTier s ((gatherTier s).setProcess id
-          { (gatherTier s).process id with returned := true }))
-          (some ((core s).getD (coreOfNetwork P (gatherTier s).2)))))
+          holdsBindBroadcastReturn ((gatherProgramsAndNetwork s).processVariables id) q U ∧
+            AcceptedPairs.subMap U
+            g)
+      (hr : ((gatherProgramsAndNetwork s).processVariables id).returned = false) :
+      AlgorithmOverBracha P s (.ret id g ((core s).getD (coreOfNetwork P (gatherProgramsAndNetwork
+        s).2)))
+        (PMF.pure (setCore (setGatherProgramsAndNetwork s ((gatherProgramsAndNetwork
+          s).setProcessVariables id
+          { (gatherProgramsAndNetwork s).processVariables id with returned := true }))
+          (some ((core s).getD (coreOfNetwork P (gatherProgramsAndNetwork s).2)))))
   /-- Corruption (deviation D1), together across the gather network state and every broadcast
   coordinate. -/
   | fail (s : StateOverBracha P.n X) (id : Fin P.n) :
@@ -274,12 +303,12 @@ theorem instanceOverBracha_step_algorithm (P : Parameters) :
       (fun q => BRB.brachaInstance P q (AcceptedPairs P.n X)) _ l μ).mp hstep with ⟨rfl, e,
         hev⟩ | hlab
   · obtain ⟨x, w', a', b', rfl, hproc, hnet, hin, hbind⟩ :=
-      instanceOverBroadcastsExtended_joint_inversion hIn hBind (by simp) hev
+      instanceOverBroadcastsExtended_synchronised_cases hIn hBind (by simp) hev
     refine ⟨Label.tau, rfl, ?_⟩
     cases e with
     | send j m =>
       have hfor : ∀ i, i ≠ j → x i = u i :=
-        fun i hi => PMF.pure_injective (programStep_send_foreign (Ne.symm hi) (hproc i))
+        fun i hi => PMF.pure_injective (programStep_send_notOwn (Ne.symm hi) (hproc i))
       have hw : w' = { w with network := w.network.recordSent j m } := PMF.pure_injective
         (networkStep_send hnet)
       have ha : a' = a := funext fun k => System.mapIdle_eq_of_step_none rfl (hin k)
@@ -288,11 +317,11 @@ theorem instanceOverBracha_step_algorithm (P : Parameters) :
       cases m with
       | echo A =>
         obtain ⟨rfl, hinp, hcard, hsend, hx⟩ := programStep_send_echo_own (hproc j)
-        rw [stateOverBroadcasts_setProcess_recordSent (PMF.pure_injective hx) hfor]
+        rw [stateOverBroadcasts_setProcessVariables_recordSent (PMF.pure_injective hx) hfor]
         exact AlgorithmOverBracha.echo _ j hinp hcard hsend
       | vote U =>
         obtain ⟨hinp, hech, happ, hQ, hsend, hx⟩ := programStep_send_vote_own (hproc j)
-        rw [stateOverBroadcasts_setProcess_recordSent (PMF.pure_injective hx) hfor]
+        rw [stateOverBroadcasts_setProcessVariables_recordSent (PMF.pure_injective hx) hfor]
         exact AlgorithmOverBracha.vote _ j U hinp hech happ hQ hsend
     | deliver i j m =>
       obtain ⟨hmem, hw⟩ := networkStep_deliver hnet
@@ -301,7 +330,7 @@ theorem instanceOverBracha_step_algorithm (P : Parameters) :
       have hb : b' = b := funext fun q => System.mapIdle_eq_of_step_none rfl (hbind q)
       subst hw'; subst ha; subst hb
       have hfor : ∀ i', i' ≠ i → x i' = u i' :=
-        fun i' hi' => PMF.pure_injective (programStep_deliver_foreign (Ne.symm hi') (hproc i'))
+        fun i' hi' => PMF.pure_injective (programStep_deliver_notOwn (Ne.symm hi') (hproc i'))
       rw [stateOverBroadcasts_deliver (PMF.pure_injective (programStep_deliver_own (hproc i))) hfor]
       exact AlgorithmOverBracha.deliver _ i j m hmem
     | inputBroadcastRet k j v =>
@@ -315,7 +344,7 @@ theorem instanceOverBracha_step_algorithm (P : Parameters) :
         fun k' hk' => System.mapIdle_eq_of_step_none (by simp [hk']) (hin k')
       have ha : a' = Function.update a k (a' k) := Function.eq_update_iff.mpr ⟨rfl, haf⟩
       have hfor : ∀ i, i ≠ j → x i = u i :=
-        fun i hi => PMF.pure_injective (programStep_inputBroadcastRet_foreign (Ne.symm hi) (hproc
+        fun i hi => PMF.pure_injective (programStep_inputBroadcastRet_notOwn (Ne.symm hi) (hproc
           i))
       have hxj := PMF.pure_injective (programStep_inputBroadcastRet_own (hproc j))
       rw [Function.eq_update_iff.mpr ⟨hxj, hfor⟩, ha]
@@ -329,13 +358,14 @@ theorem instanceOverBracha_step_algorithm (P : Parameters) :
         by_cases hi : i = j
         · subst hi; exact PMF.pure_injective hxj
         · exact PMF.pure_injective
-            (programStep_inputBroadcastCall_foreign (Ne.symm hi) (hproc i))
+            (programStep_inputBroadcastCall_notOwn (Ne.symm hi) (hproc i))
       obtain ⟨hbin, haj⟩ := brachaInstance_call_transition
         (System.step_of_mapIdle_step (l₀ := Sum.inl (BRB.Label.call y)) (by simp) (hin j))
       have haf : ∀ k, k ≠ j → a' k = a k :=
         fun k hk => System.mapIdle_eq_of_step_none (by simp [hk]) (hin k)
       have ha : a' = Function.update a j
-          (((a j).setProcess j { (a j).process j with input := some y }).multicast j (.init y)) :=
+          (((a j).setProcessVariables j { (a j).processVariables j with input := some y }).multicast
+            j (.init y)) :=
         Function.eq_update_iff.mpr ⟨haj, haf⟩
       subst ha
       rw [stateOverBroadcasts_idle hxall, stateOverBroadcasts_setInputBroadcasts]
@@ -346,13 +376,14 @@ theorem instanceOverBracha_step_algorithm (P : Parameters) :
       subst hw; subst ha
       obtain ⟨hinp, hvot, hsnd, happ, hQ, hxj⟩ := programStep_bindCall_own (hproc j)
       have hfor : ∀ i, i ≠ j → x i = u i :=
-        fun i hi => PMF.pure_injective (programStep_bindCall_foreign (Ne.symm hi) (hproc i))
+        fun i hi => PMF.pure_injective (programStep_bindCall_notOwn (Ne.symm hi) (hproc i))
       obtain ⟨hbc, hbj⟩ := brachaInstance_call_transition
         (System.step_of_mapIdle_step (l₀ := Sum.inl (BRB.Label.call U)) (by simp) (hbind j))
       have hbf : ∀ q, q ≠ j → b' q = b q :=
         fun q hq => System.mapIdle_eq_of_step_none (by simp [hq]) (hbind q)
       have hb : b' = Function.update b j
-          (((b j).setProcess j { (b j).process j with input := some U }).multicast j (.init U)) :=
+          (((b j).setProcessVariables j { (b j).processVariables j with input := some U }).multicast
+            j (.init U)) :=
         Function.eq_update_iff.mpr ⟨hbj, hbf⟩
       subst hb
       rw [Function.eq_update_iff.mpr ⟨PMF.pure_injective hxj, hfor⟩]
@@ -368,14 +399,14 @@ theorem instanceOverBracha_step_algorithm (P : Parameters) :
         fun q' hq' => System.mapIdle_eq_of_step_none (by simp [hq']) (hbind q')
       have hb : b' = Function.update b q (b' q) := Function.eq_update_iff.mpr ⟨rfl, hbf⟩
       have hfor : ∀ i, i ≠ j → x i = u i :=
-        fun i hi => PMF.pure_injective (programStep_bindRet_foreign (Ne.symm hi) (hproc i))
+        fun i hi => PMF.pure_injective (programStep_bindRet_notOwn (Ne.symm hi) (hproc i))
       have hxj := PMF.pure_injective (programStep_bindRet_own (hproc j))
       rw [Function.eq_update_iff.mpr ⟨hxj, hfor⟩, hb]
       exact AlgorithmOverBracha.bindRet _ q j U (b' q) himpl
   · by_cases hlτ : l = Sum.inl Label.tau
     · subst hlτ
       refine ⟨Label.tau, rfl, ?_⟩
-      rcases instanceOverBroadcastsExtended_tau_inversion hIn hBind hlab with
+      rcases instanceOverBroadcastsExtended_tau_cases hIn hBind hlab with
         ⟨v, rfl, hn⟩ | ⟨k, c, rfl, hs⟩ | ⟨q, d, rfl, hs⟩
       · obtain ⟨jj, m, hF, hv⟩ := networkStep_tau hn
         have hv' : v = { w with network := w.network.recordSent jj m } := PMF.pure_injective hv
@@ -392,7 +423,7 @@ theorem instanceOverBracha_step_algorithm (P : Parameters) :
         rw [stateOverBroadcasts_setBindBroadcasts]
         exact AlgorithmOverBracha.bindBroadcastTau _ q d himpl
     · obtain ⟨x, w', a', b', rfl, hproc, hnet, hin, hbind⟩ :=
-        instanceOverBroadcastsExtended_joint_inversion hIn hBind (by simpa using hlτ) hlab
+        instanceOverBroadcastsExtended_synchronised_cases hIn hBind (by simpa using hlτ) hlab
       cases l with
       | inl l₀ =>
         cases l₀ with
@@ -404,9 +435,9 @@ theorem instanceOverBracha_step_algorithm (P : Parameters) :
           subst hw; subst ha; subst hb
           obtain ⟨hinp, hxj⟩ := programStep_call_own (hproc id)
           have hfor : ∀ i, i ≠ id → x i = u i :=
-            fun i hi => PMF.pure_injective (programStep_call_foreign (Ne.symm hi) (hproc i))
+            fun i hi => PMF.pure_injective (programStep_call_notOwn (Ne.symm hi) (hproc i))
           refine ⟨Label.call id y, rfl, ?_⟩
-          rw [stateOverBroadcasts_setProcess (PMF.pure_injective hxj) hfor]
+          rw [stateOverBroadcasts_setProcessVariables (PMF.pure_injective hxj) hfor]
           exact AlgorithmOverBracha.call _ id y hinp
         | ret id g C =>
           obtain ⟨hC, hw⟩ := networkStep_ret hnet
@@ -418,7 +449,7 @@ theorem instanceOverBracha_step_algorithm (P : Parameters) :
           subst hw'; subst ha; subst hb
           obtain ⟨hinp, hbnd, hsub, hQ, hr, hxj⟩ := programStep_ret_own (hproc id)
           have hfor : ∀ i, i ≠ id → x i = u i :=
-            fun i hi => PMF.pure_injective (programStep_ret_foreign (Ne.symm hi) (hproc i))
+            fun i hi => PMF.pure_injective (programStep_ret_notOwn (Ne.symm hi) (hproc i))
           refine ⟨_, rfl, ?_⟩
           rw [stateOverBroadcasts_ret (PMF.pure_injective hxj) hfor]
           exact AlgorithmOverBracha.ret _ id g hinp hbnd hsub hQ hr
@@ -492,10 +523,12 @@ theorem algorithm_instanceOverBracha_step (P : Parameters) :
       (fun q => System.mapIdle_unchanged rfl)⟩
   | echo j hin hcard hsend =>
     exact ⟨Sum.inl Label.tau, rfl, instanceOverBroadcasts_event_step (a' := a) (b' := b)
-      (GatherEvent.send j (.echo (u j).process.accepted))
+      (GatherEvent.send j (.echo (u j).processVariables.accepted))
       (dirac_steps_update (ProgramStep.sendEcho (u j) hin hcard hsend)
-        (fun i hi => ProgramStep.sendIdle (u i) j (.echo (u j).process.accepted) (Ne.symm hi)))
-      (NetworkStep.send w j (.echo (u j).process.accepted)) (fun k => System.mapIdle_unchanged rfl)
+        (fun i hi => ProgramStep.sendIdle (u i) j (.echo (u j).processVariables.accepted) (Ne.symm
+          hi)))
+      (NetworkStep.send w j (.echo (u j).processVariables.accepted)) (fun k =>
+        System.mapIdle_unchanged rfl)
       (fun q => System.mapIdle_unchanged rfl)⟩
   | vote j U hin hech happ hQ hsend =>
     exact ⟨Sum.inl Label.tau, rfl,

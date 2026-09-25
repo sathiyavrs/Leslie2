@@ -61,8 +61,8 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ)
       refine ⟨{ q₂ with call := Function.update q₂.call id (some b) },
         Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
           (GBCA.Step.call q₂ id b (by rw [hR.call_eq id]; exact hcall))⟩,
-        hInv', ?_, ?_, hR.F_eq, hR.exclusion_certificate, hR.excluded_bound,
-        hR.grade2_evidence, hR.grade0_evidence⟩
+        hInv', ?_, ?_, hR.F_eq, hR.exclusion_witness, hR.excluded_bound,
+        hR.grade2_witness, hR.grade0_witness⟩
       · intro k
         dsimp only [firstGather_setFirstGather]
         by_cases hk : k = id
@@ -83,7 +83,7 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ)
       subst ht1
       refine ⟨q₂, Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
         (GBCA.Step.callLoop q₂ id b)⟩, hInv', hR.call_eq, ?_, hR.F_eq,
-        hR.exclusion_certificate, hR.excluded_bound, hR.grade2_evidence, hR.grade0_evidence⟩
+        hR.exclusion_witness, hR.excluded_bound, hR.grade2_witness, hR.grade0_witness⟩
       intro k
       dsimp only [programs_setFirstGather, programs_setPrograms]
       by_cases hk : k = id
@@ -103,8 +103,8 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ)
       refine ⟨{ q₂ with call := Function.update q₂.call id (some b) },
         Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
           (GBCA.Step.call q₂ id b (by rw [hR.call_eq id]; exact hcall))⟩,
-        hInv', ?_, hR.ret_eq, hR.F_eq, hR.exclusion_certificate, hR.excluded_bound,
-        hR.grade2_evidence, hR.grade0_evidence⟩
+        hInv', ?_, hR.ret_eq, hR.F_eq, hR.exclusion_witness, hR.excluded_bound,
+        hR.grade2_witness, hR.grade0_witness⟩
       intro k
       dsimp only [firstGather_setFirstGather]
       by_cases hk : k = id
@@ -126,16 +126,16 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ)
       have ht1 := PMF.pure_injective hμ
       subst ht1
       exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩, hInv',
-        hR.call_eq, hR.ret_eq, hR.F_eq, hR.exclusion_certificate, hR.excluded_bound,
-        hR.grade2_evidence, hR.grade0_evidence⟩
+        hR.call_eq, hR.ret_eq, hR.F_eq, hR.exclusion_witness, hR.excluded_bound,
+        hR.grade2_witness, hR.grade0_witness⟩
     | bindCore S h0 hval hcard =>
       have ht1 := PMF.pure_injective hμ
       subst ht1
       refine ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩, hInv',
         hR.call_eq, hR.ret_eq, hR.F_eq, ?_, hR.excluded_bound,
-        hR.grade2_evidence, hR.grade0_evidence⟩
+        hR.grade2_witness, hR.grade0_witness⟩
       intro b hb
-      obtain ⟨S', hS', -⟩ := hR.exclusion_certificate b hb
+      obtain ⟨S', hS', -⟩ := hR.exclusion_witness b hb
       rw [h0] at hS'
       exact absurd hS' (by simp)
   | secondGatherTau t2 h =>
@@ -147,20 +147,20 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ)
       have ht2 := PMF.pure_injective hμ
       subst ht2
       exact ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩, hInv',
-        hR.call_eq, hR.ret_eq, hR.F_eq, hR.exclusion_certificate, hR.excluded_bound,
-        hR.grade2_evidence, hR.grade0_evidence⟩
+        hR.call_eq, hR.ret_eq, hR.F_eq, hR.exclusion_witness, hR.excluded_bound,
+        hR.grade2_witness, hR.grade0_witness⟩
     | bindCore S h0 hval hcard =>
       have ht2 := PMF.pure_injective hμ
       subst ht2
       refine ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩, hInv',
-        hR.call_eq, hR.ret_eq, hR.F_eq, hR.exclusion_certificate, hR.excluded_bound,
+        hR.call_eq, hR.ret_eq, hR.F_eq, hR.exclusion_witness, hR.excluded_bound,
         ?_, ?_⟩
       · intro hg
-        obtain ⟨S', v, hS', -⟩ := hR.grade2_evidence hg
+        obtain ⟨S', v, hS', -⟩ := hR.grade2_witness hg
         rw [h0] at hS'
         exact absurd hS' (by simp)
       · intro hg
-        obtain ⟨S', hS', -⟩ := hR.grade0_evidence hg
+        obtain ⟨S', hS', -⟩ := hR.grade0_witness hg
         rw [h0] at hS'
         exact absurd hS' (by simp)
   | firstGatherReturn id g C t1 hin hc h =>
@@ -172,8 +172,8 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ)
       have ht1 := PMF.pure_injective hμ
       subst ht1
       refine ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩, hInv',
-        hR.call_eq, ?_, hR.F_eq, hR.exclusion_certificate, ?_, hR.grade2_evidence,
-        hR.grade0_evidence⟩
+        hR.call_eq, ?_, hR.F_eq, hR.exclusion_witness, ?_, hR.grade2_witness,
+        hR.grade0_witness⟩
       · intro k
         dsimp only [programs_setBound, programs_setFirstGather, programs_setPrograms]
         by_cases hk : k = id
@@ -190,7 +190,7 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ)
     subst hq₁'
     obtain ⟨hval2, hcore2, hF2⟩ := call_unchanged h
     refine ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩, hInv',
-      hR.call_eq, ?_, hR.F_eq, hR.exclusion_certificate, hR.excluded_bound, ?_, ?_⟩
+      hR.call_eq, ?_, hR.F_eq, hR.exclusion_witness, hR.excluded_bound, ?_, ?_⟩
     · intro k
       dsimp only [programs_setSecondGather, programs_setPrograms]
       by_cases hk : k = id
@@ -200,11 +200,11 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ)
       · rw [Function.update_of_ne hk]
         exact hR.ret_eq k
     · intro hg
-      obtain ⟨S, v, hS, hh⟩ := hR.grade2_evidence hg
+      obtain ⟨S, v, hS, hh⟩ := hR.grade2_witness hg
       exact ⟨S, v, by dsimp only [secondGather_setSecondGather,
         secondGather_setPrograms]; rw [hcore2]; exact hS, hh⟩
     · intro hg
-      obtain ⟨S, hS, hl⟩ := hR.grade0_evidence hg
+      obtain ⟨S, hS, hl⟩ := hR.grade0_witness hg
       exact ⟨S, by dsimp only [secondGather_setSecondGather,
         secondGather_setPrograms]; rw [hcore2]; exact hS, hl⟩
   | secondGatherReturn id g C t2 h2 ho h =>
@@ -216,8 +216,8 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ)
       have ht2 := PMF.pure_injective hμ
       subst ht2
       refine ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩, hInv',
-        hR.call_eq, ?_, hR.F_eq, hR.exclusion_certificate, hR.excluded_bound,
-        hR.grade2_evidence, hR.grade0_evidence⟩
+        hR.call_eq, ?_, hR.F_eq, hR.exclusion_witness, hR.excluded_bound,
+        hR.grade2_witness, hR.grade0_witness⟩
       intro k
       dsimp only [programs_setSecondGather, programs_setPrograms]
       by_cases hk : k = id
@@ -230,7 +230,7 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ)
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
     have hf := P.hResilience
-    obtain ⟨hbnd, hcert⟩ := hR.invariant.out_certificate id out ho
+    obtain ⟨hbnd, hcert⟩ := hR.invariant.out_witness id out ho
     have hretflag : q₂.ret id = false := by
       rw [hR.ret_eq id]
       exact hr
@@ -238,7 +238,7 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ)
     obtain ⟨S, hS, hβS⟩ := hR.invariant.bound_core β hβ
     have hScard : P.n - P.f ≤ S.card := hR.invariant.firstGatherCore_card S hS
     have hSval := hR.invariant.firstGatherCore_val S hS
-    have hBelowThreshold : ExclusionEvidence P q₁ (!β) :=
+    have hBelowThreshold : ExclusionWitness P q₁ (!β) :=
       ⟨S, hS, by rw [hβS]; exact count_boundOfCore_belowThreshold hScard⟩
     have hexcl : ∀ b ∈ q₂.excluded, b = !β := by
       intro b hb
@@ -279,7 +279,7 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ)
         · exact Or.inl rfl
         · cases b
           · exfalso
-            obtain ⟨S₂, hS₂, hCoreBelowThreshold⟩ := hR.grade0_evidence hgr
+            obtain ⟨S₂, hS₂, hCoreBelowThreshold⟩ := hR.grade0_witness hgr
             rw [hC₂] at hS₂
             obtain rfl : C₂ = S₂ := Option.some.inj hS₂
             have hlv := hCoreBelowThreshold v
@@ -289,7 +289,7 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ)
       · refine ⟨_, Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
           (GBCA.Step.retGrade2 q₂ id v β hlive hbv (by rw [hβv]; exact hbv)
             hgA hretflag)⟩,
-          hInv', hR.call_eq, hret_eq, hR.F_eq, hR.exclusion_certificate,
+          hInv', hR.call_eq, hret_eq, hR.F_eq, hR.exclusion_witness,
           hR.excluded_bound, ?_, ?_⟩
         · intro _
           exact ⟨C₂, v, hC₂, hA_ev⟩
@@ -305,10 +305,10 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ)
         have hexclude : (GBCA.specInst P r).LStep q₂ Silent.τ
             { q₂ with excluded := insert (!v) q₂.excluded } :=
           GBCA.Step.bindUnset q₂ (!v)
-            (quorum_of_core hR.call_eq hR.F_eq hR.invariant.firstGatherVal_provenance hSval hScard)
+            (quorum_of_core hR.call_eq hR.F_eq hR.invariant.firstGatherVal_of_call hSval hScard)
             (by
               rw [Bool.not_not]
-              exact callSupport_of_core hR.call_eq hR.F_eq hR.invariant.firstGatherVal_provenance
+              exact callSupport_of_core hR.call_eq hR.F_eq hR.invariant.firstGatherVal_of_call
                 hSval (by omega))
             hd0
         have hret2 : (GBCA.specInst P r).LStep
@@ -353,14 +353,14 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ)
         simp at hb
       have hw : P.f + 1 ≤ (Finset.univ.filter
           (fun id' => q₂.call id' = some (!v) ∨ id' ∈ q₂.F)).card :=
-        callSupport_of_firstGatherSupport hR.call_eq hR.F_eq hR.invariant.firstGatherVal_provenance
+        callSupport_of_firstGatherSupport hR.call_eq hR.F_eq hR.invariant.firstGatherVal_of_call
           hw1
       by_cases hbv : (!v) ∈ q₂.excluded
       · exact ⟨_, Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
           (GBCA.Step.retGrade1 q₂ id v β hlive hbv (by rw [hβv]; exact hbv)
             hw hretflag)⟩,
-          hInv', hR.call_eq, hret_eq, hR.F_eq, hR.exclusion_certificate,
-          hR.excluded_bound, hR.grade2_evidence, hR.grade0_evidence⟩
+          hInv', hR.call_eq, hret_eq, hR.F_eq, hR.exclusion_witness,
+          hR.excluded_bound, hR.grade2_witness, hR.grade0_witness⟩
       · have hd0 : q₂.excluded = ∅ := by
           rw [Finset.eq_empty_iff_forall_notMem]
           intro b' hb'
@@ -371,10 +371,10 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ)
         have hexclude : (GBCA.specInst P r).LStep q₂ Silent.τ
             { q₂ with excluded := insert (!v) q₂.excluded } :=
           GBCA.Step.bindUnset q₂ (!v)
-            (quorum_of_core hR.call_eq hR.F_eq hR.invariant.firstGatherVal_provenance hSval hScard)
+            (quorum_of_core hR.call_eq hR.F_eq hR.invariant.firstGatherVal_of_call hSval hScard)
             (by
               rw [Bool.not_not]
-              exact callSupport_of_core hR.call_eq hR.F_eq hR.invariant.firstGatherVal_provenance
+              exact callSupport_of_core hR.call_eq hR.F_eq hR.invariant.firstGatherVal_of_call
                 hSval (by omega))
             hd0
         have hret2 : (GBCA.specInst P r).LStep
@@ -386,8 +386,8 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ)
             (Finset.mem_insert_self _ _)
             (by rw [hβv]; exact Finset.mem_insert_self _ _) hw hretflag
         refine ⟨_, Or.inr ⟨by simp, weakLStep_tauThen hexclude hret2 (by simp)⟩,
-          hInv', hR.call_eq, hret_eq, hR.F_eq, ?_, ?_, hR.grade2_evidence,
-          hR.grade0_evidence⟩
+          hInv', hR.call_eq, hret_eq, hR.F_eq, ?_, ?_, hR.grade2_witness,
+          hR.grade0_witness⟩
         · intro b hb
           dsimp only at hb
           rw [hd0, Finset.mem_insert] at hb
@@ -406,7 +406,7 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ)
       have hC₂card : P.n - P.f ≤ C₂.card := hR.invariant.secondGatherCore_card C₂ hC₂
       have hsupp : ∀ b : Bool, P.f + 1 ≤ (Finset.univ.filter
           (fun id' => q₂.call id' = some b ∨ id' ∈ q₂.F)).card := fun b =>
-        callSupport_of_firstGatherSupport hR.call_eq hR.F_eq hR.invariant.firstGatherVal_provenance
+        callSupport_of_firstGatherSupport hR.call_eq hR.F_eq hR.invariant.firstGatherVal_of_call
           (hsupp1 b)
       have hgC : q₂.grade = none ∨ q₂.grade = some false := by
         rcases hgr : q₂.grade with _ | b
@@ -414,7 +414,7 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ)
         · cases b
           · exact Or.inr rfl
           · exfalso
-            obtain ⟨S₂, v', hS₂, hh⟩ := hR.grade2_evidence hgr
+            obtain ⟨S₂, v', hS₂, hh⟩ := hR.grade2_witness hgr
             rw [hC₂] at hS₂
             obtain rfl : C₂ = S₂ := Option.some.inj hS₂
             have hlv := hCoreBelowThreshold v'
@@ -423,7 +423,7 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ)
       · have hexclude : (GBCA.specInst P r).LStep q₂ Silent.τ
             { q₂ with excluded := insert (!β) q₂.excluded } :=
           GBCA.Step.bindUnset q₂ (!β)
-            (quorum_of_core hR.call_eq hR.F_eq hR.invariant.firstGatherVal_provenance hSval hScard)
+            (quorum_of_core hR.call_eq hR.F_eq hR.invariant.firstGatherVal_of_call hSval hScard)
             (by rw [Bool.not_not]; exact hsupp β)
             hdne
         have hret2 : (GBCA.specInst P r).LStep
@@ -457,7 +457,7 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ)
         subst hbeq
         refine ⟨_, Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
           (GBCA.Step.retGrade0 q₂ id β hb (hsupp true) (hsupp false) hgC hretflag)⟩,
-          hInv', hR.call_eq, hret_eq, hR.F_eq, hR.exclusion_certificate,
+          hInv', hR.call_eq, hret_eq, hR.F_eq, hR.exclusion_witness,
           hR.excluded_bound, ?_, ?_⟩
         · intro hgr
           exact absurd hgr (by simp)

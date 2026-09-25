@@ -7,7 +7,7 @@ Authors: Sathiya / Claude
 import Leslie2Protocols.ABA.Implementation.System
 import Leslie2Protocols.ABA.GBCA.AFW.Counting
 import Leslie2Protocols.ABA.Gather.Components
-import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.MessagesAndRecords
+import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.MessagesAndVariables
 
 /-!
 # The gather-based protocol as it runs
@@ -36,7 +36,7 @@ sent index stays the sender, so a threshold still counts distinct senders
 A process's data is scattered across those instances: `j` holds its own local state in
 each of the `4n + 2` of them, and the composed system indexes those local states by
 instance and then by process. A program must hold its own data and no one
-else's, so `RoundRecord` holds them the other way round — `j`'s local state in each
+else's, so `RoundVariables` holds them the other way round — `j`'s local state in each
 gather instance, and `j`'s local state in each of the `n` instances of each Bracha
 family. Every guard of the gather-based implementation reads the acting
 process's own local states and the network states, and the two transitions that read a network
@@ -57,9 +57,9 @@ gather's return, the second gather's call, the second gather's return, the round
 the return of each of the `4n` broadcast instances are separate transitions. A call of an
 input-broadcast instance reads the payload its gather record holds and carries that instance's
 `⟨INIT, ·⟩`; a return writes what it returned in the caller's record. The round record therefore
-holds the two gather local states over `Gather.ProcessRecord`, which carries what each instance
+holds the two gather local states over `Gather.ProcessVariables`, which carries what each instance
 returned, and the two intermediate phases `candidate` and `output`. A gather guard reads that
-record, as the guard of the composed gather program does: `Gather.ProcessRecord.accepted` is the
+record, as the guard of the composed gather program does: `Gather.ProcessVariables.accepted` is the
 `ECHO` payload `AP_i` of AFW25's Algorithm 5, line 9, and `Gather.approvedBy`,
 `Gather.holdsInputBroadcastReturn` and `Gather.holdsBindBroadcastReturn` are the remaining guards.
 
@@ -145,54 +145,57 @@ inductive RoundEvent (n : ℕ) : Type
 /-- One process's data in one round, held by instance: its local state in each gather
 instance, and its local state in each of the `n` instances of each broadcast family.
 This is the composed system's instance-major indexing transposed. -/
-structure RoundRecord (n : ℕ) : Type where
+structure RoundVariables (n : ℕ) : Type where
   /-- The candidate the first gather's return determines here (AFW25, Algorithm 4, line 2). -/
   candidate : Option (Option Bool)
   /-- The graded outcome the second gather's return determines here (AFW25, Algorithm 4,
   line 7). -/
   output : Option GBCAOutput
   /-- The process's local state in the first gather instance. -/
-  firstGather : LocalState n (Gather.ProcessRecord n Bool) (Gather.Message n Bool)
+  firstGather : LocalState n (Gather.ProcessVariables n Bool) (Gather.Message n Bool)
   /-- The process's local state in the second gather instance. -/
   secondGather :
-    LocalState n (Gather.ProcessRecord n (Option Bool)) (Gather.Message n (Option Bool))
+    LocalState n (Gather.ProcessVariables n (Option Bool)) (Gather.Message n (Option Bool))
   /-- The process's local state in each input-broadcast instance of the first
   gather. -/
-  firstGatherInputBroadcasts : ∀ _ : Fin n, LocalState n (BRB.ProcessRecord Bool) (BRB.Message Bool)
+  firstGatherInputBroadcasts : ∀ _ : Fin n, LocalState n (BRB.ProcessVariables Bool) (BRB.Message
+    Bool)
   /-- The process's local state in each bind-broadcast instance of the first
   gather. -/
   firstGatherBindBroadcasts : ∀ _ : Fin n,
-    LocalState n (BRB.ProcessRecord (AcceptedPairs n Bool)) (BRB.Message (AcceptedPairs n Bool))
+    LocalState n (BRB.ProcessVariables (AcceptedPairs n Bool)) (BRB.Message (AcceptedPairs n Bool))
   /-- The process's local state in each input-broadcast instance of the second
   gather. -/
   secondGatherInputBroadcasts : ∀ _ : Fin n,
-    LocalState n (BRB.ProcessRecord (Option Bool)) (BRB.Message (Option Bool))
+    LocalState n (BRB.ProcessVariables (Option Bool)) (BRB.Message (Option Bool))
   /-- The process's local state in each bind-broadcast instance of the second
   gather. -/
   secondGatherBindBroadcasts : ∀ _ : Fin n,
-    LocalState n (BRB.ProcessRecord (AcceptedPairs n (Option Bool))) (BRB.Message (AcceptedPairs n
+    LocalState n (BRB.ProcessVariables (AcceptedPairs n (Option Bool))) (BRB.Message (AcceptedPairs
+      n
       (Option Bool)))
 
-namespace RoundRecord
+namespace RoundVariables
 
 variable {n : ℕ}
 
 /-- The initial record: every local state empty over the initial local record. -/
-def initial (n : ℕ) : RoundRecord n where
+def initial (n : ℕ) : RoundVariables n where
   candidate := none
   output := none
-  firstGather := LocalState.initial n _ (Gather.ProcessRecord.initial n Bool)
-  secondGather := LocalState.initial n _ (Gather.ProcessRecord.initial n (Option Bool))
-  firstGatherInputBroadcasts := fun _ => LocalState.initial n _ (BRB.ProcessRecord.initial Bool)
-  firstGatherBindBroadcasts := fun _ => LocalState.initial n _ (BRB.ProcessRecord.initial
+  firstGather := LocalState.initial n _ (Gather.ProcessVariables.initial n Bool)
+  secondGather := LocalState.initial n _ (Gather.ProcessVariables.initial n (Option Bool))
+  firstGatherInputBroadcasts := fun _ => LocalState.initial n _ (BRB.ProcessVariables.initial Bool)
+  firstGatherBindBroadcasts := fun _ => LocalState.initial n _ (BRB.ProcessVariables.initial
     (AcceptedPairs n Bool))
-  secondGatherInputBroadcasts := fun _ => LocalState.initial n _ (BRB.ProcessRecord.initial (Option
+  secondGatherInputBroadcasts := fun _ => LocalState.initial n _ (BRB.ProcessVariables.initial
+    (Option
     Bool))
-  secondGatherBindBroadcasts := fun _ => LocalState.initial n _ (BRB.ProcessRecord.initial
+  secondGatherBindBroadcasts := fun _ => LocalState.initial n _ (BRB.ProcessVariables.initial
     (AcceptedPairs n (Option Bool)))
 
 /-- File a delivered message in the local state of the network state its tag names. -/
-def deliverTo (s : RoundRecord n) (k : Fin n) : Message n → RoundRecord n
+def deliverTo (s : RoundVariables n) (k : Fin n) : Message n → RoundVariables n
   | .firstGather m => { s with firstGather := s.firstGather.deliverTo k m }
   | .secondGather m => { s with secondGather := s.secondGather.deliverTo k m }
   | .firstGatherInputBroadcasts i m =>
@@ -216,25 +219,25 @@ def deliverTo (s : RoundRecord n) (k : Fin n) : Message n → RoundRecord n
           Function.update s.secondGatherBindBroadcasts i ((s.secondGatherBindBroadcasts i).deliverTo
             k m) }
 
-end RoundRecord
+end RoundVariables
 
 /-- The gather-based round record, as the implementation consumes it. -/
-instance instIsRoundRecord (n : ℕ) : IsRoundRecord n (Message n) (RoundRecord n) where
-  initial := RoundRecord.initial n
+instance instIsRoundVariables (n : ℕ) : IsRoundVariables n (Message n) (RoundVariables n) where
+  initial := RoundVariables.initial n
   deliverTo s k m := s.deliverTo k m
 
-@[simp] theorem roundRecord_initial (n : ℕ) :
-    (IsRoundRecord.initial : RoundRecord n) = RoundRecord.initial n := rfl
+@[simp] theorem roundVariables_initial (n : ℕ) :
+    (IsRoundVariables.initial : RoundVariables n) = RoundVariables.initial n := rfl
 
-@[simp] theorem roundRecord_deliverTo (n : ℕ) (s : RoundRecord n) (k : Fin n)
-    (m : Message n) : (IsRoundRecord.deliverTo s k m : RoundRecord n) = s.deliverTo k m := rfl
+@[simp] theorem roundVariables_deliverTo (n : ℕ) (s : RoundVariables n) (k : Fin n)
+    (m : Message n) : (IsRoundVariables.deliverTo s k m : RoundVariables n) = s.deliverTo k m := rfl
 
 /-- The round records of one process: the round records it holds, and whether it has terminated
 (D22). -/
-abbrev RoundRecordMap (n : ℕ) : Type := Implementation.RoundRecordMap (RoundRecord n)
+abbrev RoundVariablesMap (n : ℕ) : Type := Implementation.RoundVariablesMap (RoundVariables n)
 
 /-- The state of one process: its round-loop record and its round records. -/
-abbrev ProcessRecord (n : ℕ) : Type := Implementation.ProcessRecord n (RoundRecord n)
+abbrev ProcessVariables (n : ℕ) : Type := Implementation.ProcessVariables n (RoundVariables n)
 
 /-! ### The network's ghost -/
 
@@ -293,16 +296,16 @@ tagged sent sets and its corrupted set. The local states are the initial
 ones: `Gather.coreOf` reads the network state alone
 (`Gather.coreOf_networkState_only`). -/
 def firstGatherOf (P : Parameters) (w : NetworkState P.n) (r : ℕ) :
-    InstanceState P.n (Gather.BaseProcessRecord P.n Bool) (Gather.Message P.n Bool) :=
-  (fun _ => LocalState.initial P.n _ (Gather.BaseProcessRecord.initial P.n Bool),
+    InstanceState P.n (Gather.BaseProcessVariables P.n Bool) (Gather.Message P.n Bool) :=
+  (fun _ => LocalState.initial P.n _ (Gather.BaseProcessVariables.initial P.n Bool),
     ⟨messagesOf firstGatherMessageOf firstGatherMessageOf_inj (w.sent r), w.F⟩)
 
 /-- The second gather's instance state of round `r`, read off the adversary's
 tagged sent sets and its corrupted set. -/
 def secondGatherOf (P : Parameters) (w : NetworkState P.n) (r : ℕ) :
-    InstanceState P.n (Gather.BaseProcessRecord P.n (Option Bool))
+    InstanceState P.n (Gather.BaseProcessVariables P.n (Option Bool))
     (Gather.Message P.n (Option Bool)) :=
-  (fun _ => LocalState.initial P.n _ (Gather.BaseProcessRecord.initial P.n (Option Bool)),
+  (fun _ => LocalState.initial P.n _ (Gather.BaseProcessVariables.initial P.n (Option Bool)),
     ⟨messagesOf secondGatherMessageOf secondGatherMessageOf_inj (w.sent r), w.F⟩)
 
 /-- The ghost write: the first gather's return writes that gather's core and the round's bound
@@ -325,8 +328,8 @@ noncomputable def ghostStep (P : Parameters) :
 holds, and the bit of the first gather's core where it holds none. -/
 noncomputable def ghostOutput (P : Parameters) (w : NetworkState P.n) (r : ℕ) (_id : Fin P.n)
     (_out : GBCAOutput) : Bool :=
-  ((w.ghostRecord r).2.2).getD
-    (GBCA.boundOfCore P ((w.ghostRecord r).1.getD (Gather.coreOf P (firstGatherOf P w r))))
+  ((w.ghost r).2.2).getD
+    (GBCA.boundOfCore P ((w.ghost r).1.getD (Gather.coreOf P (firstGatherOf P w r))))
 
 /-- The bit the network announces on a return: `AFW.ghostOutput` of the
 round, and no other. This is the relation the implementation's `ghostOutput`
@@ -341,535 +344,598 @@ noncomputable abbrev announcedBound (P : Parameters) (w : NetworkState P.n) (r :
 /-- The transitions of process `j` in the round: the round's calls and returns, the two gather
 instances, the `4n` Bracha instances beneath them, and the delivery. -/
 inductive RoundStep (P : Parameters) (j : Fin P.n) :
-    ProcessRecord P.n → ExtendedLabel P.n (Message P.n) (RoundEvent P.n) →
-      PMF (ProcessRecord P.n) → Prop
+    ProcessVariables P.n → ExtendedLabel P.n (Message P.n) (RoundEvent P.n) →
+      PMF (ProcessVariables P.n) → Prop
   /-- The graded-agreement call: the round loop hands its estimate to the
   round's first gather, which records it (AFW25's Algorithm 5, line 5). The call sends no
   message. -/
-  | callG (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (b : Bool)
+  | callG (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (b : Bool)
       (hh : c.corrupted = false)
-      (hph : c.process.phase = .toCallG) (hr : c.process.round = r)
+      (hph : c.processVariables.phase = .toCallG) (hr : c.processVariables.round = r)
       (hterm : p.terminated = false)
-      (hest : c.process.estimate = some b)
-      (hin : ((p.roundRecord r).firstGather.process).input = none) :
+      (hest : c.processVariables.estimate = some b)
+      (hin : ((p.roundVariables r).firstGather.processVariables).input = none) :
       RoundStep P j (c, p) (Sum.inl (.callG r j b))
-        (PMF.pure (c.setProcess { c.process with phase := .awaitG },
-          p.setRoundRecord r
-            { (p.roundRecord r) with
-              firstGather := (p.roundRecord r).firstGather.setProcess
-                { ((p.roundRecord r).firstGather.process) with input := some b } }))
+        (PMF.pure (c.setProcessVariables { c.processVariables with phase := .awaitG },
+          p.setRoundVariables r
+            { (p.roundVariables r) with
+              firstGather := (p.roundVariables r).firstGather.setProcessVariables
+                { ((p.roundVariables r).firstGather.processVariables) with input := some b } }))
   /-- The graded-agreement call against an already-called record: the round
   loop moves, the round record does not. -/
-  | gbcaCallLoop (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (b : Bool)
+  | gbcaCallLoop (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (b : Bool)
       (hh : c.corrupted = false)
-      (hph : c.process.phase = .toCallG) (hr : c.process.round = r)
-      (hest : c.process.estimate = some b)
-      (hin : ((p.roundRecord r).firstGather.process).input ≠ none) :
+      (hph : c.processVariables.phase = .toCallG) (hr : c.processVariables.round = r)
+      (hest : c.processVariables.estimate = some b)
+      (hin : ((p.roundVariables r).firstGather.processVariables).input ≠ none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaCallLoop r j b))
-        (PMF.pure (c.setProcess { c.process with phase := .awaitG }, p))
+        (PMF.pure (c.setProcessVariables { c.processVariables with phase := .awaitG }, p))
   /-- The process calls the input-broadcast instance of the first gather with the payload its
   gather record holds, and that instance multicasts `⟨INIT, b⟩` (AFW25's Algorithm 5, line 6;
   LeslieBP's Algorithm 4, `BRB_id.call(m)`). The multicast is the network's half. -/
-  | firstGatherInputBroadcastCall (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ)
+  | firstGatherInputBroadcastCall (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ)
       (b : Bool)
       (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hin : ((p.roundRecord r).firstGather.process).input = some b)
-      (hbin : (((p.roundRecord r).firstGatherInputBroadcasts j).process).input = none) :
+      (hin : ((p.roundVariables r).firstGather.processVariables).input = some b)
+      (hbin : (((p.roundVariables r).firstGatherInputBroadcasts j).processVariables).input = none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.firstGatherInputBroadcasts j (.init b))))
-        (PMF.pure (c, p.setRoundRecord r
-          { (p.roundRecord r) with
-            firstGatherInputBroadcasts := Function.update (p.roundRecord
+        (PMF.pure (c, p.setRoundVariables r
+          { (p.roundVariables r) with
+            firstGatherInputBroadcasts := Function.update (p.roundVariables
               r).firstGatherInputBroadcasts j
-              (((p.roundRecord r).firstGatherInputBroadcasts j).setProcess
-                { (((p.roundRecord r).firstGatherInputBroadcasts j).process) with
+              (((p.roundVariables r).firstGatherInputBroadcasts j).setProcessVariables
+                { (((p.roundVariables r).firstGatherInputBroadcasts j).processVariables) with
                   input := some b }) }))
   /-- The first gather's `ECHO`: the process is called and its accepted pairs
   number at least `n − f`, the source blueprint's `|AP| ≥ n − f`. The payload is
   those pairs, `T_i ← AP_i` of AFW25's Algorithm 5, line 9. -/
-  | firstGatherEcho (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ)
+  | firstGatherEcho (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ)
       (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hin : ((p.roundRecord r).firstGather.process).input ≠ none)
-      (hcard : P.n - P.f ≤ (((p.roundRecord r).firstGather.process).accepted).card)
-      (hsend : ((p.roundRecord r).firstGather.process).sentEcho = none) :
+      (hin : ((p.roundVariables r).firstGather.processVariables).input ≠ none)
+      (hcard : P.n - P.f ≤ (((p.roundVariables r).firstGather.processVariables).accepted).card)
+      (hsend : ((p.roundVariables r).firstGather.processVariables).sentEcho = none) :
       RoundStep P j (c, p)
         (Sum.inr (.gbcaSend r j
-          (.firstGather (.echo ((p.roundRecord r).firstGather.process).accepted))))
-        (PMF.pure (c, p.setRoundRecord r
-          { (p.roundRecord r) with
-            firstGather := (p.roundRecord r).firstGather.setProcess
-              { ((p.roundRecord r).firstGather.process) with
-                sentEcho := some (((p.roundRecord r).firstGather.process).accepted) } }))
+          (.firstGather (.echo ((p.roundVariables r).firstGather.processVariables).accepted))))
+        (PMF.pure (c, p.setRoundVariables r
+          { (p.roundVariables r) with
+            firstGather := (p.roundVariables r).firstGather.setProcessVariables
+              { ((p.roundVariables r).firstGather.processVariables) with
+                sentEcho := some (((p.roundVariables r).firstGather.processVariables).accepted) }
+                  }))
   /-- The first gather's `VOTE`: `n − f` senders' `ECHO` payloads, each held
   here and contained in the vote payload, are delivered, and the process has
   multicast its own `ECHO`. The main thread of AFW25's Algorithm 5 sends `ECHO`
   before `VOTE`. -/
-  | firstGatherVote (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (U : AcceptedPairs
+  | firstGatherVote (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (U :
+      AcceptedPairs
     P.n Bool)
       (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hin : ((p.roundRecord r).firstGather.process).input ≠ none)
-      (hech : ((p.roundRecord r).firstGather.process).sentEcho ≠ none)
-      (happ : Gather.approvedBy ((p.roundRecord r).firstGather.process) U)
+      (hin : ((p.roundVariables r).firstGather.processVariables).input ≠ none)
+      (hech : ((p.roundVariables r).firstGather.processVariables).sentEcho ≠ none)
+      (happ : Gather.approvedBy ((p.roundVariables r).firstGather.processVariables) U)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
-        ∀ q ∈ Q, ∃ A, Gather.Message.echo A ∈ ((p.roundRecord r).firstGather.received q) ∧
-          Gather.approvedBy ((p.roundRecord r).firstGather.process) A ∧ A ⊆ U)
-      (hsend : ((p.roundRecord r).firstGather.process).sentVote = none) :
+        ∀ q ∈ Q, ∃ A, Gather.Message.echo A ∈ ((p.roundVariables r).firstGather.received q) ∧
+          Gather.approvedBy ((p.roundVariables r).firstGather.processVariables) A ∧ A ⊆ U)
+      (hsend : ((p.roundVariables r).firstGather.processVariables).sentVote = none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.firstGather (.vote U))))
-        (PMF.pure (c, p.setRoundRecord r
-          { (p.roundRecord r) with
-            firstGather := (p.roundRecord r).firstGather.setProcess
-              { ((p.roundRecord r).firstGather.process) with sentVote := some U } }))
+        (PMF.pure (c, p.setRoundVariables r
+          { (p.roundVariables r) with
+            firstGather := (p.roundVariables r).firstGather.setProcessVariables
+              { ((p.roundVariables r).firstGather.processVariables) with sentVote := some U } }))
   /-- The first gather's `BIND`: `n − f` senders' `VOTE` payloads, each held
   here and contained in the bind payload, are delivered; the payload is
   broadcast through the process's own bind-broadcast instance and written to the
   gather record. The process has multicast its own `VOTE` and has not called its
   own bind broadcast. The main thread of AFW25's Algorithm 5 sends `VOTE` before
   `BIND`, and sends `BIND` once, at line 17. -/
-  | firstGatherBind (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (U : AcceptedPairs
+  | firstGatherBind (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (U :
+      AcceptedPairs
     P.n Bool)
       (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hin : ((p.roundRecord r).firstGather.process).input ≠ none)
-      (hvot : ((p.roundRecord r).firstGather.process).sentVote ≠ none)
-      (hsnd : ((p.roundRecord r).firstGather.process).sentBind = none)
-      (hbc : (((p.roundRecord r).firstGatherBindBroadcasts j).process).input = none)
-      (happ : Gather.approvedBy ((p.roundRecord r).firstGather.process) U)
+      (hin : ((p.roundVariables r).firstGather.processVariables).input ≠ none)
+      (hvot : ((p.roundVariables r).firstGather.processVariables).sentVote ≠ none)
+      (hsnd : ((p.roundVariables r).firstGather.processVariables).sentBind = none)
+      (hbc : (((p.roundVariables r).firstGatherBindBroadcasts j).processVariables).input = none)
+      (happ : Gather.approvedBy ((p.roundVariables r).firstGather.processVariables) U)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
-        ∀ q ∈ Q, ∃ W, Gather.Message.vote W ∈ ((p.roundRecord r).firstGather.received q) ∧
-          Gather.approvedBy ((p.roundRecord r).firstGather.process) W ∧ W ⊆ U) :
+        ∀ q ∈ Q, ∃ W, Gather.Message.vote W ∈ ((p.roundVariables r).firstGather.received q) ∧
+          Gather.approvedBy ((p.roundVariables r).firstGather.processVariables) W ∧ W ⊆ U) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.firstGatherBindBroadcasts j (.init U))))
-        (PMF.pure (c, p.setRoundRecord r
-          { (p.roundRecord r) with
-            firstGather := (p.roundRecord r).firstGather.setProcess
-              { ((p.roundRecord r).firstGather.process) with sentBind := some U }
-            firstGatherBindBroadcasts := Function.update (p.roundRecord r).firstGatherBindBroadcasts
+        (PMF.pure (c, p.setRoundVariables r
+          { (p.roundVariables r) with
+            firstGather := (p.roundVariables r).firstGather.setProcessVariables
+              { ((p.roundVariables r).firstGather.processVariables) with sentBind := some U }
+            firstGatherBindBroadcasts := Function.update (p.roundVariables
+              r).firstGatherBindBroadcasts
               j
-              (((p.roundRecord r).firstGatherBindBroadcasts j).setProcess
-                { (((p.roundRecord r).firstGatherBindBroadcasts j).process) with input := some U })
+              (((p.roundVariables r).firstGatherBindBroadcasts j).setProcessVariables
+                { (((p.roundVariables r).firstGatherBindBroadcasts j).processVariables) with
+                    input := some U })
                   }))
   /-- The second gather's `ECHO`. -/
-  | secondGatherEcho (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ)
+  | secondGatherEcho (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ)
       (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hin : ((p.roundRecord r).secondGather.process).input ≠ none)
-      (hcard : P.n - P.f ≤ (((p.roundRecord r).secondGather.process).accepted).card)
-      (hsend : ((p.roundRecord r).secondGather.process).sentEcho = none) :
+      (hin : ((p.roundVariables r).secondGather.processVariables).input ≠ none)
+      (hcard : P.n - P.f ≤ (((p.roundVariables r).secondGather.processVariables).accepted).card)
+      (hsend : ((p.roundVariables r).secondGather.processVariables).sentEcho = none) :
       RoundStep P j (c, p)
         (Sum.inr (.gbcaSend r j
-          (.secondGather (.echo ((p.roundRecord r).secondGather.process).accepted))))
-        (PMF.pure (c, p.setRoundRecord r
-          { (p.roundRecord r) with
-            secondGather := (p.roundRecord r).secondGather.setProcess
-              { ((p.roundRecord r).secondGather.process) with
-                sentEcho := some (((p.roundRecord r).secondGather.process).accepted) } }))
+          (.secondGather (.echo ((p.roundVariables r).secondGather.processVariables).accepted))))
+        (PMF.pure (c, p.setRoundVariables r
+          { (p.roundVariables r) with
+            secondGather := (p.roundVariables r).secondGather.setProcessVariables
+              { ((p.roundVariables r).secondGather.processVariables) with
+                sentEcho := some (((p.roundVariables r).secondGather.processVariables).accepted) }
+                  }))
   /-- The second gather's `VOTE`. -/
-  | secondGatherVote (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ)
+  | secondGatherVote (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ)
       (U : AcceptedPairs P.n (Option Bool))
       (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hin : ((p.roundRecord r).secondGather.process).input ≠ none)
-      (hech : ((p.roundRecord r).secondGather.process).sentEcho ≠ none)
-      (happ : Gather.approvedBy ((p.roundRecord r).secondGather.process) U)
+      (hin : ((p.roundVariables r).secondGather.processVariables).input ≠ none)
+      (hech : ((p.roundVariables r).secondGather.processVariables).sentEcho ≠ none)
+      (happ : Gather.approvedBy ((p.roundVariables r).secondGather.processVariables) U)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
-        ∀ q ∈ Q, ∃ A, Gather.Message.echo A ∈ ((p.roundRecord r).secondGather.received q) ∧
-          Gather.approvedBy ((p.roundRecord r).secondGather.process) A ∧ A ⊆ U)
-      (hsend : ((p.roundRecord r).secondGather.process).sentVote = none) :
+        ∀ q ∈ Q, ∃ A, Gather.Message.echo A ∈ ((p.roundVariables r).secondGather.received q) ∧
+          Gather.approvedBy ((p.roundVariables r).secondGather.processVariables) A ∧ A ⊆ U)
+      (hsend : ((p.roundVariables r).secondGather.processVariables).sentVote = none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.secondGather (.vote U))))
-        (PMF.pure (c, p.setRoundRecord r
-          { (p.roundRecord r) with
-            secondGather := (p.roundRecord r).secondGather.setProcess
-              { ((p.roundRecord r).secondGather.process) with sentVote := some U } }))
+        (PMF.pure (c, p.setRoundVariables r
+          { (p.roundVariables r) with
+            secondGather := (p.roundVariables r).secondGather.setProcessVariables
+              { ((p.roundVariables r).secondGather.processVariables) with sentVote := some U } }))
   /-- The second gather's `BIND`. -/
-  | secondGatherBind (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ)
+  | secondGatherBind (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ)
       (U : AcceptedPairs P.n (Option Bool))
       (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hin : ((p.roundRecord r).secondGather.process).input ≠ none)
-      (hvot : ((p.roundRecord r).secondGather.process).sentVote ≠ none)
-      (hsnd : ((p.roundRecord r).secondGather.process).sentBind = none)
-      (hbc : (((p.roundRecord r).secondGatherBindBroadcasts j).process).input = none)
-      (happ : Gather.approvedBy ((p.roundRecord r).secondGather.process) U)
+      (hin : ((p.roundVariables r).secondGather.processVariables).input ≠ none)
+      (hvot : ((p.roundVariables r).secondGather.processVariables).sentVote ≠ none)
+      (hsnd : ((p.roundVariables r).secondGather.processVariables).sentBind = none)
+      (hbc : (((p.roundVariables r).secondGatherBindBroadcasts j).processVariables).input = none)
+      (happ : Gather.approvedBy ((p.roundVariables r).secondGather.processVariables) U)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
-        ∀ q ∈ Q, ∃ W, Gather.Message.vote W ∈ ((p.roundRecord r).secondGather.received q) ∧
-          Gather.approvedBy ((p.roundRecord r).secondGather.process) W ∧ W ⊆ U) :
+        ∀ q ∈ Q, ∃ W, Gather.Message.vote W ∈ ((p.roundVariables r).secondGather.received q) ∧
+          Gather.approvedBy ((p.roundVariables r).secondGather.processVariables) W ∧ W ⊆ U) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.secondGatherBindBroadcasts j (.init U))))
-        (PMF.pure (c, p.setRoundRecord r
-          { (p.roundRecord r) with
-            secondGather := (p.roundRecord r).secondGather.setProcess
-              { ((p.roundRecord r).secondGather.process) with sentBind := some U }
-            secondGatherBindBroadcasts := Function.update (p.roundRecord
+        (PMF.pure (c, p.setRoundVariables r
+          { (p.roundVariables r) with
+            secondGather := (p.roundVariables r).secondGather.setProcessVariables
+              { ((p.roundVariables r).secondGather.processVariables) with sentBind := some U }
+            secondGatherBindBroadcasts := Function.update (p.roundVariables
               r).secondGatherBindBroadcasts j
-              (((p.roundRecord r).secondGatherBindBroadcasts j).setProcess
-                { (((p.roundRecord r).secondGatherBindBroadcasts j).process) with input := some U })
+              (((p.roundVariables r).secondGatherBindBroadcasts j).setProcessVariables
+                { (((p.roundVariables r).secondGatherBindBroadcasts j).processVariables) with
+                    input := some U })
                   }))
   /-- The first gather returns, and the process records the candidate its returned entries
   determine (AFW25's Algorithm 4, lines 1 and 2; AFW25's Algorithm 5, line 20). The returner has
   called its own bind broadcast: the `BIND` broadcast of AFW25's Algorithm 5, line 17, precedes the
   wait of line 18. -/
-  | firstGatherReturn (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ)
+  | firstGatherReturn (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ)
       (g : Fin P.n → Option Bool)
       (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hin : ((p.roundRecord r).firstGather.process).input ≠ none)
-      (hbind : ((p.roundRecord r).firstGather.process).sentBind ≠ none)
+      (hin : ((p.roundVariables r).firstGather.processVariables).input ≠ none)
+      (hbind : ((p.roundVariables r).firstGather.processVariables).sentBind ≠ none)
       (hsubap : ∀ k x, g k = some x →
-        Gather.holdsInputBroadcastReturn ((p.roundRecord r).firstGather.process) k x)
+        Gather.holdsInputBroadcastReturn ((p.roundVariables r).firstGather.processVariables) k x)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
-        ∀ q ∈ Q, ∃ U, Gather.holdsBindBroadcastReturn ((p.roundRecord r).firstGather.process) q U ∧
+        ∀ q ∈ Q, ∃ U, Gather.holdsBindBroadcastReturn ((p.roundVariables
+          r).firstGather.processVariables) q U ∧
           AcceptedPairs.subMap U g)
-      (hr1 : ((p.roundRecord r).firstGather.process).returned = false)
-      (hcand : (p.roundRecord r).candidate = none) :
+      (hr1 : ((p.roundVariables r).firstGather.processVariables).returned = false)
+      (hcand : (p.roundVariables r).candidate = none) :
       RoundStep P j (c, p)
         (Sum.inr (.gbcaRoundEvent r j (.firstGatherReturn (GBCA.candidate P g))))
-        (PMF.pure (c, p.setRoundRecord r
-          { (p.roundRecord r) with
+        (PMF.pure (c, p.setRoundVariables r
+          { (p.roundVariables r) with
             candidate := some (GBCA.candidate P g)
-            firstGather := (p.roundRecord r).firstGather.setProcess
-              { ((p.roundRecord r).firstGather.process) with returned := true } }))
+            firstGather := (p.roundVariables r).firstGather.setProcessVariables
+              { ((p.roundVariables r).firstGather.processVariables) with returned := true } }))
   /-- The process calls the second gather with the candidate on record, which that gather records
   (AFW25's Algorithm 4, line 4). The call sends no message. -/
-  | secondGatherCall (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (x : Option Bool)
+  | secondGatherCall (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (x : Option
+      Bool)
       (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hcand : (p.roundRecord r).candidate = some x)
-      (hin2 : ((p.roundRecord r).secondGather.process).input = none) :
+      (hcand : (p.roundVariables r).candidate = some x)
+      (hin2 : ((p.roundVariables r).secondGather.processVariables).input = none) :
       RoundStep P j (c, p)
         (Sum.inr (.gbcaRoundEvent r j (.secondGatherCall x)))
-        (PMF.pure (c, p.setRoundRecord r
-          { (p.roundRecord r) with
-            secondGather := (p.roundRecord r).secondGather.setProcess
-              { ((p.roundRecord r).secondGather.process) with input := some x } }))
+        (PMF.pure (c, p.setRoundVariables r
+          { (p.roundVariables r) with
+            secondGather := (p.roundVariables r).secondGather.setProcessVariables
+              { ((p.roundVariables r).secondGather.processVariables) with input := some x } }))
   /-- The process calls the input-broadcast instance of the second gather with the payload that
   gather's record holds, and that instance multicasts `⟨INIT, x⟩` (AFW25's Algorithm 5, line 6;
   LeslieBP's Algorithm 4, `BRB_id.call(m)`). The multicast is the network's half. -/
-  | secondGatherInputBroadcastCall (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ)
+  | secondGatherInputBroadcastCall (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ)
       (x : Option Bool)
       (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hin2 : ((p.roundRecord r).secondGather.process).input = some x)
-      (hbin2 : (((p.roundRecord r).secondGatherInputBroadcasts j).process).input = none) :
+      (hin2 : ((p.roundVariables r).secondGather.processVariables).input = some x)
+      (hbin2 : (((p.roundVariables r).secondGatherInputBroadcasts j).processVariables).input = none)
+        :
       RoundStep P j (c, p)
         (Sum.inr (.gbcaSend r j (.secondGatherInputBroadcasts j (.init x))))
-        (PMF.pure (c, p.setRoundRecord r
-          { (p.roundRecord r) with
-            secondGatherInputBroadcasts := Function.update (p.roundRecord
+        (PMF.pure (c, p.setRoundVariables r
+          { (p.roundVariables r) with
+            secondGatherInputBroadcasts := Function.update (p.roundVariables
               r).secondGatherInputBroadcasts j
-              (((p.roundRecord r).secondGatherInputBroadcasts j).setProcess
-                { (((p.roundRecord r).secondGatherInputBroadcasts j).process) with
+              (((p.roundVariables r).secondGatherInputBroadcasts j).setProcessVariables
+                { (((p.roundVariables r).secondGatherInputBroadcasts j).processVariables) with
                   input := some x }) }))
   /-- The second gather returns, and the process records the graded outcome its returned entries
   determine (AFW25's Algorithm 4, lines 5 to 8; AFW25's Algorithm 5, line 20). The returner has
   called its own bind broadcast. -/
-  | secondGatherReturn (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ)
+  | secondGatherReturn (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ)
       (g : Fin P.n → Option (Option Bool))
       (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hin : ((p.roundRecord r).secondGather.process).input ≠ none)
-      (hbind : ((p.roundRecord r).secondGather.process).sentBind ≠ none)
+      (hin : ((p.roundVariables r).secondGather.processVariables).input ≠ none)
+      (hbind : ((p.roundVariables r).secondGather.processVariables).sentBind ≠ none)
       (hsubap : ∀ k x, g k = some x →
-        Gather.holdsInputBroadcastReturn ((p.roundRecord r).secondGather.process) k x)
+        Gather.holdsInputBroadcastReturn ((p.roundVariables r).secondGather.processVariables) k x)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ U,
-          Gather.holdsBindBroadcastReturn ((p.roundRecord r).secondGather.process) q U ∧
+          Gather.holdsBindBroadcastReturn ((p.roundVariables r).secondGather.processVariables) q U ∧
             AcceptedPairs.subMap U g)
-      (hr2 : ((p.roundRecord r).secondGather.process).returned = false)
-      (hout : (p.roundRecord r).output = none) :
+      (hr2 : ((p.roundVariables r).secondGather.processVariables).returned = false)
+      (hout : (p.roundVariables r).output = none) :
       RoundStep P j (c, p)
         (Sum.inr (.gbcaRoundEvent r j (.secondGatherReturn (GBCA.gradeOf P g))))
-        (PMF.pure (c, p.setRoundRecord r
-          { (p.roundRecord r) with
+        (PMF.pure (c, p.setRoundVariables r
+          { (p.roundVariables r) with
             output := some (GBCA.gradeOf P g)
-            secondGather := (p.roundRecord r).secondGather.setProcess
-              { ((p.roundRecord r).secondGather.process) with returned := true } }))
+            secondGather := (p.roundVariables r).secondGather.setProcessVariables
+              { ((p.roundVariables r).secondGather.processVariables) with returned := true } }))
   /-- The round returns the graded outcome on record to the round loop (AFW25's Algorithm 4,
   line 3 and line 8). The outcome leaves the round record, which is what marks the round
   returned. -/
-  | retG (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (out : GBCAOutput) (bnd : Bool)
+  | retG (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (out : GBCAOutput) (bnd :
+      Bool)
       (hh : c.corrupted = false)
-      (hph : c.process.phase = .awaitG) (hr : c.process.round = r)
+      (hph : c.processVariables.phase = .awaitG) (hr : c.processVariables.round = r)
       (hterm : p.terminated = false)
-      (hout : (p.roundRecord r).output = some out)
-      (hr2 : ((p.roundRecord r).secondGather.process).returned = true) :
+      (hout : (p.roundVariables r).output = some out)
+      (hr2 : ((p.roundVariables r).secondGather.processVariables).returned = true) :
       RoundStep P j (c, p) (Sum.inl (.retG r j out bnd))
-        (PMF.pure (c.setProcess { c.process with
+        (PMF.pure (c.setProcessVariables { c.processVariables with
             estimate := out.estimate, lastGrade := some out, phase := .toCallW },
-          p.setRoundRecord r { (p.roundRecord r) with output := none }))
+          p.setRoundVariables r { (p.roundVariables r) with output := none }))
   /-- `ECHO` in an input-broadcast instance of the first gather: the leader's
   `⟨INIT, m⟩` is delivered here, or an `ECHO m` receipt quorum is, or `f + 1`
   `VOTE m` receipts are; no `ECHO` is out. -/
-  | firstGatherInputBroadcastEcho (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ)
+  | firstGatherInputBroadcastEcho (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ)
       (i : Fin P.n) (m : Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hrecv : BRB.Message.init m ∈ ((p.roundRecord r).firstGatherInputBroadcasts i).received i ∨
-        P.echoReceiptQuorum ≤ ((p.roundRecord r).firstGatherInputBroadcasts i).receivedCount (.echo
+      (hrecv : BRB.Message.init m ∈ ((p.roundVariables r).firstGatherInputBroadcasts i).received i ∨
+        P.receivedEchoQuorum ≤ ((p.roundVariables r).firstGatherInputBroadcasts i).receivedCount
+          (.echo
           m) ∨
-        P.f + 1 ≤ ((p.roundRecord r).firstGatherInputBroadcasts i).receivedCount (.vote m))
-      (hsend : (((p.roundRecord r).firstGatherInputBroadcasts i).process).sentEcho = none) :
+        P.f + 1 ≤ ((p.roundVariables r).firstGatherInputBroadcasts i).receivedCount (.vote m))
+      (hsend : (((p.roundVariables r).firstGatherInputBroadcasts i).processVariables).sentEcho =
+        none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.firstGatherInputBroadcasts i (.echo m))))
-        (PMF.pure (c, p.setRoundRecord r
-          { (p.roundRecord r) with
-            firstGatherInputBroadcasts := Function.update (p.roundRecord
+        (PMF.pure (c, p.setRoundVariables r
+          { (p.roundVariables r) with
+            firstGatherInputBroadcasts := Function.update (p.roundVariables
               r).firstGatherInputBroadcasts i
-              (((p.roundRecord r).firstGatherInputBroadcasts i).setProcess
-                { (((p.roundRecord r).firstGatherInputBroadcasts i).process) with sentEcho := some m
+              (((p.roundVariables r).firstGatherInputBroadcasts i).setProcessVariables
+                { (((p.roundVariables r).firstGatherInputBroadcasts i).processVariables) with
+                  sentEcho := some m
                   }) }))
   /-- `VOTE` on an `ECHO m` receipt quorum in an input-broadcast instance of the
   first gather. -/
-  | firstGatherInputBroadcastVoteQuorum (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ)
+  | firstGatherInputBroadcastVoteQuorum (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r
+      : ℕ)
     (i : Fin P.n)
       (m : Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hcnt : P.echoReceiptQuorum ≤ ((p.roundRecord r).firstGatherInputBroadcasts i).receivedCount
+      (hcnt : P.receivedEchoQuorum ≤ ((p.roundVariables r).firstGatherInputBroadcasts
+        i).receivedCount
         (.echo
         m))
-      (hsend : (((p.roundRecord r).firstGatherInputBroadcasts i).process).sentVote = none) :
+      (hsend : (((p.roundVariables r).firstGatherInputBroadcasts i).processVariables).sentVote =
+        none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.firstGatherInputBroadcasts i (.vote m))))
-        (PMF.pure (c, p.setRoundRecord r
-          { (p.roundRecord r) with
-            firstGatherInputBroadcasts := Function.update (p.roundRecord
+        (PMF.pure (c, p.setRoundVariables r
+          { (p.roundVariables r) with
+            firstGatherInputBroadcasts := Function.update (p.roundVariables
               r).firstGatherInputBroadcasts i
-              (((p.roundRecord r).firstGatherInputBroadcasts i).setProcess
-                { (((p.roundRecord r).firstGatherInputBroadcasts i).process) with sentVote := some m
+              (((p.roundVariables r).firstGatherInputBroadcasts i).setProcessVariables
+                { (((p.roundVariables r).firstGatherInputBroadcasts i).processVariables) with
+                  sentVote := some m
                   }) }))
   /-- `VOTE` by amplification, on `f + 1` `VOTE` receipts. -/
-  | firstGatherInputBroadcastVoteAmplification (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r
+  | firstGatherInputBroadcastVoteAmplification (c : RoundLoopVariables P.n) (p : RoundVariablesMap
+      P.n) (r
     : ℕ) (i : Fin P.n)
       (m : Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hcnt : P.f + 1 ≤ ((p.roundRecord r).firstGatherInputBroadcasts i).receivedCount (.vote m))
-      (hsend : (((p.roundRecord r).firstGatherInputBroadcasts i).process).sentVote = none) :
+      (hcnt : P.f + 1 ≤ ((p.roundVariables r).firstGatherInputBroadcasts i).receivedCount (.vote m))
+      (hsend : (((p.roundVariables r).firstGatherInputBroadcasts i).processVariables).sentVote =
+        none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.firstGatherInputBroadcasts i (.vote m))))
-        (PMF.pure (c, p.setRoundRecord r
-          { (p.roundRecord r) with
-            firstGatherInputBroadcasts := Function.update (p.roundRecord
+        (PMF.pure (c, p.setRoundVariables r
+          { (p.roundVariables r) with
+            firstGatherInputBroadcasts := Function.update (p.roundVariables
               r).firstGatherInputBroadcasts i
-              (((p.roundRecord r).firstGatherInputBroadcasts i).setProcess
-                { (((p.roundRecord r).firstGatherInputBroadcasts i).process) with sentVote := some m
+              (((p.roundVariables r).firstGatherInputBroadcasts i).setProcessVariables
+                { (((p.roundVariables r).firstGatherInputBroadcasts i).processVariables) with
+                  sentVote := some m
                   }) }))
   /-- The instance broadcasting `i`'s input in the first gather returns here: a `2f + 1` `VOTE`
   quorum stands in that instance, which has not returned here yet, and the gather record files the
   value it returned. AFW25's Algorithm 5, lines 1 and 2; LeslieBP's Algorithm 4,
   `upon BRB_k.return(m')`. -/
-  | firstGatherInputBroadcastReturn (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n)
+  | firstGatherInputBroadcastReturn (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n)
       (r : ℕ) (i : Fin P.n) (v : Bool)
       (hh : c.corrupted = false) (hterm : p.terminated = false)
       (hcnt : 2 * P.f + 1 ≤
-        ((p.roundRecord r).firstGatherInputBroadcasts i).receivedCount (.vote v))
-      (hret : (((p.roundRecord r).firstGatherInputBroadcasts i).process).returned = false) :
+        ((p.roundVariables r).firstGatherInputBroadcasts i).receivedCount (.vote v))
+      (hret : (((p.roundVariables r).firstGatherInputBroadcasts i).processVariables).returned =
+        false) :
       RoundStep P j (c, p) (Sum.inr (.gbcaRoundEvent r j (.firstGatherInputBroadcastReturn i v)))
-        (PMF.pure (c, p.setRoundRecord r
-          { (p.roundRecord r) with
-            firstGather := (p.roundRecord r).firstGather.setProcess
-              { ((p.roundRecord r).firstGather.process) with
+        (PMF.pure (c, p.setRoundVariables r
+          { (p.roundVariables r) with
+            firstGather := (p.roundVariables r).firstGather.setProcessVariables
+              { ((p.roundVariables r).firstGather.processVariables) with
                 inputBroadcastReturned := Function.update
-                  ((p.roundRecord r).firstGather.process).inputBroadcastReturned i (some v) }
+                  ((p.roundVariables r).firstGather.processVariables).inputBroadcastReturned i (some
+                    v) }
             firstGatherInputBroadcasts := Function.update
-              (p.roundRecord r).firstGatherInputBroadcasts i
-              ((((p.roundRecord r).firstGatherInputBroadcasts i).setProcess
-                { (((p.roundRecord r).firstGatherInputBroadcasts i).process) with
+              (p.roundVariables r).firstGatherInputBroadcasts i
+              ((((p.roundVariables r).firstGatherInputBroadcasts i).setProcessVariables
+                { (((p.roundVariables r).firstGatherInputBroadcasts i).processVariables) with
                   returned := true })) }))
   /-- `ECHO` in a bind-broadcast instance of the first gather. -/
-  | firstGatherBindBroadcastEcho (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (i : Fin
+  | firstGatherBindBroadcastEcho (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (i
+      : Fin
     P.n)
       (m : AcceptedPairs P.n Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hrecv : BRB.Message.init m ∈ ((p.roundRecord r).firstGatherBindBroadcasts i).received i ∨
-        P.echoReceiptQuorum ≤ ((p.roundRecord r).firstGatherBindBroadcasts i).receivedCount (.echo
+      (hrecv : BRB.Message.init m ∈ ((p.roundVariables r).firstGatherBindBroadcasts i).received i ∨
+        P.receivedEchoQuorum ≤ ((p.roundVariables r).firstGatherBindBroadcasts i).receivedCount
+          (.echo
           m) ∨
-        P.f + 1 ≤ ((p.roundRecord r).firstGatherBindBroadcasts i).receivedCount (.vote m))
-      (hsend : (((p.roundRecord r).firstGatherBindBroadcasts i).process).sentEcho = none) :
+        P.f + 1 ≤ ((p.roundVariables r).firstGatherBindBroadcasts i).receivedCount (.vote m))
+      (hsend : (((p.roundVariables r).firstGatherBindBroadcasts i).processVariables).sentEcho =
+        none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.firstGatherBindBroadcasts i (.echo m))))
-        (PMF.pure (c, p.setRoundRecord r
-          { (p.roundRecord r) with
-            firstGatherBindBroadcasts := Function.update (p.roundRecord r).firstGatherBindBroadcasts
+        (PMF.pure (c, p.setRoundVariables r
+          { (p.roundVariables r) with
+            firstGatherBindBroadcasts := Function.update (p.roundVariables
+              r).firstGatherBindBroadcasts
               i
-              (((p.roundRecord r).firstGatherBindBroadcasts i).setProcess
-                { (((p.roundRecord r).firstGatherBindBroadcasts i).process) with sentEcho := some m
+              (((p.roundVariables r).firstGatherBindBroadcasts i).setProcessVariables
+                { (((p.roundVariables r).firstGatherBindBroadcasts i).processVariables) with
+                  sentEcho := some m
                   }) }))
   /-- `VOTE` on an `ECHO m` receipt quorum in a bind-broadcast instance of the
   first gather. -/
-  | firstGatherBindBroadcastVoteQuorum (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (i
+  | firstGatherBindBroadcastVoteQuorum (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r :
+      ℕ) (i
     : Fin P.n)
       (m : AcceptedPairs P.n Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hcnt : P.echoReceiptQuorum ≤ ((p.roundRecord r).firstGatherBindBroadcasts i).receivedCount
+      (hcnt : P.receivedEchoQuorum ≤ ((p.roundVariables r).firstGatherBindBroadcasts
+        i).receivedCount
         (.echo
         m))
-      (hsend : (((p.roundRecord r).firstGatherBindBroadcasts i).process).sentVote = none) :
+      (hsend : (((p.roundVariables r).firstGatherBindBroadcasts i).processVariables).sentVote =
+        none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.firstGatherBindBroadcasts i (.vote m))))
-        (PMF.pure (c, p.setRoundRecord r
-          { (p.roundRecord r) with
-            firstGatherBindBroadcasts := Function.update (p.roundRecord r).firstGatherBindBroadcasts
+        (PMF.pure (c, p.setRoundVariables r
+          { (p.roundVariables r) with
+            firstGatherBindBroadcasts := Function.update (p.roundVariables
+              r).firstGatherBindBroadcasts
               i
-              (((p.roundRecord r).firstGatherBindBroadcasts i).setProcess
-                { (((p.roundRecord r).firstGatherBindBroadcasts i).process) with sentVote := some m
+              (((p.roundVariables r).firstGatherBindBroadcasts i).setProcessVariables
+                { (((p.roundVariables r).firstGatherBindBroadcasts i).processVariables) with
+                  sentVote := some m
                   }) }))
   /-- `VOTE` by amplification in a bind-broadcast instance of the first
   gather. -/
-  | firstGatherBindBroadcastVoteAmplification (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r
+  | firstGatherBindBroadcastVoteAmplification (c : RoundLoopVariables P.n) (p : RoundVariablesMap
+      P.n) (r
     : ℕ) (i : Fin P.n)
       (m : AcceptedPairs P.n Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hcnt : P.f + 1 ≤ ((p.roundRecord r).firstGatherBindBroadcasts i).receivedCount (.vote m))
-      (hsend : (((p.roundRecord r).firstGatherBindBroadcasts i).process).sentVote = none) :
+      (hcnt : P.f + 1 ≤ ((p.roundVariables r).firstGatherBindBroadcasts i).receivedCount (.vote m))
+      (hsend : (((p.roundVariables r).firstGatherBindBroadcasts i).processVariables).sentVote =
+        none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.firstGatherBindBroadcasts i (.vote m))))
-        (PMF.pure (c, p.setRoundRecord r
-          { (p.roundRecord r) with
-            firstGatherBindBroadcasts := Function.update (p.roundRecord r).firstGatherBindBroadcasts
+        (PMF.pure (c, p.setRoundVariables r
+          { (p.roundVariables r) with
+            firstGatherBindBroadcasts := Function.update (p.roundVariables
+              r).firstGatherBindBroadcasts
               i
-              (((p.roundRecord r).firstGatherBindBroadcasts i).setProcess
-                { (((p.roundRecord r).firstGatherBindBroadcasts i).process) with sentVote := some m
+              (((p.roundVariables r).firstGatherBindBroadcasts i).setProcessVariables
+                { (((p.roundVariables r).firstGatherBindBroadcasts i).processVariables) with
+                  sentVote := some m
                   }) }))
   /-- The instance broadcasting `q`'s `BIND` payload in the first gather returns here, and the
   gather record files the payload it returned. AFW25's Algorithm 5, line 18. -/
-  | firstGatherBindBroadcastReturn (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n)
+  | firstGatherBindBroadcastReturn (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n)
       (r : ℕ) (q : Fin P.n) (U : AcceptedPairs P.n Bool)
       (hh : c.corrupted = false) (hterm : p.terminated = false)
       (hcnt : 2 * P.f + 1 ≤
-        ((p.roundRecord r).firstGatherBindBroadcasts q).receivedCount (.vote U))
-      (hret : (((p.roundRecord r).firstGatherBindBroadcasts q).process).returned = false) :
+        ((p.roundVariables r).firstGatherBindBroadcasts q).receivedCount (.vote U))
+      (hret : (((p.roundVariables r).firstGatherBindBroadcasts q).processVariables).returned =
+        false) :
       RoundStep P j (c, p) (Sum.inr (.gbcaRoundEvent r j (.firstGatherBindBroadcastReturn q U)))
-        (PMF.pure (c, p.setRoundRecord r
-          { (p.roundRecord r) with
-            firstGather := (p.roundRecord r).firstGather.setProcess
-              { ((p.roundRecord r).firstGather.process) with
+        (PMF.pure (c, p.setRoundVariables r
+          { (p.roundVariables r) with
+            firstGather := (p.roundVariables r).firstGather.setProcessVariables
+              { ((p.roundVariables r).firstGather.processVariables) with
                 bindBroadcastReturned := Function.update
-                  ((p.roundRecord r).firstGather.process).bindBroadcastReturned q (some U) }
+                  ((p.roundVariables r).firstGather.processVariables).bindBroadcastReturned q (some
+                    U) }
             firstGatherBindBroadcasts := Function.update
-              (p.roundRecord r).firstGatherBindBroadcasts q
-              ((((p.roundRecord r).firstGatherBindBroadcasts q).setProcess
-                { (((p.roundRecord r).firstGatherBindBroadcasts q).process) with
+              (p.roundVariables r).firstGatherBindBroadcasts q
+              ((((p.roundVariables r).firstGatherBindBroadcasts q).setProcessVariables
+                { (((p.roundVariables r).firstGatherBindBroadcasts q).processVariables) with
                   returned := true })) }))
   /-- `ECHO` in an input-broadcast instance of the second gather. -/
-  | secondGatherInputBroadcastEcho (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ)
+  | secondGatherInputBroadcastEcho (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ)
       (i : Fin P.n) (m : Option Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hrecv : BRB.Message.init m ∈ ((p.roundRecord r).secondGatherInputBroadcasts i).received i ∨
-        P.echoReceiptQuorum ≤ ((p.roundRecord r).secondGatherInputBroadcasts i).receivedCount (.echo
+      (hrecv : BRB.Message.init m ∈ ((p.roundVariables r).secondGatherInputBroadcasts i).received i
+        ∨
+        P.receivedEchoQuorum ≤ ((p.roundVariables r).secondGatherInputBroadcasts i).receivedCount
+          (.echo
           m) ∨
-        P.f + 1 ≤ ((p.roundRecord r).secondGatherInputBroadcasts i).receivedCount (.vote m))
-      (hsend : (((p.roundRecord r).secondGatherInputBroadcasts i).process).sentEcho = none) :
+        P.f + 1 ≤ ((p.roundVariables r).secondGatherInputBroadcasts i).receivedCount (.vote m))
+      (hsend : (((p.roundVariables r).secondGatherInputBroadcasts i).processVariables).sentEcho =
+        none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.secondGatherInputBroadcasts i (.echo m))))
-        (PMF.pure (c, p.setRoundRecord r
-          { (p.roundRecord r) with
-            secondGatherInputBroadcasts := Function.update (p.roundRecord
+        (PMF.pure (c, p.setRoundVariables r
+          { (p.roundVariables r) with
+            secondGatherInputBroadcasts := Function.update (p.roundVariables
               r).secondGatherInputBroadcasts i
-              (((p.roundRecord r).secondGatherInputBroadcasts i).setProcess
-                { (((p.roundRecord r).secondGatherInputBroadcasts i).process) with
+              (((p.roundVariables r).secondGatherInputBroadcasts i).setProcessVariables
+                { (((p.roundVariables r).secondGatherInputBroadcasts i).processVariables) with
                   sentEcho :=
                     some m }) }))
   /-- `VOTE` on an `ECHO m` receipt quorum in an input-broadcast instance of the
   second gather. -/
-  | secondGatherInputBroadcastVoteQuorum (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ)
+  | secondGatherInputBroadcastVoteQuorum (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r
+      : ℕ)
     (i : Fin P.n)
       (m : Option Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hcnt : P.echoReceiptQuorum ≤ ((p.roundRecord r).secondGatherInputBroadcasts i).receivedCount
+      (hcnt : P.receivedEchoQuorum ≤ ((p.roundVariables r).secondGatherInputBroadcasts
+        i).receivedCount
         (.echo
         m))
-      (hsend : (((p.roundRecord r).secondGatherInputBroadcasts i).process).sentVote = none) :
+      (hsend : (((p.roundVariables r).secondGatherInputBroadcasts i).processVariables).sentVote =
+        none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.secondGatherInputBroadcasts i (.vote m))))
-        (PMF.pure (c, p.setRoundRecord r
-          { (p.roundRecord r) with
-            secondGatherInputBroadcasts := Function.update (p.roundRecord
+        (PMF.pure (c, p.setRoundVariables r
+          { (p.roundVariables r) with
+            secondGatherInputBroadcasts := Function.update (p.roundVariables
               r).secondGatherInputBroadcasts i
-              (((p.roundRecord r).secondGatherInputBroadcasts i).setProcess
-                { (((p.roundRecord r).secondGatherInputBroadcasts i).process) with
+              (((p.roundVariables r).secondGatherInputBroadcasts i).setProcessVariables
+                { (((p.roundVariables r).secondGatherInputBroadcasts i).processVariables) with
                   sentVote :=
                     some m }) }))
   /-- `VOTE` by amplification in an input-broadcast instance of the second
   gather. -/
-  | secondGatherInputBroadcastVoteAmplification (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n)
+  | secondGatherInputBroadcastVoteAmplification (c : RoundLoopVariables P.n) (p : RoundVariablesMap
+      P.n)
     (r : ℕ) (i : Fin P.n)
       (m : Option Bool) (hh : c.corrupted = false) (hterm : p.terminated = false)
-      (hcnt : P.f + 1 ≤ ((p.roundRecord r).secondGatherInputBroadcasts i).receivedCount (.vote m))
-      (hsend : (((p.roundRecord r).secondGatherInputBroadcasts i).process).sentVote = none) :
+      (hcnt : P.f + 1 ≤ ((p.roundVariables r).secondGatherInputBroadcasts i).receivedCount (.vote
+        m))
+      (hsend : (((p.roundVariables r).secondGatherInputBroadcasts i).processVariables).sentVote =
+        none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.secondGatherInputBroadcasts i (.vote m))))
-        (PMF.pure (c, p.setRoundRecord r
-          { (p.roundRecord r) with
-            secondGatherInputBroadcasts := Function.update (p.roundRecord
+        (PMF.pure (c, p.setRoundVariables r
+          { (p.roundVariables r) with
+            secondGatherInputBroadcasts := Function.update (p.roundVariables
               r).secondGatherInputBroadcasts i
-              (((p.roundRecord r).secondGatherInputBroadcasts i).setProcess
-                { (((p.roundRecord r).secondGatherInputBroadcasts i).process) with
+              (((p.roundVariables r).secondGatherInputBroadcasts i).setProcessVariables
+                { (((p.roundVariables r).secondGatherInputBroadcasts i).processVariables) with
                   sentVote :=
                     some m }) }))
   /-- The instance broadcasting `i`'s input in the second gather returns here. AFW25's Algorithm 5,
   lines 1 and 2. -/
-  | secondGatherInputBroadcastReturn (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n)
+  | secondGatherInputBroadcastReturn (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n)
       (r : ℕ) (i : Fin P.n) (v : Option Bool)
       (hh : c.corrupted = false) (hterm : p.terminated = false)
       (hcnt : 2 * P.f + 1 ≤
-        ((p.roundRecord r).secondGatherInputBroadcasts i).receivedCount (.vote v))
-      (hret : (((p.roundRecord r).secondGatherInputBroadcasts i).process).returned = false) :
+        ((p.roundVariables r).secondGatherInputBroadcasts i).receivedCount (.vote v))
+      (hret : (((p.roundVariables r).secondGatherInputBroadcasts i).processVariables).returned =
+        false) :
       RoundStep P j (c, p) (Sum.inr (.gbcaRoundEvent r j (.secondGatherInputBroadcastReturn i v)))
-        (PMF.pure (c, p.setRoundRecord r
-          { (p.roundRecord r) with
-            secondGather := (p.roundRecord r).secondGather.setProcess
-              { ((p.roundRecord r).secondGather.process) with
+        (PMF.pure (c, p.setRoundVariables r
+          { (p.roundVariables r) with
+            secondGather := (p.roundVariables r).secondGather.setProcessVariables
+              { ((p.roundVariables r).secondGather.processVariables) with
                 inputBroadcastReturned := Function.update
-                  ((p.roundRecord r).secondGather.process).inputBroadcastReturned i (some v) }
+                  ((p.roundVariables r).secondGather.processVariables).inputBroadcastReturned i
+                    (some v) }
             secondGatherInputBroadcasts := Function.update
-              (p.roundRecord r).secondGatherInputBroadcasts i
-              ((((p.roundRecord r).secondGatherInputBroadcasts i).setProcess
-                { (((p.roundRecord r).secondGatherInputBroadcasts i).process) with
+              (p.roundVariables r).secondGatherInputBroadcasts i
+              ((((p.roundVariables r).secondGatherInputBroadcasts i).setProcessVariables
+                { (((p.roundVariables r).secondGatherInputBroadcasts i).processVariables) with
                   returned := true })) }))
   /-- `ECHO` in a bind-broadcast instance of the second gather. -/
-  | secondGatherBindBroadcastEcho (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ)
+  | secondGatherBindBroadcastEcho (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ)
       (i : Fin P.n) (m : AcceptedPairs P.n (Option Bool)) (hh : c.corrupted = false)
       (hterm : p.terminated = false)
-      (hrecv : BRB.Message.init m ∈ ((p.roundRecord r).secondGatherBindBroadcasts i).received i ∨
-        P.echoReceiptQuorum ≤ ((p.roundRecord r).secondGatherBindBroadcasts i).receivedCount (.echo
+      (hrecv : BRB.Message.init m ∈ ((p.roundVariables r).secondGatherBindBroadcasts i).received i ∨
+        P.receivedEchoQuorum ≤ ((p.roundVariables r).secondGatherBindBroadcasts i).receivedCount
+          (.echo
           m) ∨
-        P.f + 1 ≤ ((p.roundRecord r).secondGatherBindBroadcasts i).receivedCount (.vote m))
-      (hsend : (((p.roundRecord r).secondGatherBindBroadcasts i).process).sentEcho = none) :
+        P.f + 1 ≤ ((p.roundVariables r).secondGatherBindBroadcasts i).receivedCount (.vote m))
+      (hsend : (((p.roundVariables r).secondGatherBindBroadcasts i).processVariables).sentEcho =
+        none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.secondGatherBindBroadcasts i (.echo m))))
-        (PMF.pure (c, p.setRoundRecord r
-          { (p.roundRecord r) with
-            secondGatherBindBroadcasts := Function.update (p.roundRecord
+        (PMF.pure (c, p.setRoundVariables r
+          { (p.roundVariables r) with
+            secondGatherBindBroadcasts := Function.update (p.roundVariables
               r).secondGatherBindBroadcasts i
-              (((p.roundRecord r).secondGatherBindBroadcasts i).setProcess
-                { (((p.roundRecord r).secondGatherBindBroadcasts i).process) with sentEcho := some m
+              (((p.roundVariables r).secondGatherBindBroadcasts i).setProcessVariables
+                { (((p.roundVariables r).secondGatherBindBroadcasts i).processVariables) with
+                  sentEcho := some m
                   }) }))
   /-- `VOTE` on an `ECHO m` receipt quorum in a bind-broadcast instance of the
   second gather. -/
-  | secondGatherBindBroadcastVoteQuorum (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ)
+  | secondGatherBindBroadcastVoteQuorum (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r
+      : ℕ)
     (i : Fin P.n)
       (m : AcceptedPairs P.n (Option Bool)) (hh : c.corrupted = false)
       (hterm : p.terminated = false)
-      (hcnt : P.echoReceiptQuorum ≤ ((p.roundRecord r).secondGatherBindBroadcasts i).receivedCount
+      (hcnt : P.receivedEchoQuorum ≤ ((p.roundVariables r).secondGatherBindBroadcasts
+        i).receivedCount
         (.echo
         m))
-      (hsend : (((p.roundRecord r).secondGatherBindBroadcasts i).process).sentVote = none) :
+      (hsend : (((p.roundVariables r).secondGatherBindBroadcasts i).processVariables).sentVote =
+        none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.secondGatherBindBroadcasts i (.vote m))))
-        (PMF.pure (c, p.setRoundRecord r
-          { (p.roundRecord r) with
-            secondGatherBindBroadcasts := Function.update (p.roundRecord
+        (PMF.pure (c, p.setRoundVariables r
+          { (p.roundVariables r) with
+            secondGatherBindBroadcasts := Function.update (p.roundVariables
               r).secondGatherBindBroadcasts i
-              (((p.roundRecord r).secondGatherBindBroadcasts i).setProcess
-                { (((p.roundRecord r).secondGatherBindBroadcasts i).process) with sentVote := some m
+              (((p.roundVariables r).secondGatherBindBroadcasts i).setProcessVariables
+                { (((p.roundVariables r).secondGatherBindBroadcasts i).processVariables) with
+                  sentVote := some m
                   }) }))
   /-- `VOTE` by amplification in a bind-broadcast instance of the second
   gather. -/
-  | secondGatherBindBroadcastVoteAmplification (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r
+  | secondGatherBindBroadcastVoteAmplification (c : RoundLoopVariables P.n) (p : RoundVariablesMap
+      P.n) (r
     : ℕ) (i : Fin P.n)
       (m : AcceptedPairs P.n (Option Bool)) (hh : c.corrupted = false)
       (hterm : p.terminated = false)
-      (hcnt : P.f + 1 ≤ ((p.roundRecord r).secondGatherBindBroadcasts i).receivedCount (.vote m))
-      (hsend : (((p.roundRecord r).secondGatherBindBroadcasts i).process).sentVote = none) :
+      (hcnt : P.f + 1 ≤ ((p.roundVariables r).secondGatherBindBroadcasts i).receivedCount (.vote m))
+      (hsend : (((p.roundVariables r).secondGatherBindBroadcasts i).processVariables).sentVote =
+        none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.secondGatherBindBroadcasts i (.vote m))))
-        (PMF.pure (c, p.setRoundRecord r
-          { (p.roundRecord r) with
-            secondGatherBindBroadcasts := Function.update (p.roundRecord
+        (PMF.pure (c, p.setRoundVariables r
+          { (p.roundVariables r) with
+            secondGatherBindBroadcasts := Function.update (p.roundVariables
               r).secondGatherBindBroadcasts i
-              (((p.roundRecord r).secondGatherBindBroadcasts i).setProcess
-                { (((p.roundRecord r).secondGatherBindBroadcasts i).process) with sentVote := some m
+              (((p.roundVariables r).secondGatherBindBroadcasts i).setProcessVariables
+                { (((p.roundVariables r).secondGatherBindBroadcasts i).processVariables) with
+                  sentVote := some m
                   }) }))
   /-- The instance broadcasting `q`'s `BIND` payload in the second gather returns here. AFW25's
   Algorithm 5, line 18. -/
-  | secondGatherBindBroadcastReturn (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n)
+  | secondGatherBindBroadcastReturn (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n)
       (r : ℕ) (q : Fin P.n) (U : AcceptedPairs P.n (Option Bool))
       (hh : c.corrupted = false) (hterm : p.terminated = false)
       (hcnt : 2 * P.f + 1 ≤
-        ((p.roundRecord r).secondGatherBindBroadcasts q).receivedCount (.vote U))
-      (hret : (((p.roundRecord r).secondGatherBindBroadcasts q).process).returned = false) :
+        ((p.roundVariables r).secondGatherBindBroadcasts q).receivedCount (.vote U))
+      (hret : (((p.roundVariables r).secondGatherBindBroadcasts q).processVariables).returned =
+        false) :
       RoundStep P j (c, p) (Sum.inr (.gbcaRoundEvent r j (.secondGatherBindBroadcastReturn q U)))
-        (PMF.pure (c, p.setRoundRecord r
-          { (p.roundRecord r) with
-            secondGather := (p.roundRecord r).secondGather.setProcess
-              { ((p.roundRecord r).secondGather.process) with
+        (PMF.pure (c, p.setRoundVariables r
+          { (p.roundVariables r) with
+            secondGather := (p.roundVariables r).secondGather.setProcessVariables
+              { ((p.roundVariables r).secondGather.processVariables) with
                 bindBroadcastReturned := Function.update
-                  ((p.roundRecord r).secondGather.process).bindBroadcastReturned q (some U) }
+                  ((p.roundVariables r).secondGather.processVariables).bindBroadcastReturned q (some
+                    U) }
             secondGatherBindBroadcasts := Function.update
-              (p.roundRecord r).secondGatherBindBroadcasts q
-              ((((p.roundRecord r).secondGatherBindBroadcasts q).setProcess
-                { (((p.roundRecord r).secondGatherBindBroadcasts q).process) with
+              (p.roundVariables r).secondGatherBindBroadcasts q
+              ((((p.roundVariables r).secondGatherBindBroadcasts q).setProcessVariables
+                { (((p.roundVariables r).secondGatherBindBroadcasts q).processVariables) with
                   returned := true })) }))
   /-- Delivery, receiver's half: file the message in the local state of the network state its
   tag names. Authenticity is the network's conjunct. -/
-  | gbcaDeliverReceive (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (k : Fin P.n)
+  | gbcaDeliverReceive (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (k : Fin
+      P.n)
       (m : Message P.n) (hh : c.corrupted = false) (hterm : p.terminated = false) :
       RoundStep P j (c, p) (Sum.inr (.gbcaDeliver r j k m))
         (PMF.pure (c, p.deliverTo r k m))
@@ -878,7 +944,7 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
 `roundOwn j`, each fires only at an unreplaced program, each is Dirac, and the
 return takes the announced bit free (D29). -/
 instance instIsRoundStep (P : Parameters) :
-    IsRoundStep P (Message P.n) (RoundEvent P.n) (RoundRecord P.n) (RoundStep P) where
+    IsRoundStep P (Message P.n) (RoundEvent P.n) (RoundVariables P.n) (RoundStep P) where
   own h := by
     cases h <;> rfl
   correct h := by
@@ -897,32 +963,32 @@ section Transposition
 
 variable {n : ℕ}
 
-example (s : RoundRecord n) (k i : Fin n) (m : BRB.Message Bool) :
+example (s : RoundVariables n) (k i : Fin n) (m : BRB.Message Bool) :
     ((s.deliverTo k (.firstGatherInputBroadcasts i m)).firstGatherInputBroadcasts i).received k
       = insert m ((s.firstGatherInputBroadcasts i).received k) := by
-  simp [RoundRecord.deliverTo, LocalState.deliverTo]
+  simp [RoundVariables.deliverTo, LocalState.deliverTo]
 
-example (s : RoundRecord n) (k i i' : Fin n) (m : BRB.Message Bool) (h : i' ≠ i) :
+example (s : RoundVariables n) (k i i' : Fin n) (m : BRB.Message Bool) (h : i' ≠ i) :
     (s.deliverTo k (.firstGatherInputBroadcasts i m)).firstGatherInputBroadcasts i' =
       s.firstGatherInputBroadcasts i' := by
-  simp [RoundRecord.deliverTo, Function.update_of_ne h]
+  simp [RoundVariables.deliverTo, Function.update_of_ne h]
 
-example (s : RoundRecord n) (k i : Fin n) (m : BRB.Message Bool) :
+example (s : RoundVariables n) (k i : Fin n) (m : BRB.Message Bool) :
     (s.deliverTo k (.firstGatherInputBroadcasts i m)).firstGather = s.firstGather := by
-  simp [RoundRecord.deliverTo]
+  simp [RoundVariables.deliverTo]
 
-example (s : RoundRecord n) (k : Fin n) (m : Gather.Message n Bool) :
+example (s : RoundVariables n) (k : Fin n) (m : Gather.Message n Bool) :
     (s.deliverTo k (.firstGather m)).firstGather.received k = insert m (s.firstGather.received k) :=
       by
-  simp [RoundRecord.deliverTo, LocalState.deliverTo]
+  simp [RoundVariables.deliverTo, LocalState.deliverTo]
 
-example (s : RoundRecord n) (k : Fin n) (m : Gather.Message n Bool) (i : Fin n) :
+example (s : RoundVariables n) (k : Fin n) (m : Gather.Message n Bool) (i : Fin n) :
     (s.deliverTo k (.firstGather m)).firstGatherInputBroadcasts i = s.firstGatherInputBroadcasts i
       := by
-  simp [RoundRecord.deliverTo]
+  simp [RoundVariables.deliverTo]
 
-example (P : Parameters) (p : RoundRecordMap P.n) (r : ℕ) (sr : RoundRecord P.n) :
-    (p.setRoundRecord r sr).roundRecord r = sr := by simp
+example (P : Parameters) (p : RoundVariablesMap P.n) (r : ℕ) (sr : RoundVariables P.n) :
+    (p.setRoundVariables r sr).roundVariables r = sr := by simp
 
 end Transposition
 
@@ -934,9 +1000,9 @@ def gbcaCallPayload (P : Parameters) : Fin P.n → Bool → Option (Message P.n)
 
 /-- The step relation of the program of process `j`. -/
 abbrev ProgramStep (P : Parameters) (j : Fin P.n) :
-    ProcessRecord P.n → ExtendedLabel P.n (Message P.n) (RoundEvent P.n) →
-      PMF (ProcessRecord P.n) → Prop :=
-  Implementation.ProgramStep P (Message P.n) (RoundEvent P.n) (RoundRecord P.n) (RoundStep P) j
+    ProcessVariables P.n → ExtendedLabel P.n (Message P.n) (RoundEvent P.n) →
+      PMF (ProcessVariables P.n) → Prop :=
+  Implementation.ProgramStep P (Message P.n) (RoundEvent P.n) (RoundVariables P.n) (RoundStep P) j
 
 /-- The step relation of the network. -/
 abbrev NetworkStep (P : Parameters) :
@@ -949,26 +1015,26 @@ abbrev NetworkStep (P : Parameters) :
 /-- The state of the gather-based protocol: the process family, the network
 adversary and the coin oracle. -/
 abbrev ProtocolState (P : Parameters) : Type :=
-  Implementation.State P (Message P.n) (RoundRecord P.n) (Ghost P.n)
+  Implementation.State P (Message P.n) (RoundVariables P.n) (Ghost P.n)
 
 /-- The three components in parallel, over the extended alphabet. -/
 noncomputable def protocolExtended (P : Parameters) :
     System (ProtocolState P) (Implementation.ExtendedLabel P.n (Message P.n) (RoundEvent P.n)) :=
-  Implementation.systemExtended P (Message P.n) (RoundEvent P.n) (RoundRecord P.n) (Ghost P.n)
+  Implementation.systemExtended P (Message P.n) (RoundEvent P.n) (RoundVariables P.n) (Ghost P.n)
     (RoundStep P)
     (gbcaCallPayload P) (ghostStep P) (announcedBound P)
 
 /-- The gather-based protocol group: the rendezvous alphabet hidden, the
 result read back over `Label n`. -/
 noncomputable def protocolHidden (P : Parameters) : System (ProtocolState P) (Label P.n) :=
-  Implementation.systemHidden P (Message P.n) (RoundEvent P.n) (RoundRecord P.n) (Ghost P.n)
+  Implementation.systemHidden P (Message P.n) (RoundEvent P.n) (RoundVariables P.n) (Ghost P.n)
     (RoundStep P)
     (gbcaCallPayload P) (ghostStep P) (announcedBound P)
 
 /-- **The gather-based protocol**: the group with the sub-protocol API
 hidden. -/
 noncomputable def protocol (P : Parameters) : System (ProtocolState P) (Label P.n) :=
-  Implementation.system P (Message P.n) (RoundEvent P.n) (RoundRecord P.n) (Ghost P.n)
+  Implementation.system P (Message P.n) (RoundEvent P.n) (RoundVariables P.n) (Ghost P.n)
     (RoundStep P)
     (gbcaCallPayload P) (ghostStep P) (announcedBound P)
 

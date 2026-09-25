@@ -43,22 +43,24 @@ variable {X : Type} [DecidableEq X] {P : Parameters}
 the gather record. The core and the incidence read the sent sets and the
 corrupted set, and no local record. -/
 def networkOf {n : ℕ} (s : StateOverBroadcastSpecification n X) :
-    InstanceState n (BaseProcessRecord n X) (Message n X) :=
-  ((fun _ => LocalState.initial n (Message n X) (BaseProcessRecord.initial n X)), (gatherTier s).2)
+    InstanceState n (BaseProcessVariables n X) (Message n X) :=
+  ((fun _ => LocalState.initial n (Message n X) (BaseProcessVariables.initial n X)),
+    (gatherProgramsAndNetwork
+    s).2)
 
 omit [DecidableEq X] in
 @[simp] theorem networkOf_sent {n : ℕ} (s : StateOverBroadcastSpecification n X) :
-    (networkOf s).sent = (gatherTier s).sent := rfl
+    (networkOf s).sent = (gatherProgramsAndNetwork s).sent := rfl
 
 omit [DecidableEq X] in
 @[simp] theorem networkOf_F {n : ℕ} (s : StateOverBroadcastSpecification n X) : (networkOf s).F =
-  (gatherTier s).F
+  (gatherProgramsAndNetwork s).F
   := rfl
 
 omit [DecidableEq X] in
 /-- The core of the composition's gather network state. -/
 theorem coreOf_networkOf (s : StateOverBroadcastSpecification P.n X) :
-    coreOf P (networkOf s) = coreOfNetwork P (gatherTier s).2 := rfl
+    coreOf P (networkOf s) = coreOfNetwork P (gatherProgramsAndNetwork s).2 := rfl
 
 /-! ### The incidence on the gather network state
 
@@ -71,8 +73,8 @@ omit [DecidableEq X] in
 /-- The `ECHO` payload of a process outside `F` is the one its `sentEcho` field
 holds. -/
 theorem echoOf_eq {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s) {j : Fin P.n}
-    (hj : j ∉ (gatherTier s).F) {A : AcceptedPairs P.n X}
-    (hA : Message.echo A ∈ (gatherTier s).sent j) : echoOf (networkOf s) j = A := by
+    (hj : j ∉ (gatherProgramsAndNetwork s).F) {A : AcceptedPairs P.n X}
+    (hA : Message.echo A ∈ (gatherProgramsAndNetwork s).sent j) : echoOf (networkOf s) j = A := by
   classical
   have hex : ∃ A : AcceptedPairs P.n X, Message.echo A ∈ (networkOf s).sent j := ⟨A, hA⟩
   rw [echoOf, dif_pos hex]
@@ -87,9 +89,10 @@ least `n − f` senders. Its `VOTE` payload, if it has one, is backed by `n − 
 `ECHO` receipts; if it has none the condition is vacuous and the set is
 everything. -/
 theorem dominatedBy_card {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s)
-    {q : Fin P.n} (hq : q ∉ (gatherTier s).F) : P.n - P.f ≤ (dominatedBy (networkOf s) q).card := by
+    {q : Fin P.n} (hq : q ∉ (gatherProgramsAndNetwork s).F) : P.n - P.f ≤ (dominatedBy (networkOf s)
+      q).card := by
   classical
-  by_cases hv : ∃ W : AcceptedPairs P.n X, Message.vote W ∈ (gatherTier s).sent q
+  by_cases hv : ∃ W : AcceptedPairs P.n X, Message.vote W ∈ (gatherProgramsAndNetwork s).sent q
   · obtain ⟨W, hW⟩ := hv
     have hslot := hInv.vote_confirmed q hq W hW
     obtain ⟨Q, hQc, hQm⟩ := hInv.vote_backed q hq W hslot
@@ -114,11 +117,11 @@ omit [DecidableEq X] in
 /-- The `dominatedBy` set of a process outside `F` meets the processes outside
 `F` in at least `n − f − |F|` of them. -/
 theorem dominatedBy_correct_card {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s)
-    {q : Fin P.n} (hq : q ∉ (gatherTier s).F) :
-    P.n - P.f - (gatherTier s).F.card ≤
+    {q : Fin P.n} (hq : q ∉ (gatherProgramsAndNetwork s).F) :
+    P.n - P.f - (gatherProgramsAndNetwork s).F.card ≤
       ((correct (networkOf s)).filter (fun j => j ∈ dominatedBy (networkOf s) q)).card := by
   rw [correct_filter_dominatedBy, networkOf_F]
-  have h1 := Finset.le_card_sdiff (gatherTier s).F (dominatedBy (networkOf s) q)
+  have h1 := Finset.le_card_sdiff (gatherProgramsAndNetwork s).F (dominatedBy (networkOf s) q)
   have h2 := dominatedBy_card hInv hq
   omega
 
@@ -128,14 +131,14 @@ omit [DecidableEq X] in
 dominators. -/
 theorem exists_dominators {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s) :
     ∃ j₀, j₀ ∈ correct (networkOf s) ∧
-      P.n - P.f - (gatherTier s).F.card ≤ (dominators (networkOf s) j₀).card := by
+      P.n - P.f - (gatherProgramsAndNetwork s).F.card ≤ (dominators (networkOf s) j₀).card := by
   by_contra hc
   push Not at hc
   have hF := hInv.F_card
   have hf := P.hResilience
   set H : Finset (Fin P.n) := correct (networkOf s) with hH
-  set m : ℕ := P.n - P.f - (gatherTier s).F.card with hm
-  have hHcard : H.card = P.n - (gatherTier s).F.card := card_correct
+  set m : ℕ := P.n - P.f - (gatherProgramsAndNetwork s).F.card with hm
+  have hHcard : H.card = P.n - (gatherProgramsAndNetwork s).F.card := card_correct
   have hpos : 0 < H.card := by
     omega
   have hlow : ∀ q ∈ H, m ≤ ((correct (networkOf s)).filter
@@ -164,12 +167,13 @@ its `ECHO` payload below every committed `BIND` payload of a process outside
 the meeting process's write-once `VOTE` payload lies above the `ECHO` payload
 and below the `BIND` payload. -/
 theorem transfer {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s) {j₀ : Fin P.n}
-    (hj₀ : j₀ ∉ (gatherTier s).F) (hcnt : P.f + 1 ≤ (dominators (networkOf s) j₀).card)
-    {k : Fin P.n} (hk : k ∉ (gatherTier s).F) {U : AcceptedPairs P.n X}
+    (hj₀ : j₀ ∉ (gatherProgramsAndNetwork s).F) (hcnt : P.f + 1 ≤ (dominators (networkOf s)
+      j₀).card)
+    {k : Fin P.n} (hk : k ∉ (gatherProgramsAndNetwork s).F) {U : AcceptedPairs P.n X}
     (hU : (bindBroadcasts s k).val = some U) :
-    ∃ A, Message.echo A ∈ (gatherTier s).sent j₀ ∧ P.n - P.f ≤ A.card ∧ A ⊆ U := by
+    ∃ A, Message.echo A ∈ (gatherProgramsAndNetwork s).sent j₀ ∧ P.n - P.f ≤ A.card ∧ A ⊆ U := by
   obtain ⟨V, hVc, hVm⟩ :=
-    hInv.bind_backed k hk U ((hInv.bindBroadcastVal_provenance k U hU).resolve_left hk)
+    hInv.bind_backed k hk U ((hInv.bindBroadcastVal_of_instanceInput k U hU).resolve_left hk)
   obtain ⟨q, hqK, hqV⟩ := InstanceState.exists_mem_inter_of_quorum hcnt hVc
   rw [dominators, Finset.mem_filter] at hqK
   obtain ⟨W, hWrecv, hWU⟩ := hVm q hqV
@@ -183,20 +187,22 @@ omit [DecidableEq X] in
 least `f + 1` dominators, as soon as some process outside `F` holds a committed
 `BIND` payload. -/
 theorem core_witness {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s)
-    {k₀ : Fin P.n} (hk₀ : k₀ ∉ (gatherTier s).F) {U₀ : AcceptedPairs P.n X}
+    {k₀ : Fin P.n} (hk₀ : k₀ ∉ (gatherProgramsAndNetwork s).F) {U₀ : AcceptedPairs P.n X}
     (hU₀ : (bindBroadcasts s k₀).val = some U₀) :
-    ∃ j₁, j₁ ∉ (gatherTier s).F ∧ P.f + 1 ≤ (dominators (networkOf s) j₁).card ∧
-      Message.echo (coreOfNetwork P (gatherTier s).2) ∈ (gatherTier s).sent j₁ ∧
-      ((gatherTier s).process j₁).sentEcho = some (coreOfNetwork P (gatherTier s).2) := by
+    ∃ j₁, j₁ ∉ (gatherProgramsAndNetwork s).F ∧ P.f + 1 ≤ (dominators (networkOf s) j₁).card ∧
+      Message.echo (coreOfNetwork P (gatherProgramsAndNetwork s).2) ∈ (gatherProgramsAndNetwork
+        s).sent j₁ ∧
+      ((gatherProgramsAndNetwork s).processVariables j₁).sentEcho = some (coreOfNetwork P
+        (gatherProgramsAndNetwork s).2) := by
   have hF := hInv.F_card
   have hf := P.hResilience
   have hex : ∃ j, j ∈ correct (networkOf s) ∧ P.f + 1 ≤ (dominators (networkOf s) j).card := by
     obtain ⟨j₀, hj₀, hcnt⟩ := exists_dominators hInv
     exact ⟨j₀, hj₀, by omega⟩
   have hspec := hex.choose_spec
-  have hj₁F : hex.choose ∉ (gatherTier s).F := mem_correct.mp hspec.1
+  have hj₁F : hex.choose ∉ (gatherProgramsAndNetwork s).F := mem_correct.mp hspec.1
   obtain ⟨A, hA, -, -⟩ := transfer hInv hj₁F hspec.2 hk₀ hU₀
-  have hcore : coreOfNetwork P (gatherTier s).2 = A := by
+  have hcore : coreOfNetwork P (gatherProgramsAndNetwork s).2 = A := by
     rw [← coreOf_networkOf, coreOf, dif_pos hex]
     exact echoOf_eq hInv hj₁F hA
   exact ⟨hex.choose, hj₁F, hspec.2, by rw [hcore]; exact hA,
@@ -207,16 +213,17 @@ omit [DecidableEq X] in
 payload, the core has at least `n − f` entries and lies below the committed
 `BIND` payload of every process outside `F`. -/
 theorem single_core {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s)
-    {k₀ : Fin P.n} (hk₀ : k₀ ∉ (gatherTier s).F) {U₀ : AcceptedPairs P.n X}
+    {k₀ : Fin P.n} (hk₀ : k₀ ∉ (gatherProgramsAndNetwork s).F) {U₀ : AcceptedPairs P.n X}
     (hU₀ : (bindBroadcasts s k₀).val = some U₀) :
-    P.n - P.f ≤ (coreOfNetwork P (gatherTier s).2).card ∧
-      ∀ k ∉ (gatherTier s).F, ∀ U : AcceptedPairs P.n X, (bindBroadcasts s k).val = some U →
-        coreOfNetwork P (gatherTier s).2 ⊆ U := by
+    P.n - P.f ≤ (coreOfNetwork P (gatherProgramsAndNetwork s).2).card ∧
+      ∀ k ∉ (gatherProgramsAndNetwork s).F, ∀ U : AcceptedPairs P.n X, (bindBroadcasts s k).val =
+        some U →
+        coreOfNetwork P (gatherProgramsAndNetwork s).2 ⊆ U := by
   obtain ⟨j₁, hj₁F, hcnt, hsent, hslot⟩ := core_witness hInv hk₀ hU₀
   refine ⟨hInv.echo_card j₁ hj₁F _ hslot, ?_⟩
   intro k hk U hU
   obtain ⟨A, hA, -, hAU⟩ := transfer hInv hj₁F hcnt hk hU
-  have hEq : A = coreOfNetwork P (gatherTier s).2 := by
+  have hEq : A = coreOfNetwork P (gatherProgramsAndNetwork s).2 := by
     have h1 := hInv.echo_confirmed j₁ hj₁F A hA
     rw [hslot] at h1
     exact (Option.some.inj h1).symm
@@ -227,9 +234,9 @@ omit [DecidableEq X] in
 /-- **The core is approved**: its entries are committed input entries, the
 `ECHO` field it comes from carrying only such entries. -/
 theorem single_core_approved {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s)
-    {k₀ : Fin P.n} (hk₀ : k₀ ∉ (gatherTier s).F) {U₀ : AcceptedPairs P.n X}
+    {k₀ : Fin P.n} (hk₀ : k₀ ∉ (gatherProgramsAndNetwork s).F) {U₀ : AcceptedPairs P.n X}
     (hU₀ : (bindBroadcasts s k₀).val = some U₀) :
-    approved s (coreOfNetwork P (gatherTier s).2) := by
+    approved s (coreOfNetwork P (gatherProgramsAndNetwork s).2) := by
   obtain ⟨j₁, -, -, -, hslot⟩ := core_witness hInv hk₀ hU₀
   exact hInv.echo_approved j₁ _ hslot
 
@@ -299,18 +306,19 @@ after the first to this core: it is blind to `F` and monotone
 theorem coreOf_recorded {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s)
     {Q : Finset (Fin P.n)} (hQc : P.n - P.f ≤ Q.card)
     (hQm : ∀ q ∈ Q, ∃ U : AcceptedPairs P.n X, (bindBroadcasts s q).val = some U) :
-    P.n - P.f ≤ (coreOfNetwork P (gatherTier s).2).card ∧ approved s
-    (coreOfNetwork P (gatherTier s).2) ∧ P.f + 1 ≤
-    (bindAbove s (coreOfNetwork P (gatherTier s).2)).card := by
+    P.n - P.f ≤ (coreOfNetwork P (gatherProgramsAndNetwork s).2).card ∧ approved s
+    (coreOfNetwork P (gatherProgramsAndNetwork s).2) ∧ P.f + 1 ≤
+    (bindAbove s (coreOfNetwork P (gatherProgramsAndNetwork s).2)).card := by
   classical
   have hF := hInv.F_card
   have hf := P.hResilience
-  have hH : P.f + 1 ≤ (Q \ (gatherTier s).F).card := by
-    have h1 := Finset.le_card_sdiff (gatherTier s).F Q
+  have hH : P.f + 1 ≤ (Q \ (gatherProgramsAndNetwork s).F).card := by
+    have h1 := Finset.le_card_sdiff (gatherProgramsAndNetwork s).F Q
     omega
   obtain ⟨H, hHsub, hHcard⟩ := Finset.exists_subset_card_eq hH
   have hHQ : ∀ q ∈ H, q ∈ Q := fun q hq => (Finset.mem_sdiff.mp (hHsub hq)).1
-  have hHF : ∀ q ∈ H, q ∉ (gatherTier s).F := fun q hq => (Finset.mem_sdiff.mp (hHsub hq)).2
+  have hHF : ∀ q ∈ H, q ∉ (gatherProgramsAndNetwork s).F := fun q hq => (Finset.mem_sdiff.mp (hHsub
+    hq)).2
   have hHne : H.Nonempty := by
     rw [← Finset.card_pos, hHcard]; omega
   obtain ⟨q₀, hq₀⟩ := hHne

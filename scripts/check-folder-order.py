@@ -3,7 +3,7 @@
 
 ``Leslie2Protocols/ABA/README.md`` and ``CLAUDE.md`` give the folders of the
 ABA development in import order and state that no folder imports one below it:
-``Vocabulary/`` is written over by everything, ``GhostErasure/`` writes over
+``Vocabulary/`` is written over by everything, ``GhostRemoval/`` writes over
 everything. Lean enforces only that the import graph is acyclic, so a file may
 reach upwards through a chain the guides forbid and the build stays green.
 
@@ -54,7 +54,7 @@ ORDER = (
     "ABDY",
     "AFW",
     "Results.lean",
-    "GhostErasure",
+    "GhostRemoval",
 )
 RANK = {name: index for index, name in enumerate(ORDER)}
 IMPORT = re.compile(r"^import\s+([\w.]+)", re.MULTILINE)

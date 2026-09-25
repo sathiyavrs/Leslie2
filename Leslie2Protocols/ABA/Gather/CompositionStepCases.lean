@@ -19,8 +19,8 @@ event and an interface label. Over the instance-internal alphabet, a visible lab
 four factors — the gather programs, the gather network, the input instances and the bind
 instances — and the joint distribution is their Dirac product. A silent label moves exactly
 one of the gather network, one input instance or one bind instance.
-`instanceOverBroadcastsExtended_joint_inversion` and
-`instanceOverBroadcastsExtended_tau_inversion` read a joint step that way, and the `_step`
+`instanceOverBroadcastsExtended_synchronised_cases` and
+`instanceOverBroadcastsExtended_tau_cases` read a joint step that way, and the `_step`
 lemmas build one from the factors' transitions. The pullbacks `inputBroadcastLabelMap` and
 `bindBroadcastLabelMap` are computed label by label.
 
@@ -31,7 +31,8 @@ the identity. `networkStep_*` does the same for the gather network.
 A joint step delivers a program function given pointwise, by its value at the acting process and its
 agreement with the old function elsewhere. `Function.eq_update_iff` identifies that function with
 the old one updated at the acting process, and the `stateOverBroadcasts_*` lemmas identify the state
-a transition writes with `setGatherTier`, `setCore`, `setInputBroadcasts`, `setBindBroadcasts` or
+a transition writes with `setGatherProgramsAndNetwork`, `setCore`, `setInputBroadcasts`,
+`setBindBroadcasts` or
 `corruptAll` applied to the old state.
 -/
 
@@ -71,14 +72,15 @@ theorem instanceOverBroadcasts_step_iff (P : Parameters) (X : Type) [DecidableEq
 section GatherPrograms
 variable [DecidableEq X] {P : Parameters}
   {u x : ∀ _ : Fin P.n,
-    LocalState P.n (ProcessRecord P.n X) (Message P.n X)} {l : GatherLabel P.n X}
+    LocalState P.n (ProcessVariables P.n X) (Message P.n X)} {l : GatherLabel P.n X}
 
 /-- A synchronised transition of the gather programs on a visible label: every
 program steps, and the joint distribution is Dirac. -/
-theorem gatherProgramProduct_inversion
-    {μ : PMF (∀ _ : Fin P.n, LocalState P.n (ProcessRecord P.n X) (Message P.n X))}
+theorem gatherProgramProduct_cases
+    {μ : PMF (∀ _ : Fin P.n, LocalState P.n (ProcessVariables P.n X) (Message P.n X))}
     (h : (System.synchronisedProduct (gatherProgram P (X := X))).step u l μ) :
-    ∃ x : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord P.n X) (Message P.n X), μ = PMF.pure x ∧ ∀ i,
+    ∃ x : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables P.n X) (Message P.n X), μ = PMF.pure x ∧ ∀
+      i,
     ProgramStep P i (u i) l (PMF.pure (x i)) := by
   rw [System.synchronisedProduct_step] at h
   rcases h with ⟨-, μ_, hall, rfl⟩ | ⟨rfl, i, μ_i, hstep, -⟩
@@ -100,7 +102,7 @@ theorem gatherProgramProduct_pure (hl : l ≠ Silent.τ)
 
 /-- The gather programs have no silent transition: no program has a `τ` transition. -/
 theorem gatherProgramProduct_no_tau
-    {μ : PMF (∀ _ : Fin P.n, LocalState P.n (ProcessRecord P.n X) (Message P.n X))}
+    {μ : PMF (∀ _ : Fin P.n, LocalState P.n (ProcessVariables P.n X) (Message P.n X))}
     (h : (System.synchronisedProduct (gatherProgram P (X := X))).step u
       (Silent.τ : GatherLabel P.n X) μ)
     : False := by
@@ -120,19 +122,19 @@ section Factors
 variable [DecidableEq X] {P : Parameters} {B B' : Type}
   {BIn : ∀ _ : Fin P.n, System B (BRB.InstanceLabel P.n X)}
   {BBind : ∀ _ : Fin P.n, System B' (BRB.InstanceLabel P.n (AcceptedPairs P.n X))}
-  {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord P.n X) (Message P.n X)}
+  {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables P.n X) (Message P.n X)}
   {w w' : NetworkState P.n X} {a a' : ∀ _ : Fin P.n, B} {b b' : ∀ _ : Fin P.n, B'}
   {L : GatherLabel P.n X}
 
 /-- **The joint inversion.** A visible transition of the two tiers: every
 factor steps on the label, and the joint distribution is their Dirac
 product. -/
-theorem instanceOverBroadcastsExtended_joint_inversion (hIn : ∀ k, (BIn k).IsLTS)
+theorem instanceOverBroadcastsExtended_synchronised_cases (hIn : ∀ k, (BIn k).IsLTS)
     (hBind : ∀ q, (BBind q).IsLTS) {μ : PMF (StateOverBroadcasts P.n X B B')}
     (hL : L ≠ (Silent.τ : GatherLabel P.n X))
     (h : (instanceOverBroadcastsExtended P X BIn BBind).step ((u, w), (a, b)) L μ) :
     ∃ (x : ∀ _ : Fin P.n,
-      LocalState P.n (ProcessRecord P.n X) (Message P.n X)) (w' : NetworkState P.n X) (a' : ∀ _ :
+      LocalState P.n (ProcessVariables P.n X) (Message P.n X)) (w' : NetworkState P.n X) (a' : ∀ _ :
         Fin P.n, B) (b' : ∀ _ : Fin P.n, B'),
       μ = PMF.pure ((x, w'), (a', b')) ∧
       (∀ i, ProgramStep P i (u i) L (PMF.pure (x i))) ∧ NetworkStep P w L (PMF.pure w') ∧
@@ -143,12 +145,12 @@ theorem instanceOverBroadcastsExtended_joint_inversion (hIn : ∀ k, (BIn k).IsL
   rcases h with ⟨-, μ₁, μ₂, hga, hbr, rfl⟩ | ⟨hτ, -⟩ | ⟨hτ, -⟩
   · rw [gatherPrograms, System.parallel_step] at hga
     rcases hga with ⟨-, ν₁, ν₂, hs, hn, rfl⟩ | ⟨hτ, -⟩ | ⟨hτ, -⟩
-    · obtain ⟨y, rfl, hall⟩ := gatherProgramProduct_inversion hs
+    · obtain ⟨y, rfl, hall⟩ := gatherProgramProduct_cases hs
       obtain ⟨v, rfl⟩ := networkStep_dirac hn
       rw [System.parallel_step] at hbr
       rcases hbr with ⟨-, ρ₁, ρ₂, hi, hb, rfl⟩ | ⟨hτ, -⟩ | ⟨hτ, -⟩
-      · obtain ⟨c, rfl, hic⟩ := System.synchronisedProductMapIdle_inversion hIn hL hi
-        obtain ⟨d, rfl, hbd⟩ := System.synchronisedProductMapIdle_inversion hBind hL hb
+      · obtain ⟨c, rfl, hic⟩ := System.synchronisedProductMapIdle_cases hIn hL hi
+        obtain ⟨d, rfl, hbd⟩ := System.synchronisedProductMapIdle_cases hBind hL hb
         exact ⟨y, v, c, d, by rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure],
           hall, hn, hic, hbd⟩
       · exact absurd hτ hL
@@ -161,7 +163,7 @@ theorem instanceOverBroadcastsExtended_joint_inversion (hIn : ∀ k, (BIn k).IsL
 /-- **The silent inversion.** A silent transition of the two tiers is an
 injection of the gather network, a silent step of one input instance, or a
 silent step of one bind instance: no gather program has a `τ` transition. -/
-theorem instanceOverBroadcastsExtended_tau_inversion (hIn : ∀ k, (BIn k).IsLTS)
+theorem instanceOverBroadcastsExtended_tau_cases (hIn : ∀ k, (BIn k).IsLTS)
     (hBind : ∀ q, (BBind q).IsLTS) {μ : PMF (StateOverBroadcasts P.n X B B')}
     (h : (instanceOverBroadcastsExtended P X BIn BBind).step ((u, w), (a, b))
       (Silent.τ : GatherLabel P.n X) μ) :
@@ -185,12 +187,12 @@ theorem instanceOverBroadcastsExtended_tau_inversion (hIn : ∀ k, (BIn k).IsLTS
     rcases hbr with ⟨hτ, -⟩ | ⟨-, ρ₁, hi, rfl⟩ | ⟨-, ρ₂, hb, rfl⟩
     · exact absurd rfl hτ
     · obtain ⟨k, c, rfl, hstep⟩ :=
-        System.synchronisedProductMapIdle_tau_inversion hIn
+        System.synchronisedProductMapIdle_tau_cases hIn
           (fun k => inputBroadcastLabelMap_tau P.n X k) hi
       exact Or.inr
         (Or.inl ⟨k, c, by rw [prodPMF_pure_pure, prodPMF_pure_pure], hstep⟩)
     · obtain ⟨q, d, rfl, hstep⟩ :=
-        System.synchronisedProductMapIdle_tau_inversion hBind
+        System.synchronisedProductMapIdle_tau_cases hBind
           (fun q => bindBroadcastLabelMap_tau P.n X q) hb
       exact Or.inr
         (Or.inr ⟨q, d, by rw [prodPMF_pure_pure, prodPMF_pure_pure], hstep⟩)
@@ -375,18 +377,19 @@ the idle transition of a non-participant as the identity. The state and the
 distribution are variables, so `cases` unifies against any state of the
 program. -/
 
-section ProgramStepInversion
+section ProgramStepCases
 variable [DecidableEq X] {P : Parameters} {j : Fin P.n}
-  {p : LocalState P.n (ProcessRecord P.n X) (Message P.n X)}
-  {ν : PMF (LocalState P.n (ProcessRecord P.n X) (Message P.n X))}
+  {p : LocalState P.n (ProcessVariables P.n X) (Message P.n X)}
+  {ν : PMF (LocalState P.n (ProcessVariables P.n X) (Message P.n X))}
 
 theorem programStep_call_own {x : X} (h : ProgramStep P j p (Sum.inl (Sum.inl (.call j x))) ν) :
-    p.process.input = none ∧ ν = PMF.pure (p.setProcess { p.process with input := some x }) := by
+    p.processVariables.input = none ∧ ν = PMF.pure (p.setProcessVariables { p.processVariables with
+      input := some x }) := by
   cases h
   case call => exact ⟨by assumption, rfl⟩
   case callIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem programStep_call_foreign {i : Fin P.n} {x : X} (hi : i ≠ j)
+theorem programStep_call_notOwn {i : Fin P.n} {x : X} (hi : i ≠ j)
     (h : ProgramStep P j p (Sum.inl (Sum.inl (.call i x))) ν) : ν = PMF.pure p := by
   cases h
   case call => exact absurd rfl hi
@@ -400,18 +403,18 @@ theorem programStep_callLoop {i : Fin P.n} {x : X}
 
 theorem programStep_ret_own {g : Fin P.n → Option X} {C : AcceptedPairs P.n X}
     (h : ProgramStep P j p (Sum.inl (Sum.inl (.ret j g C))) ν) :
-    p.process.input ≠ none ∧ p.process.sentBind ≠ none ∧
-      (∀ k x, g k = some x → holdsInputBroadcastReturn p.process k x) ∧
+    p.processVariables.input ≠ none ∧ p.processVariables.sentBind ≠ none ∧
+      (∀ k x, g k = some x → holdsInputBroadcastReturn p.processVariables k x) ∧
       (∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
-        ∀ q ∈ Q, ∃ U, holdsBindBroadcastReturn p.process q U ∧ AcceptedPairs.subMap U g) ∧
-      p.process.returned = false ∧ ν = PMF.pure
-        (p.setProcess { p.process with returned := true }) := by
+        ∀ q ∈ Q, ∃ U, holdsBindBroadcastReturn p.processVariables q U ∧ AcceptedPairs.subMap U g) ∧
+      p.processVariables.returned = false ∧ ν = PMF.pure
+        (p.setProcessVariables { p.processVariables with returned := true }) := by
   cases h
   case ret =>
     exact ⟨by assumption, by assumption, by assumption, by assumption, by assumption, rfl⟩
   case retIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem programStep_ret_foreign {i : Fin P.n} {g : Fin P.n → Option X} {C : AcceptedPairs P.n X}
+theorem programStep_ret_notOwn {i : Fin P.n} {g : Fin P.n → Option X} {C : AcceptedPairs P.n X}
     (hi : i ≠ j) (h : ProgramStep P j p (Sum.inl (Sum.inl (.ret i g C))) ν) : ν = PMF.pure p := by
   cases h
   case ret => exact absurd rfl hi
@@ -424,26 +427,29 @@ theorem programStep_fail {i : Fin P.n} (h : ProgramStep P j p (Sum.inl (Sum.inl 
 
 theorem programStep_send_echo_own {A : AcceptedPairs P.n X}
     (h : ProgramStep P j p (Sum.inr (.send j (.echo A))) ν) :
-    A = p.process.accepted ∧ p.process.input ≠ none ∧ P.n - P.f ≤ p.process.accepted.card ∧
-      p.process.sentEcho = none ∧
-      ν = PMF.pure (p.setProcess { p.process with sentEcho := some p.process.accepted }) := by
+    A = p.processVariables.accepted ∧ p.processVariables.input ≠ none ∧ P.n - P.f ≤
+      p.processVariables.accepted.card ∧
+      p.processVariables.sentEcho = none ∧
+      ν = PMF.pure (p.setProcessVariables
+        { p.processVariables with sentEcho := some p.processVariables.accepted }) := by
   cases h
   case sendEcho => exact ⟨rfl, by assumption, by assumption, by assumption, rfl⟩
   case sendIdle => exact absurd rfl ‹_ ≠ j›
 
 theorem programStep_send_vote_own {U : AcceptedPairs P.n X}
     (h : ProgramStep P j p (Sum.inr (.send j (.vote U))) ν) :
-    p.process.input ≠ none ∧ p.process.sentEcho ≠ none ∧ approvedBy p.process U ∧
+    p.processVariables.input ≠ none ∧ p.processVariables.sentEcho ≠ none ∧ approvedBy
+      p.processVariables U ∧
       (∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
-        ∀ q ∈ Q, ∃ A, Message.echo A ∈ p.received q ∧ approvedBy p.process A ∧ A ⊆ U) ∧
-      p.process.sentVote = none ∧ ν = PMF.pure
-        (p.setProcess { p.process with sentVote := some U }) := by
+        ∀ q ∈ Q, ∃ A, Message.echo A ∈ p.received q ∧ approvedBy p.processVariables A ∧ A ⊆ U) ∧
+      p.processVariables.sentVote = none ∧ ν = PMF.pure
+        (p.setProcessVariables { p.processVariables with sentVote := some U }) := by
   cases h
   case sendVote =>
     exact ⟨by assumption, by assumption, by assumption, by assumption, by assumption, rfl⟩
   case sendIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem programStep_send_foreign {i : Fin P.n} {m : Message P.n X} (hi : i ≠ j)
+theorem programStep_send_notOwn {i : Fin P.n} {m : Message P.n X} (hi : i ≠ j)
     (h : ProgramStep P j p (Sum.inr (.send i m)) ν) : ν = PMF.pure p := by
   cases h
   case sendIdle => rfl
@@ -455,7 +461,7 @@ theorem programStep_deliver_own {k : Fin P.n} {m : Message P.n X}
   case deliverReceive => rfl
   case deliverIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem programStep_deliver_foreign {i k : Fin P.n} {m : Message P.n X} (hi : i ≠ j)
+theorem programStep_deliver_notOwn {i k : Fin P.n} {m : Message P.n X} (hi : i ≠ j)
     (h : ProgramStep P j p (Sum.inr (.deliver i k m)) ν) : ν = PMF.pure p := by
   cases h
   case deliverReceive => exact absurd rfl hi
@@ -463,12 +469,12 @@ theorem programStep_deliver_foreign {i k : Fin P.n} {m : Message P.n X} (hi : i 
 
 theorem programStep_inputBroadcastCall_own {x : X}
     (h : ProgramStep P j p (Sum.inr (.inputBroadcastCall j x)) ν) :
-    p.process.input = some x ∧ ν = PMF.pure p := by
+    p.processVariables.input = some x ∧ ν = PMF.pure p := by
   cases h
   case inputBroadcastCall => exact ⟨by assumption, rfl⟩
   case inputBroadcastCallIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem programStep_inputBroadcastCall_foreign {i : Fin P.n} {x : X} (hi : i ≠ j)
+theorem programStep_inputBroadcastCall_notOwn {i : Fin P.n} {x : X} (hi : i ≠ j)
     (h : ProgramStep P j p (Sum.inr (.inputBroadcastCall i x)) ν) : ν = PMF.pure p := by
   cases h
   case inputBroadcastCall => exact absurd rfl hi
@@ -476,14 +482,14 @@ theorem programStep_inputBroadcastCall_foreign {i : Fin P.n} {x : X} (hi : i ≠
 
 theorem programStep_inputBroadcastRet_own {k : Fin P.n} {v : X}
     (h : ProgramStep P j p (Sum.inr (.inputBroadcastRet k j v)) ν) :
-    ν = PMF.pure (p.setProcess { p.process with
+    ν = PMF.pure (p.setProcessVariables { p.processVariables with
       inputBroadcastReturned :=
-        Function.update p.process.inputBroadcastReturned k (some v) }) := by
+        Function.update p.processVariables.inputBroadcastReturned k (some v) }) := by
   cases h
   case inputBroadcastRetReceive => rfl
   case inputBroadcastRetIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem programStep_inputBroadcastRet_foreign {k i : Fin P.n} {v : X} (hi : i ≠ j)
+theorem programStep_inputBroadcastRet_notOwn {k i : Fin P.n} {v : X} (hi : i ≠ j)
     (h : ProgramStep P j p (Sum.inr (.inputBroadcastRet k i v)) ν) : ν = PMF.pure p := by
   cases h
   case inputBroadcastRetReceive => exact absurd rfl hi
@@ -491,17 +497,18 @@ theorem programStep_inputBroadcastRet_foreign {k i : Fin P.n} {v : X} (hi : i �
 
 theorem programStep_bindCall_own {U : AcceptedPairs P.n X}
     (h : ProgramStep P j p (Sum.inr (.bindCall j U)) ν) :
-    p.process.input ≠ none ∧ p.process.sentVote ≠ none ∧ p.process.sentBind = none ∧
-      approvedBy p.process U ∧
+    p.processVariables.input ≠ none ∧ p.processVariables.sentVote ≠ none ∧
+      p.processVariables.sentBind = none ∧
+      approvedBy p.processVariables U ∧
       (∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
-        ∀ q ∈ Q, ∃ W, Message.vote W ∈ p.received q ∧ approvedBy p.process W ∧ W ⊆ U) ∧
-      ν = PMF.pure (p.setProcess { p.process with sentBind := some U }) := by
+        ∀ q ∈ Q, ∃ W, Message.vote W ∈ p.received q ∧ approvedBy p.processVariables W ∧ W ⊆ U) ∧
+      ν = PMF.pure (p.setProcessVariables { p.processVariables with sentBind := some U }) := by
   cases h
   case bindCall =>
     exact ⟨by assumption, by assumption, by assumption, by assumption, by assumption, rfl⟩
   case bindCallIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem programStep_bindCall_foreign {i : Fin P.n} {U : AcceptedPairs P.n X} (hi : i ≠ j)
+theorem programStep_bindCall_notOwn {i : Fin P.n} {U : AcceptedPairs P.n X} (hi : i ≠ j)
     (h : ProgramStep P j p (Sum.inr (.bindCall i U)) ν) : ν = PMF.pure p := by
   cases h
   case bindCall => exact absurd rfl hi
@@ -510,23 +517,23 @@ theorem programStep_bindCall_foreign {i : Fin P.n} {U : AcceptedPairs P.n X} (hi
 theorem programStep_bindRet_own {q : Fin P.n} {U : AcceptedPairs P.n X}
     (h : ProgramStep P j p (Sum.inr (.bindRet q j U)) ν) :
     ν = PMF.pure
-      (p.setProcess { p.process with
+      (p.setProcessVariables { p.processVariables with
         bindBroadcastReturned :=
-          Function.update p.process.bindBroadcastReturned q (some U) }) := by
+          Function.update p.processVariables.bindBroadcastReturned q (some U) }) := by
   cases h
   case bindRetReceive => rfl
   case bindRetIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem programStep_bindRet_foreign {q i : Fin P.n} {U : AcceptedPairs P.n X} (hi : i ≠ j)
+theorem programStep_bindRet_notOwn {q i : Fin P.n} {U : AcceptedPairs P.n X} (hi : i ≠ j)
     (h : ProgramStep P j p (Sum.inr (.bindRet q i U)) ν) : ν = PMF.pure p := by
   cases h
   case bindRetReceive => exact absurd rfl hi
   case bindRetIdle => rfl
 
-end ProgramStepInversion
+end ProgramStepCases
 /-! ### The gather network's transitions, by label class -/
 
-section NetworkStepInversion
+section NetworkStepCases
 variable [DecidableEq X] {P : Parameters} {w : NetworkState P.n X} {μ : PMF (NetworkState P.n X)}
 
 theorem networkStep_call {id : Fin P.n} {x : X}
@@ -577,14 +584,14 @@ theorem networkStep_tau (h : NetworkStep P w (Sum.inl (Sum.inl .tau)) μ) :
   cases h
   case byzantine j m hF => exact ⟨j, m, hF, rfl⟩
 
-end NetworkStepInversion
+end NetworkStepCases
 /-! ### The write a transition makes on the composed state
 
 A joint step delivers a program function pointwise: its value at the acting
 process, and its agreement with the old one elsewhere. `Function.eq_update_iff`
 reads that function as the old one updated at the acting process, and the
-lemmas here identify the state a transition writes with `setGatherTier` and
-`InstanceState.setProcess`. -/
+lemmas here identify the state a transition writes with `setGatherProgramsAndNetwork` and
+`InstanceState.setProcessVariables`. -/
 
 section Writes
 
@@ -593,14 +600,15 @@ section Writes
 section
 
 variable {P : Parameters} {B B' : Type}
-  {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord P.n X) (Message P.n X)}
+  {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables P.n X) (Message P.n X)}
   {w : NetworkState P.n X} {a : ∀ _ : Fin P.n, B} {b : ∀ _ : Fin P.n, B'}
 
 /-- A record write at one program, with the network state untouched. -/
-theorem stateOverBroadcasts_setProcess {j : Fin P.n} {pr : ProcessRecord P.n X}
-    (hj : x j = (u j).setProcess pr) (hne : ∀ i, i ≠ j → x i = u i) :
-    (((x, w), (a, b)) : StateOverBroadcasts P.n X B B') = setGatherTier ((u, w), (a, b))
-    (InstanceState.setProcess (gatherTier ((u, w), (a, b))) j pr) := by
+theorem stateOverBroadcasts_setProcessVariables {j : Fin P.n} {pr : ProcessVariables P.n X}
+    (hj : x j = (u j).setProcessVariables pr) (hne : ∀ i, i ≠ j → x i = u i) :
+    (((x, w), (a, b)) : StateOverBroadcasts P.n X B B') = setGatherProgramsAndNetwork ((u, w), (a,
+      b))
+    (InstanceState.setProcessVariables (gatherProgramsAndNetwork ((u, w), (a, b))) j pr) := by
   rw [Function.eq_update_iff.mpr ⟨hj, hne⟩]; rfl
 
 /-- The programs remain unchanged and the network state is untouched. -/
@@ -609,10 +617,13 @@ theorem stateOverBroadcasts_idle (hall : ∀ i, x i = u i) :
   rw [funext hall]
 
 /-- A return: the returner's flag and the instance's core. -/
-theorem stateOverBroadcasts_ret {id : Fin P.n} {pr : ProcessRecord P.n X} {C : AcceptedPairs P.n X}
-    (hj : x id = (u id).setProcess pr) (hne : ∀ i, i ≠ id → x i = u i) :
+theorem stateOverBroadcasts_ret {id : Fin P.n} {pr : ProcessVariables P.n X} {C : AcceptedPairs P.n
+  X}
+    (hj : x id = (u id).setProcessVariables pr) (hne : ∀ i, i ≠ id → x i = u i) :
     (((x, { w with core := some C }), (a, b)) : StateOverBroadcasts P.n X B B') = setCore
-    (setGatherTier ((u, w), (a, b)) (InstanceState.setProcess (gatherTier ((u, w), (a, b))) id pr))
+    (setGatherProgramsAndNetwork ((u, w), (a, b)) (InstanceState.setProcessVariables
+      (gatherProgramsAndNetwork ((u, w), (a, b)))
+      id pr))
     (some C) := by
   rw [Function.eq_update_iff.mpr ⟨hj, hne⟩]; rfl
 
@@ -643,31 +654,34 @@ end
 section
 
 variable [DecidableEq X] {P : Parameters} {B B' : Type}
-  {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord P.n X) (Message P.n X)}
+  {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables P.n X) (Message P.n X)}
   {w : NetworkState P.n X} {a : ∀ _ : Fin P.n, B} {b : ∀ _ : Fin P.n, B'}
 
 /-- A record write at one program together with the network state recording the
 message that write multicasts. -/
-theorem stateOverBroadcasts_setProcess_recordSent {j : Fin P.n} {pr : ProcessRecord P.n X}
-    {m : Message P.n X} (hj : x j = (u j).setProcess pr) (hne : ∀ i, i ≠ j → x i = u i) :
+theorem stateOverBroadcasts_setProcessVariables_recordSent {j : Fin P.n} {pr : ProcessVariables P.n
+  X}
+    {m : Message P.n X} (hj : x j = (u j).setProcessVariables pr) (hne : ∀ i, i ≠ j → x i = u i) :
     (((x, { w with network := w.network.recordSent j m }), (a, b)) : StateOverBroadcasts P.n X B B')
-    = setGatherTier ((u, w), (a, b))
-    ((InstanceState.setProcess (gatherTier ((u, w), (a, b))) j pr).multicast j m) := by
+    = setGatherProgramsAndNetwork ((u, w), (a, b))
+    ((InstanceState.setProcessVariables (gatherProgramsAndNetwork ((u, w), (a, b))) j pr).multicast
+      j m) := by
   rw [Function.eq_update_iff.mpr ⟨hj, hne⟩]; rfl
 
 /-- A delivery: the receiver files the message under the sender it came from. -/
 theorem stateOverBroadcasts_deliver {i k : Fin P.n} {m : Message P.n X}
     (hi : x i = (u i).deliverTo k m) (hne : ∀ i', i' ≠ i → x i' = u i') :
-    (((x, w), (a, b)) : StateOverBroadcasts P.n X B B') = setGatherTier ((u, w), (a, b))
-    (InstanceState.receiveMessage (gatherTier ((u, w), (a, b))) i k m) := by
+    (((x, w), (a, b)) : StateOverBroadcasts P.n X B B') = setGatherProgramsAndNetwork ((u, w), (a,
+      b))
+    (InstanceState.receiveMessage (gatherProgramsAndNetwork ((u, w), (a, b))) i k m) := by
   rw [Function.eq_update_iff.mpr ⟨hi, hne⟩]; rfl
 
 /-- A Byzantine injection: the network state records a message under a
 corrupted sender. -/
 theorem stateOverBroadcasts_recordSent {k : Fin P.n} {m : Message P.n X} :
     (((u, { w with network := w.network.recordSent k m }), (a,
-      b)) : StateOverBroadcasts P.n X B B') = setGatherTier ((u, w), (a,
-        b)) (InstanceState.multicast (gatherTier ((u, w), (a, b))) k m) := rfl
+      b)) : StateOverBroadcasts P.n X B B') = setGatherProgramsAndNetwork ((u, w), (a,
+        b)) (InstanceState.multicast (gatherProgramsAndNetwork ((u, w), (a, b))) k m) := rfl
 
 end
 

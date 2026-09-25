@@ -35,13 +35,13 @@ theorem Invariant.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
     (hstepC :
       ((c.processes id).phase = .toCallG ∧ (c.processes id).round = r ∧
           (c.processes id).estimate = some b ∧
-          μc = PMF.pure (c.setProcess id { c.processes id with phase := .awaitG })) ∨
+          μc = PMF.pure (c.setProcessVariables id { c.processes id with phase := .awaitG })) ∨
         (id ∈ c.F ∧ μc = PMF.pure c))
     {gr' : GBCA.SpecState P.n} (hgr' : gr' ∈ μr.support)
     {c' : ABAState P} (hc' : c' ∈ μc.support) :
     Invariant P (Function.update g r gr') c' w ∧
       AbstractStateUnchanged P g (Function.update g r gr') c c' := by
-  have hGframe : gr'.F = (g r).F ∧ gr'.excluded = (g r).excluded ∧ gr'.grade = (g r).grade := by
+  have hGUnchanged : gr'.F = (g r).F ∧ gr'.excluded = (g r).excluded ∧ gr'.grade = (g r).grade := by
     cases hstepG with
     | call h => rw [PMF.mem_support_pure_iff] at hgr'; subst hgr'; exact ⟨rfl, rfl, rfl⟩
     | callLoop => rw [PMF.mem_support_pure_iff] at hgr'; subst hgr'; exact ⟨rfl, rfl, rfl⟩
@@ -49,31 +49,31 @@ theorem Invariant.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
     Function.update_of_ne h gr' g
   have hFgeq : ∀ r', (Function.update g r gr' r').F = (g r').F := by
     intro r'; by_cases h : r' = r
-    · subst h; rw [Function.update_self]; exact hGframe.1
+    · subst h; rw [Function.update_self]; exact hGUnchanged.1
     · rw [hGeq r' h]
   have hBindeq : ∀ r', (Function.update g r gr' r').excluded = (g r').excluded := by
     intro r'; by_cases h : r' = r
-    · subst h; rw [Function.update_self]; exact hGframe.2.1
+    · subst h; rw [Function.update_self]; exact hGUnchanged.2.1
     · rw [hGeq r' h]
   have hGradeeq : ∀ r', (Function.update g r gr' r').grade = (g r').grade := by
     intro r'; by_cases h : r' = r
-    · subst h; rw [Function.update_self]; exact hGframe.2.2
+    · subst h; rw [Function.update_self]; exact hGUnchanged.2.2
     · rw [hGeq r' h]
-  have hCframe : c'.F = c.F ∧ c'.decidedSent = c.decidedSent ∧ c'.decidedReceived =
+  have hCUnchanged : c'.F = c.F ∧ c'.decidedSent = c.decidedSent ∧ c'.decidedReceived =
     c.decidedReceived ∧
       ∀ id',
         (c'.processes id').input = (c.processes id').input ∧ (c'.processes id').estimate =
           (c.processes id').estimate ∧ (c'.processes id').round = (c.processes id').round := by
     rcases hstepC with ⟨hph, hr, hest, rfl⟩ | ⟨hF, rfl⟩
     · rw [PMF.mem_support_pure_iff] at hc'; subst hc'
-      refine ⟨ABAState.setProcess_F _ _ _, ABAState.setProcess_decidedSent _ _ _,
-        ABAState.setProcess_decidedReceived _ _ _, fun id' => ?_⟩
+      refine ⟨ABAState.setProcessVariables_F _ _ _, ABAState.setProcessVariables_decidedSent _ _ _,
+        ABAState.setProcessVariables_decidedReceived _ _ _, fun id' => ?_⟩
       by_cases h : id' = id
-      · subst h; rw [ABAState.setProcess_processes_self]; exact ⟨rfl, rfl, rfl⟩
-      · rw [ABAState.setProcess_processes_ne _ _ _ h]; exact ⟨rfl, rfl, rfl⟩
+      · subst h; rw [ABAState.setProcessVariables_processes_self]; exact ⟨rfl, rfl, rfl⟩
+      · rw [ABAState.setProcessVariables_processes_ne _ _ _ h]; exact ⟨rfl, rfl, rfl⟩
     · rw [PMF.mem_support_pure_iff] at hc'; subst hc'
       exact ⟨rfl, rfl, rfl, fun id' => ⟨rfl, rfl, rfl⟩⟩
-  obtain ⟨hCF, hCDS, hCDR, hCprocs⟩ := hCframe
+  obtain ⟨hCF, hCDS, hCDR, hCprocs⟩ := hCUnchanged
   -- The one fact needing case analysis: `gr'.call`, as an unconditional description
   -- (`Or.inl`: a fresh correct/byzantine `call` at `id`; `Or.inr`: `callLoop`, unaffected).
   have hGcall : (gr' = { g r with call := Function.update (g r).call id (some b) }) ∨
@@ -83,7 +83,8 @@ theorem Invariant.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
     | callLoop => rw [PMF.mem_support_pure_iff] at hgr'; exact Or.inr hgr'
   have hCcall : ((c.processes id).phase = .toCallG ∧ (c.processes id).round = r ∧
       (c.processes id).estimate = some b ∧
-      c' = c.setProcess id { c.processes id with phase := .awaitG }) ∨ (id ∈ c.F ∧ c' = c) := by
+      c' = c.setProcessVariables id { c.processes id with phase := .awaitG }) ∨ (id ∈ c.F ∧ c' = c)
+        := by
     rcases hstepC with ⟨hph, hr, hest, rfl⟩ | ⟨hF, rfl⟩
     · rw [PMF.mem_support_pure_iff] at hc'; exact Or.inl ⟨hph, hr, hest, hc'⟩
     · rw [PMF.mem_support_pure_iff] at hc'; exact Or.inr ⟨hF, hc'⟩
@@ -112,13 +113,13 @@ theorem Invariant.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
     · right; rfl
   have hPhaseNe : ∀ id', id' ≠ id → (c'.processes id').phase = (c.processes id').phase := by
     rcases hCcall with ⟨-, -, -, hc'eq⟩ | ⟨-, hc'eq⟩
-    · intro id' hne; rw [hc'eq, ABAState.setProcess_processes_ne _ _ _ hne]
+    · intro id' hne; rw [hc'eq, ABAState.setProcessVariables_processes_ne _ _ _ hne]
     · intro id' _; rw [hc'eq]
   have hLastGradeG : ∀ id', (c'.processes id').lastGrade = (c.processes id').lastGrade := by
     rcases hCcall with ⟨-, -, -, hc'eq⟩ | ⟨-, hc'eq⟩
     · intro id'; rw [hc'eq]; by_cases h : id' = id
-      · subst h; rw [ABAState.setProcess_processes_self]
-      · rw [ABAState.setProcess_processes_ne _ _ _ h]
+      · subst h; rw [ABAState.setProcessVariables_processes_self]
+      · rw [ABAState.setProcessVariables_processes_ne _ _ _ h]
     · intro id'; rw [hc'eq]
   have hCarrTrans : ∀ r₀ id₀ v, id₀ ∉ c.F →
       OutcomeHolder P (Function.update g r gr') c' r₀ id₀ v → OutcomeHolder P g c r₀ id₀ v := by
@@ -142,12 +143,12 @@ theorem Invariant.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
       rcases hCcall with ⟨hph, hr, hest, hc'eq⟩ | ⟨-, hc'eq⟩
       · by_cases hid : id₀ = id
         · subst hid
-          rw [hc'eq, ABAState.setProcess_processes_self] at hk
+          rw [hc'eq, ABAState.setProcessVariables_processes_self] at hk
           rcases hk with ⟨-, hp | hp⟩ | ⟨hr0, -⟩
           · exact absurd hp (by simp)
           · exact absurd hp (by simp)
           · exact Or.inr ⟨hr0, Or.inr (Or.inl hph)⟩
-        · rw [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid] at hk
+        · rw [hc'eq, ABAState.setProcessVariables_processes_ne _ _ _ hid] at hk
           exact hk
       · rw [hc'eq] at hk; exact hk
   have hCommitTrans : ∀ r0 b0, Grade2Commitment P g c r0 b0 →
@@ -176,8 +177,8 @@ theorem Invariant.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
       · rw [hGeq r'' hrr] at hcall
         exact h2 r'' id' b'' hrr' (hCF ▸ hmem) hcall
     · rw [(hCprocs id').2.2] at hround; rw [(hCprocs id').2.1]; exact h3 id' (hCF ▸ hmem) hround
-  have hCertTrans : ∀ r0 b0, Grade2Certificate P g c r0 b0 →
-      Grade2Certificate P (Function.update g r gr') c' r0 b0 := by
+  have hCertTrans : ∀ r0 b0, Grade2Witness P g c r0 b0 →
+      Grade2Witness P (Function.update g r gr') c' r0 b0 := by
     rintro r0 b0 ⟨hg1, hd1, hcm⟩
     exact ⟨by rw [hGradeeq]; exact hg1, by rw [hBindeq]; exact hd1, hCommitTrans r0 b0 hcm⟩
   have hHold : ∀ i0 b0, Grade2Holder P c' i0 b0 → Grade2Holder P c i0 b0 := by
@@ -188,7 +189,7 @@ theorem Invariant.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
     fun v _ hpin j b' hj hh => hpin j b' (hCF ▸ hj) (hHold j b' hh)⟩
   have hCcorr : c'.corrupted = c.corrupted := by
     rcases hCcall with ⟨-, -, -, hc'eq⟩ | ⟨-, hc'eq⟩
-    · rw [hc'eq]; exact ABAState.setProcess_corrupted _ _ _
+    · rw [hc'eq]; exact ABAState.setProcessVariables_corrupted _ _ _
     · rw [hc'eq]
   refine ⟨fun id' => by rw [hCcorr, hCF]; exact hI.corrupted_F id',
     fun r' => (hFgeq r').trans (hCF ▸ hI.F_gbca r'), fun r' => hCF ▸ hI.F_wcc r',
@@ -267,7 +268,7 @@ theorem Invariant.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
           rw [← hCF, ← hid]; exact hmem
         exact hI.phase_input id hmem' (by rw [hph]; simp)
       · rw [(hCprocs id').1]
-        rw [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid] at hne
+        rw [hc'eq, ABAState.setProcessVariables_processes_ne _ _ _ hid] at hne
         exact hI.phase_input id' (hCF ▸ hmem) hne
     · rw [hc'eq] at hne
       rw [(hCprocs id').1]
@@ -328,7 +329,7 @@ theorem Invariant.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
         rw [hid, (hCprocs id).1, (hCprocs id).2.1]
         exact hI.estimate0 id hmem' hround (Or.inr (Or.inl hph))
       · rw [(hCprocs id').2.2] at hround
-        rw [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid] at hphase
+        rw [hc'eq, ABAState.setProcessVariables_processes_ne _ _ _ hid] at hphase
         rw [(hCprocs id').1, (hCprocs id').2.1]
         exact hI.estimate0 id' (hCF ▸ hmem) hround hphase
     · rw [hc'eq] at hphase
@@ -342,9 +343,9 @@ theorem Invariant.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
     rcases hCcall with ⟨hph, hr, hest, hc'eq⟩ | ⟨hF, hc'eq⟩
     · by_cases hid : id' = id
       · exfalso
-        rw [hid, hc'eq, ABAState.setProcess_processes_self] at hphase
+        rw [hid, hc'eq, ABAState.setProcessVariables_processes_self] at hphase
         rcases hphase with h | h <;> simp at h
-      · rw [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid] at hround hphase
+      · rw [hc'eq, ABAState.setProcessVariables_processes_ne _ _ _ hid] at hround hphase
         rw [(hCprocs id').2.1]
         obtain ⟨hnone, hsome⟩ := hI.estimate_ret r' id' (hCF ▸ hmem) hround hphase
         refine ⟨fun he => ?_, fun b hb => ?_⟩
@@ -380,14 +381,14 @@ theorem Invariant.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
           · exact absurd hF (hCF ▸ hmem)
         · rw [hself] at hcall
           rw [hBindeq r', hGradeeq r']
-          exact hI.call_provenance r' id v (hCF ▸ hmem) (by rw [h1]; exact hcall)
+          exact hI.call_of_previousRound r' id v (hCF ▸ hmem) (by rw [h1]; exact hcall)
       · rw [h1, Function.update_self] at hcall
         have hcv := hGcallval id' v hcall hid
         rw [hBindeq r', hGradeeq r']
-        exact hI.call_provenance r' id' v (hCF ▸ hmem) (by rw [h1]; exact hcv)
+        exact hI.call_of_previousRound r' id' v (hCF ▸ hmem) (by rw [h1]; exact hcv)
     · rw [hGeq (r' + 1) h1] at hcall
       rw [hBindeq r', hGradeeq r']
-      exact hI.call_provenance r' id' v (hCF ▸ hmem) hcall
+      exact hI.call_of_previousRound r' id' v (hCF ▸ hmem) hcall
   · intro r' id' hmem hround hphase v hest
     rw [(hCprocs id').2.2] at hround; rw [(hCprocs id').2.1] at hest
     rw [hBindeq r', hGradeeq r']
@@ -395,7 +396,7 @@ theorem Invariant.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
     · by_cases hid : id' = id
       · rw [hid] at hmem hround hest
         exact hI.estimate_previous r' id (hCF ▸ hmem) hround (Or.inr (Or.inl hph)) v hest
-      · rw [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid] at hphase
+      · rw [hc'eq, ABAState.setProcessVariables_processes_ne _ _ _ hid] at hphase
         exact hI.estimate_previous r' id' (hCF ▸ hmem) hround hphase v hest
     · rw [hc'eq] at hphase
       exact hI.estimate_previous r' id' (hCF ▸ hmem) hround hphase v hest
@@ -406,7 +407,7 @@ theorem Invariant.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
     · by_cases hid : id' = id
       · rw [hid] at hmem hround ⊢
         exact hI.estimate_previous_ne id (hCF ▸ hmem) hround (Or.inr (Or.inl hph))
-      · rw [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid] at hphase
+      · rw [hc'eq, ABAState.setProcessVariables_processes_ne _ _ _ hid] at hphase
         exact hI.estimate_previous_ne id' (hCF ▸ hmem) hround hphase
     · rw [hc'eq] at hphase
       exact hI.estimate_previous_ne id' (hCF ▸ hmem) hround hphase
@@ -464,7 +465,7 @@ theorem Invariant.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
         by_cases hid : id' = id
         · rcases hCcall with ⟨-, -, -, hc'eq⟩ | ⟨-, hc'eq⟩
           · exfalso
-            rw [hid, hc'eq, ABAState.setProcess_processes_self] at hphase
+            rw [hid, hc'eq, ABAState.setProcessVariables_processes_self] at hphase
             rcases hphase with h | h <;> simp at h
           · rw [hid]
             rw [hid, hc'eq] at hphase

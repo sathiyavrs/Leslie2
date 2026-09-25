@@ -1,6 +1,6 @@
 \begin{theorem}[Two-gather round refinement]
   \label{thm:gbca-round-refines-specification}
-  \lean{PLTS.ABA.GBCA.count_aboveThreshold_of_subMap}\lean{PLTS.ABA.GBCA.boundOfCore_of_aboveThreshold}\lean{PLTS.ABA.GBCA.count_boundOfCore_belowThreshold}\lean{PLTS.ABA.GBCA.ByAFW.Invariant}\lean{PLTS.ABA.GBCA.ByAFW.ExclusionEvidence}\lean{PLTS.ABA.GBCA.ByAFW.SpecificationRelation}\lean{PLTS.ABA.GBCA.ByAFW.refinesSpecification}\leanok
+  \lean{PLTS.ABA.GBCA.count_aboveThreshold_of_subMap}\lean{PLTS.ABA.GBCA.boundOfCore_of_aboveThreshold}\lean{PLTS.ABA.GBCA.count_boundOfCore_belowThreshold}\lean{PLTS.ABA.GBCA.ByAFW.Invariant}\lean{PLTS.ABA.GBCA.ByAFW.ExclusionWitness}\lean{PLTS.ABA.GBCA.ByAFW.SpecificationRelation}\lean{PLTS.ABA.GBCA.ByAFW.refinesSpecification}\leanok
   \uses{def:aba-round-over-gather-specifications, def:aba-gbca-spec}
   The two-gather round is forward-simulated by the GBCA specification instance (Transition System~2): \leandecl{PLTS.ABA.GBCA.ByAFW.refinesSpecification}.
   The exclusion set and the grade guard are certified on the two cores, each written once, --- a bit is excluded when the first core carries it on fewer than $|S| - f$ entries --- and excludes fire on demand under the returns that need them.

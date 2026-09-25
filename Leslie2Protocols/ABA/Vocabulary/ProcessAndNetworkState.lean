@@ -100,7 +100,7 @@ it, indexed by sender. There is no record of what it has sent — the sender's
 sent lives in the network state. -/
 structure LocalState (n : ℕ) (Pr M : Type) : Type where
   /-- The process's own local record. -/
-  process : Pr
+  processVariables : Pr
   /-- `received k` — the messages from sender `k` delivered here. -/
   received : Fin n → Finset M
   deriving DecidableEq
@@ -111,15 +111,16 @@ variable {n : ℕ} {Pr M : Type}
 
 /-- The initial local state over the initial local record `p₀`. -/
 def initial (n : ℕ) (M : Type) (p₀ : Pr) : LocalState n Pr M where
-  process := p₀
+  processVariables := p₀
   received := fun _ => ∅
 
-@[simp] theorem initial_process (p₀ : Pr) : (initial n M p₀).process = p₀ := rfl
+@[simp] theorem initial_processVariables (p₀ : Pr) : (initial n M p₀).processVariables = p₀ := rfl
 @[simp] theorem initial_received (p₀ : Pr) (k : Fin n) :
     (initial n M p₀).received k = ∅ := rfl
 
 /-- Overwrite the local record. -/
-def setProcess (p : LocalState n Pr M) (pr : Pr) : LocalState n Pr M := { p with process := pr }
+def setProcessVariables (p : LocalState n Pr M) (pr : Pr) : LocalState n Pr M := { p with
+  processVariables := pr }
 
 /-- File `m` under sender `k` in the record's received sets. -/
 def deliverTo [DecidableEq M] (p : LocalState n Pr M) (k : Fin n) (m : M) : LocalState n Pr M :=
@@ -145,7 +146,7 @@ namespace InstanceState
 variable {n : ℕ} {Pr M : Type}
 
 /-- Per-process local records. -/
-def process (s : InstanceState n Pr M) : Fin n → Pr := fun j => (s.1 j).process
+def processVariables (s : InstanceState n Pr M) : Fin n → Pr := fun j => (s.1 j).processVariables
 
 /-- `sent j` — the messages process `j` has multicast (D5). -/
 def sent (s : InstanceState n Pr M) : Fin n → Finset M := s.2.sent
@@ -156,8 +157,8 @@ def received (s : InstanceState n Pr M) : Fin n → Fin n → Finset M := fun i 
 /-- The corrupted set (the network state's, kept equal by `fail` broadcast). -/
 def F (s : InstanceState n Pr M) : Finset (Fin n) := s.2.F
 
-@[simp] theorem process_apply (u : ∀ _ : Fin n, LocalState n Pr M) (w : NetworkState n M)
-    (j : Fin n) : process (u, w) j = (u j).process := rfl
+@[simp] theorem processVariables_apply (u : ∀ _ : Fin n, LocalState n Pr M) (w : NetworkState n M)
+    (j : Fin n) : processVariables (u, w) j = (u j).processVariables := rfl
 @[simp] theorem sent_apply (u : ∀ _ : Fin n, LocalState n Pr M) (w : NetworkState n M) :
     sent (u, w) = w.sent := rfl
 @[simp] theorem received_apply (u : ∀ _ : Fin n, LocalState n Pr M) (w : NetworkState n M)
@@ -169,8 +170,8 @@ def F (s : InstanceState n Pr M) : Finset (Fin n) := s.2.F
 def initial (n : ℕ) (M : Type) (p₀ : Pr) : InstanceState n Pr M :=
   (fun _ => LocalState.initial n M p₀, NetworkState.initial n M)
 
-@[simp] theorem initial_process (p₀ : Pr) (j : Fin n) :
-    (initial n M p₀).process j = p₀ := rfl
+@[simp] theorem initial_processVariables (p₀ : Pr) (j : Fin n) :
+    (initial n M p₀).processVariables j = p₀ := rfl
 @[simp] theorem initial_sent (p₀ : Pr) (j : Fin n) :
     (initial n M p₀).sent j = ∅ := rfl
 @[simp] theorem initial_received (p₀ : Pr) (i j : Fin n) :
@@ -178,43 +179,47 @@ def initial (n : ℕ) (M : Type) (p₀ : Pr) : InstanceState n Pr M :=
 @[simp] theorem initial_F (p₀ : Pr) : (initial n M p₀).F = ∅ := rfl
 
 /-- Update the local record of process `j`. -/
-def setProcess (s : InstanceState n Pr M) (j : Fin n) (p : Pr) : InstanceState n Pr M :=
-  (Function.update s.1 j ((s.1 j).setProcess p), s.2)
+def setProcessVariables (s : InstanceState n Pr M) (j : Fin n) (p : Pr) : InstanceState n Pr M :=
+  (Function.update s.1 j ((s.1 j).setProcessVariables p), s.2)
 
-@[simp] theorem setProcess_sent (s : InstanceState n Pr M) (j : Fin n) (p : Pr) :
-    (s.setProcess j p).sent = s.sent := rfl
-@[simp] theorem setProcess_F (s : InstanceState n Pr M) (j : Fin n) (p : Pr) :
-    (s.setProcess j p).F = s.F := rfl
+@[simp] theorem setProcessVariables_sent (s : InstanceState n Pr M) (j : Fin n) (p : Pr) :
+    (s.setProcessVariables j p).sent = s.sent := rfl
+@[simp] theorem setProcessVariables_F (s : InstanceState n Pr M) (j : Fin n) (p : Pr) :
+    (s.setProcessVariables j p).F = s.F := rfl
 
-@[simp] theorem setProcess_received (s : InstanceState n Pr M) (j : Fin n) (p : Pr) :
-    (s.setProcess j p).received = s.received := by
+@[simp] theorem setProcessVariables_received (s : InstanceState n Pr M) (j : Fin n) (p : Pr) :
+    (s.setProcessVariables j p).received = s.received := by
   funext i
   by_cases hi : i = j
-  · subst hi; simp [setProcess, received, LocalState.setProcess]
-  · simp [setProcess, received, Function.update_of_ne hi]
+  · subst hi; simp [setProcessVariables, received, LocalState.setProcessVariables]
+  · simp [setProcessVariables, received, Function.update_of_ne hi]
 
-@[simp] theorem setProcess_process_self (s : InstanceState n Pr M) (j : Fin n) (p : Pr) :
-    (s.setProcess j p).process j = p := by
-  simp [setProcess, process, LocalState.setProcess]
+@[simp] theorem setProcessVariables_processVariables_self (s : InstanceState n Pr M) (j : Fin n) (p
+  : Pr) :
+    (s.setProcessVariables j p).processVariables j = p := by
+  simp [setProcessVariables, processVariables, LocalState.setProcessVariables]
 
-theorem setProcess_process_ne (s : InstanceState n Pr M) (j : Fin n) (p : Pr)
-    {k : Fin n} (h : k ≠ j) : (s.setProcess j p).process k = s.process k := by
-  simp [setProcess, process, Function.update_of_ne h]
+theorem setProcessVariables_processVariables_ne (s : InstanceState n Pr M) (j : Fin n) (p : Pr)
+    {k : Fin n} (h : k ≠ j) : (s.setProcessVariables j p).processVariables k = s.processVariables k
+      := by
+  simp [setProcessVariables, processVariables, Function.update_of_ne h]
 
 /-- The record vector after a record write, as one `ite`. -/
-theorem process_setProcess (s : InstanceState n Pr M) (j : Fin n) (p : Pr) (k : Fin n) :
-    (s.setProcess j p).process k = if k = j then p else s.process k := by
+theorem processVariables_setProcessVariables (s : InstanceState n Pr M) (j : Fin n) (p : Pr) (k :
+  Fin n) :
+    (s.setProcessVariables j p).processVariables k = if k = j then p else s.processVariables k := by
   by_cases hk : k = j
   · subst hk; simp
-  · simp [setProcess_process_ne _ _ _ hk, hk]
+  · simp [setProcessVariables_processVariables_ne _ _ _ hk, hk]
 
 /-- Corruption (deviation D1): total, Dirac, and a write on the network state alone — the local
 states are corruption-blind. -/
 def corrupt (P : Parameters) (id : Fin P.n) (s : InstanceState P.n Pr M) : InstanceState P.n Pr M :=
   (s.1, s.2.corrupt P id)
 
-@[simp] theorem corrupt_process {P : Parameters} (s : InstanceState P.n Pr M) (id : Fin P.n) :
-    (s.corrupt P id).process = s.process := rfl
+@[simp] theorem corrupt_processVariables {P : Parameters} (s : InstanceState P.n Pr M) (id : Fin
+  P.n) :
+    (s.corrupt P id).processVariables = s.processVariables := rfl
 @[simp] theorem corrupt_received {P : Parameters} (s : InstanceState P.n Pr M) (id : Fin P.n) :
     (s.corrupt P id).received = s.received := rfl
 @[simp] theorem corrupt_sent {P : Parameters} (s : InstanceState P.n Pr M) (id : Fin P.n) :
@@ -298,8 +303,8 @@ def receivedCount (s : InstanceState n Pr M) (i : Fin n) (m : M) : ℕ :=
 theorem receivedCount_eq_localState (s : InstanceState n Pr M) (i : Fin n) (m : M) :
     s.receivedCount i m = (s.1 i).receivedCount m := rfl
 
-@[simp] theorem setProcess_receivedCount (s : InstanceState n Pr M) (j : Fin n) (p : Pr)
-    (i : Fin n) (m : M) : (s.setProcess j p).receivedCount i m = s.receivedCount i m := by
+@[simp] theorem setProcessVariables_receivedCount (s : InstanceState n Pr M) (j : Fin n) (p : Pr)
+    (i : Fin n) (m : M) : (s.setProcessVariables j p).receivedCount i m = s.receivedCount i m := by
   simp [receivedCount]
 
 @[simp] theorem corrupt_receivedCount {P : Parameters} (s : InstanceState P.n Pr M) (id : Fin P.n)
@@ -310,8 +315,8 @@ theorem receivedCount_eq_localState (s : InstanceState n Pr M) (i : Fin n) (m : 
 def multicast (s : InstanceState n Pr M) (j : Fin n) (m : M) : InstanceState n Pr M :=
   (s.1, s.2.recordSent j m)
 
-@[simp] theorem multicast_process (s : InstanceState n Pr M) (j : Fin n) (m : M) :
-    (s.multicast j m).process = s.process := rfl
+@[simp] theorem multicast_processVariables (s : InstanceState n Pr M) (j : Fin n) (m : M) :
+    (s.multicast j m).processVariables = s.processVariables := rfl
 @[simp] theorem multicast_received (s : InstanceState n Pr M) (j : Fin n) (m : M) :
     (s.multicast j m).received = s.received := rfl
 @[simp] theorem multicast_F (s : InstanceState n Pr M) (j : Fin n) (m : M) :
@@ -340,12 +345,12 @@ def receiveMessage (s : InstanceState n Pr M) (i j : Fin n) (m : M) : InstanceSt
 @[simp] theorem receiveMessage_F (s : InstanceState n Pr M) (i j : Fin n) (m : M) :
     (s.receiveMessage i j m).F = s.F := rfl
 
-@[simp] theorem receiveMessage_process (s : InstanceState n Pr M) (i j : Fin n) (m : M) :
-    (s.receiveMessage i j m).process = s.process := by
+@[simp] theorem receiveMessage_processVariables (s : InstanceState n Pr M) (i j : Fin n) (m : M) :
+    (s.receiveMessage i j m).processVariables = s.processVariables := by
   funext k
   by_cases hk : k = i
-  · subst hk; simp [receiveMessage, process, LocalState.deliverTo]
-  · simp [receiveMessage, process, Function.update_of_ne hk]
+  · subst hk; simp [receiveMessage, processVariables, LocalState.deliverTo]
+  · simp [receiveMessage, processVariables, Function.update_of_ne hk]
 
 /-- Membership in a delivered set after a delivery. -/
 theorem mem_receiveMessage_received {s : InstanceState n Pr M} {i j : Fin n} {m : M}
@@ -406,12 +411,12 @@ theorem exists_correct_received_of_two_quorums {P : Parameters} {s : InstanceSta
   rw [Finset.mem_inter, Finset.mem_filter, Finset.mem_filter] at hj
   exact ⟨j, hjF, hj.1.2, hj.2.2⟩
 
-/-- Two `echoReceiptQuorum` receipt quorums (at possibly different receivers) share an
-correct sender: `2 * echoReceiptQuorum − n > f ≥ |F|`. -/
+/-- Two `receivedEchoQuorum` receipt quorums (at possibly different receivers) share an
+correct sender: `2 * receivedEchoQuorum − n > f ≥ |F|`. -/
 theorem exists_correct_received_of_two_echoQuorums {P : Parameters} {s : InstanceState P.n Pr M}
     (hF : s.F.card ≤ P.f) {i i' : Fin P.n} {m m' : M}
-    (h : P.echoReceiptQuorum ≤ s.receivedCount i m)
-    (h' : P.echoReceiptQuorum ≤ s.receivedCount i' m') :
+    (h : P.receivedEchoQuorum ≤ s.receivedCount i m)
+    (h' : P.receivedEchoQuorum ≤ s.receivedCount i' m') :
     ∃ j, j ∉ s.F ∧ m ∈ s.received i j ∧ m' ∈ s.received i' j := by
   unfold receivedCount at h h'
   have hcard := Finset.card_union_add_card_inter
@@ -421,7 +426,7 @@ theorem exists_correct_received_of_two_echoQuorums {P : Parameters} {s : Instanc
       (Finset.univ.filter (fun j => m' ∈ s.received i' j))).card ≤ P.n := by
     refine le_trans (Finset.card_le_univ _) ?_
     simp
-  have hq := P.n_add_f_lt_two_mul_echoReceiptQuorum
+  have hq := P.n_add_f_lt_two_mul_receivedEchoQuorum
   have hlt : s.F.card < ((Finset.univ.filter (fun j => m ∈ s.received i j)) ∩
       (Finset.univ.filter (fun j => m' ∈ s.received i' j))).card := by
         omega

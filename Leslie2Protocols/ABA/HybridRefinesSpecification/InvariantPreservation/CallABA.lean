@@ -30,24 +30,25 @@ theorem Invariant.step_callABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
     {μc : PMF (ABAState P)}
     (hstep :
       (id ∉ c.F ∧ (c.processes id).input = none ∧
-          μc = PMF.pure (c.setProcess id { c.processes id with
+          μc = PMF.pure (c.setProcessVariables id { c.processes id with
             input := some b, estimate := some b, round := 0, phase := .toCallG })) ∨
         ((c.corrupted id = true ∨ (c.processes id).input ≠ none) ∧ μc = PMF.pure c))
     {c' : ABAState P} (hc' : c' ∈ μc.support) :
     Invariant P g c' w ∧ AbstractStateUnchanged P g g c c' := by
   rcases hstep with ⟨-, hin, rfl⟩ | ⟨-, rfl⟩
   · rw [PMF.mem_support_pure_iff] at hc'; subst hc'
-    set c' := c.setProcess id { c.processes id with
+    set c' := c.setProcessVariables id { c.processes id with
       input := some b, estimate := some b, round := 0, phase := .toCallG } with hc'def
-    have hF : c'.F = c.F := ABAState.setProcess_F _ _ _
-    have hCorr : c'.corrupted = c.corrupted := ABAState.setProcess_corrupted _ _ _
-    have hDS : c'.decidedSent = c.decidedSent := ABAState.setProcess_decidedSent _ _ _
-    have hDR : c'.decidedReceived = c.decidedReceived := ABAState.setProcess_decidedReceived _ _ _
+    have hF : c'.F = c.F := ABAState.setProcessVariables_F _ _ _
+    have hCorr : c'.corrupted = c.corrupted := ABAState.setProcessVariables_corrupted _ _ _
+    have hDS : c'.decidedSent = c.decidedSent := ABAState.setProcessVariables_decidedSent _ _ _
+    have hDR : c'.decidedReceived = c.decidedReceived :=
+      ABAState.setProcessVariables_decidedReceived _ _ _
     have hSelf : c'.processes id = { c.processes id with
         input := some b, estimate := some b, round := 0, phase := .toCallG } := by
-      rw [hc'def]; exact ABAState.setProcess_processes_self _ _ _
+      rw [hc'def]; exact ABAState.setProcessVariables_processes_self _ _ _
     have hNe : ∀ id', id' ≠ id → c'.processes id' = c.processes id' := by
-      intro id' h; rw [hc'def]; exact ABAState.setProcess_processes_ne _ _ _ h
+      intro id' h; rw [hc'def]; exact ABAState.setProcessVariables_processes_ne _ _ _ h
     have hDissTrans : ∀ r, DissentWitness P g c r → DissentWitness P g c' r := by
       intro r hd
       obtain ⟨v, hbv, hif⟩ := hd
@@ -73,7 +74,7 @@ theorem Invariant.step_callABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
         · subst hid; exfalso; simp [hSelf] at hk
         · rw [hNe id₀ hid] at he hk
           exact Or.inr ⟨he, hk⟩
-    have hCertTrans : ∀ r' b', Grade2Certificate P g c r' b' → Grade2Certificate P g c' r' b' := by
+    have hCertTrans : ∀ r' b', Grade2Witness P g c r' b' → Grade2Witness P g c' r' b' := by
       rintro r' b' ⟨hg1, hd1, h1, h2, h3, h4⟩
       refine ⟨hg1, hd1, h1,
         fun r'' id'' b'' hrr hmem hcall => h2 r'' id'' b'' hrr (hF ▸ hmem) hcall,
@@ -159,7 +160,7 @@ theorem Invariant.step_callABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
       by_cases h : id' = id
       · subst h; simp [hSelf] at hphase
       · rw [hNe id' h] at hround hphase ⊢; exact hI.estimate_ret r id' (hF ▸ hmem) hround hphase
-    · intro r id' v hmem hcall; exact hI.call_provenance r id' v (hF ▸ hmem) hcall
+    · intro r id' v hmem hcall; exact hI.call_of_previousRound r id' v (hF ▸ hmem) hcall
     · intro r id' hmem hround hphase v hest
       by_cases h : id' = id
       · subst h; simp [hSelf] at hround

@@ -147,17 +147,17 @@ sub-protocol API hidden — taken at each tier of the gather-based construction.
 /-- The state of the gather-based composed system. -/
 abbrev ComposedState (P : Parameters) : Type :=
   (ℕ → GBCA.ByAFW.RoundStateOverBracha P.n) ×
-    ((∀ _ : Fin P.n, RoundLoopRecord P.n) × (ABANetworkState P.n × (ℕ → WCC.SpecState P.n)))
+    ((∀ _ : Fin P.n, RoundLoopVariables P.n) × (ABANetworkState P.n × (ℕ → WCC.SpecState P.n)))
 
 /-- The state at the middle tier. -/
 abbrev ComposedOverBroadcastSpecificationState (P : Parameters) : Type :=
   (ℕ → GBCA.ByAFW.RoundStateOverBroadcastSpecification P.n) ×
-    ((∀ _ : Fin P.n, RoundLoopRecord P.n) × (ABANetworkState P.n × (ℕ → WCC.SpecState P.n)))
+    ((∀ _ : Fin P.n, RoundLoopVariables P.n) × (ABANetworkState P.n × (ℕ → WCC.SpecState P.n)))
 
 /-- The state at the upper tier. -/
 abbrev ComposedOverGatherSpecificationsState (P : Parameters) : Type :=
   (ℕ → GBCA.ByAFW.RoundStateOverGatherSpecifications P.n) ×
-    ((∀ _ : Fin P.n, RoundLoopRecord P.n) × (ABANetworkState P.n × (ℕ → WCC.SpecState P.n)))
+    ((∀ _ : Fin P.n, RoundLoopVariables P.n) × (ABANetworkState P.n × (ℕ → WCC.SpecState P.n)))
 
 /-- **The gather-based composed system**: the gather-based graded-agreement family beside the
 composed system's other three components, through the two hiding frames. -/
@@ -248,7 +248,7 @@ theorem roundFamilyOverBracha_fail (P : Parameters) (G : ℕ → GBCA.ByAFW.Roun
 
 /-- The three components beside the graded-agreement family move together on a visible label, the
 oracle's successor left free. -/
-theorem contextStep (P : Parameters) {C C' : ∀ _ : Fin P.n, RoundLoopRecord P.n}
+theorem contextStep (P : Parameters) {C C' : ∀ _ : Fin P.n, RoundLoopVariables P.n}
     {A A' : ABANetworkState P.n} {o : ℕ → WCC.SpecState P.n}
     {ν : PMF (ℕ → WCC.SpecState P.n)} {L : ExtendedLabel P.n Empty} (hL : L ≠ Silent.τ)
     (hC : ∀ i, RoundLoopStep P i (C i) L (PMF.pure (C' i)))
@@ -265,7 +265,7 @@ theorem contextStep (P : Parameters) {C C' : ∀ _ : Fin P.n, RoundLoopRecord P.
 /-- Build a joint transition of the four components on a visible label, the
 oracle's successor left free. -/
 theorem composedExtended_visible_step (P : Parameters)
-    {G G' : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n} {C C' : ∀ _ : Fin P.n, RoundLoopRecord P.n}
+    {G G' : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n} {C C' : ∀ _ : Fin P.n, RoundLoopVariables P.n}
     {A A' : ABANetworkState P.n} {o : ℕ → WCC.SpecState P.n} {ν : PMF (ℕ → WCC.SpecState P.n)}
     {L : ExtendedLabel P.n Empty} (hL : L ≠ Silent.τ)
     (hG : (roundFamilyOverBracha P).step G L (PMF.pure G'))
@@ -279,7 +279,7 @@ theorem composedExtended_visible_step (P : Parameters)
 
 /-- Build a silent transition of the four components from a round's own. -/
 theorem composedExtended_tau_overBracha (P : Parameters)
-    {G G' : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
+    {G G' : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n} {C : ∀ _ : Fin P.n, RoundLoopVariables P.n}
     {A : ABANetworkState P.n} {o : ℕ → WCC.SpecState P.n}
     (hG : (roundFamilyOverBracha P).step G (Sum.inl Label.tau) (PMF.pure G')) :
     (composedExtended P).step (G, C, A, o) (Sum.inl Label.tau) (PMF.pure (G', C, A, o)) := by
@@ -289,7 +289,7 @@ theorem composedExtended_tau_overBracha (P : Parameters)
 
 /-- Build a silent transition of the four components from an ABA network injection. -/
 theorem composedExtended_tau_ABANetwork (P : Parameters)
-    {G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
+    {G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n} {C : ∀ _ : Fin P.n, RoundLoopVariables P.n}
     {A A' : ABANetworkState P.n} {o : ℕ → WCC.SpecState P.n}
     (hA : ABANetworkStep P A (Sum.inl Label.tau : ExtendedLabel P.n Empty) (PMF.pure A')) :
     (composedExtended P).step (G, C, A, o) (Sum.inl Label.tau) (PMF.pure (G, C, A', o)) := by
@@ -356,7 +356,7 @@ theorem roundFamilyOverBracha_weakStep (P : Parameters)
 /-- **A silent run of the graded-agreement family is a silent weak transition of the composed
 group**: the three other components stand at their states throughout. -/
 theorem composedHidden_weakTau (P : Parameters) {G G' : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n}
-    (C : ∀ _ : Fin P.n, RoundLoopRecord P.n) (A : ABANetworkState P.n)
+    (C : ∀ _ : Fin P.n, RoundLoopVariables P.n) (A : ABANetworkState P.n)
     (o : ℕ → WCC.SpecState P.n) (h : (roundFamilyOverBracha P).weakLSilent G G') :
     weakTau (composedHidden P) (PMF.pure ((G, C, A, o) : ComposedState P))
       (PMF.pure ((G', C, A, o) : ComposedState P)) := by
@@ -374,7 +374,7 @@ by one transition each is a weak transition of the composed group. The oracle's 
 free, so the resulting distribution has the shape the matching clause of a probabilistic
 forward simulation consumes. -/
 theorem composedHidden_weakStep (P : Parameters) {G G' : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n}
-    {C C' : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A A' : ABANetworkState P.n}
+    {C C' : ∀ _ : Fin P.n, RoundLoopVariables P.n} {A A' : ABANetworkState P.n}
     {o : ℕ → WCC.SpecState P.n} {ν : PMF (ℕ → WCC.SpecState P.n)} {l : Label P.n}
     (hl : l ≠ Label.tau)
     (hG : (roundFamilyOverBracha P).weakLStep G (Sum.inl l) G')

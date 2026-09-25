@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.GhostErasure.GhostFreeSystem
+import Leslie2Protocols.ABA.GhostRemoval.GhostFreeSystem
 import Leslie2Protocols.ABA.Results
 
 /-!
@@ -16,12 +16,12 @@ graded-agreement return by `ABDY.abdyAnnouncedBound`. `ABDY.ghostFreeProtocol` i
 it runs with that record dropped and the adversary free to announce either bit on a
 return.
 
-`ABDY.protocol_erasure` is the statement that the record costs nothing: the ghost never
+`ABDY.protocol_ghostRemoval` is the statement that the record costs nothing: the ghost never
 blocks a step and never adds one, so the two systems have the same achievable trace
 distributions. Every headline about the protocol therefore holds of the ghost-free
 protocol, and the rest of this file re-derives them.
 
-The proof is the state erasure of `ABA/GhostErasure/GhostFreeSystem.lean` carried through the
+The proof is the state erasure of `ABA/GhostRemoval/GhostFreeSystem.lean` carried through the
 composition pipeline. Its hypothesis is that every round, process and graded outcome
 admits an announced bit, which here is the equation `bnd = ABDY.abdyGhostOutput P s r id out`
 read at its own right-hand side. The announced bit is silent at protocol level — a
@@ -39,9 +39,9 @@ open Implementation
 `ABDY.protocol` beside the network over the trivial ghost, whose
 graded-agreement returns announce any bit. -/
 noncomputable def ghostFreeProtocol (P : Parameters) :
-    System (Implementation.State P GBCA.ByABDY.Message (GBCA.ByABDY.RoundRecord P.n) Unit)
+    System (Implementation.State P GBCA.ByABDY.Message (GBCA.ByABDY.RoundVariables P.n) Unit)
     (Label P.n) :=
-  Implementation.systemGhostFree P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundRecord P.n)
+  Implementation.systemGhostFree P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundVariables P.n)
     (ABDY.RoundStep P)
     (ABDY.gbcaCallPayload P)
 
@@ -49,9 +49,9 @@ noncomputable def ghostFreeProtocol (P : Parameters) :
 by no guard and read by no program, and the label that announces it is hidden at protocol
 level, so the protocol and the ghost-free protocol achieve the same trace
 distributions. -/
-theorem protocol_erasure (P : Parameters) :
+theorem protocol_ghostRemoval (P : Parameters) :
     achievableTraceDists (protocol P) = achievableTraceDists (ghostFreeProtocol P) :=
-  Implementation.system_erasure P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundRecord P.n)
+  Implementation.system_ghostRemoval P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundVariables P.n)
     (Option Bool) (ABDY.RoundStep P)
     (ABDY.gbcaCallPayload P) (ABDY.abdyGhostStep P) (ABDY.abdyAnnouncedBound P)
     (fun s r id out => ⟨ABDY.abdyGhostOutput P s r id out, rfl⟩)
@@ -61,13 +61,13 @@ theorem protocol_erasure (P : Parameters) :
 /-- **The composition inclusion for the ghost-free protocol.** -/
 theorem ghostFreeProtocol_composed (P : Parameters) :
     achievableTraceDists (ghostFreeProtocol P) ⊆ achievableTraceDists (composed P) :=
-  Set.Subset.trans (protocol_erasure P).symm.subset (protocol_composed P)
+  Set.Subset.trans (protocol_ghostRemoval P).symm.subset (protocol_composed P)
 
 /-- **Trace-distribution refinement of the ghost-free protocol**: every trace
 distribution it achieves is achievable by the ABA specification. -/
 theorem ghostFreeProtocol_refines (P : Parameters) :
     achievableTraceDists (ghostFreeProtocol P) ⊆ achievableTraceDists (spec P) :=
-  Set.Subset.trans (protocol_erasure P).symm.subset (refines P)
+  Set.Subset.trans (protocol_ghostRemoval P).symm.subset (refines P)
 
 /-- **Correctness of the ghost-free protocol**: every positive-probability trace
 satisfies Validity and Agreement. -/
@@ -87,9 +87,9 @@ theorem ghostFreeProtocol_traces (P : Parameters) :
 
 /-! ### Mechanical axiom check -/
 
-/-- info: 'PLTS.ABA.ABDY.protocol_erasure' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.ABDY.protocol_ghostRemoval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms protocol_erasure
+#print axioms protocol_ghostRemoval
 
 /-- info: 'PLTS.ABA.ABDY.ghostFreeProtocol_refines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in

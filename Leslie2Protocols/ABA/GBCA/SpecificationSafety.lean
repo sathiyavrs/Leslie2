@@ -226,14 +226,14 @@ def outValue : GBCAOutput → Option Bool
 @[simp] theorem outValue_grade0 : outValue .grade0 = none := rfl
 
 /-- A grade-2 return holds its bit alive and the other bit excluded. -/
-private theorem retGrade2_inversion {s : SpecState P.n} {id : Fin P.n} {v β : Bool}
+private theorem retGrade2_cases {s : SpecState P.n} {id : Fin P.n} {v β : Bool}
     {μ : PMF (SpecState P.n)} (hstep : Step P r s (.retG r id (.grade2 v) β) μ) :
     v ∉ s.excluded ∧ (!v) ∈ s.excluded :=
   match hstep with
   | .retGrade2 _ _ _ _ hlive hexcluded _ _ _ => ⟨hlive, hexcluded⟩
 
 /-- A grade-1 return holds its bit alive and the other bit excluded. -/
-private theorem retGrade1_inversion {s : SpecState P.n} {id : Fin P.n} {v β : Bool}
+private theorem retGrade1_cases {s : SpecState P.n} {id : Fin P.n} {v β : Bool}
     {μ : PMF (SpecState P.n)} (hstep : Step P r s (.retG r id (.grade1 v) β) μ) :
     v ∉ s.excluded ∧ (!v) ∈ s.excluded :=
   match hstep with
@@ -256,11 +256,11 @@ theorem retG_value_guards {s : SpecState P.n} {id : Fin P.n} {o : GBCAOutput}
   | grade2 w =>
     obtain rfl : w = v := by
       simpa using ho
-    exact retGrade2_inversion hstep
+    exact retGrade2_cases hstep
   | grade1 w =>
     obtain rfl : w = v := by
       simpa using ho
-    exact retGrade1_inversion hstep
+    exact retGrade1_cases hstep
   | grade0 => exact absurd ho (by simp)
 
 /-- The D15 dissent count of a grade-1 return: `f + 1` support at the bit it does

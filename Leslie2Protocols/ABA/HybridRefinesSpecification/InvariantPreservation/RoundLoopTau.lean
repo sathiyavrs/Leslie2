@@ -46,8 +46,8 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
     have hDS : (c.deliverDecided i j b).decidedSent = c.decidedSent :=
       ABAState.deliverDecided_decidedSent _ _ _ _
     have hCert : ∀ r' b',
-      Grade2Certificate P g c r' b' → Grade2Certificate P g (c.deliverDecided i j b) r' b' := fun r'
-        b' => Grade2Certificate.of_unchanged rfl (fun _ => rfl) (fun _ _ => rfl)
+      Grade2Witness P g c r' b' → Grade2Witness P g (c.deliverDecided i j b) r' b' := fun r'
+        b' => Grade2Witness.of_unchanged rfl (fun _ => rfl) (fun _ _ => rfl)
         (by rw [hFeq] : c.F ⊆ _) (fun id' => by rw [hProcs]) (fun id' => by rw [hProcs])
         (fun id0 v hcar => by unfold OutcomeHolder at hcar ⊢; rwa [hProcs] at hcar)
     refine And.intro ?_ ⟨fun r0 b0 hc => ⟨r0, hCert r0 b0 hc⟩,
@@ -108,7 +108,7 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
       exact (hI.grade2_source id' b' hlg).imp (fun r => hCert r b')
     · intro r id' hmem hround hphase
       rw [hProcs] at hround hphase ⊢; exact hI.estimate_ret r id' (hFeq ▸ hmem) hround hphase
-    · intro r id' v hmem hcall; exact hI.call_provenance r id' v (hFeq ▸ hmem) hcall
+    · intro r id' v hmem hcall; exact hI.call_of_previousRound r id' v (hFeq ▸ hmem) hcall
     · intro r id' hmem hround hphase v hest
       rw [hProcs] at hround hphase hest
       exact hI.estimate_previous r id' (hFeq ▸ hmem) hround hphase v hest
@@ -150,8 +150,8 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
     have hjsent : b ∈ c.decidedSent j := hI.received_sound id j b hjmem.2
     obtain ⟨r0, hcert0⟩ := hI.decided_source j b hjF hjsent
     have hCert : ∀ r' b',
-      Grade2Certificate P g c r' b' → Grade2Certificate P g (c.sendDecided id b) r' b' := fun r' b'
-        => Grade2Certificate.of_unchanged rfl (fun _ => rfl) (fun _ _ => rfl)
+      Grade2Witness P g c r' b' → Grade2Witness P g (c.sendDecided id b) r' b' := fun r' b'
+        => Grade2Witness.of_unchanged rfl (fun _ => rfl) (fun _ _ => rfl)
         (by rw [hFeq] : c.F ⊆ _) (fun id' => by rw [hProcs]) (fun id' => by rw [hProcs])
         (fun id0 v hcar => by unfold OutcomeHolder at hcar ⊢; rwa [hProcs] at hcar)
     have hHold : ∀ i0 b0, i0 ∉ c.F → Grade2Holder P (c.sendDecided id b) i0 b0 →
@@ -221,7 +221,7 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
       rw [hProcs] at hlg; exact hI.grade2_source id' b' hlg
     · intro r id' hmem hround hphase
       rw [hProcs] at hround hphase; exact hI.estimate_ret r id' (hFeq ▸ hmem) hround hphase
-    · intro r id' v hmem hcall; exact hI.call_provenance r id' v (hFeq ▸ hmem) hcall
+    · intro r id' v hmem hcall; exact hI.call_of_previousRound r id' v (hFeq ▸ hmem) hcall
     · intro r id' hmem hround hphase v hest
       rw [hProcs] at hround hphase hest
       exact hI.estimate_previous r id' (hFeq ▸ hmem) hround hphase v hest
@@ -252,8 +252,8 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
     have hDR : (c.sendDecided id b).decidedReceived = c.decidedReceived :=
       ABAState.sendDecided_decidedReceived _ _ _
     have hCert : ∀ r' b',
-      Grade2Certificate P g c r' b' → Grade2Certificate P g (c.sendDecided id b) r' b' := fun r' b'
-        => Grade2Certificate.of_unchanged rfl (fun _ => rfl) (fun _ _ => rfl)
+      Grade2Witness P g c r' b' → Grade2Witness P g (c.sendDecided id b) r' b' := fun r' b'
+        => Grade2Witness.of_unchanged rfl (fun _ => rfl) (fun _ _ => rfl)
         (by rw [hFeq] : c.F ⊆ _) (fun id' => by rw [hProcs]) (fun id' => by rw [hProcs])
         (fun id0 v hcar => by unfold OutcomeHolder at hcar ⊢; rwa [hProcs] at hcar)
     have hHold : ∀ i0 b0, i0 ∉ c.F → Grade2Holder P (c.sendDecided id b) i0 b0 →
@@ -316,7 +316,7 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
       exact (hI.grade2_source id' b' hlg).imp (fun r => hCert r b')
     · intro r id' hmem hround hphase
       rw [hProcs] at hround hphase; exact hI.estimate_ret r id' (hFeq ▸ hmem) hround hphase
-    · intro r id' v hmem hcall; exact hI.call_provenance r id' v (hFeq ▸ hmem) hcall
+    · intro r id' v hmem hcall; exact hI.call_of_previousRound r id' v (hFeq ▸ hmem) hcall
     · intro r id' hmem hround hphase v hest
       rw [hProcs] at hround hphase hest
       exact hI.estimate_previous r id' (hFeq ▸ hmem) hround hphase v hest

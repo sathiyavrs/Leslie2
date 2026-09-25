@@ -4,19 +4,19 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.Implementation.NetworkStateWritesAndErasures
+import Leslie2Protocols.ABA.Implementation.NetworkStateWritesAndRemovals
 
 /-!
 # The transitions of the implementation, read off their labels
 
 The implementation is `relabel ∘ abstract ∘ parallel ∘ parallel ∘ synchronisedProduct` over the
 process group, the network and the lifted oracle. The lemmas here unfold that pipeline once and
-for all. `programProduct_inversion` reads a synchronised transition of the process group on a
+for all. `programProduct_cases` reads a synchronised transition of the process group on a
 visible label: every process steps, and the joint distribution is their Dirac product.
-`programProduct_tau_inversion` reads the silent one, where one process moves and the others stand.
+`programProduct_tau_cases` reads the silent one, where one process moves and the others stand.
 `systemHidden_step_iff` and `system_step_iff` split a composite transition into a hidden event and
-a label that survives the hiding. `systemExtended_event_inversion`,
-`systemExtended_label_inversion` and `systemExtended_tau_inversion` read a joint step of the three
+a label that survives the hiding. `systemExtended_event_cases`,
+`systemExtended_label_cases` and `systemExtended_tau_cases` read a joint step of the three
 components backwards, to the transitions of the group, of the network and of the oracle.
 
 The two graded-agreement returns are the only transitions that read the ghost, and what they read
@@ -37,17 +37,18 @@ lemmas below unfold it once and for all. -/
 section Composite
 
 variable {P : Parameters} {M E S : Type}
-    {roundStep : Fin P.n → ProcessRecord P.n S → ExtendedLabel P.n M E → PMF (ProcessRecord P.n S) →
+    {roundStep : Fin P.n → ProcessVariables P.n S → ExtendedLabel P.n M E → PMF (ProcessVariables
+      P.n S) →
       Prop}
     [IsRoundStep P M E S roundStep]
 
 /-- A synchronised transition of the process group on a visible label: every
 process steps, and the joint distribution is Dirac. -/
-theorem programProduct_inversion {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
+theorem programProduct_cases {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
     {l : ExtendedLabel P.n M E}
-    {μ : PMF (∀ _ : Fin P.n, ProcessRecord P.n S)} (hl : l ≠ Silent.τ)
+    {μ : PMF (∀ _ : Fin P.n, ProcessVariables P.n S)} (hl : l ≠ Silent.τ)
     (h : (System.synchronisedProduct (program P M E S roundStep)).step u l μ) :
-    ∃ x : ∀ _ : Fin P.n, ProcessRecord P.n S,
+    ∃ x : ∀ _ : Fin P.n, ProcessVariables P.n S,
       μ = PMF.pure x ∧ ∀ i, ProgramStep P M E S roundStep i (u i) l (PMF.pure (x i)) := by
   rw [System.synchronisedProduct_step] at h
   rcases h with ⟨-, μ_, hall, rfl⟩ | ⟨rfl, i, μ_i, hstep, -⟩
@@ -61,11 +62,11 @@ theorem programProduct_inversion {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
 
 /-- A silent transition of the process group: `τ` is interleaved, so exactly
 one program moves and the rest hold their state. -/
-theorem programProduct_tau_inversion {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
-    {μ : PMF (∀ _ : Fin P.n, ProcessRecord P.n S)}
+theorem programProduct_tau_cases {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
+    {μ : PMF (∀ _ : Fin P.n, ProcessVariables P.n S)}
     (h : (System.synchronisedProduct (program P M E S roundStep)).step u
       (Silent.τ : ExtendedLabel P.n M E) μ) :
-    ∃ (i : Fin P.n) (y : ProcessRecord P.n S),
+    ∃ (i : Fin P.n) (y : ProcessVariables P.n S),
       ProgramStep P M E S roundStep i (u i) (Silent.τ : ExtendedLabel P.n M E) (PMF.pure y) ∧
       μ = PMF.pure (Function.update u i y) := by
   rcases h with ⟨hτ, -⟩ | ⟨-, i, μ_i, hstep, rfl⟩
@@ -75,7 +76,7 @@ theorem programProduct_tau_inversion {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
 
 /-! ### The transitions of the implementation, read off their labels -/
 
-section SystemStepInversion
+section SystemStepCases
 variable {G : Type} [DecidableEq M] [Inhabited G]
     {callPayload : Fin P.n → Bool → Option M}
     {ghostStep : ExtendedLabel P.n M E → NetworkState P.n M G → G → G}
@@ -114,12 +115,12 @@ theorem system_step_iff (q : State P M S G) (l : Label P.n)
 
 /-- A rendezvous transition: every process, the network and the lifted oracle
 move together, and only the oracle's successor can fail to be a Dirac. -/
-theorem systemExtended_event_inversion {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
+theorem systemExtended_event_cases {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
     {w : NetworkState P.n M G} {o : ℕ → WCC.SpecState P.n} {e : NetworkEvent P.n M E}
     {μ : PMF (State P M S G)}
     (h : (systemExtended P M E S G roundStep callPayload ghostStep ghostOutput).step (u, w, o)
       (Sum.inr e) μ) :
-    ∃ (x : ∀ _ : Fin P.n, ProcessRecord P.n S) (w' : NetworkState P.n M G)
+    ∃ (x : ∀ _ : Fin P.n, ProcessVariables P.n S) (w' : NetworkState P.n M G)
       (μ₃ : PMF (ℕ → WCC.SpecState P.n)),
       (∀ i, ProgramStep P M E S roundStep i (u i) (Sum.inr e) (PMF.pure (x i))) ∧
       NetworkStep P M E G callPayload ghostStep ghostOutput w (Sum.inr e) (PMF.pure w') ∧
@@ -127,7 +128,7 @@ theorem systemExtended_event_inversion {u : ∀ _ : Fin P.n, ProcessRecord P.n S
       μ = prodPMF (PMF.pure x) (prodPMF (PMF.pure w') μ₃) := by
   rw [systemExtended, System.parallel_step] at h
   rcases h with ⟨-, μ₁, μ₂₃, hS, hNW, rfl⟩ | ⟨habs, -⟩ | ⟨habs, -⟩
-  · obtain ⟨x, rfl, hall⟩ := programProduct_inversion (by simp) hS
+  · obtain ⟨x, rfl, hall⟩ := programProduct_cases (by simp) hS
     rw [System.parallel_step] at hNW
     rcases hNW with ⟨-, μ₂, μ₃, hN, hO, rfl⟩ | ⟨habs, -⟩ | ⟨habs, -⟩
     · obtain ⟨w', rfl⟩ := networkStep_dirac hN
@@ -138,12 +139,12 @@ theorem systemExtended_event_inversion {u : ∀ _ : Fin P.n, ProcessRecord P.n S
   · simp [extendedLabel_tau] at habs
 
 /-- A visible shared-label transition. -/
-theorem systemExtended_label_inversion {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
+theorem systemExtended_label_cases {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
     {w : NetworkState P.n M G} {o : ℕ → WCC.SpecState P.n} {l : Label P.n}
     (hl : l ≠ Label.tau) {μ : PMF (State P M S G)}
     (h : (systemExtended P M E S G roundStep callPayload ghostStep ghostOutput).step (u, w, o)
       (Sum.inl l) μ) :
-    ∃ (x : ∀ _ : Fin P.n, ProcessRecord P.n S) (w' : NetworkState P.n M G)
+    ∃ (x : ∀ _ : Fin P.n, ProcessVariables P.n S) (w' : NetworkState P.n M G)
       (ω : PMF (ℕ → WCC.SpecState P.n)),
       (∀ i, ProgramStep P M E S roundStep i (u i) (Sum.inl l) (PMF.pure (x i))) ∧
       NetworkStep P M E G callPayload ghostStep ghostOutput w (Sum.inl l) (PMF.pure w') ∧
@@ -152,7 +153,7 @@ theorem systemExtended_label_inversion {u : ∀ _ : Fin P.n, ProcessRecord P.n S
   rw [systemExtended, System.parallel_step] at h
   rcases h with ⟨-, μ₁, μ₂₃, hS, hNW, rfl⟩ | ⟨habs, -⟩ | ⟨habs, -⟩
   · obtain ⟨x, rfl, hall⟩ :=
-      programProduct_inversion
+      programProduct_cases
         (by rw [extendedLabel_tau]; exact fun hh => hl (Sum.inl_injective hh)) hS
     rw [System.parallel_step] at hNW
     rcases hNW with ⟨-, μ₂, μ₃, hN, hO, rfl⟩ | ⟨habs, -⟩ | ⟨habs, -⟩
@@ -166,12 +167,12 @@ theorem systemExtended_label_inversion {u : ∀ _ : Fin P.n, ProcessRecord P.n S
 
 /-- A silent shared-label transition: one process terminating, or the network's
 own injection. The coin oracle has no silent transition, so it contributes none. -/
-theorem systemExtended_tau_inversion {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
+theorem systemExtended_tau_cases {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
     {w : NetworkState P.n M G} {o : ℕ → WCC.SpecState P.n}
     {μ : PMF (State P M S G)}
     (h : (systemExtended P M E S G roundStep callPayload ghostStep ghostOutput).step (u, w, o)
       (Sum.inl Label.tau) μ) :
-    (∃ (i : Fin P.n) (y : ProcessRecord P.n S),
+    (∃ (i : Fin P.n) (y : ProcessVariables P.n S),
       ProgramStep P M E S roundStep i (u i) (Sum.inl Label.tau) (PMF.pure y) ∧
       μ = PMF.pure (Function.update u i y, w, o)) ∨
     (∃ w', NetworkStep P M E G callPayload ghostStep ghostOutput w (Sum.inl .tau)
@@ -180,14 +181,14 @@ theorem systemExtended_tau_inversion {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
   rw [systemExtended, System.parallel_step] at h
   rcases h with ⟨habs, -⟩ | ⟨-, μ₁, hS, rfl⟩ | ⟨-, μ₂₃, hNW, rfl⟩
   · exact absurd rfl habs
-  · obtain ⟨i, y, hstep, rfl⟩ := programProduct_tau_inversion hS
+  · obtain ⟨i, y, hstep, rfl⟩ := programProduct_tau_cases hS
     exact Or.inl ⟨i, y, hstep, by rw [prodPMF_pure_pure]⟩
   · rw [System.parallel_step] at hNW
     rcases hNW with ⟨habs, -⟩ | ⟨-, μ₂, hN, rfl⟩ | ⟨-, μ₃, hO, rfl⟩
     · exact absurd rfl habs
     · obtain ⟨w', rfl⟩ := networkStep_dirac hN
       exact Or.inr ⟨w', hN, by rw [prodPMF_pure_pure, prodPMF_pure_pure]⟩
-    · exact (ABA.WCC.specFamily_tau_inversion P
+    · exact (ABA.WCC.specFamily_tau_cases P
         ((System.mapIdle_step_some (coinLabelMap_inl Label.tau) μ₃).mp hO)).elim
 
 /-! ### The bound bit on a return
@@ -198,7 +199,7 @@ transition on either therefore constrains the bound bit its label carries. -/
 
 /-- A composite graded-agreement return announces a bit the network's ghost
 relation admits. -/
-theorem systemExtended_retG_bound {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
+theorem systemExtended_retG_bound {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
     {w : NetworkState P.n M G} {o : ℕ → WCC.SpecState P.n}
     {r : ℕ} {id : Fin P.n} {out : GBCAOutput} {bnd : Bool}
     {μ : PMF (State P M S G)}
@@ -207,22 +208,22 @@ theorem systemExtended_retG_bound {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
     ghostOutput w r id out bnd := by
   have hne : (Label.retG r id out bnd : Label P.n) ≠ Label.tau := by
     simp
-  obtain ⟨x, w', ω, -, hN, -, -⟩ := systemExtended_label_inversion hne h
+  obtain ⟨x, w', ω, -, hN, -, -⟩ := systemExtended_label_cases hne h
   exact (networkStep_retG hN).1
 
 /-- A composite Byzantine graded-agreement return announces a bit the same
 ghost relation admits (D11). -/
-theorem systemExtended_byzantineRetG_bound {u : ∀ _ : Fin P.n, ProcessRecord P.n S}
+theorem systemExtended_byzantineRetG_bound {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
     {w : NetworkState P.n M G} {o : ℕ → WCC.SpecState P.n}
     {r : ℕ} {k : Fin P.n} {out : GBCAOutput} {bnd : Bool}
     {μ : PMF (State P M S G)}
     (h : (systemExtended P M E S G roundStep callPayload ghostStep ghostOutput).step (u, w, o)
       (Sum.inr (.byzantineRetG r k out bnd)) μ) :
     ghostOutput w r k out bnd := by
-  obtain ⟨x, w', μ₃, -, hN, -, -⟩ := systemExtended_event_inversion h
+  obtain ⟨x, w', μ₃, -, hN, -, -⟩ := systemExtended_event_cases h
   exact (networkStep_byzantineRetG hN).2.1
 
-end SystemStepInversion
+end SystemStepCases
 end Composite
 
 end Implementation

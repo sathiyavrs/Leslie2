@@ -23,10 +23,10 @@ INPUT = echo,  ECHO = echo2,  VOTE = echo3,  BIND = echo4,  ECHO5 = echo5
 
 ## The two halves of a round's state
 
-The data of one round sits in two records. `RoundRecord` is what one process holds: its own
+The data of one round sits in two records. `RoundVariables` is what one process holds: its own
 protocol state — the input it was called with, the `INPUT` payloads it has multicast, its
 write-once `ECHO`, `VOTE`, `BIND` and `ECHO5` payloads and its return flag, gathered in
-`ProcessRecord` — together with the messages delivered to it, indexed by sender. It holds no
+`ProcessVariables` — together with the messages delivered to it, indexed by sender. It holds no
 record of what it has multicast: a sender's sent set is the round network's. `NetworkState` is
 the round's network: the per-sender sent sets, the corrupted set and the round's bound bit.
 `RoundState` is the pair of the `n` round records and the network state, so the network
@@ -34,7 +34,8 @@ is a component of a round's state and not a field of it, and a weaker network is
 second component that leaves the rest of the round alone.
 
 `RoundState` carries the projections the algorithm's guards read — `process`,
-`received`, `sent`, `F` and `bound` — and the writes that reach one component alone: `setProcess`
+`received`, `sent`, `F` and `bound` — and the writes that reach one component alone:
+`setProcessVariables`
 and `receiveMessage` on a round record, `multicast`, `corrupt` and `setBound` on the network
 state. Each write comes with the lemmas that carry every other projection through it, which is
 what lets a guard be read off a state after a write without unfolding the pair.
@@ -121,7 +122,7 @@ theorem boundOf_grade0 {n : ℕ} (sent : Fin n → Finset Message) (F : Finset (
       else true := rfl
 
 /-- The local state of one process in one GBCA instance. -/
-structure ProcessRecord : Type where
+structure ProcessVariables : Type where
   /-- The input bit received via `callG` (`none` before the call). -/
   input : Option Bool
   /-- Which `INPUT` payloads this process has multicast (own input or relay). -/
@@ -140,7 +141,7 @@ structure ProcessRecord : Type where
   deriving DecidableEq
 
 /-- The initial local state: nothing received, nothing sent. -/
-def ProcessRecord.initial : ProcessRecord where
+def ProcessVariables.initial : ProcessVariables where
   input := none
   sentInput := fun _ => false
   sentEcho := none
@@ -162,55 +163,56 @@ programs (`ABA/GBCA/ABDY/Components.lean`). -/
 
 /-- The round record of one process: its own local state and the messages delivered to it, indexed
 by sender. There is no record of what it has sent — the sender's sent lives in the network. -/
-structure RoundRecord (n : ℕ) : Type where
+structure RoundVariables (n : ℕ) : Type where
   /-- The process's own protocol state. -/
-  process : ProcessRecord
+  processVariables : ProcessVariables
   /-- `received k` — the messages from sender `k` delivered here. -/
   received : Fin n → Finset Message
   deriving DecidableEq
 
-namespace RoundRecord
+namespace RoundVariables
 
 variable {n : ℕ}
 
 /-- The initial round record: nothing received, nothing done. -/
-def initial (n : ℕ) : RoundRecord n where
-  process := ProcessRecord.initial
+def initial (n : ℕ) : RoundVariables n where
+  processVariables := ProcessVariables.initial
   received := fun _ => ∅
 
 /-- The number of distinct senders from which this process has received `m`. -/
-def receivedCount (p : RoundRecord n) (m : Message) : ℕ :=
+def receivedCount (p : RoundVariables n) (m : Message) : ℕ :=
   (Finset.univ.filter (fun k => m ∈ p.received k)).card
 
 /-- The number of distinct senders of some received `ECHO`. -/
-def echoCount (p : RoundRecord n) : ℕ :=
+def echoCount (p : RoundVariables n) : ℕ :=
   (Finset.univ.filter (fun k => ∃ b, Message.echo b ∈ p.received k)).card
 
 /-- The number of distinct senders of some received `VOTE`. -/
-def voteCount (p : RoundRecord n) : ℕ :=
+def voteCount (p : RoundVariables n) : ℕ :=
   (Finset.univ.filter (fun k => ∃ v, Message.vote v ∈ p.received k)).card
 
 /-- The number of distinct senders of some received `BIND`. -/
-def bindCount (p : RoundRecord n) : ℕ :=
+def bindCount (p : RoundVariables n) : ℕ :=
   (Finset.univ.filter (fun k => ∃ v, Message.bind v ∈ p.received k)).card
 
 /-- The number of distinct senders of some received `ECHO5`. -/
-def echo5Count (p : RoundRecord n) : ℕ :=
+def echo5Count (p : RoundVariables n) : ℕ :=
   (Finset.univ.filter (fun k => ∃ v, Message.echo5 v ∈ p.received k)).card
 
 /-- Both bits are backed by an `n − f` `INPUT` quorum among the delivered
 messages. -/
-def bothValid (P : Parameters) (p : RoundRecord P.n) : Prop :=
+def bothValid (P : Parameters) (p : RoundVariables P.n) : Prop :=
   P.n - P.f ≤ p.receivedCount (.input true) ∧ P.n - P.f ≤ p.receivedCount (.input false)
 
 /-- Overwrite the local record. -/
-def setProcess (p : RoundRecord n) (pr : ProcessRecord) : RoundRecord n := { p with process := pr }
+def setProcessVariables (p : RoundVariables n) (pr : ProcessVariables) : RoundVariables n := { p
+  with processVariables := pr }
 
 /-- File `m` under the received set of sender `k`. -/
-def deliverTo (p : RoundRecord n) (k : Fin n) (m : Message) : RoundRecord n :=
+def deliverTo (p : RoundVariables n) (k : Fin n) (m : Message) : RoundVariables n :=
   { p with received := Function.update p.received k (insert m (p.received k)) }
 
-end RoundRecord
+end RoundVariables
 
 
 /-- The state of the round's network: the per-sender sent sets and the
@@ -289,14 +291,15 @@ end NetworkState
 /-- **The composed state of one graded-agreement round**: the `n` round records beside the round's
 network state. -/
 abbrev RoundState (n : ℕ) : Type := (∀ _ : Fin n,
-  RoundRecord n) × GBCA.ByABDY.NetworkState n
+  RoundVariables n) × GBCA.ByABDY.NetworkState n
 
 namespace RoundState
 
 variable {n : ℕ}
 
 /-- Per-process local states. -/
-def process (s : RoundState n) : Fin n → ProcessRecord := fun j => (s.1 j).process
+def processVariables (s : RoundState n) : Fin n → ProcessVariables :=
+  fun j => (s.1 j).processVariables
 
 /-- `sent j` — the messages process `j` has multicast (D5). -/
 def sent (s : RoundState n) : Fin n → Finset Message := s.2.sent
@@ -315,24 +318,25 @@ def bound (s : RoundState n) : Option Bool := s.2.bound
 /-- The round's bound bit is written: the network state records `β`. -/
 def setBound (s : RoundState n) (β : Bool) : RoundState n := (s.1, s.2.setBound β)
 
-@[simp] theorem process_apply (u : ∀ _ : Fin n, RoundRecord n) (w : GBCA.ByABDY.NetworkState n)
-    (j : Fin n) : process (u, w) j = (u j).process := rfl
-@[simp] theorem sent_apply (u : ∀ _ : Fin n, RoundRecord n) (w : GBCA.ByABDY.NetworkState n) :
+@[simp] theorem processVariables_apply (u : ∀ _ : Fin n, RoundVariables n) (w :
+  GBCA.ByABDY.NetworkState n)
+    (j : Fin n) : processVariables (u, w) j = (u j).processVariables := rfl
+@[simp] theorem sent_apply (u : ∀ _ : Fin n, RoundVariables n) (w : GBCA.ByABDY.NetworkState n) :
     sent (u, w) = w.sent := rfl
-@[simp] theorem received_apply (u : ∀ _ : Fin n, RoundRecord n) (w : GBCA.ByABDY.NetworkState n)
+@[simp] theorem received_apply (u : ∀ _ : Fin n, RoundVariables n) (w : GBCA.ByABDY.NetworkState n)
     (i : Fin n) : received (u, w) i = (u i).received := rfl
-@[simp] theorem F_apply (u : ∀ _ : Fin n, RoundRecord n) (w : GBCA.ByABDY.NetworkState n) :
+@[simp] theorem F_apply (u : ∀ _ : Fin n, RoundVariables n) (w : GBCA.ByABDY.NetworkState n) :
     F (u, w) = w.F := rfl
-@[simp] theorem bound_apply (u : ∀ _ : Fin n, RoundRecord n) (w : GBCA.ByABDY.NetworkState n) :
+@[simp] theorem bound_apply (u : ∀ _ : Fin n, RoundVariables n) (w : GBCA.ByABDY.NetworkState n) :
     bound (u, w) = w.bound := rfl
-@[simp] theorem setBound_apply (u : ∀ _ : Fin n, RoundRecord n) (w : GBCA.ByABDY.NetworkState n)
+@[simp] theorem setBound_apply (u : ∀ _ : Fin n, RoundVariables n) (w : GBCA.ByABDY.NetworkState n)
     (β : Bool) : setBound (u, w) β = (u, w.setBound β) := rfl
 
 /-! The bound-bit write touches the network state's own field alone, so every
 other projection of the round passes through it. -/
 
-@[simp] theorem setBound_process (s : RoundState n) (β : Bool) :
-    (s.setBound β).process = s.process := rfl
+@[simp] theorem setBound_processVariables (s : RoundState n) (β : Bool) :
+    (s.setBound β).processVariables = s.processVariables := rfl
 @[simp] theorem setBound_received (s : RoundState n) (β : Bool) :
     (s.setBound β).received = s.received := rfl
 @[simp] theorem setBound_sent (s : RoundState n) (β : Bool) :
@@ -348,21 +352,22 @@ example (s : RoundState n) (i j : Fin n) : s.received i j = (s.1 i).received j :
 
 /-- The initial composed state. -/
 def initial (n : ℕ) : RoundState n :=
-  (fun _ => RoundRecord.initial n, GBCA.ByABDY.NetworkState.initial n)
+  (fun _ => RoundVariables.initial n, GBCA.ByABDY.NetworkState.initial n)
 
 /-! The two components' own initial states project componentwise, so unfolding
 `initial` leaves no residue. -/
 
-@[simp] theorem _root_.PLTS.ABA.GBCA.ByABDY.RoundRecord.initial_process (n : ℕ) :
-    (RoundRecord.initial n).process = ProcessRecord.initial := rfl
-@[simp] theorem _root_.PLTS.ABA.GBCA.ByABDY.RoundRecord.initial_received (n : ℕ) (k : Fin n) :
-    (RoundRecord.initial n).received k = ∅ := rfl
+@[simp] theorem _root_.PLTS.ABA.GBCA.ByABDY.RoundVariables.initial_processVariables (n : ℕ) :
+    (RoundVariables.initial n).processVariables = ProcessVariables.initial := rfl
+@[simp] theorem _root_.PLTS.ABA.GBCA.ByABDY.RoundVariables.initial_received (n : ℕ) (k : Fin n) :
+    (RoundVariables.initial n).received k = ∅ := rfl
 @[simp] theorem _root_.PLTS.ABA.GBCA.ByABDY.NetworkState.initial_sent (n : ℕ) (j : Fin n) :
     (GBCA.ByABDY.NetworkState.initial n).sent j = ∅ := rfl
 @[simp] theorem _root_.PLTS.ABA.GBCA.ByABDY.NetworkState.initial_F (n : ℕ) :
     (GBCA.ByABDY.NetworkState.initial n).F = ∅ := rfl
 
-@[simp] theorem initial_process (j : Fin n) : (initial n).process j = ProcessRecord.initial := rfl
+@[simp] theorem initial_processVariables (j : Fin n) : (initial n).processVariables j =
+  ProcessVariables.initial := rfl
 @[simp] theorem initial_sent (j : Fin n) : (initial n).sent j = ∅ := rfl
 @[simp] theorem initial_received (i j : Fin n) : (initial n).received i j = ∅ := rfl
 @[simp] theorem initial_F : (initial n).F = ∅ := rfl
@@ -403,59 +408,63 @@ theorem bothValid_le {P : Parameters} {s : RoundState P.n} {i : Fin P.n}
 /-! ### State update helpers -/
 
 /-- Update the local state of process `j`. -/
-def setProcess (s : RoundState n) (j : Fin n) (p : ProcessRecord) : RoundState n
+def setProcessVariables (s : RoundState n) (j : Fin n) (p : ProcessVariables) : RoundState n
   :=
-  (Function.update s.1 j ((s.1 j).setProcess p), s.2)
+  (Function.update s.1 j ((s.1 j).setProcessVariables p), s.2)
 
-@[simp] theorem setProcess_sent (s : RoundState n) (j : Fin n) (p : ProcessRecord) :
-    (s.setProcess j p).sent = s.sent := rfl
-@[simp] theorem setProcess_F (s : RoundState n) (j : Fin n) (p : ProcessRecord) :
-    (s.setProcess j p).F = s.F := rfl
+@[simp] theorem setProcessVariables_sent (s : RoundState n) (j : Fin n) (p : ProcessVariables) :
+    (s.setProcessVariables j p).sent = s.sent := rfl
+@[simp] theorem setProcessVariables_F (s : RoundState n) (j : Fin n) (p : ProcessVariables) :
+    (s.setProcessVariables j p).F = s.F := rfl
 
-@[simp] theorem setProcess_received (s : RoundState n) (j : Fin n) (p : ProcessRecord) :
-    (s.setProcess j p).received = s.received := by
+@[simp] theorem setProcessVariables_received (s : RoundState n) (j : Fin n) (p : ProcessVariables) :
+    (s.setProcessVariables j p).received = s.received := by
   funext i
   by_cases hi : i = j
-  · subst hi; simp [setProcess, received, RoundRecord.setProcess]
-  · simp [setProcess, received, Function.update_of_ne hi]
+  · subst hi; simp [setProcessVariables, received, RoundVariables.setProcessVariables]
+  · simp [setProcessVariables, received, Function.update_of_ne hi]
 
-@[simp] theorem setProcess_process_self (s : RoundState n) (j : Fin n)
-  (p : ProcessRecord) :
-    (s.setProcess j p).process j = p := by
-  simp [setProcess, process, RoundRecord.setProcess]
+@[simp] theorem setProcessVariables_processVariables_self (s : RoundState n) (j : Fin n)
+  (p : ProcessVariables) :
+    (s.setProcessVariables j p).processVariables j = p := by
+  simp [setProcessVariables, processVariables, RoundVariables.setProcessVariables]
 
-theorem setProcess_process_ne (s : RoundState n) (j : Fin n) (p : ProcessRecord)
-    {k : Fin n} (h : k ≠ j) : (s.setProcess j p).process k = s.process k := by
-  simp [setProcess, process, Function.update_of_ne h]
+theorem setProcessVariables_processVariables_ne (s : RoundState n) (j : Fin n) (p :
+  ProcessVariables)
+    {k : Fin n} (h : k ≠ j) : (s.setProcessVariables j p).processVariables k = s.processVariables k
+      := by
+  simp [setProcessVariables, processVariables, Function.update_of_ne h]
 
 /-! A record write leaves every projection of the delivered sets alone. -/
 
-@[simp] theorem setProcess_receivedCount (s : RoundState n) (j : Fin n) (p : ProcessRecord)
-    (i : Fin n) (m : Message) : (s.setProcess j p).receivedCount i m = s.receivedCount i m := by
-  simp [receivedCount, setProcess_received]
-@[simp] theorem setProcess_echoCount (s : RoundState n) (j : Fin n) (p : ProcessRecord)
-    (i : Fin n) : (s.setProcess j p).echoCount i = s.echoCount i := by
-  simp [echoCount, setProcess_received]
-@[simp] theorem setProcess_voteCount (s : RoundState n) (j : Fin n) (p : ProcessRecord)
-    (i : Fin n) : (s.setProcess j p).voteCount i = s.voteCount i := by
-  simp [voteCount, setProcess_received]
-@[simp] theorem setProcess_bindCount (s : RoundState n) (j : Fin n) (p : ProcessRecord)
-    (i : Fin n) : (s.setProcess j p).bindCount i = s.bindCount i := by
-  simp [bindCount, setProcess_received]
-@[simp] theorem setProcess_echo5Count (s : RoundState n) (j : Fin n) (p : ProcessRecord)
-    (i : Fin n) : (s.setProcess j p).echo5Count i = s.echo5Count i := by
-  simp [echo5Count, setProcess_received]
-@[simp] theorem setProcess_bothValid {P : Parameters} (s : RoundState P.n) (j : Fin P.n)
-    (p : ProcessRecord) (i : Fin P.n) :
-    (s.setProcess j p).bothValid P i ↔ s.bothValid P i := by
+@[simp] theorem setProcessVariables_receivedCount (s : RoundState n) (j : Fin n) (p :
+  ProcessVariables)
+    (i : Fin n) (m : Message) : (s.setProcessVariables j p).receivedCount i m = s.receivedCount i m
+      := by
+  simp [receivedCount, setProcessVariables_received]
+@[simp] theorem setProcessVariables_echoCount (s : RoundState n) (j : Fin n) (p : ProcessVariables)
+    (i : Fin n) : (s.setProcessVariables j p).echoCount i = s.echoCount i := by
+  simp [echoCount, setProcessVariables_received]
+@[simp] theorem setProcessVariables_voteCount (s : RoundState n) (j : Fin n) (p : ProcessVariables)
+    (i : Fin n) : (s.setProcessVariables j p).voteCount i = s.voteCount i := by
+  simp [voteCount, setProcessVariables_received]
+@[simp] theorem setProcessVariables_bindCount (s : RoundState n) (j : Fin n) (p : ProcessVariables)
+    (i : Fin n) : (s.setProcessVariables j p).bindCount i = s.bindCount i := by
+  simp [bindCount, setProcessVariables_received]
+@[simp] theorem setProcessVariables_echo5Count (s : RoundState n) (j : Fin n) (p : ProcessVariables)
+    (i : Fin n) : (s.setProcessVariables j p).echo5Count i = s.echo5Count i := by
+  simp [echo5Count, setProcessVariables_received]
+@[simp] theorem setProcessVariables_bothValid {P : Parameters} (s : RoundState P.n) (j : Fin P.n)
+    (p : ProcessVariables) (i : Fin P.n) :
+    (s.setProcessVariables j p).bothValid P i ↔ s.bothValid P i := by
   simp [bothValid]
 
 /-- Process `j` multicasts `m`: the network state records it under `j`. -/
 def multicast (s : RoundState n) (j : Fin n) (m : Message) : RoundState n :=
   (s.1, s.2.recordGBCASend j m)
 
-@[simp] theorem multicast_process (s : RoundState n) (j : Fin n) (m : Message) :
-    (s.multicast j m).process = s.process := rfl
+@[simp] theorem multicast_processVariables (s : RoundState n) (j : Fin n) (m : Message) :
+    (s.multicast j m).processVariables = s.processVariables := rfl
 @[simp] theorem multicast_received (s : RoundState n) (j : Fin n) (m : Message) :
     (s.multicast j m).received = s.received := rfl
 @[simp] theorem multicast_F (s : RoundState n) (j : Fin n) (m : Message) :
@@ -502,12 +511,12 @@ def receiveMessage (s : RoundState n) (i j : Fin n) (m : Message) : RoundState n
 @[simp] theorem receiveMessage_F (s : RoundState n) (i j : Fin n) (m : Message) :
     (s.receiveMessage i j m).F = s.F := rfl
 
-@[simp] theorem receiveMessage_process (s : RoundState n) (i j : Fin n) (m : Message) :
-    (s.receiveMessage i j m).process = s.process := by
+@[simp] theorem receiveMessage_processVariables (s : RoundState n) (i j : Fin n) (m : Message) :
+    (s.receiveMessage i j m).processVariables = s.processVariables := by
   funext k
   by_cases hk : k = i
-  · subst hk; simp [receiveMessage, process, RoundRecord.deliverTo]
-  · simp [receiveMessage, process, Function.update_of_ne hk]
+  · subst hk; simp [receiveMessage, processVariables, RoundVariables.deliverTo]
+  · simp [receiveMessage, processVariables, Function.update_of_ne hk]
 
 /-- Membership in a delivered set after a delivery. -/
 theorem mem_receiveMessage_received {s : RoundState n} {i j : Fin n} {m : Message}
@@ -543,8 +552,8 @@ def corrupt (P : Parameters) (id : Fin P.n) (s : RoundState P.n) : RoundState P.
   :=
   (s.1, GBCA.ByABDY.NetworkState.corrupt P id s.2)
 
-@[simp] theorem corrupt_process {P : Parameters} (s : RoundState P.n) (id : Fin P.n) :
-    (s.corrupt P id).process = s.process := rfl
+@[simp] theorem corrupt_processVariables {P : Parameters} (s : RoundState P.n) (id : Fin P.n) :
+    (s.corrupt P id).processVariables = s.processVariables := rfl
 @[simp] theorem corrupt_received {P : Parameters} (s : RoundState P.n) (id : Fin P.n) :
     (s.corrupt P id).received = s.received := rfl
 @[simp] theorem corrupt_receivedCount {P : Parameters} (s : RoundState P.n) (id : Fin P.n)
@@ -580,8 +589,8 @@ theorem corrupt_F {P : Parameters} (s : RoundState P.n) (id : Fin P.n) :
 
 /-! The bound bit is written by no transition but the three returns. -/
 
-@[simp] theorem setProcess_bound (s : RoundState n) (j : Fin n) (p : ProcessRecord) :
-    (s.setProcess j p).bound = s.bound := rfl
+@[simp] theorem setProcessVariables_bound (s : RoundState n) (j : Fin n) (p : ProcessVariables) :
+    (s.setProcessVariables j p).bound = s.bound := rfl
 @[simp] theorem multicast_bound (s : RoundState n) (j : Fin n) (m : Message) :
     (s.multicast j m).bound = s.bound := rfl
 @[simp] theorem receiveMessage_bound (s : RoundState n) (i j : Fin n) (m : Message) :

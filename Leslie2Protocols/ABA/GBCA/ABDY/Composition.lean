@@ -40,7 +40,7 @@ instance are exactly the network's injections and the hidden rendezvous.
 
 The pipeline is `relabel ∘ abstract ∘ parallel ∘ synchronisedProduct`. `composition_step_iff`
 unfolds it once and for all, into the hidden-rendezvous case and the shared-label case, and
-`gbcaProgramProduct_inversion` reads a synchronised transition of the program group back as one
+`gbcaProgramProduct_cases` reads a synchronised transition of the program group back as one
 transition per process. In the other direction `composition_event_step`, `composition_label_step`
 and `composition_tau_network` build a transition of the instance from the program and network
 transitions it is made of.
@@ -111,7 +111,8 @@ resolution, which is not part of a graded-agreement round. -/
 
 /-- Every program transition is Dirac. -/
 theorem gbcaProgramStep_dirac {P : Parameters} {r : ℕ} {j : Fin P.n}
-    {p : GBCA.ByABDY.RoundRecord P.n} {l : GBCALabel P.n} {ν : PMF (GBCA.ByABDY.RoundRecord P.n)}
+    {p : GBCA.ByABDY.RoundVariables P.n} {l : GBCALabel P.n} {ν : PMF (GBCA.ByABDY.RoundVariables
+      P.n)}
     (h : GBCAProgramStep P r j p l ν) : ∃ p', ν = PMF.pure p' := by
   cases h <;> exact ⟨_, rfl⟩
 
@@ -151,7 +152,7 @@ theorem gbcaInstanceFamily_isLTS (P : Parameters) : (gbcaInstanceFamily P).IsLTS
 on one of the round's ports. The instance's silent transitions are therefore
 exactly the network's injections and the hidden rendezvous. -/
 theorem gbcaProgramStep_no_tau {P : Parameters} {r : ℕ} {j : Fin P.n}
-    {p : GBCA.ByABDY.RoundRecord P.n} {ν : PMF (GBCA.ByABDY.RoundRecord P.n)}
+    {p : GBCA.ByABDY.RoundVariables P.n} {ν : PMF (GBCA.ByABDY.RoundVariables P.n)}
     (h : GBCAProgramStep P r j p (Silent.τ : GBCALabel P.n) ν) : False := by
   rw [gbcaLabel_tau] at h; cases h
 
@@ -162,11 +163,11 @@ below unfold it once and for all, in both directions. -/
 
 /-- A synchronised transition of the program group on a visible label: every
 program steps, and the joint distribution is Dirac. -/
-theorem gbcaProgramProduct_inversion {P : Parameters} {r : ℕ}
-    {u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n} {l : GBCALabel P.n}
-    {μ : PMF (∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n)}
+theorem gbcaProgramProduct_cases {P : Parameters} {r : ℕ}
+    {u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundVariables P.n} {l : GBCALabel P.n}
+    {μ : PMF (∀ _ : Fin P.n, GBCA.ByABDY.RoundVariables P.n)}
     (h : (System.synchronisedProduct (gbcaProgram P r)).step u l μ) :
-    ∃ x : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n, μ = PMF.pure x ∧ ∀ i, GBCAProgramStep P r i
+    ∃ x : ∀ _ : Fin P.n, GBCA.ByABDY.RoundVariables P.n, μ = PMF.pure x ∧ ∀ i, GBCAProgramStep P r i
     (u i) l (PMF.pure (x i)) := by
   rw [System.synchronisedProduct_step] at h
   rcases h with ⟨-, μ_, hall, rfl⟩ | ⟨rfl, i, μ_i, hstep, -⟩
@@ -181,7 +182,7 @@ theorem gbcaProgramProduct_inversion {P : Parameters} {r : ℕ}
 /-- Build a synchronised transition of the program group from per-process
 Dirac steps. -/
 theorem gbcaProgramProduct_pure {P : Parameters} {r : ℕ}
-    {u x : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n} {l : GBCALabel P.n}
+    {u x : ∀ _ : Fin P.n, GBCA.ByABDY.RoundVariables P.n} {l : GBCALabel P.n}
     (hl : l ≠ Silent.τ)
     (h : ∀ i, GBCAProgramStep P r i (u i) l (PMF.pure (x i))) :
     (System.synchronisedProduct (gbcaProgram P r)).step u l (PMF.pure x) := by
@@ -190,8 +191,8 @@ theorem gbcaProgramProduct_pure {P : Parameters} {r : ℕ}
 
 /-- The program group has no silent transition: no program has a `τ` transition. -/
 theorem gbcaProgramProduct_no_tau {P : Parameters} {r : ℕ}
-    {u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n}
-    {μ : PMF (∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n)}
+    {u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundVariables P.n}
+    {μ : PMF (∀ _ : Fin P.n, GBCA.ByABDY.RoundVariables P.n)}
     (h : (System.synchronisedProduct (gbcaProgram P r)).step u (Silent.τ : GBCALabel P.n) μ) :
     False := by
   rcases h with ⟨hτ, -⟩ | ⟨-, i, μ_i, hstep, -⟩
@@ -216,7 +217,7 @@ theorem composition_step_iff (P : Parameters) (r : ℕ) (q : GBCA.ByABDY.RoundSt
 /-- Build a joint transition of the programs and the network on a rendezvous
 label. -/
 theorem compositionExtended_event_step (P : Parameters) (r : ℕ)
-    {u x : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n} {w w' : NetworkState P.n}
+    {u x : ∀ _ : Fin P.n, GBCA.ByABDY.RoundVariables P.n} {w w' : NetworkState P.n}
     (e : GBCAEvent P.n)
     (hall : ∀ i, GBCAProgramStep P r i (u i) (Sum.inr e) (PMF.pure (x i)))
     (hn : GBCANetworkStep P r w (Sum.inr e) (PMF.pure w')) :
@@ -228,7 +229,7 @@ theorem compositionExtended_event_step (P : Parameters) (r : ℕ)
 /-- Build a joint transition of the programs and the network on a visible
 shared label. -/
 theorem compositionExtended_label_step (P : Parameters) (r : ℕ)
-    {u x : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n} {w w' : NetworkState P.n}
+    {u x : ∀ _ : Fin P.n, GBCA.ByABDY.RoundVariables P.n} {w w' : NetworkState P.n}
     {l : ExtendedLabel P.n Message} (hl : l ≠ Sum.inl Label.tau)
     (hall : ∀ i, GBCAProgramStep P r i (u i) (Sum.inl l) (PMF.pure (x i)))
     (hn : GBCANetworkStep P r w (Sum.inl l) (PMF.pure w')) :
@@ -242,7 +243,7 @@ theorem compositionExtended_label_step (P : Parameters) (r : ℕ)
 /-- Build a silent transition of the programs and the network from a
 network-local one. -/
 theorem compositionExtended_tau_network (P : Parameters) (r : ℕ)
-    {u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n} {w w' : NetworkState P.n}
+    {u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundVariables P.n} {w w' : NetworkState P.n}
     (hn : GBCANetworkStep P r w (Sum.inl (Sum.inl .tau)) (PMF.pure w')) :
     (compositionExtended P r).step (u, w) (Sum.inl (Sum.inl .tau)) (PMF.pure (u, w')) := by
   rw [compositionExtended, System.parallel_step]
@@ -250,7 +251,7 @@ theorem compositionExtended_tau_network (P : Parameters) (r : ℕ)
 
 /-- A hidden rendezvous is a silent transition of the instance. -/
 theorem composition_event_step (P : Parameters) (r : ℕ)
-    {u x : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n} {w w' : NetworkState P.n}
+    {u x : ∀ _ : Fin P.n, GBCA.ByABDY.RoundVariables P.n} {w w' : NetworkState P.n}
     (e : GBCAEvent P.n)
     (hall : ∀ i, GBCAProgramStep P r i (u i) (Sum.inr e) (PMF.pure (x i)))
     (hn : GBCANetworkStep P r w (Sum.inr e) (PMF.pure w')) :
@@ -260,7 +261,7 @@ theorem composition_event_step (P : Parameters) (r : ℕ)
 
 /-- A visible shared label is a transition of the instance. -/
 theorem composition_label_step (P : Parameters) (r : ℕ)
-    {u x : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n} {w w' : NetworkState P.n}
+    {u x : ∀ _ : Fin P.n, GBCA.ByABDY.RoundVariables P.n} {w w' : NetworkState P.n}
     {l : ExtendedLabel P.n Message} (hl : l ≠ Sum.inl Label.tau)
     (hall : ∀ i, GBCAProgramStep P r i (u i) (Sum.inl l) (PMF.pure (x i)))
     (hn : GBCANetworkStep P r w (Sum.inl l) (PMF.pure w')) :
@@ -269,7 +270,7 @@ theorem composition_label_step (P : Parameters) (r : ℕ)
 
 /-- A network-local injection is a silent transition of the instance. -/
 theorem composition_tau_network (P : Parameters) (r : ℕ)
-    {u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n} {w w' : NetworkState P.n}
+    {u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundVariables P.n} {w w' : NetworkState P.n}
     (hn : GBCANetworkStep P r w (Sum.inl (Sum.inl .tau)) (PMF.pure w')) :
     (composition P r).step (u, w) (Sum.inl Label.tau) (PMF.pure (u, w')) :=
   (composition_step_iff P r _ _ _).mpr (Or.inr (compositionExtended_tau_network P r hn))

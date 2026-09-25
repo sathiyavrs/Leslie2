@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.Implementation.StepInversion
+import Leslie2Protocols.ABA.Implementation.StepCases
 
 /-!
 # The writes on the network's state, and the two erasures
@@ -57,8 +57,8 @@ theorem recordGBCASend_sent_ne [DecidableEq M] (s : NetworkState n M G)
 @[simp] theorem recordGBCASend_F [DecidableEq M] (s : NetworkState n M G)
     (r : ℕ) (j : Fin n) (m : M) : (s.recordGBCASend r j m).F = s.F := rfl
 
-@[simp] theorem recordGBCASend_ghostRecord [DecidableEq M] (s : NetworkState n M G)
-    (r : ℕ) (j : Fin n) (m : M) : (s.recordGBCASend r j m).ghostRecord = s.ghostRecord := rfl
+@[simp] theorem recordGBCASend_ghost [DecidableEq M] (s : NetworkState n M G)
+    (r : ℕ) (j : Fin n) (m : M) : (s.recordGBCASend r j m).ghost = s.ghost := rfl
 
 @[simp] theorem recordGBCACall_none [DecidableEq M] (s : NetworkState n M G)
     (r : ℕ) (j : Fin n) : s.recordGBCACall r j none = s := rfl
@@ -74,9 +74,9 @@ theorem recordGBCASend_sent_ne [DecidableEq M] (s : NetworkState n M G)
 @[simp] theorem recordGBCACall_F [DecidableEq M] (s : NetworkState n M G)
     (r : ℕ) (j : Fin n) (m : Option M) : (s.recordGBCACall r j m).F = s.F := by cases m <;> rfl
 
-@[simp] theorem recordGBCACall_ghostRecord [DecidableEq M] (s : NetworkState n M G)
+@[simp] theorem recordGBCACall_ghost [DecidableEq M] (s : NetworkState n M G)
     (r : ℕ) (j : Fin n) (m : Option M) :
-    (s.recordGBCACall r j m).ghostRecord = s.ghostRecord := by cases m <;> rfl
+    (s.recordGBCACall r j m).ghost = s.ghost := by cases m <;> rfl
 
 @[simp] theorem recordDecided_sent (s : NetworkState n M G)
     (j : Fin n) (b : Bool) : (s.recordDecided j b).sent = s.sent := rfl
@@ -89,8 +89,8 @@ theorem recordGBCASend_sent_ne [DecidableEq M] (s : NetworkState n M G)
 @[simp] theorem recordDecided_F (s : NetworkState n M G)
     (j : Fin n) (b : Bool) : (s.recordDecided j b).F = s.F := rfl
 
-@[simp] theorem recordDecided_ghostRecord (s : NetworkState n M G)
-    (j : Fin n) (b : Bool) : (s.recordDecided j b).ghostRecord = s.ghostRecord := rfl
+@[simp] theorem recordDecided_ghost (s : NetworkState n M G)
+    (j : Fin n) (b : Bool) : (s.recordDecided j b).ghost = s.ghost := rfl
 
 end Fields
 
@@ -104,9 +104,9 @@ end Fields
   unfold NetworkState.corrupt; split <;> rfl
 
 /-- Corruption leaves the ghost where it stands. -/
-@[simp] theorem networkCorrupt_ghostRecord {P : Parameters} {M G : Type}
+@[simp] theorem networkCorrupt_ghost {P : Parameters} {M G : Type}
     (s : NetworkState P.n M G)
-    (k : Fin P.n) : (NetworkState.corrupt P k s).ghostRecord = s.ghostRecord := by
+    (k : Fin P.n) : (NetworkState.corrupt P k s).ghost = s.ghost := by
   unfold NetworkState.corrupt; split <;> rfl
 
 /-! ### The ghost write
@@ -137,15 +137,15 @@ theorem writeGhost_of_round_none (s : NetworkState n M G) {L : ExtendedLabel n M
   unfold NetworkState.writeGhost; rw [h]
 
 /-- The ghost record of the round the label names, after the write. -/
-theorem writeGhost_ghostRecord_self (s : NetworkState n M G) {L : ExtendedLabel n M E} {r : ℕ}
+theorem writeGhost_ghost_self (s : NetworkState n M G) {L : ExtendedLabel n M E} {r : ℕ}
     (h : roundOf L = some r) :
-    (s.writeGhost ghostStep L).ghostRecord r = ghostStep L s (s.ghostRecord r) := by
+    (s.writeGhost ghostStep L).ghost r = ghostStep L s (s.ghost r) := by
   unfold NetworkState.writeGhost; rw [h]; simp
 
 /-- The ghost record of any other round is untouched. -/
-theorem writeGhost_ghostRecord_ne (s : NetworkState n M G) {L : ExtendedLabel n M E} {r r' : ℕ}
+theorem writeGhost_ghost_ne (s : NetworkState n M G) {L : ExtendedLabel n M E} {r r' : ℕ}
     (h : roundOf L = some r) (hne : r' ≠ r) :
-    (s.writeGhost ghostStep L).ghostRecord r' = s.ghostRecord r' := by
+    (s.writeGhost ghostStep L).ghost r' = s.ghost r' := by
   unfold NetworkState.writeGhost; rw [h]; simp [Function.update_of_ne hne]
 
 end Ghost

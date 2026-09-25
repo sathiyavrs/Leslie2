@@ -20,9 +20,9 @@ The relation carries the invariant of `ABA/GBCA/AFW/Invariant.lean`, and reads t
 the return flags and the corrupted sets off the round's state directly (`call_eq`, `ret_eq`,
 `F_eq`). The specification's `excluded` and `grade` are bookkeeping the round records nothing; the
 relation carries evidence for them instead. An excluded bit is covered by an exclusion certificate
-`ExclusionEvidence` (`exclusion_certificate`), the grade-2 guard by a value on at least `|S| − f`
-entries of the second gather's core (`grade2_evidence`), and the grade-0 guard by that core
-carrying each bit on at most `f` entries (`grade0_evidence`).
+`ExclusionWitness` (`exclusion_witness`), the grade-2 guard by a value on at least `|S| − f`
+entries of the second gather's core (`grade2_witness`), and the grade-0 guard by that core
+carrying each bit on at most `f` entries (`grade0_witness`).
 
 ## The bound bit on the label
 
@@ -57,18 +57,18 @@ structure SpecificationRelation (P : Parameters) (s : RoundStateOverGatherSpecif
   /-- The corrupted sets agree. -/
   F_eq : t.F = (firstGather s).F
   /-- An excluded bit is certified excluded. -/
-  exclusion_certificate : ∀ b ∈ t.excluded, ExclusionEvidence P s b
+  exclusion_witness : ∀ b ∈ t.excluded, ExclusionWitness P s b
   /-- An excluded bit is the complement of the round's bound bit: the
   exclusion is written inside the first return's run, which announces that
   bit. -/
   excluded_bound : ∀ b ∈ t.excluded, ∃ β, bound s = some β ∧ b = !β
   /-- The grade-2 guard is certified by a value on at least `|S| − f` entries
   of the second gather's core. -/
-  grade2_evidence : t.grade = some true → ∃ S v, (secondGather s).core = some S ∧
+  grade2_witness : t.grade = some true → ∃ S v, (secondGather s).core = some S ∧
     S.card - P.f ≤ AcceptedPairs.count S (some v)
   /-- The grade-0 guard is certified by the second gather's core carrying each
   bit on at most `f` entries. -/
-  grade0_evidence : t.grade = some false → ∃ S, (secondGather s).core = some S ∧
+  grade0_witness : t.grade = some false → ∃ S, (secondGather s).core = some S ∧
     ∀ v, AcceptedPairs.count S (some v) ≤ P.f
 
 /-- The relation holds initially. -/
@@ -77,7 +77,7 @@ theorem specificationRelation_init (P : Parameters) (r : ℕ) :
       ((GBCA.specificationOverRoundAlphabet P Empty r).init) := by
   refine ⟨Invariant.initial P r, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
     simp [roundOverGatherSpecifications_init, programs, bound, firstGather, secondGather,
-      Gather.SpecState.initial, GBCA.SpecState.initial, ProcessRecord.initial]
+      Gather.SpecState.initial, GBCA.SpecState.initial, ProcessVariables.initial]
 
 /-- **Broadcast compatibility**: the relation is preserved by corrupting both systems at once. -/
 theorem specificationRelation_corrupt {r : ℕ} {s : RoundStateOverGatherSpecifications P.n}
@@ -99,18 +99,18 @@ theorem specificationRelation_corrupt {r : ℕ} {s : RoundStateOverGatherSpecifi
     rw [GBCA.SpecState.corrupt_F, Gather.SpecState.corrupt_F, hR.F_eq]
   · intro b hb
     rw [GBCA.corrupt_excluded] at hb
-    obtain ⟨S, hS, hl⟩ := hR.exclusion_certificate b hb
+    obtain ⟨S, hS, hl⟩ := hR.exclusion_witness b hb
     exact ⟨S, by rw [firstGather_corruptAll, Gather.corrupt_core]; exact hS, hl⟩
   · intro b hb
     rw [GBCA.corrupt_excluded] at hb
     exact hR.excluded_bound b hb
   · intro hg
     rw [GBCA.corrupt_grade] at hg
-    obtain ⟨S, v, hS, hh⟩ := hR.grade2_evidence hg
+    obtain ⟨S, v, hS, hh⟩ := hR.grade2_witness hg
     exact ⟨S, v, by rw [secondGather_corruptAll, Gather.corrupt_core]; exact hS, hh⟩
   · intro hg
     rw [GBCA.corrupt_grade] at hg
-    obtain ⟨S, hS, hl⟩ := hR.grade0_evidence hg
+    obtain ⟨S, hS, hl⟩ := hR.grade0_witness hg
     exact ⟨S, by rw [secondGather_corruptAll, Gather.corrupt_core]; exact hS, hl⟩
 
 /-! ### Mechanical axiom check -/

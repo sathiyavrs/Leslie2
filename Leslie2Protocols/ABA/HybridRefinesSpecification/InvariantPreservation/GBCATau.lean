@@ -102,7 +102,7 @@ theorem Invariant.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
         · exact h1 r₀ b₀ hrr ⟨hold, hb₀nd⟩
       · rw [hExcludedNe r₀ h3'] at hb'; exact h1 r₀ b₀ hrr hb'
     have hCertTrans : ∀ r'' b'',
-        Grade2Certificate P g c r'' b'' → Grade2Certificate P g' c r'' b'' := by
+        Grade2Witness P g c r'' b'' → Grade2Witness P g' c r'' b'' := by
       rintro r'' b'' ⟨hg1, hd1, hcm⟩
       exact ⟨(hGradeeq r'').trans hg1, hExcludedMono r'' _ hd1, hCommitTrans r'' b'' hd1 hcm⟩
     refine And.intro ?_ ⟨fun r0 b0 hc => ⟨r0, hCertTrans r0 b0 hc⟩,
@@ -258,10 +258,10 @@ theorem Invariant.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
       · rw [h1, hExcludedSelf] at h
         rcases Finset.mem_insert.mp h with hnew | hold
         · -- the fresh exclusion: the spared bit `!b = v` was carried by the derived
-          -- correct caller, whose `call_provenance` provenance is the conclusion verbatim
+          -- correct caller, whose `call_of_previousRound` provenance is the conclusion verbatim
           have hveq : v = !b := by
             revert hnew; cases v <;> cases b <;> simp
-          have hcp := hI.call_provenance r' id0 (!b) hFid0 (by rw [h1]; exact hcall0)
+          have hcp := hI.call_of_previousRound r' id0 (!b) hFid0 (by rw [h1]; exact hcall0)
           rw [← hveq] at hcp
           rcases hcp with hd | ⟨hg0, hw0⟩
           · exact Or.inl (hExcludedMono r' _ hd)
@@ -275,7 +275,7 @@ theorem Invariant.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
         · exact Or.inr ⟨(hGradeeq r').trans hg0, hw0⟩
     · intro r' id v hmem hcall
       rw [hCalleq] at hcall
-      rcases hI.call_provenance r' id v hmem hcall with hd | ⟨hg0, hw0⟩
+      rcases hI.call_of_previousRound r' id v hmem hcall with hd | ⟨hg0, hw0⟩
       · exact Or.inl (hExcludedMono r' _ hd)
       · exact Or.inr ⟨(hGradeeq r').trans hg0, hw0⟩
     · intro r' id hmem hround hphase v hest

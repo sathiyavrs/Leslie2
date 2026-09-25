@@ -33,8 +33,8 @@ given in import order in its own file guide, [`Framework/README.md`](Framework/R
 | [`Relabel.lean`](Framework/Relabel.lean) | 472 | Extended alphabets and restriction along the left summand, with the precongruence for it. |
 | [`WeakTransitionsFromChains.lean`](Framework/WeakTransitionsFromChains.lean) | 196 | Weak runs from step chains: prepending a silent step, and the k-fold run — a chain of silent steps closed by one external step. |
 | [`FinerAlphabetCongruence.lean`](Framework/FinerAlphabetCongruence.lean) | 193 | Forward simulation is a congruence for reading both systems over a finer alphabet along a partial label map. |
-| [`Congruence.lean`](Framework/Congruence.lean) | 849 | Forward simulation is a congruence for the operators a composition is built from — binary parallel in either position, the full-synchronisation product of a finite family, hiding and restriction — with the weak-run splitting and mapping lemmas the four proofs share. |
-| [`Erasure.lean`](Framework/Erasure.lean) | 375 | Erasure of a state component no transition's firing depends on: the projection and lift clauses, the equality of achievable trace distributions they give, and the congruences that carry an erasure through composition, hiding and restriction. |
+| [`Congruence.lean`](Framework/Congruence.lean) | 850 | Forward simulation is a congruence for the operators a composition is built from — binary parallel in either position, the full-synchronisation product of a finite family, hiding and restriction — with the weak-run splitting and mapping lemmas the four proofs share. |
+| [`AuxiliaryVariableRemoval.lean`](Framework/AuxiliaryVariableRemoval.lean) | 380 | Erasure of a state component no transition's firing depends on: the projection and lift clauses, the equality of achievable trace distributions they give, and the congruences that carry an erasure through composition, hiding and restriction. |
 
 ## Notes
 

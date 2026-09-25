@@ -108,13 +108,17 @@ def unrename (renames : Array (Name × Name)) (n : Name) : Name := Id.run do
       return (old.toString ++ (n.toString.drop new.toString.length)).toName
   return n
 
-/-- `e` with every renamed constant taken back to its old name. -/
-def unrenameExpr (renames : Array (Name × Name)) (e : Expr) : Expr :=
+/-- `e` with every renamed constant taken back to its old name, in the constants it
+mentions and in the structure names its projection nodes carry. -/
+partial def unrenameExpr (renames : Array (Name × Name)) (e : Expr) : Expr :=
   if renames.isEmpty then e else
     e.replace fun s => match s with
       | .const n us =>
         let m := unrename renames n
         if m == n then none else some (.const m us)
+      | .proj n i b =>
+        let m := unrename renames n
+        if m == n then none else some (.proj m i (unrenameExpr renames b))
       | _ => none
 
 /-- The canonical universe parameters `u_0, u_1, …`, one for each parameter of `levelParams`. -/

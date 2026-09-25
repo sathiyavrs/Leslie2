@@ -88,16 +88,16 @@ receipts; the vote step fires on more than `(n+f)/2` `ECHO m` receipts or on `f 
 `VOTE m` receipts; and the return takes `2f + 1` `VOTE m` receipts
 (`BRB.BrachaAlgorithm.echo`, `voteQuorum`, `voteAmplification`, `ret`). Algorithm 6 of the source
 blueprint fires the echo step on an `INIT` receipt alone and puts `n − f` at every
-quorum. That is deviation **D34**, and the quorum is `Parameters.echoReceiptQuorum`, which is
-`(n + f) / 2 + 1`; `BRB.EchoCertificate` is at that size, and the invariant clause `echo_provenance`
+quorum. That is deviation **D34**, and the quorum is `Parameters.receivedEchoQuorum`, which is
+`(n + f) / 2 + 1`; `BRB.EchoWitness` is at that size, and the invariant clause `echo_of_leaderInput`
 carries a correct echo of `m` back to `ldr ∈ F ∨ input ldr = some m`.
 
 **The gather transitions follow AFW25's Algorithm 5.** Its main thread sends phase 2, waits, sends phase 3,
 waits, sends phase 4, waits and returns (lines 10–20), and the transitions carry that order:
 `Gather.ProgramStep.sendVote` requires the sender's own `ECHO`, `bindCall` requires its own `VOTE`
 and no earlier bind call, and `ret` requires the returner's own bind call, which the write-once
-field `Gather.BaseProcessRecord.sentBind` holds. Line 9 of the same algorithm sets the `ECHO`
-payload to the sender's accepted-pair set, and `ProcessRecord.accepted` — the entries of what the
+field `Gather.BaseProcessVariables.sentBind` holds. Line 9 of the same algorithm sets the `ECHO`
+payload to the sender's accepted-pair set, and `ProcessVariables.accepted` — the entries of what the
 sender's input instance returned — is that payload. Algorithm 4 of the source blueprint states the
 transitions as `upon` handlers without the order; that is deviation **D35**.
 
@@ -183,14 +183,14 @@ call of a gather and the call of the instance broadcasting the caller's input ar
 transitions.
 
 **Terminating `return` as state.** The pseudocode's `return` ends the process; the
-encoding renders that as a fire-once flag — `ProcessRecord.returned`, guarded by the `hr`
+encoding renders that as a fire-once flag — `ProcessVariables.returned`, guarded by the `hr`
 hypothesis of all three GBCA returns `Algorithm.retGrade2`, `retGrade1` and `retGrade0`,
 and `RoundLoopState.returned`, guarded at `RoundLoopStep.ret`. The guard has no surface counterpart
 in Algorithm 1 or Algorithm 2, which name no such variable; the control-flow fact it expresses does.
 (At specification level it is no interpretation: TS 1 and TS 2 carry `ret[id] = ⊥` guards of their
 own.) At the protocol, returning and terminating are two fields and two transitions:
 `RoundLoopState.returned` records that `ABAProgramStep.ret` has fired, and
-`ABDY.RoundRecordMap.terminated`, whose sole writer is `ABAProgramStep.terminate`, records that the
+`ABDY.RoundVariablesMap.terminated`, whose sole writer is `ABAProgramStep.terminate`, records that the
 process has stopped participating (D22, §6).
 
 **The announced values on the return labels (D29).** The source blueprint puts the binding
@@ -216,8 +216,8 @@ refinement (`GBCA.ByABDY.composition_binding`, `GBCA.roundOverBracha_binding`;
 `Gather.instanceOverBroadcastSpecification_core`, `Gather.instanceOverBracha_core`). The transitions that
 do read a ghost — the implementation's two graded-agreement returns — read it for the value they
 announce and not for whether they fire, the read admitting a bit at every state (`ghostOutput_total`).
-For the bound bit at the implementation that inertness is a theorem: `ABDY.protocol_erasure` and
-`AFW.protocol_erasure` equate the achievable trace distributions of each protocol with those of the
+For the bound bit at the implementation that inertness is a theorem: `ABDY.protocol_ghostRemoval` and
+`AFW.protocol_ghostRemoval` equate the achievable trace distributions of each protocol with those of the
 same protocol over a one-element ghost record whose returns announce any bit.
 
 ## 3. A network-model artifact
@@ -251,7 +251,7 @@ in the specification, and whether that placement was chosen or forced.
 `GBCA.GBCAProgramStep` (`ABA/GBCA/ABDY/Components.lean`), Byzantine handshake transitions
 included, and at
 `ABDY.ABAProgramStep` (`ABA/ABDY/System.lean`) with the reads taken through
-`p.roundRecord r`.
+`p.roundVariables r`.
 
 - **The wait-until order.** The order is carried from the `BIND` level down: each of
   those sends requires the sender's own send at the level below — `hlv : sentVote ≠ none`
@@ -282,8 +282,8 @@ included, and at
   carried from the sends over to the returns: a process that was never called does not
   return from the round.
 - **The protocol's participation guards.** `ABAProgramStep.ret` and
-`ABAProgramStep.decidedSendRelay` require `c.process.input ≠ none`, and
-`ABAProgramStep.gbcaCallLoop` requires `(p.roundRecord r).process.input ≠ none`. `gbcaCallLoop`
+`ABAProgramStep.decidedSendRelay` require `c.processVariables.input ≠ none`, and
+`ABAProgramStep.gbcaCallLoop` requires `(p.roundVariables r).processVariables.input ≠ none`. `gbcaCallLoop`
 deliberately carries no termination guard, so a process that has terminated at phase `toCallG` over
 an uncalled round record has a transition on neither call label and takes no further round-loop step. That
 excluded region is accepted rather than repaired: a terminated process is one whose own return has
@@ -463,7 +463,7 @@ for Unpredictability, inexpressible once the guess is dropped.
   counts the echoes a decided process keeps sending (Lemmas 4.6 and E.5, stated under the hypothesis
   that no non-faulty party terminates). The encoding carries that shape, as deviation **D22**; what
   belongs here is what the shape leaves uncovered. A process record holds the round record of every
-  round the process has touched, in a `Finmap` read through `ABDY.RoundRecordMap.roundRecord`; each
+  round the process has touched, in a `Finmap` read through `ABDY.RoundVariablesMap.roundVariables`; each
   round transition reads and writes the round record of the round its own label tags, under an
   instance-local guard and no round guard; and the round advance, `ABAProgramStep.retW` and
   `ABAProgramStep.retWPublish`, resets nothing. A process therefore answers prior-round messages and
@@ -472,7 +472,7 @@ for Unpredictability, inexpressible once the guess is dropped.
   record, and it writes `terminated` alone, so the round records stay as they are. Three
   residues remain.
     - The amplification transition `ABAProgramStep.gbcaSendRelay` is guarded by the process holding an
-      input in that round's round record (`hin : (p.roundRecord r).process.input ≠ none`, D8, and
+      input in that round's round record (`hin : (p.roundVariables r).processVariables.input ≠ none`, D8, and
       `Algorithm.relay` carries the same guard one level down), where lines 3–4 of ABDY22's
       Algorithm 6 guard the relay on the receipt count alone.
     - A round delivery at a process that has terminated is disabled rather than ignored.

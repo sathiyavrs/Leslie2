@@ -18,7 +18,7 @@ import Leslie2Protocols.ABA.AFW.RoundProjectionStep.OtherRoundsUnchanged
 import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ProtocolRelationConjuncts
 import Leslie2Protocols.ABA.AFW.RoundProjectionStep.SecondGatherCall
 import Leslie2Protocols.ABA.AFW.RoundProjectionStep.SecondGatherReturn
-import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ViewAfterOneWrite
+import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ProjectionAfterOneWrite
 
 /-!
 # The view of the composed round after one transition of the implementation
@@ -26,11 +26,11 @@ import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ViewAfterOneWrite
 `AFW.roundProjection` (`ABA/AFW/RoundProjection.lean`) computes the round-`r` state
 of the composed system from a state of `AFW.protocol P`. The files of
 `AFW/RoundProjectionStep/` say where that state stands after one transition of the
-implementation. `RoundProjectionStep/ViewAfterOneWrite.lean` is the write every transition
+implementation. `RoundProjectionStep/ProjectionAfterOneWrite.lean` is the write every transition
 performs, read through the view. Each of the fourteen files beside it then states, for its class of
 transitions, the view after the transition as the view before it with the composed round's own
 effect applied, written through the updaters `GBCA.ByAFW.setPrograms`, `GBCA.ByAFW.setBound`,
-`GBCA.ByAFW.setFirstGather`, `GBCA.ByAFW.setSecondGather`, `Gather.setGatherTier`,
+`GBCA.ByAFW.setFirstGather`, `GBCA.ByAFW.setSecondGather`, `Gather.setGatherProgramsAndNetwork`,
 `Gather.setInputBroadcasts`, `Gather.setBindBroadcasts` and `Gather.setCore` exactly as the
 composed transitions write them. Each transition is matched by one event of the composed round.
 `RoundProjectionStep/ProtocolRelationConjuncts.lean` holds the conjunct of

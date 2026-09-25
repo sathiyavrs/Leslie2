@@ -31,7 +31,7 @@ theorem Invariant.step_retABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
     {μc : PMF (ABAState P)}
     (hstep : (id ∉ c.F ∧ P.n - P.f ≤ c.decidedCount id b ∧ b ∈ c.decidedSent id ∧
         (c.processes id).returned = false ∧
-        μc = PMF.pure (c.setProcess id { c.processes id with returned := true })) ∨
+        μc = PMF.pure (c.setProcessVariables id { c.processes id with returned := true })) ∨
       (id ∈ c.F ∧ μc = PMF.pure c))
     {c' : ABAState P} (hc' : c' ∈ μc.support) :
     Invariant P g c' w ∧ AbstractStateUnchanged P g g c c' := by
@@ -39,40 +39,41 @@ theorem Invariant.step_retABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
   · obtain ⟨-, -, -, -, rfl⟩ := hstep
     rw [PMF.mem_support_pure_iff] at hc'
     subst hc'
-    set c' := c.setProcess id { c.processes id with returned := true } with hc'def
-    have hF : c'.F = c.F := ABAState.setProcess_F _ _ _
-    have hCorr : c'.corrupted = c.corrupted := ABAState.setProcess_corrupted _ _ _
-    have hDS : c'.decidedSent = c.decidedSent := ABAState.setProcess_decidedSent _ _ _
-    have hDR : c'.decidedReceived = c.decidedReceived := ABAState.setProcess_decidedReceived _ _ _
+    set c' := c.setProcessVariables id { c.processes id with returned := true } with hc'def
+    have hF : c'.F = c.F := ABAState.setProcessVariables_F _ _ _
+    have hCorr : c'.corrupted = c.corrupted := ABAState.setProcessVariables_corrupted _ _ _
+    have hDS : c'.decidedSent = c.decidedSent := ABAState.setProcessVariables_decidedSent _ _ _
+    have hDR : c'.decidedReceived = c.decidedReceived :=
+      ABAState.setProcessVariables_decidedReceived _ _ _
     have hDC : ∀ i b', c'.decidedCount i b' = c.decidedCount i b' :=
-      fun i b' => ABAState.setProcess_decidedCount _ _ _ _ _
+      fun i b' => ABAState.setProcessVariables_decidedCount _ _ _ _ _
     have hInput : ∀ id', (c'.processes id').input = (c.processes id').input := by
       intro id'; by_cases h : id' = id
-      · subst h; rw [hc'def, ABAState.setProcess_processes_self]
-      · rw [hc'def, ABAState.setProcess_processes_ne _ _ _ h]
+      · subst h; rw [hc'def, ABAState.setProcessVariables_processes_self]
+      · rw [hc'def, ABAState.setProcessVariables_processes_ne _ _ _ h]
     have hEst : ∀ id', (c'.processes id').estimate = (c.processes id').estimate := by
       intro id'; by_cases h : id' = id
-      · subst h; rw [hc'def, ABAState.setProcess_processes_self]
-      · rw [hc'def, ABAState.setProcess_processes_ne _ _ _ h]
+      · subst h; rw [hc'def, ABAState.setProcessVariables_processes_self]
+      · rw [hc'def, ABAState.setProcessVariables_processes_ne _ _ _ h]
     have hRound : ∀ id', (c'.processes id').round = (c.processes id').round := by
       intro id'; by_cases h : id' = id
-      · subst h; rw [hc'def, ABAState.setProcess_processes_self]
-      · rw [hc'def, ABAState.setProcess_processes_ne _ _ _ h]
+      · subst h; rw [hc'def, ABAState.setProcessVariables_processes_self]
+      · rw [hc'def, ABAState.setProcessVariables_processes_ne _ _ _ h]
     have hPhase : ∀ id', (c'.processes id').phase = (c.processes id').phase := by
       intro id'; by_cases h : id' = id
-      · subst h; rw [hc'def, ABAState.setProcess_processes_self]
-      · rw [hc'def, ABAState.setProcess_processes_ne _ _ _ h]
+      · subst h; rw [hc'def, ABAState.setProcessVariables_processes_self]
+      · rw [hc'def, ABAState.setProcessVariables_processes_ne _ _ _ h]
     have hLastGrade : ∀ id', (c'.processes id').lastGrade = (c.processes id').lastGrade := by
       intro id'; by_cases h : id' = id
-      · subst h; rw [hc'def, ABAState.setProcess_processes_self]
-      · rw [hc'def, ABAState.setProcess_processes_ne _ _ _ h]
+      · subst h; rw [hc'def, ABAState.setProcessVariables_processes_self]
+      · rw [hc'def, ABAState.setProcessVariables_processes_ne _ _ _ h]
     have hCarr : ∀ r' id' v, OutcomeHolder P g c' r' id' v → OutcomeHolder P g c r' id' v := by
       intro r' id' v hc
       unfold OutcomeHolder at hc ⊢
       rwa [hEst, hRound, hPhase] at hc
     have hCert : ∀ r' b',
-      Grade2Certificate P g c r' b' → Grade2Certificate P g c' r' b' := fun r' b' =>
-        Grade2Certificate.of_unchanged rfl (fun _ => rfl) (fun _ _ => rfl)
+      Grade2Witness P g c r' b' → Grade2Witness P g c' r' b' := fun r' b' =>
+        Grade2Witness.of_unchanged rfl (fun _ => rfl) (fun _ _ => rfl)
         (by rw [hF] : c.F ⊆ c'.F) hRound hEst (fun id0 v => hCarr r' id0 v)
     have hHold : ∀ id' b', Grade2Holder P c' id' b' → Grade2Holder P c id' b' := by
       intro id' b' h
@@ -117,7 +118,7 @@ theorem Invariant.step_retABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
     · intro r id' hmem hround hphase
       rw [hRound] at hround; rw [hPhase] at hphase
       rw [hEst]; exact hI.estimate_ret r id' (hF ▸ hmem) hround hphase
-    · intro r id' v hmem hcall; exact hI.call_provenance r id' v (hF ▸ hmem) hcall
+    · intro r id' v hmem hcall; exact hI.call_of_previousRound r id' v (hF ▸ hmem) hcall
     · intro r id' hmem hround hphase v hest
       rw [hRound] at hround; rw [hPhase] at hphase; rw [hEst] at hest
       exact hI.estimate_previous r id' (hF ▸ hmem) hround hphase v hest

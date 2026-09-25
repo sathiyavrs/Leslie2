@@ -28,7 +28,7 @@ the four `init` lemmas are the states they start from. `roundOverBracha` is the 
 implementation: AFW25's Algorithm 4 at `R = 2`, its two-gather branch, with the grade read off the
 second gather's counts in place of the approximate-agreement subroutine of its lines 7 and 8 (D24).
 
-## Views of the round's state
+## Projections of the round's state
 
 `programs`, `bound`, `firstGather` and `secondGather` read the four components of the round's
 state, and `setPrograms`, `setBound`, `setFirstGather` and `setSecondGather` are the four writes
@@ -52,7 +52,7 @@ open Composition
 
 /-- The state of the round whose gather instances have states `G₁` and `G₂`. -/
 abbrev RoundStateOverGathers (n : ℕ) (G₁ G₂ : Type) : Type :=
-  ((∀ _ : Fin n, ProcessRecord n) × Option Bool) × (G₁ × G₂)
+  ((∀ _ : Fin n, ProcessVariables n) × Option Bool) × (G₁ × G₂)
 
 /-- The round's programs beside the two gather instances, over the round-internal alphabet. -/
 noncomputable def roundOverGathersExtended (P : Parameters) (r : ℕ) {G₁ G₂ : Type}
@@ -76,7 +76,8 @@ noncomputable def roundOverGathers (P : Parameters) (r : ℕ) {G₁ G₂ : Type}
     (firstGather : System G₁ (Gather.InstanceLabel P.n Bool))
     (secondGather : System G₂ (Gather.InstanceLabel P.n (Option Bool))) :
     (roundOverGathers P r firstGather secondGather).init =
-      (((fun _ => ProcessRecord.initial P.n), none), (firstGather.init, secondGather.init)) := rfl
+      (((fun _ => ProcessVariables.initial P.n), none), (firstGather.init, secondGather.init)) :=
+        rfl
 
 /-- The state of the round over the gather instances over Bracha's
 broadcast. -/
@@ -114,33 +115,33 @@ noncomputable def roundOverGatherSpecifications (P : Parameters) (r : ℕ) :
 
 @[simp] theorem roundOverBracha_init (P : Parameters) (r : ℕ) :
     (roundOverBracha P r).init =
-      (((fun _ => ProcessRecord.initial P.n), none),
+      (((fun _ => ProcessVariables.initial P.n), none),
         ((Gather.instanceOverBracha P Bool).init,
           (Gather.instanceOverBracha P (Option Bool)).init)) := rfl
 
 @[simp] theorem roundOverBroadcastSpecification_init (P : Parameters) (r : ℕ) :
     (roundOverBroadcastSpecification P r).init =
-      (((fun _ => ProcessRecord.initial P.n), none),
+      (((fun _ => ProcessVariables.initial P.n), none),
         ((Gather.instanceOverBroadcastSpecification P Bool).init,
           (Gather.instanceOverBroadcastSpecification P (Option Bool)).init)) := rfl
 
 @[simp] theorem roundOverGatherSpecifications_init (P : Parameters) (r : ℕ) :
     (roundOverGatherSpecifications P r).init =
-      (((fun _ => ProcessRecord.initial P.n), none),
+      (((fun _ => ProcessVariables.initial P.n), none),
         (Gather.SpecState.initial P.n Bool, Gather.SpecState.initial P.n (Option Bool))) := rfl
 
-/-! ### Views of the round's state
+/-! ### Projections of the round's state
 
 The four components of the round's state, and the four writes that reach one of
 them. A transition is stated through these, so that a guard reads `programs s id`
 where the implementation reads the program function. -/
 
-section Views
+section Projections
 
 variable {n : ℕ} {G₁ G₂ : Type}
 
 /-- The programs. -/
-def programs (s : RoundStateOverGathers n G₁ G₂) : ∀ _ : Fin n, ProcessRecord n := s.1.1
+def programs (s : RoundStateOverGathers n G₁ G₂) : ∀ _ : Fin n, ProcessVariables n := s.1.1
 
 /-- The round's bound bit. -/
 def bound (s : RoundStateOverGathers n G₁ G₂) : Option Bool := s.1.2
@@ -152,7 +153,7 @@ def firstGather (s : RoundStateOverGathers n G₁ G₂) : G₁ := s.2.1
 def secondGather (s : RoundStateOverGathers n G₁ G₂) : G₂ := s.2.2
 
 /-- Overwrite the programs. -/
-def setPrograms (s : RoundStateOverGathers n G₁ G₂) (u : ∀ _ : Fin n, ProcessRecord n) :
+def setPrograms (s : RoundStateOverGathers n G₁ G₂) (u : ∀ _ : Fin n, ProcessVariables n) :
     RoundStateOverGathers n G₁ G₂ := ((u, s.1.2), s.2)
 
 /-- Overwrite the round's bound bit. -/
@@ -169,13 +170,13 @@ def setSecondGather (s : RoundStateOverGathers n G₁ G₂) (d : G₂) : RoundSt
   (s.1, (s.2.1, d))
 
 @[simp] theorem programs_setPrograms (s : RoundStateOverGathers n G₁ G₂) (u : ∀ _ : Fin n,
-    ProcessRecord n) : programs (setPrograms s u) = u := rfl
+    ProcessVariables n) : programs (setPrograms s u) = u := rfl
 @[simp] theorem bound_setPrograms (s : RoundStateOverGathers n G₁ G₂) (u : ∀ _ : Fin n,
-    ProcessRecord n) : bound (setPrograms s u) = bound s := rfl
+    ProcessVariables n) : bound (setPrograms s u) = bound s := rfl
 @[simp] theorem firstGather_setPrograms (s : RoundStateOverGathers n G₁ G₂) (u : ∀ _ : Fin n,
-    ProcessRecord n) : firstGather (setPrograms s u) = firstGather s := rfl
+    ProcessVariables n) : firstGather (setPrograms s u) = firstGather s := rfl
 @[simp] theorem secondGather_setPrograms (s : RoundStateOverGathers n G₁ G₂) (u : ∀ _ : Fin n,
-    ProcessRecord n) : secondGather (setPrograms s u) = secondGather s := rfl
+    ProcessVariables n) : secondGather (setPrograms s u) = secondGather s := rfl
 
 @[simp] theorem programs_setBound (s : RoundStateOverGathers n G₁ G₂) (v : Option Bool) :
     programs (setBound s v) = programs s := rfl
@@ -230,7 +231,7 @@ def corruptAll (P : Parameters) (id : Fin P.n) (corruptFirstGather : Fin P.n →
     secondGather (corruptAll P id corruptFirstGather corruptSecondGather s) =
       corruptSecondGather id (secondGather s) := rfl
 
-end Views
+end Projections
 
 /-! ### Determinacy
 
@@ -243,8 +244,8 @@ section Determinacy
 variable {P : Parameters} {r : ℕ}
 
 /-- Every program transition is Dirac. -/
-theorem programStep_dirac {j : Fin P.n} {p : ProcessRecord P.n} {l : ProgramLabel P.n}
-    {ν : PMF (ProcessRecord P.n)} (h : ProgramStep P r j p l ν) : ∃ p', ν = PMF.pure p' := by
+theorem programStep_dirac {j : Fin P.n} {p : ProcessVariables P.n} {l : ProgramLabel P.n}
+    {ν : PMF (ProcessVariables P.n)} (h : ProgramStep P r j p l ν) : ∃ p', ν = PMF.pure p' := by
   cases h <;> exact ⟨_, rfl⟩
 
 /-- Every transition of the round's network is Dirac. -/
@@ -305,7 +306,7 @@ theorem roundOverGatherSpecifications_isLTS (P : Parameters) (r : ℕ) :
 
 /-- No program transition fires on the silent label: a program only ever moves on one
 of the round's ports or one of its events. -/
-theorem programStep_no_tau {j : Fin P.n} {p : ProcessRecord P.n} {ν : PMF (ProcessRecord P.n)}
+theorem programStep_no_tau {j : Fin P.n} {p : ProcessVariables P.n} {ν : PMF (ProcessVariables P.n)}
     (h : ProgramStep P r j p (Silent.τ : ProgramLabel P.n) ν) : False := by
   rw [programLabel_tau] at h; cases h
 
@@ -315,7 +316,8 @@ theorem networkStep_no_tau {w : Option Bool} {μ : PMF (Option Bool)}
   rw [programLabel_tau] at h; cases h
 
 /-- No program transition fires on a family label outside the round's interface. -/
-theorem programStep_outside {j : Fin P.n} {p : ProcessRecord P.n} {ν : PMF (ProcessRecord P.n)}
+theorem programStep_outside {j : Fin P.n} {p : ProcessVariables P.n} {ν : PMF (ProcessVariables
+  P.n)}
     (h : ProgramStep P r j p ProgramLabel.outside ν) : False := by cases h
 
 /-- No transition of the round's network fires on a family label outside the round's interface. -/
@@ -323,8 +325,8 @@ theorem networkStep_outside {w : Option Bool} {μ : PMF (Option Bool)}
     (h : NetworkStep P r w ProgramLabel.outside μ) : False := by cases h
 
 /-- The program group has no silent transition. -/
-theorem programsProduct_no_tau {u : ∀ _ : Fin P.n, ProcessRecord P.n}
-    {μ : PMF (∀ _ : Fin P.n, ProcessRecord P.n)}
+theorem programsProduct_no_tau {u : ∀ _ : Fin P.n, ProcessVariables P.n}
+    {μ : PMF (∀ _ : Fin P.n, ProcessVariables P.n)}
     (h : (System.synchronisedProduct (fun j => (gbcaProgram P r j).mapIdle (programLabelMap
       P.n))).step u
       (Silent.τ : RoundLabel P.n) μ) : False := by
@@ -334,8 +336,8 @@ theorem programsProduct_no_tau {u : ∀ _ : Fin P.n, ProcessRecord P.n}
 
 /-- The round's programs have no silent transition: neither a program nor the round's network fires
 on the silent label. -/
-theorem roundPrograms_no_tau {u : ∀ _ : Fin P.n, ProcessRecord P.n} {v : Option Bool}
-    {μ : PMF ((∀ _ : Fin P.n, ProcessRecord P.n) × Option Bool)}
+theorem roundPrograms_no_tau {u : ∀ _ : Fin P.n, ProcessVariables P.n} {v : Option Bool}
+    {μ : PMF ((∀ _ : Fin P.n, ProcessVariables P.n) × Option Bool)}
     (h : (roundPrograms P r).step (u, v) (Silent.τ : RoundLabel P.n) μ) : False := by
   rw [roundPrograms, System.parallel_step] at h
   rcases h with ⟨hτ, -⟩ | ⟨-, μ₁, hs, -⟩ | ⟨-, μ₂, hn, -⟩

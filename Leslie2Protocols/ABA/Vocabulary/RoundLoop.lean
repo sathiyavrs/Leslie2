@@ -39,7 +39,7 @@ over the API labels, advancing the process's `phase` and recording the returned 
 sub-protocol state itself lives in the round specifications and the coin oracle — and no network
 state: the DECIDED sets and the corrupted set belong to the network. The transitions themselves are
 `RoundLoopStep` (`ABA/Composition/Components.lean`), the transitions of a round-loop record
-`RoundLoopRecord` over the extended alphabet, and `ABDY.ABAProgramStep`
+`RoundLoopVariables` over the extended alphabet, and `ABDY.ABAProgramStep`
 (`ABA/ABDY/System.lean`), the transitions of the protocol program that carries a round loop
 beside its round records. This file realises the assumptions of
 `DESIGN-HybridRefinesSpecification.md`: the phase machine (invariant conjunct 4), the DECIDED
@@ -51,7 +51,7 @@ diffusion state (conjunct 6), and input coherence
 * **D9 (0-based rounds).** `round : ℕ` starts at `0` where Algorithm 1 starts
   at `r = 1`; the `GBCA_r`/`WCC_r` instance indices shift accordingly.
 * **D10 (fused DECIDED-send).** Algorithm 1's `elif g = A: send ⟨DECIDED, b⟩`
-  is performed inside the round advance `RoundLoopRecord.stepRound`, joined with the
+  is performed inside the round advance `RoundLoopVariables.stepRound`, joined with the
   network's publication of the bit: receiving the round's coin adopts it when
   `estimate = ⊥`, multicasts `⟨DECIDED, b⟩` when the round's outcome was `grade2 b`,
   clears `lastGrade` and advances to the next round, all in one Dirac
@@ -77,7 +77,7 @@ diffusion state (conjunct 6), and input coherence
   DECIDED sets; a single-entry model would bar that — an under-approximation inconsistent with
   graded agreement.
 * **D23 (the corrupted process's replaced program).** A corruption replaces the
-  program of the process it names. `RoundLoopRecord.corrupted` carries the
+  program of the process it names. `RoundLoopVariables.corrupted` carries the
   replacement: the process's own half of `fail` writes the flag, every
   transition that reads or writes the process's own record is guarded by
   `corrupted = false`, and the replaced program self-loops on every label of
@@ -184,9 +184,9 @@ state the core simulation reads (`ABA/Composition/ABAState.lean`). -/
 /-- The round-loop record of one process: its own control record and the
 DECIDED payloads delivered to it, indexed by sender. There is no record of
 what it has multicast — the DECIDED sets live in the network. -/
-structure RoundLoopRecord (n : ℕ) : Type where
+structure RoundLoopVariables (n : ℕ) : Type where
   /-- The process's own control record. -/
-  process : RoundLoopState n
+  processVariables : RoundLoopState n
   /-- The DECIDED payloads delivered to this process, indexed by sender. -/
   decidedDelivered : Fin n → Finset Bool
   /-- Whether this process's program has been replaced (D23). The process's own
@@ -195,55 +195,56 @@ structure RoundLoopRecord (n : ℕ) : Type where
   corrupted : Bool
   deriving DecidableEq
 
-namespace RoundLoopRecord
+namespace RoundLoopVariables
 
 variable {n : ℕ}
 
 /-- The initial round-loop record: idle control record, no receipts, program
 not replaced. -/
-def initial (n : ℕ) : RoundLoopRecord n where
-  process := RoundLoopState.initial n
+def initial (n : ℕ) : RoundLoopVariables n where
+  processVariables := RoundLoopState.initial n
   decidedDelivered := fun _ => ∅
   corrupted := false
 
 @[simp] theorem initial_corrupted (n : ℕ) : (initial n).corrupted = false := rfl
 
 /-- The number of distinct senders whose `⟨DECIDED, b⟩` this process holds. -/
-def decidedCount (q : RoundLoopRecord n) (b : Bool) : ℕ :=
+def decidedCount (q : RoundLoopVariables n) (b : Bool) : ℕ :=
   (Finset.univ.filter (fun k => b ∈ q.decidedDelivered k)).card
 
 /-- Update the control record. -/
-def setProcess (q : RoundLoopRecord n) (p : RoundLoopState n) : RoundLoopRecord n := { q with
-  process := p }
+def setProcessVariables (q : RoundLoopVariables n) (p : RoundLoopState n) : RoundLoopVariables n :=
+  { q with
+  processVariables := p }
 
-@[simp] theorem setProcess_corrupted (q : RoundLoopRecord n) (p : RoundLoopState n) :
-    (q.setProcess p).corrupted = q.corrupted := rfl
+@[simp] theorem setProcessVariables_corrupted (q : RoundLoopVariables n) (p : RoundLoopState n) :
+    (q.setProcessVariables p).corrupted = q.corrupted := rfl
 
 /-- Record a delivered `⟨DECIDED, b⟩` from sender `k`. -/
-def receiveDecided (q : RoundLoopRecord n) (k : Fin n) (b : Bool) : RoundLoopRecord n :=
+def receiveDecided (q : RoundLoopVariables n) (k : Fin n) (b : Bool) : RoundLoopVariables n :=
   { q with
     decidedDelivered :=
       Function.update q.decidedDelivered k (insert b (q.decidedDelivered k)) }
 
-@[simp] theorem receiveDecided_corrupted (q : RoundLoopRecord n) (k : Fin n) (b : Bool) :
+@[simp] theorem receiveDecided_corrupted (q : RoundLoopVariables n) (k : Fin n) (b : Bool) :
     (q.receiveDecided k b).corrupted = q.corrupted := rfl
 
 /-- The round advance on receiving the coin `c`: adopt the coin if the
 estimate is `⊥`, clear the grade, open the next round. The `⟨DECIDED, b⟩`
 publication the advance carries on a grade-2 outcome (D10) is the network's half of
 the joint step, so no transition of it appears here. -/
-def stepRound (q : RoundLoopRecord n) (c : Bool) : RoundLoopRecord n :=
-  q.setProcess
-    { q.process with
-      estimate := some (q.process.estimate.getD c),
+def stepRound (q : RoundLoopVariables n) (c : Bool) : RoundLoopVariables n :=
+  q.setProcessVariables
+    { q.processVariables with
+      estimate := some (q.processVariables.estimate.getD c),
       lastGrade := none,
-      round := q.process.round + 1,
+      round := q.processVariables.round + 1,
       phase := .toCallG }
 
-@[simp] theorem stepRound_corrupted (q : RoundLoopRecord n) (c : Bool) :
+@[simp] theorem stepRound_corrupted (q : RoundLoopVariables n) (c : Bool) :
     (q.stepRound c).corrupted = q.corrupted := rfl
 
-end RoundLoopRecord
+end RoundLoopVariables
 
 end ABA
 end PLTS

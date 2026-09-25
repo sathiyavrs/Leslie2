@@ -38,12 +38,13 @@ The composite is not an LTS — the coin resolution is probabilistic — but bot
 step relations written here are Dirac, provided the implementation's own
 transitions are. -/
 
-section Inversion
+section Cases
 
 variable {P : Parameters} {M E S : Type}
-    {roundStep : Fin P.n → ProcessRecord P.n S → ExtendedLabel P.n M E → PMF (ProcessRecord P.n S) →
+    {roundStep : Fin P.n → ProcessVariables P.n S → ExtendedLabel P.n M E → PMF (ProcessVariables
+      P.n S) →
       Prop}
-    {j : Fin P.n} {q : ProcessRecord P.n S} {ν : PMF (ProcessRecord P.n S)}
+    {j : Fin P.n} {q : ProcessVariables P.n S} {ν : PMF (ProcessVariables P.n S)}
 
 /-- Every process transition is Dirac: the transitions here are, and so are the
 implementation's own by `IsRoundStep.dirac`. -/
@@ -63,7 +64,7 @@ transition at all, so the implementation carries `corrupted = false` (D23), and
 no graded-agreement transition is silent, `roundOwn` holding of no `τ`. -/
 theorem programStep_tau_terminate
     (h : ProgramStep P M E S roundStep j q (Silent.τ : ExtendedLabel P.n M E) ν) :
-    ∃ b : Bool, q.1.corrupted = false ∧ q.1.process.returned = true ∧
+    ∃ b : Bool, q.1.corrupted = false ∧ q.1.processVariables.returned = true ∧
       2 * P.f + 1 ≤ q.1.decidedCount b ∧ q.2.terminated = false ∧
       ν = PMF.pure (q.1, { q.2 with terminated := true }) := by
   rw [extendedLabel_tau] at h
@@ -83,10 +84,10 @@ the replaced program's self-loop is a second transition on the same label (D23).
 
 theorem programStep_callABA_own {b : Bool}
     (h : ProgramStep P M E S roundStep j q (Sum.inl (.callABA j b)) ν) :
-    (q.1.corrupted = false ∧ q.1.process.input = none ∧
-      ν = PMF.pure (q.1.setProcess { q.1.process with
+    (q.1.corrupted = false ∧ q.1.processVariables.input = none ∧
+      ν = PMF.pure (q.1.setProcessVariables { q.1.processVariables with
         input := some b, estimate := some b, round := 0, phase := .toCallG }, q.2)) ∨
-    ((q.1.corrupted = true ∨ q.1.process.input ≠ none) ∧ ν = PMF.pure q) := by
+    ((q.1.corrupted = true ∨ q.1.processVariables.input ≠ none) ∧ ν = PMF.pure q) := by
   cases h
   case roundTransition h' => exact (IsRoundStep.own h').elim
   case input => exact Or.inl ⟨by assumption, by assumption, rfl⟩
@@ -94,7 +95,7 @@ theorem programStep_callABA_own {b : Bool}
   case callABAIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => exact Or.inr ⟨Or.inl (by assumption), rfl⟩
 
-theorem programStep_callABA_foreign {id : Fin P.n} {b : Bool} (hid : id ≠ j)
+theorem programStep_callABA_notOwn {id : Fin P.n} {b : Bool} (hid : id ≠ j)
     (h : ProgramStep P M E S roundStep j q (Sum.inl (.callABA id b)) ν) :
     ν = PMF.pure q := by
   cases h
@@ -106,9 +107,9 @@ theorem programStep_callABA_foreign {id : Fin P.n} {b : Bool} (hid : id ≠ j)
 
 theorem programStep_retABA_own {b : Bool}
     (h : ProgramStep P M E S roundStep j q (Sum.inl (.retABA j b)) ν) :
-    (q.1.corrupted = false ∧ q.1.process.input ≠ none ∧
-      P.n - P.f ≤ q.1.decidedCount b ∧ q.1.process.returned = false ∧
-      ν = PMF.pure (q.1.setProcess { q.1.process with returned := true }, q.2)) ∨
+    (q.1.corrupted = false ∧ q.1.processVariables.input ≠ none ∧
+      P.n - P.f ≤ q.1.decidedCount b ∧ q.1.processVariables.returned = false ∧
+      ν = PMF.pure (q.1.setProcessVariables { q.1.processVariables with returned := true }, q.2)) ∨
     (q.1.corrupted = true ∧ ν = PMF.pure q) := by
   cases h
   case roundTransition h' => exact (IsRoundStep.own h').elim
@@ -117,7 +118,7 @@ theorem programStep_retABA_own {b : Bool}
   case retABAIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => exact Or.inr ⟨by assumption, rfl⟩
 
-theorem programStep_retABA_foreign {id : Fin P.n} {b : Bool} (hid : id ≠ j)
+theorem programStep_retABA_notOwn {id : Fin P.n} {b : Bool} (hid : id ≠ j)
     (h : ProgramStep P M E S roundStep j q (Sum.inl (.retABA id b)) ν) :
     ν = PMF.pure q := by
   cases h
@@ -126,7 +127,7 @@ theorem programStep_retABA_foreign {id : Fin P.n} {b : Bool} (hid : id ≠ j)
   case retABAIdle => rfl
   case corruptedIdle => rfl
 
-theorem programStep_callG_foreign {r : ℕ} {id : Fin P.n} {b : Bool} (hid : id ≠ j)
+theorem programStep_callG_notOwn {r : ℕ} {id : Fin P.n} {b : Bool} (hid : id ≠ j)
     (h : ProgramStep P M E S roundStep j q (Sum.inl (.callG r id b)) ν) :
     ν = PMF.pure q := by
   cases h
@@ -134,7 +135,7 @@ theorem programStep_callG_foreign {r : ℕ} {id : Fin P.n} {b : Bool} (hid : id 
   case callGIdle => rfl
   case corruptedIdle => rfl
 
-theorem programStep_retG_foreign {r : ℕ} {id : Fin P.n} {out : GBCAOutput} {bnd : Bool}
+theorem programStep_retG_notOwn {r : ℕ} {id : Fin P.n} {out : GBCAOutput} {bnd : Bool}
     (hid : id ≠ j)
     (h : ProgramStep P M E S roundStep j q (Sum.inl (.retG r id out bnd)) ν) :
     ν = PMF.pure q := by
@@ -145,8 +146,9 @@ theorem programStep_retG_foreign {r : ℕ} {id : Fin P.n} {out : GBCAOutput} {bn
 
 theorem programStep_callW_own {r : ℕ}
     (h : ProgramStep P M E S roundStep j q (Sum.inl (.callW r j)) ν) :
-    (q.1.corrupted = false ∧ q.1.process.phase = .toCallW ∧ q.1.process.round = r ∧
-      ν = PMF.pure (q.1.setProcess { q.1.process with phase := .awaitW }, q.2)) ∨
+    (q.1.corrupted = false ∧ q.1.processVariables.phase = .toCallW ∧ q.1.processVariables.round = r
+      ∧
+      ν = PMF.pure (q.1.setProcessVariables { q.1.processVariables with phase := .awaitW }, q.2)) ∨
     (q.1.corrupted = true ∧ ν = PMF.pure q) := by
   cases h
   case roundTransition h' => exact (IsRoundStep.own h').elim
@@ -154,7 +156,7 @@ theorem programStep_callW_own {r : ℕ}
   case callWIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => exact Or.inr ⟨by assumption, rfl⟩
 
-theorem programStep_callW_foreign {r : ℕ} {id : Fin P.n} (hid : id ≠ j)
+theorem programStep_callW_notOwn {r : ℕ} {id : Fin P.n} (hid : id ≠ j)
     (h : ProgramStep P M E S roundStep j q (Sum.inl (.callW r id)) ν) :
     ν = PMF.pure q := by
   cases h
@@ -165,8 +167,8 @@ theorem programStep_callW_foreign {r : ℕ} {id : Fin P.n} (hid : id ≠ j)
 
 theorem programStep_retW_own {r : ℕ} {co : Bool}
     (h : ProgramStep P M E S roundStep j q (Sum.inl (.retW r j co)) ν) :
-    (q.1.corrupted = false ∧ q.1.process.phase = .awaitW ∧ q.1.process.round = r ∧
-      (∀ v : Bool, q.1.process.lastGrade ≠ some (.grade2 v)) ∧
+    (q.1.corrupted = false ∧ q.1.processVariables.phase = .awaitW ∧ q.1.processVariables.round = r ∧
+      (∀ v : Bool, q.1.processVariables.lastGrade ≠ some (.grade2 v)) ∧
       ν = PMF.pure (q.1.stepRound co, q.2)) ∨
     (q.1.corrupted = true ∧ ν = PMF.pure q) := by
   cases h
@@ -176,7 +178,7 @@ theorem programStep_retW_own {r : ℕ} {co : Bool}
   case retWIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => exact Or.inr ⟨by assumption, rfl⟩
 
-theorem programStep_retW_foreign {r : ℕ} {id : Fin P.n} {co : Bool} (hid : id ≠ j)
+theorem programStep_retW_notOwn {r : ℕ} {id : Fin P.n} {co : Bool} (hid : id ≠ j)
     (h : ProgramStep P M E S roundStep j q (Sum.inl (.retW r id co)) ν) :
     ν = PMF.pure q := by
   cases h
@@ -196,7 +198,7 @@ theorem programStep_fail_own (h : ProgramStep P M E S roundStep j q (Sum.inl (.f
   case failIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => exact Or.inr ⟨by assumption, rfl⟩
 
-theorem programStep_fail_foreign {k : Fin P.n} (hk : k ≠ j)
+theorem programStep_fail_notOwn {k : Fin P.n} (hk : k ≠ j)
     (h : ProgramStep P M E S roundStep j q (Sum.inl (.fail k)) ν) :
     ν = PMF.pure q := by
   cases h
@@ -211,7 +213,7 @@ The Byzantine round transitions have no transition at the process they name (D22
 `byzantineCallG`, `byzantineCallGLoop` and `byzantineRetG` every process idles and there is no
 participant's transition to read. -/
 
-theorem programStep_gbcaSend_foreign {r : ℕ} {k : Fin P.n} {m : M} (hk : k ≠ j)
+theorem programStep_gbcaSend_notOwn {r : ℕ} {k : Fin P.n} {m : M} (hk : k ≠ j)
     (h : ProgramStep P M E S roundStep j q (Sum.inr (.gbcaSend r k m)) ν) :
     ν = PMF.pure q := by
   cases h
@@ -219,7 +221,7 @@ theorem programStep_gbcaSend_foreign {r : ℕ} {k : Fin P.n} {m : M} (hk : k ≠
   case gbcaSendIdle => rfl
   case corruptedIdle => rfl
 
-theorem programStep_gbcaDeliver_foreign {r : ℕ} {i k : Fin P.n} {m : M} (hi : i ≠ j)
+theorem programStep_gbcaDeliver_notOwn {r : ℕ} {i k : Fin P.n} {m : M} (hi : i ≠ j)
     (h : ProgramStep P M E S roundStep j q (Sum.inr (.gbcaDeliver r i k m)) ν) :
     ν = PMF.pure q := by
   cases h
@@ -229,7 +231,7 @@ theorem programStep_gbcaDeliver_foreign {r : ℕ} {i k : Fin P.n} {m : M} (hi : 
 
 theorem programStep_decidedSend_self {b : Bool}
     (h : ProgramStep P M E S roundStep j q (Sum.inr (.decidedSend j b)) ν) :
-    (q.1.corrupted = false ∧ q.1.process.input ≠ none ∧
+    (q.1.corrupted = false ∧ q.1.processVariables.input ≠ none ∧
       P.f + 1 ≤ q.1.decidedCount b ∧ ν = PMF.pure q) ∨
     (q.1.corrupted = true ∧ ν = PMF.pure q) := by
   cases h
@@ -239,7 +241,7 @@ theorem programStep_decidedSend_self {b : Bool}
   case decidedSendIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => exact Or.inr ⟨by assumption, rfl⟩
 
-theorem programStep_decidedSend_foreign {k : Fin P.n} {b : Bool} (hk : k ≠ j)
+theorem programStep_decidedSend_notOwn {k : Fin P.n} {b : Bool} (hk : k ≠ j)
     (h : ProgramStep P M E S roundStep j q (Sum.inr (.decidedSend k b)) ν) :
     ν = PMF.pure q := by
   cases h
@@ -258,7 +260,7 @@ theorem programStep_decidedDeliver_self {k : Fin P.n} {b : Bool}
   case decidedDeliverIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
-theorem programStep_decidedDeliver_foreign {i k : Fin P.n} {b : Bool} (hi : i ≠ j)
+theorem programStep_decidedDeliver_notOwn {i k : Fin P.n} {b : Bool} (hi : i ≠ j)
     (h : ProgramStep P M E S roundStep j q (Sum.inr (.decidedDeliver i k b)) ν) :
     ν = PMF.pure q := by
   cases h
@@ -270,8 +272,8 @@ theorem programStep_decidedDeliver_foreign {i k : Fin P.n} {b : Bool} (hi : i �
 theorem programStep_retWPublish_self {r : ℕ} {co b : Bool}
     (h : ProgramStep P M E S roundStep j q (Sum.inr (.retWPublish r j co b)) ν) :
     q.1.corrupted = false ∧
-      q.1.process.phase = .awaitW ∧ q.1.process.round = r ∧
-      q.1.process.lastGrade = some (.grade2 b) ∧
+      q.1.processVariables.phase = .awaitW ∧ q.1.processVariables.round = r ∧
+      q.1.processVariables.lastGrade = some (.grade2 b) ∧
       ν = PMF.pure (q.1.stepRound co, q.2) := by
   cases h
   case roundTransition h' => exact (IsRoundStep.own h').elim
@@ -280,7 +282,7 @@ theorem programStep_retWPublish_self {r : ℕ} {co b : Bool}
   case retWPublishIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
-theorem programStep_retWPublish_foreign {r : ℕ} {id : Fin P.n} {co b : Bool} (hid : id ≠ j)
+theorem programStep_retWPublish_notOwn {r : ℕ} {id : Fin P.n} {co b : Bool} (hid : id ≠ j)
     (h : ProgramStep P M E S roundStep j q (Sum.inr (.retWPublish r id co b)) ν) :
     ν = PMF.pure q := by
   cases h
@@ -289,7 +291,7 @@ theorem programStep_retWPublish_foreign {r : ℕ} {id : Fin P.n} {co b : Bool} (
   case retWPublishIdle => rfl
   case corruptedIdle => rfl
 
-theorem programStep_gbcaCallLoop_foreign {r : ℕ} {id : Fin P.n} {b : Bool} (hid : id ≠ j)
+theorem programStep_gbcaCallLoop_notOwn {r : ℕ} {id : Fin P.n} {b : Bool} (hid : id ≠ j)
     (h : ProgramStep P M E S roundStep j q (Sum.inr (.gbcaCallLoop r id b)) ν) :
     ν = PMF.pure q := by
   cases h
@@ -359,11 +361,11 @@ theorem programStep_noStep {L : ExtendedLabel P.n M E} (hc : q.1.corrupted = tru
   case roundTransition h' => rw [IsRoundStep.correct h'] at hc; exact absurd hc (by simp)
   all_goals simp_all
 
-end Inversion
+end Cases
 
 /-! ### The network's transitions, by label class -/
 
-section NetworkStepInversion
+section NetworkStepCases
 variable {P : Parameters} {M E G : Type} [DecidableEq M]
     {callPayload : Fin P.n → Bool → Option M}
     {ghostStep : ExtendedLabel P.n M E → NetworkState P.n M G → G → G}
@@ -509,7 +511,7 @@ theorem networkStep_tau
   case byzantineGBCA => exact Or.inl ⟨_, _, _, by assumption, rfl⟩
   case byzantineDecided => exact Or.inr ⟨_, _, by assumption, rfl⟩
 
-end NetworkStepInversion
+end NetworkStepCases
 end Implementation
 end ABA
 end PLTS

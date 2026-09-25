@@ -1,11 +1,11 @@
 \begin{theorem}[BRB instance refinement]
   \label{thm:brb-refines}
-  \lean{PLTS.ABA.BRB.EchoCertificate}\lean{PLTS.ABA.BRB.Invariant}\lean{PLTS.ABA.BRB.SpecificationRelation}\lean{PLTS.ABA.BRB.specificationRelation_corrupt}\lean{PLTS.ABA.BRB.brachaRefinesSpecification}\leanok
+  \lean{PLTS.ABA.BRB.EchoWitness}\lean{PLTS.ABA.BRB.Invariant}\lean{PLTS.ABA.BRB.SpecificationRelation}\lean{PLTS.ABA.BRB.specificationRelation_corrupt}\lean{PLTS.ABA.BRB.brachaRefinesSpecification}\leanok
   \uses{def:aba-bracha-implementation, def:aba-brb-spec}
   The Bracha instance is forward-simulated by Transition System~6.
   The relation reads the specification's $input$, $ret$ and $F$ off the implementation state and certifies its committed value by the certificate
   \[
-    \mathrm{EchoCertificate}(m) \;=\; \exists i,\ (n+f)/2 < \mathrm{receivedCount}(i, \langle\mathrm{ECHO}, m\rangle),
+    \mathrm{EchoWitness}(m) \;=\; \exists i,\ (n+f)/2 < \mathrm{receivedCount}(i, \langle\mathrm{ECHO}, m\rangle),
   \]
   which is $F$-blind and monotone in the delivered sets.
   The commit is fired on demand: a return of $m$ met by a specification state with $val = \bot$ is matched by the two-step weak run $\mathrm{commit}; \mathrm{ret}$, the commit's guard supplied by the certificate.
@@ -15,7 +15,7 @@
   \uses{def:aba-bracha-implementation, def:aba-brb-spec, def:forwardsim}
   The invariant carries receipt soundness ($received \subseteq sent$), the write-once discipline of the correct $\mathrm{ECHO}$ and $\mathrm{VOTE}$ fields, and backing clauses: a correct $\mathrm{ECHO}\,m$ carries the leader's input unless the leader is corrupted, and a correct $\mathrm{VOTE}\,m$ is backed by an $\mathrm{ECHO}\,m$ quorum.
   The backing clause for votes absorbs the amplification transition --- $f{+}1$ $\mathrm{VOTE}\,m$ receipts contain a correct one, whose own backing is reused --- so no induction along amplification chains is needed.
-  Two certificates $\mathrm{EchoCertificate}(m)$ and $\mathrm{EchoCertificate}(m')$ share a correct echo sender by quorum intersection, and correct echoes are write-once, so $m = m'$: the certified value is unique, and at a never-corrupted leader it is the leader's input, which is the commit guard's correct branch.
+  Two certificates $\mathrm{EchoWitness}(m)$ and $\mathrm{EchoWitness}(m')$ share a correct echo sender by quorum intersection, and correct echoes are write-once, so $m = m'$: the certified value is unique, and at a never-corrupted leader it is the leader's input, which is the commit guard's correct branch.
   A return transition yields the certificate from its $2f{+}1$ $\mathrm{VOTE}\,m$ receipts, which contain a correct $\mathrm{VOTE}\,m$ sender whose own backing is that certificate, and the matching run is the run above when the specification has not committed and the single return otherwise.
   Corruption is matched by the specification's own $\mathrm{fail}$, and every other transition by a stutter.
 \end{proof}

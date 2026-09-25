@@ -211,18 +211,18 @@ theorem hybridRefinesSpecification (P : Parameters) (M : Type) [DecidableEq M] :
       rcases hdisj with ⟨hidF, hin, rfl⟩ | ⟨hloop, rfl⟩
       · -- the commit transition at a never-corrupted process holding no input: `SpecStep.callSet`,
         -- whose empty-entry guard is `input_sync` read at `id`
-        set c' := ABAState.setProcess (C, A) id { ABAState.processes (C, A) id with
+        set c' := ABAState.setProcessVariables (C, A) id { ABAState.processes (C, A) id with
           input := some b, estimate := some b, round := 0, phase := .toCallG } with hc'def
         have hc'mem : c' ∈ (PMF.pure c').support := by
           rw [PMF.mem_support_pure_iff]
         have hIAF := Invariant.step_callABA hI id b hstepC hc'mem
         have hIA' : Invariant P g c' w := hIAF.1
-        have hCF : c'.F = ABAState.F (C, A) := ABAState.setProcess_F _ _ _
+        have hCF : c'.F = ABAState.F (C, A) := ABAState.setProcessVariables_F _ _ _
         have hSelf : c'.processes id = { ABAState.processes (C, A) id with
             input := some b, estimate := some b, round := 0, phase := .toCallG } := by
-          rw [hc'def]; exact ABAState.setProcess_processes_self _ _ _
+          rw [hc'def]; exact ABAState.setProcessVariables_processes_self _ _ _
         have hNe : ∀ id', id' ≠ id → c'.processes id' = ABAState.processes (C, A) id' := by
-          intro id' h; rw [hc'def]; exact ABAState.setProcess_processes_ne _ _ _ h
+          intro id' h; rw [hc'def]; exact ABAState.setProcessVariables_processes_ne _ _ _ h
         have hempty : a.input id = none := by
           rw [hAbs.input_sync id hidF]; exact hin
         set a' : SpecState P.n :=
@@ -285,7 +285,7 @@ theorem hybridRefinesSpecification (P : Parameters) (M : Type) [DecidableEq M] :
       have hdisj := hstepC
       rcases hdisj with ⟨-, hcnt, hs, hret, rfl⟩ | ⟨hFbyz, rfl⟩
       · -- a never-corrupted process's return: the abstract state decides and returns
-        set c' := ABAState.setProcess (C, A) id { ABAState.processes (C,
+        set c' := ABAState.setProcessVariables (C, A) id { ABAState.processes (C,
           A) id with returned := true } with hc'def
         have hc'mem : c' ∈ (PMF.pure c').support := by
           rw [PMF.mem_support_pure_iff]
@@ -315,13 +315,13 @@ theorem hybridRefinesSpecification (P : Parameters) (M : Type) [DecidableEq M] :
           fun j0 b0' hj0 hh0 => hI.grade2Lock_agree j0 j b0' b hj0 hjF hh0 (Or.inr hjsent)
         have hretfalse : a.ret id = false := by
           rw [hAbs.ret_eq id]; exact hret
-        have hCF : c'.F = ABAState.F (C, A) := ABAState.setProcess_F _ _ _
+        have hCF : c'.F = ABAState.F (C, A) := ABAState.setProcessVariables_F _ _ _
         have hInputEq : ∀ id', (c'.processes id').input = (ABAState.processes (C,
           A) id').input := by
           intro id'
           by_cases h : id' = id
-          · rw [h, hc'def, ABAState.setProcess_processes_self]
-          · rw [hc'def, ABAState.setProcess_processes_ne _ _ _ h]
+          · rw [h, hc'def, ABAState.setProcessVariables_processes_self]
+          · rw [hc'def, ABAState.setProcessVariables_processes_ne _ _ _ h]
         have hSync : ∀ id', id' ∉ c'.F → a.input id' = (c'.processes id').input := by
           intro id' hid'
           rw [hCF] at hid'
@@ -348,8 +348,9 @@ theorem hybridRefinesSpecification (P : Parameters) (M : Type) [DecidableEq M] :
             · intro id'
               show Function.update a1.ret id true id' = (c'.processes id').returned
               by_cases h : id' = id
-              · rw [h, Function.update_self, hc'def, ABAState.setProcess_processes_self]
-              · rw [Function.update_of_ne h, hc'def, ABAState.setProcess_processes_ne _ _ _ h]
+              · rw [h, Function.update_self, hc'def, ABAState.setProcessVariables_processes_self]
+              · rw [Function.update_of_ne h, hc'def, ABAState.setProcessVariables_processes_ne _ _ _
+                  h]
                 exact hAbs.ret_eq id'
           simp only [prodPMF_pure_abaTransition]
           obtain ⟨ω, hRel, hbid⟩ := dirac_step (g, c'.1, c'.2, w) a'' ⟨hIA', hAbs''⟩
@@ -372,8 +373,9 @@ theorem hybridRefinesSpecification (P : Parameters) (M : Type) [DecidableEq M] :
             · intro id'
               show Function.update a.ret id true id' = (c'.processes id').returned
               by_cases h : id' = id
-              · rw [h, Function.update_self, hc'def, ABAState.setProcess_processes_self]
-              · rw [Function.update_of_ne h, hc'def, ABAState.setProcess_processes_ne _ _ _ h]
+              · rw [h, Function.update_self, hc'def, ABAState.setProcessVariables_processes_self]
+              · rw [Function.update_of_ne h, hc'def, ABAState.setProcessVariables_processes_ne _ _ _
+                  h]
                 exact hAbs.ret_eq id'
           simp only [prodPMF_pure_abaTransition]
           obtain ⟨ω, hRel, hbid⟩ := dirac_step (g, c'.1, c'.2, w) a'' ⟨hIA', hAbs''⟩

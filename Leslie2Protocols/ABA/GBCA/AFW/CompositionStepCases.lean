@@ -16,15 +16,15 @@ network and the two gather instances. The lemmas here unfold that pipeline in bo
 directions.
 
 `roundOverGathers_step_iff` splits a transition of the round into a hidden event and a family
-label. `roundPrograms_idle_inversion` and `roundPrograms_label_inversion` read the round's
+label. `roundPrograms_idle_cases` and `roundPrograms_label_cases` read the round's
 programs beside the round's network: on a family label with no image at a program they remain
 unchanged, and on a label with an image every program takes its transition at that image and the
 round's network takes its. The `_pure` and `_step` lemmas build such a transition from the
 factors' transitions, and `PLTS.dirac_steps_update` identifies the program function a joint step
 delivers pointwise with the old one updated at the acting process.
 
-`roundOverGathersExtended_joint_inversion` reads a visible transition of the three factors as
-their transitions and a Dirac product. `roundOverGathersExtended_tau_inversion` reads a silent one
+`roundOverGathersExtended_synchronised_cases` reads a visible transition of the three factors as
+their transitions and a Dirac product. `roundOverGathersExtended_tau_cases` reads a silent one
 as a step of exactly one gather instance. The `roundOverGathers_*` lemmas carry both across the
 hiding and the relabelling.
 
@@ -72,7 +72,7 @@ image every program takes its transition at that image and the round's network t
 
 section RoundPrograms
 
-variable {P : Parameters} {r : ℕ} {u x : ∀ _ : Fin P.n, ProcessRecord P.n} {v v' : Option Bool}
+variable {P : Parameters} {r : ℕ} {u x : ∀ _ : Fin P.n, ProcessVariables P.n} {v v' : Option Bool}
   {L : RoundLabel P.n}
 
 /-- A label with an image other than the silent one is visible. -/
@@ -94,23 +94,23 @@ theorem roundLabel_ne_tau_of_none (hlp : programLabelMap P.n L = none) :
 
 /-- A synchronised transition of the program group on a visible label: every
 program steps, and the joint distribution is Dirac. -/
-theorem programsProduct_inversion (hL : L ≠ (Silent.τ : RoundLabel P.n))
-    {μ : PMF (∀ _ : Fin P.n, ProcessRecord P.n)}
+theorem programsProduct_cases (hL : L ≠ (Silent.τ : RoundLabel P.n))
+    {μ : PMF (∀ _ : Fin P.n, ProcessVariables P.n)}
     (h : (System.synchronisedProduct (fun j => (gbcaProgram P r j).mapIdle (programLabelMap
       P.n))).step u L
       μ) :
-    ∃ x : ∀ _ : Fin P.n, ProcessRecord P.n, μ = PMF.pure x ∧
+    ∃ x : ∀ _ : Fin P.n, ProcessVariables P.n, μ = PMF.pure x ∧
       ∀ i, ((gbcaProgram P r i).mapIdle (programLabelMap P.n)).step (u i) L (PMF.pure (x i)) :=
-  System.synchronisedProductMapIdle_inversion (fun i => gbcaProgram_isLTS P r i) hL h
+  System.synchronisedProductMapIdle_cases (fun i => gbcaProgram_isLTS P r i) hL h
 
 /-- **The round's programs remain unchanged** on a label with no image at a program. -/
-theorem roundPrograms_idle_inversion (hlp : programLabelMap P.n L = none)
-    {μ : PMF ((∀ _ : Fin P.n, ProcessRecord P.n) × Option Bool)}
+theorem roundPrograms_idle_cases (hlp : programLabelMap P.n L = none)
+    {μ : PMF ((∀ _ : Fin P.n, ProcessVariables P.n) × Option Bool)}
     (h : (roundPrograms P r).step (u, v) L μ) : μ = PMF.pure (u, v) := by
   have hL := roundLabel_ne_tau_of_none hlp
   rw [roundPrograms, System.parallel_step] at h
   rcases h with ⟨-, μ₁, μ₂, hs, hn, rfl⟩ | ⟨hτ, -⟩ | ⟨hτ, -⟩
-  · obtain ⟨y, rfl, hall⟩ := programsProduct_inversion hL hs
+  · obtain ⟨y, rfl, hall⟩ := programsProduct_cases hL hs
     have hy : y = u := funext fun i => System.mapIdle_eq_of_step_none hlp (hall i)
     subst hy
     rw [(System.mapIdle_step_none hlp _).mp hn, prodPMF_pure_pure]
@@ -119,16 +119,16 @@ theorem roundPrograms_idle_inversion (hlp : programLabelMap P.n L = none)
 
 /-- **The joint transition of the round's programs.** Every program takes its transition at the
 label's image and the round's network takes its. -/
-theorem roundPrograms_label_inversion {lp : ProgramLabel P.n}
+theorem roundPrograms_label_cases {lp : ProgramLabel P.n}
     (hlp : programLabelMap P.n L = some lp) (hlpτ : lp ≠ ProgramLabel.tau)
-    {μ : PMF ((∀ _ : Fin P.n, ProcessRecord P.n) × Option Bool)}
+    {μ : PMF ((∀ _ : Fin P.n, ProcessVariables P.n) × Option Bool)}
     (h : (roundPrograms P r).step (u, v) L μ) :
-    ∃ (x : ∀ _ : Fin P.n, ProcessRecord P.n) (v' : Option Bool), μ = PMF.pure (x, v') ∧
+    ∃ (x : ∀ _ : Fin P.n, ProcessVariables P.n) (v' : Option Bool), μ = PMF.pure (x, v') ∧
     (∀ i, ProgramStep P r i (u i) lp (PMF.pure (x i))) ∧ NetworkStep P r v lp (PMF.pure v') := by
   have hL := roundLabel_ne_tau hlp hlpτ
   rw [roundPrograms, System.parallel_step] at h
   rcases h with ⟨-, μ₁, μ₂, hs, hn, rfl⟩ | ⟨hτ, -⟩ | ⟨hτ, -⟩
-  · obtain ⟨y, rfl, hall⟩ := programsProduct_inversion hL hs
+  · obtain ⟨y, rfl, hall⟩ := programsProduct_cases hL hs
     have hnet : NetworkStep P r v lp μ₂ := (System.mapIdle_step_some hlp _).mp hn
     obtain ⟨v', rfl⟩ := networkStep_dirac hnet
     exact ⟨y, v', prodPMF_pure_pure _ _, fun i => System.step_of_mapIdle_step hlp (hall i), hnet⟩
@@ -136,16 +136,16 @@ theorem roundPrograms_label_inversion {lp : ProgramLabel P.n}
   · exact absurd hτ hL
 
 /-- **The round's programs refuse** a family label outside the round's interface. -/
-theorem roundPrograms_outside_inversion (hlp : programLabelMap P.n L = some ProgramLabel.outside)
-    {μ : PMF ((∀ _ : Fin P.n, ProcessRecord P.n) × Option Bool)}
+theorem roundPrograms_outside_cases (hlp : programLabelMap P.n L = some ProgramLabel.outside)
+    {μ : PMF ((∀ _ : Fin P.n, ProcessVariables P.n) × Option Bool)}
     (h : (roundPrograms P r).step (u, v) L μ) : False := by
-  obtain ⟨y, w, -, -, hnet⟩ := roundPrograms_label_inversion hlp (by simp) h
+  obtain ⟨y, w, -, -, hnet⟩ := roundPrograms_label_cases hlp (by simp) h
   exact networkStep_outside hnet
 
 /-- The stutter of the round's programs, read off a Dirac successor. -/
 theorem roundPrograms_idle_pure (hlp : programLabelMap P.n L = none)
     (h : (roundPrograms P r).step (u, v) L (PMF.pure (x, v'))) : x = u ∧ v' = v := by
-  have he := PMF.pure_injective (roundPrograms_idle_inversion hlp h)
+  have he := PMF.pure_injective (roundPrograms_idle_cases hlp h)
   rw [Prod.mk.injEq] at he
   exact he
 
@@ -153,7 +153,7 @@ theorem roundPrograms_idle_pure (hlp : programLabelMap P.n L = none)
 theorem roundPrograms_label_pure {lp : ProgramLabel P.n} (hlp : programLabelMap P.n L = some lp)
     (hlpτ : lp ≠ ProgramLabel.tau) (h : (roundPrograms P r).step (u, v) L (PMF.pure (x, v'))) :
     (∀ i, ProgramStep P r i (u i) lp (PMF.pure (x i))) ∧ NetworkStep P r v lp (PMF.pure v') := by
-  obtain ⟨y, w, hμ, hproc, hnet⟩ := roundPrograms_label_inversion hlp hlpτ h
+  obtain ⟨y, w, hμ, hproc, hnet⟩ := roundPrograms_label_cases hlp hlpτ h
   have he := PMF.pure_injective hμ
   rw [Prod.mk.injEq] at he
   obtain ⟨rfl, rfl⟩ := he
@@ -192,15 +192,16 @@ section Factors
 variable {P : Parameters} {r : ℕ} {G₁ G₂ : Type}
   {firstGather : System G₁ (Gather.InstanceLabel P.n Bool)}
   {secondGather : System G₂ (Gather.InstanceLabel P.n (Option Bool))}
-  {u x : ∀ _ : Fin P.n, ProcessRecord P.n} {v v' : Option Bool} {c c' : G₁} {d d' : G₂}
+  {u x : ∀ _ : Fin P.n, ProcessVariables P.n} {v v' : Option Bool} {c c' : G₁} {d d' : G₂}
   {L : RoundLabel P.n}
 
 /-- **The joint inversion.** A visible transition of the round's programs beside the two gather
 instances: every factor steps on the label, and the joint distribution is their Dirac product. -/
-theorem roundOverGathersExtended_joint_inversion (h1 : firstGather.IsLTS) (h2 : secondGather.IsLTS)
+theorem roundOverGathersExtended_synchronised_cases (h1 : firstGather.IsLTS) (h2 :
+  secondGather.IsLTS)
     (hL : L ≠ (Silent.τ : RoundLabel P.n)) {μ : PMF (RoundStateOverGathers P.n G₁ G₂)}
     (h : (roundOverGathersExtended P r firstGather secondGather).step ((u, v), (c, d)) L μ) :
-    ∃ (x : ∀ _ : Fin P.n, ProcessRecord P.n) (v' : Option Bool) (c' : G₁) (d' : G₂),
+    ∃ (x : ∀ _ : Fin P.n, ProcessVariables P.n) (v' : Option Bool) (c' : G₁) (d' : G₂),
       μ = PMF.pure ((x, v'), (c', d')) ∧
       (roundPrograms P r).step (u, v) L (PMF.pure (x, v')) ∧
       (firstGather.mapIdle (firstGatherLabelMap P.n)).step c L (PMF.pure c') ∧
@@ -220,7 +221,7 @@ theorem roundOverGathersExtended_joint_inversion (h1 : firstGather.IsLTS) (h2 : 
 
 /-- **The silent inversion.** A silent transition of the round's programs beside the two gather
 instances is a silent step of one gather instance. -/
-theorem roundOverGathersExtended_tau_inversion (h1 : firstGather.IsLTS) (h2 : secondGather.IsLTS)
+theorem roundOverGathersExtended_tau_cases (h1 : firstGather.IsLTS) (h2 : secondGather.IsLTS)
     {μ : PMF (RoundStateOverGathers P.n G₁ G₂)}
     (h : (roundOverGathersExtended P r firstGather secondGather).step ((u, v), (c,
       d)) (Silent.τ : RoundLabel P.n) μ) :
@@ -326,8 +327,9 @@ its guards together with the Dirac it produces, and the idle transition of a
 non-participant as the identity. The state and the distribution are variables,
 so `cases` unifies against any state of the program. -/
 
-section ProgramStepInversion
-variable {P : Parameters} {r : ℕ} {j : Fin P.n} {p : ProcessRecord P.n} {ν : PMF (ProcessRecord
+section ProgramStepCases
+variable {P : Parameters} {r : ℕ} {j : Fin P.n} {p : ProcessVariables P.n} {ν : PMF
+  (ProcessVariables
   P.n)}
 
 /-- A call transition names the program's own round. -/
@@ -348,7 +350,7 @@ theorem programStep_callG_own {b : Bool} (h : ProgramStep P r j p (.callG r j b)
   case callG => exact ⟨by assumption, rfl⟩
   case callGIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem programStep_callG_foreign {i : Fin P.n} {b : Bool} (hi : i ≠ j)
+theorem programStep_callG_notOwn {i : Fin P.n} {b : Bool} (hi : i ≠ j)
     (h : ProgramStep P r j p (.callG r i b) ν) : ν = PMF.pure p := by
   cases h
   case callG => exact absurd rfl hi
@@ -368,7 +370,7 @@ theorem programStep_firstGatherReturn_own {g : Fin P.n → Option Bool}
   case firstGatherReturn => exact ⟨by assumption, by assumption, rfl⟩
   case firstGatherReturnIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem programStep_firstGatherReturn_foreign {i : Fin P.n} {g : Fin P.n → Option Bool}
+theorem programStep_firstGatherReturn_notOwn {i : Fin P.n} {g : Fin P.n → Option Bool}
     {C : Gather.AcceptedPairs P.n Bool} (hi : i ≠ j)
     (h : ProgramStep P r j p (.firstGatherReturn i g C) ν) : ν = PMF.pure p := by
   cases h
@@ -383,7 +385,7 @@ theorem programStep_secondGatherCall_own {x : Option Bool}
   case secondGatherCall => exact ⟨by assumption, by assumption, rfl⟩
   case secondGatherCallIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem programStep_secondGatherCall_foreign {i : Fin P.n} {x : Option Bool} (hi : i ≠ j)
+theorem programStep_secondGatherCall_notOwn {i : Fin P.n} {x : Option Bool} (hi : i ≠ j)
     (h : ProgramStep P r j p (.secondGatherCall i x) ν) : ν = PMF.pure p := by
   cases h
   case secondGatherCall => exact absurd rfl hi
@@ -398,7 +400,7 @@ theorem programStep_secondGatherReturn_own {g : Fin P.n → Option (Option Bool)
   case secondGatherReturn => exact ⟨by assumption, by assumption, rfl⟩
   case secondGatherReturnIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem programStep_secondGatherReturn_foreign {i : Fin P.n} {g : Fin P.n → Option (Option Bool)}
+theorem programStep_secondGatherReturn_notOwn {i : Fin P.n} {g : Fin P.n → Option (Option Bool)}
     {C : Gather.AcceptedPairs P.n (Option Bool)} (hi : i ≠ j)
     (h : ProgramStep P r j p (.secondGatherReturn i g C) ν) : ν = PMF.pure p := by
   cases h
@@ -413,16 +415,16 @@ theorem programStep_retG_own {out : GBCAOutput} {bnd : Bool}
   case retG => exact ⟨by assumption, by assumption, rfl⟩
   case retGIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem programStep_retG_foreign {i : Fin P.n} {out : GBCAOutput} {bnd : Bool} (hi : i ≠ j)
+theorem programStep_retG_notOwn {i : Fin P.n} {out : GBCAOutput} {bnd : Bool} (hi : i ≠ j)
     (h : ProgramStep P r j p (.retG r i out bnd) ν) : ν = PMF.pure p := by
   cases h
   case retG => exact absurd rfl hi
   case retGIdle => rfl
 
-end ProgramStepInversion
+end ProgramStepCases
 /-! ### The transitions of the round's network, by label class -/
 
-section NetworkStepInversion
+section NetworkStepCases
 variable {P : Parameters} {r : ℕ} {w : Option Bool} {μ : PMF (Option Bool)}
 
 theorem networkStep_callG {id : Fin P.n} {b : Bool} (h : NetworkStep P r w (.callG r id b) μ) :
@@ -450,7 +452,7 @@ theorem networkStep_retG {id : Fin P.n} {out : GBCAOutput} {bnd : Bool}
     (h : NetworkStep P r w (.retG r id out bnd) μ) :
     bnd = w.getD (boundOfCore P ∅) ∧ μ = PMF.pure w := by cases h; exact ⟨rfl, rfl⟩
 
-end NetworkStepInversion
+end NetworkStepCases
 end GBCA.ByAFW
 end ABA
 end PLTS

@@ -31,17 +31,17 @@ three where they stand and writes the ghost keeps the conjunct. -/
 
 section Invariants
 
-variable {u x : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} {w v : NetworkState P.n}
+variable {u x : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} {w v : NetworkState P.n}
 
 /-- The bound invariant survives a transition that leaves the three fields it reads where they
 stand and writes the ghost through `AFW.ghostStep`. -/
 theorem boundInvariant_writeGhost (hI : BoundInvariant P u w)
-    (hcand : ∀ i r, ((x i).2.roundRecord r).candidate = ((u i).2.roundRecord r).candidate)
+    (hcand : ∀ i r, ((x i).2.roundVariables r).candidate = ((u i).2.roundVariables r).candidate)
     (hinput : ∀ i r,
-      (((x i).2.roundRecord r).secondGather.process).input = (((u i).2.roundRecord
-        r).secondGather.process).input)
-    (hout : ∀ i r, ((x i).2.roundRecord r).output = ((u i).2.roundRecord r).output)
-    (hv : ∀ r, v.ghostRecord r = w.ghostRecord r)
+      (((x i).2.roundVariables r).secondGather.processVariables).input = (((u i).2.roundVariables
+        r).secondGather.processVariables).input)
+    (hout : ∀ i r, ((x i).2.roundVariables r).output = ((u i).2.roundVariables r).output)
+    (hv : ∀ r, v.ghost r = w.ghost r)
     (L : Implementation.ExtendedLabel P.n (Message P.n) (RoundEvent P.n)) :
     BoundInvariant P x (v.writeGhost (ghostStep P) L) :=
   boundInvariant_of hI hcand hinput hout

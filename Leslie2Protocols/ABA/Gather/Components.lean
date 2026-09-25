@@ -53,7 +53,7 @@ A gather program reads no neighbouring coordinate. What a broadcast instance has
 written on the return event into its own record: `inputBroadcastReturned k` is the value instance
 `k` returned here, `bindBroadcastReturned q` is the payload bind instance `q` returned here. The
 four transitions that read what has been returned -- `sendEcho`, `sendVote`, `bindCall` and `ret`
--- read the returned values through `ProcessRecord.accepted`, `holdsInputBroadcastReturn`,
+-- read the returned values through `ProcessVariables.accepted`, `holdsInputBroadcastReturn`,
 `holdsBindBroadcastReturn` and `approvedBy`.
 
 ## The core
@@ -142,7 +142,7 @@ def gatherEvents (n : ℕ) (X : Type) : Set (GatherLabel n X) := {l | ∃ e : Ga
 
 /-- The local record of one gather program: the gather record beside the returned values of what the
 broadcast instances have returned here. -/
-structure ProcessRecord (n : ℕ) (X : Type) extends BaseProcessRecord n X where
+structure ProcessVariables (n : ℕ) (X : Type) extends BaseProcessVariables n X where
   /-- `inputBroadcastReturned k` — the value the instance broadcasting `k`'s input returned
   here. -/
   inputBroadcastReturned : Fin n → Option X
@@ -152,29 +152,30 @@ structure ProcessRecord (n : ℕ) (X : Type) extends BaseProcessRecord n X where
 
 /-- The initial local record: nothing called, nothing sent, nothing returned
 here. -/
-def ProcessRecord.initial (n : ℕ) (X : Type) : ProcessRecord n X :=
-  { BaseProcessRecord.initial n X with
+def ProcessVariables.initial (n : ℕ) (X : Type) : ProcessVariables n X :=
+  { BaseProcessVariables.initial n X with
     inputBroadcastReturned := fun _ => none,
     bindBroadcastReturned := fun _ => none }
 
 /-- `p` holds the value `v` of the instance broadcasting `k`'s input. -/
-def holdsInputBroadcastReturn {n : ℕ} {X : Type} (p : ProcessRecord n X) (k : Fin n) (v : X) : Prop
+def holdsInputBroadcastReturn {n : ℕ} {X : Type} (p : ProcessVariables n X) (k : Fin n) (v : X) :
+  Prop
   :=
   p.inputBroadcastReturned k = some v
 
 /-- `p` holds the payload `U` of the instance broadcasting `q`'s `BIND`
 payload. -/
-def holdsBindBroadcastReturn {n : ℕ} {X : Type} (p : ProcessRecord n X) (q : Fin n)
+def holdsBindBroadcastReturn {n : ℕ} {X : Type} (p : ProcessVariables n X) (q : Fin n)
     (U : AcceptedPairs n X) : Prop :=
   p.bindBroadcastReturned q = some U
 
 /-- A payload set is approved by `p` when `p` holds every one of its pairs. -/
-def approvedBy {n : ℕ} {X : Type} (p : ProcessRecord n X) (A : AcceptedPairs n X) : Prop :=
+def approvedBy {n : ℕ} {X : Type} (p : ProcessVariables n X) (A : AcceptedPairs n X) : Prop :=
   A.subMap p.inputBroadcastReturned
 
 /-- The accepted pairs of `p`: the entries of what its input instances returned. AFW25's
 Algorithm 5 writes this set `AP_i` and multicasts it as the `ECHO` payload. -/
-def ProcessRecord.accepted {n : ℕ} {X : Type} [DecidableEq X] (p : ProcessRecord n X) :
+def ProcessVariables.accepted {n : ℕ} {X : Type} [DecidableEq X] (p : ProcessVariables n X) :
   AcceptedPairs n X :=
   Finset.univ.biUnion fun k =>
     match p.inputBroadcastReturned k with
@@ -182,7 +183,7 @@ def ProcessRecord.accepted {n : ℕ} {X : Type} [DecidableEq X] (p : ProcessReco
     | none => ∅
 
 /-- A pair is accepted exactly when the input instance's returned value holds it. -/
-theorem ProcessRecord.mem_accepted {n : ℕ} {X : Type} [DecidableEq X] {p : ProcessRecord n X}
+theorem ProcessVariables.mem_accepted {n : ℕ} {X : Type} [DecidableEq X] {p : ProcessVariables n X}
     {k : Fin n} {v : X} : (k, v) ∈ p.accepted ↔ p.inputBroadcastReturned k = some v := by
   constructor
   · intro h
@@ -199,9 +200,10 @@ theorem ProcessRecord.mem_accepted {n : ℕ} {X : Type} [DecidableEq X] {p : Pro
     simp
 
 /-- The accepted pairs are entries of the input instance's returned value. -/
-theorem ProcessRecord.accepted_subMap {n : ℕ} {X : Type} [DecidableEq X] (p : ProcessRecord n X) :
+theorem ProcessVariables.accepted_subMap {n : ℕ} {X : Type} [DecidableEq X] (p : ProcessVariables n
+  X) :
     p.accepted.subMap p.inputBroadcastReturned :=
-  fun _ ha => ProcessRecord.mem_accepted.mp ha
+  fun _ ha => ProcessVariables.mem_accepted.mp ha
 
 /-- The state of the gather network: the per-sender sent sets and the corrupted
 set beside the instance's core. -/
@@ -221,11 +223,12 @@ def NetworkState.initial (n : ℕ) (X : Type) : NetworkState n X :=
 (`coreOf_networkState_only`), so any record vector gives the same set. -/
 noncomputable def coreOfNetwork {X : Type} (P : Parameters)
     (w : ABA.NetworkState P.n (Message P.n X)) : AcceptedPairs P.n X :=
-  coreOf P ((fun _ => LocalState.initial P.n (Message P.n X) (BaseProcessRecord.initial P.n X)), w)
+  coreOf P ((fun _ => LocalState.initial P.n (Message P.n X) (BaseProcessVariables.initial P.n X)),
+    w)
 
 /-- The core of an instance state is the core of its network state. -/
 theorem coreOf_eq_coreOfNetwork {X : Type} (P : Parameters)
-    (w : InstanceState P.n (BaseProcessRecord P.n X) (Message P.n X)) :
+    (w : InstanceState P.n (BaseProcessVariables P.n X) (Message P.n X)) :
     coreOf P w = coreOfNetwork P w.2 :=
   coreOf_networkState_only w _ rfl
 
@@ -299,12 +302,12 @@ returned value. -/
 /-- The step relation of the gather program of process `j`. All transitions are
 Dirac. -/
 inductive ProgramStep (P : Parameters) (j : Fin P.n) :
-    LocalState P.n (ProcessRecord P.n X) (Message P.n X) → GatherLabel P.n X →
-      PMF (LocalState P.n (ProcessRecord P.n X) (Message P.n X)) → Prop
+    LocalState P.n (ProcessVariables P.n X) (Message P.n X) → GatherLabel P.n X →
+      PMF (LocalState P.n (ProcessVariables P.n X) (Message P.n X)) → Prop
   /-- The call arrives: record the payload. -/
-  | call (p) (x : X) (h : p.process.input = none) :
+  | call (p) (x : X) (h : p.processVariables.input = none) :
       ProgramStep P j p (Sum.inl (Sum.inl (.call j x)))
-        (PMF.pure (p.setProcess { p.process with input := some x }))
+        (PMF.pure (p.setProcessVariables { p.processVariables with input := some x }))
   /-- A call at another process is not `j`'s business. -/
   | callIdle (p) (i : Fin P.n) (x : X) (hi : i ≠ j) :
       ProgramStep P j p (Sum.inl (Sum.inl (.call i x))) (PMF.pure p)
@@ -317,22 +320,23 @@ inductive ProgramStep (P : Parameters) (j : Fin P.n) :
   /-- `ECHO`: `j` is called and its accepted pairs number at least `n − f`, the
   source blueprint's `|AP| ≥ n − f`. The payload is those pairs, `T_i ← AP_i` of
   AFW25's Algorithm 5, line 9. -/
-  | sendEcho (p) (hin : p.process.input ≠ none)
-      (hcard : P.n - P.f ≤ p.process.accepted.card)
-      (hsend : p.process.sentEcho = none) :
-      ProgramStep P j p (Sum.inr (.send j (.echo p.process.accepted)))
-        (PMF.pure (p.setProcess { p.process with sentEcho := some p.process.accepted }))
+  | sendEcho (p) (hin : p.processVariables.input ≠ none)
+      (hcard : P.n - P.f ≤ p.processVariables.accepted.card)
+      (hsend : p.processVariables.sentEcho = none) :
+      ProgramStep P j p (Sum.inr (.send j (.echo p.processVariables.accepted)))
+        (PMF.pure (p.setProcessVariables
+          { p.processVariables with sentEcho := some p.processVariables.accepted }))
   /-- `VOTE U`: `n − f` senders' approved `ECHO` payloads, each contained in
   `U`, are delivered here, and `j` has multicast its own `ECHO`. The main thread
   of AFW25's Algorithm 5 sends `ECHO` before `VOTE`. -/
-  | sendVote (p) (U : AcceptedPairs P.n X) (hin : p.process.input ≠ none)
-      (hech : p.process.sentEcho ≠ none)
-      (happ : approvedBy p.process U)
+  | sendVote (p) (U : AcceptedPairs P.n X) (hin : p.processVariables.input ≠ none)
+      (hech : p.processVariables.sentEcho ≠ none)
+      (happ : approvedBy p.processVariables U)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
-        ∀ q ∈ Q, ∃ A, Message.echo A ∈ p.received q ∧ approvedBy p.process A ∧ A ⊆ U)
-      (hsend : p.process.sentVote = none) :
+        ∀ q ∈ Q, ∃ A, Message.echo A ∈ p.received q ∧ approvedBy p.processVariables A ∧ A ⊆ U)
+      (hsend : p.processVariables.sentVote = none) :
       ProgramStep P j p (Sum.inr (.send j (.vote U)))
-        (PMF.pure (p.setProcess { p.process with sentVote := some U }))
+        (PMF.pure (p.setProcessVariables { p.processVariables with sentVote := some U }))
   /-- A multicast by another process is not `j`'s business. -/
   | sendIdle (p) (i : Fin P.n) (m : Message P.n X) (hi : i ≠ j) :
       ProgramStep P j p (Sum.inr (.send i m)) (PMF.pure p)
@@ -345,16 +349,16 @@ inductive ProgramStep (P : Parameters) (j : Fin P.n) :
   /-- An input instance returns here: record the returned value. -/
   | inputBroadcastRetReceive (p) (k : Fin P.n) (v : X) :
       ProgramStep P j p (Sum.inr (.inputBroadcastRet k j v))
-        (PMF.pure (p.setProcess { p.process with
+        (PMF.pure (p.setProcessVariables { p.processVariables with
           inputBroadcastReturned :=
-            Function.update p.process.inputBroadcastReturned k (some v) }))
+            Function.update p.processVariables.inputBroadcastReturned k (some v) }))
   /-- An input instance's return to another process is not `j`'s business. -/
   | inputBroadcastRetIdle (p) (k i : Fin P.n) (v : X) (hi : i ≠ j) :
       ProgramStep P j p (Sum.inr (.inputBroadcastRet k i v)) (PMF.pure p)
   /-- `j` calls the instance broadcasting its input: the payload is the one its gather record
   holds, and the record does not move. The instance's own guard decides whether the call lands.
   AFW25's Algorithm 5, line 6. -/
-  | inputBroadcastCall (p) (x : X) (hin : p.process.input = some x) :
+  | inputBroadcastCall (p) (x : X) (hin : p.processVariables.input = some x) :
       ProgramStep P j p (Sum.inr (.inputBroadcastCall j x)) (PMF.pure p)
   /-- Another process's input-broadcast call is not `j`'s business. -/
   | inputBroadcastCallIdle (p) (i : Fin P.n) (x : X) (hi : i ≠ j) :
@@ -365,23 +369,23 @@ inductive ProgramStep (P : Parameters) (j : Fin P.n) :
   `VOTE` before `BIND`, and sends `BIND` once, at line 17. The payload handed
   to the broadcast is written to the record; the bind instance's own guard decides
   whether the call lands. -/
-  | bindCall (p) (U : AcceptedPairs P.n X) (hin : p.process.input ≠ none)
-      (hvot : p.process.sentVote ≠ none)
-      (hsnd : p.process.sentBind = none)
-      (happ : approvedBy p.process U)
+  | bindCall (p) (U : AcceptedPairs P.n X) (hin : p.processVariables.input ≠ none)
+      (hvot : p.processVariables.sentVote ≠ none)
+      (hsnd : p.processVariables.sentBind = none)
+      (happ : approvedBy p.processVariables U)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
-        ∀ q ∈ Q, ∃ W, Message.vote W ∈ p.received q ∧ approvedBy p.process W ∧ W ⊆ U) :
+        ∀ q ∈ Q, ∃ W, Message.vote W ∈ p.received q ∧ approvedBy p.processVariables W ∧ W ⊆ U) :
       ProgramStep P j p (Sum.inr (.bindCall j U))
-        (PMF.pure (p.setProcess { p.process with sentBind := some U }))
+        (PMF.pure (p.setProcessVariables { p.processVariables with sentBind := some U }))
   /-- Another process's bind call is not `j`'s business. -/
   | bindCallIdle (p) (i : Fin P.n) (U : AcceptedPairs P.n X) (hi : i ≠ j) :
       ProgramStep P j p (Sum.inr (.bindCall i U)) (PMF.pure p)
   /-- A bind instance returns here: record the returned value. -/
   | bindRetReceive (p) (q : Fin P.n) (U : AcceptedPairs P.n X) :
       ProgramStep P j p (Sum.inr (.bindRet q j U))
-        (PMF.pure (p.setProcess { p.process with
+        (PMF.pure (p.setProcessVariables { p.processVariables with
           bindBroadcastReturned :=
-            Function.update p.process.bindBroadcastReturned q (some U) }))
+            Function.update p.processVariables.bindBroadcastReturned q (some U) }))
   /-- A bind instance's return to another process is not `j`'s business. -/
   | bindRetIdle (p) (q i : Fin P.n) (U : AcceptedPairs P.n X) (hi : i ≠ j) :
       ProgramStep P j p (Sum.inr (.bindRet q i U)) (PMF.pure p)
@@ -389,14 +393,15 @@ inductive ProgramStep (P : Parameters) (j : Fin P.n) :
   here are sub-maps of it, and `j` has called its own bind broadcast. The `BIND`
   broadcast of AFW25's Algorithm 5, line 17, precedes the wait of line 18. The
   core on the label is the network's. -/
-  | ret (p) (g : Fin P.n → Option X) (C : AcceptedPairs P.n X) (hin : p.process.input ≠ none)
-      (hbind : p.process.sentBind ≠ none)
-      (hsub : ∀ k x, g k = some x → holdsInputBroadcastReturn p.process k x)
+  | ret (p) (g : Fin P.n → Option X) (C : AcceptedPairs P.n X) (hin : p.processVariables.input ≠
+      none)
+      (hbind : p.processVariables.sentBind ≠ none)
+      (hsub : ∀ k x, g k = some x → holdsInputBroadcastReturn p.processVariables k x)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
-        ∀ q ∈ Q, ∃ U, holdsBindBroadcastReturn p.process q U ∧ AcceptedPairs.subMap U g)
-      (hr : p.process.returned = false) :
+        ∀ q ∈ Q, ∃ U, holdsBindBroadcastReturn p.processVariables q U ∧ AcceptedPairs.subMap U g)
+      (hr : p.processVariables.returned = false) :
       ProgramStep P j p (Sum.inl (Sum.inl (.ret j g C)))
-        (PMF.pure (p.setProcess { p.process with returned := true }))
+        (PMF.pure (p.setProcessVariables { p.processVariables with returned := true }))
   /-- A return at another process is not `j`'s business. -/
   | retIdle (p) (i : Fin P.n) (g : Fin P.n → Option X) (C : AcceptedPairs P.n X) (hi : i ≠ j) :
       ProgramStep P j p (Sum.inl (Sum.inl (.ret i g C))) (PMF.pure p)
@@ -423,8 +428,8 @@ inductive NetworkStep (P : Parameters) :
       NetworkStep P w (Sum.inl (Sum.inr (.callLoop id x))) (PMF.pure w)
   /-- The network's half of a multicast: record the message under its sender. -/
   | send (w) (j : Fin P.n) (m : Message P.n X) :
-      NetworkStep P w (Sum.inr (.send j m)) (PMF.pure { w with network := w.network.recordSent j m
-        })
+      NetworkStep P w (Sum.inr (.send j m)) (PMF.pure
+        { w with network := w.network.recordSent j m })
   /-- The network's half of a delivery: the message must be sent under the
   named sender, and delivery does not consume it (D5). -/
   | deliver (w) (i j : Fin P.n) (m : Message P.n X) (h : m ∈ w.network.sent j) :
@@ -462,19 +467,19 @@ inductive NetworkStep (P : Parameters) :
 
 /-- The gather program of process `j`. -/
 noncomputable def gatherProgram (P : Parameters) (j : Fin P.n) :
-    System (LocalState P.n (ProcessRecord P.n X) (Message P.n X)) (GatherLabel P.n X) where
-  init := LocalState.initial P.n (Message P.n X) (ProcessRecord.initial P.n X)
+    System (LocalState P.n (ProcessVariables P.n X) (Message P.n X)) (GatherLabel P.n X) where
+  init := LocalState.initial P.n (Message P.n X) (ProcessVariables.initial P.n X)
   step := ProgramStep P j
 
 @[simp] theorem gatherProgram_init (P : Parameters) (j : Fin P.n) :
     (gatherProgram P j (X := X)).init = LocalState.initial P.n (Message P.n X)
-      (ProcessRecord.initial P.n X)
+      (ProcessVariables.initial P.n X)
       :=
   rfl
 
 @[simp] theorem gatherProgram_step (P : Parameters) (j : Fin P.n)
-    (p : LocalState P.n (ProcessRecord P.n X) (Message P.n X)) (l : GatherLabel P.n X)
-    (ν : PMF (LocalState P.n (ProcessRecord P.n X) (Message P.n X))) :
+    (p : LocalState P.n (ProcessVariables P.n X) (Message P.n X)) (l : GatherLabel P.n X)
+    (ν : PMF (LocalState P.n (ProcessVariables P.n X) (Message P.n X))) :
     (gatherProgram P j).step p l ν ↔ ProgramStep P j p l ν := Iff.rfl
 
 /-- The gather network. -/
@@ -492,7 +497,7 @@ noncomputable def gatherNetwork (P : Parameters) (X : Type) [DecidableEq X] :
 /-- The gather tier: the programs beside the gather network. -/
 noncomputable def gatherPrograms (P : Parameters) (X : Type) [DecidableEq X] :
     System
-    ((∀ _ : Fin P.n, LocalState P.n (ProcessRecord P.n X) (Message P.n X)) × NetworkState P.n X)
+    ((∀ _ : Fin P.n, LocalState P.n (ProcessVariables P.n X) (Message P.n X)) × NetworkState P.n X)
     (GatherLabel P.n X) :=
   (System.synchronisedProduct (gatherProgram P (X := X))).parallel (gatherNetwork P X)
 

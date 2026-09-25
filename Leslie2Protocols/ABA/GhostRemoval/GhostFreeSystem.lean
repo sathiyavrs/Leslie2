@@ -4,22 +4,23 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.Implementation.NetworkStateWritesAndErasures
-import Leslie2Protocols.Framework.Erasure
+import Leslie2Protocols.ABA.Implementation.NetworkStateWritesAndRemovals
+import Leslie2Protocols.Framework.AuxiliaryVariableRemoval
 
 /-!
 # Erasing the implementation's ghost
 
 The network of the implementation holds one record no program reads: the ghost
-record `NetworkState.ghostRecord` of every round, written by `ghostStep` and read out by
+record `NetworkState.ghost` of every round, written by `ghostStep` and read out by
 `ghostOutput` at the two graded-agreement returns. That read decides the bit a return
 announces and not whether the return fires: the hypothesis `ghostOutput_total` below asks it
 to admit a bit at every state. This file erases it.
 
 The system it is erased to is `systemGhostFree`, the implementation over the trivial ghost
 `Unit` whose `ghostOutput` is the full relation: the same programs, the same network transitions,
-and a graded-agreement return free to announce either bit. The erasure is a `StateErasure`
-(`Framework/Erasure.lean`) along the projection
+and a graded-agreement return free to announce either bit. The erasure is a
+`AuxiliaryVariableRemoval`
+(`Framework/AuxiliaryVariableRemoval.lean`) along the projection
 
   `π = Prod.map id (Prod.map NetworkState.forgetGhost id)`
 
@@ -37,12 +38,12 @@ admits, which is what the hypothesis `ghostOutput_total` supplies. Both algorith
 it, their `ghostOutput` being an equation.
 
 The pipeline of `Implementation/System.lean` carries the erasure from the adversary to the
-system. The three congruences of `Framework/Erasure.lean` ask the neighbours to be
+system. The three congruences of `Framework/AuxiliaryVariableRemoval.lean` ask the neighbours to be
 saturated along `φ`: the process group is, because a program's return transition takes
 the announced bit free (`IsRoundStep.boundBitFree`), and the coin oracle is, because a
 graded-agreement return is foreign to every coin round. Hiding `Label.hiddenAPI` collapses
 the erasure to the identity on labels, since every label `φ` identifies with a different
-one is a graded-agreement return, and those are hidden. The conclusion `system_erasure` is
+one is a graded-agreement return, and those are hidden. The conclusion `system_ghostRemoval` is
 therefore an equality of achievable trace distributions, with no label map in the
 statement.
 -/
@@ -55,7 +56,8 @@ namespace Implementation
 
 section GhostFreeSystem
 variable (P : Parameters) (M E S : Type) [DecidableEq M]
-    (roundStep : Fin P.n → ProcessRecord P.n S → ExtendedLabel P.n M E → PMF (ProcessRecord P.n S) →
+    (roundStep : Fin P.n → ProcessVariables P.n S → ExtendedLabel P.n M E → PMF (ProcessVariables
+      P.n S) →
       Prop)
     (callPayload : Fin P.n → Bool → Option M)
 
@@ -179,7 +181,7 @@ end Labels
 The network is the one component whose state carries the ghost, and the two
 graded-agreement returns are the one pair of transitions that read it. -/
 
-section NetworkErasure
+section NetworkRemoval
 variable {P : Parameters} {M E G : Type} [DecidableEq M] [Inhabited G]
     {callPayload : Fin P.n → Bool → Option M}
     {ghostStep : ExtendedLabel P.n M E → NetworkState P.n M G → G → G}
@@ -209,10 +211,10 @@ The lift matches a ghost-free transition by the transition of the same name at t
 state. On a graded-agreement return the announced bit is replaced by one the relation `ghostOutput`
 admits, which `ghostOutput_total` supplies, and the two bits agree under
 `forgetBoundExtended`. -/
-theorem network_erasure
+theorem network_ghostRemoval
     (ghostOutput_total : ∀ (s : NetworkState P.n M G) (r : ℕ) (id : Fin P.n) (out : GBCAOutput),
       ∃ bnd, ghostOutput s r id out bnd) :
-    StateErasure (network P M E G callPayload ghostStep ghostOutput)
+    AuxiliaryVariableRemoval (network P M E G callPayload ghostStep ghostOutput)
       (networkGhostFree P M E callPayload) NetworkState.forgetGhost forgetBoundExtended where
   init := rfl
   silent := separatesSilent_forgetBoundExtended
@@ -283,7 +285,7 @@ theorem network_erasure
     case byzantineDecided k b hF =>
       exact ⟨_, _, rfl, NetworkStep.byzantineDecided s k b hF, by simp [PMF.pure_map]⟩
 
-end NetworkErasure
+end NetworkRemoval
 /-! ### The neighbours of the erasure
 
 The network sits in the composition beside the process group and the coin
@@ -293,7 +295,8 @@ adversary announces. -/
 section Saturation
 
 variable (P : Parameters) (M E S : Type)
-    (roundStep : Fin P.n → ProcessRecord P.n S → ExtendedLabel P.n M E → PMF (ProcessRecord P.n S) →
+    (roundStep : Fin P.n → ProcessVariables P.n S → ExtendedLabel P.n M E → PMF (ProcessVariables
+      P.n S) →
       Prop)
 
 /-- **A program is saturated along the erasure.** The announced bound bit is the
@@ -359,10 +362,11 @@ end Saturation
 
 /-! ### The erasure of the implementation -/
 
-section SystemErasure
+section SystemRemoval
 
 variable (P : Parameters) (M E S G : Type) [DecidableEq M] [Inhabited G]
-    (roundStep : Fin P.n → ProcessRecord P.n S → ExtendedLabel P.n M E → PMF (ProcessRecord P.n S) →
+    (roundStep : Fin P.n → ProcessVariables P.n S → ExtendedLabel P.n M E → PMF (ProcessVariables
+      P.n S) →
       Prop)
     [IsRoundStep P M E S roundStep]
     (callPayload : Fin P.n → Bool → Option M)
@@ -375,12 +379,12 @@ oracle, parallel composition against the process group, abstraction of the rende
 alphabet, and restriction along the shared alphabet. Hiding `Label.hiddenAPI` then
 collapses the label identification to the identity, every label the identification moves
 being a graded-agreement return. -/
-theorem system_stateErasure
+theorem system_auxiliaryVariableRemoval
     (ghostOutput_total : ∀ (s : NetworkState P.n M G) (r : ℕ) (id : Fin P.n) (out : GBCAOutput),
       ∃ bnd, ghostOutput s r id out bnd) :
-    StateErasure (system P M E S G roundStep callPayload ghostStep ghostOutput)
+    AuxiliaryVariableRemoval (system P M E S G roundStep callPayload ghostStep ghostOutput)
       (systemGhostFree P M E S roundStep callPayload) forgetGhostState id := by
-  have hnet := network_erasure (callPayload := callPayload) (ghostStep := ghostStep)
+  have hnet := network_ghostRemoval (callPayload := callPayload) (ghostStep := ghostStep)
     ghostOutput_total
   have hpre := (hnet.parallel_right (coinOverExtendedAlphabet_labelSaturated P M E)).parallel_left
     (programSynchronisedProduct_labelSaturated P M E S roundStep)
@@ -392,21 +396,21 @@ theorem system_stateErasure
 /-- **The ghost changes no trace distribution.** The ghost decides no transition's firing, the
 read admitting a bit at every state, and the bit it announces is hidden at protocol level,
 so the implementation and the ghost-free system achieve the same trace distributions. -/
-theorem system_erasure
+theorem system_ghostRemoval
     (ghostOutput_total : ∀ (s : NetworkState P.n M G) (r : ℕ) (id : Fin P.n) (out : GBCAOutput),
       ∃ bnd, ghostOutput s r id out bnd) :
     achievableTraceDists (system P M E S G roundStep callPayload ghostStep ghostOutput) =
       achievableTraceDists (systemGhostFree P M E S roundStep callPayload) :=
-  (system_stateErasure P M E S G roundStep callPayload ghostStep ghostOutput
+  (system_auxiliaryVariableRemoval P M E S G roundStep callPayload ghostStep ghostOutput
     ghostOutput_total).achievableTraceDists_eq
 
-end SystemErasure
+end SystemRemoval
 
 /-! ### Mechanical axiom check -/
 
-/-- info: 'PLTS.ABA.Implementation.system_erasure' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.ABA.Implementation.system_ghostRemoval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms system_erasure
+#print axioms system_ghostRemoval
 
 end Implementation
 end ABA

@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.GBCA.ABDY.ExclusionCertificate
+import Leslie2Protocols.ABA.GBCA.ABDY.ExclusionWitness
 
 /-!
 # The simulation relation
@@ -21,11 +21,11 @@ directly (`SpecificationRelation.call_eq`, `ret_eq`, `F_eq`). The specification'
 `grade` are bookkeeping the protocol records nothing; the relation carries receipt evidence for them
 instead:
 
-* `exclusion_certificate` — every excluded bit `b` is covered by an exclude certificate
-  `ExclusionCertificate P s b`. The relation bounds `excluded` from above and never from below:
+* `exclusion_witness` — every excluded bit `b` is covered by an exclude certificate
+  `ExclusionWitness P s b`. The relation bounds `excluded` from above and never from below:
   which bits are actually excluded is recovered by case analysis at the return transitions, not
   recorded.
-* `grade2_evidence` / `grade0_evidence` — a grade-2 lock is backed by an `n − f`
+* `grade2_witness` / `grade0_witness` — a grade-2 lock is backed by an `n − f`
   `ECHO5 v` receipt quorum, a grade-0 lock by an `n − f` `ECHO5 ⊥` quorum. Two
   opposing quorums intersect in a correct process that would have multicast
   two different `ECHO5` payloads, contradicting the write-once `echo5_once` —
@@ -36,17 +36,18 @@ instead:
   complement once a return has written it. This is the one clause that bounds `excluded` from below,
   and it holds because the exclusion fires with the round's first return. It supplies the guard
   `(!bnd) ∈ excluded` of a return that announces a bit already on record, and with
-  `exclusion_certificate` it yields `SpecificationRelation.bound_certificate`: the bit on record
+  `exclusion_witness` it yields `SpecificationRelation.bound_witness`: the bit on record
   carries an exclude certificate for its complement. A value-bearing return then announces its own
   value (`SpecificationRelation.retBound_eq`) — the return's `n − f` `VOTE v` receipt quorum refutes
-  a certificate for `v` (`not_exclusionCertificate_of_voteQuorum`), so a bit on record is `v`, and a
+  a certificate for `v` (`not_exclusionWitness_of_voteQuorum`), so a bit on record is `v`, and a
   bit computed here is `v` by `boundOf`. A grade-0 return announces `boundOf`'s bit, whose
-  complement is certified by `exclusionCertificate_boundOf_grade0`.
+  complement is certified by `exclusionWitness_boundOf_grade0`.
 
 Both `bindUnset` guards come from one `ECHO` certificate (`bindUnset_guards`): refine it to an `n −
-f` `INPUT v` receipt quorum (`inputQuorum_of_echoReceiptQuorum`), whose correct senders hold an
+f` `INPUT v` receipt quorum (`inputQuorum_of_receivedEchoQuorum`), whose correct senders hold an
 input (`input_called`, D8) — that is the quorum guard (`quorum_of_messageQuorum`) — and whose count
-feeds `Invariant.support_of_input_receipts` for the `f + 1` InputSupport count (D15). At the grade-0
+feeds `Invariant.support_of_received_inputs` for the `f + 1` InputSupport count (D15). At the
+grade-0
 return the guards read the returner's own `|Valid| > 1` evidence instead
 (`inputSupport_of_bothValid` closes both bits at once), so they are available whichever bit the
 certificate names. `SpecificationRelation.callSupport` reads the counts at the specification
@@ -81,27 +82,27 @@ def excludedOf : Option Bool → Finset Bool
 /-- The simulation relation: the concrete invariant, the abstraction map for
 the fields the protocol itself holds (spec `call` = concrete input, spec
 `ret` = concrete return flags, spec `F` = concrete `F`), and receipt evidence
-for the two fields it does not. `exclusion_certificate` bounds `excluded` from above — an exclusion
+for the two fields it does not. `exclusion_witness` bounds `excluded` from above — an exclusion
 certificate for every excluded bit — and never from below. -/
 structure SpecificationRelation (P : Parameters) (s : RoundState P.n) (t : SpecState P.n) :
   Prop where
   /-- The concrete inductive invariant. -/
   invariant : Invariant P s
   /-- Spec inputs are the concrete inputs. -/
-  call_eq : ∀ id, t.call id = (s.process id).input
+  call_eq : ∀ id, t.call id = (s.processVariables id).input
   /-- Spec return flags are the concrete return flags. -/
-  ret_eq : ∀ id, t.ret id = (s.process id).returned
+  ret_eq : ∀ id, t.ret id = (s.processVariables id).returned
   /-- The corrupted sets agree. -/
   F_eq : t.F = s.F
   /-- Every excluded bit carries a monotone exclude certificate. -/
-  exclusion_certificate : ∀ b, b ∈ t.excluded → ExclusionCertificate P s b
+  exclusion_witness : ∀ b, b ∈ t.excluded → ExclusionWitness P s b
   /-- A grade-2 lock is backed by an `n − f` `ECHO5 v` receipt quorum
   for some bit `v`. -/
-  grade2_evidence : t.grade = some true →
+  grade2_witness : t.grade = some true →
     ∃ v i, P.n - P.f ≤ s.receivedCount i (.echo5 (some v))
   /-- A grade-0 lock is backed by an `n − f` `ECHO5 ⊥` receipt
   quorum. -/
-  grade0_evidence : t.grade = some false →
+  grade0_witness : t.grade = some false →
     ∃ i, P.n - P.f ≤ s.receivedCount i (.echo5 none)
   /-- The round's bound bit determines the exclusion set: nothing is excluded
   while the bit is unwritten, and the complement of the bit is the one excluded
@@ -122,9 +123,9 @@ theorem specificationRelation_init (P : Parameters) (r : ℕ) :
   call_eq := fun _ => rfl
   ret_eq := fun _ => rfl
   F_eq := rfl
-  exclusion_certificate := fun b hb => absurd hb (Finset.notMem_empty b)
-  grade2_evidence := fun h => absurd h (by simp [SpecState.initial])
-  grade0_evidence := fun h => absurd h (by simp [SpecState.initial])
+  exclusion_witness := fun b hb => absurd hb (Finset.notMem_empty b)
+  grade2_witness := fun h => absurd h (by simp [SpecState.initial])
+  grade0_witness := fun h => absurd h (by simp [SpecState.initial])
   bound_excluded := rfl
 
 /-! ### Broadcast compatibility of the relation
@@ -162,26 +163,26 @@ theorem specificationRelation_corrupt (P : Parameters) (r : ℕ) (id : Fin P.n)
     { invariant := hR.invariant.step (Algorithm.fail (r := r) x id)
         (by rw [PMF.mem_support_pure_iff])
       call_eq := fun k => by
-        rw [corrupt_call, RoundState.corrupt_process]
+        rw [corrupt_call, RoundState.corrupt_processVariables]
         exact hR.call_eq k
       ret_eq := fun k => by
-        rw [corrupt_ret, RoundState.corrupt_process]
+        rw [corrupt_ret, RoundState.corrupt_processVariables]
         exact hR.ret_eq k
       F_eq := specificationRelation_corrupt_F_eq hR.F_eq id
-      exclusion_certificate := fun b hb => by
+      exclusion_witness := fun b hb => by
         rw [corrupt_excluded] at hb
-        exact ExclusionCertificate.mono
+        exact ExclusionWitness.mono
           (fun i j m hm => by rw [RoundState.corrupt_received]; exact hm)
-          (fun j w hw => by rw [RoundState.corrupt_process]; exact hw)
+          (fun j w hw => by rw [RoundState.corrupt_processVariables]; exact hw)
           (RoundState.corrupt_F_subset x id)
-          (hR.exclusion_certificate b hb)
-      grade2_evidence := fun hg => by
+          (hR.exclusion_witness b hb)
+      grade2_witness := fun hg => by
         rw [corrupt_grade] at hg
-        obtain ⟨v, i, hi⟩ := hR.grade2_evidence hg
+        obtain ⟨v, i, hi⟩ := hR.grade2_witness hg
         exact ⟨v, i, by rw [RoundState.corrupt_receivedCount]; exact hi⟩
-      grade0_evidence := fun hg => by
+      grade0_witness := fun hg => by
         rw [corrupt_grade] at hg
-        obtain ⟨i, hi⟩ := hR.grade0_evidence hg
+        obtain ⟨i, hi⟩ := hR.grade0_witness hg
         exact ⟨i, by rw [RoundState.corrupt_receivedCount]; exact hi⟩
       bound_excluded := by
         rw [corrupt_excluded, RoundState.corrupt_bound]
@@ -190,10 +191,10 @@ theorem specificationRelation_corrupt (P : Parameters) (r : ℕ) (id : Fin P.n)
 /-- The bound bit on record carries an exclude certificate for its complement:
 the specification has excluded that complement, and every excluded bit is
 certified. -/
-theorem SpecificationRelation.bound_certificate {s : RoundState P.n} {t : SpecState P.n}
+theorem SpecificationRelation.bound_witness {s : RoundState P.n} {t : SpecState P.n}
     (hR : SpecificationRelation P s t) (β : Bool) (hb : s.bound = some β) :
-    ExclusionCertificate P s (!β) := by
-  refine hR.exclusion_certificate (!β) ?_
+    ExclusionWitness P s (!β) := by
+  refine hR.exclusion_witness (!β) ?_
   rw [hR.bound_excluded, hb, excludedOf_some]
   exact Finset.mem_singleton_self _
 
@@ -211,11 +212,11 @@ theorem SpecificationRelation.retBound_eq {s : RoundState P.n} {t : SpecState P.
   | some β =>
     refine Option.getD_some.trans ?_
     by_contra hne
-    refine not_exclusionCertificate_of_voteQuorum hR.invariant hvq ?_
+    refine not_exclusionWitness_of_voteQuorum hR.invariant hvq ?_
     have hv : (!β) = v := by
       cases β <;> cases v <;> simp_all
     rw [← hv]
-    exact hR.bound_certificate β hb
+    exact hR.bound_witness β hb
 
 /-! ### Deriving the spec guards -/
 
@@ -225,7 +226,7 @@ theorem SpecificationRelation.retBound_eq {s : RoundState P.n} {t : SpecState P.
 theorem inputSupport_of_bothValid {s : RoundState P.n} (hI : Invariant P s)
     {i : Fin P.n} (hv : s.bothValid P i) (b : Bool) : InputSupport P s b := by
   have hfn := P.f_lt_n_sub_f
-  exact hI.support_of_input_receipts
+  exact hI.support_of_received_inputs
     (le_trans (by omega) (RoundState.bothValid_le hv b))
 
 /-- An implementation support count, read at the specification along `call_eq`/`F_eq`: the spec
@@ -245,7 +246,7 @@ senders must hold an input yields the spec's call quorum; corrupted senders
 are absorbed into the `∪ F`. -/
 theorem quorum_of_messageQuorum {s : RoundState P.n} {t : SpecState P.n}
     (hR : SpecificationRelation P s t) {i : Fin P.n} {m : Message}
-    (hpart : ∀ j, j ∉ s.F → m ∈ s.sent j → (s.process j).input ≠ none)
+    (hpart : ∀ j, j ∉ s.F → m ∈ s.sent j → (s.processVariables j).input ≠ none)
     (h : P.n - P.f ≤ s.receivedCount i m) : t.quorum P := by
   unfold SpecState.quorum
   unfold RoundState.receivedCount at h
@@ -265,13 +266,13 @@ theorem quorum_of_messageQuorum {s : RoundState P.n} {t : SpecState P.n}
 
 /-- **Both `bindUnset` guards from the single certificate.** -/
 theorem bindUnset_guards {s : RoundState P.n} {t : SpecState P.n}
-    (hR : SpecificationRelation P s t) {v : Bool} (hq : EchoReceiptQuorum P s v) :
+    (hR : SpecificationRelation P s t) {v : Bool} (hq : ReceivedEchoQuorum P s v) :
     t.quorum P ∧ P.f + 1 ≤ (Finset.univ.filter (fun id => t.call id = some v ∨ id ∈ t.F)).card := by
-  obtain ⟨m, hm⟩ := inputQuorum_of_echoReceiptQuorum hR.invariant hq
+  obtain ⟨m, hm⟩ := inputQuorum_of_receivedEchoQuorum hR.invariant hq
   have hfn := P.f_lt_n_sub_f
   refine ⟨quorum_of_messageQuorum hR
     (fun j hj hm' => hR.invariant.input_called j v hj hm') hm, ?_⟩
-  exact hR.callSupport (hR.invariant.support_of_input_receipts (le_trans (by omega) hm))
+  exact hR.callSupport (hR.invariant.support_of_received_inputs (le_trans (by omega) hm))
 
 /-- Grade exclusivity, grade 2: an `n − f` `ECHO5 v` receipt quorum rules out a grade-0 lock (the
 two `ECHO5` quorums would intersect in a correct process with two different `ECHO5` payloads,
@@ -281,7 +282,7 @@ theorem grade_ne_false_of_echo5_quorum {s : RoundState P.n} {t : SpecState P.n}
     (hcnt : P.n - P.f ≤ s.receivedCount id (.echo5 (some v))) :
     t.grade ≠ some false := by
   intro hg
-  obtain ⟨i', hc⟩ := hR.grade0_evidence hg
+  obtain ⟨i', hc⟩ := hR.grade0_witness hg
   obtain ⟨j, hjF, hj1,
     hj2⟩ := RoundState.exists_correct_received_of_two_quorums hR.invariant.F_card hcnt hc
   have e1 := hR.invariant.echo5_once j (some v) hjF (hR.invariant.received_subset_sent id j _ hj1)
@@ -295,7 +296,7 @@ theorem grade_ne_true_of_echo5Bot_quorum {s : RoundState P.n} {t : SpecState P.n
     (hcnt : P.n - P.f ≤ s.receivedCount id (.echo5 none)) :
     t.grade ≠ some true := by
   intro hg
-  obtain ⟨v', i', hc⟩ := hR.grade2_evidence hg
+  obtain ⟨v', i', hc⟩ := hR.grade2_witness hg
   obtain ⟨j, hjF, hj1,
     hj2⟩ := RoundState.exists_correct_received_of_two_quorums hR.invariant.F_card hc hcnt
   have e1 := hR.invariant.echo5_once j (some v') hjF (hR.invariant.received_subset_sent i' j _ hj1)

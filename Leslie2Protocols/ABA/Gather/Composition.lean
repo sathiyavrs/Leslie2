@@ -27,13 +27,16 @@ as arguments, `instanceOverBracha` supplies Bracha instances (`BRB.brachaInstanc
 (`BRB.specificationOverInstanceAlphabet`). Both run on `StateOverBroadcasts n X B B'`, and the three
 `init` lemmas are the states they start from.
 
-## Views of the composed state
+## Projections of the composed state
 
-`gatherTier`, `inputBroadcasts`, `bindBroadcasts` and `core` read the four components of that
-state, and `setGatherTier`, `setInputBroadcasts`, `setBindBroadcasts` and `setCore` are the four
+`gatherProgramsAndNetwork`, `inputBroadcasts`, `bindBroadcasts` and `core` read the four components
+of that
+state, and `setGatherProgramsAndNetwork`, `setInputBroadcasts`, `setBindBroadcasts` and `setCore`
+are the four
 writes that reach one of them. `corruptAll` corrupts the gather network state and every broadcast
 coordinate at once, the programs untouched (D1). A transition of either tier is stated through
-these, so that a guard reads `gatherTier s` where the implementation reads the gather instance
+these, so that a guard reads `gatherProgramsAndNetwork s` where the implementation reads the gather
+instance
 state. `approved` is the payload sets whose every pair is a committed entry of the input instance
 that carries it, read at the tier over the broadcast specification.
 
@@ -60,7 +63,7 @@ variable [DecidableEq X]
 /-- The state of the composition whose broadcast instances have state `B` for
 the inputs and `B'` for the `BIND` payloads. -/
 abbrev StateOverBroadcasts (n : ℕ) (X B B' : Type) : Type :=
-  ((∀ _ : Fin n, LocalState n (ProcessRecord n X) (Message n X)) × NetworkState n X) ×
+  ((∀ _ : Fin n, LocalState n (ProcessVariables n X) (Message n X)) × NetworkState n X) ×
     ((∀ _ : Fin n, B) × (∀ _ : Fin n, B'))
 
 /-- The gather tier beside the broadcast tier, over the instance-internal
@@ -107,39 +110,41 @@ noncomputable def instanceOverBroadcastSpecification (P : Parameters) (X : Type)
     (BIn : ∀ _ : Fin P.n, System B (BRB.InstanceLabel P.n X))
     (BBind : ∀ _ : Fin P.n, System B' (BRB.InstanceLabel P.n (AcceptedPairs P.n X))) :
     (instanceOverBroadcasts P X BIn BBind).init =
-      (((fun _ => LocalState.initial P.n (Message P.n X) (ProcessRecord.initial P.n X)),
+      (((fun _ => LocalState.initial P.n (Message P.n X) (ProcessVariables.initial P.n X)),
         NetworkState.initial P.n X),
         ((fun k => (BIn k).init), (fun q => (BBind q).init))) := rfl
 
 @[simp] theorem instanceOverBracha_init (P : Parameters) :
     (instanceOverBracha P X).init =
-      (((fun _ => LocalState.initial P.n (Message P.n X) (ProcessRecord.initial P.n X)),
+      (((fun _ => LocalState.initial P.n (Message P.n X) (ProcessVariables.initial P.n X)),
         NetworkState.initial P.n X),
         ((fun _ => BRB.BrachaState.initial P.n X),
           (fun _ => BRB.BrachaState.initial P.n (AcceptedPairs P.n X)))) := rfl
 
 @[simp] theorem instanceOverBroadcastSpecification_init (P : Parameters) :
     (instanceOverBroadcastSpecification P X).init =
-      (((fun _ => LocalState.initial P.n (Message P.n X) (ProcessRecord.initial P.n X)),
+      (((fun _ => LocalState.initial P.n (Message P.n X) (ProcessVariables.initial P.n X)),
         NetworkState.initial P.n X),
         ((fun _ => BRB.SpecState.initial P.n X),
           (fun _ => BRB.SpecState.initial P.n (AcceptedPairs P.n X)))) := rfl
 
 end Transitions
 
-/-! ### Views of the instance state
+/-! ### Projections of the instance state
 
 The four components of the instance state, and the four writes that reach one
 of them. A transition of either tier is stated through these, so that a guard reads
-`gatherTier s` where the implementation reads the gather instance state. -/
+`gatherProgramsAndNetwork s` where the implementation reads the gather instance state. -/
 
-section Views
+section Projections
 
 variable {n : ℕ} {B B' : Type}
 
 /-- The gather tier's instance state: the programs beside the gather network
 state. -/
-def gatherTier (s : StateOverBroadcasts n X B B') : InstanceState n (ProcessRecord n X) (Message n
+def gatherProgramsAndNetwork (s : StateOverBroadcasts n X B B') : InstanceState n (ProcessVariables
+  n X) (Message
+  n
   X) := (s.1.1, s.1.2.network)
 
 /-- The input instances. One per process, carrying that process's input; these and the `n` bind
@@ -153,7 +158,8 @@ def bindBroadcasts (s : StateOverBroadcasts n X B B') : ∀ _ : Fin n, B' := s.2
 def core (s : StateOverBroadcasts n X B B') : Option (AcceptedPairs n X) := s.1.2.core
 
 /-- Overwrite the gather tier's instance state. -/
-def setGatherTier (s : StateOverBroadcasts n X B B') (t : InstanceState n (ProcessRecord n X)
+def setGatherProgramsAndNetwork (s : StateOverBroadcasts n X B B') (t : InstanceState n
+  (ProcessVariables n X)
   (Message n X)) :
     StateOverBroadcasts n X B B' := ((t.1, { s.1.2 with network := t.2 }), s.2)
 
@@ -170,21 +176,27 @@ def setCore (s : StateOverBroadcasts n X B B') (c : Option (AcceptedPairs n X)) 
   StateOverBroadcasts n X B B' :=
   ((s.1.1, { s.1.2 with core := c }), s.2)
 
-@[simp] theorem gatherTier_setGatherTier (s : StateOverBroadcasts n X B B') (t : InstanceState n
-  (ProcessRecord n X) (Message n X)) :
-    gatherTier (setGatherTier s t) = t := rfl
-@[simp] theorem inputBroadcasts_setGatherTier (s : StateOverBroadcasts n X B B') (t : InstanceState
-  n (ProcessRecord n X) (Message n X)) :
-    inputBroadcasts (setGatherTier s t) = inputBroadcasts s := rfl
-@[simp] theorem bindBroadcasts_setGatherTier (s : StateOverBroadcasts n X B B')
-    (t : InstanceState n (ProcessRecord n X) (Message n X)) : bindBroadcasts (setGatherTier s t) =
+@[simp] theorem gatherProgramsAndNetwork_setGatherProgramsAndNetwork (s : StateOverBroadcasts n X B
+  B') (t : InstanceState n
+  (ProcessVariables n X) (Message n X)) :
+    gatherProgramsAndNetwork (setGatherProgramsAndNetwork s t) = t := rfl
+@[simp] theorem inputBroadcasts_setGatherProgramsAndNetwork (s : StateOverBroadcasts n X B B') (t :
+  InstanceState
+  n (ProcessVariables n X) (Message n X)) :
+    inputBroadcasts (setGatherProgramsAndNetwork s t) = inputBroadcasts s := rfl
+@[simp] theorem bindBroadcasts_setGatherProgramsAndNetwork (s : StateOverBroadcasts n X B B')
+    (t : InstanceState n (ProcessVariables n X) (Message n X)) : bindBroadcasts
+      (setGatherProgramsAndNetwork s t)
+      =
       bindBroadcasts s := rfl
-@[simp] theorem core_setGatherTier (s : StateOverBroadcasts n X B B') (t : InstanceState n
-  (ProcessRecord n X) (Message n X)) :
-    core (setGatherTier s t) = core s := rfl
+@[simp] theorem core_setGatherProgramsAndNetwork (s : StateOverBroadcasts n X B B') (t :
+  InstanceState n
+  (ProcessVariables n X) (Message n X)) :
+    core (setGatherProgramsAndNetwork s t) = core s := rfl
 
-@[simp] theorem gatherTier_setInputBroadcasts (s : StateOverBroadcasts n X B B') (b : ∀ _ : Fin n,
-    B) : gatherTier (setInputBroadcasts s b) = gatherTier s := rfl
+@[simp] theorem gatherProgramsAndNetwork_setInputBroadcasts (s : StateOverBroadcasts n X B B') (b :
+  ∀ _ : Fin n,
+    B) : gatherProgramsAndNetwork (setInputBroadcasts s b) = gatherProgramsAndNetwork s := rfl
 @[simp] theorem inputBroadcasts_setInputBroadcasts (s : StateOverBroadcasts n X B B') (b : ∀ _ : Fin
   n, B) :
     inputBroadcasts (setInputBroadcasts s b) = b := rfl
@@ -194,8 +206,9 @@ def setCore (s : StateOverBroadcasts n X B B') (c : Option (AcceptedPairs n X)) 
 @[simp] theorem core_setInputBroadcasts (s : StateOverBroadcasts n X B B') (b : ∀ _ : Fin n, B) :
     core (setInputBroadcasts s b) = core s := rfl
 
-@[simp] theorem gatherTier_setBindBroadcasts (s : StateOverBroadcasts n X B B') (b : ∀ _ : Fin n,
-    B') : gatherTier (setBindBroadcasts s b) = gatherTier s := rfl
+@[simp] theorem gatherProgramsAndNetwork_setBindBroadcasts (s : StateOverBroadcasts n X B B') (b : ∀
+  _ : Fin n,
+    B') : gatherProgramsAndNetwork (setBindBroadcasts s b) = gatherProgramsAndNetwork s := rfl
 @[simp] theorem inputBroadcasts_setBindBroadcasts (s : StateOverBroadcasts n X B B') (b : ∀ _ : Fin
   n, B') :
     inputBroadcasts (setBindBroadcasts s b) = inputBroadcasts s := rfl
@@ -205,9 +218,10 @@ def setCore (s : StateOverBroadcasts n X B B') (c : Option (AcceptedPairs n X)) 
 @[simp] theorem core_setBindBroadcasts (s : StateOverBroadcasts n X B B') (b : ∀ _ : Fin n, B') :
     core (setBindBroadcasts s b) = core s := rfl
 
-@[simp] theorem gatherTier_setCore (s : StateOverBroadcasts n X B B') (c : Option (AcceptedPairs n
+@[simp] theorem gatherProgramsAndNetwork_setCore (s : StateOverBroadcasts n X B B') (c : Option
+  (AcceptedPairs n
   X)) :
-    gatherTier (setCore s c) = gatherTier s := rfl
+    gatherProgramsAndNetwork (setCore s c) = gatherProgramsAndNetwork s := rfl
 @[simp] theorem inputBroadcasts_setCore (s : StateOverBroadcasts n X B B') (c : Option
   (AcceptedPairs n X)) :
     inputBroadcasts (setCore s c) = inputBroadcasts s := rfl
@@ -225,10 +239,12 @@ def corruptAll (P : Parameters) (id : Fin P.n) (cIn : B → B) (cBind : B' → B
   ((s.1.1, { s.1.2 with network := s.1.2.network.corrupt P id }),
     (fun k => cIn (s.2.1 k), fun q => cBind (s.2.2 q)))
 
-@[simp] theorem gatherTier_corruptAll (P : Parameters) (id : Fin P.n) (cIn : B → B) (cBind : B' →
+@[simp] theorem gatherProgramsAndNetwork_corruptAll (P : Parameters) (id : Fin P.n) (cIn : B → B)
+  (cBind : B' →
   B')
     (s : StateOverBroadcasts P.n X B B') :
-    gatherTier (corruptAll P id cIn cBind s) = InstanceState.corrupt P id (gatherTier s) := rfl
+    gatherProgramsAndNetwork (corruptAll P id cIn cBind s) = InstanceState.corrupt P id
+      (gatherProgramsAndNetwork s) := rfl
 @[simp] theorem inputBroadcasts_corruptAll (P : Parameters) (id : Fin P.n) (cIn : B → B) (cBind : B'
   → B')
     (s : StateOverBroadcasts P.n X B B') (k : Fin P.n) :
@@ -240,7 +256,7 @@ def corruptAll (P : Parameters) (id : Fin P.n) (cIn : B → B) (cBind : B' → B
 @[simp] theorem core_corruptAll (P : Parameters) (id : Fin P.n) (cIn : B → B) (cBind : B' → B')
     (s : StateOverBroadcasts P.n X B B') : core (corruptAll P id cIn cBind s) = core s := rfl
 
-end Views
+end Projections
 
 /-- A payload set is approved at the tier over the broadcast specification when every pair is a
 committed entry of the input instance that carries it. -/
@@ -258,8 +274,9 @@ The gather program's and the gather network's transitions are Dirac
 
 /-- Every gather program transition is Dirac. -/
 theorem programStep_dirac {P : Parameters} {j : Fin P.n}
-    {p : LocalState P.n (ProcessRecord P.n X) (Message P.n X)} {l : GatherLabel P.n X}
-    {ν : PMF (LocalState P.n (ProcessRecord P.n X) (Message P.n X))} (h : ProgramStep P j p l ν) :
+    {p : LocalState P.n (ProcessVariables P.n X) (Message P.n X)} {l : GatherLabel P.n X}
+    {ν : PMF (LocalState P.n (ProcessVariables P.n X) (Message P.n X))} (h : ProgramStep P j p l ν)
+      :
     ∃ p', ν = PMF.pure p' := by
   cases h <;> exact ⟨_, rfl⟩
 
@@ -322,8 +339,8 @@ or on one of the interface labels. The composition's silent transitions are
 therefore the gather network's injections, the hidden events and the broadcast
 tier's own silent steps. -/
 theorem programStep_no_tau {P : Parameters} {j : Fin P.n}
-    {p : LocalState P.n (ProcessRecord P.n X) (Message P.n X)}
-    {ν : PMF (LocalState P.n (ProcessRecord P.n X) (Message P.n X))}
+    {p : LocalState P.n (ProcessVariables P.n X) (Message P.n X)}
+    {ν : PMF (LocalState P.n (ProcessVariables P.n X) (Message P.n X))}
     (h : ProgramStep P j p (Silent.τ : GatherLabel P.n X) ν) : False := by
   rw [gatherLabel_tau] at h; cases h
 

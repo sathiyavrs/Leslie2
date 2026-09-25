@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ViewAfterOneWrite
+import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ProjectionAfterOneWrite
 
 /-!
 # The graded-agreement call and its loop
@@ -26,8 +26,8 @@ variable {P : Parameters}
 
 section Transitions
 
-variable {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} {w : NetworkState P.n} {j : Fin P.n}
-    {c : RoundLoopRecord P.n} {p : RoundRecordMap P.n}
+variable {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} {w : NetworkState P.n} {j : Fin P.n}
+    {c : RoundLoopVariables P.n} {p : RoundVariablesMap P.n}
 
 /-! ### The graded-agreement call and its loop
 
@@ -39,17 +39,18 @@ read. -/
 
 /-- The graded-agreement call, read through the projection. -/
 theorem roundProjection_callG (hu : (u j).2 = p) (r : ℕ) (b : Bool) :
-    roundProjection P (Function.update u j (c, p.setRoundRecord r
-        { p.roundRecord r with
-          firstGather := (p.roundRecord r).firstGather.setProcess
-            { ((p.roundRecord r).firstGather.process) with input := some b } }))
+    roundProjection P (Function.update u j (c, p.setRoundVariables r
+        { p.roundVariables r with
+          firstGather := (p.roundVariables r).firstGather.setProcessVariables
+            { ((p.roundVariables r).firstGather.processVariables) with input := some b } }))
       (w.writeGhost (ghostStep P) (Sum.inl (.callG r j b))) r
       = GBCA.ByAFW.setFirstGather (GBCA.ByAFW.setPrograms (roundProjection P u w r)
             (Function.update (GBCA.ByAFW.programs (roundProjection P u w r)) j
               { GBCA.ByAFW.programs (roundProjection P u w r) j with input := some b }))
-          (Gather.setGatherTier (firstGatherProjection P u w r)
-            ((Gather.gatherTier (firstGatherProjection P u w r)).setProcess j
-              { (Gather.gatherTier (firstGatherProjection P u w r)).process j with
+          (Gather.setGatherProgramsAndNetwork (firstGatherProjection P u w r)
+            ((Gather.gatherProgramsAndNetwork (firstGatherProjection P u w r)).setProcessVariables j
+              { (Gather.gatherProgramsAndNetwork (firstGatherProjection P u w r)).processVariables j
+                with
                 input := some b })) := by
   subst hu
   rw [roundProjection_ghostId (Sum.inl (.callG r j b)) (fun _ _ => rfl),
@@ -58,27 +59,28 @@ theorem roundProjection_callG (hu : (u j).2 = p) (r : ℕ) (b : Bool) :
     (stateOverBroadcasts_ext ?_ ?_ ?_ ?_)
   · simp only [programs_roundProjectionUpdate, GBCA.ByAFW.programs_setFirstGather,
       GBCA.ByAFW.programs_setPrograms, programs_roundProjection_eq]
-    refine congrArg (Function.update (fun i => programProjection ((u i).2.roundRecord r)) j) ?_
-    simp only [programProjection, LocalState.setProcess]
+    refine congrArg (Function.update (fun i => programProjection ((u i).2.roundVariables r)) j) ?_
+    simp only [programProjection, LocalState.setProcessVariables]
   · simp
-  · simp only [gatherTier_firstGather_roundProjectionUpdate, GBCA.ByAFW.firstGather_setFirstGather,
-      Gather.gatherTier_setGatherTier]
+  · simp only [gatherProgramsAndNetwork_firstGather_roundProjectionUpdate,
+      GBCA.ByAFW.firstGather_setFirstGather,
+      Gather.gatherProgramsAndNetwork_setGatherProgramsAndNetwork]
     refine Prod.ext ?_ (networkState_ext rfl rfl)
-    simp only [InstanceState.setProcess]
-    refine congrArg (Function.update (fun i => ((u i).2.roundRecord r).firstGather) j) ?_
+    simp only [InstanceState.setProcessVariables]
+    refine congrArg (Function.update (fun i => ((u i).2.roundVariables r).firstGather) j) ?_
     rfl
   · funext k
     simp only [inputBroadcasts_firstGather_roundProjectionUpdate,
-      GBCA.ByAFW.firstGather_setFirstGather, Gather.inputBroadcasts_setGatherTier,
+      GBCA.ByAFW.firstGather_setFirstGather, Gather.inputBroadcasts_setGatherProgramsAndNetwork,
         inputBroadcasts_firstGatherProjection]
     exact Prod.ext (Function.update_eq_self _ _) rfl
   · funext q
     simp only [bindBroadcasts_firstGather_roundProjectionUpdate,
-      GBCA.ByAFW.firstGather_setFirstGather, Gather.bindBroadcasts_setGatherTier,
+      GBCA.ByAFW.firstGather_setFirstGather, Gather.bindBroadcasts_setGatherProgramsAndNetwork,
         bindBroadcasts_firstGatherProjection]
     exact Prod.ext (Function.update_eq_self _ _) rfl
   · simp
-  · simp only [gatherTier_secondGather_roundProjectionUpdate,
+  · simp only [gatherProgramsAndNetwork_secondGather_roundProjectionUpdate,
       GBCA.ByAFW.secondGather_setFirstGather, GBCA.ByAFW.secondGather_setPrograms,
         secondGather_roundProjection]
     exact Prod.ext (Function.update_eq_self _ _) rfl
@@ -97,7 +99,7 @@ theorem roundProjection_callG (hu : (u j).2 = p) (r : ℕ) (b : Bool) :
 /-- The graded-agreement call against an already-called record, read through
 the projection: the round loop moves and the projection is unchanged. -/
 theorem roundProjection_gbcaCallLoop (hu : (u j).2 = p) (r r' : ℕ) (b : Bool)
-    (c' : RoundLoopRecord P.n) :
+    (c' : RoundLoopVariables P.n) :
     roundProjection P (Function.update u j (c', p))
     (w.writeGhost (ghostStep P) (Sum.inr (.gbcaCallLoop r j b))) r' = roundProjection P u w r' := by
   rw [roundProjection_ghostId (Sum.inr (.gbcaCallLoop r j b)) (fun _ _ => rfl)]

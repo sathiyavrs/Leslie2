@@ -84,7 +84,7 @@ namespace Composition
 coin oracle. -/
 abbrev ComposedState (P : Parameters) : Type :=
   (ℕ → GBCA.ByABDY.RoundState P.n) ×
-    ((∀ _ : Fin P.n, RoundLoopRecord P.n) × (ABANetworkState P.n × (ℕ → WCC.SpecState P.n)))
+    ((∀ _ : Fin P.n, RoundLoopVariables P.n) × (ABANetworkState P.n × (ℕ → WCC.SpecState P.n)))
 
 end Composition
 
@@ -133,7 +133,7 @@ theorem composedHidden_step_iff (P : Parameters) (q : ComposedState P) (l : Labe
 /-- Build a joint transition of the four components on a visible label, the
 oracle's successor left arbitrary. -/
 theorem composedExtended_visible_step (P : Parameters)
-    {G G' : ℕ → GBCA.ByABDY.RoundState P.n} {C C' : ∀ _ : Fin P.n, RoundLoopRecord P.n}
+    {G G' : ℕ → GBCA.ByABDY.RoundState P.n} {C C' : ∀ _ : Fin P.n, RoundLoopVariables P.n}
     {A A' : ABANetworkState P.n} {o : ℕ → WCC.SpecState P.n} {ω : PMF (ℕ → WCC.SpecState P.n)}
     {L : ExtendedLabel P.n GBCA.ByABDY.Message} (hL : L ≠ Silent.τ)
     (hG : (GBCA.ByABDY.gbcaInstanceFamily P).step G L (PMF.pure G'))
@@ -152,7 +152,7 @@ theorem composedExtended_visible_step (P : Parameters)
 
 /-- Build a silent transition of the four components from a graded-agreement one. -/
 theorem composedExtended_tau_gbca (P : Parameters) {G G' : ℕ → GBCA.ByABDY.RoundState P.n}
-    {C : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A : ABANetworkState P.n}
+    {C : ∀ _ : Fin P.n, RoundLoopVariables P.n} {A : ABANetworkState P.n}
     {o : ℕ → WCC.SpecState P.n}
     (hG : (GBCA.ByABDY.gbcaInstanceFamily P).step G (Sum.inl Label.tau) (PMF.pure G')) :
     (ABDY.composedExtended P).step (G, C, A, o) (Sum.inl Label.tau) (PMF.pure (G', C, A, o)) := by
@@ -162,7 +162,7 @@ theorem composedExtended_tau_gbca (P : Parameters) {G G' : ℕ → GBCA.ByABDY.R
 
 /-- Build a silent transition of the four components from an ABA network injection. -/
 theorem composedExtended_tau_ABANetwork (P : Parameters)
-    {G : ℕ → GBCA.ByABDY.RoundState P.n} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
+    {G : ℕ → GBCA.ByABDY.RoundState P.n} {C : ∀ _ : Fin P.n, RoundLoopVariables P.n}
     {A A' : ABANetworkState P.n} {o : ℕ → WCC.SpecState P.n}
     (hA : ABANetworkStep P A (Sum.inl Label.tau : ExtendedLabel P.n GBCA.ByABDY.Message)
       (PMF.pure A')) :
@@ -229,8 +229,9 @@ theorem gbcaInstanceFamily_fail (P : Parameters) (G : ℕ → GBCA.ByABDY.RoundS
 
 /-- One graded-agreement program moves and every other idles. -/
 theorem gbcaProgramStep_family {P : Parameters} {r : ℕ}
-    {u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n} {L : GBCA.ByABDY.GBCALabel P.n} (id : Fin P.n)
-    (nd : GBCA.ByABDY.RoundRecord P.n)
+    {u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundVariables P.n} {L : GBCA.ByABDY.GBCALabel P.n} (id : Fin
+      P.n)
+    (nd : GBCA.ByABDY.RoundVariables P.n)
     (hown : GBCA.ByABDY.GBCAProgramStep P r id (u id) L (PMF.pure nd))
     (hfor : ∀ i, i ≠ id → GBCA.ByABDY.GBCAProgramStep P r i (u i) L (PMF.pure (u i))) :
     ∀ i, GBCA.ByABDY.GBCAProgramStep P r i (u i) L (PMF.pure (Function.update u id nd i)) := by

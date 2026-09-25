@@ -11,7 +11,7 @@ import Leslie2Protocols.ABA.Composition.Hybrid
 # `Invariant` across the `callW` transitions of `hybrid`
 
 `Invariant.step_callW`, preservation of `Invariant` at a call of the coin, assembled from the three
-transitions of `WCC.step_callW_inversion`. The input-enabledness loop and the recording call leave
+transitions of `WCC.step_callW_cases`. The input-enabledness loop and the recording call leave
 `val` and `F` alone, the coin instance touching only `.called` and the core only `.phase`, both at
 `id` and neither inspected by `Invariant` (`Invariant.step_callW_dirac`). The resolving call records
 `id` by that same bookkeeping and writes the drawn outcome to `val`
@@ -104,7 +104,7 @@ theorem Invariant.step_callW_resolve {P : Parameters} {g : ℕ → GBCA.SpecStat
       · rcases hw0 with hh | hh <;> rw [hv] at hh <;> simp at hh
     · rw [hValNe r' h2]; exact hb
   · intro r' id v hmem hcall
-    have hcp := hI.call_provenance r' id v hmem hcall
+    have hcp := hI.call_of_previousRound r' id v hmem hcall
     by_cases h2 : r' = r
     · rw [h2] at hcp ⊢
       rcases hcp with hbv | ⟨hg0, hw0⟩
@@ -152,7 +152,8 @@ theorem Invariant.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState 
     (hWcalled : ∀ j, j ≠ id → wr'.called j = (w r).called j)
     {c' : ABAState P}
     (hCstep : ((c.processes id).phase = .toCallW ∧ (c.processes id).round = r ∧
-        c' = c.setProcess id { c.processes id with phase := .awaitW }) ∨ (id ∈ c.F ∧ c' = c)) :
+        c' = c.setProcessVariables id { c.processes id with phase := .awaitW }) ∨ (id ∈ c.F ∧ c' =
+          c)) :
     Invariant P g c' (Function.update w r wr') ∧ AbstractStateUnchanged P g g c c' := by
   have hWNe : ∀ r', r' ≠ r → Function.update w r wr' r' = w r' := fun r' h =>
     Function.update_of_ne h wr' w
@@ -164,24 +165,24 @@ theorem Invariant.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState 
     intro r'; by_cases h : r' = r
     · subst h; rw [Function.update_self]; exact hWval
     · rw [hWNe r' h]
-  have hCframe : c'.F = c.F ∧ c'.decidedSent = c.decidedSent ∧ c'.decidedReceived =
+  have hCUnchanged : c'.F = c.F ∧ c'.decidedSent = c.decidedSent ∧ c'.decidedReceived =
     c.decidedReceived ∧
       ∀ id',
         (c'.processes id').input = (c.processes id').input ∧ (c'.processes id').estimate =
           (c.processes id').estimate ∧ (c'.processes id').round = (c.processes id').round := by
     rcases hCstep with ⟨hph, hr, rfl⟩ | ⟨hF, rfl⟩
-    · refine ⟨ABAState.setProcess_F _ _ _, ABAState.setProcess_decidedSent _ _ _,
-        ABAState.setProcess_decidedReceived _ _ _, fun id' => ?_⟩
+    · refine ⟨ABAState.setProcessVariables_F _ _ _, ABAState.setProcessVariables_decidedSent _ _ _,
+        ABAState.setProcessVariables_decidedReceived _ _ _, fun id' => ?_⟩
       by_cases h : id' = id
-      · subst h; rw [ABAState.setProcess_processes_self]; exact ⟨rfl, rfl, rfl⟩
-      · rw [ABAState.setProcess_processes_ne _ _ _ h]; exact ⟨rfl, rfl, rfl⟩
+      · subst h; rw [ABAState.setProcessVariables_processes_self]; exact ⟨rfl, rfl, rfl⟩
+      · rw [ABAState.setProcessVariables_processes_ne _ _ _ h]; exact ⟨rfl, rfl, rfl⟩
     · exact ⟨rfl, rfl, rfl, fun id' => ⟨rfl, rfl, rfl⟩⟩
-  obtain ⟨hCF, hCDS, hCDR, hCprocs⟩ := hCframe
+  obtain ⟨hCF, hCDS, hCDR, hCprocs⟩ := hCUnchanged
   have hLastGrade : ∀ id', (c'.processes id').lastGrade = (c.processes id').lastGrade := by
     rcases hCstep with ⟨-, -, hc'eq⟩ | ⟨-, hc'eq⟩
     · intro id'; rw [hc'eq]; by_cases h : id' = id
-      · subst h; rw [ABAState.setProcess_processes_self]
-      · rw [ABAState.setProcess_processes_ne _ _ _ h]
+      · subst h; rw [ABAState.setProcessVariables_processes_self]
+      · rw [ABAState.setProcessVariables_processes_ne _ _ _ h]
     · intro id'; rw [hc'eq]
   have hCarr : ∀ r₀ id₀ v, OutcomeHolder P g c' r₀ id₀ v → OutcomeHolder P g c r₀ id₀ v := by
     intro r₀ id₀ v hc0
@@ -191,15 +192,15 @@ theorem Invariant.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState 
       rcases hCstep with ⟨hph, hrid, hc'eq⟩ | ⟨-, hc'eq⟩
       · by_cases hid : id₀ = id
         · subst hid
-          rw [hc'eq, ABAState.setProcess_processes_self] at hk
+          rw [hc'eq, ABAState.setProcessVariables_processes_self] at hk
           rcases hk with ⟨hr0, -⟩ | ⟨-, hp⟩
           · exact Or.inl ⟨hr0, Or.inl hph⟩
           · exfalso; rcases hp with hp | hp | hp <;> simp at hp
-        · rw [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid] at hk
+        · rw [hc'eq, ABAState.setProcessVariables_processes_ne _ _ _ hid] at hk
           exact hk
       · rw [hc'eq] at hk; exact hk
-  have hCert : ∀ r' b', Grade2Certificate P g c r' b' → Grade2Certificate P g c' r' b' :=
-    fun r' b' => Grade2Certificate.of_unchanged rfl (fun _ => rfl) (fun _ _ => rfl)
+  have hCert : ∀ r' b', Grade2Witness P g c r' b' → Grade2Witness P g c' r' b' :=
+    fun r' b' => Grade2Witness.of_unchanged rfl (fun _ => rfl) (fun _ _ => rfl)
       (by rw [hCF] : c.F ⊆ _) (fun id' => (hCprocs id').2.2) (fun id' => (hCprocs id').2.1)
       (fun id0 v => hCarr r' id0 v)
   have hHold : ∀ i0 b0, Grade2Holder P c' i0 b0 → Grade2Holder P c i0 b0 := by
@@ -210,7 +211,7 @@ theorem Invariant.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState 
     fun v _ hpin j b' hj hh => hpin j b' (hCF ▸ hj) (hHold j b' hh)⟩
   have hCcorr : c'.corrupted = c.corrupted := by
     rcases hCstep with ⟨-, -, hc'eq⟩ | ⟨-, hc'eq⟩
-    · rw [hc'eq]; exact ABAState.setProcess_corrupted _ _ _
+    · rw [hc'eq]; exact ABAState.setProcessVariables_corrupted _ _ _
     · rw [hc'eq]
   refine ⟨fun id' => by rw [hCcorr, hCF]; exact hI.corrupted_F id',
     fun r' => hCF ▸ hI.F_gbca r', fun r' => (hFweq r').trans (hCF ▸ hI.F_wcc r'),
@@ -238,7 +239,7 @@ theorem Invariant.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState 
         exact hI.phase_input id hmem' (by rw [hph]; simp)
       · rw [(hCprocs id').1]
         have hne' : (c.processes id').phase ≠ .idle := by
-          rw [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid] at hne; exact hne
+          rw [hc'eq, ABAState.setProcessVariables_processes_ne _ _ _ hid] at hne; exact hne
         exact hI.phase_input id' (hCF ▸ hmem) hne'
     · rw [hc'eq] at hne; rw [(hCprocs id').1]; exact hI.phase_input id' (hCF ▸ hmem) hne
   · intro r' h; rw [hValeq] at h; exact hI.wcc_bound r' h
@@ -286,9 +287,9 @@ theorem Invariant.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState 
     · by_cases hid : id' = id
       · exfalso
         rw [hid] at hphase
-        simp only [hc'eq, ABAState.setProcess_processes_self] at hphase
+        simp only [hc'eq, ABAState.setProcessVariables_processes_self] at hphase
         rcases hphase with h | h | h <;> simp at h
-      · simp only [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid] at hphase
+      · simp only [hc'eq, ABAState.setProcessVariables_processes_ne _ _ _ hid] at hphase
         rw [(hCprocs id').2.1, (hCprocs id').1]; exact hI.estimate0 id' (hCF ▸ hmem) hround hphase
     · rw [hc'eq] at hphase
       rw [(hCprocs id').2.1, (hCprocs id').1]; exact hI.estimate0 id' (hCF ▸ hmem) hround hphase
@@ -300,27 +301,28 @@ theorem Invariant.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState 
     · by_cases hid : id' = id
       · have hround' : (c.processes id).round = r' := by
           rw [hid] at hround
-          simpa [hc'eq, ABAState.setProcess_processes_self] using hround
+          simpa [hc'eq, ABAState.setProcessVariables_processes_self] using hround
         have hreq : r' = r := hround'.symm.trans hr
         rw [hid, hreq, (hCprocs id).2.1]
         exact hI.estimate_ret r id (hCF ▸ (hid ▸ hmem)) hr (Or.inl hph)
-      · simp only [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid] at hround hphase
+      · simp only [hc'eq, ABAState.setProcessVariables_processes_ne _ _ _ hid] at hround hphase
         rw [(hCprocs id').2.1]
         exact hI.estimate_ret r' id' (hCF ▸ hmem) hround hphase
     · rw [hc'eq] at hround hphase
       rw [(hCprocs id').2.1]
       exact hI.estimate_ret r' id' (hCF ▸ hmem) hround hphase
   · intro r' v h; rw [hValeq]; exact hI.bind_succ r' v h
-  · intro r' id' v hmem hcall; rw [hValeq]; exact hI.call_provenance r' id' v (hCF ▸ hmem) hcall
+  · intro r' id' v hmem hcall; rw [hValeq]; exact hI.call_of_previousRound r' id' v (hCF ▸ hmem)
+      hcall
   · intro r' id' hmem hround hphase v hest
     rw [(hCprocs id').2.2] at hround; rw [(hCprocs id').2.1] at hest; rw [hValeq]
     rcases hCstep with ⟨hph, hr, hc'eq⟩ | ⟨-, hc'eq⟩
     · by_cases hid : id' = id
       · exfalso
         rw [hid] at hphase
-        simp only [hc'eq, ABAState.setProcess_processes_self] at hphase
+        simp only [hc'eq, ABAState.setProcessVariables_processes_self] at hphase
         rcases hphase with h | h | h <;> simp at h
-      · simp only [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid] at hphase
+      · simp only [hc'eq, ABAState.setProcessVariables_processes_ne _ _ _ hid] at hphase
         exact hI.estimate_previous r' id' (hCF ▸ hmem) hround hphase v hest
     · rw [hc'eq] at hphase
       exact hI.estimate_previous r' id' (hCF ▸ hmem) hround hphase v hest
@@ -330,9 +332,9 @@ theorem Invariant.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState 
     · by_cases hid : id' = id
       · exfalso
         rw [hid] at hphase
-        simp only [hc'eq, ABAState.setProcess_processes_self] at hphase
+        simp only [hc'eq, ABAState.setProcessVariables_processes_self] at hphase
         rcases hphase with h | h | h <;> simp at h
-      · simp only [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid] at hphase
+      · simp only [hc'eq, ABAState.setProcessVariables_processes_ne _ _ _ hid] at hphase
         rw [(hCprocs id').2.1]
         exact hI.estimate_previous_ne id' (hCF ▸ hmem) hround hphase
     · rw [hc'eq] at hphase
@@ -388,7 +390,7 @@ theorem Invariant.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState 
       rcases hCstep with ⟨hph, hr, hc'eq⟩ | ⟨-, hc'eq⟩
       · by_cases hid : id' = id
         · exact Or.inl (hid ▸ hph)
-        · rw [hc'eq, ABAState.setProcess_processes_ne _ _ _ hid] at hph2; exact hph2
+        · rw [hc'eq, ABAState.setProcessVariables_processes_ne _ _ _ hid] at hph2; exact hph2
       · rw [hc'eq] at hph2; exact hph2
     have hp' : ((c.processes id').round = r' ∧
         ((c.processes id').phase = .toCallW ∨ (c.processes id').phase = .awaitW)) ∨
@@ -429,17 +431,18 @@ theorem Invariant.step_callW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
     {μc : PMF (ABAState P)}
     (hstepC :
       ((c.processes id).phase = .toCallW ∧ (c.processes id).round = r ∧
-          μc = PMF.pure (c.setProcess id { c.processes id with phase := .awaitW })) ∨
+          μc = PMF.pure (c.setProcessVariables id { c.processes id with phase := .awaitW })) ∨
         (id ∈ c.F ∧ μc = PMF.pure c))
     {wr' : WCC.SpecState P.n} (hwr' : wr' ∈ μw'.support)
     {c' : ABAState P} (hc' : c' ∈ μc.support) :
     Invariant P g c' (Function.update w r wr') ∧ AbstractStateUnchanged P g g c c' := by
   have hCstep : ((c.processes id).phase = .toCallW ∧ (c.processes id).round = r ∧
-      c' = c.setProcess id { c.processes id with phase := .awaitW }) ∨ (id ∈ c.F ∧ c' = c) := by
+      c' = c.setProcessVariables id { c.processes id with phase := .awaitW }) ∨ (id ∈ c.F ∧ c' = c)
+        := by
     rcases hstepC with ⟨hph, hr, rfl⟩ | ⟨hF, rfl⟩
     · rw [PMF.mem_support_pure_iff] at hc'; exact Or.inl ⟨hph, hr, hc'⟩
     · rw [PMF.mem_support_pure_iff] at hc'; exact Or.inr ⟨hF, hc'⟩
-  rcases WCC.step_callW_inversion hstepW with rfl | ⟨-, -, rfl⟩ | ⟨-, hv, ht, rfl⟩
+  rcases WCC.step_callW_cases hstepW with rfl | ⟨-, -, rfl⟩ | ⟨-, hv, ht, rfl⟩
   · rw [PMF.mem_support_pure_iff] at hwr'; subst hwr'
     exact hI.step_callW_dirac r id rfl rfl (fun _ _ => rfl) hCstep
   · rw [PMF.mem_support_pure_iff] at hwr'; subst hwr'

@@ -84,21 +84,21 @@ def ProtocolRelation (P : Parameters) (u : ProtocolState P) (t : ComposedState P
   (∀ j, (u.1 j).1 = t.2.1 j) ∧
   u.2.2 = t.2.2.2 ∧
   t.2.2.1 = ⟨u.2.1.decidedSent, u.2.1.F⟩ ∧
-  (∀ r, (t.1 r).2 = ⟨u.2.1.sent r, u.2.1.F, u.2.1.ghostRecord r⟩) ∧
-  (∀ j r, (t.1 r).1 j = (u.1 j).2.roundRecord r)
+  (∀ r, (t.1 r).2 = ⟨u.2.1.sent r, u.2.1.F, u.2.1.ghost r⟩) ∧
+  (∀ j r, (t.1 r).1 j = (u.1 j).2.roundVariables r)
 
 /-- The relation, read at an explicit pair of states. -/
 theorem protocolRelation_mk (P : Parameters) (processes : ∀ _ : Fin P.n,
-    ProcessRecord P.n) (w : NetworkState P.n) (o : ℕ → WCC.SpecState P.n) (G : ℕ →
+    ProcessVariables P.n) (w : NetworkState P.n) (o : ℕ → WCC.SpecState P.n) (G : ℕ →
       GBCA.ByABDY.RoundState P.n)
-    (C : ∀ _ : Fin P.n, RoundLoopRecord P.n) (A : ABANetworkState P.n)
+    (C : ∀ _ : Fin P.n, RoundLoopVariables P.n) (A : ABANetworkState P.n)
     (o' : ℕ → WCC.SpecState P.n) :
     ProtocolRelation P (processes, w, o) (G, C, A, o') ↔
       (∀ j, (processes j).1 = C j) ∧
       o = o' ∧
       A = ⟨w.decidedSent, w.F⟩ ∧
-      (∀ r, (G r).2 = ⟨w.sent r, w.F, w.ghostRecord r⟩) ∧
-      (∀ j r, (G r).1 j = (processes j).2.roundRecord r) :=
+      (∀ r, (G r).2 = ⟨w.sent r, w.F, w.ghost r⟩) ∧
+      (∀ j r, (G r).1 j = (processes j).2.roundVariables r) :=
   Iff.rfl
 
 /-! ### Updating one round
@@ -118,7 +118,7 @@ private theorem update_fst {P : Parameters} (G : ℕ → GBCA.ByABDY.RoundState 
 /-- Updating round `r` by a state whose network state is the one it already had leaves
 every network state where it was. -/
 private theorem update_snd {P : Parameters} (G : ℕ → GBCA.ByABDY.RoundState P.n) (r : ℕ)
-    (u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n) (r' : ℕ) :
+    (u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundVariables P.n) (r' : ℕ) :
     (Function.update G r (u, (G r).2) r').2 = (G r').2 := by
   by_cases h : r' = r
   · subst h; rw [Function.update_self]
@@ -127,12 +127,13 @@ private theorem update_snd {P : Parameters} (G : ℕ → GBCA.ByABDY.RoundState 
 /-- The network state conjunct after a round multicast in round `r`. -/
 private theorem relation_recordGBCASend {P : Parameters}
     {G : ℕ → GBCA.ByABDY.RoundState P.n} {w : NetworkState P.n}
-    (hG : ∀ r, (G r).2 = ⟨w.sent r, w.F, w.ghostRecord r⟩)
-    (r : ℕ) (k : Fin P.n) (m : GBCA.ByABDY.Message) (u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n)
+    (hG : ∀ r, (G r).2 = ⟨w.sent r, w.F, w.ghost r⟩)
+    (r : ℕ) (k : Fin P.n) (m : GBCA.ByABDY.Message) (u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundVariables
+      P.n)
     (r' : ℕ) :
     ((Function.update G r (u, ((G r).2).recordGBCASend k m)) r').2 =
       ⟨(w.recordGBCASend r k m).sent r', (w.recordGBCASend r k m).F,
-        (w.recordGBCASend r k m).ghostRecord r'⟩ := by
+        (w.recordGBCASend r k m).ghost r'⟩ := by
   by_cases hr : r' = r
   · subst hr
     rw [Function.update_self]
@@ -147,9 +148,9 @@ record is write-once, so a return that announces a bit already on record leaves
 the record where it stands. -/
 private theorem ghostOutput_getD {P : Parameters} {w : NetworkState P.n} {r : ℕ} {id : Fin P.n}
     {out : GBCAOutput} {bnd : Bool} (h : bnd = abdyGhostOutput P w r id out) :
-    (w.ghostRecord r).getD bnd = bnd := by
+    (w.ghost r).getD bnd = bnd := by
   unfold abdyGhostOutput at h
-  cases hg : w.ghostRecord r with
+  cases hg : w.ghost r with
   | none => rfl
   | some β => rw [hg] at h; exact h.symm
 
@@ -157,18 +158,18 @@ private theorem ghostOutput_getD {P : Parameters} {w : NetworkState P.n} {r : �
 bit and the adversary's ghost record of round `r` take the same bit, and every
 other round's record is unchanged. -/
 private theorem relation_setBound {P : Parameters} {G : ℕ → GBCA.ByABDY.RoundState P.n}
-    {w : NetworkState P.n} (hG : ∀ r', (G r').2 = ⟨w.sent r', w.F, w.ghostRecord r'⟩)
-    (r : ℕ) (bnd : Bool) (u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundRecord P.n)
-    (hfix : (w.ghostRecord r).getD bnd = bnd) {L : ExtendedLabel P.n GBCA.ByABDY.Message}
-    (hself : (w.writeGhost (abdyGhostStep P) L).ghostRecord r
-      = some ((w.ghostRecord r).getD bnd))
+    {w : NetworkState P.n} (hG : ∀ r', (G r').2 = ⟨w.sent r', w.F, w.ghost r'⟩)
+    (r : ℕ) (bnd : Bool) (u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundVariables P.n)
+    (hfix : (w.ghost r).getD bnd = bnd) {L : ExtendedLabel P.n GBCA.ByABDY.Message}
+    (hself : (w.writeGhost (abdyGhostStep P) L).ghost r
+      = some ((w.ghost r).getD bnd))
     (hne : ∀ r', r' ≠ r →
-      (w.writeGhost (abdyGhostStep P) L).ghostRecord r' = w.ghostRecord r')
+      (w.writeGhost (abdyGhostStep P) L).ghost r' = w.ghost r')
     (r' : ℕ) :
     ((Function.update G r (u, ((G r).2).setBound bnd)) r').2
       = ⟨(w.writeGhost (abdyGhostStep P) L).sent r',
          (w.writeGhost (abdyGhostStep P) L).F,
-         (w.writeGhost (abdyGhostStep P) L).ghostRecord r'⟩ := by
+         (w.writeGhost (abdyGhostStep P) L).ghost r'⟩ := by
   by_cases hr : r' = r
   · subst hr
     rw [Function.update_self, hG r', hself, hfix]
@@ -178,9 +179,9 @@ private theorem relation_setBound {P : Parameters} {G : ℕ → GBCA.ByABDY.Roun
 
 /-- The network state's corruption act and the adversary's agree. -/
 private theorem corrupt_gbcaNetwork {P : Parameters} (w : NetworkState P.n) (k : Fin P.n) (r : ℕ) :
-    (⟨w.sent r, w.F, w.ghostRecord r⟩ : GBCA.ByABDY.NetworkState P.n).corrupt P k =
+    (⟨w.sent r, w.F, w.ghost r⟩ : GBCA.ByABDY.NetworkState P.n).corrupt P k =
       ⟨(NetworkState.corrupt P k w).sent r, (NetworkState.corrupt P k w).F,
-        (NetworkState.corrupt P k w).ghostRecord r⟩ := by
+        (NetworkState.corrupt P k w).ghost r⟩ := by
   by_cases hc : k ∉ w.F ∧ w.F.card < P.f <;>
     simp [GBCA.ByABDY.NetworkState.corrupt, Implementation.NetworkState.corrupt, hc]
 
@@ -198,25 +199,25 @@ which one process writes and the composed family leaves every other column alone
 the conjunct before the step and from the mover's own family of new-column equations. -/
 
 /-- The columns conjunct under a write at one process. -/
-private theorem relation_roundRecord (P : Parameters)
-    {processes x : ∀ _ : Fin P.n, ProcessRecord P.n}
+private theorem relation_roundVariables (P : Parameters)
+    {processes x : ∀ _ : Fin P.n, ProcessVariables P.n}
     {G G' : ℕ → GBCA.ByABDY.RoundState P.n} (id : Fin P.n)
-    (hst : ∀ j r, (G r).1 j = (processes j).2.roundRecord r)
+    (hst : ∀ j r, (G r).1 j = (processes j).2.roundVariables r)
     (hfor : ∀ i, i ≠ id → x i = processes i) (hGfor : ∀ j r, j ≠ id → (G' r).1 j = (G r).1 j)
-    (hown : ∀ r, (G' r).1 id = (x id).2.roundRecord r) :
-    ∀ j r, (G' r).1 j = (x j).2.roundRecord r := by
+    (hown : ∀ r, (G' r).1 id = (x id).2.roundVariables r) :
+    ∀ j r, (G' r).1 j = (x j).2.roundVariables r := by
   intro j r
   by_cases h : j = id
   · subst h; exact hown r
   · rw [hGfor j r h, hfor j h]; exact hst j r
 
 /-- The columns conjunct under a transition at which no process writes. -/
-private theorem relation_none (P : Parameters) {processes x : ∀ _ : Fin P.n, ProcessRecord P.n}
+private theorem relation_none (P : Parameters) {processes x : ∀ _ : Fin P.n, ProcessVariables P.n}
     {G G' : ℕ → GBCA.ByABDY.RoundState P.n}
-    (hst : ∀ j r, (G r).1 j = (processes j).2.roundRecord r)
+    (hst : ∀ j r, (G r).1 j = (processes j).2.roundVariables r)
     (hfor : ∀ i, x i = processes i)
     (hGfor : ∀ j r, (G' r).1 j = (G r).1 j) :
-    ∀ j r, (G' r).1 j = (x j).2.roundRecord r := by
+    ∀ j r, (G' r).1 j = (x j).2.roundVariables r := by
   intro j r
   rw [hGfor j r, hfor j]; exact hst j r
 
@@ -228,10 +229,10 @@ internal to a round instance, and the family carries it as its own silent transi
 
 /-- A visible label of the extended alphabet matched by the four composed
 transitions, the oracle's successor carried across. -/
-private theorem coupling_visible (P : Parameters) {x : ∀ _ : Fin P.n, ProcessRecord P.n}
+private theorem coupling_visible (P : Parameters) {x : ∀ _ : Fin P.n, ProcessVariables P.n}
     {w' : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
     {ω : PMF (ℕ → WCC.SpecState P.n)}
-    {G G' : ℕ → GBCA.ByABDY.RoundState P.n} {C C' : ∀ _ : Fin P.n, RoundLoopRecord P.n}
+    {G G' : ℕ → GBCA.ByABDY.RoundState P.n} {C C' : ∀ _ : Fin P.n, RoundLoopVariables P.n}
     {A A' : ABANetworkState P.n} {L : ExtendedLabel P.n GBCA.ByABDY.Message} (hL : L ≠ Silent.τ)
     (hrel : ∀ o' ∈ ω.support, ProtocolRelation P (x, w', o') (G', C', A', o'))
     (hGs : (GBCA.ByABDY.gbcaInstanceFamily P).step G L (PMF.pure G'))
@@ -251,9 +252,9 @@ private theorem coupling_visible (P : Parameters) {x : ∀ _ : Fin P.n, ProcessR
 /-- A rendezvous the composed system matches inside one round: the
 instance of round `r` takes it as its own silent transition. -/
 private theorem coupling_round
-    (P : Parameters) {x : ∀ _ : Fin P.n, ProcessRecord P.n} {w' : NetworkState P.n}
+    (P : Parameters) {x : ∀ _ : Fin P.n, ProcessVariables P.n} {w' : NetworkState P.n}
     {o : ℕ → WCC.SpecState P.n} {ν : PMF (ℕ → WCC.SpecState P.n)}
-    {G : ℕ → GBCA.ByABDY.RoundState P.n} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
+    {G : ℕ → GBCA.ByABDY.RoundState P.n} {C : ∀ _ : Fin P.n, RoundLoopVariables P.n}
     {A : ABANetworkState P.n} {r : ℕ} {X : GBCA.ByABDY.RoundState P.n}
     (hν : ν = PMF.pure o) (hrel : ProtocolRelation P (x, w', o) (Function.update G r X, C, A, o))
     (hsub : (GBCA.ByABDY.composition P r).step (G r) (Sum.inl Label.tau) (PMF.pure X)) :
@@ -285,9 +286,9 @@ return that self-loop carries without DECIDED evidence is authorised on the comp
 ABA network's Byzantine transition (D23). -/
 
 /-- The matching on the rendezvous alphabet. -/
-theorem coupling_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord P.n}
+theorem coupling_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessVariables P.n}
     {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
-    {G : ℕ → GBCA.ByABDY.RoundState P.n} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
+    {G : ℕ → GBCA.ByABDY.RoundState P.n} {C : ∀ _ : Fin P.n, RoundLoopVariables P.n}
     {A : ABANetworkState P.n} (hR : ProtocolRelation P (processes, w, o) (G, C, A, o))
     (e : NetworkEvent P.n GBCA.ByABDY.Message) {μ : PMF (ProtocolState P)}
     (h : (protocolExtended P).step (processes, w, o) (Sum.inr e) μ) :
@@ -296,7 +297,7 @@ theorem coupling_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
       (composedHidden P).step (G, C, A, o) Label.tau (Ω.bind id) := by
   obtain ⟨hC, -, hA, hG, hst⟩ := (protocolRelation_mk P _ _ _ _ _ _ _).mp hR
   have hCeq : ∀ i, C i = (processes i).1 := fun i => (hC i).symm
-  obtain ⟨x, w', ν, hall, hn, hWs, rfl⟩ := protocolExtended_event_inversion P h
+  obtain ⟨x, w', ν, hall, hn, hWs, rfl⟩ := protocolExtended_event_cases P h
   have hLne : (Sum.inr e : ExtendedLabel P.n GBCA.ByABDY.Message) ≠ Silent.τ := by
     simp
   have hvis : ∀ {G' : ℕ → GBCA.ByABDY.RoundState P.n} {A' : ABANetworkState P.n},
@@ -318,11 +319,11 @@ theorem coupling_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
       (System.mapIdle_step_none (coinLabelMap_gbcaSend r j m) ν).mp hWs
     obtain rfl : w' = w.recordGBCASend r j m := by
       simpa using pure_inj (networkStep_gbcaSend hn)
-    have hcol : (G r).1 j = (processes j).2.roundRecord r := hst j r
-    have hstage : ∃ nd : GBCA.ByABDY.RoundRecord P.n,
+    have hcol : (G r).1 j = (processes j).2.roundVariables r := hst j r
+    have hstage : ∃ nd : GBCA.ByABDY.RoundVariables P.n,
         GBCA.ByABDY.GBCAProgramStep P r j ((G r).1 j) (Sum.inr (GBCA.ByABDY.GBCAEvent.send j m))
           (PMF.pure nd) ∧
-        x j = ((processes j).1, (processes j).2.setRoundRecord r nd) := by
+        x j = ((processes j).1, (processes j).2.setRoundVariables r nd) := by
       cases m with
       | input b =>
         obtain ⟨-, -, hin, hcnt, hsend, hxid⟩ := programStep_gbcaSend_input_self (hall j)
@@ -384,7 +385,7 @@ theorem coupling_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
             by rw [hcol]; exact pure_inj hxid⟩
     obtain ⟨nd, htransition, hx⟩ := hstage
     have hfor : ∀ i, i ≠ j → x i = processes i := fun i hi =>
-      pure_inj (programStep_gbcaSend_foreign (Ne.symm hi) (hall i))
+      pure_inj (programStep_gbcaSend_notOwn (Ne.symm hi) (hall i))
     have hGfor : ∀ i r', i ≠ j →
         ((Function.update G r
           (Function.update ((G r).1) j nd, ((G r).2).recordGBCASend j m)) r').1 i =
@@ -395,19 +396,20 @@ theorem coupling_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
       · rw [Function.update_of_ne hr']
     have hown : ∀ r', ((Function.update G r
         (Function.update ((G r).1) j nd, ((G r).2).recordGBCASend j m)) r').1 j =
-          (x j).2.roundRecord r' := by
+          (x j).2.roundVariables r' := by
       intro r'
       simp only [hx]
       by_cases hr' : r' = r
       · subst hr'; simp
-      · rw [Function.update_of_ne hr', RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr']
+      · rw [Function.update_of_ne hr', RoundVariablesMap.roundVariables_setRoundVariables_ne _ _ _
+          hr']
         exact hst j r'
     have hxcore : ∀ i, (x i).1 = C i := by
       intro i
       by_cases hi : i = j
       · subst hi; rw [hx]; exact hC i
       · rw [hfor i hi]; exact hC i
-    have h5 := relation_roundRecord P j hst hfor hGfor hown
+    have h5 := relation_roundVariables P j hst hfor hGfor hown
     exact coupling_round P rfl ((protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨hxcore, rfl, by simpa using hA, relation_recordGBCASend hG r j m _, h5⟩)
       (GBCA.ByABDY.composition_event_step P r (GBCA.ByABDY.GBCAEvent.send j m)
@@ -421,12 +423,12 @@ theorem coupling_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
     obtain rfl : w' = w := by
       simpa using pure_inj hw
     obtain ⟨-, -, hxid⟩ := programStep_gbcaDeliver_self (hall i)
-    have hcol : (G r).1 i = (processes i).2.roundRecord r := hst i r
+    have hcol : (G r).1 i = (processes i).2.roundVariables r := hst i r
     have hx : x i = ((processes i).1,
-      (processes i).2.setRoundRecord r (((G r).1 i).deliverTo k m)) := by
+      (processes i).2.setRoundVariables r (((G r).1 i).deliverTo k m)) := by
         rw [hcol]; exact pure_inj hxid
     have hfor : ∀ i', i' ≠ i → x i' = processes i' := fun i' hi' =>
-      pure_inj (programStep_gbcaDeliver_foreign (Ne.symm hi') (hall i'))
+      pure_inj (programStep_gbcaDeliver_notOwn (Ne.symm hi') (hall i'))
     have hGfor : ∀ i' r', i' ≠ i →
         ((Function.update G r
           (Function.update ((G r).1) i (((G r).1 i).deliverTo k m), (G r).2)) r').1 i' =
@@ -437,19 +439,20 @@ theorem coupling_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
       · rw [Function.update_of_ne hr']
     have hown : ∀ r', ((Function.update G r
         (Function.update ((G r).1) i (((G r).1 i).deliverTo k m), (G r).2)) r').1 i =
-          (x i).2.roundRecord r' := by
+          (x i).2.roundVariables r' := by
       intro r'
       simp only [hx]
       by_cases hr' : r' = r
       · subst hr'; simp
-      · rw [Function.update_of_ne hr', RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr']
+      · rw [Function.update_of_ne hr', RoundVariablesMap.roundVariables_setRoundVariables_ne _ _ _
+          hr']
         exact hst i r'
     have hxcore : ∀ i', (x i').1 = C i' := by
       intro i'
       by_cases hi' : i' = i
       · subst hi'; rw [hx]; exact hC i'
       · rw [hfor i' hi']; exact hC i'
-    have h5 := relation_roundRecord P i hst hfor hGfor hown
+    have h5 := relation_roundVariables P i hst hfor hGfor hown
     exact coupling_round P rfl ((protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨hxcore, rfl, hA, fun r' => by rw [update_snd G r _ r']; exact hG r', h5⟩)
       (GBCA.ByABDY.composition_event_step P r (GBCA.ByABDY.GBCAEvent.deliver i k m)
@@ -465,7 +468,7 @@ theorem coupling_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
       · subst hi
         rcases programStep_decidedSend_self (hall i) with ⟨-, -, -, hdx⟩ | ⟨-, hdx⟩ <;>
           exact pure_inj hdx
-      · exact pure_inj (programStep_decidedSend_foreign (Ne.symm hi) (hall i))
+      · exact pure_inj (programStep_decidedSend_notOwn (Ne.symm hi) (hall i))
     have h5 := relation_none P (G' := G) hst hx (fun _ _ => rfl)
     refine hvis (A' := A.recordDecided j b) (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, by rw [hA]; simp [ABANetworkState.recordDecided,
@@ -485,10 +488,10 @@ theorem coupling_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
     obtain ⟨hhd, hnotin, hxid⟩ := programStep_decidedDeliver_self (hall i)
     have hx : x i = ((processes i).1.receiveDecided k b, (processes i).2) := pure_inj hxid
     have hfor : ∀ i', i' ≠ i → x i' = processes i' := fun i' hi' =>
-      pure_inj (programStep_decidedDeliver_foreign (Ne.symm hi') (hall i'))
-    have hown : ∀ r, (G r).1 i = (x i).2.roundRecord r := by
+      pure_inj (programStep_decidedDeliver_notOwn (Ne.symm hi') (hall i'))
+    have hown : ∀ r, (G r).1 i = (x i).2.roundVariables r := by
       intro r; simp only [hx]; exact hst i r
-    have h5 := relation_roundRecord P i hst hfor (fun _ _ _ => rfl) hown
+    have h5 := relation_roundVariables P i hst hfor (fun _ _ _ => rfl) hown
     refine hvis (A' := A) (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, hA, hG, h5⟩)
       (gbcaInstanceFamily_idle P G hLne (by simp) not_false) (fun i' => ?_)
@@ -502,10 +505,10 @@ theorem coupling_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
     obtain ⟨hh, hph, hrr, hgr, hxid⟩ := programStep_retWPublish_self (hall id)
     have hx : x id = ((processes id).1.stepRound co, (processes id).2) := pure_inj hxid
     have hfor : ∀ i, i ≠ id → x i = processes i := fun i hi =>
-      pure_inj (programStep_retWPublish_foreign (Ne.symm hi) (hall i))
-    have hown : ∀ r, (G r).1 id = (x id).2.roundRecord r := by
+      pure_inj (programStep_retWPublish_notOwn (Ne.symm hi) (hall i))
+    have hown : ∀ r, (G r).1 id = (x id).2.roundVariables r := by
       intro r; simp only [hx]; exact hst id r
-    have h5 := relation_roundRecord P id hst hfor (fun _ _ _ => rfl) hown
+    have h5 := relation_roundVariables P id hst hfor (fun _ _ _ => rfl) hown
     refine hvis (A' := A.recordDecided id b) (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, by rw [hA]; simp [ABANetworkState.recordDecided,
         NetworkState.recordDecided], fun r' => by rw [hG r']; simp [NetworkState.recordDecided],
@@ -520,14 +523,15 @@ theorem coupling_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
     obtain rfl : w' = w := by
       simpa using pure_inj (networkStep_gbcaCallLoop hn)
     obtain ⟨hh, hph, hrr, hest, -, hxid⟩ := programStep_gbcaCallLoop_self (hall id)
-    have hx : x id = ((processes id).1.setProcess { (processes id).1.process with phase := .awaitG
+    have hx : x id = ((processes id).1.setProcessVariables { (processes id).1.processVariables with
+      phase := .awaitG
       },
       (processes id).2) := pure_inj hxid
     have hfor : ∀ i, i ≠ id → x i = processes i := fun i hi =>
-      pure_inj (programStep_gbcaCallLoop_foreign (Ne.symm hi) (hall i))
-    have hown : ∀ r, (G r).1 id = (x id).2.roundRecord r := by
+      pure_inj (programStep_gbcaCallLoop_notOwn (Ne.symm hi) (hall i))
+    have hown : ∀ r, (G r).1 id = (x id).2.roundVariables r := by
       intro r; simp only [hx]; exact hst id r
-    have h5 := relation_roundRecord P id hst hfor (fun _ _ _ => rfl) hown
+    have h5 := relation_roundVariables P id hst hfor (fun _ _ _ => rfl) hown
     refine hvis (A' := A) (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, hA, hG, h5⟩)
       (gbcaInstanceFamily_owned_id P G r (by simp)
@@ -579,9 +583,9 @@ theorem coupling_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
     rw [hCeq i, hx i]; exact RoundLoopStep.byzantineRetWIdle _ r k b
 
 /-- The matching on a visible shared label. -/
-theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord P.n}
+theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessVariables P.n}
     {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
-    {G : ℕ → GBCA.ByABDY.RoundState P.n} {C : ∀ _ : Fin P.n, RoundLoopRecord P.n}
+    {G : ℕ → GBCA.ByABDY.RoundState P.n} {C : ∀ _ : Fin P.n, RoundLoopVariables P.n}
     {A : ABANetworkState P.n} (hR : ProtocolRelation P (processes, w, o) (G, C, A, o))
     {l : Label P.n} (hl : l ≠ Label.tau) {μ : PMF (ProtocolState P)}
     (h : (protocolExtended P).step (processes, w, o) (Sum.inl l) μ) :
@@ -590,7 +594,7 @@ theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
       (composedHidden P).step (G, C, A, o) l (Ω.bind id) := by
   obtain ⟨hC, -, hA, hG, hst⟩ := (protocolRelation_mk P _ _ _ _ _ _ _).mp hR
   have hCeq : ∀ i, C i = (processes i).1 := fun i => (hC i).symm
-  obtain ⟨x, w', ω, hall, hn, hOr, rfl⟩ := protocolExtended_label_inversion P hl h
+  obtain ⟨x, w', ω, hall, hn, hOr, rfl⟩ := protocolExtended_label_cases P hl h
   have hWl : (coinOverRoundAlphabet P GBCA.ByABDY.Message).step o (Sum.inl l) ω :=
     (System.mapIdle_step_some (coinLabelMap_inl l) ω).mpr hOr
   have hLne : (Sum.inl l : ExtendedLabel P.n GBCA.ByABDY.Message) ≠ Silent.τ := by
@@ -606,17 +610,18 @@ theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
   | callABA id b =>
     obtain rfl : w' = w := pure_inj (networkStep_callABA hn)
     have hfor : ∀ i, i ≠ id → x i = processes i := fun i hi =>
-      pure_inj (programStep_callABA_foreign (Ne.symm hi) (hall i))
+      pure_inj (programStep_callABA_notOwn (Ne.symm hi) (hall i))
     have hGs : (GBCA.ByABDY.gbcaInstanceFamily P).step G (Sum.inl (Label.callABA id b))
       (PMF.pure G) :=
       gbcaInstanceFamily_idle P G hLne (by simp) not_false
     rcases programStep_callABA_own (hall id) with ⟨hh, hin, hxid⟩ | ⟨hloop, hxid⟩
-    · have hx : x id = ((processes id).1.setProcess { (processes id).1.process with
+    · have hx : x id = ((processes id).1.setProcessVariables { (processes id).1.processVariables
+        with
           input := some b, estimate := some b, round := 0, phase := .toCallG },
           (processes id).2) := pure_inj hxid
-      have hown : ∀ r, (G r).1 id = (x id).2.roundRecord r := by
+      have hown : ∀ r, (G r).1 id = (x id).2.roundVariables r := by
         intro r; simp only [hx]; exact hst id r
-      have h5 := relation_roundRecord P id hst hfor (fun _ _ _ => rfl) hown
+      have h5 := relation_roundVariables P id hst hfor (fun _ _ _ => rfl) hown
       refine coupling_visible P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, hG, h5⟩) hGs (fun i => ?_)
         (ABANetworkStep.callABAIdle A id b) hWl
@@ -643,7 +648,7 @@ theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
     obtain ⟨hdp, hw⟩ := networkStep_retABA hn
     obtain rfl : w' = w := pure_inj hw
     have hfor : ∀ i, i ≠ id → x i = processes i := fun i hi =>
-      pure_inj (programStep_retABA_foreign (Ne.symm hi) (hall i))
+      pure_inj (programStep_retABA_notOwn (Ne.symm hi) (hall i))
     have hGs : (GBCA.ByABDY.gbcaInstanceFamily P).step G (Sum.inl (Label.retABA id b))
       (PMF.pure G) :=
       gbcaInstanceFamily_idle P G hLne (by simp) not_false
@@ -654,11 +659,12 @@ theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
       · exact ABANetworkStep.retByzantine A id b (by rw [hA]; exact hF)
     rcases programStep_retABA_own (hall id) with ⟨hh, -, hcnt, hret, hxid⟩ | ⟨hh, hxid⟩
     · have hx : x id =
-          ((processes id).1.setProcess { (processes id).1.process with returned := true },
+          ((processes id).1.setProcessVariables
+            { (processes id).1.processVariables with returned := true },
             (processes id).2) := pure_inj hxid
-      have hown : ∀ r, (G r).1 id = (x id).2.roundRecord r := by
+      have hown : ∀ r, (G r).1 id = (x id).2.roundVariables r := by
         intro r; simp only [hx]; exact hst id r
-      have h5 := relation_roundRecord P id hst hfor (fun _ _ _ => rfl) hown
+      have h5 := relation_roundVariables P id hst hfor (fun _ _ _ => rfl) hown
       refine coupling_visible P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, hG, h5⟩) hGs (fun i => ?_) hAs hWl
       by_cases hi : i = id
@@ -679,17 +685,18 @@ theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
   | callW r id =>
     obtain rfl : w' = w := pure_inj (networkStep_callW hn)
     have hfor : ∀ i, i ≠ id → x i = processes i := fun i hi =>
-      pure_inj (programStep_callW_foreign (Ne.symm hi) (hall i))
+      pure_inj (programStep_callW_notOwn (Ne.symm hi) (hall i))
     have hGs : (GBCA.ByABDY.gbcaInstanceFamily P).step G (Sum.inl (Label.callW r id))
       (PMF.pure G) :=
       gbcaInstanceFamily_idle P G hLne (by simp) not_false
     rcases programStep_callW_own (hall id) with ⟨hh, hph, hrr, hxid⟩ | ⟨hh, hxid⟩
     · have hx : x id =
-          ((processes id).1.setProcess { (processes id).1.process with phase := .awaitW },
+          ((processes id).1.setProcessVariables
+            { (processes id).1.processVariables with phase := .awaitW },
             (processes id).2) := pure_inj hxid
-      have hown : ∀ r, (G r).1 id = (x id).2.roundRecord r := by
+      have hown : ∀ r, (G r).1 id = (x id).2.roundVariables r := by
         intro r; simp only [hx]; exact hst id r
-      have h5 := relation_roundRecord P id hst hfor (fun _ _ _ => rfl) hown
+      have h5 := relation_roundVariables P id hst hfor (fun _ _ _ => rfl) hown
       refine coupling_visible P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, hG, h5⟩) hGs (fun i => ?_)
         (ABANetworkStep.callWIdle A r id) hWl
@@ -712,15 +719,15 @@ theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
   | retW r id co =>
     obtain rfl : w' = w := pure_inj (networkStep_retW hn)
     have hfor : ∀ i, i ≠ id → x i = processes i := fun i hi =>
-      pure_inj (programStep_retW_foreign (Ne.symm hi) (hall i))
+      pure_inj (programStep_retW_notOwn (Ne.symm hi) (hall i))
     have hGs : (GBCA.ByABDY.gbcaInstanceFamily P).step G (Sum.inl (Label.retW r id co))
       (PMF.pure G) :=
       gbcaInstanceFamily_idle P G hLne (by simp) not_false
     rcases programStep_retW_own (hall id) with ⟨hh, hph, hrr, hgr, hxid⟩ | ⟨hh, hxid⟩
     · have hx : x id = ((processes id).1.stepRound co, (processes id).2) := pure_inj hxid
-      have hown : ∀ r, (G r).1 id = (x id).2.roundRecord r := by
+      have hown : ∀ r, (G r).1 id = (x id).2.roundVariables r := by
         intro r; simp only [hx]; exact hst id r
-      have h5 := relation_roundRecord P id hst hfor (fun _ _ _ => rfl) hown
+      have h5 := relation_roundVariables P id hst hfor (fun _ _ _ => rfl) hown
       refine coupling_visible P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, hG, h5⟩) hGs (fun i => ?_)
         (ABANetworkStep.retWIdle A r id co) hWl
@@ -744,10 +751,10 @@ theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
     obtain ⟨hnew, hbud, hw⟩ := networkStep_fail hn
     obtain rfl : w' = NetworkState.corrupt P k w := pure_inj hw
     have hfor : ∀ i, i ≠ k → x i = processes i := fun i hi =>
-      pure_inj (programStep_fail_foreign (Ne.symm hi) (hall i))
+      pure_inj (programStep_fail_notOwn (Ne.symm hi) (hall i))
     have hstg : (x k).2 = (processes k).2 := by
       rcases programStep_fail_own (hall k) with ⟨-, hxk⟩ | ⟨-, hxk⟩ <;> rw [pure_inj hxk]
-    have h5 := relation_roundRecord P k (G' := fun r =>
+    have h5 := relation_roundVariables P k (G' := fun r =>
       GBCA.ByABDY.corruptionAct P (Sum.inl (Label.fail k)) (G r)) hst hfor
       (fun _ _ _ => by simp only [GBCA.ByABDY.corruptionAct_fail])
       (fun r => by simp only [GBCA.ByABDY.corruptionAct_fail]; rw [hstg]; exact hst k r)
@@ -776,22 +783,26 @@ theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
     obtain rfl : w' = w.recordGBCASend r id (.input b) := by
       simpa [gbcaCallPayload] using pure_inj (networkStep_callG hn)
     have hfor : ∀ i, i ≠ id → x i = processes i := fun i hi =>
-      pure_inj (programStep_callG_foreign (Ne.symm hi) (hall i))
+      pure_inj (programStep_callG_notOwn (Ne.symm hi) (hall i))
     obtain ⟨hh, hph, hrr, -, hest, hin, hxid⟩ := programStep_callG_own (hall id)
-    have hcol : (G r).1 id = (processes id).2.roundRecord r := hst id r
-    have hx : x id = ((processes id).1.setProcess { (processes id).1.process with phase := .awaitG
+    have hcol : (G r).1 id = (processes id).2.roundVariables r := hst id r
+    have hx : x id = ((processes id).1.setProcessVariables { (processes id).1.processVariables with
+      phase := .awaitG
       },
-        (processes id).2.setRoundRecord r (((processes id).2.roundRecord r).setProcess
-          { ((processes id).2.roundRecord r).process with
+        (processes id).2.setRoundVariables r (((processes id).2.roundVariables
+          r).setProcessVariables
+          { ((processes id).2.roundVariables r).processVariables with
             input := some b,
             sentInput :=
-              Function.update ((processes id).2.roundRecord r).process.sentInput b true })) :=
+              Function.update ((processes id).2.roundVariables r).processVariables.sentInput b true
+                })) :=
       pure_inj hxid
     have hGs : (GBCA.ByABDY.gbcaInstanceFamily P).step G (Sum.inl (Label.callG r id b))
         (PMF.pure (Function.update G r
-          (Function.update ((G r).1) id (((G r).1 id).setProcess { ((G r).1 id).process with
+          (Function.update ((G r).1) id (((G r).1 id).setProcessVariables { ((G r).1
+            id).processVariables with
             input := some b,
-            sentInput := Function.update ((G r).1 id).process.sentInput b true }),
+            sentInput := Function.update ((G r).1 id).processVariables.sentInput b true }),
           ((G r).2).recordGBCASend id (.input b)))) :=
       gbcaInstanceFamily_owned P G r (by simp)
         (GBCA.ByABDY.composition_label_step P r (by simp)
@@ -801,26 +812,29 @@ theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
           (GBCA.ByABDY.GBCANetworkStep.callG _ id b))
     have hGfor : ∀ j r', j ≠ id →
         ((Function.update G r
-          (Function.update ((G r).1) id (((G r).1 id).setProcess { ((G r).1 id).process with
+          (Function.update ((G r).1) id (((G r).1 id).setProcessVariables { ((G r).1
+            id).processVariables with
             input := some b,
-            sentInput := Function.update ((G r).1 id).process.sentInput b true }),
+            sentInput := Function.update ((G r).1 id).processVariables.sentInput b true }),
           ((G r).2).recordGBCASend id (.input b))) r').1 j = (G r').1 j := by
       intro j r' hj
       by_cases hr' : r' = r
       · subst hr'; rw [Function.update_self]; exact Function.update_of_ne hj _ _
       · rw [Function.update_of_ne hr']
     have hown : ∀ r', ((Function.update G r
-        (Function.update ((G r).1) id (((G r).1 id).setProcess { ((G r).1 id).process with
+        (Function.update ((G r).1) id (((G r).1 id).setProcessVariables { ((G r).1
+          id).processVariables with
           input := some b,
-          sentInput := Function.update ((G r).1 id).process.sentInput b true }),
-        ((G r).2).recordGBCASend id (.input b))) r').1 id = (x id).2.roundRecord r' := by
+          sentInput := Function.update ((G r).1 id).processVariables.sentInput b true }),
+        ((G r).2).recordGBCASend id (.input b))) r').1 id = (x id).2.roundVariables r' := by
       intro r'
       simp only [hx]
       by_cases hr' : r' = r
       · subst hr'; simp [hcol]
-      · rw [Function.update_of_ne hr', RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr']
+      · rw [Function.update_of_ne hr', RoundVariablesMap.roundVariables_setRoundVariables_ne _ _ _
+          hr']
         exact hst id r'
-    have h5 := relation_roundRecord P id hst hfor hGfor hown
+    have h5 := relation_roundVariables P id hst hfor hGfor hown
     refine coupling_visible P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, by simpa using hA, relation_recordGBCASend hG r id (.input b) _,
         h5⟩) hGs (fun i => ?_) (ABANetworkStep.callGIdle A r id b) hWl
@@ -832,22 +846,24 @@ theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
     obtain rfl :
         w' = w.writeGhost (abdyGhostStep P) (Sum.inl (Label.retG r id out bnd)) :=
       pure_inj hw
-    have hfix : (w.ghostRecord r).getD bnd = bnd := ghostOutput_getD hbnd
+    have hfix : (w.ghost r).getD bnd = bnd := ghostOutput_getD hbnd
     have hfor : ∀ i, i ≠ id → x i = processes i := fun i hi =>
-      pure_inj (programStep_retG_foreign (Ne.symm hi) (hall i))
-    have hcol : (G r).1 id = (processes id).2.roundRecord r := hst id r
+      pure_inj (programStep_retG_notOwn (Ne.symm hi) (hall i))
+    have hcol : (G r).1 id = (processes id).2.roundVariables r := hst id r
     have hbnd' : bnd = ((G r).2).bound.getD
         (GBCA.ByABDY.boundOf ((G r).2).sent ((G r).2).F out) := by
       rw [hG r]; exact hbnd
-    have hstage : ∃ hph : (processes id).1.process.phase = Phase.awaitG,
-        (processes id).1.process.round = r ∧ (processes id).1.corrupted = false ∧
+    have hstage : ∃ hph : (processes id).1.processVariables.phase = Phase.awaitG,
+        (processes id).1.processVariables.round = r ∧ (processes id).1.corrupted = false ∧
         GBCA.ByABDY.GBCAProgramStep P r id ((G r).1 id) (Sum.inl (Sum.inl (Label.retG r id out
           bnd)))
-          (PMF.pure (((G r).1 id).setProcess { ((G r).1 id).process with returned := true })) ∧
-        x id = ((processes id).1.setProcess { (processes id).1.process with
+          (PMF.pure (((G r).1 id).setProcessVariables { ((G r).1 id).processVariables with
+                                                          returned := true })) ∧
+        x id = ((processes id).1.setProcessVariables { (processes id).1.processVariables with
           estimate := out.estimate, lastGrade := some out, phase := .toCallW },
-          (processes id).2.setRoundRecord r (((processes id).2.roundRecord r).setProcess
-            { ((processes id).2.roundRecord r).process with returned := true })) := by
+          (processes id).2.setRoundVariables r (((processes id).2.roundVariables
+            r).setProcessVariables
+            { ((processes id).2.roundVariables r).processVariables with returned := true })) := by
       cases out with
       | grade2 v =>
         obtain ⟨hh, hph, hrr, -, hin, hlv, hcnt, hret, hxid⟩ := programStep_retGGrade2_own (hall id)
@@ -875,7 +891,8 @@ theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
     have hGs : (GBCA.ByABDY.gbcaInstanceFamily P).step G (Sum.inl (Label.retG r id out bnd))
         (PMF.pure (Function.update G r
           (Function.update ((G r).1) id
-            (((G r).1 id).setProcess { ((G r).1 id).process with returned := true }),
+            (((G r).1 id).setProcessVariables
+              { ((G r).1 id).processVariables with returned := true }),
           ((G r).2).setBound bnd))) :=
       gbcaInstanceFamily_owned P G r (by simp)
         (GBCA.ByABDY.composition_label_step P r (by simp)
@@ -885,7 +902,8 @@ theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
     have hGfor : ∀ j r', j ≠ id →
         ((Function.update G r
           (Function.update ((G r).1) id
-            (((G r).1 id).setProcess { ((G r).1 id).process with returned := true }),
+            (((G r).1 id).setProcessVariables
+              { ((G r).1 id).processVariables with returned := true }),
           ((G r).2).setBound bnd)) r').1 j = (G r').1 j := by
       intro j r' hj
       by_cases hr' : r' = r
@@ -893,15 +911,17 @@ theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
       · rw [Function.update_of_ne hr']
     have hown : ∀ r', ((Function.update G r
         (Function.update ((G r).1) id
-          (((G r).1 id).setProcess { ((G r).1 id).process with returned := true }),
-        ((G r).2).setBound bnd)) r').1 id = (x id).2.roundRecord r' := by
+          (((G r).1 id).setProcessVariables
+            { ((G r).1 id).processVariables with returned := true }),
+        ((G r).2).setBound bnd)) r').1 id = (x id).2.roundVariables r' := by
       intro r'
       simp only [hx]
       by_cases hr' : r' = r
       · subst hr'; simp [hcol]
-      · rw [Function.update_of_ne hr', RoundRecordMap.roundRecord_setRoundRecord_ne _ _ _ hr']
+      · rw [Function.update_of_ne hr', RoundVariablesMap.roundVariables_setRoundVariables_ne _ _ _
+          hr']
         exact hst id r'
-    have h5 := relation_roundRecord P id hst hfor hGfor hown
+    have h5 := relation_roundVariables P id hst hfor hGfor hown
     refine coupling_visible P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, by simpa using hA,
         relation_setBound hG r bnd _ hfix (by simp) (fun r' hr' =>
@@ -915,16 +935,16 @@ theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRec
 /-- The matching on the silent label. The protocol's own `terminate` transition writes
 no coordinate the relation reads, so the composed system matches it by standing
 still; the adversary's two injections are matched by a transition. -/
-theorem coupling_tau (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessRecord P.n}
+theorem coupling_tau (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessVariables P.n}
     {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n} {G : ℕ → GBCA.ByABDY.RoundState P.n}
-    {C : ∀ _ : Fin P.n, RoundLoopRecord P.n} {A : ABANetworkState P.n}
+    {C : ∀ _ : Fin P.n, RoundLoopVariables P.n} {A : ABANetworkState P.n}
     (hR : ProtocolRelation P (processes, w, o) (G, C, A, o)) {μ : PMF (ProtocolState P)}
     (h : (protocolExtended P).step (processes, w, o) (Sum.inl Label.tau) μ) :
     ∃ Ω : PMF (PMF (ComposedState P)), PMFRel (diracRel (ProtocolRelation P)) μ Ω ∧
     ((composedHidden P).step (G, C, A, o) Label.tau (Ω.bind id) ∨ Ω.bind id = PMF.pure (G, C, A, o))
     := by
   obtain ⟨hC, -, hA, hG, hst⟩ := (protocolRelation_mk P _ _ _ _ _ _ _).mp hR
-  rcases protocolExtended_tau_inversion P h with ⟨i, y, hy, rfl⟩ | ⟨w', hn, rfl⟩
+  rcases protocolExtended_tau_cases P h with ⟨i, y, hy, rfl⟩ | ⟨w', hn, rfl⟩
   · obtain ⟨-, -, -, -, -, hyeq⟩ := programStep_tau_terminate hy
     obtain rfl : y = ((processes i).1, { (processes i).2 with terminated := true }) :=
       pure_inj hyeq
@@ -1038,7 +1058,7 @@ record, which is what an untouched round reads as in the protocol. -/
 theorem protocolRelation_init (P : Parameters) :
     ProtocolRelation P (protocol P).init (composed P).init :=
   ⟨fun _ => rfl, rfl, rfl, fun _ => rfl,
-    fun _ r => (RoundRecordMap.initial_roundRecord P.n r).symm⟩
+    fun _ r => (RoundVariablesMap.initial_roundVariables P.n r).symm⟩
 
 /-- **The protocol forward-simulates into its composed system**
 along the Dirac lift of `ProtocolRelation`. -/

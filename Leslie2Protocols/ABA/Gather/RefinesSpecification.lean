@@ -36,7 +36,7 @@ returned map not yet committed, the core write if the instance has no core yet, 
 the return.
 
 * Entry commits are licensed by two clauses of the invariant: a committed input entry of a correct
-  process is that input instance's call record (`inputBroadcastVal_provenance`), and that call
+  process is that input instance's call record (`inputBroadcastVal_of_instanceInput`), and that call
   record is the payload the process's own gather record holds
   (`inputBroadcastCall_backed`), which the relation identifies with the specification's call
   record.
@@ -44,7 +44,7 @@ the return.
   two guards of `bindCore` are `Gather.coreOf_recorded`, which the returner's
   quorum of `n − f` committed bind payloads supplies.
 * Every return, the first included, is matched through the count
-  `SpecificationRelation.core_certificate`: at least `f + 1` bind instances hold a committed payload
+  `SpecificationRelation.core_witness`: at least `f + 1` bind instances hold a committed payload
   above the recorded core. The returner's quorum of `n − f` meets it in a
   coordinate whose committed payload lies above the core and below the returned
   map.
@@ -344,25 +344,32 @@ gather specification's transitions can replay without re-proving the run. -/
 
 theorem retRun {s : StateOverBroadcastSpecification P.n X} {t : SpecState P.n X}
     (hR : SpecificationRelation P s t) {id : Fin P.n} {g : Fin P.n → Option X}
-    (hin : ((gatherTier s).process id).input ≠ none)
-    (hbind : ((gatherTier s).process id).sentBind ≠ none)
-    (hsub : ∀ k x, g k = some x → holdsInputBroadcastReturn ((gatherTier s).process id) k x)
+    (hin : ((gatherProgramsAndNetwork s).processVariables id).input ≠ none)
+    (hbind : ((gatherProgramsAndNetwork s).processVariables id).sentBind ≠ none)
+    (hsub : ∀ k x, g k = some x → holdsInputBroadcastReturn ((gatherProgramsAndNetwork
+      s).processVariables id) k
+      x)
     (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
       ∀ q ∈ Q, ∃ U,
-        holdsBindBroadcastReturn ((gatherTier s).process id) q U ∧ AcceptedPairs.subMap U g)
-    (hr : ((gatherTier s).process id).returned = false) :
+        holdsBindBroadcastReturn ((gatherProgramsAndNetwork s).processVariables id) q U ∧
+          AcceptedPairs.subMap U
+          g)
+    (hr : ((gatherProgramsAndNetwork s).processVariables id).returned = false) :
     ∃ ts : List (SpecState P.n X),
       List.IsChain (fun a b => Step P a Label.tau (PMF.pure b)) (t :: ts) ∧
-      (ts.getLastD t).core = some ((core s).getD (coreOfNetwork P (gatherTier s).2)) ∧
-      AcceptedPairs.subMap ((core s).getD (coreOfNetwork P (gatherTier s).2)) g ∧
+      (ts.getLastD t).core = some ((core s).getD (coreOfNetwork P (gatherProgramsAndNetwork s).2)) ∧
+      AcceptedPairs.subMap ((core s).getD (coreOfNetwork P (gatherProgramsAndNetwork s).2)) g ∧
       (∀ k x, g k = some x → (ts.getLastD t).val k = some x) ∧
       (ts.getLastD t).ret id = false ∧
       SpecificationRelation P
-        (setCore (setGatherTier s ((gatherTier s).setProcess id { (gatherTier s).process id with
+        (setCore (setGatherProgramsAndNetwork s ((gatherProgramsAndNetwork s).setProcessVariables id
+          { (gatherProgramsAndNetwork
+          s).processVariables id with
           returned := true }))
-          (some ((core s).getD (coreOfNetwork P (gatherTier s).2))))
+          (some ((core s).getD (coreOfNetwork P (gatherProgramsAndNetwork s).2))))
         { ts.getLastD t with ret := Function.update (ts.getLastD t).ret id true } := by classical
-  set C : AcceptedPairs P.n X := (core s).getD (coreOfNetwork P (gatherTier s).2) with hC_def
+  set C : AcceptedPairs P.n X := (core s).getD (coreOfNetwork P (gatherProgramsAndNetwork s).2) with
+    hC_def
   have hInv' := hR.invariant.step
     (AlgorithmOverBroadcastSpecification.ret s id g hin hbind hsub hQ hr)
     (by rw [PMF.mem_support_pure_iff])
@@ -377,18 +384,18 @@ theorem retRun {s : StateOverBroadcastSpecification P.n X} {t : SpecState P.n X}
   have hguard : ∀ k ∈ l, ∀ x, g k = some x → t.val k = none →
       k ∈ t.F ∨ t.call k = some x := by
     intro k _ x hx _
-    by_cases hF : k ∈ (gatherTier s).F
+    by_cases hF : k ∈ (gatherProgramsAndNetwork s).F
     · left
       rw [hR.F_eq]
       exact hF
     · right
-      rcases hR.invariant.inputBroadcastVal_provenance k x (hsubv k x hx) with hF' | hin'
+      rcases hR.invariant.inputBroadcastVal_of_instanceInput k x (hsubv k x hx) with hF' | hin'
       · exact absurd hF' hF
       · rw [hR.call_eq k]
         exact hR.invariant.inputBroadcastCall_backed k hF x hin'
   have hpre : ∀ k y x, g k = some x → t.val k = some y → y = x := by
     intro k y x hx hy
-    have h1 := hR.val_certificate k y hy
+    have h1 := hR.val_witness k y hy
     have h2 := hsubv k x hx
     rw [h1] at h2
     injection h2
@@ -429,34 +436,37 @@ theorem retRun {s : StateOverBroadcastSpecification P.n X} {t : SpecState P.n X}
       (∀ k v, t'.val k = some v → (commitList g l t).val k = some v) →
       t'.core = some C → P.f + 1 ≤ (bindAbove s C).card →
       SpecificationRelation P
-        (setCore (setGatherTier s ((gatherTier s).setProcess id { (gatherTier s).process id with
+        (setCore (setGatherProgramsAndNetwork s ((gatherProgramsAndNetwork s).setProcessVariables id
+          { (gatherProgramsAndNetwork
+          s).processVariables id with
           returned := true }))
           (some C))
         { t' with ret := Function.update t'.ret id true } := by
     intro t' hcall hret hF hval hcore hcnt
     refine ⟨hInv', ?_, ?_, ?_, ?_, ?_, ?_⟩
-    all_goals dsimp only [gatherTier_setCore, gatherTier_setGatherTier, inputBroadcasts_setCore,
-      inputBroadcasts_setGatherTier, core_setCore]
+    all_goals dsimp only [gatherProgramsAndNetwork_setCore,
+      gatherProgramsAndNetwork_setGatherProgramsAndNetwork, inputBroadcasts_setCore,
+      inputBroadcasts_setGatherProgramsAndNetwork, core_setCore]
     · intro k
       rw [hcall, commitList_call]
       by_cases hk : k = id
       · subst hk
-        rw [InstanceState.setProcess_process_self]
+        rw [InstanceState.setProcessVariables_processVariables_self]
         exact hR.call_eq k
-      · rw [InstanceState.setProcess_process_ne _ _ _ hk]
+      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk]
         exact hR.call_eq k
     · intro k
       by_cases hk : k = id
       · subst hk
-        rw [Function.update_self, InstanceState.setProcess_process_self]
+        rw [Function.update_self, InstanceState.setProcessVariables_processVariables_self]
       · rw [Function.update_of_ne hk, hret, commitList_ret,
-          InstanceState.setProcess_process_ne _ _ _ hk]
+          InstanceState.setProcessVariables_processVariables_ne _ _ _ hk]
         exact hR.ret_eq k
     · rw [hF, commitList_F]
       exact hR.F_eq
     · intro k v hv
       rcases commitList_val_new g l t (hval k v hv) with hold | hnew
-      · exact hR.val_certificate k v hold
+      · exact hR.val_witness k v hold
       · exact hsubv k v hnew
     · exact hcore
     · intro C' hC'
@@ -464,7 +474,7 @@ theorem retRun {s : StateOverBroadcastSpecification P.n X} {t : SpecState P.n X}
       exact hcnt
   rcases hcore : core s with _ | C₀
   · -- no core yet: write `coreOfNetwork` at the end of the chain
-    have hCcore : C = coreOfNetwork P (gatherTier s).2 := by
+    have hCcore : C = coreOfNetwork P (gatherProgramsAndNetwork s).2 := by
       simp [hC_def, hcore]
     obtain ⟨hcard, -, hcnt⟩ :=
       coreOf_recorded hR.invariant hQc (fun q hq => ⟨u q, (hu q hq).1⟩)
@@ -492,7 +502,7 @@ theorem retRun {s : StateOverBroadcastSpecification P.n X} {t : SpecState P.n X}
     have hCcore : C = C₀ := by
       simp [hC_def, hcore]
     have hcnt : P.f + 1 ≤ (bindAbove s C).card := by
-      rw [hCcore]; exact hR.core_certificate C₀ hcore
+      rw [hCcore]; exact hR.core_witness C₀ hcore
     have hCg : AcceptedPairs.subMap C g := key _ hcnt
     have hlastcore : (commitList g l t).core = some C := by
       rw [commitList_core, hR.core_eq, hcore, hCcore]
@@ -515,38 +525,42 @@ The two lemmas `specificationRelation_transition` is assembled from. -/
 payload. -/
 theorem specificationRelation_call {s : StateOverBroadcastSpecification P.n X} {t : SpecState P.n X}
     (hR : SpecificationRelation P s t) {id : Fin P.n} {x : X}
-    (h : ((gatherTier s).process id).input = none) :
+    (h : ((gatherProgramsAndNetwork s).processVariables id).input = none) :
     SpecificationRelation P
-      (setGatherTier s ((gatherTier s).setProcess id { (gatherTier s).process id
+      (setGatherProgramsAndNetwork s ((gatherProgramsAndNetwork s).setProcessVariables id {
+        (gatherProgramsAndNetwork s).processVariables id
         with input := some x }))
       { t with call := Function.update t.call id (some x) } := by
   refine ⟨hR.invariant.step (AlgorithmOverBroadcastSpecification.call s id x h) (by rw
     [PMF.mem_support_pure_iff]),
     ?_, ?_, ?_, ?_, ?_, ?_⟩
-  all_goals dsimp only [gatherTier_setGatherTier, inputBroadcasts_setGatherTier]
+  all_goals dsimp only [gatherProgramsAndNetwork_setGatherProgramsAndNetwork,
+    inputBroadcasts_setGatherProgramsAndNetwork]
   · intro k
     by_cases hk : k = id
     · subst hk
-      rw [Function.update_self, InstanceState.setProcess_process_self]
-    · rw [Function.update_of_ne hk, InstanceState.setProcess_process_ne _ _ _ hk]
+      rw [Function.update_self, InstanceState.setProcessVariables_processVariables_self]
+    · rw [Function.update_of_ne hk, InstanceState.setProcessVariables_processVariables_ne _ _ _ hk]
       exact hR.call_eq k
   · intro k
     by_cases hk : k = id
     · subst hk
-      rw [InstanceState.setProcess_process_self]
+      rw [InstanceState.setProcessVariables_processVariables_self]
       exact hR.ret_eq k
-    · rw [InstanceState.setProcess_process_ne _ _ _ hk]
+    · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk]
       exact hR.ret_eq k
   · exact hR.F_eq
-  · exact hR.val_certificate
+  · exact hR.val_witness
   · exact hR.core_eq
-  · exact hR.core_certificate
+  · exact hR.core_witness
 
 /-- The relation across the call of an input instance: the instance records the payload and the
 specification stands. -/
 theorem specificationRelation_inputBroadcastCall {s : StateOverBroadcastSpecification P.n X}
     {t : SpecState P.n X} (hR : SpecificationRelation P s t) {j : Fin P.n} {x : X}
-    (hin : ((gatherTier s).process j).input = some x) (hb : (inputBroadcasts s j).input = none) :
+    (hin : ((gatherProgramsAndNetwork s).processVariables j).input = some x) (hb : (inputBroadcasts
+      s j).input =
+      none) :
     SpecificationRelation P
       (setInputBroadcasts s
         (Function.update (inputBroadcasts s) j
@@ -559,11 +573,11 @@ theorem specificationRelation_inputBroadcastCall {s : StateOverBroadcastSpecific
     by_cases hk : k = j
     · subst hk
       rw [Function.update_self]
-      exact hR.val_certificate k v hv
+      exact hR.val_witness k v hv
     · rw [Function.update_of_ne hk]
-      exact hR.val_certificate k v hv
+      exact hR.val_witness k v hv
   · intro C hC
-    exact le_trans (hR.core_certificate C hC) (Finset.card_le_card
+    exact le_trans (hR.core_witness C hC) (Finset.card_le_card
       (bindAbove_mono (AlgorithmOverBroadcastSpecification.inputBroadcastCall s j x hin hb)
         (by rw [PMF.mem_support_pure_iff]) C))
 
@@ -586,159 +600,172 @@ theorem specificationRelation_tau {s s' : StateOverBroadcastSpecification P.n X}
   | commitInputEntry k v hv hm =>
     have hs' := PMF.pure_injective hμ
     subst hs'
-    refine ⟨hInv', hR.call_eq, hR.ret_eq, hR.F_eq, ?_, hR.core_eq, hR.core_certificate⟩
+    refine ⟨hInv', hR.call_eq, hR.ret_eq, hR.F_eq, ?_, hR.core_eq, hR.core_witness⟩
     all_goals dsimp only [inputBroadcasts_setInputBroadcasts]
     · intro k' v' hv'
-      have hold := hR.val_certificate k' v' hv'
+      have hold := hR.val_witness k' v' hv'
       by_cases hk : k' = k
       · subst hk; rw [hv] at hold; exact absurd hold (by simp)
       · rw [Function.update_of_ne hk]; exact hold
   | commitBindEntry q U hv hm =>
     have hs' := PMF.pure_injective hμ
     subst hs'
-    refine ⟨hInv', hR.call_eq, hR.ret_eq, hR.F_eq, hR.val_certificate, hR.core_eq, ?_⟩
+    refine ⟨hInv', hR.call_eq, hR.ret_eq, hR.F_eq, hR.val_witness, hR.core_eq, ?_⟩
     intro C hC
-    exact le_trans (hR.core_certificate C hC) (Finset.card_le_card
+    exact le_trans (hR.core_witness C hC) (Finset.card_le_card
       (bindAbove_mono (AlgorithmOverBroadcastSpecification.commitBindEntry s q U hv hm)
         (by rw [PMF.mem_support_pure_iff]) C))
   | deliver i j m h =>
     have hs' := PMF.pure_injective hμ
     subst hs'
-    refine ⟨hInv', ?_, ?_, hR.F_eq, hR.val_certificate, hR.core_eq, hR.core_certificate⟩
-    all_goals dsimp only [gatherTier_setGatherTier]
+    refine ⟨hInv', ?_, ?_, hR.F_eq, hR.val_witness, hR.core_eq, hR.core_witness⟩
+    all_goals dsimp only [gatherProgramsAndNetwork_setGatherProgramsAndNetwork]
     · intro k
-      rw [InstanceState.receiveMessage_process]
+      rw [InstanceState.receiveMessage_processVariables]
       exact hR.call_eq k
     · intro k
-      rw [InstanceState.receiveMessage_process]
+      rw [InstanceState.receiveMessage_processVariables]
       exact hR.ret_eq k
   | echo j hin hcard hsend =>
     have hs' := PMF.pure_injective hμ
     subst hs'
-    refine ⟨hInv', ?_, ?_, hR.F_eq, hR.val_certificate, hR.core_eq, hR.core_certificate⟩
-    all_goals dsimp only [gatherTier_setGatherTier]
+    refine ⟨hInv', ?_, ?_, hR.F_eq, hR.val_witness, hR.core_eq, hR.core_witness⟩
+    all_goals dsimp only [gatherProgramsAndNetwork_setGatherProgramsAndNetwork]
     · intro k
       by_cases hk : k = j
       · subst hk
-        rw [InstanceState.multicast_process, InstanceState.setProcess_process_self]
+        rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_self]
         exact hR.call_eq k
-      · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hk]
+      · rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_ne _ _ _ hk]
         exact hR.call_eq k
     · intro k
       by_cases hk : k = j
       · subst hk
-        rw [InstanceState.multicast_process, InstanceState.setProcess_process_self]
+        rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_self]
         exact hR.ret_eq k
-      · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hk]
+      · rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_ne _ _ _ hk]
         exact hR.ret_eq k
   | vote j U hin hech happ hQ hsend =>
     have hs' := PMF.pure_injective hμ
     subst hs'
-    refine ⟨hInv', ?_, ?_, hR.F_eq, hR.val_certificate, hR.core_eq, hR.core_certificate⟩
-    all_goals dsimp only [gatherTier_setGatherTier]
+    refine ⟨hInv', ?_, ?_, hR.F_eq, hR.val_witness, hR.core_eq, hR.core_witness⟩
+    all_goals dsimp only [gatherProgramsAndNetwork_setGatherProgramsAndNetwork]
     · intro k
       by_cases hk : k = j
       · subst hk
-        rw [InstanceState.multicast_process, InstanceState.setProcess_process_self]
+        rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_self]
         exact hR.call_eq k
-      · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hk]
+      · rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_ne _ _ _ hk]
         exact hR.call_eq k
     · intro k
       by_cases hk : k = j
       · subst hk
-        rw [InstanceState.multicast_process, InstanceState.setProcess_process_self]
+        rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_self]
         exact hR.ret_eq k
-      · rw [InstanceState.multicast_process, InstanceState.setProcess_process_ne _ _ _ hk]
+      · rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_ne _ _ _ hk]
         exact hR.ret_eq k
   | bindCall j U hin hvot hsnd happ hQ hb =>
     have hs' := PMF.pure_injective hμ
     subst hs'
-    refine ⟨hInv', ?_, ?_, hR.F_eq, hR.val_certificate, hR.core_eq, ?_⟩
-    · dsimp only [gatherTier_setBindBroadcasts, gatherTier_setGatherTier]
+    refine ⟨hInv', ?_, ?_, hR.F_eq, hR.val_witness, hR.core_eq, ?_⟩
+    · dsimp only [gatherProgramsAndNetwork_setBindBroadcasts,
+        gatherProgramsAndNetwork_setGatherProgramsAndNetwork]
       intro k
       by_cases hk : k = j
       · subst hk
-        rw [InstanceState.setProcess_process_self]
+        rw [InstanceState.setProcessVariables_processVariables_self]
         exact hR.call_eq k
-      · rw [InstanceState.setProcess_process_ne _ _ _ hk]
+      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk]
         exact hR.call_eq k
-    · dsimp only [gatherTier_setBindBroadcasts, gatherTier_setGatherTier]
+    · dsimp only [gatherProgramsAndNetwork_setBindBroadcasts,
+        gatherProgramsAndNetwork_setGatherProgramsAndNetwork]
       intro k
       by_cases hk : k = j
       · subst hk
-        rw [InstanceState.setProcess_process_self]
+        rw [InstanceState.setProcessVariables_processVariables_self]
         exact hR.ret_eq k
-      · rw [InstanceState.setProcess_process_ne _ _ _ hk]
+      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk]
         exact hR.ret_eq k
     · intro C hC
-      exact le_trans (hR.core_certificate C hC) (Finset.card_le_card
+      exact le_trans (hR.core_witness C hC) (Finset.card_le_card
         (bindAbove_mono
           (AlgorithmOverBroadcastSpecification.bindCall s j U hin hvot hsnd happ hQ hb)
           (by rw [PMF.mem_support_pure_iff]) C))
   | bindCallSpecificationLoop j U hin hvot hsnd happ hQ =>
     have hs' := PMF.pure_injective hμ
     subst hs'
-    refine ⟨hInv', ?_, ?_, hR.F_eq, hR.val_certificate, hR.core_eq, hR.core_certificate⟩
-    all_goals dsimp only [gatherTier_setGatherTier]
+    refine ⟨hInv', ?_, ?_, hR.F_eq, hR.val_witness, hR.core_eq, hR.core_witness⟩
+    all_goals dsimp only [gatherProgramsAndNetwork_setGatherProgramsAndNetwork]
     · intro k
       by_cases hk : k = j
       · subst hk
-        rw [InstanceState.setProcess_process_self]
+        rw [InstanceState.setProcessVariables_processVariables_self]
         exact hR.call_eq k
-      · rw [InstanceState.setProcess_process_ne _ _ _ hk]
+      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk]
         exact hR.call_eq k
     · intro k
       by_cases hk : k = j
       · subst hk
-        rw [InstanceState.setProcess_process_self]
+        rw [InstanceState.setProcessVariables_processVariables_self]
         exact hR.ret_eq k
-      · rw [InstanceState.setProcess_process_ne _ _ _ hk]
+      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk]
         exact hR.ret_eq k
   | byzantine j m hmem =>
     have hs' := PMF.pure_injective hμ
     subst hs'
-    refine ⟨hInv', ?_, ?_, hR.F_eq, hR.val_certificate, hR.core_eq, hR.core_certificate⟩
-    all_goals dsimp only [gatherTier_setGatherTier]
+    refine ⟨hInv', ?_, ?_, hR.F_eq, hR.val_witness, hR.core_eq, hR.core_witness⟩
+    all_goals dsimp only [gatherProgramsAndNetwork_setGatherProgramsAndNetwork]
     · intro k
-      rw [InstanceState.multicast_process]
+      rw [InstanceState.multicast_processVariables]
       exact hR.call_eq k
     · intro k
-      rw [InstanceState.multicast_process]
+      rw [InstanceState.multicast_processVariables]
       exact hR.ret_eq k
   | inputBroadcastRet k j v hv hr =>
     have hs' := PMF.pure_injective hμ
     subst hs'
-    refine ⟨hInv', ?_, ?_, hR.F_eq, ?_, hR.core_eq, hR.core_certificate⟩
-    all_goals dsimp only [gatherTier_setInputBroadcasts, gatherTier_setGatherTier,
+    refine ⟨hInv', ?_, ?_, hR.F_eq, ?_, hR.core_eq, hR.core_witness⟩
+    all_goals dsimp only [gatherProgramsAndNetwork_setInputBroadcasts,
+      gatherProgramsAndNetwork_setGatherProgramsAndNetwork,
       inputBroadcasts_setInputBroadcasts]
     · intro id'
       by_cases hj : id' = j
-      · subst hj; rw [InstanceState.setProcess_process_self]; exact hR.call_eq id'
-      · rw [InstanceState.setProcess_process_ne _ _ _ hj]; exact hR.call_eq id'
+      · subst hj; rw [InstanceState.setProcessVariables_processVariables_self]; exact hR.call_eq id'
+      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hj]; exact hR.call_eq id'
     · intro id'
       by_cases hj : id' = j
-      · subst hj; rw [InstanceState.setProcess_process_self]; exact hR.ret_eq id'
-      · rw [InstanceState.setProcess_process_ne _ _ _ hj]; exact hR.ret_eq id'
+      · subst hj; rw [InstanceState.setProcessVariables_processVariables_self]; exact hR.ret_eq id'
+      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hj]; exact hR.ret_eq id'
     · intro k' v' hv'
       by_cases hk : k' = k
-      · subst hk; rw [Function.update_self]; exact hR.val_certificate k' v' hv'
-      · rw [Function.update_of_ne hk]; exact hR.val_certificate k' v' hv'
+      · subst hk; rw [Function.update_self]; exact hR.val_witness k' v' hv'
+      · rw [Function.update_of_ne hk]; exact hR.val_witness k' v' hv'
   | bindRet q j U hv hr =>
     have hs' := PMF.pure_injective hμ
     subst hs'
-    refine ⟨hInv', ?_, ?_, hR.F_eq, hR.val_certificate, hR.core_eq, ?_⟩
-    · dsimp only [gatherTier_setBindBroadcasts, gatherTier_setGatherTier]
+    refine ⟨hInv', ?_, ?_, hR.F_eq, hR.val_witness, hR.core_eq, ?_⟩
+    · dsimp only [gatherProgramsAndNetwork_setBindBroadcasts,
+        gatherProgramsAndNetwork_setGatherProgramsAndNetwork]
       intro id'
       by_cases hj : id' = j
-      · subst hj; rw [InstanceState.setProcess_process_self]; exact hR.call_eq id'
-      · rw [InstanceState.setProcess_process_ne _ _ _ hj]; exact hR.call_eq id'
-    · dsimp only [gatherTier_setBindBroadcasts, gatherTier_setGatherTier]
+      · subst hj; rw [InstanceState.setProcessVariables_processVariables_self]; exact hR.call_eq id'
+      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hj]; exact hR.call_eq id'
+    · dsimp only [gatherProgramsAndNetwork_setBindBroadcasts,
+        gatherProgramsAndNetwork_setGatherProgramsAndNetwork]
       intro id'
       by_cases hj : id' = j
-      · subst hj; rw [InstanceState.setProcess_process_self]; exact hR.ret_eq id'
-      · rw [InstanceState.setProcess_process_ne _ _ _ hj]; exact hR.ret_eq id'
+      · subst hj; rw [InstanceState.setProcessVariables_processVariables_self]; exact hR.ret_eq id'
+      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hj]; exact hR.ret_eq id'
     · intro C hC
-      exact le_trans (hR.core_certificate C hC) (Finset.card_le_card
+      exact le_trans (hR.core_witness C hC) (Finset.card_le_card
         (bindAbove_mono (AlgorithmOverBroadcastSpecification.bindRet s q j U hv hr)
           (by rw [PMF.mem_support_pure_iff]) C))
 
@@ -844,7 +871,7 @@ theorem specificationRelation_transition (P : Parameters) (X : Type) [DecidableE
     obtain ⟨ts, hchain, hcore, hmem, hcov, hret1, hRel⟩ :=
       retRun hR hin hbind hsub hQ hr
     have hretstep : Step P (ts.getLastD q₂)
-        (Label.ret id g ((core q₁).getD (coreOfNetwork P (gatherTier q₁).2)))
+        (Label.ret id g ((core q₁).getD (coreOfNetwork P (gatherProgramsAndNetwork q₁).2)))
         (PMF.pure { ts.getLastD q₂ with
           ret := Function.update (ts.getLastD q₂).ret id true }) :=
       Step.ret _ id g _ hcore hmem hcov hret1

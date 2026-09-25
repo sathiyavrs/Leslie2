@@ -18,7 +18,8 @@ round's network, and the pullbacks along which those programs and the two gather
 round-internal alphabet.
 
 A program holds one process's record of the round — its input, its candidate, whether it has called
-the second gather, its graded outcome and its return flag (`GBCA.ByAFW.ProcessRecord`). Its guards
+the second gather, its graded outcome and its return flag (`GBCA.ByAFW.ProcessVariables`). Its
+guards
 read that record and nothing else. `ProgramStep` is the step relation of process `j`'s program and
 `NetworkStep` that of the round's network; `gbcaProgram` and `GBCANetwork` are the two systems they
 carry, and `roundPrograms` is the round's programs: the `n` of them beside the round's network, each
@@ -84,7 +85,7 @@ open Composition
 
 /-- The record of one graded-agreement program: what a process holds between
 the events it takes part in. -/
-structure ProcessRecord (n : ℕ) : Type where
+structure ProcessVariables (n : ℕ) : Type where
   /-- The input the call carried. -/
   input : Option Bool
   /-- The candidate the first gather's return determines. -/
@@ -99,7 +100,7 @@ structure ProcessRecord (n : ℕ) : Type where
 
 /-- The initial record: nothing called, nothing determined, nothing
 returned. -/
-def ProcessRecord.initial (n : ℕ) : ProcessRecord n := ⟨none, none, false, none, false⟩
+def ProcessVariables.initial (n : ℕ) : ProcessVariables n := ⟨none, none, false, none, false⟩
 
 /-! ### The round-internal alphabet
 
@@ -410,57 +411,57 @@ record returned. No transition fires on the silent label. -/
 /-- The step relation of the graded-agreement program of process `j` in round
 `r`. All transitions are Dirac. -/
 inductive ProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
-    ProcessRecord P.n → ProgramLabel P.n → PMF (ProcessRecord P.n) → Prop
+    ProcessVariables P.n → ProgramLabel P.n → PMF (ProcessVariables P.n) → Prop
   /-- The call arrives: record the input. -/
-  | callG (p : ProcessRecord P.n) (b : Bool) (h : p.input = none) :
+  | callG (p : ProcessVariables P.n) (b : Bool) (h : p.input = none) :
       ProgramStep P r j p (.callG r j b) (PMF.pure { p with input := some b })
   /-- A call addressed elsewhere: not `j`'s business. -/
-  | callGIdle (p : ProcessRecord P.n) (i : Fin P.n) (b : Bool) (hi : i ≠ j) :
+  | callGIdle (p : ProcessVariables P.n) (i : Fin P.n) (b : Bool) (hi : i ≠ j) :
       ProgramStep P r j p (.callG r i b) (PMF.pure p)
   /-- The call loop: the record does not move. -/
-  | callLoop (p : ProcessRecord P.n) (b : Bool) :
+  | callLoop (p : ProcessVariables P.n) (b : Bool) :
       ProgramStep P r j p (.callLoop r j b) (PMF.pure p)
   /-- A call loop at another process: not `j`'s business. -/
-  | callLoopIdle (p : ProcessRecord P.n) (i : Fin P.n) (b : Bool) (hi : i ≠ j) :
+  | callLoopIdle (p : ProcessVariables P.n) (i : Fin P.n) (b : Bool) (hi : i ≠ j) :
       ProgramStep P r j p (.callLoop r i b) (PMF.pure p)
   /-- The first gather returns here: record the candidate of its entries. -/
-  | firstGatherReturn (p : ProcessRecord P.n) (g : Fin P.n → Option Bool) (C : Gather.AcceptedPairs
+  | firstGatherReturn (p : ProcessVariables P.n) (g : Fin P.n → Option Bool) (C :
+      Gather.AcceptedPairs
     P.n Bool)
       (hin : p.input ≠ none) (hc : p.candidate = none) :
       ProgramStep P r j p (.firstGatherReturn j g C) (PMF.pure { p with
         candidate :=
           some (candidate P g) })
   /-- The first gather's return to another process: not `j`'s business. -/
-  | firstGatherReturnIdle (p : ProcessRecord P.n) (i : Fin P.n) (g : Fin P.n → Option Bool)
+  | firstGatherReturnIdle (p : ProcessVariables P.n) (i : Fin P.n) (g : Fin P.n → Option Bool)
       (C : Gather.AcceptedPairs P.n Bool) (hi : i ≠ j) :
       ProgramStep P r j p (.firstGatherReturn i g C) (PMF.pure p)
   /-- The second gather is called here with the recorded candidate. -/
-  | secondGatherCall (p : ProcessRecord P.n) (x : Option Bool) (hc : p.candidate = some x)
+  | secondGatherCall (p : ProcessVariables P.n) (x : Option Bool) (hc : p.candidate = some x)
       (h2 : p.secondGatherCalled = false) :
       ProgramStep P r j p (.secondGatherCall j x) (PMF.pure { p with secondGatherCalled := true })
   /-- Another process's call of the second gather: not `j`'s business. -/
-  | secondGatherCallIdle (p : ProcessRecord P.n) (i : Fin P.n) (x : Option Bool) (hi : i ≠ j) :
+  | secondGatherCallIdle (p : ProcessVariables P.n) (i : Fin P.n) (x : Option Bool) (hi : i ≠ j) :
       ProgramStep P r j p (.secondGatherCall i x) (PMF.pure p)
   /-- The second gather returns here: record the grade of its entries. -/
-  | secondGatherReturn (p : ProcessRecord P.n) (g : Fin P.n → Option (Option Bool))
+  | secondGatherReturn (p : ProcessVariables P.n) (g : Fin P.n → Option (Option Bool))
       (C : Gather.AcceptedPairs P.n (Option Bool)) (h2 : p.secondGatherCalled = true)
       (ho : p.output = none) :
-      ProgramStep P r j p (.secondGatherReturn j g C) (PMF.pure { p with output := some (gradeOf P
-        g)
-        })
+      ProgramStep P r j p (.secondGatherReturn j g C) (PMF.pure
+        { p with output := some (gradeOf P g) })
   /-- The second gather's return to another process: not `j`'s business. -/
-  | secondGatherReturnIdle (p : ProcessRecord P.n) (i : Fin P.n) (g : Fin P.n → Option (Option
+  | secondGatherReturnIdle (p : ProcessVariables P.n) (i : Fin P.n) (g : Fin P.n → Option (Option
     Bool))
       (C : Gather.AcceptedPairs P.n (Option Bool)) (hi : i ≠ j) :
       ProgramStep P r j p (.secondGatherReturn i g C) (PMF.pure p)
   /-- The round returns the recorded grade. The return announces the grade and the record drops it.
   The announced bit is the round's network's to determine. -/
-  | retG (p : ProcessRecord P.n) (out : GBCAOutput) (bnd : Bool) (ho : p.output = some out)
+  | retG (p : ProcessVariables P.n) (out : GBCAOutput) (bnd : Bool) (ho : p.output = some out)
       (hr : p.returned = false) :
       ProgramStep P r j p (.retG r j out bnd)
         (PMF.pure { p with output := none, returned := true })
   /-- A return to another process: not `j`'s business. -/
-  | retGIdle (p : ProcessRecord P.n) (i : Fin P.n) (out : GBCAOutput) (bnd : Bool) (hi : i ≠ j) :
+  | retGIdle (p : ProcessVariables P.n) (i : Fin P.n) (out : GBCAOutput) (bnd : Bool) (hi : i ≠ j) :
       ProgramStep P r j p (.retG r i out bnd) (PMF.pure p)
 
 /-! ### The round's network
@@ -499,15 +500,15 @@ inductive NetworkStep (P : Parameters) (r : ℕ) :
 
 /-- The graded-agreement program of process `j` in round `r`. -/
 noncomputable def gbcaProgram (P : Parameters) (r : ℕ) (j : Fin P.n) :
-    System (ProcessRecord P.n) (ProgramLabel P.n) where
-  init := ProcessRecord.initial P.n
+    System (ProcessVariables P.n) (ProgramLabel P.n) where
+  init := ProcessVariables.initial P.n
   step := ProgramStep P r j
 
 @[simp] theorem gbcaProgram_init (P : Parameters) (r : ℕ) (j : Fin P.n) :
-    (gbcaProgram P r j).init = ProcessRecord.initial P.n := rfl
+    (gbcaProgram P r j).init = ProcessVariables.initial P.n := rfl
 
-@[simp] theorem gbcaProgram_step (P : Parameters) (r : ℕ) (j : Fin P.n) (p : ProcessRecord P.n)
-    (l : ProgramLabel P.n) (ν : PMF (ProcessRecord P.n)) :
+@[simp] theorem gbcaProgram_step (P : Parameters) (r : ℕ) (j : Fin P.n) (p : ProcessVariables P.n)
+    (l : ProgramLabel P.n) (ν : PMF (ProcessVariables P.n)) :
     (gbcaProgram P r j).step p l ν ↔ ProgramStep P r j p l ν := Iff.rfl
 
 /-- The round's network of round `r`. -/
@@ -524,12 +525,12 @@ noncomputable def GBCANetwork (P : Parameters) (r : ℕ) : System (Option Bool) 
 /-- **The round's programs**: the `n` programs beside the round's network, each read along
 `programLabelMap`. -/
 noncomputable def roundPrograms (P : Parameters) (r : ℕ) :
-    System ((∀ _ : Fin P.n, ProcessRecord P.n) × Option Bool) (RoundLabel P.n) :=
+    System ((∀ _ : Fin P.n, ProcessVariables P.n) × Option Bool) (RoundLabel P.n) :=
   (System.synchronisedProduct (fun j => (gbcaProgram P r j).mapIdle (programLabelMap P.n))).parallel
     ((GBCANetwork P r).mapIdle (programLabelMap P.n))
 
 @[simp] theorem roundPrograms_init (P : Parameters) (r : ℕ) :
-    (roundPrograms P r).init = ((fun _ => ProcessRecord.initial P.n), none) := rfl
+    (roundPrograms P r).init = ((fun _ => ProcessVariables.initial P.n), none) := rfl
 
 end GBCA.ByAFW
 end ABA

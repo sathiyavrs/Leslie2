@@ -25,8 +25,8 @@ variable {P : Parameters}
 
 section Transitions
 
-variable {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} {w : NetworkState P.n} {j : Fin P.n}
-    {c : RoundLoopRecord P.n} {p : RoundRecordMap P.n}
+variable {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} {w : NetworkState P.n} {j : Fin P.n}
+    {c : RoundLoopVariables P.n} {p : RoundVariablesMap P.n}
 
 /-! ### The round's graded return
 
@@ -43,10 +43,10 @@ def afterRetG (P : Parameters) (s : GBCA.ByAFW.RoundStateOverBracha P.n) (j : Fi
 /-- **The graded return, read through the projection.** The round returns the graded outcome on
 record to the round loop, and the outcome leaves the round record. -/
 theorem roundProjection_retG (hu : (u j).2 = p) (r : ℕ) (out : GBCAOutput) (bnd : Bool)
-    (c' : RoundLoopRecord P.n)
-    (hr2 : ((p.roundRecord r).secondGather.process).returned = true) :
-    roundProjection P (Function.update u j (c', p.setRoundRecord r
-        { p.roundRecord r with output := none }))
+    (c' : RoundLoopVariables P.n)
+    (hr2 : ((p.roundVariables r).secondGather.processVariables).returned = true) :
+    roundProjection P (Function.update u j (c', p.setRoundVariables r
+        { p.roundVariables r with output := none }))
       (w.writeGhost (ghostStep P) (Sum.inl (.retG r j out bnd))) r
       = afterRetG P (roundProjection P u w r) j := by
   subst hu
@@ -55,14 +55,15 @@ theorem roundProjection_retG (hu : (u j).2 = p) (r : ℕ) (out : GBCAOutput) (bn
     firstGatherProjection_writeNoSent, secondGatherProjection_writeNoSent]
   refine roundStateOverGathers_ext ?_ ?_ ?_ ?_
   · simp only [afterRetG, GBCA.ByAFW.programs_setPrograms, programs_roundProjection_eq,
-      roundRecord_update_self rfl, locals_programProjection_if]
+      roundVariables_update_self rfl, locals_programProjection_if]
     simp [programs_mk, programProjection, hr2]
   · simp only [afterRetG, GBCA.ByAFW.bound_setPrograms, bound_roundProjection]
     simp only [bound_mk, ghostStep]
   · simp only [afterRetG, GBCA.ByAFW.firstGather_setPrograms, firstGather_roundProjection]
     simp only [firstGather_mk, ghostStep]
     refine stateOverBroadcasts_ext ?_ ?_ ?_ ?_
-    · simp only [Gather.gatherTier_setCore, gatherTier_firstGather_roundProjectionUpdate]
+    · simp only [Gather.gatherProgramsAndNetwork_setCore,
+        gatherProgramsAndNetwork_firstGather_roundProjectionUpdate]
       exact Prod.ext (Function.update_eq_self _ _) rfl
     · funext k
       simp only [Gather.inputBroadcasts_setCore, inputBroadcasts_firstGather_roundProjectionUpdate,
@@ -76,7 +77,8 @@ theorem roundProjection_retG (hu : (u j).2 = p) (r : ℕ) (out : GBCAOutput) (bn
   · simp only [afterRetG, GBCA.ByAFW.secondGather_setPrograms, secondGather_roundProjection]
     simp only [secondGather_mk, ghostStep]
     refine stateOverBroadcasts_ext ?_ ?_ ?_ ?_
-    · simp only [Gather.gatherTier_setCore, gatherTier_secondGather_roundProjectionUpdate]
+    · simp only [Gather.gatherProgramsAndNetwork_setCore,
+        gatherProgramsAndNetwork_secondGather_roundProjectionUpdate]
       exact Prod.ext (Function.update_eq_self _ _) rfl
     · funext k
       simp only [Gather.inputBroadcasts_setCore,

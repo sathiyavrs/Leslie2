@@ -54,7 +54,7 @@ structure BroadcastSubstitutionRelation (P : Parameters) (s : StateOverBracha P.
     (t : StateOverBroadcastSpecification P.n X) : Prop where
   /-- The gather programs and the gather network state are untouched by the
   substitution. -/
-  gatherTier_eq : s.1 = t.1
+  gatherProgramsAndNetwork_eq : s.1 = t.1
   /-- Each input coordinate is BRB-refined. -/
   inputBroadcastRelation : ∀ k,
     BRB.SpecificationRelation P k (inputBroadcasts s k) (inputBroadcasts t k)
@@ -132,7 +132,8 @@ theorem broadcastSubstitutionRelation_corrupt {X : Type} [DecidableEq X] {P : Pa
     BroadcastSubstitutionRelation P
     (corruptAll P id (InstanceState.corrupt P id) (InstanceState.corrupt P id) s)
     (corruptAll P id (BRB.SpecState.corrupt P id) (BRB.SpecState.corrupt P id) t) :=
-  ⟨congrArg (fun x => (x.1, { x.2 with network := x.2.network.corrupt P id })) hR.gatherTier_eq,
+  ⟨congrArg (fun x => (x.1, { x.2 with network := x.2.network.corrupt P id }))
+    hR.gatherProgramsAndNetwork_eq,
     fun k => BRB.specificationRelation_corrupt (hR.inputBroadcastRelation k) id,
     fun q => BRB.specificationRelation_corrupt (hR.bindBroadcastRelation q) id⟩
 

@@ -74,7 +74,7 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundS
       Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
         (Step.call q2 id b (by rw [hRR.call_eq]; exact h))⟩,
       hI', ?_, ?_, hRR.F_eq, ?_,
-      by simpa using hRR.grade2_evidence, by simpa using hRR.grade0_evidence,
+      by simpa using hRR.grade2_witness, by simpa using hRR.grade0_witness,
       hRR.bound_excluded⟩
     · intro k
       change Function.update q2.call id (some b) k = _
@@ -82,16 +82,16 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundS
       · subst hk
         rw [Function.update_self]
         simp
-      · rw [Function.update_of_ne hk, process_send_ne hk]
+      · rw [Function.update_of_ne hk, processVariables_send_ne hk]
         exact hRR.call_eq k
     · intro k
       by_cases hk : k = id
       · subst hk
         simpa using hRR.ret_eq k
-      · rw [process_send_ne hk]
+      · rw [processVariables_send_ne hk]
         exact hRR.ret_eq k
     · intro b' hb'
-      exact exclusionCertificate_send (by intro w hw; exact hw) (hRR.exclusion_certificate b' hb')
+      exact exclusionWitness_send (by intro w hw; exact hw) (hRR.exclusion_witness b' hb')
   | callLoop id b =>
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'
@@ -104,206 +104,206 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundS
       hI', by simpa using hRR.call_eq, by simpa using hRR.ret_eq, hRR.F_eq, ?_, ?_, ?_,
       hRR.bound_excluded⟩
     · intro b hb
-      exact ExclusionCertificate.mono (s := q1)
+      exact ExclusionWitness.mono (s := q1)
         (fun i' j' m' hm' => RoundState.mem_receiveMessage_received.mpr (Or.inr hm'))
-        (fun k w hk => by simpa using hk) (Finset.Subset.refl _) (hRR.exclusion_certificate b hb)
+        (fun k w hk => by simpa using hk) (Finset.Subset.refl _) (hRR.exclusion_witness b hb)
     · intro hg
-      obtain ⟨v0, i0, hi0⟩ := hRR.grade2_evidence hg
+      obtain ⟨v0, i0, hi0⟩ := hRR.grade2_witness hg
       exact ⟨v0, i0,
         le_trans hi0 (RoundState.receivedCount_le_receiveMessage q1 i j m i0 _)⟩
     · intro hg
-      obtain ⟨i0, hi0⟩ := hRR.grade0_evidence hg
+      obtain ⟨i0, hi0⟩ := hRR.grade0_witness hg
       exact ⟨i0, le_trans hi0 (RoundState.receivedCount_le_receiveMessage q1 i j m i0 _)⟩
   | relay j b hin hcnt hsend =>
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'
     refine ⟨q2, Or.inl ⟨rfl, System.weakLSilent_refl _ q2⟩,
       hI', ?_, ?_, hRR.F_eq,
-      fun b' hb' => exclusionCertificate_send (by intro w hw; exact hw)
-        (hRR.exclusion_certificate b' hb'),
-      by simpa using hRR.grade2_evidence, by simpa using hRR.grade0_evidence,
+      fun b' hb' => exclusionWitness_send (by intro w hw; exact hw)
+        (hRR.exclusion_witness b' hb'),
+      by simpa using hRR.grade2_witness, by simpa using hRR.grade0_witness,
       hRR.bound_excluded⟩
     · intro k
       by_cases hk : k = j
       · subst hk
         simpa using hRR.call_eq k
-      · rw [process_send_ne hk]
+      · rw [processVariables_send_ne hk]
         exact hRR.call_eq k
     · intro k
       by_cases hk : k = j
       · subst hk
         simpa using hRR.ret_eq k
-      · rw [process_send_ne hk]
+      · rw [processVariables_send_ne hk]
         exact hRR.ret_eq k
   | echo j b hin hcnt hsend =>
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'
     refine ⟨q2, Or.inl ⟨rfl, System.weakLSilent_refl _ q2⟩,
       hI', ?_, ?_, hRR.F_eq,
-      fun b' hb' => exclusionCertificate_send (by intro w hw; exact hw)
-        (hRR.exclusion_certificate b' hb'),
-      by simpa using hRR.grade2_evidence, by simpa using hRR.grade0_evidence,
+      fun b' hb' => exclusionWitness_send (by intro w hw; exact hw)
+        (hRR.exclusion_witness b' hb'),
+      by simpa using hRR.grade2_witness, by simpa using hRR.grade0_witness,
       hRR.bound_excluded⟩
     · intro k
       by_cases hk : k = j
       · subst hk
         simpa using hRR.call_eq k
-      · rw [process_send_ne hk]
+      · rw [processVariables_send_ne hk]
         exact hRR.call_eq k
     · intro k
       by_cases hk : k = j
       · subst hk
         simpa using hRR.ret_eq k
-      · rw [process_send_ne hk]
+      · rw [processVariables_send_ne hk]
         exact hRR.ret_eq k
   | voteBit j b hin hcnt hsend =>
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'
     refine ⟨q2, Or.inl ⟨rfl, System.weakLSilent_refl _ q2⟩,
       hI', ?_, ?_, hRR.F_eq,
-      fun b' hb' => exclusionCertificate_send
+      fun b' hb' => exclusionWitness_send
         (by intro w hw; rw [hsend] at hw; simp at hw)
-        (hRR.exclusion_certificate b' hb'),
-      by simpa using hRR.grade2_evidence, by simpa using hRR.grade0_evidence,
+        (hRR.exclusion_witness b' hb'),
+      by simpa using hRR.grade2_witness, by simpa using hRR.grade0_witness,
       hRR.bound_excluded⟩
     · intro k
       by_cases hk : k = j
       · subst hk
         simpa using hRR.call_eq k
-      · rw [process_send_ne hk]
+      · rw [processVariables_send_ne hk]
         exact hRR.call_eq k
     · intro k
       by_cases hk : k = j
       · subst hk
         simpa using hRR.ret_eq k
-      · rw [process_send_ne hk]
+      · rw [processVariables_send_ne hk]
         exact hRR.ret_eq k
   | voteBot j hin _hnot hcnt hval hsend =>
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'
     refine ⟨q2, Or.inl ⟨rfl, System.weakLSilent_refl _ q2⟩,
       hI', ?_, ?_, hRR.F_eq,
-      fun b' hb' => exclusionCertificate_send
+      fun b' hb' => exclusionWitness_send
         (by intro w hw; rw [hsend] at hw; simp at hw)
-        (hRR.exclusion_certificate b' hb'),
-      by simpa using hRR.grade2_evidence, by simpa using hRR.grade0_evidence,
+        (hRR.exclusion_witness b' hb'),
+      by simpa using hRR.grade2_witness, by simpa using hRR.grade0_witness,
       hRR.bound_excluded⟩
     · intro k
       by_cases hk : k = j
       · subst hk
         simpa using hRR.call_eq k
-      · rw [process_send_ne hk]
+      · rw [processVariables_send_ne hk]
         exact hRR.call_eq k
     · intro k
       by_cases hk : k = j
       · subst hk
         simpa using hRR.ret_eq k
-      · rw [process_send_ne hk]
+      · rw [processVariables_send_ne hk]
         exact hRR.ret_eq k
   | bindBit j b hin _hlv hcnt hsend =>
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'
     refine ⟨q2, Or.inl ⟨rfl, System.weakLSilent_refl _ q2⟩,
       hI', ?_, ?_, hRR.F_eq,
-      fun b' hb' => exclusionCertificate_send (by intro w hw; exact hw)
-        (hRR.exclusion_certificate b' hb'),
-      by simpa using hRR.grade2_evidence, by simpa using hRR.grade0_evidence,
+      fun b' hb' => exclusionWitness_send (by intro w hw; exact hw)
+        (hRR.exclusion_witness b' hb'),
+      by simpa using hRR.grade2_witness, by simpa using hRR.grade0_witness,
       hRR.bound_excluded⟩
     · intro k
       by_cases hk : k = j
       · subst hk
         simpa using hRR.call_eq k
-      · rw [process_send_ne hk]
+      · rw [processVariables_send_ne hk]
         exact hRR.call_eq k
     · intro k
       by_cases hk : k = j
       · subst hk
         simpa using hRR.ret_eq k
-      · rw [process_send_ne hk]
+      · rw [processVariables_send_ne hk]
         exact hRR.ret_eq k
   | bindBot j hin _hlv _hnot hcnt hval hsend =>
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'
     refine ⟨q2, Or.inl ⟨rfl, System.weakLSilent_refl _ q2⟩,
       hI', ?_, ?_, hRR.F_eq,
-      fun b' hb' => exclusionCertificate_send (by intro w hw; exact hw)
-        (hRR.exclusion_certificate b' hb'),
-      by simpa using hRR.grade2_evidence, by simpa using hRR.grade0_evidence,
+      fun b' hb' => exclusionWitness_send (by intro w hw; exact hw)
+        (hRR.exclusion_witness b' hb'),
+      by simpa using hRR.grade2_witness, by simpa using hRR.grade0_witness,
       hRR.bound_excluded⟩
     · intro k
       by_cases hk : k = j
       · subst hk
         simpa using hRR.call_eq k
-      · rw [process_send_ne hk]
+      · rw [processVariables_send_ne hk]
         exact hRR.call_eq k
     · intro k
       by_cases hk : k = j
       · subst hk
         simpa using hRR.ret_eq k
-      · rw [process_send_ne hk]
+      · rw [processVariables_send_ne hk]
         exact hRR.ret_eq k
   | echo5Bit j b hin _hlv hcnt hsend =>
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'
     refine ⟨q2, Or.inl ⟨rfl, System.weakLSilent_refl _ q2⟩,
       hI', ?_, ?_, hRR.F_eq,
-      fun b' hb' => exclusionCertificate_send (by intro w hw; exact hw)
-        (hRR.exclusion_certificate b' hb'),
-      by simpa using hRR.grade2_evidence, by simpa using hRR.grade0_evidence,
+      fun b' hb' => exclusionWitness_send (by intro w hw; exact hw)
+        (hRR.exclusion_witness b' hb'),
+      by simpa using hRR.grade2_witness, by simpa using hRR.grade0_witness,
       hRR.bound_excluded⟩
     · intro k
       by_cases hk : k = j
       · subst hk
         simpa using hRR.call_eq k
-      · rw [process_send_ne hk]
+      · rw [processVariables_send_ne hk]
         exact hRR.call_eq k
     · intro k
       by_cases hk : k = j
       · subst hk
         simpa using hRR.ret_eq k
-      · rw [process_send_ne hk]
+      · rw [processVariables_send_ne hk]
         exact hRR.ret_eq k
   | echo5Bot j hin _hlv _hnot hcnt hval hsend =>
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'
     refine ⟨q2, Or.inl ⟨rfl, System.weakLSilent_refl _ q2⟩,
       hI', ?_, ?_, hRR.F_eq,
-      fun b' hb' => exclusionCertificate_send (by intro w hw; exact hw)
-        (hRR.exclusion_certificate b' hb'),
-      by simpa using hRR.grade2_evidence, by simpa using hRR.grade0_evidence,
+      fun b' hb' => exclusionWitness_send (by intro w hw; exact hw)
+        (hRR.exclusion_witness b' hb'),
+      by simpa using hRR.grade2_witness, by simpa using hRR.grade0_witness,
       hRR.bound_excluded⟩
     · intro k
       by_cases hk : k = j
       · subst hk
         simpa using hRR.call_eq k
-      · rw [process_send_ne hk]
+      · rw [processVariables_send_ne hk]
         exact hRR.call_eq k
     · intro k
       by_cases hk : k = j
       · subst hk
         simpa using hRR.ret_eq k
-      · rw [process_send_ne hk]
+      · rw [processVariables_send_ne hk]
         exact hRR.ret_eq k
   | byzantine j m hjF =>
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'
     exact ⟨q2, Or.inl ⟨rfl, System.weakLSilent_refl _ q2⟩,
-      hI', hRR.call_eq, hRR.ret_eq, hRR.F_eq, hRR.exclusion_certificate, hRR.grade2_evidence,
-      hRR.grade0_evidence, hRR.bound_excluded⟩
+      hI', hRR.call_eq, hRR.ret_eq, hRR.F_eq, hRR.exclusion_witness, hRR.grade2_witness,
+      hRR.grade0_witness, hRR.bound_excluded⟩
   | retGrade2 id v bnd _hin _hlv hcnt hr hbnd =>
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'
     have hret : q2.ret id = false := by
       rw [hRR.ret_eq]; exact hr
     have hfn := P.f_lt_n_sub_f
-    obtain ⟨k₁, hk₁F, hbq⟩ := bind_receipts_of_echo5_quorum hRR.invariant hcnt
+    obtain ⟨k₁, hk₁F, hbq⟩ := received_binds_of_echo5_quorum hRR.invariant hcnt
     obtain ⟨k, hkF, hvq⟩ :=
-      voteQuorum_of_bind_receipts hRR.invariant (i := k₁) (v := v) (by omega)
+      voteQuorum_of_received_binds hRR.invariant (i := k₁) (v := v) (by omega)
     have hbv : v = bnd :=
       (hbnd.trans (hRR.retBound_eq hvq (boundOf_grade2 q1.sent q1.F v))).symm
     subst hbv
     have hlive : v ∉ q2.excluded := fun hv =>
-      not_exclusionCertificate_of_voteQuorum hRR.invariant hvq (hRR.exclusion_certificate v hv)
+      not_exclusionWitness_of_voteQuorum hRR.invariant hvq (hRR.exclusion_witness v hv)
     have hgr : q2.grade = none ∨ q2.grade = some true := by
       have hne := grade_ne_false_of_echo5_quorum hRR hcnt
       cases hg : q2.grade with
@@ -319,8 +319,8 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundS
         Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
           (Step.retGrade2 q2 id v v hlive hexcluded hexcluded hgr hret)⟩,
         hI', ?_, ?_, hRR.F_eq,
-        fun b hb => exclusionCertificate_setBound (exclusionCertificate_ret
-          (hRR.exclusion_certificate b hb)),
+        fun b hb => exclusionWitness_setBound (exclusionWitness_ret
+          (hRR.exclusion_witness b hb)),
         fun _ => ⟨v, id, by simpa using hcnt⟩,
         fun hgf => absurd hgf (by simp),
         by simpa using excluded_eq_singleton hlive hexcluded⟩
@@ -328,8 +328,8 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundS
         by_cases hk : k' = id
         · subst hk
           simpa using hRR.call_eq k'
-        · rw [RoundState.setBound_process,
-          RoundState.setProcess_process_ne _ _ _ hk]
+        · rw [RoundState.setBound_processVariables,
+          RoundState.setProcessVariables_processVariables_ne _ _ _ hk]
           exact hRR.call_eq k'
       · intro k'
         change Function.update q2.ret id true k' = _
@@ -337,12 +337,12 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundS
         · subst hk
           rw [Function.update_self]
           simp
-        · rw [Function.update_of_ne hk, RoundState.setBound_process,
-            RoundState.setProcess_process_ne _ _ _ hk]
+        · rw [Function.update_of_ne hk, RoundState.setBound_processVariables,
+            RoundState.setProcessVariables_processVariables_ne _ _ _ hk]
           exact hRR.ret_eq k'
     · have hd0 : q2.excluded = ∅ := excluded_empty_of_both hlive hexcluded
       obtain ⟨hq, hw⟩ := bindUnset_guards hRR
-        (echoReceiptQuorum_of_vote_receipts hRR.invariant (i := k) (v := v) (by omega))
+        (receivedEchoQuorum_of_received_votes hRR.invariant (i := k) (v := v) (by omega))
       refine ⟨{ q2 with
         excluded := insert (!v) q2.excluded, grade := some true,
                         ret := Function.update q2.ret id true },
@@ -355,8 +355,8 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundS
         by_cases hk : k' = id
         · subst hk
           simpa using hRR.call_eq k'
-        · rw [RoundState.setBound_process,
-          RoundState.setProcess_process_ne _ _ _ hk]
+        · rw [RoundState.setBound_processVariables,
+          RoundState.setProcessVariables_processVariables_ne _ _ _ hk]
           exact hRR.call_eq k'
       · intro k'
         change Function.update q2.ret id true k' = _
@@ -364,15 +364,15 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundS
         · subst hk
           rw [Function.update_self]
           simp
-        · rw [Function.update_of_ne hk, RoundState.setBound_process,
-            RoundState.setProcess_process_ne _ _ _ hk]
+        · rw [Function.update_of_ne hk, RoundState.setBound_processVariables,
+            RoundState.setProcessVariables_processVariables_ne _ _ _ hk]
           exact hRR.ret_eq k'
       · intro b hb
         rw [Finset.mem_insert] at hb
         rcases hb with rfl | hb
-        · exact exclusionCertificate_setBound
-            (exclusionCertificate_ret (exclusionCertificate_of_voteQuorum hRR.invariant hvq))
-        · exact exclusionCertificate_setBound (exclusionCertificate_ret (hRR.exclusion_certificate b
+        · exact exclusionWitness_setBound
+            (exclusionWitness_ret (exclusionWitness_of_voteQuorum hRR.invariant hvq))
+        · exact exclusionWitness_setBound (exclusionWitness_ret (hRR.exclusion_witness b
             hb))
   | retGrade1 id v bnd _hin _hlv _hnotGrade2 hcnt honce hbind hval hr hbnd =>
     rw [PMF.mem_support_pure_iff] at hq1'
@@ -380,12 +380,12 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundS
     have hret : q2.ret id = false := by
       rw [hRR.ret_eq]; exact hr
     have hfn := P.f_lt_n_sub_f
-    obtain ⟨k, hkF, hvq⟩ := voteQuorum_of_bind_receipts hRR.invariant hbind
+    obtain ⟨k, hkF, hvq⟩ := voteQuorum_of_received_binds hRR.invariant hbind
     have hbv : v = bnd :=
       (hbnd.trans (hRR.retBound_eq hvq (boundOf_grade1 q1.sent q1.F v))).symm
     subst hbv
     have hlive : v ∉ q2.excluded := fun hv =>
-      not_exclusionCertificate_of_voteQuorum hRR.invariant hvq (hRR.exclusion_certificate v hv)
+      not_exclusionWitness_of_voteQuorum hRR.invariant hvq (hRR.exclusion_witness v hv)
     have hd : P.f + 1 ≤ (Finset.univ.filter
         (fun k' => q2.call k' = some (!v) ∨ k' ∈ q2.F)).card :=
       hRR.callSupport (inputSupport_of_bothValid hRR.invariant hval (!v))
@@ -394,16 +394,16 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundS
         Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
           (Step.retGrade1 q2 id v v hlive hexcluded hexcluded hd hret)⟩,
         hI', ?_, ?_, hRR.F_eq,
-        fun b hb => exclusionCertificate_setBound (exclusionCertificate_ret
-          (hRR.exclusion_certificate b hb)),
-        by simpa using hRR.grade2_evidence, by simpa using hRR.grade0_evidence,
+        fun b hb => exclusionWitness_setBound (exclusionWitness_ret
+          (hRR.exclusion_witness b hb)),
+        by simpa using hRR.grade2_witness, by simpa using hRR.grade0_witness,
         by simpa using excluded_eq_singleton hlive hexcluded⟩
       · intro k'
         by_cases hk : k' = id
         · subst hk
           simpa using hRR.call_eq k'
-        · rw [RoundState.setBound_process,
-          RoundState.setProcess_process_ne _ _ _ hk]
+        · rw [RoundState.setBound_processVariables,
+          RoundState.setProcessVariables_processVariables_ne _ _ _ hk]
           exact hRR.call_eq k'
       · intro k'
         change Function.update q2.ret id true k' = _
@@ -411,24 +411,24 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundS
         · subst hk
           rw [Function.update_self]
           simp
-        · rw [Function.update_of_ne hk, RoundState.setBound_process,
-            RoundState.setProcess_process_ne _ _ _ hk]
+        · rw [Function.update_of_ne hk, RoundState.setBound_processVariables,
+            RoundState.setProcessVariables_processVariables_ne _ _ _ hk]
           exact hRR.ret_eq k'
     · have hd0 : q2.excluded = ∅ := excluded_empty_of_both hlive hexcluded
       obtain ⟨hq, hw⟩ := bindUnset_guards hRR
-        (echoReceiptQuorum_of_vote_receipts hRR.invariant (i := k) (v := v) (by omega))
+        (receivedEchoQuorum_of_received_votes hRR.invariant (i := k) (v := v) (by omega))
       refine ⟨{ q2 with
         excluded := insert (!v) q2.excluded,
                         ret := Function.update q2.ret id true },
         Or.inr ⟨by simp, excludeThenRetGrade1_run hq hw hlive hd0 hd hret⟩,
-        hI', ?_, ?_, hRR.F_eq, ?_, by simpa using hRR.grade2_evidence,
-        by simpa using hRR.grade0_evidence, by simp [hd0]⟩
+        hI', ?_, ?_, hRR.F_eq, ?_, by simpa using hRR.grade2_witness,
+        by simpa using hRR.grade0_witness, by simp [hd0]⟩
       · intro k'
         by_cases hk : k' = id
         · subst hk
           simpa using hRR.call_eq k'
-        · rw [RoundState.setBound_process,
-          RoundState.setProcess_process_ne _ _ _ hk]
+        · rw [RoundState.setBound_processVariables,
+          RoundState.setProcessVariables_processVariables_ne _ _ _ hk]
           exact hRR.call_eq k'
       · intro k'
         change Function.update q2.ret id true k' = _
@@ -436,15 +436,15 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundS
         · subst hk
           rw [Function.update_self]
           simp
-        · rw [Function.update_of_ne hk, RoundState.setBound_process,
-            RoundState.setProcess_process_ne _ _ _ hk]
+        · rw [Function.update_of_ne hk, RoundState.setBound_processVariables,
+            RoundState.setProcessVariables_processVariables_ne _ _ _ hk]
           exact hRR.ret_eq k'
       · intro b hb
         rw [Finset.mem_insert] at hb
         rcases hb with rfl | hb
-        · exact exclusionCertificate_setBound
-            (exclusionCertificate_ret (exclusionCertificate_of_voteQuorum hRR.invariant hvq))
-        · exact exclusionCertificate_setBound (exclusionCertificate_ret (hRR.exclusion_certificate b
+        · exact exclusionWitness_setBound
+            (exclusionWitness_ret (exclusionWitness_of_voteQuorum hRR.invariant hvq))
+        · exact exclusionWitness_setBound (exclusionWitness_ret (hRR.exclusion_witness b
             hb))
   | retGrade0 id bnd _hin _hlv _hnotGrade2 _hnotGrade1 hcnt hval hr hbnd =>
     rw [PMF.mem_support_pure_iff] at hq1'
@@ -472,8 +472,8 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundS
       rw [hb, excludedOf_none] at hex
       have hbv : bnd = boundOf q1.sent q1.F .grade0 := by
         rw [hbnd, hb]; rfl
-      have hcert : ExclusionCertificate P q1 (!bnd) := by
-        rw [hbv]; exact exclusionCertificate_boundOf_grade0 hRR.invariant hcnt
+      have hcert : ExclusionWitness P q1 (!bnd) := by
+        rw [hbv]; exact exclusionWitness_boundOf_grade0 hRR.invariant hcnt
       have hq : q2.quorum P := quorum_of_messageQuorum hRR
         (fun j hj hm' => hRR.invariant.input_called j true hj hm')
         (RoundState.bothValid_le hval true)
@@ -492,8 +492,8 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundS
         by_cases hk : k' = id
         · subst hk
           simpa using hRR.call_eq k'
-        · rw [RoundState.setBound_process,
-          RoundState.setProcess_process_ne _ _ _ hk]
+        · rw [RoundState.setBound_processVariables,
+          RoundState.setProcessVariables_processVariables_ne _ _ _ hk]
           exact hRR.call_eq k'
       · intro k'
         change Function.update q2.ret id true k' = _
@@ -501,14 +501,14 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundS
         · subst hk
           rw [Function.update_self]
           simp
-        · rw [Function.update_of_ne hk, RoundState.setBound_process,
-            RoundState.setProcess_process_ne _ _ _ hk]
+        · rw [Function.update_of_ne hk, RoundState.setBound_processVariables,
+            RoundState.setProcessVariables_processVariables_ne _ _ _ hk]
           exact hRR.ret_eq k'
       · intro b' hb'
         rw [Finset.mem_insert] at hb'
         rcases hb' with rfl | hb'
-        · exact exclusionCertificate_setBound (exclusionCertificate_ret hcert)
-        · exact exclusionCertificate_setBound (exclusionCertificate_ret (hRR.exclusion_certificate
+        · exact exclusionWitness_setBound (exclusionWitness_ret hcert)
+        · exact exclusionWitness_setBound (exclusionWitness_ret (hRR.exclusion_witness
             b' hb'))
     | some β =>
       -- the round has returned before: it announces the bit on record
@@ -524,8 +524,8 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundS
         Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
           (Step.retGrade0 q2 id bnd hmem hwT hwF hgr hret)⟩,
         hI', ?_, ?_, hRR.F_eq,
-        fun b hb' => exclusionCertificate_setBound (exclusionCertificate_ret
-          (hRR.exclusion_certificate b hb')),
+        fun b hb' => exclusionWitness_setBound (exclusionWitness_ret
+          (hRR.exclusion_witness b hb')),
         fun hgt => absurd hgt (by simp),
         fun _ => ⟨id, by simpa using hcnt⟩,
         by simpa using hex⟩
@@ -533,8 +533,8 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundS
         by_cases hk : k' = id
         · subst hk
           simpa using hRR.call_eq k'
-        · rw [RoundState.setBound_process,
-          RoundState.setProcess_process_ne _ _ _ hk]
+        · rw [RoundState.setBound_processVariables,
+          RoundState.setProcessVariables_processVariables_ne _ _ _ hk]
           exact hRR.call_eq k'
       · intro k'
         change Function.update q2.ret id true k' = _
@@ -542,8 +542,8 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundS
         · subst hk
           rw [Function.update_self]
           simp
-        · rw [Function.update_of_ne hk, RoundState.setBound_process,
-            RoundState.setProcess_process_ne _ _ _ hk]
+        · rw [Function.update_of_ne hk, RoundState.setBound_processVariables,
+            RoundState.setProcessVariables_processVariables_ne _ _ _ hk]
           exact hRR.ret_eq k'
   | fail id =>
     rw [PMF.mem_support_pure_iff] at hq1'
@@ -552,26 +552,26 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundS
       Or.inr ⟨by simp, System.weakLStep_of_step (by simp) (Step.fail q2 id)⟩,
       hI', ?_, ?_, specificationRelation_corrupt_F_eq hRR.F_eq id, ?_, ?_, ?_, ?_⟩
     · intro k
-      rw [corrupt_call, RoundState.corrupt_process]
+      rw [corrupt_call, RoundState.corrupt_processVariables]
       exact hRR.call_eq k
     · intro k
-      rw [corrupt_ret, RoundState.corrupt_process]
+      rw [corrupt_ret, RoundState.corrupt_processVariables]
       exact hRR.ret_eq k
     · intro b hb
       rw [corrupt_excluded] at hb
-      refine ExclusionCertificate.mono (s := q1) (fun i' j' m' hm' => ?_) (fun k w hk => ?_)
-        (RoundState.corrupt_F_subset q1 id) (hRR.exclusion_certificate b hb)
+      refine ExclusionWitness.mono (s := q1) (fun i' j' m' hm' => ?_) (fun k w hk => ?_)
+        (RoundState.corrupt_F_subset q1 id) (hRR.exclusion_witness b hb)
       · rw [RoundState.corrupt_received]
         exact hm'
-      · rw [RoundState.corrupt_process]
+      · rw [RoundState.corrupt_processVariables]
         exact hk
     · intro hg
       rw [corrupt_grade] at hg
-      obtain ⟨v0, i0, hi0⟩ := hRR.grade2_evidence hg
+      obtain ⟨v0, i0, hi0⟩ := hRR.grade2_witness hg
       exact ⟨v0, i0, by rw [RoundState.corrupt_receivedCount]; exact hi0⟩
     · intro hg
       rw [corrupt_grade] at hg
-      obtain ⟨i0, hi0⟩ := hRR.grade0_evidence hg
+      obtain ⟨i0, hi0⟩ := hRR.grade0_witness hg
       exact ⟨i0, by rw [RoundState.corrupt_receivedCount]; exact hi0⟩
     · rw [corrupt_excluded, RoundState.corrupt_bound]
       exact hRR.bound_excluded

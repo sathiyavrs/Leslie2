@@ -14,7 +14,7 @@ The protocol parameters shared by every system in the ABA case study:
 * `ABA.Parameters` — the number of processes `n`, the corruption budget `f` (with
   `3 * f < n`), the coin goodness `ε` (with `0 < ε`) and the coin failure
   probability `δ` (with `2 * ε + δ ≤ 1`).
-* `ABA.Parameters.echoReceiptQuorum` — the reliable broadcast's `ECHO` quorum, `(n + f) / 2 + 1`,
+* `ABA.Parameters.receivedEchoQuorum` — the reliable broadcast's `ECHO` quorum, `(n + f) / 2 + 1`,
   which is more than `(n + f) / 2` (AFW25's Algorithm 1).
 * `ABA.Parameters.wccPMF` — *the* coin distribution of the development, over
   `ABA.CoinOutcome`: `bit b` with probability `ε` for each bit `b` (all
@@ -125,18 +125,19 @@ theorem f_lt_n_sub_f (P : Parameters) : P.f < P.n - P.f := by
 
 /-- The `ECHO` quorum of the reliable broadcast: more than `(n + f) / 2`
 senders (AFW25's Algorithm 1, line 2). -/
-def echoReceiptQuorum (P : Parameters) : ℕ := (P.n + P.f) / 2 + 1
+def receivedEchoQuorum (P : Parameters) : ℕ := (P.n + P.f) / 2 + 1
 
 /-- Two `ECHO` quorums have more than `n + f` members between them:
-`n + f < 2 * echoReceiptQuorum`. -/
-theorem n_add_f_lt_two_mul_echoReceiptQuorum (P : Parameters) : P.n + P.f < 2 * P.echoReceiptQuorum
+`n + f < 2 * receivedEchoQuorum`. -/
+theorem n_add_f_lt_two_mul_receivedEchoQuorum (P : Parameters) : P.n + P.f < 2 *
+  P.receivedEchoQuorum
   := by
-  unfold echoReceiptQuorum; omega
+  unfold receivedEchoQuorum; omega
 
 /-- The `ECHO` quorum exceeds the corruption budget: `f ≤ (n + f) / 2` since
 `f ≤ n`, so any `ECHO` quorum contains a correct sender. -/
-theorem f_lt_echoReceiptQuorum (P : Parameters) : P.f < P.echoReceiptQuorum := by
-  have := P.hResilience; unfold echoReceiptQuorum; omega
+theorem f_lt_receivedEchoQuorum (P : Parameters) : P.f < P.receivedEchoQuorum := by
+  have := P.hResilience; unfold receivedEchoQuorum; omega
 
 end Parameters
 

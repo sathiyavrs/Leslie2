@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.GBCA.AFW.CompositionStepInversion
+import Leslie2Protocols.ABA.GBCA.AFW.CompositionStepCases
 import Leslie2Protocols.ABA.GBCA.SpecificationOverRoundAlphabet
 import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 
@@ -199,7 +199,7 @@ theorem roundOverGatherSpecifications_step_algorithm (P : Parameters) (r : ℕ) 
       (Gather.specificationOverInstanceAlphabet P (Option Bool)) _ l μ).mp hstep with ⟨rfl, e,
         hev⟩ | hlab
   · obtain ⟨x, v', c', d', rfl, hRoundPrograms, hga1, hga2⟩ :=
-      roundOverGathersExtended_joint_inversion h1 h2 (by simp) hev
+      roundOverGathersExtended_synchronised_cases h1 h2 (by simp) hev
     refine ⟨Label.tau, rfl, ?_⟩
     cases e with
     | firstGatherReturn id g C =>
@@ -208,7 +208,7 @@ theorem roundOverGatherSpecifications_step_algorithm (P : Parameters) (r : ℕ) 
           hRoundPrograms
       obtain ⟨hin, hc, hxid⟩ := programStep_firstGatherReturn_own (hproc id)
       have hfor : ∀ i, i ≠ id → x i = u i :=
-        fun i hi => PMF.pure_injective (programStep_firstGatherReturn_foreign (Ne.symm hi) (hproc
+        fun i hi => PMF.pure_injective (programStep_firstGatherReturn_notOwn (Ne.symm hi) (hproc
           i))
       have hx := Function.eq_update_iff.mpr ⟨PMF.pure_injective hxid, hfor⟩
       have hv : v' = some (v.getD (boundOfCore P C)) := PMF.pure_injective
@@ -223,7 +223,7 @@ theorem roundOverGatherSpecifications_step_algorithm (P : Parameters) (r : ℕ) 
         roundPrograms_label_pure (lp := .secondGatherCall id y) (by simp) (by simp) hRoundPrograms
       obtain ⟨hc, h2', hxid⟩ := programStep_secondGatherCall_own (hproc id)
       have hfor : ∀ i, i ≠ id → x i = u i :=
-        fun i hi => PMF.pure_injective (programStep_secondGatherCall_foreign (Ne.symm hi) (hproc i))
+        fun i hi => PMF.pure_injective (programStep_secondGatherCall_notOwn (Ne.symm hi) (hproc i))
       have hx := Function.eq_update_iff.mpr ⟨PMF.pure_injective hxid, hfor⟩
       have hv : v' = v := PMF.pure_injective (networkStep_secondGatherCall hnet)
       have hc1 : c' = c := System.mapIdle_eq_of_step_none (by simp) hga1
@@ -237,7 +237,7 @@ theorem roundOverGatherSpecifications_step_algorithm (P : Parameters) (r : ℕ) 
           hRoundPrograms
       obtain ⟨h2', ho, hxid⟩ := programStep_secondGatherReturn_own (hproc id)
       have hfor : ∀ i, i ≠ id → x i = u i :=
-        fun i hi => PMF.pure_injective (programStep_secondGatherReturn_foreign (Ne.symm hi) (hproc
+        fun i hi => PMF.pure_injective (programStep_secondGatherReturn_notOwn (Ne.symm hi) (hproc
           i))
       have hx := Function.eq_update_iff.mpr ⟨PMF.pure_injective hxid, hfor⟩
       have hv : v' = v := PMF.pure_injective (networkStep_secondGatherReturn hnet)
@@ -249,7 +249,7 @@ theorem roundOverGatherSpecifications_step_algorithm (P : Parameters) (r : ℕ) 
   · by_cases hlτ : l = Sum.inl Label.tau
     · subst hlτ
       refine ⟨Label.tau, rfl, ?_⟩
-      rcases roundOverGathersExtended_tau_inversion h1 h2 hlab with ⟨c', rfl, hs⟩ | ⟨d', rfl, hs⟩
+      rcases roundOverGathersExtended_tau_cases h1 h2 hlab with ⟨c', rfl, hs⟩ | ⟨d', rfl, hs⟩
       · exact AlgorithmOverGatherSpecifications.firstGatherTau _ c'
           (specificationOverInstanceAlphabet_tau_step
           hs)
@@ -257,22 +257,22 @@ theorem roundOverGatherSpecifications_step_algorithm (P : Parameters) (r : ℕ) 
           (specificationOverInstanceAlphabet_tau_step
           hs)
     · obtain ⟨x, v', c', d', rfl, hRoundPrograms, hga1, hga2⟩ :=
-        roundOverGathersExtended_joint_inversion h1 h2 (by simpa using hlτ) hlab
+        roundOverGathersExtended_synchronised_cases h1 h2 (by simpa using hlτ) hlab
       cases l with
       | inl l₀ =>
         cases l₀ with
         | tau => exact absurd rfl hlτ
-        | callABA id b => exact (roundPrograms_outside_inversion (by simp) hRoundPrograms).elim
-        | retABA id b => exact (roundPrograms_outside_inversion (by simp) hRoundPrograms).elim
-        | callW r' id => exact (roundPrograms_outside_inversion (by simp) hRoundPrograms).elim
-        | retW r' id b => exact (roundPrograms_outside_inversion (by simp) hRoundPrograms).elim
+        | callABA id b => exact (roundPrograms_outside_cases (by simp) hRoundPrograms).elim
+        | retABA id b => exact (roundPrograms_outside_cases (by simp) hRoundPrograms).elim
+        | callW r' id => exact (roundPrograms_outside_cases (by simp) hRoundPrograms).elim
+        | retW r' id b => exact (roundPrograms_outside_cases (by simp) hRoundPrograms).elim
         | callG r' id b =>
           obtain ⟨hproc, hnet⟩ :=
             roundPrograms_label_pure (lp := .callG r' id b) (by simp) (by simp) hRoundPrograms
           obtain rfl : r' = r := programStep_callG_round (hproc id)
           obtain ⟨h0, hxid⟩ := programStep_callG_own (hproc id)
           have hfor : ∀ i, i ≠ id → x i = u i :=
-            fun i hi => PMF.pure_injective (programStep_callG_foreign (Ne.symm hi) (hproc i))
+            fun i hi => PMF.pure_injective (programStep_callG_notOwn (Ne.symm hi) (hproc i))
           have hx := Function.eq_update_iff.mpr ⟨PMF.pure_injective hxid, hfor⟩
           have hv : v' = v := PMF.pure_injective (networkStep_callG hnet)
           have hg1 : Gather.Step P c (.call id b) (PMF.pure c') :=
@@ -287,7 +287,7 @@ theorem roundOverGatherSpecifications_step_algorithm (P : Parameters) (r : ℕ) 
           obtain ⟨ho, hr, hxid⟩ := programStep_retG_own (hproc id)
           obtain ⟨rfl, hv⟩ := networkStep_retG hnet
           have hfor : ∀ i, i ≠ id → x i = u i :=
-            fun i hi => PMF.pure_injective (programStep_retG_foreign (Ne.symm hi) (hproc i))
+            fun i hi => PMF.pure_injective (programStep_retG_notOwn (Ne.symm hi) (hproc i))
           have hx := Function.eq_update_iff.mpr ⟨PMF.pure_injective hxid, hfor⟩
           have hv' : v' = v := PMF.pure_injective hv
           have hc1 : c' = c := System.mapIdle_eq_of_step_none (by simp) hga1
@@ -309,15 +309,15 @@ theorem roundOverGatherSpecifications_step_algorithm (P : Parameters) (r : ℕ) 
         | gbcaRoundEvent r' j e => exact e.elim
         | gbcaSend r' j m => exact m.elim
         | gbcaDeliver r' i j m => exact m.elim
-        | decidedSend j b => exact (roundPrograms_outside_inversion (by simp) hRoundPrograms).elim
+        | decidedSend j b => exact (roundPrograms_outside_cases (by simp) hRoundPrograms).elim
         | decidedDeliver i j b =>
-          exact (roundPrograms_outside_inversion (by simp) hRoundPrograms).elim
+          exact (roundPrograms_outside_cases (by simp) hRoundPrograms).elim
         | retWPublish r' id cc b =>
-          exact (roundPrograms_outside_inversion (by simp) hRoundPrograms).elim
+          exact (roundPrograms_outside_cases (by simp) hRoundPrograms).elim
         | byzantineCallW r' k =>
-          exact (roundPrograms_outside_inversion (by simp) hRoundPrograms).elim
+          exact (roundPrograms_outside_cases (by simp) hRoundPrograms).elim
         | byzantineRetW r' k b =>
-          exact (roundPrograms_outside_inversion (by simp) hRoundPrograms).elim
+          exact (roundPrograms_outside_cases (by simp) hRoundPrograms).elim
         | gbcaCallLoop r' id b =>
           obtain ⟨hproc, hnet⟩ :=
             roundPrograms_label_pure (lp := .callLoop r' id b) (by simp) (by simp) hRoundPrograms
@@ -335,7 +335,7 @@ theorem roundOverGatherSpecifications_step_algorithm (P : Parameters) (r : ℕ) 
           obtain rfl : r' = r := programStep_callG_round (hproc k)
           obtain ⟨h0, hxid⟩ := programStep_callG_own (hproc k)
           have hfor : ∀ i, i ≠ k → x i = u i :=
-            fun i hi => PMF.pure_injective (programStep_callG_foreign (Ne.symm hi) (hproc i))
+            fun i hi => PMF.pure_injective (programStep_callG_notOwn (Ne.symm hi) (hproc i))
           have hx := Function.eq_update_iff.mpr ⟨PMF.pure_injective hxid, hfor⟩
           have hv : v' = v := PMF.pure_injective (networkStep_callG hnet)
           have hg1 : Gather.Step P c (.call k b) (PMF.pure c') :=
@@ -361,7 +361,7 @@ theorem roundOverGatherSpecifications_step_algorithm (P : Parameters) (r : ℕ) 
           obtain ⟨ho, hr, hxid⟩ := programStep_retG_own (hproc k)
           obtain ⟨rfl, hv⟩ := networkStep_retG hnet
           have hfor : ∀ i, i ≠ k → x i = u i :=
-            fun i hi => PMF.pure_injective (programStep_retG_foreign (Ne.symm hi) (hproc i))
+            fun i hi => PMF.pure_injective (programStep_retG_notOwn (Ne.symm hi) (hproc i))
           have hx := Function.eq_update_iff.mpr ⟨PMF.pure_injective hxid, hfor⟩
           have hv' : v' = v := PMF.pure_injective hv
           have hc1 : c' = c := System.mapIdle_eq_of_step_none (by simp) hga1

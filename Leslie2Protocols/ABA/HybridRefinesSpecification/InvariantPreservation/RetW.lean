@@ -153,7 +153,7 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
             rw [hv]
             exact h4 id bv (hFeq ▸ (heq0 ▸ hmem)) (hreq ▸ hIdCarr bv hoe)
     have hCertW : ∀ r0 b0,
-        Grade2Certificate P g c r0 b0 → Grade2Certificate P g (c.stepRound id b) r0 b0 := by
+        Grade2Witness P g c r0 b0 → Grade2Witness P g (c.stepRound id b) r0 b0 := by
       rintro r0 b0 ⟨hg0, hres0, hcm⟩
       exact ⟨hg0, hres0, hCommitW r0 b0 hg0 hcm⟩
     have hRedHW : ∀ i1 b1, Grade2Holder P (c.stepRound id b) i1 b1 → Grade2Holder P c i1 b1 := by
@@ -329,7 +329,7 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
         exact hI.estimate_ret r' id' (hFeq ▸ hmem) hround hphase
     · intro r' v h; rw [hValeq r']; exact hI.bind_succ r' v h
     · intro r' id' v hmem hcall
-      rw [hValeq r']; exact hI.call_provenance r' id' v (hFeq ▸ hmem) hcall
+      rw [hValeq r']; exact hI.call_of_previousRound r' id' v (hFeq ▸ hmem) hcall
     · intro r' id' hmem hround hphase v hest
       by_cases hid : id' = id
       · rw [hid, hRoundEq] at hround
@@ -437,7 +437,7 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
     · intro r' id' hmem hround
       rw [hValeq]; exact hI.round_flip r' id' hmem hround
     · intro r' v h; rw [hValeq r']; exact hI.bind_succ r' v h
-    · intro r' id' v hmem hcall; rw [hValeq r']; exact hI.call_provenance r' id' v hmem hcall
+    · intro r' id' v hmem hcall; rw [hValeq r']; exact hI.call_of_previousRound r' id' v hmem hcall
     · intro r' id' hmem hround hphase v hest
       rw [hValeq r']; exact hI.estimate_previous r' id' hmem hround hphase v hest
     · intro r' h; rw [hValeq] at h ⊢; exact hI.wcc_order r' h

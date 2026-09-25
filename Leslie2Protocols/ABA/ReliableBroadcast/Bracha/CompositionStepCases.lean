@@ -17,8 +17,8 @@ and the instance's network. The lemmas here unfold that pipeline in both directi
 `brachaInstance_step_iff` splits a transition of the instance into a hidden rendezvous and an
 interface label. Over the instance-internal alphabet, a visible label moves both factors, the
 programs and the network, and the joint distribution is their Dirac product. A silent label
-moves the network alone. `brachaInstanceExtended_joint_inversion` and
-`brachaInstanceExtended_tau_inversion` read a joint step that way, and the `_step` lemmas build
+moves the network alone. `brachaInstanceExtended_synchronised_cases` and
+`brachaInstanceExtended_tau_cases` read a joint step that way, and the `_step` lemmas build
 one from the transitions of the factors.
 
 `programStep_*` reads one program's transition off its label: the participant's guards together
@@ -28,7 +28,8 @@ with the Dirac it produces, and the idle transition of a non-participant as the 
 A joint step delivers a program function given pointwise, by its value at the acting process
 and its agreement with the old function elsewhere. `Function.eq_update_iff` identifies that
 function with the old one updated at the acting process, and the `brachaInstance_*` lemmas
-identify the state a transition writes with `InstanceState.setProcess`, `InstanceState.multicast`,
+identify the state a transition writes with `InstanceState.setProcessVariables`,
+`InstanceState.multicast`,
 `InstanceState.receiveMessage` or `InstanceState.corrupt` applied to the old state.
 -/
 
@@ -45,11 +46,11 @@ unfold it once and for all, in both directions. -/
 
 /-- A synchronised transition of the program group on a visible label: every
 program steps, and the joint distribution is Dirac. -/
-theorem broadcastProgramProduct_inversion {P : Parameters} {ldr : Fin P.n}
-    {u : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord M) (Message M)} {l : BroadcastLabel P.n M}
-    {μ : PMF (∀ _ : Fin P.n, LocalState P.n (ProcessRecord M) (Message M))}
+theorem broadcastProgramProduct_cases {P : Parameters} {ldr : Fin P.n}
+    {u : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables M) (Message M)} {l : BroadcastLabel P.n M}
+    {μ : PMF (∀ _ : Fin P.n, LocalState P.n (ProcessVariables M) (Message M))}
     (h : (System.synchronisedProduct (broadcastProgram P ldr (M := M))).step u l μ) :
-    ∃ x : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord M) (Message M),
+    ∃ x : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables M) (Message M),
       μ = PMF.pure x ∧ ∀ i, ProgramStep P ldr i (u i) l (PMF.pure (x i)) := by
   rw [System.synchronisedProduct_step] at h
   rcases h with ⟨-, μ_, hall, rfl⟩ | ⟨rfl, i, μ_i, hstep, -⟩
@@ -64,7 +65,8 @@ theorem broadcastProgramProduct_inversion {P : Parameters} {ldr : Fin P.n}
 /-- Build a synchronised transition of the program group from per-process Dirac
 steps. -/
 theorem broadcastProgramProduct_pure {P : Parameters} {ldr : Fin P.n}
-    {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord M) (Message M)} {l : BroadcastLabel P.n M}
+    {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables M) (Message M)} {l : BroadcastLabel P.n
+      M}
     (hl : l ≠ Silent.τ) (h : ∀ i, ProgramStep P ldr i (u i) l (PMF.pure (x i))) :
     (System.synchronisedProduct (broadcastProgram P ldr (M := M))).step u l (PMF.pure x) := by
   rw [System.synchronisedProduct_step]
@@ -72,8 +74,8 @@ theorem broadcastProgramProduct_pure {P : Parameters} {ldr : Fin P.n}
 
 /-- The program group has no silent transition: no program steps on `τ`. -/
 theorem broadcastProgramProduct_no_tau {P : Parameters} {ldr : Fin P.n}
-    {u : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord M) (Message M)}
-    {μ : PMF (∀ _ : Fin P.n, LocalState P.n (ProcessRecord M) (Message M))}
+    {u : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables M) (Message M)}
+    {μ : PMF (∀ _ : Fin P.n, LocalState P.n (ProcessVariables M) (Message M))}
     (h : (System.synchronisedProduct (broadcastProgram P ldr (M := M))).step u
       (Silent.τ : BroadcastLabel P.n M) μ) :
     False := by
@@ -100,7 +102,7 @@ theorem brachaInstance_step_iff (P : Parameters) (ldr : Fin P.n) (q : BrachaStat
 /-- Build a joint transition of the programs and the network on a rendezvous
 label. -/
 theorem brachaInstanceExtended_event_step (P : Parameters) (ldr : Fin P.n)
-    {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord M) (Message M)}
+    {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables M) (Message M)}
     {w w' : NetworkState P.n (Message M)} (e : BroadcastEvent P.n M)
     (hall : ∀ i, ProgramStep P ldr i (u i) (Sum.inr e) (PMF.pure (x i)))
     (hn : NetworkStep P ldr w (Sum.inr e) (PMF.pure w')) :
@@ -112,7 +114,7 @@ theorem brachaInstanceExtended_event_step (P : Parameters) (ldr : Fin P.n)
 /-- Build a joint transition of the programs and the network on a visible
 interface label. -/
 theorem brachaInstanceExtended_label_step (P : Parameters) (ldr : Fin P.n)
-    {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord M) (Message M)}
+    {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables M) (Message M)}
     {w w' : NetworkState P.n (Message M)} {l : InstanceLabel P.n M} (hl : l ≠ Sum.inl Label.tau)
     (hall : ∀ i, ProgramStep P ldr i (u i) (Sum.inl l) (PMF.pure (x i)))
     (hn : NetworkStep P ldr w (Sum.inl l) (PMF.pure w')) :
@@ -126,7 +128,7 @@ theorem brachaInstanceExtended_label_step (P : Parameters) (ldr : Fin P.n)
 /-- Build a silent transition of the programs and the network from a
 network-local one. -/
 theorem brachaInstanceExtended_tau_network (P : Parameters) (ldr : Fin P.n)
-    {u : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord M) (Message M)}
+    {u : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables M) (Message M)}
     {w w' : NetworkState P.n (Message M)}
     (hn : NetworkStep P ldr w (Sum.inl (Sum.inl .tau)) (PMF.pure w')) :
     (brachaInstanceExtended P ldr M).step (u, w) (Sum.inl (Sum.inl .tau)) (PMF.pure (u, w')) := by
@@ -135,7 +137,7 @@ theorem brachaInstanceExtended_tau_network (P : Parameters) (ldr : Fin P.n)
 
 /-- A hidden rendezvous is a silent transition of the instance. -/
 theorem brachaInstance_event_step (P : Parameters) (ldr : Fin P.n)
-    {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord M) (Message M)}
+    {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables M) (Message M)}
     {w w' : NetworkState P.n (Message M)} (e : BroadcastEvent P.n M)
     (hall : ∀ i, ProgramStep P ldr i (u i) (Sum.inr e) (PMF.pure (x i)))
     (hn : NetworkStep P ldr w (Sum.inr e) (PMF.pure w')) :
@@ -145,7 +147,7 @@ theorem brachaInstance_event_step (P : Parameters) (ldr : Fin P.n)
 
 /-- A visible interface label is a transition of the instance. -/
 theorem brachaInstance_label_step (P : Parameters) (ldr : Fin P.n)
-    {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord M) (Message M)}
+    {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables M) (Message M)}
     {w w' : NetworkState P.n (Message M)} {l : InstanceLabel P.n M} (hl : l ≠ Sum.inl Label.tau)
     (hall : ∀ i, ProgramStep P ldr i (u i) (Sum.inl l) (PMF.pure (x i)))
     (hn : NetworkStep P ldr w (Sum.inl l) (PMF.pure w')) :
@@ -155,7 +157,7 @@ theorem brachaInstance_label_step (P : Parameters) (ldr : Fin P.n)
 
 /-- A network-local injection is a silent transition of the instance. -/
 theorem brachaInstance_tau_network (P : Parameters) (ldr : Fin P.n)
-    {u : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord M) (Message M)}
+    {u : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables M) (Message M)}
     {w w' : NetworkState P.n (Message M)}
     (hn : NetworkStep P ldr w (Sum.inl (Sum.inl .tau)) (PMF.pure w')) :
     (brachaInstance P ldr M).step (u, w) (Sum.inl Label.tau) (PMF.pure (u, w')) :=
@@ -164,17 +166,17 @@ theorem brachaInstance_tau_network (P : Parameters) (ldr : Fin P.n)
 /-- A visible transition of the programs beside the network: every program and
 the network step on the label, and the joint distribution is their Dirac
 product. -/
-theorem brachaInstanceExtended_joint_inversion {P : Parameters} {ldr : Fin P.n}
-    {u : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord M) (Message M)}
+theorem brachaInstanceExtended_synchronised_cases {P : Parameters} {ldr : Fin P.n}
+    {u : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables M) (Message M)}
     {w : NetworkState P.n (Message M)} {L : BroadcastLabel P.n M} {μ : PMF (BrachaState P.n M)}
     (hL : L ≠ (Silent.τ : BroadcastLabel P.n M))
     (h : (brachaInstanceExtended P ldr M).step (u, w) L μ) :
-    ∃ (x : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord M) (Message M))
+    ∃ (x : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables M) (Message M))
     (w' : NetworkState P.n (Message M)), μ = PMF.pure (x, w') ∧
     (∀ i, ProgramStep P ldr i (u i) L (PMF.pure (x i))) ∧ NetworkStep P ldr w L (PMF.pure w') := by
   rw [brachaInstanceExtended, System.parallel_step] at h
   rcases h with ⟨-, μ₁, μ₂, hs, hn, rfl⟩ | ⟨hτ, -⟩ | ⟨hτ, -⟩
-  · obtain ⟨x, rfl, hall⟩ := broadcastProgramProduct_inversion hs
+  · obtain ⟨x, rfl, hall⟩ := broadcastProgramProduct_cases hs
     obtain ⟨w', rfl⟩ := networkStep_dirac hn
     exact ⟨x, w', prodPMF_pure_pure _ _, hall, hn⟩
   · exact absurd hτ hL
@@ -182,8 +184,8 @@ theorem brachaInstanceExtended_joint_inversion {P : Parameters} {ldr : Fin P.n}
 
 /-- A silent transition of the programs beside the network is a network-local
 injection: no program steps on `τ`. -/
-theorem brachaInstanceExtended_tau_inversion {P : Parameters} {ldr : Fin P.n}
-    {u : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord M) (Message M)}
+theorem brachaInstanceExtended_tau_cases {P : Parameters} {ldr : Fin P.n}
+    {u : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables M) (Message M)}
     {w : NetworkState P.n (Message M)} {μ : PMF (BrachaState P.n M)}
     (h : (brachaInstanceExtended P ldr M).step (u, w) (Sum.inl (Sum.inl Label.tau)) μ) :
     ∃ w' : NetworkState P.n (Message M), μ = PMF.pure (u, w') ∧ NetworkStep P ldr w
@@ -202,18 +204,19 @@ together with the Dirac it produces, and the idle transition of a
 non-participant as the identity. The state and the distribution are variables,
 so `cases` unifies against any state of the program. -/
 
-section ProgramStepInversion
-variable {P : Parameters} {ldr j : Fin P.n} {p : LocalState P.n (ProcessRecord M) (Message M)}
-  {ν : PMF (LocalState P.n (ProcessRecord M) (Message M))}
+section ProgramStepCases
+variable {P : Parameters} {ldr j : Fin P.n} {p : LocalState P.n (ProcessVariables M) (Message M)}
+  {ν : PMF (LocalState P.n (ProcessVariables M) (Message M))}
 
 theorem programStep_call_leader {m : M}
     (h : ProgramStep P ldr ldr p (Sum.inl (Sum.inl (.call m))) ν) :
-    p.process.input = none ∧ ν = PMF.pure (p.setProcess { p.process with input := some m }) := by
+    p.processVariables.input = none ∧ ν = PMF.pure (p.setProcessVariables { p.processVariables with
+      input := some m }) := by
   cases h
   case call => exact ⟨by assumption, rfl⟩
   case callIdle => exact absurd rfl ‹_ ≠ ldr›
 
-theorem programStep_call_foreign {m : M} (hj : j ≠ ldr)
+theorem programStep_call_notOwn {m : M} (hj : j ≠ ldr)
     (h : ProgramStep P ldr j p (Sum.inl (Sum.inl (.call m))) ν) : ν = PMF.pure p := by
   cases h
   case call => exact absurd ‹j = ldr› hj
@@ -226,13 +229,13 @@ theorem programStep_callLoop {m : M}
 
 theorem programStep_ret_own {m : M}
     (h : ProgramStep P ldr j p (Sum.inl (Sum.inl (.ret j m))) ν) :
-    2 * P.f + 1 ≤ p.receivedCount (.vote m) ∧ p.process.returned = false ∧
-      ν = PMF.pure (p.setProcess { p.process with returned := true }) := by
+    2 * P.f + 1 ≤ p.receivedCount (.vote m) ∧ p.processVariables.returned = false ∧
+      ν = PMF.pure (p.setProcessVariables { p.processVariables with returned := true }) := by
   cases h
   case ret => exact ⟨by assumption, by assumption, rfl⟩
   case retIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem programStep_ret_foreign {i : Fin P.n} {m : M} (hi : i ≠ j)
+theorem programStep_ret_notOwn {i : Fin P.n} {m : M} (hi : i ≠ j)
     (h : ProgramStep P ldr j p (Sum.inl (Sum.inl (.ret i m))) ν) : ν = PMF.pure p := by
   cases h
   case ret => exact absurd rfl hi
@@ -250,24 +253,24 @@ theorem programStep_send_init_own {m : M}
 
 theorem programStep_send_echo_own {m : M}
     (h : ProgramStep P ldr j p (Sum.inr (.send j (.echo m))) ν) :
-    (Message.init m ∈ p.received ldr ∨ P.echoReceiptQuorum ≤ p.receivedCount (.echo m) ∨
-        P.f + 1 ≤ p.receivedCount (.vote m)) ∧ p.process.sentEcho = none ∧
-      ν = PMF.pure (p.setProcess { p.process with sentEcho := some m }) := by
+    (Message.init m ∈ p.received ldr ∨ P.receivedEchoQuorum ≤ p.receivedCount (.echo m) ∨
+        P.f + 1 ≤ p.receivedCount (.vote m)) ∧ p.processVariables.sentEcho = none ∧
+      ν = PMF.pure (p.setProcessVariables { p.processVariables with sentEcho := some m }) := by
   cases h
   case sendEcho => exact ⟨by assumption, by assumption, rfl⟩
   case sendIdle => exact absurd rfl ‹_ ≠ j›
 
 theorem programStep_send_vote_own {m : M}
     (h : ProgramStep P ldr j p (Sum.inr (.send j (.vote m))) ν) :
-    (P.echoReceiptQuorum ≤ p.receivedCount (.echo m) ∨ P.f + 1 ≤ p.receivedCount (.vote m)) ∧
-      p.process.sentVote = none ∧
-      ν = PMF.pure (p.setProcess { p.process with sentVote := some m }) := by
+    (P.receivedEchoQuorum ≤ p.receivedCount (.echo m) ∨ P.f + 1 ≤ p.receivedCount (.vote m)) ∧
+      p.processVariables.sentVote = none ∧
+      ν = PMF.pure (p.setProcessVariables { p.processVariables with sentVote := some m }) := by
   cases h
   case sendVoteQuorum => exact ⟨Or.inl (by assumption), by assumption, rfl⟩
   case sendVoteAmplification => exact ⟨Or.inr (by assumption), by assumption, rfl⟩
   case sendIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem programStep_send_foreign {i : Fin P.n} {m : Message M} (hi : i ≠ j)
+theorem programStep_send_notOwn {i : Fin P.n} {m : Message M} (hi : i ≠ j)
     (h : ProgramStep P ldr j p (Sum.inr (.send i m)) ν) : ν = PMF.pure p := by
   cases h
   case sendIdle => rfl
@@ -279,16 +282,16 @@ theorem programStep_deliver_own {k : Fin P.n} {m : Message M}
   case deliverReceive => rfl
   case deliverIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem programStep_deliver_foreign {i k : Fin P.n} {m : Message M} (hi : i ≠ j)
+theorem programStep_deliver_notOwn {i k : Fin P.n} {m : Message M} (hi : i ≠ j)
     (h : ProgramStep P ldr j p (Sum.inr (.deliver i k m)) ν) : ν = PMF.pure p := by
   cases h
   case deliverReceive => exact absurd rfl hi
   case deliverIdle => rfl
 
-end ProgramStepInversion
+end ProgramStepCases
 /-! ### The network's transitions, by label class -/
 
-section NetworkStepInversion
+section NetworkStepCases
 variable {P : Parameters} {ldr : Fin P.n} {w : NetworkState P.n (Message M)}
   {μ : PMF (NetworkState P.n (Message M))}
 
@@ -321,15 +324,15 @@ theorem networkStep_tau (h : NetworkStep P ldr w (Sum.inl (Sum.inl .tau)) μ) :
   cases h
   case byzantine j m hF => exact ⟨j, m, hF, rfl⟩
 
-end NetworkStepInversion
+end NetworkStepCases
 /-! ### The write a transition makes on the composed state
 
 The local states and the network state are the two components of `BrachaState`
-(`ABA/ReliableBroadcast/Bracha/MessagesAndRecords.lean`), so a joint step of the programs and the
+(`ABA/ReliableBroadcast/Bracha/MessagesAndVariables.lean`), so a joint step of the programs and the
 network writes the state the instance's own accessors read. Such a step delivers a program
 function pointwise: its value at the acting process, and its agreement with the old one elsewhere.
 `Function.eq_update_iff` reads that function as the old one updated at the acting process, and the
-lemmas here identify the state written with `InstanceState.setProcess`. -/
+lemmas here identify the state written with `InstanceState.setProcessVariables`. -/
 
 section Writes
 
@@ -338,13 +341,13 @@ section Writes
 section
 
 variable {M : Type} {P : Parameters}
-  {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord M) (Message M)}
+  {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables M) (Message M)}
   {w : NetworkState P.n (Message M)}
 
 /-- A record write at one program, with the network state untouched. -/
-theorem brachaInstance_setProcess {j : Fin P.n} {pr : ProcessRecord M}
-    (hj : x j = (u j).setProcess pr) (hne : ∀ i, i ≠ j → x i = u i) :
-    ((x, w) : BrachaState P.n M) = InstanceState.setProcess (u, w) j pr := by
+theorem brachaInstance_setProcessVariables {j : Fin P.n} {pr : ProcessVariables M}
+    (hj : x j = (u j).setProcessVariables pr) (hne : ∀ i, i ≠ j → x i = u i) :
+    ((x, w) : BrachaState P.n M) = InstanceState.setProcessVariables (u, w) j pr := by
   rw [Function.eq_update_iff.mpr ⟨hj, hne⟩]
   rfl
 
@@ -363,14 +366,16 @@ end
 section
 
 variable {M : Type} [DecidableEq M] {P : Parameters}
-  {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessRecord M) (Message M)}
+  {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables M) (Message M)}
   {w : NetworkState P.n (Message M)}
 
 /-- A record write at one program together with the network state recording the
 message that write multicasts. -/
-theorem brachaInstance_setProcess_recordSent {j : Fin P.n} {pr : ProcessRecord M} {m : Message M}
-    (hj : x j = (u j).setProcess pr) (hne : ∀ i, i ≠ j → x i = u i) :
-    ((x, w.recordSent j m) : BrachaState P.n M) = (InstanceState.setProcess (u, w) j pr).multicast j
+theorem brachaInstance_setProcessVariables_recordSent {j : Fin P.n} {pr : ProcessVariables M} {m :
+  Message M}
+    (hj : x j = (u j).setProcessVariables pr) (hne : ∀ i, i ≠ j → x i = u i) :
+    ((x, w.recordSent j m) : BrachaState P.n M) = (InstanceState.setProcessVariables (u, w) j
+      pr).multicast j
     m := by
   rw [Function.eq_update_iff.mpr ⟨hj, hne⟩]
   rfl

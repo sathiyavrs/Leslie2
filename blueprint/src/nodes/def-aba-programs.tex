@@ -1,17 +1,17 @@
 \begin{definition}[The program of one process]
   \label{def:aba-programs}
-  \lean{PLTS.ABA.GBCA.ByABDY.RoundRecord}\lean{PLTS.ABA.RoundLoopRecord}\lean{PLTS.ABA.ABDY.RoundRecordMap}\lean{PLTS.ABA.ABDY.ProcessRecord}\lean{PLTS.ABA.Composition.NetworkEvent}\lean{PLTS.ABA.Composition.ExtendedLabel}\lean{PLTS.ABA.Implementation.networkEventLabels}\lean{PLTS.ABA.ABDY.RoundStep}\lean{PLTS.ABA.ABDY.ABAProgramStep}\lean{PLTS.ABA.ABDY.ABAProgram}\leanok
+  \lean{PLTS.ABA.GBCA.ByABDY.RoundVariables}\lean{PLTS.ABA.RoundLoopVariables}\lean{PLTS.ABA.ABDY.RoundVariablesMap}\lean{PLTS.ABA.ABDY.ProcessVariables}\lean{PLTS.ABA.Composition.NetworkEvent}\lean{PLTS.ABA.Composition.ExtendedLabel}\lean{PLTS.ABA.Implementation.networkEventLabels}\lean{PLTS.ABA.ABDY.RoundStep}\lean{PLTS.ABA.ABDY.ABAProgramStep}\lean{PLTS.ABA.ABDY.ABAProgram}\leanok
   \uses{def:aba-labels, def:aba-round-messages, def:aba-round-loop-state, def:aba-implementation, def:relabel, def:synchronised-product}
-  Process $j$ runs Definition~\ref{def:aba-implementation} at ABDY22's implementation of Definition~\ref{def:aba-round-messages}: the round message type is $\mathrm{GBCA.ByABDY.Message}$, the round record is $\mathrm{GBCA.ByABDY.RoundRecord}(n)$, and the round's transitions are the fourteen of \leandecl{PLTS.ABA.ABDY.RoundStep} --- the eight multicasts of those levels, the delivery that files a received message, the call and its loop, and the three returns.
+  Process $j$ runs Definition~\ref{def:aba-implementation} at ABDY22's implementation of Definition~\ref{def:aba-round-messages}: the round message type is $\mathrm{GBCA.ByABDY.Message}$, the round record is $\mathrm{GBCA.ByABDY.RoundVariables}(n)$, and the round's transitions are the fourteen of \leandecl{PLTS.ABA.ABDY.RoundStep} --- the eight multicasts of those levels, the delivery that files a received message, the call and its loop, and the three returns.
   The twenty-nine transitions around them are the shared ones.
   The state of process $j$ is
   \[
-    \mathrm{ProcessRecord}(n) \;=\;
-      \mathrm{RoundLoopRecord}(n) \times \mathrm{RoundRecordMap}(n),
+    \mathrm{ProcessVariables}(n) \;=\;
+      \mathrm{RoundLoopVariables}(n) \times \mathrm{RoundVariablesMap}(n),
   \]
   its round-loop record --- the control record of Definition~\ref{def:aba-round-loop-state} together with the DECIDED received sets $decidedDelivered(k)$ --- beside its round's record.
-  The round's record holds a finite map $roundRecords$ from rounds to round records of Definition~\ref{def:aba-round-messages}, each with its received sets $received(k)$, and a flag $terminated$ (D22).
-  The round record of round $r$ is read $\mathrm{roundRecord}\,r$: the retained record where $j$ has touched round $r$, the initial round record elsewhere.
+  The round's record holds a finite map $roundVariablesMap$ from rounds to round records of Definition~\ref{def:aba-round-messages}, each with its received sets $received(k)$, and a flag $terminated$ (D22).
+  The round record of round $r$ is read $\mathrm{roundVariables}\,r$: the retained record where $j$ has touched round $r$, the initial round record elsewhere.
   The map is finite by its type, so $j$ holds finitely many round records at every point of a run, and the round advance resets none of them.
   Every round's transition is accordingly round-indexed rather than round-guarded: it reads and writes the round record of the round its own label tags, whichever round the round loop is in, under the guards of that round record and $terminated = \mathrm{false}$.
   Process $j$ therefore answers the messages of a round its round loop has passed, and a round delivery of any round is filed.
@@ -22,7 +22,7 @@
   A process that has terminated at phase $toCallG$ over an uncalled round record therefore has a transition on neither call label and takes no further round-loop step, an excluded region this definition accepts.
   There is no outbox and no copy of the corrupted set or its budget, so every guard of the automaton $\mathrm{ABAProgram}(P,j)$ reads $j$'s own record.
   A corruption replaces $j$'s program (D23).
-  The round-loop record carries the flag \leandecl{PLTS.ABA.RoundLoopRecord.corrupted}, written by $j$'s own half of the corruption broadcast, \leandeclnamed{failSelf}{PLTS.ABA.Implementation.ProgramStep.failSelf}; every other transition above is enabled only while that flag is down, so the record is unchanged from the corruption and $terminate$ in particular never fires afterwards.
+  The round-loop record carries the flag \leandecl{PLTS.ABA.RoundLoopVariables.corrupted}, written by $j$'s own half of the corruption broadcast, \leandeclnamed{failSelf}{PLTS.ABA.Implementation.ProgramStep.failSelf}; every other transition above is enabled only while that flag is down, so the record is unchanged from the corruption and $terminate$ in particular never fires afterwards.
   In place of those transitions the replaced program is the single self-loop \leandeclnamed{corruptedIdle}{PLTS.ABA.Implementation.ProgramStep.corruptedIdle}, taken on every label other than $\tau$ and the labels of $\mathrm{actsAt}\,j$ --- the labels on which $j$ would act on its own sub-protocol messages --- where it has no transition at all.
   Those messages enter through the handshake transitions of D11 and the injections $\mathrm{byzantineGBCA}$ and $\mathrm{byzantineDecided}$.
   The visible return is the exception: the network's own $\mathrm{retByzantine}$ transition requires $j \in F$ and no DECIDED evidence, and the self-loop is its other half.

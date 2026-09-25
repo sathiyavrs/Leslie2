@@ -21,7 +21,8 @@ component is an auxiliary variable in the sense of Abadi and Lamport, *The exist
 refinement mappings* (1991), here between systems whose steps are distributions. Erasing it
 has to leave the observable behaviour untouched.
 
-`StateErasure sysA sys0 π φ` is that statement. The map `π : SA → S0` deletes the component
+`AuxiliaryVariableRemoval sysA sys0 π φ` is that statement. The map `π : SA → S0` deletes the
+component
 and `φ : L → L` identifies the labels that differ only in the value the component announces.
 Two clauses carry the content.
 
@@ -39,11 +40,14 @@ projection is exact on labels and only the lift is taken up to `φ`. A third cla
 internal step with an external one or the reverse.
 
 `project` is a functional label-preserving simulation, hence the inclusion
-`StateErasure.achievableTraceDists_subset`. At `φ = id` the lift is label-exact, so it is a
+`AuxiliaryVariableRemoval.achievableTraceDists_subset`. At `φ = id` the lift is label-exact, so it
+is a
 probabilistic forward simulation in the opposite direction
 (`ProbabilisticForwardSimulation.ofStrongFunctional_converse`) and the two sets of
-achievable trace distributions coincide: `StateErasure.achievableTraceDists_eq`. A general
-`φ` reaches that equality through `StateErasure.abstract_collapse`, which hides every label
+achievable trace distributions coincide: `AuxiliaryVariableRemoval.achievableTraceDists_eq`. A
+general
+`φ` reaches that equality through `AuxiliaryVariableRemoval.abstract_collapse`, which hides every
+label
 `φ` identifies with a different label and returns an erasure at `φ = id`.
 
 ## Congruences
@@ -87,7 +91,8 @@ theorem System.labelSaturated_id (sys : System SC L) : sys.LabelSaturated (id : 
 
 /-- **Erasure of an auxiliary state component.** `π` deletes the component and `φ` identifies
 the labels that differ only in the value the component announces. -/
-structure StateErasure (sysA : System SA L) (sys0 : System S0 L) (π : SA → S0) (φ : L → L) :
+structure AuxiliaryVariableRemoval (sysA : System SA L) (sys0 : System S0 L) (π : SA → S0) (φ : L →
+  L) :
     Prop where
   /-- `π` carries the initial state to the initial state. -/
   init : π sysA.init = sys0.init
@@ -99,21 +104,21 @@ structure StateErasure (sysA : System SA L) (sys0 : System S0 L) (π : SA → S0
   `sysA`. -/
   lift : ∀ s l μ, sys0.step (π s) l μ → ∃ l' ν, φ l' = φ l ∧ sysA.step s l' ν ∧ μ = ν.map π
 
-namespace StateErasure
+namespace AuxiliaryVariableRemoval
 
 variable {sysA : System SA L} {sys0 : System S0 L} {π : SA → S0} {φ : L → L}
 
 /-- **Erasure includes trace distributions.** The projection clause is a functional,
 label-preserving simulation, so every trace distribution of the system carrying the
 component is achieved by the system without it. -/
-theorem achievableTraceDists_subset (h : StateErasure sysA sys0 π φ) :
+theorem achievableTraceDists_subset (h : AuxiliaryVariableRemoval sysA sys0 π φ) :
     achievableTraceDists sysA ⊆ achievableTraceDists sys0 :=
   achievableTraceDists_map π h.init h.project
 
 /-- **An erasure at `φ = id` preserves trace distributions.** The projection gives one
 inclusion; the lift, being label-exact, is a probabilistic forward simulation of `sys0` by
 `sysA` and gives the other. -/
-theorem achievableTraceDists_eq (h : StateErasure sysA sys0 π id) :
+theorem achievableTraceDists_eq (h : AuxiliaryVariableRemoval sysA sys0 π id) :
     achievableTraceDists sysA = achievableTraceDists sys0 := by
   refine Set.Subset.antisymm h.achievableTraceDists_subset ?_
   refine (ProbabilisticForwardSimulation.ofStrongFunctional_converse π h.init ?_)
@@ -149,8 +154,8 @@ untouched by `π`, and on a synchronised step it has to accept whichever represe
 `φ`-fibre the ghost-free system announces, which is what `hsat` grants. The clause `h.silent` is
 what keeps the two interleaving disjuncts apart from the synchronised one: a lift of an internal
 step is again internal. -/
-theorem parallel_right (h : StateErasure sysA sys0 π φ) (hsat : sysC.LabelSaturated φ) :
-    StateErasure (sysA.parallel sysC) (sys0.parallel sysC) (Prod.map π id) φ where
+theorem parallel_right (h : AuxiliaryVariableRemoval sysA sys0 π φ) (hsat : sysC.LabelSaturated φ) :
+    AuxiliaryVariableRemoval (sysA.parallel sysC) (sys0.parallel sysC) (Prod.map π id) φ where
   init := by
     change (π sysA.init, sysC.init) = (sys0.init, sysC.init)
     rw [h.init]
@@ -180,9 +185,9 @@ theorem parallel_right (h : StateErasure sysA sys0 π φ) (hsat : sysC.LabelSatu
       rfl
 
 /-- **Erasure is a congruence for parallel composition on the right factor.** The mirror of
-`StateErasure.parallel_right`. -/
-theorem parallel_left (h : StateErasure sysA sys0 π φ) (hsat : sysC.LabelSaturated φ) :
-    StateErasure (sysC.parallel sysA) (sysC.parallel sys0) (Prod.map id π) φ where
+`AuxiliaryVariableRemoval.parallel_right`. -/
+theorem parallel_left (h : AuxiliaryVariableRemoval sysA sys0 π φ) (hsat : sysC.LabelSaturated φ) :
+    AuxiliaryVariableRemoval (sysC.parallel sysA) (sysC.parallel sys0) (Prod.map id π) φ where
   init := by
     change (sysC.init, π sysA.init) = (sysC.init, sys0.init)
     rw [h.init]
@@ -223,9 +228,9 @@ variable {sysA : System SA L} {sys0 : System S0 L} {π : SA → S0} {φ : L → 
 /-- **Erasure is a congruence for abstraction.** Hiding a set of labels saturated along `φ`
 keeps the erasure: a hidden label of `sys0` lifts to a hidden label of `sysA`, and a visible
 one to a visible one. -/
-theorem abstract (h : StateErasure sysA sys0 π φ) (A : Set L)
+theorem abstract (h : AuxiliaryVariableRemoval sysA sys0 π φ) (A : Set L)
     (hsat : ∀ l l', φ l = φ l' → (l ∈ A ↔ l' ∈ A)) :
-    StateErasure (sysA.abstract A) (sys0.abstract A) π φ where
+    AuxiliaryVariableRemoval (sysA.abstract A) (sys0.abstract A) π φ where
   init := h.init
   silent := h.silent
   project := by
@@ -241,11 +246,11 @@ theorem abstract (h : StateErasure sysA sys0 π φ) (A : Set L)
 
 /-- **Hiding every discrepancy of `φ` collapses the erasure to the identity.** Under `hdisc`
 a label identified with a different label lies in `A`, so after hiding `A` the lift returns
-the label it was given and `StateErasure.achievableTraceDists_eq` applies. -/
-theorem abstract_collapse (h : StateErasure sysA sys0 π φ) (A : Set L)
+the label it was given and `AuxiliaryVariableRemoval.achievableTraceDists_eq` applies. -/
+theorem abstract_collapse (h : AuxiliaryVariableRemoval sysA sys0 π φ) (A : Set L)
     (hsat : ∀ l l', φ l = φ l' → (l ∈ A ↔ l' ∈ A))
     (hdisc : ∀ l l', φ l = φ l' → l ≠ l' → l ∈ A) :
-    StateErasure (sysA.abstract A) (sys0.abstract A) π id where
+    AuxiliaryVariableRemoval (sysA.abstract A) (sys0.abstract A) π id where
   init := h.init
   silent := separatesSilent_id
   project := (h.abstract A hsat).project
@@ -276,8 +281,8 @@ variable {E : Type} {sysA : System SA (L ⊕ E)} {sys0 : System S0 (L ⊕ E)} {�
 /-- **Erasure is a congruence for restriction along the left summand.** An identification of
 the extended alphabet that is a sum of identifications restricts to its left component, and
 the erasure restricts with it. -/
-theorem relabel (h : StateErasure sysA sys0 π (Sum.map φ ψ)) :
-    StateErasure sysA.relabel sys0.relabel π φ where
+theorem relabel (h : AuxiliaryVariableRemoval sysA sys0 π (Sum.map φ ψ)) :
+    AuxiliaryVariableRemoval sysA.relabel sys0.relabel π φ where
   init := h.init
   silent := by
     intro l hl
@@ -295,7 +300,7 @@ theorem relabel (h : StateErasure sysA sys0 π (Sum.map φ ψ)) :
 
 end Relabel
 
-end StateErasure
+end AuxiliaryVariableRemoval
 
 /-! ### Saturation is preserved by the combinators
 
@@ -368,8 +373,8 @@ end Saturation
 
 /-! ### Mechanical axiom check -/
 
-/-- info: 'PLTS.StateErasure.achievableTraceDists_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PLTS.AuxiliaryVariableRemoval.achievableTraceDists_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms StateErasure.achievableTraceDists_eq
+#print axioms AuxiliaryVariableRemoval.achievableTraceDists_eq
 
 end PLTS

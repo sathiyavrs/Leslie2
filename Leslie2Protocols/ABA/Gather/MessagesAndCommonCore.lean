@@ -15,7 +15,7 @@ state.
 
 A gather instance's plain-multicast messages are the `ECHO` and `VOTE` payload
 sets (`Message`); the `BIND` payloads are sent by reliable broadcast and are not
-messages of the network. `BaseProcessRecord` is the local record of one process: its input,
+messages of the network. `BaseProcessVariables` is the local record of one process: its input,
 the `ECHO` and the `VOTE` payload it has multicast, the `BIND` payload it has
 handed to its own bind broadcast, and its return flag.
 
@@ -41,8 +41,8 @@ inductive Message (n : ℕ) (X : Type) : Type
 
 /-- The local record of one process in one gather instance. The payload handed
 to the process's own bind broadcast is a field here; the payloads a bind
-broadcast has returned here are fields of `ProcessRecord` (`ABA/Gather/Components.lean`). -/
-structure BaseProcessRecord (n : ℕ) (X : Type) : Type where
+broadcast has returned here are fields of `ProcessVariables` (`ABA/Gather/Components.lean`). -/
+structure BaseProcessVariables (n : ℕ) (X : Type) : Type where
   /-- The payload received via `call` (`none` before the call). -/
   input : Option X
   /-- The `ECHO` payload multicast, if any (write-once). -/
@@ -57,7 +57,7 @@ structure BaseProcessRecord (n : ℕ) (X : Type) : Type where
   deriving DecidableEq
 
 /-- The initial local record. -/
-def BaseProcessRecord.initial (n : ℕ) (X : Type) : BaseProcessRecord n X where
+def BaseProcessVariables.initial (n : ℕ) (X : Type) : BaseProcessVariables n X where
   input := none
   sentEcho := none
   sentVote := none
@@ -74,7 +74,7 @@ least `n − f` entries and lies below every committed `BIND` payload of a
 process outside `F`. -/
 
 section CommonCore
-variable {n : ℕ} {X : Type} (w : InstanceState n (BaseProcessRecord n X) (Message n X))
+variable {n : ℕ} {X : Type} (w : InstanceState n (BaseProcessVariables n X) (Message n X))
 
 /-- The processes outside the corrupted set. -/
 def correct : Finset (Fin n) := Finset.univ \ w.F
@@ -106,7 +106,7 @@ open scoped Classical in
 outside the corrupted set with at least `f + 1` dominators, and `∅` if there
 is no such sender. -/
 noncomputable def coreOf (P : Parameters)
-    (w : InstanceState P.n (BaseProcessRecord P.n X) (Message P.n X)) : AcceptedPairs P.n X :=
+    (w : InstanceState P.n (BaseProcessVariables P.n X) (Message P.n X)) : AcceptedPairs P.n X :=
   if h : ∃ j, j ∈ correct w ∧ P.f + 1 ≤ (dominators w j).card
   then echoOf w h.choose else ∅
 
@@ -115,7 +115,7 @@ end CommonCore
 sets and the corrupted set, so a network component holding those computes
 it. -/
 theorem coreOf_networkState_only {X : Type} {P : Parameters}
-    (w w' : InstanceState P.n (BaseProcessRecord P.n X) (Message P.n X)) (h : w.2 = w'.2) :
+    (w w' : InstanceState P.n (BaseProcessVariables P.n X) (Message P.n X)) (h : w.2 = w'.2) :
     coreOf P w = coreOf P w' := by
   obtain ⟨u, m⟩ := w
   obtain ⟨u', m'⟩ := w'
@@ -131,7 +131,7 @@ sums. -/
 
 section Incidence
 
-variable {n : ℕ} {X : Type} {w : InstanceState n (BaseProcessRecord n X) (Message n X)}
+variable {n : ℕ} {X : Type} {w : InstanceState n (BaseProcessVariables n X) (Message n X)}
 
 theorem mem_correct {j : Fin n} : j ∈ correct w ↔ j ∉ w.F := by
   simp [correct]
@@ -159,7 +159,7 @@ theorem correct_filter_dominatedBy {q : Fin n} :
 open scoped Classical in
 /-- The two systems of the incidence agree: summing the rows outside `F`
 over the columns outside `F` is summing the columns over the rows. -/
-theorem sum_dominatedBy (w : InstanceState n (BaseProcessRecord n X) (Message n X)) :
+theorem sum_dominatedBy (w : InstanceState n (BaseProcessVariables n X) (Message n X)) :
     ∑ q ∈ correct w, ((correct w).filter (fun j => j ∈ dominatedBy w q)).card
       = ∑ j ∈ correct w, (dominators w j).card := by
   simp only [dominators, Finset.card_filter]

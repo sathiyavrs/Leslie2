@@ -69,15 +69,15 @@ so right after a call the program holds `some x` and the instance holds `none`. 
 read the specification's call record off the instance would be false there, and
 `Gather.refinesSpecification` is unprovable.
 
-**The constraint.** `Gather.SpecificationRelation.call_eq : ∀ k, t.call k = ((gatherTier s).process
+**The constraint.** `Gather.SpecificationRelation.call_eq : ∀ k, t.call k = ((gatherProgramsAndNetwork s).processVariables
 k).input`. The specification's call record and the gather record move on the one interface label
 under the one write-once guard, and `specificationRelation_call` takes that guard alone;
 `specificationRelation_inputBroadcastCall` is matched by a stutter of the specification.
 `Gather.Invariant.inputBroadcastCall_backed` carries the instance's record back: the payload an
 input instance of a correct process was called with is the payload that process's gather record
 holds. A return then discharges the gather specification's commit guard `k ∈ F ∨ call k = some x`
-through `val_certificate`, which bounds a committed specification entry by the instance's
-commitment, `inputBroadcastVal_provenance`, which reads that commitment back to the instance's call
+through `val_witness`, which bounds a committed specification entry by the instance's
+commitment, `inputBroadcastVal_of_instanceInput`, which reads that commitment back to the instance's call
 record, and that clause, which reads the call record back to the gather record.
 
 ## 3. The composed program drops its grade on the graded return
@@ -96,7 +96,7 @@ function applied, would have no statement.
 
 **The constraint.** The grade is held only between `secondGatherReturn` and `retG`, inside a run
 whose intermediate state is named (`AFW.afterSecondGatherReturn`) and related to no implementation
-state; `programProjection` sets `out := none`; `GBCA.ByAFW.Invariant.out_certificate` is vacuous for
+state; `programProjection` sets `out := none`; `GBCA.ByAFW.Invariant.out_witness` is vacuous for
 a returned process.
 
 ## 4. A label outside a round's interface blocks the round
@@ -125,10 +125,10 @@ instance.
 
 A composed gather program reads what each of its instances returned, written on the instance's
 return event under a `2f + 1` `VOTE` quorum at the receiver. The implementation holds the same
-record: its round record carries each gather local state over `Gather.ProcessRecord`, and
+record: its round record carries each gather local state over `Gather.ProcessVariables`, and
 `AFW.RoundStep.firstGatherInputBroadcastReturn` and its three companions write it under that same
 quorum. A gather guard of the implementation then reads the record
-(`Gather.ProcessRecord.accepted`, `Gather.approvedBy`, `Gather.holdsInputBroadcastReturn`,
+(`Gather.ProcessVariables.accepted`, `Gather.approvedBy`, `Gather.holdsInputBroadcastReturn`,
 `Gather.holdsBindBroadcastReturn`), exactly as the guard of the composed gather program does.
 
 **What fails without it.** Let the implementation keep no returned value and read a quorum on the

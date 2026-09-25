@@ -5,7 +5,7 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.Composition.Components
-import Leslie2Protocols.ABA.GBCA.ABDY.MessagesAndRecords
+import Leslie2Protocols.ABA.GBCA.ABDY.MessagesAndVariables
 import Leslie2Protocols.ABA.Implementation.CompositeTransitions
 
 /-!
@@ -26,8 +26,9 @@ implementation. This file supplies the things an implementation fixes and
 nothing else:
 
 * the round message type, `GBCA.ByABDY.Message` — the five message levels of
-  `GBCA/ABDY/MessagesAndRecords.lean` (D18);
-* the per-process per-round record, `GBCA.ByABDY.RoundRecord`, held by round in a finite map (D22);
+  `GBCA/ABDY/MessagesAndVariables.lean` (D18);
+* the per-process per-round record, `GBCA.ByABDY.RoundVariables`, held by round in a finite map
+(D22);
 * the transitions of the implementation, `RoundStep`: the graded-agreement call, the eight round
   multicasts, the round delivery, the call against an already-called record, and the three graded
   returns;
@@ -64,35 +65,38 @@ open Composition
 
 /-- The round records of one process: the round record of every round the process has touched, and
 whether it has terminated (D22). -/
-abbrev RoundRecordMap (n : ℕ) : Type := Implementation.RoundRecordMap (GBCA.ByABDY.RoundRecord n)
+abbrev RoundVariablesMap (n : ℕ) : Type := Implementation.RoundVariablesMap
+  (GBCA.ByABDY.RoundVariables n)
 
 /-- ABDY22's round record, as the implementation consumes it. -/
-instance instIsRoundRecord (n : ℕ) : IsRoundRecord n GBCA.ByABDY.Message (GBCA.ByABDY.RoundRecord n)
+instance instIsRoundVariables (n : ℕ) : IsRoundVariables n GBCA.ByABDY.Message
+  (GBCA.ByABDY.RoundVariables n)
   where
-  initial := GBCA.ByABDY.RoundRecord.initial n
+  initial := GBCA.ByABDY.RoundVariables.initial n
   deliverTo p k m := p.deliverTo k m
 
-namespace RoundRecordMap
+namespace RoundVariablesMap
 
 variable {n : ℕ}
 
 /-- The initial round records: no round touched, not terminated. -/
-def initial (n : ℕ) : RoundRecordMap n := Implementation.RoundRecordMap.initial
-  (GBCA.ByABDY.RoundRecord n)
+def initial (n : ℕ) : RoundVariablesMap n := Implementation.RoundVariablesMap.initial
+  (GBCA.ByABDY.RoundVariables n)
 
-@[simp] theorem initial_roundRecord (n r : ℕ) :
-    (initial n).roundRecord r = GBCA.ByABDY.RoundRecord.initial n :=
-  Implementation.RoundRecordMap.initial_roundRecord r
+@[simp] theorem initial_roundVariables (n r : ℕ) :
+    (initial n).roundVariables r = GBCA.ByABDY.RoundVariables.initial n :=
+  Implementation.RoundVariablesMap.initial_roundVariables r
 
-@[simp] theorem roundRecord_setRoundRecord_ne (q : RoundRecordMap n) (r : ℕ)
-    (p : GBCA.ByABDY.RoundRecord n) {r' : ℕ} (h : r' ≠ r) :
-    (q.setRoundRecord r p).roundRecord r' = q.roundRecord r' :=
-  Implementation.RoundRecordMap.roundRecord_setRoundRecord_ne q r p h
+@[simp] theorem roundVariables_setRoundVariables_ne (q : RoundVariablesMap n) (r : ℕ)
+    (p : GBCA.ByABDY.RoundVariables n) {r' : ℕ} (h : r' ≠ r) :
+    (q.setRoundVariables r p).roundVariables r' = q.roundVariables r' :=
+  Implementation.RoundVariablesMap.roundVariables_setRoundVariables_ne q r p h
 
-end RoundRecordMap
+end RoundVariablesMap
 
 /-- The state of one process: its round-loop record and its round records (D22). -/
-abbrev ProcessRecord (n : ℕ) : Type := Implementation.ProcessRecord n (GBCA.ByABDY.RoundRecord n)
+abbrev ProcessVariables (n : ℕ) : Type := Implementation.ProcessVariables n
+  (GBCA.ByABDY.RoundVariables n)
 
 /-! ### The network's state at ABDY22's implementation -/
 
@@ -117,7 +121,7 @@ abbrev NetworkState.corrupt (P : Parameters) (id : Fin P.n) (s : NetworkState P.
 The bound bit of a round is a ghost output: the specification announces it on
 every return label (`ABA/GBCA/Specification.lean`) and no program reads it. At this
 implementation the network holds it, one bit per round, in the ghost record
-`Implementation.NetworkState.ghostRecord`.
+`Implementation.NetworkState.ghost`.
 
 `abdyGhostStep` writes it. A return records the bit its own label announces if
 the round has none on record and leaves the record alone otherwise, so the
@@ -127,7 +131,7 @@ Byzantine one — write it the same way. Every other transition leaves it alone.
 `abdyGhostOutput` reads it out: the bit on record if the round has one, and
 `GBCA.ByABDY.boundOf` of the round's sent sets, the corrupted set and the outcome
 otherwise. This is the account of the round's bound bit that
-`GBCA/ABDY/MessagesAndRecords.lean` holds in its own network state, computed here from the
+`GBCA/ABDY/MessagesAndVariables.lean` holds in its own network state, computed here from the
 network's sent sets instead. `abdyAnnouncedBound` is the guard of the two
 return transitions: the bit a return announces is `abdyGhostOutput` of the round. -/
 
@@ -144,7 +148,7 @@ def abdyGhostStep (P : Parameters) :
 `GBCA.ByABDY.boundOf` of the round's messages where there is none. -/
 def abdyGhostOutput (P : Parameters) (s : NetworkState P.n) (r : ℕ) (_id : Fin P.n)
     (out : GBCAOutput) : Bool :=
-  (s.ghostRecord r).getD (GBCA.ByABDY.boundOf (s.sent r) s.F out)
+  (s.ghost r).getD (GBCA.ByABDY.boundOf (s.sent r) s.F out)
 
 /-- The bit the network announces on a return: the round's ghost
 output, and no other. This is the relation the implementation's `ghostOutput`
@@ -230,27 +234,27 @@ record is unchanged. -/
 
 @[simp] theorem writeGhost_retG_self (r : ℕ) (id : Fin P.n) (out : GBCAOutput)
     (bnd : Bool) :
-    (w.writeGhost (abdyGhostStep P) (Sum.inl (.retG r id out bnd))).ghostRecord r
-      = some ((w.ghostRecord r).getD bnd) :=
-  writeGhost_ghostRecord_self w rfl
+    (w.writeGhost (abdyGhostStep P) (Sum.inl (.retG r id out bnd))).ghost r
+      = some ((w.ghost r).getD bnd) :=
+  writeGhost_ghost_self w rfl
 
 theorem writeGhost_retG_ne (r : ℕ) (id : Fin P.n) (out : GBCAOutput) (bnd : Bool)
     {r' : ℕ} (h : r' ≠ r) :
-    (w.writeGhost (abdyGhostStep P) (Sum.inl (.retG r id out bnd))).ghostRecord r'
-      = w.ghostRecord r' :=
-  writeGhost_ghostRecord_ne w rfl h
+    (w.writeGhost (abdyGhostStep P) (Sum.inl (.retG r id out bnd))).ghost r'
+      = w.ghost r' :=
+  writeGhost_ghost_ne w rfl h
 
 @[simp] theorem writeGhost_byzantineRetG_self (r : ℕ) (k : Fin P.n) (out : GBCAOutput)
     (bnd : Bool) :
-    (w.writeGhost (abdyGhostStep P) (Sum.inr (.byzantineRetG r k out bnd))).ghostRecord r
-      = some ((w.ghostRecord r).getD bnd) :=
-  writeGhost_ghostRecord_self w rfl
+    (w.writeGhost (abdyGhostStep P) (Sum.inr (.byzantineRetG r k out bnd))).ghost r
+      = some ((w.ghost r).getD bnd) :=
+  writeGhost_ghost_self w rfl
 
 theorem writeGhost_byzantineRetG_ne (r : ℕ) (k : Fin P.n) (out : GBCAOutput) (bnd : Bool)
     {r' : ℕ} (h : r' ≠ r) :
-    (w.writeGhost (abdyGhostStep P) (Sum.inr (.byzantineRetG r k out bnd))).ghostRecord r'
-      = w.ghostRecord r' :=
-  writeGhost_ghostRecord_ne w rfl h
+    (w.writeGhost (abdyGhostStep P) (Sum.inr (.byzantineRetG r k out bnd))).ghost r'
+      = w.ghost r' :=
+  writeGhost_ghost_ne w rfl h
 
 end GhostWrites
 /-! ### The transitions of the graded-agreement implementation -/
@@ -259,182 +263,201 @@ end GhostWrites
 five message levels, the round delivery, the call against an already-called record, and the three
 graded returns. -/
 inductive RoundStep (P : Parameters) (j : Fin P.n) :
-    ProcessRecord P.n → ExtendedLabel P.n GBCA.ByABDY.Message → PMF (ProcessRecord P.n) → Prop
+    ProcessVariables P.n → ExtendedLabel P.n GBCA.ByABDY.Message → PMF (ProcessVariables P.n) → Prop
   /-- The graded-agreement call: the round loop hands its estimate to the round record of round `r`,
   which opens. The `⟨INPUT, b⟩` multicast is the network's half. -/
-  | callG_call (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (b : Bool)
+  | callG_call (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (b : Bool)
       (hh : c.corrupted = false)
-      (hph : c.process.phase = .toCallG) (hr : c.process.round = r)
+      (hph : c.processVariables.phase = .toCallG) (hr : c.processVariables.round = r)
       (hterm : p.terminated = false)
-      (hest : c.process.estimate = some b) (hin : (p.roundRecord r).process.input = none) :
+      (hest : c.processVariables.estimate = some b) (hin : (p.roundVariables
+        r).processVariables.input = none) :
       RoundStep P j (c, p) (Sum.inl (.callG r j b))
-        (PMF.pure (c.setProcess { c.process with phase := .awaitG },
-          p.setRoundRecord r ((p.roundRecord r).setProcess { (p.roundRecord r).process with
+        (PMF.pure (c.setProcessVariables { c.processVariables with phase := .awaitG },
+          p.setRoundVariables r ((p.roundVariables r).setProcessVariables { (p.roundVariables
+            r).processVariables with
             input := some b,
-            sentInput := Function.update (p.roundRecord r).process.sentInput b true })))
+            sentInput := Function.update (p.roundVariables r).processVariables.sentInput b true })))
   /-- Return with outcome `grade2 v`: an `n − f` `ECHO5 v` quorum. The round record has been called
   and its own `ECHO5` is out. Case (1) heads the algorithm's chain, so there is no higher case to
   deny. -/
-  | retGGrade2 (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (v : Bool) (bnd : Bool)
+  | retGGrade2 (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (v : Bool) (bnd :
+      Bool)
       (hh : c.corrupted = false)
-      (hph : c.process.phase = .awaitG) (hr : c.process.round = r)
+      (hph : c.processVariables.phase = .awaitG) (hr : c.processVariables.round = r)
       (hterm : p.terminated = false)
-      (hin : (p.roundRecord r).process.input ≠ none)
-      (hlv : (p.roundRecord r).process.sentEcho5 ≠ none)
-      (hcnt : P.n - P.f ≤ (p.roundRecord r).receivedCount (.echo5 (some v)))
-      (hret : (p.roundRecord r).process.returned = false) :
+      (hin : (p.roundVariables r).processVariables.input ≠ none)
+      (hlv : (p.roundVariables r).processVariables.sentEcho5 ≠ none)
+      (hcnt : P.n - P.f ≤ (p.roundVariables r).receivedCount (.echo5 (some v)))
+      (hret : (p.roundVariables r).processVariables.returned = false) :
       RoundStep P j (c, p) (Sum.inl (.retG r j (.grade2 v) bnd))
-        (PMF.pure (c.setProcess { c.process with
+        (PMF.pure (c.setProcessVariables { c.processVariables with
             estimate := (GBCAOutput.grade2 v).estimate, lastGrade := some (.grade2 v),
               phase := .toCallW },
-          p.setRoundRecord r ((p.roundRecord r).setProcess { (p.roundRecord r).process with
+          p.setRoundVariables r ((p.roundVariables r).setProcessVariables { (p.roundVariables
+            r).processVariables with
             returned := true })))
   /-- Return with outcome `grade1 v`: an `n − f` any-`ECHO5` quorum containing `ECHO5 v`, `f + 1`
   `BIND v`s and `|Valid| > 1`. The round record has been called, its own `ECHO5` is out, and
   `hnotGrade2` denies case (1) at either bit. -/
-  | retGGrade1 (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (v : Bool) (bnd : Bool)
+  | retGGrade1 (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (v : Bool) (bnd :
+      Bool)
       (hh : c.corrupted = false)
-      (hph : c.process.phase = .awaitG) (hr : c.process.round = r)
+      (hph : c.processVariables.phase = .awaitG) (hr : c.processVariables.round = r)
       (hterm : p.terminated = false)
-      (hin : (p.roundRecord r).process.input ≠ none)
-      (hlv : (p.roundRecord r).process.sentEcho5 ≠ none)
-      (hnotGrade2 : ∀ v, (p.roundRecord r).receivedCount (.echo5 (some v)) < P.n - P.f)
-      (hcnt : P.n - P.f ≤ (p.roundRecord r).echo5Count)
-      (honce : ∃ k, GBCA.ByABDY.Message.echo5 (some v) ∈ (p.roundRecord r).received k)
-      (hbind : P.f + 1 ≤ (p.roundRecord r).receivedCount (.bind (some v)))
-      (hval : (p.roundRecord r).bothValid P)
-      (hret : (p.roundRecord r).process.returned = false) :
+      (hin : (p.roundVariables r).processVariables.input ≠ none)
+      (hlv : (p.roundVariables r).processVariables.sentEcho5 ≠ none)
+      (hnotGrade2 : ∀ v, (p.roundVariables r).receivedCount (.echo5 (some v)) < P.n - P.f)
+      (hcnt : P.n - P.f ≤ (p.roundVariables r).echo5Count)
+      (honce : ∃ k, GBCA.ByABDY.Message.echo5 (some v) ∈ (p.roundVariables r).received k)
+      (hbind : P.f + 1 ≤ (p.roundVariables r).receivedCount (.bind (some v)))
+      (hval : (p.roundVariables r).bothValid P)
+      (hret : (p.roundVariables r).processVariables.returned = false) :
       RoundStep P j (c, p) (Sum.inl (.retG r j (.grade1 v) bnd))
-        (PMF.pure (c.setProcess { c.process with
+        (PMF.pure (c.setProcessVariables { c.processVariables with
             estimate := (GBCAOutput.grade1 v).estimate, lastGrade := some (.grade1 v),
               phase := .toCallW },
-          p.setRoundRecord r ((p.roundRecord r).setProcess { (p.roundRecord r).process with
+          p.setRoundVariables r ((p.roundVariables r).setProcessVariables { (p.roundVariables
+            r).processVariables with
             returned := true })))
   /-- Return with outcome `grade0`: an `n − f` `ECHO5 ⊥` quorum and `|Valid| > 1`. The round record
   has been called, its own `ECHO5` is out, `hnotGrade2` denies case (1) at either bit, and
   `hnotGrade1` denies case (2) in the reduced form `GBCA.ByABDY.Algorithm.retGrade0`
   states. -/
-  | retGGrade0 (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (bnd : Bool)
+  | retGGrade0 (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (bnd : Bool)
       (hh : c.corrupted = false)
-      (hph : c.process.phase = .awaitG) (hr : c.process.round = r)
+      (hph : c.processVariables.phase = .awaitG) (hr : c.processVariables.round = r)
       (hterm : p.terminated = false)
-      (hin : (p.roundRecord r).process.input ≠ none)
-      (hlv : (p.roundRecord r).process.sentEcho5 ≠ none)
-      (hnotGrade2 : ∀ v, (p.roundRecord r).receivedCount (.echo5 (some v)) < P.n - P.f)
-      (hnotGrade1 : ∀ v, (∃ k, GBCA.ByABDY.Message.echo5 (some v) ∈ (p.roundRecord r).received k) →
-        (p.roundRecord r).receivedCount (.bind (some v)) < P.f + 1)
-      (hcnt : P.n - P.f ≤ (p.roundRecord r).receivedCount (.echo5 none))
-      (hval : (p.roundRecord r).bothValid P)
-      (hret : (p.roundRecord r).process.returned = false) :
+      (hin : (p.roundVariables r).processVariables.input ≠ none)
+      (hlv : (p.roundVariables r).processVariables.sentEcho5 ≠ none)
+      (hnotGrade2 : ∀ v, (p.roundVariables r).receivedCount (.echo5 (some v)) < P.n - P.f)
+      (hnotGrade1 : ∀ v, (∃ k, GBCA.ByABDY.Message.echo5 (some v) ∈ (p.roundVariables r).received k)
+        →
+        (p.roundVariables r).receivedCount (.bind (some v)) < P.f + 1)
+      (hcnt : P.n - P.f ≤ (p.roundVariables r).receivedCount (.echo5 none))
+      (hval : (p.roundVariables r).bothValid P)
+      (hret : (p.roundVariables r).processVariables.returned = false) :
       RoundStep P j (c, p) (Sum.inl (.retG r j .grade0 bnd))
-        (PMF.pure (c.setProcess { c.process with
+        (PMF.pure (c.setProcessVariables { c.processVariables with
             estimate := GBCAOutput.grade0.estimate, lastGrade := some .grade0, phase := .toCallW },
-          p.setRoundRecord r ((p.roundRecord r).setProcess { (p.roundRecord r).process with
+          p.setRoundVariables r ((p.roundVariables r).setProcessVariables { (p.roundVariables
+            r).processVariables with
             returned := true })))
   /-- The round's `INPUT` relay: `f + 1` receipts of `⟨INPUT, b⟩` in the round record of round `r`,
   not yet multicast there (D8, D18, D22). -/
-  | gbcaSendRelay (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (b : Bool)
+  | gbcaSendRelay (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (b : Bool)
       (hh : c.corrupted = false)
       (hterm : p.terminated = false)
-      (hin : (p.roundRecord r).process.input ≠ none)
-      (hcnt : P.f + 1 ≤ (p.roundRecord r).receivedCount (.input b))
-      (hsend : (p.roundRecord r).process.sentInput b = false) :
+      (hin : (p.roundVariables r).processVariables.input ≠ none)
+      (hcnt : P.f + 1 ≤ (p.roundVariables r).receivedCount (.input b))
+      (hsend : (p.roundVariables r).processVariables.sentInput b = false) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.input b)))
         (PMF.pure (c,
-          p.setRoundRecord r ((p.roundRecord r).setProcess { (p.roundRecord r).process with
-            sentInput := Function.update (p.roundRecord r).process.sentInput b true })))
+          p.setRoundVariables r ((p.roundVariables r).setProcessVariables { (p.roundVariables
+            r).processVariables with
+            sentInput := Function.update (p.roundVariables r).processVariables.sentInput b true })))
   /-- The round's `ECHO`: an `n − f` `INPUT b` quorum (D18, D22). -/
-  | gbcaSendEcho (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (b : Bool)
+  | gbcaSendEcho (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (b : Bool)
       (hh : c.corrupted = false)
       (hterm : p.terminated = false)
-      (hin : (p.roundRecord r).process.input ≠ none)
-      (hcnt : P.n - P.f ≤ (p.roundRecord r).receivedCount (.input b))
-      (hsend : (p.roundRecord r).process.sentEcho = none) :
+      (hin : (p.roundVariables r).processVariables.input ≠ none)
+      (hcnt : P.n - P.f ≤ (p.roundVariables r).receivedCount (.input b))
+      (hsend : (p.roundVariables r).processVariables.sentEcho = none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.echo b)))
-        (PMF.pure (c, p.setRoundRecord r
-          ((p.roundRecord r).setProcess { (p.roundRecord r).process with sentEcho := some b })))
+        (PMF.pure (c, p.setRoundVariables r
+          ((p.roundVariables r).setProcessVariables { (p.roundVariables r).processVariables with
+            sentEcho := some b })))
   /-- The round's `VOTE b`: an `n − f` `ECHO b` quorum. The round record's own `ECHO` is sent by one
   of the algorithm's `upon` handlers and may still be pending, so no own-send condition applies here
   (D18, D22). -/
-  | gbcaSendVoteBit (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (b : Bool)
+  | gbcaSendVoteBit (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (b : Bool)
       (hh : c.corrupted = false)
       (hterm : p.terminated = false)
-      (hin : (p.roundRecord r).process.input ≠ none)
-      (hcnt : P.n - P.f ≤ (p.roundRecord r).receivedCount (.echo b))
-      (hsend : (p.roundRecord r).process.sentVote = none) :
+      (hin : (p.roundVariables r).processVariables.input ≠ none)
+      (hcnt : P.n - P.f ≤ (p.roundVariables r).receivedCount (.echo b))
+      (hsend : (p.roundVariables r).processVariables.sentVote = none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.vote (some b))))
-        (PMF.pure (c, p.setRoundRecord r
-          ((p.roundRecord r).setProcess { (p.roundRecord r).process with sentVote := some (some b)
+        (PMF.pure (c, p.setRoundVariables r
+          ((p.roundVariables r).setProcessVariables { (p.roundVariables r).processVariables with
+            sentVote := some (some b)
             })))
   /-- The round's `VOTE ⊥`: `n − f` `ECHO`s of any payload and `|Valid| > 1`, and no single-bit
   `ECHO` quorum on record. The round record's own `ECHO` is sent by one of the algorithm's `upon`
   handlers and may still be pending, so no own-send condition applies here (D18, D22). -/
-  | gbcaSendVoteBot (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ)
+  | gbcaSendVoteBot (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ)
       (hh : c.corrupted = false)
       (hterm : p.terminated = false)
-      (hin : (p.roundRecord r).process.input ≠ none)
-      (hnot : ∀ b, (p.roundRecord r).receivedCount (.echo b) < P.n - P.f)
-      (hcnt : P.n - P.f ≤ (p.roundRecord r).echoCount)
-      (hval : (p.roundRecord r).bothValid P) (hsend : (p.roundRecord r).process.sentVote = none) :
+      (hin : (p.roundVariables r).processVariables.input ≠ none)
+      (hnot : ∀ b, (p.roundVariables r).receivedCount (.echo b) < P.n - P.f)
+      (hcnt : P.n - P.f ≤ (p.roundVariables r).echoCount)
+      (hval : (p.roundVariables r).bothValid P) (hsend : (p.roundVariables
+        r).processVariables.sentVote = none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.vote none)))
-        (PMF.pure (c, p.setRoundRecord r
-          ((p.roundRecord r).setProcess { (p.roundRecord r).process with sentVote := some none })))
+        (PMF.pure (c, p.setRoundVariables r
+          ((p.roundVariables r).setProcessVariables { (p.roundVariables r).processVariables with
+            sentVote := some none })))
   /-- The round's `BIND b`: an `n − f` `VOTE b` quorum, the round record's own `VOTE` already out
   (D18, D22). -/
-  | gbcaSendBindBit (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (b : Bool)
+  | gbcaSendBindBit (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (b : Bool)
       (hh : c.corrupted = false)
       (hterm : p.terminated = false)
-      (hin : (p.roundRecord r).process.input ≠ none)
-      (hlv : (p.roundRecord r).process.sentVote ≠ none)
-      (hcnt : P.n - P.f ≤ (p.roundRecord r).receivedCount (.vote (some b)))
-      (hsend : (p.roundRecord r).process.sentBind = none) :
+      (hin : (p.roundVariables r).processVariables.input ≠ none)
+      (hlv : (p.roundVariables r).processVariables.sentVote ≠ none)
+      (hcnt : P.n - P.f ≤ (p.roundVariables r).receivedCount (.vote (some b)))
+      (hsend : (p.roundVariables r).processVariables.sentBind = none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.bind (some b))))
-        (PMF.pure (c, p.setRoundRecord r
-          ((p.roundRecord r).setProcess { (p.roundRecord r).process with sentBind := some (some b)
+        (PMF.pure (c, p.setRoundVariables r
+          ((p.roundVariables r).setProcessVariables { (p.roundVariables r).processVariables with
+            sentBind := some (some b)
             })))
   /-- The round's `BIND ⊥`: `n − f` `VOTE`s of any payload and `|Valid| > 1`, the round record's own
   `VOTE` already out, and no single-bit `VOTE` quorum on record (D18, D22). -/
-  | gbcaSendBindBot (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ)
+  | gbcaSendBindBot (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ)
       (hh : c.corrupted = false)
       (hterm : p.terminated = false)
-      (hin : (p.roundRecord r).process.input ≠ none)
-      (hlv : (p.roundRecord r).process.sentVote ≠ none)
-      (hnot : ∀ b, (p.roundRecord r).receivedCount (.vote (some b)) < P.n - P.f)
-      (hcnt : P.n - P.f ≤ (p.roundRecord r).voteCount)
-      (hval : (p.roundRecord r).bothValid P) (hsend : (p.roundRecord r).process.sentBind = none) :
+      (hin : (p.roundVariables r).processVariables.input ≠ none)
+      (hlv : (p.roundVariables r).processVariables.sentVote ≠ none)
+      (hnot : ∀ b, (p.roundVariables r).receivedCount (.vote (some b)) < P.n - P.f)
+      (hcnt : P.n - P.f ≤ (p.roundVariables r).voteCount)
+      (hval : (p.roundVariables r).bothValid P) (hsend : (p.roundVariables
+        r).processVariables.sentBind = none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.bind none)))
-        (PMF.pure (c, p.setRoundRecord r
-          ((p.roundRecord r).setProcess { (p.roundRecord r).process with sentBind := some none })))
+        (PMF.pure (c, p.setRoundVariables r
+          ((p.roundVariables r).setProcessVariables { (p.roundVariables r).processVariables with
+            sentBind := some none })))
   /-- The round's `ECHO5 b`: an `n − f` `BIND b` quorum, the round record's own `BIND` already out
   (D18, D22). -/
-  | gbcaSendEcho5Bit (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (b : Bool)
+  | gbcaSendEcho5Bit (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (b : Bool)
       (hh : c.corrupted = false)
       (hterm : p.terminated = false)
-      (hin : (p.roundRecord r).process.input ≠ none)
-      (hlv : (p.roundRecord r).process.sentBind ≠ none)
-      (hcnt : P.n - P.f ≤ (p.roundRecord r).receivedCount (.bind (some b)))
-      (hsend : (p.roundRecord r).process.sentEcho5 = none) :
+      (hin : (p.roundVariables r).processVariables.input ≠ none)
+      (hlv : (p.roundVariables r).processVariables.sentBind ≠ none)
+      (hcnt : P.n - P.f ≤ (p.roundVariables r).receivedCount (.bind (some b)))
+      (hsend : (p.roundVariables r).processVariables.sentEcho5 = none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.echo5 (some b))))
-        (PMF.pure (c, p.setRoundRecord r
-          ((p.roundRecord r).setProcess { (p.roundRecord r).process with sentEcho5 := some (some b)
+        (PMF.pure (c, p.setRoundVariables r
+          ((p.roundVariables r).setProcessVariables { (p.roundVariables r).processVariables with
+            sentEcho5 := some (some b)
             })))
   /-- The round's `ECHO5 ⊥`: `n − f` `BIND`s of any payload and `|Valid| > 1`, the round record's
   own `BIND` already out, and no single-bit `BIND` quorum on record (D18, D22). -/
-  | gbcaSendEcho5Bot (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ)
+  | gbcaSendEcho5Bot (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ)
       (hh : c.corrupted = false)
       (hterm : p.terminated = false)
-      (hin : (p.roundRecord r).process.input ≠ none)
-      (hlv : (p.roundRecord r).process.sentBind ≠ none)
-      (hnot : ∀ b, (p.roundRecord r).receivedCount (.bind (some b)) < P.n - P.f)
-      (hcnt : P.n - P.f ≤ (p.roundRecord r).bindCount)
-      (hval : (p.roundRecord r).bothValid P) (hsend : (p.roundRecord r).process.sentEcho5 = none) :
+      (hin : (p.roundVariables r).processVariables.input ≠ none)
+      (hlv : (p.roundVariables r).processVariables.sentBind ≠ none)
+      (hnot : ∀ b, (p.roundVariables r).receivedCount (.bind (some b)) < P.n - P.f)
+      (hcnt : P.n - P.f ≤ (p.roundVariables r).bindCount)
+      (hval : (p.roundVariables r).bothValid P) (hsend : (p.roundVariables
+        r).processVariables.sentEcho5 = none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.echo5 none)))
-        (PMF.pure (c, p.setRoundRecord r
-          ((p.roundRecord r).setProcess { (p.roundRecord r).process with sentEcho5 := some none })))
+        (PMF.pure (c, p.setRoundVariables r
+          ((p.roundVariables r).setProcessVariables { (p.roundVariables r).processVariables with
+            sentEcho5 := some none })))
   /-- Round delivery, receiver's half: file the message under `received k`, the messages from the
   sender, in the round record of round `r`, whichever round the round loop is in. Authenticity is
   the network's conjunct (D22). -/
-  | gbcaDeliverReceive (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n)
+  | gbcaDeliverReceive (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n)
       (r : ℕ) (k : Fin P.n) (m : GBCA.ByABDY.Message) (hh : c.corrupted = false)
       (hterm : p.terminated = false) :
       RoundStep P j (c, p) (Sum.inr (.gbcaDeliver r j k m))
@@ -443,19 +466,19 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
   round record does not. The transition carries no termination guard, so a terminated process in
   `toCallG` whose round record of round `r` is uncalled has no transition on either call label, a
   gap this implementation accepts. -/
-  | gbcaCallLoop (c : RoundLoopRecord P.n) (p : RoundRecordMap P.n) (r : ℕ) (b : Bool)
+  | gbcaCallLoop (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (b : Bool)
       (hh : c.corrupted = false)
-      (hph : c.process.phase = .toCallG) (hr : c.process.round = r)
-      (hest : c.process.estimate = some b)
-      (hin : (p.roundRecord r).process.input ≠ none) :
+      (hph : c.processVariables.phase = .toCallG) (hr : c.processVariables.round = r)
+      (hest : c.processVariables.estimate = some b)
+      (hin : (p.roundVariables r).processVariables.input ≠ none) :
       RoundStep P j (c, p) (Sum.inr (.gbcaCallLoop r j b))
-        (PMF.pure (c.setProcess { c.process with phase := .awaitG }, p))
+        (PMF.pure (c.setProcessVariables { c.processVariables with phase := .awaitG }, p))
 
 /-- The transitions above meet the implementation's conditions: each carries a label of
 `roundOwn j`, each fires only at an unreplaced program, each is Dirac, and each
 of the three returns takes the announced bit free (D29). -/
 instance instIsRoundStep (P : Parameters) :
-    IsRoundStep P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundRecord P.n) (RoundStep P) where
+    IsRoundStep P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundVariables P.n) (RoundStep P) where
   own h := by
     cases h <;> rfl
   correct h := by
@@ -469,8 +492,9 @@ instance instIsRoundStep (P : Parameters) :
 /-- The step relation of the program of process `j`: the implementation's transitions beside
 ABDY22's own round transitions. -/
 abbrev ABAProgramStep (P : Parameters) (j : Fin P.n) :
-    ProcessRecord P.n → ExtendedLabel P.n GBCA.ByABDY.Message → PMF (ProcessRecord P.n) → Prop :=
-  ProgramStep P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundRecord P.n) (RoundStep P) j
+    ProcessVariables P.n → ExtendedLabel P.n GBCA.ByABDY.Message → PMF (ProcessVariables P.n) → Prop
+      :=
+  ProgramStep P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundVariables P.n) (RoundStep P) j
 
 /-- The payload the graded-agreement call multicasts: `⟨INPUT, b⟩`. -/
 def gbcaCallPayload (P : Parameters) : Fin P.n → Bool → Option GBCA.ByABDY.Message :=
@@ -486,8 +510,8 @@ abbrev NetworkStep (P : Parameters) :
 
 /-- The program of process `j`. -/
 noncomputable abbrev ABAProgram (P : Parameters) (j : Fin P.n) :
-    System (ProcessRecord P.n) (ExtendedLabel P.n GBCA.ByABDY.Message) :=
-  program P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundRecord P.n) (RoundStep P) j
+    System (ProcessVariables P.n) (ExtendedLabel P.n GBCA.ByABDY.Message) :=
+  program P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundVariables P.n) (RoundStep P) j
 
 /-- The network. -/
 noncomputable abbrev network (P : Parameters) :
@@ -500,13 +524,13 @@ noncomputable abbrev network (P : Parameters) :
 /-- The state of the protocol: the process family, the network and
 the coin oracle. -/
 abbrev ProtocolState (P : Parameters) : Type :=
-  Implementation.State P GBCA.ByABDY.Message (GBCA.ByABDY.RoundRecord P.n) (Option Bool)
+  Implementation.State P GBCA.ByABDY.Message (GBCA.ByABDY.RoundVariables P.n) (Option Bool)
 
 /-- The three components in parallel, over the extended alphabet: the synchronised process group,
 the network and the lifted oracle. -/
 noncomputable def protocolExtended (P : Parameters) : System (ProtocolState P)
   (Composition.ExtendedLabel P.n GBCA.ByABDY.Message) :=
-  Implementation.systemExtended P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundRecord P.n)
+  Implementation.systemExtended P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundVariables P.n)
     (Option Bool)
     (ABDY.RoundStep P)
     (ABDY.gbcaCallPayload P) (ABDY.abdyGhostStep P) (ABDY.abdyAnnouncedBound P)
@@ -514,14 +538,14 @@ noncomputable def protocolExtended (P : Parameters) : System (ProtocolState P)
 /-- **The protocol group**: the rendezvous alphabet hidden, the result read
 back over `Label n`. -/
 noncomputable def protocolHidden (P : Parameters) : System (ProtocolState P) (Label P.n) :=
-  Implementation.systemHidden P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundRecord P.n)
+  Implementation.systemHidden P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundVariables P.n)
     (Option Bool)
     (ABDY.RoundStep P)
     (ABDY.gbcaCallPayload P) (ABDY.abdyGhostStep P) (ABDY.abdyAnnouncedBound P)
 
 /-- **The protocol system**: the group with the sub-protocol API hidden. -/
 noncomputable def protocol (P : Parameters) : System (ProtocolState P) (Label P.n) :=
-  Implementation.system P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundRecord P.n)
+  Implementation.system P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundVariables P.n)
     (Option Bool)
     (ABDY.RoundStep
     P)
@@ -549,42 +573,42 @@ theorem protocol_step_iff (P : Parameters) (q : ABDY.ProtocolState P) (l : Label
 
 /-- A rendezvous transition: every process, the network and the lifted oracle
 move together, and only the oracle's successor can fail to be a Dirac. -/
-theorem protocolExtended_event_inversion (P : Parameters) {u : ∀ _ : Fin P.n, ProcessRecord P.n}
+theorem protocolExtended_event_cases (P : Parameters) {u : ∀ _ : Fin P.n, ProcessVariables P.n}
     {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n} {e : NetworkEvent P.n GBCA.ByABDY.Message}
     {μ : PMF (ABDY.ProtocolState P)}
     (h : (ABDY.protocolExtended P).step (u, w, o) (Sum.inr e) μ) :
-    ∃ (x : ∀ _ : Fin P.n, ProcessRecord P.n) (w' : NetworkState P.n)
+    ∃ (x : ∀ _ : Fin P.n, ProcessVariables P.n) (w' : NetworkState P.n)
       (μ₃ : PMF (ℕ → WCC.SpecState P.n)),
       (∀ i, ABAProgramStep P i (u i) (Sum.inr e) (PMF.pure (x i))) ∧
       NetworkStep P w (Sum.inr e) (PMF.pure w') ∧
       (coinOverRoundAlphabet P GBCA.ByABDY.Message).step o (Sum.inr e) μ₃ ∧
       μ = prodPMF (PMF.pure x) (prodPMF (PMF.pure w') μ₃) :=
-  systemExtended_event_inversion h
+  systemExtended_event_cases h
 
 /-- A visible shared-label transition. -/
-theorem protocolExtended_label_inversion (P : Parameters) {u : ∀ _ : Fin P.n, ProcessRecord P.n}
+theorem protocolExtended_label_cases (P : Parameters) {u : ∀ _ : Fin P.n, ProcessVariables P.n}
     {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n} {l : Label P.n} (hl : l ≠ Label.tau)
     {μ : PMF (ABDY.ProtocolState P)}
     (h : (ABDY.protocolExtended P).step (u, w, o) (Sum.inl l) μ) :
-    ∃ (x : ∀ _ : Fin P.n, ProcessRecord P.n) (w' : NetworkState P.n)
+    ∃ (x : ∀ _ : Fin P.n, ProcessVariables P.n) (w' : NetworkState P.n)
       (ω : PMF (ℕ → WCC.SpecState P.n)),
       (∀ i, ABAProgramStep P i (u i) (Sum.inl l) (PMF.pure (x i))) ∧
       NetworkStep P w (Sum.inl l) (PMF.pure w') ∧
       (WCC.specFamily P).step o l ω ∧
       μ = prodPMF (PMF.pure x) (prodPMF (PMF.pure w') ω) :=
-  systemExtended_label_inversion hl h
+  systemExtended_label_cases hl h
 
 /-- A silent shared-label transition: one process terminating, or the network's
 own injection. The coin oracle has no silent transition, so it contributes none. -/
-theorem protocolExtended_tau_inversion (P : Parameters) {u : ∀ _ : Fin P.n, ProcessRecord P.n}
+theorem protocolExtended_tau_cases (P : Parameters) {u : ∀ _ : Fin P.n, ProcessVariables P.n}
     {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
     {μ : PMF (ABDY.ProtocolState P)}
     (h : (ABDY.protocolExtended P).step (u, w, o) (Sum.inl Label.tau) μ) :
-    (∃ (i : Fin P.n) (y : ProcessRecord P.n),
+    (∃ (i : Fin P.n) (y : ProcessVariables P.n),
       ABAProgramStep P i (u i) (Sum.inl Label.tau) (PMF.pure y) ∧
       μ = PMF.pure (Function.update u i y, w, o)) ∨
     (∃ w', NetworkStep P w (Sum.inl .tau) (PMF.pure w') ∧ μ = PMF.pure (u, w', o)) :=
-  systemExtended_tau_inversion h
+  systemExtended_tau_cases h
 
 /-! ### ABDY22's own transitions, by label class
 
@@ -593,19 +617,23 @@ together with the Dirac it produces. The idle transition of a non-participant an
 program's self-loop are read by the implementation's own lemmas; here the label names the acting
 process, so those two systems are the ones ruled out. -/
 
-section RoundStepInversion
+section RoundStepCases
 
-variable {P : Parameters} {j : Fin P.n} {q : ProcessRecord P.n} {ν : PMF (ProcessRecord P.n)}
+variable {P : Parameters} {j : Fin P.n} {q : ProcessVariables P.n} {ν : PMF (ProcessVariables P.n)}
 
 theorem programStep_callG_own {r : ℕ} {b : Bool}
     (h : ABAProgramStep P j q (Sum.inl (.callG r j b)) ν) :
     q.1.corrupted = false ∧
-      q.1.process.phase = .toCallG ∧ q.1.process.round = r ∧ q.2.terminated = false ∧
-      q.1.process.estimate = some b ∧ (q.2.roundRecord r).process.input = none ∧
-      ν = PMF.pure (q.1.setProcess { q.1.process with phase := .awaitG },
-        q.2.setRoundRecord r ((q.2.roundRecord r).setProcess { (q.2.roundRecord r).process with
+      q.1.processVariables.phase = .toCallG ∧ q.1.processVariables.round = r ∧ q.2.terminated =
+        false ∧
+      q.1.processVariables.estimate = some b ∧ (q.2.roundVariables r).processVariables.input = none
+        ∧
+      ν = PMF.pure (q.1.setProcessVariables { q.1.processVariables with phase := .awaitG },
+        q.2.setRoundVariables r ((q.2.roundVariables r).setProcessVariables { (q.2.roundVariables
+          r).processVariables with
           input := some b,
-          sentInput := Function.update (q.2.roundRecord r).process.sentInput b true })) := by
+          sentInput := Function.update (q.2.roundVariables r).processVariables.sentInput b true }))
+            := by
   cases h
   case roundTransition h' =>
     cases h'
@@ -617,15 +645,18 @@ theorem programStep_callG_own {r : ℕ} {b : Bool}
 theorem programStep_retGGrade2_own {r : ℕ} {v bnd : Bool}
     (h : ABAProgramStep P j q (Sum.inl (.retG r j (.grade2 v) bnd)) ν) :
     q.1.corrupted = false ∧
-      q.1.process.phase = .awaitG ∧ q.1.process.round = r ∧ q.2.terminated = false ∧
-      (q.2.roundRecord r).process.input ≠ none ∧ (q.2.roundRecord r).process.sentEcho5 ≠ none ∧
-      P.n - P.f ≤ (q.2.roundRecord r).receivedCount (.echo5 (some v)) ∧
-      (q.2.roundRecord r).process.returned = false ∧
-      ν = PMF.pure (q.1.setProcess { q.1.process with
+      q.1.processVariables.phase = .awaitG ∧ q.1.processVariables.round = r ∧ q.2.terminated = false
+        ∧
+      (q.2.roundVariables r).processVariables.input ≠ none ∧ (q.2.roundVariables
+        r).processVariables.sentEcho5 ≠ none ∧
+      P.n - P.f ≤ (q.2.roundVariables r).receivedCount (.echo5 (some v)) ∧
+      (q.2.roundVariables r).processVariables.returned = false ∧
+      ν = PMF.pure (q.1.setProcessVariables { q.1.processVariables with
           estimate := (GBCAOutput.grade2 v).estimate, lastGrade := some (.grade2 v),
             phase := .toCallW },
-        q.2.setRoundRecord r
-          ((q.2.roundRecord r).setProcess { (q.2.roundRecord r).process with returned := true })) :=
+        q.2.setRoundVariables r
+          ((q.2.roundVariables r).setProcessVariables { (q.2.roundVariables r).processVariables with
+            returned := true })) :=
             by
   cases h
   case roundTransition h' =>
@@ -638,19 +669,22 @@ theorem programStep_retGGrade2_own {r : ℕ} {v bnd : Bool}
 theorem programStep_retGGrade1_own {r : ℕ} {v bnd : Bool}
     (h : ABAProgramStep P j q (Sum.inl (.retG r j (.grade1 v) bnd)) ν) :
     q.1.corrupted = false ∧
-      q.1.process.phase = .awaitG ∧ q.1.process.round = r ∧ q.2.terminated = false ∧
-      (q.2.roundRecord r).process.input ≠ none ∧ (q.2.roundRecord r).process.sentEcho5 ≠ none ∧
-      (∀ v, (q.2.roundRecord r).receivedCount (.echo5 (some v)) < P.n - P.f) ∧
-      P.n - P.f ≤ (q.2.roundRecord r).echo5Count ∧
-      (∃ k, GBCA.ByABDY.Message.echo5 (some v) ∈ (q.2.roundRecord r).received k) ∧
-      P.f + 1 ≤ (q.2.roundRecord r).receivedCount (.bind (some v)) ∧
-      (q.2.roundRecord r).bothValid P ∧
-      (q.2.roundRecord r).process.returned = false ∧
-      ν = PMF.pure (q.1.setProcess { q.1.process with
+      q.1.processVariables.phase = .awaitG ∧ q.1.processVariables.round = r ∧ q.2.terminated = false
+        ∧
+      (q.2.roundVariables r).processVariables.input ≠ none ∧ (q.2.roundVariables
+        r).processVariables.sentEcho5 ≠ none ∧
+      (∀ v, (q.2.roundVariables r).receivedCount (.echo5 (some v)) < P.n - P.f) ∧
+      P.n - P.f ≤ (q.2.roundVariables r).echo5Count ∧
+      (∃ k, GBCA.ByABDY.Message.echo5 (some v) ∈ (q.2.roundVariables r).received k) ∧
+      P.f + 1 ≤ (q.2.roundVariables r).receivedCount (.bind (some v)) ∧
+      (q.2.roundVariables r).bothValid P ∧
+      (q.2.roundVariables r).processVariables.returned = false ∧
+      ν = PMF.pure (q.1.setProcessVariables { q.1.processVariables with
           estimate := (GBCAOutput.grade1 v).estimate, lastGrade := some (.grade1 v),
             phase := .toCallW },
-        q.2.setRoundRecord r
-          ((q.2.roundRecord r).setProcess { (q.2.roundRecord r).process with returned := true })) :=
+        q.2.setRoundVariables r
+          ((q.2.roundVariables r).setProcessVariables { (q.2.roundVariables r).processVariables with
+            returned := true })) :=
             by
   cases h
   case roundTransition h' =>
@@ -664,18 +698,21 @@ theorem programStep_retGGrade1_own {r : ℕ} {v bnd : Bool}
 theorem programStep_retGGrade0_own {r : ℕ} {bnd : Bool}
     (h : ABAProgramStep P j q (Sum.inl (.retG r j .grade0 bnd)) ν) :
     q.1.corrupted = false ∧
-      q.1.process.phase = .awaitG ∧ q.1.process.round = r ∧ q.2.terminated = false ∧
-      (q.2.roundRecord r).process.input ≠ none ∧ (q.2.roundRecord r).process.sentEcho5 ≠ none ∧
-      (∀ v, (q.2.roundRecord r).receivedCount (.echo5 (some v)) < P.n - P.f) ∧
-      (∀ v, (∃ k, GBCA.ByABDY.Message.echo5 (some v) ∈ (q.2.roundRecord r).received k) →
-        (q.2.roundRecord r).receivedCount (.bind (some v)) < P.f + 1) ∧
-      P.n - P.f ≤ (q.2.roundRecord r).receivedCount (.echo5 none) ∧
-      (q.2.roundRecord r).bothValid P ∧
-      (q.2.roundRecord r).process.returned = false ∧
-      ν = PMF.pure (q.1.setProcess { q.1.process with
+      q.1.processVariables.phase = .awaitG ∧ q.1.processVariables.round = r ∧ q.2.terminated = false
+        ∧
+      (q.2.roundVariables r).processVariables.input ≠ none ∧ (q.2.roundVariables
+        r).processVariables.sentEcho5 ≠ none ∧
+      (∀ v, (q.2.roundVariables r).receivedCount (.echo5 (some v)) < P.n - P.f) ∧
+      (∀ v, (∃ k, GBCA.ByABDY.Message.echo5 (some v) ∈ (q.2.roundVariables r).received k) →
+        (q.2.roundVariables r).receivedCount (.bind (some v)) < P.f + 1) ∧
+      P.n - P.f ≤ (q.2.roundVariables r).receivedCount (.echo5 none) ∧
+      (q.2.roundVariables r).bothValid P ∧
+      (q.2.roundVariables r).processVariables.returned = false ∧
+      ν = PMF.pure (q.1.setProcessVariables { q.1.processVariables with
           estimate := GBCAOutput.grade0.estimate, lastGrade := some .grade0, phase := .toCallW },
-        q.2.setRoundRecord r
-          ((q.2.roundRecord r).setProcess { (q.2.roundRecord r).process with returned := true })) :=
+        q.2.setRoundVariables r
+          ((q.2.roundVariables r).setProcessVariables { (q.2.roundVariables r).processVariables with
+            returned := true })) :=
             by
   cases h
   case roundTransition h' =>
@@ -689,12 +726,14 @@ theorem programStep_retGGrade0_own {r : ℕ} {bnd : Bool}
 theorem programStep_gbcaSend_input_self {r : ℕ} {b : Bool}
     (h : ABAProgramStep P j q (Sum.inr (.gbcaSend r j (.input b))) ν) :
     q.1.corrupted = false ∧
-      q.2.terminated = false ∧ (q.2.roundRecord r).process.input ≠ none ∧
-      P.f + 1 ≤ (q.2.roundRecord r).receivedCount (.input b) ∧
-      (q.2.roundRecord r).process.sentInput b = false ∧
+      q.2.terminated = false ∧ (q.2.roundVariables r).processVariables.input ≠ none ∧
+      P.f + 1 ≤ (q.2.roundVariables r).receivedCount (.input b) ∧
+      (q.2.roundVariables r).processVariables.sentInput b = false ∧
       ν = PMF.pure (q.1,
-        q.2.setRoundRecord r ((q.2.roundRecord r).setProcess { (q.2.roundRecord r).process with
-          sentInput := Function.update (q.2.roundRecord r).process.sentInput b true })) := by
+        q.2.setRoundVariables r ((q.2.roundVariables r).setProcessVariables { (q.2.roundVariables
+          r).processVariables with
+          sentInput := Function.update (q.2.roundVariables r).processVariables.sentInput b true }))
+            := by
   cases h
   case roundTransition h' =>
     cases h'
@@ -706,11 +745,12 @@ theorem programStep_gbcaSend_input_self {r : ℕ} {b : Bool}
 theorem programStep_gbcaSend_echo_self {r : ℕ} {b : Bool}
     (h : ABAProgramStep P j q (Sum.inr (.gbcaSend r j (.echo b))) ν) :
     q.1.corrupted = false ∧
-      q.2.terminated = false ∧ (q.2.roundRecord r).process.input ≠ none ∧
-      P.n - P.f ≤ (q.2.roundRecord r).receivedCount (.input b) ∧
-      (q.2.roundRecord r).process.sentEcho = none ∧
-      ν = PMF.pure (q.1, q.2.setRoundRecord r
-        ((q.2.roundRecord r).setProcess { (q.2.roundRecord r).process with sentEcho := some b })) :=
+      q.2.terminated = false ∧ (q.2.roundVariables r).processVariables.input ≠ none ∧
+      P.n - P.f ≤ (q.2.roundVariables r).receivedCount (.input b) ∧
+      (q.2.roundVariables r).processVariables.sentEcho = none ∧
+      ν = PMF.pure (q.1, q.2.setRoundVariables r
+        ((q.2.roundVariables r).setProcessVariables { (q.2.roundVariables r).processVariables with
+          sentEcho := some b })) :=
           by
   cases h
   case roundTransition h' =>
@@ -723,11 +763,12 @@ theorem programStep_gbcaSend_echo_self {r : ℕ} {b : Bool}
 theorem programStep_gbcaSend_voteBit_self {r : ℕ} {b : Bool}
     (h : ABAProgramStep P j q (Sum.inr (.gbcaSend r j (.vote (some b)))) ν) :
     q.1.corrupted = false ∧
-      q.2.terminated = false ∧ (q.2.roundRecord r).process.input ≠ none ∧
-      P.n - P.f ≤ (q.2.roundRecord r).receivedCount (.echo b) ∧
-      (q.2.roundRecord r).process.sentVote = none ∧
-      ν = PMF.pure (q.1, q.2.setRoundRecord r
-        ((q.2.roundRecord r).setProcess { (q.2.roundRecord r).process with sentVote := some (some b)
+      q.2.terminated = false ∧ (q.2.roundVariables r).processVariables.input ≠ none ∧
+      P.n - P.f ≤ (q.2.roundVariables r).receivedCount (.echo b) ∧
+      (q.2.roundVariables r).processVariables.sentVote = none ∧
+      ν = PMF.pure (q.1, q.2.setRoundVariables r
+        ((q.2.roundVariables r).setProcessVariables { (q.2.roundVariables r).processVariables with
+          sentVote := some (some b)
           })) := by
   cases h
   case roundTransition h' =>
@@ -740,12 +781,13 @@ theorem programStep_gbcaSend_voteBit_self {r : ℕ} {b : Bool}
 theorem programStep_gbcaSend_voteBot_self {r : ℕ}
     (h : ABAProgramStep P j q (Sum.inr (.gbcaSend r j (.vote none))) ν) :
     q.1.corrupted = false ∧
-      q.2.terminated = false ∧ (q.2.roundRecord r).process.input ≠ none ∧
-      (∀ b, (q.2.roundRecord r).receivedCount (.echo b) < P.n - P.f) ∧
-      P.n - P.f ≤ (q.2.roundRecord r).echoCount ∧
-      (q.2.roundRecord r).bothValid P ∧ (q.2.roundRecord r).process.sentVote = none ∧
-      ν = PMF.pure (q.1, q.2.setRoundRecord r
-        ((q.2.roundRecord r).setProcess { (q.2.roundRecord r).process with sentVote := some none }))
+      q.2.terminated = false ∧ (q.2.roundVariables r).processVariables.input ≠ none ∧
+      (∀ b, (q.2.roundVariables r).receivedCount (.echo b) < P.n - P.f) ∧
+      P.n - P.f ≤ (q.2.roundVariables r).echoCount ∧
+      (q.2.roundVariables r).bothValid P ∧ (q.2.roundVariables r).processVariables.sentVote = none ∧
+      ν = PMF.pure (q.1, q.2.setRoundVariables r
+        ((q.2.roundVariables r).setProcessVariables { (q.2.roundVariables r).processVariables with
+          sentVote := some none }))
           := by
   cases h
   case roundTransition h' =>
@@ -758,12 +800,13 @@ theorem programStep_gbcaSend_voteBot_self {r : ℕ}
 theorem programStep_gbcaSend_bindBit_self {r : ℕ} {b : Bool}
     (h : ABAProgramStep P j q (Sum.inr (.gbcaSend r j (.bind (some b)))) ν) :
     q.1.corrupted = false ∧
-      q.2.terminated = false ∧ (q.2.roundRecord r).process.input ≠ none ∧
-      (q.2.roundRecord r).process.sentVote ≠ none ∧
-      P.n - P.f ≤ (q.2.roundRecord r).receivedCount (.vote (some b)) ∧
-      (q.2.roundRecord r).process.sentBind = none ∧
-      ν = PMF.pure (q.1, q.2.setRoundRecord r
-        ((q.2.roundRecord r).setProcess { (q.2.roundRecord r).process with sentBind := some (some b)
+      q.2.terminated = false ∧ (q.2.roundVariables r).processVariables.input ≠ none ∧
+      (q.2.roundVariables r).processVariables.sentVote ≠ none ∧
+      P.n - P.f ≤ (q.2.roundVariables r).receivedCount (.vote (some b)) ∧
+      (q.2.roundVariables r).processVariables.sentBind = none ∧
+      ν = PMF.pure (q.1, q.2.setRoundVariables r
+        ((q.2.roundVariables r).setProcessVariables { (q.2.roundVariables r).processVariables with
+          sentBind := some (some b)
           })) := by
   cases h
   case roundTransition h' =>
@@ -776,13 +819,14 @@ theorem programStep_gbcaSend_bindBit_self {r : ℕ} {b : Bool}
 theorem programStep_gbcaSend_bindBot_self {r : ℕ}
     (h : ABAProgramStep P j q (Sum.inr (.gbcaSend r j (.bind none))) ν) :
     q.1.corrupted = false ∧
-      q.2.terminated = false ∧ (q.2.roundRecord r).process.input ≠ none ∧
-      (q.2.roundRecord r).process.sentVote ≠ none ∧
-      (∀ b, (q.2.roundRecord r).receivedCount (.vote (some b)) < P.n - P.f) ∧
-      P.n - P.f ≤ (q.2.roundRecord r).voteCount ∧
-      (q.2.roundRecord r).bothValid P ∧ (q.2.roundRecord r).process.sentBind = none ∧
-      ν = PMF.pure (q.1, q.2.setRoundRecord r
-        ((q.2.roundRecord r).setProcess { (q.2.roundRecord r).process with sentBind := some none }))
+      q.2.terminated = false ∧ (q.2.roundVariables r).processVariables.input ≠ none ∧
+      (q.2.roundVariables r).processVariables.sentVote ≠ none ∧
+      (∀ b, (q.2.roundVariables r).receivedCount (.vote (some b)) < P.n - P.f) ∧
+      P.n - P.f ≤ (q.2.roundVariables r).voteCount ∧
+      (q.2.roundVariables r).bothValid P ∧ (q.2.roundVariables r).processVariables.sentBind = none ∧
+      ν = PMF.pure (q.1, q.2.setRoundVariables r
+        ((q.2.roundVariables r).setProcessVariables { (q.2.roundVariables r).processVariables with
+          sentBind := some none }))
           := by
   cases h
   case roundTransition h' =>
@@ -795,12 +839,12 @@ theorem programStep_gbcaSend_bindBot_self {r : ℕ}
 theorem programStep_gbcaSend_echo5Bit_self {r : ℕ} {b : Bool}
     (h : ABAProgramStep P j q (Sum.inr (.gbcaSend r j (.echo5 (some b)))) ν) :
     q.1.corrupted = false ∧
-      q.2.terminated = false ∧ (q.2.roundRecord r).process.input ≠ none ∧
-      (q.2.roundRecord r).process.sentBind ≠ none ∧
-      P.n - P.f ≤ (q.2.roundRecord r).receivedCount (.bind (some b)) ∧
-      (q.2.roundRecord r).process.sentEcho5 = none ∧
-      ν = PMF.pure (q.1, q.2.setRoundRecord r
-        ((q.2.roundRecord r).setProcess { (q.2.roundRecord r).process with
+      q.2.terminated = false ∧ (q.2.roundVariables r).processVariables.input ≠ none ∧
+      (q.2.roundVariables r).processVariables.sentBind ≠ none ∧
+      P.n - P.f ≤ (q.2.roundVariables r).receivedCount (.bind (some b)) ∧
+      (q.2.roundVariables r).processVariables.sentEcho5 = none ∧
+      ν = PMF.pure (q.1, q.2.setRoundVariables r
+        ((q.2.roundVariables r).setProcessVariables { (q.2.roundVariables r).processVariables with
           sentEcho5 :=
             some (some b) })) := by
   cases h
@@ -814,13 +858,15 @@ theorem programStep_gbcaSend_echo5Bit_self {r : ℕ} {b : Bool}
 theorem programStep_gbcaSend_echo5Bot_self {r : ℕ}
     (h : ABAProgramStep P j q (Sum.inr (.gbcaSend r j (.echo5 none))) ν) :
     q.1.corrupted = false ∧
-      q.2.terminated = false ∧ (q.2.roundRecord r).process.input ≠ none ∧
-      (q.2.roundRecord r).process.sentBind ≠ none ∧
-      (∀ b, (q.2.roundRecord r).receivedCount (.bind (some b)) < P.n - P.f) ∧
-      P.n - P.f ≤ (q.2.roundRecord r).bindCount ∧
-      (q.2.roundRecord r).bothValid P ∧ (q.2.roundRecord r).process.sentEcho5 = none ∧
-      ν = PMF.pure (q.1, q.2.setRoundRecord r
-        ((q.2.roundRecord r).setProcess { (q.2.roundRecord r).process with sentEcho5 := some none
+      q.2.terminated = false ∧ (q.2.roundVariables r).processVariables.input ≠ none ∧
+      (q.2.roundVariables r).processVariables.sentBind ≠ none ∧
+      (∀ b, (q.2.roundVariables r).receivedCount (.bind (some b)) < P.n - P.f) ∧
+      P.n - P.f ≤ (q.2.roundVariables r).bindCount ∧
+      (q.2.roundVariables r).bothValid P ∧ (q.2.roundVariables r).processVariables.sentEcho5 = none
+        ∧
+      ν = PMF.pure (q.1, q.2.setRoundVariables r
+        ((q.2.roundVariables r).setProcessVariables { (q.2.roundVariables r).processVariables with
+          sentEcho5 := some none
           })) := by
   cases h
   case roundTransition h' =>
@@ -844,9 +890,11 @@ theorem programStep_gbcaDeliver_self {r : ℕ} {k : Fin P.n} {m : GBCA.ByABDY.Me
 theorem programStep_gbcaCallLoop_self {r : ℕ} {b : Bool}
     (h : ABAProgramStep P j q (Sum.inr (.gbcaCallLoop r j b)) ν) :
     q.1.corrupted = false ∧
-      q.1.process.phase = .toCallG ∧ q.1.process.round = r ∧ q.1.process.estimate = some b ∧
-      (q.2.roundRecord r).process.input ≠ none ∧
-      ν = PMF.pure (q.1.setProcess { q.1.process with phase := .awaitG }, q.2) := by
+      q.1.processVariables.phase = .toCallG ∧ q.1.processVariables.round = r ∧
+        q.1.processVariables.estimate = some b ∧
+      (q.2.roundVariables r).processVariables.input ≠ none ∧
+      ν = PMF.pure (q.1.setProcessVariables { q.1.processVariables with phase := .awaitG }, q.2) :=
+        by
   cases h
   case roundTransition h' =>
     cases h'
@@ -855,7 +903,7 @@ theorem programStep_gbcaCallLoop_self {r : ℕ} {b : Bool}
   case gbcaCallLoopIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
-end RoundStepInversion
+end RoundStepCases
 
 end ABDY
 

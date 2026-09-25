@@ -64,8 +64,8 @@ theorem Invariant.step_fail {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
     unfold OutcomeHolder at hc ⊢
     rwa [hprocs, hcall (r' + 1)] at hc
   have hCertTrans : ∀ r' b',
-    Grade2Certificate P g c r' b' → Grade2Certificate P g' c' r' b' := fun r' b' =>
-      Grade2Certificate.of_unchanged (hgrade r') hbind (fun r'' id' => congrFun (hcall r'') id')
+    Grade2Witness P g c r' b' → Grade2Witness P g' c' r' b' := fun r' b' =>
+      Grade2Witness.of_unchanged (hgrade r') hbind (fun r'' id' => congrFun (hcall r'') id')
         hFsub
       (fun id' => by rw [hprocs]) (fun id' => by rw [hprocs])
       (fun id0 v => hCarrTrans r' id0 v)
@@ -169,7 +169,7 @@ theorem Invariant.step_fail {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
     exact hI.bind_succ r v h
   · intro r id' v hmem hcall0
     rw [hcall (r + 1)] at hcall0; rw [hbind r, hgrade r, hval r]
-    exact hI.call_provenance r id' v (fun h => hmem (hFsub h)) hcall0
+    exact hI.call_of_previousRound r id' v (fun h => hmem (hFsub h)) hcall0
   · intro r id' hmem hround hphase v hest
     rw [hprocs] at hround hphase hest; rw [hbind r, hgrade r, hval r]
     exact hI.estimate_previous r id' (fun h => hmem (hFsub h)) hround hphase v hest

@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ViewAfterOneWrite
+import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ProjectionAfterOneWrite
 
 /-!
 # A Byzantine injection
@@ -24,8 +24,8 @@ variable {P : Parameters}
 
 section Transitions
 
-variable {u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n} {w : NetworkState P.n} {j : Fin P.n}
-    {c : RoundLoopRecord P.n} {p : RoundRecordMap P.n}
+variable {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} {w : NetworkState P.n} {j : Fin P.n}
+    {c : RoundLoopVariables P.n} {p : RoundVariablesMap P.n}
 
 /-! ### A Byzantine injection
 
@@ -34,11 +34,12 @@ the network state its tag names and no record moves. -/
 
 /-- A Byzantine injection on the first gather's network state, read through the
 view. -/
-theorem roundProjection_byzantineFirstGather (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n)
+theorem roundProjection_byzantineFirstGather (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n)
     (w : NetworkState P.n) (r : ℕ) (k : Fin P.n) (mm : Gather.Message P.n Bool) :
     roundProjection P u (w.recordGBCASend r k (.firstGather mm)) r
       = GBCA.ByAFW.setFirstGather (roundProjection P u w r)
-          (Gather.setGatherTier (firstGatherProjection P u w r) ((Gather.gatherTier
+          (Gather.setGatherProgramsAndNetwork (firstGatherProjection P u w r)
+            ((Gather.gatherProgramsAndNetwork
             (firstGatherProjection P u w r)).multicast k mm)) := by
   refine roundStateOverGathers_ext ?_ ?_ ?_ ?_
   · simp
@@ -46,19 +47,22 @@ theorem roundProjection_byzantineFirstGather (u : ∀ _ : Fin P.n, AFW.ProcessRe
   · simp only [GBCA.ByAFW.firstGather_setFirstGather, firstGather_roundProjection]
     refine stateOverBroadcasts_ext ?_ ?_ ?_ ?_
     · refine Prod.ext rfl (networkState_ext ?_ rfl)
-      simp only [Gather.gatherTier_setGatherTier, InstanceState.multicast,
-        ABA.NetworkState.recordSent, gatherTier_firstGatherProjection_network,
+      simp only [Gather.gatherProgramsAndNetwork_setGatherProgramsAndNetwork,
+        InstanceState.multicast,
+        ABA.NetworkState.recordSent, gatherProgramsAndNetwork_firstGatherProjection_network,
           recordGBCASend_sent_self]
       exact messagesOf_recordSent_some firstGatherMessageOf firstGatherMessageOf_inj (w.sent r) k
         (.firstGather mm) mm rfl
     · funext k'
-      simp only [Gather.inputBroadcasts_setGatherTier, inputBroadcasts_firstGatherProjection,
+      simp only [Gather.inputBroadcasts_setGatherProgramsAndNetwork,
+        inputBroadcasts_firstGatherProjection,
         recordGBCASend_sent_self]
       refine Prod.ext rfl (networkState_ext ?_ rfl)
       exact messagesOf_recordSent_none (firstGatherInputBroadcastMessageOf k')
         (firstGatherInputBroadcastMessageOf_inj k') (w.sent r) k (.firstGather mm) rfl
     · funext k'
-      simp only [Gather.bindBroadcasts_setGatherTier, bindBroadcasts_firstGatherProjection,
+      simp only [Gather.bindBroadcasts_setGatherProgramsAndNetwork,
+        bindBroadcasts_firstGatherProjection,
         recordGBCASend_sent_self]
       refine Prod.ext rfl (networkState_ext ?_ rfl)
       exact messagesOf_recordSent_none (firstGatherBindBroadcastMessageOf k')
@@ -67,7 +71,7 @@ theorem roundProjection_byzantineFirstGather (u : ∀ _ : Fin P.n, AFW.ProcessRe
   · simp only [GBCA.ByAFW.secondGather_setFirstGather, secondGather_roundProjection]
     refine stateOverBroadcasts_ext ?_ ?_ ?_ ?_
     · refine Prod.ext rfl (networkState_ext ?_ rfl)
-      simp only [gatherTier_secondGatherProjection_network, recordGBCASend_sent_self]
+      simp only [gatherProgramsAndNetwork_secondGatherProjection_network, recordGBCASend_sent_self]
       exact messagesOf_recordSent_none secondGatherMessageOf secondGatherMessageOf_inj (w.sent r) k
         (.firstGather mm) rfl
     · funext k'
@@ -84,11 +88,12 @@ theorem roundProjection_byzantineFirstGather (u : ∀ _ : Fin P.n, AFW.ProcessRe
 
 /-- A Byzantine injection on the second gather's network state, read through
 the view. -/
-theorem roundProjection_byzantineSecondGather (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n)
+theorem roundProjection_byzantineSecondGather (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n)
     (w : NetworkState P.n) (r : ℕ) (k : Fin P.n) (mm : Gather.Message P.n (Option Bool)) :
     roundProjection P u (w.recordGBCASend r k (.secondGather mm)) r
       = GBCA.ByAFW.setSecondGather (roundProjection P u w r)
-          (Gather.setGatherTier (secondGatherProjection P u w r) ((Gather.gatherTier
+          (Gather.setGatherProgramsAndNetwork (secondGatherProjection P u w r)
+            ((Gather.gatherProgramsAndNetwork
             (secondGatherProjection P u w r)).multicast k mm)) := by
   refine roundStateOverGathers_ext ?_ ?_ ?_ ?_
   · simp
@@ -96,7 +101,7 @@ theorem roundProjection_byzantineSecondGather (u : ∀ _ : Fin P.n, AFW.ProcessR
   · simp only [GBCA.ByAFW.firstGather_setSecondGather, firstGather_roundProjection]
     refine stateOverBroadcasts_ext ?_ ?_ ?_ ?_
     · refine Prod.ext rfl (networkState_ext ?_ rfl)
-      simp only [gatherTier_firstGatherProjection_network, recordGBCASend_sent_self]
+      simp only [gatherProgramsAndNetwork_firstGatherProjection_network, recordGBCASend_sent_self]
       exact messagesOf_recordSent_none firstGatherMessageOf firstGatherMessageOf_inj (w.sent r) k
         (.secondGather mm) rfl
     · funext k'
@@ -113,19 +118,22 @@ theorem roundProjection_byzantineSecondGather (u : ∀ _ : Fin P.n, AFW.ProcessR
   · simp only [GBCA.ByAFW.secondGather_setSecondGather, secondGather_roundProjection]
     refine stateOverBroadcasts_ext ?_ ?_ ?_ ?_
     · refine Prod.ext rfl (networkState_ext ?_ rfl)
-      simp only [Gather.gatherTier_setGatherTier, InstanceState.multicast,
-        ABA.NetworkState.recordSent, gatherTier_secondGatherProjection_network,
+      simp only [Gather.gatherProgramsAndNetwork_setGatherProgramsAndNetwork,
+        InstanceState.multicast,
+        ABA.NetworkState.recordSent, gatherProgramsAndNetwork_secondGatherProjection_network,
           recordGBCASend_sent_self]
       exact messagesOf_recordSent_some secondGatherMessageOf secondGatherMessageOf_inj (w.sent r) k
         (.secondGather mm) mm rfl
     · funext k'
-      simp only [Gather.inputBroadcasts_setGatherTier, inputBroadcasts_secondGatherProjection,
+      simp only [Gather.inputBroadcasts_setGatherProgramsAndNetwork,
+        inputBroadcasts_secondGatherProjection,
         recordGBCASend_sent_self]
       refine Prod.ext rfl (networkState_ext ?_ rfl)
       exact messagesOf_recordSent_none (secondGatherInputBroadcastMessageOf k')
         (secondGatherInputBroadcastMessageOf_inj k') (w.sent r) k (.secondGather mm) rfl
     · funext k'
-      simp only [Gather.bindBroadcasts_setGatherTier, bindBroadcasts_secondGatherProjection,
+      simp only [Gather.bindBroadcasts_setGatherProgramsAndNetwork,
+        bindBroadcasts_secondGatherProjection,
         recordGBCASend_sent_self]
       refine Prod.ext rfl (networkState_ext ?_ rfl)
       exact messagesOf_recordSent_none (secondGatherBindBroadcastMessageOf k')
@@ -135,7 +143,7 @@ theorem roundProjection_byzantineSecondGather (u : ∀ _ : Fin P.n, AFW.ProcessR
 /-- A Byzantine injection on an input-broadcast instance of the first gather,
 read through the view. -/
 theorem roundProjection_byzantineFirstGatherInputBroadcast
-    (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n) (w : NetworkState P.n) (r : ℕ) (k : Fin P.n)
+    (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n) (w : NetworkState P.n) (r : ℕ) (k : Fin P.n)
     (i : Fin P.n) (mm : BRB.Message Bool) :
     roundProjection P u (w.recordGBCASend r k (.firstGatherInputBroadcasts i mm)) r
       = GBCA.ByAFW.setFirstGather (roundProjection P u w r)
@@ -148,7 +156,8 @@ theorem roundProjection_byzantineFirstGatherInputBroadcast
   · simp only [GBCA.ByAFW.firstGather_setFirstGather, firstGather_roundProjection]
     refine stateOverBroadcasts_ext ?_ ?_ ?_ ?_
     · refine Prod.ext rfl (networkState_ext ?_ rfl)
-      simp only [Gather.gatherTier_setInputBroadcasts, gatherTier_firstGatherProjection_network,
+      simp only [Gather.gatherProgramsAndNetwork_setInputBroadcasts,
+        gatherProgramsAndNetwork_firstGatherProjection_network,
         recordGBCASend_sent_self]
       exact messagesOf_recordSent_none firstGatherMessageOf firstGatherMessageOf_inj (w.sent r) k
         (.firstGatherInputBroadcasts i mm) rfl
@@ -180,7 +189,7 @@ theorem roundProjection_byzantineFirstGatherInputBroadcast
   · simp only [GBCA.ByAFW.secondGather_setFirstGather, secondGather_roundProjection]
     refine stateOverBroadcasts_ext ?_ ?_ ?_ ?_
     · refine Prod.ext rfl (networkState_ext ?_ rfl)
-      simp only [gatherTier_secondGatherProjection_network, recordGBCASend_sent_self]
+      simp only [gatherProgramsAndNetwork_secondGatherProjection_network, recordGBCASend_sent_self]
       exact messagesOf_recordSent_none secondGatherMessageOf secondGatherMessageOf_inj (w.sent r) k
         (.firstGatherInputBroadcasts i mm) rfl
     · funext k'
@@ -199,7 +208,8 @@ theorem roundProjection_byzantineFirstGatherInputBroadcast
 
 /-- A Byzantine injection on a bind-broadcast instance of the first gather,
 read through the view. -/
-theorem roundProjection_byzantineFirstGatherBindBroadcast (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n)
+theorem roundProjection_byzantineFirstGatherBindBroadcast (u : ∀ _ : Fin P.n, AFW.ProcessVariables
+  P.n)
     (w : NetworkState P.n) (r : ℕ) (k : Fin P.n) (i : Fin P.n)
     (mm : BRB.Message (Gather.AcceptedPairs P.n Bool)) :
     roundProjection P u (w.recordGBCASend r k (.firstGatherBindBroadcasts i mm)) r
@@ -213,7 +223,8 @@ theorem roundProjection_byzantineFirstGatherBindBroadcast (u : ∀ _ : Fin P.n, 
   · simp only [GBCA.ByAFW.firstGather_setFirstGather, firstGather_roundProjection]
     refine stateOverBroadcasts_ext ?_ ?_ ?_ ?_
     · refine Prod.ext rfl (networkState_ext ?_ rfl)
-      simp only [Gather.gatherTier_setBindBroadcasts, gatherTier_firstGatherProjection_network,
+      simp only [Gather.gatherProgramsAndNetwork_setBindBroadcasts,
+        gatherProgramsAndNetwork_firstGatherProjection_network,
         recordGBCASend_sent_self]
       exact messagesOf_recordSent_none firstGatherMessageOf firstGatherMessageOf_inj (w.sent r) k
         (.firstGatherBindBroadcasts i mm) rfl
@@ -245,7 +256,7 @@ theorem roundProjection_byzantineFirstGatherBindBroadcast (u : ∀ _ : Fin P.n, 
   · simp only [GBCA.ByAFW.secondGather_setFirstGather, secondGather_roundProjection]
     refine stateOverBroadcasts_ext ?_ ?_ ?_ ?_
     · refine Prod.ext rfl (networkState_ext ?_ rfl)
-      simp only [gatherTier_secondGatherProjection_network, recordGBCASend_sent_self]
+      simp only [gatherProgramsAndNetwork_secondGatherProjection_network, recordGBCASend_sent_self]
       exact messagesOf_recordSent_none secondGatherMessageOf secondGatherMessageOf_inj (w.sent r) k
         (.firstGatherBindBroadcasts i mm) rfl
     · funext k'
@@ -265,7 +276,7 @@ theorem roundProjection_byzantineFirstGatherBindBroadcast (u : ∀ _ : Fin P.n, 
 /-- A Byzantine injection on an input-broadcast instance of the second gather,
 read through the view. -/
 theorem roundProjection_byzantineSecondGatherInputBroadcast
-    (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n) (w : NetworkState P.n) (r : ℕ) (k : Fin P.n)
+    (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n) (w : NetworkState P.n) (r : ℕ) (k : Fin P.n)
     (i : Fin P.n) (mm : BRB.Message (Option Bool)) :
     roundProjection P u (w.recordGBCASend r k (.secondGatherInputBroadcasts i mm)) r
       = GBCA.ByAFW.setSecondGather (roundProjection P u w r)
@@ -278,7 +289,7 @@ theorem roundProjection_byzantineSecondGatherInputBroadcast
   · simp only [GBCA.ByAFW.firstGather_setSecondGather, firstGather_roundProjection]
     refine stateOverBroadcasts_ext ?_ ?_ ?_ ?_
     · refine Prod.ext rfl (networkState_ext ?_ rfl)
-      simp only [gatherTier_firstGatherProjection_network, recordGBCASend_sent_self]
+      simp only [gatherProgramsAndNetwork_firstGatherProjection_network, recordGBCASend_sent_self]
       exact messagesOf_recordSent_none firstGatherMessageOf firstGatherMessageOf_inj (w.sent r) k
         (.secondGatherInputBroadcasts i mm) rfl
     · funext k'
@@ -297,7 +308,8 @@ theorem roundProjection_byzantineSecondGatherInputBroadcast
   · simp only [GBCA.ByAFW.secondGather_setSecondGather, secondGather_roundProjection]
     refine stateOverBroadcasts_ext ?_ ?_ ?_ ?_
     · refine Prod.ext rfl (networkState_ext ?_ rfl)
-      simp only [Gather.gatherTier_setInputBroadcasts, gatherTier_secondGatherProjection_network,
+      simp only [Gather.gatherProgramsAndNetwork_setInputBroadcasts,
+        gatherProgramsAndNetwork_secondGatherProjection_network,
         recordGBCASend_sent_self]
       exact messagesOf_recordSent_none secondGatherMessageOf secondGatherMessageOf_inj (w.sent r) k
         (.secondGatherInputBroadcasts i mm) rfl
@@ -330,7 +342,7 @@ theorem roundProjection_byzantineSecondGatherInputBroadcast
 /-- A Byzantine injection on a bind-broadcast instance of the second gather,
 read through the view. -/
 theorem roundProjection_byzantineSecondGatherBindBroadcast
-    (u : ∀ _ : Fin P.n, AFW.ProcessRecord P.n) (w : NetworkState P.n) (r : ℕ) (k : Fin P.n)
+    (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n) (w : NetworkState P.n) (r : ℕ) (k : Fin P.n)
     (i : Fin P.n) (mm : BRB.Message (Gather.AcceptedPairs P.n (Option Bool))) :
     roundProjection P u (w.recordGBCASend r k (.secondGatherBindBroadcasts i mm)) r
       = GBCA.ByAFW.setSecondGather (roundProjection P u w r)
@@ -343,7 +355,7 @@ theorem roundProjection_byzantineSecondGatherBindBroadcast
   · simp only [GBCA.ByAFW.firstGather_setSecondGather, firstGather_roundProjection]
     refine stateOverBroadcasts_ext ?_ ?_ ?_ ?_
     · refine Prod.ext rfl (networkState_ext ?_ rfl)
-      simp only [gatherTier_firstGatherProjection_network, recordGBCASend_sent_self]
+      simp only [gatherProgramsAndNetwork_firstGatherProjection_network, recordGBCASend_sent_self]
       exact messagesOf_recordSent_none firstGatherMessageOf firstGatherMessageOf_inj (w.sent r) k
         (.secondGatherBindBroadcasts i mm) rfl
     · funext k'
@@ -362,7 +374,8 @@ theorem roundProjection_byzantineSecondGatherBindBroadcast
   · simp only [GBCA.ByAFW.secondGather_setSecondGather, secondGather_roundProjection]
     refine stateOverBroadcasts_ext ?_ ?_ ?_ ?_
     · refine Prod.ext rfl (networkState_ext ?_ rfl)
-      simp only [Gather.gatherTier_setBindBroadcasts, gatherTier_secondGatherProjection_network,
+      simp only [Gather.gatherProgramsAndNetwork_setBindBroadcasts,
+        gatherProgramsAndNetwork_secondGatherProjection_network,
         recordGBCASend_sent_self]
       exact messagesOf_recordSent_none secondGatherMessageOf secondGatherMessageOf_inj (w.sent r) k
         (.secondGatherBindBroadcasts i mm) rfl

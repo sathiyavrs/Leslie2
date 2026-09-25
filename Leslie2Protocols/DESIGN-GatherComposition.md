@@ -4,18 +4,18 @@ and its chain
 Companion design document to the gather-based implementation of graded agreement: the
 sub-protocol compositions (`ABA/Vocabulary/ProcessAndNetworkState.lean`,
 `ABA/ReliableBroadcast/Specification.lean`,
-`ABA/ReliableBroadcast/Bracha/MessagesAndRecords.lean`,
+`ABA/ReliableBroadcast/Bracha/MessagesAndVariables.lean`,
 `ABA/ReliableBroadcast/Bracha/Components.lean`,
 `ABA/ReliableBroadcast/Bracha/Composition.lean`,
 `ABA/ReliableBroadcast/Bracha/SpecificationOverInstanceAlphabet.lean`,
-`ABA/ReliableBroadcast/Bracha/CompositionStepInversion.lean`,
+`ABA/ReliableBroadcast/Bracha/CompositionStepCases.lean`,
 `ABA/ReliableBroadcast/Bracha/Algorithm.lean`, `ABA/Gather/Specification.lean`,
 `ABA/Gather/MessagesAndCommonCore.lean`, `ABA/Gather/Components.lean`,
 `ABA/Gather/Composition.lean`,
 `ABA/Gather/SpecificationOverInstanceAlphabet.lean`,
-`ABA/Gather/CompositionStepInversion.lean`,
+`ABA/Gather/CompositionStepCases.lean`,
 `ABA/Gather/AlgorithmOverBroadcastSpecification.lean`, `ABA/Gather/AlgorithmOverBracha.lean`), their
-refinements (`ABA/ReliableBroadcast/Bracha/EchoCertificate.lean`,
+refinements (`ABA/ReliableBroadcast/Bracha/EchoWitness.lean`,
 `ABA/ReliableBroadcast/Bracha/Invariant.lean`,
 `ABA/ReliableBroadcast/Bracha/SpecificationRelation.lean`,
 `ABA/ReliableBroadcast/Bracha/RefinesSpecification.lean`,
@@ -24,9 +24,9 @@ refinements (`ABA/ReliableBroadcast/Bracha/EchoCertificate.lean`,
 `ABA/Gather/BroadcastSubstitution.lean`, `ABA/Gather/CommonCore.lean`), the
 two-gather round and its three tiers (`ABA/GBCA/AFW/Counting.lean`,
 `ABA/GBCA/AFW/Components.lean`, `ABA/GBCA/AFW/Composition.lean`,
-`ABA/GBCA/AFW/CompositionStepInversion.lean`,
+`ABA/GBCA/AFW/CompositionStepCases.lean`,
 `ABA/GBCA/AFW/AlgorithmOverGatherSpecifications.lean`,
-`ABA/GBCA/AFW/OutputCertificate.lean`, `ABA/GBCA/AFW/Invariant.lean`,
+`ABA/GBCA/AFW/OutputWitness.lean`, `ABA/GBCA/AFW/Invariant.lean`,
 `ABA/GBCA/AFW/SpecificationRelation.lean`, `ABA/GBCA/AFW/RefinesSpecification.lean`,
 `ABA/GBCA/AFW/BroadcastSubstitution.lean`, `ABA/GBCA/AFW/GatherSubstitution.lean`,
 `ABA/GBCA/AFW/Binding.lean`), the assembly at the protocol shape
@@ -134,20 +134,20 @@ A program reads no neighbouring component. What a sub-protocol has returned to a
 process is therefore written into that process's own record, on the return
 event, and read there.
 
-A gather program's record (`Gather.ProcessRecord`) extends the local record with two returned
+A gather program's record (`Gather.ProcessVariables`) extends the local record with two returned
 values: `inputBroadcastReturned k`, the value the input-broadcast instance `k` has returned here,
 and `bindBroadcastReturned q`, the payload the bind-broadcast instance `q` has returned here. The
 return of an instance is a hidden event of the gather composition
 (`Gather.GatherEvent.inputBroadcastRet`, `bindRet`), on which that instance takes its own return
 transition and the receiving program records the returned value. The four transitions that read what
 has been returned — `sendEcho`, `sendVote`, `bindCall` and `ret` — read the returned values through
-`Gather.ProcessRecord.accepted`, `holdsInputBroadcastReturn`, `holdsBindBroadcastReturn` and
+`Gather.ProcessVariables.accepted`, `holdsInputBroadcastReturn`, `holdsBindBroadcastReturn` and
 `approvedBy`, in the same shape at both gather tiers. The tie between a returned value and the
 instance it records is an invariant clause of `Gather.Conformance` (`inputBroadcastReturned_val`,
 `bindBroadcastReturned_val`): a returned value is the instance's committed value, established at the
 return event and kept by the write-once commit.
 
-A round program's record (`GBCA.ByAFW.ProcessRecord`) holds the process's input, its
+A round program's record (`GBCA.ByAFW.ProcessVariables`) holds the process's input, its
 candidate, whether it has called the second gather, its graded outcome and its
 return flag. The first gather's return and the second gather's call are two
 events, `firstGatherReturn` and `secondGatherCall`, and so are the second gather's return and the
@@ -264,7 +264,7 @@ and the three certificates are readings of that:
   `|S| − f` of its entries where one exists (`boundOfCore_of_aboveThreshold`), the complement being
   on fewer (`count_boundOfCore_belowThreshold`); the round's network writes it at the first gather's return,
   from the core that return carries;
-- the exclusion certificate is `ExclusionEvidence b = ∃ S, core₁ = some S ∧ count S b < |S| − f`.
+- the exclusion certificate is `ExclusionWitness b = ∃ S, core₁ = some S ∧ count S b < |S| − f`.
   The core is write-once, so the certificate stands from the moment it holds — monotonicity for free,
   where the direct implementation's refinement maintains monotone receipt quorums;
 - the grade-2/grade-0 exclusivity is the second instance's core carrying `some v` on at least
@@ -276,10 +276,10 @@ The return-then-call step and the return place the certificates in the invariant
 where the first gather's return carries the core, and consumed at `secondGatherCall`, where the
 second gather's call record takes the candidate (`secondGatherCall_candidate`). The bound bit is on
 record from the first `firstGatherReturn` on (`candidate_bound`, `secondGatherCall_bound`). The
-graded outcome's certificate, `OutputCertificate`, is established at `secondGatherReturn` from the
-second gather's return and consumed at `retG`, which sees the outcome alone (`out_certificate`). The
+graded outcome's certificate, `OutputWitness`, is established at `secondGatherReturn` from the
+second gather's return and consumed at `retG`, which sees the outcome alone (`out_witness`). The
 return transitions then mirror `GBCA.ByABDY.refinesSpecification` shape for shape: a grade-2 or grade-1 return
-hands out the bound bit and certifies `ExclusionEvidence` of its complement, and the grade-0 return
+hands out the bound bit and certifies `ExclusionWitness` of its complement, and the grade-0 return
 announces the bit the first return wrote. The D15 support counts come off the first core through the
 committed-entry provenance — a core entry is a committed entry, a committed entry of a correct
 process is its call, and the count is `F`-blind (`callSupport_of_core`) — or off a correct `⊥`
@@ -387,7 +387,7 @@ three are forced by the shape of the implementation.
   a multicast, checking a delivery and authorising a handshake transition are already payload-blind.
 - **The transposition.** The composed system indexes local states by instance
   and then by process. A program must hold its own data and no one else's, so
-  `AFW.RoundRecord n` is process-major: process `j`'s local state in each gather
+  `AFW.RoundVariables n` is process-major: process `j`'s local state in each gather
   instance, and its local state in each of the `n` instances of each broadcast family.
   Nothing is lost, because every guard of the gather-based implementation
   reads the acting process's own local states and the networks, and the two transitions that
@@ -407,7 +407,7 @@ three are forced by the shape of the implementation.
 shared objects, and the round family is *computed* from the implementation's state by
 `AFW.roundProjection`, which undoes the two separations: it transposes the local states back and
 projects each network's sent set out of the tagged family by `Finset.filterMap`. The round record
-holds each gather local state over `Gather.ProcessRecord`, so what an instance returned is there
+holds each gather local state over `Gather.ProcessVariables`, so what an instance returned is there
 already and the view is the identity on it. A round program's record is read off the process's
 first-gather input, its candidate, its second-gather input, its graded outcome and its
 second-gather return flag. Four of the five conjuncts are that computation, so there is nothing to
@@ -432,7 +432,7 @@ The proof is organised around that computation. The files of
 `ABA/AFW/RoundProjectionStep/` state, for every implementation transition, the view after
 the transition as the composed round before it with the corresponding composed effect applied,
 written through the round's updaters exactly as the algorithms write it; the master lemma
-`roundProjection_write` of `ABA/AFW/RoundProjectionStep/ViewAfterOneWrite.lean`
+`roundProjection_write` of `ABA/AFW/RoundProjectionStep/ProjectionAfterOneWrite.lean`
 pushes a one-point round write and a single sent-set insertion inside every coordinate, and each
 transition then owes only projection algebra, discharged by `messagesOf_recordSent_some` and
 `messagesOf_recordSent_none`.

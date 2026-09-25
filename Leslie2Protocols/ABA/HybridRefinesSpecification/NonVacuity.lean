@@ -104,8 +104,8 @@ def hybridStateOf (G : ℕ → GBCA.SpecState 4) (s : ABAState fourProcesses)
 /-- The round loops on a label one of them owns: the addressed loop takes its
 transition, the others remain unchanged, and the group's successor is the pointwise
 update. -/
-theorem roundLoops_at {C : ∀ _ : Fin 4, RoundLoopRecord 4} (id : Fin 4) {L : ExtendedLabel 4 M}
-    {c' : RoundLoopRecord 4} (hown : RoundLoopStep fourProcesses id (C id) L (PMF.pure c'))
+theorem roundLoops_at {C : ∀ _ : Fin 4, RoundLoopVariables 4} (id : Fin 4) {L : ExtendedLabel 4 M}
+    {c' : RoundLoopVariables 4} (hown : RoundLoopStep fourProcesses id (C id) L (PMF.pure c'))
     (hidle : ∀ j, j ≠ id → RoundLoopStep fourProcesses j (C j) L (PMF.pure (C j))) (i : Fin 4) :
     RoundLoopStep fourProcesses i (C i) L (PMF.pure (Function.update C id c' i)) := by
   by_cases h : i = id
@@ -144,22 +144,22 @@ noncomputable def abaInitial : ABAState fourProcesses := ABAState.initial fourPr
 /-- The ABA update of a `callABA id true` input: enter round `0`, ready to call the graded
 agreement. -/
 noncomputable def abaInput (id : Fin 4) (s : ABAState fourProcesses) : ABAState fourProcesses :=
-  s.setProcess id { s.processes id with
+  s.setProcessVariables id { s.processes id with
     input := some true, estimate := some true, round := 0, phase := .toCallG }
 
 /-- The ABA update of a `callG r id` emit: advance to `awaitG`. -/
 noncomputable def abaCallG (id : Fin 4) (s : ABAState fourProcesses) : ABAState fourProcesses :=
-  s.setProcess id { s.processes id with phase := .awaitG }
+  s.setProcessVariables id { s.processes id with phase := .awaitG }
 
 /-- The ABA update of a round-`0` graded-agreement `A true` return: adopt the estimate, record the
 grade, head for the coin. -/
 noncomputable def abaRetG (id : Fin 4) (s : ABAState fourProcesses) : ABAState fourProcesses :=
-  s.setProcess id { s.processes id with
+  s.setProcessVariables id { s.processes id with
     estimate := some true, lastGrade := some (.grade2 true), phase := .toCallW }
 
 /-- The ABA update of a `callW r id` emit: advance to `awaitW`. -/
 noncomputable def abaCallW (id : Fin 4) (s : ABAState fourProcesses) : ABAState fourProcesses :=
-  s.setProcess id { s.processes id with phase := .awaitW }
+  s.setProcessVariables id { s.processes id with phase := .awaitW }
 
 /-- The round-`0` specification update of a `call id true`: record the input. -/
 def gbcaSpecificationCall (id : Fin 4) (s : ℕ → GBCA.SpecState 4) : ℕ → GBCA.SpecState 4 :=
@@ -257,7 +257,8 @@ noncomputable def abaAfterDeliver2 : ABAState fourProcesses := abaAfterDeliver1.
   true
 
 /-- The ABA state after process `0` fires `retABA 0 true`. -/
-noncomputable def abaAfterRetABA : ABAState fourProcesses := abaAfterDeliver2.setProcess 0 {
+noncomputable def abaAfterRetABA : ABAState fourProcesses := abaAfterDeliver2.setProcessVariables 0
+  {
   abaAfterDeliver2.processes 0 with returned := true }
 
 /-- The four components after a synchronised `fail 0` broadcast; the ABA state carries the
@@ -640,7 +641,7 @@ theorem step_retW₀ :
     (hybrid fourProcesses M).step (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterCallW2
       coinAfterRecordingCall2) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn2
         abaAfterRoundStep0 coinAfterReturn0)) := by
-  refine hybrid_rendezvous fourProcesses (e := .retWPublish 0 (0 : Fin 4) true true) ?_
+  refine hybrid_synchronisation fourProcesses (e := .retWPublish 0 (0 : Fin 4) true true) ?_
   have h := hybridExtended_visible_step (M := M) fourProcesses
     (G := gbcaSpecificationsAfterReturn2) (C :=
     abaAfterCallW2.1) (A := abaAfterCallW2.2) (o := coinAfterRecordingCall2)
@@ -666,7 +667,7 @@ theorem step_retW₁ :
     (hybrid fourProcesses M).step (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterRoundStep0
       coinAfterReturn0) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn2
         abaAfterRoundStep1 coinAfterReturn1)) := by
-  refine hybrid_rendezvous fourProcesses (e := .retWPublish 0 (1 : Fin 4) true true) ?_
+  refine hybrid_synchronisation fourProcesses (e := .retWPublish 0 (1 : Fin 4) true true) ?_
   have h := hybridExtended_visible_step (M := M) fourProcesses
     (G := gbcaSpecificationsAfterReturn2) (C :=
     abaAfterRoundStep0.1) (A := abaAfterRoundStep0.2) (o := coinAfterReturn0)
@@ -692,7 +693,7 @@ theorem step_retW₂ :
     (hybrid fourProcesses M).step (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterRoundStep1
       coinAfterReturn1) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn2
         abaAfterRoundStep2 coinAfterReturn2)) := by
-  refine hybrid_rendezvous fourProcesses (e := .retWPublish 0 (2 : Fin 4) true true) ?_
+  refine hybrid_synchronisation fourProcesses (e := .retWPublish 0 (2 : Fin 4) true true) ?_
   have h := hybridExtended_visible_step (M := M) fourProcesses
     (G := gbcaSpecificationsAfterReturn2) (C :=
     abaAfterRoundStep1.1) (A := abaAfterRoundStep1.2) (o := coinAfterReturn1)
@@ -721,7 +722,7 @@ theorem step_deliver₀ :
     (hybrid fourProcesses M).step (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterRoundStep2
       coinAfterReturn2) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn2
         abaAfterDeliver0 coinAfterReturn2)) := by
-  refine hybrid_rendezvous fourProcesses (e := .decidedDeliver (0 : Fin 4) (0 : Fin 4) true) ?_
+  refine hybrid_synchronisation fourProcesses (e := .decidedDeliver (0 : Fin 4) (0 : Fin 4) true) ?_
   have h := hybridExtended_visible_step (M := M) fourProcesses
     (G := gbcaSpecificationsAfterReturn2) (C :=
     abaAfterRoundStep2.1) (A := abaAfterRoundStep2.2) (o := coinAfterReturn2)
@@ -743,7 +744,7 @@ theorem step_deliver₁ :
     (hybrid fourProcesses M).step (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterDeliver0
       coinAfterReturn2) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn2
         abaAfterDeliver1 coinAfterReturn2)) := by
-  refine hybrid_rendezvous fourProcesses (e := .decidedDeliver (0 : Fin 4) (1 : Fin 4) true) ?_
+  refine hybrid_synchronisation fourProcesses (e := .decidedDeliver (0 : Fin 4) (1 : Fin 4) true) ?_
   have h := hybridExtended_visible_step (M := M) fourProcesses
     (G := gbcaSpecificationsAfterReturn2) (C :=
     abaAfterDeliver0.1) (A := abaAfterDeliver0.2) (o := coinAfterReturn2)
@@ -767,7 +768,7 @@ theorem step_deliver₂ :
     (hybrid fourProcesses M).step (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterDeliver1
       coinAfterReturn2) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn2
         abaAfterDeliver2 coinAfterReturn2)) := by
-  refine hybrid_rendezvous fourProcesses (e := .decidedDeliver (0 : Fin 4) (2 : Fin 4) true) ?_
+  refine hybrid_synchronisation fourProcesses (e := .decidedDeliver (0 : Fin 4) (2 : Fin 4) true) ?_
   have h := hybridExtended_visible_step (M := M) fourProcesses
     (G := gbcaSpecificationsAfterReturn2) (C :=
     abaAfterDeliver1.1) (A := abaAfterDeliver1.2) (o := coinAfterReturn2)

@@ -44,7 +44,7 @@ theorem mapIdle_unchanged {A₀ : System B Lbl} {ψ : Λ → Option Lbl} {c : B}
 
 /-- A transition of the synchronised product on a visible label: every
 component steps, and the joint distribution is Dirac. -/
-theorem synchronisedProductMapIdle_inversion (hA : ∀ k, (A k).IsLTS) (hL : L ≠ Silent.τ)
+theorem synchronisedProductMapIdle_cases (hA : ∀ k, (A k).IsLTS) (hL : L ≠ Silent.τ)
     (h : (System.synchronisedProduct (fun k => (A k).mapIdle (φ k))).step a L μ) :
     ∃ a' : ∀ _ : Fin n, B, μ = PMF.pure a' ∧
       ∀ k, ((A k).mapIdle (φ k)).step (a k) L (PMF.pure (a' k)) := by
@@ -74,7 +74,7 @@ theorem synchronisedProductMapIdle_none (hL : L ≠ Silent.τ) (hφ : ∀ k, φ 
 
 /-- A silent transition of the synchronised product is a silent transition of
 exactly one component. -/
-theorem synchronisedProductMapIdle_tau_inversion [Silent Lbl] (hA : ∀ k, (A k).IsLTS)
+theorem synchronisedProductMapIdle_tau_cases [Silent Lbl] (hA : ∀ k, (A k).IsLTS)
     (hτ : ∀ k, φ k (Silent.τ : Λ) = some (Silent.τ : Lbl))
     (h : (System.synchronisedProduct (fun k => (A k).mapIdle (φ k))).step a (Silent.τ : Λ) μ) :
     ∃ (k : Fin n) (c : B), μ = PMF.pure (Function.update a k c) ∧

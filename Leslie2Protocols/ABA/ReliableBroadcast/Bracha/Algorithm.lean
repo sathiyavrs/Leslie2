@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.CompositionStepInversion
+import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.CompositionStepCases
 
 /-!
 # Bracha's algorithm over the composed state
@@ -23,7 +23,7 @@ The message pattern, per process:
   receipts, once;
 * `m` is returned on `2f + 1` `VOTE m` receipts.
 
-The `ECHO` quorum is `ABA.Parameters.echoReceiptQuorum`, more than `(n + f) / 2` senders. There is
+The `ECHO` quorum is `ABA.Parameters.receivedEchoQuorum`, more than `(n + f) / 2` senders. There is
 no participation guard: only the leader is called, and every other process runs its handlers
 unconditionally, Bracha's protocol having no per-process input. The write-once `sentEcho` and
 `sentVote` fields carry the "having not sent" guards of the source's `upon` clauses, and
@@ -61,9 +61,10 @@ inductive BrachaAlgorithm (P : Parameters) (ldr : Fin P.n) :
   /-- The environment call arrives at the leader: record the payload and
   multicast `⟨INIT, m⟩`. -/
   | call (s : BrachaState P.n M) (m : M)
-      (h : (s.process ldr).input = none) :
+      (h : (s.processVariables ldr).input = none) :
       BrachaAlgorithm P ldr s (.call m)
-        (PMF.pure ((s.setProcess ldr { s.process ldr with input := some m }).multicast
+        (PMF.pure ((s.setProcessVariables ldr
+          { s.processVariables ldr with input := some m }).multicast
           ldr (.init m)))
   /-- Input-enabledness loop for `call`. -/
   | callLoop (s : BrachaState P.n M) (m : M) :
@@ -76,27 +77,31 @@ inductive BrachaAlgorithm (P : Parameters) (ldr : Fin P.n) :
   /-- `ECHO`: `⟨INIT, m⟩` received from the leader, an `ECHO m` receipt quorum,
   or `f + 1` `VOTE m` receipts; no `ECHO` sent yet. -/
   | echo (s : BrachaState P.n M) (j : Fin P.n) (m : M)
-      (hrecv : Message.init m ∈ s.received j ldr ∨ P.echoReceiptQuorum ≤ s.receivedCount j (.echo m)
+      (hrecv : Message.init m ∈ s.received j ldr ∨ P.receivedEchoQuorum ≤ s.receivedCount j (.echo
+        m)
         ∨
         P.f + 1 ≤ s.receivedCount j (.vote m))
-      (hsend : (s.process j).sentEcho = none) :
+      (hsend : (s.processVariables j).sentEcho = none) :
       BrachaAlgorithm P ldr s .tau
-        (PMF.pure ((s.setProcess j { s.process j with sentEcho := some m }).multicast
+        (PMF.pure ((s.setProcessVariables j
+          { s.processVariables j with sentEcho := some m }).multicast
           j (.echo m)))
   /-- `VOTE` (quorum case): an `ECHO m` receipt quorum, no `VOTE` sent yet. -/
   | voteQuorum (s : BrachaState P.n M) (j : Fin P.n) (m : M)
-      (hcnt : P.echoReceiptQuorum ≤ s.receivedCount j (.echo m))
-      (hsend : (s.process j).sentVote = none) :
+      (hcnt : P.receivedEchoQuorum ≤ s.receivedCount j (.echo m))
+      (hsend : (s.processVariables j).sentVote = none) :
       BrachaAlgorithm P ldr s .tau
-        (PMF.pure ((s.setProcess j { s.process j with sentVote := some m }).multicast
+        (PMF.pure ((s.setProcessVariables j
+          { s.processVariables j with sentVote := some m }).multicast
           j (.vote m)))
   /-- `VOTE` (amplification case): `f + 1` `VOTE m` receipts, no `VOTE` sent
   yet. -/
   | voteAmplification (s : BrachaState P.n M) (j : Fin P.n) (m : M)
       (hcnt : P.f + 1 ≤ s.receivedCount j (.vote m))
-      (hsend : (s.process j).sentVote = none) :
+      (hsend : (s.processVariables j).sentVote = none) :
       BrachaAlgorithm P ldr s .tau
-        (PMF.pure ((s.setProcess j { s.process j with sentVote := some m }).multicast
+        (PMF.pure ((s.setProcessVariables j
+          { s.processVariables j with sentVote := some m }).multicast
           j (.vote m)))
   /-- Byzantine injection: a corrupted sender multicasts anything. -/
   | byzantine (s : BrachaState P.n M) (j : Fin P.n) (m : Message M) (h : j ∈ s.F) :
@@ -104,9 +109,9 @@ inductive BrachaAlgorithm (P : Parameters) (ldr : Fin P.n) :
   /-- Return: `2f + 1` `VOTE m` receipts. -/
   | ret (s : BrachaState P.n M) (id : Fin P.n) (m : M)
       (hcnt : 2 * P.f + 1 ≤ s.receivedCount id (.vote m))
-      (hr : (s.process id).returned = false) :
+      (hr : (s.processVariables id).returned = false) :
       BrachaAlgorithm P ldr s (.ret id m)
-        (PMF.pure (s.setProcess id { s.process id with returned := true }))
+        (PMF.pure (s.setProcessVariables id { s.processVariables id with returned := true }))
   /-- Corruption (deviation D1). -/
   | fail (s : BrachaState P.n M) (id : Fin P.n) :
       BrachaAlgorithm P ldr s (.fail id) (PMF.pure (s.corrupt P id))
@@ -138,23 +143,23 @@ theorem brachaInstance_step_algorithm (P : Parameters) (ldr : Fin P.n) :
   rintro ⟨u, w⟩ l μ hstep
   rcases (brachaInstance_step_iff P ldr (u, w) l μ).mp hstep with ⟨rfl, e, hev⟩ | hlab
   · -- a hidden rendezvous: an internal transition
-    obtain ⟨x, w', rfl, hall, hn⟩ := brachaInstanceExtended_joint_inversion (by simp) hev
+    obtain ⟨x, w', rfl, hall, hn⟩ := brachaInstanceExtended_synchronised_cases (by simp) hev
     refine ⟨Label.tau, rfl, ?_⟩
     cases e with
     | send j m =>
       have hfor : ∀ i, i ≠ j → x i = u i :=
-        fun i hi => PMF.pure_injective (programStep_send_foreign (Ne.symm hi) (hall i))
+        fun i hi => PMF.pure_injective (programStep_send_notOwn (Ne.symm hi) (hall i))
       have hw : w' = w.recordSent j m := PMF.pure_injective (networkStep_send hn)
       subst hw
       cases m with
       | init m => exact (programStep_send_init_own (hall j)).elim
       | echo m =>
         obtain ⟨hrecv, hsend, hx⟩ := programStep_send_echo_own (hall j)
-        rw [brachaInstance_setProcess_recordSent (PMF.pure_injective hx) hfor]
+        rw [brachaInstance_setProcessVariables_recordSent (PMF.pure_injective hx) hfor]
         exact BrachaAlgorithm.echo _ j m hrecv hsend
       | vote m =>
         obtain ⟨hcnt, hsend, hx⟩ := programStep_send_vote_own (hall j)
-        rw [brachaInstance_setProcess_recordSent (PMF.pure_injective hx) hfor]
+        rw [brachaInstance_setProcessVariables_recordSent (PMF.pure_injective hx) hfor]
         rcases hcnt with hq | ha
         · exact BrachaAlgorithm.voteQuorum _ j m hq hsend
         · exact BrachaAlgorithm.voteAmplification _ j m ha hsend
@@ -163,13 +168,13 @@ theorem brachaInstance_step_algorithm (P : Parameters) (ldr : Fin P.n) :
       have hw' : w' = w := PMF.pure_injective hw
       subst hw'
       have hfor : ∀ i', i' ≠ i → x i' = u i' :=
-        fun i' hi' => PMF.pure_injective (programStep_deliver_foreign (Ne.symm hi') (hall i'))
+        fun i' hi' => PMF.pure_injective (programStep_deliver_notOwn (Ne.symm hi') (hall i'))
       rw [brachaInstance_deliver (PMF.pure_injective (programStep_deliver_own (hall i))) hfor]
       exact BrachaAlgorithm.deliver _ i j m hmem
   · by_cases hlτ : l = Sum.inl Label.tau
     · -- the network's own injection
       subst hlτ
-      obtain ⟨w', rfl, hn⟩ := brachaInstanceExtended_tau_inversion hlab
+      obtain ⟨w', rfl, hn⟩ := brachaInstanceExtended_tau_cases hlab
       obtain ⟨j, m, hF, hw⟩ := networkStep_tau hn
       have hw' : w' = w.recordSent j m := PMF.pure_injective hw
       subst hw'
@@ -177,7 +182,7 @@ theorem brachaInstance_step_algorithm (P : Parameters) (ldr : Fin P.n) :
       rw [brachaInstance_recordSent]
       exact BrachaAlgorithm.byzantine _ j m hF
     · obtain ⟨x, w', rfl, hall, hn⟩ :=
-        brachaInstanceExtended_joint_inversion (by simpa using hlτ) hlab
+        brachaInstanceExtended_synchronised_cases (by simpa using hlτ) hlab
       cases l with
       | inl l₀ =>
         cases l₀ with
@@ -187,18 +192,18 @@ theorem brachaInstance_step_algorithm (P : Parameters) (ldr : Fin P.n) :
           subst hw
           obtain ⟨hin, hx⟩ := programStep_call_leader (hall ldr)
           have hfor : ∀ i, i ≠ ldr → x i = u i :=
-            fun i hi => PMF.pure_injective (programStep_call_foreign hi (hall i))
+            fun i hi => PMF.pure_injective (programStep_call_notOwn hi (hall i))
           refine ⟨_, rfl, ?_⟩
-          rw [brachaInstance_setProcess_recordSent (PMF.pure_injective hx) hfor]
+          rw [brachaInstance_setProcessVariables_recordSent (PMF.pure_injective hx) hfor]
           exact BrachaAlgorithm.call _ m hin
         | ret id m =>
           have hw : w' = w := PMF.pure_injective (networkStep_ret hn)
           subst hw
           obtain ⟨hcnt, hr, hx⟩ := programStep_ret_own (hall id)
           have hfor : ∀ i, i ≠ id → x i = u i :=
-            fun i hi => PMF.pure_injective (programStep_ret_foreign (Ne.symm hi) (hall i))
+            fun i hi => PMF.pure_injective (programStep_ret_notOwn (Ne.symm hi) (hall i))
           refine ⟨_, rfl, ?_⟩
-          rw [brachaInstance_setProcess (PMF.pure_injective hx) hfor]
+          rw [brachaInstance_setProcessVariables (PMF.pure_injective hx) hfor]
           exact BrachaAlgorithm.ret _ id m hcnt hr
         | fail id =>
           have hw : w' = w.corrupt P id := PMF.pure_injective (networkStep_fail hn)

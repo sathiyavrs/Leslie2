@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.MessagesAndRecords
+import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.MessagesAndVariables
 import Leslie2Protocols.Framework.Relabel
 
 /-!
@@ -108,13 +108,13 @@ delivery the write of the delivered set. -/
 /-- The step relation of the program of process `j` in the instance with leader
 `ldr`. All transitions are Dirac. -/
 inductive ProgramStep (P : Parameters) (ldr j : Fin P.n) :
-    LocalState P.n (ProcessRecord M) (Message M) → BroadcastLabel P.n M →
-      PMF (LocalState P.n (ProcessRecord M) (Message M)) → Prop
+    LocalState P.n (ProcessVariables M) (Message M) → BroadcastLabel P.n M →
+      PMF (LocalState P.n (ProcessVariables M) (Message M)) → Prop
   /-- The call arrives at the leader: record the payload. The multicast of
   `⟨INIT, m⟩` is the network's half (`BrachaAlgorithm.call`). -/
-  | call (p) (m : M) (hj : j = ldr) (h : p.process.input = none) :
+  | call (p) (m : M) (hj : j = ldr) (h : p.processVariables.input = none) :
       ProgramStep P ldr j p (Sum.inl (Sum.inl (.call m)))
-        (PMF.pure (p.setProcess { p.process with input := some m }))
+        (PMF.pure (p.setProcessVariables { p.processVariables with input := some m }))
   /-- A call at the leader is not a non-leader's business. -/
   | callIdle (p) (m : M) (hj : j ≠ ldr) :
       ProgramStep P ldr j p (Sum.inl (Sum.inl (.call m))) (PMF.pure p)
@@ -125,23 +125,23 @@ inductive ProgramStep (P : Parameters) (ldr j : Fin P.n) :
   quorum, or `f + 1` `VOTE m` receipts; no `ECHO` sent yet
   (`BrachaAlgorithm.echo`). -/
   | sendEcho (p) (m : M)
-      (hrecv : Message.init m ∈ p.received ldr ∨ P.echoReceiptQuorum ≤ p.receivedCount (.echo m) ∨
+      (hrecv : Message.init m ∈ p.received ldr ∨ P.receivedEchoQuorum ≤ p.receivedCount (.echo m) ∨
         P.f + 1 ≤ p.receivedCount (.vote m))
-      (hsend : p.process.sentEcho = none) :
+      (hsend : p.processVariables.sentEcho = none) :
       ProgramStep P ldr j p (Sum.inr (.send j (.echo m)))
-        (PMF.pure (p.setProcess { p.process with sentEcho := some m }))
+        (PMF.pure (p.setProcessVariables { p.processVariables with sentEcho := some m }))
   /-- `VOTE m` (quorum case): an `ECHO m` receipt quorum, no `VOTE` sent yet
   (`BrachaAlgorithm.voteQuorum`). -/
-  | sendVoteQuorum (p) (m : M) (hcnt : P.echoReceiptQuorum ≤ p.receivedCount (.echo m))
-      (hsend : p.process.sentVote = none) :
+  | sendVoteQuorum (p) (m : M) (hcnt : P.receivedEchoQuorum ≤ p.receivedCount (.echo m))
+      (hsend : p.processVariables.sentVote = none) :
       ProgramStep P ldr j p (Sum.inr (.send j (.vote m)))
-        (PMF.pure (p.setProcess { p.process with sentVote := some m }))
+        (PMF.pure (p.setProcessVariables { p.processVariables with sentVote := some m }))
   /-- `VOTE m` (amplification case): `f + 1` `VOTE m` receipts, no `VOTE` sent
   yet (`BrachaAlgorithm.voteAmplification`). -/
   | sendVoteAmplification (p) (m : M) (hcnt : P.f + 1 ≤ p.receivedCount (.vote m))
-      (hsend : p.process.sentVote = none) :
+      (hsend : p.processVariables.sentVote = none) :
       ProgramStep P ldr j p (Sum.inr (.send j (.vote m)))
-        (PMF.pure (p.setProcess { p.process with sentVote := some m }))
+        (PMF.pure (p.setProcessVariables { p.processVariables with sentVote := some m }))
   /-- A multicast by another process: not `j`'s business. -/
   | sendIdle (p) (i : Fin P.n) (m : Message M) (hi : i ≠ j) :
       ProgramStep P ldr j p (Sum.inr (.send i m)) (PMF.pure p)
@@ -154,10 +154,11 @@ inductive ProgramStep (P : Parameters) (ldr j : Fin P.n) :
       ProgramStep P ldr j p (Sum.inr (.deliver i k m)) (PMF.pure p)
   /-- Return: `2f + 1` `VOTE m` receipts on the record's own delivered sets,
   and the record has not returned (`BrachaAlgorithm.ret`). -/
-  | ret (p) (m : M) (hcnt : 2 * P.f + 1 ≤ p.receivedCount (.vote m)) (hr : p.process.returned =
+  | ret (p) (m : M) (hcnt : 2 * P.f + 1 ≤ p.receivedCount (.vote m)) (hr :
+      p.processVariables.returned =
     false) :
       ProgramStep P ldr j p (Sum.inl (Sum.inl (.ret j m)))
-        (PMF.pure (p.setProcess { p.process with returned := true }))
+        (PMF.pure (p.setProcessVariables { p.processVariables with returned := true }))
   /-- A return at another process: not `j`'s business. -/
   | retIdle (p) (i : Fin P.n) (m : M) (hi : i ≠ j) :
       ProgramStep P ldr j p (Sum.inl (Sum.inl (.ret i m))) (PMF.pure p)
@@ -206,18 +207,18 @@ inductive NetworkStep (P : Parameters) (ldr : Fin P.n) :
 
 /-- The program of process `j` in the instance with leader `ldr`. -/
 noncomputable def broadcastProgram (P : Parameters) (ldr j : Fin P.n) :
-    System (LocalState P.n (ProcessRecord M) (Message M)) (BroadcastLabel P.n M) where
-  init := LocalState.initial P.n (Message M) (ProcessRecord.initial M)
+    System (LocalState P.n (ProcessVariables M) (Message M)) (BroadcastLabel P.n M) where
+  init := LocalState.initial P.n (Message M) (ProcessVariables.initial M)
   step := ProgramStep P ldr j
 
 @[simp] theorem broadcastProgram_init (P : Parameters) (ldr j : Fin P.n) :
     (broadcastProgram P ldr j (M := M)).init = LocalState.initial P.n (Message M)
-      (ProcessRecord.initial M) :=
+      (ProcessVariables.initial M) :=
       rfl
 
 @[simp] theorem broadcastProgram_step (P : Parameters) (ldr j : Fin P.n)
-    (p : LocalState P.n (ProcessRecord M) (Message M)) (l : BroadcastLabel P.n M)
-    (ν : PMF (LocalState P.n (ProcessRecord M) (Message M))) :
+    (p : LocalState P.n (ProcessVariables M) (Message M)) (l : BroadcastLabel P.n M)
+    (ν : PMF (LocalState P.n (ProcessVariables M) (Message M))) :
     (broadcastProgram P ldr j).step p l ν ↔ ProgramStep P ldr j p l ν := Iff.rfl
 
 /-- The instance's network. -/

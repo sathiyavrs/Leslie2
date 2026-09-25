@@ -93,8 +93,8 @@ Every program transition and every network transition is Dirac, so the instance 
 
 /-- Every program transition is Dirac. -/
 theorem programStep_dirac {P : Parameters} {ldr j : Fin P.n}
-    {p : LocalState P.n (ProcessRecord M) (Message M)} {l : BroadcastLabel P.n M}
-    {ν : PMF (LocalState P.n (ProcessRecord M) (Message M))} (h : ProgramStep P ldr j p l ν) :
+    {p : LocalState P.n (ProcessVariables M) (Message M)} {l : BroadcastLabel P.n M}
+    {ν : PMF (LocalState P.n (ProcessVariables M) (Message M))} (h : ProgramStep P ldr j p l ν) :
     ∃ p', ν = PMF.pure p' := by
   cases h <;> exact ⟨_, rfl⟩
 
@@ -138,8 +138,8 @@ theorem specificationOverInstanceAlphabet_isLTS {M : Type} (P : Parameters) (ldr
 on one of the instance's interface labels. The instance's silent transitions
 are therefore exactly the network's injections and the hidden rendezvous. -/
 theorem programStep_no_tau {P : Parameters} {ldr j : Fin P.n}
-    {p : LocalState P.n (ProcessRecord M) (Message M)}
-    {ν : PMF (LocalState P.n (ProcessRecord M) (Message M))}
+    {p : LocalState P.n (ProcessVariables M) (Message M)}
+    {ν : PMF (LocalState P.n (ProcessVariables M) (Message M))}
     (h : ProgramStep P ldr j p (Silent.τ : BroadcastLabel P.n M) ν) : False := by
   rw [broadcastLabel_tau] at h; cases h
 
