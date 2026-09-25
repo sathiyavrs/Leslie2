@@ -16,15 +16,15 @@ import Leslie2Protocols.ABA.AFW.Substitution
 
 The subjects are two protocols, one per implementation of graded agreement. Each is `n` programs,
 one per process, beside two components that are not processes — the network, which owns the message
-sets, the DECIDED sets and the corrupted set with its budget, and the common-coin oracle, the only
+sets, the DECIDED sets and the corrupted set with its budget, and the common coin, the only
 component whose transitions are not Dirac. `ABDY.protocol P` runs ABDY22's graded-agreement
 algorithm in each round, `AFW.protocol P` AFW25's two-gather construction.
-A program reads its own records, its own recv and its own replacement flag, and
+A program reads its own variables, its own received sets and its own replacement flag, and
 nothing else about corruption: not the corrupted set, not the budget, not another process's status.
 A corruption replaces the program of the process it names (D23); whether another process may be
 taken off-protocol is decided by the network's `k ∈ F` guard. A program holds its round loop beside
-its round records — the round record of every round it has touched, in a finite map — and terminates
-at `2f + 1` DECIDED receipts (D22).
+its variables in every round it has touched, in a finite map, and terminates
+at `2f + 1` received DECIDED messages (D22).
 
 The abstract system is `ABA.spec P`, the single-automaton system of agreement,
 whose traces satisfy Validity and Agreement (`spec_safe`, `Specifications/ABASafety.lean`).
@@ -37,7 +37,7 @@ specification:
 1. `ABDY.protocolSimulation` (`ABDY/Simulation.lean`) — the protocol into the
    composed system, along the Dirac lift of `ABDY.ProtocolRelation`. The relation determines every
    composed coordinate from the protocol state; the inclusion is
-   one-directional because a round instance also answers the Byzantine handshake transitions
+   one-directional because a round instance also answers the Byzantine call and return transitions
    (D11) and the processes the protocol has terminated (D22).
 2. `ABDY.substitutionSimulation` (`ABDY/Substitution.lean`) — replace each
    round's graded-agreement instance by its specification, the other three components untouched:
@@ -45,7 +45,7 @@ specification:
    `abstract`).
 3. `hybridRefinesSpecification` (`HybridRefinesSpecification/Simulation.lean`) — the hand-built
 simulation of the protocol-shaped specification against the ABA specification, read in the composed
-coordinates: the round specifications, the `n` round loops, the ABA network and the coin oracle,
+coordinates: the round specifications, the `n` round loops, the ABA network and the common coin,
 each still a component of the state the relation is defined on.
 
 Five carry `AFW.protocol`, along `AFW.protocol ⊑ AFW.composed ⊑
@@ -53,8 +53,8 @@ AFW.composedOverBroadcastSpecification ⊑ AFW.composedOverGatherSpecifications 
 `AFW.protocolSimulation` (`AFW/Simulation.lean`) is the first, the protocol as it
 runs into its composed system along the Dirac lift of `AFW.ProtocolRelation`. The next three are
 `AFW.broadcastSubstitution`, `AFW.gatherSubstitution` and `AFW.roundSpecificationSubstitution`
-(`AFW/Substitution.lean`), family substitutions replacing one tier of the round
-by the tier above it: Bracha's broadcast by the broadcast specification, the gather instances by
+(`AFW/Substitution.lean`), family substitutions replacing one part of the round
+by the one above it: Bracha's broadcast by the broadcast specification, the gather instances by
 the gather specifications, the round over the gather specifications by the graded-agreement
 specification. The third of them lands on `hybrid P` itself, so the fifth is
 `hybridRefinesSpecification` again.
@@ -110,7 +110,7 @@ names. -/
 
 /-- **Safety of the protocol**: every positive-probability trace of
 every achievable trace distribution of the `n` programs beside the network
-adversary and the coin oracle satisfies Validity and Agreement. The corruption
+adversary and the common coin satisfies Validity and Agreement. The corruption
 budget is a guard of the network's own `fail` transition, so every protocol
 execution is in budget by construction and nothing is assumed of the
 traces. -/

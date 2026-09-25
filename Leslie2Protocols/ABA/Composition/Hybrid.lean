@@ -15,18 +15,18 @@ import Leslie2.Results
 `hybrid` is the specification of the ABA protocol read at the protocol's own shape. Four
 components run in parallel over `Composition.ExtendedLabel n M`, where `M` is the type of the
 messages a graded-agreement round exchanges: the ℕ-indexed family of round specifications
-`gbcaSpecificationFamily`, the `n` round loops, the ABA network and the lifted coin oracle.
+`gbcaSpecificationFamily`, the `n` round loops, the ABA network and the lifted common coin.
 `hybrid P M` is stated for every such type. ABDY22's chain takes `GBCA.ByABDY.Message` for `M`
 (`ABA/ABDY/Substitution.lean`); the gather-based chain takes `Empty`, so the round multicast and
-the round delivery name no label there (`ABA/AFW/Substitution.lean`). The rendezvous alphabet
-is hidden, the result is read back over `Label n`, and the
+the round delivery name no label there (`ABA/AFW/Substitution.lean`). The synchronisation labels
+are hidden, the result is read back over `Label n`, and the
 sub-protocol API is hidden. The last three components and the alphabet are
 `ABA/Composition/Components.lean`.
 
 The round-`r` member of `gbcaSpecificationFamily` is that round's graded-agreement specification
 read over the protocol extended alphabet along `GBCA.specificationLabelMap`
-(`GBCA/SpecificationOverRoundAlphabet.lean`). A round-tagged label — including a Byzantine
-handshake transition of that round — moves its round alone, `τ` moves one round, `fail` is the
+(`GBCA/SpecificationOverRoundAlphabet.lean`). A round-tagged label — including a Byzantine call
+or return transition of that round — moves its round alone, `τ` moves one round, `fail` is the
 broadcast that keeps every round's copy of the corrupted set together, and every other label
 idles.
 
@@ -37,10 +37,10 @@ transitions of its components (`gbcaSpecificationFamily_owned`, `gbcaSpecificati
 `gbcaSpecificationFamily_tau`, `gbcaSpecificationFamily_fail`, `hybridExtended_visible_step`,
 `hybridExtended_tau_specification`, `hybrid_synchronisation`, `hybrid_hidden`, `hybrid_visible`).
 The
-coin oracle's own transitions over the round alphabet are `wccFamily_owned` and `wccFamily_fail`.
+common coin's own transitions over the round alphabet are `wccFamily_owned` and `wccFamily_fail`.
 The account also runs in the inverse direction, from a composite transition back into the
 transitions its four components contributed. A labelled transition reaches `hybrid` along one of
-three routes through the two hiding frames: a rendezvous label and a sub-protocol API label are
+three routes through the two hidings: a synchronisation label and a sub-protocol API label are
 both hidden to `τ`, and every remaining label survives both hidings.
 
 `hybrid` is where the two chains of `ABA/Results.lean` meet.
@@ -68,7 +68,7 @@ other three components are the same in both systems. -/
 
 /-- **The specification family of the protocol**: the ℕ-indexed family of round specifications, read
 over the protocol extended alphabet along `GBCA.specificationLabelMap`. A round-tagged label —
-including a Byzantine handshake transition of that round — moves its round alone, `τ` moves one
+including a Byzantine call or return transition of that round — moves its round alone, `τ` moves one
 round, and `fail` is the broadcast that keeps every round's copy of the corrupted set together. -/
 noncomputable def gbcaSpecificationFamily (P : Parameters) (M : Type) [DecidableEq M] :
     System (ℕ → GBCA.SpecState P.n) (ExtendedLabel P.n M) :=
@@ -85,7 +85,7 @@ theorem gbcaSpecificationFamily_isLTS (P : Parameters) (M : Type) [DecidableEq M
   System.family_isLTS (GBCA.specificationOverRoundAlphabet_isLTS P M) _ _ _
 
 /-- The state of the protocol-shaped specification: the round
-specifications beside the round loops, the ABA network and the coin oracle. -/
+specifications beside the round loops, the ABA network and the common coin. -/
 abbrev HybridState (P : Parameters) : Type :=
   (ℕ → GBCA.SpecState P.n) ×
     ((∀ _ : Fin P.n, RoundLoopVariables P.n) × (ABANetworkState P.n × (ℕ → WCC.SpecState P.n)))
@@ -99,7 +99,7 @@ noncomputable def hybridExtended (P : Parameters) (M : Type) [DecidableEq M] :
     ((System.synchronisedProduct (roundLoopProgram P M)).parallel ((ABANetwork P M).parallel
       (coinOverRoundAlphabet P M)))
 
-/-- **The protocol-shaped specification**: the rendezvous alphabet hidden,
+/-- **The protocol-shaped specification**: the synchronisation labels hidden,
 the result read back over `Label n`, the sub-protocol API hidden. The pipeline is that of
 `ABDY.composed` (`ABA/ABDY/Composition.lean`), component for component. -/
 noncomputable def hybrid (P : Parameters) (M : Type) [DecidableEq M] :
@@ -225,12 +225,12 @@ theorem gbcaSpecificationFamily_tau_cases (P : Parameters) {G : ℕ → GBCA.Spe
   · exact absurd rfl habs
   · exact absurd rfl habs
 
-/-! ### The coin oracle's transitions
+/-! ### The common coin's transitions
 
-The oracle is a family over the same shape: a round-tagged label moves its
+The coin is a family over the same shape: a round-tagged label moves its
 round, `fail` is broadcast, and everything else leaves it put. -/
 
-/-- The coin oracle's family idles on a label outside its own API. -/
+/-- The common coin's family idles on a label outside its own API. -/
 theorem wccFamily_idle_cases (P : Parameters) {o : ℕ → WCC.SpecState P.n} {l : Label P.n}
     {ω : PMF (ℕ → WCC.SpecState P.n)} (hl : l ≠ Label.tau) (hr : Label.wccRound l = none)
     (hf : ¬ Label.isFail l) (h : (WCC.specFamily P).step o l ω) : ω = PMF.pure o := by
@@ -241,7 +241,7 @@ theorem wccFamily_idle_cases (P : Parameters) {o : ℕ → WCC.SpecState P.n} {l
   · exact absurd hglob hf
   · rfl
 
-/-- A label the coin oracle's family owns is answered by its round alone. -/
+/-- A label the common coin's family owns moves its round alone. -/
 theorem wccFamily_owned_cases (P : Parameters) {o : ℕ → WCC.SpecState P.n} {l : Label P.n}
     {r : ℕ} {ω : PMF (ℕ → WCC.SpecState P.n)} (hl : l ≠ Label.tau)
     (hr : Label.wccRound l = some r) (h : (WCC.specFamily P).step o l ω) :
@@ -254,7 +254,7 @@ theorem wccFamily_owned_cases (P : Parameters) {o : ℕ → WCC.SpecState P.n} {
   · rw [hr] at hr''; exact absurd hr'' (by simp)
   · rw [hr] at hr''; exact absurd hr'' (by simp)
 
-/-- A round of the coin oracle answers the label it owns, every other round
+/-- A round of the common coin moves on the label it owns, every other round
 unchanged. -/
 theorem wccFamily_owned (P : Parameters) (o : ℕ → WCC.SpecState P.n) {l : Label P.n}
     {r : ℕ} {x : WCC.SpecState P.n} (hr : Label.wccRound l = some r)
@@ -263,13 +263,13 @@ theorem wccFamily_owned (P : Parameters) (o : ℕ → WCC.SpecState P.n) {l : La
   rw [WCC.specFamily, System.family_step_iff]
   exact Or.inr (Or.inl ⟨r, hr, PMF.pure x, h, by rw [PMF.pure_map]⟩)
 
-/-- Corruption is broadcast to every round of the coin oracle's family. -/
+/-- Corruption is broadcast to every round of the common coin's family. -/
 theorem wccFamily_fail (P : Parameters) (o : ℕ → WCC.SpecState P.n) (k : Fin P.n) :
     (WCC.specFamily P).step o (.fail k) (PMF.pure fun r => (o r).corrupt P k) := by
   rw [WCC.specFamily, System.family_step_iff]
   exact Or.inr (Or.inr (Or.inl ⟨by simp, rfl, trivial, rfl⟩))
 
-/-- A corruption broadcast is answered by every round of the coin oracle's
+/-- A corruption broadcast moves every round of the common coin's
 family. -/
 theorem wccFamily_fail_cases (P : Parameters) {o : ℕ → WCC.SpecState P.n} (k : Fin P.n)
     {ω : PMF (ℕ → WCC.SpecState P.n)} (h : (WCC.specFamily P).step o (.fail k) ω) :
@@ -283,8 +283,8 @@ theorem wccFamily_fail_cases (P : Parameters) {o : ℕ → WCC.SpecState P.n} (k
 
 /-! ### Reading a protocol-shaped transition into its four components -/
 
-/-- Build a joint transition of the four components on a visible label, the
-oracle's successor left arbitrary. -/
+/-- Build a synchronised transition of the four components on a visible label, the
+coin's successor left arbitrary. -/
 theorem hybridExtended_visible_step (P : Parameters) {G G' : ℕ → GBCA.SpecState P.n}
     {C C' : ∀ _ : Fin P.n, RoundLoopVariables P.n} {A A' : ABANetworkState P.n}
     {o : ℕ → WCC.SpecState P.n} {ω : PMF (ℕ → WCC.SpecState P.n)} {L : ExtendedLabel P.n M}
@@ -304,7 +304,7 @@ theorem hybridExtended_visible_step (P : Parameters) {G G' : ℕ → GBCA.SpecSt
   exact Or.inl ⟨hL, PMF.pure A', ω, hA, hW, rfl⟩
 
 /-- A visible transition of the four components: all of them move together, and
-only the oracle's successor can fail to be a Dirac. -/
+only the coin's successor can fail to be a Dirac. -/
 theorem hybridExtended_visible_cases (P : Parameters) {G : ℕ → GBCA.SpecState P.n}
     {C : ∀ _ : Fin P.n, RoundLoopVariables P.n} {A : ABANetworkState P.n}
     {o : ℕ → WCC.SpecState P.n} {L : ExtendedLabel P.n M} (hL : L ≠ Silent.τ)
@@ -343,7 +343,7 @@ theorem hybridExtended_tau_specification (P : Parameters) {G G' : ℕ → GBCA.S
   rw [prodPMF_pure_pure]
 
 /-- A silent transition of the four components: no round loop has a `τ` transition, and neither
-has the coin oracle, so it is the specification family's binding exclusion or the ABA network's
+has the common coin, so it is the specification family's binding exclusion or the ABA network's
 own injection. -/
 theorem hybridExtended_tau_cases (P : Parameters) {G : ℕ → GBCA.SpecState P.n}
     {C : ∀ _ : Fin P.n, RoundLoopVariables P.n} {A : ABANetworkState P.n} {o : ℕ → WCC.SpecState
@@ -371,16 +371,16 @@ theorem hybridExtended_tau_cases (P : Parameters) {G : ℕ → GBCA.SpecState P.
       · exact (WCC.specFamily_tau_cases P
           ((System.mapIdle_step_some (coinLabelMap_inl Label.tau) ω).mp hW)).elim
 
-/-! ### The two hiding frames -/
+/-! ### The two hidings -/
 
-/-- **The protocol-shaped group**: the rendezvous alphabet hidden, the result
+/-- **The protocol-shaped group**: the synchronisation labels hidden, the result
 read back over `Label n`. Scaffolding for the account below, transition by
 transition; nothing outside this file names it. -/
 private noncomputable def hybridHidden (P : Parameters) (M : Type) [DecidableEq M] :
     System (HybridState P) (Label P.n) :=
   ((hybridExtended P M).abstract (networkEventLabels P.n)).relabel
 
-/-- The group's step relation, unfolded to the hidden rendezvous case and the
+/-- The group's step relation, unfolded to the hidden-synchronisation case and the
 shared-label case. -/
 theorem hybridHidden_step_iff (P : Parameters) (q : HybridState P) (l : Label P.n)
     (μ : PMF (HybridState P)) :
@@ -404,14 +404,14 @@ theorem hybrid_step_iff (P : Parameters) (q : HybridState P) (l : Label P.n)
       (l ∉ Label.hiddenAPI P.n ∧ (hybridHidden P M).step q l μ) :=
   System.abstract_step _ _ _ _ _
 
-/-! ### Building a transition through the two hiding frames
+/-! ### Building a transition through the two hidings
 
 A transition of the four components reaches the protocol-shaped specification
-along one of three routes, according to its label: a rendezvous label and a
+along one of three routes, according to its label: a synchronisation label and a
 sub-protocol API label are both hidden to `τ`, and every remaining label
 survives both hidings. -/
 
-/-- A rendezvous transition is silent: the rendezvous alphabet is hidden. -/
+/-- A synchronised transition is silent: the synchronisation labels are hidden. -/
 theorem hybrid_synchronisation (P : Parameters) {q : HybridState P} {e : NetworkEvent P.n M}
     {μ : PMF (HybridState P)} (h : (hybridExtended P M).step q (Sum.inr e) μ) :
     (hybrid P M).step q Label.tau μ := by

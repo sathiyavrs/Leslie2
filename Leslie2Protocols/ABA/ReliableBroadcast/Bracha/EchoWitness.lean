@@ -7,16 +7,16 @@ Authors: Sathiya / Claude
 import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.MessagesAndVariables
 
 /-!
-# The echo certificate
+# The echo witness
 
 `BRB.EchoWitness P s m` holds when some process in the state `s` has received `⟨ECHO, m⟩` from
-an echo quorum, more than `(n + f) / 2` senders. It counts receipts and not correctness, so it is
-blind to the corrupted set, and receipts only accumulate, so it survives every transition of the
-instance: the simp lemmas here carry it across a record write, a multicast and a corruption, and
-`EchoWitness.receiveMessage` carries it across a delivery.
+an echo quorum, more than `(n + f) / 2` senders. It counts received messages and not correctness,
+so it is blind to the corrupted set, and received messages only accumulate, so it survives every
+transition of the instance: the simp lemmas here carry it across a write to a program's variables,
+a multicast and a corruption, and `EchoWitness.receiveMessage` carries it across a delivery.
 
 The refinement of the instance into the broadcast specification
-(`ABA/ReliableBroadcast/Bracha/RefinesSpecification.lean`) uses the certificate for the
+(`ABA/ReliableBroadcast/Bracha/RefinesSpecification.lean`) uses the witness for the
 specification's committed value `val`, the one piece of abstract information the specification
 tracks and the implementation does not.
 -/
@@ -27,10 +27,10 @@ namespace BRB
 
 variable {M : Type} [DecidableEq M] {P : Parameters} {ldr : Fin P.n}
 
-/-! ### The certificate -/
+/-! ### The witness -/
 
-/-- `m` is echo-certified: some receiver holds an `ECHO m` receipt quorum.
-F-blind and monotone — receipts only accumulate. -/
+/-- `m` is echo-witnessed: some receiver holds a quorum of received `ECHO m` messages.
+F-blind and monotone — received messages only accumulate. -/
 def EchoWitness (P : Parameters) (s : BrachaState P.n M) (m : M) : Prop :=
   ∃ i, P.receivedEchoQuorum ≤ s.receivedCount i (.echo m)
 
@@ -48,7 +48,7 @@ def EchoWitness (P : Parameters) (s : BrachaState P.n M) (m : M) : Prop :=
     EchoWitness P (s.corrupt P id) m ↔ EchoWitness P s m := by
   simp [EchoWitness]
 
-/-- Deliveries preserve the certificate: counts only grow. -/
+/-- Deliveries preserve the witness: counts only grow. -/
 theorem EchoWitness.receiveMessage {s : BrachaState P.n M} {m : M} (h : EchoWitness P s m)
     (i j : Fin P.n) (x : Message M) : EchoWitness P (s.receiveMessage i j x) m := by
   obtain ⟨i', hi'⟩ := h

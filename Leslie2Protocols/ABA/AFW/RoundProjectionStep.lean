@@ -21,20 +21,20 @@ import Leslie2Protocols.ABA.AFW.RoundProjectionStep.SecondGatherReturn
 import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ProjectionAfterOneWrite
 
 /-!
-# The view of the composed round after one transition of the implementation
+# The projection of the composed round after one transition of the implementation
 
 `AFW.roundProjection` (`ABA/AFW/RoundProjection.lean`) computes the round-`r` state
 of the composed system from a state of `AFW.protocol P`. The files of
 `AFW/RoundProjectionStep/` say where that state stands after one transition of the
 implementation. `RoundProjectionStep/ProjectionAfterOneWrite.lean` is the write every transition
-performs, read through the view. Each of the fourteen files beside it then states, for its class of
-transitions, the view after the transition as the view before it with the composed round's own
-effect applied, written through the updaters `GBCA.ByAFW.setPrograms`, `GBCA.ByAFW.setBound`,
-`GBCA.ByAFW.setFirstGather`, `GBCA.ByAFW.setSecondGather`, `Gather.setGatherProgramsAndNetwork`,
-`Gather.setInputBroadcasts`, `Gather.setBindBroadcasts` and `Gather.setCore` exactly as the
-composed transitions write them. Each transition is matched by one event of the composed round.
-`RoundProjectionStep/ProtocolRelationConjuncts.lean` holds the conjunct of
-`AFW.ProtocolRelation` that no frame lemma supplies.
+performs, read through the projection. Each of the fourteen files beside it then states, for its
+class of transitions, the projection after the transition as the projection before it with the
+composed round's own effect applied, written through the updaters `GBCA.ByAFW.setPrograms`,
+`GBCA.ByAFW.setBound`, `GBCA.ByAFW.setFirstGather`, `GBCA.ByAFW.setSecondGather`,
+`Gather.setGatherProgramsAndNetwork`, `Gather.setInputBroadcasts`, `Gather.setBindBroadcasts` and
+`Gather.setCore` exactly as the composed transitions write them. Each transition is matched by one
+event of the composed round. `RoundProjectionStep/ProtocolRelationConjuncts.lean` holds the
+conjunct of `AFW.ProtocolRelation` that no projection lemma supplies.
 `ABA/AFW/SimulationOfEachTransition.lean` matches each transition of the implementation from
 these.
 -/

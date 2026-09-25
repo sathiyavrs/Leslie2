@@ -20,8 +20,8 @@ label. `roundPrograms_idle_cases` and `roundPrograms_label_cases` read the round
 programs beside the round's network: on a family label with no image at a program they remain
 unchanged, and on a label with an image every program takes its transition at that image and the
 round's network takes its. The `_pure` and `_step` lemmas build such a transition from the
-factors' transitions, and `PLTS.dirac_steps_update` identifies the program function a joint step
-delivers pointwise with the old one updated at the acting process.
+factors' transitions, and `PLTS.dirac_steps_update` identifies the program function a synchronised
+step delivers pointwise with the old one updated at the acting process.
 
 `roundOverGathersExtended_synchronised_cases` reads a visible transition of the three factors as
 their transitions and a Dirac product. `roundOverGathersExtended_tau_cases` reads a silent one
@@ -93,7 +93,7 @@ theorem roundLabel_ne_tau_of_none (hlp : programLabelMap P.n L = none) :
   exact Option.some_ne_none _ hlp
 
 /-- A synchronised transition of the program group on a visible label: every
-program steps, and the joint distribution is Dirac. -/
+program steps, and the product distribution is Dirac. -/
 theorem programsProduct_cases (hL : L ≠ (Silent.τ : RoundLabel P.n))
     {μ : PMF (∀ _ : Fin P.n, ProcessVariables P.n)}
     (h : (System.synchronisedProduct (fun j => (gbcaProgram P r j).mapIdle (programLabelMap
@@ -117,8 +117,8 @@ theorem roundPrograms_idle_cases (hlp : programLabelMap P.n L = none)
   · exact absurd hτ hL
   · exact absurd hτ hL
 
-/-- **The joint transition of the round's programs.** Every program takes its transition at the
-label's image and the round's network takes its. -/
+/-- **The synchronised transition of the round's programs.** Every program takes its transition at
+the label's image and the round's network takes its. -/
 theorem roundPrograms_label_cases {lp : ProgramLabel P.n}
     (hlp : programLabelMap P.n L = some lp) (hlpτ : lp ≠ ProgramLabel.tau)
     {μ : PMF ((∀ _ : Fin P.n, ProcessVariables P.n) × Option Bool)}
@@ -149,7 +149,7 @@ theorem roundPrograms_idle_pure (hlp : programLabelMap P.n L = none)
   rw [Prod.mk.injEq] at he
   exact he
 
-/-- The joint transition of the round's programs, read off a Dirac successor. -/
+/-- The synchronised transition of the round's programs, read off a Dirac successor. -/
 theorem roundPrograms_label_pure {lp : ProgramLabel P.n} (hlp : programLabelMap P.n L = some lp)
     (hlpτ : lp ≠ ProgramLabel.tau) (h : (roundPrograms P r).step (u, v) L (PMF.pure (x, v'))) :
     (∀ i, ProgramStep P r i (u i) lp (PMF.pure (x i))) ∧ NetworkStep P r v lp (PMF.pure v') := by
@@ -168,7 +168,7 @@ theorem roundPrograms_idle_step (hlp : programLabelMap P.n L = none) :
       (fun i => System.mapIdle_unchanged hlp),
     System.mapIdle_unchanged hlp, (prodPMF_pure_pure _ _).symm⟩
 
-/-- Build the joint transition of the round's programs from the programs' transitions and the
+/-- Build the synchronised transition of the round's programs from the programs' transitions and the
 transition of the round's network. -/
 theorem roundPrograms_label_step {lp : ProgramLabel P.n} (hlp : programLabelMap P.n L = some lp)
     (hlpτ : lp ≠ ProgramLabel.tau) (hproc : ∀ i, ProgramStep P r i (u i) lp (PMF.pure (x i)))
@@ -184,7 +184,8 @@ end RoundPrograms
 
 /-! ### The round's programs beside the two gather instances
 
-A visible label moves all three factors, and the joint distribution is their Dirac product. A silent
+A visible label moves all three factors, and the product distribution is their Dirac product. A
+silent
 label moves exactly one of the two gather instances: the round's programs have no silent
 transition. -/
 
@@ -195,8 +196,8 @@ variable {P : Parameters} {r : ℕ} {G₁ G₂ : Type}
   {u x : ∀ _ : Fin P.n, ProcessVariables P.n} {v v' : Option Bool} {c c' : G₁} {d d' : G₂}
   {L : RoundLabel P.n}
 
-/-- **The joint inversion.** A visible transition of the round's programs beside the two gather
-instances: every factor steps on the label, and the joint distribution is their Dirac product. -/
+/-- **The synchronised cases.** A visible transition of the round's programs beside the two gather
+instances: every factor steps on the label, and the product distribution is their Dirac product. -/
 theorem roundOverGathersExtended_synchronised_cases (h1 : firstGather.IsLTS) (h2 :
   secondGather.IsLTS)
     (hL : L ≠ (Silent.τ : RoundLabel P.n)) {μ : PMF (RoundStateOverGathers P.n G₁ G₂)}
@@ -219,7 +220,7 @@ theorem roundOverGathersExtended_synchronised_cases (h1 : firstGather.IsLTS) (h2
   · exact absurd hτ hL
   · exact absurd hτ hL
 
-/-- **The silent inversion.** A silent transition of the round's programs beside the two gather
+/-- **The silent cases.** A silent transition of the round's programs beside the two gather
 instances is a silent step of one gather instance. -/
 theorem roundOverGathersExtended_tau_cases (h1 : firstGather.IsLTS) (h2 : secondGather.IsLTS)
     {μ : PMF (RoundStateOverGathers P.n G₁ G₂)}

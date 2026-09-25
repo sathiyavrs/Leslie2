@@ -12,10 +12,10 @@ files, in import order:
 | `TraceDistributionSupport.lean` | 569 | From trace-distribution support to genuine executions: the safety transfer, the invariant inductions, and the relabelling of a run. |
 | `LoopsAndInstanceFamilies.lean` | 218 | Idle padding, partial label pullbacks, and ℕ-indexed instance families with a broadcast disjunct. |
 | `FamilySimulation.lean` | 375 | Forward simulation is a congruence for `System.family`: per-instance refinement lifts to the family. |
-| `SynchronisedProduct.lean` | 184 | Full-synchronisation product of a finite family — a visible label moves every component, τ moves one. |
+| `SynchronisedProduct.lean` | 185 | Full-synchronisation product of a finite family — a visible label moves every component, τ moves one. |
 | `SynchronisedProductAlongPullbacks.lean` | 161 | A family of components each read along its own pullback, under the synchronised product: the label with no image, the visible step, the silent step, and the family of Dirac steps at an update of one component. |
 | `Relabel.lean` | 472 | Extended alphabets and restriction along the left summand, with the precongruence for it. |
 | `WeakTransitionsFromChains.lean` | 196 | Weak runs from step chains: prepending a silent step, and the k-fold run — a chain of silent steps closed by one external step. |
 | `FinerAlphabetCongruence.lean` | 194 | Forward simulation is a congruence for reading both systems over a finer alphabet along a partial label map. |
 | `Congruence.lean` | 850 | Forward simulation is a congruence for the operators a composition is built from — binary parallel in either position, the full-synchronisation product of a finite family, hiding and restriction — with the weak-run splitting and mapping lemmas the four proofs share. |
-| `AuxiliaryVariableRemoval.lean` | 380 | Erasure of a state component no transition's firing depends on: the projection and lift clauses, the equality of achievable trace distributions they give, and the congruences that carry an erasure through composition, hiding and restriction. |
+| `AuxiliaryVariableRemoval.lean` | 380 | Removal of a state component no transition's firing depends on: the projection and lift clauses, the equality of achievable trace distributions they give, and the congruences that carry a removal through composition, hiding and restriction. |

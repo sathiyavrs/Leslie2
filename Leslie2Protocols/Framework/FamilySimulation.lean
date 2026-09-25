@@ -19,7 +19,7 @@ abstract family along the pointwise relation `fun s t => ∀ r, R r (s r) (t r)`
 
 The proof maps the abstract instance's weak-transition witness execution
 into the family along `AlterSeq.map (Function.update t r)` — the non-moving
-coordinates just carry the ambient joint state along:
+coordinates just carry the ambient state of the family along:
 
 * `System.weakLStep_of_step` — a single Dirac step is a (one-transition) weak
   run; `weakLStep_tauThen` is the two-step run, a silent step followed by an

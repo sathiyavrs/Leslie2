@@ -1,9 +1,9 @@
-\begin{definition}[State erasure]
-  \label{def:erasure-sim}
+\begin{definition}[Auxiliary-variable removal]
+  \label{def:auxiliary-variable-removal}
   \lean{PLTS.AuxiliaryVariableRemoval}\lean{PLTS.System.LabelSaturated}\lean{PLTS.SeparatesSilent}\lean{PLTS.AuxiliaryVariableRemoval.achievableTraceDists_eq}\leanok
   \uses{def:forwardsim, def:achievable, def:strongfunctional, thm:forward-sound}
   Let $sys_A$ and $sys_0$ be systems over one alphabet, let $\pi : State_A \to State_0$ be a map on states and let $\varphi : Label \to Label$ be a map on labels.
-  A \emph{state erasure} of $sys_A$ onto $sys_0$ along $\pi$ and $\varphi$ is the conjunction of three conditions.
+  An \emph{auxiliary-variable removal} of $sys_A$ onto $sys_0$ along $\pi$ and $\varphi$ is the conjunction of three conditions.
   The first is that $\pi$ carries $sys_A.init$ to $sys_0.init$.
   The second is that $\varphi$ separates the silent label: $\varphi\,l = \varphi\,\tau$ holds only at $l = \tau$, so no external label carries the $\varphi$-image of $\tau$.
   The third is a pair of clauses on transitions: every transition $s \xrightarrow{l} \mu$ of $sys_A$ is a transition $\pi\,s \xrightarrow{l} \mu.\mathrm{map}\,\pi$ of $sys_0$ on the same label, and every transition $\pi\,s \xrightarrow{l} \mu$ of $sys_0$ is met by a transition $s \xrightarrow{l'} \nu$ of $sys_A$ with $\varphi\,l' = \varphi\,l$ and $\mu = \nu.\mathrm{map}\,\pi$.
@@ -14,10 +14,10 @@
   The projection is exact on labels for that reason, and only the matching transition is taken up to $\varphi$.
   The projection clause is a functional strong matching in the sense of Lemma~\ref{def:strongfunctional}, so Theorem~\ref{thm:forward-sound} gives $\operatorname{ATD}(sys_A) \subseteq \operatorname{ATD}(sys_0)$.
   At $\varphi = \mathrm{id}$ the second clause is exact on labels as well, hence the converse matching of the same lemma, and the two sets coincide.
-  A general $\varphi$ reaches that equality through hiding: once the set of hidden labels contains every label $\varphi$ identifies with a different label, the erasure of the two abstractions stands at $\varphi = \mathrm{id}$.
+  A general $\varphi$ reaches that equality through hiding: once the set of hidden labels contains every label $\varphi$ identifies with a different label, the removal of the two abstractions stands at $\varphi = \mathrm{id}$.
 
-  An erasure is carried through a composition by three congruences: parallel composition against a component saturated along $\varphi$ in either position, abstraction of a set of labels closed under $\varphi$, and restriction along the left embedding of an extended alphabet (Definition~\ref{def:relabel}).
-  A system is \emph{saturated along $\varphi$} when labels with the same $\varphi$-image have the same outgoing transitions, which is what lets a component accept whichever of those labels the erased system announces.
+  A removal is carried through a composition by three congruences: parallel composition against a component saturated along $\varphi$ in either position, abstraction of a set of labels closed under $\varphi$, and restriction along the left embedding of an extended alphabet (Definition~\ref{def:relabel}).
+  A system is \emph{saturated along $\varphi$} when labels with the same $\varphi$-image have the same outgoing transitions, which is what lets a component accept whichever of those labels the system with the variable removed announces.
   Saturation is preserved by parallel composition, by abstraction of a set of labels closed under $\varphi$, by the full-synchronisation product of a finite family, and by the partial label pullback.
   Full definition: \leandecl{PLTS.AuxiliaryVariableRemoval}; the equality of achievable trace distributions is \leandecl{PLTS.AuxiliaryVariableRemoval.achievableTraceDists_eq}, saturation is \leandecl{PLTS.System.LabelSaturated} and the separation condition is \leandecl{PLTS.SeparatesSilent}.
 \end{definition}

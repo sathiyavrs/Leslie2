@@ -17,10 +17,10 @@ lemmas here unfold that pipeline in both directions.
 `instanceOverBroadcasts_step_iff` splits a transition of the instance into a hidden gather
 event and an interface label. Over the instance-internal alphabet, a visible label moves all
 four factors — the gather programs, the gather network, the input instances and the bind
-instances — and the joint distribution is their Dirac product. A silent label moves exactly
+instances — and the product distribution is their Dirac product. A silent label moves exactly
 one of the gather network, one input instance or one bind instance.
 `instanceOverBroadcastsExtended_synchronised_cases` and
-`instanceOverBroadcastsExtended_tau_cases` read a joint step that way, and the `_step`
+`instanceOverBroadcastsExtended_tau_cases` read a synchronised step that way, and the `_step`
 lemmas build one from the factors' transitions. The pullbacks `inputBroadcastLabelMap` and
 `bindBroadcastLabelMap` are computed label by label.
 
@@ -28,7 +28,8 @@ lemmas build one from the factors' transitions. The pullbacks `inputBroadcastLab
 as its guards together with the Dirac it produces, and the idle transition of a non-participant as
 the identity. `networkStep_*` does the same for the gather network.
 
-A joint step delivers a program function given pointwise, by its value at the acting process and its
+A synchronised step delivers a program function given pointwise, by its value at the acting process
+and its
 agreement with the old function elsewhere. `Function.eq_update_iff` identifies that function with
 the old one updated at the acting process, and the `stateOverBroadcasts_*` lemmas identify the state
 a transition writes with `setGatherProgramsAndNetwork`, `setCore`, `setInputBroadcasts`,
@@ -75,7 +76,7 @@ variable [DecidableEq X] {P : Parameters}
     LocalState P.n (ProcessVariables P.n X) (Message P.n X)} {l : GatherLabel P.n X}
 
 /-- A synchronised transition of the gather programs on a visible label: every
-program steps, and the joint distribution is Dirac. -/
+program steps, and the product distribution is Dirac. -/
 theorem gatherProgramProduct_cases
     {μ : PMF (∀ _ : Fin P.n, LocalState P.n (ProcessVariables P.n X) (Message P.n X))}
     (h : (System.synchronisedProduct (gatherProgram P (X := X))).step u l μ) :
@@ -111,10 +112,10 @@ theorem gatherProgramProduct_no_tau
   · exact programStep_no_tau hstep
 
 end GatherPrograms
-/-! ### The two tiers in parallel
+/-! ### The gather and the broadcast instances in parallel
 
 A visible label moves all four factors — the programs, the gather network, the
-input instances and the bind instances — and the joint distribution is their
+input instances and the bind instances — and the product distribution is their
 Dirac product. A silent label moves exactly one of the gather network, one
 input instance or one bind instance. -/
 
@@ -126,8 +127,8 @@ variable [DecidableEq X] {P : Parameters} {B B' : Type}
   {w w' : NetworkState P.n X} {a a' : ∀ _ : Fin P.n, B} {b b' : ∀ _ : Fin P.n, B'}
   {L : GatherLabel P.n X}
 
-/-- **The joint inversion.** A visible transition of the two tiers: every
-factor steps on the label, and the joint distribution is their Dirac
+/-- **The synchronised cases.** A visible transition of the gather beside the broadcast instances:
+every factor steps on the label, and the product distribution is their Dirac
 product. -/
 theorem instanceOverBroadcastsExtended_synchronised_cases (hIn : ∀ k, (BIn k).IsLTS)
     (hBind : ∀ q, (BBind q).IsLTS) {μ : PMF (StateOverBroadcasts P.n X B B')}
@@ -160,7 +161,7 @@ theorem instanceOverBroadcastsExtended_synchronised_cases (hIn : ∀ k, (BIn k).
   · exact absurd hτ hL
   · exact absurd hτ hL
 
-/-- **The silent inversion.** A silent transition of the two tiers is an
+/-- **The silent cases.** A silent transition of the gather beside the broadcast instances is an
 injection of the gather network, a silent step of one input instance, or a
 silent step of one bind instance: no gather program has a `τ` transition. -/
 theorem instanceOverBroadcastsExtended_tau_cases (hIn : ∀ k, (BIn k).IsLTS)
@@ -197,8 +198,8 @@ theorem instanceOverBroadcastsExtended_tau_cases (hIn : ∀ k, (BIn k).IsLTS)
       exact Or.inr
         (Or.inr ⟨q, d, by rw [prodPMF_pure_pure, prodPMF_pure_pure], hstep⟩)
 
-/-- Build a visible transition of the two tiers from the four factors' Dirac
-steps. -/
+/-- Build a visible transition of the gather programs and network beside the broadcast
+instances from the four factors' Dirac steps. -/
 theorem instanceOverBroadcastsExtended_label_step (hL : L ≠ (Silent.τ : GatherLabel P.n X))
     (hproc : ∀ i, ProgramStep P i (u i) L (PMF.pure (x i))) (hnet : NetworkStep P w L (PMF.pure w'))
     (hin : ∀ k, ((BIn k).mapIdle (inputBroadcastLabelMap P.n X k)).step (a k) L (PMF.pure (a' k)))
@@ -217,8 +218,8 @@ theorem instanceOverBroadcastsExtended_label_step (hL : L ≠ (Silent.τ : Gathe
     exact Or.inl ⟨hL, PMF.pure a', PMF.pure b', System.synchronisedProductMapIdle_pure hL hin,
       System.synchronisedProductMapIdle_pure hL hbind, (prodPMF_pure_pure _ _).symm⟩
 
-/-- Build a silent transition of the two tiers from an injection of the gather
-network. -/
+/-- Build a silent transition of the gather programs and network beside the broadcast
+instances from an injection of the gather network. -/
 theorem instanceOverBroadcastsExtended_tau_network
     (hn : NetworkStep P w (Silent.τ : GatherLabel P.n X) (PMF.pure w')) :
     (instanceOverBroadcastsExtended P X BIn BBind).step ((u, w), (a, b))
@@ -228,8 +229,8 @@ theorem instanceOverBroadcastsExtended_tau_network
   rw [gatherPrograms, System.parallel_step]
   exact Or.inr (Or.inr ⟨rfl, PMF.pure w', hn, (prodPMF_pure_pure _ _).symm⟩)
 
-/-- Build a silent transition of the two tiers from a silent step of one input
-instance. -/
+/-- Build a silent transition of the gather programs and network beside the broadcast
+instances from a silent step of one input instance. -/
 theorem instanceOverBroadcastsExtended_tau_input {k : Fin P.n} {c : B}
     (h : (BIn k).step (a k) (Silent.τ : BRB.InstanceLabel P.n X) (PMF.pure c)) :
     (instanceOverBroadcastsExtended P X BIn BBind).step ((u, w), (a, b))
@@ -242,8 +243,8 @@ theorem instanceOverBroadcastsExtended_tau_input {k : Fin P.n} {c : B}
     System.synchronisedProductMapIdle_tau_step (inputBroadcastLabelMap_tau P.n X k) h,
       (prodPMF_pure_pure _ _).symm⟩)
 
-/-- Build a silent transition of the two tiers from a silent step of one bind
-instance. -/
+/-- Build a silent transition of the gather programs and network beside the broadcast
+instances from a silent step of one bind instance. -/
 theorem instanceOverBroadcastsExtended_tau_bind {q : Fin P.n} {d : B'}
     (h : (BBind q).step (b q) (Silent.τ : BRB.InstanceLabel P.n (AcceptedPairs P.n X)) (PMF.pure d))
     :
@@ -587,7 +588,7 @@ theorem networkStep_tau (h : NetworkStep P w (Sum.inl (Sum.inl .tau)) μ) :
 end NetworkStepCases
 /-! ### The write a transition makes on the composed state
 
-A joint step delivers a program function pointwise: its value at the acting
+A synchronised step delivers a program function pointwise: its value at the acting
 process, and its agreement with the old one elsewhere. `Function.eq_update_iff`
 reads that function as the old one updated at the acting process, and the
 lemmas here identify the state a transition writes with `setGatherProgramsAndNetwork` and
@@ -603,7 +604,7 @@ variable {P : Parameters} {B B' : Type}
   {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables P.n X) (Message P.n X)}
   {w : NetworkState P.n X} {a : ∀ _ : Fin P.n, B} {b : ∀ _ : Fin P.n, B'}
 
-/-- A record write at one program, with the network state untouched. -/
+/-- A write to the variables of one program, with the network state untouched. -/
 theorem stateOverBroadcasts_setProcessVariables {j : Fin P.n} {pr : ProcessVariables P.n X}
     (hj : x j = (u j).setProcessVariables pr) (hne : ∀ i, i ≠ j → x i = u i) :
     (((x, w), (a, b)) : StateOverBroadcasts P.n X B B') = setGatherProgramsAndNetwork ((u, w), (a,
@@ -657,7 +658,7 @@ variable [DecidableEq X] {P : Parameters} {B B' : Type}
   {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables P.n X) (Message P.n X)}
   {w : NetworkState P.n X} {a : ∀ _ : Fin P.n, B} {b : ∀ _ : Fin P.n, B'}
 
-/-- A record write at one program together with the network state recording the
+/-- A write to the variables of one program together with the network state recording the
 message that write multicasts. -/
 theorem stateOverBroadcasts_setProcessVariables_recordSent {j : Fin P.n} {pr : ProcessVariables P.n
   X}

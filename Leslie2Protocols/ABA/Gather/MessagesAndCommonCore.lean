@@ -10,12 +10,12 @@ import Leslie2Protocols.ABA.ReliableBroadcast.Specification
 /-!
 # The vocabulary of a gather instance
 
-The records a gather instance is written over and the core of its network
+The variables a gather instance is written over and the core of its network
 state.
 
 A gather instance's plain-multicast messages are the `ECHO` and `VOTE` payload
 sets (`Message`); the `BIND` payloads are sent by reliable broadcast and are not
-messages of the network. `BaseProcessVariables` is the local record of one process: its input,
+messages of the network. `BaseProcessVariables` is the base variables of one process: its input,
 the `ECHO` and the `VOTE` payload it has multicast, the `BIND` payload it has
 handed to its own bind broadcast, and its return flag.
 
@@ -39,7 +39,7 @@ inductive Message (n : ℕ) (X : Type) : Type
   | vote (A : AcceptedPairs n X)
   deriving DecidableEq
 
-/-- The local record of one process in one gather instance. The payload handed
+/-- The base variables of one process in one gather instance. The payload handed
 to the process's own bind broadcast is a field here; the payloads a bind
 broadcast has returned here are fields of `ProcessVariables` (`ABA/Gather/Components.lean`). -/
 structure BaseProcessVariables (n : ℕ) (X : Type) : Type where
@@ -56,7 +56,7 @@ structure BaseProcessVariables (n : ℕ) (X : Type) : Type where
   returned : Bool
   deriving DecidableEq
 
-/-- The initial local record. -/
+/-- The initial base variables. -/
 def BaseProcessVariables.initial (n : ℕ) (X : Type) : BaseProcessVariables n X where
   input := none
   sentEcho := none

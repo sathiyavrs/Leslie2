@@ -10,7 +10,7 @@ import Leslie2Protocols.ABA.AFW.RoundProjectionStep.FirstGatherReturn
 # The round's graded return
 
 `roundProjection_retG`: the projection of the composed round after the round returns the graded
-outcome on record to the round loop. The transition clears the outcome from the round record,
+outcome on record to the round loop. The transition clears the outcome from the round variables,
 which is what marks the round returned, and that is what the composed round's `retG` event writes.
 `afterRetG` names the state the return reaches.
 -/
@@ -30,18 +30,18 @@ variable {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} {w : NetworkState P.n} 
 
 /-! ### The round's graded return
 
-The transition clears the graded outcome from the round record. It sends nothing, and its ghost
+The transition clears the graded outcome from the round variables. It sends nothing, and its ghost
 write finds the second gather's core on record and leaves it there. -/
 
 /-- **The round after its graded return to `j`**: the program announces the
-grade and marks the record returned. -/
+grade and marks its variables returned. -/
 def afterRetG (P : Parameters) (s : GBCA.ByAFW.RoundStateOverBracha P.n) (j : Fin P.n) :
     GBCA.ByAFW.RoundStateOverBracha P.n :=
   GBCA.ByAFW.setPrograms s (Function.update (GBCA.ByAFW.programs s) j
     { GBCA.ByAFW.programs s j with output := none, returned := true })
 
 /-- **The graded return, read through the projection.** The round returns the graded outcome on
-record to the round loop, and the outcome leaves the round record. -/
+record to the round loop, and the outcome leaves the round variables. -/
 theorem roundProjection_retG (hu : (u j).2 = p) (r : ℕ) (out : GBCAOutput) (bnd : Bool)
     (c' : RoundLoopVariables P.n)
     (hr2 : ((p.roundVariables r).secondGather.processVariables).returned = true) :

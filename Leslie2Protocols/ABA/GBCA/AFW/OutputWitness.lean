@@ -7,13 +7,13 @@ Authors: Sathiya / Claude
 import Leslie2Protocols.ABA.GBCA.AFW.AlgorithmOverGatherSpecifications
 
 /-!
-# The certificates of the two-gather round
+# The witnesses of the two-gather round
 
 The counts the refinement of `ABA/GBCA/AFW/RefinesSpecification.lean` consumes, and the two
-certificates its invariant and its relation carry.
+witnesses its invariant and its relation carry.
 
 The counting lemmas are stated on a gather specification state and on the graded agreement
-specification's call record. Committed entries and call records only grow
+specification's `call` map. Committed entries and `call` maps only grow
 (`firstGatherSupport_mono`, `call_mono`); a call writes the caller's entry alone and leaves the
 committed entries, the core and the corrupted set (`call_val`, `call_unchanged`); and a committed
 entry of a correct process reads as call support on the specification
@@ -21,18 +21,18 @@ entry of a correct process reads as call support on the specification
 specification's quorum guard from the first gather's core: the core's `n − f` distinct processes
 each carry a committed entry, hence a call or a corruption.
 
-`OutputWitness P s out` is what a recorded graded outcome certifies. A `grade2 v` outcome
+`OutputWitness P s out` is what a recorded graded outcome witnesses. A `grade2 v` outcome
 carries `some v` on at least `|S| − f` entries of the second gather's core and `v` on at least
 `|S| − f` of the first gather's; a `grade1 v` outcome carries `v` on at least `|S| − f` entries of
 the first gather's core and `f + 1` committed-entry support for `!v`; a grade-0 outcome carries
 each bit on at most `f` entries of the second gather's core and `f + 1` support for each bit. The
 invariant of `ABA/GBCA/AFW/Invariant.lean` states it of every grade a program holds.
 
-`ExclusionWitness P s b` is the exclusion certificate: the first gather's core counts `b` below
+`ExclusionWitness P s b` is the exclusion witness: the first gather's core counts `b` below
 `|S| − f`, so no later candidate is `b`. The relation of `ABA/GBCA/AFW/SpecificationRelation.lean`
 states it of every bit the specification excludes.
 
-Both certificates read the two cores and the first gather's committed-entry support. The cores are
+Both witnesses read the two cores and the first gather's committed-entry support. The cores are
 written once and the support only grows, so each survives every later transition
 (`OutputWitness.mono`).
 -/
@@ -48,7 +48,7 @@ variable {P : Parameters}
 /-! ### The counting lemmas
 
 The counts the refinement consumes, stated on a gather specification state and
-on the graded agreement specification's call record. -/
+on the graded agreement specification's `call` map. -/
 
 /-- Committed entries only grow: an entry-wise extension preserves `firstGatherSupport`. -/
 theorem firstGatherSupport_mono {t t' : Gather.SpecState P.n Bool}
@@ -156,7 +156,7 @@ theorem call_unchanged {X : Type} [DecidableEq X] {c c' : Gather.SpecState P.n X
     subst hc'
     exact ⟨rfl, rfl, rfl⟩
 
-/-- The call record of a gather specification only grows. -/
+/-- The `call` map of a gather specification only grows. -/
 theorem call_mono {X : Type} [DecidableEq X] {c c' : Gather.SpecState P.n X}
     {id : Fin P.n} {x : X} (h : Gather.Step P c (.call id x) (PMF.pure c'))
     (k : Fin P.n) (v : X) (hv : c.call k = some v) : c'.call k = some v := by
@@ -178,7 +178,7 @@ theorem call_mono {X : Type} [DecidableEq X] {c c' : Gather.SpecState P.n X}
     exact hv
 
 /-- A call of the gather specification writes the caller's entry alone: an
-entry of the new call record is an old entry or the caller's payload. -/
+entry of the new `call` map is an old entry or the caller's payload. -/
 theorem call_val {X : Type} [DecidableEq X] {c c' : Gather.SpecState P.n X}
     {id : Fin P.n} {x : X} (h : Gather.Step P c (.call id x) (PMF.pure c'))
     (k : Fin P.n) (y : X) (hy : c'.call k = some y) :
@@ -207,9 +207,9 @@ theorem firstGatherSupport_congr {t t' : Gather.SpecState P.n Bool} (hval : t'.v
   unfold firstGatherSupport
   rw [hval, hF]
 
-/-! ### The certificates -/
+/-! ### The witnesses -/
 
-/-- What a recorded graded outcome certifies. A `grade2 v` outcome carries
+/-- What a recorded graded outcome witnesses. A `grade2 v` outcome carries
 `some v` on at least `|S| − f` entries of the second gather's core and `v` on at
 least `|S| − f` of the first gather's; a `grade1 v` outcome carries `v` on at
 least `|S| − f` entries of the first gather's core and `f + 1` committed-entry
@@ -227,7 +227,7 @@ def OutputWitness (P : Parameters) (s : RoundStateOverGatherSpecifications P.n) 
       (∃ S, (secondGather s).core = some S ∧ ∀ w, AcceptedPairs.count S (some w) ≤ P.f) ∧
       ∀ b, P.f + 1 ≤ firstGatherSupport (firstGather s) b
 
-/-- The certificate reads the two cores and the first gather's committed-entry
+/-- The witness reads the two cores and the first gather's committed-entry
 support. A state holding the same cores and at least that support carries
 it. -/
 theorem OutputWitness.mono {s s' : RoundStateOverGatherSpecifications P.n}
@@ -246,7 +246,7 @@ theorem OutputWitness.mono {s s' : RoundStateOverGatherSpecifications P.n}
     obtain ⟨⟨S, hS, hl⟩, hw⟩ := h
     exact ⟨⟨S, by rw [h2]; exact hS, hl⟩, fun b => le_trans (hw b) (hv b)⟩
 
-/-- The exclusion certificate: the first gather's core counts `b` below
+/-- The exclusion witness: the first gather's core counts `b` below
 `|S| − f`, so no later candidate is `b`. It survives every later step: the core is written once. -/
 def ExclusionWitness (P : Parameters) (s : RoundStateOverGatherSpecifications P.n) (b : Bool) :
   Prop :=

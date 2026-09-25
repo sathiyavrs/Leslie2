@@ -14,23 +14,25 @@ import Leslie2Protocols.Framework.SynchronisedProduct
 One gather instance over an arbitrary payload type `X`, taken apart into the pieces that run it:
 `n` per-process gather programs beside the gather network.
 
-A gather program holds one process's local record and the messages delivered to it, indexed by
-sender (`ABA.LocalState`). Its guards read its own record and its own delivered sets. The gather
+A gather program holds one process's variables and the messages delivered to it, indexed by
+sender (`ABA.LocalState`). Its guards read its own variables and its own delivered sets. The gather
 network holds the per-sender sent sets, the corrupted set (`ABA.NetworkState`) and the instance's
-core; it reads no program's record. A multicast is a joint step of the sender, which writes its
-record, and the network, which records the message. A delivery is a joint step of the network,
+core; it reads no program's variables. A multicast is a synchronised step of the sender, which
+writes its variables, and the network, which records the message. A delivery is a synchronised step
+of the network,
 which checks that the message is sent under the named sender, and the receiver, which files it
 under that sender.
 
 `ProgramStep` is the step relation of process `j`'s program and `NetworkStep` that of the gather
 network. `gatherProgram` and `gatherNetwork` are the two automata they carry, and `gatherPrograms`
-is the gather tier: the programs beside the network.
+is the programs beside the network.
 
 ## The alphabets
 
 The specification's `call id x` carries two transitions, the call and the input-enabledness loop.
 The composition splits them across two labels, as the reliable-broadcast composition does one level
-down (`ABA/ReliableBroadcast/Bracha/Components.lean`). The gather record and the broadcast instance
+down (`ABA/ReliableBroadcast/Bracha/Components.lean`). A gather program's variables and the
+broadcast instance
 are different components, so a single label carrying both transitions would also carry the mixed
 pairs. The loop therefore has a label of its own, `LoopLabel.callLoop id x`. The interface alphabet
 is `InstanceLabel n X = Label n X ⊕ LoopLabel n X`.
@@ -50,7 +52,7 @@ composition.
 ## What the broadcast instances returned
 
 A gather program reads no neighbouring coordinate. What a broadcast instance has returned to it is
-written on the return event into its own record: `inputBroadcastReturned k` is the value instance
+written on the return event into its own variables: `inputBroadcastReturned k` is the value instance
 `k` returned here, `bindBroadcastReturned q` is the payload bind instance `q` returned here. The
 four transitions that read what has been returned -- `sendEcho`, `sendVote`, `bindCall` and `ret`
 -- read the returned values through `ProcessVariables.accepted`, `holdsInputBroadcastReturn`,
@@ -66,8 +68,8 @@ core and carries it on the label.
 ## Model and deviations
 
 * **D1 (determinised `fail`).** `NetworkState.corrupt` is the total Dirac function guarded by
-  `id ∉ F ∧ |F| < f`. It is the gather network's own transition, and the programs answer `fail` by
-  unchanged: the local records are corruption-blind.
+  `id ∉ F ∧ |F| < f`. It is the gather network's own transition, and the programs are unchanged on
+  `fail`: their variables are corruption-blind.
 * **D5 (set-based network).** A multicast records the message in the sender's sent set and a
   delivery does not consume it; a corrupted sender's injections enter its sent set through the
   network's own silent transition.
@@ -138,9 +140,9 @@ def gatherEvents (n : ℕ) (X : Type) : Set (GatherLabel n X) := {l | ∃ e : Ga
 @[simp] theorem broadcastInstanceLabel_tau (n : ℕ) (M : Type) :
     (Silent.τ : BRB.InstanceLabel n M) = Sum.inl BRB.Label.tau := rfl
 
-/-! ### The records -/
+/-! ### The variables -/
 
-/-- The local record of one gather program: the gather record beside the returned values of what the
+/-- The variables of one gather program: the base variables beside what the
 broadcast instances have returned here. -/
 structure ProcessVariables (n : ℕ) (X : Type) extends BaseProcessVariables n X where
   /-- `inputBroadcastReturned k` — the value the instance broadcasting `k`'s input returned
@@ -150,7 +152,7 @@ structure ProcessVariables (n : ℕ) (X : Type) extends BaseProcessVariables n X
   payload returned here. -/
   bindBroadcastReturned : Fin n → Option (AcceptedPairs n X)
 
-/-- The initial local record: nothing called, nothing sent, nothing returned
+/-- The initial variables: nothing called, nothing sent, nothing returned
 here. -/
 def ProcessVariables.initial (n : ℕ) (X : Type) : ProcessVariables n X :=
   { BaseProcessVariables.initial n X with
@@ -219,8 +221,8 @@ core unwritten. -/
 def NetworkState.initial (n : ℕ) (X : Type) : NetworkState n X :=
   ⟨ABA.NetworkState.initial n (Message n X), none⟩
 
-/-- The core read off a network state. The local records are not consulted
-(`coreOf_networkState_only`), so any record vector gives the same set. -/
+/-- The core read off a network state. The programs' variables are not consulted
+(`coreOf_networkState_only`), so any vector of variables gives the same set. -/
 noncomputable def coreOfNetwork {X : Type} (P : Parameters)
     (w : ABA.NetworkState P.n (Message P.n X)) : AcceptedPairs P.n X :=
   coreOf P ((fun _ => LocalState.initial P.n (Message P.n X) (BaseProcessVariables.initial P.n X)),
@@ -294,10 +296,10 @@ variable [DecidableEq X]
 
 /-! ### The gather program
 
-Process `j`'s program. Every guard reads its own record and its own delivered sets. An event
-transition carries the program's half of a joint step: on a multicast the record write, on a
-delivery the write of the delivered set, on a broadcast instance's return the recording of the
-returned value. -/
+Process `j`'s program. Every guard reads its own variables and its own delivered sets. An event
+transition carries the program's half of a synchronised step: on a multicast the write to its
+variables, on a delivery the write of the delivered set, on a broadcast instance's return the
+recording of the returned value. -/
 
 /-- The step relation of the gather program of process `j`. All transitions are
 Dirac. -/
@@ -311,7 +313,7 @@ inductive ProgramStep (P : Parameters) (j : Fin P.n) :
   /-- A call at another process is not `j`'s business. -/
   | callIdle (p) (i : Fin P.n) (x : X) (hi : i ≠ j) :
       ProgramStep P j p (Sum.inl (Sum.inl (.call i x))) (PMF.pure p)
-  /-- The call loop: the record does not move. -/
+  /-- The call loop: the variables do not move. -/
   | callLoop (p) (x : X) :
       ProgramStep P j p (Sum.inl (Sum.inr (.callLoop j x))) (PMF.pure p)
   /-- A call loop at another process is not `j`'s business. -/
@@ -355,8 +357,8 @@ inductive ProgramStep (P : Parameters) (j : Fin P.n) :
   /-- An input instance's return to another process is not `j`'s business. -/
   | inputBroadcastRetIdle (p) (k i : Fin P.n) (v : X) (hi : i ≠ j) :
       ProgramStep P j p (Sum.inr (.inputBroadcastRet k i v)) (PMF.pure p)
-  /-- `j` calls the instance broadcasting its input: the payload is the one its gather record
-  holds, and the record does not move. The instance's own guard decides whether the call lands.
+  /-- `j` calls the instance broadcasting its input: the payload is the one its own variables
+  hold, and they do not move. The instance's own guard decides whether the call lands.
   AFW25's Algorithm 5, line 6. -/
   | inputBroadcastCall (p) (x : X) (hin : p.processVariables.input = some x) :
       ProgramStep P j p (Sum.inr (.inputBroadcastCall j x)) (PMF.pure p)
@@ -367,7 +369,7 @@ inductive ProgramStep (P : Parameters) (j : Fin P.n) :
   `U`, are delivered here, `j` has multicast its own `VOTE`, and `j` has not
   called its own bind broadcast. The main thread of AFW25's Algorithm 5 sends
   `VOTE` before `BIND`, and sends `BIND` once, at line 17. The payload handed
-  to the broadcast is written to the record; the bind instance's own guard decides
+  to the broadcast is written to its variables; the bind instance's own guard decides
   whether the call lands. -/
   | bindCall (p) (U : AcceptedPairs P.n X) (hin : p.processVariables.input ≠ none)
       (hvot : p.processVariables.sentVote ≠ none)
@@ -405,14 +407,14 @@ inductive ProgramStep (P : Parameters) (j : Fin P.n) :
   /-- A return at another process is not `j`'s business. -/
   | retIdle (p) (i : Fin P.n) (g : Fin P.n → Option X) (C : AcceptedPairs P.n X) (hi : i ≠ j) :
       ProgramStep P j p (Sum.inl (Sum.inl (.ret i g C))) (PMF.pure p)
-  /-- Corruption is the network's own write, and the local records are
+  /-- Corruption is the network's own write, and the programs' variables are
   corruption-blind (D1). -/
   | failIdle (p) (i : Fin P.n) :
       ProgramStep P j p (Sum.inl (Sum.inl (.fail i))) (PMF.pure p)
 
 /-! ### The gather network
 
-The one local state of the gather tier that holds what no program may see: the
+The one state of the gather that holds what no program may see: the
 per-sender sent sets, the corrupted set and the instance's core. It participates
 in every gather multicast and delivery, it is where a corrupted sender's
 injections enter (D5), and it writes the core at the first return. -/
@@ -463,7 +465,7 @@ inductive NetworkStep (P : Parameters) :
         network :=
           w.network.corrupt P i })
 
-/-! ### The gather tier -/
+/-! ### The gather programs and the gather network -/
 
 /-- The gather program of process `j`. -/
 noncomputable def gatherProgram (P : Parameters) (j : Fin P.n) :
@@ -494,7 +496,7 @@ noncomputable def gatherNetwork (P : Parameters) (X : Type) [DecidableEq X] :
 @[simp] theorem gatherNetwork_step (P : Parameters) (w : NetworkState P.n X) (l : GatherLabel P.n X)
     (μ : PMF (NetworkState P.n X)) : (gatherNetwork P X).step w l μ ↔ NetworkStep P w l μ := Iff.rfl
 
-/-- The gather tier: the programs beside the gather network. -/
+/-- The gather programs beside the gather network. -/
 noncomputable def gatherPrograms (P : Parameters) (X : Type) [DecidableEq X] :
     System
     ((∀ _ : Fin P.n, LocalState P.n (ProcessVariables P.n X) (Message P.n X)) × NetworkState P.n X)

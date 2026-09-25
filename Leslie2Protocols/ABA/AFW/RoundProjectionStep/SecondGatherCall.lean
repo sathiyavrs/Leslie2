@@ -30,7 +30,7 @@ variable {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} {w : NetworkState P.n} 
 
 /-! ### The second gather's call
 
-The transition writes the second gather's input. It sends nothing, and the ghost record stands. -/
+The transition writes the second gather's input. It sends nothing, and the ghost stands. -/
 
 /-- **The round after `j`'s call of the second gather with `x`**: the program
 marks the call and the second gather records the payload. -/

@@ -12,21 +12,20 @@ import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.EchoWitness
 
 `BRB.Invariant P ldr s` is what the reliable-broadcast instance with leader `ldr` maintains. The
 `*_confirmed` clauses tie a correct sender's sent message to its write-once field,
-`echo_of_leaderInput` carries a correct echo back to a correct leader's call record, and
-`vote_backed`
-ties a correct vote to the receipts that justified it, with the amplification chain collapsed into
-`BRB.EchoWitness`. `Invariant.initial` holds it at the initial state, and `Invariant.step`
-carries it across every transition of `BRB.BrachaAlgorithm`.
+`echo_of_leaderInput` carries a correct echo back to the payload a correct leader was called with,
+and `vote_backed` ties a correct vote to the received messages that justified it, with the
+amplification chain collapsed into `BRB.EchoWitness`. `Invariant.initial` holds it at the initial
+state, and `Invariant.step` carries it across every transition of `BRB.BrachaAlgorithm`.
 
-`Invariant.correct_echoer` and `Invariant.correct_voter` are the counting steps: a receipt quorum
-of either level exceeds the corruption budget, so it holds a sender outside the corrupted set,
-whose write-once field the invariant reads. Three consequences follow.
+`Invariant.correct_echoer` and `Invariant.correct_voter` are the counting steps: a quorum of
+received messages of either level exceeds the corruption budget, so it holds a sender outside the
+corrupted set, whose write-once field the invariant reads. Three consequences follow.
 
-* At most one value is ever echo-certified (`echoWitness_unique`): two `ECHO` receipt quorums
-  share a correct sender, whose `sentEcho` field is write-once.
-* Every return guard yields a certificate (`echoWitness_of_vote_quorum`): a `2f + 1` `VOTE m`
-  receipt quorum holds a correct voter, and a correct vote is backed.
-* Under a correct leader a certificate identifies the leader's input
+* At most one value is ever echo-witnessed (`echoWitness_unique`): two quorums of received `ECHO`
+  messages share a correct sender, whose `sentEcho` field is write-once.
+* Every return guard yields a witness (`echoWitness_of_vote_quorum`): a quorum of `2f + 1`
+  received `VOTE m` messages holds a correct voter, and a correct vote is backed.
+* Under a correct leader a witness identifies the leader's input
   (`input_of_echoWitness`): the `ECHO` quorum holds a correct echoer, and a correct echo
   carries the leader's input, which is `echo_of_leaderInput` over the three disjuncts of the `ECHO`
   guard.
@@ -42,8 +41,8 @@ variable {M : Type} [DecidableEq M] {P : Parameters} {ldr : Fin P.n}
 
 /-- The BRB implementation invariant. The `*_confirmed` clauses tie a correct
 sender's sent to its write-once field; `echo_of_leaderInput` carries a correct echo back
-to a correct leader's call record, and `vote_backed` ties a correct vote to the
-receipts that justified it, with the amplification chain collapsed into
+to the payload a correct leader was called with, and `vote_backed` ties a correct vote to the
+received messages that justified it, with the amplification chain collapsed into
 `EchoWitness`. -/
 structure Invariant (P : Parameters) (ldr : Fin P.n) (s : BrachaState P.n M) : Prop where
   /-- The corruption budget. -/
@@ -58,13 +57,14 @@ structure Invariant (P : Parameters) (ldr : Fin P.n) (s : BrachaState P.n M) : P
     (s.processVariables k).sentEcho = some m
   /-- A correct echo of `m` carries the leader's input: under a correct leader,
   `m` is what the leader was called with. Each of the three disjuncts of the
-  `ECHO` guard leads back to that call record. -/
+  `ECHO` guard leads back to that payload. -/
   echo_of_leaderInput : ∀ k ∉ s.F, ∀ m, (s.processVariables k).sentEcho = some m →
     ldr ∈ s.F ∨ (s.processVariables ldr).input = some m
   /-- A correct sender's sent `VOTE` matches its write-once field. -/
   vote_confirmed : ∀ k ∉ s.F, ∀ m, Message.vote m ∈ s.sent k →
     (s.processVariables k).sentVote = some m
-  /-- A correct vote is backed by an `ECHO` receipt quorum somewhere: the vote on a quorum
+  /-- A correct vote is backed by a quorum of received `ECHO` messages somewhere: the vote on a
+  quorum
   witnesses itself, and the amplified vote inherits the witness from a correct backer. -/
   vote_backed : ∀ k ∉ s.F, ∀ m, (s.processVariables k).sentVote = some m → EchoWitness P s m
 
@@ -73,7 +73,7 @@ theorem Invariant.initial : Invariant P ldr (BrachaState.initial P.n M) := by
   refine ⟨by simp [BrachaState.initial], ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
     simp [BrachaState.initial, ProcessVariables.initial]
 
-/-- An `ECHO m` receipt quorum holds a correct echoer of `m`: the quorum
+/-- A quorum of received `ECHO m` messages holds a correct echoer of `m`: the quorum
 exceeds the corruption budget (`f < receivedEchoQuorum`), and a correct sender's sent
 `ECHO` matches its write-once field. -/
 theorem Invariant.correct_echoer {s : BrachaState P.n M} (hInv : Invariant P ldr s) {i : Fin P.n}
@@ -84,7 +84,7 @@ theorem Invariant.correct_echoer {s : BrachaState P.n M} (hInv : Invariant P ldr
   obtain ⟨k, hkF, hkrecv⟩ := InstanceState.exists_sender_notMem s.F hlt
   exact ⟨k, hkF, hInv.echo_confirmed k hkF m (hInv.received_subset_sent i k hkrecv)⟩
 
-/-- `f + 1` `VOTE m` receipts hold a correct voter for `m`: they exceed the
+/-- `f + 1` received `VOTE m` messages hold a correct voter for `m`: they exceed the
 corruption budget, and a correct sender's sent `VOTE` matches its write-once
 field. -/
 theorem Invariant.correct_voter {s : BrachaState P.n M} (hInv : Invariant P ldr s) {i : Fin P.n}
@@ -447,7 +447,7 @@ theorem Invariant.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (Brac
           InstanceState.setProcessVariables_processVariables_self] at hslot
         obtain rfl : m = m' := by
           injection hslot
-        -- amplification: a correct backer supplies the certificate
+        -- amplification: a correct backer supplies the witness
         have hlt : s.F.card < s.receivedCount k (.vote m) :=
           lt_of_lt_of_le (Nat.lt_succ_of_le hInv.F_card) hcnt
         obtain ⟨k', hk'F, hk'recv⟩ := InstanceState.exists_sender_notMem s.F hlt
@@ -584,9 +584,9 @@ theorem Invariant.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (Brac
       rw [echoWitness_corrupt]
       exact hInv.vote_backed k (hF k hk) m' hslot
 
-/-! ### Deriving the certificate -/
+/-! ### Deriving the witness -/
 
-/-- At most one value is ever echo-certified: two `ECHO` receipt quorums share
+/-- At most one value is ever echo-witnessed: two quorums of received `ECHO` messages share
 a correct sender, whose `sentEcho` field is write-once. -/
 theorem echoWitness_unique {s : BrachaState P.n M} (hInv : Invariant P ldr s) {m m' : M}
     (h : EchoWitness P s m) (h' : EchoWitness P s m') : m = m' := by
@@ -599,7 +599,7 @@ theorem echoWitness_unique {s : BrachaState P.n M} (hInv : Invariant P ldr s) {m
   rw [h1] at h2
   injection h2
 
-/-- Every `2f + 1` `VOTE m` receipt quorum yields the certificate: it contains
+/-- Every quorum of `2f + 1` received `VOTE m` messages yields the witness: it contains
 a correct voter, and correct votes are backed. -/
 theorem echoWitness_of_vote_quorum {s : BrachaState P.n M} (hInv : Invariant P ldr s)
     {i : Fin P.n} {m : M} (hcnt : 2 * P.f + 1 ≤ s.receivedCount i (.vote m)) :
@@ -607,7 +607,7 @@ theorem echoWitness_of_vote_quorum {s : BrachaState P.n M} (hInv : Invariant P l
   obtain ⟨k, hkF, hkslot⟩ := hInv.correct_voter (le_trans (by omega) hcnt)
   exact hInv.vote_backed k hkF m hkslot
 
-/-- Under a correct leader, the certificate identifies the leader's input: the
+/-- Under a correct leader, the witness identifies the leader's input: the
 `ECHO` quorum contains a correct echoer, whose echo carries the leader's
 input. -/
 theorem input_of_echoWitness {s : BrachaState P.n M} (hInv : Invariant P ldr s)

@@ -6,7 +6,7 @@ programs beside the instance's network (`BRB.brachaInstance`,
 gather network, in parallel with `2n` broadcast instances read along pullbacks naming them
 (`Gather.instanceOverBroadcasts`, `ABA/Gather/Composition.lean`); a round is `n` graded-agreement
 programs beside the round's network, in parallel with two gathers (`GBCA.ByAFW.roundOverGathers`,
-`ABA/GBCA/AFW/Composition.lean`). The protocol chain's round, `GBCA.ByABDY.composition`
+`ABA/GBCA/AFW/Composition.lean`). The ABDY chain's round, `GBCA.ByABDY.composition`
 (`ABA/GBCA/ABDY/Composition.lean`), is the template every level copies: components
 synchronise on the instance's own events, the events are hidden, and the result is read back over
 the instance's interface. `DESIGN-GatherComposition.md` is the account of the stack;
@@ -53,32 +53,32 @@ specificationLabelMap l = some l₀ ∧ brachaInstance.step s l μ) ↔ BrachaAl
 `Gather.instanceOverBracha_step_iff_algorithm`,
 `GBCA.ByAFW.roundOverGatherSpecifications_step_iff_algorithm`).
 
-## 2. The gather specification's call record follows the gather record
+## 2. The gather specification's call follows the gather's variables
 
-At the tier over broadcast specifications, the input broadcast of process `k` is
+At the composition over the broadcast specifications, the input broadcast of process `k` is
 `BRB.specificationOverInstanceAlphabet` read along `inputBroadcastLabelMap k`, which sends the
 event `inputBroadcastCall k x` to that instance's call and the gather's own `call` and call loop to
 no image. The instance answers that event on either of its two call transitions
 (`Gather.AlgorithmOverBroadcastSpecification.inputBroadcastCall`,
 `inputBroadcastCallSpecificationLoop`): it records the payload, or it loops and nothing moves.
 
-**What fails.** A clause tying the specification's call record to an input instance's record is
-not inductive: `Gather.AlgorithmOverBroadcastSpecification.call` moves the gather record and the
-specification's call record on the one interface label and leaves every instance where it stands,
+**What fails.** A clause tying the specification's call to an input instance's variables is
+not inductive: `Gather.AlgorithmOverBroadcastSpecification.call` moves the gather's variables and
+the specification's call on the one interface label and leaves every instance where it stands,
 so right after a call the program holds `some x` and the instance holds `none`. A relation that
-read the specification's call record off the instance would be false there, and
+read the specification's call off the instance would be false there, and
 `Gather.refinesSpecification` is unprovable.
 
 **The constraint.** `Gather.SpecificationRelation.call_eq : ∀ k, t.call k = ((gatherProgramsAndNetwork s).processVariables
-k).input`. The specification's call record and the gather record move on the one interface label
+k).input`. The specification's call and the gather's variables move on the one interface label
 under the one write-once guard, and `specificationRelation_call` takes that guard alone;
 `specificationRelation_inputBroadcastCall` is matched by a stutter of the specification.
-`Gather.Invariant.inputBroadcastCall_backed` carries the instance's record back: the payload an
-input instance of a correct process was called with is the payload that process's gather record
-holds. A return then discharges the gather specification's commit guard `k ∈ F ∨ call k = some x`
+`Gather.Invariant.inputBroadcastCall_backed` carries the instance's variables back: the payload an
+input instance of a correct process was called with is the payload that process's gather variables
+hold. A return then discharges the gather specification's commit guard `k ∈ F ∨ call k = some x`
 through `val_witness`, which bounds a committed specification entry by the instance's
-commitment, `inputBroadcastVal_of_instanceInput`, which reads that commitment back to the instance's call
-record, and that clause, which reads the call record back to the gather record.
+commitment, `inputBroadcastVal_of_instanceInput`, which reads that commitment back to the
+instance's call, and that clause, which reads the call back to the gather's variables.
 
 ## 3. The composed program drops its grade on the graded return
 
@@ -87,11 +87,11 @@ writes `out := none, returned := true`.
 
 **What fails.** The simulation of the implementation into its composed system computes the composed
 state from the implementation (`AFW.roundProjection`), and the implementation's state keeps a
-process's grade in its round-loop record alone, overwritten every round. A round's grade after its
-return is not recoverable from the implementation's state. If the program's record kept the grade,
-`AFW.programProjection` could not be a function, `AFW.ProtocolRelation` would lose the conjunct `t.1
-= fun r => roundProjection P u w r`, and the frame lemmas of
-`ABA/AFW/RoundProjectionStep/`, which state the view after a transition as that
+process's grade in its round-loop variables alone, overwritten every round. A round's grade after
+its return is not recoverable from the implementation's state. If the program's variables kept the
+grade, `AFW.programProjection` could not be a function, `AFW.ProtocolRelation` would lose the
+conjunct `t.1 = fun r => roundProjection P u w r`, and the lemmas of
+`ABA/AFW/RoundProjectionStep/`, which state the projection after a transition as that
 function applied, would have no statement.
 
 **The constraint.** The grade is held only between `secondGatherReturn` and `retG`, inside a run
@@ -102,11 +102,11 @@ a returned process.
 ## 4. A label outside a round's interface blocks the round
 
 The round is read over `ExtendedLabel` natively. A family label that is none of the
-round's own — `callABA`, `retABA`, `callW`, `retW`, the protocol network's
-rendezvous — must not be answered by every factor unchanged.
+round's own — `callABA`, `retABA`, `callW`, `retW`, the labels the protocol's
+network synchronises on — must not leave every factor unchanged.
 
 **What fails.** If every pullback returned `none` on such a label, the round
-would self-loop on it. The rendezvous have no specification label under
+would self-loop on it. The synchronisation labels have no specification label under
 `GBCA.specificationLabelMap`, so `GBCA.ByAFW.roundOverGatherSpecifications_step_algorithm` is false
 there. The ABA and coin labels have one, and `GBCA.Step` has no transition at it, so
 `GBCA.ByAFW.roundOverGatherSpecifications_step_iff_algorithm` is false there and
@@ -125,9 +125,9 @@ instance.
 
 A composed gather program reads what each of its instances returned, written on the instance's
 return event under a `2f + 1` `VOTE` quorum at the receiver. The implementation holds the same
-record: its round record carries each gather local state over `Gather.ProcessVariables`, and
+value: its round variables carry each gather local state over `Gather.ProcessVariables`, and
 `AFW.RoundStep.firstGatherInputBroadcastReturn` and its three companions write it under that same
-quorum. A gather guard of the implementation then reads the record
+quorum. A gather guard of the implementation then reads those variables
 (`Gather.ProcessVariables.accepted`, `Gather.approvedBy`, `Gather.holdsInputBroadcastReturn`,
 `Gather.holdsBindBroadcastReturn`), exactly as the guard of the composed gather program does.
 

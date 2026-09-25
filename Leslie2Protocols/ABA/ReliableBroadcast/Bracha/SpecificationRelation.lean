@@ -11,7 +11,7 @@ import Leslie2Protocols.Framework.FamilySimulation
 # The relation between the reliable-broadcast instance and its specification
 
 `BRB.SpecificationRelation P ldr s t` relates a state of the reliable-broadcast instance to a
-state of the broadcast specification with the same leader. The call records, the return flags and
+state of the broadcast specification with the same leader. The calls, the return flags and
 the corrupted sets agree, the instance invariant holds at `s`, and `val_witness` bounds the
 specification's committed value by `BRB.EchoWitness`.
 
@@ -31,18 +31,18 @@ variable {M : Type} [DecidableEq M] {P : Parameters} {ldr : Fin P.n}
 /-! ### The relation -/
 
 /-- The relation the reliable-broadcast refinement runs along. `val_witness` bounds the
-specification's committed value by the certificate; the other clauses are projections. -/
+specification's committed value by the witness; the other clauses are projections. -/
 structure SpecificationRelation (P : Parameters) (ldr : Fin P.n) (s : BrachaState P.n M)
     (t : SpecState P.n M) : Prop where
   /-- The implementation invariant. -/
   invariant : Invariant P ldr s
-  /-- The call records agree. -/
+  /-- The payloads the leader was called with agree. -/
   input_eq : t.input = (s.processVariables ldr).input
   /-- The return flags agree. -/
   ret_eq : ∀ id, t.ret id = (s.processVariables id).returned
   /-- The corrupted sets agree. -/
   F_eq : t.F = s.F
-  /-- A committed value is echo-certified. -/
+  /-- A committed value is echo-witnessed. -/
   val_witness : ∀ m, t.val = some m → EchoWitness P s m
 
 /-- The relation holds initially. -/

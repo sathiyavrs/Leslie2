@@ -238,7 +238,7 @@ def failAct (P : Parameters) : Label P.n → SpecState P.n → SpecState P.n
   | _, s => s
 
 /-- The ℕ-indexed family of WCC specification instances: one instance per
-round, `fail` broadcast to all of them, idle on foreign labels. -/
+round, `fail` broadcast to all of them, idle on the labels it does not own. -/
 noncomputable def specFamily (P : Parameters) :
     System (ℕ → SpecState P.n) (Label P.n) :=
   System.family (specInst P) Label.wccRound Label.isFail (failAct P)

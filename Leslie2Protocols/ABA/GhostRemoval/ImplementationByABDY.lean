@@ -13,20 +13,19 @@ import Leslie2Protocols.ABA.Results
 The network of `ABDY.protocol` holds one bit per round that no program reads:
 the round's bound bit, written by `ABDY.abdyGhostStep` and announced on every
 graded-agreement return by `ABDY.abdyAnnouncedBound`. `ABDY.ghostFreeProtocol` is the protocol as
-it runs with that record dropped and the adversary free to announce either bit on a
+it runs with that ghost dropped and the adversary free to announce either bit on a
 return.
 
-`ABDY.protocol_ghostRemoval` is the statement that the record costs nothing: the ghost never
+`ABDY.protocol_ghostRemoval` is the statement that the ghost costs nothing: the ghost never
 blocks a step and never adds one, so the two systems have the same achievable trace
 distributions. Every headline about the protocol therefore holds of the ghost-free
 protocol, and the rest of this file re-derives them.
 
-The proof is the state erasure of `ABA/GhostRemoval/GhostFreeSystem.lean` carried through the
-composition pipeline. Its hypothesis is that every round, process and graded outcome
-admits an announced bit, which here is the equation `bnd = ABDY.abdyGhostOutput P s r id out`
-read at its own right-hand side. The announced bit is silent at protocol level — a
-`retG` label lies in `Label.hiddenAPI` — which is why no label map appears in the
-statement.
+The proof is the auxiliary variable removal of `ABA/GhostRemoval/GhostFreeSystem.lean` carried
+through the composition pipeline. Its hypothesis is that every round, process and graded outcome
+admits an announced bit, which here is the equation `bnd = ABDY.abdyGhostOutput P s r id out` read
+at its own right-hand side. The announced bit is silent at protocol level — a `retG` label lies in
+`Label.hiddenAPI` — which is why no label map appears in the statement.
 -/
 
 namespace PLTS
@@ -35,7 +34,7 @@ namespace ABDY
 
 open Implementation
 
-/-- **The ghost-free ABDY22 protocol**: the `n` programs and the coin oracle of
+/-- **The ghost-free ABDY22 protocol**: the `n` programs and the common coin of
 `ABDY.protocol` beside the network over the trivial ghost, whose
 graded-agreement returns announce any bit. -/
 noncomputable def ghostFreeProtocol (P : Parameters) :

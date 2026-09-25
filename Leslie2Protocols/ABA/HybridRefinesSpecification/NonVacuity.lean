@@ -10,8 +10,8 @@ import Leslie2Protocols.ABA.Composition.ABAState
 /-!
 # Non-vacuity witnesses for the protocol-shaped specification
 
-Machine-checked evidence that the composed system `hybrid P M` can actually
-execute a nontrivial prefix: the core simulation `ABA.hybridRefinesSpecification` about it is not
+Machine-checked witnesses that the composed system `hybrid P M` can execute
+a nontrivial prefix: the core simulation `ABA.hybridRefinesSpecification` about it is not
 vacuously true through an immediate deadlock.
 
 We fix the small parameter set `fourProcesses` (`n = 4`, `f = 1`, `ε = 1/2`) and exhibit a
@@ -19,16 +19,16 @@ concrete **20-step run of `hybrid fourProcesses M` that reaches a genuine `retAB
 complete decision — starting from its initial state. The run is exhibited for every type `M` of
 round messages: no step of it carries a round message.
 
-* `step_callABA₀/₁/₂` — three external input handshakes (`callABA`, *visible*: the addressed round
+* `step_callABA₀/₁/₂` — three external input calls (`callABA`, *visible*: the addressed round
   loop takes its `input` transition, the other three idle, and the round specifications, the ABA
-  network and the coin oracle idle);
+  network and the common coin idle);
 * `step_callG₀/₁/₂` — three graded-agreement calls (`callG 0`, *hidden* to `τ`:
   the caller's round loop hands over its estimate and the round-`0`
   specification takes its owned `call`);
 * `step_bindUnset` — the round-`0` specification's `bindUnset` internal
   transition excluding the bit `false` (a family `τ`, `n − f` quorum met at
   `n = 4, f = 1` by the three callers of `true`);
-* `step_retG₀/₁/₂` — the three graded-agreement grade-2 return handshakes (`retG 0`, *hidden*), the
+* `step_retG₀/₁/₂` — the three graded-agreement grade-2 returns (`retG 0`, *hidden*), the
   first locking the round grade at 2. Each return announces the bound bit `true`. Its complement is
   the bit that `step_bindUnset` excluded, which is exactly the return's guard, so the ghost output
   leaves the run intact;
@@ -41,12 +41,12 @@ round messages: no step of it carries a round message.
   outcome agreeing with the bound value — with mass exactly `ε = 1/2 > 0`;
 * `step_callW₂` — process `2`'s coin call, recording again: `val` is resolved,
   so the resolving transition's guard is closed;
-* `step_retW₀/₁/₂` — the three coin returns, each a rendezvous on `retWPublish`
+* `step_retW₀/₁/₂` — the three coin returns, each a synchronised step on `retWPublish`
   (*hidden*): the round loop's fused round advance (deviation D10) joined with
   the network's publication of `⟨DECIDED, true⟩`, giving three distinct
   DECIDED-true senders;
-* `step_deliver₀/₁/₂` — the adversary delivers all three receipts to process `0`
-  (a rendezvous on `decidedDeliver`, *hidden*), meeting the `n − f = 3` return quorum;
+* `step_deliver₀/₁/₂` — the adversary delivers all three DECIDED messages to process `0`
+  (a synchronised step on `decidedDeliver`, *hidden*), meeting the `n − f = 3` return quorum;
 * `step_retABA` — process `0` fires `retABA 0 true`: the decision.
 
 Plus `step_fail` — a `fail` broadcast synchronising all four components.
@@ -58,9 +58,9 @@ states discharges by `decide`/`rfl`; the Dirac successor distributions collapse
 through `prodPMF_pure_pure` and `PMF.pure_map`, and the resolving call's branch
 mass through `prodPMF_pure_left_apply` and `map_apply_inj`.
 
-The ABA components are named through the view of `ABA/Composition/ABAState.lean`: a state of the run
+The ABA components are named as `ABA/Composition/ABAState.lean` groups them: a state of the run
 is a triple — the round specifications, one `ABAState` holding the round loops beside the ABA
-network, and the coin oracle — assembled into the four-component state by `hybridStateOf`.
+network, and the common coin — assembled into the four-component state by `hybridStateOf`.
 
 Each component carries one name per state of the run and one name per update. The states are
 `abaInitial`, `gbcaSpecificationsInitial` and `coinInitial`, and then, for each component, the state
@@ -70,8 +70,8 @@ the step named in the list above leaves behind: `abaAfterInput0`, `abaAfterCallG
 and `gbcaSpecificationsAfterFail`; `coinAfterRecordingCall0`, `coinAfterResolvingCall`,
 `coinAfterReturn0` and `coinAfterFail`. The updates are `abaInput`, `abaCallG`, `abaRetG`,
 `abaCallW` in the ABA component, `gbcaSpecificationCall` and `gbcaSpecificationRetGrade2` on the
-round specifications, and `coinCall`, `coinResolve` and `coinReturn` on the coin oracle. Reading a
-state name gives the step it follows, and reading an update name gives the label it answers. -/
+round specifications, and `coinCall`, `coinResolve` and `coinReturn` on the common coin. Reading a
+state name gives the step it follows, and reading an update name gives the label it belongs to. -/
 
 namespace PLTS
 namespace ABA
@@ -96,7 +96,7 @@ variable {M : Type} [DecidableEq M]
 /-! ### Assembling and moving the four components -/
 
 /-- A state of the protocol-shaped specification, assembled from the round specifications, the ABA
-component and the coin oracle. -/
+component and the common coin. -/
 def hybridStateOf (G : ℕ → GBCA.SpecState 4) (s : ABAState fourProcesses)
   (o : ℕ → WCC.SpecState 4) :
     HybridState fourProcesses := (G, s.1, s.2, o)
@@ -112,7 +112,7 @@ theorem roundLoops_at {C : ∀ _ : Fin 4, RoundLoopVariables 4} (id : Fin 4) {L 
   · subst h; rw [Function.update_self]; exact hown
   · rw [Function.update_of_ne h]; exact hidle i h
 
-/-- The coin oracle on a label one of its rounds owns, at a transition whose successor
+/-- The common coin on a label one of its rounds owns, at a transition whose successor
 need not be a point mass: the family's successor is the round's, pushed forward
 along the update at that round. -/
 theorem wccFamilyStep (o : ℕ → WCC.SpecState 4) {l : Label 4} {r : ℕ}
@@ -122,8 +122,8 @@ theorem wccFamilyStep (o : ℕ → WCC.SpecState 4) {l : Label 4} {r : ℕ}
   rw [WCC.specFamily, System.family_step_iff]
   exact Or.inr (Or.inl ⟨r, hr, μ, h, rfl⟩)
 
-/-- The coin oracle's idle transition on a shared label that is neither `τ`, nor one
-of its own handshakes, nor `fail`. -/
+/-- The common coin's idle transition on a shared label that is neither `τ`, nor one
+of its own calls or returns, nor `fail`. -/
 theorem wccIdle (o : ℕ → WCC.SpecState 4) {l : Label 4} (hl : l ≠ Label.tau)
     (hr : Label.wccRound l = none) (hf : ¬ Label.isFail l) :
     (coinOverRoundAlphabet fourProcesses M).step o (Sum.inl l) (PMF.pure o) :=
@@ -135,7 +135,7 @@ theorem wccIdle (o : ℕ → WCC.SpecState 4) {l : Label 4} (hl : l ≠ Label.ta
 /-- The round specifications: every round initial. -/
 def gbcaSpecificationsInitial : ℕ → GBCA.SpecState 4 := fun _ => GBCA.SpecState.initial 4
 
-/-- The coin oracle: every round initial. -/
+/-- The common coin: every round initial. -/
 def coinInitial : ℕ → WCC.SpecState 4 := fun _ => WCC.SpecState.initial 4
 
 /-- The ABA state: every round loop idle, nothing multicast, nobody corrupted. -/
@@ -225,19 +225,19 @@ noncomputable def abaAfterCallW0 : ABAState fourProcesses := abaCallW 0 abaAfter
 noncomputable def abaAfterCallW1 : ABAState fourProcesses := abaCallW 1 abaAfterCallW0
 noncomputable def abaAfterCallW2 : ABAState fourProcesses := abaCallW 2 abaAfterCallW1
 
-/-- The coin oracle after process `0`'s recording call. -/
+/-- The common coin after process `0`'s recording call. -/
 def coinAfterRecordingCall0 : ℕ → WCC.SpecState 4 := coinCall 0 coinInitial
 
-/-- The coin oracle after process `1`'s resolving call, on the `bit true`
+/-- The common coin after process `1`'s resolving call, on the `bit true`
 branch of the draw. -/
 def coinAfterResolvingCall : ℕ → WCC.SpecState 4 := coinResolve 1 (.bit true)
   coinAfterRecordingCall0
 
-/-- The coin oracle after process `2`'s recording call, which closes the round's
+/-- The common coin after process `2`'s recording call, which closes the round's
 three calls. -/
 def coinAfterRecordingCall2 : ℕ → WCC.SpecState 4 := coinCall 2 coinAfterResolvingCall
 
-/-- The coin oracle after all three processes receive the coin. -/
+/-- The common coin after all three processes receive the coin. -/
 def coinAfterReturn0 : ℕ → WCC.SpecState 4 := coinReturn 0 coinAfterRecordingCall2
 def coinAfterReturn1 : ℕ → WCC.SpecState 4 := coinReturn 1 coinAfterReturn0
 def coinAfterReturn2 : ℕ → WCC.SpecState 4 := coinReturn 2 coinAfterReturn1
@@ -274,7 +274,7 @@ noncomputable def abaAfterFail : ABAState fourProcesses := ABAState.corrupt four
 theorem hybrid_init : (hybrid fourProcesses M).init = hybridStateOf gbcaSpecificationsInitial
   abaInitial coinInitial := rfl
 
-/-! ### Step 1–3: the external input handshakes (`callABA`, visible) -/
+/-! ### Step 1–3: the external input calls (`callABA`, visible) -/
 
 /-- First input: process `0` receives `callABA 0 true`. Visible label; process
 `0`'s round loop takes `input`, the other three and the remaining components
@@ -511,7 +511,7 @@ theorem step_retG₂ :
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
 
-/-! ### Steps 11–13: all three call the coin (hidden `callW` handshakes), the
+/-! ### Steps 11–13: all three call the coin (hidden `callW` calls), the
 second call resolving it -/
 
 /-- Process `0` calls the round-`0` coin. One caller leaves the count at `f`, so
@@ -540,7 +540,7 @@ theorem step_callW₀ :
   exact h
 
 /-- The coin distribution the resolving call draws: the `wccPMF` outcome is
-written to round `0`'s `val` beside the caller's record. -/
+written to round `0`'s `val` beside the recorded caller. -/
 noncomputable def resolvedCoinDistribution : PMF (ℕ → WCC.SpecState 4) :=
   (fourProcesses.wccPMF.map (fun o => { (coinAfterRecordingCall0 0).record 1 with
     val :=
@@ -548,7 +548,8 @@ noncomputable def resolvedCoinDistribution : PMF (ℕ → WCC.SpecState 4) :=
     (Function.update coinAfterRecordingCall0 0)
 
 /-- The successor distribution of process `1`'s coin call: the round specifications and the ABA
-network remain unchanged, process `1`'s round loop advances to `awaitW`, and the coin oracle resolves. -/
+network remain unchanged, process `1`'s round loop advances to `awaitW`, and the common coin
+resolves. -/
 noncomputable def resolvedHybridDistribution : PMF (HybridState fourProcesses) :=
   prodPMF (PMF.pure gbcaSpecificationsAfterReturn2) (prodPMF (PMF.pure abaAfterCallW1.1) (prodPMF
     (PMF.pure abaAfterCallW1.2) resolvedCoinDistribution))
@@ -632,7 +633,7 @@ theorem step_callW₂ :
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
 
-/-! ### Steps 14–16: the three coin returns, each a `retWPublish` rendezvous of the
+/-! ### Steps 14–16: the three coin returns, each a `retWPublish` synchronisation of the
 round loop's fused round advance (deviation D10) with the network's publication
 of `⟨DECIDED, true⟩`. -/
 
@@ -714,7 +715,7 @@ theorem step_retW₂ :
   exact h
 
 /-! ### Steps 17–19: the adversary delivers the three `⟨DECIDED, true⟩` to
-process `0` (a `decidedDeliver` rendezvous of the receiving round loop with the
+process `0` (a `decidedDeliver` synchronisation of the receiving round loop with the
 network). -/
 
 /-- Deliver process `0`'s own `⟨DECIDED, true⟩`. -/
@@ -789,8 +790,8 @@ theorem step_deliver₂ :
 /-! ### Step 20: the decision (`retABA 0 true`, visible) -/
 
 /-- Process `0` returns `true`: it has multicast `⟨DECIDED, true⟩` — the
-network's conjunct — and holds `n − f = 3` distinct DECIDED-true receipts — the
-round loop's. The whole 20-step run, every step a Dirac except the single
+network's conjunct — and has received DECIDED-true messages from `n − f = 3` distinct
+senders — the round loop's. The whole 20-step run, every step a Dirac except the single
 `ε`-mass coin resolution, carries positive probability and ends in a genuine
 `retABA`. -/
 theorem step_retABA :
@@ -817,7 +818,7 @@ theorem step_retABA :
 /-! ### A `fail` broadcast: all four components corrupt in sync -/
 
 /-- Corruption of process `0`: the visible `fail 0` synchronises every component — the round
-specifications and the coin oracle by global broadcast, the ABA network by its own `fail`
+specifications and the common coin by global broadcast, the ABA network by its own `fail`
 transition, which carries the guards, the named round loop by replacing its own program
 (deviation D23), and the other three round loops by unchanged (deviation D1). -/
 theorem step_fail :

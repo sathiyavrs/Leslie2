@@ -36,8 +36,8 @@ broadcast, and `broadcastSubstitution_failAct`, `gatherSubstitution_failAct` and
 simultaneous-corruption statements, taken on the extended `fail` label. The four congruences of the
 pipeline then carry each family simulation under the composed system's own context —
 `ProbabilisticForwardSimulation.parallel_right` for the three untouched components, `abstract` for
-the rendezvous alphabet, `relabel` for the read-back over `Label n` (`Framework/Relabel.lean`), and
-`abstract` again for the sub-protocol API.
+the synchronisation labels, `relabel` for the read-back over `Label n`
+(`Framework/Relabel.lean`), and `abstract` again for the sub-protocol API.
 
 `AFW.substitution` is the inclusion of the gather-based composed system's achievable trace
 distributions in those of `hybrid`, the three stage inclusions chained by `Set.Subset.trans`, and

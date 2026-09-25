@@ -36,7 +36,7 @@ A corruption replaces the program of the process it names (D23), and both system
 interface carry the replacement. The corrupted process's `retABA` is matched by
 `SpecStep.retByzantine`: neither the concrete state nor the abstract state moves. On every other
 label the replaced program self-loops, and the concrete transition it contributes is the corrupted
-branch the inversion already carries. -/
+branch the step cases already carry. -/
 
 namespace PLTS
 namespace ABA
@@ -93,7 +93,7 @@ theorem ABAState.corrupt_F_subset {P : Parameters} (c : ABAState P) (id : Fin P.
   · exact Finset.Subset.refl _
 
 /-- The outcome of a visible transition collapses to a single Dirac: the specification stands, the
-ABA component lands on one state and the coin oracle stands, so the four components' joint outcome
+ABA component lands on one state and the common coin stands, so the four components' outcome
 is the point mass `dirac_step` expects. -/
 private theorem prodPMF_pure_abaTransition {P : Parameters} (G : ℕ → GBCA.SpecState P.n)
     (c : ABAState P) (o : ℕ → WCC.SpecState P.n) :
@@ -154,7 +154,7 @@ theorem hybridRefinesSpecification (P : Parameters) (M : Type) [DecidableEq M] :
           obtain ⟨⟨gr', hgr', heq⟩, rfl, rfl, rfl⟩ := hs'
           exact ⟨hI', by rw [← heq]; exact hAbs.step_gbcaTau hI r hstepG hgr'⟩)
         exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
-      · -- the view's own τ (DECIDED delivery/echo/byzantine)
+      · -- the projection's own τ (DECIDED delivery/echo/byzantine)
         obtain ⟨ω, hRel, hWeak⟩ := stutter_step _ a (fun s' hs' => by
           obtain ⟨g', C', A', w'⟩ := s'
           have hI' := hI.step hstep hs'
@@ -163,7 +163,7 @@ theorem hybridRefinesSpecification (P : Parameters) (M : Type) [DecidableEq M] :
           obtain ⟨hc2, rfl⟩ := mem_support_abaTransition hs2
           exact ⟨hI', hAbs.step_roundLoopTau hI hstepC hc2⟩)
         exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
-      · -- the callG handshake
+      · -- the callG call
         obtain ⟨ω, hRel, hWeak⟩ := stutter_step _ a (fun s' hs' => by
           obtain ⟨g', C', A', w'⟩ := s'
           have hI' := hI.step hstep hs'
@@ -174,7 +174,7 @@ theorem hybridRefinesSpecification (P : Parameters) (M : Type) [DecidableEq M] :
           obtain ⟨hc2, rfl⟩ := mem_support_abaTransition h2
           exact ⟨hI', by rw [← heq]; exact hAbs.step_callG hI r id b hstepG hstepC hgr' hc2⟩)
         exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
-      · -- the retG handshake
+      · -- the retG return
         obtain ⟨ω, hRel, hWeak⟩ := stutter_step _ a (fun s' hs' => by
           obtain ⟨g', C', A', w'⟩ := s'
           have hI' := hI.step hstep hs'
@@ -186,7 +186,7 @@ theorem hybridRefinesSpecification (P : Parameters) (M : Type) [DecidableEq M] :
           exact ⟨hI', by
             rw [← heq]; exact hAbs.step_retG hI r id out bnd hstepG hstepC hgr' hc2⟩)
         exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
-      · -- the callW handshake
+      · -- the callW call
         obtain ⟨ω, hRel, hWeak⟩ := stutter_step _ a (fun s' hs' => by
           obtain ⟨g', C', A', w'⟩ := s'
           have hI' := hI.step hstep hs'
@@ -195,7 +195,7 @@ theorem hybridRefinesSpecification (P : Parameters) (M : Type) [DecidableEq M] :
           obtain ⟨hc2, wr', hwr', rfl⟩ := mem_support_coinTransition h2
           exact ⟨hI', hAbs.step_callW hI r id hstepW hstepC hwr' hc2⟩)
         exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
-      · -- the retW handshake
+      · -- the retW return
         obtain ⟨ω, hRel, hWeak⟩ := stutter_step _ a (fun s' hs' => by
           obtain ⟨g', C', A', w'⟩ := s'
           have hI' := hI.step hstep hs'
@@ -357,7 +357,7 @@ theorem hybridRefinesSpecification (P : Parameters) (M : Type) [DecidableEq M] :
           refine ⟨ω, hRel, Or.inr ⟨by simp, ?_⟩⟩
           rw [hbid]
           exact weakStep_of_run_then_step hrun (SpecStep.ret a1 id b hval1 hretid)
-        · -- phase 2: `b` agrees with the certified value through the abstract state's holder
+        · -- phase 2: `b` agrees with the witnessed value through the abstract state's holder
           -- universal
           -- (I30 holds the derived sender's sent `b` equal at every correct holder, and the
           -- abstract state's universal names `v`; `SpecStep.ret` fires alone)

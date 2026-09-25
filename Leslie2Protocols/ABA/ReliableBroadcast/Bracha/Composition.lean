@@ -16,7 +16,8 @@ an arbitrary payload type `M`, assembled from the `n` per-process programs and t
 network of `ABA/ReliableBroadcast/Bracha/Components.lean`.
 
 `brachaInstanceExtended` is the synchronised group of programs in parallel with the network, over
-the instance-internal alphabet. `brachaInstance` hides the two rendezvous there and reads the
+the instance-internal alphabet. `brachaInstance` hides the two synchronisation labels there and
+reads the
 result back over the interface alphabet `InstanceLabel n M`, in which the instance's interface is
 the leader's call, the per-process returns, corruption and the call loop. Both run on the composed
 state `BrachaState n M`, and `brachaInstance_init` is the initial state they start from.
@@ -35,7 +36,7 @@ noncomputable def brachaInstanceExtended (P : Parameters) (ldr : Fin P.n) (M : T
   (System.synchronisedProduct (broadcastProgram P ldr (M := M))).parallel (broadcastNetwork P ldr M)
 
 /-- **The reliable-broadcast instance**: the programs beside the network, the
-two rendezvous hidden, the result read back over the interface alphabet. -/
+two synchronisation labels hidden, the result read back over the interface alphabet. -/
 noncomputable def brachaInstance (P : Parameters) (ldr : Fin P.n) (M : Type) [DecidableEq M] :
     System (BrachaState P.n M) (InstanceLabel P.n M) :=
   ((brachaInstanceExtended P ldr M).abstract (broadcastEvents P.n M)).relabel

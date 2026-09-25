@@ -17,12 +17,12 @@ import Leslie2Protocols.ABA.HybridRefinesSpecification.InvariantPreservation.Spe
 import Leslie2Protocols.ABA.HybridRefinesSpecification.InvariantPreservation.StepCases
 
 /-!
-# Step inversion and `Invariant` preservation for `hybrid`
+# The step cases and `Invariant` preservation for `hybrid`
 
 Stages A and B of the proof that `hybridSpecificationStateRelation` is a simulation relation
 (`DESIGN-HybridRefinesSpecification.md`), on top of the relation and invariant of
 `HybridRefinesSpecification/Relation.lean`. `InvariantPreservation/StepCases.lean` holds Stage
-A, the step inversion for `hybrid`, and `InvariantPreservation/SpecificationStateCorruption.lean`
+A, the step cases of `hybrid`, and `InvariantPreservation/SpecificationStateCorruption.lean`
 the readings of corruption at a specification state that the `fail` transition consumes. Stage B,
 the preservation of `Invariant`, is one file per label class, each carrying all forty invariant
 fields across the transitions of its class. The file

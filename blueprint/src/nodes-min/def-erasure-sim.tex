@@ -1,7 +1,0 @@
-\begin{definition}[State erasure]
-  \label{def:erasure-sim}
-  \lean{PLTS.AuxiliaryVariableRemoval}\lean{PLTS.System.LabelSaturated}\lean{PLTS.SeparatesSilent}\lean{PLTS.AuxiliaryVariableRemoval.achievableTraceDists_eq}\leanok
-  \uses{def:forwardsim, def:achievable, def:strongfunctional, thm:forward-sound}
-  A state erasure of $sys_A$ onto $sys_0$ is a map $\pi$ on states together with an identification $\varphi$ of labels, under which the two systems match each other's transitions along $\pi$ and $\varphi$ and $\tau$ is the one label with the $\varphi$-image of $\tau$: \leandecl{PLTS.AuxiliaryVariableRemoval}, \leandecl{PLTS.SeparatesSilent}.
-  At $\varphi = \mathrm{id}$ the two systems have the same achievable trace distributions, a general $\varphi$ reaches that equality once every label it identifies with a different label is hidden, and an erasure survives parallel composition, abstraction and restriction against a component that is label-saturated for $\varphi$: \leandecl{PLTS.AuxiliaryVariableRemoval.achievableTraceDists_eq}, \leandecl{PLTS.System.LabelSaturated}.
-\end{definition}

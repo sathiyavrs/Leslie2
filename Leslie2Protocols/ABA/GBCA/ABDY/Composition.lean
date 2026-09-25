@@ -14,32 +14,34 @@ import Leslie2Protocols.Framework.LoopsAndInstanceFamilies
 `GBCA.ByABDY.composition`: one round of the protocol, assembled from the components of
 `ABA/GBCA/ABDY/Components.lean` — the `n` corruption-blind local programs beside the round's own
 network. `compositionExtended` is the programs synchronised and put in parallel with the network
-over the instance-internal alphabet; `composition` hides the two rendezvous there and reads the
+over the instance-internal alphabet; `composition` hides the two synchronisations there and reads
+the
 result back over the shared extended alphabet `ExtendedLabel n Message`. The instance is the unit
 the
 analysis replaces by the graded-agreement specification, so its interface is exactly what that
-replacement may see: the round's handshake ports `callG r`, `retG r`, `gbcaCallLoop r` and the
+replacement may see: the round's ports `callG r`, `retG r`, `gbcaCallLoop r` and the
 three Byzantine graded-agreement labels of round `r`, and nothing else.
 
 `gbcaInstanceFamily` is the ℕ-indexed family of these instances: `System.family` routes a
 round-tagged label to its round, takes `τ` at any round, and broadcasts `fail` to every round at
 once. It is built from three functions on the shared extended alphabet. `roundOwnsLabel` gives the
 round a label of the interface belongs to, and `none` at every other label — the ABA API, the coin
-ports, `fail`, the DECIDED sets and the round rendezvous of the protocol network. `isFailLabel`
-picks out the one label every round takes at once. `corruptionAct` is the broadcast corruption act
-on an instance state: the round's network state records it and the round records do not (D1).
+ports, `fail`, the DECIDED sets and the round synchronisations of the protocol network.
+`isFailLabel` picks out the one label every round takes at once. `corruptionAct` is the broadcast
+corruption act on an instance state: the round's network state records it and the round variables do
+not (D1).
 
 ## Determinacy
 
 Every transition of a local program and of the round's network is Dirac, so the instance and its
 family are LTS: the probabilistic transition of the protocol is the coin resolution, which is not
 part of a graded-agreement round. No program moves on `τ` either, so the silent transitions of the
-instance are exactly the network's injections and the hidden rendezvous.
+instance are exactly the network's injections and the hidden synchronisations.
 
 ## Reading and building instance transitions
 
 The pipeline is `relabel ∘ abstract ∘ parallel ∘ synchronisedProduct`. `composition_step_iff`
-unfolds it once and for all, into the hidden-rendezvous case and the shared-label case, and
+unfolds it once and for all, into the hidden-synchronisation case and the shared-label case, and
 `gbcaProgramProduct_cases` reads a synchronised transition of the program group back as one
 transition per process. In the other direction `composition_event_step`, `composition_label_step`
 and `composition_tau_network` build a transition of the instance from the program and network
@@ -59,7 +61,7 @@ noncomputable def compositionExtended (P : Parameters) (r : ℕ) :
   (System.synchronisedProduct (gbcaProgram P r)).parallel (GBCANetwork P r)
 
 /-- **The round-`r` instance**: the programs beside the network, the two
-rendezvous hidden, the result read back over the shared extended alphabet. Its
+synchronisations hidden, the result read back over the shared extended alphabet. Its
 interface is the round's ports — `callG r`, `retG r`, `gbcaCallLoop r` and the
 three Byzantine graded-agreement labels of round `r`. -/
 noncomputable def composition (P : Parameters) (r : ℕ) :
@@ -67,8 +69,8 @@ noncomputable def composition (P : Parameters) (r : ℕ) :
   ((compositionExtended P r).abstract (gbcaEvents P.n)).relabel
 
 /-- The round a label of the instance interface belongs to. Every other label of the shared extended
-alphabet — the ABA API, the coin ports, `fail`, the DECIDED sets, and the round rendezvous of the
-protocol network — is owned by no round. -/
+alphabet — the ABA API, the coin ports, `fail`, the DECIDED sets, and the round synchronisations of
+the protocol network — is owned by no round. -/
 def roundOwnsLabel {n : ℕ} {M : Type} : ExtendedLabel n M → Option ℕ
   | Sum.inl (.callG r _ _) => some r
   | Sum.inl (.retG r _ _ _) => some r
@@ -89,7 +91,7 @@ instance {n : ℕ} {M : Type} : DecidablePred (isFailLabel (n := n) (M := M)) :=
   | inr e => cases e <;> simp only [isFailLabel] <;> infer_instance
 
 /-- The broadcast corruption act on an instance state: the round's network state records it, the
-round records do not (D1). -/
+round variables do not (D1). -/
 def corruptionAct (P : Parameters) : ExtendedLabel P.n Message → GBCA.ByABDY.RoundState P.n →
   GBCA.ByABDY.RoundState P.n
   | Sum.inl (.fail k), (u, w) => (u, w.corrupt P k)
@@ -148,9 +150,9 @@ theorem composition_isLTS (P : Parameters) (r : ℕ) : (composition P r).IsLTS :
 theorem gbcaInstanceFamily_isLTS (P : Parameters) : (gbcaInstanceFamily P).IsLTS :=
   System.family_isLTS (composition_isLTS P) roundOwnsLabel isFailLabel (corruptionAct P)
 
-/-- No program transition fires on `τ`: a program only ever moves in a rendezvous or
+/-- No program transition fires on `τ`: a program only ever moves in a synchronisation or
 on one of the round's ports. The instance's silent transitions are therefore
-exactly the network's injections and the hidden rendezvous. -/
+exactly the network's injections and the hidden synchronisations. -/
 theorem gbcaProgramStep_no_tau {P : Parameters} {r : ℕ} {j : Fin P.n}
     {p : GBCA.ByABDY.RoundVariables P.n} {ν : PMF (GBCA.ByABDY.RoundVariables P.n)}
     (h : GBCAProgramStep P r j p (Silent.τ : GBCALabel P.n) ν) : False := by
@@ -162,7 +164,7 @@ The pipeline is `relabel ∘ abstract ∘ parallel ∘ synchronisedProduct`; the
 below unfold it once and for all, in both directions. -/
 
 /-- A synchronised transition of the program group on a visible label: every
-program steps, and the joint distribution is Dirac. -/
+program steps, and the product distribution is Dirac. -/
 theorem gbcaProgramProduct_cases {P : Parameters} {r : ℕ}
     {u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundVariables P.n} {l : GBCALabel P.n}
     {μ : PMF (∀ _ : Fin P.n, GBCA.ByABDY.RoundVariables P.n)}
@@ -199,7 +201,7 @@ theorem gbcaProgramProduct_no_tau {P : Parameters} {r : ℕ}
   · exact hτ rfl
   · exact gbcaProgramStep_no_tau hstep
 
-/-- The instance's step relation, unfolded to the hidden-rendezvous case and
+/-- The instance's step relation, unfolded to the hidden-synchronisation case and
 the shared-label case. -/
 theorem composition_step_iff (P : Parameters) (r : ℕ) (q : GBCA.ByABDY.RoundState P.n)
     (l : ExtendedLabel P.n Message) (μ : PMF (GBCA.ByABDY.RoundState P.n)) :
@@ -214,8 +216,8 @@ theorem composition_step_iff (P : Parameters) (r : ℕ) (q : GBCA.ByABDY.RoundSt
     · exact Or.inl ⟨rfl, _, inr_mem_gbcaEvents e, hstep⟩
     · exact Or.inr ⟨inl_notMem_gbcaEvents l, hstep⟩
 
-/-- Build a joint transition of the programs and the network on a rendezvous
-label. -/
+/-- Build a synchronised transition of the programs and the network on a
+synchronisation label. -/
 theorem compositionExtended_event_step (P : Parameters) (r : ℕ)
     {u x : ∀ _ : Fin P.n, GBCA.ByABDY.RoundVariables P.n} {w w' : NetworkState P.n}
     (e : GBCAEvent P.n)
@@ -226,7 +228,7 @@ theorem compositionExtended_event_step (P : Parameters) (r : ℕ)
   exact Or.inl ⟨by simp, PMF.pure x, PMF.pure w', gbcaProgramProduct_pure (by simp) hall, hn,
     (prodPMF_pure_pure _ _).symm⟩
 
-/-- Build a joint transition of the programs and the network on a visible
+/-- Build a synchronised transition of the programs and the network on a visible
 shared label. -/
 theorem compositionExtended_label_step (P : Parameters) (r : ℕ)
     {u x : ∀ _ : Fin P.n, GBCA.ByABDY.RoundVariables P.n} {w w' : NetworkState P.n}
@@ -249,7 +251,7 @@ theorem compositionExtended_tau_network (P : Parameters) (r : ℕ)
   rw [compositionExtended, System.parallel_step]
   exact Or.inr (Or.inr ⟨rfl, PMF.pure w', hn, (prodPMF_pure_pure _ _).symm⟩)
 
-/-- A hidden rendezvous is a silent transition of the instance. -/
+/-- A hidden synchronisation is a silent transition of the instance. -/
 theorem composition_event_step (P : Parameters) (r : ℕ)
     {u x : ∀ _ : Fin P.n, GBCA.ByABDY.RoundVariables P.n} {w w' : NetworkState P.n}
     (e : GBCAEvent P.n)

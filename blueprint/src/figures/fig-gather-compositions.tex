@@ -1,12 +1,12 @@
 % The gather-based round and its three substitutions
 % (PLTS.ABA.GBCA.ByAFW.roundOverBracha, roundOverBroadcastSpecification,
 % roundOverGatherSpecifications, GBCA.specInst).
-% The bottom tier is drawn open: n programs beside the round's network, in
+% The bottom composition is drawn open: n programs beside the round's network, in
 % parallel with two gather instances, each n programs beside the gather network
 % in parallel with 2n Bracha instances, so 4n + 2 networks in one round.
 \begin{tikzpicture}[
     >={Stealth[round]}, semithick,
-    tier/.style={draw, rounded corners, align=center, font=\scriptsize,
+    composition/.style={draw, rounded corners, align=center, font=\scriptsize,
       minimum width=10.4cm, minimum height=0.6cm, inner sep=3pt},
     prog/.style={draw, rounded corners, align=center, font=\scriptsize,
       minimum height=0.55cm, inner sep=2pt},
@@ -17,7 +17,7 @@
     brbgap/.style={draw, align=center, font=\scriptsize,
       minimum width=0.55cm, minimum height=0.5cm, inner sep=1pt},
     lbl/.style={font=\scriptsize, align=left, fill=white, inner sep=1.5pt}]
-  % ---- the bottom tier, drawn open
+  % ---- the bottom composition, drawn open
   \draw[dashed, rounded corners] (-0.35,-5.75) rectangle (12.25,-0.15);
   \node[font=\scriptsize, anchor=west] at (-0.2,-0.45)
     {$\mathrm{roundOverBracha}(P,r)$: programs, the round's network, two gather instances, all concrete};
@@ -31,7 +31,7 @@
     \draw[dashed, rounded corners] (\x,-4.95) rectangle ({\x+5.8},-1.75);
     \node[font=\scriptsize, anchor=north west] at ({\x+0.05},-1.8) {\t};
     \node[prog, anchor=north west, text width=2.35cm] at ({\x+0.1},-2.15)
-      {gather programs $1 \cdots n$,\\ with their records};
+      {gather programs $1 \cdots n$,\\ with their variables};
     \node[prog, anchor=north west, text width=2.35cm] at ({\x+3.1},-2.15)
       {the gather network:\\ $sent$, $F$, the core (D29)};
     \node[brb, anchor=north west] at ({\x+0.15},-3.45) {$\mathrm{inputBroadcasts}\,1$};
@@ -45,12 +45,12 @@
   }
   \node[font=\scriptsize, align=center, text width=11.6cm] at (5.95,-5.4)
     {each Bracha instance $n$ programs beside its network; $4n + 2$ networks in one round};
-  % ---- the three tiers above it
-  \node[tier] (overbrb) at (5.95,-6.5)
+  % ---- the three compositions above it
+  \node[composition] (overbrb) at (5.95,-6.5)
     {$\mathrm{roundOverBroadcastSpecification}(P,r)$: each Bracha instance replaced by the BRB specification};
-  \node[tier] (overgather)  at (5.95,-7.7)
+  \node[composition] (overgather)  at (5.95,-7.7)
     {$\mathrm{roundOverGatherSpecifications}(P,r)$: each gather instance replaced by the gather specification};
-  \node[tier] (spec)  at (5.95,-8.9)
+  \node[composition] (spec)  at (5.95,-8.9)
     {$\mathrm{GBCA.specInst}(P,r)$: Transition System 2};
   \draw[->] (5.95,-5.75) -- (overbrb.north)
     node[lbl, midway, anchor=west, xshift=4pt]{$\mathrm{broadcastSubstitution}$, by congruence};

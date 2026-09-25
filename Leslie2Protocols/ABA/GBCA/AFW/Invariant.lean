@@ -18,28 +18,28 @@ The invariant carries
 
 * the corruption budget (`F_card`) and the agreement of the two corrupted sets
   (`secondGatherF_eq_firstGatherF`);
-* the provenance of a committed entry, per gather (`firstGatherVal_of_call`,
-  `secondGatherVal_of_call`): a committed entry of a correct process is that process's call;
-* what a correct process's candidate certifies about the first gather's core
+* a committed entry of a correct process is that process's call, per gather
+  (`firstGatherVal_of_call`, `secondGatherVal_of_call`);
+* what a correct process's candidate witnesses about the first gather's core
   (`candidate_aboveThreshold`, `candidate_bot`), and its transfer to the second gather's call
-  record (`secondGatherCall_candidate`);
-* the round's bound bit (D29): a candidate or a second call certifies that the bit is written
+  (`secondGatherCall_candidate`);
+* the round's bound bit (D29): a candidate or a second call witnesses that the bit is written
   (`candidate_bound`, `secondGatherCall_bound`), and the bit is `GBCA.boundOfCore` of the first
   gather's recorded core (`bound_core`);
-* what a recorded grade certifies (`out_witness`, through `OutputWitness`);
+* what a recorded grade witnesses (`out_witness`, through `OutputWitness`);
 * the core-write guards, which the write-once cores keep true (`firstGatherCore_val`,
   `firstGatherCore_card`, `secondGatherCore_val`, `secondGatherCore_card`).
 
-## What the program's record carries
+## What the program's variables carry
 
 The first gather's return, the second gather's call, its return and the round's graded return are
-four separate moves, and what carries the round from one to the next is the program's record. The
-invariant therefore states the first gather's certificates on the program's candidate:
+four separate moves, and what carries the round from one to the next is the program's variables. The
+invariant therefore states the first gather's witnesses on the program's candidate:
 `candidate_aboveThreshold` and `candidate_bot` are established at `firstGatherReturn`, where the
 first gather's return guards are in scope, and `secondGatherCall_candidate` transfers the candidate
-to the second gather's call record at `secondGatherCall`. The graded outcome is recorded at
-`secondGatherReturn`, and `out_witness` is what the second gather's return guards certify about
-it. Both cores are write-once, so a certificate survives every later transition.
+to the second gather's call at `secondGatherCall`. The graded outcome is recorded at
+`secondGatherReturn`, and `out_witness` is what the second gather's return guards witness about
+it. Both cores are write-once, so a witness survives every later transition.
 -/
 
 namespace PLTS
@@ -52,14 +52,14 @@ variable {P : Parameters}
 
 /-! ### The invariant -/
 
-/-- The invariant of the round over the gather specifications. The provenance
-clauses are the gather commit guards, per gather; `candidate_aboveThreshold` and `candidate_bot`
-record what the candidate the first gather's return determines certifies about
+/-- The invariant of the round over the gather specifications. The clauses naming a committed entry
+are the gather commit guards, per gather; `candidate_aboveThreshold` and `candidate_bot`
+record what the candidate the first gather's return determines witnesses about
 that gather, and `secondGatherCall_candidate` carries the candidate into the second gather's
-call record; `candidate_bound` and `secondGatherCall_bound` say that the transition writing the
+call; `candidate_bound` and `secondGatherCall_bound` say that the transition writing the
 candidate writes the bound bit, and `bound_core` that the bit is read off the
 first gather's core; `out_witness` records what the second gather's return
-certifies about the grade; the `core*` clauses re-state the core-write guards,
+witnesses about the grade; the `core*` clauses re-state the core-write guards,
 which the write-once cores keep true. -/
 structure Invariant (P : Parameters) (s : RoundStateOverGatherSpecifications P.n) : Prop where
   /-- The corruption budget. -/
@@ -77,7 +77,7 @@ structure Invariant (P : Parameters) (s : RoundStateOverGatherSpecifications P.n
   candidate_aboveThreshold : ∀ k ∉ (firstGather s).F, ∀ v,
     (programs s k).candidate = some (some v) → ∃ S,
       (firstGather s).core = some S ∧ S.card - P.f ≤ AcceptedPairs.count S v
-  /-- A correct process's `⊥` candidate certifies `f + 1` committed-entry
+  /-- A correct process's `⊥` candidate witnesses `f + 1` committed-entry
   support for both bits. -/
   candidate_bot : ∀ k ∉ (firstGather s).F, (programs s k).candidate = some none →
     P.f + 1 ≤ firstGatherSupport (firstGather s) true ∧ P.f + 1 ≤ firstGatherSupport (firstGather s)
@@ -85,15 +85,15 @@ structure Invariant (P : Parameters) (s : RoundStateOverGatherSpecifications P.n
   /-- A correct process's second call carries the candidate it holds. -/
   secondGatherCall_candidate : ∀ k ∉ (firstGather s).F, ∀ x,
     (secondGather s).call k = some x → (programs s k).candidate = some x
-  /-- A candidate certifies the bound bit is written: the first gather's return
+  /-- A candidate witnesses that the bound bit is written: the first gather's return
   writes the candidate and the bit together. -/
   candidate_bound : ∀ k, (programs s k).candidate ≠ none → bound s ≠ none
-  /-- A second call certifies the bound bit is written: the bit is written at
+  /-- A second call witnesses that the bound bit is written: the bit is written at
   the first gather's return, before any second call. -/
   secondGatherCall_bound : ∀ k, (programs s k).secondGatherCalled = true → bound s ≠ none
   /-- The bound bit is the bound bit of the first gather's recorded core. -/
   bound_core : ∀ β, bound s = some β → ∃ S, (firstGather s).core = some S ∧ β = boundOfCore P S
-  /-- A recorded grade comes with the bound bit and its certificate. -/
+  /-- A recorded grade comes with the bound bit and its witness. -/
   out_witness : ∀ k out,
     (programs s k).output = some out → bound s ≠ none ∧ OutputWitness P s out
   /-- The first gather's core is committed entries. -/

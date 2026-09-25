@@ -10,7 +10,7 @@ import Leslie2Protocols.ABA.GBCA.ABDY.RoundFamilyOwnedLabels
 /-!
 # The composed system of ABDY22's protocol
 
-The protocol of `ABA/ABDY/System.lean` is `n` programs beside one network and the coin oracle. A
+The protocol of `ABA/ABDY/System.lean` is `n` programs beside one network and the common coin. A
 program reads its own replacement flag and nothing else about corruption: not the corrupted set,
 not the budget, not another process's status (D23). Each program runs its round loop and a
 graded-agreement round at once, and the single adversary holds both kinds of message sent.
@@ -22,11 +22,12 @@ graded-agreement round at once, and the single adversary holds both kinds of mes
   (`GBCA/ABDY/Composition.lean`);
 * the round loops are `n` separate automata (`roundLoopProgram`), synchronised;
 * what is left of the network is the DECIDED sets beside the corrupted set (`ABANetwork`);
-* the coin oracle enters through the same label pullback as in the protocol
+* the common coin enters through the same label pullback as in the protocol
   (`Composition.coinOverRoundAlphabet`).
 
-The four components speak `Composition.ExtendedLabel n`, the rendezvous labels are hidden, and the
-result is read back over `Label n`. The round loops, the ABA network and the lifted oracle are
+The four components speak `Composition.ExtendedLabel n`, the labels the components synchronise on
+are hidden, and the result is read back over `Label n`. The round loops, the ABA network and the
+lifted common coin are
 defined in `ABA/Composition/Components.lean`. The pipeline `ABDY.composedExtended` /
 `ABDY.composedHidden` / `ABDY.composed` is the context term of `hybrid`
 (`ABA/Composition/Hybrid.lean`), character for character.
@@ -34,17 +35,17 @@ defined in `ABA/Composition/Components.lean`. The pipeline `ABDY.composedExtende
 ## Per-round memory
 
 A round instance is a component of the composite from the start, not an object created by the
-round's first call, and it keeps its round records and its network state for the whole run. The
+round's first call, and it keeps its round variables and its network state for the whole run. The
 graded-agreement coordinate of a composed state is therefore `ℕ → GBCA.ByABDY.RoundState n`:
-every round is present at every moment, whichever round each process is in. Those retained round
-records are specification state in one respect only: a process record of the protocol holds its own
-round records in a finite map and, once it terminates, answers nothing further, where the round
-instance answers at every moment (D22).
+every round is present at every moment, whichever round each process is in. Those retained
+variables are specification state in one respect only: a process of the protocol holds its own
+variables per round in a finite map and, once it terminates, answers nothing further, where the
+round instance answers at every moment (D22).
 
 ## The authorisation relocation (D11)
 
-A round instance carries no `k ∈ F` guard on the handshake labels `byzantineCallG`,
-`byzantineCallGLoop` and `byzantineRetG` (`GBCA/ABDY/Components.lean`, D11). A handshake label
+A round instance carries no `k ∈ F` guard on the Byzantine call and return labels `byzantineCallG`,
+`byzantineCallGLoop` and `byzantineRetG` (`GBCA/ABDY/Components.lean`, D11). Such a label
 stays visible at the instance boundary and is authorised outside it. Here `ABANetwork` is that
 outside, and it carries the guard on its own copy of the corrupted set. The two copies are written
 by one broadcast: `fail` reaches every round's network through the family
@@ -73,7 +74,7 @@ open Composition
 
 The protocol cut into its components: the graded-agreement family as a round-indexed family of
 instances, the round loops as `n` synchronised automata, the DECIDED sets beside the corrupted set,
-and the lifted coin oracle. This section composes the four components and reads the transitions of
+and the lifted common coin. This section composes the four components and reads the transitions of
 the composite. -/
 
 namespace Composition
@@ -81,7 +82,7 @@ namespace Composition
 /-! ### The composition pipeline -/
 
 /-- The state of the composed system: the round instances, the round loops, the ABA network and the
-coin oracle. -/
+common coin. -/
 abbrev ComposedState (P : Parameters) : Type :=
   (ℕ → GBCA.ByABDY.RoundState P.n) ×
     ((∀ _ : Fin P.n, RoundLoopVariables P.n) × (ABANetworkState P.n × (ℕ → WCC.SpecState P.n)))
@@ -98,7 +99,7 @@ noncomputable def composedExtended (P : Parameters) :
       ((Composition.ABANetwork P GBCA.ByABDY.Message).parallel
         (coinOverRoundAlphabet P GBCA.ByABDY.Message)))
 
-/-- **The composed group**: the rendezvous alphabet hidden, the result read
+/-- **The composed group**: the labels the components synchronise on hidden, the result read
 back over `Label n`. -/
 noncomputable def composedHidden (P : Parameters) :
     System (Composition.ComposedState P) (Label P.n) :=
@@ -114,7 +115,7 @@ namespace Composition
 
 /-! ### Reading and building composite transitions of the composed system -/
 
-/-- The composed group's step relation, unfolded to the hidden rendezvous case
+/-- The composed group's step relation, unfolded to the hidden synchronisation case
 and the shared-label case. -/
 theorem composedHidden_step_iff (P : Parameters) (q : ComposedState P) (l : Label P.n)
     (μ : PMF (ComposedState P)) :
@@ -130,8 +131,8 @@ theorem composedHidden_step_iff (P : Parameters) (q : ComposedState P) (l : Labe
     · exact Or.inl ⟨rfl, _, inr_mem_networkEventLabels e, hstep⟩
     · exact Or.inr ⟨inl_notMem_networkEventLabels l, hstep⟩
 
-/-- Build a joint transition of the four components on a visible label, the
-oracle's successor left arbitrary. -/
+/-- Build a synchronised transition of the four components on a visible label, the
+coin's successor left arbitrary. -/
 theorem composedExtended_visible_step (P : Parameters)
     {G G' : ℕ → GBCA.ByABDY.RoundState P.n} {C C' : ∀ _ : Fin P.n, RoundLoopVariables P.n}
     {A A' : ABANetworkState P.n} {o : ℕ → WCC.SpecState P.n} {ω : PMF (ℕ → WCC.SpecState P.n)}
@@ -240,11 +241,11 @@ theorem gbcaProgramStep_family {P : Parameters} {r : ℕ}
   · subst hi; rw [Function.update_self]; exact hown
   · rw [Function.update_of_ne hi]; exact hfor i hi
 
-/-! ### Hiding the rendezvous alphabet
+/-! ### Hiding the labels the components synchronise on
 
-The composition hides `NetworkEvent n`, so a transition of `ABDY.composedExtended` on a rendezvous
-label is a silent transition of `ABDY.composedHidden`, as is one on `τ`. The two round rendezvous
-never reach this point. They are internal to a round instance, hidden inside
+The composition hides `NetworkEvent n`, so a transition of `ABDY.composedExtended` on one of those
+labels is a silent transition of `ABDY.composedHidden`, as is one on `τ`. The two round
+synchronisations never reach this point. They are internal to a round instance, hidden inside
 `GBCA.ByABDY.composition`, and reach the composite as the family's own `τ`. -/
 
 theorem composedHidden_of_event (P : Parameters) {q : ComposedState P}

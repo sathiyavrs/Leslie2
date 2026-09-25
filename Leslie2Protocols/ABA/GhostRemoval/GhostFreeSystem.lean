@@ -8,17 +8,17 @@ import Leslie2Protocols.ABA.Implementation.NetworkStateWritesAndRemovals
 import Leslie2Protocols.Framework.AuxiliaryVariableRemoval
 
 /-!
-# Erasing the implementation's ghost
+# Removing the implementation's ghost
 
-The network of the implementation holds one record no program reads: the ghost
-record `NetworkState.ghost` of every round, written by `ghostStep` and read out by
+The network of the implementation holds one auxiliary variable no program reads: the ghost
+`NetworkState.ghost` of every round, written by `ghostStep` and read out by
 `ghostOutput` at the two graded-agreement returns. That read decides the bit a return
 announces and not whether the return fires: the hypothesis `ghostOutput_total` below asks it
-to admit a bit at every state. This file erases it.
+to admit a bit at every state. This file removes it.
 
-The system it is erased to is `systemGhostFree`, the implementation over the trivial ghost
+The system left by the removal is `systemGhostFree`, the implementation over the trivial ghost
 `Unit` whose `ghostOutput` is the full relation: the same programs, the same network transitions,
-and a graded-agreement return free to announce either bit. The erasure is a
+and a graded-agreement return free to announce either bit. The removal is an
 `AuxiliaryVariableRemoval`
 (`Framework/AuxiliaryVariableRemoval.lean`) along the projection
 
@@ -29,20 +29,20 @@ graded-agreement return to the return of the same round, process and graded outc
 the announced bit fixed at `false` and is the identity on every other label.
 
 Two clauses carry the content. The projection is exact on labels: every transition of the
-adversary is a transition of the ghost-free adversary at the erased state, on the same label,
-because the ghost write leaves the erasure where it stands
+adversary is a transition of the ghost-free adversary at the state with the ghost removed, on the
+same label, because the ghost write leaves that state where it stands
 (`NetworkState.forgetGhost_writeGhost`) and over `Unit` it is the identity
 (`NetworkState.writeGhost_unit`). The lift is exact up to `φ`: a ghost-free return
 announcing `bnd` is matched by the return announcing a bit the relation `ghostOutput`
 admits, which is what the hypothesis `ghostOutput_total` supplies. Both algorithms satisfy
 it, their `ghostOutput` being an equation.
 
-The pipeline of `Implementation/System.lean` carries the erasure from the adversary to the
+The pipeline of `Implementation/System.lean` carries the removal from the adversary to the
 system. The three congruences of `Framework/AuxiliaryVariableRemoval.lean` ask the neighbours to be
 saturated along `φ`: the process group is, because a program's return transition takes
-the announced bit free (`IsRoundStep.boundBitFree`), and the coin oracle is, because a
-graded-agreement return is foreign to every coin round. Hiding `Label.hiddenAPI` collapses
-the erasure to the identity on labels, since every label `φ` identifies with a different
+the announced bit free (`IsRoundStep.boundBitFree`), and the common coin is, because a
+graded-agreement return is a label no coin round owns. Hiding `Label.hiddenAPI` collapses
+the removal to the identity on labels, since every label `φ` identifies with a different
 one is a graded-agreement return, and those are hidden. The conclusion `system_ghostRemoval` is
 therefore an equality of achievable trace distributions, with no label map in the
 statement.
@@ -66,7 +66,7 @@ its two graded-agreement returns free to announce either bit. -/
 noncomputable def networkGhostFree : System (NetworkState P.n M Unit) (ExtendedLabel P.n M E) :=
   network P M E Unit callPayload (fun _ _ _ => ()) (fun _ _ _ _ _ => True)
 
-/-- **The ghost-free system**: the implementation whose adversary holds no ghost record
+/-- **The ghost-free system**: the implementation whose adversary holds no ghost
 and announces any bit on a graded-agreement return. -/
 noncomputable def systemGhostFree : System (State P M S Unit) (Label P.n) :=
   system P M E S Unit roundStep callPayload (fun _ _ _ => ()) (fun _ _ _ _ _ => True)
@@ -78,15 +78,15 @@ section Labels
 
 variable {n : ℕ} {M E : Type}
 
-/-- The projection of the implementation's state: the process family and the coin oracle
-stand, and the adversary's ghost record is dropped. -/
+/-- The projection of the implementation's state: the process family and the common coin
+stand, and the adversary's ghost is dropped. -/
 def forgetGhostState {P : Parameters} {S G : Type} :
     State P M S G → State P M S Unit :=
   Prod.map id (Prod.map NetworkState.forgetGhost id)
 
-/-- The label with the announced bound bit dropped on the rendezvous alphabet: a
+/-- The label with the announced bound bit dropped on the synchronisation labels: a
 Byzantine graded-agreement return keeps its round, the process it answers and its graded
-outcome, and every other rendezvous label stands. -/
+outcome, and every other synchronisation label stands. -/
 def forgetBoundEvent : NetworkEvent n M E → NetworkEvent n M E
   | .byzantineRetG r k out _ => .byzantineRetG r k out false
   | e => e
@@ -96,7 +96,7 @@ def forgetBoundEvent : NetworkEvent n M E → NetworkEvent n M E
     forgetBoundEvent (NetworkEvent.byzantineRetG (M := M) (E := E) r k out bnd)
       = .byzantineRetG r k out false := rfl
 
-/-- Two rendezvous labels agree under the erasure exactly when they are equal, or are
+/-- Two synchronisation labels agree under the removal exactly when they are equal, or are
 Byzantine graded-agreement returns of the same round, process and graded outcome. -/
 theorem forgetBoundEvent_eq_iff (e e' : NetworkEvent n M E) :
     forgetBoundEvent e = forgetBoundEvent e' ↔
@@ -107,12 +107,12 @@ theorem forgetBoundEvent_eq_iff (e e' : NetworkEvent n M E) :
     cases e <;> cases e' <;> simp_all [forgetBoundEvent]
   · rintro (rfl | ⟨r, k, out, b, b', rfl, rfl⟩) <;> rfl
 
-/-- The label identification of the erasure: the announced bound bit dropped on both
+/-- The label identification of the removal: the announced bound bit dropped on both
 graded-agreement returns, every other label untouched. -/
 abbrev forgetBoundExtended : ExtendedLabel n M E → ExtendedLabel n M E := Sum.map forgetBound
   forgetBoundEvent
 
-/-- Two labels of the extended alphabet agree under the erasure exactly when they are
+/-- Two labels of the extended alphabet agree under the removal exactly when they are
 equal, or are graded-agreement returns — correct or Byzantine — of the same round,
 process and graded outcome. -/
 theorem forgetBoundExtended_eq_iff (l l' : ExtendedLabel n M E) :
@@ -140,7 +140,7 @@ theorem forgetBoundExtended_eq_iff (l l' : ExtendedLabel n M E) :
   · rintro (rfl | ⟨r, id, out, b, b', rfl, rfl⟩ | ⟨r, k, out, b, b', rfl, rfl⟩) <;>
       rfl
 
-/-- The erasure separates the silent label: `τ` is a graded-agreement return of no
+/-- The removal separates the silent label: `τ` is a graded-agreement return of no
 round. -/
 theorem separatesSilent_forgetBoundExtended :
     SeparatesSilent (forgetBoundExtended (n := n) (M := M) (E := E)) := by
@@ -151,7 +151,7 @@ theorem separatesSilent_forgetBoundExtended :
   · exact absurd hτ (by simp)
   · exact absurd hτ (by simp)
 
-/-- The rendezvous alphabet is saturated along the erasure: the identification keeps a
+/-- The synchronisation labels are saturated along the removal: the identification keeps a
 label in its summand. -/
 theorem networkEventLabels_forgetBoundExtended (l l' : ExtendedLabel n M E)
     (h : forgetBoundExtended l = forgetBoundExtended l') :
@@ -161,12 +161,12 @@ theorem networkEventLabels_forgetBoundExtended (l l' : ExtendedLabel n M E)
   | Sum.inl a, Sum.inr e => exact absurd h (by simp)
   | Sum.inr e, Sum.inl a => exact absurd h (by simp)
   | Sum.inr e, Sum.inr e' => simp
-/-- The sub-protocol API is saturated along the erasure. -/
+/-- The sub-protocol API is saturated along the removal. -/
 theorem hiddenAPI_forgetBound (l l' : Label n) (h : forgetBound l = forgetBound l') :
     l ∈ Label.hiddenAPI n ↔ l' ∈ Label.hiddenAPI n := by
   rw [← forgetBound_mem_hiddenAPI l, ← forgetBound_mem_hiddenAPI l', h]
 
-/-- Every discrepancy of the erasure lies in the sub-protocol API: two distinct labels
+/-- Every discrepancy of the removal lies in the sub-protocol API: two distinct labels
 with the same image are graded-agreement returns, and those are hidden. -/
 theorem hiddenAPI_of_forgetBound_ne (l l' : Label n) (h : forgetBound l = forgetBound l')
     (hne : l ≠ l') : l ∈ Label.hiddenAPI n := by
@@ -176,7 +176,7 @@ theorem hiddenAPI_of_forgetBound_ne (l l' : Label n) (h : forgetBound l = forget
 
 end Labels
 
-/-! ### The adversary's erasure
+/-! ### The ghost removal at the adversary
 
 The network is the one component whose state carries the ghost, and the two
 graded-agreement returns are the one pair of transitions that read it. -/
@@ -197,19 +197,19 @@ private theorem networkStepGhostFree_drop {s t : NetworkState P.n M Unit}
       (PMF.pure t) := by
   rwa [writeGhost_unit] at h
 
-/-- **The adversary's ghost is erasable**, provided every round, process and graded
-outcome admits an announced bit: `NetworkState.forgetGhost` is a state erasure of the
+/-- **The adversary's ghost can be removed**, provided every round, process and graded
+outcome admits an announced bit: `NetworkState.forgetGhost` is an auxiliary-variable removal of the
 adversary onto the ghost-free adversary along `forgetBoundExtended`.
 
-The projection is exact on labels. Every transition keeps its guards under the erasure, its
+The projection is exact on labels. Every transition keeps its guards under the removal, its
 guards reading the message record, the DECIDED sets and the corrupted set alone; its
-successor is the erasure of its own successor, the ghost write leaving the erasure where
-it stands; and the two returns lose their guard, the ghost-free relation being the full
+successor is its own successor with the ghost removed, the ghost write leaving that state
+where it stands; and the two returns lose their guard, the ghost-free relation being the full
 one.
 
-The lift matches a ghost-free transition by the transition of the same name at the unerased
-state. On a graded-agreement return the announced bit is replaced by one the relation `ghostOutput`
-admits, which `ghostOutput_total` supplies, and the two bits agree under
+The lift matches a ghost-free transition by the transition of the same name at the state that
+carries the ghost. On a graded-agreement return the announced bit is replaced by one the relation
+`ghostOutput` admits, which `ghostOutput_total` supplies, and the two bits agree under
 `forgetBoundExtended`. -/
 theorem network_ghostRemoval
     (ghostOutput_total : ∀ (s : NetworkState P.n M G) (r : ℕ) (id : Fin P.n) (out : GBCAOutput),
@@ -286,10 +286,10 @@ theorem network_ghostRemoval
       exact ⟨_, _, rfl, NetworkStep.byzantineDecided s k b hF, by simp [PMF.pure_map]⟩
 
 end NetworkRemoval
-/-! ### The neighbours of the erasure
+/-! ### The neighbours of the removal
 
-The network sits in the composition beside the process group and the coin
-oracle, and each has to accept whichever representative of a `forgetBoundExtended`-fibre the
+The network sits in the composition beside the process group and the common
+coin, and each has to accept whichever representative of a `forgetBoundExtended`-fibre the
 adversary announces. -/
 
 section Saturation
@@ -299,7 +299,7 @@ variable (P : Parameters) (M E S : Type)
       P.n S) →
       Prop)
 
-/-- **A program is saturated along the erasure.** The announced bound bit is the
+/-- **A program is saturated along the removal.** The announced bound bit is the
 network's business: a program's return transition takes it free (`IsRoundStep.boundBitFree`), the
 idle transition of a non-participant carries it as a bound variable, and the replaced program's
 self-loop reads no label at all. -/
@@ -319,7 +319,7 @@ theorem program_labelSaturated [IsRoundStep P M E S roundStep] (j : Fin P.n) :
     | byzantineRetGIdle c p _ _ _ _ hk => exact .byzantineRetGIdle c p r k out b' hk
     | corruptedIdle c p _ hh _ hown => exact .corruptedIdle c p _ hh (by simp) hown
 
-/-- **The process group is saturated along the erasure**: full synchronisation carries
+/-- **The process group is saturated along the removal**: full synchronisation carries
 the saturation of every program. -/
 theorem programSynchronisedProduct_labelSaturated [IsRoundStep P M E S roundStep] :
     (System.synchronisedProduct (program P M E S roundStep)).LabelSaturated
@@ -327,7 +327,7 @@ theorem programSynchronisedProduct_labelSaturated [IsRoundStep P M E S roundStep
   System.LabelSaturated.synchronisedProduct (program_labelSaturated P M E S roundStep)
     separatesSilent_forgetBoundExtended
 
-/-- **The coin family is saturated along the erasure of the announced bound bit.** A
+/-- **The coin family is saturated along the removal of the announced bound bit.** A
 graded-agreement return belongs to no coin round and is not a corruption, so the family
 answers it by the global idle self-loop, whichever bit it announces. -/
 theorem wccSpecFamily_labelSaturated :
@@ -343,7 +343,7 @@ theorem wccSpecFamily_labelSaturated :
     · exact absurd hg (by simp [Label.isFail])
     · exact Or.inr (Or.inr (Or.inr ⟨by simp, rfl, by simp [Label.isFail], rfl⟩))
 
-/-- **The lifted coin oracle is saturated along the erasure.** Two labels the erasure
+/-- **The lifted common coin is saturated along the removal.** Two labels the removal
 identifies are both outside the pullback's image, or delegate to two labels the coin
 family cannot tell apart. -/
 theorem coinOverExtendedAlphabet_labelSaturated :
@@ -360,7 +360,7 @@ theorem coinOverExtendedAlphabet_labelSaturated :
 
 end Saturation
 
-/-! ### The erasure of the implementation -/
+/-! ### The ghost removal at the implementation -/
 
 section SystemRemoval
 
@@ -373,10 +373,10 @@ variable (P : Parameters) (M E S G : Type) [DecidableEq M] [Inhabited G]
     (ghostStep : ExtendedLabel P.n M E → NetworkState P.n M G → G → G)
     (ghostOutput : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop)
 
-/-- **The implementation's ghost is erasable.** The adversary's erasure is carried through
-the composition pipeline by four congruences: parallel composition against the coin
-oracle, parallel composition against the process group, abstraction of the rendezvous
-alphabet, and restriction along the shared alphabet. Hiding `Label.hiddenAPI` then
+/-- **The implementation's ghost can be removed.** The adversary's removal is carried through
+the composition pipeline by four congruences: parallel composition against the common
+coin, parallel composition against the process group, abstraction of the synchronisation
+labels, and restriction along the shared alphabet. Hiding `Label.hiddenAPI` then
 collapses the label identification to the identity, every label the identification moves
 being a graded-agreement return. -/
 theorem system_auxiliaryVariableRemoval

@@ -14,7 +14,7 @@ import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 `GBCA.ByAFW.AlgorithmOverGatherSpecifications` states the transitions of
 `GBCA.ByAFW.roundOverGatherSpecifications` (`GBCA/AFW/Composition.lean`) — the `n`
 graded-agreement programs beside the round's network, in parallel with two gather specifications —
-over the round's state, through the four views `programs`, `bound`, `firstGather` and
+over the round's state, through the four projections `programs`, `bound`, `firstGather` and
 `secondGather`, one constructor per case of `roundOverGatherSpecifications_step_iff_algorithm`. It
 is a relation on that state; the system is the composition.
 
@@ -23,7 +23,7 @@ the transitions of the round over the labels `GBCA.specificationLabelMap` sends 
 the `l₀`-transitions of `AlgorithmOverGatherSpecifications`, on the same state and with the same
 distribution.
 
-## The gather tier
+## The gather specifications
 
 A gather instance's own transitions are `Gather.Step` (`ABA/Gather/Specification.lean`), and a
 transition of the round carries them as the hypothesis
@@ -168,7 +168,7 @@ inductive AlgorithmOverGatherSpecifications (P : Parameters) (r : ℕ) :
         (PMF.pure (setSecondGather (setPrograms s (Function.update (programs s) id
           { programs s id with output := some (gradeOf P g) })) t2))
   /-- The round returns the grade program `id` holds, announcing the round's
-  bound bit. The return announces the grade and the record drops it. -/
+  bound bit. The return announces the grade and the variables drop it. -/
   | retG (s : RoundStateOverGatherSpecifications P.n) (id : Fin P.n) (out : GBCAOutput)
       (ho : (programs s id).output = some out) (hr : (programs s id).returned = false) :
       AlgorithmOverGatherSpecifications P r s (.retG r id out ((bound s).getD (boundOfCore P ∅)))

@@ -37,7 +37,8 @@ NOTATION = {
     # nothing in Lean by design
     "guess",
     # pseudocode for a sub-protocol return, as in BRB_k.return(m'), which the
-    # encoding reads as a receipt quorum and not as a declaration of its own
+    # encoding reads as a quorum of received messages and not as a declaration
+    # of its own
     "return",
 }
 

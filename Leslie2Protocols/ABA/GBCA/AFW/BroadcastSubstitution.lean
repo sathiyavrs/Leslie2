@@ -17,11 +17,11 @@ import Leslie2.Results
 (`GBCA.ByAFW.roundOverBracha`) is forward simulated by the round over the gather instances over the
 broadcast specification (`GBCA.ByAFW.roundOverBroadcastSpecification`), along
 `GBCA.ByAFW.BroadcastSubstitutionRelation`: the round's programs and the round's bound bit held
-equal, and each of the two gather coordinates related by the broadcast substitution of that tier
-(`Gather.BroadcastSubstitutionRelation`).
+equal, and each of the two gather coordinates related by the broadcast substitution of that
+gather instance (`Gather.BroadcastSubstitutionRelation`).
 
-The proof is the congruence argument alone. The two rounds are one expression over two gather
-tiers, so the substitution of one gather instance is carried through the operators that expression
+The proof is the congruence argument alone. The two rounds are one expression over the two gather
+instances, so the substitution of one of them is carried through the operators that expression
 is built from: `ForwardSimulation.mapIdle` reads one gather instance over the round-internal
 alphabet, `ForwardSimulation.parallel_right` and `ForwardSimulation.parallel_left` hold the other
 gather instance and then the round's programs, and `ForwardSimulation.abstract` and

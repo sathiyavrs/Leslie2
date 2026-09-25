@@ -13,18 +13,19 @@ import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 
 `AFW.protocol P` is the gather-based protocol as it runs and `AFW.composed P` reads the same
 protocol as a composition of components, down to the broadcast instances. Every transition of the
-implementation is matched here by a run of the composed system from the state the view
+implementation is matched here by a run of the composed system from the state the projection
 `AFW.roundProjection` reads: the readers that identify a transition off its label, the builders of
 a transition of one gather instance and of one round, the broadcast invariant across a transition,
-corruption read through the view, and the matching runs for a send, for a delivery, for the call
+corruption read through the projection, and the matching runs for a send, for a delivery, for the
+call
 and the graded return, and for a Byzantine injection.
 `ABA/AFW/Simulation.lean` assembles these runs into the matching.
 
 ## The clause that is not a projection
 
 `AFW.boundInvariant_of` and `AFW.writeGhost_bound` carry the bound invariant. Its two open cases
-are the first gather's return, where the ghost write puts the round's bound bit on record, and the
-second gather's return, where the graded outcome goes on record at a round whose second gather has
+are the first gather's return, where the ghost write records the round's bound bit, and the
+second gather's return, where the graded outcome is recorded at a round whose second gather has
 been called. `AFW.roundVariables_candidate_gbcaRoundEvent` and
 `AFW.roundVariables_output_gbcaRoundEvent` are the two case splits those rest on. -/
 
@@ -56,7 +57,7 @@ theorem roundTransition_of_own {P : Parameters} {j : Fin P.n} {q : AFW.ProcessVa
     | exact hown.elim
     | (rename_i hid; exact absurd hown hid)
 
-/-- A write of the round record of round `r` that leaves the candidate standing leaves every
+/-- A write of the variables of round `r` that leaves the candidate standing leaves every
 round's candidate standing. -/
 theorem roundVariables_setRoundVariables_candidate {P : Parameters} {p : RoundVariablesMap P.n} {r :
   ℕ}
@@ -125,7 +126,7 @@ theorem roundVariables_candidate_gbcaRoundEvent (P : Parameters) {j : Fin P.n}
 
 /-- **The graded outcome is written at the second gather's return alone**: a round-internal call or
 return either leaves the round's graded outcome where it stands, or is the second gather's return,
-which fires at a record whose second gather has been called. -/
+which fires at variables whose second gather has been called. -/
 theorem roundVariables_output_gbcaRoundEvent (P : Parameters) {j : Fin P.n}
     {c : RoundLoopVariables P.n} {p : RoundVariablesMap P.n} {r : ℕ} {e : RoundEvent P.n}
     {μ : PMF (AFW.ProcessVariables P.n)}
@@ -164,7 +165,7 @@ theorem transition_instanceOverBracha_inl {s : Gather.StateOverBracha P.n X} {l�
   | inr e => cases e with
     | callLoop id x => exact absurd (Option.some.inj hl).symm (h0 id x)
 
-/-- Build the instance's call: the gather record records the payload and the
+/-- Build the instance's call: the gather variables record the payload and the
 caller's own input instance broadcasts it. -/
 theorem transition_instanceOverBracha_call (s : Gather.StateOverBracha P.n X) (id : Fin P.n) (x : X)
     (h : ((Gather.gatherProgramsAndNetwork s).processVariables id).input = none) :
@@ -181,7 +182,7 @@ theorem transition_instanceOverBracha_call (s : Gather.StateOverBracha P.n X) (i
     (fun _ => System.mapIdle_unchanged rfl)
 
 /-- Build the call of the instance broadcasting the caller's input: that instance records the
-payload the gather record holds and multicasts its `⟨INIT, x⟩`. -/
+payload the gather variables hold and multicasts its `⟨INIT, x⟩`. -/
 theorem transition_instanceOverBracha_inputBroadcastCall (s : Gather.StateOverBracha P.n X)
     (id : Fin P.n) (x : X) (hin : ((Gather.gatherProgramsAndNetwork s).processVariables id).input =
       some x)
@@ -374,8 +375,8 @@ theorem roundOverBracha_secondGatherReturn (s : GBCA.ByAFW.RoundStateOverBracha 
     (System.mapIdle_step_of_step (by simp) (transition_instanceOverBracha_inl (by simp) h))
 
 /-- **The round's graded return**: the program announces the grade it holds and
-marks the record returned, and the bit the label carries is the one on
-record. -/
+marks its variables returned, and the bit the label carries is the recorded
+one. -/
 theorem roundOverBracha_retG (s : GBCA.ByAFW.RoundStateOverBracha P.n) (id : Fin P.n)
     (out : GBCAOutput) (ho : (GBCA.ByAFW.programs s id).output = some out)
     (hr : (GBCA.ByAFW.programs s id).returned = false) :
@@ -402,10 +403,10 @@ theorem roundOverBracha_run_one {q q' : GBCA.ByAFW.RoundStateOverBracha P.n}
 
 end RoundTransitions
 
-/-! ### Corruption, read through the view
+/-! ### Corruption, read through the projection
 
 Corruption reaches the round through its two gather instances: the corrupted
-set the adversary holds is the corrupted set of every network state the view
+set the adversary holds is the corrupted set of every network state the projection
 assembles, and the programs and the round's bound bit are untouched (D1). -/
 
 theorem roundProjection_fail {P : Parameters} (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n)
@@ -477,7 +478,7 @@ theorem roundProjectionFamily_byzantine {P : Parameters} (u : ∀ _ : Fin P.n, A
     simp only [roundProjection, firstGatherProjection, secondGatherProjection,
       recordGBCASend_sent_ne w r k m hr, recordGBCASend_F, recordGBCASend_ghost]
 
-/-- A transition that leaves every round record where it stands leaves the
+/-- A transition that leaves every round's variables where they stand leaves the
 whole family of rounds where it stands. -/
 theorem roundProjection_unchanged {P : Parameters} {x u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n}
     (h : ∀ i, (x i).2 = (u i).2) (w : NetworkState P.n) :
@@ -487,7 +488,7 @@ theorem roundProjection_unchanged {P : Parameters} {x u : ∀ _ : Fin P.n, AFW.P
 
 /-! ### Matching a send
 
-A send of the implementation is a silent run of the round: the sender writes its own record, the
+A send of the implementation is a silent run of the round: the sender writes its own variables, the
 network records the message, and the round the label tags moves as its own transitions move it. -/
 
 theorem roundVariables_match_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n}
@@ -889,7 +890,7 @@ theorem roundVariables_match_gbcaDeliver (P : Parameters) {u : ∀ _ : Fin P.n, 
 /-! ### Matching the return of a broadcast instance
 
 A broadcast instance returns to the acting process: the instance's return flag goes on and the
-process's gather record files what it returned, which is the return event of that gather. -/
+process's gather variables file what it returned, which is the return event of that gather. -/
 
 /-- A broadcast instance's return is one silent transition of the round. -/
 theorem roundVariables_match_gbcaRoundEvent (P : Parameters)
@@ -1031,7 +1032,7 @@ theorem roundVariables_match_callG (P : Parameters) {u : ∀ _ : Fin P.n, AFW.Pr
         (roundOverBracha_callG (roundProjection P u w r) j b hin hin)
 
 /-- The graded-agreement return of the implementation is the round's own return, the graded
-outcome read off the record the second gather's return left there. -/
+outcome read off what the second gather's return left in the variables. -/
 theorem roundVariables_match_retG (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n}
     (w : NetworkState P.n) {j : Fin P.n} {c : RoundLoopVariables P.n} {p : RoundVariablesMap P.n}
     (hu : (u j).2 = p) {r : ℕ} {out : GBCAOutput}
@@ -1080,8 +1081,8 @@ theorem roundVariables_match_retG (P : Parameters) {u : ∀ _ : Fin P.n, AFW.Pro
           (by simp only [programs_roundProjection, programProjection]; exact hout)
           (by simp [programProjection, hout]))
 
-/-- The call against an already-called record: the round loop moves, the round
-takes its input-enabledness loop and the view is unchanged. -/
+/-- The call against variables already called: the round loop moves, the round
+takes its input-enabledness loop and the projection is unchanged. -/
 theorem roundVariables_match_gbcaCallLoop (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessVariables
   P.n}
     (w : NetworkState P.n) {j : Fin P.n} {c : RoundLoopVariables P.n} {p : RoundVariablesMap P.n}
@@ -1103,7 +1104,7 @@ theorem roundVariables_match_gbcaCallLoop (P : Parameters) {u : ∀ _ : Fin P.n,
 /-! ### Matching a Byzantine injection
 
 The adversary multicasts on behalf of a corrupted sender. The message reaches
-the network state its tag names and no record moves. -/
+the network state its tag names and no process's variables move. -/
 
 theorem byzantine_match (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n)
     (w : NetworkState P.n) (r : ℕ) {k : Fin P.n}

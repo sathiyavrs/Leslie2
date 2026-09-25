@@ -36,7 +36,7 @@ state the message's tag names. A gather message moves the gather instance alone.
 moves the broadcast instance alone: the instance's return to the receiver is a transition of its
 own, `AFW/RoundProjectionStep/BroadcastReturn.lean`. -/
 
-/-- A delivery on the first gather's network, read through the view. -/
+/-- A delivery on the first gather's network, read through the projection. -/
 theorem roundProjection_deliverFirstGather (hu : (u j).2 = p) (r : ℕ) (k : Fin P.n)
     (mm : Gather.Message P.n Bool) :
     roundProjection P (Function.update u j (c, p.deliverTo r k (.firstGather mm)))
@@ -88,7 +88,7 @@ theorem roundProjection_deliverFirstGather (hu : (u j).2 = p) (r : ℕ) (k : Fin
       exact Prod.ext (Function.update_eq_self _ _) rfl
     · simp
 
-/-- A delivery on the second gather's network, read through the view. -/
+/-- A delivery on the second gather's network, read through the projection. -/
 theorem roundProjection_deliverSecondGather (hu : (u j).2 = p) (r : ℕ) (k : Fin P.n)
     (mm : Gather.Message P.n (Option Bool)) :
     roundProjection P (Function.update u j (c, p.deliverTo r k (.secondGather mm)))
@@ -152,7 +152,7 @@ noncomputable def afterFirstGatherInputBroadcastDeliver (P : Parameters)
         ((Gather.inputBroadcasts (GBCA.ByAFW.firstGather s) i).receiveMessage j k m)))
 
 /-- A delivery in an input-broadcast instance of the first gather that leaves the returned value
-where it stands, read through the view. -/
+where it stands, read through the projection. -/
 theorem roundProjection_deliverFirstGatherInputBroadcast (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
     (mm : BRB.Message Bool) :
     roundProjection P (Function.update u j (c, p.deliverTo r k (.firstGatherInputBroadcasts i mm)))
@@ -221,7 +221,7 @@ noncomputable def afterFirstGatherBindBroadcastDeliver (P : Parameters)
         ((Gather.bindBroadcasts (GBCA.ByAFW.firstGather s) i).receiveMessage j k m)))
 
 /-- A delivery in a bind-broadcast instance of the first gather that leaves the returned value where
-it stands, read through the view. -/
+it stands, read through the projection. -/
 theorem roundProjection_deliverFirstGatherBindBroadcast (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
     (mm : BRB.Message (Gather.AcceptedPairs P.n Bool)) :
     roundProjection P (Function.update u j (c, p.deliverTo r k (.firstGatherBindBroadcasts i mm)))
@@ -290,7 +290,7 @@ noncomputable def afterSecondGatherInputBroadcastDeliver (P : Parameters)
         ((Gather.inputBroadcasts (GBCA.ByAFW.secondGather s) i).receiveMessage j k m)))
 
 /-- A delivery in an input-broadcast instance of the second gather that leaves the returned value
-where it stands, read through the view. -/
+where it stands, read through the projection. -/
 theorem roundProjection_deliverSecondGatherInputBroadcast (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
     (mm : BRB.Message (Option Bool)) :
     roundProjection P (Function.update u j (c, p.deliverTo r k (.secondGatherInputBroadcasts i mm)))
@@ -360,7 +360,7 @@ noncomputable def afterSecondGatherBindBroadcastDeliver (P : Parameters)
         ((Gather.bindBroadcasts (GBCA.ByAFW.secondGather s) i).receiveMessage j k m)))
 
 /-- A delivery in a bind-broadcast instance of the second gather that leaves the returned value
-where it stands, read through the view. -/
+where it stands, read through the projection. -/
 theorem roundProjection_deliverSecondGatherBindBroadcast (hu : (u j).2 = p) (r : ℕ) (i k : Fin P.n)
     (mm : BRB.Message (Gather.AcceptedPairs P.n (Option Bool))) :
     roundProjection P (Function.update u j (c, p.deliverTo r k (.secondGatherBindBroadcasts i mm)))

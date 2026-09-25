@@ -8,15 +8,16 @@ import Leslie2Protocols.ABA.Implementation.NetworkStateWritesAndRemovals
 import Leslie2Protocols.ABA.AFW.RoundProjection
 
 /-!
-# The view of the composed round after one write
+# The projection of the composed round after one write
 
-A transition of the implementation writes the acting process's round record and records at most
+A transition of the implementation writes the acting process's round variables and records at most
 one tagged message. `roundProjection_write` and `roundProjection_writeNoSent` do that write once,
-through `roundProjectionUpdate`: each local state vector of the view becomes a one-point update of
-the old one, and each network state is recovered from the written sent family by its own tag
-(`messagesOf`).
+through `roundProjectionUpdate`: each local state vector of the projection becomes a one-point
+update of the old one, and each network state is recovered from the written sent family by its own
+tag (`messagesOf`).
 `messagesOf_recordSent_some` and `messagesOf_recordSent_none` are the sent algebra a transition
-still owes, and one simp lemma per coordinate reads the written view off `roundProjectionUpdate`.
+still owes, and one simp lemma per coordinate reads the written projection off
+`roundProjectionUpdate`.
 `networkState_ext`,
 `stateOverBroadcasts_ext` and `roundStateOverGathers_ext` identify a network state, a
 gather-over-Bracha state and a round state with their components. Every class of transitions in
@@ -36,7 +37,7 @@ theorem networkState_ext {n : ℕ} {M : Type} {a b : ABA.NetworkState n M}
     (hp : a.sent = b.sent) (hF : a.F = b.F) : a = b := by
   cases a; cases b; simp_all
 
-/-- A gather-over-Bracha state is its gather tier beside its two broadcast
+/-- A gather-over-Bracha state is its gather programs and network beside its two broadcast
 families and its core. -/
 theorem stateOverBroadcasts_ext {n : ℕ} {X B B' : Type} {a b : Gather.StateOverBroadcasts n X B B'}
     (h1 : Gather.gatherProgramsAndNetwork a = Gather.gatherProgramsAndNetwork b)
@@ -136,11 +137,11 @@ theorem messagesOf_recordSent_some [DecidableEq β] (f : Message n → Option β
     · rintro ⟨a, ha, hac⟩
       exact ⟨a, by rw [Function.update_of_ne hq]; exact ha, hac⟩
 
-/-! ### Reading a written record -/
+/-! ### Reading written variables -/
 
 variable {P : Parameters}
 
-/-- The round record a process holds at the round it has just written. -/
+/-- The variables a process holds at the round it has just written. -/
 theorem roundVariables_update_self {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} {j : Fin P.n}
     {c : RoundLoopVariables P.n} {p : RoundVariablesMap P.n} (hu : (u j).2 = p) (r : ℕ)
     (sr : RoundVariables P.n) (i : Fin P.n) :
@@ -152,7 +153,7 @@ theorem roundVariables_update_self {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.
     simp
   · rw [Function.update_of_ne hi, if_neg hi]
 
-/-- The round records a process holds at every other round. -/
+/-- The variables a process holds at every other round. -/
 theorem roundVariables_update_ne {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} {j : Fin P.n}
     {c : RoundLoopVariables P.n} {p : RoundVariablesMap P.n} (hu : (u j).2 = p) {r r' : ℕ} (hr : r'
       ≠ r)
@@ -166,7 +167,7 @@ theorem roundVariables_update_ne {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n}
     rw [Implementation.RoundVariablesMap.roundVariables_setRoundVariables_ne _ _ _ hr, hu]
   · rw [Function.update_of_ne hi]
 
-/-- The round loop a process holds is untouched by a round-record write. -/
+/-- The round loop a process holds is untouched by a write to a round's variables. -/
 @[simp] theorem core_update {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} {j : Fin P.n}
     (x : AFW.ProcessVariables P.n) (i : Fin P.n) :
     (Function.update u j x i).1 = if i = j then x.1 else (u i).1 := by
@@ -174,18 +175,18 @@ theorem roundVariables_update_ne {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n}
   · subst hi; rw [Function.update_self, if_pos rfl]
   · rw [Function.update_of_ne hi, if_neg hi]
 
-/-- The view reads a process family through its round records alone. -/
+/-- The projection reads a process family through its round variables alone. -/
 theorem roundProjection_congr {x u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} {w : NetworkState P.n}
     {r : ℕ} (h : ∀ i, (x i).2.roundVariables r = (u i).2.roundVariables r) :
     roundProjection P x w r = roundProjection P u w r := by
   simp only [roundProjection, firstGatherProjection, secondGatherProjection, h]
 
-/-! ### Transposing one written record
+/-! ### Transposing one written process's variables
 
-A transition writes the acting process's round record, so each local state vector
-the view reads becomes a one-point update of the old one. Each lemma below is that
-observation at one component of the view, stated over the `ite` that reading a
-written record produces. -/
+A transition writes the acting process's round variables, so each local state vector
+the projection reads becomes a one-point update of the old one. Each lemma below is that
+observation at one component of the projection, stated over the `ite` that reading
+written variables produces. -/
 
 section LocalStates
 variable {j : Fin P.n} (Y : Fin P.n → RoundVariables P.n) (sr : RoundVariables P.n)
@@ -248,11 +249,11 @@ theorem locals_secondGatherBindBroadcast_if (k : Fin P.n) :
   by_cases hi : i = j <;> simp [hi]
 
 end LocalStates
-/-! ### The view after one write
+/-! ### The projection after one write
 
 A transition of the implementation writes one component of the acting process's
-round record and records at most one tagged message. The two lemmas below are that
-write read through the view: each local state vector becomes a one-point
+round variables and records at most one tagged message. The two lemmas below are that
+write read through the projection: each local state vector becomes a one-point
 update, and each network state is recovered from the written sent family by its
 own tag. What every transition still owes is then sent algebra alone. -/
 
@@ -260,11 +261,11 @@ section Writes
 variable {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} {w : NetworkState P.n} {j : Fin P.n}
     {c : RoundLoopVariables P.n} {p : RoundVariablesMap P.n}
 
-/-- The view after a write, with the one-point update pushed inside every
+/-- The projection after a write, with the one-point update pushed inside every
 coordinate: the acting process's local state replaced in each local state
 vector, and each network state recovered from the written sent by its own tag.
 The two cores
-and the bound bit are the adversary's ghost record of the round, which a write
+and the bound bit are the adversary's ghost of the round, which a write
 leaves alone. -/
 noncomputable def roundProjectionUpdate (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessVariables
   P.n)
@@ -304,8 +305,8 @@ noncomputable def roundProjectionUpdate (P : Parameters) (u : ∀ _ : Fin P.n, A
           ⟨messagesOf (secondGatherBindBroadcastMessageOf q) (secondGatherBindBroadcastMessageOf_inj
             q) sent, w.F⟩))))
 
-/-- **A write, read through the view.** A transition writes the acting process's
-round record and records one tagged message; the round it names then reads as the
+/-- **A write, read through the projection.** A transition writes the acting process's
+round variables and records one tagged message; the round it names then reads as the
 one-point update of every coordinate. -/
 theorem roundProjection_write (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n) (w : NetworkState P.n)
     (j : Fin P.n) (c : RoundLoopVariables P.n) (r : ℕ) (sr : RoundVariables P.n) (m : Message P.n) :
@@ -359,7 +360,7 @@ theorem roundProjection_write (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n) (w
         roundProjectionUpdate, secondGatherProjection, recordGBCASend_sent_self]
 
 /-- A write that records nothing — a delivery, or a return — read through the
-view. -/
+projection. -/
 theorem roundProjection_writeNoSent (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n)
     (w : NetworkState P.n) (j : Fin P.n) (c : RoundLoopVariables P.n) (r : ℕ) (sr : RoundVariables
       P.n) :
@@ -399,9 +400,9 @@ theorem roundProjection_writeNoSent (u : ∀ _ : Fin P.n, AFW.ProcessVariables P
         locals_secondGatherBindBroadcast_if]
 
 end Writes
-/-! ### Reading the written view
+/-! ### Reading the written projection
 
-The written view is read coordinate by coordinate, so that a transition's
+The written projection is read coordinate by coordinate, so that a transition's
 remaining obligations are stated over one local state vector or one network
 state at a time. -/
 

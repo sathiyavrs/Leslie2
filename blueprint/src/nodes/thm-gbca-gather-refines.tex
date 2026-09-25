@@ -11,6 +11,6 @@
 
 \begin{proof}\leanok
   \uses{thm:gbca-round-substitutions, thm:gbca-round-refines-specification, thm:forward-trans, lem:hyperstep-weakstep}
-  Every tier is an LTS and each relation holds at the initial states, so each plain simulation lifts to a probabilistic one, and \leandecl{PLTS.ProbabilisticForwardSimulation.trans} chains the three.
+  Every one of the three compositions is an LTS and each relation holds at the initial states, so each plain simulation lifts to a probabilistic one, and \leandecl{PLTS.ProbabilisticForwardSimulation.trans} chains the three.
   The inclusion is the composite's soundness.
 \end{proof}

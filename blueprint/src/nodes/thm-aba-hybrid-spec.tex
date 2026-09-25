@@ -7,22 +7,22 @@
     \operatorname{ATD}(\mathrm{hybrid}(P)) \;\subseteq\;
     \operatorname{ATD}(\mathrm{spec}(P)).
   \]
-  The two systems are compared on the ABA interface alone, namely $\mathrm{callABA}(i,b)$, $\mathrm{retABA}(i,b)$, $\mathrm{fail}(i)$ and $\tau$; the sub-protocol API, the labels $\mathrm{callG}(r,i,b)$, $\mathrm{retG}(r,i,g,d)$, $\mathrm{callW}(r,i)$ and $\mathrm{retW}(r,i,c)$ for $r \in \mathbb{N}$, $i \in [n]$, bits $b$, $c$ and $d$ and graded outcomes $g \in \{(0,2), (1,2), (0,1), (1,1), (\bot,0)\}$, is hidden at the outer frame of $\mathrm{hybrid}(P)$. The inclusion holds at every round message type, ABDY22's messages and the empty type alike.
+  The two systems are compared on the ABA interface alone, namely $\mathrm{callABA}(i,b)$, $\mathrm{retABA}(i,b)$, $\mathrm{fail}(i)$ and $\tau$; the sub-protocol API, the labels $\mathrm{callG}(r,i,b)$, $\mathrm{retG}(r,i,g,d)$, $\mathrm{callW}(r,i)$ and $\mathrm{retW}(r,i,c)$ for $r \in \mathbb{N}$, $i \in [n]$, bits $b$, $c$ and $d$ and graded outcomes $g \in \{(0,2), (1,2), (0,1), (1,1), (\bot,0)\}$, is hidden by the outermost hiding of $\mathrm{hybrid}(P)$. The inclusion holds at every round message type, ABDY22's messages and the empty type alike.
   Headline: \leandecl{PLTS.ABA.hybrid_spec}.
 \end{theorem}
 
 \begin{proof}\leanok
   \uses{def:aba-hybrid, def:aba-spec, def:aba-state, def:aba-gbca-spec, def:aba-wcc-spec, def:aba-labels, def:process-algebra, def:idle-family, def:forwardsim, def:weakstep, def:coupling, def:achievable, thm:forward-sound}
   One probabilistic forward simulation carries the hybrid to the ABA specification, \leandecl{PLTS.ABA.hybridRefinesSpecification}, and it is built by hand and checked transition by transition.
-  A concrete state is the quadruple $\mathrm{HybridState}(P)$ of the round specifications, the $n$ round loops, the ABA network and the coin oracle, which is the state of $\mathrm{hybrid}(P)$ itself.
+  A concrete state is the quadruple $\mathrm{HybridState}(P)$ of the round specifications, the $n$ round loops, the ABA network and the common coin, which is the state of $\mathrm{hybrid}(P)$ itself.
   The relation is \leandecl{PLTS.ABA.hybridSpecificationRelation}, the Dirac lift of \leandecl{PLTS.ABA.hybridSpecificationStateRelation}, and $\mathrm{hybridSpecificationStateRelation}$ is the conjunction of an invariant $\mathrm{Invariant}$ on the concrete state with an abstraction predicate $\mathrm{AbstractState}$ tying it to the abstract one.
   Both read the two ABA components through the accessors of Definition~\ref{def:aba-state}, so the whole relation is written in the coordinates the system already has and no change of system precedes it.
   Take a state of $\mathrm{hybrid}(P)$ satisfying $\mathrm{Invariant} \wedge \mathrm{AbstractState}$ and a transition out of it.
   $\mathrm{AbstractState}$ fixes the corrupted set, the returns and $mode = flipEnabled$, so the abstract state never fires \leandeclnamed{coinFlip}{PLTS.ABA.SpecStep.coinFlip}, and it is two-phase on the abstract state's $val$ (D16).
-  Outside that disjunction it fixes the ghost record as well: it agrees with the committed input at every correct process, in both phases.
+  Outside that disjunction it fixes the ghost as well: it agrees with the committed input at every correct process, in both phases.
   There are three cases.
-  First, a hidden transition: the abstract state matches it by a stutter in the $\mathrm{AbstractState}$ frame, the coin's resolving call under the constant coupling that sends every outcome to the one unchanged abstract state.
-  Second, the first $\mathrm{retABA}$ of the run: the abstract state matches it by a single weak step that binds, fills, decides and returns, its bind licensed by the $f{+}1$ input support carried in the invariant and its grade-2 certificate obtained by a pigeonhole on the $n-f$ DECIDED tally behind the return.
+  First, a hidden transition: the abstract state matches it by a stutter, $\mathrm{AbstractState}$ unchanged, the coin's resolving call under the constant coupling that sends every outcome to the one unchanged abstract state.
+  Second, the first $\mathrm{retABA}$ of the run: the abstract state matches it by a single weak step that binds, fills, decides and returns, its bind licensed by the $f{+}1$ input support carried in the invariant and its grade-2 witness obtained by a pigeonhole on the $n-f$ DECIDED tally behind the return.
   Third, a $\mathrm{fail}$ transition: the abstract state matches it by the corruption broadcast.
   Either way the relation is restored, so $\mathrm{hybridSpecificationRelation}$ is a probabilistic forward simulation, and soundness (Theorem~\ref{thm:forward-sound}) turns it into the stated inclusion, \leandecl{PLTS.ABA.hybrid_spec}.
 \end{proof}

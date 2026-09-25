@@ -2,8 +2,8 @@
   \label{def:aba-gbca-instance-by-abdy}
   \lean{PLTS.ABA.GBCA.ByABDY.GBCAEvent}\lean{PLTS.ABA.GBCA.ByABDY.GBCALabel}\lean{PLTS.ABA.GBCA.ByABDY.gbcaEvents}\lean{PLTS.ABA.GBCA.ByABDY.GBCAProgramStep}\lean{PLTS.ABA.GBCA.ByABDY.gbcaProgram}\lean{PLTS.ABA.GBCA.ByABDY.NetworkState}\lean{PLTS.ABA.GBCA.ByABDY.NetworkState.corrupt}\lean{PLTS.ABA.GBCA.ByABDY.GBCANetworkStep}\lean{PLTS.ABA.GBCA.ByABDY.GBCANetwork}\lean{PLTS.ABA.GBCA.ByABDY.RoundState}\lean{PLTS.ABA.GBCA.ByABDY.compositionExtended}\lean{PLTS.ABA.GBCA.ByABDY.composition}\lean{PLTS.ABA.GBCA.ByABDY.roundOwnsLabel}\lean{PLTS.ABA.GBCA.ByABDY.corruptionAct}\lean{PLTS.ABA.GBCA.ByABDY.gbcaInstanceFamily}\leanok
   \uses{def:aba-programs, def:aba-network, def:aba-round-messages, def:relabel, def:synchronised-product, def:idle-family, def:process-algebra}
-  One round of graded agreement taken apart into the pieces that run it: $n$ local graded-agreement programs $\mathrm{gbcaProgram}(P,r,j)$, each holding one round record of Definition~\ref{def:aba-programs}, beside that round's own network $\mathrm{GBCANetwork}(P,r)$, which holds the round's per-sender message sets (D5), the corrupted set and the round's bound bit.
-  That bit is a ghost output (D29): the three return transitions write it and announce it, and no program's record holds it.
+  One round of graded agreement taken apart into the pieces that run it: $n$ local graded-agreement programs $\mathrm{gbcaProgram}(P,r,j)$, each holding one process's round variables of Definition~\ref{def:aba-programs}, beside that round's own network $\mathrm{GBCANetwork}(P,r)$, which holds the round's per-sender message sets (D5), the corrupted set and the round's bound bit.
+  That bit is a ghost output (D29): the three return transitions write it and announce it, and no program's variables hold it.
   The instance
   \[
     \mathrm{composition}(P,r) \;=\; \mathrm{relabel}\Bigl(
@@ -11,7 +11,7 @@
         \bigl(\mathrm{synchronisedProduct}_{j \in [n]}\ \mathrm{gbcaProgram}(P,r,j)\bigr)
           \parallel \mathrm{GBCANetwork}(P,r)\bigr)\Bigr)
   \]
-  is read over $\mathrm{GBCALabel}(n) = \mathrm{ExtendedLabel}(n, \mathrm{Message}) \oplus \mathrm{GBCAEvent}(n)$ and then over $\mathrm{ExtendedLabel}(n, \mathrm{Message})$, where $\mathrm{GBCAEvent}(n)$ is the alphabet of the two rendezvous of one round, the multicast and the delivery.
+  is read over $\mathrm{GBCALabel}(n) = \mathrm{ExtendedLabel}(n, \mathrm{Message}) \oplus \mathrm{GBCAEvent}(n)$ and then over $\mathrm{ExtendedLabel}(n, \mathrm{Message})$, where $\mathrm{GBCAEvent}(n)$ is the alphabet of the two labels the components of one round synchronise on, the multicast and the delivery.
   They carry no round tag, the round being the identity of the instance they belong to, and they are hidden before they leave the instance, so its interface is the round's ports alone: $\mathrm{callG}(r,\cdot,\cdot)$, $\mathrm{retG}(r,\cdot,\cdot,\cdot)$, $\mathrm{gbcaCallLoop}(r,\cdot,\cdot)$ and the three Byzantine graded-agreement transitions of round $r$, whose effect the instance carries and whose authorisation $k \in F$ is read outside it (D11).
   The graded-agreement component of the protocol is the $\mathbb{N}$-indexed family $\mathrm{gbcaInstanceFamily}(P)$ over $\mathrm{composition}(P,\cdot)$, in which the ownership map $\mathrm{roundOwnsLabel}$ sends each interface label class to its round tag, a round-tagged label moves its round alone, and $\mathrm{fail}(k)$ is the broadcast that keeps every round's copy of the corrupted set equal (D1).
   Full construction: \leandecl{PLTS.ABA.GBCA.ByABDY.composition} and \leandecl{PLTS.ABA.GBCA.ByABDY.gbcaInstanceFamily}.

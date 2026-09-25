@@ -20,8 +20,8 @@ the gather specifications (`GBCA.ByAFW.roundOverGatherSpecifications`), along
 and each of the two gather coordinates related by the gather refinement relation
 (`Gather.SpecificationRelation`).
 
-The proof is the congruence argument alone. The two rounds are one expression over two gather
-tiers, so the substitution of one gather instance is carried through the operators that expression
+The proof is the congruence argument alone. The two rounds are one expression over the two gather
+instances, so the substitution of one of them is carried through the operators that expression
 is built from: `ForwardSimulation.mapIdle` reads one gather instance over the round-internal
 alphabet, `ForwardSimulation.parallel_right` and `ForwardSimulation.parallel_left` hold the other
 gather instance and then the round's programs, and `ForwardSimulation.abstract` and

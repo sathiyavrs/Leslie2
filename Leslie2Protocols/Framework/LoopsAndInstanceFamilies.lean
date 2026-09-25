@@ -14,8 +14,8 @@ The three combinators that make the full-synchronisation `System.parallel`
 emulate the blueprint's sync-set composition `∥_S`:
 
 * `System.withIdle sys busy` — `sys` plus idle self-loops `s —l→ δ_s` on every
-  label outside `busy`. Under full synchronisation, a non-participant then
-  answers every foreign handshake by unchanged.
+  label outside `busy`. Under full synchronisation, a non-participant is then
+  unchanged on every label it does not own.
 
 * `System.mapIdle φ sys` — `sys` read over a finer alphabet `L'` along the
   partial label map `φ : L' → Option L`: a label `l'` with `φ l' = some l`
@@ -26,13 +26,13 @@ emulate the blueprint's sync-set composition `∥_S`:
 * `System.family inst owns glob act` — the ℕ-indexed family of instances
   `inst r` over a shared alphabet, with **three** step disjuncts (plus idling):
   1. *silent or owned*: on `τ`, or on a label owned by round `r`
-     (`owns l = some r`), exactly the one instance moves; the joint successor
+     (`owns l = some r`), exactly the one instance moves; the successor
      distribution is `μr.map (Function.update s r ·)` — no product PMFs arise.
   2. *global broadcast* (`glob l`, e.g. corruption `fail id`): every instance
      applies the deterministic transform `act l` simultaneously (a Dirac
      step). This is what keeps per-instance copies of shared bookkeeping (the
      corrupted set) together — a single-coordinate step could not.
-  3. *foreign* (unowned, non-global): a global idle self-loop.
+  3. *not its own* (unowned, non-global): a global idle self-loop.
 
   The broadcast disjunct applies `act` unconditionally (it is not required to
   be justified by instance steps); the intended `act`s are total corruption

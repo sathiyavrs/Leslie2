@@ -32,16 +32,16 @@ paper is named.) Per process, on external input `b`:
     upon ⟨DECIDED, b⟩ from n − f senders, having multicast ⟨DECIDED, b⟩:
       return b
 
-The file holds the algorithm alone: the handshake phase `Phase`, the estimate a graded outcome
-dictates (`GBCAOutput.estimate`), and the per-process control record `RoundLoopState`. The record
-carries no sub-protocol state — the `callG`/`retG`/`callW`/`retW` interactions are pure handshakes
-over the API labels, advancing the process's `phase` and recording the returned data, while the
-sub-protocol state itself lives in the round specifications and the coin oracle — and no network
+The file holds the algorithm alone: the phase `Phase`, the estimate a graded outcome
+dictates (`GBCAOutput.estimate`), and the per-process control variables `RoundLoopState`. The
+variables carry no sub-protocol state — the `callG`/`retG`/`callW`/`retW` interactions are calls and
+returns over the API labels, advancing the process's `phase` and recording the returned data, while
+the sub-protocol state itself lives in the round specifications and the common coin — and no network
 state: the DECIDED sets and the corrupted set belong to the network. The transitions themselves are
-`RoundLoopStep` (`ABA/Composition/Components.lean`), the transitions of a round-loop record
+`RoundLoopStep` (`ABA/Composition/Components.lean`), the transitions of the round-loop variables
 `RoundLoopVariables` over the extended alphabet, and `ABDY.ABAProgramStep`
 (`ABA/ABDY/System.lean`), the transitions of the protocol program that carries a round loop
-beside its round records. This file realises the assumptions of
+beside its round variables. This file realises the assumptions of
 `DESIGN-HybridRefinesSpecification.md`: the phase machine (invariant conjunct 4), the DECIDED
 diffusion state (conjunct 6), and input coherence
 (conjunct 5 — the correct `callG` guard ties the emitted bit to the current estimate).
@@ -55,10 +55,10 @@ diffusion state (conjunct 6), and input coherence
   network's publication of the bit: receiving the round's coin adopts it when
   `estimate = ⊥`, multicasts `⟨DECIDED, b⟩` when the round's outcome was `grade2 b`,
   clears `lastGrade` and advances to the next round, all in one Dirac
-  transition. The joint step is the `retWPublish` rendezvous, whose round-loop
+  transition. The synchronised step is `retWPublish`, whose round-loop
   half is the advance and whose network half is the sent insert.
-* **D11 (Byzantine handshake transitions).** Corrupted processes may make their sub-protocol
-  handshakes arbitrarily: each of `callG`/`retG`/`callW`/`retW` has a Byzantine handshake
+* **D11 (Byzantine call and return transitions).** Corrupted processes may make their sub-protocol
+  calls and returns arbitrarily: each of `callG`/`retG`/`callW`/`retW` has a Byzantine
   transition, authorised by `k ∈ F` at the network and constrained by no phase or estimate. The
   round loop contributes an idle transition to each of them, so the family's calls and returns for
   corrupted ids are never blocked by it.
@@ -70,7 +70,7 @@ diffusion state (conjunct 6), and input coherence
   so the insert is a first write or a no-op re-send of the same bit). Byzantine injection
   (`byzantineDecided`, guarded only by `k ∈ F`) may insert either or both bits at any time — a
   corrupted process may send `DECIDED 0` to one receiver and `DECIDED 1` to another (delivery is
-  selective). The delivery rendezvous `decidedDeliver` moves one sent bit into the receiver's own
+  selective). The synchronised delivery `decidedDeliver` moves one sent bit into the receiver's own
   set `decidedReceived i j` at most once per (receiver, sender, bit) triple, with soundness `b ∈
   decidedSent j` on the network's half; the `retABA` quorum guard counts distinct *senders* per bit
   (`decidedCount`). The per-process sent sets (D12′) let a corrupted process equivocate in the
@@ -79,11 +79,11 @@ diffusion state (conjunct 6), and input coherence
 * **D23 (the corrupted process's replaced program).** A corruption replaces the
   program of the process it names. `RoundLoopVariables.corrupted` carries the
   replacement: the process's own half of `fail` writes the flag, every
-  transition that reads or writes the process's own record is guarded by
+  transition that reads or writes the process's own variables is guarded by
   `corrupted = false`, and the replaced program self-loops on every label of
   the alphabet other than `τ` and the labels on which the process would act on
   its own sub-protocol messages. Those messages are the business of the Byzantine
-  handshake transitions (D11), which carry it with no round-loop transition of the named
+  call and return transitions (D11), which carry it with no round-loop transition of the named
   process.
 
 Two further notes: the return transition has **no** correctness check — corrupted
@@ -96,8 +96,8 @@ return (it is cleared by the round advance).
 namespace PLTS
 namespace ABA
 
-/-- The handshake phase of one core process. The five phases make each
-sub-protocol handshake guard crisp:
+/-- The phase of one core process. The five phases make each
+sub-protocol call and return guard crisp:
 `idle → toCallG → awaitG → toCallW → awaitW → (next round) toCallG → …`.
 The blueprint's per-round bookkeeping between the WCC return and the next
 GBCA call is fused into the `retW` step (deviation D10), so no separate
@@ -131,8 +131,8 @@ def GBCAOutput.estimate : GBCAOutput → Option Bool
 @[simp] theorem GBCAOutput.estimate_grade0 : (GBCAOutput.grade0).estimate = none := rfl
 
 /-- The per-process state of the ABA core. (No field mentions `n`; the
-parameter is kept so the record is addressed uniformly as `RoundLoopState n`
-alongside the other per-process records of the development.) -/
+parameter is kept so the variables are addressed uniformly as `RoundLoopState n`
+alongside the other per-process variables of the development.) -/
 structure RoundLoopState (n : ℕ) : Type where
   /-- The original external input (`callABA` payload), `none` before the call. -/
   input : Option Bool
@@ -141,7 +141,7 @@ structure RoundLoopState (n : ℕ) : Type where
   estimate : Option Bool
   /-- The current round (0-based, deviation D9). -/
   round : ℕ
-  /-- The handshake phase. -/
+  /-- The phase between the process's own calls and returns. -/
   phase : Phase
   /-- The graded outcome returned by the *current* round's GBCA (`none` before
   the return; cleared by the round advance). -/
@@ -175,23 +175,23 @@ def initial (n : ℕ) : RoundLoopState n where
 
 end RoundLoopState
 
-/-! ### The round-loop record
+/-! ### The round-loop variables
 
-A process's control record is not by itself what the composition moves: a round loop also holds the
-DECIDED payloads delivered to it. The record below pairs the two, and is one component of the ABA
-state the core simulation reads (`ABA/Composition/ABAState.lean`). -/
+A process's control variables are not by themselves what the composition moves: a round loop also
+holds the DECIDED payloads delivered to it. The structure below pairs the two, and is one component
+of the ABA state the core simulation reads (`ABA/Composition/ABAState.lean`). -/
 
-/-- The round-loop record of one process: its own control record and the
-DECIDED payloads delivered to it, indexed by sender. There is no record of
+/-- The round-loop variables of one process: its own control variables and the
+DECIDED payloads delivered to it, indexed by sender. They hold nothing of
 what it has multicast — the DECIDED sets live in the network. -/
 structure RoundLoopVariables (n : ℕ) : Type where
-  /-- The process's own control record. -/
+  /-- The process's own control variables. -/
   processVariables : RoundLoopState n
   /-- The DECIDED payloads delivered to this process, indexed by sender. -/
   decidedDelivered : Fin n → Finset Bool
   /-- Whether this process's program has been replaced (D23). The process's own
   half of `fail` writes the flag, and the guard of every correct transition reads it.
-  The record beneath the flag is unchanged from that point on. -/
+  The variables beneath the flag are unchanged from that point on. -/
   corrupted : Bool
   deriving DecidableEq
 
@@ -199,7 +199,7 @@ namespace RoundLoopVariables
 
 variable {n : ℕ}
 
-/-- The initial round-loop record: idle control record, no receipts, program
+/-- The initial round-loop variables: idle control variables, no received messages, program
 not replaced. -/
 def initial (n : ℕ) : RoundLoopVariables n where
   processVariables := RoundLoopState.initial n
@@ -212,7 +212,7 @@ def initial (n : ℕ) : RoundLoopVariables n where
 def decidedCount (q : RoundLoopVariables n) (b : Bool) : ℕ :=
   (Finset.univ.filter (fun k => b ∈ q.decidedDelivered k)).card
 
-/-- Update the control record. -/
+/-- Update the control variables. -/
 def setProcessVariables (q : RoundLoopVariables n) (p : RoundLoopState n) : RoundLoopVariables n :=
   { q with
   processVariables := p }
@@ -232,7 +232,7 @@ def receiveDecided (q : RoundLoopVariables n) (k : Fin n) (b : Bool) : RoundLoop
 /-- The round advance on receiving the coin `c`: adopt the coin if the
 estimate is `⊥`, clear the grade, open the next round. The `⟨DECIDED, b⟩`
 publication the advance carries on a grade-2 outcome (D10) is the network's half of
-the joint step, so no transition of it appears here. -/
+the synchronised step, so no transition of it appears here. -/
 def stepRound (q : RoundLoopVariables n) (c : Bool) : RoundLoopVariables n :=
   q.setProcessVariables
     { q.processVariables with

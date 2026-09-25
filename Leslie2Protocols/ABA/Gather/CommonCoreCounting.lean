@@ -28,7 +28,7 @@ The counting is over that one incidence on the gather network state, so the lemm
 state alone -- `mem_correct`, `mem_dominatedBy`, `correct_filter_dominatedBy`, `sum_dominatedBy` --
 are the ones of `ABA/Gather/MessagesAndCommonCore.lean`, applied to `networkOf`.
 
-`bindAbove` is the write-once certificate the refinement carries: the coordinates holding a
+`bindAbove` is the write-once witness the refinement carries: the coordinates holding a
 committed `BIND` payload above a given set. It is blind to the corrupted set and monotone
 (`bindVal_mono`, `bindAbove_mono`), so it survives every transition and every corruption.
 -/
@@ -40,8 +40,8 @@ namespace Gather
 variable {X : Type} [DecidableEq X] {P : Parameters}
 
 /-- The gather network state of the composition, read as an instance state over
-the gather record. The core and the incidence read the sent sets and the
-corrupted set, and no local record. -/
+the gather's base variables. The core and the incidence read the sent sets and the
+corrupted set, and no program's variables. -/
 def networkOf {n : ℕ} (s : StateOverBroadcastSpecification n X) :
     InstanceState n (BaseProcessVariables n X) (Message n X) :=
   ((fun _ => LocalState.initial n (Message n X) (BaseProcessVariables.initial n X)),
@@ -86,7 +86,7 @@ theorem echoOf_eq {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant 
 omit [DecidableEq X] in
 /-- **Every `dominatedBy` set is large**: a process outside `F` dominates at
 least `n − f` senders. Its `VOTE` payload, if it has one, is backed by `n − f`
-`ECHO` receipts; if it has none the condition is vacuous and the set is
+received `ECHO` messages; if it has none the condition is vacuous and the set is
 everything. -/
 theorem dominatedBy_card {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s)
     {q : Fin P.n} (hq : q ∉ (gatherProgramsAndNetwork s).F) : P.n - P.f ≤ (dominatedBy (networkOf s)
@@ -240,7 +240,7 @@ theorem single_core_approved {s : StateOverBroadcastSpecification P.n X} (hInv :
   obtain ⟨j₁, -, -, -, hslot⟩ := core_witness hInv hk₀ hU₀
   exact hInv.echo_approved j₁ _ hslot
 
-/-! ### The certificate that the core is written once -/
+/-! ### The witness that the core is written once -/
 
 open scoped Classical in
 /-- The coordinates holding a committed `BIND` payload above `C`. The condition
@@ -286,7 +286,7 @@ theorem bindVal_mono {s s' : StateOverBroadcastSpecification P.n X} {l : Label P
       rw [BRB.corrupt_val]; exact h
   | _ => rw [PMF.mem_support_pure_iff] at hs'; subst hs'; exact h
 
-/-- **The certificate is monotone.** The coordinates holding a committed `BIND`
+/-- **The witness is monotone.** The coordinates holding a committed `BIND`
 payload above `C` only accumulate, under every transition and every corruption. -/
 theorem bindAbove_mono {s s' : StateOverBroadcastSpecification P.n X} {l : Label P.n X}
     {μ : PMF (StateOverBroadcastSpecification P.n X)}
@@ -300,7 +300,7 @@ theorem bindAbove_mono {s s' : StateOverBroadcastSpecification P.n X} {l : Label
 /-- **The core write.** At a state where an `n − f` quorum of coordinates holds
 committed `BIND` payloads, the core has at least `n − f` entries, its entries
 are committed input entries, and at least `f + 1` coordinates hold a committed
-`BIND` payload above it. The last is the certificate that holds the returns
+`BIND` payload above it. The last is the witness that holds the returns
 after the first to this core: it is blind to `F` and monotone
 (`bindAbove_mono`), and an `n − f` return quorum meets it. -/
 theorem coreOf_recorded {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s)

@@ -19,7 +19,7 @@ It is the algorithm of the round-`r` composition (`GBCA.ByABDY.composition`,
 `composition_projects` is the characterisation: at a label of the round's interface, every
 transition of the composition is the algorithm's transition at the specification label the
 interface label projects to, one step for one step. The composition assembles `n` programs beside
-the round's network, and the composed state is the pair of the round records and the network
+the round's network, and the composed state is the pair of the round variables and the network
 state, which are exactly the local states it puts together; the algorithm reads that same pair
 through its own accessors.
 
@@ -34,7 +34,7 @@ and the three returns are the decide conditions of lines 23–29.
 
 Each process runs the message pattern
 
-* `INPUT b` — multicast on being called; relayed after `f + 1` receipts;
+* `INPUT b` — multicast on being called; relayed once `f + 1` have been received;
 * `ECHO b` — multicast once `INPUT b` was received from `n − f` senders
   (which also puts `b` into the derived set `Valid`);
 * `VOTE v` (`v ∈ {0,1,⊥}`) — a real bit after an `n − f` `ECHO b` quorum, `⊥`
@@ -53,7 +53,7 @@ by nondeterministic `τ`-transitions.
 * **D18 (the five message levels).** This is a deviation from the source
   blueprint's `alg:GBCA`, which presents a **4-round compression** of
   Algorithm 6: the `echo5` round is elided, the decide conditions read one level
-  down, and the grade-1 evidence is `f + 1` `VOTE v` where Algorithm 6 has
+  down, and the grade-1 witness is `f + 1` `VOTE v` where Algorithm 6 has
   `t + 1` `echo4 v`. The compression violates the paper's Graded Binding. One
   process held before its `ECHO` through a grade-0 decision can afterwards
   direct its write-once echo at either bit, and one corruption completes
@@ -62,9 +62,9 @@ by nondeterministic `τ`-transitions.
   follows the cited algorithm rather than the blueprint's compression; the
   upstream blueprint carries a matching red annotation.
 
-The grade-1 evidence is what the depth buys. `f + 1` `BIND v` receipts exceed
+The grade-1 witness is what the depth buys. `f + 1` received `BIND v` messages exceed
 the corruption budget, so they guarantee a correct `BIND v` sender, whose own
-wait-condition is an `n − f` `VOTE v` receipt quorum over the write-once `VOTE`
+wait-condition is an `n − f` quorum of received `VOTE v` messages over the write-once `VOTE`
 level — and that quorum is the object the paper's binding argument counts
 (Lemmas 4.8/4.9 through E.9).
 
@@ -90,16 +90,16 @@ pseudocode (`n − f`).
   multicast anything at any time.
 
 The three return transitions are cases (1), (2), (3) of Algorithm 6's lines 23–29: case (1) an
-`n − f` `ECHO5 v` quorum, case (2) an `n − f` any-`ECHO5` quorum containing `ECHO5 v` together
-with `f + 1` `BIND v`s and `|Valid| > 1`, case (3) an `n − f` `ECHO5 ⊥` quorum with
-`|Valid| > 1`. Beside the receipts of its own case, each return reads the receipts named by the
-cases above it in the chain, the process's own `ECHO5` field, and the call record. The binding and
-grade information that the specification tracks is an abstraction of these receipt patterns and
-lives only on the specification; the simulation relation
-(`GBCA/ABDY/SpecificationRelation.lean`) supplies it from the receipts.
+`n − f` `ECHO5 v` quorum, case (2) an `n − f` any-`ECHO5` quorum containing `ECHO5 v` together with
+`f + 1` `BIND v`s and `|Valid| > 1`, case (3) an `n − f` `ECHO5 ⊥` quorum with `|Valid| > 1`.
+Beside the received messages of its own case, each return reads the messages named by the cases
+above it in the chain, the process's own `ECHO5` field, and whether it has been called. The binding
+and grade information that the specification tracks is an abstraction of these patterns of received
+messages and lives only on the specification; the simulation relation
+(`GBCA/ABDY/SpecificationRelation.lean`) supplies it from the received messages.
 
 Each return also announces the round's bound bit (D29): the label carries
-`bound.getD (boundOf sent F out)`, the bit on record if the round has returned before and
+`bound.getD (boundOf sent F out)`, the recorded bit if the round has returned before and
 `boundOf`'s otherwise, and the transition writes it back to `NetworkState.bound`. The three
 returns are otherwise the returns of Algorithm 6 unchanged: the announced bit enters no guard of
 the algorithm and no field a program holds.
@@ -132,7 +132,7 @@ inductive Algorithm (P : Parameters) (r : ℕ) :
   receiver's delivered set. -/
   | deliver (s : RoundState P.n) (i j : Fin P.n) (m : Message) (h : m ∈ s.sent j) :
       Algorithm P r s .tau (PMF.pure (s.receiveMessage i j m))
-  /-- `INPUT` relay: `f + 1` receipts of `⟨INPUT, b⟩`, not yet multicast. -/
+  /-- `INPUT` relay: `f + 1` received `⟨INPUT, b⟩` messages, not yet multicast. -/
   | relay (s : RoundState P.n) (j : Fin P.n) (b : Bool)
       (hin : (s.processVariables j).input ≠ none)
       (hcnt : P.f + 1 ≤ s.receivedCount j (.input b))
@@ -165,7 +165,7 @@ inductive Algorithm (P : Parameters) (r : ℕ) :
           { s.processVariables j with sentVote := some (some b) }).multicast
           j (.vote (some b))))
   /-- `VOTE ⊥` (wait case (b)): `n − f` `ECHO`s of any payload and
-  `|Valid| > 1`, and no single-bit `ECHO` quorum is on record. The vote reads
+  `|Valid| > 1`, and no single-bit `ECHO` quorum among the received messages. The vote reads
   the `ECHO` quorum received. The process's own `ECHO` is sent by one of the
   algorithm's `upon` handlers and may still be pending, so no own-send
   condition applies here. The wait-until order is carried from the `BIND` level
@@ -193,7 +193,7 @@ inductive Algorithm (P : Parameters) (r : ℕ) :
           j (.bind (some b))))
   /-- `BIND ⊥` (wait case (b)): `n − f` `VOTE`s of any payload and
   `|Valid| > 1`, the process's own `VOTE` already out, and no single-bit
-  `VOTE` quorum is on record. -/
+  `VOTE` quorum among the received messages. -/
   | bindBot (s : RoundState P.n) (j : Fin P.n)
       (hin : (s.processVariables j).input ≠ none)
       (hlv : (s.processVariables j).sentVote ≠ none)
@@ -218,7 +218,7 @@ inductive Algorithm (P : Parameters) (r : ℕ) :
           j (.echo5 (some b))))
   /-- `ECHO5 ⊥` (wait case (b)): `n − f` `BIND`s of any payload and
   `|Valid| > 1`, the process's own `BIND` already out, and no single-bit
-  `BIND` quorum is on record. -/
+  `BIND` quorum among the received messages. -/
   | echo5Bot (s : RoundState P.n) (j : Fin P.n)
       (hin : (s.processVariables j).input ≠ none)
       (hlv : (s.processVariables j).sentBind ≠ none)
@@ -246,8 +246,8 @@ inductive Algorithm (P : Parameters) (r : ℕ) :
         (PMF.pure ((s.setProcessVariables id
           { s.processVariables id with returned := true }).setBound bnd))
   /-- Grade-1 return (decide case (2)): an `n − f` any-`ECHO5` quorum containing
-  `ECHO5 v`, `f + 1` `BIND v`s and `|Valid| > 1`. The `f + 1` `BIND v` receipts
-  put a correct `BIND v` sender — hence an `n − f` `VOTE v` receipt quorum —
+  `ECHO5 v`, `f + 1` `BIND v`s and `|Valid| > 1`. The `f + 1` received `BIND v` messages
+  put a correct `BIND v` sender — hence an `n − f` quorum of received `VOTE v` messages —
   behind every grade-1 output. The process has called, its own `ECHO5` is out,
   and no higher case holds: `hnotGrade2` denies case (1) at either bit. -/
   | retGrade1 (s : RoundState P.n) (id : Fin P.n) (v : Bool) (bnd : Bool)
@@ -268,11 +268,11 @@ inductive Algorithm (P : Parameters) (r : ℕ) :
   case holds: `hnotGrade2` denies case (1) at either bit, and `hnotGrade1` denies
   case (2). The denial of case (2) is carried in reduced form. Case (2) asks
   for four things at a bit `v`: an `n − f` any-`ECHO5` quorum, a received
-  `ECHO5 v`, `f + 1` `BIND v` receipts, and `|Valid| > 1`. This transition's own
+  `ECHO5 v`, `f + 1` received `BIND v` messages, and `|Valid| > 1`. This transition's own
   `hcnt` and `hval` already supply the first and the last, an `n − f`
   `ECHO5 ⊥` quorum being in particular an `n − f` any-`ECHO5` quorum. What is
-  left to deny is the pair of the received `ECHO5 v` and the `f + 1` `BIND v`
-  receipts, which is what `hnotGrade1` states. -/
+  left to deny is the pair of the received `ECHO5 v` and the `f + 1` received
+  `BIND v` messages, which is what `hnotGrade1` states. -/
   | retGrade0 (s : RoundState P.n) (id : Fin P.n) (bnd : Bool)
       (hin : (s.processVariables id).input ≠ none)
       (hlv : (s.processVariables id).sentEcho5 ≠ none)
@@ -302,11 +302,11 @@ interface label projects to, with no stuttering anywhere:
 | `gbcaCallLoop`, `byzantineCallGLoop` | `Algorithm.callLoop` |
 | `byzantineCallG` (D11) | `Algorithm.call` |
 | `retG` / `byzantineRetG`, by grade | `Algorithm.retGrade2` / `retGrade1` / `retGrade0` |
-| hidden `send` rendezvous, by level | the eight silent send transitions |
-| hidden `deliver` rendezvous | `Algorithm.deliver` |
+| hidden `send` synchronisation, by level | the eight silent send transitions |
+| hidden `deliver` synchronisation | `Algorithm.deliver` |
 | network-local injection | `Algorithm.byzantine` |
 
-The two hidden rendezvous and the network's injection are silent in the composition and in the
+The two hidden synchronisations and the network's injection are silent in the composition and in the
 algorithm alike, and `specificationLabelMap` takes `τ` to `τ`. -/
 
 /-- **The algorithm of the composition.** At a label of the round's interface, every transition of
@@ -318,7 +318,7 @@ theorem composition_projects (P : Parameters) (r : ℕ) :
     specificationLabelMap P.n l = some l₀ ∧ Algorithm P r σ l₀ μ := by
   rintro ⟨u, w⟩ l μ hstep
   rcases (composition_step_iff P r (u, w) l μ).mp hstep with ⟨rfl, e, hev⟩ | hlab
-  · -- a hidden rendezvous: a silent transition of the algorithm
+  · -- a hidden synchronisation: a silent transition of the algorithm
     obtain ⟨x, w', rfl, hall, hn⟩ := compositionExtended_synchronised_cases (by simp) hev
     refine ⟨Label.tau, rfl, ?_⟩
     cases e with

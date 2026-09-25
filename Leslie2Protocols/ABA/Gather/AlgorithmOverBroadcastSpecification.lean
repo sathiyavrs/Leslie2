@@ -13,7 +13,7 @@ import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 `AlgorithmOverBroadcastSpecification` states the transitions of
 `Gather.instanceOverBroadcastSpecification` (`ABA/Gather/Composition.lean`) -- the `n` gather
 programs beside the gather network, in parallel with `2n` lifted broadcast specifications -- over
-the composition's state, through the four views `gatherProgramsAndNetwork`, `inputBroadcasts`,
+the composition's state, through the four projections `gatherProgramsAndNetwork`, `inputBroadcasts`,
 `bindBroadcasts`
 and `core`, one constructor per case of `instanceOverBroadcastSpecification_step_iff_algorithm`. It
 is a relation on that state; the system is the composition. The algorithm is blueprint Algorithm 4,
@@ -32,7 +32,8 @@ which puts both under the event `inputBroadcastCall id x`, so that call carries 
 `inputBroadcastCall`, where the instance records the payload, and
 `inputBroadcastCallSpecificationLoop`, where it loops and nothing moves. The same split reaches
 the bind call, whose two transitions are `bindCall` and `bindCallSpecificationLoop`. The gather's
-own `call id x` and its call loop reach no instance: `call` writes the gather record alone and
+own `call id x` and its call loop reach no instance: `call` writes the gather program's variables
+alone and
 `callLoop` moves nothing.
 
 ## The corrupted set
@@ -79,7 +80,7 @@ section SpecificationStepCases
 variable {M : Type} {P : Parameters} {ldr : Fin P.n} {s : BRB.SpecState P.n M}
   {μ : PMF (BRB.SpecState P.n M)}
 
-/-- The two transitions of a call: the record write and the loop. -/
+/-- The two transitions of a call: the write and the loop. -/
 theorem specStep_call {m : M} (h : BRB.Step P ldr s (.call m) μ) :
     (s.input = none ∧ μ = PMF.pure { s with input := some m }) ∨ μ = PMF.pure s := by
   cases h
@@ -114,7 +115,7 @@ Dirac. -/
 inductive AlgorithmOverBroadcastSpecification (P : Parameters) :
     StateOverBroadcastSpecification P.n X → Label P.n X → PMF (StateOverBroadcastSpecification P.n
       X) → Prop
-  /-- The call arrives: the gather record records the payload. -/
+  /-- The call arrives: the gather program records the payload. -/
   | call (s : StateOverBroadcastSpecification P.n X) (id : Fin P.n) (x : X)
       (h : ((gatherProgramsAndNetwork s).processVariables id).input = none) :
       AlgorithmOverBroadcastSpecification P s (.call id x)
@@ -182,7 +183,7 @@ inductive AlgorithmOverBroadcastSpecification (P : Parameters) :
           { (gatherProgramsAndNetwork s).processVariables j with sentVote := some U }).multicast j
             (.vote U))))
   /-- The process calls the instance broadcasting its input, and that instance records the payload
-  its gather record holds. AFW25's Algorithm 5, line 6, and LeslieBP's Algorithm 4,
+  its own variables hold. AFW25's Algorithm 5, line 6, and LeslieBP's Algorithm 4,
   `BRB_id.call(m)`. -/
   | inputBroadcastCall (s : StateOverBroadcastSpecification P.n X) (j : Fin P.n) (x : X)
       (hin : ((gatherProgramsAndNetwork s).processVariables j).input = some x)
@@ -200,7 +201,7 @@ inductive AlgorithmOverBroadcastSpecification (P : Parameters) :
   The process has multicast its own `VOTE` and has not called its own bind
   broadcast. The main thread of AFW25's Algorithm 5 sends `VOTE` before `BIND`,
   and sends `BIND` once, at line 17. The payload handed to the broadcast is
-  written to the gather record. -/
+  written to the gather program's variables. -/
   | bindCall (s : StateOverBroadcastSpecification P.n X) (j : Fin P.n) (U : AcceptedPairs P.n X)
       (hin : ((gatherProgramsAndNetwork s).processVariables j).input ≠ none)
       (hvot : ((gatherProgramsAndNetwork s).processVariables j).sentVote ≠ none)
@@ -219,7 +220,7 @@ inductive AlgorithmOverBroadcastSpecification (P : Parameters) :
             { (gatherProgramsAndNetwork s).processVariables j with sentBind := some U }))
           (Function.update (bindBroadcasts s) j { bindBroadcasts s j with input := some U })))
   /-- `BIND` with the bind instance answering on its loop transition: the payload handed
-  to the broadcast is written to the gather record alone. The process has
+  to the broadcast is written to the gather program's variables alone. The process has
   multicast its own `VOTE` and has not called its own bind broadcast. -/
   | bindCallSpecificationLoop (s : StateOverBroadcastSpecification P.n X) (j : Fin P.n)
       (U : AcceptedPairs P.n X)

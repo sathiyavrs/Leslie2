@@ -8,14 +8,14 @@ import Leslie2Protocols.ABA.HybridRefinesSpecification.Relation
 import Leslie2Protocols.ABA.Composition.Hybrid
 
 /-!
-# Step inversion for `hybrid`
+# The step cases of `hybrid`
 
 One lemma per visible label class (`callABA`, `retABA`, `fail`) and one for `τ`, each reading a
 transition of the protocol-shaped specification back into the transitions of its four components, in
-the view's own coordinates: the pair `(C, A)` of the round loops beside the ABA network, read
+the projection's own coordinates: the pair `(C, A)` of the round loops beside the ABA network, read
 through `ABAState`'s accessors. `hybrid_step_tau` is the six-way disjunction the τ case of the
-simulation dispatches on; its τ has more sources than the visible labels do, the whole rendezvous
-alphabet being hidden, and each of those sources collapses into one of the six. Three of the four
+simulation dispatches on; its τ has more sources than the visible labels do, every synchronisation
+label being hidden, and each of those sources collapses into one of the six. Three of the four
 lemmas take the invariant's I0 conjunct as a hypothesis: a round loop's transition is guarded by its
 own replacement flag and the ABA network's transition by the corrupted set, and I0 identifies the
 two, so that the statement speaks of `F` alone (D23). `corrupted_eq_false_iff` is the one-line form
@@ -44,7 +44,7 @@ theorem corrupted_eq_false_iff {P : Parameters} {C : ∀ _ : Fin P.n, RoundLoopV
   rw [ABAState.corrupted_apply] at h
   cases hb : (C id).corrupted <;> rw [hb] at h <;> simp_all
 
-/-- `hybrid` inversion, `callABA`: the round specifications and the coin oracle idle on a label
+/-- `hybrid` step cases, `callABA`: the round specifications and the common coin idle on a label
 outside their own API and the ABA network has no transition of its own, so the whole transition is
 the addressed round loop's — the genuine input of a never-corrupted process, guarded by `input = ⊥`,
 or a self-loop, which is the input-enabledness transition of a process whose program stands and
@@ -130,7 +130,7 @@ theorem hybrid_step_callABA (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
       simp only [PMF.pure_map, prodPMF_pure_pure] at h ⊢
       exact h
 
-/-- `hybrid` inversion, `retABA`: a never-corrupted process's return has its
+/-- `hybrid` step cases, `retABA`: a never-corrupted process's return has its
 two guards split across two components — the `n − f` quorum is the round
 loop's, having multicast `⟨DECIDED, b⟩` oneself is the network's — and they
 rejoin on `ABAState`. A corrupted process returns any bit at any time and the
@@ -215,11 +215,11 @@ theorem hybrid_step_retABA (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
       simp only [PMF.pure_map, prodPMF_pure_pure] at h ⊢
       exact h
 
-/-- `hybrid` inversion, `fail`: a genuine synchronisation of all four components, under the two
+/-- `hybrid` step cases, `fail`: a genuine synchronisation of all four components, under the two
 guards the ABA network's transition carries — the named process is not corrupted yet and the budget
-has room. The round specifications and the coin oracle each corrupt their own copy of `F` and the
-ABA network corrupts the view's; the named round loop replaces its own program by writing the flag
-(D23), and every other round loop is unchanged (D1). -/
+has room. The round specifications and the common coin each corrupt their own copy of `F` and the
+ABA network corrupts the projection's; the named round loop replaces its own program by writing the
+flag (D23), and every other round loop is unchanged (D1). -/
 theorem hybrid_step_fail (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
     (C : ∀ _ : Fin P.n, RoundLoopVariables P.n) (A : ABANetworkState P.n) (o : ℕ → WCC.SpecState
       P.n)
@@ -271,17 +271,17 @@ theorem hybrid_step_fail (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
     simp only [PMF.pure_map, prodPMF_pure_pure] at h ⊢
     exact h
 
-/-- `hybrid` inversion, `τ` (`mp`-only: preservation only needs the forward
-direction). Six sources, and the whole rendezvous alphabet folds into them:
-the specification family's binding exclusion, the view's own DECIDED messages
-(delivery, echo, Byzantine injection), and the four handshakes — `callG`/`retG`
-against a round specification, `callW`/`retW` against the coin oracle — each
+/-- `hybrid` step cases, `τ` (`mp`-only: preservation only needs the forward
+direction). Six sources, and every synchronisation label folds into them:
+the specification family's binding exclusion, the projection's own DECIDED messages
+(delivery, echo, Byzantine injection), and the four calls and returns — `callG`/`retG`
+against a round specification, `callW`/`retW` against the common coin — each
 reached either by the shared label under the sub-protocol hiding or by the
-rendezvous that stands for it (`gbcaCallLoop`, the Byzantine handshake transitions, and the fused
-coin return `retWPublish`). The coin resolves inside the `callW` handshake (D31), so the coin
-oracle's draw arrives under that handshake's source. A replaced program contributes no source of its
-own: its self-loop on `callG`, `retG`, `callW`, `retW` and `decidedSend` reads as the corrupted
-branch already present at those transitions, `id ∈ F` being supplied by I0 (D23). -/
+synchronisation label that stands for it (`gbcaCallLoop`, the Byzantine call and return
+transitions, and the fused coin return `retWPublish`). The coin resolves inside the `callW` call
+(D31), so the common coin's draw arrives under that call's source. A replaced program contributes
+no source of its own: its self-loop on `callG`, `retG`, `callW`, `retW` and `decidedSend` reads as
+the corrupted branch already present at those transitions, `id ∈ F` being supplied by I0 (D23). -/
 theorem hybrid_step_tau (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
     (C : ∀ _ : Fin P.n, RoundLoopVariables P.n) (A : ABANetworkState P.n)
     (o : ℕ → WCC.SpecState P.n)
@@ -435,7 +435,7 @@ theorem hybrid_step_tau (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
             by rw [PMF.pure_bind]⟩))))
   · rw [hybridHidden_step_iff] at hg
     rcases hg with ⟨-, e, hpre⟩ | hpre
-    · -- a rendezvous of the hidden alphabet
+    · -- a synchronisation label of the hidden alphabet
       obtain ⟨G', C', A', ω, hG, hall, hA, hW, rfl⟩ :=
         hybridExtended_visible_cases P (by simp) hpre
       cases e with

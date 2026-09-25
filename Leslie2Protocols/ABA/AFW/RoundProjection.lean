@@ -13,38 +13,38 @@ import Leslie2Protocols.Framework.WeakTransitionsFromChains
 import Leslie2Protocols.Framework.Congruence
 
 /-!
-# The view of the gather-based protocol in its composed system
+# The projection of the gather-based protocol onto its composed system
 
 `AFW.protocol P` is the gather-based protocol as it runs and `AFW.composed P` reads the same
 protocol as a composition of components, down to the broadcast instances. This file holds two of
-the three things the simulation between them rests on: the view that computes a composed state from
-the implementation, and the relation that view carries. `ABA/AFW/Composition.lean` holds the third,
-the builders that assemble a transition of the composed system out of transitions of its
+the three things the simulation between them rests on: the projection that computes a composed state
+from the implementation, and the relation that projection carries. `ABA/AFW/Composition.lean` holds
+the third, the builders that assemble a transition of the composed system out of transitions of its
 components.
 
-## The composed state is a view of the implementation
+## The composed state is a projection of the implementation
 
-A state of `composed P` is computed from a state of `protocol P`. The round loops and the coin
-oracle are shared objects, the ABA network is the DECIDED sets beside the corrupted set, and the
+A state of `composed P` is computed from a state of `protocol P`. The round loops and the common
+coin are shared objects, the ABA network is the DECIDED sets beside the corrupted set, and the
 round-`r` state is assembled by `roundProjection`. Assembling it undoes the two rearrangements the
 implementation performs. The local states are transposed back: an instance's local state vector at
-round `r` is read off the round records the `n` processes hold. And the sent sets are recovered one
-tag at a time: an instance's network state carries the messages of its own tag, read off the
-adversary's single tagged sent family by `AFW.messagesOf`.
+round `r` is read off the variables the `n` processes hold in that round. And the sent sets are
+recovered one tag at a time: an instance's network state carries the messages of its own tag, read
+off the adversary's single tagged sent family by `AFW.messagesOf`.
 
 ## What the broadcast instances returned
 
-A gather program of the composed system holds two records of what each broadcast instance has
-returned to it, and so does the implementation: the round record's two gather local states are
+A gather program of the composed system holds two accounts of what each broadcast instance has
+returned to it, and so does the implementation: the round variables' two gather local states are
 over `Gather.ProcessVariables`, which the instance's return writes. The projection is then the
 identity on each local state, and the transposition and the untagging of the sent sets are all it
 performs.
 
-## The ghost record is the round's auxiliary state
+## The ghost is the round's auxiliary state
 
 The round carries three fields no guard of it reads: the core of each of its
 two gather instances, and the round's bound bit. In the implementation the network
-holds those three as the ghost record of the round (`AFW.Ghost`), so the view
+holds those three as the ghost of the round (`AFW.Ghost`), so the projection
 reads them off it, and a transition's ghost write is the round's write of them
 (`roundProjection_writeGhost`, `roundProjection_writeGhost_ne`, `roundProjection_ghostId`). The two
 projections of a gather's core agree because each is `Gather.coreOf` of the same
@@ -53,8 +53,8 @@ network state (`coreOfNetwork_firstGatherProjection`, `coreOfNetwork_secondGathe
 ## The clause that is not a projection
 
 `BoundInvariant` says that a process holding a round-`r` candidate has passed that round's first
-gather return, so the round's bound bit is on record, and that a graded outcome on record reaches a
-candidate on record through the two fields between them. -/
+gather return, so the round's bound bit is recorded, and that a recorded graded outcome reaches a
+recorded candidate through the two fields between them. -/
 
 namespace PLTS
 namespace ABA
@@ -125,9 +125,9 @@ variable {X : Type}
 variable {P : Parameters}
 
 /-- The round-`r` state of the first gather instance, read off the implementation's state:
-the local state vectors transposed out of the round records the processes hold,
+the local state vectors transposed out of the variables the processes hold in that round,
 the network states recovered tag by tag from the adversary's tagged sent sets,
-and the instance's core the first field of the adversary's ghost record. -/
+and the instance's core the first field of the adversary's ghost. -/
 noncomputable def firstGatherProjection (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessVariables
   P.n)
     (w : NetworkState P.n) (r : ℕ) : Gather.StateOverBracha P.n Bool :=
@@ -144,7 +144,7 @@ noncomputable def firstGatherProjection (P : Parameters) (u : ∀ _ : Fin P.n, A
           (w.sent r), w.F⟩)))
 
 /-- The round-`r` state of the second gather instance, read off the implementation's state,
-its core the second field of the adversary's ghost record. -/
+its core the second field of the adversary's ghost. -/
 noncomputable def secondGatherProjection (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessVariables
   P.n)
     (w : NetworkState P.n) (r : ℕ) : Gather.StateOverBracha P.n (Option Bool) :=
@@ -160,10 +160,10 @@ noncomputable def secondGatherProjection (P : Parameters) (u : ∀ _ : Fin P.n, 
         ⟨messagesOf (secondGatherBindBroadcastMessageOf q) (secondGatherBindBroadcastMessageOf_inj
           q) (w.sent r), w.F⟩)))
 
-/-- One process's record in the round, read off its round record, field by field: the first
+/-- One process's variables in the round, read off its round variables, field by field: the first
 gather's input is the round's input, the candidate and the graded outcome are the two the round
-record holds, the second gather's input marks the second call, and the round has returned exactly
-when its second gather has returned and the record holds no graded outcome, which is the state the
+variables hold, the second gather's input marks the second call, and the round has returned exactly
+when its second gather has returned and the variables hold no graded outcome, which is the state the
 round's own return leaves. -/
 def programProjection {n : ℕ} (st : RoundVariables n) : GBCA.ByAFW.ProcessVariables n where
   input := st.firstGather.processVariables.input
@@ -173,13 +173,13 @@ def programProjection {n : ℕ} (st : RoundVariables n) : GBCA.ByAFW.ProcessVari
   returned := st.secondGather.processVariables.returned && st.output.isNone
 
 /-- The round-`r` state of the composed system, read off the implementation's state: the
-process records beside the round's bound bit, and the two gather instances. -/
+process variables beside the round's bound bit, and the two gather instances. -/
 noncomputable def roundProjection (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n)
     (w : NetworkState P.n) (r : ℕ) : GBCA.ByAFW.RoundStateOverBracha P.n :=
   ((fun j => programProjection ((u j).2.roundVariables r), (w.ghost r).2.2),
     (firstGatherProjection P u w r, secondGatherProjection P u w r))
 
-/-! ### Reading the composed round's state off the view -/
+/-! ### Reading the composed round's state off the projection -/
 
 section Readers
 
@@ -265,17 +265,17 @@ theorem coreOfNetwork_secondGatherProjection :
 
 end Readers
 
-/-! ### The ghost write, read through the view
+/-! ### The ghost write, read through the projection
 
-The adversary's ghost record of round `r` is the round's two gather cores
+The adversary's ghost of round `r` is the round's two gather cores
 beside its bound bit, so a transition's ghost write is the round's write of
 those three fields. The lemmas below are that write at the round the
 transition's label names, at every other round, and at a transition whose write
-returns the record it found. -/
+returns the ghost it found. -/
 
-/-- **The ghost write at the round its label names**, read through the view:
-the two cores and the bound bit are the written record, every other coordinate
-the view before the write. -/
+/-- **The ghost write at the round its label names**, read through the projection:
+the two cores and the bound bit are the written ghost, every other coordinate
+the projection before the write. -/
 theorem roundProjection_writeGhost (v : ∀ _ : Fin P.n, AFW.ProcessVariables P.n) (w : NetworkState
   P.n)
     {L : Implementation.ExtendedLabel P.n (Message P.n) (RoundEvent P.n)} {r : ℕ}
@@ -290,7 +290,7 @@ theorem roundProjection_writeGhost (v : ∀ _ : Fin P.n, AFW.ProcessVariables P.
   rw [h]
   simp [roundProjection, firstGatherProjection, secondGatherProjection, Gather.setCore]
 
-/-- The ghost write leaves every other round's view where it stands. -/
+/-- The ghost write leaves every other round's projection where it stands. -/
 theorem roundProjection_writeGhost_ne (v : ∀ _ : Fin P.n, AFW.ProcessVariables P.n)
     (w : NetworkState P.n)
     {L : Implementation.ExtendedLabel P.n (Message P.n) (RoundEvent P.n)} {r r' : ℕ}
@@ -301,8 +301,8 @@ theorem roundProjection_writeGhost_ne (v : ∀ _ : Fin P.n, AFW.ProcessVariables
   rw [h]
   simp [roundProjection, firstGatherProjection, secondGatherProjection, Function.update_of_ne hr]
 
-/-- A transition whose ghost write returns the record it found leaves every
-round's view where it stands. -/
+/-- A transition whose ghost write returns the ghost it found leaves every
+round's projection where it stands. -/
 theorem roundProjection_ghostId
     (L : Implementation.ExtendedLabel P.n (Message P.n) (RoundEvent P.n))
     (h : ∀ (v : NetworkState P.n) (G : Ghost P.n), ghostStep P L v G = G)
@@ -321,7 +321,7 @@ theorem ghostStep_bound (L : Implementation.ExtendedLabel P.n (Message P.n) (Rou
   unfold ghostStep
   split <;> simp_all
 
-/-- The bound bit of a round on record stays on record across any transition. -/
+/-- A round's bound bit, once recorded, stays recorded across any transition. -/
 theorem writeGhost_bound {w : NetworkState P.n}
     (L : Implementation.ExtendedLabel P.n (Message P.n) (RoundEvent P.n)) {r : ℕ}
     (h : (w.ghost r).2.2 ≠ none) :
@@ -334,8 +334,8 @@ theorem writeGhost_bound {w : NetworkState P.n}
     · subst hr; simpa using ghostStep_bound L w _ h
     · simpa [Function.update_of_ne hr] using h
 
-/-- A send, read through the view with its ghost write: the round's two cores
-and its bound bit are the record `AFW.ghostStep` writes, and every other
+/-- A send, read through the projection with its ghost write: the round's two cores
+and its bound bit are what `AFW.ghostStep` writes, and every other
 coordinate is the send's own. -/
 theorem roundProjection_gbcaSendGhost (v : ∀ _ : Fin P.n, AFW.ProcessVariables P.n)
     (w : NetworkState P.n) (r : ℕ) (j : Fin P.n) (m : Message P.n) :
@@ -351,7 +351,7 @@ theorem roundProjection_gbcaSendGhost (v : ∀ _ : Fin P.n, AFW.ProcessVariables
               r)).2.1)) :=
   roundProjection_writeGhost v _ rfl
 
-/-! ### The view at the initial state -/
+/-! ### The projection at the initial state -/
 
 /-- The empty sent family projects to the empty sent family. -/
 theorem messagesOf_empty {β : Type} (f : Message n → Option β)
@@ -360,8 +360,9 @@ theorem messagesOf_empty {β : Type} (f : Message n → Option β)
   funext q
   simp [messagesOf]
 
-/-- **Every round of the view is the composed round's initial state**: an untouched round reads as
-the initial record in the implementation, and the empty sent projects to the empty sent. -/
+/-- **Every round of the projection is the composed round's initial state**: an untouched round
+reads as the initial variables in the implementation, and the empty sent projects to the empty
+sent. -/
 theorem roundProjection_init (P : Parameters) (r : ℕ) :
     roundProjection P (protocol P).init.1 (protocol P).init.2.1 r =
     (GBCA.ByAFW.roundOverBracha P r).init :=
@@ -383,10 +384,11 @@ theorem roundProjection_init (P : Parameters) (r : ℕ) :
 
 /-! ### The relation -/
 
-/-- **The round's bound bit is on record wherever its candidate is**: a process holding a
+/-- **The round's bound bit is recorded wherever its candidate is**: a process holding a
 round-`r` candidate has passed that round's first gather return, and that return writes the bound
-bit. The second conjunct carries a graded outcome on record back to a candidate on record, through
-the two record facts that are the guards of the transitions writing the fields between them. This
+bit. The second conjunct carries a recorded graded outcome back to a recorded candidate, through
+the two facts on the variables that are the guards of the transitions writing the fields between
+them. This
 is what the graded return's announced bit rests on, and it is the one clause of the relation that
 is not a projection of the implementation's state. -/
 def BoundInvariant (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n)
@@ -399,10 +401,11 @@ def BoundInvariant (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessVariables P
         ((((u i).2.roundVariables r).secondGather.processVariables).input ≠ none →
           ((u i).2.roundVariables r).candidate ≠ none)
 
-/-- **The composition relation**: the round loops and the coin oracle are shared, the ABA network is
-the DECIDED sets beside the corrupted set, every round's state is the view `roundProjection` of the
-implementation's state, and the bound bit of a called round is on record. The first four conjuncts
-are unguarded, so they determine the composed state from the implementation. -/
+/-- **The composition relation**: the round loops and the common coin are shared, the ABA network
+is the DECIDED sets beside the corrupted set, every round's state is the projection
+`roundProjection` of the implementation's state, and the bound bit of a called round is recorded.
+The first four conjuncts are unguarded, so they determine the composed state from the
+implementation. -/
 def ProtocolRelation (P : Parameters) (s : ProtocolState P) (t : ComposedState P) : Prop :=
   (∀ j, (s.1 j).1 = t.2.1 j) ∧
     s.2.2 = t.2.2.2 ∧
@@ -419,7 +422,7 @@ theorem protocolRelation_mk (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessVa
         (G = fun r => roundProjection P u w r) ∧ BoundInvariant P u w) := Iff.rfl
 
 /-- The bound invariant survives a transition that leaves the three fields it reads where they
-stand and keeps on record every bound bit already there. -/
+stand and keeps every bound bit already recorded. -/
 theorem boundInvariant_of {u x : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} {w v : NetworkState P.n}
     (hI : BoundInvariant P u w)
     (hcand : ∀ i r, ((x i).2.roundVariables r).candidate = ((u i).2.roundVariables r).candidate)
@@ -450,8 +453,8 @@ theorem boundInvariant_ofOutputCleared {u x : ∀ _ : Fin P.n, AFW.ProcessVariab
       fun hs => by rw [hcand i r]; exact (hI.2 r i).2 (by rw [← hinput i r]; exact hs)⟩⟩
 
 /-- The bound invariant survives the second gather's call: the candidate and the graded outcome
-stand, and at every round the second gather's input either stands or is written at a record whose
-candidate is on record. -/
+stand, and at every round the second gather's input either stands or is written at variables whose
+candidate is recorded. -/
 theorem boundInvariant_ofSecondGatherCall {u x : ∀ _ : Fin P.n, AFW.ProcessVariables P.n}
     {w v : NetworkState P.n} (hI : BoundInvariant P u w)
     (hcand : ∀ i r, ((x i).2.roundVariables r).candidate = ((u i).2.roundVariables r).candidate)
@@ -468,7 +471,7 @@ theorem boundInvariant_ofSecondGatherCall {u x : ∀ _ : Fin P.n, AFW.ProcessVar
       fun hs => by rw [hcand i r]; exact (hI.2 r i).2 (by rw [← heq]; exact hs)⟩
   · exact ⟨fun _ => hne, fun _ => by rw [hcand i r]; exact hc⟩
 
-/-- The initial states are related: every round of the view is the composed
+/-- The initial states are related: every round of the projection is the composed
 round's initial state. -/
 theorem protocolRelation_init (P : Parameters) :
     ProtocolRelation P (protocol P).init (composed P).init := by
@@ -477,12 +480,12 @@ theorem protocolRelation_init (P : Parameters) :
   funext r
   exact (roundProjection_init P r).symm
 
-/-! ### Transposing one written record
+/-! ### Transposing one written process's variables
 
-A transition writes the acting process's round record, so the local state vector the
-view reads becomes a one-point update of the old one. Each lemma below is that
-observation at one component, stated over the `ite` that reading a written
-record produces. -/
+A transition writes the acting process's round variables, so the local state vector the
+projection reads becomes a one-point update of the old one. Each lemma below is that
+observation at one component, stated over the `ite` that reading written
+variables produces. -/
 
 section LocalStates
 variable {j : Fin n} (Y : Fin n → RoundVariables n) (sr : RoundVariables n)

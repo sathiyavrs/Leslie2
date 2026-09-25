@@ -9,9 +9,9 @@ import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ProjectionAfterOneWrite
 /-!
 # A Byzantine injection
 
-`roundProjection_byzantineFirstGather` and its five companions: the view of the composed round
+`roundProjection_byzantineFirstGather` and its five companions: the projection of the composed round
 after an injection. The adversary multicasts on behalf of a corrupted sender, the message reaches
-the network state its tag names, and no record moves.
+the network state its tag names, and no process's variables move.
 -/
 
 namespace PLTS
@@ -30,10 +30,10 @@ variable {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} {w : NetworkState P.n} 
 /-! ### A Byzantine injection
 
 The adversary multicasts on behalf of a corrupted sender. The message reaches
-the network state its tag names and no record moves. -/
+the network state its tag names and no process's variables move. -/
 
 /-- A Byzantine injection on the first gather's network state, read through the
-view. -/
+projection. -/
 theorem roundProjection_byzantineFirstGather (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n)
     (w : NetworkState P.n) (r : ℕ) (k : Fin P.n) (mm : Gather.Message P.n Bool) :
     roundProjection P u (w.recordGBCASend r k (.firstGather mm)) r
@@ -87,7 +87,7 @@ theorem roundProjection_byzantineFirstGather (u : ∀ _ : Fin P.n, AFW.ProcessVa
     · simp
 
 /-- A Byzantine injection on the second gather's network state, read through
-the view. -/
+the projection. -/
 theorem roundProjection_byzantineSecondGather (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n)
     (w : NetworkState P.n) (r : ℕ) (k : Fin P.n) (mm : Gather.Message P.n (Option Bool)) :
     roundProjection P u (w.recordGBCASend r k (.secondGather mm)) r
@@ -141,7 +141,7 @@ theorem roundProjection_byzantineSecondGather (u : ∀ _ : Fin P.n, AFW.ProcessV
     · simp
 
 /-- A Byzantine injection on an input-broadcast instance of the first gather,
-read through the view. -/
+read through the projection. -/
 theorem roundProjection_byzantineFirstGatherInputBroadcast
     (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n) (w : NetworkState P.n) (r : ℕ) (k : Fin P.n)
     (i : Fin P.n) (mm : BRB.Message Bool) :
@@ -207,7 +207,7 @@ theorem roundProjection_byzantineFirstGatherInputBroadcast
     · simp
 
 /-- A Byzantine injection on a bind-broadcast instance of the first gather,
-read through the view. -/
+read through the projection. -/
 theorem roundProjection_byzantineFirstGatherBindBroadcast (u : ∀ _ : Fin P.n, AFW.ProcessVariables
   P.n)
     (w : NetworkState P.n) (r : ℕ) (k : Fin P.n) (i : Fin P.n)
@@ -274,7 +274,7 @@ theorem roundProjection_byzantineFirstGatherBindBroadcast (u : ∀ _ : Fin P.n, 
     · simp
 
 /-- A Byzantine injection on an input-broadcast instance of the second gather,
-read through the view. -/
+read through the projection. -/
 theorem roundProjection_byzantineSecondGatherInputBroadcast
     (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n) (w : NetworkState P.n) (r : ℕ) (k : Fin P.n)
     (i : Fin P.n) (mm : BRB.Message (Option Bool)) :
@@ -340,7 +340,7 @@ theorem roundProjection_byzantineSecondGatherInputBroadcast
     · simp
 
 /-- A Byzantine injection on a bind-broadcast instance of the second gather,
-read through the view. -/
+read through the projection. -/
 theorem roundProjection_byzantineSecondGatherBindBroadcast
     (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n) (w : NetworkState P.n) (r : ℕ) (k : Fin P.n)
     (i : Fin P.n) (mm : BRB.Message (Gather.AcceptedPairs P.n (Option Bool))) :

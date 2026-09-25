@@ -18,7 +18,7 @@ specification's own transitions at the labels the map carries, and a Dirac self-
 Every program transition and every network transition is Dirac, so the programs, the network, the
 instance and the lifted specification are each an LTS. No program transition fires on the silent
 label, so the instance's silent transitions are the network's injections and the hidden
-rendezvous.
+synchronisations.
 
 A weak run of the specification is read back over the interface along a section of
 `specificationLabelMap`. `labelSection` is the left injection, the interface label a
@@ -134,9 +134,9 @@ theorem specificationOverInstanceAlphabet_isLTS {M : Type} (P : Parameters) (ldr
   (specificationOverInstanceAlphabet P ldr M).IsLTS :=
   System.mapIdle_isLTS _ (specInst_isLTS P ldr)
 
-/-- No program transition fires on `τ`: a program only ever moves in a rendezvous or
+/-- No program transition fires on `τ`: a program only ever moves on a synchronisation label or
 on one of the instance's interface labels. The instance's silent transitions
-are therefore exactly the network's injections and the hidden rendezvous. -/
+are therefore exactly the network's injections and the hidden synchronisations. -/
 theorem programStep_no_tau {P : Parameters} {ldr j : Fin P.n}
     {p : LocalState P.n (ProcessVariables M) (Message M)}
     {ν : PMF (LocalState P.n (ProcessVariables M) (Message M))}

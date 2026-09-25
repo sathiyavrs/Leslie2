@@ -9,11 +9,11 @@ import Leslie2Protocols.ABA.Composition.Components
 /-!
 # The ABA state of the composed system
 
-The round-loop records beside the ABA network, read as one object.
+The round-loop variables beside the ABA network, read as one object.
 
 `ABAState` is the pair `(∀ j, RoundLoopVariables) × ABANetworkState`. Its accessors gather the
 data the two components hold apart: `processes` reads each process's control
-record, `decidedReceived` its receipts, `corrupted` the replacement flag of its
+variables, `decidedReceived` its received DECIDED messages, `corrupted` the replacement flag of its
 program (D23), and `decidedSent` and `F` the network's sent sets and corrupted
 set. The invariant of the core simulation is stated through these accessors, so
 it reads the composed state without a change of system.
@@ -26,13 +26,13 @@ open Implementation Composition
 
 variable {P : Parameters}
 
-/-- **The ABA state**: the `n` round-loop records beside the ABA network. -/
+/-- **The ABA state**: the `n` round-loop variables beside the ABA network. -/
 abbrev ABAState (P : Parameters) : Type :=
   (∀ _ : Fin P.n, RoundLoopVariables P.n) × ABANetworkState P.n
 
 namespace ABAState
 
-/-- The control record of process `id`. -/
+/-- The control variables of process `id`. -/
 def processes (s : ABAState P) : Fin P.n → RoundLoopState P.n := fun j => (s.1 j).processVariables
 
 /-- `b ∈ s.decidedSent id` — process `id` has multicast `⟨DECIDED, b⟩`. -/
@@ -107,7 +107,7 @@ def decidedCount (s : ABAState P) (id : Fin P.n) (b : Bool) : ℕ :=
     (initial P).decidedCount id b = 0 := by
   simp [decidedCount]
 
-/-- Update the control record of process `id`. -/
+/-- Update the control variables of process `id`. -/
 def setProcessVariables (s : ABAState P) (id : Fin P.n) (p : RoundLoopState P.n) : ABAState P :=
   (Function.update s.1 id ((s.1 id).setProcessVariables p), s.2)
 
@@ -191,7 +191,7 @@ theorem mem_sendDecided_decidedSent_iff (s : ABAState P) (id : Fin P.n) (b : Boo
   · simp [sendDecided_decidedSent, hk]
 
 /-- The adversary delivers `⟨DECIDED, b⟩` from sender `j` to receiver `i`:
-the receiver's record files `b` under `j` (per-(receiver, sender, bit),
+the receiver's variables file `b` under `j` (per-(receiver, sender, bit),
 deviation D12′). -/
 def deliverDecided (s : ABAState P) (i j : Fin P.n) (b : Bool) : ABAState P :=
   (Function.update s.1 i ((s.1 i).receiveDecided j b), s.2)

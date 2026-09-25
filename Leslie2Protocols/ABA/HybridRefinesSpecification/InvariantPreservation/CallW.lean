@@ -19,7 +19,7 @@ transitions of `WCC.step_callW_cases`. The input-enabledness loop and the record
 threshold: `Invariant.exists_correct_wccCaller` supplies a never-corrupted caller of round `r`,
 whose `wcc_called`, `wcc_callRound` and `wccCalled_witness` carry `wcc_bound`, `wcc_order` and
 `flip_grade2Lock`. `agree_locked`'s round-`r` corner is vacuous: `round_flip` at a never-corrupted
-process past round `r` contradicts `val = ⊥`. The record of `id` and the write to `val` compose
+process past round `r` contradicts `val = ⊥`. The recording of `id` and the write to `val` compose
 into one update, `Function.update` being idempotent at the round it writes.
 -/
 

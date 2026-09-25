@@ -10,11 +10,11 @@ import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ProjectionAfterOneWrite
 # Every other round is unchanged
 
 `roundProjection_otherTransition` and its three companions: the rounds a transition does not name
-read exactly as the transition found them. The acting process's other round records are untouched,
-the adversary's sent family is written at one round only, and so is its ghost record.
-`toRoundFamily`,
-`toRoundFamilyNoSent` and `toRoundFamilySent` state a transition's effect on the whole family of
-rounds as a one-point update.
+`roundProjection_otherTransition` and its three companions: the rounds a transition does not name
+read exactly as the transition found them. The acting process's variables in its other rounds are
+untouched, the adversary's sent family is written at one round only, and so is its ghost.
+`toRoundFamily`, `toRoundFamilyNoSent` and `toRoundFamilySent` state a transition's effect on the
+whole family of rounds as a one-point update.
 -/
 
 namespace PLTS
@@ -34,10 +34,10 @@ variable {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} {w : NetworkState P.n} 
 /-! ### Every other round is unchanged
 
 A transition names one round. The rounds it does not name read exactly as they did:
-the acting process's other round records are untouched, the adversary's sent
-family is written at one round only, and so is its ghost record. -/
+the acting process's variables in its other rounds are untouched, the adversary's sent
+family is written at one round only, and so is its ghost. -/
 
-/-- The view of a round the transition does not name. -/
+/-- The projection of a round the transition does not name. -/
 theorem roundProjection_otherTransition (hu : (u j).2 = p) {r r' : ℕ} (hr : r' ≠ r) (sr :
   RoundVariables P.n)
     (v : NetworkState P.n) (hsent : v.sent r' = w.sent r') (hF : v.F = w.F)

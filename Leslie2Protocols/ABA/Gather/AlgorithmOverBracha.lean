@@ -14,8 +14,8 @@ import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 `AlgorithmOverBracha` states the transitions of `Gather.instanceOverBracha`
 (`ABA/Gather/Composition.lean`) -- the `n` gather programs beside the gather network, in parallel
 with `2n` composed reliable-broadcast instances -- over the composition's state, through the four
-views `gatherProgramsAndNetwork`, `inputBroadcasts`, `bindBroadcasts` and `core`, one constructor
-per case of
+projections `gatherProgramsAndNetwork`, `inputBroadcasts`, `bindBroadcasts` and `core`, one
+constructor per case of
 `instanceOverBracha_step_iff_algorithm`. It is a relation on that state; the system is the
 composition.
 
@@ -24,7 +24,7 @@ transitions of the composition over the labels `specificationLabelMap` sends to 
 the `l₀`-transitions of `AlgorithmOverBracha`, on the same composed state and with the same
 distribution.
 
-## The broadcast tier
+## The broadcast instances
 
 A broadcast instance's own transitions are `BRB.BrachaAlgorithm`
 (`ABA/ReliableBroadcast/Bracha/Algorithm.lean`), and `BRB.brachaInstance_step_iff_algorithm` matches
@@ -129,7 +129,7 @@ stated over the composition's state: one constructor per case of
 `Gather.instanceOverBracha_step_iff_algorithm`. All transitions are Dirac. -/
 inductive AlgorithmOverBracha (P : Parameters) :
     StateOverBracha P.n X → Label P.n X → PMF (StateOverBracha P.n X) → Prop
-  /-- The call arrives: the gather record records the payload. -/
+  /-- The call arrives: the gather program records the payload. -/
   | call (s : StateOverBracha P.n X) (id : Fin P.n) (x : X)
       (h : ((gatherProgramsAndNetwork s).processVariables id).input = none) :
       AlgorithmOverBracha P s (.call id x)
@@ -191,7 +191,7 @@ inductive AlgorithmOverBracha (P : Parameters) :
           { (gatherProgramsAndNetwork s).processVariables j with sentVote := some U }).multicast j
             (.vote U))))
   /-- The process calls the instance broadcasting its input, and that instance broadcasts the
-  payload its gather record holds. AFW25's Algorithm 5, line 6, and LeslieBP's Algorithm 4,
+  payload its own variables hold. AFW25's Algorithm 5, line 6, and LeslieBP's Algorithm 4,
   `BRB_id.call(m)`. -/
   | inputBroadcastCall (s : StateOverBracha P.n X) (j : Fin P.n) (x : X)
       (hin : ((gatherProgramsAndNetwork s).processVariables j).input = some x)
@@ -207,7 +207,7 @@ inductive AlgorithmOverBracha (P : Parameters) :
   The process has multicast its own `VOTE` and has not called its own bind
   broadcast. The main thread of AFW25's Algorithm 5 sends `VOTE` before `BIND`,
   and sends `BIND` once, at line 17. The payload handed to the broadcast is
-  written to the gather record. -/
+  written to the gather program's variables. -/
   | bindCall (s : StateOverBracha P.n X) (j : Fin P.n) (U : AcceptedPairs P.n X)
       (hin : ((gatherProgramsAndNetwork s).processVariables j).input ≠ none)
       (hvot : ((gatherProgramsAndNetwork s).processVariables j).sentVote ≠ none)

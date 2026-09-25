@@ -11,19 +11,19 @@ import Leslie2Protocols.ABA.Implementation.System
 
 `programStep_*` reads one program's transition off its label: the participant's transition as its
 guards together with the Dirac it produces, and the idle transition of a non-participant as the
-identity. The record and the distribution are variables, so `cases` unifies against any round
-record. A participant's transition carries the health guard `corrupted = false`, and on a label
+identity. The state and the distribution are variables, so `cases` unifies against any round
+variables. A participant's transition carries the health guard `corrupted = false`, and on a label
 outside `actsAt j` the replaced program's self-loop is a second transition on the same label
 (D23).
 
-The readers hold for every implementation, because a label outside `roundOwn j` is answered by a
+The readers hold for every implementation, because a label outside `roundOwn j` has a
 transition written for all of them and `IsRoundStep` confines the implementation's own transitions
 to `roundOwn j`. The Byzantine round transitions have no transition at the process they name
 (D22, D23), so on `byzantineCallG`, `byzantineCallGLoop` and `byzantineRetG` every process idles
 and there is no participant's transition to read.
 
-`networkStep_*` does the same for the network, on the interface labels, on the rendezvous alphabet
-and on the silent label. `programStep_dirac` and `networkStep_dirac` state that both step
+`networkStep_*` does the same for the network, on the interface labels, on the synchronisation
+labels and on the silent label. `programStep_dirac` and `networkStep_dirac` state that both step
 relations are Dirac, provided the implementation's own transitions are; the composite carries the
 probabilistic coin resolution and is not.
 -/
@@ -59,7 +59,7 @@ variable [IsRoundStep P M E S roundStep]
 
 /-- The one `τ` transition of a program is `terminate`: a silent step of a
 program is that program's own termination, taken on a fired return and DECIDED
-receipts from `2f + 1` distinct senders (D22). A replaced program has no silent
+messages received from `2f + 1` distinct senders (D22). A replaced program has no silent
 transition at all, so the implementation carries `corrupted = false` (D23), and
 no graded-agreement transition is silent, `roundOwn` holding of no `τ`. -/
 theorem programStep_tau_terminate
@@ -207,7 +207,7 @@ theorem programStep_fail_notOwn {k : Fin P.n} (hk : k ≠ j)
   case failIdle => rfl
   case corruptedIdle => rfl
 
-/-! ### One program's transitions on the rendezvous alphabet
+/-! ### One program's transitions on the synchronisation labels
 
 The Byzantine round transitions have no transition at the process they name (D22, D23), so on
 `byzantineCallG`, `byzantineCallGLoop` and `byzantineRetG` every process idles and there is no
@@ -351,7 +351,7 @@ theorem programStep_byzantineRetG_noStep {r : ℕ} {out : GBCAOutput} {bnd : Boo
   | corruptedIdle _ _ _ _ _ hown => exact hown rfl
 
 /-- **The replaced program writes nothing** (D23). Whatever the label, a
-process whose flag is up leaves both halves of its record where they stand.
+process whose flag is up leaves both halves of its variables where they stand.
 Every transition that writes carries the health guard, the implementation's own
 transitions by `IsRoundStep.correct`, so no transition of a replaced program
 survives except a self-loop. -/
@@ -415,7 +415,7 @@ theorem networkStep_gbcaCallLoop {r : ℕ} {id : Fin P.n} {b : Bool}
   cases h; rfl
 
 /-- The network's half of a round-internal call or return: it sends nothing and writes the ghost
-record of the round the label names. -/
+of the round the label names. -/
 theorem networkStep_gbcaRoundEvent {r : ℕ} {j : Fin P.n} {e : E}
     (h : NetworkStep P M E G callPayload ghostStep ghostOutput s
       (Sum.inr (.gbcaRoundEvent r j e)) μ) :

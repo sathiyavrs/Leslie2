@@ -8,10 +8,10 @@
       minimum width=4.5cm, minimum height=1.0cm, text width=4.2cm, inner sep=3pt},
     lbl/.style={font=\scriptsize, fill=white, inner sep=1.5pt},
     ann/.style={font=\scriptsize, align=center, inner sep=1.5pt}]
-  % the outer frame: the sub-protocol API hidden
+  % the outer hiding: the sub-protocol API hidden
   \draw[dashed, rounded corners] (-1.1,-3.45) rectangle (11.3,3.9);
   \node[font=\footnotesize] at (8.6,3.6) {$\mathrm{abstract}\,\mathrm{hiddenAPI}$};
-  % the inner frame: the rendezvous alphabet hidden
+  % the inner hiding: the network events hidden
   \draw[dashed, rounded corners] (-0.8,-3.2) rectangle (10.9,3.15);
   \node[font=\footnotesize] at (7.6,2.87)
     {$\mathrm{relabel} \circ \mathrm{abstract}\,\mathrm{networkEventLabels}$};
@@ -38,7 +38,7 @@
     {$\mathrm{send}(j,m)$, $\mathrm{deliver}(i,j,m) \to \tau$};
   \draw[->] (0.6,2.3) -- (0.6,1.6);
   \node[ann, anchor=west, align=left] at (0.75,1.95)
-    {$\mathrm{callG}\,r$, $\mathrm{retG}\,r$,\\ round $r$'s handshake transitions};
+    {$\mathrm{callG}\,r$, $\mathrm{retG}\,r$,\\ round $r$'s Byzantine calls and returns};
   \node[ann] at (2.55,-2.45)
     {one instance per round $r \in \mathbb{N}$; $\mathrm{fail}$ broadcast to all};
   % ---- components 2 to 4
@@ -47,7 +47,7 @@
   \node[comp] (anet) at (8.55,-0.7)
     {$\mathrm{ABANetwork}(P)$: sent sets $decidedSent(j)$,\\
      corrupted set $F$ with $|F| < f$,\\
-     every handshake transition's guard $k \in F$};
+     the guard $k \in F$ of every Byzantine call and return};
   \node[comp] (w) at (8.55,-2.5)
     {$\mathrm{WCC.specFamily}(P)$ along $\mathrm{coinLabelMap}$\\
      the one non-Dirac component};

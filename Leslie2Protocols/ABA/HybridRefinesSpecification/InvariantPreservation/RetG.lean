@@ -243,7 +243,7 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
           exact Or.inl (Or.inr ⟨he, hk⟩)
       · rw [hc'eq] at he hk
         exact Or.inl (Or.inr ⟨he, hk⟩)
-  -- Provenance of a standing round-`r` carrier: the permanent residue or the grade-0 lock.
+  -- Where a standing round-`r` carrier comes from: the permanent residue or the grade-0 lock.
   have hProvC : ∀ j1 v1, j1 ∉ c.F → OutcomeHolder P g c r j1 v1 →
       (!v1) ∈ (g r).excluded ∨ (g r).grade = some false := by
     intro j1 v1 hj hcar
@@ -414,9 +414,9 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
         exact Or.inl (Or.inl h1)
     · rw [hCDS] at h1
       exact Or.inl (Or.inr h1)
-  -- A fresh grade-2 return's value against any standing certificate: same round via the
-  -- fire-time pair, below via the certificate's commitment, above via the fresh
-  -- commitment and the derived caller of the certificate's spared bit.
+  -- A fresh grade-2 return's value against any standing witness: same round via the
+  -- fire-time pair, below via the witness's commitment, above via the fresh
+  -- commitment and the derived caller of the witness's spared bit.
   have hpinCert : ∀ b1, out = .grade2 b1 → ∀ r1 b1', Grade2Witness P g c r1 b1' → b1' = b1 := by
     intro b1 hout r1 b1' hcert
     rcases hRetInfo with ⟨u, hoev, hulive, huexcluded⟩ | ⟨hoe, -⟩
@@ -777,7 +777,7 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
     -- toCallW`) gets a fresh grade/dissent fact from the genuine GBCA return guards
     -- (`retGrade2`/`retGrade0` grade the round outright; `retGrade1`'s dissent converts
     -- to `DissentWitness` via `input_gbcaRound0`/`call_of_previousRound`, mirroring
-    -- `DissentWitness`'s own provenance argument);
+    -- `DissentWitness`'s own argument);
     -- everywhere else is `hGradedOrDissent`-routed pass-through of the pre-state fact.
     intro r' id' hmem hp
     rcases hp with ⟨hround, hphase⟩ | hlt
@@ -828,7 +828,7 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
   · intro r' h
     rw [hBindeq] at h
     exact GBCA.SpecState.quorum_of_eq (hFgeq r') (hCalleq r') (hI.bound_quorum r' h)
-  · -- I26: `retG` never touches `excluded`, sent sets pass through the `c`-frame
+  · -- I26: `retG` never touches `excluded`, sent sets pass through unchanged
     intro r' v hb
     rw [hBindeq r'] at hb
     exact (hI.bind_support r' v hb).mono
@@ -917,7 +917,7 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
         · exact Or.inr (by rw [hreq0]; exact hGradeTo r hgf)
       · exact Or.inl (Option.some_inj.mp (hev0.symm.trans hev1))
   · -- I30 establishment: a fresh grade-2 return is compared against every standing correct
-    -- holder's certificate through `hpinCert`.
+    -- holder's witness through `hpinCert`.
     intro i0 j0 b0 b0' hm hm' h h'
     have hpin : ∀ b1, out = .grade2 b1 → ∀ j1 b1',
         j1 ∉ c.F → Grade2Holder P c j1 b1' → b1' = b1 := by

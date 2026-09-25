@@ -11,7 +11,7 @@ import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ProjectionAfterOneWrite
 
 `roundProjection_firstGatherReturn`: the projection of the composed round after the first gather
 returns to the acting process. The transition records the candidate the returned entries determine
-and marks the gather record returned, and its ghost write is the first gather's core and the
+and marks the gather variables returned, and its ghost write is the first gather's core and the
 round's bound bit, which is what the composed round's `firstGatherReturn` event writes.
 `afterFirstGatherReturn` names the state the return reaches, and `firstGatherReturnCore` is the
 core the return carries. `firstGatherProjection_writeNoSent` and its companion at the second
@@ -33,7 +33,7 @@ variable {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} {w : NetworkState P.n} 
 
 /-! ### The first gather's return
 
-The transition records the candidate and marks the gather record returned. It sends nothing, and
+The transition records the candidate and marks the gather variables returned. It sends nothing, and
 its ghost write is the first gather's core beside the round's bound bit. -/
 
 /-- The projection onto the first gather instance after a write that records nothing. -/
@@ -52,8 +52,8 @@ theorem secondGatherProjection_writeNoSent (u : ∀ _ : Fin P.n, AFW.ProcessVari
     GBCA.ByAFW.secondGather (roundProjectionUpdate P u w r j sr (w.sent r)) :=
   congrArg GBCA.ByAFW.secondGather (roundProjection_writeNoSent u w j c r sr)
 
-/-- The core the first gather's return carries: the one on record, and the core
-of the gather's network state where none is on record. -/
+/-- The core the first gather's return carries: the recorded one, and the core
+of the gather's network state where none is recorded. -/
 noncomputable def firstGatherReturnCore (P : Parameters) (s : GBCA.ByAFW.RoundStateOverBracha P.n) :
     Gather.AcceptedPairs P.n Bool :=
   (Gather.core (GBCA.ByAFW.firstGather s)).getD (Gather.coreOfNetwork P

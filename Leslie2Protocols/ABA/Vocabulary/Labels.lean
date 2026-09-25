@@ -21,9 +21,9 @@ label fires iff *every* component steps on it. Components therefore carry
 self-loops on labels that are not their business (added by the `withIdle` /
 `family` combinators, not here), which makes full synchronisation emulate the
 blueprint's sync-set composition `∥_S`: the genuine participants of a label
-handshake while everyone else no-ops in place.
+synchronise while everyone else no-ops in place.
 
-* `callG/retG r id …`, `callW/retW r id …` — handshakes between a round loop
+* `callG/retG r id …`, `callW/retW r id …` — the calls and returns between a round loop
   and the round-`r` instance of the respective family. A `retG` label names the
   round, the process being answered, the graded outcome it receives and the
   round's bound bit.

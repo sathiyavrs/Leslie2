@@ -14,18 +14,18 @@ import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 The composition is `relabel ∘ abstract ∘ parallel` over the synchronised group of programs
 and the instance's network. The lemmas here unfold that pipeline in both directions.
 
-`brachaInstance_step_iff` splits a transition of the instance into a hidden rendezvous and an
+`brachaInstance_step_iff` splits a transition of the instance into a hidden synchronisation and an
 interface label. Over the instance-internal alphabet, a visible label moves both factors, the
-programs and the network, and the joint distribution is their Dirac product. A silent label
+programs and the network, and the product distribution is their Dirac product. A silent label
 moves the network alone. `brachaInstanceExtended_synchronised_cases` and
-`brachaInstanceExtended_tau_cases` read a joint step that way, and the `_step` lemmas build
+`brachaInstanceExtended_tau_cases` read a synchronised step that way, and the `_step` lemmas build
 one from the transitions of the factors.
 
 `programStep_*` reads one program's transition off its label: the participant's guards together
 with the Dirac it produces, and the idle transition of a non-participant as the identity.
 `networkStep_*` does the same for the instance's network.
 
-A joint step delivers a program function given pointwise, by its value at the acting process
+A synchronised step delivers a program function given pointwise, by its value at the acting process
 and its agreement with the old function elsewhere. `Function.eq_update_iff` identifies that
 function with the old one updated at the acting process, and the `brachaInstance_*` lemmas
 identify the state a transition writes with `InstanceState.setProcessVariables`,
@@ -45,7 +45,7 @@ The pipeline is `relabel ∘ abstract ∘ parallel ∘ synchronisedProduct`; the
 unfold it once and for all, in both directions. -/
 
 /-- A synchronised transition of the program group on a visible label: every
-program steps, and the joint distribution is Dirac. -/
+program steps, and the product distribution is Dirac. -/
 theorem broadcastProgramProduct_cases {P : Parameters} {ldr : Fin P.n}
     {u : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables M) (Message M)} {l : BroadcastLabel P.n M}
     {μ : PMF (∀ _ : Fin P.n, LocalState P.n (ProcessVariables M) (Message M))}
@@ -83,7 +83,7 @@ theorem broadcastProgramProduct_no_tau {P : Parameters} {ldr : Fin P.n}
   · exact hτ rfl
   · exact programStep_no_tau hstep
 
-/-- The instance's step relation, unfolded to the hidden-rendezvous case and
+/-- The instance's step relation, unfolded to the hidden-synchronisation case and
 the interface-label case. -/
 theorem brachaInstance_step_iff (P : Parameters) (ldr : Fin P.n) (q : BrachaState P.n M)
     (l : InstanceLabel P.n M) (μ : PMF (BrachaState P.n M)) :
@@ -99,8 +99,8 @@ theorem brachaInstance_step_iff (P : Parameters) (ldr : Fin P.n) (q : BrachaStat
     · exact Or.inl ⟨rfl, _, inr_mem_broadcastEvents e, hstep⟩
     · exact Or.inr ⟨inl_notMem_broadcastEvents l, hstep⟩
 
-/-- Build a joint transition of the programs and the network on a rendezvous
-label. -/
+/-- Build a synchronised transition of the programs and the network on a
+synchronisation label. -/
 theorem brachaInstanceExtended_event_step (P : Parameters) (ldr : Fin P.n)
     {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables M) (Message M)}
     {w w' : NetworkState P.n (Message M)} (e : BroadcastEvent P.n M)
@@ -111,7 +111,7 @@ theorem brachaInstanceExtended_event_step (P : Parameters) (ldr : Fin P.n)
   exact Or.inl ⟨by simp, PMF.pure x, PMF.pure w', broadcastProgramProduct_pure (by simp) hall, hn,
     (prodPMF_pure_pure _ _).symm⟩
 
-/-- Build a joint transition of the programs and the network on a visible
+/-- Build a synchronised transition of the programs and the network on a visible
 interface label. -/
 theorem brachaInstanceExtended_label_step (P : Parameters) (ldr : Fin P.n)
     {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables M) (Message M)}
@@ -135,7 +135,7 @@ theorem brachaInstanceExtended_tau_network (P : Parameters) (ldr : Fin P.n)
   rw [brachaInstanceExtended, System.parallel_step]
   exact Or.inr (Or.inr ⟨rfl, PMF.pure w', hn, (prodPMF_pure_pure _ _).symm⟩)
 
-/-- A hidden rendezvous is a silent transition of the instance. -/
+/-- A hidden synchronisation is a silent transition of the instance. -/
 theorem brachaInstance_event_step (P : Parameters) (ldr : Fin P.n)
     {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables M) (Message M)}
     {w w' : NetworkState P.n (Message M)} (e : BroadcastEvent P.n M)
@@ -164,7 +164,7 @@ theorem brachaInstance_tau_network (P : Parameters) (ldr : Fin P.n)
   (brachaInstance_step_iff P ldr _ _ _).mpr (Or.inr (brachaInstanceExtended_tau_network P ldr hn))
 
 /-- A visible transition of the programs beside the network: every program and
-the network step on the label, and the joint distribution is their Dirac
+the network step on the label, and the product distribution is their Dirac
 product. -/
 theorem brachaInstanceExtended_synchronised_cases {P : Parameters} {ldr : Fin P.n}
     {u : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables M) (Message M)}
@@ -328,7 +328,8 @@ end NetworkStepCases
 /-! ### The write a transition makes on the composed state
 
 The local states and the network state are the two components of `BrachaState`
-(`ABA/ReliableBroadcast/Bracha/MessagesAndVariables.lean`), so a joint step of the programs and the
+(`ABA/ReliableBroadcast/Bracha/MessagesAndVariables.lean`), so a synchronised step of the programs
+and the
 network writes the state the instance's own accessors read. Such a step delivers a program
 function pointwise: its value at the acting process, and its agreement with the old one elsewhere.
 `Function.eq_update_iff` reads that function as the old one updated at the acting process, and the
@@ -344,7 +345,7 @@ variable {M : Type} {P : Parameters}
   {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables M) (Message M)}
   {w : NetworkState P.n (Message M)}
 
-/-- A record write at one program, with the network state untouched. -/
+/-- A write to the variables of one program, with the network state untouched. -/
 theorem brachaInstance_setProcessVariables {j : Fin P.n} {pr : ProcessVariables M}
     (hj : x j = (u j).setProcessVariables pr) (hne : ∀ i, i ≠ j → x i = u i) :
     ((x, w) : BrachaState P.n M) = InstanceState.setProcessVariables (u, w) j pr := by
@@ -369,7 +370,7 @@ variable {M : Type} [DecidableEq M] {P : Parameters}
   {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables M) (Message M)}
   {w : NetworkState P.n (Message M)}
 
-/-- A record write at one program together with the network state recording the
+/-- A write to the variables of one program together with the network state recording the
 message that write multicasts. -/
 theorem brachaInstance_setProcessVariables_recordSent {j : Fin P.n} {pr : ProcessVariables M} {m :
   Message M}

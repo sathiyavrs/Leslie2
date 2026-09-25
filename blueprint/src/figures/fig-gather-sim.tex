@@ -1,7 +1,7 @@
-% The three tier simulations of one gather-based round
+% The three simulations of one gather-based round
 % (PLTS.ABA.GBCA.ByAFW.broadcastSubstitution, gatherSubstitution,
 % refinesSpecification).
-% Concrete transitions above each tier, the tier below, dashed verticals the relation.
+% Concrete transitions above each composition, the composition below, dashed verticals the relation.
 \begin{tikzpicture}[
     >={Stealth[round]}, semithick, on grid,
     conc/.style={draw, rounded corners, minimum height=0.8cm, align=center,
@@ -27,10 +27,10 @@
   \draw[dashed, ->] (r2) -- (2.45,-0.45) node[rel, pos=0.5, above]{$\mathrm{GatherSubstitutionRelation}$};
   \draw[dashed, ->] (r3) -- (2.45,-2.05) node[rel, pos=0.5, above]{$\mathrm{SpecificationRelation}$};
   \node[note, anchor=west] at (12.3,1.15)  {a stutter or a return\\ of the BRB specification};
-  \node[note, anchor=west] at (12.3,-0.45) {a stutter; a broadcast\\ return writes a record};
+  \node[note, anchor=west] at (12.3,-0.45) {a stutter; a broadcast\\ return records the\\ value returned};
   \node[note, anchor=west] at (12.3,-2.05) {a run, or a single\\ graded return};
   \node[font=\footnotesize, align=center] at (7.2,-3.85)
-    {each stage idealises away one tier and holds the tiers above it equal;\\
+    {each stage replaces one component by its specification\\ and holds the components above it equal;\\
      the two upper stages are congruence applications, the round's network held equal,\\
      and $\mathrm{SpecificationRelation}$ fixes $excluded$ at the complement of the bit it holds};
 \end{tikzpicture}

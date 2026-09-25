@@ -64,7 +64,7 @@ extension of the run and not merely at the moment of the return. A grade-0 retur
 commits the instance: from that point on at most one bit is alive anywhere in the
 future, which is what makes handing out no bit the right answer. `retGrade0`
 additionally requires `f + 1` F-blind support for each bit (D15), which is what
-certifies that neither bit was forced.
+witnesses that neither bit was forced.
 
 ## The all-⊥ run
 
@@ -77,12 +77,12 @@ process is answered with the internal choice. The guard `(!bnd) ∈ excluded` is
 the binding witness either way — `!bnd` is a bit that no extension can hand out
 — whether the round goes on to hand out `bnd` or hands out nothing at all.
 
-## Provenance (D14/D15)
+## Where a handed-out value comes from (D14/D15)
 
-* **D14 (repair, load-bearing).** The source blueprint's TS 2 certifies binding
-  by a *single* correct witness (`∃ id ∉ F, call id = b`), and grade-1 / grade-0 dissent
-  likewise by a single correct dissenter. That singular witness is the same
-  provenance loss the D13 repair removes from Transition System 1, one level
+* **D14 (repair, load-bearing).** The source blueprint's TS 2 witnesses binding
+  by a *single* correct caller (`∃ id ∉ F, call id = b`), and grade-1 / grade-0 dissent
+  likewise by a single correct dissenter. That singular witness loses the same
+  account of where a value comes from that the D13 repair restores in Transition System 1, one level
   down: the witness may
   be corrupted later in the trace, after which nothing attributes the outcome to
   a never-corrupted input — and `hybrid` built on this TS 2 provably violates
@@ -91,19 +91,19 @@ the binding witness either way — `!bnd` is a bit that no extension can hand ou
   round-1 unanimity decides `1`, `fail 0`, `retABA 1 1` — never-corrupted
   processes all input `0`). ABDY22's implementation carries the `f + 1` via
   Valid-set relay thresholds; TS 2 abstracted it to one witness.
-* **D15 (the repair).** Every certificate is a count
+* **D15 (the repair).** Every witness is a count
   `f + 1 ≤ #{id | call id = some b ∨ id ∈ F}` at the relevant bit — exactly
   TS 1's `InputSupport` shape (D13), directly `F`-blind: the count is monotone in `F`
   and in `call`, so it is immune to later `fail`s. On the exclusion set the
   counts sit at three places. `bindUnset b` counts support for the bit it
   *spares*, `!b`; the `retGrade1` dissent guard counts support for the bit it does
-  *not* hand out, `!v`; `retGrade0` counts support for both bits. Provenance survives
+  *not* hand out, `!v`; `retGrade0` counts support for both bits. The account survives
   verbatim: `F` is monotone with `|F_final| ≤ f`, so among `f + 1` distinct
   supporters some member is outside the *final* `F`, hence outside the current
   `F`, hence a never-corrupted genuine caller — corrupt supporters are paid for
   by the `F` budget itself, with no phantom-call bookkeeping. Chaining the two:
   a bit `v` handed out at grade `≥ 1` requires `(!v) ∈ excluded`, and the
-  `bindUnset (!v)` that put it there certified `f + 1` F-blind supporters of
+  `bindUnset (!v)` that put it there witnessed `f + 1` F-blind supporters of
   `!(!v) = v`; the budget pigeonhole then recovers a never-corrupted genuine
   caller of `v` behind every value-bearing return.
 
@@ -166,7 +166,7 @@ def corrupt (P : Parameters) (id : Fin P.n) (s : SpecState P.n) : SpecState P.n 
 
 end SpecState
 
-/-! ### Corruption frame lemmas
+/-! ### Corruption preserved by a write elsewhere
 
 `SpecState.corrupt` writes `F` and nothing else, so every other projection
 passes through it untouched. These four `@[simp]` lemmas are the canonical

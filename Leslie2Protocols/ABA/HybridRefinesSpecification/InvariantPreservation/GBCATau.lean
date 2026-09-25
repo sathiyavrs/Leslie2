@@ -258,7 +258,7 @@ theorem Invariant.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
       · rw [h1, hExcludedSelf] at h
         rcases Finset.mem_insert.mp h with hnew | hold
         · -- the fresh exclusion: the spared bit `!b = v` was carried by the derived
-          -- correct caller, whose `call_of_previousRound` provenance is the conclusion verbatim
+          -- correct caller, whose `call_of_previousRound` is the conclusion verbatim
           have hveq : v = !b := by
             revert hnew; cases v <;> cases b <;> simp
           have hcp := hI.call_of_previousRound r' id0 (!b) hFid0 (by rw [h1]; exact hcall0)

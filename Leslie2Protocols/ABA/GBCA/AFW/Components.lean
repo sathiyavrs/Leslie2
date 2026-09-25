@@ -17,13 +17,12 @@ The pieces that run the round-`r` graded-agreement round: `n` graded-agreement p
 round's network, and the pullbacks along which those programs and the two gather instances read the
 round-internal alphabet.
 
-A program holds one process's record of the round — its input, its candidate, whether it has called
-the second gather, its graded outcome and its return flag (`GBCA.ByAFW.ProcessVariables`). Its
-guards
-read that record and nothing else. `ProgramStep` is the step relation of process `j`'s program and
-`NetworkStep` that of the round's network; `gbcaProgram` and `GBCANetwork` are the two systems they
-carry, and `roundPrograms` is the round's programs: the `n` of them beside the round's network, each
-read along `programLabelMap`.
+A program holds one process's variables for the round — its input, its candidate, whether it has
+called the second gather, its graded outcome and its return flag (`GBCA.ByAFW.ProcessVariables`).
+Its guards read those variables and nothing else. `ProgramStep` is the step relation of process
+`j`'s program and `NetworkStep` that of the round's network; `gbcaProgram` and `GBCANetwork` are
+the two systems they carry, and `roundPrograms` is the round's programs: the `n` of them beside the
+round's network, each read along `programLabelMap`.
 
 The round's network exchanges no messages. It holds the round's bound bit alone, auxiliary state
 (D29) that no program reads. The `firstGatherReturn` event writes the bit from the core the first
@@ -36,7 +35,7 @@ and `secondGatherCall`, and so are the second gather's return and the round's gr
 return, `secondGatherReturn` and `retG`. A program moves on each of the four: `firstGatherReturn`
 records the candidate `GBCA.candidate` of the returned entries, `secondGatherCall` marks the call,
 `secondGatherReturn` records the grade `GBCA.gradeOf`, `retG` marks the return. What carries
-the round from one event to the next is the program's record.
+the round from one event to the next is the program's variables.
 
 ## The alphabet
 
@@ -45,7 +44,7 @@ The round speaks `ExtendedLabel n Empty` natively, as `GBCA.ByABDY.composition` 
 instances, so it takes the empty type for the family alphabet's round message type: the round
 multicast `gbcaSend` and the round delivery `gbcaDeliver` name no label here. The call loop of
 the family alphabet, `gbcaCallLoop r id b`, is the round's loop label, and the three Byzantine
-handshake labels of round `r` are labels of the interface. A program is read along
+call and return labels of round `r` are labels of the interface. A program is read along
 `programLabelMap`, the projection that sends a Byzantine call to a call, a Byzantine return to a
 return, and the two call loops to the loop.
 
@@ -55,11 +54,11 @@ Byzantine calls to `Gather.Label.call`. The second gather is called on the round
 `secondGatherCall` event, which `secondGatherLabelMap` sends to `Gather.Label.call`; the second
 gather's loop label has no label of the family over it.
 
-A family label outside the round's interface — the ABA API, the coin ports and the rendezvous of
-the protocol's own networks — has the image `ProgramLabel.outside`, on which neither a program nor
-the round's network moves. The round has no transition on such a label, and the family supplies the
-idle. Corruption is the exception: it has no image at all, so the round's programs remain unchanged
-on it while the two gather instances move.
+A family label outside the round's interface — the ABA API, the coin ports and the synchronisations
+of the protocol's own networks — has the image `ProgramLabel.outside`, on which neither a program
+nor the round's network moves. The round has no transition on such a label, and the family supplies
+the idle. Corruption is the exception: it has no image at all, so the round's programs remain
+unchanged on it while the two gather instances move.
 
 The round-internal alphabet is `RoundLabel n = ExtendedLabel n Empty ⊕ RoundEvent n`, and
 `roundEvents` collects the three events of `RoundEvent n`. They are hidden by the composition of
@@ -81,9 +80,9 @@ namespace GBCA.ByAFW
 open Implementation hiding NetworkEvent ExtendedLabel
 open Composition
 
-/-! ### The program's record -/
+/-! ### The program's variables -/
 
-/-- The record of one graded-agreement program: what a process holds between
+/-- The variables of one graded-agreement program: what a process holds between
 the events it takes part in. -/
 structure ProcessVariables (n : ℕ) : Type where
   /-- The input the call carried. -/
@@ -98,7 +97,7 @@ structure ProcessVariables (n : ℕ) : Type where
   returned : Bool
   deriving DecidableEq
 
-/-- The initial record: nothing called, nothing determined, nothing
+/-- The initial variables: nothing called, nothing determined, nothing
 returned. -/
 def ProcessVariables.initial (n : ℕ) : ProcessVariables n := ⟨none, none, false, none, false⟩
 
@@ -142,7 +141,7 @@ def roundEvents (n : ℕ) : Set (RoundLabel n) := {l | ∃ e : RoundEvent n, l =
 
 /-! ### The program's alphabet -/
 
-/-- The alphabet of one graded-agreement program: the round's two handshake
+/-- The alphabet of one graded-agreement program: the round's call and return
 ports, the loop the family alphabet's call loops stand for, and the round's
 three events. -/
 inductive ProgramLabel (n : ℕ) : Type
@@ -150,7 +149,7 @@ inductive ProgramLabel (n : ℕ) : Type
   | tau
   /-- The round's call at `id` with input `b`. -/
   | callG (r : ℕ) (id : Fin n) (b : Bool)
-  /-- The round's call against an already-called record. -/
+  /-- The round's call against variables already called. -/
   | callLoop (r : ℕ) (id : Fin n) (b : Bool)
   /-- The first gather's return to `id`. -/
   | firstGatherReturn (id : Fin n) (g : Fin n → Option Bool) (C : Gather.AcceptedPairs n Bool)
@@ -402,11 +401,11 @@ variable {n : ℕ} (r : ℕ) (id k i j : Fin n) (b c bnd : Bool) (x : Option Boo
 end Pullbacks
 /-! ### The graded-agreement program
 
-Process `j`'s program in this round. Every guard reads its own record. The
+Process `j`'s program in this round. Every guard reads its own variables. The
 round's four moves are one transition each: the call records the input, the first
 gather's return records the candidate, the second gather's call marks itself,
 the second gather's return records the grade, and the round's return marks the
-record returned. No transition fires on the silent label. -/
+variables returned. No transition fires on the silent label. -/
 
 /-- The step relation of the graded-agreement program of process `j` in round
 `r`. All transitions are Dirac. -/
@@ -418,7 +417,7 @@ inductive ProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
   /-- A call addressed elsewhere: not `j`'s business. -/
   | callGIdle (p : ProcessVariables P.n) (i : Fin P.n) (b : Bool) (hi : i ≠ j) :
       ProgramStep P r j p (.callG r i b) (PMF.pure p)
-  /-- The call loop: the record does not move. -/
+  /-- The call loop: the variables do not move. -/
   | callLoop (p : ProcessVariables P.n) (b : Bool) :
       ProgramStep P r j p (.callLoop r j b) (PMF.pure p)
   /-- A call loop at another process: not `j`'s business. -/
@@ -454,8 +453,8 @@ inductive ProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
     Bool))
       (C : Gather.AcceptedPairs P.n (Option Bool)) (hi : i ≠ j) :
       ProgramStep P r j p (.secondGatherReturn i g C) (PMF.pure p)
-  /-- The round returns the recorded grade. The return announces the grade and the record drops it.
-  The announced bit is the round's network's to determine. -/
+  /-- The round returns the recorded grade. The return announces the grade and the variables drop
+  it. The announced bit is the round's network's to determine. -/
   | retG (p : ProcessVariables P.n) (out : GBCAOutput) (bnd : Bool) (ho : p.output = some out)
       (hr : p.returned = false) :
       ProgramStep P r j p (.retG r j out bnd)
@@ -492,7 +491,7 @@ inductive NetworkStep (P : Parameters) (r : ℕ) :
   | secondGatherReturn (w : Option Bool) (id : Fin P.n) (g : Fin P.n → Option (Option Bool))
       (C : Gather.AcceptedPairs P.n (Option Bool)) :
       NetworkStep P r w (.secondGatherReturn id g C) (PMF.pure w)
-  /-- The round's return announces the bit on record, and moves nothing. -/
+  /-- The round's return announces the recorded bit, and moves nothing. -/
   | retG (w : Option Bool) (id : Fin P.n) (out : GBCAOutput) :
       NetworkStep P r w (.retG r id out (w.getD (boundOfCore P ∅))) (PMF.pure w)
 

@@ -12,25 +12,25 @@ import Leslie2Protocols.ABA.GBCA.Specification
 
 The graded agreement specification speaks the shared alphabet `Label n`. A graded-agreement round
 speaks the extended alphabet `Composition.ExtendedLabel n M`, over the type `M` of the messages the
-round exchanges, in which the three Byzantine handshake
-transitions and the call loop of round `r` are separate labels. `specificationLabelMap` is the
+round exchanges, in which the three Byzantine call and return transitions and the call loop of
+round `r` are separate labels. `specificationLabelMap` is the
 projection that identifies them with the specification labels they stand for: a Byzantine call is a
 call, a Byzantine return is a return, and the two call loops are calls, which the specification
 takes on its input-enabledness transitions (D11). Every other extended label idles: the protocol
-network's rendezvous and the coin handshake are off the specification's interface.
+network's synchronisation and the coin's call and return are off the specification's interface.
 
 `specificationOverRoundAlphabet` is the specification read back along `specificationLabelMap`. It
 is the system a round is replaced by, and both graded-agreement implementations reach it:
 ABDY22's round through `GBCA/ABDY/RefinesSpecification.lean` and the two-gather round through
-`GBCA/AFW/RefinesSpecification.lean`. The handshake labels stay visible at this boundary, and their
-authorisation is the surrounding network's business.
+`GBCA/AFW/RefinesSpecification.lean`. The call and return labels stay visible at this boundary,
+and their authorisation is the surrounding network's business.
 
 A weak run of the specification is read back over the extended alphabet along a section of
 `specificationLabelMap`. `labelSection l₀ l` sends every label to its own copy on the left, except
 `l₀`, which it sends to `l`. `weakLSilent_specificationOverRoundAlphabet` carries a silent weak run.
 `weakLStep_specificationOverRoundAlphabet` carries a labelled one to any extended label projecting
-to the same specification label, which is what answers a Byzantine handshake by the specification's
-own call or return.
+to the same specification label, which is what answers a Byzantine call or return by the
+specification's own call or return.
 -/
 
 namespace PLTS
@@ -101,8 +101,8 @@ def specificationLabelMap (n : ℕ) {M : Type} : ExtendedLabel n M → Option (L
 @[simp] theorem specificationLabelMap_tau (n : ℕ) {M : Type} :
     specificationLabelMap n (Silent.τ : ExtendedLabel n M) = some (Silent.τ : Label n) := rfl
 
-/-- Only the silent label projects to the silent label: a handshake transition projects to a
-handshake port, and every other extended label idles. -/
+/-- Only the silent label projects to the silent label: a call or a return projects to a call or a
+return port, and every other extended label idles. -/
 theorem specificationLabelMap_eq_tau {n : ℕ} {M : Type} {l : ExtendedLabel n M}
     (h : specificationLabelMap n l = some Label.tau) :
     l = Sum.inl Label.tau := by

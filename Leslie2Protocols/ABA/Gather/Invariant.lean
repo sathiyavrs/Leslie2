@@ -11,17 +11,17 @@ import Leslie2Protocols.ABA.Gather.AlgorithmOverBroadcastSpecification
 
 `Gather.Invariant` is what the gather instance over the broadcast specifications
 (`Gather.instanceOverBroadcastSpecification`, `ABA/Gather/Composition.lean`) maintains, stated over
-the composition's state through the views `gatherProgramsAndNetwork`, `inputBroadcasts`,
+the composition's state through the projections `gatherProgramsAndNetwork`, `inputBroadcasts`,
 `bindBroadcasts` and
 `core`. `Invariant.initial` holds it at the initial state, and `Invariant.step` carries it along
 every transition of `Gather.AlgorithmOverBroadcastSpecification`.
 
 The invariant has two parts. `Conformance` collects what the composition records: the corruption
 budget, the corrupted set of each of the `2n` broadcast instances, delivery soundness, the returned
-values a program holds, the provenance of a committed entry, and the message pattern of a process
+values a program holds, where a committed entry comes from, and the message pattern of a process
 outside `F` -- a `*_confirmed` clause ties its sent message to its write-once field, a `*_backed`
 clause ties that field to what justified it -- the `n − f` received messages of a vote or a bind
-payload, the caller's own gather record for the payload of an input instance -- and `echo_card`
+payload, the caller's own variables for the payload of an input instance -- and `echo_card`
 gives a correct echo payload its `n − f` entries. `echo_approved` is the second part: the payload
 set in a process's `ECHO` field consists of committed input entries (`Gather.approved`). It carries
 no correctness premise, because only `AlgorithmOverBroadcastSpecification.echo` writes the field and
@@ -33,18 +33,19 @@ Committed entries are written once, so `approved` is monotone along every transi
 
 ## What the broadcast instances returned
 
-A gather program reads what a broadcast instance returned to it out of its own record. The clauses
+A gather program reads what a broadcast instance returned to it out of its own variables. The
+clauses
 `inputBroadcastReturned_val` and `bindBroadcastReturned_val` carry a returned value back to the
 commitment that wrote it: they are established at the `inputBroadcastRet` and `bindRet`
 transitions, whose guards are the broadcast specification's `val = some v`, and they survive
 because a committed value is written once.
 
-## The call records
+## The calls
 
 A process calls the instance broadcasting its input on an event of its own, so the payload an
-input instance records is the payload the caller's gather record holds
-(`inputBroadcastCall_backed`), and the provenance of a commitment reads the input instance's own
-call record (`inputBroadcastVal_of_instanceInput`).
+input instance records is the payload the caller's own variables hold
+(`inputBroadcastCall_backed`), and a commitment is the payload the input instance was called with
+(`inputBroadcastVal_of_instanceInput`).
 -/
 
 namespace PLTS
@@ -56,9 +57,9 @@ variable {X : Type} [DecidableEq X] {P : Parameters}
 /-! ### The conformance clauses -/
 
 /-- The conformance clauses. The `*_confirmed` clauses tie a correct sender's sent to its write-once
-field, the `*_backed` clauses tie the fields to the receipts that justified them, the return clauses
-tie a program's returned value to the commitment that wrote it, and the provenance clauses are the
-broadcast commit guards, recorded per instance. -/
+field, the `*_backed` clauses tie the fields to the received messages that justified them, the
+return clauses tie a program's returned value to the commitment that wrote it, and the
+`*_of_instanceInput` clauses are the broadcast commit guards, recorded per instance. -/
 structure Conformance (P : Parameters) (s : StateOverBroadcastSpecification P.n X) : Prop where
   /-- The corruption budget. -/
   F_card : (gatherProgramsAndNetwork s).F.card ≤ P.f
@@ -113,8 +114,8 @@ structure Conformance (P : Parameters) (s : StateOverBroadcastSpecification P.n 
   bind_backed : ∀ j ∉ (gatherProgramsAndNetwork s).F, ∀ U, (bindBroadcasts s j).input = some U →
     ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
       ∀ q ∈ Q, ∃ W, Message.vote W ∈ (gatherProgramsAndNetwork s).received j q ∧ W ⊆ U
-  /-- The payload an input instance was called with is the payload its own process's gather
-  record holds. -/
+  /-- The payload an input instance was called with is the payload its own process's
+  variables hold. -/
   inputBroadcastCall_backed : ∀ k ∉ (gatherProgramsAndNetwork s).F, ∀ x,
     (inputBroadcasts s k).input = some x → ((gatherProgramsAndNetwork s).processVariables k).input =
       some x

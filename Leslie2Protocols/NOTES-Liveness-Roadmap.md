@@ -166,11 +166,11 @@ Ordered by expected value-for-effort:
    direction, `protocol ⊑ composed ⊑ hybrid ⊑ ABA.spec`, so a mass bound established at `ABA.spec`
    has to be carried down all three, the composition inclusion (`ABDY.protocolSimulation`,
    `ABA/ABDY/Simulation.lean`) included. That inclusion imposes no constraint on the
-   amplification axis. Under D22 a process retains the round record of every round it has touched
+   amplification axis. Under D22 a process retains its variables in every round it has touched
    and answers that round's messages under an instance-local guard, whichever round its loop is in,
    which is the behaviour ABDY22's Lemmas 4.6 and E.5 are stated under; and
    `ABAProgramStep.terminate` fires only once the process's own return has fired and `2f + 1`
-   DECIDED receipts are on record, so the concrete stopping point is a terminate in the paper's
+   DECIDED messages have been received, so the concrete stopping point is a terminate in the paper's
    sense — the endpoint a fairness marking would stop at. Nothing in the development says when that
    step fires, or that it ever does: the marking itself and every statement about it are what a
    campaign has to supply. Budget the corrupt-fairness mismatch as the primary risk: the fairness

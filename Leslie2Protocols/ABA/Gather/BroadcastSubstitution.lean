@@ -17,16 +17,17 @@ import Leslie2.Results
 `Gather.broadcastSubstitution`: the gather instance over Bracha's broadcast
 (`Gather.instanceOverBracha`) is forward simulated by the gather instance over the broadcast
 specification (`Gather.instanceOverBroadcastSpecification`), along
-`Gather.BroadcastSubstitutionRelation` — the gather tier held equal, and each broadcast coordinate
+`Gather.BroadcastSubstitutionRelation` — the gather programs and network held equal, and each
+broadcast coordinate
 related to its specification coordinate by the BRB refinement relation (`BRB.SpecificationRelation`,
 `ABA/ReliableBroadcast/Bracha/RefinesSpecification.lean`).
 
-The proof is the congruence argument alone. The two instances are one expression over two broadcast
-tiers, so the BRB refinement (`BRB.brachaRefinesSpecification`) is carried through the operators
-that expression is built from: `ForwardSimulation.mapIdle` reads one coordinate over the
-composition's alphabet, `ForwardSimulation.synchronisedProduct` collects the coordinates of one
+The proof is the congruence argument alone. The two instances are one expression over two families
+of broadcast instances, so the BRB refinement (`BRB.brachaRefinesSpecification`) is carried through
+the operators that expression is built from: `ForwardSimulation.mapIdle` reads one coordinate over
+the composition's alphabet, `ForwardSimulation.synchronisedProduct` collects the coordinates of one
 family, `ForwardSimulation.parallel_right` and `ForwardSimulation.parallel_left` hold the other
-family and then the gather tier, and `ForwardSimulation.abstract` and `ForwardSimulation.relabel`
+family and then the gather itself, and `ForwardSimulation.abstract` and `ForwardSimulation.relabel`
 hide the events and read the result back over the interface alphabet. The two families are replaced
 one after the other and the two steps are joined by `ForwardSimulation.trans`.
 `ForwardSimulation.congr` then reshapes the composite relation into `BroadcastSubstitutionRelation`:
@@ -47,7 +48,7 @@ variable {X : Type} [DecidableEq X] {P : Parameters}
 
 /-! ### The relation -/
 
-/-- The broadcast substitution relation: the gather tier equal, and each
+/-- The broadcast substitution relation: the gather programs and network equal, and each
 broadcast coordinate related to its specification coordinate by the BRB
 refinement relation. -/
 structure BroadcastSubstitutionRelation (P : Parameters) (s : StateOverBracha P.n X)

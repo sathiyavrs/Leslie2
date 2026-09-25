@@ -12,8 +12,11 @@ import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ProjectionAfterOneWrite
 `roundProjection_callG` and `roundProjection_gbcaCallLoop`: the projection of the composed round
 after a call of graded agreement. The call records the input on the round's first gather and sends
 nothing, which is what the composed round's `callG` writes, its program recording the input and
-its first gather taking `Gather.AlgorithmOverBracha.call`. A call against an already-called record
-moves the round loop alone, which the projection does not read.
+`roundProjection_callG` and `roundProjection_gbcaCallLoop`: the projection of the composed round
+after a call of graded agreement. The call records the input on the round's first gather and sends
+nothing, which is what the composed round's `callG` writes, its program recording the input and its
+first gather taking `Gather.AlgorithmOverBracha.call`. A call at a process whose first gather
+already holds an input moves the round loop alone, which the projection does not read.
 -/
 
 namespace PLTS
@@ -33,9 +36,9 @@ variable {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} {w : NetworkState P.n} 
 
 The call records the input on the round's first gather and sends nothing. The
 composed round answers on one label, whose program transition records the input and
-whose first gather takes `Gather.AlgorithmOverBracha.call`. The call against an
-already-called record moves the round loop alone, which the projection does not
-read. -/
+whose first gather takes `Gather.AlgorithmOverBracha.call`. The call at a process whose
+first gather already holds an input moves the round loop alone, which the
+projection does not read. -/
 
 /-- The graded-agreement call, read through the projection. -/
 theorem roundProjection_callG (hu : (u j).2 = p) (r : ℕ) (b : Bool) :

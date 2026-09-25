@@ -7,20 +7,20 @@ Authors: Sathiya / Claude
 import Leslie2Protocols.ABA.Implementation.StepCases
 
 /-!
-# The writes on the network's state, and the two erasures
+# The writes on the network's state, and the two removals
 
 The network's state holds the sent sets, the DECIDED sets, the corrupted set with its budget, and
-one ghost record per round. Four writes touch it: a round multicast, a DECIDED multicast,
+one ghost per round. Four writes touch it: a round multicast, a DECIDED multicast,
 corruption, and the ghost write. Each touches one field and leaves the others where they stand.
 The lemmas here read each field of the state a write delivers, and they are the field algebra the
 proofs over the implementation run on. The three writes on the message record leave the ghost
 alone, and the ghost write leaves the message record alone and leaves the ghost alone too on a
 label naming no round.
 
-Two erasures forget the ghost. `NetworkState.forgetGhost` sends the network's state to
+Two removals forget the ghost. `NetworkState.forgetGhost` sends the network's state to
 the state over the trivial ghost `Unit`, and it commutes with each of the three writes on the
-message record. Over `Unit` the ghost write is the identity, so the erasure of a ghost write is the
-erasure of the state it starts from. `forgetBound` sends a label to the label with the announced
+message record. Over `Unit` the ghost write is the identity, so the removal of a ghost write is the
+removal of the state it starts from. `forgetBound` sends a label to the label with the announced
 bound bit fixed at `false`, and it is the identity elsewhere. Two labels agree under it exactly
 when they are equal or are returns of the same round, process and graded outcome, and it keeps a
 label inside the sub-protocol API and outside it.
@@ -136,13 +136,13 @@ theorem writeGhost_of_round_none (s : NetworkState n M G) {L : ExtendedLabel n M
     (h : roundOf L = none) : s.writeGhost ghostStep L = s := by
   unfold NetworkState.writeGhost; rw [h]
 
-/-- The ghost record of the round the label names, after the write. -/
+/-- The ghost of the round the label names, after the write. -/
 theorem writeGhost_ghost_self (s : NetworkState n M G) {L : ExtendedLabel n M E} {r : ℕ}
     (h : roundOf L = some r) :
     (s.writeGhost ghostStep L).ghost r = ghostStep L s (s.ghost r) := by
   unfold NetworkState.writeGhost; rw [h]; simp
 
-/-- The ghost record of any other round is untouched. -/
+/-- The ghost of any other round is untouched. -/
 theorem writeGhost_ghost_ne (s : NetworkState n M G) {L : ExtendedLabel n M E} {r r' : ℕ}
     (h : roundOf L = some r) (hne : r' ≠ r) :
     (s.writeGhost ghostStep L).ghost r' = s.ghost r' := by
@@ -152,10 +152,10 @@ end Ghost
 
 /-! ### Dropping the ghost
 
-Two erasures. `NetworkState.forgetGhost` sends the network's state to the state
+Two removals. `NetworkState.forgetGhost` sends the network's state to the state
 over the trivial ghost `Unit`, and it commutes with each of the adversary's
 three writes on the message record. Over `Unit` the ghost write is the
-identity, so the erasure of a ghost write is the erasure of the state it
+identity, so the removal of a ghost write is the removal of the state it
 starts from. `forgetBound` sends a label to the label with the announced bound
 bit fixed at `false`, and it is the identity elsewhere; two labels agree under
 it exactly when they are equal or are returns of the same round, process and
@@ -192,7 +192,7 @@ variable {n : ℕ} {M E G : Type}
   simp only [forgetGhost_F]
   split <;> rfl
 
-/-- The ghost write leaves the erasure where it stands. -/
+/-- The ghost write leaves the removal where it stands. -/
 @[simp] theorem forgetGhost_writeGhost (s : NetworkState n M G)
     (ghostStep : ExtendedLabel n M E → NetworkState n M G → G → G) (L : ExtendedLabel n M E) :
     (s.writeGhost ghostStep L).forgetGhost = s.forgetGhost := by
@@ -220,7 +220,7 @@ def forgetBound : Label n → Label n
 @[simp] theorem forgetBound_retG (r : ℕ) (id : Fin n) (out : GBCAOutput) (bnd : Bool) :
     forgetBound (Label.retG r id out bnd) = Label.retG r id out false := rfl
 
-/-- Two labels agree under the erasure exactly when they are equal, or are
+/-- Two labels agree under the removal exactly when they are equal, or are
 graded-agreement returns of the same round, process and graded outcome. -/
 theorem forgetBound_eq_iff (l l' : Label n) :
     forgetBound l = forgetBound l' ↔
@@ -231,7 +231,7 @@ theorem forgetBound_eq_iff (l l' : Label n) :
     cases l <;> cases l' <;> simp_all [forgetBound]
   · rintro (rfl | ⟨r, id, out, b, b', rfl, rfl⟩) <;> rfl
 
-/-- The erasure keeps a label inside the sub-protocol API and outside it. -/
+/-- The removal keeps a label inside the sub-protocol API and outside it. -/
 @[simp] theorem forgetBound_mem_hiddenAPI (l : Label n) :
     forgetBound l ∈ Label.hiddenAPI n ↔ l ∈ Label.hiddenAPI n := by
   cases l <;> simp [forgetBound]

@@ -11,12 +11,13 @@ import Leslie2Protocols.ABA.GBCA.ABDY.Composition
 
 `gbcaProgramStep_*` reads one program's transition off its label: the participant's transition as
 its guards together with the Dirac it produces, and the idle transition of a non-participant as the
-identity. `gbcaNetworkStep_*` does the same for the round's network on the two rendezvous and on the
-silent label.
+identity. `gbcaNetworkStep_*` does the same for the round's network on the two synchronisations and
+on the silent label.
 
-The round records and the network state are the two components of `GBCA.ByABDY.RoundState`
-(`GBCA/ABDY/MessagesAndVariables.lean`), the composed state the round instance runs on. What a joint
-step delivers is a program function given pointwise, by its value at the acting process and its
+The round variables and the network state are the two components of `GBCA.ByABDY.RoundState`
+(`GBCA/ABDY/MessagesAndVariables.lean`), the composed state the round instance runs on. What a
+synchronised step delivers is a program function given pointwise, by its value at the acting process
+and its
 agreement with the old function elsewhere, where the algorithm of `GBCA/ABDY/Algorithm.lean` writes
 with `Function.update`. `Function.eq_update_iff` identifies the two, and the `composition_*` lemmas
 identify the state a transition writes with `setProcessVariables`, `recordGBCASend`, `setBound`,
@@ -29,7 +30,8 @@ program and the network step together, and on the silent label only the network 
 
 `gbcaNetworkStep_*_round` reads the network's transition off a round-tagged label. The network has
 a transition only for its own round, so these readers return the round equation together with the
-network's move, and a handshake label of another round carries no transition of the instance at all.
+network's move, and a call or return label of another round carries no transition of the instance at
+all.
 -/
 
 namespace PLTS
@@ -323,9 +325,10 @@ theorem gbcaNetworkStep_tau (h : GBCANetworkStep P r w (Sum.inl (Sum.inl .tau)) 
 end NetworkStepCases
 /-! ### The write a transition makes on the composed state
 
-The round records and the network state are the two components of `GBCA.ByABDY.RoundState`
+The round variables and the network state are the two components of `GBCA.ByABDY.RoundState`
 (`GBCA/ABDY/MessagesAndVariables.lean`), the composed state the round instance runs on, and the four
-accessors of that pair are the ones the algorithm reads. A joint step delivers a program function
+accessors of that pair are the ones the algorithm reads. A synchronised step delivers a program
+function
 pointwise: its value at the acting process, and its agreement with the old one elsewhere.
 `Function.eq_update_iff` reads that function as the old one updated at the acting process, and the
 lemmas here identify the state the algorithm writes with `Function.update`. -/
@@ -334,7 +337,7 @@ section Writes
 variable {P : Parameters} {u x : ∀ _ : Fin P.n, GBCA.ByABDY.RoundVariables P.n} {w : NetworkState
   P.n}
 
-/-- A record write at one program, with the network state untouched. -/
+/-- A write to one program's variables, with the network state untouched. -/
 theorem composition_setProcessVariables {j : Fin P.n} {pr : GBCA.ByABDY.ProcessVariables}
     (hj : x j = (u j).setProcessVariables pr) (hne : ∀ i, i ≠ j → x i = u i) :
     ((x, w) : GBCA.ByABDY.RoundState P.n) = GBCA.ByABDY.RoundState.setProcessVariables
@@ -342,7 +345,7 @@ theorem composition_setProcessVariables {j : Fin P.n} {pr : GBCA.ByABDY.ProcessV
   rw [Function.eq_update_iff.mpr ⟨hj, hne⟩]
   rfl
 
-/-- A record write at one program together with the network state recording the message
+/-- A write to one program's variables together with the network state recording the message
 that write multicasts. -/
 theorem composition_setProcessVariables_recordGBCASend {j : Fin P.n} {pr :
   GBCA.ByABDY.ProcessVariables}
@@ -353,7 +356,7 @@ theorem composition_setProcessVariables_recordGBCASend {j : Fin P.n} {pr :
   rw [Function.eq_update_iff.mpr ⟨hj, hne⟩]
   rfl
 
-/-- A record write at one program together with the network state's write of
+/-- A write to one program's variables together with the network state's write of
 the round's bound bit. -/
 theorem composition_setProcessVariables_setBound {j : Fin P.n} {pr : GBCA.ByABDY.ProcessVariables}
   {β : Bool}
@@ -390,13 +393,14 @@ theorem composition_corrupt (k : Fin P.n) :
 end Writes
 /-! ### Reading an instance transition backwards
 
-Two inversions of the composition, the counterparts of `compositionExtended_event_step` /
-`compositionExtended_label_step` / `compositionExtended_tau_network`: on a visible label of the
+Two readings of the composition's transitions, the counterparts of
+`compositionExtended_event_step` / `compositionExtended_label_step` /
+`compositionExtended_tau_network`: on a visible label of the
 internal alphabet every program and the network step together, and on the silent label
 only the network moves. -/
 
 /-- A visible transition of the programs beside the network: every program and
-the network step on the label, and the joint distribution is their Dirac
+the network step on the label, and the product distribution is their Dirac
 product. -/
 theorem compositionExtended_synchronised_cases {P : Parameters} {r : ℕ}
     {u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundVariables P.n} {w : NetworkState P.n} {L : GBCALabel P.n}
@@ -430,7 +434,7 @@ theorem compositionExtended_tau_cases {P : Parameters} {r : ℕ}
 
 /-! ### The network's transitions read off a round-tagged label
 
-The network has a transition only for its own round: a handshake label of another round
+The network has a transition only for its own round: a call or return label of another round
 carries no transition of the instance at all. These readers therefore return
 the round equation together with the network's move. -/
 
@@ -472,7 +476,7 @@ theorem gbcaNetworkStep_byzantineRetG_round {r' : ℕ} {k : Fin P.n} {out : GBCA
   | byzantineRetG _ _ _ hbnd => exact ⟨rfl, hbnd, rfl⟩
 
 /-! The labels the network does not offer at all: the ABA API, the coin ports,
-corruption, and the protocol network's own rendezvous. -/
+corruption, and the protocol network's own synchronisations. -/
 
 theorem gbcaNetworkStep_callABA_noStep {id : Fin P.n} {b : Bool}
     (h : GBCANetworkStep P r w (Sum.inl (Sum.inl (.callABA id b))) μ) : False := by cases h

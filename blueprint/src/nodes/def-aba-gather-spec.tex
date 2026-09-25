@@ -4,7 +4,7 @@
   \uses{def:aba-parameters}
   Transition System~4 with the call/commit split and one bound core.
   An instance is parametric in the payload type $X$; an entry set is a finite $U \subseteq [n] \times X$, and $U \sqsubseteq g$ ($\mathrm{subMap}$) says every entry of $U$ is an entry of the partial map $g$.
-  The state is the record $\{call, val, ret, core, F\}$: the recorded calls, the committed entries, the return flags, an optional entry set $core$, and the corrupted set.
+  The state is $\{call, val, ret, core, F\}$: the recorded calls, the committed entries, the return flags, an optional entry set $core$, and the corrupted set.
   The transitions are the call with its loop; the per-entry commit, a silent transition writing $val(k)$ once under
   \[
     val(k) = \bot \;\wedge\; \bigl(k \in F \vee call(k) = v\bigr),

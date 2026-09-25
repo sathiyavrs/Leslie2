@@ -9,9 +9,9 @@ import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ProjectionAfterOneWrite
 /-!
 # A send of a gather instance
 
-`roundProjection_firstGatherSend` and `roundProjection_secondGatherSend`: the view of the composed
-round after a gather's `ECHO` or `VOTE`. The transition writes the sender's gather record and
-records on the gather's network state, and the composed round writes the same through
+`roundProjection_firstGatherSend` and `roundProjection_secondGatherSend`: the projection onto the
+composed round after a gather's `ECHO` or `VOTE`. The transition writes the sender's variables in
+the gather and records on the gather's network state, and the composed round writes the same through
 `Gather.setGatherProgramsAndNetwork`.
 -/
 
@@ -35,7 +35,7 @@ gather's network state. Each is the gather's `send` event, which
 `Gather.AlgorithmOverBracha.echo` and `Gather.AlgorithmOverBracha.vote` write through
 `Gather.setGatherProgramsAndNetwork`. -/
 
-/-- A send of the first gather, read through the view. -/
+/-- A send of the first gather, read through the projection. -/
 theorem roundProjection_firstGatherSend (hu : (u j).2 = p) (r : ℕ)
     (pr : Gather.ProcessVariables P.n Bool) (m : Gather.Message P.n Bool)
     (hin : pr.input = ((p.roundVariables r).firstGather.processVariables).input) :
@@ -120,7 +120,7 @@ theorem roundProjection_firstGatherSend (hu : (u j).2 = p) (r : ℕ)
       exact messagesOf_recordSent_none (secondGatherBindBroadcastMessageOf
           q) (secondGatherBindBroadcastMessageOf_inj q) (w.sent r) j (.firstGather m) rfl
 
-/-- A send of the second gather, read through the view. -/
+/-- A send of the second gather, read through the projection. -/
 theorem roundProjection_secondGatherSend (hu : (u j).2 = p) (r : ℕ)
     (pr : Gather.ProcessVariables P.n (Option Bool)) (m : Gather.Message P.n (Option Bool))
     (hin : pr.input = ((p.roundVariables r).secondGather.processVariables).input)

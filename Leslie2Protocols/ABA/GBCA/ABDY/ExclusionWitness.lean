@@ -7,37 +7,38 @@ Authors: Sathiya / Claude
 import Leslie2Protocols.ABA.GBCA.ABDY.Invariant
 
 /-!
-# The exclude certificates
+# The exclusion witnesses
 
-An exclude certificate `ExclusionWitness P s b` is receipt evidence that the bit `b` can never
-gain grade-≥1 support: either the opposite bit owns the unique `n − f` `ECHO` receipt quorum
-(`ReceivedEchoQuorum P s (!b)`, Case A), or an `n − f` quorum of processes is each corrupted or
-committed, write-once, to a `VOTE` payload other than `some b` (`VoteQuorumAgainst P s b`, Case B).
-Both disjuncts make an `n − f` `VOTE b` receipt quorum — the only source of any grade-≥1
-evidence for `b` — impossible forever: a `VOTE b` quorum against Case A yields a correct
-double-`ECHO` sender (`receivedEchoQuorum_unique`, write-once `sentEcho`), and against Case B meets
-the quorum only inside `F`, contradicting `2(n − f) > n + f` (`no_disjoint_quorums`).
+An exclusion witness `ExclusionWitness P s b` is a witness on the received messages that the bit
+`b` can never gain grade-≥1 support: either the opposite bit owns the unique `n − f` quorum of
+received `ECHO` messages (`ReceivedEchoQuorum P s (!b)`, Case A), or an `n − f` quorum of processes
+is each corrupted or committed, write-once, to a `VOTE` payload other than `some b`
+(`VoteQuorumAgainst P s b`, Case B). Both disjuncts make an `n − f` quorum of received `VOTE b`
+messages — the only source of any grade-≥1 support for `b` — impossible forever: a `VOTE b` quorum
+against Case A yields a correct double-`ECHO` sender (`receivedEchoQuorum_unique`, write-once
+`sentEcho`), and against Case B meets the quorum only inside `F`, contradicting
+`2(n − f) > n + f` (`no_disjoint_quorums`).
 
-A certificate is `F`-blind and receipt-monotone (`ExclusionWitness.mono`), so it survives every
-transition of the algorithm: a multicast (`exclusionWitness_send`), a return
+A witness is `F`-blind and monotone in the received messages (`ExclusionWitness.mono`), so it
+survives every transition of the algorithm: a multicast (`exclusionWitness_send`), a return
 (`exclusionWitness_ret`), and a write of the round's bound bit
 (`exclusionWitness_setBound`).
 
-The derivation chains turn a return's own evidence into a certificate. `retGrade2`'s `ECHO5 v`
-quorum and `retGrade1`'s `f + 1` `BIND v` receipts both route to an `n − f` `VOTE v` receipt
-quorum at a correct process (`received_binds_of_echo5_quorum`, `voteQuorum_of_received_binds`),
-which excludes `!v` — the quorum itself is a `VoteQuorumAgainst`
-(`exclusionWitness_of_voteQuorum`) — and certifies `v` alive
+The derivation chains turn a return's own quorums into an exclusion witness. `retGrade2`'s `ECHO5 v`
+quorum and `retGrade1`'s `f + 1` received `BIND v` messages both route to an `n − f` quorum of
+received `VOTE v` messages at a correct process (`received_binds_of_echo5_quorum`,
+`voteQuorum_of_received_binds`), which excludes `!v` — the quorum itself is a `VoteQuorumAgainst`
+(`exclusionWitness_of_voteQuorum`) — and witnesses `v` alive
 (`not_exclusionWitness_of_voteQuorum`). The grade-0 return's `ECHO5 ⊥`
-quorum yields a certificate for *some* bit (`exclusionWitness_of_echo5Bot_quorum`): if a
-correct bit-voter exists anywhere, its `vote_confirmed` receipt quorum is Case A for the opposite
-bit; otherwise the correct vote prefix is all-⊥ and the `VoteQuorumAgainst` holds for both bits at
-once (`exclusionWitness_of_noCorrectVote`). `exclusionWitness_boundOf_grade0` certifies the
-complement of the bit a grade-0 return announces.
+quorum yields a witness for *some* bit (`exclusionWitness_of_echo5Bot_quorum`): if a
+correct bit-voter exists anywhere, its `vote_confirmed` quorum of received messages is Case A for
+the opposite bit; otherwise the correct vote prefix is all-⊥ and the `VoteQuorumAgainst` holds for
+both bits at once (`exclusionWitness_of_noCorrectVote`). `exclusionWitness_boundOf_grade0` witnesses
+the complement of the bit a grade-0 return announces.
 
 Two lemmas carry a Case A quorum between the `ECHO` level and its neighbours:
-`receivedEchoQuorum_of_received_votes` reads one off `f + 1` `VOTE v` receipts, and
-`inputQuorum_of_receivedEchoQuorum` refines one to an `n − f` `INPUT v` receipt quorum.
+`receivedEchoQuorum_of_received_votes` reads one off `f + 1` received `VOTE v` messages, and
+`inputQuorum_of_receivedEchoQuorum` refines one to an `n − f` quorum of received `INPUT v` messages.
 -/
 
 open Stream'
@@ -48,17 +49,17 @@ namespace GBCA.ByABDY
 
 variable {P : Parameters}
 
-/-! ### The exclude certificates -/
+/-! ### The exclusion witnesses -/
 
-/-- Case A carrier: some process holds an `n − f` `ECHO v` receipt quorum.
-The certificate is `F`-blind and receipt-monotone, hence stable under `fail`
+/-- Case A carrier: some process holds an `n − f` quorum of received `ECHO v` messages.
+The witness is `F`-blind and monotone in the received messages, hence stable under `fail`
 and under every transition of the algorithm, and at most one bit can carry it
 (`receivedEchoQuorum_unique`). -/
 def ReceivedEchoQuorum (P : Parameters) (s : RoundState P.n) (v : Bool) : Prop :=
   ∃ i, P.n - P.f ≤ s.receivedCount i (.echo v)
 
-/-- Derivation from `f + 1` `VOTE v` receipts: they contain a correct `VOTE v`
-sender, whose `vote_confirmed` receipt quorum is the certificate. -/
+/-- Derivation from `f + 1` received `VOTE v` messages: they contain a correct `VOTE v`
+sender, whose `vote_confirmed` quorum of received messages is the witness. -/
 theorem receivedEchoQuorum_of_received_votes {s : RoundState P.n} (hI : Invariant P s)
     {i : Fin P.n} {v : Bool} (h : P.f + 1 ≤ s.receivedCount i (.vote (some v))) :
     ReceivedEchoQuorum P s v := by
@@ -68,7 +69,7 @@ theorem receivedEchoQuorum_of_received_votes {s : RoundState P.n} (hI : Invarian
   obtain ⟨k, hkF, hkr⟩ := RoundState.exists_sender_notMem s.F h'
   exact ⟨k, hI.vote_confirmed k v hkF (hI.received_subset_sent i k _ hkr)⟩
 
-/-- The certificate refines to an `n − f` `INPUT v` receipt quorum. -/
+/-- The witness refines to an `n − f` quorum of received `INPUT v` messages. -/
 theorem inputQuorum_of_receivedEchoQuorum {s : RoundState P.n} (hI : Invariant P s)
     {v : Bool} (h : ReceivedEchoQuorum P s v) :
     ∃ m, P.n - P.f ≤ s.receivedCount m (.input v) := by
@@ -99,17 +100,17 @@ def VoteQuorumAgainst (P : Parameters) (s : RoundState P.n) (b : Bool) : Prop :=
   P.n - P.f ≤ (Finset.univ.filter
     (fun j => j ∈ s.F ∨ ∃ w, (s.processVariables j).sentVote = some w ∧ w ≠ some b)).card
 
-/-- The exclude certificate licensing `b ∈ excluded` on the specification: either the opposite bit
-owns the (unique) `n − f` `ECHO` receipt quorum, or a `VoteQuorumAgainst` blocks `b` at the `VOTE`
-level. Both disjuncts make an `n − f` `VOTE b` receipt quorum — the only source of any grade-≥1
-evidence for `b` — impossible forever. -/
+/-- The exclusion witness licensing `b ∈ excluded` on the specification: either the opposite bit
+owns the (unique) `n − f` quorum of received `ECHO` messages, or a `VoteQuorumAgainst` blocks `b` at
+the `VOTE` level. Both disjuncts make an `n − f` quorum of received `VOTE b` messages — the only
+source of any grade-≥1 support for `b` — impossible forever. -/
 def ExclusionWitness (P : Parameters) (s : RoundState P.n) (b : Bool) : Prop :=
   ReceivedEchoQuorum P s (!b) ∨ VoteQuorumAgainst P s b
 
 /-- The counting core: two `n − f`-sized subsets of `Fin n` meeting only
 inside `F` contradict `|F| ≤ f` and `3f < n` (`2(n − f) > n + f`). The same
 arithmetic as `exists_correct_received_of_two_quorums`, exposed as a set statement because
-`VoteQuorumAgainst` is a set of processes, not a set of receipts. -/
+`VoteQuorumAgainst` is a set of processes, not a set of received messages. -/
 theorem no_disjoint_quorums {Q D F : Finset (Fin P.n)}
     (hQ : P.n - P.f ≤ Q.card) (hD : P.n - P.f ≤ D.card)
     (hQD : Q ∩ D ⊆ F) (hF : F.card ≤ P.f) : False := by
@@ -121,8 +122,8 @@ theorem no_disjoint_quorums {Q D F : Finset (Fin P.n)}
   have hint : (Q ∩ D).card ≤ F.card := Finset.card_le_card hQD
   omega
 
-/-- **Certificate monotonicity**: receipts only grow, `sentVote` is
-write-once, `F` only grows — so an exclusion certificate never expires. -/
+/-- **Witness monotonicity**: the received messages only grow, `sentVote` is
+write-once, `F` only grows — so an exclusion witness never expires. -/
 theorem ExclusionWitness.mono {s s' : RoundState P.n} {b : Bool}
     (hrecv : ∀ i j m, m ∈ s.received i j → m ∈ s'.received i j)
     (hvote : ∀ j w, (s.processVariables j).sentVote = some w → (s'.processVariables j).sentVote =
@@ -181,9 +182,9 @@ theorem exclusionWitness_setBound {s : RoundState P.n} {b β : Bool}
 
 /-! ### The derivation chains -/
 
-/-- `f + 1` `BIND v` receipts exceed the corruption budget, so they contain
+/-- `f + 1` received `BIND v` messages exceed the corruption budget, so they contain
 a correct binder, whose `bind_confirmed` wait-condition is a correct `n − f`
-`VOTE v` receipt quorum — the object the binding argument counts. -/
+quorum of received `VOTE v` messages — the object the binding argument counts. -/
 theorem voteQuorum_of_received_binds {s : RoundState P.n} (hI : Invariant P s)
     {i : Fin P.n} {v : Bool} (h : P.f + 1 ≤ s.receivedCount i (.bind (some v))) :
     ∃ k, k ∉ s.F ∧ P.n - P.f ≤ s.receivedCount k (.vote (some v)) := by
@@ -193,8 +194,8 @@ theorem voteQuorum_of_received_binds {s : RoundState P.n} (hI : Invariant P s)
   obtain ⟨k, hkF, hkr⟩ := RoundState.exists_sender_notMem s.F h'
   exact ⟨k, hkF, hI.bind_confirmed k v hkF (hI.received_subset_sent i k _ hkr)⟩
 
-/-- An `n − f` `ECHO5 v` receipt quorum contains a correct `ECHO5` sender, whose
-`echo5_confirmed` wait-condition is a correct `n − f` `BIND v` receipt quorum. -/
+/-- An `n − f` quorum of received `ECHO5 v` messages contains a correct `ECHO5` sender, whose
+`echo5_confirmed` wait-condition is a correct `n − f` quorum of received `BIND v` messages. -/
 theorem received_binds_of_echo5_quorum {s : RoundState P.n} (hI : Invariant P s)
     {i : Fin P.n} {v : Bool} (h : P.n - P.f ≤ s.receivedCount i (.echo5 (some v))) :
     ∃ k, k ∉ s.F ∧ P.n - P.f ≤ s.receivedCount k (.bind (some v)) := by
@@ -205,9 +206,9 @@ theorem received_binds_of_echo5_quorum {s : RoundState P.n} (hI : Invariant P s)
   obtain ⟨k, hkF, hkr⟩ := RoundState.exists_sender_notMem s.F h'
   exact ⟨k, hkF, hI.echo5_confirmed k v hkF (hI.received_subset_sent i k _ hkr)⟩
 
-/-- **Availability, the excluded bit**: any `n − f` `VOTE v` receipt quorum excludes the opposite
-bit — the quorum's members are each corrupted or committed (write-once) to `some v`, so the quorum
-itself is a `VoteQuorumAgainst` for `!v`. -/
+/-- **Availability, the excluded bit**: any `n − f` quorum of received `VOTE v` messages excludes
+the opposite bit — the quorum's members are each corrupted or committed (write-once) to `some v`,
+so the quorum itself is a `VoteQuorumAgainst` for `!v`. -/
 theorem exclusionWitness_of_voteQuorum {s : RoundState P.n} (hI : Invariant P s)
     {i : Fin P.n} {v : Bool} (h : P.n - P.f ≤ s.receivedCount i (.vote (some v))) :
     ExclusionWitness P s (!v) := by
@@ -221,8 +222,9 @@ theorem exclusionWitness_of_voteQuorum {s : RoundState P.n} (hI : Invariant P s)
     injection hc with hc
     cases v <;> simp at hc
 
-/-- **Availability, the live bit**: an `n − f` `VOTE v` receipt quorum refutes both certificate
-cases for `v` itself — against Case A the derived `ECHO v` quorum meets the `ECHO (!v)` quorum in a
+/-- **Availability, the live bit**: an `n − f` quorum of received `VOTE v` messages refutes both
+cases of the witness for `v` itself — against Case A the derived `ECHO v` quorum meets the
+`ECHO (!v)` quorum in a
 correct double-echoer, and against Case B the quorum meets the quorum only inside `F`. -/
 theorem not_exclusionWitness_of_voteQuorum {s : RoundState P.n} (hI : Invariant P s)
     {i : Fin P.n} {v : Bool} (h : P.n - P.f ≤ s.receivedCount i (.vote (some v))) :
@@ -244,12 +246,12 @@ theorem not_exclusionWitness_of_voteQuorum {s : RoundState P.n} (hI : Invariant 
       rw [hsv] at hcommit
       exact hne (Option.some.inj hcommit)
 
-/-- **Availability at the grade-0 return**: an `n − f` `ECHO5 ⊥` receipt quorum
-certifies *some* excluded bit. Classical dichotomy on "a correct bit-voter
-exists somewhere": if yes, its `vote_confirmed` receipt quorum is Case A for the
-opposite bit; if no, the quorum's correct `ECHO5` sender holds `n − f` any-`BIND`
-receipts, its correct `BIND` sender can only have sent `BIND ⊥` (a bit `BIND`
-needs a correct bit-voter), and that sender's `bindBot_confirmed` receipts identify an
+/-- **Availability at the grade-0 return**: an `n − f` quorum of received `ECHO5 ⊥` messages
+witnesses *some* excluded bit. Classical dichotomy on "a correct bit-voter
+exists somewhere": if yes, its `vote_confirmed` quorum of received messages is Case A for the
+opposite bit; if no, the quorum's correct `ECHO5` sender holds `n − f` received any-`BIND`
+messages, its correct `BIND` sender can only have sent `BIND ⊥` (a bit `BIND`
+needs a correct bit-voter), and that sender's `bindBot_confirmed` messages identify an
 `n − f` set of processes each corrupted or committed to `VOTE ⊥` — a
 `VoteQuorumAgainst` for both bits at once. -/
 theorem exclusionWitness_of_noCorrectVote {s : RoundState P.n} (hI : Invariant P s)
@@ -293,9 +295,10 @@ theorem exclusionWitness_of_noCorrectVote {s : RoundState P.n} (hI : Invariant P
       subst hnone
       exact Or.inr ⟨none, hI.vote_once q none hqF hqs, by simp⟩
 
-/-- **Availability at the grade-0 return**: an `n − f` `ECHO5 ⊥` receipt quorum certifies *some*
-excluded bit. Classical dichotomy on "a correct bit-voter exists somewhere": if yes, its
-`vote_confirmed` receipt quorum is Case A for the opposite bit; if no, the all-⊥ quorum of
+/-- **Availability at the grade-0 return**: an `n − f` quorum of received `ECHO5 ⊥` messages
+witnesses *some* excluded bit. Classical dichotomy on "a correct bit-voter exists somewhere": if
+yes, its `vote_confirmed` quorum of received messages is Case A for the opposite bit; if no, the
+all-⊥ quorum of
 `exclusionWitness_of_noCorrectVote` answers. -/
 theorem exclusionWitness_of_echo5Bot_quorum {s : RoundState P.n} (hI : Invariant P s)
     {i : Fin P.n} (h : P.n - P.f ≤ s.receivedCount i (.echo5 none)) :
@@ -308,9 +311,10 @@ theorem exclusionWitness_of_echo5Bot_quorum {s : RoundState P.n} (hI : Invariant
     exact ⟨k, hI.vote_confirmed k b hkF hks⟩
   · exact ⟨false, exclusionWitness_of_noCorrectVote hI h hcase false⟩
 
-/-- **The grade-0 return's announced bit is certified.** At an `n − f` `ECHO5 ⊥` receipt quorum the
-complement of `boundOf … C` carries an exclude certificate. Where a correct bit-voter exists its
-`vote_confirmed` receipt quorum is Case A for the opposite bit, which is the bit `boundOf` names;
+/-- **The grade-0 return's announced bit is witnessed.** At an `n − f` quorum of received `ECHO5 ⊥`
+messages the complement of `boundOf … C` carries an exclusion witness. Where a correct bit-voter
+exists its `vote_confirmed` quorum of received messages is Case A for the opposite bit, which is the
+bit `boundOf` names;
 where none exists the quorum covers both bits at once. -/
 theorem exclusionWitness_boundOf_grade0 {s : RoundState P.n} (hI : Invariant P s)
     {i : Fin P.n} (h : P.n - P.f ≤ s.receivedCount i (.echo5 none)) :

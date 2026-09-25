@@ -7,10 +7,10 @@ Authors: Sathiya / Claude
 import Leslie2Protocols.ABA.ReliableBroadcast.Specification
 
 /-!
-# The messages and the records of one reliable-broadcast instance
+# The messages and the variables of one reliable-broadcast instance
 
-The three message levels of Bracha's protocol over an arbitrary payload type `M`, the local
-record one process keeps in one Byzantine Reliable Broadcast instance, and the composed state
+The three message levels of Bracha's protocol over an arbitrary payload type `M`, the
+variables one process keeps in one Byzantine Reliable Broadcast instance, and the composed state
 they make with the instance's network.
 
 `Message` carries `⟨INIT, m⟩`, `⟨ECHO, m⟩` and `⟨VOTE, m⟩`. `ProcessVariables` holds the leader's
@@ -19,7 +19,7 @@ fields `sentEcho` and `sentVote`, which carry the "having not sent" guards of th
 clauses, and the return in `returned`.
 
 `BrachaState` is the generic two-part shape `ABA.InstanceState`
-(`ABA/Vocabulary/ProcessAndNetworkState.lean`): each process's record and delivered sets beside
+(`ABA/Vocabulary/ProcessAndNetworkState.lean`): each process's variables and delivered sets beside
 the instance's network state, under the development's D1 (determinised corruption) and D5
 (set-based network) conventions.
 -/
@@ -38,10 +38,10 @@ inductive Message (M : Type) : Type
   | vote (m : M)
   deriving DecidableEq
 
-/-- The local record of one process in one BRB instance. -/
+/-- The variables of one process in one BRB instance. -/
 structure ProcessVariables (M : Type) : Type where
-  /-- The leader's call record (`none` before the call; only the leader's is
-  ever written). -/
+  /-- The payload the leader was called with (`none` before the call; only the
+  leader's is ever written). -/
   input : Option M
   /-- The `ECHO` payload multicast, if any (write-once). -/
   sentEcho : Option M
@@ -51,7 +51,7 @@ structure ProcessVariables (M : Type) : Type where
   returned : Bool
   deriving DecidableEq
 
-/-- The initial local record. -/
+/-- The initial variables. -/
 def ProcessVariables.initial (M : Type) : ProcessVariables M where
   input := none
   sentEcho := none

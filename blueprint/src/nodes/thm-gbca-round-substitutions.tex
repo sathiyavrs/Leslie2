@@ -2,7 +2,7 @@
   \label{thm:gbca-round-substitutions}
   \lean{PLTS.ABA.GBCA.ByAFW.BroadcastSubstitutionRelation}\lean{PLTS.ABA.GBCA.ByAFW.broadcastSubstitution}\lean{PLTS.ABA.GBCA.ByAFW.GatherSubstitutionRelation}\lean{PLTS.ABA.GBCA.ByAFW.gatherSubstitution}\leanok
   \uses{def:aba-round-over-bracha, def:aba-round-over-gather-specifications, thm:gather-broadcast-substitution, thm:gather-core, thm:forwardsim-congruence}
-  Each tier of the round is forward-simulated by the one above it, along the round's programs and network held equal beside the gather-level relation at both gather slots: the fully concrete tier by the tier over broadcast specifications, along Theorem~\ref{thm:gather-broadcast-substitution}'s relation, and that tier by the round over gather specifications, along Theorem~\ref{thm:gather-core}'s.
+  Each composition of the round is forward-simulated by the one above it, along the round's programs and network held equal beside the gather-level relation at both gather positions: the fully concrete round by the round over the broadcast specifications, along Theorem~\ref{thm:gather-broadcast-substitution}'s relation, and that round by the round over the gather specifications, along Theorem~\ref{thm:gather-core}'s.
   The programs and the round's network, which holds the bound bit, stand equal in both systems, and neither substitution touches them.
   Both proofs are applications of Theorem~\ref{thm:forwardsim-congruence}.
 \end{theorem}

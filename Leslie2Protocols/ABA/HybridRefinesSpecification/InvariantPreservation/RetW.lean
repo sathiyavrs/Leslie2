@@ -236,7 +236,7 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
       · rw [heq]; exact hI.received_sound i j b' h
       · rw [heq]
         by_cases hji : j = id
-        -- the sent set only grows (D12′): the old receipt stays covered
+        -- the sent set only grows (D12′): the old received message stays covered
         · rw [hji] at h ⊢
           rw [Function.update_self]
           exact Finset.mem_insert_of_mem (hI.received_sound i id b' h)

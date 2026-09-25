@@ -1,4 +1,4 @@
-% The gather-based protocol (PLTS.ABA.AFW.protocol) and the view that reads it
+% The gather-based protocol (PLTS.ABA.AFW.protocol) and the projection that reads it
 % as a composition (PLTS.ABA.AFW.roundProjection).
 \begin{tikzpicture}[
     >={Stealth[round]}, semithick,
@@ -17,15 +17,15 @@
   % the n programs
   \node[prog] (p1) at (0.65,0.4) {program $1$};
   \node[prog, minimum width=3.0cm] (pj) at (4.3,0.4)
-    {program $j$\\ \emph{process-major} record};
+    {program $j$\\ \emph{process-major} variables};
   \node[prog] (pn) at (8.4,0.4) {program $n$};
   \node[font=\scriptsize] at (2.2,0.4)  {$\cdots$};
   \node[font=\scriptsize] at (6.35,0.4) {$\cdots$};
   \foreach \x in {0.65,4.3,8.4} \draw[<->] (\x,1.75) -- (\x,0.9);
-  % the adversary and the oracle, reached round the outside, clear of the programs
+  % the adversary and the common coin, reached round the outside, clear of the programs
   \node[comp] (adv) at (2.4,-1.95)
     {the network:\\ one tagged sent-set family per round,\\
-     the DECIDED sets, $F$, the ghost record};
+     the DECIDED sets, $F$, the ghost};
   \node[comp] (w) at (7.8,-1.95)
     {$\mathrm{WCC.specFamily}(P)$\\ along $\mathrm{coinLabelMap}$};
   \draw[<->] (-0.75,1.75) -- (-0.75,-1.95) -- (adv.west);

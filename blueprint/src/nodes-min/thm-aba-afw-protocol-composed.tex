@@ -2,7 +2,7 @@
   \label{thm:aba-afw-protocol-composed}
   \lean{PLTS.ABA.AFW.roundProjection}\lean{PLTS.ABA.AFW.BoundInvariant}\lean{PLTS.ABA.AFW.ProtocolRelation}\lean{PLTS.ABA.AFW.protocolSimulation}\lean{PLTS.ABA.AFW.protocol_composed}\leanok
   \uses{def:aba-afw-protocol, def:aba-afw-round-families, thm:forward-sound, def:achievable}
-  The gather-based protocol is forward-simulated by its composed system, along the Dirac lift of a relation that computes the composed state from the implementation's, \leandecl{PLTS.ABA.AFW.roundProjection}, and carries the bound bit of every round whose candidate is on record, \leandecl{PLTS.ABA.AFW.BoundInvariant}; hence $\operatorname{ATD}(\afw{\mathrm{protocol}}(P)) \subseteq \operatorname{ATD}(\afw{\mathrm{composed}}(P))$: \leandecl{PLTS.ABA.AFW.protocolSimulation}, \leandecl{PLTS.ABA.AFW.protocol_composed}.
+  The gather-based protocol is forward-simulated by its composed system, along the Dirac lift of a relation that computes the composed state from the implementation's, \leandecl{PLTS.ABA.AFW.roundProjection}, and carries the bound bit of every round in which a process holds a candidate, \leandecl{PLTS.ABA.AFW.BoundInvariant}; hence $\operatorname{ATD}(\afw{\mathrm{protocol}}(P)) \subseteq \operatorname{ATD}(\afw{\mathrm{composed}}(P))$: \leandecl{PLTS.ABA.AFW.protocolSimulation}, \leandecl{PLTS.ABA.AFW.protocol_composed}.
   Each transition of the implementation is matched by one event of the composed round.
 \end{theorem}
 

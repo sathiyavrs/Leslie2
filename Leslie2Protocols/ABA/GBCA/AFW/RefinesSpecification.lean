@@ -22,8 +22,8 @@ matches that case by a weak run of the graded agreement specification with the r
 and `refinesSpecification` lifts the run to the interface along a section of
 `GBCA.specificationLabelMap`.
 
-The runs are at most two steps — `bindUnset ; ret` through `weakLStep_tauThen`. The long commit
-chains live one tier down, inside the gather instances' own internal transitions.
+The runs are at most two steps -- `bindUnset ; ret` through `weakLStep_tauThen`. The long commit
+chains live inside the gather instances' own internal transitions.
 -/
 
 namespace PLTS

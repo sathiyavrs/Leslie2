@@ -10,14 +10,14 @@ import Leslie2Protocols.ABA.Implementation.NetworkStateWritesAndRemovals
 # The transitions of the implementation, read off their labels
 
 The implementation is `relabel ∘ abstract ∘ parallel ∘ parallel ∘ synchronisedProduct` over the
-process group, the network and the lifted oracle. The lemmas here unfold that pipeline once and
+process group, the network and the lifted coin. The lemmas here unfold that pipeline once and
 for all. `programProduct_cases` reads a synchronised transition of the process group on a
-visible label: every process steps, and the joint distribution is their Dirac product.
+visible label: every process steps, and the product distribution is their Dirac product.
 `programProduct_tau_cases` reads the silent one, where one process moves and the others stand.
 `systemHidden_step_iff` and `system_step_iff` split a composite transition into a hidden event and
 a label that survives the hiding. `systemExtended_event_cases`,
-`systemExtended_label_cases` and `systemExtended_tau_cases` read a joint step of the three
-components backwards, to the transitions of the group, of the network and of the oracle.
+`systemExtended_label_cases` and `systemExtended_tau_cases` read a synchronised step of the three
+components backwards, to the transitions of the group, of the network and of the coin.
 
 The two graded-agreement returns are the only transitions that read the ghost, and what they read
 is the relation `ghostOutput` at the network's state. `systemExtended_retG_bound` and
@@ -43,7 +43,7 @@ variable {P : Parameters} {M E S : Type}
     [IsRoundStep P M E S roundStep]
 
 /-- A synchronised transition of the process group on a visible label: every
-process steps, and the joint distribution is Dirac. -/
+process steps, and the product distribution is Dirac. -/
 theorem programProduct_cases {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
     {l : ExtendedLabel P.n M E}
     {μ : PMF (∀ _ : Fin P.n, ProcessVariables P.n S)} (hl : l ≠ Silent.τ)
@@ -83,8 +83,8 @@ variable {G : Type} [DecidableEq M] [Inhabited G]
     {ghostOutput : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop}
 
 omit [IsRoundStep P M E S roundStep] in
-/-- The composite step relation of the group, unfolded to the hidden
-rendezvous case and the shared-label case. -/
+/-- The composite step relation of the group, unfolded to the hidden-synchronisation
+case and the shared-label case. -/
 theorem systemHidden_step_iff (q : State P M S G) (l : Label P.n)
     (μ : PMF (State P M S G)) :
     (systemHidden P M E S G roundStep callPayload ghostStep ghostOutput).step q l μ ↔
@@ -113,8 +113,8 @@ theorem system_step_iff (q : State P M S G) (l : Label P.n)
         (systemHidden P M E S G roundStep callPayload ghostStep ghostOutput).step q l μ) :=
   System.abstract_step _ _ _ _ _
 
-/-- A rendezvous transition: every process, the network and the lifted oracle
-move together, and only the oracle's successor can fail to be a Dirac. -/
+/-- A synchronised transition: every process, the network and the lifted coin
+move together, and only the coin's successor can fail to be a Dirac. -/
 theorem systemExtended_event_cases {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
     {w : NetworkState P.n M G} {o : ℕ → WCC.SpecState P.n} {e : NetworkEvent P.n M E}
     {μ : PMF (State P M S G)}
@@ -166,7 +166,7 @@ theorem systemExtended_label_cases {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
   · rw [extendedLabel_tau] at habs; exact absurd (Sum.inl_injective habs) hl
 
 /-- A silent shared-label transition: one process terminating, or the network's
-own injection. The coin oracle has no silent transition, so it contributes none. -/
+own injection. The common coin has no silent transition, so it contributes none. -/
 theorem systemExtended_tau_cases {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
     {w : NetworkState P.n M G} {o : ℕ → WCC.SpecState P.n}
     {μ : PMF (State P M S G)}

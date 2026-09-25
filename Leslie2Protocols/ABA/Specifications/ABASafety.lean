@@ -34,17 +34,17 @@ The proof is invariant reasoning along genuine executions (via
 * `SpecificationInvariant` — the state invariant, in two clauses: the corrupted set respects
   the budget (`F_le`), and the decision value carries `f + 1` F-blind
   supporters (`val_support`). The second clause is `SpecStep.decide`'s own guard
-  at the one transition that writes `val`. Every transition that only grows the ghost
-  record carries it by `InputSupport.mono`; `SpecStep.callByzantine`, whose write may
+  at the one transition that writes `val`. Every transition that only grows the
+  ghost carries it by `InputSupport.mono`; `SpecStep.callByzantine`, whose write may
   replace a recorded bit, carries it by `InputSupport.callByzantine` instead, the writer
   being counted through the `F` disjunct.
 * `ValidityInvariant` — the label-history-aware invariant, in four clauses. The corrupted
   set is exactly the fold of D1-`corrupt` over the labels seen so far
-  (`F_eq`), `SpecificationInvariant` holds (`invariant`), and the ghost record agrees with the
+  (`F_eq`), `SpecificationInvariant` holds (`invariant`), and the ghost agrees with the
   history at every uncorrupted process: a recorded input is attributed either
   to the corruption of its own entry or to the first `callABA` of its process
   (`input_source`), and an uncorrupted process whose first `callABA` carries `b`
-  has `b` recorded (`source_input`). The two record clauses carry each other at
+  has `b` recorded (`source_input`). The two ghost clauses carry each other at
   `SpecStep.callSet`, whose guard is the empty entry: by `source_input` such an
   entry says no earlier `callABA` of that process was recorded, so the label
   the transition carries is the first. `SpecStep.callByzantine` takes `input_source`'s
@@ -364,7 +364,7 @@ theorem SpecificationInvariant.step {s : SpecState P.n} {l : Label P.n} {μ : PM
     (hstep : SpecStep P s l μ) (hs' : s' ∈ μ.support) : SpecificationInvariant P s' := by
   cases hstep with
   | callSet id b h =>
-    -- the write is at an empty entry, so the record only grows and
+    -- the write is at an empty entry, so the ghost only grows and
     -- `InputSupport.mono` carries the support
     rw [PMF.mem_support_pure_iff] at hs'; subst hs'
     have hnew : ∀ id' v, s.input id' = some v →
@@ -546,7 +546,7 @@ theorem firstCall_of_take {n : ℕ} {L : List (Label n)} {m : ℕ} {id : Fin n}
 
 /-! ### The label-history-aware invariant (for Validity) -/
 
-/-- The history-aware invariant: the ghost record agrees with the label
+/-- The history-aware invariant: the ghost agrees with the label
 history at every uncorrupted process, and the corrupted set is exactly the
 fold of D1-`corrupt` over the labels seen so far. `input_source` attributes a
 recorded input either to the corruption of its own entry or to the process's

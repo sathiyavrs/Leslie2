@@ -12,13 +12,13 @@ import Leslie2Protocols.Framework.Relabel
 import Leslie2Protocols.Framework.SynchronisedProduct
 
 /-!
-# Erasure of an auxiliary state component
+# Removal of an auxiliary state component
 
 A system is often written with a state component that no transition's firing depends on: a
-record of what has already happened, carried so that an invariant can be stated over it. A
+history of what has already happened, carried so that an invariant can be stated over it. A
 step may read the component to decide a value it announces, never whether it fires. Such a
 component is an auxiliary variable in the sense of Abadi and Lamport, *The existence of
-refinement mappings* (1991), here between systems whose steps are distributions. Erasing it
+refinement mappings* (1991), here between systems whose steps are distributions. Removing it
 has to leave the observable behaviour untouched.
 
 `AuxiliaryVariableRemoval sysA sys0 π φ` is that statement. The map `π : SA → S0` deletes the
@@ -33,7 +33,7 @@ Two clauses carry the content.
   `sysA` with `φ l' = φ l` and `μ = ν.map π`. The component blocks no step.
 
 The two clauses are not symmetric. A label of `sysA` may announce the value of
-the erased component, and from a state `s` only the announcement `s` carries is available,
+the removed auxiliary variable, and from a state `s` only the announcement `s` carries is available,
 whereas `sys0` has nothing to announce from and offers every label of the `φ`-fibre. So the
 projection is exact on labels and only the lift is taken up to `φ`. A third clause,
 `silent`, keeps `τ` alone in its `φ`-fibre (`SeparatesSilent`), so a lift never matches an
@@ -48,11 +48,11 @@ achievable trace distributions coincide: `AuxiliaryVariableRemoval.achievableTra
 general
 `φ` reaches that equality through `AuxiliaryVariableRemoval.abstract_collapse`, which hides every
 label
-`φ` identifies with a different label and returns an erasure at `φ = id`.
+`φ` identifies with a different label and returns a removal at `φ = id`.
 
 ## Congruences
 
-An erasure survives parallel composition in either position, against a component whose step relation
+A removal survives parallel composition in either position, against a component whose step relation
 is saturated along `φ` (`System.LabelSaturated`); abstraction of a `φ`-saturated set of labels; and
 restriction along the left summand of an extended alphabet (`Framework/Relabel.lean`). Saturation
 itself is preserved by parallel composition, abstraction, the full-synchronisation product
@@ -65,7 +65,7 @@ variable {SA S0 SC L : Type} [Silent L]
 
 /-! ### The two label conditions -/
 
-/-- `φ` **separates the silent label**: `τ` is alone in its `φ`-fibre. An erasure asks this
+/-- `φ` **separates the silent label**: `τ` is alone in its `φ`-fibre. A removal asks this
 of its label identification, so that the fibre of an internal label holds no external one. -/
 def SeparatesSilent (φ : L → L) : Prop :=
   ∀ l, φ l = φ (Silent.τ : L) → l = Silent.τ
@@ -75,7 +75,7 @@ theorem separatesSilent_id : SeparatesSilent (id : L → L) := fun _ h => h
 
 /-- A system is **saturated along `φ`** when its step relation is constant on the `φ`-fibres of the
 label: labels with the same `φ`-image have the same outgoing transitions. This is the hypothesis
-under which a system is a neighbour of an erasure in a composition — it accepts whichever
+under which a system is a neighbour of a removal in a composition — it accepts whichever
 representative of a fibre the ghost-free system announces. -/
 def System.LabelSaturated (sys : System SC L) (φ : L → L) : Prop :=
   ∀ s l l' μ, φ l = φ l' → sys.step s l μ → sys.step s l' μ
@@ -87,9 +87,9 @@ theorem System.labelSaturated_id (sys : System SC L) : sys.LabelSaturated (id : 
   have hll : l = l' := h
   exact hll ▸ hstep
 
-/-! ### Erasure -/
+/-! ### Removal -/
 
-/-- **Erasure of an auxiliary state component.** `π` deletes the component and `φ` identifies
+/-- **Removal of an auxiliary state component.** `π` deletes the component and `φ` identifies
 the labels that differ only in the value the component announces. -/
 structure AuxiliaryVariableRemoval (sysA : System SA L) (sys0 : System S0 L) (π : SA → S0) (φ : L →
   L) :
@@ -108,14 +108,14 @@ namespace AuxiliaryVariableRemoval
 
 variable {sysA : System SA L} {sys0 : System S0 L} {π : SA → S0} {φ : L → L}
 
-/-- **Erasure includes trace distributions.** The projection clause is a functional,
+/-- **Removal includes trace distributions.** The projection clause is a functional,
 label-preserving simulation, so every trace distribution of the system carrying the
 component is achieved by the system without it. -/
 theorem achievableTraceDists_subset (h : AuxiliaryVariableRemoval sysA sys0 π φ) :
     achievableTraceDists sysA ⊆ achievableTraceDists sys0 :=
   achievableTraceDists_map π h.init h.project
 
-/-- **An erasure at `φ = id` preserves trace distributions.** The projection gives one
+/-- **A removal at `φ = id` preserves trace distributions.** The projection gives one
 inclusion; the lift, being label-exact, is a probabilistic forward simulation of `sys0` by
 `sysA` and gives the other. -/
 theorem achievableTraceDists_eq (h : AuxiliaryVariableRemoval sysA sys0 π id) :
@@ -149,7 +149,7 @@ private theorem map_prodPMF_left (f : SA → S0) (μ₁ : PMF SC) (μ₂ : PMF S
   rw [show (Prod.map (id : SC → SC) f) = (fun p : SC × SA => (id p.1, f p.2)) from rfl,
     prodPMF_map, PMF.map_id]
 
-/-- **Erasure is a congruence for parallel composition on the left factor.** The neighbour `sysC` is
+/-- **Removal is a congruence for parallel composition on the left factor.** The neighbour `sysC` is
 untouched by `π`, and on a synchronised step it has to accept whichever representative of the
 `φ`-fibre the ghost-free system announces, which is what `hsat` grants. The clause `h.silent` is
 what keeps the two interleaving disjuncts apart from the synchronised one: a lift of an internal
@@ -184,7 +184,7 @@ theorem parallel_right (h : AuxiliaryVariableRemoval sysA sys0 π φ) (hsat : sy
       rw [map_prodPMF_right π (PMF.pure a) μ₂, PMF.pure_map]
       rfl
 
-/-- **Erasure is a congruence for parallel composition on the right factor.** The mirror of
+/-- **Removal is a congruence for parallel composition on the right factor.** The mirror of
 `AuxiliaryVariableRemoval.parallel_right`. -/
 theorem parallel_left (h : AuxiliaryVariableRemoval sysA sys0 π φ) (hsat : sysC.LabelSaturated φ) :
     AuxiliaryVariableRemoval (sysC.parallel sysA) (sysC.parallel sys0) (Prod.map id π) φ where
@@ -225,8 +225,8 @@ section Abstract
 
 variable {sysA : System SA L} {sys0 : System S0 L} {π : SA → S0} {φ : L → L}
 
-/-- **Erasure is a congruence for abstraction.** Hiding a set of labels saturated along `φ`
-keeps the erasure: a hidden label of `sys0` lifts to a hidden label of `sysA`, and a visible
+/-- **Removal is a congruence for abstraction.** Hiding a set of labels saturated along `φ`
+keeps the removal: a hidden label of `sys0` lifts to a hidden label of `sysA`, and a visible
 one to a visible one. -/
 theorem abstract (h : AuxiliaryVariableRemoval sysA sys0 π φ) (A : Set L)
     (hsat : ∀ l l', φ l = φ l' → (l ∈ A ↔ l' ∈ A)) :
@@ -244,7 +244,7 @@ theorem abstract (h : AuxiliaryVariableRemoval sysA sys0 π φ) (A : Set L)
     · obtain ⟨l', ν, hlab, hA, hμ⟩ := h.lift s l μ hstep
       exact ⟨l', ν, hlab, Or.inr ⟨fun hm => hl ((hsat l' l hlab).mp hm), hA⟩, hμ⟩
 
-/-- **Hiding every discrepancy of `φ` collapses the erasure to the identity.** Under `hdisc`
+/-- **Hiding every discrepancy of `φ` collapses the removal to the identity.** Under `hdisc`
 a label identified with a different label lies in `A`, so after hiding `A` the lift returns
 the label it was given and `AuxiliaryVariableRemoval.achievableTraceDists_eq` applies. -/
 theorem abstract_collapse (h : AuxiliaryVariableRemoval sysA sys0 π φ) (A : Set L)
@@ -278,9 +278,9 @@ section Relabel
 variable {E : Type} {sysA : System SA (L ⊕ E)} {sys0 : System S0 (L ⊕ E)} {π : SA → S0}
   {φ : L → L} {ψ : E → E}
 
-/-- **Erasure is a congruence for restriction along the left summand.** An identification of
+/-- **Removal is a congruence for restriction along the left summand.** An identification of
 the extended alphabet that is a sum of identifications restricts to its left component, and
-the erasure restricts with it. -/
+the removal restricts with it. -/
 theorem relabel (h : AuxiliaryVariableRemoval sysA sys0 π (Sum.map φ ψ)) :
     AuxiliaryVariableRemoval sysA.relabel sys0.relabel π φ where
   init := h.init
@@ -304,7 +304,7 @@ end AuxiliaryVariableRemoval
 
 /-! ### Saturation is preserved by the combinators
 
-An erasure composes against a neighbour saturated along `φ`, so the neighbour's saturation
+A removal composes against a neighbour saturated along `φ`, so the neighbour's saturation
 has to be established for the systems the case study builds. -/
 
 section Saturation

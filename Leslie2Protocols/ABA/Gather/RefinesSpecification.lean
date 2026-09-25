@@ -36,10 +36,10 @@ returned map not yet committed, the core write if the instance has no core yet, 
 the return.
 
 * Entry commits are licensed by two clauses of the invariant: a committed input entry of a correct
-  process is that input instance's call record (`inputBroadcastVal_of_instanceInput`), and that call
-  record is the payload the process's own gather record holds
-  (`inputBroadcastCall_backed`), which the relation identifies with the specification's call
-  record.
+  process is the payload that input instance was called with
+  (`inputBroadcastVal_of_instanceInput`), and that payload is the one the process's own variables
+  hold (`inputBroadcastCall_backed`), which the relation identifies with the specification's
+  call.
 * The core written is `coreOfNetwork` of the instance's gather network state, and the
   two guards of `bindCore` are `Gather.coreOf_recorded`, which the returner's
   quorum of `n − f` committed bind payloads supplies.
@@ -54,11 +54,11 @@ Three lemmas beside the refinement hold the relation across one transition:
 of an input instance, and `specificationRelation_tau` for an internal transition under a stuttering
 specification. `specificationRelation_transition` is assembled from the three.
 
-## The call records
+## The calls
 
-The call and the call loop are two interface labels, the gather record moves on the first and
-stands on the second, and the specification answers each on the transition of the same name. The
-two records therefore move on exactly the same label under the same write-once guard, and the
+The call and the call loop are two interface labels, the gather program's variables move on the
+first and stand on the second, and the specification has a transition of the same name for each.
+The two therefore move on exactly the same label under the same write-once guard, and the
 relation identifies them. The call of an input instance is an event of the instance's own
 alphabet, at which the specification stands.
 -/
@@ -498,7 +498,7 @@ theorem retRun {s : StateOverBroadcastSpecification P.n X} {t : SpecState P.n X}
       exact hretflag
     · rw [List.getLastD_concat]
       exact hrel _ rfl rfl rfl (fun _ _ h => h) rfl hcnt
-  · -- a core written earlier: the certificate meets the return quorum
+  · -- a core written earlier: the witness meets the return quorum
     have hCcore : C = C₀ := by
       simp [hC_def, hcore]
     have hcnt : P.f + 1 ≤ (bindAbove s C).card := by
@@ -521,7 +521,7 @@ theorem retRun {s : StateOverBroadcastSpecification P.n X} {t : SpecState P.n X}
 
 The two lemmas `specificationRelation_transition` is assembled from. -/
 
-/-- The relation across the call: the gather record and the specification both record the
+/-- The relation across the call: the gather program and the specification both record the
 payload. -/
 theorem specificationRelation_call {s : StateOverBroadcastSpecification P.n X} {t : SpecState P.n X}
     (hR : SpecificationRelation P s t) {id : Fin P.n} {x : X}

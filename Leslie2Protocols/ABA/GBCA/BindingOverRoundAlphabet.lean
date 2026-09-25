@@ -25,7 +25,7 @@ therefore only grows along such an execution and holds at most one bit, which is
 argument of `ABA/GBCA/SpecificationSafety.lean` (D19, D29).
 
 Binding is a property of the labels, so every inclusion into `specificationOverRoundAlphabet`
-carries it. The three tiers of the two-gather round take it along theirs in
+carries it. The three compositions of the two-gather round take it along theirs in
 `ABA/GBCA/AFW/Binding.lean`.
 -/
 

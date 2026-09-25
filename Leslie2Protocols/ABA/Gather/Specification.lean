@@ -17,7 +17,7 @@ of scope.
 
 ## The state
 
-* `call` — the environment's call records, one entry per process.
+* `call` — the payload each process was called with, one entry per process.
 * `val` — the committed entries: the one value each process's contribution
   can ever deliver. Each entry is written at most once, by the internal
   transition `commit`, whose guard `k ∈ F ∨ call k = some v` says a corrupted
@@ -95,7 +95,7 @@ instance {n : ℕ} {X : Type} : Silent (Label n X) := ⟨Label.tau⟩
 
 /-- The state of one gather specification instance. -/
 structure SpecState (n : ℕ) (X : Type) : Type where
-  /-- The environment's call records. -/
+  /-- The payload each process was called with. -/
   call : Fin n → Option X
   /-- The committed entries: what each process's contribution delivers.
   Each entry is written at most once, by `commit`. -/
@@ -126,7 +126,7 @@ def corrupt (P : Parameters) (id : Fin P.n) (s : SpecState P.n X) : SpecState P.
 
 end SpecState
 
-/-! ### Corruption frame lemmas -/
+/-! ### What corruption leaves unchanged -/
 
 variable {X : Type}
 

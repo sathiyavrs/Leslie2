@@ -2,7 +2,7 @@
   \label{def:idle-family}
   \lean{PLTS.System.withIdle}\lean{PLTS.System.family}\leanok
   \uses{def:process-algebra}
-  Idle self-loops on foreign labels make the full synchronisation of Definition~\ref{def:process-algebra} emulate sync-set composition.
+  Idle self-loops on the labels a component does not own make the full synchronisation of Definition~\ref{def:process-algebra} emulate sync-set composition.
   The $\mathbb{N}$-indexed instance family moves one instance per owned or silent label, broadcasts corruption to all instances, and idles otherwise.
   Full construction: \leandecl{PLTS.System.withIdle} and \leandecl{PLTS.System.family}.
   Families of LTS instances are LTS.\lean{PLTS.System.family_isLTS}\leanok

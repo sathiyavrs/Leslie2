@@ -12,18 +12,19 @@ import Leslie2.Systems.LTS
 
 `System.synchronisedProduct sys` composes a finite family `sys i : System (State i) Label`
 over one shared alphabet under **full synchronisation**: on every visible label
-*all* components step simultaneously on that label, and the joint next-state
+*all* components step simultaneously on that label, and the next-state
 distribution is the independent product `piPMF`. The silent label `τ` is the sole
 exception — it is interleaved, exactly one component moving while the others hold
 their state, as in `System.parallel`.
 
 This is the dual of `System.interleave` (in `ProcessAlgebra/Composition.lean`),
 which synchronises nothing; the sync-set composition `∥_S` sits between the two
-and is recovered from `synchronisedProduct` by the **rendezvous idiom**:
+and is recovered from `synchronisedProduct` by giving every component an idle self-loop on the
+labels it does not own:
 
 * every component carries idle self-loops (`System.withIdle`, in
   `Framework/LoopsAndInstanceFamilies.lean`) on the labels it does not own, so a component that
-  is not a participant answers a foreign handshake by unchanged;
+  is not a participant is unchanged there;
 * a label owned by exactly two components is then a communication: it moves those
   two and leaves every other component where it is;
 * a label owned by no component is blocked — no component offers it, so the
@@ -115,7 +116,7 @@ namespace System
 
 /-- **Full-synchronisation composition** of a finite family of PLTS over a common
 label alphabet. On a visible label `l ≠ τ` *every* component steps simultaneously
-on `l`, and the joint next-state distribution is the independent product `piPMF`
+on `l`, and the next-state distribution is the independent product `piPMF`
 of the per-component distributions; on the silent label `τ` exactly one component
 steps and all the others hold their state (the `Function.update` of the all-Dirac
 family used by `System.interleave`). -/

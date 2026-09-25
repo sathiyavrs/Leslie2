@@ -16,10 +16,10 @@ specification). `specificationRelation_init` holds it at the two initial states,
 `specificationRelation_corrupt` is broadcast compatibility: the relation is preserved by corrupting
 both systems at once, in the shape the family congruence consumes.
 
-The relation carries the invariant of `ABA/GBCA/AFW/Invariant.lean`, and reads the call records,
+The relation carries the invariant of `ABA/GBCA/AFW/Invariant.lean`, and reads the calls,
 the return flags and the corrupted sets off the round's state directly (`call_eq`, `ret_eq`,
-`F_eq`). The specification's `excluded` and `grade` are bookkeeping the round records nothing; the
-relation carries evidence for them instead. An excluded bit is covered by an exclusion certificate
+`F_eq`). The specification's `excluded` and `grade` are bookkeeping the round records nothing, so
+the relation carries a witness for each. An excluded bit is covered by an exclusion witness
 `ExclusionWitness` (`exclusion_witness`), the grade-2 guard by a value on at least `|S| − f`
 entries of the second gather's core (`grade2_witness`), and the grade-0 guard by that core
 carrying each bit on at most `f` entries (`grade0_witness`).
@@ -49,24 +49,24 @@ structure SpecificationRelation (P : Parameters) (s : RoundStateOverGatherSpecif
     (t : GBCA.SpecState P.n) : Prop where
   /-- The invariant. -/
   invariant : Invariant P s
-  /-- The call records agree. -/
+  /-- The calls agree. -/
   call_eq : ∀ k, t.call k = (firstGather s).call k
   /-- The return flags agree: the specification returns at the graded return,
   which the program marks. -/
   ret_eq : ∀ id, t.ret id = (programs s id).returned
   /-- The corrupted sets agree. -/
   F_eq : t.F = (firstGather s).F
-  /-- An excluded bit is certified excluded. -/
+  /-- An excluded bit is witnessed excluded. -/
   exclusion_witness : ∀ b ∈ t.excluded, ExclusionWitness P s b
   /-- An excluded bit is the complement of the round's bound bit: the
   exclusion is written inside the first return's run, which announces that
   bit. -/
   excluded_bound : ∀ b ∈ t.excluded, ∃ β, bound s = some β ∧ b = !β
-  /-- The grade-2 guard is certified by a value on at least `|S| − f` entries
+  /-- The grade-2 guard is witnessed by a value on at least `|S| − f` entries
   of the second gather's core. -/
   grade2_witness : t.grade = some true → ∃ S v, (secondGather s).core = some S ∧
     S.card - P.f ≤ AcceptedPairs.count S (some v)
-  /-- The grade-0 guard is certified by the second gather's core carrying each
+  /-- The grade-0 guard is witnessed by the second gather's core carrying each
   bit on at most `f` entries. -/
   grade0_witness : t.grade = some false → ∃ S, (secondGather s).core = some S ∧
     ∀ v, AcceptedPairs.count S (some v) ≤ P.f

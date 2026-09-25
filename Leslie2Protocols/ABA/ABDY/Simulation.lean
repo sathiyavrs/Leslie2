@@ -13,10 +13,10 @@ import Leslie2.Results
 # The protocol under its composed system
 
 The protocol of `ABA/ABDY/System.lean` and the composed system of
-`ABA/ABDY/Composition.lean` present one protocol at two cuts. A process record
-of the protocol carries the round-loop record beside the round record of every round the process
+`ABA/ABDY/Composition.lean` present one protocol at two cuts. A process's variables
+in the protocol carry the round-loop variables beside its variables in every round the process
 has touched (D22). A composed state carries one graded-agreement instance per round, at every
-moment. The round record of round `r` at a process is the entry of that process in the instance
+moment. A process's variables in round `r` are the entry of that process in the instance
 of round `r`, so the two cuts hold the same round data indexed two ways: by process in one, by
 round in the other.
 
@@ -27,20 +27,20 @@ counterpart in the gather-based chain's `AFW`, and the qualifier is dropped belo
 
 `ProtocolRelation` determines every coordinate of a composed state, in five conjuncts and under
 no guard.
-Both returns of a round read the ghost record of that round for the bit they announce and write it
+Both returns of a round read the ghost of that round for the bit they announce and write it
 back, so the two systems announce one bit and the fourth conjunct is restored by
 `relation_setBound`.
 
-* The round loops are the first components of the process records.
-* The coin oracle is the same component in both systems.
+* The round loops are the first components of the process variables.
+* The common coin is the same component in both systems.
 * The ABA network is the protocol adversary's DECIDED sets beside its corrupted set.
 * The network state of round `r` is the adversary's round-`r` message sets beside the same corrupted
-  set and the adversary's ghost record of round `r`. Corruption is one broadcast in both systems, so
+  set and the adversary's ghost of round `r`. Corruption is one broadcast in both systems, so
   every copy of the corrupted set is the adversary's; the round's bound bit is the adversary's ghost
-  record of that round, which is the composed system of the bit the instance's network state holds.
-* The entry of process `j` in the instance of round `r` is the round record of round `r` that `j`
-  holds. This is one equation for each pair `(j, r)`. A round `j` has not touched reads as the
-  initial round record in the protocol, and the equation asks the composed entry to be initial there
+  of that round, which is the composed system of the bit the instance's network state holds.
+* The entry of process `j` in the instance of round `r` is what `j` holds in its variables for
+  round `r`. This is one equation for each pair `(j, r)`. A round `j` has not touched reads as the
+  initial variables in the protocol, and the equation asks the composed entry to be initial there
   too.
 
 A composed state is therefore determined by any protocol state related to it.
@@ -50,7 +50,7 @@ are related to the same composed state.
 
 `PLTS.coupling_pure` and `PLTS.coupling_map` (`Framework/DiracRelationCoupling.lean`) are the two
 couplings this determination supplies: a Dirac protocol outcome is matched by the single composed
-state it determines, and an outcome whose only free coordinate is the oracle's is matched outcome
+state it determines, and an outcome whose only free coordinate is the coin's is matched outcome
 by outcome.
 
 ## What this file supplies
@@ -73,13 +73,13 @@ open Composition
 
 namespace ABDY
 
-/-- **The relation of the protocol presentation to the composed one.** Writing `u = (processes, w,
-o)` and `t = (G, C, A, o')`, the five conjuncts are: the round loops agree; the oracle is shared;
-the ABA network is the adversary's DECIDED sets beside its corrupted set; each round's network state
-is that round's messages out of the adversary's sent sets beside the same corrupted set and the
-adversary's ghost record of that round; and the entry of process `j` in the instance of round `r` is
-the round record of round `r` that `j` holds (D22). No conjunct is guarded, so the composed state is
-determined. -/
+/-- **The relation of the protocol presentation to the composed one.** Writing
+`u = (processes, w, o)` and `t = (G, C, A, o')`, the five conjuncts are: the round loops agree; the
+common coin is shared; the ABA network is the adversary's DECIDED sets beside its corrupted set;
+each round's network state is that round's messages out of the adversary's sent sets beside the
+same corrupted set and the adversary's ghost of that round; and the entry of process `j` in the
+instance of round `r` is what `j` holds in its variables for round `r` (D22). No conjunct is
+guarded, so the composed state is determined. -/
 def ProtocolRelation (P : Parameters) (u : ProtocolState P) (t : ComposedState P) : Prop :=
   (∀ j, (u.1 j).1 = t.2.1 j) ∧
   u.2.2 = t.2.2.2 ∧
@@ -104,10 +104,10 @@ theorem protocolRelation_mk (P : Parameters) (processes : ∀ _ : Fin P.n,
 /-! ### Updating one round
 
 A label owned by round `r` moves that round's instance and no other. The two lemmas below read the
-round records and the network states of the updated family. -/
+round variables and the network states of the updated family. -/
 
-/-- Updating round `r` by a state whose round records are the ones it already had leaves every round
-record where it was. -/
+/-- Updating round `r` by a state whose round variables are the ones it already had leaves every
+round's variables where they were. -/
 private theorem update_fst {P : Parameters} (G : ℕ → GBCA.ByABDY.RoundState P.n) (r : ℕ)
     {X : GBCA.ByABDY.RoundState P.n} (hX : X.1 = (G r).1) (r' : ℕ) :
     (Function.update G r X r').1 = (G r').1 := by
@@ -144,8 +144,8 @@ private theorem relation_recordGBCASend {P : Parameters}
     simp
 
 /-- The bit a return announces is the round's bound bit after the write: the
-record is write-once, so a return that announces a bit already on record leaves
-the record where it stands. -/
+ghost is write-once, so a return that announces a bit already recorded leaves
+the ghost where it stands. -/
 private theorem ghostOutput_getD {P : Parameters} {w : NetworkState P.n} {r : ℕ} {id : Fin P.n}
     {out : GBCAOutput} {bnd : Bool} (h : bnd = abdyGhostOutput P w r id out) :
     (w.ghost r).getD bnd = bnd := by
@@ -155,8 +155,8 @@ private theorem ghostOutput_getD {P : Parameters} {w : NetworkState P.n} {r : �
   | some β => rw [hg] at h; exact h.symm
 
 /-- The network state conjunct after a return of round `r`. The instance's bound
-bit and the adversary's ghost record of round `r` take the same bit, and every
-other round's record is unchanged. -/
+bit and the adversary's ghost of round `r` take the same bit, and the ghost of every
+other round is unchanged. -/
 private theorem relation_setBound {P : Parameters} {G : ℕ → GBCA.ByABDY.RoundState P.n}
     {w : NetworkState P.n} (hG : ∀ r', (G r').2 = ⟨w.sent r', w.F, w.ghost r'⟩)
     (r : ℕ) (bnd : Bool) (u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundVariables P.n)
@@ -194,7 +194,7 @@ private theorem corrupt_abaNetwork {P : Parameters} (w : NetworkState P.n) (k : 
 
 /-! ### The columns conjunct across a write
 
-The conjunct that speaks of the round records is read process by process. Under a transition at
+The conjunct that speaks of the round variables is read process by process. Under a transition at
 which one process writes and the composed family leaves every other column alone, it follows from
 the conjunct before the step and from the mover's own family of new-column equations. -/
 
@@ -224,11 +224,11 @@ private theorem relation_none (P : Parameters) {processes x : ∀ _ : Fin P.n, P
 /-! ### Assembling a composed transition
 
 Two shapes of matching run. A label the composed system takes on the nose is matched by the
-transitions of its four components. A round rendezvous has no transition at three of them: it is
-internal to a round instance, and the family carries it as its own silent transition. -/
+transitions of its four components. A round synchronisation has no transition at three of them: it
+is internal to a round instance, and the family carries it as its own silent transition. -/
 
 /-- A visible label of the extended alphabet matched by the four composed
-transitions, the oracle's successor carried across. -/
+transitions, the coin's successor carried across. -/
 private theorem coupling_visible (P : Parameters) {x : ∀ _ : Fin P.n, ProcessVariables P.n}
     {w' : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
     {ω : PMF (ℕ → WCC.SpecState P.n)}
@@ -249,7 +249,7 @@ private theorem coupling_visible (P : Parameters) {x : ∀ _ : Fin P.n, ProcessV
   rw [← prodPMF_three_pure_factors] at hbind
   exact ⟨Ω, hr, hbind ▸ composedExtended_visible_step P hL hGs hCs hAs hWs⟩
 
-/-- A rendezvous the composed system matches inside one round: the
+/-- A synchronisation the composed system matches inside one round: the
 instance of round `r` takes it as its own silent transition. -/
 private theorem coupling_round
     (P : Parameters) {x : ∀ _ : Fin P.n, ProcessVariables P.n} {w' : NetworkState P.n}
@@ -268,7 +268,7 @@ private theorem coupling_round
   · rw [hbind]
     exact composedHidden_of_tau P (composedExtended_tau_gbca P (gbcaInstanceFamily_tau P G r hsub))
 
-/-! ### The handshake transitions the protocol process group cannot take
+/-! ### The call and return transitions the protocol process group cannot take
 
 A Byzantine graded-agreement call or return names a process, and the protocol program of that
 process has no transition for it (D11, D22). Neither has the replaced program of a corrupted
@@ -278,14 +278,15 @@ protocol transition carries either label. -/
 
 /-! ### The matching, by label class
 
-A transition of the protocol group is a hidden rendezvous, a visible shared label, or the silent
+A transition of the protocol group is a hidden synchronisation, a visible shared label, or the
+silent
 label. Each is matched by a transition of the composed group on the same label, built from the
 transitions of the four composed components. A corrupted process's replaced program is matched loop
 for loop: where the protocol program self-loops, the composed round loop takes `corruptedIdle`. The
-return that self-loop carries without DECIDED evidence is authorised on the composed system by the
+return that self-loop carries without a DECIDED witness is authorised on the composed system by the
 ABA network's Byzantine transition (D23). -/
 
-/-- The matching on the rendezvous alphabet. -/
+/-- The matching on the labels the components synchronise on. -/
 theorem coupling_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessVariables P.n}
     {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
     {G : ℕ → GBCA.ByABDY.RoundState P.n} {C : ∀ _ : Fin P.n, RoundLoopVariables P.n}
@@ -1004,8 +1005,9 @@ theorem coupling_tau (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessVaria
 
 /-! ### The simulation -/
 
-/-- The matching at the group level: the rendezvous alphabet is hidden in both systems, so a hidden
-protocol rendezvous is matched by a silent transition of the composed group. The second disjunct is
+/-- The matching at the group level: the labels the components synchronise on are hidden in both
+systems, so a hidden protocol synchronisation is matched by a silent transition of the composed
+group. The second disjunct is
 the matching run for `terminate`: the state is unchanged under a silent protocol label. -/
 theorem coupling_hidden (P : Parameters) {u : ProtocolState P} {t : ComposedState P}
     (hR : ProtocolRelation P u t) {l : Label P.n} {μ : PMF (ProtocolState P)}
@@ -1053,8 +1055,8 @@ theorem coupling_step (P : Parameters) {u : ProtocolState P} {t : ComposedState 
       · exact ⟨Ω, hrel, Or.inr ⟨hτ, weakStep_strong hstep⟩⟩
     · exact ⟨Ω, hrel, Or.inl ⟨rfl, hpure ▸ weakTau_refl (composed P) (PMF.pure t)⟩⟩
 
-/-- The two initial states are related: everything is initial, so every column is the initial round
-record, which is what an untouched round reads as in the protocol. -/
+/-- The two initial states are related: everything is initial, so every column is the initial
+round's variables, which is what an untouched round reads as in the protocol. -/
 theorem protocolRelation_init (P : Parameters) :
     ProtocolRelation P (protocol P).init (composed P).init :=
   ⟨fun _ => rfl, rfl, rfl, fun _ => rfl,

@@ -10,7 +10,7 @@ import Leslie2Protocols.ABA.GBCA.Specification
 # The messages and the state of a GBCA round (ABDY22 Algorithm 6)
 
 The data one round of the Graded Binding Crusader Agreement protocol runs on: the messages its
-processes multicast, the bit a return announces, the two records that hold a round's state, and
+processes multicast, the bit a return announces, the two parts a round's state has, and
 the counting the algorithm's guards read.
 
 `Message` is the five message levels of ABDY22's Algorithm 6, under the level mapping
@@ -23,20 +23,20 @@ INPUT = echo,  ECHO = echo2,  VOTE = echo3,  BIND = echo4,  ECHO5 = echo5
 
 ## The two halves of a round's state
 
-The data of one round sits in two records. `RoundVariables` is what one process holds: its own
+The data of one round sits in two parts. `RoundVariables` is what one process holds: its own
 protocol state — the input it was called with, the `INPUT` payloads it has multicast, its
 write-once `ECHO`, `VOTE`, `BIND` and `ECHO5` payloads and its return flag, gathered in
-`ProcessVariables` — together with the messages delivered to it, indexed by sender. It holds no
-record of what it has multicast: a sender's sent set is the round network's. `NetworkState` is
+`ProcessVariables` — together with the messages delivered to it, indexed by sender. It does not
+record what it has multicast: a sender's sent set is the round network's. `NetworkState` is
 the round's network: the per-sender sent sets, the corrupted set and the round's bound bit.
-`RoundState` is the pair of the `n` round records and the network state, so the network
+`RoundState` is the pair of the `n` processes' round variables and the network state, so the network
 is a component of a round's state and not a field of it, and a weaker network is a different
 second component that leaves the rest of the round alone.
 
 `RoundState` carries the projections the algorithm's guards read — `process`,
 `received`, `sent`, `F` and `bound` — and the writes that reach one component alone:
 `setProcessVariables`
-and `receiveMessage` on a round record, `multicast`, `corrupt` and `setBound` on the network
+and `receiveMessage` on a round's variables, `multicast`, `corrupt` and `setBound` on the network
 state. Each write comes with the lemmas that carry every other projection through it, which is
 what lets a guard be read off a state after a write without unfolding the pair.
 
@@ -44,8 +44,8 @@ The counting is `receivedCount`, the number of distinct senders of a message at 
 per-level counts `echoCount`, `voteCount`, `bindCount` and `echo5Count`; and `bothValid`, which
 says that both bits are backed by an `n − f` `INPUT` quorum in a receiver's delivered sets, the
 set `Valid` of the algorithm being `{0, 1}` there. Two quorum lemmas close the file:
-a receipt count above `|G|` yields a sender outside `G`, and two `n − f` receipt quorums at
-possibly different receivers share a correct sender.
+a count of received messages above `|G|` yields a sender outside `G`, and two `n − f` quorums of
+received messages at possibly different receivers share a correct sender.
 
 ## The round's bound bit
 
@@ -53,7 +53,7 @@ possibly different receivers share a correct sender.
 state: no program reads it, and the three return transitions of the algorithm
 (`GBCA/ABDY/Algorithm.lean`) are the only transitions that touch it. `boundOf` computes the bit
 from the round's sent sets, the corrupted set and the outcome; a return announces the bit already
-on record if the round has returned before, and `boundOf`'s otherwise, and writes it back, so one
+recorded if the round has returned before, and `boundOf`'s otherwise, and writes it back, so one
 round announces one bit on all of its returns.
 
 ## Model and deviations
@@ -92,8 +92,8 @@ bit a return of outcome `out` announces on its label.
 
 A value-bearing outcome announces the value it hands out. An outcome carrying no
 value announces the payload of a correct `⟨VOTE, b⟩` sender, and `true` where
-there is none. A correct `⟨VOTE, b⟩` sender holds an `n − f` `⟨ECHO, b⟩`
-receipt quorum and at most one bit carries such a quorum, so on a reachable
+there is none. A correct `⟨VOTE, b⟩` sender holds an `n − f` quorum of received
+`⟨ECHO, b⟩` messages and at most one bit carries such a quorum, so on a reachable
 state the two bit branches are exclusive and the order in which they are read
 is immaterial. Where neither branch applies no bit is ever handed out, and the
 announced bit is the surviving one of a round that hands out nothing.
@@ -152,17 +152,18 @@ def ProcessVariables.initial : ProcessVariables where
 
 /-! ### The two halves of a round's state
 
-The data of one round sits in two records. Each process holds its own protocol
-state together with the messages delivered to it, and nothing else — there is
-no record there of what it has multicast. The round's network state holds the
+The data of one round sits in two parts. Each process holds its own protocol
+state together with the messages delivered to it, and nothing else — what it has
+multicast is not recorded there. The round's network state holds the
 per-sender sent sets and the corrupted set. The instance's state below is their
 pair, so every field of the algorithm is a field of one local state or the other.
 
 The network state carries the name of the instance that composes it beside the
 programs (`ABA/GBCA/ABDY/Components.lean`). -/
 
-/-- The round record of one process: its own local state and the messages delivered to it, indexed
-by sender. There is no record of what it has sent — the sender's sent lives in the network. -/
+/-- The round variables of one process: its own local state and the messages delivered to it,
+indexed by sender. What it has sent is not recorded here — the sender's sent lives in the
+network. -/
 structure RoundVariables (n : ℕ) : Type where
   /-- The process's own protocol state. -/
   processVariables : ProcessVariables
@@ -174,7 +175,7 @@ namespace RoundVariables
 
 variable {n : ℕ}
 
-/-- The initial round record: nothing received, nothing done. -/
+/-- The initial round variables: nothing received, nothing done. -/
 def initial (n : ℕ) : RoundVariables n where
   processVariables := ProcessVariables.initial
   received := fun _ => ∅
@@ -204,7 +205,7 @@ messages. -/
 def bothValid (P : Parameters) (p : RoundVariables P.n) : Prop :=
   P.n - P.f ≤ p.receivedCount (.input true) ∧ P.n - P.f ≤ p.receivedCount (.input false)
 
-/-- Overwrite the local record. -/
+/-- Overwrite the process's own local state. -/
 def setProcessVariables (p : RoundVariables n) (pr : ProcessVariables) : RoundVariables n := { p
   with processVariables := pr }
 
@@ -288,8 +289,8 @@ theorem mem_recordGBCASend {w : NetworkState n} {j : Fin n} {m : GBCA.ByABDY.Mes
 end NetworkState
 
 
-/-- **The composed state of one graded-agreement round**: the `n` round records beside the round's
-network state. -/
+/-- **The composed state of one graded-agreement round**: the `n` processes' round variables beside
+the round's network state. -/
 abbrev RoundState (n : ℕ) : Type := (∀ _ : Fin n,
   RoundVariables n) × GBCA.ByABDY.NetworkState n
 
@@ -398,7 +399,7 @@ def echo5Count (s : RoundState n) (i : Fin n) : ℕ :=
 def bothValid (P : Parameters) (s : RoundState P.n) (i : Fin P.n) : Prop :=
   P.n - P.f ≤ s.receivedCount i (.input true) ∧ P.n - P.f ≤ s.receivedCount i (.input false)
 
-/-- Both bits of a `bothValid` evidence, indexed by the bit. -/
+/-- Both bits of a `bothValid` witness, indexed by the bit. -/
 theorem bothValid_le {P : Parameters} {s : RoundState P.n} {i : Fin P.n}
     (h : s.bothValid P i) (b : Bool) : P.n - P.f ≤ s.receivedCount i (.input b) := by
   cases b
@@ -435,7 +436,7 @@ theorem setProcessVariables_processVariables_ne (s : RoundState n) (j : Fin n) (
       := by
   simp [setProcessVariables, processVariables, Function.update_of_ne h]
 
-/-! A record write leaves every projection of the delivered sets alone. -/
+/-! A write to a process's own local state leaves every projection of the delivered sets alone. -/
 
 @[simp] theorem setProcessVariables_receivedCount (s : RoundState n) (j : Fin n) (p :
   ProcessVariables)
@@ -500,8 +501,8 @@ theorem sent_subset_multicast (s : RoundState n) (j : Fin n) (m : Message) (k : 
     s.sent k ⊆ (s.multicast j m).sent k :=
   fun _ h => mem_multicast_sent.mpr (Or.inr h)
 
-/-- The adversary delivers `m` from sender `j` to receiver `i`: the receiver's round record files it
-under `j`'s received set. -/
+/-- The adversary delivers `m` from sender `j` to receiver `i`: the receiver's round variables file
+it under `j`'s received set. -/
 def receiveMessage (s : RoundState n) (i j : Fin n) (m : Message) : RoundState n
   :=
   (Function.update s.1 i ((s.1 i).deliverTo j m), s.2)
@@ -547,7 +548,7 @@ theorem receivedCount_le_receiveMessage (s : RoundState n) (i j : Fin n) (m : Me
   exact ⟨hk.1, mem_receiveMessage_received.mpr (Or.inr hk.2)⟩
 
 /-- Corruption (deviation D1): total, Dirac, equal to the spec's, and a write of the network state
-alone — the round records are corruption-blind. -/
+alone — the round variables are corruption-blind. -/
 def corrupt (P : Parameters) (id : Fin P.n) (s : RoundState P.n) : RoundState P.n
   :=
   (s.1, GBCA.ByABDY.NetworkState.corrupt P id s.2)
@@ -625,7 +626,7 @@ theorem exists_correct_of_card_lt {Q F : Finset (Fin n)} (h : F.card < Q.card) :
   by_contra hjF
   exact hc ⟨j, hj, hjF⟩
 
-/-- A receipt count exceeding `|G|` yields a sender outside `G`. -/
+/-- A count of received messages exceeding `|G|` yields a sender outside `G`. -/
 theorem exists_sender_notMem {P : Parameters} {s : RoundState P.n} (G : Finset (Fin P.n))
     {i : Fin P.n} {m : Message} (h : G.card < s.receivedCount i m) :
     ∃ j, j ∉ G ∧ m ∈ s.received i j := by
@@ -634,7 +635,7 @@ theorem exists_sender_notMem {P : Parameters} {s : RoundState P.n} (G : Finset (
   rw [Finset.mem_filter] at hjQ
   exact ⟨j, hjF, hjQ.2⟩
 
-/-- Two `n − f` receipt quorums (at possibly different receivers) share an
+/-- Two `n − f` quorums of received messages (at possibly different receivers) share a
 correct sender: `(n−f) + (n−f) − n = n − 2f > f ≥ |F|`. -/
 theorem exists_correct_received_of_two_quorums {P : Parameters} {s : RoundState P.n}
     (hF : s.F.card ≤ P.f) {i i' : Fin P.n} {m m' : Message} (h : P.n - P.f ≤ s.receivedCount i m)

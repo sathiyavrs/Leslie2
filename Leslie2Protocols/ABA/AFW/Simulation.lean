@@ -20,15 +20,15 @@ inclusion from here to the ABA specification.
 ## The relation is a function
 
 `AFW.ProtocolRelation` (`ABA/AFW/RoundProjection.lean`) determines the composed
-state from the implementation: the round loops and the coin oracle are shared, the ABA network is
-the DECIDED sets beside the corrupted set, and every round is the view `AFW.roundProjection`.
+state from the implementation: the round loops and the common coin are shared, the ABA network is
+the DECIDED sets beside the corrupted set, and every round is the projection `AFW.roundProjection`.
 `PLTS.coupling_pure` and `PLTS.coupling_map` (`Framework/DiracRelationCoupling.lean`) are the two
-couplings for a Dirac outcome and for an outcome whose only free coordinate is the oracle's.
+couplings for a Dirac outcome and for an outcome whose only free coordinate is the coin's.
 
 ## The matching, label class by label class
 
 `AFW.coupling_tau`, `AFW.coupling_label` and `AFW.coupling_event` match the silent label, a
-visible shared label and a rendezvous of the implementation, each from the runs of
+visible shared label and a synchronisation of the implementation, each from the runs of
 `ABA/AFW/SimulationOfEachTransition.lean`. `AFW.coupling_hidden` concludes in a weak run of the
 composed group, and `AFW.coupling_step` carries that run through the sub-protocol hiding with
 `weakTau_abstract`, `weakTau_of_weakStep_mem` and `weakStep_abstract`.
@@ -45,10 +45,10 @@ open Composition GBCA.ByABDY
 /-! ### Assembling a matched run
 
 Three shapes of matching run: a visible shared label the four components take with one transition
-each, a hidden rendezvous they take the same way, and a silent run of the graded-agreement family
-alone. -/
+each, a hidden synchronisation they take the same way, and a silent run of the graded-agreement
+family alone. -/
 
-/-- A visible shared label: the four components move together, the oracle's
+/-- A visible shared label: the four components move together, the coin's
 successor free. -/
 private theorem coupling_visible (P : Parameters) {x : ∀ _ : Fin P.n, AFW.ProcessVariables P.n}
     {w' : NetworkState P.n} {G' : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n}
@@ -72,7 +72,7 @@ private theorem coupling_visible (P : Parameters) {x : ∀ _ : Fin P.n, AFW.Proc
   rw [← prodPMF_three_pure_factors] at hb
   exact ⟨Ω, hr, hb ▸ composedHidden_weakStep P hl hG hC hA hW⟩
 
-/-- A hidden rendezvous: the four components move together and the composed
+/-- A hidden synchronisation: the four components move together and the composed
 group reads the move as silent. -/
 private theorem coupling_hiddenSynchronisation (P : Parameters)
     {x : ∀ _ : Fin P.n, AFW.ProcessVariables P.n}
@@ -478,11 +478,11 @@ theorem coupling_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessVariabl
     · rw [hfor i hi]; exact RoundLoopStep.retGIdle _ r id out bnd (Ne.symm hi)
 
 
-/-! ### The matching on a rendezvous of the implementation
+/-! ### The matching on a synchronisation of the implementation
 
 A send and a delivery are internal to the round, so the composed system matches them with a silent
 run of the graded-agreement family. The DECIDED transitions, the fused coin return and the
-handshake transitions are matched by the same rendezvous. -/
+call and return transitions are matched by the same synchronisation. -/
 
 theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n}
     {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
@@ -907,8 +907,9 @@ theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessVariabl
 
 /-! ### The matching at the group and at the system -/
 
-/-- **The matching at the group level**: the rendezvous alphabet is hidden in both systems, so a
-hidden rendezvous of the implementation is matched by a silent run of the composed group. -/
+/-- **The matching at the group level**: the labels the components synchronise on are hidden in both
+systems, so a hidden synchronisation of the implementation is matched by a silent run of the
+composed group. -/
 theorem coupling_hidden (P : Parameters) {s : ProtocolState P} {t : ComposedState P}
     (hR : ProtocolRelation P s t) {l : Label P.n} {μ : PMF (ProtocolState P)}
     (h : (protocolHidden P).step s l μ) :
@@ -955,7 +956,7 @@ theorem coupling_step (P : Parameters) {s : ProtocolState P} {t : ComposedState 
         weakStep_abstract (composedHidden P) (Label.hiddenAPI P.n) hnm hlay⟩⟩
 
 /-- **The gather-based protocol forward-simulates into its composed system**,
-along the Dirac lift of the view. -/
+along the Dirac lift of the projection. -/
 theorem protocolSimulation (P : Parameters) :
     ProbabilisticForwardSimulation (protocol P) (composed P)
       (diracRel (ProtocolRelation P)) where

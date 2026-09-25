@@ -9,7 +9,7 @@ import Leslie2Protocols.ABA.AFW.RoundProjection
 /-!
 # The conjunct of the protocol relation that is not a projection
 
-`BoundInvariant` is the conjunct of `AFW.ProtocolRelation` that no frame lemma supplies.
+`BoundInvariant` is the conjunct of `AFW.ProtocolRelation` that no projection lemma supplies.
 `boundInvariant_writeGhost` carries it across a transition that leaves the candidate, the second
 gather's input and the graded outcome where they stand and writes the ghost.
 -/
@@ -25,9 +25,9 @@ variable {P : Parameters}
 
 /-! ### The conjunct that is not a projection
 
-`BoundInvariant` is the conjunct of `AFW.ProtocolRelation` that no frame lemma supplies. It reads
-the candidate, the second gather's input and the graded outcome, so a transition that leaves the
-three where they stand and writes the ghost keeps the conjunct. -/
+`BoundInvariant` is the conjunct of `AFW.ProtocolRelation` that no projection lemma supplies. It
+reads the candidate, the second gather's input and the graded outcome, so a transition that leaves
+the three where they stand and writes the ghost keeps the conjunct. -/
 
 section Invariants
 

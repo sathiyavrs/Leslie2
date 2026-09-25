@@ -14,12 +14,12 @@ A family of systems, each read along its own pullback of the shared alphabet
 (`System.mapIdle`), under the synchronised product (`System.synchronisedProduct`).
 A label with no image at a component leaves that component unchanged, so a label
 naming one component moves that component alone. On a visible label every
-component steps, and the joint distribution is the Dirac of the family of the
+component steps, and the product distribution is the Dirac of the family of the
 components' targets. A silent transition of the product is a silent transition
 of exactly one component, on the label its pullback carries `τ` to.
 
 `dirac_steps_update` is the pointwise reading of such a family of Dirac steps:
-one component's step beside every other component's stutter.
+one component's step beside every other component's idle transition.
 -/
 
 namespace PLTS
@@ -43,7 +43,7 @@ theorem mapIdle_unchanged {A₀ : System B Lbl} {ψ : Λ → Option Lbl} {c : B}
   (System.mapIdle_step_none hψ _).mpr rfl
 
 /-- A transition of the synchronised product on a visible label: every
-component steps, and the joint distribution is Dirac. -/
+component steps, and the product distribution is Dirac. -/
 theorem synchronisedProductMapIdle_cases (hA : ∀ k, (A k).IsLTS) (hL : L ≠ Silent.τ)
     (h : (System.synchronisedProduct (fun k => (A k).mapIdle (φ k))).step a L μ) :
     ∃ a' : ∀ _ : Fin n, B, μ = PMF.pure a' ∧
@@ -147,7 +147,7 @@ section DiracStepsAtUpdate
 variable {ι S L : Type} [DecidableEq ι] {Step : ι → S → L → PMF S → Prop}
   {u : ι → S} {j : ι} {s : S} {l : L}
 
-/-- One component's Dirac step beside the Dirac stutter of every other
+/-- One component's Dirac step beside the Dirac idle transition of every other
 component: every component steps into the family updated at the acting one. -/
 theorem dirac_steps_update (hj : Step j (u j) l (PMF.pure s))
     (hother : ∀ i, i ≠ j → Step i (u i) l (PMF.pure (u i))) :

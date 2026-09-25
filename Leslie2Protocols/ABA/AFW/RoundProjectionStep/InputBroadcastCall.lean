@@ -32,9 +32,11 @@ variable {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} {w : NetworkState P.n} 
 
 /-! ### The calls of the input-broadcast instances
 
-Each transition writes the record of the instance broadcasting the caller's input, and the network
-records that instance's `⟨INIT, x⟩`. The gather record, the round's program and the ghost record
-stand. -/
+Each transition writes the variables of the instance broadcasting the caller's input, and the
+network
+Each transition writes the variables of the instance broadcasting the caller's input, and the
+network records that instance's `⟨INIT, x⟩`. The gather's variables, the round's program and the
+ghost stand. -/
 
 /-- The projection onto the first gather instance after a write that records one message. -/
 theorem firstGatherProjection_write (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n)

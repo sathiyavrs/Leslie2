@@ -2,7 +2,7 @@
   \label{thm:brb-refines}
   \lean{PLTS.ABA.BRB.EchoWitness}\lean{PLTS.ABA.BRB.Invariant}\lean{PLTS.ABA.BRB.SpecificationRelation}\lean{PLTS.ABA.BRB.specificationRelation_corrupt}\lean{PLTS.ABA.BRB.brachaRefinesSpecification}\leanok
   \uses{def:aba-bracha-implementation, def:aba-brb-spec}
-  The Bracha instance is forward-simulated by Transition System~6, along a relation certifying the committed value by an $\mathrm{ECHO}$ receipt quorum of more than $(n+f)/2$ senders and firing the commit on demand under the first return; the relation survives the corruption broadcast: \leandecl{PLTS.ABA.BRB.brachaRefinesSpecification}, \leandecl{PLTS.ABA.BRB.specificationRelation_corrupt}.
+  The Bracha instance is forward-simulated by Transition System~6, along a relation witnessing the committed value by a quorum of received $\mathrm{ECHO}$ messages from more than $(n+f)/2$ senders and firing the commit on demand under the first return; the relation survives the corruption broadcast: \leandecl{PLTS.ABA.BRB.brachaRefinesSpecification}, \leandecl{PLTS.ABA.BRB.specificationRelation_corrupt}.
 \end{theorem}
 
 \begin{proof}\leanok

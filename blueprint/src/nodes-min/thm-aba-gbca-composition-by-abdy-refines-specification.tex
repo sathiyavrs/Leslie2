@@ -2,7 +2,7 @@
   \label{thm:aba-gbca-composition-by-abdy-refines-specification}
   \lean{PLTS.ABA.GBCA.ByABDY.refinesSpecification}\lean{PLTS.ABA.GBCA.ByABDY.specificationRelation_transition}\lean{PLTS.ABA.GBCA.ByABDY.composition_projects}\lean{PLTS.ABA.GBCA.specificationLabelMap}\lean{PLTS.ABA.GBCA.specificationOverRoundAlphabet}\lean{PLTS.ABA.GBCA.ByABDY.specificationRelation_init}\lean{PLTS.ABA.GBCA.ByABDY.refinesSpecification_failAct}\lean{PLTS.ABA.GBCA.ByABDY.specificationCorruptionAct}\leanok
   \uses{def:aba-gbca-instance-by-abdy, def:aba-gbca-algorithm-by-abdy, def:aba-gbca-spec, def:forwardsim}
-  Each round's composition is forward-simulated by that round's GBCA specification instance, read over the round's interface, along a relation that certifies the exclusion set and the grade by receipt patterns, fires an exclusion on demand, holds at the initial states and survives the corruption broadcast: \leandecl{PLTS.ABA.GBCA.ByABDY.refinesSpecification}.
+  Each round's composition is forward-simulated by that round's GBCA specification instance, read over the round's interface, along a relation that witnesses the exclusion set and the grade by patterns of received messages, fires an exclusion on demand, holds at the initial states and survives the corruption broadcast: \leandecl{PLTS.ABA.GBCA.ByABDY.refinesSpecification}.
 \end{theorem}
 
 \begin{proof}\leanok

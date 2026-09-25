@@ -18,15 +18,15 @@ at once, which is the shape the family lifting consumes.
 
 The composed state is the protocol's own data, so only `call`, `ret` and `F` are read off it
 directly (`SpecificationRelation.call_eq`, `ret_eq`, `F_eq`). The specification's `excluded` and
-`grade` are bookkeeping the protocol records nothing; the relation carries receipt evidence for them
-instead:
+`grade` are bookkeeping the protocol records nothing; the relation carries witnesses on the received
+messages for them instead:
 
-* `exclusion_witness` — every excluded bit `b` is covered by an exclude certificate
+* `exclusion_witness` — every excluded bit `b` is covered by an exclusion witness
   `ExclusionWitness P s b`. The relation bounds `excluded` from above and never from below:
   which bits are actually excluded is recovered by case analysis at the return transitions, not
   recorded.
-* `grade2_witness` / `grade0_witness` — a grade-2 lock is backed by an `n − f`
-  `ECHO5 v` receipt quorum, a grade-0 lock by an `n − f` `ECHO5 ⊥` quorum. Two
+* `grade2_witness` / `grade0_witness` — a grade-2 lock is backed by an `n − f` quorum of
+  received `ECHO5 v` messages, a grade-0 lock by an `n − f` `ECHO5 ⊥` quorum. Two
   opposing quorums intersect in a correct process that would have multicast
   two different `ECHO5` payloads, contradicting the write-once `echo5_once` —
   which is the grade-2 / grade-0 exclusivity the specification's grade guard demands
@@ -35,22 +35,21 @@ instead:
   `excluded = excludedOf bound`, empty while the bit is unwritten and the singleton of its
   complement once a return has written it. This is the one clause that bounds `excluded` from below,
   and it holds because the exclusion fires with the round's first return. It supplies the guard
-  `(!bnd) ∈ excluded` of a return that announces a bit already on record, and with
-  `exclusion_witness` it yields `SpecificationRelation.bound_witness`: the bit on record
-  carries an exclude certificate for its complement. A value-bearing return then announces its own
-  value (`SpecificationRelation.retBound_eq`) — the return's `n − f` `VOTE v` receipt quorum refutes
-  a certificate for `v` (`not_exclusionWitness_of_voteQuorum`), so a bit on record is `v`, and a
-  bit computed here is `v` by `boundOf`. A grade-0 return announces `boundOf`'s bit, whose
-  complement is certified by `exclusionWitness_boundOf_grade0`.
+  `(!bnd) ∈ excluded` of a return that announces a bit already recorded, and with
+  `exclusion_witness` it yields `SpecificationRelation.bound_witness`: the recorded bit
+  carries an exclusion witness for its complement. A value-bearing return then announces its own
+  value (`SpecificationRelation.retBound_eq`) — the return's `n − f` quorum of received `VOTE v`
+  messages refutes a witness for `v` (`not_exclusionWitness_of_voteQuorum`), so a recorded bit is
+  `v`, and a bit computed here is `v` by `boundOf`. A grade-0 return announces `boundOf`'s bit,
+  whose complement is witnessed by `exclusionWitness_boundOf_grade0`.
 
-Both `bindUnset` guards come from one `ECHO` certificate (`bindUnset_guards`): refine it to an `n −
-f` `INPUT v` receipt quorum (`inputQuorum_of_receivedEchoQuorum`), whose correct senders hold an
-input (`input_called`, D8) — that is the quorum guard (`quorum_of_messageQuorum`) — and whose count
-feeds `Invariant.support_of_received_inputs` for the `f + 1` InputSupport count (D15). At the
-grade-0
-return the guards read the returner's own `|Valid| > 1` evidence instead
+Both `bindUnset` guards come from one `ECHO` witness (`bindUnset_guards`): refine it to an `n − f`
+quorum of received `INPUT v` messages (`inputQuorum_of_receivedEchoQuorum`), whose correct senders
+hold an input (`input_called`, D8) — that is the quorum guard (`quorum_of_messageQuorum`) — and
+whose count feeds `Invariant.support_of_received_inputs` for the `f + 1` InputSupport count (D15).
+At the grade-0 return the guards read the returner's own `|Valid| > 1` witness instead
 (`inputSupport_of_bothValid` closes both bits at once), so they are available whichever bit the
-certificate names. `SpecificationRelation.callSupport` reads the counts at the specification
+witness names. `SpecificationRelation.callSupport` reads the counts at the specification
 along `call_eq`/`F_eq`.
 
 The specification excludes a bit by the internal τ-transition `bindUnset`, so a return of the
@@ -81,9 +80,9 @@ def excludedOf : Option Bool → Finset Bool
 
 /-- The simulation relation: the concrete invariant, the abstraction map for
 the fields the protocol itself holds (spec `call` = concrete input, spec
-`ret` = concrete return flags, spec `F` = concrete `F`), and receipt evidence
+`ret` = concrete return flags, spec `F` = concrete `F`), and witnesses on the received messages
 for the two fields it does not. `exclusion_witness` bounds `excluded` from above — an exclusion
-certificate for every excluded bit — and never from below. -/
+witness for every excluded bit — and never from below. -/
 structure SpecificationRelation (P : Parameters) (s : RoundState P.n) (t : SpecState P.n) :
   Prop where
   /-- The concrete inductive invariant. -/
@@ -94,20 +93,20 @@ structure SpecificationRelation (P : Parameters) (s : RoundState P.n) (t : SpecS
   ret_eq : ∀ id, t.ret id = (s.processVariables id).returned
   /-- The corrupted sets agree. -/
   F_eq : t.F = s.F
-  /-- Every excluded bit carries a monotone exclude certificate. -/
+  /-- Every excluded bit carries a monotone exclusion witness. -/
   exclusion_witness : ∀ b, b ∈ t.excluded → ExclusionWitness P s b
-  /-- A grade-2 lock is backed by an `n − f` `ECHO5 v` receipt quorum
+  /-- A grade-2 lock is backed by an `n − f` quorum of received `ECHO5 v` messages
   for some bit `v`. -/
   grade2_witness : t.grade = some true →
     ∃ v i, P.n - P.f ≤ s.receivedCount i (.echo5 (some v))
-  /-- A grade-0 lock is backed by an `n − f` `ECHO5 ⊥` receipt
-  quorum. -/
+  /-- A grade-0 lock is backed by an `n − f` quorum of received `ECHO5 ⊥`
+  messages. -/
   grade0_witness : t.grade = some false →
     ∃ i, P.n - P.f ≤ s.receivedCount i (.echo5 none)
   /-- The round's bound bit determines the exclusion set: nothing is excluded
   while the bit is unwritten, and the complement of the bit is the one excluded
   bit once a return has written it. The exclusion fires with the round's first
-  return, so the two records move together. -/
+  return, so the bit and the exclusion set move together. -/
   bound_excluded : t.excluded = excludedOf s.bound
 
 /-- The simulation relation of the round-`r` instance (the round index is
@@ -188,9 +187,9 @@ theorem specificationRelation_corrupt (P : Parameters) (r : ℕ) (id : Fin P.n)
         rw [corrupt_excluded, RoundState.corrupt_bound]
         exact hR.bound_excluded }
 
-/-- The bound bit on record carries an exclude certificate for its complement:
+/-- The recorded bound bit carries an exclusion witness for its complement:
 the specification has excluded that complement, and every excluded bit is
-certified. -/
+witnessed. -/
 theorem SpecificationRelation.bound_witness {s : RoundState P.n} {t : SpecState P.n}
     (hR : SpecificationRelation P s t) (β : Bool) (hb : s.bound = some β) :
     ExclusionWitness P s (!β) := by
@@ -199,8 +198,8 @@ theorem SpecificationRelation.bound_witness {s : RoundState P.n} {t : SpecState 
   exact Finset.mem_singleton_self _
 
 /-- **The announced bit of a value-bearing return.** A return of `v` carries an
-`n − f` `VOTE v` receipt quorum, which refutes an exclude certificate for `v`; so a bound bit
-already on record, whose complement is certified, is `v` itself,
+`n − f` quorum of received `VOTE v` messages, which refutes an exclusion witness for `v`; so a
+bound bit already recorded, whose complement is witnessed, is `v` itself,
 and one computed here is `v` by `boundOf`. -/
 theorem SpecificationRelation.retBound_eq {s : RoundState P.n} {t : SpecState P.n}
     (hR : SpecificationRelation P s t) {i : Fin P.n} {v : Bool} {out : GBCAOutput}
@@ -220,9 +219,9 @@ theorem SpecificationRelation.retBound_eq {s : RoundState P.n} {t : SpecState P.
 
 /-! ### Deriving the spec guards -/
 
-/-- D15 derivation at `retGrade1`/`retGrade0`: `|Valid| > 1` evidence yields the
+/-- D15 derivation at `retGrade1`/`retGrade0`: the `|Valid| > 1` witness yields the
 `f + 1` F-blind genuine-holder support for either bit — its `n − f ≥ f + 1`
-`INPUT` receipt quorum for that bit sits at the returner itself. -/
+quorum of received `INPUT` messages for that bit sits at the returner itself. -/
 theorem inputSupport_of_bothValid {s : RoundState P.n} (hI : Invariant P s)
     {i : Fin P.n} (hv : s.bothValid P i) (b : Bool) : InputSupport P s b := by
   have hfn := P.f_lt_n_sub_f
@@ -241,7 +240,7 @@ theorem SpecificationRelation.callSupport {s : RoundState P.n} {t : SpecState P.
   rw [hR.call_eq, hR.F_eq]
   exact hk.2
 
-/-- D8 quorum derivation: any `n − f` receipt quorum of a message whose correct
+/-- D8 quorum derivation: any `n − f` quorum of received copies of a message whose correct
 senders must hold an input yields the spec's call quorum; corrupted senders
 are absorbed into the `∪ F`. -/
 theorem quorum_of_messageQuorum {s : RoundState P.n} {t : SpecState P.n}
@@ -264,7 +263,7 @@ theorem quorum_of_messageQuorum {s : RoundState P.n} {t : SpecState P.n}
     rw [hR.call_eq]
     exact hpart k hkF' (hR.invariant.received_subset_sent i k _ hk.2)
 
-/-- **Both `bindUnset` guards from the single certificate.** -/
+/-- **Both `bindUnset` guards from the single witness.** -/
 theorem bindUnset_guards {s : RoundState P.n} {t : SpecState P.n}
     (hR : SpecificationRelation P s t) {v : Bool} (hq : ReceivedEchoQuorum P s v) :
     t.quorum P ∧ P.f + 1 ≤ (Finset.univ.filter (fun id => t.call id = some v ∨ id ∈ t.F)).card := by
@@ -274,7 +273,8 @@ theorem bindUnset_guards {s : RoundState P.n} {t : SpecState P.n}
     (fun j hj hm' => hR.invariant.input_called j v hj hm') hm, ?_⟩
   exact hR.callSupport (hR.invariant.support_of_received_inputs (le_trans (by omega) hm))
 
-/-- Grade exclusivity, grade 2: an `n − f` `ECHO5 v` receipt quorum rules out a grade-0 lock (the
+/-- Grade exclusivity, grade 2: an `n − f` quorum of received `ECHO5 v` messages rules out a
+grade-0 lock (the
 two `ECHO5` quorums would intersect in a correct process with two different `ECHO5` payloads,
 against `echo5_once`). -/
 theorem grade_ne_false_of_echo5_quorum {s : RoundState P.n} {t : SpecState P.n}
@@ -290,7 +290,8 @@ theorem grade_ne_false_of_echo5_quorum {s : RoundState P.n} {t : SpecState P.n}
   rw [e1] at e2
   exact absurd (Option.some.inj e2) (by simp)
 
-/-- Grade exclusivity, grade 0: an `n − f` `ECHO5 ⊥` receipt quorum rules out a grade-2 lock. -/
+/-- Grade exclusivity, grade 0: an `n − f` quorum of received `ECHO5 ⊥` messages rules out a
+grade-2 lock. -/
 theorem grade_ne_true_of_echo5Bot_quorum {s : RoundState P.n} {t : SpecState P.n}
     (hR : SpecificationRelation P s t) {id : Fin P.n}
     (hcnt : P.n - P.f ≤ s.receivedCount id (.echo5 none)) :

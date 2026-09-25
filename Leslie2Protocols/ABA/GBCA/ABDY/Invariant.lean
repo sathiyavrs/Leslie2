@@ -27,13 +27,13 @@ The invariant carries
 * protocol conformance of correct multicasts (`echo_confirmed`, `vote_input`,
   `vote_confirmed`, `bind_confirmed`, `bindBot_confirmed`, `echo5_input`, `echo5_confirmed`,
   `echo5Bot_confirmed`): each correct `ECHO`/`VOTE`/`BIND`/`ECHO5` is backed by the
-  receipt evidence that Algorithm 6 demands (receipts only grow, so the
-  historical evidence persists in the current state);
+  received messages that Algorithm 6 demands (the received messages only grow, so a witness once
+  present persists in the current state);
 * write-once recording of correct multicasts (`echo_once`, `vote_once`,
   `bind_once`, `echo5_once`): a correct process's payload is the one held in the
   sender's write-once field, so a correct process speaks at most one payload
-  per level — `echo_once` carries the unique `ECHO` receipt quorum and `vote_once` the `VOTE`
-  quorum count of the exclude certificates in `GBCA/ABDY/ExclusionWitness.lean`, and
+  per level — `echo_once` carries the unique quorum of received `ECHO` messages and `vote_once` the
+  `VOTE` quorum count of the exclusion witnesses in `GBCA/ABDY/ExclusionWitness.lean`, and
   `echo5_once` the grade exclusivity;
 * participation (`input_called`, D8): a correct `INPUT` sender has been
   called;
@@ -42,14 +42,14 @@ The invariant carries
   multicast by a sender outside `G` traces back to a process outside `G`
   whose own input is `b`. The quantification over `G` is what makes the
   clause inductive: the classical "first correct sender of `INPUT b` is an
-  originator" argument is temporal, but a relayer's `f + 1` receipt quorum
+  originator" argument is temporal, but a relayer's `f + 1` quorum of received messages
   always contains a sender outside `G`, so the pre-state clause — already
   quantified over the same `G` — supplies the witness, and corruption steps
   only shrink the range of `G`;
 * the first-relayer support clause (`input_support`, D15): a correct
-  `INPUT b` multicast is by a genuine holder of `b` or already certifies
+  `INPUT b` multicast is by a genuine holder of `b` or already witnesses
   `f + 1` F-blind genuine-holder support (`InputSupport`) — inductive because
-  the first correct relayer's `f + 1` `INPUT b` receipt senders are each in
+  the senders of the first correct relayer's `f + 1` received `INPUT b` messages are each in
   `F` or genuine holders, and the count is monotone under every step.
 -/
 
@@ -134,7 +134,7 @@ structure Invariant (P : Parameters) (s : RoundState P.n) : Prop where
   F_card : s.F.card ≤ P.f
   /-- Delivery soundness: everything delivered was multicast. -/
   received_subset_sent : ∀ i j m, m ∈ s.received i j → m ∈ s.sent j
-  /-- Correct `ECHO b` is backed by an `n − f` `INPUT b` receipt quorum. -/
+  /-- Correct `ECHO b` is backed by an `n − f` quorum of received `INPUT b` messages. -/
   echo_confirmed : ∀ j b, j ∉ s.F → Message.echo b ∈ s.sent j →
     P.n - P.f ≤ s.receivedCount j (.input b)
   /-- Correct `ECHO` multicasts are recorded in the write-once `sentEcho`
@@ -143,11 +143,11 @@ structure Invariant (P : Parameters) (s : RoundState P.n) : Prop where
     (s.processVariables j).sentEcho = some b
   /-- Correct voters hold an input (D8). -/
   vote_input : ∀ j w, j ∉ s.F → Message.vote w ∈ s.sent j → (s.processVariables j).input ≠ none
-  /-- Correct `VOTE b` is backed by an `n − f` `ECHO b` receipt quorum. -/
+  /-- Correct `VOTE b` is backed by an `n − f` quorum of received `ECHO b` messages. -/
   vote_confirmed : ∀ j b, j ∉ s.F → Message.vote (some b) ∈ s.sent j →
     P.n - P.f ≤ s.receivedCount j (.echo b)
   /-- Correct `VOTE` multicasts are recorded in the write-once `sentVote`
-  field; this is the level the exclude certificates of
+  field; this is the level the exclusion witnesses of
   `GBCA/ABDY/ExclusionWitness.lean` count. -/
   vote_once : ∀ j w, j ∉ s.F → Message.vote w ∈ s.sent j →
     (s.processVariables j).sentVote = some w
@@ -155,10 +155,10 @@ structure Invariant (P : Parameters) (s : RoundState P.n) : Prop where
   field; in particular a correct process multicasts at most one payload. -/
   bind_once : ∀ j w, j ∉ s.F → Message.bind w ∈ s.sent j →
     (s.processVariables j).sentBind = some w
-  /-- Correct `BIND b` is backed by an `n − f` `VOTE b` receipt quorum. -/
+  /-- Correct `BIND b` is backed by an `n − f` quorum of received `VOTE b` messages. -/
   bind_confirmed : ∀ j b, j ∉ s.F → Message.bind (some b) ∈ s.sent j →
     P.n - P.f ≤ s.receivedCount j (.vote (some b))
-  /-- Correct `BIND ⊥` is backed by `n − f` any-payload `VOTE` receipts. -/
+  /-- Correct `BIND ⊥` is backed by `n − f` received any-payload `VOTE` messages. -/
   bindBot_confirmed : ∀ j, j ∉ s.F → Message.bind none ∈ s.sent j →
     P.n - P.f ≤ s.voteCount j
   /-- Correct `ECHO5` senders hold an input (D8, one level up). -/
@@ -167,10 +167,10 @@ structure Invariant (P : Parameters) (s : RoundState P.n) : Prop where
   that carries the grade-2/grade-0 exclusivity. -/
   echo5_once : ∀ j w, j ∉ s.F → Message.echo5 w ∈ s.sent j →
     (s.processVariables j).sentEcho5 = some w
-  /-- Correct `ECHO5 b` is backed by an `n − f` `BIND b` receipt quorum. -/
+  /-- Correct `ECHO5 b` is backed by an `n − f` quorum of received `BIND b` messages. -/
   echo5_confirmed : ∀ j b, j ∉ s.F → Message.echo5 (some b) ∈ s.sent j →
     P.n - P.f ≤ s.receivedCount j (.bind (some b))
-  /-- Correct `ECHO5 ⊥` is backed by `n − f` any-payload `BIND` receipts. -/
+  /-- Correct `ECHO5 ⊥` is backed by `n − f` received any-payload `BIND` messages. -/
   echo5Bot_confirmed : ∀ j, j ∉ s.F → Message.echo5 none ∈ s.sent j →
     P.n - P.f ≤ s.bindCount j
   /-- Budget-robust input origin: for every corruption superset `G` within
@@ -180,9 +180,9 @@ structure Invariant (P : Parameters) (s : RoundState P.n) : Prop where
     ∀ j, j ∉ G → Message.input b ∈ s.sent j →
     ∃ m, m ∉ G ∧ (s.processVariables m).input = some b
   /-- Relayer-inductivized first-relayer support (D15): a correct `INPUT b`
-  multicast is by a genuine holder of `b`, or certifies the `f + 1` F-blind
-  genuine-holder support outright — the first correct relayer's `f + 1`
-  `INPUT b` receipt senders are each in `F` or genuine holders. -/
+  multicast is by a genuine holder of `b`, or witnesses the `f + 1` F-blind
+  genuine-holder support outright — the senders of the first correct relayer's
+  `f + 1` received `INPUT b` messages are each in `F` or genuine holders. -/
   input_support : ∀ (b : Bool) (j : Fin P.n), j ∉ s.F → Message.input b ∈ s.sent j →
     (s.processVariables j).input = some b ∨ InputSupport P s b
   /-- Participation one level down (D8): a correct `INPUT` sender has been
@@ -210,7 +210,7 @@ theorem Invariant.initial (P : Parameters) : Invariant P (RoundState.initial P.n
   input_support := fun b j _ h => absurd h (by simp [RoundState.initial])
   input_called := fun j b _ h => absurd h (by simp [RoundState.initial])
 
-/-- Derivation (D15): any `f + 1` `INPUT b` receipt count yields the F-blind
+/-- Derivation (D15): any count of `f + 1` received `INPUT b` messages yields the F-blind
 genuine-holder support — some correct non-holder sender's `input_support` clause
 closes, or else every sender is a holder-or-`F`-member and the senders
 themselves witness the count. -/
@@ -242,8 +242,8 @@ theorem processVariables_send_ne {s : RoundState P.n} {j : Fin P.n} {p : Process
 
 /-- **Invariant preservation, correct-send schema.** Process `j` updates its
 local state to `p` and multicasts `m`. The hypotheses collect, clause by
-clause, what the new message and the touched field must satisfy; every frame
-condition is discharged here once for all nine send transitions (`call`, `relay`,
+clause, what the new message and the touched field must satisfy; every condition on a field the
+send leaves alone is discharged here once for all nine send transitions (`call`, `relay`,
 `echo`, `voteBit`, `voteBot`, `bindBit`, `bindBot`, `echo5Bit`, `echo5Bot`). -/
 private theorem Invariant.send {s : RoundState P.n} (hI : Invariant P s) {j : Fin P.n}
     {p : ProcessVariables} {m : Message}
@@ -471,7 +471,7 @@ private theorem Invariant.send {s : RoundState P.n} (hI : Invariant P s) {j : Fi
       · rw [processVariables_send_ne hkj]
         exact hI.input_called j' b hF hold
 
-/-- **Invariant preservation, local-frame schema.** A `setProcessVariables` that keeps
+/-- **Invariant preservation, one process's own variables.** A `setProcessVariables` that keeps
 the input and all four write-once fields (the return transitions, which flip only
 `returned`) preserves every clause. -/
 private theorem Invariant.setProcessVariables_unchanged {s : RoundState P.n} (hI : Invariant P s)
@@ -549,7 +549,7 @@ private theorem Invariant.setProcessVariables_unchanged {s : RoundState P.n} (hI
     rw [hin j']
     exact hI.input_called j' b hF hm'
 
-/-- **Frame lemma for the bound bit.** The ghost write touches the network
+/-- **The invariant is preserved by the bound bit's write.** The ghost write touches the network
 state's own field alone, and no clause of `Invariant` reads it. -/
 private theorem Invariant.setBound {s : RoundState P.n} (hI : Invariant P s) (β : Bool) :
     Invariant P (s.setBound β) := { hI with }

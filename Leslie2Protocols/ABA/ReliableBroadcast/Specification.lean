@@ -89,7 +89,7 @@ def corrupt (P : Parameters) (id : Fin P.n) (s : SpecState P.n M) : SpecState P.
 
 end SpecState
 
-/-! ### Corruption frame lemmas -/
+/-! ### What corruption leaves unchanged -/
 
 variable {M : Type}
 

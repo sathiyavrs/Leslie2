@@ -14,14 +14,15 @@ import Leslie2Protocols.Framework.LoopsAndInstanceFamilies
 # The gather instance, composed
 
 `Gather.instanceOverBroadcasts`: one gather instance over an arbitrary payload type `X`, assembled
-from the gather tier of `ABA/Gather/Components.lean` -- the `n` gather programs beside the gather
-network -- and a broadcast tier of `2n` reliable-broadcast instances, one per process for the
-inputs and one per process for the `BIND` payloads (D32), each lifted along the pullback that names
-it. `instanceOverBroadcastsExtended` is the two tiers in parallel over the instance-internal
+from the `n` gather programs beside the gather network (`ABA/Gather/Components.lean`) and the `2n`
+reliable-broadcast instances, one per process for the inputs and one per process for the `BIND`
+payloads (D32), each lifted along the pullback that names it.
+`instanceOverBroadcastsExtended` puts the two in parallel over the instance-internal
 alphabet; `instanceOverBroadcasts` hides the instance's six events there and reads the result back
 over the interface alphabet `InstanceLabel n X`, the gather alphabet extended by the call loop.
 
-The composition is generic in the broadcast tier: `instanceOverBroadcasts` takes the `2n` instances
+The composition is generic in the broadcast instances: `instanceOverBroadcasts` takes the `2n`
+instances
 as arguments, `instanceOverBracha` supplies Bracha instances (`BRB.brachaInstance`) and
 `instanceOverBroadcastSpecification` supplies lifted broadcast specifications
 (`BRB.specificationOverInstanceAlphabet`). Both run on `StateOverBroadcasts n X B B'`, and the three
@@ -34,16 +35,16 @@ of that
 state, and `setGatherProgramsAndNetwork`, `setInputBroadcasts`, `setBindBroadcasts` and `setCore`
 are the four
 writes that reach one of them. `corruptAll` corrupts the gather network state and every broadcast
-coordinate at once, the programs untouched (D1). A transition of either tier is stated through
-these, so that a guard reads `gatherProgramsAndNetwork s` where the implementation reads the gather
-instance
-state. `approved` is the payload sets whose every pair is a committed entry of the input instance
-that carries it, read at the tier over the broadcast specification.
+coordinate at once, the programs untouched (D1). A transition of the gather or of a broadcast
+instance is stated through these, so that a guard reads `gatherProgramsAndNetwork s` where the
+implementation reads the gather instance state. `approved` is the payload sets whose every pair is a
+committed entry of the input instance that carries it, read at the composition over the broadcast
+specification.
 
 ## Determinacy
 
 The gather program's and the gather network's transitions are Dirac
-(`ABA/Gather/Components.lean`), so the composition is an LTS whenever the broadcast tier is:
+(`ABA/Gather/Components.lean`), so the composition is an LTS whenever the broadcast instances are:
 `instanceOverBracha_isLTS` and `instanceOverBroadcastSpecification_isLTS` are the two instances of
 that.
 -/
@@ -58,7 +59,7 @@ section Transitions
 
 variable [DecidableEq X]
 
-/-! ### The gather instance over a broadcast tier -/
+/-! ### The gather instance over the broadcast instances -/
 
 /-- The state of the composition whose broadcast instances have state `B` for
 the inputs and `B'` for the `BIND` payloads. -/
@@ -66,8 +67,8 @@ abbrev StateOverBroadcasts (n : ℕ) (X B B' : Type) : Type :=
   ((∀ _ : Fin n, LocalState n (ProcessVariables n X) (Message n X)) × NetworkState n X) ×
     ((∀ _ : Fin n, B) × (∀ _ : Fin n, B'))
 
-/-- The gather tier beside the broadcast tier, over the instance-internal
-alphabet. -/
+/-- The gather programs and network beside the broadcast instances, over the
+instance-internal alphabet. -/
 noncomputable def instanceOverBroadcastsExtended (P : Parameters) (X : Type) [DecidableEq X]
     {B B' : Type} (BIn : ∀ _ : Fin P.n, System B (BRB.InstanceLabel P.n X))
     (BBind : ∀ _ : Fin P.n, System B' (BRB.InstanceLabel P.n (AcceptedPairs P.n X))) :
@@ -77,8 +78,8 @@ noncomputable def instanceOverBroadcastsExtended (P : Parameters) (X : Type) [De
       k))).parallel
       (System.synchronisedProduct (fun q => (BBind q).mapIdle (bindBroadcastLabelMap P.n X q))))
 
-/-- **The gather instance** over the broadcast tier `BIn`, `BBind`: the two
-tiers in parallel, the instance's events hidden, the result read back over the
+/-- **The gather instance** over the broadcast instances `BIn`, `BBind`: the
+two in parallel, the instance's events hidden, the result read back over the
 interface alphabet. -/
 noncomputable def instanceOverBroadcasts (P : Parameters) (X : Type) [DecidableEq X] {B B' : Type}
     (BIn : ∀ _ : Fin P.n, System B (BRB.InstanceLabel P.n X))
@@ -133,14 +134,15 @@ end Transitions
 /-! ### Projections of the instance state
 
 The four components of the instance state, and the four writes that reach one
-of them. A transition of either tier is stated through these, so that a guard reads
-`gatherProgramsAndNetwork s` where the implementation reads the gather instance state. -/
+of them. A transition of the gather or of a broadcast instance is stated through these, so that a
+guard reads `gatherProgramsAndNetwork s` where the implementation reads the gather instance
+state. -/
 
 section Projections
 
 variable {n : ℕ} {B B' : Type}
 
-/-- The gather tier's instance state: the programs beside the gather network
+/-- The gather's instance state: the programs beside the gather network
 state. -/
 def gatherProgramsAndNetwork (s : StateOverBroadcasts n X B B') : InstanceState n (ProcessVariables
   n X) (Message
@@ -157,7 +159,7 @@ def bindBroadcasts (s : StateOverBroadcasts n X B B') : ∀ _ : Fin n, B' := s.2
 /-- The instance's core. -/
 def core (s : StateOverBroadcasts n X B B') : Option (AcceptedPairs n X) := s.1.2.core
 
-/-- Overwrite the gather tier's instance state. -/
+/-- Overwrite the gather's instance state. -/
 def setGatherProgramsAndNetwork (s : StateOverBroadcasts n X B B') (t : InstanceState n
   (ProcessVariables n X)
   (Message n X)) :
@@ -232,7 +234,7 @@ def setCore (s : StateOverBroadcasts n X B B') (c : Option (AcceptedPairs n X)) 
     core (setCore s c) = c := rfl
 
 /-- Corruption (deviation D1): the gather network state and every broadcast coordinate corrupted
-together, the programs untouched. The two transforms are the corruption of the tier's broadcast
+together, the programs untouched. The two transforms are the corruption of the broadcast
 instances. -/
 def corruptAll (P : Parameters) (id : Fin P.n) (cIn : B → B) (cBind : B' → B')
     (s : StateOverBroadcasts P.n X B B') : StateOverBroadcasts P.n X B B' :=
@@ -258,7 +260,8 @@ def corruptAll (P : Parameters) (id : Fin P.n) (cIn : B → B) (cBind : B' → B
 
 end Projections
 
-/-- A payload set is approved at the tier over the broadcast specification when every pair is a
+/-- A payload set is approved at the composition over the broadcast specification when every pair
+is a
 committed entry of the input instance that carries it. -/
 def approved {n : ℕ} (s : StateOverBroadcastSpecification n X) (A : AcceptedPairs n X) : Prop :=
   A.subMap (fun k => (inputBroadcasts s k).val)
@@ -270,7 +273,8 @@ variable [DecidableEq X]
 /-! ### Determinacy
 
 The gather program's and the gather network's transitions are Dirac
-(`ABA/Gather/Components.lean`), so the composition is an LTS whenever the broadcast tier is. -/
+(`ABA/Gather/Components.lean`), so the composition is an LTS whenever the broadcast instances
+are. -/
 
 /-- Every gather program transition is Dirac. -/
 theorem programStep_dirac {P : Parameters} {j : Fin P.n}
@@ -299,11 +303,11 @@ theorem gatherProgramProduct_isLTS (P : Parameters) :
     (System.synchronisedProduct (gatherProgram P (X := X))).IsLTS :=
   System.synchronisedProduct_isLTS (gatherProgram_isLTS P)
 
-/-- The gather tier is an LTS. -/
+/-- The gather programs beside the gather network form an LTS. -/
 theorem gatherPrograms_isLTS (P : Parameters) : (gatherPrograms P X).IsLTS :=
   System.parallel_isLTS (gatherProgramProduct_isLTS P) (gatherNetwork_isLTS P)
 
-/-- The two tiers in parallel form an LTS. -/
+/-- The gather programs and network beside the broadcast instances form an LTS. -/
 theorem instanceOverBroadcastsExtended_isLTS (P : Parameters) {B B' : Type}
     {BIn : ∀ _ : Fin P.n, System B (BRB.InstanceLabel P.n X)}
     {BBind : ∀ _ : Fin P.n, System B' (BRB.InstanceLabel P.n (AcceptedPairs P.n X))}
@@ -337,7 +341,7 @@ theorem instanceOverBroadcastSpecification_isLTS (P : Parameters) :
 /-- No gather program transition fires on `τ`: a program only ever moves in an event
 or on one of the interface labels. The composition's silent transitions are
 therefore the gather network's injections, the hidden events and the broadcast
-tier's own silent steps. -/
+instances' own silent steps. -/
 theorem programStep_no_tau {P : Parameters} {j : Fin P.n}
     {p : LocalState P.n (ProcessVariables P.n X) (Message P.n X)}
     {ν : PMF (LocalState P.n (ProcessVariables P.n X) (Message P.n X))}

@@ -8,7 +8,7 @@
       \mathrm{gbcaSpecificationFamily}(P) \parallel \bigl(\mathrm{synchronisedProduct}_{j}\ \mathrm{roundLoopProgram}(P,j)
         \parallel (\mathrm{ABANetwork}(P) \parallel \mathrm{coinOverRoundAlphabet}(P))\bigr),
   \]
-  and $\mathrm{hybrid}(P, M)$ is that read through the two frames of $\abdy{\mathrm{composed}}(P)$.
+  and $\mathrm{hybrid}(P, M)$ is that read through the two hidings of $\abdy{\mathrm{composed}}(P)$.
   Every component here is written over $\mathrm{ExtendedLabel}(n, M)$ and no step of the system reads a round message, so the hybrid is a system for every round message type $M$: the ABDY chain takes $\mathrm{GBCA.ByABDY.Message}$ for it, and the gather-based chain takes the empty type, so the round multicast and the round delivery name no label there. The system stays in the protocol's own coordinates: the round loops are $n$ programs, the DECIDED sets and the corrupted set are the ABA network's, and only the graded-agreement rounds are read at specification level.
   Full construction: \leandecl{PLTS.ABA.hybrid}.
 \end{definition}

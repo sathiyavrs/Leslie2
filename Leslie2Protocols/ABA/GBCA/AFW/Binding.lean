@@ -11,11 +11,11 @@ import Leslie2Protocols.ABA.GBCA.BindingOverRoundAlphabet
 import Leslie2.Results
 
 /-!
-# Binding of the three tiers of the two-gather round
+# Binding of the three compositions of the two-gather round
 
-The three tiers of the two-gather round reach `GBCA.specificationOverRoundAlphabet`, the graded
-agreement specification read over the family alphabet, through `GBCA.ByAFW.refinesSpecification`
-and the substitutions of
+The three compositions of the two-gather round reach `GBCA.specificationOverRoundAlphabet`, the
+graded agreement specification read over the family alphabet, through
+`GBCA.ByAFW.refinesSpecification` and the substitutions of
 `GBCA/AFW/BroadcastSubstitution.lean` and `GBCA/AFW/GatherSubstitution.lean`.
 `roundOverGatherSpecifications_refines`, `roundOverBroadcastSpecification_specificationTraces` and
 `roundOverBracha_specificationTraces` are the trace-distribution inclusions of the three, and
@@ -24,7 +24,7 @@ and the substitutions of
 Binding is a property of the labels (`GBCA.BindingTraceExtended`), so each inclusion carries it
 from `GBCA.specificationOverRoundAlphabet_binding`: `roundOverGatherSpecifications_binding`,
 `roundOverBroadcastSpecification_binding` and `roundOverBracha_binding` are binding at the three
-tiers.
+compositions.
 -/
 
 open Stream'
@@ -93,7 +93,7 @@ theorem roundOverBroadcastSpecification_specificationTraces (P : Parameters) (r 
   Set.Subset.trans (roundOverBroadcastSpecification_refines P r)
     (roundOverGatherSpecifications_refines P r)
 
-/-! ### Binding of the three tiers -/
+/-! ### Binding of the three compositions -/
 
 /-- **Binding of the round over the gather specifications, on a trace.** Every
 positive-probability trace of the round is bound to one bit: all its round-`r`
@@ -117,7 +117,8 @@ theorem roundOverBroadcastSpecification_binding (P : Parameters) (r : ℕ) :
     (specificationOverRoundAlphabet_binding P Empty r)
 
 /-- **Binding of the round over the gather instances over Bracha's broadcast,
-on a trace**, along the three-tier inclusion `roundOverBracha_specificationTraces`. -/
+on a trace**, along the inclusion through the three compositions,
+`roundOverBracha_specificationTraces`. -/
 theorem roundOverBracha_binding (P : Parameters) (r : ℕ) :
     ∀ D ∈ achievableTraceDists (roundOverBracha P r), ∀ t, D t ≠ 0 →
       BindingTraceExtended P r t :=

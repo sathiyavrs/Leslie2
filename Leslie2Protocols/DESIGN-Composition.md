@@ -7,7 +7,7 @@ ABDY.protocol  ⊑  ABDY.composed                                  ⊑  hybrid  
  AFW.protocol  ⊑   AFW.composed  ⊑  AFW.composedOverBroadcastSpecification  ⊑  AFW.composedOverGatherSpecifications  ⊑  hybrid  ⊑  ABA.spec
 ```
 
-A protocol is what runs: `n` programs beside a network and a coin oracle. A program reads
+A protocol is what runs: `n` programs beside a network and the common coin. A program reads
 its own replacement flag and nothing else about corruption: not the corrupted set, not the budget,
 not another process's status (D23). A composed system is the same protocol read as a composition of
 components. `hybrid` replaces each round's graded-agreement instance by the graded agreement
@@ -39,17 +39,17 @@ system that runs, and everything above it is specification. Both first inclusion
 inclusions, `ABDY.protocol_composed` and `AFW.protocol_composed`, and not equalities.
 
 The two protocols are one construction. What the protocol fixes — the round loop, the DECIDED
-sets, the coin handshake, corruption, the network and the composition pipeline — is
+sets, the coin's call and return, corruption, the network and the composition pipeline — is
 settled by the round interface and the specification, so `ABA/Implementation/System.lean` writes it
-once, parametric in the round message type, the per-process per-round record, the round's
-transitions and the adversary's per-round ghost record (D30). `ABA/ABDY/System.lean` and
+once, parametric in the round message type, the per-process per-round variables, the round's
+transitions and the adversary's per-round ghost (D30). `ABA/ABDY/System.lean` and
 `ABA/AFW/System.lean` supply the two instances.
 
-A process record of a protocol carries the round-loop record beside the round record of every round
-the process has touched, and a flag saying whether the process has terminated (D22). A composed
+The variables of a process in a protocol are the round-loop variables, its variables in every
+round it has touched, and a flag saying whether it has terminated (D22). A composed
 state carries one graded-agreement instance per round at every moment, and no termination flag.
 `ABDY.ProtocolRelation` and `AFW.ProtocolRelation` determine every composed coordinate from the
-protocol state: a round instance's local states are the round records the processes hold for that
+protocol state: a round instance's local states are the round variables the processes hold for that
 round, and its network states are the adversary's sent sets for it. Those conjuncts are unguarded,
 so a composed state is determined by any protocol state related to it. `AFW.ProtocolRelation`
 carries one further conjunct, `AFW.BoundInvariant`, which is not a projection of the protocol state:
@@ -57,8 +57,8 @@ a round whose second gather has been called has its bound bit on record, which i
 return's announced bit rests on.
 
 What makes each inclusion one-directional is on the composed system, and it is the same on both. A
-round instance has transitions for the Byzantine graded-agreement handshake and no program of a
-protocol has one (D11), and the instance's round transitions carry no termination guard, so the
+round instance has transitions for the Byzantine graded-agreement call and return, and no program
+of a protocol has one (D11), and the instance's round transitions carry no termination guard, so the
 instance answers a send or a delivery at a process the protocol has terminated.
 
 ## What the composition buys
@@ -77,8 +77,8 @@ is that same move at that same place, which is what the second chain is.
 
 Idealizing the round also exposes an asymmetry worth naming. The round's sent sets, its delivery
 guards and its injections die with the graded-agreement idealization. The DECIDED sets, the
-corruption budget and the authorisation `k ∈ F` of every Byzantine handshake transition survive it,
-at the ABA network. What a component owns is what disappears with it.
+corruption budget and the authorisation `k ∈ F` of every Byzantine call and return transition
+survive it, at the ABA network. What a component owns is what disappears with it.
 
 ## The gather-based chain
 
@@ -86,15 +86,15 @@ The gather-based implementation applies that device three more times, inside the
 before the round itself is exchanged at `hybrid`.
 
 One shape carries every message-passing level: `n` programs beside the one network that
-carries their messages. A program holds one process's local record and the messages
+carries their messages. A program holds one process's variables and the messages
 delivered to it, indexed by sender, and its guards read that and nothing else. The
 network holds the per-sender sent sets and the corrupted set (`ABA.NetworkState`, D5)
-and reads no program's record. A multicast is a joint step of the sender and the
-network, a delivery a joint step of the network and the receiver, and both labels are
+and reads no program's variables. A multicast is a synchronised step of the sender and the
+network, a delivery a synchronised step of the network and the receiver, and both labels are
 hidden inside the instance. `ABA.InstanceState n Pr M` is the state of such a pair.
 
-Three levels are built that way, each the level below it in parallel with a tier of its
-own:
+Three levels are built that way, each the level below it in parallel with programs and a
+network of its own:
 
 - a reliable-broadcast instance is `n` programs beside the instance's network at the
   broadcast message type (`BRB.brachaInstance`, `ABA/ReliableBroadcast/Bracha/Composition.lean`);
@@ -107,9 +107,9 @@ own:
   instances read along `firstGatherLabelMap` and `secondGatherLabelMap`
   (`GBCA.ByAFW.roundOverGathers`, `ABA/GBCA/AFW/Composition.lean`). `GBCA.ByAFW.roundOverBracha`,
   `GBCA.ByAFW.roundOverBroadcastSpecification` and `GBCA.ByAFW.roundOverGatherSpecifications` are
-  the three tiers, by which gather system fills the two slots.
+  the three compositions, by which gather system fills the two slots.
 
-The state of each is the product of its components, and every tier of a level is the
+The state of each is the product of its components, and the three compositions of a level are the
 same expression at a different component:
 
 ```
@@ -120,15 +120,15 @@ GBCA.ByAFW.RoundStateOverGathers n G₁ G₂  = ((Fin n → GBCA.ByAFW.ProcessVa
 ```
 
 A program reads no neighbouring coordinate, so what a sub-protocol has returned to a process is
-written into that process's own record. A gather program's record of what the broadcast instances
-returned (`Gather.ProcessVariables.inputBroadcastReturned`, `bindBroadcastReturned`) are written on the
-return event of a broadcast instance and read by the four transitions that read what has been
-returned. A round program's record (`GBCA.ByAFW.ProcessVariables`) holds the candidate between the
-first gather's return and the second gather's call, and the graded outcome between the second gather's return and
-the round's own return: each of those two is a pair of events, and the record is what carries the
-round across them.
+written into that process's own variables. A gather program's variables for what the broadcast
+instances returned (`Gather.ProcessVariables.inputBroadcastReturned`, `bindBroadcastReturned`) are
+written on the return event of a broadcast instance and read by the four transitions that read what
+has been returned. A round program's variables (`GBCA.ByAFW.ProcessVariables`) hold the candidate
+between the first gather's return and the second gather's call, and the graded outcome between the
+second gather's return and the round's own return: each of those two is a pair of events, and the
+variables are what carry the round across them.
 
-Three substitutions take one tier to the next, and each removes exactly what the
+Three substitutions take one composition to the next, and each removes exactly what the
 component it replaces owned.
 
 - `Gather.broadcastSubstitution` replaces each of a gather's `2n` Bracha instances by a broadcast
@@ -136,7 +136,7 @@ component it replaces owned.
   each is the committed value, written once.
 - `Gather.refinesSpecification` replaces a gather instance by the gather specification. The `n`
   gather programs, the gather network and the `2n` broadcast specifications beneath them
-  die together; what survives is the per-entry committed record and the recorded core.
+  die together; what survives is the per-entry committed value and the recorded core.
 - `GBCA.ByAFW.refinesSpecification` replaces the round over the two gather specifications by
   `GBCA.specInst`. The graded-agreement programs, the round's network and the two gather
   specifications die; what survives is `excluded` and `grade`.
@@ -184,7 +184,7 @@ each the four congruences applied to one family substitution under a single cont
     (networkEventLabels P.n)).relabel).abstract (Label.hiddenAPI P.n)
 ```
 
-`FAMILY` is the family of round tiers — `AFW.roundFamilyOverBracha`,
+`FAMILY` is the family of round compositions — `AFW.roundFamilyOverBracha`,
 `AFW.roundFamilyOverBroadcastSpecification`, `AFW.roundFamilyOverGatherSpecifications` — and
 `GBCA.ByABDY.gbcaInstanceFamily` and `gbcaSpecificationFamily` stand in the same position in the
 other chain. The context term is the same expression in all five, which is why the third stage's
@@ -196,11 +196,11 @@ sent-set family the adversary holds, tagging each message with the instance it b
 `firstGatherInputBroadcasts`, `firstGatherBindBroadcasts`, `secondGatherInputBroadcasts` and
 `secondGatherBindBroadcasts`. `AFW.RoundVariables` is the composed system's instance-major indexing
 transposed, one process's local state in each of those instances, and `AFW.Ghost` is the adversary's
-record for one round, the two recorded cores beside the bound bit.
+ghost for one round, the two recorded cores beside the bound bit.
 
 ## Where each network is external
 
-No network is internal to a process, and none is a field of a process record.
+No network is internal to a process, and none is a field of a process's variables.
 
 Both chains carry the ABA DECIDED network `Composition.ABANetwork`. It is a component of every
 system of both chains and the second component of `ABAState`, the state
@@ -227,29 +227,29 @@ Every invariant therefore reads its network through accessors on a pair — the
 `GBCA.ByABDY.RoundState` accessors in `ABA/GBCA/ABDY/MessagesAndVariables.lean`, the `ABAState`
 accessors in `ABA/Composition/ABAState.lean`, the `ABA.InstanceState` accessors in
 `ABA/Vocabulary/ProcessAndNetworkState.lean` — and names the network's own sent sets
-rather than a copy of them held inside a record. Weakening any one of them is a change to
-that one component.
+rather than a copy of them held inside a program's variables. Weakening any one of them is a change
+to that one component.
 
 The ghost field of the network is removable, and `ABA/GhostRemoval/GhostFreeSystem.lean`
 removes it. The ghost-free system `Implementation.systemGhostFree` is the implementation over a
-one-element ghost record, its two graded-agreement return transitions free to announce either
-bit; the map that drops the record is a state erasure of the adversary onto it
-(`Framework/AuxiliaryVariableRemoval.lean`), and the congruences of that file carry the erasure through the
-same pipeline the composition is built by — the coin oracle, the process group, the
-rendezvous hiding and the restriction. Hiding `Label.hiddenAPI` collapses the label
-identification the erasure runs on, since every label it moves is a `retG`, so
+one-element ghost, its two graded-agreement return transitions free to announce either
+bit; the map that drops the ghost is an auxiliary-variable removal of the adversary onto it
+(`Framework/AuxiliaryVariableRemoval.lean`), and the congruences of that file carry the removal
+through the same pipeline the composition is built by — the common coin, the process group, the
+hiding of the labels the components synchronise on, and the restriction. Hiding `Label.hiddenAPI`
+collapses the label identification the removal runs on, since every label it moves is a `retG`, so
 `ABDY.protocol_ghostRemoval` and `AFW.protocol_ghostRemoval` are equalities of achievable trace
 distributions with no map on labels in them. The bound bit is therefore a field the chain
 may keep or drop, and the choice to keep it is a choice about what the invariants read,
 not about what the protocol does.
 
-## Every state is a component's own record or a product of them
+## Every state is one component's own or a product of them
 
 The property holds across the development, and a reader should not have to re-derive it.
 
-Each leaf record holds exactly one local state's data: `RoundLoopState` and `RoundLoopVariables` for a
+Each leaf structure holds exactly one local state's data: `RoundLoopState` and `RoundLoopVariables` for a
 round loop, `GBCA.ByABDY.ProcessVariables` and `GBCA.ByABDY.RoundVariables` for a graded-agreement round,
-`ABDY.RoundVariablesMap` and `AFW.RoundVariablesMap` for the round records of one process,
+`ABDY.RoundVariablesMap` and `AFW.RoundVariablesMap` for the round variables of one process,
 `GBCA.ByABDY.NetworkState` for a round's network state beside its bound bit, `ABA.NetworkState` for
 the network state of any other sub-protocol instance, `Composition.ABANetworkState` for the DECIDED
 network, and one `SpecState` for each of the five specifications. Each composite state is an
@@ -259,29 +259,30 @@ the ABDY22 chain, and `Gather.StateOverBracha`, `Gather.StateOverBroadcastSpecif
 `GBCA.ByAFW.RoundStateOverBracha`, `GBCA.ByAFW.RoundStateOverBroadcastSpecification`,
 `GBCA.ByAFW.RoundStateOverGatherSpecifications` and `AFW.RoundVariables` for the gather-based one.
 
-One record holds two kinds of message set at once, and it is the right one to. `ABDY.NetworkState`
+One structure holds two kinds of message set at once, and it is the right one to.
+`ABDY.NetworkState`
 (`ABA/ABDY/System.lean`) and `AFW.NetworkState`
 (`ABA/AFW/System.lean`) carry the round sent sets, the DECIDED sets and the
 corrupted set together, because each is the network of a protocol — the subject of a
-chain, not a vehicle for proving anything about it. Each carries one ghost record per round beside
+chain, not a vehicle for proving anything about it. Each carries one ghost per round beside
 them (D30), for the same reason: the value a graded return announces is determined by the round's
-messages and the corrupted set, which this record holds. The implementation of
-`ABA/Implementation/System.lean` is parametric in that record's type, its update `ghostStep`,
+messages and the corrupted set, which this network state holds. The implementation of
+`ABA/Implementation/System.lean` is parametric in that ghost's type, its update `ghostStep`,
 applied on every transition to the round the label names, and its output `ghostOutput`, which the
 two graded-agreement return transitions read. What a transition reads there is the value its label
 announces, not whether it fires: the read admits a bit at every state (`ghostOutput_total`), which
-is what makes the record erasable. `ABDY.protocol_composed` and `AFW.protocol_composed` carry those systems into ones
-where each round owns its network states beside `Composition.ABANetworkState`, and every step above
-the first inclusion runs there. A round's ghost record is the composed system of the values the
-round's own state holds, which is one conjunct of each protocol relation.
+is what makes the ghost removable. `ABDY.protocol_composed` and `AFW.protocol_composed` carry those
+systems into ones where each round owns its network states beside `Composition.ABANetworkState`, and
+every step above the first inclusion runs there. A round's ghost is, in the composed system, the
+values the round's own state holds, which is one conjunct of each protocol relation.
 
 ## What the DECIDED model already weakens
 
 The ABA network is the one neither chain idealizes, so what it assumes is what the development
 assumes. Much of the weakening one might ask for is already in it.
 
-`decidedSent` is a `Finset`, so there is no delivery order to disturb. Receipts are sets too and
-`RoundLoopVariables.receiveDecided` files by insertion, so a repeated delivery of one (receiver,
+`decidedSent` is a `Finset`, so there is no delivery order to disturb. Received sets are sets too
+and `RoundLoopVariables.receiveDecided` files by insertion, so a repeated delivery of one (receiver,
 sender,
 bit) triple carries no information: `Composition.ABANetworkStep.decidedDeliver` consumes
 nothing, and the receiver's `Composition.RoundLoopStep.decidedDeliverReceive` declines the repeat
@@ -293,9 +294,9 @@ No transition forces a delivery, so any subset of the multicasts may be lost. `b
 injects either bit for any `k ∈ F`, so a corrupted process may equivocate in the DECIDED sets.
 `Composition.ABANetworkStep.retByzantine` lets a corrupted process return either bit at any time
 with
-no DECIDED evidence at all, its round-loop half being the self-loop of the replaced
+no DECIDED quorum at all, its round-loop half being the self-loop of the replaced
 program (D23), so the DECIDED quorum is a condition on correct returns alone.
 
 What remains assumed is unforgeability of a correct process's DECIDED multicast. The
-delivery guard `b ∈ decidedSent j` attributes every receipt to a genuine send by the named
-sender, and no transition lets one process record a send under another's name.
+delivery guard `b ∈ decidedSent j` attributes every received message to a genuine send by the
+named sender, and no transition lets one process record a send under another's name.

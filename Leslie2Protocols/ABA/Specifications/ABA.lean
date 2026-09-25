@@ -11,7 +11,7 @@ import Leslie2Protocols.ABA.Vocabulary.Labels
 
 This module is the account of record for what the ABA development specifies.
 
-The state is the record `SpecState`: a ghost record `input` of genuine `callABA` events (D13), the
+The state is `SpecState`: a ghost `input` of genuine `callABA` events (D13), the
 flags `ret` of the processes that have returned, the corrupted set `F`, the decision value `val`,
 and a control mode `mode ∈ {flipEnabled, decisionEnabled, noTransitionEnabled}` (D21). Eight
 transitions act on it. `SpecStep.callSet` and `SpecStep.callLoop` carry the interface call of a
@@ -47,13 +47,13 @@ possibly at one of them already.
 So a state passing that guard leaves both bits supported ever after and the
 decision stays enabled at `ControlMode.decisionEnabled`; the Lean lemma is deferred.
 
-Provenance rests on the ghost record and the support guard `InputSupport` (D13).
+What the decided value can be rests on the ghost and the support guard `InputSupport` (D13).
 `SpecStep.decide` is the sole writer of `val`. Its guards are `val = ⊥`,
 `InputSupport b` and `mode ≠ noTransitionEnabled`, and the support guard is the entire constraint
 on the value decided. The transition is therefore enabled whenever some bit carries
 `f + 1` recorded-or-corrupt supporters and the mode is not `ControlMode.noTransitionEnabled`; no
 count of participating processes is read anywhere in the system.
-The record holds each process's first genuine call (D16). `SpecStep.callSet`
+The ghost holds each process's first genuine call (D16). `SpecStep.callSet`
 writes at an empty entry and `SpecStep.callLoop`, the input-enabledness loop,
 loops at a filled one, so the label is enabled at every state and every ghost
 write is a first write.
@@ -75,7 +75,7 @@ inductive ControlMode : Type
 
 /-- The state of the ABA specification (Transition System 1). -/
 structure SpecState (n : ℕ) where
-  /-- Ghost input record (D13): `input id = some b` when a genuine
+  /-- The ghost input (D13): `input id = some b` when a genuine
   `callABA id b` event was recorded for `id`. -/
   input : Fin n → Option Bool
   /-- Which processes have returned. -/
@@ -147,8 +147,8 @@ noncomputable def flipPMF (P : Parameters) : PMF FlipOutcome :=
 /-- The step relation of the ABA specification. -/
 inductive SpecStep (P : Parameters) :
     SpecState P.n → Label P.n → PMF (SpecState P.n) → Prop
-  /-- `SpecStep.callSet`: an environment call records its bit in the ghost record. The
-  guard `h` is the empty entry, so the write is a first write and the record
+  /-- `SpecStep.callSet`: an environment call records its bit in the ghost. The
+  guard `h` is the empty entry, so the write is a first write and the ghost
   holds the bit of the process's first genuine call (D13, D16). -/
   | callSet (s : SpecState P.n) (id : Fin P.n) (b : Bool) (h : s.input id = none) :
       SpecStep P s (.callABA id b)
@@ -226,8 +226,8 @@ example :
 
 /-- **First-write check (D16).** A call at an uncorrupted process holding no
 input is answered by `SpecStep.callSet` alone: `SpecStep.callLoop` asks for a filled entry and
-`SpecStep.callByzantine` for a corrupted caller, so the bit reaches the ghost
-record. -/
+`SpecStep.callByzantine` for a corrupted caller, so the bit reaches the
+ghost. -/
 example (P : Parameters) (s : SpecState P.n) (id : Fin P.n) (b : Bool)
     (h : s.input id = none) (hF : id ∉ s.F) (μ : PMF (SpecState P.n))
     (hstep : SpecStep P s (.callABA id b) μ) :

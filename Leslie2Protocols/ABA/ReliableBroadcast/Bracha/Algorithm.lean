@@ -17,11 +17,11 @@ relation on that state; the system is the composition.
 The message pattern, per process:
 
 * the leader, on being called with `m`, multicasts `⟨INIT, m⟩`;
-* `⟨ECHO, m⟩` is multicast on receipt of `⟨INIT, m⟩` from the leader, on an `ECHO m` receipt
-  quorum, or on `f + 1` `VOTE m` receipts, once;
-* `⟨VOTE, m⟩` is multicast on an `ECHO m` receipt quorum, or amplified from `f + 1` `VOTE m`
-  receipts, once;
-* `m` is returned on `2f + 1` `VOTE m` receipts.
+* `⟨ECHO, m⟩` is multicast on receiving `⟨INIT, m⟩` from the leader, on a quorum of received
+  `ECHO m` messages, or on `f + 1` received `VOTE m` messages, once;
+* `⟨VOTE, m⟩` is multicast on a quorum of received `ECHO m` messages, or amplified from `f + 1`
+  received `VOTE m` messages, once;
+* `m` is returned on `2f + 1` received `VOTE m` messages.
 
 The `ECHO` quorum is `ABA.Parameters.receivedEchoQuorum`, more than `(n + f) / 2` senders. There is
 no participation guard: only the leader is called, and every other process runs its handlers
@@ -39,8 +39,9 @@ distribution.
 ## Model and deviations
 
 * **D34 (Bracha after AFW25).** Bracha's protocol (Bracha 1987) is transcribed in the form of
-  Algorithm 1 of AFW25: the echo step fires on an `INIT` receipt, on an `ECHO m` receipt quorum or
-  on `f + 1` `VOTE m` receipts, and the echo quorum is more than `(n + f) / 2` senders.
+  Algorithm 1 of AFW25: the echo step fires on a received `INIT`, on a quorum of received `ECHO m`
+  messages or on `f + 1` received `VOTE m` messages, and the echo quorum is more than `(n + f) / 2`
+  senders.
 * **D1 (determinised corruption)** and **D5 (set-based network)** are the conventions of the
   composed state the algorithm runs on.
 -/
@@ -74,8 +75,8 @@ inductive BrachaAlgorithm (P : Parameters) (ldr : Fin P.n) :
   | deliver (s : BrachaState P.n M) (i j : Fin P.n) (m : Message M)
       (h : m ∈ s.sent j) :
       BrachaAlgorithm P ldr s .tau (PMF.pure (s.receiveMessage i j m))
-  /-- `ECHO`: `⟨INIT, m⟩` received from the leader, an `ECHO m` receipt quorum,
-  or `f + 1` `VOTE m` receipts; no `ECHO` sent yet. -/
+  /-- `ECHO`: `⟨INIT, m⟩` received from the leader, a quorum of received `ECHO m`
+  messages, or `f + 1` received `VOTE m` messages; no `ECHO` sent yet. -/
   | echo (s : BrachaState P.n M) (j : Fin P.n) (m : M)
       (hrecv : Message.init m ∈ s.received j ldr ∨ P.receivedEchoQuorum ≤ s.receivedCount j (.echo
         m)
@@ -86,7 +87,7 @@ inductive BrachaAlgorithm (P : Parameters) (ldr : Fin P.n) :
         (PMF.pure ((s.setProcessVariables j
           { s.processVariables j with sentEcho := some m }).multicast
           j (.echo m)))
-  /-- `VOTE` (quorum case): an `ECHO m` receipt quorum, no `VOTE` sent yet. -/
+  /-- `VOTE` (quorum case): a quorum of received `ECHO m` messages, no `VOTE` sent yet. -/
   | voteQuorum (s : BrachaState P.n M) (j : Fin P.n) (m : M)
       (hcnt : P.receivedEchoQuorum ≤ s.receivedCount j (.echo m))
       (hsend : (s.processVariables j).sentVote = none) :
@@ -94,7 +95,7 @@ inductive BrachaAlgorithm (P : Parameters) (ldr : Fin P.n) :
         (PMF.pure ((s.setProcessVariables j
           { s.processVariables j with sentVote := some m }).multicast
           j (.vote m)))
-  /-- `VOTE` (amplification case): `f + 1` `VOTE m` receipts, no `VOTE` sent
+  /-- `VOTE` (amplification case): `f + 1` received `VOTE m` messages, no `VOTE` sent
   yet. -/
   | voteAmplification (s : BrachaState P.n M) (j : Fin P.n) (m : M)
       (hcnt : P.f + 1 ≤ s.receivedCount j (.vote m))
@@ -106,7 +107,7 @@ inductive BrachaAlgorithm (P : Parameters) (ldr : Fin P.n) :
   /-- Byzantine injection: a corrupted sender multicasts anything. -/
   | byzantine (s : BrachaState P.n M) (j : Fin P.n) (m : Message M) (h : j ∈ s.F) :
       BrachaAlgorithm P ldr s .tau (PMF.pure (s.multicast j m))
-  /-- Return: `2f + 1` `VOTE m` receipts. -/
+  /-- Return: `2f + 1` received `VOTE m` messages. -/
   | ret (s : BrachaState P.n M) (id : Fin P.n) (m : M)
       (hcnt : 2 * P.f + 1 ≤ s.receivedCount id (.vote m))
       (hr : (s.processVariables id).returned = false) :
@@ -126,13 +127,14 @@ label projects to, with no stuttering anywhere.
 | --- | --- |
 | `call` (leader writes, network records) | `BrachaAlgorithm.call` |
 | `callLoop` | `BrachaAlgorithm.callLoop` |
-| hidden `send` rendezvous, by level | `BrachaAlgorithm.echo` / `voteQuorum` / `voteAmplification` |
-| hidden `deliver` rendezvous | `BrachaAlgorithm.deliver` |
+| hidden `send` synchronisation, by level | `BrachaAlgorithm.echo` / `voteQuorum` /
+`voteAmplification` |
+| hidden `deliver` synchronisation | `BrachaAlgorithm.deliver` |
 | network-local injection | `BrachaAlgorithm.byzantine` |
 | `ret` | `BrachaAlgorithm.ret` |
 | `fail` | `BrachaAlgorithm.fail` |
 
-The two hidden rendezvous and the network's injection are silent in both systems, and
+The two hidden synchronisations and the network's injection are silent in both systems, and
 `specificationLabelMap` takes `τ` to `τ`. -/
 
 /-- **The projection.** -/
@@ -142,7 +144,7 @@ theorem brachaInstance_step_algorithm (P : Parameters) (ldr : Fin P.n) :
       ∃ l₀, specificationLabelMap P.n M l = some l₀ ∧ BrachaAlgorithm P ldr s l₀ μ := by
   rintro ⟨u, w⟩ l μ hstep
   rcases (brachaInstance_step_iff P ldr (u, w) l μ).mp hstep with ⟨rfl, e, hev⟩ | hlab
-  · -- a hidden rendezvous: an internal transition
+  · -- a hidden synchronisation: an internal transition
     obtain ⟨x, w', rfl, hall, hn⟩ := brachaInstanceExtended_synchronised_cases (by simp) hev
     refine ⟨Label.tau, rfl, ?_⟩
     cases e with

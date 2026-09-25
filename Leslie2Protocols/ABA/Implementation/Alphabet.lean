@@ -14,7 +14,8 @@ import Leslie2Protocols.Framework.Relabel
 
 The shared alphabet `Label n` names what an observer of the protocol sees: the
 ABA interface, the two sub-protocol interfaces, and corruption. It cannot name
-a multicast, a delivery, or a Byzantine handshake transition, because those are joint steps of
+a multicast, a delivery, or a Byzantine call or return transition, because those are synchronised
+steps of
 components whose boundary the observer does not see. The extended alphabet
 `ExtendedLabel n M E` adds them, and the composition hides them again.
 
@@ -22,7 +23,7 @@ The alphabet is parametric in two types an implementation supplies: the graded-a
 type `M`, and the type `E` of the round's own calls and returns. Every constructor but the three
 that carry one of them is independent of which graded-agreement implementation is being read, and so
 is everything defined over the alphabet here: the hidden-label set, the labels a process acts on
-(D23), the coin oracle's label pullback, and the lifted oracle itself. An implementation fixes `M`
+(D23), the common coin's label pullback, and the lifted coin itself. An implementation fixes `M`
 and `E` and inherits all of it.
 
 The graded-agreement return `retG` carries `GBCAOutput`, the interface's grade,
@@ -36,13 +37,14 @@ namespace PLTS
 namespace ABA
 namespace Implementation
 
-/-! ### The rendezvous alphabet -/
+/-! ### The synchronisation labels -/
 
-/-- The rendezvous alphabet: the two networks, the Byzantine handshake transitions, and the
-handshake branches the shared alphabet does not distinguish. The round multicast and the round
-delivery carry a message of the graded-agreement implementation being read. -/
+/-- The labels the programs and the network synchronise on: the two networks, the Byzantine call and
+return transitions, and the call and return branches the shared alphabet does not distinguish. The
+round multicast and the round delivery carry a message of the graded-agreement implementation being
+read. -/
 inductive NetworkEvent (n : ℕ) (M E : Type) : Type
-  /-- Round-`r` multicast: sender `j` writes its record and the network sent sets
+  /-- Round-`r` multicast: sender `j` writes its variables and the network sent sets
   `m` under `j`. -/
   | gbcaSend (r : ℕ) (j : Fin n) (m : M)
   /-- Round-`r` delivery: `m`, sent under sender `j`, reaches receiver `i`. -/
@@ -54,15 +56,15 @@ inductive NetworkEvent (n : ℕ) (M E : Type) : Type
   /-- The coin return fused with a `⟨DECIDED, b⟩` publication (D10): the
   round-`r` coin `c` returns to `id`, whose outcome was `grade2 b`. -/
   | retWPublish (r : ℕ) (id : Fin n) (c : Bool) (b : Bool)
-  /-- The graded-agreement call against an already-called round record. -/
+  /-- The graded-agreement call against a round already called. -/
   | gbcaCallLoop (r : ℕ) (id : Fin n) (b : Bool)
   /-- A round-internal call or return at process `j`: a step at the boundary between the round's
   program and one of its sub-protocol instances, which the shared alphabet does not name. The
-  network takes part in it, writing the round's ghost record, and it sends no message. -/
+  network takes part in it, writing the round's ghost, and it sends no message. -/
   | gbcaRoundEvent (r : ℕ) (j : Fin n) (e : E)
-  /-- A corrupted process takes the graded-agreement call, opening the round record (D11). -/
+  /-- A corrupted process takes the graded-agreement call, opening the round's variables (D11). -/
   | byzantineCallG (r : ℕ) (k : Fin n) (b : Bool)
-  /-- A corrupted process takes the graded-agreement call against an already-called round record
+  /-- A corrupted process takes the graded-agreement call against a round already called
   (D11). -/
   | byzantineCallGLoop (r : ℕ) (k : Fin n) (b : Bool)
   /-- A corrupted process takes a graded-agreement return (D11), the round's
@@ -78,7 +80,7 @@ inductive NetworkEvent (n : ℕ) (M E : Type) : Type
 `Sum.inr` label is observable and hence hideable. -/
 abbrev ExtendedLabel (n : ℕ) (M E : Type) : Type := Label n ⊕ NetworkEvent n M E
 
-/-- The rendezvous labels, hidden by the composition. -/
+/-- The synchronisation labels, hidden by the composition. -/
 def networkEventLabels (n : ℕ) {M E : Type} : Set (ExtendedLabel n M E) :=
   {l | ∃ e : NetworkEvent n M E, l = Sum.inr e}
 
@@ -97,12 +99,12 @@ def networkEventLabels (n : ℕ) {M E : Type} : Set (ExtendedLabel n M E) :=
 A corruption replaces the program of the process it names (D23). The replaced
 program is unchanged on every label it can take at all, and it can take every
 label except the ones below: those on which the process would act on its own
-sub-protocol messages. Those messages are the business of the Byzantine handshake
+sub-protocol messages. Those messages are the business of the Byzantine call and return
 transitions (D11), which carry it with no transition at the process they name. -/
 
 /-- The labels on which process `j` acts on its own sub-protocol messages: its own graded-agreement
 call and return, its own round multicast, the round and DECIDED deliveries addressed to it, its own
-call against an already-called round record, its own round-internal call or return, its own fused
+call against a round already called, its own round-internal call or return, its own fused
 coin return, and the graded-agreement transitions that name it. -/
 def actsAt {n : ℕ} {M E : Type} (j : Fin n) : ExtendedLabel n M E → Prop
   | Sum.inl (.callG _ id _) => id = j
@@ -124,12 +126,12 @@ instance {n : ℕ} {M E : Type} (j : Fin n) :
   | Sum.inl l => cases l <;> unfold actsAt <;> infer_instance
   | Sum.inr e => cases e <;> unfold actsAt <;> infer_instance
 
-/-! ### The label pullback of the coin oracle -/
+/-! ### The label pullback of the common coin -/
 
-/-- The pullback along which the coin oracle is read over the extended
-alphabet: a shared label is its own, the Byzantine handshake transitions and the
-fused coin return are the oracle's own handshakes, and every other rendezvous
-label leaves the oracle idle. -/
+/-- The pullback along which the common coin is read over the extended
+alphabet: a shared label is its own, the Byzantine call and return transitions and the
+fused coin return are the coin's own calls and returns, and every other network
+event leaves the coin idle. -/
 def coinLabelMap (n : ℕ) {M E : Type} : ExtendedLabel n M E → Option (Label n)
   | Sum.inl l => some l
   | Sum.inr (.byzantineCallW r k) => some (.callW r k)
@@ -178,9 +180,9 @@ def coinLabelMap (n : ℕ) {M E : Type} : ExtendedLabel n M E → Option (Label 
     (out : GBCAOutput) (bnd : Bool) :
     coinLabelMap (M := M) (E := E) n (Sum.inr (.byzantineRetG r k out bnd)) = none := rfl
 
-/-! ### The lifted coin oracle -/
+/-! ### The lifted common coin -/
 
-/-- The coin oracle, read over the extended alphabet through the pullback. A
+/-- The common coin, read over the extended alphabet through the pullback. A
 implementation fixes `M` and `E` and names the result `coinOverRoundAlphabet`. -/
 noncomputable def coinOverExtendedAlphabet (P : Parameters) (M E : Type) :
     System (ℕ → WCC.SpecState P.n) (ExtendedLabel P.n M E) :=
@@ -189,11 +191,11 @@ noncomputable def coinOverExtendedAlphabet (P : Parameters) (M E : Type) :
 @[simp] theorem coinOverExtendedAlphabet_init (P : Parameters) (M E : Type) :
     (coinOverExtendedAlphabet P M E).init = (WCC.specFamily P).init := rfl
 
-/-! ### The coin oracle's idle transition over the shared alphabet -/
+/-! ### The common coin's idle transition over the shared alphabet -/
 
-/-- The coin oracle idles on a shared label that is neither `τ`, nor a
-handshake of one of its own rounds, nor `fail`. Read through the pullback
-`coinLabelMap`, this is the oracle's transition in every joint step — of a protocol
+/-- The common coin idles on a shared label that is neither `τ`, nor a
+call or return of one of its own rounds, nor `fail`. Read through the pullback
+`coinLabelMap`, this is the coin's transition in every synchronised step — of a protocol
 system, of its composed system, and of the protocol-shaped specification
 (`ABA/Composition/Hybrid.lean`) — that leaves the coin unchanged. -/
 theorem wccFamily_idle (P : Parameters) (o : ℕ → WCC.SpecState P.n) {l : Label P.n}

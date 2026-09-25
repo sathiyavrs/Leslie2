@@ -10,20 +10,20 @@ import Leslie2Protocols.ABA.Vocabulary.Parameters
 # The two halves of a sub-protocol instance state, generically
 
 The data of one message-passing sub-protocol instance sits in two halves:
-each process holds its own local record beside the messages delivered to it,
+each process holds its own variables beside the messages delivered to it,
 and the instance's network state holds the per-sender sent sets and the corrupted
 set. The GBCA implementation introduced this shape for one concrete message
-type; the sub-protocol tiers (BRB, Gather) repeat it at their own payload
+type; the sub-protocols (BRB, Gather) repeat it at their own payload
 types, so the shape is stated here once, generically:
 
 * `ABA.NetworkState n M` — the network state: per-sender sent sets over payload type `M`, and
   the corrupted set;
-* `ABA.LocalState n Pr M` — one process's local state: its local record `Pr` and its
+* `ABA.LocalState n Pr M` — one process's local state: its variables `Pr` and its
   delivered sets, indexed by sender;
 * `ABA.InstanceState n Pr M` — the instance state, the pair of the local state vector and
   the network state, with the multicast / delivery / corruption updates
-  (`multicast`, `receiveMessage`, `corrupt`), the receipt counts (`receivedCount`), the
-  frame lemmas each update leaves behind, and the quorum-counting lemmas
+  (`multicast`, `receiveMessage`, `corrupt`), the counts of received messages (`receivedCount`),
+  the lemmas on what each update leaves unchanged, and the quorum-counting lemmas
   (`exists_sender_notMem`, `exists_correct_received_of_two_quorums`,
   `exists_correct_received_of_two_echoQuorums`).
 
@@ -95,11 +95,11 @@ end NetworkState
 
 /-! ### The local state of one process -/
 
-/-- The local state of one process: its own local record and the messages delivered to
-it, indexed by sender. There is no record of what it has sent — the sender's
+/-- The local state of one process: its own variables and the messages delivered to
+it, indexed by sender. It holds nothing of what it has sent — the sender's
 sent lives in the network state. -/
 structure LocalState (n : ℕ) (Pr M : Type) : Type where
-  /-- The process's own local record. -/
+  /-- The process's own variables. -/
   processVariables : Pr
   /-- `received k` — the messages from sender `k` delivered here. -/
   received : Fin n → Finset M
@@ -109,7 +109,7 @@ namespace LocalState
 
 variable {n : ℕ} {Pr M : Type}
 
-/-- The initial local state over the initial local record `p₀`. -/
+/-- The initial local state over the initial variables `p₀`. -/
 def initial (n : ℕ) (M : Type) (p₀ : Pr) : LocalState n Pr M where
   processVariables := p₀
   received := fun _ => ∅
@@ -118,16 +118,16 @@ def initial (n : ℕ) (M : Type) (p₀ : Pr) : LocalState n Pr M where
 @[simp] theorem initial_received (p₀ : Pr) (k : Fin n) :
     (initial n M p₀).received k = ∅ := rfl
 
-/-- Overwrite the local record. -/
+/-- Overwrite the variables. -/
 def setProcessVariables (p : LocalState n Pr M) (pr : Pr) : LocalState n Pr M := { p with
   processVariables := pr }
 
-/-- File `m` under sender `k` in the record's received sets. -/
+/-- File `m` under sender `k` in the local state's received sets. -/
 def deliverTo [DecidableEq M] (p : LocalState n Pr M) (k : Fin n) (m : M) : LocalState n Pr M :=
   { p with received := Function.update p.received k (insert m (p.received k)) }
 
-/-- The number of distinct senders from which this local state holds `m`. A receipt
-threshold read at one process is a count on that process's local state alone, which is
+/-- The number of distinct senders from which this local state holds `m`. A threshold on
+received messages read at one process is a count on that process's local state alone, which is
 what lets the implementation state it locally. -/
 def receivedCount [DecidableEq M] (p : LocalState n Pr M) (m : M) : ℕ :=
   (Finset.univ.filter (fun q => m ∈ p.received q)).card
@@ -145,7 +145,7 @@ namespace InstanceState
 
 variable {n : ℕ} {Pr M : Type}
 
-/-- Per-process local records. -/
+/-- Per-process variables. -/
 def processVariables (s : InstanceState n Pr M) : Fin n → Pr := fun j => (s.1 j).processVariables
 
 /-- `sent j` — the messages process `j` has multicast (D5). -/
@@ -166,7 +166,7 @@ def F (s : InstanceState n Pr M) : Finset (Fin n) := s.2.F
 @[simp] theorem F_apply (u : ∀ _ : Fin n, LocalState n Pr M) (w : NetworkState n M) :
     F (u, w) = w.F := rfl
 
-/-- The initial instance state over the initial local record `p₀`. -/
+/-- The initial instance state over the initial variables `p₀`. -/
 def initial (n : ℕ) (M : Type) (p₀ : Pr) : InstanceState n Pr M :=
   (fun _ => LocalState.initial n M p₀, NetworkState.initial n M)
 
@@ -178,7 +178,7 @@ def initial (n : ℕ) (M : Type) (p₀ : Pr) : InstanceState n Pr M :=
     (initial n M p₀).received i j = ∅ := rfl
 @[simp] theorem initial_F (p₀ : Pr) : (initial n M p₀).F = ∅ := rfl
 
-/-- Update the local record of process `j`. -/
+/-- Update the variables of process `j`. -/
 def setProcessVariables (s : InstanceState n Pr M) (j : Fin n) (p : Pr) : InstanceState n Pr M :=
   (Function.update s.1 j ((s.1 j).setProcessVariables p), s.2)
 
@@ -204,7 +204,7 @@ theorem setProcessVariables_processVariables_ne (s : InstanceState n Pr M) (j : 
       := by
   simp [setProcessVariables, processVariables, Function.update_of_ne h]
 
-/-- The record vector after a record write, as one `ite`. -/
+/-- The variables of every process after a write to one, as one `ite`. -/
 theorem processVariables_setProcessVariables (s : InstanceState n Pr M) (j : Fin n) (p : Pr) (k :
   Fin n) :
     (s.setProcessVariables j p).processVariables k = if k = j then p else s.processVariables k := by
@@ -289,7 +289,7 @@ theorem exists_mem_inter_of_quorum {P : Parameters} {K Q : Finset (Fin P.n)}
   rw [Finset.mem_inter] at hq
   exact ⟨q, hq.1, hq.2⟩
 
-/-! ### Receipt counts on an instance state -/
+/-! ### Counts of received messages on an instance state -/
 
 section Counting
 
@@ -299,7 +299,7 @@ variable [DecidableEq M]
 def receivedCount (s : InstanceState n Pr M) (i : Fin n) (m : M) : ℕ :=
   (Finset.univ.filter (fun j => m ∈ s.received i j)).card
 
-/-- The instance's receipt count at `i` is the count on `i`'s own local state. -/
+/-- The instance's count of received messages at `i` is the count on `i`'s own local state. -/
 theorem receivedCount_eq_localState (s : InstanceState n Pr M) (i : Fin n) (m : M) :
     s.receivedCount i m = (s.1 i).receivedCount m := rfl
 
@@ -380,7 +380,7 @@ theorem receivedCount_le_receiveMessage (s : InstanceState n Pr M) (i j : Fin n)
   rw [Finset.mem_filter] at hk ⊢
   exact ⟨hk.1, mem_receiveMessage_received.mpr (Or.inr hk.2)⟩
 
-/-- A receipt count exceeding `|G|` yields a sender outside `G`. -/
+/-- A count of received messages exceeding `|G|` yields a sender outside `G`. -/
 theorem exists_sender_notMem {P : Parameters} {s : InstanceState P.n Pr M}
     (G : Finset (Fin P.n)) {i : Fin P.n} {m : M} (h : G.card < s.receivedCount i m) :
     ∃ j, j ∉ G ∧ m ∈ s.received i j := by
@@ -389,7 +389,7 @@ theorem exists_sender_notMem {P : Parameters} {s : InstanceState P.n Pr M}
   rw [Finset.mem_filter] at hjQ
   exact ⟨j, hjF, hjQ.2⟩
 
-/-- Two `n − f` receipt quorums (at possibly different receivers) share an
+/-- Two `n − f` quorums of received messages (at possibly different receivers) share a
 correct sender: `(n−f) + (n−f) − n = n − 2f > f ≥ |F|`. -/
 theorem exists_correct_received_of_two_quorums {P : Parameters} {s : InstanceState P.n Pr M}
     (hF : s.F.card ≤ P.f) {i i' : Fin P.n} {m m' : M} (h : P.n - P.f ≤ s.receivedCount i m)
@@ -411,8 +411,8 @@ theorem exists_correct_received_of_two_quorums {P : Parameters} {s : InstanceSta
   rw [Finset.mem_inter, Finset.mem_filter, Finset.mem_filter] at hj
   exact ⟨j, hjF, hj.1.2, hj.2.2⟩
 
-/-- Two `receivedEchoQuorum` receipt quorums (at possibly different receivers) share an
-correct sender: `2 * receivedEchoQuorum − n > f ≥ |F|`. -/
+/-- Two `receivedEchoQuorum` quorums of received messages (at possibly different receivers) share
+a correct sender: `2 * receivedEchoQuorum − n > f ≥ |F|`. -/
 theorem exists_correct_received_of_two_echoQuorums {P : Parameters} {s : InstanceState P.n Pr M}
     (hF : s.F.card ≤ P.f) {i i' : Fin P.n} {m m' : M}
     (h : P.receivedEchoQuorum ≤ s.receivedCount i m)

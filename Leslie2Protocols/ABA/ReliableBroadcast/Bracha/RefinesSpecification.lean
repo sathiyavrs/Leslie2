@@ -24,7 +24,7 @@ where the call loop is answered by the specification's own loop.
 The matching is stated here, one transition of `BRB.BrachaAlgorithm` at a time, along
 `BRB.SpecificationRelation` (`ABA/ReliableBroadcast/Bracha/SpecificationRelation.lean`). The
 internal transitions stutter. The call and corruption are matched by the specification's own
-transitions. A return is matched by `ret` alone when `val` is already committed, the certificates
+transitions. A return is matched by `ret` alone when `val` is already committed, the witnesses
 identifying the two values, and by the two-step run `commit ; ret` when it is not, with `commit`'s
 guard discharged by `input_of_echoWitness` under a correct leader and by membership in the
 corrupted set otherwise.
@@ -455,7 +455,7 @@ theorem specificationRelation_call {P : Parameters} {ldr : Fin P.n} {s : BrachaS
     rw [echoWitness_multicast, echoWitness_setProcessVariables]
     exact hR.val_witness m' hm'
 
-/-- **The on-demand commit.** A `VOTE` receipt quorum licenses the
+/-- **The on-demand commit.** A quorum of received `VOTE` messages licenses the
 specification's committed value: either it is already this value, or the
 `commit` guard holds towards it, the relation restored either way. -/
 theorem commitReach {P : Parameters} {ldr : Fin P.n} {s : BrachaState P.n M}

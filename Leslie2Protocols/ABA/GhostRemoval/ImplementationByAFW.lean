@@ -11,13 +11,13 @@ import Leslie2Protocols.ABA.Results
 /-!
 # The ghost-free gather-based protocol
 
-The network of `AFW.protocol` holds one record per round that no program
+The network of `AFW.protocol` holds one ghost per round that no program
 reads: the two gathers' recorded cores and the round's bound bit, written by
 `AFW.ghostStep` and announced on every graded-agreement return by `AFW.announcedBound`.
-`AFW.ghostFreeProtocol` is the protocol as it runs with that record dropped and the adversary
+`AFW.ghostFreeProtocol` is the protocol as it runs with that ghost dropped and the adversary
 free to announce either bit on a return.
 
-`AFW.protocol_ghostRemoval` is the statement that the record costs nothing: the ghost never
+`AFW.protocol_ghostRemoval` is the statement that the ghost costs nothing: the ghost never
 blocks a step and never adds one, so the two systems have the same achievable trace
 distributions. Every headline about the protocol therefore holds of the ghost-free
 protocol, and the rest of this file re-derives them: the composition inclusion into
@@ -25,12 +25,11 @@ protocol, and the rest of this file re-derives them: the composition inclusion i
 Agreement of every positive-probability trace, and trace conservativity against the
 protocol-shaped specification `hybrid`.
 
-The proof is the state erasure of `ABA/GhostRemoval/GhostFreeSystem.lean` carried through the
-composition pipeline. Its hypothesis is that every round, process and graded outcome
-admits an announced bit, which here is the equation `bnd = AFW.ghostOutput P w r id out`
-read at its own right-hand side. The announced bit is silent at protocol level — a
-`retG` label lies in `Label.hiddenAPI` — which is why no label map appears in the
-statement.
+The proof is the auxiliary variable removal of `ABA/GhostRemoval/GhostFreeSystem.lean` carried
+through the composition pipeline. Its hypothesis is that every round, process and graded outcome
+admits an announced bit, which here is the equation `bnd = AFW.ghostOutput P w r id out` read at its
+own right-hand side. The announced bit is silent at protocol level — a `retG` label lies in
+`Label.hiddenAPI` — which is why no label map appears in the statement.
 -/
 
 namespace PLTS
@@ -39,7 +38,7 @@ namespace AFW
 
 open Implementation
 
-/-- **The ghost-free gather-based protocol**: the `n` programs and the coin oracle of
+/-- **The ghost-free gather-based protocol**: the `n` programs and the common coin of
 `AFW.protocol` beside the network over the trivial ghost, whose
 graded-agreement returns announce any bit. -/
 noncomputable def ghostFreeProtocol (P : Parameters) :

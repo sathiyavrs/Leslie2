@@ -13,13 +13,14 @@ import Leslie2Protocols.ABA.Gather.SpecificationSafety
 `Gather.SpecificationRelation P s t` relates a state of the gather instance over the broadcast
 specifications (`Gather.instanceOverBroadcastSpecification`, `ABA/Gather/Composition.lean`) to a
 state of the gather specification (`Gather.specInst`, blueprint TS 4). The return flags and the
-corrupted sets agree, the call records agree with the gather records', the two systems hold the
-same core, and the instance invariant of `ABA/Gather/Invariant.lean` holds at `s`.
+corrupted sets agree, the specification's calls agree with the gather programs' inputs, the two
+systems hold the same core, and the instance invariant of `ABA/Gather/Invariant.lean` holds at `s`.
 
-The specification's abstract content is bounded from above by receipt evidence the instance
-carries. `val_witness` bounds a committed specification entry by the commitment of the input
-instance that holds it. `core_witness` is the count of `ABA/Gather/CommonCoreCounting.lean`: at
-least `f + 1` bind instances hold a committed payload above the recorded core (`bindAbove`). The
+The specification's abstract content is bounded from above by the witnesses on received messages
+that the instance carries. `val_witness` bounds a committed specification entry by the commitment of
+the input instance that holds it. `core_witness` is the count of
+`ABA/Gather/CommonCoreCounting.lean`: at least `f + 1` bind instances hold a committed payload above
+the recorded core (`bindAbove`). The
 count is blind to `F` and monotone, so it survives every transition and every corruption.
 
 `specificationRelation_init` holds the relation at the two initial states, and
@@ -43,7 +44,7 @@ structure SpecificationRelation (P : Parameters) (s : StateOverBroadcastSpecific
     (t : SpecState P.n X) : Prop where
   /-- The instance invariant. -/
   invariant : Invariant P s
-  /-- The call records agree with the gather records'. -/
+  /-- The specification's calls agree with the gather programs' inputs. -/
   call_eq : ∀ k, t.call k = ((gatherProgramsAndNetwork s).processVariables k).input
   /-- The return flags agree. -/
   ret_eq : ∀ id, t.ret id = ((gatherProgramsAndNetwork s).processVariables id).returned

@@ -11,9 +11,12 @@ import Leslie2Protocols.ABA.AFW.RoundProjectionStep.FirstGatherReturn
 
 `roundProjection_secondGatherReturn`: the projection of the composed round after the second gather
 returns to the acting process. The transition records the graded outcome the returned entries
-determine and marks the gather record returned, and its ghost write is the second gather's core,
-which is what the composed round's `secondGatherReturn` event writes. `afterSecondGatherReturn`
-names the state the return reaches, and `secondGatherReturnCore` is the core the return carries.
+`roundProjection_secondGatherReturn`: the projection of the composed round after the second gather
+returns to the acting process. The transition records the graded outcome the returned entries
+determine and marks its variables in the gather returned, and its ghost write is the second gather's
+core, which is what the composed round's `secondGatherReturn` event writes.
+`afterSecondGatherReturn` names the state the return reaches, and `secondGatherReturnCore` is the
+core the return carries.
 -/
 
 namespace PLTS
@@ -31,7 +34,8 @@ variable {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} {w : NetworkState P.n} 
 
 /-! ### The second gather's return
 
-The transition records the graded outcome and marks the gather record returned. It sends nothing,
+The transition records the graded outcome and marks its variables in the gather returned. It sends
+nothing,
 and its ghost write is the second gather's core. -/
 
 /-- The core the second gather's return carries. -/

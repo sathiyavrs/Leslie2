@@ -1,35 +1,35 @@
 \begin{theorem}[The announced bit affects no trace distribution]
-  \label{thm:aba-erasure}
+  \label{thm:aba-ghost-removal}
   \lean{PLTS.ABA.Implementation.system_ghostRemoval}\lean{PLTS.ABA.ABDY.protocol_ghostRemoval}\lean{PLTS.ABA.AFW.protocol_ghostRemoval}\lean{PLTS.ABA.ABDY.ghostFreeProtocol_safe}\lean{PLTS.ABA.AFW.ghostFreeProtocol_safe}\leanok
-  \uses{def:erasure-sim, def:aba-ghost-free, def:aba-labels, def:achievable, thm:aba-main, thm:aba-afw-main}
-  Let $P$ be a parameter record and write $\mathrm{protocol}_0$ for the ghost-free system of Definition~\ref{def:aba-ghost-free}.
+  \uses{def:auxiliary-variable-removal, def:aba-ghost-free, def:aba-labels, def:achievable, thm:aba-main, thm:aba-afw-main}
+  Fix parameters $P$ and write $\mathrm{protocol}_0$ for the ghost-free system of Definition~\ref{def:aba-ghost-free}.
   Then
   \[ \begin{aligned}
        \operatorname{ATD}(\abdy{\mathrm{protocol}}(P)) &= \operatorname{ATD}(\abdy{\mathrm{protocol}_0}(P)),\\
        \operatorname{ATD}(\afw{\mathrm{protocol}}(P)) &= \operatorname{ATD}(\afw{\mathrm{protocol}_0}(P)).
      \end{aligned} \]
   No map on labels stands in either equation.
-  A graded-agreement return is a label of the hidden alphabet of Definition~\ref{def:aba-labels}, so the bit it announces is silent at protocol level, and the identification of labels the erasure runs on is discharged by the outermost hiding frame.
+  A graded-agreement return is a label of the hidden alphabet of Definition~\ref{def:aba-labels}, so the bit it announces is silent at protocol level, and the identification of labels the removal runs on is discharged by the outermost hiding.
   Every statement of Theorem~\ref{thm:aba-main} and of Theorem~\ref{thm:aba-afw-main} therefore holds of the ghost-free system: the composition inclusion, the refinement by the ABA specification, and Validity and Agreement on every positive-probability trace of every achievable trace distribution.
 \end{theorem}
 
 \begin{proof}\leanok
-  \uses{def:erasure-sim, def:aba-ghost-free, def:aba-labels}
-  Each equation is one instance of the erasure of Definition~\ref{def:aba-implementation}, and that erasure is assembled in four moves.
+  \uses{def:auxiliary-variable-removal, def:aba-ghost-free, def:aba-labels}
+  Each equation is one instance of the removal of Definition~\ref{def:aba-implementation}, and that removal is assembled in four moves.
 
   The first is the network.
-  Take $\pi$ to delete the adversary's ghost record, and $\varphi$ to send a graded-agreement return to the return of the same round, process and graded outcome with the announced bit fixed, and to be the identity on every other label.
+  Take $\pi$ to delete the adversary's ghost, and $\varphi$ to send a graded-agreement return to the return of the same round, process and graded outcome with the announced bit fixed, and to be the identity on every other label.
   The projection clause holds because every guard of the adversary reads the message sets, the DECIDED sets and the corrupted set alone, and because the ghost write leaves the deletion where it stands; the two return transitions lose their guard, the ghost-free output being the full relation.
   The matching clause holds because a ghost-free return is met by the return announcing a bit the implementation's own output admits, which is supplied by the hypothesis that every state, round, process and graded outcome admits one; each algorithm's output is an equation, so its right-hand side is such a bit.
 
   The second is the saturation of the components beside it.
   A program's return transition takes the announced bit free, so each program is saturated along $\varphi$ and the synchronised group of Definition~\ref{def:synchronised-product} is saturated with it.
-  A graded-agreement return belongs to no coin round and is not a corruption, so the coin family answers it by its idle self-loop whichever bit it announces, and the lifted oracle inherits the saturation along the label pullback.
+  A graded-agreement return belongs to no coin round and is not a corruption, so the coin family answers it by its idle self-loop whichever bit it announces, and the lifted coin inherits the saturation along the label pullback.
 
   The third is the pipeline.
-  The four congruences of Definition~\ref{def:erasure-sim} carry the adversary's erasure through the composition of Definition~\ref{def:aba-implementation} in the order that composition builds it: parallel composition against the coin oracle, parallel composition against the process group, abstraction of the rendezvous alphabet, and restriction along the left embedding.
+  The four congruences of Definition~\ref{def:auxiliary-variable-removal} carry the adversary's removal through the composition of Definition~\ref{def:aba-implementation} in the order that composition builds it: parallel composition against the common coin, parallel composition against the process group, abstraction of the network events, and restriction along the left embedding.
 
   The fourth is the collapse.
-  Every label $\varphi$ identifies with a different label is a graded-agreement return, and those make up part of the hidden alphabet, so abstracting that alphabet leaves an erasure at $\varphi = \mathrm{id}$, whose two systems have the same achievable trace distributions by Definition~\ref{def:erasure-sim}.
+  Every label $\varphi$ identifies with a different label is a graded-agreement return, and those make up part of the hidden alphabet, so abstracting that alphabet leaves a removal at $\varphi = \mathrm{id}$, whose two systems have the same achievable trace distributions by Definition~\ref{def:auxiliary-variable-removal}.
   The conclusions at the ghost-free system follow by rewriting along the equation in each statement of Theorem~\ref{thm:aba-main} and of Theorem~\ref{thm:aba-afw-main}, safety by the transfer those theorems already run on.
 \end{proof}

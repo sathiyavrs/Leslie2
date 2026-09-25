@@ -14,13 +14,13 @@ One Byzantine Reliable Broadcast instance with designated leader `ldr` over an a
 type `M`, taken apart into the pieces that run it: `n` per-process programs beside the instance's
 network.
 
-A program holds one process's local record and the messages delivered to it, indexed by sender
-(`ABA.LocalState`). It holds no sent set and no corrupted set; its guards read its own record and
+A program holds one process's variables and the messages delivered to it, indexed by sender
+(`ABA.LocalState`). It holds no sent set and no corrupted set; its guards read its own variables and
 its own delivered sets, never the identity of the caller. The network holds the per-sender sent
-sets and the corrupted set (`ABA.NetworkState`), and reads no program's record. A multicast is a
-joint step of the sender, which writes its record, and the network, which records the message. A
-delivery is a joint step of the network, which checks that the message is sent under the named
-sender, and the receiver, which files it under that sender.
+sets and the corrupted set (`ABA.NetworkState`), and reads no program's variables. A multicast is a
+synchronised step of the sender, which writes its variables, and the network, which records the
+message. A delivery is a synchronised step of the network, which checks that the message is sent
+under the named sender, and the receiver, which files it under that sender.
 
 `ProgramStep` is the step relation of process `j`'s program and `NetworkStep` that of the
 instance's network. `broadcastProgram` and `broadcastNetwork` are the two automata they carry.
@@ -28,7 +28,7 @@ instance's network. `broadcastProgram` and `broadcastNetwork` are the two automa
 ## The alphabets
 
 The specification's `call m` carries two transitions, the call and the input-enabledness loop.
-The composition splits them across two labels. The leader's record and the network's sent sets
+The composition splits them across two labels. The leader's variables and the network's sent sets
 are different components, so a single label carrying both transitions would also carry the two
 mixed pairs: the leader looping while the network posts `⟨INIT, m⟩`, and the leader recording its
 payload while the network posts nothing. The loop therefore has a label of its own,
@@ -36,15 +36,16 @@ payload while the network posts nothing. The loop therefore has a label of its o
 `InstanceLabel n M = Label n M ⊕ LoopLabel M`.
 
 The instance-internal alphabet `BroadcastLabel n M = InstanceLabel n M ⊕ BroadcastEvent n M` puts
-the two rendezvous, the multicast and the delivery, beside the interface. Its silent label is
+the two synchronisation labels, the multicast and the delivery, beside the interface. Its silent
+label is
 `Sum.inl τ`, so every `Sum.inr` label is observable and hence hideable, and `broadcastEvents`
 collects the labels the instance hides.
 
 ## Model and deviations
 
 * **D1 (determinised `fail`).** `NetworkState.corrupt` is the total Dirac function guarded by
-  `id ∉ F ∧ |F| < f`. It is the network's own transition, and the programs answer `fail` by
-  unchanged: the local records are corruption-blind.
+  `id ∉ F ∧ |F| < f`. It is the network's own transition, and the programs are unchanged on
+  `fail`: their variables are corruption-blind.
 * **D5 (set-based network).** Multicasts are idempotent: `sent j` is the set of messages `j` has
   multicast, and `received k` at a program is the set of messages from `k` delivered there.
   Thresholds count distinct senders. A corrupted sender's injections enter its sent set through
@@ -71,7 +72,8 @@ inductive LoopLabel (M : Type) : Type
 call loop beside it. -/
 abbrev InstanceLabel (n : ℕ) (M : Type) : Type := Label n M ⊕ LoopLabel M
 
-/-- The internal rendezvous of one instance: the multicast and the delivery. -/
+/-- The labels a program and the instance's network synchronise on: the multicast and the
+delivery. -/
 inductive BroadcastEvent (n : ℕ) (M : Type) : Type
   /-- Process `j` hands `m` to the instance's network. -/
   | send (j : Fin n) (m : Message M)
@@ -80,11 +82,11 @@ inductive BroadcastEvent (n : ℕ) (M : Type) : Type
   deriving DecidableEq
 
 /-- The instance-internal alphabet: the interface alphabet plus the two
-rendezvous. Its silent label is `Sum.inl τ`, so every `Sum.inr` label is
+synchronisation labels. Its silent label is `Sum.inl τ`, so every `Sum.inr` label is
 observable and hence hideable. -/
 abbrev BroadcastLabel (n : ℕ) (M : Type) : Type := InstanceLabel n M ⊕ BroadcastEvent n M
 
-/-- The rendezvous labels, hidden by the instance. -/
+/-- The synchronisation labels, hidden by the instance. -/
 def broadcastEvents (n : ℕ) (M : Type) : Set (BroadcastLabel n M) := {l | ∃ e : BroadcastEvent n M,
   l = Sum.inr e}
 
@@ -100,9 +102,9 @@ def broadcastEvents (n : ℕ) (M : Type) : Set (BroadcastLabel n M) := {l | ∃ 
 
 /-! ### The local program
 
-Process `j`'s program in one instance. Every guard reads the local record and
-the delivered sets and nothing else. A rendezvous transition carries the program's
-half of a joint step with the network — on a send the record write, on a
+Process `j`'s program in one instance. Every guard reads its own variables and
+the delivered sets and nothing else. A synchronised transition carries the program's
+half of a step with the network — on a send the write to its variables, on a
 delivery the write of the delivered set. -/
 
 /-- The step relation of the program of process `j` in the instance with leader
@@ -118,11 +120,11 @@ inductive ProgramStep (P : Parameters) (ldr j : Fin P.n) :
   /-- A call at the leader is not a non-leader's business. -/
   | callIdle (p) (m : M) (hj : j ≠ ldr) :
       ProgramStep P ldr j p (Sum.inl (Sum.inl (.call m))) (PMF.pure p)
-  /-- The call loop: the record does not move (`BrachaAlgorithm.callLoop`). -/
+  /-- The call loop: the variables do not move (`BrachaAlgorithm.callLoop`). -/
   | callLoop (p) (m : M) :
       ProgramStep P ldr j p (Sum.inl (Sum.inr (.callLoop m))) (PMF.pure p)
-  /-- `ECHO m`: `⟨INIT, m⟩` delivered from the leader, an `ECHO m` receipt
-  quorum, or `f + 1` `VOTE m` receipts; no `ECHO` sent yet
+  /-- `ECHO m`: `⟨INIT, m⟩` delivered from the leader, a quorum of received
+  `ECHO m` messages, or `f + 1` received `VOTE m` messages; no `ECHO` sent yet
   (`BrachaAlgorithm.echo`). -/
   | sendEcho (p) (m : M)
       (hrecv : Message.init m ∈ p.received ldr ∨ P.receivedEchoQuorum ≤ p.receivedCount (.echo m) ∨
@@ -130,13 +132,13 @@ inductive ProgramStep (P : Parameters) (ldr j : Fin P.n) :
       (hsend : p.processVariables.sentEcho = none) :
       ProgramStep P ldr j p (Sum.inr (.send j (.echo m)))
         (PMF.pure (p.setProcessVariables { p.processVariables with sentEcho := some m }))
-  /-- `VOTE m` (quorum case): an `ECHO m` receipt quorum, no `VOTE` sent yet
+  /-- `VOTE m` (quorum case): a quorum of received `ECHO m` messages, no `VOTE` sent yet
   (`BrachaAlgorithm.voteQuorum`). -/
   | sendVoteQuorum (p) (m : M) (hcnt : P.receivedEchoQuorum ≤ p.receivedCount (.echo m))
       (hsend : p.processVariables.sentVote = none) :
       ProgramStep P ldr j p (Sum.inr (.send j (.vote m)))
         (PMF.pure (p.setProcessVariables { p.processVariables with sentVote := some m }))
-  /-- `VOTE m` (amplification case): `f + 1` `VOTE m` receipts, no `VOTE` sent
+  /-- `VOTE m` (amplification case): `f + 1` received `VOTE m` messages, no `VOTE` sent
   yet (`BrachaAlgorithm.voteAmplification`). -/
   | sendVoteAmplification (p) (m : M) (hcnt : P.f + 1 ≤ p.receivedCount (.vote m))
       (hsend : p.processVariables.sentVote = none) :
@@ -152,8 +154,8 @@ inductive ProgramStep (P : Parameters) (ldr j : Fin P.n) :
   /-- A delivery to another process: not `j`'s business. -/
   | deliverIdle (p) (i k : Fin P.n) (m : Message M) (hi : i ≠ j) :
       ProgramStep P ldr j p (Sum.inr (.deliver i k m)) (PMF.pure p)
-  /-- Return: `2f + 1` `VOTE m` receipts on the record's own delivered sets,
-  and the record has not returned (`BrachaAlgorithm.ret`). -/
+  /-- Return: `2f + 1` received `VOTE m` messages on its own delivered sets,
+  and it has not returned (`BrachaAlgorithm.ret`). -/
   | ret (p) (m : M) (hcnt : 2 * P.f + 1 ≤ p.receivedCount (.vote m)) (hr :
       p.processVariables.returned =
     false) :
@@ -162,7 +164,7 @@ inductive ProgramStep (P : Parameters) (ldr j : Fin P.n) :
   /-- A return at another process: not `j`'s business. -/
   | retIdle (p) (i : Fin P.n) (m : M) (hi : i ≠ j) :
       ProgramStep P ldr j p (Sum.inl (Sum.inl (.ret i m))) (PMF.pure p)
-  /-- Corruption is the network's own write, and the local records are
+  /-- Corruption is the network's own write, and the programs' variables are
   corruption-blind (D1). -/
   | failIdle (p) (i : Fin P.n) :
       ProgramStep P ldr j p (Sum.inl (Sum.inl (.fail i))) (PMF.pure p)
@@ -185,7 +187,7 @@ inductive NetworkStep (P : Parameters) (ldr : Fin P.n) :
   | callLoop (w) (m : M) :
       NetworkStep P ldr w (Sum.inl (Sum.inr (.callLoop m))) (PMF.pure w)
   /-- The network's half of a multicast: sent the message under its sender.
-  Authenticity is the sender's joint participation (D5). -/
+  Authenticity is the sender's participation in the synchronised step (D5). -/
   | send (w) (j : Fin P.n) (m : Message M) :
       NetworkStep P ldr w (Sum.inr (.send j m)) (PMF.pure (w.recordSent j m))
   /-- The network's half of a delivery: the message must be sent under the

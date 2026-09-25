@@ -13,7 +13,7 @@ import Leslie2.Systems.LTS
 # Extended alphabets and restriction along the left summand
 
 A composition often needs labels that only exist to make its components
-rendezvous — round tags, per-process handshakes, internal acknowledgements —
+synchronise — round tags, per-process calls and returns, internal acknowledgements —
 which the composite is not meant to expose. The idiom is to build the components
 over the **extended alphabet** `Label ⊕ Extra`, where `Label` is the alphabet the
 composite shares with everything else and `Extra` carries the auxiliary labels; `System.abstract`
