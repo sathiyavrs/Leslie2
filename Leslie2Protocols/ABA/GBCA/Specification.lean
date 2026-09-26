@@ -15,7 +15,7 @@ The round-`r` instance of the Graded Binding Crusader Agreement specification.
 Binding is *negative* information. The state field `excluded : Finset Bool` is the
 set of bits the instance can no longer hand out; it starts empty. The internal
 τ-transition `bindUnset b` excludes one bit — `excluded := insert b excluded` — once a
-quorum has spoken and `f + 1` F-blind supporters back the *surviving* bit `!b`.
+quorum has called and `f + 1` F-blind supporters back the *surviving* bit `!b`.
 No transition removes a bit and `bindUnset` requires `excluded = ∅`, so `excluded` is written
 at most once per instance — the exclusion commits the round — and is monotone along
 every execution; `corrupt` leaves it alone. The once-only guard is what makes
@@ -26,9 +26,9 @@ that monotonicity plus the membership guards on the return transitions, with no
 auxiliary invariant.
 
 Grades: `grade2 b` (decide `b`), `grade1 b` (adopt `b`), `grade0` (no output; adopt the coin).
-The `grade` field (`some true` ≈ the grade-2 lock, `some false` ≈ the
-grade-0 lock) enforces the grade-2 / grade-0 exclusivity of Graded Agreement: once a
-grade-2 return has happened no grade-0 return can, and vice versa.
+The `grade` field (`some true` ≈ grade 2, `some false` ≈ grade 0) enforces the
+grade-2 / grade-0 exclusivity of Graded Agreement: once a grade-2 return has happened
+no grade-0 return can, and vice versa.
 
 ## Graded agreement is the guard pair
 
@@ -136,7 +136,7 @@ structure SpecState (n : ℕ) where
   /-- The exclusion set: the bits the instance can no longer hand out.
   Monotone, written at most once, by `bindUnset`. -/
   excluded : Finset Bool
-  /-- The grade lock: `some true` after a grade-2 return, `some false` after a
+  /-- The grade: `some true` after a grade-2 return, `some false` after a
   grade-0 return (`⊥` before either). -/
   grade : Option Bool
   /-- The corrupted set (local copy, kept equal by `fail` broadcast). -/
@@ -207,7 +207,7 @@ inductive Step (P : Parameters) (r : ℕ) :
   /-- Input-enabledness loop for `call`. -/
   | callLoop (s : SpecState P.n) (id : Fin P.n) (b : Bool) :
       Step P r s (.callG r id b) (PMF.pure s)
-  /-- Binding: a quorum has spoken and `f + 1` processes support the surviving
+  /-- Binding: a quorum has called and `f + 1` processes support the surviving
   bit `!b` (D15, InputSupport form: caller or `F`-member); exclude `b`. Fires at most
   once per instance — the guard is `excluded = ∅` — and `excluded` never shrinks. -/
   | bindUnset (s : SpecState P.n) (b : Bool)
@@ -227,7 +227,7 @@ inductive Step (P : Parameters) (r : ℕ) :
       (hr : s.ret id = false) :
       Step P r s (.retG r id (.grade1 v) bnd)
         (PMF.pure { s with ret := Function.update s.ret id true })
-  /-- Grade-2 return: decide the surviving bit `v` (locks the grade at 2). Same guard pair and same
+  /-- Grade-2 return: decide the surviving bit `v` (writes grade 2). Same guard pair and same
   announced bit as `retGrade1`. -/
   | retGrade2 (s : SpecState P.n) (id : Fin P.n) (v : Bool) (bnd : Bool)
       (hlive : v ∉ s.excluded) (hexcluded : (!v) ∈ s.excluded)
@@ -239,7 +239,7 @@ inductive Step (P : Parameters) (r : ℕ) :
   /-- Grade-0 return: no output, but the bound bit is announced. The guard `(!bnd) ∈ excluded` is
   the Graded Binding witness, valid in every extension because `excluded` only grows, and it names
   `bnd` as the surviving bit. Both bits carry `f + 1` F-blind support (D15), which is what makes
-  handing out no bit the right answer; the grade is locked at 0. -/
+  handing out no bit the right answer; the grade is written 0. -/
   | retGrade0 (s : SpecState P.n) (id : Fin P.n) (bnd : Bool)
       (hbnd : (!bnd) ∈ s.excluded)
       (hwT : P.f + 1 ≤ (Finset.univ.filter

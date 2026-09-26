@@ -297,11 +297,11 @@ later state.
 
 Split on whether the dissent count at `!v` ever reaches `f + 1`. If it never does, `retGrade1`
 and `retGrade0` stay disabled forever — each asks `f + 1` at the dissenting bit, `retGrade0` at both
-bits — and no grade-0 lock can arise, so `retGrade2 v` is enabled at every un-returned process for
+bits — and no grade-0 return can arise, so `retGrade2 v` is enabled at every un-returned process for
 the rest of the run and the round decides. This is the near-unanimous case: under unanimous
 correct input the count is capped by the corruption budget outright
 (`GBCASafety.support_le_of_unanimous`). If the count does reach `f + 1`, then from that point
-`retGrade1 v` is enabled at every un-returned process, whatever the grade lock, since `retGrade1`
+`retGrade1 v` is enabled at every un-returned process, whatever the grade, since `retGrade1`
 reads no grade. Either way each un-returned process has a return enabled from some point on
 and permanently, so a fair scheduler answers it. Nothing in the sketch mentions the coin: it
 is a statement about one GBCA instance, and it is what item 1 of §4 would have to supply for

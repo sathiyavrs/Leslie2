@@ -10,11 +10,11 @@ import Leslie2Protocols.ABA.GBCA.Specification
 /-!
 # The graded agreement specification over the round's alphabet
 
-The graded agreement specification speaks the shared alphabet `Label n`. A graded-agreement round
-speaks the extended alphabet `Composition.ExtendedLabel n M`, over the type `M` of the messages the
-round exchanges, in which the three Byzantine call and return transitions and the call loop of
-round `r` are separate labels. `specificationLabelMap` is the
-projection that identifies them with the specification labels they stand for: a Byzantine call is a
+The graded agreement specification is over the shared alphabet `Label n`. The alphabet of a
+graded-agreement round is the extended alphabet `Composition.ExtendedLabel n M`, over the type `M`
+of the messages the round exchanges, in which the three Byzantine call and return transitions and
+the call loop of round `r` are separate labels. `specificationLabelMap` is the projection that
+identifies them with the specification labels they stand for: a Byzantine call is a
 call, a Byzantine return is a return, and the two call loops are calls, which the specification
 takes on its input-enabledness transitions (D11). Every other extended label idles: the protocol
 network's synchronisation and the coin's call and return are off the specification's interface.

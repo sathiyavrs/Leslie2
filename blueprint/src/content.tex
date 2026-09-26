@@ -199,7 +199,7 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
   \item D15: the $F$-blind form of those support counts, namely $f+1$ distinct callers-or-corrupted.
     The count is monotone in $F$ and in the calls, so no later corruption invalidates it, and among $f+1$ supporters some member lies outside the final $F$, which recovers a never-corrupted genuine caller; filling the entries of corrupted processes at the specification instead would require knowing which process is corrupted later, a prophecy no forward simulation has.
   \item D16: the two-phase abstract state used by the core simulation, which defers the specification's $\tau$-progress to a single \leandeclnamed{decide}{PLTS.ABA.SpecStep.decide} step under the first visible return.
-    An abstract state that decides when a round excludes a bit can be contradicted afterwards: a late caller of the other bit enables a grade-0 return at that round, the next round spares the opposite bit and locks it at grade~2, and the decision falls against the committed value.
+    An abstract state that decides when a round excludes a bit can be contradicted afterwards: a late caller of the other bit enables a grade-0 return at that round, the next round spares the opposite bit and is graded~2, and the decision falls against the committed value.
     The abstract state therefore commits as late as a forward simulation permits.
   \item D17: a fourth outcome $\dagger$, of mass $\failmass$, on the single distribution both coin resolutions follow, where the source's two range over $\{0,1,\top\}$.
     At Transition System~3 it delivers to no process, and at Transition System~1 it puts the system into the mode $noTransitionEnabled$, which enables no silent transition.
@@ -295,7 +295,7 @@ Three of the eight transitions are not drawn: the guarded corruption transition 
 
 Transition Systems~2 and~3 are the specifications of the two sub-protocols, given as round-indexed instances together with the $\mathbb{N}$-indexed families the round loop calls.
 The trace form of binding, and its transfer to both implementations, is Theorem~\ref{thm:aba-gbca-binding-trace}.
-Both graded-agreement implementations meet Transition System~2 read over the alphabet a round speaks, along the projection that identifies the Byzantine call and return labels with the specification labels they stand for.
+Both graded-agreement implementations meet Transition System~2 read over the alphabet of a round, along the projection that identifies the Byzantine call and return labels with the specification labels they stand for.
 Binding holds of that reading, so every inclusion into it carries binding.
 See \leanmodule{Leslie2Protocols/ABA/GBCA/Specification}, \leanmodule{Leslie2Protocols/ABA/GBCA/SpecificationSafety}, \leanmodule{Leslie2Protocols/ABA/GBCA/SpecificationOverRoundAlphabet} and \leanmodule{Leslie2Protocols/ABA/GBCA/BindingOverRoundAlphabet}.
 
@@ -584,7 +584,7 @@ And a program's variables are process-major: process $j$ holds its own local sta
 The adversary further holds the ghost of each round, \leandecl{PLTS.ABA.AFW.Ghost}: the two gathers' cores and the round's bound bit, each written once (D30).
 Assembling the composed state from the implementation's undoes both rearrangements, which is what \leandecl{PLTS.ABA.AFW.roundProjection} does --- projecting the one sent-set family onto the network states, transposing the variables back, and reading the two cores and the bound bit off that ghost.}
 
-At the protocol shape, the gather-based rounds occupy the same refinable position the direct rounds do: each round speaks the extended alphabet itself, is gathered into the round-indexed family, and is put through the composed system's pipeline.
+At the protocol shape, the gather-based rounds occupy the same refinable position the direct rounds do: each round is over the extended alphabet itself, is gathered into the round-indexed family, and is put through the composed system's pipeline.
 The three substitutions inside the round become three stages between protocol-shaped systems, the third landing on $\mathrm{hybrid}(P)$ itself, and from there the chain is the shared one: Theorem~\ref{thm:aba-hybrid-spec} and the safety transfer.
 See \leanmodule{Leslie2Protocols/ABA/AFW/Composition} and \leanmodule{Leslie2Protocols/ABA/AFW/Substitution}.
 

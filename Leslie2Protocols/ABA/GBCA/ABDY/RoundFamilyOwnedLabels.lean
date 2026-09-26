@@ -11,7 +11,7 @@ import Leslie2Protocols.ABA.GBCA.ABDY.Composition
 
 `GBCA.ByABDY.roundOwnsLabel` and `GBCA.ByABDY.isFailLabel` are decided by a `rfl` at every label of
 the extended alphabet, over every type `M` of round messages. The composed system composes
-`GBCA.ByABDY.gbcaInstanceFamily` with local states that speak that alphabet, so it discharges the
+`GBCA.ByABDY.gbcaInstanceFamily` with components over that alphabet, so it discharges the
 premises on `roundOwnsLabel` and `isFailLabel` by `simp`; the table here is what `simp` uses, and
 it sits beside the instance it evaluates. `corruptionAct_fail` evaluates the family's corruption
 act on a `fail` label.

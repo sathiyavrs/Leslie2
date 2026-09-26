@@ -15,9 +15,9 @@ specification. The GBCA instance only ever touches `.grade` and `.ret`, never `.
 `.call`, and `.ret` is not inspected by `Invariant`; the core only ever touches `.estimate`,
 `.lastGrade` and `.phase` at `id`, never `.round` or `.input`. The two round-chaining lemmas the
 proof runs on stand beside it: `Invariant.commit_to_later_rounds` carries a live pair and the
-absence of a grade-0 lock from a round to every later round, and
-`Invariant.grade0Lock_chain_to_earlier_rounds` carries a grade-0 lock to every earlier round. The
-hard obligations, `grade2Lock_commit`'s round-`r` commitment and `agree_locked`'s estimate transfer
+absence of grade 0 from a round to every later round, and
+`Invariant.grade0_chain_to_earlier_rounds` carries grade 0 to every earlier round. The
+hard obligations, `grade2Bound_commit`'s round-`r` commitment and `agree_bound`'s estimate transfer
 at `id`, need GBCA's own graded-agreement safety and are handed off.
 -/
 
@@ -28,12 +28,12 @@ open Implementation Composition
 
 variable {P : Parameters}
 
-/-- Once a round `r` is not (yet) grade-0-locked and its surviving bit `b` is still alive, every
+/-- Once a round `r` is not (yet) graded 0 and its surviving bit `b` is still alive, every
 round `r' ≥ r` either has an empty exclusion set or the same live pair, and is never
-grade-0-locked either: `bind_succ` forces every bit excluded at a freshly-bound round `r' + 1` to
+graded 0 either: `bind_succ` forces every bit excluded at a freshly-bound round `r' + 1` to
 be a bit already excluded at `r'` — hence `!b`, by the inductive pair — unless `r'` itself just
-closed grade-0-locked (ruled out by the IH), and `grade0Lock_chain` propagates the absence of a
-grade-0 lock downward, so its contrapositive propagates it upward along the induction. -/
+closed at grade 0 (ruled out by the IH), and `grade0_chain` propagates the absence of
+grade 0 downward, so its contrapositive propagates it upward along the induction. -/
 theorem Invariant.commit_to_later_rounds {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) :
     ∀ r b, (g r).grade ≠ some false → (!b) ∈ (g r).excluded → b ∉ (g r).excluded →
@@ -44,7 +44,7 @@ theorem Invariant.commit_to_later_rounds {P : Parameters} {g : ℕ → GBCA.Spec
   induction r', hrr' using Nat.le_induction with
   | base => exact ⟨Or.inr ⟨hres, hlive⟩, hg⟩
   | succ r' hrr' ih =>
-    refine ⟨?_, fun h => ih.2 (hI.grade0Lock_chain r' h)⟩
+    refine ⟨?_, fun h => ih.2 (hI.grade0_chain r' h)⟩
     rcases Finset.eq_empty_or_nonempty ((g (r' + 1)).excluded) with hemp | ⟨w', hw'⟩
     · exact Or.inl hemp
     · right
@@ -65,14 +65,14 @@ theorem Invariant.commit_to_later_rounds {P : Parameters} {g : ℕ → GBCA.Spec
       · have hbb := hwmem b hb0
         exact absurd hbb (by cases b <;> simp)
 
-/-- Grade-0 locks propagate downward to every earlier round, by iterating `grade0Lock_chain`. -/
-theorem Invariant.grade0Lock_chain_to_earlier_rounds {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
+/-- Grade 0 propagates downward to every earlier round, by iterating `grade0_chain`. -/
+theorem Invariant.grade0_chain_to_earlier_rounds {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
     {c : ABAState P} {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) :
     ∀ r r', r ≤ r' → (g r').grade = some false → (g r).grade = some false := by
   intro r r' hrr'
   induction r', hrr' using Nat.le_induction with
   | base => exact id
-  | succ r' hrr' ih => intro h; exact ih (hI.grade0Lock_chain r' h)
+  | succ r' hrr' ih => intro h; exact ih (hI.grade0_chain r' h)
 
 /-- `retG`: `Invariant` is preserved and the abstract state is unchanged at a return of the
 graded-agreement specification. -/
@@ -159,7 +159,7 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
     · rw [PMF.mem_support_pure_iff] at hc'; exact Or.inl ⟨hph, hr, hc'⟩
     · rw [PMF.mem_support_pure_iff] at hc'; exact Or.inr ⟨hF, hc'⟩
   -- The return either hands out round `r`'s surviving bit (`retGrade2`/`retGrade1`, with its live
-  -- pair as fire-time guards) or hands out nothing and locks the round at 0 (`retGrade0`).
+  -- pair as fire-time guards) or hands out nothing and sets the round's grade to 0 (`retGrade0`).
   have hRetInfo : (∃ v, out.estimate = some v ∧ v ∉ (g r).excluded ∧ (!v) ∈ (g r).excluded) ∨
       (out.estimate = none ∧ gr'.grade = some false) := by
     cases hstepG with
@@ -168,15 +168,15 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
     | retGrade0 _ _ _ _ _ _ _ =>
       rw [PMF.mem_support_pure_iff] at hgr'
       exact Or.inr ⟨rfl, by rw [hgr']⟩
-  -- A round that is grade-0-locked after the return carries the `retGrade0` guards at `g r`: either
-  -- they were already there (`retGrade1` leaves the grade alone; `retGrade2` locks grade 2) or this
+  -- A round graded 0 after the return carries the `retGrade0` guards at `g r`: either they
+  -- were already there (`retGrade1` leaves the grade alone; `retGrade2` writes grade 2) or this
   -- very return supplied them.
   have hCsupp : gr'.grade = some false → ∀ b, P.f + 1 ≤ (Finset.univ.filter
       (fun id' => (g r).call id' = some b ∨ id' ∈ (g r).F)).card := by
     cases hstepG with
     | retGrade1 _ _ _ _ _ _ _ _ =>
       rw [PMF.mem_support_pure_iff] at hgr'
-      intro hgf b; rw [hgr'] at hgf; exact hI.grade0Lock_support r b hgf
+      intro hgf b; rw [hgr'] at hgf; exact hI.grade0_support r b hgf
     | retGrade2 _ _ _ _ _ _ _ _ =>
       rw [PMF.mem_support_pure_iff] at hgr'
       intro hgf; rw [hgr'] at hgf; simp at hgf
@@ -211,17 +211,17 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
         rw [hrr1, Function.update_self]; exact hGgradeFalse (hrr1 ▸ hgf)
       · exact DissentWitness.preserved (hBindeq r') (hBindeq (r' - 1))
           (fun hgf => by rwa [hGeq (r' - 1) hrr1]) (fun id' => (hCprocs id').1) hd
-  -- A grade-0-locking return at round `r` pulls a grade-0 lock below every
-  -- grade-2-locked round under `r` (its own both-bit supports via
-  -- `grade0Lock_chain_of_both_supports`, then `grade0Lock_chain_to_earlier_rounds`) — contradiction.
+  -- A grade-0 return at round `r` pulls grade 0 below every round graded 2
+  -- under `r` (its own both-bit supports via
+  -- `grade0_chain_of_both_supports`, then `grade0_chain_to_earlier_rounds`) — contradiction.
   have hNoCAbove : ∀ r0, r0 < r → (g r0).grade = some true → gr'.grade = some false →
       False := by
     intro r0 hlt hg0 hgf
     have hr1 : r - 1 + 1 = r := by
       omega
-    have hgf' := hI.grade0Lock_chain_of_both_supports (r - 1)
+    have hgf' := hI.grade0_chain_of_both_supports (r - 1)
       (by rw [hr1]; exact hCsupp hgf true) (by rw [hr1]; exact hCsupp hgf false)
-    have hgf0 := hI.grade0Lock_chain_to_earlier_rounds r0 (r - 1) (by omega) hgf'
+    have hgf0 := hI.grade0_chain_to_earlier_rounds r0 (r - 1) (by omega) hgf'
     rw [hg0] at hgf0; simp at hgf0
   -- OutcomeHolder reduction: a carrier of the post-state is an old carrier or the freshly
   -- returned `id` itself, holding the return's own output.
@@ -243,7 +243,7 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
           exact Or.inl (Or.inr ⟨he, hk⟩)
       · rw [hc'eq] at he hk
         exact Or.inl (Or.inr ⟨he, hk⟩)
-  -- Where a standing round-`r` carrier comes from: the permanent residue or the grade-0 lock.
+  -- Where a standing round-`r` carrier comes from: the permanent residue or grade 0.
   have hProvC : ∀ j1 v1, j1 ∉ c.F → OutcomeHolder P g c r j1 v1 →
       (!v1) ∈ (g r).excluded ∨ (g r).grade = some false := by
     intro j1 v1 hj hcar
@@ -296,8 +296,8 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
     · rw [h2, hGself]; exact hGgradeTrue (h2 ▸ hg0)
     · rw [hGeq r0 h2]; exact hg0
   -- The *fresh* round-`r` commitment: a live pair at the returning round that is not (yet)
-  -- A grade-0-locked round commits everything at and above it, through `commit_to_later_rounds`'s
-  -- pair invariant.
+  -- graded 0 commits everything at and above it, through `commit_to_later_rounds`'s pair
+  -- invariant.
   have hFreshCommit : ∀ b0, (g r).grade ≠ some false →
       (!b0) ∈ (g r).excluded → b0 ∉ (g r).excluded →
       Grade2Commitment P (Function.update g r gr') c' r b0 := by
@@ -480,8 +480,8 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
         exact hI.phase_input id' (hCF ▸ hmem) hne'
     · rw [hc'eq] at hne; rw [(hCprocs id').1]; exact hI.phase_input id' (hCF ▸ hmem) hne
   · -- `down_settled`: off the returning round nothing moved; at `r' + 1 = r` a grade-0
-    -- return's both-bit support pushes the grade-0 lock down one round
-    -- (`grade0Lock_chain_of_both_supports`).
+    -- return's both-bit support pushes grade 0 down one round
+    -- (`grade0_chain_of_both_supports`).
     intro r' h
     by_cases h2 : r' = r
     · exact hClosedTo r' (hI.down_settled r' ((hClosedEq (r' + 1) (by omega)).mp h))
@@ -492,7 +492,7 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
           rw [← hBindeq (r' + 1)]; exact hb
         · have hgself : Function.update g r gr' (r' + 1) = gr' := by rw [h1]; exact hGself
           rw [hgself] at hgf
-          exact Or.inr (hI.grade0Lock_chain_of_both_supports r' (by rw [h1]; exact hCsupp hgf true)
+          exact Or.inr (hI.grade0_chain_of_both_supports r' (by rw [h1]; exact hCsupp hgf true)
             (by rw [h1]; exact hCsupp hgf false))
       · exact hI.down_settled r' ((hClosedEq (r' + 1) h1).mp h)
   · obtain ⟨R, hR⟩ := hI.quiescent
@@ -513,7 +513,7 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
       rw [hr0r]
       exact hFreshCommit b0 hgne hb0eq.1 hb0eq.2
     · rw [hGeq r0 hr0r] at hgr hbr
-      obtain ⟨h1, h2, h3, h4⟩ := hI.grade2Lock_commit r0 b0 hgr hbr
+      obtain ⟨h1, h2, h3, h4⟩ := hI.grade2Bound_commit r0 b0 hgr hbr
       refine ⟨fun r' b'' hrr' hb' => by rw [hBindeq] at hb'; exact h1 r' b'' hrr' hb',
         fun r' id' b'' hrr' hmem hcall => by
           rw [hCalleq] at hcall; exact h2 r' id' b'' hrr' (hCF ▸ hmem) hcall,
@@ -548,7 +548,7 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
     rcases hCstepG with ⟨hph, hr, hc'eq⟩ | ⟨hF, hc'eq⟩
     · by_cases hid : id' = id
       · -- `id` sits at round `r` with `r' < r` and an agreeing coin at `r'`: round `r' + 1`
-        -- can neither have bound (`hlast'`) nor be grade-0-locked (`no_grade0Lock_succ`).
+        -- can neither have bound (`hlast'`) nor be graded 0 (`no_grade0_succ`).
         exfalso
         have hmem' : id ∉ c.F := by
           rw [← hCF, ← hid]; exact hmem
@@ -560,15 +560,15 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
           · rw [← heq] at huexcluded
             rw [hlast'.2] at huexcluded
             simp at huexcluded
-          · exact hI.no_grade0Lock_succ_of_support r' v hcoin hbnd
+          · exact hI.no_grade0_succ_of_support r' v hcoin hbnd
               (by rw [heq]; exact hCsupp hgf (!v))
         · rcases hI.round_bound id hmem' (r' + 1) (by omega) with hh | hh
           · exact hh hlast'.2
-          · exact hI.no_grade0Lock_succ r' v hcoin hbnd hh
+          · exact hI.no_grade0_succ r' v hcoin hbnd hh
       · rw [hc'eq, ABAState.setProcessVariables_processes_ne _ _ _ hid]
-        exact hI.agree_locked r' v hlast' hbr hcoin id' (hCF ▸ hmem) hround
+        exact hI.agree_bound r' v hlast' hbr hcoin id' (hCF ▸ hmem) hround
     · rw [hc'eq]
-      exact hI.agree_locked r' v hlast' hbr hcoin id' (hCF ▸ hmem) hround
+      exact hI.agree_bound r' v hlast' hbr hcoin id' (hCF ▸ hmem) hround
   · intro r' h
     by_cases h2 : r' = r
     · rw [h2, hBindeq]
@@ -664,8 +664,8 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
           · rw [hr0eq, Function.update_self] at hgr0
             by_cases hrr : r' = r
             · exact absurd hgr0 (by rw [hGgradeFalse (by rw [← hrr]; exact hg0)]; simp)
-            · have hgrfalse : (g r).grade = some false := hI.grade0Lock_chain_to_earlier_rounds r r' (by omega)
-                hg0
+            · have hgrfalse : (g r).grade = some false :=
+                hI.grade0_chain_to_earlier_rounds r r' (by omega) hg0
               rw [hGgradeFalse hgrfalse] at hgr0
               simp at hgr0
           · rw [hGeq r₀ hr0eq] at hgr0
@@ -683,7 +683,8 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
         · rw [hr0eq, Function.update_self] at hgr0
           by_cases hrr : r' = r
           · exact absurd hgr0 (by rw [hGgradeFalse (by rw [← hrr]; exact hg0)]; simp)
-          · have hgrfalse : (g r).grade = some false := hI.grade0Lock_chain_to_earlier_rounds r r' (by omega) hg0
+          · have hgrfalse : (g r).grade = some false :=
+              hI.grade0_chain_to_earlier_rounds r r' (by omega) hg0
             rw [hGgradeFalse hgrfalse] at hgr0
             simp at hgr0
         · rw [hGeq r₀ hr0eq] at hgr0
@@ -730,15 +731,15 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
     · rw [h2] at h ⊢
       rw [hGeq (r + 1) (by omega)] at h
       rw [Function.update_self]
-      exact hGgradeFalse (hI.grade0Lock_chain r h)
+      exact hGgradeFalse (hI.grade0_chain r h)
     · by_cases h1 : r' + 1 = r
       · rw [h1, Function.update_self] at h
         rw [hGeq r' h2]
-        exact hI.grade0Lock_chain_of_both_supports r' (by rw [h1]; exact hCsupp h true)
+        exact hI.grade0_chain_of_both_supports r' (by rw [h1]; exact hCsupp h true)
           (by rw [h1]; exact hCsupp h false)
       · rw [hGeq (r' + 1) h1] at h
         rw [hGeq r' h2]
-        exact hI.grade0Lock_chain r' h
+        exact hI.grade0_chain r' h
   · intro id' hmem hround hphase
     rw [(hCprocs id').2] at hround
     rcases hCstepG with ⟨hph, hr, hc'eq⟩ | ⟨hF, hc'eq⟩
@@ -758,7 +759,7 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
   · intro r' id' hmem hcalled
     rw [(hCprocs id').2]; exact hI.wcc_callRound r' id' (hCF ▸ hmem) hcalled
   · intro r' h
-    rcases hI.flip_grade2Lock r' h with hg | hd
+    rcases hI.flip_witness r' h with hg | hd
     · left
       by_cases hrr : r' = r
       · rw [hrr, Function.update_self]; exact hGradeNoneTrans (hrr ▸ hg)
@@ -843,7 +844,7 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
       rw [hrr]
       exact hCsupp hgf b'
     · rw [hGeq r' hrr] at hgf
-      exact hI.grade0Lock_support r' b' hgf
+      exact hI.grade0_support r' b' hgf
   · -- I28: `retG` never touches `excluded`/`call`/`F`
     intro r' b0 hbd
     rw [hBindeq r'] at hbd
@@ -851,7 +852,7 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
       (hI.excluded_support r' b0 hbd)
   · -- I29 establishment: a fresh value-bearing return's carrier meets every standing
     -- opposite carrier's permanent residue head-on — the return's own liveness guard
-    -- refutes it; a grade-0 return locks the round's grade instead.
+    -- refutes it; a grade-0 return sets the round's grade to 0 instead.
     intro r₀ i0 j0 v v' hm hm' h h'
     have hred : ∀ i1 v1, OutcomeHolder P (Function.update g r gr') c' r₀ i1 v1 →
         OutcomeHolder P g c r₀ i1 v1 ∨ (i1 = id ∧ r₀ = r ∧ out.estimate = some v1) := by
@@ -930,7 +931,7 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
       exact hpinCert b1 hout r1 b1' hcv1
     rcases hRedH i0 b0 h with hold0 | ⟨-, hout0⟩
     · rcases hRedH j0 b0' h' with hold1 | ⟨-, hout1⟩
-      · exact hI.grade2Lock_agree i0 j0 b0 b0' (hCF ▸ hm) (hCF ▸ hm') hold0 hold1
+      · exact hI.grade2Bound_agree i0 j0 b0 b0' (hCF ▸ hm) (hCF ▸ hm') hold0 hold1
       · exact hpin b0' hout1 i0 b0 (hCF ▸ hm) hold0
     · rcases hRedH j0 b0' h' with hold1 | ⟨-, hout1⟩
       · exact (hpin b0 hout0 j0 b0' (hCF ▸ hm') hold1).symm

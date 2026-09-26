@@ -42,7 +42,7 @@ six events are the gather multicast and delivery, the call and the return of an 
 and the call and the return of a bind instance. They are hidden before anything outside sees the
 instance, and `gatherEvents` collects the labels hidden there.
 
-A broadcast instance speaks its own interface alphabet and joins the composition along a pullback
+A broadcast instance has its own interface alphabet and joins the composition along a pullback
 that names it -- `inputBroadcastLabelMap k` for the instance broadcasting `k`'s input,
 `bindBroadcastLabelMap q` for the instance broadcasting `q`'s `BIND` payload (D32). A label
 carrying another instance's index has no image, and that instance is unchanged. Corruption and the
@@ -236,7 +236,7 @@ theorem coreOf_eq_coreOfNetwork {X : Type} (P : Parameters)
 
 /-! ### The pullbacks
 
-A broadcast instance speaks its own interface alphabet `BRB.InstanceLabel`. It joins
+A broadcast instance has its own interface alphabet `BRB.InstanceLabel`. It joins
 the composition along a pullback that names it: a label carrying another
 instance's index has no image and leaves that instance idle. -/
 

@@ -18,7 +18,7 @@ simulation dispatches on; its τ has more sources than the visible labels do, ev
 label being hidden, and each of those sources collapses into one of the six. Three of the four
 lemmas take the invariant's I0 conjunct as a hypothesis: a round loop's transition is guarded by its
 own replacement flag and the ABA network's transition by the corrupted set, and I0 identifies the
-two, so that the statement speaks of `F` alone (D23). `corrupted_eq_false_iff` is the one-line form
+two, so that the statement is on `F` alone (D23). `corrupted_eq_false_iff` is the one-line form
 of that translation.
 -/
 

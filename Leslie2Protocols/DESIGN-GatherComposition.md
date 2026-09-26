@@ -94,14 +94,14 @@ Gather.instanceOverBracha P X   ⊑ Gather.instanceOverBroadcastSpecification P 
 Gather.instanceOverBroadcastSpecification P X ⊑ Gather.specInst P X       (refinesSpecification, Gather/RefinesSpecification.lean)
 ```
 
-Each composition speaks an alphabet of its own, in which the call's
+Each composition has an alphabet of its own, in which the call's
 input-enabledness loop is a label of its own, and its specification is read
 along a pullback that sends the loop to the call (`BRB.specificationLabelMap`,
 `Gather.specificationLabelMap`): the specification answers its call label on two transitions, and a
 composition whose caller and network are different components could otherwise
-combine the caller's loop with the network's post. The round speaks the family
+combine the caller's loop with the network's post. The round is over the family
 alphabet `ExtendedLabel P.n Empty` natively, as the ABDY chain's round
-`GBCA.ByABDY.composition` speaks `ExtendedLabel P.n GBCA.ByABDY.Message`, so the family's call
+`GBCA.ByABDY.composition` is over `ExtendedLabel P.n GBCA.ByABDY.Message`, so the family's call
 loops are its loop labels and `GBCA.specificationLabelMap` reads its specification. The family
 alphabet is parametric in the type of the messages a graded-agreement round exchanges; the round
 takes the empty type for it, so the round multicast and the round delivery name no label in
@@ -346,7 +346,7 @@ Two ingredients, both shared with the ABDY chain:
   `ABDY/Substitution.lean`'s `ABDY.substitutionSimulation` uses, so the third
   stage's target is definitionally `hybrid P`.
 
-The round speaks the family alphabet natively, so no lift precedes the family; the families are
+The round is over the family alphabet natively, so no lift precedes the family; the families are
 `System.family (GBCA.ByAFW.roundOverBracha P) roundOwnsLabel isFailLabel corruptionOverBracha` and
 their two siblings, as `GBCA.ByABDY.gbcaInstanceFamily` is. The stages compose by
 `ProbabilisticForwardSimulation.trans`; the inclusions compose by `Set.Subset.trans` and never

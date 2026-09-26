@@ -25,7 +25,7 @@ graded-agreement round at once, and the single adversary holds both kinds of mes
 * the common coin enters through the same label pullback as in the protocol
   (`Composition.coinOverRoundAlphabet`).
 
-The four components speak `Composition.ExtendedLabel n`, the labels the components synchronise on
+The four components have the alphabet `Composition.ExtendedLabel n`, the labels they synchronise on
 are hidden, and the result is read back over `Label n`. The round loops, the ABA network and the
 lifted common coin are
 defined in `ABA/Composition/Components.lean`. The pipeline `ABDY.composedExtended` /

@@ -40,8 +40,8 @@ Every one of `hybrid_step_tau`'s six disjuncts is matched by a stutter: the abst
 untouched by every hidden transition and only moves at the visible ones
 (`callABA`/`retABA`/`fail`), handled in `HybridRefinesSpecification/Simulation.lean`. All six
 lemmas below are instances of a single argument about a write elsewhere: `AbstractState` inspects
-only `F`, the per-process `input`/`returned` projections, and the grade-2 lock on `g` — and each
-transition preserves all three. -/
+only `F`, the per-process `input`/`returned` projections, and the grade-2 witnesses on
+`g` — and each transition preserves all three. -/
 
 /-- `AbstractState` transfers along any write that preserves `F`, the per-process
 `input`/`returned` projections, and the grade-2 witness and holder universal. -/

@@ -197,7 +197,7 @@ coin, and the lemmas that read a transition off its label.
 
 | file | lines | what it is |
 |---|---|---|
-| `Implementation/Alphabet.lean` | 219 | The extended alphabet `ExtendedLabel n M E` the implementation speaks, parametric in the round message type and in the type of the round's own calls and returns, with the label pullback the common coin is read along. |
+| `Implementation/Alphabet.lean` | 219 | The extended alphabet `ExtendedLabel n M E` of the implementation, parametric in the round message type and in the type of the round's own calls and returns, with the label pullback the common coin is read along. |
 | `Implementation/System.lean` | 717 | **The implementation of a protocol**, parametric in the graded-agreement implementation: the shared transitions of a program and of the network, the payload a graded-agreement call multicasts where it multicasts one, the adversary's per-round ghost with its update and its output (D30), the pipeline that composes them beside the common coin, and `IsRoundStep`, what an implementation states about its own transitions. |
 | `Implementation/StepCases.lean` | 517 | The transitions of one program and of the network, read off their labels: the participant's transition as its guards together with the Dirac it produces, the idle transition of a non-participant as the identity, and the determinacy of both step relations. |
 | `Implementation/NetworkStateWritesAndRemovals.lean` | 243 | The field algebra of the network's four writes: a round multicast, a DECIDED multicast, corruption and the ghost write, each read down to the fields of the state it delivers. With them the two removals, `NetworkState.forgetGhost` to the state over the trivial ghost `Unit` and `forgetBound` to the label with the announced bound bit fixed at `false`. |
@@ -247,7 +247,7 @@ make, the algorithm that composition realises, and the simulation into the speci
 | `Gather/BroadcastSubstitution.lean` | 153 | `broadcastSubstitution`: the broadcast substitution inside gather, per coordinate, carried through the composition by the congruences. |
 | `Gather/CommonCore.lean` | 142 | `instanceOverBroadcastSpecification_core` and `instanceOverBracha_core`: the common core read off a trace holds at the two gather implementations, carried down from the specification along their refinements. |
 
-**`ABA/GBCA/`** — the graded-agreement specification, the binding it carries, and the reading of it over the alphabet a round speaks.
+**`ABA/GBCA/`** — the graded-agreement specification, the binding it carries, and the reading of it over the alphabet of a round.
 
 | file | lines | what it is |
 |---|---|---|
@@ -410,7 +410,7 @@ The gather-based files form their own stack over `Vocabulary/ProcessAndNetworkSt
 type, and `GBCA/AFW/AlgorithmOverGatherSpecifications.lean` imports
 `GBCA/SpecificationOverRoundAlphabet.lean`, whose
 `GBCA.specificationLabelMap` and `GBCA.specificationOverRoundAlphabet` read the
-graded-agreement specification over the family alphabet the round speaks, `AFW/System.lean`
+graded-agreement specification over the family alphabet of the round, `AFW/System.lean`
 instantiates `Implementation/System.lean`, and `AFW/Substitution.lean` imports
 `Composition/Hybrid.lean` for `hybrid`, the system its third stage lands on. No file
 of the ABDY chain imports a gather-based one, and `Results.lean` is where the two chains meet,
@@ -443,7 +443,7 @@ For the gather-based chain, by module docstring: `ReliableBroadcast/Bracha/Compo
 `GBCA/AFW/Composition.lean` → `GBCA/AFW/CompositionStepCases.lean` →
 `GBCA/AFW/AlgorithmOverGatherSpecifications.lean` →
 `AFW/Composition.lean` → `AFW/Substitution.lean` → `AFW/Simulation.lean`. The first twelve are
-the three levels, four files each: the components and the alphabet they speak, the composition
+the three levels, four files each: the components and their alphabet, the composition
 they are assembled into, the cases of a transition of the composition, read back into
 the transitions of its components, and the algorithm that reads a transition of the composition
 off its label; `GBCA/AFW/AlgorithmOverGatherSpecifications.lean` is the algorithm the counting

@@ -312,7 +312,7 @@ theorem hybridRefinesSpecification (P : Parameters) (M : Type) [DecidableEq M] :
         -- the abstract holder universal for `b`: every correct grade-2 decision holder agrees
         -- with the derived sender's sent bit (I30)
         have hpinb : ∀ j0 b0', j0 ∉ ABAState.F (C, A) → Grade2Holder P (C, A) j0 b0' → b0' = b :=
-          fun j0 b0' hj0 hh0 => hI.grade2Lock_agree j0 j b0' b hj0 hjF hh0 (Or.inr hjsent)
+          fun j0 b0' hj0 hh0 => hI.grade2Bound_agree j0 j b0' b hj0 hjF hh0 (Or.inr hjsent)
         have hretfalse : a.ret id = false := by
           rw [hAbs.ret_eq id]; exact hret
         have hCF : c'.F = ABAState.F (C, A) := ABAState.setProcessVariables_F _ _ _

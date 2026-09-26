@@ -18,8 +18,9 @@ import Leslie2Protocols.Framework.SynchronisedProduct
 The protocol is composed twice in this development. The protocol
 (`ABA/ABDY/System.lean`) puts `n` per-process programs beside a network
 and the common coin. The composed system (`ABA/ABDY/Composition.lean`) cuts
-the same protocol into its components. Both compositions speak one alphabet, and some of what they
-compose is the same object in both systems. This file holds that alphabet and those components.
+the same protocol into its components. Both compositions are over one alphabet, and some of
+what they compose is the same object in both systems. This file holds that alphabet and those
+components.
 
 ## The extended alphabet
 
@@ -27,14 +28,14 @@ compose is the same object in both systems. This file holds that alphabet and th
 message networks, the Byzantine call and return transitions, or the branches of a call or return
 that it does not distinguish. `NetworkEvent n M` names them, over the type `M` of the
 messages a graded-agreement round exchanges (`ABA/Implementation/Alphabet.lean`), and
-`ExtendedLabel n M = Label n ⊕ NetworkEvent n M` is the alphabet every component here speaks. Its
+`ExtendedLabel n M = Label n ⊕ NetworkEvent n M` is the alphabet of every component here. Its
 silent label is `Sum.inl τ`, so every `Sum.inr` label is observable, and `networkEventLabels n` —
 the set of all of them — is what both compositions hide before reading the result back over
 `Label n`.
 
 ## The common coin
 
-The common coin `WCC.specFamily` speaks `Label n`, so it is joined to the extended alphabet through
+The common coin `WCC.specFamily` is over `Label n`, so it is joined to the extended alphabet through
 the label pullback `coinLabelMap`, which sends a shared label to itself, the Byzantine call and
 return transitions and the fused coin return to the coin's own call and return transitions, and
 every other network event out of the domain. `coinOverRoundAlphabet` is the coin read along that

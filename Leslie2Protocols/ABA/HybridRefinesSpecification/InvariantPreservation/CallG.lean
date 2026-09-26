@@ -13,7 +13,7 @@ import Leslie2Protocols.ABA.Composition.Hybrid
 `Invariant.step_callG`, preservation of `Invariant` at a call of the graded-agreement
 specification. The GBCA instance only ever touches `.call`, never `.F`, `.excluded` or `.grade`,
 and the core only ever touches `.phase` at `id`, never `.input`, `.estimate` or `.round`.
-`grade2Lock_commit`'s second conjunct comes from its own third conjunct and the correct call guard
+`grade2Bound_commit`'s second conjunct comes from its own third conjunct and the correct call guard
 `estimate = b`. The correct-fresh-call corner of `input_gbcaRound0` and `input_called` needs
 "`estimate = input` before any round-`0` return", a coherence of phase and input that is not an
 explicit `Invariant` conjunct, and is handed off.
@@ -195,7 +195,7 @@ theorem Invariant.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
     fun r' => (hFgeq r').trans (hCF ▸ hI.F_gbca r'), fun r' => hCF ▸ hI.F_wcc r',
     hCF ▸ hI.F_card,
     ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
-    ?_, ?_, ?_, fun r' h => by rw [hGradeeq] at h ⊢; exact hI.grade0Lock_chain r' h, ?_,
+    ?_, ?_, ?_, fun r' h => by rw [hGradeeq] at h ⊢; exact hI.grade0_chain r' h, ?_,
     hI.wcc_order, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
     fun r' v hb => (hI.bind_support r' v (by rw [← hBindeq r']; exact hb)).mono
       (fun id' b' h => by rw [(hCprocs id').1]; exact h) (fun x hx => by rw [hCF]; exact hx),
@@ -204,7 +204,7 @@ theorem Invariant.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
         by_cases hrr : r' = r
         · subst hrr; rw [Function.update_self]; exact hCallMono id' b' h
         · rw [hGeq r' hrr]; exact h)
-      (hFgeq r').ge (hI.grade0Lock_support r' b' ((hGradeeq r').symm.trans hgf)),
+      (hFgeq r').ge (hI.grade0_support r' b' ((hGradeeq r').symm.trans hgf)),
     fun r' b0 hbd => GBCA.callSupport_mono
       (fun id' h => by
         by_cases hrr : r' = r
@@ -214,7 +214,7 @@ theorem Invariant.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
     fun r₀ i0 j0 v v' hm hm' h h' => (hI.outcomeHolder_agree r₀ i0 j0 v v' (hCF ▸ hm) (hCF ▸ hm')
       (hCarrTrans r₀ i0 v (hCF ▸ hm) h) (hCarrTrans r₀ j0 v' (hCF ▸ hm') h')).imp
       (fun x => x) (fun hh => (hGradeeq r₀).trans hh),
-    fun i0 j0 b0 b0' hm hm' h h' => hI.grade2Lock_agree i0 j0 b0 b0' (hCF ▸ hm) (hCF ▸ hm')
+    fun i0 j0 b0 b0' hm hm' h h' => hI.grade2Bound_agree i0 j0 b0 b0' (hCF ▸ hm) (hCF ▸ hm')
       (hHold _ _ h) (hHold _ _ h')⟩
   · -- input_gbcaRound0
     intro id' b' hmem hcall
@@ -288,7 +288,7 @@ theorem Invariant.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
     exact (hI.decided_source id' b' (hCF ▸ hmem) h).imp (fun r0 => hCertTrans r0 b')
   · intro r0 b0 hgr hbr
     rw [hGradeeq] at hgr; rw [hBindeq] at hbr
-    exact hCommitTrans r0 b0 (hI.grade2Lock_commit r0 b0 hgr hbr)
+    exact hCommitTrans r0 b0 (hI.grade2Bound_commit r0 b0 hgr hbr)
   · intro id' hmem r' hround
     rw [(hCprocs id').2.2] at hround
     rw [RoundSettled.congr (hBindeq r') (hGradeeq r')]
@@ -298,7 +298,7 @@ theorem Invariant.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
       by rw [← hBindeq (r' + 1)]; exact hlast.2⟩
     rw [hBindeq] at hbr
     rw [(hCprocs id').2.2] at hround; rw [(hCprocs id').2.1]
-    exact hI.agree_locked r' v hlast' hbr hcoin id' (hCF ▸ hmem) hround
+    exact hI.agree_bound r' v hlast' hbr hcoin id' (hCF ▸ hmem) hround
   · intro r' h; rw [hGradeeq] at h; rw [hBindeq]; exact hI.grade2_needs_bind r' h
   · intro r' id' hmem hcall
     by_cases hrr : r' = r
@@ -448,7 +448,7 @@ theorem Invariant.step_callG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {
   · intro r' id' hmem hcalled
     rw [(hCprocs id').2.2]; exact hI.wcc_callRound r' id' (hCF ▸ hmem) hcalled
   · intro r' h
-    rcases hI.flip_grade2Lock r' h with hg | hd
+    rcases hI.flip_witness r' h with hg | hd
     · left; rw [hGradeeq]; exact hg
     · right
       exact DissentWitness.preserved (hBindeq r') (hBindeq (r' - 1))

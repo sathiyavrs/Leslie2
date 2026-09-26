@@ -328,7 +328,7 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
     The count is monotone in $F$ and in the calls, so no later corruption invalidates it, and among $f+1$ supporters some member lies outside the final $F$, which recovers a never-corrupted genuine caller; filling the entries of corrupted processes at the specification instead would require knowing which process is corrupted later, a prophecy no forward simulation has.
     The alternative, a specification transition filling the entries of corrupted processes, is refuted by the prophecy it would need.
   \item D16: the two-phase abstract state used by the core simulation, which defers the specification's $\tau$-progress to a single \leandeclnamed{decide}{PLTS.ABA.SpecStep.decide} step under the first visible return.
-    An abstract state that decides when a round excludes a bit can be contradicted afterwards: a late caller of the other bit enables a grade-0 return at that round, the next round spares the opposite bit and locks it at grade~2, and the decision falls against the committed value.
+    An abstract state that decides when a round excludes a bit can be contradicted afterwards: a late caller of the other bit enables a grade-0 return at that round, the next round spares the opposite bit and is graded~2, and the decision falls against the committed value.
     The abstract state therefore commits as late as a forward simulation permits.
     It never fires the flip either, whose $\delta$-branch reaches the mode enabling no transition, where a return arriving later could not be answered.
     An eager abstract state is refuted by that trace; deciding at the round would need a backward simulation or a prophecy variable, neither of which the framework carries.
@@ -621,7 +621,7 @@ System~1.
 \subsection{The sub-protocol specifications}
 
 Transition Systems~2 and~3 are the specifications of the two sub-protocols, given as round-indexed instances together with the $\mathbb{N}$-indexed families the round loop calls.
-Both graded-agreement implementations meet Transition System~2 read over the alphabet a round speaks, along the projection that identifies the Byzantine call and return labels with the specification labels they stand for.
+Both graded-agreement implementations meet Transition System~2 read over the alphabet of a round, along the projection that identifies the Byzantine call and return labels with the specification labels they stand for.
 Binding holds of that reading, so every inclusion into it carries binding.
 See \leanmodule{Leslie2Protocols/ABA/GBCA/Specification},
 \leanmodule{Leslie2Protocols/ABA/GBCA/SpecificationSafety},
@@ -637,9 +637,9 @@ The exclusion set never holds two bits: \leandeclnamed{bindUnset}{PLTS.ABA.GBCA.
 The exclude edge names the bit it excludes, so $1{-}b$ is the surviving bit at every state to its right.
 The abstraction does not track $ret$, so a repeat return is a self-loop.
 Binding (transition~3, \leandeclnamed{bindUnset}{PLTS.ABA.GBCA.Step.bindUnset}) fires under a quorum with $f{+}1$ $\mathrm{InputSupport}$ support for the surviving bit and excludes the other.
-\leandeclnamed{retGrade2}{PLTS.ABA.GBCA.Step.retGrade2} (transition~5) hands out the surviving bit and locks the grade at $2$; it loops on $(1,2)$.
+\leandeclnamed{retGrade2}{PLTS.ABA.GBCA.Step.retGrade2} (transition~5) hands out the surviving bit and writes grade $2$; it loops on $(1,2)$.
 \leandeclnamed{retGrade1}{PLTS.ABA.GBCA.Step.retGrade1} (transition~4) hands out the surviving bit under $f{+}1$ dissent support; it writes neither component and carries no grade guard, so it loops on all three states with $|excluded| = 1$.
-\leandeclnamed{retGrade0}{PLTS.ABA.GBCA.Step.retGrade0} (transition~6) carries $f{+}1$ support for each of the two bits, hands out no bit and needs only that the complement of the bit it announces be excluded; it locks the grade at $0$ from $(1,\bot)$ and loops on $(1,0)$.
+\leandeclnamed{retGrade0}{PLTS.ABA.GBCA.Step.retGrade0} (transition~6) carries $f{+}1$ support for each of the two bits, hands out no bit and needs only that the complement of the bit it announces be excluded; it writes grade $0$ from $(1,\bot)$ and loops on $(1,0)$.
 The grade-2 and grade-0 guards are mutually exclusive, \leandeclnamed{retGrade2}{PLTS.ABA.GBCA.Step.retGrade2} needing the grade unset or already $2$ and \leandeclnamed{retGrade0}{PLTS.ABA.GBCA.Step.retGrade0} needing it unset or already $0$.
 Each of the three returns carries the round's bound bit on its label, drawn beside it as $bnd = 1{-}b$: a return announces the complement of the excluded bit, so every return of a round announces one bit (D29).
 Every $\mathrm{InputSupport}$ count is $f{+}1$ distinct callers-or-corrupted (D15) and $F$-blind.
@@ -654,7 +654,7 @@ The \leandeclnamed{fail}{PLTS.ABA.GBCA.Step.fail} broadcast (transition~7) is en
   \item $call : [n] \to \{0,1,\bot\}$, the pending input of each process, $\bot$ when unset.
   \item $ret : [n] \to \mathbb{B}$, which processes have received their return.
   \item $excluded \subseteq \{0,1\}$, the exclusion set: the bits the instance can no longer hand out, written only by the internal binding transition (D19).
-  \item $grade : \{0,1,\bot\}$, the grade lock, written $1$ by a grade-2 return and $0$ by a grade-0 return.
+  \item $grade : \{0,1,\bot\}$, the grade, written once, $1$ by a grade-2 return and $0$ by a grade-0 return.
   \item $F \subseteq [n]$, the corrupted set, a local copy the $\mathrm{fail}$ broadcast keeps equal to the others.
 \end{itemize}
 \noindent Binding is internal specification state, it is negative information, and every return announces the surviving bit (D19, D29).
@@ -1861,7 +1861,7 @@ The round interface $\mathrm{callG}/\mathrm{retG}$, Transition System~2 and ever
 The verification is organised as substitutions inside the round.
 The round has three compositions, one per gather system in its two gather slots: the round over gather specifications, the same round over gather-over-broadcast instances, and the fully concrete round over gather-over-Bracha instances.
 Three forward simulations connect them --- the broadcast substitution and the gather substitution, each an application of the congruences of Theorem~\ref{thm:forwardsim-congruence}, and the counting refinement into Transition System~2, proved on the composition through its characterisation by the algorithm --- and compose to the round refinement.
-At the protocol shape, each round speaks the extended alphabet itself, is gathered into the round-indexed family, and is put through the composed system's pipeline; the three substitutions become three stages whose last lands on $\mathrm{hybrid}(P)$, and from there the chain is the shared one.
+At the protocol shape, each round is over the extended alphabet itself, is gathered into the round-indexed family, and is put through the composed system's pipeline; the three substitutions become three stages whose last lands on $\mathrm{hybrid}(P)$, and from there the chain is the shared one.
 Two systems are verified: the composed one, the gather-based counterpart of Definition~\ref{def:aba-composed}, and beneath it the implementation, the second instantiation of Definition~\ref{def:aba-implementation}, which is the gather-based protocol as it runs.
 
 The two chains meet at $\mathrm{hybrid}(P)$ and are identical above it, and below it they run through systems of the same shape.
@@ -2136,7 +2136,7 @@ Assembling the composed state from the implementation's undoes both rearrangemen
 
 
 At the protocol shape the gather-based rounds occupy the same refinable position the direct rounds do.
-Each system over the round speaks the extended alphabet itself, and is gathered into the round-indexed family under the corruption broadcast, whose compatibility is each relation's own statement that the two corrupted sets move together.
+Each system over the round has the extended alphabet itself, and is gathered into the round-indexed family under the corruption broadcast, whose compatibility is each relation's own statement that the two corrupted sets move together.
 The three family substitutions run under the composed system's context through the four congruences, exactly as the substitution of Theorem~\ref{thm:aba-substitution} does, and the third stage lands on $\mathrm{hybrid}(P)$ itself: the core simulation, the safety of the specification and the safety transfer are shared between the two chains from that point up.
 One specification, two verified implementations, one meeting point at $\mathrm{hybrid}(P)$. Below that point the chain has one step more than the direct one, the substitution splitting into its three stages:
 \[ \begin{aligned}

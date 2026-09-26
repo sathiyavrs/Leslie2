@@ -57,15 +57,15 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
         rw [ABAState.deliverDecided_corrupted, hFeq]; exact hI.corrupted_F id',
       fun r => by rw [hFeq]; exact hI.F_gbca r, fun r => by rw [hFeq]; exact hI.F_wcc r,
       hFeq ▸ hI.F_card, ?_, ?_, ?_, hI.down_settled, hI.quiescent, hI.wcc_bound, ?_, ?_, ?_, ?_, ?_,
-      hI.grade2_needs_bind, ?_, ?_, ?_, ?_, ?_, ?_, hI.bind_succ, ?_, ?_, hI.grade0Lock_chain, ?_,
+      hI.grade2_needs_bind, ?_, ?_, ?_, ?_, ?_, ?_, hI.bind_succ, ?_, ?_, hI.grade0_chain, ?_,
       hI.wcc_order, ?_, ?_, ?_, ?_, ?_, ?_, hI.bound_quorum,
       fun r v hb => (hI.bind_support r v hb).mono
         (fun id' b' h => by rw [hProcs]; exact h) (fun x hx => by rw [hFeq]; exact hx),
-      hI.grade0Lock_support, hI.excluded_support,
+      hI.grade0_support, hI.excluded_support,
       fun r' i0 j0 v v' hm hm' h h' => hI.outcomeHolder_agree r' i0 j0 v v' (hFeq ▸ hm) (hFeq ▸ hm')
         (by unfold OutcomeHolder at h ⊢; rwa [hProcs] at h)
         (by unfold OutcomeHolder at h' ⊢; rwa [hProcs] at h'),
-      fun i0 j0 b0 b0' hm hm' h h' => hI.grade2Lock_agree i0 j0 b0 b0' (hFeq ▸ hm) (hFeq ▸ hm')
+      fun i0 j0 b0 b0' hm hm' h h' => hI.grade2Bound_agree i0 j0 b0 b0' (hFeq ▸ hm) (hFeq ▸ hm')
         (by unfold Grade2Holder at h ⊢; rwa [hProcs, hDS] at h)
         (by unfold Grade2Holder at h' ⊢; rwa [hProcs, hDS] at h')⟩
     · intro id' b' hmem hcall
@@ -88,7 +88,7 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
       rw [hDS] at h
       exact (hI.decided_source id' b' (hFeq ▸ hmem) h).imp (fun r => hCert r b')
     · intro r b' hgr hbr
-      obtain ⟨h1, h2, h3, h4⟩ := hI.grade2Lock_commit r b' hgr hbr
+      obtain ⟨h1, h2, h3, h4⟩ := hI.grade2Bound_commit r b' hgr hbr
       refine ⟨h1, h2, fun id' hmem hround => ?_,
         fun id0 v hmem hcar => h4 id0 v (hFeq ▸ hmem)
           (by unfold OutcomeHolder at hcar ⊢; rwa [hProcs] at hcar)⟩
@@ -96,7 +96,7 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
     · intro id' hmem r hround
       rw [hProcs] at hround; exact hI.round_bound id' (hFeq ▸ hmem) r hround
     · intro r v hlast hbr hcoin id' hmem hround
-      rw [hProcs] at hround ⊢; exact hI.agree_locked r v hlast hbr hcoin id' (hFeq ▸ hmem) hround
+      rw [hProcs] at hround ⊢; exact hI.agree_bound r v hlast hbr hcoin id' (hFeq ▸ hmem) hround
     · intro r id' hmem hcall; rw [hProcs]; exact hI.call_round r id' (hFeq ▸ hmem) hcall
     · intro r id' hmem hcalled; exact hI.wcc_called r id' (hFeq ▸ hmem) hcalled
     · intro r id' hmem hround
@@ -118,7 +118,7 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
     · intro id' b' h; rw [hProcs]; exact hI.input_gbcaRound0_permanent id' b' h
     · intro r id' hmem hcalled; rw [hProcs]; exact hI.wcc_callRound r id' (hFeq ▸ hmem) hcalled
     · intro r h
-      rcases hI.flip_grade2Lock r h with hg | hd
+      rcases hI.flip_witness r h with hg | hd
       · left; exact hg
       · right; exact DissentWitness.preserved rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
     · intro id' hmem hin r; rw [hProcs] at hin; exact hI.idle_no_wccCall id' (hFeq ▸ hmem) hin r
@@ -170,18 +170,18 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
         rw [ABAState.sendDecided_corrupted, hFeq]; exact hI.corrupted_F id',
       fun r => by rw [hFeq]; exact hI.F_gbca r, fun r => by rw [hFeq]; exact hI.F_wcc r,
       hFeq ▸ hI.F_card, ?_, ?_, ?_, hI.down_settled, hI.quiescent, hI.wcc_bound, ?_, ?_, ?_, ?_, ?_,
-      hI.grade2_needs_bind, ?_, ?_, ?_, ?_, ?_, ?_, hI.bind_succ, ?_, ?_, hI.grade0Lock_chain, ?_,
+      hI.grade2_needs_bind, ?_, ?_, ?_, ?_, ?_, ?_, hI.bind_succ, ?_, ?_, hI.grade0_chain, ?_,
       hI.wcc_order, ?_, ?_, ?_, ?_, ?_, ?_, hI.bound_quorum,
       fun r v hb => (hI.bind_support r v hb).mono
         (fun id' b' h => by rw [hProcs]; exact h) (fun x hx => by rw [hFeq]; exact hx),
-      hI.grade0Lock_support, hI.excluded_support,
+      hI.grade0_support, hI.excluded_support,
       fun r' i0 j0 v v' hm hm' h h' => hI.outcomeHolder_agree r' i0 j0 v v' (hFeq ▸ hm) (hFeq ▸ hm')
         (by unfold OutcomeHolder at h ⊢; rwa [hProcs] at h)
         (by unfold OutcomeHolder at h' ⊢; rwa [hProcs] at h'),
       fun i0 j0 b0 b0' hm hm' h h' => by
         obtain ⟨ja, hjaF, hja⟩ := hHold i0 b0 (hFeq ▸ hm) h
         obtain ⟨jb, hjbF, hjb⟩ := hHold j0 b0' (hFeq ▸ hm') h'
-        exact hI.grade2Lock_agree ja jb b0 b0' hjaF hjbF hja hjb⟩
+        exact hI.grade2Bound_agree ja jb b0 b0' hjaF hjbF hja hjb⟩
     · intro id' b' hmem hcall
       rw [hProcs]; exact hI.input_gbcaRound0 id' b' (hFeq ▸ hmem) hcall
     · intro r id' hmem hcall
@@ -202,7 +202,7 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
       · rw [Function.update_of_ne hid] at h
         exact (hI.decided_source id' b' (hFeq ▸ hmem) h).imp (fun r => hCert r b')
     · intro r b' hgr hbr
-      obtain ⟨h1, h2, h3, h4⟩ := hI.grade2Lock_commit r b' hgr hbr
+      obtain ⟨h1, h2, h3, h4⟩ := hI.grade2Bound_commit r b' hgr hbr
       refine ⟨h1, h2, fun id' hmem hround => ?_,
         fun id0 v hmem hcar => h4 id0 v (hFeq ▸ hmem)
           (by unfold OutcomeHolder at hcar ⊢; rwa [hProcs] at hcar)⟩
@@ -210,7 +210,7 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
     · intro id' hmem r hround
       rw [hProcs] at hround; exact hI.round_bound id' (hFeq ▸ hmem) r hround
     · intro r v hlast hbr hcoin id' hmem hround
-      rw [hProcs] at hround ⊢; exact hI.agree_locked r v hlast hbr hcoin id' (hFeq ▸ hmem) hround
+      rw [hProcs] at hround ⊢; exact hI.agree_bound r v hlast hbr hcoin id' (hFeq ▸ hmem) hround
     · intro r id' hmem hcall; rw [hProcs]; exact hI.call_round r id' (hFeq ▸ hmem) hcall
     · intro r id' hmem hcalled; exact hI.wcc_called r id' (hFeq ▸ hmem) hcalled
     · intro r id' hmem hround
@@ -231,7 +231,7 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
     · intro id' b' h; rw [hProcs]; exact hI.input_gbcaRound0_permanent id' b' h
     · intro r id' hmem hcalled; rw [hProcs]; exact hI.wcc_callRound r id' (hFeq ▸ hmem) hcalled
     · intro r h
-      rcases hI.flip_grade2Lock r h with hg | hd
+      rcases hI.flip_witness r h with hg | hd
       · left; exact hg
       · right; exact DissentWitness.preserved rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
     · intro id' hmem hin r; rw [hProcs] at hin; exact hI.idle_no_wccCall id' (hFeq ▸ hmem) hin r
@@ -270,15 +270,15 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
         rw [ABAState.sendDecided_corrupted, hFeq]; exact hI.corrupted_F id',
       fun r => by rw [hFeq]; exact hI.F_gbca r, fun r => by rw [hFeq]; exact hI.F_wcc r,
       hFeq ▸ hI.F_card, ?_, ?_, ?_, hI.down_settled, hI.quiescent, hI.wcc_bound, ?_, ?_, ?_, ?_, ?_,
-      hI.grade2_needs_bind, ?_, ?_, ?_, ?_, ?_, ?_, hI.bind_succ, ?_, ?_, hI.grade0Lock_chain, ?_,
+      hI.grade2_needs_bind, ?_, ?_, ?_, ?_, ?_, ?_, hI.bind_succ, ?_, ?_, hI.grade0_chain, ?_,
       hI.wcc_order, ?_, ?_, ?_, ?_, ?_, ?_, hI.bound_quorum,
       fun r v hb => (hI.bind_support r v hb).mono
         (fun id' b' h => by rw [hProcs]; exact h) (fun x hx => by rw [hFeq]; exact hx),
-      hI.grade0Lock_support, hI.excluded_support,
+      hI.grade0_support, hI.excluded_support,
       fun r' i0 j0 v v' hm hm' h h' => hI.outcomeHolder_agree r' i0 j0 v v' (hFeq ▸ hm) (hFeq ▸ hm')
         (by unfold OutcomeHolder at h ⊢; rwa [hProcs] at h)
         (by unfold OutcomeHolder at h' ⊢; rwa [hProcs] at h'),
-      fun i0 j0 b0 b0' hm hm' h h' => hI.grade2Lock_agree i0 j0 b0 b0' (hFeq ▸ hm) (hFeq ▸ hm')
+      fun i0 j0 b0 b0' hm hm' h h' => hI.grade2Bound_agree i0 j0 b0 b0' (hFeq ▸ hm) (hFeq ▸ hm')
         (hHold i0 b0 (hFeq ▸ hm) h) (hHold j0 b0' (hFeq ▸ hm') h')⟩
     · intro id' b' hmem hcall
       rw [hProcs]; exact hI.input_gbcaRound0 id' b' (hFeq ▸ hmem) hcall
@@ -296,7 +296,7 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
       · rw [Function.update_of_ne hid] at h
         exact (hI.decided_source id' b' (hFeq ▸ hmem) h).imp (fun r => hCert r b')
     · intro r b' hgr hbr
-      obtain ⟨h1, h2, h3, h4⟩ := hI.grade2Lock_commit r b' hgr hbr
+      obtain ⟨h1, h2, h3, h4⟩ := hI.grade2Bound_commit r b' hgr hbr
       refine ⟨h1, h2, fun id' hmem hround => ?_,
         fun id0 v hmem hcar => h4 id0 v (hFeq ▸ hmem)
           (by unfold OutcomeHolder at hcar ⊢; rwa [hProcs] at hcar)⟩
@@ -304,7 +304,7 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
     · intro id' hmem r hround
       rw [hProcs] at hround; exact hI.round_bound id' (hFeq ▸ hmem) r hround
     · intro r v hlast hbr hcoin id' hmem hround
-      rw [hProcs] at hround ⊢; exact hI.agree_locked r v hlast hbr hcoin id' (hFeq ▸ hmem) hround
+      rw [hProcs] at hround ⊢; exact hI.agree_bound r v hlast hbr hcoin id' (hFeq ▸ hmem) hround
     · intro r id' hmem hcall; rw [hProcs]; exact hI.call_round r id' (hFeq ▸ hmem) hcall
     · intro r id' hmem hcalled; exact hI.wcc_called r id' (hFeq ▸ hmem) hcalled
     · intro r id' hmem hround
@@ -326,7 +326,7 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
     · intro id' b' h; rw [hProcs]; exact hI.input_gbcaRound0_permanent id' b' h
     · intro r id' hmem hcalled; rw [hProcs]; exact hI.wcc_callRound r id' (hFeq ▸ hmem) hcalled
     · intro r h
-      rcases hI.flip_grade2Lock r h with hg | hd
+      rcases hI.flip_witness r h with hg | hd
       · left; exact hg
       · right; exact DissentWitness.preserved rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
     · intro id' hmem hin r; rw [hProcs] at hin; exact hI.idle_no_wccCall id' (hFeq ▸ hmem) hin r

@@ -20,8 +20,8 @@ emulate the blueprint's sync-set composition `∥_S`:
 * `System.mapIdle φ sys` — `sys` read over a finer alphabet `L'` along the
   partial label map `φ : L' → Option L`: a label `l'` with `φ l' = some l`
   delegates to the `l`-transitions, and a label outside the image of `φ`
-  leaves the system idle. This is how a component that speaks a coarser
-  alphabet joins a composition over a finer one.
+  leaves the system idle. This is how a component whose alphabet is coarser
+  joins a composition over a finer one.
 
 * `System.family inst owns glob act` — the ℕ-indexed family of instances
   `inst r` over a shared alphabet, with **three** step disjuncts (plus idling):

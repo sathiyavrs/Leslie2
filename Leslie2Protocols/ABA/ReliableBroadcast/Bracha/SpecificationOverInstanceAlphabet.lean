@@ -9,7 +9,7 @@ import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.Composition
 /-!
 # The reliable-broadcast specification over the instance's interface
 
-The broadcast specification speaks `Label n M`. The reliable-broadcast instance speaks
+The broadcast specification is over `Label n M`. The reliable-broadcast instance's alphabet is
 `InstanceLabel n M`, in which the call loop is a label of its own. `specificationLabelMap`
 sends the call loop to the call it stands for and every other interface label to its own
 copy. `specificationOverInstanceAlphabet` is the specification read along that map: the
@@ -42,7 +42,7 @@ variable {M : Type} [DecidableEq M]
 
 /-! ### The specification read over the instance's interface
 
-The specification speaks `Label n M`; the instance speaks `InstanceLabel n M`, in which
+The specification is over `Label n M`; the instance's alphabet is `InstanceLabel n M`, in which
 the call loop is a label of its own. `specificationLabelMap` is the projection that
 identifies the loop with the specification label it stands for, so that the
 specification's own loop transition answers it. -/

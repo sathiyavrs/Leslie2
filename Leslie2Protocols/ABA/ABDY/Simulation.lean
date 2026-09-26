@@ -194,7 +194,7 @@ private theorem corrupt_abaNetwork {P : Parameters} (w : NetworkState P.n) (k : 
 
 /-! ### The columns conjunct across a write
 
-The conjunct that speaks of the round variables is read process by process. Under a transition at
+The conjunct on the round variables is read process by process. Under a transition at
 which one process writes and the composed family leaves every other column alone, it follows from
 the conjunct before the step and from the mover's own family of new-column equations. -/
 

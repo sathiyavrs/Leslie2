@@ -116,7 +116,7 @@ theorem Invariant.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
       fun r₀ i j v v' hm hm' h h' => (hI.outcomeHolder_agree r₀ i j v v' hm hm'
         (hCarrTrans _ _ _ h) (hCarrTrans _ _ _ h')).imp (fun x => x)
         (fun hh => (hGradeeq r₀).trans hh),
-      hI.grade2Lock_agree⟩
+      hI.grade2Bound_agree⟩
     · intro id b' hmem hcall; rw [hCalleq] at hcall; exact hI.input_gbcaRound0 id b' hmem hcall
     · intro r' id hmem hcall; rw [hCalleq] at hcall; exact hI.input_called r' id hmem hcall
     · intro r' h
@@ -152,7 +152,7 @@ theorem Invariant.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
           rw [hExcludedSelf] at hbr
           refine ⟨?_, fun hh => hbr.2 (Finset.mem_insert_of_mem hh)⟩
           rcases Finset.mem_insert.mp hbr.1 with hnew | hold
-          · -- the fresh exclusion is `!b'`: the grade-2-locked round already had an excluded bit,
+          · -- the fresh exclusion is `!b'`: the round bound at grade 2 already had an excluded bit,
             -- which can be neither `b` (`hb`) nor `b'` (still alive), so it is `!b'`
             obtain ⟨wd, hwd⟩ :=
               Finset.nonempty_iff_ne_empty.mpr (hI.grade2_needs_bind r' hgr)
@@ -163,7 +163,7 @@ theorem Invariant.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
             exact hwd' ▸ hwd
           · exact hold
         · rw [hExcludedNe r' h2] at hbr; exact hbr
-      exact hCommitTrans r' b' hpair.1 (hI.grade2Lock_commit r' b' hgr hpair)
+      exact hCommitTrans r' b' hpair.1 (hI.grade2Bound_commit r' b' hgr hpair)
     · intro id hmem r' hround
       by_cases h2 : r' = r
       · subst h2; exact hClosedSelf
@@ -184,7 +184,7 @@ theorem Invariant.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
           · -- round `r'` was fresh before this exclusion, hence already grade-0-blocked upward;
             -- `estimate_previous` fixes `id`'s estimate at the agreeing coin's bit.
             have hnoC : (g (r' + 1)).grade ≠ some false :=
-              fun hh => hI.no_grade0Lock_succ r' v hcoin (by rw [hexcluded0]; simp) hh
+              fun hh => hI.no_grade0_succ r' v hcoin (by rw [hexcluded0]; simp) hh
             have hround1 : (c.processes id).round = r' + 1 := by
               by_contra hne
               rcases hI.round_bound id hmem (r' + 1) (by omega) with hh | hh
@@ -214,7 +214,7 @@ theorem Invariant.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
                 · rw [hcoin] at hh; simp only [CoinValue.bit.injEq] at hh; rw [hh]
                 · rw [hcoin] at hh; simp at hh
           · -- round `r'` already had an excluded bit, which the live pair fixes at `!v`:
-            -- the pre-exclude pair holds and the old `agree_locked` applies
+            -- the pre-exclude pair holds and the old `agree_bound` applies
             have hpairold : (!v) ∈ (g r').excluded ∧ v ∉ (g r').excluded := by
               rw [hExcludedSelf'] at hbr
               refine ⟨?_, fun hh => hbr.2 (Finset.mem_insert_of_mem hh)⟩
@@ -228,11 +228,11 @@ theorem Invariant.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
               · exact hold
             have hlast' : IsLastBound g r' :=
               ⟨Finset.nonempty_iff_ne_empty.mp ⟨_, hpairold.1⟩, hemp1⟩
-            exact hI.agree_locked r' v hlast' hpairold hcoin id hmem hround
+            exact hI.agree_bound r' v hlast' hpairold hcoin id hmem hround
         · have hlast' : IsLastBound g r' := ⟨by rw [← hExcludedNe r' h2]; exact hlast.1,
             by rw [← hExcludedNe (r' + 1) h1]; exact hlast.2⟩
           rw [hExcludedNe r' h2] at hbr
-          exact hI.agree_locked r' v hlast' hbr hcoin id hmem hround
+          exact hI.agree_bound r' v hlast' hbr hcoin id hmem hround
     · intro r' h
       by_cases h2 : r' = r
       · subst h2; rw [hExcludedSelf]; simp
@@ -284,11 +284,11 @@ theorem Invariant.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
       · exact Or.inr ⟨(hGradeeq r').trans hg0, hw0⟩
     · intro r' h
       rw [hGradeeq] at h ⊢
-      exact hI.grade0Lock_chain r' h
+      exact hI.grade0_chain r' h
     · intro id b' h; rw [hCalleq] at h; exact hI.input_gbcaRound0_permanent id b' h
-    · -- `flip_grade2Lock`: `grade` and every residue component are preserved monotonically
+    · -- `flip_witness`: `grade` and every residue component are preserved monotonically
       intro r' h
-      rcases hI.flip_grade2Lock r' h with hg | hd
+      rcases hI.flip_witness r' h with hg | hd
       · left; rw [hGradeeq]; exact hg
       · right; exact hDissTrans r' hd
     · intro r' id hmem hp
@@ -318,7 +318,7 @@ theorem Invariant.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
     · intro r' b' hgf
       rw [hGradeeq] at hgf
       exact GBCA.callSupport_mono (fun id' h => by rw [hCalleq r']; exact h) (hFeq r').ge
-        (hI.grade0Lock_support r' b' hgf)
+        (hI.grade0_support r' b' hgf)
     · -- I28 establishment: the fresh exclusion records its own guard; old exclusions keep theirs
       intro r' b' hb'
       have hcnt : ∀ r₀ b₀, P.f + 1 ≤ (Finset.univ.filter

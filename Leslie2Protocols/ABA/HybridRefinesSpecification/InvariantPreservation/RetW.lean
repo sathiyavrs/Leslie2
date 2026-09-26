@@ -15,7 +15,7 @@ entirely, the coin instance touches only `.ret`, a field `Invariant` does not in
 core's `stepRound` touches `estimate`, `lastGrade`, `round` and `phase` at `id`, and
 `decidedSent id` on a grade-2. `round_bound`'s freshly included round is covered by `wcc_bound`,
 the coin having resolved closing the round. The DECIDED-on-grade-2 witness for `decided_source`,
-and the extension of `grade2Lock_commit` and `agree_locked` to `id`'s new round, need the
+and the extension of `grade2Bound_commit` and `agree_bound` to `id`'s new round, need the
 cross-round correlation of `lastGrade` with `(g r).grade` and `(g r).excluded` (GBCA graded
 agreement), which is not a local `Invariant` consequence, and are handed off.
 -/
@@ -181,7 +181,7 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
       fun r' => hFeq ▸ hI.F_gbca r', fun r' => (hFweq r').trans (hFeq ▸ hI.F_wcc r'),
       hFeq ▸ hI.F_card, ?_, ?_, ?_, hI.down_settled, hI.quiescent,
       fun r' h => hI.wcc_bound r' (by rw [← hValeq r']; exact h),
-      ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, hI.grade0Lock_chain, ?_,
+      ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, hI.grade0_chain, ?_,
       ?_, ?_, ?_, ?_, ?_, ?_, ?_, hI.bound_quorum,
       fun r' v hb2 => (hI.bind_support r' v hb2).mono
         (fun id2 b2 h => by
@@ -189,7 +189,7 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
           · rw [hid2, hInputEq]; exact hid2 ▸ h
           · rw [hProcNe id2 hid2]; exact h)
         (fun x hx => by rw [hFeq]; exact hx),
-      hI.grade0Lock_support, hI.excluded_support,
+      hI.grade0_support, hI.excluded_support,
       fun r₀ i0 j0 v v' hm hm' h h' => by
         rcases hRedW r₀ i0 v h with hold0 | ⟨heq0, hreq0, hev0⟩
         · rcases hRedW r₀ j0 v' h' with hold1 | ⟨heq1, hreq1, hev1⟩
@@ -212,7 +212,7 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
               exact hI.outcomeHolder_agree r₀ id j0 bv v' (hFeq ▸ (heq0 ▸ hm)) (hFeq ▸ hm')
                 (hreq0 ▸ hIdCarr bv hoe) hold1
           · exact Or.inl (hev0.symm.trans hev1),
-      fun i0 j0 b0 b0' hm hm' h h' => hI.grade2Lock_agree i0 j0 b0 b0' (hFeq ▸ hm) (hFeq ▸ hm')
+      fun i0 j0 b0 b0' hm hm' h h' => hI.grade2Bound_agree i0 j0 b0 b0' (hFeq ▸ hm) (hFeq ▸ hm')
         (hRedHW i0 b0 h) (hRedHW j0 b0' h')⟩
     · intro id' b' hmem hcall
       by_cases h : id' = id
@@ -254,7 +254,7 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
         · rw [Function.update_of_ne hid] at h
           exact (hI.decided_source id' b' (hFeq ▸ hmem) h).imp (fun r0 => hCertW r0 b')
     · intro r0 b0 hgr hbr
-      exact hCommitW r0 b0 hgr (hI.grade2Lock_commit r0 b0 hgr hbr)
+      exact hCommitW r0 b0 hgr (hI.grade2Bound_commit r0 b0 hgr hbr)
     · intro id' hmem r' hround
       by_cases h : id' = id
       · rw [h] at hmem; rw [h, hRoundEq] at hround
@@ -267,7 +267,7 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
       by_cases hid : id' = id
       · rw [hid, hRoundEq] at hround
         by_cases hle : r' < (c.processes id).round
-        · have hold := hI.agree_locked r' v hlast hbr hcoin id (hFeq ▸ (hid ▸ hmem)) hle
+        · have hold := hI.agree_bound r' v hlast hbr hcoin id (hFeq ▸ (hid ▸ hmem)) hle
           rw [hid]; simp [hold]
         · have hr'eq : r' = (c.processes id).round := by omega
           have hr'r : r' = r := hr'eq.trans hr
@@ -287,7 +287,7 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
               exact hbr.2 (hv' ▸ hbveq)
             simp [hbv, hbv0]
       · rw [hProcNe id' hid] at hround; rw [hProcNe id' hid]
-        exact hI.agree_locked r' v hlast hbr hcoin id' (hFeq ▸ hmem) hround
+        exact hI.agree_bound r' v hlast hbr hcoin id' (hFeq ▸ hmem) hround
     · exact hI.grade2_needs_bind
     · intro r' id' hmem hcall
       by_cases h : id' = id
@@ -378,7 +378,7 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
         exact hI.wcc_callRound r' id' (hFeq ▸ hmem) hcalled
     · intro r' h
       rw [hValeq] at h
-      rcases hI.flip_grade2Lock r' h with hg | hd
+      rcases hI.flip_witness r' h with hg | hd
       · left; exact hg
       · right
         refine DissentWitness.preserved rfl rfl (fun hh => hh) (fun id2 => ?_) hd
@@ -423,15 +423,15 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
     refine ⟨hI.corrupted_F, hI.F_gbca, fun r' => (hFweq r').trans (hI.F_wcc r'), hI.F_card,
       hI.input_gbcaRound0, hI.input_called, hI.phase_input, hI.down_settled, hI.quiescent,
       fun r' h => hI.wcc_bound r' (by rw [← hValeq r']; exact h),
-      hI.received_sound, hI.decided_source, hI.grade2Lock_commit, hI.round_bound, ?_,
+      hI.received_sound, hI.decided_source, hI.grade2Bound_commit, hI.round_bound, ?_,
       hI.grade2_needs_bind, hI.call_round, ?_, ?_, hI.estimate0, hI.grade2_source, hI.estimate_ret,
-      ?_, ?_, ?_, hI.grade0Lock_chain, hI.estimate_previous_ne,
+      ?_, ?_, ?_, hI.grade0_chain, hI.estimate_previous_ne,
       ?_, hI.input_gbcaRound0_permanent, ?_, ?_, ?_, hI.retG_witness, ?_, hI.bound_quorum,
-      hI.bind_support, hI.grade0Lock_support, hI.excluded_support, hI.outcomeHolder_agree,
-        hI.grade2Lock_agree⟩
+      hI.bind_support, hI.grade0_support, hI.excluded_support, hI.outcomeHolder_agree,
+        hI.grade2Bound_agree⟩
     · intro r' v hlast hbr hcoin id' hmem hround
       rw [hValeq] at hcoin
-      exact hI.agree_locked r' v hlast hbr hcoin id' hmem hround
+      exact hI.agree_bound r' v hlast hbr hcoin id' hmem hround
     · intro r' id' hmem hcalled
       rw [hCalledEq] at hcalled; exact hI.wcc_called r' id' hmem hcalled
     · intro r' id' hmem hround
@@ -443,7 +443,7 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
     · intro r' h; rw [hValeq] at h ⊢; exact hI.wcc_order r' h
     · intro r' id' hmem hcalled
       rw [hCalledEq] at hcalled; exact hI.wcc_callRound r' id' hmem hcalled
-    · intro r' h; rw [hValeq] at h; exact hI.flip_grade2Lock r' h
+    · intro r' h; rw [hValeq] at h; exact hI.flip_witness r' h
     · intro id' hmem hin r'; rw [hCalledEq]; exact hI.idle_no_wccCall id' hmem hin r'
     · intro r' id' hmem hcalled
       rw [hCalledEq] at hcalled; exact hI.wccCalled_witness r' id' hmem hcalled

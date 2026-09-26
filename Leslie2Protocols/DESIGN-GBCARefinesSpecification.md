@@ -645,7 +645,7 @@ The exclusion set and the exclusion witness are read directly by the files above
 `HybridRefinesSpecification/Relation.lean` chain and `HybridRefinesSpecification/Simulation.lean`
 phrase the round skeleton over `excluded`: `IsLastBound g r` is `(g r).excluded ≠ ∅ ∧ (g (r +
 1)).excluded = ∅`, `RoundSettled g r` is `(g r).excluded ≠ ∅ ∨ (g r).grade = some false`, and
-`grade2Lock_commit`, `grade2_needs_bind`, `bind_support` and the grade-2 lock witnesses are keyed
+`grade2Bound_commit`, `grade2_needs_bind`, `bind_support` and the grade-2 witnesses are keyed
 on the guard pair `(!b) ∈ excluded ∧ b ∉ excluded` — the D19 rendering of `bind = some b`, with
 `bind ≠ none` rendered as `excluded ≠ ∅`. `GBCA.ByABDY.specificationRelation_corrupt` carries the
 `exclusion_witness` clause through `ExclusionWitness.mono`, whose three hypotheses it

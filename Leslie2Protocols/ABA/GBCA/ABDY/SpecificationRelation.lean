@@ -25,8 +25,8 @@ messages for them instead:
   `ExclusionWitness P s b`. The relation bounds `excluded` from above and never from below:
   which bits are actually excluded is recovered by case analysis at the return transitions, not
   recorded.
-* `grade2_witness` / `grade0_witness` — a grade-2 lock is backed by an `n − f` quorum of
-  received `ECHO5 v` messages, a grade-0 lock by an `n − f` `ECHO5 ⊥` quorum. Two
+* `grade2_witness` / `grade0_witness` — the grade at 2 is backed by an `n − f` quorum of
+  received `ECHO5 v` messages, the grade at 0 by an `n − f` `ECHO5 ⊥` quorum. Two
   opposing quorums intersect in a correct process that would have multicast
   two different `ECHO5` payloads, contradicting the write-once `echo5_once` —
   which is the grade-2 / grade-0 exclusivity the specification's grade guard demands
@@ -95,11 +95,11 @@ structure SpecificationRelation (P : Parameters) (s : RoundState P.n) (t : SpecS
   F_eq : t.F = s.F
   /-- Every excluded bit carries a monotone exclusion witness. -/
   exclusion_witness : ∀ b, b ∈ t.excluded → ExclusionWitness P s b
-  /-- A grade-2 lock is backed by an `n − f` quorum of received `ECHO5 v` messages
+  /-- The grade at 2 is backed by an `n − f` quorum of received `ECHO5 v` messages
   for some bit `v`. -/
   grade2_witness : t.grade = some true →
     ∃ v i, P.n - P.f ≤ s.receivedCount i (.echo5 (some v))
-  /-- A grade-0 lock is backed by an `n − f` quorum of received `ECHO5 ⊥`
+  /-- The grade at 0 is backed by an `n − f` quorum of received `ECHO5 ⊥`
   messages. -/
   grade0_witness : t.grade = some false →
     ∃ i, P.n - P.f ≤ s.receivedCount i (.echo5 none)
@@ -273,10 +273,9 @@ theorem bindUnset_guards {s : RoundState P.n} {t : SpecState P.n}
     (fun j hj hm' => hR.invariant.input_called j v hj hm') hm, ?_⟩
   exact hR.callSupport (hR.invariant.support_of_received_inputs (le_trans (by omega) hm))
 
-/-- Grade exclusivity, grade 2: an `n − f` quorum of received `ECHO5 v` messages rules out a
-grade-0 lock (the
-two `ECHO5` quorums would intersect in a correct process with two different `ECHO5` payloads,
-against `echo5_once`). -/
+/-- Grade exclusivity, grade 2: an `n − f` quorum of received `ECHO5 v` messages rules out
+grade 0 (the two `ECHO5` quorums would intersect in a correct process with two
+different `ECHO5` payloads, against `echo5_once`). -/
 theorem grade_ne_false_of_echo5_quorum {s : RoundState P.n} {t : SpecState P.n}
     (hR : SpecificationRelation P s t) {id : Fin P.n} {v : Bool}
     (hcnt : P.n - P.f ≤ s.receivedCount id (.echo5 (some v))) :
@@ -290,8 +289,8 @@ theorem grade_ne_false_of_echo5_quorum {s : RoundState P.n} {t : SpecState P.n}
   rw [e1] at e2
   exact absurd (Option.some.inj e2) (by simp)
 
-/-- Grade exclusivity, grade 0: an `n − f` quorum of received `ECHO5 ⊥` messages rules out a
-grade-2 lock. -/
+/-- Grade exclusivity, grade 0: an `n − f` quorum of received `ECHO5 ⊥` messages rules out
+grade 2. -/
 theorem grade_ne_true_of_echo5Bot_quorum {s : RoundState P.n} {t : SpecState P.n}
     (hR : SpecificationRelation P s t) {id : Fin P.n}
     (hcnt : P.n - P.f ≤ s.receivedCount id (.echo5 none)) :

@@ -84,14 +84,14 @@ theorem Invariant.step_retABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
     refine ⟨fun id' => by rw [hCorr, hF]; exact hI.corrupted_F id',
       fun r => (hI.F_gbca r).trans hF.symm, fun r => ?_, ?_, ?_, ?_, ?_,
       hI.down_settled, hI.quiescent, hI.wcc_bound, ?_, ?_, ?_, ?_, ?_,
-      hI.grade2_needs_bind, ?_, ?_, ?_, ?_, ?_, ?_, hI.bind_succ, ?_, ?_, hI.grade0Lock_chain, ?_,
+      hI.grade2_needs_bind, ?_, ?_, ?_, ?_, ?_, ?_, hI.bind_succ, ?_, ?_, hI.grade0_chain, ?_,
       hI.wcc_order, ?_, ?_, ?_, ?_, ?_, ?_, hI.bound_quorum,
       fun r v hb => (hI.bind_support r v hb).mono
         (fun id' b' h => by rw [hInput]; exact h) (fun x hx => by rw [hF]; exact hx),
-      hI.grade0Lock_support, hI.excluded_support,
+      hI.grade0_support, hI.excluded_support,
       fun r' i j v v' hm hm' h h' => hI.outcomeHolder_agree r' i j v v' (hF ▸ hm) (hF ▸ hm')
         (hCarr _ _ _ h) (hCarr _ _ _ h'),
-      fun i j b₀ b₀' hm hm' h h' => hI.grade2Lock_agree i j b₀ b₀' (hF ▸ hm) (hF ▸ hm')
+      fun i j b₀ b₀' hm hm' h h' => hI.grade2Bound_agree i j b₀ b₀' (hF ▸ hm) (hF ▸ hm')
         (hHold _ _ h) (hHold _ _ h')⟩
     · rw [hF]; exact hI.F_wcc r
     · rw [hF]; exact hI.F_card
@@ -103,10 +103,10 @@ theorem Invariant.step_retABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
       exact (hI.decided_source id' b' (hF ▸ hmem) h).imp (fun r => hCert r b')
     · intro r b' hg hb
       exact Grade2Commitment.of_unchanged (fun _ => rfl) (fun _ _ => rfl)
-        (by rw [hF]) hRound hEst (fun id0 v => hCarr r id0 v) (hI.grade2Lock_commit r b' hg hb)
+        (by rw [hF]) hRound hEst (fun id0 v => hCarr r id0 v) (hI.grade2Bound_commit r b' hg hb)
     · intro id' hmem r hr; exact hI.round_bound id' (hF ▸ hmem) r (hRound id' ▸ hr)
     · intro r v hlast hb hcoin id' hmem hr
-      rw [hEst]; exact hI.agree_locked r v hlast hb hcoin id' (hF ▸ hmem) (hRound id' ▸ hr)
+      rw [hEst]; exact hI.agree_bound r v hlast hb hcoin id' (hF ▸ hmem) (hRound id' ▸ hr)
     · intro r id' hmem hcall; rw [hRound]; exact hI.call_round r id' (hF ▸ hmem) hcall
     · intro r id' hmem hcalled; exact hI.wcc_called r id' (hF ▸ hmem) hcalled
     · intro r id' hmem hr; rw [hRound] at hr; exact hI.round_flip r id' (hF ▸ hmem) hr
@@ -131,7 +131,7 @@ theorem Invariant.step_retABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
       · right; rw [hF]; exact hf
     · intro r id' hmem hcalled; rw [hRound]; exact hI.wcc_callRound r id' (hF ▸ hmem) hcalled
     · intro r h
-      rcases hI.flip_grade2Lock r h with hg | hd
+      rcases hI.flip_witness r h with hg | hd
       · left; exact hg
       · right; exact DissentWitness.preserved rfl rfl (fun hh => hh) (fun id' => hInput id') hd
     · intro id' hmem hin r'; rw [hInput] at hin; exact hI.idle_no_wccCall id' (hF ▸ hmem) hin r'

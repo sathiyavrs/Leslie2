@@ -39,8 +39,9 @@ commits the round, and the surviving bit stays available to every later return.
   reachability hypothesis beyond membership in one execution.
 * `retG_grade_exclusive` — **graded agreement, grade-2/grade-0 clause**. The second clause of
   Definition 3.2: no execution carries both a grade-2 return and a grade-0 return. The `grade` field
-  is the lock. `retGrade2` writes `some true` and `retGrade0` writes `some false`, each firing only
-  from a state whose grade is unset or already at the value it writes, and no other transition
+  is written at most once. `retGrade2` writes `some true` and `retGrade0` writes
+  `some false`, each firing only from a state whose grade is unset or already at the
+  value it writes, and no other transition
   touches the field, so `Step.grade_mono` holds transition by transition and `grade_stable` carries
   the written value to every later state. `specInst_grade_agree` is the same statement read off the
   trace.
@@ -165,9 +166,9 @@ theorem excluded_card_le_one {e : AlterSeq (SpecState P.n) (Label P.n)}
     he 0 k e.init s (Nat.zero_le k) rfl hst
     (by rw [← he.2]; simp [specInst, SpecState.initial])
 
-/-! ### Monotonicity of the grade lock -/
+/-! ### Monotonicity of the grade -/
 
-/-- **The grade lock never changes once set.** `retGrade2` writes `some true` and `retGrade0` writes
+/-- **The grade never changes once set.** `retGrade2` writes `some true` and `retGrade0` writes
 `some false`, each from a state whose grade is unset or already at the value it writes; no other
 transition touches the field, `corrupt` included. -/
 theorem Step.grade_mono {s s' : SpecState P.n} {l : Label P.n} {g : Bool}
@@ -200,7 +201,7 @@ theorem Step.grade_mono {s s' : SpecState P.n} {l : Label P.n} {g : Bool}
     subst hs'
     exact hg
 
-/-- **A locked grade stays locked along a run.** -/
+/-- **The grade, once set, keeps its value along a run.** -/
 theorem grade_stable {e : AlterSeq (SpecState P.n) (Label P.n)}
     (he : is_exec e (specInst P r)) {k₁ k₂ : ℕ} (hk : k₁ ≤ k₂)
     {s₁ s₂ : SpecState P.n} {g : Bool}
@@ -286,7 +287,7 @@ private theorem retGrade0_grade_guard {s : SpecState P.n} {id : Fin P.n} {β : B
   match hstep with
   | .retGrade0 _ _ _ _ _ _ hg _ => hg
 
-/-- A grade-2 return locks the grade at 2. -/
+/-- A grade-2 return writes grade 2. -/
 private theorem retGrade2_grade {s s' : SpecState P.n} {id : Fin P.n} {v β : Bool}
     {μ : PMF (SpecState P.n)} (hstep : Step P r s (.retG r id (.grade2 v) β) μ)
     (hs' : s' ∈ μ.support) : s'.grade = some true := by
@@ -295,7 +296,7 @@ private theorem retGrade2_grade {s s' : SpecState P.n} {id : Fin P.n} {v β : Bo
   subst hs'
   rfl
 
-/-- A grade-0 return locks the grade at 0. -/
+/-- A grade-0 return writes grade 0. -/
 private theorem retGrade0_grade {s s' : SpecState P.n} {id : Fin P.n} {β : Bool}
     {μ : PMF (SpecState P.n)} (hstep : Step P r s (.retG r id .grade0 β) μ)
     (hs' : s' ∈ μ.support) : s'.grade = some false := by
@@ -401,9 +402,9 @@ theorem retGrade0_excluded_nonempty {e : AlterSeq (SpecState P.n) (Label P.n)}
   ⟨!β, excluded_mem_stable he hk hst₁ hst₂ (retG_bound_guard hstep)⟩
 
 /-- **grade-2 / grade-0 exclusivity along a run.** No execution of the round-`r` specification
-instance carries both a grade-2 return and a grade-0 return. The grade-2 return locks the grade to
-`some true` and the grade-0 return to `some false`, each fires only from a state whose grade is
-unset or already at the value it writes, and `grade_stable` carries the earlier lock to the later
+instance carries both a grade-2 return and a grade-0 return. The grade-2 return writes
+`some true` and the grade-0 return `some false`, each fires only from a state whose grade is
+unset or already at the value it writes, and `grade_stable` carries the earlier grade to the later
 return's state. -/
 theorem retG_grade_exclusive {e : AlterSeq (SpecState P.n) (Label P.n)}
     (he : is_exec e (specInst P r)) {k₁ k₂ : ℕ} (hne : k₁ ≠ k₂)
@@ -419,12 +420,12 @@ theorem retG_grade_exclusive {e : AlterSeq (SpecState P.n) (Label P.n)}
     rw [show e.stateAt (k₂ + 1) = (e.trans.get? k₂).map Prod.snd from rfl, hg₂]
     rfl
   rcases lt_or_gt_of_ne hne with h | h
-  · have hlock : s₂.grade = some true :=
+  · have hgrade2 : s₂.grade = some true :=
       grade_stable he h hnext₁ hst₂ (retGrade2_grade hstep₁ hsupp₁)
-    rcases retGrade0_grade_guard hstep₂ with hc | hc <;> rw [hlock] at hc <;> simp at hc
-  · have hlock : s₁.grade = some false :=
+    rcases retGrade0_grade_guard hstep₂ with hc | hc <;> rw [hgrade2] at hc <;> simp at hc
+  · have hgrade0 : s₁.grade = some false :=
       grade_stable he h hnext₂ hst₁ (retGrade0_grade hstep₂ hsupp₂)
-    rcases retGrade2_grade_guard hstep₁ with hc | hc <;> rw [hlock] at hc <;> simp at hc
+    rcases retGrade2_grade_guard hstep₁ with hc | hc <;> rw [hgrade0] at hc <;> simp at hc
 
 /-! ### The trace-level statement -/
 

@@ -39,7 +39,7 @@ the round from one event to the next is the program's variables.
 
 ## The alphabet
 
-The round speaks `ExtendedLabel n Empty` natively, as `GBCA.ByABDY.composition` speaks
+The round is over `ExtendedLabel n Empty` natively, as `GBCA.ByABDY.composition` is over
 `ExtendedLabel n GBCA.ByABDY.Message`. The round exchanges its messages inside its two gather
 instances, so it takes the empty type for the family alphabet's round message type: the round
 multicast `gbcaSend` and the round delivery `gbcaDeliver` name no label here. The call loop of
@@ -62,7 +62,7 @@ unchanged on it while the two gather instances move.
 
 The round-internal alphabet is `RoundLabel n = ExtendedLabel n Empty ⊕ RoundEvent n`, and
 `roundEvents` collects the three events of `RoundEvent n`. They are hidden by the composition of
-`ABA/GBCA/AFW/Composition.lean`, which speaks `ExtendedLabel n Empty`.
+`ABA/GBCA/AFW/Composition.lean`, which is over `ExtendedLabel n Empty`.
 
 ## Corruption
 

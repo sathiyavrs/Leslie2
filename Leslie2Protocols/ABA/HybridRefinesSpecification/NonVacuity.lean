@@ -29,9 +29,9 @@ round messages: no step of it carries a round message.
   transition excluding the bit `false` (a family `τ`, `n − f` quorum met at
   `n = 4, f = 1` by the three callers of `true`);
 * `step_retG₀/₁/₂` — the three graded-agreement grade-2 returns (`retG 0`, *hidden*), the
-  first locking the round grade at 2. Each return announces the bound bit `true`. Its complement is
-  the bit that `step_bindUnset` excluded, which is exactly the return's guard, so the ghost output
-  leaves the run intact;
+  first setting the round's grade to 2. Each return announces the bound bit `true`. Its
+  complement is the bit that `step_bindUnset` excluded, which is exactly the return's guard, so
+  the ghost output leaves the run intact;
 * `step_callW₀` — process `0`'s coin call (`callW 0`, *hidden*), a recording
   call: a single caller does not carry the count past `f = 1`;
 * `step_callW₁` + `step_callW₁_mass` — process `1`'s coin call, the resolving
@@ -165,7 +165,7 @@ noncomputable def abaCallW (id : Fin 4) (s : ABAState fourProcesses) : ABAState 
 def gbcaSpecificationCall (id : Fin 4) (s : ℕ → GBCA.SpecState 4) : ℕ → GBCA.SpecState 4 :=
   Function.update s 0 { s 0 with call := Function.update (s 0).call id (some true) }
 
-/-- The round-`0` specification update of an `A true` return by `id`: lock the grade at 2 and record
+/-- The round-`0` specification update of an `A true` return by `id`: set the grade to 2 and record
 the return. -/
 def gbcaSpecificationRetGrade2 (id : Fin 4) (s : ℕ → GBCA.SpecState 4) : ℕ → GBCA.SpecState 4 :=
   Function.update s 0 { s 0 with grade := some true, ret := Function.update (s 0).ret id true }
@@ -432,7 +432,7 @@ theorem step_bindUnset :
 /-! ### Steps 8–10: the three graded-agreement grade-2 returns (`retG 0`, hidden) -/
 
 /-- Process `0` takes a grade-2 return of the bound value `true`: the round-`0`
-specification locks the grade and records the return, the round loop adopts the
+specification sets the grade and records the return, the round loop adopts the
 estimate and heads for the coin. -/
 theorem step_retG₀ :
     (hybrid fourProcesses M).step

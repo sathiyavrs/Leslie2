@@ -96,13 +96,13 @@ theorem Invariant.step_callABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
     refine ⟨fun id' => by rw [hCorr, hF]; exact hI.corrupted_F id',
       fun r => (hI.F_gbca r).trans hF.symm, fun r => hF ▸ hI.F_wcc r, hF ▸ hI.F_card,
       ?_, ?_, ?_, hI.down_settled, hI.quiescent, hI.wcc_bound, ?_, ?_, ?_, ?_, ?_,
-      hI.grade2_needs_bind, ?_, ?_, ?_, ?_, ?_, ?_, hI.bind_succ, ?_, ?_, hI.grade0Lock_chain, ?_,
+      hI.grade2_needs_bind, ?_, ?_, ?_, ?_, ?_, ?_, hI.bind_succ, ?_, ?_, hI.grade0_chain, ?_,
       hI.wcc_order, ?_, ?_, ?_, ?_, ?_, ?_, hI.bound_quorum,
       fun r v hb => (hI.bind_support r v hb).mono hInMono (fun x hx => by rw [hF]; exact hx),
-      hI.grade0Lock_support, hI.excluded_support,
+      hI.grade0_support, hI.excluded_support,
       fun r' i j v v' hm hm' h h' => hI.outcomeHolder_agree r' i j v v' (hF ▸ hm) (hF ▸ hm')
         (hCarrTrans _ _ _ h) (hCarrTrans _ _ _ h'),
-      fun i j b₀ b₀' hm hm' h h' => hI.grade2Lock_agree i j b₀ b₀' (hF ▸ hm) (hF ▸ hm')
+      fun i j b₀ b₀' hm hm' h h' => hI.grade2Bound_agree i j b₀ b₀' (hF ▸ hm) (hF ▸ hm')
         (hHold _ _ h) (hHold _ _ h')⟩
     · intro id' b' hmem hcall
       by_cases h : id' = id
@@ -123,7 +123,7 @@ theorem Invariant.step_callABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
     · intro id' b' hmem h; rw [hDS] at h
       exact (hI.decided_source id' b' (hF ▸ hmem) h).imp (fun r => hCertTrans r b')
     · intro r b' hg hb
-      obtain ⟨h1, h2, h3, h4⟩ := hI.grade2Lock_commit r b' hg hb
+      obtain ⟨h1, h2, h3, h4⟩ := hI.grade2Bound_commit r b' hg hb
       refine ⟨h1, h2, fun id' hmem hr => ?_,
         fun id0 v hmem hcar => h4 id0 v (hF ▸ hmem) (hCarrTrans r id0 v hcar)⟩
       by_cases h : id' = id
@@ -136,7 +136,7 @@ theorem Invariant.step_callABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
     · intro r v hlast hb hcoin id' hmem hr
       by_cases h : id' = id
       · subst h; simp [hSelf] at hr
-      · rw [hNe id' h] at hr ⊢; exact hI.agree_locked r v hlast hb hcoin id' (hF ▸ hmem) hr
+      · rw [hNe id' h] at hr ⊢; exact hI.agree_bound r v hlast hb hcoin id' (hF ▸ hmem) hr
     · intro r id' hmem hcall
       by_cases h : id' = id
       · rw [h] at hcall hmem; exact absurd hin (hI.input_called r id (hF ▸ hmem) hcall)
@@ -186,11 +186,11 @@ theorem Invariant.step_callABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
         rw [this] at hcalled
         exact absurd hcalled (by simp)
       · rw [hNe id' hid]; exact hI.wcc_callRound r id' (hF ▸ hmem) hcalled
-    · -- `flip_grade2Lock`: `g` is untouched entirely; the only wrinkle is the `r = 0` dissent
+    · -- `flip_witness`: `g` is untouched entirely; the only wrinkle is the `r = 0` dissent
       -- witness possibly naming `id` itself, ruled out by `hin : input = none` (the fresh
       -- the input of a correct process cannot have been the opposing dissenter).
       intro r h
-      rcases hI.flip_grade2Lock r h with hg | hd
+      rcases hI.flip_witness r h with hg | hd
       · left; exact hg
       · right
         obtain ⟨v, hbv, hif⟩ := hd

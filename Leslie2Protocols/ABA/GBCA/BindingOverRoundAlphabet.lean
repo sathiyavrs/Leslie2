@@ -10,8 +10,8 @@ import Leslie2Protocols.ABA.GBCA.SpecificationSafety
 /-!
 # Binding of the specification over the round's alphabet
 
-A graded-agreement round speaks the family alphabet `Composition.ExtendedLabel n M`, over the type
-`M` of the messages the round exchanges, in which a
+The alphabet of a graded-agreement round is the family alphabet
+`Composition.ExtendedLabel n M`, over the type `M` of the messages the round exchanges, in which a
 round-`r` return appears twice: as `Sum.inl (Label.retG r id out bnd)` and as the Byzantine label
 `Sum.inr (.byzantineRetG r id out bnd)`. `specificationLabelMap` sends both to the same
 specification return, and `BindingTraceExtended` states binding at every label of a trace that

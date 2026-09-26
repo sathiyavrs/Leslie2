@@ -31,7 +31,7 @@ The invariant carries
   present persists in the current state);
 * write-once recording of correct multicasts (`echo_once`, `vote_once`,
   `bind_once`, `echo5_once`): a correct process's payload is the one held in the
-  sender's write-once field, so a correct process speaks at most one payload
+  sender's write-once field, so a correct process multicasts at most one payload
   per level — `echo_once` carries the unique quorum of received `ECHO` messages and `vote_once` the
   `VOTE` quorum count of the exclusion witnesses in `GBCA/ABDY/ExclusionWitness.lean`, and
   `echo5_once` the grade exclusivity;

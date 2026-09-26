@@ -35,10 +35,10 @@ side admits the loop and the left-hand side offers the call alone, and at the lo
 reverse. The refinement into the specification fails with it, since a second call with another
 payload would let the specification record and commit a value the instance never broadcast.
 
-**The constraint.** Each composition speaks an alphabet in which the loop is its own
+**The constraint.** Each composition is over an alphabet in which the loop is its own
 label: `BRB.InstanceLabel = Label ⊕ LoopLabel` with `LoopLabel.callLoop m`,
 `Gather.InstanceLabel = Label ⊕ LoopLabel`
-with `LoopLabel.callLoop id x`, and the round speaks `ExtendedLabel` natively, whose
+with `LoopLabel.callLoop id x`, and the round is over `ExtendedLabel` natively, whose
 `NetworkEvent.gbcaCallLoop` and `byzantineCallGLoop` are its loop labels. On the call label the
 caller has one transition and the network posts; on the loop label every component is unchanged.
 The specification is read along a pullback that sends the loop to the call

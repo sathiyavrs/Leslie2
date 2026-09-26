@@ -9,7 +9,7 @@ import Leslie2Protocols.ABA.Gather.Composition
 /-!
 # The gather specification over the instance's interface
 
-The gather specification speaks `Label n X`. The gather instance speaks
+The gather specification is over `Label n X`. The gather instance's alphabet is
 `InstanceLabel n X`, in which the call loop is a label of its own.
 `specificationLabelMap` sends the call loop to the call it stands for and every
 other interface label to its own copy. `specificationOverInstanceAlphabet` is the
@@ -33,7 +33,7 @@ variable {X : Type}
 
 /-! ### The specification read over the instance's interface
 
-The specification speaks `Label n X`; the instance speaks `InstanceLabel n X`, in which
+The specification is over `Label n X`; the instance's alphabet is `InstanceLabel n X`, in which
 the call loop is a label of its own. `specificationLabelMap` identifies the loop with the
 specification label it stands for, so that the specification's own loop transition
 answers it. -/
