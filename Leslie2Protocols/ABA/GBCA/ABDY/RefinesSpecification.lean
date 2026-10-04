@@ -54,7 +54,8 @@ variable {P : Parameters}
 
 /-- **The relation across one transition**: every transition of `Algorithm` at a related
 pair is matched by a weak run of the graded agreement specification, ending at a related
-state. The internal transitions stutter; the call, the call loop and `fail` are matched by the
+state. The internal transitions stutter, the multicast of the process's own `INPUT` among them;
+the call, the call loop and `fail` are matched by the
 specification's own transitions; a return is matched by a graded specification return, preceded by
 `bindUnset` where the bit that return needs excluded is not excluded yet. -/
 theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundState P.n)
@@ -82,16 +83,23 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundS
       · subst hk
         rw [Function.update_self]
         simp
-      · rw [Function.update_of_ne hk, processVariables_send_ne hk]
+      · rw [Function.update_of_ne hk, RoundState.setProcessVariables_processVariables_ne _ _ _ hk]
         exact hRR.call_eq k
     · intro k
       by_cases hk : k = id
       · subst hk
         simpa using hRR.ret_eq k
-      · rw [processVariables_send_ne hk]
+      · rw [RoundState.setProcessVariables_processVariables_ne _ _ _ hk]
         exact hRR.ret_eq k
     · intro b' hb'
-      exact exclusionWitness_send (by intro w hw; exact hw) (hRR.exclusion_witness b' hb')
+      refine ExclusionWitness.mono (s := q1) (fun _ _ _ hm => by simpa using hm)
+        (fun k w hk => ?_) (Finset.Subset.refl _) (hRR.exclusion_witness b' hb')
+      by_cases hkj : k = id
+      · subst hkj
+        rw [RoundState.setProcessVariables_processVariables_self]
+        exact hk
+      · rw [RoundState.setProcessVariables_processVariables_ne _ _ _ hkj]
+        exact hk
   | callLoop id b =>
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'
@@ -114,6 +122,27 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundS
     · intro hg
       obtain ⟨i0, hi0⟩ := hRR.grade0_witness hg
       exact ⟨i0, le_trans hi0 (RoundState.receivedCount_le_receiveMessage q1 i j m i0 _)⟩
+  | input j b hin hsend =>
+    rw [PMF.mem_support_pure_iff] at hq1'
+    subst hq1'
+    refine ⟨q2, Or.inl ⟨rfl, System.weakLSilent_refl _ q2⟩,
+      hI', ?_, ?_, hRR.F_eq,
+      fun b' hb' => exclusionWitness_send (by intro w hw; exact hw)
+        (hRR.exclusion_witness b' hb'),
+      by simpa using hRR.grade2_witness, by simpa using hRR.grade0_witness,
+      hRR.bound_excluded⟩
+    · intro k
+      by_cases hk : k = j
+      · subst hk
+        simpa using hRR.call_eq k
+      · rw [processVariables_send_ne hk]
+        exact hRR.call_eq k
+    · intro k
+      by_cases hk : k = j
+      · subst hk
+        simpa using hRR.ret_eq k
+      · rw [processVariables_send_ne hk]
+        exact hRR.ret_eq k
   | relay j b hin hcnt hsend =>
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'

@@ -2,6 +2,6 @@
   \label{def:aba-round-messages}
   \lean{PLTS.ABA.GBCA.ByABDY.Message}\lean{PLTS.ABA.GBCA.ByABDY.ProcessVariables}\leanok
   The messages of one graded-agreement round run over the five levels of $\mathrm{Message}$: $\langle\mathrm{INPUT},b\rangle$ and $\langle\mathrm{ECHO},b\rangle$ carry a bit, and $\langle\mathrm{VOTE},v\rangle$, $\langle\mathrm{BIND},v\rangle$ and $\langle\mathrm{ECHO5},v\rangle$ carry a bit or $\bot$, the five levels being $\mathrm{echo}$ through $\mathrm{echo5}$ of~\cite{ABDY22}.
-  The round state of one process is $\mathrm{ProcessVariables}$, holding its call payload $\mathit{input}$, a flag $\mathit{sentInput}$ per $\mathrm{INPUT}$ payload it has multicast, the write-once payload fields $\mathit{sentEcho}$, $\mathit{sentVote}$, $\mathit{sentBind}$ and $\mathit{sentEcho5}$, one per higher level, and the flag $\mathit{returned}$; no field of it names another process.
+  The round state of one process is $\mathrm{ProcessVariables}$, holding the input $\mathit{input}$ its call records, a flag $\mathit{sentInput}$ per $\mathrm{INPUT}$ payload it has multicast, the write-once payload fields $\mathit{sentEcho}$, $\mathit{sentVote}$, $\mathit{sentBind}$ and $\mathit{sentEcho5}$, one per higher level, and the flag $\mathit{returned}$; no field of it names another process.
   Full constructions: \leandecl{PLTS.ABA.GBCA.ByABDY.Message} and \leandecl{PLTS.ABA.GBCA.ByABDY.ProcessVariables}.
 \end{definition}

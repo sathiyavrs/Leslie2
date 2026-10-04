@@ -34,7 +34,8 @@ and the three returns are the decide conditions of lines 23–29.
 
 Each process runs the message pattern
 
-* `INPUT b` — multicast on being called; relayed once `f + 1` have been received;
+* `INPUT b` — multicast once the call has recorded the input `b`, a transition of its own after
+  the call; relayed once `f + 1` have been received;
 * `ECHO b` — multicast once `INPUT b` was received from `n − f` senders
   (which also puts `b` into the derived set `Valid`);
 * `VOTE v` (`v ∈ {0,1,⊥}`) — a real bit after an `n − f` `ECHO b` quorum, `⊥`
@@ -75,7 +76,7 @@ pseudocode (`n − f`).
 
 ## The algorithm
 
-* **D8 (participation guard).** The protocol sends (`relay`, `echo`, `vote*`,
+* **D8 (participation guard).** The protocol sends (`input`, `relay`, `echo`, `vote*`,
   `bind*`, `echo5*`) and the three returns require the process to have received
   its input (`input ≠ none`): the algorithm's handlers only run inside a called
   instance. The send transitions are taken in the wait-until order of Algorithm 6
@@ -116,15 +117,11 @@ open Composition
 levels, one transition per line, on the composed state. All transitions are Dirac. -/
 inductive Algorithm (P : Parameters) (r : ℕ) :
     RoundState P.n → Label P.n → PMF (RoundState P.n) → Prop
-  /-- The environment call arrives: record the input and multicast
-  `⟨INPUT, b⟩`. -/
+  /-- The environment call arrives: record the input. -/
   | call (s : RoundState P.n) (id : Fin P.n) (b : Bool)
       (h : (s.processVariables id).input = none) :
       Algorithm P r s (.callG r id b)
-        (PMF.pure ((s.setProcessVariables id { s.processVariables id with
-            input := some b,
-            sentInput := Function.update (s.processVariables id).sentInput b true }).multicast
-          id (.input b)))
+        (PMF.pure (s.setProcessVariables id { s.processVariables id with input := some b }))
   /-- Input-enabledness loop for `call`. -/
   | callLoop (s : RoundState P.n) (id : Fin P.n) (b : Bool) :
       Algorithm P r s (.callG r id b) (PMF.pure s)
@@ -132,6 +129,15 @@ inductive Algorithm (P : Parameters) (r : ℕ) :
   receiver's delivered set. -/
   | deliver (s : RoundState P.n) (i j : Fin P.n) (m : Message) (h : m ∈ s.sent j) :
       Algorithm P r s .tau (PMF.pure (s.receiveMessage i j m))
+  /-- `INPUT b`: the first multicast of the process's own input, ABDY22 Algorithm 6 line 2 and
+  the first statement of LeslieBP Algorithm 2. -/
+  | input (s : RoundState P.n) (j : Fin P.n) (b : Bool)
+      (hin : (s.processVariables j).input = some b)
+      (hsend : (s.processVariables j).sentInput b = false) :
+      Algorithm P r s .tau
+        (PMF.pure ((s.setProcessVariables j { s.processVariables j with
+            sentInput := Function.update (s.processVariables j).sentInput b true }).multicast
+          j (.input b)))
   /-- `INPUT` relay: `f + 1` received `⟨INPUT, b⟩` messages, not yet multicast. -/
   | relay (s : RoundState P.n) (j : Fin P.n) (b : Bool)
       (hin : (s.processVariables j).input ≠ none)
@@ -298,11 +304,11 @@ interface label projects to, with no stuttering anywhere:
 
 | the composition | the algorithm |
 | --- | --- |
-| `callG` (caller writes, network records) | `Algorithm.call` |
+| `callG` (caller writes) | `Algorithm.call` |
 | `gbcaCallLoop`, `byzantineCallGLoop` | `Algorithm.callLoop` |
 | `byzantineCallG` (D11) | `Algorithm.call` |
 | `retG` / `byzantineRetG`, by grade | `Algorithm.retGrade2` / `retGrade1` / `retGrade0` |
-| hidden `send` synchronisation, by level | the eight silent send transitions |
+| hidden `send` synchronisation, by level | the nine silent send transitions |
 | hidden `deliver` synchronisation | `Algorithm.deliver` |
 | network-local injection | `Algorithm.byzantine` |
 
@@ -329,9 +335,11 @@ theorem composition_projects (P : Parameters) (r : ℕ) :
       subst hw
       cases m with
       | input b =>
-        obtain ⟨hin, hcnt, hsend, hx⟩ := gbcaProgramStep_send_input_own (hall j)
+        obtain ⟨hcase, hsend, hx⟩ := gbcaProgramStep_send_input_own (hall j)
         rw [composition_setProcessVariables_recordGBCASend (PMF.pure_injective hx) hfor]
-        exact Algorithm.relay _ j b hin hcnt hsend
+        rcases hcase with hin | ⟨hin, hcnt⟩
+        · exact Algorithm.input _ j b hin hsend
+        · exact Algorithm.relay _ j b hin hcnt hsend
       | echo b =>
         obtain ⟨hin, hcnt, hsend, hx⟩ := gbcaProgramStep_send_echo_own (hall j)
         rw [composition_setProcessVariables_recordGBCASend (PMF.pure_injective hx) hfor]
@@ -400,13 +408,13 @@ theorem composition_projects (P : Parameters) (r : ℕ) :
         | fail k => exact (gbcaNetworkStep_fail_noStep hn).elim
         | callG r' id b =>
           obtain ⟨rfl, hw⟩ := gbcaNetworkStep_callG_round hn
-          have hw' : w' = w.recordGBCASend id (.input b) := PMF.pure_injective hw
+          have hw' : w' = w := PMF.pure_injective hw
           subst hw'
           obtain ⟨hin, hx⟩ := gbcaProgramStep_callG_own (hall id)
           have hfor : ∀ i, i ≠ id → x i = u i :=
             fun i hi => PMF.pure_injective (gbcaProgramStep_callG_notOwn (Ne.symm hi) (hall i))
           refine ⟨_, rfl, ?_⟩
-          rw [composition_setProcessVariables_recordGBCASend (PMF.pure_injective hx) hfor]
+          rw [composition_setProcessVariables (PMF.pure_injective hx) hfor]
           exact Algorithm.call _ id b hin
         | retG r' id out bnd =>
           obtain ⟨rfl, hbnd, hw⟩ := gbcaNetworkStep_retG_round hn
@@ -455,14 +463,14 @@ theorem composition_projects (P : Parameters) (r : ℕ) :
           exact Algorithm.callLoop _ id b
         | byzantineCallG r' k b =>
           obtain ⟨rfl, hw⟩ := gbcaNetworkStep_byzantineCallG_round hn
-          have hw' : w' = w.recordGBCASend k (.input b) := PMF.pure_injective hw
+          have hw' : w' = w := PMF.pure_injective hw
           subst hw'
           obtain ⟨hin, hx⟩ := gbcaProgramStep_byzantineCallG_own (hall k)
           have hfor : ∀ i, i ≠ k → x i = u i :=
             fun i hi => PMF.pure_injective (gbcaProgramStep_byzantineCallG_notOwn (Ne.symm hi)
               (hall i))
           refine ⟨_, rfl, ?_⟩
-          rw [composition_setProcessVariables_recordGBCASend (PMF.pure_injective hx) hfor]
+          rw [composition_setProcessVariables (PMF.pure_injective hx) hfor]
           exact Algorithm.call _ k b hin
         | byzantineCallGLoop r' k b =>
           obtain ⟨rfl, hw⟩ := gbcaNetworkStep_byzantineCallGLoop_round hn

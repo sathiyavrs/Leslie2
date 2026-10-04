@@ -243,7 +243,7 @@ theorem processVariables_send_ne {s : RoundState P.n} {j : Fin P.n} {p : Process
 /-- **Invariant preservation, correct-send schema.** Process `j` updates its
 local state to `p` and multicasts `m`. The hypotheses collect, clause by
 clause, what the new message and the touched field must satisfy; every condition on a field the
-send leaves alone is discharged here once for all nine send transitions (`call`, `relay`,
+send leaves alone is discharged here once for all nine send transitions (`input`, `relay`,
 `echo`, `voteBit`, `voteBot`, `bindBit`, `bindBot`, `echo5Bit`, `echo5Bot`). -/
 private theorem Invariant.send {s : RoundState P.n} (hI : Invariant P s) {j : Fin P.n}
     {p : ProcessVariables} {m : Message}
@@ -472,22 +472,27 @@ private theorem Invariant.send {s : RoundState P.n} (hI : Invariant P s) {j : Fi
         exact hI.input_called j' b hF hold
 
 /-- **Invariant preservation, one process's own variables.** A `setProcessVariables` that keeps
-the input and all four write-once fields (the return transitions, which flip only
-`returned`) preserves every clause. -/
+an input already recorded and all four write-once fields preserves every clause. The call, which
+records the input, and the return transitions, which flip only `returned`, are of this kind. -/
 private theorem Invariant.setProcessVariables_unchanged {s : RoundState P.n} (hI : Invariant P s)
     {id : Fin P.n} {p : ProcessVariables}
-    (h1 : p.input = (s.processVariables id).input)
+    (h1 : ∀ b, (s.processVariables id).input = some b → p.input = some b)
     (h2 : p.sentEcho = (s.processVariables id).sentEcho)
     (h3 : p.sentVote = (s.processVariables id).sentVote)
     (h4 : p.sentBind = (s.processVariables id).sentBind)
     (h5 : p.sentEcho5 = (s.processVariables id).sentEcho5) :
     Invariant P (s.setProcessVariables id p) := by
-  have hin : ∀ k, ((s.setProcessVariables id p).processVariables k).input = (s.processVariables
-    k).input := by
-    intro k
+  have hin : ∀ k b, (s.processVariables k).input = some b →
+      ((s.setProcessVariables id p).processVariables k).input = some b := by
+    intro k b hb
     by_cases hk : k = id
-    · subst hk; rw [RoundState.setProcessVariables_processVariables_self, h1]
-    · rw [RoundState.setProcessVariables_processVariables_ne _ _ _ hk]
+    · subst hk; rw [RoundState.setProcessVariables_processVariables_self]; exact h1 b hb
+    · rw [RoundState.setProcessVariables_processVariables_ne _ _ _ hk]; exact hb
+  have hne : ∀ k, (s.processVariables k).input ≠ none →
+      ((s.setProcessVariables id p).processVariables k).input ≠ none := by
+    intro k hk
+    obtain ⟨b, hb⟩ := Option.ne_none_iff_exists'.mp hk
+    rw [hin k b hb]; simp
   have hech : ∀ k, ((s.setProcessVariables id p).processVariables k).sentEcho = (s.processVariables
     k).sentEcho := by
     intro k
@@ -520,8 +525,7 @@ private theorem Invariant.setProcessVariables_unchanged {s : RoundState P.n} (hI
     rw [hech j']
     exact hI.echo_once j' b hF hm'
   · intro j' w hF hm'
-    rw [hin j']
-    exact hI.vote_input j' w hF hm'
+    exact hne j' (hI.vote_input j' w hF hm')
   · intro j' w hF hm'
     rw [hvot j']
     exact hI.vote_once j' w hF hm'
@@ -529,25 +533,19 @@ private theorem Invariant.setProcessVariables_unchanged {s : RoundState P.n} (hI
     rw [hbin j']
     exact hI.bind_once j' w hF hm'
   · intro j' w hF hm'
-    rw [hin j']
-    exact hI.echo5_input j' w hF hm'
+    exact hne j' (hI.echo5_input j' w hF hm')
   · intro j' w hF hm'
     rw [hsea j']
     exact hI.echo5_once j' w hF hm'
   · intro b G hFG hGc j' hjG hm'
     obtain ⟨m0, hmG, hmi⟩ := hI.input_origin b G hFG hGc j' hjG hm'
-    exact ⟨m0, hmG, by rw [hin m0]; exact hmi⟩
+    exact ⟨m0, hmG, hin m0 b hmi⟩
   · intro b j' hF hm'
     rcases hI.input_support b j' hF hm' with hji | hsupp
-    · left
-      rw [hin j']
-      exact hji
-    · right
-      exact InputSupport.mono (s := s) (fun k hk => by rw [hin k]; exact hk)
-        (fun _ hh => hh) hsupp
+    · exact Or.inl (hin j' b hji)
+    · exact Or.inr (InputSupport.mono (s := s) (fun k hk => hin k b hk) (fun _ hh => hh) hsupp)
   · intro j' b hF hm'
-    rw [hin j']
-    exact hI.input_called j' b hF hm'
+    exact hne j' (hI.input_called j' b hF hm')
 
 /-- **The invariant is preserved by the bound bit's write.** The ghost write touches the network
 state's own field alone, and no clause of `Invariant` reads it. -/
@@ -563,8 +561,13 @@ theorem Invariant.step {r : ℕ} {s : RoundState P.n} {l : Label P.n}
   | call id b h =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    refine hI.send (by simp) (fun b' hb' => absurd hb' (by rw [h]; simp))
-      (fun b' heq => by injection heq with hb; subst hb; exact Or.inl rfl)
+    exact hI.setProcessVariables_unchanged (fun b' hb' => absurd hb' (by rw [h]; simp))
+      rfl rfl rfl rfl
+  | input j b hin hsend =>
+    rw [PMF.mem_support_pure_iff] at hs'
+    subst hs'
+    refine hI.send (by rw [hin]; simp) (fun _ hb => hb)
+      (fun b' heq => by injection heq with hb; subst hb; exact Or.inl hin)
       (fun b' heq => by simp at heq) (fun b' heq => by simp at heq)
       (fun b' heq => by simp at heq) (fun heq => by simp at heq)
       (fun b' heq => by simp at heq) (fun heq => by simp at heq)
@@ -737,17 +740,17 @@ theorem Invariant.step {r : ℕ} {s : RoundState P.n} {l : Label P.n}
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     refine Invariant.setBound ?_ bnd
-    exact hI.setProcessVariables_unchanged rfl rfl rfl rfl rfl
+    exact hI.setProcessVariables_unchanged (fun _ hb => hb) rfl rfl rfl rfl
   | retGrade1 id v bnd _hin _hlv _hnotGrade2 hcnt honce hbind hval hr _hbnd =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     refine Invariant.setBound ?_ bnd
-    exact hI.setProcessVariables_unchanged rfl rfl rfl rfl rfl
+    exact hI.setProcessVariables_unchanged (fun _ hb => hb) rfl rfl rfl rfl
   | retGrade0 id bnd _hin _hlv _hnotGrade2 _hnotGrade1 hcnt hval hr _hbnd =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     refine Invariant.setBound ?_ bnd
-    exact hI.setProcessVariables_unchanged rfl rfl rfl rfl rfl
+    exact hI.setProcessVariables_unchanged (fun _ hb => hb) rfl rfl rfl rfl
   | fail id =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'

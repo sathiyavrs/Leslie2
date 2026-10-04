@@ -42,7 +42,6 @@ noncomputable def ghostFreeProtocol (P : Parameters) :
     (Label P.n) :=
   Implementation.systemGhostFree P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundVariables P.n)
     (ABDY.RoundStep P)
-    (ABDY.gbcaCallPayload P)
 
 /-- **The ghost costs nothing.** The bound bit the network records is written
 by no guard and read by no program, and the label that announces it is hidden at protocol
@@ -52,7 +51,7 @@ theorem protocol_ghostRemoval (P : Parameters) :
     achievableTraceDists (protocol P) = achievableTraceDists (ghostFreeProtocol P) :=
   Implementation.system_ghostRemoval P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundVariables P.n)
     (Option Bool) (ABDY.RoundStep P)
-    (ABDY.gbcaCallPayload P) (ABDY.abdyGhostStep P) (ABDY.abdyAnnouncedBound P)
+    (ABDY.abdyGhostStep P) (ABDY.abdyAnnouncedBound P)
     (fun s r id out => ⟨ABDY.abdyGhostOutput P s r id out, rfl⟩)
 
 /-! ### The headlines at the ghost-free protocol -/

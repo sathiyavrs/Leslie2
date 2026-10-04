@@ -44,7 +44,6 @@ graded-agreement returns announce any bit. -/
 noncomputable def ghostFreeProtocol (P : Parameters) :
     System (Implementation.State P (Message P.n) (RoundVariables P.n) Unit) (Label P.n) :=
   Implementation.systemGhostFree P (Message P.n) (RoundEvent P.n) (RoundVariables P.n) (RoundStep P)
-    (gbcaCallPayload P)
 
 /-- **The ghost costs nothing.** The ghost the network keeps for each round is
 written by no guard and read by no program, and the label that announces its bit is
@@ -55,7 +54,7 @@ theorem protocol_ghostRemoval (P : Parameters) :
   Implementation.system_ghostRemoval P (Message P.n) (RoundEvent P.n) (RoundVariables P.n) (Ghost
     P.n)
     (RoundStep P)
-    (gbcaCallPayload P) (ghostStep P) (announcedBound P)
+    (ghostStep P) (announcedBound P)
     (fun w r id out => ⟨ghostOutput P w r id out, rfl⟩)
 
 /-! ### The headlines at the ghost-free protocol -/

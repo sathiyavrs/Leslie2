@@ -182,7 +182,7 @@ theorem transition_instanceOverBracha_call (s : Gather.StateOverBracha P.n X) (i
     (fun _ => System.mapIdle_unchanged rfl)
 
 /-- Build the call of the instance broadcasting the caller's input: that instance records the
-payload the gather variables hold and multicasts its `⟨INIT, x⟩`. -/
+payload the gather variables hold as the leader's input. -/
 theorem transition_instanceOverBracha_inputBroadcastCall (s : Gather.StateOverBracha P.n X)
     (id : Fin P.n) (x : X) (hin : ((Gather.gatherProgramsAndNetwork s).processVariables id).input =
       some x)
@@ -190,10 +190,8 @@ theorem transition_instanceOverBracha_inputBroadcastCall (s : Gather.StateOverBr
     (Gather.instanceOverBracha P X).step s (Sum.inl Gather.Label.tau)
       (PMF.pure (Gather.setInputBroadcasts s
         (Function.update (Gather.inputBroadcasts s) id
-          (((Gather.inputBroadcasts s id).setProcessVariables id
-            { (Gather.inputBroadcasts s id).processVariables id with input := some x }).multicast id
-              (.init
-              x))))) := by
+          ((Gather.inputBroadcasts s id).setProcessVariables id
+            { (Gather.inputBroadcasts s id).processVariables id with input := some x })))) := by
   obtain ⟨⟨v, y⟩, a, b⟩ := s
   exact Gather.instanceOverBroadcasts_event_step (x := v) (w' := y) (b' := b)
     (Gather.GatherEvent.inputBroadcastCall id x)
@@ -531,18 +529,6 @@ theorem roundVariables_match_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW
     rw [roundProjection_firstGatherVote rfl]
     exact roundOverBracha_run_one (roundOverBracha_firstGatherTau (roundProjection P u w r)
         htransition)
-  | firstGatherBind _ _ _ U hh hterm hin hvot hsnd hbc happ hQ =>
-    have htransition := Gather.AlgorithmOverBracha.bindCall (firstGatherProjection P u w r) j U hin
-      hvot
-      hsnd happ hQ hbc
-    refine ⟨_, rfl, rfl,
-      fun r' hr' => Implementation.RoundVariablesMap.roundVariables_setRoundVariables_ne _ _ _ hr',
-        roundVariables_setRoundVariables_candidate rfl, roundVariables_setRoundVariables_output rfl,
-        Or.inl (by simp [Implementation.RoundVariablesMap.roundVariables_setRoundVariables_self,
-          LocalState.setProcessVariables]), ?_⟩
-    rw [roundProjection_firstGatherBind rfl]
-    exact roundOverBracha_run_one (roundOverBracha_firstGatherTau (roundProjection P u w r)
-        htransition)
   | secondGatherEcho _ _ _ hh hterm hin hcard hsend =>
     have htransition :=
       Gather.AlgorithmOverBracha.echo (secondGatherProjection P u w r) j hin hcard hsend
@@ -566,38 +552,56 @@ theorem roundVariables_match_gbcaSend (P : Parameters) {u : ∀ _ : Fin P.n, AFW
     rw [roundProjection_secondGatherVote rfl]
     exact roundOverBracha_run_one (roundOverBracha_secondGatherTau (roundProjection P u w r)
         htransition)
-  | secondGatherBind _ _ _ U hh hterm hin hvot hsnd hbc happ hQ =>
-    have htransition := Gather.AlgorithmOverBracha.bindCall (secondGatherProjection P u w r) j U hin
-      hvot
-      hsnd happ hQ hbc
-    refine ⟨_, rfl, rfl,
-      fun r' hr' => Implementation.RoundVariablesMap.roundVariables_setRoundVariables_ne _ _ _ hr',
-        roundVariables_setRoundVariables_candidate rfl, roundVariables_setRoundVariables_output rfl,
-        Or.inl (by simp [Implementation.RoundVariablesMap.roundVariables_setRoundVariables_self,
-          LocalState.setProcessVariables]), ?_⟩
-    rw [roundProjection_secondGatherBind rfl]
-    exact roundOverBracha_run_one (roundOverBracha_secondGatherTau (roundProjection P u w r)
-        htransition)
-  | firstGatherInputBroadcastCall _ _ _ b hh hterm hin hbin =>
+  | firstGatherInputBroadcastInit _ _ _ b hh hterm hin hsend =>
     have htransition :=
-      Gather.AlgorithmOverBracha.inputBroadcastCall (firstGatherProjection P u w r) j b hin hbin
+      Gather.AlgorithmOverBracha.inputBroadcastTau (firstGatherProjection P u w r) j _
+      (BRB.BrachaAlgorithm.init (Gather.inputBroadcasts (firstGatherProjection P u w r) j) b
+        hin hsend)
     refine ⟨_, rfl, rfl,
       fun r' hr' => Implementation.RoundVariablesMap.roundVariables_setRoundVariables_ne _ _ _ hr',
         roundVariables_setRoundVariables_candidate rfl, roundVariables_setRoundVariables_output rfl,
         Or.inl (by simp [Implementation.RoundVariablesMap.roundVariables_setRoundVariables_self]),
           ?_⟩
-    rw [roundProjection_firstGatherInputBroadcastCall rfl]
+    rw [roundProjection_firstGatherInputBroadcastInit rfl]
     exact roundOverBracha_run_one (roundOverBracha_firstGatherTau (roundProjection P u w r)
         htransition)
-  | secondGatherInputBroadcastCall _ _ _ x hh hterm hin2 hbin2 =>
+  | firstGatherBindBroadcastInit _ _ _ U hh hterm hin hsend =>
     have htransition :=
-      Gather.AlgorithmOverBracha.inputBroadcastCall (secondGatherProjection P u w r) j x hin2 hbin2
+      Gather.AlgorithmOverBracha.bindBroadcastTau (firstGatherProjection P u w r) j _
+      (BRB.BrachaAlgorithm.init (Gather.bindBroadcasts (firstGatherProjection P u w r) j) U
+        hin hsend)
     refine ⟨_, rfl, rfl,
       fun r' hr' => Implementation.RoundVariablesMap.roundVariables_setRoundVariables_ne _ _ _ hr',
         roundVariables_setRoundVariables_candidate rfl, roundVariables_setRoundVariables_output rfl,
         Or.inl (by simp [Implementation.RoundVariablesMap.roundVariables_setRoundVariables_self]),
           ?_⟩
-    rw [roundProjection_secondGatherInputBroadcastCall rfl]
+    rw [roundProjection_firstGatherBindBroadcastInit rfl]
+    exact roundOverBracha_run_one (roundOverBracha_firstGatherTau (roundProjection P u w r)
+        htransition)
+  | secondGatherInputBroadcastInit _ _ _ x hh hterm hin hsend =>
+    have htransition :=
+      Gather.AlgorithmOverBracha.inputBroadcastTau (secondGatherProjection P u w r) j _
+      (BRB.BrachaAlgorithm.init (Gather.inputBroadcasts (secondGatherProjection P u w r) j) x
+        hin hsend)
+    refine ⟨_, rfl, rfl,
+      fun r' hr' => Implementation.RoundVariablesMap.roundVariables_setRoundVariables_ne _ _ _ hr',
+        roundVariables_setRoundVariables_candidate rfl, roundVariables_setRoundVariables_output rfl,
+        Or.inl (by simp [Implementation.RoundVariablesMap.roundVariables_setRoundVariables_self]),
+          ?_⟩
+    rw [roundProjection_secondGatherInputBroadcastInit rfl]
+    exact roundOverBracha_run_one (roundOverBracha_secondGatherTau (roundProjection P u w r)
+        htransition)
+  | secondGatherBindBroadcastInit _ _ _ U hh hterm hin hsend =>
+    have htransition :=
+      Gather.AlgorithmOverBracha.bindBroadcastTau (secondGatherProjection P u w r) j _
+      (BRB.BrachaAlgorithm.init (Gather.bindBroadcasts (secondGatherProjection P u w r) j) U
+        hin hsend)
+    refine ⟨_, rfl, rfl,
+      fun r' hr' => Implementation.RoundVariablesMap.roundVariables_setRoundVariables_ne _ _ _ hr',
+        roundVariables_setRoundVariables_candidate rfl, roundVariables_setRoundVariables_output rfl,
+        Or.inl (by simp [Implementation.RoundVariablesMap.roundVariables_setRoundVariables_self]),
+          ?_⟩
+    rw [roundProjection_secondGatherBindBroadcastInit rfl]
     exact roundOverBracha_run_one (roundOverBracha_secondGatherTau (roundProjection P u w r)
         htransition)
   | firstGatherInputBroadcastEcho _ _ _ i mm hh hterm hrecv hsend =>
@@ -887,12 +891,14 @@ theorem roundVariables_match_gbcaDeliver (P : Parameters) {u : ∀ _ : Fin P.n, 
         hga2,
         hcand, hout, hrun⟩
 
-/-! ### Matching the return of a broadcast instance
+/-! ### Matching the call and the return of a broadcast instance
 
-A broadcast instance returns to the acting process: the instance's return flag goes on and the
-process's gather variables file what it returned, which is the return event of that gather. -/
+The acting process calls a broadcast instance: the instance records the payload as the leader's
+input, which is the call event of that gather. A broadcast instance returns to the acting process:
+the instance's return flag goes on and the process's gather variables file what it returned, which
+is the return event of that gather. -/
 
-/-- A broadcast instance's return is one silent transition of the round. -/
+/-- A call or a return of a broadcast instance is one silent transition of the round. -/
 theorem roundVariables_match_gbcaRoundEvent (P : Parameters)
     {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} (w : NetworkState P.n) {j : Fin P.n}
     {c : RoundLoopVariables P.n} {p : RoundVariablesMap P.n} (hu : (u j).2 = p) {r : ℕ}
@@ -943,6 +949,37 @@ theorem roundVariables_match_gbcaRoundEvent (P : Parameters)
         (Gather.AlgorithmOverBracha.ret _ j g hin hbind hsubap hQ hr2))
     change (((u j).2.roundVariables r).secondGather.processVariables).input.isSome = true
     exact Option.isSome_iff_ne_none.mpr hin
+  | firstGatherInputBroadcastCall _ _ _ b hh hterm hin hbin =>
+    refine ⟨_, rfl, rfl,
+      fun r' hr' => Implementation.RoundVariablesMap.roundVariables_setRoundVariables_ne _ _ _ hr',
+        roundVariables_setRoundVariables_secondGatherInput_or rfl, ?_⟩
+    rw [roundProjection_firstGatherInputBroadcastCall rfl]
+    exact roundOverBracha_run_one (roundOverBracha_firstGatherTau (roundProjection P u w r)
+      (Gather.AlgorithmOverBracha.inputBroadcastCall (firstGatherProjection P u w r) j b hin hbin))
+  | secondGatherInputBroadcastCall _ _ _ x hh hterm hin2 hbin2 =>
+    refine ⟨_, rfl, rfl,
+      fun r' hr' => Implementation.RoundVariablesMap.roundVariables_setRoundVariables_ne _ _ _ hr',
+        roundVariables_setRoundVariables_secondGatherInput_or rfl, ?_⟩
+    rw [roundProjection_secondGatherInputBroadcastCall rfl]
+    exact roundOverBracha_run_one (roundOverBracha_secondGatherTau (roundProjection P u w r)
+      (Gather.AlgorithmOverBracha.inputBroadcastCall (secondGatherProjection P u w r) j x hin2
+        hbin2))
+  | firstGatherBind _ _ _ U hh hterm hin hvot hsnd hbc happ hQ =>
+    refine ⟨_, rfl, rfl,
+      fun r' hr' => Implementation.RoundVariablesMap.roundVariables_setRoundVariables_ne _ _ _ hr',
+        roundVariables_setRoundVariables_secondGatherInput_or rfl, ?_⟩
+    rw [roundProjection_firstGatherBind rfl]
+    exact roundOverBracha_run_one (roundOverBracha_firstGatherTau (roundProjection P u w r)
+      (Gather.AlgorithmOverBracha.bindCall (firstGatherProjection P u w r) j U hin hvot hsnd happ
+        hQ hbc))
+  | secondGatherBind _ _ _ U hh hterm hin hvot hsnd hbc happ hQ =>
+    refine ⟨_, rfl, rfl,
+      fun r' hr' => Implementation.RoundVariablesMap.roundVariables_setRoundVariables_ne _ _ _ hr',
+        roundVariables_setRoundVariables_secondGatherInput_or rfl, ?_⟩
+    rw [roundProjection_secondGatherBind rfl]
+    exact roundOverBracha_run_one (roundOverBracha_secondGatherTau (roundProjection P u w r)
+      (Gather.AlgorithmOverBracha.bindCall (secondGatherProjection P u w r) j U hin hvot hsnd
+        happ hQ hbc))
   | firstGatherInputBroadcastReturn _ _ _ i v hh hterm hcnt hret =>
     refine ⟨_, rfl, rfl,
       fun r' hr' => Implementation.RoundVariablesMap.roundVariables_setRoundVariables_ne _ _ _ hr',
@@ -1016,7 +1053,7 @@ theorem roundVariables_match_callG (P : Parameters) {u : ∀ _ : Fin P.n, AFW.Pr
       (∀ r', (x.2.roundVariables r').output = (p.roundVariables r').output) ∧
       (GBCA.ByAFW.roundOverBracha P r).weakLStep (roundProjection P u w r) (Sum.inl (.callG r j b))
         (roundProjection P (Function.update u j x)
-          ((w.recordGBCACall r j (gbcaCallPayload P j b)).writeGhost (ghostStep P)
+          (w.writeGhost (ghostStep P)
             (Sum.inl (.callG r j b))) r) := by
   subst hu
   cases h with
@@ -1027,7 +1064,7 @@ theorem roundVariables_match_callG (P : Parameters) {u : ∀ _ : Fin P.n, AFW.Pr
         roundVariables_setRoundVariables_secondGatherInput rfl,
         roundVariables_setRoundVariables_candidate rfl, roundVariables_setRoundVariables_output rfl,
           ?_⟩
-    · rw [show w.recordGBCACall r j (gbcaCallPayload P j b) = w from rfl, roundProjection_callG rfl]
+    · rw [roundProjection_callG rfl]
       exact System.weakLStep_of_step (by simp)
         (roundOverBracha_callG (roundProjection P u w r) j b hin hin)
 

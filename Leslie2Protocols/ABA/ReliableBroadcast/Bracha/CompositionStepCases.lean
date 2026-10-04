@@ -247,8 +247,11 @@ theorem programStep_fail {i : Fin P.n}
   case failIdle => rfl
 
 theorem programStep_send_init_own {m : M}
-    (h : ProgramStep P ldr j p (Sum.inr (.send j (.init m))) ν) : False := by
+    (h : ProgramStep P ldr j p (Sum.inr (.send j (.init m))) ν) :
+    j = ldr ∧ p.processVariables.input = some m ∧ p.processVariables.sentInit = none ∧
+      ν = PMF.pure (p.setProcessVariables { p.processVariables with sentInit := some m }) := by
   cases h
+  case sendInit => exact ⟨by assumption, by assumption, by assumption, rfl⟩
   case sendIdle => exact absurd rfl ‹_ ≠ j›
 
 theorem programStep_send_echo_own {m : M}
@@ -296,7 +299,7 @@ variable {P : Parameters} {ldr : Fin P.n} {w : NetworkState P.n (Message M)}
   {μ : PMF (NetworkState P.n (Message M))}
 
 theorem networkStep_call {m : M} (h : NetworkStep P ldr w (Sum.inl (Sum.inl (.call m))) μ) :
-    μ = PMF.pure (w.recordSent ldr (.init m)) := by
+    μ = PMF.pure w := by
   cases h; rfl
 
 theorem networkStep_callLoop {m : M} (h : NetworkStep P ldr w (Sum.inl (Sum.inr (.callLoop m))) μ) :

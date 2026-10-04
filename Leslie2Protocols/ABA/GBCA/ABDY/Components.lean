@@ -23,6 +23,11 @@ corruption flag, and it does not record the messages it has multicast; its guard
 and the delivered sets, never the identity of the caller. The round loop that moves the ports is not
 here either — a call writes the round's variables alone, a return sets their `returned` flag alone.
 
+A call records the input and sends nothing. The process's own `⟨INPUT, b⟩` is the first multicast of
+the round, a send of its own (ABDY22 Algorithm 6 line 2, the first statement of LeslieBP
+Algorithm 2), and the relay of an `INPUT` received from `f + 1` senders is a second send of the same
+message (lines 3–4).
+
 The round's network holds the per-sender sent sets and the corrupted set. A multicast is a
 synchronised step of the sender, which writes its variables, and the network, which records the
 message; a delivery is a synchronised step of the network, which checks that the message is sent
@@ -55,8 +60,8 @@ interface — no component offers them, so they carry no transition of the insta
   hold the process's input: the algorithm's handlers only run inside a called instance.
 * **D11 (Byzantine call and return transitions), split.** A Byzantine call or return transition is
   authorised by a `k ∈ F` guard and has an effect on the round's data. The components carry the
-  effect and not the authorisation: `byzantineCallG` opens the round's variables and records its
-  `⟨INPUT, b⟩` without any `k ∈ F` guard, and `byzantineRetG` sets the `returned` flag and writes
+  effect and not the authorisation: `byzantineCallG` opens the round's variables without any
+  `k ∈ F` guard, and `byzantineRetG` sets the `returned` flag and writes
   the round's bound bit on the same witness, denials and guard a correct return needs. The guard
   belongs to the network that surrounds the instance, where it applies to the call or return label
   that stays visible at this boundary.
@@ -136,13 +141,10 @@ return ports and the two synchronisations. -/
 round `r`. -/
 inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
     GBCA.ByABDY.RoundVariables P.n → GBCALabel P.n → PMF (GBCA.ByABDY.RoundVariables P.n) → Prop
-  /-- The call arrives: record the input and mark `⟨INPUT, b⟩` as multicast.
-  The recording of that message is the network's half (`Algorithm.call`). -/
+  /-- The call arrives: record the input (`Algorithm.call`). -/
   | call (p : GBCA.ByABDY.RoundVariables P.n) (b : Bool) (h : p.processVariables.input = none) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inl (.callG r j b)))
-        (PMF.pure (p.setProcessVariables { p.processVariables with
-          input := some b,
-          sentInput := Function.update p.processVariables.sentInput b true }))
+        (PMF.pure (p.setProcessVariables { p.processVariables with input := some b }))
   /-- A call addressed elsewhere: not `j`'s business. -/
   | callIdle (p : GBCA.ByABDY.RoundVariables P.n) (id : Fin P.n) (b : Bool) (hid : id ≠ j) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inl (.callG r id b))) (PMF.pure p)
@@ -196,9 +198,7 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
   | byzantineCall (p : GBCA.ByABDY.RoundVariables P.n) (b : Bool) (h : p.processVariables.input =
       none) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineCallG r j b)))
-        (PMF.pure (p.setProcessVariables { p.processVariables with
-          input := some b,
-          sentInput := Function.update p.processVariables.sentInput b true }))
+        (PMF.pure (p.setProcessVariables { p.processVariables with input := some b }))
   /-- A Byzantine call at another process: not `j`'s business. -/
   | byzantineCallIdle (p : GBCA.ByABDY.RoundVariables P.n) (k : Fin P.n) (b : Bool) (hk : k ≠ j) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineCallG r k b))) (PMF.pure p)
@@ -246,6 +246,14 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
       Bool)
       (hk : k ≠ j) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r k out bnd))) (PMF.pure p)
+  /-- `INPUT b`: the process's own input, not yet multicast. ABDY22 Algorithm 6 line 2 and the
+  first statement of LeslieBP Algorithm 2 (`Algorithm.input`). -/
+  | sendInput (p : GBCA.ByABDY.RoundVariables P.n) (b : Bool)
+      (hin : p.processVariables.input = some b)
+      (hsend : p.processVariables.sentInput b = false) :
+      GBCAProgramStep P r j p (Sum.inr (.send j (.input b)))
+        (PMF.pure (p.setProcessVariables { p.processVariables with
+          sentInput := Function.update p.processVariables.sentInput b true }))
   /-- `INPUT` relay: `f + 1` received `⟨INPUT, b⟩` messages, not yet multicast
   (`Algorithm.relay`; D8, D18). -/
   | sendRelay (p : GBCA.ByABDY.RoundVariables P.n) (b : Bool)
@@ -364,11 +372,9 @@ inductive GBCANetworkStep (P : Parameters) (r : ℕ) :
   (`Algorithm.byzantine`; D5, D11). -/
   | byzantineGBCA (w : NetworkState P.n) (k : Fin P.n) (m : GBCA.ByABDY.Message) (hF : k ∈ w.F) :
       GBCANetworkStep P r w (Sum.inl (Sum.inl .tau)) (PMF.pure (w.recordGBCASend k m))
-  /-- The network's half of the call: sent the caller's `⟨INPUT, b⟩`
-  (`Algorithm.call`). -/
+  /-- The network's half of the call: it sends nothing (`Algorithm.call`). -/
   | callG (w : NetworkState P.n) (id : Fin P.n) (b : Bool) :
-      GBCANetworkStep P r w (Sum.inl (Sum.inl (.callG r id b)))
-        (PMF.pure (w.recordGBCASend id (.input b)))
+      GBCANetworkStep P r w (Sum.inl (Sum.inl (.callG r id b))) (PMF.pure w)
   /-- A return sends nothing, and writes the round's bound bit: the label's
   `bnd` is the bit `bound` holds if there is one and `boundOf`'s otherwise, and
   it is written there (`Algorithm.retGrade2`/`retGrade1`/`retGrade0`). -/
@@ -380,12 +386,11 @@ inductive GBCANetworkStep (P : Parameters) (r : ℕ) :
   (`Algorithm.callLoop`). -/
   | gbcaCallLoop (w : NetworkState P.n) (id : Fin P.n) (b : Bool) :
       GBCANetworkStep P r w (Sum.inl (Sum.inr (.gbcaCallLoop r id b))) (PMF.pure w)
-  /-- A Byzantine call (D11): its `⟨INPUT, b⟩` is sent here, and there is no
-  `k ∈ F` guard on this transition — the authorisation belongs to the network
-  outside the instance, where the call label stays visible. -/
+  /-- A Byzantine call (D11): it sends nothing, and there is no `k ∈ F` guard on this
+  transition. The authorisation belongs to the network outside the instance, where the call
+  label stays visible. A corrupted process's `⟨INPUT, b⟩` enters by `byzantineGBCA`. -/
   | byzantineCallG (w : NetworkState P.n) (k : Fin P.n) (b : Bool) :
-      GBCANetworkStep P r w (Sum.inl (Sum.inr (.byzantineCallG r k b)))
-        (PMF.pure (w.recordGBCASend k (.input b)))
+      GBCANetworkStep P r w (Sum.inl (Sum.inr (.byzantineCallG r k b))) (PMF.pure w)
   /-- A Byzantine call against variables already called sends nothing (D11). -/
   | byzantineCallGLoop (w : NetworkState P.n) (k : Fin P.n) (b : Bool) :
       GBCANetworkStep P r w (Sum.inl (Sum.inr (.byzantineCallGLoop r k b))) (PMF.pure w)

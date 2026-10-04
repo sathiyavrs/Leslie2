@@ -59,17 +59,16 @@ variable (P : Parameters) (M E S : Type) [DecidableEq M]
     (roundStep : Fin P.n → ProcessVariables P.n S → ExtendedLabel P.n M E → PMF (ProcessVariables
       P.n S) →
       Prop)
-    (callPayload : Fin P.n → Bool → Option M)
 
 /-- The adversary of the ghost-free system: the network's transitions over the trivial ghost,
 its two graded-agreement returns free to announce either bit. -/
 noncomputable def networkGhostFree : System (NetworkState P.n M Unit) (ExtendedLabel P.n M E) :=
-  network P M E Unit callPayload (fun _ _ _ => ()) (fun _ _ _ _ _ => True)
+  network P M E Unit (fun _ _ _ => ()) (fun _ _ _ _ _ => True)
 
 /-- **The ghost-free system**: the implementation whose adversary holds no ghost
 and announces any bit on a graded-agreement return. -/
 noncomputable def systemGhostFree : System (State P M S Unit) (Label P.n) :=
-  system P M E S Unit roundStep callPayload (fun _ _ _ => ()) (fun _ _ _ _ _ => True)
+  system P M E S Unit roundStep (fun _ _ _ => ()) (fun _ _ _ _ _ => True)
 
 end GhostFreeSystem
 /-! ### The projection and the label identification -/
@@ -183,7 +182,6 @@ graded-agreement returns are the one pair of transitions that read it. -/
 
 section NetworkRemoval
 variable {P : Parameters} {M E G : Type} [DecidableEq M] [Inhabited G]
-    {callPayload : Fin P.n → Bool → Option M}
     {ghostStep : ExtendedLabel P.n M E → NetworkState P.n M G → G → G}
     {ghostOutput : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop}
 
@@ -191,9 +189,9 @@ variable {P : Parameters} {M E G : Type} [DecidableEq M] [Inhabited G]
 transition written with its ghost write is a transition written without it. -/
 private theorem networkStepGhostFree_drop {s t : NetworkState P.n M Unit}
     {L : ExtendedLabel P.n M E}
-    (h : NetworkStep P M E Unit callPayload (fun _ _ _ => ()) (fun _ _ _ _ _ => True) s L
+    (h : NetworkStep P M E Unit (fun _ _ _ => ()) (fun _ _ _ _ _ => True) s L
       (PMF.pure (t.writeGhost (fun _ _ _ => ()) L))) :
-    NetworkStep P M E Unit callPayload (fun _ _ _ => ()) (fun _ _ _ _ _ => True) s L
+    NetworkStep P M E Unit (fun _ _ _ => ()) (fun _ _ _ _ _ => True) s L
       (PMF.pure t) := by
   rwa [writeGhost_unit] at h
 
@@ -214,8 +212,8 @@ carries the ghost. On a graded-agreement return the announced bit is replaced by
 theorem network_ghostRemoval
     (ghostOutput_total : ∀ (s : NetworkState P.n M G) (r : ℕ) (id : Fin P.n) (out : GBCAOutput),
       ∃ bnd, ghostOutput s r id out bnd) :
-    AuxiliaryVariableRemoval (network P M E G callPayload ghostStep ghostOutput)
-      (networkGhostFree P M E callPayload) NetworkState.forgetGhost forgetBoundExtended where
+    AuxiliaryVariableRemoval (network P M E G ghostStep ghostOutput)
+      (networkGhostFree P M E) NetworkState.forgetGhost forgetBoundExtended where
   init := rfl
   silent := separatesSilent_forgetBoundExtended
   project := by
@@ -224,7 +222,7 @@ theorem network_ghostRemoval
     simp only [networkGhostFree, network_step]
     cases h <;>
       simp only [PMF.pure_map, forgetGhost_writeGhost, forgetGhost_recordGBCASend,
-        forgetGhost_recordGBCACall, forgetGhost_recordDecided, forgetGhost_corrupt] <;>
+        forgetGhost_recordDecided, forgetGhost_corrupt] <;>
       apply networkStepGhostFree_drop <;>
       first
         | exact NetworkStep.retByzantine _ _ _ (by assumption)
@@ -369,7 +367,6 @@ variable (P : Parameters) (M E S G : Type) [DecidableEq M] [Inhabited G]
       P.n S) →
       Prop)
     [IsRoundStep P M E S roundStep]
-    (callPayload : Fin P.n → Bool → Option M)
     (ghostStep : ExtendedLabel P.n M E → NetworkState P.n M G → G → G)
     (ghostOutput : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop)
 
@@ -382,9 +379,9 @@ being a graded-agreement return. -/
 theorem system_auxiliaryVariableRemoval
     (ghostOutput_total : ∀ (s : NetworkState P.n M G) (r : ℕ) (id : Fin P.n) (out : GBCAOutput),
       ∃ bnd, ghostOutput s r id out bnd) :
-    AuxiliaryVariableRemoval (system P M E S G roundStep callPayload ghostStep ghostOutput)
-      (systemGhostFree P M E S roundStep callPayload) forgetGhostState id := by
-  have hnet := network_ghostRemoval (callPayload := callPayload) (ghostStep := ghostStep)
+    AuxiliaryVariableRemoval (system P M E S G roundStep ghostStep ghostOutput)
+      (systemGhostFree P M E S roundStep) forgetGhostState id := by
+  have hnet := network_ghostRemoval (ghostStep := ghostStep)
     ghostOutput_total
   have hpre := (hnet.parallel_right (coinOverExtendedAlphabet_labelSaturated P M E)).parallel_left
     (programSynchronisedProduct_labelSaturated P M E S roundStep)
@@ -399,9 +396,9 @@ so the implementation and the ghost-free system achieve the same trace distribut
 theorem system_ghostRemoval
     (ghostOutput_total : ∀ (s : NetworkState P.n M G) (r : ℕ) (id : Fin P.n) (out : GBCAOutput),
       ∃ bnd, ghostOutput s r id out bnd) :
-    achievableTraceDists (system P M E S G roundStep callPayload ghostStep ghostOutput) =
-      achievableTraceDists (systemGhostFree P M E S roundStep callPayload) :=
-  (system_auxiliaryVariableRemoval P M E S G roundStep callPayload ghostStep ghostOutput
+    achievableTraceDists (system P M E S G roundStep ghostStep ghostOutput) =
+      achievableTraceDists (systemGhostFree P M E S roundStep) :=
+  (system_auxiliaryVariableRemoval P M E S G roundStep ghostStep ghostOutput
     ghostOutput_total).achievableTraceDists_eq
 
 end SystemRemoval

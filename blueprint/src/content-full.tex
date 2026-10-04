@@ -1171,7 +1171,8 @@ The round variables and the round's network state are in
 \input{nodes/def-aba-gbca-algorithm-by-abdy}
 
 \blueprintfig{fig-gbca-impl}{The round's graded-agreement composition \leandecl{PLTS.ABA.GBCA.ByABDY.composition}, running Algorithm~\ref{alg:gbca-impl} (D18): the per-process round automaton and, in a box of its own, the authenticated set-based network.
-On a call a process multicasts $\langle\mathrm{INPUT},b\rangle$ and relays it after $f{+}1$ received $\langle\mathrm{INPUT},b\rangle$ messages; an $n{-}f$ quorum at each level produces the next multicast $\langle\mathrm{ECHO},b\rangle$, $\langle\mathrm{VOTE},v\rangle$, $\langle\mathrm{BIND},v\rangle$, then $\langle\mathrm{ECHO5},v\rangle$, the levels from $\mathrm{BIND}$ down requiring the process's own send at the level below.
+On a call a process records its input $b$.
+Its first multicast is $\langle\mathrm{INPUT},b\rangle$, the transition $\mathrm{input}$, and it relays $\langle\mathrm{INPUT},b\rangle$ after $f{+}1$ received $\langle\mathrm{INPUT},b\rangle$ messages; an $n{-}f$ quorum at each level produces the next multicast $\langle\mathrm{ECHO},b\rangle$, $\langle\mathrm{VOTE},v\rangle$, $\langle\mathrm{BIND},v\rangle$, then $\langle\mathrm{ECHO5},v\rangle$, the levels from $\mathrm{BIND}$ down requiring the process's own send at the level below.
 The returns are $(b,2)$ on an $n{-}f$ ECHO5-$b$ quorum, $(b,1)$ on an $n{-}f$ any-ECHO5 quorum with $f{+}1$ BIND-$b$ and $|\mathrm{Valid}|>1$, and $(\bot,0)$ on an $n{-}f$ ECHO5-$\bot$ quorum with $|\mathrm{Valid}|>1$: the three cases of the last wait-until block of Algorithm~\ref{alg:gbca-impl}, taken as the if/elif/else chain that block writes, so a return denies the cases above it and requires the process's own ECHO5.
 Each return box also carries the bit its label announces: the grade-2 and grade-1 returns the bit they hand out, the grade-0 return the bit read off the sent sets.
 The dashed local state is the D5 network: per-sender sent and received message sets, adversary $\mathrm{deliver}$, Byzantine injection for $j\in F$, and the round's bound bit, a ghost written at the first return and announced at every return (D29).}
@@ -1261,12 +1262,15 @@ The two $\mathrm{VOTE}$ transitions ask for no own send, the $\mathrm{ECHO}$ the
 Transition & Label & Guard & Effect \\
 \hline
 \leandeclnamed{call}{PLTS.ABA.GBCA.ByABDY.Algorithm.call} & $\mathrm{callG}(r,i,b)$ & $\mathit{input}_i$ unset
-  & $\mathit{input}_i \gets b$; \\
- & & & $\mathit{sentInput}_i(b) \gets$ true; \\
- & & & multicast $\mathrm{IN}\,b$ \\
+  & $\mathit{input}_i \gets b$ \\
 \hline
 \leandeclnamed{callLoop}{PLTS.ABA.GBCA.ByABDY.Algorithm.callLoop} & $\mathrm{callG}(r,i,b)$ & ---
   & identity (self-loop) \\
+\hline
+\leandeclnamed{input}{PLTS.ABA.GBCA.ByABDY.Algorithm.input} & $\tau$
+  & $\mathit{input}_j = b$,
+  & $\mathit{sentInput}_j(b) \gets$ true; \\
+ & & $\mathit{sentInput}_j(b)$ false & multicast $\mathrm{IN}\,b$ \\
 \hline
 \leandeclnamed{deliver}{PLTS.ABA.GBCA.ByABDY.Algorithm.deliver} & $\tau$ & $m \in \mathit{sent}(j)$
   & add $m$ to $\mathit{received}(i,j)$ (D5) \\
@@ -2095,7 +2099,7 @@ Three things separate that component from the composed system's, and all three a
 A round of the composed system carries $4n+2$ networks, one per sub-protocol instance, while the adversary of the implementation carries one sent-set family per round; a round message therefore carries a tag naming the network it belongs to, and for a broadcast message the instance, whose index is its leader.
 The sender index stays the sender, so a threshold still counts distinct senders (D5).
 And the composed system indexes the local states by instance and then by process, while a program must hold its own data and no one else's; the round variables are therefore transposed, holding one process's local state in every instance.
-And a program of the implementation takes one transition per statement of the pseudocode: the graded-agreement call records the round's input, the call of a process's own input broadcast is a transition of its own, a gather's return and the call that follows it are two, and a broadcast instance's return is the transition that writes what it returned.
+And a program of the implementation takes one transition per statement of the pseudocode: the graded-agreement call records the round's input, the call of a broadcast instance and the leader's multicast of $\langle\mathrm{INIT}, x\rangle$ that follows it are two, a gather's return and the call that follows it are two, and a broadcast instance's return is the transition that writes what it returned.
 None of the three loses anything, because every guard of the gather-based implementation reads the acting process's own local states and the networks, and the two transitions that read a network --- the adversary's delivery and its Byzantine injection --- belong to the adversary in either system.
 Assembling the composed state from the implementation's undoes all three: the local states are transposed back and each network's sent set is projected out of the tagged sent-set family.
 That assembly is the simulation relation of Theorem~\ref{thm:aba-afw-protocol-composed}, which is a function rather than a correspondence --- the composed state is computed from the implementation's --- and the proof obligation of a transition is which of the six projections takes the message it sends.

@@ -54,9 +54,7 @@ variable {P : Parameters} {r : ℕ} {j : Fin P.n} {p : GBCA.ByABDY.RoundVariable
 theorem gbcaProgramStep_callG_own {b : Bool}
     (h : GBCAProgramStep P r j p (Sum.inl (Sum.inl (.callG r j b))) ν) :
     p.processVariables.input = none ∧
-      ν = PMF.pure (p.setProcessVariables { p.processVariables with
-        input := some b,
-        sentInput := Function.update p.processVariables.sentInput b true }) := by
+      ν = PMF.pure (p.setProcessVariables { p.processVariables with input := some b }) := by
   cases h
   case call => exact ⟨by assumption, rfl⟩
   case callIdle => exact absurd rfl ‹_ ≠ j›
@@ -123,9 +121,7 @@ theorem gbcaProgramStep_retG_notOwn {id : Fin P.n} {out : GBCAOutput} {bnd : Boo
 theorem gbcaProgramStep_byzantineCallG_own {b : Bool}
     (h : GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineCallG r j b))) ν) :
     p.processVariables.input = none ∧
-      ν = PMF.pure (p.setProcessVariables { p.processVariables with
-        input := some b,
-        sentInput := Function.update p.processVariables.sentInput b true }) := by
+      ν = PMF.pure (p.setProcessVariables { p.processVariables with input := some b }) := by
   cases h
   case byzantineCall => exact ⟨by assumption, rfl⟩
   case byzantineCallIdle => exact absurd rfl ‹_ ≠ j›
@@ -189,16 +185,20 @@ theorem gbcaProgramStep_byzantineRetG_notOwn {k : Fin P.n} {out : GBCAOutput} {b
   case byzantineRetIdle => rfl
   all_goals exact absurd rfl hk
 
+/-- A send of `⟨INPUT, b⟩` by the program is the first multicast of its own input or the relay. -/
 theorem gbcaProgramStep_send_input_own {b : Bool}
     (h : GBCAProgramStep P r j p (Sum.inr (.send j (.input b))) ν) :
-    p.processVariables.input ≠ none ∧ P.f + 1 ≤ p.receivedCount (.input b) ∧
+    (p.processVariables.input = some b ∨
+      p.processVariables.input ≠ none ∧ P.f + 1 ≤ p.receivedCount (.input b)) ∧
       p.processVariables.sentInput b = false ∧
     ν = PMF.pure (p.setProcessVariables
       { p.processVariables with
         sentInput := Function.update p.processVariables.sentInput b true }) := by
   cases h
+  case sendInput =>
+    exact ⟨Or.inl (by assumption), by assumption, rfl⟩
   case sendRelay =>
-    exact ⟨by assumption, by assumption, by assumption, rfl⟩
+    exact ⟨Or.inr ⟨by assumption, by assumption⟩, by assumption, rfl⟩
   case sendIdle => exact absurd rfl ‹_ ≠ j›
 
 theorem gbcaProgramStep_send_echo_own {b : Bool}
@@ -443,7 +443,7 @@ variable {P : Parameters} {r : ℕ} {w : NetworkState P.n} {μ : PMF (NetworkSta
 
 theorem gbcaNetworkStep_callG_round {r' : ℕ} {id : Fin P.n} {b : Bool}
     (h : GBCANetworkStep P r w (Sum.inl (Sum.inl (.callG r' id b))) μ) :
-    r' = r ∧ μ = PMF.pure (w.recordGBCASend id (.input b)) := by
+    r' = r ∧ μ = PMF.pure w := by
   cases h; exact ⟨rfl, rfl⟩
 
 theorem gbcaNetworkStep_retG_round {r' : ℕ} {id : Fin P.n} {out : GBCAOutput} {bnd : Bool}
@@ -460,7 +460,7 @@ theorem gbcaNetworkStep_gbcaCallLoop_round {r' : ℕ} {id : Fin P.n} {b : Bool}
 
 theorem gbcaNetworkStep_byzantineCallG_round {r' : ℕ} {k : Fin P.n} {b : Bool}
     (h : GBCANetworkStep P r w (Sum.inl (Sum.inr (.byzantineCallG r' k b))) μ) :
-    r' = r ∧ μ = PMF.pure (w.recordGBCASend k (.input b)) := by
+    r' = r ∧ μ = PMF.pure w := by
   cases h; exact ⟨rfl, rfl⟩
 
 theorem gbcaNetworkStep_byzantineCallGLoop_round {r' : ℕ} {k : Fin P.n} {b : Bool}

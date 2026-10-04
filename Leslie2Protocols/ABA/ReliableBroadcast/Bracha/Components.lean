@@ -28,12 +28,10 @@ instance's network. `broadcastProgram` and `broadcastNetwork` are the two automa
 ## The alphabets
 
 The specification's `call m` carries two transitions, the call and the input-enabledness loop.
-The composition splits them across two labels. The leader's variables and the network's sent sets
-are different components, so a single label carrying both transitions would also carry the two
-mixed pairs: the leader looping while the network posts `⟨INIT, m⟩`, and the leader recording its
-payload while the network posts nothing. The loop therefore has a label of its own,
-`LoopLabel.callLoop m`, and the interface alphabet is
-`InstanceLabel n M = Label n M ⊕ LoopLabel M`.
+The composition takes the loop on a label of its own, `LoopLabel.callLoop m`, and the interface
+alphabet is `InstanceLabel n M = Label n M ⊕ LoopLabel M`. The call writes the leader's `input`
+and the network records nothing. The leader's `⟨INIT, m⟩` is a multicast of its own, guarded by
+that `input`.
 
 The instance-internal alphabet `BroadcastLabel n M = InstanceLabel n M ⊕ BroadcastEvent n M` puts
 the two synchronisation labels, the multicast and the delivery, beside the interface. Its silent
@@ -112,8 +110,7 @@ delivery the write of the delivered set. -/
 inductive ProgramStep (P : Parameters) (ldr j : Fin P.n) :
     LocalState P.n (ProcessVariables M) (Message M) → BroadcastLabel P.n M →
       PMF (LocalState P.n (ProcessVariables M) (Message M)) → Prop
-  /-- The call arrives at the leader: record the payload. The multicast of
-  `⟨INIT, m⟩` is the network's half (`BrachaAlgorithm.call`). -/
+  /-- The call arrives at the leader: record the payload (`BrachaAlgorithm.call`). -/
   | call (p) (m : M) (hj : j = ldr) (h : p.processVariables.input = none) :
       ProgramStep P ldr j p (Sum.inl (Sum.inl (.call m)))
         (PMF.pure (p.setProcessVariables { p.processVariables with input := some m }))
@@ -123,6 +120,12 @@ inductive ProgramStep (P : Parameters) (ldr j : Fin P.n) :
   /-- The call loop: the variables do not move (`BrachaAlgorithm.callLoop`). -/
   | callLoop (p) (m : M) :
       ProgramStep P ldr j p (Sum.inl (Sum.inr (.callLoop m))) (PMF.pure p)
+  /-- `INIT m`: the leader holds the payload `m` it was called with, and has sent no `INIT`
+  yet (`BrachaAlgorithm.init`). -/
+  | sendInit (p) (m : M) (hj : j = ldr) (hin : p.processVariables.input = some m)
+      (hsend : p.processVariables.sentInit = none) :
+      ProgramStep P ldr j p (Sum.inr (.send j (.init m)))
+        (PMF.pure (p.setProcessVariables { p.processVariables with sentInit := some m }))
   /-- `ECHO m`: `⟨INIT, m⟩` delivered from the leader, a quorum of received
   `ECHO m` messages, or `f + 1` received `VOTE m` messages; no `ECHO` sent yet
   (`BrachaAlgorithm.echo`). -/
@@ -179,10 +182,9 @@ sent, and it is where a corrupted sender's injections enter (D5). -/
 /-- The step relation of the instance's network. All transitions are Dirac. -/
 inductive NetworkStep (P : Parameters) (ldr : Fin P.n) :
     NetworkState P.n (Message M) → BroadcastLabel P.n M → PMF (NetworkState P.n (Message M)) → Prop
-  /-- The network's half of the call: the leader's `⟨INIT, m⟩` is sent
-  (`BrachaAlgorithm.call`). -/
+  /-- The call sends nothing (`BrachaAlgorithm.call`). -/
   | call (w) (m : M) :
-      NetworkStep P ldr w (Sum.inl (Sum.inl (.call m))) (PMF.pure (w.recordSent ldr (.init m)))
+      NetworkStep P ldr w (Sum.inl (Sum.inl (.call m))) (PMF.pure w)
   /-- The call loop sends nothing (`BrachaAlgorithm.callLoop`). -/
   | callLoop (w) (m : M) :
       NetworkStep P ldr w (Sum.inl (Sum.inr (.callLoop m))) (PMF.pure w)

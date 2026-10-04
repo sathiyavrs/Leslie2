@@ -174,15 +174,11 @@ refinements hold for it. What the deferral withholds is a return, which is liven
 The `guess` label and the `guess` state field are omitted under either
 reading (D4, §6).
 
-**Line 2's multicast fused into the call.** ABDY22's Algorithm 6 takes its input `x` as a
+**The call and line 2's multicast.** ABDY22's Algorithm 6 takes its input `x` as a
 parameter and multicasts `⟨INPUT, x⟩` at line 2, its first statement.
-`GBCA.ByABDY.Algorithm.call` writes `input`, `sentInput` and the multicast in one step, so
-no state of the implementation holds a called process whose `INPUT` has not been sent. The
-sent sets are read by `Algorithm.deliver` alone, so a send the adversary would delay is a
-delivery it delays instead, and the same patterns of received messages are reachable under either
-rendering. The registry catalogues no fusion at the gather-based implementation, where the
-call of a gather and the call of the instance broadcasting the caller's input are two
-transitions.
+`GBCA.ByABDY.Algorithm.call` records the input and sends nothing.
+The multicast is `GBCA.ByABDY.Algorithm.input`, the first send of the instance, and the relay of
+lines 3–4 is `Algorithm.relay`.
 
 **Terminating `return` as state.** The pseudocode's `return` ends the process; the
 encoding renders that as a fire-once flag — `ProcessVariables.returned`, guarded by the `hr`

@@ -32,11 +32,8 @@ corrupted set otherwise.
 Four lemmas beside the refinement hold the relation across one transition:
 `specificationRelation_tau` for an internal transition under a stuttering specification,
 `brachaAlgorithm_tau_F` for the corrupted set across one, `specificationRelation_call` for the
-Four lemmas beside the refinement hold the relation across one transition:
-`specificationRelation_tau` for an internal transition under a stuttering specification,
-`brachaAlgorithm_tau_F` for the corrupted set across one, `specificationRelation_call` for the two
-effects of a call, the write of the leader's input and the `INIT` multicast, and `commitReach` for
-the on-demand commit that a derived delivery licenses.
+call, which writes the leader's input, and `commitReach` for the on-demand commit that a derived
+delivery licenses.
 
 ## Model and deviations
 
@@ -76,6 +73,30 @@ theorem specificationRelation_transition (P : Parameters) (ldr : Fin P.n) (q₁ 
     · intro k
       by_cases hkl : k = ldr
       · subst hkl
+        rw [InstanceState.setProcessVariables_processVariables_self]
+        exact hR.ret_eq k
+      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hkl]
+        exact hR.ret_eq k
+    · simpa using hR.F_eq
+    · intro m' hm'
+      rw [echoWitness_setProcessVariables]
+      exact hR.val_witness m' hm'
+  | callLoop m =>
+    rw [PMF.mem_support_pure_iff] at hq₁'
+    subst hq₁'
+    exact ⟨q₂, Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
+      (Step.callLoop q₂ m)⟩, hR⟩
+  | init m hin hsend =>
+    rw [PMF.mem_support_pure_iff] at hq₁'
+    subst hq₁'
+    refine ⟨q₂, Or.inl ⟨rfl, System.weakLSilent_refl _ q₂⟩,
+      hInv', ?_, ?_, ?_, ?_⟩
+    · rw [InstanceState.multicast_processVariables,
+        InstanceState.setProcessVariables_processVariables_self]
+      exact hR.input_eq
+    · intro k
+      by_cases hkl : k = ldr
+      · subst hkl
         rw [InstanceState.multicast_processVariables,
           InstanceState.setProcessVariables_processVariables_self]
         exact hR.ret_eq k
@@ -86,11 +107,6 @@ theorem specificationRelation_transition (P : Parameters) (ldr : Fin P.n) (q₁ 
     · intro m' hm'
       rw [echoWitness_multicast, echoWitness_setProcessVariables]
       exact hR.val_witness m' hm'
-  | callLoop m =>
-    rw [PMF.mem_support_pure_iff] at hq₁'
-    subst hq₁'
-    exact ⟨q₂, Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
-      (Step.callLoop q₂ m)⟩, hR⟩
   | deliver i j m h =>
     rw [PMF.mem_support_pure_iff] at hq₁'
     subst hq₁'
@@ -296,9 +312,8 @@ theorem brachaRefinesSpecification (P : Parameters) (ldr : Fin P.n) :
 /-! ### The relation across the internal and the call transitions
 
 An internal transition under a stuttering specification, the corrupted set across an internal
-An internal transition under a stuttering specification, the corrupted set across an internal
-transition, the two effects of a call, the write of the leader's input and the `INIT` multicast, and
-the on-demand commit that a derived delivery licenses. -/
+transition, the call, which writes the leader's input, and the on-demand commit that a derived
+delivery licenses. -/
 
 /-- The relation across any internal transition, the specification stuttering. -/
 theorem specificationRelation_tau {P : Parameters} {ldr : Fin P.n} {s s' : BrachaState P.n M}
@@ -308,6 +323,26 @@ theorem specificationRelation_tau {P : Parameters} {ldr : Fin P.n} {s s' : Brach
   have hInv' := hR.invariant.step hstep (by rw [PMF.mem_support_pure_iff])
   generalize hμ : (PMF.pure s' : PMF (BrachaState P.n M)) = μ at hstep
   cases hstep with
+  | init m hin hsend =>
+    have hs' := PMF.pure_injective hμ
+    subst hs'
+    refine ⟨hInv', ?_, ?_, ?_, ?_⟩
+    · rw [InstanceState.multicast_processVariables,
+        InstanceState.setProcessVariables_processVariables_self]
+      exact hR.input_eq
+    · intro k
+      by_cases hkl : k = ldr
+      · subst hkl
+        rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_self]
+        exact hR.ret_eq k
+      · rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_ne _ _ _ hkl]
+        exact hR.ret_eq k
+    · simpa using hR.F_eq
+    · intro m' hm'
+      rw [echoWitness_multicast, echoWitness_setProcessVariables]
+      exact hR.val_witness m' hm'
   | deliver i j m h =>
     have hs' := PMF.pure_injective hμ
     subst hs'
@@ -411,6 +446,10 @@ theorem brachaAlgorithm_tau_F {P : Parameters} {ldr : Fin P.n} {s s' : BrachaSta
     (hstep : BrachaAlgorithm P ldr s Label.tau (PMF.pure s')) : s'.F = s.F := by
   generalize hμ : (PMF.pure s' : PMF (BrachaState P.n M)) = μ at hstep
   cases hstep with
+  | init m hin hsend =>
+    have hs' := PMF.pure_injective hμ
+    subst hs'
+    simp
   | deliver i j m h =>
     have hs' := PMF.pure_injective hμ
     subst hs'
@@ -437,26 +476,22 @@ theorem specificationRelation_call {P : Parameters} {ldr : Fin P.n} {s : BrachaS
     {t : SpecState P.n M} (hR : SpecificationRelation P ldr s t) {m : M}
     (h : (s.processVariables ldr).input = none) :
     SpecificationRelation P ldr
-      ((s.setProcessVariables ldr { s.processVariables ldr with input := some m }).multicast ldr
-        (.init m))
+      (s.setProcessVariables ldr { s.processVariables ldr with input := some m })
       { t with input := some m } := by
   refine ⟨hR.invariant.step (BrachaAlgorithm.call s m h) (by rw [PMF.mem_support_pure_iff]),
     ?_, ?_, ?_, ?_⟩
   · dsimp only
-    rw [InstanceState.multicast_processVariables,
-      InstanceState.setProcessVariables_processVariables_self]
+    rw [InstanceState.setProcessVariables_processVariables_self]
   · intro k
     by_cases hkl : k = ldr
     · subst hkl
-      rw [InstanceState.multicast_processVariables,
-        InstanceState.setProcessVariables_processVariables_self]
+      rw [InstanceState.setProcessVariables_processVariables_self]
       exact hR.ret_eq k
-    · rw [InstanceState.multicast_processVariables,
-        InstanceState.setProcessVariables_processVariables_ne _ _ _ hkl]
+    · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hkl]
       exact hR.ret_eq k
   · simpa using hR.F_eq
   · intro m' hm'
-    rw [echoWitness_multicast, echoWitness_setProcessVariables]
+    rw [echoWitness_setProcessVariables]
     exact hR.val_witness m' hm'
 
 /-- **The on-demand commit.** A quorum of received `VOTE` messages licenses the

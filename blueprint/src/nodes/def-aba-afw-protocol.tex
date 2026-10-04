@@ -1,8 +1,8 @@
 \begin{definition}[The gather-based protocol]
   \label{def:aba-afw-protocol}
-  \lean{PLTS.ABA.AFW.Message}\lean{PLTS.ABA.AFW.RoundEvent}\lean{PLTS.ABA.AFW.RoundVariables}\lean{PLTS.ABA.AFW.RoundStep}\lean{PLTS.ABA.AFW.gbcaCallPayload}\lean{PLTS.ABA.AFW.Ghost}\lean{PLTS.ABA.AFW.firstGatherOf}\lean{PLTS.ABA.AFW.secondGatherOf}\lean{PLTS.ABA.AFW.ghostStep}\lean{PLTS.ABA.AFW.ghostOutput}\lean{PLTS.ABA.AFW.protocolExtended}\lean{PLTS.ABA.AFW.protocolHidden}\lean{PLTS.ABA.AFW.protocol}\leanok
+  \lean{PLTS.ABA.AFW.Message}\lean{PLTS.ABA.AFW.RoundEvent}\lean{PLTS.ABA.AFW.RoundVariables}\lean{PLTS.ABA.AFW.RoundStep}\lean{PLTS.ABA.AFW.Ghost}\lean{PLTS.ABA.AFW.firstGatherOf}\lean{PLTS.ABA.AFW.secondGatherOf}\lean{PLTS.ABA.AFW.ghostStep}\lean{PLTS.ABA.AFW.ghostOutput}\lean{PLTS.ABA.AFW.protocolExtended}\lean{PLTS.ABA.AFW.protocolHidden}\lean{PLTS.ABA.AFW.protocol}\leanok
   \uses{def:aba-implementation, def:aba-round-over-bracha, def:aba-gather-over-bracha, def:aba-gather-core}
-  The implementation of Definition~\ref{def:aba-implementation} at the gather-based implementation, supplying the five things it requires: the tagged message type, the round's own events, the round variables, no call payload, and the round's transitions.
+  The implementation of Definition~\ref{def:aba-implementation} at the gather-based implementation, supplying the four things it requires: the tagged message type, the round's own events, the round variables and the round's transitions.
   The message type is tagged: a round of that implementation carries $4n+2$ network states --- one for each gather instance and one for each of the $4n$ Bracha instances --- and the tag names the network state a message belongs to, and for a Bracha message the instance, whose index is its leader.
   The adversary then holds one sent-set family per round, the sender index staying the sender, so a threshold still counts distinct senders (D5).
   The round variables are process-major.
@@ -10,6 +10,7 @@
   Every guard of the gather-based implementation reads the acting process's own local states and the network states, and the two transitions that read a network state --- the adversary's delivery and its Byzantine injection --- belong to the adversary, so the rearrangement loses nothing.
   The transitions are those of the programs of $\mathrm{GBCA.ByAFW.roundOverBracha}$, its graded-agreement programs ($\mathrm{GBCA.ByAFW.ProgramStep}$), its gather programs ($\mathrm{Gather.ProgramStep}$) and the Bracha programs beneath them ($\mathrm{BRB.ProgramStep}$), written over the tagged message type, each the process's half of a step whose network half is a transition of the adversary: a send writes the sender's own variables and the network records the message, and a delivery files the message in the receiver's own local state, dispatched on the tag.
   Every call and every return of a sub-protocol is a transition of its own, as they are in the composed system.
+  The call of a broadcast instance records the payload as the leader's input and sends nothing, and the leader's multicast of $\langle\mathrm{INIT}, x\rangle$ is a send of its own that follows the call.
   The ghost of a round is $\mathrm{Ghost}(n)$, the first gather's core, the second gather's core and the round's bound bit, each written once (D29, D30).
   $\mathrm{ghostStep}$ writes it.
   The first gather's return writes the first core at $\mathrm{coreOf}$ of the round's first gather network state and the bound bit at $\mathrm{boundOfCore}$ of that core; the second gather's return writes the second core the same way, and so does a Byzantine graded return, at a process whose program has been replaced; every other label leaves the ghost where it stands.
@@ -17,6 +18,6 @@
   $\mathrm{coreOf}$ reads the sent sets and the corrupted set alone, which is what lets the adversary compute a core from its own state.
   $\mathrm{ghostOutput}$ reads the bit back, and the two graded-agreement return transitions fire only with the bit their label carries equal to it.
   It is total: where the ghost holds no bit it computes one from the first gather's core, and on a reachable state the returner's own first gather return has already written the bit.
-  The adversary needs no transitions beyond those of Definition~\ref{def:aba-implementation}: recording a multicast, checking a delivery and authorising a Byzantine call or return are independent of the payload.
+  The adversary needs no transitions beyond those of Definition~\ref{def:aba-implementation}: recording a multicast, checking a delivery and authorising a Byzantine call or return are the same at every message type.
   Full construction: \leandecl{PLTS.ABA.AFW.protocol}.
 \end{definition}

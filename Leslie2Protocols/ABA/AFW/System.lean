@@ -51,12 +51,14 @@ programs beneath them (`BRB.ProgramStep`). Each is the process's half of a step 
 is a transition of the adversary. A send writes the sender's own variables and the network records
 the
 message; a delivery files the message in the receiver's own local state, dispatched on the tag.
-Every call and every return of a sub-protocol is a transition of its own. The graded-agreement
-call, the call of the process's own input-broadcast instance in each of the two gathers, the first
-gather's return, the second gather's call, the second gather's return, the round's own return and
-the return of each of the `4n` broadcast instances are separate transitions. A call of an
-input-broadcast instance reads the payload its gather variables hold and carries that instance's
-`⟨INIT, ·⟩`; a return writes what it returned in the caller's variables. The round's variables
+Every call and every return of a sub-protocol is a transition of its own, and no transition takes
+a call or a return together with a send. The graded-agreement call, the call of the process's own
+input-broadcast instance and of its own bind-broadcast instance in each of the two gathers, the
+first gather's return, the second gather's call, the second gather's return, the round's own return
+and the return of each of the `4n` broadcast instances are separate transitions. A call of an
+input-broadcast instance reads the payload its gather variables hold and records it as that
+instance's input; the leader's `⟨INIT, ·⟩` is the send that follows, `firstGatherInputBroadcastInit`
+and its three companions. A return writes what it returned in the caller's variables. The round's variables
 therefore hold the two gather local states over `Gather.ProcessVariables`, which carries what each
 instance returned, and the two intermediate phases `candidate` and `output`. A gather guard reads
 those variables, as the guard of the composed gather program does:
@@ -127,6 +129,18 @@ inductive RoundEvent (n : ℕ) : Type
   /-- The second gather returns, and the graded outcome is computed from what it gathered (AFW25,
   Algorithm 4, lines 5 to 8). -/
   | secondGatherReturn (out : GBCAOutput)
+  /-- The process calls the instance broadcasting its input in the first gather with `v` (AFW25,
+  Algorithm 5, line 6). -/
+  | firstGatherInputBroadcastCall (v : Bool)
+  /-- The process calls the instance broadcasting its `BIND` payload in the first gather with `U`
+  (AFW25, Algorithm 5, line 17). -/
+  | firstGatherBindBroadcastCall (U : AcceptedPairs n Bool)
+  /-- The process calls the instance broadcasting its input in the second gather with `v` (AFW25,
+  Algorithm 5, line 6). -/
+  | secondGatherInputBroadcastCall (v : Option Bool)
+  /-- The process calls the instance broadcasting its `BIND` payload in the second gather with `U`
+  (AFW25, Algorithm 5, line 17). -/
+  | secondGatherBindBroadcastCall (U : AcceptedPairs n (Option Bool))
   /-- The instance broadcasting `k`'s input in the first gather returns `v` (AFW25, Algorithm 5,
   lines 1 and 2). -/
   | firstGatherInputBroadcastReturn (k : Fin n) (v : Bool)
@@ -372,14 +386,14 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
       RoundStep P j (c, p) (Sum.inr (.gbcaCallLoop r j b))
         (PMF.pure (c.setProcessVariables { c.processVariables with phase := .awaitG }, p))
   /-- The process calls the input-broadcast instance of the first gather with the payload its
-  gather variables hold, and that instance multicasts `⟨INIT, b⟩` (AFW25's Algorithm 5, line 6;
-  LeslieBP's Algorithm 4, `BRB_id.call(m)`). The multicast is the network's half. -/
+  gather variables hold, and that instance records it as the leader's input (AFW25's Algorithm 5,
+  line 6; LeslieBP's Algorithm 4, `BRB_id.call(m)`). The call sends no message. -/
   | firstGatherInputBroadcastCall (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ)
       (b : Bool)
       (hh : c.corrupted = false) (hterm : p.terminated = false)
       (hin : ((p.roundVariables r).firstGather.processVariables).input = some b)
       (hbin : (((p.roundVariables r).firstGatherInputBroadcasts j).processVariables).input = none) :
-      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.firstGatherInputBroadcasts j (.init b))))
+      RoundStep P j (c, p) (Sum.inr (.gbcaRoundEvent r j (.firstGatherInputBroadcastCall b)))
         (PMF.pure (c, p.setRoundVariables r
           { (p.roundVariables r) with
             firstGatherInputBroadcasts := Function.update (p.roundVariables
@@ -387,6 +401,23 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
               (((p.roundVariables r).firstGatherInputBroadcasts j).setProcessVariables
                 { (((p.roundVariables r).firstGatherInputBroadcasts j).processVariables) with
                   input := some b }) }))
+  /-- The leader of the input-broadcast instance of the first gather multicasts `⟨INIT, b⟩` for
+  the input that instance records (LeslieBP's Algorithm 6, `send ⟨init, m⟩ to all`). The multicast
+  is the network's half. -/
+  | firstGatherInputBroadcastInit (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ)
+      (b : Bool)
+      (hh : c.corrupted = false) (hterm : p.terminated = false)
+      (hin : (((p.roundVariables r).firstGatherInputBroadcasts j).processVariables).input = some b)
+      (hsend :
+        (((p.roundVariables r).firstGatherInputBroadcasts j).processVariables).sentInit = none) :
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.firstGatherInputBroadcasts j (.init b))))
+        (PMF.pure (c, p.setRoundVariables r
+          { (p.roundVariables r) with
+            firstGatherInputBroadcasts := Function.update (p.roundVariables
+              r).firstGatherInputBroadcasts j
+              (((p.roundVariables r).firstGatherInputBroadcasts j).setProcessVariables
+                { (((p.roundVariables r).firstGatherInputBroadcasts j).processVariables) with
+                  sentInit := some b }) }))
   /-- The first gather's `ECHO`: the process is called and its accepted pairs
   number at least `n − f`, the source blueprint's `|AP| ≥ n − f`. The payload is
   those pairs, `T_i ← AP_i` of AFW25's Algorithm 5, line 9. -/
@@ -425,9 +456,9 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
             firstGather := (p.roundVariables r).firstGather.setProcessVariables
               { ((p.roundVariables r).firstGather.processVariables) with sentVote := some U } }))
   /-- The first gather's `BIND`: `n − f` senders' `VOTE` payloads, each held
-  here and contained in the bind payload, are delivered; the payload is
-  broadcast through the process's own bind-broadcast instance and written to the
-  gather variables. The process has multicast its own `VOTE` and has not called its
+  here and contained in the bind payload, are delivered; the process calls its own bind-broadcast
+  instance with the payload, which that instance records, and writes it to the gather variables.
+  The call sends no message. The process has multicast its own `VOTE` and has not called its
   own bind broadcast. The main thread of AFW25's Algorithm 5 sends `VOTE` before
   `BIND`, and sends `BIND` once, at line 17. -/
   | firstGatherBind (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (U :
@@ -442,7 +473,7 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ W, Gather.Message.vote W ∈ ((p.roundVariables r).firstGather.received q) ∧
           Gather.approvedBy ((p.roundVariables r).firstGather.processVariables) W ∧ W ⊆ U) :
-      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.firstGatherBindBroadcasts j (.init U))))
+      RoundStep P j (c, p) (Sum.inr (.gbcaRoundEvent r j (.firstGatherBindBroadcastCall U)))
         (PMF.pure (c, p.setRoundVariables r
           { (p.roundVariables r) with
             firstGather := (p.roundVariables r).firstGather.setProcessVariables
@@ -454,6 +485,23 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
                 { (((p.roundVariables r).firstGatherBindBroadcasts j).processVariables) with
                     input := some U })
                   }))
+  /-- The leader of the bind-broadcast instance of the first gather multicasts `⟨INIT, U⟩` for
+  the input that instance records (LeslieBP's Algorithm 6, `send ⟨init, m⟩ to all`). The multicast
+  is the network's half. -/
+  | firstGatherBindBroadcastInit (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ)
+      (U : AcceptedPairs P.n Bool)
+      (hh : c.corrupted = false) (hterm : p.terminated = false)
+      (hin : (((p.roundVariables r).firstGatherBindBroadcasts j).processVariables).input = some U)
+      (hsend :
+        (((p.roundVariables r).firstGatherBindBroadcasts j).processVariables).sentInit = none) :
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.firstGatherBindBroadcasts j (.init U))))
+        (PMF.pure (c, p.setRoundVariables r
+          { (p.roundVariables r) with
+            firstGatherBindBroadcasts := Function.update (p.roundVariables
+              r).firstGatherBindBroadcasts j
+              (((p.roundVariables r).firstGatherBindBroadcasts j).setProcessVariables
+                { (((p.roundVariables r).firstGatherBindBroadcasts j).processVariables) with
+                  sentInit := some U }) }))
   /-- The second gather's `ECHO`. -/
   | secondGatherEcho (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ)
       (hh : c.corrupted = false) (hterm : p.terminated = false)
@@ -485,7 +533,7 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
           { (p.roundVariables r) with
             secondGather := (p.roundVariables r).secondGather.setProcessVariables
               { ((p.roundVariables r).secondGather.processVariables) with sentVote := some U } }))
-  /-- The second gather's `BIND`. -/
+  /-- The second gather's `BIND`. The call sends no message. -/
   | secondGatherBind (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ)
       (U : AcceptedPairs P.n (Option Bool))
       (hh : c.corrupted = false) (hterm : p.terminated = false)
@@ -497,7 +545,7 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ W, Gather.Message.vote W ∈ ((p.roundVariables r).secondGather.received q) ∧
           Gather.approvedBy ((p.roundVariables r).secondGather.processVariables) W ∧ W ⊆ U) :
-      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.secondGatherBindBroadcasts j (.init U))))
+      RoundStep P j (c, p) (Sum.inr (.gbcaRoundEvent r j (.secondGatherBindBroadcastCall U)))
         (PMF.pure (c, p.setRoundVariables r
           { (p.roundVariables r) with
             secondGather := (p.roundVariables r).secondGather.setProcessVariables
@@ -508,6 +556,23 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
                 { (((p.roundVariables r).secondGatherBindBroadcasts j).processVariables) with
                     input := some U })
                   }))
+  /-- The leader of the bind-broadcast instance of the second gather multicasts `⟨INIT, U⟩` for
+  the input that instance records (LeslieBP's Algorithm 6, `send ⟨init, m⟩ to all`). The multicast
+  is the network's half. -/
+  | secondGatherBindBroadcastInit (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ)
+      (U : AcceptedPairs P.n (Option Bool))
+      (hh : c.corrupted = false) (hterm : p.terminated = false)
+      (hin : (((p.roundVariables r).secondGatherBindBroadcasts j).processVariables).input = some U)
+      (hsend :
+        (((p.roundVariables r).secondGatherBindBroadcasts j).processVariables).sentInit = none) :
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.secondGatherBindBroadcasts j (.init U))))
+        (PMF.pure (c, p.setRoundVariables r
+          { (p.roundVariables r) with
+            secondGatherBindBroadcasts := Function.update (p.roundVariables
+              r).secondGatherBindBroadcasts j
+              (((p.roundVariables r).secondGatherBindBroadcasts j).setProcessVariables
+                { (((p.roundVariables r).secondGatherBindBroadcasts j).processVariables) with
+                  sentInit := some U }) }))
   /-- The first gather returns, and the process records the candidate its returned entries
   determine (AFW25's Algorithm 4, lines 1 and 2; AFW25's Algorithm 5, line 20). The returner has
   called its own bind broadcast: the `BIND` broadcast of AFW25's Algorithm 5, line 17, precedes the
@@ -546,8 +611,8 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
             secondGather := (p.roundVariables r).secondGather.setProcessVariables
               { ((p.roundVariables r).secondGather.processVariables) with input := some x } }))
   /-- The process calls the input-broadcast instance of the second gather with the payload that
-  gather's variables hold, and that instance multicasts `⟨INIT, x⟩` (AFW25's Algorithm 5, line 6;
-  LeslieBP's Algorithm 4, `BRB_id.call(m)`). The multicast is the network's half. -/
+  gather's variables hold, and that instance records it as the leader's input (AFW25's Algorithm 5,
+  line 6; LeslieBP's Algorithm 4, `BRB_id.call(m)`). The call sends no message. -/
   | secondGatherInputBroadcastCall (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ)
       (x : Option Bool)
       (hh : c.corrupted = false) (hterm : p.terminated = false)
@@ -555,7 +620,7 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
       (hbin2 : (((p.roundVariables r).secondGatherInputBroadcasts j).processVariables).input = none)
         :
       RoundStep P j (c, p)
-        (Sum.inr (.gbcaSend r j (.secondGatherInputBroadcasts j (.init x))))
+        (Sum.inr (.gbcaRoundEvent r j (.secondGatherInputBroadcastCall x)))
         (PMF.pure (c, p.setRoundVariables r
           { (p.roundVariables r) with
             secondGatherInputBroadcasts := Function.update (p.roundVariables
@@ -563,6 +628,23 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
               (((p.roundVariables r).secondGatherInputBroadcasts j).setProcessVariables
                 { (((p.roundVariables r).secondGatherInputBroadcasts j).processVariables) with
                   input := some x }) }))
+  /-- The leader of the input-broadcast instance of the second gather multicasts `⟨INIT, x⟩` for
+  the input that instance records (LeslieBP's Algorithm 6, `send ⟨init, m⟩ to all`). The multicast
+  is the network's half. -/
+  | secondGatherInputBroadcastInit (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ)
+      (x : Option Bool)
+      (hh : c.corrupted = false) (hterm : p.terminated = false)
+      (hin : (((p.roundVariables r).secondGatherInputBroadcasts j).processVariables).input = some x)
+      (hsend :
+        (((p.roundVariables r).secondGatherInputBroadcasts j).processVariables).sentInit = none) :
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.secondGatherInputBroadcasts j (.init x))))
+        (PMF.pure (c, p.setRoundVariables r
+          { (p.roundVariables r) with
+            secondGatherInputBroadcasts := Function.update (p.roundVariables
+              r).secondGatherInputBroadcasts j
+              (((p.roundVariables r).secondGatherInputBroadcasts j).setProcessVariables
+                { (((p.roundVariables r).secondGatherInputBroadcasts j).processVariables) with
+                  sentInit := some x }) }))
   /-- The second gather returns, and the process records the graded outcome its returned entries
   determine (AFW25's Algorithm 4, lines 5 to 8; AFW25's Algorithm 5, line 20). The returner has
   called its own bind broadcast. -/
@@ -995,10 +1077,6 @@ end Transposition
 
 /-! ### The protocol -/
 
-/-- The graded-agreement call multicasts nothing: the caller's input reaches the network at the
-call of its own input-broadcast instance of the first gather, a transition of its own. -/
-def gbcaCallPayload (P : Parameters) : Fin P.n → Bool → Option (Message P.n) := fun _ _ => none
-
 /-- The step relation of the program of process `j`. -/
 abbrev ProgramStep (P : Parameters) (j : Fin P.n) :
     ProcessVariables P.n → ExtendedLabel P.n (Message P.n) (RoundEvent P.n) →
@@ -1009,7 +1087,7 @@ abbrev ProgramStep (P : Parameters) (j : Fin P.n) :
 abbrev NetworkStep (P : Parameters) :
     NetworkState P.n → ExtendedLabel P.n (Message P.n) (RoundEvent P.n) →
       PMF (NetworkState P.n) → Prop :=
-  Implementation.NetworkStep P (Message P.n) (RoundEvent P.n) (Ghost P.n) (gbcaCallPayload P)
+  Implementation.NetworkStep P (Message P.n) (RoundEvent P.n) (Ghost P.n)
     (ghostStep P)
     (announcedBound P)
 
@@ -1023,21 +1101,21 @@ noncomputable def protocolExtended (P : Parameters) :
     System (ProtocolState P) (Implementation.ExtendedLabel P.n (Message P.n) (RoundEvent P.n)) :=
   Implementation.systemExtended P (Message P.n) (RoundEvent P.n) (RoundVariables P.n) (Ghost P.n)
     (RoundStep P)
-    (gbcaCallPayload P) (ghostStep P) (announcedBound P)
+    (ghostStep P) (announcedBound P)
 
 /-- The gather-based protocol group: the labels the components synchronise on
 hidden, the result read back over `Label n`. -/
 noncomputable def protocolHidden (P : Parameters) : System (ProtocolState P) (Label P.n) :=
   Implementation.systemHidden P (Message P.n) (RoundEvent P.n) (RoundVariables P.n) (Ghost P.n)
     (RoundStep P)
-    (gbcaCallPayload P) (ghostStep P) (announcedBound P)
+    (ghostStep P) (announcedBound P)
 
 /-- **The gather-based protocol**: the group with the sub-protocol API
 hidden. -/
 noncomputable def protocol (P : Parameters) : System (ProtocolState P) (Label P.n) :=
   Implementation.system P (Message P.n) (RoundEvent P.n) (RoundVariables P.n) (Ghost P.n)
     (RoundStep P)
-    (gbcaCallPayload P) (ghostStep P) (announcedBound P)
+    (ghostStep P) (announcedBound P)
 
 end AFW
 

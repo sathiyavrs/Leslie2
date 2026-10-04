@@ -16,7 +16,8 @@ relation on that state; the system is the composition.
 
 The message pattern, per process:
 
-* the leader, on being called with `m`, multicasts `⟨INIT, m⟩`;
+* the leader, called with `m`, records `m` in `input`, and multicasts `⟨INIT, m⟩` in a
+  transition of its own, once;
 * `⟨ECHO, m⟩` is multicast on receiving `⟨INIT, m⟩` from the leader, on a quorum of received
   `ECHO m` messages, or on `f + 1` received `VOTE m` messages, once;
 * `⟨VOTE, m⟩` is multicast on a quorum of received `ECHO m` messages, or amplified from `f + 1`
@@ -25,7 +26,8 @@ The message pattern, per process:
 
 The `ECHO` quorum is `ABA.Parameters.receivedEchoQuorum`, more than `(n + f) / 2` senders. There is
 no participation guard: only the leader is called, and every other process runs its handlers
-unconditionally, Bracha's protocol having no per-process input. The write-once `sentEcho` and
+unconditionally, Bracha's protocol having no per-process input. The write-once `sentInit` field
+makes the leader's `INIT` a single multicast. The write-once `sentEcho` and
 `sentVote` fields carry the "having not sent" guards of the source's `upon` clauses, and
 `voteAmplification` and `voteQuorum` write the same field, so a process votes at most once
 whichever of the two fires first.
@@ -59,14 +61,11 @@ loop are the two transitions of `call m`, which the instance takes at two labels
 is Dirac. -/
 inductive BrachaAlgorithm (P : Parameters) (ldr : Fin P.n) :
     BrachaState P.n M → Label P.n M → PMF (BrachaState P.n M) → Prop
-  /-- The environment call arrives at the leader: record the payload and
-  multicast `⟨INIT, m⟩`. -/
+  /-- The environment call arrives at the leader: record the payload. -/
   | call (s : BrachaState P.n M) (m : M)
       (h : (s.processVariables ldr).input = none) :
       BrachaAlgorithm P ldr s (.call m)
-        (PMF.pure ((s.setProcessVariables ldr
-          { s.processVariables ldr with input := some m }).multicast
-          ldr (.init m)))
+        (PMF.pure (s.setProcessVariables ldr { s.processVariables ldr with input := some m }))
   /-- Input-enabledness loop for `call`. -/
   | callLoop (s : BrachaState P.n M) (m : M) :
       BrachaAlgorithm P ldr s (.call m) (PMF.pure s)
@@ -75,6 +74,15 @@ inductive BrachaAlgorithm (P : Parameters) (ldr : Fin P.n) :
   | deliver (s : BrachaState P.n M) (i j : Fin P.n) (m : Message M)
       (h : m ∈ s.sent j) :
       BrachaAlgorithm P ldr s .tau (PMF.pure (s.receiveMessage i j m))
+  /-- `INIT`: the leader holds the payload `m` it was called with and has sent no `INIT` yet.
+  The source's `if p_id is leader: send ⟨init, m⟩ to all`. -/
+  | init (s : BrachaState P.n M) (m : M)
+      (hin : (s.processVariables ldr).input = some m)
+      (hsend : (s.processVariables ldr).sentInit = none) :
+      BrachaAlgorithm P ldr s .tau
+        (PMF.pure ((s.setProcessVariables ldr
+          { s.processVariables ldr with sentInit := some m }).multicast
+          ldr (.init m)))
   /-- `ECHO`: `⟨INIT, m⟩` received from the leader, a quorum of received `ECHO m`
   messages, or `f + 1` received `VOTE m` messages; no `ECHO` sent yet. -/
   | echo (s : BrachaState P.n M) (j : Fin P.n) (m : M)
@@ -125,9 +133,9 @@ label projects to, with no stuttering anywhere.
 
 | instance | algorithm |
 | --- | --- |
-| `call` (leader writes, network records) | `BrachaAlgorithm.call` |
+| `call` (leader writes) | `BrachaAlgorithm.call` |
 | `callLoop` | `BrachaAlgorithm.callLoop` |
-| hidden `send` synchronisation, by level | `BrachaAlgorithm.echo` / `voteQuorum` /
+| hidden `send` synchronisation, by level | `BrachaAlgorithm.init` / `echo` / `voteQuorum` /
 `voteAmplification` |
 | hidden `deliver` synchronisation | `BrachaAlgorithm.deliver` |
 | network-local injection | `BrachaAlgorithm.byzantine` |
@@ -154,7 +162,10 @@ theorem brachaInstance_step_algorithm (P : Parameters) (ldr : Fin P.n) :
       have hw : w' = w.recordSent j m := PMF.pure_injective (networkStep_send hn)
       subst hw
       cases m with
-      | init m => exact (programStep_send_init_own (hall j)).elim
+      | init m =>
+        obtain ⟨rfl, hin, hsend, hx⟩ := programStep_send_init_own (hall j)
+        rw [brachaInstance_setProcessVariables_recordSent (PMF.pure_injective hx) hfor]
+        exact BrachaAlgorithm.init _ m hin hsend
       | echo m =>
         obtain ⟨hrecv, hsend, hx⟩ := programStep_send_echo_own (hall j)
         rw [brachaInstance_setProcessVariables_recordSent (PMF.pure_injective hx) hfor]
@@ -190,13 +201,13 @@ theorem brachaInstance_step_algorithm (P : Parameters) (ldr : Fin P.n) :
         cases l₀ with
         | tau => exact absurd rfl hlτ
         | call m =>
-          have hw : w' = w.recordSent ldr (.init m) := PMF.pure_injective (networkStep_call hn)
+          have hw : w' = w := PMF.pure_injective (networkStep_call hn)
           subst hw
           obtain ⟨hin, hx⟩ := programStep_call_leader (hall ldr)
           have hfor : ∀ i, i ≠ ldr → x i = u i :=
             fun i hi => PMF.pure_injective (programStep_call_notOwn hi (hall i))
           refine ⟨_, rfl, ?_⟩
-          rw [brachaInstance_setProcessVariables_recordSent (PMF.pure_injective hx) hfor]
+          rw [brachaInstance_setProcessVariables (PMF.pure_injective hx) hfor]
           exact BrachaAlgorithm.call _ m hin
         | ret id m =>
           have hw : w' = w := PMF.pure_injective (networkStep_ret hn)
@@ -239,6 +250,12 @@ theorem algorithm_brachaInstance_step (P : Parameters) (ldr : Fin P.n) :
   | callLoop m =>
     exact ⟨Sum.inr (.callLoop m), rfl, brachaInstance_label_step P ldr (by simp)
       (fun i => ProgramStep.callLoop (u i) m) (NetworkStep.callLoop w m)⟩
+  | init m hin hsend =>
+    exact ⟨Sum.inl Label.tau, rfl, brachaInstance_event_step P ldr
+      (BroadcastEvent.send ldr (.init m))
+      (dirac_steps_update (ProgramStep.sendInit (u ldr) m rfl hin hsend)
+        (fun i hi => ProgramStep.sendIdle (u i) ldr (.init m) (Ne.symm hi)))
+      (NetworkStep.send w ldr (.init m))⟩
   | deliver i j m h =>
     exact ⟨Sum.inl Label.tau, rfl, brachaInstance_event_step P ldr (BroadcastEvent.deliver i j m)
       (dirac_steps_update (ProgramStep.deliverReceive (u i) j m)

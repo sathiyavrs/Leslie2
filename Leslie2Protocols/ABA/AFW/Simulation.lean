@@ -350,7 +350,7 @@ theorem coupling_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessVariabl
           exact RoundLoopStep.corruptedIdle _ _ hh (by simp) not_false
       · rw [hCeq i, hfor i hi]; exact RoundLoopStep.failIdle _ k (Ne.symm hi)
   | callG r id b =>
-    obtain rfl : w' = (w.recordGBCACall r id (gbcaCallPayload P id b)).writeGhost (ghostStep P)
+    obtain rfl : w' = w.writeGhost (ghostStep P)
         (Sum.inl (Label.callG r id b)) := pure_inj (networkStep_callG hn)
     have hfor : ∀ i, i ≠ id → x i = u i := fun i hi =>
       pure_inj (programStep_callG_notOwn (Ne.symm hi) (hall i))
@@ -383,11 +383,11 @@ theorem coupling_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessVariabl
       · subst hi; exact hgo r''
       · rw [hfor i hi]
     have hfam : (fun r' => roundProjection P x
-          ((w.recordGBCACall r id (gbcaCallPayload P id b)).writeGhost (ghostStep P)
+          (w.writeGhost (ghostStep P)
             (Sum.inl (Label.callG r id b))) r')
         = Function.update (fun r' => roundProjection P u w r') r
           (roundProjection P (Function.update u id (x id))
-            ((w.recordGBCACall r id (gbcaCallPayload P id b)).writeGhost (ghostStep P)
+            (w.writeGhost (ghostStep P)
               (Sum.inl (Label.callG r id b))) r) := by
       funext r'
       by_cases hr' : r' = r
@@ -395,7 +395,6 @@ theorem coupling_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessVariabl
         rw [Function.update_self]
         exact roundProjection_congr (fun i => hxc i r')
       · rw [Function.update_of_ne hr',
-          show w.recordGBCACall r id (gbcaCallPayload P id b) = w from rfl,
           roundProjection_writeGhost_ne (L := Sum.inl (Label.callG r id b)) _ _ rfl hr']
         exact roundProjection_congr (fun i => by
           by_cases hi : i = id

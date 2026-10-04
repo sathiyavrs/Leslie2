@@ -105,30 +105,23 @@ theorem Invariant.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (Brac
     subst hs'
     refine ⟨by simpa using hInv.F_card, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · intro i k x hx
-      simp only [InstanceState.multicast_received, InstanceState.setProcessVariables_received] at hx
-      rw [InstanceState.mem_multicast_sent, InstanceState.setProcessVariables_sent]
-      exact Or.inr (hInv.received_subset_sent i k hx)
+      rw [InstanceState.setProcessVariables_received] at hx
+      rw [InstanceState.setProcessVariables_sent]
+      exact hInv.received_subset_sent i k hx
     · intro hldr m' hmem
-      rw [InstanceState.mem_multicast_sent, InstanceState.setProcessVariables_sent] at hmem
-      rcases hmem with ⟨-, hm'⟩ | hold
-      · obtain rfl : m' = m := by injection hm'
-        simp
-      · have hin := hInv.init_confirmed (by simpa using hldr) m' hold
-        rw [h] at hin
-        exact absurd hin (by simp)
+      rw [InstanceState.setProcessVariables_sent] at hmem
+      have hin := hInv.init_confirmed (by simpa using hldr) m' hmem
+      rw [h] at hin
+      exact absurd hin (by simp)
     · intro k hk m' hmem
-      rw [InstanceState.mem_multicast_sent, InstanceState.setProcessVariables_sent] at hmem
-      rcases hmem with ⟨-, hm'⟩ | hold
-      · exact absurd hm' (by simp)
-      · have hpre := hInv.echo_confirmed k (by simpa using hk) m' hold
-        by_cases hkl : k = ldr
-        · subst hkl
-          rw [InstanceState.multicast_processVariables,
-            InstanceState.setProcessVariables_processVariables_self]
-          exact hpre
-        · rw [InstanceState.multicast_processVariables,
-            InstanceState.setProcessVariables_processVariables_ne _ _ _ hkl]
-          exact hpre
+      rw [InstanceState.setProcessVariables_sent] at hmem
+      have hpre := hInv.echo_confirmed k (by simpa using hk) m' hmem
+      by_cases hkl : k = ldr
+      · subst hkl
+        rw [InstanceState.setProcessVariables_processVariables_self]
+        exact hpre
+      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hkl]
+        exact hpre
     · intro k hk m' hslot
       by_cases hldr : ldr ∈ s.F
       · exact Or.inl (by simpa using hldr)
@@ -136,39 +129,84 @@ theorem Invariant.step {s : BrachaState P.n M} {l : Label P.n M} {μ : PMF (Brac
         have hslot' : (s.processVariables k).sentEcho = some m' := by
           by_cases hkl : k = ldr
           · subst hkl
-            rw [InstanceState.multicast_processVariables,
-              InstanceState.setProcessVariables_processVariables_self] at hslot
+            rw [InstanceState.setProcessVariables_processVariables_self] at hslot
             exact hslot
-          · rw [InstanceState.multicast_processVariables,
-            InstanceState.setProcessVariables_processVariables_ne _ _ _ hkl] at hslot
+          · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hkl] at hslot
             exact hslot
         rcases hInv.echo_of_leaderInput k (by simpa using hk) m' hslot' with hldrF | hin
         · exact hldr hldrF
         · rw [h] at hin
           exact absurd hin (by simp)
     · intro k hk m' hmem
-      rw [InstanceState.mem_multicast_sent, InstanceState.setProcessVariables_sent] at hmem
-      rcases hmem with ⟨-, hm'⟩ | hold
-      · exact absurd hm' (by simp)
-      · have hpre := hInv.vote_confirmed k (by simpa using hk) m' hold
-        by_cases hkl : k = ldr
-        · subst hkl
-          rw [InstanceState.multicast_processVariables,
-            InstanceState.setProcessVariables_processVariables_self]
-          exact hpre
-        · rw [InstanceState.multicast_processVariables,
-            InstanceState.setProcessVariables_processVariables_ne _ _ _ hkl]
-          exact hpre
-    · intro k hk m' hslot
-      rw [echoWitness_multicast, echoWitness_setProcessVariables]
+      rw [InstanceState.setProcessVariables_sent] at hmem
+      have hpre := hInv.vote_confirmed k (by simpa using hk) m' hmem
       by_cases hkl : k = ldr
       · subst hkl
-        rw [InstanceState.multicast_processVariables,
-          InstanceState.setProcessVariables_processVariables_self] at hslot
+        rw [InstanceState.setProcessVariables_processVariables_self]
+        exact hpre
+      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hkl]
+        exact hpre
+    · intro k hk m' hslot
+      rw [echoWitness_setProcessVariables]
+      by_cases hkl : k = ldr
+      · subst hkl
+        rw [InstanceState.setProcessVariables_processVariables_self] at hslot
         exact hInv.vote_backed k (by simpa using hk) m' hslot
-      · rw [InstanceState.multicast_processVariables,
-          InstanceState.setProcessVariables_processVariables_ne _ _ _ hkl] at hslot
+      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hkl] at hslot
         exact hInv.vote_backed k (by simpa using hk) m' hslot
+  | init m hin hsend =>
+    rw [PMF.mem_support_pure_iff] at hs'
+    have hpv : ∀ k, (s'.processVariables k).input = (s.processVariables k).input ∧
+        (s'.processVariables k).sentEcho = (s.processVariables k).sentEcho ∧
+        (s'.processVariables k).sentVote = (s.processVariables k).sentVote := by
+      intro k
+      subst hs'
+      rw [InstanceState.multicast_processVariables]
+      by_cases hkl : k = ldr
+      · subst hkl
+        rw [InstanceState.setProcessVariables_processVariables_self]
+        exact ⟨rfl, rfl, rfl⟩
+      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hkl]
+        exact ⟨rfl, rfl, rfl⟩
+    have hsent : ∀ k x, x ∈ s'.sent k ↔ (k = ldr ∧ x = .init m) ∨ x ∈ s.sent k := by
+      intro k x
+      subst hs'
+      rw [InstanceState.mem_multicast_sent, InstanceState.setProcessVariables_sent]
+    have hF : s'.F = s.F := by subst hs'; simp
+    have hW : ∀ m', EchoWitness P s' m' ↔ EchoWitness P s m' := by
+      intro m'
+      subst hs'
+      rw [echoWitness_multicast, echoWitness_setProcessVariables]
+    refine ⟨by rw [hF]; exact hInv.F_card, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    · intro i k x hx
+      have hx' : x ∈ s.received i k := by
+        subst hs'
+        simpa only [InstanceState.multicast_received, InstanceState.setProcessVariables_received]
+          using hx
+      exact (hsent k x).mpr (Or.inr (hInv.received_subset_sent i k hx'))
+    · intro hldr m' hmem
+      rw [(hpv ldr).1]
+      rcases (hsent ldr _).mp hmem with ⟨-, hm'⟩ | hold
+      · obtain rfl : m' = m := by injection hm'
+        exact hin
+      · exact hInv.init_confirmed (by rwa [hF] at hldr) m' hold
+    · intro k hk m' hmem
+      rw [(hpv k).2.1]
+      rcases (hsent k _).mp hmem with ⟨-, hm'⟩ | hold
+      · exact absurd hm' (by simp)
+      · exact hInv.echo_confirmed k (by rwa [hF] at hk) m' hold
+    · intro k hk m' hslot
+      rw [(hpv k).2.1] at hslot
+      rw [hF, (hpv ldr).1]
+      exact hInv.echo_of_leaderInput k (by rwa [hF] at hk) m' hslot
+    · intro k hk m' hmem
+      rw [(hpv k).2.2]
+      rcases (hsent k _).mp hmem with ⟨-, hm'⟩ | hold
+      · exact absurd hm' (by simp)
+      · exact hInv.vote_confirmed k (by rwa [hF] at hk) m' hold
+    · intro k hk m' hslot
+      rw [(hpv k).2.2] at hslot
+      exact (hW m').mpr (hInv.vote_backed k (by rwa [hF] at hk) m' hslot)
   | callLoop m =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'

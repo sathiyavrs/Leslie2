@@ -29,7 +29,7 @@ nothing else:
   `GBCA/ABDY/MessagesAndVariables.lean` (D18);
 * the per-process per-round variables, `GBCA.ByABDY.RoundVariables`, held by round in a finite map
 (D22);
-* the transitions of the implementation, `RoundStep`: the graded-agreement call, the eight round
+* the transitions of the implementation, `RoundStep`: the graded-agreement call, the nine round
   multicasts, the round delivery, the call against variables already called, and the three graded
   returns;
 * the network's ghost — the type `Option Bool` of a round's bound
@@ -260,13 +260,13 @@ theorem writeGhost_byzantineRetG_ne (r : ℕ) (k : Fin P.n) (out : GBCAOutput) (
 end GhostWrites
 /-! ### The transitions of the graded-agreement implementation -/
 
-/-- The round transitions of process `j`: the graded-agreement call, the eight multicasts of the
+/-- The round transitions of process `j`: the graded-agreement call, the nine multicasts of the
 five message levels, the round delivery, the call against variables already called, and the three
 graded returns. -/
 inductive RoundStep (P : Parameters) (j : Fin P.n) :
     ProcessVariables P.n → ExtendedLabel P.n GBCA.ByABDY.Message → PMF (ProcessVariables P.n) → Prop
   /-- The graded-agreement call: the round loop hands its estimate to the variables of round `r`,
-  which open. The `⟨INPUT, b⟩` multicast is the network's half. -/
+  which record it as the input. -/
   | callG_call (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (b : Bool)
       (hh : c.corrupted = false)
       (hph : c.processVariables.phase = .toCallG) (hr : c.processVariables.round = r)
@@ -276,9 +276,7 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
       RoundStep P j (c, p) (Sum.inl (.callG r j b))
         (PMF.pure (c.setProcessVariables { c.processVariables with phase := .awaitG },
           p.setRoundVariables r ((p.roundVariables r).setProcessVariables { (p.roundVariables
-            r).processVariables with
-            input := some b,
-            sentInput := Function.update (p.roundVariables r).processVariables.sentInput b true })))
+            r).processVariables with input := some b })))
   /-- Return with outcome `grade2 v`: an `n − f` `ECHO5 v` quorum. The round's variables are called
   and its own `ECHO5` is out. Case (1) heads the algorithm's chain, so there is no higher case to
   deny. -/
@@ -344,6 +342,19 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
           p.setRoundVariables r ((p.roundVariables r).setProcessVariables { (p.roundVariables
             r).processVariables with
             returned := true })))
+  /-- The round's `INPUT b`: the process's own input in the variables of round `r`, not yet
+  multicast there. ABDY22 Algorithm 6 line 2 and the first statement of LeslieBP Algorithm 2
+  (D22). -/
+  | gbcaSendInput (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (b : Bool)
+      (hh : c.corrupted = false)
+      (hterm : p.terminated = false)
+      (hin : (p.roundVariables r).processVariables.input = some b)
+      (hsend : (p.roundVariables r).processVariables.sentInput b = false) :
+      RoundStep P j (c, p) (Sum.inr (.gbcaSend r j (.input b)))
+        (PMF.pure (c,
+          p.setRoundVariables r ((p.roundVariables r).setProcessVariables { (p.roundVariables
+            r).processVariables with
+            sentInput := Function.update (p.roundVariables r).processVariables.sentInput b true })))
   /-- The round's `INPUT` relay: `f + 1` received `⟨INPUT, b⟩` messages in the variables of round
   `r`, not yet multicast there (D8, D18, D22). -/
   | gbcaSendRelay (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (b : Bool)
@@ -500,15 +511,11 @@ abbrev ABAProgramStep (P : Parameters) (j : Fin P.n) :
       :=
   ProgramStep P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundVariables P.n) (RoundStep P) j
 
-/-- The payload the graded-agreement call multicasts: `⟨INPUT, b⟩`. -/
-def gbcaCallPayload (P : Parameters) : Fin P.n → Bool → Option GBCA.ByABDY.Message :=
-  fun _ b => some (.input b)
-
 /-- The step relation of the network. -/
 abbrev NetworkStep (P : Parameters) :
     NetworkState P.n → ExtendedLabel P.n GBCA.ByABDY.Message → PMF (NetworkState P.n)
   → Prop :=
-  Implementation.NetworkStep P GBCA.ByABDY.Message Empty (Option Bool) (gbcaCallPayload P)
+  Implementation.NetworkStep P GBCA.ByABDY.Message Empty (Option Bool)
     (abdyGhostStep P)
     (abdyAnnouncedBound P)
 
@@ -520,7 +527,7 @@ noncomputable abbrev ABAProgram (P : Parameters) (j : Fin P.n) :
 /-- The network. -/
 noncomputable abbrev network (P : Parameters) :
     System (NetworkState P.n) (ExtendedLabel P.n GBCA.ByABDY.Message) :=
-  Implementation.network P GBCA.ByABDY.Message Empty (Option Bool) (gbcaCallPayload P)
+  Implementation.network P GBCA.ByABDY.Message Empty (Option Bool)
     (abdyGhostStep P)
     (abdyAnnouncedBound P)
 
@@ -537,7 +544,7 @@ noncomputable def protocolExtended (P : Parameters) : System (ProtocolState P)
   Implementation.systemExtended P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundVariables P.n)
     (Option Bool)
     (ABDY.RoundStep P)
-    (ABDY.gbcaCallPayload P) (ABDY.abdyGhostStep P) (ABDY.abdyAnnouncedBound P)
+    (ABDY.abdyGhostStep P) (ABDY.abdyAnnouncedBound P)
 
 /-- **The protocol group**: the labels the components synchronise on hidden, the result read
 back over `Label n`. -/
@@ -545,7 +552,7 @@ noncomputable def protocolHidden (P : Parameters) : System (ProtocolState P) (La
   Implementation.systemHidden P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundVariables P.n)
     (Option Bool)
     (ABDY.RoundStep P)
-    (ABDY.gbcaCallPayload P) (ABDY.abdyGhostStep P) (ABDY.abdyAnnouncedBound P)
+    (ABDY.abdyGhostStep P) (ABDY.abdyAnnouncedBound P)
 
 /-- **The protocol system**: the group with the sub-protocol API hidden. -/
 noncomputable def protocol (P : Parameters) : System (ProtocolState P) (Label P.n) :=
@@ -553,7 +560,7 @@ noncomputable def protocol (P : Parameters) : System (ProtocolState P) (Label P.
     (Option Bool)
     (ABDY.RoundStep
     P)
-    (ABDY.gbcaCallPayload P) (ABDY.abdyGhostStep P) (ABDY.abdyAnnouncedBound P)
+    (ABDY.abdyGhostStep P) (ABDY.abdyAnnouncedBound P)
 
 
 /-! ### Reading composite transitions
@@ -634,10 +641,7 @@ theorem programStep_callG_own {r : ℕ} {b : Bool}
         ∧
       ν = PMF.pure (q.1.setProcessVariables { q.1.processVariables with phase := .awaitG },
         q.2.setRoundVariables r ((q.2.roundVariables r).setProcessVariables { (q.2.roundVariables
-          r).processVariables with
-          input := some b,
-          sentInput := Function.update (q.2.roundVariables r).processVariables.sentInput b true }))
-            := by
+          r).processVariables with input := some b })) := by
   cases h
   case roundTransition h' =>
     cases h'
@@ -727,11 +731,14 @@ theorem programStep_retGGrade0_own {r : ℕ} {bnd : Bool}
   case retGIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
+/-- A send of `⟨INPUT, b⟩` by the program is the first multicast of its own input or the relay. -/
 theorem programStep_gbcaSend_input_self {r : ℕ} {b : Bool}
     (h : ABAProgramStep P j q (Sum.inr (.gbcaSend r j (.input b))) ν) :
     q.1.corrupted = false ∧
-      q.2.terminated = false ∧ (q.2.roundVariables r).processVariables.input ≠ none ∧
-      P.f + 1 ≤ (q.2.roundVariables r).receivedCount (.input b) ∧
+      q.2.terminated = false ∧
+      ((q.2.roundVariables r).processVariables.input = some b ∨
+        (q.2.roundVariables r).processVariables.input ≠ none ∧
+        P.f + 1 ≤ (q.2.roundVariables r).receivedCount (.input b)) ∧
       (q.2.roundVariables r).processVariables.sentInput b = false ∧
       ν = PMF.pure (q.1,
         q.2.setRoundVariables r ((q.2.roundVariables r).setProcessVariables { (q.2.roundVariables
@@ -741,8 +748,9 @@ theorem programStep_gbcaSend_input_self {r : ℕ} {b : Bool}
   cases h
   case roundTransition h' =>
     cases h'
-    exact ⟨by assumption, by assumption, by assumption, by assumption,
-      by assumption, rfl⟩
+    · exact ⟨by assumption, by assumption, Or.inl (by assumption), by assumption, rfl⟩
+    · exact ⟨by assumption, by assumption, Or.inr ⟨by assumption, by assumption⟩,
+        by assumption, rfl⟩
   case gbcaSendIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 

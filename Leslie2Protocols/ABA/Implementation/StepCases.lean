@@ -367,41 +367,40 @@ end Cases
 
 section NetworkStepCases
 variable {P : Parameters} {M E G : Type} [DecidableEq M]
-    {callPayload : Fin P.n → Bool → Option M}
     {ghostStep : ExtendedLabel P.n M E → NetworkState P.n M G → G → G}
     {ghostOutput : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop}
     {s : NetworkState P.n M G} {μ : PMF (NetworkState P.n M G)}
 
 /-- Every network transition is Dirac. -/
 theorem networkStep_dirac {l : ExtendedLabel P.n M E}
-    (h : NetworkStep P M E G callPayload ghostStep ghostOutput s l μ) :
+    (h : NetworkStep P M E G ghostStep ghostOutput s l μ) :
     ∃ s', μ = PMF.pure s' := by
   cases h <;> exact ⟨_, rfl⟩
 
 theorem networkStep_gbcaSend {r : ℕ} {j : Fin P.n} {m : M}
-    (h : NetworkStep P M E G callPayload ghostStep ghostOutput s (Sum.inr (.gbcaSend r j m)) μ) :
+    (h : NetworkStep P M E G ghostStep ghostOutput s (Sum.inr (.gbcaSend r j m)) μ) :
     μ = PMF.pure ((s.recordGBCASend r j m).writeGhost ghostStep (Sum.inr (.gbcaSend r j m))) := by
   cases h; rfl
 
 theorem networkStep_gbcaDeliver {r : ℕ} {i j : Fin P.n} {m : M}
-    (h : NetworkStep P M E G callPayload ghostStep ghostOutput s
+    (h : NetworkStep P M E G ghostStep ghostOutput s
       (Sum.inr (.gbcaDeliver r i j m)) μ) :
     m ∈ s.sent r j ∧ μ = PMF.pure (s.writeGhost ghostStep (Sum.inr (.gbcaDeliver r i j m))) := by
   cases h; exact ⟨by assumption, rfl⟩
 
 theorem networkStep_decidedSend {j : Fin P.n} {b : Bool}
-    (h : NetworkStep P M E G callPayload ghostStep ghostOutput s (Sum.inr (.decidedSend j b)) μ) :
+    (h : NetworkStep P M E G ghostStep ghostOutput s (Sum.inr (.decidedSend j b)) μ) :
     b ∉ s.decidedSent j ∧ μ = PMF.pure (s.recordDecided j b) := by
   cases h; exact ⟨by assumption, rfl⟩
 
 theorem networkStep_decidedDeliver {i j : Fin P.n} {b : Bool}
-    (h : NetworkStep P M E G callPayload ghostStep ghostOutput s
+    (h : NetworkStep P M E G ghostStep ghostOutput s
       (Sum.inr (.decidedDeliver i j b)) μ)
     : b ∈ s.decidedSent j ∧ μ = PMF.pure s := by
   cases h; exact ⟨by assumption, rfl⟩
 
 theorem networkStep_retWPublish {r : ℕ} {id : Fin P.n} {c b : Bool}
-    (h : NetworkStep P M E G callPayload ghostStep ghostOutput s
+    (h : NetworkStep P M E G ghostStep ghostOutput s
       (Sum.inr (.retWPublish r id c b)) μ)
     :
     μ = PMF.pure ((s.recordDecided id b).writeGhost ghostStep (Sum.inr (.retWPublish r id c b))) :=
@@ -409,7 +408,7 @@ theorem networkStep_retWPublish {r : ℕ} {id : Fin P.n} {c b : Bool}
   cases h; rfl
 
 theorem networkStep_gbcaCallLoop {r : ℕ} {id : Fin P.n} {b : Bool}
-    (h : NetworkStep P M E G callPayload ghostStep ghostOutput s
+    (h : NetworkStep P M E G ghostStep ghostOutput s
       (Sum.inr (.gbcaCallLoop r id b)) μ) :
     μ = PMF.pure (s.writeGhost ghostStep (Sum.inr (.gbcaCallLoop r id b))) := by
   cases h; rfl
@@ -417,49 +416,48 @@ theorem networkStep_gbcaCallLoop {r : ℕ} {id : Fin P.n} {b : Bool}
 /-- The network's half of a round-internal call or return: it sends nothing and writes the ghost
 of the round the label names. -/
 theorem networkStep_gbcaRoundEvent {r : ℕ} {j : Fin P.n} {e : E}
-    (h : NetworkStep P M E G callPayload ghostStep ghostOutput s
+    (h : NetworkStep P M E G ghostStep ghostOutput s
       (Sum.inr (.gbcaRoundEvent r j e)) μ) :
     μ = PMF.pure (s.writeGhost ghostStep (Sum.inr (.gbcaRoundEvent r j e))) := by
   cases h; rfl
 
 theorem networkStep_byzantineCallGLoop {r : ℕ} {k : Fin P.n} {b : Bool}
-    (h : NetworkStep P M E G callPayload ghostStep ghostOutput s
+    (h : NetworkStep P M E G ghostStep ghostOutput s
       (Sum.inr (.byzantineCallGLoop r k b)) μ) :
     k ∈ s.F ∧
       μ = PMF.pure (s.writeGhost ghostStep (Sum.inr (.byzantineCallGLoop r k b))) := by
   cases h; exact ⟨by assumption, rfl⟩
 
 theorem networkStep_byzantineCallW {r : ℕ} {k : Fin P.n}
-    (h : NetworkStep P M E G callPayload ghostStep ghostOutput s
+    (h : NetworkStep P M E G ghostStep ghostOutput s
       (Sum.inr (.byzantineCallW r k)) μ) :
     k ∈ s.F ∧ μ = PMF.pure (s.writeGhost ghostStep (Sum.inr (.byzantineCallW r k))) := by
   cases h; exact ⟨by assumption, rfl⟩
 
 theorem networkStep_byzantineRetW {r : ℕ} {k : Fin P.n} {b : Bool}
-    (h : NetworkStep P M E G callPayload ghostStep ghostOutput s
+    (h : NetworkStep P M E G ghostStep ghostOutput s
       (Sum.inr (.byzantineRetW r k b)) μ) :
     k ∈ s.F ∧ μ = PMF.pure (s.writeGhost ghostStep (Sum.inr (.byzantineRetW r k b))) := by
   cases h; exact ⟨by assumption, rfl⟩
 
 theorem networkStep_byzantineCallG {r : ℕ} {k : Fin P.n} {b : Bool}
-    (h : NetworkStep P M E G callPayload ghostStep ghostOutput s
+    (h : NetworkStep P M E G ghostStep ghostOutput s
       (Sum.inr (.byzantineCallG r k b)) μ)
     :
-    k ∈ s.F ∧ μ = PMF.pure ((s.recordGBCACall r k (callPayload k b)).writeGhost ghostStep
-      (Sum.inr (.byzantineCallG r k b))) := by
+    k ∈ s.F ∧ μ = PMF.pure (s.writeGhost ghostStep (Sum.inr (.byzantineCallG r k b))) := by
   cases h; exact ⟨by assumption, rfl⟩
 
 /-- A Byzantine graded-agreement return is authorised by the corrupted set, and
 the bound bit on its label stands in the round's ghost relation (D11). -/
 theorem networkStep_byzantineRetG {r : ℕ} {k : Fin P.n} {out : GBCAOutput} {bnd : Bool}
-    (h : NetworkStep P M E G callPayload ghostStep ghostOutput s
+    (h : NetworkStep P M E G ghostStep ghostOutput s
       (Sum.inr (.byzantineRetG r k out bnd)) μ) :
     k ∈ s.F ∧ ghostOutput s r k out bnd ∧
       μ = PMF.pure (s.writeGhost ghostStep (Sum.inr (.byzantineRetG r k out bnd))) := by
   cases h; exact ⟨by assumption, by assumption, rfl⟩
 
 theorem networkStep_callABA {id : Fin P.n} {b : Bool}
-    (h : NetworkStep P M E G callPayload ghostStep ghostOutput s (Sum.inl (.callABA id b)) μ) :
+    (h : NetworkStep P M E G ghostStep ghostOutput s (Sum.inl (.callABA id b)) μ) :
     μ = PMF.pure s := by
   cases h; rfl
 
@@ -467,44 +465,42 @@ theorem networkStep_callABA {id : Fin P.n} {b : Bool}
 or by its corruption (D23); the two transitions share the label and the
 identity successor. -/
 theorem networkStep_retABA {id : Fin P.n} {b : Bool}
-    (h : NetworkStep P M E G callPayload ghostStep ghostOutput s (Sum.inl (.retABA id b)) μ) :
+    (h : NetworkStep P M E G ghostStep ghostOutput s (Sum.inl (.retABA id b)) μ) :
     (b ∈ s.decidedSent id ∨ id ∈ s.F) ∧ μ = PMF.pure s := by
   cases h
   case retABA => exact ⟨Or.inl (by assumption), rfl⟩
   case retByzantine => exact ⟨Or.inr (by assumption), rfl⟩
 
 theorem networkStep_callG {r : ℕ} {id : Fin P.n} {b : Bool}
-    (h : NetworkStep P M E G callPayload ghostStep ghostOutput s (Sum.inl (.callG r id b)) μ) :
-    μ = PMF.pure
-    ((s.recordGBCACall r id (callPayload id b)).writeGhost ghostStep (Sum.inl (.callG r id b))) :=
-    by
+    (h : NetworkStep P M E G ghostStep ghostOutput s (Sum.inl (.callG r id b)) μ) :
+    μ = PMF.pure (s.writeGhost ghostStep (Sum.inl (.callG r id b))) := by
   cases h; rfl
 
 /-- A graded-agreement return announces the round's ghost output: the bound bit
 on the label stands in `ghostOutput` at the state the transition starts from. -/
 theorem networkStep_retG {r : ℕ} {id : Fin P.n} {out : GBCAOutput} {bnd : Bool}
-    (h : NetworkStep P M E G callPayload ghostStep ghostOutput s (Sum.inl (.retG r id out bnd)) μ) :
+    (h : NetworkStep P M E G ghostStep ghostOutput s (Sum.inl (.retG r id out bnd)) μ) :
     ghostOutput s r id out bnd ∧ μ = PMF.pure
     (s.writeGhost ghostStep (Sum.inl (.retG r id out bnd))) := by
   cases h; exact ⟨by assumption, rfl⟩
 
 theorem networkStep_callW {r : ℕ} {id : Fin P.n}
-    (h : NetworkStep P M E G callPayload ghostStep ghostOutput s (Sum.inl (.callW r id)) μ) :
+    (h : NetworkStep P M E G ghostStep ghostOutput s (Sum.inl (.callW r id)) μ) :
     μ = PMF.pure s := by
   cases h; rfl
 
 theorem networkStep_retW {r : ℕ} {id : Fin P.n} {c : Bool}
-    (h : NetworkStep P M E G callPayload ghostStep ghostOutput s (Sum.inl (.retW r id c)) μ) :
+    (h : NetworkStep P M E G ghostStep ghostOutput s (Sum.inl (.retW r id c)) μ) :
     μ = PMF.pure s := by
   cases h; rfl
 
 theorem networkStep_fail {k : Fin P.n}
-    (h : NetworkStep P M E G callPayload ghostStep ghostOutput s (Sum.inl (.fail k)) μ) :
+    (h : NetworkStep P M E G ghostStep ghostOutput s (Sum.inl (.fail k)) μ) :
     k ∉ s.F ∧ s.F.card < P.f ∧ μ = PMF.pure (s.corrupt P k) := by
   cases h; exact ⟨by assumption, by assumption, rfl⟩
 
 theorem networkStep_tau
-    (h : NetworkStep P M E G callPayload ghostStep ghostOutput s (Sum.inl .tau) μ) :
+    (h : NetworkStep P M E G ghostStep ghostOutput s (Sum.inl .tau) μ) :
     (∃ (r : ℕ) (k : Fin P.n) (m : M), k ∈ s.F ∧ μ = PMF.pure (s.recordGBCASend r k m)) ∨
     (∃ (k : Fin P.n) (b : Bool), k ∈ s.F ∧ μ = PMF.pure (s.recordDecided k b)) := by
   cases h

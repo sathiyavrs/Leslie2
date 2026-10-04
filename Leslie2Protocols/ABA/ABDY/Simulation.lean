@@ -327,10 +327,13 @@ theorem coupling_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessVar
         x j = ((processes j).1, (processes j).2.setRoundVariables r nd) := by
       cases m with
       | input b =>
-        obtain ⟨-, -, hin, hcnt, hsend, hxid⟩ := programStep_gbcaSend_input_self (hall j)
-        exact ⟨_, GBCA.ByABDY.GBCAProgramStep.sendRelay _ b (by rw [hcol]; exact hin)
-          (by rw [hcol]; exact hcnt) (by rw [hcol]; exact hsend),
-          by rw [hcol]; exact pure_inj hxid⟩
+        obtain ⟨-, -, hcase, hsend, hxid⟩ := programStep_gbcaSend_input_self (hall j)
+        rcases hcase with hin | ⟨hin, hcnt⟩
+        · exact ⟨_, GBCA.ByABDY.GBCAProgramStep.sendInput _ b (by rw [hcol]; exact hin)
+            (by rw [hcol]; exact hsend), by rw [hcol]; exact pure_inj hxid⟩
+        · exact ⟨_, GBCA.ByABDY.GBCAProgramStep.sendRelay _ b (by rw [hcol]; exact hin)
+            (by rw [hcol]; exact hcnt) (by rw [hcol]; exact hsend),
+            by rw [hcol]; exact pure_inj hxid⟩
       | echo b =>
         obtain ⟨-, -, hin, hcnt, hsend, hxid⟩ := programStep_gbcaSend_echo_self (hall j)
         exact ⟨_, GBCA.ByABDY.GBCAProgramStep.sendEcho _ b (by rw [hcol]; exact hin)
@@ -781,8 +784,8 @@ theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessVar
         exact RoundLoopStep.corruptedIdle _ _ hh (by simp) not_false
     · rw [hCeq i, hfor i hi]; exact RoundLoopStep.failIdle _ k (Ne.symm hi)
   | callG r id b =>
-    obtain rfl : w' = w.recordGBCASend r id (.input b) := by
-      simpa [gbcaCallPayload] using pure_inj (networkStep_callG hn)
+    obtain rfl : w' = w := by
+      simpa using pure_inj (networkStep_callG hn)
     have hfor : ∀ i, i ≠ id → x i = processes i := fun i hi =>
       pure_inj (programStep_callG_notOwn (Ne.symm hi) (hall i))
     obtain ⟨hh, hph, hrr, -, hest, hin, hxid⟩ := programStep_callG_own (hall id)
@@ -792,19 +795,13 @@ theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessVar
       },
         (processes id).2.setRoundVariables r (((processes id).2.roundVariables
           r).setProcessVariables
-          { ((processes id).2.roundVariables r).processVariables with
-            input := some b,
-            sentInput :=
-              Function.update ((processes id).2.roundVariables r).processVariables.sentInput b true
-                })) :=
+          { ((processes id).2.roundVariables r).processVariables with input := some b })) :=
       pure_inj hxid
     have hGs : (GBCA.ByABDY.gbcaInstanceFamily P).step G (Sum.inl (Label.callG r id b))
         (PMF.pure (Function.update G r
           (Function.update ((G r).1) id (((G r).1 id).setProcessVariables { ((G r).1
-            id).processVariables with
-            input := some b,
-            sentInput := Function.update ((G r).1 id).processVariables.sentInput b true }),
-          ((G r).2).recordGBCASend id (.input b)))) :=
+            id).processVariables with input := some b }),
+          (G r).2))) :=
       gbcaInstanceFamily_owned P G r (by simp)
         (GBCA.ByABDY.composition_label_step P r (by simp)
           (gbcaProgramStep_family id _
@@ -814,20 +811,16 @@ theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessVar
     have hGfor : ∀ j r', j ≠ id →
         ((Function.update G r
           (Function.update ((G r).1) id (((G r).1 id).setProcessVariables { ((G r).1
-            id).processVariables with
-            input := some b,
-            sentInput := Function.update ((G r).1 id).processVariables.sentInput b true }),
-          ((G r).2).recordGBCASend id (.input b))) r').1 j = (G r').1 j := by
+            id).processVariables with input := some b }),
+          (G r).2)) r').1 j = (G r').1 j := by
       intro j r' hj
       by_cases hr' : r' = r
       · subst hr'; rw [Function.update_self]; exact Function.update_of_ne hj _ _
       · rw [Function.update_of_ne hr']
     have hown : ∀ r', ((Function.update G r
         (Function.update ((G r).1) id (((G r).1 id).setProcessVariables { ((G r).1
-          id).processVariables with
-          input := some b,
-          sentInput := Function.update ((G r).1 id).processVariables.sentInput b true }),
-        ((G r).2).recordGBCASend id (.input b))) r').1 id = (x id).2.roundVariables r' := by
+          id).processVariables with input := some b }),
+        (G r).2)) r').1 id = (x id).2.roundVariables r' := by
       intro r'
       simp only [hx]
       by_cases hr' : r' = r
@@ -837,7 +830,7 @@ theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessVar
         exact hst id r'
     have h5 := relation_roundVariables P id hst hfor hGfor hown
     refine coupling_visible P hLne (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
-      ⟨fun _ => rfl, rfl, by simpa using hA, relation_recordGBCASend hG r id (.input b) _,
+      ⟨fun _ => rfl, rfl, by simpa using hA, fun r' => by rw [update_snd]; simpa using hG r',
         h5⟩) hGs (fun i => ?_) (ABANetworkStep.callGIdle A r id b) hWl
     by_cases hi : i = id
     · subst hi; rw [hCeq i, hx]; exact RoundLoopStep.callG _ r b hh hph hrr hest

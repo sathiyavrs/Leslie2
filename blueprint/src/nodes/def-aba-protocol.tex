@@ -18,7 +18,8 @@
     \abdy{\mathrm{protocol}}(P) \;=\; \mathrm{abstract}_H\bigl(\abdy{\mathrm{protocolHidden}}(P)\bigr),
   \]
   where $\mathrm{coinOverRoundAlphabet}(P)$ is the common coin read along $\mathrm{coinLabelMap}$ and $H$ is the sub-protocol API of Definition~\ref{def:aba-labels}.
-  This is the pipeline of Definition~\ref{def:aba-implementation} at ABDY22's implementation; the payload the call multicasts is $\langle \mathrm{INPUT}, b \rangle$.
+  This is the pipeline of Definition~\ref{def:aba-implementation} at ABDY22's implementation.
+  The call records the input $b$ and sends nothing; the multicast of $\langle \mathrm{INPUT}, b \rangle$ is a round transition of its own.
   Hiding $\mathrm{networkEventLabels}$ discharges the extended alphabet, so the alphabet of $\abdy{\mathrm{protocolHidden}}(P)$ is exactly $\mathrm{Label}(n)$.
   Full construction: \leandecl{PLTS.ABA.ABDY.protocol}.
 \end{definition}

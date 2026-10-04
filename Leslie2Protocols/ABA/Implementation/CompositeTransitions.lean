@@ -78,7 +78,6 @@ theorem programProduct_tau_cases {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
 
 section SystemStepCases
 variable {G : Type} [DecidableEq M] [Inhabited G]
-    {callPayload : Fin P.n → Bool → Option M}
     {ghostStep : ExtendedLabel P.n M E → NetworkState P.n M G → G → G}
     {ghostOutput : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop}
 
@@ -87,11 +86,11 @@ omit [IsRoundStep P M E S roundStep] in
 case and the shared-label case. -/
 theorem systemHidden_step_iff (q : State P M S G) (l : Label P.n)
     (μ : PMF (State P M S G)) :
-    (systemHidden P M E S G roundStep callPayload ghostStep ghostOutput).step q l μ ↔
+    (systemHidden P M E S G roundStep ghostStep ghostOutput).step q l μ ↔
       (l = .tau ∧ ∃ e : NetworkEvent P.n M E,
-        (systemExtended P M E S G roundStep callPayload ghostStep ghostOutput).step q
+        (systemExtended P M E S G roundStep ghostStep ghostOutput).step q
           (Sum.inr e) μ) ∨
-      (systemExtended P M E S G roundStep callPayload ghostStep ghostOutput).step q
+      (systemExtended P M E S G roundStep ghostStep ghostOutput).step q
         (Sum.inl l) μ := by
   constructor
   · rintro (⟨hτ, l', ⟨e, rfl⟩, hstep⟩ | ⟨-, hstep⟩)
@@ -106,11 +105,11 @@ omit [IsRoundStep P M E S roundStep] in
 a label that survives the hiding. -/
 theorem system_step_iff (q : State P M S G) (l : Label P.n)
     (μ : PMF (State P M S G)) :
-    (system P M E S G roundStep callPayload ghostStep ghostOutput).step q l μ ↔
+    (system P M E S G roundStep ghostStep ghostOutput).step q l μ ↔
       (l = .tau ∧ ∃ l' ∈ Label.hiddenAPI P.n,
-        (systemHidden P M E S G roundStep callPayload ghostStep ghostOutput).step q l' μ) ∨
+        (systemHidden P M E S G roundStep ghostStep ghostOutput).step q l' μ) ∨
       (l ∉ Label.hiddenAPI P.n ∧
-        (systemHidden P M E S G roundStep callPayload ghostStep ghostOutput).step q l μ) :=
+        (systemHidden P M E S G roundStep ghostStep ghostOutput).step q l μ) :=
   System.abstract_step _ _ _ _ _
 
 /-- A synchronised transition: every process, the network and the lifted coin
@@ -118,12 +117,12 @@ move together, and only the coin's successor can fail to be a Dirac. -/
 theorem systemExtended_event_cases {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
     {w : NetworkState P.n M G} {o : ℕ → WCC.SpecState P.n} {e : NetworkEvent P.n M E}
     {μ : PMF (State P M S G)}
-    (h : (systemExtended P M E S G roundStep callPayload ghostStep ghostOutput).step (u, w, o)
+    (h : (systemExtended P M E S G roundStep ghostStep ghostOutput).step (u, w, o)
       (Sum.inr e) μ) :
     ∃ (x : ∀ _ : Fin P.n, ProcessVariables P.n S) (w' : NetworkState P.n M G)
       (μ₃ : PMF (ℕ → WCC.SpecState P.n)),
       (∀ i, ProgramStep P M E S roundStep i (u i) (Sum.inr e) (PMF.pure (x i))) ∧
-      NetworkStep P M E G callPayload ghostStep ghostOutput w (Sum.inr e) (PMF.pure w') ∧
+      NetworkStep P M E G ghostStep ghostOutput w (Sum.inr e) (PMF.pure w') ∧
       (coinOverExtendedAlphabet P M E).step o (Sum.inr e) μ₃ ∧
       μ = prodPMF (PMF.pure x) (prodPMF (PMF.pure w') μ₃) := by
   rw [systemExtended, System.parallel_step] at h
@@ -142,12 +141,12 @@ theorem systemExtended_event_cases {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
 theorem systemExtended_label_cases {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
     {w : NetworkState P.n M G} {o : ℕ → WCC.SpecState P.n} {l : Label P.n}
     (hl : l ≠ Label.tau) {μ : PMF (State P M S G)}
-    (h : (systemExtended P M E S G roundStep callPayload ghostStep ghostOutput).step (u, w, o)
+    (h : (systemExtended P M E S G roundStep ghostStep ghostOutput).step (u, w, o)
       (Sum.inl l) μ) :
     ∃ (x : ∀ _ : Fin P.n, ProcessVariables P.n S) (w' : NetworkState P.n M G)
       (ω : PMF (ℕ → WCC.SpecState P.n)),
       (∀ i, ProgramStep P M E S roundStep i (u i) (Sum.inl l) (PMF.pure (x i))) ∧
-      NetworkStep P M E G callPayload ghostStep ghostOutput w (Sum.inl l) (PMF.pure w') ∧
+      NetworkStep P M E G ghostStep ghostOutput w (Sum.inl l) (PMF.pure w') ∧
       (WCC.specFamily P).step o l ω ∧
       μ = prodPMF (PMF.pure x) (prodPMF (PMF.pure w') ω) := by
   rw [systemExtended, System.parallel_step] at h
@@ -170,12 +169,12 @@ own injection. The common coin has no silent transition, so it contributes none.
 theorem systemExtended_tau_cases {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
     {w : NetworkState P.n M G} {o : ℕ → WCC.SpecState P.n}
     {μ : PMF (State P M S G)}
-    (h : (systemExtended P M E S G roundStep callPayload ghostStep ghostOutput).step (u, w, o)
+    (h : (systemExtended P M E S G roundStep ghostStep ghostOutput).step (u, w, o)
       (Sum.inl Label.tau) μ) :
     (∃ (i : Fin P.n) (y : ProcessVariables P.n S),
       ProgramStep P M E S roundStep i (u i) (Sum.inl Label.tau) (PMF.pure y) ∧
       μ = PMF.pure (Function.update u i y, w, o)) ∨
-    (∃ w', NetworkStep P M E G callPayload ghostStep ghostOutput w (Sum.inl .tau)
+    (∃ w', NetworkStep P M E G ghostStep ghostOutput w (Sum.inl .tau)
         (PMF.pure w') ∧
       μ = PMF.pure (u, w', o)) := by
   rw [systemExtended, System.parallel_step] at h
@@ -203,7 +202,7 @@ theorem systemExtended_retG_bound {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
     {w : NetworkState P.n M G} {o : ℕ → WCC.SpecState P.n}
     {r : ℕ} {id : Fin P.n} {out : GBCAOutput} {bnd : Bool}
     {μ : PMF (State P M S G)}
-    (h : (systemExtended P M E S G roundStep callPayload ghostStep ghostOutput).step (u, w, o)
+    (h : (systemExtended P M E S G roundStep ghostStep ghostOutput).step (u, w, o)
       (Sum.inl (.retG r id out bnd)) μ) :
     ghostOutput w r id out bnd := by
   have hne : (Label.retG r id out bnd : Label P.n) ≠ Label.tau := by
@@ -217,7 +216,7 @@ theorem systemExtended_byzantineRetG_bound {u : ∀ _ : Fin P.n, ProcessVariable
     {w : NetworkState P.n M G} {o : ℕ → WCC.SpecState P.n}
     {r : ℕ} {k : Fin P.n} {out : GBCAOutput} {bnd : Bool}
     {μ : PMF (State P M S G)}
-    (h : (systemExtended P M E S G roundStep callPayload ghostStep ghostOutput).step (u, w, o)
+    (h : (systemExtended P M E S G roundStep ghostStep ghostOutput).step (u, w, o)
       (Sum.inr (.byzantineRetG r k out bnd)) μ) :
     ghostOutput w r k out bnd := by
   obtain ⟨x, w', μ₃, -, hN, -, -⟩ := systemExtended_event_cases h
