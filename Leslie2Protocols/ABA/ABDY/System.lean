@@ -470,8 +470,8 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
           ((p.roundVariables r).setProcessVariables { (p.roundVariables r).processVariables with
             sentEcho5 := some none })))
   /-- Round delivery, receiver's half: file the message under `received k`, the messages from the
-  sender, in the variables of round `r`, whichever round the round loop is in. Authenticity is
-  the network's conjunct (D22). -/
+  sender, in the variables of round `r`, whichever round the round loop is in (D22).
+  Authenticity is the network's conjunct (D5). -/
   | gbcaDeliverReceive (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n)
       (r : ℕ) (k : Fin P.n) (m : GBCA.ByABDY.Message) (hh : c.corrupted = false)
       (hterm : p.terminated = false) :

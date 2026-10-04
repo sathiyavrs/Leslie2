@@ -46,7 +46,7 @@ loop beside its round variables. This file realises the assumptions of
 diffusion state (conjunct 6), and input coherence
 (conjunct 5 — the correct `callG` guard ties the emitted bit to the current estimate).
 
-## Model and deviations (continuing the project's D1–D8)
+## Model, the coin return with the DECIDED send, and the deviations continuing D1–D8
 
 * **D9 (0-based rounds).** `round : ℕ` starts at `0` where Algorithm 1 starts
   at `r = 1`; the `GBCA_r`/`WCC_r` instance indices shift accordingly.

@@ -153,7 +153,7 @@ inductive AlgorithmOverBracha (P : Parameters) :
       AlgorithmOverBracha P s .tau
         (PMF.pure (setGatherProgramsAndNetwork s ((gatherProgramsAndNetwork s).receiveMessage i j
           m)))
-  /-- `ECHO`: the process is called and its accepted pairs number at least
+  /-- `ECHO`: the process is called (D8) and its accepted pairs number at least
   `n − f`, the source blueprint's `|AP| ≥ n − f`. The payload is those pairs,
   `T_i ← AP_i` of AFW25's Algorithm 5, line 9. -/
   | echo (s : StateOverBracha P.n X) (j : Fin P.n)
@@ -168,8 +168,8 @@ inductive AlgorithmOverBracha (P : Parameters) :
             j).accepted
             }).multicast j
             (.echo ((gatherProgramsAndNetwork s).processVariables j).accepted))))
-  /-- `VOTE`: `n − f` senders' approved `ECHO` payloads, each contained in the
-  vote payload, are delivered here, and the process has multicast its own
+  /-- `VOTE`: the process is called (D8), `n − f` senders' approved `ECHO` payloads,
+  each contained in the vote payload, are delivered here, and the process has multicast its own
   `ECHO`. The main thread of AFW25's Algorithm 5 sends `ECHO` before `VOTE`. -/
   | vote (s : StateOverBracha P.n X) (j : Fin P.n) (U : AcceptedPairs P.n X)
       (hin : ((gatherProgramsAndNetwork s).processVariables j).input ≠ none)
@@ -198,8 +198,8 @@ inductive AlgorithmOverBracha (P : Parameters) :
           (Function.update (inputBroadcasts s) j
             ((inputBroadcasts s j).setProcessVariables j
               { (inputBroadcasts s j).processVariables j with input := some x }))))
-  /-- `BIND`: `n − f` senders' approved `VOTE` payloads, each contained in the
-  bind payload, are delivered here, and the process calls its bind instance with the payload.
+  /-- `BIND`: the process is called (D8), `n − f` senders' approved `VOTE` payloads,
+  each contained in the bind payload, are delivered here, and the process calls its bind instance with the payload.
   The process has multicast its own `VOTE` and has not called its own bind
   broadcast. The main thread of AFW25's Algorithm 5 sends `VOTE` before `BIND`,
   and sends `BIND` once, at line 17. The payload handed to the broadcast is
@@ -253,8 +253,8 @@ inductive AlgorithmOverBracha (P : Parameters) :
                 s).processVariables
                 j).bindBroadcastReturned q (some U) }))
           (Function.update (bindBroadcasts s) q d)))
-  /-- Return: the output's entries are held here, `n − f` bind payloads held
-  here are sub-maps of it, and the returner has called its own bind broadcast.
+  /-- Return: the returner is called (D8), the output's entries are held here, `n − f`
+  bind payloads held here are sub-maps of it, and the returner has called its own bind broadcast.
   The `BIND` broadcast of AFW25's Algorithm 5, line 17, precedes the wait of line
   18. The label carries the instance's core, which this transition writes if it
   is unwritten. -/

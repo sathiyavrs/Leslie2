@@ -319,7 +319,7 @@ inductive ProgramStep (P : Parameters) (j : Fin P.n) :
   /-- A call loop at another process is not `j`'s business. -/
   | callLoopIdle (p) (i : Fin P.n) (x : X) (hi : i ≠ j) :
       ProgramStep P j p (Sum.inl (Sum.inr (.callLoop i x))) (PMF.pure p)
-  /-- `ECHO`: `j` is called and its accepted pairs number at least `n − f`, the
+  /-- `ECHO`: `j` is called (D8) and its accepted pairs number at least `n − f`, the
   source blueprint's `|AP| ≥ n − f`. The payload is those pairs, `T_i ← AP_i` of
   AFW25's Algorithm 5, line 9. -/
   | sendEcho (p) (hin : p.processVariables.input ≠ none)
@@ -328,8 +328,8 @@ inductive ProgramStep (P : Parameters) (j : Fin P.n) :
       ProgramStep P j p (Sum.inr (.send j (.echo p.processVariables.accepted)))
         (PMF.pure (p.setProcessVariables
           { p.processVariables with sentEcho := some p.processVariables.accepted }))
-  /-- `VOTE U`: `n − f` senders' approved `ECHO` payloads, each contained in
-  `U`, are delivered here, and `j` has multicast its own `ECHO`. The main thread
+  /-- `VOTE U`: `j` is called (D8), `n − f` senders' approved `ECHO` payloads, each
+  contained in `U`, are delivered here, and `j` has multicast its own `ECHO`. The main thread
   of AFW25's Algorithm 5 sends `ECHO` before `VOTE`. -/
   | sendVote (p) (U : AcceptedPairs P.n X) (hin : p.processVariables.input ≠ none)
       (hech : p.processVariables.sentEcho ≠ none)
@@ -365,8 +365,8 @@ inductive ProgramStep (P : Parameters) (j : Fin P.n) :
   /-- Another process's input-broadcast call is not `j`'s business. -/
   | inputBroadcastCallIdle (p) (i : Fin P.n) (x : X) (hi : i ≠ j) :
       ProgramStep P j p (Sum.inr (.inputBroadcastCall i x)) (PMF.pure p)
-  /-- `BIND U`: `n − f` senders' approved `VOTE` payloads, each contained in
-  `U`, are delivered here, `j` has multicast its own `VOTE`, and `j` has not
+  /-- `BIND U`: `j` is called (D8), `n − f` senders' approved `VOTE` payloads, each
+  contained in `U`, are delivered here, `j` has multicast its own `VOTE`, and `j` has not
   called its own bind broadcast. The main thread of AFW25's Algorithm 5 sends
   `VOTE` before `BIND`, and sends `BIND` once, at line 17. The payload handed
   to the broadcast is written to its variables; the bind instance's own guard decides
@@ -391,8 +391,8 @@ inductive ProgramStep (P : Parameters) (j : Fin P.n) :
   /-- A bind instance's return to another process is not `j`'s business. -/
   | bindRetIdle (p) (q i : Fin P.n) (U : AcceptedPairs P.n X) (hi : i ≠ j) :
       ProgramStep P j p (Sum.inr (.bindRet q i U)) (PMF.pure p)
-  /-- Return: the output's entries are held here, `n − f` bind payloads held
-  here are sub-maps of it, and `j` has called its own bind broadcast. The `BIND`
+  /-- Return: `j` is called (D8), the output's entries are held here, `n − f` bind
+  payloads held here are sub-maps of it, and `j` has called its own bind broadcast. The `BIND`
   broadcast of AFW25's Algorithm 5, line 17, precedes the wait of line 18. The
   core on the label is the network's. -/
   | ret (p) (g : Fin P.n → Option X) (C : AcceptedPairs P.n X) (hin : p.processVariables.input ≠

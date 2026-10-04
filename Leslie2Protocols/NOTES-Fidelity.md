@@ -128,7 +128,7 @@ once". `Algorithm.retGrade1` reads this as *from at least one sender*: `honce : 
 Message.echo5 (some v) ∈ s.received id k`, not as a cardinality constraint of exactly one received
 message. The
 hypothesis is a genuine part of the transition, carried through the protocol's rendering by
-`ABAProgramStep.retGGrade1` and through the round instance's Byzantine return transition
+`ABDY.RoundStep.retGGrade1` and through the round instance's Byzantine return transition
 `GBCAProgramStep.byzantineRetGrade1`, but no proof consumes it: the refinement's `retGrade1`
 transitions
 bind it and leave it unused, discharging the grade-1 return's specification guards from the `f
@@ -183,8 +183,8 @@ and `RoundLoopState.returned`, guarded at `RoundLoopStep.ret`. The guard has no 
 in Algorithm 1 or Algorithm 2, which name no such variable; the control-flow fact it expresses does.
 (At specification level it is no interpretation: TS 1 and TS 2 carry `ret[id] = ⊥` guards of their
 own.) At the protocol, returning and terminating are two fields and two transitions:
-`RoundLoopState.returned` records that `ABAProgramStep.ret` has fired, and
-`ABDY.RoundVariablesMap.terminated`, whose sole writer is `ABAProgramStep.terminate`, records that the
+`RoundLoopState.returned` records that `Implementation.ProgramStep.ret` has fired, and
+`ABDY.RoundVariablesMap.terminated`, whose sole writer is `Implementation.ProgramStep.terminate`, records that the
 process has stopped participating (D22, §6).
 
 **The announced values on the return labels (D29).** The source blueprint puts the binding
@@ -227,8 +227,8 @@ delivery is a synchronisation whose two halves are held by different components.
 adversary's conjunct in both sent sets: `NetworkStep.gbcaDeliver` requires `h : m ∈ s.sent r j` and
 `NetworkStep.decidedDeliver` requires `h : b ∈ s.decidedSent j`, neither consuming the sent message.
 Freshness is the receiver's, and only in the DECIDED sent sets:
-`ABAProgramStep.decidedDeliverReceive` carries `hr : b ∉ c.decidedDelivered k` while
-`ABAProgramStep.gbcaDeliverReceive` carries no freshness guard, filing the message under the
+`Implementation.ProgramStep.decidedDeliverReceive` carries `hr : b ∉ c.decidedDelivered k` while
+`ABDY.RoundStep.gbcaDeliverReceive` carries no freshness guard, filing the message under the
 sender's received set whatever is already there. Its one hypothesis is the termination guard
 `hterm : p.terminated = false` carried by every round transition (D22, §6), which is not a freshness
 condition.
@@ -244,7 +244,7 @@ in the specification, and whether that placement was chosen or forced.
 (`ABA/GBCA/ABDY/Algorithm.lean`), mirrored transition for transition at
 `GBCA.GBCAProgramStep` (`ABA/GBCA/ABDY/Components.lean`), Byzantine call and return transitions
 included, and at
-`ABDY.ABAProgramStep` (`ABA/ABDY/System.lean`) with the reads taken through
+`ABDY.RoundStep` (`ABA/ABDY/System.lean`) with the reads taken through
 `p.roundVariables r`.
 
 - **The wait-until order.** The order is carried from the `BIND` level down: each of
@@ -275,9 +275,9 @@ included, and at
 - **The return call guards.** All three returns require `input ≠ none`, the D8 guard
   carried from the sends over to the returns: a process that was never called does not
   return from the round.
-- **The protocol's participation guards.** `ABAProgramStep.ret` and
-`ABAProgramStep.decidedRelay` require `c.processVariables.input ≠ none`, and
-`ABAProgramStep.gbcaCallLoop` requires `(p.roundVariables r).processVariables.input ≠ none`. `gbcaCallLoop`
+- **The protocol's participation guards.** `Implementation.ProgramStep.ret` and
+`Implementation.ProgramStep.decidedRelay` require `c.processVariables.input ≠ none`, and
+`ABDY.RoundStep.gbcaCallLoop` requires `(p.roundVariables r).processVariables.input ≠ none`. `gbcaCallLoop`
 deliberately carries no termination guard, so a process that has terminated at phase `toCallG` over
 round variables holding no call has a transition on neither call label and takes no further
 round-loop step. That
@@ -306,7 +306,7 @@ repaired at the transition; the seventh entry is a cross-reference.
   idle, so the call loop must accept every call label whatever the variables hold.
 - **`RoundLoopStep`'s DECIDED transitions (chosen).** `RoundLoopStep.ret` and
   `RoundLoopStep.decidedRelay` read the counts of received messages alone, without the `input ≠ none`
-  guard their `ABAProgramStep` counterparts carry. The composed system is the abstraction
+  guard their `Implementation.ProgramStep` counterparts carry. The composed system is the abstraction
   the protocol is carried into, and a guard there would ripple through `ABDY.ProtocolRelation` and
   the core simulation.
 - **`SpecStep.ret` without a correctness guard (chosen).** The correct return's guards are
@@ -322,11 +322,19 @@ repaired at the transition; the seventh entry is a cross-reference.
   `Gather.Step.fail` and `BRB.Step.fail` accept every `fail` label and let the transform decide what
   the state does. The network's `fail` transition carries the two guards `SpecStep.fail` carries,
   so the two systems enable the same labels and no refinement is affected. The guard itself is D1;
-  the loop TS 1 carries beside it is what this entry records. TS 1's other input-enabledness loop,
+  the loop TS 1 carries beside it is what this entry records.
+  Under the source's loop a `fail(id)` fires in budget without changing `F`, so the state's
+  corrupted set and the trace fold `failSet` diverge. Take `n = 4` and `f = 1`. A looped
+  `fail(p1)` enters `p1` into the fold and leaves `F` empty. A real `fail(p2)` that follows enters
+  `p2` into `F`, and the fold, whose budget `p1` fills, leaves `p2` out. `SpecStep.retByzantine` at
+  `p2` then returns the bit opposite to a correct returner's, while the fold counts `p2` as never
+  corrupted. The loop taken verbatim therefore falsifies `spec_safe`. The shape that follows the
+  source at the specification is a total `fail`, as the other four specifications have, which keeps
+  `F` equal to the fold. TS 1's other input-enabledness loop,
   the one on `callABA`, is guarded here as well: `SpecStep.callLoop` fires at a filled ghost entry
   (D36).
 - **The `2f + 1` commit read as a relay threshold (cross-reference).**
-  `ABAProgramStep.terminate` reads `2f + 1` received DECIDED messages where the paper's condition is
+  `Implementation.ProgramStep.terminate` reads `2f + 1` received DECIDED messages where the paper's condition is
   that the process may stop without holding another back. That delta is the third D22
   residue of §6, and is not restated here.
 
@@ -460,24 +468,24 @@ for Unpredictability, inexpressible once the guess is dropped.
   belongs here is what the shape leaves uncovered. A process's variables hold its variables in every
   round it has touched, in a `Finmap` read through `ABDY.RoundVariablesMap.roundVariables`; each
   round transition reads and writes the variables of the round its own label tags, under an
-  instance-local guard and no round guard; and the round advance, `ABAProgramStep.retW`, and
-  the DECIDED send, `ABAProgramStep.decidedSend`, reset nothing. A process therefore answers prior-round messages and
-  files deliveries of any round. `ABAProgramStep.terminate` is the terminating step. It fires when
+  instance-local guard and no round guard; and the round advance, `Implementation.ProgramStep.retW`, and
+  the DECIDED send, `Implementation.ProgramStep.decidedSend`, reset nothing. A process therefore answers prior-round messages and
+  files deliveries of any round. `Implementation.ProgramStep.terminate` is the terminating step. It fires when
   the process's own return has fired and DECIDED messages from `2f + 1` distinct senders have been
   received, and it writes `terminated` alone, so the round variables stay as they are. Three
   residues remain.
-    - The amplification transition `ABAProgramStep.gbcaSendRelay` is guarded by the process holding an
+    - The amplification transition `ABDY.RoundStep.gbcaSendRelay` is guarded by the process holding an
       input in that round's variables (`hin : (p.roundVariables r).processVariables.input ≠ none`, D8, and
       `Algorithm.relay` carries the same guard one level down), where lines 3–4 of ABDY22's
       Algorithm 6 guard the relay on the count of received messages alone.
     - A round delivery at a process that has terminated is disabled rather than ignored.
-      `ABAProgramStep.gbcaDeliverReceive` carries `hterm : p.terminated = false` and
-      `ABAProgramStep.gbcaDeliverIdle` demands a different receiver, so the adversary has no
+      `ABDY.RoundStep.gbcaDeliverReceive` carries `hterm : p.terminated = false` and
+      `Implementation.ProgramStep.gbcaDeliverIdle` demands a different receiver, so the adversary has no
       composite step delivering a round message there at all.
-    - The `2f + 1` count of received DECIDED messages of `ABAProgramStep.terminate` is the
+    - The `2f + 1` count of received DECIDED messages of `Implementation.ProgramStep.terminate` is the
       encoding's commit point. At most `f` senders are corrupted, so `2f + 1` received messages
       stand behind `f + 1`
-      correct senders of the payload, which is the threshold `ABAProgramStep.decidedRelay`
+      correct senders of the payload, which is the threshold `Implementation.ProgramStep.decidedRelay`
       reads; the paper's own condition is that the process may stop without holding back
       any other.
 - **The scope of `terminate`.** The flag is read by the round transitions and by nothing else:
@@ -495,7 +503,7 @@ process at every level of the chain (D23). At the protocol and in the composed s
 corruption replaces the process's program: the correct transitions are guarded by the replacement
 flag, the replaced program self-loops on `callABA` and `retABA`, and the network's own
 `retByzantine` transition authorises the return under `k ∈ F` with none of the received DECIDED
-messages `ABAProgramStep.ret` demands. At the specification the same behaviour is `SpecStep.callByzantine`,
+messages `Implementation.ProgramStep.ret` demands. At the specification the same behaviour is `SpecStep.callByzantine`,
 which records a bit unrelated to the one its label declares, and `SpecStep.retByzantine`, which
 returns any bit at any time without moving the state.
 

@@ -175,10 +175,13 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
     The budget is a guard of the one component that owns the corrupted set, so no headline carries a hypothesis on the trace, and the broadcast keeps every component's copy of the set equal, no component reading another's state.
   \item D4: the WCC \texttt{guess} label and the \texttt{guess} state field are omitted.
     The label and the field exist solely for Unpredictability, which is out of scope.
-  \item D5: a set-based authenticated network with per-sender message sets.
-    A threshold counts distinct senders in a receiver's delivered sets and a multicast is idempotent, so message duplication and point-to-point scheduling are absorbed into the set model; the network is the one component that holds what no program may see, the sent sets and the corrupted set, and it is where a corrupted sender's injections enter.
-  \item D8: protocol sends and returns guarded by prior participation.
-    The algorithm's handlers run only inside a called instance, so a process that was never called neither sends nor returns, and the guard is what lets the correct senders of a quorum of received $\mathrm{INPUT}$ messages be counted as callers in the round's quorum guard.
+  \item D5: the network holds the set $sent(r,j)$ of the round-$r$ messages process $j$ has multicast; a multicast inserts into it under guards at the sender, a delivery checks membership and consumes nothing, a threshold counts distinct senders, and arbitrary content enters only through the injection under $k \in F$.
+    The source carries no network, and Section~2 of~\cite{ABDY22} and Section~2.1 of~\cite{AFW25} state it in one sentence each, links that do not drop messages and reliable point-to-point messages with arbitrary content from a faulty process.
+    The sets absorb duplication, re-delivery and per-link order, and they admit the equivocation that D12$'$ mirrors for DECIDED.
+  \item D8: every protocol send of a round, the round's three graded returns, the ABA return and the DECIDED relay are guarded by the acting process's own input, which is the reading of~\cite{ABDY22}.
+    There every party receives an input (Definition~2.2, Definition~3.2 stating Validity over the inputs of the non-faulty parties), and participation begins with the input send: ``To participate in the algorithm, a party $p$ begins by sending its input value $x$ to all parties'' (Section~4.1), ``a party starts by sending its input value $x$ to all other parties'' (Section~4.2), and Algorithm~6 is ``nearly identical to Algorithm~4 up through line~17''.
+    The uncalled process and the caller quorum are Transition System~2's, and the guard is what discharges that quorum: the correct senders of an $n-f$ quorum of received $\mathrm{INPUT}$ messages are callers.
+    Without the guard the source's Algorithm~2 does not refine the source's Transition System~2; the guard holds across the gather layer of both chains, and Bracha's rounds carry none, since only the leader is called.
   \item D9: $0$-based round indexing.
     The round counter and every round-indexed family range over $\mathbb{N}$, whose first element indexes the initial round variables.
   \item D11: Byzantine call and return transitions at each sub-protocol interface.
@@ -369,6 +372,12 @@ The network holds that bit for the round as a ghost, written at the first return
 
 The protocol of Section~\ref{sec:aba-protocol} at that graded-agreement implementation is the $n$ programs, each carrying its variables in every round it has touched, beside the one adversary holding what no process may see.
 
+Corruption is the one synchronised step $\mathrm{fail}(j)$, on a visible label.
+Its halves are the network's guarded insertion \leandeclnamed{fail}{PLTS.ABA.Implementation.NetworkStep.fail}, the write of the process's own flag $corrupted$ by \leandeclnamed{failSelf}{PLTS.ABA.Implementation.ProgramStep.failSelf}, every other program idle, and each instance of the common coin inserting $j$ into its own copy of the corrupted set.
+Every correct transition reads the flag, and the replaced program \leandeclnamed{corruptedIdle}{PLTS.ABA.Implementation.ProgramStep.corruptedIdle} self-loops on every label other than $\tau$ and those of \leandeclnamed{actsAt}{PLTS.ABA.Implementation.actsAt}\,$j$, on which it has no transition, so a corrupted process neither calls into nor returns from a round at the implementation, while the ABA-level corrupted interface, the network's Byzantine return under $j \in F$, fires.
+The clause \leandeclnamed{corrupted_F}{PLTS.ABA.Invariant.corrupted_F} of the invariant of Theorem~\ref{thm:aba-hybrid-spec} ties the flag to the set.
+No transition emits $\mathrm{fail}$: the scheduler fires it wherever it is enabled, and the trace predicates read it off the trace.
+
 \input{nodes-min/def-aba-programs}
 \input{nodes-min/def-aba-network}
 \input{nodes-min/def-aba-protocol}
@@ -447,7 +456,7 @@ See \leanmodule{Leslie2Protocols/ABA/Composition/ABAState} and \leanmodule{Lesli
 
 \input{nodes-min/thm-aba-hybrid-spec}
 
-\blueprintfig{fig-coresim}{The simulation of Theorem~\ref{thm:aba-hybrid-spec}, \leandecl{PLTS.ABA.hybridRefinesSpecification}: the two-phase abstract state, its stutter matching every concrete transition --- the coin's resolution, the one probabilistic transition among them, included --- under a constant coupling, and the single \leandeclnamed{decide}{PLTS.ABA.SpecStep.decide} step that leads the first $\mathrm{retABA}$, the two together forming one weak step.}
+\blueprintfig{fig-coresim}{The simulation of Theorem~\ref{thm:aba-hybrid-spec}, \leandecl{PLTS.ABA.hybridRefinesSpecification}: the two-phase abstract state, its stutter matching every hidden transition --- the coin's resolution, the one probabilistic transition among them, included --- under a constant coupling, and the single \leandeclnamed{decide}{PLTS.ABA.SpecStep.decide} step that leads the first $\mathrm{retABA}$, the two together forming the weak step that matches it.}
 
 \subsection{The main theorems}
 
