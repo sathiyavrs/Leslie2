@@ -19,9 +19,15 @@
     % upper left so that the round back-edge can come down on the upper right
     (tcg)  edge[loop, out=110, in=150, looseness=7]
       node[lbl, above left, text width=1.6cm, align=center]{\texttt{inputLoop}} (tcg);
-  % round back-edge, routed over the top so it clears the DECIDED node below
-  \draw[->] (aww) to[out=115, in=50, looseness=0.55]
-    node[lbl, above]{\texttt{retW}: round${+}1$ (D10)} (tcg);
+  % the DECIDED send of a grade-2 round, above the row between awaitG and toCallW
+  \node[state] (tsd) at (7.25,2.1) {\texttt{toSendDecided}};
+  \draw[->] (aww) to[out=110, in=0]
+    node[elbl, left, pos=0.25, xshift=-3pt, text width=1.9cm, align=right]{\texttt{retW}: round${+}1$,\\ grade $2$} (tsd);
+  \draw[->] (tsd) to[out=180, in=70]
+    node[elbl, right, pos=0.6, xshift=3pt]{\texttt{decidedSend}} (tcg);
+  % round back-edge, routed over the top so it clears the toSendDecided node
+  \draw[->] (aww) to[out=80, in=100, looseness=1.0]
+    node[lbl, above]{\texttt{retW}: round${+}1$} (tcg);
   % the DECIDED sets, below the row; detail in caption
   \node[draw, dashed, rounded corners, align=center, font=\footnotesize,
         below=1.95cm of awg, minimum width=5.4cm, inner sep=4pt] (dec)

@@ -286,7 +286,7 @@ Both follow the same distribution, displayed in Definition~\ref{def:aba-paramete
 \section{Deviations from the source blueprint}
 \label{sec:aba-deviations}
 
-Each departure from~\cite{LeslieBP} carries a label, cited at the point where it applies, and each entry states the departure, its reason, and, in the full edition, what following the source would take; the labels D2, D3, D6, D7, D20 and D25 are not in use, and D12 is superseded by D12$'$.
+Each departure from~\cite{LeslieBP} carries a label, cited at the point where it applies, and each entry states the departure, its reason, and, in the full edition, what following the source would take; the labels D2, D3, D6, D7, D10, D20, D25 and D28 are not in use, and D12 is superseded by D12$'$.
 \begin{itemize}
   \item D1: corruption is a guarded deterministic transform $\mathrm{corrupt}$, which inserts $id$ into $F$ and writes nothing else, broadcast to every component on $\mathrm{fail}(id)$ under the guard $id \notin F \wedge |F| < f$ at the component that owns the corrupted set, its half at the process the label names being the replacement of D23.
     The budget is a guard of the one component that owns the corrupted set, so no headline carries a hypothesis on the trace, and the broadcast keeps every component's copy of the set equal, no component reading another's state.
@@ -304,9 +304,6 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
   \item D9: $0$-based round indexing.
     The round counter and every round-indexed family range over $\mathbb{N}$, whose first element indexes the initial round variables.
     Indexing from $1$ is a shift of the counter's initial value and of every round-indexed family, with no proof content.
-  \item D10: the per-round bookkeeping between the coin return and the next call fused into the coin-return step, \leandeclnamed{retW}{PLTS.ABA.Implementation.ProgramStep.retW} beside \leandeclnamed{retWPublish}{PLTS.ABA.Implementation.ProgramStep.retWPublish}, the second multicasting DECIDED on a grade-$2$ outcome.
-    The bookkeeping between the coin's return and the next call is local computation with no event of its own, so a phase for it would add a silent transition that every simulation stutters on, and the DECIDED publication is the network's half of the same synchronised step, which no program can take alone.
-    Separating the bookkeeping into a phase of its own adds a silent transition to the round loop and a stutter case to every simulation above it; separating the publication from the return is not available, a multicast being a synchronised step of a program and the network.
   \item D11: Byzantine call and return transitions at each sub-protocol interface.
     In an implementation the graded-agreement call and return have no transition at the process their label names: \leandeclnamed{byzantineCallGIdle}{PLTS.ABA.Implementation.ProgramStep.byzantineCallGIdle} and \leandeclnamed{byzantineRetGIdle}{PLTS.ABA.Implementation.ProgramStep.byzantineRetGIdle} carry $k \neq j$, and \leandeclnamed{corruptedIdle}{PLTS.ABA.Implementation.ProgramStep.corruptedIdle} excludes the labels of $\mathrm{actsAt}\,j$.
     An implementation therefore neither calls into nor returns from a round at a corrupted process, both labels being hidden, and the composed system answers them, so an implementation is included in its composed system and the inclusion holds in that direction alone.
@@ -1398,10 +1395,10 @@ No transition reads a second process, and Definitions~\ref{def:aba-programs} and
 \input{nodes/def-aba-protocol}
 
 \blueprintfig{fig-protocol}{The protocol \leandecl{PLTS.ABA.ABDY.protocol}: the $n$ programs $\mathrm{ABAProgram}(P,j)$, \leandecl{PLTS.ABA.ABDY.ABAProgram}, under $\mathrm{synchronisedProduct}$, the network \leandecl{PLTS.ABA.ABDY.network} and the common coin beside the group.
-Each program holds one process's round loop beside its round's variables, its variables in every round it has touched and its termination flag (D22); every guard of its forty-three transitions reads that program's own variables, and what any of them reads of corruption is those variables' own replacement flag (D23).
-Its state \leandecl{PLTS.ABA.ABDY.NetworkState} holds the sent sets $sent(r,j)$ and $decidedSent(j)$, the corrupted set $F$ and the ghost $ghost(r)$ of each round, that round's bound bit (D30); its twenty-one transitions supply the other half of every send, every delivery, every Byzantine sub-protocol call and return and the Byzantine ABA return; the corruption budget is the guard on its own $\mathrm{fail}$ transition.
-The inner dashed box is $\mathrm{relabel} \circ \mathrm{abstract}\,\mathrm{networkEventLabels}$: every $\mathrm{gbcaSend}$, $\mathrm{gbcaDeliver}$, $\mathrm{decidedRelay}$, $\mathrm{decidedDeliver}$, $\mathrm{retWPublish}$, $\mathrm{gbcaCallLoop}$ and Byzantine sub-protocol call and return transition becomes $\tau$.
-The common coin is joined through the partial map $\mathrm{coinLabelMap}$, so the transitions $\mathrm{byzantineCallW}$ and $\mathrm{byzantineRetW}$ and the fused return $\mathrm{retWPublish}$ reach it as calls and returns of the coin while the network labels leave it idle.
+Each program holds one process's round loop beside its round's variables, its variables in every round it has touched and its termination flag (D22); every guard of its forty-five transitions reads that program's own variables, and what any of them reads of corruption is those variables' own replacement flag (D23).
+Its state \leandecl{PLTS.ABA.ABDY.NetworkState} holds the sent sets $sent(r,j)$ and $decidedSent(j)$, the corrupted set $F$ and the ghost $ghost(r)$ of each round, that round's bound bit (D30); its twenty-two transitions supply the other half of every send, every delivery, every Byzantine sub-protocol call and return and the Byzantine ABA return; the corruption budget is the guard on its own $\mathrm{fail}$ transition.
+The inner dashed box is $\mathrm{relabel} \circ \mathrm{abstract}\,\mathrm{networkEventLabels}$: every $\mathrm{gbcaSend}$, $\mathrm{gbcaDeliver}$, $\mathrm{decidedSend}$, $\mathrm{decidedRelay}$, $\mathrm{decidedDeliver}$, $\mathrm{gbcaCallLoop}$ and Byzantine sub-protocol call and return transition becomes $\tau$.
+The common coin is joined through the partial map $\mathrm{coinLabelMap}$, so the transitions $\mathrm{byzantineCallW}$ and $\mathrm{byzantineRetW}$ reach it as calls and returns of the coin while the other network labels, $\mathrm{decidedSend}$ among them, leave it idle.
 The outer dashed box is $\mathrm{abstract}_H$, which hides the coin's call and return $\mathrm{callW}/\mathrm{retW}$; what leaves it is the API $\mathrm{callABA}/\mathrm{retABA}/\mathrm{fail}$ together with $\tau$.
 The dashed vertical is Theorem~\ref{thm:aba-protocol-composed}: the protocol is forward-simulated by the same system read as a composition of components, along the Dirac lift of $\mathrm{ProtocolRelation}$.}
 
@@ -1411,7 +1408,7 @@ transition is allowed to read, and the presentation states it in its sharpest fo
 Every implemented part of the protocol is $n$ programs: the round loop, the
 graded-agreement transitions of each round, the DECIDED gossip and the received-message
 bookkeeping of both sit inside $\mathrm{ABAProgram}(P,j)$, and every guard
-of its forty-three transitions is a function of $j$'s variables.
+of its forty-five transitions is a function of $j$'s variables.
 Nothing of the protocol is shared.
 The received sets and the control variables each belong to one process, and every
 quorum count is taken over one process's own received sets.
@@ -1515,13 +1512,15 @@ The DECIDED sets, the corrupted set with its budget, and the authorisation $k \i
 The self-loops of a process carry \leandeclnamed{inputLoop}{PLTS.ABA.Composition.RoundLoopStep.inputLoop}, which takes $\mathrm{callABA}$ at a process whose input is set (D36), together with the four transitions on which every round loop stands while a Byzantine call or return transition moves graded-agreement or coin content, \leandeclnamed{byzantineCallGIdle}{PLTS.ABA.Composition.RoundLoopStep.byzantineCallGIdle}, \leandeclnamed{byzantineRetGIdle}{PLTS.ABA.Composition.RoundLoopStep.byzantineRetGIdle}, \leandeclnamed{byzantineCallWIdle}{PLTS.ABA.Composition.RoundLoopStep.byzantineCallWIdle} and \leandeclnamed{byzantineRetWIdle}{PLTS.ABA.Composition.RoundLoopStep.byzantineRetWIdle}; the guard $k \in F$ that authorises such a transition is the network's, at \leandeclnamed{byzantineCallG}{PLTS.ABA.Composition.ABANetworkStep.byzantineCallG}, \leandeclnamed{byzantineRetG}{PLTS.ABA.Composition.ABANetworkStep.byzantineRetG}, \leandeclnamed{byzantineCallW}{PLTS.ABA.Composition.ABANetworkStep.byzantineCallW} and \leandeclnamed{byzantineRetW}{PLTS.ABA.Composition.ABANetworkStep.byzantineRetW} (D11).
 The step \leandeclnamed{retG}{PLTS.ABA.Composition.RoundLoopStep.retG} sets $estimate$ to the grade.
 The bound bit the same label carries is a ghost output, and no transition of the loop reads it (D29).
-The coin return has two transitions.
-The step \leandeclnamed{retW}{PLTS.ABA.Composition.RoundLoopStep.retW} increments the round and adopts the coin when $estimate = \bot$; the step \leandeclnamed{retWPublish}{PLTS.ABA.Composition.RoundLoopStep.retWPublish} does the same on a grade-2 return and multicasts $\langle\mathrm{DECIDED},b\rangle$, the sent set insert being the network's half of that synchronised transition, \leandeclnamed{retWPublish}{PLTS.ABA.Composition.ABANetworkStep.retWPublish} (D10).
+The coin return and the DECIDED send are two steps.
+The step \leandeclnamed{retW}{PLTS.ABA.Composition.RoundLoopStep.retW} increments the round and adopts the coin when $estimate = \bot$; on a grade-2 outcome it keeps $lastGrade$ and enters $\mathrm{toSendDecided}$, and otherwise it clears $lastGrade$ and enters $\mathrm{toCallG}$.
+The step \leandeclnamed{decidedSend}{PLTS.ABA.Composition.RoundLoopStep.decidedSend} is taken at $\mathrm{toSendDecided}$ with $lastGrade = (b,2)$: it multicasts $\langle\mathrm{DECIDED},b\rangle$, clears $lastGrade$ and enters $\mathrm{toCallG}$.
+The sent set insert is the network's half of that synchronised transition, \leandeclnamed{decidedSend}{PLTS.ABA.Composition.ABANetworkStep.decidedSend}, which carries no guard.
 The DECIDED sets are round-agnostic, carrying no round index.
 A delivery pairs the network's authenticity guard \leandeclnamed{decidedDeliver}{PLTS.ABA.Composition.ABANetworkStep.decidedDeliver} with the receiver's write \leandeclnamed{decidedDeliverReceive}{PLTS.ABA.Composition.RoundLoopStep.decidedDeliverReceive}; a relay pairs the sender's count of $f{+}1$ received messages \leandeclnamed{decidedRelay}{PLTS.ABA.Composition.RoundLoopStep.decidedRelay} with the network's write-once insert \leandeclnamed{decidedRelay}{PLTS.ABA.Composition.ABANetworkStep.decidedRelay}; and \leandeclnamed{byzantineDecided}{PLTS.ABA.Composition.ABANetworkStep.byzantineDecided} is the network's own $\tau$-loop, by which $id \in F$ records either bit (D12$'$).
 The exit \texttt{retABA}\,$id\,b$ fires once $n-f$ distinct senders of $b$ have been delivered to $id$, the count read at \leandeclnamed{ret}{PLTS.ABA.Composition.RoundLoopStep.ret}, and $b$ lies in $id$'s own sent set, read at \leandeclnamed{retABA}{PLTS.ABA.Composition.ABANetworkStep.retABA}.
 
-\blueprintfig{fig-core-phases}{The round loop \leandecl{PLTS.ABA.Composition.roundLoopProgram}: the per-process five-phase cycle of calls and returns, the fused DECIDED multicast at the grade-2 coin return (D10), and the DECIDED sets guarding $\mathrm{retABA}$.
+\blueprintfig{fig-core-phases}{The round loop \leandecl{PLTS.ABA.Composition.roundLoopProgram}: the per-process cycle of six phases of calls and returns, the multicast of $\langle\mathrm{DECIDED},b\rangle$ at $\mathrm{toSendDecided}$ after a grade-2 coin return, and the DECIDED sets guarding $\mathrm{retABA}$.
 Every edge drawn carries the guard that the process's own program is unreplaced, so a corruption leaves the machine at the phase it has reached and the phase field is unchanged from there (D23).
 The \texttt{inputLoop} self-loop absorbs $\mathrm{callABA}$ at a process whose input is set (D36), so it stands at every phase the \texttt{input} edge leads to and is drawn at $\mathrm{toCallG}$ alone.}
 
@@ -1534,10 +1533,11 @@ Each process carries a phase, an element of
 \[
   \mathrm{Phase} \;=\;
   \{\,\mathrm{idle},\ \mathrm{toCallG},\ \mathrm{awaitG},\ \mathrm{toCallW},\
-    \mathrm{awaitW}\,\},
+    \mathrm{awaitW},\ \mathrm{toSendDecided}\,\},
 \]
 traversed as $\mathrm{idle} \to \mathrm{toCallG} \to \mathrm{awaitG} \to \mathrm{toCallW} \to \mathrm{awaitW} \to \mathrm{toCallG} \to \cdots$.
-There is no separate phase for the per-round bookkeeping between the WCC return and the next GBCA call, because that bookkeeping is fused into the $\mathrm{retW}$ step (D10).
+A round whose outcome is of grade $2$ passes from $\mathrm{awaitW}$ through $\mathrm{toSendDecided}$ to $\mathrm{toCallG}$.
+The phase $\mathrm{toSendDecided}$ lies between the coin return of a grade-2 round and the next GBCA call, and the one transition that leaves it is the multicast of $\langle\mathrm{DECIDED},b\rangle$.
 The per-process $\mathrm{RoundLoopState}$, \leandecl{PLTS.ABA.RoundLoopState}, has fields
 \begin{itemize}
   \item $\mathit{input}$ --- the external input bit; unset before
@@ -1548,7 +1548,8 @@ The per-process $\mathrm{RoundLoopState}$, \leandecl{PLTS.ABA.RoundLoopState}, h
     (D9).
   \item $\mathit{phase} \in \mathrm{Phase}$ --- the phase of the round loop.
   \item $\mathit{lastGrade}$ --- the graded outcome of the current round's GBCA;
-    unset before the return, and cleared by the round advance.
+    unset before the return, and cleared by the round advance, or, on a
+    grade-2 outcome, by the DECIDED send.
   \item $\mathit{returned}$ --- whether $\mathrm{retABA}$ has fired at this
     process.
 \end{itemize}
@@ -1610,19 +1611,21 @@ Transition & Label & Guard & Effect \\
   & $\mathit{phase}_i \gets \mathrm{awaitW}$ \\
 \hline
 \leandeclnamed{retW}{PLTS.ABA.Composition.RoundLoopStep.retW} & $\mathrm{retW}(r,i,c)$
-  & $\mathit{phase}_i = \mathrm{awaitW}$, $\mathit{round}_i = r$,
+  & $\mathit{phase}_i = \mathrm{awaitW}$, $\mathit{round}_i = r$
   & $\mathit{estimate}_i \gets c$ if $\mathit{estimate}_i = \bot$; \\
- & & $\mathit{lastGrade}_i$ not a grade $2$
-  & clear $\mathit{lastGrade}_i$; \\
  & & & $\mathit{round}_i \gets r + 1$; \\
- & & & $\mathit{phase}_i \gets \mathrm{toCallG}$ \\
+ & & & if $\mathit{lastGrade}_i$ is of grade $2$: \\
+ & & & \quad $\mathit{phase}_i \gets \mathrm{toSendDecided}$; \\
+ & & & otherwise clear $\mathit{lastGrade}_i$; \\
+ & & & \quad $\mathit{phase}_i \gets \mathrm{toCallG}$ \\
 \hline
-\leandeclnamed{retWPublish}{PLTS.ABA.Composition.RoundLoopStep.retWPublish}, & $\mathrm{retWPublish}(r,i,c,b)$
-  & $\mathit{phase}_i = \mathrm{awaitW}$, $\mathit{round}_i = r$,
-  & the effect of $\mathrm{retW}$, and \\
-\leandeclnamed{retWPublish}{PLTS.ABA.Composition.ABANetworkStep.retWPublish} & \quad $\to\tau$
-  & $\mathit{lastGrade}_i = (b,2)$ (round loop)
-  & multicast $\mathrm{DEC}\,b$ at $i$ (D10) \\
+\leandeclnamed{decidedSend}{PLTS.ABA.Composition.RoundLoopStep.decidedSend}, & $\mathrm{decidedSend}(i,b)$
+  & $\mathit{phase}_i = \mathrm{toSendDecided}$,
+  & multicast $\mathrm{DEC}\,b$ at $i$; \\
+\leandeclnamed{decidedSend}{PLTS.ABA.Composition.ABANetworkStep.decidedSend} & \quad $\to\tau$
+  & $\mathit{lastGrade}_i = (b,2)$ (sender)
+  & clear $\mathit{lastGrade}_i$; \\
+ & & & $\mathit{phase}_i \gets \mathrm{toCallG}$ \\
 \hline
 \leandeclnamed{byzantineCallG}{PLTS.ABA.Composition.ABANetworkStep.byzantineCallG}, & $\mathrm{byzantineCallG}(r,i,b)$
   & $i \in F$ (network)
@@ -1689,17 +1692,21 @@ The correct return transition is the notable case: an unreplaced program must pa
 What a corruption buys at the interface is the transition beneath it, which requires no DECIDED message at all.
 The corruption transition \leandeclnamed{fail}{PLTS.ABA.Composition.ABANetworkStep.fail} is a synchronisation of every component of the composition, each keeping its own copy of $F$; at the process it names the round loop's half is \leandeclnamed{failSelf}{PLTS.ABA.Composition.RoundLoopStep.failSelf}, which writes the replacement flag, and at every other process it is \leandeclnamed{failIdle}{PLTS.ABA.Composition.RoundLoopStep.failIdle}, another process's corruption being no business of theirs.
 Since every correct transition carries the replacement guard, the variables of a corrupted process are unchanged from that point: its phase, estimate, round, grade and received sets are what they were at the corruption.
-The $\mathrm{estimate}$-update of \leandeclnamed{retW}{PLTS.ABA.Composition.RoundLoopStep.retW} is Algorithm~\ref{alg:aba-core}'s branch \textbf{if} $b = \bot$ \textbf{then} $b \gets c$, and the conditional multicast is its branch \textbf{elif} $g = A$; the branch is taken by choosing between the two coin-return transitions, and the multicast is fused with the round advance into one Dirac step (D10).
+The $\mathrm{estimate}$-update of \leandeclnamed{retW}{PLTS.ABA.Composition.RoundLoopStep.retW} is Algorithm~\ref{alg:aba-core}'s branch \textbf{if} $b = \bot$ \textbf{then} $b \gets c$, and the conditional multicast is its branch \textbf{elif} $g = A$.
+The branch is the phase $\mathrm{toSendDecided}$, which the coin return enters on a grade-2 outcome, and the multicast is the Dirac step \leandeclnamed{decidedSend}{PLTS.ABA.Composition.RoundLoopStep.decidedSend} taken from it.
+The coin return increments the round before that step, and the DECIDED sets carry no round index, so the multicast is that of the round just closed.
 The relay guard of \leandeclnamed{decidedRelay}{PLTS.ABA.Composition.RoundLoopStep.decidedRelay} and \leandeclnamed{decidedRelay}{PLTS.ABA.Composition.ABANetworkStep.decidedRelay} is payload-specific, matching Algorithm~\ref{alg:aba-core}'s clause ``having not sent it'': a sent set already holding the other payload does not block the relay of $b$.
 
 \dynamics{The round loop}{%
-Each process runs a five-phase cycle: idle, ready to call the round's GBCA,
-awaiting its return, ready to call the round's coin, awaiting the coin.
+Each process runs a cycle of six phases: idle, ready to call the round's GBCA,
+awaiting its return, ready to call the round's coin, awaiting the coin, and,
+after a grade-2 outcome, ready to send DECIDED.
 The graded outcome fixes the next estimate, a grade-2 or grade-1 return of value $b$
 setting it to $b$ and a grade-0 return clearing it to $\bot$; a cleared estimate is
 filled by the coin of the same round, and a set estimate ignores that coin.
-When the round's outcome was $(b,2)$, the step that receives the coin also
-multicasts $\langle \mathrm{DECIDED}, b \rangle$ and advances the round.
+The step that receives the coin advances the round.
+When the round's outcome was $(b,2)$, a step of its own then
+multicasts $\langle \mathrm{DECIDED}, b \rangle$ before the next GBCA call.
 A process holding $\langle \mathrm{DECIDED}, b \rangle$ from $f+1$ distinct
 senders and not having multicast $\langle \mathrm{DECIDED}, b \rangle$ itself multicasts
 $\langle \mathrm{DECIDED}, b \rangle$ itself, the $f+1$ threshold guaranteeing

@@ -26,9 +26,10 @@ common coin, and their alphabet is the extended alphabet of the protocol; the la
 synchronise on are hidden, the result is read back over `Label n`, and the sub-protocol API is
 hidden in turn (`Composition/Hybrid.lean`). Corrupted processes' calls and returns are covered by
 the Byzantine call and return transitions, authorised by `k ∈ F` at `ABANetwork` (D11). See
-`Vocabulary/RoundLoop.lean`'s module docstring for the per-process algorithm and deviations D9–D12′
-(0-based rounds, the DECIDED send `decidedSend` of a grade-2 round taken after the coin return
-`retW`, the Byzantine call and return transitions, per-process DECIDED sets — see § D12′ below).
+`Vocabulary/RoundLoop.lean`'s module docstring for the per-process algorithm, the DECIDED send
+`decidedSend` of a grade-2 round taken after the coin return `retW`, and deviations D9, D11 and D12′
+(0-based rounds, the Byzantine call and return transitions, per-process DECIDED sets — see § D12′
+below).
 
 Concrete state: `(g, (C, (A, w)))` with `g : ℕ → GBCA.SpecState`, `C : ∀ j, RoundLoopVariables`, `A :
 ABANetworkState`, `w : ℕ → WCC.SpecState`. The two ABA components are read as one object `c :

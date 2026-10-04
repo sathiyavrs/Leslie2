@@ -23,8 +23,8 @@ file are the source blueprint's. The encoding
 follows the source blueprint; where the source blueprint departs from a paper the
 encoding inherits the departure, except at the items of §1.
 
-**The D-registry is elsewhere.** The catalogued deviations — D1, D4, D5, D8–D19, D21–D24,
-D26, D27, D29–D36, with D12 refined to D12′ and D28 retired, a retired number not being
+**The D-registry is elsewhere.** The catalogued deviations — D1, D4, D5, D8, D9, D11–D19, D21–D24,
+D26, D27, D29–D36, with D12 refined to D12′ and D10 and D28 retired, a retired number not being
 reused — are cited at the point of use in the ABA module
 docstrings and glossed one by one in the blueprint chapter (the Deviations paragraph of
 `blueprint/src/content.tex`), which is the registry of record.
@@ -280,7 +280,7 @@ included, and at
   carried from the sends over to the returns: a process that was never called does not
   return from the round.
 - **The protocol's participation guards.** `ABAProgramStep.ret` and
-`ABAProgramStep.decidedSendRelay` require `c.processVariables.input ≠ none`, and
+`ABAProgramStep.decidedRelay` require `c.processVariables.input ≠ none`, and
 `ABAProgramStep.gbcaCallLoop` requires `(p.roundVariables r).processVariables.input ≠ none`. `gbcaCallLoop`
 deliberately carries no termination guard, so a process that has terminated at phase `toCallG` over
 round variables holding no call has a transition on neither call label and takes no further
@@ -309,7 +309,7 @@ repaired at the transition; the seventh entry is a cross-reference.
   `GBCANetworkStep.byzantineCallGLoop` carries no `k ∈ F`, and the named process's transition is
   idle, so the call loop must accept every call label whatever the variables hold.
 - **`RoundLoopStep`'s DECIDED transitions (chosen).** `RoundLoopStep.ret` and
-  `RoundLoopStep.decidedSendRelay` read the counts of received messages alone, without the `input ≠ none`
+  `RoundLoopStep.decidedRelay` read the counts of received messages alone, without the `input ≠ none`
   guard their `ABAProgramStep` counterparts carry. The composed system is the abstraction
   the protocol is carried into, and a guard there would ripple through `ABDY.ProtocolRelation` and
   the core simulation.
@@ -464,8 +464,8 @@ for Unpredictability, inexpressible once the guess is dropped.
   belongs here is what the shape leaves uncovered. A process's variables hold its variables in every
   round it has touched, in a `Finmap` read through `ABDY.RoundVariablesMap.roundVariables`; each
   round transition reads and writes the variables of the round its own label tags, under an
-  instance-local guard and no round guard; and the round advance, `ABAProgramStep.retW` and
-  `ABAProgramStep.retWPublish`, resets nothing. A process therefore answers prior-round messages and
+  instance-local guard and no round guard; and the round advance, `ABAProgramStep.retW`, and
+  the DECIDED send, `ABAProgramStep.decidedSend`, reset nothing. A process therefore answers prior-round messages and
   files deliveries of any round. `ABAProgramStep.terminate` is the terminating step. It fires when
   the process's own return has fired and DECIDED messages from `2f + 1` distinct senders have been
   received, and it writes `terminated` alone, so the round variables stay as they are. Three
@@ -481,15 +481,15 @@ for Unpredictability, inexpressible once the guess is dropped.
     - The `2f + 1` count of received DECIDED messages of `ABAProgramStep.terminate` is the
       encoding's commit point. At most `f` senders are corrupted, so `2f + 1` received messages
       stand behind `f + 1`
-      correct senders of the payload, which is the threshold `ABAProgramStep.decidedSendRelay`
+      correct senders of the payload, which is the threshold `ABAProgramStep.decidedRelay`
       reads; the paper's own condition is that the process may stop without holding back
       any other.
 - **The scope of `terminate`.** The flag is read by the round transitions and by nothing else:
   `callG_call`, the three `retG_*`, `gbcaSendRelay`, `gbcaSendEcho`, the six level transitions
   `gbcaSendVoteBit` through `gbcaSendEcho5Bot`, `gbcaDeliverReceive`, and `terminate` itself;
   `gbcaCallLoop` is the round transition that does not read it (§4). A process that has terminated still
-  finishes a pending coin call with its return (`callW`, `retW`), publishes `⟨DECIDED, b⟩` through
-  `retWPublish`, and both relays and receives DECIDED (`decidedSendRelay`, `decidedDeliverReceive`).
+  finishes a pending coin call with its return (`callW`, `retW`), sends `⟨DECIDED, b⟩` on a grade-2
+  outcome (`decidedSend`), and both relays and receives DECIDED (`decidedRelay`, `decidedDeliverReceive`).
   That placement is the design and not an oversight: what the flag records is that the process has
   stopped participating in graded agreement, and the D12′ broadcast it keeps carrying is what lets
   the processes still running cross the relay threshold without it.

@@ -346,7 +346,7 @@ inductive ProgramStep (P : Parameters) (M E S : Type)
       (r : ℕ) (id : Fin P.n) (hid : id ≠ j) :
       ProgramStep P M E S roundStep j (c, p) (Sum.inl (.callW r id)) (PMF.pure (c, p))
   /-- The coin return: the round advances and nothing is sent. On a grade-2 outcome the advance
-  enters `toSendDecided`, where the DECIDED send follows (D10). The advance opens a new round;
+  enters `toSendDecided`, where the DECIDED send follows. The advance opens a new round;
   the round variables the process holds are retained across it (D22). -/
   | retW (c : RoundLoopVariables P.n) (p : RoundVariablesMap S) (r : ℕ) (co : Bool)
       (hh : c.corrupted = false)
@@ -400,7 +400,7 @@ inductive ProgramStep (P : Parameters) (M E S : Type)
   | decidedDeliverIdle (c : RoundLoopVariables P.n) (p : RoundVariablesMap S)
       (i k : Fin P.n) (b : Bool) (hi : i ≠ j) :
       ProgramStep P M E S roundStep j (c, p) (Sum.inr (.decidedDeliver i k b)) (PMF.pure (c, p))
-  /-- The DECIDED send of a grade-2 round (D10): the outcome of the round just closed was
+  /-- The DECIDED send of a grade-2 round: the outcome of the round just closed was
   `grade2 b`, so the process sends `⟨DECIDED, b⟩` to all, clears the grade and enters the next
   round's `toCallG`. The sent insert is the network's half. -/
   | decidedSend (c : RoundLoopVariables P.n) (p : RoundVariablesMap S) (b : Bool)
@@ -493,7 +493,7 @@ inductive NetworkStep (P : Parameters) (M E G : Type) [DecidableEq M]
       NetworkStep P M E G ghostStep ghostOutput s (Sum.inr (.decidedDeliver i j b))
         (PMF.pure (s.writeGhost ghostStep (Sum.inr (.decidedDeliver i j b))))
   /-- The network's half of a DECIDED send: the payload enters the sender's DECIDED set
-  (D10, D12′). -/
+  (D12′). -/
   | decidedSend (s : NetworkState P.n M G) (j : Fin P.n) (b : Bool) :
       NetworkStep P M E G ghostStep ghostOutput s (Sum.inr (.decidedSend j b))
         (PMF.pure ((s.recordDecided j b).writeGhost ghostStep (Sum.inr (.decidedSend j b))))

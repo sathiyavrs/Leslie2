@@ -1,6 +1,6 @@
 \begin{definition}[The per-process variables beside the ABA network]
   \label{def:aba-state}
-  \lean{PLTS.ABA.ABAState}\lean{PLTS.ABA.ABAState.processes}\lean{PLTS.ABA.ABAState.decidedSent}\lean{PLTS.ABA.ABAState.decidedReceived}\lean{PLTS.ABA.ABAState.corrupted}\lean{PLTS.ABA.ABAState.F}\lean{PLTS.ABA.ABAState.decidedCount}\lean{PLTS.ABA.ABAState.setProcessVariables}\lean{PLTS.ABA.ABAState.stepRound}\lean{PLTS.ABA.ABAState.sendDecided}\lean{PLTS.ABA.ABAState.deliverDecided}\lean{PLTS.ABA.ABAState.corrupt}\leanok
+  \lean{PLTS.ABA.ABAState}\lean{PLTS.ABA.ABAState.processes}\lean{PLTS.ABA.ABAState.decidedSent}\lean{PLTS.ABA.ABAState.decidedReceived}\lean{PLTS.ABA.ABAState.corrupted}\lean{PLTS.ABA.ABAState.F}\lean{PLTS.ABA.ABAState.decidedCount}\lean{PLTS.ABA.ABAState.setProcessVariables}\lean{PLTS.ABA.ABAState.stepRound}\lean{PLTS.ABA.ABAState.sendDecidedOnGrade2}\lean{PLTS.ABA.ABAState.sendDecided}\lean{PLTS.ABA.ABAState.deliverDecided}\lean{PLTS.ABA.ABAState.corrupt}\leanok
   \uses{def:aba-labels, def:aba-round-loop-state, def:aba-programs, def:aba-composed}
   The round loop is carried by two components, and $\mathrm{ABAState}$ reads them as one object:
   \[
@@ -11,7 +11,8 @@
   Five accessors gather what the two components hold apart.
   $\mathrm{processes}$ reads a process's control state, $\mathrm{decidedReceived}$ its received sets and $\mathrm{corrupted}$ the flag saying whether its program has been replaced (D23), all three at that process's variables; $\mathrm{decidedSent}$ reads the multicast sent sets and $F$ the corrupted set, both at the network.
   The flag and the corrupted set live in different components, and the two are written by the two halves of one $\mathrm{fail}$ transition; that they name the same processes is the first conjunct of the core simulation's invariant and not a fact of the state shape.
-  Read through them, $\mathrm{decidedCount}\,i\,b$ is the number of distinct senders whose $\langle\mathrm{DECIDED},b\rangle$ has been delivered to $i$, which is the count the return guard reads, and the operations $\mathrm{setProcessVariables}$, $\mathrm{stepRound}$, $\mathrm{sendDecided}$, $\mathrm{deliverDecided}$ and $\mathrm{corrupt}$ name the effects of the transitions below.
+  Read through them, $\mathrm{decidedCount}\,i\,b$ is the number of distinct senders whose $\langle\mathrm{DECIDED},b\rangle$ has been delivered to $i$, which is the count the return guard reads, and the operations $\mathrm{setProcessVariables}$, $\mathrm{stepRound}$, $\mathrm{sendDecidedOnGrade2}$, $\mathrm{sendDecided}$, $\mathrm{deliverDecided}$ and $\mathrm{corrupt}$ name the effects of the transitions below.
+  The coin return's effect is $\mathrm{stepRound}$ and the DECIDED send's is $\mathrm{sendDecidedOnGrade2}$.
   An accessor is a projection of one component, so nothing of the two components is identified: the object is the pair read through accessors and not a coarser state.
   Full construction: \leandecl{PLTS.ABA.ABAState}.
 \end{definition}

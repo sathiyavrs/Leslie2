@@ -203,7 +203,7 @@ inductive RoundLoopStep (P : Parameters) {M : Type} [DecidableEq M] (j : Fin P.n
   | callWIdle (c : RoundLoopVariables P.n) (r : ℕ) (id : Fin P.n) (hid : id ≠ j) :
       RoundLoopStep P j c (Sum.inl (.callW r id)) (PMF.pure c)
   /-- The coin return: the round advances and nothing is sent. On a grade-2 outcome the advance
-  enters `toSendDecided`, where the DECIDED send follows (D10). -/
+  enters `toSendDecided`, where the DECIDED send follows. -/
   | retW (c : RoundLoopVariables P.n) (r : ℕ) (co : Bool) (hh : c.corrupted = false)
       (hph : c.processVariables.phase = .awaitW) (hr : c.processVariables.round = r) :
       RoundLoopStep P j c (Sum.inl (.retW r j co)) (PMF.pure (c.stepRound co))
@@ -240,7 +240,7 @@ inductive RoundLoopStep (P : Parameters) {M : Type} [DecidableEq M] (j : Fin P.n
   /-- A DECIDED delivery to another process: not `j`'s business. -/
   | decidedDeliverIdle (c : RoundLoopVariables P.n) (i k : Fin P.n) (b : Bool) (hi : i ≠ j) :
       RoundLoopStep P j c (Sum.inr (.decidedDeliver i k b)) (PMF.pure c)
-  /-- The DECIDED send of a grade-2 round (D10): the outcome of the round just closed was
+  /-- The DECIDED send of a grade-2 round: the outcome of the round just closed was
   `grade2 b`, so the process sends `⟨DECIDED, b⟩` to all, clears the grade and enters the next
   round's `toCallG`. The sent insert is `ABANetwork`'s half. -/
   | decidedSend (c : RoundLoopVariables P.n) (b : Bool) (hh : c.corrupted = false)
@@ -332,7 +332,7 @@ inductive ABANetworkStep (P : Parameters) {M : Type} [DecidableEq M] :
   sender (D12′). -/
   | decidedDeliver (a : ABANetworkState P.n) (i j : Fin P.n) (b : Bool) (h : b ∈ a.decidedSent j) :
       ABANetworkStep P a (Sum.inr (.decidedDeliver i j b)) (PMF.pure a)
-  /-- The DECIDED send's half: the payload enters the sender's DECIDED set (D10, D12′). -/
+  /-- The DECIDED send's half: the payload enters the sender's DECIDED set (D12′). -/
   | decidedSend (a : ABANetworkState P.n) (j : Fin P.n) (b : Bool) :
       ABANetworkStep P a (Sum.inr (.decidedSend j b)) (PMF.pure (a.recordDecided j b))
   /-- A graded-agreement call against a round already called sends nothing. -/

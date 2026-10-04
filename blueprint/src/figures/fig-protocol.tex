@@ -45,7 +45,7 @@
     {$\mathrm{WCC.specFamily}(P)$\\ along $\mathrm{coinLabelMap}$};
   \draw[<->] (7.2,-0.35) -- (7.2,-1.95);
   \node[ann, anchor=west] at (7.35,-1.1)
-    {$\mathrm{callW}$, $\mathrm{retW}$,\\ $\mathrm{retWPublish}$,\\
+    {$\mathrm{callW}$, $\mathrm{retW}$,\\
      $\mathrm{byzantineCallW}$,\\ $\mathrm{byzantineRetW}$};
   % the presentation it is included in
   \node[comp] (impl) at (4.9,-5.1) {$\abdy{\mathrm{composed}}(P)$};
@@ -53,6 +53,6 @@
     node[lbl, anchor=west, xshift=4pt]{$\operatorname{ATD}$ inclusion, along $\mathrm{ProtocolRelation}$}
     (4.9,-4.6);
   \node[ann, text width=11.6cm] at (4.9,-6.0)
-    {the synchronisation labels are $\mathrm{gbcaSend}$, $\mathrm{gbcaDeliver}$, $\mathrm{decidedRelay}$,
-     $\mathrm{decidedDeliver}$, $\mathrm{retWPublish}$, $\mathrm{gbcaCallLoop}$ and the five Byzantine call and return transitions};
+    {the synchronisation labels are $\mathrm{gbcaSend}$, $\mathrm{gbcaDeliver}$, $\mathrm{decidedSend}$,
+     $\mathrm{decidedRelay}$, $\mathrm{decidedDeliver}$, $\mathrm{gbcaCallLoop}$ and the five Byzantine call and return transitions};
 \end{tikzpicture}

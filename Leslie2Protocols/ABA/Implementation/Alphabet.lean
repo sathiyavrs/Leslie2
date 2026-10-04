@@ -49,7 +49,7 @@ inductive NetworkEvent (n : ℕ) (M E : Type) : Type
   | gbcaSend (r : ℕ) (j : Fin n) (m : M)
   /-- Round-`r` delivery: `m`, sent under sender `j`, reaches receiver `i`. -/
   | gbcaDeliver (r : ℕ) (i j : Fin n) (m : M)
-  /-- DECIDED send (D10): sender `j` sends `⟨DECIDED, b⟩` to all on the grade-2 outcome `grade2 b`
+  /-- DECIDED send: sender `j` sends `⟨DECIDED, b⟩` to all on the grade-2 outcome `grade2 b`
   of the round it has just closed. -/
   | decidedSend (j : Fin n) (b : Bool)
   /-- DECIDED relay: sender `j` sends `⟨DECIDED, b⟩` to all on an `f + 1` quorum. -/

@@ -234,7 +234,7 @@ theorem deliverDecided_decidedReceived_of_ne (s : ABAState P) (i j : Fin P.n) (b
 /-- The round advance of process `id` on receiving the coin `c`: the round loop's own advance
 `RoundLoopVariables.stepRound`, the network untouched. It adopts the coin when the estimate is `⊥`
 and opens the next round. On a grade-2 outcome it keeps the grade and enters `toSendDecided`;
-otherwise it clears the grade and enters `toCallG` (D10). -/
+otherwise it clears the grade and enters `toCallG`. -/
 def stepRound (s : ABAState P) (id : Fin P.n) (c : Bool) : ABAState P :=
   (Function.update s.1 id ((s.1 id).stepRound c), s.2)
 
@@ -318,7 +318,7 @@ theorem stepRound_processes_ne (s : ABAState P) (id : Fin P.n) (c : Bool)
   rw [stepRound_decidedReceived]
 
 /-- The DECIDED send of process `id` on the grade-2 outcome `grade2 b` of the round it has just
-closed (D10): the network sets `b` under `id`, and the process clears the grade and enters the
+closed: the network sets `b` under `id`, and the process clears the grade and enters the
 next round's `toCallG`. -/
 def sendDecidedOnGrade2 (s : ABAState P) (id : Fin P.n) (b : Bool) : ABAState P :=
   (s.sendDecided id b).setProcessVariables id

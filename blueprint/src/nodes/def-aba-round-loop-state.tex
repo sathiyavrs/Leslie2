@@ -1,7 +1,7 @@
 \begin{definition}[The state one process carries between rounds]
   \label{def:aba-round-loop-state}
   \lean{PLTS.ABA.RoundLoopState}\leanok
-  The control state of one process in the round loop is $\mathrm{RoundLoopState}$: its external input bit, its estimate, whose unset value is the algorithm's $\bot$ awaiting the coin, its round counter, counted from $0$ (D9), its phase in the round's calls and returns, one of $\mathrm{idle}$, $\mathrm{toCallG}$, $\mathrm{awaitG}$, $\mathrm{toCallW}$ and $\mathrm{awaitW}$, the graded outcome of the current round, and a returned flag.
+  The control state of one process in the round loop is $\mathrm{RoundLoopState}$: its external input bit, its estimate, whose unset value is the algorithm's $\bot$ awaiting the coin, its round counter, counted from $0$ (D9), its phase in the round's calls and returns, one of $\mathrm{idle}$, $\mathrm{toCallG}$, $\mathrm{awaitG}$, $\mathrm{toCallW}$, $\mathrm{awaitW}$ and $\mathrm{toSendDecided}$, the last held between the coin return of a grade-2 round and its DECIDED send, the graded outcome of the current round, and a returned flag.
   The round loop's one message is $\langle\mathrm{DECIDED},b\rangle$, a bare bit, so a sent set of such messages is a set of bits.
   No field of it names another process.
   Full construction: \leandecl{PLTS.ABA.RoundLoopState}.

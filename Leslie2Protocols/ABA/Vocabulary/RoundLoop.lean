@@ -50,12 +50,13 @@ diffusion state (conjunct 6), and input coherence
 
 * **D9 (0-based rounds).** `round : ℕ` starts at `0` where Algorithm 1 starts
   at `r = 1`; the `GBCA_r`/`WCC_r` instance indices shift accordingly.
-* **D10 (the DECIDED send of a grade-2 round).** Algorithm 1's `elif g = A: send ⟨DECIDED, b⟩`
-  is a transition of its own, `decidedSend`, taken after the coin return. The coin return
-  `retW` performs the round advance `RoundLoopVariables.stepRound`: it adopts the coin when
-  `estimate = ⊥` and opens the next round. When the round's outcome was `grade2 b`, the advance
-  keeps `lastGrade` and enters the phase `toSendDecided`. The DECIDED send then clears
-  `lastGrade`, enters `toCallG`, and its network half inserts `b` into the process's DECIDED set.
+* **The coin return and the DECIDED send.** The coin return `retW` is the round advance
+  `RoundLoopVariables.stepRound`: it adopts the coin when `estimate = ⊥` and opens the next round.
+  When the round's outcome was `grade2 b`, the advance keeps `lastGrade` and enters the phase
+  `toSendDecided`. Algorithm 1's `elif g = A: send ⟨DECIDED, b⟩` is the transition `decidedSend`
+  taken from that phase: it clears `lastGrade` and enters `toCallG`, and its network half inserts
+  `b` into the process's DECIDED set. The DECIDED sets carry no round index, so the send taken
+  after the round counter has advanced is the send of the round just closed.
 * **D11 (Byzantine call and return transitions).** Corrupted processes may make their sub-protocol
   calls and returns arbitrarily: each of `callG`/`retG`/`callW`/`retW` has a Byzantine
   transition, authorised by `k ∈ F` at the network and constrained by no phase or estimate. The
@@ -98,7 +99,7 @@ namespace ABA
 /-- The phase of one core process. The phases make each
 sub-protocol call and return guard crisp:
 `idle → toCallG → awaitG → toCallW → awaitW → (next round) toCallG → …`.
-On a grade-2 outcome the coin return enters `toSendDecided` (deviation D10), and the
+On a grade-2 outcome the coin return enters `toSendDecided`, and the
 DECIDED send leads from it to the next round's `toCallG`. -/
 inductive Phase : Type
   /-- No external input received yet. -/

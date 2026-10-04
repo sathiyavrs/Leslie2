@@ -169,7 +169,7 @@ Write $[n]$ for the identifier set and $F \subseteq [n]$ for the corrupted set.
 \section{Deviations from the source blueprint}
 \label{sec:aba-deviations}
 
-Each departure from~\cite{LeslieBP} carries a label, cited at the point where it applies, and each entry states the departure and its reason; the labels D2, D3, D6, D7, D20 and D25 are not in use, and D12 is superseded by D12$'$.
+Each departure from~\cite{LeslieBP} carries a label, cited at the point where it applies, and each entry states the departure and its reason; the labels D2, D3, D6, D7, D10, D20, D25 and D28 are not in use, and D12 is superseded by D12$'$.
 \begin{itemize}
   \item D1: corruption is a guarded deterministic transform $\mathrm{corrupt}$, which inserts $id$ into $F$ and writes nothing else, broadcast to every component on $\mathrm{fail}(id)$ under the guard $id \notin F \wedge |F| < f$ at the component that owns the corrupted set, its half at the process the label names being the replacement of D23.
     The budget is a guard of the one component that owns the corrupted set, so no headline carries a hypothesis on the trace, and the broadcast keeps every component's copy of the set equal, no component reading another's state.
@@ -181,8 +181,6 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
     The algorithm's handlers run only inside a called instance, so a process that was never called neither sends nor returns, and the guard is what lets the correct senders of a quorum of received $\mathrm{INPUT}$ messages be counted as callers in the round's quorum guard.
   \item D9: $0$-based round indexing.
     The round counter and every round-indexed family range over $\mathbb{N}$, whose first element indexes the initial round variables.
-  \item D10: the per-round bookkeeping between the coin return and the next call fused into the coin-return step, \leandeclnamed{retW}{PLTS.ABA.Implementation.ProgramStep.retW} beside \leandeclnamed{retWPublish}{PLTS.ABA.Implementation.ProgramStep.retWPublish}, the second multicasting DECIDED on a grade-$2$ outcome.
-    The bookkeeping between the coin's return and the next call is local computation with no event of its own, so a phase for it would add a silent transition that every simulation stutters on, and the DECIDED publication is the network's half of the same synchronised step, which no program can take alone.
   \item D11: Byzantine call and return transitions at each sub-protocol interface.
     In an implementation the graded-agreement call and return have no transition at the process their label names: \leandeclnamed{byzantineCallGIdle}{PLTS.ABA.Implementation.ProgramStep.byzantineCallGIdle} and \leandeclnamed{byzantineRetGIdle}{PLTS.ABA.Implementation.ProgramStep.byzantineRetGIdle} carry $k \neq j$, and \leandeclnamed{corruptedIdle}{PLTS.ABA.Implementation.ProgramStep.corruptedIdle} excludes the labels of $\mathrm{actsAt}\,j$.
     An implementation therefore neither calls into nor returns from a round at a corrupted process, both labels being hidden, and the composed system answers them, so an implementation is included in its composed system and the inclusion holds in that direction alone.
@@ -401,7 +399,7 @@ See \leanmodule{Leslie2Protocols/ABA/Vocabulary/RoundLoop} and \leanmodule{Lesli
 
 \input{nodes-min/def-aba-state}
 
-\blueprintfig{fig-core-phases}{The round loop \leandecl{PLTS.ABA.Composition.roundLoopProgram}: the per-process five-phase cycle of calls and returns, the fused DECIDED multicast at the grade-2 coin return (D10), and the DECIDED sets guarding $\mathrm{retABA}$.
+\blueprintfig{fig-core-phases}{The round loop \leandecl{PLTS.ABA.Composition.roundLoopProgram}: the per-process cycle of six phases of calls and returns, the multicast of $\langle\mathrm{DECIDED},b\rangle$ at $\mathrm{toSendDecided}$ after a grade-2 coin return, and the DECIDED sets guarding $\mathrm{retABA}$.
 A corruption leaves the machine at whatever phase it reaches: every edge drawn carries the guard that the program is unreplaced, so the phase field is unchanged from the corruption on (D23).
 The \texttt{inputLoop} self-loop absorbs $\mathrm{callABA}$ at a process whose input is set (D36), so it stands at every phase the \texttt{input} edge leads to and is drawn at $\mathrm{toCallG}$ alone.}
 
