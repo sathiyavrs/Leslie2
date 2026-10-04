@@ -188,7 +188,7 @@ coin the protocol calls.
 |---|---|---|
 | `Specifications/ABA.lean` | 251 | **The top-level ABA specification**, the system all safety is measured against. Eight transitions over `SpecState`, whose control mode carries the flip (D21) and two of which are the corrupted interface (D23). The decision is guarded by the `f + 1` support guard `InputSupport` alone (D13). |
 | `Specifications/ABASafety.lean` | 894 | `spec_safe`: every positive-mass trace of `ABA.spec` is valid and agreeing. The trace predicates live here. |
-| `Specifications/WCC.lean` | 259 | The weak common coin specification, per round, and the coin value domain `CoinValue`. The call carries three transitions: an unguarded loop that records nothing, one that records a caller, and one that records the caller whose access carries the count above `f` and draws the coin in the same step (D31). Held at specification level by design. |
+| `Specifications/WCC.lean` | 233 | The weak common coin specification, per round, and the coin value domain `CoinValue`. Five transitions: a call that records its caller, an unguarded loop on the call label that records nothing, the resolution on `τ`, enabled at `val = ⊥` once the callers number more than `f` (D31) and drawing the coin, a return and the corruption. Held at specification level by design. |
 
 **`ABA/Implementation/`** — the shape of a protocol as it runs, written once and
 parametric in the graded-agreement implementation: the process programs, the network

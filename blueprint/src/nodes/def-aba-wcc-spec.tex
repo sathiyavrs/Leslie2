@@ -3,12 +3,12 @@
   \lean{PLTS.ABA.WCC.Step}\lean{PLTS.ABA.WCC.specFamily}\leanok
   \uses{def:aba-labels, def:aba-parameters, def:idle-family}
   Transition System 3, as a round-indexed instance and the $\mathbb{N}$-indexed family of Definition~\ref{def:idle-family} over it.
-  The call label carries two transitions under exclusive guards.
-  \leandeclnamed{call}{PLTS.ABA.WCC.Step.call} records a caller that leaves the count at $f$ or below, or that arrives at a resolved $val$.
-  \leandeclnamed{callResolve}{PLTS.ABA.WCC.Step.callResolve} takes the caller whose access carries the count above $f$ at $val = \bot$, records it, and draws $val$ by the distribution of Definition~\ref{def:aba-parameters}, the one both coin resolutions of the development share.
-  The count is \leandeclnamed{threshold}{PLTS.ABA.WCC.SpecState.threshold}, read at the recorded state \leandeclnamed{record}{PLTS.ABA.WCC.SpecState.record} and taken over the callers alone (D31).
-  A third transition \leandeclnamed{callLoop}{PLTS.ABA.WCC.Step.callLoop} carries a call at every state and records no caller, which makes the call label input-enabled: the crossing access is therefore a recorded one, and the scheduler may defer the resolution past any number of calls.
-  The resolving transition is the only one of this system that is not Dirac, and the system carries no silent transition.
+  The call label carries two transitions.
+  \leandeclnamed{call}{PLTS.ABA.WCC.Step.call} records a caller that has not called before, and \leandeclnamed{callLoop}{PLTS.ABA.WCC.Step.callLoop} carries a call at every state and records no caller, which makes the call label input-enabled.
+  The resolution \leandeclnamed{resolve}{PLTS.ABA.WCC.Step.resolve} is a transition of its own on $\tau$.
+  It is enabled at $val = \bot$ once the count \leandeclnamed{threshold}{PLTS.ABA.WCC.SpecState.threshold}, taken over the callers alone (D31), exceeds $f$, and it draws $val$ by the distribution of Definition~\ref{def:aba-parameters}, the one both coin resolutions of the development share.
+  The scheduler places the resolution at any state after the count exceeds $f$, past any number of later calls.
+  The resolution is the only transition of this system that is not Dirac, and its only silent transition.
   Its fourth outcome $\dagger$, of mass $\failmass$, delivers to no process, so the round it resolves is unchanged (D17).
   The full list of transitions: \leandecl{PLTS.ABA.WCC.specFamily}.
 \end{definition}

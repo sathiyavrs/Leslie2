@@ -9,12 +9,12 @@
   \node[state] (top) at (5.2,-2.2) {$val{=}\top$};
   \node[state] (undelivered) at (5.2,-4.6) {$val{=}\dagger$};
   \path
-    (bot) edge node[lbl, sloped, above, pos=0.58]{\texttt{callResolve}\,$[\varepsilon]$} (b1)
-    (bot) edge node[lbl, above]{\texttt{callResolve}\,$[\varepsilon]$} (b0)
-    (bot) edge node[lbl, sloped, above, pos=0.5]{\texttt{callResolve}\,$[1{-}2\varepsilon{-}\failmass]$} (top)
-    (bot) edge node[lbl, sloped, below, pos=0.66]{\texttt{callResolve}\,$[\failmass]$} (undelivered)
+    (bot) edge node[lbl, sloped, above, pos=0.58]{\texttt{resolve}\,$[\varepsilon]$} (b1)
+    (bot) edge node[lbl, above]{\texttt{resolve}\,$[\varepsilon]$} (b0)
+    (bot) edge node[lbl, sloped, above, pos=0.5]{\texttt{resolve}\,$[1{-}2\varepsilon{-}\failmass]$} (top)
+    (bot) edge node[lbl, sloped, below, pos=0.66]{\texttt{resolve}\,$[\failmass]$} (undelivered)
     (bot) edge[loop above, looseness=6]
-      node[lbl, above]{\texttt{callRecord} / \texttt{callLoop}} (bot)
+      node[lbl, above]{\texttt{call} / \texttt{callLoop}} (bot)
     (b1)  edge[loop right, looseness=6] node[lbl, right]{\texttt{ret}\,$1$ (common)} (b1)
     (b0)  edge[loop right, looseness=6] node[lbl, right]{\texttt{ret}\,$0$ (common)} (b0)
     (top) edge[loop right, looseness=6]
@@ -22,6 +22,6 @@
   \node[right=0.55cm of undelivered, font=\footnotesize, align=left]
     {no \texttt{ret} enabled};
   \node[font=\footnotesize, align=left, text width=3.8cm] at (0.2,-3.3)
-    {\texttt{callResolve} is the call whose own access carries the caller
-     count above $f$ at $val{=}\bot$; every other call is \texttt{callRecord}};
+    {\texttt{resolve} is a silent transition, enabled at $val{=}\bot$
+     once the callers number more than $f$};
 \end{tikzpicture}

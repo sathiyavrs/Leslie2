@@ -279,7 +279,7 @@ resolved outcome, and $\dagger$ is a resolution that delivers to no process (D17
 
 Every transition is displayed as a guard above a labelled step into an explicit distribution.
 A Dirac target and a genuinely probabilistic one are therefore distinguishable in that display.
-Exactly two transitions in the whole development are non-Dirac: the flip of Transition System~1 and the resolving call of Transition System~3.
+Exactly two transitions in the whole development are non-Dirac: the flip of Transition System~1 and the resolution of Transition System~3.
 Both follow the same distribution, displayed in Definition~\ref{def:aba-parameters}; the flip reads it through the map that drops the bit (D21).
 
 
@@ -380,12 +380,12 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
     The composed system of the same protocol holds those values in the network components of the round, and the projection relating the two systems reads the ghost onto them.
     Both implementations instantiate one parametric system, so the ghost is a parameter beside the round transitions; it sits at the network because the value a graded return announces is determined by the round's messages and the corrupted set, which the network holds; and a ghost no program reads, whose output admits a bit at every state, is what the removal of Definition~\ref{def:aba-ghost-free} can delete.
     The ghost-free system is the instance at the one-element ghost, so following the source is an instantiation and not a change.
-  \item D31: the coin resolves in the access that crosses the threshold, after Fig.~7 of~\cite{GhostDraft}, in place of Transition System~3's separately scheduled resolution transition, so the call label carries two recording transitions under exclusive guards, \leandeclnamed{call}{PLTS.ABA.WCC.Step.call} and \leandeclnamed{callResolve}{PLTS.ABA.WCC.Step.callResolve}, the second drawing $val$ in the step that records the crossing caller.
-    That crossing access is a recorded one, \leandeclnamed{callLoop}{PLTS.ABA.WCC.Step.callLoop} carrying a call at every state and recording no caller, and the threshold counts callers alone, corrupted ones included, where Transition System~3 counts the corrupted set beside them, since a corrupted caller reaches the instance as a caller.
-    The instance has in consequence no transition on $\tau$ at all.
-    That caller-only count is the count of Unpredictability, which asks that all outcomes remain possible until $f+1$ processes have called, where the same threshold with $F$ added resolves at the first correct call once the corruption budget is spent.
-    Were the corrupted set counted, a corruption could carry the count across the threshold, and the family broadcasts $\mathrm{fail}$ by a deterministic transform, on which no resolution can be drawn.
-    A separately scheduled resolution transition is a silent transition of the instance and a case in every simulation above it; counting the corrupted set is not available, the family's broadcast being deterministic.
+  \item D31: the threshold of the resolution \leandeclnamed{resolve}{PLTS.ABA.WCC.Step.resolve} counts callers alone, corrupted callers included, where the source counts the corrupted set beside them.
+    A corrupted process reaches the instance as a caller through its Byzantine call, and a corruption is no access.
+    Definition~2.1 of~\cite{ABDY22} defines unpredictability by accesses: the output is unpredictable until at least $d+1$ parties have accessed the coin.
+    The count of callers is the count of that definition at $d = f$.
+    With $F$ added, the same threshold is reached at the first correct call once $|F| = f$.
+    Following the source takes its count at the guard of the resolution, one guard and the lemma that reads it, under which a corruption with no access carries the count over $f$.
   \item D32: each $\mathrm{BIND}$ payload is sent by reliable broadcast, through one bind-broadcast instance per process and gather, where Algorithm~5 of~\cite{AFW25} and Algorithm~4 of~\cite{LeslieBP} send it to all.
     The adversary of~\cite{AFW25} chooses the corrupted set initially, so a payload sent to all is fixed by its sender's correctness, where under D1 a sender corrupted after its send may equivocate, and the witness that holds the later returns to the core counts committed payloads, which stay fixed whatever happens to their sender.
     Sending the payload to all is available only under a static adversary, whose corrupted set is fixed before the execution; under D1 the witness has nothing fixed to count.
@@ -843,7 +843,8 @@ The trace form of binding, and its transfer to both implementations, is Theorem~
 \input{nodes/def-aba-wcc-spec}
 
 \blueprintfig{fig-wcc}{The WCC specification instance \leandecl{PLTS.ABA.WCC.specInst} (Transition System 3): the four-outcome coin resolution and the return of the common bit or an adversary-chosen bit.
-The \leandeclnamed{callResolve}{PLTS.ABA.WCC.Step.callResolve} guard requires that the caller's own access carry the callers above $f$, $|\{id:\ called\}|>f$ at the recorded state, at $val = \bot$, every other call being \leandeclnamed{call}{PLTS.ABA.WCC.Step.call}; it is the sole probabilistic transition besides Transition System 1.
+The resolution \leandeclnamed{resolve}{PLTS.ABA.WCC.Step.resolve} is a silent transition, enabled at $val = \bot$ once the callers number more than $f$, $|\{id:\ called\}|>f$.
+It is the sole probabilistic transition besides the flip of Transition System 1.
 On $val{=}1$ and $val{=}0$ every process returns the common bit, and on $val{=}\top$ each process returns an adversary-chosen bit.
 The branch $val{=}\dagger$ of mass $\failmass$ enables no return (D17): \leandeclnamed{ret}{PLTS.ABA.WCC.Step.ret} has a positive guard, so no return is enabled there.}
 
@@ -862,7 +863,8 @@ The branch $val{=}\dagger$ of mass $\failmass$ enables no return (D17): \leandec
 \noindent\textbf{Labels.}
 $\mathrm{callW}(r,id)$, $\mathrm{retW}(r,id,b)$ and $\mathrm{fail}(id)$, for $id \in [n]$ and $b \in \mathbb{B}$.
 The upstream $\mathrm{guess}(b)$ label is not encoded (D4).
-The instance steps on the three label families above only and has no transition on $\tau$ (D31); the family combinator supplies idle self-loops on every other label, the API labels of every round $r' \neq r$ among them.
+The instance steps on the three label families above and on $\tau$, by the resolution alone.
+The family combinator supplies idle self-loops on every other label, the API labels of every round $r' \neq r$ among them.
 
 \noindent\textbf{Input-enabled labels.}
 $\mathrm{callW}(r,id)$, by the unconditional loop transition~2, and $\mathrm{fail}(id)$, whose transition~5 is total (D1).
@@ -874,36 +876,28 @@ $called = \mathrm{false}^{[n]}$, $ret = \mathrm{false}^{[n]}$, $val = \bot$ and 
 \noindent In each transition $id \in [n]$ and $b \in \mathbb{B}$ are parameters, and $s$ is the source state.
 
 \medskip
-\noindent In transitions~1 and~3, write $s' = s[\,called[id] := \mathrm{true}\,]$ for the state the access records; the count both transitions read is taken at $s'$ (D31).
-
-\medskip
-\noindent\textbf{1.} \leandeclnamed{call}{PLTS.ABA.WCC.Step.call} (D31).
-Guard
-\[ \begin{aligned}
-     &called[id] = \mathrm{false},\\
-     &\neg\bigl(\,\bigl|\{j \in [n] \mid s'.called[j] = \mathrm{true}\}\bigr| > f
-        \ \wedge\ val = \bot\,\bigr).
-   \end{aligned} \]
-\[ s \xrightarrow{\;\mathrm{callW}(r,id)\;} \delta(s') \]
+\noindent\textbf{1.} \leandeclnamed{call}{PLTS.ABA.WCC.Step.call}.
+Guard $called[id] = \mathrm{false}$.
+\[ s \xrightarrow{\;\mathrm{callW}(r,id)\;} \delta\bigl(s[\,called[id] := \mathrm{true}\,]\bigr) \]
 
 \noindent\textbf{2.} \leandeclnamed{callLoop}{PLTS.ABA.WCC.Step.callLoop}.
 No guard.
 \[ s \xrightarrow{\;\mathrm{callW}(r,id)\;} \delta(s) \]
 
-\noindent\textbf{3.} \leandeclnamed{callResolve}{PLTS.ABA.WCC.Step.callResolve} (D31).
+\noindent\textbf{3.} \leandeclnamed{resolve}{PLTS.ABA.WCC.Step.resolve} (D31).
 Guard
 \[ \begin{aligned}
-     &called[id] = \mathrm{false},\\
-     &\bigl|\{j \in [n] \mid s'.called[j] = \mathrm{true}\}\bigr| > f,\\
+     &\bigl|\{j \in [n] \mid called[j] = \mathrm{true}\}\bigr| > f,\\
      &val = \bot.
    \end{aligned} \]
 \[ \begin{aligned}
-     s \xrightarrow{\;\mathrm{callW}(r,id)\;}\ \
-     &\varepsilon\cdot\delta\bigl(s'[\,val := 0\,]\bigr)
-     + \varepsilon\cdot\delta\bigl(s'[\,val := 1\,]\bigr)\\
-     &{}+ (1-2\varepsilon-\failmass)\cdot\delta\bigl(s'[\,val := \top\,]\bigr)
-     + \failmass\cdot\delta\bigl(s'[\,val := \dagger\,]\bigr)
+     s \xrightarrow{\;\tau\;}\ \
+     &\varepsilon\cdot\delta\bigl(s[\,val := 0\,]\bigr)
+     + \varepsilon\cdot\delta\bigl(s[\,val := 1\,]\bigr)\\
+     &{}+ (1-2\varepsilon-\failmass)\cdot\delta\bigl(s[\,val := \top\,]\bigr)
+     + \failmass\cdot\delta\bigl(s[\,val := \dagger\,]\bigr)
    \end{aligned} \]
+The count of the guard is \leandeclnamed{threshold}{PLTS.ABA.WCC.SpecState.threshold}.
 
 \noindent\textbf{4.} \leandeclnamed{ret}{PLTS.ABA.WCC.Step.ret}.
 Guard $val \in \{b, \top\}$ and $ret[id] = \mathrm{false}$.
@@ -922,9 +916,11 @@ No guard.
 \medskip
 \noindent The guard of transition~4 is positive, so it holds of neither $\bot$ nor $\dagger$.
 A resolution to $\dagger$ therefore enables no return, and no process ever returns from that instance (D17).
-No other transition tells $\dagger$ from the other resolved values: transition~3 requires $val = \bot$, so at $val = \dagger$ a call takes transition~1 or transition~2, and transitions~2 and~5 read $called$, $ret$ and $F$ alone.
+No other transition tells $\dagger$ from the other resolved values: transition~3 requires $val = \bot$, transitions~1 and~2 carry a call at every value of $val$, and transitions~1, 2 and~5 read $called$, $ret$ and $F$ alone.
 
 \dynamics{The coin and its parameters}{%
+The resolution is a silent transition.
+The scheduler places it at any state after the callers number more than $f$, and it fires once per instance.
 One coin resolution has four outcomes.
 With probability $\varepsilon$ the outcome is the bit $0$, and with probability
 $\varepsilon$ it is the bit $1$.
@@ -1804,14 +1800,14 @@ Its relation is defined on the state of $\mathrm{hybrid}(P)$ itself, where the r
 
 \input{nodes/thm-aba-hybrid-spec}
 
-\blueprintfig{fig-coresim}{The simulation of Theorem~\ref{thm:aba-hybrid-spec}, \leandecl{PLTS.ABA.hybridRefinesSpecification}: the two-phase abstract state, its stutter matching every concrete transition --- the coin's resolving call, the one probabilistic transition among them, included --- under a constant coupling, and the single \leandeclnamed{decide}{PLTS.ABA.SpecStep.decide} step that leads the first $\mathrm{retABA}$, the two together forming one weak step.}
+\blueprintfig{fig-coresim}{The simulation of Theorem~\ref{thm:aba-hybrid-spec}, \leandecl{PLTS.ABA.hybridRefinesSpecification}: the two-phase abstract state, its stutter matching every concrete transition --- the coin's resolution, the one probabilistic transition among them, included --- under a constant coupling, and the single \leandeclnamed{decide}{PLTS.ABA.SpecStep.decide} step that leads the first $\mathrm{retABA}$, the two together forming one weak step.}
 
 \dynamics{What the simulation buys}{%
 The abstract state of a state of the hybrid is lazy.
 Every hidden transition is matched by a stutter: the calls and returns, the internal steps
 of the sub-protocol specifications, and the delivery and echo of DECIDED all
 leave the abstract state where it was.
-The coin's resolving call is matched the same way, under the constant
+The silent resolution of the coin is matched the same way, under the constant
 coupling that sends every outcome of the draw to the one unchanged abstract state, so the
 abstract state never fires its own coin transition.
 The entire decision is deferred to the first visible return, where a single
@@ -2212,10 +2208,6 @@ The existence of refinement mappings.
 Gabriel Bracha.
 Asynchronous Byzantine agreement protocols.
 \emph{Information and Computation}, 75(2):130--143, 1987.
-
-\bibitem[GhostDraft]{GhostDraft}
-\emph{Asynchronous Randomized Consensus with Ghost Variables}.
-Working draft, 2026. The specification-style pseudocode whose Fig.~7 the coin encoding follows.
 
 \bibitem[LeslieBP]{LeslieBP}
 Gaspard Reghem.

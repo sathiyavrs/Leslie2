@@ -149,27 +149,23 @@ reading, hence for the union.
 `|AP_id| = n − f`, and the echo transitions take the `≥` form, the accepted-pair set growing
 one entry per delivery and the transition firing at any point past the bound.
 
-**The coin's `⊤` outcome answered at the return.** `WCC.Step.callResolve` draws the coin
-inside the access that carries the caller count above `f`, which is Fig. 7 of the
-ghost-variables draft against TS 3's separately scheduled resolution; that departure carries
-a D-number (D31) and the blueprint registry is where it is glossed. What carries none is how
-the outcome `CoinValue.top` is answered. Three of the four outcomes fix what every caller receives.
-`⊤`
-fixes nothing: `WCC.Step.ret`'s guard `val = .top ∨ val = .bit b` admits either bit, so the
-adversary picks a process's returned bit at that process's return. The draft's Fig. 7 fixes the
-responses at the resolution instead, one bit per process written when the coin resolves. The
-two admit the same per-process assignments, and the encoding lets the adversary choose later,
-with more of the run in view, so the encoding's coin is the more permissive of the two. A
-specification constrains from above, so the refinements hold for the wider reading, hence for
-the narrower one.
+**The coin's resolution and its count.** `WCC.Step.resolve` is the resolution of TS 3, a
+transition of its own on `τ`, enabled at `val = ⊥` once the number of callers exceeds `f`, and
+placed by the scheduler at any state past that count. Its count is a departure, and it carries a
+D-number (D31), glossed in the blueprint registry: the threshold counts callers alone, corrupted
+callers included, where TS 3 counts the corrupted set beside them. The reason is Definition 2.1
+of ABDY22, which defines unpredictability by accesses: the output is unpredictable "until at
+least d + 1 parties have accessed the coin". A corrupted process reaches the instance as a caller
+through its Byzantine call, and a corruption is no access.
 
-The same transition differs from Fig. 7 in a second way, glossed under D31. There every access
-joins the caller set, so the coin resolves inside the `(f + 1)`st access. `WCC.Step.callLoop`
-is unguarded and records no caller, so a call may be answered by it: the resolution happens
-at the `(f + 1)`st recorded access, and the scheduler may defer it by answering calls with
-the loop. The loop is what makes the call label input-enabled, and deferral adds executions
-to the specification, so the encoding's coin is again the wider of the two and the
-refinements hold for it. What the deferral withholds is a return, which is liveness.
+**The coin's `⊤` outcome answered at the return.** Three of the four outcomes fix what every
+caller receives. `CoinValue.top` fixes nothing: `WCC.Step.ret`'s guard
+`val = .top ∨ val = .bit b` admits either bit, so the adversary picks a process's returned bit at
+that process's return, as in TS 3. Fig. 7 of the ghost-variables draft fixes the responses at the
+resolution, one bit per process written when the coin resolves. The two admit the same
+per-process assignments, and the encoding lets the adversary choose later, with more of the run in
+view, so the encoding's coin is the more permissive of the two. A specification constrains from
+above, so the refinements hold for the wider reading, hence for the narrower one.
 
 The `guess` label and the `guess` state field are omitted under either
 reading (D4, §6).

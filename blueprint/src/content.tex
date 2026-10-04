@@ -232,10 +232,11 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
     Two parameters carry it: an update applied on every transition, which replaces the ghost of the round the label names and leaves the other rounds alone, and an output relation on the announced bit guarding the two graded-agreement return transitions, whose three instantiations are Definition~\ref{def:aba-ghost-free}.
     The composed system of the same protocol holds those values in the network components of the round, and the projection relating the two systems reads the ghost onto them.
     Both implementations instantiate one parametric system, so the ghost is a parameter beside the round transitions; it sits at the network because the value a graded return announces is determined by the round's messages and the corrupted set, which the network holds; and a ghost no program reads, whose output admits a bit at every state, is what the removal of Definition~\ref{def:aba-ghost-free} can delete.
-  \item D31: the coin resolves in the access that crosses the threshold, after Fig.~7 of~\cite{GhostDraft}, in place of Transition System~3's separately scheduled resolution transition, so the call label carries two recording transitions under exclusive guards, \leandeclnamed{call}{PLTS.ABA.WCC.Step.call} and \leandeclnamed{callResolve}{PLTS.ABA.WCC.Step.callResolve}, the second drawing $val$ in the step that records the crossing caller.
-    That crossing access is a recorded one, \leandeclnamed{callLoop}{PLTS.ABA.WCC.Step.callLoop} carrying a call at every state and recording no caller, and the threshold counts callers alone, corrupted ones included, where Transition System~3 counts the corrupted set beside them, since a corrupted caller reaches the instance as a caller.
-    That caller-only count is the count of Unpredictability, which asks that all outcomes remain possible until $f+1$ processes have called, where the same threshold with $F$ added resolves at the first correct call once the corruption budget is spent.
-    Were the corrupted set counted, a corruption could carry the count across the threshold, and the family broadcasts $\mathrm{fail}$ by a deterministic transform, on which no resolution can be drawn.
+  \item D31: the threshold of the resolution \leandeclnamed{resolve}{PLTS.ABA.WCC.Step.resolve} counts callers alone, corrupted callers included, where the source counts the corrupted set beside them.
+    A corrupted process reaches the instance as a caller through its Byzantine call, and a corruption is no access.
+    Definition~2.1 of~\cite{ABDY22} defines unpredictability by accesses: the output is unpredictable until at least $d+1$ parties have accessed the coin.
+    The count of callers is the count of that definition at $d = f$.
+    With $F$ added, the same threshold is reached at the first correct call once $|F| = f$.
   \item D32: each $\mathrm{BIND}$ payload is sent by reliable broadcast, through one bind-broadcast instance per process and gather, where Algorithm~5 of~\cite{AFW25} and Algorithm~4 of~\cite{LeslieBP} send it to all.
     The adversary of~\cite{AFW25} chooses the corrupted set initially, so a payload sent to all is fixed by its sender's correctness, where under D1 a sender corrupted after its send may equivocate, and the witness that holds the later returns to the core counts committed payloads, which stay fixed whatever happens to their sender.
   \item D33: both gathers of the round are the binding form, where the second call of Algorithm~4 of~\cite{AFW25} is non-binding.
@@ -307,15 +308,18 @@ Each of the three carries the round's bound bit on its label, drawn beside it as
 \input{nodes-min/thm-gbca-spec-binding}
 \input{nodes-min/thm-gbca-spec-validity}
 
-The WCC instance, over \leandecl{PLTS.ABA.WCC.SpecState}, resolves its coin once into four outcomes, inside the access that carries the number of callers above $f$, and that resolution is the second and last non-Dirac transition of the development.
+The WCC instance, over \leandecl{PLTS.ABA.WCC.SpecState}, resolves its coin once into four outcomes, by a silent transition enabled once the callers number more than $f$.
+That resolution is the second and last non-Dirac transition of the development.
 Its value domain is \leandecl{PLTS.ABA.CoinValue}, ranging over $\{0,1,\bot,\top,\dagger\}$, where $\bot$ is unresolved, $\top$ is an adversarially resolved outcome and $\dagger$ is a resolution that delivers to no process (D17).
-The instance carries no silent transition, so each of its transitions is an access, a return or a corruption.
+The resolution is the one silent transition of the instance, and the scheduler places it at any state after the count exceeds $f$.
+Every other transition is an access, a return or a corruption.
 See \leanmodule{Leslie2Protocols/ABA/Specifications/WCC}.
 
 \input{nodes-min/def-aba-wcc-spec}
 
 \blueprintfig{fig-wcc}{The WCC specification instance \leandecl{PLTS.ABA.WCC.specInst} (Transition System 3): the four-outcome coin resolution and the return of the common bit or an adversary-chosen bit.
-The \leandeclnamed{callResolve}{PLTS.ABA.WCC.Step.callResolve} guard requires that the caller's own access carry the number of callers above $f$ at $val = \bot$, every other call being \leandeclnamed{call}{PLTS.ABA.WCC.Step.call}, and the branch $val{=}\dagger$ of mass $\failmass$ enables no return (D17), \leandeclnamed{ret}{PLTS.ABA.WCC.Step.ret} having a positive guard.}
+The resolution \leandeclnamed{resolve}{PLTS.ABA.WCC.Step.resolve} is a silent transition, enabled at $val = \bot$ once the callers number more than $f$, and every call is \leandeclnamed{call}{PLTS.ABA.WCC.Step.call} or \leandeclnamed{callLoop}{PLTS.ABA.WCC.Step.callLoop}.
+The branch $val{=}\dagger$ of mass $\failmass$ enables no return (D17), \leandeclnamed{ret}{PLTS.ABA.WCC.Step.ret} having a positive guard.}
 
 \section{The protocol}
 \label{sec:aba-protocol}
@@ -443,7 +447,7 @@ See \leanmodule{Leslie2Protocols/ABA/Composition/ABAState} and \leanmodule{Lesli
 
 \input{nodes-min/thm-aba-hybrid-spec}
 
-\blueprintfig{fig-coresim}{The simulation of Theorem~\ref{thm:aba-hybrid-spec}, \leandecl{PLTS.ABA.hybridRefinesSpecification}: the two-phase abstract state, its stutter matching every concrete transition --- the coin's resolving call, the one probabilistic transition among them, included --- under a constant coupling, and the single \leandeclnamed{decide}{PLTS.ABA.SpecStep.decide} step that leads the first $\mathrm{retABA}$, the two together forming one weak step.}
+\blueprintfig{fig-coresim}{The simulation of Theorem~\ref{thm:aba-hybrid-spec}, \leandecl{PLTS.ABA.hybridRefinesSpecification}: the two-phase abstract state, its stutter matching every concrete transition --- the coin's resolution, the one probabilistic transition among them, included --- under a constant coupling, and the single \leandeclnamed{decide}{PLTS.ABA.SpecStep.decide} step that leads the first $\mathrm{retABA}$, the two together forming one weak step.}
 
 \subsection{The main theorems}
 
@@ -644,10 +648,6 @@ The existence of refinement mappings.
 Gabriel Bracha.
 Asynchronous Byzantine agreement protocols.
 \emph{Information and Computation}, 75(2):130--143, 1987.
-
-\bibitem[GhostDraft]{GhostDraft}
-\emph{Asynchronous Randomized Consensus with Ghost Variables}.
-Working draft, 2026. The specification-style pseudocode whose Fig.~7 the coin encoding follows.
 
 \bibitem[LeslieBP]{LeslieBP}
 Gaspard Reghem.

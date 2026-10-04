@@ -866,7 +866,7 @@ theorem step_deliver₂ :
 
 /-- Process `0` returns `true`: it has multicast `⟨DECIDED, true⟩` — the
 network's conjunct — and has received DECIDED-true messages from `n − f = 3` distinct
-senders — the round loop's. The whole 23-step run, every step a Dirac except the single
+senders — the round loop's. The whole 24-step run, every step a Dirac except the single
 `ε`-mass coin resolution, carries positive probability and ends in a genuine
 `retABA`. -/
 theorem step_retABA :
