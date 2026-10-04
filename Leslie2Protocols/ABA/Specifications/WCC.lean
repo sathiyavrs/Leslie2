@@ -10,32 +10,28 @@ import Leslie2Protocols.Framework.LoopsAndInstanceFamilies
 /-!
 # The WCC specification instance (blueprint Transition System 3)
 
-The round-`r` instance of the Weak Common Coin specification. The coin
-resolves inside the `(f+1)`st recorded access: the call that carries the number of
-callers above `f` at an unresolved `val` draws `val` from `wccPMF` -- each bit
-with probability `ε` (all correct processes receive that bit), the failure
-outcome with probability `δ`, and `⊤` with the remaining mass. Under `⊤`
-delivery happens and each process's returned bit is left to the adversary.
-That call is the only probabilistic transition of the instance, and the only
-one of the whole development besides `ABA.spec`'s.
-
-The call label therefore carries two transitions. The recording call takes a caller
-that does not cross the threshold, or one at an already resolved `val`, and
-records it. The resolving call takes the crossing caller at `val = ⊥`, and
-records it while drawing `val`. Their guards are exclusive.
+The round-`r` instance of the Weak Common Coin specification. A call records
+its caller. The resolution is a silent transition, enabled at `val = ⊥` once the
+number of callers exceeds `f`, and placed by the scheduler. It draws `val` from
+`wccPMF`: each bit with probability `ε` (all correct processes receive that
+bit), the failure outcome with probability `δ`, and `⊤` with the remaining
+mass. Under `⊤` delivery happens and each process's returned bit is left to the
+adversary. The resolution is the only probabilistic transition of the
+instance, and the only one of the whole development besides `ABA.spec`'s.
 
 The coin's value domain `ABA.CoinValue` is declared here, together with the map
 `ABA.CoinOutcome.toCoinValue` that sends a `wccPMF` outcome to the value the
 resolution writes.
 
-## Why the corrupted set is not counted
+## The count of callers
 
-The threshold is `P.f < |{id | called id}|`: it counts accesses. A corrupted
+The threshold is `P.f < |{id | called id}|`. It counts callers alone, after
+Definition 2.1 of ABDY22, which counts accesses to the coin. A corrupted
 process reaches the instance as a caller, since `coinLabelMap` sends its
-`byzantineCallW r k` to `callW r k`, so `called` already counts it. Were `F` added
-to the count, a corruption would be able to carry the count across the
-threshold; the family combinator broadcasts `fail` by a deterministic
-transform, so that resolution would have to be drawn on a Dirac transition.
+`byzantineCallW r k` to `callW r k`, so `called` counts it. The corrupted set
+`F` is not added to the count. The family combinator broadcasts `fail` by a
+deterministic transform, so a corruption cannot enable the resolution on its
+own.
 
 Deviations: the `guess` label is omitted (D4 -- it exists solely for the
 out-of-scope Unpredictability property), and `fail` is the determinised
@@ -52,19 +48,8 @@ out-of-scope Unpredictability property), and `fail` is the determinised
   delivery does happen and the adversary merely picks each process's returned
   bit.
 
-* **D31 (resolution inside the crossing access).** The coin resolves inside
-  the access that crosses the threshold, and the threshold counts accesses
-  alone, following Fig. 7 of *Asynchronous Randomized Consensus with Ghost
-  Variables* (working draft, 2026). Transition System 3 resolves
-  by a separately scheduled transition and counts the corrupted set alongside the
-  callers. The crossing access is a recorded one: `WCC.Step.callLoop` carries
-  the call label at every state and records no caller, so a call may be
-  answered there, and the scheduler may defer the resolution past any number
-  of calls. No safety theorem of the development depends on the coin
-  resolving.
-
-The instance only steps on its own round-`r` API labels and `fail`; it has no
-silent transition (`WCC.step_tau_cases`), and the family combinator (`System.family`)
+The instance steps on its own round-`r` API labels, on `fail`, and on `τ` by the
+resolution (`WCC.step_tau_cases`). The family combinator (`System.family`)
 supplies idle self-loops on every other label.
 -/
 
@@ -72,7 +57,7 @@ namespace PLTS
 namespace ABA
 
 /-- A `⊤`-completed value: `⊥`, `⊤`, a bit, or a failed resolution. The value
-domain of the weak common coin, written by `WCC.Step.callResolve` and read by
+domain of the weak common coin, written by `WCC.Step.resolve` and read by
 `WCC.Step.ret`. -/
 inductive CoinValue : Type
   /-- Unresolved (`⊥`). -/
@@ -124,8 +109,7 @@ def initial (n : ℕ) : SpecState n where
   val := .bot
   F := ∅
 
-/-- The state with `id`'s access recorded. Both call transitions produce their
-successor from it, and the resolution threshold is read at it. -/
+/-- The state with `id`'s access recorded: the successor of `id`'s call. -/
 def record (s : SpecState n) (id : Fin n) : SpecState n :=
   { s with called := Function.update s.called id true }
 
@@ -157,20 +141,15 @@ end SpecState
 /-- The step relation of the round-`r` WCC specification instance. -/
 inductive Step (P : Parameters) (r : ℕ) :
     SpecState P.n → Label P.n → PMF (SpecState P.n) → Prop
-  /-- A process calls the coin and the call records nothing further: either the
-  call leaves the caller count at `f` or below, or `val` is already resolved. -/
-  | callRecord (s : SpecState P.n) (id : Fin P.n) (h : s.called id = false)
-      (hres : ¬ ((s.record id).threshold P ∧ s.val = .bot)) :
+  /-- A process calls the coin, and the call records the caller. -/
+  | call (s : SpecState P.n) (id : Fin P.n) (h : s.called id = false) :
       Step P r s (.callW r id) (PMF.pure (s.record id))
-  /-- A process calls the coin, its access carries the caller count above `f`,
-  and `val` is unresolved: the call records the caller and draws `val` from
-  `wccPMF`. This is the instance's only probabilistic transition. Outcome
-  `undelivered` (mass `δ`, deviation D17) resolves the coin without
-  delivering. -/
-  | callResolve (s : SpecState P.n) (id : Fin P.n) (h : s.called id = false)
-      (hv : s.val = .bot) (ht : (s.record id).threshold P) :
-      Step P r s (.callW r id)
-        (P.wccPMF.map (fun o => { s.record id with val := o.toCoinValue }))
+  /-- The coin resolves: at an unresolved `val` with the number of callers above
+  `f`, `val` is drawn from `wccPMF`. This is the instance's only probabilistic
+  transition. Outcome `undelivered` (mass `δ`, deviation D17) resolves the coin
+  without delivering. -/
+  | resolve (s : SpecState P.n) (hv : s.val = .bot) (ht : s.threshold P) :
+      Step P r s .tau (P.wccPMF.map (fun o => { s with val := o.toCoinValue }))
   /-- Input-enabledness loop for `call`. -/
   | callLoop (s : SpecState P.n) (id : Fin P.n) :
       Step P r s (.callW r id) (PMF.pure s)
@@ -185,39 +164,34 @@ inductive Step (P : Parameters) (r : ℕ) :
   | fail (s : SpecState P.n) (id : Fin P.n) :
       Step P r s (.fail id) (PMF.pure (s.corrupt P id))
 
-/-- The three transitions of the call label: the input-enabledness loop, the recording
-call, and the resolving call. -/
+/-- The two transitions of the call label: the input-enabledness loop and the call that
+records the caller. -/
 theorem step_callW_cases {P : Parameters} {r : ℕ} {s : SpecState P.n} {id : Fin P.n}
     {μ : PMF (SpecState P.n)} (h : Step P r s (.callW r id) μ) :
-    μ = PMF.pure s ∨
-      (s.called id = false ∧ ¬ ((s.record id).threshold P ∧ s.val = .bot) ∧
-        μ = PMF.pure (s.record id)) ∨
-      (s.called id = false ∧ s.val = .bot ∧ (s.record id).threshold P ∧
-        μ = P.wccPMF.map (fun o => { s.record id with val := o.toCoinValue })) := by
+    μ = PMF.pure s ∨ (s.called id = false ∧ μ = PMF.pure (s.record id)) := by
   cases h with
-  | callRecord _ h hres => exact Or.inr (Or.inl ⟨h, hres, rfl⟩)
-  | callResolve _ h hv ht => exact Or.inr (Or.inr ⟨h, hv, ht, rfl⟩)
+  | call _ h => exact Or.inr ⟨h, rfl⟩
   | callLoop => exact Or.inl rfl
 
-/-- The instance has no silent transition. -/
+/-- The silent transition of the instance is the resolution: it is enabled at an
+unresolved `val` with the number of callers above `f`, and draws `val` from `wccPMF`. -/
 theorem step_tau_cases {P : Parameters} {r : ℕ} {s : SpecState P.n}
-    {μ : PMF (SpecState P.n)} : ¬ Step P r s .tau μ := by
-  intro h; cases h
+    {μ : PMF (SpecState P.n)} (h : Step P r s .tau μ) :
+    s.val = .bot ∧ s.threshold P ∧
+      μ = P.wccPMF.map (fun o => { s with val := o.toCoinValue }) := by
+  cases h with
+  | resolve hv ht => exact ⟨hv, ht, rfl⟩
 
 /-- A state in the support of a call's successor either is the state the call
 was taken at -- the input-enabledness loop -- or records the call. -/
 theorem step_callW_support {P : Parameters} {r : ℕ} {s : SpecState P.n} {id : Fin P.n}
     {μ : PMF (SpecState P.n)} (h : Step P r s (.callW r id) μ)
     {x : SpecState P.n} (hx : x ∈ μ.support) : x = s ∨ x.called id = true := by
-  rcases step_callW_cases h with rfl | ⟨-, -, rfl⟩ | ⟨-, -, -, rfl⟩
+  rcases step_callW_cases h with rfl | ⟨-, rfl⟩
   · exact Or.inl (by simpa using hx)
   · simp only [PMF.support_pure, Set.mem_singleton_iff] at hx
     subst hx
     exact Or.inr (by simp)
-  · refine Or.inr ?_
-    simp only [PMF.support_map, Set.mem_image] at hx
-    obtain ⟨o, -, rfl⟩ := hx
-    simp
 
 /-- The round-`r` WCC specification instance. -/
 noncomputable def specInst (P : Parameters) (r : ℕ) : System (SpecState P.n) (Label P.n) where
@@ -243,16 +217,17 @@ noncomputable def specFamily (P : Parameters) :
     System (ℕ → SpecState P.n) (Label P.n) :=
   System.family (specInst P) Label.wccRound Label.isFail (failAct P)
 
-/-- The family has no silent transition: its instances have none, and every other
-transition of `System.family` carries a label other than `τ`. -/
+/-- The silent transition of the family is one instance's resolution: some round `r`
+takes its `τ`, and every other round is unchanged. -/
 theorem specFamily_tau_cases (P : Parameters) {o : ℕ → SpecState P.n}
-    {ω : PMF (ℕ → SpecState P.n)} : ¬ (specFamily P).step o Label.tau ω := by
-  rw [specFamily, System.family_step_iff]
-  rintro (⟨-, r, μr, hstep, -⟩ | ⟨r, hr, -⟩ | ⟨hτ, -⟩ | ⟨hτ, -⟩)
-  · exact step_tau_cases hstep
+    {ω : PMF (ℕ → SpecState P.n)} (h : (specFamily P).step o Label.tau ω) :
+    ∃ r μr, Step P r (o r) .tau μr ∧ ω = μr.map (Function.update o r) := by
+  rw [specFamily, System.family_step_iff] at h
+  rcases h with ⟨-, r, μr, hstep, rfl⟩ | ⟨r, hr, -⟩ | ⟨hτ, -⟩ | ⟨hτ, -⟩
+  · exact ⟨r, μr, hstep, rfl⟩
   · exact absurd hr (by simp [Label.wccRound])
-  · exact hτ rfl
-  · exact hτ rfl
+  · exact absurd rfl hτ
+  · exact absurd rfl hτ
 
 end WCC
 end ABA

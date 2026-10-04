@@ -46,14 +46,14 @@ composition's gather states.
 The three families, the three composed systems, and the lemmas that read and build their
 transitions. `roundFamilyOverBracha_owned`, `roundFamilyOverBracha_tau`,
 `roundFamilyOverBracha_idle` and `roundFamilyOverBracha_fail` place a transition of one round in
-the family. `composedExtended_visible_step`, `composedExtended_tau_overBracha` and
-`composedExtended_tau_ABANetwork` assemble a transition of the four components out of transitions
-of each, and `composedHidden_of_event` and `composedHidden_of_tau` carry one through the two
-hidings. `roundFamilyOverBracha_silentRun`, `roundFamilyOverBracha_weakStep`,
-`composedHidden_weakTau` and `composedHidden_weakStep` do the same for a run. The protocol meets
-`AFW.composed` in `ABA/AFW/Simulation.lean`, along the projection of
-`ABA/AFW/RoundProjection.lean`, and
-`ABA/AFW/Substitution.lean` carries `AFW.composed` to `hybrid` in three stages.
+the family. `composedExtended_visible_step`, `composedExtended_tau_overBracha`,
+`composedExtended_tau_ABANetwork` and `composedExtended_tau_coin` assemble a transition of the
+four components out of transitions of each, and `composedHidden_of_event` and
+`composedHidden_of_tau` carry one through the two hidings. `roundFamilyOverBracha_silentRun`,
+`roundFamilyOverBracha_weakStep`, `composedHidden_weakTau` and `composedHidden_weakStep` do the
+same for a run. The protocol meets `AFW.composed` in `ABA/AFW/Simulation.lean`, along the
+projection of `ABA/AFW/RoundProjection.lean`, and `ABA/AFW/Substitution.lean` carries
+`AFW.composed` to `hybrid` in three stages.
 -/
 
 namespace PLTS
@@ -303,6 +303,22 @@ theorem composedExtended_tau_ABANetwork (P : Parameters)
     rw [System.parallel_step]
     exact Or.inr (Or.inl ⟨rfl, PMF.pure A', hA, rfl⟩)
   · rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure]
+
+/-- Build a silent transition of the four components from the resolution of one round of the
+common coin. -/
+theorem composedExtended_tau_coin (P : Parameters)
+    {G : ℕ → GBCA.ByAFW.RoundStateOverBracha P.n} {C : ∀ _ : Fin P.n, RoundLoopVariables P.n}
+    {A : ABANetworkState P.n} {o : ℕ → WCC.SpecState P.n} {r : ℕ}
+    {μw : PMF (WCC.SpecState P.n)} (hW : WCC.Step P r (o r) Label.tau μw) :
+    (composedExtended P).step (G, C, A, o) (Sum.inl Label.tau)
+      (prodPMF (PMF.pure G) (prodPMF (PMF.pure C)
+        (prodPMF (PMF.pure A) (μw.map (Function.update o r))))) := by
+  rw [composedExtended, System.parallel_step]
+  refine Or.inr (Or.inr ⟨rfl, _, ?_, rfl⟩)
+  rw [System.parallel_step]
+  refine Or.inr (Or.inr ⟨rfl, _, ?_, rfl⟩)
+  rw [System.parallel_step]
+  exact Or.inr (Or.inr ⟨rfl, _, coinOverExtendedAlphabet_tau P Empty Empty o hW, rfl⟩)
 
 /-! ### The two hidings -/
 

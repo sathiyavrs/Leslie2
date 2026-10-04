@@ -35,9 +35,9 @@ idles.
 `hybrid` and its transitions. The builders assemble a transition of the composite out of
 transitions of its components (`gbcaSpecificationFamily_owned`, `gbcaSpecificationFamily_idle`,
 `gbcaSpecificationFamily_tau`, `gbcaSpecificationFamily_fail`, `hybridExtended_visible_step`,
-`hybridExtended_tau_specification`, `hybrid_synchronisation`, `hybrid_hidden`, `hybrid_visible`).
-The
-common coin's own transitions over the round alphabet are `wccFamily_owned` and `wccFamily_fail`.
+`hybridExtended_tau_specification`, `hybridExtended_tau_coin`, `hybrid_synchronisation`,
+`hybrid_hidden`, `hybrid_visible`). The common coin's own transitions over the round alphabet are
+`wccFamily_owned`, `wccFamily_fail` and the resolution `wccFamily_tau`.
 The account also runs in the inverse direction, from a composite transition back into the
 transitions its four components contributed. A labelled transition reaches `hybrid` along one of
 three routes through the two hidings: a synchronisation label and a sub-protocol API label are
@@ -342,9 +342,25 @@ theorem hybridExtended_tau_specification (P : Parameters) {G G' : ℕ → GBCA.S
   refine Or.inr (Or.inl ⟨rfl, PMF.pure G', hG, ?_⟩)
   rw [prodPMF_pure_pure]
 
-/-- A silent transition of the four components: no round loop has a `τ` transition, and neither
-has the common coin, so it is the specification family's binding exclusion or the ABA network's
-own injection. -/
+/-- Build a silent transition of the four components from the resolution of one round of the
+common coin. -/
+theorem hybridExtended_tau_coin (P : Parameters) {G : ℕ → GBCA.SpecState P.n}
+    {C : ∀ _ : Fin P.n, RoundLoopVariables P.n} {A : ABANetworkState P.n}
+    {o : ℕ → WCC.SpecState P.n} {r : ℕ} {μw : PMF (WCC.SpecState P.n)}
+    (hW : WCC.Step P r (o r) Label.tau μw) :
+    (hybridExtended P M).step (G, C, A, o) (Sum.inl Label.tau)
+      (prodPMF (PMF.pure G) (prodPMF (PMF.pure C)
+        (prodPMF (PMF.pure A) (μw.map (Function.update o r))))) := by
+  rw [hybridExtended, System.parallel_step]
+  refine Or.inr (Or.inr ⟨rfl, _, ?_, rfl⟩)
+  rw [System.parallel_step]
+  refine Or.inr (Or.inr ⟨rfl, _, ?_, rfl⟩)
+  rw [System.parallel_step]
+  exact Or.inr (Or.inr ⟨rfl, _, coinOverExtendedAlphabet_tau P M Empty o hW, rfl⟩)
+
+/-- A silent transition of the four components: no round loop has a `τ` transition, so it is
+the specification family's binding exclusion, the ABA network's own injection, or the
+resolution of one round of the common coin. -/
 theorem hybridExtended_tau_cases (P : Parameters) {G : ℕ → GBCA.SpecState P.n}
     {C : ∀ _ : Fin P.n, RoundLoopVariables P.n} {A : ABANetworkState P.n} {o : ℕ → WCC.SpecState
       P.n}
@@ -352,7 +368,10 @@ theorem hybridExtended_tau_cases (P : Parameters) {G : ℕ → GBCA.SpecState P.
     (∃ G', (gbcaSpecificationFamily P M).step G (Sum.inl Label.tau) (PMF.pure G') ∧
         μ = PMF.pure (G', C, A, o)) ∨
     (∃ A', ABANetworkStep P A (Sum.inl Label.tau : ExtendedLabel P.n M) (PMF.pure A') ∧
-      μ = PMF.pure (G, C, A', o)) := by
+      μ = PMF.pure (G, C, A', o)) ∨
+    (∃ (r : ℕ) (μw : PMF (WCC.SpecState P.n)), WCC.Step P r (o r) Label.tau μw ∧
+      μ = prodPMF (PMF.pure G) (prodPMF (PMF.pure C)
+        (prodPMF (PMF.pure A) (μw.map (Function.update o r))))) := by
   rw [hybridExtended, System.parallel_step] at h
   rcases h with ⟨habs, -⟩ | ⟨-, μ₁, hG, rfl⟩ | ⟨-, μ₂, hrest, rfl⟩
   · exact absurd rfl habs
@@ -366,10 +385,11 @@ theorem hybridExtended_tau_cases (P : Parameters) {G : ℕ → GBCA.SpecState P.
       rcases hrest with ⟨habs, -⟩ | ⟨-, μ₃, hA, rfl⟩ | ⟨-, ω, hW, rfl⟩
       · exact absurd rfl habs
       · obtain ⟨A', rfl⟩ := abaNetworkStep_dirac hA
-        exact Or.inr ⟨A', hA,
-          by rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure]⟩
-      · exact (WCC.specFamily_tau_cases P
-          ((System.mapIdle_step_some (coinLabelMap_inl Label.tau) ω).mp hW)).elim
+        exact Or.inr (Or.inl ⟨A', hA,
+          by rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure]⟩)
+      · obtain ⟨r, μw, hstep, rfl⟩ := WCC.specFamily_tau_cases P
+          ((System.mapIdle_step_some (coinLabelMap_inl Label.tau) ω).mp hW)
+        exact Or.inr (Or.inr ⟨r, μw, hstep, rfl⟩)
 
 /-! ### The two hidings -/
 

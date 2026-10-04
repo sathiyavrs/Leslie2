@@ -26,7 +26,7 @@ The transitions dispatch as follows. A visible `callABA` is matched by
 `SpecStep.callByzantine` at a corrupted process. A never-corrupted process's visible
 `retABA` is matched by `SpecStep.decide` followed by `SpecStep.ret` on the
 first such transition, and by `SpecStep.ret` alone on every later one. Every
-hidden transition, the coin's resolving call included, is matched by a
+hidden transition, the coin's resolution included, is matched by a
 stutter: the abstract state's mode stays `ControlMode.flipEnabled`, so it never fires
 `SpecStep.coinFlip` and `SpecStep.decide` remains enabled when the first
 return arrives. A `fail` is matched by `SpecStep.fail`, whose two guards are
@@ -59,7 +59,7 @@ outcome `μ_C` relates to the *same* abstract state `a` (via `hybridSpecificatio
 abstract state matches it by the trivial `weakTau_refl` stutter: the coupling `Ω := μ_C.map (fun
 s' => (s', pure a))` has first marginal `μ_C` and second marginal the constant `pure (pure a)`
 (`PMF.map_const`), so `ω := pure (pure a)` and `ω.bind id = pure a` (`PMF.pure_bind`). Reused by
-every hidden transition, the coin's resolving call included. -/
+every hidden transition, the coin's resolution included. -/
 private theorem stutter_step {P : Parameters} (μ_C : PMF (HybridState P)) (a : SpecState P.n)
     (hA : ∀ s' ∈ μ_C.support, hybridSpecificationStateRelation P s' a) :
     ∃ ω : PMF (PMF (SpecState P.n)),
@@ -145,7 +145,7 @@ theorem hybridRefinesSpecification (P : Parameters) (M : Type) [DecidableEq M] :
         ⟨r, id, b, μr, μc, hstepG, hstepC, rfl⟩ |
         ⟨r, id, out, bnd, μr, μc, hstepG, hstepC, rfl⟩ |
         ⟨r, id, μw', μc, hstepW, hstepC, rfl⟩ | ⟨r, id, b, μw', μc, hstepW, hstepC, rfl⟩ |
-        ⟨id, b, μc, ⟨-, hph, hlg, rfl⟩, rfl⟩
+        ⟨id, b, μc, ⟨-, hph, hlg, rfl⟩, rfl⟩ | ⟨r, μw, hstepW, rfl⟩
       · -- the round's own `GBCA.Step.bindUnset` — the abstract state stutters
         obtain ⟨ω, hRel, hWeak⟩ := stutter_step _ a (fun s' hs' => by
           obtain ⟨g', C', A', w'⟩ := s'
@@ -215,6 +215,13 @@ theorem hybridRefinesSpecification (P : Parameters) (M : Type) [DecidableEq M] :
           rw [PMF.mem_support_pure_iff] at hc2
           obtain ⟨rfl, rfl⟩ := Prod.ext_iff.mp hc2
           exact ⟨hI', hAbs.step_decidedSend hI id b hph hlg⟩)
+        exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
+      · -- the coin's resolution
+        obtain ⟨ω, hRel, hWeak⟩ := stutter_step _ a (fun s' hs' => by
+          obtain ⟨g', C', A', w'⟩ := s'
+          have hI' := hI.step hstep hs'
+          obtain ⟨rfl, rfl, rfl, wr', -, rfl⟩ := mem_support_coinResolution hs'
+          exact ⟨hI', hAbs.step_resolve r wr'⟩)
         exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
     | callABA id b =>
       rw [hybrid_step_callABA P g C A w id b hI.corrupted_F] at hstep

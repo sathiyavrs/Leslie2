@@ -14,7 +14,7 @@ assembly of Stages A–C.
 
 * **Stage C** — `AbstractState` preservation for the stutter transitions. The abstract state is
   untouched by every hidden transition and moves only at the visible ones
-  (`callABA`/`retABA`/`fail`, handled in `HybridRefinesSpecification/Simulation.lean`). All seven
+  (`callABA`/`retABA`/`fail`, handled in `HybridRefinesSpecification/Simulation.lean`). All eight
   lemmas are instances of one argument about a write elsewhere, `AbstractState.unchangedBy`.
 * **Assembly** — `Invariant.step`: `Invariant` is preserved by every `hybrid` step,
   dispatching on the label class through Stage A's step-case lemmas and calling
@@ -36,9 +36,9 @@ variable {M : Type} [DecidableEq M]
 
 /-! ### Stage C: `AbstractState` preservation for the stutter transitions
 
-Every one of `hybrid_step_tau`'s seven disjuncts is matched by a stutter: the abstract state is
+Every one of `hybrid_step_tau`'s eight disjuncts is matched by a stutter: the abstract state is
 untouched by every hidden transition and only moves at the visible ones
-(`callABA`/`retABA`/`fail`), handled in `HybridRefinesSpecification/Simulation.lean`. All seven
+(`callABA`/`retABA`/`fail`), handled in `HybridRefinesSpecification/Simulation.lean`. All eight
 lemmas below are instances of a single argument about a write elsewhere: `AbstractState` inspects
 only `F`, the per-process `input`/`returned` projections, and the grade-2 witnesses on
 `g` — and each transition preserves all three. -/
@@ -217,6 +217,14 @@ theorem AbstractState.step_decidedSend {P : Parameters} {g : ℕ → GBCA.SpecSt
   exact hA.unchangedBy (ABAState.sendDecidedOnGrade2_F _ _ _) (fun id' => (hCUnchanged id').1)
     (fun id' => (hCUnchanged id').2) hAF
 
+/-- The coin's resolution: stutters. The resolution writes the coin instance of one round alone,
+which `AbstractState` does not read, and leaves `g` and the core unchanged. -/
+theorem AbstractState.step_resolve {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
+    {c : ABAState P} {w : ℕ → WCC.SpecState P.n} {a : SpecState P.n}
+    (hA : AbstractState P g c w a) (r : ℕ) (wr' : WCC.SpecState P.n) :
+    AbstractState P g c (Function.update w r wr') a :=
+  hA.unchangedBy rfl (fun _ => rfl) (fun _ => rfl) (AbstractStateUnchanged.refl P g c)
+
 /-! ### Assembly: `Invariant` is preserved by every `hybrid` step -/
 
 /-- Reading a transition where the ABA component moves alone: its own outcome, the common coin
@@ -245,6 +253,18 @@ theorem mem_support_coinTransition {P : Parameters} {μc : PMF (ABAState P)}
   obtain ⟨rfl, rfl, wr', hwr', heq⟩ := hmem
   exact ⟨hc, wr', hwr', heq.symm⟩
 
+/-- Reading a transition where the common coin moves alone: `g` and the core unchanged, the coin
+instance of round `r` drawn from its own outcome. -/
+theorem mem_support_coinResolution {P : Parameters} {G g' : ℕ → GBCA.SpecState P.n}
+    {C C' : ∀ _ : Fin P.n, RoundLoopVariables P.n} {A A' : ABANetworkState P.n}
+    {μw : PMF (WCC.SpecState P.n)} {o w' : ℕ → WCC.SpecState P.n} {r : ℕ}
+    (h : (g', C', A', w') ∈ (prodPMF (PMF.pure G) (prodPMF (PMF.pure C)
+      (prodPMF (PMF.pure A) (μw.map (Function.update o r))))).support) :
+    g' = G ∧ C' = C ∧ A' = A ∧ ∃ wr' ∈ μw.support, w' = Function.update o r wr' := by
+  simp only [mem_support_prodPMF, PMF.mem_support_pure_iff, PMF.mem_support_map_iff] at h
+  obtain ⟨rfl, rfl, rfl, wr', hwr', heq⟩ := h
+  exact ⟨rfl, rfl, rfl, wr', hwr', heq.symm⟩
+
 /-- **`Invariant` is preserved.** Dispatches on the label class via `hybrid_step_callABA`/
 `hybrid_step_retABA`/`hybrid_step_fail` (Stage A1) and `hybrid_step_tau` (Stage A2), calling
 the matching `Invariant.step_*` helper (Stage B) in each case. -/
@@ -264,7 +284,8 @@ theorem Invariant.step {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
       ⟨r, id, out, bnd, μr, μc, hstepG, hstepC, rfl⟩ |
       ⟨r, id, μw', μc, hstepW, hstepC, rfl⟩ |
       ⟨r, id, b, μw', μc, hstepW, hstepC, rfl⟩ |
-      ⟨id, b, μc, ⟨-, hph, hlg, rfl⟩, rfl⟩
+      ⟨id, b, μc, ⟨-, hph, hlg, rfl⟩, rfl⟩ |
+      ⟨r, μw, hstepW, rfl⟩
     · simp only [mem_support_prodPMF] at hmem
       obtain ⟨h1, h2⟩ := hmem
       rw [PMF.mem_support_map_iff] at h1
@@ -313,6 +334,11 @@ theorem Invariant.step {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
       rw [PMF.mem_support_pure_iff] at hc2
       rw [h1, hc2]
       exact (Invariant.step_decidedSend hI id b hph hlg).1
+    · obtain ⟨rfl, rfl, rfl, wr', hwr', rfl⟩ := mem_support_coinResolution hmem
+      obtain ⟨hv, ht, rfl⟩ := WCC.step_tau_cases hstepW
+      rw [PMF.mem_support_map_iff] at hwr'
+      obtain ⟨oc, -, rfl⟩ := hwr'
+      exact hI.step_resolve r ht hv oc
   | callABA id b =>
     rw [hybrid_step_callABA P g C A w id b hI.corrupted_F] at hstep
     obtain ⟨μc, hstepC, rfl⟩ := hstep

@@ -609,8 +609,8 @@ theorem protocolExtended_label_cases (P : Parameters) {u : ∀ _ : Fin P.n, Proc
       μ = prodPMF (PMF.pure x) (prodPMF (PMF.pure w') ω) :=
   systemExtended_label_cases hl h
 
-/-- A silent shared-label transition: one process terminating, or the network's
-own injection. The common coin has no silent transition, so it contributes none. -/
+/-- A silent shared-label transition: one process terminating, the network's own
+injection, or the resolution of one round of the common coin. -/
 theorem protocolExtended_tau_cases (P : Parameters) {u : ∀ _ : Fin P.n, ProcessVariables P.n}
     {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
     {μ : PMF (ABDY.ProtocolState P)}
@@ -618,7 +618,9 @@ theorem protocolExtended_tau_cases (P : Parameters) {u : ∀ _ : Fin P.n, Proces
     (∃ (i : Fin P.n) (y : ProcessVariables P.n),
       ABAProgramStep P i (u i) (Sum.inl Label.tau) (PMF.pure y) ∧
       μ = PMF.pure (Function.update u i y, w, o)) ∨
-    (∃ w', NetworkStep P w (Sum.inl .tau) (PMF.pure w') ∧ μ = PMF.pure (u, w', o)) :=
+    (∃ w', NetworkStep P w (Sum.inl .tau) (PMF.pure w') ∧ μ = PMF.pure (u, w', o)) ∨
+    (∃ (r : ℕ) (μw : PMF (WCC.SpecState P.n)), WCC.Step P r (o r) Label.tau μw ∧
+      μ = prodPMF (PMF.pure u) (prodPMF (PMF.pure w) (μw.map (Function.update o r)))) :=
   systemExtended_tau_cases h
 
 /-! ### ABDY22's own transitions, by label class

@@ -38,7 +38,8 @@ the set of all of them — is what both compositions hide before reading the res
 The common coin `WCC.specFamily` is over `Label n`, so it is joined to the extended alphabet through
 the label pullback `coinLabelMap`, which sends a shared label to itself, the Byzantine call and
 return transitions to the coin's own call and return transitions, and every other network event
-out of the domain. `coinOverRoundAlphabet` is the coin read along that
+out of the domain. `τ` is a shared label, so the coin's resolution is a silent transition of the
+coin read along the pullback. `coinOverRoundAlphabet` is the coin read along that
 pullback at this alphabet. It is a component of both compositions, unchanged.
 
 ## The round loop of one process

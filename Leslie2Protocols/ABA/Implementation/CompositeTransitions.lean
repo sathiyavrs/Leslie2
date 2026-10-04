@@ -164,8 +164,8 @@ theorem systemExtended_label_cases {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
   · rw [extendedLabel_tau] at habs; exact absurd (Sum.inl_injective habs) hl
   · rw [extendedLabel_tau] at habs; exact absurd (Sum.inl_injective habs) hl
 
-/-- A silent shared-label transition: one process terminating, or the network's
-own injection. The common coin has no silent transition, so it contributes none. -/
+/-- A silent shared-label transition: one process terminating, the network's own
+injection, or the resolution of one round of the common coin. -/
 theorem systemExtended_tau_cases {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
     {w : NetworkState P.n M G} {o : ℕ → WCC.SpecState P.n}
     {μ : PMF (State P M S G)}
@@ -176,7 +176,9 @@ theorem systemExtended_tau_cases {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
       μ = PMF.pure (Function.update u i y, w, o)) ∨
     (∃ w', NetworkStep P M E G ghostStep ghostOutput w (Sum.inl .tau)
         (PMF.pure w') ∧
-      μ = PMF.pure (u, w', o)) := by
+      μ = PMF.pure (u, w', o)) ∨
+    (∃ (r : ℕ) (μw : PMF (WCC.SpecState P.n)), WCC.Step P r (o r) Label.tau μw ∧
+      μ = prodPMF (PMF.pure u) (prodPMF (PMF.pure w) (μw.map (Function.update o r)))) := by
   rw [systemExtended, System.parallel_step] at h
   rcases h with ⟨habs, -⟩ | ⟨-, μ₁, hS, rfl⟩ | ⟨-, μ₂₃, hNW, rfl⟩
   · exact absurd rfl habs
@@ -186,9 +188,10 @@ theorem systemExtended_tau_cases {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
     rcases hNW with ⟨habs, -⟩ | ⟨-, μ₂, hN, rfl⟩ | ⟨-, μ₃, hO, rfl⟩
     · exact absurd rfl habs
     · obtain ⟨w', rfl⟩ := networkStep_dirac hN
-      exact Or.inr ⟨w', hN, by rw [prodPMF_pure_pure, prodPMF_pure_pure]⟩
-    · exact (ABA.WCC.specFamily_tau_cases P
-        ((System.mapIdle_step_some (coinLabelMap_inl Label.tau) μ₃).mp hO)).elim
+      exact Or.inr (Or.inl ⟨w', hN, by rw [prodPMF_pure_pure, prodPMF_pure_pure]⟩)
+    · obtain ⟨r, μw, hstep, rfl⟩ := ABA.WCC.specFamily_tau_cases P
+        ((System.mapIdle_step_some (coinLabelMap_inl Label.tau) μ₃).mp hO)
+      exact Or.inr (Or.inr ⟨r, μw, hstep, rfl⟩)
 
 /-! ### The bound bit on a return
 

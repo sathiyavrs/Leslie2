@@ -929,7 +929,8 @@ theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessVar
 
 /-- The matching on the silent label. The protocol's own `terminate` transition writes
 no coordinate the relation reads, so the composed system matches it by standing
-still; the adversary's two injections are matched by a transition. -/
+still; the adversary's two injections and the resolution of a round of the common coin are
+matched by a transition. -/
 theorem coupling_tau (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessVariables P.n}
     {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n} {G : ℕ → GBCA.ByABDY.RoundState P.n}
     {C : ∀ _ : Fin P.n, RoundLoopVariables P.n} {A : ABANetworkState P.n}
@@ -939,7 +940,8 @@ theorem coupling_tau (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessVaria
     ((composedHidden P).step (G, C, A, o) Label.tau (Ω.bind id) ∨ Ω.bind id = PMF.pure (G, C, A, o))
     := by
   obtain ⟨hC, -, hA, hG, hst⟩ := (protocolRelation_mk P _ _ _ _ _ _ _).mp hR
-  rcases protocolExtended_tau_cases P h with ⟨i, y, hy, rfl⟩ | ⟨w', hn, rfl⟩
+  rcases protocolExtended_tau_cases P h with ⟨i, y, hy, rfl⟩ | ⟨w', hn, rfl⟩ |
+    ⟨r, μw, hW, rfl⟩
   · obtain ⟨-, -, -, -, -, hyeq⟩ := programStep_tau_terminate hy
     obtain rfl : y = ((processes i).1, { (processes i).2 with terminated := true }) :=
       pure_inj hyeq
@@ -996,6 +998,13 @@ theorem coupling_tau (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessVaria
       exact composedHidden_of_tau P (composedExtended_tau_ABANetwork P
         (ABANetworkStep.byzantineDecided A k b
         hFA))
+  · obtain ⟨Ω, hr, hbind⟩ := coupling_map (μw.map (Function.update o r))
+      (fun o' => ((processes, w, o') : ProtocolState P))
+      (fun o' => ((G, C, A, o') : ComposedState P))
+      (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, hA, hG, hst⟩)
+    rw [← prodPMF_two_pure_factors] at hr
+    rw [← prodPMF_three_pure_factors] at hbind
+    exact ⟨Ω, hr, Or.inl (hbind ▸ composedHidden_of_tau P (composedExtended_tau_coin P hW))⟩
 
 /-! ### The simulation -/
 

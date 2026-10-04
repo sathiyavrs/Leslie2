@@ -58,11 +58,12 @@ insertion.
 The composed system, and the lemmas that read and build its transitions. The builders assemble a
 transition of the composite out of transitions of its components
 (`composedExtended_visible_step`, `composedExtended_tau_gbca`, `composedExtended_tau_ABANetwork`,
-`gbcaInstanceFamily_owned`, `gbcaInstanceFamily_idle`, `gbcaInstanceFamily_tau`,
-`gbcaInstanceFamily_fail`, `composedHidden_of_event`, `composedHidden_of_tau`). The per-component
-transitions these consume and produce are those of `ABA/Composition/Components.lean` and
-`GBCA/ABDY/Components.lean`. The protocol meets the composed system in `ABA/ABDY/Simulation.lean`,
-and `ABA/ABDY/Substitution.lean` carries the composed system to `hybrid`.
+`composedExtended_tau_coin`, `gbcaInstanceFamily_owned`, `gbcaInstanceFamily_idle`,
+`gbcaInstanceFamily_tau`, `gbcaInstanceFamily_fail`, `composedHidden_of_event`,
+`composedHidden_of_tau`). The per-component transitions these consume and produce are those of
+`ABA/Composition/Components.lean` and `GBCA/ABDY/Components.lean`. The protocol meets the
+composed system in `ABA/ABDY/Simulation.lean`, and `ABA/ABDY/Substitution.lean` carries the
+composed system to `hybrid`.
 -/
 namespace PLTS
 namespace ABA
@@ -176,6 +177,23 @@ theorem composedExtended_tau_ABANetwork (P : Parameters)
     rw [System.parallel_step]
     exact Or.inr (Or.inl ⟨rfl, PMF.pure A', hA, rfl⟩)
   · rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure]
+
+/-- Build a silent transition of the four components from the resolution of one round of the
+common coin. -/
+theorem composedExtended_tau_coin (P : Parameters)
+    {G : ℕ → GBCA.ByABDY.RoundState P.n} {C : ∀ _ : Fin P.n, RoundLoopVariables P.n}
+    {A : ABANetworkState P.n} {o : ℕ → WCC.SpecState P.n} {r : ℕ}
+    {μw : PMF (WCC.SpecState P.n)} (hW : WCC.Step P r (o r) Label.tau μw) :
+    (ABDY.composedExtended P).step (G, C, A, o) (Sum.inl Label.tau)
+      (prodPMF (PMF.pure G) (prodPMF (PMF.pure C)
+        (prodPMF (PMF.pure A) (μw.map (Function.update o r))))) := by
+  rw [ABDY.composedExtended, System.parallel_step]
+  refine Or.inr (Or.inr ⟨rfl, _, ?_, rfl⟩)
+  rw [System.parallel_step]
+  refine Or.inr (Or.inr ⟨rfl, _, ?_, rfl⟩)
+  rw [System.parallel_step]
+  exact Or.inr (Or.inr ⟨rfl, _,
+    coinOverExtendedAlphabet_tau P GBCA.ByABDY.Message Empty o hW, rfl⟩)
 
 /-! ### The graded-agreement family's transitions
 

@@ -15,7 +15,7 @@ a nontrivial prefix: the core simulation `ABA.hybridRefinesSpecification` about 
 vacuously true through an immediate deadlock.
 
 We fix the small parameter set `fourProcesses` (`n = 4`, `f = 1`, `ε = 1/2`) and exhibit a
-concrete **23-step run of `hybrid fourProcesses M` that reaches a genuine `retABA`** — a
+concrete **24-step run of `hybrid fourProcesses M` that reaches a genuine `retABA`** — a
 complete decision — starting from its initial state. The run is exhibited for every type `M` of
 round messages: no step of it carries a round message.
 
@@ -32,15 +32,13 @@ round messages: no step of it carries a round message.
   first setting the round's grade to 2. Each return announces the bound bit `true`. Its
   complement is the bit that `step_bindUnset` excluded, which is exactly the return's guard, so
   the ghost output leaves the run intact;
-* `step_callW₀` — process `0`'s coin call (`callW 0`, *hidden*), a recording
-  call: a single caller does not carry the count past `f = 1`;
-* `step_callW₁` + `step_callW₁_mass` — process `1`'s coin call, the resolving
-  call and the run's **single probabilistic step**: that access carries the
-  caller count to `2 > f` at `val = ⊥`, so the call records its caller and
-  draws `val` from `wccPMF`. The successor lands on the `bit true` branch — the
-  outcome agreeing with the bound value — with mass exactly `ε = 1/2 > 0`;
-* `step_callW₂` — process `2`'s coin call, recording again: `val` is resolved,
-  so the resolving transition's guard is closed;
+* `step_callW₀`, `step_callW₁` — the coin calls of processes `0` and `1` (`callW 0`, *hidden*),
+  each recording its caller: the second carries the caller count to `2 > f`;
+* `step_resolve` + `step_resolve_mass` — the coin's silent resolution (a coin `τ`) and the run's
+  **single probabilistic step**: at `val = ⊥` with the caller count above `f`, the resolution
+  draws `val` from `wccPMF`. The successor lands on the `bit true` branch — the outcome agreeing
+  with the bound value — with mass exactly `ε = 1/2 > 0`;
+* `step_callW₂` — process `2`'s coin call, recording its caller at a resolved `val`;
 * `step_retW₀/₁/₂` — the three coin returns (`retW 0`, *hidden*): each process takes the round
   advance, keeps the grade `grade2 true` and enters `toSendDecided` at round `1`;
 * `step_decidedSend₀/₁/₂` — the DECIDED send of each process after its coin return (a
@@ -53,11 +51,11 @@ round messages: no step of it carries a round message.
 
 Plus `step_fail` — a `fail` broadcast synchronising all four components.
 
-Because every step but the resolving call is a Dirac and the chosen branch of
-that call has mass `ε > 0`, the whole path is a positive-probability execution: a
+Because every step but the resolution is a Dirac and the chosen branch of
+the resolution has mass `ε > 0`, the whole path is a positive-probability execution: a
 product of Diracs times one `ε` factor. Every guard on these closed numeric
 states discharges by `decide`/`rfl`; the Dirac successor distributions collapse
-through `prodPMF_pure_pure` and `PMF.pure_map`, and the resolving call's branch
+through `prodPMF_pure_pure` and `PMF.pure_map`, and the resolution's branch
 mass through `prodPMF_pure_left_apply` and `map_apply_inj`.
 
 The ABA components are named as `ABA/Composition/ABAState.lean` groups them: a state of the run
@@ -70,11 +68,12 @@ the step named in the list above leaves behind: `abaAfterInput0`, `abaAfterCallG
 `abaAfterCallW0`, `abaAfterRoundStep0`, `abaAfterDecidedSend0`, `abaAfterDeliver0`, `abaAfterRetABA`
 and `abaAfterFail`;
 `gbcaSpecificationsAfterCall0`, `gbcaSpecificationsAfterBindUnset`, `gbcaSpecificationsAfterReturn0`
-and `gbcaSpecificationsAfterFail`; `coinAfterRecordingCall0`, `coinAfterResolvingCall`,
-`coinAfterReturn0` and `coinAfterFail`. The updates are `abaInput`, `abaCallG`, `abaRetG`,
-`abaCallW` in the ABA component, `gbcaSpecificationCall` and `gbcaSpecificationRetGrade2` on the
-round specifications, and `coinCall`, `coinResolve` and `coinReturn` on the common coin. Reading a
-state name gives the step it follows, and reading an update name gives the label it belongs to. -/
+and `gbcaSpecificationsAfterFail`; `coinAfterRecordingCall0`, `coinAfterRecordingCall1`,
+`coinAfterResolution`, `coinAfterRecordingCall2`, `coinAfterReturn0` and `coinAfterFail`. The
+updates are `abaInput`, `abaCallG`, `abaRetG`, `abaCallW` in the ABA component,
+`gbcaSpecificationCall` and `gbcaSpecificationRetGrade2` on the round specifications, and
+`coinCall`, `coinResolve` and `coinReturn` on the common coin. Reading a state name gives the step
+it follows, and reading an update name gives the transition it belongs to. -/
 
 namespace PLTS
 namespace ABA
@@ -178,10 +177,9 @@ caller. -/
 def coinCall (id : Fin 4) (s : ℕ → WCC.SpecState 4) : ℕ → WCC.SpecState 4 :=
   Function.update s 0 ((s 0).record id)
 
-/-- The round-`0` coin update of a resolving call by `id` whose draw lands on
-`v`: record `id` as a caller and write `v`. -/
-def coinResolve (id : Fin 4) (v : CoinValue) (s : ℕ → WCC.SpecState 4) : ℕ → WCC.SpecState 4 :=
-  Function.update s 0 { (s 0).record id with val := v }
+/-- The round-`0` coin update of the coin's resolution whose draw lands on `v`: write `v`. -/
+def coinResolve (v : CoinValue) (s : ℕ → WCC.SpecState 4) : ℕ → WCC.SpecState 4 :=
+  Function.update s 0 { s 0 with val := v }
 
 /-- The round-`0` coin update of a `ret id true`. -/
 def coinReturn (id : Fin 4) (s : ℕ → WCC.SpecState 4) : ℕ → WCC.SpecState 4 :=
@@ -231,14 +229,16 @@ noncomputable def abaAfterCallW2 : ABAState fourProcesses := abaCallW 2 abaAfter
 /-- The common coin after process `0`'s recording call. -/
 def coinAfterRecordingCall0 : ℕ → WCC.SpecState 4 := coinCall 0 coinInitial
 
-/-- The common coin after process `1`'s resolving call, on the `bit true`
-branch of the draw. -/
-def coinAfterResolvingCall : ℕ → WCC.SpecState 4 := coinResolve 1 (.bit true)
-  coinAfterRecordingCall0
+/-- The common coin after process `1`'s recording call, which carries the caller count of round
+`0` to `2 > f`. -/
+def coinAfterRecordingCall1 : ℕ → WCC.SpecState 4 := coinCall 1 coinAfterRecordingCall0
+
+/-- The common coin after its resolution, on the `bit true` branch of the draw. -/
+def coinAfterResolution : ℕ → WCC.SpecState 4 := coinResolve (.bit true) coinAfterRecordingCall1
 
 /-- The common coin after process `2`'s recording call, which closes the round's
 three calls. -/
-def coinAfterRecordingCall2 : ℕ → WCC.SpecState 4 := coinCall 2 coinAfterResolvingCall
+def coinAfterRecordingCall2 : ℕ → WCC.SpecState 4 := coinCall 2 coinAfterResolution
 
 /-- The common coin after all three processes receive the coin. -/
 def coinAfterReturn0 : ℕ → WCC.SpecState 4 := coinReturn 0 coinAfterRecordingCall2
@@ -524,11 +524,11 @@ theorem step_retG₂ :
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
 
-/-! ### Steps 11–13: all three call the coin (hidden `callW` calls), the
-second call resolving it -/
+/-! ### Steps 11–14: all three call the coin (hidden `callW` calls), and the coin resolves
+after the second call (a coin `τ`) -/
 
-/-- Process `0` calls the round-`0` coin. One caller leaves the count at `f`, so
-the call only records. -/
+/-- Process `0` calls the round-`0` coin. The call records the caller, and one caller leaves the
+count at `f`. -/
 theorem step_callW₀ :
     (hybrid fourProcesses M).step (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterRetG2
       coinInitial) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterCallW0
@@ -546,36 +546,19 @@ theorem step_callW₀ :
         hj)))
     (ABANetworkStep.callWIdle (P := fourProcesses) abaAfterRetG2.2 0 0)
     ((System.mapIdle_step_some (coinLabelMap_inl (Label.callW 0 (0 : Fin 4))) _).mpr
-      (wccFamily_owned fourProcesses coinInitial rfl (WCC.Step.callRecord (P := fourProcesses) (r :=
-        0) (coinInitial 0) 0 (by decide)
-        (by simp only [WCC.SpecState.threshold]; decide))))
+      (wccFamily_owned fourProcesses coinInitial rfl (WCC.Step.call (P := fourProcesses) (r :=
+        0) (coinInitial 0) 0 (by decide))))
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
 
-/-- The coin distribution the resolving call draws: the `wccPMF` outcome is
-written to round `0`'s `val` beside the recorded caller. -/
-noncomputable def resolvedCoinDistribution : PMF (ℕ → WCC.SpecState 4) :=
-  (fourProcesses.wccPMF.map (fun o => { (coinAfterRecordingCall0 0).record 1 with
-    val :=
-      o.toCoinValue })).map
-    (Function.update coinAfterRecordingCall0 0)
-
-/-- The successor distribution of process `1`'s coin call: the round specifications and the ABA
-network remain unchanged, process `1`'s round loop advances to `awaitW`, and the common coin
-resolves. -/
-noncomputable def resolvedHybridDistribution : PMF (HybridState fourProcesses) :=
-  prodPMF (PMF.pure gbcaSpecificationsAfterReturn2) (prodPMF (PMF.pure abaAfterCallW1.1) (prodPMF
-    (PMF.pure abaAfterCallW1.2) resolvedCoinDistribution))
-
-/-- Process `1` calls the round-`0` coin. Its access carries the caller count to
-`2 > f` at `val = ⊥`, so the call records the caller and draws `val` from
-`wccPMF`: the run's single probabilistic step. -/
+/-- Process `1` calls the round-`0` coin. The call records the caller, and the caller count of
+round `0` reaches `2 > f`. -/
 theorem step_callW₁ :
-    (hybrid fourProcesses M).step
-    (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterCallW0 coinAfterRecordingCall0) Label.tau
-    resolvedHybridDistribution := by
+    (hybrid fourProcesses M).step (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterCallW0
+      coinAfterRecordingCall0) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn2
+        abaAfterCallW1 coinAfterRecordingCall1)) := by
   refine hybrid_hidden fourProcesses (l := Label.callW 0 (1 : Fin 4)) (by simp) ?_
-  exact hybridExtended_visible_step (M := M) fourProcesses
+  have h := hybridExtended_visible_step (M := M) fourProcesses
     (G := gbcaSpecificationsAfterReturn2) (C :=
     abaAfterCallW0.1) (A := abaAfterCallW0.2) (o := coinAfterRecordingCall0)
     (L := Sum.inl (Label.callW 0 (1 : Fin 4))) (by simp)
@@ -587,50 +570,74 @@ theorem step_callW₁ :
         hj)))
     (ABANetworkStep.callWIdle (P := fourProcesses) abaAfterCallW0.2 0 1)
     ((System.mapIdle_step_some (coinLabelMap_inl (Label.callW 0 (1 : Fin 4))) _).mpr
-      (wccFamilyStep coinAfterRecordingCall0 rfl (WCC.Step.callResolve (P := fourProcesses) (r := 0)
-        (coinAfterRecordingCall0 0) 1 (by decide)
-        (by decide) (by simp only [WCC.SpecState.threshold]; decide))))
+      (wccFamily_owned fourProcesses coinAfterRecordingCall0 rfl (WCC.Step.call (P :=
+        fourProcesses) (r := 0) (coinAfterRecordingCall0 0) 1 (by decide))))
+  rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
+  exact h
+
+/-- The coin distribution the resolution draws: the `wccPMF` outcome is written to round `0`'s
+`val`. -/
+noncomputable def resolvedCoinDistribution : PMF (ℕ → WCC.SpecState 4) :=
+  (fourProcesses.wccPMF.map (fun o => { coinAfterRecordingCall1 0 with val := o.toCoinValue })).map
+    (Function.update coinAfterRecordingCall1 0)
+
+/-- The successor distribution of the coin's resolution: the round specifications, the round
+loops and the ABA network remain unchanged, and the common coin resolves. -/
+noncomputable def resolvedHybridDistribution : PMF (HybridState fourProcesses) :=
+  prodPMF (PMF.pure gbcaSpecificationsAfterReturn2) (prodPMF (PMF.pure abaAfterCallW1.1) (prodPMF
+    (PMF.pure abaAfterCallW1.2) resolvedCoinDistribution))
+
+/-- The round-`0` coin resolves. Its caller count `2` exceeds `f` at `val = ⊥`, so the silent
+resolution draws `val` from `wccPMF`: the run's single probabilistic step. This is a family `τ`,
+interleaved on the common coin while the other three components hold. -/
+theorem step_resolve :
+    (hybrid fourProcesses M).step
+    (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterCallW1 coinAfterRecordingCall1) Label.tau
+    resolvedHybridDistribution := by
+  refine hybrid_visible fourProcesses (by simp) ?_
+  exact hybridExtended_tau_coin (M := M) fourProcesses
+    (WCC.Step.resolve (P := fourProcesses) (r := 0) (coinAfterRecordingCall1 0) (by decide)
+      (by simp only [WCC.SpecState.threshold]; decide))
 
 /-- The draw lands on the `bit true` branch — the outcome that agrees with the
 bound value — with mass exactly `ε = 1/2 > 0`. This is the run's single
 `ε` factor; every other step is Dirac, so the whole path has positive
 probability. -/
-theorem step_callW₁_mass :
+theorem step_resolve_mass :
     resolvedHybridDistribution
-    (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterCallW1 coinAfterResolvingCall) =
+    (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterCallW1 coinAfterResolution) =
     fourProcesses.ε := by
-  have hup : Function.Injective (Function.update coinAfterRecordingCall0 0) := by
+  have hup : Function.Injective (Function.update coinAfterRecordingCall1 0) := by
     intro a b h; have h0 := congrFun h 0; simpa using h0
   have hg : Function.Injective
       (fun o : CoinOutcome =>
-        ({ (coinAfterRecordingCall0 0).record 1 with val := o.toCoinValue } : WCC.SpecState 4)) :=
+        ({ coinAfterRecordingCall1 0 with val := o.toCoinValue } : WCC.SpecState 4)) :=
     fun _ _ h => CoinOutcome.toCoinValue_injective (congrArg (·.val) h)
   change prodPMF (PMF.pure gbcaSpecificationsAfterReturn2) (prodPMF (PMF.pure abaAfterCallW1.1)
     (prodPMF (PMF.pure abaAfterCallW1.2) resolvedCoinDistribution))
       (gbcaSpecificationsAfterReturn2, abaAfterCallW1.1, abaAfterCallW1.2,
-        coinAfterResolvingCall) = fourProcesses.ε
+        coinAfterResolution) = fourProcesses.ε
   rw [prodPMF_pure_left_apply, prodPMF_pure_left_apply, prodPMF_pure_left_apply]
   unfold resolvedCoinDistribution
-  rw [show (coinAfterResolvingCall : ℕ → WCC.SpecState 4)
-      = Function.update coinAfterRecordingCall0 0 { (coinAfterRecordingCall0 0).record 1 with
-        val :=
-          CoinValue.bit true } from rfl,
+  rw [show (coinAfterResolution : ℕ → WCC.SpecState 4)
+      = Function.update coinAfterRecordingCall1 0
+        { coinAfterRecordingCall1 0 with val := CoinValue.bit true } from rfl,
     map_apply_inj hup,
-    show ({ (coinAfterRecordingCall0 0).record 1 with val := CoinValue.bit true } : WCC.SpecState 4)
-      = (fun o => { (coinAfterRecordingCall0 0).record 1 with val := o.toCoinValue })
+    show ({ coinAfterRecordingCall1 0 with val := CoinValue.bit true } : WCC.SpecState 4)
+      = (fun o => { coinAfterRecordingCall1 0 with val := o.toCoinValue })
         (CoinOutcome.bit true) from rfl,
     map_apply_inj hg, Parameters.wccPMF_apply_bit]
 
-/-- Process `2` calls the round-`0` coin. `val` is resolved, so the resolving
-transition's guard is closed and this call only records. -/
+/-- Process `2` calls the round-`0` coin. The call records the caller; `val` is resolved, so the
+resolution is disabled. -/
 theorem step_callW₂ :
     (hybrid fourProcesses M).step (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterCallW1
-      coinAfterResolvingCall) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn2
+      coinAfterResolution) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn2
         abaAfterCallW2 coinAfterRecordingCall2)) := by
   refine hybrid_hidden fourProcesses (l := Label.callW 0 (2 : Fin 4)) (by simp) ?_
   have h := hybridExtended_visible_step (M := M) fourProcesses
     (G := gbcaSpecificationsAfterReturn2) (C :=
-    abaAfterCallW1.1) (A := abaAfterCallW1.2) (o := coinAfterResolvingCall)
+    abaAfterCallW1.1) (A := abaAfterCallW1.2) (o := coinAfterResolution)
     (L := Sum.inl (Label.callW 0 (2 : Fin 4))) (by simp)
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsAfterReturn2 (by simp) rfl
       not_false)
@@ -640,13 +647,12 @@ theorem step_callW₂ :
         hj)))
     (ABANetworkStep.callWIdle (P := fourProcesses) abaAfterCallW1.2 0 2)
     ((System.mapIdle_step_some (coinLabelMap_inl (Label.callW 0 (2 : Fin 4))) _).mpr
-      (wccFamily_owned fourProcesses coinAfterResolvingCall rfl (WCC.Step.callRecord (P :=
-        fourProcesses) (r := 0) (coinAfterResolvingCall 0) 2 (by decide)
-        (by simp only [WCC.SpecState.threshold]; decide))))
+      (wccFamily_owned fourProcesses coinAfterResolution rfl (WCC.Step.call (P :=
+        fourProcesses) (r := 0) (coinAfterResolution 0) 2 (by decide))))
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
 
-/-! ### Steps 14–19: the three coin returns (`retW 0`, hidden), each followed by the DECIDED
+/-! ### Steps 15–20: the three coin returns (`retW 0`, hidden), each followed by the DECIDED
 send of the grade-2 round (a `decidedSend` synchronisation of the sending round loop with the
 network) -/
 
@@ -782,7 +788,7 @@ theorem step_decidedSend₂ :
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
 
-/-! ### Steps 20–22: the adversary delivers the three `⟨DECIDED, true⟩` to
+/-! ### Steps 21–23: the adversary delivers the three `⟨DECIDED, true⟩` to
 process `0` (a `decidedDeliver` synchronisation of the receiving round loop with the
 network). -/
 
@@ -856,7 +862,7 @@ theorem step_deliver₂ :
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
 
-/-! ### Step 23: the decision (`retABA 0 true`, visible) -/
+/-! ### Step 24: the decision (`retABA 0 true`, visible) -/
 
 /-- Process `0` returns `true`: it has multicast `⟨DECIDED, true⟩` — the
 network's conjunct — and has received DECIDED-true messages from `n − f = 3` distinct

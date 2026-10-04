@@ -202,6 +202,25 @@ theorem wccFamily_idle (P : Parameters) (o : ℕ → WCC.SpecState P.n) {l : Lab
   rw [WCC.specFamily, System.family_step_iff]
   exact Or.inr (Or.inr (Or.inr ⟨hl, hr, hf, rfl⟩))
 
+/-! ### The common coin's resolution -/
+
+/-- An instance's resolution at round `r` is a silent transition of the common coin's
+family, every other round unchanged. -/
+theorem wccFamily_tau (P : Parameters) (o : ℕ → WCC.SpecState P.n) {r : ℕ}
+    {μw : PMF (WCC.SpecState P.n)} (h : WCC.Step P r (o r) Label.tau μw) :
+    (WCC.specFamily P).step o Label.tau (μw.map (Function.update o r)) := by
+  rw [WCC.specFamily, System.family_step_iff]
+  exact Or.inl ⟨rfl, r, μw, h, rfl⟩
+
+/-- An instance's resolution at round `r` is a silent transition of the common coin read
+over the extended alphabet. -/
+theorem coinOverExtendedAlphabet_tau (P : Parameters) (M E : Type)
+    (o : ℕ → WCC.SpecState P.n) {r : ℕ} {μw : PMF (WCC.SpecState P.n)}
+    (h : WCC.Step P r (o r) Label.tau μw) :
+    (coinOverExtendedAlphabet P M E).step o (Sum.inl Label.tau)
+      (μw.map (Function.update o r)) :=
+  (System.mapIdle_step_some (coinLabelMap_inl Label.tau) _).mpr (wccFamily_tau P o h)
+
 /-! ### Dirac successors
 
 A Dirac distribution determines its point. -/

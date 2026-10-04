@@ -46,7 +46,7 @@ Dirac.
 The abstract state is **lazy** and **never-flipping**. It never fires `SpecStep.coinFlip`, so its
 mode is `ControlMode.flipEnabled` at every state it reaches (field `mode_flipEnabled`),
 `SpecStep.decide` is
-enabled throughout, and the concrete coin's resolving call couples to a stutter. And it never
+enabled throughout, and the concrete coin's resolution couples to a stutter. And it never
 decides *between* transitions: it occupies one of two phases, keyed on `a.val`, and crosses from
 the first to the second at the visible `retABA` that opens phase 2.
 
@@ -88,7 +88,7 @@ packages exactly this — `AbstractState` transfers along any write preserving `
 not among them, so `AbstractState` transfers along any change of it. That lemma replaces the
 stutter argument at each transition: every hidden transition preserves the three projections, so its
 `AbstractState`-match is one `AbstractState.unchangedBy` invocation rather than a bespoke
-re-derivation (the seven Stage-C stutter lemmas of
+re-derivation (the eight Stage-C stutter lemmas of
 `HybridRefinesSpecification/AbstractStatePreservation.lean` are all instances).
 
 ### Witnesses: decided values stated without the live pair
@@ -169,7 +169,7 @@ one-line form of that translation.
 | concrete transition | label | matching abstract run |
 |---|---|---|
 | every hidden call and return (`callG`/`retG`/`callW`/`retW`), `bindUnset`, the DECIDED send of a grade-2 round (`decidedSend`), DECIDED gossip τ | τ | stutter (`AbstractState.unchangedBy`; only `Invariant` moves) |
-| `callW` at the transition that resolves `WCC_r`'s coin | τ | constant-coupled stutter via the generic `stutter_step` (`HybridRefinesSpecification/Simulation.lean`): coupling `Ω := μ_C.map (·, pure a)`, so `ω = pure (pure a)` and `ω.bind id = pure a` (the abstract state never flips, so every outcome of the draw lands on the same `a`) |
+| the resolution of `WCC_r`'s coin | τ | constant-coupled stutter via the generic `stutter_step` (`HybridRefinesSpecification/Simulation.lean`): coupling `Ω := μ_C.map (·, pure a)`, so `ω = pure (pure a)` and `ω.bind id = pure a` (the abstract state never flips, so every outcome of the draw lands on the same `a`) |
 | `callABA id b`, `id ∉ F`, the commit transition (`input = none`) | `callABA id b` | `SpecStep.callSet` (a first write at the empty ghost entry `input_sync` supplies; both systems commit `b`) |
 | `callABA id b`, `id ∉ F`, the concrete loop (`input ≠ none`) | `callABA id b` | `SpecStep.callLoop` (the filled ghost entry `input_sync` supplies; neither system moves) |
 | `callABA id b`, `id ∈ F` | `callABA id b` | `SpecStep.callByzantine` (D23): the ghost at a corrupted id is unconstrained |
@@ -392,17 +392,17 @@ fields), grouped:
   W-calls only at closed rounds), `wcc_order`, `round_flip`.
   `RoundSettled.congr`/`RoundSettled.of_unchanged`
   are the two preservation lemmas every transition's unchanged facts feed.
-- **The coin clauses, established at the resolving call**: `wcc_bound`, `wcc_order` and
+- **The coin clauses, established at the resolution**: `wcc_bound`, `wcc_order` and
   `flip_witness` are the conjuncts that read `(w r).val`, and the one transition that writes it
-  is `callW`'s resolving call, so `Invariant.step_callW_resolve` carries all three. Its input is
+  is the coin's silent resolution, so `Invariant.step_resolve` carries all three. Its input is
   `Invariant.exists_correct_wccCaller`: the threshold counts more than `f` callers of round `r`
   and `F_card` bounds the corrupted set by `f`, so the callers outnumber it and one of
   them is never corrupted. That caller's `wcc_called`, `wcc_callRound` and `wccCalled_witness`
   carry `wcc_bound`, `wcc_order` and `flip_witness` in turn. `agree_bound`'s round-`r` corner is
-  vacuous, `round_flip` at a correct process past round `r` contradicting `val = ⊥`. The
-  other two transitions of `callW` — the input-enabledness loop and the recording call — move
-  neither `val` nor `F`, and both go through `Invariant.step_callW_dirac`; `Invariant.step_callW`
-  assembles the three off `WCC.step_callW_cases`.
+  vacuous, `round_flip` at a correct process past round `r` contradicting `val = ⊥`. The two
+  transitions of `callW` — the input-enabledness loop and the recording call — move neither `val`
+  nor `F`, and both go through `Invariant.step_callW_dirac`; `Invariant.step_callW` assembles the
+  two off `WCC.step_callW_cases`.
 - **Where an input and an estimate come from**: `input_gbcaRound0`, `input_gbcaRound0_permanent`,
   `input_called`,
   `phase_input`, `estimate0`, `estimate_ret`, `estimate_previous`, `estimate_previous_ne`,

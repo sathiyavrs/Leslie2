@@ -126,7 +126,7 @@ private theorem coupling_unchanged (P : Parameters) {s : ProtocolState P} {t : C
 
 The implementation's own `terminate` transition writes no coordinate the relation reads,
 so the composed system matches it by remaining unchanged; the adversary's two injections
-are matched by a transition. -/
+and the resolution of a round of the common coin are matched by a transition. -/
 
 theorem coupling_tau (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n}
     {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
@@ -138,7 +138,8 @@ theorem coupling_tau (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessVariables
       PMFRel (diracRel (ProtocolRelation P)) μ Ω ∧
       weakTau (composedHidden P) (PMF.pure ((G, C, A, o) : ComposedState P)) (Ω.bind id) := by
   obtain ⟨hC, -, hA, hGv, hB⟩ := (protocolRelation_mk P _ _ _ _ _ _ _).mp hR
-  rcases systemExtended_tau_cases h with ⟨i, y, hstep, rfl⟩ | ⟨w', hn, rfl⟩
+  rcases systemExtended_tau_cases h with ⟨i, y, hstep, rfl⟩ | ⟨w', hn, rfl⟩ |
+    ⟨r, μw, hW, rfl⟩
   · obtain ⟨b, hh, hret, hcnt, hterm, hy⟩ := programStep_tau_terminate hstep
     obtain rfl : y = ((u i).1, { (u i).2 with terminated := true }) := pure_inj hy
     have hst : ∀ (j : Fin P.n) (r : ℕ),
@@ -186,6 +187,14 @@ theorem coupling_tau (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessVariables
       refine weakTau_of_step rfl (composedHidden_of_tau P (composedExtended_tau_ABANetwork P ?_))
       rw [hA]
       exact ABANetworkStep.byzantineDecided ⟨w.decidedSent, w.F⟩ k b hF
+  · obtain ⟨Ω, hr, hb⟩ := coupling_map (μw.map (Function.update o r))
+      (fun o' => ((u, w, o') : ProtocolState P)) (fun o' => ((G, C, A, o') : ComposedState P))
+      (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr ⟨hC, rfl, hA, hGv, hB⟩)
+    rw [← prodPMF_two_pure_factors] at hr
+    rw [← prodPMF_three_pure_factors] at hb
+    refine ⟨Ω, hr, ?_⟩
+    rw [hb]
+    exact weakTau_of_step rfl (composedHidden_of_tau P (composedExtended_tau_coin P hW))
 
 
 /-! ### The matching on a visible shared label -/

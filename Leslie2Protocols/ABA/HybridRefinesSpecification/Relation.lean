@@ -384,7 +384,7 @@ structure Invariant (P : Parameters) (g : ℕ → GBCA.SpecState P.n) (c : ABASt
     ((c.processes id).phase = .idle ∨ (c.processes id).phase = .toCallG ∨
       (c.processes id).phase = .awaitG ∨ (c.processes id).phase = .toSendDecided) →
     (c.processes id).estimate ≠ none
-  /-- I19 : coins resolve in round order. Established at the resolving call: the threshold
+  /-- I19 : coins resolve in round order. Established at the resolution: the threshold
   on `w (r + 1)` yields a never-corrupted caller, the callers outnumbering `F`, and that
   caller has by `round_flip` already resolved round `r`'s coin. -/
   wcc_order : ∀ r, (w (r + 1)).val ≠ .bot → (w r).val ≠ .bot
@@ -397,7 +397,7 @@ structure Invariant (P : Parameters) (g : ℕ → GBCA.SpecState P.n) (c : ABASt
     (g 0).call id = some b → (c.processes id).input = some b ∨ id ∈ c.F
   /-- I21' : the `WCC` analogue of `call_round` (I8) — a correct `WCC_r` caller has reached round
   `r`. Established at the `callW` transition exactly like `call_round` is at `callG`; feeds
-  `wcc_order`/`flip_witness`'s establishment at the resolving call (a never-corrupted caller of
+  `wcc_order`/`flip_witness`'s establishment at the resolution (a never-corrupted caller of
   the round being resolved has already resolved every earlier round's coin via `round_flip`). -/
   wcc_callRound : ∀ r id, id ∉ c.F → (w r).called id = true → r ≤ (c.processes id).round
   /-- I21 : a resolution-threshold consequence — once round `r`'s coin has
@@ -424,7 +424,7 @@ structure Invariant (P : Parameters) (g : ℕ → GBCA.SpecState P.n) (c : ABASt
   /-- I24 : a correct `WCC_r` caller inherits `retG_witness`'s conclusion outright
   (it called `GBCA_r` and reached `toCallW`/`awaitW` at the same return). Established at the
   `callW` transition from `retG_witness`; preserved trivially (conclusion permanent, `fail` shrinks
-  the quantifier). Feeds `flip_witness`'s establishment at the resolving call, through the
+  the quantifier). Feeds `flip_witness`'s establishment at the resolution, through the
   threshold's never-corrupted caller. -/
   wccCalled_witness : ∀ r id, id ∉ c.F → (w r).called id = true →
     (g r).grade ≠ none ∨ DissentWitness P g c r

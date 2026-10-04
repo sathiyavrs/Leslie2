@@ -306,12 +306,12 @@ order.
 
 | file | lines | what it is |
 |---|---|---|
-| `HybridRefinesSpecification/InvariantPreservation.lean` | 32 | The module that imports the twelve files of `InvariantPreservation/`. |
-| `HybridRefinesSpecification/AbstractStatePreservation.lean` | 366 | `AbstractState` preservation for the stutter transitions, and the assembly `Invariant.step`. |
-| `HybridRefinesSpecification/NonVacuity.lean` | 914 | A concrete 23-step run of `hybrid fourProcesses` to a `retABA` decision, so the simulation about it is not vacuous. |
+| `HybridRefinesSpecification/InvariantPreservation.lean` | 33 | The module that imports the thirteen files of `InvariantPreservation/`. |
+| `HybridRefinesSpecification/AbstractStatePreservation.lean` | 392 | `AbstractState` preservation for the stutter transitions, and the assembly `Invariant.step`. |
+| `HybridRefinesSpecification/NonVacuity.lean` | 920 | A concrete 24-step run of `hybrid fourProcesses` to a `retABA` decision, so the simulation about it is not vacuous. |
 | `HybridRefinesSpecification/Relation.lean` | 695 | The core simulation's relation: the lazy abstract state `AbstractState` and the concrete invariant `Invariant`. |
 | `HybridRefinesSpecification/WeakTransitions.lean` | 52 | The abstract-state run lemmas: `SpecStep.decide` as a τ-run (`decide_step`), and a run closed by a visible step (`weakStep_of_run_then_step`). |
-| `HybridRefinesSpecification/Simulation.lean` | 461 | **`hybridRefinesSpecification`**: the simulation proof itself, one case per concrete step class, and `hybrid_spec`, its soundness inclusion. One axiom check. |
+| `HybridRefinesSpecification/Simulation.lean` | 468 | **`hybridRefinesSpecification`**: the simulation proof itself, one case per concrete step class, and `hybrid_spec`, its soundness inclusion. One axiom check. |
 
 **`ABA/HybridRefinesSpecification/InvariantPreservation/`** — the cases of a transition of
 `hybrid`, and the preservation of `Invariant` across the transitions of each label class.
@@ -320,16 +320,17 @@ order.
 |---|---|---|
 | `HybridRefinesSpecification/InvariantPreservation/CallABA.lean` | 224 | `Invariant.step_callABA`: `Invariant` across a call of the ABA interface — a never-corrupted process's genuine external input, or the idle self-loop. |
 | `HybridRefinesSpecification/InvariantPreservation/CallG.lean` | 502 | `Invariant.step_callG`: `Invariant` across a call of the graded-agreement specification, which touches `.call` at the GBCA instance and `.phase` at the core. |
-| `HybridRefinesSpecification/InvariantPreservation/CallW.lean` | 463 | `Invariant.step_callW`: `Invariant` across a call of the coin, over the three transitions of `WCC.step_callW_cases` — the enabledness loop, the recording call, and the resolving call that writes the drawn outcome. |
+| `HybridRefinesSpecification/InvariantPreservation/CallW.lean` | 334 | `Invariant.step_callW`: `Invariant` across a call of the coin, over the two transitions of `WCC.step_callW_cases` — the enabledness loop and the recording call. |
 | `HybridRefinesSpecification/InvariantPreservation/GBCATau.lean` | 341 | `Invariant.step_gbcaTau`: `Invariant` across `bindUnset`, the graded-agreement family's only genuine `τ`-step. |
 | `HybridRefinesSpecification/InvariantPreservation/RetABA.lean` | 152 | `Invariant.step_retABA`: `Invariant` across a return of the ABA interface, which sets `returned` alone. |
 | `HybridRefinesSpecification/InvariantPreservation/RetG.lean` | 943 | `Invariant.step_retG`: `Invariant` across a return of the graded-agreement specification, with the two round-chaining lemmas the proof runs on. |
+| `HybridRefinesSpecification/InvariantPreservation/Resolve.lean` | 142 | `Invariant.step_resolve`: `Invariant` across the coin's silent resolution, which writes the drawn outcome to `val`, with `Invariant.exists_correct_wccCaller`, the never-corrupted caller the threshold supplies. |
 | `HybridRefinesSpecification/InvariantPreservation/RetW.lean` | 436 | `Invariant.step_retW`: `Invariant` across a return of the coin, the transition that closes a round and, on a grade-2 outcome, enters `toSendDecided`. |
 | `HybridRefinesSpecification/InvariantPreservation/DecidedSend.lean` | 172 | `Invariant.step_decidedSend`: `Invariant` across the DECIDED send of a grade-2 round, which inserts the bit into the sender's DECIDED set and moves the sender to `toCallG`. |
 | `HybridRefinesSpecification/InvariantPreservation/RoundLoopTau.lean` | 344 | `Invariant.step_roundLoopTau`: `Invariant` across a core `τ` — DECIDED delivery, echo, or byzantine injection. |
 | `HybridRefinesSpecification/InvariantPreservation/SpecificationStateCorruption.lean` | 51 | The four readings of corruption at a graded-agreement or coin specification state that the `fail` transition consumes. |
 | `HybridRefinesSpecification/InvariantPreservation/Fail.lean` | 219 | `Invariant.step_fail`: `Invariant` across a synchronised corruption of all three components, where `F` gains exactly the named process. |
-| `HybridRefinesSpecification/InvariantPreservation/StepCases.lean` | 584 | `hybrid_step_callABA`, `hybrid_step_retABA`, `hybrid_step_fail` and `hybrid_step_tau`: a transition of `hybrid` read back into the transitions of its four components, with `corrupted_eq_false_iff`, the reading of a round loop's replacement flag on the corrupted set. |
+| `HybridRefinesSpecification/InvariantPreservation/StepCases.lean` | 590 | `hybrid_step_callABA`, `hybrid_step_retABA`, `hybrid_step_fail` and `hybrid_step_tau`: a transition of `hybrid` read back into the transitions of its four components, with `corrupted_eq_false_iff`, the reading of a round loop's replacement flag on the corrupted set. |
 
 **`ABA/ABDY/`** — ABDY22's protocol as it runs, its composed system, the substitution to
 `hybrid`, and the simulation into the composition.

@@ -380,7 +380,7 @@ Each departure from~\cite{LeslieBP} carries a label, cited at the point where it
     The composed system of the same protocol holds those values in the network components of the round, and the projection relating the two systems reads the ghost onto them.
     Both implementations instantiate one parametric system, so the ghost is a parameter beside the round transitions; it sits at the network because the value a graded return announces is determined by the round's messages and the corrupted set, which the network holds; and a ghost no program reads, whose output admits a bit at every state, is what the removal of Definition~\ref{def:aba-ghost-free} can delete.
     The ghost-free system is the instance at the one-element ghost, so following the source is an instantiation and not a change.
-  \item D31: the coin resolves in the access that crosses the threshold, after Fig.~7 of~\cite{GhostDraft}, in place of Transition System~3's separately scheduled resolution transition, so the call label carries two recording transitions under exclusive guards, \leandeclnamed{callRecord}{PLTS.ABA.WCC.Step.callRecord} and \leandeclnamed{callResolve}{PLTS.ABA.WCC.Step.callResolve}, the second drawing $val$ in the step that records the crossing caller.
+  \item D31: the coin resolves in the access that crosses the threshold, after Fig.~7 of~\cite{GhostDraft}, in place of Transition System~3's separately scheduled resolution transition, so the call label carries two recording transitions under exclusive guards, \leandeclnamed{call}{PLTS.ABA.WCC.Step.call} and \leandeclnamed{callResolve}{PLTS.ABA.WCC.Step.callResolve}, the second drawing $val$ in the step that records the crossing caller.
     That crossing access is a recorded one, \leandeclnamed{callLoop}{PLTS.ABA.WCC.Step.callLoop} carrying a call at every state and recording no caller, and the threshold counts callers alone, corrupted ones included, where Transition System~3 counts the corrupted set beside them, since a corrupted caller reaches the instance as a caller.
     The instance has in consequence no transition on $\tau$ at all.
     That caller-only count is the count of Unpredictability, which asks that all outcomes remain possible until $f+1$ processes have called, where the same threshold with $F$ added resolves at the first correct call once the corruption budget is spent.
@@ -843,7 +843,7 @@ The trace form of binding, and its transfer to both implementations, is Theorem~
 \input{nodes/def-aba-wcc-spec}
 
 \blueprintfig{fig-wcc}{The WCC specification instance \leandecl{PLTS.ABA.WCC.specInst} (Transition System 3): the four-outcome coin resolution and the return of the common bit or an adversary-chosen bit.
-The \leandeclnamed{callResolve}{PLTS.ABA.WCC.Step.callResolve} guard requires that the caller's own access carry the callers above $f$, $|\{id:\ called\}|>f$ at the recorded state, at $val = \bot$, every other call being \leandeclnamed{callRecord}{PLTS.ABA.WCC.Step.callRecord}; it is the sole probabilistic transition besides Transition System 1.
+The \leandeclnamed{callResolve}{PLTS.ABA.WCC.Step.callResolve} guard requires that the caller's own access carry the callers above $f$, $|\{id:\ called\}|>f$ at the recorded state, at $val = \bot$, every other call being \leandeclnamed{call}{PLTS.ABA.WCC.Step.call}; it is the sole probabilistic transition besides Transition System 1.
 On $val{=}1$ and $val{=}0$ every process returns the common bit, and on $val{=}\top$ each process returns an adversary-chosen bit.
 The branch $val{=}\dagger$ of mass $\failmass$ enables no return (D17): \leandeclnamed{ret}{PLTS.ABA.WCC.Step.ret} has a positive guard, so no return is enabled there.}
 
@@ -877,7 +877,7 @@ $called = \mathrm{false}^{[n]}$, $ret = \mathrm{false}^{[n]}$, $val = \bot$ and 
 \noindent In transitions~1 and~3, write $s' = s[\,called[id] := \mathrm{true}\,]$ for the state the access records; the count both transitions read is taken at $s'$ (D31).
 
 \medskip
-\noindent\textbf{1.} \leandeclnamed{callRecord}{PLTS.ABA.WCC.Step.callRecord} (D31).
+\noindent\textbf{1.} \leandeclnamed{call}{PLTS.ABA.WCC.Step.call} (D31).
 Guard
 \[ \begin{aligned}
      &called[id] = \mathrm{false},\\
