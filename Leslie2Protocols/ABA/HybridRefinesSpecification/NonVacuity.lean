@@ -65,7 +65,7 @@ network, and the common coin — assembled into the four-component state by `hyb
 Each component carries one name per state of the run and one name per update. The states are
 `abaInitial`, `gbcaSpecificationsInitial` and `coinInitial`, and then, for each component, the state
 the step named in the list above leaves behind: `abaAfterInput0`, `abaAfterCallG0`, `abaAfterRetG0`,
-`abaAfterCallW0`, `abaAfterRoundStep0`, `abaAfterDecidedSend0`, `abaAfterDeliver0`, `abaAfterRetABA`
+`abaAfterCallW0`, `abaAfterRetW0`, `abaAfterDecidedSend0`, `abaAfterDeliver0`, `abaAfterRetABA`
 and `abaAfterFail`;
 `gbcaSpecificationsAfterCall0`, `gbcaSpecificationsAfterBindUnset`, `gbcaSpecificationsAfterReturn0`
 and `gbcaSpecificationsAfterFail`; `coinAfterRecordingCall0`, `coinAfterRecordingCall1`,
@@ -249,17 +249,17 @@ def coinAfterReturn2 : ℕ → WCC.SpecState 4 := coinReturn 2 coinAfterReturn1
 Each coin return is the round advance: the round carried the grade `grade2 true`, so the process
 keeps the grade and enters `toSendDecided` at round `1`. Each DECIDED send sets `true` in the
 sender's DECIDED set, clears the grade and enters `toCallG`. -/
-noncomputable def abaAfterRoundStep0 : ABAState fourProcesses := abaAfterCallW2.stepRound 0 true
+noncomputable def abaAfterRetW0 : ABAState fourProcesses := abaAfterCallW2.stepRound 0 true
 noncomputable def abaAfterDecidedSend0 : ABAState fourProcesses :=
-  abaAfterRoundStep0.sendDecidedOnGrade2 0 true
-noncomputable def abaAfterRoundStep1 : ABAState fourProcesses :=
+  abaAfterRetW0.sendDecidedOnGrade2 0 true
+noncomputable def abaAfterRetW1 : ABAState fourProcesses :=
   abaAfterDecidedSend0.stepRound 1 true
 noncomputable def abaAfterDecidedSend1 : ABAState fourProcesses :=
-  abaAfterRoundStep1.sendDecidedOnGrade2 1 true
-noncomputable def abaAfterRoundStep2 : ABAState fourProcesses :=
+  abaAfterRetW1.sendDecidedOnGrade2 1 true
+noncomputable def abaAfterRetW2 : ABAState fourProcesses :=
   abaAfterDecidedSend1.stepRound 2 true
 noncomputable def abaAfterDecidedSend2 : ABAState fourProcesses :=
-  abaAfterRoundStep2.sendDecidedOnGrade2 2 true
+  abaAfterRetW2.sendDecidedOnGrade2 2 true
 
 /-- ABA states after the adversary delivers all three `⟨DECIDED, true⟩` to process `0`. -/
 noncomputable def abaAfterDeliver0 : ABAState fourProcesses :=
@@ -661,7 +661,7 @@ network) -/
 theorem step_retW₀ :
     (hybrid fourProcesses M).step (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterCallW2
       coinAfterRecordingCall2) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn2
-        abaAfterRoundStep0 coinAfterReturn0)) := by
+        abaAfterRetW0 coinAfterReturn0)) := by
   refine hybrid_hidden fourProcesses (l := Label.retW 0 (0 : Fin 4) true) (by simp) ?_
   have h := hybridExtended_visible_step (M := M) fourProcesses
     (G := gbcaSpecificationsAfterReturn2) (C := abaAfterCallW2.1) (A := abaAfterCallW2.2)
@@ -682,20 +682,20 @@ theorem step_retW₀ :
 
 /-- Process `0` sends `⟨DECIDED, true⟩` and enters `toCallG` at round `1`. -/
 theorem step_decidedSend₀ :
-    (hybrid fourProcesses M).step (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterRoundStep0
+    (hybrid fourProcesses M).step (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterRetW0
       coinAfterReturn0) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn2
         abaAfterDecidedSend0 coinAfterReturn0)) := by
   refine hybrid_synchronisation fourProcesses (e := .decidedSend (0 : Fin 4) true) ?_
   have h := hybridExtended_visible_step (M := M) fourProcesses
-    (G := gbcaSpecificationsAfterReturn2) (C := abaAfterRoundStep0.1) (A := abaAfterRoundStep0.2)
+    (G := gbcaSpecificationsAfterReturn2) (C := abaAfterRetW0.1) (A := abaAfterRetW0.2)
     (o := coinAfterReturn0) (L := Sum.inr (.decidedSend (0 : Fin 4) true)) (by simp)
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsAfterReturn2 (by simp) rfl
       not_false)
-    (roundLoops_at 0 (RoundLoopStep.decidedSend (P := fourProcesses) (abaAfterRoundStep0.1 0) true
+    (roundLoops_at 0 (RoundLoopStep.decidedSend (P := fourProcesses) (abaAfterRetW0.1 0) true
         (by decide) (by decide) (by decide))
-      (fun j hj => RoundLoopStep.decidedSendIdle (P := fourProcesses) (abaAfterRoundStep0.1 j) 0
+      (fun j hj => RoundLoopStep.decidedSendIdle (P := fourProcesses) (abaAfterRetW0.1 j) 0
         true (Ne.symm hj)))
-    (ABANetworkStep.decidedSend (P := fourProcesses) abaAfterRoundStep0.2 0 true)
+    (ABANetworkStep.decidedSend (P := fourProcesses) abaAfterRetW0.2 0 true)
     ((System.mapIdle_step_none (coinLabelMap_decidedSend (0 : Fin 4) true) _).mpr rfl)
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
@@ -704,7 +704,7 @@ theorem step_decidedSend₀ :
 theorem step_retW₁ :
     (hybrid fourProcesses M).step (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterDecidedSend0
       coinAfterReturn0) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn2
-        abaAfterRoundStep1 coinAfterReturn1)) := by
+        abaAfterRetW1 coinAfterReturn1)) := by
   refine hybrid_hidden fourProcesses (l := Label.retW 0 (1 : Fin 4) true) (by simp) ?_
   have h := hybridExtended_visible_step (M := M) fourProcesses
     (G := gbcaSpecificationsAfterReturn2) (C := abaAfterDecidedSend0.1)
@@ -726,20 +726,20 @@ theorem step_retW₁ :
 
 /-- Process `1` sends `⟨DECIDED, true⟩`. -/
 theorem step_decidedSend₁ :
-    (hybrid fourProcesses M).step (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterRoundStep1
+    (hybrid fourProcesses M).step (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterRetW1
       coinAfterReturn1) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn2
         abaAfterDecidedSend1 coinAfterReturn1)) := by
   refine hybrid_synchronisation fourProcesses (e := .decidedSend (1 : Fin 4) true) ?_
   have h := hybridExtended_visible_step (M := M) fourProcesses
-    (G := gbcaSpecificationsAfterReturn2) (C := abaAfterRoundStep1.1) (A := abaAfterRoundStep1.2)
+    (G := gbcaSpecificationsAfterReturn2) (C := abaAfterRetW1.1) (A := abaAfterRetW1.2)
     (o := coinAfterReturn1) (L := Sum.inr (.decidedSend (1 : Fin 4) true)) (by simp)
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsAfterReturn2 (by simp) rfl
       not_false)
-    (roundLoops_at 1 (RoundLoopStep.decidedSend (P := fourProcesses) (abaAfterRoundStep1.1 1) true
+    (roundLoops_at 1 (RoundLoopStep.decidedSend (P := fourProcesses) (abaAfterRetW1.1 1) true
         (by decide) (by decide) (by decide))
-      (fun j hj => RoundLoopStep.decidedSendIdle (P := fourProcesses) (abaAfterRoundStep1.1 j) 1
+      (fun j hj => RoundLoopStep.decidedSendIdle (P := fourProcesses) (abaAfterRetW1.1 j) 1
         true (Ne.symm hj)))
-    (ABANetworkStep.decidedSend (P := fourProcesses) abaAfterRoundStep1.2 1 true)
+    (ABANetworkStep.decidedSend (P := fourProcesses) abaAfterRetW1.2 1 true)
     ((System.mapIdle_step_none (coinLabelMap_decidedSend (1 : Fin 4) true) _).mpr rfl)
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h
@@ -748,7 +748,7 @@ theorem step_decidedSend₁ :
 theorem step_retW₂ :
     (hybrid fourProcesses M).step (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterDecidedSend1
       coinAfterReturn1) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn2
-        abaAfterRoundStep2 coinAfterReturn2)) := by
+        abaAfterRetW2 coinAfterReturn2)) := by
   refine hybrid_hidden fourProcesses (l := Label.retW 0 (2 : Fin 4) true) (by simp) ?_
   have h := hybridExtended_visible_step (M := M) fourProcesses
     (G := gbcaSpecificationsAfterReturn2) (C := abaAfterDecidedSend1.1)
@@ -770,20 +770,20 @@ theorem step_retW₂ :
 
 /-- Process `2` sends `⟨DECIDED, true⟩`; three distinct senders hold `⟨DECIDED, true⟩`. -/
 theorem step_decidedSend₂ :
-    (hybrid fourProcesses M).step (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterRoundStep2
+    (hybrid fourProcesses M).step (hybridStateOf gbcaSpecificationsAfterReturn2 abaAfterRetW2
       coinAfterReturn2) Label.tau (PMF.pure (hybridStateOf gbcaSpecificationsAfterReturn2
         abaAfterDecidedSend2 coinAfterReturn2)) := by
   refine hybrid_synchronisation fourProcesses (e := .decidedSend (2 : Fin 4) true) ?_
   have h := hybridExtended_visible_step (M := M) fourProcesses
-    (G := gbcaSpecificationsAfterReturn2) (C := abaAfterRoundStep2.1) (A := abaAfterRoundStep2.2)
+    (G := gbcaSpecificationsAfterReturn2) (C := abaAfterRetW2.1) (A := abaAfterRetW2.2)
     (o := coinAfterReturn2) (L := Sum.inr (.decidedSend (2 : Fin 4) true)) (by simp)
     (gbcaSpecificationFamily_idle fourProcesses gbcaSpecificationsAfterReturn2 (by simp) rfl
       not_false)
-    (roundLoops_at 2 (RoundLoopStep.decidedSend (P := fourProcesses) (abaAfterRoundStep2.1 2) true
+    (roundLoops_at 2 (RoundLoopStep.decidedSend (P := fourProcesses) (abaAfterRetW2.1 2) true
         (by decide) (by decide) (by decide))
-      (fun j hj => RoundLoopStep.decidedSendIdle (P := fourProcesses) (abaAfterRoundStep2.1 j) 2
+      (fun j hj => RoundLoopStep.decidedSendIdle (P := fourProcesses) (abaAfterRetW2.1 j) 2
         true (Ne.symm hj)))
-    (ABANetworkStep.decidedSend (P := fourProcesses) abaAfterRoundStep2.2 2 true)
+    (ABANetworkStep.decidedSend (P := fourProcesses) abaAfterRetW2.2 2 true)
     ((System.mapIdle_step_none (coinLabelMap_decidedSend (2 : Fin 4) true) _).mpr rfl)
   rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure] at h
   exact h

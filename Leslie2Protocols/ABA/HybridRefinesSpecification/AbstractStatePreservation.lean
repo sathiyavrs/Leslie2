@@ -75,16 +75,16 @@ theorem AbstractState.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecS
     (hstep :
       (∃ i j b, b ∈ c.decidedSent j ∧ b ∉ c.decidedReceived i j ∧ μc = PMF.pure (c.deliverDecided i
       j b)) ∨
-      (∃ id b, P.f + 1 ≤ c.decidedCount id b ∧ b ∉ c.decidedSent id ∧ μc = PMF.pure (c.sendDecided
-      id b)) ∨ (∃ id b, id ∈ c.F ∧ μc = PMF.pure (c.sendDecided id b)))
+      (∃ id b, P.f + 1 ≤ c.decidedCount id b ∧ b ∉ c.decidedSent id ∧ μc = PMF.pure (c.recordDecided
+      id b)) ∨ (∃ id b, id ∈ c.F ∧ μc = PMF.pure (c.recordDecided id b)))
     {c' : ABAState P} (hc' : c' ∈ μc.support) : AbstractState P g c' w a := by
   have hAF := (Invariant.step_roundLoopTau hI hstep hc').2
   have hCUnchanged : c'.F = c.F ∧ c'.processes = c.processes := by
     rcases hstep with ⟨i, j, b, hs, hr, rfl⟩ | ⟨id, b, hcnt, hs, rfl⟩ | ⟨id, b, hF, rfl⟩ <;>
       rw [PMF.mem_support_pure_iff] at hc' <;> subst hc'
     · exact ⟨ABAState.deliverDecided_F _ _ _ _, ABAState.deliverDecided_processes _ _ _ _⟩
-    · exact ⟨ABAState.sendDecided_F _ _ _, ABAState.sendDecided_processes _ _ _⟩
-    · exact ⟨ABAState.sendDecided_F _ _ _, ABAState.sendDecided_processes _ _ _⟩
+    · exact ⟨ABAState.recordDecided_F _ _ _, ABAState.recordDecided_processes _ _ _⟩
+    · exact ⟨ABAState.recordDecided_F _ _ _, ABAState.recordDecided_processes _ _ _⟩
   exact hA.unchangedBy hCUnchanged.1 (fun id => by rw [hCUnchanged.2]) (fun id => by rw
     [hCUnchanged.2]) hAF
 
@@ -218,7 +218,8 @@ theorem AbstractState.step_decidedSend {P : Parameters} {g : ℕ → GBCA.SpecSt
     (fun id' => (hCUnchanged id').2) hAF
 
 /-- The coin's resolution: stutters. The resolution writes the coin instance of one round alone,
-which `AbstractState` does not read, and leaves `g` and the core unchanged. -/
+which `AbstractState` does not read, and leaves `g`, the round loops and the ABA network
+unchanged. -/
 theorem AbstractState.step_resolve {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
     {c : ABAState P} {w : ℕ → WCC.SpecState P.n} {a : SpecState P.n}
     (hA : AbstractState P g c w a) (r : ℕ) (wr' : WCC.SpecState P.n) :
@@ -253,8 +254,8 @@ theorem mem_support_coinTransition {P : Parameters} {μc : PMF (ABAState P)}
   obtain ⟨rfl, rfl, wr', hwr', heq⟩ := hmem
   exact ⟨hc, wr', hwr', heq.symm⟩
 
-/-- Reading a transition where the common coin moves alone: `g` and the core unchanged, the coin
-instance of round `r` drawn from its own outcome. -/
+/-- Reading a transition where the common coin moves alone: `g`, the round loops and the ABA
+network unchanged, the coin instance of round `r` drawn from its own outcome. -/
 theorem mem_support_coinResolution {P : Parameters} {G g' : ℕ → GBCA.SpecState P.n}
     {C C' : ∀ _ : Fin P.n, RoundLoopVariables P.n} {A A' : ABANetworkState P.n}
     {μw : PMF (WCC.SpecState P.n)} {o w' : ℕ → WCC.SpecState P.n} {r : ℕ}

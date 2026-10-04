@@ -928,8 +928,8 @@ theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessVar
       exact RoundLoopStep.retGIdle _ r id out bnd (Ne.symm hi)
 
 /-- The matching on the silent label. The protocol's own `terminate` transition writes
-no coordinate the relation reads, so the composed system matches it by standing
-still; the adversary's two injections and the resolution of a round of the common coin are
+no coordinate the relation reads, so the composed system matches it by remaining
+unchanged; the adversary's two injections and the resolution of a round of the common coin are
 matched by a transition. -/
 theorem coupling_tau (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessVariables P.n}
     {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n} {G : ℕ → GBCA.ByABDY.RoundState P.n}

@@ -28,8 +28,8 @@ resolution writes.
 The threshold is `P.f < |{id | called id}|`. It counts callers alone, after
 Definition 2.1 of ABDY22, which counts accesses to the coin. A corrupted
 process reaches the instance as a caller, since `coinLabelMap` sends its
-`byzantineCallW r k` to `callW r k`, so `called` counts it. The corrupted set
-`F` is not added to the count. A corruption leaves `called` unchanged, so it
+`byzantineCallW r k` to `callW r k`, so `called` counts it. Transition System 3
+adds `F` to the count; the threshold here does not (D31). A corruption leaves `called` unchanged, so it
 cannot enable the resolution.
 
 Deviations: the `guess` label is omitted (D4 -- it exists solely for the

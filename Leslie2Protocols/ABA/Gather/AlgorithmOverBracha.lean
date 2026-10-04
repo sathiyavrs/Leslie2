@@ -199,7 +199,8 @@ inductive AlgorithmOverBracha (P : Parameters) :
             ((inputBroadcasts s j).setProcessVariables j
               { (inputBroadcasts s j).processVariables j with input := some x }))))
   /-- `BIND`: the process is called (D8), `n − f` senders' approved `VOTE` payloads,
-  each contained in the bind payload, are delivered here, and the process calls its bind instance with the payload.
+  each contained in the bind payload, are delivered here, and the process calls its bind instance
+  with the payload.
   The process has multicast its own `VOTE` and has not called its own bind
   broadcast. The main thread of AFW25's Algorithm 5 sends `VOTE` before `BIND`,
   and sends `BIND` once, at line 17. The payload handed to the broadcast is

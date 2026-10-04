@@ -1525,7 +1525,6 @@ The DECIDED sets, the corrupted set with its budget, and the authorisation $k \i
 The self-loops of a process carry \leandeclnamed{inputLoop}{PLTS.ABA.Composition.RoundLoopStep.inputLoop}, which takes $\mathrm{callABA}$ at a process whose input is set (D36), together with the four transitions on which every round loop stands while a Byzantine call or return transition moves graded-agreement or coin content, \leandeclnamed{byzantineCallGIdle}{PLTS.ABA.Composition.RoundLoopStep.byzantineCallGIdle}, \leandeclnamed{byzantineRetGIdle}{PLTS.ABA.Composition.RoundLoopStep.byzantineRetGIdle}, \leandeclnamed{byzantineCallWIdle}{PLTS.ABA.Composition.RoundLoopStep.byzantineCallWIdle} and \leandeclnamed{byzantineRetWIdle}{PLTS.ABA.Composition.RoundLoopStep.byzantineRetWIdle}; the guard $k \in F$ that authorises such a transition is the network's, at \leandeclnamed{byzantineCallG}{PLTS.ABA.Composition.ABANetworkStep.byzantineCallG}, \leandeclnamed{byzantineRetG}{PLTS.ABA.Composition.ABANetworkStep.byzantineRetG}, \leandeclnamed{byzantineCallW}{PLTS.ABA.Composition.ABANetworkStep.byzantineCallW} and \leandeclnamed{byzantineRetW}{PLTS.ABA.Composition.ABANetworkStep.byzantineRetW} (D11).
 The step \leandeclnamed{retG}{PLTS.ABA.Composition.RoundLoopStep.retG} sets $estimate$ to the grade.
 The bound bit the same label carries is a ghost output, and no transition of the loop reads it (D29).
-The coin return and the DECIDED send are two steps.
 The step \leandeclnamed{retW}{PLTS.ABA.Composition.RoundLoopStep.retW} increments the round and adopts the coin when $estimate = \bot$; on a grade-2 outcome it keeps $lastGrade$ and enters $\mathrm{toSendDecided}$, and otherwise it clears $lastGrade$ and enters $\mathrm{toCallG}$.
 The step \leandeclnamed{decidedSend}{PLTS.ABA.Composition.RoundLoopStep.decidedSend} is taken at $\mathrm{toSendDecided}$ with $lastGrade = (b,2)$: it multicasts $\langle\mathrm{DECIDED},b\rangle$, clears $lastGrade$ and enters $\mathrm{toCallG}$.
 The sent set insert is the network's half of that synchronised transition, \leandeclnamed{decidedSend}{PLTS.ABA.Composition.ABANetworkStep.decidedSend}, which carries no guard.
@@ -1718,7 +1717,7 @@ The graded outcome fixes the next estimate, a grade-2 or grade-1 return of value
 setting it to $b$ and a grade-0 return clearing it to $\bot$; a cleared estimate is
 filled by the coin of the same round, and a set estimate ignores that coin.
 The step that receives the coin advances the round.
-When the round's outcome was $(b,2)$, a step of its own then
+When the round's outcome was $(b,2)$, the step $\mathrm{decidedSend}$ then
 multicasts $\langle \mathrm{DECIDED}, b \rangle$ before the next GBCA call.
 A process holding $\langle \mathrm{DECIDED}, b \rangle$ from $f+1$ distinct
 senders and not having multicast $\langle \mathrm{DECIDED}, b \rangle$ itself multicasts

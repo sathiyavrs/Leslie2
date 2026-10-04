@@ -168,7 +168,7 @@ one-line form of that translation.
 
 | concrete transition | label | matching abstract run |
 |---|---|---|
-| every hidden call and return (`callG`/`retG`/`callW`/`retW`), `bindUnset`, the DECIDED send of a grade-2 round (`decidedSend`), DECIDED gossip τ | τ | stutter (`AbstractState.unchangedBy`; only `Invariant` moves) |
+| every hidden call and return (`callG`/`retG`/`callW`/`retW`), `bindUnset`, the DECIDED send of a grade-2 round (`decidedSend`), the DECIDED relay, delivery and injection | τ | stutter (`AbstractState.unchangedBy`; only `Invariant` moves) |
 | the resolution of `WCC_r`'s coin | τ | constant-coupled stutter via the generic `stutter_step` (`HybridRefinesSpecification/Simulation.lean`): coupling `Ω := μ_C.map (·, pure a)`, so `ω = pure (pure a)` and `ω.bind id = pure a` (the abstract state never flips, so every outcome of the draw lands on the same `a`) |
 | `callABA id b`, `id ∉ F`, the commit transition (`input = none`) | `callABA id b` | `SpecStep.callSet` (a first write at the empty ghost entry `input_sync` supplies; both systems commit `b`) |
 | `callABA id b`, `id ∉ F`, the concrete loop (`input ≠ none`) | `callABA id b` | `SpecStep.callLoop` (the filled ghost entry `input_sync` supplies; neither system moves) |
@@ -358,8 +358,8 @@ X and `DECIDED 1` to Y — an under-approximation inconsistent with the equivoca
 sets of graded agreement. D12′ mirrors D5 in the DECIDED sets: the network's `decidedSent` and
 the round-loop variables' received sets, read as one object (`Composition/ABAState.lean`) as
 `decidedSent : Fin n → Finset Bool` and `decidedReceived : Fin n → Fin n → Finset Bool`,
-two maps that only grow. `sendDecided` inserts; delivery is the `decidedDeliver` synchronisation, per
-(receiver, sender, bit), with soundness `b ∈ decidedSent j` on the network's half and an
+two maps that only grow. `recordDecided` inserts; delivery is the `decidedDeliver` synchronisation,
+per (receiver, sender, bit), with soundness `b ∈ decidedSent j` on the network's half and an
 at-most-once `b ∉ decidedReceived i j` guard on the receiver's; `byzantineDecided` is guarded *only*
 by
 `k ∈ F`. Correct sent sets stay at card ≤ 1 in reachable states (grade-2 witnesses fix

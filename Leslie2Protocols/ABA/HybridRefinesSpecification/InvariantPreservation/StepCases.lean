@@ -297,9 +297,9 @@ theorem hybrid_step_tau (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
               μc = PMF.pure (ABAState.deliverDecided (C, A) i j b)) ∨
           (∃ k b, P.f + 1 ≤ ABAState.decidedCount (C, A) k b ∧
               b ∉ ABAState.decidedSent (C, A) k ∧
-              μc = PMF.pure (ABAState.sendDecided (C, A) k b)) ∨
+              μc = PMF.pure (ABAState.recordDecided (C, A) k b)) ∨
           (∃ k b, k ∈ ABAState.F (C, A) ∧
-              μc = PMF.pure (ABAState.sendDecided (C, A) k b))) ∧
+              μc = PMF.pure (ABAState.recordDecided (C, A) k b))) ∧
         μ = prodPMF (PMF.pure G) (μc.map fun c => (c.1, c.2, o))) ∨
       (∃ (r : ℕ) (id : Fin P.n) (b : Bool) (μr : PMF (GBCA.SpecState P.n))
           (μc : PMF (ABAState P)), GBCA.Step P r (G r) (.callG r id b) μr ∧
@@ -464,7 +464,7 @@ theorem hybrid_step_tau (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
         obtain rfl : A' = A.recordDecided j b := pure_inj hA'
         obtain rfl : ω = PMF.pure o :=
           (System.mapIdle_step_none (coinLabelMap_decidedRelay j b) ω).mp hW
-        refine Or.inr (Or.inl ⟨PMF.pure (ABAState.sendDecided (C, A) j b), ?_, by
+        refine Or.inr (Or.inl ⟨PMF.pure (ABAState.recordDecided (C, A) j b), ?_, by
           simp only [PMF.pure_map, prodPMF_pure_pure]; rfl⟩)
         rcases roundLoopStep_decidedRelay_self (hall j) with ⟨-, hcnt, -⟩ | ⟨hh, -⟩
         · exact Or.inr (Or.inl ⟨j, b, hcnt, hsent, rfl⟩)
@@ -582,7 +582,7 @@ theorem hybrid_step_tau (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
         exact Or.inl ⟨r, PMF.pure X, hstepG, by rw [PMF.pure_map, prodPMF_pure_pure]⟩
       · obtain ⟨k, b, hF, hA'⟩ := abaNetworkStep_tau hnet
         obtain rfl : A' = A.recordDecided k b := pure_inj hA'
-        exact Or.inr (Or.inl ⟨PMF.pure (ABAState.sendDecided (C, A) k b),
+        exact Or.inr (Or.inl ⟨PMF.pure (ABAState.recordDecided (C, A) k b),
           Or.inr (Or.inr ⟨k, b, hF, rfl⟩), by rw [PMF.pure_map, prodPMF_pure_pure]; rfl⟩)
       · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr ⟨r, μw, hstepW, rfl⟩))))))
 

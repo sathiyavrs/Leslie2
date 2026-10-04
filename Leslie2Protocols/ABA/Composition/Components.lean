@@ -370,8 +370,7 @@ inductive ABANetworkStep (P : Parameters) {M : Type} [DecidableEq M] :
   loop's half is the replaced program's self-loop. -/
   | retByzantine (a : ABANetworkState P.n) (id : Fin P.n) (b : Bool) (hF : id ∈ a.F) :
       ABANetworkStep P a (Sum.inl (.retABA id b)) (PMF.pure a)
-  /-- The graded-agreement call's `⟨INPUT, b⟩` is sent in the round's network,
-  not here. -/
+  /-- A graded-agreement call sends nothing. -/
   | callGIdle (a : ABANetworkState P.n) (r : ℕ) (id : Fin P.n) (b : Bool) :
       ABANetworkStep P a (Sum.inl (.callG r id b)) (PMF.pure a)
   /-- A graded-agreement return sends nothing, and the bound bit it

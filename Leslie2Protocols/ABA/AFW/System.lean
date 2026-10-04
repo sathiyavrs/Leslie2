@@ -49,19 +49,17 @@ written over the tagged message type: the transitions of its graded-agreement pr
 (`GBCA.ByAFW.ProgramStep`), of its gather programs (`Gather.ProgramStep`) and of the Bracha
 programs beneath them (`BRB.ProgramStep`). Each is the process's half of a step whose network half
 is a transition of the adversary. A send writes the sender's own variables and the network records
-the
-message; a delivery files the message in the receiver's own local state, dispatched on the tag.
-Every call and every return of a sub-protocol is a transition of its own, and no transition takes
-a call or a return together with a send. The graded-agreement call, the call of the process's own
-input-broadcast instance and of its own bind-broadcast instance in each of the two gathers, the
-first gather's return, the second gather's call, the second gather's return, the round's own return
-and the return of each of the `4n` broadcast instances are separate transitions. A call of an
-input-broadcast instance reads the payload its gather variables hold and records it as that
-instance's input; the leader's `⟨INIT, ·⟩` is the send that follows, `firstGatherInputBroadcastInit`
-and its three companions. A return writes what it returned in the caller's variables. The round's variables
-therefore hold the two gather local states over `Gather.ProcessVariables`, which carries what each
-instance returned, and the two intermediate phases `candidate` and `output`. A gather guard reads
-those variables, as the guard of the composed gather program does:
+the message; a delivery files the message in the receiver's own local state, dispatched on the tag.
+Every call and every return of a sub-protocol is a transition of its own. The graded-agreement
+call, the call of the process's own input-broadcast instance and of its own bind-broadcast instance
+in each of the two gathers, the first gather's return, the second gather's call, the second
+gather's return, the round's own return and the return of each of the `4n` broadcast instances are
+each one transition. A call of an input-broadcast instance reads the payload its gather variables
+hold and records it as that instance's input; the leader's `⟨INIT, ·⟩` is the send that follows,
+`firstGatherInputBroadcastInit` and its three companions. A return writes what it returned in the
+caller's variables. The round's variables therefore hold the two gather local states over
+`Gather.ProcessVariables`, which carries what each instance returned, and the two intermediate
+phases `candidate` and `output`. A gather guard reads those variables, as the guard of the composed gather program does:
 `Gather.ProcessVariables.accepted` is the `ECHO` payload `AP_i` of AFW25's Algorithm 5, line 9, and
 `Gather.approvedBy`,
 `Gather.holdsInputBroadcastReturn` and `Gather.holdsBindBroadcastReturn` are the remaining guards.

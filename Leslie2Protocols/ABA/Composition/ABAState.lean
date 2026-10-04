@@ -150,45 +150,45 @@ theorem setProcessVariables_processes_ne (s : ABAState P) (id : Fin P.n) (p : Ro
 
 /-- Process `id` multicasts `⟨DECIDED, b⟩`: the network sent sets `b` under `id`
 (deviation D12′ — the sent only ever grows). -/
-def sendDecided (s : ABAState P) (id : Fin P.n) (b : Bool) : ABAState P :=
+def recordDecided (s : ABAState P) (id : Fin P.n) (b : Bool) : ABAState P :=
   (s.1, s.2.recordDecided id b)
 
-@[simp] theorem sendDecided_processes (s : ABAState P) (id : Fin P.n) (b : Bool) :
-    (s.sendDecided id b).processes = s.processes := rfl
-@[simp] theorem sendDecided_decidedReceived (s : ABAState P) (id : Fin P.n) (b : Bool) :
-    (s.sendDecided id b).decidedReceived = s.decidedReceived := rfl
-@[simp] theorem sendDecided_corrupted (s : ABAState P) (id : Fin P.n) (b : Bool) :
-    (s.sendDecided id b).corrupted = s.corrupted := rfl
-@[simp] theorem sendDecided_F (s : ABAState P) (id : Fin P.n) (b : Bool) :
-    (s.sendDecided id b).F = s.F := rfl
-@[simp] theorem sendDecided_decidedSent (s : ABAState P) (id : Fin P.n) (b : Bool) :
-    (s.sendDecided id b).decidedSent =
+@[simp] theorem recordDecided_processes (s : ABAState P) (id : Fin P.n) (b : Bool) :
+    (s.recordDecided id b).processes = s.processes := rfl
+@[simp] theorem recordDecided_decidedReceived (s : ABAState P) (id : Fin P.n) (b : Bool) :
+    (s.recordDecided id b).decidedReceived = s.decidedReceived := rfl
+@[simp] theorem recordDecided_corrupted (s : ABAState P) (id : Fin P.n) (b : Bool) :
+    (s.recordDecided id b).corrupted = s.corrupted := rfl
+@[simp] theorem recordDecided_F (s : ABAState P) (id : Fin P.n) (b : Bool) :
+    (s.recordDecided id b).F = s.F := rfl
+@[simp] theorem recordDecided_decidedSent (s : ABAState P) (id : Fin P.n) (b : Bool) :
+    (s.recordDecided id b).decidedSent =
       Function.update s.decidedSent id (insert b (s.decidedSent id)) := rfl
-@[simp] theorem sendDecided_decidedCount (s : ABAState P) (id : Fin P.n) (b : Bool)
+@[simp] theorem recordDecided_decidedCount (s : ABAState P) (id : Fin P.n) (b : Bool)
     (i : Fin P.n) (b' : Bool) :
-    (s.sendDecided id b).decidedCount i b' = s.decidedCount i b' := rfl
+    (s.recordDecided id b).decidedCount i b' = s.decidedCount i b' := rfl
 
-/-- Sent sets only grow under `sendDecided`. -/
-theorem sendDecided_decidedSent_mono (s : ABAState P) (id : Fin P.n) (b : Bool)
+/-- Sent sets only grow under `recordDecided`. -/
+theorem recordDecided_decidedSent_mono (s : ABAState P) (id : Fin P.n) (b : Bool)
     {k : Fin P.n} {b' : Bool} (h : b' ∈ s.decidedSent k) :
-    b' ∈ (s.sendDecided id b).decidedSent k := by
+    b' ∈ (s.recordDecided id b).decidedSent k := by
   by_cases hk : k = id
   · subst hk
-    simp only [sendDecided_decidedSent, Function.update_self]
+    simp only [recordDecided_decidedSent, Function.update_self]
     exact Finset.mem_insert_of_mem h
-  · simp only [sendDecided_decidedSent, Function.update_of_ne hk]
+  · simp only [recordDecided_decidedSent, Function.update_of_ne hk]
     exact h
 
-/-- Membership in a post-`sendDecided` sent set: the fresh bit at `id`, or an
+/-- Membership in a post-`recordDecided` sent set: the fresh bit at `id`, or an
 old sent member. -/
-theorem mem_sendDecided_decidedSent_iff (s : ABAState P) (id : Fin P.n) (b : Bool)
+theorem mem_recordDecided_decidedSent_iff (s : ABAState P) (id : Fin P.n) (b : Bool)
     (k : Fin P.n) (b' : Bool) :
-    b' ∈ (s.sendDecided id b).decidedSent k ↔
+    b' ∈ (s.recordDecided id b).decidedSent k ↔
       (k = id ∧ b' = b) ∨ b' ∈ s.decidedSent k := by
   by_cases hk : k = id
   · subst hk
-    simp [sendDecided_decidedSent, Function.update_self, Finset.mem_insert]
-  · simp [sendDecided_decidedSent, hk]
+    simp [recordDecided_decidedSent, Function.update_self, Finset.mem_insert]
+  · simp [recordDecided_decidedSent, hk]
 
 /-- The adversary delivers `⟨DECIDED, b⟩` from sender `j` to receiver `i`:
 the receiver's variables file `b` under `j` (per-(receiver, sender, bit),
@@ -321,7 +321,7 @@ theorem stepRound_processes_ne (s : ABAState P) (id : Fin P.n) (c : Bool)
 closed: the network sets `b` under `id`, and the process clears the grade and enters the
 next round's `toCallG`. -/
 def sendDecidedOnGrade2 (s : ABAState P) (id : Fin P.n) (b : Bool) : ABAState P :=
-  (s.sendDecided id b).setProcessVariables id
+  (s.recordDecided id b).setProcessVariables id
     { s.processes id with lastGrade := none, phase := .toCallG }
 
 theorem sendDecidedOnGrade2_apply (C : ∀ _ : Fin P.n, RoundLoopVariables P.n)
@@ -349,7 +349,7 @@ theorem mem_sendDecidedOnGrade2_decidedSent_iff (s : ABAState P) (id : Fin P.n) 
     (k : Fin P.n) (b' : Bool) :
     b' ∈ (s.sendDecidedOnGrade2 id b).decidedSent k ↔
       (k = id ∧ b' = b) ∨ b' ∈ s.decidedSent k :=
-  mem_sendDecided_decidedSent_iff s id b k b'
+  mem_recordDecided_decidedSent_iff s id b k b'
 
 @[simp] theorem sendDecidedOnGrade2_decidedReceived (s : ABAState P) (id : Fin P.n) (b : Bool) :
     (s.sendDecidedOnGrade2 id b).decidedReceived = s.decidedReceived :=

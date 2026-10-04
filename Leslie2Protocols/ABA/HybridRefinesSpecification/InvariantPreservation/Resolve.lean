@@ -15,8 +15,8 @@ and it writes the drawn outcome to `val`. The clauses reading `(w r).val` come b
 threshold: `Invariant.exists_correct_wccCaller` supplies a never-corrupted caller of round `r`,
 whose `wcc_called`, `wcc_callRound` and `wccCalled_witness` carry `wcc_bound`, `wcc_order` and
 `flip_witness`. `agree_bound`'s round-`r` corner is vacuous: `round_flip` at a never-corrupted
-process past round `r` contradicts `val = ⊥`. The resolution leaves `called`, `F`, `g` and the
-core unchanged, so every other clause passes through.
+process past round `r` contradicts `val = ⊥`. The resolution leaves `called`, `F`, `g`, the
+round loops and the ABA network unchanged, so every other clause passes through.
 -/
 
 namespace PLTS
