@@ -198,13 +198,14 @@ theorem Invariant.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
               · have hu := hsome u he
                 rw [hemp1] at hu; exact absurd hu (by simp)
             · have hphase3 : (c.processes id).phase = .idle ∨ (c.processes id).phase = .toCallG ∨
-                  (c.processes id).phase = .awaitG := by
-                rcases hph2 : (c.processes id).phase with _ | _ | _ | _ | _
+                  (c.processes id).phase = .awaitG ∨ (c.processes id).phase = .toSendDecided := by
+                rcases hph2 : (c.processes id).phase with _ | _ | _ | _ | _ | _
                 · exact Or.inl rfl
                 · exact Or.inr (Or.inl rfl)
-                · exact Or.inr (Or.inr rfl)
+                · exact Or.inr (Or.inr (Or.inl rfl))
                 · exact absurd (Or.inl hph2) hgroup
                 · exact absurd (Or.inr hph2) hgroup
+                · exact Or.inr (Or.inr (Or.inr rfl))
               obtain ⟨u, he⟩ :=
                 Option.ne_none_iff_exists'.mp (hI.estimate_previous_ne id hmem (by omega) hphase3)
               rw [he]

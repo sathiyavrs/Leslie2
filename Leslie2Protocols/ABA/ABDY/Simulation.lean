@@ -463,29 +463,29 @@ theorem coupling_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessVar
         (gbcaProgramStep_family i _ (GBCA.ByABDY.GBCAProgramStep.deliverReceive _ k m)
           (fun i' hi' => GBCA.ByABDY.GBCAProgramStep.deliverIdle _ i k m (Ne.symm hi')))
         (GBCA.ByABDY.GBCANetworkStep.deliver _ i k m (by rw [hG r]; exact hmem)))
-  | decidedSend j b =>
-    obtain ⟨hdp, hw⟩ := networkStep_decidedSend hn
+  | decidedRelay j b =>
+    obtain ⟨hdp, hw⟩ := networkStep_decidedRelay hn
     obtain rfl : w' = w.recordDecided j b := pure_inj hw
     have hx : ∀ i, x i = processes i := by
       intro i
       by_cases hi : i = j
       · subst hi
-        rcases programStep_decidedSend_self (hall i) with ⟨-, -, -, hdx⟩ | ⟨-, hdx⟩ <;>
+        rcases programStep_decidedRelay_self (hall i) with ⟨-, -, -, hdx⟩ | ⟨-, hdx⟩ <;>
           exact pure_inj hdx
-      · exact pure_inj (programStep_decidedSend_notOwn (Ne.symm hi) (hall i))
+      · exact pure_inj (programStep_decidedRelay_notOwn (Ne.symm hi) (hall i))
     have h5 := relation_none P (G' := G) hst hx (fun _ _ => rfl)
     refine hvis (A' := A.recordDecided j b) (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
       ⟨fun _ => rfl, rfl, by rw [hA]; simp [ABANetworkState.recordDecided,
         NetworkState.recordDecided], fun r => by rw [hG r]; simp [NetworkState.recordDecided], h5⟩)
       (gbcaInstanceFamily_idle P G hLne (by simp) not_false) (fun i => ?_)
-      (ABANetworkStep.decidedSend A j b (by rw [hA]; exact hdp))
+      (ABANetworkStep.decidedRelay A j b (by rw [hA]; exact hdp))
     rw [hCeq i, hx i]
     by_cases hi : i = j
     · subst hi
-      rcases programStep_decidedSend_self (hall i) with ⟨hh, -, hdcnt, -⟩ | ⟨hh, -⟩
-      · exact RoundLoopStep.decidedSendRelay _ b hh hdcnt
+      rcases programStep_decidedRelay_self (hall i) with ⟨hh, -, hdcnt, -⟩ | ⟨hh, -⟩
+      · exact RoundLoopStep.decidedRelay _ b hh hdcnt
       · exact RoundLoopStep.corruptedIdle _ _ hh (by simp) not_false
-    · exact RoundLoopStep.decidedSendIdle _ j b (Ne.symm hi)
+    · exact RoundLoopStep.decidedRelayIdle _ j b (Ne.symm hi)
   | decidedDeliver i k b =>
     obtain ⟨hdp, hw⟩ := networkStep_decidedDeliver hn
     obtain rfl : w' = w := pure_inj hw
@@ -503,13 +503,14 @@ theorem coupling_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessVar
     by_cases hi' : i' = i
     · subst hi'; rw [hCeq i', hx]; exact RoundLoopStep.decidedDeliverReceive _ k b hhd hnotin
     · rw [hCeq i', hfor i' hi']; exact RoundLoopStep.decidedDeliverIdle _ i k b (Ne.symm hi')
-  | retWPublish r id co b =>
-    obtain rfl : w' = w.recordDecided id b := by
-      simpa using pure_inj (networkStep_retWPublish hn)
-    obtain ⟨hh, hph, hrr, hgr, hxid⟩ := programStep_retWPublish_self (hall id)
-    have hx : x id = ((processes id).1.stepRound co, (processes id).2) := pure_inj hxid
+  | decidedSend id b =>
+    obtain rfl : w' = w.recordDecided id b := pure_inj (networkStep_decidedSend hn)
+    obtain ⟨hh, hph, hgr, hxid⟩ := programStep_decidedSend_self (hall id)
+    have hx : x id = ((processes id).1.setProcessVariables
+        { (processes id).1.processVariables with lastGrade := none, phase := .toCallG },
+        (processes id).2) := pure_inj hxid
     have hfor : ∀ i, i ≠ id → x i = processes i := fun i hi =>
-      pure_inj (programStep_retWPublish_notOwn (Ne.symm hi) (hall i))
+      pure_inj (programStep_decidedSend_notOwn (Ne.symm hi) (hall i))
     have hown : ∀ r, (G r).1 id = (x id).2.roundVariables r := by
       intro r; simp only [hx]; exact hst id r
     have h5 := relation_roundVariables P id hst hfor (fun _ _ _ => rfl) hown
@@ -518,11 +519,11 @@ theorem coupling_event (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessVar
         NetworkState.recordDecided], fun r' => by rw [hG r']; simp [NetworkState.recordDecided],
           h5⟩)
       (gbcaInstanceFamily_idle P G hLne (by simp) not_false) (fun i => ?_)
-      (ABANetworkStep.retWPublish A r id co b)
+      (ABANetworkStep.decidedSend A id b)
     by_cases hi : i = id
-    · subst hi; rw [hCeq i, hx]; exact RoundLoopStep.retWPublish _ r co b hh hph hrr hgr
+    · subst hi; rw [hCeq i, hx]; exact RoundLoopStep.decidedSend _ b hh hph hgr
     · rw [hCeq i, hfor i hi]
-      exact RoundLoopStep.retWPublishIdle _ r id co b (Ne.symm hi)
+      exact RoundLoopStep.decidedSendIdle _ id b (Ne.symm hi)
   | gbcaCallLoop r id b =>
     obtain rfl : w' = w := by
       simpa using pure_inj (networkStep_gbcaCallLoop hn)
@@ -727,7 +728,7 @@ theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessVar
     have hGs : (GBCA.ByABDY.gbcaInstanceFamily P).step G (Sum.inl (Label.retW r id co))
       (PMF.pure G) :=
       gbcaInstanceFamily_idle P G hLne (by simp) not_false
-    rcases programStep_retW_own (hall id) with ⟨hh, hph, hrr, hgr, hxid⟩ | ⟨hh, hxid⟩
+    rcases programStep_retW_own (hall id) with ⟨hh, hph, hrr, hxid⟩ | ⟨hh, hxid⟩
     · have hx : x id = ((processes id).1.stepRound co, (processes id).2) := pure_inj hxid
       have hown : ∀ r, (G r).1 id = (x id).2.roundVariables r := by
         intro r; simp only [hx]; exact hst id r
@@ -736,7 +737,7 @@ theorem coupling_label (P : Parameters) {processes : ∀ _ : Fin P.n, ProcessVar
         ⟨fun _ => rfl, rfl, hA, hG, h5⟩) hGs (fun i => ?_)
         (ABANetworkStep.retWIdle A r id co) hWl
       by_cases hi : i = id
-      · subst hi; rw [hCeq i, hx]; exact RoundLoopStep.retW _ r co hh hph hrr hgr
+      · subst hi; rw [hCeq i, hx]; exact RoundLoopStep.retW _ r co hh hph hrr
       · rw [hCeq i, hfor i hi]; exact RoundLoopStep.retWIdle _ r id co (Ne.symm hi)
     · have hx : ∀ i, x i = processes i := by
         intro i

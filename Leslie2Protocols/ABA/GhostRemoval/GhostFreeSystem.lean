@@ -238,14 +238,14 @@ theorem network_ghostRemoval
       exact ⟨_, _, rfl, NetworkStep.gbcaSend s r j m, by simp [PMF.pure_map]⟩
     case gbcaDeliver r i j m hm =>
       exact ⟨_, _, rfl, NetworkStep.gbcaDeliver s r i j m hm, by simp [PMF.pure_map]⟩
-    case decidedSend j b hb =>
-      exact ⟨_, _, rfl, NetworkStep.decidedSend s j b hb, by simp [PMF.pure_map]⟩
+    case decidedSend j b =>
+      exact ⟨_, _, rfl, NetworkStep.decidedSend s j b, by simp [PMF.pure_map]⟩
+    case decidedRelay j b hb =>
+      exact ⟨_, _, rfl, NetworkStep.decidedRelay s j b hb, by simp [PMF.pure_map]⟩
     case decidedDeliver i j b hb =>
       exact ⟨_, _, rfl, NetworkStep.decidedDeliver s i j b hb, by simp [PMF.pure_map]⟩
     case gbcaRoundEvent r j e =>
       exact ⟨_, _, rfl, NetworkStep.gbcaRoundEvent s r j e, by simp [PMF.pure_map]⟩
-    case retWPublish r id c b =>
-      exact ⟨_, _, rfl, NetworkStep.retWPublish s r id c b, by simp [PMF.pure_map]⟩
     case gbcaCallLoop r id b =>
       exact ⟨_, _, rfl, NetworkStep.gbcaCallLoop s r id b, by simp [PMF.pure_map]⟩
     case byzantineCallG r k b hF =>

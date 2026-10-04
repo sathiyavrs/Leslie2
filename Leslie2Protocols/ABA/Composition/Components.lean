@@ -37,14 +37,15 @@ the set of all of them — is what both compositions hide before reading the res
 
 The common coin `WCC.specFamily` is over `Label n`, so it is joined to the extended alphabet through
 the label pullback `coinLabelMap`, which sends a shared label to itself, the Byzantine call and
-return transitions and the fused coin return to the coin's own call and return transitions, and
-every other network event out of the domain. `coinOverRoundAlphabet` is the coin read along that
+return transitions to the coin's own call and return transitions, and every other network event
+out of the domain. `coinOverRoundAlphabet` is the coin read along that
 pullback at this alphabet. It is a component of both compositions, unchanged.
 
 ## The round loop of one process
 
 `RoundLoopStep` is the step relation of one process's round loop: the API transitions `callABA` and
-`retABA`, the graded-agreement and coin calls and returns, the DECIDED relay and its delivery, and
+`retABA`, the graded-agreement and coin calls and returns, the DECIDED send, the DECIDED relay and
+its delivery, and
 an idle transition for every label the process does not act on. It writes no round variables. The
 composed system runs `n` of these automata (`roundLoopProgram`) under a full-synchronisation
 product. The protocol composition pairs each round loop with the round variables into one program
@@ -201,11 +202,10 @@ inductive RoundLoopStep (P : Parameters) {M : Type} [DecidableEq M] (j : Fin P.n
   /-- A coin call by another process: not `j`'s business. -/
   | callWIdle (c : RoundLoopVariables P.n) (r : ℕ) (id : Fin P.n) (hid : id ≠ j) :
       RoundLoopStep P j c (Sum.inl (.callW r id)) (PMF.pure c)
-  /-- The coin return without a publication: the round advances and nothing is
-  multicast, the round's grade not being a grade-2 outcome (D10). -/
+  /-- The coin return: the round advances and nothing is sent. On a grade-2 outcome the advance
+  enters `toSendDecided`, where the DECIDED send follows (D10). -/
   | retW (c : RoundLoopVariables P.n) (r : ℕ) (co : Bool) (hh : c.corrupted = false)
-      (hph : c.processVariables.phase = .awaitW) (hr : c.processVariables.round = r)
-      (hgr : ∀ v : Bool, c.processVariables.lastGrade ≠ some (.grade2 v)) :
+      (hph : c.processVariables.phase = .awaitW) (hr : c.processVariables.round = r) :
       RoundLoopStep P j c (Sum.inl (.retW r j co)) (PMF.pure (c.stepRound co))
   /-- A coin return to another process: not `j`'s business. -/
   | retWIdle (c : RoundLoopVariables P.n) (r : ℕ) (id : Fin P.n) (co : Bool) (hid : id ≠ j) :
@@ -225,12 +225,12 @@ inductive RoundLoopStep (P : Parameters) {M : Type} [DecidableEq M] (j : Fin P.n
       RoundLoopStep P j c L (PMF.pure c)
   /-- The DECIDED relay on an `f + 1` quorum (D12′): the quorum is a condition
   on the variables, the write-once condition and the sent insert are `ABANetwork`'s. -/
-  | decidedSendRelay (c : RoundLoopVariables P.n) (b : Bool) (hh : c.corrupted = false)
+  | decidedRelay (c : RoundLoopVariables P.n) (b : Bool) (hh : c.corrupted = false)
       (hcnt : P.f + 1 ≤ c.decidedCount b) :
-      RoundLoopStep P j c (Sum.inr (.decidedSend j b)) (PMF.pure c)
+      RoundLoopStep P j c (Sum.inr (.decidedRelay j b)) (PMF.pure c)
   /-- A DECIDED relay by another process: not `j`'s business. -/
-  | decidedSendIdle (c : RoundLoopVariables P.n) (k : Fin P.n) (b : Bool) (hk : k ≠ j) :
-      RoundLoopStep P j c (Sum.inr (.decidedSend k b)) (PMF.pure c)
+  | decidedRelayIdle (c : RoundLoopVariables P.n) (k : Fin P.n) (b : Bool) (hk : k ≠ j) :
+      RoundLoopStep P j c (Sum.inr (.decidedRelay k b)) (PMF.pure c)
   /-- DECIDED delivery, receiver's half: at most one received message per (sender, bit)
   (D12′). Authenticity is `ABANetwork`'s conjunct. -/
   | decidedDeliverReceive (c : RoundLoopVariables P.n) (k : Fin P.n) (b : Bool) (hh : c.corrupted =
@@ -240,18 +240,18 @@ inductive RoundLoopStep (P : Parameters) {M : Type} [DecidableEq M] (j : Fin P.n
   /-- A DECIDED delivery to another process: not `j`'s business. -/
   | decidedDeliverIdle (c : RoundLoopVariables P.n) (i k : Fin P.n) (b : Bool) (hi : i ≠ j) :
       RoundLoopStep P j c (Sum.inr (.decidedDeliver i k b)) (PMF.pure c)
-  /-- The coin return fused with the `⟨DECIDED, b⟩` publication (D10): the
-  round's outcome was `grade2 b`, so the round advance publishes `b`, the sent insert
-  being `ABANetwork`'s half. -/
-  | retWPublish (c : RoundLoopVariables P.n) (r : ℕ) (co : Bool) (b : Bool)
-      (hh : c.corrupted = false)
-      (hph : c.processVariables.phase = .awaitW) (hr : c.processVariables.round = r)
+  /-- The DECIDED send of a grade-2 round (D10): the outcome of the round just closed was
+  `grade2 b`, so the process sends `⟨DECIDED, b⟩` to all, clears the grade and enters the next
+  round's `toCallG`. The sent insert is `ABANetwork`'s half. -/
+  | decidedSend (c : RoundLoopVariables P.n) (b : Bool) (hh : c.corrupted = false)
+      (hph : c.processVariables.phase = .toSendDecided)
       (hgr : c.processVariables.lastGrade = some (.grade2 b)) :
-      RoundLoopStep P j c (Sum.inr (.retWPublish r j co b)) (PMF.pure (c.stepRound co))
-  /-- A fused coin return at another process: not `j`'s business. -/
-  | retWPublishIdle (c : RoundLoopVariables P.n) (r : ℕ) (id : Fin P.n) (co : Bool) (b : Bool)
-      (hid : id ≠ j) :
-      RoundLoopStep P j c (Sum.inr (.retWPublish r id co b)) (PMF.pure c)
+      RoundLoopStep P j c (Sum.inr (.decidedSend j b))
+        (PMF.pure (c.setProcessVariables
+          { c.processVariables with lastGrade := none, phase := .toCallG }))
+  /-- A DECIDED send by another process: not `j`'s business. -/
+  | decidedSendIdle (c : RoundLoopVariables P.n) (k : Fin P.n) (b : Bool) (hk : k ≠ j) :
+      RoundLoopStep P j c (Sum.inr (.decidedSend k b)) (PMF.pure c)
   /-- The graded-agreement call against a round already called: the round loop moves and
   nothing else does — the whole transition is core content. -/
   | gbcaCallLoop (c : RoundLoopVariables P.n) (r : ℕ) (b : Bool) (hh : c.corrupted = false)
@@ -326,16 +326,16 @@ end ABANetworkState
 inductive ABANetworkStep (P : Parameters) {M : Type} [DecidableEq M] :
     ABANetworkState P.n → ExtendedLabel P.n M → PMF (ABANetworkState P.n) → Prop
   /-- The DECIDED relay's half: the payload must not be sent yet (D12′). -/
-  | decidedSend (a : ABANetworkState P.n) (j : Fin P.n) (b : Bool) (h : b ∉ a.decidedSent j) :
-      ABANetworkStep P a (Sum.inr (.decidedSend j b)) (PMF.pure (a.recordDecided j b))
+  | decidedRelay (a : ABANetworkState P.n) (j : Fin P.n) (b : Bool) (h : b ∉ a.decidedSent j) :
+      ABANetworkStep P a (Sum.inr (.decidedRelay j b)) (PMF.pure (a.recordDecided j b))
   /-- The DECIDED delivery's half: the payload must be sent under the named
   sender (D12′). -/
   | decidedDeliver (a : ABANetworkState P.n) (i j : Fin P.n) (b : Bool) (h : b ∈ a.decidedSent j) :
       ABANetworkStep P a (Sum.inr (.decidedDeliver i j b)) (PMF.pure a)
-  /-- The fused coin return's half: sent the published payload (D10, D12′). -/
-  | retWPublish (a : ABANetworkState P.n) (r : ℕ) (id : Fin P.n) (c : Bool) (b : Bool) :
-      ABANetworkStep P a (Sum.inr (.retWPublish r id c b)) (PMF.pure (a.recordDecided id b))
-  /-- A graded-agreement call against a round already called publishes nothing here. -/
+  /-- The DECIDED send's half: the payload enters the sender's DECIDED set (D10, D12′). -/
+  | decidedSend (a : ABANetworkState P.n) (j : Fin P.n) (b : Bool) :
+      ABANetworkStep P a (Sum.inr (.decidedSend j b)) (PMF.pure (a.recordDecided j b))
+  /-- A graded-agreement call against a round already called sends nothing. -/
   | gbcaCallLoop (a : ABANetworkState P.n) (r : ℕ) (id : Fin P.n) (b : Bool) :
       ABANetworkStep P a (Sum.inr (.gbcaCallLoop r id b)) (PMF.pure a)
   /-- The authorisation of a Byzantine graded-agreement call (D11): the round
@@ -373,15 +373,15 @@ inductive ABANetworkStep (P : Parameters) {M : Type} [DecidableEq M] :
   not here. -/
   | callGIdle (a : ABANetworkState P.n) (r : ℕ) (id : Fin P.n) (b : Bool) :
       ABANetworkStep P a (Sum.inl (.callG r id b)) (PMF.pure a)
-  /-- A graded-agreement return publishes nothing here, and the bound bit it
+  /-- A graded-agreement return sends nothing, and the bound bit it
   announces is the round instance's: this component holds no ghost. -/
   | retGIdle (a : ABANetworkState P.n) (r : ℕ) (id : Fin P.n) (out : GBCAOutput)
       (bnd : Bool) :
       ABANetworkStep P a (Sum.inl (.retG r id out bnd)) (PMF.pure a)
-  /-- A coin call publishes nothing. -/
+  /-- A coin call sends nothing. -/
   | callWIdle (a : ABANetworkState P.n) (r : ℕ) (id : Fin P.n) :
       ABANetworkStep P a (Sum.inl (.callW r id)) (PMF.pure a)
-  /-- An unfused coin return publishes nothing. -/
+  /-- A coin return sends nothing. -/
   | retWIdle (a : ABANetworkState P.n) (r : ℕ) (id : Fin P.n) (c : Bool) :
       ABANetworkStep P a (Sum.inl (.retW r id c)) (PMF.pure a)
   /-- Corruption (deviations D1, D23): Dirac, and guarded by the budget. The
@@ -600,12 +600,11 @@ theorem roundLoopStep_callW_notOwn {r : ℕ} {id : Fin P.n} (hid : id ≠ j)
 theorem roundLoopStep_retW_own {r : ℕ} {co : Bool}
     (h : RoundLoopStep P j c (Sum.inl (.retW r j co) : ExtendedLabel P.n M) ν) :
     (c.corrupted = false ∧ c.processVariables.phase = .awaitW ∧ c.processVariables.round = r ∧
-      (∀ v : Bool, c.processVariables.lastGrade ≠ some (.grade2 v)) ∧
       ν = PMF.pure (c.stepRound co)) ∨
     (c.corrupted = true ∧ ν = PMF.pure c) := by
   cases h
   case retW =>
-    exact Or.inl ⟨by assumption, by assumption, by assumption, by assumption, rfl⟩
+    exact Or.inl ⟨by assumption, by assumption, by assumption, rfl⟩
   case retWIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => exact Or.inr ⟨by assumption, rfl⟩
 
@@ -635,21 +634,21 @@ theorem roundLoopStep_fail_notOwn {k : Fin P.n} (hk : k ≠ j)
   case failIdle => rfl
   case corruptedIdle => rfl
 
-theorem roundLoopStep_decidedSend_self {b : Bool}
-    (h : RoundLoopStep P j c (Sum.inr (.decidedSend j b) : ExtendedLabel P.n M) ν) :
+theorem roundLoopStep_decidedRelay_self {b : Bool}
+    (h : RoundLoopStep P j c (Sum.inr (.decidedRelay j b) : ExtendedLabel P.n M) ν) :
     (c.corrupted = false ∧ P.f + 1 ≤ c.decidedCount b ∧ ν = PMF.pure c) ∨
     (c.corrupted = true ∧ ν = PMF.pure c) := by
   cases h
-  case decidedSendRelay => exact Or.inl ⟨by assumption, by assumption, rfl⟩
-  case decidedSendIdle => exact absurd rfl ‹_ ≠ j›
+  case decidedRelay => exact Or.inl ⟨by assumption, by assumption, rfl⟩
+  case decidedRelayIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => exact Or.inr ⟨by assumption, rfl⟩
 
-theorem roundLoopStep_decidedSend_notOwn {k : Fin P.n} {b : Bool} (hk : k ≠ j)
-(h : RoundLoopStep P j c (Sum.inr (.decidedSend k b) : ExtendedLabel P.n M) ν) :
+theorem roundLoopStep_decidedRelay_notOwn {k : Fin P.n} {b : Bool} (hk : k ≠ j)
+(h : RoundLoopStep P j c (Sum.inr (.decidedRelay k b) : ExtendedLabel P.n M) ν) :
     ν = PMF.pure c := by
   cases h
-  case decidedSendRelay => exact absurd rfl hk
-  case decidedSendIdle => rfl
+  case decidedRelay => exact absurd rfl hk
+  case decidedRelayIdle => rfl
   case corruptedIdle => rfl
 
 theorem roundLoopStep_decidedDeliver_self {k : Fin P.n} {b : Bool}
@@ -668,22 +667,23 @@ theorem roundLoopStep_decidedDeliver_notOwn {i k : Fin P.n} {b : Bool} (hi : i �
   case decidedDeliverIdle => rfl
   case corruptedIdle => rfl
 
-theorem roundLoopStep_retWPublish_self {r : ℕ} {co b : Bool}
-    (h : RoundLoopStep P j c (Sum.inr (.retWPublish r j co b) : ExtendedLabel P.n M) ν) :
-    c.corrupted = false ∧ c.processVariables.phase = .awaitW ∧ c.processVariables.round = r ∧
-      c.processVariables.lastGrade = some (.grade2 b) ∧ ν = PMF.pure (c.stepRound co) := by
+theorem roundLoopStep_decidedSend_self {b : Bool}
+    (h : RoundLoopStep P j c (Sum.inr (.decidedSend j b) : ExtendedLabel P.n M) ν) :
+    c.corrupted = false ∧ c.processVariables.phase = .toSendDecided ∧
+      c.processVariables.lastGrade = some (.grade2 b) ∧
+      ν = PMF.pure (c.setProcessVariables
+        { c.processVariables with lastGrade := none, phase := .toCallG }) := by
   cases h
-  case retWPublish =>
-    exact ⟨by assumption, by assumption, by assumption, by assumption, rfl⟩
-  case retWPublishIdle => exact absurd rfl ‹_ ≠ j›
+  case decidedSend => exact ⟨by assumption, by assumption, by assumption, rfl⟩
+  case decidedSendIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
-theorem roundLoopStep_retWPublish_notOwn {r : ℕ} {id : Fin P.n} {co b : Bool} (hid : id ≠ j)
-(h : RoundLoopStep P j c (Sum.inr (.retWPublish r id co b) : ExtendedLabel P.n M) ν) :
+theorem roundLoopStep_decidedSend_notOwn {k : Fin P.n} {b : Bool} (hk : k ≠ j)
+    (h : RoundLoopStep P j c (Sum.inr (.decidedSend k b) : ExtendedLabel P.n M) ν) :
     ν = PMF.pure c := by
   cases h
-  case retWPublish => exact absurd rfl hid
-  case retWPublishIdle => rfl
+  case decidedSend => exact absurd rfl hk
+  case decidedSendIdle => rfl
   case corruptedIdle => rfl
 
 theorem roundLoopStep_gbcaCallLoop_self {r : ℕ} {b : Bool}
@@ -746,8 +746,8 @@ section ABANetworkStepCases
 variable {P : Parameters} {M : Type} [DecidableEq M] {a : ABANetworkState P.n}
   {μ : PMF (ABANetworkState P.n)}
 
-theorem abaNetworkStep_decidedSend {j : Fin P.n} {b : Bool}
-    (h : ABANetworkStep P a (Sum.inr (.decidedSend j b) : ExtendedLabel P.n M) μ) :
+theorem abaNetworkStep_decidedRelay {j : Fin P.n} {b : Bool}
+    (h : ABANetworkStep P a (Sum.inr (.decidedRelay j b) : ExtendedLabel P.n M) μ) :
     b ∉ a.decidedSent j ∧ μ = PMF.pure (a.recordDecided j b) := by
   cases h; exact ⟨by assumption, rfl⟩
 
@@ -756,9 +756,9 @@ theorem abaNetworkStep_decidedDeliver {i j : Fin P.n} {b : Bool}
     b ∈ a.decidedSent j ∧ μ = PMF.pure a := by
   cases h; exact ⟨by assumption, rfl⟩
 
-theorem abaNetworkStep_retWPublish {r : ℕ} {id : Fin P.n} {c b : Bool}
-    (h : ABANetworkStep P a (Sum.inr (.retWPublish r id c b) : ExtendedLabel P.n M) μ) :
-    μ = PMF.pure (a.recordDecided id b) := by
+theorem abaNetworkStep_decidedSend {j : Fin P.n} {b : Bool}
+    (h : ABANetworkStep P a (Sum.inr (.decidedSend j b) : ExtendedLabel P.n M) μ) :
+    μ = PMF.pure (a.recordDecided j b) := by
   cases h; rfl
 
 theorem abaNetworkStep_gbcaCallLoop {r : ℕ} {id : Fin P.n} {b : Bool}

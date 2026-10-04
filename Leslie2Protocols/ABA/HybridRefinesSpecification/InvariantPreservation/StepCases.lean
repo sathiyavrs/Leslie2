@@ -13,9 +13,9 @@ import Leslie2Protocols.ABA.Composition.Hybrid
 One lemma per visible label class (`callABA`, `retABA`, `fail`) and one for `τ`, each reading a
 transition of the protocol-shaped specification back into the transitions of its four components, in
 the projection's own coordinates: the pair `(C, A)` of the round loops beside the ABA network, read
-through `ABAState`'s accessors. `hybrid_step_tau` is the six-way disjunction the τ case of the
+through `ABAState`'s accessors. `hybrid_step_tau` is the seven-way disjunction the τ case of the
 simulation dispatches on; its τ has more sources than the visible labels do, every synchronisation
-label being hidden, and each of those sources collapses into one of the six. Three of the four
+label being hidden, and each of those sources collapses into one of the seven. Three of the four
 lemmas take the invariant's I0 conjunct as a hypothesis: a round loop's transition is guarded by its
 own replacement flag and the ABA network's transition by the corrupted set, and I0 identifies the
 two, so that the statement is on `F` alone (D23). `corrupted_eq_false_iff` is the one-line form
@@ -272,15 +272,16 @@ theorem hybrid_step_fail (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
     exact h
 
 /-- `hybrid` step cases, `τ` (`mp`-only: preservation only needs the forward
-direction). Six sources, and every synchronisation label folds into them:
+direction). Seven sources, and every synchronisation label folds into them:
 the specification family's binding exclusion, the projection's own DECIDED messages
-(delivery, echo, Byzantine injection), and the four calls and returns — `callG`/`retG`
+(delivery, the `f + 1` relay, Byzantine injection), the four calls and returns — `callG`/`retG`
 against a round specification, `callW`/`retW` against the common coin — each
 reached either by the shared label under the sub-protocol hiding or by the
-synchronisation label that stands for it (`gbcaCallLoop`, the Byzantine call and return
-transitions, and the fused coin return `retWPublish`). The coin resolves inside the `callW` call
+synchronisation label that stands for it (`gbcaCallLoop` and the Byzantine call and return
+transitions), and the DECIDED send of a grade-2 round, taken after the coin return on the
+synchronisation label `decidedSend`. The coin resolves inside the `callW` call
 (D31), so the common coin's draw arrives under that call's source. A replaced program contributes
-no source of its own: its self-loop on `callG`, `retG`, `callW`, `retW` and `decidedSend` reads as
+no source of its own: its self-loop on `callG`, `retG`, `callW`, `retW` and `decidedRelay` reads as
 the corrupted branch already present at those transitions, `id ∈ F` being supplied by I0 (D23). -/
 theorem hybrid_step_tau (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
     (C : ∀ _ : Fin P.n, RoundLoopVariables P.n) (A : ABANetworkState P.n)
@@ -335,7 +336,12 @@ theorem hybrid_step_tau (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
             μc = PMF.pure (ABAState.stepRound (C, A) id b)) ∨
           (id ∈ ABAState.F (C, A) ∧ μc = PMF.pure (C, A))) ∧
         μ = prodPMF (PMF.pure G) (μc.bind fun c => prodPMF (PMF.pure c.1)
-              (prodPMF (PMF.pure c.2) (μw'.map (Function.update o r))))) := by
+              (prodPMF (PMF.pure c.2) (μw'.map (Function.update o r))))) ∨
+      (∃ (id : Fin P.n) (b : Bool) (μc : PMF (ABAState P)),
+        (id ∉ ABAState.F (C, A) ∧ (ABAState.processes (C, A) id).phase = .toSendDecided ∧
+            (ABAState.processes (C, A) id).lastGrade = some (.grade2 b) ∧
+            μc = PMF.pure (ABAState.sendDecidedOnGrade2 (C, A) id b)) ∧
+        μ = prodPMF (PMF.pure G) (μc.map fun c => (c.1, c.2, o))) := by
   rw [hybrid_step_iff] at hstep
   rcases hstep with ⟨-, l', hl', hg⟩ | ⟨-, hg⟩
   · rw [hybridHidden_step_iff] at hg
@@ -418,21 +424,21 @@ theorem hybrid_step_tau (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
         obtain rfl : A = A' := (pure_inj (abaNetworkStep_retW hA)).symm
         obtain ⟨μw', hstepW, rfl⟩ := wccFamily_owned_cases P (by simp) rfl
           ((System.mapIdle_step_some (coinLabelMap_inl (Label.retW r id c)) _).mp hW)
-        rcases roundLoopStep_retW_own (hall id) with ⟨-, hph, hr, hgr, hx0⟩ | ⟨hh, hx0⟩
+        rcases roundLoopStep_retW_own (hall id) with ⟨-, hph, hr, hx0⟩ | ⟨hh, hx0⟩
         · obtain rfl : C' = Function.update C id ((C id).stepRound c) :=
             roundLoopVariables_update hx0 (fun i hi => roundLoopStep_retW_notOwn (Ne.symm hi) (hall
               i))
-          refine Or.inr (Or.inr (Or.inr (Or.inr (Or.inr ⟨r, id, c, μw',
+          refine Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨r, id, c, μw',
             PMF.pure (ABAState.stepRound (C, A) id c), hstepW,
-            Or.inl ⟨hph, hr, rfl⟩, ?_⟩))))
-          rw [PMF.pure_bind, ABAState.stepRound_of_not_grade2 C A id c hgr]
+            Or.inl ⟨hph, hr, rfl⟩, ?_⟩)))))
+          rw [PMF.pure_bind, ABAState.stepRound_apply C A id c]
         · obtain rfl : C = C' := (roundLoopVariables_id fun i => by
             by_cases hi : i = id
             · subst hi; exact hx0
             · exact roundLoopStep_retW_notOwn (Ne.symm hi) (hall i)).symm
-          exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr ⟨r, id, c, μw',
+          exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨r, id, c, μw',
             PMF.pure (C, A), hstepW, Or.inr ⟨(hcorr id).mp hh, rfl⟩,
-            by rw [PMF.pure_bind]⟩))))
+            by rw [PMF.pure_bind]⟩)))))
   · rw [hybridHidden_step_iff] at hg
     rcases hg with ⟨-, e, hpre⟩ | hpre
     · -- a synchronisation label of the hidden alphabet
@@ -442,22 +448,22 @@ theorem hybrid_step_tau (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
       | gbcaRoundEvent r j ev => exact ev.elim
       | gbcaSend r j m => exact (abaNetworkStep_gbcaSend_noStep hA).elim
       | gbcaDeliver r i j m => exact (abaNetworkStep_gbcaDeliver_noStep hA).elim
-      | decidedSend j b =>
+      | decidedRelay j b =>
         obtain rfl : G = G' :=
           (pure_inj (gbcaSpecificationFamily_idle_cases P hG (by simp) rfl not_false)).symm
         have hx0 : (PMF.pure (C' j) : PMF (RoundLoopVariables P.n)) = PMF.pure (C j) := by
-          rcases roundLoopStep_decidedSend_self (hall j) with ⟨-, -, h⟩ | ⟨-, h⟩ <;> exact h
+          rcases roundLoopStep_decidedRelay_self (hall j) with ⟨-, -, h⟩ | ⟨-, h⟩ <;> exact h
         obtain rfl : C = C' := (roundLoopVariables_id fun i => by
           by_cases hi : i = j
           · subst hi; exact hx0
-          · exact roundLoopStep_decidedSend_notOwn (Ne.symm hi) (hall i)).symm
-        obtain ⟨hsent, hA'⟩ := abaNetworkStep_decidedSend hA
+          · exact roundLoopStep_decidedRelay_notOwn (Ne.symm hi) (hall i)).symm
+        obtain ⟨hsent, hA'⟩ := abaNetworkStep_decidedRelay hA
         obtain rfl : A' = A.recordDecided j b := pure_inj hA'
         obtain rfl : ω = PMF.pure o :=
-          (System.mapIdle_step_none (coinLabelMap_decidedSend j b) ω).mp hW
+          (System.mapIdle_step_none (coinLabelMap_decidedRelay j b) ω).mp hW
         refine Or.inr (Or.inl ⟨PMF.pure (ABAState.sendDecided (C, A) j b), ?_, by
           simp only [PMF.pure_map, prodPMF_pure_pure]; rfl⟩)
-        rcases roundLoopStep_decidedSend_self (hall j) with ⟨-, hcnt, -⟩ | ⟨hh, -⟩
+        rcases roundLoopStep_decidedRelay_self (hall j) with ⟨-, hcnt, -⟩ | ⟨hh, -⟩
         · exact Or.inr (Or.inl ⟨j, b, hcnt, hsent, rfl⟩)
         · exact Or.inr (Or.inr ⟨j, b, (hcorr j).mp hh, rfl⟩)
       | decidedDeliver i j b =>
@@ -475,20 +481,21 @@ theorem hybrid_step_tau (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
         exact Or.inr (Or.inl ⟨PMF.pure (ABAState.deliverDecided (C, A) i j b),
           Or.inl ⟨i, j, b, hmem, hnr, rfl⟩, by
             simp only [PMF.pure_map, prodPMF_pure_pure]; rfl⟩)
-      | retWPublish r id c b =>
+      | decidedSend j b =>
         obtain rfl : G = G' :=
           (pure_inj (gbcaSpecificationFamily_idle_cases P hG (by simp) rfl not_false)).symm
-        obtain ⟨μw', hstepW, rfl⟩ := wccFamily_owned_cases P (by simp) rfl
-          ((System.mapIdle_step_some (coinLabelMap_retWPublish r id c b) ω).mp hW)
-        obtain ⟨-, hph, hr, hgA, hx0⟩ := roundLoopStep_retWPublish_self (hall id)
-        obtain rfl : C' = Function.update C id ((C id).stepRound c) :=
-          roundLoopVariables_update hx0 (fun k hk => roundLoopStep_retWPublish_notOwn (Ne.symm hk)
+        obtain ⟨hh, hph, hgA, hx0⟩ := roundLoopStep_decidedSend_self (hall j)
+        obtain rfl : C' = Function.update C j ((C j).setProcessVariables
+            { (C j).processVariables with lastGrade := none, phase := .toCallG }) :=
+          roundLoopVariables_update hx0 (fun k hk => roundLoopStep_decidedSend_notOwn (Ne.symm hk)
             (hall k))
-        obtain rfl : A' = A.recordDecided id b := pure_inj (abaNetworkStep_retWPublish hA)
-        refine Or.inr (Or.inr (Or.inr (Or.inr (Or.inr ⟨r, id, c, μw',
-          PMF.pure (ABAState.stepRound (C, A) id c), hstepW,
-          Or.inl ⟨hph, hr, rfl⟩, ?_⟩))))
-        rw [PMF.pure_bind, ABAState.stepRound_publish C A id c b hgA]
+        obtain rfl : A' = A.recordDecided j b := pure_inj (abaNetworkStep_decidedSend hA)
+        obtain rfl : ω = PMF.pure o :=
+          (System.mapIdle_step_none (coinLabelMap_decidedSend j b) ω).mp hW
+        exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr ⟨j, b,
+          PMF.pure (ABAState.sendDecidedOnGrade2 (C, A) j b),
+          ⟨(corrupted_eq_false_iff hcorr j).mp hh, hph, hgA, rfl⟩, by
+            simp only [PMF.pure_map, prodPMF_pure_pure]; rfl⟩)))))
       | gbcaCallLoop r id b =>
         obtain ⟨X, hstepG, rfl⟩ := gbcaSpecificationFamily_owned_step P rfl (by simp) rfl hG
         obtain ⟨-, hph, hr, hest, hx0⟩ := roundLoopStep_gbcaCallLoop_self (hall id)
@@ -558,8 +565,8 @@ theorem hybrid_step_tau (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
         obtain rfl : A = A' := (pure_inj hA').symm
         obtain ⟨μw', hstepW, rfl⟩ := wccFamily_owned_cases P (by simp) rfl
           ((System.mapIdle_step_some (coinLabelMap_byzantineRetW r k b) ω).mp hW)
-        exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr ⟨r, k, b, μw',
-          PMF.pure (C, A), hstepW, Or.inr ⟨hF, rfl⟩, by rw [PMF.pure_bind]⟩))))
+        exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨r, k, b, μw',
+          PMF.pure (C, A), hstepW, Or.inr ⟨hF, rfl⟩, by rw [PMF.pure_bind]⟩)))))
     · -- genuine `τ`: the binding exclusion or the network's Byzantine injection
       rcases hybridExtended_tau_cases P hpre with ⟨G', hspec, rfl⟩ | ⟨A', hnet, rfl⟩
       · obtain ⟨r, X, hstepG, hGeq⟩ := gbcaSpecificationFamily_tau_cases P hspec

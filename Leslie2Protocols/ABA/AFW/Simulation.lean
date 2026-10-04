@@ -299,7 +299,7 @@ theorem coupling_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessVariabl
       intro i
       by_cases hi : i = id
       · subst hi
-        rcases programStep_retW_own (hall i) with ⟨-, -, -, -, hx⟩ | ⟨-, hx⟩ <;> rw [pure_inj hx]
+        rcases programStep_retW_own (hall i) with ⟨-, -, -, hx⟩ | ⟨-, hx⟩ <;> rw [pure_inj hx]
       · rw [hfor i hi]
     refine coupling_visible P hl (fun o' _ => (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun _ => rfl, rfl, hA, by rw [hGv]; exact roundProjection_unchanged hsame w',
@@ -310,8 +310,8 @@ theorem coupling_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessVariabl
     rw [hCeq i]
     by_cases hi : i = id
     · subst hi
-      rcases programStep_retW_own (hall i) with ⟨hh, hph, hr, hgr, hx⟩ | ⟨hc, hx⟩
-      · rw [pure_inj hx]; exact RoundLoopStep.retW _ r co hh hph hr hgr
+      rcases programStep_retW_own (hall i) with ⟨hh, hph, hr, hx⟩ | ⟨hc, hx⟩
+      · rw [pure_inj hx]; exact RoundLoopStep.retW _ r co hh hph hr
       · rw [pure_inj hx]
         exact RoundLoopStep.corruptedIdle _ _ hc (by simp) not_false
     · rw [hfor i hi]; exact RoundLoopStep.retWIdle _ r id co (Ne.symm hi)
@@ -480,8 +480,8 @@ theorem coupling_label (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessVariabl
 /-! ### The matching on a synchronisation of the implementation
 
 A send and a delivery are internal to the round, so the composed system matches them with a silent
-run of the graded-agreement family. The DECIDED transitions, the fused coin return and the
-call and return transitions are matched by the same synchronisation. -/
+run of the graded-agreement family. The DECIDED transitions and the call and return transitions are
+matched by the same synchronisation. -/
 
 theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n}
     {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
@@ -724,31 +724,31 @@ theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessVariabl
         boundInvariant_of hB hxcand hxg hxout (fun _ hb => writeGhost_bound _ hb)⟩) ?_
     rw [hGv]
     exact System.weakLSilent_family roundOwnsLabel isFailLabel (corruptionOverBracha P) hlow
-  | decidedSend j b =>
-    obtain ⟨hd, hw⟩ := networkStep_decidedSend hn
+  | decidedRelay j b =>
+    obtain ⟨hd, hw⟩ := networkStep_decidedRelay hn
     obtain rfl : w' = w.recordDecided j b := pure_inj hw
     have hx : ∀ i, x i = u i := by
       intro i
       by_cases hi : i = j
       · subst hi
-        rcases programStep_decidedSend_self (hall i) with ⟨-, -, -, hxi⟩ | ⟨-, hxi⟩ <;>
+        rcases programStep_decidedRelay_self (hall i) with ⟨-, -, -, hxi⟩ | ⟨-, hxi⟩ <;>
           exact pure_inj hxi
-      · exact pure_inj (programStep_decidedSend_notOwn (Ne.symm hi) (hall i))
-    refine coupling_hiddenSynchronisation P (.decidedSend j b) (fun o' _ =>
+      · exact pure_inj (programStep_decidedRelay_notOwn (Ne.symm hi) (hall i))
+    refine coupling_hiddenSynchronisation P (.decidedRelay j b) (fun o' _ =>
       (protocolRelation_mk P _ _ _ _ _ _ _).mpr
         ⟨fun i => by rw [hx i], rfl, by rw [hA]; rfl, by
           rw [hGv]; funext r; exact (roundProjection_congr (fun i => by rw [hx i])).symm,
           boundInvariant_of hB (fun i r => by rw [hx i])
             (fun i r => by rw [hx i]) (fun i r => by rw [hx i]) (fun _ hb => hb)⟩)
       (roundFamilyOverBracha_idle P G (by simp) (by simp) not_false) (fun i => ?_)
-      (hA ▸ ABANetworkStep.decidedSend ⟨w.decidedSent, w.F⟩ j b hd) hWs
+      (hA ▸ ABANetworkStep.decidedRelay ⟨w.decidedSent, w.F⟩ j b hd) hWs
     rw [hCeq i]
     by_cases hi : i = j
     · subst hi
-      rcases programStep_decidedSend_self (hall i) with ⟨hh, hin, hcnt, -⟩ | ⟨hc, -⟩
-      · exact RoundLoopStep.decidedSendRelay _ b hh hcnt
+      rcases programStep_decidedRelay_self (hall i) with ⟨hh, hin, hcnt, -⟩ | ⟨hc, -⟩
+      · exact RoundLoopStep.decidedRelay _ b hh hcnt
       · exact RoundLoopStep.corruptedIdle _ _ hc (by simp) not_false
-    · exact RoundLoopStep.decidedSendIdle _ j b (Ne.symm hi)
+    · exact RoundLoopStep.decidedRelayIdle _ j b (Ne.symm hi)
   | decidedDeliver i k b =>
     obtain ⟨hd, hw⟩ := networkStep_decidedDeliver hn
     obtain rfl : w' = w := pure_inj hw
@@ -771,35 +771,29 @@ theorem coupling_event (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessVariabl
     by_cases hi : i' = i
     · subst hi; rw [pure_inj hxi]; exact RoundLoopStep.decidedDeliverReceive _ k b hh hr
     · rw [hfor i' hi]; exact RoundLoopStep.decidedDeliverIdle _ i k b (Ne.symm hi)
-  | retWPublish r id cc b =>
-    obtain rfl : w' = (w.recordDecided id b).writeGhost (ghostStep P)
-        (Sum.inr (NetworkEvent.retWPublish r id cc b)) := pure_inj (networkStep_retWPublish hn)
+  | decidedSend id b =>
+    obtain rfl : w' = w.recordDecided id b := pure_inj (networkStep_decidedSend hn)
     have hfor : ∀ i, i ≠ id → x i = u i := fun i hi =>
-      pure_inj (programStep_retWPublish_notOwn (Ne.symm hi) (hall i))
-    obtain ⟨hh, hph, hr, hgr, hxi⟩ := programStep_retWPublish_self (hall id)
+      pure_inj (programStep_decidedSend_notOwn (Ne.symm hi) (hall i))
+    obtain ⟨hh, hph, hgr, hxi⟩ := programStep_decidedSend_self (hall id)
     have hsame : ∀ i, (x i).2 = (u i).2 := by
       intro i
       by_cases hi : i = id
       · subst hi; rw [pure_inj hxi]
       · rw [hfor i hi]
-    have hprojection : ∀ r', roundProjection P x ((w.recordDecided id b).writeGhost (ghostStep P)
-        (Sum.inr (NetworkEvent.retWPublish r id cc b))) r' = roundProjection P u w r' := fun r' =>
-      (roundProjection_congr (fun i => by rw [hsame i])).trans
-        (roundProjection_ghostId (Sum.inr (NetworkEvent.retWPublish r id cc b))
-          (fun _ _ => rfl) u _ r')
-    refine coupling_hiddenSynchronisation P (.retWPublish r id cc b) (fun o' _ =>
+    refine coupling_hiddenSynchronisation P (.decidedSend id b) (fun o' _ =>
       (protocolRelation_mk P _ _ _ _ _ _ _).mpr
-        ⟨fun _ => rfl, rfl, by rw [hA]; rfl, by rw [hGv]; funext r'; exact (hprojection r').symm,
-          boundInvariant_of hB (fun i r' => by rw [hsame i])
-            (fun i r' => by rw [hsame i]) (fun i r' => by rw [hsame i])
-            (fun _ hb => writeGhost_bound _ hb)⟩)
+        ⟨fun _ => rfl, rfl, by rw [hA]; rfl, by
+          rw [hGv]; funext r; exact (roundProjection_congr (fun i => by rw [hsame i])).symm,
+          boundInvariant_of hB (fun i r => by rw [hsame i])
+            (fun i r => by rw [hsame i]) (fun i r => by rw [hsame i]) (fun _ hb => hb)⟩)
       (roundFamilyOverBracha_idle P G (by simp) (by simp) not_false) (fun i => ?_)
-      (hA ▸ ABANetworkStep.retWPublish ⟨w.decidedSent, w.F⟩ r id cc b) hWs
+      (hA ▸ ABANetworkStep.decidedSend ⟨w.decidedSent, w.F⟩ id b) hWs
     rw [hCeq i]
     by_cases hi : i = id
     · subst hi; rw [pure_inj hxi]
-      exact RoundLoopStep.retWPublish _ r cc b hh hph hr hgr
-    · rw [hfor i hi]; exact RoundLoopStep.retWPublishIdle _ r id cc b (Ne.symm hi)
+      exact RoundLoopStep.decidedSend _ b hh hph hgr
+    · rw [hfor i hi]; exact RoundLoopStep.decidedSendIdle _ id b (Ne.symm hi)
   | gbcaCallLoop r id b =>
     obtain rfl : ν = PMF.pure o :=
       (System.mapIdle_step_none (coinLabelMap_gbcaCallLoop r id b) ν).mp hWs

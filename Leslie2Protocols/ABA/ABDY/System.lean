@@ -204,14 +204,14 @@ variable (P : Parameters) (w : NetworkState P.n)
 @[simp] theorem writeGhost_gbcaDeliver (r : ℕ) (i j : Fin P.n) (m : GBCA.ByABDY.Message) :
     w.writeGhost (abdyGhostStep P) (Sum.inr (.gbcaDeliver r i j m)) = w :=
   writeGhost_abdy_id P w _ fun _ => rfl
-@[simp] theorem writeGhost_decidedSend (j : Fin P.n) (b : Bool) :
-    w.writeGhost (abdyGhostStep P) (Sum.inr (.decidedSend j b)) = w :=
+@[simp] theorem writeGhost_decidedRelay (j : Fin P.n) (b : Bool) :
+    w.writeGhost (abdyGhostStep P) (Sum.inr (.decidedRelay j b)) = w :=
   writeGhost_abdy_id P w _ fun _ => rfl
 @[simp] theorem writeGhost_decidedDeliver (i j : Fin P.n) (b : Bool) :
     w.writeGhost (abdyGhostStep P) (Sum.inr (.decidedDeliver i j b)) = w :=
   writeGhost_abdy_id P w _ fun _ => rfl
-@[simp] theorem writeGhost_retWPublish (r : ℕ) (id : Fin P.n) (c b : Bool) :
-    w.writeGhost (abdyGhostStep P) (Sum.inr (.retWPublish r id c b)) = w :=
+@[simp] theorem writeGhost_decidedSend (j : Fin P.n) (b : Bool) :
+    w.writeGhost (abdyGhostStep P) (Sum.inr (.decidedSend j b)) = w :=
   writeGhost_abdy_id P w _ fun _ => rfl
 @[simp] theorem writeGhost_gbcaCallLoop (r : ℕ) (id : Fin P.n) (b : Bool) :
     w.writeGhost (abdyGhostStep P) (Sum.inr (.gbcaCallLoop r id b)) = w :=

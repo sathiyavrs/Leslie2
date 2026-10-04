@@ -447,9 +447,9 @@ theorem composition_projects (P : Parameters) (r : ℕ) :
         | gbcaRoundEvent r' j e => exact e.elim
         | gbcaSend r' j m => exact (gbcaNetworkStep_gbcaSend_noStep hn).elim
         | gbcaDeliver r' i j m => exact (gbcaNetworkStep_gbcaDeliver_noStep hn).elim
-        | decidedSend j b => exact (gbcaNetworkStep_decidedSend_noStep hn).elim
+        | decidedRelay j b => exact (gbcaNetworkStep_decidedRelay_noStep hn).elim
         | decidedDeliver i j b => exact (gbcaNetworkStep_decidedDeliver_noStep hn).elim
-        | retWPublish r' id c b => exact (gbcaNetworkStep_retWPublish_noStep hn).elim
+        | decidedSend j b => exact (gbcaNetworkStep_decidedSend_noStep hn).elim
         | byzantineCallW r' k => exact (gbcaNetworkStep_byzantineCallW_noStep hn).elim
         | byzantineRetW r' k b => exact (gbcaNetworkStep_byzantineRetW_noStep hn).elim
         | gbcaCallLoop r' id b =>

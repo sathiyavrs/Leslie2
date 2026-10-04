@@ -309,10 +309,10 @@ theorem roundOverGatherSpecifications_step_algorithm (P : Parameters) (r : ℕ) 
         | gbcaRoundEvent r' j e => exact e.elim
         | gbcaSend r' j m => exact m.elim
         | gbcaDeliver r' i j m => exact m.elim
-        | decidedSend j b => exact (roundPrograms_outside_cases (by simp) hRoundPrograms).elim
+        | decidedRelay j b => exact (roundPrograms_outside_cases (by simp) hRoundPrograms).elim
         | decidedDeliver i j b =>
           exact (roundPrograms_outside_cases (by simp) hRoundPrograms).elim
-        | retWPublish r' id cc b =>
+        | decidedSend j b =>
           exact (roundPrograms_outside_cases (by simp) hRoundPrograms).elim
         | byzantineCallW r' k =>
           exact (roundPrograms_outside_cases (by simp) hRoundPrograms).elim

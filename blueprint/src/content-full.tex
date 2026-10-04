@@ -1400,7 +1400,7 @@ No transition reads a second process, and Definitions~\ref{def:aba-programs} and
 \blueprintfig{fig-protocol}{The protocol \leandecl{PLTS.ABA.ABDY.protocol}: the $n$ programs $\mathrm{ABAProgram}(P,j)$, \leandecl{PLTS.ABA.ABDY.ABAProgram}, under $\mathrm{synchronisedProduct}$, the network \leandecl{PLTS.ABA.ABDY.network} and the common coin beside the group.
 Each program holds one process's round loop beside its round's variables, its variables in every round it has touched and its termination flag (D22); every guard of its forty-three transitions reads that program's own variables, and what any of them reads of corruption is those variables' own replacement flag (D23).
 Its state \leandecl{PLTS.ABA.ABDY.NetworkState} holds the sent sets $sent(r,j)$ and $decidedSent(j)$, the corrupted set $F$ and the ghost $ghost(r)$ of each round, that round's bound bit (D30); its twenty-one transitions supply the other half of every send, every delivery, every Byzantine sub-protocol call and return and the Byzantine ABA return; the corruption budget is the guard on its own $\mathrm{fail}$ transition.
-The inner dashed box is $\mathrm{relabel} \circ \mathrm{abstract}\,\mathrm{networkEventLabels}$: every $\mathrm{gbcaSend}$, $\mathrm{gbcaDeliver}$, $\mathrm{decidedSend}$, $\mathrm{decidedDeliver}$, $\mathrm{retWPublish}$, $\mathrm{gbcaCallLoop}$ and Byzantine sub-protocol call and return transition becomes $\tau$.
+The inner dashed box is $\mathrm{relabel} \circ \mathrm{abstract}\,\mathrm{networkEventLabels}$: every $\mathrm{gbcaSend}$, $\mathrm{gbcaDeliver}$, $\mathrm{decidedRelay}$, $\mathrm{decidedDeliver}$, $\mathrm{retWPublish}$, $\mathrm{gbcaCallLoop}$ and Byzantine sub-protocol call and return transition becomes $\tau$.
 The common coin is joined through the partial map $\mathrm{coinLabelMap}$, so the transitions $\mathrm{byzantineCallW}$ and $\mathrm{byzantineRetW}$ and the fused return $\mathrm{retWPublish}$ reach it as calls and returns of the coin while the network labels leave it idle.
 The outer dashed box is $\mathrm{abstract}_H$, which hides the coin's call and return $\mathrm{callW}/\mathrm{retW}$; what leaves it is the API $\mathrm{callABA}/\mathrm{retABA}/\mathrm{fail}$ together with $\tau$.
 The dashed vertical is Theorem~\ref{thm:aba-protocol-composed}: the protocol is forward-simulated by the same system read as a composition of components, along the Dirac lift of $\mathrm{ProtocolRelation}$.}
@@ -1518,7 +1518,7 @@ The bound bit the same label carries is a ghost output, and no transition of the
 The coin return has two transitions.
 The step \leandeclnamed{retW}{PLTS.ABA.Composition.RoundLoopStep.retW} increments the round and adopts the coin when $estimate = \bot$; the step \leandeclnamed{retWPublish}{PLTS.ABA.Composition.RoundLoopStep.retWPublish} does the same on a grade-2 return and multicasts $\langle\mathrm{DECIDED},b\rangle$, the sent set insert being the network's half of that synchronised transition, \leandeclnamed{retWPublish}{PLTS.ABA.Composition.ABANetworkStep.retWPublish} (D10).
 The DECIDED sets are round-agnostic, carrying no round index.
-A delivery pairs the network's authenticity guard \leandeclnamed{decidedDeliver}{PLTS.ABA.Composition.ABANetworkStep.decidedDeliver} with the receiver's write \leandeclnamed{decidedDeliverReceive}{PLTS.ABA.Composition.RoundLoopStep.decidedDeliverReceive}; a relay pairs the sender's count of $f{+}1$ received messages \leandeclnamed{decidedSendRelay}{PLTS.ABA.Composition.RoundLoopStep.decidedSendRelay} with the network's write-once insert \leandeclnamed{decidedSend}{PLTS.ABA.Composition.ABANetworkStep.decidedSend}; and \leandeclnamed{byzantineDecided}{PLTS.ABA.Composition.ABANetworkStep.byzantineDecided} is the network's own $\tau$-loop, by which $id \in F$ records either bit (D12$'$).
+A delivery pairs the network's authenticity guard \leandeclnamed{decidedDeliver}{PLTS.ABA.Composition.ABANetworkStep.decidedDeliver} with the receiver's write \leandeclnamed{decidedDeliverReceive}{PLTS.ABA.Composition.RoundLoopStep.decidedDeliverReceive}; a relay pairs the sender's count of $f{+}1$ received messages \leandeclnamed{decidedRelay}{PLTS.ABA.Composition.RoundLoopStep.decidedRelay} with the network's write-once insert \leandeclnamed{decidedRelay}{PLTS.ABA.Composition.ABANetworkStep.decidedRelay}; and \leandeclnamed{byzantineDecided}{PLTS.ABA.Composition.ABANetworkStep.byzantineDecided} is the network's own $\tau$-loop, by which $id \in F$ records either bit (D12$'$).
 The exit \texttt{retABA}\,$id\,b$ fires once $n-f$ distinct senders of $b$ have been delivered to $id$, the count read at \leandeclnamed{ret}{PLTS.ABA.Composition.RoundLoopStep.ret}, and $b$ lies in $id$'s own sent set, read at \leandeclnamed{retABA}{PLTS.ABA.Composition.ABANetworkStep.retABA}.
 
 \blueprintfig{fig-core-phases}{The round loop \leandecl{PLTS.ABA.Composition.roundLoopProgram}: the per-process five-phase cycle of calls and returns, the fused DECIDED multicast at the grade-2 coin return (D10), and the DECIDED sets guarding $\mathrm{retABA}$.
@@ -1650,10 +1650,10 @@ Transition & Label & Guard & Effect \\
 \leandeclnamed{decidedDeliverReceive}{PLTS.ABA.Composition.RoundLoopStep.decidedDeliverReceive} & \quad $\to\tau$
   & $b \notin \mathit{decidedReceived}(i,j)$ (receiver) & (D12$'$) \\
 \hline
-\leandeclnamed{decidedSendRelay}{PLTS.ABA.Composition.RoundLoopStep.decidedSendRelay}, & $\mathrm{decidedSend}(i,b)$
+\leandeclnamed{decidedRelay}{PLTS.ABA.Composition.RoundLoopStep.decidedRelay}, & $\mathrm{decidedRelay}(i,b)$
   & $\#_i(b) \ge f{+}1$ (sender),
   & multicast $\mathrm{DEC}\,b$ at $i$ \\
-\leandeclnamed{decidedSend}{PLTS.ABA.Composition.ABANetworkStep.decidedSend} & \quad $\to\tau$
+\leandeclnamed{decidedRelay}{PLTS.ABA.Composition.ABANetworkStep.decidedRelay} & \quad $\to\tau$
   & $b \notin \mathit{decidedSent}_i$ (network) & \\
 \hline
 \leandeclnamed{byzantineDecided}{PLTS.ABA.Composition.ABANetworkStep.byzantineDecided} & $\tau$ & $i \in F$
@@ -1690,7 +1690,7 @@ What a corruption buys at the interface is the transition beneath it, which requ
 The corruption transition \leandeclnamed{fail}{PLTS.ABA.Composition.ABANetworkStep.fail} is a synchronisation of every component of the composition, each keeping its own copy of $F$; at the process it names the round loop's half is \leandeclnamed{failSelf}{PLTS.ABA.Composition.RoundLoopStep.failSelf}, which writes the replacement flag, and at every other process it is \leandeclnamed{failIdle}{PLTS.ABA.Composition.RoundLoopStep.failIdle}, another process's corruption being no business of theirs.
 Since every correct transition carries the replacement guard, the variables of a corrupted process are unchanged from that point: its phase, estimate, round, grade and received sets are what they were at the corruption.
 The $\mathrm{estimate}$-update of \leandeclnamed{retW}{PLTS.ABA.Composition.RoundLoopStep.retW} is Algorithm~\ref{alg:aba-core}'s branch \textbf{if} $b = \bot$ \textbf{then} $b \gets c$, and the conditional multicast is its branch \textbf{elif} $g = A$; the branch is taken by choosing between the two coin-return transitions, and the multicast is fused with the round advance into one Dirac step (D10).
-The relay guard of \leandeclnamed{decidedSendRelay}{PLTS.ABA.Composition.RoundLoopStep.decidedSendRelay} and \leandeclnamed{decidedSend}{PLTS.ABA.Composition.ABANetworkStep.decidedSend} is payload-specific, matching Algorithm~\ref{alg:aba-core}'s clause ``having not sent it'': a sent set already holding the other payload does not block the relay of $b$.
+The relay guard of \leandeclnamed{decidedRelay}{PLTS.ABA.Composition.RoundLoopStep.decidedRelay} and \leandeclnamed{decidedRelay}{PLTS.ABA.Composition.ABANetworkStep.decidedRelay} is payload-specific, matching Algorithm~\ref{alg:aba-core}'s clause ``having not sent it'': a sent set already holding the other payload does not block the relay of $b$.
 
 \dynamics{The round loop}{%
 Each process runs a five-phase cycle: idle, ready to call the round's GBCA,
@@ -1720,7 +1720,7 @@ each process returns at most once, by the flag its return transition sets.
 }
 
 The round loop's list of transitions is read on a pair of components, as the one above is, and every guard in the table is read at one component: the counts of
-\leandeclnamed{decidedSendRelay}{PLTS.ABA.Composition.RoundLoopStep.decidedSendRelay} and \leandeclnamed{ret}{PLTS.ABA.Composition.RoundLoopStep.ret} range over one receiver's own received sets, and the
+\leandeclnamed{decidedRelay}{PLTS.ABA.Composition.RoundLoopStep.decidedRelay} and \leandeclnamed{ret}{PLTS.ABA.Composition.RoundLoopStep.ret} range over one receiver's own received sets, and the
 soundness guard $b \in decidedSent(j)$ that licenses a delivery is the network's, split from the freshness guard $b \notin decidedDelivered(i)$ and the write at the receiver.
 Definitions~\ref{def:aba-programs} and~\ref{def:aba-network} write the same transitions at the finer cut, where one program's variables hold the round loop beside the variables of every round it has touched, and the DECIDED sets share a component with the round's sent sets.
 

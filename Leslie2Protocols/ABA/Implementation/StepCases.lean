@@ -168,13 +168,12 @@ theorem programStep_callW_notOwn {r : ℕ} {id : Fin P.n} (hid : id ≠ j)
 theorem programStep_retW_own {r : ℕ} {co : Bool}
     (h : ProgramStep P M E S roundStep j q (Sum.inl (.retW r j co)) ν) :
     (q.1.corrupted = false ∧ q.1.processVariables.phase = .awaitW ∧ q.1.processVariables.round = r ∧
-      (∀ v : Bool, q.1.processVariables.lastGrade ≠ some (.grade2 v)) ∧
       ν = PMF.pure (q.1.stepRound co, q.2)) ∨
     (q.1.corrupted = true ∧ ν = PMF.pure q) := by
   cases h
   case roundTransition h' => exact (IsRoundStep.own h').elim
   case retW =>
-    exact Or.inl ⟨by assumption, by assumption, by assumption, by assumption, rfl⟩
+    exact Or.inl ⟨by assumption, by assumption, by assumption, rfl⟩
   case retWIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => exact Or.inr ⟨by assumption, rfl⟩
 
@@ -229,25 +228,25 @@ theorem programStep_gbcaDeliver_notOwn {r : ℕ} {i k : Fin P.n} {m : M} (hi : i
   case gbcaDeliverIdle => rfl
   case corruptedIdle => rfl
 
-theorem programStep_decidedSend_self {b : Bool}
-    (h : ProgramStep P M E S roundStep j q (Sum.inr (.decidedSend j b)) ν) :
+theorem programStep_decidedRelay_self {b : Bool}
+    (h : ProgramStep P M E S roundStep j q (Sum.inr (.decidedRelay j b)) ν) :
     (q.1.corrupted = false ∧ q.1.processVariables.input ≠ none ∧
       P.f + 1 ≤ q.1.decidedCount b ∧ ν = PMF.pure q) ∨
     (q.1.corrupted = true ∧ ν = PMF.pure q) := by
   cases h
   case roundTransition h' => exact (IsRoundStep.own h').elim
-  case decidedSendRelay =>
+  case decidedRelay =>
     exact Or.inl ⟨by assumption, by assumption, by assumption, rfl⟩
-  case decidedSendIdle => exact absurd rfl ‹_ ≠ j›
+  case decidedRelayIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => exact Or.inr ⟨by assumption, rfl⟩
 
-theorem programStep_decidedSend_notOwn {k : Fin P.n} {b : Bool} (hk : k ≠ j)
-    (h : ProgramStep P M E S roundStep j q (Sum.inr (.decidedSend k b)) ν) :
+theorem programStep_decidedRelay_notOwn {k : Fin P.n} {b : Bool} (hk : k ≠ j)
+    (h : ProgramStep P M E S roundStep j q (Sum.inr (.decidedRelay k b)) ν) :
     ν = PMF.pure q := by
   cases h
   case roundTransition h' => exact (IsRoundStep.own h').elim
-  case decidedSendRelay => exact absurd rfl hk
-  case decidedSendIdle => rfl
+  case decidedRelay => exact absurd rfl hk
+  case decidedRelayIdle => rfl
   case corruptedIdle => rfl
 
 theorem programStep_decidedDeliver_self {k : Fin P.n} {b : Bool}
@@ -269,26 +268,25 @@ theorem programStep_decidedDeliver_notOwn {i k : Fin P.n} {b : Bool} (hi : i ≠
   case decidedDeliverIdle => rfl
   case corruptedIdle => rfl
 
-theorem programStep_retWPublish_self {r : ℕ} {co b : Bool}
-    (h : ProgramStep P M E S roundStep j q (Sum.inr (.retWPublish r j co b)) ν) :
-    q.1.corrupted = false ∧
-      q.1.processVariables.phase = .awaitW ∧ q.1.processVariables.round = r ∧
+theorem programStep_decidedSend_self {b : Bool}
+    (h : ProgramStep P M E S roundStep j q (Sum.inr (.decidedSend j b)) ν) :
+    q.1.corrupted = false ∧ q.1.processVariables.phase = .toSendDecided ∧
       q.1.processVariables.lastGrade = some (.grade2 b) ∧
-      ν = PMF.pure (q.1.stepRound co, q.2) := by
+      ν = PMF.pure (q.1.setProcessVariables
+        { q.1.processVariables with lastGrade := none, phase := .toCallG }, q.2) := by
   cases h
   case roundTransition h' => exact (IsRoundStep.own h').elim
-  case retWPublish =>
-    exact ⟨by assumption, by assumption, by assumption, by assumption, rfl⟩
-  case retWPublishIdle => exact absurd rfl ‹_ ≠ j›
+  case decidedSend => exact ⟨by assumption, by assumption, by assumption, rfl⟩
+  case decidedSendIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
-theorem programStep_retWPublish_notOwn {r : ℕ} {id : Fin P.n} {co b : Bool} (hid : id ≠ j)
-    (h : ProgramStep P M E S roundStep j q (Sum.inr (.retWPublish r id co b)) ν) :
+theorem programStep_decidedSend_notOwn {k : Fin P.n} {b : Bool} (hk : k ≠ j)
+    (h : ProgramStep P M E S roundStep j q (Sum.inr (.decidedSend k b)) ν) :
     ν = PMF.pure q := by
   cases h
   case roundTransition h' => exact (IsRoundStep.own h').elim
-  case retWPublish => exact absurd rfl hid
-  case retWPublishIdle => rfl
+  case decidedSend => exact absurd rfl hk
+  case decidedSendIdle => rfl
   case corruptedIdle => rfl
 
 theorem programStep_gbcaCallLoop_notOwn {r : ℕ} {id : Fin P.n} {b : Bool} (hid : id ≠ j)
@@ -388,8 +386,8 @@ theorem networkStep_gbcaDeliver {r : ℕ} {i j : Fin P.n} {m : M}
     m ∈ s.sent r j ∧ μ = PMF.pure (s.writeGhost ghostStep (Sum.inr (.gbcaDeliver r i j m))) := by
   cases h; exact ⟨by assumption, rfl⟩
 
-theorem networkStep_decidedSend {j : Fin P.n} {b : Bool}
-    (h : NetworkStep P M E G ghostStep ghostOutput s (Sum.inr (.decidedSend j b)) μ) :
+theorem networkStep_decidedRelay {j : Fin P.n} {b : Bool}
+    (h : NetworkStep P M E G ghostStep ghostOutput s (Sum.inr (.decidedRelay j b)) μ) :
     b ∉ s.decidedSent j ∧ μ = PMF.pure (s.recordDecided j b) := by
   cases h; exact ⟨by assumption, rfl⟩
 
@@ -399,12 +397,9 @@ theorem networkStep_decidedDeliver {i j : Fin P.n} {b : Bool}
     : b ∈ s.decidedSent j ∧ μ = PMF.pure s := by
   cases h; exact ⟨by assumption, rfl⟩
 
-theorem networkStep_retWPublish {r : ℕ} {id : Fin P.n} {c b : Bool}
-    (h : NetworkStep P M E G ghostStep ghostOutput s
-      (Sum.inr (.retWPublish r id c b)) μ)
-    :
-    μ = PMF.pure ((s.recordDecided id b).writeGhost ghostStep (Sum.inr (.retWPublish r id c b))) :=
-    by
+theorem networkStep_decidedSend {j : Fin P.n} {b : Bool}
+    (h : NetworkStep P M E G ghostStep ghostOutput s (Sum.inr (.decidedSend j b)) μ) :
+    μ = PMF.pure (s.recordDecided j b) := by
   cases h; rfl
 
 theorem networkStep_gbcaCallLoop {r : ℕ} {id : Fin P.n} {b : Bool}

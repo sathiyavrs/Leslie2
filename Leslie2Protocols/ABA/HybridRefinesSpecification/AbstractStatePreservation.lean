@@ -14,7 +14,7 @@ assembly of Stages A–C.
 
 * **Stage C** — `AbstractState` preservation for the stutter transitions. The abstract state is
   untouched by every hidden transition and moves only at the visible ones
-  (`callABA`/`retABA`/`fail`, handled in `HybridRefinesSpecification/Simulation.lean`). All six
+  (`callABA`/`retABA`/`fail`, handled in `HybridRefinesSpecification/Simulation.lean`). All seven
   lemmas are instances of one argument about a write elsewhere, `AbstractState.unchangedBy`.
 * **Assembly** — `Invariant.step`: `Invariant` is preserved by every `hybrid` step,
   dispatching on the label class through Stage A's step-case lemmas and calling
@@ -36,9 +36,9 @@ variable {M : Type} [DecidableEq M]
 
 /-! ### Stage C: `AbstractState` preservation for the stutter transitions
 
-Every one of `hybrid_step_tau`'s six disjuncts is matched by a stutter: the abstract state is
+Every one of `hybrid_step_tau`'s seven disjuncts is matched by a stutter: the abstract state is
 untouched by every hidden transition and only moves at the visible ones
-(`callABA`/`retABA`/`fail`), handled in `HybridRefinesSpecification/Simulation.lean`. All six
+(`callABA`/`retABA`/`fail`), handled in `HybridRefinesSpecification/Simulation.lean`. All seven
 lemmas below are instances of a single argument about a write elsewhere: `AbstractState` inspects
 only `F`, the per-process `input`/`returned` projections, and the grade-2 witnesses on
 `g` — and each transition preserves all three. -/
@@ -191,11 +191,32 @@ theorem AbstractState.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n
       rw [PMF.mem_support_pure_iff] at hc' <;> subst hc'
     · refine ⟨ABAState.stepRound_F _ _ _, fun id' => ?_⟩
       by_cases h : id' = id
-      · subst h; rw [ABAState.stepRound_processes_self _ _ _]; exact ⟨rfl, rfl⟩
+      · subst h
+        exact ⟨ABAState.stepRound_processes_self_input _ _ _,
+          ABAState.stepRound_processes_self_returned _ _ _⟩
       · rw [ABAState.stepRound_processes_ne _ _ _ h]; exact ⟨rfl, rfl⟩
     · exact ⟨rfl, fun id' => ⟨rfl, rfl⟩⟩
   exact hA.unchangedBy hCUnchanged.1 (fun id' => (hCUnchanged.2 id').1) (fun id' => (hCUnchanged.2
     id').2) hAF
+
+/-- The DECIDED send of a grade-2 round: stutters. -/
+theorem AbstractState.step_decidedSend {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
+    {c : ABAState P} {w : ℕ → WCC.SpecState P.n} {a : SpecState P.n}
+    (hA : AbstractState P g c w a) (hI : Invariant P g c w) (id : Fin P.n) (b : Bool)
+    (hph : (c.processes id).phase = .toSendDecided)
+    (hlg : (c.processes id).lastGrade = some (.grade2 b)) :
+    AbstractState P g (c.sendDecidedOnGrade2 id b) w a := by
+  have hAF := (Invariant.step_decidedSend hI id b hph hlg).2
+  have hCUnchanged : ∀ id', ((c.sendDecidedOnGrade2 id b).processes id').input =
+      (c.processes id').input ∧
+      ((c.sendDecidedOnGrade2 id b).processes id').returned = (c.processes id').returned := by
+    intro id'
+    by_cases h : id' = id
+    · subst h; rw [ABAState.sendDecidedOnGrade2_processes_self]; exact ⟨rfl, rfl⟩
+    · rw [ABAState.sendDecidedOnGrade2_processes_ne _ _ _ h]; exact ⟨rfl, rfl⟩
+  exact hA.unchangedBy (ABAState.sendDecidedOnGrade2_F _ _ _) (fun id' => (hCUnchanged id').1)
+    (fun id' => (hCUnchanged id').2) hAF
+
 /-! ### Assembly: `Invariant` is preserved by every `hybrid` step -/
 
 /-- Reading a transition where the ABA component moves alone: its own outcome, the common coin
@@ -242,7 +263,8 @@ theorem Invariant.step {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
       ⟨r, id, b, μr, μc, hstepG, hstepC, rfl⟩ |
       ⟨r, id, out, bnd, μr, μc, hstepG, hstepC, rfl⟩ |
       ⟨r, id, μw', μc, hstepW, hstepC, rfl⟩ |
-      ⟨r, id, b, μw', μc, hstepW, hstepC, rfl⟩
+      ⟨r, id, b, μw', μc, hstepW, hstepC, rfl⟩ |
+      ⟨id, b, μc, ⟨-, hph, hlg, rfl⟩, rfl⟩
     · simp only [mem_support_prodPMF] at hmem
       obtain ⟨h1, h2⟩ := hmem
       rw [PMF.mem_support_map_iff] at h1
@@ -284,6 +306,13 @@ theorem Invariant.step {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
       obtain ⟨hc2, wr', hwr', rfl⟩ := mem_support_coinTransition h2
       rw [h1]
       exact (Invariant.step_retW hI r id b hstepW hstepC hwr' hc2).1
+    · simp only [mem_support_prodPMF] at hmem
+      obtain ⟨h1, h2⟩ := hmem
+      rw [PMF.mem_support_pure_iff] at h1
+      obtain ⟨hc2, rfl⟩ := mem_support_abaTransition h2
+      rw [PMF.mem_support_pure_iff] at hc2
+      rw [h1, hc2]
+      exact (Invariant.step_decidedSend hI id b hph hlg).1
   | callABA id b =>
     rw [hybrid_step_callABA P g C A w id b hI.corrupted_F] at hstep
     obtain ⟨μc, hstepC, rfl⟩ := hstep

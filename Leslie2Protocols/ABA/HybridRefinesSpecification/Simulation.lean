@@ -144,7 +144,8 @@ theorem hybridRefinesSpecification (P : Parameters) (M : Type) [DecidableEq M] :
         ⟨r, μr, hstepG, rfl⟩ | ⟨μc, hstepC, rfl⟩ |
         ⟨r, id, b, μr, μc, hstepG, hstepC, rfl⟩ |
         ⟨r, id, out, bnd, μr, μc, hstepG, hstepC, rfl⟩ |
-        ⟨r, id, μw', μc, hstepW, hstepC, rfl⟩ | ⟨r, id, b, μw', μc, hstepW, hstepC, rfl⟩
+        ⟨r, id, μw', μc, hstepW, hstepC, rfl⟩ | ⟨r, id, b, μw', μc, hstepW, hstepC, rfl⟩ |
+        ⟨id, b, μc, ⟨-, hph, hlg, rfl⟩, rfl⟩
       · -- the round's own `GBCA.Step.bindUnset` — the abstract state stutters
         obtain ⟨ω, hRel, hWeak⟩ := stutter_step _ a (fun s' hs' => by
           obtain ⟨g', C', A', w'⟩ := s'
@@ -203,6 +204,17 @@ theorem hybridRefinesSpecification (P : Parameters) (M : Type) [DecidableEq M] :
           obtain ⟨rfl, h2⟩ := hs'
           obtain ⟨hc2, wr', hwr', rfl⟩ := mem_support_coinTransition h2
           exact ⟨hI', hAbs.step_retW hI r id b hstepW hstepC hwr' hc2⟩)
+        exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
+      · -- the DECIDED send of a grade-2 round
+        obtain ⟨ω, hRel, hWeak⟩ := stutter_step _ a (fun s' hs' => by
+          obtain ⟨g', C', A', w'⟩ := s'
+          have hI' := hI.step hstep hs'
+          simp only [mem_support_prodPMF, PMF.mem_support_pure_iff] at hs'
+          obtain ⟨rfl, hs2⟩ := hs'
+          obtain ⟨hc2, rfl⟩ := mem_support_abaTransition hs2
+          rw [PMF.mem_support_pure_iff] at hc2
+          obtain ⟨rfl, rfl⟩ := Prod.ext_iff.mp hc2
+          exact ⟨hI', hAbs.step_decidedSend hI id b hph hlg⟩)
         exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
     | callABA id b =>
       rw [hybrid_step_callABA P g C A w id b hI.corrupted_F] at hstep

@@ -27,8 +27,8 @@ synchronise on are hidden, the result is read back over `Label n`, and the sub-p
 hidden in turn (`Composition/Hybrid.lean`). Corrupted processes' calls and returns are covered by
 the Byzantine call and return transitions, authorised by `k ∈ F` at `ABANetwork` (D11). See
 `Vocabulary/RoundLoop.lean`'s module docstring for the per-process algorithm and deviations D9–D12′
-(0-based rounds, the fused DECIDED-send in `retWPublish`/`stepRound`, per-process DECIDED sets — see
-§ D12′ below).
+(0-based rounds, the DECIDED send `decidedSend` of a grade-2 round taken after the coin return
+`retW`, the Byzantine call and return transitions, per-process DECIDED sets — see § D12′ below).
 
 Concrete state: `(g, (C, (A, w)))` with `g : ℕ → GBCA.SpecState`, `C : ∀ j, RoundLoopVariables`, `A :
 ABANetworkState`, `w : ℕ → WCC.SpecState`. The two ABA components are read as one object `c :
@@ -87,7 +87,7 @@ packages exactly this — `AbstractState` transfers along any write preserving `
 not among them, so `AbstractState` transfers along any change of it. That lemma replaces the
 stutter argument at each transition: every hidden transition preserves the three projections, so its
 `AbstractState`-match is one `AbstractState.unchangedBy` invocation rather than a bespoke
-re-derivation (the six Stage-C stutter lemmas of
+re-derivation (the seven Stage-C stutter lemmas of
 `HybridRefinesSpecification/AbstractStatePreservation.lean` are all instances).
 
 ### Witnesses: decided values stated without the live pair
@@ -167,7 +167,7 @@ one-line form of that translation.
 
 | concrete transition | label | matching abstract run |
 |---|---|---|
-| every hidden call and return (`callG`/`retG`/`callW`/`retW`), `bindUnset`, DECIDED gossip τ | τ | stutter (`AbstractState.unchangedBy`; only `Invariant` moves) |
+| every hidden call and return (`callG`/`retG`/`callW`/`retW`), `bindUnset`, the DECIDED send of a grade-2 round (`decidedSend`), DECIDED gossip τ | τ | stutter (`AbstractState.unchangedBy`; only `Invariant` moves) |
 | `callW` at the transition that resolves `WCC_r`'s coin | τ | constant-coupled stutter via the generic `stutter_step` (`HybridRefinesSpecification/Simulation.lean`): coupling `Ω := μ_C.map (·, pure a)`, so `ω = pure (pure a)` and `ω.bind id = pure a` (the abstract state never flips, so every outcome of the draw lands on the same `a`) |
 | `callABA id b`, `id ∉ F`, the commit transition (`input = none`) | `callABA id b` | `SpecStep.callSet` (a first write at the empty ghost entry `input_sync` supplies; both systems commit `b`) |
 | `callABA id b`, `id ∉ F`, the concrete loop (`input ≠ none`) | `callABA id b` | `SpecStep.callLoop` (the filled ghost entry `input_sync` supplies; neither system moves) |

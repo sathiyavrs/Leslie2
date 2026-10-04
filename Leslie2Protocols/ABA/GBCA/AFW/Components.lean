@@ -289,12 +289,12 @@ variable {n : ℕ} (r : ℕ) (id k i j : Fin n) (b c bnd : Bool) (x : Option Boo
 @[simp] theorem programLabelMap_byzantineRetG :
     programLabelMap n (Sum.inl (Sum.inr (.byzantineRetG r k out bnd))) = some (.retG r k out bnd) :=
       rfl
-@[simp] theorem programLabelMap_decidedSend : programLabelMap n (Sum.inl (Sum.inr (.decidedSend j
+@[simp] theorem programLabelMap_decidedRelay : programLabelMap n (Sum.inl (Sum.inr (.decidedRelay j
   b))) = some .outside := rfl
 @[simp] theorem programLabelMap_decidedDeliver : programLabelMap n (Sum.inl (Sum.inr
   (.decidedDeliver i j b))) = some .outside := rfl
-@[simp] theorem programLabelMap_retWPublish :
-    programLabelMap n (Sum.inl (Sum.inr (.retWPublish r id c b))) = some .outside := rfl
+@[simp] theorem programLabelMap_decidedSend :
+    programLabelMap n (Sum.inl (Sum.inr (.decidedSend j b))) = some .outside := rfl
 @[simp] theorem programLabelMap_byzantineCallW :
     programLabelMap n (Sum.inl (Sum.inr (.byzantineCallW r k))) = some .outside := rfl
 @[simp] theorem programLabelMap_byzantineRetW :
@@ -335,13 +335,12 @@ variable {n : ℕ} (r : ℕ) (id k i j : Fin n) (b c bnd : Bool) (x : Option Boo
       k b)) := rfl
 @[simp] theorem firstGatherLabelMap_byzantineRetG :
     firstGatherLabelMap n (Sum.inl (Sum.inr (.byzantineRetG r k out bnd))) = none := rfl
-@[simp] theorem firstGatherLabelMap_decidedSend : firstGatherLabelMap n (Sum.inl (Sum.inr
-  (.decidedSend j b))) = none := rfl
+@[simp] theorem firstGatherLabelMap_decidedRelay : firstGatherLabelMap n (Sum.inl (Sum.inr
+  (.decidedRelay j b))) = none := rfl
 @[simp] theorem firstGatherLabelMap_decidedDeliver : firstGatherLabelMap n (Sum.inl (Sum.inr
   (.decidedDeliver i j b))) = none := rfl
-@[simp] theorem firstGatherLabelMap_retWPublish : firstGatherLabelMap n (Sum.inl (Sum.inr
-  (.retWPublish r id
-  c b))) = none := rfl
+@[simp] theorem firstGatherLabelMap_decidedSend : firstGatherLabelMap n (Sum.inl (Sum.inr
+  (.decidedSend j b))) = none := rfl
 @[simp] theorem firstGatherLabelMap_byzantineCallW : firstGatherLabelMap n (Sum.inl (Sum.inr
   (.byzantineCallW r k))) = none := rfl
 @[simp] theorem firstGatherLabelMap_byzantineRetW : firstGatherLabelMap n (Sum.inl (Sum.inr
@@ -378,13 +377,12 @@ variable {n : ℕ} (r : ℕ) (id k i j : Fin n) (b c bnd : Bool) (x : Option Boo
     secondGatherLabelMap n (Sum.inl (Sum.inr (.byzantineCallGLoop r k b))) = none := rfl
 @[simp] theorem secondGatherLabelMap_byzantineRetG :
     secondGatherLabelMap n (Sum.inl (Sum.inr (.byzantineRetG r k out bnd))) = none := rfl
-@[simp] theorem secondGatherLabelMap_decidedSend : secondGatherLabelMap n (Sum.inl (Sum.inr
-  (.decidedSend j b))) = none := rfl
+@[simp] theorem secondGatherLabelMap_decidedRelay : secondGatherLabelMap n (Sum.inl (Sum.inr
+  (.decidedRelay j b))) = none := rfl
 @[simp] theorem secondGatherLabelMap_decidedDeliver : secondGatherLabelMap n (Sum.inl (Sum.inr
   (.decidedDeliver i j b))) = none := rfl
-@[simp] theorem secondGatherLabelMap_retWPublish : secondGatherLabelMap n (Sum.inl (Sum.inr
-  (.retWPublish r
-  id c b))) = none := rfl
+@[simp] theorem secondGatherLabelMap_decidedSend : secondGatherLabelMap n (Sum.inl (Sum.inr
+  (.decidedSend j b))) = none := rfl
 @[simp] theorem secondGatherLabelMap_byzantineCallW : secondGatherLabelMap n (Sum.inl (Sum.inr
   (.byzantineCallW r k))) = none := rfl
 @[simp] theorem secondGatherLabelMap_byzantineRetW : secondGatherLabelMap n (Sum.inl (Sum.inr

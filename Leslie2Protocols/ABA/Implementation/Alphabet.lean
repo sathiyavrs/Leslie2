@@ -49,13 +49,13 @@ inductive NetworkEvent (n : ℕ) (M E : Type) : Type
   | gbcaSend (r : ℕ) (j : Fin n) (m : M)
   /-- Round-`r` delivery: `m`, sent under sender `j`, reaches receiver `i`. -/
   | gbcaDeliver (r : ℕ) (i j : Fin n) (m : M)
-  /-- DECIDED relay: sender `j` publishes `⟨DECIDED, b⟩` on an `f + 1` quorum. -/
+  /-- DECIDED send (D10): sender `j` sends `⟨DECIDED, b⟩` to all on the grade-2 outcome `grade2 b`
+  of the round it has just closed. -/
   | decidedSend (j : Fin n) (b : Bool)
+  /-- DECIDED relay: sender `j` sends `⟨DECIDED, b⟩` to all on an `f + 1` quorum. -/
+  | decidedRelay (j : Fin n) (b : Bool)
   /-- DECIDED delivery: sender `j`'s `⟨DECIDED, b⟩` reaches receiver `i`. -/
   | decidedDeliver (i j : Fin n) (b : Bool)
-  /-- The coin return fused with a `⟨DECIDED, b⟩` publication (D10): the
-  round-`r` coin `c` returns to `id`, whose outcome was `grade2 b`. -/
-  | retWPublish (r : ℕ) (id : Fin n) (c : Bool) (b : Bool)
   /-- The graded-agreement call against a round already called. -/
   | gbcaCallLoop (r : ℕ) (id : Fin n) (b : Bool)
   /-- A round-internal call or return at process `j`: a step at the boundary between the round's
@@ -104,8 +104,8 @@ transitions (D11), which carry it with no transition at the process they name. -
 
 /-- The labels on which process `j` acts on its own sub-protocol messages: its own graded-agreement
 call and return, its own round multicast, the round and DECIDED deliveries addressed to it, its own
-call against a round already called, its own round-internal call or return, its own fused
-coin return, and the graded-agreement transitions that name it. -/
+call against a round already called, its own round-internal call or return, its own DECIDED send,
+and the graded-agreement transitions that name it. -/
 def actsAt {n : ℕ} {M E : Type} (j : Fin n) : ExtendedLabel n M E → Prop
   | Sum.inl (.callG _ id _) => id = j
   | Sum.inl (.retG _ id _ _) => id = j
@@ -114,7 +114,7 @@ def actsAt {n : ℕ} {M E : Type} (j : Fin n) : ExtendedLabel n M E → Prop
   | Sum.inr (.decidedDeliver i _ _) => i = j
   | Sum.inr (.gbcaCallLoop _ id _) => id = j
   | Sum.inr (.gbcaRoundEvent _ k _) => k = j
-  | Sum.inr (.retWPublish _ id _ _) => id = j
+  | Sum.inr (.decidedSend id _) => id = j
   | Sum.inr (.byzantineCallG _ k _) => k = j
   | Sum.inr (.byzantineCallGLoop _ k _) => k = j
   | Sum.inr (.byzantineRetG _ k _ _) => k = j
@@ -129,14 +129,12 @@ instance {n : ℕ} {M E : Type} (j : Fin n) :
 /-! ### The label pullback of the common coin -/
 
 /-- The pullback along which the common coin is read over the extended
-alphabet: a shared label is its own, the Byzantine call and return transitions and the
-fused coin return are the coin's own calls and returns, and every other network
-event leaves the coin idle. -/
+alphabet: a shared label is its own, the Byzantine call and return transitions are the coin's own
+calls and returns, and every other network event leaves the coin idle. -/
 def coinLabelMap (n : ℕ) {M E : Type} : ExtendedLabel n M E → Option (Label n)
   | Sum.inl l => some l
   | Sum.inr (.byzantineCallW r k) => some (.callW r k)
   | Sum.inr (.byzantineRetW r k b) => some (.retW r k b)
-  | Sum.inr (.retWPublish r id c _) => some (.retW r id c)
   | Sum.inr _ => none
 
 @[simp] theorem coinLabelMap_inl {n : ℕ} {M E : Type} (l : Label n) :
@@ -148,9 +146,6 @@ def coinLabelMap (n : ℕ) {M E : Type} : ExtendedLabel n M E → Option (Label 
 @[simp] theorem coinLabelMap_byzantineRetW {n : ℕ} {M E : Type} (r : ℕ) (k : Fin n) (b : Bool) :
     coinLabelMap (M := M) (E := E) n (Sum.inr (.byzantineRetW r k b)) = some (.retW r k b) := rfl
 
-@[simp] theorem coinLabelMap_retWPublish {n : ℕ} {M E : Type} (r : ℕ) (id : Fin n) (c b : Bool) :
-    coinLabelMap (M := M) (E := E) n (Sum.inr (.retWPublish r id c b)) = some (.retW r id c) := rfl
-
 @[simp] theorem coinLabelMap_gbcaSend {n : ℕ} {M E : Type} (r : ℕ) (j : Fin n) (m : M) :
     coinLabelMap (E := E) n (Sum.inr (.gbcaSend r j m)) = none := rfl
 
@@ -159,6 +154,9 @@ def coinLabelMap (n : ℕ) {M E : Type} : ExtendedLabel n M E → Option (Label 
 
 @[simp] theorem coinLabelMap_decidedSend {n : ℕ} {M E : Type} (j : Fin n) (b : Bool) :
     coinLabelMap (M := M) (E := E) n (Sum.inr (.decidedSend j b)) = none := rfl
+
+@[simp] theorem coinLabelMap_decidedRelay {n : ℕ} {M E : Type} (j : Fin n) (b : Bool) :
+    coinLabelMap (M := M) (E := E) n (Sum.inr (.decidedRelay j b)) = none := rfl
 
 @[simp] theorem coinLabelMap_decidedDeliver {n : ℕ} {M E : Type} (i j : Fin n) (b : Bool) :
     coinLabelMap (M := M) (E := E) n (Sum.inr (.decidedDeliver i j b)) = none := rfl

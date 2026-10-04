@@ -12,12 +12,11 @@ import Leslie2Protocols.ABA.Composition.Hybrid
 
 `Invariant.step_retW`, preservation of `Invariant` at a return of the coin. `g` is untouched
 entirely, the coin instance touches only `.ret`, a field `Invariant` does not inspect, and the
-core's `stepRound` touches `estimate`, `lastGrade`, `round` and `phase` at `id`, and
-`decidedSent id` on a grade-2. `round_bound`'s freshly included round is covered by `wcc_bound`,
-the coin having resolved closing the round. The DECIDED-on-grade-2 witness for `decided_source`,
-and the extension of `grade2Bound_commit` and `agree_bound` to `id`'s new round, need the
-cross-round correlation of `lastGrade` with `(g r).grade` and `(g r).excluded` (GBCA graded
-agreement), which is not a local `Invariant` consequence, and are handed off.
+round advance `ABAState.stepRound` touches `estimate`, `round` and `phase` at `id`, and clears
+`lastGrade` unless the round's outcome was grade 2. On a grade-2 outcome `id` enters
+`toSendDecided` with its grade kept, so the set of grade-2 holders is unchanged; the DECIDED send
+that follows is `Invariant.step_decidedSend`. `round_bound`'s freshly included round is covered by
+`wcc_bound`, the coin having resolved closing the round.
 -/
 
 namespace PLTS
@@ -77,23 +76,31 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
       ABAState.stepRound_decidedReceived _ _ _
     have hProcNe : ∀ id', id' ≠ id → (c.stepRound id b).processes id' = c.processes id' := by
       intro id' h; exact ABAState.stepRound_processes_ne _ _ _ h
-    have hProcSelf : (c.stepRound id b).processes id = { c.processes id with
-        estimate := some ((c.processes id).estimate.getD b), lastGrade := none,
-        round := (c.processes id).round + 1,
-          phase := .toCallG } := ABAState.stepRound_processes_self _ _ _
-    have hInputEq : ((c.stepRound id b).processes id).input = (c.processes id).input := by
-      rw [hProcSelf]
-    have hRoundEq : ((c.stepRound id b).processes id).round = (c.processes id).round + 1 := by
-      rw [hProcSelf]
-    have hDSeq : (c.stepRound id b).decidedSent = c.decidedSent ∨
-        ∃ b0, (c.processes id).lastGrade = some (.grade2 b0) ∧
-          (c.stepRound id b).decidedSent =
-            Function.update c.decidedSent id (insert b0 (c.decidedSent id)) := by
+    have hInputEq : ((c.stepRound id b).processes id).input = (c.processes id).input :=
+      ABAState.stepRound_processes_self_input _ _ _
+    have hRoundEq : ((c.stepRound id b).processes id).round = (c.processes id).round + 1 :=
+      ABAState.stepRound_processes_self_round _ _ _
+    -- On a grade-2 outcome `id` enters `toSendDecided` with its grade kept; otherwise it enters
+    -- `toCallG` with its grade cleared.
+    have hSelfCases : (((c.stepRound id b).processes id).phase = .toSendDecided ∧
+          ((c.stepRound id b).processes id).lastGrade = (c.processes id).lastGrade) ∨
+        (((c.stepRound id b).processes id).phase = .toCallG ∧
+          ((c.stepRound id b).processes id).lastGrade = none) := by
       by_cases hA : ∃ b0, (c.processes id).lastGrade = some (.grade2 b0)
       · obtain ⟨b0, hlg⟩ := hA
-        exact Or.inr ⟨b0, hlg, ABAState.stepRound_decidedSent_of_grade2 c id b b0 hlg⟩
-      · exact Or.inl (ABAState.stepRound_decidedSent_of_not_grade2 c id b (fun b1 heq => hA ⟨b1,
-          heq⟩))
+        rw [ABAState.stepRound_processes_self_of_grade2 c id b b0 hlg]
+        exact Or.inl ⟨rfl, rfl⟩
+      · rw [ABAState.stepRound_processes_self_of_not_grade2 c id b (fun b1 h => hA ⟨b1, h⟩)]
+        exact Or.inr ⟨rfl, rfl⟩
+    have hPhaseNotW : ((c.stepRound id b).processes id).phase ≠ .toCallW ∧
+        ((c.stepRound id b).processes id).phase ≠ .awaitW := by
+      rcases hSelfCases with ⟨h, -⟩ | ⟨h, -⟩ <;> rw [h] <;> exact ⟨by decide, by decide⟩
+    have hLGEq : ∀ b1, ((c.stepRound id b).processes id).lastGrade = some (.grade2 b1) →
+        (c.processes id).lastGrade = some (.grade2 b1) := by
+      intro b1 h
+      rcases hSelfCases with ⟨-, h'⟩ | ⟨-, h'⟩
+      · rwa [h'] at h
+      · rw [h'] at h; simp at h
     have hDR2 : ∀ r', DissentWitness P g c r' → DissentWitness P g (c.stepRound id b) r' := by
       intro r' hd
       refine DissentWitness.preserved rfl rfl (fun hh => hh) (fun id2 => ?_) hd
@@ -109,11 +116,12 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
       rcases hc1 with hcall | ⟨he, hk⟩
       · exact Or.inl (Or.inl hcall)
       · by_cases hid1 : i1 = id
-        · rw [hid1, hProcSelf] at he hk
+        · rw [hid1, ABAState.stepRound_processes_self_estimate] at he
+          rw [hid1] at hk
           rcases hk with ⟨-, hp | hp⟩ | ⟨hr0, -⟩
-          · exact absurd hp (by simp)
-          · exact absurd hp (by simp)
-          · have hr0' : (c.processes id).round + 1 = r₀ + 1 := by simpa using hr0
+          · exact absurd hp hPhaseNotW.1
+          · exact absurd hp hPhaseNotW.2
+          · have hr0' : (c.processes id).round + 1 = r₀ + 1 := by rw [← hRoundEq]; exact hr0
             exact Or.inr ⟨hid1, by omega, Option.some_inj.mp he⟩
         · rw [hProcNe i1 hid1] at he hk
           exact Or.inl (Or.inr ⟨he, hk⟩)
@@ -130,7 +138,7 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
           · have hold := h3 id (hFeq ▸ (hid ▸ hmem)) hle
             rw [hid]; simp [hold]
           · have hr0r : r0 = r := (by omega : r0 = (c.processes id).round).trans hr
-            rw [hid]; simp only [hProcSelf]
+            rw [hid, ABAState.stepRound_processes_self_estimate]
             rcases Option.eq_none_or_eq_some ((c.processes id).estimate) with hoe | ⟨bv, hoe⟩
             · exfalso
               obtain ⟨hg0', -⟩ :=
@@ -160,19 +168,9 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
       intro i1 b1 h1
       rcases h1 with h1 | h1
       · by_cases hid1 : i1 = id
-        · rw [hid1, hProcSelf] at h1; simp at h1
+        · rw [hid1] at h1 ⊢; exact Or.inl (hLGEq b1 h1)
         · rw [hProcNe i1 hid1] at h1; exact Or.inl h1
-      · rcases hDSeq with heq | ⟨b2, hlg, heq⟩
-        · rw [heq] at h1; exact Or.inr h1
-        · rw [heq] at h1
-          by_cases hid1 : i1 = id
-          · subst hid1
-            rw [Function.update_self, Finset.mem_insert] at h1
-            rcases h1 with rfl | h1
-            · exact Or.inl hlg
-            · exact Or.inr h1
-          · rw [Function.update_of_ne hid1] at h1
-            exact Or.inr h1
+      · exact Or.inr h1
     rw [hc']
     refine And.intro ?_ ⟨fun r0 b0 hc => ⟨r0, hCertW r0 b0 hc⟩,
       fun v _ hpin j b' hj hh => hpin j b' (hFeq ▸ hj) (hRedHW j b' hh)⟩
@@ -232,27 +230,9 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
         exact hI.phase_input id' (hFeq ▸ hmem) hne
     · intro i j b' h
       rw [hDReq] at h
-      rcases hDSeq with heq | ⟨b0, hlg, heq⟩
-      · rw [heq]; exact hI.received_sound i j b' h
-      · rw [heq]
-        by_cases hji : j = id
-        -- the sent set only grows (D12′): the old received message stays covered
-        · rw [hji] at h ⊢
-          rw [Function.update_self]
-          exact Finset.mem_insert_of_mem (hI.received_sound i id b' h)
-        · rw [Function.update_of_ne hji]; exact hI.received_sound i j b' h
+      exact hI.received_sound i j b' h
     · intro id' b' hmem h
-      rcases hDSeq with heq | ⟨b0, hlg, heq⟩
-      · rw [heq] at h
-        exact (hI.decided_source id' b' (hFeq ▸ hmem) h).imp (fun r0 => hCertW r0 b')
-      · rw [heq] at h
-        by_cases hid : id' = id
-        · rw [hid, Function.update_self, Finset.mem_insert] at h
-          rcases h with rfl | h
-          · exact (hI.grade2_source id b' hlg).imp (fun r0 => hCertW r0 b')
-          · exact (hI.decided_source id b' (hFeq ▸ hid ▸ hmem) h).imp (fun r0 => hCertW r0 b')
-        · rw [Function.update_of_ne hid] at h
-          exact (hI.decided_source id' b' (hFeq ▸ hmem) h).imp (fun r0 => hCertW r0 b')
+      exact (hI.decided_source id' b' (hFeq ▸ hmem) h).imp (fun r0 => hCertW r0 b')
     · intro r0 b0 hgr hbr
       exact hCommitW r0 b0 hgr (hI.grade2Bound_commit r0 b0 hgr hbr)
     · intro id' hmem r' hround
@@ -271,7 +251,7 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
           rw [hid]; simp [hold]
         · have hr'eq : r' = (c.processes id).round := by omega
           have hr'r : r' = r := hr'eq.trans hr
-          rw [hid]; simp only [hProcSelf]
+          rw [hid, ABAState.stepRound_processes_self_estimate]
           obtain ⟨hnone, hsome⟩ := hI.estimate_ret r id (hFeq ▸ (hid ▸ hmem)) hr (Or.inr hph)
           by_cases holdE : (c.processes id).estimate = none
           · obtain ⟨hg0, -⟩ := hnone holdE
@@ -316,14 +296,17 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
         exact hI.estimate0 id' (hFeq ▸ hmem) hround hphase
     · intro id' b' hlg
       by_cases h : id' = id
-      · exfalso; rw [h, hProcSelf] at hlg; simp at hlg
+      · rw [h] at hlg
+        exact (hI.grade2_source id b' (hLGEq b' hlg)).imp (fun r0 => hCertW r0 b')
       · rw [hProcNe id' h] at hlg
         exact (hI.grade2_source id' b' hlg).imp (fun r0 => hCertW r0 b')
     · intro r' id' hmem hround hphase
       by_cases h : id' = id
       · exfalso
-        rw [h, hProcSelf] at hphase
-        rcases hphase with hp | hp <;> simp at hp
+        rw [h] at hphase
+        rcases hphase with hp | hp
+        · exact hPhaseNotW.1 hp
+        · exact hPhaseNotW.2 hp
       · rw [hProcNe id' h] at hround hphase
         rw [hProcNe id' h]
         exact hI.estimate_ret r' id' (hFeq ▸ hmem) hround hphase
@@ -338,7 +321,7 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
         rw [hreq, hValeq r]
         have hveq : (c.processes id).estimate.getD b = v := by
           have hcopy := hest
-          rw [hid, hProcSelf] at hcopy
+          rw [hid, ABAState.stepRound_processes_self_estimate] at hcopy
           exact Option.some_inj.mp hcopy
         have hep := hI.estimate_ret r id (hFeq ▸ (hid ▸ hmem)) hr (Or.inr hph)
         rcases Option.eq_none_or_eq_some ((c.processes id).estimate) with hoe | ⟨bv, hoe⟩
@@ -355,7 +338,7 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
         exact hI.estimate_previous r' id' (hFeq ▸ hmem) hround hphase v hest
     · intro id' hmem hround hphase
       by_cases hid : id' = id
-      · rw [hid, hProcSelf]; simp
+      · rw [hid, ABAState.stepRound_processes_self_estimate]; simp
       · rw [hProcNe id' hid] at hround hphase ⊢
         exact hI.estimate_previous_ne id' (hFeq ▸ hmem) hround hphase
     · intro r' h; rw [hValeq] at h ⊢; exact hI.wcc_order r' h
@@ -398,8 +381,9 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
       · rw [hid] at hmem hp
         rcases hp with ⟨hround, hphase⟩ | hlt0
         · exfalso
-          rw [hProcSelf] at hphase
-          rcases hphase with h | h <;> simp at h
+          rcases hphase with h | h
+          · exact hPhaseNotW.1 h
+          · exact hPhaseNotW.2 h
         · rw [hRoundEq] at hlt0
           by_cases hlt : r' < (c.processes id).round
           · rcases hI.retG_witness r' id (hFeq ▸ hmem) (Or.inr hlt) with hg | hd

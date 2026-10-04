@@ -231,57 +231,85 @@ theorem deliverDecided_decidedReceived_of_ne (s : ABAState P) (i j : Fin P.n) (b
         Function.update_of_ne h]
     · simp [deliverDecided, decidedReceived, Function.update_of_ne hi]
 
-/-- The round advance of process `id` on receiving the coin `c` (fused
-DECIDED-send, deviation D10): adopt the coin when the estimate is `⊥`,
-multicast `⟨DECIDED, b⟩` when the round's outcome was `grade2 b`, clear the grade and
-move to `toCallG` of the next round. -/
+/-- The round advance of process `id` on receiving the coin `c`: the round loop's own advance
+`RoundLoopVariables.stepRound`, the network untouched. It adopts the coin when the estimate is `⊥`
+and opens the next round. On a grade-2 outcome it keeps the grade and enters `toSendDecided`;
+otherwise it clears the grade and enters `toCallG` (D10). -/
 def stepRound (s : ABAState P) (id : Fin P.n) (c : Bool) : ABAState P :=
-  (match (s.processes id).lastGrade with
-    | some (.grade2 b) => s.sendDecided id b
-    | _ => s).setProcessVariables id
-    { s.processes id with
-      estimate := some ((s.processes id).estimate.getD c),
-      lastGrade := none,
-      round := (s.processes id).round + 1,
-      phase := .toCallG }
+  (Function.update s.1 id ((s.1 id).stepRound c), s.2)
 
-@[simp] theorem stepRound_processes_self (s : ABAState P) (id : Fin P.n) (c : Bool) :
+theorem stepRound_apply (C : ∀ _ : Fin P.n, RoundLoopVariables P.n) (A : ABANetworkState P.n)
+    (id : Fin P.n) (co : Bool) :
+    stepRound (P := P) (C, A) id co = (Function.update C id ((C id).stepRound co), A) := rfl
+
+theorem stepRound_processes_self_of_grade2 (s : ABAState P) (id : Fin P.n) (c b : Bool)
+    (h : (s.processes id).lastGrade = some (.grade2 b)) :
+    (s.stepRound id c).processes id =
+      { s.processes id with
+        estimate := some ((s.processes id).estimate.getD c),
+        round := (s.processes id).round + 1,
+        phase := .toSendDecided } := by
+  simp only [stepRound, processes, Function.update_self]
+  rw [RoundLoopVariables.stepRound_of_grade2 _ c b h]
+  rfl
+
+theorem stepRound_processes_self_of_not_grade2 (s : ABAState P) (id : Fin P.n) (c : Bool)
+    (h : ∀ b, (s.processes id).lastGrade ≠ some (.grade2 b)) :
     (s.stepRound id c).processes id =
       { s.processes id with
         estimate := some ((s.processes id).estimate.getD c),
         lastGrade := none,
         round := (s.processes id).round + 1,
         phase := .toCallG } := by
-  unfold stepRound
-  exact setProcessVariables_processes_self _ _ _
+  simp only [stepRound, processes, Function.update_self]
+  rw [RoundLoopVariables.stepRound_of_not_grade2 _ c h]
+  rfl
+
+@[simp] theorem stepRound_processes_self_input (s : ABAState P) (id : Fin P.n) (c : Bool) :
+    ((s.stepRound id c).processes id).input = (s.processes id).input := by
+  simp only [stepRound, processes, Function.update_self, RoundLoopVariables.stepRound]
+  split <;> rfl
+
+@[simp] theorem stepRound_processes_self_estimate (s : ABAState P) (id : Fin P.n) (c : Bool) :
+    ((s.stepRound id c).processes id).estimate = some ((s.processes id).estimate.getD c) := by
+  simp only [stepRound, processes, Function.update_self, RoundLoopVariables.stepRound]
+  split <;> rfl
+
+@[simp] theorem stepRound_processes_self_round (s : ABAState P) (id : Fin P.n) (c : Bool) :
+    ((s.stepRound id c).processes id).round = (s.processes id).round + 1 := by
+  simp only [stepRound, processes, Function.update_self, RoundLoopVariables.stepRound]
+  split <;> rfl
+
+@[simp] theorem stepRound_processes_self_returned (s : ABAState P) (id : Fin P.n) (c : Bool) :
+    ((s.stepRound id c).processes id).returned = (s.processes id).returned := by
+  simp only [stepRound, processes, Function.update_self, RoundLoopVariables.stepRound]
+  split <;> rfl
 
 theorem stepRound_processes_ne (s : ABAState P) (id : Fin P.n) (c : Bool)
     {k : Fin P.n} (h : k ≠ id) : (s.stepRound id c).processes k = s.processes k := by
-  unfold stepRound
-  cases (s.processes id).lastGrade with
-  | none => exact setProcessVariables_processes_ne _ _ _ h
-  | some out => cases out <;> exact setProcessVariables_processes_ne _ _ _ h
+  simp [stepRound, processes, Function.update_of_ne h]
 
 @[simp] theorem stepRound_decidedReceived (s : ABAState P) (id : Fin P.n) (c : Bool) :
     (s.stepRound id c).decidedReceived = s.decidedReceived := by
-  unfold stepRound
-  cases (s.processes id).lastGrade with
-  | none => exact setProcessVariables_decidedReceived _ _ _
-  | some out => cases out <;> exact setProcessVariables_decidedReceived _ _ _
+  funext i
+  by_cases hi : i = id
+  · subst hi
+    simp only [stepRound, decidedReceived, Function.update_self, RoundLoopVariables.stepRound]
+    split <;> rfl
+  · simp [stepRound, decidedReceived, Function.update_of_ne hi]
 
 @[simp] theorem stepRound_corrupted (s : ABAState P) (id : Fin P.n) (c : Bool) :
     (s.stepRound id c).corrupted = s.corrupted := by
-  unfold stepRound
-  cases (s.processes id).lastGrade with
-  | none => exact setProcessVariables_corrupted _ _ _
-  | some out => cases out <;> exact setProcessVariables_corrupted _ _ _
+  funext i
+  by_cases hi : i = id
+  · subst hi; simp [stepRound, corrupted]
+  · simp [stepRound, corrupted, Function.update_of_ne hi]
 
 @[simp] theorem stepRound_F (s : ABAState P) (id : Fin P.n) (c : Bool) :
-    (s.stepRound id c).F = s.F := by
-  unfold stepRound
-  cases (s.processes id).lastGrade with
-  | none => rfl
-  | some out => cases out <;> rfl
+    (s.stepRound id c).F = s.F := rfl
+
+@[simp] theorem stepRound_decidedSent (s : ABAState P) (id : Fin P.n) (c : Bool) :
+    (s.stepRound id c).decidedSent = s.decidedSent := rfl
 
 @[simp] theorem stepRound_decidedCount (s : ABAState P) (id : Fin P.n) (c : Bool)
     (i : Fin P.n) (b : Bool) :
@@ -289,55 +317,55 @@ theorem stepRound_processes_ne (s : ABAState P) (id : Fin P.n) (c : Bool)
   unfold decidedCount
   rw [stepRound_decidedReceived]
 
-/-- On a `grade2 b` outcome the round advance multicasts `⟨DECIDED, b⟩`. -/
-theorem stepRound_decidedSent_of_grade2 (s : ABAState P) (id : Fin P.n) (c b : Bool)
-    (h : (s.processes id).lastGrade = some (.grade2 b)) :
-    (s.stepRound id c).decidedSent =
-      Function.update s.decidedSent id (insert b (s.decidedSent id)) := by
-  unfold stepRound
-  rw [h]
-  rfl
+/-- The DECIDED send of process `id` on the grade-2 outcome `grade2 b` of the round it has just
+closed (D10): the network sets `b` under `id`, and the process clears the grade and enters the
+next round's `toCallG`. -/
+def sendDecidedOnGrade2 (s : ABAState P) (id : Fin P.n) (b : Bool) : ABAState P :=
+  (s.sendDecided id b).setProcessVariables id
+    { s.processes id with lastGrade := none, phase := .toCallG }
 
-/-- Without a grade-2 outcome the round advance leaves the DECIDED sets alone. -/
-theorem stepRound_decidedSent_of_not_grade2 (s : ABAState P) (id : Fin P.n) (c : Bool)
-    (h : ∀ b, (s.processes id).lastGrade ≠ some (.grade2 b)) :
-    (s.stepRound id c).decidedSent = s.decidedSent := by
-  unfold stepRound
-  cases hg : (s.processes id).lastGrade with
-  | none => rfl
-  | some out =>
-    cases out with
-    | grade2 b => exact absurd hg (h b)
-    | grade1 b => rfl
-    | grade0 => rfl
+theorem sendDecidedOnGrade2_apply (C : ∀ _ : Fin P.n, RoundLoopVariables P.n)
+    (A : ABANetworkState P.n) (id : Fin P.n) (b : Bool) :
+    sendDecidedOnGrade2 (P := P) (C, A) id b =
+      (Function.update C id ((C id).setProcessVariables
+        { (C id).processVariables with lastGrade := none, phase := .toCallG }),
+        A.recordDecided id b) := rfl
 
-/-- The round advance when the round carried no grade-2 outcome: the round loop's
-own advance, the network untouched. -/
-theorem stepRound_of_not_grade2 (C : ∀ _ : Fin P.n, RoundLoopVariables P.n) (A : ABANetworkState
-  P.n)
-    (id : Fin P.n) (co : Bool)
-    (hg : ∀ v : Bool, (C id).processVariables.lastGrade ≠ some (.grade2 v)) :
-    stepRound (P := P) (C, A) id co
-      = (Function.update C id ((C id).stepRound co), A) := by
-  unfold stepRound
-  cases hlg : (C id).processVariables.lastGrade with
-  | none => rw [show (processes (P := P) (C, A) id).lastGrade = none from hlg]; rfl
-  | some out =>
-    cases out with
-    | grade2 v => exact absurd hlg (hg v)
-    | grade1 v => rw [show (processes (P := P) (C,
-      A) id).lastGrade = some (.grade1 v) from hlg]; rfl
-    | grade0 => rw [show (processes (P := P) (C, A) id).lastGrade = some .grade0 from hlg]; rfl
+@[simp] theorem sendDecidedOnGrade2_processes_self (s : ABAState P) (id : Fin P.n) (b : Bool) :
+    (s.sendDecidedOnGrade2 id b).processes id =
+      { s.processes id with lastGrade := none, phase := .toCallG } :=
+  setProcessVariables_processes_self _ _ _
 
-/-- The round advance on a `grade2 b` outcome: the round loop's advance joined with
-the network's publication of `b` (the fused DECIDED-send, D10). -/
-theorem stepRound_publish (C : ∀ _ : Fin P.n, RoundLoopVariables P.n) (A : ABANetworkState P.n)
-    (id : Fin P.n) (co b : Bool) (hg : (C id).processVariables.lastGrade = some (.grade2 b)) :
-    stepRound (P := P) (C, A) id co
-      = (Function.update C id ((C id).stepRound co), A.recordDecided id b) := by
-  unfold stepRound
-  rw [show (processes (P := P) (C, A) id).lastGrade = some (.grade2 b) from hg]
-  rfl
+theorem sendDecidedOnGrade2_processes_ne (s : ABAState P) (id : Fin P.n) (b : Bool)
+    {k : Fin P.n} (h : k ≠ id) : (s.sendDecidedOnGrade2 id b).processes k = s.processes k :=
+  setProcessVariables_processes_ne _ _ _ h
+
+@[simp] theorem sendDecidedOnGrade2_decidedSent (s : ABAState P) (id : Fin P.n) (b : Bool) :
+    (s.sendDecidedOnGrade2 id b).decidedSent =
+      Function.update s.decidedSent id (insert b (s.decidedSent id)) := rfl
+
+/-- Membership in a post-send sent set: the sent bit at `id`, or an old sent member. -/
+theorem mem_sendDecidedOnGrade2_decidedSent_iff (s : ABAState P) (id : Fin P.n) (b : Bool)
+    (k : Fin P.n) (b' : Bool) :
+    b' ∈ (s.sendDecidedOnGrade2 id b).decidedSent k ↔
+      (k = id ∧ b' = b) ∨ b' ∈ s.decidedSent k :=
+  mem_sendDecided_decidedSent_iff s id b k b'
+
+@[simp] theorem sendDecidedOnGrade2_decidedReceived (s : ABAState P) (id : Fin P.n) (b : Bool) :
+    (s.sendDecidedOnGrade2 id b).decidedReceived = s.decidedReceived :=
+  setProcessVariables_decidedReceived _ _ _
+
+@[simp] theorem sendDecidedOnGrade2_corrupted (s : ABAState P) (id : Fin P.n) (b : Bool) :
+    (s.sendDecidedOnGrade2 id b).corrupted = s.corrupted :=
+  setProcessVariables_corrupted _ _ _
+
+@[simp] theorem sendDecidedOnGrade2_F (s : ABAState P) (id : Fin P.n) (b : Bool) :
+    (s.sendDecidedOnGrade2 id b).F = s.F := rfl
+
+@[simp] theorem sendDecidedOnGrade2_decidedCount (s : ABAState P) (id : Fin P.n) (b : Bool)
+    (i : Fin P.n) (b' : Bool) :
+    (s.sendDecidedOnGrade2 id b).decidedCount i b' = s.decidedCount i b' :=
+  setProcessVariables_decidedCount _ _ _ _ _
 
 /-- Corruption (deviations D1, D23): total, Dirac, monotone in `F`. The
 network takes `id` into the corrupted set and the named round loop takes the

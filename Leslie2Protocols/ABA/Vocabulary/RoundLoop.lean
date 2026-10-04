@@ -39,9 +39,9 @@ returns over the API labels, advancing the process's `phase` and recording the r
 the sub-protocol state itself lives in the round specifications and the common coin — and no network
 state: the DECIDED sets and the corrupted set belong to the network. The transitions themselves are
 `RoundLoopStep` (`ABA/Composition/Components.lean`), the transitions of the round-loop variables
-`RoundLoopVariables` over the extended alphabet, and `ABDY.ABAProgramStep`
-(`ABA/ABDY/System.lean`), the transitions of the protocol program that carries a round loop
-beside its round variables. This file realises the assumptions of
+`RoundLoopVariables` over the extended alphabet, and `Implementation.ProgramStep`
+(`ABA/Implementation/System.lean`), the transitions of the protocol program that carries a round
+loop beside its round variables. This file realises the assumptions of
 `DESIGN-HybridRefinesSpecification.md`: the phase machine (invariant conjunct 4), the DECIDED
 diffusion state (conjunct 6), and input coherence
 (conjunct 5 — the correct `callG` guard ties the emitted bit to the current estimate).
@@ -50,13 +50,12 @@ diffusion state (conjunct 6), and input coherence
 
 * **D9 (0-based rounds).** `round : ℕ` starts at `0` where Algorithm 1 starts
   at `r = 1`; the `GBCA_r`/`WCC_r` instance indices shift accordingly.
-* **D10 (fused DECIDED-send).** Algorithm 1's `elif g = A: send ⟨DECIDED, b⟩`
-  is performed inside the round advance `RoundLoopVariables.stepRound`, joined with the
-  network's publication of the bit: receiving the round's coin adopts it when
-  `estimate = ⊥`, multicasts `⟨DECIDED, b⟩` when the round's outcome was `grade2 b`,
-  clears `lastGrade` and advances to the next round, all in one Dirac
-  transition. The synchronised step is `retWPublish`, whose round-loop
-  half is the advance and whose network half is the sent insert.
+* **D10 (the DECIDED send of a grade-2 round).** Algorithm 1's `elif g = A: send ⟨DECIDED, b⟩`
+  is a transition of its own, `decidedSend`, taken after the coin return. The coin return
+  `retW` performs the round advance `RoundLoopVariables.stepRound`: it adopts the coin when
+  `estimate = ⊥` and opens the next round. When the round's outcome was `grade2 b`, the advance
+  keeps `lastGrade` and enters the phase `toSendDecided`. The DECIDED send then clears
+  `lastGrade`, enters `toCallG`, and its network half inserts `b` into the process's DECIDED set.
 * **D11 (Byzantine call and return transitions).** Corrupted processes may make their sub-protocol
   calls and returns arbitrarily: each of `callG`/`retG`/`callW`/`retW` has a Byzantine
   transition, authorised by `k ∈ F` at the network and constrained by no phase or estimate. The
@@ -65,9 +64,9 @@ diffusion state (conjunct 6), and input coherence
 * **D12′ (per-process DECIDED sets, equivocation-capable).** The DECIDED multicast state is the
   network's per-process sent `decidedSent : Fin n → Finset Bool`, read in the ABA component as
   `decidedSent` (`ABA/Composition/ABAState.lean`) and mirroring graded agreement's D5 sent-set
-  pattern. Correct sends insert into the sent (the fused `retWPublish` publication and the `f + 1`
-  relay `decidedSend`; in reachable states DECIDED coherence keeps every correct sent at card ≤ 1,
-  so the insert is a first write or a no-op re-send of the same bit). Byzantine injection
+  pattern. Correct sends insert into the sent: the DECIDED send `decidedSend` of a grade-2 round,
+  and the `f + 1` relay `decidedRelay`. In reachable states DECIDED coherence keeps every correct
+  sent at card ≤ 1, so the insert is a first write or a re-send of the same bit. Byzantine injection
   (`byzantineDecided`, guarded only by `k ∈ F`) may insert either or both bits at any time — a
   corrupted process may send `DECIDED 0` to one receiver and `DECIDED 1` to another (delivery is
   selective). The synchronised delivery `decidedDeliver` moves one sent bit into the receiver's own
@@ -89,19 +88,18 @@ diffusion state (conjunct 6), and input coherence
 Two further notes: the return transition has **no** correctness check — corrupted
 returns must pass the same `n − f` DECIDED count as correct ones, and the
 specification's return transition is likewise blind to correctness — and
-`lastGrade` always refers to the *current* round's GBCA
-return (it is cleared by the round advance).
+`lastGrade` always refers to the GBCA return of the round in progress or of the round just
+closed. It is cleared by the round advance, or, on a grade-2 outcome, by the DECIDED send.
 -/
 
 namespace PLTS
 namespace ABA
 
-/-- The phase of one core process. The five phases make each
+/-- The phase of one core process. The phases make each
 sub-protocol call and return guard crisp:
 `idle → toCallG → awaitG → toCallW → awaitW → (next round) toCallG → …`.
-The blueprint's per-round bookkeeping between the WCC return and the next
-GBCA call is fused into the `retW` step (deviation D10), so no separate
-"stepping" phase is needed. -/
+On a grade-2 outcome the coin return enters `toSendDecided` (deviation D10), and the
+DECIDED send leads from it to the next round's `toCallG`. -/
 inductive Phase : Type
   /-- No external input received yet. -/
   | idle
@@ -113,6 +111,8 @@ inductive Phase : Type
   | toCallW
   /-- Waiting for the current round's WCC return. -/
   | awaitW
+  /-- Ready to send DECIDED on the grade-2 outcome of the round just closed. -/
+  | toSendDecided
   deriving DecidableEq, Repr
 
 /-- The estimate a graded outcome dictates: `grade2 b`/`grade1 b` set the estimate to
@@ -144,7 +144,7 @@ structure RoundLoopState (n : ℕ) : Type where
   /-- The phase between the process's own calls and returns. -/
   phase : Phase
   /-- The graded outcome returned by the *current* round's GBCA (`none` before
-  the return; cleared by the round advance). -/
+  the return; cleared by the round advance, or by the DECIDED send on a grade-2 outcome). -/
   lastGrade : Option GBCAOutput
   /-- Whether this process has returned (fired `retABA`). -/
   returned : Bool
@@ -230,19 +230,50 @@ def receiveDecided (q : RoundLoopVariables n) (k : Fin n) (b : Bool) : RoundLoop
     (q.receiveDecided k b).corrupted = q.corrupted := rfl
 
 /-- The round advance on receiving the coin `c`: adopt the coin if the
-estimate is `⊥`, clear the grade, open the next round. The `⟨DECIDED, b⟩`
-publication the advance carries on a grade-2 outcome (D10) is the network's half of
-the synchronised step, so no transition of it appears here. -/
+estimate is `⊥` and open the next round. On a grade-2 outcome the advance keeps the grade and
+enters `toSendDecided`, where the DECIDED send of the round just closed is taken; otherwise it
+clears the grade and enters `toCallG`. -/
 def stepRound (q : RoundLoopVariables n) (c : Bool) : RoundLoopVariables n :=
-  q.setProcessVariables
-    { q.processVariables with
-      estimate := some (q.processVariables.estimate.getD c),
-      lastGrade := none,
-      round := q.processVariables.round + 1,
-      phase := .toCallG }
+  match q.processVariables.lastGrade with
+  | some (.grade2 _) =>
+    q.setProcessVariables
+      { q.processVariables with
+        estimate := some (q.processVariables.estimate.getD c),
+        round := q.processVariables.round + 1,
+        phase := .toSendDecided }
+  | _ =>
+    q.setProcessVariables
+      { q.processVariables with
+        estimate := some (q.processVariables.estimate.getD c),
+        lastGrade := none,
+        round := q.processVariables.round + 1,
+        phase := .toCallG }
+
+theorem stepRound_of_grade2 (q : RoundLoopVariables n) (c b : Bool)
+    (h : q.processVariables.lastGrade = some (.grade2 b)) :
+    q.stepRound c = q.setProcessVariables
+      { q.processVariables with
+        estimate := some (q.processVariables.estimate.getD c),
+        round := q.processVariables.round + 1,
+        phase := .toSendDecided } := by
+  unfold stepRound; rw [h]
+
+theorem stepRound_of_not_grade2 (q : RoundLoopVariables n) (c : Bool)
+    (h : ∀ b, q.processVariables.lastGrade ≠ some (.grade2 b)) :
+    q.stepRound c = q.setProcessVariables
+      { q.processVariables with
+        estimate := some (q.processVariables.estimate.getD c),
+        lastGrade := none,
+        round := q.processVariables.round + 1,
+        phase := .toCallG } := by
+  unfold stepRound
+  split
+  · next b' hb => exact absurd hb (h b')
+  · rfl
 
 @[simp] theorem stepRound_corrupted (q : RoundLoopVariables n) (c : Bool) :
-    (q.stepRound c).corrupted = q.corrupted := rfl
+    (q.stepRound c).corrupted = q.corrupted := by
+  unfold stepRound; split <;> rfl
 
 end RoundLoopVariables
 

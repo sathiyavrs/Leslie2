@@ -499,14 +499,14 @@ theorem gbcaNetworkStep_gbcaSend_noStep {r' : ℕ} {j : Fin P.n} {m : GBCA.ByABD
 theorem gbcaNetworkStep_gbcaDeliver_noStep {r' : ℕ} {i j : Fin P.n} {m : GBCA.ByABDY.Message}
     (h : GBCANetworkStep P r w (Sum.inl (Sum.inr (.gbcaDeliver r' i j m))) μ) : False := by cases h
 
-theorem gbcaNetworkStep_decidedSend_noStep {j : Fin P.n} {b : Bool}
-    (h : GBCANetworkStep P r w (Sum.inl (Sum.inr (.decidedSend j b))) μ) : False := by cases h
+theorem gbcaNetworkStep_decidedRelay_noStep {j : Fin P.n} {b : Bool}
+    (h : GBCANetworkStep P r w (Sum.inl (Sum.inr (.decidedRelay j b))) μ) : False := by cases h
 
 theorem gbcaNetworkStep_decidedDeliver_noStep {i j : Fin P.n} {b : Bool}
     (h : GBCANetworkStep P r w (Sum.inl (Sum.inr (.decidedDeliver i j b))) μ) : False := by cases h
 
-theorem gbcaNetworkStep_retWPublish_noStep {r' : ℕ} {id : Fin P.n} {c b : Bool}
-    (h : GBCANetworkStep P r w (Sum.inl (Sum.inr (.retWPublish r' id c b))) μ) : False := by cases h
+theorem gbcaNetworkStep_decidedSend_noStep {j : Fin P.n} {b : Bool}
+    (h : GBCANetworkStep P r w (Sum.inl (Sum.inr (.decidedSend j b))) μ) : False := by cases h
 
 theorem gbcaNetworkStep_byzantineCallW_noStep {r' : ℕ} {k : Fin P.n}
     (h : GBCANetworkStep P r w (Sum.inl (Sum.inr (.byzantineCallW r' k))) μ) : False := by cases h

@@ -64,12 +64,12 @@ variable {n : ℕ} {M : Type}
     GBCA.ByABDY.roundOwnsLabel (Sum.inr (.gbcaSend r j m) : ExtendedLabel n M) = none := rfl
 @[simp] theorem roundOwnsLabel_gbcaDeliver (r : ℕ) (i j : Fin n) (m : M) :
     GBCA.ByABDY.roundOwnsLabel (Sum.inr (.gbcaDeliver r i j m) : ExtendedLabel n M) = none := rfl
-@[simp] theorem roundOwnsLabel_decidedSend (j : Fin n) (b : Bool) :
-    GBCA.ByABDY.roundOwnsLabel (Sum.inr (.decidedSend j b) : ExtendedLabel n M) = none := rfl
+@[simp] theorem roundOwnsLabel_decidedRelay (j : Fin n) (b : Bool) :
+    GBCA.ByABDY.roundOwnsLabel (Sum.inr (.decidedRelay j b) : ExtendedLabel n M) = none := rfl
 @[simp] theorem roundOwnsLabel_decidedDeliver (i j : Fin n) (b : Bool) :
     GBCA.ByABDY.roundOwnsLabel (Sum.inr (.decidedDeliver i j b) : ExtendedLabel n M) = none := rfl
-@[simp] theorem roundOwnsLabel_retWPublish (r : ℕ) (id : Fin n) (c b : Bool) :
-    GBCA.ByABDY.roundOwnsLabel (Sum.inr (.retWPublish r id c b) : ExtendedLabel n M) = none := rfl
+@[simp] theorem roundOwnsLabel_decidedSend (j : Fin n) (b : Bool) :
+    GBCA.ByABDY.roundOwnsLabel (Sum.inr (.decidedSend j b) : ExtendedLabel n M) = none := rfl
 @[simp] theorem roundOwnsLabel_byzantineCallW (r : ℕ) (k : Fin n) :
     GBCA.ByABDY.roundOwnsLabel (Sum.inr (.byzantineCallW r k) : ExtendedLabel n M) = none := rfl
 @[simp] theorem roundOwnsLabel_byzantineRetW (r : ℕ) (k : Fin n) (b : Bool) :

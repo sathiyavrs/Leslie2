@@ -323,13 +323,14 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
               exact hlive' (hv' ▸ hveq)
             rw [hvb]
       · have hphase3 : (c.processes id').phase = .idle ∨ (c.processes id').phase = .toCallG ∨
-            (c.processes id').phase = .awaitG := by
-          rcases hph2 : (c.processes id').phase with _ | _ | _ | _ | _
+            (c.processes id').phase = .awaitG ∨ (c.processes id').phase = .toSendDecided := by
+          rcases hph2 : (c.processes id').phase with _ | _ | _ | _ | _ | _
           · exact Or.inl rfl
           · exact Or.inr (Or.inl rfl)
-          · exact Or.inr (Or.inr rfl)
+          · exact Or.inr (Or.inr (Or.inl rfl))
           · exact absurd (Or.inl hph2) hgroup
           · exact absurd (Or.inr hph2) hgroup
+          · exact Or.inr (Or.inr (Or.inr rfl))
         have hround1 : (c.processes id').round ≠ 0 := by
           omega
         have hne := hI.estimate_previous_ne id' hmem2 hround1 hphase3

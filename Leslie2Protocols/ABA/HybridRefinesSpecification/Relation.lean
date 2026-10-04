@@ -70,7 +70,7 @@ def OutcomeHolder (P : Parameters) (g : ℕ → GBCA.SpecState P.n) (c : ABAStat
           ((c.processes id).phase = .toCallW ∨ (c.processes id).phase = .awaitW)) ∨
         ((c.processes id).round = r + 1 ∧
           ((c.processes id).phase = .idle ∨ (c.processes id).phase = .toCallG ∨
-            (c.processes id).phase = .awaitG))))
+            (c.processes id).phase = .awaitG ∨ (c.processes id).phase = .toSendDecided))))
 
 /-- The permanent commitments of a round bound at grade 2 (what `Invariant.grade2Bound_commit`
 concludes of it, together with the round's own correct carriers). Carried *inside* every
@@ -332,14 +332,13 @@ structure Invariant (P : Parameters) (g : ℕ → GBCA.SpecState P.n) (c : ABASt
   /-- I11 : round-0 pre-`retG` estimates of correct processes are the external input. -/
   estimate0 : ∀ id, id ∉ c.F → (c.processes id).round = 0 →
     ((c.processes id).phase = .idle ∨ (c.processes id).phase = .toCallG ∨
-      (c.processes id).phase = .awaitG) →
+      (c.processes id).phase = .awaitG ∨ (c.processes id).phase = .toSendDecided) →
     (c.processes id).estimate = (c.processes id).input
   /-- I12 : a grade-2 traces back to a genuine `GBCA` grade-2 return. Correctness-free:
   the round loop's `RoundLoopStep.retG` records the outcome carried on the shared `retG`
   label, so it is the outcome the round specification's return guards
-  (`retGrade2`/`retGrade1`/`retGrade0`) licensed, regardless of `id`'s corruption; this is needed
-  corruption-free in `step_retW`'s proofs of `received_sound` and `decided_source`, which have no
-  correctness hypothesis. -/
+  (`retGrade2`/`retGrade1`/`retGrade0`) licensed, regardless of `id`'s corruption. The proof of
+  `decided_source` in `step_decidedSend` reads it at the sender. -/
   grade2_source : ∀ id b, (c.processes id).lastGrade = some (.grade2 b) →
     ∃ r, Grade2Witness P g c r b
   /-- I13 : the estimate after `retG` — correct processes between `retG r` and
@@ -371,7 +370,7 @@ structure Invariant (P : Parameters) (g : ℕ → GBCA.SpecState P.n) (c : ABASt
   `r` ended with. -/
   estimate_previous : ∀ r id, id ∉ c.F → (c.processes id).round = r + 1 →
     ((c.processes id).phase = .idle ∨ (c.processes id).phase = .toCallG ∨
-      (c.processes id).phase = .awaitG) →
+      (c.processes id).phase = .awaitG ∨ (c.processes id).phase = .toSendDecided) →
     ∀ v, (c.processes id).estimate = some v →
       (!v) ∈ (g r).excluded ∨
         ((g r).grade = some false ∧ ((w r).val = .bit v ∨ (w r).val = .top))
@@ -383,7 +382,7 @@ structure Invariant (P : Parameters) (g : ℕ → GBCA.SpecState P.n) (c : ABASt
   `retG`'s grade-0 output (which also flips the phase away from `toCallG`/`awaitG`) can. -/
   estimate_previous_ne : ∀ id, id ∉ c.F → (c.processes id).round ≠ 0 →
     ((c.processes id).phase = .idle ∨ (c.processes id).phase = .toCallG ∨
-      (c.processes id).phase = .awaitG) →
+      (c.processes id).phase = .awaitG ∨ (c.processes id).phase = .toSendDecided) →
     (c.processes id).estimate ≠ none
   /-- I19 : coins resolve in round order. Established at the resolving call: the threshold
   on `w (r + 1)` yields a never-corrupted caller, the callers outnumbering `F`, and that

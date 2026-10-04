@@ -80,15 +80,14 @@ def specificationLabelMap (n : ℕ) {M : Type} : ExtendedLabel n M → Option (L
     (m : M) :
     specificationLabelMap n (Sum.inr (.gbcaDeliver r i j m)) = none := rfl
 
-@[simp] theorem specificationLabelMap_decidedSend {n : ℕ} {M : Type} (j : Fin n) (b : Bool) :
-    specificationLabelMap (M := M) n (Sum.inr (.decidedSend j b)) = none := rfl
+@[simp] theorem specificationLabelMap_decidedRelay {n : ℕ} {M : Type} (j : Fin n) (b : Bool) :
+    specificationLabelMap (M := M) n (Sum.inr (.decidedRelay j b)) = none := rfl
 
 @[simp] theorem specificationLabelMap_decidedDeliver {n : ℕ} {M : Type} (i j : Fin n) (b : Bool) :
     specificationLabelMap (M := M) n (Sum.inr (.decidedDeliver i j b)) = none := rfl
 
-@[simp] theorem specificationLabelMap_retWPublish {n : ℕ} {M : Type} (r : ℕ) (id : Fin n)
-    (c b : Bool) :
-    specificationLabelMap (M := M) n (Sum.inr (.retWPublish r id c b)) = none := rfl
+@[simp] theorem specificationLabelMap_decidedSend {n : ℕ} {M : Type} (j : Fin n) (b : Bool) :
+    specificationLabelMap (M := M) n (Sum.inr (.decidedSend j b)) = none := rfl
 
 @[simp] theorem specificationLabelMap_byzantineCallW {n : ℕ} {M : Type} (r : ℕ) (k : Fin n) :
     specificationLabelMap (M := M) n (Sum.inr (.byzantineCallW r k)) = none := rfl

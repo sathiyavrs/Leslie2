@@ -32,8 +32,8 @@ A program's transition is the implementation's business exactly when its label i
 `roundOwn j`: the graded-agreement call and return at `j`, `j`'s own round multicast, a round
 delivery addressed to `j`, `j`'s own call against a round already called, and `j`'s own
 round-internal call or return. Every other label — the ABA interface, the coin's call and return,
-the DECIDED relay and its delivery, the Byzantine call and return transitions, corruption, and the
-same six label classes at another process — has its transition here.
+the DECIDED send, the DECIDED relay and its delivery, the Byzantine call and return transitions,
+corruption, and the same six label classes at another process — has its transition here.
 `IsRoundStep` states that division: a program's transition on a label outside `roundOwn j` is one
 of the transitions here, whichever implementation is being read.
 
@@ -156,15 +156,15 @@ abbrev ProcessVariables (n : ℕ) (S : Type) : Type := RoundLoopVariables n × R
 /-- The round a label of the extended alphabet names, if any. A shared label
 names a round when it is a graded-agreement call or return, which is
 `Label.gbcaRound`; a network event names the round its constructor carries.
-The ABA interface, corruption, the DECIDED relay and the DECIDED delivery name
-no round. This is the round whose ghost a transition writes. -/
+The ABA interface, corruption, the DECIDED send, the DECIDED relay and the DECIDED delivery
+name no round. This is the round whose ghost a transition writes. -/
 def roundOf {n : ℕ} {M E : Type} : ExtendedLabel n M E → Option ℕ
   | Sum.inl l => l.gbcaRound
   | Sum.inr (.gbcaSend r _ _) => some r
   | Sum.inr (.gbcaDeliver r _ _ _) => some r
   | Sum.inr (.decidedSend _ _) => none
+  | Sum.inr (.decidedRelay _ _) => none
   | Sum.inr (.decidedDeliver _ _ _) => none
-  | Sum.inr (.retWPublish r _ _ _) => some r
   | Sum.inr (.gbcaCallLoop r _ _) => some r
   | Sum.inr (.gbcaRoundEvent r _ _) => some r
   | Sum.inr (.byzantineCallG r _ _) => some r
@@ -345,13 +345,12 @@ inductive ProgramStep (P : Parameters) (M E S : Type)
   | callWIdle (c : RoundLoopVariables P.n) (p : RoundVariablesMap S)
       (r : ℕ) (id : Fin P.n) (hid : id ≠ j) :
       ProgramStep P M E S roundStep j (c, p) (Sum.inl (.callW r id)) (PMF.pure (c, p))
-  /-- The coin return without a publication: the round advances and nothing is multicast, the
-  round's grade not being a grade-2 outcome (D10). The advance opens a new round; the round
-  variables the process holds are retained across it (D22). -/
+  /-- The coin return: the round advances and nothing is sent. On a grade-2 outcome the advance
+  enters `toSendDecided`, where the DECIDED send follows (D10). The advance opens a new round;
+  the round variables the process holds are retained across it (D22). -/
   | retW (c : RoundLoopVariables P.n) (p : RoundVariablesMap S) (r : ℕ) (co : Bool)
       (hh : c.corrupted = false)
-      (hph : c.processVariables.phase = .awaitW) (hr : c.processVariables.round = r)
-      (hgr : ∀ v : Bool, c.processVariables.lastGrade ≠ some (.grade2 v)) :
+      (hph : c.processVariables.phase = .awaitW) (hr : c.processVariables.round = r) :
       ProgramStep P M E S roundStep j (c, p) (Sum.inl (.retW r j co))
         (PMF.pure (c.stepRound co, p))
   /-- A coin return to another process: not `j`'s business. -/
@@ -383,14 +382,14 @@ inductive ProgramStep (P : Parameters) (M E S : Type)
   received the input (D8, D12′). Not having multicast `b` is a condition on the
   sent, hence the network's conjunct; the sent insert is the network's half
   too. -/
-  | decidedSendRelay (c : RoundLoopVariables P.n) (p : RoundVariablesMap S) (b : Bool)
+  | decidedRelay (c : RoundLoopVariables P.n) (p : RoundVariablesMap S) (b : Bool)
       (hh : c.corrupted = false) (hin : c.processVariables.input ≠ none)
       (hcnt : P.f + 1 ≤ c.decidedCount b) :
-      ProgramStep P M E S roundStep j (c, p) (Sum.inr (.decidedSend j b)) (PMF.pure (c, p))
+      ProgramStep P M E S roundStep j (c, p) (Sum.inr (.decidedRelay j b)) (PMF.pure (c, p))
   /-- A DECIDED relay by another process: not `j`'s business. -/
-  | decidedSendIdle (c : RoundLoopVariables P.n) (p : RoundVariablesMap S)
+  | decidedRelayIdle (c : RoundLoopVariables P.n) (p : RoundVariablesMap S)
       (k : Fin P.n) (b : Bool) (hk : k ≠ j) :
-      ProgramStep P M E S roundStep j (c, p) (Sum.inr (.decidedSend k b)) (PMF.pure (c, p))
+      ProgramStep P M E S roundStep j (c, p) (Sum.inr (.decidedRelay k b)) (PMF.pure (c, p))
   /-- DECIDED delivery, receiver's half: at most one received message per (sender, bit)
   (D12′). Authenticity is the network's conjunct. -/
   | decidedDeliverReceive (c : RoundLoopVariables P.n) (p : RoundVariablesMap S)
@@ -401,20 +400,19 @@ inductive ProgramStep (P : Parameters) (M E S : Type)
   | decidedDeliverIdle (c : RoundLoopVariables P.n) (p : RoundVariablesMap S)
       (i k : Fin P.n) (b : Bool) (hi : i ≠ j) :
       ProgramStep P M E S roundStep j (c, p) (Sum.inr (.decidedDeliver i k b)) (PMF.pure (c, p))
-  /-- The coin return fused with the `⟨DECIDED, b⟩` publication (D10): the round's outcome was
-  `grade2 b`, so the round advance publishes `b`, the sent insert being the network's half. The
-  advance opens a new round; the round variables the process holds are retained across it (D22). -/
-  | retWPublish (c : RoundLoopVariables P.n) (p : RoundVariablesMap S)
-      (r : ℕ) (co : Bool) (b : Bool) (hh : c.corrupted = false)
-      (hph : c.processVariables.phase = .awaitW) (hr : c.processVariables.round = r)
+  /-- The DECIDED send of a grade-2 round (D10): the outcome of the round just closed was
+  `grade2 b`, so the process sends `⟨DECIDED, b⟩` to all, clears the grade and enters the next
+  round's `toCallG`. The sent insert is the network's half. -/
+  | decidedSend (c : RoundLoopVariables P.n) (p : RoundVariablesMap S) (b : Bool)
+      (hh : c.corrupted = false) (hph : c.processVariables.phase = .toSendDecided)
       (hgr : c.processVariables.lastGrade = some (.grade2 b)) :
-      ProgramStep P M E S roundStep j (c, p) (Sum.inr (.retWPublish r j co b))
-        (PMF.pure (c.stepRound co, p))
-  /-- A fused coin return at another process: not `j`'s business. -/
-  | retWPublishIdle (c : RoundLoopVariables P.n) (p : RoundVariablesMap S)
-      (r : ℕ) (id : Fin P.n) (co : Bool) (b : Bool) (hid : id ≠ j) :
-      ProgramStep P M E S roundStep j (c, p) (Sum.inr (.retWPublish r id co b))
-        (PMF.pure (c, p))
+      ProgramStep P M E S roundStep j (c, p) (Sum.inr (.decidedSend j b))
+        (PMF.pure (c.setProcessVariables
+          { c.processVariables with lastGrade := none, phase := .toCallG }, p))
+  /-- A DECIDED send by another process: not `j`'s business. -/
+  | decidedSendIdle (c : RoundLoopVariables P.n) (p : RoundVariablesMap S)
+      (k : Fin P.n) (b : Bool) (hk : k ≠ j) :
+      ProgramStep P M E S roundStep j (c, p) (Sum.inr (.decidedSend k b)) (PMF.pure (c, p))
   /-- Such a call at another process: not `j`'s business. -/
   | gbcaCallLoopIdle (c : RoundLoopVariables P.n) (p : RoundVariablesMap S)
       (r : ℕ) (id : Fin P.n) (b : Bool) (hid : id ≠ j) :
@@ -486,19 +484,19 @@ inductive NetworkStep (P : Parameters) (M E G : Type) [DecidableEq M]
         (PMF.pure (s.writeGhost ghostStep (Sum.inr (.gbcaDeliver r i j m))))
   /-- The network's half of a DECIDED relay: the payload must not be sent
   yet (D12′). -/
-  | decidedSend (s : NetworkState P.n M G) (j : Fin P.n) (b : Bool) (h : b ∉ s.decidedSent j) :
-      NetworkStep P M E G ghostStep ghostOutput s (Sum.inr (.decidedSend j b))
-        (PMF.pure ((s.recordDecided j b).writeGhost ghostStep (Sum.inr (.decidedSend j b))))
+  | decidedRelay (s : NetworkState P.n M G) (j : Fin P.n) (b : Bool) (h : b ∉ s.decidedSent j) :
+      NetworkStep P M E G ghostStep ghostOutput s (Sum.inr (.decidedRelay j b))
+        (PMF.pure ((s.recordDecided j b).writeGhost ghostStep (Sum.inr (.decidedRelay j b))))
   /-- The network's half of a DECIDED delivery: the payload must be sent
   under the named sender (D12′). -/
   | decidedDeliver (s : NetworkState P.n M G) (i j : Fin P.n) (b : Bool) (h : b ∈ s.decidedSent j) :
       NetworkStep P M E G ghostStep ghostOutput s (Sum.inr (.decidedDeliver i j b))
         (PMF.pure (s.writeGhost ghostStep (Sum.inr (.decidedDeliver i j b))))
-  /-- The network's half of the fused coin return: sent the published payload
+  /-- The network's half of a DECIDED send: the payload enters the sender's DECIDED set
   (D10, D12′). -/
-  | retWPublish (s : NetworkState P.n M G) (r : ℕ) (id : Fin P.n) (c : Bool) (b : Bool) :
-      NetworkStep P M E G ghostStep ghostOutput s (Sum.inr (.retWPublish r id c b))
-        (PMF.pure ((s.recordDecided id b).writeGhost ghostStep (Sum.inr (.retWPublish r id c b))))
+  | decidedSend (s : NetworkState P.n M G) (j : Fin P.n) (b : Bool) :
+      NetworkStep P M E G ghostStep ghostOutput s (Sum.inr (.decidedSend j b))
+        (PMF.pure ((s.recordDecided j b).writeGhost ghostStep (Sum.inr (.decidedSend j b))))
   /-- A graded-agreement call against a round already called sends nothing. -/
   | gbcaCallLoop (s : NetworkState P.n M G) (r : ℕ) (id : Fin P.n) (b : Bool) :
       NetworkStep P M E G ghostStep ghostOutput s (Sum.inr (.gbcaCallLoop r id b))
@@ -564,7 +562,7 @@ inductive NetworkStep (P : Parameters) (M E G : Type) [DecidableEq M]
   | callWIdle (s : NetworkState P.n M G) (r : ℕ) (id : Fin P.n) :
       NetworkStep P M E G ghostStep ghostOutput s (Sum.inl (.callW r id))
         (PMF.pure (s.writeGhost ghostStep (Sum.inl (.callW r id))))
-  /-- An unfused coin return sends nothing. -/
+  /-- A coin return sends nothing. -/
   | retWIdle (s : NetworkState P.n M G) (r : ℕ) (id : Fin P.n) (c : Bool) :
       NetworkStep P M E G ghostStep ghostOutput s (Sum.inl (.retW r id c))
         (PMF.pure (s.writeGhost ghostStep (Sum.inl (.retW r id c))))
