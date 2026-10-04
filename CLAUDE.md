@@ -75,7 +75,7 @@ and still fits the graph source; run it against both `blueprint/web` and
 `blueprint/web-full`. When updating leanblueprint, re-diff the template against the
 plugin's own.
 
-The two node directories must agree on their formal frontmatter (`\label`, `\lean`, `\leanok`, `\uses`) — that is what the dependency graph and the declaration collection are built from. `python3 scripts/check-node-sync.py` checks every pair and prints `N/N in sync`; only the bodies are allowed to differ.
+The two node directories must agree on their formal frontmatter (`\label`, `\lean`, `\leanok`, `\uses`) — that is what the dependency graph and the declaration collection are built from. `python3 scripts/check-node-sync.py` checks every pair and prints `N/N in sync`; only the bodies are allowed to differ. `python3 scripts/check-deviations-sync.py` checks the two registries of deviations, `deviations.tex` and `deviations-full.tex`, against each other and against their overview tables: the same labels in the same order, the same headlines, and the fields each edition carries.
 
 Caveats: plasTeX 3.1 silently breaks on **Python 3.14** (packages fail to load, `\lean`/`\uses` fall back to default renderers, no dep graph, no `lean_decls`, no theorem badges), and `leanblueprint web` resolves `plastex` from PATH — so there must be exactly ONE pipx installation, on Python ≤ 3.13, exposing both apps: `pipx install leanblueprint --python /opt/homebrew/bin/python3.13 --include-deps` (uninstall any standalone `plastex` pipx venv first). The dependency graph needs no external `dot` binary (`pygraphviz` ships bundled Graphviz libraries). plasTeX caches the parse in `blueprint/src/web.paux` — after preamble/URL changes, `rm -rf blueprint/web blueprint/src/web.paux` before rebuilding.
 

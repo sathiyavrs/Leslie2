@@ -104,10 +104,11 @@ jobs:
       # check-lean-prose covers what checkdecls cannot: the objects the prose sets
       # as \mathrm{...} are not harvested declarations, so a rename leaves its old
       # name in the prose without failing anything.
-      - name: Check the full edition's declarations, node sync, prose names, module links, node order and folder order
+      - name: Check the full edition's declarations, node sync, deviation sync, prose names, module links, node order and folder order
         run: |
           lake exe checkdecls blueprint/lean_decls
           python3 scripts/check-node-sync.py
+          python3 scripts/check-deviations-sync.py
           python3 scripts/check-lean-prose.py
           python3 scripts/check-lean-modules.py
           python3 scripts/check-uses-order.py

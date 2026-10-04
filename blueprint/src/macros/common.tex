@@ -34,3 +34,19 @@
 % Lean development writes that superscript as the namespace AFW.
 \newcommand{\afw}[1]{#1^{\mathsf{AFW}}}
 \newcommand{\abdy}[1]{#1^{\mathsf{ABDY}}}
+% The registry of deviations from the source blueprint: deviations.tex in
+% the default edition, deviations-full.tex in the full one. An entry is
+% \deviation{label}{headline}, the headline being the clause the overview
+% table carries, followed by its fields, each a paragraph opened by a bold
+% field name: \departure and \reason in both editions, \following in the
+% full edition alone. Nothing but entries stands inside the environment,
+% and no blank line: plasTeX renders every child of the list as an item.
+% scripts/check-deviations-sync.py keeps the two files and their tables in
+% step. \deviationsline is the line-breaking setting of the entries, defined
+% per pipeline: \sloppy in print, where the list's indentation narrows the
+% line, and nothing on the web.
+\newenvironment{deviations}{\deviationsline\begin{description}}{\end{description}}
+\newcommand{\deviation}[2]{\item[#1]\textit{#2.}}
+\newcommand{\departure}[1]{\par\noindent\textbf{Departure.}~#1\par}
+\newcommand{\reason}[1]{\par\noindent\textbf{Reason.}~#1\par}
+\newcommand{\following}[1]{\par\noindent\textbf{Following the source.}~#1\par}
