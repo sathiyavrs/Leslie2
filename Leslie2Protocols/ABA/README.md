@@ -152,6 +152,58 @@ is the Deviations paragraph of `../../blueprint/src/content.tex`.
 `../NOTES-Fidelity.md` covers how the encoding stands against its sources beyond that
 registry.
 
+## What to expect
+
+Each verified sub-protocol level is one folder: `ReliableBroadcast/Bracha/`, `Gather/`,
+`GBCA/ABDY/` and `GBCA/AFW/`. Its files come in import order, and a kind of file carries one
+name at every level that has it. The messages and variables come first (`MessagesAndVariables.lean`,
+`MessagesAndCommonCore.lean`), preceded at `Gather/` by the specification and its safety
+(`Specification.lean`, `SpecificationSafety.lean`). The components follow: the programs and the network, with their
+step relations and alphabets (`Components.lean`). The composition places the programs beside the
+network and the sub-instances in parallel, hides the level's own events, and reads the result
+back over the interface alphabet (`Composition.lean`). Where the interface carries labels the
+specification does not, the specification is read over the instance's alphabet
+(`SpecificationOverInstanceAlphabet.lean`, and for a round `GBCA/SpecificationOverRoundAlphabet.lean`).
+The cases of a composition step read a step back into the transitions of the components
+(`CompositionStepCases.lean`), and at `GBCA/ABDY/` the labels the round family owns follow them
+(`RoundFamilyOwnedLabels.lean`). The algorithm states the transitions of the composition as one
+relation on its state, characterised by a `…_step_iff_algorithm` theorem (at `GBCA/ABDY/`, by
+`composition_projects`), one algorithm per composition where a level has several (`Algorithm.lean`,
+`AlgorithmOverBracha.lean`, `AlgorithmOverBroadcastSpecification.lean`,
+`AlgorithmOverGatherSpecifications.lean`). Then come the witnesses (`EchoWitness.lean`,
+`ExclusionWitness.lean`, `OutputWitness.lean`) and the invariant (`Invariant.lean`), with a
+counting file where the argument counts (`Gather/CommonCoreCounting.lean`, and
+`GBCA/AFW/Counting.lean`, which the components read and which heads its folder). The
+specification relation (`SpecificationRelation.lean`) precedes the refinement, which opens with
+the per-transition matching (`RefinesSpecification.lean`). The substitutions by congruence follow
+(`BroadcastSubstitution.lean`, `GatherSubstitution.lean`), and the property carried down a trace
+closes the folder (`Binding.lean`, `CommonCore.lean`). A protocol level, `ABDY/` or `AFW/`, holds
+the protocol as it runs (`System.lean`), its composed systems (`Composition.lean`), the
+simulation of the protocol into its composition (`Simulation.lean`, at `AFW/` over
+`RoundProjection.lean`, `RoundProjectionStep/` and `SimulationOfEachTransition.lean`) and the
+substitution to `hybrid` (`Substitution.lean`). Both protocols instantiate one implementation
+shape, written once in `Implementation/`.
+
+A system is named for what sits beneath it: `instanceOverBracha`,
+`instanceOverBroadcastSpecification`, `roundOverGatherSpecifications`,
+`composedOverBroadcastSpecification`. A simulation is named by its kind and its level:
+`refinesSpecification` along a `SpecificationRelation`, a `…Substitution` for each level replaced
+by its specification, and `protocolSimulation` along a `ProtocolRelation`. A lemma is named by the
+transition and the role: `programStep_<label>_own` for the program of the process the label
+names and `programStep_<label>_notOwn` for any other, `networkStep_<label>`,
+`roundProjection_<transition>`, `Invariant.step_<label>`, and the suffixes `…_cases`,
+`…_specificationTraces`, `…_binding` and `…_core`. The headlines sit in the chain's namespace,
+`ABDY.main` and `AFW.refines` among them, under the naming of the chains stated above.
+
+The words are the sources' words: the Leslie blueprint, ABDY22, AFW25, and the simulations paper
+for the terms of simulation. A transition is one case of a step relation, and an algorithm is a
+list of cases. The tree writes variables, witness, cases, synchronisation, received messages,
+removal of an auxiliary variable and projection. A transition is matched by a step of the other
+system, and a relation is preserved by a transition. A system is over its alphabet. A process is
+correct or corrupted, and the grades are 2, 1 and 0. Beside the source names ABDY and AFW, the
+acronyms are ABA, GBCA, WCC and BRB, and no word is abbreviated. A deviation from the source
+blueprint is cited by its label where it applies.
+
 ## The files
 
 Each file's module docstring is the account of record for it. The table gives one clause per
@@ -167,9 +219,7 @@ sit above it, and `Composition/Hybrid.lean`, which sits above `GBCA/ABDY/` while
 the rest of `Composition/` sits below it. Every other sub-folder holds its parent's position.
 Within a folder the files are given in import order.
 Each file holds one object or one result together
-with the lemmas that exist only to prove it, and Mathlib's `linter.style.longFile` caps a file
-at 1500 lines, a file over the cap carrying an explicit `set_option linter.style.longFile`
-raise.
+with the lemmas that exist only to prove it.
 
 
 **`ABA/Vocabulary/`** — the variables and alphabets every implementation is written over.
@@ -445,10 +495,8 @@ For the gather-based chain, by module docstring: `ReliableBroadcast/Bracha/Compo
 `GBCA/AFW/Composition.lean` → `GBCA/AFW/CompositionStepCases.lean` →
 `GBCA/AFW/AlgorithmOverGatherSpecifications.lean` →
 `AFW/Composition.lean` → `AFW/Substitution.lean` → `AFW/Simulation.lean`. The first twelve are
-the three levels, four files each: the components and their alphabet, the composition
-they are assembled into, the cases of a transition of the composition, read back into
-the transitions of its components, and the algorithm that reads a transition of the composition
-off its label; `GBCA/AFW/AlgorithmOverGatherSpecifications.lean` is the algorithm the counting
+the three levels, four files each, in the pattern of the section What to expect;
+`GBCA/AFW/AlgorithmOverGatherSpecifications.lean` is the algorithm the counting
 refinement runs on;
 `AFW/Composition.lean` holds the three systems at the protocol shape and `AFW/Substitution.lean`
 the three stages between them; `AFW/Simulation.lean` is the simulation into `AFW/System.lean`, the

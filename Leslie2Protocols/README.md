@@ -14,6 +14,9 @@ protocol as it runs, through one implementation shape written parametrically in 
 graded-agreement implementation and instantiated twice. 115 files, `ABA/Results.lean`
 beside eleven content-themed sub-folders, given in import order in its own file guide,
 [`ABA/README.md`](ABA/README.md).
+The ABA guide, [`ABA/README.md`](ABA/README.md), states before its file tables what to expect of
+every level: the files a level holds, how its systems, simulations and lemmas are named, and the
+words the tree uses.
 
 ## `Framework/`
 
