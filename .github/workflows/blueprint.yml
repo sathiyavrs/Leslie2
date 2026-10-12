@@ -47,6 +47,19 @@ jobs:
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags
 
+      # The build stamp. The four edition roots read blueprint/src/buildstamp.tex,
+      # which is tracked with a local-build stamp; this step overwrites it on the
+      # runner with the commit and the time of the build, and appends the same
+      # line to the home page. The site then says which commit it was built
+      # from, and the last step of this job reads that line back. The overwrite
+      # is never committed.
+      - name: Stamp the build with the commit and the time
+        run: |
+          now="$(date -u +%Y-%m-%dT%H:%MZ)"
+          printf '\\newcommand{\\buildstamp}{Built from commit %s on %s.}\n' "${GITHUB_SHA::7}" "$now" > blueprint/src/buildstamp.tex
+          printf '\n\nBuilt from commit [%s](https://github.com/%s/commit/%s) on %s.\n' "${GITHUB_SHA::7}" "$GITHUB_REPOSITORY" "$GITHUB_SHA" "$now" >> home_page/index.md
+          cat blueprint/src/buildstamp.tex
+
       - name: Build and lint project
         uses: leanprover/lean-action@434f25c2f80ded67bba02502ad3a86f25db50709 # 2025-07-02
         with:
@@ -75,11 +88,13 @@ jobs:
       # zero, and the blueprint package never loads, which costs every Lean
       # cross-link and leaves the dependency graph empty. Graphviz is the build
       # dependency of pygraphviz, which the dependency-graph plugin imports.
+      # The version is the one of the local pipx install (CLAUDE.md); bump both
+      # together, so that the site and a local build render the same.
       - name: Install leanblueprint (pulls plasTeX and its three plugins)
         run: |
           sudo apt-get update
           sudo apt-get install -y texlive-base graphviz libgraphviz-dev
-          pip install leanblueprint
+          pip install leanblueprint==0.0.20
 
       # Ordering constraint: this step MUST run before "Compile blueprint and
       # documentation" below. It overwrites blueprint/lean_decls with the full
@@ -119,3 +134,12 @@ jobs:
         with:
           blueprint: true
           homepage: home_page
+
+      # The deployment above is the one step this job cannot inspect before it
+      # runs: the default edition is built inside the docgen container and
+      # check-web-build.py never sees it. This step reads the site itself, once
+      # the home page carries this commit's stamp, and applies the same checks
+      # to the deployed editions. A dispatched run deploys nothing, so it skips.
+      - name: Check the deployed site
+        if: github.event_name == 'push'
+        run: python3 scripts/check-live-site.py https://sathiyavrs.github.io/Leslie2 "${GITHUB_SHA::7}"

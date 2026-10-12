@@ -19,7 +19,7 @@ lake exe mk_all --check            # check that each library root re-exports all
                                    # (CI runs this via `mk_all-check: true`)
 ```
 
-There is no test suite. CI (`.github/workflows/blueprint.yml`) runs `lake-action` with `build: true, lint: false, mk_all-check: true` (which builds the default targets and checks the library roots), then builds the extras library (`lake build Leslie2Extra`) to keep it green, then compiles the blueprint and doc-gen output to GitHub Pages on every push to `main` or `master`. A manual run verifies everything but publishes nothing: the docs build, the Jekyll build, the Pages upload and the deployment are all conditional on push events. Linting is intentionally off in CI; the lakefile sets `weak.linter.mathlibStandardSet = true` so warnings show locally but don't fail the build.
+There is no test suite. CI (`.github/workflows/blueprint.yml`) runs `lake-action` with `build: true, lint: false, mk_all-check: true` (which builds the default targets and checks the library roots), then builds the extras library (`lake build Leslie2Extra`) to keep it green, then compiles the blueprint and doc-gen output to GitHub Pages on every push to `main` or `master`, and ends by reading the deployed site back (`scripts/check-live-site.py`: the commit stamp on the home page, the plugin output of both web editions, the PDF and the docs). A manual run verifies everything but publishes nothing: the docs build, the Jekyll build, the Pages upload and the deployment are all conditional on push events. Linting is intentionally off in CI; the lakefile sets `weak.linter.mathlibStandardSet = true` so warnings show locally but don't fail the build.
 
 ## Lakefile conventions
 
@@ -63,6 +63,10 @@ latexmk -output-directory=../print-full print-full.tex  # → ../print-full/prin
 ```
 
 Caveat: the full web build writes `blueprint/lean_decls`, the same path `leanblueprint web` writes, and the two editions collect different declaration sets. `build-full.sh` saves and restores that file; if you run `plastex -c plastex-full.cfg` by hand, re-run `leanblueprint web` before `lake exe checkdecls blueprint/lean_decls`.
+
+#### The site and the local builds
+
+The print builds do not rebuild `blueprint/web/` or `blueprint/web-full/`, so rebuild those with `leanblueprint web` and `bash blueprint/build-full.sh` before comparing a web edition with the site. The site's home page, the title page of each print edition and the first paragraph of each web edition carry a stamp naming the commit and the time of the build (`blueprint/src/buildstamp.tex`, which CI overwrites on the runner; a local build is stamped with its date). The site lags a push to `main` by the length of the publishing run, about an hour, and the run's last step reads the deployed site and fails if the stamp or the plugin output is missing.
 
 The dependency graph is drawn from a vendored copy of the plugin's page template,
 `blueprint/src/dep_graph.html`, selected by `tpl=` in the `\usepackage[...]{blueprint}`

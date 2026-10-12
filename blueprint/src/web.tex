@@ -13,6 +13,7 @@
 
 \input{macros/common}
 \input{macros/web}
+\input{buildstamp}
 
 % This edition omits the algorithm floats, so a reference renders as its prose name.
 \renewcommand{\algoref}[2]{#2}
@@ -25,5 +26,6 @@
 
 \begin{document}
 \maketitle
+\noindent\textit{\buildstamp}
 \input{content}
 \end{document}
