@@ -426,9 +426,10 @@ The specification holds that core as write-once state of size at least $n - f$ a
 The size bound is provable from the prefix of an execution, which is what the transition writing the core requires.
 The core is one correct sender's $\mathrm{ECHO}$ payload, located on the sent sets by the counting of Definition~\ref{def:aba-gather-core}.
 Remark~22 of~\cite{AFW25} determines the core of a non-binding gather only in hindsight; here it is an auxiliary variable in the sense of~\cite{AL91}, held as state and announced on the returns (D29).
-The implementation is a composition: $n$ gather programs beside the gather network, which holds the core, in parallel with $2n$ reliable-broadcast instances read along pullbacks naming them, the instance's own events hidden.
+The implementation is a composition: $n$ gather programs beside the gather network, which holds the core, in parallel with $n$ reliable-broadcast instances carrying the inputs, read along a pullback naming them, the instance's own events hidden.
 A program keeps in its own variables what the broadcast instances have returned to it, written on the return events, and reads nothing else.
-The implementation sends its $\mathrm{BIND}$ payloads by reliable broadcast, which is what fixes a payload against a sender corrupted later, and is verified in two substitutions: the Bracha instances replaced by congruence at every coordinate, then the whole instance replaced by Transition System~4 on the composition.
+A program sends its $\mathrm{ECHO}$, $\mathrm{VOTE}$ and $\mathrm{BIND}$ payloads to all on the gather network, the $\mathrm{BIND}$ payload once (D35).
+The implementation is verified in two substitutions: the Bracha instances replaced by congruence at every coordinate, then the whole instance replaced by Transition System~4 on the composition.
 See \leanmodule{Leslie2Protocols/ABA/Gather/Specification}, \leanmodule{Leslie2Protocols/ABA/Gather/SpecificationSafety}, \leanmodule{Leslie2Protocols/ABA/Gather/MessagesAndCommonCore}, \leanmodule{Leslie2Protocols/ABA/Gather/Components}, \leanmodule{Leslie2Protocols/ABA/Gather/Composition}, \leanmodule{Leslie2Protocols/ABA/Gather/SpecificationOverInstanceAlphabet}, \leanmodule{Leslie2Protocols/ABA/Gather/CompositionStepCases}, \leanmodule{Leslie2Protocols/ABA/Gather/AlgorithmOverBracha}, \leanmodule{Leslie2Protocols/ABA/Gather/AlgorithmOverBroadcastSpecification}, \leanmodule{Leslie2Protocols/ABA/Gather/Invariant}, \leanmodule{Leslie2Protocols/ABA/Gather/CommonCoreCounting}, \leanmodule{Leslie2Protocols/ABA/Gather/SpecificationRelation}, \leanmodule{Leslie2Protocols/ABA/Gather/RefinesSpecification}, \leanmodule{Leslie2Protocols/ABA/Gather/BroadcastSubstitution} and \leanmodule{Leslie2Protocols/ABA/Gather/CommonCore}.
 
 \input{nodes-min/def-aba-gather-spec}
@@ -464,8 +465,8 @@ See \leanmodule{Leslie2Protocols/ABA/GBCA/AFW/Counting}, \leanmodule{Leslie2Prot
 \input{nodes-min/def-aba-round-over-bracha}
 
 \blueprintfig{fig-gather-compositions}{One round of the gather-based implementation, \leandecl{PLTS.ABA.GBCA.ByAFW.roundOverBracha}, drawn open, and the three substitutions that carry it to Transition System~2.
-A round is $n$ graded-agreement programs beside the round's own network, which holds the bound bit and nothing else, in parallel with two gather instances of the binding form (D33), one over the input bits and one over the candidates; each gather is $n$ programs beside the gather network, which holds the core, in parallel with $2n$ Bracha instances.
-That is $4n + 2$ networks in a single round --- $2n$ broadcasts for the inputs and $2n$ for the $\mathrm{BIND}$ payloads (D32, D33), beside the two gather networks --- which is the count the implementation collapses into one tagged sent-set family.
+A round is $n$ graded-agreement programs beside the round's own network, which holds the bound bit and nothing else, in parallel with two gather instances of the binding form (D33), one over the input bits and one over the candidates; each gather is $n$ programs beside the gather network, which holds the core, in parallel with $n$ Bracha instances carrying the inputs.
+That is $2n + 2$ networks in a single round, $2n$ broadcasts for the inputs beside the two gather networks, which is the count the implementation collapses into one tagged sent-set family.
 The three systems above it --- the three that carry one round, from the two gather specifications down to Bracha --- replace one component at a time: \leandecl{PLTS.ABA.GBCA.ByAFW.broadcastSubstitution} replaces each Bracha instance by the BRB specification, by congruence, \leandecl{PLTS.ABA.GBCA.ByAFW.gatherSubstitution} each gather instance by the gather specification, by congruence, and \leandecl{PLTS.ABA.GBCA.ByAFW.refinesSpecification} reads the grade off the two cores, each written once, and the exclusion set off the round's bound bit.
 In each of them the round's own network holds that bound bit, written at the first gather's first return and untouched by either substitution.
 Each is a plain forward simulation, so the three compose.}
@@ -484,9 +485,9 @@ The round's own network is held equal by the two substitutions, and \leandecl{PL
 \section{The gather-based chain}
 
 Beneath the composed system is the protocol that runs.
-It is Definition~\ref{def:aba-implementation} a second time, at the gather-based implementation: the same round loop, the same DECIDED sets, the same coin's call and return, the same corruption discipline and the same pipeline, over a graded-agreement component that is the two gather instances and the $4n$ Bracha instances beneath them.
+It is Definition~\ref{def:aba-implementation} a second time, at the gather-based implementation: the same round loop, the same DECIDED sets, the same coin's call and return, the same corruption discipline and the same pipeline, over a graded-agreement component that is the two gather instances and the $2n$ Bracha instances beneath them.
 Three things separate that component from the composed system's.
-A round of the composed system carries $4n+2$ networks; the adversary of the implementation carries one sent-set family, so a round message is tagged with the network it belongs to.
+A round of the composed system carries $2n+2$ networks; the adversary of the implementation carries one sent-set family, so a round message is tagged with the network it belongs to.
 The composed system indexes the local states by instance and then by process, where a program must hold its own data and no one else's, so the round variables are transposed to hold one process's local state in every instance.
 And a program of the implementation takes one transition per statement of the pseudocode: the graded-agreement call records the round's input, the call of a broadcast instance and the leader's multicast of $\langle\mathrm{INIT}, x\rangle$ that follows it are two, a gather's return and the call that follows it are two, and a broadcast instance's return is the transition that writes what it returned.
 Assembling the composed state from the implementation's undoes all three, which is what the simulation relation of Theorem~\ref{thm:aba-afw-protocol-composed} does.
@@ -500,7 +501,7 @@ See \leanmodule{Leslie2Protocols/ABA/AFW/System}, \leanmodule{Leslie2Protocols/A
 
 \blueprintfig{fig-afw-protocol}{The gather-based protocol \leandecl{PLTS.ABA.AFW.protocol}: the $n$ programs beside the one network and the common coin, under the two hidings of Definition~\ref{def:aba-implementation}.
 The shape is that of Definition~\ref{def:aba-implementation}, and two things distinguish it from ABDY22's instantiation.
-The adversary holds a single sent-set family per round over the tagged message type \leandecl{PLTS.ABA.AFW.Message}, whose tag names the network state a message belongs to and, for a broadcast message, the instance; the composed system of the same round carries $4n + 2$ separate network states.
+The adversary holds a single sent-set family per round over the tagged message type \leandecl{PLTS.ABA.AFW.Message}, whose tag names the network state a message belongs to and, for a broadcast message, the instance; the composed system of the same round carries $2n + 2$ separate network states.
 And a program's variables are process-major: process $j$ holds its own local state in every instance, where the composed system indexes the local states by instance and then by process.
 The adversary further holds the ghost of each round, \leandecl{PLTS.ABA.AFW.Ghost}: the two gathers' cores and the round's bound bit, each written once (D30).
 Assembling the composed state from the implementation's undoes both rearrangements, which is what \leandecl{PLTS.ABA.AFW.roundProjection} does --- projecting the one sent-set family onto the network states, transposing the variables back, and reading the two cores and the bound bit off that ghost.}
@@ -514,7 +515,7 @@ See \leanmodule{Leslie2Protocols/ABA/AFW/Composition} and \leanmodule{Leslie2Pro
 \blueprintfig{fig-afw-composed}{The gather-based composed system \leandecl{PLTS.ABA.AFW.composed} and its three-stage substitution.
 Component for component this is the composed system of Definition~\ref{def:aba-composed}: the same $n$ round loops, the same ABA network carrying the DECIDED sets and the corrupted set with its budget, the same lifted common coin, under the same two hidings.
 What differs is the refinable position, and that it is replaced three times rather than once.
-The position holds \leandecl{PLTS.ABA.AFW.roundFamilyOverBracha}, one composed round of Definition~\ref{def:aba-round-composition} per $r \in \mathbb{N}$, each carrying $4n + 2$ networks, and the substitution runs in three stages rather than one: the Bracha instances, then the gather instances, then the counting onto Transition System~2.
+The position holds \leandecl{PLTS.ABA.AFW.roundFamilyOverBracha}, one composed round of Definition~\ref{def:aba-round-composition} per $r \in \mathbb{N}$, each carrying $2n + 2$ networks, and the substitution runs in three stages rather than one: the Bracha instances, then the gather instances, then the counting onto Transition System~2.
 The intermediate systems are $\afw{\mathrm{composed}}_{\mathrm{BRB}\,\mathrm{spec}}(P)$ and $\afw{\mathrm{composed}}_{\mathrm{Gather}\,\mathrm{spec}}(P)$, and the third stage lands on $\mathrm{hybrid}(P)$ itself, where the two chains meet.
 The other three components stand unchanged throughout.}
 \input{nodes-min/thm-aba-afw-protocol-composed}

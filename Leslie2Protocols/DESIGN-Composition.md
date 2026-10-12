@@ -99,8 +99,8 @@ network of its own:
 - a reliable-broadcast instance is `n` programs beside the instance's network at the
   broadcast message type (`BRB.brachaInstance`, `ABA/ReliableBroadcast/Bracha/Composition.lean`);
 - a gather instance is `n` gather programs beside the gather network, in parallel with
-  `2n` reliable-broadcast instances — one per process for the inputs, one per process for
-  the `BIND` payloads — each read along a pullback that names it (`Gather.instanceOverBroadcasts`,
+  `n` reliable-broadcast instances, one per process for the inputs, each read along the pullback
+  `Gather.inputBroadcastLabelMap` that names it (`Gather.instanceOverBroadcasts`,
   `ABA/Gather/Composition.lean`). `Gather.instanceOverBracha` plugs Bracha's instances into
   that slot and `Gather.instanceOverBroadcastSpecification` the broadcast specifications;
 - a round is `n` graded-agreement programs beside the round's network, in parallel with two gather
@@ -114,16 +114,15 @@ same expression at a different component:
 
 ```
 BRB.BrachaState  n M       = (Fin n → LocalState n (ProcessVariables M) (Message M)) × NetworkState n (Message M)
-Gather.StateOverBroadcasts n X B B' = ((Fin n → LocalState n (ProcessVariables n X) (Message n X)) × NetworkState n X)
-                             × ((Fin n → B) × (Fin n → B'))
+Gather.StateOverBroadcasts n X B = ((Fin n → LocalState n (ProcessVariables n X) (Message n X)) × NetworkState n X)
+                             × (Fin n → B)
 GBCA.ByAFW.RoundStateOverGathers n G₁ G₂  = ((Fin n → GBCA.ByAFW.ProcessVariables n) × Option Bool) × (G₁ × G₂)
 ```
 
 A program reads no neighbouring coordinate, so what a sub-protocol has returned to a process is
 written into that process's own variables. A gather program's variables for what the broadcast
-instances returned (`Gather.ProcessVariables.inputBroadcastReturned`, `bindBroadcastReturned`) are
-written on the return event of a broadcast instance and read by the four transitions that read what
-has been returned. A round program's variables (`GBCA.ByAFW.ProcessVariables`) hold the candidate
+instances returned (`Gather.ProcessVariables.inputBroadcastReturned`) are written on the return
+event of a broadcast instance and read by the four transitions that read what has been returned. A round program's variables (`GBCA.ByAFW.ProcessVariables`) hold the candidate
 between the first gather's return and the second gather's call, and the graded outcome between the
 second gather's return and the round's own return: each of those two is a pair of events, and the
 variables are what carry the round across them.
@@ -131,11 +130,11 @@ variables are what carry the round across them.
 Three substitutions take one composition to the next, and each removes exactly what the
 component it replaces owned.
 
-- `Gather.broadcastSubstitution` replaces each of a gather's `2n` Bracha instances by a broadcast
+- `Gather.broadcastSubstitution` replaces each of a gather's `n` Bracha instances by a broadcast
   specification. An instance's programs and its network die together; what survives of
   each is the committed value, written once.
 - `Gather.refinesSpecification` replaces a gather instance by the gather specification. The `n`
-  gather programs, the gather network and the `2n` broadcast specifications beneath them
+  gather programs, the gather network and the `n` broadcast specifications beneath them
   die together; what survives is the per-entry committed value and the recorded core.
 - `GBCA.ByAFW.refinesSpecification` replaces the round over the two gather specifications by
   `GBCA.specInst`. The graded-agreement programs, the round's network and the two gather
@@ -163,16 +162,11 @@ meets the specification only at the last of the three substitutions, where
 level down: it is a field of the gather network that no process reads and no guard consults, and the
 gather specification's own core is the value its return labels announce (D29).
 
-Which component owns a payload is a design decision and not bookkeeping. A gather's
-`BIND` payloads are sent by reliable broadcast rather than on the gather network, so a
-committed payload is write-once whatever later happens to its sender. A payload held in
-a network is fixed only by its sender's correctness, and D1 withdraws that at any moment.
-The decision is legible in the message types: `Gather.Message` carries `echo` and `vote`
-and no `BIND` constructor, and at the protocol a bind payload is tagged `firstGatherBindBroadcasts`
-or
-`secondGatherBindBroadcasts`, a broadcast instance's message rather than a gather's. The counting
-argument
-the choice enables is `DESIGN-GatherComposition.md`.
+A gather's `BIND` payloads are messages of the gather network, each multicast once, as AFW25's
+Algorithm 5 sends them at line 17. At the protocol a `BIND` is tagged `firstGather` or
+`secondGather`, as the gather's `ECHO` and `VOTE` are. The counting of
+`DESIGN-GatherComposition.md` runs on `Gather.withoutBindAbove`, the processes outside `F` whose
+sent set holds no `BIND` above the core, a set that corruption and sends only shrink.
 
 At the protocol shape the three stages are `AFW.composed ⊑
 AFW.composedOverBroadcastSpecification ⊑ AFW.composedOverGatherSpecifications ⊑ hybrid`,
@@ -190,11 +184,10 @@ each the four congruences applied to one family substitution under a single cont
 other chain. The context term is the same expression in all five, which is why the third stage's
 target is `hybrid P` itself and why the two chains meet there.
 
-Beneath `AFW.composed` the protocol collapses the round's `4n + 2` network states into the one
+Beneath `AFW.composed` the protocol collapses the round's `2n + 2` network states into the one
 sent-set family the adversary holds, tagging each message with the instance it belongs to:
 `AFW.Message` carries a constructor per component, `firstGather`, `secondGather`,
-`firstGatherInputBroadcasts`, `firstGatherBindBroadcasts`, `secondGatherInputBroadcasts` and
-`secondGatherBindBroadcasts`. `AFW.RoundVariables` is the composed system's instance-major indexing
+`firstGatherInputBroadcasts` and `secondGatherInputBroadcasts`. `AFW.RoundVariables` is the composed system's instance-major indexing
 transposed, one process's local state in each of those instances, and `AFW.Ghost` is the adversary's
 ghost for one round, the two recorded cores beside the bound bit.
 
@@ -216,8 +209,8 @@ reads it, and the three return transitions are the only transitions that touch i
 to the round for the same reason the sent sets do, so it disappears with the round at the
 substitution.
 
-The gather-based chain carries `4n + 2` of them per round: one for each gather instance,
-and one for each of the `4n` broadcast instances beneath the two. They disappear in two
+The gather-based chain carries `2n + 2` of them per round: one for each gather instance,
+and one for each of the `2n` broadcast instances beneath the two. They disappear in two
 stages rather than one, the broadcast networks at `Gather.broadcastSubstitution`, carried into the
 round by `GBCA.ByAFW.broadcastSubstitution`, and the gather networks at
 `Gather.refinesSpecification`, carried by `GBCA.ByAFW.gatherSubstitution`, each inside the component

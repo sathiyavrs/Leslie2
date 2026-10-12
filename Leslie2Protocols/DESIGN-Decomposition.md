@@ -3,7 +3,7 @@
 The gather-based chain runs over compositions at every level. A reliable-broadcast instance is `n`
 programs beside the instance's network (`BRB.brachaInstance`,
 `ABA/ReliableBroadcast/Bracha/Composition.lean`); a gather instance is `n` programs beside the
-gather network, in parallel with `2n` broadcast instances read along pullbacks naming them
+gather network, in parallel with `n` broadcast instances read along the pullback naming them
 (`Gather.instanceOverBroadcasts`, `ABA/Gather/Composition.lean`); a round is `n` graded-agreement
 programs beside the round's network, in parallel with two gathers (`GBCA.ByAFW.roundOverGathers`,
 `ABA/GBCA/AFW/Composition.lean`). The ABDY chain's round, `GBCA.ByABDY.composition`
@@ -44,7 +44,7 @@ caller has one transition and the network posts; on the loop label every compone
 The specification is read along a pullback that sends the loop to the call
 (`BRB.specificationLabelMap`, `Gather.specificationLabelMap`, `GBCA.specificationLabelMap`),
 so its own loop transition answers the loop label. The level above pulls the composition's alphabet
-back from its own (`Gather.inputBroadcastLabelMap`, `Gather.bindBroadcastLabelMap`,
+back from its own (`Gather.inputBroadcastLabelMap`,
 `GBCA.ByAFW.firstGatherLabelMap`, `GBCA.ByAFW.secondGatherLabelMap`). The characterisation by the
 algorithm is then exact in the form quantified over the interface labels: `(∃ l,
 specificationLabelMap l = some l₀ ∧ brachaInstance.step s l μ) ↔ BrachaAlgorithm s l₀ μ`
@@ -126,17 +126,17 @@ instance.
 A composed gather program reads what each of its instances returned, written on the instance's
 return event under a `2f + 1` `VOTE` quorum at the receiver. The implementation holds the same
 value: its round variables carry each gather local state over `Gather.ProcessVariables`, and
-`AFW.RoundStep.firstGatherInputBroadcastReturn` and its three companions write it under that same
-quorum. A gather guard of the implementation then reads those variables
-(`Gather.ProcessVariables.accepted`, `Gather.approvedBy`, `Gather.holdsInputBroadcastReturn`,
-`Gather.holdsBindBroadcastReturn`), exactly as the guard of the composed gather program does.
+`AFW.RoundStep.firstGatherInputBroadcastReturn` and its companion at the second gather write it
+under that same quorum. A gather guard of the implementation then reads those variables
+(`Gather.ProcessVariables.accepted`, `Gather.approvedBy`, `Gather.holdsInputBroadcastReturn`)
+and the received `BIND` messages, exactly as the guard of the composed gather program does.
 
 **What fails without it.** Let the implementation keep no returned value and read a quorum on the
 acting process's own local state in the instance instead. An implementation transition then hands
 its composed counterpart a specific value `x` with a quorum, while the composed transition needs
 `inputBroadcastReturned k = some x` for the value the instance returned. The two coincide only if
 two vote quorums at one process name one value, so the relation has to carry `BRB.Invariant` at
-each of a round's `4n` instances and re-establish it after every matched transition, and a
+each of a round's `2n` instances and re-establish it after every matched transition, and a
 delivery completing a quorum is matched by the instance's delivery and then its return, a run of
 two events. Every one of those obligations follows from not recording the return.
 
@@ -154,7 +154,7 @@ inside a gather instance and inside a round (`Gather.broadcastSubstitution`,
 `GBCA.ByAFW.broadcastSubstitution`, `GBCA.ByAFW.gatherSubstitution`) are applications of these
 congruences and of nothing else.
 
-The `2n` broadcast instances of a gather and the two gathers of a round are
+The `n` broadcast instances of a gather and the two gathers of a round are
 placed under `synchronisedProduct` and `parallel` after a `mapIdle` lift along a
 pullback naming each instance, so a label carrying another instance's index
 leaves an instance unchanged. A chain of binary parallel compositions

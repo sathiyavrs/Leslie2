@@ -33,7 +33,6 @@ D27 & the BRB leader's recorded input split from the committed value \\
 D29 & ghost outputs carried down as auxiliary variables \\
 D30 & a parametric per-round ghost held by the network \\
 D31 & the coin's threshold counting callers alone \\
-D32 & each BIND payload sent by reliable broadcast \\
 D33 & both gathers of the round in the binding form \\
 D34 & Bracha's rounds as published, three echo triggers and the $(n+f)/2$ quorum \\
 D35 & the gather transitions carrying the order of the sends \\
@@ -134,11 +133,8 @@ D36 & the input-enabledness loop guarded on its variables \\
   Definition~2.1 of~\cite{ABDY22} defines unpredictability by accesses: the output is unpredictable until at least $d+1$ parties have accessed the coin.
   The count of callers is the count of that definition at $d = f$.
   With $F$ added, the same threshold is reached at the first correct call once $|F| = f$.}
-\deviation{D32}{each BIND payload sent by reliable broadcast}
-\departure{Each $\mathrm{BIND}$ payload is sent by reliable broadcast, through one bind-broadcast instance per process and gather, where Algorithm~5 of~\cite{AFW25} and Algorithm~4 of~\cite{LeslieBP} send it to all.}
-\reason{The adversary of~\cite{AFW25} chooses the corrupted set initially, so a payload sent to all is fixed by its sender's correctness, where under D1 a sender corrupted after its send may equivocate, and the witness that holds the later returns to the core counts committed payloads, which stay fixed whatever happens to their sender.}
 \deviation{D33}{both gathers of the round in the binding form}
-\departure{Both gathers of the round are the binding form, where the second call of Algorithm~4 of~\cite{AFW25} is non-binding.}
+\departure{Both gathers of the round are the binding form, where Algorithm~4 of~\cite{AFW25} calls one subroutine $G$ at both calls and the proof of its Theorem~21 uses the binding of the first call alone.}
 \reason{The round's counting reads the grade off a common core of the second gather, and Remark~22 of~\cite{AFW25} makes the core of a non-binding gather a prophecy variable in the sense of~\cite{AL91}, determined by the completed execution alone, which a forward simulation cannot write at the specification's transition, since the value chosen there must hold in every extension.
   The binding form makes it a history variable, determined by the prefix, and a binding gather is a non-binding gather with one phase more, so every execution of the round is an execution of Algorithm~4 of~\cite{AFW25}.}
 \deviation{D34}{Bracha's rounds as published, three echo triggers and the $(n+f)/2$ quorum}
@@ -150,7 +146,7 @@ D36 & the input-enabledness loop guarded on its variables \\
 \reason{Algorithm~1 of~\cite{AFW25} is Bracha's algorithm as published; its $\mathrm{ECHO}$ quorum of more than $(n+f)/2$ senders is the witness the refinement carries, two such quorums meeting in a correct sender of the write-once echo, and the three triggers of the echo step are what Bracha's totality rests on.}
 \deviation{D35}{the gather transitions carrying the order of the sends}
 \departure{The gather transitions carry the order in which Algorithm~5 of~\cite{AFW25} sends, where Algorithm~4 of the source blueprint states each send as a transition firing on its received messages alone.
-  The vote requires the sender's own $\mathrm{ECHO}$, the bind call requires the sender's own $\mathrm{VOTE}$ and no earlier bind call, and the return requires the returner's own bind call, which the write-once field $\mathit{sentBind}$ of the gather variables holds.
+  The vote requires the sender's own $\mathrm{ECHO}$, the $\mathrm{BIND}$ send requires the sender's own $\mathrm{VOTE}$, and the return requires the returner's own $\mathrm{BIND}$ send, which the write-once field $\mathit{sentBind}$ of the gather's variables holds.
   The $\mathrm{ECHO}$ payload is the set of entries the input broadcasts have returned to the sender, which is what Algorithm~5 of~\cite{AFW25} and Algorithm~4 of the source blueprint both send.
   The transition fires once that set has $n-f$ entries, which is the source blueprint's guard.}
 \reason{The order is that of Algorithm~5's main thread, and each transition's guard on the sender's own send at the level below is the reachability of the wait-until block written as a guard, so the transitions encode the program rather than its handlers alone.}
@@ -159,4 +155,4 @@ D36 & the input-enabledness loop guarded on its variables \\
 \reason{The call label is enabled at every state in both systems, and every write to the ghost is a first write, so the ghost holds each never-corrupted process's first genuine call.
   That call is the witness Validity names: \leandecl{PLTS.ABA.ValidityTrace} asks of every return of $b$ by a never-corrupted process an earlier $\mathrm{callABA}(id',b)$ at a never-corrupted $id'$, first among $id'$'s $\mathrm{callABA}$ labels in the trace.}
 \end{deviations}
-The labels D2, D3, D6, D7, D10, D20, D25 and D28 are not in use, and D12 is superseded by D12$'$.
+The labels D2, D3, D6, D7, D10, D20, D25, D28 and D32 are not in use, and D12 is superseded by D12$'$.
