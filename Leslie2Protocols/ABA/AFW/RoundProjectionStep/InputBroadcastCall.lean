@@ -67,7 +67,7 @@ theorem roundProjection_firstGatherInputBroadcastCall (hu : (u j).2 = p) (r : �
     exact Function.update_eq_self _ _
   · simp
   · simp only [GBCA.ByAFW.firstGather_setFirstGather]
-    refine stateOverBroadcasts_ext ?_ ?_ ?_ ?_
+    refine stateOverBroadcasts_ext ?_ ?_ ?_
     · simp only [gatherProgramsAndNetwork_firstGather_roundProjectionUpdate,
         Gather.gatherProgramsAndNetwork_setInputBroadcasts]
       exact Prod.ext (Function.update_eq_self _ _) rfl
@@ -80,22 +80,14 @@ theorem roundProjection_firstGatherInputBroadcastCall (hu : (u j).2 = p) (r : �
         exact Prod.ext rfl rfl
       · rw [Function.update_of_ne hk, Function.update_of_ne hk]
         exact Prod.ext (Function.update_eq_self _ _) rfl
-    · funext q
-      simp only [bindBroadcasts_firstGather_roundProjectionUpdate,
-        Gather.bindBroadcasts_setInputBroadcasts, bindBroadcasts_firstGatherProjection]
-      exact Prod.ext (Function.update_eq_self _ _) rfl
     · simp
   · simp only [GBCA.ByAFW.secondGather_setFirstGather, secondGather_roundProjection]
-    refine stateOverBroadcasts_ext ?_ ?_ ?_ ?_
+    refine stateOverBroadcasts_ext ?_ ?_ ?_
     · simp only [gatherProgramsAndNetwork_secondGather_roundProjectionUpdate]
       exact Prod.ext (Function.update_eq_self _ _) rfl
     · funext k
       simp only [inputBroadcasts_secondGather_roundProjectionUpdate,
         inputBroadcasts_secondGatherProjection]
-      exact Prod.ext (Function.update_eq_self _ _) rfl
-    · funext q
-      simp only [bindBroadcasts_secondGather_roundProjectionUpdate,
-        bindBroadcasts_secondGatherProjection]
       exact Prod.ext (Function.update_eq_self _ _) rfl
     · simp
 
@@ -129,20 +121,16 @@ theorem roundProjection_secondGatherInputBroadcastCall (hu : (u j).2 = p) (r : �
     exact Function.update_eq_self _ _
   · simp
   · simp only [GBCA.ByAFW.firstGather_setSecondGather, firstGather_roundProjection]
-    refine stateOverBroadcasts_ext ?_ ?_ ?_ ?_
+    refine stateOverBroadcasts_ext ?_ ?_ ?_
     · simp only [gatherProgramsAndNetwork_firstGather_roundProjectionUpdate]
       exact Prod.ext (Function.update_eq_self _ _) rfl
     · funext k
       simp only [inputBroadcasts_firstGather_roundProjectionUpdate,
         inputBroadcasts_firstGatherProjection]
       exact Prod.ext (Function.update_eq_self _ _) rfl
-    · funext q
-      simp only [bindBroadcasts_firstGather_roundProjectionUpdate,
-        bindBroadcasts_firstGatherProjection]
-      exact Prod.ext (Function.update_eq_self _ _) rfl
     · simp
   · simp only [GBCA.ByAFW.secondGather_setSecondGather]
-    refine stateOverBroadcasts_ext ?_ ?_ ?_ ?_
+    refine stateOverBroadcasts_ext ?_ ?_ ?_
     · simp only [gatherProgramsAndNetwork_secondGather_roundProjectionUpdate,
         Gather.gatherProgramsAndNetwork_setInputBroadcasts]
       exact Prod.ext (Function.update_eq_self _ _) rfl
@@ -155,10 +143,6 @@ theorem roundProjection_secondGatherInputBroadcastCall (hu : (u j).2 = p) (r : �
         exact Prod.ext rfl rfl
       · rw [Function.update_of_ne hk, Function.update_of_ne hk]
         exact Prod.ext (Function.update_eq_self _ _) rfl
-    · funext q
-      simp only [bindBroadcasts_secondGather_roundProjectionUpdate,
-        Gather.bindBroadcasts_setInputBroadcasts, bindBroadcasts_secondGatherProjection]
-      exact Prod.ext (Function.update_eq_self _ _) rfl
     · simp
 
 end Transitions

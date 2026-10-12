@@ -61,7 +61,7 @@ theorem roundProjection_retG (hu : (u j).2 = p) (r : ℕ) (out : GBCAOutput) (bn
     simp only [bound_mk, ghostStep]
   · simp only [afterRetG, GBCA.ByAFW.firstGather_setPrograms, firstGather_roundProjection]
     simp only [firstGather_mk, ghostStep]
-    refine stateOverBroadcasts_ext ?_ ?_ ?_ ?_
+    refine stateOverBroadcasts_ext ?_ ?_ ?_
     · simp only [Gather.gatherProgramsAndNetwork_setCore,
         gatherProgramsAndNetwork_firstGather_roundProjectionUpdate]
       exact Prod.ext (Function.update_eq_self _ _) rfl
@@ -69,24 +69,16 @@ theorem roundProjection_retG (hu : (u j).2 = p) (r : ℕ) (out : GBCAOutput) (bn
       simp only [Gather.inputBroadcasts_setCore, inputBroadcasts_firstGather_roundProjectionUpdate,
         inputBroadcasts_firstGatherProjection]
       exact Prod.ext (Function.update_eq_self _ _) rfl
-    · funext q
-      simp only [Gather.bindBroadcasts_setCore, bindBroadcasts_firstGather_roundProjectionUpdate,
-        bindBroadcasts_firstGatherProjection]
-      exact Prod.ext (Function.update_eq_self _ _) rfl
     · simp only [Gather.core_setCore, core_firstGatherProjection]
   · simp only [afterRetG, GBCA.ByAFW.secondGather_setPrograms, secondGather_roundProjection]
     simp only [secondGather_mk, ghostStep]
-    refine stateOverBroadcasts_ext ?_ ?_ ?_ ?_
+    refine stateOverBroadcasts_ext ?_ ?_ ?_
     · simp only [Gather.gatherProgramsAndNetwork_setCore,
         gatherProgramsAndNetwork_secondGather_roundProjectionUpdate]
       exact Prod.ext (Function.update_eq_self _ _) rfl
     · funext k
       simp only [Gather.inputBroadcasts_setCore,
         inputBroadcasts_secondGather_roundProjectionUpdate, inputBroadcasts_secondGatherProjection]
-      exact Prod.ext (Function.update_eq_self _ _) rfl
-    · funext q
-      simp only [Gather.bindBroadcasts_setCore, bindBroadcasts_secondGather_roundProjectionUpdate,
-        bindBroadcasts_secondGatherProjection]
       exact Prod.ext (Function.update_eq_self _ _) rfl
     · simp only [Gather.core_setCore, core_secondGatherProjection]
 

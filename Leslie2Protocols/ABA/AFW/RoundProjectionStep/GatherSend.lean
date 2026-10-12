@@ -10,9 +10,9 @@ import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ProjectionAfterOneWrite
 # A send of a gather instance
 
 `roundProjection_firstGatherSend` and `roundProjection_secondGatherSend`: the projection onto the
-composed round after a gather's `ECHO` or `VOTE`. The transition writes the sender's variables in
-the gather and records on the gather's network state, and the composed round writes the same through
-`Gather.setGatherProgramsAndNetwork`.
+composed round after a gather's `ECHO`, `VOTE` or `BIND`. The transition writes the sender's
+variables in the gather and records on the gather's network state, and the composed round writes
+the same through `Gather.setGatherProgramsAndNetwork`.
 -/
 
 namespace PLTS
@@ -30,10 +30,10 @@ variable {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} {w : NetworkState P.n} 
 
 /-! ### A send of a gather instance
 
-A gather's `ECHO` and `VOTE` write the sender's variables in the gather and record on the
-gather's network state. Each is the gather's `send` event, which
-`Gather.AlgorithmOverBracha.echo` and `Gather.AlgorithmOverBracha.vote` write through
-`Gather.setGatherProgramsAndNetwork`. -/
+A gather's `ECHO`, `VOTE` and `BIND` write the sender's variables in the gather and record on
+the gather's network state. Each is the gather's `send` event, which
+`Gather.AlgorithmOverBracha.echo`, `Gather.AlgorithmOverBracha.vote` and
+`Gather.AlgorithmOverBracha.bind` write through `Gather.setGatherProgramsAndNetwork`. -/
 
 /-- A send of the first gather, read through the projection. -/
 theorem roundProjection_firstGatherSend (hu : (u j).2 = p) (r : ℕ)
@@ -50,8 +50,8 @@ theorem roundProjection_firstGatherSend (hu : (u j).2 = p) (r : ℕ)
                 pr).multicast j m)) := by
   rw [← hu] at hin ⊢
   rw [roundProjection_write]
-  refine roundStateOverGathers_ext ?_ rfl (stateOverBroadcasts_ext ?_ ?_ ?_ rfl)
-    (stateOverBroadcasts_ext ?_ ?_ ?_ rfl)
+  refine roundStateOverGathers_ext ?_ rfl (stateOverBroadcasts_ext ?_ ?_ rfl)
+    (stateOverBroadcasts_ext ?_ ?_ rfl)
   · simp only [GBCA.ByAFW.programs, GBCA.ByAFW.setFirstGather, roundProjection,
       roundProjectionUpdate, programProjection, LocalState.setProcessVariables, hin]
     exact Function.update_eq_self _ _
@@ -75,15 +75,6 @@ theorem roundProjection_firstGatherSend (hu : (u j).2 = p) (r : ℕ)
         GBCA.ByAFW.setFirstGather, roundProjection, roundProjectionUpdate, firstGatherProjection]
       exact messagesOf_recordSent_none (firstGatherInputBroadcastMessageOf k)
         (firstGatherInputBroadcastMessageOf_inj k) (w.sent r) j (.firstGather m) rfl
-  · funext q
-    refine Prod.ext ?_ (networkState_ext ?_ rfl)
-    · simp only [Gather.bindBroadcasts, Gather.setGatherProgramsAndNetwork, GBCA.ByAFW.firstGather,
-      GBCA.ByAFW.setFirstGather, roundProjection, roundProjectionUpdate, firstGatherProjection]
-      exact Function.update_eq_self _ _
-    · simp only [Gather.bindBroadcasts, Gather.setGatherProgramsAndNetwork, GBCA.ByAFW.firstGather,
-      GBCA.ByAFW.setFirstGather, roundProjection, roundProjectionUpdate, firstGatherProjection]
-      exact messagesOf_recordSent_none (firstGatherBindBroadcastMessageOf q)
-        (firstGatherBindBroadcastMessageOf_inj q) (w.sent r) j (.firstGather m) rfl
   · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [Gather.gatherProgramsAndNetwork, GBCA.ByAFW.secondGather,
         GBCA.ByAFW.setFirstGather,
@@ -108,17 +99,6 @@ theorem roundProjection_firstGatherSend (hu : (u j).2 = p) (r : ℕ)
       exact messagesOf_recordSent_none
           (secondGatherInputBroadcastMessageOf k) (secondGatherInputBroadcastMessageOf_inj k)
             (w.sent r) j (.firstGather m) rfl
-  · funext q
-    refine Prod.ext ?_ (networkState_ext ?_ rfl)
-    · simp only [Gather.bindBroadcasts, GBCA.ByAFW.secondGather, GBCA.ByAFW.setFirstGather,
-      roundProjection, roundProjectionUpdate,
-        secondGatherProjection]
-      exact Function.update_eq_self _ _
-    · simp only [Gather.bindBroadcasts, GBCA.ByAFW.secondGather, GBCA.ByAFW.setFirstGather,
-      roundProjection, roundProjectionUpdate,
-        secondGatherProjection]
-      exact messagesOf_recordSent_none (secondGatherBindBroadcastMessageOf
-          q) (secondGatherBindBroadcastMessageOf_inj q) (w.sent r) j (.firstGather m) rfl
 
 /-- A send of the second gather, read through the projection. -/
 theorem roundProjection_secondGatherSend (hu : (u j).2 = p) (r : ℕ)
@@ -136,8 +116,8 @@ theorem roundProjection_secondGatherSend (hu : (u j).2 = p) (r : ℕ)
                 pr).multicast j m)) := by
   rw [← hu] at hin hret ⊢
   rw [roundProjection_write]
-  refine roundStateOverGathers_ext ?_ rfl (stateOverBroadcasts_ext ?_ ?_ ?_ rfl)
-    (stateOverBroadcasts_ext ?_ ?_ ?_ rfl)
+  refine roundStateOverGathers_ext ?_ rfl (stateOverBroadcasts_ext ?_ ?_ rfl)
+    (stateOverBroadcasts_ext ?_ ?_ rfl)
   · simp only [GBCA.ByAFW.programs, GBCA.ByAFW.setSecondGather, roundProjection,
       roundProjectionUpdate, programProjection, LocalState.setProcessVariables, hin, hret]
     exact Function.update_eq_self _ _
@@ -164,17 +144,6 @@ theorem roundProjection_secondGatherSend (hu : (u j).2 = p) (r : ℕ)
         firstGatherProjection]
       exact messagesOf_recordSent_none (firstGatherInputBroadcastMessageOf
           k) (firstGatherInputBroadcastMessageOf_inj k) (w.sent r) j (.secondGather m) rfl
-  · funext q
-    refine Prod.ext ?_ (networkState_ext ?_ rfl)
-    · simp only [Gather.bindBroadcasts, GBCA.ByAFW.firstGather, GBCA.ByAFW.setSecondGather,
-      roundProjection, roundProjectionUpdate,
-        firstGatherProjection]
-      exact Function.update_eq_self _ _
-    · simp only [Gather.bindBroadcasts, GBCA.ByAFW.firstGather, GBCA.ByAFW.setSecondGather,
-      roundProjection, roundProjectionUpdate,
-        firstGatherProjection]
-      exact messagesOf_recordSent_none (firstGatherBindBroadcastMessageOf
-          q) (firstGatherBindBroadcastMessageOf_inj q) (w.sent r) j (.secondGather m) rfl
   · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [Gather.gatherProgramsAndNetwork, Gather.setGatherProgramsAndNetwork,
         GBCA.ByAFW.secondGather,
@@ -197,15 +166,6 @@ theorem roundProjection_secondGatherSend (hu : (u j).2 = p) (r : ℕ)
         GBCA.ByAFW.setSecondGather, roundProjection, roundProjectionUpdate, secondGatherProjection]
       exact messagesOf_recordSent_none (secondGatherInputBroadcastMessageOf k)
         (secondGatherInputBroadcastMessageOf_inj k) (w.sent r) j (.secondGather m) rfl
-  · funext q
-    refine Prod.ext ?_ (networkState_ext ?_ rfl)
-    · simp only [Gather.bindBroadcasts, Gather.setGatherProgramsAndNetwork, GBCA.ByAFW.secondGather,
-      GBCA.ByAFW.setSecondGather, roundProjection, roundProjectionUpdate, secondGatherProjection]
-      exact Function.update_eq_self _ _
-    · simp only [Gather.bindBroadcasts, Gather.setGatherProgramsAndNetwork, GBCA.ByAFW.secondGather,
-      GBCA.ByAFW.setSecondGather, roundProjection, roundProjectionUpdate, secondGatherProjection]
-      exact messagesOf_recordSent_none (secondGatherBindBroadcastMessageOf q)
-        (secondGatherBindBroadcastMessageOf_inj q) (w.sent r) j (.secondGather m) rfl
 
 end Transitions
 

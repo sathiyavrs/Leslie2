@@ -37,22 +37,20 @@ theorem networkState_ext {n : ℕ} {M : Type} {a b : ABA.NetworkState n M}
     (hp : a.sent = b.sent) (hF : a.F = b.F) : a = b := by
   cases a; cases b; simp_all
 
-/-- A gather-over-Bracha state is its gather programs and network beside its two broadcast
-families and its core. -/
-theorem stateOverBroadcasts_ext {n : ℕ} {X B B' : Type} {a b : Gather.StateOverBroadcasts n X B B'}
+/-- A gather-over-Bracha state is its gather programs and network beside its input-broadcast
+family and its core. -/
+theorem stateOverBroadcasts_ext {n : ℕ} {X B : Type} {a b : Gather.StateOverBroadcasts n X B}
     (h1 : Gather.gatherProgramsAndNetwork a = Gather.gatherProgramsAndNetwork b)
     (h2 : Gather.inputBroadcasts a = Gather.inputBroadcasts b)
-    (h3 : Gather.bindBroadcasts a = Gather.bindBroadcasts b) (h4 : Gather.core a = Gather.core b) :
-    a = b := by
-  obtain ⟨⟨ua, ⟨wa, ca⟩⟩, ia, ba⟩ := a
-  obtain ⟨⟨ub, ⟨wb, cb⟩⟩, ib, bb⟩ := b
+    (h3 : Gather.core a = Gather.core b) : a = b := by
+  obtain ⟨⟨ua, ⟨wa, ca⟩⟩, ia⟩ := a
+  obtain ⟨⟨ub, ⟨wb, cb⟩⟩, ib⟩ := b
   have hu : ua = ub := congrArg Prod.fst h1
   have hw : wa = wb := congrArg Prod.snd h1
   subst hu; subst hw
   change ia = ib at h2
-  change ba = bb at h3
-  change ca = cb at h4
-  subst h2; subst h3; subst h4
+  change ca = cb at h3
+  subst h2; subst h3
   rfl
 
 /-- A round state is its programs and its bound bit beside its two gather
@@ -224,26 +222,10 @@ theorem locals_firstGatherInputBroadcast_if (k : Fin P.n) :
   rw [Function.update_apply]
   by_cases hi : i = j <;> simp [hi]
 
-theorem locals_firstGatherBindBroadcast_if (k : Fin P.n) :
-    (fun i => ((if i = j then sr else Y i).firstGatherBindBroadcasts k))
-      = Function.update (fun i => ((Y i).firstGatherBindBroadcasts k)) j
-          ((sr.firstGatherBindBroadcasts k)) := by
-  funext i
-  rw [Function.update_apply]
-  by_cases hi : i = j <;> simp [hi]
-
 theorem locals_secondGatherInputBroadcast_if (k : Fin P.n) :
     (fun i => ((if i = j then sr else Y i).secondGatherInputBroadcasts k))
       = Function.update (fun i => ((Y i).secondGatherInputBroadcasts k)) j
           ((sr.secondGatherInputBroadcasts k)) := by
-  funext i
-  rw [Function.update_apply]
-  by_cases hi : i = j <;> simp [hi]
-
-theorem locals_secondGatherBindBroadcast_if (k : Fin P.n) :
-    (fun i => ((if i = j then sr else Y i).secondGatherBindBroadcasts k))
-      = Function.update (fun i => ((Y i).secondGatherBindBroadcasts k)) j
-          ((sr.secondGatherBindBroadcasts k)) := by
   funext i
   rw [Function.update_apply]
   by_cases hi : i = j <;> simp [hi]
@@ -283,12 +265,7 @@ noncomputable def roundProjectionUpdate (P : Parameters) (u : ∀ _ : Fin P.n, A
           r).firstGatherInputBroadcasts k)) j
             ((sr.firstGatherInputBroadcasts k)),
           ⟨messagesOf (firstGatherInputBroadcastMessageOf k) (firstGatherInputBroadcastMessageOf_inj
-            k) sent, w.F⟩),
-        fun q => (Function.update (fun i => (((u i).2.roundVariables
-          r).firstGatherBindBroadcasts q)) j
-            ((sr.firstGatherBindBroadcasts q)),
-          ⟨messagesOf (firstGatherBindBroadcastMessageOf q) (firstGatherBindBroadcastMessageOf_inj
-            q) sent, w.F⟩)),
+            k) sent, w.F⟩)),
       ((Function.update
             (fun i => ((u i).2.roundVariables r).secondGather) j
             (sr.secondGather),
@@ -298,12 +275,7 @@ noncomputable def roundProjectionUpdate (P : Parameters) (u : ∀ _ : Fin P.n, A
           r).secondGatherInputBroadcasts k)) j
             ((sr.secondGatherInputBroadcasts k)),
           ⟨messagesOf (secondGatherInputBroadcastMessageOf k)
-            (secondGatherInputBroadcastMessageOf_inj k) sent, w.F⟩),
-        fun q => (Function.update (fun i => (((u i).2.roundVariables
-          r).secondGatherBindBroadcasts q)) j
-            ((sr.secondGatherBindBroadcasts q)),
-          ⟨messagesOf (secondGatherBindBroadcastMessageOf q) (secondGatherBindBroadcastMessageOf_inj
-            q) sent, w.F⟩))))
+            (secondGatherInputBroadcastMessageOf_inj k) sent, w.F⟩))))
 
 /-- **A write, read through the projection.** A transition writes the acting process's
 round variables and records one tagged message; the round it names then reads as the
@@ -313,8 +285,8 @@ theorem roundProjection_write (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n) (w
     roundProjection P (Function.update u j (c, (u j).2.setRoundVariables r sr))
     (w.recordGBCASend r j m) r = roundProjectionUpdate P u w r j sr
     (Function.update (w.sent r) j (insert m (w.sent r j))) := by
-  refine roundStateOverGathers_ext ?_ rfl (stateOverBroadcasts_ext ?_ ?_ ?_ rfl)
-    (stateOverBroadcasts_ext ?_ ?_ ?_ rfl)
+  refine roundStateOverGathers_ext ?_ rfl (stateOverBroadcasts_ext ?_ ?_ rfl)
+    (stateOverBroadcasts_ext ?_ ?_ rfl)
   · simp only [GBCA.ByAFW.programs, roundProjection, roundProjectionUpdate,
       roundVariables_update_self rfl, locals_programProjection_if]
   · refine Prod.ext ?_ (networkState_ext ?_ rfl)
@@ -331,13 +303,6 @@ theorem roundProjection_write (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n) (w
         locals_firstGatherInputBroadcast_if]
     · simp only [Gather.inputBroadcasts, GBCA.ByAFW.firstGather, roundProjection,
         roundProjectionUpdate, firstGatherProjection, recordGBCASend_sent_self]
-  · funext q
-    refine Prod.ext ?_ (networkState_ext ?_ rfl)
-    · simp only [Gather.bindBroadcasts, GBCA.ByAFW.firstGather, roundProjection,
-      roundProjectionUpdate, firstGatherProjection, roundVariables_update_self rfl,
-        locals_firstGatherBindBroadcast_if]
-    · simp only [Gather.bindBroadcasts, GBCA.ByAFW.firstGather, roundProjection,
-        roundProjectionUpdate, firstGatherProjection, recordGBCASend_sent_self]
   · refine Prod.ext ?_ (networkState_ext ?_ rfl)
     · simp only [Gather.gatherProgramsAndNetwork, GBCA.ByAFW.secondGather, roundProjection,
         roundProjectionUpdate, secondGatherProjection, roundVariables_update_self rfl,
@@ -351,13 +316,6 @@ theorem roundProjection_write (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n) (w
         locals_secondGatherInputBroadcast_if]
     · simp only [Gather.inputBroadcasts, GBCA.ByAFW.secondGather, roundProjection,
         roundProjectionUpdate, secondGatherProjection, recordGBCASend_sent_self]
-  · funext q
-    refine Prod.ext ?_ (networkState_ext ?_ rfl)
-    · simp only [Gather.bindBroadcasts, GBCA.ByAFW.secondGather, roundProjection,
-      roundProjectionUpdate, secondGatherProjection, roundVariables_update_self rfl,
-        locals_secondGatherBindBroadcast_if]
-    · simp only [Gather.bindBroadcasts, GBCA.ByAFW.secondGather, roundProjection,
-        roundProjectionUpdate, secondGatherProjection, recordGBCASend_sent_self]
 
 /-- A write that records nothing — a delivery, or a return — read through the
 projection. -/
@@ -366,8 +324,8 @@ theorem roundProjection_writeNoSent (u : ∀ _ : Fin P.n, AFW.ProcessVariables P
       P.n) :
     roundProjection P (Function.update u j (c, (u j).2.setRoundVariables r sr)) w r =
     roundProjectionUpdate P u w r j sr (w.sent r) := by
-  refine roundStateOverGathers_ext ?_ rfl (stateOverBroadcasts_ext ?_ ?_ ?_ rfl)
-    (stateOverBroadcasts_ext ?_ ?_ ?_ rfl)
+  refine roundStateOverGathers_ext ?_ rfl (stateOverBroadcasts_ext ?_ ?_ rfl)
+    (stateOverBroadcasts_ext ?_ ?_ rfl)
   · simp only [GBCA.ByAFW.programs, roundProjection, roundProjectionUpdate,
       roundVariables_update_self rfl, locals_programProjection_if]
   · refine Prod.ext ?_ (networkState_ext rfl rfl)
@@ -379,11 +337,6 @@ theorem roundProjection_writeNoSent (u : ∀ _ : Fin P.n, AFW.ProcessVariables P
     simp only [Gather.inputBroadcasts, GBCA.ByAFW.firstGather, roundProjection,
       roundProjectionUpdate, firstGatherProjection, roundVariables_update_self rfl,
         locals_firstGatherInputBroadcast_if]
-  · funext q
-    refine Prod.ext ?_ (networkState_ext rfl rfl)
-    simp only [Gather.bindBroadcasts, GBCA.ByAFW.firstGather, roundProjection,
-      roundProjectionUpdate, firstGatherProjection, roundVariables_update_self rfl,
-        locals_firstGatherBindBroadcast_if]
   · refine Prod.ext ?_ (networkState_ext rfl rfl)
     simp only [Gather.gatherProgramsAndNetwork, GBCA.ByAFW.secondGather, roundProjection,
       roundProjectionUpdate,
@@ -393,11 +346,6 @@ theorem roundProjection_writeNoSent (u : ∀ _ : Fin P.n, AFW.ProcessVariables P
     simp only [Gather.inputBroadcasts, GBCA.ByAFW.secondGather, roundProjection,
       roundProjectionUpdate, secondGatherProjection, roundVariables_update_self rfl,
         locals_secondGatherInputBroadcast_if]
-  · funext q
-    refine Prod.ext ?_ (networkState_ext rfl rfl)
-    simp only [Gather.bindBroadcasts, GBCA.ByAFW.secondGather, roundProjection,
-      roundProjectionUpdate, secondGatherProjection, roundVariables_update_self rfl,
-        locals_secondGatherBindBroadcast_if]
 
 end Writes
 /-! ### Reading the written projection
@@ -480,14 +428,6 @@ variable (v : ∀ _ : Fin P.n, AFW.ProcessVariables P.n) (w : NetworkState P.n) 
             ⟨messagesOf (firstGatherInputBroadcastMessageOf k)
               (firstGatherInputBroadcastMessageOf_inj k) sent, w.F⟩) := rfl
 
-@[simp] theorem bindBroadcasts_firstGather_roundProjectionUpdate (q : Fin P.n) :
-    Gather.bindBroadcasts (GBCA.ByAFW.firstGather (roundProjectionUpdate P v w r j sr sent)) q
-      = (Function.update (fun i => (((v i).2.roundVariables
-        r).firstGatherBindBroadcasts q)) j
-          ((sr.firstGatherBindBroadcasts q)),
-            ⟨messagesOf (firstGatherBindBroadcastMessageOf q) (firstGatherBindBroadcastMessageOf_inj
-              q) sent, w.F⟩) := rfl
-
 @[simp] theorem inputBroadcasts_secondGather_roundProjectionUpdate (k : Fin P.n) :
     Gather.inputBroadcasts (GBCA.ByAFW.secondGather (roundProjectionUpdate P v w r j sr sent)) k
       = (Function.update (fun i => (((v i).2.roundVariables
@@ -495,14 +435,6 @@ variable (v : ∀ _ : Fin P.n, AFW.ProcessVariables P.n) (w : NetworkState P.n) 
           ((sr.secondGatherInputBroadcasts k)),
             ⟨messagesOf (secondGatherInputBroadcastMessageOf k)
               (secondGatherInputBroadcastMessageOf_inj k) sent, w.F⟩) := rfl
-
-@[simp] theorem bindBroadcasts_secondGather_roundProjectionUpdate (q : Fin P.n) :
-    Gather.bindBroadcasts (GBCA.ByAFW.secondGather (roundProjectionUpdate P v w r j sr sent)) q
-      = (Function.update (fun i => (((v i).2.roundVariables
-        r).secondGatherBindBroadcasts q)) j
-          ((sr.secondGatherBindBroadcasts q)),
-            ⟨messagesOf (secondGatherBindBroadcastMessageOf q)
-              (secondGatherBindBroadcastMessageOf_inj q) sent, w.F⟩) := rfl
 
 end WrittenProjectionReaders
 end AFW

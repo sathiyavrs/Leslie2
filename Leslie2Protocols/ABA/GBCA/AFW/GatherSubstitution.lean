@@ -113,8 +113,8 @@ theorem gatherSubstitutionRelation_corrupt {P : Parameters}
     (hR : GatherSubstitutionRelation P s t) (id : Fin P.n) :
     GatherSubstitutionRelation P
       (corruptAll P id
-        (fun i => Gather.corruptAll P i (BRB.SpecState.corrupt P i) (BRB.SpecState.corrupt P i))
-        (fun i => Gather.corruptAll P i (BRB.SpecState.corrupt P i) (BRB.SpecState.corrupt P i))
+        (fun i => Gather.corruptAll P i (BRB.SpecState.corrupt P i))
+        (fun i => Gather.corruptAll P i (BRB.SpecState.corrupt P i))
         s)
       (corruptAll P id (fun i => Gather.SpecState.corrupt P i)
         (fun i => Gather.SpecState.corrupt P i) t) :=

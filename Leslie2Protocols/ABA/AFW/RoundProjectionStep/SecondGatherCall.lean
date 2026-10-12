@@ -59,8 +59,8 @@ theorem roundProjection_secondGatherCall (hu : (u j).2 = p) (r : ℕ) (x : Optio
   rw [roundProjection_ghostId (Sum.inr (.gbcaRoundEvent r j (.secondGatherCall x)))
       (fun _ _ => rfl),
     roundProjection_writeNoSent]
-  refine roundStateOverGathers_ext ?_ ?_ (stateOverBroadcasts_ext ?_ ?_ ?_ ?_)
-    (stateOverBroadcasts_ext ?_ ?_ ?_ ?_)
+  refine roundStateOverGathers_ext ?_ ?_ (stateOverBroadcasts_ext ?_ ?_ ?_)
+    (stateOverBroadcasts_ext ?_ ?_ ?_)
   · simp only [afterSecondGatherCall, programs_roundProjectionUpdate,
       GBCA.ByAFW.programs_setSecondGather, GBCA.ByAFW.programs_setPrograms,
         programs_roundProjection_eq]
@@ -76,11 +76,6 @@ theorem roundProjection_secondGatherCall (hu : (u j).2 = p) (r : ℕ) (x : Optio
       GBCA.ByAFW.firstGather_setSecondGather, GBCA.ByAFW.firstGather_setPrograms,
         firstGather_roundProjection, inputBroadcasts_firstGatherProjection]
     exact Prod.ext (Function.update_eq_self _ _) rfl
-  · funext q
-    simp only [afterSecondGatherCall, bindBroadcasts_firstGather_roundProjectionUpdate,
-      GBCA.ByAFW.firstGather_setSecondGather, GBCA.ByAFW.firstGather_setPrograms,
-        firstGather_roundProjection, bindBroadcasts_firstGatherProjection]
-    exact Prod.ext (Function.update_eq_self _ _) rfl
   · simp [afterSecondGatherCall]
   · simp only [afterSecondGatherCall, gatherProgramsAndNetwork_secondGather_roundProjectionUpdate,
       GBCA.ByAFW.secondGather_setSecondGather,
@@ -92,10 +87,6 @@ theorem roundProjection_secondGatherCall (hu : (u j).2 = p) (r : ℕ) (x : Optio
   · funext k
     simp only [afterSecondGatherCall, inputBroadcasts_secondGather_roundProjectionUpdate,
       GBCA.ByAFW.secondGather_setSecondGather, Gather.inputBroadcasts_setGatherProgramsAndNetwork]
-    exact Prod.ext (Function.update_eq_self _ _) rfl
-  · funext q
-    simp only [afterSecondGatherCall, bindBroadcasts_secondGather_roundProjectionUpdate,
-      GBCA.ByAFW.secondGather_setSecondGather, Gather.bindBroadcasts_setGatherProgramsAndNetwork]
     exact Prod.ext (Function.update_eq_self _ _) rfl
   · simp [afterSecondGatherCall]
 

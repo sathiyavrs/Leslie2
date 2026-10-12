@@ -16,12 +16,12 @@ state of the gather specification (`Gather.specInst`, blueprint TS 4). The retur
 corrupted sets agree, the specification's calls agree with the gather programs' inputs, the two
 systems hold the same core, and the instance invariant of `ABA/Gather/Invariant.lean` holds at `s`.
 
-The specification's abstract content is bounded from above by the witnesses on received messages
-that the instance carries. `val_witness` bounds a committed specification entry by the commitment of
-the input instance that holds it. `core_witness` is the count of
-`ABA/Gather/CommonCoreCounting.lean`: at least `f + 1` bind instances hold a committed payload above
-the recorded core (`bindAbove`). The
-count is blind to `F` and monotone, so it survives every transition and every corruption.
+The instance carries two witnesses: `val_witness` bounds a committed specification entry by the
+input instance's commitment, and `withoutBindAbove_card` is the count that holds every return to
+the recorded core. The count is that of `ABA/Gather/CommonCoreCounting.lean`: at most `f`
+processes outside `F` have sent no `BIND` payload containing the recorded core
+(`withoutBindAbove`). That set only loses members along every
+transition and every corruption, so the count survives both.
 
 `specificationRelation_init` holds the relation at the two initial states, and
 `specificationRelation_corrupt` carries it across a corruption of both systems at once, which is
@@ -37,9 +37,8 @@ variable {X : Type} [DecidableEq X] {P : Parameters}
 /-! ### The relation -/
 
 /-- The refinement relation of the composed gather instance. `val_witness` bounds
-the specification's committed entries by the input instances' commitments; `core_witness` is the
-count, blind to `F` and monotone, holding the recorded core
-below committed bind payloads. -/
+the specification's committed entries by the input instances' commitments; `withoutBindAbove_card`
+bounds the processes outside `F` that have sent no `BIND` payload containing the recorded core. -/
 structure SpecificationRelation (P : Parameters) (s : StateOverBroadcastSpecification P.n X)
     (t : SpecState P.n X) : Prop where
   /-- The instance invariant. -/
@@ -54,9 +53,9 @@ structure SpecificationRelation (P : Parameters) (s : StateOverBroadcastSpecific
   val_witness : ∀ k v, t.val k = some v → (inputBroadcasts s k).val = some v
   /-- The two systems hold the same core. -/
   core_eq : t.core = core s
-  /-- At least `f + 1` bind instances hold a committed payload above the recorded
+  /-- At most `f` processes outside `F` have sent no `BIND` payload containing the recorded
   core. -/
-  core_witness : ∀ C, core s = some C → P.f + 1 ≤ (bindAbove s C).card
+  withoutBindAbove_card : ∀ C, core s = some C → (withoutBindAbove s C).card ≤ P.f
 
 /-- The relation holds initially. -/
 theorem specificationRelation_init :
@@ -67,17 +66,19 @@ theorem specificationRelation_init :
       ProcessVariables.initial, BaseProcessVariables.initial, NetworkState.initial,
         InstanceState.processVariables, InstanceState.F]
 
+omit [DecidableEq X] in
 /-- **Broadcast compatibility**: the relation is preserved by corrupting both systems at once. -/
 theorem specificationRelation_corrupt {s : StateOverBroadcastSpecification P.n X}
     {t : SpecState P.n X} (hR : SpecificationRelation P s t) (id : Fin P.n) :
     SpecificationRelation P
-    (corruptAll P id (BRB.SpecState.corrupt P id) (BRB.SpecState.corrupt P id) s)
+    (corruptAll P id (BRB.SpecState.corrupt P id) s)
     (t.corrupt P id) := by
+  classical
   refine ⟨hR.invariant.step (AlgorithmOverBroadcastSpecification.fail s id) (by rw
     [PMF.mem_support_pure_iff]),
     ?_, ?_, ?_, ?_, ?_, ?_⟩
   all_goals dsimp only [gatherProgramsAndNetwork_corruptAll, inputBroadcasts_corruptAll,
-    bindBroadcasts_corruptAll, core_corruptAll]
+    core_corruptAll]
   · intro k
     rw [corrupt_call, InstanceState.corrupt_processVariables]
     exact hR.call_eq k
@@ -92,9 +93,8 @@ theorem specificationRelation_corrupt {s : StateOverBroadcastSpecification P.n X
   · rw [corrupt_core]
     exact hR.core_eq
   · intro C hC
-    exact le_trans (hR.core_witness C hC) (Finset.card_le_card
-      (bindAbove_mono (AlgorithmOverBroadcastSpecification.fail s id)
-        (by rw [PMF.mem_support_pure_iff]) C))
+    exact le_trans (Finset.card_le_card (withoutBindAbove_corruptAll s id _ C))
+      (hR.withoutBindAbove_card C hC)
 
 end Gather
 end ABA

@@ -11,9 +11,6 @@ import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ProjectionAfterOneWrite
 
 `roundProjection_callG` and `roundProjection_gbcaCallLoop`: the projection of the composed round
 after a call of graded agreement. The call records the input on the round's first gather and sends
-nothing, which is what the composed round's `callG` writes, its program recording the input and
-`roundProjection_callG` and `roundProjection_gbcaCallLoop`: the projection of the composed round
-after a call of graded agreement. The call records the input on the round's first gather and sends
 nothing, which is what the composed round's `callG` writes, its program recording the input and its
 first gather taking `Gather.AlgorithmOverBracha.call`. A call at a process whose first gather
 already holds an input moves the round loop alone, which the projection does not read.
@@ -58,8 +55,8 @@ theorem roundProjection_callG (hu : (u j).2 = p) (r : ℕ) (b : Bool) :
   subst hu
   rw [roundProjection_ghostId (Sum.inl (.callG r j b)) (fun _ _ => rfl),
     roundProjection_writeNoSent]
-  refine roundStateOverGathers_ext ?_ ?_ (stateOverBroadcasts_ext ?_ ?_ ?_ ?_)
-    (stateOverBroadcasts_ext ?_ ?_ ?_ ?_)
+  refine roundStateOverGathers_ext ?_ ?_ (stateOverBroadcasts_ext ?_ ?_ ?_)
+    (stateOverBroadcasts_ext ?_ ?_ ?_)
   · simp only [programs_roundProjectionUpdate, GBCA.ByAFW.programs_setFirstGather,
       GBCA.ByAFW.programs_setPrograms, programs_roundProjection_eq]
     refine congrArg (Function.update (fun i => programProjection ((u i).2.roundVariables r)) j) ?_
@@ -77,11 +74,6 @@ theorem roundProjection_callG (hu : (u j).2 = p) (r : ℕ) (b : Bool) :
       GBCA.ByAFW.firstGather_setFirstGather, Gather.inputBroadcasts_setGatherProgramsAndNetwork,
         inputBroadcasts_firstGatherProjection]
     exact Prod.ext (Function.update_eq_self _ _) rfl
-  · funext q
-    simp only [bindBroadcasts_firstGather_roundProjectionUpdate,
-      GBCA.ByAFW.firstGather_setFirstGather, Gather.bindBroadcasts_setGatherProgramsAndNetwork,
-        bindBroadcasts_firstGatherProjection]
-    exact Prod.ext (Function.update_eq_self _ _) rfl
   · simp
   · simp only [gatherProgramsAndNetwork_secondGather_roundProjectionUpdate,
       GBCA.ByAFW.secondGather_setFirstGather, GBCA.ByAFW.secondGather_setPrograms,
@@ -91,11 +83,6 @@ theorem roundProjection_callG (hu : (u j).2 = p) (r : ℕ) (b : Bool) :
     simp only [inputBroadcasts_secondGather_roundProjectionUpdate,
       GBCA.ByAFW.secondGather_setFirstGather, GBCA.ByAFW.secondGather_setPrograms,
         secondGather_roundProjection, inputBroadcasts_secondGatherProjection]
-    exact Prod.ext (Function.update_eq_self _ _) rfl
-  · funext q
-    simp only [bindBroadcasts_secondGather_roundProjectionUpdate,
-      GBCA.ByAFW.secondGather_setFirstGather, GBCA.ByAFW.secondGather_setPrograms,
-        secondGather_roundProjection, bindBroadcasts_secondGatherProjection]
     exact Prod.ext (Function.update_eq_self _ _) rfl
   · simp
 

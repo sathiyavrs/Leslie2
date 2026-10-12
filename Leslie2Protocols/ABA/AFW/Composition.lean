@@ -77,8 +77,8 @@ def corruptionOverBracha (P : Parameters) :
       GBCA.ByAFW.RoundStateOverBracha P.n
   | Sum.inl (.fail k), s =>
     GBCA.ByAFW.corruptAll P k
-      (fun i => Gather.corruptAll P i (InstanceState.corrupt P i) (InstanceState.corrupt P i))
-      (fun i => Gather.corruptAll P i (InstanceState.corrupt P i) (InstanceState.corrupt P i)) s
+      (fun i => Gather.corruptAll P i (InstanceState.corrupt P i))
+      (fun i => Gather.corruptAll P i (InstanceState.corrupt P i)) s
   | _, s => s
 
 /-- The broadcast corruption act on a round over the gather instances over the
@@ -88,8 +88,8 @@ def corruptionOverBroadcastSpecification (P : Parameters) :
       GBCA.ByAFW.RoundStateOverBroadcastSpecification P.n
   | Sum.inl (.fail k), s =>
     GBCA.ByAFW.corruptAll P k
-      (fun i => Gather.corruptAll P i (BRB.SpecState.corrupt P i) (BRB.SpecState.corrupt P i))
-      (fun i => Gather.corruptAll P i (BRB.SpecState.corrupt P i) (BRB.SpecState.corrupt P i)) s
+      (fun i => Gather.corruptAll P i (BRB.SpecState.corrupt P i))
+      (fun i => Gather.corruptAll P i (BRB.SpecState.corrupt P i)) s
   | _, s => s
 
 /-- The broadcast corruption act on a round over the gather specifications. -/

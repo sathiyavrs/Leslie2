@@ -31,8 +31,8 @@ performs, read through the projection. Each of the fourteen files beside it then
 class of transitions, the projection after the transition as the projection before it with the
 composed round's own effect applied, written through the updaters `GBCA.ByAFW.setPrograms`,
 `GBCA.ByAFW.setBound`, `GBCA.ByAFW.setFirstGather`, `GBCA.ByAFW.setSecondGather`,
-`Gather.setGatherProgramsAndNetwork`, `Gather.setInputBroadcasts`, `Gather.setBindBroadcasts` and
-`Gather.setCore` exactly as the composed transitions write them. Each transition is matched by one
+`Gather.setGatherProgramsAndNetwork`, `Gather.setInputBroadcasts` and `Gather.setCore` exactly as
+the composed transitions write them. Each transition is matched by one
 event of the composed round. `RoundProjectionStep/ProtocolRelationConjuncts.lean` holds the
 conjunct of `AFW.ProtocolRelation` that no projection lemma supplies.
 `ABA/AFW/SimulationOfEachTransition.lean` matches each transition of the implementation from

@@ -30,12 +30,17 @@ round-`r` state is assembled by `roundProjection`. Assembling it undoes the two 
 implementation performs. The local states are transposed back: an instance's local state vector at
 round `r` is read off the variables the `n` processes hold in that round. And the sent sets are
 recovered one tag at a time: an instance's network state carries the messages of its own tag, read
-off the adversary's single tagged sent family by `AFW.messagesOf`.
+off the adversary's single tagged sent family by `AFW.messagesOf`. A round has `2n + 2` network
+states: one for each gather, which carries that gather's `ECHO`, `VOTE` and `BIND` messages, and
+one for each input-broadcast instance of each gather. The untaggings are
+`AFW.firstGatherMessageOf` and `AFW.secondGatherMessageOf` for the two gathers, and
+`firstGatherInputBroadcastMessageOf` and `secondGatherInputBroadcastMessageOf` for the
+input-broadcast instances.
 
 ## What the broadcast instances returned
 
-A gather program of the composed system holds two accounts of what each broadcast instance has
-returned to it, and so does the implementation: the round variables' two gather local states are
+A gather program of the composed system holds what each input-broadcast instance has returned to
+it, and so does the implementation: the round variables' two gather local states are
 over `Gather.ProcessVariables`, which the instance's return writes. The projection is then the
 identity on each local state, and the transposition and the untagging of the sent sets are all it
 performs.
@@ -63,7 +68,7 @@ namespace AFW
 open Implementation hiding NetworkEvent ExtendedLabel
 open Composition GBCA.ByABDY
 
-/-! ### The four broadcast untaggings
+/-! ### The two broadcast untaggings
 
 The two gather untaggings and their injectivity are `AFW.firstGatherMessageOf` and
 `AFW.secondGatherMessageOf` of `ABA/AFW/System.lean`, where the adversary's ghost
@@ -76,21 +81,9 @@ def firstGatherInputBroadcastMessageOf (i : Fin n) : Message n → Option (BRB.M
   | .firstGatherInputBroadcasts i' m => if i' = i then some m else none
   | _ => none
 
-/-- The messages of bind-broadcast instance `i` of the first gather. -/
-def firstGatherBindBroadcastMessageOf (i : Fin n) : Message n → Option (BRB.Message
-  (Gather.AcceptedPairs n Bool))
-  | .firstGatherBindBroadcasts i' m => if i' = i then some m else none
-  | _ => none
-
 /-- The messages of input-broadcast instance `i` of the second gather. -/
 def secondGatherInputBroadcastMessageOf (i : Fin n) : Message n → Option (BRB.Message (Option Bool))
   | .secondGatherInputBroadcasts i' m => if i' = i then some m else none
-  | _ => none
-
-/-- The messages of bind-broadcast instance `i` of the second gather. -/
-def secondGatherBindBroadcastMessageOf (i : Fin n) : Message n → Option (BRB.Message
-  (Gather.AcceptedPairs n (Option Bool)))
-  | .secondGatherBindBroadcasts i' m => if i' = i then some m else none
   | _ => none
 
 theorem firstGatherInputBroadcastMessageOf_inj (i : Fin n) : ∀ a a' (b : BRB.Message Bool),
@@ -99,24 +92,11 @@ theorem firstGatherInputBroadcastMessageOf_inj (i : Fin n) : ∀ a a' (b : BRB.M
   intro a a' b h h'
   cases a <;> cases a' <;> simp_all [firstGatherInputBroadcastMessageOf]
 
-theorem firstGatherBindBroadcastMessageOf_inj (i : Fin n) :
-    ∀ a a' (b : BRB.Message (Gather.AcceptedPairs n Bool)), b ∈ firstGatherBindBroadcastMessageOf i
-    a → b ∈ firstGatherBindBroadcastMessageOf i a' → a = a' := by
-  intro a a' b h h'
-  cases a <;> cases a' <;> simp_all [firstGatherBindBroadcastMessageOf]
-
 theorem secondGatherInputBroadcastMessageOf_inj (i : Fin n) :
     ∀ a a' (b : BRB.Message (Option Bool)), b ∈ secondGatherInputBroadcastMessageOf i a → b ∈
     secondGatherInputBroadcastMessageOf i a' → a = a' := by
   intro a a' b h h'
   cases a <;> cases a' <;> simp_all [secondGatherInputBroadcastMessageOf]
-
-theorem secondGatherBindBroadcastMessageOf_inj (i : Fin n) :
-    ∀ a a' (b : BRB.Message (Gather.AcceptedPairs n (Option Bool))), b ∈
-    secondGatherBindBroadcastMessageOf i a → b ∈ secondGatherBindBroadcastMessageOf i a' → a = a' :=
-    by
-  intro a a' b h h'
-  cases a <;> cases a' <;> simp_all [secondGatherBindBroadcastMessageOf]
 
 variable {X : Type}
 
@@ -134,14 +114,9 @@ noncomputable def firstGatherProjection (P : Parameters) (u : ∀ _ : Fin P.n, A
   ((fun i => ((u i).2.roundVariables r).firstGather,
       ⟨⟨messagesOf firstGatherMessageOf firstGatherMessageOf_inj (w.sent r), w.F⟩,
         (w.ghost r).1⟩),
-    (fun k => (fun i => (((u i).2.roundVariables r).firstGatherInputBroadcasts
-      k),
-        ⟨messagesOf (firstGatherInputBroadcastMessageOf k) (firstGatherInputBroadcastMessageOf_inj
-          k) (w.sent r), w.F⟩),
-      fun q => (fun i => (((u i).2.roundVariables r).firstGatherBindBroadcasts
-        q),
-        ⟨messagesOf (firstGatherBindBroadcastMessageOf q) (firstGatherBindBroadcastMessageOf_inj q)
-          (w.sent r), w.F⟩)))
+    fun k => (fun i => ((u i).2.roundVariables r).firstGatherInputBroadcasts k,
+      ⟨messagesOf (firstGatherInputBroadcastMessageOf k) (firstGatherInputBroadcastMessageOf_inj k)
+        (w.sent r), w.F⟩))
 
 /-- The round-`r` state of the second gather instance, read off the implementation's state,
 its core the second field of the adversary's ghost. -/
@@ -151,14 +126,9 @@ noncomputable def secondGatherProjection (P : Parameters) (u : ∀ _ : Fin P.n, 
   ((fun i => ((u i).2.roundVariables r).secondGather,
       ⟨⟨messagesOf secondGatherMessageOf secondGatherMessageOf_inj (w.sent r), w.F⟩,
         (w.ghost r).2.1⟩),
-    (fun k => (fun i => (((u i).2.roundVariables r).secondGatherInputBroadcasts
-      k),
-        ⟨messagesOf (secondGatherInputBroadcastMessageOf k) (secondGatherInputBroadcastMessageOf_inj
-          k) (w.sent r), w.F⟩),
-      fun q => (fun i => (((u i).2.roundVariables r).secondGatherBindBroadcasts
-        q),
-        ⟨messagesOf (secondGatherBindBroadcastMessageOf q) (secondGatherBindBroadcastMessageOf_inj
-          q) (w.sent r), w.F⟩)))
+    fun k => (fun i => ((u i).2.roundVariables r).secondGatherInputBroadcasts k,
+      ⟨messagesOf (secondGatherInputBroadcastMessageOf k)
+        (secondGatherInputBroadcastMessageOf_inj k) (w.sent r), w.F⟩))
 
 /-- One process's variables in the round, read off its round variables, field by field: the first
 gather's input is the round's input, the candidate and the graded outcome are the two the round
@@ -229,23 +199,11 @@ variable (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n) (w : NetworkState P.n) 
           ⟨messagesOf (firstGatherInputBroadcastMessageOf k) (firstGatherInputBroadcastMessageOf_inj
             k) (w.sent r), w.F⟩) := rfl
 
-@[simp] theorem bindBroadcasts_firstGatherProjection (q : Fin P.n) :
-    Gather.bindBroadcasts (firstGatherProjection P u w r) q
-      = ((fun i => (((u i).2.roundVariables r).firstGatherBindBroadcasts q)),
-          ⟨messagesOf (firstGatherBindBroadcastMessageOf q) (firstGatherBindBroadcastMessageOf_inj
-            q) (w.sent r), w.F⟩) := rfl
-
 @[simp] theorem inputBroadcasts_secondGatherProjection (k : Fin P.n) :
     Gather.inputBroadcasts (secondGatherProjection P u w r) k
       = ((fun i => (((u i).2.roundVariables r).secondGatherInputBroadcasts k)),
           ⟨messagesOf (secondGatherInputBroadcastMessageOf k)
             (secondGatherInputBroadcastMessageOf_inj k) (w.sent r), w.F⟩) := rfl
-
-@[simp] theorem bindBroadcasts_secondGatherProjection (q : Fin P.n) :
-    Gather.bindBroadcasts (secondGatherProjection P u w r) q
-      = ((fun i => (((u i).2.roundVariables r).secondGatherBindBroadcasts q)),
-          ⟨messagesOf (secondGatherBindBroadcastMessageOf q) (secondGatherBindBroadcastMessageOf_inj
-            q) (w.sent r), w.F⟩) := rfl
 
 /-- **The two systems of the first gather's core agree**: the instance's core
 is read off its network state alone, and that network state is the one
@@ -512,25 +470,10 @@ theorem locals_firstGatherInputBroadcasts_if (k : Fin n) :
   rw [Function.update_apply]
   by_cases hi : i = j <;> simp [hi]
 
-theorem locals_firstGatherBindBroadcasts_if (k : Fin n) :
-    (fun i => (if i = j then sr else Y i).firstGatherBindBroadcasts k) = Function.update
-    (fun i => (Y i).firstGatherBindBroadcasts k) j (sr.firstGatherBindBroadcasts k) := by
-  funext i
-  rw [Function.update_apply]
-  by_cases hi : i = j <;> simp [hi]
-
 theorem locals_secondGatherInputBroadcasts_if (k : Fin n) :
     (fun i => (if i = j then sr else Y i).secondGatherInputBroadcasts k)
       = Function.update (fun i => (Y i).secondGatherInputBroadcasts k) j
         (sr.secondGatherInputBroadcasts k) := by
-  funext i
-  rw [Function.update_apply]
-  by_cases hi : i = j <;> simp [hi]
-
-theorem locals_secondGatherBindBroadcasts_if (k : Fin n) :
-    (fun i => (if i = j then sr else Y i).secondGatherBindBroadcasts k)
-      = Function.update (fun i => (Y i).secondGatherBindBroadcasts k) j
-        (sr.secondGatherBindBroadcasts k) := by
   funext i
   rw [Function.update_apply]
   by_cases hi : i = j <;> simp [hi]

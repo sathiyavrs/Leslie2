@@ -38,25 +38,22 @@ pairs. The loop therefore has a label of its own, `LoopLabel.callLoop id x`. The
 is `InstanceLabel n X = Label n X ⊕ LoopLabel n X`.
 
 The instance-internal alphabet is `GatherLabel n X = InstanceLabel n X ⊕ GatherEvent n X`. Its
-six events are the gather multicast and delivery, the call and the return of an input instance,
-and the call and the return of a bind instance. They are hidden before anything outside sees the
-instance, and `gatherEvents` collects the labels hidden there.
+four events are the gather multicast and delivery, and the call and the return of an input
+instance. They are hidden before anything outside sees the instance, and `gatherEvents` collects
+the labels hidden there.
 
-A broadcast instance has its own interface alphabet and joins the composition along a pullback
-that names it -- `inputBroadcastLabelMap k` for the instance broadcasting `k`'s input,
-`bindBroadcastLabelMap q` for the instance broadcasting `q`'s `BIND` payload (D32). A label
-carrying another instance's index has no image, and that instance is unchanged. Corruption and the
-silent label have an image at every instance, so `fail` is a broadcast across the whole
-composition.
+An input instance has its own interface alphabet and joins the composition along the pullback
+`inputBroadcastLabelMap k`, which names the instance broadcasting `k`'s input. A label carrying
+another instance's index has no image, and that instance is unchanged. Corruption and the silent
+label have an image at every instance, so `fail` is a broadcast across the whole composition.
 
-## What the broadcast instances returned
+## What the input instances returned
 
-A gather program reads no neighbouring coordinate. What a broadcast instance has returned to it is
-written on the return event into its own variables: `inputBroadcastReturned k` is the value instance
-`k` returned here, `bindBroadcastReturned q` is the payload bind instance `q` returned here. The
-four transitions that read what has been returned -- `sendEcho`, `sendVote`, `bindCall` and `ret`
--- read the returned values through `ProcessVariables.accepted`, `holdsInputBroadcastReturn`,
-`holdsBindBroadcastReturn` and `approvedBy`.
+A gather program reads no neighbouring coordinate. What an input instance has returned to it is
+written on the return event into its own variables: `inputBroadcastReturned k` is the value
+instance `k` returned here. The four transitions that read what has been returned -- `sendEcho`,
+`sendVote`, `sendBind` and `ret` -- read the returned values through `ProcessVariables.accepted`,
+`approvedBy` and `holdsInputBroadcastReturn`.
 
 ## The core
 
@@ -73,8 +70,6 @@ core and carries it on the label.
 * **D5 (set-based network).** A multicast records the message in the sender's sent set and a
   delivery does not consume it; a corrupted sender's injections enter its sent set through the
   network's own silent transition.
-* **D32 (two broadcast families).** The inputs and the `BIND` payloads are carried by two families
-  of `n` instances each, read along the two pullbacks.
 -/
 
 namespace PLTS
@@ -96,8 +91,8 @@ inductive LoopLabel (n : ℕ) (X : Type) : Type
 call loop beside it. -/
 abbrev InstanceLabel (n : ℕ) (X : Type) : Type := Label n X ⊕ LoopLabel n X
 
-/-- The instance's own events: the gather multicast and delivery, the call and the return of an
-input instance, and the call and return of a bind instance. -/
+/-- The instance's own events: the gather multicast and delivery, and the call and the return of
+an input instance. -/
 inductive GatherEvent (n : ℕ) (X : Type) : Type
   /-- Process `j` hands `m` to the gather network. -/
   | send (j : Fin n) (m : Message n X)
@@ -109,12 +104,8 @@ inductive GatherEvent (n : ℕ) (X : Type) : Type
   | inputBroadcastCall (j : Fin n) (x : X)
   /-- The instance broadcasting `k`'s input returns `v` to `j`. -/
   | inputBroadcastRet (k j : Fin n) (v : X)
-  /-- Process `j` calls the instance broadcasting its `BIND` payload `U`. -/
-  | bindCall (j : Fin n) (U : AcceptedPairs n X)
-  /-- The instance broadcasting `q`'s `BIND` payload returns `U` to `j`. -/
-  | bindRet (q j : Fin n) (U : AcceptedPairs n X)
 
-/-- The instance-internal alphabet: the interface alphabet plus the six
+/-- The instance-internal alphabet: the interface alphabet plus the four
 events. Its silent label is `Sum.inl (Sum.inl tau)`, so every `Sum.inr` label is
 observable and hence hideable. -/
 abbrev GatherLabel (n : ℕ) (X : Type) : Type := InstanceLabel n X ⊕ GatherEvent n X
@@ -143,33 +134,23 @@ def gatherEvents (n : ℕ) (X : Type) : Set (GatherLabel n X) := {l | ∃ e : Ga
 /-! ### The variables -/
 
 /-- The variables of one gather program: the base variables beside what the
-broadcast instances have returned here. -/
+input instances have returned here. -/
 structure ProcessVariables (n : ℕ) (X : Type) extends BaseProcessVariables n X where
   /-- `inputBroadcastReturned k` — the value the instance broadcasting `k`'s input returned
   here. -/
   inputBroadcastReturned : Fin n → Option X
-  /-- `bindBroadcastReturned q` — the payload the instance broadcasting `q`'s `BIND`
-  payload returned here. -/
-  bindBroadcastReturned : Fin n → Option (AcceptedPairs n X)
 
 /-- The initial variables: nothing called, nothing sent, nothing returned
 here. -/
 def ProcessVariables.initial (n : ℕ) (X : Type) : ProcessVariables n X :=
   { BaseProcessVariables.initial n X with
-    inputBroadcastReturned := fun _ => none,
-    bindBroadcastReturned := fun _ => none }
+    inputBroadcastReturned := fun _ => none }
 
 /-- `p` holds the value `v` of the instance broadcasting `k`'s input. -/
 def holdsInputBroadcastReturn {n : ℕ} {X : Type} (p : ProcessVariables n X) (k : Fin n) (v : X) :
   Prop
   :=
   p.inputBroadcastReturned k = some v
-
-/-- `p` holds the payload `U` of the instance broadcasting `q`'s `BIND`
-payload. -/
-def holdsBindBroadcastReturn {n : ℕ} {X : Type} (p : ProcessVariables n X) (q : Fin n)
-    (U : AcceptedPairs n X) : Prop :=
-  p.bindBroadcastReturned q = some U
 
 /-- A payload set is approved by `p` when `p` holds every one of its pairs. -/
 def approvedBy {n : ℕ} {X : Type} (p : ProcessVariables n X) (A : AcceptedPairs n X) : Prop :=
@@ -234,9 +215,9 @@ theorem coreOf_eq_coreOfNetwork {X : Type} (P : Parameters)
     coreOf P w = coreOfNetwork P w.2 :=
   coreOf_networkState_only w _ rfl
 
-/-! ### The pullbacks
+/-! ### The pullback
 
-A broadcast instance has its own interface alphabet `BRB.InstanceLabel`. It joins
+An input instance has its own interface alphabet `BRB.InstanceLabel`. It joins
 the composition along a pullback that names it: a label carrying another
 instance's index has no image and leaves that instance idle. -/
 
@@ -251,23 +232,9 @@ def inputBroadcastLabelMap (n : ℕ) (X : Type) (k : Fin n) : GatherLabel n X �
   | Sum.inr (.inputBroadcastRet k' j v) => if k = k' then some (Sum.inl (.ret j v)) else none
   | _ => none
 
-/-- The pullback along which the instance broadcasting `q`'s `BIND` payload is
-read. -/
-def bindBroadcastLabelMap (n : ℕ) (X : Type) (q : Fin n) : GatherLabel n X → Option
-  (BRB.InstanceLabel n (AcceptedPairs n X))
-  | Sum.inl (Sum.inl .tau) => some (Sum.inl .tau)
-  | Sum.inl (Sum.inl (.fail id)) => some (Sum.inl (.fail id))
-  | Sum.inr (.bindCall j U) => if q = j then some (Sum.inl (.call U)) else none
-  | Sum.inr (.bindRet q' j U) => if q = q' then some (Sum.inl (.ret j U)) else none
-  | _ => none
-
 @[simp] theorem inputBroadcastLabelMap_tau (n : ℕ) (X : Type) (k : Fin n) :
     inputBroadcastLabelMap n X k (Silent.τ : GatherLabel n X) = some (Silent.τ : BRB.InstanceLabel n
       X) := rfl
-
-@[simp] theorem bindBroadcastLabelMap_tau (n : ℕ) (X : Type) (q : Fin n) :
-    bindBroadcastLabelMap n X q (Silent.τ : GatherLabel n X) = some (Silent.τ : BRB.InstanceLabel n
-      (AcceptedPairs n X)) := rfl
 
 /-- Only the silent label of the composition reaches the silent label of an
 input instance. -/
@@ -279,17 +246,6 @@ theorem inputBroadcastLabelMap_eq_tau {n : ℕ} {X : Type} {k : Fin n} {l : Gath
   · cases e; simp_all [inputBroadcastLabelMap]
   · cases e <;> simp_all [inputBroadcastLabelMap]
 
-/-- Only the silent label of the composition reaches the silent label of a bind
-instance. -/
-theorem bindBroadcastLabelMap_eq_tau {n : ℕ} {X : Type} {q : Fin n} {l : GatherLabel n X}
-    (h : bindBroadcastLabelMap n X q l = some (Silent.τ : BRB.InstanceLabel n (AcceptedPairs n X)))
-      : l =
-      Silent.τ := by
-  rcases l with (l | e) | e
-  · cases l <;> simp_all [bindBroadcastLabelMap]
-  · cases e; simp_all [bindBroadcastLabelMap]
-  · cases e <;> simp_all [bindBroadcastLabelMap]
-
 section Transitions
 
 variable [DecidableEq X]
@@ -298,7 +254,7 @@ variable [DecidableEq X]
 
 Process `j`'s program. Every guard reads its own variables and its own delivered sets. An event
 transition carries the program's half of a synchronised step: on a multicast the write to its
-variables, on a delivery the write of the delivered set, on a broadcast instance's return the
+variables, on a delivery the write of the delivered set, on an input instance's return the
 recording of the returned value. -/
 
 /-- The step relation of the gather program of process `j`. All transitions are
@@ -339,6 +295,18 @@ inductive ProgramStep (P : Parameters) (j : Fin P.n) :
       (hsend : p.processVariables.sentVote = none) :
       ProgramStep P j p (Sum.inr (.send j (.vote U)))
         (PMF.pure (p.setProcessVariables { p.processVariables with sentVote := some U }))
+  /-- `BIND U`: `j` is called (D8), `n − f` senders' approved `VOTE` payloads, each
+  contained in `U`, are delivered here, `j` has multicast its own `VOTE`, and `j` has not
+  multicast a `BIND`. The main thread of AFW25's Algorithm 5 sends `VOTE` before `BIND`, and
+  sends `BIND` to all processes once, at line 17. -/
+  | sendBind (p) (U : AcceptedPairs P.n X) (hin : p.processVariables.input ≠ none)
+      (hvot : p.processVariables.sentVote ≠ none)
+      (happ : approvedBy p.processVariables U)
+      (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
+        ∀ q ∈ Q, ∃ W, Message.vote W ∈ p.received q ∧ approvedBy p.processVariables W ∧ W ⊆ U)
+      (hsend : p.processVariables.sentBind = none) :
+      ProgramStep P j p (Sum.inr (.send j (.bind U)))
+        (PMF.pure (p.setProcessVariables { p.processVariables with sentBind := some U }))
   /-- A multicast by another process is not `j`'s business. -/
   | sendIdle (p) (i : Fin P.n) (m : Message P.n X) (hi : i ≠ j) :
       ProgramStep P j p (Sum.inr (.send i m)) (PMF.pure p)
@@ -365,42 +333,16 @@ inductive ProgramStep (P : Parameters) (j : Fin P.n) :
   /-- Another process's input-broadcast call is not `j`'s business. -/
   | inputBroadcastCallIdle (p) (i : Fin P.n) (x : X) (hi : i ≠ j) :
       ProgramStep P j p (Sum.inr (.inputBroadcastCall i x)) (PMF.pure p)
-  /-- `BIND U`: `j` is called (D8), `n − f` senders' approved `VOTE` payloads, each
-  contained in `U`, are delivered here, `j` has multicast its own `VOTE`, and `j` has not
-  called its own bind broadcast. The main thread of AFW25's Algorithm 5 sends
-  `VOTE` before `BIND`, and sends `BIND` once, at line 17. The payload handed
-  to the broadcast is written to its variables; the bind instance's own guard decides
-  whether the call lands. -/
-  | bindCall (p) (U : AcceptedPairs P.n X) (hin : p.processVariables.input ≠ none)
-      (hvot : p.processVariables.sentVote ≠ none)
-      (hsnd : p.processVariables.sentBind = none)
-      (happ : approvedBy p.processVariables U)
-      (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
-        ∀ q ∈ Q, ∃ W, Message.vote W ∈ p.received q ∧ approvedBy p.processVariables W ∧ W ⊆ U) :
-      ProgramStep P j p (Sum.inr (.bindCall j U))
-        (PMF.pure (p.setProcessVariables { p.processVariables with sentBind := some U }))
-  /-- Another process's bind call is not `j`'s business. -/
-  | bindCallIdle (p) (i : Fin P.n) (U : AcceptedPairs P.n X) (hi : i ≠ j) :
-      ProgramStep P j p (Sum.inr (.bindCall i U)) (PMF.pure p)
-  /-- A bind instance returns here: record the returned value. -/
-  | bindRetReceive (p) (q : Fin P.n) (U : AcceptedPairs P.n X) :
-      ProgramStep P j p (Sum.inr (.bindRet q j U))
-        (PMF.pure (p.setProcessVariables { p.processVariables with
-          bindBroadcastReturned :=
-            Function.update p.processVariables.bindBroadcastReturned q (some U) }))
-  /-- A bind instance's return to another process is not `j`'s business. -/
-  | bindRetIdle (p) (q i : Fin P.n) (U : AcceptedPairs P.n X) (hi : i ≠ j) :
-      ProgramStep P j p (Sum.inr (.bindRet q i U)) (PMF.pure p)
-  /-- Return: `j` is called (D8), the output's entries are held here, `n − f` bind
-  payloads held here are sub-maps of it, and `j` has called its own bind broadcast. The `BIND`
-  broadcast of AFW25's Algorithm 5, line 17, precedes the wait of line 18. The
+  /-- Return: `j` is called (D8), the output's entries are held here, `n − f` senders'
+  `BIND` payloads delivered here are sub-maps of it, and `j` has multicast its own `BIND`. The
+  `BIND` multicast of AFW25's Algorithm 5, line 17, precedes the wait of line 18. The
   core on the label is the network's. -/
   | ret (p) (g : Fin P.n → Option X) (C : AcceptedPairs P.n X) (hin : p.processVariables.input ≠
       none)
       (hbind : p.processVariables.sentBind ≠ none)
       (hsub : ∀ k x, g k = some x → holdsInputBroadcastReturn p.processVariables k x)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
-        ∀ q ∈ Q, ∃ U, holdsBindBroadcastReturn p.processVariables q U ∧ AcceptedPairs.subMap U g)
+        ∀ q ∈ Q, ∃ U, Message.bind U ∈ p.received q ∧ AcceptedPairs.subMap U g)
       (hr : p.processVariables.returned = false) :
       ProgramStep P j p (Sum.inl (Sum.inl (.ret j g C)))
         (PMF.pure (p.setProcessVariables { p.processVariables with returned := true }))
@@ -448,12 +390,6 @@ inductive NetworkStep (P : Parameters) :
   /-- An input-broadcast call sends nothing. -/
   | inputBroadcastCallIdle (w) (j : Fin P.n) (x : X) :
       NetworkStep P w (Sum.inr (.inputBroadcastCall j x)) (PMF.pure w)
-  /-- A bind call sends nothing. -/
-  | bindCallIdle (w) (j : Fin P.n) (U : AcceptedPairs P.n X) :
-      NetworkStep P w (Sum.inr (.bindCall j U)) (PMF.pure w)
-  /-- A bind instance's return sends nothing. -/
-  | bindRetIdle (w) (q j : Fin P.n) (U : AcceptedPairs P.n X) :
-      NetworkStep P w (Sum.inr (.bindRet q j U)) (PMF.pure w)
   /-- Return: the label carries the core, which this transition writes if it is
   unwritten. -/
   | ret (w) (id : Fin P.n) (g : Fin P.n → Option X) :

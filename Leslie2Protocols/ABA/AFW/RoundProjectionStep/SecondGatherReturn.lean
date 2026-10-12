@@ -89,7 +89,7 @@ theorem roundProjection_secondGatherReturn (hu : (u j).2 = p) (r : ℕ)
   · simp only [afterSecondGatherReturn, GBCA.ByAFW.firstGather_setSecondGather,
       GBCA.ByAFW.firstGather_setPrograms, firstGather_roundProjection]
     simp only [firstGather_mk, ghostStep]
-    refine stateOverBroadcasts_ext ?_ ?_ ?_ ?_
+    refine stateOverBroadcasts_ext ?_ ?_ ?_
     · simp only [Gather.gatherProgramsAndNetwork_setCore,
         gatherProgramsAndNetwork_firstGather_roundProjectionUpdate]
       exact Prod.ext (Function.update_eq_self _ _) rfl
@@ -97,15 +97,11 @@ theorem roundProjection_secondGatherReturn (hu : (u j).2 = p) (r : ℕ)
       simp only [Gather.inputBroadcasts_setCore, inputBroadcasts_firstGather_roundProjectionUpdate,
         inputBroadcasts_firstGatherProjection]
       exact Prod.ext (Function.update_eq_self _ _) rfl
-    · funext q
-      simp only [Gather.bindBroadcasts_setCore, bindBroadcasts_firstGather_roundProjectionUpdate,
-        bindBroadcasts_firstGatherProjection]
-      exact Prod.ext (Function.update_eq_self _ _) rfl
     · simp only [Gather.core_setCore, core_firstGatherProjection]
   · simp only [afterSecondGatherReturn, GBCA.ByAFW.secondGather_setSecondGather,
       secondGather_roundProjection]
     simp only [secondGather_mk, ghostStep]
-    refine stateOverBroadcasts_ext ?_ ?_ ?_ ?_
+    refine stateOverBroadcasts_ext ?_ ?_ ?_
     · simp only [Gather.gatherProgramsAndNetwork_setCore,
         Gather.gatherProgramsAndNetwork_setGatherProgramsAndNetwork,
         gatherProgramsAndNetwork_secondGather_roundProjectionUpdate]
@@ -117,10 +113,6 @@ theorem roundProjection_secondGatherReturn (hu : (u j).2 = p) (r : ℕ)
     · funext k
       simp only [Gather.inputBroadcasts_setCore, Gather.inputBroadcasts_setGatherProgramsAndNetwork,
         inputBroadcasts_secondGather_roundProjectionUpdate, inputBroadcasts_secondGatherProjection]
-      exact Prod.ext (Function.update_eq_self _ _) rfl
-    · funext q
-      simp only [Gather.bindBroadcasts_setCore, Gather.bindBroadcasts_setGatherProgramsAndNetwork,
-        bindBroadcasts_secondGather_roundProjectionUpdate, bindBroadcasts_secondGatherProjection]
       exact Prod.ext (Function.update_eq_self _ _) rfl
     · simp only [Gather.core_setCore, secondGatherReturnCore, secondGather_roundProjection,
         core_secondGatherProjection, coreOfNetwork_secondGatherProjection]

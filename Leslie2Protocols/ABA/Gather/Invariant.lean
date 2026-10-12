@@ -11,34 +11,32 @@ import Leslie2Protocols.ABA.Gather.AlgorithmOverBroadcastSpecification
 
 `Gather.Invariant` is what the gather instance over the broadcast specifications
 (`Gather.instanceOverBroadcastSpecification`, `ABA/Gather/Composition.lean`) maintains, stated over
-the composition's state through the projections `gatherProgramsAndNetwork`, `inputBroadcasts`,
-`bindBroadcasts` and
+the composition's state through the projections `gatherProgramsAndNetwork`, `inputBroadcasts` and
 `core`. `Invariant.initial` holds it at the initial state, and `Invariant.step` carries it along
 every transition of `Gather.AlgorithmOverBroadcastSpecification`.
 
 The invariant has two parts. `Conformance` collects what the composition records: the corruption
-budget, the corrupted set of each of the `2n` broadcast instances, delivery soundness, the returned
+budget, the corrupted set of each of the `n` input instances, delivery soundness, the returned
 values a program holds, where a committed entry comes from, and the message pattern of a process
-outside `F` -- a `*_confirmed` clause ties its sent message to its write-once field, a `*_backed`
-clause ties that field to what justified it -- the `n − f` received messages of a vote or a bind
-payload, the caller's own variables for the payload of an input instance -- and `echo_card`
-gives a correct echo payload its `n − f` entries. `echo_approved` is the second part: the payload
-set in a process's `ECHO` field consists of committed input entries (`Gather.approved`). It carries
-no correctness premise, because only `AlgorithmOverBroadcastSpecification.echo` writes the field and
+outside `F`. A `*_confirmed` clause ties a sent `ECHO`, `VOTE` or `BIND` message to its write-once
+field. A `*_backed` clause ties that field to what justified it: the `n − f` received `ECHO`
+payloads contained in a `VOTE` payload, the `n − f` received `VOTE` payloads contained in a `BIND`
+payload, and the caller's own variables for the payload of an input instance. `echo_card` gives a
+correct echo payload its `n − f` entries. `echo_approved` is the second part: the payload set in a
+process's `ECHO` field consists of committed input entries (`Gather.approved`). It carries no
+correctness premise, because only `AlgorithmOverBroadcastSpecification.echo` writes the field and
 a corrupted sender's accepted pairs are entries of its returned value too.
 
 Committed entries are written once, so `approved` is monotone along every transition
 (`approved_mono`), which is what makes `echo_approved` inductive. The counting argument of
-`ABA/Gather/CommonCoreCounting.lean` runs on the invariant at the `ECHO` and `BIND` levels.
+`ABA/Gather/CommonCoreCounting.lean` runs on the invariant at the `ECHO`, `VOTE` and `BIND` levels.
 
-## What the broadcast instances returned
+## What the input instances returned
 
-A gather program reads what a broadcast instance returned to it out of its own variables. The
-clauses
-`inputBroadcastReturned_val` and `bindBroadcastReturned_val` carry a returned value back to the
-commitment that wrote it: they are established at the `inputBroadcastRet` and `bindRet`
-transitions, whose guards are the broadcast specification's `val = some v`, and they survive
-because a committed value is written once.
+A gather program reads what an input instance returned to it out of its own variables. The clause
+`inputBroadcastReturned_val` carries a returned value back to the commitment that wrote it: it is
+established at the `inputBroadcastRet` transition, whose guard is the broadcast specification's
+`val = some v`, and it survives because a committed value is written once.
 
 ## The calls
 
@@ -65,8 +63,6 @@ structure Conformance (P : Parameters) (s : StateOverBroadcastSpecification P.n 
   F_card : (gatherProgramsAndNetwork s).F.card ≤ P.f
   /-- The input instances' corrupted sets are equal to the gather network state's. -/
   F_inputBroadcast_eq : ∀ k, (inputBroadcasts s k).F = (gatherProgramsAndNetwork s).F
-  /-- The bind instances' corrupted sets are equal to the gather network state's. -/
-  F_bind_eq : ∀ k, (bindBroadcasts s k).F = (gatherProgramsAndNetwork s).F
   /-- Delivered messages were multicast. -/
   received_subset_sent : ∀ i k, (gatherProgramsAndNetwork s).received i k ⊆
     (gatherProgramsAndNetwork s).sent k
@@ -74,23 +70,11 @@ structure Conformance (P : Parameters) (s : StateOverBroadcastSpecification P.n 
   that returned it. -/
   inputBroadcastReturned_val : ∀ j k v,
     ((gatherProgramsAndNetwork s).processVariables j).inputBroadcastReturned k = some v →
-      (inputBroadcasts s
-      k).val = some
-      v
-  /-- A payload in what a program's bind instance returned is the committed payload of the instance
-  that returned it. -/
-  bindBroadcastReturned_val : ∀ j q U, ((gatherProgramsAndNetwork s).processVariables
-    j).bindBroadcastReturned q =
-    some U →
-    (bindBroadcasts s q).val = some U
+      (inputBroadcasts s k).val = some v
   /-- A committed input entry of a correct process is the payload its input
   instance recorded. -/
   inputBroadcastVal_of_instanceInput : ∀ k v, (inputBroadcasts s k).val = some v →
     k ∈ (gatherProgramsAndNetwork s).F ∨ (inputBroadcasts s k).input = some v
-  /-- A committed bind payload of a correct process is the payload its bind
-  instance recorded. -/
-  bindBroadcastVal_of_instanceInput : ∀ k U, (bindBroadcasts s k).val = some U →
-    k ∈ (gatherProgramsAndNetwork s).F ∨ (bindBroadcasts s k).input = some U
   /-- A correct sender's sent `ECHO` matches its write-once field. -/
   echo_confirmed : ∀ j ∉ (gatherProgramsAndNetwork s).F, ∀ A, Message.echo A ∈
     (gatherProgramsAndNetwork s).sent j →
@@ -109,9 +93,14 @@ structure Conformance (P : Parameters) (s : StateOverBroadcastSpecification P.n 
     s).processVariables j).sentVote = some W →
     ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
       ∀ q ∈ Q, ∃ A, Message.echo A ∈ (gatherProgramsAndNetwork s).received j q ∧ A ⊆ W
-  /-- A bind payload contributed by a correct process is backed by `n − f` senders' vote
-  payloads, each contained in it. -/
-  bind_backed : ∀ j ∉ (gatherProgramsAndNetwork s).F, ∀ U, (bindBroadcasts s j).input = some U →
+  /-- A correct sender's sent `BIND` matches its write-once field. -/
+  bind_confirmed : ∀ j ∉ (gatherProgramsAndNetwork s).F, ∀ U, Message.bind U ∈
+    (gatherProgramsAndNetwork s).sent j →
+    ((gatherProgramsAndNetwork s).processVariables j).sentBind = some U
+  /-- A correct bind payload is backed by `n − f` senders' vote payloads, each contained
+  in it. -/
+  bind_backed : ∀ j ∉ (gatherProgramsAndNetwork s).F, ∀ U, ((gatherProgramsAndNetwork
+    s).processVariables j).sentBind = some U →
     ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
       ∀ q ∈ Q, ∃ W, Message.vote W ∈ (gatherProgramsAndNetwork s).received j q ∧ W ⊆ U
   /-- The payload an input instance was called with is the payload its own process's
@@ -122,87 +111,10 @@ structure Conformance (P : Parameters) (s : StateOverBroadcastSpecification P.n 
 
 /-- The conformance clauses hold initially. -/
 theorem Conformance.initial : Conformance P ((instanceOverBroadcastSpecification P X).init) := by
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
-    simp [gatherProgramsAndNetwork, inputBroadcasts, bindBroadcasts, ProcessVariables.initial,
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
+    simp [gatherProgramsAndNetwork, inputBroadcasts, ProcessVariables.initial,
       BaseProcessVariables.initial, BRB.SpecState.initial, NetworkState.initial,
         InstanceState.processVariables, InstanceState.sent, InstanceState.received, InstanceState.F]
-
-omit [DecidableEq X] in
-/-- **The conformance clauses are blind to the `BIND` field**: no clause reads
-it, so a write to it at one program carries them over. -/
-theorem Conformance.setSentBind {s : StateOverBroadcastSpecification P.n X} (hConf : Conformance P
-  s) (j
-  : Fin P.n)
-    (U : AcceptedPairs P.n X) :
-    Conformance P (setGatherProgramsAndNetwork s ((gatherProgramsAndNetwork s).setProcessVariables j
-      { (gatherProgramsAndNetwork
-      s).processVariables j with
-      sentBind := some U })) := by
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  all_goals dsimp only [gatherProgramsAndNetwork_setGatherProgramsAndNetwork,
-    inputBroadcasts_setGatherProgramsAndNetwork,
-    bindBroadcasts_setGatherProgramsAndNetwork, InstanceState.setProcessVariables_F,
-      InstanceState.setProcessVariables_sent]
-  · exact hConf.F_card
-  · exact hConf.F_inputBroadcast_eq
-  · exact hConf.F_bind_eq
-  · simp only [InstanceState.setProcessVariables_received]
-    exact hConf.received_subset_sent
-  · intro j' k v hv
-    by_cases hk : j' = j
-    · subst hk
-      rw [InstanceState.setProcessVariables_processVariables_self] at hv
-      exact hConf.inputBroadcastReturned_val j' k v hv
-    · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk] at hv
-      exact hConf.inputBroadcastReturned_val j' k v hv
-  · intro j' q U' hU'
-    by_cases hk : j' = j
-    · subst hk
-      rw [InstanceState.setProcessVariables_processVariables_self] at hU'
-      exact hConf.bindBroadcastReturned_val j' q U' hU'
-    · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk] at hU'
-      exact hConf.bindBroadcastReturned_val j' q U' hU'
-  · exact hConf.inputBroadcastVal_of_instanceInput
-  · exact hConf.bindBroadcastVal_of_instanceInput
-  · intro j' hj A hA
-    by_cases hk : j' = j
-    · subst hk
-      rw [InstanceState.setProcessVariables_processVariables_self]
-      exact hConf.echo_confirmed j' hj A hA
-    · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk]
-      exact hConf.echo_confirmed j' hj A hA
-  · intro j' hj A hA
-    by_cases hk : j' = j
-    · subst hk
-      rw [InstanceState.setProcessVariables_processVariables_self] at hA
-      exact hConf.echo_card j' hj A hA
-    · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk] at hA
-      exact hConf.echo_card j' hj A hA
-  · intro j' hj W hW
-    by_cases hk : j' = j
-    · subst hk
-      rw [InstanceState.setProcessVariables_processVariables_self]
-      exact hConf.vote_confirmed j' hj W hW
-    · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk]
-      exact hConf.vote_confirmed j' hj W hW
-  · simp only [InstanceState.setProcessVariables_received]
-    intro j' hj W hW
-    by_cases hk : j' = j
-    · subst hk
-      rw [InstanceState.setProcessVariables_processVariables_self] at hW
-      exact hConf.vote_backed j' hj W hW
-    · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk] at hW
-      exact hConf.vote_backed j' hj W hW
-  · simp only [InstanceState.setProcessVariables_received]
-    exact hConf.bind_backed
-  · intro k hk y hy
-    have h0 := hConf.inputBroadcastCall_backed k hk y hy
-    by_cases hkj : k = j
-    · subst hkj
-      rw [InstanceState.setProcessVariables_processVariables_self]
-      exact h0
-    · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hkj]
-      exact h0
 
 /-- The conformance clauses are preserved by every step. -/
 theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label P.n X}
@@ -213,13 +125,11 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
   | call id x h =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     all_goals dsimp only [gatherProgramsAndNetwork_setGatherProgramsAndNetwork,
-      inputBroadcasts_setGatherProgramsAndNetwork,
-      bindBroadcasts_setGatherProgramsAndNetwork]
+      inputBroadcasts_setGatherProgramsAndNetwork]
     · exact hInv.F_card
     · exact hInv.F_inputBroadcast_eq
-    · exact hInv.F_bind_eq
     · intro i k m hm
       rw [InstanceState.setProcessVariables_received] at hm
       rw [InstanceState.setProcessVariables_sent]
@@ -231,15 +141,7 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
         exact hInv.inputBroadcastReturned_val j k v hv
       · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hj] at hv
         exact hInv.inputBroadcastReturned_val j k v hv
-    · intro j q U hU
-      by_cases hj : j = id
-      · subst hj
-        rw [InstanceState.setProcessVariables_processVariables_self] at hU
-        exact hInv.bindBroadcastReturned_val j q U hU
-      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hj] at hU
-        exact hInv.bindBroadcastReturned_val j q U hU
     · exact hInv.inputBroadcastVal_of_instanceInput
-    · exact hInv.bindBroadcastVal_of_instanceInput
     · intro j hj A hA
       rw [InstanceState.setProcessVariables_sent] at hA
       have hpre := hInv.echo_confirmed j hj A hA
@@ -274,8 +176,22 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
       · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk] at hW
         exact hInv.vote_backed j hj W hW
     · intro j hj U hU
+      rw [InstanceState.setProcessVariables_sent] at hU
+      have hpre := hInv.bind_confirmed j hj U hU
+      by_cases hk : j = id
+      · subst hk
+        rw [InstanceState.setProcessVariables_processVariables_self]
+        exact hpre
+      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk]
+        exact hpre
+    · intro j hj U hU
       rw [InstanceState.setProcessVariables_received]
-      exact hInv.bind_backed j hj U hU
+      by_cases hk : j = id
+      · subst hk
+        rw [InstanceState.setProcessVariables_processVariables_self] at hU
+        exact hInv.bind_backed j hj U hU
+      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk] at hU
+        exact hInv.bind_backed j hj U hU
     · intro k hk y hy
       have h0 := hInv.inputBroadcastCall_backed k hk y hy
       by_cases hkid : k = id
@@ -291,10 +207,9 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
   | inputBroadcastCall j x hin hb =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    refine ⟨hInv.F_card, ?_, hInv.F_bind_eq, hInv.received_subset_sent, ?_,
-      hInv.bindBroadcastReturned_val, ?_, hInv.bindBroadcastVal_of_instanceInput,
-        hInv.echo_confirmed,
-        hInv.echo_card, hInv.vote_confirmed, hInv.vote_backed, hInv.bind_backed, ?_⟩
+    refine ⟨hInv.F_card, ?_, hInv.received_subset_sent, ?_, ?_, hInv.echo_confirmed,
+      hInv.echo_card, hInv.vote_confirmed, hInv.vote_backed, hInv.bind_confirmed,
+      hInv.bind_backed, ?_⟩
     all_goals dsimp only [gatherProgramsAndNetwork_setInputBroadcasts,
       inputBroadcasts_setInputBroadcasts]
     · intro k
@@ -337,11 +252,9 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
   | commitInputEntry k v hv hm =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    refine ⟨hInv.F_card, ?_, hInv.F_bind_eq, hInv.received_subset_sent, ?_,
-      hInv.bindBroadcastReturned_val, ?_, hInv.bindBroadcastVal_of_instanceInput,
-        hInv.echo_confirmed,
-        hInv.echo_card, hInv.vote_confirmed,
-      hInv.vote_backed, hInv.bind_backed, ?_⟩
+    refine ⟨hInv.F_card, ?_, hInv.received_subset_sent, ?_, ?_, hInv.echo_confirmed,
+      hInv.echo_card, hInv.vote_confirmed, hInv.vote_backed, hInv.bind_confirmed,
+      hInv.bind_backed, ?_⟩
     all_goals dsimp only [gatherProgramsAndNetwork_setInputBroadcasts,
       inputBroadcasts_setInputBroadcasts]
     · intro k'
@@ -378,59 +291,14 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
         exact hInv.inputBroadcastCall_backed k' hk' y hy
       · rw [Function.update_of_ne hkk] at hy
         exact hInv.inputBroadcastCall_backed k' hk' y hy
-  | commitBindEntry q U hv hm =>
-    rw [PMF.mem_support_pure_iff] at hs'
-    subst hs'
-    refine ⟨hInv.F_card, hInv.F_inputBroadcast_eq, ?_, hInv.received_subset_sent,
-      hInv.inputBroadcastReturned_val, ?_, hInv.inputBroadcastVal_of_instanceInput, ?_,
-        hInv.echo_confirmed, hInv.echo_card, hInv.vote_confirmed,
-      hInv.vote_backed, ?_, hInv.inputBroadcastCall_backed⟩
-    all_goals dsimp only [gatherProgramsAndNetwork_setBindBroadcasts,
-      bindBroadcasts_setBindBroadcasts]
-    · intro q'
-      by_cases hq : q' = q
-      · subst hq
-        rw [Function.update_self]
-        exact hInv.F_bind_eq q'
-      · rw [Function.update_of_ne hq]
-        exact hInv.F_bind_eq q'
-    · intro j q' U' hU'
-      by_cases hq : q' = q
-      · subst hq
-        have hold := hInv.bindBroadcastReturned_val j q' U' hU'
-        rw [hv] at hold
-        exact absurd hold (by simp)
-      · rw [Function.update_of_ne hq]
-        exact hInv.bindBroadcastReturned_val j q' U' hU'
-    · intro q' U' hU'
-      by_cases hq : q' = q
-      · subst hq
-        rw [Function.update_self] at hU' ⊢
-        have hUU : some U = some U' := hU'
-        obtain rfl : U = U' := by
-          injection hUU
-        rcases hm with hF | hin
-        · exact Or.inl (hInv.F_bind_eq q' ▸ hF)
-        · exact Or.inr hin
-      · rw [Function.update_of_ne hq] at hU' ⊢
-        exact hInv.bindBroadcastVal_of_instanceInput q' U' hU'
-    · intro j hj U' hU'
-      by_cases hq : j = q
-      · subst hq
-        rw [Function.update_self] at hU'
-        exact hInv.bind_backed j hj U' hU'
-      · rw [Function.update_of_ne hq] at hU'
-        exact hInv.bind_backed j hj U' hU'
   | deliver i j m h =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     all_goals dsimp only [gatherProgramsAndNetwork_setGatherProgramsAndNetwork,
-      inputBroadcasts_setGatherProgramsAndNetwork,
-      bindBroadcasts_setGatherProgramsAndNetwork]
+      inputBroadcasts_setGatherProgramsAndNetwork]
     · exact hInv.F_card
     · exact hInv.F_inputBroadcast_eq
-    · exact hInv.F_bind_eq
     · intro i' k m' hm'
       rw [InstanceState.mem_receiveMessage_received] at hm'
       rw [InstanceState.receiveMessage_sent]
@@ -440,11 +308,7 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
     · intro j' k v hv
       rw [InstanceState.receiveMessage_processVariables] at hv
       exact hInv.inputBroadcastReturned_val j' k v hv
-    · intro j' q U hU
-      rw [InstanceState.receiveMessage_processVariables] at hU
-      exact hInv.bindBroadcastReturned_val j' q U hU
     · exact hInv.inputBroadcastVal_of_instanceInput
-    · exact hInv.bindBroadcastVal_of_instanceInput
     · intro j' hj A hA
       rw [InstanceState.receiveMessage_sent] at hA
       rw [InstanceState.receiveMessage_processVariables]
@@ -463,6 +327,11 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
         obtain ⟨A, hA, hAW⟩ := hQ q hq
         exact ⟨A, InstanceState.mem_receiveMessage_received.mpr (Or.inr hA), hAW⟩⟩
     · intro j' hj U hU
+      rw [InstanceState.receiveMessage_sent] at hU
+      rw [InstanceState.receiveMessage_processVariables]
+      exact hInv.bind_confirmed j' hj U hU
+    · intro j' hj U hU
+      rw [InstanceState.receiveMessage_processVariables] at hU
       obtain ⟨Q, hQc, hQ⟩ := hInv.bind_backed j' hj U hU
       exact ⟨Q, hQc, fun q hq => by
         obtain ⟨W, hW, hWU⟩ := hQ q hq
@@ -473,13 +342,11 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
   | echo j hin hcard hsend =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     all_goals dsimp only [gatherProgramsAndNetwork_setGatherProgramsAndNetwork,
-      inputBroadcasts_setGatherProgramsAndNetwork,
-      bindBroadcasts_setGatherProgramsAndNetwork]
+      inputBroadcasts_setGatherProgramsAndNetwork]
     · exact hInv.F_card
     · exact hInv.F_inputBroadcast_eq
-    · exact hInv.F_bind_eq
     · intro i k m hm
       simp only [InstanceState.multicast_received, InstanceState.setProcessVariables_received] at hm
       rw [InstanceState.mem_multicast_sent, InstanceState.setProcessVariables_sent]
@@ -492,16 +359,7 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
         exact hInv.inputBroadcastReturned_val j' k v hv
       · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk] at hv
         exact hInv.inputBroadcastReturned_val j' k v hv
-    · intro j' q U hU
-      rw [InstanceState.multicast_processVariables] at hU
-      by_cases hk : j' = j
-      · subst hk
-        rw [InstanceState.setProcessVariables_processVariables_self] at hU
-        exact hInv.bindBroadcastReturned_val j' q U hU
-      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk] at hU
-        exact hInv.bindBroadcastReturned_val j' q U hU
     · exact hInv.inputBroadcastVal_of_instanceInput
-    · exact hInv.bindBroadcastVal_of_instanceInput
     · intro j' hj A' hA'
       rw [InstanceState.mem_multicast_sent, InstanceState.setProcessVariables_sent] at hA'
       rcases hA' with ⟨rfl, hm'⟩ | hold
@@ -551,9 +409,29 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
       · rw [InstanceState.multicast_processVariables,
           InstanceState.setProcessVariables_processVariables_ne _ _ _ hk] at hW
         exact hInv.vote_backed j' hj W hW
-    · intro j' hj U hU
+    · intro j' hj U' hU'
+      rw [InstanceState.mem_multicast_sent, InstanceState.setProcessVariables_sent] at hU'
+      rcases hU' with ⟨-, hm'⟩ | hold
+      · exact absurd hm' (by simp)
+      · have hpre := hInv.bind_confirmed j' hj U' hold
+        by_cases hk : j' = j
+        · subst hk
+          rw [InstanceState.multicast_processVariables,
+            InstanceState.setProcessVariables_processVariables_self]
+          exact hpre
+        · rw [InstanceState.multicast_processVariables,
+            InstanceState.setProcessVariables_processVariables_ne _ _ _ hk]
+          exact hpre
+    · intro j' hj U' hU'
       simp only [InstanceState.multicast_received, InstanceState.setProcessVariables_received]
-      exact hInv.bind_backed j' hj U hU
+      by_cases hk : j' = j
+      · subst hk
+        rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_self] at hU'
+        exact hInv.bind_backed j' hj U' hU'
+      · rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_ne _ _ _ hk] at hU'
+        exact hInv.bind_backed j' hj U' hU'
     · intro k hk y hy
       rw [InstanceState.multicast_processVariables]
       have h0 := hInv.inputBroadcastCall_backed k hk y hy
@@ -566,13 +444,11 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
   | vote j U hin hech happ hQ hsend =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     all_goals dsimp only [gatherProgramsAndNetwork_setGatherProgramsAndNetwork,
-      inputBroadcasts_setGatherProgramsAndNetwork,
-      bindBroadcasts_setGatherProgramsAndNetwork]
+      inputBroadcasts_setGatherProgramsAndNetwork]
     · exact hInv.F_card
     · exact hInv.F_inputBroadcast_eq
-    · exact hInv.F_bind_eq
     · intro i k m hm
       simp only [InstanceState.multicast_received, InstanceState.setProcessVariables_received] at hm
       rw [InstanceState.mem_multicast_sent, InstanceState.setProcessVariables_sent]
@@ -585,16 +461,7 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
         exact hInv.inputBroadcastReturned_val j' k v hv
       · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk] at hv
         exact hInv.inputBroadcastReturned_val j' k v hv
-    · intro j' q U' hU'
-      rw [InstanceState.multicast_processVariables] at hU'
-      by_cases hk : j' = j
-      · subst hk
-        rw [InstanceState.setProcessVariables_processVariables_self] at hU'
-        exact hInv.bindBroadcastReturned_val j' q U' hU'
-      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk] at hU'
-        exact hInv.bindBroadcastReturned_val j' q U' hU'
     · exact hInv.inputBroadcastVal_of_instanceInput
-    · exact hInv.bindBroadcastVal_of_instanceInput
     · intro j' hj A' hA'
       rw [InstanceState.mem_multicast_sent, InstanceState.setProcessVariables_sent] at hA'
       rcases hA' with ⟨-, hm'⟩ | hold
@@ -647,8 +514,28 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
           InstanceState.setProcessVariables_processVariables_ne _ _ _ hk] at hW
         exact hInv.vote_backed j' hj W hW
     · intro j' hj U' hU'
+      rw [InstanceState.mem_multicast_sent, InstanceState.setProcessVariables_sent] at hU'
+      rcases hU' with ⟨-, hm'⟩ | hold
+      · exact absurd hm' (by simp)
+      · have hpre := hInv.bind_confirmed j' hj U' hold
+        by_cases hk : j' = j
+        · subst hk
+          rw [InstanceState.multicast_processVariables,
+            InstanceState.setProcessVariables_processVariables_self]
+          exact hpre
+        · rw [InstanceState.multicast_processVariables,
+            InstanceState.setProcessVariables_processVariables_ne _ _ _ hk]
+          exact hpre
+    · intro j' hj U' hU'
       simp only [InstanceState.multicast_received, InstanceState.setProcessVariables_received]
-      exact hInv.bind_backed j' hj U' hU'
+      by_cases hk : j' = j
+      · subst hk
+        rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_self] at hU'
+        exact hInv.bind_backed j' hj U' hU'
+      · rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_ne _ _ _ hk] at hU'
+        exact hInv.bind_backed j' hj U' hU'
     · intro k hk y hy
       rw [InstanceState.multicast_processVariables]
       have h0 := hInv.inputBroadcastCall_backed k hk y hy
@@ -658,68 +545,118 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
         exact h0
       · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hkj]
         exact h0
-  | bindCall j U hin hvot hsnd happ hQ hb =>
+  | bind j U hin hvot happ hQ hsend =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    refine Conformance.setSentBind (s := setBindBroadcasts s (Function.update (bindBroadcasts s) j
-      { bindBroadcasts s j with input := some U })) ?_ j U
-    refine ⟨hInv.F_card, hInv.F_inputBroadcast_eq, ?_, hInv.received_subset_sent,
-      hInv.inputBroadcastReturned_val, ?_, hInv.inputBroadcastVal_of_instanceInput, ?_,
-        hInv.echo_confirmed, hInv.echo_card, hInv.vote_confirmed,
-      hInv.vote_backed, ?_, hInv.inputBroadcastCall_backed⟩
-    all_goals dsimp only [gatherProgramsAndNetwork_setBindBroadcasts,
-      bindBroadcasts_setBindBroadcasts]
-    · intro q
-      by_cases hq : q = j
-      · subst hq
-        rw [Function.update_self]
-        exact hInv.F_bind_eq q
-      · rw [Function.update_of_ne hq]
-        exact hInv.F_bind_eq q
-    · intro j' q U' hU'
-      by_cases hq : q = j
-      · subst hq
-        rw [Function.update_self]
-        exact hInv.bindBroadcastReturned_val j' q U' hU'
-      · rw [Function.update_of_ne hq]
-        exact hInv.bindBroadcastReturned_val j' q U' hU'
-    · intro q U' hU'
-      by_cases hq : q = j
-      · subst hq
-        rw [Function.update_self] at hU' ⊢
-        rcases hInv.bindBroadcastVal_of_instanceInput q U' hU' with hF | hin'
-        · exact Or.inl hF
-        · rw [hb] at hin'
-          exact absurd hin' (by simp)
-      · rw [Function.update_of_ne hq] at hU' ⊢
-        exact hInv.bindBroadcastVal_of_instanceInput q U' hU'
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    all_goals dsimp only [gatherProgramsAndNetwork_setGatherProgramsAndNetwork,
+      inputBroadcasts_setGatherProgramsAndNetwork]
+    · exact hInv.F_card
+    · exact hInv.F_inputBroadcast_eq
+    · intro i k m hm
+      simp only [InstanceState.multicast_received, InstanceState.setProcessVariables_received] at hm
+      rw [InstanceState.mem_multicast_sent, InstanceState.setProcessVariables_sent]
+      exact Or.inr (hInv.received_subset_sent i k hm)
+    · intro j' k v hv
+      rw [InstanceState.multicast_processVariables] at hv
+      by_cases hk : j' = j
+      · subst hk
+        rw [InstanceState.setProcessVariables_processVariables_self] at hv
+        exact hInv.inputBroadcastReturned_val j' k v hv
+      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk] at hv
+        exact hInv.inputBroadcastReturned_val j' k v hv
+    · exact hInv.inputBroadcastVal_of_instanceInput
+    · intro j' hj A' hA'
+      rw [InstanceState.mem_multicast_sent, InstanceState.setProcessVariables_sent] at hA'
+      rcases hA' with ⟨-, hm'⟩ | hold
+      · exact absurd hm' (by simp)
+      · have hpre := hInv.echo_confirmed j' hj A' hold
+        by_cases hk : j' = j
+        · subst hk
+          rw [InstanceState.multicast_processVariables,
+            InstanceState.setProcessVariables_processVariables_self]
+          exact hpre
+        · rw [InstanceState.multicast_processVariables,
+            InstanceState.setProcessVariables_processVariables_ne _ _ _ hk]
+          exact hpre
+    · intro j' hj A' hA'
+      by_cases hk : j' = j
+      · subst hk
+        rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_self] at hA'
+        exact hInv.echo_card j' hj A' hA'
+      · rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_ne _ _ _ hk] at hA'
+        exact hInv.echo_card j' hj A' hA'
+    · intro j' hj W hW
+      rw [InstanceState.mem_multicast_sent, InstanceState.setProcessVariables_sent] at hW
+      rcases hW with ⟨-, hm'⟩ | hold
+      · exact absurd hm' (by simp)
+      · have hpre := hInv.vote_confirmed j' hj W hold
+        by_cases hk : j' = j
+        · subst hk
+          rw [InstanceState.multicast_processVariables,
+            InstanceState.setProcessVariables_processVariables_self]
+          exact hpre
+        · rw [InstanceState.multicast_processVariables,
+            InstanceState.setProcessVariables_processVariables_ne _ _ _ hk]
+          exact hpre
+    · intro j' hj W hW
+      simp only [InstanceState.multicast_received, InstanceState.setProcessVariables_received]
+      by_cases hk : j' = j
+      · subst hk
+        rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_self] at hW
+        exact hInv.vote_backed j' hj W hW
+      · rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_ne _ _ _ hk] at hW
+        exact hInv.vote_backed j' hj W hW
     · intro j' hj U' hU'
-      by_cases hq : j' = j
-      · subst hq
-        rw [Function.update_self] at hU'
-        have hUU : some U = some U' := hU'
+      rw [InstanceState.mem_multicast_sent, InstanceState.setProcessVariables_sent] at hU'
+      rcases hU' with ⟨rfl, hm'⟩ | hold
+      · obtain rfl : U' = U := by injection hm'
+        rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_self]
+      · have hpre := hInv.bind_confirmed j' hj U' hold
+        by_cases hk : j' = j
+        · subst hk
+          rw [hsend] at hpre
+          exact absurd hpre (by simp)
+        · rw [InstanceState.multicast_processVariables,
+            InstanceState.setProcessVariables_processVariables_ne _ _ _ hk]
+          exact hpre
+    · intro j' hj U' hU'
+      simp only [InstanceState.multicast_received, InstanceState.setProcessVariables_received]
+      by_cases hk : j' = j
+      · subst hk
+        rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_self] at hU'
         obtain rfl : U = U' := by
-          injection hUU
+          injection hU'
         obtain ⟨Q, hQc, hQm⟩ := hQ
         exact ⟨Q, hQc, fun q hq => by
           obtain ⟨W, hW, -, hWU⟩ := hQm q hq
           exact ⟨W, hW, hWU⟩⟩
-      · rw [Function.update_of_ne hq] at hU'
+      · rw [InstanceState.multicast_processVariables,
+          InstanceState.setProcessVariables_processVariables_ne _ _ _ hk] at hU'
         exact hInv.bind_backed j' hj U' hU'
-  | bindCallSpecificationLoop j U hin hvot hsnd happ hQ =>
-    rw [PMF.mem_support_pure_iff] at hs'
-    subst hs'
-    exact hInv.setSentBind j U
+    · intro k hk y hy
+      rw [InstanceState.multicast_processVariables]
+      have h0 := hInv.inputBroadcastCall_backed k hk y hy
+      by_cases hkj : k = j
+      · subst hkj
+        rw [InstanceState.setProcessVariables_processVariables_self]
+        exact h0
+      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hkj]
+        exact h0
   | byzantine j m h =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     all_goals dsimp only [gatherProgramsAndNetwork_setGatherProgramsAndNetwork,
-      inputBroadcasts_setGatherProgramsAndNetwork,
-      bindBroadcasts_setGatherProgramsAndNetwork]
+      inputBroadcasts_setGatherProgramsAndNetwork]
     · exact hInv.F_card
     · exact hInv.F_inputBroadcast_eq
-    · exact hInv.F_bind_eq
     · intro i k m' hm'
       rw [InstanceState.multicast_received] at hm'
       rw [InstanceState.mem_multicast_sent]
@@ -727,11 +664,7 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
     · intro j' k v hv
       rw [InstanceState.multicast_processVariables] at hv
       exact hInv.inputBroadcastReturned_val j' k v hv
-    · intro j' q U hU
-      rw [InstanceState.multicast_processVariables] at hU
-      exact hInv.bindBroadcastReturned_val j' q U hU
     · exact hInv.inputBroadcastVal_of_instanceInput
-    · exact hInv.bindBroadcastVal_of_instanceInput
     · intro j' hj A hA
       rw [InstanceState.mem_multicast_sent] at hA
       rw [InstanceState.multicast_processVariables]
@@ -752,6 +685,13 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
       rw [InstanceState.multicast_received]
       exact hInv.vote_backed j' hj W hW
     · intro j' hj U hU
+      rw [InstanceState.mem_multicast_sent] at hU
+      rw [InstanceState.multicast_processVariables]
+      rcases hU with ⟨rfl, -⟩ | hold
+      · exact absurd h hj
+      · exact hInv.bind_confirmed j' hj U hold
+    · intro j' hj U hU
+      rw [InstanceState.multicast_processVariables] at hU
       rw [InstanceState.multicast_received]
       exact hInv.bind_backed j' hj U hU
     · intro k hk y hy
@@ -760,11 +700,9 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
   | inputBroadcastRet k j v hv hr =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     all_goals dsimp only [gatherProgramsAndNetwork_setInputBroadcasts,
-      gatherProgramsAndNetwork_setGatherProgramsAndNetwork,
-      inputBroadcasts_setInputBroadcasts, bindBroadcasts_setInputBroadcasts,
-        bindBroadcasts_setGatherProgramsAndNetwork]
+      gatherProgramsAndNetwork_setGatherProgramsAndNetwork, inputBroadcasts_setInputBroadcasts]
     · exact hInv.F_card
     · intro k'
       by_cases hk : k' = k
@@ -773,7 +711,6 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
         exact hInv.F_inputBroadcast_eq k'
       · rw [Function.update_of_ne hk]
         exact hInv.F_inputBroadcast_eq k'
-    · exact hInv.F_bind_eq
     · intro i k' m hm
       rw [InstanceState.setProcessVariables_received] at hm
       rw [InstanceState.setProcessVariables_sent]
@@ -800,13 +737,6 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
           exact hInv.inputBroadcastReturned_val j' k' v' hv'
         · rw [Function.update_of_ne hk]
           exact hInv.inputBroadcastReturned_val j' k' v' hv'
-    · intro j' q U hU
-      by_cases hj : j' = j
-      · subst hj
-        rw [InstanceState.setProcessVariables_processVariables_self] at hU
-        exact hInv.bindBroadcastReturned_val j' q U hU
-      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hj] at hU
-        exact hInv.bindBroadcastReturned_val j' q U hU
     · intro k' v' hv'
       by_cases hk : k' = k
       · subst hk
@@ -814,7 +744,6 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
         exact hInv.inputBroadcastVal_of_instanceInput k' v' hv'
       · rw [Function.update_of_ne hk] at hv' ⊢
         exact hInv.inputBroadcastVal_of_instanceInput k' v' hv'
-    · exact hInv.bindBroadcastVal_of_instanceInput
     · intro j' hj A hA
       rw [InstanceState.setProcessVariables_sent] at hA
       have hpre := hInv.echo_confirmed j' hj A hA
@@ -849,8 +778,22 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
       · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk] at hW
         exact hInv.vote_backed j' hj W hW
     · intro j' hj U hU
+      rw [InstanceState.setProcessVariables_sent] at hU
+      have hpre := hInv.bind_confirmed j' hj U hU
+      by_cases hk : j' = j
+      · subst hk
+        rw [InstanceState.setProcessVariables_processVariables_self]
+        exact hpre
+      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk]
+        exact hpre
+    · intro j' hj U hU
       rw [InstanceState.setProcessVariables_received]
-      exact hInv.bind_backed j' hj U hU
+      by_cases hk : j' = j
+      · subst hk
+        rw [InstanceState.setProcessVariables_processVariables_self] at hU
+        exact hInv.bind_backed j' hj U hU
+      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk] at hU
+        exact hInv.bind_backed j' hj U hU
     · intro k' hk' y hy
       have h0 : (inputBroadcasts s k').input = some y := by
         by_cases hkk : k' = k
@@ -866,124 +809,15 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
         exact h1
       · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hkj]
         exact h1
-  | bindRet q j U hv hr =>
-    rw [PMF.mem_support_pure_iff] at hs'
-    subst hs'
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-    all_goals dsimp only [gatherProgramsAndNetwork_setBindBroadcasts,
-      gatherProgramsAndNetwork_setGatherProgramsAndNetwork,
-      bindBroadcasts_setBindBroadcasts, inputBroadcasts_setBindBroadcasts,
-        inputBroadcasts_setGatherProgramsAndNetwork]
-    · exact hInv.F_card
-    · exact hInv.F_inputBroadcast_eq
-    · intro q'
-      by_cases hq : q' = q
-      · subst hq
-        rw [Function.update_self]
-        exact hInv.F_bind_eq q'
-      · rw [Function.update_of_ne hq]
-        exact hInv.F_bind_eq q'
-    · intro i k m hm
-      rw [InstanceState.setProcessVariables_received] at hm
-      rw [InstanceState.setProcessVariables_sent]
-      exact hInv.received_subset_sent i k hm
-    · intro j' k v hv'
-      by_cases hj : j' = j
-      · subst hj
-        rw [InstanceState.setProcessVariables_processVariables_self] at hv'
-        exact hInv.inputBroadcastReturned_val j' k v hv'
-      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hj] at hv'
-        exact hInv.inputBroadcastReturned_val j' k v hv'
-    · intro j' q' U' hU'
-      by_cases hj : j' = j
-      · subst hj
-        rw [InstanceState.setProcessVariables_processVariables_self] at hU'
-        dsimp only at hU'
-        by_cases hq : q' = q
-        · subst hq
-          rw [Function.update_self] at hU'
-          rw [Function.update_self]
-          obtain rfl : U = U' := by
-            injection hU'
-          exact hv
-        · rw [Function.update_of_ne hq] at hU'
-          rw [Function.update_of_ne hq]
-          exact hInv.bindBroadcastReturned_val j' q' U' hU'
-      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hj] at hU'
-        by_cases hq : q' = q
-        · subst hq
-          rw [Function.update_self]
-          exact hInv.bindBroadcastReturned_val j' q' U' hU'
-        · rw [Function.update_of_ne hq]
-          exact hInv.bindBroadcastReturned_val j' q' U' hU'
-    · exact hInv.inputBroadcastVal_of_instanceInput
-    · intro q' U' hU'
-      by_cases hq : q' = q
-      · subst hq
-        rw [Function.update_self] at hU' ⊢
-        exact hInv.bindBroadcastVal_of_instanceInput q' U' hU'
-      · rw [Function.update_of_ne hq] at hU' ⊢
-        exact hInv.bindBroadcastVal_of_instanceInput q' U' hU'
-    · intro j' hj A hA
-      rw [InstanceState.setProcessVariables_sent] at hA
-      have hpre := hInv.echo_confirmed j' hj A hA
-      by_cases hk : j' = j
-      · subst hk
-        rw [InstanceState.setProcessVariables_processVariables_self]
-        exact hpre
-      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk]
-        exact hpre
-    · intro j' hj A hA
-      by_cases hk : j' = j
-      · subst hk
-        rw [InstanceState.setProcessVariables_processVariables_self] at hA
-        exact hInv.echo_card j' hj A hA
-      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk] at hA
-        exact hInv.echo_card j' hj A hA
-    · intro j' hj W hW
-      rw [InstanceState.setProcessVariables_sent] at hW
-      have hpre := hInv.vote_confirmed j' hj W hW
-      by_cases hk : j' = j
-      · subst hk
-        rw [InstanceState.setProcessVariables_processVariables_self]
-        exact hpre
-      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk]
-        exact hpre
-    · intro j' hj W hW
-      rw [InstanceState.setProcessVariables_received]
-      by_cases hk : j' = j
-      · subst hk
-        rw [InstanceState.setProcessVariables_processVariables_self] at hW
-        exact hInv.vote_backed j' hj W hW
-      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk] at hW
-        exact hInv.vote_backed j' hj W hW
-    · intro j' hj U' hU'
-      rw [InstanceState.setProcessVariables_received]
-      by_cases hq : j' = q
-      · subst hq
-        rw [Function.update_self] at hU'
-        exact hInv.bind_backed j' hj U' hU'
-      · rw [Function.update_of_ne hq] at hU'
-        exact hInv.bind_backed j' hj U' hU'
-    · intro k hk y hy
-      have h0 := hInv.inputBroadcastCall_backed k hk y hy
-      by_cases hkj : k = j
-      · subst hkj
-        rw [InstanceState.setProcessVariables_processVariables_self]
-        exact h0
-      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hkj]
-        exact h0
   | ret id g hin hbind hsub hQ hr =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     all_goals dsimp only [gatherProgramsAndNetwork_setCore,
       gatherProgramsAndNetwork_setGatherProgramsAndNetwork, inputBroadcasts_setCore,
-      inputBroadcasts_setGatherProgramsAndNetwork, bindBroadcasts_setCore,
-        bindBroadcasts_setGatherProgramsAndNetwork]
+      inputBroadcasts_setGatherProgramsAndNetwork]
     · exact hInv.F_card
     · exact hInv.F_inputBroadcast_eq
-    · exact hInv.F_bind_eq
     · intro i k m hm
       rw [InstanceState.setProcessVariables_received] at hm
       rw [InstanceState.setProcessVariables_sent]
@@ -995,15 +829,7 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
         exact hInv.inputBroadcastReturned_val j k v hv
       · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hj] at hv
         exact hInv.inputBroadcastReturned_val j k v hv
-    · intro j q U hU
-      by_cases hj : j = id
-      · subst hj
-        rw [InstanceState.setProcessVariables_processVariables_self] at hU
-        exact hInv.bindBroadcastReturned_val j q U hU
-      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hj] at hU
-        exact hInv.bindBroadcastReturned_val j q U hU
     · exact hInv.inputBroadcastVal_of_instanceInput
-    · exact hInv.bindBroadcastVal_of_instanceInput
     · intro j hj A hA
       rw [InstanceState.setProcessVariables_sent] at hA
       have hpre := hInv.echo_confirmed j hj A hA
@@ -1038,8 +864,22 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
       · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk] at hW
         exact hInv.vote_backed j hj W hW
     · intro j hj U hU
+      rw [InstanceState.setProcessVariables_sent] at hU
+      have hpre := hInv.bind_confirmed j hj U hU
+      by_cases hk : j = id
+      · subst hk
+        rw [InstanceState.setProcessVariables_processVariables_self]
+        exact hpre
+      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk]
+        exact hpre
+    · intro j hj U hU
       rw [InstanceState.setProcessVariables_received]
-      exact hInv.bind_backed j hj U hU
+      by_cases hk : j = id
+      · subst hk
+        rw [InstanceState.setProcessVariables_processVariables_self] at hU
+        exact hInv.bind_backed j hj U hU
+      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk] at hU
+        exact hInv.bind_backed j hj U hU
     · intro k hk y hy
       have h0 := hInv.inputBroadcastCall_backed k hk y hy
       by_cases hkid : k = id
@@ -1054,14 +894,11 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
     have hF : ∀ k, k ∉ (InstanceState.corrupt P id (gatherProgramsAndNetwork s)).F → k ∉
       (gatherProgramsAndNetwork s).F :=
       fun k hk hkF => hk (InstanceState.corrupt_F_subset (gatherProgramsAndNetwork s) id hkF)
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-    all_goals dsimp only [gatherProgramsAndNetwork_corruptAll, inputBroadcasts_corruptAll,
-      bindBroadcasts_corruptAll]
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    all_goals dsimp only [gatherProgramsAndNetwork_corruptAll, inputBroadcasts_corruptAll]
     · exact InstanceState.corrupt_card_le (gatherProgramsAndNetwork s) id hInv.F_card
     · intro k
       rw [BRB.SpecState.corrupt_F, InstanceState.corrupt_F, hInv.F_inputBroadcast_eq k]
-    · intro k
-      rw [BRB.SpecState.corrupt_F, InstanceState.corrupt_F, hInv.F_bind_eq k]
     · intro i k m hm
       rw [InstanceState.corrupt_received] at hm
       rw [InstanceState.corrupt_sent]
@@ -1070,20 +907,10 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
       rw [InstanceState.corrupt_processVariables] at hv
       rw [BRB.corrupt_val]
       exact hInv.inputBroadcastReturned_val j k v hv
-    · intro j q U hU
-      rw [InstanceState.corrupt_processVariables] at hU
-      rw [BRB.corrupt_val]
-      exact hInv.bindBroadcastReturned_val j q U hU
     · intro k v hv
       rw [BRB.corrupt_val] at hv
       rw [BRB.corrupt_input]
       rcases hInv.inputBroadcastVal_of_instanceInput k v hv with hkF | hin
-      · exact Or.inl (InstanceState.corrupt_F_subset (gatherProgramsAndNetwork s) id hkF)
-      · exact Or.inr hin
-    · intro k U hU
-      rw [BRB.corrupt_val] at hU
-      rw [BRB.corrupt_input]
-      rcases hInv.bindBroadcastVal_of_instanceInput k U hU with hkF | hin
       · exact Or.inl (InstanceState.corrupt_F_subset (gatherProgramsAndNetwork s) id hkF)
       · exact Or.inr hin
     · intro j hj A hA
@@ -1102,7 +929,11 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
       rw [InstanceState.corrupt_received]
       exact hInv.vote_backed j (hF j hj) W hW
     · intro j hj U hU
-      rw [BRB.corrupt_input] at hU
+      rw [InstanceState.corrupt_sent] at hU
+      rw [InstanceState.corrupt_processVariables]
+      exact hInv.bind_confirmed j (hF j hj) U hU
+    · intro j hj U hU
+      rw [InstanceState.corrupt_processVariables] at hU
       rw [InstanceState.corrupt_received]
       exact hInv.bind_backed j (hF j hj) U hU
     · intro k hk y hy
@@ -1215,18 +1046,11 @@ theorem echoApproved_step {s s' : StateOverBroadcastSpecification P.n X} {l : La
       by_cases hk : j = j₀
       · subst hk; rw [InstanceState.setProcessVariables_processVariables_self] at hA; exact hA
       · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk] at hA; exact hA
-  | bindCall j₀ U hin hvot hsnd happ hQ hb =>
-      rw [PMF.mem_support_pure_iff] at hs'; subst hs'
-      refine hEA j A ?_
-      dsimp only [gatherProgramsAndNetwork_setBindBroadcasts,
-        gatherProgramsAndNetwork_setGatherProgramsAndNetwork] at hA
-      by_cases hk : j = j₀
-      · subst hk; rw [InstanceState.setProcessVariables_processVariables_self] at hA; exact hA
-      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk] at hA; exact hA
-  | bindCallSpecificationLoop j₀ U hin hvot hsnd happ hQ =>
+  | bind j₀ U hin hvot happ hQ hsend =>
       rw [PMF.mem_support_pure_iff] at hs'; subst hs'
       refine hEA j A ?_
       dsimp only [gatherProgramsAndNetwork_setGatherProgramsAndNetwork] at hA
+      rw [InstanceState.multicast_processVariables] at hA
       by_cases hk : j = j₀
       · subst hk; rw [InstanceState.setProcessVariables_processVariables_self] at hA; exact hA
       · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk] at hA; exact hA
@@ -1234,14 +1058,6 @@ theorem echoApproved_step {s s' : StateOverBroadcastSpecification P.n X} {l : La
       rw [PMF.mem_support_pure_iff] at hs'; subst hs'
       refine hEA j A ?_
       dsimp only [gatherProgramsAndNetwork_setInputBroadcasts,
-        gatherProgramsAndNetwork_setGatherProgramsAndNetwork] at hA
-      by_cases hk : j = j₀
-      · subst hk; rw [InstanceState.setProcessVariables_processVariables_self] at hA; exact hA
-      · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hk] at hA; exact hA
-  | bindRet q j₀ U hv hr =>
-      rw [PMF.mem_support_pure_iff] at hs'; subst hs'
-      refine hEA j A ?_
-      dsimp only [gatherProgramsAndNetwork_setBindBroadcasts,
         gatherProgramsAndNetwork_setGatherProgramsAndNetwork] at hA
       by_cases hk : j = j₀
       · subst hk; rw [InstanceState.setProcessVariables_processVariables_self] at hA; exact hA
