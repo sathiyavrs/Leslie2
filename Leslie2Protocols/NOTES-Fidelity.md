@@ -52,22 +52,22 @@ as the grade-1 witness where Algorithm 6 reads `f + 1` `BIND v`.
 The compression is not merely shallower; it violates the paper's Graded Binding. One
 process held before its `ECHO` through a grade-0 decision can afterwards direct its
 write-once echo at either bit, and one corruption completes the `f + 1` `VOTE v` count
-for the bit of the adversary's choice, so two extensions of a single grade-0 return hand out
+for the bit of the adversary's choice, so two extensions of a single grade-0 return return
 two different bits and no binding-faithful specification simulates the compression. The
 concrete violation at `n = 4, f = 1` is written out in `DESIGN-GBCARefinesSpecification.md`. At
-D18's witness level the same attack dies: `f + 1 > |F|` received `BIND v` messages put a correct
-`BIND v` sender behind every grade-≥1 output, hence a quorum of `n − f` received `VOTE v` messages
+D18's witness level the same attack fails: `f + 1 > |F|` received `BIND v` messages give every
+grade-≥1 output a correct `BIND v` sender, hence a quorum of `n − f` received `VOTE v` messages
 over the write-once `VOTE` level — and that quorum is the object the paper's binding
 argument counts (Lemmas 4.8/4.9 through E.9).
 
-Annotation lives in `GBCA/ABDY/Algorithm.lean`'s module docstring, in the blueprint
+The annotation is in `GBCA/ABDY/Algorithm.lean`'s module docstring, in the blueprint
 chapter's caption for the algorithm and its D18 registry entry, and in the source
 blueprint's own TeX (`Leslie/blueprint/src/sections/Algorithm.tex`, a red note at
 Algorithm 2's decide conditions); the source's PDF caption reads "Implementation of GBCA
 from [ABDY22]" with no such note.
 
 On the specification the matching item is **D19**. TS 2's bound value `bind ∈ {0,1,⊥}` is replaced
-by the exclusion set `excluded : Finset Bool`, the bits the instance can no longer hand out
+by the exclusion set `excluded : Finset Bool`, the bits the instance can no longer return
 (`GBCA/Specification.lean`). The exclude fires under the guard `excluded = ∅`, so reachable states
 are exactly `excluded ∈ {∅, {b}}` (`GBCASafety.excluded_card_le_one`) and the bound value embeds
 onto them — `bind = ⊥` as `excluded = ∅`, `bind = b` as `excluded = {!b}`. The two state shapes
@@ -335,7 +335,7 @@ repaired at the transition; the seventh entry is a cross-reference.
   (D36).
 - **The `2f + 1` commit read as a relay threshold (cross-reference).**
   `Implementation.ProgramStep.terminate` reads `2f + 1` received DECIDED messages where the paper's condition is
-  that the process may stop without holding another back. That delta is the third D22
+  that the process may stop without delaying another. That delta is the third D22
   residue of §6, and is not restated here.
 
 ## 5. Source defects the encoding does not reproduce
@@ -347,7 +347,7 @@ repaired at the transition; the seventh entry is a cross-reference.
   `Specifications/ABA.lean` reproduces neither transition. `PLTS.ABA.SpecStep.decide` is the
   sole writer of `val` and fires only from `val = ⊥`, so the decision value is written
   once and Agreement is structural (`PLTS.ABA.SpecificationInvariant.val_stable`); and it carries
-  the D13 support guard `PLTS.ABA.InputSupport`, which is where the Validity trace dies — the
+  the D13 support guard `PLTS.ABA.InputSupport`, which is where the Validity trace fails — the
   counterexample check in `Specifications/ABA.lean` records it, with inputs `1,0,0,0` at `n = 4, f =
   1` and the sole `1`-inputter corrupted leaving one supporter of `1` against the `f + 1 = 2` the
   guard demands. The eight-transition shape this leaves, with the control mode carrying the flip, is
@@ -369,7 +369,7 @@ repaired at the transition; the seventh entry is a cross-reference.
   the same system's `State` line. It is omitted: `PLTS.ABA.SpecState` declares `input`,
   `ret`, `F`, `val` and `mode`, and nothing else.
 - **TS 6 fixes the delivered value at the call, which Bracha's rounds do not.** Under TS 6
-  a correct `call(m)` sets the single `call` field to `m`, every return hands out `call`,
+  a correct `call(m)` sets the single `call` field to `m`, every return returns `call`,
   and the corrupted-leader transition can only spoil the field (`call = ⊤`, no returns) before
   the first return. Bracha's rounds with the leader corrupted *after* its `INIT` multicast
   leave more open: until some correct process holds an ECHO quorum of more than `(n+f)/2`
@@ -377,13 +377,13 @@ repaired at the transition; the seventh entry is a cross-reference.
   than `m`, and no resolution of TS 6's nondeterminism returns it — the specification
   excludes its own implementation under D1's dynamic corruption. `BRB.SpecState` splits
   the recorded `input` from the committed `val` and guards the commit by
-  `ldr ∈ F ∨ input = some m` (D27), which is the window the implementation actually leaves
-  open: at a never-corrupted leader the commit is fixed at the input, and Validity
-  survives in the form the property states it.
+  `ldr ∈ F ∨ input = some m` (D27), which admits exactly the commits the implementation
+  admits: at a never-corrupted leader the commit is fixed at the input, and Validity
+  holds in the form the property states it.
 - **TS 4's bound core is what a reachable state determines.** The core is a correct
   sender's `ECHO` payload heard by `f + 1` correct processes, and the counting of
   `ABA/Gather/CommonCoreCounting.lean` locates it in the prefix of a run. Two independent
-  points stand behind that reading. As written (source p. 20), the bind transition constrains
+  points support that reading. As written (source p. 20), the bind transition constrains
   its set `S` only to identifiers already called — no size bound, the empty set included,
   so the `n − f` size clause of Binding Common Core is not enforced by the transitions (its
   return guard also reads `bind ≠ ⊥` where the unset marker is `∅`). And a size guard on
@@ -450,7 +450,7 @@ for Unpredictability, inexpressible once the guess is dropped.
   `NOTES-Liveness-Roadmap.md`.
 - **The approximate-agreement subroutine of AFW25's Algorithm 4.** Lines 7 and 8 set the
   grade by an approximate-agreement subroutine on an input of `R` or `0`, so a process
-  there reaches the top grade only when enough others also chose `R`. AFW25's Appendix B
+  there reaches grade 2 only when enough others also chose `R`. AFW25's Appendix B
   gives that subroutine concretely, as a two-input approximate agreement over a primitive
   with its own `f + 1` relay and `n − f` thresholds. Neither is encoded: the grade is the
   local count on the second gather's return (D24), which drops a communication step. Line
@@ -485,9 +485,9 @@ for Unpredictability, inexpressible once the guess is dropped.
       composite step delivering a round message there at all.
     - The `2f + 1` count of received DECIDED messages of `Implementation.ProgramStep.terminate` is the
       encoding's commit point. At most `f` senders are corrupted, so `2f + 1` received messages
-      stand behind `f + 1`
-      correct senders of the payload, which is the threshold `Implementation.ProgramStep.decidedRelay`
-      reads; the paper's own condition is that the process may stop without holding back
+      have `f + 1`
+      correct senders of the payload among them, which is the threshold `Implementation.ProgramStep.decidedRelay`
+      reads; the paper's own condition is that the process may stop without delaying
       any other.
 - **The scope of `terminate`.** The flag is read by the round transitions and by nothing else:
   `callG_call`, the three `retG_*`, `gbcaSendRelay`, `gbcaSendEcho`, the six level transitions
@@ -517,7 +517,7 @@ non-membership in every stage of `failSet`, the fold of the D1 transform over th
 labels seen so far, so a process corrupted at any point of the trace is excluded at every
 point of it. The witness axis stays as strong as the papers': the caller `ValidityTrace`
 produces must itself be never corrupted, not merely a member of a support set a later
-`fail` could taint, and the call it produces is that caller's first `callABA` of the
+`fail` could invalidate, and the call it produces is that caller's first `callABA` of the
 trace, the event that carries the caller's input.
 
 One level down the interface binds corrupted returners too. At the composed system

@@ -7,7 +7,7 @@ documentation covers them and the blueprint's links resolve.
 ## `ABA/`
 
 The asynchronous binary agreement development: machine-checked safety for randomized ABA,
-from the protocol as it runs down to a small specification, by probabilistic forward
+from the protocol as it runs to a small specification, by probabilistic forward
 simulation, with two verified implementations of its graded-agreement sub-protocol —
 one direct, one built over gather and reliable broadcast. Each is carried from the
 protocol as it runs, through one implementation shape written parametrically in the
@@ -44,10 +44,10 @@ given in import order in its own file guide, [`Framework/README.md`](Framework/R
 | file | what it is for |
 |---|---|
 | [`DESIGN-Decomposition.md`](DESIGN-Decomposition.md) | The five constraints the decomposition proofs impose on the gather-based chain's compositions — the loop label, the specification's call following the gather's variables, the grade dropped on return, the blocking of off-interface labels, a broadcast instance's return as a transition of the implementation — each with the statement that fails without it. |
-| [`DESIGN-Composition.md`](DESIGN-Composition.md) | Why the chains are cut where they are: what the composition buys, what each component owns and where it disappears, and what the DECIDED model already weakens. |
+| [`DESIGN-Composition.md`](DESIGN-Composition.md) | Why the chains are cut where they are: what the composition gives, what each component owns and where it disappears, and what the DECIDED model already weakens. |
 | [`DESIGN-HybridRefinesSpecification.md`](DESIGN-HybridRefinesSpecification.md) | The narrative account of the core simulation `hybrid ⊑ ABA.spec` — the abstract state, the invariant, and the witnesses decided values ride on. |
 | [`DESIGN-GBCARefinesSpecification.md`](DESIGN-GBCARefinesSpecification.md) | The narrative account of the per-instance GBCA refinement — exclude-on-demand, the witnesses on the pattern of received messages, and the run structure. |
-| [`DESIGN-GatherComposition.md`](DESIGN-GatherComposition.md) | The narrative account of the gather-based GBCA stack — the compositions at each level, the counting argument behind the gather specification's core, the BIND payloads multicast on the gather network, the counting at the round over the gather specifications, the substitutions as congruence applications, and the implementation beneath the composed one. |
+| [`DESIGN-GatherComposition.md`](DESIGN-GatherComposition.md) | The narrative account of the gather-based GBCA stack — the compositions at each level, the counting argument for the gather specification's core, the BIND payloads multicast on the gather network, the counting at the round over the gather specifications, the substitutions as congruence applications, and the implementation beneath the composed one. |
 | [`NOTES-Fidelity.md`](NOTES-Fidelity.md) | How the encoding stands against its sources — the Leslie blueprint, ABDY22 and AFW25: where it follows one against another, and what it deliberately does not reproduce. |
 | [`NOTES-Liveness-Roadmap.md`](NOTES-Liveness-Roadmap.md) | Termination is out of scope; this is what proving it would take. |
 

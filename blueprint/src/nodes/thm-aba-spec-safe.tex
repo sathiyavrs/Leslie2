@@ -17,5 +17,5 @@
   For Validity, $\mathrm{SpecificationInvariant}$ ties $val$ to an $f{+}1$ $F$-blind support, each member of which is either ghost-recorded as inputting the value or corrupted, and $\mathrm{ValidityInvariant}$'s clause $input\_source$ attributes each ghost entry to the first $\mathrm{callABA}$ of its process in the label history.
   Its converse clause $source\_input$ carries that attribution through \leandeclnamed{callSet}{PLTS.ABA.SpecStep.callSet}: the transition's guard is the empty entry, which at an uncorrupted process says that no earlier $\mathrm{callABA}$ of that process stands in the history, so the label the transition carries is the first.
   The at most $f$ ever-corrupted processes, obtained as a trace-level fold of the $\mathrm{failSet}$, leave one of the $f{+}1$ supporters a never-corrupted recorded caller by a budget pigeonhole.
-  Positionality of that caller, a call at some $k < m$, is read off the same label-history fold.
+  Positionality of that caller, a call at some $k < m$, is derived from the same label-history fold.
 \end{proof}

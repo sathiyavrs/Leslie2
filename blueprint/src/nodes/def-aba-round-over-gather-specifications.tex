@@ -2,7 +2,7 @@
   \label{def:aba-round-over-gather-specifications}
   \lean{PLTS.ABA.GBCA.candidate}\lean{PLTS.ABA.GBCA.gradeOf}\lean{PLTS.ABA.GBCA.boundOfCore}\lean{PLTS.ABA.GBCA.ByAFW.RoundStateOverGatherSpecifications}\lean{PLTS.ABA.GBCA.ByAFW.AlgorithmOverGatherSpecifications}\lean{PLTS.ABA.GBCA.ByAFW.roundOverGatherSpecifications}\lean{PLTS.ABA.GBCA.ByAFW.roundOverGatherSpecifications_step_iff_algorithm}\leanok
   \uses{def:aba-round-composition, def:aba-gbca-network, def:aba-gather-spec, def:aba-gbca-spec, def:aba-labels}
-  The graded agreement of~\cite{AFW25} --- its Algorithm~4 at $R = 2$, the two-gather branch, with the grade read off the second gather's counts in place of the approximate-agreement subroutine of lines~7 and~8 (D24) --- over two gather specification instances of Definition~\ref{def:aba-gather-spec}, each the binding form (D33), the first at payload type $\mathbb{B}$ and the second at $\mathbb{B} \cup \{\bot\}$.
+  The graded agreement of~\cite{AFW25} --- its Algorithm~4 in its case $R \ge 2$, at $R = 2$, with the grade computed from the second gather's counts in place of the approximate-agreement subroutine of lines~7 and~8 (D24) --- over two gather specification instances of Definition~\ref{def:aba-gather-spec}, each the binding form (D33), the first at payload type $\mathbb{B}$ and the second at $\mathbb{B} \cup \{\bot\}$.
   The round is the composition of Definition~\ref{def:aba-round-composition}: its state is the $n$ programs' variables beside the round's network, in parallel with the two gather states, and a program's variables hold the process's input, its candidate, whether it has called the second gather, its graded outcome and its return flag.
   For a first-gather output $g$, the candidate is
   \[
@@ -18,6 +18,6 @@
   The round's network holds the bound bit, auxiliary state (D29) that no program reads and no guard consults.
   It is written at the round's first $\mathrm{firstGatherReturn}$ and once only, as $\mathrm{boundOfCore}$ of the core the first gather's return carries, and every graded return announces it on its label.
   For a payload set $S$, $\mathrm{boundOfCore}(S)$ is the bit carried by at least $|S| - f$ of the entries of $S$, and $1$ where neither bit is.
-  At the sizes the core transition of Definition~\ref{def:aba-gather-spec} allows, $|S| \ge n - f > 2f$, at most one bit is carried by that many, so a return handing out $v$ announces $v$ and a return handing out nothing announces a bit whose complement no return can hand out.
+  At the sizes the core transition of Definition~\ref{def:aba-gather-spec} allows, $|S| \ge n - f > 2f$, at most one bit is carried by that many, so a return of $v$ announces $v$ and a return of no value announces a bit whose complement no return can have as its value.
   Full construction: \leandecl{PLTS.ABA.GBCA.ByAFW.roundOverGatherSpecifications}; its transitions at the specification's labels are listed by \leandecl{PLTS.ABA.GBCA.ByAFW.AlgorithmOverGatherSpecifications}, a relation on the round's state, and \leandecl{PLTS.ABA.GBCA.ByAFW.roundOverGatherSpecifications_step_iff_algorithm} states that the round's transitions over the family labels the pullback sends to one specification label are exactly the cases of that algorithm at that label.
 \end{definition}

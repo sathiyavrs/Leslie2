@@ -13,10 +13,10 @@
         \mathrm{relabel}\bigl(\mathrm{abstract}_{\mathrm{NetworkEvent}}(
           (\mathrm{synchronisedProduct}_{j \in [n]}\ \mathrm{program}(j)) \parallel (\mathrm{network} \parallel \mathrm{coinOverExtendedAlphabet}))\bigr)\Bigr),
   \]
-  and the lemmas that read a transition off its label.
+  and the lemmas that determine a transition from its label.
   Which transitions belong to the implementation is settled by the label: a program's transition is the implementation's business exactly when its label is one of $\mathrm{roundOwn}(j)$ --- the graded-agreement call and return at $j$, $j$'s own round multicast, a delivery addressed to $j$, $j$'s own round events, and $j$'s own call against round variables that already hold an input.
   An implementation must supply four things about its transitions: that they carry such a label, that they fire only at an unreplaced program, that they are Dirac, and that a return transition takes the announced bit free, firing at every other bit with the same successor (D29).
-  That is \leandecl{PLTS.ABA.Implementation.IsRoundStep}; the lemmas that read a transition off its label consume the first three, and Theorem~\ref{thm:aba-ghost-removal} the fourth.
+  That is \leandecl{PLTS.ABA.Implementation.IsRoundStep}; the lemmas that determine a transition from its label consume the first three, and Theorem~\ref{thm:aba-ghost-removal} the fourth.
   The alphabet the components synchronise on is parametric in $M$ in its round multicast and its round delivery and in $E$ in its round event, a hidden synchronisation on which the network moves and sends nothing, and fixed in every other constructor, and is hidden before it leaves the composition, so two instantiations at the same protocol need not agree on it.
   The adversary holds one thing more, the ghost, and an implementation supplies it too (D30).
   For each round $r$ its state carries a ghost $ghost(r)$ of a type $G$ the implementation fixes.

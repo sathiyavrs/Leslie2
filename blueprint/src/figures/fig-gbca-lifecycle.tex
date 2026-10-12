@@ -4,7 +4,7 @@
 % ({b}, C) for each bit b, seven in all. (empty, A) and (empty, C) are
 % unreachable, every graded return needing excluded nonempty; and excluded never holds
 % two bits, bindUnset being enabled from excluded = empty alone, so no second exclusion
-% is drawn. The exclude edge names the bit it excludes, so 1-b is the surviving bit
+% is drawn. The exclude edge names the bit it excludes, so 1-b is the bit not excluded
 % at every node to its right. Every return announces the round's bound bit bnd,
 % the complement of the excluded one, so bnd = 1-b at every node to the right of
 % the exclude edge. call/callLoop are enabled in every state and

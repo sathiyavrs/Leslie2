@@ -19,7 +19,7 @@ ABDY22's Algorithm 6 (D18), which calls no sub-protocol, so one substitution tak
 `hybrid`. `AFW.protocol` runs AFW25's two-gather construction over reliable broadcast (D24),
 so the recursion continues two levels further and its chain carries three.
 
-This note records why the cut is placed where it is, what it buys, and what the model already
+This note records why the cut is placed where it is, what it gives, and what the model already
 weakens. The systems themselves are in `ABA/ABDY/System.lean`,
 `ABA/AFW/System.lean` and `ABA/Specifications/ABA.lean`;
 `ABA/Composition/Hybrid.lean` carries `hybrid` over the components of
@@ -61,7 +61,7 @@ round instance has transitions for the Byzantine graded-agreement call and retur
 of a protocol has one (D11), and the instance's round transitions carry no termination guard, so the
 instance answers a send or a delivery at a process the protocol has terminated.
 
-## What the composition buys
+## What the composition gives
 
 A sub-protocol is swappable exactly when its component boundary owns its network.
 
@@ -76,9 +76,9 @@ swapped in by the same precongruence. Exchanging the whole implementation of gra
 is that same move at that same place, which is what the second chain is.
 
 Idealizing the round also exposes an asymmetry worth naming. The round's sent sets, its delivery
-guards and its injections die with the graded-agreement idealization. The DECIDED sets, the
+guards and its injections are removed by the graded-agreement idealization. The DECIDED sets, the
 corruption budget and the authorisation `k ∈ F` of every Byzantine call and return transition
-survive it, at the ABA network. What a component owns is what disappears with it.
+are kept, at the ABA network. What a component owns is what disappears with it.
 
 ## The gather-based chain
 
@@ -131,14 +131,14 @@ Three substitutions take one composition to the next, and each removes exactly w
 component it replaces owned.
 
 - `Gather.broadcastSubstitution` replaces each of a gather's `n` Bracha instances by a broadcast
-  specification. An instance's programs and its network die together; what survives of
-  each is the committed value, written once.
+  specification. An instance's programs and its network are removed together; what is kept
+  of each is the committed value, written once.
 - `Gather.refinesSpecification` replaces a gather instance by the gather specification. The `n`
   gather programs, the gather network and the `n` broadcast specifications beneath them
-  die together; what survives is the per-entry committed value and the recorded core.
+  are removed together; what is kept is the per-entry committed value and the recorded core.
 - `GBCA.ByAFW.refinesSpecification` replaces the round over the two gather specifications by
   `GBCA.specInst`. The graded-agreement programs, the round's network and the two gather
-  specifications die; what survives is `excluded` and `grade`.
+  specifications are removed; what is kept is `excluded` and `grade`.
 
 The first two are applied inside the round by congruence. `GBCA.ByAFW.broadcastSubstitution` carries
 `Gather.broadcastSubstitution` and `GBCA.ByAFW.gatherSubstitution` carries

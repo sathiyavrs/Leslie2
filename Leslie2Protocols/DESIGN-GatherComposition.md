@@ -211,7 +211,7 @@ the returner has received `BIND` payloads from a quorum `Q` of `n − f` senders
 outside `F` has sent a `BIND` payload containing the core by the transfer, and so
 `withoutBindAbove` of the core has at most `n − |Q| ≤ f` members. Along every transition `F` and
 every sent set only grow, so the set only loses members (`withoutBindAbove_step`,
-`withoutBindAbove_corruptAll`), and the bound survives every later send and corruption. At a later
+`withoutBindAbove_corruptAll`), and every later send and corruption preserves the bound. At a later
 return, the returner's `n − f` senders hold at most `f` members of `F` and at most `f` members of
 the set, so `n − 3f ≥ 1` of them lie outside both (`exists_correct_bindAbove_of_quorum`). Such a
 sender holds a `BIND` payload above the core, and the payload the returner received from it is that
@@ -234,8 +234,8 @@ excludes its own implementation
 (`NOTES-Fidelity.md` §5). `BRB.SpecState` therefore splits `input` (the
 call wrote) from `val` (the committed value), with the silent commit transition
 guarded `ldr ∈ F ∨ input = some m`: the corrupted leader's power is a commit
-of any value, the correct leader's value is fixed, and the window closes at
-the commit. `Gather.SpecState` carries the per-entry form: `call` and `val`
+of any value, the correct leader's value is fixed, and the value every return
+carries is fixed at the commit rather than at the call. `Gather.SpecState` carries the per-entry form: `call` and `val`
 split, `Gather.Step.commit` guarded `k ∈ F ∨ call k = some v`.
 
 The refinement counterpart is *commit-on-demand*: the abstract commit is a
@@ -255,11 +255,11 @@ and the specification's `commit` guard is dischargeable against the instance's.
 
 ## Counting at the round over the gather specifications (`refinesSpecification`)
 
-`roundOverGatherSpecifications` is AFW25's Algorithm 4 at `R = 2`, its two-gather branch
+`roundOverGatherSpecifications` is AFW25's Algorithm 4 in its case `R ≥ 2`, at `R = 2`
 (D24): candidate at `|dom g| − f` occurrences after the first gather, grade at
 `|dom h| − f` / `f + 1` after the second. The refinement into TS 2 witnesses
 the specification's `excluded` and `grade` on the two instances' recorded cores.
-One transfer lemma carries a count from a returned map down to a core below
+One transfer lemma carries a count from a returned map to a core below
 it: `count_aboveThreshold_of_subMap` (AFW25 Lemma 13) says that a map carrying `x` on all
 but `f` of its entries makes such a core carry `x` on at least `|S| − f` of its
 own, the core sitting below the map and losing at most `f` entries to it.
@@ -286,10 +286,10 @@ record from the first `firstGatherReturn` on (`candidate_bound`, `secondGatherCa
 graded outcome's witness, `OutputWitness`, is established at `secondGatherReturn` from the
 second gather's return and consumed at `retG`, which sees the outcome alone (`out_witness`). The
 return transitions then mirror `GBCA.ByABDY.refinesSpecification` shape for shape: a grade-2 or grade-1 return
-hands out the bound bit and witnesses `ExclusionWitness` of its complement, and the grade-0 return
-announces the bit the first return wrote. The D15 support counts come off the first core through the
+returns the bound bit and witnesses `ExclusionWitness` of its complement, and the grade-0 return
+announces the bit the first return wrote. The D15 support counts are computed from the first core through the
 committed entries — a core entry is a committed entry, a committed entry of a correct
-process is its call, and the count is `F`-blind (`callSupport_of_core`) — or off a correct `⊥`
+process is its call, and the count is `F`-blind (`callSupport_of_core`) — or from a correct `⊥`
 candidate. Exclusions fire on demand as the two-step run `bindUnset; ret`, as in the direct
 refinement.
 
@@ -297,7 +297,7 @@ refinement.
 
 A substitution that replaces a component by a system that simulates it is an application of the
 congruences of `Framework/Congruence.lean`: forward simulation between labelled transition systems
-survives parallel composition in either position, the synchronised product of a finite family,
+is preserved by parallel composition in either position, the synchronised product of a finite family,
 hiding and restriction, and two simulations compose. Every substitution inside a composition of the
 stack is proved that way and nothing else:
 
@@ -380,7 +380,7 @@ a delivery addressed to `j`, and `j`'s call against a round whose variables alre
 instantiation
 supplies `Implementation.IsRoundStep` — its transitions carry such a label, fire only at an
 unreplaced
-program, and are Dirac — and the shared lemmas that read a transition off its label consume
+program, and are Dirac — and the shared lemmas that determine a transition from its label consume
 exactly those three facts.
 `AFW.roundTransition_of_own` runs the argument the other way: a program's step on a label of
 `roundOwn j` is a step of the implementation, which is what lets each case of the simulation rule
@@ -425,7 +425,7 @@ shared objects, and the round family is *computed* from the implementation's sta
 `AFW.roundProjection`, which undoes the two separations: it transposes the local states back and
 projects each network's sent set out of the tagged family by `Finset.filterMap`. The round
 variables hold each gather local state over `Gather.ProcessVariables`, so what an instance returned
-is there already and the projection is the identity on it. A round program's variables are read off
+is there already and the projection is the identity on it. A round program's variables are computed from
 the process's
 first-gather input, its candidate, its second-gather input, its graded outcome and its
 second-gather return flag. Four of the five conjuncts are that computation, so there is nothing to
@@ -437,7 +437,7 @@ holds the same three as the round's ghost `AFW.Ghost`, which `AFW.roundProjectio
 off. Two transitions write the ghost. The first gather's return writes that gather's core at
 `Gather.coreOf` of that gather's projection of the tagged sent sets, and the bound bit at
 `GBCA.boundOfCore` of that core; the second gather's return writes the second core the same way.
-The composed `firstGatherReturn` and `secondGatherReturn` write the same two values off the core
+The composed `firstGatherReturn` and `secondGatherReturn` write the same two values computed from the core
 their gather's return carries, and the values agree because each is `Gather.coreOfNetwork` of one
 network's state (`coreOfNetwork_firstGatherProjection`, `coreOfNetwork_secondGatherProjection`).
 
@@ -472,7 +472,7 @@ same guard.
 `AFW.protocol_composed`, the composition inclusion it yields. `ABA/Results.lean` takes that
 inclusion to the headlines of the gather-based chain — `AFW.refines`, `AFW.main`,
 `AFW.chainSimulation` and the composed-level `AFW.composed_refines`, `AFW.composed_safe`,
-`AFW.chainSimulationOfComposed` — each behind a `#print axioms` check, beside the protocol
+`AFW.chainSimulationOfComposed` — each with a `#print axioms` check, beside the protocol
 chain's own.
 
 ## Boundaries

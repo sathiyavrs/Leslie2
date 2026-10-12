@@ -3,9 +3,9 @@
   \lean{PLTS.ABA.GBCA.ByABDY.refinesSpecification}\lean{PLTS.ABA.GBCA.ByABDY.specificationRelation_transition}\lean{PLTS.ABA.GBCA.ByABDY.composition_projects}\lean{PLTS.ABA.GBCA.specificationLabelMap}\lean{PLTS.ABA.GBCA.specificationOverRoundAlphabet}\lean{PLTS.ABA.GBCA.ByABDY.specificationRelation_init}\lean{PLTS.ABA.GBCA.ByABDY.refinesSpecification_failAct}\lean{PLTS.ABA.GBCA.ByABDY.specificationCorruptionAct}\leanok
   \uses{def:aba-gbca-instance-by-abdy, def:aba-gbca-algorithm-by-abdy, def:aba-gbca-spec, def:forwardsim}
   For all parameters $P$ and every round $r$, the round-$r$ composition $\mathrm{composition}(P,r)$ is forward-simulated by the round-$r$ GBCA specification instance, read over the round's interface.
-  The relation reads the specification's $call$, $ret$ and $F$ off the composed state and witnesses its $excluded$ and $grade$ by patterns of received messages: an \emph{exclusion witness} for every member of $excluded$, and an $n{-}f$ ECHO5 quorum for each half of the grade guard.
+  The relation takes the specification's $call$, $ret$ and $F$ from the composed state and witnesses its $excluded$ and $grade$ by patterns of received messages: an \emph{exclusion witness} for every member of $excluded$, and an $n{-}f$ ECHO5 quorum for each half of the grade guard.
   Exclusions are fired on demand: a return met by a specification state whose $excluded$ lacks the bit that return needs excluded is matched by the two-step weak run $\mathrm{bindUnset};\mathrm{ret}$, and every return --- grade-0 returns included --- does the same case split on $excluded$, however many returns preceded it.
-  The relation holds at the initial states and survives the corruption broadcast.
+  The relation holds at the initial states and is preserved by the corruption broadcast.
 \end{theorem}
 
 \begin{proof}\leanok
@@ -17,7 +17,7 @@
   The second half matches one transition of the algorithm by a weak run of the specification.
   The relation is checked constructor by constructor, and the work is in the witnesses it carries for the two fields the protocol does not hold.
   A member $b$ of $excluded$ is witnessed either by a quorum of $n{-}f$ received $\mathrm{ECHO}\,(1-b)$ messages or by a set of $n{-}f$ processes each corrupted or committed by its write-once $\mathit{sentVote}$ to a payload other than $b$; each half of the grade guard is witnessed by an $n{-}f$ $\mathrm{ECHO5}$ quorum at its own payload.
-  All of these are $F$-blind and monotone in the delivered sets, in the write-once send fields and in $F$, so they survive every step and every $\mathrm{fail}$.
+  All of these are $F$-blind and monotone in the delivered sets, in the write-once send fields and in $F$, so every step and every $\mathrm{fail}$ preserves them.
   The clause $bound\_excluded$ fixes $excluded$ by an equation on the round's bound bit: empty while the bit is unwritten, and the singleton of the bit's complement once a return has written it.
   The bit the round holds therefore supplies the guard $(1-bnd) \in excluded$ of a return that announces it.
   Two quorum intersections carry the argument: either exclusion witness makes an $n{-}f$ $\mathrm{VOTE}\,b$ quorum impossible forever, that quorum being the only source of a grade-$\ge 1$ witness for $b$; and an $n{-}f$ $\mathrm{ECHO5}\,v$ quorum cannot coexist with an $n{-}f$ $\mathrm{ECHO5}\,\bot$ quorum, which is grade-2 / grade-0 exclusivity.

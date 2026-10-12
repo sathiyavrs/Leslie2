@@ -1,6 +1,6 @@
 % ABA specification, the transition graph of Transition System 1 (PLTS.ABA.SpecStep).
 % Four control states keyed on (mode, val), each named by its mode. Transition 3 is drawn
-% as a probabilistic branch: the undirected stem carries the tau-step, and the
+% as a probabilistic transition: the undirected stem carries the tau-step, and the
 % three outcome edges carry the flip masses. Five of the eight transitions are
 % drawn; fail (D1) and the corrupted interface callByzantine/retByzantine (D23) are not,
 % none of them writing the mode. See the caption.
@@ -25,7 +25,7 @@
     (dec) edge[loop below, looseness=5]
       node[lbl, below]{5 \texttt{ret}} (dec);
 
-  % the flip as a probabilistic branch
+  % the flip as a probabilistic transition
   \draw[-] (idl) -- node[lbl, above, pos=0.45]{3 \texttt{coinFlip}, $\tau$} (br);
   \path
     (br) edge[bend right=14] node[plbl, left]{$\delta_{\mathrm f}$} (dea)

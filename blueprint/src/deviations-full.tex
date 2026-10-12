@@ -31,10 +31,10 @@ D19 & negative binding, the exclusion set as the state \\
 D21 & Transition System~1 as eight transitions over a mode \\
 D22 & retention with termination \\
 D23 & a corrupted process's program replaced by a self-loop \\
-D24 & the gather-based round's grade read off the second gather's counts \\
+D24 & the gather-based round's grade computed from the second gather's counts \\
 D26 & gather calls and committed entries in separate fields \\
 D27 & the BRB leader's recorded input split from the committed value \\
-D29 & ghost outputs carried down as auxiliary variables \\
+D29 & ghost outputs carried to the implementations as auxiliary variables \\
 D30 & a parametric per-round ghost held by the network \\
 D31 & the coin's threshold counting callers alone \\
 D33 & both gathers of the round in the binding form \\
@@ -52,7 +52,7 @@ D36 & the input-enabledness loop guarded on its variables \\
   The transform is deterministic because a family broadcasts a label by one deterministic transform, applied to every instance at once.}
 \following{Transition System~1's loop $\top \xrightarrow{\mathrm{fail}(id)} \top$ taken verbatim lets $\mathrm{fail}(id)$ fire within the budget without changing $F$, so the corrupted set of the state and the fold \leandecl{PLTS.ABA.failSet} of the trace diverge.
   In the source the divergence is harmless, since every return of Transition System~1 reads $val$.
-  Here it falsifies the trace predicates of \leandecl{PLTS.ABA.spec_safe}, which read corruption off the fold while the corrupted interface of D23 returns any bit at a process of the state's $F$: at $n = 4$, $f = 1$, a looped $\mathrm{fail}(p_1)$ followed by a corrupting $\mathrm{fail}(p_2)$ leaves the fold at $\{p_1\}$ and the state at $\{p_2\}$, so with every process calling $0$, a return of $0$ by $p_3$ and a Byzantine return of $1$ by $p_2$ are two returns by never-corrupted processes that disagree.
+  Here it falsifies the trace predicates of \leandecl{PLTS.ABA.spec_safe}, which compute corruption from the fold while the corrupted interface of D23 returns any bit at a process of the state's $F$: at $n = 4$, $f = 1$, a looped $\mathrm{fail}(p_1)$ followed by a corrupting $\mathrm{fail}(p_2)$ leaves the fold at $\{p_1\}$ and the state at $\{p_2\}$, so with every process calling $0$, a return of $0$ by $p_3$ and a Byzantine return of $1$ by $p_2$ are two returns by never-corrupted processes that disagree.
   The shape that keeps the label enabled at every state and $F$ equal to the fold is a total $\mathrm{fail}$ transition, as the four other specifications have, whose test inside $\mathrm{corrupt}$ carries the guard.
   Carrying the budget as a hypothesis on the trace is the alternative, and it would relativize every invariant and every headline.}
 \deviation{D4}{no WCC \texttt{guess} label or state field}
@@ -96,11 +96,11 @@ D36 & the input-enabledness loop guarded on its variables \\
   The variable has one correct writer, the interface transition \leandeclnamed{callSet}{PLTS.ABA.SpecStep.callSet}, whose guard is the empty entry, so its write is a first write.
   Transition~2, the input-enabledness loop \leandeclnamed{callLoop}{PLTS.ABA.SpecStep.callLoop}, carries the call label at a filled entry and writes nothing (D36), and the corrupted transition of D23 writes the variable too.}
 \reason{Without the guard the specification violates Validity: at $n = 4$, $f = 1$, with the recorded inputs $1,0,0,0$ and the sole holder of $1$ corrupted, a decision of $1$ has every never-corrupted process inputting $0$.
-  Among $f+1$ supporters some process is never corrupted, since at most $f$ ever are, so the decided bit keeps a never-corrupted inputter behind it with no guard that reads the future.}
+  Among $f+1$ supporters some process is never corrupted, since at most $f$ ever are, so the decided bit has a never-corrupted inputter with no guard that reads the future.}
 \following{The departure repairs Transition System~1, whose source carries an annotation at the transition; following its form would reintroduce the violation.}
 \deviation{D14}{$f+1$ support guards on the GBCA specification's binding and returns}
 \departure{$f+1$ support guards on the GBCA specification's binding, on the dissenting bit at its grade-1 return, and on each of the two bits at its grade-0 return.}
-\reason{Transition System~2's singular witness may be corrupted later in the trace, after which nothing attributes the outcome to a never-corrupted input, and $\mathrm{hybrid}$ over that form violates Validity: at $n = 4$, $f = 1$ with inputs $1,0,0,0$, binding at $1$ off the sole holder of $1$, grade-1 adoption everywhere, unanimity in the next round and the corruption of that holder return $1$ where every never-corrupted process input $0$.}
+\reason{Transition System~2's singular witness may be corrupted later in the trace, after which nothing attributes the outcome to a never-corrupted input, and $\mathrm{hybrid}$ over that form violates Validity: at $n = 4$, $f = 1$ with inputs $1,0,0,0$, binding at $1$ with the sole holder of $1$ as its witness, grade-1 adoption everywhere, unanimity in the next round and the corruption of that holder return $1$ where every never-corrupted process input $0$.}
 \following{The departure repairs Transition System~2, whose source carries an annotation at the transition; following its form would reintroduce the violation.}
 \deviation{D15}{$F$-blind support counts}
 \departure{The $F$-blind form of those support counts, namely $f+1$ distinct callers-or-corrupted; the repair is D13 and D14, and the count is the form it takes.}
@@ -108,9 +108,9 @@ D36 & the input-enabledness loop guarded on its variables \\
 \following{The alternative, a specification transition filling the entries of corrupted processes, is refuted by the prophecy it would need.}
 \deviation{D16}{a two-phase abstract state deciding at the first visible return}
 \departure{The two-phase abstract state used by the core simulation, which defers the specification's $\tau$-progress to a single \leandeclnamed{decide}{PLTS.ABA.SpecStep.decide} step under the first visible return.}
-\reason{An abstract state that decides when a round excludes a bit can be contradicted afterwards: a late caller of the other bit enables a grade-0 return at that round, the next round spares the opposite bit and is graded~2, and the decision falls against the committed value.
+\reason{An abstract state that decides when a round excludes a bit can be contradicted afterwards: a late caller of the other bit enables a grade-0 return at that round, the next round leaves the opposite bit not excluded and is graded~2, and the decision contradicts the committed value.
   The abstract state therefore commits as late as a forward simulation permits.
-  It never fires the flip either, whose $\delta$-branch reaches the mode enabling no transition, where a return arriving later could not be answered.}
+  It never fires the flip either, whose outcome of mass $\delta$ reaches the mode enabling no transition, where a return arriving later could not be answered.}
 \following{An eager abstract state is refuted by that trace; deciding at the round would need a backward simulation or a prophecy variable, neither of which the framework carries.}
 \deviation{D17}{a fourth coin outcome $\dagger$ of mass $\failmass$}
 \departure{A fourth outcome $\dagger$, of mass $\failmass$, on the single distribution both coin resolutions follow, where the source's two range over $\{0,1,\top\}$.
@@ -121,7 +121,7 @@ D36 & the input-enabledness loop guarded on its variables \\
 \deviation{D18}{ABDY22's Algorithm~6 transcribed in full, ECHO5 level included}
 \departure{The GBCA implementation transcribes ABDY22's Algorithm~6 in full, over the message levels INPUT, ECHO, VOTE, BIND and ECHO5, in place of the source's compression of it.}
 \reason{That compression elides the ECHO5 level and takes $f{+}1$ received $\mathrm{VOTE}\,v$ messages as the grade-$1$ witness where Algorithm~6 takes $f{+}1$ received $\mathrm{BIND}\,v$ messages, which violates Binding.
-  One process held at the echo level through a grade-0 return may afterwards direct its write-once echo at either bit, and a single corruption completes the $f{+}1$ count for the bit the adversary picks, so two extensions of one grade-0 return hand out two different bits.}
+  One process held at the echo level through a grade-0 return may afterwards direct its write-once echo at either bit, and a single corruption completes the $f{+}1$ count for the bit the adversary picks, so two extensions of one grade-0 return contain returns of two different bits.}
 \following{Following the compression is not available: the refinement of the round into the graded agreement specification, or into any specification carrying Binding, does not exist for it.}
 \deviation{D19}{negative binding, the exclusion set as the state}
 \departure{Binding is negative and the exclusion set is the state, the GBCA specification carrying $excluded \subseteq \{0,1\}$ under one inserting internal transition and no removing transition, in place of the source's bound value $bind \in \{0,1,\bot\}$, so that a return's guard on the bit it announces is $1-bnd \in excluded$ where the source's is $bind = bnd$ (Definition~\ref{def:aba-gbca-spec}).
@@ -135,27 +135,27 @@ D36 & the input-enabledness loop guarded on its variables \\
 \reason{Transition System~1's re-proposal transition fires with $val$ already written, so its unanimity transition can overwrite the decision between two returns, which violates Agreement; with \leandeclnamed{decide}{PLTS.ABA.SpecStep.decide} the sole writer of $val$ under $val = \bot$, the decision is written once by the shape of the system.
   The flip names no bit because a bit entering through the one probabilistic transition would re-admit a Validity-breaking decision at probability $\varepsilon$; the identification of the flip's outcome with the coin agreeing with a round's value belongs to a refinement's outcome coupling.
   The guard on the flip is unsatisfiable under unanimity among the never-corrupted processes, so a unanimous run is Dirac and the decision can only take the unanimous bit, which is the liveness half of Validity held by the shape of the system; the lemma that the guard, once satisfied, stays satisfied is deferred, and no simulation of the development fires the flip (D17).}
-\following{Transition System~1's shape with its re-proposal guarded on $val = \bot$ would still carry the free bind that the D13 counterexample runs through, and the core simulation is stated on the mode; the source carries annotations at both transitions.}
+\following{Transition System~1's shape with its re-proposal guarded on $val = \bot$ would still carry the free bind that the D13 counterexample takes, and the core simulation is stated on the mode; the source carries annotations at both transitions.}
 \deviation{D22}{retention with termination}
 \departure{Retention with termination, a process holding its variables in every round it has touched in the finite map of \leandecl{PLTS.ABA.Implementation.RoundVariablesMap}, where a round never touched reads as the initial variables, and the round's message transitions reading the variables of the round their own label tags name rather than those of the round the round loop stands at.
   Termination is \leandeclnamed{terminate}{PLTS.ABA.Implementation.ProgramStep.terminate}, which fires once the process's own return has fired and its received messages hold DECIDED from $2f+1$ senders, sets the flag alone, and carries the replacement guard of D23.
   The message transitions of a round are round-indexed rather than round-guarded, reading and writing the variables of the round their own label tags name whichever round the round loop stands at, while the graded call and the three graded returns keep the round-loop guard.}
-\reason{ABDY22 separates deciding from terminating, and its amplification argument (Lemmas~4.6 and~E.5) counts the echoes a decided process keeps sending, so a process must answer the messages of every round it has touched; the finite map keeps that state finite by construction, and $2f+1$ received DECIDED messages stand behind $f+1$ correct senders, the relay threshold, so a terminated process holds no other back.}
+\reason{ABDY22 separates deciding from terminating, and its amplification argument (Lemmas~4.6 and~E.5) counts the echoes a decided process keeps sending, so a process must answer the messages of every round it has touched; the finite map keeps that state finite by construction, and $2f+1$ received DECIDED messages have $f+1$ correct senders among them, the relay threshold, so a terminated process delays no other process.}
 \following{Terminating at the return is a change of $\mathrm{terminate}$'s guard alone.
   Dropping the transition is the deletion of the guard the round transitions read, and it is the source's Algorithm~1, whose loop runs on after its return.
   Neither costs anything above the first inclusion, no composed state carrying the flag.}
 \deviation{D23}{a corrupted process's program replaced by a self-loop}
 \departure{When a process is corrupted its program is replaced, \leandeclnamed{failSelf}{PLTS.ABA.Implementation.ProgramStep.failSelf} writing the flag \leandecl{PLTS.ABA.RoundLoopVariables.corrupted}, every correct transition requiring an unreplaced program, and the replaced program being the single self-loop \leandeclnamed{corruptedIdle}{PLTS.ABA.Implementation.ProgramStep.corruptedIdle}.
   Both networks carry the Byzantine visible return $\mathrm{retABA}(id,b)$ under the authorisation $id \in F$ alone, and Transition System~1's image of the replacement is \leandeclnamed{callByzantine}{PLTS.ABA.SpecStep.callByzantine}, recording a bit unrelated to the one its label declares, beside \leandeclnamed{retByzantine}{PLTS.ABA.SpecStep.retByzantine}, returning any bit at any time without moving the state.
-  The self-loop is taken on every label other than $\tau$ and the labels on which the process would act on its own sub-protocol messages, where it has no transition at all; those run through the call and return transitions of D11 and the injections $\mathrm{byzantineGBCA}$ and $\mathrm{byzantineDecided}$.}
+  The self-loop is taken on every label other than $\tau$ and the labels on which the process would act on its own sub-protocol messages, where it has no transition at all; those labels are taken by the call and return transitions of D11 and the injections $\mathrm{byzantineGBCA}$ and $\mathrm{byzantineDecided}$.}
 \reason{A corrupted process is the adversary's, so the model lets it call one bit and record another and return either bit at any time; the replacement flag is the one thing a program reads about corruption, so no program reads the corrupted set or the budget, and the two corrupted transitions of Transition System~1 add behaviour and remove none, which is why both trace predicates are read at never-corrupted returners.}
 \following{Without the corrupted interface a corrupted process would be held to the correct transitions, which is more than the papers' adversary concedes, and the removal of its program in place of a replacement breaks the abstract state's agreement on returns.}
-\deviation{D24}{the gather-based round's grade read off the second gather's counts}
-\departure{The gather-based GBCA implementation follows Algorithm~4 of~\cite{AFW25} at $R = 2$, with the grade read off the second gather's counts in place of the approximate-agreement subroutine of lines~7 and~8: $(v, 2)$ at $|{\rm dom}\, h| - f$ entries of $v$, $(v, 1)$ at $f{+}1$, $(\bot, 0)$ below both.}
+\deviation{D24}{the gather-based round's grade computed from the second gather's counts}
+\departure{The gather-based GBCA implementation follows Algorithm~4 of~\cite{AFW25} at $R = 2$, with the grade computed from the second gather's counts in place of the approximate-agreement subroutine of lines~7 and~8: $(v, 2)$ at $|{\rm dom}\, h| - f$ entries of $v$, $(v, 1)$ at $f{+}1$, $(\bot, 0)$ below both.}
 \reason{The source supplies no gather-based GBCA, its gather serving the coin construction, which stays at specification level here.
-  Reading the grade off a process's own counts is sound because $|{\rm dom}\, h| - f \ge n - 2f \ge f + 1$ carries the bit on at least $|{\rm dom}\, h| - f$ entries past the $f{+}1$ bar, where Lemma~18 of~\cite{AFW25} makes it unique.
+  Computing the grade from a process's own counts is sound because $|{\rm dom}\, h| - f \ge n - 2f \ge f + 1$ carries the bit on at least $|{\rm dom}\, h| - f$ entries past the $f{+}1$ bar, where Lemma~18 of~\cite{AFW25} makes it unique.
   The local count carries the exclusivity the subroutine establishes, so its message exchange and its thresholds add a step the round's safety does not need.}
-\following{The source at this round is Algorithm~4 of~\cite{AFW25}; following it means encoding the subroutine as a third component of the round, with a specification and a refinement of its own, and reading the grade off its return.}
+\following{The source at this round is Algorithm~4 of~\cite{AFW25}; following it means encoding the subroutine as a third component of the round, with a specification and a refinement of its own, and computing the grade from its return.}
 \deviation{D26}{gather calls and committed entries in separate fields}
 \departure{The gather specification records calls and committed entries in separate fields, a per-entry internal commit writing $val(k)$ once under $k \in F \vee call(k) = v$, in place of Transition System~4's transition writing $call$ itself at a corrupted process.
   The transition writing the core fires on a set of committed entries of size at least $n-f$, where Transition System~4 fires on more than $n-f$ recorded calls and puts no size bound on the set it takes.}
@@ -163,10 +163,10 @@ D36 & the input-enabledness loop guarded on its variables \\
 \following{Following Transition System~4 would exclude executions of the implementation and leave the size clause of Binding Common Core unstated.}
 \deviation{D27}{the BRB leader's recorded input split from the committed value}
 \departure{The BRB specification splits the leader's recorded input from the committed value, an internal commit writing the value once under $\mathit{ldr} \in F \vee input = m$, in place of Transition System~6's single call field and its corrupted-leader transition, which only bars the instance from returning.}
-\reason{Under Transition System~6 a correct call fixes every return, where Bracha's rounds with the leader corrupted after its $\mathrm{INIT}$ can deliver another value until some correct process holds an $\mathrm{ECHO}$ quorum, so that specification would exclude its own implementation under D1; the split closes the window at the commit, a leader corrupted after its call may commit any value, and Validity holds at a never-corrupted leader, as the property states it.}
+\reason{Under Transition System~6 a correct call fixes every return, where Bracha's rounds with the leader corrupted after its $\mathrm{INIT}$ can deliver another value until some correct process holds an $\mathrm{ECHO}$ quorum, so that specification would exclude its own implementation under D1; the split fixes the value at the commit, a leader corrupted after its call may commit any value, and Validity holds at a never-corrupted leader, as the property states it.}
 \following{Following Transition System~6 would exclude executions of Bracha's rounds.}
-\deviation{D29}{ghost outputs carried down as auxiliary variables}
-\departure{Ghost outputs, the round's bound bit and a gather instance's common core, which Transition Systems~2 and~4 announce on their return labels already, carried down to the implementations as auxiliary variables in the sense of~\cite{AL91}.
+\deviation{D29}{ghost outputs carried to the implementations as auxiliary variables}
+\departure{Ghost outputs, the round's bound bit and a gather instance's common core, which Transition Systems~2 and~4 announce on their return labels already, carried to the implementations as auxiliary variables in the sense of~\cite{AL91}.
   A network component holds each of them and no program reads one.
   A gather instance's core is the field $core$ of the gather network, beside the per-sender sent sets and the corrupted set; the bound bit of a round of the direct implementation is a field of that round's network, and the bound bit of a gather-based round is the whole state of that round's own network, which exchanges no messages; an implementation holds both in the ghost of D30.}
 \reason{Announcing the value is what puts binding, a property of the extensions of an execution, on a single trace.
@@ -190,7 +190,7 @@ D36 & the input-enabledness loop guarded on its variables \\
   The guard here fires later than the source's, so the coin specification, which the development keeps at specification level, admits fewer behaviours and the assumption on the coin is stronger; no theorem of the development reads the resolution.}
 \deviation{D33}{both gathers of the round in the binding form}
 \departure{Both gathers of the round are the binding form, where Algorithm~4 of~\cite{AFW25} calls one subroutine $G$ at both calls and the proof of its Theorem~21 uses the binding of the first call alone.}
-\reason{The round's counting reads the grade off a common core of the second gather (D24), and Remark~22 of~\cite{AFW25} makes the core of a non-binding gather a prophecy variable in the sense of~\cite{AL91}, determined by the completed execution alone, which a forward simulation cannot write at the specification's transition, since the value chosen there must hold in every extension.
+\reason{The round's counting computes the grade from a common core of the second gather (D24), and Remark~22 of~\cite{AFW25} makes the core of a non-binding gather a prophecy variable in the sense of~\cite{AL91}, determined by the completed execution alone, which a forward simulation cannot write at the specification's transition, since the value chosen there must hold in every extension.
   The binding form makes it a history variable, determined by the prefix, and a binding gather is a non-binding gather with one phase more, so every execution of the round is an execution of Algorithm~4 of~\cite{AFW25}.
   Under the subroutine of lines~7 and~8 of Algorithm~4 the second gather's core is not read, so the binding form at the second call follows from D24 and from Transition System~4 being the one gather specification of the development.}
 \following{Nothing at the algorithm, the binding form being an admissible instance of the subroutine $G$ of Algorithm~4.

@@ -3,7 +3,7 @@
   \lean{PLTS.ABA.Gather.Invariant}\lean{PLTS.ABA.Gather.SpecificationRelation}\lean{PLTS.ABA.Gather.refinesSpecification}\leanok
   \uses{def:aba-gather-over-broadcast-specification, def:aba-gather-spec, def:aba-gather-core}
   The gather implementation over broadcast specifications is forward-simulated by Transition System~4.
-  The relation reads the specification's $call$ off the gather programs' variables, $ret$ and $F$ off the gather programs and the gather network, witnesses each committed abstract entry by the corresponding input-broadcast commitment, holds the two sides' cores equal, and witnesses a written core by the count
+  The relation takes the specification's $call$ from the gather programs' variables, $ret$ and $F$ from the gather programs and the gather network, witnesses each committed abstract entry by the corresponding input-broadcast commitment, holds the two sides' cores equal, and witnesses a written core by the count
   \[
     |\{\, d \notin F \;:\; \text{no } \mathrm{BIND} \text{ payload } U \in \mathit{sent}(d) \text{ with } core \subseteq U \,\}| \le f,
   \]
@@ -14,13 +14,13 @@
 
 \begin{proof}\leanok
   \uses{def:aba-gather-over-broadcast-specification, def:aba-gather-spec, def:aba-gather-core, def:forwardsim}
-  The invariant ties what each program holds of the broadcasts' returns to the instances that wrote them --- a returned value is that instance's committed value --- ties a correct sender's sent $\mathrm{BIND}$ to its write-once field and that field to the $n - f$ received $\mathrm{VOTE}$ payloads behind it, and carries approval-backing for the write-once $\mathrm{ECHO}$ and $\mathrm{VOTE}$ fields.
+  The invariant ties what each program holds of the broadcasts' returns to the instances that wrote them --- a returned value is that instance's committed value --- ties a correct sender's sent $\mathrm{BIND}$ to its write-once field and that field to the $n - f$ received $\mathrm{VOTE}$ payloads that enabled its write, and carries approval-backing for the write-once $\mathrm{ECHO}$ and $\mathrm{VOTE}$ fields.
   The specification's $call$ follows the gather programs' variables, which the interface's call label writes under the write-once guard.
   The call of an input instance is an event of the instance's own alphabet, matched by a stutter of the specification, and the invariant carries the instance's recorded call back to the gather program's variables, which is what discharges the specification's commit guard.
-  The core written is the core of Definition~\ref{def:aba-gather-core}, read off the instance's network state, and the two guards of that write are its size bound and its approval, both supplied by a sender outside $F$ among the returner's $n - f$ senders of received $\mathrm{BIND}$ payloads.
+  The core written is the core of Definition~\ref{def:aba-gather-core}, computed from the instance's network state, and the two guards of that write are its size bound and its approval, both supplied by a sender outside $F$ among the returner's $n - f$ senders of received $\mathrm{BIND}$ payloads.
   The same senders bound by $f$ the processes outside $F$ with no $\mathrm{BIND}$ payload above the core, which is the count the relation carries.
   Every return is matched through that count, the first through the bound that \leandecl{PLTS.ABA.Gather.coreOf_recorded} establishes.
-  The set it counts only loses members, so the bound survives every later transition and every corruption.
+  The set it counts only loses members, so every later transition and every corruption preserves the bound.
   The return's own $n{-}f$ senders include $n - 3f \ge 1$ processes outside $F$ and outside the set, and such a process holds a single $\mathrm{BIND}$ in its sent set, so the payload received from it lies above the core and below the returned map, which is what the return's $C \sqsubseteq g$ guard requires.
   Every internal transition is matched by the abstract commit it names or by a stutter, a broadcast return, which writes a program's variables, by a stutter, and corruption by the specification's own $\mathrm{fail}$.
 \end{proof}

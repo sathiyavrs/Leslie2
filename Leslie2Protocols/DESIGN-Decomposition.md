@@ -66,7 +66,7 @@ no image. The instance answers that event on either of its two call transitions
 not inductive: `Gather.AlgorithmOverBroadcastSpecification.call` moves the gather's variables and
 the specification's call on the one interface label and leaves every instance where it stands,
 so right after a call the program holds `some x` and the instance holds `none`. A relation that
-read the specification's call off the instance would be false there, and
+took the specification's call from the instance would be false there, and
 `Gather.refinesSpecification` is unprovable.
 
 **The constraint.** `Gather.SpecificationRelation.call_eq : ∀ k, t.call k = ((gatherProgramsAndNetwork s).processVariables

@@ -2,7 +2,7 @@
   \label{thm:gbca-spec-validity}
   \lean{PLTS.ABA.GBCA.specInst_validity}\leanok
   \uses{def:aba-gbca-spec, thm:trace-support}
-  On a trace of the GBCA specification instance whose every round-$r$ call carries $v$ unless its caller is corrupted somewhere along the trace, every round-$r$ return hands out $v$: \leandecl{PLTS.ABA.GBCA.specInst_validity}.
+  On a trace of the GBCA specification instance whose every round-$r$ call carries $v$ unless its caller is corrupted somewhere along the trace, every round-$r$ return returns $v$: \leandecl{PLTS.ABA.GBCA.specInst_validity}.
   Neither a grade-0 return nor a grade-1 return occurs on such a trace, so every return is a grade-2 return of $v$: \leandecl{PLTS.ABA.GBCA.specInst_no_retGrade0} and \leandecl{PLTS.ABA.GBCA.specInst_no_retGrade1}.
 \end{theorem}
 

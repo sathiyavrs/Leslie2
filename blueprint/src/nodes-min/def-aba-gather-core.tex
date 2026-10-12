@@ -2,7 +2,7 @@
   \label{def:aba-gather-core}
   \lean{PLTS.ABA.Gather.correct}\lean{PLTS.ABA.Gather.dominatedBy}\lean{PLTS.ABA.Gather.dominators}\lean{PLTS.ABA.Gather.echoOf}\lean{PLTS.ABA.Gather.coreOf}\lean{PLTS.ABA.Gather.Invariant}\lean{PLTS.ABA.Gather.single_core}\lean{PLTS.ABA.Gather.single_core_approved}\lean{PLTS.ABA.Gather.withoutBindAbove}\lean{PLTS.ABA.Gather.coreOf_recorded}\leanok
   \uses{def:aba-gather-over-broadcast-specification, def:aba-parameters}
-  A payload set read off the sent sets and the corrupted set of a gather network state: the $\mathrm{ECHO}$ payload of a sender whose payload lies below every $\mathrm{VOTE}$ of many processes outside $F$ (\leandecl{PLTS.ABA.Gather.coreOf}).
+  A payload set computed from the sent sets and the corrupted set of a gather network state: the $\mathrm{ECHO}$ payload of a sender whose payload lies below every $\mathrm{VOTE}$ of many processes outside $F$ (\leandecl{PLTS.ABA.Gather.coreOf}).
   Under the invariant \leandecl{PLTS.ABA.Gather.Invariant}, as soon as one process outside $F$ has multicast a $\mathrm{BIND}$ payload, that set has at least $n-f$ entries, its entries are committed input-broadcast entries, and it lies below every $\mathrm{BIND}$ payload in the sent set of a process outside $F$: \leandecl{PLTS.ABA.Gather.single_core} and \leandecl{PLTS.ABA.Gather.single_core_approved}.
   The processes outside $F$ whose sent set holds no $\mathrm{BIND}$ payload containing it number at most $f$ at the first return and only lose members along an execution, so the $n{-}f$ senders of a later return include one outside $F$ whose single $\mathrm{BIND}$ payload contains it: \leandecl{PLTS.ABA.Gather.withoutBindAbove} and \leandecl{PLTS.ABA.Gather.coreOf_recorded}.
 \end{definition}

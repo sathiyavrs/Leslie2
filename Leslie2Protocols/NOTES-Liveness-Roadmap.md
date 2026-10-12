@@ -20,11 +20,11 @@ development follow `ABA.Parameters.wccPMF` (`ABA/Vocabulary/Parameters.lean`), w
 resolves without delivering. In TS 3 that outcome is absorbing — `WCC.Step.resolve` fires once
 per instance and `WCC.Step.ret` has a positive guard — so the processes awaiting an undelivered
 round's return never return, in any extension, under any scheduler. A single such round therefore
-strands positive mass, and no fairness assumption recovers it. The failure mass sits at the correct
+leaves the processes awaiting it with no enabled return, on executions of positive mass, and no fairness assumption recovers it. The failure mass sits at the correct
 processes.
 
 The function `g` is the protocol's, and its value there is left open. Each round is a race between
-the `δ_f` failure mass and a decision: a resolution matches the round's surviving bit with
+the `δ_f` failure mass and a decision: a resolution matches the round's bit not excluded with
 probability `ε` and fails to deliver with probability `δ_f`, and how those compound over the round
 sequence depends on the fairness constraint chosen and on the round structure the proof exposes.
 
@@ -57,13 +57,13 @@ supermartingales in Caesar):
 precondition the coin cannot see: the round's value is fixed before the coin resolves, so a
 resolution matching it decides. That precondition is structural here rather than an assumption a
 liveness proof would have to carry. At the specification, GBCA's exclusion set `excluded` only grows
-— its single writer inserts and corruption does not touch it — and both value-bearing returns demand
-`v ∉ excluded ∧ !v ∈ excluded`, so any two graded returns of one round hand out the same bit and a
-grade-0 return determines a bit that no extension of the run hands out at grade ≥ 1: `retG_value_agree`,
+— its single writer inserts and corruption does not touch it — and both returns of grade 1 and 2 demand
+`v ∉ excluded ∧ !v ∈ excluded`, so any two graded returns of one round return the same bit and a
+grade-0 return determines a bit that no extension of the run returns at grade ≥ 1: `retG_value_agree`,
 `specInst_binding`, `retGrade0_excluded_nonempty` (`ABA/GBCA/SpecificationSafety.lean`), each from
 monotonicity alone, no invariant. The precondition is on the trace, not only on the state: every
 return of a round announces the round's bound bit on its label (D29), so `specInst_binding` reads it
-off the labels of a single trace, and the coin's race is against a bit the trace has already named.
+on the labels of a single trace, and the coin's race is against a bit the trace has already named.
 At the implementation the encoding is ABDY22's Algorithm 6 in full (D18), whose Binding the paper
 proves. The precondition is therefore available in both systems of the refinement, and a liveness
 effort inherits it rather than re-deriving it; what it must supply is the probabilistic part, the
@@ -236,7 +236,7 @@ structurally, at the specification and with no proof obligation. A supported bit
 never-corrupted recorded inputter (`InputSupport.correct_supporter`,
 `Specifications/ABASafety.lean`), so under unanimity among the correct processes on `v` the bit `!v`
 is supported by corrupted identifiers alone, at most `f` of them, and `hmix` fails at every state
-such a run reaches. The flip is then unreachable, and with it every probabilistic branch of the
+such a run reaches. The flip is then unreachable, and with it every probabilistic outcome of the
 system: the unanimous path is Dirac, and `SpecStep.decide` can write only `v`. That is the liveness
 half of Validity — "if all correct processes input `v` then all correct processes return `v`" — held
 by the shape of the guard rather than by an argument.
@@ -246,8 +246,8 @@ protocol only at `δ_f = 0`, or under a the protocol's reordering. With `δ_f > 
 consults the coin under unanimity: the round loop's phase machine calls `WCC_r` after every
 graded-agreement return, the coin adoption being a later line of ABDY22's Algorithm 2 than the call,
 so a unanimous round still runs a resolution that carries mass `δ_f` on the outcome that delivers to
-nothing and strands the processes awaiting it. The specification's unanimous path has no such
-branch, so the two agree on the unanimous case only when `δ_f = 0` or when the protocol is reordered
+nothing and leaves the processes awaiting it with no enabled return. The specification's
+unanimous path has no such outcome, so the two agree on the unanimous case only when `δ_f = 0` or when the protocol is reordered
 to skip the coin call on a grade the round has already settled. This is the campaign's transfer
 caveat and is recorded here rather than repaired.
 
@@ -255,7 +255,7 @@ caveat and is recorded here rather than repaired.
 forward along a map that forgets which bit was delivered: one bit to `toDecisionEnabled`, the other
 bit and the adversarial outcome to `toFlipEnabled`, the failure outcome to `undelivered`. The three
 masses are all the transitions read. Reading `toDecisionEnabled` as "the coin agreed with the round's
-surviving bit" is accordingly not a component of TS 1 — it is what a liveness refinement would
+bit not excluded" is accordingly not a component of TS 1 — it is what a liveness refinement would
 supply, as an outcome coupling between the coin's resolution and `flipPMF`: the agree-outcome,
 of mass `ε`, coupled to `toDecisionEnabled`; the disagree- and adversarial outcomes to
 `toFlipEnabled`; the failure outcome, of mass `δ_f`, to `undelivered`. Safety needs none of it,
@@ -272,16 +272,16 @@ specification is not.
 Suppose the guard were the per-bit one, `b ∉ excluded`, so that a round could exclude both bits in
 turn. Take a mixed round: a quorum, `f + 1` F-blind support at each bit, and a grade-2 return of `v`
 already fired. `bindUnset v` is then enabled — its guards would be the quorum, `f + 1` support for
-the spared bit `!v`, and `v` not yet excluded, none of which the return disturbs — so under a
+the bit `!v` it leaves not excluded, and `v` not yet excluded, none of which the return disturbs — so under a
 blanket-fair marking of the internal transitions every fair scheduler must eventually fire it. After
-that exclusion no bit is alive: `retGrade2` and `retGrade1` are disabled at both bits, and
+that exclusion both bits are excluded: `retGrade2` and `retGrade1` are disabled at both bits, and
 `retGrade0` is disabled by the grade-2 guard (`grade = some true`). The processes that had not yet
 returned never return, in any extension, under any scheduler. Spec-level Termination — "if `n − f`
 correct processes take part then all correct processes eventually return" — would then be false of
 the specification itself, and no marking at the implementation could repair it.
 
 The `excluded = ∅` guard removes those states rather than the obligation. Every reachable state
-has `excluded ∈ {∅, {b}}` (`GBCASafety.excluded_card_le_one`), the surviving bit stays alive, and
+has `excluded ∈ {∅, {b}}` (`GBCASafety.excluded_card_le_one`), the bit not excluded stays outside `excluded`, and
 the grade-2 guard still admits grade-2 and grade-1 returns. The resolution is structural, so no
 marking has anything to decide here. The same holds of TS 1's flip (§5), where the one-shot guard
 and the absorbing `ControlMode.noTransitionEnabled` settle the question in the step relation rather
@@ -292,7 +292,7 @@ processes have called, so the quorum guard holds and holds forever (the count is
 in `call` and `F`). The quorum's `n − f ≥ 2f + 1` callers-or-corrupted fall on two bits, so
 some bit `v` carries `f + 1` of them by pigeonhole — the `InputSupport(v)` count, itself monotone.
 All three guards of `bindUnset (!v)` therefore hold, and they persist until the transition is
-taken, so weak fairness fires it; `excluded = {!v}` from then on, and `v` is alive at every
+taken, so weak fairness fires it; `excluded = {!v}` from then on, and `v` is not excluded at every
 later state.
 
 Split on whether the dissent count at `!v` ever reaches `f + 1`. If it never does, `retGrade1`
@@ -307,7 +307,7 @@ and permanently, so a fair scheduler answers it. Nothing in the sketch mentions 
 is a statement about one GBCA instance, and it is what item 1 of §4 would have to supply for
 the sub-protocol position.
 
-## 7. Pointers
+## 7. References
 
 - Ranked witness + transfers: `Leslie_LTS/Framework/Simulation.lean:1339,1506,2110,2246`
 - Fairness/WF1/LTL: `Leslie_LTS/Framework/{Liveness,LTL,Divergence}.lean`
@@ -324,6 +324,6 @@ the sub-protocol position.
   `ABDY.protocolSimulation`, `ABDY.protocol_composed`) — the presentation to state fair termination over if
   it is to be stated of the protocol: the `fail` transition belongs to the network and is guarded
   by `k ∉ F ∧ |F| < f`, so `fail` is enabled exactly while budget remains and the marking of `fail`
-  is read off that component's own state.
+  is computed from that component's own state.
 - Paper validation of fair AST for this protocol family: `Papers/consensus-src` (Ben-Or +
   graded consensus, SMT-checked in Caesar)
